@@ -62,12 +62,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_input.c 243586 2012-11-27 01:59:51Z ae $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_input.c 329158 2018-02-12 13:52:58Z ae $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipfw.h"
 #include "opt_ipsec.h"
+#include "opt_kdtrace.h"
 #include "opt_route.h"
 
 #include <sys/param.h>
@@ -77,6 +78,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_input.c 243586 2012-11-27 01:59:51
 #include <sys/proc.h>
 #include <sys/domain.h>
 #include <sys/protosw.h>
+#include <sys/sdt.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/errno.h>
@@ -93,6 +95,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_input.c 243586 2012-11-27 01:59:51
 #include <net/vnet.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/ip_var.h>
 #include <netinet/in_systm.h>
 #include <net/if_llatbl.h>
@@ -117,16 +120,12 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_input.c 243586 2012-11-27 01:59:51
 
 #include <netinet6/ip6protosw.h>
 
-#ifdef FLOWTABLE
-#include <net/flowtable.h>
-VNET_DECLARE(int, ip6_output_flowtable_size);
-#define	V_ip6_output_flowtable_size	VNET(ip6_output_flowtable_size)
-#endif
-
 extern struct domain inet6domain;
 
 u_char ip6_protox[IPPROTO_MAX];
 VNET_DEFINE(struct in6_ifaddrhead, in6_ifaddrhead);
+VNET_DEFINE(struct in6_ifaddrlisthead *, in6_ifaddrhashtbl);
+VNET_DEFINE(u_long, in6_ifaddrhmask);
 
 static struct netisr_handler ip6_nh = {
 	.nh_name = "ip6",
@@ -140,7 +139,11 @@ VNET_DECLARE(struct callout, in6_tmpaddrtimer_ch);
 
 VNET_DEFINE(struct pfil_head, inet6_pfil_hook);
 
-VNET_DEFINE(struct ip6stat, ip6stat);
+VNET_PCPUSTAT_DEFINE(struct ip6stat, ip6stat);
+VNET_PCPUSTAT_SYSINIT(ip6stat);
+#ifdef VIMAGE
+VNET_PCPUSTAT_SYSUNINIT(ip6stat);
+#endif /* VIMAGE */
 
 struct rwlock in6_ifaddr_lock;
 RW_SYSINIT(in6_ifaddr_lock, &in6_ifaddr_lock, "in6_ifaddr_lock");
@@ -167,8 +170,12 @@ ip6_init(void)
 
 	TUNABLE_INT_FETCH("net.inet6.ip6.auto_linklocal",
 	    &V_ip6_auto_linklocal);
+	TUNABLE_INT_FETCH("net.inet6.ip6.accept_rtadv", &V_ip6_accept_rtadv);
+	TUNABLE_INT_FETCH("net.inet6.ip6.no_radr", &V_ip6_no_radr);
 
 	TAILQ_INIT(&V_in6_ifaddrhead);
+	V_in6_ifaddrhashtbl = hashinit(IN6ADDR_NHASH, M_IFADDR,
+	    &V_in6_ifaddrhmask);
 
 	/* Initialize packet filter hooks. */
 	V_inet6_pfil_hook.ph_type = PFIL_TYPE_AF;
@@ -182,24 +189,6 @@ ip6_init(void)
 	nd6_init();
 	frag6_init();
 
-#ifdef FLOWTABLE
-	if (TUNABLE_INT_FETCH("net.inet6.ip6.output_flowtable_size",
-		&V_ip6_output_flowtable_size)) {
-		if (V_ip6_output_flowtable_size < 256)
-			V_ip6_output_flowtable_size = 256;
-		if (!powerof2(V_ip6_output_flowtable_size)) {
-			printf("flowtable must be power of 2 size\n");
-			V_ip6_output_flowtable_size = 2048;
-		}
-	} else {
-		/*
-		 * round up to the next power of 2
-		 */
-		V_ip6_output_flowtable_size = 1 << fls((1024 + maxusers * 64)-1);
-	}
-	V_ip6_ft = flowtable_alloc("ipv6", V_ip6_output_flowtable_size, FL_IPV6|FL_PCPU);
-#endif	
-	
 	V_ip6_desync_factor = arc4random() % MAX_TEMP_DESYNC_FACTOR;
 
 	/* Skip global initialization stuff for non-default instances. */
@@ -295,7 +284,12 @@ ip6proto_unregister(short ip6proto)
 void
 ip6_destroy()
 {
+	int i;
 
+	if ((i = pfil_head_unregister(&V_inet6_pfil_hook)) != 0)
+		printf("%s: WARNING: unable to unregister pfil hook, "
+		    "error %d\n", __func__, i);
+	hashdestroy(V_in6_ifaddrhashtbl, M_IFADDR, V_in6_ifaddrhmask);
 	nd6_destroy();
 	callout_drain(&V_in6_tmpaddrtimer_ch);
 }
@@ -490,21 +484,16 @@ ip6_input(struct mbuf *m)
 	if (m && m->m_next != NULL && m->m_pkthdr.len < MCLBYTES) {
 		struct mbuf *n;
 
-		MGETHDR(n, M_DONTWAIT, MT_HEADER);
-		if (n)
-			M_MOVE_PKTHDR(n, m);
-		if (n && n->m_pkthdr.len > MHLEN) {
-			MCLGET(n, M_DONTWAIT);
-			if ((n->m_flags & M_EXT) == 0) {
-				m_freem(n);
-				n = NULL;
-			}
-		}
+		if (m->m_pkthdr.len > MHLEN)
+			n = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
+		else
+			n = m_gethdr(M_NOWAIT, MT_DATA);
 		if (n == NULL) {
 			m_freem(m);
 			return;	/* ENOBUFS */
 		}
 
+		m_move_pkthdr(n, m);
 		m_copydata(m, 0, n->m_pkthdr.len, mtod(n, caddr_t));
 		n->m_len = n->m_pkthdr.len;
 		m_freem(m);
@@ -533,6 +522,8 @@ ip6_input(struct mbuf *m)
 
 	IP6STAT_INC(ip6s_nxthist[ip6->ip6_nxt]);
 
+	IP_PROBE(receive, NULL, NULL, ip6, m->m_pkthdr.rcvif, NULL, ip6);
+
 	/*
 	 * Check against address spoofing/corruption.
 	 */
@@ -557,7 +548,18 @@ ip6_input(struct mbuf *m)
 		in6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_addrerr);
 		goto bad;
 	}
-
+	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst) &&
+	    IPV6_ADDR_MC_SCOPE(&ip6->ip6_dst) == 0) {
+		/*
+		 * RFC4291 2.7:
+		 * Nodes must not originate a packet to a multicast address
+		 * whose scop field contains the reserved value 0; if such
+		 * a packet is received, it must be silently dropped.
+		 */
+		IP6STAT_INC(ip6s_badscope);
+		in6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_addrerr);
+		goto bad;
+	}
 #ifdef ALTQ
 	if (altq_input != NULL && (*altq_input)(m, AF_INET6) == 0) {
 		/* packet is dropped by traffic conditioner */
@@ -1073,7 +1075,6 @@ ip6_hopopts_input(u_int32_t *plenp, u_int32_t *rtalertp,
 	struct mbuf *m = *mp;
 	int off = *offp, hbhlen;
 	struct ip6_hbh *hbh;
-	u_int8_t *opt;
 
 	/* validation of the length of the header */
 #ifndef PULLDOWN_TEST
@@ -1100,8 +1101,6 @@ ip6_hopopts_input(u_int32_t *plenp, u_int32_t *rtalertp,
 #endif
 	off += hbhlen;
 	hbhlen -= sizeof(struct ip6_hbh);
-	opt = (u_int8_t *)hbh + sizeof(struct ip6_hbh);
-
 	if (ip6_process_hopopts(m, (u_int8_t *)hbh + sizeof(struct ip6_hbh),
 				hbhlen, rtalertp, plenp) < 0)
 		return (-1);
@@ -1594,24 +1593,28 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 #undef IS2292
 
 void
-ip6_notify_pmtu(struct inpcb *in6p, struct sockaddr_in6 *dst, u_int32_t *mtu)
+ip6_notify_pmtu(struct inpcb *inp, struct sockaddr_in6 *dst, u_int32_t mtu)
 {
 	struct socket *so;
 	struct mbuf *m_mtu;
 	struct ip6_mtuinfo mtuctl;
 
-	so =  in6p->inp_socket;
-
-	if (mtu == NULL)
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+	/*
+	 * Notify the error by sending IPV6_PATHMTU ancillary data if
+	 * application wanted to know the MTU value.
+	 * NOTE: we notify disconnected sockets, because some udp
+	 * applications keep sending sockets disconnected.
+	 * NOTE: our implementation doesn't notify connected sockets that has
+	 * foreign address that is different than given destination addresses
+	 * (this is permitted by RFC 3542).
+	 */
+	if ((inp->inp_flags & IN6P_MTU) == 0 || (
+	    !IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_faddr) &&
+	    !IN6_ARE_ADDR_EQUAL(&inp->in6p_faddr, &dst->sin6_addr)))
 		return;
 
-#ifdef DIAGNOSTIC
-	if (so == NULL)		/* I believe this is impossible */
-		panic("ip6_notify_pmtu: socket is NULL");
-#endif
-
-	bzero(&mtuctl, sizeof(mtuctl));	/* zero-clear for safety */
-	mtuctl.ip6m_mtu = *mtu;
+	mtuctl.ip6m_mtu = mtu;
 	mtuctl.ip6m_addr = *dst;
 	if (sa6_recoverscope(&mtuctl.ip6m_addr))
 		return;
@@ -1620,14 +1623,13 @@ ip6_notify_pmtu(struct inpcb *in6p, struct sockaddr_in6 *dst, u_int32_t *mtu)
 	    IPV6_PATHMTU, IPPROTO_IPV6)) == NULL)
 		return;
 
+	so =  inp->inp_socket;
 	if (sbappendaddr(&so->so_rcv, (struct sockaddr *)dst, NULL, m_mtu)
 	    == 0) {
 		m_freem(m_mtu);
 		/* XXX: should count statistics */
 	} else
 		sorwakeup(so);
-
-	return;
 }
 
 #ifdef PULLDOWN_TEST
@@ -1660,22 +1662,12 @@ ip6_pullexthdr(struct mbuf *m, size_t off, int nxt)
 	else
 		elen = (ip6e.ip6e_len + 1) << 3;
 
-	MGET(n, M_DONTWAIT, MT_DATA);
-	if (n && elen >= MLEN) {
-		MCLGET(n, M_DONTWAIT);
-		if ((n->m_flags & M_EXT) == 0) {
-			m_free(n);
-			n = NULL;
-		}
-	}
-	if (!n)
+	if (elen > MLEN)
+		n = m_getcl(M_NOWAIT, MT_DATA, 0);
+	else
+		n = m_get(M_NOWAIT, MT_DATA);
+	if (n == NULL)
 		return NULL;
-
-	n->m_len = 0;
-	if (elen >= M_TRAILINGSPACE(n)) {
-		m_free(n);
-		return NULL;
-	}
 
 	m_copydata(m, off, elen, mtod(n, caddr_t));
 	n->m_len = elen;
@@ -1686,49 +1678,39 @@ ip6_pullexthdr(struct mbuf *m, size_t off, int nxt)
 /*
  * Get pointer to the previous header followed by the header
  * currently processed.
- * XXX: This function supposes that
- *	M includes all headers,
- *	the next header field and the header length field of each header
- *	are valid, and
- *	the sum of each header length equals to OFF.
- * Because of these assumptions, this function must be called very
- * carefully. Moreover, it will not be used in the near future when
- * we develop `neater' mechanism to process extension headers.
  */
-char *
+int
 ip6_get_prevhdr(struct mbuf *m, int off)
 {
-	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
+	struct ip6_ext ip6e;
+	struct ip6_hdr *ip6;
+	int len, nlen, nxt;
 
 	if (off == sizeof(struct ip6_hdr))
-		return (&ip6->ip6_nxt);
-	else {
-		int len, nxt;
-		struct ip6_ext *ip6e = NULL;
+		return (offsetof(struct ip6_hdr, ip6_nxt));
+	if (off < sizeof(struct ip6_hdr))
+		panic("%s: off < sizeof(struct ip6_hdr)", __func__);
 
-		nxt = ip6->ip6_nxt;
-		len = sizeof(struct ip6_hdr);
-		while (len < off) {
-			ip6e = (struct ip6_ext *)(mtod(m, caddr_t) + len);
-
-			switch (nxt) {
-			case IPPROTO_FRAGMENT:
-				len += sizeof(struct ip6_frag);
-				break;
-			case IPPROTO_AH:
-				len += (ip6e->ip6e_len + 2) << 2;
-				break;
-			default:
-				len += (ip6e->ip6e_len + 1) << 3;
-				break;
-			}
-			nxt = ip6e->ip6e_nxt;
+	ip6 = mtod(m, struct ip6_hdr *);
+	nxt = ip6->ip6_nxt;
+	len = sizeof(struct ip6_hdr);
+	nlen = 0;
+	while (len < off) {
+		m_copydata(m, len, sizeof(ip6e), (caddr_t)&ip6e);
+		switch (nxt) {
+		case IPPROTO_FRAGMENT:
+			nlen = sizeof(struct ip6_frag);
+			break;
+		case IPPROTO_AH:
+			nlen = (ip6e.ip6e_len + 2) << 2;
+			break;
+		default:
+			nlen = (ip6e.ip6e_len + 1) << 3;
 		}
-		if (ip6e)
-			return (&ip6e->ip6e_nxt);
-		else
-			return NULL;
+		len += nlen;
+		nxt = ip6e.ip6e_nxt;
 	}
+	return (len - nlen);
 }
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008
  *	Swinburne University of Technology, Melbourne, Australia.
@@ -47,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/cc/cc.c 220560 2011-04-12 08:13:18Z lstewart $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc.c 273847 2014-10-30 08:04:48Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -92,33 +93,33 @@ cc_default_algo(SYSCTL_HANDLER_ARGS)
 {
 	char default_cc[TCP_CA_NAME_MAX];
 	struct cc_algo *funcs;
-	int err, found;
+	int error;
 
-	err = found = 0;
+	/* Get the current default: */
+	CC_LIST_RLOCK();
+	strlcpy(default_cc, CC_DEFAULT()->name, sizeof(default_cc));
+	CC_LIST_RUNLOCK();
 
-	if (req->newptr == NULL) {
-		/* Just print the current default. */
-		CC_LIST_RLOCK();
-		strlcpy(default_cc, CC_DEFAULT()->name, TCP_CA_NAME_MAX);
-		CC_LIST_RUNLOCK();
-		err = sysctl_handle_string(oidp, default_cc, 1, req);
-	} else {
-		/* Find algo with specified name and set it to default. */
-		CC_LIST_RLOCK();
-		STAILQ_FOREACH(funcs, &cc_list, entries) {
-			if (strncmp((char *)req->newptr, funcs->name,
-			    TCP_CA_NAME_MAX) == 0) {
-				found = 1;
-				V_default_cc_ptr = funcs;
-			}
-		}
-		CC_LIST_RUNLOCK();
+	error = sysctl_handle_string(oidp, default_cc, sizeof(default_cc), req);
 
-		if (!found)
-			err = ESRCH;
+	/* Check for error or no change */
+	if (error != 0 || req->newptr == NULL)
+		goto done;
+
+	error = ESRCH;
+
+	/* Find algo with specified name and set it to default. */
+	CC_LIST_RLOCK();
+	STAILQ_FOREACH(funcs, &cc_list, entries) {
+		if (strncmp(default_cc, funcs->name, sizeof(default_cc)))
+			continue;
+		V_default_cc_ptr = funcs;
+		error = 0;
+		break;
 	}
-
-	return (err);
+	CC_LIST_RUNLOCK();
+done:
+	return (error);
 }
 
 /*
@@ -166,7 +167,7 @@ cc_list_available(SYSCTL_HANDLER_ARGS)
 
 	if (!err) {
 		sbuf_finish(s);
-		err = sysctl_handle_string(oidp, sbuf_data(s), 1, req);
+		err = sysctl_handle_string(oidp, sbuf_data(s), 0, req);
 	}
 
 	sbuf_delete(s);

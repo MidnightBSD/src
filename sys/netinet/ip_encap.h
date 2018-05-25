@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/9/sys/netinet/ip_encap.h 139823 2005-01-07 01:45:51Z imp $	*/
+/*	$FreeBSD: stable/10/sys/netinet/ip_encap.h 139823 2005-01-07 01:45:51Z imp $	*/
 /*	$KAME: ip_encap.h,v 1.7 2000/03/25 07:23:37 sumikawa Exp $	*/
 
 /*-

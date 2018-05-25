@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_bsd_addr.c 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_bsd_addr.c 296052 2016-02-25 18:46:06Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -97,22 +97,15 @@ sctp_iterator_thread(void *v SCTP_UNUSED)
 void
 sctp_startup_iterator(void)
 {
-	static int called = 0;
-	int ret;
-
-	if (called) {
+	if (sctp_it_ctl.thread_proc) {
 		/* You only get one */
 		return;
 	}
-	/* init the iterator head */
-	called = 1;
-	sctp_it_ctl.iterator_running = 0;
-	sctp_it_ctl.iterator_flags = 0;
-	sctp_it_ctl.cur_it = NULL;
+	/* Initialize global locks here, thus only once. */
 	SCTP_ITERATOR_LOCK_INIT();
 	SCTP_IPI_ITERATOR_WQ_INIT();
 	TAILQ_INIT(&sctp_it_ctl.iteratorhead);
-	ret = kproc_create(sctp_iterator_thread,
+	kproc_create(sctp_iterator_thread,
 	    (void *)NULL,
 	    &sctp_it_ctl.thread_proc,
 	    RFPROC,
@@ -153,12 +146,12 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 
 
 static uint32_t
-sctp_is_desired_interface_type(struct ifaddr *ifa)
+sctp_is_desired_interface_type(struct ifnet *ifn)
 {
 	int result;
 
 	/* check the interface type to see if it's one we care about */
-	switch (ifa->ifa_ifp->if_type) {
+	switch (ifn->if_type) {
 	case IFT_ETHER:
 	case IFT_ISO88023:
 	case IFT_ISO88024:
@@ -217,6 +210,10 @@ sctp_init_ifns_for_vrf(int vrfid)
 
 	IFNET_RLOCK();
 	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(ifnet), if_list) {
+		if (sctp_is_desired_interface_type(ifn) == 0) {
+			/* non desired type */
+			continue;
+		}
 		IF_ADDR_RLOCK(ifn);
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if (ifa->ifa_addr == NULL) {
@@ -239,10 +236,6 @@ sctp_init_ifns_for_vrf(int vrfid)
 				break;
 #endif
 			default:
-				continue;
-			}
-			if (sctp_is_desired_interface_type(ifa) == 0) {
-				/* non desired type */
 				continue;
 			}
 			switch (ifa->ifa_addr->sa_family) {
@@ -301,6 +294,9 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
 	uint32_t ifa_flags = 0;
 
+	if (SCTP_BASE_VAR(sctp_pcb_initialized) == 0) {
+		return;
+	}
 	/*
 	 * BSD only has one VRF, if this changes we will need to hook in the
 	 * right things here to get the id to pass to the address managment
@@ -316,6 +312,10 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		return;
 	}
 	if (ifa->ifa_addr == NULL) {
+		return;
+	}
+	if (sctp_is_desired_interface_type(ifa->ifa_ifp) == 0) {
+		/* non desired type */
 		return;
 	}
 	switch (ifa->ifa_addr->sa_family) {
@@ -339,22 +339,16 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		/* non inet/inet6 skip */
 		return;
 	}
-
-	if (sctp_is_desired_interface_type(ifa) == 0) {
-		/* non desired type */
-		return;
-	}
 	if (cmd == RTM_ADD) {
 		(void)sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
-		    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
-		    ifa->ifa_ifp->if_xname,
+		    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type, ifa->ifa_ifp->if_xname,
 		    (void *)ifa, ifa->ifa_addr, ifa_flags, 1);
 	} else {
 
 		sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr,
 		    ifa->ifa_ifp->if_index,
-		    ifa->ifa_ifp->if_xname
-		    );
+		    ifa->ifa_ifp->if_xname);
+
 		/*
 		 * We don't bump refcount here so when it completes the
 		 * final delete will happen.
@@ -412,9 +406,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	}
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			sctp_log_mb(m, SCTP_MBUF_IALLOC);
-		}
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
 	return (m);
@@ -423,11 +415,12 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 
 #ifdef SCTP_PACKET_LOGGING
 void
-sctp_packet_log(struct mbuf *m, int length)
+sctp_packet_log(struct mbuf *m)
 {
 	int *lenat, thisone;
 	void *copyto;
 	uint32_t *tick_tock;
+	int length;
 	int total_len;
 	int grabbed_lock = 0;
 	int value, newval, thisend, thisbegin;
@@ -437,6 +430,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	 * (value) -ticks of log      (ticks) o -ip packet o -as logged -
 	 * where this started (thisbegin) x <--end points here
 	 */
+	length = SCTP_HEADER_LEN(m);
 	total_len = SCTP_SIZE32((length + (4 * sizeof(int))));
 	/* Log a packet to the buffer. */
 	if (total_len > SCTP_PACKET_LOG_SIZE) {

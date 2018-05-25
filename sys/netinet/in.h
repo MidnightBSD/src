@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: stable/9/sys/netinet/in.h 239430 2012-08-20 14:42:29Z emaste $
+ * $FreeBSD: stable/10/sys/netinet/in.h 273841 2014-10-29 23:10:48Z jilles $
  */
 
 #ifndef _NETINET_IN_H_
@@ -101,7 +101,7 @@ struct sockaddr_in {
 	char	sin_zero[8];
 };
 
-#if !defined(_KERNEL) && __BSD_VISIBLE
+#if !defined(_KERNEL) && __POSIX_VISIBLE >= 200112
 
 #ifndef _BYTEORDER_PROTOTYPED
 #define	_BYTEORDER_PROTOTYPED
@@ -121,7 +121,7 @@ __END_DECLS
 #define	ntohs(x)	__ntohs(x)
 #endif
 
-#endif /* !_KERNEL && __BSD_VISIBLE */
+#endif /* !_KERNEL && __POSIX_VISIBLE >= 200112 */
 
 #if __POSIX_VISIBLE >= 200112
 #define	IPPROTO_IPV6		41		/* IP6 header */
@@ -238,12 +238,17 @@ __END_DECLS
 #define	IPPROTO_IPCOMP		108		/* payload compression (IPComp) */
 #define	IPPROTO_SCTP		132		/* SCTP */
 #define	IPPROTO_MH		135		/* IPv6 Mobility Header */
+#define	IPPROTO_UDPLITE		136		/* UDP-Lite */
+#define	IPPROTO_HIP		139		/* IP6 Host Identity Protocol */
+#define	IPPROTO_SHIM6		140		/* IP6 Shim6 Protocol */
 /* 101-254: Partly Unassigned */
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_CARP		112		/* CARP */
 #define	IPPROTO_PGM		113		/* PGM */
 #define	IPPROTO_MPLS		137		/* MPLS-in-IP */
 #define	IPPROTO_PFSYNC		240		/* PFSYNC */
+#define	IPPROTO_RESERVED_253	253		/* Reserved */
+#define	IPPROTO_RESERVED_254	254		/* Reserved */
 /* 255: Reserved */
 /* BSD Private, local use, namespace incursion, no longer used */
 #define	IPPROTO_OLD_DIVERT	254		/* OLD divert pseudo-proto */
@@ -700,24 +705,6 @@ int	getsourcefilter(int, uint32_t, struct sockaddr *, socklen_t,
 #define	IPCTL_GIF_TTL		16	/* default TTL for gif encap packet */
 #define	IPCTL_MAXID		17
 
-#define	IPCTL_NAMES { \
-	{ 0, 0 }, \
-	{ "forwarding", CTLTYPE_INT }, \
-	{ "redirect", CTLTYPE_INT }, \
-	{ "ttl", CTLTYPE_INT }, \
-	{ "mtu", CTLTYPE_INT }, \
-	{ "rtexpire", CTLTYPE_INT }, \
-	{ "rtminexpire", CTLTYPE_INT }, \
-	{ "rtmaxcache", CTLTYPE_INT }, \
-	{ "sourceroute", CTLTYPE_INT }, \
-	{ "directed-broadcast", CTLTYPE_INT }, \
-	{ "intr-queue-maxlen", CTLTYPE_INT }, \
-	{ "intr-queue-drops", CTLTYPE_INT }, \
-	{ "stats", CTLTYPE_STRUCT }, \
-	{ "accept_sourceroute", CTLTYPE_INT }, \
-	{ "fastforwarding", CTLTYPE_INT }, \
-}
-
 #endif /* __BSD_VISIBLE */
 
 #ifdef _KERNEL
@@ -742,33 +729,6 @@ void	 in_ifdetach(struct ifnet *);
 #define	satosin(sa)	((struct sockaddr_in *)(sa))
 #define	sintosa(sin)	((struct sockaddr *)(sin))
 #define	ifatoia(ifa)	((struct in_ifaddr *)(ifa))
-
-/*
- * Historically, BSD keeps ip_len and ip_off in host format
- * when doing layer 3 processing, and this often requires
- * to translate the format back and forth.
- * To make the process explicit, we define a couple of macros
- * that also take into account the fact that at some point
- * we may want to keep those fields always in net format.
- */
-
-#if (BYTE_ORDER == BIG_ENDIAN) || defined(HAVE_NET_IPLEN)
-#define SET_NET_IPLEN(p)	do {} while (0)
-#define SET_HOST_IPLEN(p)	do {} while (0)
-#else
-#define SET_NET_IPLEN(p)	do {		\
-	struct ip *h_ip = (p);			\
-	h_ip->ip_len = htons(h_ip->ip_len);	\
-	h_ip->ip_off = htons(h_ip->ip_off);	\
-	} while (0)
-
-#define SET_HOST_IPLEN(p)	do {		\
-	struct ip *h_ip = (p);			\
-	h_ip->ip_len = ntohs(h_ip->ip_len);	\
-	h_ip->ip_off = ntohs(h_ip->ip_off);	\
-	} while (0)
-#endif /* !HAVE_NET_IPLEN */
-
 #endif /* _KERNEL */
 
 /* INET6 stuff */

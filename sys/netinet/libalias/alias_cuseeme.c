@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Brian Somers <brian@Awfulhak.org>
  *                    with the aid of code written by
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_cuseeme.c 190841 2009-04-08 11:56:49Z piso $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_cuseeme.c 190841 2009-04-08 11:56:49Z piso $");
 
 #ifdef _KERNEL
 #include <sys/param.h>

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_ss_functions.c 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_ss_functions.c 235828 2012-05-23 11:26:28Z tuexen $");
 
 #include <netinet/sctp_pcb.h>
 

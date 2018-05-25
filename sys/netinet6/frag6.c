@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/frag6.c 238479 2012-07-15 11:27:15Z bz $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/frag6.c 329158 2018-02-12 13:52:58Z ae $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -223,9 +223,8 @@ frag6_input(struct mbuf **mp, int *offp, int proto)
 	offset += sizeof(struct ip6_frag);
 
 	/*
-	 * XXX-BZ RFC XXXX (draft-gont-6man-ipv6-atomic-fragments)
-	 * Handle "atomic" fragments (offset and m bit set to 0) upfront,
-	 * unrelated to any reassembly.  Just skip the fragment header.
+	 * RFC 6946: Handle "atomic" fragments (offset and m bit set to 0)
+	 * upfront, unrelated to any reassembly.  Just skip the fragment header.
 	 */
 	if ((ip6f->ip6f_offlg & ~IP6F_RESERVED_MASK) == 0) {
 		/* XXX-BZ we want dedicated counters for this. */
@@ -535,6 +534,11 @@ insert:
 	af6 = ip6af->ip6af_down;
 	frag6_deq(ip6af);
 	while (af6 != (struct ip6asfrag *)q6) {
+		m->m_pkthdr.csum_flags &=
+		    IP6_REASS_MBUF(af6)->m_pkthdr.csum_flags;
+		m->m_pkthdr.csum_data +=
+		    IP6_REASS_MBUF(af6)->m_pkthdr.csum_data;
+
 		af6dwn = af6->ip6af_down;
 		frag6_deq(af6);
 		while (t->m_next)
@@ -544,6 +548,10 @@ insert:
 		free(af6, M_FTABLE);
 		af6 = af6dwn;
 	}
+
+	while (m->m_pkthdr.csum_data & 0xffff0000)
+		m->m_pkthdr.csum_data = (m->m_pkthdr.csum_data & 0xffff) +
+		    (m->m_pkthdr.csum_data >> 16);
 
 	/* adjust offset to point where the original next header starts */
 	offset = ip6af->ip6af_offset - sizeof(struct ip6_frag);
@@ -557,36 +565,23 @@ insert:
 	*q6->ip6q_nxtp = (u_char)(nxt & 0xff);
 #endif
 
-	/* Delete frag6 header */
-	if (m->m_len >= offset + sizeof(struct ip6_frag)) {
-		/* This is the only possible case with !PULLDOWN_TEST */
-		ovbcopy((caddr_t)ip6, (caddr_t)ip6 + sizeof(struct ip6_frag),
-		    offset);
-		m->m_data += sizeof(struct ip6_frag);
-		m->m_len -= sizeof(struct ip6_frag);
-	} else {
-		/* this comes with no copy if the boundary is on cluster */
-		if ((t = m_split(m, offset, M_DONTWAIT)) == NULL) {
-			frag6_remque(q6);
-			V_frag6_nfrags -= q6->ip6q_nfrag;
+	if (ip6_deletefraghdr(m, offset, M_NOWAIT) != 0) {
+		frag6_remque(q6);
+		V_frag6_nfrags -= q6->ip6q_nfrag;
 #ifdef MAC
-			mac_ip6q_destroy(q6);
+		mac_ip6q_destroy(q6);
 #endif
-			free(q6, M_FTABLE);
-			V_frag6_nfragpackets--;
-			goto dropfrag;
-		}
-		m_adj(t, sizeof(struct ip6_frag));
-		m_cat(m, t);
+		free(q6, M_FTABLE);
+		V_frag6_nfragpackets--;
+
+		goto dropfrag;
 	}
 
 	/*
 	 * Store NXT to the original.
 	 */
-	{
-		char *prvnxtp = ip6_get_prevhdr(m, offset); /* XXX */
-		*prvnxtp = nxt;
-	}
+	m_copyback(m, ip6_get_prevhdr(m, offset), sizeof(uint8_t),
+	    (caddr_t)&nxt);
 
 	frag6_remque(q6);
 	V_frag6_nfrags -= q6->ip6q_nfrag;
@@ -790,4 +785,28 @@ frag6_drain(void)
 	}
 	IP6Q_UNLOCK();
 	VNET_LIST_RUNLOCK_NOSLEEP();
+}
+
+int
+ip6_deletefraghdr(struct mbuf *m, int offset, int wait)
+{
+	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
+	struct mbuf *t;
+
+	/* Delete frag6 header. */
+	if (m->m_len >= offset + sizeof(struct ip6_frag)) {
+		/* This is the only possible case with !PULLDOWN_TEST. */
+		bcopy(ip6, (char *)ip6 + sizeof(struct ip6_frag),
+		    offset);
+		m->m_data += sizeof(struct ip6_frag);
+		m->m_len -= sizeof(struct ip6_frag);
+	} else {
+		/* This comes with no copy if the boundary is on cluster. */
+		if ((t = m_split(m, offset, wait)) == NULL)
+			return (ENOMEM);
+		m_adj(t, sizeof(struct ip6_frag));
+		m_cat(m, t);
+	}
+
+	return (0);
 }

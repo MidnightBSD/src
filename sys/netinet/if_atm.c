@@ -33,7 +33,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/if_atm.c 216466 2010-12-15 22:58:45Z bz $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/if_atm.c 249925 2013-04-26 12:50:32Z glebius $");
 
 /*
  * IP <=> ATM address resolution.
@@ -318,7 +318,7 @@ failed:
  *   but this is enough for PVCs entered via the "route" command.
  */
 int
-atmresolve(struct rtentry *rt, struct mbuf *m, struct sockaddr *dst,
+atmresolve(struct rtentry *rt, struct mbuf *m, const struct sockaddr *dst,
     struct atm_pseudohdr *desten)
 {
 	struct sockaddr_dl *sdl;
@@ -330,7 +330,8 @@ atmresolve(struct rtentry *rt, struct mbuf *m, struct sockaddr *dst,
 	}
 
 	if (rt == NULL) {
-		rt = RTALLOC1(dst, 0); /* link level on table 0 XXX MRT */
+		/* link level on table 0 XXX MRT */
+		rt = RTALLOC1(__DECONST(struct sockaddr *, dst), 0);
 		if (rt == NULL)
 			goto bad;	/* failed */
 		RT_REMREF(rt);		/* don't keep LL references */

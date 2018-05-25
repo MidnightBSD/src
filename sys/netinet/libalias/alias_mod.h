@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Paolo Pisati <piso@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet/libalias/alias_mod.h 190841 2009-04-08 11:56:49Z piso $
+ * $FreeBSD: stable/10/sys/netinet/libalias/alias_mod.h 190841 2009-04-08 11:56:49Z piso $
  */
 
 /*

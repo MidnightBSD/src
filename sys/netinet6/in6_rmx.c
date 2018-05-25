@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_rmx.c 242646 2012-11-06 01:18:53Z melifaro $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/in6_rmx.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -136,8 +136,8 @@ in6_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
 		}
 	}
 
-	if (!rt->rt_rmx.rmx_mtu && rt->rt_ifp)
-		rt->rt_rmx.rmx_mtu = IN6_LINKMTU(rt->rt_ifp);
+	if (!rt->rt_mtu && rt->rt_ifp)
+		rt->rt_mtu = IN6_LINKMTU(rt->rt_ifp);
 
 	ret = rn_addroute(v_arg, n_arg, head, treenodes);
 	if (ret == NULL) {
@@ -207,12 +207,11 @@ in6_mtuexpire(struct radix_node *rn, void *rock)
 	if (!rt)
 		panic("rt == NULL in in6_mtuexpire");
 
-	if (rt->rt_rmx.rmx_expire && !(rt->rt_flags & RTF_PROBEMTU)) {
-		if (rt->rt_rmx.rmx_expire <= time_uptime) {
+	if (rt->rt_expire && !(rt->rt_flags & RTF_PROBEMTU)) {
+		if (rt->rt_expire <= time_uptime) {
 			rt->rt_flags |= RTF_PROBEMTU;
 		} else {
-			ap->nextstop = lmin(ap->nextstop,
-					rt->rt_rmx.rmx_expire);
+			ap->nextstop = lmin(ap->nextstop, rt->rt_expire);
 		}
 	}
 
@@ -278,7 +277,7 @@ in6_inithead(void **head, int off)
 	rnh->rnh_addaddr = in6_addroute;
 
 	if (V__in6_rt_was_here == 0) {
-		callout_init(&V_rtq_mtutimer, CALLOUT_MPSAFE);
+		callout_init(&V_rtq_mtutimer, 1);
 		in6_mtutimo(curvnet);	/* kick off timeout first time */
 		V__in6_rt_was_here = 1;
 	}
@@ -292,7 +291,7 @@ in6_detachhead(void **head, int off)
 {
 
 	callout_drain(&V_rtq_mtutimer);
-	return (1);
+	return (rn_detachhead(head));
 }
 #endif
 

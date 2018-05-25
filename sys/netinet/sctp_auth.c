@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_auth.c 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_auth.c 294174 2016-01-16 17:56:06Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp.h>
@@ -134,11 +134,6 @@ sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
 	if (list == NULL)
 		return (-1);
 
-	/* is chunk restricted? */
-	if ((chunk == SCTP_ASCONF) ||
-	    (chunk == SCTP_ASCONF_ACK)) {
-		return (-1);
-	}
 	if (list->chunks[chunk] == 1) {
 		list->chunks[chunk] = 0;
 		list->num_chunks--;
@@ -156,16 +151,6 @@ sctp_auth_get_chklist_size(const sctp_auth_chklist_t * list)
 		return (0);
 	else
 		return (list->num_chunks);
-}
-
-/*
- * set the default list of chunks requiring AUTH
- */
-void
-sctp_auth_set_default_chunks(sctp_auth_chklist_t * list)
-{
-	(void)sctp_auth_add_chunk(SCTP_ASCONF, list);
-	(void)sctp_auth_add_chunk(SCTP_ASCONF_ACK, list);
 }
 
 /*
@@ -334,10 +319,6 @@ sctp_generate_random_key(uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
-	/* validate keylen */
-	if (keylen > SCTP_AUTH_RANDOM_SIZE_MAX)
-		keylen = SCTP_AUTH_RANDOM_SIZE_MAX;
-
 	new_key = sctp_alloc_key(keylen);
 	if (new_key == NULL) {
 		/* out of memory */
@@ -375,7 +356,7 @@ sctp_compare_key(sctp_key_t * key1, sctp_key_t * key2)
 	uint32_t i;
 	uint32_t key1len, key2len;
 	uint8_t *key_1, *key_2;
-	uint8_t temp[SCTP_AUTH_RANDOM_SIZE_MAX];
+	uint8_t val1, val2;
 
 	/* sanity/length check */
 	key1len = sctp_get_keylen(key1);
@@ -387,38 +368,24 @@ sctp_compare_key(sctp_key_t * key1, sctp_key_t * key2)
 	else if (key2len == 0)
 		return (1);
 
-	if (key1len != key2len) {
-		if (key1len >= key2len)
-			maxlen = key1len;
-		else
-			maxlen = key2len;
-		bzero(temp, maxlen);
-		if (key1len < maxlen) {
-			/* prepend zeroes to key1 */
-			bcopy(key1->key, temp + (maxlen - key1len), key1len);
-			key_1 = temp;
-			key_2 = key2->key;
-		} else {
-			/* prepend zeroes to key2 */
-			bcopy(key2->key, temp + (maxlen - key2len), key2len);
-			key_1 = key1->key;
-			key_2 = temp;
-		}
+	if (key1len < key2len) {
+		maxlen = key2len;
 	} else {
 		maxlen = key1len;
-		key_1 = key1->key;
-		key_2 = key2->key;
 	}
-
+	key_1 = key1->key;
+	key_2 = key2->key;
+	/* check for numeric equality */
 	for (i = 0; i < maxlen; i++) {
-		if (*key_1 > *key_2)
+		/* left-pad with zeros */
+		val1 = (i < (maxlen - key1len)) ? 0 : *(key_1++);
+		val2 = (i < (maxlen - key2len)) ? 0 : *(key_2++);
+		if (val1 > val2) {
 			return (1);
-		else if (*key_1 < *key_2)
+		} else if (val1 < val2) {
 			return (-1);
-		key_1++;
-		key_2++;
+		}
 	}
-
 	/* keys are equal value, so check lengths */
 	if (key1len == key2len)
 		return (0);
@@ -592,7 +559,7 @@ sctp_auth_key_acquire(struct sctp_tcb *stcb, uint16_t key_id)
 		atomic_add_int(&skey->refcount, 1);
 		SCTPDBG(SCTP_DEBUG_AUTH2,
 		    "%s: stcb %p key %u refcount acquire to %d\n",
-		    __FUNCTION__, stcb, key_id, skey->refcount);
+		    __func__, (void *)stcb, key_id, skey->refcount);
 	}
 }
 
@@ -610,20 +577,20 @@ sctp_auth_key_release(struct sctp_tcb *stcb, uint16_t key_id, int so_locked
 
 	/* decrement the ref count */
 	if (skey) {
-		sctp_free_sharedkey(skey);
 		SCTPDBG(SCTP_DEBUG_AUTH2,
 		    "%s: stcb %p key %u refcount release to %d\n",
-		    __FUNCTION__, stcb, key_id, skey->refcount);
+		    __func__, (void *)stcb, key_id, skey->refcount);
 
 		/* see if a notification should be generated */
-		if ((skey->refcount <= 1) && (skey->deactivated)) {
+		if ((skey->refcount <= 2) && (skey->deactivated)) {
 			/* notify ULP that key is no longer used */
 			sctp_ulp_notify(SCTP_NOTIFY_AUTH_FREE_KEY, stcb,
 			    key_id, 0, so_locked);
 			SCTPDBG(SCTP_DEBUG_AUTH2,
 			    "%s: stcb %p key %u no longer used, %d\n",
-			    __FUNCTION__, stcb, key_id, skey->refcount);
+			    __func__, (void *)stcb, key_id, skey->refcount);
 		}
+		sctp_free_sharedkey(skey);
 	}
 }
 
@@ -665,7 +632,7 @@ sctp_copy_skeylist(const struct sctp_keyhead *src, struct sctp_keyhead *dest)
 
 
 sctp_hmaclist_t *
-sctp_alloc_hmaclist(uint8_t num_hmacs)
+sctp_alloc_hmaclist(uint16_t num_hmacs)
 {
 	sctp_hmaclist_t *new_list;
 	int alloc_size;
@@ -704,15 +671,7 @@ sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id)
 		return (-1);
 	}
 	if ((hmac_id != SCTP_AUTH_HMAC_ID_SHA1) &&
-#ifdef HAVE_SHA224
-	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA224) &&
-#endif
-#ifdef HAVE_SHA2
-	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA256) &&
-	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA384) &&
-	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA512) &&
-#endif
-	    1) {
+	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA256)) {
 		return (-1);
 	}
 	/* Now is it already in the list */
@@ -755,8 +714,9 @@ sctp_default_supported_hmaclist(void)
 	new_list = sctp_alloc_hmaclist(2);
 	if (new_list == NULL)
 		return (NULL);
-	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA1);
+	/* We prefer SHA256, so list it first */
 	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA256);
+	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA1);
 	return (new_list);
 }
 
@@ -812,19 +772,13 @@ int
 sctp_verify_hmac_param(struct sctp_auth_hmac_algo *hmacs, uint32_t num_hmacs)
 {
 	uint32_t i;
-	uint16_t hmac_id;
-	uint32_t sha1_supported = 0;
 
 	for (i = 0; i < num_hmacs; i++) {
-		hmac_id = ntohs(hmacs->hmac_ids[i]);
-		if (hmac_id == SCTP_AUTH_HMAC_ID_SHA1)
-			sha1_supported = 1;
+		if (ntohs(hmacs->hmac_ids[i]) == SCTP_AUTH_HMAC_ID_SHA1) {
+			return (0);
+		}
 	}
-	/* all HMAC id's are supported */
-	if (sha1_supported == 0)
-		return (-1);
-	else
-		return (0);
+	return (-1);
 }
 
 sctp_authinfo_t *
@@ -878,18 +832,8 @@ sctp_get_hmac_digest_len(uint16_t hmac_algo)
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
 		return (SCTP_AUTH_DIGEST_LEN_SHA1);
-#ifdef HAVE_SHA224
-	case SCTP_AUTH_HMAC_ID_SHA224:
-		return (SCTP_AUTH_DIGEST_LEN_SHA224);
-#endif
-#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
 		return (SCTP_AUTH_DIGEST_LEN_SHA256);
-	case SCTP_AUTH_HMAC_ID_SHA384:
-		return (SCTP_AUTH_DIGEST_LEN_SHA384);
-	case SCTP_AUTH_HMAC_ID_SHA512:
-		return (SCTP_AUTH_DIGEST_LEN_SHA512);
-#endif
 	default:
 		/* unknown HMAC algorithm: can't do anything */
 		return (0);
@@ -901,17 +845,9 @@ sctp_get_hmac_block_len(uint16_t hmac_algo)
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
-#ifdef HAVE_SHA224
-	case SCTP_AUTH_HMAC_ID_SHA224:
-#endif
 		return (64);
-#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
 		return (64);
-	case SCTP_AUTH_HMAC_ID_SHA384:
-	case SCTP_AUTH_HMAC_ID_SHA512:
-		return (128);
-#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -924,23 +860,11 @@ sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t * ctx)
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
-		SHA1_Init(&ctx->sha1);
+		SCTP_SHA1_INIT(&ctx->sha1);
 		break;
-#ifdef HAVE_SHA224
-	case SCTP_AUTH_HMAC_ID_SHA224:
-		break;
-#endif
-#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
-		SHA256_Init(&ctx->sha256);
+		SCTP_SHA256_INIT(&ctx->sha256);
 		break;
-	case SCTP_AUTH_HMAC_ID_SHA384:
-		SHA384_Init(&ctx->sha384);
-		break;
-	case SCTP_AUTH_HMAC_ID_SHA512:
-		SHA512_Init(&ctx->sha512);
-		break;
-#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -954,23 +878,11 @@ sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t * ctx,
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
-		SHA1_Update(&ctx->sha1, text, textlen);
+		SCTP_SHA1_UPDATE(&ctx->sha1, text, textlen);
 		break;
-#ifdef HAVE_SHA224
-	case SCTP_AUTH_HMAC_ID_SHA224:
-		break;
-#endif
-#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
-		SHA256_Update(&ctx->sha256, text, textlen);
+		SCTP_SHA256_UPDATE(&ctx->sha256, text, textlen);
 		break;
-	case SCTP_AUTH_HMAC_ID_SHA384:
-		SHA384_Update(&ctx->sha384, text, textlen);
-		break;
-	case SCTP_AUTH_HMAC_ID_SHA512:
-		SHA512_Update(&ctx->sha512, text, textlen);
-		break;
-#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -984,24 +896,11 @@ sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t * ctx,
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
-		SHA1_Final(digest, &ctx->sha1);
+		SCTP_SHA1_FINAL(digest, &ctx->sha1);
 		break;
-#ifdef HAVE_SHA224
-	case SCTP_AUTH_HMAC_ID_SHA224:
-		break;
-#endif
-#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
-		SHA256_Final(digest, &ctx->sha256);
+		SCTP_SHA256_FINAL(digest, &ctx->sha256);
 		break;
-	case SCTP_AUTH_HMAC_ID_SHA384:
-		/* SHA384 is truncated SHA512 */
-		SHA384_Final(digest, &ctx->sha384);
-		break;
-	case SCTP_AUTH_HMAC_ID_SHA512:
-		SHA512_Final(digest, &ctx->sha512);
-		break;
-#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -1540,8 +1439,8 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 			p_random = (struct sctp_auth_random *)phdr;
 			random_len = plen - sizeof(*p_random);
 		} else if (ptype == SCTP_HMAC_LIST) {
-			int num_hmacs;
-			int i;
+			uint16_t num_hmacs;
+			uint16_t i;
 
 			if (plen > sizeof(hmacs_store))
 				break;
@@ -1753,8 +1652,8 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 
 	/* is the indicated HMAC supported? */
 	if (!sctp_auth_is_supported_hmac(stcb->asoc.local_hmacs, hmac_id)) {
-		struct mbuf *m_err;
-		struct sctp_auth_invalid_hmac *err;
+		struct mbuf *op_err;
+		struct sctp_error_auth_invalid_hmac *cause;
 
 		SCTP_STAT_INCR(sctps_recvivalhmacid);
 		SCTPDBG(SCTP_DEBUG_AUTH1,
@@ -1764,20 +1663,19 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		 * report this in an Error Chunk: Unsupported HMAC
 		 * Identifier
 		 */
-		m_err = sctp_get_mbuf_for_msg(sizeof(*err), 0, M_DONTWAIT,
-		    1, MT_HEADER);
-		if (m_err != NULL) {
+		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_error_auth_invalid_hmac),
+		    0, M_NOWAIT, 1, MT_HEADER);
+		if (op_err != NULL) {
 			/* pre-reserve some space */
-			SCTP_BUF_RESV_UF(m_err, sizeof(struct sctp_chunkhdr));
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
 			/* fill in the error */
-			err = mtod(m_err, struct sctp_auth_invalid_hmac *);
-			bzero(err, sizeof(*err));
-			err->ph.param_type = htons(SCTP_CAUSE_UNSUPPORTED_HMACID);
-			err->ph.param_length = htons(sizeof(*err));
-			err->hmac_id = ntohs(hmac_id);
-			SCTP_BUF_LEN(m_err) = sizeof(*err);
+			cause = mtod(op_err, struct sctp_error_auth_invalid_hmac *);
+			cause->cause.code = htons(SCTP_CAUSE_UNSUPPORTED_HMACID);
+			cause->cause.length = htons(sizeof(struct sctp_error_auth_invalid_hmac));
+			cause->hmac_id = ntohs(hmac_id);
+			SCTP_BUF_LEN(op_err) = sizeof(struct sctp_error_auth_invalid_hmac);
 			/* queue it */
-			sctp_queue_op_err(stcb, m_err);
+			sctp_queue_op_err(stcb, op_err);
 		}
 		return (-1);
 	}
@@ -1870,13 +1768,14 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 		return;
 
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_authkey_event),
-	    0, M_DONTWAIT, 1, MT_HEADER);
+	    0, M_NOWAIT, 1, MT_HEADER);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
 
 	SCTP_BUF_LEN(m_notify) = 0;
 	auth = mtod(m_notify, struct sctp_authkey_event *);
+	memset(auth, 0, sizeof(struct sctp_authkey_event));
 	auth->auth_type = SCTP_AUTHENTICATION_EVENT;
 	auth->auth_flags = 0;
 	auth->auth_length = sizeof(*auth);
@@ -2035,8 +1934,7 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 		    "SCTP: peer sent chunk list w/o AUTH\n");
 		return (-1);
 	}
-	if (!SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk) && peer_supports_asconf &&
-	    !peer_supports_auth) {
+	if (peer_supports_asconf && !peer_supports_auth) {
 		SCTPDBG(SCTP_DEBUG_AUTH1,
 		    "SCTP: peer supports ASCONF but not AUTH\n");
 		return (-1);

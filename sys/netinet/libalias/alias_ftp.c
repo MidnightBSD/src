@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_ftp.c 223437 2011-06-22 20:00:27Z ae $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_ftp.c 223437 2011-06-22 20:00:27Z ae $");
 
 /*
     Alias_ftp.c performs special processing for FTP sessions under

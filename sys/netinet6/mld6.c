@@ -65,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/mld6.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/mld6.c 291987 2015-12-08 07:31:26Z ae $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -276,7 +276,7 @@ mld_save_context(struct mbuf *m, struct ifnet *ifp)
 {
 
 #ifdef VIMAGE
-	m->m_pkthdr.header = ifp->if_vnet;
+	m->m_pkthdr.PH_loc.ptr = ifp->if_vnet;
 #endif /* VIMAGE */
 	m->m_pkthdr.flowid = ifp->if_index;
 }
@@ -285,7 +285,7 @@ static __inline void
 mld_scrub_context(struct mbuf *m)
 {
 
-	m->m_pkthdr.header = NULL;
+	m->m_pkthdr.PH_loc.ptr = NULL;
 	m->m_pkthdr.flowid = 0;
 }
 
@@ -301,7 +301,7 @@ mld_restore_context(struct mbuf *m)
 {
 
 #if defined(VIMAGE) && defined(INVARIANTS)
-	KASSERT(curvnet == m->m_pkthdr.header,
+	KASSERT(curvnet == m->m_pkthdr.PH_loc.ptr,
 	    ("%s: called when curvnet was not restored", __func__));
 #endif
 	return (m->m_pkthdr.flowid);
@@ -1800,13 +1800,13 @@ mld_v1_transmit_report(struct in6_multi *in6m, const int type)
 	ia = in6ifa_ifpforlinklocal(ifp, IN6_IFF_NOTREADY|IN6_IFF_ANYCAST);
 	/* ia may be NULL if link-local address is tentative. */
 
-	MGETHDR(mh, M_DONTWAIT, MT_HEADER);
+	mh = m_gethdr(M_NOWAIT, MT_DATA);
 	if (mh == NULL) {
 		if (ia != NULL)
 			ifa_free(&ia->ia_ifa);
 		return (ENOMEM);
 	}
-	MGET(md, M_DONTWAIT, MT_DATA);
+	md = m_get(M_NOWAIT, MT_DATA);
 	if (md == NULL) {
 		m_free(mh);
 		if (ia != NULL)
@@ -2448,9 +2448,9 @@ mld_v2_enqueue_group_record(struct ifqueue *ifq, struct in6_multi *inm,
 		m0srcs = (ifp->if_mtu - MLD_MTUSPACE -
 		    sizeof(struct mldv2_record)) / sizeof(struct in6_addr);
 		if (!is_state_change && !is_group_query)
-			m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+			m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m == NULL)
-			m = m_gethdr(M_DONTWAIT, MT_DATA);
+			m = m_gethdr(M_NOWAIT, MT_DATA);
 		if (m == NULL)
 			return (-ENOMEM);
 
@@ -2573,9 +2573,9 @@ mld_v2_enqueue_group_record(struct ifqueue *ifq, struct in6_multi *inm,
 			CTR1(KTR_MLD, "%s: outbound queue full", __func__);
 			return (-ENOMEM);
 		}
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m == NULL)
-			m = m_gethdr(M_DONTWAIT, MT_DATA);
+			m = m_gethdr(M_NOWAIT, MT_DATA);
 		if (m == NULL)
 			return (-ENOMEM);
 		mld_save_context(m, ifp);
@@ -2727,9 +2727,9 @@ mld_v2_enqueue_filter_change(struct ifqueue *ifq, struct in6_multi *inm)
 				CTR1(KTR_MLD,
 				    "%s: use previous packet", __func__);
 			} else {
-				m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+				m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 				if (m == NULL)
-					m = m_gethdr(M_DONTWAIT, MT_DATA);
+					m = m_gethdr(M_NOWAIT, MT_DATA);
 				if (m == NULL) {
 					CTR1(KTR_MLD,
 					    "%s: m_get*() failed", __func__);
@@ -2990,6 +2990,15 @@ mld_v2_dispatch_general_query(struct mld_ifinfo *mli)
 	KASSERT(mli->mli_version == MLD_VERSION_2,
 	    ("%s: called when version %d", __func__, mli->mli_version));
 
+	/*
+	 * Check that there are some packets queued. If so, send them first.
+	 * For large number of groups the reply to general query can take
+	 * many packets, we should finish sending them before starting of
+	 * queuing the new reply.
+	 */
+	if (mli->mli_gq.ifq_head != NULL)
+		goto send;
+
 	ifp = mli->mli_ifp;
 
 	IF_ADDR_RLOCK(ifp);
@@ -3025,6 +3034,7 @@ mld_v2_dispatch_general_query(struct mld_ifinfo *mli)
 	}
 	IF_ADDR_RUNLOCK(ifp);
 
+send:
 	mld_dispatch_queue(&mli->mli_gq, MLD_MAX_RESPONSE_BURST);
 
 	/*
@@ -3099,7 +3109,7 @@ mld_dispatch_packet(struct mbuf *m)
 	}
 
 	mld_scrub_context(m0);
-	m->m_flags &= ~(M_PROTOFLAGS);
+	m_clrprotoflags(m);
 	m0->m_pkthdr.rcvif = V_loif;
 
 	ip6 = mtod(m0, struct ip6_hdr *);
@@ -3174,7 +3184,7 @@ mld_v2_encap_report(struct ifnet *ifp, struct mbuf *m)
 	if (ia == NULL)
 		CTR1(KTR_MLD, "%s: warning: ia is NULL", __func__);
 
-	MGETHDR(mh, M_DONTWAIT, MT_HEADER);
+	mh = m_gethdr(M_NOWAIT, MT_DATA);
 	if (mh == NULL) {
 		if (ia != NULL)
 			ifa_free(&ia->ia_ifa);

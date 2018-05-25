@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $
- * $FreeBSD: stable/9/sys/netinet6/nd6.h 245555 2013-01-17 16:39:21Z ume $
+ * $FreeBSD: stable/10/sys/netinet6/nd6.h 303458 2016-07-28 20:08:01Z sbruno $
  */
 
 #ifndef _NETINET6_ND6_H_
@@ -80,7 +80,7 @@ struct nd_ifinfo {
 
 #define ND6_IFF_PERFORMNUD	0x1
 #define ND6_IFF_ACCEPT_RTADV	0x2
-#define ND6_IFF_PREFER_SOURCE	0x4 /* XXX: not related to ND. */
+#define ND6_IFF_PREFER_SOURCE	0x4 /* Not used in FreeBSD. */
 #define ND6_IFF_IFDISABLED	0x8 /* IPv6 operation is disabled due to
 				     * DAD failure.  (XXX: not ND-specific)
 				     */
@@ -88,6 +88,7 @@ struct nd_ifinfo {
 #define ND6_IFF_AUTO_LINKLOCAL	0x20
 #define	ND6_IFF_NO_RADR		0x40
 #define ND6_IFF_NO_PREFER_IFACE	0x80 /* XXX: not related to ND. */
+#define ND6_IFF_NO_DAD		0x100
 
 #define	ND6_CREATE		LLE_CREATE
 #define	ND6_EXCLUSIVE		LLE_EXCLUSIVE
@@ -235,14 +236,15 @@ struct	in6_ndifreq {
 		((MAX_RANDOM_FACTOR - MIN_RANDOM_FACTOR) * (x >> 10)))) /1000)
 
 TAILQ_HEAD(nd_drhead, nd_defrouter);
-struct	nd_defrouter {
+struct nd_defrouter {
 	TAILQ_ENTRY(nd_defrouter) dr_entry;
-	struct	in6_addr rtaddr;
-	u_char	flags;		/* flags on RA message */
+	struct in6_addr rtaddr;
+	u_char	raflags;	/* flags on RA message */
 	u_short	rtlifetime;
 	u_long	expire;
-	struct  ifnet *ifp;
+	struct ifnet *ifp;
 	int	installed;	/* is installed into kernel routing table */
+	u_int	refcnt;
 };
 
 struct nd_prefixctl {
@@ -342,6 +344,19 @@ VNET_DECLARE(int, nd6_onlink_ns_rfc4861);
 #define	V_nd6_debug			VNET(nd6_debug)
 #define	V_nd6_onlink_ns_rfc4861		VNET(nd6_onlink_ns_rfc4861)
 
+/* Lock for the prefix and default router lists. */
+VNET_DECLARE(struct rwlock, nd6_lock);
+#define	V_nd6_lock			VNET(nd6_lock)
+
+#define	ND6_RLOCK()			rw_rlock(&V_nd6_lock)
+#define	ND6_RUNLOCK()			rw_runlock(&V_nd6_lock)
+#define	ND6_WLOCK()			rw_wlock(&V_nd6_lock)
+#define	ND6_WUNLOCK()			rw_wunlock(&V_nd6_lock)
+#define	ND6_WLOCK_ASSERT()		rw_assert(&V_nd6_lock, RA_WLOCKED)
+#define	ND6_RLOCK_ASSERT()		rw_assert(&V_nd6_lock, RA_RLOCKED)
+#define	ND6_LOCK_ASSERT()		rw_assert(&V_nd6_lock, RA_LOCKED)
+#define	ND6_UNLOCK_ASSERT()		rw_assert(&V_nd6_lock, RA_UNLOCKED)
+
 #define nd6log(x)	do { if (V_nd6_debug) log x; } while (/*CONSTCOND*/ 0)
 
 VNET_DECLARE(struct callout, nd6_timer_ch);
@@ -360,7 +375,7 @@ VNET_DECLARE(int, ip6_temp_regen_advance); /* seconds */
 #define	V_ip6_temp_regen_advance	VNET(ip6_temp_regen_advance)
 
 union nd_opts {
-	struct nd_opt_hdr *nd_opt_array[8];	/* max = target address list */
+	struct nd_opt_hdr *nd_opt_array[16];	/* max = ND_OPT_NONCE */
 	struct {
 		struct nd_opt_hdr *zero;
 		struct nd_opt_hdr *src_lladdr;
@@ -368,6 +383,16 @@ union nd_opts {
 		struct nd_opt_prefix_info *pi_beg; /* multiple opts, start */
 		struct nd_opt_rd_hdr *rh;
 		struct nd_opt_mtu *mtu;
+		struct nd_opt_hdr *__res6;
+		struct nd_opt_hdr *__res7;
+		struct nd_opt_hdr *__res8;
+		struct nd_opt_hdr *__res9;
+		struct nd_opt_hdr *__res10;
+		struct nd_opt_hdr *__res11;
+		struct nd_opt_hdr *__res12;
+		struct nd_opt_hdr *__res13;
+		struct nd_opt_nonce *nonce;
+		struct nd_opt_hdr *__res15;
 		struct nd_opt_hdr *search;	/* multiple opts */
 		struct nd_opt_hdr *last;	/* multiple opts */
 		int done;
@@ -380,6 +405,7 @@ union nd_opts {
 #define nd_opts_pi_end		nd_opt_each.pi_end
 #define nd_opts_rh		nd_opt_each.rh
 #define nd_opts_mtu		nd_opt_each.mtu
+#define nd_opts_nonce		nd_opt_each.nonce
 #define nd_opts_search		nd_opt_each.search
 #define nd_opts_last		nd_opt_each.last
 #define nd_opts_done		nd_opt_each.done
@@ -411,14 +437,13 @@ struct llentry *nd6_cache_lladdr(struct ifnet *, struct in6_addr *,
 	char *, int, int, int);
 int nd6_output(struct ifnet *, struct ifnet *, struct mbuf *,
 	struct sockaddr_in6 *, struct rtentry *);
-int nd6_output_lle(struct ifnet *, struct ifnet *, struct mbuf *,
-	struct sockaddr_in6 *, struct rtentry *, struct llentry *,
-	struct mbuf **);
-int nd6_output_flush(struct ifnet *, struct ifnet *, struct mbuf *,
-	struct sockaddr_in6 *, struct route *);
+void nd6_grab_holdchain(struct llentry *, struct mbuf **,
+    struct sockaddr_in6 *);
+int nd6_flush_holdchain(struct ifnet *, struct ifnet *, struct mbuf *,
+    struct sockaddr_in6 *);
 int nd6_need_cache(struct ifnet *);
 int nd6_storelladdr(struct ifnet *, struct mbuf *,
-	struct sockaddr *, u_char *, struct llentry **);
+	const struct sockaddr *, u_char *, struct llentry **);
 
 /* nd6_nbr.c */
 void nd6_na_input(struct mbuf *, int, int);
@@ -426,24 +451,28 @@ void nd6_na_output(struct ifnet *, const struct in6_addr *,
 	const struct in6_addr *, u_long, int, struct sockaddr *);
 void nd6_ns_input(struct mbuf *, int, int);
 void nd6_ns_output(struct ifnet *, const struct in6_addr *,
-	const struct in6_addr *, struct llentry *, int);
+	const struct in6_addr *, struct llentry *, uint8_t *);
 caddr_t nd6_ifptomac(struct ifnet *);
+void nd6_dad_init(void);
 void nd6_dad_start(struct ifaddr *, int);
 void nd6_dad_stop(struct ifaddr *);
-void nd6_dad_duplicated(struct ifaddr *);
 
 /* nd6_rtr.c */
 void nd6_rs_input(struct mbuf *, int, int);
 void nd6_ra_input(struct mbuf *, int, int);
-void prelist_del(struct nd_prefix *);
 void defrouter_reset(void);
 void defrouter_select(void);
-void defrtrlist_del(struct nd_defrouter *);
+void defrouter_ref(struct nd_defrouter *);
+void defrouter_rele(struct nd_defrouter *);
+bool defrouter_remove(struct in6_addr *, struct ifnet *);
+void defrouter_unlink(struct nd_defrouter *, struct nd_drhead *);
+void defrouter_del(struct nd_defrouter *);
 void prelist_remove(struct nd_prefix *);
 int nd6_prelist_add(struct nd_prefixctl *, struct nd_defrouter *,
 	struct nd_prefix **);
 void pfxlist_onlink_check(void);
 struct nd_defrouter *defrouter_lookup(struct in6_addr *, struct ifnet *);
+struct nd_defrouter *defrouter_lookup_locked(struct in6_addr *, struct ifnet *);
 struct nd_prefix *nd6_prefix_lookup(struct nd_prefixctl *);
 void rt6_flush(struct in6_addr *, struct ifnet *);
 int nd6_setdefaultiface(int);

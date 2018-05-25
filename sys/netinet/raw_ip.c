@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/raw_ip.c 227423 2011-11-10 19:10:53Z andre $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/raw_ip.c 266718 2014-05-26 22:54:15Z smh $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -100,9 +100,6 @@ int	(*ip_dn_io_ptr)(struct mbuf **, int, struct ip_fw_args *);
 void	(*ip_divert_ptr)(struct mbuf *, int);
 int	(*ng_ipfw_input_p)(struct mbuf **, int,
 			struct ip_fw_args *, int);
-
-/* Hook for telling pf that the destination address changed */
-void	(*m_addr_chg_pf_p)(struct mbuf *m);
 
 #ifdef INET
 /*
@@ -290,6 +287,11 @@ rip_input(struct mbuf *m, int off)
 	last = NULL;
 
 	ifp = m->m_pkthdr.rcvif;
+	/*
+	 * Applications on raw sockets expect host byte order.
+	 */
+	ip->ip_len = ntohs(ip->ip_len);
+	ip->ip_off = ntohs(ip->ip_off);
 
 	hash = INP_PCBHASH_RAW(proto, ip->ip_src.s_addr,
 	    ip->ip_dst.s_addr, V_ripcbinfo.ipi_hashmask);
@@ -438,7 +440,7 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
 			m_freem(m);
 			return(EMSGSIZE);
 		}
-		M_PREPEND(m, sizeof(struct ip), M_DONTWAIT);
+		M_PREPEND(m, sizeof(struct ip), M_NOWAIT);
 		if (m == NULL)
 			return(ENOBUFS);
 
@@ -446,32 +448,32 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
 		ip = mtod(m, struct ip *);
 		ip->ip_tos = inp->inp_ip_tos;
 		if (inp->inp_flags & INP_DONTFRAG)
-			ip->ip_off = IP_DF;
+			ip->ip_off = htons(IP_DF);
 		else
-			ip->ip_off = 0;
+			ip->ip_off = htons(0);
 		ip->ip_p = inp->inp_ip_p;
-		ip->ip_len = m->m_pkthdr.len;
+		ip->ip_len = htons(m->m_pkthdr.len);
 		ip->ip_src = inp->inp_laddr;
+		ip->ip_dst.s_addr = dst;
 		if (jailed(inp->inp_cred)) {
 			/*
 			 * prison_local_ip4() would be good enough but would
 			 * let a source of INADDR_ANY pass, which we do not
-			 * want to see from jails. We do not go through the
-			 * pain of in_pcbladdr() for raw sockets.
+			 * want to see from jails.
 			 */
-			if (ip->ip_src.s_addr == INADDR_ANY)
-				error = prison_get_ip4(inp->inp_cred,
-				    &ip->ip_src);
-			else
+			if (ip->ip_src.s_addr == INADDR_ANY) {
+				error = in_pcbladdr(inp, &ip->ip_dst, &ip->ip_src,
+				    inp->inp_cred);
+			} else {
 				error = prison_local_ip4(inp->inp_cred,
 				    &ip->ip_src);
+			}
 			if (error != 0) {
 				INP_RUNLOCK(inp);
 				m_freem(m);
 				return (error);
 			}
 		}
-		ip->ip_dst.s_addr = dst;
 		ip->ip_ttl = inp->inp_ip_ttl;
 	} else {
 		if (m->m_pkthdr.len > IP_MAXPACKET) {
@@ -500,6 +502,13 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
 		}
 		if (ip->ip_id == 0)
 			ip->ip_id = ip_newid();
+
+		/*
+		 * Applications on raw sockets pass us packets
+		 * in host byte order.
+		 */
+		ip->ip_len = htons(ip->ip_len);
+		ip->ip_off = htons(ip->ip_off);
 
 		/*
 		 * XXX prevent ip_output from overwriting header fields.
@@ -538,6 +547,8 @@ rip_output(struct mbuf *m, struct socket *so, u_long dst)
  *
  * When adding new socket options here, make sure to add access control
  * checks here as necessary.
+ *
+ * XXX-BZ inp locking?
  */
 int
 rip_ctloutput(struct socket *so, struct sockopt *sopt)

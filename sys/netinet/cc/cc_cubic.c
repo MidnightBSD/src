@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -46,7 +47,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/cc/cc_cubic.c 220592 2011-04-13 11:28:46Z pluknet $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_cubic.c 293711 2016-01-11 23:37:31Z hiren $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -299,8 +300,10 @@ static void
 cubic_post_recovery(struct cc_var *ccv)
 {
 	struct cubic *cubic_data;
+	int pipe;
 
 	cubic_data = ccv->cc_data;
+	pipe = 0;
 
 	/* Fast convergence heuristic. */
 	if (cubic_data->max_cwnd < cubic_data->prev_max_cwnd)
@@ -315,10 +318,13 @@ cubic_post_recovery(struct cc_var *ccv)
 		 *
 		 * XXXLAS: Find a way to do this without needing curack
 		 */
-		if (SEQ_GT(ccv->curack + CCV(ccv, snd_ssthresh),
-		    CCV(ccv, snd_max)))
-			CCV(ccv, snd_cwnd) = CCV(ccv, snd_max) - ccv->curack +
-			    CCV(ccv, t_maxseg);
+		if (V_tcp_do_rfc6675_pipe)
+			pipe = tcp_compute_pipe(ccv->ccvc.tcp);
+		else
+			pipe = CCV(ccv, snd_max) - ccv->curack;
+
+		if (pipe < CCV(ccv, snd_ssthresh))
+			CCV(ccv, snd_cwnd) = pipe + CCV(ccv, t_maxseg);
 		else
 			/* Update cwnd based on beta and adjusted max_cwnd. */
 			CCV(ccv, snd_cwnd) = max(1, ((CUBIC_BETA *

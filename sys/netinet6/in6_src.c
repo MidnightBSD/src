@@ -62,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_src.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/in6_src.c 297445 2016-03-31 09:55:21Z ae $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -141,7 +141,7 @@ static void init_policy_queue(void);
 static int add_addrsel_policyent(struct in6_addrpolicy *);
 static int delete_addrsel_policyent(struct in6_addrpolicy *);
 static int walk_addrsel_policy(int (*)(struct in6_addrpolicy *, void *),
-				    void *);
+	void *);
 static int dump_addrsel_policyent(struct in6_addrpolicy *, void *);
 static struct in6_addrpolicy *match_addrsel_policy(struct sockaddr_in6 *);
 
@@ -250,19 +250,27 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		    (inp->inp_flags & IN6P_IPV6_V6ONLY) != 0))) != 0)
 			return (error);
 
-		ia6 = (struct in6_ifaddr *)ifa_ifwithaddr(
-		    (struct sockaddr *)&srcsock);
-		if (ia6 == NULL ||
-		    (ia6->ia6_flags & (IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
-			if (ia6 != NULL)
-				ifa_free(&ia6->ia_ifa);
-			return (EADDRNOTAVAIL);
-		}
+		/*
+		 * If IPV6_BINDANY socket option is set, we allow to specify
+		 * non local addresses as source address in IPV6_PKTINFO
+		 * ancillary data.
+		 */
+		if ((inp->inp_flags & INP_BINDANY) == 0) {
+			ia6 = (struct in6_ifaddr *)ifa_ifwithaddr(
+			    (struct sockaddr *)&srcsock);
+			if (ia6 == NULL || (ia6->ia6_flags & (IN6_IFF_ANYCAST |
+			    IN6_IFF_NOTREADY))) {
+				if (ia6 != NULL)
+					ifa_free(&ia6->ia_ifa);
+				return (EADDRNOTAVAIL);
+			}
+			bcopy(&ia6->ia_addr.sin6_addr, srcp, sizeof(*srcp));
+			ifa_free(&ia6->ia_ifa);
+		} else
+			bcopy(&srcsock.sin6_addr, srcp, sizeof(*srcp));
 		pi->ipi6_addr = srcsock.sin6_addr; /* XXX: this overrides pi */
 		if (ifpp)
 			*ifpp = ifp;
-		bcopy(&ia6->ia_addr.sin6_addr, srcp, sizeof(*srcp));
-		ifa_free(&ia6->ia_ifa);
 		return (0);
 	}
 
@@ -444,6 +452,24 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 			REPLACE(8);
 
 		/*
+		 * Rule 9: prefer address with better virtual status.
+		 */
+		if (ifa_preferred(&ia_best->ia_ifa, &ia->ia_ifa))
+			REPLACE(9);
+		if (ifa_preferred(&ia->ia_ifa, &ia_best->ia_ifa))
+			NEXT(9);
+
+		/*
+		 * Rule 10: prefer address with `prefer_source' flag.
+		 */
+		if ((ia_best->ia6_flags & IN6_IFF_PREFER_SOURCE) == 0 &&
+		    (ia->ia6_flags & IN6_IFF_PREFER_SOURCE) != 0)
+			REPLACE(10);
+		if ((ia_best->ia6_flags & IN6_IFF_PREFER_SOURCE) != 0 &&
+		    (ia->ia6_flags & IN6_IFF_PREFER_SOURCE) == 0)
+			NEXT(10);
+
+		/*
 		 * Rule 14: Use longest matching prefix.
 		 * Note: in the address selection draft, this rule is
 		 * documented as "Rule 8".  However, since it is also
@@ -608,6 +634,7 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		if (ron->ro_rt == NULL) {
 			in6_rtalloc(ron, fibnum); /* multi path case? */
 			if (ron->ro_rt == NULL) {
+				/* XXX-BZ WT.? */
 				if (ron->ro_rt) {
 					RTFREE(ron->ro_rt);
 					ron->ro_rt = NULL;
@@ -1114,8 +1141,7 @@ delete_addrsel_policyent(struct in6_addrpolicy *key)
 }
 
 static int
-walk_addrsel_policy(int (*callback)(struct in6_addrpolicy *, void *),
-    void *w)
+walk_addrsel_policy(int (*callback)(struct in6_addrpolicy *, void *), void *w)
 {
 	struct addrsel_policyent *pol;
 	int error = 0;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Written by Atsushi Murai <amurai@spec.co.jp>
  * Copyright (c) 1998, System Planning and Engineering Co.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_nbt.c 190938 2009-04-11 15:19:09Z piso $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_nbt.c 190938 2009-04-11 15:19:09Z piso $");
 
 /*
     alias_nbt.c performs special processing for NetBios over TCP/IP

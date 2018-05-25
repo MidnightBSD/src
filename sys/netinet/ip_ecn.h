@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/9/sys/netinet/ip_ecn.h 139823 2005-01-07 01:45:51Z imp $	*/
+/*	$FreeBSD: stable/10/sys/netinet/ip_ecn.h 139823 2005-01-07 01:45:51Z imp $	*/
 /*	$KAME: ip_ecn.h,v 1.8 2002/01/07 11:34:47 kjc Exp $	*/
 
 /*-

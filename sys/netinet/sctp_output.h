@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_output.h 238253 2012-07-08 16:14:42Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_output.h 295208 2016-02-03 14:04:07Z tuexen $");
 
 #ifndef _NETINET_SCTP_OUTPUT_H_
 #define _NETINET_SCTP_OUTPUT_H_
@@ -47,7 +47,8 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_scoping *scope,
     struct mbuf *m_at,
-    int cnt_inits_to);
+    int cnt_inits_to,
+    uint16_t * padding_len, uint16_t * chunk_len);
 
 
 int sctp_is_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
@@ -55,13 +56,9 @@ int sctp_is_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 
 int
 sctp_is_address_in_scope(struct sctp_ifa *ifa,
-    int ipv4_addr_legal,
-    int ipv6_addr_legal,
-    int loopback_scope,
-    int ipv4_local_scope,
-    int local_scope,
-    int site_scope,
+    struct sctp_scoping *scope,
     int do_update);
+
 int
     sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa);
 
@@ -84,8 +81,11 @@ sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *, int
 );
 
 void
-sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *, struct mbuf *,
-    int, int, struct sctphdr *, struct sctp_init_chunk *,
+sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
+    struct sctp_nets *, struct mbuf *,
+    int, int,
+    struct sockaddr *, struct sockaddr *,
+    struct sctphdr *, struct sctp_init_chunk *,
     uint8_t, uint32_t,
     uint32_t, uint16_t, int);
 
@@ -117,8 +117,9 @@ void sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
 void sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *, int);
 
 void 
-sctp_send_shutdown_complete2(struct mbuf *, struct sctphdr *,
-    uint8_t, uint32_t,
+sctp_send_shutdown_complete2(struct sockaddr *, struct sockaddr *,
+    struct sctphdr *,
+    uint8_t, uint32_t, uint16_t,
     uint32_t, uint16_t);
 
 void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *, int addr_locked);
@@ -163,7 +164,7 @@ void sctp_send_ecn_echo(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
 void
 sctp_send_packet_dropped(struct sctp_tcb *, struct sctp_nets *, struct mbuf *,
-    int, int);
+    int, int, int);
 
 
 
@@ -171,48 +172,33 @@ void sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t, uint8_t);
 
 
 void
-sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
-    int number_entries, uint16_t * list,
-    uint32_t seq, uint32_t resp_seq, uint32_t last_sent);
+     sctp_add_stream_reset_result(struct sctp_tmit_chunk *, uint32_t, uint32_t);
 
 void
-sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
-    int number_entries, uint16_t * list,
-    uint32_t seq);
+sctp_send_deferred_reset_response(struct sctp_tcb *,
+    struct sctp_stream_reset_list *,
+    int);
 
 void
-sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
-    uint32_t seq);
-
-void
-sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
-    uint32_t resp_seq, uint32_t result);
-
-void
-sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
-    uint32_t resp_seq, uint32_t result,
-    uint32_t send_una, uint32_t recv_next);
+sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *,
+    uint32_t, uint32_t, uint32_t, uint32_t);
+int
+    sctp_send_stream_reset_out_if_possible(struct sctp_tcb *, int);
 
 int
-sctp_send_str_reset_req(struct sctp_tcb *stcb,
-    int number_entries, uint16_t * list,
-    uint8_t send_out_req,
-    uint8_t send_in_req,
-    uint8_t send_tsn_req,
-    uint8_t add_stream,
-    uint16_t adding_o,
-    uint16_t adding_i, uint8_t from_peer);
+sctp_send_str_reset_req(struct sctp_tcb *, uint16_t, uint16_t *,
+    uint8_t, uint8_t, uint8_t, uint16_t, uint16_t, uint8_t);
 
 void
-sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
-    struct mbuf *,
-    uint8_t, uint32_t,
+sctp_send_abort(struct mbuf *, int, struct sockaddr *, struct sockaddr *,
+    struct sctphdr *, uint32_t, struct mbuf *,
+    uint8_t, uint32_t, uint16_t,
     uint32_t, uint16_t);
 
 void 
-sctp_send_operr_to(struct mbuf *, struct sctphdr *, uint32_t,
-    struct mbuf *,
-    uint8_t, uint32_t,
+sctp_send_operr_to(struct sockaddr *, struct sockaddr *,
+    struct sctphdr *, uint32_t, struct mbuf *,
+    uint8_t, uint32_t, uint16_t,
     uint32_t, uint16_t);
 
 #endif				/* _KERNEL || __Userspace__ */

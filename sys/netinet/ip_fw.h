@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet/ip_fw.h 234597 2012-04-23 07:15:15Z melifaro $
+ * $FreeBSD: stable/10/sys/netinet/ip_fw.h 287963 2015-09-18 17:29:24Z melifaro $
  */
 
 #ifndef _IPFW2_H
@@ -615,6 +615,7 @@ typedef struct	_ipfw_table_xentry {
 	uint8_t		type;		/* entry type			*/
 	uint8_t		masklen;	/* mask length			*/
 	uint16_t	tbl;		/* table number			*/
+	uint16_t	flags;		/* record flags			*/
 	uint32_t	value;		/* value			*/
 	union {
 		/* Longest field needs to be aligned by 4-byte boundary	*/
@@ -622,6 +623,7 @@ typedef struct	_ipfw_table_xentry {
 		char	iface[IF_NAMESIZE];	/* interface name	*/
 	} k;
 } ipfw_table_xentry;
+#define	IPFW_TCF_INET	0x01		/* CIDR flags: IPv4 record	*/
 
 typedef struct	_ipfw_table {
 	u_int32_t	size;		/* size of entries in bytes	*/

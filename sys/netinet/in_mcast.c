@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/in_mcast.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/in_mcast.c 321134 2017-07-18 16:58:52Z ngie $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/in_mcast.c 248085 2013-03-09 02:36:32Z 
 #include <sys/protosw.h>
 #include <sys/sysctl.h>
 #include <sys/ktr.h>
+#include <sys/taskqueue.h>
 #include <sys/tree.h>
 
 #include <net/if.h>
@@ -139,12 +140,16 @@ static int	in_getmulti(struct ifnet *, const struct in_addr *,
 		    struct in_multi **);
 static int	inm_get_source(struct in_multi *inm, const in_addr_t haddr,
 		    const int noalloc, struct ip_msource **pims);
+#ifdef KTR
 static int	inm_is_ifp_detached(const struct in_multi *);
+#endif
 static int	inm_merge(struct in_multi *, /*const*/ struct in_mfilter *);
 static void	inm_purge(struct in_multi *);
 static void	inm_reap(struct in_multi *);
 static struct ip_moptions *
 		inp_findmoptions(struct inpcb *);
+static void	inp_freemoptions_internal(struct ip_moptions *);
+static void	inp_gcmoptions(void *, int);
 static int	inp_get_source_filters(struct inpcb *, struct sockopt *);
 static int	inp_join_group(struct inpcb *, struct sockopt *);
 static int	inp_leave_group(struct inpcb *, struct sockopt *);
@@ -180,6 +185,11 @@ static SYSCTL_NODE(_net_inet_ip_mcast, OID_AUTO, filters,
     CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_ip_mcast_filters,
     "Per-interface stack-wide source filters");
 
+static STAILQ_HEAD(, ip_moptions) imo_gc_list =
+    STAILQ_HEAD_INITIALIZER(imo_gc_list);
+static struct task imo_gc_task = TASK_INITIALIZER(0, inp_gcmoptions, NULL);
+
+#ifdef KTR
 /*
  * Inline function which wraps assertions for a valid ifp.
  * The ifnet layer will set the ifma's ifp pointer to NULL if the ifp
@@ -202,6 +212,7 @@ inm_is_ifp_detached(const struct in_multi *inm)
 
 	return (ifp == NULL);
 }
+#endif
 
 /*
  * Initialize an in_mfilter structure to a known state at t0, t1
@@ -1004,9 +1015,10 @@ inm_merge(struct in_multi *inm, /*const*/ struct in_mfilter *imf)
 	/* Decrement ASM listener count on transition out of ASM mode. */
 	if (imf->imf_st[0] == MCAST_EXCLUDE && nsrc0 == 0) {
 		if ((imf->imf_st[1] != MCAST_EXCLUDE) ||
-		    (imf->imf_st[1] == MCAST_EXCLUDE && nsrc1 > 0))
+		    (imf->imf_st[1] == MCAST_EXCLUDE && nsrc1 > 0)) {
 			CTR1(KTR_IGMPV3, "%s: --asm on inm at t1", __func__);
 			--inm->inm_st[1].iss_asm;
+		}
 	}
 
 	/* Increment ASM listener count on transition to ASM mode. */
@@ -1172,10 +1184,7 @@ out_inm_release:
 int
 in_leavegroup(struct in_multi *inm, /*const*/ struct in_mfilter *imf)
 {
-	struct ifnet *ifp;
 	int error;
-
-	ifp = inm->inm_ifp;
 
 	IN_MULTI_LOCK();
 	error = in_leavegroup_locked(inm, imf);
@@ -1233,7 +1242,9 @@ in_leavegroup_locked(struct in_multi *inm, /*const*/ struct in_mfilter *imf)
 	KASSERT(error == 0, ("%s: failed to merge inm state", __func__));
 
 	CTR1(KTR_IGMPV3, "%s: doing igmp downcall", __func__);
+	CURVNET_SET(inm->inm_ifp->if_vnet);
 	error = igmp_change_state(inm);
+	CURVNET_RESTORE();
 	if (error)
 		CTR1(KTR_IGMPV3, "%s: failed igmp downcall", __func__);
 
@@ -1443,13 +1454,15 @@ inp_block_unblock_source(struct inpcb *inp, struct sockopt *sopt)
 	error = inm_merge(inm, imf);
 	if (error) {
 		CTR1(KTR_IGMPV3, "%s: failed to merge inm state", __func__);
-		goto out_imf_rollback;
+		goto out_in_multi_locked;
 	}
 
 	CTR1(KTR_IGMPV3, "%s: doing igmp downcall", __func__);
 	error = igmp_change_state(inm);
 	if (error)
 		CTR1(KTR_IGMPV3, "%s: failed igmp downcall", __func__);
+
+out_in_multi_locked:
 
 	IN_MULTI_UNLOCK();
 
@@ -1519,17 +1532,29 @@ inp_findmoptions(struct inpcb *inp)
 }
 
 /*
- * Discard the IP multicast options (and source filters).
+ * Discard the IP multicast options (and source filters).  To minimize
+ * the amount of work done while holding locks such as the INP's
+ * pcbinfo lock (which is used in the receive path), the free
+ * operation is performed asynchronously in a separate task.
  *
  * SMPng: NOTE: assumes INP write lock is held.
  */
 void
 inp_freemoptions(struct ip_moptions *imo)
 {
-	struct in_mfilter	*imf;
-	size_t			 idx, nmships;
 
 	KASSERT(imo != NULL, ("%s: ip_moptions is NULL", __func__));
+	IN_MULTI_LOCK();
+	STAILQ_INSERT_TAIL(&imo_gc_list, imo, imo_link);
+	IN_MULTI_UNLOCK();
+	taskqueue_enqueue(taskqueue_thread, &imo_gc_task);
+}
+
+static void
+inp_freemoptions_internal(struct ip_moptions *imo)
+{
+	struct in_mfilter	*imf;
+	size_t			 idx, nmships;
 
 	nmships = imo->imo_num_memberships;
 	for (idx = 0; idx < nmships; ++idx) {
@@ -1545,6 +1570,22 @@ inp_freemoptions(struct ip_moptions *imo)
 		free(imo->imo_mfilters, M_INMFILTER);
 	free(imo->imo_membership, M_IPMOPTS);
 	free(imo, M_IPMOPTS);
+}
+
+static void
+inp_gcmoptions(void *context, int pending)
+{
+	struct ip_moptions *imo;
+
+	IN_MULTI_LOCK();
+	while (!STAILQ_EMPTY(&imo_gc_list)) {
+		imo = STAILQ_FIRST(&imo_gc_list);
+		STAILQ_REMOVE_HEAD(&imo_gc_list, imo_link);
+		IN_MULTI_UNLOCK();
+		inp_freemoptions_internal(imo);
+		IN_MULTI_LOCK();
+	}
+	IN_MULTI_UNLOCK();
 }
 
 /*
@@ -1615,6 +1656,8 @@ inp_get_source_filters(struct inpcb *inp, struct sockopt *sopt)
 	 * has asked for, but we always tell userland how big the
 	 * buffer really needs to be.
 	 */
+	if (msfr.msfr_nsrcs > in_mcast_maxsocksrc)
+		msfr.msfr_nsrcs = in_mcast_maxsocksrc;
 	tss = NULL;
 	if (msfr.msfr_srcs != NULL && msfr.msfr_nsrcs > 0) {
 		tss = malloc(sizeof(struct sockaddr_storage) * msfr.msfr_nsrcs,
@@ -2089,8 +2132,12 @@ inp_join_group(struct inpcb *inp, struct sockopt *sopt)
 	if (is_new) {
 		error = in_joingroup_locked(ifp, &gsa->sin.sin_addr, imf,
 		    &inm);
-		if (error)
+		if (error) {
+                        CTR1(KTR_IGMPV3, "%s: in_joingroup_locked failed", 
+                            __func__);
+                        IN_MULTI_UNLOCK();
 			goto out_imo_free;
+                }
 		imo->imo_membership[idx] = inm;
 	} else {
 		CTR1(KTR_IGMPV3, "%s: merge inm state", __func__);
@@ -2098,20 +2145,21 @@ inp_join_group(struct inpcb *inp, struct sockopt *sopt)
 		if (error) {
 			CTR1(KTR_IGMPV3, "%s: failed to merge inm state",
 			    __func__);
-			goto out_imf_rollback;
+			goto out_in_multi_locked;
 		}
 		CTR1(KTR_IGMPV3, "%s: doing igmp downcall", __func__);
 		error = igmp_change_state(inm);
 		if (error) {
 			CTR1(KTR_IGMPV3, "%s: failed igmp downcall",
 			    __func__);
-			goto out_imf_rollback;
+			goto out_in_multi_locked;
 		}
 	}
 
+out_in_multi_locked:
+
 	IN_MULTI_UNLOCK();
 
-out_imf_rollback:
 	INP_WLOCK_ASSERT(inp);
 	if (error) {
 		imf_rollback(imf);
@@ -2315,7 +2363,7 @@ inp_leave_group(struct inpcb *inp, struct sockopt *sopt)
 		if (error) {
 			CTR1(KTR_IGMPV3, "%s: failed to merge inm state",
 			    __func__);
-			goto out_imf_rollback;
+			goto out_in_multi_locked;
 		}
 
 		CTR1(KTR_IGMPV3, "%s: doing igmp downcall", __func__);
@@ -2326,9 +2374,10 @@ inp_leave_group(struct inpcb *inp, struct sockopt *sopt)
 		}
 	}
 
+out_in_multi_locked:
+
 	IN_MULTI_UNLOCK();
 
-out_imf_rollback:
 	if (error)
 		imf_rollback(imf);
 	else
@@ -2562,13 +2611,15 @@ inp_set_source_filters(struct inpcb *inp, struct sockopt *sopt)
 	error = inm_merge(inm, imf);
 	if (error) {
 		CTR1(KTR_IGMPV3, "%s: failed to merge inm state", __func__);
-		goto out_imf_rollback;
+		goto out_in_multi_locked;
 	}
 
 	CTR1(KTR_IGMPV3, "%s: doing igmp downcall", __func__);
 	error = igmp_change_state(inm);
 	if (error)
 		CTR1(KTR_IGMPV3, "%s: failed igmp downcall", __func__);
+
+out_in_multi_locked:
 
 	IN_MULTI_UNLOCK();
 

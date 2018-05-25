@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008
  * 	Swinburne University of Technology, Melbourne, Australia.
@@ -68,7 +69,7 @@
  * - Dynamic control of hash-table size
  */
 
-/* $FreeBSD: stable/9/sys/netinet/libalias/alias_sctp.c 249132 2013-04-05 08:22:11Z mav $ */
+/* $FreeBSD: stable/10/sys/netinet/libalias/alias_sctp.c 332284 2018-04-08 16:29:24Z tuexen $ */
 
 #ifdef _KERNEL
 #include <machine/stdarg.h>
@@ -185,7 +186,7 @@ static MALLOC_DEFINE(M_SCTPNAT, "sctpnat", "sctp nat dbs");
 /* Use kernel allocator. */
 #ifdef _SYS_MALLOC_H_
 #define	sn_malloc(x)	malloc(x, M_SCTPNAT, M_NOWAIT|M_ZERO)
-#define	sn_calloc(n,x)	sn_malloc(x * n)
+#define	sn_calloc(n,x)	sn_malloc((x) * (n))
 #define	sn_free(x)	free(x, M_SCTPNAT)
 #endif// #ifdef _SYS_MALLOC_H_
 
@@ -420,9 +421,9 @@ int sysctl_chg_loglevel(SYSCTL_HANDLER_ARGS)
 	error = sysctl_handle_int(oidp, &level, 0, req);
 	if (error) return (error);
 
-	sysctl_log_level = (level > SN_LOG_DEBUG_MAX)?(SN_LOG_DEBUG_MAX):(level);
-	sysctl_log_level = (level < SN_LOG_LOW)?(SN_LOG_LOW):(level);
-
+	level = (level > SN_LOG_DEBUG_MAX)?(SN_LOG_DEBUG_MAX):(level);
+	level = (level < SN_LOG_LOW)?(SN_LOG_LOW):(level);
+	sysctl_log_level = level;
 	return (0);
 }
 
@@ -2114,31 +2115,31 @@ FindSctpGlobal(struct libalias *la, struct in_addr g_addr, uint32_t g_vtag, uint
  * @return pointer to association or NULL
  */
 static struct sctp_nat_assoc*
-FindSctpLocalT(struct libalias *la,  struct in_addr g_addr, uint32_t l_vtag, uint16_t g_port, uint16_t l_port)
+FindSctpLocalT(struct libalias *la, struct in_addr g_addr, uint32_t l_vtag, uint16_t g_port, uint16_t l_port)
 {
 	u_int i;
 	struct sctp_nat_assoc *assoc = NULL, *lastmatch = NULL;
 	struct sctp_GlobalAddress *G_Addr = NULL;
 	int cnt = 0;
-  
+
 	if (l_vtag != 0) { /* an init packet, vtag==0 */
 		i = SN_TABLE_HASH(l_vtag, g_port, la->sctpNatTableSize);
 		LIST_FOREACH(assoc, &la->sctpTableGlobal[i], list_G) {
 			if ((assoc->g_vtag == l_vtag) && (assoc->g_port == g_port) && (assoc->l_port == l_port)) {
 				if (assoc->num_Gaddr) {
 					LIST_FOREACH(G_Addr, &(assoc->Gaddr), list_Gaddr) {
-						if(G_Addr->g_addr.s_addr == G_Addr->g_addr.s_addr)
-							return(assoc); /* full match */
+						if (G_Addr->g_addr.s_addr == g_addr.s_addr)
+							return (assoc); /* full match */
 					}
 				} else {
-					if (++cnt > 1) return(NULL);
+					if (++cnt > 1) return (NULL);
 					lastmatch = assoc;
 				}
 			}
 		}
 	}
 	/* If there is more than one match we do not know which local address to send to */
-	return( cnt ? lastmatch : NULL );
+	return (cnt ? lastmatch : NULL);
 }
 
 /** @ingroup Hash

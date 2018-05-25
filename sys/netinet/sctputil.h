@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctputil.h 238253 2012-07-08 16:14:42Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctputil.h 294215 2016-01-17 12:15:41Z tuexen $");
 
 #ifndef _NETINET_SCTP_UTIL_H_
 #define _NETINET_SCTP_UTIL_H_
@@ -68,6 +68,9 @@ void
 /*
  * Function prototypes
  */
+int32_t
+sctp_map_assoc_state(int);
+
 uint32_t
 sctp_get_ifa_hash_val(struct sockaddr *addr);
 
@@ -81,7 +84,7 @@ uint32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
 uint32_t sctp_select_a_tag(struct sctp_inpcb *, uint16_t lport, uint16_t rport, int);
 
-int sctp_init_asoc(struct sctp_inpcb *, struct sctp_tcb *, uint32_t, uint32_t);
+int sctp_init_asoc(struct sctp_inpcb *, struct sctp_tcb *, uint32_t, uint32_t, uint16_t);
 
 void sctp_fill_random_store(struct sctp_pcb *);
 
@@ -148,9 +151,11 @@ struct sctp_paramhdr *
 sctp_get_next_param(struct mbuf *, int,
     struct sctp_paramhdr *, int);
 
-int sctp_add_pad_tombuf(struct mbuf *, int);
+struct mbuf *
+     sctp_add_pad_tombuf(struct mbuf *, int);
 
-int sctp_pad_lastmbuf(struct mbuf *, int, struct mbuf *);
+struct mbuf *
+     sctp_pad_lastmbuf(struct mbuf *, int, struct mbuf *);
 
 void 
 sctp_ulp_notify(uint32_t, struct sctp_tcb *, uint32_t, void *, int
@@ -187,7 +192,8 @@ sctp_abort_notification(struct sctp_tcb *, uint8_t, uint16_t,
 /* We abort responding to an IP packet for some reason */
 void
 sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *, struct mbuf *,
-    int, struct sctphdr *, struct mbuf *,
+    int, struct sockaddr *, struct sockaddr *,
+    struct sctphdr *, struct mbuf *,
     uint8_t, uint32_t,
     uint32_t, uint16_t);
 
@@ -202,9 +208,11 @@ sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *,
 );
 
 void 
-sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
-    struct sctp_inpcb *,
-    uint8_t, uint32_t,
+sctp_handle_ootb(struct mbuf *, int, int,
+    struct sockaddr *, struct sockaddr *,
+    struct sctphdr *, struct sctp_inpcb *,
+    struct mbuf *,
+    uint8_t, uint32_t, uint16_t,
     uint32_t, uint16_t);
 
 int 
@@ -242,7 +250,6 @@ struct sockaddr_in6 *
 int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 
 void sctp_print_address(struct sockaddr *);
-void sctp_print_address_pkt(struct ip *, struct sctphdr *);
 
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
@@ -252,7 +259,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
 #endif
 );
 
-struct mbuf *sctp_generate_invmanparam(int);
+struct mbuf *sctp_generate_cause(uint16_t, char *);
+struct mbuf *sctp_generate_no_user_data_cause(uint32_t);
 
 void 
 sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
@@ -274,42 +282,42 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 #define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
 do { \
 	if (tp1->data != NULL) { \
-                atomic_subtract_int(&((asoc)->chunks_on_out_queue), chk_cnt); \
+		atomic_subtract_int(&((asoc)->chunks_on_out_queue), chk_cnt); \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
 			atomic_subtract_int(&((asoc)->total_output_queue_size), tp1->book_size); \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
 		} \
-   	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
-	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
+		if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
 				atomic_subtract_int(&((stcb)->sctp_socket->so_snd.sb_cc), tp1->book_size); \
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
 		} \
-        } \
+	} \
 } while (0)
 
 #endif
 
 #define sctp_free_spbufspace(stcb, asoc, sp)  \
 do { \
- 	if (sp->data != NULL) { \
+	if (sp->data != NULL) { \
 		if ((asoc)->total_output_queue_size >= sp->length) { \
 			atomic_subtract_int(&(asoc)->total_output_queue_size, sp->length); \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
 		} \
-   	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
-	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
+		if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= sp->length) { \
 				atomic_subtract_int(&stcb->sctp_socket->so_snd.sb_cc,sp->length); \
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
 		} \
-        } \
+	} \
 } while (0)
 
 #define sctp_snd_sb_alloc(stcb, sz)  \
@@ -323,12 +331,8 @@ do { \
 } while (0)
 
 /* functions to start/stop udp tunneling */
-/* XXX: Remove the #ifdef after tunneling over IPv6 works also on FreeBSD. */
-#ifdef INET
 void sctp_over_udp_stop(void);
 int sctp_over_udp_start(void);
-
-#endif
 
 int
 sctp_soreceive(struct socket *so, struct sockaddr **psa,
@@ -349,8 +353,14 @@ void sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t, uint16_t, uint16_t, 
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
 
 
+#ifdef SCTP_MBUF_LOGGING
 void
      sctp_log_mb(struct mbuf *m, int from);
+
+void
+     sctp_log_mbc(struct mbuf *m, int from);
+
+#endif
 
 void
 sctp_sblog(struct sockbuf *sb,
@@ -369,7 +379,6 @@ void sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *, int, int, uint8_t);
 void sctp_log_block(uint8_t, struct sctp_association *, int);
 void sctp_log_rwnd(uint8_t, uint32_t, uint32_t, uint32_t);
-void sctp_log_mbcnt(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
 void sctp_log_rwnd_set(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
 int sctp_fill_stat_log(void *, size_t *);
 void sctp_log_fr(uint32_t, uint32_t, uint32_t, int);

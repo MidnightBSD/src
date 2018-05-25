@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_lro.c 247470 2013-02-28 16:32:36Z gallatin $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_lro.c 305189 2016-09-01 08:01:13Z sephe $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_lro.c 247470 2013-02-28 16:32:36Z g
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
@@ -54,6 +55,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_lro.c 247470 2013-02-28 16:32:36Z g
 #include <netinet/ip_var.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_lro.h>
+#include <netinet/tcp_var.h>
 
 #include <netinet6/ip6_var.h>
 
@@ -67,6 +69,14 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_lro.c 247470 2013-02-28 16:32:36Z g
 #ifndef	TCP_LRO_UPDATE_CSUM
 #define	TCP_LRO_INVALID_CSUM	0x0000
 #endif
+
+SYSCTL_NODE(_net_inet_tcp, OID_AUTO, lro,  CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "TCP LRO");
+
+static unsigned	tcp_lro_entries = LRO_ENTRIES;
+SYSCTL_UINT(_net_inet_tcp_lro, OID_AUTO, entries,
+    CTLFLAG_RDTUN | CTLFLAG_MPSAFE, &tcp_lro_entries, 0,
+    "default number of LRO entries");
 
 int
 tcp_lro_init(struct lro_ctrl *lc)
@@ -82,7 +92,7 @@ tcp_lro_init(struct lro_ctrl *lc)
 	SLIST_INIT(&lc->lro_active);
 
 	error = 0;
-	for (i = 0; i < LRO_ENTRIES; i++) {
+	for (i = 0; i < tcp_lro_entries; i++) {
 		le = (struct lro_entry *)malloc(sizeof(*le), M_DEVBUF,
 		    M_NOWAIT | M_ZERO);
                 if (le == NULL) {
@@ -193,6 +203,25 @@ tcp_lro_rx_csum_fixup(struct lro_entry *le, void *l3hdr, struct tcphdr *th,
 	return (c & 0xffff);
 }
 #endif
+
+void
+tcp_lro_flush_inactive(struct lro_ctrl *lc, const struct timeval *timeout)
+{
+	struct lro_entry *le, *le_tmp;
+	struct timeval tv;
+
+	if (SLIST_EMPTY(&lc->lro_active))
+		return;
+
+	getmicrotime(&tv);
+	timevalsub(&tv, timeout);
+	SLIST_FOREACH_SAFE(le, &lc->lro_active, next, le_tmp) {
+		if (timevalcmp(&tv, &le->mtime, >=)) {
+			SLIST_REMOVE(&lc->lro_active, le, lro_entry, next);
+			tcp_lro_flush(lc, le);
+		}
+	}
+}
 
 void
 tcp_lro_flush(struct lro_ctrl *lc, struct lro_entry *le)
@@ -364,6 +393,7 @@ tcp_lro_rx(struct lro_ctrl *lc, struct mbuf *m, uint32_t csum)
 	tcp_seq seq;
 	int error, ip_len, l;
 	uint16_t eh_type, tcp_data_len;
+	int force_flush = 0;
 
 	/* We expect a contiguous header [eh, ip, tcp]. */
 
@@ -430,10 +460,17 @@ tcp_lro_rx(struct lro_ctrl *lc, struct mbuf *m, uint32_t csum)
 	 * Check TCP header constraints.
 	 */
 	/* Ensure no bits set besides ACK or PSH. */
-	if ((th->th_flags & ~(TH_ACK | TH_PUSH)) != 0)
-		return (TCP_LRO_CANNOT);
+	if ((th->th_flags & ~(TH_ACK | TH_PUSH)) != 0) {
+		if (th->th_flags & TH_SYN)
+			return (TCP_LRO_CANNOT);
+		/*
+		 * Make sure that previously seen segements/ACKs are delivered
+		 * before this segement, e.g. FIN.
+		 */
+		force_flush = 1;
+	}
 
-	/* XXX-BZ We lose a AKC|PUSH flag concatinating multiple segments. */
+	/* XXX-BZ We lose a ACK|PUSH flag concatenating multiple segments. */
 	/* XXX-BZ Ideally we'd flush on PUSH? */
 
 	/*
@@ -447,8 +484,13 @@ tcp_lro_rx(struct lro_ctrl *lc, struct mbuf *m, uint32_t csum)
 	ts_ptr = (uint32_t *)(th + 1);
 	if (l != 0 && (__predict_false(l != TCPOLEN_TSTAMP_APPA) ||
 	    (*ts_ptr != ntohl(TCPOPT_NOP<<24|TCPOPT_NOP<<16|
-	    TCPOPT_TIMESTAMP<<8|TCPOLEN_TIMESTAMP))))
-		return (TCP_LRO_CANNOT);
+	    TCPOPT_TIMESTAMP<<8|TCPOLEN_TIMESTAMP)))) {
+		/*
+		 * Make sure that previously seen segements/ACKs are delivered
+		 * before this segement.
+		 */
+		force_flush = 1;
+	}
 
 	/* If the driver did not pass in the checksum, set it now. */
 	if (csum == 0x0000)
@@ -480,6 +522,13 @@ tcp_lro_rx(struct lro_ctrl *lc, struct mbuf *m, uint32_t csum)
 				continue;
 			break;
 #endif
+		}
+
+		if (force_flush) {
+			/* Timestamps mismatch; this is a FIN, etc */
+			SLIST_REMOVE(&lc->lro_active, le, lro_entry, next);
+			tcp_lro_flush(lc, le);
+			return (TCP_LRO_CANNOT);
 		}
 
 		/* Flush now if appending will result in overflow. */
@@ -544,19 +593,29 @@ tcp_lro_rx(struct lro_ctrl *lc, struct mbuf *m, uint32_t csum)
 		if (le->p_len > (65535 - lc->ifp->if_mtu)) {
 			SLIST_REMOVE(&lc->lro_active, le, lro_entry, next);
 			tcp_lro_flush(lc, le);
-		}
+		} else
+			getmicrotime(&le->mtime);
 
 		return (0);
 	}
 
+	if (force_flush) {
+		/*
+		 * Nothing to flush, but this segment can not be further
+		 * aggregated/delayed.
+		 */
+		return (TCP_LRO_CANNOT);
+	}
+
 	/* Try to find an empty slot. */
 	if (SLIST_EMPTY(&lc->lro_free))
-		return (TCP_LRO_CANNOT);
+		return (TCP_LRO_NO_ENTRIES);
 
 	/* Start a new segment chain. */
 	le = SLIST_FIRST(&lc->lro_free);
 	SLIST_REMOVE_HEAD(&lc->lro_free, next);
 	SLIST_INSERT_HEAD(&lc->lro_active, le, next);
+	getmicrotime(&le->mtime);
 
 	/* Start filling in details. */
 	switch (eh_type) {

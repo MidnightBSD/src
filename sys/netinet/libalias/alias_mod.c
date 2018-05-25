@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Paolo Pisati <piso@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_mod.c 201758 2010-01-07 21:01:37Z mbr $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_mod.c 201758 2010-01-07 21:01:37Z mbr $");
 
 #ifdef _KERNEL
 #include <sys/libkern.h>

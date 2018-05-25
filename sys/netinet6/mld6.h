@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet6/mld6.h 191666 2009-04-29 11:31:23Z bms $
+ * $FreeBSD: stable/10/sys/netinet6/mld6.h 191666 2009-04-29 11:31:23Z bms $
  */
 
 #ifndef _NETINET6_MLD6_H_

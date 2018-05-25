@@ -31,14 +31,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/scope6.c 243382 2012-11-22 00:22:54Z ae $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/scope6.c 299145 2016-05-05 23:06:39Z markj $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
 #include <sys/systm.h>
 #include <sys/queue.h>
+#include <sys/sysctl.h>
 #include <sys/syslog.h>
 
 #include <net/if.h>
@@ -56,6 +58,11 @@ VNET_DEFINE(int, ip6_use_defzone) = 1;
 #else
 VNET_DEFINE(int, ip6_use_defzone) = 0;
 #endif
+VNET_DEFINE(int, deembed_scopeid) = 1;
+SYSCTL_DECL(_net_inet6_ip6);
+SYSCTL_VNET_INT(_net_inet6_ip6, OID_AUTO, deembed_scopeid, CTLFLAG_RW,
+    &VNET_NAME(deembed_scopeid), 0,
+    "Extract embedded zone ID and set it to sin6_scope_id in sockaddr_in6.");
 
 /*
  * The scope6_lock protects the global sid default stored in
@@ -72,6 +79,9 @@ static VNET_DEFINE(struct scope6_id, sid_default);
 
 #define SID(ifp) \
 	(((struct in6_ifextra *)(ifp)->if_afdata[AF_INET6])->scope6_id)
+
+static int	scope6_get(struct ifnet *, struct scope6_id *);
+static int	scope6_set(struct ifnet *, struct scope6_id *);
 
 void
 scope6_init(void)
@@ -116,6 +126,30 @@ scope6_ifdetach(struct scope6_id *sid)
 }
 
 int
+scope6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
+{
+	struct in6_ifreq *ifr;
+
+	if (ifp->if_afdata[AF_INET6] == NULL)
+		return (EPFNOSUPPORT);
+
+	ifr = (struct in6_ifreq *)data;
+	switch (cmd) {
+	case SIOCSSCOPE6:
+		return (scope6_set(ifp,
+		    (struct scope6_id *)ifr->ifr_ifru.ifru_scope_id));
+	case SIOCGSCOPE6:
+		return (scope6_get(ifp,
+		    (struct scope6_id *)ifr->ifr_ifru.ifru_scope_id));
+	case SIOCGSCOPE6DEF:
+		return (scope6_get_default(
+		    (struct scope6_id *)ifr->ifr_ifru.ifru_scope_id));
+	default:
+		return (EOPNOTSUPP);
+	}
+}
+
+static int
 scope6_set(struct ifnet *ifp, struct scope6_id *idlist)
 {
 	int i;
@@ -178,7 +212,7 @@ scope6_set(struct ifnet *ifp, struct scope6_id *idlist)
 	return (error);
 }
 
-int
+static int
 scope6_get(struct ifnet *ifp, struct scope6_id *idlist)
 {
 	struct scope6_id *sid;
@@ -196,7 +230,6 @@ scope6_get(struct ifnet *ifp, struct scope6_id *idlist)
 	IF_AFDATA_RUNLOCK(ifp);
 	return (0);
 }
-
 
 /*
  * Get a scope of the address. Node-local, link-local, site-local or global.
@@ -331,7 +364,6 @@ scope6_addr2default(struct in6_addr *addr)
 int
 sa6_embedscope(struct sockaddr_in6 *sin6, int defaultok)
 {
-	struct ifnet *ifp;
 	u_int32_t zoneid;
 
 	if ((zoneid = sin6->sin6_scope_id) == 0 && defaultok)
@@ -346,15 +378,11 @@ sa6_embedscope(struct sockaddr_in6 *sin6, int defaultok)
 		 * zone IDs assuming a one-to-one mapping between interfaces
 		 * and links.
 		 */
-		if (V_if_index < zoneid)
-			return (ENXIO);
-		ifp = ifnet_byindex(zoneid);
-		if (ifp == NULL) /* XXX: this can happen for some OS */
+		if (V_if_index < zoneid || ifnet_byindex(zoneid) == NULL)
 			return (ENXIO);
 
 		/* XXX assignment to 16bit from 32bit variable */
 		sin6->sin6_addr.s6_addr16[1] = htons(zoneid & 0xffff);
-
 		sin6->sin6_scope_id = 0;
 	}
 
@@ -370,12 +398,6 @@ sa6_recoverscope(struct sockaddr_in6 *sin6)
 	char ip6buf[INET6_ADDRSTRLEN];
 	u_int32_t zoneid;
 
-	if (sin6->sin6_scope_id != 0) {
-		log(LOG_NOTICE,
-		    "sa6_recoverscope: assumption failure (non 0 ID): %s%%%d\n",
-		    ip6_sprintf(ip6buf, &sin6->sin6_addr), sin6->sin6_scope_id);
-		/* XXX: proceed anyway... */
-	}
 	if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr) ||
 	    IN6_IS_ADDR_MC_INTFACELOCAL(&sin6->sin6_addr)) {
 		/*
@@ -386,8 +408,19 @@ sa6_recoverscope(struct sockaddr_in6 *sin6)
 			/* sanity check */
 			if (V_if_index < zoneid)
 				return (ENXIO);
+#if 0
+			/* XXX: Disabled due to possible deadlock. */
 			if (!ifnet_byindex(zoneid))
 				return (ENXIO);
+#endif
+			if (sin6->sin6_scope_id != 0 &&
+			    zoneid != sin6->sin6_scope_id) {
+				log(LOG_NOTICE,
+				    "%s: embedded scope mismatch: %s%%%d. "
+				    "sin6_scope_id was overridden\n", __func__,
+				    ip6_sprintf(ip6buf, &sin6->sin6_addr),
+				    sin6->sin6_scope_id);
+			}
 			sin6->sin6_addr.s6_addr16[1] = 0;
 			sin6->sin6_scope_id = zoneid;
 		}
@@ -410,62 +443,34 @@ in6_setscope(struct in6_addr *in6, struct ifnet *ifp, u_int32_t *ret_id)
 	u_int32_t zoneid = 0;
 	struct scope6_id *sid;
 
-	IF_AFDATA_RLOCK(ifp);
-
-	sid = SID(ifp);
-
-#ifdef DIAGNOSTIC
-	if (sid == NULL) { /* should not happen */
-		panic("in6_setscope: scope array is NULL");
-		/* NOTREACHED */
-	}
-#endif
-
 	/*
 	 * special case: the loopback address can only belong to a loopback
 	 * interface.
 	 */
 	if (IN6_IS_ADDR_LOOPBACK(in6)) {
-		if (!(ifp->if_flags & IFF_LOOPBACK)) {
-			IF_AFDATA_RUNLOCK(ifp);
+		if (!(ifp->if_flags & IFF_LOOPBACK))
 			return (EINVAL);
-		} else {
-			if (ret_id != NULL)
-				*ret_id = 0; /* there's no ambiguity */
+	} else {
+		scope = in6_addrscope(in6);
+		if (scope == IPV6_ADDR_SCOPE_INTFACELOCAL ||
+		    scope == IPV6_ADDR_SCOPE_LINKLOCAL) {
+			/*
+			 * Currently we use interface indeces as the
+			 * zone IDs for interface-local and link-local
+			 * scopes.
+			 */
+			zoneid = ifp->if_index;
+			in6->s6_addr16[1] = htons(zoneid & 0xffff); /* XXX */
+		} else if (scope != IPV6_ADDR_SCOPE_GLOBAL) {
+			IF_AFDATA_RLOCK(ifp);
+			sid = SID(ifp);
+			zoneid = sid->s6id_list[scope];
 			IF_AFDATA_RUNLOCK(ifp);
-			return (0);
 		}
 	}
 
-	scope = in6_addrscope(in6);
-	switch (scope) {
-	case IPV6_ADDR_SCOPE_INTFACELOCAL: /* should be interface index */
-		zoneid = sid->s6id_list[IPV6_ADDR_SCOPE_INTFACELOCAL];
-		break;
-
-	case IPV6_ADDR_SCOPE_LINKLOCAL:
-		zoneid = sid->s6id_list[IPV6_ADDR_SCOPE_LINKLOCAL];
-		break;
-
-	case IPV6_ADDR_SCOPE_SITELOCAL:
-		zoneid = sid->s6id_list[IPV6_ADDR_SCOPE_SITELOCAL];
-		break;
-
-	case IPV6_ADDR_SCOPE_ORGLOCAL:
-		zoneid = sid->s6id_list[IPV6_ADDR_SCOPE_ORGLOCAL];
-		break;
-
-	default:
-		zoneid = 0;	/* XXX: treat as global. */
-		break;
-	}
-	IF_AFDATA_RUNLOCK(ifp);
-
 	if (ret_id != NULL)
 		*ret_id = zoneid;
-
-	if (IN6_IS_SCOPE_LINKLOCAL(in6) || IN6_IS_ADDR_MC_INTFACELOCAL(in6))
-		in6->s6_addr16[1] = htons(zoneid & 0xffff); /* XXX */
 
 	return (0);
 }

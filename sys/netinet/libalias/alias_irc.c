@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_irc.c 190841 2009-04-08 11:56:49Z piso $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_irc.c 190841 2009-04-08 11:56:49Z piso $");
 
 /* Alias_irc.c intercepts packages contain IRC CTCP commands, and
 	changes DCC commands to export a port on the aliasing host instead

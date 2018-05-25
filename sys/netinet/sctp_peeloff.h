@@ -32,22 +32,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_peeloff.h 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_peeloff.h 243516 2012-11-25 14:25:08Z tuexen $");
 
 #ifndef _NETINET_SCTP_PEELOFF_H_
 #define _NETINET_SCTP_PEELOFF_H_
-
-
-
-
 #if defined(_KERNEL)
-
 int sctp_can_peel_off(struct socket *, sctp_assoc_t);
 int sctp_do_peeloff(struct socket *, struct socket *, sctp_assoc_t);
-struct socket *sctp_get_peeloff(struct socket *, sctp_assoc_t, int *);
-
-
 
 #endif				/* _KERNEL */
-
-#endif
+#endif				/* _NETINET_SCTP_PEELOFF_H_ */

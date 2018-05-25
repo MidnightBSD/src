@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/9/sys/netinet/ip6.h 215956 2010-11-27 21:51:39Z brucec $	*/
+/*	$FreeBSD: stable/10/sys/netinet/ip6.h 249294 2013-04-09 07:11:22Z ae $	*/
 /*	$KAME: ip6.h,v 1.18 2001/03/29 05:34:30 itojun Exp $	*/
 
 /*-

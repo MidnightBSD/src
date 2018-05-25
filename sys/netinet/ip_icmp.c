@@ -31,10 +31,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_icmp.c 242640 2012-11-06 00:49:52Z melifaro $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/ip_icmp.c 283901 2015-06-02 03:14:42Z ae $");
 
 #include "opt_inet.h"
-#include "opt_ipsec.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -65,10 +64,6 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_icmp.c 242640 2012-11-06 00:49:52Z m
 #include <netinet/icmp_var.h>
 
 #ifdef INET
-#ifdef IPSEC
-#include <netipsec/ipsec.h>
-#include <netipsec/key.h>
-#endif
 
 #include <machine/in_cksum.h>
 
@@ -90,12 +85,17 @@ static VNET_DEFINE(int, icmplim_output) = 1;
 #define	V_icmplim_output		VNET(icmplim_output)
 SYSCTL_VNET_INT(_net_inet_icmp, OID_AUTO, icmplim_output, CTLFLAG_RW,
 	&VNET_NAME(icmplim_output), 0,
-	"Enable rate limiting of ICMP responses");
+	"Enable logging of ICMP response rate limiting");
 
 #ifdef INET
-VNET_DEFINE(struct icmpstat, icmpstat);
-SYSCTL_VNET_STRUCT(_net_inet_icmp, ICMPCTL_STATS, stats, CTLFLAG_RW,
-	&VNET_NAME(icmpstat), icmpstat, "");
+VNET_PCPUSTAT_DEFINE(struct icmpstat, icmpstat);
+VNET_PCPUSTAT_SYSINIT(icmpstat);
+SYSCTL_VNET_PCPUSTAT(_net_inet_icmp, ICMPCTL_STATS, stats, struct icmpstat,
+    icmpstat, "ICMP statistics (struct icmpstat, netinet/icmp_var.h)");
+
+#ifdef VIMAGE
+VNET_PCPUSTAT_SYSUNINIT(icmpstat);
+#endif /* VIMAGE */
 
 static VNET_DEFINE(int, icmpmaskrepl) = 0;
 #define	V_icmpmaskrepl			VNET(icmpmaskrepl)
@@ -144,6 +144,10 @@ SYSCTL_VNET_INT(_net_inet_icmp, OID_AUTO, bmcastecho, CTLFLAG_RW,
 	&VNET_NAME(icmpbmcastecho), 0,
 	"");
 
+static VNET_DEFINE(int, icmptstamprepl) = 1;
+#define	V_icmptstamprepl		VNET(icmptstamprepl)
+SYSCTL_INT(_net_inet_icmp, OID_AUTO, tstamprepl, CTLFLAG_RW,
+	&VNET_NAME(icmptstamprepl), 0, "Respond to ICMP Timestamp packets");
 
 #ifdef ICMPPRINTFS
 int	icmpprintfs = 0;
@@ -198,7 +202,7 @@ void
 kmod_icmpstat_inc(int statnum)
 {
 
-	(*((u_long *)&V_icmpstat + statnum))++;
+	counter_u64_add(VNET(icmpstat)[statnum], 1);
 }
 
 /*
@@ -230,7 +234,7 @@ icmp_error(struct mbuf *n, int type, int code, uint32_t dest, int mtu)
 	 */
 	if (n->m_flags & M_DECRYPTED)
 		goto freeit;
-	if (oip->ip_off & ~(IP_MF|IP_DF))
+	if (oip->ip_off & htons(~(IP_MF|IP_DF)))
 		goto freeit;
 	if (n->m_flags & (M_BCAST|M_MCAST))
 		goto freeit;
@@ -264,25 +268,26 @@ icmp_error(struct mbuf *n, int type, int code, uint32_t dest, int mtu)
 		tcphlen = th->th_off << 2;
 		if (tcphlen < sizeof(struct tcphdr))
 			goto freeit;
-		if (oip->ip_len < oiphlen + tcphlen)
+		if (ntohs(oip->ip_len) < oiphlen + tcphlen)
 			goto freeit;
 		if (oiphlen + tcphlen > n->m_len && n->m_next == NULL)
 			goto stdreply;
 		if (n->m_len < oiphlen + tcphlen && 
 		    ((n = m_pullup(n, oiphlen + tcphlen)) == NULL))
 			goto freeit;
-		icmpelen = max(tcphlen, min(V_icmp_quotelen, oip->ip_len - oiphlen));
+		icmpelen = max(tcphlen, min(V_icmp_quotelen,
+		    ntohs(oip->ip_len) - oiphlen));
 	} else
-stdreply:	icmpelen = max(8, min(V_icmp_quotelen, oip->ip_len - oiphlen));
+stdreply:	icmpelen = max(8, min(V_icmp_quotelen, ntohs(oip->ip_len) - oiphlen));
 
 	icmplen = min(oiphlen + icmpelen, nlen);
 	if (icmplen < sizeof(struct ip))
 		goto freeit;
 
 	if (MHLEN > sizeof(struct ip) + ICMP_MINLEN + icmplen)
-		m = m_gethdr(M_DONTWAIT, MT_DATA);
+		m = m_gethdr(M_NOWAIT, MT_DATA);
 	else
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		goto freeit;
 #ifdef MAC
@@ -323,8 +328,6 @@ stdreply:	icmpelen = max(8, min(V_icmp_quotelen, oip->ip_len - oiphlen));
 	 */
 	m_copydata(n, 0, icmplen, (caddr_t)&icp->icmp_ip);
 	nip = &icp->icmp_ip;
-	nip->ip_len = htons(nip->ip_len);
-	nip->ip_off = htons(nip->ip_off);
 
 	/*
 	 * Set up ICMP message mbuf and copy old IP header (without options
@@ -339,11 +342,12 @@ stdreply:	icmpelen = max(8, min(V_icmp_quotelen, oip->ip_len - oiphlen));
 	m->m_pkthdr.rcvif = n->m_pkthdr.rcvif;
 	nip = mtod(m, struct ip *);
 	bcopy((caddr_t)oip, (caddr_t)nip, sizeof(struct ip));
-	nip->ip_len = m->m_len;
+	nip->ip_len = htons(m->m_len);
 	nip->ip_v = IPVERSION;
 	nip->ip_hl = 5;
 	nip->ip_p = IPPROTO_ICMP;
 	nip->ip_tos = 0;
+	nip->ip_off = 0;
 	icmp_reflect(m);
 
 freeit:
@@ -361,7 +365,7 @@ icmp_input(struct mbuf *m, int off)
 	struct ip *ip = mtod(m, struct ip *);
 	struct sockaddr_in icmpsrc, icmpdst, icmpgw;
 	int hlen = off;
-	int icmplen = ip->ip_len;
+	int icmplen = ntohs(ip->ip_len) - off;
 	int i, code;
 	void (*ctlfunc)(int, struct sockaddr *, void *);
 	int fibnum;
@@ -502,7 +506,6 @@ icmp_input(struct mbuf *m, int off)
 			ICMPSTAT_INC(icps_badlen);
 			goto freeit;
 		}
-		icp->icmp_ip.ip_len = ntohs(icp->icmp_ip.ip_len);
 		/* Discard ICMP's in response to multicast packets */
 		if (IN_MULTICAST(ntohl(icp->icmp_ip.ip_dst.s_addr)))
 			goto badcode;
@@ -538,6 +541,8 @@ icmp_input(struct mbuf *m, int off)
 			goto reflect;
 
 	case ICMP_TSTAMP:
+		if (V_icmptstamprepl == 0)
+			break;
 		if (!V_icmpbmcastecho
 		    && (m->m_flags & (M_MCAST | M_BCAST)) != 0) {
 			ICMPSTAT_INC(icps_bmcasttstamp);
@@ -595,7 +600,6 @@ icmp_input(struct mbuf *m, int off)
 		}
 		ifa_free(&ia->ia_ifa);
 reflect:
-		ip->ip_len += hlen;	/* since ip_input deducts this */
 		ICMPSTAT_INC(icps_reflect);
 		ICMPSTAT_INC(icps_outhist[icp->icmp_type]);
 		icmp_reflect(m);
@@ -656,9 +660,6 @@ reflect:
 			  (struct sockaddr *)&icmpgw, fibnum);
 		}
 		pfctlinput(PRC_REDIRECT_HOST, (struct sockaddr *)&icmpsrc);
-#ifdef IPSEC
-		key_sa_routechange((struct sockaddr *)&icmpsrc);
-#endif
 		break;
 
 	/*
@@ -704,8 +705,6 @@ icmp_reflect(struct mbuf *m)
 		ICMPSTAT_INC(icps_badaddr);
 		goto done;	/* Ip_output() will check for broadcast */
 	}
-
-	m_addr_changed(m);
 
 	t = ip->ip_dst;
 	ip->ip_dst = ip->ip_src;
@@ -815,7 +814,7 @@ match:
 		 */
 		cp = (u_char *) (ip + 1);
 		if ((opts = ip_srcroute(m)) == 0 &&
-		    (opts = m_gethdr(M_DONTWAIT, MT_DATA))) {
+		    (opts = m_gethdr(M_NOWAIT, MT_DATA))) {
 			opts->m_len = sizeof(struct in_addr);
 			mtod(opts, struct in_addr *)->s_addr = 0;
 		}
@@ -863,19 +862,7 @@ match:
 			    printf("%d\n", opts->m_len);
 #endif
 		}
-		/*
-		 * Now strip out original options by copying rest of first
-		 * mbuf's data back, and adjust the IP length.
-		 */
-		ip->ip_len -= optlen;
-		ip->ip_v = IPVERSION;
-		ip->ip_hl = 5;
-		m->m_len -= optlen;
-		if (m->m_flags & M_PKTHDR)
-			m->m_pkthdr.len -= optlen;
-		optlen += sizeof(struct ip);
-		bcopy((caddr_t)ip + optlen, (caddr_t)(ip + 1),
-			 (unsigned)(m->m_len - sizeof(struct ip)));
+		ip_stripoptions(m);
 	}
 	m_tag_delete_nonpersistent(m);
 	m->m_flags &= ~(M_BCAST|M_MCAST);
@@ -901,7 +888,7 @@ icmp_send(struct mbuf *m, struct mbuf *opts)
 	m->m_len -= hlen;
 	icp = mtod(m, struct icmp *);
 	icp->icmp_cksum = 0;
-	icp->icmp_cksum = in_cksum(m, ip->ip_len - hlen);
+	icp->icmp_cksum = in_cksum(m, ntohs(ip->ip_len) - hlen);
 	m->m_data -= hlen;
 	m->m_len += hlen;
 	m->m_pkthdr.rcvif = (struct ifnet *)0;

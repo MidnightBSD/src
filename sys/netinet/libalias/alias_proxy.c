@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_proxy.c 243282 2012-11-19 15:26:03Z emaste $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_proxy.c 241648 2012-10-17 20:23:07Z emaste $");
 
 /* file: alias_proxy.c
 

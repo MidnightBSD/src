@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_pcb.h 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_pcb.h 296052 2016-02-25 18:46:06Z tuexen $");
 
 #ifndef _NETINET_SCTP_PCB_H_
 #define _NETINET_SCTP_PCB_H_
@@ -145,7 +145,12 @@ struct sctp_tagblock {
 
 
 struct sctp_epinfo {
-	struct socket *udp_tun_socket;
+#ifdef INET
+	struct socket *udp4_tun_socket;
+#endif
+#ifdef INET6
+	struct socket *udp6_tun_socket;
+#endif
 	struct sctpasochead *sctp_asochash;
 	u_long hashasocmark;
 
@@ -319,6 +324,7 @@ struct sctp_pcb {
 	int auto_close_time;
 	uint32_t initial_sequence_debug;
 	uint32_t adaptation_layer_indicator;
+	uint8_t adaptation_layer_indicator_provided;
 	uint32_t store_at;
 	uint32_t max_burst;
 	uint32_t fr_max_burst;
@@ -383,8 +389,8 @@ struct sctp_inpcb {
 
 	/* back pointer to our socket */
 	struct socket *sctp_socket;
+	uint64_t sctp_features;	/* Feature flags */
 	uint32_t sctp_flags;	/* INP state flag set */
-	uint32_t sctp_features;	/* Feature flags */
 	uint32_t sctp_mobility_features;	/* Mobility  Feature flags */
 	struct sctp_pcb sctp_ep;/* SCTP ep data */
 	/* head of the hash of all associations */
@@ -399,9 +405,16 @@ struct sctp_inpcb {
 	uint32_t sctp_frag_point;
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
+	uint32_t max_cwnd;
 	uint8_t local_strreset_support;
 	uint32_t sctp_cmt_on_off;
-	uint32_t sctp_ecn_enable;
+	uint8_t ecn_supported;
+	uint8_t prsctp_supported;
+	uint8_t auth_supported;
+	uint8_t asconf_supported;
+	uint8_t reconfig_supported;
+	uint8_t nrsack_supported;
+	uint8_t pktdrop_supported;
 	struct sctp_nonpad_sndrcvinfo def_send;
 	/*-
 	 * These three are here for the sosend_dgram
@@ -418,6 +431,7 @@ struct sctp_inpcb {
 	struct mtx inp_rdata_mtx;
 	int32_t refcount;
 	uint32_t def_vrf_id;
+	uint16_t fibnum;
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t last_abort_code;
@@ -529,6 +543,7 @@ sctp_inpcb_bind(struct socket *, struct sockaddr *,
 
 struct sctp_tcb *
 sctp_findassociation_addr(struct mbuf *, int,
+    struct sockaddr *, struct sockaddr *,
     struct sctphdr *, struct sctp_chunkhdr *, struct sctp_inpcb **,
     struct sctp_nets **, uint32_t vrf_id);
 
@@ -559,7 +574,7 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *,
     sctp_assoc_t, int);
 
 struct sctp_tcb *
-sctp_findassociation_ep_asconf(struct mbuf *, int,
+sctp_findassociation_ep_asconf(struct mbuf *, int, struct sockaddr *,
     struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **, uint32_t vrf_id);
 
 int sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id);
@@ -570,7 +585,7 @@ void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int *, uint32_t, uint32_t, struct thread *);
+    int *, uint32_t, uint32_t, uint16_t, struct thread *);
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
@@ -583,10 +598,6 @@ void
      sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t rport);
 
 void sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *, uint32_t);
-
-int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *, uint32_t);
-
-void sctp_remove_laddr(struct sctp_laddr *);
 
 void sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
 
@@ -604,8 +615,8 @@ void sctp_add_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 void sctp_del_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 
 int
-sctp_load_addresses_from_init(struct sctp_tcb *, struct mbuf *, int,
-    int, struct sctphdr *, struct sockaddr *);
+sctp_load_addresses_from_init(struct sctp_tcb *, struct mbuf *, int, int,
+    struct sockaddr *, struct sockaddr *, struct sockaddr *);
 
 int
 sctp_set_primary_addr(struct sctp_tcb *, struct sockaddr *,
@@ -637,12 +648,6 @@ sctp_initiate_iterator(inp_func inpf,
 #if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
 void
      sctp_queue_to_mcore(struct mbuf *m, int off, int cpu_to_use);
-
-#endif
-
-#ifdef INVARIANTS
-void
-     sctp_validate_no_locks(struct sctp_inpcb *inp);
 
 #endif
 

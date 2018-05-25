@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)igmp_var.h	8.1 (Berkeley) 7/19/93
- * $FreeBSD: stable/9/sys/netinet/igmp_var.h 190965 2009-04-12 13:41:13Z rwatson $
+ * $FreeBSD: stable/10/sys/netinet/igmp_var.h 254925 2013-08-26 18:16:05Z jhb $
  */
 
 #ifndef _NETINET_IGMP_VAR_H_
@@ -219,8 +219,4 @@ SYSCTL_DECL(_net_inet_igmp);
 #define IGMPCTL_STATS		1	/* statistics (read-only) */
 #define IGMPCTL_MAXID		2
 
-#define IGMPCTL_NAMES { \
-	{ 0, 0 }, \
-	{ "stats", CTLTYPE_STRUCT } \
-}
 #endif

@@ -31,13 +31,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_output.c 243586 2012-11-27 01:59:51Z ae $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/ip_output.c 284496 2015-06-17 07:21:43Z hselasky $");
 
+#include "opt_inet.h"
 #include "opt_ipfw.h"
 #include "opt_ipsec.h"
-#include "opt_route.h"
+#include "opt_kdtrace.h"
 #include "opt_mbuf_stress_test.h"
 #include "opt_mpath.h"
+#include "opt_route.h"
 #include "opt_sctp.h"
 
 #include <sys/param.h>
@@ -48,6 +50,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_output.c 243586 2012-11-27 01:59:51Z
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
+#include <sys/sdt.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
@@ -65,6 +68,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/ip_output.c 243586 2012-11-27 01:59:51Z
 #include <net/vnet.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/in_pcb.h>
@@ -103,7 +107,6 @@ extern	struct protosw inetsw[];
 /*
  * IP output.  The packet in mbuf chain m contains a skeletal IP
  * header (with len, off, ttl, proto, tos, src, dst).
- * ip_len and ip_off are in host format.
  * The mbuf chain containing the packet will be freed.
  * The mbuf opt, if present, will not be freed.
  * If route ro is present and has ro_rt initialized, route lookup would be
@@ -125,12 +128,15 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 	int n;	/* scratchpad */
 	int error = 0;
 	struct sockaddr_in *dst;
+	const struct sockaddr_in *gw;
 	struct in_ifaddr *ia;
-	int isbroadcast, sw_csum;
+	int isbroadcast;
+	uint16_t ip_len, ip_off;
 	struct route iproute;
 	struct rtentry *rte;	/* cache for ro->ro_rt */
 	struct in_addr odst;
 	struct m_tag *fwd_tag = NULL;
+	int have_ia_ref;
 #ifdef IPSEC
 	int no_route_but_check_spd = 0;
 #endif
@@ -139,9 +145,9 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 	if (inp != NULL) {
 		INP_LOCK_ASSERT(inp);
 		M_SETFIB(m, inp->inp_inc.inc_fibnum);
-		if (inp->inp_flags & (INP_HW_FLOWID|INP_SW_FLOWID)) {
+		if (inp->inp_flowtype != M_HASHTYPE_NONE) {
 			m->m_pkthdr.flowid = inp->inp_flowid;
-			m->m_flags |= M_FLOWID;
+			M_HASHTYPE_SET(m, M_HASHTYPE_OPAQUE);
 		}
 	}
 
@@ -151,19 +157,8 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 	}
 
 #ifdef FLOWTABLE
-	if (ro->ro_rt == NULL) {
-		struct flentry *fle;
-			
-		/*
-		 * The flow table returns route entries valid for up to 30
-		 * seconds; we rely on the remainder of ip_output() taking no
-		 * longer than that long for the stability of ro_rt. The
-		 * flow ID assignment must have happened before this point.
-		 */
-		fle = flowtable_lookup_mbuf(V_ip_ft, m, AF_INET);
-		if (fle != NULL)
-			flow_to_route(fle, ro);
-	}
+	if (ro->ro_rt == NULL)
+		(void )flowtable_lookup(AF_INET, m, ro);
 #endif
 
 	if (opt) {
@@ -173,6 +168,8 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 			hlen = len; /* ip->ip_hl is updated above */
 	}
 	ip = mtod(m, struct ip *);
+	ip_len = ntohs(ip->ip_len);
+	ip_off = ntohs(ip->ip_off);
 
 	/*
 	 * Fill in IP header.  If we are not allowing fragmentation,
@@ -195,9 +192,17 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 		hlen = ip->ip_hl << 2;
 	}
 
+	/*
+	 * dst/gw handling:
+	 *
+	 * dst can be rewritten but always point to &ro->ro_dst
+	 * gw is readonly but can be pointed either to dst OR rt_gatewy
+	 * therefore we need restore GW if we're re-doing lookup
+	 */
+	gw = dst = (struct sockaddr_in *)&ro->ro_dst;
 again:
-	dst = (struct sockaddr_in *)&ro->ro_dst;
 	ia = NULL;
+	have_ia_ref = 0;
 	/*
 	 * If there is a cached route,
 	 * check that it is to the same destination
@@ -214,6 +219,7 @@ again:
 		RO_RTFREE(ro);
 		ro->ro_lle = NULL;
 		rte = NULL;
+		gw = dst;
 	}
 	if (rte == NULL && fwd_tag == NULL) {
 		bzero(dst, sizeof(*dst));
@@ -234,6 +240,7 @@ again:
 			error = ENETUNREACH;
 			goto bad;
 		}
+		have_ia_ref = 1;
 		ip->ip_dst.s_addr = INADDR_BROADCAST;
 		dst->sin_addr = ip->ip_dst;
 		ifp = ia->ia_ifp;
@@ -246,6 +253,7 @@ again:
 			error = ENETUNREACH;
 			goto bad;
 		}
+		have_ia_ref = 1;
 		ifp = ia->ia_ifp;
 		ip->ip_ttl = 1;
 		isbroadcast = in_broadcast(dst->sin_addr, ifp);
@@ -257,6 +265,8 @@ again:
 		 */
 		ifp = imo->imo_multicast_ifp;
 		IFP_TO_IA(ifp, ia);
+		if (ia)
+			have_ia_ref = 1;
 		isbroadcast = 0;	/* fool gcc */
 	} else {
 		/*
@@ -292,15 +302,14 @@ again:
 			goto bad;
 		}
 		ia = ifatoia(rte->rt_ifa);
-		ifa_ref(&ia->ia_ifa);
 		ifp = rte->rt_ifp;
-		rte->rt_rmx.rmx_pksent++;
+		counter_u64_add(rte->rt_pksent, 1);
 		if (rte->rt_flags & RTF_GATEWAY)
-			dst = (struct sockaddr_in *)rte->rt_gateway;
+			gw = (struct sockaddr_in *)rte->rt_gateway;
 		if (rte->rt_flags & RTF_HOST)
 			isbroadcast = (rte->rt_flags & RTF_BROADCAST);
 		else
-			isbroadcast = in_broadcast(dst->sin_addr, ifp);
+			isbroadcast = in_broadcast(gw->sin_addr, ifp);
 	}
 	/*
 	 * Calculate MTU.  If we have a route that is up, use that,
@@ -314,9 +323,9 @@ again:
 		 * them, there is no way for one to update all its
 		 * routes when the MTU is changed.
 		 */
-		if (rte->rt_rmx.rmx_mtu > ifp->if_mtu)
-			rte->rt_rmx.rmx_mtu = ifp->if_mtu;
-		mtu = rte->rt_rmx.rmx_mtu;
+		if (rte->rt_mtu > ifp->if_mtu)
+			rte->rt_mtu = ifp->if_mtu;
+		mtu = rte->rt_mtu;
 	} else {
 		mtu = ifp->if_mtu;
 	}
@@ -326,11 +335,11 @@ again:
 	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr))) {
 		m->m_flags |= M_MCAST;
 		/*
-		 * IP destination address is multicast.  Make sure "dst"
+		 * IP destination address is multicast.  Make sure "gw"
 		 * still points to the address in "ro".  (It may have been
 		 * changed to point to a gateway address, above.)
 		 */
-		dst = (struct sockaddr_in *)&ro->ro_dst;
+		gw = dst;
 		/*
 		 * See if the caller provided any multicast options
 		 */
@@ -436,7 +445,7 @@ again:
 	 * packet or packet fragments, unless ALTQ is enabled on the given
 	 * interface in which case packetdrop should be done by queueing.
 	 */
-	n = ip->ip_len / mtu + 1; /* how many fragments ? */
+	n = ip_len / mtu + 1; /* how many fragments ? */
 	if (
 #ifdef ALTQ
 	    (!ALTQ_IS_ENABLED(&ifp->if_snd)) &&
@@ -463,7 +472,7 @@ again:
 			goto bad;
 		}
 		/* don't allow broadcast messages to be fragmented */
-		if (ip->ip_len > mtu) {
+		if (ip_len > mtu) {
 			error = EMSGSIZE;
 			goto bad;
 		}
@@ -530,7 +539,7 @@ sendit:
 			error = netisr_queue(NETISR_IP, m);
 			goto done;
 		} else {
-			if (ia != NULL)
+			if (have_ia_ref)
 				ifa_free(&ia->ia_ifa);
 			goto again;	/* Redo the routing table lookup. */
 		}
@@ -558,12 +567,11 @@ sendit:
 	/* Or forward to some other address? */
 	if ((m->m_flags & M_IP_NEXTHOP) &&
 	    (fwd_tag = m_tag_find(m, PACKET_TAG_IPFORWARD, NULL)) != NULL) {
-		dst = (struct sockaddr_in *)&ro->ro_dst;
 		bcopy((fwd_tag+1), dst, sizeof(struct sockaddr_in));
 		m->m_flags |= M_SKIP_FIREWALL;
 		m->m_flags &= ~M_IP_NEXTHOP;
 		m_tag_delete(m, fwd_tag);
-		if (ia != NULL)
+		if (have_ia_ref)
 			ifa_free(&ia->ia_ifa);
 		goto again;
 	}
@@ -580,31 +588,29 @@ passout:
 	}
 
 	m->m_pkthdr.csum_flags |= CSUM_IP;
-	sw_csum = m->m_pkthdr.csum_flags & ~ifp->if_hwassist;
-	if (sw_csum & CSUM_DELAY_DATA) {
+	if (m->m_pkthdr.csum_flags & CSUM_DELAY_DATA & ~ifp->if_hwassist) {
 		in_delayed_cksum(m);
-		sw_csum &= ~CSUM_DELAY_DATA;
+		m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 	}
 #ifdef SCTP
-	if (sw_csum & CSUM_SCTP) {
+	if (m->m_pkthdr.csum_flags & CSUM_SCTP & ~ifp->if_hwassist) {
 		sctp_delayed_cksum(m, (uint32_t)(ip->ip_hl << 2));
-		sw_csum &= ~CSUM_SCTP;
+		m->m_pkthdr.csum_flags &= ~CSUM_SCTP;
 	}
 #endif
-	m->m_pkthdr.csum_flags &= ifp->if_hwassist;
 
 	/*
 	 * If small enough for interface, or the interface will take
 	 * care of the fragmentation for us, we can just send directly.
 	 */
-	if (ip->ip_len <= mtu ||
+	if (ip_len <= mtu ||
 	    (m->m_pkthdr.csum_flags & ifp->if_hwassist & CSUM_TSO) != 0 ||
-	    ((ip->ip_off & IP_DF) == 0 && (ifp->if_hwassist & CSUM_FRAGMENT))) {
-		ip->ip_len = htons(ip->ip_len);
-		ip->ip_off = htons(ip->ip_off);
+	    ((ip_off & IP_DF) == 0 && (ifp->if_hwassist & CSUM_FRAGMENT))) {
 		ip->ip_sum = 0;
-		if (sw_csum & CSUM_DELAY_IP)
+		if (m->m_pkthdr.csum_flags & CSUM_IP & ~ifp->if_hwassist) {
 			ip->ip_sum = in_cksum(m, hlen);
+			m->m_pkthdr.csum_flags &= ~CSUM_IP;
+		}
 
 		/*
 		 * Record statistics for this interface address.
@@ -622,20 +628,21 @@ passout:
 		}
 #ifdef MBUF_STRESS_TEST
 		if (mbuf_frag_size && m->m_pkthdr.len > mbuf_frag_size)
-			m = m_fragment(m, M_DONTWAIT, mbuf_frag_size);
+			m = m_fragment(m, M_NOWAIT, mbuf_frag_size);
 #endif
 		/*
 		 * Reset layer specific mbuf flags
 		 * to avoid confusing lower layers.
 		 */
-		m->m_flags &= ~(M_PROTOFLAGS);
+		m_clrprotoflags(m);
+		IP_PROBE(send, NULL, NULL, ip, ifp, ip, NULL);
 		error = (*ifp->if_output)(ifp, m,
-		    		(struct sockaddr *)dst, ro);
+		    (const struct sockaddr *)gw, ro);
 		goto done;
 	}
 
 	/* Balk when DF bit is set or the interface didn't support TSO. */
-	if ((ip->ip_off & IP_DF) || (m->m_pkthdr.csum_flags & CSUM_TSO)) {
+	if ((ip_off & IP_DF) || (m->m_pkthdr.csum_flags & CSUM_TSO)) {
 		error = EMSGSIZE;
 		IPSTAT_INC(ips_cantfrag);
 		goto bad;
@@ -645,7 +652,7 @@ passout:
 	 * Too large for interface; fragment if possible. If successful,
 	 * on return, m will point to a list of packets to be sent.
 	 */
-	error = ip_fragment(ip, &m, mtu, ifp->if_hwassist, sw_csum);
+	error = ip_fragment(ip, &m, mtu, ifp->if_hwassist);
 	if (error)
 		goto bad;
 	for (; m; m = m0) {
@@ -661,10 +668,11 @@ passout:
 			 * Reset layer specific mbuf flags
 			 * to avoid confusing upper layers.
 			 */
-			m->m_flags &= ~(M_PROTOFLAGS);
+			m_clrprotoflags(m);
 
+			IP_PROBE(send, NULL, NULL, ip, ifp, ip, NULL);
 			error = (*ifp->if_output)(ifp, m,
-			    (struct sockaddr *)dst, ro);
+			    (const struct sockaddr *)gw, ro);
 		} else
 			m_freem(m);
 	}
@@ -675,7 +683,7 @@ passout:
 done:
 	if (ro == &iproute)
 		RO_RTFREE(ro);
-	if (ia != NULL)
+	if (have_ia_ref)
 		ifa_free(&ia->ia_ifa);
 	return (error);
 bad:
@@ -690,11 +698,10 @@ bad:
  * chain of fragments that should be freed by the caller.
  *
  * if_hwassist_flags is the hw offload capabilities (see if_data.ifi_hwassist)
- * sw_csum contains the delayed checksums flags (e.g., CSUM_DELAY_IP).
  */
 int
 ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
-    u_long if_hwassist_flags, int sw_csum)
+    u_long if_hwassist_flags)
 {
 	int error = 0;
 	int hlen = ip->ip_hl << 2;
@@ -704,8 +711,12 @@ ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
 	int firstlen;
 	struct mbuf **mnext;
 	int nfrags;
+	uint16_t ip_len, ip_off;
 
-	if (ip->ip_off & IP_DF) {	/* Fragmentation not allowed */
+	ip_len = ntohs(ip->ip_len);
+	ip_off = ntohs(ip->ip_off);
+
+	if (ip_off & IP_DF) {	/* Fragmentation not allowed */
 		IPSTAT_INC(ips_cantfrag);
 		return EMSGSIZE;
 	}
@@ -720,14 +731,12 @@ ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
 	 * If the interface will not calculate checksums on
 	 * fragmented packets, then do it here.
 	 */
-	if (m0->m_pkthdr.csum_flags & CSUM_DELAY_DATA &&
-	    (if_hwassist_flags & CSUM_IP_FRAGS) == 0) {
+	if (m0->m_pkthdr.csum_flags & CSUM_DELAY_DATA) {
 		in_delayed_cksum(m0);
 		m0->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 	}
 #ifdef SCTP
-	if (m0->m_pkthdr.csum_flags & CSUM_SCTP &&
-	    (if_hwassist_flags & CSUM_IP_FRAGS) == 0) {
+	if (m0->m_pkthdr.csum_flags & CSUM_SCTP) {
 		sctp_delayed_cksum(m0, hlen);
 		m0->m_pkthdr.csum_flags &= ~CSUM_SCTP;
 	}
@@ -744,10 +753,8 @@ ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
 		 * be less than the receiver's page size ?
 		 */
 		int newlen;
-		struct mbuf *m;
 
-		for (m = m0, off = 0; m && (off+m->m_len) <= mtu; m = m->m_next)
-			off += m->m_len;
+		off = MIN(mtu, m0->m_pkthdr.len);
 
 		/*
 		 * firstlen (off - hlen) must be aligned on an 
@@ -779,18 +786,30 @@ smart_frag_failure:
 	 * The fragments are linked off the m_nextpkt of the original
 	 * packet, which after processing serves as the first fragment.
 	 */
-	for (nfrags = 1; off < ip->ip_len; off += len, nfrags++) {
+	for (nfrags = 1; off < ip_len; off += len, nfrags++) {
 		struct ip *mhip;	/* ip header on the fragment */
 		struct mbuf *m;
 		int mhlen = sizeof (struct ip);
 
-		MGETHDR(m, M_DONTWAIT, MT_DATA);
+		m = m_gethdr(M_NOWAIT, MT_DATA);
 		if (m == NULL) {
 			error = ENOBUFS;
 			IPSTAT_INC(ips_odropped);
 			goto done;
 		}
-		m->m_flags |= (m0->m_flags & M_MCAST) | M_FRAG;
+		/*
+		 * Make sure the complete packet header gets copied
+		 * from the originating mbuf to the newly created
+		 * mbuf. This also ensures that existing firewall
+		 * classification(s), VLAN tags and so on get copied
+		 * to the resulting fragmented packet(s):
+		 */
+		if (m_dup_pkthdr(m, m0, M_NOWAIT) == 0) {
+			m_free(m);
+			error = ENOBUFS;
+			IPSTAT_INC(ips_odropped);
+			goto done;
+		}
 		/*
 		 * In the first mbuf, leave room for the link header, then
 		 * copy the original IP header including options. The payload
@@ -805,15 +824,14 @@ smart_frag_failure:
 			mhip->ip_hl = mhlen >> 2;
 		}
 		m->m_len = mhlen;
-		/* XXX do we need to add ip->ip_off below ? */
-		mhip->ip_off = ((off - hlen) >> 3) + ip->ip_off;
-		if (off + len >= ip->ip_len) {	/* last fragment */
-			len = ip->ip_len - off;
-			m->m_flags |= M_LASTFRAG;
-		} else
+		/* XXX do we need to add ip_off below ? */
+		mhip->ip_off = ((off - hlen) >> 3) + ip_off;
+		if (off + len >= ip_len)
+			len = ip_len - off;
+		else
 			mhip->ip_off |= IP_MF;
 		mhip->ip_len = htons((u_short)(len + mhlen));
-		m->m_next = m_copym(m0, off, len, M_DONTWAIT);
+		m->m_next = m_copym(m0, off, len, M_NOWAIT);
 		if (m->m_next == NULL) {	/* copy failed */
 			m_free(m);
 			error = ENOBUFS;	/* ??? */
@@ -821,36 +839,33 @@ smart_frag_failure:
 			goto done;
 		}
 		m->m_pkthdr.len = mhlen + len;
-		m->m_pkthdr.rcvif = NULL;
 #ifdef MAC
 		mac_netinet_fragment(m0, m);
 #endif
-		m->m_pkthdr.csum_flags = m0->m_pkthdr.csum_flags;
 		mhip->ip_off = htons(mhip->ip_off);
 		mhip->ip_sum = 0;
-		if (sw_csum & CSUM_DELAY_IP)
+		if (m->m_pkthdr.csum_flags & CSUM_IP & ~if_hwassist_flags) {
 			mhip->ip_sum = in_cksum(m, mhlen);
+			m->m_pkthdr.csum_flags &= ~CSUM_IP;
+		}
 		*mnext = m;
 		mnext = &m->m_nextpkt;
 	}
 	IPSTAT_ADD(ips_ofragments, nfrags);
 
-	/* set first marker for fragment chain */
-	m0->m_flags |= M_FIRSTFRAG | M_FRAG;
-	m0->m_pkthdr.csum_data = nfrags;
-
 	/*
 	 * Update first fragment by trimming what's been copied out
 	 * and updating header.
 	 */
-	m_adj(m0, hlen + firstlen - ip->ip_len);
+	m_adj(m0, hlen + firstlen - ip_len);
 	m0->m_pkthdr.len = hlen + firstlen;
 	ip->ip_len = htons((u_short)m0->m_pkthdr.len);
-	ip->ip_off |= IP_MF;
-	ip->ip_off = htons(ip->ip_off);
+	ip->ip_off = htons(ip_off | IP_MF);
 	ip->ip_sum = 0;
-	if (sw_csum & CSUM_DELAY_IP)
+	if (m0->m_pkthdr.csum_flags & CSUM_IP & ~if_hwassist_flags) {
 		ip->ip_sum = in_cksum(m0, hlen);
+		m0->m_pkthdr.csum_flags &= ~CSUM_IP;
+	}
 
 done:
 	*m_frag = m0;
@@ -861,26 +876,23 @@ void
 in_delayed_cksum(struct mbuf *m)
 {
 	struct ip *ip;
-	u_short csum, offset;
+	uint16_t csum, offset, ip_len;
 
 	ip = mtod(m, struct ip *);
 	offset = ip->ip_hl << 2 ;
-	csum = in_cksum_skip(m, ip->ip_len, offset);
+	ip_len = ntohs(ip->ip_len);
+	csum = in_cksum_skip(m, ip_len, offset);
 	if (m->m_pkthdr.csum_flags & CSUM_UDP && csum == 0)
 		csum = 0xffff;
 	offset += m->m_pkthdr.csum_data;	/* checksum offset */
 
-	if (offset + sizeof(u_short) > m->m_len) {
-		printf("delayed m_pullup, m->len: %d  off: %d  p: %d\n",
-		    m->m_len, offset, ip->ip_p);
-		/*
-		 * XXX
-		 * this shouldn't happen, but if it does, the
-		 * correct behavior may be to insert the checksum
-		 * in the appropriate next mbuf in the chain.
-		 */
-		return;
+	/* find the mbuf in the chain where the checksum starts*/
+	while ((m != NULL) && (offset >= m->m_len)) {
+		offset -= m->m_len;
+		m = m->m_next;
 	}
+	KASSERT(m != NULL, ("in_delayed_cksum: checksum outside mbuf chain."));
+	KASSERT(offset + sizeof(u_short) <= m->m_len, ("in_delayed_cksum: checksum split between mbufs."));
 	*(u_short *)(m->m_data + offset) = csum;
 }
 
@@ -902,13 +914,10 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 			switch (sopt->sopt_name) {
 			case SO_REUSEADDR:
 				INP_WLOCK(inp);
-				if (IN_MULTICAST(ntohl(inp->inp_laddr.s_addr))) {
-					if ((so->so_options &
-					    (SO_REUSEADDR | SO_REUSEPORT)) != 0)
-						inp->inp_flags2 |= INP_REUSEPORT;
-					else
-						inp->inp_flags2 &= ~INP_REUSEPORT;
-				}
+				if ((so->so_options & SO_REUSEADDR) != 0)
+					inp->inp_flags2 |= INP_REUSEADDR;
+				else
+					inp->inp_flags2 &= ~INP_REUSEADDR;
 				INP_WUNLOCK(inp);
 				error = 0;
 				break;
@@ -947,7 +956,7 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 				error = EMSGSIZE;
 				break;
 			}
-			MGET(m, sopt->sopt_td ? M_WAIT : M_DONTWAIT, MT_DATA);
+			m = m_get(sopt->sopt_td ? M_WAITOK : M_NOWAIT, MT_DATA);
 			if (m == NULL) {
 				error = ENOBUFS;
 				break;
@@ -1285,7 +1294,7 @@ ip_mloopback(struct ifnet *ifp, struct mbuf *m, struct sockaddr_in *dst,
 	 * Make a deep copy of the packet because we're going to
 	 * modify the pack in order to generate checksums.
 	 */
-	copym = m_dup(m, M_DONTWAIT);
+	copym = m_dup(m, M_NOWAIT);
 	if (copym != NULL && (copym->m_flags & M_EXT || copym->m_len < hlen))
 		copym = m_pullup(copym, hlen);
 	if (copym != NULL) {
@@ -1302,8 +1311,6 @@ ip_mloopback(struct ifnet *ifp, struct mbuf *m, struct sockaddr_in *dst,
 		 * than the interface's MTU.  Can this possibly matter?
 		 */
 		ip = mtod(copym, struct ip *);
-		ip->ip_len = htons(ip->ip_len);
-		ip->ip_off = htons(ip->ip_off);
 		ip->ip_sum = 0;
 		ip->ip_sum = in_cksum(copym, hlen);
 #if 1 /* XXX */

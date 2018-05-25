@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/in_cksum.c 172467 2007-10-07 20:44:24Z silby $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/in_cksum.c 238941 2012-07-31 08:04:49Z luigi $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -89,7 +89,7 @@ in_cksum(struct mbuf *m, int len)
 		/*
 		 * Force to even boundary.
 		 */
-		if ((1 & (int) w) && (mlen > 0)) {
+		if ((1 & (uintptr_t) w) && (mlen > 0)) {
 			REDUCE;
 			sum <<= 8;
 			s_util.c[0] = *(u_char *)w;

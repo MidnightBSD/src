@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias.c 214754 2010-11-03 21:10:12Z n_hibma $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias.c 318519 2017-05-19 07:31:48Z eugen $");
 
 /*
     Alias.c provides supervisory control for the functions of the
@@ -699,11 +700,13 @@ ProtoAliasOut(struct libalias *la, struct in_addr *ip_src,
 	struct alias_link *lnk;
 
 	LIBALIAS_LOCK_ASSERT(la);
-	(void)create;
 
 /* Return if proxy-only mode is enabled */
 	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY)
 		return (PKT_ALIAS_OK);
+
+	if (!create)
+		return (PKT_ALIAS_IGNORED);
 
 	lnk = FindProtoOut(la, *ip_src, ip_dst, ip_p);
 	if (lnk != NULL) {
@@ -1749,40 +1752,22 @@ LibAliasUnLoadAllModule(void)
 struct mbuf *
 m_megapullup(struct mbuf *m, int len) {
 	struct mbuf *mcl;
-	
+
 	if (len > m->m_pkthdr.len)
 		goto bad;
-	
-	/* Do not reallocate packet if it is sequentional,
-	 * writable and has some extra space for expansion.
-	 * XXX: Constant 100bytes is completely empirical. */
-#define	RESERVE 100
-	if (m->m_next == NULL && M_WRITABLE(m) && M_TRAILINGSPACE(m) >= RESERVE)
+
+	if (m->m_next == NULL && M_WRITABLE(m))
 		return (m);
 
-	if (len <= MCLBYTES - RESERVE) {
-		mcl = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
-	} else if (len < MJUM16BYTES) {
-		int size;
-		if (len <= MJUMPAGESIZE - RESERVE) {
-			size = MJUMPAGESIZE;
-		} else if (len <= MJUM9BYTES - RESERVE) {
-			size = MJUM9BYTES;
-		} else {
-			size = MJUM16BYTES;
-		};
-		mcl = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, size);
-	} else {
-		goto bad;
-	}
+	mcl = m_get2(len, M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (mcl == NULL)
 		goto bad;
- 
+	m_align(mcl, len);
 	m_move_pkthdr(mcl, m);
 	m_copydata(m, 0, len, mtod(mcl, caddr_t));
 	mcl->m_len = mcl->m_pkthdr.len = len;
 	m_freem(m);
- 
+
 	return (mcl);
 bad:
 	m_freem(m);

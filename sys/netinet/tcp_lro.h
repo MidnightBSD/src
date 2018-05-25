@@ -25,11 +25,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/netinet/tcp_lro.h 238230 2012-07-08 11:24:22Z bz $
+ * $FreeBSD: stable/10/sys/netinet/tcp_lro.h 301949 2016-06-16 04:21:27Z sephe $
  */
 
 #ifndef _TCP_LRO_H_
 #define _TCP_LRO_H_
+
+#include <sys/time.h>
 
 struct lro_entry
 {
@@ -60,6 +62,7 @@ struct lro_entry
 	uint32_t		tsecr;
 	uint16_t		window;
 	uint16_t		timestamp;	/* flag, not a TCP hdr field. */
+	struct timeval		mtime;
 };
 SLIST_HEAD(lro_head, lro_entry);
 
@@ -84,9 +87,11 @@ struct lro_ctrl {
 
 int tcp_lro_init(struct lro_ctrl *);
 void tcp_lro_free(struct lro_ctrl *);
+void tcp_lro_flush_inactive(struct lro_ctrl *, const struct timeval *);
 void tcp_lro_flush(struct lro_ctrl *, struct lro_entry *);
 int tcp_lro_rx(struct lro_ctrl *, struct mbuf *, uint32_t);
 
+#define	TCP_LRO_NO_ENTRIES	-2
 #define	TCP_LRO_CANNOT		-1
 #define	TCP_LRO_NOT_SUPPORTED	1
 

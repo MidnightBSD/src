@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_reass.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_reass.c 285976 2015-07-28 19:58:44Z delphij $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -75,67 +75,54 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_reass.c 248085 2013-03-09 02:36:32Z
 #include <netinet/tcp_debug.h>
 #endif /* TCPDEBUG */
 
-static int tcp_reass_sysctl_maxseg(SYSCTL_HANDLER_ARGS);
 static int tcp_reass_sysctl_qsize(SYSCTL_HANDLER_ARGS);
 
 static SYSCTL_NODE(_net_inet_tcp, OID_AUTO, reass, CTLFLAG_RW, 0,
     "TCP Segment Reassembly Queue");
 
-static VNET_DEFINE(int, tcp_reass_maxseg) = 0;
-#define	V_tcp_reass_maxseg		VNET(tcp_reass_maxseg)
-SYSCTL_VNET_PROC(_net_inet_tcp_reass, OID_AUTO, maxsegments,
-    CTLTYPE_INT | CTLFLAG_RDTUN,
-    &VNET_NAME(tcp_reass_maxseg), 0, &tcp_reass_sysctl_maxseg, "I",
+static int tcp_reass_maxseg = 0;
+SYSCTL_INT(_net_inet_tcp_reass, OID_AUTO, maxsegments, CTLFLAG_RDTUN,
+    &tcp_reass_maxseg, 0,
     "Global maximum number of TCP Segments in Reassembly Queue");
 
-static VNET_DEFINE(int, tcp_reass_qsize) = 0;
-#define	V_tcp_reass_qsize		VNET(tcp_reass_qsize)
-SYSCTL_VNET_PROC(_net_inet_tcp_reass, OID_AUTO, cursegments,
-    CTLTYPE_INT | CTLFLAG_RD,
-    &VNET_NAME(tcp_reass_qsize), 0, &tcp_reass_sysctl_qsize, "I",
+SYSCTL_PROC(_net_inet_tcp_reass, OID_AUTO, cursegments,
+    (CTLTYPE_INT | CTLFLAG_RD), NULL, 0, &tcp_reass_sysctl_qsize, "I",
     "Global number of TCP Segments currently in Reassembly Queue");
 
-static VNET_DEFINE(int, tcp_reass_overflows) = 0;
-#define	V_tcp_reass_overflows		VNET(tcp_reass_overflows)
-SYSCTL_VNET_INT(_net_inet_tcp_reass, OID_AUTO, overflows,
-    CTLTYPE_INT | CTLFLAG_RD,
-    &VNET_NAME(tcp_reass_overflows), 0,
+static int tcp_reass_overflows = 0;
+SYSCTL_INT(_net_inet_tcp_reass, OID_AUTO, overflows,
+    CTLFLAG_RD,
+    &tcp_reass_overflows, 0,
     "Global number of TCP Segment Reassembly Queue Overflows");
 
-static VNET_DEFINE(uma_zone_t, tcp_reass_zone);
-#define	V_tcp_reass_zone		VNET(tcp_reass_zone)
+static uma_zone_t tcp_reass_zone;
 
 /* Initialize TCP reassembly queue */
 static void
 tcp_reass_zone_change(void *tag)
 {
 
-	V_tcp_reass_maxseg = nmbclusters / 16;
-	uma_zone_set_max(V_tcp_reass_zone, V_tcp_reass_maxseg);
+	/* Set the zone limit and read back the effective value. */
+	tcp_reass_maxseg = nmbclusters / 16;
+	tcp_reass_maxseg = uma_zone_set_max(tcp_reass_zone,
+	    tcp_reass_maxseg);
 }
 
 void
-tcp_reass_init(void)
+tcp_reass_global_init(void)
 {
 
-	V_tcp_reass_maxseg = nmbclusters / 16;
+	tcp_reass_maxseg = nmbclusters / 16;
 	TUNABLE_INT_FETCH("net.inet.tcp.reass.maxsegments",
-	    &V_tcp_reass_maxseg);
-	V_tcp_reass_zone = uma_zcreate("tcpreass", sizeof (struct tseg_qent),
+	    &tcp_reass_maxseg);
+	tcp_reass_zone = uma_zcreate("tcpreass", sizeof (struct tseg_qent),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
-	uma_zone_set_max(V_tcp_reass_zone, V_tcp_reass_maxseg);
+	/* Set the zone limit and read back the effective value. */
+	tcp_reass_maxseg = uma_zone_set_max(tcp_reass_zone,
+	    tcp_reass_maxseg);
 	EVENTHANDLER_REGISTER(nmbclusters_change,
 	    tcp_reass_zone_change, NULL, EVENTHANDLER_PRI_ANY);
 }
-
-#ifdef VIMAGE
-void
-tcp_reass_destroy(void)
-{
-
-	uma_zdestroy(V_tcp_reass_zone);
-}
-#endif
 
 void
 tcp_reass_flush(struct tcpcb *tp)
@@ -147,7 +134,7 @@ tcp_reass_flush(struct tcpcb *tp)
 	while ((qe = LIST_FIRST(&tp->t_segq)) != NULL) {
 		LIST_REMOVE(qe, tqe_q);
 		m_freem(qe->tqe_m);
-		uma_zfree(V_tcp_reass_zone, qe);
+		uma_zfree(tcp_reass_zone, qe);
 		tp->t_segqlen--;
 	}
 
@@ -157,17 +144,12 @@ tcp_reass_flush(struct tcpcb *tp)
 }
 
 static int
-tcp_reass_sysctl_maxseg(SYSCTL_HANDLER_ARGS)
-{
-	V_tcp_reass_maxseg = uma_zone_get_max(V_tcp_reass_zone);
-	return (sysctl_handle_int(oidp, arg1, arg2, req));
-}
-
-static int
 tcp_reass_sysctl_qsize(SYSCTL_HANDLER_ARGS)
 {
-	V_tcp_reass_qsize = uma_zone_get_cur(V_tcp_reass_zone);
-	return (sysctl_handle_int(oidp, arg1, arg2, req));
+	int qsize;
+
+	qsize = uma_zone_get_cur(tcp_reass_zone);
+	return (sysctl_handle_int(oidp, &qsize, 0, req));
 }
 
 int
@@ -212,9 +194,9 @@ tcp_reass(struct tcpcb *tp, struct tcphdr *th, int *tlenp, struct mbuf *m)
 	 * Investigate why and re-evaluate the below limit after the behaviour
 	 * is understood.
 	 */
-	if (th->th_seq != tp->rcv_nxt &&
+	if ((th->th_seq != tp->rcv_nxt || !TCPS_HAVEESTABLISHED(tp->t_state)) &&
 	    tp->t_segqlen >= (so->so_rcv.sb_hiwat / tp->t_maxseg) + 1) {
-		V_tcp_reass_overflows++;
+		tcp_reass_overflows++;
 		TCPSTAT_INC(tcps_rcvmemdrop);
 		m_freem(m);
 		*tlenp = 0;
@@ -233,9 +215,9 @@ tcp_reass(struct tcpcb *tp, struct tcphdr *th, int *tlenp, struct mbuf *m)
 	 * Use a temporary structure on the stack for the missing segment
 	 * when the zone is exhausted. Otherwise we may get stuck.
 	 */
-	te = uma_zalloc(V_tcp_reass_zone, M_NOWAIT);
+	te = uma_zalloc(tcp_reass_zone, M_NOWAIT);
 	if (te == NULL) {
-		if (th->th_seq != tp->rcv_nxt) {
+		if (th->th_seq != tp->rcv_nxt || !TCPS_HAVEESTABLISHED(tp->t_state)) {
 			TCPSTAT_INC(tcps_rcvmemdrop);
 			m_freem(m);
 			*tlenp = 0;
@@ -283,7 +265,8 @@ tcp_reass(struct tcpcb *tp, struct tcphdr *th, int *tlenp, struct mbuf *m)
 				TCPSTAT_INC(tcps_rcvduppack);
 				TCPSTAT_ADD(tcps_rcvdupbyte, *tlenp);
 				m_freem(m);
-				uma_zfree(V_tcp_reass_zone, te);
+				if (te != &tqs)
+					uma_zfree(tcp_reass_zone, te);
 				tp->t_segqlen--;
 				/*
 				 * Try to present any queued data
@@ -320,7 +303,7 @@ tcp_reass(struct tcpcb *tp, struct tcphdr *th, int *tlenp, struct mbuf *m)
 		nq = LIST_NEXT(q, tqe_q);
 		LIST_REMOVE(q, tqe_q);
 		m_freem(q->tqe_m);
-		uma_zfree(V_tcp_reass_zone, q);
+		uma_zfree(tcp_reass_zone, q);
 		tp->t_segqlen--;
 		q = nq;
 	}
@@ -359,7 +342,7 @@ present:
 		else
 			sbappendstream_locked(&so->so_rcv, q->tqe_m);
 		if (q != &tqs)
-			uma_zfree(V_tcp_reass_zone, q);
+			uma_zfree(tcp_reass_zone, q);
 		tp->t_segqlen--;
 		q = nq;
 	} while (q && q->tqe_th->th_seq == tp->rcv_nxt);

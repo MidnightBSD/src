@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_fsm.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/netinet/tcp_fsm.h 171656 2007-07-30 11:06:42Z des $
+ * $FreeBSD: stable/10/sys/netinet/tcp_fsm.h 171656 2007-07-30 11:06:42Z des $
  */
 
 #ifndef _NETINET_TCP_FSM_H_

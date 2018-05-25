@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/sctp6_var.h 244524 2012-12-21 00:41:52Z delphij $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/sctp6_var.h 243186 2012-11-17 20:04:04Z tuexen $");
 
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
@@ -42,21 +42,16 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/sctp6_var.h 244524 2012-12-21 00:41:52
 SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
 
-
 int sctp6_input(struct mbuf **, int *, int);
-int sctp6_output
-(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
+int sctp6_input_with_port(struct mbuf **, int *, uint16_t);
+int 
+sctp6_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, struct proc *);
-	void sctp6_ctlinput(int, struct sockaddr *, void *);
+void sctp6_ctlinput(int, struct sockaddr *, void *);
+extern void 
+sctp6_notify(struct sctp_inpcb *, struct icmp6_hdr *,
+    struct sctphdr *, struct sockaddr *,
+    struct sctp_tcb *, struct sctp_nets *);
 
-
-	extern void sctp6_notify(struct sctp_inpcb *inp,
-         struct icmp6_hdr *icmph,
-         struct sctphdr *sh,
-         struct sockaddr *to,
-         struct sctp_tcb *stcb,
-         struct sctp_nets *net);
-
-
-#endif				/* _KERNEL */
+#endif
 #endif

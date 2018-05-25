@@ -30,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_pcbgroup.c 222748 2011-06-06 12:55:02Z rwatson $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/in6_pcbgroup.c 222748 2011-06-06 12:55:02Z rwatson $");
 
 #include "opt_inet6.h"
 

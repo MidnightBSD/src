@@ -58,7 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp_var.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/netinet6/udp6_var.h 174510 2007-12-10 16:03:40Z obrien $
+ * $FreeBSD: stable/10/sys/netinet6/udp6_var.h 265946 2014-05-13 06:05:53Z kevlo $
  */
 
 #ifndef _NETINET6_UDP6_VAR_H_
@@ -70,6 +70,7 @@ SYSCTL_DECL(_net_inet6_udp6);
 extern struct pr_usrreqs	udp6_usrreqs;
 
 void	udp6_ctlinput(int, struct sockaddr *, void *);
+void	udplite6_ctlinput(int, struct sockaddr *, void *);
 int	udp6_input(struct mbuf **, int *, int);
 #endif
 

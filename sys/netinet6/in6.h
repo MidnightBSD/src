@@ -59,7 +59,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: stable/9/sys/netinet6/in6.h 244524 2012-12-21 00:41:52Z delphij $
+ * $FreeBSD: stable/10/sys/netinet6/in6.h 272662 2014-10-06 17:08:19Z tuexen $
  */
 
 #ifndef __KAME_NETINET_IN_H_INCLUDED_
@@ -362,11 +362,11 @@ extern const struct in6_addr in6addr_linklocal_allv2routers;
 
 #define IFA6_IS_DEPRECATED(a) \
 	((a)->ia6_lifetime.ia6t_pltime != ND6_INFINITE_LIFETIME && \
-	 (u_int32_t)((time_second - (a)->ia6_updatetime)) > \
+	 (u_int32_t)((time_uptime - (a)->ia6_updatetime)) > \
 	 (a)->ia6_lifetime.ia6t_pltime)
 #define IFA6_IS_INVALID(a) \
 	((a)->ia6_lifetime.ia6t_vltime != ND6_INFINITE_LIFETIME && \
-	 (u_int32_t)((time_second - (a)->ia6_updatetime)) > \
+	 (u_int32_t)((time_uptime - (a)->ia6_updatetime)) > \
 	 (a)->ia6_lifetime.ia6t_vltime)
 #endif /* _KERNEL */
 
@@ -623,13 +623,18 @@ struct ip6_mtuinfo {
 #endif /* __BSD_VISIBLE */
 
 /*
- * Redefinition of mbuf flags
+ * Since both netinet/ and netinet6/ call into netipsec/ and netpfil/,
+ * the protocol specific mbuf flags are shared between them.
  */
-#define	M_AUTHIPHDR	M_PROTO2
-#define	M_DECRYPTED	M_PROTO3
-#define	M_LOOP		M_PROTO4
-#define	M_AUTHIPDGM	M_PROTO5
-#define	M_RTALERT_MLD	M_PROTO6
+#define	M_FASTFWD_OURS		M_PROTO1	/* changed dst to local */
+#define	M_IP6_NEXTHOP		M_PROTO2	/* explicit ip nexthop */
+#define	M_IP_NEXTHOP		M_PROTO2	/* explicit ip nexthop */
+#define	M_SKIP_FIREWALL		M_PROTO3	/* skip firewall processing */
+#define	M_AUTHIPHDR		M_PROTO4
+#define	M_DECRYPTED		M_PROTO5
+#define	M_LOOP			M_PROTO6
+#define	M_AUTHIPDGM		M_PROTO7
+#define	M_RTALERT_MLD		M_PROTO8
 
 #ifdef _KERNEL
 struct cmsghdr;
@@ -637,6 +642,8 @@ struct ip6_hdr;
 
 int	in6_cksum_pseudo(struct ip6_hdr *, uint32_t, uint8_t, uint16_t);
 int	in6_cksum(struct mbuf *, u_int8_t, u_int32_t, u_int32_t);
+int	in6_cksum_partial(struct mbuf *, u_int8_t, u_int32_t, u_int32_t,
+			  u_int32_t);
 int	in6_localaddr(struct in6_addr *);
 int	in6_localip(struct in6_addr *);
 int	in6_addrscope(struct in6_addr *);

@@ -60967,6 +60967,7 @@ sys/netinet/accf_dns.c -text
 sys/netinet/accf_http.c -text
 sys/netinet/cc.h -text
 sys/netinet/cc/cc.c -text
+sys/netinet/cc/cc_cdg.c svneol=native#text/plain
 sys/netinet/cc/cc_chd.c -text
 sys/netinet/cc/cc_cubic.c -text
 sys/netinet/cc/cc_cubic.h -text
@@ -60990,6 +60991,8 @@ sys/netinet/in_cksum.c -text
 sys/netinet/in_debug.c -text
 sys/netinet/in_gif.c -text
 sys/netinet/in_gif.h -text
+sys/netinet/in_kdtrace.c svneol=native#text/plain
+sys/netinet/in_kdtrace.h svneol=native#text/plain
 sys/netinet/in_mcast.c -text
 sys/netinet/in_pcb.c -text
 sys/netinet/in_pcb.h -text
@@ -61107,6 +61110,7 @@ sys/netinet/sctp_peeloff.c -text
 sys/netinet/sctp_peeloff.h -text
 sys/netinet/sctp_ss_functions.c -text
 sys/netinet/sctp_structs.h -text
+sys/netinet/sctp_syscalls.c svneol=native#text/plain
 sys/netinet/sctp_sysctl.c -text
 sys/netinet/sctp_sysctl.h -text
 sys/netinet/sctp_timer.c -text
@@ -61120,6 +61124,8 @@ sys/netinet/siftr.c -text
 sys/netinet/tcp.h -text
 sys/netinet/tcp_debug.c -text
 sys/netinet/tcp_debug.h -text
+sys/netinet/tcp_fastopen.c svneol=native#text/plain
+sys/netinet/tcp_fastopen.h svneol=native#text/plain
 sys/netinet/tcp_fsm.h -text
 sys/netinet/tcp_hostcache.c -text
 sys/netinet/tcp_hostcache.h -text
@@ -61141,10 +61147,13 @@ sys/netinet/tcp_timewait.c -text
 sys/netinet/tcp_usrreq.c -text
 sys/netinet/tcp_var.h -text
 sys/netinet/tcpip.h -text
+sys/netinet/toecore.c svneol=native#text/plain
+sys/netinet/toecore.h svneol=native#text/plain
 sys/netinet/toedev.h svneol=native#text/plain
 sys/netinet/udp.h -text
 sys/netinet/udp_usrreq.c -text
 sys/netinet/udp_var.h -text
+sys/netinet/udplite.h svneol=native#text/plain
 sys/netinet6/dest6.c -text
 sys/netinet6/frag6.c -text
 sys/netinet6/icmp6.c -text
@@ -61167,6 +61176,7 @@ sys/netinet6/in6_var.h -text
 sys/netinet6/ip6.h -text
 sys/netinet6/ip6_ecn.h -text
 sys/netinet6/ip6_forward.c -text
+sys/netinet6/ip6_gre.c svneol=native#text/plain
 sys/netinet6/ip6_id.c -text
 sys/netinet6/ip6_input.c -text
 sys/netinet6/ip6_ipsec.c -text

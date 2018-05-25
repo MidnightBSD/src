@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/if_ether.c 248852 2013-03-28 20:48:40Z emaste $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/if_ether.c 309340 2016-11-30 22:20:23Z vangyzen $");
 
 #include "opt_inet.h"
 
@@ -65,7 +65,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/if_ether.c 248852 2013-03-28 20:48:40Z 
 #include <netinet/in_var.h>
 #include <net/if_llatbl.h>
 #include <netinet/if_ether.h>
-#if defined(INET)
+#ifdef INET
 #include <netinet/ip_carp.h>
 #endif
 
@@ -74,7 +74,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/if_ether.c 248852 2013-03-28 20:48:40Z 
 
 #include <security/mac/mac_framework.h>
 
-#define SIN(s) ((struct sockaddr_in *)s)
+#define SIN(s) ((const struct sockaddr_in *)(s))
 #define SDL(s) ((struct sockaddr_dl *)s)
 
 SYSCTL_DECL(_net_link_ether);
@@ -90,7 +90,12 @@ VNET_DEFINE(int, useloopback) = 1;	/* use loopback interface for
 static VNET_DEFINE(int, arp_proxyall) = 0;
 static VNET_DEFINE(int, arpt_down) = 20;	/* keep incomplete entries for
 						 * 20 seconds */
-VNET_DEFINE(struct arpstat, arpstat);  /* ARP statistics, see if_arp.h */
+VNET_PCPUSTAT_DEFINE(struct arpstat, arpstat);  /* ARP statistics, see if_arp.h */
+VNET_PCPUSTAT_SYSINIT(arpstat);
+
+#ifdef VIMAGE
+VNET_PCPUSTAT_SYSUNINIT(arpstat);
+#endif /* VIMAGE */
 
 static VNET_DEFINE(int, arp_maxhold) = 1;
 
@@ -98,7 +103,6 @@ static VNET_DEFINE(int, arp_maxhold) = 1;
 #define	V_arpt_down		VNET(arpt_down)
 #define	V_arp_maxtries		VNET(arp_maxtries)
 #define	V_arp_proxyall		VNET(arp_proxyall)
-#define	V_arpstat		VNET(arpstat)
 #define	V_arp_maxhold		VNET(arp_maxhold)
 
 SYSCTL_VNET_INT(_net_link_ether_inet, OID_AUTO, max_age, CTLFLAG_RW,
@@ -116,16 +120,35 @@ SYSCTL_VNET_INT(_net_link_ether_inet, OID_AUTO, proxyall, CTLFLAG_RW,
 SYSCTL_VNET_INT(_net_link_ether_inet, OID_AUTO, wait, CTLFLAG_RW,
 	&VNET_NAME(arpt_down), 0,
 	"Incomplete ARP entry lifetime in seconds");
-SYSCTL_VNET_STRUCT(_net_link_ether_arp, OID_AUTO, stats, CTLFLAG_RW,
-	&VNET_NAME(arpstat), arpstat,
-	"ARP statistics (struct arpstat, net/if_arp.h)");
+SYSCTL_VNET_PCPUSTAT(_net_link_ether_arp, OID_AUTO, stats, struct arpstat,
+    arpstat, "ARP statistics (struct arpstat, net/if_arp.h)");
 SYSCTL_VNET_INT(_net_link_ether_inet, OID_AUTO, maxhold, CTLFLAG_RW,
 	&VNET_NAME(arp_maxhold), 0,
 	"Number of packets to hold per ARP entry");
 
+/*
+ * Due to the exponential backoff algorithm used for the interval between GARP
+ * retransmissions, the maximum number of retransmissions is limited for
+ * sanity. This limit corresponds to a maximum interval between retransmissions
+ * of 2^16 seconds ~= 18 hours.
+ *
+ * Making this limit more dynamic is more complicated than worthwhile,
+ * especially since sending out GARPs spaced days apart would be of little
+ * use. A maximum dynamic limit would look something like:
+ *
+ * const int max = fls(INT_MAX / hz) - 1;
+ */
+#define MAX_GARP_RETRANSMITS 16
+static int sysctl_garp_rexmit(SYSCTL_HANDLER_ARGS);
+static int garp_rexmit_count = 0; /* GARP retransmission setting. */
+
+SYSCTL_PROC(_net_link_ether_inet, OID_AUTO, garp_rexmit_count,
+    CTLTYPE_INT|CTLFLAG_RW|CTLFLAG_MPSAFE,
+    &garp_rexmit_count, 0, sysctl_garp_rexmit, "I",
+    "Number of times to retransmit GARP packets;"
+    " 0 to disable, maximum of 16");
+
 static void	arp_init(void);
-void		arprequest(struct ifnet *,
-			struct in_addr *, struct in_addr *, u_char *);
 static void	arpintr(struct mbuf *);
 static void	arptimer(void *);
 #ifdef INET
@@ -140,8 +163,6 @@ static const struct netisr_handler arp_nh = {
 };
 
 #ifdef AF_INET
-void arp_ifscrub(struct ifnet *ifp, uint32_t addr);
-
 /*
  * called by in_ifscrub to remove entry from the table when
  * the interface goes away
@@ -155,10 +176,10 @@ arp_ifscrub(struct ifnet *ifp, uint32_t addr)
 	addr4.sin_len    = sizeof(addr4);
 	addr4.sin_family = AF_INET;
 	addr4.sin_addr.s_addr = addr;
-	IF_AFDATA_LOCK(ifp);
+	IF_AFDATA_WLOCK(ifp);
 	lla_lookup(LLTABLE(ifp), (LLE_DELETE | LLE_IFADDR),
 	    (struct sockaddr *)&addr4);
-	IF_AFDATA_UNLOCK(ifp);
+	IF_AFDATA_WUNLOCK(ifp);
 }
 #endif
 
@@ -172,12 +193,40 @@ arptimer(void *arg)
 	struct ifnet *ifp;
 
 	if (lle->la_flags & LLE_STATIC) {
-		LLE_WUNLOCK(lle);
 		return;
 	}
-
+	LLE_WLOCK(lle);
+	if (callout_pending(&lle->la_timer)) {
+		/*
+		 * Here we are a bit odd here in the treatment of 
+		 * active/pending. If the pending bit is set, it got
+		 * rescheduled before I ran. The active
+		 * bit we ignore, since if it was stopped
+		 * in ll_tablefree() and was currently running
+		 * it would have return 0 so the code would
+		 * not have deleted it since the callout could
+		 * not be stopped so we want to go through
+		 * with the delete here now. If the callout
+		 * was restarted, the pending bit will be back on and
+		 * we just want to bail since the callout_reset would
+		 * return 1 and our reference would have been removed
+		 * by arpresolve() below.
+		 */
+		LLE_WUNLOCK(lle);
+ 		return;
+ 	}
 	ifp = lle->lle_tbl->llt_ifp;
 	CURVNET_SET(ifp->if_vnet);
+
+	if ((lle->la_flags & LLE_DELETED) == 0) {
+		int evt;
+
+		if (lle->la_flags & LLE_VALID)
+			evt = LLENTRY_EXPIRED;
+		else
+			evt = LLENTRY_TIMEDOUT;
+		EVENTHANDLER_INVOKE(lle_event, lle, evt);
+	}
 
 	callout_stop(&lle->la_timer);
 
@@ -210,37 +259,49 @@ arptimer(void *arg)
  *	- arp header source ethernet address
  */
 void
-arprequest(struct ifnet *ifp, struct in_addr *sip, struct in_addr  *tip,
-    u_char *enaddr)
+arprequest(struct ifnet *ifp, const struct in_addr *sip,
+    const struct in_addr *tip, u_char *enaddr)
 {
 	struct mbuf *m;
 	struct arphdr *ah;
 	struct sockaddr sa;
+	u_char *carpaddr = NULL;
 
 	if (sip == NULL) {
-		/* XXX don't believe this can happen (or explain why) */
 		/*
 		 * The caller did not supply a source address, try to find
 		 * a compatible one among those assigned to this interface.
 		 */
 		struct ifaddr *ifa;
 
+		IF_ADDR_RLOCK(ifp);
 		TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
-			if (!ifa->ifa_addr ||
-			    ifa->ifa_addr->sa_family != AF_INET)
+			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
-			sip = &SIN(ifa->ifa_addr)->sin_addr;
+
+			if (ifa->ifa_carp) {
+				if ((*carp_iamatch_p)(ifa, &carpaddr) == 0)
+					continue;
+				sip = &IA_SIN(ifa)->sin_addr;
+			} else {
+				carpaddr = NULL;
+				sip = &IA_SIN(ifa)->sin_addr;
+			}
+
 			if (0 == ((sip->s_addr ^ tip->s_addr) &
-			    SIN(ifa->ifa_netmask)->sin_addr.s_addr) )
+			    IA_MASKSIN(ifa)->sin_addr.s_addr))
 				break;  /* found it. */
 		}
+		IF_ADDR_RUNLOCK(ifp);
 		if (sip == NULL) {
 			printf("%s: cannot find matching address\n", __func__);
 			return;
 		}
 	}
+	if (enaddr == NULL)
+		enaddr = carpaddr ? carpaddr : (u_char *)IF_LLADDR(ifp);
 
-	if ((m = m_gethdr(M_DONTWAIT, MT_DATA)) == NULL)
+	if ((m = m_gethdr(M_NOWAIT, MT_DATA)) == NULL)
 		return;
 	m->m_len = sizeof(*ah) + 2*sizeof(struct in_addr) +
 		2*ifp->if_data.ifi_addrlen;
@@ -255,12 +316,13 @@ arprequest(struct ifnet *ifp, struct in_addr *sip, struct in_addr  *tip,
 	ah->ar_hln = ifp->if_addrlen;		/* hardware address length */
 	ah->ar_pln = sizeof(struct in_addr);	/* protocol address length */
 	ah->ar_op = htons(ARPOP_REQUEST);
-	bcopy((caddr_t)enaddr, (caddr_t)ar_sha(ah), ah->ar_hln);
-	bcopy((caddr_t)sip, (caddr_t)ar_spa(ah), ah->ar_pln);
-	bcopy((caddr_t)tip, (caddr_t)ar_tpa(ah), ah->ar_pln);
+	bcopy(enaddr, ar_sha(ah), ah->ar_hln);
+	bcopy(sip, ar_spa(ah), ah->ar_pln);
+	bcopy(tip, ar_tpa(ah), ah->ar_pln);
 	sa.sa_family = AF_ARP;
 	sa.sa_len = 2;
 	m->m_flags |= M_BCAST;
+	m_clrprotoflags(m);	/* Avoid confusing lower layers. */
 	(*ifp->if_output)(ifp, m, &sa, NULL);
 	ARPSTAT_INC(txrequests);
 }
@@ -281,7 +343,7 @@ arprequest(struct ifnet *ifp, struct in_addr *sip, struct in_addr  *tip,
  */
 int
 arpresolve(struct ifnet *ifp, struct rtentry *rt0, struct mbuf *m,
-	struct sockaddr *dst, u_char *desten, struct llentry **lle)
+	const struct sockaddr *dst, u_char *desten, struct llentry **lle)
 {
 	struct llentry *la = 0;
 	u_int flags = 0;
@@ -317,8 +379,8 @@ retry:
 	if (la == NULL) {
 		if (flags & LLE_CREATE)
 			log(LOG_DEBUG,
-			    "arpresolve: can't allocate llinfo for %s\n",
-			    inet_ntoa(SIN(dst)->sin_addr));
+			    "arpresolve: can't allocate llinfo for %s on %s\n",
+			    inet_ntoa(SIN(dst)->sin_addr), ifp->if_xname);
 		m_freem(m);
 		return (EINVAL);
 	}
@@ -326,6 +388,7 @@ retry:
 	if ((la->la_flags & LLE_VALID) &&
 	    ((la->la_flags & LLE_STATIC) || la->la_expire > time_uptime)) {
 		bcopy(&la->ll_addr, desten, ifp->if_addrlen);
+		renew = 0;
 		/*
 		 * If entry has an expiry time and it is approaching,
 		 * see if we need to send an ARP request within this
@@ -333,15 +396,21 @@ retry:
 		 */
 		if (!(la->la_flags & LLE_STATIC) &&
 		    time_uptime + la->la_preempt > la->la_expire) {
-			arprequest(ifp, NULL,
-			    &SIN(dst)->sin_addr, IF_LLADDR(ifp));
-
+			renew = 1;
 			la->la_preempt--;
 		}
 
 		*lle = la;
-		error = 0;
-		goto done;
+
+		if (flags & LLE_EXCLUSIVE)
+			LLE_WUNLOCK(la);
+		else
+			LLE_RUNLOCK(la);
+
+		if (renew == 1)
+			arprequest(ifp, NULL, &SIN(dst)->sin_addr, NULL);
+
+		return (0);
 	}
 
 	if (la->la_flags & LLE_STATIC) {   /* should not happen! */
@@ -411,8 +480,7 @@ retry:
 			LLE_REMREF(la);
 		la->la_asked++;
 		LLE_WUNLOCK(la);
-		arprequest(ifp, NULL, &SIN(dst)->sin_addr,
-		    IF_LLADDR(ifp));
+		arprequest(ifp, NULL, &SIN(dst)->sin_addr, NULL);
 		return (error);
 	}
 done:
@@ -491,6 +559,9 @@ static int log_arp_wrong_iface = 1;
 static int log_arp_movements = 1;
 static int log_arp_permanent_modify = 1;
 static int allow_multicast = 0;
+static struct timeval arp_lastlog;
+static int arp_curpps;
+static int arp_maxpps = 1;
 
 SYSCTL_INT(_net_link_ether_inet, OID_AUTO, log_arp_wrong_iface, CTLFLAG_RW,
 	&log_arp_wrong_iface, 0,
@@ -503,6 +574,15 @@ SYSCTL_INT(_net_link_ether_inet, OID_AUTO, log_arp_permanent_modify, CTLFLAG_RW,
 	"log arp replies from MACs different than the one in the permanent arp entry");
 SYSCTL_INT(_net_link_ether_inet, OID_AUTO, allow_multicast, CTLFLAG_RW,
 	&allow_multicast, 0, "accept multicast addresses");
+SYSCTL_INT(_net_link_ether_inet, OID_AUTO, max_log_per_second,
+	CTLFLAG_RW, &arp_maxpps, 0,
+	"Maximum number of remotely triggered ARP messages that can be "
+	"logged per second");
+
+#define	ARP_LOG(pri, ...)	do {					\
+	if (ppsratecheck(&arp_lastlog, &arp_curpps, arp_maxpps))	\
+		log((pri), "arp: " __VA_ARGS__);			\
+} while (0)
 
 static void
 in_arpinput(struct mbuf *m)
@@ -519,7 +599,7 @@ in_arpinput(struct mbuf *m)
 	int op, flags;
 	int req_len;
 	int bridged = 0, is_bridge = 0;
-	int carp_match = 0;
+	int carped;
 	struct sockaddr_in sin;
 	sin.sin_len = sizeof(struct sockaddr_in);
 	sin.sin_family = AF_INET;
@@ -532,7 +612,7 @@ in_arpinput(struct mbuf *m)
 
 	req_len = arphdr_len2(ifp->if_addrlen, sizeof(struct in_addr));
 	if (m->m_len < req_len && (m = m_pullup(m, req_len)) == NULL) {
-		log(LOG_NOTICE, "in_arp: runt packet -- m_pullup failed\n");
+		ARP_LOG(LOG_NOTICE, "runt packet -- m_pullup failed\n");
 		return;
 	}
 
@@ -542,13 +622,13 @@ in_arpinput(struct mbuf *m)
 	 * a protocol length not equal to an IPv4 address.
 	 */
 	if (ah->ar_pln != sizeof(struct in_addr)) {
-		log(LOG_NOTICE, "in_arp: requested protocol length != %zu\n",
+		ARP_LOG(LOG_NOTICE, "requested protocol length != %zu\n",
 		    sizeof(struct in_addr));
 		goto drop;
 	}
 
 	if (allow_multicast == 0 && ETHER_IS_MULTICAST(ar_sha(ah))) {
-		log(LOG_NOTICE, "arp: %*D is multicast\n",
+		ARP_LOG(LOG_NOTICE, "%*D is multicast\n",
 		    ifp->if_addrlen, (u_char *)ar_sha(ah), ":");
 		goto drop;
 	}
@@ -564,24 +644,14 @@ in_arpinput(struct mbuf *m)
 	 * For a bridge, we want to check the address irrespective
 	 * of the receive interface. (This will change slightly
 	 * when we have clusters of interfaces).
-	 * If the interface does not match, but the recieving interface
-	 * is part of carp, we call carp_iamatch to see if this is a
-	 * request for the virtual host ip.
-	 * XXX: This is really ugly!
 	 */
 	IN_IFADDR_RLOCK();
 	LIST_FOREACH(ia, INADDR_HASH(itaddr.s_addr), ia_hash) {
 		if (((bridged && ia->ia_ifp->if_bridge == ifp->if_bridge) ||
 		    ia->ia_ifp == ifp) &&
-		    itaddr.s_addr == ia->ia_addr.sin_addr.s_addr) {
-			ifa_ref(&ia->ia_ifa);
-			IN_IFADDR_RUNLOCK();
-			goto match;
-		}
-		if (ifp->if_carp != NULL &&
-		    (*carp_iamatch_p)(ifp, ia, &isaddr, &enaddr) &&
-		    itaddr.s_addr == ia->ia_addr.sin_addr.s_addr) {
-			carp_match = 1;
+		    itaddr.s_addr == ia->ia_addr.sin_addr.s_addr &&
+		    (ia->ia_ifa.ifa_carp == NULL ||
+		    (*carp_iamatch_p)(&ia->ia_ifa, &enaddr))) {
 			ifa_ref(&ia->ia_ifa);
 			IN_IFADDR_RUNLOCK();
 			goto match;
@@ -625,7 +695,9 @@ in_arpinput(struct mbuf *m)
 	 */
 	IF_ADDR_RLOCK(ifp);
 	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
-		if (ifa->ifa_addr->sa_family == AF_INET) {
+		if (ifa->ifa_addr->sa_family == AF_INET &&
+		    (ifa->ifa_carp == NULL ||
+		    (*carp_iamatch_p)(ifa, &enaddr))) {
 			ia = ifatoia(ifa);
 			ifa_ref(ifa);
 			IF_ADDR_RUNLOCK(ifp);
@@ -646,14 +718,14 @@ in_arpinput(struct mbuf *m)
 match:
 	if (!enaddr)
 		enaddr = (u_int8_t *)IF_LLADDR(ifp);
+	carped = (ia->ia_ifa.ifa_carp != NULL);
 	myaddr = ia->ia_addr.sin_addr;
 	ifa_free(&ia->ia_ifa);
 	if (!bcmp(ar_sha(ah), enaddr, ifp->if_addrlen))
 		goto drop;	/* it's from me, ignore it. */
 	if (!bcmp(ar_sha(ah), ifp->if_broadcastaddr, ifp->if_addrlen)) {
-		log(LOG_NOTICE,
-		    "arp: link address is broadcast for IP address %s!\n",
-		    inet_ntoa(isaddr));
+		ARP_LOG(LOG_NOTICE, "link address is broadcast for IP address "
+		    "%s!\n", inet_ntoa(isaddr));
 		goto drop;
 	}
 	/*
@@ -662,9 +734,9 @@ match:
 	 * case we suppress the warning to avoid false positive complaints of
 	 * potential misconfiguration.
 	 */
-	if (!bridged && isaddr.s_addr == myaddr.s_addr && myaddr.s_addr != 0) {
-		log(LOG_ERR,
-		   "arp: %*D is using my IP address %s on %s!\n",
+	if (!bridged && !carped && isaddr.s_addr == myaddr.s_addr &&
+	    myaddr.s_addr != 0) {
+		ARP_LOG(LOG_ERR, "%*D is using my IP address %s on %s!\n",
 		   ifp->if_addrlen, (u_char *)ar_sha(ah), ":",
 		   inet_ntoa(isaddr), ifp->if_xname);
 		itaddr = myaddr;
@@ -685,9 +757,9 @@ match:
 	IF_AFDATA_UNLOCK(ifp);
 	if (la != NULL) {
 		/* the following is not an error when doing bridging */
-		if (!bridged && la->lle_tbl->llt_ifp != ifp && !carp_match) {
+		if (!bridged && la->lle_tbl->llt_ifp != ifp) {
 			if (log_arp_wrong_iface)
-				log(LOG_WARNING, "arp: %s is on %s "
+				ARP_LOG(LOG_WARNING, "%s is on %s "
 				    "but got reply from %*D on %s\n",
 				    inet_ntoa(isaddr),
 				    la->lle_tbl->llt_ifp->if_xname,
@@ -701,8 +773,8 @@ match:
 			if (la->la_flags & LLE_STATIC) {
 				LLE_WUNLOCK(la);
 				if (log_arp_permanent_modify)
-					log(LOG_ERR,
-					    "arp: %*D attempts to modify "
+					ARP_LOG(LOG_ERR,
+					    "%*D attempts to modify "
 					    "permanent entry for %s on %s\n",
 					    ifp->if_addrlen,
 					    (u_char *)ar_sha(ah), ":",
@@ -710,7 +782,7 @@ match:
 				goto reply;
 			}
 			if (log_arp_movements) {
-				log(LOG_INFO, "arp: %s moved from %*D "
+				ARP_LOG(LOG_INFO, "%s moved from %*D "
 				    "to %*D on %s\n",
 				    inet_ntoa(isaddr),
 				    ifp->if_addrlen,
@@ -722,7 +794,7 @@ match:
 
 		if (ifp->if_addrlen != ah->ar_hln) {
 			LLE_WUNLOCK(la);
-			log(LOG_WARNING, "arp from %*D: addr len: new %d, "
+			ARP_LOG(LOG_WARNING, "from %*D: addr len: new %d, "
 			    "i/f %d (ignored)\n", ifp->if_addrlen,
 			    (u_char *) ar_sha(ah), ":", ah->ar_hln,
 			    ifp->if_addrlen);
@@ -731,7 +803,7 @@ match:
 		(void)memcpy(&la->ll_addr, ar_sha(ah), ifp->if_addrlen);
 		la->la_flags |= LLE_VALID;
 
-		EVENTHANDLER_INVOKE(arp_update_event, la);
+		EVENTHANDLER_INVOKE(lle_event, la, LLENTRY_RESOLVED);
 
 		if (!(la->la_flags & LLE_STATIC)) {
 			int canceled;
@@ -763,6 +835,8 @@ match:
 			for (; m_hold != NULL; m_hold = m_hold_next) {
 				m_hold_next = m_hold->m_nextpkt;
 				m_hold->m_nextpkt = NULL;
+				/* Avoid confusing lower layers. */
+				m_clrprotoflags(m_hold);
 				(*ifp->if_output)(ifp, m_hold, &sa, NULL);
 			}
 		} else
@@ -781,9 +855,9 @@ reply:
 		struct llentry *lle = NULL;
 
 		sin.sin_addr = itaddr;
-		IF_AFDATA_LOCK(ifp);
+		IF_AFDATA_RLOCK(ifp);
 		lle = lla_lookup(LLTABLE(ifp), 0, (struct sockaddr *)&sin);
-		IF_AFDATA_UNLOCK(ifp);
+		IF_AFDATA_RUNLOCK(ifp);
 
 		if ((lle != NULL) && (lle->la_flags & LLE_PUB)) {
 			(void)memcpy(ar_tha(ah), ar_sha(ah), ah->ar_hln);
@@ -830,7 +904,7 @@ reply:
 			if (!rt)
 				goto drop;
 			if (rt->rt_ifp != ifp) {
-				log(LOG_INFO, "arp_proxy: ignoring request"
+				ARP_LOG(LOG_INFO, "proxy: ignoring request"
 				    " from %s via %s, expecting %s\n",
 				    inet_ntoa(isaddr), ifp->if_xname,
 				    rt->rt_ifp->if_xname);
@@ -867,6 +941,7 @@ reply:
 	m->m_pkthdr.rcvif = NULL;
 	sa.sa_family = AF_ARP;
 	sa.sa_len = 2;
+	m_clrprotoflags(m);	/* Avoid confusing lower layers. */
 	(*ifp->if_output)(ifp, m, &sa, NULL);
 	ARPSTAT_INC(txreplies);
 	return;
@@ -876,14 +951,124 @@ drop:
 }
 #endif
 
+/*
+ * Handle the garp_rexmit_count. Like sysctl_handle_int(), but limits the range
+ * of valid values.
+ */
+static int
+sysctl_garp_rexmit(SYSCTL_HANDLER_ARGS)
+{
+	int error;
+	int rexmit_count = *(int *)arg1;
+
+	error = sysctl_handle_int(oidp, &rexmit_count, 0, req);
+
+	/* Enforce limits on any new value that may have been set. */
+	if (!error && req->newptr) {
+		/* A new value was set. */
+		if (rexmit_count < 0) {
+			rexmit_count = 0;
+		} else if (rexmit_count > MAX_GARP_RETRANSMITS) {
+			rexmit_count = MAX_GARP_RETRANSMITS;
+		}
+		*(int *)arg1 = rexmit_count;
+	}
+
+	return (error);
+}
+
+/*
+ * Retransmit a Gratuitous ARP (GARP) and, if necessary, schedule a callout to
+ * retransmit it again. A pending callout owns a reference to the ifa.
+ */
+static void
+garp_rexmit(void *arg)
+{
+	struct in_ifaddr *ia = arg;
+
+	if (callout_pending(&ia->ia_garp_timer) ||
+	    !callout_active(&ia->ia_garp_timer)) {
+		IFA_UNLOCK(&ia->ia_ifa);
+		ifa_free(&ia->ia_ifa);
+		return;
+	}
+
+	/*
+	 * Drop ifa lock while the ARP request is generated.
+	 */
+	IFA_UNLOCK(&ia->ia_ifa);
+
+	arprequest(ia->ia_ifa.ifa_ifp, &IA_SIN(ia)->sin_addr,
+	    &IA_SIN(ia)->sin_addr, IF_LLADDR(ia->ia_ifa.ifa_ifp));
+
+	/*
+	 * Increment the count of retransmissions. If the count has reached the
+	 * maximum value, stop sending the GARP packets. Otherwise, schedule
+	 * the callout to retransmit another GARP packet.
+	 */
+	++ia->ia_garp_count;
+	if (ia->ia_garp_count >= garp_rexmit_count) {
+		ifa_free(&ia->ia_ifa);
+	} else {
+		int rescheduled;
+		IFA_LOCK(&ia->ia_ifa);
+		rescheduled = callout_reset(&ia->ia_garp_timer,
+		    (1 << ia->ia_garp_count) * hz,
+		    garp_rexmit, ia);
+		IFA_UNLOCK(&ia->ia_ifa);
+		if (rescheduled) {
+			ifa_free(&ia->ia_ifa);
+		}
+	}
+}
+
+/*
+ * Start the GARP retransmit timer.
+ *
+ * A single GARP is always transmitted when an IPv4 address is added
+ * to an interface and that is usually sufficient. However, in some
+ * circumstances, such as when a shared address is passed between
+ * cluster nodes, this single GARP may occasionally be dropped or
+ * lost. This can lead to neighbors on the network link working with a
+ * stale ARP cache and sending packets destined for that address to
+ * the node that previously owned the address, which may not respond.
+ *
+ * To avoid this situation, GARP retransmits can be enabled by setting
+ * the net.link.ether.inet.garp_rexmit_count sysctl to a value greater
+ * than zero. The setting represents the maximum number of
+ * retransmissions. The interval between retransmissions is calculated
+ * using an exponential backoff algorithm, doubling each time, so the
+ * retransmission intervals are: {1, 2, 4, 8, 16, ...} (seconds).
+ */
+static void
+garp_timer_start(struct ifaddr *ifa)
+{
+	struct in_ifaddr *ia = (struct in_ifaddr *) ifa;
+
+	IFA_LOCK(ifa);
+	ia->ia_garp_count = 0;
+	if (callout_reset(&ia->ia_garp_timer, (1 << ia->ia_garp_count) * hz,
+	    garp_rexmit, ia) == 0) {
+		ifa_ref(ifa);
+	}
+	IFA_UNLOCK(ifa);
+}
+
 void
 arp_ifinit(struct ifnet *ifp, struct ifaddr *ifa)
 {
 	struct llentry *lle;
 
+	if (ifa->ifa_carp != NULL)
+		return;
+
 	if (ntohl(IA_SIN(ifa)->sin_addr.s_addr) != INADDR_ANY) {
 		arprequest(ifp, &IA_SIN(ifa)->sin_addr,
 				&IA_SIN(ifa)->sin_addr, IF_LLADDR(ifp));
+		if (garp_rexmit_count > 0) {
+			garp_timer_start(ifa);
+		}
+
 		/*
 		 * interface address is considered static entry
 		 * because the output of the arp utility shows

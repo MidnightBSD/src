@@ -64,11 +64,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $OpenBSD: ip_id.c,v 1.6 2002/03/15 18:19:52 millert Exp $
+ * $OpenBSD: ip6_id.c,v 1.2 2003/12/10 07:21:01 itojun Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_id.c 174510 2007-12-10 16:03:40Z obrien $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_id.c 327550 2018-01-04 15:57:49Z pfg $");
 
 /*
  * seed = random (bits - 1) bit
@@ -222,7 +222,7 @@ initid(struct randomtab *p)
 	p->ru_g = pmod(p->ru_gen, j, p->ru_n);
 	p->ru_counter = 0;
 
-	p->ru_reseed = time_second + p->ru_out;
+	p->ru_reseed = time_uptime + p->ru_out;
 	p->ru_msb = p->ru_msb ? 0 : (1U << (p->ru_bits - 1));
 }
 
@@ -230,15 +230,12 @@ static u_int32_t
 randomid(struct randomtab *p)
 {
 	int i, n;
-	u_int32_t tmp;
 
-	if (p->ru_counter >= p->ru_max || time_second > p->ru_reseed)
+	if (p->ru_counter >= p->ru_max || time_uptime > p->ru_reseed)
 		initid(p);
 
-	tmp = arc4random();
-
 	/* Skip a random number of ids */
-	n = tmp & 0x3; tmp = tmp >> 2;
+	n = arc4random() & 0x3;
 	if (p->ru_counter + n >= p->ru_max)
 		initid(p);
 
@@ -249,7 +246,7 @@ randomid(struct randomtab *p)
 
 	p->ru_counter += i;
 
-	return (p->ru_seed ^ pmod(p->ru_g, p->ru_seed2 ^ p->ru_x, p->ru_n)) |
+	return (p->ru_seed ^ pmod(p->ru_g, p->ru_seed2 + p->ru_x, p->ru_n)) |
 	    p->ru_msb;
 }
 

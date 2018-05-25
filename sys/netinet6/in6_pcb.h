@@ -59,7 +59,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/netinet6/in6_pcb.h 244524 2012-12-21 00:41:52Z delphij $
+ * $FreeBSD: stable/10/sys/netinet6/in6_pcb.h 241916 2012-10-22 21:49:56Z delphij $
  */
 
 #ifndef _NETINET6_IN6_PCB_H_

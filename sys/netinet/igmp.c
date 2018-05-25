@@ -49,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/igmp.c 249132 2013-04-05 08:22:11Z mav $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/igmp.c 305558 2016-09-07 19:25:08Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -290,7 +290,7 @@ igmp_save_context(struct mbuf *m, struct ifnet *ifp)
 {
 
 #ifdef VIMAGE
-	m->m_pkthdr.header = ifp->if_vnet;
+	m->m_pkthdr.PH_loc.ptr = ifp->if_vnet;
 #endif /* VIMAGE */
 	m->m_pkthdr.flowid = ifp->if_index;
 }
@@ -299,7 +299,7 @@ static __inline void
 igmp_scrub_context(struct mbuf *m)
 {
 
-	m->m_pkthdr.header = NULL;
+	m->m_pkthdr.PH_loc.ptr = NULL;
 	m->m_pkthdr.flowid = 0;
 }
 
@@ -327,7 +327,7 @@ igmp_restore_context(struct mbuf *m)
 
 #ifdef notyet
 #if defined(VIMAGE) && defined(INVARIANTS)
-	KASSERT(curvnet == (m->m_pkthdr.header),
+	KASSERT(curvnet == (m->m_pkthdr.PH_loc.ptr),
 	    ("%s: called when curvnet was not restored", __func__));
 #endif
 #endif
@@ -524,13 +524,13 @@ igmp_ra_alloc(void)
 	struct mbuf	*m;
 	struct ipoption	*p;
 
-	MGET(m, M_DONTWAIT, MT_DATA);
+	m = m_get(M_WAITOK, MT_DATA);
 	p = mtod(m, struct ipoption *);
 	p->ipopt_dst.s_addr = INADDR_ANY;
-	p->ipopt_list[0] = IPOPT_RA;	/* Router Alert Option */
-	p->ipopt_list[1] = 0x04;	/* 4 bytes long */
-	p->ipopt_list[2] = IPOPT_EOL;	/* End of IP option list */
-	p->ipopt_list[3] = 0x00;	/* pad byte */
+	p->ipopt_list[0] = (char)IPOPT_RA;	/* Router Alert Option */
+	p->ipopt_list[1] = 0x04;		/* 4 bytes long */
+	p->ipopt_list[2] = IPOPT_EOL;		/* End of IP option list */
+	p->ipopt_list[3] = 0x00;		/* pad byte */
 	m->m_len = sizeof(p->ipopt_dst) + p->ipopt_list[1];
 
 	return (m);
@@ -655,16 +655,12 @@ igmp_ifdetach(struct ifnet *ifp)
 void
 igmp_domifdetach(struct ifnet *ifp)
 {
-	struct igmp_ifinfo *igi;
 
 	CTR3(KTR_IGMPV3, "%s: called for ifp %p(%s)",
 	    __func__, ifp, ifp->if_xname);
 
 	IGMP_LOCK();
-
-	igi = ((struct in_ifinfo *)ifp->if_afdata[AF_INET])->ii_igmp;
 	igi_delete_locked(ifp);
-
 	IGMP_UNLOCK();
 }
 
@@ -1443,7 +1439,7 @@ igmp_input(struct mbuf *m, int off)
 
 	ip = mtod(m, struct ip *);
 	iphlen = off;
-	igmplen = ip->ip_len;
+	igmplen = ntohs(ip->ip_len) - off;
 
 	/*
 	 * Validate lengths.
@@ -1534,8 +1530,7 @@ igmp_input(struct mbuf *m, int off)
 		case IGMP_VERSION_3: {
 				struct igmpv3 *igmpv3;
 				uint16_t igmpv3len;
-				uint16_t srclen;
-				int nsrc;
+				uint16_t nsrc;
 
 				IGMPSTAT_INC(igps_rcv_v3_queries);
 				igmpv3 = (struct igmpv3 *)igmp;
@@ -1543,8 +1538,8 @@ igmp_input(struct mbuf *m, int off)
 				 * Validate length based on source count.
 				 */
 				nsrc = ntohs(igmpv3->igmp_numsrc);
-				srclen = sizeof(struct in_addr) * nsrc;
-				if (nsrc * sizeof(in_addr_t) > srclen) {
+				if (nsrc * sizeof(in_addr_t) >
+				    UINT16_MAX - iphlen - IGMP_V3_QUERY_MINLEN) {
 					IGMPSTAT_INC(igps_rcv_tooshort);
 					return;
 				}
@@ -1553,7 +1548,7 @@ igmp_input(struct mbuf *m, int off)
 				 * this scope.
 				 */
 				igmpv3len = iphlen + IGMP_V3_QUERY_MINLEN +
-				    srclen;
+				    sizeof(struct in_addr) * nsrc;
 				if ((m->m_flags & M_EXT ||
 				     m->m_len < igmpv3len) &&
 				    (m = m_pullup(m, igmpv3len)) == NULL) {
@@ -2122,6 +2117,7 @@ igmp_v1v2_process_querier_timers(struct igmp_ifinfo *igi)
 				    __func__, igi->igi_version, IGMP_VERSION_2,
 				    igi->igi_ifp, igi->igi_ifp->if_xname);
 				igi->igi_version = IGMP_VERSION_2;
+				igmp_v3_cancel_link_timers(igi);
 			}
 		}
 	} else if (igi->igi_v1_timer > 0) {
@@ -2204,7 +2200,7 @@ igmp_v1v2_queue_report(struct in_multi *inm, const int type)
 
 	ifp = inm->inm_ifp;
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m == NULL)
 		return (ENOMEM);
 	MH_ALIGN(m, sizeof(struct ip) + sizeof(struct igmp));
@@ -2226,7 +2222,7 @@ igmp_v1v2_queue_report(struct in_multi *inm, const int type)
 
 	ip = mtod(m, struct ip *);
 	ip->ip_tos = 0;
-	ip->ip_len = sizeof(struct ip) + sizeof(struct igmp);
+	ip->ip_len = htons(sizeof(struct ip) + sizeof(struct igmp));
 	ip->ip_off = 0;
 	ip->ip_p = IPPROTO_IGMP;
 	ip->ip_src.s_addr = INADDR_ANY;
@@ -2781,12 +2777,12 @@ igmp_v3_enqueue_group_record(struct ifqueue *ifq, struct in_multi *inm,
 		m0srcs = (ifp->if_mtu - IGMP_LEADINGSPACE -
 		    sizeof(struct igmp_grouprec)) / sizeof(in_addr_t);
 		if (!is_state_change && !is_group_query) {
-			m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+			m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 			if (m)
 				m->m_data += IGMP_LEADINGSPACE;
 		}
 		if (m == NULL) {
-			m = m_gethdr(M_DONTWAIT, MT_DATA);
+			m = m_gethdr(M_NOWAIT, MT_DATA);
 			if (m)
 				MH_ALIGN(m, IGMP_LEADINGSPACE);
 		}
@@ -2906,11 +2902,11 @@ igmp_v3_enqueue_group_record(struct ifqueue *ifq, struct in_multi *inm,
 			CTR1(KTR_IGMPV3, "%s: outbound queue full", __func__);
 			return (-ENOMEM);
 		}
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m)
 			m->m_data += IGMP_LEADINGSPACE;
 		if (m == NULL) {
-			m = m_gethdr(M_DONTWAIT, MT_DATA);
+			m = m_gethdr(M_NOWAIT, MT_DATA);
 			if (m)
 				MH_ALIGN(m, IGMP_LEADINGSPACE);
 		}
@@ -3062,11 +3058,11 @@ igmp_v3_enqueue_filter_change(struct ifqueue *ifq, struct in_multi *inm)
 				CTR1(KTR_IGMPV3,
 				    "%s: use previous packet", __func__);
 			} else {
-				m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+				m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 				if (m)
 					m->m_data += IGMP_LEADINGSPACE;
 				if (m == NULL) {
-					m = m_gethdr(M_DONTWAIT, MT_DATA);
+					m = m_gethdr(M_NOWAIT, MT_DATA);
 					if (m)
 						MH_ALIGN(m, IGMP_LEADINGSPACE);
 				}
@@ -3328,6 +3324,15 @@ igmp_v3_dispatch_general_query(struct igmp_ifinfo *igi)
 	KASSERT(igi->igi_version == IGMP_VERSION_3,
 	    ("%s: called when version %d", __func__, igi->igi_version));
 
+	/*
+	 * Check that there are some packets queued. If so, send them first.
+	 * For large number of groups the reply to general query can take
+	 * many packets, we should finish sending them before starting of
+	 * queuing the new reply.
+	 */
+	if (igi->igi_gq.ifq_head != NULL)
+		goto send;
+
 	ifp = igi->igi_ifp;
 
 	IF_ADDR_RLOCK(ifp);
@@ -3363,6 +3368,7 @@ igmp_v3_dispatch_general_query(struct igmp_ifinfo *igi)
 	}
 	IF_ADDR_RUNLOCK(ifp);
 
+send:
 	loop = (igi->igi_flags & IGIF_LOOPBACK) ? 1 : 0;
 	igmp_dispatch_queue(&igi->igi_gq, IGMP_MAX_RESPONSE_BURST, loop);
 
@@ -3403,7 +3409,7 @@ igmp_intr(struct mbuf *m)
 	 * indexes to guard against interface detach, they are
 	 * unique to each VIMAGE and must be retrieved.
 	 */
-	CURVNET_SET((struct vnet *)(m->m_pkthdr.header));
+	CURVNET_SET((struct vnet *)(m->m_pkthdr.PH_loc.ptr));
 	ifindex = igmp_restore_context(m);
 
 	/*
@@ -3450,7 +3456,7 @@ igmp_intr(struct mbuf *m)
 	}
 
 	igmp_scrub_context(m0);
-	m->m_flags &= ~(M_PROTOFLAGS);
+	m_clrprotoflags(m);
 	m0->m_pkthdr.rcvif = V_loif;
 #ifdef MAC
 	mac_netinet_igmp_send(ifp, m0);
@@ -3498,7 +3504,7 @@ igmp_v3_encap_report(struct ifnet *ifp, struct mbuf *m)
 	if (m->m_flags & M_IGMPV3_HDR) {
 		igmpreclen -= hdrlen;
 	} else {
-		M_PREPEND(m, hdrlen, M_DONTWAIT);
+		M_PREPEND(m, hdrlen, M_NOWAIT);
 		if (m == NULL)
 			return (NULL);
 		m->m_flags |= M_IGMPV3_HDR;
@@ -3523,8 +3529,8 @@ igmp_v3_encap_report(struct ifnet *ifp, struct mbuf *m)
 
 	ip = mtod(m, struct ip *);
 	ip->ip_tos = IPTOS_PREC_INTERNETCONTROL;
-	ip->ip_len = hdrlen + igmpreclen;
-	ip->ip_off = IP_DF;
+	ip->ip_len = htons(hdrlen + igmpreclen);
+	ip->ip_off = htons(IP_DF);
 	ip->ip_p = IPPROTO_IGMP;
 	ip->ip_sum = 0;
 

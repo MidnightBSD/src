@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * alias_skinny.c
  *
@@ -27,7 +28,7 @@
  *
  * Author: Joe Marcus Clarke <marcus@FreeBSD.org>
  *
- * $FreeBSD: stable/9/sys/netinet/libalias/alias_skinny.c 190841 2009-04-08 11:56:49Z piso $
+ * $FreeBSD: stable/10/sys/netinet/libalias/alias_skinny.c 240725 2012-09-20 03:29:43Z kevlo $
  */
 
 #ifdef _KERNEL
@@ -340,7 +341,7 @@ AliasHandleSkinny(struct libalias *la, struct ip *pip, struct alias_link *lnk)
 	 * through the packet using len to determine message boundaries.
 	 * This comes into play big time with port messages being in the
 	 * same packet as register messages.  Also, open receive channel
-	 * acks are usually buried in a pakcet some 400 bytes long.
+	 * acks are usually buried in a packet some 400 bytes long.
 	 */
 	while (dlen >= skinny_hdr_len) {
 		len = (sd->len);

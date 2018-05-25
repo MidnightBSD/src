@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_os_bsd.h 237896 2012-07-01 07:59:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_os_bsd.h 314327 2017-02-27 08:27:38Z avg $");
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
 #define _NETINET_SCTP_OS_BSD_H_
@@ -96,7 +96,6 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_os_bsd.h 237896 2012-07-01 07:59:0
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_pcb.h>
-#include <netinet/icmp6.h>
 #include <netinet6/ip6protosw.h>
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
@@ -104,6 +103,9 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_os_bsd.h 237896 2012-07-01 07:59:0
 
 
 #include <netinet/ip_options.h>
+
+#include <crypto/sha1.h>
+#include <crypto/sha2/sha256.h>
 
 #ifndef in6pcb
 #define in6pcb		inpcb
@@ -150,46 +152,31 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 #define V_system_base_info VNET(system_base_info)
 #define SCTP_BASE_INFO(__m) V_system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS V_system_base_info.sctpstat
-#define SCTP_BASE_STATS_SYSCTL VNET_NAME(system_base_info.sctpstat)
-#define SCTP_BASE_STAT(__m)     V_system_base_info.sctpstat.__m
-#define SCTP_BASE_SYSCTL(__m) VNET_NAME(system_base_info.sctpsysctl.__m)
+#define SCTP_BASE_STAT(__m) V_system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) V_system_base_info.sctpsysctl.__m
 #define SCTP_BASE_VAR(__m) V_system_base_info.__m
-
-/*
- *
- */
-#define USER_ADDR_NULL	(NULL)	/* FIX ME: temp */
 
 #define SCTP_PRINTF(params...)	printf(params)
 #if defined(SCTP_DEBUG)
 #define SCTPDBG(level, params...)					\
 {									\
-    do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
-	    SCTP_PRINTF(params);						\
-	}								\
-    } while (0);							\
+	do {								\
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {		\
+			SCTP_PRINTF(params);				\
+		}							\
+	} while (0);							\
 }
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
-    do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
-	    sctp_print_address(addr);					\
-	}								\
-    } while (0);							\
-}
-#define SCTPDBG_PKT(level, iph, sh)					\
-{									\
-    do {								\
-	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
-		    sctp_print_address_pkt(iph, sh);			\
-	    }								\
-    } while (0);							\
+	do {								\
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {		\
+			sctp_print_address(addr);			\
+		}							\
+	} while (0);							\
 }
 #else
 #define SCTPDBG(level, params...)
 #define SCTPDBG_ADDR(level, addr)
-#define SCTPDBG_PKT(level, iph, sh)
 #endif
 
 #ifdef SCTP_LTRACE_CHUNKS
@@ -201,11 +188,11 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 #ifdef SCTP_LTRACE_ERRORS
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) \
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
-        	SCTP_PRINTF("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
+		SCTP_PRINTF("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
 		            m, inp, stcb, net, file, __LINE__, err);
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) \
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
-        	SCTP_PRINTF("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
+		SCTP_PRINTF("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
 		            inp, stcb, net, file, __LINE__, err);
 #else
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
@@ -239,16 +226,16 @@ MALLOC_DECLARE(SCTP_M_MCORE);
  * general memory allocation
  */
 #define SCTP_MALLOC(var, type, size, name) \
-    do { \
-	var = (type)malloc(size, name, M_NOWAIT); \
-    } while (0)
+	do { \
+		var = (type)malloc(size, name, M_NOWAIT); \
+	} while (0)
 
 #define SCTP_FREE(var, type)	free(var, type)
 
 #define SCTP_MALLOC_SONAME(var, type, size) \
-    do { \
-	var = (type)malloc(size, M_SONAME, M_WAITOK | M_ZERO); \
-    } while (0)
+	do { \
+		var = (type)malloc(size, M_SONAME, M_WAITOK | M_ZERO); \
+	} while (0)
 
 #define SCTP_FREE_SONAME(var)	free(var, M_SONAME)
 
@@ -335,11 +322,11 @@ typedef struct callout sctp_os_timer_t;
 /*      MTU              */
 /*************************/
 #define SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, af) ((struct ifnet *)ifn)->if_mtu
-#define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((rt != NULL) ? rt->rt_rmx.rmx_mtu : 0)
+#define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((uint32_t)((rt != NULL) ? rt->rt_mtu : 0))
 #define SCTP_GATHER_MTU_FROM_INTFC(sctp_ifn) ((sctp_ifn->ifn_p != NULL) ? ((struct ifnet *)(sctp_ifn->ifn_p))->if_mtu : 0)
 #define SCTP_SET_MTU_OF_ROUTE(sa, rt, mtu) do { \
                                               if (rt != NULL) \
-                                                 rt->rt_rmx.rmx_mtu = mtu; \
+                                                 rt->rt_mtu = mtu; \
                                            } while(0)
 
 /* (de-)register interface event notifications */
@@ -366,7 +353,7 @@ typedef struct callout sctp_os_timer_t;
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
 #define SCTP_DETACH_HEADER_FROM_CHAIN(m)
-#define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
+#define SCTP_HEADER_LEN(m) ((m)->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
@@ -394,10 +381,6 @@ typedef struct callout sctp_os_timer_t;
  * into the chain of data holders, for BSD
  * its a NOP.
  */
-
-/* Macro's for getting length from V6/V4 header */
-#define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
-#define SCTP_GET_IPV6_LENGTH(ip6) (ntohs(ip6->ip6_plen))
 
 /* get the v6 hop limit */
 #define SCTP_GET_HLIM(inp, ro)	in6_selecthlim((struct in6pcb *)&inp->ip_inp.inp, (ro ? (ro->ro_rt ? (ro->ro_rt->rt_ifp) : (NULL)) : (NULL)));
@@ -429,18 +412,18 @@ typedef struct callout sctp_os_timer_t;
 typedef struct route sctp_route_t;
 typedef struct rtentry sctp_rtentry_t;
 
-/*
- * XXX multi-FIB support was backed out in r179783 and it seems clear that the
- * VRF support as currently in FreeBSD is not ready to support multi-FIB.
- * It might be best to implement multi-FIB support for both v4 and v6 indepedent
- * of VRFs and leave those to a real MPLS stack.
- */
-#define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
+#define SCTP_RTALLOC(ro, vrf_id, fibnum) \
+	rtalloc_ign_fib((struct route *)ro, 0UL, fibnum)
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
 /* This is re-pulse ourselves for sendbuf */
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
+
+/*
+ * SCTP protocol specific mbuf flags.
+ */
+#define	M_NOTIFICATION		M_PROTO1	/* SCTP notification */
 
 /*
  * IP output routines
@@ -453,12 +436,14 @@ typedef struct rtentry sctp_rtentry_t;
 	    local_stcb->sctp_ep && \
 	    local_stcb->sctp_ep->sctp_socket) \
 		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
+	m_clrprotoflags(o_pak); \
 	result = ip_output(o_pak, NULL, ro, o_flgs, 0, NULL); \
 }
 
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
 	struct sctp_tcb *local_stcb = stcb; \
+	m_clrprotoflags(o_pak); \
 	if (local_stcb && local_stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
 				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
@@ -475,23 +460,18 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 /*
  * SCTP AUTH
  */
-#define HAVE_SHA2
-
 #define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
 
-#ifdef USE_SCTP_SHA1
-#include <netinet/sctp_sha1.h>
-#else
-#include <crypto/sha1.h>
 /* map standard crypto API names */
-#define SHA1_Init	SHA1Init
-#define SHA1_Update	SHA1Update
-#define SHA1_Final(x,y)	SHA1Final((caddr_t)x, y)
-#endif
+#define SCTP_SHA1_CTX		SHA1_CTX
+#define SCTP_SHA1_INIT		SHA1Init
+#define SCTP_SHA1_UPDATE	SHA1Update
+#define SCTP_SHA1_FINAL(x,y)	SHA1Final((caddr_t)x, y)
 
-#if defined(HAVE_SHA2)
-#include <crypto/sha2/sha2.h>
-#endif
+#define SCTP_SHA256_CTX		SHA256_CTX
+#define SCTP_SHA256_INIT	SHA256_Init
+#define SCTP_SHA256_UPDATE	SHA256_Update
+#define SCTP_SHA256_FINAL(x,y)	SHA256_Final((caddr_t)x, y)
 
 #endif
 

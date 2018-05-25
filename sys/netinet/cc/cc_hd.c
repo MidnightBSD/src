@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
@@ -52,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/cc/cc_hd.c 220560 2011-04-12 08:13:18Z lstewart $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_hd.c 220560 2011-04-12 08:13:18Z lstewart $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

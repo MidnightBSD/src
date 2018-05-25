@@ -66,7 +66,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_pcb.c 234279 2012-04-14 10:36:43Z glebius $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet6/in6_pcb.c 309108 2016-11-24 14:48:46Z jch $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -106,8 +106,6 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_pcb.c 234279 2012-04-14 10:36:43Z 
 #include <netinet/in_pcb.h>
 #include <netinet6/in6_pcb.h>
 #include <netinet6/scope6_var.h>
-
-struct	in6_addr zeroin6_addr;
 
 int
 in6_pcbbind(register struct inpcb *inp, struct sockaddr *nam,
@@ -159,7 +157,7 @@ in6_pcbbind(register struct inpcb *inp, struct sockaddr *nam,
 			 * and a multicast address is bound on both
 			 * new and duplicated sockets.
 			 */
-			if (so->so_options & SO_REUSEADDR)
+			if ((so->so_options & (SO_REUSEADDR|SO_REUSEPORT)) != 0)
 				reuseport = SO_REUSEADDR|SO_REUSEPORT;
 		} else if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			struct ifaddr *ifa;
@@ -246,8 +244,7 @@ in6_pcbbind(register struct inpcb *inp, struct sockaddr *nam,
 				if (tw == NULL ||
 				    (reuseport & tw->tw_so_options) == 0)
 					return (EADDRINUSE);
-			} else if (t && (reuseport == 0 ||
-			    (t->inp_flags2 & INP_REUSEPORT) == 0)) {
+			} else if (t && (reuseport & inp_so_options(t)) == 0) {
 				return (EADDRINUSE);
 			}
 #ifdef INET
@@ -268,8 +265,8 @@ in6_pcbbind(register struct inpcb *inp, struct sockaddr *nam,
 					     INP_IPV6PROTO) ==
 					     (t->inp_vflag & INP_IPV6PROTO))))
 						return (EADDRINUSE);
-				} else if (t && (reuseport == 0 ||
-				    (t->inp_flags2 & INP_REUSEPORT) == 0) &&
+				} else if (t &&
+				    (reuseport & inp_so_options(t)) == 0 &&
 				    (ntohl(t->inp_laddr.s_addr) != INADDR_ANY ||
 				    (t->inp_vflag & INP_IPV6PROTO) != 0))
 					return (EADDRINUSE);
@@ -626,18 +623,12 @@ in6_pcbnotify(struct inpcbinfo *pcbinfo, struct sockaddr *dst,
 		/*
 		 * If the error designates a new path MTU for a destination
 		 * and the application (associated with this socket) wanted to
-		 * know the value, notify. Note that we notify for all
-		 * disconnected sockets if the corresponding application
-		 * wanted. This is because some UDP applications keep sending
-		 * sockets disconnected.
+		 * know the value, notify.
 		 * XXX: should we avoid to notify the value to TCP sockets?
 		 */
-		if (cmd == PRC_MSGSIZE && (inp->inp_flags & IN6P_MTU) != 0 &&
-		    (IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_faddr) ||
-		     IN6_ARE_ADDR_EQUAL(&inp->in6p_faddr, &sa6_dst->sin6_addr))) {
+		if (cmd == PRC_MSGSIZE && cmdarg != NULL)
 			ip6_notify_pmtu(inp, (struct sockaddr_in6 *)dst,
-					(u_int32_t *)cmdarg);
-		}
+					*(u_int32_t *)cmdarg);
 
 		/*
 		 * Detect if we should notify the error. If no source and
@@ -778,7 +769,7 @@ in6_pcbpurgeif0(struct inpcbinfo *pcbinfo, struct ifnet *ifp)
 	struct ip6_moptions *im6o;
 	int i, gap;
 
-	INP_INFO_RLOCK(pcbinfo);
+	INP_INFO_WLOCK(pcbinfo);
 	LIST_FOREACH(in6p, pcbinfo->ipi_listhead, inp_list) {
 		INP_WLOCK(in6p);
 		im6o = in6p->in6p_moptions;
@@ -809,7 +800,7 @@ in6_pcbpurgeif0(struct inpcbinfo *pcbinfo, struct ifnet *ifp)
 		}
 		INP_WUNLOCK(in6p);
 	}
-	INP_INFO_RUNLOCK(pcbinfo);
+	INP_INFO_WUNLOCK(pcbinfo);
 }
 
 /*

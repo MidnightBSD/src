@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_uio.h 244524 2012-12-21 00:41:52Z delphij $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_uio.h 294180 2016-01-16 18:05:24Z tuexen $");
 
 #ifndef _NETINET_SCTP_UIO_H_
 #define _NETINET_SCTP_UIO_H_
@@ -135,19 +135,26 @@ struct sctp_extrcvinfo {
 	uint16_t sinfo_flags;
 	uint32_t sinfo_ppid;
 	uint32_t sinfo_context;
-	uint32_t sinfo_timetolive;
+	uint32_t sinfo_timetolive;	/* should have been sinfo_pr_value */
 	uint32_t sinfo_tsn;
 	uint32_t sinfo_cumtsn;
 	sctp_assoc_t sinfo_assoc_id;
-	uint16_t sreinfo_next_flags;
-	uint16_t sreinfo_next_stream;
-	uint32_t sreinfo_next_aid;
-	uint32_t sreinfo_next_length;
-	uint32_t sreinfo_next_ppid;
+	uint16_t serinfo_next_flags;
+	uint16_t serinfo_next_stream;
+	uint32_t serinfo_next_aid;
+	uint32_t serinfo_next_length;
+	uint32_t serinfo_next_ppid;
 	uint16_t sinfo_keynumber;
 	uint16_t sinfo_keynumber_valid;
 	uint8_t __reserve_pad[SCTP_ALIGN_RESV_PAD_SHORT];
 };
+
+#define sinfo_pr_value sinfo_timetolive
+#define sreinfo_next_flags serinfo_next_flags
+#define sreinfo_next_stream serinfo_next_stream
+#define sreinfo_next_aid serinfo_next_aid
+#define sreinfo_next_length serinfo_next_length
+#define sreinfo_next_ppid serinfo_next_ppid
 
 struct sctp_sndinfo {
 	uint16_t snd_sid;
@@ -250,18 +257,23 @@ struct sctp_snd_all_completes {
 					SCTP_SACK_IMMEDIATELY)) != 0)
 /* for the endpoint */
 
-/* The lower byte is an enumeration of PR-SCTP policies */
+/* The lower four bits is an enumeration of PR-SCTP policies */
 #define SCTP_PR_SCTP_NONE 0x0000/* Reliable transfer */
 #define SCTP_PR_SCTP_TTL  0x0001/* Time based PR-SCTP */
 #define SCTP_PR_SCTP_BUF  0x0002/* Buffer based PR-SCTP */
 #define SCTP_PR_SCTP_RTX  0x0003/* Number of retransmissions based PR-SCTP */
+#define SCTP_PR_SCTP_MAX  SCTP_PR_SCTP_RTX
+#define SCTP_PR_SCTP_ALL  0x000f/* Used for aggregated stats */
 
 #define PR_SCTP_POLICY(x)         ((x) & 0x0f)
-#define PR_SCTP_ENABLED(x)        (PR_SCTP_POLICY(x) != SCTP_PR_SCTP_NONE)
+#define PR_SCTP_ENABLED(x)        ((PR_SCTP_POLICY(x) != SCTP_PR_SCTP_NONE) && \
+                                   (PR_SCTP_POLICY(x) != SCTP_PR_SCTP_ALL))
 #define PR_SCTP_TTL_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_TTL)
 #define PR_SCTP_BUF_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_BUF)
 #define PR_SCTP_RTX_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_RTX)
-#define PR_SCTP_INVALID_POLICY(x) (PR_SCTP_POLICY(x) > SCTP_PR_SCTP_RTX)
+#define PR_SCTP_INVALID_POLICY(x) (PR_SCTP_POLICY(x) > SCTP_PR_SCTP_MAX)
+#define PR_SCTP_VALID_POLICY(x)   (PR_SCTP_POLICY(x) <= SCTP_PR_SCTP_MAX)
+
 /* Stat's */
 struct sctp_pcbinfo {
 	uint32_t ep_count;
@@ -663,10 +675,6 @@ struct sctp_hmacalgo {
 #define SCTP_AUTH_HMAC_ID_RSVD		0x0000
 #define SCTP_AUTH_HMAC_ID_SHA1		0x0001	/* default, mandatory */
 #define SCTP_AUTH_HMAC_ID_SHA256	0x0003
-#define SCTP_AUTH_HMAC_ID_SHA224	0x0004
-#define SCTP_AUTH_HMAC_ID_SHA384	0x0005
-#define SCTP_AUTH_HMAC_ID_SHA512	0x0006
-
 
 /* SCTP_AUTH_ACTIVE_KEY / SCTP_AUTH_DELETE_KEY */
 struct sctp_authkeyid {
@@ -723,6 +731,14 @@ struct sctp_udpencaps {
 	struct sockaddr_storage sue_address;
 	sctp_assoc_t sue_assoc_id;
 	uint16_t sue_port;
+};
+
+struct sctp_prstatus {
+	sctp_assoc_t sprstat_assoc_id;
+	uint16_t sprstat_sid;
+	uint16_t sprstat_policy;
+	uint64_t sprstat_abandoned_unsent;
+	uint64_t sprstat_abandoned_sent;
 };
 
 struct sctp_cwnd_args {
@@ -1150,7 +1166,7 @@ union sctp_sockstore {
 struct xsctp_inpcb {
 	uint32_t last;
 	uint32_t flags;
-	uint32_t features;
+	uint64_t features;
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t total_nospaces;
@@ -1158,7 +1174,12 @@ struct xsctp_inpcb {
 	uint16_t local_port;
 	uint16_t qlen;
 	uint16_t maxqlen;
-	uint32_t extra_padding[32];	/* future */
+	void *socket;
+#if defined(__LP64__)
+	uint32_t extra_padding[29];	/* future */
+#else
+	uint32_t extra_padding[30];	/* future */
+#endif
 };
 
 struct xsctp_tcb {
@@ -1216,7 +1237,8 @@ struct xsctp_raddr {
 	struct sctp_timeval start_time;	/* sctpAssocLocalRemEntry 8   */
 	uint32_t rtt;
 	uint32_t heartbeat_interval;
-	uint32_t extra_padding[31];	/* future */
+	uint32_t ssthresh;
+	uint32_t extra_padding[30];	/* future */
 };
 
 #define SCTP_MAX_LOGGING_SIZE 30000
@@ -1279,33 +1301,39 @@ void sctp_freeladdrs(struct sockaddr *);
 int sctp_opt_info(int, sctp_assoc_t, int, void *, socklen_t *);
 
 /* deprecated */
-ssize_t sctp_sendmsg 
-(int, const void *, size_t, const struct sockaddr *,
+ssize_t 
+sctp_sendmsg(int, const void *, size_t, const struct sockaddr *,
     socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
 
 /* deprecated */
-	ssize_t sctp_send(int, const void *, size_t,
-              const struct sctp_sndrcvinfo *, int);
+ssize_t 
+sctp_send(int, const void *, size_t,
+    const struct sctp_sndrcvinfo *, int);
 
 /* deprecated */
-	ssize_t sctp_sendx(int, const void *, size_t, struct sockaddr *,
-               int, struct sctp_sndrcvinfo *, int);
+ssize_t 
+sctp_sendx(int, const void *, size_t, struct sockaddr *,
+    int, struct sctp_sndrcvinfo *, int);
 
 /* deprecated */
-	ssize_t sctp_sendmsgx(int sd, const void *, size_t, struct sockaddr *,
-                  int, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
+ssize_t 
+sctp_sendmsgx(int sd, const void *, size_t, struct sockaddr *,
+    int, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
 
-	sctp_assoc_t sctp_getassocid(int, struct sockaddr *);
+sctp_assoc_t sctp_getassocid(int, struct sockaddr *);
 
 /* deprecated */
-	ssize_t sctp_recvmsg(int, void *, size_t, struct sockaddr *, socklen_t *,
-                 struct sctp_sndrcvinfo *, int *);
+ssize_t 
+sctp_recvmsg(int, void *, size_t, struct sockaddr *, socklen_t *,
+    struct sctp_sndrcvinfo *, int *);
 
-	ssize_t sctp_sendv(int, const struct iovec *, int, struct sockaddr *,
-               int, void *, socklen_t, unsigned int, int);
+ssize_t 
+sctp_sendv(int, const struct iovec *, int, struct sockaddr *,
+    int, void *, socklen_t, unsigned int, int);
 
-	ssize_t sctp_recvv(int, const struct iovec *, int, struct sockaddr *,
-               socklen_t *, void *, socklen_t *, unsigned int *, int *);
+ssize_t 
+sctp_recvv(int, const struct iovec *, int, struct sockaddr *,
+    socklen_t *, void *, socklen_t *, unsigned int *, int *);
 
 __END_DECLS
 

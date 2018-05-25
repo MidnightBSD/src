@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_usrreq.c 241132 2012-10-02 12:57:47Z glebius $");
+__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_usrreq.c 309108 2016-11-24 14:48:46Z jch $");
 
 #include "opt_ddb.h"
 #include "opt_inet.h"
@@ -59,6 +59,7 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_usrreq.c 241132 2012-10-02 12:57:47
 #include <sys/protosw.h>
 #include <sys/proc.h>
 #include <sys/jail.h>
+#include <sys/syslog.h>
 
 #ifdef DDB
 #include <ddb/ddb.h>
@@ -80,6 +81,9 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_usrreq.c 241132 2012-10-02 12:57:47
 #include <netinet6/ip6_var.h>
 #include <netinet6/scope6_var.h>
 #endif
+#ifdef TCP_RFC7413
+#include <netinet/tcp_fastopen.h>
+#endif
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
@@ -88,7 +92,9 @@ __FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_usrreq.c 241132 2012-10-02 12:57:47
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
 #endif
+#ifdef TCP_OFFLOAD
 #include <netinet/tcp_offload.h>
+#endif
 
 /*
  * TCP protocol interface to socket abstraction.
@@ -161,7 +167,7 @@ tcp_detach(struct socket *so, struct inpcb *inp)
 {
 	struct tcpcb *tp;
 
-	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+	INP_INFO_LOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(inp);
 
 	KASSERT(so->so_pcb == inp, ("tcp_detach: so_pcb != inp"));
@@ -181,12 +187,43 @@ tcp_detach(struct socket *so, struct inpcb *inp)
 		 * present until timewait ends.
 		 *
 		 * XXXRW: Would it be cleaner to free the tcptw here?
+		 *
+		 * Astute question indeed, from twtcp perspective there are
+		 * three cases to consider:
+		 *
+		 * #1 tcp_detach is called at tcptw creation time by
+		 *  tcp_twstart, then do not discard the newly created tcptw
+		 *  and leave inpcb present until timewait ends
+		 * #2 tcp_detach is called at timewait end (or reuse) by
+		 *  tcp_twclose, then the tcptw has already been discarded
+		 *  (or reused) and inpcb is freed here
+		 * #3 tcp_detach is called() after timewait ends (or reuse)
+		 *  (e.g. by soclose), then tcptw has already been discarded
+		 *  (or reused) and inpcb is freed here
+		 *
+		 *  In all three cases the tcptw should not be freed here.
 		 */
 		if (inp->inp_flags & INP_DROPPED) {
-			KASSERT(tp == NULL, ("tcp_detach: INP_TIMEWAIT && "
-			    "INP_DROPPED && tp != NULL"));
 			in_pcbdetach(inp);
-			in_pcbfree(inp);
+			if (__predict_true(tp == NULL)) {
+				in_pcbfree(inp);
+			} else {
+				/*
+				 * This case should not happen as in TIMEWAIT
+				 * state the inp should not be destroyed before
+				 * its tcptw.  If INVARIANTS is defined, panic.
+				 */
+#ifdef INVARIANTS
+				panic("%s: Panic before an inp double-free: "
+				    "INP_TIMEWAIT && INP_DROPPED && tp != NULL"
+				    , __func__);
+#else
+				log(LOG_ERR, "%s: Avoid an inp double-free: "
+				    "INP_TIMEWAIT && INP_DROPPED && tp != NULL"
+				    , __func__);
+#endif
+				INP_WUNLOCK(inp);
+			}
 		} else {
 			in_pcbdetach(inp);
 			INP_WUNLOCK(inp);
@@ -224,15 +261,20 @@ static void
 tcp_usr_detach(struct socket *so)
 {
 	struct inpcb *inp;
+	int rlock = 0;
 
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_detach: inp == NULL"));
-	INP_INFO_WLOCK(&V_tcbinfo);
+	if (!INP_INFO_WLOCKED(&V_tcbinfo)) {
+		INP_INFO_RLOCK(&V_tcbinfo);
+		rlock = 1;
+	}
 	INP_WLOCK(inp);
 	KASSERT(inp->inp_socket != NULL,
 	    ("tcp_usr_detach: inp_socket == NULL"));
 	tcp_detach(so, inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	if (rlock)
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 }
 
 #ifdef INET
@@ -366,12 +408,19 @@ tcp_usr_listen(struct socket *so, int backlog, struct thread *td)
 		error = in_pcbbind(inp, (struct sockaddr *)0, td->td_ucred);
 	INP_HASH_WUNLOCK(&V_tcbinfo);
 	if (error == 0) {
-		tp->t_state = TCPS_LISTEN;
+		tcp_state_change(tp, TCPS_LISTEN);
 		solisten_proto(so, backlog);
-		tcp_offload_listen_open(tp);
+#ifdef TCP_OFFLOAD
+		if ((so->so_options & SO_NO_OFFLOAD) == 0)
+			tcp_offload_listen_start(tp);
+#endif
 	}
 	SOCK_UNLOCK(so);
 
+#ifdef TCP_RFC7413
+	if (tp->t_flags & TF_FASTOPEN)
+		tp->t_tfo_pending = tcp_fastopen_alloc_counter();
+#endif
 out:
 	TCPDEBUG2(PRU_LISTEN);
 	INP_WUNLOCK(inp);
@@ -408,11 +457,19 @@ tcp6_usr_listen(struct socket *so, int backlog, struct thread *td)
 	}
 	INP_HASH_WUNLOCK(&V_tcbinfo);
 	if (error == 0) {
-		tp->t_state = TCPS_LISTEN;
+		tcp_state_change(tp, TCPS_LISTEN);
 		solisten_proto(so, backlog);
+#ifdef TCP_OFFLOAD
+		if ((so->so_options & SO_NO_OFFLOAD) == 0)
+			tcp_offload_listen_start(tp);
+#endif
 	}
 	SOCK_UNLOCK(so);
 
+#ifdef TCP_RFC7413
+	if (tp->t_flags & TF_FASTOPEN)
+		tp->t_tfo_pending = tcp_fastopen_alloc_counter();
+#endif
 out:
 	TCPDEBUG2(PRU_LISTEN);
 	INP_WUNLOCK(inp);
@@ -452,15 +509,26 @@ tcp_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_connect: inp == NULL"));
 	INP_WLOCK(inp);
-	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
-		error = EINVAL;
+	if (inp->inp_flags & INP_TIMEWAIT) {
+		error = EADDRINUSE;
+		goto out;
+	}
+	if (inp->inp_flags & INP_DROPPED) {
+		error = ECONNREFUSED;
 		goto out;
 	}
 	tp = intotcpcb(inp);
 	TCPDEBUG1();
 	if ((error = tcp_connect(tp, nam, td)) != 0)
 		goto out;
-	error = tcp_output_connect(so, nam);
+#ifdef TCP_OFFLOAD
+	if (registered_toedevs > 0 &&
+	    (so->so_options & SO_NO_OFFLOAD) == 0 &&
+	    (error = tcp_offload_connect(so, nam)) == 0)
+		goto out;
+#endif
+	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
+	error = tcp_output(tp);
 out:
 	TCPDEBUG2(PRU_CONNECT);
 	INP_WUNLOCK(inp);
@@ -492,8 +560,12 @@ tcp6_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp6_usr_connect: inp == NULL"));
 	INP_WLOCK(inp);
-	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
-		error = EINVAL;
+	if (inp->inp_flags & INP_TIMEWAIT) {
+		error = EADDRINUSE;
+		goto out;
+	}
+	if (inp->inp_flags & INP_DROPPED) {
+		error = ECONNREFUSED;
 		goto out;
 	}
 	tp = intotcpcb(inp);
@@ -520,7 +592,13 @@ tcp6_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 			goto out;
 		if ((error = tcp_connect(tp, (struct sockaddr *)&sin, td)) != 0)
 			goto out;
-		error = tcp_output_connect(so, nam);
+#ifdef TCP_OFFLOAD
+		if (registered_toedevs > 0 &&
+		    (so->so_options & SO_NO_OFFLOAD) == 0 &&
+		    (error = tcp_offload_connect(so, nam)) == 0)
+			goto out;
+#endif
+		error = tcp_output(tp);
 		goto out;
 	}
 #endif
@@ -531,7 +609,14 @@ tcp6_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 		goto out;
 	if ((error = tcp6_connect(tp, nam, td)) != 0)
 		goto out;
-	error = tcp_output_connect(so, nam);
+#ifdef TCP_OFFLOAD
+	if (registered_toedevs > 0 &&
+	    (so->so_options & SO_NO_OFFLOAD) == 0 &&
+	    (error = tcp_offload_connect(so, nam)) == 0)
+		goto out;
+#endif
+	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
+	error = tcp_output(tp);
 
 out:
 	TCPDEBUG2(PRU_CONNECT);
@@ -559,11 +644,13 @@ tcp_usr_disconnect(struct socket *so)
 	int error = 0;
 
 	TCPDEBUG0;
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_disconnect: inp == NULL"));
 	INP_WLOCK(inp);
-	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
+	if (inp->inp_flags & INP_TIMEWAIT)
+		goto out;
+	if (inp->inp_flags & INP_DROPPED) {
 		error = ECONNRESET;
 		goto out;
 	}
@@ -573,7 +660,7 @@ tcp_usr_disconnect(struct socket *so)
 out:
 	TCPDEBUG2(PRU_DISCONNECT);
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 	return (error);
 }
 
@@ -581,13 +668,6 @@ out:
 /*
  * Accept a connection.  Essentially all the work is done at higher levels;
  * just return the address of the peer, storing through addr.
- *
- * The rationale for acquiring the tcbinfo lock here is somewhat complicated,
- * and is described in detail in the commit log entry for r175612.  Acquiring
- * it delays an accept(2) racing with sonewconn(), which inserts the socket
- * before the inpcb address/port fields are initialized.  A better fix would
- * prevent the socket from being placed in the listen queue until all fields
- * are fully initialized.
  */
 static int
 tcp_usr_accept(struct socket *so, struct sockaddr **nam)
@@ -604,7 +684,6 @@ tcp_usr_accept(struct socket *so, struct sockaddr **nam)
 
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_accept: inp == NULL"));
-	INP_INFO_RLOCK(&V_tcbinfo);
 	INP_WLOCK(inp);
 	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
 		error = ECONNABORTED;
@@ -624,7 +703,6 @@ tcp_usr_accept(struct socket *so, struct sockaddr **nam)
 out:
 	TCPDEBUG2(PRU_ACCEPT);
 	INP_WUNLOCK(inp);
-	INP_INFO_RUNLOCK(&V_tcbinfo);
 	if (error == 0)
 		*nam = in_sockaddr(port, &addr);
 	return error;
@@ -697,7 +775,7 @@ tcp_usr_shutdown(struct socket *so)
 	struct tcpcb *tp = NULL;
 
 	TCPDEBUG0;
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("inp == NULL"));
 	INP_WLOCK(inp);
@@ -710,12 +788,12 @@ tcp_usr_shutdown(struct socket *so)
 	socantsendmore(so);
 	tcp_usrclosed(tp);
 	if (!(inp->inp_flags & INP_DROPPED))
-		error = tcp_output_disconnect(tp);
+		error = tcp_output(tp);
 
 out:
 	TCPDEBUG2(PRU_SHUTDOWN);
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 
 	return (error);
 }
@@ -740,7 +818,24 @@ tcp_usr_rcvd(struct socket *so, int flags)
 	}
 	tp = intotcpcb(inp);
 	TCPDEBUG1();
-	tcp_output_rcvd(tp);
+#ifdef TCP_RFC7413
+	/*
+	 * For passively-created TFO connections, don't attempt a window
+	 * update while still in SYN_RECEIVED as this may trigger an early
+	 * SYN|ACK.  It is preferable to have the SYN|ACK be sent along with
+	 * application response data, or failing that, when the DELACK timer
+	 * expires.
+	 */
+	if ((tp->t_flags & TF_FASTOPEN) &&
+	    (tp->t_state == TCPS_SYN_RECEIVED))
+		goto out;
+#endif
+#ifdef TCP_OFFLOAD
+	if (tp->t_flags & TF_TOE)
+		tcp_offload_rcvd(tp);
+	else
+#endif
+	tcp_output(tp);
 
 out:
 	TCPDEBUG2(PRU_RCVD);
@@ -772,7 +867,7 @@ tcp_usr_send(struct socket *so, int flags, struct mbuf *m,
 	 * this call.
 	 */
 	if (flags & PRUS_EOF)
-		INP_INFO_WLOCK(&V_tcbinfo);
+		INP_INFO_RLOCK(&V_tcbinfo);
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_send: inp == NULL"));
 	INP_WLOCK(inp);
@@ -829,14 +924,14 @@ tcp_usr_send(struct socket *so, int flags, struct mbuf *m,
 			 * Close the send side of the connection after
 			 * the data is sent.
 			 */
-			INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+			INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
 			socantsendmore(so);
 			tcp_usrclosed(tp);
 		}
 		if (!(inp->inp_flags & INP_DROPPED)) {
 			if (flags & PRUS_MORETOCOME)
 				tp->t_flags |= TF_MORETOCOME;
-			error = tcp_output_send(tp);
+			error = tcp_output(tp);
 			if (flags & PRUS_MORETOCOME)
 				tp->t_flags &= ~TF_MORETOCOME;
 		}
@@ -885,7 +980,7 @@ tcp_usr_send(struct socket *so, int flags, struct mbuf *m,
 		}
 		tp->snd_up = tp->snd_una + so->so_snd.sb_cc;
 		tp->t_flags |= TF_FORCEDATA;
-		error = tcp_output_send(tp);
+		error = tcp_output(tp);
 		tp->t_flags &= ~TF_FORCEDATA;
 	}
 out:
@@ -893,7 +988,7 @@ out:
 		  ((flags & PRUS_EOF) ? PRU_SEND_EOF : PRU_SEND));
 	INP_WUNLOCK(inp);
 	if (flags & PRUS_EOF)
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 	return (error);
 }
 
@@ -910,7 +1005,7 @@ tcp_usr_abort(struct socket *so)
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_abort: inp == NULL"));
 
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	INP_WLOCK(inp);
 	KASSERT(inp->inp_socket != NULL,
 	    ("tcp_usr_abort: inp_socket == NULL"));
@@ -932,7 +1027,7 @@ tcp_usr_abort(struct socket *so)
 		inp->inp_flags |= INP_SOCKREF;
 	}
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 }
 
 /*
@@ -948,7 +1043,7 @@ tcp_usr_close(struct socket *so)
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("tcp_usr_close: inp == NULL"));
 
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	INP_WLOCK(inp);
 	KASSERT(inp->inp_socket != NULL,
 	    ("tcp_usr_close: inp_socket == NULL"));
@@ -971,7 +1066,7 @@ tcp_usr_close(struct socket *so)
 		inp->inp_flags |= INP_SOCKREF;
 	}
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 }
 
 /*
@@ -1119,8 +1214,7 @@ tcp_connect(struct tcpcb *tp, struct sockaddr *nam, struct thread *td)
 
 	soisconnecting(so);
 	TCPSTAT_INC(tcps_connattempt);
-	tp->t_state = TCPS_SYN_SENT;
-	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
+	tcp_state_change(tp, TCPS_SYN_SENT);
 	tp->iss = tcp_new_isn(tp);
 	tcp_sendseqinit(tp);
 
@@ -1192,8 +1286,7 @@ tcp6_connect(struct tcpcb *tp, struct sockaddr *nam, struct thread *td)
 
 	soisconnecting(so);
 	TCPSTAT_INC(tcps_connattempt);
-	tp->t_state = TCPS_SYN_SENT;
-	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
+	tcp_state_change(tp, TCPS_SYN_SENT);
 	tp->iss = tcp_new_isn(tp);
 	tcp_sendseqinit(tp);
 
@@ -1324,9 +1417,9 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				tp->t_flags |= TF_SIGNATURE;
 			else
 				tp->t_flags &= ~TF_SIGNATURE;
-			INP_WUNLOCK(inp);
-			break;
+			goto unlock_and_done;
 #endif /* TCP_SIGNATURE */
+
 		case TCP_NODELAY:
 		case TCP_NOOPT:
 			INP_WUNLOCK(inp);
@@ -1352,6 +1445,13 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				tp->t_flags |= opt;
 			else
 				tp->t_flags &= ~opt;
+unlock_and_done:
+#ifdef TCP_OFFLOAD
+			if (tp->t_flags & TF_TOE) {
+				tcp_offload_ctloutput(tp, sopt->sopt_dir,
+				    sopt->sopt_name);
+			}
+#endif
 			INP_WUNLOCK(inp);
 			break;
 
@@ -1370,8 +1470,7 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				if (TCPS_HAVEESTABLISHED(tp->t_state))
 					error = tcp_output(tp);
 			}
-			INP_WUNLOCK(inp);
-			break;
+			goto unlock_and_done;
 
 		case TCP_MAXSEG:
 			INP_WUNLOCK(inp);
@@ -1386,8 +1485,7 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				tp->t_maxseg = optval;
 			else
 				error = EINVAL;
-			INP_WUNLOCK(inp);
-			break;
+			goto unlock_and_done;
 
 		case TCP_INFO:
 			INP_WUNLOCK(inp);
@@ -1439,8 +1537,7 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				}
 			}
 			CC_LIST_RUNLOCK();
-			INP_WUNLOCK(inp);
-			break;
+			goto unlock_and_done;
 
 		case TCP_KEEPIDLE:
 		case TCP_KEEPINTVL:
@@ -1484,8 +1581,7 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 					    TP_KEEPINIT(tp));
 				break;
 			}
-			INP_WUNLOCK(inp);
-			break;
+			goto unlock_and_done;
 
 		case TCP_KEEPCNT:
 			INP_WUNLOCK(inp);
@@ -1499,8 +1595,30 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 			    (TP_MAXIDLE(tp) > 0))
 				tcp_timer_activate(tp, TT_2MSL,
 				    TP_MAXIDLE(tp));
+			goto unlock_and_done;
+
+#ifdef TCP_RFC7413
+		case TCP_FASTOPEN:
 			INP_WUNLOCK(inp);
-			break;
+			if (!V_tcp_fastopen_enabled)
+				return (EPERM);
+
+			error = sooptcopyin(sopt, &optval, sizeof optval,
+			    sizeof optval);
+			if (error)
+				return (error);
+
+			INP_WLOCK_RECHECK(inp);
+			if (optval) {
+				tp->t_flags |= TF_FASTOPEN;
+				if ((tp->t_state == TCPS_LISTEN) &&
+				    (tp->t_tfo_pending == NULL))
+					tp->t_tfo_pending =
+					    tcp_fastopen_alloc_counter();
+			} else
+				tp->t_flags &= ~TF_FASTOPEN;
+			goto unlock_and_done;
+#endif
 
 		default:
 			INP_WUNLOCK(inp);
@@ -1551,6 +1669,34 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 			INP_WUNLOCK(inp);
 			error = sooptcopyout(sopt, buf, TCP_CA_NAME_MAX);
 			break;
+		case TCP_KEEPIDLE:
+		case TCP_KEEPINTVL:
+		case TCP_KEEPINIT:
+		case TCP_KEEPCNT:
+			switch (sopt->sopt_name) {
+			case TCP_KEEPIDLE:
+				ui = tp->t_keepidle / hz;
+				break;
+			case TCP_KEEPINTVL:
+				ui = tp->t_keepintvl / hz;
+				break;
+			case TCP_KEEPINIT:
+				ui = tp->t_keepinit / hz;
+				break;
+			case TCP_KEEPCNT:
+				ui = tp->t_keepcnt;
+				break;
+			}
+			INP_WUNLOCK(inp);
+			error = sooptcopyout(sopt, &ui, sizeof(ui));
+			break;
+#ifdef TCP_RFC7413
+		case TCP_FASTOPEN:
+			optval = tp->t_flags & TF_FASTOPEN;
+			INP_WUNLOCK(inp);
+			error = sooptcopyout(sopt, &optval, sizeof optval);
+			break;
+#endif
 		default:
 			INP_WUNLOCK(inp);
 			error = ENOPROTOOPT;
@@ -1561,18 +1707,6 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 	return (error);
 }
 #undef INP_WLOCK_RECHECK
-
-/*
- * tcp_sendspace and tcp_recvspace are the default send and receive window
- * sizes, respectively.  These are obsolescent (this information should
- * be set by the route).
- */
-u_long	tcp_sendspace = 1024*32;
-SYSCTL_ULONG(_net_inet_tcp, TCPCTL_SENDSPACE, sendspace, CTLFLAG_RW,
-    &tcp_sendspace , 0, "Maximum outgoing TCP datagram size");
-u_long	tcp_recvspace = 1024*64;
-SYSCTL_ULONG(_net_inet_tcp, TCPCTL_RECVSPACE, recvspace, CTLFLAG_RW,
-    &tcp_recvspace , 0, "Maximum incoming TCP datagram size");
 
 /*
  * Attach TCP protocol to socket, allocating
@@ -1587,16 +1721,16 @@ tcp_attach(struct socket *so)
 	int error;
 
 	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
-		error = soreserve(so, tcp_sendspace, tcp_recvspace);
+		error = soreserve(so, V_tcp_sendspace, V_tcp_recvspace);
 		if (error)
 			return (error);
 	}
 	so->so_rcv.sb_flags |= SB_AUTOSIZE;
 	so->so_snd.sb_flags |= SB_AUTOSIZE;
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	error = in_pcballoc(so, &V_tcbinfo);
 	if (error) {
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		return (error);
 	}
 	inp = sotoinpcb(so);
@@ -1612,12 +1746,12 @@ tcp_attach(struct socket *so)
 	if (tp == NULL) {
 		in_pcbdetach(inp);
 		in_pcbfree(inp);
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		return (ENOBUFS);
 	}
 	tp->t_state = TCPS_CLOSED;
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 	return (0);
 }
 
@@ -1635,7 +1769,7 @@ tcp_disconnect(struct tcpcb *tp)
 	struct inpcb *inp = tp->t_inpcb;
 	struct socket *so = inp->inp_socket;
 
-	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+	INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(inp);
 
 	/*
@@ -1655,7 +1789,7 @@ tcp_disconnect(struct tcpcb *tp)
 		sbflush(&so->so_rcv);
 		tcp_usrclosed(tp);
 		if (!(inp->inp_flags & INP_DROPPED))
-			tcp_output_disconnect(tp);
+			tcp_output(tp);
 	}
 }
 
@@ -1673,15 +1807,17 @@ static void
 tcp_usrclosed(struct tcpcb *tp)
 {
 
-	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+	INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	switch (tp->t_state) {
 	case TCPS_LISTEN:
-		tcp_offload_listen_close(tp);
+#ifdef TCP_OFFLOAD
+		tcp_offload_listen_stop(tp);
+#endif
+		tcp_state_change(tp, TCPS_CLOSED);
 		/* FALLTHROUGH */
 	case TCPS_CLOSED:
-		tp->t_state = TCPS_CLOSED;
 		tp = tcp_close(tp);
 		/*
 		 * tcp_close() should never return NULL here as the socket is
@@ -1697,11 +1833,11 @@ tcp_usrclosed(struct tcpcb *tp)
 		break;
 
 	case TCPS_ESTABLISHED:
-		tp->t_state = TCPS_FIN_WAIT_1;
+		tcp_state_change(tp, TCPS_FIN_WAIT_1);
 		break;
 
 	case TCPS_CLOSE_WAIT:
-		tp->t_state = TCPS_LAST_ACK;
+		tcp_state_change(tp, TCPS_LAST_ACK);
 		break;
 	}
 	if (tp->t_state >= TCPS_FIN_WAIT_2) {
@@ -1882,6 +2018,10 @@ db_print_tflags(u_int t_flags)
 	}
 	if (t_flags & TF_ECN_PERMIT) {
 		db_printf("%sTF_ECN_PERMIT", comma ? ", " : "");
+		comma = 1;
+	}
+	if (t_flags & TF_FASTOPEN) {
+		db_printf("%sTF_FASTOPEN", comma ? ", " : "");
 		comma = 1;
 	}
 }

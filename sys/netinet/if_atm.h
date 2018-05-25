@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/sys/netinet/if_atm.h 139823 2005-01-07 01:45:51Z imp $ */
+/* $FreeBSD: stable/10/sys/netinet/if_atm.h 249925 2013-04-26 12:50:32Z glebius $ */
 /*      $NetBSD: if_atm.h,v 1.2 1996/07/03 17:17:17 chuck Exp $       */
 
 /*-
@@ -44,5 +44,5 @@ struct rtentry;
 struct sockaddr;
 
 void atm_rtrequest(int, struct rtentry *, struct rt_addrinfo *);
-int atmresolve(struct rtentry *, struct mbuf *, struct sockaddr *,
+int atmresolve(struct rtentry *, struct mbuf *, const struct sockaddr *,
 		struct atm_pseudohdr *);
