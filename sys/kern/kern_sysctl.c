@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_sysctl.c 324749 2017-10-19 08:00:34Z avg $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -45,7 +46,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/param.h>
 #include <sys/fail.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
@@ -142,6 +143,8 @@ sysctl_register_oid(struct sysctl_oid *oidp)
 	struct sysctl_oid_list *parent = oidp->oid_parent;
 	struct sysctl_oid *p;
 	struct sysctl_oid *q;
+	int oid_number;
+	int timeout = 2;
 
 	/*
 	 * First check if another oid with the same name already
@@ -158,40 +161,100 @@ sysctl_register_oid(struct sysctl_oid *oidp)
 			return;
 		}
 	}
+	/* get current OID number */
+	oid_number = oidp->oid_number;
+
+#if (OID_AUTO >= 0)
+#error "OID_AUTO is expected to be a negative value"
+#endif	
 	/*
-	 * If this oid has a number OID_AUTO, give it a number which
-	 * is greater than any current oid.
+	 * Any negative OID number qualifies as OID_AUTO. Valid OID
+	 * numbers should always be positive.
+	 *
 	 * NOTE: DO NOT change the starting value here, change it in
 	 * <sys/sysctl.h>, and make sure it is at least 256 to
-	 * accomodate e.g. net.inet.raw as a static sysctl node.
+	 * accommodate e.g. net.inet.raw as a static sysctl node.
 	 */
-	if (oidp->oid_number == OID_AUTO) {
-		static int newoid = CTL_AUTO_START;
+	if (oid_number < 0) {
+		static int newoid;
 
-		oidp->oid_number = newoid++;
-		if (newoid == 0x7fffffff)
-			panic("out of oids");
+		/*
+		 * By decrementing the next OID number we spend less
+		 * time inserting the OIDs into a sorted list.
+		 */
+		if (--newoid < CTL_AUTO_START)
+			newoid = 0x7fffffff;
+
+		oid_number = newoid;
 	}
-#if 0
-	else if (oidp->oid_number >= CTL_AUTO_START) {
-		/* do not panic; this happens when unregistering sysctl sets */
-		printf("static sysctl oid too high: %d", oidp->oid_number);
-	}
-#endif
 
 	/*
-	 * Insert the oid into the parent's list in order.
+	 * Insert the OID into the parent's list sorted by OID number.
 	 */
+retry:
 	q = NULL;
 	SLIST_FOREACH(p, parent, oid_link) {
-		if (oidp->oid_number < p->oid_number)
+		/* check if the current OID number is in use */
+		if (oid_number == p->oid_number) {
+			/* get the next valid OID number */
+			if (oid_number < CTL_AUTO_START ||
+			    oid_number == 0x7fffffff) {
+				/* wraparound - restart */
+				oid_number = CTL_AUTO_START;
+				/* don't loop forever */
+				if (!timeout--)
+					panic("sysctl: Out of OID numbers\n");
+				goto retry;
+			} else {
+				oid_number++;
+			}
+		} else if (oid_number < p->oid_number)
 			break;
 		q = p;
 	}
-	if (q)
+	/* check for non-auto OID number collision */
+	if (oidp->oid_number >= 0 && oidp->oid_number < CTL_AUTO_START &&
+	    oid_number >= CTL_AUTO_START) {
+		printf("sysctl: OID number(%d) is already in use for '%s'\n",
+		    oidp->oid_number, oidp->oid_name);
+	}
+	/* update the OID number, if any */
+	oidp->oid_number = oid_number;
+	if (q != NULL)
 		SLIST_INSERT_AFTER(q, oidp, oid_link);
 	else
 		SLIST_INSERT_HEAD(parent, oidp, oid_link);
+}
+
+void
+sysctl_register_disabled_oid(struct sysctl_oid *oidp)
+{
+
+	/*
+	 * Mark the leaf as dormant if it's not to be immediately enabled.
+	 * We do not disable nodes as they can be shared between modules
+	 * and it is always safe to access a node.
+	 */
+	KASSERT((oidp->oid_kind & CTLFLAG_DORMANT) == 0,
+	    ("internal flag is set in oid_kind"));
+	if ((oidp->oid_kind & CTLTYPE) != CTLTYPE_NODE)
+		oidp->oid_kind |= CTLFLAG_DORMANT;
+	sysctl_register_oid(oidp);
+}
+
+void
+sysctl_enable_oid(struct sysctl_oid *oidp)
+{
+
+	SYSCTL_ASSERT_XLOCKED();
+	if ((oidp->oid_kind & CTLTYPE) == CTLTYPE_NODE) {
+		KASSERT((oidp->oid_kind & CTLFLAG_DORMANT) == 0,
+		    ("sysctl node is marked as dormant"));
+		return;
+	}
+	KASSERT((oidp->oid_kind & CTLFLAG_DORMANT) != 0,
+	    ("enabling already enabled sysctl oid"));
+	oidp->oid_kind &= ~CTLFLAG_DORMANT;
 }
 
 void
@@ -264,7 +327,7 @@ sysctl_ctx_free(struct sysctl_ctx_list *clist)
 	}
 	/*
 	 * Restore deregistered entries, either from the end,
-	 * or from the place where error occured.
+	 * or from the place where error occurred.
 	 * e contains the entry that was not unregistered
 	 */
 	if (error)
@@ -398,7 +461,8 @@ sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del, int recurse)
 	if (oidp == NULL)
 		return(EINVAL);
 	if ((oidp->oid_kind & CTLFLAG_DYN) == 0) {
-		printf("can't remove non-dynamic nodes!\n");
+		printf("Warning: can't remove non-dynamic nodes (%s)!\n",
+		    oidp->oid_name);
 		return (EINVAL);
 	}
 	/*
@@ -412,8 +476,12 @@ sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del, int recurse)
 		if (oidp->oid_refcnt == 1) {
 			SLIST_FOREACH_SAFE(p,
 			    SYSCTL_CHILDREN(oidp), oid_link, tmp) {
-				if (!recurse)
+				if (!recurse) {
+					printf("Warning: failed attempt to "
+					    "remove oid %s with child %s\n",
+					    oidp->oid_name, p->oid_name);
 					return (ENOTEMPTY);
+				}
 				error = sysctl_remove_oid_locked(p, del,
 				    recurse);
 				if (error)
@@ -732,7 +800,7 @@ sysctl_sysctl_next_ls(struct sysctl_oid_list *lsp, int *name, u_int namelen,
 		*next = oidp->oid_number;
 		*oidpp = oidp;
 
-		if (oidp->oid_kind & CTLFLAG_SKIP)
+		if ((oidp->oid_kind & (CTLFLAG_SKIP | CTLFLAG_DORMANT)) != 0)
 			continue;
 
 		if (!namelen) {
@@ -1384,6 +1452,8 @@ sysctl_find_oid(int *name, u_int namelen, struct sysctl_oid **noid,
 			}
 			lsp = SYSCTL_CHILDREN(oid);
 		} else if (indx == namelen) {
+			if ((oid->oid_kind & CTLFLAG_DORMANT) != 0)
+				return (ENOENT);
 			*noid = oid;
 			if (nindx != NULL)
 				*nindx = indx;
@@ -1487,7 +1557,10 @@ sysctl_root(SYSCTL_HANDLER_ARGS)
 #endif
 	oid->oid_running++;
 	SYSCTL_XUNLOCK();
-
+#ifdef VIMAGE
+	if ((oid->oid_kind & CTLFLAG_VNET) && arg1 != NULL)
+		arg1 = (void *)(curvnet->vnet_data_base + (uintptr_t)arg1);
+#endif
 	if (!(oid->oid_kind & CTLFLAG_MPSAFE))
 		mtx_lock(&Giant);
 	error = oid->oid_handler(oid, arg1, arg2, req);

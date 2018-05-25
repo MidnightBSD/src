@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Assar Westerlund
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_syscalls.c 214181 2010-10-21 20:31:50Z delphij $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
