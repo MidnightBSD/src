@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Jason Evans <jasone@freebsd.org>.  All rights reserved.
  *
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_sema.c 139804 2005-01-06 23:35:40Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
