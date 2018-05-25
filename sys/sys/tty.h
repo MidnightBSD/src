@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/tty.h 271773 2014-09-18 14:44:47Z grehan $
  */
 
 #ifndef _SYS_TTY_H_
@@ -166,12 +167,16 @@ void	tty_rel_gone(struct tty *tp);
 
 #define	tty_lock(tp)		mtx_lock((tp)->t_mtx)
 #define	tty_unlock(tp)		mtx_unlock((tp)->t_mtx)
+#define	tty_lock_owned(tp)	mtx_owned((tp)->t_mtx)
 #define	tty_lock_assert(tp,ma)	mtx_assert((tp)->t_mtx, (ma))
 #define	tty_getlock(tp)		((tp)->t_mtx)
 
 /* Device node creation. */
 void	tty_makedev(struct tty *tp, struct ucred *cred, const char *fmt, ...)
     __printflike(3, 4);
+int	tty_makedevf(struct tty *tp, struct ucred *cred, int flags,
+    const char *fmt, ...) __printflike(4, 5);
+#define	TTYMK_CLONING		0x1
 #define	tty_makealias(tp,fmt,...) \
 	make_dev_alias((tp)->t_dev, fmt, ## __VA_ARGS__)
 
@@ -192,6 +197,7 @@ int	tty_ioctl(struct tty *tp, u_long cmd, void *data, int fflag,
     struct thread *td);
 int	tty_ioctl_compat(struct tty *tp, u_long cmd, caddr_t data,
     int fflag, struct thread *td);
+void	tty_set_winsize(struct tty *tp, const struct winsize *wsz);
 void	tty_init_console(struct tty *tp, speed_t speed);
 void	tty_flush(struct tty *tp, int flags);
 void	tty_hiwat_in_block(struct tty *tp);

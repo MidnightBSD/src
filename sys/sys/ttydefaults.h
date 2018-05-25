@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttydefaults.h	8.4 (Berkeley) 1/21/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/ttydefaults.h 249311 2013-04-09 16:16:34Z ed $
  */
 
 /*
@@ -79,9 +80,9 @@
 #define	CSTART		CTRL('Q')
 #define	CSTOP		CTRL('S')
 #define	CLNEXT		CTRL('V')
-#define	CDISCARD 	CTRL('O')
-#define	CWERASE 	CTRL('W')
-#define	CREPRINT 	CTRL('R')
+#define	CDISCARD	CTRL('O')
+#define	CWERASE		CTRL('W')
+#define	CREPRINT	CTRL('R')
 #define	CEOT		CEOF
 /* compat */
 #define	CBRK		CEOL
@@ -95,10 +96,17 @@
  * #define TTYDEFCHARS to include an array of default control characters.
  */
 #ifdef TTYDEFCHARS
-static cc_t	ttydefchars[NCCS] = {
-	CEOF,	CEOL,	CEOL,	CERASE, CWERASE, CKILL, CREPRINT,
-	CERASE2, CINTR,	CQUIT,	CSUSP,	CDSUSP,	CSTART,	CSTOP,	CLNEXT,
-	CDISCARD, CMIN,	CTIME,  CSTATUS, _POSIX_VDISABLE
+
+#include <sys/cdefs.h>
+#include <sys/_termios.h>
+
+static const cc_t ttydefchars[] = {
+	CEOF, CEOL, CEOL, CERASE, CWERASE, CKILL, CREPRINT, CERASE2, CINTR,
+	CQUIT, CSUSP, CDSUSP, CSTART, CSTOP, CLNEXT, CDISCARD, CMIN, CTIME,
+	CSTATUS, _POSIX_VDISABLE
 };
+_Static_assert(sizeof(ttydefchars) / sizeof(cc_t) == NCCS,
+    "Size of ttydefchars does not match NCCS");
+
 #undef TTYDEFCHARS
-#endif
+#endif /* TTYDEFCHARS */
