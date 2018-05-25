@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander V. Chernikov <melifaro@ipfw.ru>
  * All rights reserved.
@@ -23,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * 	$FreeBSD$
+ * 	$FreeBSD: stable/10/sys/netgraph/netflow/netflow_v9.c 260278 2014-01-04 19:04:53Z dim $
  */
 
-static const char rcs_id[] =
-    "@(#) $FreeBSD$";
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/netgraph/netflow/netflow_v9.c 260278 2014-01-04 19:04:53Z dim $");
 
 #include "opt_inet6.h"
 #include "opt_route.h"
@@ -386,7 +387,7 @@ get_export9_dgram(priv_p priv, fib_export_p fe, struct netflow_v9_packet_opt **t
 		uint16_t mtu = priv->mtu;
 
 		/* Allocate entire packet at once, allowing easy m_append() calls */
-		m = m_getm(NULL, mtu, M_DONTWAIT, MT_DATA);
+		m = m_getm(NULL, mtu, M_NOWAIT, MT_DATA);
 		if (m == NULL)
 			return (NULL);
 
