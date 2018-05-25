@@ -1,4 +1,5 @@
-# $MidnightBSD$
+# $MidnightBSD$ 
+# $FreeBSD: stable/10/sys/kern/Make.tags.inc 252356 2013-06-28 21:00:08Z davide $
 #	@(#)Make.tags.inc	8.1 (Berkeley) 6/11/93
 
 SYS?=	${.CURDIR}/..
@@ -27,12 +28,8 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/fs/devfs/*.[ch] \
 	${SYS}/fs/fdescfs/*.[ch] \
 	${SYS}/fs/fifofs/*.[ch] \
-	${SYS}/fs/hpfs/*.[ch] \
 	${SYS}/fs/msdosfs/*.[ch] \
-	${SYS}/fs/ntfs/*.[ch] \
 	${SYS}/fs/nullfs/*.[ch] \
-	${SYS}/fs/nwfs/*.[ch] \
-	${SYS}/fs/portalfs/*.[ch] \
 	${SYS}/fs/procfs/*.[ch] \
 	${SYS}/fs/smbfs/*.[ch] \
 	${SYS}/fs/udf/*.[ch] \
@@ -93,7 +90,6 @@ COMMDIR2= ${SYS}/dev/advansys \
 	${SYS}/fs/fifofs \
 	${SYS}/fs/msdosfs \
 	${SYS}/fs/nullfs \
-	${SYS}/fs/portalfs \
 	${SYS}/fs/procfs \
 	${SYS}/fs/specfs \
 	${SYS}/fs/unionfs \
