@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, 2005 Mellanox Technologies Ltd.  All rights reserved.
  * Copyright (c) 2004, 2005 Infinicon Corporation.  All rights reserved.

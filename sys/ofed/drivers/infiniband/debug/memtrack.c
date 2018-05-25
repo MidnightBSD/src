@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
   This software is available to you under a choice of one of two
   licenses.  You may choose to be licensed under the terms of the GNU
@@ -18,6 +19,8 @@
 
   Copyright (c) 2004 Mellanox Technologies Ltd.  All rights reserved.
 */
+
+#define	LINUXKPI_PARAM_PREFIX memtrack_
 
 #define C_MEMTRACK_C
 

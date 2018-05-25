@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_trunk.c,v 1.30 2007/01/31 06:20:19 reyk Exp $	*/
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
@@ -35,8 +36,6 @@
 #include <sys/systm.h>
 #include <linux/compiler.h>
 #include <asm/types.h>
-
-#define	__read_mostly __attribute__((__section__(".data.read_mostly")))
 
 #ifndef __bitwise__
 #ifdef __CHECKER__

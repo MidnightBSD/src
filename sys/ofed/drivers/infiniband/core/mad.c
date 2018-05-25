@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2007 Voltaire, Inc. All rights reserved.
  * Copyright (c) 2005 Intel Corporation.  All rights reserved.
@@ -33,6 +34,9 @@
  * SOFTWARE.
  *
  */
+
+#define	LINUXKPI_PARAM_PREFIX ibcore_
+
 #include <linux/dma-mapping.h>
 #include <rdma/ib_cache.h>
 

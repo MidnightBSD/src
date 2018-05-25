@@ -1,8 +1,9 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
  * Copyright (c) 2010 Panasas, Inc.
- * Copyright (c) 2013 Mellanox Technologies, Ltd.
+ * Copyright (c) 2013-2015 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +49,10 @@ linux_fget(unsigned int fd)
 {
 	struct file *file;
 
-	file = fget_unlocked(curthread->td_proc->p_fd, fd);
+	if (fget_unlocked(curthread->td_proc->p_fd, fd, NULL, 0, &file,
+	    NULL) != 0) {
+		return (NULL);
+	}
 	return (struct linux_file *)file->f_data;
 }
 
@@ -70,15 +74,16 @@ put_unused_fd(unsigned int fd)
 {
 	struct file *file;
 
-	file = fget_unlocked(curthread->td_proc->p_fd, fd);
-	if (file == NULL)
+	if (fget_unlocked(curthread->td_proc->p_fd, fd, NULL, 0, &file,
+	    NULL) != 0) {
 		return;
+	}
 	/*
 	 * NOTE: We should only get here when the "fd" has not been
 	 * installed, so no need to free the associated Linux file
 	 * structure.
 	 */
-	fdclose(curthread->td_proc->p_fd, file, fd, curthread);
+	fdclose(curthread, file, fd);
 
 	/* drop extra reference */
 	fdrop(file, curthread);
@@ -89,8 +94,8 @@ fd_install(unsigned int fd, struct linux_file *filp)
 {
 	struct file *file;
 
-	file = fget_unlocked(curthread->td_proc->p_fd, fd);
-	if (file == NULL) {
+	if (fget_unlocked(curthread->td_proc->p_fd, fd, NULL, 0, &file,
+	    NULL) != 0) {
 		filp->_file = NULL;
 	} else {
 		filp->_file = file;
@@ -109,6 +114,21 @@ get_unused_fd(void)
 	int fd;
 
 	error = falloc(curthread, &file, &fd, 0);
+	if (error)
+		return -error;
+	/* drop the extra reference */
+	fdrop(file, curthread);
+	return fd;
+}
+
+static inline int
+get_unused_fd_flags(int flags)
+{
+	struct file *file;
+	int error;
+	int fd;
+
+	error = falloc(curthread, &file, &fd, flags);
 	if (error)
 		return -error;
 	/* drop the extra reference */

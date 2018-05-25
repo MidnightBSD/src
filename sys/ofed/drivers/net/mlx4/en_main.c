@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007, 2014 Mellanox Technologies. All rights reserved.
  *
@@ -30,6 +31,8 @@
  * SOFTWARE.
  *
  */
+
+#define	LINUXKPI_PARAM_PREFIX mlx4_
 
 #include <linux/module.h>
 #include <linux/delay.h>

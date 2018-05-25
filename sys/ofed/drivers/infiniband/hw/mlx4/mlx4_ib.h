@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006, 2007 Cisco Systems.  All rights reserved.
  * Copyright (c) 2007, 2008 Mellanox Technologies. All rights reserved.

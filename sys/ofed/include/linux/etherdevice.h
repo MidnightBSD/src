@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2014 Mellanox Technologies, Ltd. All rights reserved.
@@ -36,6 +37,9 @@
 #define _LINUX_ETHERDEVICE
 
 #include <linux/types.h>
+
+#include <sys/random.h>
+#include <sys/libkern.h>
 
 #define	ETH_MODULE_SFF_8079		1
 #define	ETH_MODULE_SFF_8079_LEN		256
@@ -111,6 +115,34 @@ static inline bool is_valid_ether_addr(const u8 *addr)
 static inline void ether_addr_copy(u8 *dst, const u8 *src)
 {
 	memcpy(dst, src, 6);
+}
+
+static inline bool
+ether_addr_equal(const u8 *pa, const u8 *pb)
+{
+	return (memcmp(pa, pb, 6) == 0);
+}
+
+static inline bool
+ether_addr_equal_64bits(const u8 *pa, const u8 *pb)
+{
+	return (memcmp(pa, pb, 6) == 0);
+}
+
+static inline void
+eth_broadcast_addr(u8 *pa)
+{
+	memset(pa, 0xff, 6);
+}
+
+static inline void
+random_ether_addr(u8 * dst)
+{
+	if (read_random(dst, 6) == 0)
+		arc4rand(dst, 6, 0);
+
+	dst[0] &= 0xfe;
+	dst[0] |= 0x02;
 }
 
 #endif /* _LINUX_ETHERDEVICE */

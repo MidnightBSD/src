@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007, 2014 Mellanox Technologies. All rights reserved.
  *
@@ -394,8 +395,14 @@ int mlx4_en_activate_rx_rings(struct mlx4_en_priv *priv)
                 ring->rx_mb_size = priv->rx_mb_size;
 
 		ring->stride = stride;
-		if (ring->stride <= TXBB_SIZE)
+		if (ring->stride <= TXBB_SIZE) {
+			/* Stamp first unused send wqe */
+			__be32 *ptr = (__be32 *)ring->buf;
+			__be32 stamp = cpu_to_be32(1 << STAMP_SHIFT);
+			*ptr = stamp;
+			/* Move pointer to start of rx section */	
 			ring->buf += TXBB_SIZE;
+		}
 
 		ring->log_stride = ffs(ring->stride) - 1;
 		ring->buf_size = ring->size * ring->stride;
@@ -622,7 +629,7 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 
 		/* forward Toeplitz compatible hash value */
 		mb->m_pkthdr.flowid = be32_to_cpu(cqe->immed_rss_invalid);
-		mb->m_flags |= M_FLOWID;
+		M_HASHTYPE_SET(mb, M_HASHTYPE_OPAQUE);
 		mb->m_pkthdr.rcvif = dev;
 		if (be32_to_cpu(cqe->vlan_my_qpn) &
 		    MLX4_CQE_VLAN_PRESENT_MASK) {

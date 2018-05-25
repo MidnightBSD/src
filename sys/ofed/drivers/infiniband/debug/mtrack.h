@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __mtrack_h_
 #define __mtrack_h_
 

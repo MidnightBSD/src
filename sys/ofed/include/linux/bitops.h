@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
@@ -165,6 +166,8 @@ find_next_bit(unsigned long *addr, unsigned long size, unsigned long offset)
 		mask = (*addr) & ~BIT_MASK(offs);
 		if (mask)
 			return (bit + __ffsl(mask));
+		if (size - bit <= BITS_PER_LONG)
+			return (size);
 		bit += BITS_PER_LONG;
 		addr++;
 	}
@@ -203,6 +206,8 @@ find_next_zero_bit(unsigned long *addr, unsigned long size,
 		mask = ~(*addr) & ~BIT_MASK(offs);
 		if (mask)
 			return (bit + __ffsl(mask));
+		if (size - bit <= BITS_PER_LONG)
+			return (size);
 		bit += BITS_PER_LONG;
 		addr++;
 	}

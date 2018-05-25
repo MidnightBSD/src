@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef _SDP_DBG_H_
 #define _SDP_DBG_H_
 

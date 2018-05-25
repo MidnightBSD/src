@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Topspin Communications.  All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All rights reserved.
@@ -87,7 +88,7 @@ static void ipoib_add_one(struct ib_device *device);
 static void ipoib_remove_one(struct ib_device *device);
 static void ipoib_start(struct ifnet *dev);
 static int ipoib_output(struct ifnet *ifp, struct mbuf *m,
-	    struct sockaddr *dst, struct route *ro);
+	    const struct sockaddr *dst, struct route *ro);
 static int ipoib_ioctl(struct ifnet *ifp, u_long command, caddr_t data);
 static void ipoib_input(struct ifnet *ifp, struct mbuf *m);
 
@@ -293,13 +294,8 @@ ipoib_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		break;
 
 	case SIOCGIFADDR:
-		{
-			struct sockaddr *sa;
-
-			sa = (struct sockaddr *) & ifr->ifr_data;
-			bcopy(IF_LLADDR(ifp),
-			      (caddr_t) sa->sa_data, INFINIBAND_ALEN);
-		}
+		bcopy(IF_LLADDR(ifp), &ifr->ifr_addr.sa_data[0],
+		    INFINIBAND_ALEN);
 		break;
 
 	case SIOCSIFMTU:
@@ -880,7 +876,7 @@ ipoib_intf_alloc(const char *name)
 	dev->if_output = ipoib_output;
 	dev->if_input = ipoib_input;
 	dev->if_resolvemulti = ipoib_resolvemulti;
-	dev->if_baudrate = IF_Gbps(10UL);
+	if_initbaudrate(dev, IF_Gbps(10));
 	dev->if_broadcastaddr = priv->broadcastaddr;
 	dev->if_snd.ifq_maxlen = ipoib_sendq_size * 2;
 	sdl = (struct sockaddr_dl *)dev->if_addr->ifa_addr;
@@ -1258,7 +1254,7 @@ ipoib_cleanup_module(void)
  */
 static int
 ipoib_output(struct ifnet *ifp, struct mbuf *m,
-	struct sockaddr *dst, struct route *ro)
+	const struct sockaddr *dst, struct route *ro)
 {
 	u_char edst[INFINIBAND_ALEN];
 	struct llentry *lle = NULL;
@@ -1352,7 +1348,7 @@ ipoib_output(struct ifnet *ifp, struct mbuf *m,
 	 * Add local net header.  If no space in first mbuf,
 	 * allocate another.
 	 */
-	M_PREPEND(m, IPOIB_HEADER_LEN, M_DONTWAIT);
+	M_PREPEND(m, IPOIB_HEADER_LEN, M_NOWAIT);
 	if (m == NULL) {
 		error = ENOBUFS;
 		goto bad;
@@ -1448,7 +1444,7 @@ ipoib_input(struct ifnet *ifp, struct mbuf *m)
 	 * Strip off Infiniband header.
 	 */
 	m->m_flags &= ~M_VLANTAG;
-	m->m_flags &= ~(M_PROTOFLAGS);
+	m_clrprotoflags(m);
 	m_adj(m, IPOIB_HEADER_LEN);
 
 	if (IPOIB_IS_MULTICAST(eh->hwaddr)) {

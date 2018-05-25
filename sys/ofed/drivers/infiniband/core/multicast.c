@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006 Intel Corporation.  All rights reserved.
  *
@@ -29,6 +30,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#define	LINUXKPI_PARAM_PREFIX ibcore_
 
 #include <linux/completion.h>
 #include <linux/dma-mapping.h>

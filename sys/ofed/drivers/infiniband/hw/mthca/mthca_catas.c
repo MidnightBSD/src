@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Cisco Systems.  All rights reserved.
  *
@@ -29,6 +30,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#define	LINUXKPI_PARAM_PREFIX mthca_
 
 #include <linux/jiffies.h>
 #include <linux/timer.h>

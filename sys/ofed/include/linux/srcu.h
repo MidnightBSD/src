@@ -1,9 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2010 Isilon Systems, Inc.
- * Copyright (c) 2010 iX Systems, Inc.
- * Copyright (c) 2010 Panasas, Inc.
- * Copyright (c) 2013, 2014 Mellanox Technologies, Ltd.
+ * Copyright (c) 2015 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,54 +23,51 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/sys/ofed/include/linux/srcu.h 293151 2016-01-04 09:37:05Z hselasky $
  */
+#ifndef	_LINUX_SRCU_H_
+#define	_LINUX_SRCU_H_
 
-#ifndef	_LINUX_IO_MAPPING_H_
-#define	_LINUX_IO_MAPPING_H_
+#include <sys/param.h>
+#include <sys/lock.h>
+#include <sys/sx.h>
 
-#include <linux/types.h>
-#include <linux/io.h>
+struct srcu_struct {
+	struct sx sx;
+};
 
-struct io_mapping;
-
-static inline struct io_mapping *
-io_mapping_create_wc(resource_size_t base, unsigned long size)
+static inline int
+init_srcu_struct(struct srcu_struct *srcu)
 {
-
-	return ioremap_wc(base, size);
+	sx_init(&srcu->sx, "SleepableRCU");
+	return (0);
 }
 
 static inline void
-io_mapping_free(struct io_mapping *mapping)
+cleanup_srcu_struct(struct srcu_struct *srcu)
 {
-
-	iounmap(mapping);
+	sx_destroy(&srcu->sx);
 }
 
-static inline void *
-io_mapping_map_atomic_wc(struct io_mapping *mapping, unsigned long offset)
+static inline int
+srcu_read_lock(struct srcu_struct *srcu)
 {
-
-	return (((char *)mapping) + offset);
-}
-
-static inline void
-io_mapping_unmap_atomic(void *vaddr)
-{
-
-}
-
-static inline void *
-io_mapping_map_wc(struct io_mapping *mapping, unsigned long offset)
-{
-
-	return (((char *) mapping) + offset);
+	sx_slock(&srcu->sx);
+	return (0);
 }
 
 static inline void
-io_mapping_unmap(void *vaddr)
+srcu_read_unlock(struct srcu_struct *srcu, int key)
 {
-
+	sx_sunlock(&srcu->sx);
 }
 
-#endif	/* _LINUX_IO_MAPPING_H_ */
+static inline void
+synchronize_srcu(struct srcu_struct *srcu)
+{
+	sx_xlock(&srcu->sx);
+	sx_xunlock(&srcu->sx);
+}
+
+#endif					/* _LINUX_SRCU_H_ */

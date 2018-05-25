@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef	_LINUX_JHASH_H_
 #define	_LINUX_JHASH_H_
 

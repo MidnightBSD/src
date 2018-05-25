@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 Mellanox Technologies. All rights reserved.
  *

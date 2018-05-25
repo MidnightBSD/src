@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
@@ -41,6 +42,7 @@
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/filio.h>
+#include <sys/rwlock.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -52,6 +54,7 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/sysfs.h>
@@ -62,6 +65,10 @@
 #include <linux/netdevice.h>
 
 #include <vm/vm_pager.h>
+
+#include <linux/workqueue.h>
+
+SYSCTL_NODE(_compat, OID_AUTO, linuxkpi, CTLFLAG_RW, 0, "LinuxKPI parameters");
 
 MALLOC_DEFINE(M_KMALLOC, "linux", "Linux kmalloc compat");
 
@@ -77,7 +84,6 @@ struct device linux_rootdev;
 struct class miscclass;
 struct list_head pci_drivers;
 struct list_head pci_devices;
-struct net init_net;
 spinlock_t pci_lock;
 
 unsigned long linux_timer_hz_mask;
@@ -89,7 +95,50 @@ panic_cmp(struct rb_node *one, struct rb_node *two)
 }
 
 RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
- 
+
+int
+kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
+{
+	va_list tmp_va;
+	int len;
+	char *old;
+	char *name;
+	char dummy;
+
+	old = kobj->name;
+
+	if (old && fmt == NULL)
+		return (0);
+
+	/* compute length of string */
+	va_copy(tmp_va, args);
+	len = vsnprintf(&dummy, 0, fmt, tmp_va);
+	va_end(tmp_va);
+
+	/* account for zero termination */
+	len++;
+
+	/* check for error */
+	if (len < 1)
+		return (-EINVAL);
+
+	/* allocate memory for string */
+	name = kzalloc(len, GFP_KERNEL);
+	if (name == NULL)
+		return (-ENOMEM);
+	vsnprintf(name, len, fmt, args);
+	kobj->name = name;
+
+	/* free old string */
+	kfree(old);
+
+	/* filter new string */
+	for (; *name != '\0'; name++)
+		if (*name == '/')
+			*name = '!';
+	return (0);
+}
+
 int
 kobject_set_name(struct kobject *kobj, const char *fmt, ...)
 {
@@ -451,10 +500,10 @@ linux_dev_mmap_single(struct cdev *dev, vm_ooffset_t *offset,
 			}
 			*offset = 0;
 			if (vma.vm_page_prot != VM_MEMATTR_DEFAULT) {
-				VM_OBJECT_LOCK(*object);
+				VM_OBJECT_WLOCK(*object);
 				vm_object_set_memattr(*object,
 				    vma.vm_page_prot);
-				VM_OBJECT_UNLOCK(*object);
+				VM_OBJECT_WUNLOCK(*object);
 			}
 		}
 	} else
@@ -578,6 +627,7 @@ struct fileops linuxfileops = {
 	.fo_ioctl = linux_file_ioctl,
 	.fo_chmod = invfo_chmod,
 	.fo_chown = invfo_chown,
+	.fo_sendfile = invfo_sendfile,
 };
 
 /*
@@ -662,7 +712,7 @@ vmap(struct page **pages, unsigned int count, unsigned long flags, int prot)
 	size_t size;
 
 	size = count * PAGE_SIZE;
-	off = kmem_alloc_nofault(kernel_map, size);
+	off = kva_alloc(size);
 	if (off == 0)
 		return (NULL);
 	vmmap_add((void *)off, size);
@@ -680,7 +730,7 @@ vunmap(void *addr)
 	if (vmmap == NULL)
 		return;
 	pmap_qremove((vm_offset_t)addr, vmmap->vm_size / PAGE_SIZE);
-	kmem_free(kernel_map, (vm_offset_t)addr, vmmap->vm_size);
+	kva_free((vm_offset_t)addr, vmmap->vm_size);
 	kfree(vmmap);
 }
 
@@ -878,6 +928,50 @@ linux_completion_done(struct completion *c)
 		isdone = 0;
 	sleepq_release(c);
 	return (isdone);
+}
+
+void
+linux_delayed_work_fn(void *arg)
+{
+	struct delayed_work *work;
+
+	work = arg;
+	taskqueue_enqueue(work->work.taskqueue, &work->work.work_task);
+}
+
+void
+linux_work_fn(void *context, int pending)
+{
+	struct work_struct *work;
+
+	work = context;
+	work->fn(work);
+}
+
+void
+linux_flush_fn(void *context, int pending)
+{
+}
+
+struct workqueue_struct *
+linux_create_workqueue_common(const char *name, int cpus)
+{
+	struct workqueue_struct *wq;
+
+	wq = kmalloc(sizeof(*wq), M_WAITOK);
+	wq->taskqueue = taskqueue_create(name, M_WAITOK,
+	    taskqueue_thread_enqueue,  &wq->taskqueue);
+	atomic_set(&wq->draining, 0);
+	taskqueue_start_threads(&wq->taskqueue, cpus, PWAIT, "%s", name);
+
+	return (wq);
+}
+
+void
+destroy_workqueue(struct workqueue_struct *wq)
+{
+	taskqueue_free(wq->taskqueue);
+	kfree(wq);
 }
 
 static void

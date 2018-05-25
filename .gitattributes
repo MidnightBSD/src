@@ -61617,6 +61617,7 @@ sys/ofed/include/linux/semaphore.h -text
 sys/ofed/include/linux/slab.h -text
 sys/ofed/include/linux/socket.h -text
 sys/ofed/include/linux/spinlock.h -text
+sys/ofed/include/linux/srcu.h svneol=native#text/plain
 sys/ofed/include/linux/stddef.h -text
 sys/ofed/include/linux/string.h -text
 sys/ofed/include/linux/sysfs.h -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006, 2007 Cisco Systems, Inc.  All rights reserved.
  *
@@ -199,6 +200,7 @@ enum {
 	MLX4_DEV_CAP_FLAG2_EQE_STRIDE		= 1LL <<  23,
 	MLX4_DEV_CAP_FLAG2_UPDATE_QP_SRC_CHECK_LB = 1LL << 24,
 	MLX4_DEV_CAP_FLAG2_RX_CSUM_MODE		= 1LL <<  25,
+	MLX4_DEV_CAP_FLAG2_SYS_EQS		= 1LL <<  26,
 };
 
 /* bit enums for an 8-bit flags field indicating special use
@@ -216,6 +218,23 @@ enum {
 enum {
 	MLX4_DEV_CAP_CQ_FLAG_IO			= 1 <<  0
 };
+
+enum {
+	MLX4_QUERY_FUNC_FLAGS_BF_RES_QP	= 1LL << 0
+};
+
+/* bit enums for an 8-bit flags field indicating special use
+ * QPs which require special handling in qp_reserve_range.
+ * Currently, this only includes QPs used by the ETH interface,
+ * where we expect to use blueflame.  These QPs must not have
+ * bits 6 and 7 set in their qp number.
+ *
+ * This enum may use only bits 0..7.
+ */
+enum {
+	MLX4_RESERVE_ETH_BF_QP		= 1 << 7,
+};
+
 
 enum {
 	MLX4_DEV_CAP_64B_EQE_ENABLED	= 1LL << 0,
@@ -473,6 +492,7 @@ struct mlx4_caps {
 	int			num_cqs;
 	int			max_cqes;
 	int			reserved_cqs;
+	int			num_sys_eqs;
 	int			num_eqs;
 	int			reserved_eqs;
 	int			num_comp_vectors;
@@ -531,6 +551,7 @@ struct mlx4_caps {
 	u32			max_basic_counters;
 	u32			max_extended_counters;
 	u8			def_counter_index[MLX4_MAX_PORTS + 1];
+	u8			alloc_res_qp_mask;
 };
 
 struct mlx4_buf_list {
@@ -1253,7 +1274,6 @@ int mlx4_register_mac(struct mlx4_dev *dev, u8 port, u64 mac);
 void mlx4_unregister_mac(struct mlx4_dev *dev, u8 port, u64 mac);
 int mlx4_get_base_qpn(struct mlx4_dev *dev, u8 port);
 int __mlx4_replace_mac(struct mlx4_dev *dev, u8 port, int qpn, u64 new_mac);
-void mlx4_set_stats_bitmap(struct mlx4_dev *dev, unsigned long *stats_bitmap);
 int mlx4_SET_PORT_general(struct mlx4_dev *dev, u8 port, int mtu,
 			  u8 pptx, u8 pfctx, u8 pprx, u8 pfcrx);
 int mlx4_SET_PORT_qpn_calc(struct mlx4_dev *dev, u8 port, u32 base_qpn,
@@ -1317,7 +1337,7 @@ int mlx4_get_roce_gid_from_slave(struct mlx4_dev *dev, int port, int slave_id, u
 
 int mlx4_FLOW_STEERING_IB_UC_QP_RANGE(struct mlx4_dev *dev, u32 min_range_qpn, u32 max_range_qpn);
 
-int mlx4_read_clock(struct mlx4_dev *dev);
+s64 mlx4_read_clock(struct mlx4_dev *dev);
 int mlx4_get_internal_clock_params(struct mlx4_dev *dev,
 				   struct mlx4_clock_params *params);
 

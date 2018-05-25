@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, 2005 Topspin Communications.  All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All rights reserved.
@@ -34,6 +35,8 @@
 
 #ifndef _IPOIB_H
 #define _IPOIB_H
+
+#define	LINUXKPI_PARAM_PREFIX ipoib_
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

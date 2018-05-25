@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Topspin Communications.  All rights reserved.
  * Copyright (c) 2005 Cisco Systems.  All rights reserved.
@@ -32,6 +33,8 @@
  * SOFTWARE.
  */
 
+#define	LINUXKPI_PARAM_PREFIX ibcore_
+
 #include <linux/mm.h>
 #include <linux/dma-mapping.h>
 #include <linux/sched.h>
@@ -52,7 +55,7 @@
 #include "uverbs.h"
 
 static int allow_weak_ordering;
-module_param(allow_weak_ordering, bool, 0444);
+module_param(allow_weak_ordering, int, 0444);
 MODULE_PARM_DESC(allow_weak_ordering,  "Allow weak ordering for data registered memory");
 
 #define IB_UMEM_MAX_PAGE_CHUNK						\
@@ -140,10 +143,10 @@ static void __ib_umem_release(struct ib_device *dev, struct ib_umem *umem, int d
 			struct page *page = sg_page(&chunk->page_list[i]);
 			if (umem->writable && dirty) {
 				if (object && object != page->object)
-					VM_OBJECT_UNLOCK(object);
+					VM_OBJECT_WUNLOCK(object);
 				if (object != page->object) {
 					object = page->object;
-					VM_OBJECT_LOCK(object);
+					VM_OBJECT_WLOCK(object);
 				}
 				vm_page_dirty(page);
 			}
@@ -151,7 +154,7 @@ static void __ib_umem_release(struct ib_device *dev, struct ib_umem *umem, int d
 		kfree(chunk);
 	}
 	if (object)
-		VM_OBJECT_UNLOCK(object);
+		VM_OBJECT_WUNLOCK(object);
 
 #endif
 }

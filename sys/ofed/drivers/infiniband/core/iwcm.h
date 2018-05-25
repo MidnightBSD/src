@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Network Appliance, Inc. All rights reserved.
  * Copyright (c) 2005 Open Grid Computing, Inc. All rights reserved.

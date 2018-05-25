@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, 2005 Intel Corporation.  All rights reserved.
  * Copyright (c) 2005, 2006 Voltaire Inc.  All rights reserved.
@@ -32,6 +33,9 @@
  *
  * $Id$
  */
+
+#define	LINUXKPI_PARAM_PREFIX ib_madeye_
+
 #include <linux/module.h>
 #include <linux/device.h>
 #include <linux/err.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
@@ -68,7 +69,7 @@ static inline unsigned long
 _get_page(gfp_t mask)
 {
 
-	return kmem_malloc(kmem_map, PAGE_SIZE, mask);
+	return kmem_malloc(kmem_arena, PAGE_SIZE, mask);
 }
 
 #define	get_zeroed_page(mask)	_get_page((mask) | M_ZERO)
@@ -81,7 +82,7 @@ free_page(unsigned long page)
 
 	if (page == 0)
 		return;
-	kmem_free(kmem_map, page, PAGE_SIZE);
+	kmem_free(kmem_arena, page, PAGE_SIZE);
 }
 
 static inline void
@@ -91,18 +92,18 @@ __free_page(struct page *m)
 	if (m->object != kmem_object)
 		panic("__free_page:  Freed page %p not allocated via wrappers.",
 		    m);
-	kmem_free(kmem_map, (vm_offset_t)page_address(m), PAGE_SIZE);
+	kmem_free(kmem_arena, (vm_offset_t)page_address(m), PAGE_SIZE);
 }
 
 static inline void
-__free_pages(void *p, unsigned int order)
+__free_pages(struct page *m, unsigned int order)
 {
 	size_t size;
 
-	if (p == 0)
+	if (m == NULL)
 		return;
 	size = PAGE_SIZE << order;
-	kmem_free(kmem_map, (vm_offset_t)p, size);
+	kmem_free(kmem_arena, (vm_offset_t)page_address(m), size);
 }
 
 static inline void free_pages(uintptr_t addr, unsigned int order)
@@ -124,7 +125,7 @@ alloc_pages(gfp_t gfp_mask, unsigned int order)
 	size_t size;
 
 	size = PAGE_SIZE << order;
-	page = kmem_alloc_contig(kmem_map, size, gfp_mask, 0, -1,
+	page = kmem_alloc_contig(kmem_arena, size, gfp_mask, 0, -1,
 	    size, 0, VM_MEMATTR_DEFAULT);
 	if (page == 0)
 		return (NULL);

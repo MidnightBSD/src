@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
@@ -103,7 +104,7 @@ do {									\
 		kick_proc0();						\
 } while (0)
 
-#define	cond_resched()	if (!cold)	sched_relinquish(curthread)
+#define	cond_resched()	do { if (!cold) sched_relinquish(curthread); } while (0)
 
 #define	sched_yield()	sched_relinquish(curthread)
 

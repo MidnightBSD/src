@@ -1,3 +1,4 @@
+# $MidnightBSD$
 EXTRA_CFLAGS += -Idrivers/infiniband/include
 EXTRA_CFLAGS += -ggdb
 

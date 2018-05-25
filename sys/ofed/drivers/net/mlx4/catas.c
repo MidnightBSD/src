@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2007, 2008, 2014 Mellanox Technologies. All rights reserved.
@@ -30,6 +31,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#define	LINUXKPI_PARAM_PREFIX mlx4_
 
 #include <linux/workqueue.h>
 #include <linux/module.h>
