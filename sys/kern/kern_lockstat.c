@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008-2009 Stacey Son <sson@FreeBSD.org>
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/kern/kern_lockstat.c 285759 2015-07-21 17:16:37Z markj $
  */
 
 /*
@@ -36,9 +37,10 @@
 
 #ifdef KDTRACE_HOOKS
 
-#include <sys/time.h>
 #include <sys/types.h>
+#include <sys/lock.h>
 #include <sys/lockstat.h>
+#include <sys/time.h>
 
 /*
  * The following must match the type definition of dtrace_probe.  It is  
@@ -47,13 +49,18 @@
 uint32_t lockstat_probemap[LS_NPROBES];
 void (*lockstat_probe_func)(uint32_t, uintptr_t, uintptr_t,
     uintptr_t, uintptr_t, uintptr_t);
-
+int lockstat_enabled = 0;
 
 uint64_t 
-lockstat_nsecs(void)
+lockstat_nsecs(struct lock_object *lo)
 {
 	struct bintime bt;
 	uint64_t ns;
+
+	if (!lockstat_enabled)
+		return (0);
+	if ((lo->lo_flags & LO_NOPROFILE) != 0)
+		return (0);
 
 	binuptime(&bt);
 	ns = bt.sec * (uint64_t)1000000000;

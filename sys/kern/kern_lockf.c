@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -59,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_lockf.c 313729 2017-02-14 13:45:38Z avg $");
 
 #include "opt_debug_lockf.h"
 
@@ -362,7 +363,7 @@ lf_free_lock(struct lockf_entry *lock)
 	struct lock_owner *lo = lock->lf_owner;
 	if (lo) {
 		KASSERT(LIST_EMPTY(&lock->lf_outedges),
-		    ("freeing lock with dependancies"));
+		    ("freeing lock with dependencies"));
 		KASSERT(LIST_EMPTY(&lock->lf_inedges),
 		    ("freeing lock with dependants"));
 		sx_xlock(&lf_lock_owners_lock);
@@ -469,6 +470,9 @@ lf_advlockasync(struct vop_advlockasync_args *ap, struct lockf **statep,
 			return (EOVERFLOW);
 		end = start + oadd;
 	}
+
+retry_setlock:
+
 	/*
 	 * Avoid the common case of unlocking when inode has no locks.
 	 */
@@ -684,7 +688,7 @@ lf_advlockasync(struct vop_advlockasync_args *ap, struct lockf **statep,
 		break;
 	}
 
-#ifdef INVARIANTS
+#ifdef DIAGNOSTIC
 	/*
 	 * Check for some can't happen stuff. In this case, the active
 	 * lock list becoming disordered or containing mutually
@@ -744,6 +748,11 @@ lf_advlockasync(struct vop_advlockasync_args *ap, struct lockf **statep,
 		sx_destroy(&freestate->ls_lock);
 		free(freestate, M_LOCKF);
 		freestate = NULL;
+	}
+
+	if (error == EDOOFUS) {
+		KASSERT(ap->a_op == F_SETLK, ("EDOOFUS"));
+		goto retry_setlock;
 	}
 	return (error);
 }
@@ -819,7 +828,7 @@ lf_purgelocks(struct vnode *vp, struct lockf **statep)
 
 		/*
 		 * We can just free all the active locks since they
-		 * will have no dependancies (we removed them all
+		 * will have no dependencies (we removed them all
 		 * above). We don't need to bother locking since we
 		 * are the last thread using this state structure.
 		 */
@@ -907,7 +916,7 @@ lf_add_edge(struct lockf_entry *x, struct lockf_entry *y)
 	struct lockf_edge *e;
 	int error;
 
-#ifdef INVARIANTS
+#ifdef DIAGNOSTIC
 	LIST_FOREACH(e, &x->lf_outedges, le_outlink)
 		KASSERT(e->le_to != y, ("adding lock edge twice"));
 #endif
@@ -1104,7 +1113,7 @@ lf_insert_lock(struct lockf *state, struct lockf_entry *lock)
 
 /*
  * Wake up a sleeping lock and remove it from the pending list now
- * that all its dependancies have been resolved. The caller should
+ * that all its dependencies have been resolved. The caller should
  * arrange for the lock to be added to the active list, adjusting any
  * existing locks for the same owner as needed.
  */
@@ -1129,9 +1138,9 @@ lf_wakeup_lock(struct lockf *state, struct lockf_entry *wakelock)
 }
 
 /*
- * Re-check all dependant locks and remove edges to locks that we no
+ * Re-check all dependent locks and remove edges to locks that we no
  * longer block. If 'all' is non-zero, the lock has been removed and
- * we must remove all the dependancies, otherwise it has simply been
+ * we must remove all the dependencies, otherwise it has simply been
  * reduced but remains active. Any pending locks which have been been
  * unblocked are added to 'granted'
  */
@@ -1157,7 +1166,7 @@ lf_update_dependancies(struct lockf *state, struct lockf_entry *lock, int all,
 }
 
 /*
- * Set the start of an existing active lock, updating dependancies and
+ * Set the start of an existing active lock, updating dependencies and
  * adding any newly woken locks to 'granted'.
  */
 static void
@@ -1173,7 +1182,7 @@ lf_set_start(struct lockf *state, struct lockf_entry *lock, off_t new_start,
 }
 
 /*
- * Set the end of an existing active lock, updating dependancies and
+ * Set the end of an existing active lock, updating dependencies and
  * adding any newly woken locks to 'granted'.
  */
 static void
@@ -1196,7 +1205,7 @@ lf_set_end(struct lockf *state, struct lockf_entry *lock, off_t new_end,
  * pending locks as a result of downgrading/unlocking. We simply
  * activate the newly granted locks by looping.
  *
- * Since the new lock already has its dependancies set up, we always
+ * Since the new lock already has its dependencies set up, we always
  * add it to the list (unless its an unlock request). This may
  * fragment the lock list in some pathological cases but its probably
  * not a real problem.
@@ -1324,7 +1333,7 @@ lf_cancel_lock(struct lockf *state, struct lockf_entry *lock)
 	 * may allow some other pending lock to become
 	 * active. Consider this case:
 	 *
-	 * Owner	Action		Result		Dependancies
+	 * Owner	Action		Result		Dependencies
 	 * 
 	 * A:		lock [0..0]	succeeds	
 	 * B:		lock [2..2]	succeeds	
@@ -1460,7 +1469,7 @@ lf_setlock(struct lockf *state, struct lockf_entry *lock, struct vnode *vp,
 		lock->lf_refs++;
 		error = sx_sleep(lock, &state->ls_lock, priority, lockstr, 0);
 		if (lf_free_lock(lock)) {
-			error = EINTR;
+			error = EDOOFUS;
 			goto out;
 		}
 
@@ -1832,7 +1841,7 @@ lf_split(struct lockf *state, struct lockf_entry *lock1,
 	/*
 	 * This cannot cause a deadlock since any edges we would add
 	 * to splitlock already exist in lock1. We must be sure to add
-	 * necessary dependancies to splitlock before we reduce lock1
+	 * necessary dependencies to splitlock before we reduce lock1
 	 * otherwise we may accidentally grant a pending lock that
 	 * was blocked by the tail end of lock1.
 	 */

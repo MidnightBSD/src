@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  ***********************************************************************
  *								       *
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_ntptime.c 285611 2015-07-15 19:11:43Z delphij $");
 
 #include "opt_ntp.h"
 
@@ -148,14 +149,14 @@ typedef int64_t l_fp;
 #define SHIFT_FLL	2		/* FLL loop gain (shift) */
 
 static int time_state = TIME_OK;	/* clock state */
-static int time_status = STA_UNSYNC;	/* clock status bits */
+int time_status = STA_UNSYNC;	/* clock status bits */
 static long time_tai;			/* TAI offset (s) */
 static long time_monitor;		/* last time offset scaled (ns) */
 static long time_constant;		/* poll interval (shift) (s) */
 static long time_precision = 1;		/* clock precision (ns) */
 static long time_maxerror = MAXPHASE / 1000; /* maximum error (us) */
-static long time_esterror = MAXPHASE / 1000; /* estimated error (us) */
-static long time_reftime;		/* time at last adjustment (s) */
+long time_esterror = MAXPHASE / 1000; /* estimated error (us) */
+static long time_reftime;		/* uptime at last adjustment (s) */
 static l_fp time_offset;		/* time offset (ns) */
 static l_fp time_freq;			/* frequency offset (ns/s) */
 static l_fp time_adj;			/* tick adjust (ns/s) */
@@ -301,13 +302,17 @@ SYSCTL_PROC(_kern_ntp_pll, OID_AUTO, gettime, CTLTYPE_OPAQUE|CTLFLAG_RD,
 	0, sizeof(struct ntptimeval) , ntp_sysctl, "S,ntptimeval", "");
 
 #ifdef PPS_SYNC
-SYSCTL_INT(_kern_ntp_pll, OID_AUTO, pps_shiftmax, CTLFLAG_RW, &pps_shiftmax, 0, "");
-SYSCTL_INT(_kern_ntp_pll, OID_AUTO, pps_shift, CTLFLAG_RW, &pps_shift, 0, "");
+SYSCTL_INT(_kern_ntp_pll, OID_AUTO, pps_shiftmax, CTLFLAG_RW,
+    &pps_shiftmax, 0, "Max interval duration (sec) (shift)");
+SYSCTL_INT(_kern_ntp_pll, OID_AUTO, pps_shift, CTLFLAG_RW,
+    &pps_shift, 0, "Interval duration (sec) (shift)");
 SYSCTL_LONG(_kern_ntp_pll, OID_AUTO, time_monitor, CTLFLAG_RD,
-    &time_monitor, 0, "");
+    &time_monitor, 0, "Last time offset scaled (ns)");
 
-SYSCTL_OPAQUE(_kern_ntp_pll, OID_AUTO, pps_freq, CTLFLAG_RD, &pps_freq, sizeof(pps_freq), "I", "");
-SYSCTL_OPAQUE(_kern_ntp_pll, OID_AUTO, time_freq, CTLFLAG_RD, &time_freq, sizeof(time_freq), "I", "");
+SYSCTL_OPAQUE(_kern_ntp_pll, OID_AUTO, pps_freq, CTLFLAG_RD,
+    &pps_freq, sizeof(pps_freq), "I", "Scaled frequency offset (ns/sec)");
+SYSCTL_OPAQUE(_kern_ntp_pll, OID_AUTO, time_freq, CTLFLAG_RD,
+    &time_freq, sizeof(time_freq), "I", "Frequency offset (ns/sec)");
 #endif
 
 /*
@@ -692,12 +697,12 @@ hardupdate(offset)
 	 * otherwise, the argument offset is used to compute it.
 	 */
 	if (time_status & STA_PPSFREQ && time_status & STA_PPSSIGNAL) {
-		time_reftime = time_second;
+		time_reftime = time_uptime;
 		return;
 	}
 	if (time_status & STA_FREQHOLD || time_reftime == 0)
-		time_reftime = time_second;
-	mtemp = time_second - time_reftime;
+		time_reftime = time_uptime;
+	mtemp = time_uptime - time_reftime;
 	L_LINT(ftemp, time_monitor);
 	L_RSHIFT(ftemp, (SHIFT_PLL + 2 + time_constant) << 1);
 	L_MPY(ftemp, mtemp);
@@ -710,7 +715,7 @@ hardupdate(offset)
 		L_ADD(time_freq, ftemp);
 		time_status |= STA_MODE;
 	}
-	time_reftime = time_second;
+	time_reftime = time_uptime;
 	if (L_GINT(time_freq) > MAXFREQ)
 		L_LINT(time_freq, MAXFREQ);
 	else if (L_GINT(time_freq) < -MAXFREQ)
@@ -828,8 +833,15 @@ hardpps(tsp, nsec)
 	 * discarded. otherwise, if so enabled, the time offset is
 	 * updated. We can tolerate a modest loss of data here without
 	 * much degrading time accuracy.
-	 */
-	if (u_nsec > (pps_jitter << PPS_POPCORN)) {
+	 *
+	 * The measurements being checked here were made with the system
+	 * timecounter, so the popcorn threshold is not allowed to fall below
+	 * the number of nanoseconds in two ticks of the timecounter.  For a
+	 * timecounter running faster than 1 GHz the lower bound is 2ns, just
+	 * to avoid a nonsensical threshold of zero.
+	*/
+	if (u_nsec > lmax(pps_jitter << PPS_POPCORN, 
+	    2 * (NANOSECOND / (long)qmin(NANOSECOND, tc_getfrequency())))) {
 		time_status |= STA_PPSJITTER;
 		pps_jitcnt++;
 	} else if (time_status & STA_PPSTIME) {
@@ -1040,5 +1052,5 @@ start_periodic_resettodr(void *arg __unused)
 	    periodic_resettodr, NULL);
 }
 
-SYSINIT(periodic_resettodr, SI_SUB_RUN_SCHEDULER, SI_ORDER_MIDDLE,
+SYSINIT(periodic_resettodr, SI_SUB_LAST, SI_ORDER_MIDDLE,
 	start_periodic_resettodr, NULL);

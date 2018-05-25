@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.
@@ -32,11 +33,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_ktrace.c 315562 2017-03-19 15:56:06Z kib $");
 
 #include "opt_ktrace.h"
 
 #include <sys/param.h>
+#include <sys/capsicum.h>
 #include <sys/systm.h>
 #include <sys/fcntl.h>
 #include <sys/kernel.h>
@@ -95,6 +97,7 @@ struct ktr_request {
 	void	*ktr_buffer;
 	union {
 		struct	ktr_proc_ctor ktr_proc_ctor;
+		struct	ktr_cap_fail ktr_cap_fail;
 		struct	ktr_syscall ktr_syscall;
 		struct	ktr_sysret ktr_sysret;
 		struct	ktr_genio ktr_genio;
@@ -107,21 +110,20 @@ struct ktr_request {
 };
 
 static int data_lengths[] = {
-	0,					/* none */
-	offsetof(struct ktr_syscall, ktr_args),	/* KTR_SYSCALL */
-	sizeof(struct ktr_sysret),		/* KTR_SYSRET */
-	0,					/* KTR_NAMEI */
-	sizeof(struct ktr_genio),		/* KTR_GENIO */
-	sizeof(struct ktr_psig),		/* KTR_PSIG */
-	sizeof(struct ktr_csw),			/* KTR_CSW */
-	0,					/* KTR_USER */
-	0,					/* KTR_STRUCT */
-	0,					/* KTR_SYSCTL */
-	sizeof(struct ktr_proc_ctor),		/* KTR_PROCCTOR */
-	0,					/* KTR_PROCDTOR */
-	0,					/* unused */
-	sizeof(struct ktr_fault),		/* KTR_FAULT */
-	sizeof(struct ktr_faultend),		/* KTR_FAULTEND */
+	[KTR_SYSCALL] = offsetof(struct ktr_syscall, ktr_args),
+	[KTR_SYSRET] = sizeof(struct ktr_sysret),
+	[KTR_NAMEI] = 0,
+	[KTR_GENIO] = sizeof(struct ktr_genio),
+	[KTR_PSIG] = sizeof(struct ktr_psig),
+	[KTR_CSW] = sizeof(struct ktr_csw),
+	[KTR_USER] = 0,
+	[KTR_STRUCT] = 0,
+	[KTR_SYSCTL] = 0,
+	[KTR_PROCCTOR] = sizeof(struct ktr_proc_ctor),
+	[KTR_PROCDTOR] = 0,
+	[KTR_CAPFAIL] = sizeof(struct ktr_cap_fail),
+	[KTR_FAULT] = sizeof(struct ktr_fault),
+	[KTR_FAULTEND] = sizeof(struct ktr_faultend),
 };
 
 static STAILQ_HEAD(, ktr_request) ktr_free;
@@ -131,7 +133,7 @@ static SYSCTL_NODE(_kern, OID_AUTO, ktrace, CTLFLAG_RD, 0, "KTRACE options");
 static u_int ktr_requestpool = KTRACE_REQUEST_POOL;
 TUNABLE_INT("kern.ktrace.request_pool", &ktr_requestpool);
 
-static u_int ktr_geniosize = PAGE_SIZE;
+u_int ktr_geniosize = PAGE_SIZE;
 TUNABLE_INT("kern.ktrace.genio_size", &ktr_geniosize);
 SYSCTL_UINT(_kern_ktrace, OID_AUTO, genio_size, CTLFLAG_RW, &ktr_geniosize,
     0, "Maximum size of genio event payload");
@@ -511,7 +513,6 @@ ktrprocexit(struct thread *td)
 	struct proc *p;
 	struct ucred *cred;
 	struct vnode *vp;
-	int vfslocked;
 
 	p = td->td_proc;
 	if (p->p_traceflag == 0)
@@ -529,11 +530,8 @@ ktrprocexit(struct thread *td)
 	ktr_freeproc(p, &cred, &vp);
 	mtx_unlock(&ktrace_mtx);
 	PROC_UNLOCK(p);
-	if (vp != NULL) {
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+	if (vp != NULL)
 		vrele(vp);
-		VFS_UNLOCK_GIANT(vfslocked);
-	}
 	if (cred != NULL)
 		crfree(cred);
 	ktrace_exit(td);
@@ -780,6 +778,33 @@ ktrstruct(name, data, datalen)
 }
 
 void
+ktrcapfail(type, needed, held)
+	enum ktr_cap_fail_type type;
+	const cap_rights_t *needed;
+	const cap_rights_t *held;
+{
+	struct thread *td = curthread;
+	struct ktr_request *req;
+	struct ktr_cap_fail *kcf;
+
+	req = ktr_getrequest(KTR_CAPFAIL);
+	if (req == NULL)
+		return;
+	kcf = &req->ktr_data.ktr_cap_fail;
+	kcf->cap_type = type;
+	if (needed != NULL)
+		kcf->cap_needed = *needed;
+	else
+		cap_rights_init(&kcf->cap_needed);
+	if (held != NULL)
+		kcf->cap_held = *held;
+	else
+		cap_rights_init(&kcf->cap_held);
+	ktr_enqueuerequest(td, req);
+	ktrace_exit(td);
+}
+
+void
 ktrfault(vaddr, type)
 	vm_offset_t vaddr;
 	int type;
@@ -840,7 +865,7 @@ sys_ktrace(td, uap)
 	int ops = KTROP(uap->ops);
 	int descend = uap->ops & KTRFLAG_DESCEND;
 	int nfound, ret = 0;
-	int flags, error = 0, vfslocked;
+	int flags, error = 0;
 	struct nameidata nd;
 	struct ucred *cred;
 
@@ -855,25 +880,21 @@ sys_ktrace(td, uap)
 		/*
 		 * an operation which requires a file argument.
 		 */
-		NDINIT(&nd, LOOKUP, NOFOLLOW | MPSAFE, UIO_USERSPACE,
-		    uap->fname, td);
+		NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_USERSPACE, uap->fname, td);
 		flags = FREAD | FWRITE | O_NOFOLLOW;
 		error = vn_open(&nd, &flags, 0, NULL);
 		if (error) {
 			ktrace_exit(td);
 			return (error);
 		}
-		vfslocked = NDHASGIANT(&nd);
 		NDFREE(&nd, NDF_ONLY_PNBUF);
 		vp = nd.ni_vp;
 		VOP_UNLOCK(vp, 0);
 		if (vp->v_type != VREG) {
 			(void) vn_close(vp, FREAD|FWRITE, td->td_ucred, td);
-			VFS_UNLOCK_GIANT(vfslocked);
 			ktrace_exit(td);
 			return (EACCES);
 		}
-		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	/*
 	 * Clear all uses of the tracefile.
@@ -899,10 +920,8 @@ sys_ktrace(td, uap)
 		}
 		sx_sunlock(&allproc_lock);
 		if (vrele_count > 0) {
-			vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 			while (vrele_count-- > 0)
 				vrele(vp);
-			VFS_UNLOCK_GIANT(vfslocked);
 		}
 		goto done;
 	}
@@ -968,11 +987,8 @@ sys_ktrace(td, uap)
 	if (!ret)
 		error = EPERM;
 done:
-	if (vp != NULL) {
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+	if (vp != NULL)
 		(void) vn_close(vp, FWRITE, td->td_ucred, td);
-		VFS_UNLOCK_GIANT(vfslocked);
-	}
 	ktrace_exit(td);
 	return (error);
 #else /* !KTRACE */
@@ -1064,13 +1080,8 @@ ktrops(td, p, ops, facs, vp)
 	if ((p->p_traceflag & KTRFAC_MASK) != 0)
 		ktrprocctor_entered(td, p);
 	PROC_UNLOCK(p);
-	if (tracevp != NULL) {
-		int vfslocked;
-
-		vfslocked = VFS_LOCK_GIANT(tracevp->v_mount);
+	if (tracevp != NULL)
 		vrele(tracevp);
-		VFS_UNLOCK_GIANT(vfslocked);
-	}
 	if (tracecred != NULL)
 		crfree(tracecred);
 
@@ -1124,7 +1135,7 @@ ktr_writerequest(struct thread *td, struct ktr_request *req)
 	struct iovec aiov[3];
 	struct mount *mp;
 	int datalen, buflen, vrele_count;
-	int error, vfslocked;
+	int error;
 
 	/*
 	 * We hold the vnode and credential for use in I/O in case ktrace is
@@ -1182,7 +1193,6 @@ ktr_writerequest(struct thread *td, struct ktr_request *req)
 		auio.uio_iovcnt++;
 	}
 
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_start_write(vp, &mp, V_WAIT);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 #ifdef MAC
@@ -1195,10 +1205,8 @@ ktr_writerequest(struct thread *td, struct ktr_request *req)
 	crfree(cred);
 	if (!error) {
 		vrele(vp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return;
 	}
-	VFS_UNLOCK_GIANT(vfslocked);
 
 	/*
 	 * If error encountered, give up tracing on this vnode.  We defer
@@ -1237,10 +1245,8 @@ ktr_writerequest(struct thread *td, struct ktr_request *req)
 	}
 	sx_sunlock(&allproc_lock);
 
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	while (vrele_count-- > 0)
 		vrele(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 }
 
 /*

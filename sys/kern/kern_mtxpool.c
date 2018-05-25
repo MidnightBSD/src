@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Matthew Dillon.  All Rights Reserved.
  *
@@ -39,12 +40,12 @@
  *
  * Disadvantages:
  *	- should generally only be used as leaf mutexes.
- *	- pool/pool dependancy ordering cannot be depended on.
+ *	- pool/pool dependency ordering cannot be depended on.
  *	- possible L1 cache mastersip contention between cpus.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_mtxpool.c 302234 2016-06-27 21:50:30Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

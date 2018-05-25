@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/kern/kern_loginclass.c 302229 2016-06-27 21:25:01Z bdrewery $
  */
 
 /*
@@ -43,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_loginclass.c 302229 2016-06-27 21:25:01Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/eventhandler.h>
@@ -69,9 +70,7 @@ LIST_HEAD(, loginclass)	loginclasses;
  * Lock protecting loginclasses list.
  */
 static struct mtx loginclasses_lock;
-
-static void lc_init(void);
-SYSINIT(loginclass, SI_SUB_CPU, SI_ORDER_FIRST, lc_init, NULL);
+MTX_SYSINIT(loginclasses_init, &loginclasses_lock, "loginclasses lock", MTX_DEF);
 
 void
 loginclass_hold(struct loginclass *lc)
@@ -207,7 +206,7 @@ sys_setloginclass(struct thread *td, struct setloginclass_args *uap)
 	PROC_LOCK(p);
 	oldcred = crcopysafe(p, newcred);
 	newcred->cr_loginclass = newlc;
-	p->p_ucred = newcred;
+	proc_set_cred(p, newcred);
 	PROC_UNLOCK(p);
 #ifdef RACCT
 	racct_proc_ucred_changed(p, oldcred, newcred);
@@ -228,11 +227,4 @@ loginclass_racct_foreach(void (*callback)(struct racct *racct,
 	LIST_FOREACH(lc, &loginclasses, lc_next)
 		(callback)(lc->lc_racct, arg2, arg3);
 	mtx_unlock(&loginclasses_lock);
-}
-
-static void
-lc_init(void)
-{
-
-	mtx_init(&loginclasses_lock, "loginclasses lock", NULL, MTX_DEF);
 }

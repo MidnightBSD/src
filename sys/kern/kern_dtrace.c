@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 John Birrell <jb@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_dtrace.c 269752 2014-08-09 14:05:01Z markj $");
 
 #include "opt_kdb.h"
 
@@ -38,6 +39,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/proc.h>
 #include <sys/dtrace_bsd.h>
 #include <sys/sysctl.h>
+#include <sys/sysent.h>
 
 #define KDTRACE_PROC_SIZE	64
 #define	KDTRACE_THREAD_SIZE	256
@@ -46,6 +48,14 @@ FEATURE(kdtrace_hooks,
     "Kernel DTrace hooks which are required to load DTrace kernel modules");
 
 static MALLOC_DEFINE(M_KDTRACE, "kdtrace", "DTrace hooks");
+
+/* Hooks used in the machine-dependent trap handlers. */
+dtrace_trap_func_t		dtrace_trap_func;
+dtrace_doubletrap_func_t	dtrace_doubletrap_func;
+dtrace_pid_probe_ptr_t		dtrace_pid_probe_ptr;
+dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
+
+systrace_probe_func_t		systrace_probe_func;
 
 /* Return the DTrace process data size compiled in the kernel hooks. */
 size_t

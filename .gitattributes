@@ -59490,6 +59490,7 @@ sys/kern/device_if.m -text
 sys/kern/dtio_kdtrace.c svneol=native#text/plain
 sys/kern/genassym.sh -text
 sys/kern/imgact_aout.c -text
+sys/kern/imgact_binmisc.c svneol=native#text/plain
 sys/kern/imgact_elf.c -text
 sys/kern/imgact_elf32.c -text
 sys/kern/imgact_elf64.c -text
@@ -59517,6 +59518,7 @@ sys/kern/kern_event.c -text
 sys/kern/kern_exec.c -text
 sys/kern/kern_exit.c -text
 sys/kern/kern_fail.c -text
+sys/kern/kern_ffclock.c svneol=native#text/plain
 sys/kern/kern_fork.c -text
 sys/kern/kern_gzio.c -text
 sys/kern/kern_hhook.c -text

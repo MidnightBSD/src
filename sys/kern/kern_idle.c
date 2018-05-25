@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2000-2004 The FreeBSD Project. All rights reserved.
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_idle.c 222531 2011-05-31 15:11:43Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
