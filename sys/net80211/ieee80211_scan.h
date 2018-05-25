@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_scan.h 227331 2011-11-08 04:00:24Z adrian $
  */
 #ifndef _NET80211_IEEE80211_SCAN_H_
 #define _NET80211_IEEE80211_SCAN_H_
@@ -213,6 +214,7 @@ struct ieee80211_scanparams {
 	uint8_t		*ath;
 	uint8_t		*tdma;
 	uint8_t		*csa;
+	uint8_t		*quiet;
 	uint8_t		*meshid;
 	uint8_t		*meshconf;
 	uint8_t		*spare[3];

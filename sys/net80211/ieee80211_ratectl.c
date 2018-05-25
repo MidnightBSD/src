@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_ratectl.c 214894 2010-11-06 18:17:20Z bschmidt $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

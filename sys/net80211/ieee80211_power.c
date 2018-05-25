@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/net80211/ieee80211_power.c,v 1.5 2013/01/17 23:29:38 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_power.c 254261 2013-08-12 22:27:53Z adrian $");
 
 /*
  * IEEE 802.11 power save support.
@@ -69,6 +70,8 @@ ieee80211_power_vattach(struct ieee80211vap *vap)
 		vap->iv_update_ps = ieee80211_update_ps;
 		vap->iv_set_tim = ieee80211_set_tim;
 	}
+	vap->iv_node_ps = ieee80211_node_pwrsave;
+	vap->iv_sta_ps = ieee80211_sta_pwrsave;
 }
 
 void
@@ -411,9 +414,12 @@ static void
 pwrsave_flushq(struct ieee80211_node *ni)
 {
 	struct ieee80211_psq *psq = &ni->ni_psq;
+	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211_psq_head *qhead;
 	struct ifnet *parent, *ifp;
+	struct mbuf *parent_q = NULL, *ifp_q = NULL;
+	struct mbuf *m;
 
 	IEEE80211_NOTE(vap, IEEE80211_MSG_POWER, ni,
 	    "flush ps queue, %u packets queued", psq->psq_len);
@@ -425,8 +431,7 @@ pwrsave_flushq(struct ieee80211_node *ni)
 		parent = vap->iv_ic->ic_ifp;
 		/* XXX need different driver interface */
 		/* XXX bypasses q max and OACTIVE */
-		IF_PREPEND_LIST(&parent->if_snd, qhead->head, qhead->tail,
-		    qhead->len);
+		parent_q = qhead->head;
 		qhead->head = qhead->tail = NULL;
 		qhead->len = 0;
 	} else
@@ -437,8 +442,7 @@ pwrsave_flushq(struct ieee80211_node *ni)
 		ifp = vap->iv_ifp;
 		/* XXX need different driver interface */
 		/* XXX bypasses q max and OACTIVE */
-		IF_PREPEND_LIST(&ifp->if_snd, qhead->head, qhead->tail,
-		    qhead->len);
+		ifp_q = qhead->head;
 		qhead->head = qhead->tail = NULL;
 		qhead->len = 0;
 	} else
@@ -448,10 +452,36 @@ pwrsave_flushq(struct ieee80211_node *ni)
 
 	/* NB: do this outside the psq lock */
 	/* XXX packets might get reordered if parent is OACTIVE */
-	if (parent != NULL)
-		if_start(parent);
-	if (ifp != NULL)
-		if_start(ifp);
+	/* parent frames, should be encapsulated */
+	if (parent != NULL) {
+		while (parent_q != NULL) {
+			m = parent_q;
+			parent_q = m->m_nextpkt;
+			m->m_nextpkt = NULL;
+			/* must be encapsulated */
+			KASSERT((m->m_flags & M_ENCAP),
+			    ("%s: parentq with non-M_ENCAP frame!\n",
+			    __func__));
+			/*
+			 * For encaped frames, we need to free the node
+			 * reference upon failure.
+			 */
+			if (ieee80211_parent_xmitpkt(ic, m) != 0)
+				ieee80211_free_node(ni);
+		}
+	}
+
+	/* VAP frames, aren't encapsulated */
+	if (ifp != NULL) {
+		while (ifp_q != NULL) {
+			m = ifp_q;
+			ifp_q = m->m_nextpkt;
+			m->m_nextpkt = NULL;
+			KASSERT((!(m->m_flags & M_ENCAP)),
+			    ("%s: vapq with M_ENCAP frame!\n", __func__));
+			(void) ieee80211_vap_xmitpkt(vap, m);
+		}
+	}
 }
 
 /*

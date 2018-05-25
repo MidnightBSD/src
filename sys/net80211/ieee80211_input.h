@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_input.h 221418 2011-05-04 02:23:59Z adrian $
  */
 #ifndef _NET80211_IEEE80211_INPUT_H_
 #define _NET80211_IEEE80211_INPUT_H_

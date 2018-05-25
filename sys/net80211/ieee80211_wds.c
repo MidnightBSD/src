@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -25,7 +26,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_wds.c 283855 2015-05-31 23:29:04Z ae $");
 #endif
 
 /*
@@ -232,7 +233,6 @@ void
 ieee80211_dwds_mcast(struct ieee80211vap *vap0, struct mbuf *m)
 {
 	struct ieee80211com *ic = vap0->iv_ic;
-	struct ifnet *parent = ic->ic_ifp;
 	const struct ether_header *eh = mtod(m, const struct ether_header *);
 	struct ieee80211_node *ni;
 	struct ieee80211vap *vap;
@@ -256,7 +256,7 @@ ieee80211_dwds_mcast(struct ieee80211vap *vap0, struct mbuf *m)
 		/*
 		 * Duplicate the frame and send it.
 		 */
-		mcopy = m_copypacket(m, M_DONTWAIT);
+		mcopy = m_copypacket(m, M_NOWAIT);
 		if (mcopy == NULL) {
 			ifp->if_oerrors++;
 			/* XXX stat + msg */
@@ -296,13 +296,17 @@ ieee80211_dwds_mcast(struct ieee80211vap *vap0, struct mbuf *m)
 		mcopy->m_flags |= M_MCAST;
 		mcopy->m_pkthdr.rcvif = (void *) ni;
 
-		err = parent->if_transmit(parent, mcopy);
+		err = ieee80211_parent_xmitpkt(ic, mcopy);
 		if (err) {
 			/* NB: IFQ_HANDOFF reclaims mbuf */
 			ifp->if_oerrors++;
 			ieee80211_free_node(ni);
-		} else
+		} else {
 			ifp->if_opackets++;
+			if_inc_counter(ifp, IFCOUNTER_OMCASTS, 1);
+			if_inc_counter(ifp, IFCOUNTER_OBYTES,
+			    m->m_pkthdr.len);
+		}
 	}
 }
 
@@ -557,7 +561,7 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 		 * crypto cipher modules used to do delayed update
 		 * of replay sequence numbers.
 		 */
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			if ((vap->iv_flags & IEEE80211_F_PRIVACY) == 0) {
 				/*
 				 * Discard encrypted frames when privacy is off.
@@ -575,7 +579,7 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 				goto out;
 			}
 			wh = mtod(m, struct ieee80211_frame *);
-			wh->i_fc[1] &= ~IEEE80211_FC1_WEP;
+			wh->i_fc[1] &= ~IEEE80211_FC1_PROTECTED;
 		} else {
 			/* XXX M_WEP and IEEE80211_F_PRIVACY */
 			key = NULL;
@@ -709,7 +713,7 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 			    ether_sprintf(wh->i_addr2), rssi);
 		}
 #endif
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
 			    wh, NULL, "%s", "WEP set but not permitted");
 			vap->iv_stats.is_rx_mgtdiscard++; /* XXX */

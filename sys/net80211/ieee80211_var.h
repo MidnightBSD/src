@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_var.h 254076 2013-08-07 22:01:43Z adrian $
  */
 #ifndef _NET80211_IEEE80211_VAR_H_
 #define _NET80211_IEEE80211_VAR_H_
@@ -55,7 +56,7 @@
 #include <net80211/ieee80211_radiotap.h>
 #include <net80211/ieee80211_scan.h>
 
-#define	IEEE80211_TXPOWER_MAX	100	/* .5 dbM (XXX units?) */
+#define	IEEE80211_TXPOWER_MAX	100	/* .5 dBm (XXX units?) */
 #define	IEEE80211_TXPOWER_MIN	0	/* kill radio */
 
 #define	IEEE80211_DTIM_DEFAULT	1	/* default DTIM period */
@@ -118,6 +119,7 @@ struct ieee80211_frame;
 struct ieee80211com {
 	struct ifnet		*ic_ifp;	/* associated device */
 	ieee80211_com_lock_t	ic_comlock;	/* state update lock */
+	ieee80211_tx_lock_t	ic_txlock;	/* ic/vap TX lock */
 	TAILQ_HEAD(, ieee80211vap) ic_vaps;	/* list of vap instances */
 	int			ic_headroom;	/* driver tx headroom needs */
 	enum ieee80211_phytype	ic_phytype;	/* XXX wrong for multi-mode */
@@ -130,6 +132,7 @@ struct ieee80211com {
 	struct task		ic_mcast_task;	/* deferred mcast update */
 	struct task		ic_chan_task;	/* deferred channel change */
 	struct task		ic_bmiss_task;	/* deferred beacon miss hndlr */
+	struct task		ic_chw_task;	/* deferred HT CHW update */
 
 	uint32_t		ic_flags;	/* state flags */
 	uint32_t		ic_flags_ext;	/* extended state flags */
@@ -242,6 +245,10 @@ struct ieee80211com {
 	int			(*ic_setregdomain)(struct ieee80211com *,
 				    struct ieee80211_regdomain *,
 				    int, struct ieee80211_channel []);
+
+	int			(*ic_set_quiet)(struct ieee80211_node *,
+				    u_int8_t *quiet_elm);
+
 	/* send/recv 802.11 management frame */
 	int			(*ic_send_mgmt)(struct ieee80211_node *,
 				     int, int);
@@ -318,6 +325,10 @@ struct ieee80211com {
 				    int batimeout, int baseqctl);
 	void			(*ic_ampdu_rx_stop)(struct ieee80211_node *,
 				    struct ieee80211_rx_ampdu *);
+
+	/* The channel width has changed (20<->2040) */
+	void			(*ic_update_chw)(struct ieee80211com *);
+
 	uint64_t		ic_spare[7];
 };
 
@@ -403,6 +414,12 @@ struct ieee80211vap {
 	uint8_t			iv_dtim_period;	/* DTIM period */
 	uint8_t			iv_dtim_count;	/* DTIM count from last bcn */
 						/* set/unset aid pwrsav state */
+	uint8_t			iv_quiet;	/* Quiet Element */
+	uint8_t			iv_quiet_count;	/* constant count for Quiet Element */
+	uint8_t			iv_quiet_count_value;	/* variable count for Quiet Element */
+	uint8_t			iv_quiet_period;	/* period for Quiet Element */
+	uint16_t		iv_quiet_duration;	/* duration for Quiet Element */
+	uint16_t		iv_quiet_offset;	/* offset for Quiet Element */
 	int			iv_csa_count;	/* count for doing CSA */
 
 	struct ieee80211_node	*iv_bss;	/* information for this node */
@@ -471,12 +488,22 @@ struct ieee80211vap {
 	/* power save handling */
 	void			(*iv_update_ps)(struct ieee80211vap *, int);
 	int			(*iv_set_tim)(struct ieee80211_node *, int);
+	void			(*iv_node_ps)(struct ieee80211_node *, int);
+	void			(*iv_sta_ps)(struct ieee80211vap *, int);
+	void			(*iv_recv_pspoll)(struct ieee80211_node *,
+				    struct mbuf *);
+
 	/* state machine processing */
 	int			(*iv_newstate)(struct ieee80211vap *,
 				    enum ieee80211_state, int);
 	/* 802.3 output method for raw frame xmit */
+#if __FreeBSD_version >= 1000031
+	int			(*iv_output)(struct ifnet *, struct mbuf *,
+				    const struct sockaddr *, struct route *);
+#else
 	int			(*iv_output)(struct ifnet *, struct mbuf *,
 				    struct sockaddr *, struct route *);
+#endif
 	uint64_t		iv_spare[6];
 };
 MALLOC_DECLARE(M_80211_VAP);
@@ -690,6 +717,11 @@ void	ieee80211_radiotap_attach(struct ieee80211com *,
 		uint32_t tx_radiotap,
 	    struct ieee80211_radiotap_header *rh, int rlen,
 		uint32_t rx_radiotap);
+void	ieee80211_radiotap_attachv(struct ieee80211com *,
+	    struct ieee80211_radiotap_header *th,
+	    int tlen, int n_tx_v, uint32_t tx_radiotap,
+	    struct ieee80211_radiotap_header *rh,
+	    int rlen, int n_rx_v, uint32_t rx_radiotap);
 void	ieee80211_radiotap_detach(struct ieee80211com *);
 void	ieee80211_radiotap_vattach(struct ieee80211vap *);
 void	ieee80211_radiotap_vdetach(struct ieee80211vap *);
@@ -793,6 +825,28 @@ ieee80211_htchanflags(const struct ieee80211_channel *c)
 	return IEEE80211_IS_CHAN_HT40(c) ?
 	    IEEE80211_FHT_HT | IEEE80211_FHT_USEHT40 :
 	    IEEE80211_IS_CHAN_HT(c) ?  IEEE80211_FHT_HT : 0;
+}
+
+/*
+ * Fetch the current TX power (cap) for the given node.
+ *
+ * This includes the node and ic/vap TX power limit as needed,
+ * but it doesn't take into account any per-rate limit.
+ */
+static __inline uint16_t
+ieee80211_get_node_txpower(struct ieee80211_node *ni)
+{
+	struct ieee80211com *ic = ni->ni_ic;
+	uint16_t txpower;
+
+	txpower = ni->ni_txpower;
+	txpower = MIN(txpower, ic->ic_txpowlimit);
+	if (ic->ic_curchan != NULL) {
+		txpower = MIN(txpower, 2 * ic->ic_curchan->ic_maxregpower);
+		txpower = MIN(txpower, ic->ic_curchan->ic_maxpower);
+	}
+
+	return (txpower);
 }
 
 /*

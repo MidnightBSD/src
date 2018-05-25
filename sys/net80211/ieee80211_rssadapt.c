@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/net80211/ieee80211_rssadapt.c 321725 2017-07-30 18:38:05Z avos $	*/
 /* $NetBSD: ieee80211_rssadapt.c,v 1.9 2005/02/26 22:45:09 perry Exp $ */
 /*-
  * Copyright (c) 2010 Rui Paulo <rpaulo@FreeBSD.org>
@@ -127,7 +128,8 @@ rssadapt_init(struct ieee80211vap *vap)
 
 	KASSERT(vap->iv_rs == NULL, ("%s: iv_rs already initialized",
 	    __func__));
-	
+
+	nrefs++;		/* XXX locking */
 	vap->iv_rs = rs = malloc(sizeof(struct ieee80211_rssadapt),
 	    M_80211_RATECTL, M_NOWAIT|M_ZERO);
 	if (rs == NULL) {
@@ -143,6 +145,8 @@ static void
 rssadapt_deinit(struct ieee80211vap *vap)
 {
 	free(vap->iv_rs, M_80211_RATECTL);
+	KASSERT(nrefs > 0, ("imbalanced attach/detach"));
+	nrefs--;		/* XXX locking */
 }
 
 static void

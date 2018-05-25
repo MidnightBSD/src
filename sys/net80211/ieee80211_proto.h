@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_proto.h 259175 2013-12-10 13:42:59Z gavin $
  */
 #ifndef _NET80211_IEEE80211_PROTO_H_
 #define _NET80211_IEEE80211_PROTO_H_
@@ -96,12 +97,22 @@ int	ieee80211_mgmt_output(struct ieee80211_node *, struct mbuf *, int,
 		struct ieee80211_bpf_params *);
 int	ieee80211_raw_xmit(struct ieee80211_node *, struct mbuf *,
 		const struct ieee80211_bpf_params *);
+#if __FreeBSD_version >= 1000031
+int	ieee80211_output(struct ifnet *, struct mbuf *,
+               const struct sockaddr *, struct route *ro);
+#else
 int	ieee80211_output(struct ifnet *, struct mbuf *,
                struct sockaddr *, struct route *ro);
+#endif
+int	ieee80211_vap_pkt_send_dest(struct ieee80211vap *, struct mbuf *,
+		struct ieee80211_node *);
+int	ieee80211_raw_output(struct ieee80211vap *, struct ieee80211_node *,
+		struct mbuf *, const struct ieee80211_bpf_params *);
 void	ieee80211_send_setup(struct ieee80211_node *, struct mbuf *, int, int,
         const uint8_t [IEEE80211_ADDR_LEN], const uint8_t [IEEE80211_ADDR_LEN],
         const uint8_t [IEEE80211_ADDR_LEN]);
-void	ieee80211_start(struct ifnet *);
+int	ieee80211_vap_transmit(struct ifnet *ifp, struct mbuf *m);
+void	ieee80211_vap_qflush(struct ifnet *ifp);
 int	ieee80211_send_nulldata(struct ieee80211_node *);
 int	ieee80211_classify(struct ieee80211_node *, struct mbuf *m);
 struct mbuf *ieee80211_mbuf_adjust(struct ieee80211vap *, int,
@@ -115,6 +126,11 @@ int	ieee80211_send_probereq(struct ieee80211_node *ni,
 		const uint8_t da[IEEE80211_ADDR_LEN],
 		const uint8_t bssid[IEEE80211_ADDR_LEN],
 		const uint8_t *ssid, size_t ssidlen);
+struct mbuf *	ieee80211_ff_encap1(struct ieee80211vap *, struct mbuf *,
+		const struct ether_header *);
+void	ieee80211_tx_complete(struct ieee80211_node *,
+		struct mbuf *, int);
+
 /*
  * The formation of ProbeResponse frames requires guidance to
  * deal with legacy clients.  When the client is identified as
@@ -134,6 +150,9 @@ struct mbuf *ieee80211_alloc_cts(struct ieee80211com *,
 
 uint8_t *ieee80211_add_rates(uint8_t *, const struct ieee80211_rateset *);
 uint8_t *ieee80211_add_xrates(uint8_t *, const struct ieee80211_rateset *);
+uint8_t *ieee80211_add_wpa(uint8_t *, const struct ieee80211vap *);
+uint8_t *ieee80211_add_rsn(uint8_t *, const struct ieee80211vap *);
+uint8_t *ieee80211_add_qos(uint8_t *, const struct ieee80211_node *);
 uint16_t ieee80211_getcapinfo(struct ieee80211vap *,
 		struct ieee80211_channel *);
 
@@ -215,7 +234,7 @@ struct ieee80211_aclator {
 	int	(*iac_attach)(struct ieee80211vap *);
 	void	(*iac_detach)(struct ieee80211vap *);
 	int	(*iac_check)(struct ieee80211vap *,
-			const uint8_t mac[IEEE80211_ADDR_LEN]);
+			const struct ieee80211_frame *wh);
 	int	(*iac_add)(struct ieee80211vap *,
 			const uint8_t mac[IEEE80211_ADDR_LEN]);
 	int	(*iac_remove)(struct ieee80211vap *,
@@ -314,6 +333,8 @@ void	ieee80211_dturbo_switch(struct ieee80211vap *, int newflags);
 void	ieee80211_swbmiss(void *arg);
 void	ieee80211_beacon_miss(struct ieee80211com *);
 int	ieee80211_new_state(struct ieee80211vap *, enum ieee80211_state, int);
+int	ieee80211_new_state_locked(struct ieee80211vap *, enum ieee80211_state,
+		int);
 void	ieee80211_print_essid(const uint8_t *, int);
 void	ieee80211_dump_pkt(struct ieee80211com *,
 		const uint8_t *, int, int, int);
@@ -344,6 +365,7 @@ struct ieee80211_beacon_offsets {
 	uint16_t	bo_appie_len;	/* AppIE length in bytes */
 	uint16_t	bo_csa_trailer_len;
 	uint8_t		*bo_csa;	/* start of CSA element */
+	uint8_t		*bo_quiet;	/* start of Quiet element */
 	uint8_t		*bo_meshconf;	/* start of MESHCONF element */
 	uint8_t		*bo_spare[3];
 };

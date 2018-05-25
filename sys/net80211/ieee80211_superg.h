@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_superg.h 244051 2012-12-09 19:20:28Z adrian $
  */
 #ifndef _NET80211_IEEE80211_SUPERG_H_
 #define _NET80211_IEEE80211_SUPERG_H_
@@ -66,7 +67,6 @@ struct ieee80211_stageq {
 struct ieee80211_superg {
 	/* fast-frames staging q */
 	struct ieee80211_stageq	ff_stageq[WME_NUM_AC];
-	int			ff_stageqdepth;	/* cumulative depth */
 };
 
 void	ieee80211_superg_attach(struct ieee80211com *);
@@ -87,6 +87,10 @@ struct mbuf *ieee80211_ff_check(struct ieee80211_node *, struct mbuf *);
 void	ieee80211_ff_age(struct ieee80211com *, struct ieee80211_stageq *,
 	     int quanta);
 
+/*
+ * See ieee80211_ff_age() for a description of the locking
+ * expectation here.
+ */
 static __inline void
 ieee80211_ff_flush(struct ieee80211com *ic, int ac)
 {
@@ -96,12 +100,16 @@ ieee80211_ff_flush(struct ieee80211com *ic, int ac)
 		ieee80211_ff_age(ic, &sg->ff_stageq[ac], 0x7fffffff);
 }
 
+/*
+ * See ieee80211_ff_age() for a description of the locking
+ * expectation here.
+ */
 static __inline void
 ieee80211_ff_age_all(struct ieee80211com *ic, int quanta)
 {
 	struct ieee80211_superg *sg = ic->ic_superg;
 
-	if (sg != NULL && sg->ff_stageqdepth) {
+	if (sg != NULL) {
 		if (sg->ff_stageq[WME_AC_VO].depth)
 			ieee80211_ff_age(ic, &sg->ff_stageq[WME_AC_VO], quanta);
 		if (sg->ff_stageq[WME_AC_VI].depth)

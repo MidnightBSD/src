@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_ioctl.c 322061 2017-08-04 20:24:23Z pfg $");
 
 /*
  * IEEE 802.11 ioctl support (FreeBSD-specific)
@@ -972,6 +973,21 @@ ieee80211_ioctl_get80211(struct ieee80211vap *vap, u_long cmd,
 	case IEEE80211_IOC_PUREG:
 		ireq->i_val = (vap->iv_flags & IEEE80211_F_PUREG) != 0;
 		break;
+	case IEEE80211_IOC_QUIET:
+		ireq->i_val = vap->iv_quiet;
+		break;
+	case IEEE80211_IOC_QUIET_COUNT:
+		ireq->i_val = vap->iv_quiet_count;
+		break;
+	case IEEE80211_IOC_QUIET_PERIOD:
+		ireq->i_val = vap->iv_quiet_period;
+		break;
+	case IEEE80211_IOC_QUIET_DUR:
+		ireq->i_val = vap->iv_quiet_duration;
+		break;
+	case IEEE80211_IOC_QUIET_OFFSET:
+		ireq->i_val = vap->iv_quiet_offset;
+		break;
 	case IEEE80211_IOC_BGSCAN:
 		ireq->i_val = (vap->iv_flags & IEEE80211_F_BGSCAN) != 0;
 		break;
@@ -1325,12 +1341,17 @@ setmlme_dropsta(struct ieee80211vap *vap,
 	if (!IEEE80211_ADDR_EQ(mac, ic->ic_ifp->if_broadcastaddr)) {
 		IEEE80211_NODE_LOCK(nt);
 		ni = ieee80211_find_node_locked(nt, mac);
+		IEEE80211_NODE_UNLOCK(nt);
+		/*
+		 * Don't do the node update inside the node
+		 * table lock.  This unfortunately causes LORs
+		 * with drivers and their TX paths.
+		 */
 		if (ni != NULL) {
 			domlme(mlmeop, ni);
 			ieee80211_free_node(ni);
 		} else
 			error = ENOENT;
-		IEEE80211_NODE_UNLOCK(nt);
 	} else {
 		ieee80211_iterate_nodes(nt, domlme, mlmeop);
 	}
@@ -1382,6 +1403,22 @@ setmlme_common(struct ieee80211vap *vap, int op,
 			    IEEE80211_FC0_SUBTYPE_DEAUTH, reason);
 			ieee80211_free_node(ni);
 			break;
+		case IEEE80211_M_MBSS:
+			IEEE80211_NODE_LOCK(nt);
+			ni = ieee80211_find_node_locked(nt, mac);
+			/*
+			 * Don't do the node update inside the node
+			 * table lock.  This unfortunately causes LORs
+			 * with drivers and their TX paths.
+			 */
+			IEEE80211_NODE_UNLOCK(nt);
+			if (ni != NULL) {
+				ieee80211_node_leave(ni);
+				ieee80211_free_node(ni);
+			} else {
+				error = ENOENT;
+			}
+			break;
 		default:
 			error = EINVAL;
 			break;
@@ -1396,6 +1433,12 @@ setmlme_common(struct ieee80211vap *vap, int op,
 		}
 		IEEE80211_NODE_LOCK(nt);
 		ni = ieee80211_find_vap_node_locked(nt, vap, mac);
+		/*
+		 * Don't do the node update inside the node
+		 * table lock.  This unfortunately causes LORs
+		 * with drivers and their TX paths.
+		 */
+		IEEE80211_NODE_UNLOCK(nt);
 		if (ni != NULL) {
 			mlmedebug(vap, mac, op, reason);
 			if (op == IEEE80211_MLME_AUTHORIZE)
@@ -1405,7 +1448,6 @@ setmlme_common(struct ieee80211vap *vap, int op,
 			ieee80211_free_node(ni);
 		} else
 			error = ENOENT;
-		IEEE80211_NODE_UNLOCK(nt);
 		break;
 	case IEEE80211_MLME_AUTH:
 		if (vap->iv_opmode != IEEE80211_M_HOSTAP) {
@@ -1414,6 +1456,12 @@ setmlme_common(struct ieee80211vap *vap, int op,
 		}
 		IEEE80211_NODE_LOCK(nt);
 		ni = ieee80211_find_vap_node_locked(nt, vap, mac);
+		/*
+		 * Don't do the node update inside the node
+		 * table lock.  This unfortunately causes LORs
+		 * with drivers and their TX paths.
+		 */
+		IEEE80211_NODE_UNLOCK(nt);
 		if (ni != NULL) {
 			mlmedebug(vap, mac, op, reason);
 			if (reason == IEEE80211_STATUS_SUCCESS) {
@@ -1437,7 +1485,6 @@ setmlme_common(struct ieee80211vap *vap, int op,
 			ieee80211_free_node(ni);
 		} else
 			error = ENOENT;
-		IEEE80211_NODE_UNLOCK(nt);
 		break;
 	default:
 		error = EINVAL;
@@ -1543,7 +1590,9 @@ ieee80211_ioctl_setmlme(struct ieee80211vap *vap, struct ieee80211req *ireq)
 	    mlme.im_op == IEEE80211_MLME_ASSOC)
 		return setmlme_assoc_sta(vap, mlme.im_macaddr,
 		    vap->iv_des_ssid[0].len, vap->iv_des_ssid[0].ssid);
-	else if (mlme.im_op == IEEE80211_MLME_ASSOC)
+	else if ((vap->iv_opmode == IEEE80211_M_IBSS || 
+	    vap->iv_opmode == IEEE80211_M_AHDEMO) && 
+	    mlme.im_op == IEEE80211_MLME_ASSOC)
 		return setmlme_assoc_adhoc(vap, mlme.im_macaddr,
 		    mlme.im_ssid_len, mlme.im_ssid);
 	else
@@ -1922,9 +1971,10 @@ setcurchan(struct ieee80211vap *vap, struct ieee80211_channel *c)
 			/* XXX need state machine for other vap's to follow */
 			ieee80211_setcurchan(ic, vap->iv_des_chan);
 			vap->iv_bss->ni_chan = ic->ic_curchan;
-		} else
+		} else {
 			ic->ic_curchan = vap->iv_des_chan;
 			ic->ic_rt = ieee80211_get_ratetable(ic->ic_curchan);
+		}
 	} else {
 		/*
 		 * Need to go through the state machine in case we
@@ -2938,6 +2988,24 @@ ieee80211_ioctl_set80211(struct ieee80211vap *vap, u_long cmd, struct ieee80211r
 		/* NB: reset only if we're operating on an 11g channel */
 		if (isvap11g(vap))
 			error = ENETRESET;
+		break;
+	case IEEE80211_IOC_QUIET:
+		vap->iv_quiet= ireq->i_val;
+		break;
+	case IEEE80211_IOC_QUIET_COUNT:
+		vap->iv_quiet_count=ireq->i_val;
+		break;
+	case IEEE80211_IOC_QUIET_PERIOD:
+		vap->iv_quiet_period=ireq->i_val;
+		break;
+	case IEEE80211_IOC_QUIET_OFFSET:
+		vap->iv_quiet_offset=ireq->i_val;
+		break;
+	case IEEE80211_IOC_QUIET_DUR:
+		if(ireq->i_val < vap->iv_bss->ni_intval)
+			vap->iv_quiet_duration = ireq->i_val;
+		else
+			error = EINVAL;
 		break;
 	case IEEE80211_IOC_BGSCAN:
 		if (ireq->i_val) {

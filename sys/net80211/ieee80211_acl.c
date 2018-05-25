@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/net80211/ieee80211_acl.c,v 1.6 2013/01/17 23:29:37 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_acl.c 228622 2011-12-17 10:32:31Z bschmidt $");
 
 /*
  * IEEE 802.11 MAC ACL support.
@@ -152,7 +153,7 @@ _acl_free(struct aclstate *as, struct acl *acl)
 }
 
 static int
-acl_check(struct ieee80211vap *vap, const uint8_t mac[IEEE80211_ADDR_LEN])
+acl_check(struct ieee80211vap *vap, const struct ieee80211_frame *wh)
 {
 	struct aclstate *as = vap->iv_as;
 
@@ -161,9 +162,9 @@ acl_check(struct ieee80211vap *vap, const uint8_t mac[IEEE80211_ADDR_LEN])
 	case ACL_POLICY_RADIUS:
 		return 1;
 	case ACL_POLICY_ALLOW:
-		return _find_acl(as, mac) != NULL;
+		return _find_acl(as, wh->i_addr2) != NULL;
 	case ACL_POLICY_DENY:
-		return _find_acl(as, mac) == NULL;
+		return _find_acl(as, wh->i_addr2) == NULL;
 	}
 	return 0;		/* should not happen */
 }

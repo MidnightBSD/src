@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Adrian Chadd, Xenion Lty Ltd
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_alq.h 233133 2012-03-18 21:54:59Z adrian $
  */
 #ifndef	__IEEE80211_ALQ_H__
 #define	__IEEE80211_ALQ_H__
@@ -38,6 +39,7 @@
  */
 struct ieee80211_alq_rec {
 	uint32_t	r_timestamp;	/* XXX may wrap! */
+	uint32_t	r_threadid;	/* current thread id */
 	uint16_t	r_wlan;		/* wlan interface number */
 	uint8_t		r_version;	/* version */
 	uint8_t		r_op;		/* top-level operation id */
@@ -46,6 +48,7 @@ struct ieee80211_alq_rec {
 };
 
 /* General logging function */
-extern void ieee80211_alq_log(struct ieee80211vap *vap, uint8_t op, u_char *p, int l);
+extern	void ieee80211_alq_log(struct ieee80211vap *vap, uint8_t op,
+	    u_char *p, int l);
 
 #endif	/* __IEEE80211_ALQ_H__ */

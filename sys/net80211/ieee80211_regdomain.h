@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_regdomain.h 243974 2012-12-07 06:34:46Z adrian $
  */
 #ifndef _NET80211_IEEE80211_REGDOMAIN_H_
 #define _NET80211_IEEE80211_REGDOMAIN_H_
@@ -258,6 +259,17 @@ enum RegdomainCode {
 	SKU_SR9			= 0x0298, /* Ubiquiti SR9 (900MHz/GSM) */
 	SKU_XR9			= 0x0299, /* Ubiquiti XR9 (900MHz/GSM) */
 	SKU_GZ901		= 0x029a, /* Zcomax GZ-901 (900MHz/GSM) */
+	SKU_XC900M		= 0x029b, /* Xagyl XC900M (900MHz/GSM) */
+					  /*
+					   * The XC900M by default uses the
+					   * same mapping as the XR9.  It
+					   * can optionally use a slightly
+					   * offset channel spacing (905MHz-
+					   * 925MHz) versus the XR9 (907MHz-
+					   * 922MHz), giving an extra channel.
+					   * This requires a jumper on the
+					   * NIC to be changed.
+					   */
 };
 
 #if defined(__KERNEL__) || defined(_KERNEL)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_crypto_wep.c 305615 2016-09-08 15:06:28Z pfg $");
 
 /*
  * IEEE 802.11 WEP crypto support.
@@ -419,7 +420,7 @@ wep_decrypt(struct ieee80211_key *key, struct mbuf *m0, int hdrlen)
 	}
 
 	off = hdrlen + wep.ic_header;
-	data_len = m->m_pkthdr.len - (off + wep.ic_trailer),
+	data_len = m->m_pkthdr.len - (off + wep.ic_trailer);
 
 	/* Compute CRC32 over unencrypted data and apply RC4 to data */
 	crc = ~0;

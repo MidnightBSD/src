@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_input.c 254640 2013-08-22 05:53:47Z adrian $");
 
 #include "opt_wlan.h"
 
@@ -131,7 +132,7 @@ ieee80211_input_mimo_all(struct ieee80211com *ic, struct mbuf *m,
 			 * Packet contents are changed by ieee80211_decap
 			 * so do a deep copy of the packet.
 			 */
-			mcopy = m_dup(m, M_DONTWAIT);
+			mcopy = m_dup(m, M_NOWAIT);
 			if (mcopy == NULL) {
 				/* XXX stat+msg */
 				continue;
@@ -250,7 +251,10 @@ ieee80211_deliver_data(struct ieee80211vap *vap,
 	struct ifnet *ifp = vap->iv_ifp;
 
 	/* clear driver/net80211 flags before passing up */
-	m->m_flags &= ~(M_80211_RX | M_MCAST | M_BCAST);
+	m->m_flags &= ~(M_MCAST | M_BCAST);
+#if __FreeBSD_version >= 1000046
+	m_clrprotoflags(m);
+#endif
 
 	/* NB: see hostap_deliver_data, this path doesn't handle hostap */
 	KASSERT(vap->iv_opmode != IEEE80211_M_HOSTAP, ("gack, hostap"));
@@ -323,13 +327,13 @@ ieee80211_decap(struct ieee80211vap *vap, struct mbuf *m, int hdrlen)
 		IEEE80211_ADDR_COPY(eh->ether_shost, wh.i_addr4);
 		break;
 	}
-#ifdef ALIGNED_POINTER
+#ifndef __NO_STRICT_ALIGNMENT
 	if (!ALIGNED_POINTER(mtod(m, caddr_t) + sizeof(*eh), uint32_t)) {
 		m = ieee80211_realign(vap, m, sizeof(*eh));
 		if (m == NULL)
 			return NULL;
 	}
-#endif /* ALIGNED_POINTER */
+#endif /* !__NO_STRICT_ALIGNMENT */
 	if (llc != NULL) {
 		eh = mtod(m, struct ether_header *);
 		eh->ether_type = htons(m->m_pkthdr.len - sizeof(*eh));
@@ -522,6 +526,9 @@ ieee80211_parse_beacon(struct ieee80211_node *ni, struct mbuf *m,
 		case IEEE80211_ELEMID_CSA:
 			scan->csa = frm;
 			break;
+		case IEEE80211_ELEMID_QUIET:
+			scan->quiet = frm;
+			break;
 		case IEEE80211_ELEMID_FHPARMS:
 			if (ic->ic_phytype == IEEE80211_T_FH) {
 				scan->fhdwell = LE_READ_2(&frm[2]);
@@ -649,7 +656,8 @@ ieee80211_parse_beacon(struct ieee80211_node *ni, struct mbuf *m,
 	      scan->bintval <= IEEE80211_BINTVAL_MAX)) {
 		IEEE80211_DISCARD(vap,
 		    IEEE80211_MSG_ELEMID | IEEE80211_MSG_INPUT,
-		    wh, NULL, "bogus beacon interval", scan->bintval);
+		    wh, NULL, "bogus beacon interval (%d TU)",
+		    (int) scan->bintval);
 		vap->iv_stats.is_rx_badbintval++;
 		scan->status |= IEEE80211_BPARSE_BINTVAL_INVALID;
 	}
@@ -756,6 +764,61 @@ ieee80211_parse_action(struct ieee80211_node *ni, struct mbuf *m)
 			break;
 		}
 		break;
+#ifdef IEEE80211_SUPPORT_MESH
+	case IEEE80211_ACTION_CAT_MESH:
+		switch (ia->ia_action) {
+		case IEEE80211_ACTION_MESH_LMETRIC:
+			/*
+			 * XXX: verification is true only if we are using
+			 * Airtime link metric (default)
+			 */
+			IEEE80211_VERIFY_LENGTH(efrm - frm,
+			    sizeof(struct ieee80211_meshlmetric_ie),
+			    return EINVAL);
+			break;
+		case IEEE80211_ACTION_MESH_HWMP:
+			/* verify something */
+			break;
+		case IEEE80211_ACTION_MESH_GANN:
+			IEEE80211_VERIFY_LENGTH(efrm - frm,
+			    sizeof(struct ieee80211_meshgann_ie),
+			    return EINVAL);
+			break;
+		case IEEE80211_ACTION_MESH_CC:
+		case IEEE80211_ACTION_MESH_MCCA_SREQ:
+		case IEEE80211_ACTION_MESH_MCCA_SREP:
+		case IEEE80211_ACTION_MESH_MCCA_AREQ:
+		case IEEE80211_ACTION_MESH_MCCA_ADVER:
+		case IEEE80211_ACTION_MESH_MCCA_TRDOWN:
+		case IEEE80211_ACTION_MESH_TBTT_REQ:
+		case IEEE80211_ACTION_MESH_TBTT_RES:
+			/* reject these early on, not implemented */
+			IEEE80211_DISCARD(vap,
+			    IEEE80211_MSG_ELEMID | IEEE80211_MSG_INPUT,
+			    wh, NULL, "not implemented yet, act=0x%02X",
+			    ia->ia_action);
+			return EINVAL;
+		}
+		break;
+	case IEEE80211_ACTION_CAT_SELF_PROT:
+		/* If TA or RA group address discard silently */
+		if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
+			IEEE80211_IS_MULTICAST(wh->i_addr2))
+			return EINVAL;
+		/*
+		 * XXX: Should we verify complete length now or it is
+		 * to varying in sizes?
+		 */
+		switch (ia->ia_action) {
+		case IEEE80211_ACTION_MESHPEERING_CONFIRM:
+		case IEEE80211_ACTION_MESHPEERING_CLOSE:
+			/* is not a peering candidate (yet) */
+			if (ni == vap->iv_bss)
+				return EINVAL;
+			break;
+		}
+		break;
+#endif
 	}
 	return 0;
 }

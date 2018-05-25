@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_ddb.c 246516 2013-02-07 21:29:48Z monthadar $");
 
 #include "opt_ddb.h"
 #include "opt_wlan.h"
@@ -63,9 +64,9 @@ __MBSDID("$MidnightBSD$");
 } while (0)
 
 static void _db_show_sta(const struct ieee80211_node *);
-static void _db_show_vap(const struct ieee80211vap *, int);
+static void _db_show_vap(const struct ieee80211vap *, int, int);
 static void _db_show_com(const struct ieee80211com *,
-	int showvaps, int showsta, int showprocs);
+	int showvaps, int showsta, int showmesh, int showprocs);
 
 static void _db_show_node_table(const char *tag,
 	const struct ieee80211_node_table *);
@@ -103,7 +104,7 @@ DB_SHOW_COMMAND(statab, db_show_statab)
 
 DB_SHOW_COMMAND(vap, db_show_vap)
 {
-	int i, showprocs = 0;
+	int i, showmesh = 0, showprocs = 0;
 
 	if (!have_addr) {
 		db_printf("usage: show vap <addr>\n");
@@ -113,18 +114,22 @@ DB_SHOW_COMMAND(vap, db_show_vap)
 		switch (modif[i]) {
 		case 'a':
 			showprocs = 1;
+			showmesh = 1;
+			break;
+		case 'm':
+			showmesh = 1;
 			break;
 		case 'p':
 			showprocs = 1;
 			break;
 		}
-	_db_show_vap((const struct ieee80211vap *) addr, showprocs);
+	_db_show_vap((const struct ieee80211vap *) addr, showmesh, showprocs);
 }
 
 DB_SHOW_COMMAND(com, db_show_com)
 {
 	const struct ieee80211com *ic;
-	int i, showprocs = 0, showvaps = 0, showsta = 0;
+	int i, showprocs = 0, showvaps = 0, showsta = 0, showmesh = 0;
 
 	if (!have_addr) {
 		db_printf("usage: show com <addr>\n");
@@ -133,10 +138,13 @@ DB_SHOW_COMMAND(com, db_show_com)
 	for (i = 0; modif[i] != '\0'; i++)
 		switch (modif[i]) {
 		case 'a':
-			showsta = showvaps = showprocs = 1;
+			showsta = showmesh = showvaps = showprocs = 1;
 			break;
 		case 's':
 			showsta = 1;
+			break;
+		case 'm':
+			showmesh = 1;
 			break;
 		case 'v':
 			showvaps = 1;
@@ -147,7 +155,7 @@ DB_SHOW_COMMAND(com, db_show_com)
 		}
 
 	ic = (const struct ieee80211com *) addr;
-	_db_show_com(ic, showvaps, showsta, showprocs);
+	_db_show_com(ic, showvaps, showsta, showmesh, showprocs);
 }
 
 DB_SHOW_ALL_COMMAND(vaps, db_show_all_vaps)
@@ -178,7 +186,7 @@ DB_SHOW_ALL_COMMAND(vaps, db_show_all_vaps)
 						    vap->iv_ifp->if_xname, vap);
 					db_printf("\n");
 				} else
-					_db_show_com(ic, 1, 1, 1);
+					_db_show_com(ic, 1, 1, 1, 1);
 			}
 	}
 }
@@ -202,7 +210,7 @@ _db_show_txampdu(const char *sep, int ix, const struct ieee80211_tx_ampdu *tap)
 {
 	db_printf("%stxampdu[%d]: %p flags %b %s\n",
 		sep, ix, tap, tap->txa_flags, IEEE80211_AGGR_BITS,
-		ieee80211_wme_acnames[tap->txa_ac]);
+		ieee80211_wme_acnames[TID_TO_WME_AC(tap->txa_tid)]);
 	db_printf("%s  token %u lastsample %d pkts %d avgpps %d qbytes %d qframes %d\n",
 		sep, tap->txa_token, tap->txa_lastsample, tap->txa_pkts,
 		tap->txa_avgpps, tap->txa_qbytes, tap->txa_qframes);
@@ -293,7 +301,7 @@ _db_show_sta(const struct ieee80211_node *ni)
 		ni->ni_htopmode, ni->ni_htstbc, ni->ni_chw);
 
 	/* XXX ampdu state */
-	for (i = 0; i < WME_NUM_AC; i++)
+	for (i = 0; i < WME_NUM_TID; i++)
 		if (ni->ni_tx_ampdu[i].txa_flags & IEEE80211_AGGR_SETUP)
 			_db_show_txampdu("\t", i, &ni->ni_tx_ampdu[i]);
 	for (i = 0; i < WME_NUM_TID; i++)
@@ -330,7 +338,7 @@ _db_show_tdma(const char *sep, const struct ieee80211_tdma_state *ts, int showpr
 #endif /* IEEE80211_SUPPORT_TDMA */
 
 static void
-_db_show_vap(const struct ieee80211vap *vap, int showprocs)
+_db_show_vap(const struct ieee80211vap *vap, int showmesh, int showprocs)
 {
 	const struct ieee80211com *ic = vap->iv_ic;
 	int i;
@@ -341,6 +349,10 @@ _db_show_vap(const struct ieee80211vap *vap, int showprocs)
 	db_printf("\n");
 
 	db_printf("\topmode %s", ieee80211_opmode_name[vap->iv_opmode]);
+#ifdef IEEE80211_SUPPORT_MESH
+	if (vap->iv_opmode == IEEE80211_M_MBSS)
+		db_printf("(%p)", vap->iv_mesh);
+#endif
 	db_printf(" state %s", ieee80211_state_name[vap->iv_state]);
 	db_printf(" ifp %p(%s)", vap->iv_ifp, vap->iv_ifp->if_xname);
 	db_printf("\n");
@@ -472,6 +484,10 @@ _db_show_vap(const struct ieee80211vap *vap, int showprocs)
 	db_printf(" acl %p", vap->iv_acl);
 	db_printf(" as %p", vap->iv_as);
 	db_printf("\n");
+#ifdef IEEE80211_SUPPORT_MESH
+	if (showmesh && vap->iv_mesh != NULL)
+		_db_show_mesh(vap->iv_mesh);
+#endif
 #ifdef IEEE80211_SUPPORT_TDMA
 	if (vap->iv_tdma != NULL)
 		_db_show_tdma("\t", vap->iv_tdma, showprocs);
@@ -495,7 +511,8 @@ _db_show_vap(const struct ieee80211vap *vap, int showprocs)
 }
 
 static void
-_db_show_com(const struct ieee80211com *ic, int showvaps, int showsta, int showprocs)
+_db_show_com(const struct ieee80211com *ic, int showvaps, int showsta,
+    int showmesh, int showprocs)
 {
 	struct ieee80211vap *vap;
 
@@ -651,7 +668,7 @@ _db_show_com(const struct ieee80211com *ic, int showvaps, int showsta, int showp
 	if (showvaps && !TAILQ_EMPTY(&ic->ic_vaps)) {
 		db_printf("\n");
 		TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next)
-			_db_show_vap(vap, showprocs);
+			_db_show_vap(vap, showmesh, showprocs);
 	}
 	if (showsta && !TAILQ_EMPTY(&ic->ic_sta.nt_node)) {
 		const struct ieee80211_node_table *nt = &ic->ic_sta;
@@ -870,8 +887,10 @@ _db_show_mesh(const struct ieee80211_mesh_state *ms)
 	TAILQ_FOREACH(rt, &ms->ms_routes, rt_next) {
 		db_printf("entry %d:\tdest: %6D nexthop: %6D metric: %u", i,
 		    rt->rt_dest, ":", rt->rt_nexthop, ":", rt->rt_metric);
+
 		db_printf("\tlifetime: %u lastseq: %u priv: %p\n",
-		    rt->rt_lifetime, rt->rt_lastmseq, rt->rt_priv);
+		    ieee80211_mesh_rt_update(rt, 0),
+		    rt->rt_lastmseq, rt->rt_priv);
 		i++;
 	}
 }

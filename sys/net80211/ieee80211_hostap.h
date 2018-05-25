@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_hostap.h 241138 2012-10-02 17:45:19Z adrian $
  */
 #ifndef _NET80211_IEEE80211_HOSTAP_H_
 #define _NET80211_IEEE80211_HOSTAP_H_
@@ -32,4 +33,10 @@
  */
 void	ieee80211_hostap_attach(struct ieee80211com *);
 void	ieee80211_hostap_detach(struct ieee80211com *);
+
+/*
+ * This method can be overridden
+ */
+void ieee80211_recv_pspoll(struct ieee80211_node *, struct mbuf *);
+
 #endif /* !_NET80211_IEEE80211_HOSTAP_H_ */

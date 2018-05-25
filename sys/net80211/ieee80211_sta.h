@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/net80211/ieee80211_sta.h 244060 2012-12-09 22:56:29Z adrian $
  */
 #ifndef _NET80211_IEEE80211_STA_H_
 #define _NET80211_IEEE80211_STA_H_
@@ -33,4 +34,10 @@
 void	ieee80211_sta_attach(struct ieee80211com *);
 void	ieee80211_sta_detach(struct ieee80211com *);
 void	ieee80211_sta_vattach(struct ieee80211vap *);
+
+/*
+ * Used by the adhoc/mesh/tdma paths.
+ */
+extern	int ieee80211_parse_wmeparams(struct ieee80211vap *vap, uint8_t *frm,
+	    const struct ieee80211_frame *wh);
 #endif /* !_NET80211_IEEE80211_STA_H_ */

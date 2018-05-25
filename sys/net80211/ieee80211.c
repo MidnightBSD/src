@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211.c 254315 2013-08-14 04:24:25Z rpaulo $");
 
 /*
  * IEEE 802.11 generic handler
@@ -241,9 +242,15 @@ null_transmit(struct ifnet *ifp, struct mbuf *m)
 	return EACCES;		/* XXX EIO/EPERM? */
 }
 
+#if __FreeBSD_version >= 1000031
+static int
+null_output(struct ifnet *ifp, struct mbuf *m,
+	const struct sockaddr *dst, struct route *ro)
+#else
 static int
 null_output(struct ifnet *ifp, struct mbuf *m,
 	struct sockaddr *dst, struct route *ro)
+#endif
 {
 	if_printf(ifp, "discard raw packet\n");
 	return null_transmit(ifp, m);
@@ -254,6 +261,13 @@ null_input(struct ifnet *ifp, struct mbuf *m)
 {
 	if_printf(ifp, "if_input should not be called\n");
 	m_freem(m);
+}
+
+static void
+null_update_chw(struct ieee80211com *ic)
+{
+
+	if_printf(ic->ic_ifp, "%s: need callback\n", __func__);
 }
 
 /*
@@ -271,12 +285,13 @@ ieee80211_ifattach(struct ieee80211com *ic,
 	KASSERT(ifp->if_type == IFT_IEEE80211, ("if_type %d", ifp->if_type));
 
 	IEEE80211_LOCK_INIT(ic, ifp->if_xname);
+	IEEE80211_TX_LOCK_INIT(ic, ifp->if_xname);
 	TAILQ_INIT(&ic->ic_vaps);
 
 	/* Create a taskqueue for all state changes */
 	ic->ic_tq = taskqueue_create("ic_taskq", M_WAITOK | M_ZERO,
 	    taskqueue_thread_enqueue, &ic->ic_tq);
-	taskqueue_start_threads(&ic->ic_tq, 1, PI_NET, "%s taskq",
+	taskqueue_start_threads(&ic->ic_tq, 1, PI_NET, "%s net80211 taskq",
 	    ifp->if_xname);
 	/*
 	 * Fill in 802.11 available channel set, mark all
@@ -287,6 +302,7 @@ ieee80211_ifattach(struct ieee80211com *ic,
 
 	ic->ic_update_mcast = null_update_mcast;
 	ic->ic_update_promisc = null_update_promisc;
+	ic->ic_update_chw = null_update_chw;
 
 	ic->ic_hash_key = arc4random();
 	ic->ic_bintval = IEEE80211_BINTVAL_DEFAULT;
@@ -309,7 +325,11 @@ ieee80211_ifattach(struct ieee80211com *ic,
 
 	ifp->if_addrlen = IEEE80211_ADDR_LEN;
 	ifp->if_hdrlen = 0;
+
+	CURVNET_SET(vnet0);
+
 	if_attach(ifp);
+
 	ifp->if_mtu = IEEE80211_MTU_MAX;
 	ifp->if_broadcastaddr = ieee80211broadcastaddr;
 	ifp->if_output = null_output;
@@ -323,6 +343,8 @@ ieee80211_ifattach(struct ieee80211com *ic,
 	sdl->sdl_alen = IEEE80211_ADDR_LEN;
 	IEEE80211_ADDR_COPY(LLADDR(sdl), macaddr);
 	ifa_free(ifa);
+
+	CURVNET_RESTORE();
 }
 
 /*
@@ -337,8 +359,18 @@ ieee80211_ifdetach(struct ieee80211com *ic)
 	struct ifnet *ifp = ic->ic_ifp;
 	struct ieee80211vap *vap;
 
+	/*
+	 * This detaches the main interface, but not the vaps.
+	 * Each VAP may be in a separate VIMAGE.
+	 */
+	CURVNET_SET(ifp->if_vnet);
 	if_detach(ifp);
+	CURVNET_RESTORE();
 
+	/*
+	 * The VAP is responsible for setting and clearing
+	 * the VIMAGE context.
+	 */
 	while ((vap = TAILQ_FIRST(&ic->ic_vaps)) != NULL)
 		ieee80211_vap_destroy(vap);
 	ieee80211_waitfor_parent(ic);
@@ -357,8 +389,11 @@ ieee80211_ifdetach(struct ieee80211com *ic)
 	ieee80211_power_detach(ic);
 	ieee80211_node_detach(ic);
 
+	/* XXX VNET needed? */
 	ifmedia_removeall(&ic->ic_media);
+
 	taskqueue_free(ic->ic_tq);
+	IEEE80211_TX_LOCK_DESTROY(ic);
 	IEEE80211_LOCK_DESTROY(ic);
 }
 
@@ -399,13 +434,10 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct ieee80211vap *vap,
 	if_initname(ifp, name, unit);
 	ifp->if_softc = vap;			/* back pointer */
 	ifp->if_flags = IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST;
-	ifp->if_start = ieee80211_start;
+	ifp->if_transmit = ieee80211_vap_transmit;
+	ifp->if_qflush = ieee80211_vap_qflush;
 	ifp->if_ioctl = ieee80211_ioctl;
 	ifp->if_init = ieee80211_init;
-	/* NB: input+output filled in by ether_ifattach */
-	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
-	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
-	IFQ_SET_READY(&ifp->if_snd);
 
 	vap->iv_ifp = ifp;
 	vap->iv_ic = ic;
@@ -578,6 +610,8 @@ ieee80211_vap_detach(struct ieee80211vap *vap)
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ifnet *ifp = vap->iv_ifp;
 
+	CURVNET_SET(ifp->if_vnet);
+
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_STATE, "%s: %s parent %s\n",
 	    __func__, ieee80211_opmode_name[vap->iv_opmode],
 	    ic->ic_ifp->if_xname);
@@ -630,6 +664,8 @@ ieee80211_vap_detach(struct ieee80211vap *vap)
 	ieee80211_sysctl_vdetach(vap);
 
 	if_free(ifp);
+
+	CURVNET_RESTORE();
 }
 
 /*
@@ -1483,7 +1519,6 @@ findmedia(const struct ratemedia rates[], int n, u_int match)
 int
 ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode mode)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	static const struct ratemedia rates[] = {
 		{   2 | IFM_IEEE80211_FH, IFM_IEEE80211_FH1 },
 		{   4 | IFM_IEEE80211_FH, IFM_IEEE80211_FH2 },
@@ -1604,7 +1639,7 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode m
 	if (mode == IEEE80211_MODE_11NA) {
 		if (rate & IEEE80211_RATE_MCS) {
 			rate &= ~IEEE80211_RATE_MCS;
-			m = findmedia(htrates, N(htrates), rate);
+			m = findmedia(htrates, nitems(htrates), rate);
 			if (m != IFM_AUTO)
 				return m | IFM_IEEE80211_11NA;
 		}
@@ -1612,7 +1647,7 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode m
 		/* NB: 12 is ambiguous, it will be treated as an MCS */
 		if (rate & IEEE80211_RATE_MCS) {
 			rate &= ~IEEE80211_RATE_MCS;
-			m = findmedia(htrates, N(htrates), rate);
+			m = findmedia(htrates, nitems(htrates), rate);
 			if (m != IFM_AUTO)
 				return m | IFM_IEEE80211_11NG;
 		}
@@ -1625,31 +1660,32 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode m
 	case IEEE80211_MODE_11NA:
 	case IEEE80211_MODE_TURBO_A:
 	case IEEE80211_MODE_STURBO_A:
-		return findmedia(rates, N(rates), rate | IFM_IEEE80211_11A);
+		return findmedia(rates, nitems(rates), 
+		    rate | IFM_IEEE80211_11A);
 	case IEEE80211_MODE_11B:
-		return findmedia(rates, N(rates), rate | IFM_IEEE80211_11B);
+		return findmedia(rates, nitems(rates), 
+		    rate | IFM_IEEE80211_11B);
 	case IEEE80211_MODE_FH:
-		return findmedia(rates, N(rates), rate | IFM_IEEE80211_FH);
+		return findmedia(rates, nitems(rates), 
+		    rate | IFM_IEEE80211_FH);
 	case IEEE80211_MODE_AUTO:
 		/* NB: ic may be NULL for some drivers */
 		if (ic != NULL && ic->ic_phytype == IEEE80211_T_FH)
-			return findmedia(rates, N(rates),
+			return findmedia(rates, nitems(rates),
 			    rate | IFM_IEEE80211_FH);
 		/* NB: hack, 11g matches both 11b+11a rates */
 		/* fall thru... */
 	case IEEE80211_MODE_11G:
 	case IEEE80211_MODE_11NG:
 	case IEEE80211_MODE_TURBO_G:
-		return findmedia(rates, N(rates), rate | IFM_IEEE80211_11G);
+		return findmedia(rates, nitems(rates), rate | IFM_IEEE80211_11G);
 	}
 	return IFM_AUTO;
-#undef N
 }
 
 int
 ieee80211_media2rate(int mword)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	static const int ieeerates[] = {
 		-1,		/* IFM_AUTO */
 		0,		/* IFM_MANUAL */
@@ -1677,9 +1713,8 @@ ieee80211_media2rate(int mword)
 		54,		/* IFM_IEEE80211_OFDM27 */
 		-1,		/* IFM_IEEE80211_MCS */
 	};
-	return IFM_SUBTYPE(mword) < N(ieeerates) ?
+	return IFM_SUBTYPE(mword) < nitems(ieeerates) ?
 		ieeerates[IFM_SUBTYPE(mword)] : 0;
-#undef N
 }
 
 /*

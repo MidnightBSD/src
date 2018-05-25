@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_proto.c 314667 2017-03-04 13:03:31Z avg $");
 
 /*
  * IEEE 802.11 protocol support.
@@ -105,9 +106,8 @@ static void parent_updown(void *, int);
 static void update_mcast(void *, int);
 static void update_promisc(void *, int);
 static void update_channel(void *, int);
+static void update_chw(void *, int);
 static void ieee80211_newstate_cb(void *, int);
-static int ieee80211_new_state_locked(struct ieee80211vap *,
-	enum ieee80211_state, int);
 
 static int
 null_raw_xmit(struct ieee80211_node *ni, struct mbuf *m,
@@ -144,6 +144,7 @@ ieee80211_proto_attach(struct ieee80211com *ic)
 	TASK_INIT(&ic->ic_promisc_task, 0, update_promisc, ic);
 	TASK_INIT(&ic->ic_chan_task, 0, update_channel, ic);
 	TASK_INIT(&ic->ic_bmiss_task, 0, beacon_miss, ic);
+	TASK_INIT(&ic->ic_chw_task, 0, update_chw, ic);
 
 	ic->ic_wme.wme_hipri_switch_hysteresis =
 		AGGRESSIVE_MODE_SWITCH_HYSTERESIS;
@@ -193,8 +194,8 @@ ieee80211_proto_vattach(struct ieee80211vap *vap)
 	vap->iv_rtsthreshold = IEEE80211_RTS_DEFAULT;
 	vap->iv_fragthreshold = IEEE80211_FRAG_DEFAULT;
 	vap->iv_bmiss_max = IEEE80211_BMISS_MAX;
-	callout_init(&vap->iv_swbmiss, CALLOUT_MPSAFE);
-	callout_init(&vap->iv_mgtsend, CALLOUT_MPSAFE);
+	callout_init_mtx(&vap->iv_swbmiss, IEEE80211_LOCK_OBJ(ic), 0);
+	callout_init(&vap->iv_mgtsend, 1);
 	TASK_INIT(&vap->iv_nstate_task, 0, ieee80211_newstate_cb, vap);
 	TASK_INIT(&vap->iv_swbmiss_task, 0, beacon_swmiss, vap);
 	/*
@@ -447,7 +448,7 @@ ieee80211_dump_pkt(struct ieee80211com *ic,
 		printf(" QoS [TID %u%s]", qwh->i_qos[0] & IEEE80211_QOS_TID,
 			qwh->i_qos[0] & IEEE80211_QOS_ACKPOLICY ? " ACM" : "");
 	}
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		int off;
 
 		off = ieee80211_anyhdrspace(ic, wh);
@@ -660,13 +661,12 @@ ieee80211_set_shortslottime(struct ieee80211com *ic, int onoff)
 int
 ieee80211_iserp_rateset(const struct ieee80211_rateset *rs)
 {
-#define N(a)	(sizeof(a) / sizeof(a[0]))
 	static const int rates[] = { 2, 4, 11, 22, 12, 24, 48 };
 	int i, j;
 
-	if (rs->rs_nrates < N(rates))
+	if (rs->rs_nrates < nitems(rates))
 		return 0;
-	for (i = 0; i < N(rates); i++) {
+	for (i = 0; i < nitems(rates); i++) {
 		for (j = 0; j < rs->rs_nrates; j++) {
 			int r = rs->rs_rates[j] & IEEE80211_RATE_VAL;
 			if (rates[i] == r)
@@ -679,7 +679,6 @@ ieee80211_iserp_rateset(const struct ieee80211_rateset *rs)
 		;
 	}
 	return 1;
-#undef N
 }
 
 /*
@@ -994,6 +993,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 	struct wmeParams *chanp, *bssp;
 	enum ieee80211_phymode mode;
 	int i;
+	int do_aggrmode = 0;
 
        	/*
 	 * Set up the channel access parameters for the physical
@@ -1034,11 +1034,38 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 	 * BE uses agressive params to optimize performance of
 	 * legacy/non-QoS traffic.
 	 */
-        if ((vap->iv_opmode == IEEE80211_M_HOSTAP &&
-	     (wme->wme_flags & WME_F_AGGRMODE) != 0) ||
-	    (vap->iv_opmode == IEEE80211_M_STA &&
-	     (vap->iv_bss->ni_flags & IEEE80211_NODE_QOS) == 0) ||
-	    (vap->iv_flags & IEEE80211_F_WME) == 0) {
+
+	/* Hostap? Only if aggressive mode is enabled */
+        if (vap->iv_opmode == IEEE80211_M_HOSTAP &&
+	     (wme->wme_flags & WME_F_AGGRMODE) != 0)
+		do_aggrmode = 1;
+
+	/*
+	 * Station? Only if we're in a non-QoS BSS.
+	 */
+	else if ((vap->iv_opmode == IEEE80211_M_STA &&
+	     (vap->iv_bss->ni_flags & IEEE80211_NODE_QOS) == 0))
+		do_aggrmode = 1;
+
+	/*
+	 * IBSS? Only if we we have WME enabled.
+	 */
+	else if ((vap->iv_opmode == IEEE80211_M_IBSS) &&
+	    (vap->iv_flags & IEEE80211_F_WME))
+		do_aggrmode = 1;
+
+	/*
+	 * If WME is disabled on this VAP, default to aggressive mode
+	 * regardless of the configuration.
+	 */
+	if ((vap->iv_flags & IEEE80211_F_WME) == 0)
+		do_aggrmode = 1;
+
+	/* XXX WDS? */
+
+	/* XXX MBSS? */
+	
+	if (do_aggrmode) {
 		chanp = &wme->wme_chanParams.cap_wmeParams[WME_AC_BE];
 		bssp = &wme->wme_bssChanParams.cap_wmeParams[WME_AC_BE];
 
@@ -1056,7 +1083,14 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 		    chanp->wmep_acm, chanp->wmep_aifsn, chanp->wmep_logcwmin,
 		    chanp->wmep_logcwmax, chanp->wmep_txopLimit);
 	}
-	
+
+
+	/*
+	 * Change the contention window based on the number of associated
+	 * stations.  If the number of associated stations is 1 and
+	 * aggressive mode is enabled, lower the contention window even
+	 * further.
+	 */
 	if (vap->iv_opmode == IEEE80211_M_HOSTAP &&
 	    ic->ic_sta_assoc < 2 && (wme->wme_flags & WME_F_AGGRMODE) != 0) {
 		static const uint8_t logCwMin[IEEE80211_MODE_MAX] = {
@@ -1080,8 +1114,15 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_WME,
 		    "update %s (chan+bss) logcwmin %u\n",
 		    ieee80211_wme_acnames[WME_AC_BE], chanp->wmep_logcwmin);
-    	}	
-	if (vap->iv_opmode == IEEE80211_M_HOSTAP) {	/* XXX ibss? */
+	}
+
+	/*
+	 * Arrange for the beacon update.
+	 *
+	 * XXX what about MBSS, WDS?
+	 */
+	if (vap->iv_opmode == IEEE80211_M_HOSTAP
+	    || vap->iv_opmode == IEEE80211_M_IBSS) {
 		/*
 		 * Arrange for a beacon update and bump the parameter
 		 * set number so associated stations load the new values.
@@ -1147,6 +1188,17 @@ update_channel(void *arg, int npending)
 	ieee80211_radiotap_chan_change(ic);
 }
 
+static void
+update_chw(void *arg, int npending)
+{
+	struct ieee80211com *ic = arg;
+
+	/*
+	 * XXX should we defer the channel width _config_ update until now?
+	 */
+	ic->ic_update_chw(ic);
+}
+
 /*
  * Block until the parent is in a known state.  This is
  * used after any operations that dispatch a task (e.g.
@@ -1161,6 +1213,7 @@ ieee80211_waitfor_parent(struct ieee80211com *ic)
 	ieee80211_draintask(ic, &ic->ic_promisc_task);
 	ieee80211_draintask(ic, &ic->ic_chan_task);
 	ieee80211_draintask(ic, &ic->ic_bmiss_task);
+	ieee80211_draintask(ic, &ic->ic_chw_task);
 	taskqueue_unblock(ic->ic_tq);
 }
 
@@ -1403,7 +1456,7 @@ beacon_miss(void *arg, int npending)
 	struct ieee80211com *ic = arg;
 	struct ieee80211vap *vap;
 
-	/* XXX locking */
+	IEEE80211_LOCK(ic);
 	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
 		/*
 		 * We only pass events through for sta vap's in RUN state;
@@ -1415,18 +1468,21 @@ beacon_miss(void *arg, int npending)
 		    vap->iv_bmiss != NULL)
 			vap->iv_bmiss(vap);
 	}
+	IEEE80211_UNLOCK(ic);
 }
 
 static void
 beacon_swmiss(void *arg, int npending)
 {
 	struct ieee80211vap *vap = arg;
+	struct ieee80211com *ic = vap->iv_ic;
 
-	if (vap->iv_state != IEEE80211_S_RUN)
-		return;
-
-	/* XXX Call multiple times if npending > zero? */
-	vap->iv_bmiss(vap);
+	IEEE80211_LOCK(ic);
+	if (vap->iv_state == IEEE80211_S_RUN) {
+		/* XXX Call multiple times if npending > zero? */
+		vap->iv_bmiss(vap);
+	}
+	IEEE80211_UNLOCK(ic);
 }
 
 /*
@@ -1439,6 +1495,8 @@ ieee80211_swbmiss(void *arg)
 {
 	struct ieee80211vap *vap = arg;
 	struct ieee80211com *ic = vap->iv_ic;
+
+	IEEE80211_LOCK_ASSERT(ic);
 
 	/* XXX sleep state? */
 	KASSERT(vap->iv_state == IEEE80211_S_RUN,
@@ -1610,6 +1668,7 @@ markwaiting(struct ieee80211vap *vap0)
 		if (vap->iv_state != IEEE80211_S_INIT) {
 			/* NB: iv_newstate may drop the lock */
 			vap->iv_newstate(vap, IEEE80211_S_INIT, 0);
+			IEEE80211_LOCK_ASSERT(ic);
 			vap->iv_flags_ext |= IEEE80211_FEXT_SCANWAIT;
 		}
 	}
@@ -1644,6 +1703,7 @@ wakeupwaiting(struct ieee80211vap *vap0)
 			vap->iv_newstate(vap,
 			    vap->iv_opmode == IEEE80211_M_STA ?
 			        IEEE80211_S_SCAN : IEEE80211_S_RUN, 0);
+			IEEE80211_LOCK_ASSERT(ic);
 		}
 	}
 }
@@ -1673,6 +1733,7 @@ ieee80211_newstate_cb(void *xvap, int npending)
 		    ieee80211_state_name[vap->iv_state],
 		    ieee80211_state_name[IEEE80211_S_INIT], arg);
 		vap->iv_newstate(vap, IEEE80211_S_INIT, arg);
+		IEEE80211_LOCK_ASSERT(ic);
 		vap->iv_flags_ext &= ~IEEE80211_FEXT_REINIT;
 	}
 
@@ -1694,6 +1755,7 @@ ieee80211_newstate_cb(void *xvap, int npending)
 	    ieee80211_state_name[ostate], ieee80211_state_name[nstate], arg);
 
 	rc = vap->iv_newstate(vap, nstate, arg);
+	IEEE80211_LOCK_ASSERT(ic);
 	vap->iv_flags_ext &= ~IEEE80211_FEXT_STATEWAIT;
 	if (rc != 0) {
 		/* State transition failed */
@@ -1720,7 +1782,10 @@ ieee80211_newstate_cb(void *xvap, int npending)
 		 * (i.e. coming out of power save mode).
 		 */
 		vap->iv_ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-		if_start(vap->iv_ifp);
+
+		/*
+		 * XXX TODO Kick-start a VAP queue - this should be a method!
+		 */
 
 		/* bring up any vaps waiting on us */
 		wakeupwaiting(vap);
@@ -1733,8 +1798,9 @@ ieee80211_newstate_cb(void *xvap, int npending)
 		 */
 		ieee80211_scan_flush(vap);
 
-		/* XXX NB: cast for altq */
-		ieee80211_flush_ifq((struct ifqueue *)&ic->ic_ifp->if_snd, vap);
+		/*
+		 * XXX TODO: ic/vap queue flush
+		 */
 	}
 done:
 	IEEE80211_UNLOCK(ic);
@@ -1767,7 +1833,7 @@ done:
  * is usually a mistake and indicates lack of proper integration
  * with the net80211 layer.
  */
-static int
+int
 ieee80211_new_state_locked(struct ieee80211vap *vap,
 	enum ieee80211_state nstate, int arg)
 {
