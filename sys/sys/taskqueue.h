@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/taskqueue.h 315268 2017-03-14 16:00:33Z hselasky $
  */
 
 #ifndef _SYS_TASKQUEUE_H_
@@ -47,6 +48,16 @@ struct timeout_task {
 	int    f;
 };
 
+enum taskqueue_callback_type {
+	TASKQUEUE_CALLBACK_TYPE_INIT,
+	TASKQUEUE_CALLBACK_TYPE_SHUTDOWN,
+};
+#define	TASKQUEUE_CALLBACK_TYPE_MIN	TASKQUEUE_CALLBACK_TYPE_INIT
+#define	TASKQUEUE_CALLBACK_TYPE_MAX	TASKQUEUE_CALLBACK_TYPE_SHUTDOWN
+#define	TASKQUEUE_NUM_CALLBACKS		TASKQUEUE_CALLBACK_TYPE_MAX + 1
+
+typedef void (*taskqueue_callback_fn)(void *context);
+
 /*
  * A notification callback function which is called from
  * taskqueue_enqueue().  The context argument is given in the call to
@@ -64,6 +75,7 @@ int	taskqueue_start_threads(struct taskqueue **tqp, int count, int pri,
 int	taskqueue_enqueue(struct taskqueue *queue, struct task *task);
 int	taskqueue_enqueue_timeout(struct taskqueue *queue,
 	    struct timeout_task *timeout_task, int ticks);
+int	taskqueue_poll_is_busy(struct taskqueue *queue, struct task *task);
 int	taskqueue_cancel(struct taskqueue *queue, struct task *task,
 	    u_int *pendp);
 int	taskqueue_cancel_timeout(struct taskqueue *queue,
@@ -71,11 +83,15 @@ int	taskqueue_cancel_timeout(struct taskqueue *queue,
 void	taskqueue_drain(struct taskqueue *queue, struct task *task);
 void	taskqueue_drain_timeout(struct taskqueue *queue,
 	    struct timeout_task *timeout_task);
+void	taskqueue_drain_all(struct taskqueue *queue);
 void	taskqueue_free(struct taskqueue *queue);
 void	taskqueue_run(struct taskqueue *queue);
 void	taskqueue_block(struct taskqueue *queue);
 void	taskqueue_unblock(struct taskqueue *queue);
 int	taskqueue_member(struct taskqueue *queue, struct thread *td);
+void	taskqueue_set_callback(struct taskqueue *queue,
+	    enum taskqueue_callback_type cb_type,
+	    taskqueue_callback_fn callback, void *context);
 
 #define TASK_INITIALIZER(priority, func, context)	\
 	{ .ta_pending = 0,				\

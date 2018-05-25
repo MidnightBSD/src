@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)callout.h	8.2 (Berkeley) 1/21/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/_callout.h 281657 2015-04-17 15:39:42Z rrs $
  */
 
 #ifndef _SYS__CALLOUT_H
@@ -42,19 +43,23 @@
 
 struct lock_object;
 
-SLIST_HEAD(callout_list, callout);
+LIST_HEAD(callout_list, callout);
+SLIST_HEAD(callout_slist, callout);
 TAILQ_HEAD(callout_tailq, callout);
 
 struct callout {
 	union {
+		LIST_ENTRY(callout) le;
 		SLIST_ENTRY(callout) sle;
 		TAILQ_ENTRY(callout) tqe;
 	} c_links;
-	int	c_time;				/* ticks to the event */
+	sbintime_t c_time;			/* ticks to the event */
+	sbintime_t c_precision;			/* delta allowed wrt opt */
 	void	*c_arg;				/* function argument */
 	void	(*c_func)(void *);		/* function to call */
 	struct lock_object *c_lock;		/* lock to handle */
-	int	c_flags;			/* state of this entry */
+	short	c_flags;			/* User State */
+	short	c_iflags;			/* Internal State */
 	volatile int c_cpu;			/* CPU we're scheduled on */
 };
 

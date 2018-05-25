@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
+ * Copyright (c) 2010-2013 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/sys/timeet.h 266347 2014-05-17 20:10:12Z ian $
  */
 
 #ifndef _SYS_TIMEEC_H_
@@ -45,7 +46,7 @@
 
 struct eventtimer;
 typedef int et_start_t(struct eventtimer *et,
-    struct bintime *first, struct bintime *period);
+    sbintime_t first, sbintime_t period);
 typedef int et_stop_t(struct eventtimer *et);
 typedef void et_event_cb_t(struct eventtimer *et, void *arg);
 typedef int et_deregister_cb_t(struct eventtimer *et, void *arg);
@@ -70,8 +71,8 @@ struct eventtimer {
 	int			et_active;
 	u_int64_t		et_frequency;
 		/* Base frequency in Hz. */
-	struct bintime		et_min_period;
-	struct bintime		et_max_period;
+	sbintime_t		et_min_period;
+	sbintime_t		et_max_period;
 	et_start_t		*et_start;
 	et_stop_t		*et_stop;
 	et_event_cb_t		*et_event_cb;
@@ -89,12 +90,12 @@ extern struct mtx	et_eventtimers_mtx;
 /* Driver API */
 int	et_register(struct eventtimer *et);
 int	et_deregister(struct eventtimer *et);
+void	et_change_frequency(struct eventtimer *et, uint64_t newfreq);
 /* Consumer API  */
 struct eventtimer *et_find(const char *name, int check, int want);
 int	et_init(struct eventtimer *et, et_event_cb_t *event,
     et_deregister_cb_t *deregister, void *arg);
-int	et_start(struct eventtimer *et,
-    struct bintime *first, struct bintime *period);
+int	et_start(struct eventtimer *et, sbintime_t first, sbintime_t period);
 int	et_stop(struct eventtimer *et);
 int	et_ban(struct eventtimer *et);
 int	et_free(struct eventtimer *et);
