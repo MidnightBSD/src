@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2002
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/atm/ng_ccatm.h 189315 2009-03-03 18:47:33Z ed $
  */
 
 /*

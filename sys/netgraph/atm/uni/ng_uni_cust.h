@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -28,7 +29,7 @@
  *
  * Customisation of signalling source to the NG environment.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/atm/uni/ng_uni_cust.h 281657 2015-04-17 15:39:42Z rrs $
  */
 
 #include <sys/param.h>
@@ -87,8 +88,8 @@ struct uni_timer {
 #define	_TIMER_STOP(UNI,FIELD) do {						\
 	ng_uncallout(&FIELD.c, (UNI)->arg);					\
     } while (0)
-#define	TIMER_ISACT(UNI,T)	((UNI)->T.c.c_flags & (CALLOUT_ACTIVE |	\
-							CALLOUT_PENDING))
+#define	TIMER_ISACT(UNI,T)	(callout_active(&(UNI)->T.c) ||		\
+	callout_pending(&(UNI)->T.c))
 #define	_TIMER_START(UNI,ARG,FIELD,DUE,FUNC) do {			\
 	_TIMER_STOP(UNI, FIELD);					\
 	ng_callout(&FIELD.c, (UNI)->arg, NULL,				\

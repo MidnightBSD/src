@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/netgraph/atm/sscop/ng_sscop.c 241686 2012-10-18 13:57:24Z andre $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -861,10 +862,8 @@ sscop_send_manage(struct sscop *sscop, void *p, enum sscop_maasig sig,
 static int
 ng_sscop_mod_event(module_t mod, int event, void *data)
 {
-	int s;
 	int error = 0;
 
-	s = splnet();
 	switch (event) {
 
 	  case MOD_LOAD:
@@ -877,6 +876,5 @@ ng_sscop_mod_event(module_t mod, int event, void *data)
 		error = EOPNOTSUPP;
 		break;
 	}
-	splx(s);
 	return (error);
 }

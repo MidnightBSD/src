@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/netgraph/atm/sscop/ng_sscop_cust.h 281657 2015-04-17 15:39:42Z rrs $
  *
  * Customisation of the SSCOP code to ng_sscop.
  */
@@ -115,7 +116,7 @@ typedef struct callout sscop_timer_t;
 	ng_callout(&(S)->t_##T, (S)->aarg, NULL,			\
 	    hz * (S)->timer##T / 1000, T##_func, (S), 0);		\
     } while (0)
-#define	TIMER_ISACT(S, T) ((S)->t_##T.c_flags & (CALLOUT_PENDING))
+#define	TIMER_ISACT(S, T) (callout_pending(&(S)->t_##T))
 
 /*
  * This assumes, that the user argument is the node pointer.
