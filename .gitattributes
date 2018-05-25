@@ -59596,6 +59596,7 @@ sys/kern/subr_bufring.c -text
 sys/kern/subr_bus.c -text
 sys/kern/subr_bus_dma.c svneol=native#text/plain
 sys/kern/subr_busdma_bufalloc.c svneol=native#text/plain
+sys/kern/subr_capability.c svneol=native#text/plain
 sys/kern/subr_clock.c -text
 sys/kern/subr_counter.c svneol=native#text/plain
 sys/kern/subr_devstat.c -text
@@ -59619,6 +59620,7 @@ sys/kern/subr_nvlist.c svneol=native#text/plain
 sys/kern/subr_nvpair.c svneol=native#text/plain
 sys/kern/subr_param.c -text
 sys/kern/subr_pcpu.c -text
+sys/kern/subr_pctrie.c svneol=native#text/plain
 sys/kern/subr_power.c -text
 sys/kern/subr_prf.c -text
 sys/kern/subr_prof.c -text
@@ -59636,6 +59638,7 @@ sys/kern/subr_trap.c -text
 sys/kern/subr_turnstile.c -text
 sys/kern/subr_uio.c -text
 sys/kern/subr_unit.c -text
+sys/kern/subr_vmem.c svneol=native#text/plain
 sys/kern/subr_witness.c -text
 sys/kern/sys_capability.c -text
 sys/kern/sys_generic.c -text
