@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/opencrypto/cryptodev.h 213068 2010-09-23 11:52:32Z pjd $	*/
 /*	$OpenBSD: cryptodev.h,v 1.31 2002/06/11 11:14:29 beck Exp $	*/
 
 /*-

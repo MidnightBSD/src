@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*      $OpenBSD: criov.c,v 1.9 2002/01/29 15:48:29 jason Exp $	*/
 
 /*-
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/opencrypto/criov.c 159241 2006-06-04 22:15:13Z pjd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

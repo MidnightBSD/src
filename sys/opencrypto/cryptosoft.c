@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: cryptosoft.c,v 1.35 2002/04/26 08:43:50 deraadt Exp $	*/
 
 /*-
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/opencrypto/cryptosoft.c 215295 2010-11-14 13:09:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

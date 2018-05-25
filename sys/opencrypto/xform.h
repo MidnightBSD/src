@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/opencrypto/xform.h 314327 2017-02-27 08:27:38Z avg $	*/
 /*	$OpenBSD: xform.h,v 1.8 2001/08/28 12:20:43 ben Exp $	*/
 
 /*-
@@ -27,7 +28,9 @@
 
 #include <sys/md5.h>
 #include <crypto/sha1.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha256.h>
+#include <crypto/sha2/sha384.h>
+#include <crypto/sha2/sha512.h>
 #include <opencrypto/rmd160.h>
 
 /* Declarations */

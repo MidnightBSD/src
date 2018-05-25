@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2006 Sam Leffler.  All rights reserved.
  *
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/opencrypto/crypto.c 208834 2010-06-05 16:00:53Z kib $");
 
 /*
  * Cryptographic Subsystem.

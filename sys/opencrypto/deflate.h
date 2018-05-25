@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/opencrypto/deflate.h 199895 2009-11-28 21:08:19Z bz $	*/
 /* $OpenBSD: deflate.h,v 1.3 2002/03/14 01:26:51 millert Exp $ */
 
 /*-

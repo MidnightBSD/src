@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/opencrypto/skipjack.h 139825 2005-01-07 02:29:27Z imp $	*/
 /*	$OpenBSD: skipjack.h,v 1.3 2002/03/14 01:26:51 millert Exp $	*/
 
 /*-

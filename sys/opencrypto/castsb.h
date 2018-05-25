@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/opencrypto/castsb.h 139825 2005-01-07 02:29:27Z imp $	*/
 /*      $OpenBSD: castsb.h,v 1.1 2000/02/28 23:13:04 deraadt Exp $       */
 /*-
  *	CAST-128 in C

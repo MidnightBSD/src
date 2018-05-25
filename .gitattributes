@@ -61662,6 +61662,7 @@ sys/opencrypto/cast.h -text
 sys/opencrypto/castsb.h -text
 sys/opencrypto/criov.c -text
 sys/opencrypto/crypto.c -text
+sys/opencrypto/cryptodeflate.c svneol=native#text/plain
 sys/opencrypto/cryptodev.c -text
 sys/opencrypto/cryptodev.h -text
 sys/opencrypto/cryptodev_if.m -text
