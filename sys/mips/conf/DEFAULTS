@@ -1,0 +1,11 @@
+#
+# DEFAULTS -- Default kernel configuration file for FreeBSD/mips
+#
+# $FreeBSD: stable/10/sys/mips/conf/DEFAULTS 232619 2012-03-06 20:01:25Z attilio $
+
+device		mem
+
+device		uart_ns8250
+
+options 	GEOM_PART_BSD
+options 	GEOM_PART_MBR

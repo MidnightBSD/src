@@ -1,0 +1,12 @@
+#
+# $FreeBSD: stable/10/sys/mips/conf/SWARM64 233644 2012-03-29 02:54:35Z jmallett $
+#
+
+include		"std.SWARM"
+
+ident		SWARM64
+
+machine		mips mips64
+makeoptions	ARCH_FLAGS="-mabi=64 -march=mips64"
+makeoptions	LDSCRIPT_NAME=ldscript.mips.cfe
+makeoptions	KERNLOADADDR=0xffffffff80001000
