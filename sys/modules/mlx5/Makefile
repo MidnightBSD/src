@@ -1,0 +1,38 @@
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/mlx5/Makefile 322007 2017-08-03 14:14:13Z hselasky $
+.PATH:	${.CURDIR}/../../dev/mlx5/mlx5_core ${.CURDIR}/../../ofed/include/linux
+
+KMOD=mlx5
+SRCS= \
+mlx5_alloc.c \
+mlx5_cmd.c \
+mlx5_cq.c \
+mlx5_diagnostics.c \
+mlx5_eq.c \
+mlx5_eswitch_vacl.c \
+mlx5_flow_table.c \
+mlx5_fw.c \
+mlx5_health.c \
+mlx5_mad.c \
+mlx5_main.c \
+mlx5_mcg.c \
+mlx5_mr.c \
+mlx5_pagealloc.c \
+mlx5_pd.c \
+mlx5_port.c \
+mlx5_qp.c \
+mlx5_srq.c \
+mlx5_transobj.c \
+mlx5_uar.c \
+mlx5_vport.c \
+mlx5_wq.c \
+device_if.h bus_if.h vnode_if.h pci_if.h \
+        opt_inet.h opt_inet6.h opt_random.h
+
+SRCS+= linux_compat.c linux_radix.c linux_idr.c
+
+CFLAGS+= -I${.CURDIR}/../../ofed/include
+
+.include <bsd.kmod.mk>
+
+CFLAGS+= -Wno-cast-qual -Wno-pointer-arith ${GCC_MS_EXTENSIONS}
