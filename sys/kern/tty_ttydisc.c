@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/tty_ttydisc.c 242078 2012-10-25 09:05:21Z ed $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -676,7 +677,6 @@ ttydisc_echo(struct tty *tp, char c, int quote)
 
 	return ttydisc_echo_force(tp, c, quote);
 }
-
 
 static void
 ttydisc_reprint_char(void *d, char c, int quote)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/tty_outq.c 223575 2011-06-26 18:26:20Z ed $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

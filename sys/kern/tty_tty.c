@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp.  All rights reserved.
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/tty_tty.c 216952 2011-01-04 10:59:38Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

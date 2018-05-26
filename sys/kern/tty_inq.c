@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/tty_inq.c 229272 2012-01-02 12:12:10Z ed $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -355,7 +356,7 @@ ttyinq_findchar(struct ttyinq *ti, const char *breakc, size_t maxlen,
 		return (0);
 
 	while (boff < bend) {
-		if (index(breakc, tib->tib_data[boff]) && !GETBIT(tib, boff)) {
+		if (strchr(breakc, tib->tib_data[boff]) && !GETBIT(tib, boff)) {
 			*lastc = tib->tib_data[boff];
 			return (boff - ti->ti_begin + 1);
 		}

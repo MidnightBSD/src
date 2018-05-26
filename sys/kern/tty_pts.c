@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/tty_pts.c 321020 2017-07-15 17:25:40Z dchagin $");
 
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT
@@ -123,7 +124,7 @@ ptsdev_read(struct file *fp, struct uio *uio, struct ucred *active_cred,
 		/*
 		 * Implement packet mode. When packet mode is turned on,
 		 * the first byte contains a bitmask of events that
-		 * occured (start, stop, flush, window size, etc).
+		 * occurred (start, stop, flush, window size, etc).
 		 */
 		if (psc->pts_flags & PTS_PKT && psc->pts_pkt) {
 			pkt = psc->pts_pkt;
@@ -269,6 +270,9 @@ ptsdev_ioctl(struct file *fp, u_long cmd, void *data,
 	int error = 0, sig;
 
 	switch (cmd) {
+	case FIODTYPE:
+		*(int *)data = D_TTY;
+		return (0);
 	case FIONBIO:
 		/* This device supports non-blocking operation. */
 		return (0);
@@ -599,6 +603,7 @@ static struct fileops ptsdev_ops = {
 	.fo_close	= ptsdev_close,
 	.fo_chmod	= invfo_chmod,
 	.fo_chown	= invfo_chown,
+	.fo_sendfile	= invfo_sendfile,
 	.fo_flags	= DFLAG_PASSABLE,
 };
 
@@ -835,7 +840,7 @@ sys_posix_openpt(struct thread *td, struct posix_openpt_args *uap)
 	/* Allocate the actual pseudo-TTY. */
 	error = pts_alloc(FFLAGS(uap->flags & O_ACCMODE), td, fp);
 	if (error != 0) {
-		fdclose(td->td_proc->p_fd, fp, fd, td);
+		fdclose(td, fp, fd);
 		fdrop(fp, td);
 		return (error);
 	}
