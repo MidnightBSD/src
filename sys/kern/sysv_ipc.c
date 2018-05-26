@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: sysv_ipc.c,v 1.7 1994/06/29 06:33:11 cgd Exp $	*/
 /*-
  * Copyright (c) 1994 Herb Peyerl <hpeyerl@novatel.ca>
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/sysv_ipc.c 205322 2010-03-19 11:01:51Z kib $");
 
 #include "opt_compat.h"
 #include "opt_sysvipc.h"
