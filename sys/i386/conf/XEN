@@ -1,17 +1,25 @@
 #
 # XEN -- Kernel configuration for i386 XEN DomU
 #
+# $FreeBSD: stable/10/sys/i386/conf/XEN 292213 2015-12-14 15:45:11Z hselasky $
 # $MidnightBSD$
 
 cpu		I686_CPU
 ident		XEN
 
-makeoptions	DEBUG=-gdwarf-2		# Build kernel with gdb(1) debug symbols
-makeoptions	WITHOUT_MODULES="aha ahb amd ctl cxgb dpt drm drm2 hptnr hptmv ida malo mps mwl nve rdma sound sym trm xfs"
+makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
+
+# The following drivers don't build with PAE or XEN enabled.
+makeoptions	WITHOUT_MODULES="ctl cxgb dpt drm drm2 hptmv ida rdma"
+
+# The following drivers don't work with PAE enabled.
+makeoptions	WITHOUT_MODULES+="asr ncr pst"
+
+# The following drivers don't build with XEN enabled.
+makeoptions	WITHOUT_MODULES+="mlx5 mlx5en"
 
 options 	SCHED_ULE		# ULE scheduler
 options 	PREEMPTION		# Enable kernel thread preemption
-#options 	SCHED_4BSD		 
 
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
@@ -65,7 +73,6 @@ options 	MCLSHIFT=12
 options 	SMP			# Symmetric MultiProcessor Kernel
 device		apic			# I/O APIC
 
-
 #device		atkbdc		# AT keyboard controller
 #device		atkbd		# AT keyboard
 device		psm		# PS/2 mouse
@@ -78,13 +85,15 @@ device		loop		# Network loopback
 device		random		# Entropy device
 device		ether		# Ethernet support
 device		tun		# Packet tunnel.
-device		pty		# Pseudo-ttys (telnet etc)
 device		md		# Memory "disks"
 device		gif		# IPv6 and IPv4 tunneling
 device		faith		# IPv6-to-IPv4 relaying (translation)
+
+# Wireless cards
+options 	IEEE80211_SUPPORT_MESH
+options 	AH_SUPPORT_AR5416
 
 # The `bpf' device enables the Berkeley Packet Filter.
 # Be aware of the administrative consequences of enabling this!
 # Note that 'bpf' is required for DHCP.
 device		bpf		# Berkeley packet filter
-

@@ -59225,7 +59225,6 @@ sys/i386/bios/mca_machdep.c -text
 sys/i386/bios/mca_machdep.h -text
 sys/i386/bios/smapi.c -text
 sys/i386/bios/smapi_bios.S -text
-sys/i386/conf/ALTQ -text
 sys/i386/conf/DEFAULTS -text
 sys/i386/conf/GENERIC -text
 sys/i386/conf/GENERIC.hints -text
@@ -59233,7 +59232,6 @@ sys/i386/conf/Makefile -text
 sys/i386/conf/NOTES -text
 sys/i386/conf/PAE -text
 sys/i386/conf/XEN -text
-sys/i386/conf/XENHVM -text
 sys/i386/conf/ZFS -text
 sys/i386/i386/apic_vector.s -text
 sys/i386/i386/atomic.c -text
