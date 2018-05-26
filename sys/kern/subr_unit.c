@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/kern/subr_unit.c 312325 2017-01-17 01:58:50Z ngie $
  *
  *
  * Unit number allocation functions.
@@ -68,8 +69,8 @@
  */
 
 #include <sys/types.h>
-#include <sys/queue.h>
 #include <sys/bitstring.h>
+#include <sys/_unrhdr.h>
 
 #ifdef _KERNEL
 
@@ -187,28 +188,12 @@ CTASSERT(sizeof(struct unr) == sizeof(struct unrb));
 /* Number of bits in the bitmap */
 #define NBITS	((int)sizeof(((struct unrb *)NULL)->map) * 8)
 
-/* Header element for a unr number space. */
-
-struct unrhdr {
-	TAILQ_HEAD(unrhd,unr)	head;
-	u_int			low;	/* Lowest item */
-	u_int			high;	/* Highest item */
-	u_int			busy;	/* Count of allocated items */
-	u_int			alloc;	/* Count of memory allocations */
-	u_int			first;	/* items in allocated from start */
-	u_int			last;	/* items free at end */
-	struct mtx		*mtx;
-	TAILQ_HEAD(unrfr,unr)	ppfree;	/* Items to be freed after mtx
-					   lock dropped */
-};
-
-
 #if defined(DIAGNOSTIC) || !defined(_KERNEL)
 /*
  * Consistency check function.
  *
  * Checks the internal consistency as well as we can.
- * 
+ *
  * Called at all boundaries of this API.
  */
 static void
@@ -236,7 +221,7 @@ check_unrhdr(struct unrhdr *uh, int line)
 			    ("UNR inconsistency: busy %u found %u (line %d)\n",
 			    ub->busy, w, line));
 			y += w;
-		} else if (up->ptr != NULL) 
+		} else if (up->ptr != NULL)
 			y += up->len;
 	}
 	KASSERT (y == uh->busy,
@@ -315,20 +300,12 @@ clean_unrhdr(struct unrhdr *uh)
 	mtx_unlock(uh->mtx);
 }
 
-/*
- * Allocate a new unrheader set.
- *
- * Highest and lowest valid values given as parameters.
- */
-
-struct unrhdr *
-new_unrhdr(int low, int high, struct mtx *mutex)
+void
+init_unrhdr(struct unrhdr *uh, int low, int high, struct mtx *mutex)
 {
-	struct unrhdr *uh;
 
 	KASSERT(low >= 0 && low <= high,
 	    ("UNR: use error: new_unrhdr(%d, %d)", low, high));
-	uh = Malloc(sizeof *uh);
 	if (mutex != NULL)
 		uh->mtx = mutex;
 	else
@@ -340,6 +317,21 @@ new_unrhdr(int low, int high, struct mtx *mutex)
 	uh->first = 0;
 	uh->last = 1 + (high - low);
 	check_unrhdr(uh, __LINE__);
+}
+
+/*
+ * Allocate a new unrheader set.
+ *
+ * Highest and lowest valid values given as parameters.
+ */
+
+struct unrhdr *
+new_unrhdr(int low, int high, struct mtx *mutex)
+{
+	struct unrhdr *uh;
+
+	uh = Malloc(sizeof *uh);
+	init_unrhdr(uh, low, high, mutex);
 	return (uh);
 }
 
@@ -364,7 +356,7 @@ is_bitmap(struct unrhdr *uh, struct unr *up)
 /*
  * Look for sequence of items which can be combined into a bitmap, if
  * multiple are present, take the one which saves most memory.
- * 
+ *
  * Return (1) if a sequence was found to indicate that another call
  * might be able to do more.  Return (0) if we found no suitable sequence.
  *
@@ -591,7 +583,7 @@ alloc_unrl(struct unrhdr *uh)
 	}
 
 	/*
-	 * We can always allocate from the first list element, so if we have 
+	 * We can always allocate from the first list element, so if we have
 	 * nothing on the list, we must have run out of unit numbers.
 	 */
 	if (up == NULL)
@@ -806,7 +798,7 @@ free_unrl(struct unrhdr *uh, u_int item, void **p1, void **p2)
 	/* Handle bitmap items */
 	if (is_bitmap(uh, up)) {
 		ub = up->ptr;
-		
+
 		KASSERT(bit_test(ub->map, item) != 0,
 		    ("UNR: Freeing free item %d (bitmap)\n", item));
 		bit_clear(ub->map, item);
@@ -909,7 +901,7 @@ print_unr(struct unrhdr *uh, struct unr *up)
 		for (x = 0; x < up->len; x++) {
 			if (bit_test(ub->map, x))
 				printf("#");
-			else 
+			else
 				printf(" ");
 		}
 		printf("]\n");

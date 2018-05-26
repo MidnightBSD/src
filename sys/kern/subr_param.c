@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_param.c 288690 2015-10-05 05:33:30Z kib $");
 
 #include "opt_param.h"
 #include "opt_msgbuf.h"
@@ -76,28 +77,34 @@ __FBSDID("$MidnightBSD$");
 #define NBUF 0
 #endif
 #ifndef MAXFILES
-#define	MAXFILES (maxproc * 2)
+#define	MAXFILES (40 + 32 * maxusers)
 #endif
 
 static int sysctl_kern_vm_guest(SYSCTL_HANDLER_ARGS);
 
-int	hz;
-int	tick;
+int	hz;				/* system clock's frequency */
+int	tick;				/* usec per tick (1000000 / hz) */
+struct bintime tick_bt;			/* bintime per tick (1s / hz) */
+sbintime_t tick_sbt;
 int	maxusers;			/* base tunable */
 int	maxproc;			/* maximum # of processes */
 int	maxprocperuid;			/* max # of procs per user */
 int	maxfiles;			/* sys. wide open files limit */
 int	maxfilesperproc;		/* per-proc open files limit */
 int	msgbufsize;			/* size of kernel message buffer */
-int	ncallout;			/* maximum # of timer events */
 int	nbuf;
+int	bio_transient_maxcnt;
 int	ngroups_max;			/* max # groups per process */
 int	nswbuf;
 pid_t	pid_max = PID_MAX;
 long	maxswzone;			/* max swmeta KVA storage */
 long	maxbcache;			/* max buffer cache KVA storage */
 long	maxpipekva;			/* Limit on pipe KVA */
-int 	vm_guest;			/* Running as virtual machine guest? */
+#ifdef XEN
+int	vm_guest = VM_GUEST_XEN;
+#else
+int	vm_guest = VM_GUEST_NO;		/* Running as virtual machine guest? */
+#endif
 u_long	maxtsiz;			/* max text size */
 u_long	dfldsiz;			/* initial data size limit */
 u_long	maxdsiz;			/* max data size */
@@ -107,8 +114,6 @@ u_long	sgrowsiz;			/* amount to grow stack */
 
 SYSCTL_INT(_kern, OID_AUTO, hz, CTLFLAG_RDTUN, &hz, 0,
     "Number of clock ticks per second");
-SYSCTL_INT(_kern, OID_AUTO, ncallout, CTLFLAG_RDTUN, &ncallout, 0,
-    "Number of pre-allocated timer events");
 SYSCTL_INT(_kern, OID_AUTO, nbuf, CTLFLAG_RDTUN, &nbuf, 0,
     "Number of buffers in the buffer cache");
 SYSCTL_INT(_kern, OID_AUTO, nswbuf, CTLFLAG_RDTUN, &nswbuf, 0,
@@ -119,6 +124,9 @@ SYSCTL_LONG(_kern, OID_AUTO, maxswzone, CTLFLAG_RDTUN, &maxswzone, 0,
     "Maximum memory for swap metadata");
 SYSCTL_LONG(_kern, OID_AUTO, maxbcache, CTLFLAG_RDTUN, &maxbcache, 0,
     "Maximum value of vfs.maxbufspace");
+SYSCTL_INT(_kern, OID_AUTO, bio_transient_maxcnt, CTLFLAG_RDTUN,
+    &bio_transient_maxcnt, 0,
+    "Maximum number of transient BIOs mappings");
 SYSCTL_ULONG(_kern, OID_AUTO, maxtsiz, CTLFLAG_RW | CTLFLAG_TUN, &maxtsiz, 0,
     "Maximum text size");
 SYSCTL_ULONG(_kern, OID_AUTO, dfldsiz, CTLFLAG_RW | CTLFLAG_TUN, &dfldsiz, 0,
@@ -133,7 +141,7 @@ SYSCTL_ULONG(_kern, OID_AUTO, sgrowsiz, CTLFLAG_RW | CTLFLAG_TUN, &sgrowsiz, 0,
     "Amount to grow stack on a stack fault");
 SYSCTL_PROC(_kern, OID_AUTO, vm_guest, CTLFLAG_RD | CTLTYPE_STRING,
     NULL, 0, sysctl_kern_vm_guest, "A",
-    "Virtual machine guest detected? (none|generic|xen)");
+    "Virtual machine guest detected?");
 
 /*
  * These have to be allocated somewhere; allocating
@@ -150,59 +158,11 @@ static const char *const vm_guest_sysctl_names[] = {
 	"none",
 	"generic",
 	"xen",
+	"hv",
+	"vmware",
 	NULL
 };
-
-#ifndef XEN
-static const char *const vm_bnames[] = {
-	"QEMU",				/* QEMU */
-	"Plex86",			/* Plex86 */
-	"Bochs",			/* Bochs */
-	"Xen",				/* Xen */
-	"Seabios",			/* KVM */
-	NULL
-};
-
-static const char *const vm_pnames[] = {
-	"VMware Virtual Platform",	/* VMWare VM */
-	"Virtual Machine",		/* Microsoft VirtualPC */
-	"VirtualBox",			/* Sun xVM VirtualBox */
-	"Parallels Virtual Platform",	/* Parallels VM */
-	"KVM",				/* KVM */
-	NULL
-};
-
-
-/*
- * Detect known Virtual Machine hosts by inspecting the emulated BIOS.
- */
-static enum VM_GUEST
-detect_virtual(void)
-{
-	char *sysenv;
-	int i;
-
-	sysenv = getenv("smbios.bios.vendor");
-	if (sysenv != NULL) {
-		for (i = 0; vm_bnames[i] != NULL; i++)
-			if (strcmp(sysenv, vm_bnames[i]) == 0) {
-				freeenv(sysenv);
-				return (VM_GUEST_VM);
-			}
-		freeenv(sysenv);
-	}
-	sysenv = getenv("smbios.system.product");
-	if (sysenv != NULL) {
-		for (i = 0; vm_pnames[i] != NULL; i++)
-			if (strcmp(sysenv, vm_pnames[i]) == 0) {
-				freeenv(sysenv);
-				return (VM_GUEST_VM);
-			}
-		freeenv(sysenv);
-	}
-	return (VM_GUEST_NO);
-}
-#endif
+CTASSERT(nitems(vm_guest_sysctl_names) - 1 == VM_LAST);
 
 /*
  * Boot time overrides that are not scaled against main memory
@@ -210,16 +170,14 @@ detect_virtual(void)
 void
 init_param1(void)
 {
-#ifndef XEN
-	vm_guest = detect_virtual();
-#else
-	vm_guest = VM_GUEST_XEN;
-#endif
+
 	hz = -1;
 	TUNABLE_INT_FETCH("kern.hz", &hz);
 	if (hz == -1)
 		hz = vm_guest > VM_GUEST_NO ? HZ_VM : HZ;
 	tick = 1000000 / hz;
+	tick_sbt = SBT_1S / hz;
+	tick_bt = sbttobt(tick_sbt);
 
 #ifdef VM_SWZONE_SIZE_MAX
 	maxswzone = VM_SWZONE_SIZE_MAX;
@@ -264,6 +222,8 @@ init_param1(void)
 		pid_max = PID_MAX;
 	else if (pid_max < 300)
 		pid_max = 300;
+
+	TUNABLE_INT_FETCH("vfs.unmapped_buf_allowed", &unmapped_buf_allowed);
 }
 
 /*
@@ -280,51 +240,65 @@ init_param2(long physpages)
 		maxusers = physpages / (2 * 1024 * 1024 / PAGE_SIZE);
 		if (maxusers < 32)
 			maxusers = 32;
-		if (maxusers > 384)
-			maxusers = 384;
-	}
+#ifdef VM_MAX_AUTOTUNE_MAXUSERS
+                if (maxusers > VM_MAX_AUTOTUNE_MAXUSERS)
+                        maxusers = VM_MAX_AUTOTUNE_MAXUSERS;
+#endif
+                /*
+                 * Scales down the function in which maxusers grows once
+                 * we hit 384.
+                 */
+                if (maxusers > 384)
+                        maxusers = 384 + ((maxusers - 384) / 8);
+        }
 
 	/*
 	 * The following can be overridden after boot via sysctl.  Note:
 	 * unless overriden, these macros are ultimately based on maxusers.
-	 */
-	maxproc = NPROC;
-	TUNABLE_INT_FETCH("kern.maxproc", &maxproc);
-	/*
 	 * Limit maxproc so that kmap entries cannot be exhausted by
 	 * processes.
 	 */
+	maxproc = NPROC;
+	TUNABLE_INT_FETCH("kern.maxproc", &maxproc);
 	if (maxproc > (physpages / 12))
 		maxproc = physpages / 12;
-	maxfiles = MAXFILES;
-	TUNABLE_INT_FETCH("kern.maxfiles", &maxfiles);
+	if (maxproc > pid_max)
+		maxproc = pid_max;
 	maxprocperuid = (maxproc * 9) / 10;
-	maxfilesperproc = (maxfiles * 9) / 10;
+
+	/*
+	 * The default limit for maxfiles is 1/12 of the number of
+	 * physical page but not less than 16 times maxusers.
+	 * At most it can be 1/6 the number of physical pages.
+	 */
+	maxfiles = imax(MAXFILES, physpages / 8);
+	TUNABLE_INT_FETCH("kern.maxfiles", &maxfiles);
+	if (maxfiles > (physpages / 4))
+		maxfiles = physpages / 4;
+	maxfilesperproc = (maxfiles / 10) * 9;
 	
 	/*
 	 * Cannot be changed after boot.
 	 */
 	nbuf = NBUF;
 	TUNABLE_INT_FETCH("kern.nbuf", &nbuf);
-
-	ncallout = 16 + maxproc + maxfiles;
-	TUNABLE_INT_FETCH("kern.ncallout", &ncallout);
+	TUNABLE_INT_FETCH("kern.bio_transient_maxcnt", &bio_transient_maxcnt);
 
 	/*
 	 * The default for maxpipekva is min(1/64 of the kernel address space,
 	 * max(1/64 of main memory, 512KB)).  See sys_pipe.c for more details.
 	 */
 	maxpipekva = (physpages / 64) * PAGE_SIZE;
+	TUNABLE_LONG_FETCH("kern.ipc.maxpipekva", &maxpipekva);
 	if (maxpipekva < 512 * 1024)
 		maxpipekva = 512 * 1024;
 	if (maxpipekva > (VM_MAX_KERNEL_ADDRESS - VM_MIN_KERNEL_ADDRESS) / 64)
 		maxpipekva = (VM_MAX_KERNEL_ADDRESS - VM_MIN_KERNEL_ADDRESS) /
 		    64;
-	TUNABLE_LONG_FETCH("kern.ipc.maxpipekva", &maxpipekva);
 }
 
 /*
- * Sysctl stringiying handler for kern.vm_guest.
+ * Sysctl stringifying handler for kern.vm_guest.
  */
 static int
 sysctl_kern_vm_guest(SYSCTL_HANDLER_ARGS)

@@ -1,11 +1,17 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * the Systems Programming Group of the University of Utah Computer
  * Science Department.
+ *
+ * Portions of this software were developed by Julien Ridoux at the University
+ * of Melbourne under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +54,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_rtc.c 306501 2016-09-30 13:49:50Z royger $");
+
+#include "opt_ffclock.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,6 +64,9 @@ __FBSDID("$MidnightBSD$");
 #include <sys/bus.h>
 #include <sys/clock.h>
 #include <sys/sysctl.h>
+#ifdef FFCLOCK
+#include <sys/timeffc.h>
+#endif
 #include <sys/timetc.h>
 
 #include "clock_if.h"
@@ -74,7 +85,7 @@ clock_register(device_t dev, long res)	/* res has units of microseconds */
 {
 
 	if (clock_dev != NULL) {
-		if (clock_res > res) {
+		if (clock_res <= res) {
 			if (bootverbose)
 				device_printf(dev, "not installed as "
 				    "time-of-day clock: clock %s has higher "
@@ -133,6 +144,9 @@ inittodr(time_t base)
 	ts.tv_sec += utc_offset();
 	timespecadd(&ts, &clock_adj);
 	tc_setclock(&ts);
+#ifdef FFCLOCK
+	ffclock_reset_clock(&ts);
+#endif
 	return;
 
 wrong_time:

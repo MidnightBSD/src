@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
@@ -42,9 +43,9 @@
 #include "opt_ktrace.h"
 #include "opt_kdtrace.h"
 
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_syscall.c 315949 2017-03-25 13:33:23Z badger $");
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/ktr.h>
 #ifdef KTRACE
 #include <sys/uio.h>
@@ -64,30 +65,32 @@ syscallenter(struct thread *td, struct syscall_args *sa)
 	td->td_pticks = 0;
 	if (td->td_ucred != p->p_ucred)
 		cred_update_thread(td);
-	if (p->p_flag & P_TRACED) {
-		traced = 1;
+	traced = (p->p_flag & P_TRACED) != 0;
+	if (traced || td->td_dbgflags & TDB_USERWR) {
 		PROC_LOCK(p);
 		td->td_dbgflags &= ~TDB_USERWR;
-		td->td_dbgflags |= TDB_SCE;
+		if (traced)
+			td->td_dbgflags |= TDB_SCE;
 		PROC_UNLOCK(p);
-	} else
-		traced = 0;
+	}
 	error = (p->p_sysent->sv_fetch_syscall_args)(td, sa);
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSCALL))
 		ktrsyscall(sa->code, sa->narg, sa->args);
 #endif
-
-	CTR6(KTR_SYSC,
-"syscall: td=%p pid %d %s (%#lx, %#lx, %#lx)",
-	    td, td->td_proc->p_pid, syscallname(p, sa->code),
-	    sa->args[0], sa->args[1], sa->args[2]);
+	KTR_START4(KTR_SYSC, "syscall", syscallname(p, sa->code),
+	    (uintptr_t)td, "pid:%d", td->td_proc->p_pid, "arg0:%p", sa->args[0],
+	    "arg1:%p", sa->args[1], "arg2:%p", sa->args[2]);
 
 	if (error == 0) {
+
 		STOPEVENT(p, S_SCE, sa->narg);
-		if (p->p_flag & P_TRACED && p->p_stops & S_PT_SCE) {
+		if (p->p_flag & P_TRACED) {
 			PROC_LOCK(p);
-			ptracestop((td), SIGTRAP);
+			td->td_dbg_sc_code = sa->code;
+			td->td_dbg_sc_narg = sa->narg;
+			if (p->p_ptevents & PTRACE_SCE)
+				ptracestop((td), SIGTRAP, NULL);
 			PROC_UNLOCK(p);
 		}
 		if (td->td_dbgflags & TDB_USERWR) {
@@ -96,6 +99,10 @@ syscallenter(struct thread *td, struct syscall_args *sa)
 			 * debugger modified registers or memory.
 			 */
 			error = (p->p_sysent->sv_fetch_syscall_args)(td, sa);
+			PROC_LOCK(p);
+			td->td_dbg_sc_code = sa->code;
+			td->td_dbg_sc_narg = sa->narg;
+			PROC_UNLOCK(p);
 #ifdef KTRACE
 			if (KTRPOINT(td, KTR_SYSCALL))
 				ktrsyscall(sa->code, sa->narg, sa->args);
@@ -150,10 +157,12 @@ syscallenter(struct thread *td, struct syscall_args *sa)
 			    sa->callp, NULL, (error) ? -1 : td->td_retval[0]);
 #endif
 		syscall_thread_exit(td, sa->callp);
-		CTR4(KTR_SYSC, "syscall: p=%p error=%d return %#lx %#lx",
-		    p, error, td->td_retval[0], td->td_retval[1]);
 	}
  retval:
+	KTR_STOP4(KTR_SYSC, "syscall", syscallname(p, sa->code),
+	    (uintptr_t)td, "pid:%d", td->td_proc->p_pid, "error:%d", error,
+	    "retval0:%#lx", td->td_retval[0], "retval1:%#lx",
+	    td->td_retval[1]);
 	if (traced) {
 		PROC_LOCK(p);
 		td->td_dbgflags &= ~TDB_SCE;
@@ -172,30 +181,9 @@ syscallret(struct thread *td, int error, struct syscall_args *sa __unused)
 	p = td->td_proc;
 
 	/*
-	 * Check for misbehavior.
-	 */
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    syscallname(p, sa->code));
-	KASSERT(td->td_critnest == 0,
-	    ("System call %s returning in a critical section",
-	    syscallname(p, sa->code)));
-	KASSERT(td->td_locks == 0,
-	    ("System call %s returning with %d locks held",
-	     syscallname(p, sa->code), td->td_locks));
-	KASSERT((td->td_pflags & TDP_NOFAULTING) == 0,
-	    ("System call %s returning with pagefaults disabled",
-	     syscallname(p, sa->code)));
-	KASSERT((td->td_pflags & TDP_NOSLEEPING) == 0,
-	    ("System call %s returning with sleep disabled",
-	     syscallname(p, sa->code)));
-
-	/*
 	 * Handle reschedule and other end-of-syscall issues
 	 */
 	userret(td, td->td_frame);
-
-	CTR4(KTR_SYSC, "syscall %s exit thread %p pid %d proc %s",
-	    syscallname(p, sa->code), td, td->td_proc->p_pid, td->td_name);
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSRET)) {
@@ -228,8 +216,8 @@ syscallret(struct thread *td, int error, struct syscall_args *sa __unused)
 		 */
 		if (traced &&
 		    ((td->td_dbgflags & (TDB_FORK | TDB_EXEC)) != 0 ||
-		    (p->p_stops & S_PT_SCX) != 0))
-			ptracestop(td, SIGTRAP);
+		    (p->p_ptevents & PTRACE_SCX) != 0))
+			ptracestop(td, SIGTRAP, NULL);
 		td->td_dbgflags &= ~(TDB_SCX | TDB_EXEC | TDB_FORK);
 		PROC_UNLOCK(p);
 	}
@@ -247,9 +235,28 @@ syscallret(struct thread *td, int error, struct syscall_args *sa __unused)
 		 */
 		td->td_pflags &= ~TDP_RFPPWAIT;
 		p2 = td->td_rfppwait_p;
+again:
 		PROC_LOCK(p2);
-		while (p2->p_flag & P_PPWAIT)
-			cv_wait(&p2->p_pwait, &p2->p_mtx);
+		while (p2->p_flag & P_PPWAIT) {
+			PROC_LOCK(p);
+			if (thread_suspend_check_needed()) {
+				PROC_UNLOCK(p2);
+				thread_suspend_check(0);
+				PROC_UNLOCK(p);
+				goto again;
+			} else {
+				PROC_UNLOCK(p);
+			}
+			cv_timedwait(&p2->p_pwait, &p2->p_mtx, hz);
+		}
 		PROC_UNLOCK(p2);
+
+		if (td->td_dbgflags & TDB_VFORK) {
+			PROC_LOCK(p);
+			if (p->p_ptevents & PTRACE_VFORK)
+				ptracestop(td, SIGTRAP, NULL);
+			td->td_dbgflags &= ~TDB_VFORK;
+			PROC_UNLOCK(p);
+		}
 	}
 }

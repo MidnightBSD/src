@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, John Baldwin <jhb@FreeBSD.org>.
  * All rights reserved.
@@ -10,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -33,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_smp.c 331910 2018-04-03 07:52:06Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +42,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 
@@ -55,11 +54,15 @@ __FBSDID("$MidnightBSD$");
 #ifdef SMP
 volatile cpuset_t stopped_cpus;
 volatile cpuset_t started_cpus;
+volatile cpuset_t suspended_cpus;
 cpuset_t hlt_cpus_mask;
 cpuset_t logical_cpus_mask;
 
 void (*cpustop_restartfunc)(void);
 #endif
+
+static int sysctl_kern_smp_active(SYSCTL_HANDLER_ARGS);
+
 /* This is used in modules that need to work in both SMP and UP. */
 cpuset_t all_cpus;
 
@@ -79,9 +82,8 @@ SYSCTL_INT(_kern_smp, OID_AUTO, maxid, CTLFLAG_RD|CTLFLAG_CAPRD, &mp_maxid, 0,
 SYSCTL_INT(_kern_smp, OID_AUTO, maxcpus, CTLFLAG_RD|CTLFLAG_CAPRD, &mp_maxcpus,
     0, "Max number of CPUs that the system was compiled for.");
 
-int smp_active = 0;	/* are the APs allowed to run? */
-SYSCTL_INT(_kern_smp, OID_AUTO, active, CTLFLAG_RW, &smp_active, 0,
-    "Number of Auxillary Processors (APs) that were successfully started");
+SYSCTL_PROC(_kern_smp, OID_AUTO, active, CTLFLAG_RD | CTLTYPE_INT, NULL, 0,
+    sysctl_kern_smp_active, "I", "Indicates system is running in SMP mode");
 
 int smp_disabled = 0;	/* has smp been disabled? */
 SYSCTL_INT(_kern_smp, OID_AUTO, disabled, CTLFLAG_RDTUN|CTLFLAG_CAPRD,
@@ -147,7 +149,7 @@ mp_start(void *dummy)
 	}
 
 	cpu_mp_start();
-	printf("MidnightBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
+	printf("FreeBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
 	    mp_ncpus);
 	cpu_mp_announce();
 }
@@ -207,6 +209,7 @@ generic_stop_cpus(cpuset_t map, u_int type)
 #endif
 	static volatile u_int stopping_cpu = NOCPU;
 	int i;
+	volatile cpuset_t *cpus;
 
 	KASSERT(
 #if defined(__amd64__) || defined(__i386__)
@@ -222,6 +225,18 @@ generic_stop_cpus(cpuset_t map, u_int type)
 	CTR2(KTR_SMP, "stop_cpus(%s) with %u type",
 	    cpusetobj_strprint(cpusetbuf, &map), type);
 
+#if defined(__amd64__) || defined(__i386__)
+	/*
+	 * When suspending, ensure there are are no IPIs in progress.
+	 * IPIs that have been issued, but not yet delivered (e.g.
+	 * not pending on a vCPU when running under virtualization)
+	 * will be lost, violating FreeBSD's assumption of reliable
+	 * IPI delivery.
+	 */
+	if (type == IPI_SUSPEND)
+		mtx_lock_spin(&smp_ipi_mtx);
+#endif
+
 	if (stopping_cpu != PCPU_GET(cpuid))
 		while (atomic_cmpset_int(&stopping_cpu, NOCPU,
 		    PCPU_GET(cpuid)) == 0)
@@ -231,8 +246,15 @@ generic_stop_cpus(cpuset_t map, u_int type)
 	/* send the stop IPI to all CPUs in map */
 	ipi_selected(map, type);
 
+#if defined(__amd64__) || defined(__i386__)
+	if (type == IPI_SUSPEND)
+		cpus = &suspended_cpus;
+	else
+#endif
+		cpus = &stopped_cpus;
+
 	i = 0;
-	while (!CPU_SUBSET(&stopped_cpus, &map)) {
+	while (!CPU_SUBSET(cpus, &map)) {
 		/* spin */
 		cpu_spinwait();
 		i++;
@@ -241,6 +263,11 @@ generic_stop_cpus(cpuset_t map, u_int type)
 			break;
 		}
 	}
+
+#if defined(__amd64__) || defined(__i386__)
+	if (type == IPI_SUSPEND)
+		mtx_unlock_spin(&smp_ipi_mtx);
+#endif
 
 	stopping_cpu = NOCPU;
 	return (1);
@@ -282,27 +309,64 @@ suspend_cpus(cpuset_t map)
  *   0: NA
  *   1: ok
  */
-int
-restart_cpus(cpuset_t map)
+static int
+generic_restart_cpus(cpuset_t map, u_int type)
 {
 #ifdef KTR
 	char cpusetbuf[CPUSETBUFSIZ];
 #endif
+	volatile cpuset_t *cpus;
+
+	KASSERT(
+#if defined(__amd64__) || defined(__i386__)
+	    type == IPI_STOP || type == IPI_STOP_HARD || type == IPI_SUSPEND,
+#else
+	    type == IPI_STOP || type == IPI_STOP_HARD,
+#endif
+	    ("%s: invalid stop type", __func__));
 
 	if (!smp_started)
 		return 0;
 
 	CTR1(KTR_SMP, "restart_cpus(%s)", cpusetobj_strprint(cpusetbuf, &map));
 
+#if defined(__amd64__) || defined(__i386__)
+	if (type == IPI_SUSPEND)
+		cpus = &resuming_cpus;
+	else
+#endif
+		cpus = &stopped_cpus;
+
 	/* signal other cpus to restart */
-	CPU_COPY_STORE_REL(&map, &started_cpus);
+#if defined(__amd64__) || defined(__i386__)
+	if (type == IPI_SUSPEND)
+		CPU_COPY_STORE_REL(&map, &toresume_cpus);
+	else
+#endif
+		CPU_COPY_STORE_REL(&map, &started_cpus);
 
 	/* wait for each to clear its bit */
-	while (CPU_OVERLAP(&stopped_cpus, &map))
+	while (CPU_OVERLAP(cpus, &map))
 		cpu_spinwait();
 
 	return 1;
 }
+
+int
+restart_cpus(cpuset_t map)
+{
+
+	return (generic_restart_cpus(map, IPI_STOP));
+}
+
+#if defined(__amd64__) || defined(__i386__)
+int
+resume_cpus(cpuset_t map)
+{
+
+	return (generic_restart_cpus(map, IPI_SUSPEND));
+}
+#endif
 
 /*
  * All-CPU rendezvous.  CPUs are signalled, all execute the setup function 
@@ -725,3 +789,65 @@ smp_no_rendevous_barrier(void *dummy)
 	KASSERT((!smp_started),("smp_no_rendevous called and smp is started"));
 #endif
 }
+
+/*
+ * Wait specified idle threads to switch once.  This ensures that even
+ * preempted threads have cycled through the switch function once,
+ * exiting their codepaths.  This allows us to change global pointers
+ * with no other synchronization.
+ */
+int
+quiesce_cpus(cpuset_t map, const char *wmesg, int prio)
+{
+	struct pcpu *pcpu;
+	u_int gen[MAXCPU];
+	int error;
+	int cpu;
+
+	error = 0;
+	for (cpu = 0; cpu <= mp_maxid; cpu++) {
+		if (!CPU_ISSET(cpu, &map) || CPU_ABSENT(cpu))
+			continue;
+		pcpu = pcpu_find(cpu);
+		gen[cpu] = pcpu->pc_idlethread->td_generation;
+	}
+	for (cpu = 0; cpu <= mp_maxid; cpu++) {
+		if (!CPU_ISSET(cpu, &map) || CPU_ABSENT(cpu))
+			continue;
+		pcpu = pcpu_find(cpu);
+		thread_lock(curthread);
+		sched_bind(curthread, cpu);
+		thread_unlock(curthread);
+		while (gen[cpu] == pcpu->pc_idlethread->td_generation) {
+			error = tsleep(quiesce_cpus, prio, wmesg, 1);
+			if (error != EWOULDBLOCK)
+				goto out;
+			error = 0;
+		}
+	}
+out:
+	thread_lock(curthread);
+	sched_unbind(curthread);
+	thread_unlock(curthread);
+
+	return (error);
+}
+
+int
+quiesce_all_cpus(const char *wmesg, int prio)
+{
+
+	return quiesce_cpus(all_cpus, wmesg, prio);
+}
+
+/* Extra care is taken with this sysctl because the data type is volatile */
+static int
+sysctl_kern_smp_active(SYSCTL_HANDLER_ARGS)
+{
+	int error, active;
+
+	active = smp_started;
+	error = SYSCTL_OUT(req, &active, sizeof(active));
+	return (error);
+}
+

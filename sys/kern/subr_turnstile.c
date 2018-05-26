@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_turnstile.c,v 1.4 2012-10-09 04:08:16 laffer1 Exp $
- *	and BSDI $Id: subr_turnstile.c,v 1.4 2012-10-09 04:08:16 laffer1 Exp $
+ *	from BSDI $Id: mutex_witness.c,v 1.1.2.20 2000/04/27 03:10:27 cp Exp $
+ *	and BSDI $Id: synch_machdep.c,v 2.3.2.39 2000/04/27 03:10:25 cp Exp $
  */
 
 /*
@@ -57,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_turnstile.c 296728 2016-03-12 17:17:34Z kib $");
 
 #include "opt_ddb.h"
 #include "opt_kdtrace.h"
@@ -170,8 +171,8 @@ static int	turnstile_init(void *mem, int size, int flags);
 static void	turnstile_fini(void *mem, int size);
 
 SDT_PROVIDER_DECLARE(sched);
-SDT_PROBE_DEFINE(sched, , , sleep, sleep);
-SDT_PROBE_DEFINE2(sched, , , wakeup, wakeup, "struct thread *", 
+SDT_PROBE_DEFINE(sched, , , sleep);
+SDT_PROBE_DEFINE2(sched, , , wakeup, "struct thread *", 
     "struct proc *");
 
 /*
@@ -215,10 +216,9 @@ propagate_priority(struct thread *td)
 
 		/*
 		 * If the thread is asleep, then we are probably about
-		 * to deadlock.  To make debugging this easier, just
-		 * panic and tell the user which thread misbehaved so
-		 * they can hopefully get a stack trace from the truly
-		 * misbehaving thread.
+		 * to deadlock.  To make debugging this easier, show
+		 * backtrace of misbehaving thread and panic to not
+		 * leave the kernel deadlocked.
 		 */
 		if (TD_IS_SLEEPING(td)) {
 			printf(
@@ -1028,8 +1028,7 @@ print_thread(struct thread *td, const char *prefix)
 {
 
 	db_printf("%s%p (tid %d, pid %d, \"%s\")\n", prefix, td, td->td_tid,
-	    td->td_proc->p_pid, td->td_name[0] != '\0' ? td->td_name :
-	    td->td_name);
+	    td->td_proc->p_pid, td->td_name);
 }
 
 static void
@@ -1111,8 +1110,7 @@ print_lockchain(struct thread *td, const char *prefix)
 	 */
 	while (!db_pager_quit) {
 		db_printf("%sthread %d (pid %d, %s) ", prefix, td->td_tid,
-		    td->td_proc->p_pid, td->td_name[0] != '\0' ? td->td_name :
-		    td->td_name);
+		    td->td_proc->p_pid, td->td_name);
 		switch (td->td_state) {
 		case TDS_INACTIVE:
 			db_printf("is inactive\n");
@@ -1195,8 +1193,7 @@ print_sleepchain(struct thread *td, const char *prefix)
 	 */
 	while (!db_pager_quit) {
 		db_printf("%sthread %d (pid %d, %s) ", prefix, td->td_tid,
-		    td->td_proc->p_pid, td->td_name[0] != '\0' ? td->td_name :
-		    td->td_name);
+		    td->td_proc->p_pid, td->td_name);
 		switch (td->td_state) {
 		case TDS_INACTIVE:
 			db_printf("is inactive\n");

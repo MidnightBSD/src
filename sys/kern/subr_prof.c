@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_prof.c 302234 2016-06-27 21:50:30Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -269,7 +270,7 @@ kmstartup(dummy)
 	 * without much risk of reducing the profiling times below what they
 	 * would be when profiling is not configured.  Abbreviate:
 	 *	ab = minimum time between MC1 and MC3
-	 *	a  = minumum time between MC1 and MC2
+	 *	a  = minimum time between MC1 and MC2
 	 *	b  = minimum time between MC2 and MC3
 	 *	cd = minimum time between ME1 and ME3
 	 *	c  = minimum time between ME1 and ME2
@@ -421,12 +422,12 @@ sys_profil(struct thread *td, struct profil_args *uap)
 	}
 	PROC_LOCK(p);
 	upp = &td->td_proc->p_stats->p_prof;
-	PROC_SLOCK(p);
+	PROC_PROFLOCK(p);
 	upp->pr_off = uap->offset;
 	upp->pr_scale = uap->scale;
 	upp->pr_base = uap->samples;
 	upp->pr_size = uap->size;
-	PROC_SUNLOCK(p);
+	PROC_PROFUNLOCK(p);
 	startprofclock(p);
 	PROC_UNLOCK(p);
 
@@ -466,15 +467,15 @@ addupc_intr(struct thread *td, uintfptr_t pc, u_int ticks)
 	if (ticks == 0)
 		return;
 	prof = &td->td_proc->p_stats->p_prof;
-	PROC_SLOCK(td->td_proc);
+	PROC_PROFLOCK(td->td_proc);
 	if (pc < prof->pr_off ||
 	    (i = PC_TO_INDEX(pc, prof)) >= prof->pr_size) {
-		PROC_SUNLOCK(td->td_proc);
+		PROC_PROFUNLOCK(td->td_proc);
 		return;			/* out of range; ignore */
 	}
 
 	addr = prof->pr_base + i;
-	PROC_SUNLOCK(td->td_proc);
+	PROC_PROFUNLOCK(td->td_proc);
 	if ((v = fuswintr(addr)) == -1 || suswintr(addr, v + ticks) == -1) {
 		td->td_profil_addr = pc;
 		td->td_profil_ticks = ticks;
@@ -509,15 +510,15 @@ addupc_task(struct thread *td, uintfptr_t pc, u_int ticks)
 	}
 	p->p_profthreads++;
 	prof = &p->p_stats->p_prof;
-	PROC_SLOCK(p);
+	PROC_PROFLOCK(p);
 	if (pc < prof->pr_off ||
 	    (i = PC_TO_INDEX(pc, prof)) >= prof->pr_size) {
-		PROC_SUNLOCK(p);
+		PROC_PROFUNLOCK(p);
 		goto out;
 	}
 
 	addr = prof->pr_base + i;
-	PROC_SUNLOCK(p);
+	PROC_PROFUNLOCK(p);
 	PROC_UNLOCK(p);
 	if (copyin(addr, &v, sizeof(v)) == 0) {
 		v += ticks;
@@ -533,6 +534,7 @@ out:
 	if (--p->p_profthreads == 0) {
 		if (p->p_flag & P_STOPPROF) {
 			wakeup(&p->p_profthreads);
+			p->p_flag &= ~P_STOPPROF;
 			stop = 0;
 		}
 	}

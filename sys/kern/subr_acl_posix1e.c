@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2006 Robert N. M. Watson
  * All rights reserved.
@@ -34,9 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/subr_acl_posix1e.c 232936 2012-03-13 20:27:48Z adrian $");
 
 #include <sys/param.h>
+#include <sys/kernel.h>
+#include <sys/module.h>
 #include <sys/systm.h>
 #include <sys/mount.h>
 #include <sys/priv.h>
@@ -648,3 +651,42 @@ acl_posix1e_newfilemode(mode_t cmode, struct acl *dacl)
 
 	return (mode);
 }
+
+
+static int
+acl_posix1e_modload(module_t mod, int what, void *arg)
+{
+	int ret;
+
+	ret = 0;
+
+	switch (what) {
+	case MOD_LOAD:
+	case MOD_SHUTDOWN:
+		break;
+
+	case MOD_QUIESCE:
+		/* XXX TODO */
+		ret = 0;
+		break;
+
+	case MOD_UNLOAD:
+		/* XXX TODO */
+		ret = 0;
+		break;
+	default:
+		ret = EINVAL;
+		break;
+	}
+
+	return (ret);
+}
+
+static moduledata_t acl_posix1e_mod = {
+	"acl_posix1e",
+	acl_posix1e_modload,
+	NULL
+};
+
+DECLARE_MODULE(acl_posix1e, acl_posix1e_mod, SI_SUB_VFS, SI_ORDER_FIRST);
+MODULE_VERSION(acl_posix1e, 1);

@@ -59634,6 +59634,7 @@ sys/kern/subr_smp.c -text
 sys/kern/subr_stack.c -text
 sys/kern/subr_syscall.c -text
 sys/kern/subr_taskqueue.c -text
+sys/kern/subr_terminal.c svneol=native#text/plain
 sys/kern/subr_trap.c -text
 sys/kern/subr_turnstile.c -text
 sys/kern/subr_uio.c -text
