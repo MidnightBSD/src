@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,29 +31,18 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/param.h 286878 2015-08-18 09:09:39Z kib $
  */
 
-#include <machine/_align.h>
 
 #ifndef _I386_INCLUDE_PARAM_H_
 #define	_I386_INCLUDE_PARAM_H_
 
+#include <machine/_align.h>
+
 /*
  * Machine dependent constants for Intel 386.
  */
-
-/*
- * Round p (pointer or byte index) up to a correctly-aligned value
- * for all data types (int, long, ...).   The result is unsigned int
- * and must be cast to any desired pointer type.
- */
-#ifndef _ALIGNBYTES
-#define _ALIGNBYTES	(sizeof(int) - 1)
-#endif
-#ifndef _ALIGN
-#define _ALIGN(p)	(((unsigned)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
-#endif
 
 
 #define __HAVE_ACPI
@@ -74,6 +64,10 @@
 #else
 #define MAXCPU		1
 #endif /* SMP || KLD_MODULE */
+
+#ifndef MAXMEMDOM
+#define	MAXMEMDOM	1
+#endif
 
 #define ALIGNBYTES	_ALIGNBYTES
 #define ALIGN(p)	_ALIGN(p)
@@ -97,7 +91,7 @@
 #define PAGE_MASK	(PAGE_SIZE-1)
 #define NPTEPG		(PAGE_SIZE/(sizeof (pt_entry_t)))
 
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 #define NPGPTD		4
 #define PDRSHIFT	21		/* LOG2(NBPDR) */
 #define NPGPTD_SHIFT	9
@@ -121,6 +115,11 @@
 #define KSTACK_PAGES 2		/* Includes pcb! */
 #endif
 #define KSTACK_GUARD_PAGES 1	/* pages of kstack guard; 0 disables */
+#if KSTACK_PAGES < 4
+#define	TD0_KSTACK_PAGES 4
+#else
+#define	TD0_KSTACK_PAGES KSTACK_PAGES
+#endif
 
 /*
  * Ceiling on amount of swblock kva space, can be changed via
@@ -163,5 +162,8 @@
 #define i386_ptob(x)		((x) << PAGE_SHIFT)
 
 #define	pgtok(x)		((x) * (PAGE_SIZE / 1024))
+
+#define INKERNEL(va)	(((vm_offset_t)(va)) >= VM_MAXUSER_ADDRESS && \
+    ((vm_offset_t)(va)) < VM_MAX_KERNEL_ADDRESS)
 
 #endif /* !_I386_INCLUDE_PARAM_H_ */

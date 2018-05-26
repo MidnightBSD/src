@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1990 Andrew Moore, Talke Studio
@@ -32,13 +33,15 @@
  * SUCH DAMAGE.
  *
  * 	from: @(#) ieeefp.h 	1.0 (Berkeley) 9/23/93
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
  */
 
 #ifndef _MACHINE_IEEEFP_H_
 #define _MACHINE_IEEEFP_H_
 
 /*
+ * Deprecated historical FPU control interface
+ *
  * IEEE floating point type, constant and function definitions.
  * XXX: FP*FLD and FP*OFF are undocumented pollution.
  */
@@ -252,8 +255,5 @@ fpresetsticky(fp_except_t _m)
 }
 
 #endif /* __GNUCLIKE_ASM */
-
-/* Suppress prototypes in the MI header. */
-#define	_IEEEFP_INLINED_	1
 
 #endif /* !_MACHINE_IEEEFP_H_ */

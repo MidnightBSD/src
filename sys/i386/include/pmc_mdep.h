@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005,2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/pmc_mdep.h 286305 2015-08-05 07:21:44Z kib $
  */
 
 #ifndef _MACHINE_PMC_MDEP_H
@@ -138,8 +139,7 @@ struct pmc_mdep;
 
 #define	PMC_IN_KERNEL_STACK(S,START,END)		\
 	((S) >= (START) && (S) < (END))
-#define	PMC_IN_KERNEL(va) (((va) >= USRSTACK) &&	\
-	((va) < VM_MAX_KERNEL_ADDRESS))
+#define	PMC_IN_KERNEL(va)	INKERNEL(va)
 
 #define	PMC_IN_USERSPACE(va) ((va) <= VM_MAXUSER_ADDRESS)
 

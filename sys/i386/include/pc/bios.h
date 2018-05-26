@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/pc/bios.h 272913 2014-10-10 20:47:23Z jhb $
  */
 
 #ifndef _MACHINE_PC_BIOS_H_
@@ -219,6 +220,14 @@ struct bios_smap {
     u_int64_t	base;
     u_int64_t	length;
     u_int32_t	type;
+} __packed;
+
+/* Structure extended to include extended attribute field in ACPI 3.0. */
+struct bios_smap_xattr {
+    u_int64_t	base;
+    u_int64_t	length;
+    u_int32_t	type;
+    u_int32_t	xattr;
 } __packed;
 
 /*

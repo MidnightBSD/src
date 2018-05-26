@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/vmparam.h 282065 2015-04-27 08:02:12Z kib $
  */
 
 
@@ -64,9 +65,15 @@
 #endif
 
 /*
- * The physical address space is densely populated.
+ * Choose between DENSE and SPARSE based on whether lower execution time or
+ * lower kernel address space consumption is desired.  Under PAE, kernel
+ * address space is often in short supply.
  */
+#ifdef PAE
+#define	VM_PHYSSEG_SPARSE
+#else
 #define	VM_PHYSSEG_DENSE
+#endif
 
 /*
  * The number of PHYSSEG entries must be one greater than the number
@@ -107,13 +114,6 @@
 #endif
 
 /*
- * Only one memory domain.
- */
-#ifndef VM_NDOMAIN
-#define	VM_NDOMAIN		1
-#endif
-
-/*
  * Enable superpage reservations: 1 level.
  */
 #ifndef	VM_NRESERVLEVEL
@@ -121,11 +121,11 @@
 #endif
 
 /*
- * Level 0 reservations consist of 512 pages under PAE and 1024 pages
- * otherwise.
+ * Level 0 reservations consist of 512 pages when PAE pagetables are
+ * used, and 1024 pages otherwise.
  */
 #ifndef	VM_LEVEL_0_ORDER
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 #define	VM_LEVEL_0_ORDER	9
 #else
 #define	VM_LEVEL_0_ORDER	10
@@ -171,24 +171,23 @@
 #define VM_MAX_ADDRESS		VADDR(PTDPTDI, PTDPTDI)
 #define VM_MIN_ADDRESS		((vm_offset_t)0)
 
-/* virtual sizes (bytes) for various kernel submaps */
-#ifndef VM_KMEM_SIZE
-#define VM_KMEM_SIZE		(12 * 1024 * 1024)
-#endif
-
 /*
- * How many physical pages per KVA page allocated.
- * min(max(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE),
- *     VM_KMEM_SIZE_MIN), VM_KMEM_SIZE_MAX)
- * is the total KVA space allocated for kmem_map.
+ * How many physical pages per kmem arena virtual page.
  */
 #ifndef VM_KMEM_SIZE_SCALE
 #define	VM_KMEM_SIZE_SCALE	(3)
 #endif
 
 /*
- * Ceiling on the amount of kmem_map KVA space: 40% of the entire KVA space
- * rounded to the nearest multiple of the superpage size.
+ * Optional floor (in bytes) on the size of the kmem arena.
+ */
+#ifndef VM_KMEM_SIZE_MIN
+#define	VM_KMEM_SIZE_MIN	(12 * 1024 * 1024)
+#endif
+
+/*
+ * Optional ceiling (in bytes) on the size of the kmem arena: 40% of the
+ * kernel map rounded to the nearest multiple of the superpage size.
  */
 #ifndef VM_KMEM_SIZE_MAX
 #define	VM_KMEM_SIZE_MAX	(((((VM_MAX_KERNEL_ADDRESS - \
@@ -201,5 +200,9 @@
 #endif
 
 #define	ZERO_REGION_SIZE	(64 * 1024)	/* 64KB */
+
+#ifndef VM_MAX_AUTOTUNE_MAXUSERS
+#define VM_MAX_AUTOTUNE_MAXUSERS 384
+#endif
 
 #endif /* _MACHINE_VMPARAM_H_ */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/cpufunc.h 313150 2017-02-03 12:20:44Z kib $
  */
 
 /*
@@ -94,6 +95,13 @@ clflush(u_long addr)
 {
 
 	__asm __volatile("clflush %0" : : "m" (*(char *)addr));
+}
+
+static __inline void
+clflushopt(u_long addr)
+{
+
+	__asm __volatile(".byte 0x66;clflush %0" : : "m" (*(char *)addr));
 }
 
 static __inline void
@@ -168,6 +176,13 @@ mfence(void)
 	__asm __volatile("mfence" : : : "memory");
 }
 
+static __inline void
+sfence(void)
+{
+
+	__asm __volatile("sfence" : : : "memory");
+}
+
 #ifdef _KERNEL
 
 #define	HAVE_INLINE_FFS
@@ -184,12 +199,28 @@ ffs(int mask)
 	 return (mask == 0 ? mask : (int)bsfl((u_int)mask) + 1);
 }
 
+#define	HAVE_INLINE_FFSL
+
+static __inline int
+ffsl(long mask)
+{
+	return (ffs((int)mask));
+}
+
 #define	HAVE_INLINE_FLS
 
 static __inline int
 fls(int mask)
 {
 	return (mask == 0 ? mask : (int)bsrl((u_int)mask) + 1);
+}
+
+#define	HAVE_INLINE_FLSL
+
+static __inline int
+flsl(long mask)
+{
+	return (fls((int)mask));
 }
 
 #endif /* _KERNEL */
@@ -439,6 +470,25 @@ rcr4(void)
 
 	__asm __volatile("movl %%cr4,%0" : "=r" (data));
 	return (data);
+}
+
+static __inline uint64_t
+rxcr(u_int reg)
+{
+	u_int low, high;
+
+	__asm __volatile("xgetbv" : "=a" (low), "=d" (high) : "c" (reg));
+	return (low | ((uint64_t)high << 32));
+}
+
+static __inline void
+load_xcr(u_int reg, uint64_t val)
+{
+	u_int low, high;
+
+	low = val;
+	high = val >> 32;
+	__asm __volatile("xsetbv" : : "c" (reg), "a" (low), "d" (high));
 }
 
 /*

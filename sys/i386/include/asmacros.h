@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/asmacros.h 290668 2015-11-11 01:32:35Z jhb $
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -146,9 +147,12 @@
 	pushl	$0 ;		/* dummy error code */			\
 	pushl	$0 ;		/* dummy trap type */			\
 	pushal ;		/* 8 ints */				\
-	pushl	%ds ;		/* save data and extra segments ... */	\
-	pushl	%es ;							\
-	pushl	%fs
+	pushl	$0 ;		/* save data and extra segments ... */	\
+	movw	%ds,(%esp) ;						\
+	pushl	$0 ;							\
+	movw	%es,(%esp) ;						\
+	pushl	$0 ;							\
+	movw	%fs,(%esp)
 	
 #define	POP_FRAME							\
 	popl	%fs ;							\

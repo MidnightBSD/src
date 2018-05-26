@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Simple prototyle Xen Store Daemon providing simple tree-like database.
  * Copyright (C) 2005 Rusty Russell IBM Corporation

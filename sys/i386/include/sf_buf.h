@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2005 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/sf_buf.h 255318 2013-09-06 17:44:13Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -44,6 +45,9 @@ struct sf_buf {
 	cpuset_t	cpumask;	/* cpus on which mapping is valid */
 #endif
 };
+
+struct sf_buf * sf_buf_alloc(struct vm_page *m, int flags);
+void sf_buf_free(struct sf_buf *sf);
 
 static __inline vm_offset_t
 sf_buf_kva(struct sf_buf *sf)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -23,7 +24,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/stack.h 286305 2015-08-05 07:21:44Z kib $
  */
 
 #ifndef _MACHINE_STACK_H_
@@ -32,8 +33,6 @@
 /*
  * Stack trace.
  */
-#define INKERNEL(va)	(((vm_offset_t)(va)) >= USRSTACK && \
-	    ((vm_offset_t)(va)) < VM_MAX_KERNEL_ADDRESS)
 
 struct i386_frame {
 	struct i386_frame	*f_frame;

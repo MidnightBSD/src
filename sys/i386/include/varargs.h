@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1990, 1993
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)varargs.h	8.2 (Berkeley) 3/22/94
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/varargs.h 143063 2005-03-02 21:33:29Z joerg $
  */
 
 #ifndef _MACHINE_VARARGS_H_

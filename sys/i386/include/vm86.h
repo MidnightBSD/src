@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Jonathan Lemon
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/vm86.h 258559 2013-11-25 15:58:48Z emaste $
  */
 
 #ifndef _MACHINE_VM86_H_
@@ -113,7 +114,7 @@ struct vm86context {
 	} pmap[VM86_PMAPSIZE];
 };
 
-#define VM_USERCHANGE   (PSL_USERCHANGE | PSL_RF)
+#define VM_USERCHANGE   (PSL_USERCHANGE)
 #define VME_USERCHANGE  (VM_USERCHANGE | PSL_VIP | PSL_VIF)
 
 struct vm86_kernel {

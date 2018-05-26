@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/i386/include/resource.h 280970 2015-04-01 21:48:54Z jhb $ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -40,5 +41,8 @@
 #define	SYS_RES_DRQ	2	/* isa dma lines */
 #define	SYS_RES_MEMORY	3	/* i/o memory */
 #define	SYS_RES_IOPORT	4	/* i/o ports */
+#ifdef NEW_PCIB
+#define	PCI_RES_BUS	5	/* PCI bus numbers */
+#endif
 
 #endif /* !_MACHINE_RESOURCE_H_ */

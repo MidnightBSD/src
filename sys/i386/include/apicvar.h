@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -10,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -26,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/apicvar.h 302165 2016-06-24 01:20:33Z sephe $
  */
 
 #ifndef _MACHINE_APICVAR_H_
@@ -103,36 +101,6 @@
  */ 
 
 /* Interrupts for local APIC LVT entries other than the timer. */
-#ifdef XEN
-/* These are the Xen i386 APIC definitions */
-#define	APIC_LOCAL_INTS	240
-#define	APIC_ERROR_INT	APIC_LOCAL_INTS
-#define	APIC_THERMAL_INT (APIC_LOCAL_INTS + 1)
-#define	APIC_CMC_INT	(APIC_LOCAL_INTS + 2)
-#define	APIC_IPI_INTS	(APIC_LOCAL_INTS + 3)
-
-#define	IPI_RENDEZVOUS		(APIC_IPI_INTS)	/* Inter-CPU rendezvous. */
-#define	IPI_INVLTLB		(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs */
-#define	IPI_INVLPG		(APIC_IPI_INTS + 2)
-#define	IPI_INVLRNG		(APIC_IPI_INTS + 3)
-#define	IPI_INVLCACHE		(APIC_IPI_INTS + 4)
-#define	IPI_LAZYPMAP		(APIC_IPI_INTS + 5)	/* Lazy pmap release. */
-/* Vector to handle bitmap based IPIs */
-#define	IPI_BITMAP_VECTOR	(APIC_IPI_INTS + 6)
-
-/* IPIs handled by IPI_BITMAPED_VECTOR  (XXX ups is there a better place?) */
-#define	IPI_AST		0 	/* Generate software trap. */
-#define IPI_PREEMPT     1
-#define IPI_HARDCLOCK   2 
-#define IPI_BITMAP_LAST IPI_HARDCLOCK
-#define IPI_IS_BITMAPED(x) ((x) <= IPI_BITMAP_LAST)
-
-#define	IPI_STOP	(APIC_IPI_INTS + 7)	/* Stop CPU until restarted. */
-#define	IPI_SUSPEND	(APIC_IPI_INTS + 8)	/* Suspend CPU until restarted. */
-#define	IPI_STOP_HARD	(APIC_IPI_INTS + 9)	/* Stop CPU with a NMI. */
-
-#else /* XEN */
-/* These are the normal i386 APIC definitions */
 #define	APIC_LOCAL_INTS	240
 #define	APIC_ERROR_INT	APIC_LOCAL_INTS
 #define	APIC_THERMAL_INT (APIC_LOCAL_INTS + 1)
@@ -158,22 +126,12 @@
 #define	IPI_STOP	(APIC_IPI_INTS + 7)	/* Stop CPU until restarted. */
 #define	IPI_SUSPEND	(APIC_IPI_INTS + 8)	/* Suspend CPU until restarted. */
 #define	IPI_STOP_HARD	(APIC_IPI_INTS + 9)	/* Stop CPU with a NMI. */
-#endif /* XEN */
 
 /*
  * The spurious interrupt can share the priority class with the IPIs since
  * it is not a normal interrupt. (Does not use the APIC's interrupt fifo)
  */
 #define	APIC_SPURIOUS_INT 255
-
-#define	LVT_LINT0	0
-#define	LVT_LINT1	1
-#define	LVT_TIMER	2
-#define	LVT_ERROR	3
-#define	LVT_PMC		4
-#define	LVT_THERMAL	5
-#define	LVT_CMCI	6
-#define	LVT_MAX		LVT_CMCI
 
 #ifndef LOCORE
 
@@ -257,6 +215,7 @@ int	lapic_set_lvt_triggermode(u_int apic_id, u_int lvt,
 	    enum intr_trigger trigger);
 void	lapic_set_tpr(u_int vector);
 void	lapic_setup(int boot);
+void	xen_intr_handle_upcall(struct trapframe *frame);
 
 #endif /* !LOCORE */
 #endif /* _MACHINE_APICVAR_H_ */

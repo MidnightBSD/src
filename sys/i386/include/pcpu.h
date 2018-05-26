@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) Peter Wemm
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/pcpu.h 256073 2013-10-05 23:11:01Z gibbs $
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -44,15 +45,6 @@
  * other processors"
  */
 
-#if defined(XEN) || defined(XENHVM)
-#ifndef NR_VIRQS
-#define	NR_VIRQS	24
-#endif
-#ifndef NR_IPIS
-#define	NR_IPIS		2
-#endif
-#endif
-
 #if defined(XEN)
 
 /* These are peridically updated in shared_info, and then copied here. */
@@ -71,21 +63,13 @@ struct shadow_time_info {
 	vm_paddr_t *pc_pdir_shadow;					\
 	uint64_t pc_processed_system_time;				\
 	struct shadow_time_info pc_shadow_time;				\
-	int	pc_resched_irq;						\
-	int	pc_callfunc_irq;					\
-	int	pc_virq_to_irq[NR_VIRQS];				\
-	int	pc_ipi_to_irq[NR_IPIS]	
+	char	__pad[185]
 
-#elif defined(XENHVM)
+#else /* !XEN */
 
-#define	PCPU_XEN_FIELDS							\
+#define PCPU_XEN_FIELDS							\
 	;								\
-	unsigned int pc_last_processed_l1i;				\
-	unsigned int pc_last_processed_l2i
-
-#else /* !XEN && !XENHVM */
-
-#define PCPU_XEN_FIELDS
+	char	__pad[233]
 
 #endif
 
@@ -101,7 +85,8 @@ struct shadow_time_info {
 	u_int   pc_acpi_id;		/* ACPI CPU id */		\
 	u_int	pc_apic_id;						\
 	int	pc_private_tss;		/* Flag indicating private tss*/\
-	u_int	pc_cmci_mask		/* MCx banks for CMCI */	\
+	u_int	pc_cmci_mask;		/* MCx banks for CMCI */	\
+	u_int	pc_vcpu_id		/* Xen vCPU ID */		\
 	PCPU_XEN_FIELDS
 
 #ifdef _KERNEL

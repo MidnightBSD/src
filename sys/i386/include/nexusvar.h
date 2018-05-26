@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -26,7 +27,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/nexusvar.h 177157 2008-03-13 20:39:04Z jhb $
  */
 
 #ifndef _MACHINE_NEXUSVAR_H_

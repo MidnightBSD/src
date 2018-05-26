@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  * features.h
  *
@@ -5,7 +6,7 @@
  *
  * Copyright (c) 2006, Ian Campbell
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/xen/features.h 181638 2008-08-12 19:41:11Z kmacy $
  */
 
 #ifndef __ASM_XEN_FEATURES_H__

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1994 by Rodney W. Grimes, Milwaukie, Oregon  97222
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/bootinfo.h 235391 2012-05-13 09:25:39Z avg $
  */
 
 #ifndef	_MACHINE_BOOTINFO_H_

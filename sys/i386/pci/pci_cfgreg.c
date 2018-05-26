@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/pci/pci_cfgreg.c 261455 2014-02-04 03:36:42Z eadler $");
 
 #include "opt_xbox.h"
 
@@ -306,7 +307,7 @@ pci_cfgenable(unsigned bus, unsigned slot, unsigned func, int reg, int bytes)
 		switch (cfgmech) {
 		case CFGMECH_PCIE:
 		case CFGMECH_1:
-			outl(CONF1_ADDR_PORT, (1 << 31)
+			outl(CONF1_ADDR_PORT, (1U << 31)
 			    | (bus << 16) | (slot << 11) 
 			    | (func << 8) | (reg & ~0x03));
 			dataport = CONF1_DATA_PORT + (reg & 0x03);
@@ -562,7 +563,7 @@ pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus)
 		if (pcie_array == NULL)
 			return (0);
 
-		va = kmem_alloc_nofault(kernel_map, PCIE_CACHE * PAGE_SIZE);
+		va = kva_alloc(PCIE_CACHE * PAGE_SIZE);
 		if (va == 0) {
 			free(pcie_array, M_DEVBUF);
 			return (0);
@@ -610,25 +611,29 @@ pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus)
 }
 #endif /* !XEN */
 
-#define PCIE_PADDR(bar, reg, bus, slot, func)	\
-	((bar)				|	\
-	(((bus) & 0xff) << 20)		|	\
+#define PCIE_PADDR(base, reg, bus, slot, func)	\
+	((base)				+	\
+	((((bus) & 0xff) << 20)		|	\
 	(((slot) & 0x1f) << 15)		|	\
 	(((func) & 0x7) << 12)		|	\
-	((reg) & 0xfff))
+	((reg) & 0xfff)))
 
-/*
- * Find an element in the cache that matches the physical page desired, or
- * create a new mapping from the least recently used element.
- * A very simple LRU algorithm is used here, does it need to be more
- * efficient?
- */
-static __inline struct pcie_cfg_elem *
-pciereg_findelem(vm_paddr_t papage)
+static __inline vm_offset_t
+pciereg_findaddr(int bus, unsigned slot, unsigned func, unsigned reg)
 {
 	struct pcie_cfg_list *pcielist;
 	struct pcie_cfg_elem *elem;
+	vm_paddr_t pa, papage;
 
+	pa = PCIE_PADDR(pcie_base, reg, bus, slot, func);
+	papage = pa & ~PAGE_MASK;
+
+	/*
+	 * Find an element in the cache that matches the physical page desired,
+	 * or create a new mapping from the least recently used element.
+	 * A very simple LRU algorithm is used here, does it need to be more
+	 * efficient?
+	 */
 	pcielist = &pcie_list[PCPU_GET(cpuid)];
 	TAILQ_FOREACH(elem, pcielist, elem) {
 		if (elem->papage == papage)
@@ -649,7 +654,7 @@ pciereg_findelem(vm_paddr_t papage)
 		TAILQ_REMOVE(pcielist, elem, elem);
 		TAILQ_INSERT_HEAD(pcielist, elem, elem);
 	}
-	return (elem);
+	return (elem->vapage | (pa & PAGE_MASK));
 }
 
 /*
@@ -664,9 +669,7 @@ static int
 pciereg_cfgread(int bus, unsigned slot, unsigned func, unsigned reg,
     unsigned bytes)
 {
-	struct pcie_cfg_elem *elem;
-	volatile vm_offset_t va;
-	vm_paddr_t pa, papage;
+	vm_offset_t va;
 	int data = -1;
 
 	if (bus < pcie_minbus || bus > pcie_maxbus || slot > PCI_SLOTMAX ||
@@ -674,23 +677,20 @@ pciereg_cfgread(int bus, unsigned slot, unsigned func, unsigned reg,
 		return (-1);
 
 	critical_enter();
-	pa = PCIE_PADDR(pcie_base, reg, bus, slot, func);
-	papage = pa & ~PAGE_MASK;
-	elem = pciereg_findelem(papage);
-	va = elem->vapage | (pa & PAGE_MASK);
+	va = pciereg_findaddr(bus, slot, func, reg);
 
 	switch (bytes) {
 	case 4:
-		__asm __volatile("mov %1, %%eax" : "=a" (data)
-		    : "m" (*(uint32_t *)va));
+		__asm("movl %1, %0" : "=a" (data)
+		    : "m" (*(volatile uint32_t *)va));
 		break;
 	case 2:
-		__asm __volatile("movzwl %1, %%eax" : "=a" (data)
-		    : "m" (*(uint16_t *)va));
+		__asm("movzwl %1, %0" : "=a" (data)
+		    : "m" (*(volatile uint16_t *)va));
 		break;
 	case 1:
-		__asm __volatile("movzbl %1, %%eax" : "=a" (data)
-		    : "m" (*(uint8_t *)va));
+		__asm("movzbl %1, %0" : "=a" (data)
+		    : "m" (*(volatile uint8_t *)va));
 		break;
 	}
 
@@ -702,32 +702,27 @@ static void
 pciereg_cfgwrite(int bus, unsigned slot, unsigned func, unsigned reg, int data,
     unsigned bytes)
 {
-	struct pcie_cfg_elem *elem;
-	volatile vm_offset_t va;
-	vm_paddr_t pa, papage;
+	vm_offset_t va;
 
 	if (bus < pcie_minbus || bus > pcie_maxbus || slot > PCI_SLOTMAX ||
 	    func > PCI_FUNCMAX || reg > PCIE_REGMAX)
 		return;
 
 	critical_enter();
-	pa = PCIE_PADDR(pcie_base, reg, bus, slot, func);
-	papage = pa & ~PAGE_MASK;
-	elem = pciereg_findelem(papage);
-	va = elem->vapage | (pa & PAGE_MASK);
+	va = pciereg_findaddr(bus, slot, func, reg);
 
 	switch (bytes) {
 	case 4:
-		__asm __volatile("mov %%eax, %0" : "=m" (*(uint32_t *)va)
+		__asm("movl %1, %0" : "=m" (*(volatile uint32_t *)va)
 		    : "a" (data));
 		break;
 	case 2:
-		__asm __volatile("mov %%ax, %0" : "=m" (*(uint16_t *)va)
-		    : "a" (data));
+		__asm("movw %1, %0" : "=m" (*(volatile uint16_t *)va)
+		    : "a" ((uint16_t)data));
 		break;
 	case 1:
-		__asm __volatile("mov %%al, %0" : "=m" (*(uint8_t *)va)
-		    : "a" (data));
+		__asm("movb %1, %0" : "=m" (*(volatile uint8_t *)va)
+		    : "a" ((uint8_t)data));
 		break;
 	}
 

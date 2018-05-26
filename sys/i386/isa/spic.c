@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000  Nick Sayer
  * All rights reserved.
@@ -34,14 +35,14 @@
  * and mouse button out of the jog dial. I suspect that this device will
  * end up having to support at least 2 different minor devices: One to be
  * the jog wheel device for moused to camp out on and the other to perform
- * all of the other miscelaneous functions of this device. But for now,
+ * all of the other miscellaneous functions of this device. But for now,
  * the jog wheel is all you get.
  *
  * At the moment, the data sent back by the device is rather primitive.
  * It sends a single character per event:
  * u = up, d = down -- that's the jog button
  * l = left, r = right -- that's the dial.
- * "left" and "right" are rather caprecious. They actually represent
+ * "left" and "right" are rather capricious. They actually represent
  * ccw and cw, respectively
  *
  * What documentation exists is thanks to Andrew Tridge, and his page at
@@ -50,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/isa/spic.c 320923 2017-07-12 22:16:54Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -346,6 +347,8 @@ spic_attach(device_t dev)
 
 	/* There can be only one */
 	make_dev(&spic_cdevsw, 0, 0, 0, 0600, "jogdial");
+	device_printf(dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 
 	return 0;
 }

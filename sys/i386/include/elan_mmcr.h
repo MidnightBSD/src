@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 John Birrell
  * All rights reserved.
@@ -32,7 +33,7 @@
  * bytes. Ignore fields with the 'pad' prefix - they are only present for
  * alignment purposes.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/elan_mmcr.h 139788 2005-01-06 22:05:28Z imp $
  */
 
 #ifndef _MACHINE_ELAN_MMCR_H_

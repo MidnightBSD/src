@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, 2005 Kip Macy
  * All rights reserved.
@@ -23,16 +24,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/xen/xenfunc.h 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #ifndef _XEN_XENFUNC_H_
 #define _XEN_XENFUNC_H_
 
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <xen/hypervisor.h>
+
+#include <vm/pmap.h>
+
 #include <machine/xen/xenpmap.h>
 #include <machine/segments.h>
+
 #include <sys/pcpu.h>
 #define BKPT __asm__("int3");
 #define XPQ_CALL_DEPTH 5

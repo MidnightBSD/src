@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/include/asm.h 254463 2013-08-17 19:24:58Z jilles $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -49,11 +50,12 @@
 	popl	%ebx
 #define	PIC_PLT(x)	x@PLT
 #define	PIC_GOT(x)	x@GOT(%ebx)
+#define	PIC_GOTOFF(x)	x@GOTOFF(%ebx)
 #else
 #define	PIC_PROLOGUE
 #define	PIC_EPILOGUE
 #define	PIC_PLT(x)	x
-#define	PIC_GOT(x)	x
+#define	PIC_GOTOFF(x)	x
 #endif
 
 /*
@@ -88,6 +90,20 @@
 #define	ALTENTRY(x)	_ENTRY(x)
 #define	ENTRY(x)	_ENTRY(x)
 #endif
+
+/*
+ * WEAK_ALIAS: create a weak alias.
+ */
+#define	WEAK_ALIAS(alias,sym)						\
+	.weak alias;							\
+	alias = sym
+
+/*
+ * STRONG_ALIAS: create a strong alias.
+ */
+#define	STRONG_ALIAS(alias,sym)						\
+	.globl alias;							\
+	alias = sym
 
 #define RCSID(x)	.text; .asciz x
 
