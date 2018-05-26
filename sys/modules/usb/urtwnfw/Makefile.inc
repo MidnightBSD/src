@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+# $MidnightBSD$ 
 # $FreeBSD: stable/10/sys/modules/usb/urtwnfw/Makefile.inc 253139 2013-07-10 08:21:09Z hiren $
 #
 # Common rules for building firmware.  Note this gets auto-included

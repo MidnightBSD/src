@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/*# $MidnightBSD$ */
 # $FreeBSD: stable/10/sys/modules/iwnfw/Makefile.inc 208591 2010-05-27 12:54:42Z rpaulo $
 #
 # Common rules for building firmware.  Note this gets auto-included

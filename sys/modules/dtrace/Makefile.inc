@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+## $MidnightBSD$ 
 # $FreeBSD: stable/10/sys/modules/dtrace/Makefile.inc 282748 2015-05-11 07:54:39Z avg $
 
 IGNORE_PRAGMA=	1
