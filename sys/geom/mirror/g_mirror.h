@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/mirror/g_mirror.h,v 1.24.2.1 2009/12/08 23:34:34 mav Exp $
+ * $FreeBSD: stable/10/sys/geom/mirror/g_mirror.h 324589 2017-10-13 09:14:05Z avg $
  */
 
 #ifndef	_G_MIRROR_H_
@@ -160,14 +161,17 @@ struct g_mirror_event {
 #define	G_MIRROR_DEVICE_FLAG_WAIT	0x0200000000000000ULL
 #define	G_MIRROR_DEVICE_FLAG_DESTROYING	0x0400000000000000ULL
 #define	G_MIRROR_DEVICE_FLAG_TASTING	0x0800000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_WIPE	0x1000000000000000ULL
 
 #define	G_MIRROR_DEVICE_STATE_STARTING		0
 #define	G_MIRROR_DEVICE_STATE_RUNNING		1
 
 /* Bump syncid on first write. */
-#define	G_MIRROR_BUMP_SYNCID	0x1
+#define	G_MIRROR_BUMP_SYNCID		0x1
 /* Bump genid immediately. */
-#define	G_MIRROR_BUMP_GENID	0x2
+#define	G_MIRROR_BUMP_GENID		0x2
+/* Bump syncid immediately. */
+#define	G_MIRROR_BUMP_SYNCID_NOW	0x4
 struct g_mirror_softc {
 	u_int		sc_state;	/* Device state. */
 	uint32_t	sc_slice;	/* Slice size. */
@@ -178,6 +182,7 @@ struct g_mirror_softc {
 
 	struct g_geom	*sc_geom;
 	struct g_provider *sc_provider;
+	int		sc_provider_open;
 
 	uint32_t	sc_id;		/* Mirror unique ID. */
 
@@ -205,6 +210,7 @@ struct g_mirror_softc {
 	int		sc_idle;	/* DIRTY flags removed. */
 	time_t		sc_last_write;
 	u_int		sc_writes;
+	u_int		sc_refcnt;	/* Number of softc references */
 
 	TAILQ_HEAD(, g_mirror_event) sc_events;
 	struct mtx	sc_events_mtx;
@@ -212,6 +218,8 @@ struct g_mirror_softc {
 	struct callout	sc_callout;
 
 	struct root_hold_token *sc_rootmount;
+
+	struct mtx	 sc_done_mtx;
 };
 #define	sc_name	sc_geom->name
 
