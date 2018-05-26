@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2004 Poul-Henning Kamp
  * Copyright (c) 1999 Michael Smith
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/vfs_mount.c 332754 2018-04-19 05:52:47Z avg $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -77,6 +78,10 @@ static void	free_mntarg(struct mntarg *ma);
 static int	usermount = 0;
 SYSCTL_INT(_vfs, OID_AUTO, usermount, CTLFLAG_RW, &usermount, 0,
     "Unprivileged users may mount and unmount file systems");
+
+static int	default_autoro = false;
+SYSCTL_INT(_vfs, OID_AUTO, default_autoro, CTLFLAG_RW, &default_autoro, 0,
+    "Retry failed r/w mount as r/o if no explicit ro/rw option is specified");
 
 MALLOC_DEFINE(M_MOUNT, "mount", "vfs mount structure");
 static uma_zone_t mount_zone;
@@ -232,7 +237,7 @@ vfs_equalopts(const char *opt1, const char *opt2)
 /*
  * If a mount option is specified several times,
  * (with or without the "no" prefix) only keep
- * the last occurence of it.
+ * the last occurrence of it.
  */
 static void
 vfs_sanitizeopts(struct vfsoptlist *opts)
@@ -463,9 +468,9 @@ vfs_mount_alloc(struct vnode *vp, struct vfsconf *vfsp, const char *fspath,
 	mp->mnt_activevnodelistsize = 0;
 	mp->mnt_ref = 0;
 	(void) vfs_busy(mp, MBF_NOWAIT);
+	atomic_add_acq_int(&vfsp->vfc_refcount, 1);
 	mp->mnt_op = vfsp->vfc_vfsops;
 	mp->mnt_vfc = vfsp;
-	vfsp->vfc_refcount++;	/* XXX Unlocked */
 	mp->mnt_stat.f_type = vfsp->vfc_typenum;
 	mp->mnt_gen++;
 	strlcpy(mp->mnt_stat.f_fstypename, vfsp->vfc_name, MFSNAMELEN);
@@ -505,7 +510,7 @@ vfs_mount_destroy(struct mount *mp)
 		panic("vfs_mount_destroy: nonzero writeopcount");
 	if (mp->mnt_secondary_writes != 0)
 		panic("vfs_mount_destroy: nonzero secondary_writes");
-	mp->mnt_vfc->vfc_refcount--;
+	atomic_subtract_rel_int(&mp->mnt_vfc->vfc_refcount, 1);
 	if (!TAILQ_EMPTY(&mp->mnt_nvnodelist)) {
 		struct vnode *vp;
 
@@ -521,6 +526,8 @@ vfs_mount_destroy(struct mount *mp)
 	if (mp->mnt_lockref != 0)
 		panic("vfs_mount_destroy: nonzero lock refcount");
 	MNT_IUNLOCK(mp);
+	if (mp->mnt_vnodecovered != NULL)
+		vrele(mp->mnt_vnodecovered);
 #ifdef MAC
 	mac_mount_destroy(mp);
 #endif
@@ -530,6 +537,31 @@ vfs_mount_destroy(struct mount *mp)
 	uma_zfree(mount_zone, mp);
 }
 
+static bool
+vfs_should_downgrade_to_ro_mount(uint64_t fsflags, int error)
+{
+	/* This is an upgrade of an exisiting mount. */
+	if ((fsflags & MNT_UPDATE) != 0)
+		return (false);
+	/* This is already an R/O mount. */
+	if ((fsflags & MNT_RDONLY) != 0)
+		return (false);
+
+	switch (error) {
+	case ENODEV:	/* generic, geom, ... */
+	case EACCES:	/* cam/scsi, ... */
+	case EROFS:	/* md, mmcsd, ... */
+		/*
+		 * These errors can be returned by the storage layer to signal
+		 * that the media is read-only.  No harm in the R/O mount
+		 * attempt if the error was returned for some other reason.
+		 */
+		return (true);
+	default:
+		return (false);
+	}
+}
+
 int
 vfs_donmount(struct thread *td, uint64_t fsflags, struct uio *fsoptions)
 {
@@ -537,10 +569,12 @@ vfs_donmount(struct thread *td, uint64_t fsflags, struct uio *fsoptions)
 	struct vfsopt *opt, *tmp_opt;
 	char *fstype, *fspath, *errmsg;
 	int error, fstypelen, fspathlen, errmsg_len, errmsg_pos;
+	bool autoro;
 
 	errmsg = fspath = NULL;
 	errmsg_len = fspathlen = 0;
 	errmsg_pos = -1;
+	autoro = default_autoro;
 
 	error = vfs_buildopts(fsoptions, &optlist);
 	if (error)
@@ -632,16 +666,27 @@ vfs_donmount(struct thread *td, uint64_t fsflags, struct uio *fsoptions)
 			free(opt->name, M_MOUNT);
 			opt->name = strdup("nonosymfollow", M_MOUNT);
 		}
-		else if (strcmp(opt->name, "noro") == 0)
+		else if (strcmp(opt->name, "noro") == 0) {
 			fsflags &= ~MNT_RDONLY;
-		else if (strcmp(opt->name, "rw") == 0)
+			autoro = false;
+		}
+		else if (strcmp(opt->name, "rw") == 0) {
 			fsflags &= ~MNT_RDONLY;
-		else if (strcmp(opt->name, "ro") == 0)
+			autoro = false;
+		}
+		else if (strcmp(opt->name, "ro") == 0) {
 			fsflags |= MNT_RDONLY;
+			autoro = false;
+		}
 		else if (strcmp(opt->name, "rdonly") == 0) {
 			free(opt->name, M_MOUNT);
 			opt->name = strdup("ro", M_MOUNT);
 			fsflags |= MNT_RDONLY;
+			autoro = false;
+		}
+		else if (strcmp(opt->name, "autoro") == 0) {
+			vfs_freeopt(optlist, opt);
+			autoro = true;
 		}
 		else if (strcmp(opt->name, "suiddir") == 0)
 			fsflags |= MNT_SUIDDIR;
@@ -649,6 +694,10 @@ vfs_donmount(struct thread *td, uint64_t fsflags, struct uio *fsoptions)
 			fsflags |= MNT_SYNCHRONOUS;
 		else if (strcmp(opt->name, "union") == 0)
 			fsflags |= MNT_UNION;
+		else if (strcmp(opt->name, "automounted") == 0) {
+			fsflags |= MNT_AUTOMOUNTED;
+			vfs_freeopt(optlist, opt);
+		}
 	}
 
 	/*
@@ -656,12 +705,25 @@ vfs_donmount(struct thread *td, uint64_t fsflags, struct uio *fsoptions)
 	 * variables will fit in our mp buffers, including the
 	 * terminating NUL.
 	 */
-	if (fstypelen >= MFSNAMELEN - 1 || fspathlen >= MNAMELEN - 1) {
+	if (fstypelen > MFSNAMELEN || fspathlen > MNAMELEN) {
 		error = ENAMETOOLONG;
 		goto bail;
 	}
 
 	error = vfs_domount(td, fstype, fspath, fsflags, &optlist);
+
+	/*
+	 * See if we can mount in the read-only mode if the error code suggests
+	 * that it could be possible and the mount options allow for that.
+	 * Never try it if "[no]{ro|rw}" has been explicitly requested and not
+	 * overridden by "autoro".
+	 */
+	if (autoro && vfs_should_downgrade_to_ro_mount(fsflags, error)) {
+		printf("%s: R/W mount failed, possibly R/O media,"
+		    " trying R/O mount\n", __func__);
+		fsflags |= MNT_RDONLY;
+		error = vfs_domount(td, fstype, fspath, fsflags, &optlist);
+	}
 bail:
 	/* copyout the errmsg */
 	if (errmsg_pos != -1 && ((2 * errmsg_pos + 1) < fsoptions->uio_iovcnt)
@@ -736,26 +798,20 @@ sys_mount(td, uap)
 	}
 
 	AUDIT_ARG_TEXT(fstype);
-	mtx_lock(&Giant);
 	vfsp = vfs_byname_kld(fstype, td, &error);
 	free(fstype, M_TEMP);
-	if (vfsp == NULL) {
-		mtx_unlock(&Giant);
+	if (vfsp == NULL)
 		return (ENOENT);
-	}
-	if (vfsp->vfc_vfsops->vfs_cmount == NULL) {
-		mtx_unlock(&Giant);
+	if (vfsp->vfc_vfsops->vfs_cmount == NULL)
 		return (EOPNOTSUPP);
-	}
 
-	ma = mount_argsu(ma, "fstype", uap->type, MNAMELEN);
+	ma = mount_argsu(ma, "fstype", uap->type, MFSNAMELEN);
 	ma = mount_argsu(ma, "fspath", uap->path, MNAMELEN);
 	ma = mount_argb(ma, flags & MNT_RDONLY, "noro");
 	ma = mount_argb(ma, !(flags & MNT_NOSUID), "nosuid");
 	ma = mount_argb(ma, !(flags & MNT_NOEXEC), "noexec");
 
 	error = vfsp->vfc_vfsops->vfs_cmount(ma, uap->data, flags);
-	mtx_unlock(&Giant);
 	return (error);
 }
 
@@ -777,7 +833,6 @@ vfs_domount_first(
 	struct vnode *newdp;
 	int error;
 
-	mtx_assert(&Giant, MA_OWNED);
 	ASSERT_VOP_ELOCKED(vp, __func__);
 	KASSERT((fsflags & MNT_UPDATE) == 0, ("MNT_UPDATE shouldn't be here"));
 
@@ -821,6 +876,7 @@ vfs_domount_first(
 	error = VFS_MOUNT(mp);
 	if (error != 0) {
 		vfs_unbusy(mp);
+		mp->mnt_vnodecovered = NULL;
 		vfs_mount_destroy(mp);
 		VI_LOCK(vp);
 		vp->v_iflag &= ~VI_MOUNT;
@@ -861,8 +917,9 @@ vfs_domount_first(
 	vfs_event_signal(NULL, VQ_MOUNT, 0);
 	if (VFS_ROOT(mp, LK_EXCLUSIVE, &newdp))
 		panic("mount: lost mount");
-	VOP_UNLOCK(newdp, 0);
 	VOP_UNLOCK(vp, 0);
+	EVENTHANDLER_INVOKE(vfs_mounted, mp, newdp, td);
+	VOP_UNLOCK(newdp, 0);
 	mountcheckdirs(vp, newdp);
 	vrele(newdp);
 	if ((mp->mnt_flag & MNT_RDONLY) == 0)
@@ -888,15 +945,20 @@ vfs_domount_update(
 	int error, export_error;
 	uint64_t flag;
 
-	mtx_assert(&Giant, MA_OWNED);
 	ASSERT_VOP_ELOCKED(vp, __func__);
 	KASSERT((fsflags & MNT_UPDATE) != 0, ("MNT_UPDATE should be here"));
+	mp = vp->v_mount;
 
 	if ((vp->v_vflag & VV_ROOT) == 0) {
+		if (vfs_copyopt(*optlist, "export", &export, sizeof(export))
+		    == 0)
+			error = EXDEV;
+		else
+			error = EINVAL;
 		vput(vp);
-		return (EINVAL);
+		return (error);
 	}
-	mp = vp->v_mount;
+
 	/*
 	 * We only allow the filesystem to be reloaded if it
 	 * is currently mounted read-only.
@@ -931,6 +993,11 @@ vfs_domount_update(
 	VOP_UNLOCK(vp, 0);
 
 	MNT_ILOCK(mp);
+	if ((mp->mnt_kern_flag & MNTK_UNMOUNT) != 0) {
+		MNT_IUNLOCK(mp);
+		error = EBUSY;
+		goto end;
+	}
 	mp->mnt_flag &= ~MNT_UPDATEMASK;
 	mp->mnt_flag |= fsflags & (MNT_RELOAD | MNT_FORCE | MNT_UPDATE |
 	    MNT_SNAPSHOT | MNT_ROOTFS | MNT_UPDATEMASK | MNT_RDONLY);
@@ -1085,13 +1152,11 @@ vfs_domount(
 	/*
 	 * Get vnode to be covered or mount point's vnode in case of MNT_UPDATE.
 	 */
-	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+	NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
 	    UIO_SYSSPACE, fspath, td);
 	error = namei(&nd);
 	if (error != 0)
 		return (error);
-	if (!NDHASGIANT(&nd))
-		mtx_lock(&Giant);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vp = nd.ni_vp;
 	if ((fsflags & MNT_UPDATE) == 0) {
@@ -1106,10 +1171,6 @@ vfs_domount(
 		free(pathbuf, M_TEMP);
 	} else
 		error = vfs_domount_update(td, vp, fsflags, optlist);
-	mtx_unlock(&Giant);
-
-	ASSERT_VI_UNLOCKED(vp, __func__);
-	ASSERT_VOP_UNLOCKED(vp, __func__);
 
 	return (error);
 }
@@ -1128,17 +1189,12 @@ struct unmount_args {
 #endif
 /* ARGSUSED */
 int
-sys_unmount(td, uap)
-	struct thread *td;
-	register struct unmount_args /* {
-		char *path;
-		int flags;
-	} */ *uap;
+sys_unmount(struct thread *td, struct unmount_args *uap)
 {
 	struct nameidata nd;
 	struct mount *mp;
 	char *pathbuf;
-	int error, id0, id1, vfslocked;
+	int error, id0, id1;
 
 	AUDIT_ARG_VALUE(uap->flags);
 	if (jailed(td->td_ucred) || usermount == 0) {
@@ -1153,12 +1209,10 @@ sys_unmount(td, uap)
 		free(pathbuf, M_TEMP);
 		return (error);
 	}
-	mtx_lock(&Giant);
 	if (uap->flags & MNT_BYFSID) {
 		AUDIT_ARG_TEXT(pathbuf);
 		/* Decode the filesystem ID. */
 		if (sscanf(pathbuf, "FSID:%d:%d", &id0, &id1) != 2) {
-			mtx_unlock(&Giant);
 			free(pathbuf, M_TEMP);
 			return (EINVAL);
 		}
@@ -1166,30 +1220,31 @@ sys_unmount(td, uap)
 		mtx_lock(&mountlist_mtx);
 		TAILQ_FOREACH_REVERSE(mp, &mountlist, mntlist, mnt_list) {
 			if (mp->mnt_stat.f_fsid.val[0] == id0 &&
-			    mp->mnt_stat.f_fsid.val[1] == id1)
+			    mp->mnt_stat.f_fsid.val[1] == id1) {
+				vfs_ref(mp);
 				break;
+			}
 		}
 		mtx_unlock(&mountlist_mtx);
 	} else {
 		/*
 		 * Try to find global path for path argument.
 		 */
-		NDINIT(&nd, LOOKUP,
-		    FOLLOW | LOCKLEAF | MPSAFE | AUDITVNODE1,
+		NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
 		    UIO_SYSSPACE, pathbuf, td);
 		if (namei(&nd) == 0) {
-			vfslocked = NDHASGIANT(&nd);
 			NDFREE(&nd, NDF_ONLY_PNBUF);
 			error = vn_path_to_global_path(td, nd.ni_vp, pathbuf,
 			    MNAMELEN);
 			if (error == 0 || error == ENODEV)
 				vput(nd.ni_vp);
-			VFS_UNLOCK_GIANT(vfslocked);
 		}
 		mtx_lock(&mountlist_mtx);
 		TAILQ_FOREACH_REVERSE(mp, &mountlist, mntlist, mnt_list) {
-			if (strcmp(mp->mnt_stat.f_mntonname, pathbuf) == 0)
+			if (strcmp(mp->mnt_stat.f_mntonname, pathbuf) == 0) {
+				vfs_ref(mp);
 				break;
+			}
 		}
 		mtx_unlock(&mountlist_mtx);
 	}
@@ -1201,7 +1256,6 @@ sys_unmount(td, uap)
 		 * now, so in the !MNT_BYFSID case return the more likely
 		 * EINVAL for compatibility.
 		 */
-		mtx_unlock(&Giant);
 		return ((uap->flags & MNT_BYFSID) ? ENOENT : EINVAL);
 	}
 
@@ -1209,11 +1263,10 @@ sys_unmount(td, uap)
 	 * Don't allow unmounting the root filesystem.
 	 */
 	if (mp->mnt_flag & MNT_ROOTFS) {
-		mtx_unlock(&Giant);
+		vfs_rel(mp);
 		return (EINVAL);
 	}
 	error = dounmount(mp, uap->flags, td);
-	mtx_unlock(&Giant);
 	return (error);
 }
 
@@ -1221,24 +1274,18 @@ sys_unmount(td, uap)
  * Do the actual filesystem unmount.
  */
 int
-dounmount(mp, flags, td)
-	struct mount *mp;
-	int flags;
-	struct thread *td;
+dounmount(struct mount *mp, int flags, struct thread *td)
 {
 	struct vnode *coveredvp, *fsrootvp;
 	int error;
 	uint64_t async_flag;
 	int mnt_gen_r;
 
-	mtx_assert(&Giant, MA_OWNED);
-
 	if ((coveredvp = mp->mnt_vnodecovered) != NULL) {
 		mnt_gen_r = mp->mnt_gen;
 		VI_LOCK(coveredvp);
 		vholdl(coveredvp);
 		vn_lock(coveredvp, LK_EXCLUSIVE | LK_INTERLOCK | LK_RETRY);
-		vdrop(coveredvp);
 		/*
 		 * Check for mp being unmounted while waiting for the
 		 * covered vnode lock.
@@ -1246,34 +1293,51 @@ dounmount(mp, flags, td)
 		if (coveredvp->v_mountedhere != mp ||
 		    coveredvp->v_mountedhere->mnt_gen != mnt_gen_r) {
 			VOP_UNLOCK(coveredvp, 0);
+			vdrop(coveredvp);
+			vfs_rel(mp);
 			return (EBUSY);
 		}
 	}
+
 	/*
 	 * Only privileged root, or (if MNT_USER is set) the user that did the
 	 * original mount is permitted to unmount this filesystem.
 	 */
 	error = vfs_suser(mp, td);
-	if (error) {
-		if (coveredvp)
+	if (error != 0) {
+		if (coveredvp != NULL) {
 			VOP_UNLOCK(coveredvp, 0);
+			vdrop(coveredvp);
+		}
+		vfs_rel(mp);
 		return (error);
 	}
 
-	vn_start_write(NULL, &mp, V_WAIT);
+	vn_start_write(NULL, &mp, V_WAIT | V_MNTREF);
 	MNT_ILOCK(mp);
 	if ((mp->mnt_kern_flag & MNTK_UNMOUNT) != 0 ||
+	    (mp->mnt_flag & MNT_UPDATE) != 0 ||
 	    !TAILQ_EMPTY(&mp->mnt_uppers)) {
 		MNT_IUNLOCK(mp);
-		if (coveredvp)
+		if (coveredvp != NULL) {
 			VOP_UNLOCK(coveredvp, 0);
+			vdrop(coveredvp);
+		}
 		vn_finished_write(mp);
 		return (EBUSY);
 	}
 	mp->mnt_kern_flag |= MNTK_UNMOUNT | MNTK_NOINSMNTQ;
 	/* Allow filesystems to detect that a forced unmount is in progress. */
-	if (flags & MNT_FORCE)
+	if (flags & MNT_FORCE) {
 		mp->mnt_kern_flag |= MNTK_UNMOUNTF;
+		MNT_IUNLOCK(mp);
+		/*
+		 * Must be done after setting MNTK_UNMOUNTF and before
+		 * waiting for mnt_lockref to become 0.
+		 */
+		VFS_PURGE(mp);
+		MNT_ILOCK(mp);
+	}
 	error = 0;
 	if (mp->mnt_lockref) {
 		mp->mnt_kern_flag |= MNTK_DRAINING;
@@ -1291,6 +1355,16 @@ dounmount(mp, flags, td)
 	if (mp->mnt_flag & MNT_EXPUBLIC)
 		vfs_setpublicfs(NULL, NULL, NULL);
 
+	/*
+	 * From now, we can claim that the use reference on the
+	 * coveredvp is ours, and the ref can be released only by
+	 * successfull unmount by us, or left for later unmount
+	 * attempt.  The previously acquired hold reference is no
+	 * longer needed to protect the vnode from reuse.
+	 */
+	if (coveredvp != NULL)
+		vdrop(coveredvp);
+
 	vfs_msync(mp, MNT_WAIT);
 	MNT_ILOCK(mp);
 	async_flag = mp->mnt_flag & MNT_ASYNC;
@@ -1306,7 +1380,8 @@ dounmount(mp, flags, td)
 	 */
 	if ((flags & MNT_FORCE) &&
 	    VFS_ROOT(mp, LK_EXCLUSIVE, &fsrootvp) == 0) {
-		if (mp->mnt_vnodecovered != NULL)
+		if (mp->mnt_vnodecovered != NULL &&
+		    (mp->mnt_flag & MNT_IGNORE) == 0)
 			mountcheckdirs(fsrootvp, mp->mnt_vnodecovered);
 		if (fsrootvp == rootvnode) {
 			vrele(rootvnode);
@@ -1314,8 +1389,8 @@ dounmount(mp, flags, td)
 		}
 		vput(fsrootvp);
 	}
-	if (((mp->mnt_flag & MNT_RDONLY) ||
-	     (error = VFS_SYNC(mp, MNT_WAIT)) == 0) || (flags & MNT_FORCE) != 0)
+	if ((mp->mnt_flag & MNT_RDONLY) != 0 || (flags & MNT_FORCE) != 0 ||
+	    (error = VFS_SYNC(mp, MNT_WAIT)) == 0)
 		error = VFS_UNMOUNT(mp, flags);
 	vn_finished_write(mp);
 	/*
@@ -1327,7 +1402,8 @@ dounmount(mp, flags, td)
 	if (error && error != ENXIO) {
 		if ((flags & MNT_FORCE) &&
 		    VFS_ROOT(mp, LK_EXCLUSIVE, &fsrootvp) == 0) {
-			if (mp->mnt_vnodecovered != NULL)
+			if (mp->mnt_vnodecovered != NULL &&
+			    (mp->mnt_flag & MNT_IGNORE) == 0)
 				mountcheckdirs(mp->mnt_vnodecovered, fsrootvp);
 			if (rootvnode == NULL) {
 				rootvnode = fsrootvp;
@@ -1359,11 +1435,14 @@ dounmount(mp, flags, td)
 	mtx_lock(&mountlist_mtx);
 	TAILQ_REMOVE(&mountlist, mp, mnt_list);
 	mtx_unlock(&mountlist_mtx);
+	EVENTHANDLER_INVOKE(vfs_unmounted, mp, td);
 	if (coveredvp != NULL) {
 		coveredvp->v_mountedhere = NULL;
-		vput(coveredvp);
+		VOP_UNLOCK(coveredvp, 0);
 	}
 	vfs_event_signal(NULL, VQ_UNMOUNT, 0);
+	if (mp == rootdevmp)
+		rootdevmp = NULL;
 	vfs_mount_destroy(mp);
 	return (0);
 }
@@ -1509,6 +1588,48 @@ vfs_getopt_pos(struct vfsoptlist *opts, const char *name)
 		}
 	}
 	return (-1);
+}
+
+int
+vfs_getopt_size(struct vfsoptlist *opts, const char *name, off_t *value)
+{
+	char *opt_value, *vtp;
+	quad_t iv;
+	int error, opt_len;
+
+	error = vfs_getopt(opts, name, (void **)&opt_value, &opt_len);
+	if (error != 0)
+		return (error);
+	if (opt_len == 0 || opt_value == NULL)
+		return (EINVAL);
+	if (opt_value[0] == '\0' || opt_value[opt_len - 1] != '\0')
+		return (EINVAL);
+	iv = strtoq(opt_value, &vtp, 0);
+	if (vtp == opt_value || (vtp[0] != '\0' && vtp[1] != '\0'))
+		return (EINVAL);
+	if (iv < 0)
+		return (EINVAL);
+	switch (vtp[0]) {
+	case 't':
+	case 'T':
+		iv *= 1024;
+	case 'g':
+	case 'G':
+		iv *= 1024;
+	case 'm':
+	case 'M':
+		iv *= 1024;
+	case 'k':
+	case 'K':
+		iv *= 1024;
+	case '\0':
+		break;
+	default:
+		return (EINVAL);
+	}
+	*value = iv;
+
+	return (0);
 }
 
 char *
@@ -1666,103 +1787,6 @@ vfs_copyopt(opts, name, dest, len)
 		}
 	}
 	return (ENOENT);
-}
-
-/*
- * These are helper functions for filesystems to traverse all
- * their vnodes.  See MNT_VNODE_FOREACH() in sys/mount.h.
- *
- * This interface has been deprecated in favor of MNT_VNODE_FOREACH_ALL.
- */
-
-MALLOC_DECLARE(M_VNODE_MARKER);
-
-struct vnode *
-__mnt_vnode_next(struct vnode **mvp, struct mount *mp)
-{
-	struct vnode *vp;
-
-	mtx_assert(MNT_MTX(mp), MA_OWNED);
-
-	KASSERT((*mvp)->v_mount == mp, ("marker vnode mount list mismatch"));
-	if (should_yield()) {
-		MNT_IUNLOCK(mp);
-		kern_yield(PRI_UNCHANGED);
-		MNT_ILOCK(mp);
-	}
-	vp = TAILQ_NEXT(*mvp, v_nmntvnodes);
-	while (vp != NULL && vp->v_type == VMARKER)
-		vp = TAILQ_NEXT(vp, v_nmntvnodes);
-
-	/* Check if we are done */
-	if (vp == NULL) {
-		__mnt_vnode_markerfree(mvp, mp);
-		return (NULL);
-	}
-	TAILQ_REMOVE(&mp->mnt_nvnodelist, *mvp, v_nmntvnodes);
-	TAILQ_INSERT_AFTER(&mp->mnt_nvnodelist, vp, *mvp, v_nmntvnodes);
-	return (vp);
-}
-
-struct vnode *
-__mnt_vnode_first(struct vnode **mvp, struct mount *mp)
-{
-	struct vnode *vp;
-
-	mtx_assert(MNT_MTX(mp), MA_OWNED);
-
-	vp = TAILQ_FIRST(&mp->mnt_nvnodelist);
-	while (vp != NULL && vp->v_type == VMARKER)
-		vp = TAILQ_NEXT(vp, v_nmntvnodes);
-
-	/* Check if we are done */
-	if (vp == NULL) {
-		*mvp = NULL;
-		return (NULL);
-	}
-	MNT_REF(mp);
-	MNT_IUNLOCK(mp);
-	*mvp = (struct vnode *) malloc(sizeof(struct vnode),
-				       M_VNODE_MARKER,
-				       M_WAITOK | M_ZERO);
-	MNT_ILOCK(mp);
-	(*mvp)->v_type = VMARKER;
-
-	vp = TAILQ_FIRST(&mp->mnt_nvnodelist);
-	while (vp != NULL && vp->v_type == VMARKER)
-		vp = TAILQ_NEXT(vp, v_nmntvnodes);
-
-	/* Check if we are done */
-	if (vp == NULL) {
-		MNT_IUNLOCK(mp);
-		free(*mvp, M_VNODE_MARKER);
-		MNT_ILOCK(mp);
-		*mvp = NULL;
-		MNT_REL(mp);
-		return (NULL);
-	}
-	(*mvp)->v_mount = mp;
-	TAILQ_INSERT_AFTER(&mp->mnt_nvnodelist, vp, *mvp, v_nmntvnodes);
-	return (vp);
-}
-
-
-void
-__mnt_vnode_markerfree(struct vnode **mvp, struct mount *mp)
-{
-
-	if (*mvp == NULL)
-		return;
-
-	mtx_assert(MNT_MTX(mp), MA_OWNED);
-
-	KASSERT((*mvp)->v_mount == mp, ("marker vnode mount list mismatch"));
-	TAILQ_REMOVE(&mp->mnt_nvnodelist, *mvp, v_nmntvnodes);
-	MNT_IUNLOCK(mp);
-	free(*mvp, M_VNODE_MARKER);
-	MNT_ILOCK(mp);
-	*mvp = NULL;
-	MNT_REL(mp);
 }
 
 int

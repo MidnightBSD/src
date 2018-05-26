@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/vfs_default.c 330266 2018-03-02 04:43:07Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,8 +48,8 @@ __FBSDID("$MidnightBSD$");
 #include <sys/lockf.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
-#include <sys/mutex.h>
 #include <sys/namei.h>
+#include <sys/rwlock.h>
 #include <sys/fcntl.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
@@ -354,8 +355,8 @@ dirent_exists(struct vnode *vp, const char *dirname, struct thread *td)
 		if (error)
 			goto out;
 
-		if ((dp->d_type != DT_WHT) &&
-		    !strcmp(dp->d_name, dirname)) {
+		if (dp->d_type != DT_WHT && dp->d_fileno != 0 &&
+		    strcmp(dp->d_name, dirname) == 0) {
 			found = 1;
 			goto out;
 		}
@@ -399,17 +400,24 @@ int
 vop_stdadvlock(struct vop_advlock_args *ap)
 {
 	struct vnode *vp;
-	struct ucred *cred;
 	struct vattr vattr;
 	int error;
 
 	vp = ap->a_vp;
-	cred = curthread->td_ucred;
-	vn_lock(vp, LK_SHARED | LK_RETRY);
-	error = VOP_GETATTR(vp, &vattr, cred);
-	VOP_UNLOCK(vp, 0);
-	if (error)
-		return (error);
+	if (ap->a_fl->l_whence == SEEK_END) {
+		/*
+		 * The NFSv4 server must avoid doing a vn_lock() here, since it
+		 * can deadlock the nfsd threads, due to a LOR.  Fortunately
+		 * the NFSv4 server always uses SEEK_SET and this code is
+		 * only required for the SEEK_END case.
+		 */
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		error = VOP_GETATTR(vp, &vattr, curthread->td_ucred);
+		VOP_UNLOCK(vp, 0);
+		if (error)
+			return (error);
+	} else
+		vattr.va_size = 0;
 
 	return (lf_advlock(ap, &(vp->v_lockf), vattr.va_size));
 }
@@ -418,17 +426,19 @@ int
 vop_stdadvlockasync(struct vop_advlockasync_args *ap)
 {
 	struct vnode *vp;
-	struct ucred *cred;
 	struct vattr vattr;
 	int error;
 
 	vp = ap->a_vp;
-	cred = curthread->td_ucred;
-	vn_lock(vp, LK_SHARED | LK_RETRY);
-	error = VOP_GETATTR(vp, &vattr, cred);
-	VOP_UNLOCK(vp, 0);
-	if (error)
-		return (error);
+	if (ap->a_fl->l_whence == SEEK_END) {
+		/* The size argument is only needed for SEEK_END. */
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		error = VOP_GETATTR(vp, &vattr, curthread->td_ucred);
+		VOP_UNLOCK(vp, 0);
+		if (error)
+			return (error);
+	} else
+		vattr.va_size = 0;
 
 	return (lf_advlockasync(ap, &(vp->v_lockf), vattr.va_size));
 }
@@ -626,18 +636,25 @@ int
 vop_stdfsync(ap)
 	struct vop_fsync_args /* {
 		struct vnode *a_vp;
-		struct ucred *a_cred;
 		int a_waitfor;
 		struct thread *a_td;
 	} */ *ap;
 {
-	struct vnode *vp = ap->a_vp;
-	struct buf *bp;
+	struct vnode *vp;
+	struct buf *bp, *nbp;
 	struct bufobj *bo;
-	struct buf *nbp;
-	int error = 0;
-	int maxretry = 1000;     /* large, arbitrarily chosen */
+	struct mount *mp;
+	int error, maxretry;
 
+	error = 0;
+	maxretry = 10000;     /* large, arbitrarily chosen */
+	vp = ap->a_vp;
+	mp = NULL;
+	if (vp->v_type == VCHR) {
+		VI_LOCK(vp);
+		mp = vp->v_rdev->si_mountpt;
+		VI_UNLOCK(vp);
+	}
 	bo = &vp->v_bufobj;
 	BO_LOCK(bo);
 loop1:
@@ -662,7 +679,7 @@ loop2:
 				continue;
 			if (BUF_LOCK(bp,
 			    LK_EXCLUSIVE | LK_INTERLOCK | LK_SLEEPFAIL,
-			    BO_MTX(bo)) != 0) {
+			    BO_LOCKPTR(bo)) != 0) {
 				BO_LOCK(bo);
 				goto loop1;
 			}
@@ -680,6 +697,8 @@ loop2:
 			bremfree(bp);
 			bawrite(bp);
 		}
+		if (maxretry < 1000)
+			pause("dirty", hz < 1000 ? 1 : hz / 1000);
 		BO_LOCK(bo);
 		goto loop2;
 	}
@@ -701,14 +720,16 @@ loop2:
 			TAILQ_FOREACH(bp, &bo->bo_dirty.bv_hd, b_bobufs)
 				if ((error = bp->b_error) == 0)
 					continue;
-			if (error == 0 && --maxretry >= 0)
+			if ((mp != NULL && mp->mnt_secondary_writes > 0) ||
+			    (error == 0 && --maxretry >= 0))
 				goto loop1;
-			error = EAGAIN;
+			if (error == 0)
+				error = EAGAIN;
 		}
 	}
 	BO_UNLOCK(bo);
-	if (error == EAGAIN)
-		vprint("fsync: giving up on dirty", vp);
+	if (error != 0)
+		vn_printf(vp, "fsync: giving up on dirty (error = %d) ", error);
 
 	return (error);
 }
@@ -1017,7 +1038,7 @@ vop_stdadvise(struct vop_advise_args *ap)
 {
 	struct vnode *vp;
 	off_t start, end;
-	int error, vfslocked;
+	int error;
 
 	vp = ap->a_vp;
 	switch (ap->a_advice) {
@@ -1038,24 +1059,21 @@ vop_stdadvise(struct vop_advise_args *ap)
 		 * requested range.
 		 */
 		error = 0;
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		if (vp->v_iflag & VI_DOOMED) {
 			VOP_UNLOCK(vp, 0);
-			VFS_UNLOCK_GIANT(vfslocked);
 			break;
 		}
 		vinvalbuf(vp, V_CLEANONLY, 0, 0);
 		if (vp->v_object != NULL) {
 			start = trunc_page(ap->a_start);
 			end = round_page(ap->a_end);
-			VM_OBJECT_LOCK(vp->v_object);
+			VM_OBJECT_WLOCK(vp->v_object);
 			vm_object_page_cache(vp->v_object, OFF_TO_IDX(start),
 			    OFF_TO_IDX(end));
-			VM_OBJECT_UNLOCK(vp->v_object);
+			VM_OBJECT_WUNLOCK(vp->v_object);
 		}
 		VOP_UNLOCK(vp, 0);
-		VFS_UNLOCK_GIANT(vfslocked);
 		break;
 	default:
 		error = EINVAL;

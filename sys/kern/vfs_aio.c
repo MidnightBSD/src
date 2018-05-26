@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 John S. Dyson.  All rights reserved.
  *
@@ -19,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/vfs_aio.c 304739 2016-08-24 09:20:27Z kib $");
 
 #include "opt_compat.h"
 
@@ -28,7 +29,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/malloc.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/eventhandler.h>
 #include <sys/sysproto.h>
 #include <sys/filedesc.h>
@@ -46,6 +47,7 @@ __FBSDID("$MidnightBSD$");
 #include <sys/resourcevar.h>
 #include <sys/signalvar.h>
 #include <sys/protosw.h>
+#include <sys/rwlock.h>
 #include <sys/sema.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -58,10 +60,12 @@ __FBSDID("$MidnightBSD$");
 #include <sys/conf.h>
 #include <sys/event.h>
 #include <sys/mount.h>
+#include <geom/geom.h>
 
 #include <machine/atomic.h>
 
 #include <vm/vm.h>
+#include <vm/vm_page.h>
 #include <vm/vm_extern.h>
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
@@ -231,9 +235,10 @@ struct aiocblist {
 	int	jobstate;		/* (b) job state */
 	int	inputcharge;		/* (*) input blockes */
 	int	outputcharge;		/* (*) output blockes */
-	struct	buf *bp;		/* (*) private to BIO backend,
-				  	 * buffer pointer
-					 */
+	struct	bio *bp;		/* (*) BIO backend BIO pointer */
+	struct	buf *pbuf;		/* (*) BIO backend buffer pointer */
+	struct	vm_page *pages[btoc(MAXPHYS)+1]; /* BIO backend pages */
+	int	npages;			/* BIO backend number of pages */
 	struct	proc *userproc;		/* (*) user process */
 	struct  ucred *cred;		/* (*) active credential when created */
 	struct	file *fd_file;		/* (*) pointer to file structure */
@@ -242,7 +247,6 @@ struct aiocblist {
 	struct	knlist klist;		/* (a) list of knotes */
 	struct	aiocb uaiocb;		/* (*) kernel I/O control block */
 	ksiginfo_t ksi;			/* (a) realtime signal info */
-	struct	task biotask;		/* (*) private to BIO backend */
 	uint64_t seqno;			/* (*) job number */
 	int	pending;		/* (a) number of pending I/O, aio_fsync only */
 };
@@ -337,15 +341,16 @@ static struct unrhdr *aiod_unr;
 void		aio_init_aioinfo(struct proc *p);
 static int	aio_onceonly(void);
 static int	aio_free_entry(struct aiocblist *aiocbe);
-static void	aio_process(struct aiocblist *aiocbe);
+static void	aio_process_rw(struct aiocblist *aiocbe);
+static void	aio_process_sync(struct aiocblist *aiocbe);
+static void	aio_process_mlock(struct aiocblist *aiocbe);
 static int	aio_newproc(int *);
 int		aio_aqueue(struct thread *td, struct aiocb *job,
 			struct aioliojob *lio, int type, struct aiocb_ops *ops);
-static void	aio_physwakeup(struct buf *bp);
+static void	aio_physwakeup(struct bio *bp);
 static void	aio_proc_rundown(void *arg, struct proc *p);
 static void	aio_proc_rundown_exec(void *arg, struct proc *p, struct image_params *imgp);
 static int	aio_qphysio(struct proc *p, struct aiocblist *iocb);
-static void	biohelper(void *, int);
 static void	aio_daemon(void *param);
 static void	aio_swake_cb(struct socket *, struct sockbuf *);
 static int	aio_unload(void);
@@ -424,6 +429,7 @@ static struct syscall_helper_data aio_syscalls[] = {
 	SYSCALL_INIT_HELPER(aio_cancel),
 	SYSCALL_INIT_HELPER(aio_error),
 	SYSCALL_INIT_HELPER(aio_fsync),
+	SYSCALL_INIT_HELPER(aio_mlock),
 	SYSCALL_INIT_HELPER(aio_read),
 	SYSCALL_INIT_HELPER(aio_return),
 	SYSCALL_INIT_HELPER(aio_suspend),
@@ -451,6 +457,7 @@ static struct syscall_helper_data aio32_syscalls[] = {
 	SYSCALL32_INIT_HELPER(freebsd32_aio_cancel),
 	SYSCALL32_INIT_HELPER(freebsd32_aio_error),
 	SYSCALL32_INIT_HELPER(freebsd32_aio_fsync),
+	SYSCALL32_INIT_HELPER(freebsd32_aio_mlock),
 	SYSCALL32_INIT_HELPER(freebsd32_aio_read),
 	SYSCALL32_INIT_HELPER(freebsd32_aio_write),
 	SYSCALL32_INIT_HELPER(freebsd32_aio_waitcomplete),
@@ -700,7 +707,8 @@ aio_free_entry(struct aiocblist *aiocbe)
 	 * at open time, but this is already true of file descriptors in
 	 * a multithreaded process.
 	 */
-	fdrop(aiocbe->fd_file, curthread);
+	if (aiocbe->fd_file)
+		fdrop(aiocbe->fd_file, curthread);
 	crfree(aiocbe->cred);
 	uma_zfree(aiocb_zone, aiocbe);
 	AIO_LOCK(ki);
@@ -835,37 +843,34 @@ static int
 aio_fsync_vnode(struct thread *td, struct vnode *vp)
 {
 	struct mount *mp;
-	int vfslocked;
 	int error;
 
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if ((error = vn_start_write(vp, &mp, V_WAIT | PCATCH)) != 0)
 		goto drop;
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	if (vp->v_object != NULL) {
-		VM_OBJECT_LOCK(vp->v_object);
+		VM_OBJECT_WLOCK(vp->v_object);
 		vm_object_page_clean(vp->v_object, 0, 0, 0);
-		VM_OBJECT_UNLOCK(vp->v_object);
+		VM_OBJECT_WUNLOCK(vp->v_object);
 	}
 	error = VOP_FSYNC(vp, MNT_WAIT, td);
 
 	VOP_UNLOCK(vp, 0);
 	vn_finished_write(mp);
 drop:
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
 /*
- * The AIO processing activity.  This is the code that does the I/O request for
- * the non-physio version of the operations.  The normal vn operations are used,
- * and this code should work in all instances for every type of file, including
- * pipes, sockets, fifos, and regular files.
+ * The AIO processing activity for LIO_READ/LIO_WRITE.  This is the code that
+ * does the I/O request for the non-physio version of the operations.  The
+ * normal vn operations are used, and this code should work in all instances
+ * for every type of file, including pipes, sockets, fifos, and regular files.
  *
  * XXX I don't think it works well for socket, pipe, and fifo.
  */
 static void
-aio_process(struct aiocblist *aiocbe)
+aio_process_rw(struct aiocblist *aiocbe)
 {
 	struct ucred *td_savedcred;
 	struct thread *td;
@@ -879,22 +884,15 @@ aio_process(struct aiocblist *aiocbe)
 	int oublock_st, oublock_end;
 	int inblock_st, inblock_end;
 
+	KASSERT(aiocbe->uaiocb.aio_lio_opcode == LIO_READ ||
+	    aiocbe->uaiocb.aio_lio_opcode == LIO_WRITE,
+	    ("%s: opcode %d", __func__, aiocbe->uaiocb.aio_lio_opcode));
+
 	td = curthread;
 	td_savedcred = td->td_ucred;
 	td->td_ucred = aiocbe->cred;
 	cb = &aiocbe->uaiocb;
 	fp = aiocbe->fd_file;
-
-	if (cb->aio_lio_opcode == LIO_SYNC) {
-		error = 0;
-		cnt = 0;
-		if (fp->f_vnode != NULL)
-			error = aio_fsync_vnode(td, fp->f_vnode);
-		cb->_aiocb_private.error = error;
-		cb->_aiocb_private.status = 0;
-		td->td_ucred = td_savedcred;
-		return;
-	}
 
 	aiov.iov_base = (void *)(uintptr_t)cb->aio_buf;
 	aiov.iov_len = cb->aio_nbytes;
@@ -953,6 +951,41 @@ aio_process(struct aiocblist *aiocbe)
 	cb->_aiocb_private.error = error;
 	cb->_aiocb_private.status = cnt;
 	td->td_ucred = td_savedcred;
+}
+
+static void
+aio_process_sync(struct aiocblist *aiocbe)
+{
+	struct thread *td = curthread;
+	struct ucred *td_savedcred = td->td_ucred;
+	struct aiocb *cb = &aiocbe->uaiocb;
+	struct file *fp = aiocbe->fd_file;
+	int error = 0;
+
+	KASSERT(aiocbe->uaiocb.aio_lio_opcode == LIO_SYNC,
+	    ("%s: opcode %d", __func__, aiocbe->uaiocb.aio_lio_opcode));
+
+	td->td_ucred = aiocbe->cred;
+	if (fp->f_vnode != NULL)
+		error = aio_fsync_vnode(td, fp->f_vnode);
+	cb->_aiocb_private.error = error;
+	cb->_aiocb_private.status = 0;
+	td->td_ucred = td_savedcred;
+}
+
+static void
+aio_process_mlock(struct aiocblist *aiocbe)
+{
+	struct aiocb *cb = &aiocbe->uaiocb;
+	int error;
+
+	KASSERT(aiocbe->uaiocb.aio_lio_opcode == LIO_MLOCK,
+	    ("%s: opcode %d", __func__, aiocbe->uaiocb.aio_lio_opcode));
+
+	error = vm_mlock(aiocbe->userproc, aiocbe->cred,
+	    __DEVOLATILE(void *, cb->aio_buf), cb->aio_nbytes);
+	cb->_aiocb_private.error = error;
+	cb->_aiocb_private.status = 0;
 }
 
 static void
@@ -1026,7 +1059,7 @@ notification_done:
 }
 
 /*
- * The AIO daemon, most of the actual work is done in aio_process,
+ * The AIO daemon, most of the actual work is done in aio_process_*,
  * but the setup (and address space mgmt) is done in this routine.
  */
 static void
@@ -1123,7 +1156,18 @@ aio_daemon(void *_id)
 			ki = userp->p_aioinfo;
 
 			/* Do the I/O function. */
-			aio_process(aiocbe);
+			switch(aiocbe->uaiocb.aio_lio_opcode) {
+			case LIO_READ:
+			case LIO_WRITE:
+				aio_process_rw(aiocbe);
+				break;
+			case LIO_SYNC:
+				aio_process_sync(aiocbe);
+				break;
+			case LIO_MLOCK:
+				aio_process_mlock(aiocbe);
+				break;
+			}
 
 			mtx_lock(&aio_job_mtx);
 			/* Decrement the active job count. */
@@ -1252,122 +1296,139 @@ aio_qphysio(struct proc *p, struct aiocblist *aiocbe)
 {
 	struct aiocb *cb;
 	struct file *fp;
-	struct buf *bp;
+	struct bio *bp;
+	struct buf *pbuf;
 	struct vnode *vp;
 	struct cdevsw *csw;
 	struct cdev *dev;
 	struct kaioinfo *ki;
 	struct aioliojob *lj;
-	int error, ref;
+	int error, ref, unmap, poff;
+	vm_prot_t prot;
 
 	cb = &aiocbe->uaiocb;
 	fp = aiocbe->fd_file;
 
-	if (fp->f_type != DTYPE_VNODE)
+	if (fp == NULL || fp->f_type != DTYPE_VNODE)
 		return (-1);
 
 	vp = fp->f_vnode;
-
-	/*
-	 * If its not a disk, we don't want to return a positive error.
-	 * It causes the aio code to not fall through to try the thread
-	 * way when you're talking to a regular file.
-	 */
-	if (!vn_isdisk(vp, &error)) {
-		if (error == ENOTBLK)
-			return (-1);
-		else
-			return (error);
-	}
-
+	if (vp->v_type != VCHR)
+		return (-1);
 	if (vp->v_bufobj.bo_bsize == 0)
 		return (-1);
-
- 	if (cb->aio_nbytes % vp->v_bufobj.bo_bsize)
-		return (-1);
-
-	if (cb->aio_nbytes >
-	    MAXPHYS - (((vm_offset_t) cb->aio_buf) & PAGE_MASK))
-		return (-1);
-
-	ki = p->p_aioinfo;
-	if (ki->kaio_buffer_count >= ki->kaio_ballowed_count)
+	if (cb->aio_nbytes % vp->v_bufobj.bo_bsize)
 		return (-1);
 
 	ref = 0;
 	csw = devvn_refthread(vp, &dev, &ref);
 	if (csw == NULL)
 		return (ENXIO);
+
+	if ((csw->d_flags & D_DISK) == 0) {
+		error = -1;
+		goto unref;
+	}
 	if (cb->aio_nbytes > dev->si_iosize_max) {
 		error = -1;
 		goto unref;
 	}
 
-	/* Create and build a buffer header for a transfer. */
-	bp = (struct buf *)getpbuf(NULL);
-	BUF_KERNPROC(bp);
+	ki = p->p_aioinfo;
+	poff = (vm_offset_t)cb->aio_buf & PAGE_MASK;
+	unmap = ((dev->si_flags & SI_UNMAPPED) && unmapped_buf_allowed);
+	if (unmap) {
+		if (cb->aio_nbytes > MAXPHYS) {
+			error = -1;
+			goto unref;
+		}
+	} else {
+		if (cb->aio_nbytes > MAXPHYS - poff) {
+			error = -1;
+			goto unref;
+		}
+		if (ki->kaio_buffer_count >= ki->kaio_ballowed_count) {
+			error = -1;
+			goto unref;
+		}
+	}
+	aiocbe->bp = bp = g_alloc_bio();
+	if (!unmap) {
+		aiocbe->pbuf = pbuf = (struct buf *)getpbuf(NULL);
+		BUF_KERNPROC(pbuf);
+	} else
+		pbuf = NULL;
 
 	AIO_LOCK(ki);
 	ki->kaio_count++;
-	ki->kaio_buffer_count++;
+	if (!unmap)
+		ki->kaio_buffer_count++;
 	lj = aiocbe->lio;
 	if (lj)
 		lj->lioj_count++;
-	AIO_UNLOCK(ki);
-
-	/*
-	 * Get a copy of the kva from the physical buffer.
-	 */
-	error = 0;
-
-	bp->b_bcount = cb->aio_nbytes;
-	bp->b_bufsize = cb->aio_nbytes;
-	bp->b_iodone = aio_physwakeup;
-	bp->b_saveaddr = bp->b_data;
-	bp->b_data = (void *)(uintptr_t)cb->aio_buf;
-	bp->b_offset = cb->aio_offset;
-	bp->b_iooffset = cb->aio_offset;
-	bp->b_blkno = btodb(cb->aio_offset);
-	bp->b_iocmd = cb->aio_lio_opcode == LIO_WRITE ? BIO_WRITE : BIO_READ;
-
-	/*
-	 * Bring buffer into kernel space.
-	 */
-	if (vmapbuf(bp) < 0) {
-		error = EFAULT;
-		goto doerror;
-	}
-
-	AIO_LOCK(ki);
-	aiocbe->bp = bp;
-	bp->b_caller1 = (void *)aiocbe;
 	TAILQ_INSERT_TAIL(&ki->kaio_bufqueue, aiocbe, plist);
 	TAILQ_INSERT_TAIL(&ki->kaio_all, aiocbe, allist);
 	aiocbe->jobstate = JOBST_JOBQBUF;
 	cb->_aiocb_private.status = cb->aio_nbytes;
 	AIO_UNLOCK(ki);
 
+	bp->bio_length = cb->aio_nbytes;
+	bp->bio_bcount = cb->aio_nbytes;
+	bp->bio_done = aio_physwakeup;
+	bp->bio_data = (void *)(uintptr_t)cb->aio_buf;
+	bp->bio_offset = cb->aio_offset;
+	bp->bio_cmd = cb->aio_lio_opcode == LIO_WRITE ? BIO_WRITE : BIO_READ;
+	bp->bio_dev = dev;
+	bp->bio_caller1 = (void *)aiocbe;
+
+	prot = VM_PROT_READ;
+	if (cb->aio_lio_opcode == LIO_READ)
+		prot |= VM_PROT_WRITE;	/* Less backwards than it looks */
+	if ((aiocbe->npages = vm_fault_quick_hold_pages(
+	    &curproc->p_vmspace->vm_map,
+	    (vm_offset_t)bp->bio_data, bp->bio_length, prot, aiocbe->pages,
+	    sizeof(aiocbe->pages)/sizeof(aiocbe->pages[0]))) < 0) {
+		error = EFAULT;
+		goto doerror;
+	}
+	if (!unmap) {
+		pmap_qenter((vm_offset_t)pbuf->b_data,
+		    aiocbe->pages, aiocbe->npages);
+		bp->bio_data = pbuf->b_data + poff;
+	} else {
+		bp->bio_ma = aiocbe->pages;
+		bp->bio_ma_n = aiocbe->npages;
+		bp->bio_ma_offset = poff;
+		bp->bio_data = unmapped_buf;
+		bp->bio_flags |= BIO_UNMAPPED;
+	}
+
 	atomic_add_int(&num_queue_count, 1);
-	atomic_add_int(&num_buf_aio, 1);
-
-	bp->b_error = 0;
-
-	TASK_INIT(&aiocbe->biotask, 0, biohelper, aiocbe);
+	if (!unmap)
+		atomic_add_int(&num_buf_aio, 1);
 
 	/* Perform transfer. */
-	dev_strategy_csw(dev, csw, bp);
+	csw->d_strategy(bp);
 	dev_relthread(dev, ref);
 	return (0);
 
 doerror:
 	AIO_LOCK(ki);
+	aiocbe->jobstate = JOBST_NULL;
+	TAILQ_REMOVE(&ki->kaio_bufqueue, aiocbe, plist);
+	TAILQ_REMOVE(&ki->kaio_all, aiocbe, allist);
 	ki->kaio_count--;
-	ki->kaio_buffer_count--;
+	if (!unmap)
+		ki->kaio_buffer_count--;
 	if (lj)
 		lj->lioj_count--;
-	aiocbe->bp = NULL;
 	AIO_UNLOCK(ki);
-	relpbuf(bp, NULL);
+	if (pbuf) {
+		relpbuf(pbuf, NULL);
+		aiocbe->pbuf = NULL;
+	}
+	g_destroy_bio(bp);
+	aiocbe->bp = NULL;
 unref:
 	dev_relthread(dev, ref);
 	return (error);
@@ -1522,9 +1583,10 @@ static struct aiocb_ops aiocb_ops_osigevent = {
  */
 int
 aio_aqueue(struct thread *td, struct aiocb *job, struct aioliojob *lj,
-	int type, struct aiocb_ops *ops)
+    int type, struct aiocb_ops *ops)
 {
 	struct proc *p = td->td_proc;
+	cap_rights_t rights;
 	struct file *fp;
 	struct socket *so;
 	struct aiocblist *aiocbe, *cb;
@@ -1553,8 +1615,6 @@ aio_aqueue(struct thread *td, struct aiocb *job, struct aioliojob *lj,
 	}
 
 	aiocbe = uma_zalloc(aiocb_zone, M_WAITOK | M_ZERO);
-	aiocbe->inputcharge = 0;
-	aiocbe->outputcharge = 0;
 	knlist_init_mtx(&aiocbe->klist, AIO_MTX(ki));
 
 	error = ops->copyin(job, &aiocbe->uaiocb);
@@ -1562,6 +1622,12 @@ aio_aqueue(struct thread *td, struct aiocb *job, struct aioliojob *lj,
 		ops->store_error(job, error);
 		uma_zfree(aiocb_zone, aiocbe);
 		return (error);
+	}
+
+	/* XXX: aio_nbytes is later casted to signed types. */
+	if (aiocbe->uaiocb.aio_nbytes > INT_MAX) {
+		uma_zfree(aiocb_zone, aiocbe);
+		return (EINVAL);
 	}
 
 	if (aiocbe->uaiocb.aio_sigevent.sigev_notify != SIGEV_KEVENT &&
@@ -1601,16 +1667,21 @@ aio_aqueue(struct thread *td, struct aiocb *job, struct aioliojob *lj,
 	fd = aiocbe->uaiocb.aio_fildes;
 	switch (opcode) {
 	case LIO_WRITE:
-		error = fget_write(td, fd, CAP_WRITE | CAP_SEEK, &fp);
+		error = fget_write(td, fd,
+		    cap_rights_init(&rights, CAP_PWRITE), &fp);
 		break;
 	case LIO_READ:
-		error = fget_read(td, fd, CAP_READ | CAP_SEEK, &fp);
+		error = fget_read(td, fd,
+		    cap_rights_init(&rights, CAP_PREAD), &fp);
 		break;
 	case LIO_SYNC:
-		error = fget(td, fd, CAP_FSYNC, &fp);
+		error = fget(td, fd, cap_rights_init(&rights, CAP_FSYNC), &fp);
+		break;
+	case LIO_MLOCK:
+		fp = NULL;
 		break;
 	case LIO_NOP:
-		error = fget(td, fd, 0, &fp);
+		error = fget(td, fd, cap_rights_init(&rights), &fp);
 		break;
 	default:
 		error = EINVAL;
@@ -1666,7 +1737,8 @@ aio_aqueue(struct thread *td, struct aiocb *job, struct aioliojob *lj,
 	error = kqfd_register(kqfd, &kev, td, 1);
 aqueue_fail:
 	if (error) {
-		fdrop(fp, td);
+		if (fp)
+			fdrop(fp, td);
 		uma_zfree(aiocb_zone, aiocbe);
 		ops->store_error(job, error);
 		goto done;
@@ -1683,7 +1755,7 @@ no_kqueue:
 	if (opcode == LIO_SYNC)
 		goto queueit;
 
-	if (fp->f_type == DTYPE_SOCKET) {
+	if (fp && fp->f_type == DTYPE_SOCKET) {
 		/*
 		 * Alternate queueing for socket ops: Reach down into the
 		 * descriptor to get the socket data.  Then check to see if the
@@ -1734,8 +1806,6 @@ no_kqueue:
 	}
 #endif
 queueit:
-	/* No buffer for daemon I/O. */
-	aiocbe->bp = NULL;
 	atomic_add_int(&num_queue_count, 1);
 
 	AIO_LOCK(ki);
@@ -1997,7 +2067,7 @@ sys_aio_cancel(struct thread *td, struct aio_cancel_args *uap)
 	struct vnode *vp;
 
 	/* Lookup file object. */
-	error = fget(td, uap->fd, 0, &fp);
+	error = fget(td, uap->fd, NULL, &fp);
 	if (error)
 		return (error);
 
@@ -2159,6 +2229,13 @@ sys_aio_write(struct thread *td, struct aio_write_args *uap)
 {
 
 	return (aio_aqueue(td, uap->aiocbp, NULL, LIO_WRITE, &aiocb_ops));
+}
+
+int
+sys_aio_mlock(struct thread *td, struct aio_mlock_args *uap)
+{
+
+	return (aio_aqueue(td, uap->aiocbp, NULL, LIO_MLOCK, &aiocb_ops));
 }
 
 static int
@@ -2365,54 +2442,43 @@ sys_lio_listio(struct thread *td, struct lio_listio_args *uap)
 	return (error);
 }
 
-/*
- * Called from interrupt thread for physio, we should return as fast
- * as possible, so we schedule a biohelper task.
- */
 static void
-aio_physwakeup(struct buf *bp)
+aio_physwakeup(struct bio *bp)
 {
-	struct aiocblist *aiocbe;
-
-	aiocbe = (struct aiocblist *)bp->b_caller1;
-	taskqueue_enqueue(taskqueue_aiod_bio, &aiocbe->biotask);
-}
-
-/*
- * Task routine to perform heavy tasks, process wakeup, and signals.
- */
-static void
-biohelper(void *context, int pending)
-{
-	struct aiocblist *aiocbe = context;
-	struct buf *bp;
+	struct aiocblist *aiocbe = (struct aiocblist *)bp->bio_caller1;
 	struct proc *userp;
 	struct kaioinfo *ki;
 	int nblks;
 
+	/* Release mapping into kernel space. */
+	if (aiocbe->pbuf) {
+		pmap_qremove((vm_offset_t)aiocbe->pbuf->b_data, aiocbe->npages);
+		relpbuf(aiocbe->pbuf, NULL);
+		aiocbe->pbuf = NULL;
+		atomic_subtract_int(&num_buf_aio, 1);
+	}
+	vm_page_unhold_pages(aiocbe->pages, aiocbe->npages);
+
 	bp = aiocbe->bp;
+	aiocbe->bp = NULL;
 	userp = aiocbe->userproc;
 	ki = userp->p_aioinfo;
 	AIO_LOCK(ki);
-	aiocbe->uaiocb._aiocb_private.status -= bp->b_resid;
+	aiocbe->uaiocb._aiocb_private.status -= bp->bio_resid;
 	aiocbe->uaiocb._aiocb_private.error = 0;
-	if (bp->b_ioflags & BIO_ERROR)
-		aiocbe->uaiocb._aiocb_private.error = bp->b_error;
+	if (bp->bio_flags & BIO_ERROR)
+		aiocbe->uaiocb._aiocb_private.error = bp->bio_error;
 	nblks = btodb(aiocbe->uaiocb.aio_nbytes);
 	if (aiocbe->uaiocb.aio_lio_opcode == LIO_WRITE)
 		aiocbe->outputcharge += nblks;
 	else
 		aiocbe->inputcharge += nblks;
-	aiocbe->bp = NULL;
 	TAILQ_REMOVE(&userp->p_aioinfo->kaio_bufqueue, aiocbe, plist);
 	ki->kaio_buffer_count--;
 	aio_bio_done_notify(userp, aiocbe, DONE_BUF);
 	AIO_UNLOCK(ki);
 
-	/* Release mapping into kernel space. */
-	vunmapbuf(bp);
-	relpbuf(bp, NULL);
-	atomic_subtract_int(&num_buf_aio, 1);
+	g_destroy_bio(bp);
 }
 
 /* syscall - wait for the next completion of an aio request */
@@ -2503,14 +2569,9 @@ static int
 kern_aio_fsync(struct thread *td, int op, struct aiocb *aiocbp,
     struct aiocb_ops *ops)
 {
-	struct proc *p = td->td_proc;
-	struct kaioinfo *ki;
 
 	if (op != O_SYNC) /* XXX lack of O_DSYNC */
 		return (EINVAL);
-	ki = p->p_aioinfo;
-	if (ki == NULL)
-		aio_init_aioinfo(p);
 	return (aio_aqueue(td, aiocbp, NULL, LIO_SYNC, ops));
 }
 
@@ -2696,31 +2757,6 @@ aiocb32_copyin_old_sigevent(struct aiocb *ujob, struct aiocb *kjob)
 }
 
 static int
-convert_sigevent32(struct sigevent32 *sig32, struct sigevent *sig)
-{
-
-	CP(*sig32, *sig, sigev_notify);
-	switch (sig->sigev_notify) {
-	case SIGEV_NONE:
-		break;
-	case SIGEV_THREAD_ID:
-		CP(*sig32, *sig, sigev_notify_thread_id);
-		/* FALLTHROUGH */
-	case SIGEV_SIGNAL:
-		CP(*sig32, *sig, sigev_signo);
-		break;
-	case SIGEV_KEVENT:
-		CP(*sig32, *sig, sigev_notify_kqueue);
-		CP(*sig32, *sig, sigev_notify_kevent_flags);
-		PTRIN_CP(*sig32, *sig, sigev_value.sival_ptr);
-		break;
-	default:
-		return (EINVAL);
-	}
-	return (0);
-}
-
-static int
 aiocb32_copyin(struct aiocb *ujob, struct aiocb *kjob)
 {
 	struct aiocb32 job32;
@@ -2899,6 +2935,14 @@ freebsd32_aio_write(struct thread *td, struct freebsd32_aio_write_args *uap)
 {
 
 	return (aio_aqueue(td, (struct aiocb *)uap->aiocbp, NULL, LIO_WRITE,
+	    &aiocb32_ops));
+}
+
+int
+freebsd32_aio_mlock(struct thread *td, struct freebsd32_aio_mlock_args *uap)
+{
+
+	return (aio_aqueue(td, (struct aiocb *)uap->aiocbp, NULL, LIO_MLOCK,
 	    &aiocb32_ops));
 }
 
