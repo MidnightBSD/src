@@ -1,9 +1,15 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/zfs/Makefile,v 1.6.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $FreeBSD: stable/10/sys/modules/zfs/Makefile 315844 2017-03-23 08:16:29Z avg $
 
 KMOD=	zfs
 
-SRCS=	bus_if.h device_if.h vnode_if.h
+SRCS=	bus_if.h device_if.h vnode_if.h opt_kstack_pages.h
+
+.if !defined(KERNBUILDDIR)
+SRCS+=	opt_kdtrace.h
+opt_kdtrace.h:
+	echo "" > ${.TARGET}
+.endif
 
 SUNW=	${.CURDIR}/../../cddl/contrib/opensolaris
 
@@ -12,14 +18,15 @@ SRCS+=	acl_common.c
 .PATH:	${SUNW}/common/avl
 SRCS+=	avl.c
 .PATH:	${SUNW}/common/nvpair
-SRCS+=	nvpair.c
-SRCS+=	nvpair_alloc_fixed.c
-SRCS+=	fnvpair.c
+SRCS+=	opensolaris_nvpair.c
+SRCS+=	opensolaris_nvpair_alloc_fixed.c
+SRCS+=	opensolaris_fnvpair.c
 .PATH:	${.CURDIR}/../../cddl/contrib/opensolaris/common/unicode
 SRCS+=	u8_textprep.c
 
 .PATH:	${.CURDIR}/../../cddl/compat/opensolaris/kern
 SRCS+=	opensolaris_acl.c
+SRCS+=	opensolaris_dtrace.c
 SRCS+=	opensolaris_kobj.c
 SRCS+=	opensolaris_kstat.c
 SRCS+=	opensolaris_lookup.c
@@ -29,6 +36,7 @@ SRCS+=	opensolaris_sysevent.c
 SRCS+=	opensolaris_taskq.c
 SRCS+=	opensolaris_uio.c
 SRCS+=	opensolaris_vfs.c
+SRCS+=	opensolaris_vm.c
 SRCS+=	opensolaris_zone.c
 
 _A=${.CURDIR}/../../cddl/contrib/opensolaris/common/atomic
@@ -43,7 +51,6 @@ SRCS+=		opensolaris_atomic.c
 .endif
 
 .PATH:	${SUNW}/uts/common/fs
-SRCS+=	gfs.c
 SRCS+=	vnode.c
 
 .PATH:	${SUNW}/uts/common/os
@@ -65,7 +72,7 @@ SRCS+=	zmod_subr.c
 SRCS+=	zutil.c
 
 .PATH:	${.CURDIR}/../../crypto/sha2
-SRCS+=	sha2.c
+SRCS+=	sha256c.c sha512c.c
 
 .PATH:	${SUNW}/common/zfs
 .include "${SUNW}/uts/common/Makefile.files"
@@ -87,10 +94,16 @@ CFLAGS+=-I${SUNW}/common/zfs
 CFLAGS+=-I${SUNW}/common
 CFLAGS+=-DBUILDING_ZFS
 
+.if ${MACHINE_ARCH} == "powerpc64"
+CFLAGS+=-mminimal-toc
+.endif
+
 #CFLAGS+=-DDEBUG=1
 #DEBUG_FLAGS=-g
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../cddl/compat/opensolaris/sys/debug_compat.h
 
 CWARNFLAGS+=-Wno-unknown-pragmas
 CWARNFLAGS+=-Wno-missing-prototypes
