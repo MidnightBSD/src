@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_shutdown.c 305853 2016-09-16 00:14:26Z hiren $");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -50,17 +51,20 @@ __FBSDID("$MidnightBSD$");
 #include <sys/conf.h>
 #include <sys/cons.h>
 #include <sys/eventhandler.h>
+#include <sys/filedesc.h>
 #include <sys/jail.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/kerneldump.h>
 #include <sys/kthread.h>
+#include <sys/ktr.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
@@ -87,6 +91,11 @@ __FBSDID("$MidnightBSD$");
 #ifndef PANIC_REBOOT_WAIT_TIME
 #define PANIC_REBOOT_WAIT_TIME 15 /* default to 15 seconds */
 #endif
+static int panic_reboot_wait_time = PANIC_REBOOT_WAIT_TIME;
+SYSCTL_INT(_kern, OID_AUTO, panic_reboot_wait_time, CTLFLAG_RW | CTLFLAG_TUN,
+    &panic_reboot_wait_time, 0,
+    "Seconds to wait before rebooting after a panic");
+TUNABLE_INT("kern.panic_reboot_wait_time", &panic_reboot_wait_time);
 
 /*
  * Note that stdarg.h and the ANSI style va_start macro is used for both
@@ -121,11 +130,6 @@ SYSCTL_INT(_kern, OID_AUTO, sync_on_panic, CTLFLAG_RW | CTLFLAG_TUN,
 	&sync_on_panic, 0, "Do a sync before rebooting from a panic");
 TUNABLE_INT("kern.sync_on_panic", &sync_on_panic);
 
-static int stop_scheduler_on_panic = 1;
-SYSCTL_INT(_kern, OID_AUTO, stop_scheduler_on_panic, CTLFLAG_RW | CTLFLAG_TUN,
-    &stop_scheduler_on_panic, 0, "stop scheduler upon entering panic");
-TUNABLE_INT("kern.stop_scheduler_on_panic", &stop_scheduler_on_panic);
-
 static SYSCTL_NODE(_kern, OID_AUTO, shutdown, CTLFLAG_RW, 0,
     "Shutdown environment");
 
@@ -136,6 +140,10 @@ static int show_busybufs = 1;
 #endif
 SYSCTL_INT(_kern_shutdown, OID_AUTO, show_busybufs, CTLFLAG_RW,
 	&show_busybufs, 0, "");
+
+int suspend_blocked = 0;
+SYSCTL_INT(_kern, OID_AUTO, suspend_blocked, CTLFLAG_RW,
+	&suspend_blocked, 0, "Block suspend due to a pending shutdown");
 
 /*
  * Variable panicstr contains argument to first call to panic; used as flag
@@ -151,10 +159,16 @@ static struct dumperinfo dumper;	/* our selected dumper */
 static struct pcb dumppcb;		/* Registers. */
 lwpid_t dumptid;			/* Thread ID. */
 
+static struct cdevsw reroot_cdevsw = {
+     .d_version = D_VERSION,
+     .d_name    = "reroot",
+};
+
 static void poweroff_wait(void *, int);
 static void shutdown_halt(void *junk, int howto);
 static void shutdown_panic(void *junk, int howto);
 static void shutdown_reset(void *junk, int howto);
+static int kern_reroot(void);
 
 /* register various local shutdown events */
 static void
@@ -174,6 +188,26 @@ shutdown_conf(void *unused)
 SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL);
 
 /*
+ * The only reason this exists is to create the /dev/reroot/ directory,
+ * used by reroot code in init(8) as a mountpoint for tmpfs.
+ */
+static void
+reroot_conf(void *unused)
+{
+	int error;
+	struct cdev *cdev;
+
+	error = make_dev_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK, &cdev,
+	    &reroot_cdevsw, NULL, UID_ROOT, GID_WHEEL, 0600, "reroot/reroot");
+	if (error != 0) {
+		printf("%s: failed to create device node, error %d",
+		    __func__, error);
+	}
+}
+
+SYSINIT(reroot_conf, SI_SUB_DEVFS, SI_ORDER_ANY, reroot_conf, NULL);
+
+/*
  * The system call that results in a reboot.
  */
 /* ARGSUSED */
@@ -189,9 +223,13 @@ sys_reboot(struct thread *td, struct reboot_args *uap)
 	if (error == 0)
 		error = priv_check(td, PRIV_REBOOT);
 	if (error == 0) {
-		mtx_lock(&Giant);
-		kern_reboot(uap->opt);
-		mtx_unlock(&Giant);
+		if (uap->opt & RB_REROOT) {
+			error = kern_reroot();
+		} else {
+			mtx_lock(&Giant);
+			kern_reboot(uap->opt);
+			mtx_unlock(&Giant);
+		}
 	}
 	return (error);
 }
@@ -456,6 +494,102 @@ kern_reboot(int howto)
 }
 
 /*
+ * The system call that results in changing the rootfs.
+ */
+static int
+kern_reroot(void)
+{
+	struct vnode *oldrootvnode, *vp;
+	struct mount *mp, *devmp;
+	int error;
+
+	if (curproc != initproc)
+		return (EPERM);
+
+	/*
+	 * Mark the filesystem containing currently-running executable
+	 * (the temporary copy of init(8)) busy.
+	 */
+	vp = curproc->p_textvp;
+	error = vn_lock(vp, LK_SHARED);
+	if (error != 0)
+		return (error);
+	mp = vp->v_mount;
+	error = vfs_busy(mp, MBF_NOWAIT);
+	if (error != 0) {
+		vfs_ref(mp);
+		VOP_UNLOCK(vp, 0);
+		error = vfs_busy(mp, 0);
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		vfs_rel(mp);
+		if (error != 0) {
+			VOP_UNLOCK(vp, 0);
+			return (ENOENT);
+		}
+		if (vp->v_iflag & VI_DOOMED) {
+			VOP_UNLOCK(vp, 0);
+			vfs_unbusy(mp);
+			return (ENOENT);
+		}
+	}
+	VOP_UNLOCK(vp, 0);
+
+	/*
+	 * Remove the filesystem containing currently-running executable
+	 * from the mount list, to prevent it from being unmounted
+	 * by vfs_unmountall(), and to avoid confusing vfs_mountroot().
+	 *
+	 * Also preserve /dev - forcibly unmounting it could cause driver
+	 * reinitialization.
+	 */
+
+	vfs_ref(rootdevmp);
+	devmp = rootdevmp;
+	rootdevmp = NULL;
+
+	mtx_lock(&mountlist_mtx);
+	TAILQ_REMOVE(&mountlist, mp, mnt_list);
+	TAILQ_REMOVE(&mountlist, devmp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+
+	oldrootvnode = rootvnode;
+
+	/*
+	 * Unmount everything except for the two filesystems preserved above.
+	 */
+	vfs_unmountall();
+
+	/*
+	 * Add /dev back; vfs_mountroot() will move it into its new place.
+	 */
+	mtx_lock(&mountlist_mtx);
+	TAILQ_INSERT_HEAD(&mountlist, devmp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+	rootdevmp = devmp;
+	vfs_rel(rootdevmp);
+
+	/*
+	 * Mount the new rootfs.
+	 */
+	vfs_mountroot();
+
+	/*
+	 * Update all references to the old rootvnode.
+	 */
+	mountcheckdirs(oldrootvnode, rootvnode);
+
+	/*
+	 * Add the temporary filesystem back and unbusy it.
+	 */
+	mtx_lock(&mountlist_mtx);
+	TAILQ_INSERT_TAIL(&mountlist, mp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+	vfs_unbusy(mp);
+
+	return (0);
+}
+
+/*
  * If the shutdown was a clean halt, behave accordingly.
  */
 static void
@@ -487,12 +621,12 @@ shutdown_panic(void *junk, int howto)
 	int loop;
 
 	if (howto & RB_DUMP) {
-		if (PANIC_REBOOT_WAIT_TIME != 0) {
-			if (PANIC_REBOOT_WAIT_TIME != -1) {
+		if (panic_reboot_wait_time != 0) {
+			if (panic_reboot_wait_time != -1) {
 				printf("Automatic reboot in %d seconds - "
 				       "press a key on the console to abort\n",
-					PANIC_REBOOT_WAIT_TIME);
-				for (loop = PANIC_REBOOT_WAIT_TIME * 10;
+					panic_reboot_wait_time);
+				for (loop = panic_reboot_wait_time * 10;
 				     loop > 0; --loop) {
 					DELAY(1000 * 100); /* 1/10th second */
 					/* Did user type a key? */
@@ -543,6 +677,134 @@ shutdown_reset(void *junk, int howto)
 	/* NOTREACHED */ /* assuming reset worked */
 }
 
+#if defined(WITNESS) || defined(INVARIANTS)
+static int kassert_warn_only = 0;
+#ifdef KDB
+static int kassert_do_kdb = 0;
+#endif
+#ifdef KTR
+static int kassert_do_ktr = 0;
+#endif
+static int kassert_do_log = 1;
+static int kassert_log_pps_limit = 4;
+static int kassert_log_mute_at = 0;
+static int kassert_log_panic_at = 0;
+static int kassert_warnings = 0;
+
+SYSCTL_NODE(_debug, OID_AUTO, kassert, CTLFLAG_RW, NULL, "kassert options");
+
+SYSCTL_INT(_debug_kassert, OID_AUTO, warn_only, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_warn_only, 0,
+    "KASSERT triggers a panic (1) or just a warning (0)");
+TUNABLE_INT("debug.kassert.warn_only", &kassert_warn_only);
+
+#ifdef KDB
+SYSCTL_INT(_debug_kassert, OID_AUTO, do_kdb, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_do_kdb, 0, "KASSERT will enter the debugger");
+TUNABLE_INT("debug.kassert.do_kdb", &kassert_do_kdb);
+#endif
+
+#ifdef KTR
+SYSCTL_UINT(_debug_kassert, OID_AUTO, do_ktr, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_do_ktr, 0,
+    "KASSERT does a KTR, set this to the KTRMASK you want");
+TUNABLE_INT("debug.kassert.do_ktr", &kassert_do_ktr);
+#endif
+
+SYSCTL_INT(_debug_kassert, OID_AUTO, do_log, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_do_log, 0, "KASSERT triggers a panic (1) or just a warning (0)");
+TUNABLE_INT("debug.kassert.do_log", &kassert_do_log);
+
+SYSCTL_INT(_debug_kassert, OID_AUTO, warnings, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_warnings, 0, "number of KASSERTs that have been triggered");
+TUNABLE_INT("debug.kassert.warnings", &kassert_warnings);
+
+SYSCTL_INT(_debug_kassert, OID_AUTO, log_panic_at, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_log_panic_at, 0, "max number of KASSERTS before we will panic");
+TUNABLE_INT("debug.kassert.log_panic_at", &kassert_log_panic_at);
+
+SYSCTL_INT(_debug_kassert, OID_AUTO, log_pps_limit, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_log_pps_limit, 0, "limit number of log messages per second");
+TUNABLE_INT("debug.kassert.log_pps_limit", &kassert_log_pps_limit);
+
+SYSCTL_INT(_debug_kassert, OID_AUTO, log_mute_at, CTLFLAG_RW | CTLFLAG_TUN,
+    &kassert_log_mute_at, 0, "max number of KASSERTS to log");
+TUNABLE_INT("debug.kassert.log_mute_at", &kassert_log_mute_at);
+
+static int kassert_sysctl_kassert(SYSCTL_HANDLER_ARGS);
+
+SYSCTL_PROC(_debug_kassert, OID_AUTO, kassert,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_SECURE, NULL, 0,
+    kassert_sysctl_kassert, "I", "set to trigger a test kassert");
+
+static int
+kassert_sysctl_kassert(SYSCTL_HANDLER_ARGS)
+{
+	int error, i;
+
+	error = sysctl_wire_old_buffer(req, sizeof(int));
+	if (error == 0) {
+		i = 0;
+		error = sysctl_handle_int(oidp, &i, 0, req);
+	}
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	KASSERT(0, ("kassert_sysctl_kassert triggered kassert %d", i));
+	return (0);
+}
+
+/*
+ * Called by KASSERT, this decides if we will panic
+ * or if we will log via printf and/or ktr.
+ */
+void
+kassert_panic(const char *fmt, ...)
+{
+	static char buf[256];
+	va_list ap;
+
+	va_start(ap, fmt);
+	(void)vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	/*
+	 * panic if we're not just warning, or if we've exceeded
+	 * kassert_log_panic_at warnings.
+	 */
+	if (!kassert_warn_only ||
+	    (kassert_log_panic_at > 0 &&
+	     kassert_warnings >= kassert_log_panic_at)) {
+		va_start(ap, fmt);
+		vpanic(fmt, ap);
+		/* NORETURN */
+	}
+#ifdef KTR
+	if (kassert_do_ktr)
+		CTR0(ktr_mask, buf);
+#endif /* KTR */
+	/*
+	 * log if we've not yet met the mute limit.
+	 */
+	if (kassert_do_log &&
+	    (kassert_log_mute_at == 0 ||
+	     kassert_warnings < kassert_log_mute_at)) {
+		static  struct timeval lasterr;
+		static  int curerr;
+
+		if (ppsratecheck(&lasterr, &curerr, kassert_log_pps_limit)) {
+			printf("KASSERT failed: %s\n", buf);
+			kdb_backtrace();
+		}
+	}
+#ifdef KDB
+	if (kassert_do_kdb) {
+		kdb_enter(KDB_WHY_KASSERT, buf);
+	}
+#endif
+	atomic_add_int(&kassert_warnings, 1);
+}
+#endif
+
 /*
  * Panic is called on unresolvable fatal errors.  It prints "panic: mesg",
  * and then reboots.  If we are called twice, then we avoid trying to sync
@@ -551,48 +813,43 @@ shutdown_reset(void *junk, int howto)
 void
 panic(const char *fmt, ...)
 {
+	va_list ap;
+
+	va_start(ap, fmt);
+	vpanic(fmt, ap);
+}
+
+void
+vpanic(const char *fmt, va_list ap)
+{
 #ifdef SMP
-	static volatile u_int panic_cpu = NOCPU;
 	cpuset_t other_cpus;
 #endif
 	struct thread *td = curthread;
 	int bootopt, newpanic;
-	va_list ap;
 	static char buf[256];
 
-	if (stop_scheduler_on_panic)
-		spinlock_enter();
-	else
-		critical_enter();
+	spinlock_enter();
 
 #ifdef SMP
 	/*
-	 * We don't want multiple CPU's to panic at the same time, so we
-	 * use panic_cpu as a simple spinlock.  We have to keep checking
-	 * panic_cpu if we are spinning in case the panic on the first
-	 * CPU is canceled.
+	 * stop_cpus_hard(other_cpus) should prevent multiple CPUs from
+	 * concurrently entering panic.  Only the winner will proceed
+	 * further.
 	 */
-	if (panic_cpu != PCPU_GET(cpuid))
-		while (atomic_cmpset_int(&panic_cpu, NOCPU,
-		    PCPU_GET(cpuid)) == 0)
-			while (panic_cpu != NOCPU)
-				; /* nothing */
-
-	if (stop_scheduler_on_panic) {
-		if (panicstr == NULL && !kdb_active) {
-			other_cpus = all_cpus;
-			CPU_CLR(PCPU_GET(cpuid), &other_cpus);
-			stop_cpus_hard(other_cpus);
-		}
-
-		/*
-		 * We set stop_scheduler here and not in the block above,
-		 * because we want to ensure that if panic has been called and
-		 * stop_scheduler_on_panic is true, then stop_scheduler will
-		 * always be set.  Even if panic has been entered from kdb.
-		 */
-		td->td_stopsched = 1;
+	if (panicstr == NULL && !kdb_active) {
+		other_cpus = all_cpus;
+		CPU_CLR(PCPU_GET(cpuid), &other_cpus);
+		stop_cpus_hard(other_cpus);
 	}
+
+	/*
+	 * We set stop_scheduler here and not in the block above,
+	 * because we want to ensure that if panic has been called and
+	 * stop_scheduler_on_panic is true, then stop_scheduler will
+	 * always be set.  Even if panic has been entered from kdb.
+	 */
+	td->td_stopsched = 1;
 #endif
 
 	bootopt = RB_AUTOBOOT;
@@ -605,7 +862,6 @@ panic(const char *fmt, ...)
 		newpanic = 1;
 	}
 
-	va_start(ap, fmt);
 	if (newpanic) {
 		(void)vsnprintf(buf, sizeof(buf), fmt, ap);
 		panicstr = buf;
@@ -616,7 +872,6 @@ panic(const char *fmt, ...)
 		vprintf(fmt, ap);
 		printf("\n");
 	}
-	va_end(ap);
 #ifdef SMP
 	printf("cpuid = %d\n", PCPU_GET(cpuid));
 #endif
@@ -632,8 +887,6 @@ panic(const char *fmt, ...)
 	/* thread_unlock(td); */
 	if (!sync_on_panic)
 		bootopt |= RB_NOSYNC;
-	if (!stop_scheduler_on_panic)
-		critical_exit();
 	kern_reboot(bootopt);
 }
 
@@ -650,7 +903,7 @@ panic(const char *fmt, ...)
 static int poweroff_delay = POWEROFF_DELAY;
 
 SYSCTL_INT(_kern_shutdown, OID_AUTO, poweroff_delay, CTLFLAG_RW,
-	&poweroff_delay, 0, "");
+    &poweroff_delay, 0, "Delay before poweroff to write disk caches (msec)");
 
 static void
 poweroff_wait(void *junk, int howto)
@@ -670,7 +923,7 @@ poweroff_wait(void *junk, int howto)
  */
 static int kproc_shutdown_wait = 60;
 SYSCTL_INT(_kern_shutdown, OID_AUTO, kproc_shutdown_wait, CTLFLAG_RW,
-    &kproc_shutdown_wait, 0, "");
+    &kproc_shutdown_wait, 0, "Max wait time (sec) to stop for each process");
 
 void
 kproc_shutdown(void *arg, int howto)
@@ -712,18 +965,34 @@ kthread_shutdown(void *arg, int howto)
 		printf("done\n");
 }
 
+static char dumpdevname[sizeof(((struct cdev*)NULL)->si_name)];
+SYSCTL_STRING(_kern_shutdown, OID_AUTO, dumpdevname, CTLFLAG_RD,
+    dumpdevname, 0, "Device for kernel dumps");
+
 /* Registration of dumpers */
 int
-set_dumper(struct dumperinfo *di)
+set_dumper(struct dumperinfo *di, const char *devname, struct thread *td)
 {
+	size_t wantcopy;
+	int error;
+
+	error = priv_check(td, PRIV_SETDUMPER);
+	if (error != 0)
+		return (error);
 
 	if (di == NULL) {
 		bzero(&dumper, sizeof dumper);
+		dumpdevname[0] = '\0';
 		return (0);
 	}
 	if (dumper.dumper != NULL)
 		return (EBUSY);
 	dumper = *di;
+	wantcopy = strlcpy(dumpdevname, devname, sizeof(dumpdevname));
+	if (wantcopy >= sizeof(dumpdevname)) {
+		printf("set_dumper: device name truncated from '%s' -> '%s'\n",
+			devname, dumpdevname);
+	}
 	return (0);
 }
 
@@ -750,16 +1019,27 @@ mkdumpheader(struct kerneldumpheader *kdh, char *magic, uint32_t archver,
 {
 
 	bzero(kdh, sizeof(*kdh));
-	strncpy(kdh->magic, magic, sizeof(kdh->magic));
-	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
+	strlcpy(kdh->magic, magic, sizeof(kdh->magic));
+	strlcpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
 	kdh->version = htod32(KERNELDUMPVERSION);
 	kdh->architectureversion = htod32(archver);
 	kdh->dumplength = htod64(dumplen);
 	kdh->dumptime = htod64(time_second);
 	kdh->blocksize = htod32(blksz);
-	strncpy(kdh->hostname, prison0.pr_hostname, sizeof(kdh->hostname));
-	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
+	strlcpy(kdh->hostname, prison0.pr_hostname, sizeof(kdh->hostname));
+	strlcpy(kdh->versionstring, version, sizeof(kdh->versionstring));
 	if (panicstr != NULL)
-		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
+		strlcpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
 	kdh->parity = kerneldump_parity(kdh);
 }
+
+#ifdef DDB
+DB_SHOW_COMMAND(panic, db_show_panic)
+{
+
+	if (panicstr == NULL)
+		db_printf("panicstr not set\n");
+	else
+		db_printf("panic: %s\n", panicstr);
+}
+#endif

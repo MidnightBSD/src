@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/kern_resource.c 293473 2016-01-09 14:08:10Z dchagin $");
 
 #include "opt_compat.h"
 
@@ -79,6 +80,8 @@ static void	calcru1(struct proc *p, struct rusage_ext *ruxp,
 static int	donice(struct thread *td, struct proc *chgp, int n);
 static struct uidinfo *uilookup(uid_t uid);
 static void	ruxagg_locked(struct rusage_ext *rux, struct thread *td);
+
+static __inline int	lim_shared(struct plimit *limp);
 
 /*
  * Resource controls and accounting.
@@ -469,8 +472,7 @@ sys_rtprio(td, uap)
 int
 rtp_to_pri(struct rtprio *rtp, struct thread *td)
 {
-	u_char	newpri;
-	u_char	oldpri;
+	u_char  newpri, oldclass, oldpri;
 
 	switch (RTP_PRIO_BASE(rtp->type)) {
 	case RTP_PRIO_REALTIME:
@@ -493,11 +495,12 @@ rtp_to_pri(struct rtprio *rtp, struct thread *td)
 	}
 
 	thread_lock(td);
+	oldclass = td->td_pri_class;
 	sched_class(td, rtp->type);	/* XXX fix */
 	oldpri = td->td_user_pri;
 	sched_user_prio(td, newpri);
-	if (td->td_user_pri != oldpri && (td == curthread ||
-	    td->td_priority == oldpri || td->td_user_pri <= PRI_MAX_REALTIME))
+	if (td->td_user_pri != oldpri && (oldclass != RTP_PRIO_NORMAL ||
+	    td->td_pri_class != RTP_PRIO_NORMAL))
 		sched_prio(td, td->td_user_pri);
 	if (TD_ON_UPILOCK(td) && oldpri != newpri) {
 		critical_enter();
@@ -629,11 +632,11 @@ lim_cb(void *arg)
 	 */
 	if (p->p_cpulimit == RLIM_INFINITY)
 		return;
-	PROC_SLOCK(p);
+	PROC_STATLOCK(p);
 	FOREACH_THREAD_IN_PROC(p, td) {
 		ruxagg(p, td);
 	}
-	PROC_SUNLOCK(p);
+	PROC_STATUNLOCK(p);
 	if (p->p_rux.rux_runtime > p->p_cpulimit * cpu_tickrate()) {
 		lim_rlimit(p, RLIMIT_CPU, &rlim);
 		if (p->p_rux.rux_runtime >= rlim.rlim_max * cpu_tickrate()) {
@@ -645,7 +648,8 @@ lim_cb(void *arg)
 		}
 	}
 	if ((p->p_flag & P_WEXIT) == 0)
-		callout_reset(&p->p_limco, hz, lim_cb, p);
+		callout_reset_sbt(&p->p_limco, SBT_1S, 0,
+		    lim_cb, p, C_PREL(1));
 }
 
 int
@@ -676,28 +680,37 @@ kern_proc_setrlimit(struct thread *td, struct proc *p, u_int which,
 		limp->rlim_max = RLIM_INFINITY;
 
 	oldssiz.rlim_cur = 0;
-	newlim = lim_alloc();
+	newlim = NULL;
 	PROC_LOCK(p);
+	if (lim_shared(p->p_limit)) {
+		PROC_UNLOCK(p);
+		newlim = lim_alloc();
+		PROC_LOCK(p);
+	}
 	oldlim = p->p_limit;
 	alimp = &oldlim->pl_rlimit[which];
 	if (limp->rlim_cur > alimp->rlim_max ||
 	    limp->rlim_max > alimp->rlim_max)
 		if ((error = priv_check(td, PRIV_PROC_SETRLIMIT))) {
 			PROC_UNLOCK(p);
-			lim_free(newlim);
+			if (newlim != NULL)
+				lim_free(newlim);
 			return (error);
 		}
 	if (limp->rlim_cur > limp->rlim_max)
 		limp->rlim_cur = limp->rlim_max;
-	lim_copy(newlim, oldlim);
-	alimp = &newlim->pl_rlimit[which];
+	if (newlim != NULL) {
+		lim_copy(newlim, oldlim);
+		alimp = &newlim->pl_rlimit[which];
+	}
 
 	switch (which) {
 
 	case RLIMIT_CPU:
 		if (limp->rlim_cur != RLIM_INFINITY &&
 		    p->p_cpulimit == RLIM_INFINITY)
-			callout_reset(&p->p_limco, hz, lim_cb, p);
+			callout_reset_sbt(&p->p_limco, SBT_1S, 0,
+			    lim_cb, p, C_PREL(1));
 		p->p_cpulimit = limp->rlim_cur;
 		break;
 	case RLIMIT_DATA:
@@ -739,11 +752,18 @@ kern_proc_setrlimit(struct thread *td, struct proc *p, u_int which,
 	if (p->p_sysent->sv_fixlimit != NULL)
 		p->p_sysent->sv_fixlimit(limp, which);
 	*alimp = *limp;
-	p->p_limit = newlim;
+	if (newlim != NULL)
+		p->p_limit = newlim;
 	PROC_UNLOCK(p);
-	lim_free(oldlim);
+	if (newlim != NULL)
+		lim_free(oldlim);
 
-	if (which == RLIMIT_STACK) {
+	if (which == RLIMIT_STACK &&
+	    /*
+	     * Skip calls from exec_new_vmspace(), done when stack is
+	     * not mapped yet.
+	     */
+	    (td != curthread || (p->p_flag & P_INEXEC) == 0)) {
 		/*
 		 * Stack is allocated to the max at exec time with only
 		 * "rlim_cur" bytes accessible.  If stack limit is going
@@ -828,7 +848,7 @@ calcru(struct proc *p, struct timeval *up, struct timeval *sp)
 	uint64_t runtime, u;
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
-	PROC_SLOCK_ASSERT(p, MA_OWNED);
+	PROC_STATLOCK_ASSERT(p, MA_OWNED);
 	/*
 	 * If we are getting stats for the current process, then add in the
 	 * stats that this thread has accumulated in its current time slice.
@@ -860,7 +880,7 @@ rufetchtd(struct thread *td, struct rusage *ru)
 	uint64_t runtime, u;
 
 	p = td->td_proc;
-	PROC_SLOCK_ASSERT(p, MA_OWNED);
+	PROC_STATLOCK_ASSERT(p, MA_OWNED);
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
 	/*
 	 * If we are getting stats for the current thread, then add in the
@@ -996,11 +1016,11 @@ kern_getrusage(struct thread *td, int who, struct rusage *rup)
 		break;
 
 	case RUSAGE_THREAD:
-		PROC_SLOCK(p);
+		PROC_STATLOCK(p);
 		thread_lock(td);
 		rufetchtd(td, rup);
 		thread_unlock(td);
-		PROC_SUNLOCK(p);
+		PROC_STATUNLOCK(p);
 		break;
 
 	default:
@@ -1047,7 +1067,7 @@ ruxagg_locked(struct rusage_ext *rux, struct thread *td)
 {
 
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
-	PROC_SLOCK_ASSERT(td->td_proc, MA_OWNED);
+	PROC_STATLOCK_ASSERT(td->td_proc, MA_OWNED);
 	rux->rux_runtime += td->td_incruntime;
 	rux->rux_uticks += td->td_uticks;
 	rux->rux_sticks += td->td_sticks;
@@ -1077,7 +1097,7 @@ rufetch(struct proc *p, struct rusage *ru)
 {
 	struct thread *td;
 
-	PROC_SLOCK_ASSERT(p, MA_OWNED);
+	PROC_STATLOCK_ASSERT(p, MA_OWNED);
 
 	*ru = p->p_ru;
 	if (p->p_numthreads > 0)  {
@@ -1098,10 +1118,10 @@ rufetchcalc(struct proc *p, struct rusage *ru, struct timeval *up,
     struct timeval *sp)
 {
 
-	PROC_SLOCK(p);
+	PROC_STATLOCK(p);
 	rufetch(p, ru);
 	calcru(p, up, sp);
-	PROC_SUNLOCK(p);
+	PROC_STATUNLOCK(p);
 }
 
 /*
@@ -1127,13 +1147,26 @@ lim_hold(limp)
 	return (limp);
 }
 
+static __inline int
+lim_shared(limp)
+	struct plimit *limp;
+{
+
+	return (limp->pl_refcnt > 1);
+}
+
 void
 lim_fork(struct proc *p1, struct proc *p2)
 {
+
+	PROC_LOCK_ASSERT(p1, MA_OWNED);
+	PROC_LOCK_ASSERT(p2, MA_OWNED);
+
 	p2->p_limit = lim_hold(p1->p_limit);
 	callout_init_mtx(&p2->p_limco, &p2->p_mtx, 0);
 	if (p1->p_cpulimit != RLIM_INFINITY)
-		callout_reset(&p2->p_limco, hz, lim_cb, p2);
+		callout_reset_sbt(&p2->p_limco, SBT_1S, 0,
+		    lim_cb, p2, C_PREL(1));
 }
 
 void
@@ -1155,7 +1188,7 @@ lim_copy(dst, src)
 	struct plimit *dst, *src;
 {
 
-	KASSERT(dst->pl_refcnt == 1, ("lim_copy to shared limit"));
+	KASSERT(!lim_shared(dst), ("lim_copy to shared limit"));
 	bcopy(src->pl_rlimit, dst->pl_rlimit, sizeof(src->pl_rlimit));
 }
 
@@ -1422,24 +1455,6 @@ chgptscnt(uip, diff, max)
 		atomic_add_long(&uip->ui_ptscnt, (long)diff);
 		if (uip->ui_ptscnt < 0)
 			printf("negative ptscnt for uid = %d\n", uip->ui_uid);
-	}
-	return (1);
-}
-
-int
-chgkqcnt(struct uidinfo *uip, int diff, rlim_t max)
-{
-
-	if (diff > 0 && max != 0) {
-		if (atomic_fetchadd_long(&uip->ui_kqcnt, (long)diff) +
-		    diff > max) {
-			atomic_subtract_long(&uip->ui_kqcnt, (long)diff);
-			return (0);
-		}
-	} else {
-		atomic_add_long(&uip->ui_kqcnt, (long)diff);
-		if (uip->ui_kqcnt < 0)
-			printf("negative kqcnt for uid = %d\n", uip->ui_uid);
 	}
 	return (1);
 }
