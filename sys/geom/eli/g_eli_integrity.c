@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/eli/g_eli_integrity.c,v 1.2 2008/12/03 00:25:48 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_integrity.c,v 1.4 2006/07/22 10:05:55 pjd Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/eli/g_eli_integrity.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -469,8 +469,16 @@ g_eli_auth_run(struct g_eli_worker *wr, struct bio *bp)
 		iov = (struct iovec *)p;	p += sizeof(*iov);
 
 		data_secsize = sc->sc_data_per_sector;
-		if ((i % lsec) == 0)
+		if ((i % lsec) == 0) {
 			data_secsize = decr_secsize % data_secsize;
+			/*
+			 * Last encrypted sector of each decrypted sector is
+			 * only partially filled.
+			 */
+			if (bp->bio_cmd == BIO_WRITE)
+				memset(data + sc->sc_alen + data_secsize, 0,
+				    encr_secsize - sc->sc_alen - data_secsize);
+		}
 
 		if (bp->bio_cmd == BIO_READ) {
 			/* Remember read HMAC. */

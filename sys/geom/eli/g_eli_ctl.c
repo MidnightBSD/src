@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/eli/g_eli_ctl.c,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_ctl.c,v 1.13 2007/05/06 14:56:03 pjd Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/eli/g_eli_ctl.c 257718 2013-11-05 19:58:40Z delphij $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -472,7 +472,7 @@ g_eli_ctl_configure(struct gctl_req *req, struct g_class *mp)
 			    prov, error);
 		}
 		bzero(&md, sizeof(md));
-		bzero(sector, sizeof(sector));
+		bzero(sector, pp->sectorsize);
 		free(sector, M_ELI);
 	}
 }
@@ -563,7 +563,7 @@ g_eli_ctl_setkey(struct gctl_req *req, struct g_class *mp)
 
 	/* Encrypt Master Key with the new key. */
 	error = g_eli_mkey_encrypt(md.md_ealgo, key, md.md_keylen, mkeydst);
-	bzero(key, sizeof(key));
+	bzero(key, keysize);
 	if (error != 0) {
 		bzero(&md, sizeof(md));
 		gctl_error(req, "Cannot encrypt Master Key (error=%d).", error);
@@ -576,7 +576,7 @@ g_eli_ctl_setkey(struct gctl_req *req, struct g_class *mp)
 	bzero(&md, sizeof(md));
 	error = g_write_data(cp, pp->mediasize - pp->sectorsize, sector,
 	    pp->sectorsize);
-	bzero(sector, sizeof(sector));
+	bzero(sector, pp->sectorsize);
 	free(sector, M_ELI);
 	if (error != 0) {
 		gctl_error(req, "Cannot store metadata on %s (error=%d).",
@@ -692,7 +692,7 @@ g_eli_ctl_delkey(struct gctl_req *req, struct g_class *mp)
 		(void)g_io_flush(cp);
 	}
 	bzero(&md, sizeof(md));
-	bzero(sector, sizeof(sector));
+	bzero(sector, pp->sectorsize);
 	free(sector, M_ELI);
 	if (*all)
 		G_ELI_DEBUG(1, "All keys removed from %s.", pp->name);
@@ -1018,6 +1018,12 @@ g_eli_config(struct gctl_req *req, struct g_class *mp, const char *verb)
 	while (*version != G_ELI_VERSION) {
 		if (G_ELI_VERSION == G_ELI_VERSION_06 &&
 		    *version == G_ELI_VERSION_05) {
+			/* Compatible. */
+			break;
+		}
+		if (G_ELI_VERSION == G_ELI_VERSION_07 &&
+		    (*version == G_ELI_VERSION_05 ||
+		     *version == G_ELI_VERSION_06)) {
 			/* Compatible. */
 			break;
 		}

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/eli/g_eli_crypto.c,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_crypto.c,v 1.5 2007/09/01 06:33:01 pjd Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/eli/g_eli_crypto.c 266749 2014-05-27 14:55:09Z marius $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -266,6 +266,7 @@ g_eli_crypto_hmac_init(struct hmac_ctx *ctx, const uint8_t *hkey,
 	/* Perform inner SHA512. */
 	SHA512_Init(&ctx->shactx);
 	SHA512_Update(&ctx->shactx, k_ipad, sizeof(k_ipad));
+	bzero(k_ipad, sizeof(k_ipad));
 }
 
 void
@@ -289,10 +290,12 @@ g_eli_crypto_hmac_final(struct hmac_ctx *ctx, uint8_t *md, size_t mdsize)
 	bzero(ctx, sizeof(*ctx));
 	SHA512_Update(&lctx, digest, sizeof(digest));
 	SHA512_Final(digest, &lctx);
+	bzero(&lctx, sizeof(lctx));
 	/* mdsize == 0 means "Give me the whole hash!" */
 	if (mdsize == 0)
 		mdsize = SHA512_MDLEN;
 	bcopy(digest, md, mdsize);
+	bzero(digest, sizeof(digest));
 }
 
 void

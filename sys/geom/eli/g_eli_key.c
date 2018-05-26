@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/eli/g_eli_key.c,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_key.c,v 1.3 2006/06/05 21:38:54 pjd Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/eli/g_eli_key.c 238114 2012-07-04 17:43:25Z pjd $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -198,7 +198,7 @@ g_eli_mkey_propagate(struct g_eli_softc *sc, const unsigned char *mkey)
 	mkey += sizeof(sc->sc_ivkey);
 
 	/*
-	 * The authentication key is: akey = HMAC_SHA512(Master-Key, 0x11)
+	 * The authentication key is: akey = HMAC_SHA512(Data-Key, 0x11)
 	 */
 	if ((sc->sc_flags & G_ELI_FLAG_AUTH) != 0) {
 		g_eli_crypto_hmac(mkey, G_ELI_MAXKEYLEN, "\x11", 1,
@@ -210,7 +210,7 @@ g_eli_mkey_propagate(struct g_eli_softc *sc, const unsigned char *mkey)
 	/* Initialize encryption keys. */
 	g_eli_key_init(sc);
 
-	if (sc->sc_flags & G_ELI_FLAG_AUTH) {
+	if ((sc->sc_flags & G_ELI_FLAG_AUTH) != 0) {
 		/*
 		 * Precalculate SHA256 for HMAC key generation.
 		 * This is expensive operation and we can do it only once now or
