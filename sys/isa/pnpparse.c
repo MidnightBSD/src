@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/isa/pnpparse.c,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/isa/pnpparse.c 165654 2006-12-30 11:55:47Z ceri $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

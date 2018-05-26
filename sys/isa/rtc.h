@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/isa/rtc.h,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)rtc.h	7.1 (Berkeley) 5/12/91
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/isa/rtc.h 209371 2010-06-20 21:33:29Z mav $
  */
 
 #ifndef _I386_ISA_RTC_H_

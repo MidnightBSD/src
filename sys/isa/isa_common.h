@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/isa/isa_common.h,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/isa/isa_common.h 221526 2011-05-06 13:48:53Z jhb $
  */
 
 /*

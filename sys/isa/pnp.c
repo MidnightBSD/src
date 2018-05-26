@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/isa/pnp.c,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996, Sujal M. Patel
  * All rights reserved.
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/isa/pnp.c 220126 2011-03-29 12:38:13Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
