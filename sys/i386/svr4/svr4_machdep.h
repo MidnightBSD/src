@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -25,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/svr4/svr4_machdep.h 139790 2005-01-06 22:18:23Z imp $
  */
 
 #ifndef	_I386_SVR4_MACHDEP_H_

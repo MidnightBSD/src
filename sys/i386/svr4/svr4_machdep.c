@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/svr4/svr4_machdep.c 276080 2014-12-22 20:53:45Z jhb $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -65,7 +66,6 @@ __FBSDID("$FreeBSD$");
 
 extern int svr4_szsigcode;
 extern char svr4_sigcode[];
-extern int _udatasel, _ucodesel;
 
 static void svr4_getsiginfo(union svr4_siginfo *, int, u_long, caddr_t);
 
