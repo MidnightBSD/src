@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_sockbuf.c 274043 2014-11-03 12:38:29Z hselasky $");
 
 #include "opt_param.h"
 
@@ -65,7 +66,7 @@ u_long sb_max_adj =
 
 static	u_long sb_efficiency = 8;	/* parameter for sbreserve() */
 
-static void	sbdrop_internal(struct sockbuf *sb, int len);
+static struct mbuf	*sbcut_internal(struct sockbuf *sb, int len);
 static void	sbflush_internal(struct sockbuf *sb);
 
 /*
@@ -127,9 +128,9 @@ sbwait(struct sockbuf *sb)
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	sb->sb_flags |= SB_WAIT;
-	return (msleep(&sb->sb_cc, &sb->sb_mtx,
+	return (msleep_sbt(&sb->sb_cc, &sb->sb_mtx,
 	    (sb->sb_flags & SB_NOINTR) ? PSOCK : PSOCK | PCATCH, "sbwait",
-	    sb->sb_timeo));
+	    sb->sb_timeo, 0, 0));
 }
 
 int
@@ -188,7 +189,7 @@ sowakeup(struct socket *so, struct sockbuf *sb)
 	}
 	KNOTE_LOCKED(&sb->sb_sel.si_note, 0);
 	if (sb->sb_upcall != NULL) {
-		ret = sb->sb_upcall(so, sb->sb_upcallarg, M_DONTWAIT);
+		ret = sb->sb_upcall(so, sb->sb_upcallarg, M_NOWAIT);
 		if (ret == SU_ISCONNECTED) {
 			KASSERT(sb == &so->so_rcv,
 			    ("SO_SND upcall returned SU_ISCONNECTED"));
@@ -528,6 +529,9 @@ sbappendstream_locked(struct sockbuf *sb, struct mbuf *m)
 
 	SBLASTMBUFCHK(sb);
 
+	/* Remove all packet headers and mbuf tags to get a pure data chain. */
+	m_demote(m, 1);
+	
 	sbcompress(sb, m, sb->sb_mbtail);
 
 	sb->sb_lastrecord = sb->sb_mb;
@@ -617,40 +621,23 @@ sbappendrecord(struct sockbuf *sb, struct mbuf *m0)
 	SOCKBUF_UNLOCK(sb);
 }
 
-/*
- * Append address and data, and optionally, control (ancillary) data to the
- * receive queue of a socket.  If present, m0 must include a packet header
- * with total length.  Returns 0 if no space in sockbuf or insufficient
- * mbufs.
- */
-int
-sbappendaddr_locked(struct sockbuf *sb, const struct sockaddr *asa,
-    struct mbuf *m0, struct mbuf *control)
+/* Helper routine that appends data, control, and address to a sockbuf. */
+static int
+sbappendaddr_locked_internal(struct sockbuf *sb, const struct sockaddr *asa,
+    struct mbuf *m0, struct mbuf *control, struct mbuf *ctrl_last)
 {
 	struct mbuf *m, *n, *nlast;
-	int space = asa->sa_len;
-
-	SOCKBUF_LOCK_ASSERT(sb);
-
-	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
-		panic("sbappendaddr_locked");
-	if (m0)
-		space += m0->m_pkthdr.len;
-	space += m_length(control, &n);
-
-	if (space > sbspace(sb))
-		return (0);
 #if MSIZE <= 256
 	if (asa->sa_len > MLEN)
 		return (0);
 #endif
-	MGET(m, M_DONTWAIT, MT_SONAME);
-	if (m == 0)
+	m = m_get(M_NOWAIT, MT_SONAME);
+	if (m == NULL)
 		return (0);
 	m->m_len = asa->sa_len;
 	bcopy(asa, mtod(m, caddr_t), asa->sa_len);
-	if (n)
-		n->m_next = m0;		/* concatenate data to control */
+	if (ctrl_last)
+		ctrl_last->m_next = m0;	/* concatenate data to control */
 	else
 		control = m0;
 	m->m_next = control;
@@ -665,6 +652,50 @@ sbappendaddr_locked(struct sockbuf *sb, const struct sockaddr *asa,
 
 	SBLASTRECORDCHK(sb);
 	return (1);
+}
+
+/*
+ * Append address and data, and optionally, control (ancillary) data to the
+ * receive queue of a socket.  If present, m0 must include a packet header
+ * with total length.  Returns 0 if no space in sockbuf or insufficient
+ * mbufs.
+ */
+int
+sbappendaddr_locked(struct sockbuf *sb, const struct sockaddr *asa,
+    struct mbuf *m0, struct mbuf *control)
+{
+	struct mbuf *ctrl_last;
+	int space = asa->sa_len;
+
+	SOCKBUF_LOCK_ASSERT(sb);
+
+	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
+		panic("sbappendaddr_locked");
+	if (m0)
+		space += m0->m_pkthdr.len;
+	space += m_length(control, &ctrl_last);
+
+	if (space > sbspace(sb))
+		return (0);
+	return (sbappendaddr_locked_internal(sb, asa, m0, control, ctrl_last));
+}
+
+/*
+ * Append address and data, and optionally, control (ancillary) data to the
+ * receive queue of a socket.  If present, m0 must include a packet header
+ * with total length.  Returns 0 if insufficient mbufs.  Does not validate space
+ * on the receiving sockbuf.
+ */
+int
+sbappendaddr_nospacecheck_locked(struct sockbuf *sb, const struct sockaddr *asa,
+    struct mbuf *m0, struct mbuf *control)
+{
+	struct mbuf *ctrl_last;
+
+	SOCKBUF_LOCK_ASSERT(sb);
+
+	ctrl_last = (control == NULL) ? NULL : m_last(control);
+	return (sbappendaddr_locked_internal(sb, asa, m0, control, ctrl_last));
 }
 
 /*
@@ -815,7 +846,7 @@ sbflush_internal(struct sockbuf *sb)
 		 */
 		if (!sb->sb_cc && (sb->sb_mb == NULL || sb->sb_mb->m_len))
 			break;
-		sbdrop_internal(sb, (int)sb->sb_cc);
+		m_freem(sbcut_internal(sb, (int)sb->sb_cc));
 	}
 	if (sb->sb_cc || sb->sb_mb || sb->sb_mbcnt)
 		panic("sbflush_internal: cc %u || mb %p || mbcnt %u",
@@ -840,15 +871,16 @@ sbflush(struct sockbuf *sb)
 }
 
 /*
- * Drop data from (the front of) a sockbuf.
+ * Cut data from (the front of) a sockbuf.
  */
-static void
-sbdrop_internal(struct sockbuf *sb, int len)
+static struct mbuf *
+sbcut_internal(struct sockbuf *sb, int len)
 {
-	struct mbuf *m;
-	struct mbuf *next;
+	struct mbuf *m, *n, *next, *mfree;
 
 	next = (m = sb->sb_mb) ? m->m_nextpkt : 0;
+	mfree = NULL;
+
 	while (len > 0) {
 		if (m == 0) {
 			if (next == 0)
@@ -869,11 +901,17 @@ sbdrop_internal(struct sockbuf *sb, int len)
 		}
 		len -= m->m_len;
 		sbfree(sb, m);
-		m = m_free(m);
+		n = m->m_next;
+		m->m_next = mfree;
+		mfree = m;
+		m = n;
 	}
 	while (m && m->m_len == 0) {
 		sbfree(sb, m);
-		m = m_free(m);
+		n = m->m_next;
+		m->m_next = mfree;
+		mfree = m;
+		m = n;
 	}
 	if (m) {
 		sb->sb_mb = m;
@@ -891,6 +929,8 @@ sbdrop_internal(struct sockbuf *sb, int len)
 	} else if (m->m_nextpkt == NULL) {
 		sb->sb_lastrecord = m;
 	}
+
+	return (mfree);
 }
 
 /*
@@ -901,17 +941,31 @@ sbdrop_locked(struct sockbuf *sb, int len)
 {
 
 	SOCKBUF_LOCK_ASSERT(sb);
+	m_freem(sbcut_internal(sb, len));
+}
 
-	sbdrop_internal(sb, len);
+/*
+ * Drop data from (the front of) a sockbuf,
+ * and return it to caller.
+ */
+struct mbuf *
+sbcut_locked(struct sockbuf *sb, int len)
+{
+
+	SOCKBUF_LOCK_ASSERT(sb);
+	return (sbcut_internal(sb, len));
 }
 
 void
 sbdrop(struct sockbuf *sb, int len)
 {
+	struct mbuf *mfree;
 
 	SOCKBUF_LOCK(sb);
-	sbdrop_locked(sb, len);
+	mfree = sbcut_internal(sb, len);
 	SOCKBUF_UNLOCK(sb);
+
+	m_freem(mfree);
 }
 
 /*
@@ -939,6 +993,13 @@ sbsndptr(struct sockbuf *sb, u_int off, u_int len, u_int *moff)
 	/* Return closest mbuf in chain for current offset. */
 	*moff = off - sb->sb_sndptroff;
 	m = ret = sb->sb_sndptr ? sb->sb_sndptr : sb->sb_mb;
+	if (*moff == m->m_len) {
+		*moff = 0;
+		sb->sb_sndptroff += m->m_len;
+		m = ret = m->m_next;
+		KASSERT(ret->m_len > 0,
+		    ("mbuf %p in sockbuf %p chain has no valid data", ret, sb));
+	}
 
 	/* Advance by len to be as close as possible for the next transmit. */
 	for (off = off - sb->sb_sndptroff + len - 1;
@@ -952,6 +1013,37 @@ sbsndptr(struct sockbuf *sb, u_int off, u_int len, u_int *moff)
 	sb->sb_sndptr = m;
 
 	return (ret);
+}
+
+/*
+ * Return the first mbuf and the mbuf data offset for the provided
+ * send offset without changing the "sb_sndptroff" field.
+ */
+struct mbuf *
+sbsndmbuf(struct sockbuf *sb, u_int off, u_int *moff)
+{
+	struct mbuf *m;
+
+	KASSERT(sb->sb_mb != NULL, ("%s: sb_mb is NULL", __func__));
+
+	/*
+	 * If the "off" is below the stored offset, which happens on
+	 * retransmits, just use "sb_mb":
+	 */
+	if (sb->sb_sndptr == NULL || sb->sb_sndptroff > off) {
+		m = sb->sb_mb;
+	} else {
+		m = sb->sb_sndptr;
+		off -= sb->sb_sndptroff;
+	}
+	while (off > 0 && m != NULL) {
+		if (off < m->m_len)
+			break;
+		off -= m->m_len;
+		m = m->m_next;
+	}
+	*moff = off;
+	return (m);
 }
 
 /*
@@ -1002,9 +1094,9 @@ sbcreatecontrol(caddr_t p, int size, int type, int level)
 	if (CMSG_SPACE((u_int)size) > MCLBYTES)
 		return ((struct mbuf *) NULL);
 	if (CMSG_SPACE((u_int)size) > MLEN)
-		m = m_getcl(M_DONTWAIT, MT_CONTROL, 0);
+		m = m_getcl(M_NOWAIT, MT_CONTROL, 0);
 	else
-		m = m_get(M_DONTWAIT, MT_CONTROL);
+		m = m_get(M_NOWAIT, MT_CONTROL);
 	if (m == NULL)
 		return ((struct mbuf *) NULL);
 	cp = mtod(m, struct cmsghdr *);
@@ -1053,4 +1145,4 @@ SYSCTL_INT(_kern, KERN_DUMMY, dummy, CTLFLAG_RW, &dummy, 0, "");
 SYSCTL_OID(_kern_ipc, KIPC_MAXSOCKBUF, maxsockbuf, CTLTYPE_ULONG|CTLFLAG_RW,
     &sb_max, 0, sysctl_handle_sb_max, "LU", "Maximum socket buffer size");
 SYSCTL_ULONG(_kern_ipc, KIPC_SOCKBUF_WASTE, sockbuf_waste_factor, CTLFLAG_RW,
-    &sb_efficiency, 0, "");
+    &sb_efficiency, 0, "Socket buffer size waste factor");

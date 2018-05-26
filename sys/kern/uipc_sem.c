@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Alfred Perlstein <alfred@FreeBSD.org>
  * Copyright (c) 2003-2005 SPARTA, Inc.
@@ -32,18 +33,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_sem.c 325783 2017-11-13 23:21:17Z jamie $");
 
 #include "opt_compat.h"
 #include "opt_posix.h"
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/condvar.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/fnv_hash.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/ksem.h>
 #include <sys/lock.h>
@@ -71,7 +73,6 @@ FEATURE(p1003_1b_semaphores, "POSIX P1003.1B semaphores support");
  * TODO
  *
  * - Resource limits?
- * - Update fstat(1)
  * - Replace global sem_lock with mtx_pool locks?
  * - Add a MAC check_create() hook for creating new named semaphores.
  */
@@ -117,7 +118,7 @@ static int	ksem_create(struct thread *td, const char *path,
 		    semid_t *semidp, mode_t mode, unsigned int value,
 		    int flags, int compat32);
 static void	ksem_drop(struct ksem *ks);
-static int	ksem_get(struct thread *td, semid_t id, cap_rights_t rights,
+static int	ksem_get(struct thread *td, semid_t id, cap_rights_t *rightsp,
     struct file **fpp);
 static struct ksem *ksem_hold(struct ksem *ks);
 static void	ksem_insert(char *path, Fnv32_t fnv, struct ksem *ks);
@@ -150,6 +151,7 @@ static struct fileops ksem_ops = {
 	.fo_close = ksem_closef,
 	.fo_chmod = ksem_chmod,
 	.fo_chown = ksem_chown,
+	.fo_sendfile = invfo_sendfile,
 	.fo_flags = DFLAG_PASSABLE
 };
 
@@ -407,6 +409,7 @@ ksem_insert(char *path, Fnv32_t fnv, struct ksem *ks)
 	map->km_path = path;
 	map->km_fnv = fnv;
 	map->km_ksem = ksem_hold(ks);
+	ks->ks_path = path;
 	LIST_INSERT_HEAD(KSEM_HASH(fnv), map, km_link);
 }
 
@@ -428,6 +431,7 @@ ksem_remove(char *path, Fnv32_t fnv, struct ucred *ucred)
 			error = ksem_access(map->km_ksem, ucred);
 			if (error)
 				return (error);
+			map->km_ksem->ks_path = NULL;
 			LIST_REMOVE(map, km_link);
 			ksem_drop(map->km_ksem);
 			free(map->km_path, M_KSEM);
@@ -437,6 +441,32 @@ ksem_remove(char *path, Fnv32_t fnv, struct ucred *ucred)
 	}
 
 	return (ENOENT);
+}
+
+static void
+ksem_info_impl(struct ksem *ks, char *path, size_t size, uint32_t *value)
+{
+	const char *ks_path, *pr_path;
+	size_t pr_pathlen;
+
+	if (ks->ks_path == NULL)
+		return;
+	sx_slock(&ksem_dict_lock);
+	ks_path = ks->ks_path;
+	if (ks_path != NULL) {
+		pr_path = curthread->td_ucred->cr_prison->pr_path;
+		if (strcmp(pr_path, "/") != 0) {
+			/* Return the jail-rooted pathname. */
+			pr_pathlen = strlen(pr_path);
+			if (strncmp(ks_path, pr_path, pr_pathlen) == 0 &&
+			    ks_path[pr_pathlen] == '/')
+				ks_path += pr_pathlen;
+		}
+		strlcpy(path, ks_path, size);
+	}
+	if (value != NULL)
+		*value = ks->ks_value;
+	sx_sunlock(&ksem_dict_lock);
 }
 
 static int
@@ -477,6 +507,8 @@ ksem_create(struct thread *td, const char *name, semid_t *semidp, mode_t mode,
 	struct ksem *ks;
 	struct file *fp;
 	char *path;
+	const char *pr_path;
+	size_t pr_pathlen;
 	Fnv32_t fnv;
 	int error, fd;
 
@@ -499,7 +531,7 @@ ksem_create(struct thread *td, const char *name, semid_t *semidp, mode_t mode,
 	 */
 	error = ksem_create_copyout_semid(td, semidp, fd, compat32);
 	if (error) {
-		fdclose(fdp, fp, fd, td);
+		fdclose(td, fp, fd);
 		fdrop(fp, td);
 		return (error);
 	}
@@ -513,13 +545,19 @@ ksem_create(struct thread *td, const char *name, semid_t *semidp, mode_t mode,
 			ks->ks_flags |= KS_ANONYMOUS;
 	} else {
 		path = malloc(MAXPATHLEN, M_KSEM, M_WAITOK);
-		error = copyinstr(name, path, MAXPATHLEN, NULL);
+		pr_path = td->td_ucred->cr_prison->pr_path;
+
+		/* Construct a full pathname for jailed callers. */
+		pr_pathlen = strcmp(pr_path, "/") == 0 ? 0
+		    : strlcpy(path, pr_path, MAXPATHLEN);
+		error = copyinstr(name, path + pr_pathlen,
+		    MAXPATHLEN - pr_pathlen, NULL);
 
 		/* Require paths to start with a '/' character. */
-		if (error == 0 && path[0] != '/')
+		if (error == 0 && path[pr_pathlen] != '/')
 			error = EINVAL;
 		if (error) {
-			fdclose(fdp, fp, fd, td);
+			fdclose(td, fp, fd);
 			fdrop(fp, td);
 			free(path, M_KSEM);
 			return (error);
@@ -570,7 +608,7 @@ ksem_create(struct thread *td, const char *name, semid_t *semidp, mode_t mode,
 
 	if (error) {
 		KASSERT(ks == NULL, ("ksem_create error with a ksem"));
-		fdclose(fdp, fp, fd, td);
+		fdclose(td, fp, fd);
 		fdrop(fp, td);
 		return (error);
 	}
@@ -584,13 +622,14 @@ ksem_create(struct thread *td, const char *name, semid_t *semidp, mode_t mode,
 }
 
 static int
-ksem_get(struct thread *td, semid_t id, cap_rights_t rights, struct file **fpp)
+ksem_get(struct thread *td, semid_t id, cap_rights_t *rightsp,
+    struct file **fpp)
 {
 	struct ksem *ks;
 	struct file *fp;
 	int error;
 
-	error = fget(td, id, rights, &fp);
+	error = fget(td, id, rightsp, &fp);
 	if (error)
 		return (EINVAL);
 	if (fp->f_type != DTYPE_SEM) {
@@ -651,11 +690,17 @@ int
 sys_ksem_unlink(struct thread *td, struct ksem_unlink_args *uap)
 {
 	char *path;
+	const char *pr_path;
+	size_t pr_pathlen;
 	Fnv32_t fnv;
 	int error;
 
 	path = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
-	error = copyinstr(uap->name, path, MAXPATHLEN, NULL);
+	pr_path = td->td_ucred->cr_prison->pr_path;
+	pr_pathlen = strcmp(pr_path, "/") == 0 ? 0
+	    : strlcpy(path, pr_path, MAXPATHLEN);
+	error = copyinstr(uap->name, path + pr_pathlen, MAXPATHLEN - pr_pathlen,
+	    NULL);
 	if (error) {
 		free(path, M_TEMP);
 		return (error);
@@ -704,11 +749,13 @@ struct ksem_post_args {
 int
 sys_ksem_post(struct thread *td, struct ksem_post_args *uap)
 {
+	cap_rights_t rights;
 	struct file *fp;
 	struct ksem *ks;
 	int error;
 
-	error = ksem_get(td, uap->id, CAP_SEM_POST, &fp);
+	error = ksem_get(td, uap->id,
+	    cap_rights_init(&rights, CAP_SEM_POST), &fp);
 	if (error)
 		return (error);
 	ks = fp->f_data;
@@ -793,12 +840,13 @@ kern_sem_wait(struct thread *td, semid_t id, int tryflag,
 {
 	struct timespec ts1, ts2;
 	struct timeval tv;
+	cap_rights_t rights;
 	struct file *fp;
 	struct ksem *ks;
 	int error;
 
 	DP((">>> kern_sem_wait entered! pid=%d\n", (int)td->td_proc->p_pid));
-	error = ksem_get(td, id, CAP_SEM_WAIT, &fp);
+	error = ksem_get(td, id, cap_rights_init(&rights, CAP_SEM_WAIT), &fp);
 	if (error)
 		return (error);
 	ks = fp->f_data;
@@ -860,11 +908,13 @@ struct ksem_getvalue_args {
 int
 sys_ksem_getvalue(struct thread *td, struct ksem_getvalue_args *uap)
 {
+	cap_rights_t rights;
 	struct file *fp;
 	struct ksem *ks;
 	int error, val;
 
-	error = ksem_get(td, uap->id, CAP_SEM_GETVALUE, &fp);
+	error = ksem_get(td, uap->id,
+	    cap_rights_init(&rights, CAP_SEM_GETVALUE), &fp);
 	if (error)
 		return (error);
 	ks = fp->f_data;
@@ -1014,6 +1064,7 @@ ksem_module_init(void)
 	p31b_setcfg(CTL_P1003_1B_SEMAPHORES, 200112L);
 	p31b_setcfg(CTL_P1003_1B_SEM_NSEMS_MAX, SEM_MAX);
 	p31b_setcfg(CTL_P1003_1B_SEM_VALUE_MAX, SEM_VALUE_MAX);
+	ksem_info = ksem_info_impl;
 
 	error = syscall_helper_register(ksem_syscalls);
 	if (error)
@@ -1035,6 +1086,7 @@ ksem_module_destroy(void)
 #endif
 	syscall_helper_unregister(ksem_syscalls);
 
+	ksem_info = NULL;
 	p31b_setcfg(CTL_P1003_1B_SEMAPHORES, 0);
 	hashdestroy(ksem_dictionary, M_KSEM, ksem_hash);
 	sx_destroy(&ksem_dict_lock);

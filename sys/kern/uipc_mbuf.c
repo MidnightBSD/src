@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_mbuf.c 308376 2016-11-06 16:44:33Z avos $");
 
 #include "opt_param.h"
 #include "opt_mbuf_stress_test.h"
@@ -83,6 +84,77 @@ SYSCTL_INT(_kern_ipc, OID_AUTO, m_defragfailure, CTLFLAG_RD,
 SYSCTL_INT(_kern_ipc, OID_AUTO, m_defragrandomfailures, CTLFLAG_RW,
 	   &m_defragrandomfailures, 0, "");
 #endif
+
+/*
+ * Ensure the correct size of various mbuf parameters.  It could be off due
+ * to compiler-induced padding and alignment artifacts.
+ */
+CTASSERT(sizeof(struct mbuf) == MSIZE);
+CTASSERT(MSIZE - offsetof(struct mbuf, m_dat) == MLEN);
+CTASSERT(MSIZE - offsetof(struct mbuf, m_pktdat) == MHLEN);
+
+/*
+ * m_get2() allocates minimum mbuf that would fit "size" argument.
+ */
+struct mbuf *
+m_get2(int size, int how, short type, int flags)
+{
+	struct mb_args args;
+	struct mbuf *m, *n;
+
+	args.flags = flags;
+	args.type = type;
+
+	if (size <= MHLEN || (size <= MLEN && (flags & M_PKTHDR) == 0))
+		return (uma_zalloc_arg(zone_mbuf, &args, how));
+	if (size <= MCLBYTES)
+		return (uma_zalloc_arg(zone_pack, &args, how));
+
+	if (size > MJUMPAGESIZE)
+		return (NULL);
+
+	m = uma_zalloc_arg(zone_mbuf, &args, how);
+	if (m == NULL)
+		return (NULL);
+
+	n = uma_zalloc_arg(zone_jumbop, m, how);
+	if (n == NULL) {
+		uma_zfree(zone_mbuf, m);
+		return (NULL);
+	}
+
+	return (m);
+}
+
+/*
+ * m_getjcl() returns an mbuf with a cluster of the specified size attached.
+ * For size it takes MCLBYTES, MJUMPAGESIZE, MJUM9BYTES, MJUM16BYTES.
+ */
+struct mbuf *
+m_getjcl(int how, short type, int flags, int size)
+{
+	struct mb_args args;
+	struct mbuf *m, *n;
+	uma_zone_t zone;
+
+	if (size == MCLBYTES)
+		return m_getcl(how, type, flags);
+
+	args.flags = flags;
+	args.type = type;
+
+	m = uma_zalloc_arg(zone_mbuf, &args, how);
+	if (m == NULL)
+		return (NULL);
+
+	zone = m_getzone(size);
+	n = uma_zalloc_arg(zone, m, how);
+	if (n == NULL) {
+		uma_zfree(zone_mbuf, m);
+		return (NULL);
+	}
+	return (m);
+}
 
 /*
  * Allocate a given length worth of mbufs and/or clusters (whatever fits
@@ -182,25 +254,31 @@ m_freem(struct mbuf *mb)
  * Returns:
  *    Nothing.
  */
-void
+int
 m_extadd(struct mbuf *mb, caddr_t buf, u_int size,
-    void (*freef)(void *, void *), void *arg1, void *arg2, int flags, int type)
+    int (*freef)(struct mbuf *, void *, void *), void *arg1, void *arg2,
+    int flags, int type, int wait)
 {
 	KASSERT(type != EXT_CLUSTER, ("%s: EXT_CLUSTER not allowed", __func__));
 
 	if (type != EXT_EXTREF)
-		mb->m_ext.ref_cnt = (u_int *)uma_zalloc(zone_ext_refcnt, M_NOWAIT);
-	if (mb->m_ext.ref_cnt != NULL) {
-		*(mb->m_ext.ref_cnt) = 1;
-		mb->m_flags |= (M_EXT | flags);
-		mb->m_ext.ext_buf = buf;
-		mb->m_data = mb->m_ext.ext_buf;
-		mb->m_ext.ext_size = size;
-		mb->m_ext.ext_free = freef;
-		mb->m_ext.ext_arg1 = arg1;
-		mb->m_ext.ext_arg2 = arg2;
-		mb->m_ext.ext_type = type;
-        }
+		mb->m_ext.ref_cnt = uma_zalloc(zone_ext_refcnt, wait);
+
+	if (mb->m_ext.ref_cnt == NULL)
+		return (ENOMEM);
+
+	*(mb->m_ext.ref_cnt) = 1;
+	mb->m_flags |= (M_EXT | flags);
+	mb->m_ext.ext_buf = buf;
+	mb->m_data = mb->m_ext.ext_buf;
+	mb->m_ext.ext_size = size;
+	mb->m_ext.ext_free = freef;
+	mb->m_ext.ext_arg1 = arg1;
+	mb->m_ext.ext_arg2 = arg2;
+	mb->m_ext.ext_type = type;
+	mb->m_ext.ext_flags = 0;
+
+	return (0);
 }
 
 /*
@@ -215,12 +293,11 @@ mb_free_ext(struct mbuf *m)
 	KASSERT((m->m_flags & M_EXT) == M_EXT, ("%s: M_EXT not set", __func__));
 	KASSERT(m->m_ext.ref_cnt != NULL, ("%s: ref_cnt not set", __func__));
 
-
 	/*
 	 * check if the header is embedded in the cluster
-	 */     
+	 */
 	skipmbuf = (m->m_flags & M_NOFREE);
-	
+
 	/* Free attached storage if this mbuf is the only reference to it. */
 	if (*(m->m_ext.ref_cnt) == 1 ||
 	    atomic_fetchadd_int(m->m_ext.ref_cnt, -1) == 1) {
@@ -253,7 +330,7 @@ mb_free_ext(struct mbuf *m)
 		case EXT_EXTREF:
 			KASSERT(m->m_ext.ext_free != NULL,
 				("%s: ext_free not set", __func__));
-			(*(m->m_ext.ext_free))(m->m_ext.ext_arg1,
+			(void)(*(m->m_ext.ext_free))(m, m->m_ext.ext_arg1,
 			    m->m_ext.ext_arg2);
 			break;
 		default:
@@ -275,6 +352,7 @@ mb_free_ext(struct mbuf *m)
 	m->m_ext.ref_cnt = NULL;
 	m->m_ext.ext_size = 0;
 	m->m_ext.ext_type = 0;
+	m->m_ext.ext_flags = 0;
 	m->m_flags &= ~M_EXT;
 	uma_zfree(zone_mbuf, m);
 }
@@ -301,6 +379,7 @@ mb_dupcl(struct mbuf *n, struct mbuf *m)
 	n->m_ext.ext_size = m->m_ext.ext_size;
 	n->m_ext.ref_cnt = m->m_ext.ref_cnt;
 	n->m_ext.ext_type = m->m_ext.ext_type;
+	n->m_ext.ext_flags = m->m_ext.ext_flags;
 	n->m_flags |= M_EXT;
 	n->m_flags |= m->m_flags & M_RDONLY;
 }
@@ -327,7 +406,7 @@ m_demote(struct mbuf *m0, int all)
 			m_freem(m->m_nextpkt);
 			m->m_nextpkt = NULL;
 		}
-		m->m_flags = m->m_flags & (M_EXT|M_RDONLY|M_FREELIST|M_NOFREE);
+		m->m_flags = m->m_flags & (M_EXT|M_RDONLY|M_NOFREE);
 	}
 }
 
@@ -368,11 +447,6 @@ m_sanity(struct mbuf *m0, int sanitize)
 			M_SANITY_ACTION("m_data outside mbuf data range right");
 		if ((caddr_t)m->m_data + m->m_len > b)
 			M_SANITY_ACTION("m_data + m_len exeeds mbuf space");
-		if ((m->m_flags & M_PKTHDR) && m->m_pkthdr.header) {
-			if ((caddr_t)m->m_pkthdr.header < a ||
-			    (caddr_t)m->m_pkthdr.header > b)
-				M_SANITY_ACTION("m_pkthdr.header outside mbuf data range");
-		}
 
 		/* m->m_nextpkt may only be set on first mbuf in chain. */
 		if (m != m0 && m->m_nextpkt != NULL) {
@@ -462,8 +536,8 @@ m_dup_pkthdr(struct mbuf *to, struct mbuf *from, int how)
 #if 0
 	/*
 	 * The mbuf allocator only initializes the pkthdr
-	 * when the mbuf is allocated with MGETHDR. Many users
-	 * (e.g. m_copy*, m_prepend) use MGET and then
+	 * when the mbuf is allocated with m_gethdr(). Many users
+	 * (e.g. m_copy*, m_prepend) use m_get() and then
 	 * smash the pkthdr as needed causing these
 	 * assertions to trip.  For now just disable them.
 	 */
@@ -495,15 +569,15 @@ m_prepend(struct mbuf *m, int len, int how)
 	struct mbuf *mn;
 
 	if (m->m_flags & M_PKTHDR)
-		MGETHDR(mn, how, m->m_type);
+		mn = m_gethdr(how, m->m_type);
 	else
-		MGET(mn, how, m->m_type);
+		mn = m_get(how, m->m_type);
 	if (mn == NULL) {
 		m_freem(m);
 		return (NULL);
 	}
 	if (m->m_flags & M_PKTHDR)
-		M_MOVE_PKTHDR(mn, m);
+		m_move_pkthdr(mn, m);
 	mn->m_next = m;
 	m = mn;
 	if(m->m_flags & M_PKTHDR) {
@@ -520,7 +594,7 @@ m_prepend(struct mbuf *m, int len, int how)
 /*
  * Make a copy of an mbuf chain starting "off0" bytes from the beginning,
  * continuing for "len" bytes.  If len is M_COPYALL, copy to end of mbuf.
- * The wait parameter is a choice of M_WAIT/M_DONTWAIT from caller.
+ * The wait parameter is a choice of M_WAITOK/M_NOWAIT from caller.
  * Note that the copy is read-only, because clusters are not copied,
  * only their reference counts are incremented.
  */
@@ -553,9 +627,9 @@ m_copym(struct mbuf *m, int off0, int len, int wait)
 			break;
 		}
 		if (copyhdr)
-			MGETHDR(n, wait, m->m_type);
+			n = m_gethdr(wait, m->m_type);
 		else
-			MGET(n, wait, m->m_type);
+			n = m_get(wait, m->m_type);
 		*np = n;
 		if (n == NULL)
 			goto nospace;
@@ -581,13 +655,10 @@ m_copym(struct mbuf *m, int off0, int len, int wait)
 		m = m->m_next;
 		np = &n->m_next;
 	}
-	if (top == NULL)
-		mbstat.m_mcfail++;	/* XXX: No consistency. */
 
 	return (top);
 nospace:
 	m_freem(top);
-	mbstat.m_mcfail++;	/* XXX: No consistency. */
 	return (NULL);
 }
 
@@ -679,7 +750,6 @@ m_copymdata(struct mbuf *m, struct mbuf *n, int off, int len,
 			return NULL;
 		bcopy(&buf, mm->m_ext.ext_buf, mm->m_len);
 		mm->m_data = mm->m_ext.ext_buf;
-		mm->m_pkthdr.header = NULL;
 	}
 	if (prep && !(mm->m_flags & M_EXT) && len > M_LEADINGSPACE(mm)) {
 		bcopy(mm->m_data, &buf, mm->m_len);
@@ -690,7 +760,6 @@ m_copymdata(struct mbuf *m, struct mbuf *n, int off, int len,
 		       mm->m_ext.ext_size - mm->m_len, mm->m_len);
 		mm->m_data = (caddr_t)mm->m_ext.ext_buf +
 			      mm->m_ext.ext_size - mm->m_len;
-		mm->m_pkthdr.header = NULL;
 	}
 
 	/* Append/prepend as many mbuf (clusters) as necessary to fit len. */
@@ -754,7 +823,7 @@ m_copypacket(struct mbuf *m, int how)
 	struct mbuf *top, *n, *o;
 
 	MBUF_CHECKSLEEP(how);
-	MGET(n, how, m->m_type);
+	n = m_get(how, m->m_type);
 	top = n;
 	if (n == NULL)
 		goto nospace;
@@ -772,7 +841,7 @@ m_copypacket(struct mbuf *m, int how)
 
 	m = m->m_next;
 	while (m) {
-		MGET(o, how, m->m_type);
+		o = m_get(how, m->m_type);
 		if (o == NULL)
 			goto nospace;
 
@@ -792,7 +861,6 @@ m_copypacket(struct mbuf *m, int how)
 	return top;
 nospace:
 	m_freem(top);
-	mbstat.m_mcfail++;	/* XXX: No consistency. */ 
 	return (NULL);
 }
 
@@ -867,6 +935,7 @@ m_dup(struct mbuf *m, int how)
 			}
 			if ((n->m_flags & M_EXT) == 0)
 				nsize = MHLEN;
+			n->m_flags &= ~M_RDONLY;
 		}
 		n->m_len = 0;
 
@@ -896,7 +965,6 @@ m_dup(struct mbuf *m, int how)
 
 nospace:
 	m_freem(top);
-	mbstat.m_mcfail++;	/* XXX: No consistency. */
 	return (NULL);
 }
 
@@ -911,8 +979,8 @@ m_cat(struct mbuf *m, struct mbuf *n)
 	while (m->m_next)
 		m = m->m_next;
 	while (n) {
-		if (m->m_flags & M_EXT ||
-		    m->m_data + m->m_len + n->m_len >= &m->m_dat[MLEN]) {
+		if (!M_WRITABLE(m) ||
+		    M_TRAILINGSPACE(m) < n->m_len) {
 			/* just join the two chains */
 			m->m_next = n;
 			return;
@@ -1000,8 +1068,8 @@ m_adj(struct mbuf *mp, int req_len)
 
 /*
  * Rearange an mbuf chain so that len bytes are contiguous
- * and in the data area of an mbuf (so that mtod and dtom
- * will work for a structure of size len).  Returns the resulting
+ * and in the data area of an mbuf (so that mtod will work
+ * for a structure of size len).  Returns the resulting
  * mbuf chain on success, frees it and returns null on failure.
  * If there is room, it will add up to max_protohdr-len extra bytes to the
  * contiguous region in an attempt to avoid being called next time.
@@ -1028,12 +1096,11 @@ m_pullup(struct mbuf *n, int len)
 	} else {
 		if (len > MHLEN)
 			goto bad;
-		MGET(m, M_DONTWAIT, n->m_type);
+		m = m_get(M_NOWAIT, n->m_type);
 		if (m == NULL)
 			goto bad;
-		m->m_len = 0;
 		if (n->m_flags & M_PKTHDR)
-			M_MOVE_PKTHDR(m, n);
+			m_move_pkthdr(m, n);
 	}
 	space = &m->m_dat[MLEN] - (m->m_data + m->m_len);
 	do {
@@ -1057,7 +1124,6 @@ m_pullup(struct mbuf *n, int len)
 	return (m);
 bad:
 	m_freem(n);
-	mbstat.m_mpfail++;	/* XXX: No consistency. */
 	return (NULL);
 }
 
@@ -1076,12 +1142,11 @@ m_copyup(struct mbuf *n, int len, int dstoff)
 
 	if (len > (MHLEN - dstoff))
 		goto bad;
-	MGET(m, M_DONTWAIT, n->m_type);
+	m = m_get(M_NOWAIT, n->m_type);
 	if (m == NULL)
 		goto bad;
-	m->m_len = 0;
 	if (n->m_flags & M_PKTHDR)
-		M_MOVE_PKTHDR(m, n);
+		m_move_pkthdr(m, n);
 	m->m_data += dstoff;
 	space = &m->m_dat[MLEN] - (m->m_data + m->m_len);
 	do {
@@ -1131,8 +1196,18 @@ m_split(struct mbuf *m0, int len0, int wait)
 	if (m == NULL)
 		return (NULL);
 	remain = m->m_len - len;
-	if (m0->m_flags & M_PKTHDR) {
-		MGETHDR(n, wait, m0->m_type);
+	if (m0->m_flags & M_PKTHDR && remain == 0) {
+		n = m_gethdr(wait, m0->m_type);
+		if (n == NULL)
+			return (NULL);
+		n->m_next = m->m_next;
+		m->m_next = NULL;
+		n->m_pkthdr.rcvif = m0->m_pkthdr.rcvif;
+		n->m_pkthdr.len = m0->m_pkthdr.len - len0;
+		m0->m_pkthdr.len = len0;
+		return (n);
+	} else if (m0->m_flags & M_PKTHDR) {
+		n = m_gethdr(wait, m0->m_type);
 		if (n == NULL)
 			return (NULL);
 		n->m_pkthdr.rcvif = m0->m_pkthdr.rcvif;
@@ -1158,7 +1233,7 @@ m_split(struct mbuf *m0, int len0, int wait)
 		m->m_next = NULL;
 		return (n);
 	} else {
-		MGET(n, wait, m->m_type);
+		n = m_get(wait, m->m_type);
 		if (n == NULL)
 			return (NULL);
 		M_ALIGN(n, remain);
@@ -1195,10 +1270,10 @@ m_devget(char *buf, int totlen, int off, struct ifnet *ifp,
 	while (totlen > 0) {
 		if (top == NULL) {	/* First one, must be PKTHDR */
 			if (totlen + off >= MINCLSIZE) {
-				m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+				m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 				len = MCLBYTES;
 			} else {
-				m = m_gethdr(M_DONTWAIT, MT_DATA);
+				m = m_gethdr(M_NOWAIT, MT_DATA);
 				len = MHLEN;
 
 				/* Place initial small packet/header at end of mbuf */
@@ -1213,10 +1288,10 @@ m_devget(char *buf, int totlen, int off, struct ifnet *ifp,
 			m->m_pkthdr.len = totlen;
 		} else {
 			if (totlen + off >= MINCLSIZE) {
-				m = m_getcl(M_DONTWAIT, MT_DATA, 0);
+				m = m_getcl(M_NOWAIT, MT_DATA, 0);
 				len = MCLBYTES;
 			} else {
-				m = m_get(M_DONTWAIT, MT_DATA);
+				m = m_get(M_NOWAIT, MT_DATA);
 				len = MLEN;
 			}
 			if (m == NULL) {
@@ -1260,7 +1335,7 @@ m_copyback(struct mbuf *m0, int off, int len, c_caddr_t cp)
 		off -= mlen;
 		totlen += mlen;
 		if (m->m_next == NULL) {
-			n = m_get(M_DONTWAIT, m->m_type);
+			n = m_get(M_NOWAIT, m->m_type);
 			if (n == NULL)
 				goto out;
 			bzero(mtod(n, caddr_t), MLEN);
@@ -1284,7 +1359,7 @@ m_copyback(struct mbuf *m0, int off, int len, c_caddr_t cp)
 		if (len == 0)
 			break;
 		if (m->m_next == NULL) {
-			n = m_get(M_DONTWAIT, m->m_type);
+			n = m_get(M_NOWAIT, m->m_type);
 			if (n == NULL)
 				break;
 			n->m_len = min(MLEN, len);
@@ -1328,7 +1403,7 @@ m_append(struct mbuf *m0, int len, c_caddr_t cp)
 		 * Allocate a new mbuf; could check space
 		 * and allocate a cluster instead.
 		 */
-		n = m_get(M_DONTWAIT, m->m_type);
+		n = m_get(M_NOWAIT, m->m_type);
 		if (n == NULL)
 			break;
 		n->m_len = min(MLEN, remainder);
@@ -1584,7 +1659,7 @@ again:
 		n = m->m_next;
 		if (n == NULL)
 			break;
-		if ((m->m_flags & M_RDONLY) == 0 &&
+		if (M_WRITABLE(m) &&
 		    n->m_len < M_TRAILINGSPACE(m)) {
 			bcopy(mtod(n, void *), mtod(m, char *) + m->m_len,
 				n->m_len);
@@ -1811,14 +1886,22 @@ m_mbuftouio(struct uio *uio, struct mbuf *m, int len)
 void
 m_align(struct mbuf *m, int len)
 {
+#ifdef INVARIANTS
+	const char *msg = "%s: not a virgin mbuf";
+#endif
 	int adjust;
 
-	if (m->m_flags & M_EXT)
+	if (m->m_flags & M_EXT) {
+		KASSERT(m->m_data == m->m_ext.ext_buf, (msg, __func__));
 		adjust = m->m_ext.ext_size - len;
-	else if (m->m_flags & M_PKTHDR)
+	} else if (m->m_flags & M_PKTHDR) {
+		KASSERT(m->m_data == m->m_pktdat, (msg, __func__));
 		adjust = MHLEN - len;
-	else
+	} else {
+		KASSERT(m->m_data == m->m_dat, (msg, __func__));
 		adjust = MLEN - len;
+	}
+
 	m->m_data += adjust &~ (sizeof(long)-1);
 }
 
@@ -1900,43 +1983,23 @@ m_unshare(struct mbuf *m0, int how)
 		}
 
 		/*
-		 * Allocate new space to hold the copy...
-		 */
-		/* XXX why can M_PKTHDR be set past the first mbuf? */
-		if (mprev == NULL && (m->m_flags & M_PKTHDR)) {
-			/*
-			 * NB: if a packet header is present we must
-			 * allocate the mbuf separately from any cluster
-			 * because M_MOVE_PKTHDR will smash the data
-			 * pointer and drop the M_EXT marker.
-			 */
-			MGETHDR(n, how, m->m_type);
-			if (n == NULL) {
-				m_freem(m0);
-				return (NULL);
-			}
-			M_MOVE_PKTHDR(n, m);
-			MCLGET(n, how);
-			if ((n->m_flags & M_EXT) == 0) {
-				m_free(n);
-				m_freem(m0);
-				return (NULL);
-			}
-		} else {
-			n = m_getcl(how, m->m_type, m->m_flags);
-			if (n == NULL) {
-				m_freem(m0);
-				return (NULL);
-			}
-		}
-		/*
-		 * ... and copy the data.  We deal with jumbo mbufs
-		 * (i.e. m_len > MCLBYTES) by splitting them into
-		 * clusters.  We could just malloc a buffer and make
-		 * it external but too many device drivers don't know
-		 * how to break up the non-contiguous memory when
+		 * Allocate new space to hold the copy and copy the data.
+		 * We deal with jumbo mbufs (i.e. m_len > MCLBYTES) by
+		 * splitting them into clusters.  We could just malloc a
+		 * buffer and make it external but too many device drivers
+		 * don't know how to break up the non-contiguous memory when
 		 * doing DMA.
 		 */
+		n = m_getcl(how, m->m_type, m->m_flags & M_COPYFLAGS);
+		if (n == NULL) {
+			m_freem(m0);
+			return (NULL);
+		}
+		if (m->m_flags & M_PKTHDR) {
+			KASSERT(mprev == NULL, ("%s: m0 %p, m %p has M_PKTHDR",
+			    __func__, m0, m));
+			m_move_pkthdr(n, m);
+		}
 		len = m->m_len;
 		off = 0;
 		mfirst = n;
@@ -1957,7 +2020,7 @@ m_unshare(struct mbuf *m0, int how)
 				break;
 			off += cc;
 
-			n = m_getcl(how, m->m_type, m->m_flags);
+			n = m_getcl(how, m->m_type, m->m_flags & M_COPYFLAGS);
 			if (n == NULL) {
 				m_freem(mfirst);
 				m_freem(m0);
