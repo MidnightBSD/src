@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/label/g_label.h,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/label/g_label.h,v 1.7.2.1 2009/04/07 19:18:02 ivoras Exp $
+ * $FreeBSD: stable/10/sys/geom/label/g_label.h 286193 2015-08-02 10:08:57Z trasz $
  */
 
 #ifndef	_G_LABEL_H_
@@ -88,6 +88,9 @@ extern struct g_label_desc g_label_reiserfs;
 extern struct g_label_desc g_label_ntfs;
 extern struct g_label_desc g_label_gpt;
 extern struct g_label_desc g_label_gpt_uuid;
+extern struct g_label_desc g_label_disk_ident;
+
+extern void g_label_rtrim(char *label, size_t size);
 #endif	/* _KERNEL */
 
 struct g_label_metadata {

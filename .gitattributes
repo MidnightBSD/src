@@ -58932,6 +58932,7 @@ sys/geom/journal/g_journal.h -text
 sys/geom/journal/g_journal_ufs.c -text
 sys/geom/label/g_label.c -text
 sys/geom/label/g_label.h -text
+sys/geom/label/g_label_disk_ident.c svneol=native#text/plain
 sys/geom/label/g_label_ext2fs.c -text
 sys/geom/label/g_label_gpt.c -text
 sys/geom/label/g_label_iso9660.c -text

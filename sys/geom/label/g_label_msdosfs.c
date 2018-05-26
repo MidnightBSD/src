@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2006 Tobias Reifenberger
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.6.2.1 2009/02/13 19:49:35 lulf Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_msdosfs.c 286193 2015-08-02 10:08:57Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,7 +49,6 @@ g_label_msdosfs_taste(struct g_consumer *cp, char *label, size_t size)
 	FAT32_BSBPB *pfat32_bsbpb;
 	FAT_DES *pfat_entry;
 	uint8_t *sector0, *sector;
-	uint32_t i;
 
 	g_topology_assert_not();
 	pp = cp->provider;
@@ -201,14 +200,7 @@ g_label_msdosfs_taste(struct g_consumer *cp, char *label, size_t size)
 	}
 
 endofchecks:
-	for (i = size - 1; i > 0; i--) {
-		if (label[i] == '\0')
-			continue;
-		else if (label[i] == ' ')
-			label[i] = '\0';
-		else
-			break;
-	}
+	g_label_rtrim(label, size);
 
 error:
 	if (sector0 != NULL)

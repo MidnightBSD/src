@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label_ufs.c,v 1.11.2.1 2009/04/07 19:18:02 ivoras Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_ufs.c 242379 2012-10-30 21:32:10Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -82,7 +82,11 @@ g_label_ufs_taste_common(struct g_consumer *cp, char *label, size_t size, int wh
 		fs = (struct fs *)g_read_data(cp, superblock, SBLOCKSIZE, NULL);
 		if (fs == NULL)
 			continue;
-		/* Check for magic and make sure things are the right size */
+		/* Check for magic. We also need to check if file system size is equal
+		 * to providers size, because sysinstall(8) used to bogusly put first
+		 * partition at offset 0 instead of 16, and glabel/ufs would find file
+		 * system on slice instead of partition.
+		 */
 		if (fs->fs_magic == FS_UFS1_MAGIC && fs->fs_fsize > 0 &&
 		    pp->mediasize / fs->fs_fsize == fs->fs_old_size) {
 		    	/* Valid UFS1. */

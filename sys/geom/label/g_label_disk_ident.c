@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2012 Ivan Voras <ivoras@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_iso9660.c 286193 2015-08-02 10:08:57Z trasz $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_disk_ident.c 249571 2013-04-16 22:42:40Z ivoras $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,47 +34,56 @@ __FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_iso9660.c 286193 2015-08-02
 #include <sys/malloc.h>
 
 #include <geom/geom.h>
+#include <geom/geom_disk.h>
 #include <geom/label/g_label.h>
+#include <geom/multipath/g_multipath.h>
 
-#define G_LABEL_ISO9660_DIR	"iso9660"
 
-#define	ISO9660_MAGIC	"\x01" "CD001" "\x01\x00"
-#define	ISO9660_OFFSET	0x8000
-#define	VOLUME_LEN	32
+#define G_LABEL_DISK_IDENT_DIR	"diskid"
 
+static char* classes_pass[] = { G_DISK_CLASS_NAME, G_MULTIPATH_CLASS_NAME,
+    NULL };
 
 static void
-g_label_iso9660_taste(struct g_consumer *cp, char *label, size_t size)
+g_label_disk_ident_taste(struct g_consumer *cp, char *label, size_t size)
 {
-	struct g_provider *pp;
-	char *sector, *volume;
+	struct g_class *cls;
+	char ident[100];
+	int ident_len, found, i;
 
 	g_topology_assert_not();
-	pp = cp->provider;
 	label[0] = '\0';
 
-	if ((ISO9660_OFFSET % pp->sectorsize) != 0)
-		return;
-	sector = (char *)g_read_data(cp, ISO9660_OFFSET, pp->sectorsize,
-	    NULL);
-	if (sector == NULL)
-		return;
-	if (bcmp(sector, ISO9660_MAGIC, sizeof(ISO9660_MAGIC) - 1) != 0) {
-		g_free(sector);
-		return;
+	cls = cp->provider->geom->class;
+
+	/* 
+	 * Get the GEOM::ident string, and construct a label in the format
+	 * "CLASS_NAME-ident"
+	 */
+	ident_len = sizeof(ident);
+	if (g_io_getattr("GEOM::ident", cp, &ident_len, ident) == 0) {
+		if (ident_len == 0 || ident[0] == '\0')
+			return;
+		for (i = 0, found = 0; classes_pass[i] != NULL; i++)
+			if (strcmp(classes_pass[i], cls->name) == 0) {
+				found = 1;
+				break;
+			}
+		if (!found)
+			return;
+		/*
+		 * We can safely ignore the result of snprintf(): the label
+		 * will simply be truncated, which at most is only annoying.
+		 */
+		(void)snprintf(label, size, "%s-%s", cls->name, ident);
 	}
-	G_LABEL_DEBUG(1, "ISO9660 file system detected on %s.", pp->name);
-	volume = sector + 0x28;
-	bzero(label, size);
-	strlcpy(label, volume, MIN(size, VOLUME_LEN));
-	g_free(sector);
-	g_label_rtrim(label, size);
 }
 
-struct g_label_desc g_label_iso9660 = {
-	.ld_taste = g_label_iso9660_taste,
-	.ld_dir = G_LABEL_ISO9660_DIR,
+struct g_label_desc g_label_disk_ident = {
+	.ld_taste = g_label_disk_ident_taste,
+	.ld_dir = G_LABEL_DISK_IDENT_DIR,
 	.ld_enabled = 1
 };
 
-G_LABEL_INIT(iso9660, g_label_iso9660, "Create device nodes for ISO9660 volume names");
+G_LABEL_INIT(disk_ident, g_label_disk_ident, "Create device nodes for drives "
+    "which export a disk identification string");
