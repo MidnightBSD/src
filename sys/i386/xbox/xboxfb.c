@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, 2006 Rink Springer <rink@il.fontys.nl>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/xbox/xboxfb.c 233707 2012-03-30 19:10:14Z jhb $");
 
 /*
  * This is the syscon(4)-ized version of the Xbox Frame Buffer driver. It
@@ -54,7 +55,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/pmap.h>
 #include <machine/bus.h>
 #include <machine/xbox.h>
-#include <machine/legacyvar.h>
+#include <x86/legacyvar.h>
 #include <dev/fb/fbreg.h>
 #include <dev/fb/gfb.h>
 #include <dev/syscons/syscons.h>

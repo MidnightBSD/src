@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * Copyright (c) 1996, by Steve Passe
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/xen/mptable.c 256073 2013-10-05 23:11:01Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -40,7 +41,7 @@ __FBSDID("$FreeBSD$");
 #include <machine/apicvar.h>
 
 #include <xen/hypervisor.h>
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <machine/smp.h>
 #include <xen/interface/vcpu.h>
 
@@ -87,6 +88,8 @@ static int
 mptable_setup_local(void)
 {
 
+	PCPU_SET(apic_id, 0);
+	PCPU_SET(vcpu_id, 0);
 	return (0);
 }
 

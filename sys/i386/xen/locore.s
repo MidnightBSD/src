@@ -30,7 +30,8 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)locore.s	7.3 (Berkeley) 5/13/91
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/xen/locore.s 254671 2013-08-22 20:07:06Z gibbs $
+ * $MidnightBSD$
  *
  *		originally from: locore.s, by William F. Jolitz
  *
@@ -76,7 +77,7 @@
 	ELFNOTE(Xen, XEN_ELFNOTE_PADDR_OFFSET,   .long,  KERNBASE)
 	ELFNOTE(Xen, XEN_ELFNOTE_ENTRY,          .long,  btext)
 	ELFNOTE(Xen, XEN_ELFNOTE_HYPERCALL_PAGE, .long,  hypercall_page)
-	ELFNOTE(Xen, XEN_ELFNOTE_HV_START_LOW,   .long,  HYPERVISOR_VIRT_START)
+	ELFNOTE(Xen, XEN_ELFNOTE_HV_START_LOW,   .long,  XEN_HYPERVISOR_VIRT_START)
 #if 0
 	ELFNOTE(Xen, XEN_ELFNOTE_FEATURES,       .asciz, "writable_page_tables|writable_descriptor_tables|auto_translated_physmap|pae_pgdir_above_4gb|supervisor_mode_kernel")
 #endif

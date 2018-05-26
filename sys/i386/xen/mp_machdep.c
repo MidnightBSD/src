@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, by Steve Passe
  * Copyright (c) 2008, by Kip Macy
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/xen/mp_machdep.c 278423 2015-02-08 23:04:32Z marius $");
 
 #include "opt_apic.h"
 #include "opt_cpu.h"
@@ -64,6 +65,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
+#include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
@@ -84,25 +86,60 @@ __FBSDID("$FreeBSD$");
 #include <machine/specialreg.h>
 #include <machine/pcpu.h>
 
-
-
-#include <machine/xen/xen-os.h>
+#include <xen/xen-os.h>
 #include <xen/evtchn.h>
 #include <xen/xen_intr.h>
 #include <xen/hypervisor.h>
 #include <xen/interface/vcpu.h>
 
+/*---------------------------- Extern Declarations ---------------------------*/
+extern	struct pcpu __pcpu[];
+
+extern void Xhypervisor_callback(void);
+extern void failsafe_callback(void);
+extern void pmap_lazyfix_action(void);
+
+/*--------------------------- Forward Declarations ---------------------------*/
+static driver_filter_t	smp_reschedule_interrupt;
+static driver_filter_t	smp_call_function_interrupt;
+static void		assign_cpu_ids(void);
+static void		set_interrupt_apic_ids(void);
+static int		start_all_aps(void);
+static int		start_ap(int apic_id);
+static void		release_aps(void *dummy);
+
+/*---------------------------------- Macros ----------------------------------*/
+#define	IPI_TO_IDX(ipi) ((ipi) - APIC_IPI_INTS)
+
+/*-------------------------------- Local Types -------------------------------*/
+typedef void call_data_func_t(uintptr_t , uintptr_t);
+
+struct cpu_info {
+	int	cpu_present:1;
+	int	cpu_bsp:1;
+	int	cpu_disabled:1;
+};
+
+struct xen_ipi_handler
+{
+	driver_filter_t	*filter;
+	const char	*description;
+};
+
+enum {
+	RESCHEDULE_VECTOR,
+	CALL_FUNCTION_VECTOR,
+};
+
+/*-------------------------------- Global Data -------------------------------*/
+static u_int	hyperthreading_cpus;
+static cpuset_t	hyperthreading_cpus_mask;
 
 int	mp_naps;		/* # of Applications processors */
 int	boot_cpu_id = -1;	/* designated BSP */
 
-extern	struct pcpu __pcpu[];
-
 static int bootAP;
 static union descriptor *bootAPgdt;
-
-static char resched_name[NR_CPUS][15];
-static char callfunc_name[NR_CPUS][15];
 
 /* Free these after use */
 void *bootstacks[MAXCPU];
@@ -113,8 +150,6 @@ struct pcb stoppcbs[MAXCPU];
 vm_offset_t smp_tlb_addr1;
 vm_offset_t smp_tlb_addr2;
 volatile int smp_tlb_wait;
-
-typedef void call_data_func_t(uintptr_t , uintptr_t);
 
 static u_int logical_cpus;
 static volatile cpuset_t ipi_nmi_pending;
@@ -129,11 +164,7 @@ static volatile int aps_ready = 0;
  * Store data from cpu_add() until later in the boot when we actually setup
  * the APs.
  */
-struct cpu_info {
-	int	cpu_present:1;
-	int	cpu_bsp:1;
-	int	cpu_disabled:1;
-} static cpu_info[MAX_APIC_ID + 1];
+static struct cpu_info cpu_info[MAX_APIC_ID + 1];
 int cpu_apic_ids[MAXCPU];
 int apic_cpuids[MAX_APIC_ID + 1];
 
@@ -143,19 +174,17 @@ static volatile u_int cpu_ipi_pending[MAXCPU];
 static int cpu_logical;
 static int cpu_cores;
 
-static void	assign_cpu_ids(void);
-static void	set_interrupt_apic_ids(void);
-int	start_all_aps(void);
-static int	start_ap(int apic_id);
-static void	release_aps(void *dummy);
+static const struct xen_ipi_handler xen_ipis[] = 
+{
+	[RESCHEDULE_VECTOR]	= { smp_reschedule_interrupt,	"resched"  },
+	[CALL_FUNCTION_VECTOR]	= { smp_call_function_interrupt,"callfunc" }
+};
 
-static u_int	hyperthreading_cpus;
-static cpuset_t	hyperthreading_cpus_mask;
+/*------------------------------- Per-CPU Data -------------------------------*/
+DPCPU_DEFINE(xen_intr_handle_t, ipi_handle[nitems(xen_ipis)]);
+DPCPU_DEFINE(struct vcpu_info *, vcpu_info);
 
-extern void Xhypervisor_callback(void);
-extern void failsafe_callback(void);
-extern void pmap_lazyfix_action(void);
-
+/*------------------------------ Implementation ------------------------------*/
 struct cpu_group *
 cpu_topo(void)
 {
@@ -354,12 +383,12 @@ iv_lazypmap(uintptr_t a, uintptr_t b)
  */
 static call_data_func_t *ipi_vectors[6] = 
 {
-  iv_rendezvous,
-  iv_invltlb,
-  iv_invlpg,
-  iv_invlrng,
-  iv_invlcache,
-  iv_lazypmap,
+	iv_rendezvous,
+	iv_invltlb,
+	iv_invlpg,
+	iv_invlrng,
+	iv_invlcache,
+	iv_lazypmap,
 };
 
 /*
@@ -413,10 +442,11 @@ smp_call_function_interrupt(void *unused)
 	atomic_t *finished = &call_data->finished;
 
 	/* We only handle function IPIs, not bitmap IPIs */
-	if (call_data->func_id < APIC_IPI_INTS || call_data->func_id > IPI_BITMAP_VECTOR)
+	if (call_data->func_id < APIC_IPI_INTS ||
+	    call_data->func_id > IPI_BITMAP_VECTOR)
 		panic("invalid function id %u", call_data->func_id);
 	
-	func = ipi_vectors[call_data->func_id - APIC_IPI_INTS];
+	func = ipi_vectors[IPI_TO_IDX(call_data->func_id)];
 	/*
 	 * Notify initiating CPU that I've grabbed the data and am
 	 * about to execute the function
@@ -460,50 +490,46 @@ cpu_mp_announce(void)
 }
 
 static int
-xen_smp_intr_init(unsigned int cpu)
+xen_smp_cpu_init(unsigned int cpu)
 {
-	int rc;
-	unsigned int irq;
-	
-	per_cpu(resched_irq, cpu) = per_cpu(callfunc_irq, cpu) = -1;
+	xen_intr_handle_t *ipi_handle;
+	const struct xen_ipi_handler *ipi;
+	int idx, rc;
 
-	sprintf(resched_name[cpu], "resched%u", cpu);
-	rc = bind_ipi_to_irqhandler(RESCHEDULE_VECTOR,
-				    cpu,
-				    resched_name[cpu],
-				    smp_reschedule_interrupt,
-	    INTR_TYPE_TTY, &irq);
+	ipi_handle = DPCPU_ID_GET(cpu, ipi_handle);
+	for (ipi = xen_ipis, idx = 0; idx < nitems(xen_ipis); ipi++, idx++) {
 
-	printf("[XEN] IPI cpu=%d irq=%d vector=RESCHEDULE_VECTOR (%d)\n",
-	    cpu, irq, RESCHEDULE_VECTOR);
-	
-	per_cpu(resched_irq, cpu) = irq;
+		/*
+		 * The PCPU variable pc_device is not initialized on i386 PV,
+		 * so we have to use the root_bus device in order to setup
+		 * the IPIs.
+		 */
+		rc = xen_intr_alloc_and_bind_ipi(root_bus, cpu,
+		    ipi->filter, INTR_TYPE_TTY, &ipi_handle[idx]);
+		if (rc != 0) {
+			printf("Unable to allocate a XEN IPI port. "
+			    "Error %d\n", rc);
+			break;
+		}
+		xen_intr_describe(ipi_handle[idx], "%s", ipi->description);
+	}
 
-	sprintf(callfunc_name[cpu], "callfunc%u", cpu);
-	rc = bind_ipi_to_irqhandler(CALL_FUNCTION_VECTOR,
-				    cpu,
-				    callfunc_name[cpu],
-				    smp_call_function_interrupt,
-	    INTR_TYPE_TTY, &irq);
-	if (rc < 0)
-		goto fail;
-	per_cpu(callfunc_irq, cpu) = irq;
+	for (;idx < nitems(xen_ipis); idx++)
+		    ipi_handle[idx] = NULL;
 
-	printf("[XEN] IPI cpu=%d irq=%d vector=CALL_FUNCTION_VECTOR (%d)\n",
-	    cpu, irq, CALL_FUNCTION_VECTOR);
+	if (rc == 0)
+		return (0);
 
-	
-	if ((cpu != 0) && ((rc = ap_cpu_initclocks(cpu)) != 0))
-		goto fail;
+	/* Either all are successfully mapped, or none at all. */
+	for (idx = 0; idx < nitems(xen_ipis); idx++) {
+		if (ipi_handle[idx] == NULL)
+			continue;
 
-	return 0;
+		xen_intr_unbind(ipi_handle[idx]);
+		ipi_handle[idx] = NULL;
+	}
 
- fail:
-	if (per_cpu(resched_irq, cpu) >= 0)
-		unbind_from_irqhandler(per_cpu(resched_irq, cpu));
-	if (per_cpu(callfunc_irq, cpu) >= 0)
-		unbind_from_irqhandler(per_cpu(callfunc_irq, cpu));
-	return rc;
+	return (rc);
 }
 
 static void
@@ -512,7 +538,17 @@ xen_smp_intr_init_cpus(void *unused)
 	int i;
 	    
 	for (i = 0; i < mp_ncpus; i++)
-		xen_smp_intr_init(i);
+		xen_smp_cpu_init(i);
+}
+
+static void
+xen_smp_intr_setup_cpus(void *unused)
+{
+	int i;
+
+	for (i = 0; i < mp_ncpus; i++)
+		DPCPU_ID_SET(i, vcpu_info,
+		    &HYPERVISOR_shared_info->vcpu_info[i]);
 }
 
 #define MTOPSIZE (1<<(14 + PAGE_SHIFT))
@@ -563,22 +599,13 @@ init_secondary(void)
 	for (addr = 0; addr < NKPT * NBPDR - 1; addr += PAGE_SIZE)
 		invlpg(addr);
 
-	/* set up FPU state on the AP */
-	npxinit();
 #if 0
-	
-	/* set up SSE registers */
-	enable_sse();
+	/* set up SSE/NX */
+	initializecpu();
 #endif
-#if 0 && defined(PAE)
-	/* Enable the PTE no-execute bit. */
-	if ((amd_feature & AMDID_NX) != 0) {
-		uint64_t msr;
 
-		msr = rdmsr(MSR_EFER) | EFER_NXE;
-		wrmsr(MSR_EFER, msr);
-	}
-#endif
+	/* set up FPU state on the AP */
+	npxinit(false);
 #if 0
 	/* A quick check from sanity claus */
 	if (PCPU_GET(apic_id) != lapic_id()) {
@@ -620,7 +647,6 @@ init_secondary(void)
 	if (smp_cpus == mp_ncpus) {
 		/* enable IPI's, tlb shootdown, freezes etc */
 		atomic_store_rel_int(&smp_started, 1);
-		smp_active = 1;	 /* historic */
 	}
 
 	mtx_unlock_spin(&ap_boot_mtx);
@@ -745,8 +771,10 @@ start_all_aps(void)
 		/* Get per-cpu data */
 		pc = &__pcpu[bootAP];
 		pcpu_init(pc, bootAP, sizeof(struct pcpu));
-		dpcpu_init((void *)kmem_alloc(kernel_map, DPCPU_SIZE), bootAP);
+		dpcpu_init((void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
+		    M_WAITOK | M_ZERO), bootAP);
 		pc->pc_apic_id = cpu_apic_ids[bootAP];
+		pc->pc_vcpu_id = cpu_apic_ids[bootAP];
 		pc->pc_prvspace = pc;
 		pc->pc_curthread = 0;
 
@@ -786,7 +814,7 @@ start_all_aps(void)
 	pmap_invalidate_range(kernel_pmap, 0, NKPT * NBPDR - 1);
 	
 	/* number of APs actually started */
-	return mp_naps;
+	return (mp_naps);
 }
 
 extern uint8_t *pcpu_boot_stack;
@@ -804,18 +832,18 @@ smp_trap_init(trap_info_t *trap_ctxt)
         }
 }
 
+extern struct rwlock pvh_global_lock;
 extern int nkpt;
 static void
 cpu_initialize_context(unsigned int cpu)
 {
 	/* vcpu_guest_context_t is too large to allocate on the stack.
 	 * Hence we allocate statically and protect it with a lock */
-	vm_page_t m[4];
+	vm_page_t m[NPGPTD + 2];
 	static vcpu_guest_context_t ctxt;
 	vm_offset_t boot_stack;
 	vm_offset_t newPTD;
 	vm_paddr_t ma[NPGPTD];
-	static int color;
 	int i;
 
 	/*
@@ -825,15 +853,15 @@ cpu_initialize_context(unsigned int cpu)
 	 *
 	 */
 	for (i = 0; i < NPGPTD + 2; i++) {
-		m[i] = vm_page_alloc(NULL, color++,
+		m[i] = vm_page_alloc(NULL, 0,
 		    VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED |
 		    VM_ALLOC_ZERO);
 
 		pmap_zero_page(m[i]);
 
 	}
-	boot_stack = kmem_alloc_nofault(kernel_map, 1);
-	newPTD = kmem_alloc_nofault(kernel_map, NPGPTD);
+	boot_stack = kva_alloc(PAGE_SIZE);
+	newPTD = kva_alloc(NPGPTD * PAGE_SIZE);
 	ma[0] = VM_PAGE_TO_MACH(m[0])|PG_V;
 
 #ifdef PAE	
@@ -855,7 +883,7 @@ cpu_initialize_context(unsigned int cpu)
 	    nkpt*sizeof(vm_paddr_t));
 
 	pmap_qremove(newPTD, 4);
-	kmem_free(kernel_map, newPTD, 4);
+	kva_free(newPTD, 4 * PAGE_SIZE);
 	/*
 	 * map actual idle stack to boot_stack
 	 */
@@ -863,7 +891,7 @@ cpu_initialize_context(unsigned int cpu)
 
 
 	xen_pgdpt_pin(VM_PAGE_TO_MACH(m[NPGPTD + 1]));
-	vm_page_lock_queues();
+	rw_wlock(&pvh_global_lock);
 	for (i = 0; i < 4; i++) {
 		int pdir = (PTDPTDI + i) / NPDEPG;
 		int curoffset = (PTDPTDI + i) % NPDEPG;
@@ -873,7 +901,7 @@ cpu_initialize_context(unsigned int cpu)
 		    ma[i]);
 	}
 	PT_UPDATES_FLUSH();
-	vm_page_unlock_queues();
+	rw_wunlock(&pvh_global_lock);
 	
 	memset(&ctxt, 0, sizeof(ctxt));
 	ctxt.flags = VGCF_IN_KERNEL;
@@ -891,7 +919,8 @@ cpu_initialize_context(unsigned int cpu)
 	smp_trap_init(ctxt.trap_ctxt);
 
 	ctxt.ldt_ents = 0;
-	ctxt.gdt_frames[0] = (uint32_t)((uint64_t)vtomach(bootAPgdt) >> PAGE_SHIFT);
+	ctxt.gdt_frames[0] =
+	    (uint32_t)((uint64_t)vtomach(bootAPgdt) >> PAGE_SHIFT);
 	ctxt.gdt_ents      = 512;
 
 #ifdef __i386__
@@ -951,10 +980,17 @@ start_ap(int apic_id)
 	/* Wait up to 5 seconds for it to start. */
 	for (ms = 0; ms < 5000; ms++) {
 		if (mp_naps > cpus)
-			return 1;	/* return SUCCESS */
+			return (1);	/* return SUCCESS */
 		DELAY(1000);
 	}
-	return 0;		/* return FAILURE */
+	return (0);		/* return FAILURE */
+}
+
+static void
+ipi_pcpu(int cpu, u_int ipi)
+{
+	KASSERT((ipi <= nitems(xen_ipis)), ("invalid IPI"));
+	xen_intr_signal(DPCPU_ID_GET(cpu, ipi_handle[ipi]));
 }
 
 /*
@@ -1010,7 +1046,8 @@ smp_tlb_shootdown(u_int vector, vm_offset_t addr1, vm_offset_t addr2)
 }
 
 static void
-smp_targeted_tlb_shootdown(cpuset_t mask, u_int vector, vm_offset_t addr1, vm_offset_t addr2)
+smp_targeted_tlb_shootdown(cpuset_t mask, u_int vector, vm_offset_t addr1,
+    vm_offset_t addr2)
 {
 	int cpu, ncpu, othercpus;
 	struct _call_data data;
@@ -1038,7 +1075,7 @@ smp_targeted_tlb_shootdown(cpuset_t mask, u_int vector, vm_offset_t addr1, vm_of
 		ipi_all_but_self(vector);
 	} else {
 		ncpu = 0;
-		while ((cpu = cpusetobj_ffs(&mask)) != 0) {
+		while ((cpu = CPU_FFS(&mask)) != 0) {
 			cpu--;
 			CPU_CLR(cpu, &mask);
 			CTR3(KTR_SMP, "%s: cpu: %d ipi: %x", __func__, cpu,
@@ -1131,7 +1168,7 @@ ipi_selected(cpuset_t cpus, u_int ipi)
 	if (ipi == IPI_STOP_HARD)
 		CPU_OR_ATOMIC(&ipi_nmi_pending, &cpus);
 
-	while ((cpu = cpusetobj_ffs(&cpus)) != 0) {
+	while ((cpu = CPU_FFS(&cpus)) != 0) {
 		cpu--;
 		CPU_CLR(cpu, &cpus);
 		CTR3(KTR_SMP, "%s: cpu: %d ipi: %x", __func__, cpu, ipi);
@@ -1230,6 +1267,31 @@ cpustop_handler(void)
 }
 
 /*
+ * Handlers for TLB related IPIs
+ *
+ * On i386 Xen PV this are no-ops since this port doesn't support SMP.
+ */
+void
+invltlb_handler(void)
+{
+}
+
+void
+invlpg_handler(void)
+{
+}
+
+void
+invlrng_handler(void)
+{
+}
+
+void
+invlcache_handler(void)
+{
+}
+
+/*
  * This is called once the rest of the system is up and running and we're
  * ready to let the AP's out of the pen.
  */
@@ -1244,5 +1306,5 @@ release_aps(void *dummy __unused)
 		ia32_pause();
 }
 SYSINIT(start_aps, SI_SUB_SMP, SI_ORDER_FIRST, release_aps, NULL);
-SYSINIT(start_ipis, SI_SUB_INTR, SI_ORDER_ANY, xen_smp_intr_init_cpus, NULL);
-
+SYSINIT(start_ipis, SI_SUB_SMP, SI_ORDER_ANY, xen_smp_intr_init_cpus, NULL);
+SYSINIT(start_cpu, SI_SUB_INTR, SI_ORDER_ANY, xen_smp_intr_setup_cpus, NULL);
