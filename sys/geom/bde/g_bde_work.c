@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/bde/g_bde_work.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/bde/g_bde_work.c,v 1.28 2006/08/04 07:56:34 yar Exp $
+ * $FreeBSD: stable/10/sys/geom/bde/g_bde_work.c 314327 2017-02-27 08:27:38Z avg $
  */
 /*
  * This source file contains the state-engine which makes things happen in the
@@ -72,7 +72,7 @@
 #include <sys/kthread.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
 

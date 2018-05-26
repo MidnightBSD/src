@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/bde/g_bde_lock.c,v 1.17 2005/11/30 19:07:28 sobomax Exp $
+ * $FreeBSD: stable/10/sys/geom/bde/g_bde_lock.c 314327 2017-02-27 08:27:38Z avg $
  */
 /* This souce file contains routines which operates on the lock sectors, both
  * for the kernel and the userland program gbde(1).
@@ -59,7 +59,7 @@
 #endif
 
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>

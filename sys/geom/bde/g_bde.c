@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/bde/g_bde.c,v 1.29 2005/03/11 15:42:51 ume Exp $
+ * $FreeBSD: stable/10/sys/geom/bde/g_bde.c 314327 2017-02-27 08:27:38Z avg $
  *
  */
 
@@ -45,7 +45,7 @@
 #include <sys/sysctl.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
 #define BDE_CLASS_NAME "BDE"
@@ -86,7 +86,7 @@ g_bde_orphan(struct g_consumer *cp)
 	sc = gp->softc;
 	gp->flags |= G_GEOM_WITHER;
 	LIST_FOREACH(pp, &gp->provider, provider)
-		g_orphan_provider(pp, ENXIO);
+		g_wither_provider(pp, ENXIO);
 	bzero(sc, sizeof(struct g_bde_softc));	/* destroy evidence */
 	return;
 }
@@ -186,14 +186,6 @@ g_bde_create_geom(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 		kproc_create(g_bde_worker, gp, &sc->thread, 0, 0,
 			"g_bde %s", gp->name);
 		pp = g_new_providerf(gp, "%s", gp->name);
-#if 0
-		/*
-		 * XXX: Disable this for now.  Appearantly UFS no longer
-		 * XXX: issues BIO_DELETE requests correctly, with the obvious
-		 * XXX: outcome that userdata is trashed.
-		 */
-		pp->flags |= G_PF_CANDELETE;
-#endif
 		pp->stripesize = kp->zone_cont;
 		pp->stripeoffset = 0;
 		pp->mediasize = sc->mediasize;

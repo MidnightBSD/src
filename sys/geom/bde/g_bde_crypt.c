@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/bde/g_bde_crypt.c,v 1.23 2005/07/20 18:08:16 phk Exp $
+ * $FreeBSD: stable/10/sys/geom/bde/g_bde_crypt.c 314327 2017-02-27 08:27:38Z avg $
  */
 /* This source file contains the functions responsible for the crypto, keying
  * and mapping operations on the I/O requests.
@@ -48,7 +48,7 @@
 #include <sys/md5.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
