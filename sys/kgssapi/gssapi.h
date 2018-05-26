@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) The Internet Society (2000).  All Rights Reserved.
  *
@@ -25,7 +26,7 @@
  * HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF
  * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/kgssapi/gssapi.h 184588 2008-11-03 10:38:00Z dfr $
  */
 
 #ifndef _KGSSAPI_GSSAPI_H_

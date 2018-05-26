@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kgssapi/gss_impl.c 299617 2016-05-13 08:25:06Z ngie $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -104,15 +105,20 @@ sys_gssd_syscall(struct thread *td, struct gssd_syscall_args *uap)
 	error = copyinstr(uap->path, path, sizeof(path), NULL);
 	if (error)
 		return (error);
+	if (strlen(path) + 1 > sizeof(sun.sun_path))
+		return (EINVAL);
 
-        sun.sun_family = AF_LOCAL;
-        strcpy(sun.sun_path, path);
-        sun.sun_len = SUN_LEN(&sun);
-        
-        nconf = getnetconfigent("local");
-        cl = clnt_reconnect_create(nconf,
-	    (struct sockaddr *) &sun, GSSD, GSSDVERS,
-	    RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+	if (path[0] != '\0') {
+		sun.sun_family = AF_LOCAL;
+		strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+		sun.sun_len = SUN_LEN(&sun);
+		
+		nconf = getnetconfigent("local");
+		cl = clnt_reconnect_create(nconf,
+		    (struct sockaddr *) &sun, GSSD, GSSDVERS,
+		    RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+	} else
+		cl = NULL;
 
 	mtx_lock(&kgss_gssd_lock);
 	oldcl = kgss_gssd_handle;
@@ -286,6 +292,7 @@ kgssapi_modevent(module_t mod, int type, void *data)
 
 	switch (type) {
 	case MOD_LOAD:
+		rpc_gss_entries.rpc_gss_refresh_auth = rpc_gss_refresh_auth;
 		rpc_gss_entries.rpc_gss_secfind = rpc_gss_secfind;
 		rpc_gss_entries.rpc_gss_secpurge = rpc_gss_secpurge;
 		rpc_gss_entries.rpc_gss_seccreate = rpc_gss_seccreate;

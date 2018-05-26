@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kgssapi/gssd_prot.c 299617 2016-05-13 08:25:06Z ngie $");
 
 #ifdef _KERNEL
 #include <sys/malloc.h>
@@ -101,8 +102,10 @@ xdr_gss_OID(XDR *xdrs, gss_OID *oidp)
 		} else {
 			oid = mem_alloc(sizeof(gss_OID_desc));
 			memset(oid, 0, sizeof(*oid));
-			if (!xdr_gss_OID_desc(xdrs, oid))
+			if (!xdr_gss_OID_desc(xdrs, oid)) {
+				mem_free(oid, sizeof(gss_OID_desc));
 				return (FALSE);
+			}
 			*oidp = oid;
 		}
 		break;
@@ -164,8 +167,10 @@ xdr_gss_OID_set(XDR *xdrs, gss_OID_set *setp)
 		} else {
 			set = mem_alloc(sizeof(gss_OID_set_desc));
 			memset(set, 0, sizeof(*set));
-			if (!xdr_gss_OID_set_desc(xdrs, set))
+			if (!xdr_gss_OID_set_desc(xdrs, set)) {
+				mem_free(set, sizeof(gss_OID_set_desc));
 				return (FALSE);
+			}
 			*setp = set;
 		}
 		break;
@@ -224,8 +229,10 @@ xdr_gss_channel_bindings_t(XDR *xdrs, gss_channel_bindings_t *chp)
 			    || !xdr_gss_buffer_desc(xdrs,
 				&ch->acceptor_address)
 			    || !xdr_gss_buffer_desc(xdrs,
-				&ch->application_data))
+				&ch->application_data)) {
+				mem_free(ch, sizeof(*ch));
 				return (FALSE);
+			}
 			*chp = ch;
 		}
 		break;
