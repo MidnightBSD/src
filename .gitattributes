@@ -60646,6 +60646,7 @@ sys/modules/wlan_wep/Makefile -text
 sys/modules/wlan_xauth/Makefile -text
 sys/modules/wpi/Makefile -text
 sys/modules/wpifw/Makefile -text
+sys/modules/wtap/Makefile svneol=native#text/plain
 sys/modules/x86bios/Makefile -text
 sys/modules/xe/Makefile -text
 sys/modules/xfs/Makefile -text
