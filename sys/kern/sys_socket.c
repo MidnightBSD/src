@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/sys_socket.c 254356 2013-08-15 07:54:31Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,6 +67,7 @@ struct fileops	socketops = {
 	.fo_close = soo_close,
 	.fo_chmod = invfo_chmod,
 	.fo_chown = invfo_chown,
+	.fo_sendfile = invfo_sendfile,
 	.fo_flags = DFLAG_PASSABLE
 };
 

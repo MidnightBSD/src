@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -59,12 +60,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/kern/sys_procdesc.c 280258 2015-03-19 13:37:36Z rwatson $");
 
 #include "opt_procdesc.h"
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
@@ -113,6 +114,7 @@ static struct fileops procdesc_ops = {
 	.fo_close = procdesc_close,
 	.fo_chmod = procdesc_chmod,
 	.fo_chown = procdesc_chown,
+	.fo_sendfile = invfo_sendfile,
 	.fo_flags = DFLAG_PASSABLE,
 };
 
@@ -137,14 +139,14 @@ SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_ANY, procdesc_init, NULL);
  * died.
  */
 int
-procdesc_find(struct thread *td, int fd, cap_rights_t rights,
+procdesc_find(struct thread *td, int fd, cap_rights_t *rightsp,
     struct proc **p)
 {
 	struct procdesc *pd;
 	struct file *fp;
 	int error;
 
-	error = fget(td, fd, rights, &fp);
+	error = fget(td, fd, rightsp, &fp);
 	if (error)
 		return (error);
 	if (fp->f_type != DTYPE_PROCDESC) {
@@ -184,12 +186,12 @@ procdesc_pid(struct file *fp_procdesc)
  * Retrieve the PID associated with a process descriptor.
  */
 int
-kern_pdgetpid(struct thread *td, int fd, cap_rights_t rights, pid_t *pidp)
+kern_pdgetpid(struct thread *td, int fd, cap_rights_t *rightsp, pid_t *pidp)
 {
 	struct file *fp;
 	int error;
 
-	error = fget(td, fd, rights, &fp);
+	error = fget(td, fd, rightsp, &fp);
 	if (error)
 		return (error);
 	if (fp->f_type != DTYPE_PROCDESC) {
@@ -208,11 +210,13 @@ out:
 int
 sys_pdgetpid(struct thread *td, struct pdgetpid_args *uap)
 {
+	cap_rights_t rights;
 	pid_t pid;
 	int error;
 
 	AUDIT_ARG_FD(uap->fd);
-	error = kern_pdgetpid(td, uap->fd, CAP_PDGETPID, &pid);
+	error = kern_pdgetpid(td, uap->fd,
+	    cap_rights_init(&rights, CAP_PDGETPID), &pid);
 	if (error == 0)
 		error = copyout(&pid, uap->pidp, sizeof(pid));
 	return (error);
@@ -333,12 +337,13 @@ procdesc_reap(struct proc *p)
 
 	pd = p->p_procdesc;
 	pd->pd_proc = NULL;
+	p->p_procdesc = NULL;
 	procdesc_free(pd);
 }
 
 /*
  * procdesc_close() - last close on a process descriptor.  If the process is
- * still running, terminate with SIGKILL (unless PD_DAEMON is set) and let
+ * still running, terminate with SIGKILL (unless PDF_DAEMON is set) and let
  * init(8) clean up the mess; if not, we have to clean up the zombie ourselves.
  */
 static int
@@ -358,14 +363,20 @@ procdesc_close(struct file *fp, struct thread *td)
 	pd->pd_flags |= PDF_CLOSED;
 	PROCDESC_UNLOCK(pd);
 	p = pd->pd_proc;
-	PROC_LOCK(p);
-	if (p->p_state == PRS_ZOMBIE) {
+	if (p == NULL) {
+		/*
+		 * This is the case where process' exit status was already
+		 * collected and procdesc_reap() was already called.
+		 */
+		sx_xunlock(&proctree_lock);
+	} else if (p->p_state == PRS_ZOMBIE) {
 		/*
 		 * If the process is already dead and just awaiting reaping,
 		 * do that now.  This will release the process's reference to
 		 * the process descriptor when it calls back into
 		 * procdesc_reap().
 		 */
+		PROC_LOCK(p);
 		PROC_SLOCK(p);
 		proc_reap(curthread, p, NULL, 0);
 	} else {
@@ -376,6 +387,7 @@ procdesc_close(struct file *fp, struct thread *td)
 		 * process from its descriptor so that its exit status will
 		 * be reported normally.
 		 */
+		PROC_LOCK(p);
 		pd->pd_proc = NULL;
 		p->p_procdesc = NULL;
 		procdesc_free(pd);
@@ -386,7 +398,7 @@ procdesc_close(struct file *fp, struct thread *td)
 		 */
 		p->p_sigparent = SIGCHLD;
 		proc_reparent(p, initproc);
-		if ((pd->pd_flags & PD_DAEMON) == 0)
+		if ((pd->pd_flags & PDF_DAEMON) == 0)
 			kern_psignal(p, SIGKILL);
 		PROC_UNLOCK(p);
 		sx_xunlock(&proctree_lock);
