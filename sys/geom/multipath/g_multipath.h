@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/multipath/g_multipath.h,v 1.2 2008/12/03 00:25:49 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Matthew Jacob <mjacob@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/multipath/g_multipath.h,v 1.1 2007/02/27 04:01:58 mjacob Exp $
+ * $FreeBSD: stable/10/sys/geom/multipath/g_multipath.h 260478 2014-01-09 11:11:47Z mav $
  */
 /*
  * Based upon work by Pawel Jakub Dawidek <pjd@FreeBSD.org> for all of the
@@ -49,6 +49,7 @@ struct g_multipath_softc {
 	struct mtx		sc_mtx;
 	char			sc_name[16];
 	char			sc_uuid[40];
+	off_t			sc_size;
 	int			sc_opened;
 	int			sc_stopping;
 	int			sc_ndisks;
