@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/sysvipc/sysvmsg/Makefile 213781 2010-10-13 14:44:38Z rpaulo $
 
 .PATH: ${.CURDIR}/../../../kern
 

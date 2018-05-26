@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/acpi/acpi_asus/Makefile 193530 2009-06-05 18:44:36Z jkim $
 
 .PATH:	${.CURDIR}/../../../dev/acpi_support
 

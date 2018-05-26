@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../dev/ata ${.CURDIR}/../../../${MACHINE}/${MACHINE}

@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/acpi/acpi_hp/Makefile 194701 2009-06-23 13:17:25Z rpaulo $
 
 .PATH:	${.CURDIR}/../../../dev/acpi_support
 

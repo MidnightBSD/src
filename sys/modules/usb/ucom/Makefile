@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/ucom/Makefile 198258 2009-10-19 21:54:41Z thompsa $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

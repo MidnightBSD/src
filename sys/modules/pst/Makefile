@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/pst/Makefile 119571 2003-08-30 08:01:05Z sos $
 
 .PATH: ${.CURDIR}/../../dev/pst
 

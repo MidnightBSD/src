@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/3dfx_linux/Makefile,v 1.1.2.1 2006/03/09 21:51:00 yar Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/3dfx_linux/Makefile 156260 2006-03-03 21:37:38Z yar $
 
 .PATH: ${.CURDIR}/../../dev/tdfx
 

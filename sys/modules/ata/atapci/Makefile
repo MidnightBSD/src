@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ata/atapci/Makefile 249213 2013-04-06 19:12:49Z marius $
 
 SUBDIR += chipsets
 
@@ -6,7 +7,6 @@ SUBDIR += chipsets
 
 KMOD=	atapci
 SRCS=	ata-pci.c ata-dma.c ata-sata.c
-SRCS+=  opt_ata.h ata_if.h device_if.h bus_if.h pci_if.h
+SRCS+=	ata_if.h bus_if.h device_if.h pci_if.h
 
 .include <bsd.kmod.mk>
-

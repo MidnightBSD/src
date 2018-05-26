@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #
 # Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
 # All rights reserved.
@@ -26,14 +27,14 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/mwl/Makefile 234866 2012-05-01 07:38:40Z uqs $
 #
 
 .PATH: ${.CURDIR}/../../dev/mwl
 
 KMOD=	if_mwl
 SRCS=	if_mwl.c if_mwl_pci.c mwlhal.c
-SRCS+=	device_if.h bus_if.h pci_if.h opt_inet.h opt_mwl.h
+SRCS+=	device_if.h bus_if.h pci_if.h opt_inet.h opt_mwl.h opt_wlan.h
 
 opt_mwl.h:
 	echo '#define MWL_DEBUG 1'> $@

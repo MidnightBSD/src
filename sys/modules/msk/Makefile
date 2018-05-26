@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sys/modules/msk/Makefile,v 1.1.2.1 2008/07/01 00:36:30 laffer1 Exp $
-# $FreeBSD: src/sys/modules/msk/Makefile,v 1.1.2.1 2007/03/27 02:20:20 yongari Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/msk/Makefile 165140 2006-12-13 02:37:48Z yongari $
 
 .PATH: ${.CURDIR}/../../dev/msk
 

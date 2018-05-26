@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ipwfw/ipw_ibss/Makefile 167165 2007-03-02 11:42:56Z flz $
 
 .PATH: ${.CURDIR}/../../../contrib/dev/ipw
 

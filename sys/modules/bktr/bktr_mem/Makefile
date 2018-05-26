@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/bktr/bktr_mem/Makefile 160063 2006-07-01 10:51:55Z markm $
 
 .PATH: ${.CURDIR}/../../../dev/bktr
 

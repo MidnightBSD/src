@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/usb/uath/Makefile 190688 2009-04-04 11:23:00Z weongyo $
 
 .PATH: ${.CURDIR}/../../../dev/usb/wlan
 

@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/re/Makefile,v 1.2 2003/09/08 03:24:29 wpaul Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/re/Makefile 150636 2005-09-27 18:10:43Z mlaier $
 
 .PATH: ${.CURDIR}/../../dev/re
 

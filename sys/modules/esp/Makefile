@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/esp/Makefile 227006 2011-11-01 21:26:57Z marius $
 
 .PATH: ${.CURDIR}/../../dev/esp
 

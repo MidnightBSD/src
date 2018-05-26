@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/acpi/acpi_dock/Makefile 193530 2009-06-05 18:44:36Z jkim $
 
 .PATH:		${.CURDIR}/../../../dev/acpica
 KMOD=		acpi_dock

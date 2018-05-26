@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/mthca/Makefile 260495 2014-01-09 22:40:51Z dim $
 
 .PATH:  ${.CURDIR}/../../ofed/drivers/infiniband/hw/mthca
 
@@ -28,4 +29,4 @@ opt_inet6.h:
 
 .include <bsd.kmod.mk>
 
-CFLAGS+= -Wno-cast-qual -Wno-pointer-arith -fms-extensions
+CFLAGS+= -Wno-cast-qual -Wno-pointer-arith ${GCC_MS_EXTENSIONS}

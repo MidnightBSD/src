@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/bm/Makefile 179645 2008-06-07 22:58:32Z marcel $
 
 .PATH: ${.CURDIR}/../../dev/bm
 

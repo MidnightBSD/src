@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/vr/Makefile 177048 2008-03-11 03:50:57Z yongari $
 
 .PATH: ${.CURDIR}/../../dev/vr
 

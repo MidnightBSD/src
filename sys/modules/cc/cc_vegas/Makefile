@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/cc/cc_vegas/Makefile 218152 2011-02-01 06:17:00Z lstewart $
 
 .include <bsd.own.mk>
 

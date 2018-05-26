@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/ncv/Makefile,v 1.3 2005/09/27 18:10:36 mlaier Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ncv/Makefile 150636 2005-09-27 18:10:43Z mlaier $
 
 .PATH: ${.CURDIR}/../../dev/ncv
 

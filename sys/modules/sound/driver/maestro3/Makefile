@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/sound/driver/maestro3/Makefile,v 1.3 2003/02/07 13:56:32 nyan Exp $
+# $FreeBSD: stable/10/sys/modules/sound/driver/maestro3/Makefile 230898 2012-02-02 00:10:20Z pfg $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

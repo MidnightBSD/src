@@ -1,5 +1,6 @@
-# $Id: Makefile,v 1.1.1.4 2012-07-21 15:16:45 laffer1 Exp $
-# $FreeBSD$
+# $MidnightBSD$
+# $Id: Makefile,v 1.1 2002/11/24 20:40:04 max Exp $
+# $FreeBSD: stable/10/sys/modules/netgraph/bluetooth/h4/Makefile 155824 2006-02-18 23:49:28Z yar $
 
 .PATH: ${.CURDIR}/../../../../netgraph/bluetooth/drivers/h4
 

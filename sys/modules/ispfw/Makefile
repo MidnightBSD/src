@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #-
 # Copyright (c) 2006 by Matthew Jacob
 # All rights reserved.
@@ -24,24 +25,19 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD$ 
+# $FreeBSD: stable/10/sys/modules/ispfw/Makefile 291528 2015-11-30 21:55:35Z mav $ 
 
 
 SUBDIR = ispfw
 SUBDIR += isp_1040
-SUBDIR += isp_1040_it
 SUBDIR += isp_1080
-SUBDIR += isp_1080_it
 SUBDIR += isp_12160
-SUBDIR += isp_12160_it
 SUBDIR += isp_2100
 SUBDIR += isp_2200
 SUBDIR += isp_2300
 SUBDIR += isp_2322
 SUBDIR += isp_2400
-SUBDIR += isp_2400_multi
 SUBDIR += isp_2500
-SUBDIR += isp_2500_multi
 .if ${MACHINE} == "sparc64"
 SUBDIR += isp_1000
 .endif

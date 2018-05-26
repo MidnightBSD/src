@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sys/modules/aha/Makefile,v 1.2 2009/03/15 14:13:04 laffer1 Exp $
-# $FreeBSD: src/sys/modules/aha/Makefile,v 1.8.14.1 2006/02/10 00:37:58 yar Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/aha/Makefile 217070 2011-01-06 21:04:00Z imp $
 
 .PATH: ${.CURDIR}/../../dev/aha
 

@@ -1,25 +1,26 @@
+# $MidnightBSD$
 #
-# $FreeBSD: release/9.2.0/sys/modules/cxgbe/t5_firmware/Makefile 252661 2013-07-03 23:52:15Z np $
+# $FreeBSD: stable/10/sys/modules/cxgbe/t5_firmware/Makefile 331719 2018-03-29 01:20:58Z np $
 #
 
-T5FW = ${.CURDIR}/../../../dev/cxgbe/firmware
+T5FW=	${.CURDIR}/../../../dev/cxgbe/firmware
 .PATH: ${T5FW}
 
-KMOD = t5fw_cfg
-FIRMWS = ${KMOD}.txt:${KMOD}:1.0.0.0
+KMOD=	t5fw_cfg
+FIRMWS=	${KMOD}.txt:${KMOD}:1.0.0.0
 
 # You can have additional configuration files in the ${T5FW} directory.
 # t5fw_cfg_<name>.txt
 CFG_FILES != cd ${T5FW} && echo ${KMOD}_*.txt
 .for F in ${CFG_FILES}
 .if exists(${F})
-FIRMWS += ${F}:${F:C/.txt//}:1.0.0.0
+FIRMWS+=	${F}:${F:C/.txt//}:1.0.0.0
 .endif
 .endfor
 
-T5FW_VER = 1.8.22.0
-FIRMWS += t5fw.fw:t5fw:${T5FW_VER}
-CLEANFILES += t5fw.fw
+T5FW_VER=	1.16.63.0
+FIRMWS+=	t5fw.fw:t5fw:${T5FW_VER}
+CLEANFILES+=	t5fw.fw
 
 t5fw.fw: t5fw-${T5FW_VER}.bin.uu
 	uudecode -o ${.TARGET} ${.ALLSRC}

@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ipfw_nat/Makefile 240494 2012-09-14 11:51:49Z glebius $
 
 .PATH: ${.CURDIR}/../../netpfil/ipfw
 

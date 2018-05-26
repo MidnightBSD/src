@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/elink/Makefile 112793 2003-03-29 13:42:20Z mdodd $
 #
 
 .PATH:	${.CURDIR}/../../i386/isa

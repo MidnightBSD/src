@@ -1,14 +1,13 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/pfsync/Makefile 240494 2012-09-14 11:51:49Z glebius $
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../contrib/pf/net
+.PATH: ${.CURDIR}/../../netpfil/pf
 
 KMOD=	pfsync
 SRCS=	if_pfsync.c \
 	opt_pf.h opt_inet.h opt_inet6.h
-
-CFLAGS+= -I${.CURDIR}/../../contrib/pf
 SRCS+=	bus_if.h device_if.h
 
 .if defined(KERNBUILDDIR)

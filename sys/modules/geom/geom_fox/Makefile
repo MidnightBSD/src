@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/geom/geom_fox/Makefile 116518 2003-06-18 09:29:28Z phk $
 
 .PATH: ${.CURDIR}/../../../geom
 

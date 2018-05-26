@@ -1,5 +1,6 @@
-# $Id: Makefile,v 1.1.1.3 2012-07-21 15:16:45 laffer1 Exp $
-# $FreeBSD$
+# $MidnightBSD$
+# $Id: Makefile,v 1.2 2003/01/12 23:37:31 max Exp $
+# $FreeBSD: stable/10/sys/modules/netgraph/bluetooth/socket/Makefile 181034 2008-07-30 22:42:17Z emax $
 
 .PATH: ${.CURDIR}/../../../../netgraph/bluetooth/socket
 

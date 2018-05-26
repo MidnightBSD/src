@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/ale/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ale/Makefile 184870 2008-11-12 09:52:06Z yongari $
 
 .PATH: ${.CURDIR}/../../dev/ale
 

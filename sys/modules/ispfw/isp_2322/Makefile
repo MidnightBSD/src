@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #-
 # Copyright (c) 2006 by Matthew Jacob
 # All rights reserved.
@@ -24,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/ispfw/isp_2322/Makefile 160212 2006-07-09 17:50:20Z mjacob $
 
 .PATH: ${.CURDIR}/../../../dev/ispfw
 

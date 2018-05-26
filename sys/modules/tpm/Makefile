@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/tpm/Makefile 211270 2010-08-13 04:00:35Z takawata $
 
 .PATH:	${.CURDIR}/../../dev/tpm
 

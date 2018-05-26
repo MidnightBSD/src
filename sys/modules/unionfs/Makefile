@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/unionfs/Makefile 89260 2002-01-11 15:49:02Z ru $
 
 .PATH: ${.CURDIR}/../../fs/unionfs
 

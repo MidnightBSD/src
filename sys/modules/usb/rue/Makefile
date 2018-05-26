@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/rue/Makefile 226154 2011-10-08 12:33:10Z marius $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sys/modules/ibcs2/Makefile,v 1.2 2009/01/18 00:02:19 laffer1 Exp $
-# $FreeBSD: src/sys/modules/ibcs2/Makefile,v 1.34 2002/08/12 07:20:15 alfred Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ibcs2/Makefile 193588 2009-06-06 17:01:44Z rwatson $
 
 .PATH: ${.CURDIR}/../../i386/ibcs2
 

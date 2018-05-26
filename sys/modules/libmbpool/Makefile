@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/libmbpool/Makefile 117624 2003-07-15 08:59:38Z harti $
 
 .PATH: ${.CURDIR}/../../kern
 

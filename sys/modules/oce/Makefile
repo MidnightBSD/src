@@ -1,9 +1,10 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/oce/Makefile 284045 2015-06-05 20:38:22Z jhb $
 #
 
 .PATH:	${.CURDIR}/../../dev/oce
-KMOD	= oce
+KMOD	= if_oce
 SRCS    = oce_if.c oce_hw.c oce_mbox.c oce_util.c oce_queue.c oce_sysctl.c
 SRCS    += bus_if.h device_if.h pci_if.h opt_inet.h opt_inet6.h
 

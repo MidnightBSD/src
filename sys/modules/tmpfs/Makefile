@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/tmpfs/Makefile 171087 2007-06-29 05:23:15Z delphij $
 
 .PATH: ${.CURDIR}/../../fs/tmpfs
 

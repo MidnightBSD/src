@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/vx/Makefile 211690 2010-08-23 06:13:29Z imp $
 
 .PATH: ${.CURDIR}/../../dev/vx
 

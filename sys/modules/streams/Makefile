@@ -1,13 +1,10 @@
-# $FreeBSD$ 
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/streams/Makefile 299215 2016-05-07 08:30:21Z dchagin $ 
 
 .PATH: ${.CURDIR}/../../dev/streams
 
 KMOD=	streams
 SRCS=	streams.c
-
-EXPORT_SYMS=	svr4_str_initialized	\
-		svr4_stream_get		\
-		svr4_delete_socket
 
 .if defined(DEBUG)
 CFLAGS+= -DDEBUG_SVR4

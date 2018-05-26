@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/drm/i915/Makefile 182080 2008-08-23 20:59:12Z rnoland $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= i915

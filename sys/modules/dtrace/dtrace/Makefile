@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/dtrace/dtrace/Makefile 268578 2014-07-12 22:56:41Z rpaulo $
 
 ARCHDIR=	${MACHINE_CPUARCH}
 
@@ -14,9 +15,11 @@ SRCS=		dtrace.c \
 		dtrace_subr.c
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+.PATH: ${.CURDIR}/../../../cddl/dev/dtrace/x86
 SRCS+=		dis_tables.c \
 		instr_size.c
-CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel
+CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel \
+		-I${.CURDIR}/../../../cddl/dev/dtrace/x86
 .endif
 
 SRCS+=		bus_if.h device_if.h vnode_if.h
@@ -38,9 +41,10 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../../cddl/dev/dtrace \
 		-I${.CURDIR}/../../../cddl/dev/dtrace/${ARCHDIR} \
 		-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common \
+		-I${.CURDIR}/../../../../cddl/contrib/opensolaris/common/util \
 		-I${.CURDIR}/../../.. -DDIS_MEM
 
-CFLAGS+=	-DSMP -DDEBUG
+CFLAGS+=	-DSMP
 
 EXPORT_SYMS=	dtrace_register \
 		dtrace_unregister \
@@ -49,3 +53,10 @@ EXPORT_SYMS=	dtrace_register \
 dtrace_asm.o:  assym.s
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+
+CWARNFLAGS+=	-Wno-parentheses
+CWARNFLAGS+=	-Wno-uninitialized
+CWARNFLAGS+=	-Wno-cast-qual
+CWARNFLAGS+=	-Wno-unused

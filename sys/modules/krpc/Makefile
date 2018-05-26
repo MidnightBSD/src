@@ -1,10 +1,12 @@
-# $MidnightBSD: src/sys/modules/krpc/Makefile,v 1.1 2012/03/24 21:30:06 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/krpc/Makefile 269398 2014-08-01 21:10:41Z rmacklem $
 
 .PATH: ${.CURDIR}/../../rpc ${.CURDIR}/../../xdr
 KMOD=	krpc
 SRCS=	auth_none.c \
 	auth_unix.c \
 	authunix_prot.c \
+	clnt_bck.c \
 	clnt_dg.c \
 	clnt_rc.c \
 	clnt_vc.c \

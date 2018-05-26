@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sys/modules/cpufreq/Makefile,v 1.3 2010/03/12 04:28:25 laffer1 Exp $
-# $FreeBSD: src/sys/modules/cpufreq/Makefile,v 1.8 2005/04/19 16:38:24 njl Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/cpufreq/Makefile 211690 2010-08-23 06:13:29Z imp $
 
 .PATH:	${.CURDIR}/../../dev/cpufreq		\
 	${.CURDIR}/../../${MACHINE_CPUARCH}/cpufreq
@@ -17,6 +17,11 @@ SRCS+=	est.c hwpstate.c p4tcc.c powernow.c
 
 .if ${MACHINE} == "i386"
 SRCS+=	smist.c
+.endif
+
+.if ${MACHINE} == "powerpc"
+.PATH:	${.CURDIR}/../../powerpc/cpufreq
+SRCS+= dfs.c
 .endif
 
 .include <bsd.kmod.mk>

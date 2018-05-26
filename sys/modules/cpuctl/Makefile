@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/cpuctl/Makefile,v 1.1.2.1 2009/01/12 15:48:22 stas Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/cpuctl/Makefile 181430 2008-08-08 16:26:53Z stas $
 
 .PATH: ${.CURDIR}/../../dev/cpuctl
 

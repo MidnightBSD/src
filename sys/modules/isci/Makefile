@@ -1,6 +1,7 @@
+# $MidnightBSD$
 # isci driver Makefile
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/isci/Makefile 245952 2013-01-26 22:08:21Z pfg $
 
 ISCI_SRC_PATH = ${.CURDIR}/../..
 

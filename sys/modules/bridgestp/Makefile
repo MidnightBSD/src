@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/bridgestp/Makefile 193744 2009-06-08 19:57:35Z bz $
 
 .PATH: ${.CURDIR}/../../net
 

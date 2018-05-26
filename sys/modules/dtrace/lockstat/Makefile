@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sys/modules/dtrace/lockstat/Makefile,v 1.1 2012/03/28 21:16:38 laffer1 Exp $
-# $FreeBSD: src/sys/modules/dtrace/lockstat/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/dtrace/lockstat/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH: ${.CURDIR}/../../../cddl/dev/lockstat
 
@@ -13,3 +13,5 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../..
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

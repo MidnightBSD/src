@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 S\xf8ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.

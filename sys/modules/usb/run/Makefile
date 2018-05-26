@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/run/Makefile 203134 2010-01-28 22:24:54Z thompsa $
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #

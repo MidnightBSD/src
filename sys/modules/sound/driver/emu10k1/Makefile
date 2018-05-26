@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/sound/driver/emu10k1/Makefile 230915 2012-02-02 17:25:39Z joel $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

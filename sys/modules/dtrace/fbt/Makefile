@@ -1,10 +1,14 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/dtrace/fbt/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $FreeBSD: stable/10/sys/modules/dtrace/fbt/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH: ${.CURDIR}/../../../cddl/dev/fbt
 
 KMOD=		fbt
+.if ${MACHINE_CPUARCH} == "powerpc"
+SRCS=		fbt_powerpc.c
+.else
 SRCS=		fbt.c
+.endif
 SRCS+=		vnode_if.h
 
 CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
@@ -12,3 +16,5 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../..
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

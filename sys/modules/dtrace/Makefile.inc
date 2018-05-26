@@ -1,10 +1,9 @@
-# $MidnightBSD: src/sys/modules/dtrace/Makefile.inc,v 1.1 2012/03/28 21:16:38 laffer1 Exp $
-# $FreeBSD: src/sys/modules/dtrace/Makefile.inc,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/sys/modules/dtrace/Makefile.inc 282748 2015-05-11 07:54:39Z avg $
 
 IGNORE_PRAGMA=	1
 
 load	:
-	-kldload cyclic
 	-kldload dtrace
 .if ${MACHINE_CPUARCH} == "i386"
 	-kldload sdt
@@ -26,5 +25,4 @@ unload	:
 	-kldunload sdt
 .endif
 	-kldunload dtrace
-	-kldunload cyclic
 	kldstat

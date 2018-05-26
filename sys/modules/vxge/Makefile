@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/vxge/Makefile 221167 2011-04-28 14:33:15Z gnn $
 
 .PATH: ${.CURDIR}/../../dev/vxge
 VPATH =	${.CURDIR}/../../dev/vxge/vxgehal

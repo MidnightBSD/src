@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/msdosfs/Makefile 166383 2007-02-01 04:21:03Z avatar $
 
 .PATH: ${.CURDIR}/../../fs/msdosfs
 

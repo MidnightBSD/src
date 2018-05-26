@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/uhso/Makefile 202181 2010-01-13 03:16:31Z thompsa $
 #
 # Copyright (c) 2010 Andrew Thompson. All rights reserved.
 #

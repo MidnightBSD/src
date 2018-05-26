@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/sym/Makefile 70711 2001-01-06 14:00:42Z obrien $
 
 .PATH: ${.CURDIR}/../../dev/sym
 

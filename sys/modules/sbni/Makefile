@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/sbni/Makefile 86752 2001-11-21 22:29:35Z fjoe $
 
 .PATH: ${.CURDIR}/../../dev/sbni
 

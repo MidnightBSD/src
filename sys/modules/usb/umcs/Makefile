@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/umcs/Makefile 222696 2011-06-04 20:40:24Z hselasky $
 #
 # Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
 #

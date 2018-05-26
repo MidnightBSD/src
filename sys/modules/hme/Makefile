@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/hme/Makefile 178762 2008-05-04 14:59:25Z marius $
 
 .PATH: ${.CURDIR}/../../dev/hme
 

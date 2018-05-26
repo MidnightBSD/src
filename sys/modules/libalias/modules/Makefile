@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/libalias/modules/Makefile 162701 2006-09-27 12:30:27Z ru $
 
 .include "${.CURDIR}/modules.inc"
 

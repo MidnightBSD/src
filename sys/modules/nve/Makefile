@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/nve/Makefile 228861 2011-12-24 13:36:28Z dim $
 
 .PATH: ${.CURDIR}/../../dev/nve
 

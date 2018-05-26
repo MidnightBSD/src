@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/netgraph/atm/atmbase/Makefile 121938 2003-11-03 09:18:52Z harti $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #

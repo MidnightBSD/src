@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/usb/Makefile 215649 2010-11-22 01:11:28Z weongyo $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #

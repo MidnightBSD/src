@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/mps/Makefile 239462 2012-08-20 18:33:03Z dim $
 
 .PATH: ${.CURDIR}/../../dev/mps
 
@@ -9,9 +10,10 @@ SRCS+=	opt_cam.h opt_compat.h
 SRCS+=	device_if.h bus_if.h pci_if.h
 
 #CFLAGS += -DMPS_DEBUG
-DEBUG_FLAGS += -g
 
 .include <bsd.kmod.mk>
 
-CWARNFLAGS.mps_sas.c=	${NO_WUNNEEDED_INTERNAL_DECL}
-CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}
+CWARNFLAGS.mps_sas.c=		${NO_WUNNEEDED_INTERNAL_DECL}
+# XXX Work around clang warning, until maintainer approves fix.
+CWARNFLAGS.mps_mapping.c=	${NO_WSOMETIMES_UNINITIALIZED}
+CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/nfe/Makefile 163962 2006-11-03 21:41:19Z ru $
 
 .PATH: ${.CURDIR}/../../dev/nfe
 

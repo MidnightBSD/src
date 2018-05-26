@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/uchcom/Makefile 172748 2007-10-18 10:51:06Z takawata $
 
 S=	${.CURDIR}/../..
 .PATH: $S/dev/usb

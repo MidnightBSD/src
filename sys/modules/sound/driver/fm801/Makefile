@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/sound/driver/fm801/Makefile,v 1.3 2003/02/07 13:56:32 nyan Exp $
+# $FreeBSD: stable/10/sys/modules/sound/driver/fm801/Makefile 110498 2003-02-07 13:56:33Z nyan $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

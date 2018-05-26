@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/geom/geom_sunlabel/Makefile 115479 2003-05-31 18:36:41Z phk $
 
 .PATH: ${.CURDIR}/../../../geom
 

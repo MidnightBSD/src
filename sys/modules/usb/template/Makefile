@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/template/Makefile 269922 2014-08-13 08:21:52Z hselasky $
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -38,6 +39,7 @@ SRCS=	opt_bus.h opt_usb.h device_if.h bus_if.h usb_if.h vnode_if.h usbdevs.h \
 	usb_template_modem.c \
 	usb_template_mouse.c \
 	usb_template_msc.c \
-	usb_template_mtp.c
+	usb_template_mtp.c \
+	usb_template_phone.c
 
 .include <bsd.kmod.mk>

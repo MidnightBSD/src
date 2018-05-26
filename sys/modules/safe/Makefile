@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #-
 # Copyright (c) 2003 Sam Leffler, Errno Consulting
 # All rights reserved.
@@ -23,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/modules/safe/Makefile,v 1.4 2007/03/21 03:42:50 sam Exp $
+# $FreeBSD: stable/10/sys/modules/safe/Makefile 182668 2008-09-01 23:59:00Z imp $
 #
 
 .PATH:	${.CURDIR}/../../dev/safe

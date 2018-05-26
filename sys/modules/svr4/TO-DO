@@ -12,4 +12,5 @@ TO-DO list
   * Make SysV emulator use SysV shared memory support (duh)
 
 
-$FreeBSD$
+$FreeBSD: stable/10/sys/modules/svr4/TO-DO 50477 1999-08-28 01:08:13Z peter $
+$MidnightBSD$

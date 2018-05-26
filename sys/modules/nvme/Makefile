@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: release/9.2.0/sys/modules/nvme/Makefile 253631 2013-07-24 22:48:29Z jimharris $
+# $FreeBSD: stable/10/sys/modules/nvme/Makefile 253476 2013-07-19 21:40:57Z jimharris $
 
 .PATH: ${.CURDIR}/../../dev/nvme
 

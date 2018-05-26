@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/geom/geom_eli/Makefile 220922 2011-04-21 13:31:43Z pjd $
 
 .PATH: ${.CURDIR}/../../../geom/eli
 

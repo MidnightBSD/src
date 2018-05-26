@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/usb/avr32dci/Makefile 228483 2011-12-14 00:28:54Z hselasky $
 #
 # Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
 #

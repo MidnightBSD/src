@@ -1,8 +1,8 @@
-# $MidnightBSD: src/sys/modules/dtrace/dtraceall/Makefile,v 1.1 2012/03/28 21:16:38 laffer1 Exp $
-# $FreeBSD: src/sys/modules/dtrace/dtraceall/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/dtrace/dtraceall/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 KMOD=		dtraceall
-SRCS=		dtraceall.c opt_compat.h
+SRCS=		dtraceall.c opt_compat.h opt_nfs.h
 
 CFLAGS+=	-I${.CURDIR}/../../..
 
@@ -14,3 +14,5 @@ opt_compat.h:
 .endif
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

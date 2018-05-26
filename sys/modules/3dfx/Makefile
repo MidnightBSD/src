@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/3dfx/Makefile 241828 2012-10-22 02:12:11Z eadler $
 
 .PATH: $(.CURDIR)/../../dev/tdfx
 

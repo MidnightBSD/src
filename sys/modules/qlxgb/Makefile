@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #-
 # Copyright (c) 2010-2011 Qlogic Corporation
 # All rights reserved.
@@ -26,7 +27,7 @@
 # File : Makefile
 # Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/qlxgb/Makefile 227064 2011-11-03 21:20:22Z bz $
 #
 
 .PATH: ${.CURDIR}/../../dev/qlxgb

@@ -1,17 +1,25 @@
 # $MidnightBSD$
 #
-# $FreeBSD: stable/9/sys/modules/cxgbe/tom/Makefile 247434 2013-02-28 00:44:54Z np $
+# $FreeBSD: stable/10/sys/modules/cxgbe/tom/Makefile 270297 2014-08-21 19:54:02Z np $
 #
 
 .include <bsd.own.mk>
 
-CXGBE = ${.CURDIR}/../../../dev/cxgbe
+CXGBE=	${.CURDIR}/../../../dev/cxgbe
 .PATH: ${CXGBE}/tom
 
-KMOD = t4_tom
-SRCS = t4_tom.c t4_connect.c t4_listen.c t4_cpl_io.c t4_tom_l2t.c t4_ddp.c
-SRCS+= device_if.h bus_if.h pci_if.h
-SRCS+= opt_inet.h opt_inet6.h
+KMOD=	t4_tom
+SRCS=	bus_if.h
+SRCS+=	device_if.h
+SRCS+=	opt_inet.h
+SRCS+=	opt_inet6.h
+SRCS+=	pci_if.h
+SRCS+=	t4_connect.c
+SRCS+=	t4_cpl_io.c
+SRCS+=	t4_ddp.c
+SRCS+=	t4_listen.c
+SRCS+=	t4_tom.c
+SRCS+=	t4_tom_l2t.c
 
 CFLAGS+= -I${CXGBE}
 

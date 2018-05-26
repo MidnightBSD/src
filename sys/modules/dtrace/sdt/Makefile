@@ -1,14 +1,16 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/dtrace/sdt/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $FreeBSD: stable/10/sys/modules/dtrace/sdt/Makefile 254319 2013-08-14 08:03:57Z uqs $
 
 .PATH: ${.CURDIR}/../../../cddl/dev/sdt
 
 KMOD=		sdt
 SRCS=		sdt.c
-SRCS+=		vnode_if.h
+SRCS+=		vnode_if.h opt_kdtrace.h
 
 CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 		-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common \
 		-I${.CURDIR}/../../..
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h

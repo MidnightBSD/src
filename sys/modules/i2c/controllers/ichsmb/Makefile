@@ -1,4 +1,5 @@
-#$FreeBSD$
+# $MidnightBSD$
+#$FreeBSD: stable/10/sys/modules/i2c/controllers/ichsmb/Makefile 146996 2005-06-05 11:55:29Z takawata $
 
 .PATH:		${.CURDIR}/../../../../dev/ichsmb
 KMOD		= ichsmb

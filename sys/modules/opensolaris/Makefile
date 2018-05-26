@@ -1,4 +1,5 @@
-# $MidnightBSD: src/sys/modules/opensolaris/Makefile,v 1.2 2012/04/10 19:39:40 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/opensolaris/Makefile 253996 2013-08-06 15:51:56Z avg $
 
 .PATH: ${.CURDIR}/../../cddl/compat/opensolaris/kern
 
@@ -27,3 +28,5 @@ CFLAGS+=	-I${.CURDIR}/../../cddl/compat/opensolaris		\
 IGNORE_PRAGMA=	1
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../cddl/compat/opensolaris/sys/debug_compat.h

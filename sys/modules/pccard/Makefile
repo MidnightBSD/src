@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/pccard/Makefile 150363 2005-09-20 06:48:55Z imp $
 
 .PATH: ${.CURDIR}/../../dev/pccard
 

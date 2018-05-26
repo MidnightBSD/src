@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/firewire/fwip/Makefile 220371 2011-04-05 19:41:18Z uqs $
 
 # Makefile for the fwip(4) module (IP over IEEE1394)
 

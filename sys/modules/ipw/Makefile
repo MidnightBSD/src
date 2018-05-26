@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/ipw/Makefile,v 1.2 2005/09/27 18:10:35 mlaier Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ipw/Makefile 150636 2005-09-27 18:10:43Z mlaier $
 
 .PATH: ${.CURDIR}/../../dev/ipw
 

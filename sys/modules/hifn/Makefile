@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/hifn/Makefile,v 1.6 2007/03/21 03:42:50 sam Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/hifn/Makefile 182668 2008-09-01 23:59:00Z imp $
 
 .PATH:	${.CURDIR}/../../dev/hifn
 KMOD	= hifn

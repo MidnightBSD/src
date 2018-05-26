@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/modules/dtrace/dtraceall/dtraceall.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: stable/10/sys/modules/dtrace/dtraceall/dtraceall.c 287090 2015-08-24 03:41:14Z julian $
  */
 
 #include <sys/cdefs.h>
@@ -34,6 +34,7 @@
 #include <sys/module.h>
 #include <sys/errno.h>
 #include "opt_compat.h"
+#include "opt_nfs.h"
 
 static int
 dtraceall_modevent(module_t mod __unused, int type, void *data __unused)
@@ -63,15 +64,19 @@ DEV_MODULE(dtraceall, dtraceall_modevent, NULL);
 MODULE_VERSION(dtraceall, 1);
 
 /* All the DTrace modules should be dependencies here: */
-MODULE_DEPEND(dtraceall, cyclic, 1, 1, 1);
 MODULE_DEPEND(dtraceall, opensolaris, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtrace, 1, 1, 1);
-MODULE_DEPEND(dtraceall, dtio, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtmalloc, 1, 1, 1);
+#if defined(NFSCL)
 MODULE_DEPEND(dtraceall, dtnfscl, 1, 1, 1);
+#endif
+#if defined(NFSCLIENT)
 MODULE_DEPEND(dtraceall, dtnfsclient, 1, 1, 1);
-#if defined(__amd64__) || defined(__i386__)
+#endif
+#if defined(__amd64__) || defined(__i386__) || defined(__powerpc__)
 MODULE_DEPEND(dtraceall, fbt, 1, 1, 1);
+#endif
+#if defined(__amd64__) || defined(__i386__)
 MODULE_DEPEND(dtraceall, fasttrap, 1, 1, 1);
 #endif
 MODULE_DEPEND(dtraceall, lockstat, 1, 1, 1);

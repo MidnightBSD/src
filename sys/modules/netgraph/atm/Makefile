@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/netgraph/atm/Makefile 179308 2008-05-25 22:11:40Z rwatson $
 
 SUBDIR=			\
 	atm 		\

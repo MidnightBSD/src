@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/cd9660/Makefile,v 1.16 2007/02/11 14:01:31 rodrigc Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/cd9660/Makefile 166640 2007-02-11 14:01:32Z rodrigc $
 
 .PATH: ${.CURDIR}/../../fs/cd9660
 

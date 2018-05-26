@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/syscons/Makefile 294783 2016-01-26 08:55:31Z des $
 
 SUBDIR=	${_apm} \
 	${_beastie} \
@@ -9,6 +10,7 @@ SUBDIR=	${_apm} \
 	${_fire} \
 	green \
 	${_logo} \
+	${_plasma} \
 	${_rain} \
 	${_snake} \
 	${_star} \
@@ -25,6 +27,7 @@ _daemon=	daemon
 _dragon=	dragon
 _fire=		fire
 _logo=		logo
+_plasma=	plasma
 _rain=		rain
 _snake=		snake
 _star=		star

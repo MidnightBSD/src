@@ -1,7 +1,8 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/nxge/Makefile 242731 2012-11-08 01:35:02Z kevlo $
 
 .PATH: ${.CURDIR}/../../dev/nxge
-VPATH = ${.CURDIR}/../../dev/nxge/xgehal
+.PATH: ${.CURDIR}/../../dev/nxge/xgehal
 
 CFLAGS_NXGE = 
 

@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/ipfw/Makefile,v 1.26 2007/07/03 12:46:06 mlaier Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/ipfw/Makefile 240494 2012-09-14 11:51:49Z glebius $
 
 .include <bsd.own.mk>
 
@@ -11,7 +12,6 @@ SRCS+=	ip_fw_sockopt.c ip_fw_table.c
 SRCS+=	opt_inet.h opt_inet6.h opt_ipdivert.h opt_ipfw.h opt_ipsec.h
 
 CFLAGS+= -DIPFIREWALL
-CFLAGS+= -I${.CURDIR}/../../contrib/pf
 #
 #If you want it verbose
 #CFLAGS+= -DIPFIREWALL_VERBOSE

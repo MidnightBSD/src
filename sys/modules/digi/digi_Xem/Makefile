@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/digi/digi_Xem/Makefile 76195 2001-05-02 01:08:09Z brian $
 
 .PATH:	${.CURDIR}/../../../dev/digi
 KMOD=	digi_Xem

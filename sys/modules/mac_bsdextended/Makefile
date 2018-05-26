@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/mac_bsdextended/Makefile 184331 2008-10-27 12:09:15Z rwatson $
 
 .PATH: ${.CURDIR}/../../security/mac_bsdextended
 

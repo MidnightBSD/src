@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sys/modules/dtrace/fasttrap/Makefile,v 1.1 2012/03/28 21:18:51 laffer1 Exp $
-# $FreeBSD: src/sys/modules/dtrace/fasttrap/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/dtrace/fasttrap/Makefile 268734 2014-07-16 02:02:46Z pfg $
 
 .PATH:	${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common/dtrace
 
@@ -14,8 +14,18 @@ CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
 .if ${MACHINE_CPUARCH} == "amd64" ||  ${MACHINE_CPUARCH} == "i386"
 CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel
 .PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel/dtrace
+.elif ${MACHINE_CPUARCH} == "powerpc"
+CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/powerpc
+.PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/uts/powerpc/dtrace
 .endif
 
-CFLAGS+=	-DSMP -DDEBUG
+.PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/common/unicode
+SRCS+=		u8_textprep.c
+
+CFLAGS+=	-DSMP
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+CWARNFLAGS+=	-Wno-cast-qual
+CWARNFLAGS+=	-Wno-unused

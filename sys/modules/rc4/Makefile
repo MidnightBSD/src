@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/rc4/Makefile 109318 2003-01-15 19:55:17Z sam $
 
 .PATH: ${.CURDIR}/../../crypto/rc4
 

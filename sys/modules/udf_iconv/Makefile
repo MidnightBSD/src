@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/udf_iconv/Makefile 122221 2003-11-07 09:38:05Z scottl $
 
 .PATH:	${.CURDIR}/../../fs/udf
 KMOD=	udf_iconv

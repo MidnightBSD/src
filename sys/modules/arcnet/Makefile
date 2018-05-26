@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/arcnet/Makefile 220470 2011-04-09 09:07:31Z uqs $
 
 .PATH: ${.CURDIR}/../../net
 

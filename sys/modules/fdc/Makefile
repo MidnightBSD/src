@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/fdc/Makefile 193530 2009-06-05 18:44:36Z jkim $
 
 KMOD=	fdc
 

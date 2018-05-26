@@ -60595,6 +60595,7 @@ sys/modules/usb/uhid/Makefile -text
 sys/modules/usb/uhso/Makefile -text
 sys/modules/usb/uipaq/Makefile -text
 sys/modules/usb/ukbd/Makefile -text
+sys/modules/usb/uled/Makefile svneol=native#text/plain
 sys/modules/usb/ulpt/Makefile -text
 sys/modules/usb/umass/Makefile -text
 sys/modules/usb/umcs/Makefile -text
@@ -60606,7 +60607,14 @@ sys/modules/usb/upgt/Makefile -text
 sys/modules/usb/uplcom/Makefile -text
 sys/modules/usb/ural/Makefile -text
 sys/modules/usb/urio/Makefile -text
+sys/modules/usb/urndis/Makefile svneol=native#text/plain
 sys/modules/usb/urtw/Makefile -text
+sys/modules/usb/urtwn/Makefile svneol=native#text/plain
+sys/modules/usb/urtwnfw/Makefile svneol=native#text/plain
+sys/modules/usb/urtwnfw/Makefile.inc svneol=native#text/plain
+sys/modules/usb/urtwnfw/urtwnrtl8188eu/Makefile svneol=native#text/plain
+sys/modules/usb/urtwnfw/urtwnrtl8192cT/Makefile svneol=native#text/plain
+sys/modules/usb/urtwnfw/urtwnrtl8192cU/Makefile svneol=native#text/plain
 sys/modules/usb/usb/Makefile -text
 sys/modules/usb/usfs/Makefile -text
 sys/modules/usb/usie/Makefile -text
@@ -60614,6 +60622,7 @@ sys/modules/usb/uslcom/Makefile -text
 sys/modules/usb/uss820dci/Makefile -text
 sys/modules/usb/uvisor/Makefile -text
 sys/modules/usb/uvscom/Makefile -text
+sys/modules/usb/wsp/Makefile svneol=native#text/plain
 sys/modules/usb/xhci/Makefile -text
 sys/modules/usb/zyd/Makefile -text
 sys/modules/utopia/Makefile -text
@@ -60623,11 +60632,16 @@ sys/modules/viawd/Makefile -text
 sys/modules/virtio/Makefile -text
 sys/modules/virtio/balloon/Makefile -text
 sys/modules/virtio/block/Makefile -text
+sys/modules/virtio/console/Makefile svneol=native#text/plain
 sys/modules/virtio/network/Makefile -text
 sys/modules/virtio/pci/Makefile -text
+sys/modules/virtio/random/Makefile svneol=native#text/plain
 sys/modules/virtio/scsi/Makefile -text
 sys/modules/virtio/virtio/Makefile -text
 sys/modules/vkbd/Makefile -text
+sys/modules/vmm/Makefile svneol=native#text/plain
+sys/modules/vmware/Makefile svneol=native#text/plain
+sys/modules/vmware/vmxnet3/Makefile svneol=native#text/plain
 sys/modules/vpo/Makefile -text
 sys/modules/vr/Makefile -text
 sys/modules/vte/Makefile -text

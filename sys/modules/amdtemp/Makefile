@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/amdtemp/Makefile,v 1.1.2.1 2009/05/21 17:09:23 rpaulo Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/amdtemp/Makefile 189768 2009-03-13 16:08:08Z rpaulo $
 
 .PATH:	${.CURDIR}/../../dev/amdtemp
 

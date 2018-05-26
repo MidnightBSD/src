@@ -1,5 +1,6 @@
+# $MidnightBSD$
 # $Whistle: Makefile,v 1.5 1999/01/24 06:48:37 archie Exp $
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/netgraph/Makefile 291811 2015-12-04 18:44:12Z bdrewery $
 
 .include <bsd.own.mk>
 

@@ -1,7 +1,5 @@
-# $MidnightBSD: src/sys/modules/dpms/Makefile,v 1.1 2012/03/31 16:59:45 laffer1 Exp $
-# $FreeBSD: src/sys/modules/dpms/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
-
-.PATH: ${.CURDIR}/../../i386/isa
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/dpms/Makefile 198251 2009-10-19 20:58:10Z jkim $
 
 KMOD=	dpms
 SRCS=	bus_if.h device_if.h pci_if.h

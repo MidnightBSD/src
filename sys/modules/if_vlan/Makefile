@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/if_vlan/Makefile,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/if_vlan/Makefile 193744 2009-06-08 19:57:35Z bz $
 
 .PATH: ${.CURDIR}/../../net
 

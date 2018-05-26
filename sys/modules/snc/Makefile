@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/snc/Makefile 181391 2008-08-07 20:51:51Z imp $
 
 .PATH: ${.CURDIR}/../../dev/snc
 

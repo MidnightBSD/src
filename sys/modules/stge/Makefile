@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/modules/stge/Makefile 160642 2006-07-25 00:45:55Z yongari $
 
 .PATH: ${.CURDIR}/../../dev/stge
 

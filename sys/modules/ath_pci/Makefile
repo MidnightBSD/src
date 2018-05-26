@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #
 # Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd
 # All rights reserved.
@@ -26,7 +27,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/modules/ath_pci/Makefile 227413 2011-11-09 23:53:13Z adrian $
 #
 
 .PATH:	${.CURDIR}/../../dev/ath
@@ -34,7 +35,7 @@
 
 KMOD=	if_ath_pci
 SRCS=	if_ath_pci.c
-SRCS+=	device_if.h bus_if.h pci_if.h opt_ah.h
+SRCS+=	device_if.h bus_if.h pci_if.h opt_wlan.h opt_ath.h opt_ah.h
 
 CFLAGS+=  -I. -I${.CURDIR}/../../dev/ath -I${.CURDIR}/../../dev/ath/ath_hal
 

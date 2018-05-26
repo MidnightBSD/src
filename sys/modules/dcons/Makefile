@@ -1,4 +1,6 @@
 # $MidnightBSD$
+# $Id: Makefile,v 1.6 2003/10/24 15:41:26 simokawa Exp $
+# $FreeBSD: stable/10/sys/modules/dcons/Makefile 225214 2011-08-27 14:24:27Z rwatson $
 
 .PATH:	${.CURDIR}/../../dev/dcons
 

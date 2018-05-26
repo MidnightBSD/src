@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/sound/driver/ich/Makefile,v 1.2 2003/02/07 13:56:32 nyan Exp $
+# $FreeBSD: stable/10/sys/modules/sound/driver/ich/Makefile 245952 2013-01-26 22:08:21Z pfg $
 
 .PATH:		${.CURDIR}/../../../../dev/sound/pci
 KMOD		= snd_ich
