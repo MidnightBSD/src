@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/geom/raid/g_raid.h 260385 2014-01-07 01:32:23Z scottl $
  */
 
 #ifndef	_G_RAID_H_
@@ -306,6 +307,7 @@ struct g_raid_volume {
 	int			 v_stopping;	/* Volume is stopping */
 	int			 v_provider_open; /* Number of opens. */
 	int			 v_global_id;	/* Global volume ID (rX). */
+	int			 v_read_only;	/* Volume is read-only. */
 	TAILQ_ENTRY(g_raid_volume)	 v_next; /* List of volumes entry. */
 	LIST_ENTRY(g_raid_volume)	 v_global_next; /* Global list entry. */
 };
@@ -375,6 +377,7 @@ struct g_raid_tr_class {
 	KOBJ_CLASS_FIELDS;
 	int		 trc_enable;
 	int		 trc_priority;
+	int		 trc_accept_unmapped;
 	LIST_ENTRY(g_raid_tr_class) trc_list;
 };
 

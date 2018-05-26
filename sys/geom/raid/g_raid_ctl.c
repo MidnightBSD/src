@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/geom/raid/g_raid_ctl.c 299497 2016-05-12 00:45:57Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -117,7 +118,7 @@ g_raid_ctl_label(struct gctl_req *req, struct g_class *mp)
 	}
 	format = gctl_get_asciiparam(req, "arg0");
 	if (format == NULL) {
-		gctl_error(req, "No format recieved.");
+		gctl_error(req, "No format received.");
 		return;
 	}
 	crstatus = g_raid_create_node_format(format, req, &geom);
@@ -164,7 +165,7 @@ g_raid_ctl_stop(struct gctl_req *req, struct g_class *mp)
 	}
 	nodename = gctl_get_asciiparam(req, "arg0");
 	if (nodename == NULL) {
-		gctl_error(req, "No array name recieved.");
+		gctl_error(req, "No array name received.");
 		return;
 	}
 	sc = g_raid_find_node(mp, nodename);
@@ -181,7 +182,7 @@ g_raid_ctl_stop(struct gctl_req *req, struct g_class *mp)
 	sx_xlock(&sc->sc_lock);
 	error = g_raid_destroy(sc, how);
 	if (error != 0)
-		sx_xunlock(&sc->sc_lock);
+		gctl_error(req, "Array is busy.");
 	g_topology_lock();
 }
 
@@ -204,7 +205,7 @@ g_raid_ctl_other(struct gctl_req *req, struct g_class *mp)
 	}
 	nodename = gctl_get_asciiparam(req, "arg0");
 	if (nodename == NULL) {
-		gctl_error(req, "No array name recieved.");
+		gctl_error(req, "No array name received.");
 		return;
 	}
 	sc = g_raid_find_node(mp, nodename);

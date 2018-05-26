@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Fabio Checconi
  * Copyright (c) 2009-2010 Luigi Rizzo, Universita` di Pisa
@@ -26,8 +27,8 @@
  */
 
 /*
- * $Id: gs_scheduler.h,v 1.1.1.1 2012-07-21 15:17:20 laffer1 Exp $
- * $FreeBSD$
+ * $Id$
+ * $FreeBSD: stable/10/sys/geom/sched/gs_scheduler.h 218909 2011-02-21 09:01:34Z brucec $
  *
  * Prototypes for GEOM-based disk scheduling algorithms.
  * See g_sched.c for generic documentation.

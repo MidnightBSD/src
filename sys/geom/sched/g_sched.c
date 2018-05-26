@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Fabio Checconi
  * Copyright (c) 2009-2010 Luigi Rizzo, Universita` di Pisa
@@ -26,8 +27,8 @@
  */
 
 /*
- * $Id: g_sched.c,v 1.1.1.1 2012-07-21 15:17:20 laffer1 Exp $
- * $FreeBSD$
+ * $Id$
+ * $FreeBSD: stable/10/sys/geom/sched/g_sched.c 243333 2012-11-20 12:32:18Z jh $
  *
  * Main control module for geom-based disk schedulers ('sched').
  *

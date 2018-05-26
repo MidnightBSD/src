@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/geom/raid/md_jmicron.c 286759 2015-08-14 02:45:22Z pfg $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -494,7 +495,7 @@ nofit:
 		if (olddisk == NULL)
 			panic("No disk at position %d!", disk_pos);
 		if (olddisk->d_state != G_RAID_DISK_S_OFFLINE) {
-			G_RAID_DEBUG1(1, sc, "More then one disk for pos %d",
+			G_RAID_DEBUG1(1, sc, "More than one disk for pos %d",
 			    disk_pos);
 			g_raid_change_disk_state(disk, G_RAID_DISK_S_STALE);
 			return (0);
@@ -836,16 +837,13 @@ g_raid_md_taste_jmicron(struct g_raid_md_object *md, struct g_class *mp,
 
 	/* Read metadata from device. */
 	meta = NULL;
-	vendor = 0xffff;
-	if (g_access(cp, 1, 0, 0) != 0)
-		return (G_RAID_MD_TASTE_FAIL);
 	g_topology_unlock();
-	len = 2;
+	vendor = 0xffff;
+	len = sizeof(vendor);
 	if (pp->geom->rank == 1)
 		g_io_getattr("GEOM::hba_vendor", cp, &len, &vendor);
 	meta = jmicron_meta_read(cp);
 	g_topology_lock();
-	g_access(cp, -1, 0, 0);
 	if (meta == NULL) {
 		if (g_raid_aggressive_spare) {
 			if (vendor == 0x197b) {
@@ -922,7 +920,11 @@ search:
 		G_RAID_DEBUG1(1, sc, "root_mount_hold %p", mdi->mdio_rootmount);
 	}
 
+	/* There is no return after this point, so we close passed consumer. */
+	g_access(cp, -1, 0, 0);
+
 	rcp = g_new_consumer(geom);
+	rcp->flags |= G_CF_DIRECT_RECEIVE;
 	g_attach(rcp, pp);
 	if (g_access(rcp, 1, 1, 1) != 0)
 		; //goto fail1;

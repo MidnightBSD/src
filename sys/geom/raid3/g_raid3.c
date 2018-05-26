@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.81.2.3 2010/09/19 20:08:45 mav Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/raid3/g_raid3.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2379,8 +2379,7 @@ g_raid3_destroy_provider(struct g_raid3_softc *sc)
 	mtx_unlock(&sc->sc_queue_mtx);
 	G_RAID3_DEBUG(0, "Device %s: provider %s destroyed.", sc->sc_name,
 	    sc->sc_provider->name);
-	sc->sc_provider->flags |= G_PF_WITHER;
-	g_orphan_provider(sc->sc_provider, ENXIO);
+	g_wither_provider(sc->sc_provider, ENXIO);
 	g_topology_unlock();
 	sc->sc_provider = NULL;
 	if (sc->sc_syncdisk != NULL)
@@ -3167,7 +3166,7 @@ g_raid3_create(struct g_class *mp, const struct g_raid3_metadata *md)
 	bioq_init(&sc->sc_sync_delayed);
 	TAILQ_INIT(&sc->sc_events);
 	mtx_init(&sc->sc_events_mtx, "graid3:events", NULL, MTX_DEF);
-	callout_init(&sc->sc_callout, CALLOUT_MPSAFE);
+	callout_init(&sc->sc_callout, 1);
 	sc->sc_state = G_RAID3_DEVICE_STATE_STARTING;
 	gp->softc = sc;
 	sc->sc_geom = gp;

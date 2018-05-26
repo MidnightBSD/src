@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Fabio Checconi
  * Copyright (c) 2009-2010 Luigi Rizzo, Universita` di Pisa
@@ -26,8 +27,8 @@
  */
 
 /*
- * $Id: gs_rr.c,v 1.1.1.1 2012-07-21 15:17:20 laffer1 Exp $
- * $FreeBSD$
+ * $Id$
+ * $FreeBSD: stable/10/sys/geom/sched/gs_rr.c 314667 2017-03-04 13:03:31Z avg $
  *
  * A round-robin (RR) anticipatory scheduler, with per-client queues.
  *
@@ -602,7 +603,7 @@ g_rr_init(struct g_geom *geom)
 	sc = malloc(sizeof *sc, M_GEOM_SCHED, M_NOWAIT | M_ZERO);
 	sc->sc_geom = geom;
 	TAILQ_INIT(&sc->sc_rr_tailq);
-	callout_init(&sc->sc_wait, CALLOUT_MPSAFE);
+	callout_init(&sc->sc_wait, 1);
 	LIST_INSERT_HEAD(&me.sc_head, sc, sc_next);
 	me.units++;
 
