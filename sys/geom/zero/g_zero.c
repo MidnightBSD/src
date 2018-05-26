@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/zero/g_zero.c,v 1.4 2006/02/01 12:06:01 pjd Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/zero/g_zero.c 260385 2014-01-07 01:32:23Z scottl $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -42,15 +42,36 @@ __FBSDID("$FreeBSD: src/sys/geom/zero/g_zero.c,v 1.4 2006/02/01 12:06:01 pjd Exp
 
 #define	G_ZERO_CLASS_NAME	"ZERO"
 
+static int	g_zero_clear_sysctl(SYSCTL_HANDLER_ARGS);
+
 SYSCTL_DECL(_kern_geom);
 static SYSCTL_NODE(_kern_geom, OID_AUTO, zero, CTLFLAG_RW, 0,
     "GEOM_ZERO stuff");
 static int g_zero_clear = 1;
-SYSCTL_INT(_kern_geom_zero, OID_AUTO, clear, CTLFLAG_RW, &g_zero_clear, 0,
-    "Clear read data buffer");
+SYSCTL_PROC(_kern_geom_zero, OID_AUTO, clear, CTLTYPE_INT|CTLFLAG_RW,
+    &g_zero_clear, 0, g_zero_clear_sysctl, "I", "Clear read data buffer");
 static int g_zero_byte = 0;
 SYSCTL_INT(_kern_geom_zero, OID_AUTO, byte, CTLFLAG_RW, &g_zero_byte, 0,
     "Byte (octet) value to clear the buffers with");
+
+static struct g_provider *gpp;
+
+static int
+g_zero_clear_sysctl(SYSCTL_HANDLER_ARGS)
+{
+	int error;
+
+	error = sysctl_handle_int(oidp, &g_zero_clear, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (gpp == NULL)
+		return (ENXIO);
+	if (g_zero_clear)
+		gpp->flags &= ~G_PF_ACCEPT_UNMAPPED;
+	else
+		gpp->flags |= G_PF_ACCEPT_UNMAPPED;
+	return (0);
+}
 
 static void
 g_zero_start(struct bio *bp)
@@ -59,7 +80,7 @@ g_zero_start(struct bio *bp)
 
 	switch (bp->bio_cmd) {
 	case BIO_READ:
-		if (g_zero_clear)
+		if (g_zero_clear && (bp->bio_flags & BIO_UNMAPPED) == 0)
 			memset(bp->bio_data, g_zero_byte, bp->bio_length);
 		/* FALLTHROUGH */
 	case BIO_DELETE:
@@ -85,7 +106,10 @@ g_zero_init(struct g_class *mp)
 	gp = g_new_geomf(mp, "gzero");
 	gp->start = g_zero_start;
 	gp->access = g_std_access;
-	pp = g_new_providerf(gp, "%s", gp->name);
+	gpp = pp = g_new_providerf(gp, "%s", gp->name);
+	pp->flags |= G_PF_DIRECT_SEND | G_PF_DIRECT_RECEIVE;
+	if (!g_zero_clear)
+		pp->flags |= G_PF_ACCEPT_UNMAPPED;
 	pp->mediasize = 1152921504606846976LLU;
 	pp->sectorsize = 512;
 	g_error_provider(pp, 0);
@@ -105,6 +129,7 @@ g_zero_destroy_geom(struct gctl_req *req __unused, struct g_class *mp __unused,
 		return (0);
 	if (pp->acr > 0 || pp->acw > 0 || pp->ace > 0)
 		return (EBUSY);
+	gpp = NULL;
 	g_wither_geom(gp, ENXIO);
 	return (0);
 }

@@ -58997,6 +58997,16 @@ sys/geom/stripe/g_stripe.c -text
 sys/geom/stripe/g_stripe.h -text
 sys/geom/uncompress/g_uncompress.c -text
 sys/geom/uzip/g_uzip.c -text
+sys/geom/uzip/g_uzip.h svneol=native#text/plain
+sys/geom/uzip/g_uzip_cloop.h svneol=native#text/plain
+sys/geom/uzip/g_uzip_dapi.h svneol=native#text/plain
+sys/geom/uzip/g_uzip_lzma.c svneol=native#text/plain
+sys/geom/uzip/g_uzip_lzma.h svneol=native#text/plain
+sys/geom/uzip/g_uzip_softc.h svneol=native#text/plain
+sys/geom/uzip/g_uzip_wrkthr.c svneol=native#text/plain
+sys/geom/uzip/g_uzip_wrkthr.h svneol=native#text/plain
+sys/geom/uzip/g_uzip_zlib.c svneol=native#text/plain
+sys/geom/uzip/g_uzip_zlib.h svneol=native#text/plain
 sys/geom/vinum/geom_vinum.c -text
 sys/geom/vinum/geom_vinum.h -text
 sys/geom/vinum/geom_vinum_create.c -text
