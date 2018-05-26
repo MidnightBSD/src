@@ -3,9 +3,9 @@
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
- * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
+ * Ported to FreeBSD by Jean-SÃ©bastien PÃ©dron <jspedron@club-internet.fr>
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/gnu/fs/reiserfs/reiserfs_vfsops.c 288985 2015-10-07 09:29:42Z avatar $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -581,7 +581,6 @@ reiserfs_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td)
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
 	MNT_IUNLOCK(mp);
 #if defined(si_mountpoint)
 	devvp->v_rdev->si_mountpoint = mp;
@@ -962,8 +961,8 @@ uint32_t find_hash_out(struct reiserfs_mount *rmp)
 		    key.on_disk_key.k_objectid, key.on_disk_key.k_dir_id);
 		retval = search_by_entry_key(sbi, &key, &path, &de);
 		if (retval == IO_ERROR) {
-			pathrelse(&path);
-			return (UNSET_HASH);
+			hash = UNSET_HASH;
+			break;
 		}
 		if (retval == NAME_NOT_FOUND)
 			de.de_entry_num--;
@@ -1024,6 +1023,7 @@ uint32_t find_hash_out(struct reiserfs_mount *rmp)
 		}
 	} while (0);
 
+	free(ip, M_REISERFSNODE);
 	pathrelse(&path);
 	return (hash);
 }

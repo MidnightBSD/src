@@ -1,11 +1,11 @@
-/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_inode.c,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
- * Ported to FreeBSD by Jean-Sébastien Pédron <dumbbell@FreeBSD.org>
+ * Ported to FreeBSD by Jean-SÃ©bastien PÃ©dron <dumbbell@FreeBSD.org>
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/gnu/fs/reiserfs/reiserfs_inode.c 243311 2012-11-19 22:43:45Z attilio $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -105,12 +105,10 @@ reiserfs_inactive(struct vop_inactive_args *ap)
 {
 	int error;
 	struct vnode *vp;
-	struct thread *td;
 	struct reiserfs_node *ip;
 
 	error = 0;
 	vp = ap->a_vp;
-	td = ap->a_td;
 	ip = VTOI(vp);
 
 	reiserfs_log(LOG_DEBUG, "deactivating inode used %d times\n",
@@ -130,7 +128,7 @@ out:
 	 */
 	if (ip->i_mode == 0) {
 		reiserfs_log(LOG_DEBUG, "recyling\n");
-		vrecycle(vp, td);
+		vrecycle(vp);
 	}
 
 	return (error);
@@ -760,13 +758,6 @@ reiserfs_iget(
 	rmp = VFSTOREISERFS(mp);
 	dev = rmp->rm_dev;
 
-	/*
-	 * If this malloc() is performed after the getnewvnode() it might
-	 * block, leaving a vnode with a NULL v_data to be found by
-	 * reiserfs_sync() if a sync happens to fire right then, which
-	 * will cause a panic because reiserfs_sync() blindly dereferences
-	 * vp->v_data (as well it should).
-	 */
 	reiserfs_log(LOG_DEBUG, "malloc(struct reiserfs_node)\n");
 	ip = malloc(sizeof(struct reiserfs_node), M_REISERFSNODE,
 	    M_WAITOK | M_ZERO);
