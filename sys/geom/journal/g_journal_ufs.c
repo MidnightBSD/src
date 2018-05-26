@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/journal/g_journal_ufs.c,v 1.1 2006/10/31 21:31:00 pjd Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/journal/g_journal_ufs.c 163837 2006-10-31 21:31:00Z pjd $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
