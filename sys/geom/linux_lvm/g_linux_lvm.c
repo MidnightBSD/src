@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/linux_lvm/g_linux_lvm.c,v 1.1 2011/07/13 01:14:00 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/linux_lvm/g_linux_lvm.c,v 1.3 2011/02/25 10:24:35 netchild Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/linux_lvm/g_linux_lvm.c 306765 2016-10-06 15:36:13Z mav $");
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -335,7 +335,7 @@ g_llvm_remove_disk(struct g_llvm_vg *vg, struct g_consumer *cp)
 		if (found) {
 			G_LLVM_DEBUG(0, "Device %s removed.",
 			    lv->lv_gprov->name);
-			g_orphan_provider(lv->lv_gprov, ENXIO);
+			g_wither_provider(lv->lv_gprov, ENXIO);
 			lv->lv_gprov = NULL;
 		}
 	}

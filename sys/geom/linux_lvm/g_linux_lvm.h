@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
@@ -23,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/linux_lvm/g_linux_lvm.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/geom/linux_lvm/g_linux_lvm.h 176417 2008-02-20 07:45:36Z thompsa $
  */
 
 #define	G_LLVM_DEBUG(lvl, ...)	do {					\
