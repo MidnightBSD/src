@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, 2007 Lukas Ertl
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/geom/vinum/geom_vinum_state.c 311939 2017-01-11 21:01:49Z dim $");
 
 #include <sys/libkern.h>
 #include <sys/malloc.h>
@@ -183,7 +184,7 @@ gv_set_sd_state(struct gv_sd *s, int newstate, int flags)
 		 * Only do this if we're forced, since it usually is done
 		 * internally, and then we do use the force flag. 
 		 */
-		if (!flags & GV_SETSTATE_FORCE)
+		if (!(flags & GV_SETSTATE_FORCE))
 			return (GV_ERR_SETSTATE);
 		break;
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2004, 2007 Lukas Ertl
  *  All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/geom/vinum/geom_vinum_rm.c 306765 2016-10-06 15:36:13Z mav $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -223,8 +224,7 @@ gv_rm_vol(struct gv_softc *sc, struct gv_volume *v)
 	/* Get rid of the volume's provider. */
 	if (pp != NULL) {
 		g_topology_lock();
-		pp->flags |= G_PF_WITHER;
-		g_orphan_provider(pp, ENXIO);
+		g_wither_provider(pp, ENXIO);
 		g_topology_unlock();
 	}
 }
