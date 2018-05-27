@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Scott Long <scottl@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/udf/udf_vnops.c 278141 2015-02-03 08:03:19Z dim $
  */
 
 /* udf_vnops.c */
@@ -48,7 +49,6 @@
 
 #include <vm/uma.h>
 
-#include <fs/fifofs/fifo.h>
 #include <fs/udf/ecma167-udf.h>
 #include <fs/udf/osta.h>
 #include <fs/udf/udf.h>
@@ -481,7 +481,7 @@ udf_read(struct vop_read_args *ap)
 			if (lblktosize(udfmp, rablock) < fsize) {
 				error = cluster_read(vp, fsize, lbn, size,
 				    NOCRED, uio->uio_resid,
-				    (ap->a_ioflag >> 16), &bp);
+				    (ap->a_ioflag >> 16), 0, &bp);
 			} else {
 				error = bread(vp, lbn, size, NOCRED, &bp);
 			}
@@ -527,8 +527,9 @@ udf_transname(char *cs0string, char *destname, int len, struct udf_mnt *udfmp)
 		}
 
 		while (unilen > 0 && destleft > 0) {
-			udf_iconv->conv(udfmp->im_d2l, (const char **)&unibuf,
-				(size_t *)&unilen, (char **)&destname, &destleft);
+			udf_iconv->conv(udfmp->im_d2l, __DECONST(const char **,
+			    &unibuf), (size_t *)&unilen, (char **)&destname,
+			    &destleft);
 			/* Unconverted character found */
 			if (unilen > 0 && destleft > 0) {
 				*destname++ = '?';

@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*
  * Prototypes for the OSTA functions
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/udf/osta.h 162255 2006-09-12 19:02:34Z imp $
  */
 
 /*-
