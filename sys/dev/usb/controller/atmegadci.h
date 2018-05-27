@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/atmegadci.h 229096 2011-12-31 14:22:02Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/controller/atmegadci.h 228483 2011-12-14 00:28:54Z hselasky $ */
 /*-
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
  *

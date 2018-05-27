@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/at91dci_atmelarm.c 308402 2016-11-07 09:19:04Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/at91dci_fdt.c 308402 2016-11-07 09:19:04Z hselasky $");
 
 /*-
  * Copyright (c) 2007-2008 Hans Petter Selasky. All rights reserved.
@@ -64,6 +64,10 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/at91dci_atmelarm.c 308402 2
 #include <arm/at91/at91rm92reg.h>
 #include <arm/at91/at91_pioreg.h>
 #include <arm/at91/at91_piovar.h>
+
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
 
 #define	MEM_RID	0
 
@@ -133,6 +137,8 @@ at91_udp_pull_down(void *arg)
 static int
 at91_udp_probe(device_t dev)
 {
+	if (!ofw_bus_is_compatible(dev, "atmel,at91rm9200-udc"))
+		return (ENXIO);
 	device_set_desc(dev, "AT91 integrated AT91_UDP controller");
 	return (0);
 }
@@ -315,4 +321,4 @@ static driver_t at91_udp_driver = {
 
 static devclass_t at91_udp_devclass;
 
-DRIVER_MODULE(at91_udp, atmelarm, at91_udp_driver, at91_udp_devclass, 0, 0);
+DRIVER_MODULE(at91_udp, simplebus, at91_udp_driver, at91_udp_devclass, 0, 0);

@@ -58331,11 +58331,13 @@ sys/dev/ubsec/ubsecvar.h -text
 sys/dev/usb/controller/at91dci.c -text
 sys/dev/usb/controller/at91dci.h -text
 sys/dev/usb/controller/at91dci_atmelarm.c -text
+sys/dev/usb/controller/at91dci_fdt.c svneol=native#text/plain
 sys/dev/usb/controller/atmegadci.c -text
 sys/dev/usb/controller/atmegadci.h -text
 sys/dev/usb/controller/atmegadci_atmelarm.c -text
 sys/dev/usb/controller/avr32dci.c -text
 sys/dev/usb/controller/avr32dci.h -text
+sys/dev/usb/controller/dwc_otg.c svneol=native#text/plain
 sys/dev/usb/controller/ehci.c -text
 sys/dev/usb/controller/ehci.h -text
 sys/dev/usb/controller/ehci_ixp4xx.c -text

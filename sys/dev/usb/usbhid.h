@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usbhid.h 245733 2013-01-21 07:28:46Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usbhid.h 246122 2013-01-30 15:26:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -29,7 +30,9 @@
 #ifndef _USB_HID_H_
 #define	_USB_HID_H_
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <dev/usb/usb_endian.h>
+#endif
 
 #define	UR_GET_HID_DESCRIPTOR	0x06
 #define	UDESC_HID		0x21

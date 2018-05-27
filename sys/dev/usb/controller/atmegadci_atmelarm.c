@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/atmegadci_atmelarm.c 308403 2016-11-07 09:23:07Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/atmegadci_atmelarm.c 308402 2016-11-07 09:19:04Z hselasky $");
 
 /*-
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
