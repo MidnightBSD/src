@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_vnops.h,v 1.7 2005/12/03 17:34:44 christos Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/tmpfs/tmpfs_vnops.h 313095 2017-02-02 13:39:11Z kib $
  */
 
 #ifndef _FS_TMPFS_TMPFS_VNOPS_H_
@@ -39,19 +40,16 @@
 #error not supposed to be exposed to userland.
 #endif
 
-/* --------------------------------------------------------------------- */
-
 /*
  * Declarations for tmpfs_vnops.c.
  */
 
 extern struct vop_vector tmpfs_vnodeop_entries;
+extern struct vop_vector tmpfs_vnodeop_nonc_entries;
 
 vop_access_t	tmpfs_access;
 vop_getattr_t	tmpfs_getattr;
 vop_setattr_t	tmpfs_setattr;
 vop_reclaim_t	tmpfs_reclaim;
-
-/* --------------------------------------------------------------------- */
 
 #endif /* _FS_TMPFS_TMPFS_VNOPS_H_ */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_fifoops.c,v 1.5 2005/12/11 12:24:29 christos Exp $	*/
 
 /*-
@@ -34,7 +35,7 @@
  * tmpfs vnode interface for named pipes.
  */
 #include <sys/cdefs.h>
- __MBSDID("$MidnightBSD$");
+ __FBSDID("$FreeBSD: stable/10/sys/fs/tmpfs/tmpfs_fifoops.c 312069 2017-01-13 12:47:44Z kib $");
 
 #include <sys/param.h>
 #include <sys/filedesc.h>
@@ -48,40 +49,15 @@
 #include <fs/tmpfs/tmpfs_fifoops.h>
 #include <fs/tmpfs/tmpfs_vnops.h>
 
-/* --------------------------------------------------------------------- */
-
-static int
-tmpfs_fifo_kqfilter(struct vop_kqfilter_args *ap)
-{
-	struct vnode *vp;
-	struct tmpfs_node *node;
-
-	vp = ap->a_vp;
-	node = VP_TO_TMPFS_NODE(vp);
-
-	switch (ap->a_kn->kn_filter){
-	case EVFILT_READ:
-		node->tn_status |= TMPFS_NODE_ACCESSED;
-		break;
-	case EVFILT_WRITE:
-		node->tn_status |= TMPFS_NODE_MODIFIED;
-		break;
-	}
-
-	return fifo_specops.vop_kqfilter(ap);
-}
-
-/* --------------------------------------------------------------------- */
-
 static int
 tmpfs_fifo_close(struct vop_close_args *v)
 {
 	struct tmpfs_node *node;
-	node = VP_TO_TMPFS_NODE(v->a_vp);
-	node->tn_status |= TMPFS_NODE_ACCESSED;
 
+	node = VP_TO_TMPFS_NODE(v->a_vp);
+	tmpfs_set_status(node, TMPFS_NODE_ACCESSED);
 	tmpfs_update(v->a_vp);
-	return fifo_specops.vop_close(v);
+	return (fifo_specops.vop_close(v));
 }
 
 /*
@@ -94,6 +70,5 @@ struct vop_vector tmpfs_fifoop_entries = {
 	.vop_access =			tmpfs_access,
 	.vop_getattr =			tmpfs_getattr,
 	.vop_setattr =			tmpfs_setattr,
-	.vop_kqfilter =			tmpfs_fifo_kqfilter,
 };
 
