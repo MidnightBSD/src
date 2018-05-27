@@ -1,4 +1,5 @@
-# $MidnightBSD$
+$MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/qlxgb/README.txt 250340 2013-05-07 22:58:42Z davidcs $
 
 			README File
 	QLogic 3200 and 8200 series Single/Dual Port
@@ -93,7 +94,7 @@ Technical Support at any phase of integration for assistance. QLogic
 Technical Support can be reached by the following methods: 
 Web:    http://support.qlogic.com
 E-mail: support@qlogic.com
-(c) Copyright 2011. All rights reserved worldwide. QLogic, the QLogic 
+(c) Copyright 2013. All rights reserved worldwide. QLogic, the QLogic 
 logo, and the Powered by QLogic logo are registered trademarks of
 QLogic Corporation. All other brand and product names are trademarks 
 or registered trademarks of their respective owners. 

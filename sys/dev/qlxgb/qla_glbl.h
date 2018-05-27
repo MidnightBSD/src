@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * Copyright (c) 2010-2011 Qlogic Corporation
+ * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -24,7 +25,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/qlxgb/qla_glbl.h 250340 2013-05-07 22:58:42Z davidcs $
  */
 /*
  * File: qla_glbl.h
@@ -55,14 +56,6 @@ extern void qla_free_dmabuf(qla_host_t *ha, qla_dma_t *dma_buf);
 extern void qla_start(struct ifnet *ifp);
 extern int qla_get_mbuf(qla_host_t *ha, qla_rx_buf_t *rxb, struct mbuf *nmp,
 	        uint32_t jumbo);
-
-
-/*
- * from qla_flash.c
- */
-extern int qla_flash_rd32_words(qla_host_t *ha, uint32_t addr,
-		uint32_t *val, uint32_t num);
-extern int qla_flash_rd32(qla_host_t *ha, uint32_t addr, uint32_t *val);
 
 /*
  * from qla_hw.c
@@ -97,6 +90,14 @@ extern int qla_init_hw(qla_host_t *ha);
 extern int qla_rdwr_indreg32(qla_host_t *ha, uint32_t addr, uint32_t *val,
 		uint32_t rd);
 extern int qla_rd_flash32(qla_host_t *ha, uint32_t addr, uint32_t *data);
+extern int qla_flash_rd32_words(qla_host_t *ha, uint32_t addr,
+		uint32_t *val, uint32_t num);
+extern int qla_flash_rd32(qla_host_t *ha, uint32_t addr, uint32_t *val);
+extern int qla_fw_update(qla_host_t *ha, void *fdata, uint32_t off,
+		uint32_t size);
+extern int qla_erase_flash(qla_host_t *ha, uint32_t off, uint32_t size);
+extern int qla_wr_flash_buffer(qla_host_t *ha, uint32_t off, uint32_t size,
+		void *buf, uint32_t pattern);
 
 /*
  * from qla_ioctl.c

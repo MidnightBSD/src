@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * Copyright (c) 2010-2011 Qlogic Corporation
+ * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -24,7 +25,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/qlxgb/qla_hw.h 250340 2013-05-07 22:58:42Z davidcs $
  */
 /*
  * File: qla_hw.h
@@ -724,6 +725,8 @@ typedef struct _qla_sds {
 	volatile uint32_t rcv_active;
 } qla_sds_t;
 
+#define QL_FRAME_HDR_SIZE (ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN +\
+		sizeof (struct ip) + sizeof (struct tcphdr) + 16)
 /*
  * struct for storing hardware specific information for a given interface
  */
@@ -791,6 +794,8 @@ typedef struct _qla_hw {
 	bus_addr_t	rx_cntxt_rsp_paddr;
 	
 	qla_sds_t	sds[MAX_SDS_RINGS]; 
+
+	uint8_t		frame_hdr[QL_FRAME_HDR_SIZE];
 } qla_hw_t;
 
 #define QL_UPDATE_RDS_PRODUCER_INDEX(ha, i, val) \

@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * Copyright (c) 2010-2011 Qlogic Corporation
+ * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgb/qla_dbg.c 250340 2013-05-07 22:58:42Z davidcs $");
 
 #include "qla_os.h"
 #include "qla_reg.h"
