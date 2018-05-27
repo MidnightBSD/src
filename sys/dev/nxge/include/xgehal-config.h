@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Neterion, Inc.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/nxge/include/xgehal-config.h 230134 2012-01-15 13:23:43Z uqs $
  */
 
 #ifndef XGE_HAL_CONFIG_H
@@ -621,7 +622,7 @@ typedef struct xge_hal_mac_config_t {
  * stable in order for the adapter to declare "LINK UP".
  * The enumerated settings (see Xframe-II UG) are:
  *      0 ........... instantaneous
- *      1 ........... 500 ³s
+ *      1 ........... 500 Î¼s
  *      2 ........... 1 ms
  *      3 ........... 64 ms
  *      4 ........... 256 ms

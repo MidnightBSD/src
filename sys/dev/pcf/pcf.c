@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu, Marc Bouget
  * Copyright (c) 2004 Joerg Wunsch
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pcf/pcf.c 289666 2015-10-20 21:20:34Z ian $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -170,7 +171,7 @@ pcf_start(device_t dev, u_char slave, int timeout)
 		printf("pcf: busy!\n");
 #endif
 		PCF_UNLOCK(sc);
-		return (IIC_EBUSBSY);
+		return (IIC_EBUSERR);
 	}
 
 	/* set slave address to PCF. Last bit (LSB) must be set correctly

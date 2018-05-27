@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Neterion, Inc.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/nxge/xgehal/xgehal-fifo-fp.c 230133 2012-01-15 13:23:33Z uqs $
  */
 
 #ifdef XGE_DEBUG_FP
@@ -794,7 +795,7 @@ xge_hal_fifo_dtr_free(xge_hal_channel_h channelh, xge_hal_dtr_h dtr)
  * in fifo descriptor.
  * @channelh: Channel handle.
  * @dtrh: Descriptor handle.
- * @frag_idx: Index of the data buffer in the caller's scatter-gather listá
+ * @frag_idx: Index of the data buffer in the caller's scatter-gather list
  *            (of buffers).
  * @vaddr: Virtual address of the data buffer.
  * @dma_pointer: DMA address of the data buffer referenced by @frag_idx.
@@ -1015,7 +1016,7 @@ xge_hal_fifo_dtr_buffer_finalize(xge_hal_channel_h channelh, xge_hal_dtr_h dtrh,
  * descriptor.
  * @channelh: Channel handle.
  * @dtrh: Descriptor handle.
- * @frag_idx: Index of the data buffer in the caller's scatter-gather listá
+ * @frag_idx: Index of the data buffer in the caller's scatter-gather list
  *            (of buffers).
  * @dma_pointer: DMA address of the data buffer referenced by @frag_idx.
  * @size: Size of the data buffer (in bytes).

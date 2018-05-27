@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Neterion, Inc.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/nxge/if_nxge.c 332280 2018-04-08 15:35:57Z brooks $
  */
 
 #include <dev/nxge/if_nxge.h>
@@ -1361,11 +1362,16 @@ int
 xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 {
 	xge_hal_status_e status = XGE_HAL_OK;
-	char *data = (char *)ifreqp->ifr_data;
+	char cmd, mode;
 	void *info = NULL;
-	int retValue = EINVAL;
+	int retValue;
 
-	switch(*data) {
+	cmd = retValue = fubyte(ifreqp->ifr_data);
+	if (retValue == -1)
+		return (EFAULT);
+
+	retValue = EINVAL;
+	switch(cmd) {
 	    case XGE_QUERY_STATS:
 	        mtx_lock(&lldev->mtx_drv);
 	        status = xge_hal_stats_hw(lldev->devh,
@@ -1493,8 +1499,8 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	    case XGE_SET_BUFFER_MODE_1:
 	    case XGE_SET_BUFFER_MODE_2:
 	    case XGE_SET_BUFFER_MODE_5:
-	        *data = (*data == XGE_SET_BUFFER_MODE_1) ? 'Y':'N';
-	        if(copyout(data, ifreqp->ifr_data, sizeof(data)) == 0)
+	        mode = (cmd == XGE_SET_BUFFER_MODE_1) ? 'Y':'N';
+	        if(copyout(&mode, ifreqp->ifr_data, sizeof(mode)) == 0)
 	            retValue = 0;
 	        break;
 	    default:
@@ -1515,10 +1521,17 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 int
 xge_ioctl_registers(xge_lldev_t *lldev, struct ifreq *ifreqp)
 {
-	xge_register_t *data = (xge_register_t *)ifreqp->ifr_data;
+	xge_register_t tmpdata;
+	xge_register_t *data;
 	xge_hal_status_e status = XGE_HAL_OK;
 	int retValue = EINVAL, offset = 0, index = 0;
+	int error;
 	u64 val64 = 0;
+
+	error = copyin(ifreqp->ifr_data, &tmpdata, sizeof(tmpdata));
+	if (error != 0)
+		return (error);
+	data = &tmpdata;
 
 	/* Reading a register */
 	if(strcmp(data->option, "-r") == 0) {
@@ -1743,7 +1756,7 @@ xge_device_init(xge_lldev_t *lldev, xge_hal_channel_reopen_e option)
 	    return;
 
 	/* Initializing timer */
-	callout_init(&lldev->timer, CALLOUT_MPSAFE);
+	callout_init(&lldev->timer, 1);
 
 	xge_trace(XGE_TRACE, "Set MTU size");
 	status = xge_hal_device_mtu_set(hldev, ifnetp->if_mtu);
@@ -3507,7 +3520,8 @@ static device_method_t xge_methods[] = {
 	DEVMETHOD(device_attach,    xge_attach),
 	DEVMETHOD(device_detach,    xge_detach),
 	DEVMETHOD(device_shutdown,  xge_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t xge_driver = {
