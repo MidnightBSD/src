@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pcf8563reg.h,v 1.1 2011/01/21 19:11:47 jakllsch Exp $	*/
 
 /*-
@@ -5,7 +6,7 @@
  *
  * This file is in the public domain.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/iicbus/pcf8563reg.h 234248 2012-04-13 23:07:32Z marius $
  */
 
 /*

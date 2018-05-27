@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Stanislav Sedov <stas@FreeBSD.org>,
  *                    Rafal Jaworowski <raj@FreeBSD.org>,
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/ds133x.c 246128 2013-01-30 18:01:20Z sbz $");
 /*
  * Dallas Semiconductor DS133X RTC sitting on the I2C bus.
  */
@@ -347,7 +348,7 @@ static device_method_t ds133x_methods[] = {
 	DEVMETHOD(clock_gettime,	ds133x_gettime),
 	DEVMETHOD(clock_settime,	ds133x_settime),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t ds133x_driver = {

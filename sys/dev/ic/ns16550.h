@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ns16550.h	7.1 (Berkeley) 5/9/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ic/ns16550.h 318151 2017-05-10 20:12:23Z marius $
  */
 
 /*
@@ -182,8 +183,10 @@
 #define	com_xoff1	6	/* XOFF 1 character (R/W) */
 #define	com_xoff2	7	/* XOFF 2 character (R/W) */
 
+#define DW_REG_USR	31	/* DesignWare derived Uart Status Reg */
 #define com_usr		39	/* Octeon 16750/16550 Uart Status Reg */
 #define REG_USR		com_usr
+#define USR_BUSY	1	/* Uart Busy. Serial transfer in progress */
 #define USR_TXFIFO_NOTFULL 2    /* Uart TX FIFO Not full */
 
 /* 16950 register #1.  Access enabled by ACR[7].  Also requires !LCR[7]. */
@@ -203,6 +206,7 @@
  * requires ACR[6].
  */
 #define	com_icr		5	/* index control register (R/W) */
+#define	REG_ICR		com_icr
 
 /*
  * 16950 register #7.  It is the same as com_scr except it has a different
@@ -218,6 +222,7 @@
  */
 
 #define	com_acr		0	/* additional control register (R/W) */
+#define	REG_ACR		com_acr
 #define	ACR_ASE		0x80	/* ASR/RFL/TFL enable */
 #define	ACR_ICRE	0x40	/* ICR enable */
 #define	ACR_TLE		0x20	/* TTL/RTL enable */

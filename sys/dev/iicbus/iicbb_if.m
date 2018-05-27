@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 1998 Nicolas Souchu
 # All rights reserved.
@@ -23,12 +24,35 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/iicbus/iicbb_if.m 232365 2012-03-01 20:58:20Z kan $
 #
 
 #include <sys/bus.h>
 
 INTERFACE iicbb;
+
+#
+# Default implementation of optional methods
+#
+CODE {
+	static int
+	null_pre_xfer(device_t dev)
+	{
+		return 0;
+	}
+
+	static void
+	null_post_xfer(device_t dev)
+
+	{
+	}
+
+	static int
+	null_callback(device_t dev, int index, caddr_t data)
+	{
+		return 0;
+	}
+};
 
 #
 # iicbus callback
@@ -37,7 +61,21 @@ METHOD int callback {
 	device_t dev;
 	int index;
 	caddr_t data;
-};
+} DEFAULT null_callback;
+
+#
+# Prepare device for I2C transfer
+#
+METHOD int pre_xfer {
+	device_t dev;
+} DEFAULT null_pre_xfer;
+
+#
+# Cleanup device after I2C transfer
+#
+METHOD void post_xfer {
+	device_t dev;
+} DEFAULT null_post_xfer;
 
 #
 # Set I2C bus data line

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, University of Vermont and State Agricultural College.
  * Copyright (c) 1992, Garrett A. Wollman.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ic/i82586.h 112734 2003-03-28 06:27:08Z mdodd $
  */
 
 /*

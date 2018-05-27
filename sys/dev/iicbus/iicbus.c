@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/iicbus.c 310071 2016-12-14 16:21:10Z avg $");
 
 /*
  * Autoconfiguration and support routines for the Philips serial I2C bus
@@ -38,7 +39,8 @@ __MBSDID("$MidnightBSD$");
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/bus.h> 
+#include <sys/sysctl.h>
+#include <sys/bus.h>
 
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
@@ -59,7 +61,7 @@ iicbus_probe(device_t dev)
 }
 
 #if SCAN_IICBUS
-static int 
+static int
 iic_probe_device(device_t dev, u_char addr)
 {
 	int count;
@@ -92,10 +94,17 @@ iicbus_attach(device_t dev)
 	unsigned char addr;
 #endif
 	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
+	int strict;
 
 	sc->dev = dev;
 	mtx_init(&sc->lock, "iicbus", NULL, MTX_DEF);
+	iicbus_init_frequency(dev, 0);
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
+	if (resource_int_value(device_get_name(dev),
+		device_get_unit(dev), "strict", &strict) == 0)
+		sc->strict = strict;
+	else
+		sc->strict = 1;
 
 	/* device probing is meaningless since the bus is supposed to be
 	 * hot-plug. Moreover, some I2C chips do not appreciate random
@@ -118,7 +127,7 @@ iicbus_attach(device_t dev)
 	bus_generic_attach(dev);
         return (0);
 }
-  
+
 static int
 iicbus_detach(device_t dev)
 {
@@ -126,10 +135,11 @@ iicbus_detach(device_t dev)
 
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
 	bus_generic_detach(dev);
+	device_delete_children(dev);
 	mtx_destroy(&sc->lock);
 	return (0);
 }
-  
+
 static int
 iicbus_print_child(device_t dev, device_t child)
 {
@@ -182,6 +192,26 @@ iicbus_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 		return (EINVAL);
 	case IICBUS_IVAR_ADDR:
 		*result = devi->addr;
+		break;
+	case IICBUS_IVAR_NOSTOP:
+		*result = devi->nostop;
+		break;
+	}
+	return (0);
+}
+
+static int
+iicbus_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
+{
+	struct iicbus_ivar *devi = IICBUS_IVAR(child);
+
+	switch (which) {
+	default:
+		return (EINVAL);
+	case IICBUS_IVAR_ADDR:
+		return (EINVAL);
+	case IICBUS_IVAR_NOSTOP:
+		devi->nostop = value;
 		break;
 	}
 	return (0);
@@ -237,6 +267,51 @@ iicbus_null_repeated_start(device_t dev, u_char addr)
 	return (IIC_ENOTSUPP);
 }
 
+void
+iicbus_init_frequency(device_t dev, u_int bus_freq)
+{
+	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
+
+	/*
+	 * If a bus frequency value was passed in, use it.  Otherwise initialize
+	 * it first to the standard i2c 100KHz frequency, then override that
+	 * from a hint if one exists.
+	 */
+	if (bus_freq > 0)
+		sc->bus_freq = bus_freq;
+	else {
+		sc->bus_freq = 100000;
+		resource_int_value(device_get_name(dev), device_get_unit(dev),
+		    "frequency", (int *)&sc->bus_freq);
+	}
+	/*
+	 * Set up the sysctl that allows the bus frequency to be changed.
+	 * It is flagged as a tunable so that the user can set the value in
+	 * loader(8), and that will override any other setting from any source.
+	 * The sysctl tunable/value is the one most directly controlled by the
+	 * user and thus the one that always takes precedence.
+	 */
+	SYSCTL_ADD_UINT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    OID_AUTO, "frequency", CTLFLAG_RW | CTLFLAG_TUN, &sc->bus_freq,
+	    sc->bus_freq, "Bus frequency in Hz");
+}
+
+static u_int
+iicbus_get_frequency(device_t dev, u_char speed)
+{
+	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
+
+	/*
+	 * If the frequency has not been configured for the bus, or the request
+	 * is specifically for SLOW speed, use the standard 100KHz rate, else
+	 * use the configured bus speed.
+	 */
+	if (sc->bus_freq == 0 || speed == IIC_SLOW)
+		return (100000);
+	return (sc->bus_freq);
+}
+
 static device_method_t iicbus_methods[] = {
         /* device interface */
         DEVMETHOD(device_probe,         iicbus_probe),
@@ -248,12 +323,14 @@ static device_method_t iicbus_methods[] = {
         DEVMETHOD(bus_print_child,      iicbus_print_child),
 	DEVMETHOD(bus_probe_nomatch,	iicbus_probe_nomatch),
 	DEVMETHOD(bus_read_ivar,	iicbus_read_ivar),
+	DEVMETHOD(bus_write_ivar,	iicbus_write_ivar),
 	DEVMETHOD(bus_child_pnpinfo_str, iicbus_child_pnpinfo_str),
 	DEVMETHOD(bus_child_location_str, iicbus_child_location_str),
 	DEVMETHOD(bus_hinted_child,	iicbus_hinted_child),
 
 	/* iicbus interface */
 	DEVMETHOD(iicbus_transfer,	iicbus_transfer),
+	DEVMETHOD(iicbus_get_frequency,	iicbus_get_frequency),
 
 	DEVMETHOD_END
 };

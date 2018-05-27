@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Sam Leffler.  All rights reserved.
  *
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/ad7418.c 246128 2013-01-30 18:01:20Z sbz $");
 /*
  * Analog Devices AD7418 chip sitting on the I2C bus.
  */
@@ -219,7 +220,7 @@ static device_method_t ad7418_methods[] = {
 	DEVMETHOD(device_probe,		ad7418_probe),
 	DEVMETHOD(device_attach,	ad7418_attach),
 
-	{0, 0},
+	DEVMETHOD_END
 };
 
 static driver_t ad7418_driver = {

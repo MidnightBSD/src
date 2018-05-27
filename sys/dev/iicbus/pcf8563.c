@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/pcf8563.c 241679 2012-10-18 10:29:16Z marius $");
 
 /*
  * Driver for NXP PCF8563 real-time clock/calendar

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)nec765.h	7.1 (Berkeley) 5/9/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ic/nec765.h 162165 2006-09-08 21:46:01Z jkim $
  */
 
 /*

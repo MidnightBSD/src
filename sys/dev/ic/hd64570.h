@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 John Hay.  All rights reserved.
  *
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ic/hd64570.h 139749 2005-01-06 01:43:34Z imp $
  */
 #ifndef _HD64570_H_
 #define _HD64570_H_
