@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part_vtoc8.c,v 1.1.2.6 2011/10/30 12:23:06 marius Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part_vtoc8.c 265912 2014-05-12 12:04:44Z ae $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -42,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/geom/part/g_part_vtoc8.c,v 1.1.2.6 2011/10/30 12:23:
 #include <sys/sysctl.h>
 #include <sys/vtoc.h>
 #include <geom/geom.h>
+#include <geom/geom_int.h>
 #include <geom/part/g_part.h>
 
 #include "g_part_if.h"
@@ -116,30 +118,47 @@ vtoc8_parse_type(const char *type, uint16_t *tag)
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_NANDFS);
 	if (!strcasecmp(type, alias)) {
-		*tag = VTOC_TAG_FREEBSD_NANDFS;
+		*tag = VTOC_TAG_MIDNIGHTBSD_NANDFS;
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP);
 	if (!strcasecmp(type, alias)) {
-		*tag = VTOC_TAG_FREEBSD_SWAP;
+		*tag = VTOC_TAG_MIDNIGHTBSD_SWAP;
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS);
 	if (!strcasecmp(type, alias)) {
-		*tag = VTOC_TAG_FREEBSD_UFS;
+		*tag = VTOC_TAG_MIDNIGHTBSD_UFS;
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM);
 	if (!strcasecmp(type, alias)) {
-		*tag = VTOC_TAG_FREEBSD_VINUM;
+		*tag = VTOC_TAG_MIDNIGHTBSD_VINUM;
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS);
 	if (!strcasecmp(type, alias)) {
-		*tag = VTOC_TAG_FREEBSD_ZFS;
+		*tag = VTOC_TAG_MIDNIGHTBSD_ZFS;
 		return (0);
 	}
 	return (EINVAL);
+}
+
+static int
+vtoc8_align(struct g_part_vtoc8_table *table, uint64_t *start, uint64_t *size)
+{
+
+	if (*size < table->secpercyl)
+		return (EINVAL);
+	if (start != NULL && (*start % table->secpercyl)) {
+		*size += (*start % table->secpercyl) - table->secpercyl;
+		*start -= (*start % table->secpercyl) - table->secpercyl;
+	}
+	if (*size % table->secpercyl)
+		*size -= (*size % table->secpercyl);
+	if (*size < table->secpercyl)
+		return (EINVAL);
+	return (0);
 }
 
 static int
@@ -160,16 +179,9 @@ g_part_vtoc8_add(struct g_part_table *basetable, struct g_part_entry *entry,
 
 	table = (struct g_part_vtoc8_table *)basetable;
 	index = entry->gpe_index - 1;
-
 	start = gpp->gpp_start;
 	size = gpp->gpp_size;
-	if (start % table->secpercyl) {
-		size = size - table->secpercyl + (start % table->secpercyl);
-		start = start - (start % table->secpercyl) + table->secpercyl;
-	}
-	if (size % table->secpercyl)
-		size = size - (size % table->secpercyl);
-	if (size < table->secpercyl)
+	if (vtoc8_align(table, &start, &size) != 0)
 		return (EINVAL);
 
 	KASSERT(entry->gpe_start <= start, (__func__));
@@ -210,7 +222,7 @@ g_part_vtoc8_create(struct g_part_table *basetable, struct g_part_parms *gpp)
 	ncyls = pcyls - acyls;
 	msize = ncyls * table->secpercyl;
 
-	sprintf(table->vtoc.ascii, "FreeBSD%lldM cyl %u alt %u hd %u sec %u",
+	sprintf(table->vtoc.ascii, "MidnightBSD%lldM cyl %u alt %u hd %u sec %u",
 	    (long long)(msize / 2048), ncyls, acyls, basetable->gpt_heads,
 	    basetable->gpt_sectors);
 	be32enc(&table->vtoc.version, VTOC_VERSION);
@@ -279,7 +291,7 @@ g_part_vtoc8_dumpto(struct g_part_table *basetable,
 	 */
 	table = (struct g_part_vtoc8_table *)basetable;
 	tag = be16dec(&table->vtoc.part[entry->gpe_index - 1].tag);
-	return ((tag == 0 || tag == VTOC_TAG_FREEBSD_SWAP ||
+	return ((tag == 0 || tag == VTOC_TAG_MIDNIGHTBSD_SWAP ||
 	    tag == VTOC_TAG_SWAP) ? 1 : 0);
 }
 
@@ -306,19 +318,62 @@ g_part_vtoc8_modify(struct g_part_table *basetable,
 }
 
 static int
+vtoc8_set_rawsize(struct g_part_table *basetable, struct g_provider *pp)
+{
+	struct g_part_vtoc8_table *table;
+	struct g_part_entry *baseentry;
+	off_t msize;
+	uint32_t acyls, ncyls, pcyls;
+
+	table = (struct g_part_vtoc8_table *)basetable;
+	msize = MIN(pp->mediasize / pp->sectorsize, UINT32_MAX);
+	pcyls = msize / table->secpercyl;
+	if (pcyls > UINT16_MAX)
+		return (ERANGE);
+	acyls = be16dec(&table->vtoc.altcyls);
+	ncyls = pcyls - acyls;
+	msize = ncyls * table->secpercyl;
+	basetable->gpt_last = msize - 1;
+
+	bzero(table->vtoc.ascii, sizeof(table->vtoc.ascii));
+	sprintf(table->vtoc.ascii, "MidnightBSD%lldM cyl %u alt %u hd %u sec %u",
+	    (long long)(msize / 2048), ncyls, acyls, basetable->gpt_heads,
+	    basetable->gpt_sectors);
+	be16enc(&table->vtoc.physcyls, pcyls);
+	be16enc(&table->vtoc.ncyls, ncyls);
+	be32enc(&table->vtoc.map[VTOC_RAW_PART].nblks, msize);
+	if (be32dec(&table->vtoc.sanity) == VTOC_SANITY)
+		be16enc(&table->vtoc.part[VTOC_RAW_PART].tag, VTOC_TAG_BACKUP);
+	LIST_FOREACH(baseentry, &basetable->gpt_entry, gpe_entry) {
+		if (baseentry->gpe_index == VTOC_RAW_PART + 1) {
+			baseentry->gpe_end = basetable->gpt_last;
+			return (0);
+		}
+	}
+	return (ENXIO);
+}
+
+static int
 g_part_vtoc8_resize(struct g_part_table *basetable,
     struct g_part_entry *entry, struct g_part_parms *gpp)
 {
 	struct g_part_vtoc8_table *table;
+	struct g_provider *pp;
 	uint64_t size;
 
+	if (entry == NULL) {
+		pp = LIST_FIRST(&basetable->gpt_gp->consumer)->provider;
+		return (vtoc8_set_rawsize(basetable, pp));
+	}
 	table = (struct g_part_vtoc8_table *)basetable;
 	size = gpp->gpp_size;
-	if (size % table->secpercyl)
-		size = size - (size % table->secpercyl);
-	if (size < table->secpercyl)
+	if (vtoc8_align(table, NULL, &size) != 0)
 		return (EINVAL);
-
+	/* XXX: prevent unexpected shrinking. */
+	pp = entry->gpe_pp;
+	if ((g_debugflags & 0x10) == 0 && size < gpp->gpp_size &&
+	    pp->mediasize / pp->sectorsize > size)
+		return (EBUSY);
 	entry->gpe_end = entry->gpe_start + size - 1;
 	be32enc(&table->vtoc.map[entry->gpe_index - 1].nblks, size);
 
@@ -492,15 +547,15 @@ g_part_vtoc8_type(struct g_part_table *basetable, struct g_part_entry *entry,
 
 	table = (struct g_part_vtoc8_table *)basetable;
 	tag = be16dec(&table->vtoc.part[entry->gpe_index - 1].tag);
-	if (tag == VTOC_TAG_FREEBSD_NANDFS)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_NANDFS));
-	if (tag == VTOC_TAG_FREEBSD_SWAP)
+	if (tag == VTOC_TAG_MIDNIGHTBSD_NANDFS)
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_NANDFS));
+	if (tag == VTOC_TAG_MIDNIGHTBSD_SWAP)
 		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP));
-	if (tag == VTOC_TAG_FREEBSD_UFS)
+	if (tag == VTOC_TAG_MIDNIGHTBSD_UFS)
 		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS));
-	if (tag == VTOC_TAG_FREEBSD_VINUM)
+	if (tag == VTOC_TAG_MIDNIGHTBSD_VINUM)
 		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM));
-	if (tag == VTOC_TAG_FREEBSD_ZFS)
+	if (tag == VTOC_TAG_MIDNIGHTBSD_ZFS)
 		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS));
 	snprintf(buf, bufsz, "!%d", tag);
 	return (buf);
