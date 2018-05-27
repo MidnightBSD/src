@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 1992-1998 Søren Schmidt
+ * Copyright (c) 1992-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/syscons.c 282750 2015-05-11 08:16:33Z avg $");
 
 #include "opt_compat.h"
 #include "opt_syscons.h"
@@ -63,7 +63,8 @@ __FBSDID("$FreeBSD$");
 #include <sys/power.h>
 
 #include <machine/clock.h>
-#if defined(__sparc64__) || defined(__powerpc__)
+#if defined(__arm__) || defined(__mips__) || \
+	defined(__powerpc__) || defined(__sparc64__)
 #include <machine/sc_machdep.h>
 #else
 #include <machine/pc/display.h>
@@ -86,6 +87,9 @@ __FBSDID("$FreeBSD$");
 #define MAX_BLANKTIME		(7*24*60*60)	/* 7 days!? */
 
 #define KEYCODE_BS		0x0e		/* "<-- Backspace" key, XXX */
+
+/* NULL-safe version of "tty_opened()" */
+#define	tty_opened_ns(tp)	((tp) != NULL && tty_opened(tp))
 
 typedef struct default_attr {
 	int		std_color;		/* normal hardware color */
@@ -219,6 +223,7 @@ static int finish_vt_acq(scr_stat *scp);
 static void exchange_scr(sc_softc_t *sc);
 static void update_cursor_image(scr_stat *scp);
 static void change_cursor_shape(scr_stat *scp, int flags, int base, int height);
+static void update_font(scr_stat *);
 static int save_kbd_state(scr_stat *scp);
 static int update_kbd_state(scr_stat *scp, int state, int mask);
 static int update_kbd_leds(scr_stat *scp, int which);
@@ -263,6 +268,8 @@ static struct cdevsw consolectl_devsw = {
 int
 sc_probe_unit(int unit, int flags)
 {
+    if (!vty_enabled(VTY_SC))
+        return ENXIO;
     if (!scvidprobe(unit, flags, FALSE)) {
 	if (bootverbose)
 	    printf("%s%d: no video adapter found.\n", SC_DRIVER_NAME, unit);
@@ -488,6 +495,9 @@ sc_attach_unit(int unit, int flags)
     struct cdev *dev;
     int vc;
 
+    if (!vty_enabled(VTY_SC))
+        return ENXIO;
+
     flags &= ~SC_KERNEL_CONSOLE;
 
     if (sc_console_unit == unit) {
@@ -503,6 +513,8 @@ sc_attach_unit(int unit, int flags)
 
     sc = sc_get_softc(unit, flags & SC_KERNEL_CONSOLE);
     sc->config = flags;
+    callout_init(&sc->ctimeout, 0);
+    callout_init(&sc->cblink, 0);
     scp = sc_get_stat(sc->dev[0]);
     if (sc_console == NULL)	/* sc_console_unit < 0 */
 	sc_console = scp;
@@ -539,7 +551,7 @@ sc_attach_unit(int unit, int flags)
 
     /* Register suspend/resume/shutdown callbacks for the kernel console. */
     if (sc_console_unit == unit) {
-	EVENTHANDLER_REGISTER(power_suspend, scsuspend, NULL,
+	EVENTHANDLER_REGISTER(power_suspend_early, scsuspend, NULL,
 			      EVENTHANDLER_PRI_ANY);
 	EVENTHANDLER_REGISTER(power_resume, scresume, NULL,
 			      EVENTHANDLER_PRI_ANY);
@@ -570,6 +582,8 @@ sc_attach_unit(int unit, int flags)
 static void
 scmeminit(void *arg)
 {
+    if (!vty_enabled(VTY_SC))
+        return;
     if (sc_malloc)
 	return;
     sc_malloc = TRUE;
@@ -743,7 +757,7 @@ sckbdevent(keyboard_t *thiskbd, int event, void *arg)
     while ((c = scgetc(sc, SCGETC_NONBLOCK)) != NOKEY) {
 
 	cur_tty = SC_DEV(sc, sc->cur_scp->index);
-	if (!tty_opened(cur_tty))
+	if (!tty_opened_ns(cur_tty))
 	    continue;
 
 	if ((*sc->cur_scp->tsw->te_input)(sc->cur_scp, c, cur_tty))
@@ -1137,7 +1151,7 @@ sctty_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
     case VT_OPENQRY:    	/* return free virtual console */
 	for (i = sc->first_vty; i < sc->first_vty + sc->vtys; i++) {
 	    tp = SC_DEV(sc, i);
-	    if (!tty_opened(tp)) {
+	    if (!tty_opened_ns(tp)) {
 		*(int *)data = i + 1;
 		return 0;
 	    }
@@ -1583,6 +1597,11 @@ sc_cnprobe(struct consdev *cp)
     int unit;
     int flags;
 
+    if (!vty_enabled(VTY_SC)) {
+	cp->cn_pri = CN_DEAD;
+	return;
+    }
+
     cp->cn_pri = sc_get_cons_priority(&unit, &flags);
 
     /* a video card is always required */
@@ -1714,6 +1733,7 @@ sc_cnputc(struct consdev *cd, int c)
 	 * spinlock.
 	 */
 	tp = SC_DEV(scp->sc, scp->index);
+	/* XXX "tp" can be NULL */
 	tty_lock(tp);
 	if (tty_opened(tp))
 	    sctty_outwakeup(tp);
@@ -1827,13 +1847,11 @@ static void
 scrn_timer(void *arg)
 {
 #ifndef PC98
-    static int kbd_interval = 0;
+    static time_t kbd_time_stamp = 0;
 #endif
-    struct timeval tv;
     sc_softc_t *sc;
     scr_stat *scp;
-    int again;
-    int s;
+    int again, rate;
 
     again = (arg != NULL);
     if (arg != NULL)
@@ -1843,18 +1861,18 @@ scrn_timer(void *arg)
     else
 	return;
 
+    /* find the vty to update */
+    scp = sc->cur_scp;
+
     /* don't do anything when we are performing some I/O operations */
-    if (suspend_in_progress || sc->font_loading_in_progress) {
-	if (again)
-	    timeout(scrn_timer, sc, hz / 10);
-	return;
-    }
-    s = spltty();
+    if (suspend_in_progress || sc->font_loading_in_progress)
+	goto done;
 
 #ifndef PC98
     if ((sc->kbd == NULL) && (sc->config & SC_AUTODETECT_KBD)) {
 	/* try to allocate a keyboard automatically */
-	if (++kbd_interval >= 25) {
+	if (kbd_time_stamp != time_uptime) {
+	    kbd_time_stamp = time_uptime;
 	    sc->keyboard = sc_allocate_keyboard(sc, -1);
 	    if (sc->keyboard >= 0) {
 		sc->kbd = kbd_get_keyboard(sc->keyboard);
@@ -1863,25 +1881,20 @@ scrn_timer(void *arg)
 		update_kbd_state(sc->cur_scp, sc->cur_scp->status,
 				 LOCK_MASK);
 	    }
-	    kbd_interval = 0;
 	}
     }
 #endif /* PC98 */
 
-    /* find the vty to update */
-    scp = sc->cur_scp;
-
     /* should we stop the screen saver? */
-    getmicrouptime(&tv);
     if (debugger > 0 || panicstr || shutdown_in_progress)
 	sc_touch_scrn_saver();
     if (run_scrn_saver) {
-	if (tv.tv_sec > sc->scrn_time_stamp + scrn_blank_time)
+	if (time_uptime > sc->scrn_time_stamp + scrn_blank_time)
 	    sc->flags |= SC_SCRN_IDLE;
 	else
 	    sc->flags &= ~SC_SCRN_IDLE;
     } else {
-	sc->scrn_time_stamp = tv.tv_sec;
+	sc->scrn_time_stamp = time_uptime;
 	sc->flags &= ~SC_SCRN_IDLE;
 	if (scrn_blank_time > 0)
 	    run_scrn_saver = TRUE;
@@ -1894,12 +1907,8 @@ scrn_timer(void *arg)
 
     /* should we just return ? */
     if (sc->blink_in_progress || sc->switch_in_progress
-	|| sc->write_in_progress) {
-	if (again)
-	    timeout(scrn_timer, sc, hz / 10);
-	splx(s);
-	return;
-    }
+	|| sc->write_in_progress)
+	goto done;
 
     /* Update the screen */
     scp = sc->cur_scp;		/* cur_scp may have changed... */
@@ -1913,9 +1922,19 @@ scrn_timer(void *arg)
 	    (*current_saver)(sc, TRUE);
 #endif
 
-    if (again)
-	timeout(scrn_timer, sc, hz / 25);
-    splx(s);
+done:
+    if (again) {
+	/*
+	 * Use reduced "refresh" rate if we are in graphics and that is not a
+	 * graphical screen saver.  In such case we just have nothing to do.
+	 */
+	if (ISGRAPHSC(scp) && !(sc->flags & SC_SCRN_BLANKED))
+	    rate = 2;
+	else
+	    rate = 30;
+	callout_reset_sbt(&sc->ctimeout, SBT_1S / rate, 0,
+	    scrn_timer, sc, C_PREL(1));
+    }
 }
 
 static int
@@ -2434,7 +2453,7 @@ sc_switch_scr(sc_softc_t *sc, u_int next_scr)
      */
     tp = SC_DEV(sc, cur_scp->index);
     if ((cur_scp->index != next_scr)
-	&& tty_opened(tp)
+	&& tty_opened_ns(tp)
 	&& (cur_scp->smode.mode == VT_AUTO)
 	&& ISGRAPHSC(cur_scp)) {
 	splx(s);
@@ -2451,7 +2470,7 @@ sc_switch_scr(sc_softc_t *sc, u_int next_scr)
      */
     if ((sc_console == NULL) || (next_scr != sc_console->index)) {
 	tp = SC_DEV(sc, next_scr);
-	if (!tty_opened(tp)) {
+	if (!tty_opened_ns(tp)) {
 	    splx(s);
 	    sc_bell(cur_scp, bios_value.bell_pitch, BELL_DURATION);
 	    DPRINTF(5, ("error 2, requested vty isn't open!\n"));
@@ -3137,7 +3156,7 @@ scresume(__unused void *arg)
 
 	suspend_in_progress = FALSE;
 	if (sc_susp_scr < 0) {
-		mark_all(sc_console->sc->cur_scp);
+		update_font(sc_console->sc->cur_scp);
 		return;
 	}
 	sc_switch_scr(sc_console->sc, sc_susp_scr);
@@ -3394,7 +3413,7 @@ next_code:
 	sc_touch_scrn_saver();
 
     if (!(flags & SCGETC_CN))
-	random_harvest(&c, sizeof(c), 1, 0, RANDOM_KEYBOARD);
+	random_harvest(&c, sizeof(c), 1, RANDOM_KEYBOARD);
 
     if (scp->kbd_mode != K_XLATE)
 	return KEYCHAR(c);
@@ -3490,7 +3509,7 @@ next_code:
 			    sc_draw_cursor_image(scp);
 			}
 			tp = SC_DEV(sc, scp->index);
-			if (!kdb_active && tty_opened(tp))
+			if (!kdb_active && tty_opened_ns(tp))
 			    sctty_outwakeup(tp);
 #endif
 		    }
@@ -3585,7 +3604,7 @@ next_code:
 			sc->first_vty + i != this_scr; 
 			i = (i + 1)%sc->vtys) {
 		    struct tty *tp = SC_DEV(sc, sc->first_vty + i);
-		    if (tty_opened(tp)) {
+		    if (tty_opened_ns(tp)) {
 			sc_switch_scr(scp->sc, sc->first_vty + i);
 			break;
 		    }
@@ -3598,7 +3617,7 @@ next_code:
 			sc->first_vty + i != this_scr;
 			i = (i + sc->vtys - 1)%sc->vtys) {
 		    struct tty *tp = SC_DEV(sc, sc->first_vty + i);
-		    if (tty_opened(tp)) {
+		    if (tty_opened_ns(tp)) {
 			sc_switch_scr(scp->sc, sc->first_vty + i);
 			break;
 		    }
@@ -3640,6 +3659,37 @@ sctty_mmap(struct tty *tp, vm_ooffset_t offset, vm_paddr_t *paddr,
     if (scp != scp->sc->cur_scp)
 	return -1;
     return vidd_mmap(scp->sc->adp, offset, paddr, nprot, memattr);
+}
+
+static void
+update_font(scr_stat *scp)
+{
+#ifndef SC_NO_FONT_LOADING
+    /* load appropriate font */
+    if (!(scp->status & GRAPHICS_MODE)) {
+	if (!(scp->status & PIXEL_MODE) && ISFONTAVAIL(scp->sc->adp->va_flags)) {
+	    if (scp->font_size < 14) {
+		if (scp->sc->fonts_loaded & FONT_8)
+		    sc_load_font(scp, 0, 8, 8, scp->sc->font_8, 0, 256);
+	    } else if (scp->font_size >= 16) {
+		if (scp->sc->fonts_loaded & FONT_16)
+		    sc_load_font(scp, 0, 16, 8, scp->sc->font_16, 0, 256);
+	    } else {
+		if (scp->sc->fonts_loaded & FONT_14)
+		    sc_load_font(scp, 0, 14, 8, scp->sc->font_14, 0, 256);
+	    }
+	    /*
+	     * FONT KLUDGE:
+	     * This is an interim kludge to display correct font.
+	     * Always use the font page #0 on the video plane 2.
+	     * Somehow we cannot show the font in other font pages on
+	     * some video cards... XXX
+	     */ 
+	    sc_show_font(scp, 0);
+	}
+	mark_all(scp);
+    }
+#endif /* !SC_NO_FONT_LOADING */
 }
 
 static int
@@ -3714,32 +3764,7 @@ set_mode(scr_stat *scp)
 		(void *)scp->sc->adp->va_window, FALSE);
 #endif
 
-#ifndef SC_NO_FONT_LOADING
-    /* load appropriate font */
-    if (!(scp->status & GRAPHICS_MODE)) {
-	if (!(scp->status & PIXEL_MODE) && ISFONTAVAIL(scp->sc->adp->va_flags)) {
-	    if (scp->font_size < 14) {
-		if (scp->sc->fonts_loaded & FONT_8)
-		    sc_load_font(scp, 0, 8, 8, scp->sc->font_8, 0, 256);
-	    } else if (scp->font_size >= 16) {
-		if (scp->sc->fonts_loaded & FONT_16)
-		    sc_load_font(scp, 0, 16, 8, scp->sc->font_16, 0, 256);
-	    } else {
-		if (scp->sc->fonts_loaded & FONT_14)
-		    sc_load_font(scp, 0, 14, 8, scp->sc->font_14, 0, 256);
-	    }
-	    /*
-	     * FONT KLUDGE:
-	     * This is an interim kludge to display correct font.
-	     * Always use the font page #0 on the video plane 2.
-	     * Somehow we cannot show the font in other font pages on
-	     * some video cards... XXX
-	     */ 
-	    sc_show_font(scp, 0);
-	}
-	mark_all(scp);
-    }
-#endif /* !SC_NO_FONT_LOADING */
+    update_font(scp);
 
     sc_set_border(scp, scp->border);
     sc_set_cursor_image(scp);
@@ -3794,7 +3819,7 @@ sc_paste(scr_stat *scp, const u_char *p, int count)
     u_char *rmap;
 
     tp = SC_DEV(scp->sc, scp->sc->cur_scp->index);
-    if (!tty_opened(tp))
+    if (!tty_opened_ns(tp))
 	return;
     rmap = scp->sc->scr_rmap;
     for (; count > 0; --count)
@@ -3808,7 +3833,7 @@ sc_respond(scr_stat *scp, const u_char *p, int count, int wakeup)
     struct tty *tp;
 
     tp = SC_DEV(scp->sc, scp->sc->cur_scp->index);
-    if (!tty_opened(tp))
+    if (!tty_opened_ns(tp))
 	return;
     ttydisc_rint_simple(tp, p, count);
     if (wakeup) {
@@ -3850,7 +3875,7 @@ blink_screen(void *arg)
 	scp->sc->blink_in_progress = 0;
     	mark_all(scp);
 	tp = SC_DEV(scp->sc, scp->index);
-	if (tty_opened(tp))
+	if (tty_opened_ns(tp))
 	    sctty_outwakeup(tp);
 	if (scp->sc->delayed_next_scr)
 	    sc_switch_scr(scp->sc, scp->sc->delayed_next_scr - 1);
@@ -3859,7 +3884,8 @@ blink_screen(void *arg)
 	(*scp->rndr->draw)(scp, 0, scp->xsize*scp->ysize, 
 			   scp->sc->blink_in_progress & 1);
 	scp->sc->blink_in_progress--;
-	timeout(blink_screen, scp, hz / 10);
+	callout_reset_sbt(&scp->sc->cblink, SBT_1S / 15, 0,
+	    blink_screen, scp, C_PREL(0));
     }
 }
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/scvesactl.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/scvesactl.c 197025 2009-09-09 09:50:31Z delphij $");
 
 #include "opt_vga.h"
 

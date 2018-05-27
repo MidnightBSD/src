@@ -1,7 +1,7 @@
-/* $MidnightBSD: src/sys/dev/syscons/schistory.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
- * Copyright (c) 1992-1998 Søren Schmidt
+ * Copyright (c) 1992-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/schistory.c 239696 2012-08-25 23:59:31Z gonzo $");
 
 #include "opt_syscons.h"
 
@@ -43,7 +43,8 @@ __FBSDID("$FreeBSD$");
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 
-#if defined(__sparc64__) || defined(__powerpc__)
+#if defined(__arm__) || defined(__mips__) || \
+	defined(__powerpc__) || defined(__sparc64__)
 #include <machine/sc_machdep.h>
 #else
 #include <machine/pc/display.h>

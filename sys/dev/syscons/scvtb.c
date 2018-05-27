@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/scvtb.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/scvtb.c 146476 2005-05-21 20:28:15Z marius $");
 
 #include "opt_syscons.h"
 

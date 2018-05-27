@@ -58278,6 +58278,9 @@ sys/dev/syscons/green/green_saver.c -text
 sys/dev/syscons/logo/beastie.c -text
 sys/dev/syscons/logo/logo.c -text
 sys/dev/syscons/logo/logo_saver.c -text
+sys/dev/syscons/plasma/fp16.c svneol=native#text/plain
+sys/dev/syscons/plasma/fp16.h svneol=native#text/plain
+sys/dev/syscons/plasma/plasma_saver.c svneol=native#text/plain
 sys/dev/syscons/rain/rain_saver.c -text
 sys/dev/syscons/scgfbrndr.c -text
 sys/dev/syscons/schistory.c -text

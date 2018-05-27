@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/sys/dev/syscons/syscons.h,v 1.6 2012/03/24 01:11:05 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1995-1998 Søren Schmidt
+ * Copyright (c) 1995-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/syscons/syscons.h 262674 2014-03-02 01:46:44Z jmmv $
  */
 
 #ifndef _DEV_SYSCONS_SYSCONS_H_
@@ -146,9 +146,9 @@
 /*
    The following #defines are hard-coded for a maximum text
    resolution corresponding to a maximum framebuffer
-   resolution of 1600x1200 with an 8x8 font...
+   resolution of 1920x1200 with an 8x8 font...
 */
-#define	COL		200
+#define	COL		240
 #define	ROW		150
 
 #define PCBURST		128
@@ -270,6 +270,8 @@ typedef struct sc_softc {
 #ifdef KDB
 	int		sc_altbrk;
 #endif
+	struct callout	ctimeout;
+	struct callout	cblink;
 } sc_softc_t;
 
 /* virtual screen */

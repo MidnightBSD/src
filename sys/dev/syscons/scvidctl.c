@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/scvidctl.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/scvidctl.c 242529 2012-11-03 22:21:37Z ed $");
 
 #include "opt_compat.h"
 #include "opt_syscons.h"
@@ -138,6 +138,7 @@ sc_set_text_mode(scr_stat *scp, struct tty *tp, int mode, int xsize, int ysize,
 		 int fontsize, int fontwidth)
 {
     video_info_t info;
+    struct winsize wsz;
     u_char *font;
     int prev_ysize;
     int error;
@@ -235,16 +236,9 @@ sc_set_text_mode(scr_stat *scp, struct tty *tp, int mode, int xsize, int ysize,
 
     if (tp == NULL)
 	return 0;
-    DPRINTF(5, ("ws_*size (%d,%d), size (%d,%d)\n",
-	tp->t_winsize.ws_col, tp->t_winsize.ws_row, scp->xsize, scp->ysize));
-    if (tp->t_winsize.ws_col != scp->xsize
-	|| tp->t_winsize.ws_row != scp->ysize) {
-	tp->t_winsize.ws_col = scp->xsize;
-	tp->t_winsize.ws_row = scp->ysize;
-
-	tty_signal_pgrp(tp, SIGWINCH);
-    }
-
+    wsz.ws_col = scp->xsize;
+    wsz.ws_row = scp->ysize;
+    tty_set_winsize(tp, &wsz);
     return 0;
 }
 
@@ -255,6 +249,7 @@ sc_set_graphics_mode(scr_stat *scp, struct tty *tp, int mode)
     return ENODEV;
 #else
     video_info_t info;
+    struct winsize wsz;
     int error;
     int s;
 
@@ -301,14 +296,9 @@ sc_set_graphics_mode(scr_stat *scp, struct tty *tp, int mode)
 
     if (tp == NULL)
 	return 0;
-    if (tp->t_winsize.ws_xpixel != scp->xpixel
-	|| tp->t_winsize.ws_ypixel != scp->ypixel) {
-	tp->t_winsize.ws_xpixel = scp->xpixel;
-	tp->t_winsize.ws_ypixel = scp->ypixel;
-
-	tty_signal_pgrp(tp, SIGWINCH);
-    }
-
+    wsz.ws_col = scp->xsize;
+    wsz.ws_row = scp->ysize;
+    tty_set_winsize(tp, &wsz);
     return 0;
 #endif /* SC_NO_MODE_CHANGE */
 }
@@ -321,7 +311,7 @@ sc_set_pixel_mode(scr_stat *scp, struct tty *tp, int xsize, int ysize,
     return ENODEV;
 #else
     video_info_t info;
-    ksiginfo_t ksi;
+    struct winsize wsz;
     u_char *font;
     int prev_ysize;
     int error;
@@ -426,20 +416,9 @@ sc_set_pixel_mode(scr_stat *scp, struct tty *tp, int xsize, int ysize,
 
     if (tp == NULL)
 	return 0;
-    if (tp->t_winsize.ws_col != scp->xsize
-	|| tp->t_winsize.ws_row != scp->ysize) {
-	tp->t_winsize.ws_col = scp->xsize;
-	tp->t_winsize.ws_row = scp->ysize;
-	if (tp->t_pgrp != NULL) {
-	    ksiginfo_init(&ksi);
-	    ksi.ksi_signo = SIGWINCH;
-	    ksi.ksi_code = SI_KERNEL;
-	    PGRP_LOCK(tp->t_pgrp);
-	    pgsignal(tp->t_pgrp, SIGWINCH, 1, &ksi);
-	    PGRP_UNLOCK(tp->t_pgrp);
-	}
-    }
-
+    wsz.ws_col = scp->xsize;
+    wsz.ws_row = scp->ysize;
+    tty_set_winsize(tp, &wsz);
     return 0;
 #endif /* SC_PIXEL_MODE */
 }

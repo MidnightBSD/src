@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/sysmouse.c,v 1.3 2009/08/30 06:02:33 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/sysmouse.c 268366 2014-07-07 14:16:05Z ray $");
 
 #include "opt_syscons.h"
 
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/tty.h>
 #include <sys/ttydefaults.h>
 #include <sys/kernel.h>
+#include <sys/cons.h>
 #include <sys/consio.h>
 #include <sys/mouse.h>
 
@@ -166,6 +167,8 @@ static struct ttydevsw smdev_ttydevsw = {
 static void
 sm_attach_mouse(void *unused)
 {
+	if (!vty_enabled(VTY_SC))
+		return;
 	sysmouse_tty = tty_alloc(&smdev_ttydevsw, NULL);
 	tty_makedev(sysmouse_tty, NULL, "sysmouse");
 }
