@@ -37,13 +37,84 @@
  * Costa Mesa, CA 92626
  */
 
-
-/* $FreeBSD: release/9.2.0/sys/dev/oce/oce_if.c 252905 2013-07-06 23:56:58Z delphij $ */
+/* $FreeBSD: stable/10/sys/dev/oce/oce_if.c 314667 2017-03-04 13:03:31Z avg $ */
 
 #include "opt_inet6.h"
 #include "opt_inet.h"
 
 #include "oce_if.h"
+
+/* UE Status Low CSR */
+static char *ue_status_low_desc[] = {
+	"CEV",
+	"CTX",
+	"DBUF",
+	"ERX",
+	"Host",
+	"MPU",
+	"NDMA",
+	"PTC ",
+	"RDMA ",
+	"RXF ",
+	"RXIPS ",
+	"RXULP0 ",
+	"RXULP1 ",
+	"RXULP2 ",
+	"TIM ",
+	"TPOST ",
+	"TPRE ",
+	"TXIPS ",
+	"TXULP0 ",
+	"TXULP1 ",
+	"UC ",
+	"WDMA ",
+	"TXULP2 ",
+	"HOST1 ",
+	"P0_OB_LINK ",
+	"P1_OB_LINK ",
+	"HOST_GPIO ",
+	"MBOX ",
+	"AXGMAC0",
+	"AXGMAC1",
+	"JTAG",
+	"MPU_INTPEND"
+};
+
+/* UE Status High CSR */
+static char *ue_status_hi_desc[] = {
+	"LPCMEMHOST",
+	"MGMT_MAC",
+	"PCS0ONLINE",
+	"MPU_IRAM",
+	"PCS1ONLINE",
+	"PCTL0",
+	"PCTL1",
+	"PMEM",
+	"RR",
+	"TXPB",
+	"RXPP",
+	"XAUI",
+	"TXP",
+	"ARM",
+	"IPC",
+	"HOST2",
+	"HOST3",
+	"HOST4",
+	"HOST5",
+	"HOST6",
+	"HOST7",
+	"HOST8",
+	"HOST9",
+	"NETC",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown"
+};
 
 
 /* Driver entry points prototypes */
@@ -112,7 +183,8 @@ static device_method_t oce_dispatch[] = {
 	DEVMETHOD(device_attach, oce_attach),
 	DEVMETHOD(device_detach, oce_detach),
 	DEVMETHOD(device_shutdown, oce_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t oce_driver = {
@@ -270,7 +342,7 @@ oce_attach(device_t dev)
 
 	oce_add_sysctls(sc);
 
-	callout_init(&sc->timer, CALLOUT_MPSAFE);
+	callout_init(&sc->timer, 1);
 	rc = callout_reset(&sc->timer, 2 * hz, oce_local_timer, sc);
 	if (rc)
 		goto stats_free;
@@ -388,11 +460,11 @@ oce_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		}
 
 		if ((ifp->if_flags & IFF_PROMISC) && !sc->promisc) {
-			sc->promisc = TRUE;
-			oce_rxf_set_promiscuous(sc, sc->promisc);
+			if (!oce_rxf_set_promiscuous(sc, (1 | (1 << 1))))
+				sc->promisc = TRUE;
 		} else if (!(ifp->if_flags & IFF_PROMISC) && sc->promisc) {
-			sc->promisc = FALSE;
-			oce_rxf_set_promiscuous(sc, sc->promisc);
+			if (!oce_rxf_set_promiscuous(sc, 0))
+				sc->promisc = FALSE;
 		}
 
 		break;
@@ -492,10 +564,7 @@ oce_multiq_start(struct ifnet *ifp, struct mbuf *m)
 	int queue_index = 0;
 	int status = 0;
 
-	if (!sc->link_status)
-		return ENXIO;
-
-	if ((m->m_flags & M_FLOWID) != 0)
+	if (M_HASHTYPE_GET(m) != M_HASHTYPE_NONE)
 		queue_index = m->m_pkthdr.flowid % sc->nwqs;
 
 	wq = sc->wq[queue_index];
@@ -758,6 +827,21 @@ oce_media_status(struct ifnet *ifp, struct ifmediareq *req)
 		req->ifm_active |= IFM_10G_SR | IFM_FDX;
 		sc->speed = 10000;
 		break;
+	case 5: /* 20 Gbps */
+		req->ifm_active |= IFM_10G_SR | IFM_FDX;
+		sc->speed = 20000;
+		break;
+	case 6: /* 25 Gbps */
+		req->ifm_active |= IFM_10G_SR | IFM_FDX;
+		sc->speed = 25000;
+		break;
+	case 7: /* 40 Gbps */
+		req->ifm_active |= IFM_40G_SR4 | IFM_FDX;
+		sc->speed = 40000;
+		break;
+	default:
+		sc->speed = 0;
+		break;
 	}
 	
 	return;
@@ -862,10 +946,12 @@ retry:
 			(m->m_pkthdr.csum_flags & CSUM_TCP) ? 1 : 0;
 		nichdr->u0.s.num_wqe = num_wqes;
 		nichdr->u0.s.total_length = m->m_pkthdr.len;
+
 		if (m->m_flags & M_VLANTAG) {
 			nichdr->u0.s.vlan = 1; /*Vlan present*/
 			nichdr->u0.s.vlan_tag = m->m_pkthdr.ether_vtag;
 		}
+
 		if (m->m_pkthdr.csum_flags & CSUM_TSO) {
 			if (m->m_pkthdr.tso_segsz) {
 				nichdr->u0.s.lso = 1;
@@ -1174,32 +1260,29 @@ oce_multiq_transmit(struct ifnet *ifp, struct mbuf *m, struct oce_wq *wq)
 		return status;
 	}
 
-	if (m == NULL)
-		next = drbr_dequeue(ifp, br);		
-	else if (drbr_needs_enqueue(ifp, br)) {
+	if (m != NULL) {
 		if ((status = drbr_enqueue(ifp, br, m)) != 0)
 			return status;
-		next = drbr_dequeue(ifp, br);
-	} else
-		next = m;
-
-	while (next != NULL) {
+	} 
+	while ((next = drbr_peek(ifp, br)) != NULL) {
 		if (oce_tx(sc, &next, queue_index)) {
-			if (next != NULL) {
+			if (next == NULL) {
+				drbr_advance(ifp, br);
+			} else {
+				drbr_putback(ifp, br, next);
 				wq->tx_stats.tx_stops ++;
 				ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-				status = drbr_enqueue(ifp, br, next);
 			}  
 			break;
 		}
+		drbr_advance(ifp, br);
 		ifp->if_obytes += next->m_pkthdr.len;
 		if (next->m_flags & M_MCAST)
 			ifp->if_omcasts++;
 		ETHER_BPF_MTAP(ifp, next);
-		next = drbr_dequeue(ifp, br);
 	}
 
-	return status;
+	return 0;
 }
 
 
@@ -1292,7 +1375,7 @@ oce_rx(struct oce_rq *rq, uint32_t rqe_idx, struct oce_nic_rx_cqe *cqe)
 			m->m_pkthdr.flowid = (rq->queue_index - 1);
 		else
 			m->m_pkthdr.flowid = rq->queue_index;
-		m->m_flags |= M_FLOWID;
+		M_HASHTYPE_SET(m, M_HASHTYPE_OPAQUE);
 #endif
 		/* This deternies if vlan tag is Valid */
 		if (oce_cqe_vtp_valid(sc, cqe)) { 
@@ -1646,7 +1729,13 @@ oce_attach_ifp(POCE_SOFTC sc)
 #endif
 	
 	sc->ifp->if_capenable = sc->ifp->if_capabilities;
-	sc->ifp->if_baudrate = IF_Gbps(10UL);
+	if_initbaudrate(sc->ifp, IF_Gbps(10));
+
+#if __FreeBSD_version >= 1000000
+	sc->ifp->if_hw_tsomax = 65536 - (ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN);
+	sc->ifp->if_hw_tsomaxsegcount = OCE_MAX_TX_ELEMENTS;
+	sc->ifp->if_hw_tsomaxsegsize = 4096;
+#endif
 
 	ether_ifattach(sc->ifp, sc->macaddr.mac_addr);
 	
@@ -1666,7 +1755,8 @@ oce_add_vlan(void *arg, struct ifnet *ifp, uint16_t vtag)
 
 	sc->vlan_tag[vtag] = 1;
 	sc->vlans_added++;
-	oce_vid_config(sc);
+	if (sc->vlans_added <= (sc->max_vlans + 1))
+		oce_vid_config(sc);
 }
 
 
@@ -1865,8 +1955,70 @@ done:
 	/* Is there atleast one eq that needs to be modified? */
 	if(num)
 		oce_mbox_eqd_modify_periodic(sc, set_eqd, num);
+}
+
+static void oce_detect_hw_error(POCE_SOFTC sc)
+{
+
+	uint32_t ue_low = 0, ue_high = 0, ue_low_mask = 0, ue_high_mask = 0;
+	uint32_t sliport_status = 0, sliport_err1 = 0, sliport_err2 = 0;
+	uint32_t i;
+
+	if (sc->hw_error)
+		return;
+
+	if (IS_XE201(sc)) {
+		sliport_status = OCE_READ_REG32(sc, db, SLIPORT_STATUS_OFFSET);
+		if (sliport_status & SLIPORT_STATUS_ERR_MASK) {
+			sliport_err1 = OCE_READ_REG32(sc, db, SLIPORT_ERROR1_OFFSET);
+			sliport_err2 = OCE_READ_REG32(sc, db, SLIPORT_ERROR2_OFFSET);
+		}
+	} else {
+		ue_low = OCE_READ_REG32(sc, devcfg, PCICFG_UE_STATUS_LOW);
+		ue_high = OCE_READ_REG32(sc, devcfg, PCICFG_UE_STATUS_HIGH);
+		ue_low_mask = OCE_READ_REG32(sc, devcfg, PCICFG_UE_STATUS_LOW_MASK);
+		ue_high_mask = OCE_READ_REG32(sc, devcfg, PCICFG_UE_STATUS_HI_MASK);
+
+		ue_low = (ue_low & ~ue_low_mask);
+		ue_high = (ue_high & ~ue_high_mask);
+	}
+
+	/* On certain platforms BE hardware can indicate spurious UEs.
+	 * Allow the h/w to stop working completely in case of a real UE.
+	 * Hence not setting the hw_error for UE detection.
+	 */
+	if (sliport_status & SLIPORT_STATUS_ERR_MASK) {
+		sc->hw_error = TRUE;
+		device_printf(sc->dev, "Error detected in the card\n");
+	}
+
+	if (sliport_status & SLIPORT_STATUS_ERR_MASK) {
+		device_printf(sc->dev,
+				"ERR: sliport status 0x%x\n", sliport_status);
+		device_printf(sc->dev,
+				"ERR: sliport error1 0x%x\n", sliport_err1);
+		device_printf(sc->dev,
+				"ERR: sliport error2 0x%x\n", sliport_err2);
+	}
+
+	if (ue_low) {
+		for (i = 0; ue_low; ue_low >>= 1, i++) {
+			if (ue_low & 1)
+				device_printf(sc->dev, "UE: %s bit set\n",
+							ue_status_low_desc[i]);
+		}
+	}
+
+	if (ue_high) {
+		for (i = 0; ue_high; ue_high >>= 1, i++) {
+			if (ue_high & 1)
+				device_printf(sc->dev, "UE: %s bit set\n",
+							ue_status_hi_desc[i]);
+		}
+	}
 
 }
+
 
 static void
 oce_local_timer(void *arg)
@@ -1874,6 +2026,7 @@ oce_local_timer(void *arg)
 	POCE_SOFTC sc = arg;
 	int i = 0;
 	
+	oce_detect_hw_error(sc);
 	oce_refresh_nic_stats(sc);
 	oce_refresh_queue_stats(sc);
 	oce_mac_addr_set(sc);
@@ -1892,7 +2045,7 @@ oce_local_timer(void *arg)
 
 /* NOTE : This should only be called holding
  *        DEVICE_LOCK.
-*/
+ */
 static void
 oce_if_deactivate(POCE_SOFTC sc)
 {
@@ -2001,11 +2154,6 @@ process_link_state(POCE_SOFTC sc, struct oce_async_cqe_link_state *acqe)
 		sc->link_status = ASYNC_EVENT_LINK_DOWN;
 		if_link_state_change(sc->ifp, LINK_STATE_DOWN);
 	}
-
-	/* Update speed */
-	sc->link_speed = acqe->u0.s.speed;
-	sc->qos_link_speed = (uint32_t) acqe->u0.s.qos_link_speed * 10;
-
 }
 
 
@@ -2079,10 +2227,16 @@ setup_max_queues_want(POCE_SOFTC sc)
 	    (sc->function_mode & FNM_UMC_MODE)    ||
 	    (sc->function_mode & FNM_VNIC_MODE)	  ||
 	    (!is_rss_enabled(sc))		  ||
-	    (sc->flags & OCE_FLAGS_BE2)) {
+	    IS_BE2(sc)) {
 		sc->nrqs = 1;
 		sc->nwqs = 1;
+	} else {
+		sc->nrqs = MIN(OCE_NCPUS, sc->nrssqs) + 1;
+		sc->nwqs = MIN(OCE_NCPUS, sc->nrssqs);
 	}
+
+	if (IS_BE2(sc) && is_rss_enabled(sc))
+		sc->nrqs = MIN(OCE_NCPUS, sc->nrssqs) + 1;
 }
 
 
@@ -2096,6 +2250,9 @@ update_queues_got(POCE_SOFTC sc)
 		sc->nrqs = 1;
 		sc->nwqs = 1;
 	}
+
+	if (IS_BE2(sc))
+		sc->nwqs = 1;
 }
 
 static int 
@@ -2187,18 +2344,17 @@ oce_get_config(POCE_SOFTC sc)
 		max_rss = OCE_MAX_RSS;
 
 	if (!IS_BE(sc)) {
-		rc = oce_get_func_config(sc);
+		rc = oce_get_profile_config(sc, max_rss);
 		if (rc) {
 			sc->nwqs = OCE_MAX_WQ;
 			sc->nrssqs = max_rss;
 			sc->nrqs = sc->nrssqs + 1;
 		}
 	}
-	else {
-		rc = oce_get_profile_config(sc);
+	else { /* For BE3 don't rely on fw for determining the resources */
 		sc->nrssqs = max_rss;
 		sc->nrqs = sc->nrssqs + 1;
-		if (rc)
-			sc->nwqs = OCE_MAX_WQ;
+		sc->nwqs = OCE_MAX_WQ;
+		sc->max_vlans = MAX_VLANFILTER_SIZE; 
 	}
 }

@@ -37,8 +37,7 @@
  * Costa Mesa, CA 92626
  */
 
-
-/* $FreeBSD: release/9.2.0/sys/dev/oce/oce_if.h 252905 2013-07-06 23:56:58Z delphij $ */
+/* $FreeBSD: stable/10/sys/dev/oce/oce_if.h 274043 2014-11-03 12:38:29Z hselasky $ */
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -89,7 +88,8 @@
 
 #include "oce_hw.h"
 
-#define COMPONENT_REVISION "4.6.95.0"
+/* OCE device driver module component revision informaiton */
+#define COMPONENT_REVISION "10.0.664.0"
 
 /* OCE devices supported by this driver */
 #define PCI_VENDOR_EMULEX		0x10df	/* Emulex */
@@ -174,6 +174,7 @@ extern int mp_ncpus;			/* system's total active cpu cores */
 #define  OCE_CAPAB_FLAGS 		(MBX_RX_IFACE_FLAGS_BROADCAST    | \
 					MBX_RX_IFACE_FLAGS_UNTAGGED      | \
 					MBX_RX_IFACE_FLAGS_PROMISCUOUS      | \
+					MBX_RX_IFACE_FLAGS_VLAN_PROMISCUOUS |	\
 					MBX_RX_IFACE_FLAGS_MCAST_PROMISCUOUS   | \
 					MBX_RX_IFACE_FLAGS_RSS | \
 					MBX_RX_IFACE_FLAGS_PASS_L3L4_ERR)
@@ -758,14 +759,9 @@ struct oce_rq {
 };
 
 struct link_status {
-	uint8_t physical_port;
-	uint8_t mac_duplex;
-	uint8_t mac_speed;
-	uint8_t mac_fault;
-	uint8_t mgmt_mac_duplex;
-	uint8_t mgmt_mac_speed;
+	uint8_t phys_port_speed;
+	uint8_t logical_link_status;
 	uint16_t qos_link_speed;
-	uint32_t logical_link_status;
 };
 
 
@@ -864,7 +860,7 @@ typedef struct oce_softc {
 	uint32_t if_cap_flags;
 
 	uint32_t flow_control;
-	uint32_t promisc;
+	uint8_t  promisc;
 
 	struct oce_aic_obj aic_obj[OCE_MAX_EQ];
 
@@ -878,9 +874,11 @@ typedef struct oce_softc {
 	struct oce_drv_stats oce_stats_info;
 	struct callout  timer;
 	int8_t be3_native;
+	uint8_t hw_error;
 	uint16_t qnq_debug_event;
 	uint16_t qnqid;
-	uint16_t pvid;
+	uint32_t pvid;
+	uint32_t max_vlans;
 
 } OCE_SOFTC, *POCE_SOFTC;
 
@@ -1011,7 +1009,7 @@ int oce_config_vlan(POCE_SOFTC sc, uint32_t if_id,
 		uint32_t untagged, uint32_t enable_promisc);
 int oce_set_flow_control(POCE_SOFTC sc, uint32_t flow_control);
 int oce_config_nic_rss(POCE_SOFTC sc, uint32_t if_id, uint16_t enable_rss);
-int oce_rxf_set_promiscuous(POCE_SOFTC sc, uint32_t enable);
+int oce_rxf_set_promiscuous(POCE_SOFTC sc, uint8_t enable);
 int oce_set_common_iface_rx_filter(POCE_SOFTC sc, POCE_DMA_MEM sgl);
 int oce_get_link_status(POCE_SOFTC sc, struct link_status *link);
 int oce_mbox_get_nic_stats_v0(POCE_SOFTC sc, POCE_DMA_MEM pstats_dma_mem);
@@ -1052,7 +1050,7 @@ int oce_mbox_cq_create(struct oce_cq *cq, uint32_t ncoalesce,
 int oce_mbox_read_transrecv_data(POCE_SOFTC sc, uint32_t page_num);
 void oce_mbox_eqd_modify_periodic(POCE_SOFTC sc, struct oce_set_eqd *set_eqd,
 					int num);
-int oce_get_profile_config(POCE_SOFTC sc);
+int oce_get_profile_config(POCE_SOFTC sc, uint32_t max_rss);
 int oce_get_func_config(POCE_SOFTC sc);
 void mbx_common_req_hdr_init(struct mbx_hdr *hdr,
 			     uint8_t dom,
@@ -1095,6 +1093,9 @@ extern uint32_t oce_max_rsp_handled;	/* max responses */
 #define OCE_PHY_LOOPBACK		0x1
 #define OCE_ONE_PORT_EXT_LOOPBACK	0x2
 #define OCE_NO_LOOPBACK			0xff
+
+#undef IFM_40G_SR4
+#define IFM_40G_SR4			28
 
 #define atomic_inc_32(x)		atomic_add_32(x, 1)
 #define atomic_dec_32(x)		atomic_subtract_32(x, 1)

@@ -37,7 +37,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: release/9.2.0/sys/dev/oce/oce_hw.h 252905 2013-07-06 23:56:58Z delphij $ */
+/* $FreeBSD: stable/10/sys/dev/oce/oce_hw.h 268046 2014-06-30 16:23:31Z delphij $ */
 
 #include <sys/types.h>
 
@@ -60,6 +60,30 @@
 #define	INTR_EN				0x20000000
 #define	IMAGE_TRANSFER_SIZE		(32 * 1024)	/* 32K at a time */
 
+
+/********* UE Status and Mask Registers ***/
+#define PCICFG_UE_STATUS_LOW                    0xA0
+#define PCICFG_UE_STATUS_HIGH                   0xA4
+#define PCICFG_UE_STATUS_LOW_MASK               0xA8
+
+/* Lancer SLIPORT registers */
+#define SLIPORT_STATUS_OFFSET           0x404
+#define SLIPORT_CONTROL_OFFSET          0x408
+#define SLIPORT_ERROR1_OFFSET           0x40C
+#define SLIPORT_ERROR2_OFFSET           0x410
+#define PHYSDEV_CONTROL_OFFSET          0x414
+
+#define SLIPORT_STATUS_ERR_MASK         0x80000000
+#define SLIPORT_STATUS_DIP_MASK         0x02000000
+#define SLIPORT_STATUS_RN_MASK          0x01000000
+#define SLIPORT_STATUS_RDY_MASK         0x00800000
+#define SLI_PORT_CONTROL_IP_MASK        0x08000000
+#define PHYSDEV_CONTROL_FW_RESET_MASK   0x00000002
+#define PHYSDEV_CONTROL_DD_MASK         0x00000004
+#define PHYSDEV_CONTROL_INP_MASK        0x40000000
+
+#define SLIPORT_ERROR_NO_RESOURCE1      0x2
+#define SLIPORT_ERROR_NO_RESOURCE2      0x9
 /* CSR register offsets */
 #define	MPU_EP_CONTROL			0
 #define	MPU_EP_SEMAPHORE_BE3		0xac
@@ -1000,7 +1024,7 @@ struct mbx_hdr {
 #define	OCE_MBX_ADDL_STATUS(_MHDR) ((_MHDR)->u0.rsp.additional_status)
 #define	OCE_MBX_STATUS(_MHDR) ((_MHDR)->u0.rsp.status)
 
-/* [05] OPCODE_COMMON_QUERY_LINK_CONFIG */
+/* [05] OPCODE_COMMON_QUERY_LINK_CONFIG_V1 */
 struct mbx_query_common_link_config {
 	struct mbx_hdr hdr;
 	union {
@@ -1009,16 +1033,37 @@ struct mbx_query_common_link_config {
 		} req;
 
 		struct {
-			/* dw 0 */
-			uint8_t physical_port;
-			uint8_t mac_duplex;
-			uint8_t mac_speed;
-			uint8_t mac_fault;
-			/* dw 1 */
-			uint8_t mgmt_mac_duplex;
-			uint8_t mgmt_mac_speed;
+		#ifdef _BIG_ENDIAN
+			uint32_t physical_port_fault:8;
+			uint32_t physical_port_speed:8;
+			uint32_t link_duplex:8;
+			uint32_t pt:2;
+			uint32_t port_number:6;
+
 			uint16_t qos_link_speed;
-			uint32_t logical_link_status;
+			uint16_t rsvd0;
+
+			uint32_t rsvd1:21;
+			uint32_t phys_fcv:1;
+			uint32_t phys_rxf:1;
+			uint32_t phys_txf:1;
+			uint32_t logical_link_status:8;
+		#else
+			uint32_t port_number:6;
+			uint32_t pt:2;
+			uint32_t link_duplex:8;
+			uint32_t physical_port_speed:8;
+			uint32_t physical_port_fault:8;
+
+			uint16_t rsvd0;
+			uint16_t qos_link_speed;
+
+			uint32_t logical_link_status:8;
+			uint32_t phys_txf:1;
+			uint32_t phys_rxf:1;
+			uint32_t phys_fcv:1;
+			uint32_t rsvd1:21;
+		#endif
 		} rsp;
 	} params;
 };
@@ -2080,7 +2125,8 @@ struct flash_file_hdr {
 	uint32_t antidote;
 	uint32_t num_imgs;
 	uint8_t  build[24];
-	uint8_t  rsvd[32];
+	uint8_t  asic_type_rev;
+	uint8_t  rsvd[31];
 };
 
 struct image_hdr {
@@ -3682,4 +3728,3 @@ enum OCE_QUEUE_RX_STATS {
 	QUEUE_RX_BUFFER_ERRORS = 8,
 	QUEUE_RX_N_WORDS = 10
 };
-

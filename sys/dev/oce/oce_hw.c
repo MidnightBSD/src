@@ -37,7 +37,8 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: release/9.2.0/sys/dev/oce/oce_hw.c 252905 2013-07-06 23:56:58Z delphij $ */
+/* $FreeBSD: stable/10/sys/dev/oce/oce_hw.c 268046 2014-06-30 16:23:31Z delphij $ */
+
 
 #include "oce_if.h"
 
@@ -204,12 +205,16 @@ void oce_get_pci_capabilities(POCE_SOFTC sc)
 {
 	uint32_t val;
 
-	if (pci_find_cap(sc->dev, PCIY_PCIX, &val) == 0) {
+#if __FreeBSD_version >= 1000000
+	#define pci_find_extcap pci_find_cap
+#endif
+
+	if (pci_find_extcap(sc->dev, PCIY_PCIX, &val) == 0) {
 		if (val != 0) 
 			sc->flags |= OCE_FLAGS_PCIX;
 	}
 
-	if (pci_find_cap(sc->dev, PCIY_EXPRESS, &val) == 0) {
+	if (pci_find_extcap(sc->dev, PCIY_EXPRESS, &val) == 0) {
 		if (val != 0) {
 			uint16_t link_status =
 			    pci_read_config(sc->dev, val + 0x12, 2);
@@ -220,12 +225,12 @@ void oce_get_pci_capabilities(POCE_SOFTC sc)
 		}
 	}
 
-	if (pci_find_cap(sc->dev, PCIY_MSI, &val) == 0) {
+	if (pci_find_extcap(sc->dev, PCIY_MSI, &val) == 0) {
 		if (val != 0)
 			sc->flags |= OCE_FLAGS_MSI_CAPABLE;
 	}
 
-	if (pci_find_cap(sc->dev, PCIY_MSIX, &val) == 0) {
+	if (pci_find_extcap(sc->dev, PCIY_MSIX, &val) == 0) {
 		if (val != 0) {
 			val = pci_msix_count(sc->dev);
 			sc->flags |= OCE_FLAGS_MSIX_CAPABLE;
@@ -387,6 +392,9 @@ oce_create_nw_interface(POCE_SOFTC sc)
 		capab_flags &= ~MBX_RX_IFACE_FLAGS_PASS_L3L4_ERR;
 	}
 
+	if (IS_SH(sc) || IS_XE201(sc))
+		capab_flags |= MBX_RX_IFACE_FLAGS_MULTICAST;
+
 	/* enable capabilities controlled via driver startup parameters */
 	if (is_rss_enabled(sc))
 		capab_en_flags |= MBX_RX_IFACE_FLAGS_RSS;
@@ -480,11 +488,7 @@ oce_hw_start(POCE_SOFTC sc)
 		if_link_state_change(sc->ifp, LINK_STATE_DOWN);
 	}
 
-	if (link.mac_speed > 0 && link.mac_speed < 5)
-		sc->link_speed = link.mac_speed;
-	else
-		sc->link_speed = 0;
-
+	sc->link_speed = link.phys_port_speed;
 	sc->qos_link_speed = (uint32_t )link.qos_link_speed * 10;
 
 	rc = oce_start_mq(sc->mq);
