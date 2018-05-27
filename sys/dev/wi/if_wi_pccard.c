@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/wi/if_wi_pccard.c 182250 2008-08-27 05:39:44Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wi/if_wavelan_ieee.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/wi/if_wavelan_ieee.h 192492 2009-05-20 22:28:55Z imp $
  */
 
 #ifndef _IF_WAVELAN_IEEE_H

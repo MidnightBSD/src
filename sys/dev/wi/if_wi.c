@@ -1,6 +1,4 @@
 /* $MidnightBSD$ */
-/*	$NetBSD: wi.c,v 1.109 2003/01/09 08:52:19 dyoung Exp $	*/
-
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -63,7 +61,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/wi/if_wi.c 262007 2014-02-17 01:36:53Z kevlo $");
+
+#include "opt_wlan.h"
 
 #define WI_HERMES_STATS_WAR	/* Work around stats counter bug. */
 
@@ -1004,7 +1004,7 @@ wi_start_locked(struct ifnet *ifp)
 		    mtod(m0, const uint8_t *) + ieee80211_hdrsize(wh));
 		frmhdr.wi_ehdr.ether_type = llc->llc_snap.ether_type;
 		frmhdr.wi_tx_ctl = htole16(WI_ENC_TX_802_11|WI_TXCNTL_TX_EX);
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			k = ieee80211_crypto_encap(ni, m0);
 			if (k == NULL) {
 				ieee80211_free_node(ni);
@@ -1107,7 +1107,7 @@ wi_raw_xmit(struct ieee80211_node *ni, struct mbuf *m0,
 	frmhdr.wi_tx_ctl = htole16(WI_ENC_TX_802_11|WI_TXCNTL_TX_EX);
 	if (params && (params->ibp_flags & IEEE80211_BPF_NOACK))
 		frmhdr.wi_tx_ctl |= htole16(WI_TXCNTL_ALTRTRY);
-	if ((wh->i_fc[1] & IEEE80211_FC1_WEP) &&
+	if ((wh->i_fc[1] & IEEE80211_FC1_PROTECTED) &&
 	    (!params || (params && (params->ibp_flags & IEEE80211_BPF_CRYPTO)))) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
@@ -1512,6 +1512,10 @@ wi_info_intr(struct wi_softc *sc)
 	case WI_INFO_LINK_STAT:
 		wi_read_bap(sc, fid, sizeof(ltbuf), &stat, sizeof(stat));
 		DPRINTF(("wi_info_intr: LINK_STAT 0x%x\n", le16toh(stat)));
+
+		if (vap == NULL)
+			goto finish;
+
 		switch (le16toh(stat)) {
 		case WI_INFO_LINK_STAT_CONNECTED:
 			if (vap->iv_state == IEEE80211_S_RUN &&
@@ -1567,6 +1571,7 @@ wi_info_intr(struct wi_softc *sc)
 		    le16toh(ltbuf[1]), le16toh(ltbuf[0])));
 		break;
 	}
+finish:
 	CSR_WRITE_2(sc, WI_EVENT_ACK, WI_EV_INFO);
 }
 
@@ -1901,8 +1906,7 @@ wi_seek_bap(struct wi_softc *sc, int id, int off)
 static int
 wi_read_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 {
-	u_int16_t *ptr;
-	int i, error, cnt;
+	int error, cnt;
 
 	if (buflen == 0)
 		return 0;
@@ -1911,9 +1915,7 @@ wi_read_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 			return error;
 	}
 	cnt = (buflen + 1) / 2;
-	ptr = (u_int16_t *)buf;
-	for (i = 0; i < cnt; i++)
-		*ptr++ = CSR_READ_2(sc, WI_DATA0);
+	CSR_READ_MULTI_STREAM_2(sc, WI_DATA0, (u_int16_t *)buf, cnt);
 	sc->sc_bap_off += cnt * 2;
 	return 0;
 }
@@ -1921,8 +1923,7 @@ wi_read_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 static int
 wi_write_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 {
-	u_int16_t *ptr;
-	int i, error, cnt;
+	int error, cnt;
 
 	if (buflen == 0)
 		return 0;
@@ -1932,9 +1933,7 @@ wi_write_bap(struct wi_softc *sc, int id, int off, void *buf, int buflen)
 			return error;
 	}
 	cnt = (buflen + 1) / 2;
-	ptr = (u_int16_t *)buf;
-	for (i = 0; i < cnt; i++)
-		CSR_WRITE_2(sc, WI_DATA0, ptr[i]);
+	CSR_WRITE_MULTI_STREAM_2(sc, WI_DATA0, (u_int16_t *)buf, cnt);
 	sc->sc_bap_off += cnt * 2;
 
 	return 0;

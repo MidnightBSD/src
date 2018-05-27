@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wi/if_wivar.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002
  *	M Warner Losh <imp@freebsd.org>.  All rights reserved.
@@ -32,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/wi/if_wivar.h 194023 2009-06-11 17:14:28Z avg $
  */
 
 /*

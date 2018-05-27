@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wi/if_wi_pci.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/wi/if_wi_pci.c 254263 2013-08-12 23:30:01Z scottl $
  */
 
 /*
@@ -138,22 +138,12 @@ static int
 wi_pci_attach(device_t dev)
 {
 	struct wi_softc		*sc;
-	u_int32_t		command, wanted;
+	u_int32_t		command;
 	u_int16_t		reg;
 	int			error;
 	int			timeout;
 
 	sc = device_get_softc(dev);
-
-	command = pci_read_config(dev, PCIR_COMMAND, 4);
-	wanted = PCIM_CMD_PORTEN|PCIM_CMD_MEMEN;
-	command |= wanted;
-	pci_write_config(dev, PCIR_COMMAND, command, 4);
-	command = pci_read_config(dev, PCIR_COMMAND, 4);
-	if ((command & wanted) != wanted) {
-		device_printf(dev, "wi_pci_attach() failed to enable pci!\n");
-		return (ENXIO);
-	}
 
 	if (sc->wi_bus_type != WI_BUS_PCI_NATIVE) {
 		error = wi_alloc(dev, WI_PCI_IORES);
