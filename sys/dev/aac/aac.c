@@ -29,6 +29,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac.c 331637 2018-03-27 17:52:52Z brooks $");
 
 /*
  * Driver for the Adaptec 'FSA' family of PCI/SCSI RAID adapters.
@@ -36,6 +37,7 @@
 #define AAC_DRIVERNAME			"aac"
 
 #include "opt_aac.h"
+#include "opt_compat.h"
 
 /* #include <stddef.h> */
 #include <sys/param.h>
@@ -43,7 +45,9 @@
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
+#include <sys/proc.h>
 #include <sys/sysctl.h>
+#include <sys/sysent.h>
 #include <sys/poll.h>
 #include <sys/ioccom.h>
 
@@ -507,9 +511,9 @@ aac_alloc(struct aac_softc *sc)
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR, 	/* highaddr */
 			       NULL, NULL, 		/* filter, filterarg */
-			       MAXBSIZE,		/* maxsize */
+			       sc->aac_max_sectors << 9, /* maxsize */
 			       sc->aac_sg_tablesize,	/* nsegments */
-			       MAXBSIZE,		/* maxsegsize */
+			       BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			       BUS_DMA_ALLOCNOW,	/* flags */
 			       busdma_lock_mutex,	/* lockfunc */
 			       &sc->aac_io_lock,	/* lockfuncarg */
@@ -631,9 +635,11 @@ aac_free(struct aac_softc *sc)
 	/* disconnect the interrupt handler */
 	if (sc->aac_intr)
 		bus_teardown_intr(sc->aac_dev, sc->aac_irq, sc->aac_intr);
-	if (sc->aac_irq != NULL)
+	if (sc->aac_irq != NULL) {
 		bus_release_resource(sc->aac_dev, SYS_RES_IRQ,
 		    rman_get_rid(sc->aac_irq), sc->aac_irq);
+		pci_release_msi(sc->aac_dev);
+	}
 
 	/* destroy data-transfer DMA tag */
 	if (sc->aac_buffer_dmat)
@@ -987,14 +993,18 @@ aac_startio(struct aac_softc *sc)
 		 * busdma.
 		 */
 		if (cm->cm_datalen != 0) {
-			error = bus_dmamap_load(sc->aac_buffer_dmat,
-						cm->cm_datamap, cm->cm_data,
-						cm->cm_datalen,
-						aac_map_command_sg, cm, 0);
+			if (cm->cm_flags & AAC_REQ_BIO)
+				error = bus_dmamap_load_bio(
+				    sc->aac_buffer_dmat, cm->cm_datamap,
+				    (struct bio *)cm->cm_private,
+				    aac_map_command_sg, cm, 0);
+			else
+				error = bus_dmamap_load(sc->aac_buffer_dmat,
+				    cm->cm_datamap, cm->cm_data,
+				    cm->cm_datalen, aac_map_command_sg, cm, 0);
 			if (error == EINPROGRESS) {
 				fwprintf(sc, HBA_FLAGS_DBG_COMM_B, "freezing queue\n");
 				sc->flags |= AAC_QUEUE_FRZN;
-				error = 0;
 			} else if (error != 0)
 				panic("aac_startio: unexpected error %d from "
 				      "busdma", error);
@@ -1199,9 +1209,9 @@ aac_bio_command(struct aac_softc *sc, struct aac_command **cmp)
 		goto fail;
 
 	/* fill out the command */
-	cm->cm_data = (void *)bp->bio_data;
 	cm->cm_datalen = bp->bio_bcount;
 	cm->cm_complete = aac_bio_complete;
+	cm->cm_flags = AAC_REQ_BIO;
 	cm->cm_private = bp;
 	cm->cm_timestamp = time_uptime;
 
@@ -1402,6 +1412,7 @@ aac_release_command(struct aac_command *cm)
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	/* (re)initialize the command/FIB */
+	cm->cm_datalen = 0;
 	cm->cm_sgtable = NULL;
 	cm->cm_flags = 0;
 	cm->cm_complete = NULL;
@@ -3096,18 +3107,30 @@ aac_ioctl_send_raw_srb(struct aac_softc *sc, caddr_t arg)
 	/* Retrieve correct SG entries. */
 	if (fibsize == (sizeof(struct aac_srb) +
 	    srbcmd->sg_map.SgCount * sizeof(struct aac_sg_entry))) {
+		struct aac_sg_entry sg;
+
 		sge = srbcmd->sg_map.SgEntry;
 		sge64 = NULL;
-		srb_sg_bytecount = sge->SgByteCount;
-		srb_sg_address = (void *)(uintptr_t)sge->SgAddress;
+
+		if ((error = copyin(sge, &sg, sizeof(sg))) != 0)
+			goto out;
+
+		srb_sg_bytecount = sg.SgByteCount;
+		srb_sg_address = (void *)(uintptr_t)sg.SgAddress;
 	}
 #ifdef __amd64__
 	else if (fibsize == (sizeof(struct aac_srb) +
 	    srbcmd->sg_map.SgCount * sizeof(struct aac_sg_entry64))) {
+		struct aac_sg_entry64 sg;
+
 		sge = NULL;
 		sge64 = (struct aac_sg_entry64 *)srbcmd->sg_map.SgEntry;
-		srb_sg_bytecount = sge64->SgByteCount;
-		srb_sg_address = (void *)sge64->SgAddress;
+
+		if ((error = copyin(sge64, &sg, sizeof(sg))) != 0)
+			goto out;
+
+		srb_sg_bytecount = sg.SgByteCount;
+		srb_sg_address = (void *)sg.SgAddress;
 		if (sge64->SgAddress > 0xffffffffull &&
 		    (sc->flags & AAC_FLAGS_SG_64BIT) == 0) {
 			error = EINVAL;
@@ -3501,7 +3524,19 @@ aac_getnext_aif(struct aac_softc *sc, caddr_t arg)
 
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
-	if ((error = copyin(arg, &agf, sizeof(agf))) == 0) {
+#ifdef COMPAT_FREEBSD32
+	if (SV_CURPROC_FLAG(SV_ILP32)) {
+		struct get_adapter_fib_ioctl32 agf32;
+		error = copyin(arg, &agf32, sizeof(agf32));
+		if (error == 0) {
+			agf.AdapterFibContext = agf32.AdapterFibContext;
+			agf.Wait = agf32.Wait;
+			agf.AifFib = (caddr_t)(uintptr_t)agf32.AifFib;
+		}
+	} else
+#endif
+		error = copyin(arg, &agf, sizeof(agf));
+	if (error == 0) {
 		for (ctx = sc->fibctx; ctx; ctx = ctx->next) {
 			if (agf.AdapterFibContext == ctx->unique)
 				break;

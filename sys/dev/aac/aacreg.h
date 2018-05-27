@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aacreg.h,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000-2001 Scott Long
@@ -27,6 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ *	$FreeBSD: stable/10/sys/dev/aac/aacreg.h 213272 2010-09-29 14:22:00Z emaste $
  */
 
 /*

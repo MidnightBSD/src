@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_debug.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,6 +29,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac_debug.c 242823 2012-11-09 13:58:52Z rdivacky $");
 
 /*
  * Debugging support.
@@ -160,7 +161,7 @@ void
 aac_panic(struct aac_softc *sc, char *reason)
 {
 	aac_print_queues(sc);
-	panic(reason);
+	panic("%s", reason);
 }
 
 /*
