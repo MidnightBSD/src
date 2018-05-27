@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_disk.h,v 1.7 2007/05/05 17:12:15 pjd Exp $
+ * $FreeBSD: stable/10/sys/geom/geom_disk.h 329319 2018-02-15 16:31:35Z avg $
  */
 
 #ifndef _GEOM_GEOM_DISK_H_
@@ -44,6 +44,8 @@
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 #include <sys/disk.h>
+
+#define G_DISK_CLASS_NAME	"DISK"
 
 struct disk;
 
@@ -79,6 +81,7 @@ struct disk {
 	disk_ioctl_t		*d_ioctl;
 	dumper_t		*d_dump;
 	disk_getattr_t		*d_getattr;
+	disk_gone_t		*d_gone;
 
 	/* Info fields from driver to geom_disk.c. Valid when open */
 	u_int			d_sectorsize;
@@ -86,6 +89,7 @@ struct disk {
 	u_int			d_fwsectors;
 	u_int			d_fwheads;
 	u_int			d_maxsize;
+	off_t			d_delmaxsize;
 	u_int			d_stripeoffset;
 	u_int			d_stripesize;
 	char			d_ident[DISK_IDENT_SIZE];
@@ -98,15 +102,23 @@ struct disk {
 	/* Fields private to the driver */
 	void			*d_drv1;
 
-	/* new fields in stable - don't use if DISKFLAG_LACKS_GONE is set */
-	disk_gone_t		*d_gone;
+	/* New field - don't use if DISKFLAG_LACKS_ROTRATE is set */
+	uint16_t		d_rotation_rate;
 };
 
-#define DISKFLAG_NEEDSGIANT	0x1
-#define DISKFLAG_OPEN		0x2
-#define DISKFLAG_CANDELETE	0x4
-#define DISKFLAG_CANFLUSHCACHE	0x8
-#define DISKFLAG_LACKS_GONE	0x10
+#define	DISKFLAG_NEEDSGIANT		0x0001
+#define	DISKFLAG_OPEN			0x0002
+#define	DISKFLAG_CANDELETE		0x0004
+#define	DISKFLAG_CANFLUSHCACHE		0x0008
+#define	DISKFLAG_UNMAPPED_BIO		0x0010
+#define	DISKFLAG_DIRECT_COMPLETION	0x0020
+#define DISKFLAG_LACKS_ROTRATE		0x0040
+#define	DISKFLAG_WRITE_PROTECT		0x0100
+
+#define	DISK_RR_UNKNOWN		0
+#define	DISK_RR_NON_ROTATING	1
+#define	DISK_RR_MIN		0x0401
+#define	DISK_RR_MAX		0xfffe
 
 struct disk *disk_alloc(void);
 void disk_create(struct disk *disk, int version);
@@ -115,11 +127,14 @@ void disk_gone(struct disk *disk);
 void disk_attr_changed(struct disk *dp, const char *attr, int flag);
 void disk_media_changed(struct disk *dp, int flag);
 void disk_media_gone(struct disk *dp, int flag);
+int disk_resize(struct disk *dp, int flag);
 
 #define DISK_VERSION_00		0x58561059
 #define DISK_VERSION_01		0x5856105a
 #define DISK_VERSION_02		0x5856105b
-#define DISK_VERSION		DISK_VERSION_02
+#define DISK_VERSION_03		0x5856105c
+#define DISK_VERSION_04		0x5856105d
+#define DISK_VERSION		DISK_VERSION_04
 
 #endif /* _KERNEL */
 #endif /* _GEOM_GEOM_DISK_H_ */
