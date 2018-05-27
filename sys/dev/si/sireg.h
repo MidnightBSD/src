@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  * 'C' definitions for Specialix serial multiplex driver.
@@ -30,7 +31,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/si/sireg.h 152172 2005-11-07 21:53:58Z jhb $
  */
 
 /*

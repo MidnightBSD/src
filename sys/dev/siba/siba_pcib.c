@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Bruce M. Simpson.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/siba/siba_pcib.c 227843 2011-11-22 21:28:20Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

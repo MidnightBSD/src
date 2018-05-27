@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1988-1998 Specialix International.
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/si/si2_z280.c 154087 2006-01-06 20:17:48Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

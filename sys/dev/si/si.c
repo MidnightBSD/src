@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  *
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/si/si.c 320923 2017-07-12 22:16:54Z jhb $");
 
 #ifndef lint
 static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International, 1990,1992,1998",
@@ -605,6 +606,8 @@ try_next2:
 	if (unit == 0)
 		make_dev(&si_Scdevsw, 0, UID_ROOT, GID_WHEEL, 0600,
 		    "si_control");
+	device_printf(dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 	return (0);
 }
 
@@ -1446,7 +1449,6 @@ si_start(struct tty *tp)
 
 #if 0
 /*
- * Note: called at splsoftclock from the timeout code
  * This has to deal with two things...  cause wakeups while waiting for
  * tty drains on last process exit, and call l_start at about the right
  * time for protocols like ppp.

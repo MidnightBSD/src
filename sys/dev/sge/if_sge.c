@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010 Nikolay Denev <ndenev@gmail.com>
  * Copyright (c) 2007-2008 Alexander Pohoyda <alexander.pohoyda@gmx.net>
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sge/if_sge.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * SiS 190/191 PCI Ethernet NIC driver.

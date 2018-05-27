@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009, 2010 Nikolay Denev <ndenev@gmail.com>
  * Copyright (c) 2007, 2008 Alexander Pohoyda <alexander.pohoyda@gmx.net>
@@ -32,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sge/if_sgereg.h 264442 2014-04-14 04:51:59Z yongari $
  */
 
 #ifndef _IF_SGEREG_H
@@ -284,7 +285,7 @@ struct sge_desc {
 #define	SGE_RX_RING_CNT		256 /* [8, 1024] */
 #define	SGE_TX_RING_CNT		256 /* [8, 8192] */
 #define	SGE_DESC_ALIGN		16
-#define	SGE_MAXTXSEGS		32
+#define	SGE_MAXTXSEGS		35
 #define	SGE_TSO_MAXSIZE		(65535 + sizeof(struct ether_vlan_header))
 #define	SGE_TSO_MAXSEGSIZE	4096
 #define	SGE_RX_BUF_ALIGN	sizeof(uint64_t)

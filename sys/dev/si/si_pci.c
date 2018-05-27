@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  *
@@ -19,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/si/si_pci.c 174136 2007-12-01 20:39:47Z peter $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

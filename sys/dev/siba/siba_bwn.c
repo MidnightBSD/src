@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Weongyo Jeong <weongyo@freebsd.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/siba/siba_bwn.c 232472 2012-03-03 18:08:57Z jhb $");
 
 /*
  * Sonics Silicon Backplane front-end for bwn(4).
@@ -279,11 +280,27 @@ siba_bwn_teardown_intr(device_t dev, device_t child, struct resource *irq,
 }
 
 static int
+siba_bwn_find_cap(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+
+	return (pci_find_cap(dev, capability, capreg));
+}
+
+static int
 siba_bwn_find_extcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
 
 	return (pci_find_extcap(dev, capability, capreg));
+}
+
+static int
+siba_bwn_find_htcap(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+
+	return (pci_find_htcap(dev, capability, capreg));
 }
 
 static int
@@ -405,7 +422,9 @@ static device_method_t siba_bwn_methods[] = {
 	DEVMETHOD(bus_teardown_intr,    siba_bwn_teardown_intr),
 
 	/* PCI interface */
+	DEVMETHOD(pci_find_cap,		siba_bwn_find_cap),
 	DEVMETHOD(pci_find_extcap,	siba_bwn_find_extcap),
+	DEVMETHOD(pci_find_htcap,	siba_bwn_find_htcap),
 	DEVMETHOD(pci_alloc_msi,	siba_bwn_alloc_msi),
 	DEVMETHOD(pci_release_msi,	siba_bwn_release_msi),
 	DEVMETHOD(pci_msi_count,	siba_bwn_msi_count),
