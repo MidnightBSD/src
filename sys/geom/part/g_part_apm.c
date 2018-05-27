@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2008 Marcel Moolenaar
  * All rights reserved.
@@ -25,12 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part_apm.c,v 1.3.2.5 2011/04/29 10:33:54 gavin Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part_apm.c 271636 2014-09-15 17:49:46Z emaste $");
 
 #include <sys/param.h>
 #include <sys/apm.h>
 #include <sys/bio.h>
-#include <sys/diskmbr.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/geom/part/g_part_apm.c,v 1.3.2.5 2011/04/29 10:33:54
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <geom/geom.h>
+#include <geom/geom_int.h>
 #include <geom/part/g_part.h>
 
 #include "g_part_if.h"
@@ -311,10 +312,14 @@ g_part_apm_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
 		/* confxml: partition entry information */
 		strncpy(u.name, entry->ent.ent_name, APM_ENT_NAMELEN);
 		u.name[APM_ENT_NAMELEN] = '\0';
-		sbuf_printf(sb, "%s<label>%s</label>\n", indent, u.name);
+		sbuf_printf(sb, "%s<label>", indent);
+		g_conf_printf_escaped(sb, "%s", u.name);
+		sbuf_printf(sb, "</label>\n");
 		strncpy(u.type, entry->ent.ent_type, APM_ENT_TYPELEN);
 		u.type[APM_ENT_TYPELEN] = '\0';
-		sbuf_printf(sb, "%s<rawtype>%s</rawtype>\n", indent, u.type);
+		sbuf_printf(sb, "%s<rawtype>", indent);
+		g_conf_printf_escaped(sb, "%s", u.type);
+		sbuf_printf(sb, "</rawtype>\n");
 	} else {
 		/* confxml: scheme information */
 	}
@@ -360,6 +365,14 @@ g_part_apm_resize(struct g_part_table *basetable,
     struct g_part_entry *baseentry, struct g_part_parms *gpp)
 {
 	struct g_part_apm_entry *entry;
+	struct g_provider *pp;
+
+	if (baseentry == NULL) {
+		pp = LIST_FIRST(&basetable->gpt_gp->consumer)->provider;
+		basetable->gpt_last = MIN(pp->mediasize / pp->sectorsize,
+		    UINT32_MAX) - 1;
+		return (0);
+	}
 
 	entry = (struct g_part_apm_entry *)baseentry;
 	baseentry->gpe_end = baseentry->gpe_start + gpp->gpp_size - 1;
