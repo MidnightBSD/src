@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_skreg.h,v 1.10 2003/08/12 05:23:06 nate Exp $	*/
 
 /*-
@@ -31,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sk/if_skreg.h 251133 2013-05-30 12:16:55Z marius $
  */
 
 /*-

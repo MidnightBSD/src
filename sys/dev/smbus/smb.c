@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/smbus/smb.c 188077 2009-02-03 16:14:37Z jhb $
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/smbus/smbconf.h 310062 2016-12-14 15:38:28Z avg $
  */
 #ifndef __SMBONF_H
 #define __SMBONF_H
@@ -33,6 +34,10 @@
 #define SMBPRI (PZERO+8)		/* XXX sleep/wakeup queue priority */
 
 #define n(flags) (~(flags) & (flags))
+
+/* Order constants for smbus children. */
+#define SMBUS_ORDER_HINTED	20
+#define SMBUS_ORDER_PNP		40
 
 /*
  * How tsleep() is called in smb_request_bus().
@@ -70,7 +75,9 @@
 /*
  * ivars codes
  */
-#define SMBUS_IVAR_ADDR	0x1	/* slave address of the device */
+enum smbus_ivars {
+    SMBUS_IVAR_ADDR,	/* slave address of the device */
+};
 
 int	smbus_request_bus(device_t, device_t, int);
 int	smbus_release_bus(device_t, device_t);
@@ -79,7 +86,12 @@ int	smbus_error(int error);
 
 void	smbus_intr(device_t, u_char, char low, char high, int error);
 
-u_char	smbus_get_addr(device_t);
+#define SMBUS_ACCESSOR(var, ivar, type)					\
+	__BUS_ACCESSOR(smbus, var, SMBUS, ivar, type)
+
+SMBUS_ACCESSOR(addr,		ADDR,		int)
+
+#undef SMBUS_ACCESSOR
 
 extern driver_t smbus_driver;
 extern devclass_t smbus_devclass;

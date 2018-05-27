@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  *
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sio/sio_pccard.c 162294 2006-09-14 03:47:59Z jmg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

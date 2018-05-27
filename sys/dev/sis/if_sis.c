@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp <phk@FreeBSD.org>
  * Copyright (c) 1997, 1998, 1999
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sis/if_sis.c 280657 2015-03-26 04:55:22Z yongari $");
 
 /*
  * SiS 900/SiS 7016 fast ethernet PCI NIC driver. Datasheets are
@@ -757,7 +758,8 @@ sis_rxfilter_ns(struct sis_softc *sc)
 		if_maddr_runlock(ifp);
 	}
 
-	CSR_WRITE_4(sc, SIS_RXFILT_CTL, filter);
+	/* Turn the receive filter on */
+	CSR_WRITE_4(sc, SIS_RXFILT_CTL, filter | SIS_RXFILTCTL_ENABLE);
 	CSR_READ_4(sc, SIS_RXFILT_CTL);
 }
 
@@ -779,7 +781,7 @@ sis_rxfilter_sis(struct sis_softc *sc)
 
 	filter = CSR_READ_4(sc, SIS_RXFILT_CTL);
 	if (filter & SIS_RXFILTCTL_ENABLE) {
-		CSR_WRITE_4(sc, SIS_RXFILT_CTL, filter & ~SIS_RXFILT_CTL);
+		CSR_WRITE_4(sc, SIS_RXFILT_CTL, filter & ~SIS_RXFILTCTL_ENABLE);
 		CSR_READ_4(sc, SIS_RXFILT_CTL);
 	}
 	filter &= ~(SIS_RXFILTCTL_ALLPHYS | SIS_RXFILTCTL_BROAD |
@@ -819,7 +821,8 @@ sis_rxfilter_sis(struct sis_softc *sc)
 		CSR_WRITE_4(sc, SIS_RXFILT_DATA, hashes[i]);
 	}
 
-	CSR_WRITE_4(sc, SIS_RXFILT_CTL, filter);
+	/* Turn the receive filter on */
+	CSR_WRITE_4(sc, SIS_RXFILT_CTL, filter | SIS_RXFILTCTL_ENABLE);
 	CSR_READ_4(sc, SIS_RXFILT_CTL);
 }
 
@@ -1054,7 +1057,6 @@ sis_attach(device_t dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = sis_ioctl;
 	ifp->if_start = sis_start;
@@ -1617,11 +1619,9 @@ sis_tick(void *xsc)
 {
 	struct sis_softc	*sc;
 	struct mii_data		*mii;
-	struct ifnet		*ifp;
 
 	sc = xsc;
 	SIS_LOCK_ASSERT(sc);
-	ifp = sc->sis_ifp;
 
 	mii = device_get_softc(sc->sis_miibus);
 	mii_tick(mii);
@@ -2017,8 +2017,6 @@ sis_initl(struct sis_softc *sc)
 	}
 
 	sis_rxfilter(sc);
-	/* Turn the receive filter on */
-	SIS_SETBIT(sc, SIS_RXFILT_CTL, SIS_RXFILTCTL_ENABLE);
 
 	/*
 	 * Load the address of the RX and TX lists.
@@ -2140,7 +2138,8 @@ sis_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		SIS_LOCK(sc);
-		sis_rxfilter(sc);
+		if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+			sis_rxfilter(sc);
 		SIS_UNLOCK(sc);
 		break;
 	case SIOCGIFMEDIA:

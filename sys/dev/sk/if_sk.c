@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_sk.c,v 2.33 2003/08/12 05:23:06 nate Exp $	*/
 
 /*-
@@ -48,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sk/if_sk.c 266921 2014-05-31 11:08:22Z brueffer $");
 
 /*
  * SysKonnect SK-NET gigabit ethernet driver for FreeBSD. Supports
@@ -137,11 +138,6 @@ MODULE_DEPEND(sk, miibus, 1, 1, 1);
 
 /* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
-
-#ifndef lint
-static const char rcsid[] =
-  "$MidnightBSD$";
-#endif
 
 static const struct sk_type sk_devs[] = {
 	{
@@ -1353,7 +1349,6 @@ sk_attach(dev)
 	}
 	ifp->if_softc = sc_if;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	/*
 	 * SK_GENESIS has a bug in checksum offload - From linux.
@@ -2882,13 +2877,11 @@ static void
 sk_txeof(sc_if)
 	struct sk_if_softc	*sc_if;
 {
-	struct sk_softc		*sc;
 	struct sk_txdesc	*txd;
 	struct sk_tx_desc	*cur_tx;
 	struct ifnet		*ifp;
 	u_int32_t		idx, sk_ctl;
 
-	sc = sc_if->sk_softc;
 	ifp = sc_if->sk_ifp;
 
 	txd = STAILQ_FIRST(&sc_if->sk_cdata.sk_txbusyq);

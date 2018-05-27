@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Benno Rice.  All rights reserved.
  *
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/smc/if_smc.c 244169 2012-12-13 03:33:01Z gonzo $");
 
 /*
  * Driver for SMSC LAN91C111, may work for older variants.
@@ -807,6 +808,10 @@ smc_intr(void *context)
 	struct smc_softc	*sc;
 	
 	sc = (struct smc_softc *)context;
+	/*
+	 * Block interrupts in order to let smc_task_intr to kick in
+	 */
+	smc_write_1(sc, MSK, 0);
 	taskqueue_enqueue_fast(sc->smc_tq, &sc->smc_intr);
 	return (FILTER_HANDLED);
 }
@@ -825,13 +830,6 @@ smc_task_intr(void *context, int pending)
 	SMC_LOCK(sc);
 	
 	smc_select_bank(sc, 2);
-
-	/*
-	 * Get the current mask, and then block all interrupts while we're
-	 * working.
-	 */
-	if ((ifp->if_capenable & IFCAP_POLLING) == 0)
-		smc_write_1(sc, MSK, 0);
 
 	/*
 	 * Find out what interrupts are flagged.
@@ -1237,9 +1235,10 @@ smc_init_locked(struct smc_softc *sc)
 {
 	struct ifnet	*ifp;
 
-	ifp = sc->smc_ifp;
-
 	SMC_ASSERT_LOCKED(sc);
+	ifp = sc->smc_ifp;
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+		return;
 
 	smc_reset(sc);
 	smc_enable(sc);

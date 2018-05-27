@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sk/xmaciireg.h 158070 2006-04-27 05:59:09Z yongari $
  */
 
 /*

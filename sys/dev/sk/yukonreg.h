@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: yukonreg.h,v 1.2 2003/08/12 05:23:06 nate Exp $ */
 /*-
  * Copyright (c) 2003 Nathan L. Binkert <binkertn@umich.edu>
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sk/yukonreg.h 158070 2006-04-27 05:59:09Z yongari $
  */
 
 /* General Purpose Status Register (GPSR) */
