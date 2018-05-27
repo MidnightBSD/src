@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_hpet.c 240384 2012-09-12 09:29:22Z mav $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_hpet.c 274001 2014-11-03 03:17:58Z rpaulo $");
 
 #include "opt_acpi.h"
 #if defined(__amd64__) || defined(__ia64__)
@@ -36,11 +36,13 @@ __FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_hpet.c 240384 2012-09-12 0
 #include "opt_apic.h"
 #endif
 #include <sys/param.h>
+#include <sys/conf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/proc.h>
 #include <sys/rman.h>
+#include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
@@ -107,6 +109,19 @@ struct hpet_softc {
 		char			name[8];
 	} 			t[32];
 	int			num_timers;
+	struct cdev		*pdev;
+	int			mmap_allow;
+	int			mmap_allow_write;
+};
+
+static d_open_t hpet_open;
+static d_mmap_t hpet_mmap;
+
+static struct cdevsw hpet_cdevsw = {
+	.d_version =	D_VERSION,
+	.d_name =	"hpet",
+	.d_open =	hpet_open,
+	.d_mmap =	hpet_mmap,
 };
 
 static u_int hpet_get_timecount(struct timecounter *tc);
@@ -148,8 +163,7 @@ hpet_disable(struct hpet_softc *sc)
 }
 
 static int
-hpet_start(struct eventtimer *et,
-    struct bintime *first, struct bintime *period)
+hpet_start(struct eventtimer *et, sbintime_t first, sbintime_t period)
 {
 	struct hpet_timer *mt = (struct hpet_timer *)et->et_priv;
 	struct hpet_timer *t;
@@ -157,20 +171,16 @@ hpet_start(struct eventtimer *et,
 	uint32_t fdiv, now;
 
 	t = (mt->pcpu_master < 0) ? mt : &sc->t[mt->pcpu_slaves[curcpu]];
-	if (period != NULL) {
+	if (period != 0) {
 		t->mode = 1;
-		t->div = (sc->freq * (period->frac >> 32)) >> 32;
-		if (period->sec != 0)
-			t->div += sc->freq * period->sec;
+		t->div = (sc->freq * period) >> 32;
 	} else {
 		t->mode = 2;
 		t->div = 0;
 	}
-	if (first != NULL) {
-		fdiv = (sc->freq * (first->frac >> 32)) >> 32;
-		if (first->sec != 0)
-			fdiv += sc->freq * first->sec;
-	} else
+	if (first != 0)
+		fdiv = (sc->freq * first) >> 32;
+	else
 		fdiv = t->div;
 	if (t->irq < 0)
 		bus_write_4(sc->mem_res, HPET_ISR, 1 << t->num);
@@ -299,7 +309,7 @@ hpet_find(ACPI_HANDLE handle, UINT32 level, void *context,
 		return (AE_OK);
 	if (ACPI_FAILURE(acpi_GetInteger(handle, "_UID", &uid)) ||
 	    id == uid)
-		*((int *)status) = 1;
+		*status = acpi_get_device(handle);
 	return (AE_OK);
 }
 
@@ -320,14 +330,43 @@ hpet_find_irq_rid(device_t dev, u_long start, u_long end)
 	}
 }
 
+static int
+hpet_open(struct cdev *cdev, int oflags, int devtype, struct thread *td)
+{
+	struct hpet_softc *sc;
+
+	sc = cdev->si_drv1;
+	if (!sc->mmap_allow)
+		return (EPERM);
+	else
+		return (0);
+}
+
+static int
+hpet_mmap(struct cdev *cdev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int nprot, vm_memattr_t *memattr)
+{
+	struct hpet_softc *sc;
+
+	sc = cdev->si_drv1;
+	if (offset > rman_get_size(sc->mem_res))
+		return (EINVAL);
+	if (!sc->mmap_allow_write && (nprot & PROT_WRITE))
+		return (EPERM);
+	*paddr = rman_get_start(sc->mem_res) + offset;
+	*memattr = VM_MEMATTR_UNCACHEABLE;
+
+	return (0);
+}
+
 /* Discover the HPET via the ACPI table of the same name. */
-static void 
+static void
 hpet_identify(driver_t *driver, device_t parent)
 {
 	ACPI_TABLE_HPET *hpet;
 	ACPI_STATUS	status;
 	device_t	child;
-	int 		i, found;
+	int		i;
 
 	/* Only one HPET device can be added. */
 	if (devclass_get_device(hpet_devclass, 0))
@@ -338,12 +377,18 @@ hpet_identify(driver_t *driver, device_t parent)
 		if (ACPI_FAILURE(status))
 			return;
 		/* Search for HPET device with same ID. */
-		found = 0;
+		child = NULL;
 		AcpiWalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT,
-		    100, hpet_find, NULL, (void *)(uintptr_t)hpet->Sequence, (void *)&found);
+		    100, hpet_find, NULL, (void *)(uintptr_t)hpet->Sequence,
+		    (void *)&child);
 		/* If found - let it be probed in normal way. */
-		if (found)
+		if (child) {
+			if (bus_get_resource(child, SYS_RES_MEMORY, 0,
+			    NULL, NULL) != 0)
+				bus_set_resource(child, SYS_RES_MEMORY, 0,
+				    hpet->Address.Address, HPET_MEM_WIDTH);
 			continue;
+		}
 		/* If not - create it from table info. */
 		child = BUS_ADD_CHILD(parent, 2, "hpet", 0);
 		if (child == NULL) {
@@ -646,8 +691,8 @@ hpet_attach(device_t dev)
 #ifdef DEV_APIC
 		if ((t->caps & HPET_TCAP_FSB_INT_DEL) && t->irq >= 0) {
 			uint64_t addr;
-			uint32_t data;	
-			
+			uint32_t data;
+
 			if (PCIB_MAP_MSI(
 			    device_get_parent(device_get_parent(dev)), dev,
 			    t->irq, &addr, &data) == 0) {
@@ -681,16 +726,14 @@ hpet_attach(device_t dev)
 		if (t->pcpu_master >= 0) {
 			t->et.et_flags |= ET_FLAGS_PERCPU;
 			t->et.et_quality += 100;
-		}
+		} else if (mp_ncpus >= 8)
+			t->et.et_quality -= 100;
 		if ((t->caps & HPET_TCAP_PER_INT) == 0)
 			t->et.et_quality -= 10;
 		t->et.et_frequency = sc->freq;
-		t->et.et_min_period.sec = 0;
-		t->et.et_min_period.frac =
-		    (((uint64_t)(HPET_MIN_CYCLES * 2) << 32) / sc->freq) << 32;
-		t->et.et_max_period.sec = 0xfffffffeLLU / sc->freq;
-		t->et.et_max_period.frac =
-		    ((0xfffffffeLLU << 32) / sc->freq) << 32;
+		t->et.et_min_period =
+		    ((uint64_t)(HPET_MIN_CYCLES * 2) << 32) / sc->freq;
+		t->et.et_max_period = (0xfffffffeLLU << 32) / sc->freq;
 		t->et.et_start = hpet_start;
 		t->et.et_stop = hpet_stop;
 		t->et.et_priv = &sc->t[i];
@@ -699,6 +742,31 @@ hpet_attach(device_t dev)
 			maxhpetet++;
 		}
 	}
+
+	sc->pdev = make_dev(&hpet_cdevsw, 0, UID_ROOT, GID_WHEEL,
+	    0600, "hpet%d", device_get_unit(dev));
+	if (sc->pdev) {
+		sc->pdev->si_drv1 = sc;
+		sc->mmap_allow = 1;
+		TUNABLE_INT_FETCH("hw.acpi.hpet.mmap_allow",
+		    &sc->mmap_allow);
+		sc->mmap_allow_write = 1;
+		TUNABLE_INT_FETCH("hw.acpi.hpet.mmap_allow_write",
+		    &sc->mmap_allow_write);
+		SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+		    OID_AUTO, "mmap_allow",
+		    CTLFLAG_RW, &sc->mmap_allow, 0,
+		    "Allow userland to memory map HPET");
+		SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+		    OID_AUTO, "mmap_allow_write",
+		    CTLFLAG_RW, &sc->mmap_allow_write, 0,
+		    "Allow userland write to the HPET register space");
+	} else
+		device_printf(dev, "could not create /dev/hpet%d\n",
+		    device_get_unit(dev));
+
 	return (0);
 }
 
@@ -743,8 +811,8 @@ hpet_resume(device_t dev)
 #ifdef DEV_APIC
 		if (t->irq >= 0 && (sc->legacy_route == 0 || i >= 2)) {
 			uint64_t addr;
-			uint32_t data;	
-			
+			uint32_t data;
+
 			if (PCIB_MAP_MSI(
 			    device_get_parent(device_get_parent(dev)), dev,
 			    t->irq, &addr, &data) == 0) {
@@ -815,7 +883,7 @@ hpet_remap_intr(device_t dev, device_t child, u_int irq)
 	struct hpet_softc *sc = device_get_softc(dev);
 	struct hpet_timer *t;
 	uint64_t addr;
-	uint32_t data;	
+	uint32_t data;
 	int error, i;
 
 	for (i = 0; i < sc->num_timers; i++) {
@@ -850,7 +918,7 @@ static device_method_t hpet_methods[] = {
 	DEVMETHOD(bus_remap_intr, hpet_remap_intr),
 #endif
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t	hpet_driver = {

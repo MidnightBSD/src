@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/Osd/OsdStream.c 193530 2009-06-05 18:44:36Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdStream.c 193530 2009-06-05 18:44:36Z jkim $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 

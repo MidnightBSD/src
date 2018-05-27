@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_pcib.c 253426 2013-07-17 14:04:18Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_pcib.c 279195 2015-02-23 01:17:45Z kib $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -96,7 +96,7 @@ prt_attach_devices(ACPI_PCI_ROUTING_TABLE *entry, void *arg)
     int error;
 
     /* We only care about entries that reference a link device. */
-    if (entry->Source == NULL || entry->Source[0] == '\0')
+    if (entry->Source[0] == '\0')
 	return;
 
     /*
@@ -130,7 +130,8 @@ prt_attach_devices(ACPI_PCI_ROUTING_TABLE *entry, void *arg)
 int
 acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
 {
-    ACPI_STATUS			status;
+    ACPI_STATUS status;
+    int error;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
@@ -160,7 +161,8 @@ acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
      */
     prt_walk_table(prt, prt_attach_devices, dev);
 
-    return_VALUE (bus_generic_attach(dev));
+    error = bus_generic_attach(dev);
+    return_VALUE(error);
 }
 
 static void
@@ -221,7 +223,7 @@ acpi_pcib_route_interrupt(device_t pcib, device_t dev, int pin,
     if (bootverbose) {
 	device_printf(pcib, "matched entry for %d.%d.INT%c",
 	    pci_get_bus(dev), pci_get_slot(dev), 'A' + pin);
-	if (prt->Source != NULL && prt->Source[0] != '\0')
+	if (prt->Source[0] != '\0')
 		printf(" (src %s:%u)", prt->Source, prt->SourceIndex);
 	printf("\n");
     }
@@ -233,8 +235,7 @@ acpi_pcib_route_interrupt(device_t pcib, device_t dev, int pin,
      * XXX: If the source index is non-zero, ignore the source device and
      * assume that this is a hard-wired entry.
      */
-    if (prt->Source == NULL || prt->Source[0] == '\0' ||
-	prt->SourceIndex != 0) {
+    if (prt->Source[0] == '\0' || prt->SourceIndex != 0) {
 	if (bootverbose)
 	    device_printf(pcib, "slot %d INT%c hardwired to IRQ %d\n",
 		pci_get_slot(dev), 'A' + pin, prt->SourceIndex);
@@ -265,7 +266,7 @@ acpi_pcib_route_interrupt(device_t pcib, device_t dev, int pin,
 out:
     ACPI_SERIAL_END(pcib);
 
-    return_VALUE (interrupt);
+    return_VALUE(interrupt);
 }
 
 int
@@ -277,4 +278,3 @@ acpi_pcib_power_for_sleep(device_t pcib, device_t dev, int *pstate)
     acpi_device_pwr_for_sleep(acpi_dev, dev, pstate);
     return (0);
 }
-

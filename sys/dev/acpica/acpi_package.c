@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_package.c 202771 2010-01-21 21:14:28Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_package.c 315021 2017-03-10 19:34:14Z vangyzen $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -51,7 +51,7 @@ acpi_PkgInt(ACPI_OBJECT *res, int idx, UINT64 *dst)
     ACPI_OBJECT		*obj;
 
     obj = &res->Package.Elements[idx];
-    if (obj == NULL || obj->Type != ACPI_TYPE_INTEGER)
+    if (obj->Type != ACPI_TYPE_INTEGER)
 	return (EINVAL);
     *dst = obj->Integer.Value;
 

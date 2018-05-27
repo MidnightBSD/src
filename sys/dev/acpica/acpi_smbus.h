@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_smbus.h 151564 2005-10-23 00:20:13Z njl $
+ *	$FreeBSD: stable/10/sys/dev/acpica/acpi_smbus.h 151564 2005-10-23 00:20:13Z njl $
  */
 
 #ifndef _ACPI_SMBUS_H_

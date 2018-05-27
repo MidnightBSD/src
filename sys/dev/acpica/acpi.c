@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi.c 251754 2013-06-14 18:30:43Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi.c 306536 2016-09-30 22:40:58Z jkim $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -101,6 +101,7 @@ int		acpi_quirks;
 /* Supported sleep states. */
 static BOOLEAN	acpi_sleep_states[ACPI_S_STATE_COUNT];
 
+static void	acpi_lookup(void *arg, const char *name, device_t *dev);
 static int	acpi_modevent(struct module *mod, int event, void *junk);
 static int	acpi_probe(device_t dev);
 static int	acpi_attach(device_t dev);
@@ -208,6 +209,7 @@ static device_method_t acpi_methods[] = {
     DEVMETHOD(bus_setup_intr,		bus_generic_setup_intr),
     DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
     DEVMETHOD(bus_hint_device_unit,	acpi_hint_device_unit),
+    DEVMETHOD(bus_get_domain,		acpi_get_domain),
 
     /* ACPI bus */
     DEVMETHOD(acpi_id_probe,		acpi_device_id_probe),
@@ -218,7 +220,7 @@ static device_method_t acpi_methods[] = {
     /* ISA emulation */
     DEVMETHOD(isa_pnp_probe,		acpi_isa_pnp_probe),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_driver = {
@@ -256,16 +258,6 @@ static char acpi_remove_interface[256];
 TUNABLE_STR("hw.acpi.remove_interface", acpi_remove_interface,
     sizeof(acpi_remove_interface));
 
-/*
- * Allow override of whether methods execute in parallel or not.
- * Enable this for serial behavior, which fixes "AE_ALREADY_EXISTS"
- * errors for AML that really can't handle parallel method execution.
- * It is off by default since this breaks recursive methods and
- * some IBMs use such code.
- */
-static int acpi_serialize_methods;
-TUNABLE_INT("hw.acpi.serialize_methods", &acpi_serialize_methods);
-
 /* Allow users to dump Debug objects without ACPI debugger. */
 static int acpi_debug_objects;
 TUNABLE_INT("debug.acpi.enable_debug_objects", &acpi_debug_objects);
@@ -278,6 +270,12 @@ static int acpi_interpreter_slack = 1;
 TUNABLE_INT("debug.acpi.interpreter_slack", &acpi_interpreter_slack);
 SYSCTL_INT(_debug_acpi, OID_AUTO, interpreter_slack, CTLFLAG_RDTUN,
     &acpi_interpreter_slack, 1, "Turn on interpreter slack mode.");
+
+/* Ignore register widths set by FADT and use default widths instead. */
+static int acpi_ignore_reg_width = 1;
+TUNABLE_INT("debug.acpi.default_register_width", &acpi_ignore_reg_width);
+SYSCTL_INT(_debug_acpi, OID_AUTO, default_register_width, CTLFLAG_RDTUN,
+    &acpi_ignore_reg_width, 1, "Ignore register widths set by FADT");
 
 #ifdef __amd64__
 /* Reset system clock while resuming.  XXX Remove once tested. */
@@ -432,7 +430,7 @@ acpi_probe(device_t dev)
 
     device_set_desc(dev, acpi_desc);
 
-    return_VALUE (0);
+    return_VALUE (BUS_PROBE_NOWILDCARD);
 }
 
 static int
@@ -474,9 +472,9 @@ acpi_attach(device_t dev)
      * Set the globals from our tunables.  This is needed because ACPI-CA
      * uses UINT8 for some values and we have no tunable_byte.
      */
-    AcpiGbl_AllMethodsSerialized = acpi_serialize_methods ? TRUE : FALSE;
     AcpiGbl_EnableInterpreterSlack = acpi_interpreter_slack ? TRUE : FALSE;
     AcpiGbl_EnableAmlDebugObject = acpi_debug_objects ? TRUE : FALSE;
+    AcpiGbl_UseDefaultRegisterWidths = acpi_ignore_reg_width ? TRUE : FALSE;
 
 #ifndef ACPI_DEBUG
     /*
@@ -614,7 +612,9 @@ acpi_attach(device_t dev)
     /* Probe all supported sleep states. */
     acpi_sleep_states[ACPI_STATE_S0] = TRUE;
     for (state = ACPI_STATE_S1; state < ACPI_S_STATE_COUNT; state++)
-	if (ACPI_SUCCESS(AcpiGetSleepTypeData(state, &TypeA, &TypeB)))
+	if (ACPI_SUCCESS(AcpiEvaluateObject(ACPI_ROOT_OBJECT,
+	    __DECONST(char *, AcpiGbl_SleepStateNames[state]), NULL, NULL)) &&
+	    ACPI_SUCCESS(AcpiGetSleepTypeData(state, &TypeA, &TypeB)))
 	    acpi_sleep_states[state] = TRUE;
 
     /*
@@ -672,8 +672,10 @@ acpi_attach(device_t dev)
     /* Register ACPI again to pass the correct argument of pm_func. */
     power_pm_register(POWER_PM_TYPE_ACPI, acpi_pm_func, sc);
 
-    if (!acpi_disabled("bus"))
+    if (!acpi_disabled("bus")) {
+	EVENTHANDLER_REGISTER(dev_lookup, acpi_lookup, NULL, 1000);
 	acpi_probe_children(dev);
+    }
 
     /* Update all GPEs and enable runtime GPEs. */
     status = AcpiUpdateAllGpes();
@@ -796,6 +798,7 @@ acpi_print_child(device_t bus, device_t child)
     retval += resource_list_print_type(rl, "drq",   SYS_RES_DRQ,    "%ld");
     if (device_get_flags(child))
 	retval += printf(" flags %#x", device_get_flags(child));
+    retval += bus_print_child_domain(bus, child);
     retval += bus_print_child_footer(bus, child);
 
     return (retval);
@@ -852,11 +855,18 @@ acpi_child_location_str_method(device_t cbdev, device_t child, char *buf,
     size_t buflen)
 {
     struct acpi_device *dinfo = device_get_ivars(child);
+    char buf2[32];
+    int pxm;
 
-    if (dinfo->ad_handle)
-	snprintf(buf, buflen, "handle=%s", acpi_name(dinfo->ad_handle));
-    else
-	snprintf(buf, buflen, "unknown");
+    if (dinfo->ad_handle) {
+        snprintf(buf, buflen, "handle=%s", acpi_name(dinfo->ad_handle));
+        if (ACPI_SUCCESS(acpi_GetInteger(dinfo->ad_handle, "_PXM", &pxm))) {
+                snprintf(buf2, 32, " _PXM=%d", pxm);
+                strlcat(buf, buf2, buflen);
+        }
+    } else {
+        snprintf(buf, buflen, "unknown");
+    }
     return (0);
 }
 
@@ -1059,6 +1069,35 @@ acpi_hint_device_unit(device_t acdev, device_t child, const char *name,
 	    break;
 	}
     }
+}
+
+/*
+ * Fech the NUMA domain for the given device.
+ *
+ * If a device has a _PXM method, map that to a NUMA domain.
+ *
+ * If none is found, then it'll call the parent method.
+ * If there's no domain, return ENOENT.
+ */
+int
+acpi_get_domain(device_t dev, device_t child, int *domain)
+{
+#if MAXMEMDOM > 1
+	ACPI_HANDLE h;
+	int d, pxm;
+
+	h = acpi_get_handle(child);
+	if ((h != NULL) &&
+	    ACPI_SUCCESS(acpi_GetInteger(h, "_PXM", &pxm))) {
+		d = acpi_map_pxm_to_vm_domainid(pxm);
+		if (d < 0)
+			return (ENOENT);
+		*domain = d;
+		return (0);
+	}
+#endif
+	/* No _PXM node; go up a level */
+	return (bus_generic_get_domain(dev, child, domain));
 }
 
 /*
@@ -1505,7 +1544,7 @@ static int
 acpi_isa_get_compatid(device_t dev, uint32_t *cids, int count)
 {
     ACPI_DEVICE_INFO	*devinfo;
-    ACPI_DEVICE_ID	*ids;
+    ACPI_PNP_DEVICE_ID	*ids;
     ACPI_HANDLE		h;
     uint32_t		*pnpid;
     int			i, valid;
@@ -2413,6 +2452,46 @@ acpi_AppendBufferResource(ACPI_BUFFER *buf, ACPI_RESOURCE *res)
     return (AE_OK);
 }
 
+ACPI_STATUS
+acpi_EvaluateOSC(ACPI_HANDLE handle, uint8_t *uuid, int revision, int count,
+    uint32_t *caps_in, uint32_t *caps_out, bool query)
+{
+	ACPI_OBJECT arg[4], *ret;
+	ACPI_OBJECT_LIST arglist;
+	ACPI_BUFFER buf;
+	ACPI_STATUS status;
+
+	arglist.Pointer = arg;
+	arglist.Count = 4;
+	arg[0].Type = ACPI_TYPE_BUFFER;
+	arg[0].Buffer.Length = ACPI_UUID_LENGTH;
+	arg[0].Buffer.Pointer = uuid;
+	arg[1].Type = ACPI_TYPE_INTEGER;
+	arg[1].Integer.Value = revision;
+	arg[2].Type = ACPI_TYPE_INTEGER;
+	arg[2].Integer.Value = count;
+	arg[3].Type = ACPI_TYPE_BUFFER;
+	arg[3].Buffer.Length = count * sizeof(*caps_in);
+	arg[3].Buffer.Pointer = (uint8_t *)caps_in;
+	caps_in[0] = query ? 1 : 0;
+	buf.Pointer = NULL;
+	buf.Length = ACPI_ALLOCATE_BUFFER;
+	status = AcpiEvaluateObjectTyped(handle, "_OSC", &arglist, &buf,
+	    ACPI_TYPE_BUFFER);
+	if (ACPI_FAILURE(status))
+		return (status);
+	if (caps_out != NULL) {
+		ret = buf.Pointer;
+		if (ret->Buffer.Length != count * sizeof(*caps_out)) {
+			AcpiOsFree(buf.Pointer);
+			return (AE_BUFFER_OVERFLOW);
+		}
+		bcopy(ret->Buffer.Pointer, caps_out, ret->Buffer.Length);
+	}
+	AcpiOsFree(buf.Pointer);
+	return (status);
+}
+
 /*
  * Set interrupt model.
  */
@@ -2511,8 +2590,11 @@ acpi_ReqSleepState(struct acpi_softc *sc, int state)
     if (!acpi_sleep_states[state])
 	return (EOPNOTSUPP);
 
-    /* If a suspend request is already in progress, just return. */
-    if (sc->acpi_next_sstate != 0) {
+    /*
+     * If a reboot/shutdown/suspend request is already in progress or
+     * suspend is blocked due to an upcoming shutdown, just return.
+     */
+    if (rebooting || sc->acpi_next_sstate != 0 || suspend_blocked) {
 	return (0);
     }
 
@@ -2714,6 +2796,8 @@ acpi_EnterSleepState(struct acpi_softc *sc, int state)
 	return_ACPI_STATUS (AE_OK);
     }
 
+    EVENTHANDLER_INVOKE(power_suspend_early);
+    stop_all_proc();
     EVENTHANDLER_INVOKE(power_suspend);
 
     if (smp_started) {
@@ -2782,6 +2866,7 @@ acpi_EnterSleepState(struct acpi_softc *sc, int state)
 	if (sleep_result == 1 && state != ACPI_STATE_S4)
 	    AcpiWriteBitRegister(ACPI_BITREG_SCI_ENABLE, ACPI_ENABLE_EVENT);
 
+	AcpiLeaveSleepStatePrep(state);
 
 	if (sleep_result == 1 && state == ACPI_STATE_S3) {
 	    /*
@@ -2819,6 +2904,7 @@ acpi_EnterSleepState(struct acpi_softc *sc, int state)
 	    AcpiEnable();
     } else {
 	status = AcpiEnterSleepState(state);
+	AcpiLeaveSleepStatePrep(state);
 	intr_restore(intr);
 	if (ACPI_FAILURE(status)) {
 	    device_printf(sc->acpi_dev, "AcpiEnterSleepState failed - %s\n",
@@ -2854,6 +2940,8 @@ backout:
 	sched_unbind(curthread);
 	thread_unlock(curthread);
     }
+
+    resume_all_proc();
 
     EVENTHANDLER_INVOKE(power_resume);
 
@@ -3360,6 +3448,31 @@ acpi_disabled(char *subsys)
     return (0);
 }
 
+static void
+acpi_lookup(void *arg, const char *name, device_t *dev)
+{
+    ACPI_HANDLE handle;
+
+    if (*dev != NULL)
+	return;
+
+    /*
+     * Allow any handle name that is specified as an absolute path and
+     * starts with '\'.  We could restrict this to \_SB and friends,
+     * but see acpi_probe_children() for notes on why we scan the entire
+     * namespace for devices.
+     *
+     * XXX: The pathname argument to AcpiGetHandle() should be fixed to
+     * be const.
+     */
+    if (name[0] != '\\')
+	return;
+    if (ACPI_FAILURE(AcpiGetHandle(ACPI_ROOT_OBJECT, __DECONST(char *, name),
+	&handle)))
+	return;
+    *dev = acpi_get_device(handle);
+}
+
 /*
  * Control interface.
  *
@@ -3570,7 +3683,7 @@ acpi_UserNotify(const char *subsystem, ACPI_HANDLE h, uint8_t notify)
 
     handle_buf.Pointer = NULL;
     handle_buf.Length = ACPI_ALLOCATE_BUFFER;
-    status = AcpiNsHandleToPathname(h, &handle_buf);
+    status = AcpiNsHandleToPathname(h, &handle_buf, FALSE);
     if (ACPI_FAILURE(status))
 	return;
     snprintf(notify_buf, sizeof(notify_buf), "notify=0x%02x", notify);

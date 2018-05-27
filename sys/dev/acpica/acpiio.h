@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/acpica/acpiio.h 216503 2010-12-17 16:21:30Z avg $
+ * $FreeBSD: stable/10/sys/dev/acpica/acpiio.h 216503 2010-12-17 16:21:30Z avg $
  */
 
 #ifndef _ACPIIO_H_

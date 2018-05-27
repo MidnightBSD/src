@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_acad.c 197649 2009-09-30 17:07:49Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_acad.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -75,7 +75,7 @@ static device_method_t acpi_acad_methods[] = {
     DEVMETHOD(device_probe,	acpi_acad_probe),
     DEVMETHOD(device_attach,	acpi_acad_attach),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_acad_driver = {

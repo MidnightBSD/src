@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_pci_link.c 251754 2013-06-14 18:30:43Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_pci_link.c 249767 2013-04-22 15:51:06Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -1108,7 +1108,7 @@ static device_method_t acpi_pci_link_methods[] = {
 	DEVMETHOD(device_attach,	acpi_pci_link_attach),
 	DEVMETHOD(device_resume,	acpi_pci_link_resume),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_pci_link_driver = {

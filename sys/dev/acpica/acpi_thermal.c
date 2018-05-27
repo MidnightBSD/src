@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_thermal.c 260881 2014-01-19 13:51:46Z dumbbell $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_thermal.c 255077 2013-08-30 19:21:12Z dumbbell $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -154,7 +154,7 @@ static device_method_t acpi_tz_methods[] = {
     DEVMETHOD(device_probe,	acpi_tz_probe),
     DEVMETHOD(device_attach,	acpi_tz_attach),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_tz_driver = {

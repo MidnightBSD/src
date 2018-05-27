@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/acpica/acpivar.h 247881 2013-03-06 10:23:56Z avg $
+ * $FreeBSD: stable/10/sys/dev/acpica/acpivar.h 303229 2016-07-23 17:41:47Z jhb $
  */
 
 #ifndef _ACPIVAR_H_
@@ -72,8 +72,6 @@ struct acpi_softc {
     int			acpi_verbose;
     int			acpi_handle_reboot;
 
-    bus_dma_tag_t	acpi_waketag;
-    bus_dmamap_t	acpi_wakemap;
     vm_offset_t		acpi_wakeaddr;
     vm_paddr_t		acpi_wakephys;
 
@@ -188,7 +186,7 @@ extern struct mtx			acpi_mutex;
  * Various features and capabilities for the acpi_get_features() method.
  * In particular, these are used for the ACPI 3.0 _PDC and _OSC methods.
  * See the Intel document titled "Intel Processor Vendor-Specific ACPI",
- * number 302223-005.
+ * number 302223-007.
  */
 #define	ACPI_CAP_PERF_MSRS	(1 << 0)  /* Intel SpeedStep PERF_CTL MSRs */
 #define	ACPI_CAP_C1_IO_HALT	(1 << 1)  /* Intel C1 "IO then halt" sequence */
@@ -201,6 +199,9 @@ extern struct mtx			acpi_mutex;
 #define	ACPI_CAP_SMP_C1_NATIVE	(1 << 8)  /* MP C1 support other than halt */
 #define	ACPI_CAP_SMP_C3_NATIVE	(1 << 9)  /* MP C2 and C3 support */
 #define	ACPI_CAP_PX_HW_COORD	(1 << 11) /* Intel P-state HW coordination */
+#define	ACPI_CAP_INTR_CPPC	(1 << 12) /* Native Interrupt Handling for
+	     Collaborative Processor Performance Control notifications */
+#define	ACPI_CAP_HW_DUTY_C	(1 << 13) /* Hardware Duty Cycling */
 
 /*
  * Quirk flags.
@@ -269,7 +270,7 @@ acpi_get_type(device_t dev)
 
     if ((h = acpi_get_handle(dev)) == NULL)
 	return (ACPI_TYPE_NOT_FOUND);
-    if (AcpiGetType(h, &t) != AE_OK)
+    if (ACPI_FAILURE(AcpiGetType(h, &t)))
 	return (ACPI_TYPE_NOT_FOUND);
     return (t);
 }
@@ -335,6 +336,9 @@ ACPI_STATUS	acpi_FindIndexedResource(ACPI_BUFFER *buf, int index,
 		    ACPI_RESOURCE **resp);
 ACPI_STATUS	acpi_AppendBufferResource(ACPI_BUFFER *buf,
 		    ACPI_RESOURCE *res);
+ACPI_STATUS	acpi_EvaluateOSC(ACPI_HANDLE handle, uint8_t *uuid,
+		    int revision, int count, uint32_t *caps_in,
+		    uint32_t *caps_out, bool query);
 ACPI_STATUS	acpi_OverrideInterruptLevel(UINT32 InterruptNumber);
 ACPI_STATUS	acpi_SetIntrModel(int model);
 int		acpi_ReqSleepState(struct acpi_softc *sc, int state);
@@ -491,6 +495,17 @@ ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 #define	KTR_ACPI		KTR_DEV
 
 SYSCTL_DECL(_debug_acpi);
+
+/*
+ * Map a PXM to a VM domain.
+ *
+ * Returns the VM domain ID if found, or -1 if not found / invalid.
+ */
+#if MAXMEMDOM > 1
+extern	int acpi_map_pxm_to_vm_domainid(int pxm);
+#endif
+
+extern	int acpi_get_domain(device_t dev, device_t child, int *domain);
 
 #endif /* _KERNEL */
 #endif /* !_ACPIVAR_H_ */

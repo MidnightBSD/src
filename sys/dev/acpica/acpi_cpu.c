@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005 Nate Lawson (SDG)
  * Copyright (c) 2001 Michael Smith
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_cpu.c 244618 2012-12-23 12:09:41Z avg $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_cpu.c 303229 2016-07-23 17:41:47Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -85,6 +86,7 @@ struct acpi_cpu_softc {
     int			 cpu_prev_sleep;/* Last idle sleep duration. */
     int			 cpu_features;	/* Child driver supported features. */
     /* Runtime state. */
+    int			 cpu_non_c2;	/* Index of lowest non-C2 state. */
     int			 cpu_non_c3;	/* Index of lowest non-C3 state. */
     u_int		 cpu_cx_stats[MAX_CX_STATES];/* Cx usage history. */
     /* Values for sysctl. */
@@ -168,9 +170,10 @@ static int	acpi_cpu_cx_cst(struct acpi_cpu_softc *sc);
 static void	acpi_cpu_startup(void *arg);
 static void	acpi_cpu_startup_cx(struct acpi_cpu_softc *sc);
 static void	acpi_cpu_cx_list(struct acpi_cpu_softc *sc);
-static void	acpi_cpu_idle(void);
+static void	acpi_cpu_idle(sbintime_t sbt);
 static void	acpi_cpu_notify(ACPI_HANDLE h, UINT32 notify, void *context);
-static int	acpi_cpu_quirks(void);
+static void	acpi_cpu_quirks(void);
+static void	acpi_cpu_quirks_piix4(void);
 static int	acpi_cpu_usage_sysctl(SYSCTL_HANDLER_ARGS);
 static int	acpi_cpu_set_cx_lowest(struct acpi_cpu_softc *sc);
 static int	acpi_cpu_cx_lowest_sysctl(SYSCTL_HANDLER_ARGS);
@@ -273,7 +276,7 @@ static int
 acpi_cpu_attach(device_t dev)
 {
     ACPI_BUFFER		   buf;
-    ACPI_OBJECT		   arg[4], *obj;
+    ACPI_OBJECT		   arg, *obj;
     ACPI_OBJECT_LIST	   arglist;
     struct pcpu		   *pcpu_data;
     struct acpi_cpu_softc *sc;
@@ -357,31 +360,19 @@ acpi_cpu_attach(device_t dev)
      * Intel Processor Vendor-Specific ACPI Interface Specification.
      */
     if (sc->cpu_features) {
-	arglist.Pointer = arg;
-	arglist.Count = 4;
-	arg[0].Type = ACPI_TYPE_BUFFER;
-	arg[0].Buffer.Length = sizeof(cpu_oscuuid);
-	arg[0].Buffer.Pointer = cpu_oscuuid;	/* UUID */
-	arg[1].Type = ACPI_TYPE_INTEGER;
-	arg[1].Integer.Value = 1;		/* revision */
-	arg[2].Type = ACPI_TYPE_INTEGER;
-	arg[2].Integer.Value = 1;		/* count */
-	arg[3].Type = ACPI_TYPE_BUFFER;
-	arg[3].Buffer.Length = sizeof(cap_set);	/* Capabilities buffer */
-	arg[3].Buffer.Pointer = (uint8_t *)cap_set;
-	cap_set[0] = 0;				/* status */
 	cap_set[1] = sc->cpu_features;
-	status = AcpiEvaluateObject(sc->cpu_handle, "_OSC", &arglist, NULL);
+	status = acpi_EvaluateOSC(sc->cpu_handle, cpu_oscuuid, 1, 2, cap_set,
+	    cap_set, false);
 	if (ACPI_SUCCESS(status)) {
 	    if (cap_set[0] != 0)
 		device_printf(dev, "_OSC returned status %#x\n", cap_set[0]);
 	}
 	else {
-	    arglist.Pointer = arg;
+	    arglist.Pointer = &arg;
 	    arglist.Count = 1;
-	    arg[0].Type = ACPI_TYPE_BUFFER;
-	    arg[0].Buffer.Length = sizeof(cap_set);
-	    arg[0].Buffer.Pointer = (uint8_t *)cap_set;
+	    arg.Type = ACPI_TYPE_BUFFER;
+	    arg.Buffer.Length = sizeof(cap_set);
+	    arg.Buffer.Pointer = (uint8_t *)cap_set;
 	    cap_set[0] = 1; /* revision */
 	    cap_set[1] = 1; /* number of capabilities integers */
 	    cap_set[2] = sc->cpu_features;
@@ -664,8 +655,10 @@ acpi_cpu_generic_cx_probe(struct acpi_cpu_softc *sc)
     cx_ptr->type = ACPI_STATE_C1;
     cx_ptr->trans_lat = 0;
     cx_ptr++;
+    sc->cpu_non_c2 = sc->cpu_cx_count;
     sc->cpu_non_c3 = sc->cpu_cx_count;
     sc->cpu_cx_count++;
+    cpu_deepest_sleep = 1;
 
     /* 
      * The spec says P_BLK must be 6 bytes long.  However, some systems
@@ -691,6 +684,7 @@ acpi_cpu_generic_cx_probe(struct acpi_cpu_softc *sc)
 	    cx_ptr++;
 	    sc->cpu_non_c3 = sc->cpu_cx_count;
 	    sc->cpu_cx_count++;
+	    cpu_deepest_sleep = 2;
 	}
     }
     if (sc->cpu_p_blk_len < 6)
@@ -707,7 +701,7 @@ acpi_cpu_generic_cx_probe(struct acpi_cpu_softc *sc)
 	    cx_ptr->trans_lat = AcpiGbl_FADT.C3Latency;
 	    cx_ptr++;
 	    sc->cpu_cx_count++;
-	    cpu_can_deep_sleep = 1;
+	    cpu_deepest_sleep = 3;
 	}
     }
 }
@@ -753,6 +747,7 @@ acpi_cpu_cx_cst(struct acpi_cpu_softc *sc)
 	count = MAX_CX_STATES;
     }
 
+    sc->cpu_non_c2 = 0;
     sc->cpu_non_c3 = 0;
     sc->cpu_cx_count = 0;
     cx_ptr = sc->cpu_cx_states;
@@ -764,6 +759,7 @@ acpi_cpu_cx_cst(struct acpi_cpu_softc *sc)
     cx_ptr->type = ACPI_STATE_C0;
     cx_ptr++;
     sc->cpu_cx_count++;
+    cpu_deepest_sleep = 1;
 
     /* Set up all valid states. */
     for (i = 0; i < count; i++) {
@@ -784,6 +780,7 @@ acpi_cpu_cx_cst(struct acpi_cpu_softc *sc)
 		/* This is the first C1 state.  Use the reserved slot. */
 		sc->cpu_cx_states[0] = *cx_ptr;
 	    } else {
+		sc->cpu_non_c2 = sc->cpu_cx_count;
 		sc->cpu_non_c3 = sc->cpu_cx_count;
 		cx_ptr++;
 		sc->cpu_cx_count++;
@@ -791,6 +788,8 @@ acpi_cpu_cx_cst(struct acpi_cpu_softc *sc)
 	    continue;
 	case ACPI_STATE_C2:
 	    sc->cpu_non_c3 = sc->cpu_cx_count;
+	    if (cpu_deepest_sleep < 2)
+		    cpu_deepest_sleep = 2;
 	    break;
 	case ACPI_STATE_C3:
 	default:
@@ -800,7 +799,7 @@ acpi_cpu_cx_cst(struct acpi_cpu_softc *sc)
 				 device_get_unit(sc->cpu_dev), i));
 		continue;
 	    } else
-		cpu_can_deep_sleep = 1;
+		cpu_deepest_sleep = 3;
 	    break;
 	}
 
@@ -872,7 +871,7 @@ acpi_cpu_startup(void *arg)
 	for (i = 0; i < cpu_ndevices; i++) {
 	    sc = device_get_softc(cpu_devices[i]);
 	    if (cpu_quirks & CPU_QUIRK_NO_C3) {
-		sc->cpu_cx_count = sc->cpu_non_c3 + 1;
+		sc->cpu_cx_count = min(sc->cpu_cx_count, sc->cpu_non_c3 + 1);
 	    }
 	    AcpiInstallNotifyHandler(sc->cpu_handle, ACPI_DEVICE_NOTIFY,
 		acpi_cpu_notify, sc);
@@ -954,13 +953,13 @@ acpi_cpu_startup_cx(struct acpi_cpu_softc *sc)
  * interrupts are re-enabled.
  */
 static void
-acpi_cpu_idle()
+acpi_cpu_idle(sbintime_t sbt)
 {
     struct	acpi_cpu_softc *sc;
     struct	acpi_cx *cx_next;
     uint64_t	cputicks;
     uint32_t	start_time, end_time;
-    int		bm_active, cx_next_idx, i;
+    int		bm_active, cx_next_idx, i, us;
 
     /*
      * Look up our CPU id to get our softc.  If it's NULL, we'll use C1
@@ -980,13 +979,18 @@ acpi_cpu_idle()
     }
 
     /* Find the lowest state that has small enough latency. */
+    us = sc->cpu_prev_sleep;
+    if (sbt >= 0 && us > (sbt >> 12))
+	us = (sbt >> 12);
     cx_next_idx = 0;
-    if (cpu_disable_deep_sleep)
+    if (cpu_disable_c2_sleep)
+	i = min(sc->cpu_cx_lowest, sc->cpu_non_c2);
+    else if (cpu_disable_c3_sleep)
 	i = min(sc->cpu_cx_lowest, sc->cpu_non_c3);
     else
 	i = sc->cpu_cx_lowest;
     for (; i >= 0; i--) {
-	if (sc->cpu_cx_states[i].trans_lat * 3 <= sc->cpu_prev_sleep) {
+	if (sc->cpu_cx_states[i].trans_lat * 3 <= us) {
 	    cx_next_idx = i;
 	    break;
 	}
@@ -1111,12 +1115,9 @@ acpi_cpu_notify(ACPI_HANDLE h, UINT32 notify, void *context)
     acpi_UserNotify("PROCESSOR", sc->cpu_handle, notify);
 }
 
-static int
+static void
 acpi_cpu_quirks(void)
 {
-    device_t acpi_dev;
-    uint32_t val;
-
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
     /*
@@ -1150,6 +1151,16 @@ acpi_cpu_quirks(void)
     }
 
     /* Look for various quirks of the PIIX4 part. */
+    acpi_cpu_quirks_piix4();
+}
+
+static void
+acpi_cpu_quirks_piix4(void)
+{
+#ifdef __i386__
+    device_t acpi_dev;
+    uint32_t val;
+
     acpi_dev = pci_find_device(PCI_VENDOR_INTEL, PCI_DEVICE_82371AB_3);
     if (acpi_dev != NULL) {
 	switch (pci_get_revid(acpi_dev)) {
@@ -1198,8 +1209,7 @@ acpi_cpu_quirks(void)
 	    break;
 	}
     }
-
-    return (0);
+#endif
 }
 
 static int

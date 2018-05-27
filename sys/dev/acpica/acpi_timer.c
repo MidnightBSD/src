@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_timer.c 232086 2012-02-23 22:26:14Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_timer.c 255726 2013-09-20 05:06:03Z gibbs $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -83,7 +83,7 @@ static device_method_t acpi_timer_methods[] = {
     DEVMETHOD(device_probe,	acpi_timer_probe),
     DEVMETHOD(device_attach,	acpi_timer_attach),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_timer_driver = {
@@ -190,6 +190,7 @@ acpi_timer_probe(device_t dev)
     else
 	acpi_timer_timecounter.tc_counter_mask = 0x00ffffff;
     acpi_timer_timecounter.tc_frequency = acpi_timer_frequency;
+    acpi_timer_timecounter.tc_flags = TC_FLAGS_SUSPEND_SAFE;
     if (testenv("debug.acpi.timer_test"))
 	acpi_timer_boot_test();
 
@@ -284,6 +285,14 @@ acpi_timer_suspend_handler(struct timecounter *newtc)
 	if (acpi_timer_eh != NULL) {
 		EVENTHANDLER_DEREGISTER(power_resume, acpi_timer_eh);
 		acpi_timer_eh = NULL;
+	}
+
+	if ((timecounter->tc_flags & TC_FLAGS_SUSPEND_SAFE) != 0) {
+		/*
+		 * If we are using a suspend safe timecounter, don't
+		 * save/restore it across suspend/resume.
+		 */
+		return;
 	}
 
 	KASSERT(newtc == &acpi_timer_timecounter,

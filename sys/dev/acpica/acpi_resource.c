@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_resource.c 267835 2014-06-24 19:58:18Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_resource.c 333080 2018-04-28 00:16:54Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -297,33 +297,33 @@ acpi_parse_resource(ACPI_RESOURCE *res, void *context)
     case ACPI_RESOURCE_TYPE_EXTENDED_ADDRESS64:
 	switch (res->Type) {
 	case ACPI_RESOURCE_TYPE_ADDRESS16:
-	    gran = res->Data.Address16.Granularity;
-	    min = res->Data.Address16.Minimum;
-	    max = res->Data.Address16.Maximum;
-	    length = res->Data.Address16.AddressLength;
+	    gran = res->Data.Address16.Address.Granularity;
+	    min = res->Data.Address16.Address.Minimum;
+	    max = res->Data.Address16.Address.Maximum;
+	    length = res->Data.Address16.Address.AddressLength;
 	    name = "Address16";
 	    break;
 	case ACPI_RESOURCE_TYPE_ADDRESS32:
-	    gran = res->Data.Address32.Granularity;
-	    min = res->Data.Address32.Minimum;
-	    max = res->Data.Address32.Maximum;
-	    length = res->Data.Address32.AddressLength;
+	    gran = res->Data.Address32.Address.Granularity;
+	    min = res->Data.Address32.Address.Minimum;
+	    max = res->Data.Address32.Address.Maximum;
+	    length = res->Data.Address32.Address.AddressLength;
 	    name = "Address32";
 	    break;
 	case ACPI_RESOURCE_TYPE_ADDRESS64:
-	    gran = res->Data.Address64.Granularity;
-	    min = res->Data.Address64.Minimum;
-	    max = res->Data.Address64.Maximum;
-	    length = res->Data.Address64.AddressLength;
+	    gran = res->Data.Address64.Address.Granularity;
+	    min = res->Data.Address64.Address.Minimum;
+	    max = res->Data.Address64.Address.Maximum;
+	    length = res->Data.Address64.Address.AddressLength;
 	    name = "Address64";
 	    break;
 	default:
 	    KASSERT(res->Type == ACPI_RESOURCE_TYPE_EXTENDED_ADDRESS64,
 		("should never happen"));
-	    gran = res->Data.ExtAddress64.Granularity;
-	    min = res->Data.ExtAddress64.Minimum;
-	    max = res->Data.ExtAddress64.Maximum;
-	    length = res->Data.ExtAddress64.AddressLength;
+	    gran = res->Data.ExtAddress64.Address.Granularity;
+	    min = res->Data.ExtAddress64.Address.Minimum;
+	    max = res->Data.ExtAddress64.Address.Maximum;
+	    length = res->Data.ExtAddress64.Address.AddressLength;
 	    name = "ExtAddress64";
 	    break;
 	}
@@ -516,6 +516,24 @@ acpi_res_set_iorange(device_t dev, void *context, uint64_t low,
 
     if (cp == NULL)
 	return;
+
+    /*
+     * XXX: Some BIOSes contain buggy _CRS entries where fixed I/O
+     * ranges have the maximum base address (_MAX) to the end of the
+     * I/O range instead of the start.  These are then treated as a
+     * relocatable I/O range rather than a fixed I/O resource.  As a
+     * workaround, treat I/O resources encoded this way as fixed I/O
+     * ports.
+     */
+    if (high == (low + length)) {
+	if (bootverbose)
+	    device_printf(dev,
+		"_CRS has fixed I/O port range defined as relocatable\n");
+
+	bus_set_resource(dev, SYS_RES_IOPORT, cp->ar_nio++, low, length);
+	return;
+    }
+
     device_printf(dev, "I/O range not supported\n");
 }
 
@@ -627,7 +645,7 @@ static device_method_t acpi_sysres_methods[] = {
     DEVMETHOD(device_probe,	acpi_sysres_probe),
     DEVMETHOD(device_attach,	acpi_sysres_attach),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_sysres_driver = {

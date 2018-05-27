@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_throttle.c 193530 2009-06-05 18:44:36Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_throttle.c 283892 2015-06-01 19:26:24Z jkim $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -97,7 +97,7 @@ static void	acpi_throttle_identify(driver_t *driver, device_t parent);
 static int	acpi_throttle_probe(device_t dev);
 static int	acpi_throttle_attach(device_t dev);
 static int	acpi_throttle_evaluate(struct acpi_throttle_softc *sc);
-static int	acpi_throttle_quirks(struct acpi_throttle_softc *sc);
+static void	acpi_throttle_quirks(struct acpi_throttle_softc *sc);
 static int	acpi_thr_settings(device_t dev, struct cf_setting *sets,
 		    int *count);
 static int	acpi_thr_set(device_t dev, const struct cf_setting *set);
@@ -115,7 +115,7 @@ static device_method_t acpi_throttle_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	acpi_thr_get),
 	DEVMETHOD(cpufreq_drv_type,	acpi_thr_type),
 	DEVMETHOD(cpufreq_drv_settings,	acpi_thr_settings),
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_throttle_driver = {
@@ -315,9 +315,10 @@ acpi_throttle_evaluate(struct acpi_throttle_softc *sc)
 	return (0);
 }
 
-static int
+static void
 acpi_throttle_quirks(struct acpi_throttle_softc *sc)
 {
+#ifdef __i386__
 	device_t acpi_dev;
 
 	/* Look for various quirks of the PIIX4 part. */
@@ -340,8 +341,7 @@ acpi_throttle_quirks(struct acpi_throttle_softc *sc)
 			break;
 		}
 	}
-
-	return (0);
+#endif
 }
 
 static int

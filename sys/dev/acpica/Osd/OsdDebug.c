@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/Osd/OsdDebug.c 222544 2011-05-31 19:45:58Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdDebug.c 306536 2016-09-30 22:40:58Z jkim $");
 
 #include "opt_ddb.h"
 #include <sys/param.h>
@@ -105,7 +105,7 @@ acpi_EnterDebugger(void)
 
     if (!initted) {
 	printf("Initialising ACPICA debugger...\n");
-	AcpiDbInitialize();
+	AcpiInitializeDebugger();
 	initted = 1;
     }
 

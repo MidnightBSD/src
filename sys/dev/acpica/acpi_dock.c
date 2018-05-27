@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/acpica/acpi_dock.c 209064 2010-06-11 19:53:42Z jkim $
+ * $FreeBSD: stable/10/sys/dev/acpica/acpi_dock.c 246128 2013-01-30 18:01:20Z sbz $
  */
 
 #include "opt_acpi.h"
@@ -522,7 +522,7 @@ static device_method_t acpi_dock_methods[] = {
 	DEVMETHOD(device_probe, acpi_dock_probe),
 	DEVMETHOD(device_attach, acpi_dock_attach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t	acpi_dock_driver = {

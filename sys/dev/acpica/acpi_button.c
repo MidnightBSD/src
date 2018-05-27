@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_button.c 216471 2010-12-15 23:48:45Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_button.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -80,8 +80,7 @@ static device_method_t acpi_button_methods[] = {
     DEVMETHOD(device_suspend,	acpi_button_suspend),
     DEVMETHOD(device_shutdown,	acpi_button_suspend),
     DEVMETHOD(device_resume,	acpi_button_resume),
-
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_button_driver = {

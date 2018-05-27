@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_lid.c 209746 2010-07-06 20:57:28Z jkim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_lid.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -70,7 +70,7 @@ static device_method_t acpi_lid_methods[] = {
     DEVMETHOD(device_suspend,	acpi_lid_suspend),
     DEVMETHOD(device_resume,	acpi_lid_resume),
 
-    {0, 0}
+    DEVMETHOD_END
 };
 
 static driver_t acpi_lid_driver = {

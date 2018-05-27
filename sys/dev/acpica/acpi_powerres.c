@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_powerres.c 267983 2014-06-27 20:57:12Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_powerres.c 267983 2014-06-27 20:57:12Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_powerres.c 267983 2014-06-27 20
  * resource, and only deactivate it when there are no powered devices.
  *
  * Note that this only manages resources for known devices.  There is an
- * ugly case where we may turn of power to a device which is in use because
+ * ugly case where we may turn off power to a device which is in use because
  * we don't know that it depends on a given resource.  We should perhaps
  * try to be smarter about this, but a more complete solution would involve
  * scanning all of the ACPI namespace to find devices we're not currently
