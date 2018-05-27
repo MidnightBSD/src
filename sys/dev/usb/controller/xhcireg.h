@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/xhcireg.h 302267 2016-06-29 10:23:19Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/controller/xhcireg.h 302266 2016-06-29 10:21:45Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.

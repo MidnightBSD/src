@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  * Copyright (c) 2009 Andrew Turner.  All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_s3c24x0.c 308403 2016-11-07 09:23:07Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ohci_s3c24x0.c 308402 2016-11-07 09:19:04Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -60,7 +61,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_s3c24x0.c 308403 2016-1
 
 #include <sys/rman.h>
 
-#include <arm/s3c2xx0/s3c24x0reg.h>
+#include <arm/samsung/s3c2xx0/s3c24x0reg.h>
 
 static device_probe_t ohci_s3c24x0_probe;
 static device_attach_t ohci_s3c24x0_attach;

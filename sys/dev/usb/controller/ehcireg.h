@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/ehcireg.h 214349 2010-10-25 15:51:43Z nwhitehorn $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/controller/ehcireg.h 214349 2010-10-25 15:51:43Z nwhitehorn $ */
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.

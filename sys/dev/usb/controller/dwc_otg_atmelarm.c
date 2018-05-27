@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2012 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/musb_otg_atmelarm.c 308402 2016-11-07 09:19:04Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/dwc_otg_atmelarm.c 278278 2015-02-05 20:03:02Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/musb_otg_atmelarm.c 308402 
 #include <sys/callout.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>
+#include <sys/rman.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -56,88 +57,35 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/musb_otg_atmelarm.c 308402 
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
-#include <dev/usb/controller/musb_otg.h>
 
-#include <sys/rman.h>
+#include <dev/usb/controller/dwc_otg.h>
 
-static device_probe_t musbotg_probe;
-static device_attach_t musbotg_attach;
-static device_detach_t musbotg_detach;
+static device_probe_t dwc_otg_probe;
+static device_attach_t dwc_otg_attach;
+static device_detach_t dwc_otg_detach;
 
-struct musbotg_super_softc {
-	struct musbotg_softc sc_otg;	/* must be first */
+struct dwc_otg_super_softc {
+	struct dwc_otg_softc sc_otg;	/* must be first */
 };
 
-static void
-musbotg_vbus_poll(struct musbotg_super_softc *sc)
-{
-	uint8_t vbus_val = 1;		/* fake VBUS on - TODO */
-
-	/* just forward it */
-	musbotg_vbus_interrupt(&sc->sc_otg, vbus_val);
-}
-
-static void
-musbotg_clocks_on(void *arg)
-{
-#if 0
-	struct musbotg_super_softc *sc = arg;
-
-#endif
-}
-
-static void
-musbotg_clocks_off(void *arg)
-{
-#if 0
-	struct musbotg_super_softc *sc = arg;
-
-#endif
-}
-
-static void
-musbotg_wrapper_interrupt(void *arg)
-{
-
-	/* 
-	 * Nothing to do.
-	 * Main driver takes care about everything 
-	 */
-	musbotg_interrupt(arg, 0, 0, 0);
-}
-
-static void
-musbotg_ep_int_set(struct musbotg_softc *sc, int ep, int on)
-{
-	/* 
-	 * Nothing to do.
-	 * Main driver takes care about everything 
-	 */
-}
-
 static int
-musbotg_probe(device_t dev)
+dwc_otg_probe(device_t dev)
 {
-	device_set_desc(dev, "MUSB OTG integrated USB controller");
+	device_set_desc(dev, "DWC OTG 2.0 integrated USB controller");
 	return (0);
 }
 
 static int
-musbotg_attach(device_t dev)
+dwc_otg_attach(device_t dev)
 {
-	struct musbotg_super_softc *sc = device_get_softc(dev);
+	struct dwc_otg_super_softc *sc = device_get_softc(dev);
 	int err;
 	int rid;
-
-	/* setup MUSB OTG USB controller interface softc */
-	sc->sc_otg.sc_clocks_on = &musbotg_clocks_on;
-	sc->sc_otg.sc_clocks_off = &musbotg_clocks_off;
-	sc->sc_otg.sc_clocks_arg = sc;
 
 	/* initialise some bus fields */
 	sc->sc_otg.sc_bus.parent = dev;
 	sc->sc_otg.sc_bus.devices = sc->sc_otg.sc_devices;
-	sc->sc_otg.sc_bus.devices_max = MUSB2_MAX_DEVICES;
+	sc->sc_otg.sc_bus.devices_max = DWC_OTG_MAX_DEVICES;
 	sc->sc_otg.sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
@@ -160,61 +108,54 @@ musbotg_attach(device_t dev)
 	rid = 0;
 	sc->sc_otg.sc_irq_res =
 	    bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
-	if (!(sc->sc_otg.sc_irq_res)) {
+	if (sc->sc_otg.sc_irq_res == NULL)
 		goto error;
-	}
+
 	sc->sc_otg.sc_bus.bdev = device_add_child(dev, "usbus", -1);
-	if (!(sc->sc_otg.sc_bus.bdev)) {
+	if (sc->sc_otg.sc_bus.bdev == NULL)
 		goto error;
-	}
+
 	device_set_ivars(sc->sc_otg.sc_bus.bdev, &sc->sc_otg.sc_bus);
 
-	sc->sc_otg.sc_id = 0;
-	sc->sc_otg.sc_platform_data = sc;
-	sc->sc_otg.sc_mode = MUSB2_DEVICE_MODE;
-
-#if (__FreeBSD_version >= 700031)
 	err = bus_setup_intr(dev, sc->sc_otg.sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
-	    NULL, (driver_intr_t *)musbotg_wrapper_interrupt, sc, &sc->sc_otg.sc_intr_hdl);
-#else
-	err = bus_setup_intr(dev, sc->sc_otg.sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
-	    (driver_intr_t *)musbotg_wrapper_interrupt, sc, &sc->sc_otg.sc_intr_hdl);
-#endif
+	    &dwc_otg_filter_interrupt, &dwc_otg_interrupt, sc, &sc->sc_otg.sc_intr_hdl);
 	if (err) {
 		sc->sc_otg.sc_intr_hdl = NULL;
 		goto error;
 	}
-	err = musbotg_init(&sc->sc_otg);
-	if (!err) {
+	err = dwc_otg_init(&sc->sc_otg);
+	if (err == 0) {
 		err = device_probe_and_attach(sc->sc_otg.sc_bus.bdev);
 	}
-	if (err) {
+	if (err)
 		goto error;
-	} else {
-		/* poll VBUS one time */
-		musbotg_vbus_poll(sc);
-	}
 	return (0);
 
 error:
-	musbotg_detach(dev);
+	dwc_otg_detach(dev);
 	return (ENXIO);
 }
 
 static int
-musbotg_detach(device_t dev)
+dwc_otg_detach(device_t dev)
 {
-	struct musbotg_super_softc *sc = device_get_softc(dev);
+	struct dwc_otg_super_softc *sc = device_get_softc(dev);
+	device_t bdev;
 	int err;
 
+	if (sc->sc_otg.sc_bus.bdev) {
+		bdev = sc->sc_otg.sc_bus.bdev;
+		device_detach(bdev);
+		device_delete_child(dev, bdev);
+	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(dev);
 
 	if (sc->sc_otg.sc_irq_res && sc->sc_otg.sc_intr_hdl) {
 		/*
-		 * only call musbotg_uninit() after musbotg_init()
+		 * only call dwc_otg_uninit() after dwc_otg_init()
 		 */
-		musbotg_uninit(&sc->sc_otg);
+		dwc_otg_uninit(&sc->sc_otg);
 
 		err = bus_teardown_intr(dev, sc->sc_otg.sc_irq_res,
 		    sc->sc_otg.sc_intr_hdl);
@@ -237,11 +178,11 @@ musbotg_detach(device_t dev)
 	return (0);
 }
 
-static device_method_t musbotg_methods[] = {
+static device_method_t dwc_otg_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe, musbotg_probe),
-	DEVMETHOD(device_attach, musbotg_attach),
-	DEVMETHOD(device_detach, musbotg_detach),
+	DEVMETHOD(device_probe, dwc_otg_probe),
+	DEVMETHOD(device_attach, dwc_otg_attach),
+	DEVMETHOD(device_detach, dwc_otg_detach),
 	DEVMETHOD(device_suspend, bus_generic_suspend),
 	DEVMETHOD(device_resume, bus_generic_resume),
 	DEVMETHOD(device_shutdown, bus_generic_shutdown),
@@ -249,13 +190,13 @@ static device_method_t musbotg_methods[] = {
 	DEVMETHOD_END
 };
 
-static driver_t musbotg_driver = {
-	.name = "musbotg",
-	.methods = musbotg_methods,
-	.size = sizeof(struct musbotg_super_softc),
+static driver_t dwc_otg_driver = {
+	.name = "dwc_otg",
+	.methods = dwc_otg_methods,
+	.size = sizeof(struct dwc_otg_super_softc),
 };
 
-static devclass_t musbotg_devclass;
+static devclass_t dwc_otg_devclass;
 
-DRIVER_MODULE(musbotg, atmelarm, musbotg_driver, musbotg_devclass, 0, 0);
-MODULE_DEPEND(musbotg, usb, 1, 1, 1);
+DRIVER_MODULE(dwcotg, atmelarm, dwc_otg_driver, dwc_otg_devclass, 0, 0);
+MODULE_DEPEND(dwcotg, usb, 1, 1, 1);

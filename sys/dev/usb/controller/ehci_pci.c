@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci_pci.c 308403 2016-11-07 09:23:07Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ehci_pci.c 316651 2017-04-09 06:44:31Z mav $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -112,6 +113,8 @@ ehci_pci_match(device_t self)
 
 	case 0x20951022:
 		return ("AMD CS5536 (Geode) USB 2.0 controller");
+	case 0x78081022:
+		return ("AMD FCH USB 2.0 controller");
 
 	case 0x43451002:
 		return "ATI SB200 USB 2.0 controller";
@@ -120,6 +123,12 @@ ehci_pci_match(device_t self)
 	case 0x43961002:
 		return ("AMD SB7x0/SB8x0/SB9x0 USB 2.0 controller");
 
+	case 0x0f348086:
+		return ("Intel BayTrail USB 2.0 controller");
+	case 0x1c268086:
+		return ("Intel Cougar Point USB 2.0 controller");
+	case 0x1c2d8086:
+		return ("Intel Cougar Point USB 2.0 controller");
 	case 0x1d268086:
 		return ("Intel Patsburg USB 2.0 controller");
 	case 0x1d2d8086:
@@ -166,9 +175,15 @@ ehci_pci_match(device_t self)
 		return ("Intel Wildcat Point USB 2.0 controller USB-A");
 	case 0x8cad8086:
 		return ("Intel Wildcat Point USB 2.0 controller USB-B");
+	case 0x8d268086:
+		return ("Intel Wellsburg USB 2.0 controller");
+	case 0x8d2d8086:
+		return ("Intel Wellsburg USB 2.0 controller");
+	case 0x9c268086:
+		return ("Intel Lynx Point LP USB 2.0 controller USB");
 
 	case 0x00e01033:
-		return ("NEC uPD 720100 USB 2.0 controller");
+		return ("NEC uPD 72010x USB 2.0 controller");
 
 	case 0x006810de:
 		return "NVIDIA nForce2 USB 2.0 controller";
@@ -216,7 +231,7 @@ ehci_pci_probe(device_t self)
 
 	if (desc) {
 		device_set_desc(self, desc);
-		return (0);
+		return (BUS_PROBE_DEFAULT);
 	} else {
 		return (ENXIO);
 	}

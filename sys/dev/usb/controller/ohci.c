@@ -1,3 +1,5 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/controller/ohci.c 246122 2013-01-30 15:26:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -25,9 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci.c 257040 2013-10-24 06:06:17Z hselasky $");
-
 /*
  * USB Open Host Controller driver.
  *
@@ -35,6 +34,9 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci.c 257040 2013-10-24 06:
  * USB spec:  http://www.usb.org/developers/docs/usbspec.zip
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -70,6 +72,8 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci.c 257040 2013-10-24 06:
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
+
 #include <dev/usb/controller/ohci.h>
 #include <dev/usb/controller/ohcireg.h>
 

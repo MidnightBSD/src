@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ohci_atmelarm.c 278278 2015-02-05 20:03:02Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ohci_fdt.c 278278 2015-02-05 20:03:02Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -62,11 +62,15 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ohci_atmelarm.c 278278 2015
 
 #include <arm/at91/at91_pmcvar.h>
 
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+
 #define	MEM_RID	0
 
-static device_probe_t ohci_atmelarm_probe;
-static device_attach_t ohci_atmelarm_attach;
-static device_detach_t ohci_atmelarm_detach;
+static device_probe_t ohci_at91_fdt_probe;
+static device_attach_t ohci_at91_fdt_attach;
+static device_detach_t ohci_at91_fdt_detach;
 
 struct at91_ohci_softc {
 	struct ohci_softc sc_ohci;	/* must be first */
@@ -76,15 +80,17 @@ struct at91_ohci_softc {
 };
 
 static int
-ohci_atmelarm_probe(device_t dev)
+ohci_at91_fdt_probe(device_t dev)
 {
-
+	if (!ofw_bus_is_compatible(dev, "atmel,at91rm9200-ohci"))
+		return (ENXIO);
 	device_set_desc(dev, "AT91 integrated OHCI controller");
+
 	return (BUS_PROBE_DEFAULT);
 }
 
 static int
-ohci_atmelarm_attach(device_t dev)
+ohci_at91_fdt_attach(device_t dev)
 {
 	struct at91_ohci_softc *sc = device_get_softc(dev);
 	int err;
@@ -158,12 +164,12 @@ ohci_atmelarm_attach(device_t dev)
 	return (0);
 
 error:
-	ohci_atmelarm_detach(dev);
+	ohci_at91_fdt_detach(dev);
 	return (ENXIO);
 }
 
 static int
-ohci_atmelarm_detach(device_t dev)
+ohci_at91_fdt_detach(device_t dev)
 {
 	struct at91_ohci_softc *sc = device_get_softc(dev);
 	device_t bdev;
@@ -177,42 +183,45 @@ ohci_atmelarm_detach(device_t dev)
 	/* during module unload there are lots of children leftover */
 	device_delete_children(dev);
 
-	/*
-	 * Put the controller into reset, then disable clocks and do
-	 * the MI tear down.  We have to disable the clocks/hardware
-	 * after we do the rest of the teardown.  We also disable the
-	 * clocks in the opposite order we acquire them, but that
-	 * doesn't seem to be absolutely necessary.  We free up the
-	 * clocks after we disable them, so the system could, in
-	 * theory, reuse them.
-	 */
-	bus_space_write_4(sc->sc_ohci.sc_io_tag, sc->sc_ohci.sc_io_hdl,
-	    OHCI_CONTROL, 0);
-
-	at91_pmc_clock_disable(sc->fclk);
-	at91_pmc_clock_disable(sc->iclk);
-	at91_pmc_clock_disable(sc->mclk);
-	at91_pmc_clock_deref(sc->fclk);
-	at91_pmc_clock_deref(sc->iclk);
-	at91_pmc_clock_deref(sc->mclk);
-
-	if (sc->sc_ohci.sc_irq_res && sc->sc_ohci.sc_intr_hdl) {
+	if (sc->sc_ohci.sc_io_res != NULL) {
 		/*
-		 * only call ohci_detach() after ohci_init()
+		 * Put the controller into reset, then disable clocks and do
+		 * the MI tear down.  We have to disable the clocks/hardware
+		 * after we do the rest of the teardown.  We also disable the
+		 * clocks in the opposite order we acquire them, but that
+		 * doesn't seem to be absolutely necessary.  We free up the
+		 * clocks after we disable them, so the system could, in
+		 * theory, reuse them.
 		 */
-		ohci_detach(&sc->sc_ohci);
+		bus_space_write_4(sc->sc_ohci.sc_io_tag, sc->sc_ohci.sc_io_hdl,
+				  OHCI_CONTROL, 0);
 
-		err = bus_teardown_intr(dev, sc->sc_ohci.sc_irq_res, sc->sc_ohci.sc_intr_hdl);
-		sc->sc_ohci.sc_intr_hdl = NULL;
-	}
-	if (sc->sc_ohci.sc_irq_res) {
-		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->sc_ohci.sc_irq_res);
-		sc->sc_ohci.sc_irq_res = NULL;
-	}
-	if (sc->sc_ohci.sc_io_res) {
-		bus_release_resource(dev, SYS_RES_MEMORY, MEM_RID,
-		    sc->sc_ohci.sc_io_res);
-		sc->sc_ohci.sc_io_res = NULL;
+		at91_pmc_clock_disable(sc->fclk);
+		at91_pmc_clock_disable(sc->iclk);
+		at91_pmc_clock_disable(sc->mclk);
+		at91_pmc_clock_deref(sc->fclk);
+		at91_pmc_clock_deref(sc->iclk);
+		at91_pmc_clock_deref(sc->mclk);
+
+		if (sc->sc_ohci.sc_irq_res && sc->sc_ohci.sc_intr_hdl) {
+			/*
+			 * only call ohci_detach() after ohci_init()
+			 */
+			ohci_detach(&sc->sc_ohci);
+
+			err = bus_teardown_intr(dev, sc->sc_ohci.sc_irq_res,
+			    sc->sc_ohci.sc_intr_hdl);
+			sc->sc_ohci.sc_intr_hdl = NULL;
+		}
+		if (sc->sc_ohci.sc_irq_res) {
+			bus_release_resource(dev, SYS_RES_IRQ, 0, sc->sc_ohci.sc_irq_res);
+			sc->sc_ohci.sc_irq_res = NULL;
+		}
+		if (sc->sc_ohci.sc_io_res) {
+			bus_release_resource(dev, SYS_RES_MEMORY, MEM_RID,
+					     sc->sc_ohci.sc_io_res);
+			sc->sc_ohci.sc_io_res = NULL;
+		}
 	}
 	usb_bus_mem_free_all(&sc->sc_ohci.sc_bus, &ohci_iterate_hw_softc);
 
@@ -221,9 +230,9 @@ ohci_atmelarm_detach(device_t dev)
 
 static device_method_t ohci_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe, ohci_atmelarm_probe),
-	DEVMETHOD(device_attach, ohci_atmelarm_attach),
-	DEVMETHOD(device_detach, ohci_atmelarm_detach),
+	DEVMETHOD(device_probe, ohci_at91_fdt_probe),
+	DEVMETHOD(device_attach, ohci_at91_fdt_attach),
+	DEVMETHOD(device_detach, ohci_at91_fdt_detach),
 	DEVMETHOD(device_suspend, bus_generic_suspend),
 	DEVMETHOD(device_resume, bus_generic_resume),
 	DEVMETHOD(device_shutdown, bus_generic_shutdown),
@@ -239,5 +248,5 @@ static driver_t ohci_driver = {
 
 static devclass_t ohci_devclass;
 
-DRIVER_MODULE(ohci, atmelarm, ohci_driver, ohci_devclass, 0, 0);
+DRIVER_MODULE(ohci, simplebus, ohci_driver, ohci_devclass, 0, 0);
 MODULE_DEPEND(ohci, usb, 1, 1, 1);

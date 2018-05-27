@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/uhci_pci.c 308403 2016-11-07 09:23:07Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/uhci_pci.c 308402 2016-11-07 09:19:04Z hselasky $");
 
 /* Universal Host Controller Interface
  *
@@ -161,6 +162,12 @@ uhci_pci_match(device_t self)
 	case 0x24de8086:
 		return ("Intel 82801EB (ICH5) USB controller USB-D");
 
+	case 0x25a98086:
+		return ("Intel 6300ESB USB controller USB-A");
+
+	case 0x25aa8086:
+		return ("Intel 6300ESB USB controller USB-B");
+
 	case 0x26588086:
 		return ("Intel 82801FB/FR/FW/FRW (ICH6) USB controller USB-A");
 
@@ -248,7 +255,7 @@ uhci_pci_probe(device_t self)
 
 	if (desc) {
 		device_set_desc(self, desc);
-		return (0);
+		return (BUS_PROBE_DEFAULT);
 	} else {
 		return (ENXIO);
 	}

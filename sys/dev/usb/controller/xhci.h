@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/controller/xhci.h 315253 2017-03-14 15:30:46Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/controller/xhci.h 333203 2018-05-03 07:38:45Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -35,7 +36,15 @@
 #define	XHCI_MAX_COMMANDS	(16 * 1)
 #define	XHCI_MAX_RSEG		1
 #define	XHCI_MAX_TRANSFERS	4
-
+#if USB_MAX_EP_STREAMS == 8
+#define	XHCI_MAX_STREAMS	8
+#define	XHCI_MAX_STREAMS_LOG	3
+#elif USB_MAX_EP_STREAMS == 1
+#define	XHCI_MAX_STREAMS	1
+#define	XHCI_MAX_STREAMS_LOG	0
+#else
+#error "The USB_MAX_EP_STREAMS value is not supported."
+#endif
 #define	XHCI_DEV_CTX_ADDR_ALIGN		64	/* bytes */
 #define	XHCI_DEV_CTX_ALIGN		64	/* bytes */
 #define	XHCI_INPUT_CTX_ALIGN		64	/* bytes */
@@ -308,7 +317,8 @@ struct xhci_trb {
 } __aligned(4);
 
 struct xhci_dev_endpoint_trbs {
-	struct xhci_trb		trb[XHCI_MAX_ENDPOINTS][XHCI_MAX_TRANSFERS];
+	struct xhci_trb		trb[(XHCI_MAX_STREAMS *
+	    XHCI_MAX_TRANSFERS) + XHCI_MAX_STREAMS];
 };
 
 #if (USB_PAGE_SIZE < 4096)
@@ -366,13 +376,14 @@ struct xhci_hw_root {
 
 struct xhci_endpoint_ext {
 	struct xhci_trb		*trb;
-	struct usb_xfer		*xfer[XHCI_MAX_TRANSFERS - 1];
+	struct usb_xfer		*xfer[XHCI_MAX_TRANSFERS * XHCI_MAX_STREAMS];
 	struct usb_page_cache	*page_cache;
 	uint64_t		physaddr;
-	uint8_t			trb_used;
-	uint8_t			trb_index;
+	uint8_t			trb_used[XHCI_MAX_STREAMS];
+	uint8_t			trb_index[XHCI_MAX_STREAMS];
 	uint8_t			trb_halted;
 	uint8_t			trb_running;
+	uint8_t			trb_ep_mode;
 	uint8_t			trb_ep_maxp;
 };
 
@@ -388,11 +399,11 @@ enum {
 struct xhci_hw_dev {
 	struct usb_page_cache	device_pc;
 	struct usb_page_cache	input_pc;
-	struct usb_page_cache	endpoint_pc;
+	struct usb_page_cache	endpoint_pc[XHCI_MAX_ENDPOINTS];
 
 	struct usb_page		device_pg;
 	struct usb_page		input_pg;
-	struct usb_page		endpoint_pg;
+	struct usb_page		endpoint_pg[XHCI_MAX_ENDPOINTS];
 
 	struct xhci_endpoint_ext endp[XHCI_MAX_ENDPOINTS];
 
@@ -441,8 +452,7 @@ struct xhci_softc {
 	struct xhci_hw_softc	sc_hw;
 	/* base device */
 	struct usb_bus		sc_bus;
-	/* configure process */
-	struct usb_process	sc_config_proc;
+	/* configure message */
 	struct usb_bus_msg	sc_config_msg[2];
 
 	struct usb_callout	sc_callout;
@@ -497,6 +507,8 @@ struct xhci_softc {
 	uint8_t			sc_noport;
 	/* root HUB device configuration */
 	uint8_t			sc_conf;
+	/* step status stage of all control transfers */
+	uint8_t			sc_ctlstep;
 	/* root HUB port event bitmap, max 256 ports */
 	uint8_t			sc_hub_idata[32];
 

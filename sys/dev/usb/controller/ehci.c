@@ -1,3 +1,5 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/controller/ehci.c 273883 2014-10-31 07:38:49Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2004 The NetBSD Foundation, Inc. All rights reserved.
@@ -43,9 +45,9 @@
  * 1) command failures are not recovered correctly
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci.c 273887 2014-10-31 07:59:07Z hselasky $");
-
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -81,6 +83,8 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci.c 273887 2014-10-31 07:
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
+
 #include <dev/usb/controller/ehci.h>
 #include <dev/usb/controller/ehcireg.h>
 

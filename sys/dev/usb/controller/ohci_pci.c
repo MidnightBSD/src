@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_pci.c 308403 2016-11-07 09:23:07Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ohci_pci.c 308402 2016-11-07 09:19:04Z hselasky $");
 
 /*
  * USB Open Host Controller driver.
@@ -124,9 +125,10 @@ ohci_pci_match(device_t self)
 
 	case 0x740c1022:
 		return ("AMD-756 USB Controller");
-
 	case 0x74141022:
 		return ("AMD-766 USB Controller");
+	case 0x78071022:
+		return ("AMD FCH USB Controller");
 
 	case 0x43741002:
 		return "ATI SB400 USB Controller";

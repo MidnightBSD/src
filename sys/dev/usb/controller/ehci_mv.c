@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci_mv.c 308403 2016-11-07 09:23:07Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ehci_mv.c 308402 2016-11-07 09:19:04Z hselasky $");
 
 #include "opt_bus.h"
 
@@ -102,6 +103,9 @@ static void *ih_err;
 static int
 mv_ehci_probe(device_t self)
 {
+
+	if (!ofw_bus_status_okay(self))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(self, "mrvl,usb-ehci"))
 		return (ENXIO);
