@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -32,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom.h,v 1.100.2.2 2009/03/17 19:38:40 marcel Exp $
+ * $FreeBSD: stable/10/sys/geom/geom.h 332096 2018-04-06 12:23:59Z avg $
  */
 
 #ifndef _GEOM_GEOM_H_
@@ -79,6 +80,7 @@ typedef void g_attrchanged_t (struct g_consumer *, const char *attr);
 typedef void g_provgone_t (struct g_provider *);
 typedef void g_dumpconf_t (struct sbuf *, const char *indent, struct g_geom *,
     struct g_consumer *, struct g_provider *);
+typedef void g_resize_t(struct g_consumer *cp);
 
 /*
  * The g_class structure describes a transformation class.  In other words
@@ -108,6 +110,8 @@ struct g_class {
 	g_orphan_t		*orphan;
 	g_ioctl_t		*ioctl;
 	g_provgone_t		*providergone;
+	g_resize_t		*resize;
+	void			*spare1;
 	void			*spare2;
 	/*
 	 * The remaining elements are private
@@ -139,11 +143,15 @@ struct g_geom {
 	g_orphan_t		*orphan;
 	g_ioctl_t		*ioctl;
 	g_provgone_t		*providergone;
+	g_resize_t		*resize;
+	void			*spare0;
 	void			*spare1;
 	void			*softc;
 	unsigned		flags;
-#define	G_GEOM_WITHER		1
-#define	G_GEOM_VOLATILE_BIO	2
+#define	G_GEOM_WITHER		0x01
+#define	G_GEOM_VOLATILE_BIO	0x02
+#define	G_GEOM_IN_ACCESS	0x04
+#define	G_GEOM_ACCESS_WAIT	0x08
 };
 
 /*
@@ -172,6 +180,8 @@ struct g_consumer {
 	int			flags;
 #define G_CF_SPOILED		0x1
 #define G_CF_ORPHAN		0x4
+#define G_CF_DIRECT_SEND	0x10
+#define G_CF_DIRECT_RECEIVE	0x20
 	struct devstat		*stat;
 	u_int			nstart, nend;
 
@@ -198,9 +208,11 @@ struct g_provider {
 	struct devstat		*stat;
 	u_int			nstart, nend;
 	u_int			flags;
-#define G_PF_CANDELETE		0x1
 #define G_PF_WITHER		0x2
 #define G_PF_ORPHAN		0x4
+#define	G_PF_ACCEPT_UNMAPPED	0x8
+#define G_PF_DIRECT_SEND	0x10
+#define G_PF_DIRECT_RECEIVE	0x20
 
 	/* Two fields for the implementing class to use */
 	void			*private;
@@ -265,12 +277,14 @@ int g_handleattr(struct bio *bp, const char *attribute, const void *val,
     int len);
 int g_handleattr_int(struct bio *bp, const char *attribute, int val);
 int g_handleattr_off_t(struct bio *bp, const char *attribute, off_t val);
+int g_handleattr_uint16_t(struct bio *bp, const char *attribute, uint16_t val);
 int g_handleattr_str(struct bio *bp, const char *attribute, const char *str);
 struct g_consumer * g_new_consumer(struct g_geom *gp);
 struct g_geom * g_new_geomf(struct g_class *mp, const char *fmt, ...)
     __printflike(2, 3);
 struct g_provider * g_new_providerf(struct g_geom *gp, const char *fmt, ...)
     __printflike(2, 3);
+void g_resize_provider(struct g_provider *pp, off_t size);
 int g_retaste(struct g_class *mp);
 void g_spoil(struct g_provider *pp, struct g_consumer *cp);
 int g_std_access(struct g_provider *pp, int dr, int dw, int de);
@@ -386,6 +400,8 @@ g_free(void *ptr)
 		#name, g_modevent, &class			\
 	};							\
 	DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
+
+int g_is_geom_thread(struct thread *td);
 
 #endif /* _KERNEL */
 
