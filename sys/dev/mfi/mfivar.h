@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -54,7 +55,7 @@
 #define _MFIVAR_H
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfivar.h 270732 2014-08-27 21:11:19Z markj $");
 
 #include <sys/lock.h>
 #include <sys/sx.h>
@@ -104,10 +105,11 @@ struct mfi_command {
 #define MFI_CMD_POLLED		(1<<4)
 #define MFI_CMD_SCSI		(1<<5)
 #define MFI_CMD_CCB		(1<<6)
-#define MFI_CMD_TBOLT		(1<<7)
-#define MFI_ON_MFIQ_FREE	(1<<8)
-#define MFI_ON_MFIQ_BUSY	(1<<9)
+#define	MFI_CMD_BIO		(1<<7)
+#define MFI_CMD_TBOLT		(1<<8)
+#define MFI_ON_MFIQ_FREE	(1<<9)
 #define MFI_ON_MFIQ_READY	(1<<10)
+#define MFI_ON_MFIQ_BUSY	(1<<11)
 #define MFI_ON_MFIQ_MASK	(MFI_ON_MFIQ_FREE | MFI_ON_MFIQ_READY| \
     MFI_ON_MFIQ_BUSY)
 #define MFI_CMD_FLAGS_FMT	"\20" \
@@ -117,10 +119,11 @@ struct mfi_command {
     "\4COMPLETED" \
     "\5POLLED" \
     "\6SCSI" \
-    "\7TBOLT" \
-    "\10Q_FREE" \
-    "\11Q_READY" \
-    "\12Q_BUSY"
+    "\7BIO" \
+    "\10TBOLT" \
+    "\11Q_FREE" \
+    "\12Q_READY" \
+    "\13Q_BUSY"
 	uint8_t			retry_for_fw_reset;
 	void			(* cm_complete)(struct mfi_command *cm);
 	void			*cm_private;
@@ -199,6 +202,9 @@ struct mfi_softc {
 #define MFI_FLAGS_GEN2		(1<<6)
 #define MFI_FLAGS_SKINNY	(1<<7)
 #define MFI_FLAGS_TBOLT		(1<<8)
+#define MFI_FLAGS_MRSAS		(1<<9)
+#define MFI_FLAGS_INVADER	(1<<10)
+#define MFI_FLAGS_FURY		(1<<11)
 	// Start: LSIP200113393
 	bus_dma_tag_t			verbuf_h_dmat;
 	bus_dmamap_t			verbuf_h_dmamap;
@@ -313,6 +319,8 @@ struct mfi_softc {
 
 	TAILQ_HEAD(, ccb_hdr)		mfi_cam_ccbq;
 	struct mfi_command *		(* mfi_cam_start)(void *);
+	void				(*mfi_cam_rescan_cb)(struct mfi_softc *,
+					    uint32_t);
 	struct callout			mfi_watchdog_callout;
 	struct mtx			mfi_io_lock;
 	struct sx			mfi_config_lock;

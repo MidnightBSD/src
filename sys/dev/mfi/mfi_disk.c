@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_disk.c 267084 2014-06-05 00:43:32Z kib $");
 
 #include "opt_mfi.h"
 
@@ -169,6 +170,7 @@ mfi_disk_attach(device_t dev)
 		sc->ld_disk->d_fwheads = 64;
 		sc->ld_disk->d_fwsectors = 32;
 	}
+	sc->ld_disk->d_flags = DISKFLAG_UNMAPPED_BIO;
 	disk_create(sc->ld_disk, DISK_VERSION);
 
 	return (0);

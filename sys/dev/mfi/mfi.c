@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include "opt_compat.h"
 #include "opt_mfi.h"
@@ -375,6 +376,7 @@ mfi_attach(struct mfi_softc *sc)
 	int error, commsz, framessz, sensesz;
 	int frames, unit, max_fw_sge, max_fw_cmds;
 	uint32_t tb_mem_size = 0;
+	struct cdev *dev_t;
 
 	if (sc == NULL)
 		return EINVAL;
@@ -769,7 +771,8 @@ mfi_attach(struct mfi_softc *sc)
 	sc->mfi_cdev = make_dev(&mfi_cdevsw, unit, UID_ROOT, GID_OPERATOR,
 	    0640, "mfi%d", unit);
 	if (unit == 0)
-		make_dev_alias(sc->mfi_cdev, "megaraid_sas_ioctl_node");
+		make_dev_alias_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK, &dev_t,
+		    sc->mfi_cdev, "%s", "megaraid_sas_ioctl_node");
 	if (sc->mfi_cdev != NULL)
 		sc->mfi_cdev->si_drv1 = sc;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(sc->mfi_dev),
@@ -786,7 +789,7 @@ mfi_attach(struct mfi_softc *sc)
 	bus_generic_attach(sc->mfi_dev);
 
 	/* Start the timeout watchdog */
-	callout_init(&sc->mfi_watchdog_callout, CALLOUT_MPSAFE);
+	callout_init(&sc->mfi_watchdog_callout, 1);
 	callout_reset(&sc->mfi_watchdog_callout, mfi_cmd_timeout * hz,
 	    mfi_timeout, sc);
 
@@ -1628,6 +1631,11 @@ mfi_decode_evt(struct mfi_softc *sc, struct mfi_evt_detail *detail)
 				sx_xunlock(&sc->mfi_config_lock);
 			}
 		}
+		if (sc->mfi_cam_rescan_cb != NULL &&
+		    (detail->code == MR_EVT_PD_INSERTED ||
+		    detail->code == MR_EVT_PD_REMOVED)) {
+			sc->mfi_cam_rescan_cb(sc, detail->args.pd.device_id);
+		}
 		break;
 	}
 }
@@ -2117,6 +2125,8 @@ mfi_build_cdb(int readop, uint8_t byte2, u_int64_t lba, u_int32_t block_count, u
 	return cdb_len;
 }
 
+extern char *unmapped_buf;
+
 static struct mfi_command *
 mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 {
@@ -2140,11 +2150,11 @@ mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 	pass->header.cmd = MFI_CMD_PD_SCSI_IO;
 	switch (bio->bio_cmd & 0x03) {
 	case BIO_READ:
-		flags = MFI_CMD_DATAIN;
+		flags = MFI_CMD_DATAIN | MFI_CMD_BIO;
 		readop = 1;
 		break;
 	case BIO_WRITE:
-		flags = MFI_CMD_DATAOUT;
+		flags = MFI_CMD_DATAOUT | MFI_CMD_BIO;
 		readop = 0;
 		break;
 	default:
@@ -2169,7 +2179,7 @@ mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 	pass->sense_addr_hi = (uint32_t)((uint64_t)cm->cm_sense_busaddr >> 32);
 	cm->cm_complete = mfi_bio_complete;
 	cm->cm_private = bio;
-	cm->cm_data = bio->bio_data;
+	cm->cm_data = unmapped_buf;
 	cm->cm_len = bio->bio_bcount;
 	cm->cm_sg = &pass->sgl;
 	cm->cm_total_frame_size = MFI_PASS_FRAME_SIZE;
@@ -2200,11 +2210,11 @@ mfi_build_ldio(struct mfi_softc *sc, struct bio *bio)
 	switch (bio->bio_cmd & 0x03) {
 	case BIO_READ:
 		io->header.cmd = MFI_CMD_LD_READ;
-		flags = MFI_CMD_DATAIN;
+		flags = MFI_CMD_DATAIN | MFI_CMD_BIO;
 		break;
 	case BIO_WRITE:
 		io->header.cmd = MFI_CMD_LD_WRITE;
-		flags = MFI_CMD_DATAOUT;
+		flags = MFI_CMD_DATAOUT | MFI_CMD_BIO;
 		break;
 	default:
 		/* TODO: what about BIO_DELETE??? */
@@ -2225,7 +2235,7 @@ mfi_build_ldio(struct mfi_softc *sc, struct bio *bio)
 	io->lba_lo = bio->bio_pblkno & 0xffffffff;
 	cm->cm_complete = mfi_bio_complete;
 	cm->cm_private = bio;
-	cm->cm_data = bio->bio_data;
+	cm->cm_data = unmapped_buf;
 	cm->cm_len = bio->bio_bcount;
 	cm->cm_sg = &io->sgl;
 	cm->cm_total_frame_size = MFI_IO_FRAME_SIZE;
@@ -2307,8 +2317,18 @@ mfi_mapcmd(struct mfi_softc *sc, struct mfi_command *cm)
 
 	if ((cm->cm_data != NULL) && (cm->cm_frame->header.cmd != MFI_CMD_STP )) {
 		polled = (cm->cm_flags & MFI_CMD_POLLED) ? BUS_DMA_NOWAIT : 0;
-		error = bus_dmamap_load(sc->mfi_buffer_dmat, cm->cm_dmamap,
-		    cm->cm_data, cm->cm_len, mfi_data_cb, cm, polled);
+		if (cm->cm_flags & MFI_CMD_CCB)
+			error = bus_dmamap_load_ccb(sc->mfi_buffer_dmat,
+			    cm->cm_dmamap, cm->cm_data, mfi_data_cb, cm,
+			    polled);
+		else if (cm->cm_flags & MFI_CMD_BIO)
+			error = bus_dmamap_load_bio(sc->mfi_buffer_dmat,
+			    cm->cm_dmamap, cm->cm_private, mfi_data_cb, cm,
+			    polled);
+		else
+			error = bus_dmamap_load(sc->mfi_buffer_dmat,
+			    cm->cm_dmamap, cm->cm_data, cm->cm_len,
+			    mfi_data_cb, cm, polled);
 		if (error == EINPROGRESS) {
 			sc->mfi_flags |= MFI_FLAGS_QFRZN;
 			return (0);
@@ -3762,12 +3782,15 @@ mfi_timeout(void *data)
 				MFI_PRINT_CMD(cm);
 				MFI_VALIDATE_CMD(sc, cm);
 				/*
-				 * Fail the command instead of leaving it on
-				 * the queue where it could remain stuck forever
+				 * While commands can get stuck forever we do
+				 * not fail them as there is no way to tell if
+				 * the controller has actually processed them
+				 * or not.
+				 *
+				 * In addition its very likely that force
+				 * failing a command here would cause a panic
+				 * e.g. in UFS.
 				 */
-				mfi_remove_busy(cm);
-				cm->cm_error = ETIMEDOUT;
-				mfi_complete(sc, cm);
 				timedout++;
 			}
 		}

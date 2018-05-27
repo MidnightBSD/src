@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/lmc/if_lmc.h 249925 2013-04-26 12:50:32Z glebius $
  *
  * Copyright (c) 2002-2004 David Boggs. (boggs@boggs.palo-alto.ca.us)
  * All rights reserved.
@@ -1595,7 +1596,7 @@ static int lmc_raw_ioctl(struct ifnet *, u_long, caddr_t);
 static int lmc_ifnet_ioctl(struct ifnet *, u_long, caddr_t);
 static void lmc_ifnet_start(struct ifnet *);
 static int lmc_raw_output(struct ifnet *, struct mbuf *,
- struct sockaddr *, struct route *);
+ const struct sockaddr *, struct route *);
 # ifdef __OpenBSD__
 static int ifmedia_change(struct ifnet *);
 static void ifmedia_status(struct ifnet *, struct ifmediareq *);

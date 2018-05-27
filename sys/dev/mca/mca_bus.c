@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mca/mca_bus.c 227843 2011-11-22 21:28:20Z marius $");
 
 /*
  * References:

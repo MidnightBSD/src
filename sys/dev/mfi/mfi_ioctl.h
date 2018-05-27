@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_ioctl.h 233805 2012-04-02 19:13:02Z ambrisko $");
 
 #include <dev/mfi/mfireg.h>
 

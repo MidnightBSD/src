@@ -57580,6 +57580,7 @@ sys/dev/mii/rgephyreg.h -text
 sys/dev/mii/rlphy.c -text
 sys/dev/mii/rlswitch.c -text
 sys/dev/mii/smcphy.c -text
+sys/dev/mii/smscphy.c svneol=native#text/plain
 sys/dev/mii/tdkphy.c -text
 sys/dev/mii/tdkphyreg.h -text
 sys/dev/mii/tlphy.c -text

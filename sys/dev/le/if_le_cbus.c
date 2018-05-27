@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994-2000
  *	Paul Richards. All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/le/if_le_cbus.c 183337 2008-09-24 21:26:46Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

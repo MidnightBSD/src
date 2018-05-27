@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Mark R V Murray
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mem/memutil.c 217515 2011-01-17 22:58:28Z jkim $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

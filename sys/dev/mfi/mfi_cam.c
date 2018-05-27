@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2007 Scott Long
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_cam.c 315813 2017-03-23 06:41:13Z mav $");
 
 #include "opt_mfi.h"
 
@@ -50,7 +51,9 @@ __MBSDID("$MidnightBSD$");
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
 #include <cam/cam_debug.h>
+#include <cam/cam_periph.h>
 #include <cam/cam_sim.h>
+#include <cam/cam_xpt_periph.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
@@ -63,12 +66,19 @@ __MBSDID("$MidnightBSD$");
 #include <dev/mfi/mfi_ioctl.h>
 #include <dev/mfi/mfivar.h>
 
+enum mfip_state {
+	MFIP_STATE_NONE,
+	MFIP_STATE_DETACH,
+	MFIP_STATE_RESCAN
+};
+
 struct mfip_softc {
 	device_t	dev;
 	struct mfi_softc *mfi_sc;
 	struct cam_devq *devq;
 	struct cam_sim	*sim;
 	struct cam_path	*path;
+	enum mfip_state	state;
 };
 
 static int	mfip_probe(device_t);
@@ -76,6 +86,7 @@ static int	mfip_attach(device_t);
 static int	mfip_detach(device_t);
 static void	mfip_cam_action(struct cam_sim *, union ccb *);
 static void	mfip_cam_poll(struct cam_sim *);
+static void	mfip_cam_rescan(struct mfi_softc *, uint32_t tid);
 static struct mfi_command * mfip_start(void *);
 static void	mfip_done(struct mfi_command *cm);
 
@@ -89,7 +100,8 @@ static device_method_t	mfip_methods[] = {
 	DEVMETHOD(device_probe,		mfip_probe),
 	DEVMETHOD(device_attach,	mfip_attach),
 	DEVMETHOD(device_detach,	mfip_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 static driver_t mfip_driver = {
 	"mfip",
@@ -122,6 +134,7 @@ mfip_attach(device_t dev)
 
 	mfisc = device_get_softc(device_get_parent(dev));
 	sc->dev = dev;
+	sc->state = MFIP_STATE_NONE;
 	sc->mfi_sc = mfisc;
 	mfisc->mfi_cam_start = mfip_start;
 
@@ -137,6 +150,8 @@ mfip_attach(device_t dev)
 		device_printf(dev, "CAM SIM attach failed\n");
 		return (EINVAL);
 	}
+
+	mfisc->mfi_cam_rescan_cb = mfip_cam_rescan;
 
 	mtx_lock(&mfisc->mfi_io_lock);
 	if (xpt_bus_register(sc->sim, dev, 0) != 0) {
@@ -161,6 +176,16 @@ mfip_detach(device_t dev)
 	sc = device_get_softc(dev);
 	if (sc == NULL)
 		return (EINVAL);
+
+	mtx_lock(&sc->mfi_sc->mfi_io_lock);
+	if (sc->state == MFIP_STATE_RESCAN) {
+		mtx_unlock(&sc->mfi_sc->mfi_io_lock);
+		return (EBUSY);
+	}
+	sc->state = MFIP_STATE_DETACH;
+	mtx_unlock(&sc->mfi_sc->mfi_io_lock);
+
+	sc->mfi_sc->mfi_cam_rescan_cb = NULL;
 
 	if (sc->sim != NULL) {
 		mtx_lock(&sc->mfi_sc->mfi_io_lock);
@@ -192,16 +217,16 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 		struct ccb_pathinq *cpi = &ccb->cpi;
 
 		cpi->version_num = 1;
-		cpi->hba_inquiry = PI_SDTR_ABLE|PI_TAG_ABLE|PI_WIDE_16;
+		cpi->hba_inquiry = PI_TAG_ABLE;
 		cpi->target_sprt = 0;
-		cpi->hba_misc = PIM_NOBUSRESET|PIM_SEQSCAN;
+		cpi->hba_misc = PIM_NOBUSRESET | PIM_SEQSCAN | PIM_UNMAPPED;
 		cpi->hba_eng_cnt = 0;
 		cpi->max_target = MFI_SCSI_MAX_TARGETS;
 		cpi->max_lun = MFI_SCSI_MAX_LUNS;
 		cpi->initiator_id = MFI_SCSI_INITIATOR_ID;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "LSI", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "LSI", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
@@ -220,6 +245,8 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 		break;
 	case XPT_GET_TRAN_SETTINGS:
 	{
+		struct ccb_trans_settings_scsi *scsi =
+		    &ccb->cts.proto_specific.scsi;
 		struct ccb_trans_settings_sas *sas =
 		    &ccb->cts.xport_specific.sas;
 
@@ -227,6 +254,9 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 		ccb->cts.protocol_version = SCSI_REV_2;
 		ccb->cts.transport = XPORT_SAS;
 		ccb->cts.transport_version = 0;
+
+		scsi->valid = CTS_SCSI_VALID_TQ;
+		scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
 
 		sas->valid &= ~CTS_SAS_VALID_SPEED;
 		sas->bitrate = 150000;
@@ -247,17 +277,6 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 			ccbh->status = CAM_REQ_INVALID;
 			break;
 		}
-		if ((ccbh->flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-			if (ccbh->flags & CAM_DATA_PHYS) {
-				ccbh->status = CAM_REQ_INVALID;
-				break;
-			}
-			if (ccbh->flags & CAM_SCATTER_VALID) {
-				ccbh->status = CAM_REQ_INVALID;
-				break;
-			}
-		}
-
 		ccbh->ccb_mfip_ptr = sc;
 		TAILQ_INSERT_TAIL(&mfisc->mfi_cam_ccbq, ccbh, sim_links.tqe);
 		mfi_startio(mfisc);
@@ -270,6 +289,53 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 
 	xpt_done(ccb);
 	return;
+}
+
+static void
+mfip_cam_rescan(struct mfi_softc *sc, uint32_t tid)
+{
+	union ccb *ccb;
+	struct mfip_softc *camsc;
+	struct cam_sim *sim;
+	device_t mfip_dev;
+
+	mtx_lock(&Giant);
+	mfip_dev = device_find_child(sc->mfi_dev, "mfip", -1);
+	mtx_unlock(&Giant);
+	if (mfip_dev == NULL) {
+		device_printf(sc->mfi_dev, "Couldn't find mfip child device!\n");
+		return;
+	}
+
+	mtx_lock(&sc->mfi_io_lock);
+	camsc = device_get_softc(mfip_dev);
+	if (camsc->state == MFIP_STATE_DETACH) {
+		mtx_unlock(&sc->mfi_io_lock);
+		return;
+	}
+	camsc->state = MFIP_STATE_RESCAN;
+
+	ccb = xpt_alloc_ccb_nowait();
+	if (ccb == NULL) {
+		mtx_unlock(&sc->mfi_io_lock);
+		device_printf(sc->mfi_dev,
+		    "Cannot allocate ccb for bus rescan.\n");
+		return;
+	}
+
+	sim = camsc->sim;
+	if (xpt_create_path(&ccb->ccb_h.path, NULL, cam_sim_path(sim),
+	    tid, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
+		xpt_free_ccb(ccb);
+		mtx_unlock(&sc->mfi_io_lock);
+		device_printf(sc->mfi_dev,
+		    "Cannot create path for bus rescan.\n");
+		return;
+	}
+	xpt_rescan(ccb);
+
+	camsc->state = MFIP_STATE_NONE;
+	mtx_unlock(&sc->mfi_io_lock);
 }
 
 static struct mfi_command *
@@ -314,14 +380,14 @@ mfip_start(void *data)
 	cm->cm_private = ccb;
 	cm->cm_sg = &pt->sgl;
 	cm->cm_total_frame_size = MFI_PASS_FRAME_SIZE;
-	cm->cm_data = csio->data_ptr;
+	cm->cm_data = ccb;
 	cm->cm_len = csio->dxfer_len;
 	switch (ccbh->flags & CAM_DIR_MASK) {
 	case CAM_DIR_IN:
-		cm->cm_flags = MFI_CMD_DATAIN;
+		cm->cm_flags = MFI_CMD_DATAIN | MFI_CMD_CCB;
 		break;
 	case CAM_DIR_OUT:
-		cm->cm_flags = MFI_CMD_DATAOUT;
+		cm->cm_flags = MFI_CMD_DATAOUT | MFI_CMD_CCB;
 		break;
 	case CAM_DIR_NONE:
 	default:

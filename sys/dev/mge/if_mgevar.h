@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mge/if_mgevar.h 261455 2014-02-04 03:36:42Z eadler $
  */
 
 #ifndef __IF_MGE_H__
@@ -103,6 +104,8 @@ struct mge_softc {
 	uint32_t	mge_tx_tok_cnt;
 	uint16_t	mge_mtu;
 	int		mge_ver;
+	int		mge_intr_cnt;
+	uint8_t		mge_hw_csum;
 
 	struct mge_softc *phy_sc;
 };
@@ -260,7 +263,7 @@ struct mge_softc {
 #define MGE_PORT_INT_RXQ0	(1 << 2)
 #define MGE_PORT_INT_RXERR	(1 << 10)
 #define MGE_PORT_INT_RXERRQ0	(1 << 11)
-#define MGE_PORT_INT_SUM	(1 << 31)
+#define MGE_PORT_INT_SUM	(1U << 31)
 
 #define MGE_PORT_INT_CAUSE_EXT	0x464
 #define MGE_PORT_INT_MASK_EXT	0x46C
@@ -271,7 +274,7 @@ struct mge_softc {
 #define MGE_PORT_INT_EXT_TXUR	(1 << 19)
 #define MGE_PORT_INT_EXT_LC	(1 << 20)
 #define MGE_PORT_INT_EXT_IAR	(1 << 23)
-#define MGE_PORT_INT_EXT_SUM	(1 << 31)
+#define MGE_PORT_INT_EXT_SUM	(1U << 31)
 
 #define MGE_RX_FIFO_URGENT_TRSH		0x470
 #define MGE_TX_FIFO_URGENT_TRSH		0x474
@@ -328,7 +331,7 @@ struct mge_softc {
 #define MGE_RX_DESC_FIRST	(1 << 27)
 #define MGE_RX_ENABLE_INT	(1 << 29)
 #define MGE_RX_L4_CSUM_OK	(1 << 30)
-#define MGE_DMA_OWNED		(1 << 31)
+#define MGE_DMA_OWNED		(1U << 31)
 
 #define MGE_RX_IP_FRAGMENT	(1 << 2)
 

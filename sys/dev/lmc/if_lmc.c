@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/lmc/if_lmc.c 255471 2013-09-11 09:19:44Z glebius $
  *
  * Copyright (c) 2002-2004 David Boggs. <boggs@boggs.palo-alto.ca.us>
  * All rights reserved.
@@ -4480,7 +4481,6 @@ lmc_raw_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 # if (defined(__FreeBSD__) && defined(DEVICE_POLLING))  /* XXX necessary? */
     case SIOCSIFCAP:
 # endif
-    case SIOCSIFDSTADDR:
     case SIOCAIFADDR:
     case SIOCSIFFLAGS:
 #if 0
@@ -4587,7 +4587,7 @@ lmc_ifnet_start(struct ifnet *ifp)
 /* Called from a syscall (user context; no spinlocks). */
 static int
 lmc_raw_output(struct ifnet *ifp, struct mbuf *m,
- struct sockaddr *dst, struct route *ro)
+ const struct sockaddr *dst, struct route *ro)
   {
   softc_t *sc = IFP2SC(ifp);
   int error = 0;
@@ -4946,7 +4946,9 @@ lmc_ifnet_detach(softc_t *sc)
   /* Detach from the ifnet kernel interface. */
   if_detach(sc->ifp);
 
-# if (__FreeBSD_version >= 600000)
+# if (defined(__FreeBSD__) && __FreeBSD_version >= 800082)
+  if_free(sc->ifp);
+# elif (defined(__FreeBSD__) && __FreeBSD_version >= 600000)
   if_free_type(sc->ifp, NSPPP ? IFT_PPP : IFT_OTHER);
 # endif
   }

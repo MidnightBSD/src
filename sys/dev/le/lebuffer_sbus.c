@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/le/lebuffer_sbus.c 225931 2011-10-02 23:22:38Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

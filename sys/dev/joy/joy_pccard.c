@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Jean-Marc Zucconi
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/joy/joy_pccard.c 150396 2005-09-20 19:54:11Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

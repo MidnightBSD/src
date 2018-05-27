@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: lancevar.h,v 1.10 2005/12/11 12:21:27 christos Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/le/lancevar.h 204646 2010-03-03 17:55:51Z joel $ */
 
 #ifndef _DEV_LE_LANCEVAR_H_
 #define	_DEV_LE_LANCEVAR_H_

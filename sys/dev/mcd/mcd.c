@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1993 by Holger Veit (data part)
  * Copyright 1993 by Brian Moore (audio part)
@@ -43,8 +44,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-static const char COPYRIGHT[] = "mcd-driver (C)1993 by H.Veit & B.Moore";
+__FBSDID("$FreeBSD: stable/10/sys/dev/mcd/mcd.c 320923 2017-07-12 22:16:54Z jhb $");
+static const char __used COPYRIGHT[] = "mcd-driver (C)1993 by H.Veit & B.Moore";
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -206,6 +207,8 @@ mcd_attach(struct mcd_softc *sc)
 				 UID_ROOT, GID_OPERATOR, 0640, "mcd%d", unit);
 
 	sc->mcd_dev_t->si_drv1 = (void *)sc;
+	device_printf(sc->dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 
 	return (0);
 }
@@ -289,7 +292,6 @@ static void
 mcdstrategy(struct bio *bp)
 {
 	struct mcd_softc *sc;
-	int s;
 
 	sc = (struct mcd_softc *)bp->bio_dev->si_drv1;
 
@@ -318,9 +320,7 @@ mcdstrategy(struct bio *bp)
 	bp->bio_resid = 0;
 
 	/* queue it */
-	s = splbio();
 	bioq_disksort(&sc->data.head, bp);
-	splx(s);
 
 	/* now check whether we can perform processing */
 	mcd_start(sc);
@@ -338,10 +338,8 @@ static void
 mcd_start(struct mcd_softc *sc)
 {
 	struct bio *bp;
-	int s = splbio();
 
 	if (sc->data.flags & MCDMBXBSY) {
-		splx(s);
 		return;
 	}
 
@@ -350,10 +348,8 @@ mcd_start(struct mcd_softc *sc)
 		/* block found to process, dequeue */
 		/*MCD_TRACE("mcd_start: found block bp=0x%x\n",bp,0,0,0);*/
 		sc->data.flags |= MCDMBXBSY;
-		splx(s);
 	} else {
 		/* nothing to do */
-		splx(s);
 		return;
 	}
 

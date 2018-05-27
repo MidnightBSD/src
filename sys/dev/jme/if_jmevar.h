@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/jme/if_jmevar.h 264442 2014-04-14 04:51:59Z yongari $
  */
 
 #ifndef	_IF_JMEVAR_H
@@ -49,7 +50,7 @@
 #define	JME_RX_RING_ALIGN	16
 #define	JME_TSO_MAXSEGSIZE	4096
 #define	JME_TSO_MAXSIZE		(65535 + sizeof(struct ether_vlan_header))
-#define	JME_MAXTXSEGS		32
+#define	JME_MAXTXSEGS		35
 #define	JME_RX_BUF_ALIGN	sizeof(uint64_t)
 #define	JME_SSB_ALIGN		16
 

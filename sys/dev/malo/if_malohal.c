@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Marvell Semiconductor, Inc.
  * Copyright (c) 2007 Sam Leffler, Errno Consulting
@@ -31,7 +32,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/malo/if_malohal.c 190550 2009-03-30 11:23:14Z weongyo $");
 #endif
 
 #include <sys/param.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: am7990var.h,v 1.23 2005/12/11 12:21:25 christos Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/le/am7990var.h 204646 2010-03-03 17:55:51Z joel $ */
 
 #ifndef _DEV_LE_AM7990VAR_H_
 #define	_DEV_LE_AM7990VAR_H_

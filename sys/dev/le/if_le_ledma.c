@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_le_ledma.c,v 1.26 2005/12/11 12:23:44 christos Exp $	*/
 
 /*-
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/le/if_le_ledma.c 204646 2010-03-03 17:55:51Z joel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

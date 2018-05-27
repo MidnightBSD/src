@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/kbd/kbd.c 312352 2017-01-17 22:02:22Z lifanov $");
 
 #include "opt_kbd.h"
 
@@ -884,11 +885,11 @@ genkbd_commonioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 			omapp->key[i].spcl = mapp->key[i].spcl;
 			omapp->key[i].flgs = mapp->key[i].flgs;
 		}
-		return (0);
+		break;
 	case PIO_KEYMAP:	/* set keyboard translation table */
 	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 #ifndef KBD_DISABLE_KEYMAP_LOAD
-		mapp = malloc(sizeof *mapp, M_TEMP, M_NOWAIT);
+		mapp = malloc(sizeof *mapp, M_TEMP, M_WAITOK);
 		if (cmd == OPIO_KEYMAP) {
 			omapp = (okeymap_t *)arg;
 			mapp->n_keys = omapp->n_keys;
