@@ -47,7 +47,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/advansys.c 315813 2017-03-23 06:41:13Z mav $");
  
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -169,9 +169,9 @@ adv_clear_state_really(struct adv_softc *adv, union ccb* ccb)
 			ccb_h = LIST_FIRST(&adv->pending_ccbs);
 			while (ccb_h != NULL) {
 				cinfo = ccb_h->ccb_cinfo_ptr;
-				callout_reset(&cinfo->timer,
-				    ccb_h->timeout * hz / 1000, adv_timeout,
-				    ccb_h);
+				callout_reset_sbt(&cinfo->timer,
+				    SBT_1MS * ccb_h->timeout, 0,
+				    adv_timeout, ccb_h, 0);
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 			}
 			adv->state &= ~ADV_IN_TIMEOUT;
@@ -208,6 +208,7 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		struct	ccb_hdr *ccb_h;
 		struct	ccb_scsiio *csio;
 		struct	adv_ccb_info *cinfo;
+		int error;
 
 		ccb_h = &ccb->ccb_h;
 		csio = &ccb->csio;
@@ -218,58 +219,17 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		ccb_h->ccb_cinfo_ptr = cinfo;
 		cinfo->ccb = ccb;
 
-		/* Only use S/G if there is a transfer */
-		if ((ccb_h->flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-			if ((ccb_h->flags & CAM_SCATTER_VALID) == 0) {
-				/*
-				 * We've been given a pointer
-				 * to a single buffer
-				 */
-				if ((ccb_h->flags & CAM_DATA_PHYS) == 0) {
-					int error;
-
-					error =
-					    bus_dmamap_load(adv->buffer_dmat,
-							    cinfo->dmamap,
-							    csio->data_ptr,
-							    csio->dxfer_len,
-							    adv_execute_ccb,
-							    csio, /*flags*/0);
-					if (error == EINPROGRESS) {
-						/*
-						 * So as to maintain ordering,
-						 * freeze the controller queue
-						 * until our mapping is
-						 * returned.
-						 */
-						adv_set_state(adv,
-							      ADV_BUSDMA_BLOCK);
-					}
-				} else {
-					struct bus_dma_segment seg;
-
-					/* Pointer to physical buffer */
-					seg.ds_addr =
-					     (bus_addr_t)csio->data_ptr;
-					seg.ds_len = csio->dxfer_len;
-					adv_execute_ccb(csio, &seg, 1, 0);
-				}
-			} else {
-				struct bus_dma_segment *segs;
-				if ((ccb_h->flags & CAM_DATA_PHYS) != 0)
-					panic("adv_setup_data - Physical "
-					      "segment pointers unsupported");
-
-				if ((ccb_h->flags & CAM_SG_LIST_PHYS) == 0)
-					panic("adv_setup_data - Virtual "
-					      "segment addresses unsupported");
-
-				/* Just use the segments provided */
-				segs = (struct bus_dma_segment *)csio->data_ptr;
-				adv_execute_ccb(ccb, segs, csio->sglist_cnt, 0);
-			}
-		} else {
-			adv_execute_ccb(ccb, NULL, 0, 0);
+		error = bus_dmamap_load_ccb(adv->buffer_dmat,
+					    cinfo->dmamap,
+					    ccb,
+					    adv_execute_ccb,
+					    csio, /*flags*/0);
+		if (error == EINPROGRESS) {
+			/*
+			 * So as to maintain ordering, freeze the controller
+			 * queue until our mapping is returned.
+			 */
+			adv_set_state(adv, ADV_BUSDMA_BLOCK);
 		}
 		break;
 	}
@@ -470,9 +430,9 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = adv->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Advansys", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Advansys", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->ccb_h.status = CAM_REQ_CMP;
                 cpi->transport = XPORT_SPI;
@@ -610,8 +570,8 @@ adv_execute_ccb(void *arg, bus_dma_segment_t *dm_segs,
 	ccb_h->status |= CAM_SIM_QUEUED;
 	LIST_INSERT_HEAD(&adv->pending_ccbs, ccb_h, sim_links.le);
 	/* Schedule our timeout */
-	callout_reset(&cinfo->timer, ccb_h->timeout * hz /1000, adv_timeout,
-	    csio);
+	callout_reset_sbt(&cinfo->timer, SBT_1MS * ccb_h->timeout, 0,
+	    adv_timeout, csio, 0);
 }
 
 static struct adv_ccb_info *

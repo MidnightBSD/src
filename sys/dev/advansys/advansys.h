@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  * All rights reserved.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/advansys/advansys.h 241492 2012-10-12 21:31:44Z jhb $
  */
 
 #ifndef _ADVANSYS_H_

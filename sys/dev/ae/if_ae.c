@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
@@ -28,8 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: stable/9/sys/dev/ae/if_ae.c 264445 2014-04-14 04:59:46Z yongari $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ae/if_ae.c 264444 2014-04-14 04:58:50Z yongari $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

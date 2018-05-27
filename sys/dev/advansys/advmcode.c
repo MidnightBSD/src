@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/advansys/advmcode.c,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Downloadable microcode for Advanced Systems Inc. SCSI controllers
  *
@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/advmcode.c 139749 2005-01-06 01:43:34Z imp $");
 
 #include <sys/param.h>
 

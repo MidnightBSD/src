@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/adw_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -200,14 +200,13 @@ adw_pci_attach(device_t dev)
 {
 	struct		adw_softc *adw;
 	struct		adw_pci_identity *entry;
-	u_int32_t	command;
+	u_int16_t	command;
 	struct		resource *regs;
 	int		regs_type;
 	int		regs_id;
 	int		error;
 	int		zero;
  
-	command = pci_read_config(dev, PCIR_COMMAND, /*bytes*/1);
 	entry = adw_find_pci_device(dev);
 	if (entry == NULL)
 		return (ENXIO);
@@ -215,14 +214,11 @@ adw_pci_attach(device_t dev)
 	regs_type = 0;
 	regs_id = 0;
 #ifdef ADW_ALLOW_MEMIO
-	if ((command & PCIM_CMD_MEMEN) != 0) {
-		regs_type = SYS_RES_MEMORY;
-		regs_id = ADW_PCI_MEMBASE;
-		regs = bus_alloc_resource_any(dev, regs_type,
-					      &regs_id, RF_ACTIVE);
-	}
+	regs_type = SYS_RES_MEMORY;
+	regs_id = ADW_PCI_MEMBASE;
+	regs = bus_alloc_resource_any(dev, regs_type, &regs_id, RF_ACTIVE);
 #endif
-	if (regs == NULL && (command & PCIM_CMD_PORTEN) != 0) {
+	if (regs == NULL) {
 		regs_type = SYS_RES_IOPORT;
 		regs_id = ADW_PCI_IOBASE;
 		regs = bus_alloc_resource_any(dev, regs_type,
@@ -297,6 +293,7 @@ adw_pci_attach(device_t dev)
 	 * 'control_flag' CONTROL_FLAG_IGNORE_PERR flag to tell the microcode
 	 * to ignore DMA parity errors.
 	 */
+	command = pci_read_config(dev, PCIR_COMMAND, /*bytes*/2);
 	if ((command & PCIM_CMD_PERRESPEN) == 0)
 		adw_lram_write_16(adw, ADW_MC_CONTROL_FLAG,
 				  adw_lram_read_16(adw, ADW_MC_CONTROL_FLAG)

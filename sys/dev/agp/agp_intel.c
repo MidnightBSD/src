@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -25,9 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_intel.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,7 +106,7 @@ agp_intel_match(device_t dev)
 		return ("Intel 82845G host to AGP bridge");
 	case 0x35808086:
 		return ("Intel 82855GM host to AGP bridge");
-	};
+	}
 
 	return (NULL);
 }

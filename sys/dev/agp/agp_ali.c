@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -25,9 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_ali.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +70,7 @@ agp_ali_match(device_t dev)
 		return ("Ali M1541 host to AGP bridge");
 	case 0x162110b9:
 		return ("Ali M1621 host to AGP bridge");
-	};
+	}
 
 	return NULL;
 }

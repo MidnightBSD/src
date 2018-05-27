@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/adlink/adlink.c,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Poul-Henning Kamp
  * All rights reserved.
@@ -44,7 +44,7 @@
 
 #ifdef _KERNEL
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/adlink/adlink.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -408,7 +408,8 @@ static device_method_t adlink_methods[] = {
 	DEVMETHOD(device_suspend,	bus_generic_suspend),
 	DEVMETHOD(device_resume,	bus_generic_resume),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
  
 static driver_t adlink_driver = {

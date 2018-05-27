@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
@@ -22,8 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/9/sys/dev/ae/if_aereg.h 258960 2013-12-05 07:16:24Z yongari $
+ * $FreeBSD: stable/10/sys/dev/ae/if_aereg.h 253406 2013-07-17 01:34:25Z yongari $
  */
 
 /*

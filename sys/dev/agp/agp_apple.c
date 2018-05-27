@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -25,9 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_apple.c 275406 2014-12-02 13:46:13Z tijl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -226,8 +225,6 @@ agp_apple_bind_page(device_t dev, vm_offset_t offset, vm_offset_t physical)
 		return EINVAL;
 
 	sc->gatt->ag_virtual[offset >> AGP_PAGE_SHIFT] = physical;
-	__asm __volatile("dcbst 0,%0; sync" ::
-	    "r"(&sc->gatt->ag_virtual[offset >> AGP_PAGE_SHIFT]) : "memory");
 	return (0);
 }
 
@@ -240,8 +237,6 @@ agp_apple_unbind_page(device_t dev, vm_offset_t offset)
 		return EINVAL;
 
 	sc->gatt->ag_virtual[offset >> AGP_PAGE_SHIFT] = 0;
-	__asm __volatile("dcbst 0,%0; sync" ::
-	    "r"(&sc->gatt->ag_virtual[offset >> AGP_PAGE_SHIFT]) : "memory");
 	return (0);
 }
 

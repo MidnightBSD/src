@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -22,7 +23,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/adb/adb_mouse.c 262668 2014-03-01 21:50:23Z jhibbits $
  */
 
 #include <sys/cdefs.h>
@@ -154,7 +155,7 @@ adb_mouse_attach(device_t dev)
 	sc = device_get_softc(dev);
 	sc->sc_dev = dev;
 
-	mtx_init(&sc->sc_mtx,"ams",MTX_DEF,0);
+	mtx_init(&sc->sc_mtx, "ams", NULL, MTX_DEF);
 	cv_init(&sc->sc_cv,"ams");
 
 	sc->flags = 0;
@@ -471,7 +472,8 @@ ams_poll(struct cdev *dev, int events, struct thread *p)
 		mtx_lock(&sc->sc_mtx);
 		
 		if (sc->xdelta == 0 && sc->ydelta == 0 && 
-		   sc->buttons == sc->last_buttons) {
+		   sc->buttons == sc->last_buttons &&
+		   sc->packet_read_len == 0) {
 			selrecord(p, &sc->rsel);
 			events = 0;
 		} else {
@@ -569,9 +571,9 @@ ams_read(struct cdev *dev, struct uio *uio, int flag)
 
 	mtx_unlock(&sc->sc_mtx);
 
-	uiomove(outpacket,len,uio);
+	error = uiomove(outpacket,len,uio);
 
-	return (0);
+	return (error);
 }
 
 

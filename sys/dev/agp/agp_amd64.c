@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, 2005 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
@@ -25,9 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_amd64.c 275406 2014-12-02 13:46:13Z tijl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -115,7 +114,7 @@ agp_amd64_match(device_t dev)
 		return ("VIA K8T800Pro host to PCI bridge");
 	case 0x31881106:
 		return ("VIA 8385 host to PCI bridge");
-	};
+	}
 
 	return (NULL);
 }
@@ -242,8 +241,6 @@ agp_amd64_attach(device_t dev)
 		    ~(AGP_AMD64_APCTRL_DISGARTCPU | AGP_AMD64_APCTRL_DISGARTIO),
 		    4);
 	}
-
-	agp_flush_cache();
 
 	return (0);
 }

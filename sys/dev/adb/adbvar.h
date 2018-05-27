@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -22,7 +23,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/adb/adbvar.h 185724 2008-12-06 23:26:02Z nwhitehorn $
  */
 
 #ifndef	_POWERPC_ADBVAR_H_

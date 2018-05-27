@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -25,14 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_nvidia.c 243095 2012-11-15 18:49:17Z eadler $");
 
 /*
  * Written using information gleaned from the
  * NVIDIA nForce/nForce2 AGPGART Linux Kernel Patch.
  */
-
-#include "opt_bus.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>

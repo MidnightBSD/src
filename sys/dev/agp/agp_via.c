@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -25,9 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
-#include "opt_bus.h"
+__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_via.c 244926 2013-01-01 18:16:49Z antoine $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -137,7 +136,7 @@ agp_via_match(device_t dev)
 		return ("VIA PT880 host to PCI bridge");
 	case 0xb1981106:
 		return ("VIA VT83xx/VT87xx/KTxxx/Px8xx host to PCI bridge");
-	};
+	}
 
 	return NULL;
 }

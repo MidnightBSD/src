@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/adv_eisa.c 241492 2012-10-12 21:31:44Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
