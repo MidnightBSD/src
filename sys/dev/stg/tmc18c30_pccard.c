@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NecBSD: tmc18c30_pisa.c,v 1.22 1998/11/26 01:59:21 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -39,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/stg/tmc18c30_pccard.c 240325 2012-09-10 18:49:49Z jhb $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -49,14 +50,12 @@ __MBSDID("$MidnightBSD$");
 #include <sys/systm.h>
 
 #include <machine/bus.h>
-#include <compat/netbsd/dvcfg.h>
 
-#include <sys/device_port.h>
+#include <sys/bus.h>
 
 #include <dev/pccard/pccardvar.h>
 
 #include <cam/scsi/scsi_low.h>
-#include <cam/scsi/scsi_low_pisa.h>
 
 #include <dev/stg/tmc18c30reg.h>
 #include <dev/stg/tmc18c30var.h>

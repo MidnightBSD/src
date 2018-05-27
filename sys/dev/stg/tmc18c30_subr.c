@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * [Ported for FreeBSD]
  *  Copyright (c) 2000
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/stg/tmc18c30_subr.c 240325 2012-09-10 18:49:49Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +53,6 @@ __MBSDID("$MidnightBSD$");
 #include <sys/rman.h> 
 
 #include <cam/scsi/scsi_low.h>
-#include <cam/scsi/scsi_low_pisa.h>
 
 #include <dev/stg/tmc18c30reg.h>
 #include <dev/stg/tmc18c30var.h>
