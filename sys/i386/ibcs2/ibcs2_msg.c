@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_msg.c 160138 2006-07-06 21:29:05Z jhb $");
 
 /*
  * IBCS2 message compatibility module.

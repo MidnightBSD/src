@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, 1995 Scott Bartram
  * Copyright (c) 1994 Arne H Juul
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_socksys.h 139799 2005-01-06 23:22:04Z imp $
  */
 
 #ifndef	_I386_IBCS2_IBCS2_SOCKSYS_H_

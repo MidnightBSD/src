@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_sysvec.c 294136 2016-01-16 07:56:49Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -54,8 +55,6 @@ MODULE_VERSION(ibcs2, 1);
 
 extern int bsd_to_ibcs2_errno[];
 extern struct sysent ibcs2_sysent[IBCS2_SYS_MAXSYSCALL];
-extern int szsigcode;
-extern char sigcode[];
 static int ibcs2_fixup(register_t **, struct image_params *);
 
 struct sysentvec ibcs2_svr3_sysvec = {
@@ -91,6 +90,8 @@ struct sysentvec ibcs2_svr3_sysvec = {
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = NULL,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 
 static int

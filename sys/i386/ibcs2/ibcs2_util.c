@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Christos Zoulas
  * Copyright (c) 1995 Frank van der Linden
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_util.c 177997 2008-04-08 09:45:49Z kib $");
 
 #include <sys/fcntl.h>
 #include <sys/param.h>

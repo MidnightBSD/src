@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * Copyright (c) 1995 Steven Wallace
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_stat.c 229272 2012-01-02 12:12:10Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -212,7 +213,7 @@ ibcs2_utssys(td, uap)
 			IBCS2_UNAME_VERSION, sizeof(sut.version) - 1);
 		getcredhostname(td->td_ucred, machine_name,
 		    sizeof(machine_name) - 1);
-		p = index(machine_name, '.');
+		p = strchr(machine_name, '.');
 		if ( p )
 			*p = '\0';
 		strncpy(sut.nodename, machine_name, sizeof(sut.nodename) - 1);

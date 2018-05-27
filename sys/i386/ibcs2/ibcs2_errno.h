@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ibcs2_errno.h
  * Copyright (c) 1995 Scott Bartram
@@ -28,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_errno.h 139799 2005-01-06 23:22:04Z imp $
  */
 
 #ifndef _IBCS2_ERRNO_H

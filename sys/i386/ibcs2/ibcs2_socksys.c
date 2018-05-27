@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, 1995 Scott Bartram
  * Copyright (c) 1994 Arne H Juul
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_socksys.c 229272 2012-01-02 12:12:10Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -152,7 +153,7 @@ ibcs2_getipdomainname(td, uap)
 	/* Get the domain name. */
 	getcredhostname(td->td_ucred, hname, sizeof(hname));
 
-	dptr = index(hname, '.');
+	dptr = strchr(hname, '.');
 	if ( dptr )
 		dptr++;
 	else
@@ -182,7 +183,7 @@ ibcs2_setipdomainname(td, uap)
 		return EINVAL;
 
 	/* Get the host's unqualified name (strip off the domain) */
-	ptr = index(hname, '.');
+	ptr = strchr(hname, '.');
 	if ( ptr != NULL ) {
 		ptr++;
 		*ptr = '\0';

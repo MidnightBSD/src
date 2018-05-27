@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Sean Eric Fagan
- * Copyright (c) 1994 Søren Schmidt
+ * Copyright (c) 1994 SÃ¸ren Schmidt
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_xenix.c 230132 2012-01-15 13:23:18Z uqs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

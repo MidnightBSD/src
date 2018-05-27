@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Steven Wallace
  * Copyright (c) 1994, 1995 Scott Bartram
@@ -47,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_misc.c 331671 2018-03-28 13:44:02Z emaste $");
 
 /*
  * IBCS2 compatibility module.
@@ -57,7 +58,7 @@ __FBSDID("$FreeBSD$");
  */
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/dirent.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
@@ -200,15 +201,22 @@ ibcs2_execv(td, uap)
 	struct ibcs2_execv_args *uap;
 {
 	struct image_args eargs;
+	struct vmspace *oldvmspace;
 	char *path;
 	int error;
 
         CHECKALTEXIST(td, uap->path, &path);
 
+	error = pre_execve(td, &oldvmspace);
+	if (error != 0) {
+		free(path, M_TEMP);
+		return (error);
+	}
 	error = exec_copyin_args(&eargs, path, UIO_SYSSPACE, uap->argp, NULL);
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
+	post_execve(td, error, oldvmspace);
 	return (error);
 }
 
@@ -218,16 +226,23 @@ ibcs2_execve(td, uap)
         struct ibcs2_execve_args *uap;
 {
 	struct image_args eargs;
+	struct vmspace *oldvmspace;
 	char *path;
 	int error;
 
         CHECKALTEXIST(td, uap->path, &path);
 
+	error = pre_execve(td, &oldvmspace);
+	if (error != 0) {
+		free(path, M_TEMP);
+		return (error);
+	}
 	error = exec_copyin_args(&eargs, path, UIO_SYSSPACE, uap->argp,
 	    uap->envp);
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
+	post_execve(td, error, oldvmspace);
 	return (error);
 }
 
@@ -326,28 +341,29 @@ ibcs2_getdents(td, uap)
 	register int len, reclen;	/* BSD-format */
 	register caddr_t outp;		/* iBCS2-format */
 	register int resid;		/* iBCS2-format */
+	cap_rights_t rights;
 	struct file *fp;
 	struct uio auio;
 	struct iovec aiov;
 	struct ibcs2_dirent idb;
 	off_t off;			/* true file offset */
-	int buflen, error, eofflag, vfslocked;
+	int buflen, error, eofflag;
 	u_long *cookies = NULL, *cookiep;
 	int ncookies;
 #define	BSD_DIRENT(cp)		((struct dirent *)(cp))
 #define	IBCS2_RECLEN(reclen)	(reclen + sizeof(u_short))
 
-	if ((error = getvnode(td->td_proc->p_fd, uap->fd,
-	    CAP_READ | CAP_SEEK, &fp)) != 0)
+	memset(&idb, 0, sizeof(idb));
+	error = getvnode(td->td_proc->p_fd, uap->fd,
+	    cap_rights_init(&rights, CAP_READ), &fp);
+	if (error != 0)
 		return (error);
 	if ((fp->f_flag & FREAD) == 0) {
 		fdrop(fp, td);
 		return (EBADF);
 	}
 	vp = fp->f_vnode;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type != VDIR) {	/* XXX  vnode readdir op should do this */
-		VFS_UNLOCK_GIANT(vfslocked);
 		fdrop(fp, td);
 		return (EINVAL);
 	}
@@ -464,7 +480,6 @@ eof:
 	td->td_retval[0] = uap->nbytes - resid;
 out:
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookies)
 		free(cookies, M_TEMP);
@@ -482,6 +497,7 @@ ibcs2_read(td, uap)
 	register int len, reclen;	/* BSD-format */
 	register caddr_t outp;		/* iBCS2-format */
 	register int resid;		/* iBCS2-format */
+	cap_rights_t rights;
 	struct file *fp;
 	struct uio auio;
 	struct iovec aiov;
@@ -490,12 +506,13 @@ ibcs2_read(td, uap)
 		char name[14];
 	} idb;
 	off_t off;			/* true file offset */
-	int buflen, error, eofflag, size, vfslocked;
+	int buflen, error, eofflag, size;
 	u_long *cookies = NULL, *cookiep;
 	int ncookies;
 
-	if ((error = getvnode(td->td_proc->p_fd, uap->fd,
-	    CAP_READ | CAP_SEEK, &fp)) != 0) {
+	error = getvnode(td->td_proc->p_fd, uap->fd,
+	    cap_rights_init(&rights, CAP_READ), &fp);
+	if (error != 0) {
 		if (error == EINVAL)
 			return sys_read(td, (struct read_args *)uap);
 		else
@@ -506,9 +523,7 @@ ibcs2_read(td, uap)
 		return (EBADF);
 	}
 	vp = fp->f_vnode;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type != VDIR) {
-		VFS_UNLOCK_GIANT(vfslocked);
 		fdrop(fp, td);
 		return sys_read(td, (struct read_args *)uap);
 	}
@@ -631,7 +646,6 @@ eof:
 	td->td_retval[0] = uap->nbytes - resid;
 out:
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookies)
 		free(cookies, M_TEMP);
