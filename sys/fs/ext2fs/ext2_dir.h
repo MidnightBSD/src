@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Aditya Sarawgi
  * All rights reserved.
@@ -23,59 +24,79 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_dir.h 311232 2017-01-04 02:43:33Z pfg $
  */
 
 #ifndef _FS_EXT2FS_EXT2_DIR_H_
-#define _FS_EXT2FS_EXT2_DIR_H_
+#define	_FS_EXT2FS_EXT2_DIR_H_
 
 /*
  * Structure of a directory entry
  */
-#define EXT2FS_MAXNAMLEN 255
+#define	EXT2FS_MAXNAMLEN	255
 
-struct	ext2fs_direct {
+struct ext2fs_direct {
 	uint32_t e2d_ino;		/* inode number of entry */
 	uint16_t e2d_reclen;		/* length of this record */
 	uint16_t e2d_namlen;		/* length of string in e2d_name */
 	char e2d_name[EXT2FS_MAXNAMLEN];/* name with length<=EXT2FS_MAXNAMLEN */
 };
+
+enum slotstatus {
+	NONE,
+	COMPACT,
+	FOUND
+};
+
+struct ext2fs_searchslot {
+	enum slotstatus slotstatus;
+	doff_t	slotoffset;		/* offset of area with free space */
+	int	slotsize;		/* size of area at slotoffset */
+	int	slotfreespace;		/* amount of space free in slot */
+	int	slotneeded;		/* sizeof the entry we are seeking */
+};
+
 /*
  * The new version of the directory entry.  Since EXT2 structures are
  * stored in intel byte order, and the name_len field could never be
  * bigger than 255 chars, it's safe to reclaim the extra byte for the
  * file_type field.
  */
-struct	ext2fs_direct_2 {
+struct ext2fs_direct_2 {
 	uint32_t e2d_ino;		/* inode number of entry */
 	uint16_t e2d_reclen;		/* length of this record */
-	uint8_t e2d_namlen;		/* length of string in e2d_name */
-	uint8_t e2d_type;		/* file type */
-	char e2d_name[EXT2FS_MAXNAMLEN];/* name with length<=EXT2FS_MAXNAMLEN */
+	uint8_t	e2d_namlen;		/* length of string in e2d_name */
+	uint8_t	e2d_type;		/* file type */
+	char	e2d_name[EXT2FS_MAXNAMLEN];	/* name with
+						 * length<=EXT2FS_MAXNAMLEN */
 };
+
+/*
+ * Maximal count of links to a file
+ */
+#define	EXT2_LINK_MAX	32000
+
 /*
  * Ext2 directory file types.  Only the low 3 bits are used.  The
  * other bits are reserved for now.
  */
-#define EXT2_FT_UNKNOWN		0
-#define EXT2_FT_REG_FILE	1
-#define EXT2_FT_DIR		2
-#define EXT2_FT_CHRDEV		3
-#define EXT2_FT_BLKDEV 		4
-#define EXT2_FT_FIFO		5
-#define EXT2_FT_SOCK		6
-#define EXT2_FT_SYMLINK		7
-
-#define EXT2_FT_MAX		8
+#define	EXT2_FT_UNKNOWN		0
+#define	EXT2_FT_REG_FILE	1
+#define	EXT2_FT_DIR		2
+#define	EXT2_FT_CHRDEV		3
+#define	EXT2_FT_BLKDEV 		4
+#define	EXT2_FT_FIFO		5
+#define	EXT2_FT_SOCK		6
+#define	EXT2_FT_SYMLINK		7
+#define	EXT2_FT_MAX		8
 
 /*
  * EXT2_DIR_PAD defines the directory entries boundaries
  *
  * NOTE: It must be a multiple of 4
  */
-#define EXT2_DIR_PAD		 	4
-#define EXT2_DIR_ROUND 			(EXT2_DIR_PAD - 1)
-#define EXT2_DIR_REC_LEN(name_len)	(((name_len) + 8 + EXT2_DIR_ROUND) & \
+#define	EXT2_DIR_PAD		 	4
+#define	EXT2_DIR_ROUND			(EXT2_DIR_PAD - 1)
+#define	EXT2_DIR_REC_LEN(name_len)	(((name_len) + 8 + EXT2_DIR_ROUND) & \
 					 ~EXT2_DIR_ROUND)
-#endif /* !_FS_EXT2FS_EXT2_DIR_H_ */
-
+#endif	/* !_FS_EXT2FS_EXT2_DIR_H_ */

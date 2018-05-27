@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,11 +28,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_mount.h 311232 2017-01-04 02:43:33Z pfg $
  */
 
 #ifndef _FS_EXT2FS_EXT2_MOUNT_H_
-#define _FS_EXT2FS_EXT2_MOUNT_H_
+#define	_FS_EXT2FS_EXT2_MOUNT_H_
 
 #ifdef _KERNEL
 
@@ -59,20 +60,20 @@ struct ext2mount {
 	struct bufobj *um_bo;
 };
 
-#define EXT2_LOCK(aa)		mtx_lock(&(aa)->um_lock)
-#define EXT2_UNLOCK(aa)	mtx_unlock(&(aa)->um_lock)
-#define EXT2_MTX(aa)		(&(aa)->um_lock)
+#define	EXT2_LOCK(aa)		mtx_lock(&(aa)->um_lock)
+#define	EXT2_UNLOCK(aa)	mtx_unlock(&(aa)->um_lock)
+#define	EXT2_MTX(aa)		(&(aa)->um_lock)
 
 /* Convert mount ptr to ext2fsmount ptr. */
-#define VFSTOEXT2(mp)	((struct ext2mount *)((mp)->mnt_data))
+#define	VFSTOEXT2(mp)	((struct ext2mount *)((mp)->mnt_data))
 
 /*
  * Macros to access file system parameters in the ufsmount structure.
  * Used by ufs_bmap.
  */
-#define MNINDIR(ump)			((ump)->um_nindir)
+#define	MNINDIR(ump)			((ump)->um_nindir)
 #define	blkptrtodb(ump, b)		((b) << (ump)->um_bptrtodb)
 #define	is_sequential(ump, a, b)	((b) == (a) + ump->um_seqinc)
-#endif /* _KERNEL */
+#endif	/* _KERNEL */
 
 #endif	/* !_FS_EXT2FS_EXT2_MOUNT_H_ */

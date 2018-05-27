@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp.  All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/devfs/devfs_int.h 278283 2015-02-05 20:49:13Z hselasky $
  */
 
 /*
@@ -70,7 +71,7 @@ struct cdev_priv {
 	LIST_HEAD(, cdev_privdata) cdp_fdpriv;
 };
 
-#define	cdev2priv(c)	member2struct(cdev_priv, cdp_c, c)
+#define	cdev2priv(c)	__containerof(c, struct cdev_priv, cdp_c)
 
 struct cdev	*devfs_alloc(int);
 int	devfs_dev_exists(const char *);

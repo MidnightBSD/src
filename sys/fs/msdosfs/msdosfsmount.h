@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/fs/msdosfs/msdosfsmount.h 281095 2015-04-05 01:03:11Z kib $ */
 /*	$NetBSD: msdosfsmount.h,v 1.17 1997/11/17 15:37:07 ws Exp $	*/
 
 /*-
@@ -239,8 +240,8 @@ struct msdosfs_args {
 	gid_t	gid;		/* gid that owns msdosfs files */
 	mode_t	mask;		/* file mask to be applied for msdosfs perms */
 	int	flags;		/* see below */
-	int magic;		/* version number */
-	u_int16_t u2w[128];     /* Local->Unicode table */
+	int	unused1;	/* unused, was version number */
+	u_int16_t unused2[128];	/* no longer used, was Local->Unicode table */
 	char	*cs_win;	/* Windows(Unicode) Charset */
 	char	*cs_dos;	/* DOS Charset */
 	char	*cs_local;	/* Local Charset */
@@ -263,7 +264,5 @@ struct msdosfs_args {
 #define	MSDOSFS_FATMIRROR	0x20000000	/* FAT is mirrored */
 #define	MSDOSFS_LARGEFS		0x10000000	/* perform fileno mapping */
 #define	MSDOSFS_FSIMOD		0x01000000
-
-#define MSDOSFS_ARGSMAGIC	0xe4eff300
 
 #endif /* !_MSDOSFS_MSDOSFSMOUNT_H_ */

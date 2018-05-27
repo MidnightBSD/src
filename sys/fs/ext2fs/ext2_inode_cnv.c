@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 The University of Utah and
  * the Computer Systems Laboratory at the University of Utah (CSL).
@@ -19,7 +20,7 @@
  * improvements that they make and grant CSL redistribution rights.
  *
  *      Utah $Hdr$
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_inode_cnv.c 320841 2017-07-09 15:14:22Z pfg $
  */
 
 /*
@@ -32,6 +33,7 @@
 #include <sys/stat.h>
 #include <sys/vnode.h>
 
+#include <fs/ext2fs/fs.h>
 #include <fs/ext2fs/inode.h>
 #include <fs/ext2fs/ext2fs.h>
 #include <fs/ext2fs/ext2_dinode.h>
@@ -40,28 +42,42 @@
 #define XTIME_TO_NSEC(x)	((x & EXT3_NSEC_MASK) >> 2)
 #define NSEC_TO_XTIME(t)	(le32toh(t << 2) & EXT3_NSEC_MASK)
 
+#ifdef EXT2FS_DEBUG
 void
 ext2_print_inode(struct inode *in)
 {
 	int i;
+	struct ext4_extent_header *ehp;
+	struct ext4_extent *ep;
 
-	printf( "Inode: %5d", in->i_number);
-	printf( /* "Inode: %5d" */
-		" Type: %10s Mode: 0x%o Flags: 0x%x  Version: %d\n",
-		"n/a", in->i_mode, in->i_flags, in->i_gen);
-	printf( "User: %5lu Group: %5lu  Size: %lu\n",
-		(unsigned long)in->i_uid, (unsigned long)in->i_gid,
-		(unsigned long)in->i_size);
-	printf( "Links: %3d Blockcount: %d\n",
-		in->i_nlink, in->i_blocks);
-	printf( "ctime: 0x%x", in->i_ctime);
-	printf( "atime: 0x%x", in->i_atime);
-	printf( "mtime: 0x%x", in->i_mtime);
-	printf( "BLOCKS: ");
-	for(i=0; i < (in->i_blocks <= 24 ? ((in->i_blocks+1)/2): 12); i++)
-		printf("%d ", in->i_db[i]);
+	printf("Inode: %5ju", (uintmax_t)in->i_number);
+	printf(	/* "Inode: %5d" */
+	    " Type: %10s Mode: 0x%o Flags: 0x%x  Version: %d\n",
+	    "n/a", in->i_mode, in->i_flags, in->i_gen);
+	printf("User: %5u Group: %5u  Size: %ju\n",
+	    in->i_uid, in->i_gid, (uintmax_t)in->i_size);
+	printf("Links: %3d Blockcount: %ju\n",
+	    in->i_nlink, (uintmax_t)in->i_blocks);
+	printf("ctime: 0x%x", in->i_ctime);
+	printf("atime: 0x%x", in->i_atime);
+	printf("mtime: 0x%x", in->i_mtime);
+	if (E2DI_HAS_XTIME(in))
+		printf("crtime %#x ", in->i_birthtime);
+	printf("BLOCKS:");
+	for (i = 0; i < (in->i_blocks <= 24 ? (in->i_blocks + 1) / 2 : 12); i++)
+		printf("  %d", in->i_db[i]);
+	printf("\n");
+	printf("Extents:\n");
+	ehp = (struct ext4_extent_header *)in->i_db;
+	printf("Header (magic 0x%x entries %d max %d depth %d gen %d)\n",
+	    ehp->eh_magic, ehp->eh_ecount, ehp->eh_max, ehp->eh_depth,
+	    ehp->eh_gen);
+	ep = (struct ext4_extent *)(char *)(ehp + 1);
+	printf("Index (blk %d len %d start_lo %d start_hi %d)\n", ep->e_blk,
+	    ep->e_len, ep->e_start_lo, ep->e_start_hi);
 	printf("\n");
 }
+#endif	/* EXT2FS_DEBUG */
 
 /*
  *	raw ext2 inode to inode
@@ -69,14 +85,15 @@ ext2_print_inode(struct inode *in)
 void
 ext2_ei2i(struct ext2fs_dinode *ei, struct inode *ip)
 {
-        int i;
+	int i;
 
 	ip->i_nlink = ei->e2di_nlink;
-	/* Godmar thinks - if the link count is zero, then the inode is
-	   unused - according to ext2 standards. Ufs marks this fact
-	   by setting i_mode to zero - why ?
-	   I can see that this might lead to problems in an undelete.
-	*/
+	/*
+	 * Godmar thinks - if the link count is zero, then the inode is
+	 * unused - according to ext2 standards. Ufs marks this fact by
+	 * setting i_mode to zero - why ? I can see that this might lead to
+	 * problems in an undelete.
+	 */
 	ip->i_mode = ei->e2di_nlink ? ei->e2di_mode : 0;
 	ip->i_size = ei->e2di_size;
 	if (S_ISREG(ip->i_mode))
@@ -95,14 +112,23 @@ ext2_ei2i(struct ext2fs_dinode *ei, struct inode *ip)
 	ip->i_flags |= (ei->e2di_flags & EXT2_APPEND) ? SF_APPEND : 0;
 	ip->i_flags |= (ei->e2di_flags & EXT2_IMMUTABLE) ? SF_IMMUTABLE : 0;
 	ip->i_flags |= (ei->e2di_flags & EXT2_NODUMP) ? UF_NODUMP : 0;
+	ip->i_flag |= (ei->e2di_flags & EXT3_INDEX) ? IN_E3INDEX : 0;
+	ip->i_flag |= (ei->e2di_flags & EXT4_EXTENTS) ? IN_E4EXTENTS : 0;
 	ip->i_blocks = ei->e2di_nblock;
+	if (E2DI_HAS_HUGE_FILE(ip)) {
+		ip->i_blocks |= (uint64_t)ei->e2di_nblock_high << 32;
+		if (ei->e2di_flags & EXT4_HUGE_FILE)
+			ip->i_blocks = fsbtodb(ip->i_e2fs, ip->i_blocks);
+	}
 	ip->i_gen = ei->e2di_gen;
 	ip->i_uid = ei->e2di_uid;
 	ip->i_gid = ei->e2di_gid;
+	ip->i_uid |= (uint32_t)ei->e2di_uid_high << 16;
+	ip->i_gid |= (uint32_t)ei->e2di_gid_high << 16;
 	/* XXX use memcpy */
-	for(i = 0; i < NDADDR; i++)
+	for (i = 0; i < NDADDR; i++)
 		ip->i_db[i] = ei->e2di_blocks[i];
-	for(i = 0; i < NIADDR; i++)
+	for (i = 0; i < NIADDR; i++)
 		ip->i_ib[i] = ei->e2di_blocks[EXT2_NDIR_BLOCKS + i];
 }
 
@@ -116,9 +142,9 @@ ext2_i2ei(struct inode *ip, struct ext2fs_dinode *ei)
 
 	ei->e2di_mode = ip->i_mode;
 	ei->e2di_nlink = ip->i_nlink;
-	/* 
-	   Godmar thinks: if dtime is nonzero, ext2 says this inode
-	   has been deleted, this would correspond to a zero link count
+	/*
+	 * Godmar thinks: if dtime is nonzero, ext2 says this inode has been
+	 * deleted, this would correspond to a zero link count
 	 */
 	ei->e2di_dtime = ei->e2di_nlink ? 0 : ip->i_mtime;
 	ei->e2di_size = ip->i_size;
@@ -134,18 +160,22 @@ ext2_i2ei(struct inode *ip, struct ext2fs_dinode *ei)
 		ei->e2di_crtime = ip->i_birthtime;
 		ei->e2di_crtime_extra = NSEC_TO_XTIME(ip->i_birthnsec);
 	}
-	ei->e2di_flags = ip->i_flags;
 	ei->e2di_flags = 0;
-	ei->e2di_flags |= (ip->i_flags & SF_APPEND) ? EXT2_APPEND: 0;
-	ei->e2di_flags |= (ip->i_flags & SF_IMMUTABLE) ? EXT2_IMMUTABLE: 0;
-	ei->e2di_flags |= (ip->i_flags & UF_NODUMP) ? EXT2_NODUMP: 0;
-	ei->e2di_nblock = ip->i_blocks;
+	ei->e2di_flags |= (ip->i_flags & SF_APPEND) ? EXT2_APPEND : 0;
+	ei->e2di_flags |= (ip->i_flags & SF_IMMUTABLE) ? EXT2_IMMUTABLE : 0;
+	ei->e2di_flags |= (ip->i_flags & UF_NODUMP) ? EXT2_NODUMP : 0;
+	ei->e2di_flags |= (ip->i_flag & IN_E3INDEX) ? EXT3_INDEX : 0;
+	ei->e2di_flags |= (ip->i_flag & IN_E4EXTENTS) ? EXT4_EXTENTS : 0;
+	ei->e2di_nblock = ip->i_blocks & 0xffffffff;
+	ei->e2di_nblock_high = ip->i_blocks >> 32 & 0xffff;
 	ei->e2di_gen = ip->i_gen;
-	ei->e2di_uid = ip->i_uid;
-	ei->e2di_gid = ip->i_gid;
+	ei->e2di_uid = ip->i_uid & 0xffff;
+	ei->e2di_uid_high = ip->i_uid >> 16 & 0xffff;
+	ei->e2di_gid = ip->i_gid & 0xffff;
+	ei->e2di_gid_high = ip->i_gid >> 16 & 0xffff;
 	/* XXX use memcpy */
-	for(i = 0; i < NDADDR; i++)
+	for (i = 0; i < NDADDR; i++)
 		ei->e2di_blocks[i] = ip->i_db[i];
-	for(i = 0; i < NIADDR; i++)
+	for (i = 0; i < NIADDR; i++)
 		ei->e2di_blocks[EXT2_NDIR_BLOCKS + i] = ip->i_ib[i];
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  modified for EXT2FS support in Lites 1.1
  *
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_vfsops.c	8.8 (Berkeley) 4/18/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_vfsops.c 311232 2017-01-04 02:43:33Z pfg $
  */
 
 #include <sys/param.h>
@@ -112,7 +113,7 @@ ext2_mount(struct mount *mp)
 	struct vfsoptlist *opts;
 	struct vnode *devvp;
 	struct thread *td;
-	struct ext2mount *ump = 0;
+	struct ext2mount *ump = NULL;
 	struct m_ext2fs *fs;
 	struct nameidata nd, *ndp = &nd;
 	accmode_t accmode;
@@ -141,7 +142,7 @@ ext2_mount(struct mount *mp)
 	 */
 	if (mp->mnt_flag & MNT_UPDATE) {
 		ump = VFSTOEXT2(mp);
-		fs = ump->um_e2fs; 
+		fs = ump->um_e2fs;
 		error = 0;
 		if (fs->e2fs_ronly == 0 &&
 		    vfs_flagopt(opts, "ro", NULL, 0)) {
@@ -152,7 +153,7 @@ ext2_mount(struct mount *mp)
 			if (mp->mnt_flag & MNT_FORCE)
 				flags |= FORCECLOSE;
 			error = ext2_flushfiles(mp, flags, td);
-			if ( error == 0 && fs->e2fs_wasvalid && ext2_cgupdate(ump, MNT_WAIT) == 0) {
+			if (error == 0 && fs->e2fs_wasvalid && ext2_cgupdate(ump, MNT_WAIT) == 0) {
 				fs->e2fs->e2fs_state |= E2FS_ISCLEAN;
 				ext2_sbupdate(ump, MNT_WAIT);
 			}
@@ -290,7 +291,8 @@ ext2_check_sb_compat(struct ext2fs *es, struct cdev *dev, int ronly)
 		return (1);
 	}
 	if (es->e2fs_rev > E2FS_REV0) {
-		if (es->e2fs_features_incompat & ~EXT2F_INCOMPAT_SUPP) {
+		if (es->e2fs_features_incompat & ~(EXT2F_INCOMPAT_SUPP |
+						   EXT4F_RO_INCOMPAT_SUPP)) {
 			printf(
 "WARNING: mount of %s denied due to unsupported optional features\n",
 			    devtoname(dev));
@@ -307,8 +309,8 @@ ext2_check_sb_compat(struct ext2fs *es, struct cdev *dev, int ronly)
 }
 
 /*
- * This computes the fields of the  ext2_sb_info structure from the
- * data in the ext2_super_block structure read in.
+ * This computes the fields of the m_ext2fs structure from the
+ * data in the ext2fs structure read in.
  */
 static int
 compute_sb_data(struct vnode *devvp, struct ext2fs *es,
@@ -331,7 +333,7 @@ compute_sb_data(struct vnode *devvp, struct ext2fs *es,
 	fs->e2fs_fpg = es->e2fs_fpg;
 	fs->e2fs_ipg = es->e2fs_ipg;
 	if (es->e2fs_rev == E2FS_REV0) {
-		fs->e2fs_isize = E2FS_REV0_INODE_SIZE ;
+		fs->e2fs_isize = E2FS_REV0_INODE_SIZE;
 	} else {
 		fs->e2fs_isize = es->e2fs_inode_size;
 
@@ -354,51 +356,66 @@ compute_sb_data(struct vnode *devvp, struct ext2fs *es,
 	}
 
 	fs->e2fs_ipb = fs->e2fs_bsize / EXT2_INODE_SIZE(fs);
-	fs->e2fs_itpg = fs->e2fs_ipg /fs->e2fs_ipb;
+	fs->e2fs_itpg = fs->e2fs_ipg / fs->e2fs_ipb;
 	/* s_resuid / s_resgid ? */
-	fs->e2fs_gcount = (es->e2fs_bcount - es->e2fs_first_dblock +
-	    EXT2_BLOCKS_PER_GROUP(fs) - 1) / EXT2_BLOCKS_PER_GROUP(fs);
+	fs->e2fs_gcount = howmany(es->e2fs_bcount - es->e2fs_first_dblock,
+	    EXT2_BLOCKS_PER_GROUP(fs));
 	e2fs_descpb = fs->e2fs_bsize / sizeof(struct ext2_gd);
-	db_count = (fs->e2fs_gcount + e2fs_descpb - 1) / e2fs_descpb;
+	db_count = howmany(fs->e2fs_gcount, e2fs_descpb);
 	fs->e2fs_gdbcount = db_count;
 	fs->e2fs_gd = malloc(db_count * fs->e2fs_bsize,
 	    M_EXT2MNT, M_WAITOK);
 	fs->e2fs_contigdirs = malloc(fs->e2fs_gcount *
-	    sizeof(*fs->e2fs_contigdirs), M_EXT2MNT, M_WAITOK);
+	    sizeof(*fs->e2fs_contigdirs), M_EXT2MNT, M_WAITOK | M_ZERO);
 
 	/*
 	 * Adjust logic_sb_block.
 	 * Godmar thinks: if the blocksize is greater than 1024, then
 	 * the superblock is logically part of block zero.
 	 */
-	if(fs->e2fs_bsize > SBSIZE)
+	if (fs->e2fs_bsize > SBSIZE)
 		logic_sb_block = 0;
 	for (i = 0; i < db_count; i++) {
-		error = bread(devvp ,
-			 fsbtodb(fs, logic_sb_block + i + 1 ),
-			fs->e2fs_bsize, NOCRED, &bp);
+		error = bread(devvp,
+		    fsbtodb(fs, logic_sb_block + i + 1),
+		    fs->e2fs_bsize, NOCRED, &bp);
 		if (error) {
+			free(fs->e2fs_contigdirs, M_EXT2MNT);
 			free(fs->e2fs_gd, M_EXT2MNT);
 			brelse(bp);
 			return (error);
 		}
 		e2fs_cgload((struct ext2_gd *)bp->b_data,
 		    &fs->e2fs_gd[
-			i * fs->e2fs_bsize / sizeof(struct ext2_gd)],
+		    i * fs->e2fs_bsize / sizeof(struct ext2_gd)],
 		    fs->e2fs_bsize);
 		brelse(bp);
 		bp = NULL;
 	}
+	/* Initialization for the ext2 Orlov allocator variant. */
 	fs->e2fs_total_dir = 0;
-	for (i=0; i < fs->e2fs_gcount; i++){
+	for (i = 0; i < fs->e2fs_gcount; i++)
 		fs->e2fs_total_dir += fs->e2fs_gd[i].ext2bgd_ndirs;
-		fs->e2fs_contigdirs[i] = 0;
-	}
+
 	if (es->e2fs_rev == E2FS_REV0 ||
 	    !EXT2_HAS_RO_COMPAT_FEATURE(fs, EXT2F_ROCOMPAT_LARGEFILE))
 		fs->e2fs_maxfilesize = 0x7fffffff;
-	else
-		fs->e2fs_maxfilesize = 0x7fffffffffffffff;
+	else {
+		fs->e2fs_maxfilesize = 0xffffffffffff;
+		if (EXT2_HAS_RO_COMPAT_FEATURE(fs, EXT2F_ROCOMPAT_HUGE_FILE))
+			fs->e2fs_maxfilesize = 0x7fffffffffffffff;
+	}
+	if (es->e4fs_flags & E2FS_UNSIGNED_HASH) {
+		fs->e2fs_uhash = 3;
+	} else if ((es->e4fs_flags & E2FS_SIGNED_HASH) == 0) {
+#ifdef __CHAR_UNSIGNED__
+		es->e4fs_flags |= E2FS_UNSIGNED_HASH;
+		fs->e2fs_uhash = 3;
+#else
+		es->e4fs_flags |= E2FS_SIGNED_HASH;
+#endif
+	}
+
 	return (0);
 }
 
@@ -453,7 +470,7 @@ ext2_reload(struct mount *mp, struct thread *td)
 	fs = VFSTOEXT2(mp)->um_e2fs;
 	bcopy(bp->b_data, fs->e2fs, sizeof(struct ext2fs));
 
-	if((error = compute_sb_data(devvp, es, fs)) != 0) {
+	if ((error = compute_sb_data(devvp, es, fs)) != 0) {
 		brelse(bp);
 		return (error);
 	}
@@ -500,7 +517,7 @@ loop:
 			MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
 			return (error);
 		}
-		ext2_ei2i((struct ext2fs_dinode *) ((char *)bp->b_data +
+		ext2_ei2i((struct ext2fs_dinode *)((char *)bp->b_data +
 		    EXT2_INODE_SIZE(fs) * ino_to_fsbo(fs, ip->i_number)), ip);
 		brelse(bp);
 		VOP_UNLOCK(vp, 0);
@@ -525,7 +542,8 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 	struct csum *sump;
 	int error;
 	int ronly;
-	int i, size;
+	int i;
+	u_long size;
 	int32_t *lp;
 	int32_t e2fs_maxcontig;
 
@@ -584,13 +602,13 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 
 	/*
 	 * I don't know whether this is the right strategy. Note that
-	 * we dynamically allocate both an ext2_sb_info and an ext2_super_block
+	 * we dynamically allocate both an m_ext2fs and an ext2fs
 	 * while Linux keeps the super block in a locked buffer.
 	 */
 	ump->um_e2fs = malloc(sizeof(struct m_ext2fs),
-		M_EXT2MNT, M_WAITOK);
+	    M_EXT2MNT, M_WAITOK | M_ZERO);
 	ump->um_e2fs->e2fs = malloc(sizeof(struct ext2fs),
-		M_EXT2MNT, M_WAITOK);
+	    M_EXT2MNT, M_WAITOK);
 	mtx_init(EXT2_MTX(ump), "EXT2FS", "EXT2FS Lock", MTX_DEF);
 	bcopy(es, ump->um_e2fs->e2fs, (u_int)sizeof(struct ext2fs));
 	if ((error = compute_sb_data(devvp, ump->um_e2fs->e2fs, ump->um_e2fs)))
@@ -598,8 +616,8 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 
 	/*
 	 * Calculate the maximum contiguous blocks and size of cluster summary
-	 * array.  In FFS this is done by newfs; however, the superblock 
-	 * in ext2fs doesn't have these variables, so we can calculate 
+	 * array.  In FFS this is done by newfs; however, the superblock
+	 * in ext2fs doesn't have these variables, so we can calculate
 	 * them here.
 	 */
 	e2fs_maxcontig = MAX(1, MAXPHYS / ump->um_e2fs->e2fs_bsize);
@@ -630,7 +648,7 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 	 */
 	fs->e2fs_wasvalid = fs->e2fs->e2fs_state & E2FS_ISCLEAN ? 1 : 0;
 	if (ronly == 0) {
-		fs->e2fs_fmod = 1;		/* mark it modified */
+		fs->e2fs_fmod = 1;	/* mark it modified */
 		fs->e2fs->e2fs_state &= ~E2FS_ISCLEAN;	/* set fs invalid */
 	}
 	mp->mnt_data = ump;
@@ -659,8 +677,8 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 	 * Initialize filesystem stat information in mount struct.
 	 */
 	MNT_ILOCK(mp);
- 	mp->mnt_kern_flag |= MNTK_MPSAFE | MNTK_LOOKUP_SHARED |
-            MNTK_EXTENDED_SHARED;
+	mp->mnt_kern_flag |= MNTK_LOOKUP_SHARED | MNTK_EXTENDED_SHARED |
+	    MNTK_USES_BCACHE;
 	MNT_IUNLOCK(mp);
 	return (0);
 out:
@@ -674,7 +692,7 @@ out:
 		PICKUP_GIANT();
 	}
 	if (ump) {
-	  	mtx_destroy(EXT2_MTX(ump));
+		mtx_destroy(EXT2_MTX(ump));
 		free(ump->um_e2fs->e2fs_gd, M_EXT2MNT);
 		free(ump->um_e2fs->e2fs_contigdirs, M_EXT2MNT);
 		free(ump->um_e2fs->e2fs, M_EXT2MNT);
@@ -709,8 +727,8 @@ ext2_unmount(struct mount *mp, int mntflags)
 	ronly = fs->e2fs_ronly;
 	if (ronly == 0 && ext2_cgupdate(ump, MNT_WAIT) == 0) {
 		if (fs->e2fs_wasvalid)
- 			fs->e2fs->e2fs_state |= E2FS_ISCLEAN;
- 		ext2_sbupdate(ump, MNT_WAIT);
+			fs->e2fs->e2fs_state |= E2FS_ISCLEAN;
+		ext2_sbupdate(ump, MNT_WAIT);
 	}
 
 	DROP_GIANT();
@@ -747,8 +765,9 @@ ext2_flushfiles(struct mount *mp, int flags, struct thread *td)
 	error = vflush(mp, 0, flags, td);
 	return (error);
 }
+
 /*
- * Get file system statistics.
+ * Get filesystem statistics.
  */
 int
 ext2_statfs(struct mount *mp, struct statfs *sbp)
@@ -853,7 +872,7 @@ loop:
 	}
 
 	/*
-	 * Force stale file system control information to be flushed.
+	 * Force stale filesystem control information to be flushed.
 	 */
 	if (waitfor != MNT_LAZY) {
 		vn_lock(ump->um_devvp, LK_EXCLUSIVE | LK_RETRY);
@@ -888,7 +907,6 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	struct ext2mount *ump;
 	struct buf *bp;
 	struct vnode *vp;
-	struct cdev *dev;
 	struct thread *td;
 	int i, error;
 	int used_blocks;
@@ -899,15 +917,6 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 		return (error);
 
 	ump = VFSTOEXT2(mp);
-	dev = ump->um_dev;
-
-	/*
-	 * If this malloc() is performed after the getnewvnode()
-	 * it might block, leaving a vnode with a NULL v_data to be
-	 * found by ext2_sync() if a sync happens to fire right then,
-	 * which will cause a panic because ext2_sync() blindly
-	 * dereferences vp->v_data (as well it should).
-	 */
 	ip = malloc(sizeof(struct inode), M_EXT2NODE, M_WAITOK | M_ZERO);
 
 	/* Allocate a new vnode/inode. */
@@ -919,7 +928,7 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	vp->v_data = ip;
 	ip->i_vnode = vp;
 	ip->i_e2fs = fs = ump->um_e2fs;
-	ip->i_ump  = ump;
+	ip->i_ump = ump;
 	ip->i_number = ino;
 
 	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL);
@@ -948,8 +957,8 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 		return (error);
 	}
 	/* convert ext2 inode to dinode */
-	ext2_ei2i((struct ext2fs_dinode *) ((char *)bp->b_data + EXT2_INODE_SIZE(fs) *
-			ino_to_fsbo(fs, ino)), ip);
+	ext2_ei2i((struct ext2fs_dinode *)((char *)bp->b_data + EXT2_INODE_SIZE(fs) *
+	    ino_to_fsbo(fs, ino)), ip);
 	ip->i_block_group = ino_to_cg(fs, ino);
 	ip->i_next_alloc_block = 0;
 	ip->i_next_alloc_goal = 0;
@@ -958,15 +967,19 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	 * Now we want to make sure that block pointers for unused
 	 * blocks are zeroed out - ext2_balloc depends on this
 	 * although for regular files and directories only
+	 *
+	 * If IN_E4EXTENTS is enabled, unused blocks are not zeroed
+	 * out because we could corrupt the extent tree.
 	 */
-	if(S_ISDIR(ip->i_mode) || S_ISREG(ip->i_mode)) {
-		used_blocks = (ip->i_size+fs->e2fs_bsize-1) / fs->e2fs_bsize;
+	if (!(ip->i_flag & IN_E4EXTENTS) &&
+	    (S_ISDIR(ip->i_mode) || S_ISREG(ip->i_mode))) {
+		used_blocks = howmany(ip->i_size, fs->e2fs_bsize);
 		for (i = used_blocks; i < EXT2_NDIR_BLOCKS; i++)
 			ip->i_db[i] = 0;
 	}
-/*
+#ifdef EXT2FS_DEBUG
 	ext2_print_inode(ip);
-*/
+#endif
 	bqrelse(bp);
 
 	/*
@@ -988,7 +1001,7 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	 * already have one. This should only happen on old filesystems.
 	 */
 	if (ip->i_gen == 0) {
-		ip->i_gen = random() / 2 + 1;
+		ip->i_gen = random() + 1;
 		if ((vp->v_mount->mnt_flag & MNT_RDONLY) == 0)
 			ip->i_flag |= IN_MODIFIED;
 	}
@@ -1088,6 +1101,7 @@ ext2_cgupdate(struct ext2mount *mp, int waitfor)
 		allerror = error;
 	return (allerror);
 }
+
 /*
  * Return the root of a filesystem.
  */

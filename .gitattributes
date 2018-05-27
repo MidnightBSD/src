@@ -58714,7 +58714,11 @@ sys/fs/ext2fs/ext2_balloc.c -text
 sys/fs/ext2fs/ext2_bmap.c -text
 sys/fs/ext2fs/ext2_dinode.h -text
 sys/fs/ext2fs/ext2_dir.h -text
+sys/fs/ext2fs/ext2_extents.c svneol=native#text/plain
+sys/fs/ext2fs/ext2_extents.h svneol=native#text/plain
 sys/fs/ext2fs/ext2_extern.h -text
+sys/fs/ext2fs/ext2_hash.c svneol=native#text/plain
+sys/fs/ext2fs/ext2_htree.c svneol=native#text/plain
 sys/fs/ext2fs/ext2_inode.c -text
 sys/fs/ext2fs/ext2_inode_cnv.c -text
 sys/fs/ext2fs/ext2_lookup.c -text
@@ -58724,6 +58728,7 @@ sys/fs/ext2fs/ext2_vfsops.c -text
 sys/fs/ext2fs/ext2_vnops.c -text
 sys/fs/ext2fs/ext2fs.h -text
 sys/fs/ext2fs/fs.h -text
+sys/fs/ext2fs/htree.h svneol=native#text/plain
 sys/fs/ext2fs/inode.h -text
 sys/fs/fdescfs/fdesc.h -text
 sys/fs/fdescfs/fdesc_vfsops.c -text

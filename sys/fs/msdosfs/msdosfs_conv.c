@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_conv.c 333611 2018-05-14 19:21:57Z pfg $ */
 /*	$NetBSD: msdosfs_conv.c,v 1.25 1997/11/17 15:36:40 ws Exp $	*/
 
 /*-
@@ -257,7 +258,7 @@ dos2unixfn(dn, un, lower, pmp)
 	 * Copy the name portion into the unix filename string.
 	 */
 	for (i = 8; i > 0 && *dn != ' ';) {
-		c = dos2unixchr(tmpbuf, (const u_char **)&dn, &i,
+		c = dos2unixchr(tmpbuf, __DECONST(const u_char **, &dn), &i,
 		    lower & LCASE_BASE, pmp);
 		while (*c != '\0') {
 			*un++ = *c++;
@@ -274,8 +275,8 @@ dos2unixfn(dn, un, lower, pmp)
 		*un++ = '.';
 		thislong++;
 		for (i = 3; i > 0 && *dn != ' ';) {
-			c = dos2unixchr(tmpbuf, (const u_char **)&dn, &i,
-			    lower & LCASE_EXT, pmp);
+			c = dos2unixchr(tmpbuf, __DECONST(const u_char **, &dn),
+			    &i, lower & LCASE_EXT, pmp);
 			while (*c != '\0') {
 				*un++ = *c++;
 				thislong++;
@@ -581,7 +582,7 @@ unix2winfn(un, unlen, wep, cnt, chksum, pmp)
 		if (!code)
 			end = WIN_LAST;
 	}
-	if (*un == '\0')
+	if (!unlen)
 		end = WIN_LAST;
 	wep->weCnt |= end;
 	return !end;
@@ -629,7 +630,8 @@ winChkName(nbp, un, unlen, chksum, pmp)
 		 * to look up or create files in case sensitive even when
 		 * it's a long file name.
 		 */
-		c1 = unix2winchr((const u_char **)&np, &len, LCASE_BASE, pmp);
+		c1 = unix2winchr(__DECONST(const u_char **, &np), &len,
+		    LCASE_BASE, pmp);
 		c2 = unix2winchr(&un, &unlen, LCASE_BASE, pmp);
 		if (c1 != c2)
 			return -2;
@@ -677,7 +679,9 @@ win2unixfn(nbp, wep, chksum, pmp)
 		switch (code) {
 		case 0:
 			*np = '\0';
-			mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
+			if (mbnambuf_write(nbp, name,
+			    (wep->weCnt & WIN_CNT) - 1) != 0)
+				return -1;
 			return chksum;
 		case '/':
 			*np = '\0';
@@ -695,7 +699,9 @@ win2unixfn(nbp, wep, chksum, pmp)
 		switch (code) {
 		case 0:
 			*np = '\0';
-			mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
+			if (mbnambuf_write(nbp, name,
+			    (wep->weCnt & WIN_CNT) - 1) != 0)
+				return -1;
 			return chksum;
 		case '/':
 			*np = '\0';
@@ -713,7 +719,9 @@ win2unixfn(nbp, wep, chksum, pmp)
 		switch (code) {
 		case 0:
 			*np = '\0';
-			mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
+			if (mbnambuf_write(nbp, name,
+			    (wep->weCnt & WIN_CNT) - 1) != 0)
+				return -1;
 			return chksum;
 		case '/':
 			*np = '\0';
@@ -727,7 +735,8 @@ win2unixfn(nbp, wep, chksum, pmp)
 		cp += 2;
 	}
 	*np = '\0';
-	mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
+	if (mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1) != 0)
+		return -1;
 	return chksum;
 }
 
@@ -774,7 +783,7 @@ winSlotCnt(un, unlen, pmp)
 }
 
 /*
- * Determine the number of bytes neccesary for Win95 names
+ * Determine the number of bytes neccessary for Win95 names
  */
 size_t
 winLenFixup(un, unlen)
@@ -788,7 +797,7 @@ winLenFixup(un, unlen)
 }
 
 /*
- * Store an area with multi byte string instr, and reterns left
+ * Store an area with multi byte string instr, and returns left
  * byte of instr and moves pointer forward. The area's size is
  * inlen or outlen.
  */
@@ -947,8 +956,8 @@ win2unixchr(u_char *outbuf, u_int16_t wc, struct msdosfsmount *pmp)
 		ilen = 2;
 		olen = len = 4;
 		inp = inbuf;
-		msdosfs_iconv->convchr(pmp->pm_w2u, (const char **)&inp, &ilen,
-				     (char **)&outp, &olen);
+		msdosfs_iconv->convchr(pmp->pm_w2u, __DECONST(const char **,
+		    &inp), &ilen, (char **)&outp, &olen);
 		len -= olen;
 
 		/*
@@ -1029,7 +1038,7 @@ mbnambuf_init(struct mbnambuf *nbp)
  * This only penalizes portions of substrings that contain more than
  * WIN_CHARS bytes when they are first encountered.
  */
-void
+int
 mbnambuf_write(struct mbnambuf *nbp, char *name, int id)
 {
 	char *slot;
@@ -1040,7 +1049,7 @@ mbnambuf_write(struct mbnambuf *nbp, char *name, int id)
 		printf("msdosfs: non-decreasing id: id %d, last id %d\n",
 		    id, nbp->nb_last_id);
 #endif
-		return;
+		return (EINVAL);
 	}
 
 	/* Will store this substring in a WIN_CHARS-aligned slot. */
@@ -1051,17 +1060,24 @@ mbnambuf_write(struct mbnambuf *nbp, char *name, int id)
 #ifdef MSDOSFS_DEBUG
 		printf("msdosfs: file name length %zu too large\n", newlen);
 #endif
-		return;
+		return (ENAMETOOLONG);
 	}
 
 	/* Shift suffix upwards by the amount length exceeds WIN_CHARS. */
-	if (count > WIN_CHARS && nbp->nb_len != 0)
+	if (count > WIN_CHARS && nbp->nb_len != 0) {
+		if ((id * WIN_CHARS + count + nbp->nb_len) >
+		    sizeof(nbp->nb_buf))
+			return (ENAMETOOLONG);
+
 		bcopy(slot + WIN_CHARS, slot + count, nbp->nb_len);
+	}
 
 	/* Copy in the substring to its slot and update length so far. */
 	bcopy(name, slot, count);
 	nbp->nb_len = newlen;
 	nbp->nb_last_id = id;
+
+	return (0);
 }
 
 /*

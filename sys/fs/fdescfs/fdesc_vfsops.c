@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)fdesc_vfsops.c	8.4 (Berkeley) 1/21/94
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/fdescfs/fdesc_vfsops.c 277985 2015-01-31 17:35:53Z jamie $
  */
 
 /*
@@ -42,6 +43,7 @@
 #include <sys/systm.h>
 #include <sys/filedesc.h>
 #include <sys/kernel.h>
+#include <sys/jail.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/malloc.h>
@@ -78,7 +80,11 @@ fdesc_mount(struct mount *mp)
 {
 	int error = 0;
 	struct fdescmount *fmp;
+	struct thread *td = curthread;
 	struct vnode *rvp;
+
+	if (!prison_allow(td->td_ucred, PR_ALLOW_MOUNT_FDESCFS))
+		return (EPERM);
 
 	/*
 	 * Update is a no-op
@@ -98,7 +104,7 @@ fdesc_mount(struct mount *mp)
 	error = fdesc_allocvp(Froot, -1, FD_ROOT, mp, &rvp);
 	if (error) {
 		free(fmp, M_FDESCMNT);
-		mp->mnt_data = 0;
+		mp->mnt_data = NULL;
 		return (error);
 	}
 	rvp->v_type = VDIR;
@@ -107,9 +113,6 @@ fdesc_mount(struct mount *mp)
 	VOP_UNLOCK(rvp, 0);
 	/* XXX -- don't mark as local to work around fts() problems */
 	/*mp->mnt_flag |= MNT_LOCAL;*/
-	MNT_ILOCK(mp);
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
-	MNT_IUNLOCK(mp);
 	vfs_getnewfsid(mp);
 
 	vfs_mountedfrom(mp, "fdescfs");
@@ -152,7 +155,7 @@ fdesc_unmount(mp, mntflags)
 	 */
 	mtx_lock(&fdesc_hashmtx);
 	data = mp->mnt_data;
-	mp->mnt_data = 0;
+	mp->mnt_data = NULL;
 	mtx_unlock(&fdesc_hashmtx);
 	free(data, M_FDESCMNT);	/* XXX */
 
@@ -208,7 +211,7 @@ fdesc_statfs(mp, sbp)
 	last = min(fdp->fd_nfiles, lim);
 	freefd = 0;
 	for (i = fdp->fd_freefile; i < last; i++)
-		if (fdp->fd_ofiles[i] == NULL)
+		if (fdp->fd_ofiles[i].fde_file == NULL)
 			freefd++;
 
 	/*
@@ -240,4 +243,4 @@ static struct vfsops fdesc_vfsops = {
 	.vfs_unmount =		fdesc_unmount,
 };
 
-VFS_SET(fdesc_vfsops, fdescfs, VFCF_SYNTHETIC);
+VFS_SET(fdesc_vfsops, fdescfs, VFCF_SYNTHETIC | VFCF_JAIL);

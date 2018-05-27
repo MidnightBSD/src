@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_bmap.c 185071 2008-11-18 23:19:43Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

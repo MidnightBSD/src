@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)fdesc.h	8.5 (Berkeley) 1/21/94
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/fdescfs/fdesc.h 191990 2009-05-11 15:33:26Z attilio $
  */
 
 #ifdef _KERNEL

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Tim J. Robbins.
  * All rights reserved.
@@ -43,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_fileno.c 263670 2014-03-23 19:48:30Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,7 +76,7 @@ msdosfs_fileno_init(mp)
 
 	RB_INIT(&pmp->pm_filenos);
 	pmp->pm_nfileno = FILENO_FIRST_DYN;
-        if (pmp->pm_HugeSectors > 0xffffffff /
+	if (pmp->pm_HugeSectors > 0xffffffff /
 	    (pmp->pm_BytesPerSec / sizeof(struct direntry)) + 1)
 		pmp->pm_flags |= MSDOSFS_LARGEFS;
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -25,7 +26,7 @@
  *
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/devfs/devfs_devs.c 313932 2017-02-19 03:17:11Z kib $
  */
 
 #include <sys/param.h>
@@ -61,7 +62,7 @@ static MALLOC_DEFINE(M_DEVFS2, "DEVFS2", "DEVFS data 2");
 static MALLOC_DEFINE(M_DEVFS3, "DEVFS3", "DEVFS data 3");
 static MALLOC_DEFINE(M_CDEVP, "DEVFS1", "DEVFS cdev_priv storage");
 
-static SYSCTL_NODE(_vfs, OID_AUTO, devfs, CTLFLAG_RW, 0, "DEVFS filesystem");
+SYSCTL_NODE(_vfs, OID_AUTO, devfs, CTLFLAG_RW, 0, "DEVFS filesystem");
 
 static unsigned devfs_generation;
 SYSCTL_UINT(_vfs_devfs, OID_AUTO, generation, CTLFLAG_RD,
@@ -109,10 +110,10 @@ SYSCTL_PROC(_kern, OID_AUTO, devname,
     NULL, 0, sysctl_devname, "", "devname(3) handler");
 
 SYSCTL_INT(_debug_sizeof, OID_AUTO, cdev, CTLFLAG_RD,
-    0, sizeof(struct cdev), "sizeof(struct cdev)");
+    SYSCTL_NULL_INT_PTR, sizeof(struct cdev), "sizeof(struct cdev)");
 
 SYSCTL_INT(_debug_sizeof, OID_AUTO, cdev_priv, CTLFLAG_RD,
-    0, sizeof(struct cdev_priv), "sizeof(struct cdev_priv)");
+    SYSCTL_NULL_INT_PTR, sizeof(struct cdev_priv), "sizeof(struct cdev_priv)");
 
 struct cdev *
 devfs_alloc(int flags)
@@ -121,23 +122,17 @@ devfs_alloc(int flags)
 	struct cdev *cdev;
 	struct timespec ts;
 
-	cdp = malloc(sizeof *cdp, M_CDEVP, M_USE_RESERVE | M_ZERO |
+	cdp = malloc(sizeof *cdp, M_CDEVP, M_ZERO |
 	    ((flags & MAKEDEV_NOWAIT) ? M_NOWAIT : M_WAITOK));
 	if (cdp == NULL)
 		return (NULL);
 
 	cdp->cdp_dirents = &cdp->cdp_dirent0;
-	cdp->cdp_dirent0 = NULL;
-	cdp->cdp_maxdirent = 0;
-	cdp->cdp_inode = 0;
 
 	cdev = &cdp->cdp_c;
-
-	cdev->si_name = cdev->__si_namebuf;
 	LIST_INIT(&cdev->si_children);
 	vfs_timestamp(&ts);
 	cdev->si_atime = cdev->si_mtime = cdev->si_ctime = ts;
-	cdev->si_cred = NULL;
 
 	return (cdev);
 }
@@ -187,6 +182,16 @@ devfs_find(struct devfs_dirent *dd, const char *name, int namelen, int type)
 			continue;
 		if (type != 0 && type != de->de_dirent->d_type)
 			continue;
+
+		/*
+		 * The race with finding non-active name is not
+		 * completely closed by the check, but it is similar
+		 * to the devfs_allocv() in making it unlikely enough.
+		 */
+		if (de->de_dirent->d_type == DT_CHR &&
+		    (de->de_cdp->cdp_flags & CDP_ACTIVE) == 0)
+			continue;
+
 		if (bcmp(name, de->de_dirent->d_name, namelen) != 0)
 			continue;
 		break;
@@ -204,7 +209,7 @@ devfs_newdirent(char *name, int namelen)
 	struct dirent d;
 
 	d.d_namlen = namelen;
-	i = sizeof (*de) + GENERIC_DIRSIZ(&d); 
+	i = sizeof(*de) + GENERIC_DIRSIZ(&d);
 	de = malloc(i, M_DEVFS3, M_WAITOK | M_ZERO);
 	de->de_dirent = (struct dirent *)(de + 1);
 	de->de_dirent->d_namlen = namelen;
@@ -242,7 +247,8 @@ devfs_parent_dirent(struct devfs_dirent *de)
 }
 
 struct devfs_dirent *
-devfs_vmkdir(struct devfs_mount *dmp, char *name, int namelen, struct devfs_dirent *dotdot, u_int inode)
+devfs_vmkdir(struct devfs_mount *dmp, char *name, int namelen,
+    struct devfs_dirent *dotdot, u_int inode)
 {
 	struct devfs_dirent *dd;
 	struct devfs_dirent *de;
@@ -295,6 +301,13 @@ devfs_vmkdir(struct devfs_mount *dmp, char *name, int namelen, struct devfs_dire
 void
 devfs_dirent_free(struct devfs_dirent *de)
 {
+	struct vnode *vp;
+
+	vp = de->de_vnode;
+	mtx_lock(&devfs_de_interlock);
+	if (vp != NULL && vp->v_data == de)
+		vp->v_data = NULL;
+	mtx_unlock(&devfs_de_interlock);
 	free(de, M_DEVFS3);
 }
 
@@ -656,7 +669,7 @@ devfs_cleanup(struct devfs_mount *dm)
 /*
  * devfs_create() and devfs_destroy() are called from kern_conf.c and
  * in both cases the devlock() mutex is held, so no further locking
- * is necesary and no sleeping allowed.
+ * is necessary and no sleeping allowed.
  */
 
 void

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *	@(#)kernfs_vfsops.c	8.10 (Berkeley) 5/14/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/devfs/devfs_vfsops.c 297523 2016-04-03 14:38:02Z mav $
  */
 
 #include <sys/param.h>
@@ -131,8 +132,7 @@ devfs_mount(struct mount *mp)
 
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE | MNTK_LOOKUP_SHARED |
-	    MNTK_EXTENDED_SHARED;
+	mp->mnt_kern_flag |= MNTK_LOOKUP_SHARED | MNTK_EXTENDED_SHARED;
 #ifdef MAC
 	mp->mnt_flag |= MNT_MULTILABEL;
 #endif
@@ -183,6 +183,8 @@ devfs_unmount(struct mount *mp, int mntflags)
 	fmp = VFSTODEVFS(mp);
 	KASSERT(fmp->dm_mount != NULL,
 		("devfs_unmount unmounted devfs_mount"));
+	if (mntflags & MNT_FORCE)
+		flags |= FORCECLOSE;
 	/* There is 1 extra root vnode reference from devfs_mount(). */
 	error = vflush(mp, 1, flags, curthread);
 	if (error)

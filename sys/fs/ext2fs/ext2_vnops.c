@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  modified for EXT2FS support in Lites 1.1
  *
@@ -39,7 +40,7 @@
  *
  *	@(#)ufs_vnops.c	8.7 (Berkeley) 2/3/94
  *	@(#)ufs_vnops.c 8.27 (Berkeley) 5/27/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_vnops.c 311232 2017-01-04 02:43:33Z pfg $
  */
 
 #include "opt_suiddir.h"
@@ -48,11 +49,13 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
+#include <sys/filio.h>
 #include <sys/stat.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
 #include <sys/endian.h>
 #include <sys/priv.h>
+#include <sys/rwlock.h>
 #include <sys/mount.h>
 #include <sys/unistd.h>
 #include <sys/time.h>
@@ -64,14 +67,14 @@
 #include <sys/file.h>
 
 #include <vm/vm.h>
-#include <vm/vm_page.h>
-#include <vm/vm_object.h>
+#include <vm/vm_param.h>
 #include <vm/vm_extern.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page.h>
+#include <vm/vm_pager.h>
 #include <vm/vnode_pager.h>
 
 #include "opt_directio.h"
-
-#include <fs/fifofs/fifo.h>
 
 #include <ufs/ufs/dir.h>
 
@@ -85,6 +88,8 @@
 
 static int ext2_makeinode(int mode, struct vnode *, struct vnode **, struct componentname *);
 static void ext2_itimes_locked(struct vnode *);
+static int ext4_ext_read(struct vop_read_args *);
+static int ext2_ind_read(struct vop_read_args *);
 
 static vop_access_t	ext2_access;
 static int ext2_chmod(struct vnode *, int, struct ucred *, struct thread *);
@@ -93,7 +98,9 @@ static int ext2_chown(struct vnode *, uid_t, gid_t, struct ucred *,
 static vop_close_t	ext2_close;
 static vop_create_t	ext2_create;
 static vop_fsync_t	ext2_fsync;
+static vop_getpages_t	ext2_getpages;
 static vop_getattr_t	ext2_getattr;
+static vop_ioctl_t	ext2_ioctl;
 static vop_link_t	ext2_link;
 static vop_mkdir_t	ext2_mkdir;
 static vop_mknod_t	ext2_mknod;
@@ -122,8 +129,10 @@ struct vop_vector ext2_vnodeops = {
 	.vop_close =		ext2_close,
 	.vop_create =		ext2_create,
 	.vop_fsync =		ext2_fsync,
+	.vop_getpages =		ext2_getpages,
 	.vop_getattr =		ext2_getattr,
 	.vop_inactive =		ext2_inactive,
+	.vop_ioctl =		ext2_ioctl,
 	.vop_link =		ext2_link,
 	.vop_lookup =		vfs_cache_lookup,
 	.vop_mkdir =		ext2_mkdir,
@@ -184,7 +193,7 @@ ext2_itimes_locked(struct vnode *vp)
 	struct inode *ip;
 	struct timespec ts;
 
-	ASSERT_VI_LOCKED(vp, __func__);	
+	ASSERT_VI_LOCKED(vp, __func__);
 
 	ip = VTOI(vp);
 	if ((ip->i_flag & (IN_ACCESS | IN_CHANGE | IN_UPDATE)) == 0)
@@ -232,8 +241,10 @@ ext2_create(struct vop_create_args *ap)
 	error =
 	    ext2_makeinode(MAKEIMODE(ap->a_vap->va_type, ap->a_vap->va_mode),
 	    ap->a_dvp, ap->a_vpp, ap->a_cnp);
-	if (error)
+	if (error != 0)
 		return (error);
+	if ((ap->a_cnp->cn_flags & MAKEENTRY) != 0)
+		cache_enter(ap->a_dvp, *ap->a_vpp, ap->a_cnp);
 	return (0);
 }
 
@@ -373,7 +384,7 @@ ext2_setattr(struct vop_setattr_args *ap)
 	}
 	if (vap->va_flags != VNOVAL) {
 		/* Disallow flags not supported by ext2fs. */
-		if(vap->va_flags & ~(SF_APPEND | SF_IMMUTABLE | UF_NODUMP))
+		if (vap->va_flags & ~(SF_APPEND | SF_IMMUTABLE | UF_NODUMP))
 			return (EOPNOTSUPP);
 
 		if (vp->v_mount->mnt_flag & MNT_RDONLY)
@@ -392,21 +403,17 @@ ext2_setattr(struct vop_setattr_args *ap)
 		 * if securelevel > 0 and any existing system flags are set.
 		 */
 		if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS, 0)) {
-			if (ip->i_flags &
-			    (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
+			if (ip->i_flags & (SF_IMMUTABLE | SF_APPEND)) {
 				error = securelevel_gt(cred, 0);
 				if (error)
 					return (error);
 			}
-			ip->i_flags = vap->va_flags;
 		} else {
-			if (ip->i_flags &
-			    (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND) ||
-			    (vap->va_flags & UF_SETTABLE) != vap->va_flags)
+			if (ip->i_flags & (SF_IMMUTABLE | SF_APPEND) ||
+			    ((vap->va_flags ^ ip->i_flags) & SF_SETTABLE))
 				return (EPERM);
-			ip->i_flags &= SF_SETTABLE;
-			ip->i_flags |= (vap->va_flags & UF_SETTABLE);
 		}
+		ip->i_flags = vap->va_flags;
 		ip->i_flag |= IN_CHANGE;
 		if (ip->i_flags & (IMMUTABLE | APPEND))
 			return (0);
@@ -458,16 +465,14 @@ ext2_setattr(struct vop_setattr_args *ap)
 		    ((vap->va_vaflags & VA_UTIMES_NULL) == 0 ||
 		    (error = VOP_ACCESS(vp, VWRITE, cred, td))))
 			return (error);
-		if (vap->va_atime.tv_sec != VNOVAL)
-			ip->i_flag |= IN_ACCESS;
-		if (vap->va_mtime.tv_sec != VNOVAL)
-			ip->i_flag |= IN_CHANGE | IN_UPDATE;
-		ext2_itimes(vp);
+		ip->i_flag |= IN_CHANGE | IN_MODIFIED;
 		if (vap->va_atime.tv_sec != VNOVAL) {
+			ip->i_flag &= ~IN_ACCESS;
 			ip->i_atime = vap->va_atime.tv_sec;
 			ip->i_atimensec = vap->va_atime.tv_nsec;
 		}
 		if (vap->va_mtime.tv_sec != VNOVAL) {
+			ip->i_flag &= ~IN_UPDATE;
 			ip->i_mtime = vap->va_mtime.tv_sec;
 			ip->i_mtimensec = vap->va_mtime.tv_nsec;
 		}
@@ -663,14 +668,10 @@ ext2_link(struct vop_link_args *ap)
 	struct inode *ip;
 	int error;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ext2_link: no name");
 #endif
-	if (tdvp->v_mount != vp->v_mount) {
-		error = EXDEV;
-		goto out;
-	}
 	ip = VTOI(vp);
 	if ((nlink_t)ip->i_nlink >= EXT2_LINK_MAX) {
 		error = EMLINK;
@@ -732,7 +733,7 @@ ext2_rename(struct vop_rename_args *ap)
 	int error = 0;
 	u_char namlen;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((tcnp->cn_flags & HASBUF) == 0 ||
 	    (fcnp->cn_flags & HASBUF) == 0)
 		panic("ext2_rename: no name");
@@ -776,10 +777,10 @@ abortit:
 	dp = VTOI(fdvp);
 	ip = VTOI(fvp);
 	if (ip->i_nlink >= EXT2_LINK_MAX) {
- 		VOP_UNLOCK(fvp, 0);
- 		error = EMLINK;
- 		goto abortit;
- 	}
+		VOP_UNLOCK(fvp, 0);
+		error = EMLINK;
+		goto abortit;
+	}
 	if ((ip->i_flags & (NOUNLINK | IMMUTABLE | APPEND))
 	    || (dp->i_flags & APPEND)) {
 		VOP_UNLOCK(fvp, 0);
@@ -895,7 +896,7 @@ abortit:
 		vput(tdvp);
 	} else {
 		if (xp->i_devvp != dp->i_devvp || xp->i_devvp != ip->i_devvp)
-		       panic("ext2_rename: EXDEV");
+			panic("ext2_rename: EXDEV");
 		/*
 		 * Short circuit rename(foo, foo).
 		 */
@@ -918,8 +919,8 @@ abortit:
 		 * to it. Also, ensure source and target are compatible
 		 * (both directories, or both not directories).
 		 */
-		if ((xp->i_mode&IFMT) == IFDIR) {
-			if (! ext2_dirempty(xp, dp->i_number, tcnp->cn_cred) || 
+		if ((xp->i_mode & IFMT) == IFDIR) {
+			if (!ext2_dirempty(xp, dp->i_number, tcnp->cn_cred) ||
 			    xp->i_nlink > 2) {
 				error = ENOTEMPTY;
 				goto bad;
@@ -943,8 +944,8 @@ abortit:
 		 * of the target directory.
 		 */
 		if (doingdirectory && !newparent) {
-		       dp->i_nlink--;
-		       dp->i_flag |= IN_CHANGE;
+			dp->i_nlink--;
+			dp->i_flag |= IN_CHANGE;
 		}
 		vput(tdvp);
 		/*
@@ -983,10 +984,10 @@ abortit:
 		dp = VTOI(fdvp);
 	} else {
 		/*
-		 * From name has disappeared.
+		 * From name has disappeared.  IN_RENAME is not sufficient
+		 * to protect against directory races due to timing windows,
+		 * so we can't panic here.
 		 */
-		if (doingdirectory)
-			panic("ext2_rename: lost dir entry");
 		vrele(ap->a_fvp);
 		return (0);
 	}
@@ -1001,8 +1002,11 @@ abortit:
 	 * rename.
 	 */
 	if (xp != ip) {
-		if (doingdirectory)
-			panic("ext2_rename: lost dir entry");
+		/*
+		 * From name resolves to a different inode.  IN_RENAME is
+		 * not sufficient protection against timing window races
+		 * so we can't panic here.
+		 */
 	} else {
 		/*
 		 * If the source is a directory with a
@@ -1014,9 +1018,9 @@ abortit:
 			dp->i_nlink--;
 			dp->i_flag |= IN_CHANGE;
 			error = vn_rdwr(UIO_READ, fvp, (caddr_t)&dirbuf,
-				sizeof(struct dirtemplate), (off_t)0,
-				UIO_SYSSPACE, IO_NODELOCKED | IO_NOMACCHECK,
-				tcnp->cn_cred, NOCRED, NULL, NULL);
+			    sizeof(struct dirtemplate), (off_t)0,
+			    UIO_SYSSPACE, IO_NODELOCKED | IO_NOMACCHECK,
+			    tcnp->cn_cred, NOCRED, NULL, NULL);
 			if (error == 0) {
 				/* Like ufs little-endian: */
 				namlen = dirbuf.dotdot_type;
@@ -1027,7 +1031,7 @@ abortit:
 					    "rename: mangled dir");
 				} else {
 					dirbuf.dotdot_ino = newparent;
-					(void) vn_rdwr(UIO_WRITE, fvp,
+					(void)vn_rdwr(UIO_WRITE, fvp,
 					    (caddr_t)&dirbuf,
 					    sizeof(struct dirtemplate),
 					    (off_t)0, UIO_SYSSPACE,
@@ -1083,7 +1087,7 @@ ext2_mkdir(struct vop_mkdir_args *ap)
 	struct dirtemplate dirtemplate, *dtp;
 	int error, dmode;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ext2_mkdir: no name");
 #endif
@@ -1110,12 +1114,12 @@ ext2_mkdir(struct vop_mkdir_args *ap)
 		 * if we are hacking owners here, (only do this where told to)
 		 * and we are not giving it TOO root, (would subvert quotas)
 		 * then go ahead and give it to the other user.
-		 * The new directory also inherits the SUID bit. 
+		 * The new directory also inherits the SUID bit.
 		 * If user's UID and dir UID are the same,
 		 * 'give it away' so that the SUID is still forced on.
 		 */
-		if ( (dvp->v_mount->mnt_flag & MNT_SUIDDIR) &&
-		   (dp->i_mode & ISUID) && dp->i_uid) {
+		if ((dvp->v_mount->mnt_flag & MNT_SUIDDIR) &&
+		    (dp->i_mode & ISUID) && dp->i_uid) {
 			dmode |= ISUID;
 			ip->i_uid = dp->i_uid;
 		} else {
@@ -1154,10 +1158,11 @@ ext2_mkdir(struct vop_mkdir_args *ap)
 	dirtemplate = *dtp;
 	dirtemplate.dot_ino = ip->i_number;
 	dirtemplate.dotdot_ino = dp->i_number;
-	/* note that in ext2 DIRBLKSIZ == blocksize, not DEV_BSIZE 
-	 * so let's just redefine it - for this function only
+	/*
+	 * note that in ext2 DIRBLKSIZ == blocksize, not DEV_BSIZE so let's
+	 * just redefine it - for this function only
 	 */
-#undef  DIRBLKSIZ 
+#undef  DIRBLKSIZ
 #define DIRBLKSIZ  VTOI(dvp)->i_e2fs->e2fs_bsize
 	dirtemplate.dotdot_reclen = DIRBLKSIZ - 12;
 	error = vn_rdwr(UIO_WRITE, tvp, (caddr_t)&dirtemplate,
@@ -1222,7 +1227,6 @@ ext2_rmdir(struct vop_rmdir_args *ap)
 	 *  the current directory and thus be
 	 *  non-empty.)
 	 */
-	error = 0;
 	if (ip->i_nlink != 2 || !ext2_dirempty(ip, dp->i_number, cnp->cn_cred)) {
 		error = ENOTEMPTY;
 		goto out;
@@ -1328,12 +1332,10 @@ ext2_strategy(struct vop_strategy_args *ap)
 {
 	struct buf *bp = ap->a_bp;
 	struct vnode *vp = ap->a_vp;
-	struct inode *ip;
 	struct bufobj *bo;
-	int32_t blkno;
+	daddr_t blkno;
 	int error;
 
-	ip = VTOI(vp);
 	if (vp->v_type == VBLK || vp->v_type == VCHR)
 		panic("ext2_strategy: spec");
 	if (bp->b_blkno == bp->b_lblkno) {
@@ -1394,7 +1396,7 @@ ext2fifo_close(struct vop_close_args *ap)
 /*
  * Kqfilter wrapper for fifos.
  *
- * Fall through to ext2 kqfilter routines if needed 
+ * Fall through to ext2 kqfilter routines if needed
  */
 static int
 ext2fifo_kqfilter(struct vop_kqfilter_args *ap)
@@ -1413,30 +1415,68 @@ ext2fifo_kqfilter(struct vop_kqfilter_args *ap)
 static int
 ext2_pathconf(struct vop_pathconf_args *ap)
 {
+	int error = 0;
 
 	switch (ap->a_name) {
 	case _PC_LINK_MAX:
 		*ap->a_retval = EXT2_LINK_MAX;
-		return (0);
+		break;
 	case _PC_NAME_MAX:
 		*ap->a_retval = NAME_MAX;
-		return (0);
+		break;
 	case _PC_PATH_MAX:
 		*ap->a_retval = PATH_MAX;
-		return (0);
+		break;
 	case _PC_PIPE_BUF:
 		*ap->a_retval = PIPE_BUF;
-		return (0);
+		break;
 	case _PC_CHOWN_RESTRICTED:
 		*ap->a_retval = 1;
-		return (0);
+		break;
 	case _PC_NO_TRUNC:
 		*ap->a_retval = 1;
-		return (0);
+		break;
+	case _PC_MIN_HOLE_SIZE:
+		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_iosize;
+		break;
+	case _PC_ASYNC_IO:
+		/* _PC_ASYNC_IO should have been handled by upper layers. */
+		KASSERT(0, ("_PC_ASYNC_IO should not get here"));
+		error = EINVAL;
+		break;
+	case _PC_PRIO_IO:
+		*ap->a_retval = 0;
+		break;
+	case _PC_SYNC_IO:
+		*ap->a_retval = 0;
+		break;
+	case _PC_ALLOC_SIZE_MIN:
+		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_bsize;
+		break;
+	case _PC_FILESIZEBITS:
+		*ap->a_retval = 64;
+		break;
+	case _PC_REC_INCR_XFER_SIZE:
+		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_iosize;
+		break;
+	case _PC_REC_MAX_XFER_SIZE:
+		*ap->a_retval = -1;	/* means ``unlimited'' */
+		break;
+	case _PC_REC_MIN_XFER_SIZE:
+		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_iosize;
+		break;
+	case _PC_REC_XFER_ALIGN:
+		*ap->a_retval = PAGE_SIZE;
+		break;
+	case _PC_SYMLINK_MAX:
+		*ap->a_retval = MAXPATHLEN;
+		break;
+
 	default:
-		return (EINVAL);
+		error = EINVAL;
+		break;
 	}
-	/* NOTREACHED */
+	return (error);
 }
 
 /*
@@ -1492,7 +1532,7 @@ ext2_makeinode(int mode, struct vnode *dvp, struct vnode **vpp,
 	int error;
 
 	pdir = VTOI(dvp);
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ext2_makeinode: no name");
 #endif
@@ -1516,9 +1556,9 @@ ext2_makeinode(int mode, struct vnode *dvp, struct vnode **vpp,
 		 * then go ahead and give it to the other user.
 		 * Note that this drops off the execute bits for security.
 		 */
-		if ( (dvp->v_mount->mnt_flag & MNT_SUIDDIR) &&
-		     (pdir->i_mode & ISUID) &&
-		     (pdir->i_uid != cnp->cn_cred->cr_uid) && pdir->i_uid) {
+		if ((dvp->v_mount->mnt_flag & MNT_SUIDDIR) &&
+		    (pdir->i_mode & ISUID) &&
+		    (pdir->i_uid != cnp->cn_cred->cr_uid) && pdir->i_uid) {
 			ip->i_uid = pdir->i_uid;
 			mode &= ~07111;
 		} else {
@@ -1572,6 +1612,28 @@ ext2_read(struct vop_read_args *ap)
 {
 	struct vnode *vp;
 	struct inode *ip;
+	int error;
+
+	vp = ap->a_vp;
+	ip = VTOI(vp);
+
+	/* EXT4_EXT_LOCK(ip); */
+	if (ip->i_flag & IN_E4EXTENTS)
+		error = ext4_ext_read(ap);
+	else
+		error = ext2_ind_read(ap);
+	/* EXT4_EXT_UNLOCK(ip); */
+	return (error);
+}
+
+/*
+ * Vnode op for reading.
+ */
+static int
+ext2_ind_read(struct vop_read_args *ap)
+{
+	struct vnode *vp;
+	struct inode *ip;
 	struct uio *uio;
 	struct m_ext2fs *fs;
 	struct buf *bp;
@@ -1606,7 +1668,7 @@ ext2_read(struct vop_read_args *ap)
 	fs = ip->i_e2fs;
 	if (uio->uio_offset < ip->i_size &&
 	    uio->uio_offset >= fs->e2fs_maxfilesize)
-	    	return (EOVERFLOW);
+		return (EOVERFLOW);
 
 	for (error = 0, bp = NULL; uio->uio_resid > 0; bp = NULL) {
 		if ((bytesinfile = ip->i_size - uio->uio_offset) <= 0)
@@ -1624,11 +1686,13 @@ ext2_read(struct vop_read_args *ap)
 
 		if (lblktosize(fs, nextlbn) >= ip->i_size)
 			error = bread(vp, lbn, size, NOCRED, &bp);
-		else if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0)
+		else if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
 			error = cluster_read(vp, ip->i_size, lbn, size,
-			    NOCRED, blkoffset + uio->uio_resid, seqcount, &bp);
-		else if (seqcount > 1) {
-			int nextsize = blksize(fs, ip, nextlbn);
+			    NOCRED, blkoffset + uio->uio_resid, seqcount,
+			    0, &bp);
+		} else if (seqcount > 1) {
+			u_int nextsize = blksize(fs, ip, nextlbn);
+
 			error = breadn(vp, lbn,
 			    size, &nextlbn, &nextsize, 1, NOCRED, &bp);
 		} else
@@ -1662,7 +1726,7 @@ ext2_read(struct vop_read_args *ap)
 			xfersize = size;
 		}
 		error = uiomove((char *)bp->b_data + blkoffset,
-  			(int)xfersize, uio);
+		    (int)xfersize, uio);
 		if (error)
 			break;
 
@@ -1686,11 +1750,11 @@ ext2_read(struct vop_read_args *ap)
 		}
 	}
 
-	/* 
-	 * This can only happen in the case of an error
-	 * because the loop above resets bp to NULL on each iteration
-	 * and on normal completion has not set a new value into it.
-	 * so it must have come from a 'break' statement
+	/*
+	 * This can only happen in the case of an error because the loop
+	 * above resets bp to NULL on each iteration and on normal
+	 * completion has not set a new value into it. so it must have come
+	 * from a 'break' statement
 	 */
 	if (bp != NULL) {
 		if (ioflag & (IO_VMIO|IO_DIRECT)) {
@@ -1702,9 +1766,124 @@ ext2_read(struct vop_read_args *ap)
 	}
 
 	if ((error == 0 || uio->uio_resid != orig_resid) &&
-	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0)
+	    (vp->v_mount->mnt_flag & (MNT_NOATIME | MNT_RDONLY)) == 0)
 		ip->i_flag |= IN_ACCESS;
 	return (error);
+}
+
+static int
+ext2_ioctl(struct vop_ioctl_args *ap)
+{
+
+	switch (ap->a_command) {
+	case FIOSEEKDATA:
+	case FIOSEEKHOLE:
+		return (vn_bmap_seekhole(ap->a_vp, ap->a_command,
+		    (off_t *)ap->a_data, ap->a_cred));
+	default:
+		return (ENOTTY);
+	}
+}
+
+/*
+ * this function handles ext4 extents block mapping
+ */
+static int
+ext4_ext_read(struct vop_read_args *ap)
+{
+	struct vnode *vp;
+	struct inode *ip;
+	struct uio *uio;
+	struct m_ext2fs *fs;
+	struct buf *bp;
+	struct ext4_extent nex, *ep;
+	struct ext4_extent_path path;
+	daddr_t lbn, newblk;
+	off_t bytesinfile;
+	int cache_type;
+	ssize_t orig_resid;
+	int error;
+	long size, xfersize, blkoffset;
+
+	vp = ap->a_vp;
+	ip = VTOI(vp);
+	uio = ap->a_uio;
+	memset(&path, 0, sizeof(path));
+
+	orig_resid = uio->uio_resid;
+	KASSERT(orig_resid >= 0, ("%s: uio->uio_resid < 0", __func__));
+	if (orig_resid == 0)
+		return (0);
+	KASSERT(uio->uio_offset >= 0, ("%s: uio->uio_offset < 0", __func__));
+	fs = ip->i_e2fs;
+	if (uio->uio_offset < ip->i_size && uio->uio_offset >= fs->e2fs_maxfilesize)
+		return (EOVERFLOW);
+
+	while (uio->uio_resid > 0) {
+		if ((bytesinfile = ip->i_size - uio->uio_offset) <= 0)
+			break;
+		lbn = lblkno(fs, uio->uio_offset);
+		size = blksize(fs, ip, lbn);
+		blkoffset = blkoff(fs, uio->uio_offset);
+
+		xfersize = fs->e2fs_fsize - blkoffset;
+		xfersize = MIN(xfersize, uio->uio_resid);
+		xfersize = MIN(xfersize, bytesinfile);
+
+		/* get block from ext4 extent cache */
+		cache_type = ext4_ext_in_cache(ip, lbn, &nex);
+		switch (cache_type) {
+		case EXT4_EXT_CACHE_NO:
+			ext4_ext_find_extent(fs, ip, lbn, &path);
+			ep = path.ep_ext;
+			if (ep == NULL)
+				return (EIO);
+
+			ext4_ext_put_cache(ip, ep, EXT4_EXT_CACHE_IN);
+
+			newblk = lbn - ep->e_blk + (ep->e_start_lo |
+			    (daddr_t)ep->e_start_hi << 32);
+
+			if (path.ep_bp != NULL) {
+				brelse(path.ep_bp);
+				path.ep_bp = NULL;
+			}
+			break;
+
+		case EXT4_EXT_CACHE_GAP:
+			/* block has not been allocated yet */
+			return (0);
+
+		case EXT4_EXT_CACHE_IN:
+			newblk = lbn - nex.e_blk + (nex.e_start_lo |
+			    (daddr_t)nex.e_start_hi << 32);
+			break;
+
+		default:
+			panic("%s: invalid cache type", __func__);
+		}
+
+		error = bread(ip->i_devvp, fsbtodb(fs, newblk), size, NOCRED, &bp);
+		if (error) {
+			brelse(bp);
+			return (error);
+		}
+
+		size -= bp->b_resid;
+		if (size < xfersize) {
+			if (size == 0) {
+				bqrelse(bp);
+				break;
+			}
+			xfersize = size;
+		}
+		error = uiomove(bp->b_data + blkoffset, (int)xfersize, uio);
+		bqrelse(bp);
+		if (error)
+			return (error);
+	}
+
+	return (0);
 }
 
 /*
@@ -1746,7 +1925,7 @@ ext2_write(struct vop_write_args *ap)
 	case VDIR:
 		/* XXX differs from ffs -- this is called from ext2_mkdir(). */
 		if ((ioflag & IO_SYNC) == 0)
-		panic("ext2_write: nonsync dir write");
+			panic("ext2_write: nonsync dir write");
 		break;
 	default:
 		panic("ext2_write: type %p %d (%jd,%jd)", (void *)vp,
@@ -1784,10 +1963,10 @@ ext2_write(struct vop_write_args *ap)
 		if (uio->uio_offset + xfersize > ip->i_size)
 			vnode_pager_setsize(vp, uio->uio_offset + xfersize);
 
-                /*
+		/*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
-                 */
+		 */
 		if (fs->e2fs_bsize > xfersize)
 			flags |= BA_CLRBUF;
 		else
@@ -1797,16 +1976,7 @@ ext2_write(struct vop_write_args *ap)
 		if (error != 0)
 			break;
 
-		/*
-		 * If the buffer is not valid and we did not clear garbage
-		 * out above, we have to do so here even though the write
-		 * covers the entire buffer in order to avoid a mmap()/write
-		 * race where another process may see the garbage prior to
-		 * the uiomove() for a write replacing it.
-		 */
-		if ((bp->b_flags & B_CACHE) == 0 && fs->e2fs_bsize <= xfersize)
-			vfs_bio_clrbuf(bp);
-		if ((ioflag & (IO_SYNC|IO_INVAL)) == (IO_SYNC|IO_INVAL))
+		if ((ioflag & (IO_SYNC | IO_INVAL)) == (IO_SYNC | IO_INVAL))
 			bp->b_flags |= B_NOCACHE;
 		if (uio->uio_offset + xfersize > ip->i_size)
 			ip->i_size = uio->uio_offset + xfersize;
@@ -1816,6 +1986,26 @@ ext2_write(struct vop_write_args *ap)
 
 		error =
 		    uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
+		/*
+		 * If the buffer is not already filled and we encounter an
+		 * error while trying to fill it, we have to clear out any
+		 * garbage data from the pages instantiated for the buffer.
+		 * If we do not, a failed uiomove() during a write can leave
+		 * the prior contents of the pages exposed to a userland mmap.
+		 *
+		 * Note that we need only clear buffers with a transfer size
+		 * equal to the block size because buffers with a shorter
+		 * transfer size were cleared above by the call to ext2_balloc()
+		 * with the BA_CLRBUF flag set.
+		 *
+		 * If the source region for uiomove identically mmaps the
+		 * buffer, uiomove() performed the NOP copy, and the buffer
+		 * content remains valid because the page fault handler
+		 * validated the pages.
+		 */
+		if (error != 0 && (bp->b_flags & B_CACHE) == 0 &&
+		    fs->e2fs_bsize == xfersize)
+			vfs_bio_clrbuf(bp);
 		if (ioflag & (IO_VMIO|IO_DIRECT)) {
 			bp->b_flags |= B_RELBUF;
 		}
@@ -1830,14 +2020,14 @@ ext2_write(struct vop_write_args *ap)
 		if (ioflag & IO_SYNC) {
 			(void)bwrite(bp);
 		} else if (vm_page_count_severe() ||
-		    buf_dirty_count_severe() ||
+			    buf_dirty_count_severe() ||
 		    (ioflag & IO_ASYNC)) {
 			bp->b_flags |= B_CLUSTEROK;
 			bawrite(bp);
 		} else if (xfersize + blkoffset == fs->e2fs_fsize) {
 			if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERW) == 0) {
 				bp->b_flags |= B_CLUSTEROK;
-				cluster_write(vp, bp, ip->i_size, seqcount);
+				cluster_write(vp, bp, ip->i_size, seqcount, 0);
 			} else {
 				bawrite(bp);
 			}
@@ -1870,9 +2060,49 @@ ext2_write(struct vop_write_args *ap)
 		}
 	}
 	if (uio->uio_resid != resid) {
-               ip->i_flag |= IN_CHANGE | IN_UPDATE;
-               if (ioflag & IO_SYNC)
-                       error = ext2_update(vp, 1);
-       }
+		ip->i_flag |= IN_CHANGE | IN_UPDATE;
+		if (ioflag & IO_SYNC)
+			error = ext2_update(vp, 1);
+	}
 	return (error);
+}
+
+/*
+ * get page routine
+ */
+static int
+ext2_getpages(struct vop_getpages_args *ap)
+{
+	int i;
+	vm_page_t mreq;
+	int pcount;
+
+	pcount = round_page(ap->a_count) / PAGE_SIZE;
+	mreq = ap->a_m[ap->a_reqpage];
+
+	/*
+	 * if ANY DEV_BSIZE blocks are valid on a large filesystem block,
+	 * then the entire page is valid.  Since the page may be mapped,
+	 * user programs might reference data beyond the actual end of file
+	 * occuring within the page.  We have to zero that data.
+	 */
+	VM_OBJECT_WLOCK(mreq->object);
+	if (mreq->valid) {
+		if (mreq->valid != VM_PAGE_BITS_ALL)
+			vm_page_zero_invalid(mreq, TRUE);
+		for (i = 0; i < pcount; i++) {
+			if (i != ap->a_reqpage) {
+				vm_page_lock(ap->a_m[i]);
+				vm_page_free(ap->a_m[i]);
+				vm_page_unlock(ap->a_m[i]);
+			}
+		}
+		VM_OBJECT_WUNLOCK(mreq->object);
+		return VM_PAGER_OK;
+	}
+	VM_OBJECT_WUNLOCK(mreq->object);
+
+	return vnode_pager_generic_getpages(ap->a_vp, ap->a_m,
+					    ap->a_count,
+					    ap->a_reqpage);
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cd9660_mount.h	8.1 (Berkeley) 5/24/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/cd9660/cd9660_mount.h 213664 2010-10-10 07:05:47Z kib $
  */
 
 /*

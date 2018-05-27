@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  modified for Lites 1.1
  *
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_balloc.c	8.4 (Berkeley) 9/23/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_balloc.c 311232 2017-01-04 02:43:33Z pfg $
  */
 
 #include <sys/param.h>
@@ -44,27 +45,29 @@
 #include <sys/mount.h>
 #include <sys/vnode.h>
 
+#include <fs/ext2fs/fs.h>
 #include <fs/ext2fs/inode.h>
 #include <fs/ext2fs/ext2fs.h>
-#include <fs/ext2fs/fs.h>
+#include <fs/ext2fs/ext2_dinode.h>
 #include <fs/ext2fs/ext2_extern.h>
 #include <fs/ext2fs/ext2_mount.h>
+
 /*
- * Balloc defines the structure of file system storage
+ * Balloc defines the structure of filesystem storage
  * by allocating the physical blocks on a device given
  * the inode and the logical block number in a file.
  */
 int
-ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
+ext2_balloc(struct inode *ip, e2fs_lbn_t lbn, int size, struct ucred *cred,
     struct buf **bpp, int flags)
 {
 	struct m_ext2fs *fs;
 	struct ext2mount *ump;
-	int32_t nb;
 	struct buf *bp, *nbp;
 	struct vnode *vp = ITOV(ip);
 	struct indir indirs[NIADDR + 2];
-	uint32_t newb, *bap, pref;
+	e4fs_daddr_t nb, newb;
+	e2fs_daddr_t *bap, pref;
 	int osize, nsize, num, i, error;
 
 	*bpp = NULL;
@@ -74,22 +77,23 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 	ump = ip->i_ump;
 
 	/*
-	 * check if this is a sequential block allocation. 
-	 * If so, increment next_alloc fields to allow ext2_blkpref 
+	 * check if this is a sequential block allocation.
+	 * If so, increment next_alloc fields to allow ext2_blkpref
 	 * to make a good guess
 	 */
-        if (lbn == ip->i_next_alloc_block + 1) {
+	if (lbn == ip->i_next_alloc_block + 1) {
 		ip->i_next_alloc_block++;
 		ip->i_next_alloc_goal++;
 	}
-
 	/*
 	 * The first NDADDR blocks are direct blocks
 	 */
 	if (lbn < NDADDR) {
 		nb = ip->i_db[lbn];
-		/* no new block is to be allocated, and no need to expand
-		   the file */
+		/*
+		 * no new block is to be allocated, and no need to expand
+		 * the file
+		 */
 		if (nb != 0 && ip->i_size >= (lbn + 1) * fs->e2fs_bsize) {
 			error = bread(vp, lbn, fs->e2fs_bsize, NOCRED, &bp);
 			if (error) {
@@ -114,10 +118,13 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 				}
 				bp->b_blkno = fsbtodb(fs, nb);
 			} else {
-			/* Godmar thinks: this shouldn't happen w/o fragments */
-				printf("nsize %d(%d) > osize %d(%d) nb %d\n", 
-					(int)nsize, (int)size, (int)osize, 
-					(int)ip->i_size, (int)nb);
+				/*
+				 * Godmar thinks: this shouldn't happen w/o
+				 * fragments
+				 */
+				printf("nsize %d(%d) > osize %d(%d) nb %d\n",
+				    (int)nsize, (int)size, (int)osize,
+				    (int)ip->i_size, (int)nb);
 				panic(
 				    "ext2_balloc: Something is terribly wrong");
 /*
@@ -152,9 +159,9 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 	pref = 0;
 	if ((error = ext2_getlbns(vp, lbn, indirs, &num)) != 0)
 		return (error);
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (num < 1)
-		panic ("ext2_balloc: ext2_getlbns returned indirect block");
+		panic("ext2_balloc: ext2_getlbns returned indirect block");
 #endif
 	/*
 	 * Fetch the first indirect block allocating if necessary.
@@ -163,10 +170,10 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 	nb = ip->i_ib[indirs[0].in_off];
 	if (nb == 0) {
 		EXT2_LOCK(ump);
-		pref = ext2_blkpref(ip, lbn, indirs[0].in_off + 
-					     EXT2_NDIR_BLOCKS, &ip->i_db[0], 0);
-	        if ((error = ext2_alloc(ip, lbn, pref, 
-			(int)fs->e2fs_bsize, cred, &newb)))
+		pref = ext2_blkpref(ip, lbn, indirs[0].in_off +
+		    EXT2_NDIR_BLOCKS, &ip->i_db[0], 0);
+		if ((error = ext2_alloc(ip, lbn, pref, fs->e2fs_bsize, cred,
+		    &newb)))
 			return (error);
 		nb = newb;
 		bp = getblk(vp, indirs[1].in_lbn, fs->e2fs_bsize, 0, 0, 0);
@@ -193,7 +200,7 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 			brelse(bp);
 			return (error);
 		}
-		bap = (int32_t *)bp->b_data;
+		bap = (e2fs_daddr_t *)bp->b_data;
 		nb = bap[indirs[i].in_off];
 		if (i == num)
 			break;
@@ -205,8 +212,8 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 		EXT2_LOCK(ump);
 		if (pref == 0)
 			pref = ext2_blkpref(ip, lbn, indirs[i].in_off, bap,
-						bp->b_lblkno);
-		error =  ext2_alloc(ip, lbn, pref, (int)fs->e2fs_bsize, cred, &newb);
+			    bp->b_lblkno);
+		error = ext2_alloc(ip, lbn, pref, (int)fs->e2fs_bsize, cred, &newb);
 		if (error) {
 			brelse(bp);
 			return (error);
@@ -243,8 +250,8 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 	 */
 	if (nb == 0) {
 		EXT2_LOCK(ump);
-		pref = ext2_blkpref(ip, lbn, indirs[i].in_off, &bap[0], 
-				bp->b_lblkno);
+		pref = ext2_blkpref(ip, lbn, indirs[i].in_off, &bap[0],
+		    bp->b_lblkno);
 		if ((error = ext2_alloc(ip,
 		    lbn, pref, (int)fs->e2fs_bsize, cred, &newb)) != 0) {
 			brelse(bp);
@@ -263,7 +270,7 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 		if (flags & IO_SYNC) {
 			bwrite(bp);
 		} else {
-		if (bp->b_bufsize == fs->e2fs_bsize)
+			if (bp->b_bufsize == fs->e2fs_bsize)
 				bp->b_flags |= B_CLUSTEROK;
 			bdwrite(bp);
 		}
@@ -273,10 +280,11 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 	brelse(bp);
 	if (flags & BA_CLRBUF) {
 		int seqcount = (flags & BA_SEQMASK) >> BA_SEQSHIFT;
+
 		if (seqcount && (vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
 			error = cluster_read(vp, ip->i_size, lbn,
 			    (int)fs->e2fs_bsize, NOCRED,
-			    MAXBSIZE, seqcount, &nbp);
+			    MAXBSIZE, seqcount, 0, &nbp);
 		} else {
 			error = bread(vp, lbn, (int)fs->e2fs_bsize, NOCRED, &nbp);
 		}
@@ -291,4 +299,3 @@ ext2_balloc(struct inode *ip, int32_t lbn, int size, struct ucred *cred,
 	*bpp = nbp;
 	return (0);
 }
-

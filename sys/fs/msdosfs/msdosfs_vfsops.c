@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_vfsops.c 308552 2016-11-11 20:08:45Z kib $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
@@ -175,24 +176,8 @@ update_mp(struct mount *mp, struct thread *td)
 
 	if (pmp->pm_flags & MSDOSFSMNT_NOWIN95)
 		pmp->pm_flags |= MSDOSFSMNT_SHORTNAME;
-	else if (!(pmp->pm_flags &
-	    (MSDOSFSMNT_SHORTNAME | MSDOSFSMNT_LONGNAME))) {
-		struct vnode *rootvp;
-
-		/*
-		 * Try to divine whether to support Win'95 long filenames
-		 */
-		if (FAT32(pmp))
-			pmp->pm_flags |= MSDOSFSMNT_LONGNAME;
-		else {
-			if ((error =
-			    msdosfs_root(mp, LK_EXCLUSIVE, &rootvp)) != 0)
-				return error;
-			pmp->pm_flags |= findwin95(VTODE(rootvp)) ?
-			    MSDOSFSMNT_LONGNAME : MSDOSFSMNT_SHORTNAME;
-			vput(rootvp);
-		}
-	}
+	else
+		pmp->pm_flags |= MSDOSFSMNT_LONGNAME;
 	return 0;
 }
 
@@ -759,7 +744,7 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
+	mp->mnt_kern_flag |= MNTK_USES_BCACHE | MNTK_NO_IOPF;
 	MNT_IUNLOCK(mp);
 
 	if (pmp->pm_flags & MSDOSFS_LARGEFS)
@@ -779,8 +764,7 @@ error_exit:
 	}
 	if (pmp) {
 		lockdestroy(&pmp->pm_fatlock);
-		if (pmp->pm_inusemap)
-			free(pmp->pm_inusemap, M_MSDOSFSFAT);
+		free(pmp->pm_inusemap, M_MSDOSFSFAT);
 		free(pmp, M_MSDOSFSMNT);
 		mp->mnt_data = NULL;
 	}
@@ -797,13 +781,17 @@ msdosfs_unmount(struct mount *mp, int mntflags)
 	struct msdosfsmount *pmp;
 	int error, flags;
 
-	flags = 0;
-	if (mntflags & MNT_FORCE)
-		flags |= FORCECLOSE;
-	error = vflush(mp, 0, flags, curthread);
-	if (error && error != ENXIO)
-		return error;
+	error = flags = 0;
 	pmp = VFSTOMSDOSFS(mp);
+	if ((pmp->pm_flags & MSDOSFSMNT_RONLY) == 0)
+		error = msdosfs_sync(mp, MNT_WAIT);
+	if ((mntflags & MNT_FORCE) != 0)
+		flags |= FORCECLOSE;
+	else if (error != 0)
+		return (error);
+	error = vflush(mp, 0, flags, curthread);
+	if (error != 0 && error != ENXIO)
+		return (error);
 	if ((pmp->pm_flags & MSDOSFSMNT_RONLY) == 0) {
 		error = markvoldirty(pmp, 0);
 		if (error && error != ENXIO) {

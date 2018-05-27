@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Ryuichiro Imura
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_iconv.c 171753 2007-08-07 02:25:56Z bde $");
 
 #include <sys/param.h>
 #include <sys/iconv.h>

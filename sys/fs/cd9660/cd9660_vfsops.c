@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_vfsops.c 255867 2013-09-25 02:49:18Z jmg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -133,7 +134,7 @@ cd9660_mount(struct mount *mp)
 	int error;
 	accmode_t accmode;
 	struct nameidata ndp;
-	struct iso_mnt *imp = 0;
+	struct iso_mnt *imp = NULL;
 
 	td = curthread;
 
@@ -205,7 +206,7 @@ iso_mountfs(devvp, mp)
 	struct vnode *devvp;
 	struct mount *mp;
 {
-	struct iso_mnt *isomp = (struct iso_mnt *)0;
+	struct iso_mnt *isomp = NULL;
 	struct buf *bp = NULL;
 	struct buf *pribp = NULL, *supbp = NULL;
 	struct cdev *dev;
@@ -214,7 +215,7 @@ iso_mountfs(devvp, mp)
 	int iso_bsize;
 	int iso_blknum;
 	int joliet_level;
-	struct iso_volume_descriptor *vdp = 0;
+	struct iso_volume_descriptor *vdp = NULL;
 	struct iso_primary_descriptor *pri = NULL;
 	struct iso_sierra_primary_descriptor *pri_sierra = NULL;
 	struct iso_supplementary_descriptor *sup = NULL;
@@ -369,6 +370,9 @@ iso_mountfs(devvp, mp)
 	pribp->b_flags |= B_AGE;
 	brelse(pribp);
 	pribp = NULL;
+	rootp = NULL;
+	pri = NULL;
+	pri_sierra = NULL;
 
 	mp->mnt_data = isomp;
 	mp->mnt_stat.f_fsid.val[0] = dev2udev(dev);
@@ -376,8 +380,7 @@ iso_mountfs(devvp, mp)
 	mp->mnt_maxsymlinklen = 0;
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE | MNTK_LOOKUP_SHARED |
-	    MNTK_EXTENDED_SHARED;
+	mp->mnt_kern_flag |= MNTK_LOOKUP_SHARED | MNTK_EXTENDED_SHARED;
 	MNT_IUNLOCK(mp);
 	isomp->im_mountp = mp;
 	isomp->im_dev = dev;
@@ -391,11 +394,11 @@ iso_mountfs(devvp, mp)
 
 	/* Check the Rock Ridge Extension support */
 	if (!(isomp->im_flags & ISOFSMNT_NORRIP)) {
-		if ((error = bread(isomp->im_devvp,
-				  (isomp->root_extent + isonum_711(rootp->ext_attr_length)) <<
-				  (isomp->im_bshift - DEV_BSHIFT),
-				  isomp->logical_block_size, NOCRED, &bp)) != 0)
-		    goto out;
+		if ((error = bread(isomp->im_devvp, (isomp->root_extent +
+		    isonum_711(((struct iso_directory_record *)isomp->root)->
+		    ext_attr_length)) << (isomp->im_bshift - DEV_BSHIFT),
+		    isomp->logical_block_size, NOCRED, &bp)) != 0)
+			goto out;
 
 		rootp = (struct iso_directory_record *)bp->b_data;
 
@@ -412,6 +415,7 @@ iso_mountfs(devvp, mp)
 		bp->b_flags |= B_AGE;
 		brelse(bp);
 		bp = NULL;
+		rootp = NULL;
 	}
 
 	if (isomp->im_flags & ISOFSMNT_KICONV && cd9660_iconv) {
@@ -466,6 +470,7 @@ iso_mountfs(devvp, mp)
 	if (supbp) {
 		brelse(supbp);
 		supbp = NULL;
+		sup = NULL;
 	}
 
 	return 0;
@@ -484,7 +489,7 @@ out:
 		PICKUP_GIANT();
 	}
 	if (isomp) {
-		free((caddr_t)isomp, M_ISOFSMNT);
+		free(isomp, M_ISOFSMNT);
 		mp->mnt_data = NULL;
 	}
 	dev_rel(dev);
@@ -522,7 +527,7 @@ cd9660_unmount(mp, mntflags)
 	PICKUP_GIANT();
 	vrele(isomp->im_devvp);
 	dev_rel(isomp->im_dev);
-	free((caddr_t)isomp, M_ISOFSMNT);
+	free(isomp, M_ISOFSMNT);
 	mp->mnt_data = NULL;
 	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;

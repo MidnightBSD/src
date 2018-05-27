@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_bmap.c	8.7 (Berkeley) 3/21/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_bmap.c 311232 2017-01-04 02:43:33Z pfg $
  */
 
 #include <sys/param.h>
@@ -46,9 +47,13 @@
 #include <sys/stat.h>
 
 #include <fs/ext2fs/inode.h>
+#include <fs/ext2fs/fs.h>
 #include <fs/ext2fs/ext2fs.h>
+#include <fs/ext2fs/ext2_dinode.h>
 #include <fs/ext2fs/ext2_extern.h>
 #include <fs/ext2fs/ext2_mount.h>
+
+static int ext4_bmapext(struct vnode *, int32_t, int64_t *, int *, int *);
 
 /*
  * Bmap converts the logical block number of a file to its physical block
@@ -58,7 +63,7 @@
 int
 ext2_bmap(struct vop_bmap_args *ap)
 {
-	int32_t blkno;
+	daddr_t blkno;
 	int error;
 
 	/*
@@ -70,10 +75,61 @@ ext2_bmap(struct vop_bmap_args *ap)
 	if (ap->a_bnp == NULL)
 		return (0);
 
-	error = ext2_bmaparray(ap->a_vp, ap->a_bn, &blkno,
-	    ap->a_runp, ap->a_runb);
+	if (VTOI(ap->a_vp)->i_flag & IN_E4EXTENTS)
+		error = ext4_bmapext(ap->a_vp, ap->a_bn, &blkno,
+		    ap->a_runp, ap->a_runb);
+	else
+		error = ext2_bmaparray(ap->a_vp, ap->a_bn, &blkno,
+		    ap->a_runp, ap->a_runb);
 	*ap->a_bnp = blkno;
 	return (error);
+}
+
+/*
+ * This function converts the logical block number of a file to
+ * its physical block number on the disk within ext4 extents.
+ */
+static int
+ext4_bmapext(struct vnode *vp, int32_t bn, int64_t *bnp, int *runp, int *runb)
+{
+	struct inode *ip;
+	struct m_ext2fs *fs;
+	struct ext4_extent *ep;
+	struct ext4_extent_path path = {.ep_bp = NULL};
+	daddr_t lbn;
+	int ret = 0;
+
+	ip = VTOI(vp);
+	fs = ip->i_e2fs;
+	lbn = bn;
+
+	/*
+	 * TODO: need to implement read ahead to improve the performance.
+	 */
+	if (runp != NULL)
+		*runp = 0;
+
+	if (runb != NULL)
+		*runb = 0;
+
+	ext4_ext_find_extent(fs, ip, lbn, &path);
+	ep = path.ep_ext;
+	if (ep == NULL)
+		ret = EIO;
+	else {
+		*bnp = fsbtodb(fs, lbn - ep->e_blk +
+		    (ep->e_start_lo | (daddr_t)ep->e_start_hi << 32));
+
+		if (*bnp == 0)
+			*bnp = -1;
+	}
+
+	if (path.ep_bp != NULL) {
+		brelse(path.ep_bp);
+		path.ep_bp = NULL;
+	}
+
+	return (ret);
 }
 
 /*
@@ -91,16 +147,15 @@ ext2_bmap(struct vop_bmap_args *ap)
  */
 
 int
-ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
+ext2_bmaparray(struct vnode *vp, daddr_t bn, daddr_t *bnp, int *runp, int *runb)
 {
 	struct inode *ip;
 	struct buf *bp;
 	struct ext2mount *ump;
 	struct mount *mp;
-	struct vnode *devvp;
-	struct indir a[NIADDR+1], *ap;
-	int32_t daddr;
-	long metalbn;
+	struct indir a[NIADDR + 1], *ap;
+	daddr_t daddr;
+	e2fs_lbn_t metalbn;
 	int error, num, maxrun = 0, bsize;
 	int *nump;
 
@@ -108,7 +163,6 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 	ip = VTOI(vp);
 	mp = vp->v_mount;
 	ump = VFSTOEXT2(mp);
-	devvp = ump->um_devvp;
 
 	bsize = EXT2_BLOCK_SIZE(ump->um_e2fs);
 
@@ -116,10 +170,8 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 		maxrun = mp->mnt_iosize_max / bsize - 1;
 		*runp = 0;
 	}
-
-	if (runb) {
+	if (runb)
 		*runb = 0;
-	}
 
 
 	ap = a;
@@ -134,7 +186,8 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 		if (*bnp == 0) {
 			*bnp = -1;
 		} else if (runp) {
-			int32_t bnb = bn;
+			daddr_t bnb = bn;
+
 			for (++bn; bn < NDADDR && *runp < maxrun &&
 			    is_sequential(ump, ip->i_db[bn - 1], ip->i_db[bn]);
 			    ++bn, ++*runp);
@@ -142,13 +195,12 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 			if (runb && (bn > 0)) {
 				for (--bn; (bn >= 0) && (*runb < maxrun) &&
 					is_sequential(ump, ip->i_db[bn],
-						ip->i_db[bn+1]);
+						ip->i_db[bn + 1]);
 						--bn, ++*runb);
 			}
 		}
 		return (0);
 	}
-
 
 	/* Get disk address out of indirect block array */
 	daddr = ip->i_ib[ap->in_off];
@@ -172,7 +224,7 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 
 		bp = getblk(vp, metalbn, bsize, 0, 0, 0);
 		if ((bp->b_flags & B_CACHE) == 0) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (!daddr)
 				panic("ext2_bmaparray: indirect block not in cache");
 #endif
@@ -191,20 +243,21 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 			}
 		}
 
-		daddr = ((int32_t *)bp->b_data)[ap->in_off];
+		daddr = ((e2fs_daddr_t *)bp->b_data)[ap->in_off];
 		if (num == 1 && daddr && runp) {
 			for (bn = ap->in_off + 1;
 			    bn < MNINDIR(ump) && *runp < maxrun &&
 			    is_sequential(ump,
-			    ((int32_t *)bp->b_data)[bn - 1],
-			    ((int32_t *)bp->b_data)[bn]);
+			    ((e2fs_daddr_t *)bp->b_data)[bn - 1],
+			    ((e2fs_daddr_t *)bp->b_data)[bn]);
 			    ++bn, ++*runp);
 			bn = ap->in_off;
 			if (runb && bn) {
 				for (--bn; bn >= 0 && *runb < maxrun &&
-			    		is_sequential(ump, ((int32_t *)bp->b_data)[bn],
-					    ((int32_t *)bp->b_data)[bn+1]);
-			    		--bn, ++*runb);
+					is_sequential(ump,
+					((e2fs_daddr_t *)bp->b_data)[bn],
+					((e2fs_daddr_t *)bp->b_data)[bn + 1]);
+					--bn, ++*runb);
 			}
 		}
 	}
@@ -218,7 +271,7 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
 	 * return a request for a zeroed out buffer if attempts are made
 	 * to read a BLK_NOCOPY or BLK_SNAP block.
 	 */
-	if ((ip->i_flags & SF_SNAPSHOT) && daddr > 0 && daddr < ump->um_seqinc){
+	if ((ip->i_flags & SF_SNAPSHOT) && daddr > 0 && daddr < ump->um_seqinc) {
 		*bnp = -1;
 		return (0);
 	}
@@ -239,9 +292,10 @@ ext2_bmaparray(struct vnode *vp, int32_t bn, int32_t *bnp, int *runp, int *runb)
  * once with the offset into the page itself.
  */
 int
-ext2_getlbns(struct vnode *vp, int32_t bn, struct indir *ap, int *nump)
+ext2_getlbns(struct vnode *vp, daddr_t bn, struct indir *ap, int *nump)
 {
-	long blockcnt, metalbn, realbn;
+	long blockcnt;
+	e2fs_lbn_t metalbn, realbn;
 	struct ext2mount *ump;
 	int i, numlevels, off;
 	int64_t qblockcnt;
