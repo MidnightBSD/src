@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/sati_read_capacity.c 233663 2012-03-29 15:43:07Z jimharris $");
 
 /**
  * @file

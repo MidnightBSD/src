@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_controller.c 315813 2017-03-23 06:41:13Z mav $");
 
 #include <dev/isci/isci.h>
 
@@ -49,6 +50,9 @@ __MBSDID("$MidnightBSD$");
 #include <dev/isci/scil/scif_remote_device.h>
 #include <dev/isci/scil/scif_domain.h>
 #include <dev/isci/scil/scif_user_callback.h>
+#include <dev/isci/scil/scic_sgpio.h>
+
+#include <dev/led/led.h>
 
 void isci_action(struct cam_sim *sim, union ccb *ccb);
 void isci_poll(struct cam_sim *sim);
@@ -271,11 +275,34 @@ void isci_controller_construct(struct ISCI_CONTROLLER *controller,
 	sci_pool_initialize(controller->unmap_buffer_pool);
 }
 
+static void isci_led_fault_func(void *priv, int onoff)
+{
+	struct ISCI_PHY *phy = priv;
+
+	/* map onoff to the fault LED */
+	phy->led_fault = onoff;
+	scic_sgpio_update_led_state(phy->handle, 1 << phy->index, 
+		phy->led_fault, phy->led_locate, 0);
+}
+
+static void isci_led_locate_func(void *priv, int onoff)
+{
+	struct ISCI_PHY *phy = priv;
+
+	/* map onoff to the locate LED */
+	phy->led_locate = onoff;
+	scic_sgpio_update_led_state(phy->handle, 1 << phy->index, 
+		phy->led_fault, phy->led_locate, 0);
+}
+
 SCI_STATUS isci_controller_initialize(struct ISCI_CONTROLLER *controller)
 {
 	SCIC_USER_PARAMETERS_T scic_user_parameters;
 	SCI_CONTROLLER_HANDLE_T scic_controller_handle;
+	char led_name[64];
 	unsigned long tunable;
+	uint32_t io_shortage;
+	uint32_t fail_on_timeout;
 	int i;
 
 	scic_controller_handle =
@@ -341,9 +368,13 @@ SCI_STATUS isci_controller_initialize(struct ISCI_CONTROLLER *controller)
 	 *  this io_shortage parameter, which will tell CAM that we have a
 	 *  large queue depth than we really do.
 	 */
-	uint32_t io_shortage = 0;
+	io_shortage = 0;
 	TUNABLE_INT_FETCH("hw.isci.io_shortage", &io_shortage);
 	controller->sim_queue_depth += io_shortage;
+
+	fail_on_timeout = 1;
+	TUNABLE_INT_FETCH("hw.isci.fail_on_task_timeout", &fail_on_timeout);
+	controller->fail_on_task_timeout = fail_on_timeout;
 
 	/* Attach to CAM using xpt_bus_register now, then immediately freeze
 	 *  the simq.  It will get released later when initial domain discovery
@@ -354,6 +385,23 @@ SCI_STATUS isci_controller_initialize(struct ISCI_CONTROLLER *controller)
 	isci_controller_attach_to_cam(controller);
 	xpt_freeze_simq(controller->sim, 1);
 	mtx_unlock(&controller->lock);
+
+	for (i = 0; i < SCI_MAX_PHYS; i++) {
+		controller->phys[i].handle = scic_controller_handle;
+		controller->phys[i].index = i;
+
+		/* fault */
+		controller->phys[i].led_fault = 0;
+		sprintf(led_name, "isci.bus%d.port%d.fault", controller->index, i);
+		controller->phys[i].cdev_fault = led_create(isci_led_fault_func,
+		    &controller->phys[i], led_name);
+			
+		/* locate */
+		controller->phys[i].led_locate = 0;
+		sprintf(led_name, "isci.bus%d.port%d.locate", controller->index, i);
+		controller->phys[i].cdev_locate = led_create(isci_led_locate_func,
+		    &controller->phys[i], led_name);
+	}
 
 	return (scif_controller_initialize(controller->scif_controller_handle));
 }
@@ -539,7 +587,7 @@ void isci_controller_domain_discovery_complete(
 			 */
 			union ccb *ccb = xpt_alloc_ccb_nowait();
 
-			xpt_create_path(&ccb->ccb_h.path, xpt_periph,
+			xpt_create_path(&ccb->ccb_h.path, NULL,
 			    cam_sim_path(isci_controller->sim),
 			    CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD);
 
@@ -632,7 +680,8 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->version_num = 1;
 			cpi->hba_inquiry = PI_TAG_ABLE;
 			cpi->target_sprt = 0;
-			cpi->hba_misc = PIM_NOBUSRESET | PIM_SEQSCAN;
+			cpi->hba_misc = PIM_NOBUSRESET | PIM_SEQSCAN |
+			    PIM_UNMAPPED;
 			cpi->hba_eng_cnt = 0;
 			cpi->max_target = SCI_MAX_REMOTE_DEVICES - 1;
 			cpi->max_lun = ISCI_MAX_LUN;
@@ -643,9 +692,9 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->bus_id = bus;
 			cpi->initiator_id = SCI_MAX_REMOTE_DEVICES;
 			cpi->base_transfer_speed = 300000;
-			strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-			strncpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
-			strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
+			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->transport = XPORT_SAS;
 			cpi->transport_version = 0;
 			cpi->protocol = PROTO_SCSI;
@@ -692,6 +741,11 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 		}
 		break;
 	case XPT_SCSI_IO:
+		if (ccb->ccb_h.flags & CAM_CDB_PHYS) {
+			ccb->ccb_h.status = CAM_REQ_INVALID;
+			xpt_done(ccb);
+			break;
+		}
 		isci_io_request_execute_scsi_io(ccb, controller);
 		break;
 #if __FreeBSD_version >= 900026
@@ -754,6 +808,7 @@ isci_controller_release_queued_ccbs(struct ISCI_CONTROLLER *controller)
 {
 	struct ISCI_REMOTE_DEVICE *dev;
 	struct ccb_hdr *ccb_h;
+	uint8_t *ptr;
 	int dev_idx;
 
 	KASSERT(mtx_owned(&controller->lock), ("controller lock not owned"));
@@ -773,8 +828,8 @@ isci_controller_release_queued_ccbs(struct ISCI_CONTROLLER *controller)
 			if (ccb_h == NULL)
 				continue;
 
-			isci_log_message(1, "ISCI", "release %p %x\n", ccb_h,
-			    ((union ccb *)ccb_h)->csio.cdb_io.cdb_bytes[0]);
+			ptr = scsiio_cdb_ptr(&((union ccb *)ccb_h)->csio);
+			isci_log_message(1, "ISCI", "release %p %x\n", ccb_h, *ptr);
 
 			dev->queued_ccb_in_progress = (union ccb *)ccb_h;
 			isci_io_request_execute_scsi_io(

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_oem_parameters.c 231136 2012-02-07 17:43:58Z jimharris $");
 
 #include <dev/isci/isci.h>
 #include <vm/vm.h>

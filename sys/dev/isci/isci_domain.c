@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_domain.c 249468 2013-04-14 09:55:48Z mav $");
 
 #include <dev/isci/isci.h>
 
@@ -300,7 +301,7 @@ scif_cb_domain_device_removed(SCI_CONTROLLER_HANDLE_T controller,
 
 	isci_controller->remote_device[isci_remote_device->index] = NULL;
 
-	xpt_create_path(&ccb->ccb_h.path, xpt_periph, path,
+	xpt_create_path(&ccb->ccb_h.path, NULL, path,
 	    isci_remote_device->index, CAM_LUN_WILDCARD);
 
 	xpt_rescan(ccb);

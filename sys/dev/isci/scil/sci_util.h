@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -49,23 +50,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/isci/scil/sci_util.h 265571 2014-05-07 16:57:33Z jimharris $
  */
 #ifndef _SCI_UTIL_H_
 #define _SCI_UTIL_H_
+
+#include <sys/param.h>
 
 #include <dev/isci/scil/sci_types.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#endif
-
-#ifndef MIN
-#define MIN(x,y) ((x) < (y) ? (x) : (y))
-#endif
-
-#ifndef MAX
-#define MAX(x,y) ((x) > (y) ? (x) : (y))
 #endif
 
 /**

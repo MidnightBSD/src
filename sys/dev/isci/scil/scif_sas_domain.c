@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scif_sas_domain.c 250460 2013-05-10 16:41:26Z eadler $");
 
 /**
  * @file
@@ -637,7 +638,7 @@ void scif_sas_domain_terminate_requests(
       SCIF_SAS_REQUEST_T      * request = NULL;
 
       // Cycle through the fast list of IO requests.  Terminate each
-      // oustanding requests that matches the criteria supplied by the
+      // outstanding requests that matches the criteria supplied by the
       // caller.
       while (element != NULL)
       {
@@ -1275,7 +1276,7 @@ U8 scif_sas_domain_get_smp_request_count(
    SCIC_TRANSPORT_PROTOCOL   protocol;
 
    // Cycle through the fast list of IO requests.  Terminate each
-   // oustanding requests that matches the criteria supplied by the
+   // outstanding requests that matches the criteria supplied by the
    // caller.
    while (element != NULL)
    {

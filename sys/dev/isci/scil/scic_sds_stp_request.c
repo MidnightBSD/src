@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_stp_request.c 268073 2014-07-01 06:23:48Z scottl $");
 
 #include <dev/isci/scil/intel_sat.h>
 #include <dev/isci/scil/intel_sata.h>
@@ -1222,6 +1223,7 @@ SCI_STATUS scic_sds_stp_request_pio_data_in_copy_data_buffer(
          length -= copy_length;
          sgl_offset += copy_length;
          data_offset += copy_length;
+         source_address += copy_length;
 #endif
       }
    }

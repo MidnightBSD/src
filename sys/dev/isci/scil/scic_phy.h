@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -49,7 +50,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/isci/scil/scic_phy.h 300060 2016-05-17 15:18:01Z pfg $
  */
 #ifndef _SCIC_PHY_H_
 #define _SCIC_PHY_H_
@@ -308,7 +309,7 @@ SCI_STATUS scic_sas_phy_get_properties(
 
 /**
  * @brief This method will enable the user to retrieve information
- *        specific to a SATA phy, such as: the recieved signature
+ *        specific to a SATA phy, such as: the received signature
  *        FIS, if a port selector is present, etc.
  *
  * @param[in]  phy this parameter specifies the phy for which to

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -49,7 +50,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/isci/scil/scif_sas_high_priority_request_queue.h 231136 2012-02-07 17:43:58Z jimharris $
  */
 #ifndef _SCIF_SAS_HIGH_PRIORITY_REQUEST_QUEUE_H_
 #define _SCIF_SAS_HIGH_PRIORITY_REQUEST_QUEUE_H_

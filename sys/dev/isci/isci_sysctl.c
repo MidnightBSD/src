@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_sysctl.c 276269 2014-12-26 23:18:09Z scottl $");
 
 #include <dev/isci/isci.h>
 
@@ -193,6 +194,54 @@ isci_sysctl_start_phy(SYSCTL_HANDLER_ARGS)
 	return 0;
 }
 
+static int
+isci_sysctl_log_frozen_lun_masks(SYSCTL_HANDLER_ARGS)
+{
+	struct isci_softc	*isci = (struct isci_softc *)arg1;
+	struct ISCI_REMOTE_DEVICE *device;
+	int32_t			log_frozen_devices = 0;
+	int			error, i, j;
+
+	error = sysctl_handle_int(oidp, &log_frozen_devices, 0, req);
+
+	if (error || log_frozen_devices == 0)
+		return (error);
+
+	for (i = 0; i < isci->controller_count; i++) {
+		for (j = 0; j < SCI_MAX_REMOTE_DEVICES; j++) {
+			device = isci->controllers[i].remote_device[j];
+
+			if (device == NULL)
+				continue;
+
+			device_printf(isci->device,
+			    "controller %d device %3d frozen_lun_mask 0x%02x\n",
+			    i, j, device->frozen_lun_mask);
+		}
+	}
+
+	return (0);
+}
+
+static int
+isci_sysctl_fail_on_task_timeout(SYSCTL_HANDLER_ARGS)
+{
+	struct isci_softc	*isci = (struct isci_softc *)arg1;
+	int32_t			fail_on_timeout;
+	int			error, i;
+
+	fail_on_timeout = isci->controllers[0].fail_on_task_timeout;
+	error = sysctl_handle_int(oidp, &fail_on_timeout, 0, req);
+
+	if (error || req->newptr == NULL)
+		return (error);
+
+	for (i = 0; i < isci->controller_count; i++)
+		isci->controllers[i].fail_on_task_timeout = fail_on_timeout;
+
+	return (0);
+}
+
 void isci_sysctl_initialize(struct isci_softc *isci)
 {
 	struct sysctl_ctx_list *sysctl_ctx = device_get_sysctl_ctx(isci->device);
@@ -225,5 +274,15 @@ void isci_sysctl_initialize(struct isci_softc *isci)
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree), OID_AUTO,
 	    "start_phy", CTLTYPE_UINT| CTLFLAG_RW, isci, 0,
 	    isci_sysctl_start_phy, "IU", "Start PHY on a controller");
+
+	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree), OID_AUTO,
+	    "log_frozen_lun_masks", CTLTYPE_UINT| CTLFLAG_RW, isci, 0,
+	    isci_sysctl_log_frozen_lun_masks, "IU",
+	    "Log frozen lun masks to kernel log");
+
+	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree), OID_AUTO,
+	    "fail_on_task_timeout", CTLTYPE_UINT | CTLFLAG_RW, isci, 0,
+	    isci_sysctl_fail_on_task_timeout, "IU",
+	    "Fail a command that has encountered a task management timeout");
 }
 

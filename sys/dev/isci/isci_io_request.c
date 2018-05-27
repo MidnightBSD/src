@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_io_request.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <dev/isci/isci.h>
 
@@ -86,6 +87,7 @@ isci_io_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 	struct ISCI_REMOTE_DEVICE *isci_remote_device;
 	union ccb *ccb;
 	BOOL complete_ccb;
+	struct ccb_scsiio *csio;
 
 	complete_ccb = TRUE;
 	isci_controller = (struct ISCI_CONTROLLER *) sci_object_get_association(scif_controller);
@@ -93,7 +95,7 @@ isci_io_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 		(struct ISCI_REMOTE_DEVICE *) sci_object_get_association(remote_device);
 
 	ccb = isci_request->ccb;
-
+	csio = &ccb->csio;
 	ccb->ccb_h.status &= ~CAM_STATUS_MASK;
 
 	switch (completion_status) {
@@ -124,7 +126,6 @@ isci_io_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 		SCI_SSP_RESPONSE_IU_T * response_buffer;
 		uint32_t sense_length;
 		int error_code, sense_key, asc, ascq;
-		struct ccb_scsiio *csio = &ccb->csio;
 
 		response_buffer = (SCI_SSP_RESPONSE_IU_T *)
 		    scif_io_request_get_response_iu_address(
@@ -146,21 +147,26 @@ isci_io_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 		isci_log_message(1, "ISCI",
 		    "isci: bus=%x target=%x lun=%x cdb[0]=%x status=%x key=%x asc=%x ascq=%x\n",
 		    ccb->ccb_h.path_id, ccb->ccb_h.target_id,
-		    ccb->ccb_h.target_lun, csio->cdb_io.cdb_bytes[0],
+		    ccb->ccb_h.target_lun, scsiio_cdb_ptr(csio),
 		    csio->scsi_status, sense_key, asc, ascq);
 		break;
 	}
 
 	case SCI_IO_FAILURE_REMOTE_DEVICE_RESET_REQUIRED:
 		isci_remote_device_reset(isci_remote_device, NULL);
+		ccb->ccb_h.status |= CAM_REQ_TERMIO;
+		isci_log_message(0, "ISCI",
+		    "isci: bus=%x target=%x lun=%x cdb[0]=%x remote device reset required\n",
+		    ccb->ccb_h.path_id, ccb->ccb_h.target_id,
+		    ccb->ccb_h.target_lun, scsiio_cdb_ptr(csio));
+		break;
 
-		/* drop through */
 	case SCI_IO_FAILURE_TERMINATED:
 		ccb->ccb_h.status |= CAM_REQ_TERMIO;
-		isci_log_message(1, "ISCI",
+		isci_log_message(0, "ISCI",
 		    "isci: bus=%x target=%x lun=%x cdb[0]=%x terminated\n",
 		    ccb->ccb_h.path_id, ccb->ccb_h.target_id,
-		    ccb->ccb_h.target_lun, ccb->csio.cdb_io.cdb_bytes[0]);
+		    ccb->ccb_h.target_lun, scsiio_cdb_ptr(csio));
 		break;
 
 	case SCI_IO_FAILURE_INVALID_STATE:
@@ -203,7 +209,7 @@ isci_io_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 		isci_log_message(1, "ISCI",
 		    "isci: bus=%x target=%x lun=%x cdb[0]=%x completion status=%x\n",
 		    ccb->ccb_h.path_id, ccb->ccb_h.target_id,
-		    ccb->ccb_h.target_lun, ccb->csio.cdb_io.cdb_bytes[0],
+		    ccb->ccb_h.target_lun, scsiio_cdb_ptr(csio),
 		    completion_status);
 		ccb->ccb_h.status |= CAM_REQ_CMP_ERR;
 		break;
@@ -280,13 +286,13 @@ isci_io_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 			 *   get a ready notification for this device.
 			 */
 			isci_log_message(1, "ISCI", "already queued %p %x\n",
-			    ccb, ccb->csio.cdb_io.cdb_bytes[0]);
+			    ccb, scsiio_cdb_ptr(csio));
 
 			isci_remote_device->queued_ccb_in_progress = NULL;
 
 		} else {
 			isci_log_message(1, "ISCI", "queue %p %x\n", ccb,
-			    ccb->csio.cdb_io.cdb_bytes[0]);
+			    scsiio_cdb_ptr(csio));
 			ccb->ccb_h.status |= CAM_SIM_QUEUED;
 
 			TAILQ_INSERT_TAIL(&isci_remote_device->queued_ccbs,
@@ -368,7 +374,7 @@ scif_cb_io_request_get_cdb_address(void * scif_user_io_request)
 	struct ISCI_IO_REQUEST *isci_request =
 	    (struct ISCI_IO_REQUEST *)scif_user_io_request;
 
-	return (isci_request->ccb->csio.cdb_io.cdb_bytes);
+	return (scsiio_cdb_ptr(&isci_request->ccb->csio));
 }
 
 /**
@@ -506,10 +512,31 @@ uint8_t *
 scif_cb_io_request_get_virtual_address_from_sgl(void * scif_user_io_request,
     uint32_t byte_offset)
 {
-	struct ISCI_IO_REQUEST *isci_request =
-	    (struct ISCI_IO_REQUEST *)scif_user_io_request;
+	struct ISCI_IO_REQUEST	*isci_request;
+	union ccb		*ccb;
 
-	return (isci_request->ccb->csio.data_ptr + byte_offset);
+
+	isci_request = scif_user_io_request;
+	ccb = isci_request->ccb;
+
+	/*
+	 * This callback is only invoked for SCSI/ATA translation of
+	 *  PIO commands such as INQUIRY and READ_CAPACITY, to allow
+	 *  the driver to write the translated data directly into the
+	 *  data buffer.  It is never invoked for READ/WRITE commands.
+	 *  The driver currently assumes only READ/WRITE commands will
+	 *  be unmapped.
+	 *
+	 * As a safeguard against future changes to unmapped commands,
+	 *  add an explicit panic here should the DATA_MASK != VADDR.
+	 *  Otherwise, we would return some garbage pointer back to the
+	 *  caller which would result in a panic or more subtle data
+	 *  corruption later on.
+	 */
+	if ((ccb->ccb_h.flags & CAM_DATA_MASK) != CAM_DATA_VADDR)
+		panic("%s: requesting pointer into unmapped ccb", __func__);
+
+	return (ccb->csio.data_ptr + byte_offset);
 }
 
 /**
@@ -654,7 +681,7 @@ isci_request_construct(struct ISCI_REQUEST *request,
 	request->dma_tag = io_buffer_dma_tag;
 	request->physical_address = physical_address;
 	bus_dmamap_create(request->dma_tag, 0, &request->dma_map);
-	callout_init(&request->timer, CALLOUT_MPSAFE);
+	callout_init(&request->timer, 1);
 }
 
 static void
@@ -705,15 +732,15 @@ isci_io_request_construct(void *arg, bus_dma_segment_t *seg, int nseg,
 	}
 
 	if (ccb->ccb_h.timeout != CAM_TIME_INFINITY)
-		callout_reset(&io_request->parent.timer, ccb->ccb_h.timeout,
-		    isci_io_request_timeout, io_request);
+		callout_reset_sbt(&io_request->parent.timer,
+		    SBT_1MS * ccb->ccb_h.timeout, 0, isci_io_request_timeout,
+		    io_request, 0);
 }
 
 void
 isci_io_request_execute_scsi_io(union ccb *ccb,
     struct ISCI_CONTROLLER *controller)
 {
-	struct ccb_scsiio *csio = &ccb->csio;
 	target_id_t target_id = ccb->ccb_h.target_id;
 	struct ISCI_REQUEST *request;
 	struct ISCI_IO_REQUEST *io_request;
@@ -748,29 +775,17 @@ isci_io_request_execute_scsi_io(union ccb *ccb,
 	io_request->current_sge_index = 0;
 	io_request->parent.remote_device_handle = device->sci_object;
 
-	if ((ccb->ccb_h.flags & CAM_SCATTER_VALID) != 0)
-		panic("Unexpected CAM_SCATTER_VALID flag!  flags = 0x%x\n",
-		    ccb->ccb_h.flags);
-
-	if ((ccb->ccb_h.flags & CAM_DATA_PHYS) != 0)
-		panic("Unexpected CAM_DATA_PHYS flag!  flags = 0x%x\n",
-		    ccb->ccb_h.flags);
-
-	if ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-		error = bus_dmamap_load(io_request->parent.dma_tag,
-		    io_request->parent.dma_map, csio->data_ptr, csio->dxfer_len,
-		    isci_io_request_construct, io_request, 0x0);
-
-		/* A resource shortage from BUSDMA will be automatically
-		 * continued at a later point, pushing the CCB processing
-		 * forward, which will in turn unfreeze the simq.
-		 */
-		if (error == EINPROGRESS) {
-			xpt_freeze_simq(controller->sim, 1);
-			ccb->ccb_h.flags |= CAM_RELEASE_SIMQ;
-		}
-	} else
-		isci_io_request_construct(io_request, NULL, 0, 0);
+	error = bus_dmamap_load_ccb(io_request->parent.dma_tag,
+	    io_request->parent.dma_map, ccb,
+	    isci_io_request_construct, io_request, 0x0);
+	/* A resource shortage from BUSDMA will be automatically
+	 * continued at a later point, pushing the CCB processing
+	 * forward, which will in turn unfreeze the simq.
+	 */
+	if (error == EINPROGRESS) {
+		xpt_freeze_simq(controller->sim, 1);
+		ccb->ccb_h.flags |= CAM_RELEASE_SIMQ;
+	}
 }
 
 void
@@ -970,7 +985,8 @@ isci_io_request_execute_smp_io(union ccb *ccb,
 	}
 
 	if (ccb->ccb_h.timeout != CAM_TIME_INFINITY)
-		callout_reset(&io_request->parent.timer, ccb->ccb_h.timeout,
-		    isci_io_request_timeout, request);
+		callout_reset_sbt(&io_request->parent.timer,
+		    SBT_1MS *  ccb->ccb_h.timeout, 0, isci_io_request_timeout,
+		    request, 0);
 }
 #endif

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -49,7 +50,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/isci/scil/scu_remote_node_context.h 231136 2012-02-07 17:43:58Z jimharris $
  */
 #ifndef __SCU_REMOTE_NODE_CONTEXT_HEADER__
 #define __SCU_REMOTE_NODE_CONTEXT_HEADER__

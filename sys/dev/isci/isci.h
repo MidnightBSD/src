@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -27,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/isci/isci.h 268073 2014-07-01 06:23:48Z scottl $
  */
 
 #ifndef _ISCI_H
@@ -143,6 +144,16 @@ struct ISCI_INTERRUPT_INFO
 
 };
 
+struct ISCI_PHY
+{
+	struct cdev		*cdev_fault;
+	struct cdev		*cdev_locate;
+	SCI_CONTROLLER_HANDLE_T	handle;
+	int			index;
+	int			led_fault;
+	int			led_locate;
+};
+
 struct ISCI_CONTROLLER
 {
 	struct isci_softc 	*isci;
@@ -154,6 +165,7 @@ struct ISCI_CONTROLLER
 	uint32_t		initial_discovery_mask;
 	BOOL			is_frozen;
 	BOOL			release_queued_ccbs;
+	BOOL			fail_on_task_timeout;
 	uint8_t			*remote_device_memory;
 	struct ISCI_MEMORY	cached_controller_memory;
 	struct ISCI_MEMORY	uncached_controller_memory;
@@ -169,6 +181,7 @@ struct ISCI_CONTROLLER
 	uint32_t		queue_depth;
 	uint32_t		sim_queue_depth;
 	SCI_FAST_LIST_T		pending_device_reset_list;
+	struct ISCI_PHY		phys[SCI_MAX_PHYS];
 
 	SCI_MEMORY_DESCRIPTOR_LIST_HANDLE_T mdl;
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -49,10 +50,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/isci/scil/sci_controller_constants.h 265571 2014-05-07 16:57:33Z jimharris $
  */
 #ifndef _SCI_CONTROLLER_CONSTANTS_H_
 #define _SCI_CONTROLLER_CONSTANTS_H_
+
+#include <sys/param.h>
 
 /**
  * @file
@@ -148,8 +151,13 @@ extern "C" {
 /**
  * This constant defines the maximum number of Scatter-Gather Elements
  * to be used by any SCI component.
+ *
+ * Note: number of elements must be an even number, since descriptors
+ * posted to hardware always contain pairs of elements (with second
+ * element set to zeroes if not needed).
  */
-#define SCI_MAX_SCATTER_GATHER_ELEMENTS 130
+#define __MAXPHYS_ELEMENTS ((MAXPHYS / PAGE_SIZE) + 1)
+#define SCI_MAX_SCATTER_GATHER_ELEMENTS  ((__MAXPHYS_ELEMENTS + 1) & ~0x1)
 #endif
 
 #ifndef SCI_MIN_SCATTER_GATHER_ELEMENTS

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_port_configuration_agent.c 249586 2013-04-17 11:47:32Z gabor $");
 
 /**
  * @file
@@ -1109,7 +1110,7 @@ void scic_sds_port_configuration_agent_destroy(
  *
  * @param[in] controller This parameter specifies the core controller, one of
  *            its phy's resources are to be released.
- * @param[in] this_phy This parameter specifies the phy whose resourse is to
+ * @param[in] this_phy This parameter specifies the phy whose resource is to
  *            be released.
  */
 void scic_sds_port_configuration_agent_release_resource(

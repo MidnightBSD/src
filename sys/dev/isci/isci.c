@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci.c 287677 2015-09-11 17:01:01Z jimharris $");
 
 #include <dev/isci/isci.h>
 
@@ -38,11 +39,14 @@ __MBSDID("$MidnightBSD$");
 
 #include <cam/cam_periph.h>
 
+#include <dev/led/led.h>
+
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
 #include <dev/isci/scil/scic_logger.h>
 #include <dev/isci/scil/scic_library.h>
+#include <dev/isci/scil/scic_sgpio.h>
 #include <dev/isci/scil/scic_user_callback.h>
 
 #include <dev/isci/scil/scif_controller.h>
@@ -81,6 +85,7 @@ static driver_t isci_pci_driver = {
 };
 
 DRIVER_MODULE(isci, pci, isci_pci_driver, isci_devclass, 0, 0);
+MODULE_DEPEND(isci, cam, 1, 1, 1);
 
 static struct _pcsid
 {
@@ -159,6 +164,7 @@ isci_attach(device_t device)
 
 	g_isci = isci;
 	isci->device = device;
+	pci_enable_busmaster(device);
 
 	isci_allocate_pci_memory(isci);
 
@@ -180,7 +186,7 @@ static int
 isci_detach(device_t device)
 {
 	struct isci_softc *isci = DEVICE2SOFTC(device);
-	int i;
+	int i, phy;
 
 	for (i = 0; i < isci->controller_count; i++) {
 		struct ISCI_CONTROLLER *controller = &isci->controllers[i];
@@ -219,6 +225,14 @@ isci_detach(device_t device)
 
 		if (controller->remote_device_memory != NULL)
 			free(controller->remote_device_memory, M_ISCI);
+
+		for (phy = 0; phy < SCI_MAX_PHYS; phy++) {
+			if (controller->phys[phy].cdev_fault)
+				led_destroy(controller->phys[phy].cdev_fault);
+
+			if (controller->phys[phy].cdev_locate)
+				led_destroy(controller->phys[phy].cdev_locate);
+		}
 
 		while (1) {
 			sci_pool_get(controller->unmap_buffer_pool, unmap_buffer);
@@ -260,6 +274,7 @@ isci_detach(device_t device)
 
 		pci_release_msi(device);
 	}
+	pci_disable_busmaster(device);
 
 	return (0);
 }

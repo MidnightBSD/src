@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_port.c 249586 2013-04-17 11:47:32Z gabor $");
 
 /**
  * @file
@@ -1537,7 +1538,7 @@ void scic_port_enable_broadcast_change_notification(
  *
  * @param[in] controller This parameter specifies the core controller, one of
  *            its phy's resources are to be released.
- * @param[in] this_port This parameter specifies the port whose resourse is to
+ * @param[in] this_port This parameter specifies the port whose resource is to
  *            be released.
  */
 void scic_sds_port_release_resource(

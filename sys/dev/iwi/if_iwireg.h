@@ -1,3 +1,6 @@
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/iwi/if_iwireg.h 170530 2007-06-11 03:36:55Z sam $	*/
+
 /*-
  * Copyright (c) 2004, 2005
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.

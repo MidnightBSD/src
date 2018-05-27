@@ -1,3 +1,6 @@
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/iwi/if_iwivar.h 264954 2014-04-25 22:19:18Z marius $	*/
+
 /*-
  * Copyright (c) 2004, 2005
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
@@ -151,8 +154,6 @@ struct iwi_softc {
 	bus_space_tag_t		sc_st;
 	bus_space_handle_t	sc_sh;
 	void 			*sc_ih;
-	int			mem_rid;
-	int			irq_rid;
 
 	/*
 	 * The card needs external firmware images to work, which is made of a
