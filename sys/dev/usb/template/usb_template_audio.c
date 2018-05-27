@@ -1,6 +1,5 @@
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/template/usb_template_audio.c 223472 2011-06-23 10:35:45Z hselasky $");
-
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/template/usb_template_audio.c 246125 2013-01-30 16:05:54Z hselasky $ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
@@ -30,6 +29,9 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/template/usb_template_audio.c 223472 20
  * This file contains the USB template for an USB Audio Device.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -51,9 +53,11 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/template/usb_template_audio.c 223472 20
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
+#include <dev/usb/usb_core.h>
 #include <dev/usb/usb_cdc.h>
 
 #include <dev/usb/template/usb_template.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 enum {
 	INDEX_AUDIO_LANG,
@@ -64,30 +68,21 @@ enum {
 	INDEX_AUDIO_MAX,
 };
 
-#define	STRING_LANG \
-  0x09, 0x04,				/* American English */
-
 #define	STRING_AUDIO_PRODUCT \
-  'A', 0, 'u', 0, 'd', 0, 'i', 0, 'o', 0, ' ', 0, \
-  'T', 0, 'e', 0, 's', 0, 't', 0, ' ', 0, \
-  'D', 0, 'e', 0, 'v', 0, 'i', 0, 'c', 0, 'e', 0, ' ', 0, 
+  "A\0u\0d\0i\0o\0 \0T\0e\0s\0t\0 \0D\0e\0v\0i\0c\0e"
 
 #define	STRING_AUDIO_MIXER \
-  'M', 0, 'i', 0, 'x', 0, 'e', 0, 'r', 0, ' ', 0, \
-  'i', 0, 'n', 0, 't', 0, 'e', 0, 'r', 0, 'f', 0, 'a', 0, 'c', 0, 'e', 0,
+  "M\0i\0x\0e\0r\0 \0i\0n\0t\0e\0r\0f\0a\0c\0e"
 
 #define	STRING_AUDIO_RECORD \
-  'R', 0, 'e', 0, 'c', 0, 'o', 0, 'r', 0, 'd', 0, ' ', 0, \
-  'i', 0, 'n', 0, 't', 0, 'e', 0, 'r', 0, 'f', 0, 'a', 0, 'c', 0, 'e', 0,
+  "R\0e\0c\0o\0r\0d\0 \0i\0n\0t\0e\0r\0f\0a\0c\0e"
 
 #define	STRING_AUDIO_PLAYBACK \
-  'P', 0, 'l', 0, 'a', 0, 'y', 0, 'b', 0, 'a', 0, 'c', 0, 'k', 0, ' ', 0, \
-  'i', 0, 'n', 0, 't', 0, 'e', 0, 'r', 0, 'f', 0, 'a', 0, 'c', 0, 'e', 0,
+  "P\0l\0a\0y\0b\0a\0c\0k\0 \0i\0n\0t\0e\0r\0f\0a\0c\0e"
 
 
 /* make the real string descriptors */
 
-USB_MAKE_STRING_DESC(STRING_LANG, string_lang);
 USB_MAKE_STRING_DESC(STRING_AUDIO_MIXER, string_audio_mixer);
 USB_MAKE_STRING_DESC(STRING_AUDIO_RECORD, string_audio_record);
 USB_MAKE_STRING_DESC(STRING_AUDIO_PLAYBACK, string_audio_playback);
@@ -385,7 +380,7 @@ static const void *
 audio_get_string_desc(uint16_t lang_id, uint8_t string_index)
 {
 	static const void *ptr[INDEX_AUDIO_MAX] = {
-		[INDEX_AUDIO_LANG] = &string_lang,
+		[INDEX_AUDIO_LANG] = &usb_string_lang_en,
 		[INDEX_AUDIO_MIXER] = &string_audio_mixer,
 		[INDEX_AUDIO_RECORD] = &string_audio_record,
 		[INDEX_AUDIO_PLAYBACK] = &string_audio_playback,
@@ -393,7 +388,7 @@ audio_get_string_desc(uint16_t lang_id, uint8_t string_index)
 	};
 
 	if (string_index == 0) {
-		return (&string_lang);
+		return (&usb_string_lang_en);
 	}
 	if (lang_id != 0x0409) {
 		return (NULL);

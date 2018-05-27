@@ -58441,6 +58441,7 @@ sys/dev/usb/template/usb_template_modem.c -text
 sys/dev/usb/template/usb_template_mouse.c -text
 sys/dev/usb/template/usb_template_msc.c -text
 sys/dev/usb/template/usb_template_mtp.c -text
+sys/dev/usb/template/usb_template_phone.c svneol=native#text/plain
 sys/dev/usb/ufm_ioctl.h -text
 sys/dev/usb/uftdiio.h svneol=native#text/plain
 sys/dev/usb/usb.h -text

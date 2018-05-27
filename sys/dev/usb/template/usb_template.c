@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/template/usb_template.c 305735 2016-09-12 10:20:44Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/template/usb_template.c 305734 2016-09-12 10:17:25Z hselasky $ */
 /*-
  * Copyright (c) 2007 Hans Petter Selasky. All rights reserved.
  *
@@ -29,6 +30,9 @@
  * USB templates.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -66,7 +70,9 @@
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#include <dev/usb/usb_request.h>
 #include <dev/usb/template/usb_template.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 MODULE_DEPEND(usb_template, usb, 1, 1, 1);
 MODULE_VERSION(usb_template, 1);
@@ -130,7 +136,7 @@ usb_make_raw_desc(struct usb_temp_setup *temp,
 
 			/* check if we have got a CDC union descriptor */
 
-			if ((raw[0] >= sizeof(struct usb_cdc_union_descriptor)) &&
+			if ((raw[0] == sizeof(struct usb_cdc_union_descriptor)) &&
 			    (raw[1] == UDESC_CS_INTERFACE) &&
 			    (raw[2] == UDESCSUB_CDC_UNION)) {
 				struct usb_cdc_union_descriptor *ud = (void *)dst;
@@ -145,7 +151,7 @@ usb_make_raw_desc(struct usb_temp_setup *temp,
 
 			/* check if we have got an interface association descriptor */
 
-			if ((raw[0] >= sizeof(struct usb_interface_assoc_descriptor)) &&
+			if ((raw[0] == sizeof(struct usb_interface_assoc_descriptor)) &&
 			    (raw[1] == UDESC_IFACE_ASSOC)) {
 				struct usb_interface_assoc_descriptor *iad = (void *)dst;
 
@@ -157,7 +163,7 @@ usb_make_raw_desc(struct usb_temp_setup *temp,
 
 			/* check if we have got a call management descriptor */
 
-			if ((raw[0] >= sizeof(struct usb_cdc_cm_descriptor)) &&
+			if ((raw[0] == sizeof(struct usb_cdc_cm_descriptor)) &&
 			    (raw[1] == UDESC_CS_INTERFACE) &&
 			    (raw[2] == UDESCSUB_CDC_CM)) {
 				struct usb_cdc_cm_descriptor *ccd = (void *)dst;
@@ -1263,7 +1269,7 @@ usb_temp_setup(struct usb_device *udev,
 		goto done;
 	}
 	/* allocate zeroed memory */
-	uts->buf = malloc(uts->size, M_USB, M_WAITOK | M_ZERO);
+	uts->buf = usbd_alloc_config_desc(udev, uts->size);
 	/*
 	 * Allow malloc() to return NULL regardless of M_WAITOK flag.
 	 * This helps when porting the software to non-FreeBSD
@@ -1332,12 +1338,8 @@ done:
 void
 usb_temp_unsetup(struct usb_device *udev)
 {
-	if (udev->usb_template_ptr) {
-
-		free(udev->usb_template_ptr, M_USB);
-
-		udev->usb_template_ptr = NULL;
-	}
+	usbd_free_config_desc(udev, udev->usb_template_ptr);
+	udev->usb_template_ptr = NULL;
 }
 
 static usb_error_t
@@ -1366,6 +1368,9 @@ usb_temp_setup_by_index(struct usb_device *udev, uint16_t index)
 		break;
 	case USB_TEMP_MOUSE:
 		err = usb_temp_setup(udev, &usb_template_mouse);
+		break;
+	case USB_TEMP_PHONE:
+		err = usb_temp_setup(udev, &usb_template_phone);
 		break;
 	default:
 		return (USB_ERR_INVAL);
