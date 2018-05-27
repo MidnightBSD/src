@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_bsd.c,v 1.6 2011/12/28 00:14:43 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.78.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/geom_bsd.c 322860 2017-08-24 21:44:23Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -306,101 +306,14 @@ g_bsd_hotwrite(void *arg, int flag)
 	gsp = gp->softc;
 	ms = gsp->softc;
 	gsl = &gsp->slices[bp->bio_to->index];
-	p = (u_char*)bp->bio_data + ms->labeloffset 
-	    - (bp->bio_offset + gsl->offset);
+	p = (u_char*)bp->bio_data + ms->labeloffset -
+	    (bp->bio_offset + gsl->offset);
 	error = g_bsd_modify(gp, p);
 	if (error) {
 		g_io_deliver(bp, EPERM);
 		return;
 	}
 	g_slice_finish_hot(bp);
-}
-
-/*-
- * This start routine is only called for non-trivial requests, all the
- * trivial ones are handled autonomously by the slice code.
- * For requests we handle here, we must call the g_io_deliver() on the
- * bio, and return non-zero to indicate to the slice code that we did so.
- * This code executes in the "DOWN" I/O path, this means:
- *    * No sleeping.
- *    * Don't grab the topology lock.
- *    * Don't call biowait, g_getattr(), g_setattr() or g_read_data()
- */
-static int
-g_bsd_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct thread *td)
-{
-	struct g_geom *gp;
-	struct g_bsd_softc *ms;
-	struct g_slicer *gsp;
-	u_char *label;
-	int error;
-
-	gp = pp->geom;
-	gsp = gp->softc;
-	ms = gsp->softc;
-
-	switch(cmd) {
-	case DIOCGDINFO:
-		/* Return a copy of the disklabel to userland. */
-		bsd_disklabel_le_dec(ms->label, data, MAXPARTITIONS);
-		return(0);
-	case DIOCBSDBB: {
-		struct g_consumer *cp;
-		u_char *buf;
-		void *p;
-		int error, i;
-		uint64_t sum;
-
-		if (!(fflag & FWRITE))
-			return (EPERM);
-		/* The disklabel to set is the ioctl argument. */
-		buf = g_malloc(BBSIZE, M_WAITOK);
-		p = *(void **)data;
-		error = copyin(p, buf, BBSIZE);
-		if (!error) {
-			/* XXX: Rude, but supposedly safe */
-			DROP_GIANT();
-			g_topology_lock();
-			/* Validate and modify our slice instance to match. */
-			error = g_bsd_modify(gp, buf + ms->labeloffset);
-			if (!error) {
-				cp = LIST_FIRST(&gp->consumer);
-				if (ms->labeloffset == ALPHA_LABEL_OFFSET) {
-					sum = 0;
-					for (i = 0; i < 63; i++)
-						sum += le64dec(buf + i * 8);
-					le64enc(buf + 504, sum);
-				}
-				error = g_write_data(cp, 0, buf, BBSIZE);
-			}
-			g_topology_unlock();
-			PICKUP_GIANT();
-		}
-		g_free(buf);
-		return (error);
-	}
-	case DIOCSDINFO:
-	case DIOCWDINFO: {
-		if (!(fflag & FWRITE))
-			return (EPERM);
-		label = g_malloc(LABELSIZE, M_WAITOK);
-		/* The disklabel to set is the ioctl argument. */
-		bsd_disklabel_le_enc(label, data);
-
-		DROP_GIANT();
-		g_topology_lock();
-		/* Validate and modify our slice instance to match. */
-		error = g_bsd_modify(gp, label);
-		if (error == 0 && cmd == DIOCWDINFO)
-			error = g_bsd_writelabel(gp, NULL);
-		g_topology_unlock();
-		PICKUP_GIANT();
-		g_free(label);
-		return(error);
-	}
-	default:
-		return (ENOIOCTL);
-	}
 }
 
 static int
@@ -526,6 +439,16 @@ g_bsd_taste(struct g_class *mp, struct g_provider *pp, int flags)
 			if (i != 165 && flags == G_TF_NORMAL)
 				break;
 			error = g_getattr("MBR::offset", cp, &ms->mbroffset);
+			if (error)
+				break;
+		}
+
+		/* Same thing if we are inside a PC98 */
+		error = g_getattr("PC98::type", cp, &i);
+		if (!error) {
+			if (i != 0xc494 && flags == G_TF_NORMAL)
+				break;
+			error = g_getattr("PC98::offset", cp, &ms->mbroffset);
 			if (error)
 				break;
 		}
@@ -691,7 +614,6 @@ static struct g_class g_bsd_class = {
 	.taste = g_bsd_taste,
 	.ctlreq = g_bsd_config,
 	.dumpconf = g_bsd_dumpconf,
-	.ioctl = g_bsd_ioctl,
 };
 
 DECLARE_GEOM_CLASS(g_bsd_class, g_bsd);
