@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Rohit Grover
  * All rights reserved.
@@ -57,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/atp.c 263064 2014-03-12 07:18:39Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/input/atp.c 263063 2014-03-12 07:15:41Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

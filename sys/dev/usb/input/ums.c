@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/ums.c 308396 2016-11-07 08:17:23Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/input/ums.c 308395 2016-11-07 08:15:58Z hselasky $");
 
 /*
  * HID spec: http://www.usb.org/developers/devclass_docs/HID1_11.pdf
@@ -1045,7 +1046,8 @@ static device_method_t ums_methods[] = {
 	DEVMETHOD(device_probe, ums_probe),
 	DEVMETHOD(device_attach, ums_attach),
 	DEVMETHOD(device_detach, ums_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t ums_driver = {

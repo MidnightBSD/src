@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uhid.c,v 1.46 2001/11/13 06:24:55 lukem Exp $	*/
 
 /* Also already merged from NetBSD:
@@ -5,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/uhid.c 291206 2015-11-23 13:48:28Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/input/uhid.c 291205 2015-11-23 13:47:31Z hselasky $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -865,7 +866,8 @@ static device_method_t uhid_methods[] = {
 	DEVMETHOD(device_probe, uhid_probe),
 	DEVMETHOD(device_attach, uhid_attach),
 	DEVMETHOD(device_detach, uhid_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t uhid_driver = {

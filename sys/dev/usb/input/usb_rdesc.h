@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Nick Hibma <n_hibma@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/input/usb_rdesc.h 196219 2009-08-14 20:03:53Z jhb $
+ * $FreeBSD: stable/10/sys/dev/usb/input/usb_rdesc.h 196219 2009-08-14 20:03:53Z jhb $
  *
  * This file contains replacements for broken HID report descriptors.
  */

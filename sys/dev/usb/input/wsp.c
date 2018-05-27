@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Huang Wen Hui
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/wsp.c 291066 2015-11-19 10:01:50Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/input/wsp.c 331997 2018-04-04 08:45:41Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -922,7 +923,12 @@ wsp_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 		sc->sc_status.button = 0;
 
 		if (ibt != 0) {
-			sc->sc_status.button |= MOUSE_BUTTON1DOWN;
+			if ((params->caps & HAS_INTEGRATED_BUTTON) && ntouch == 2)
+				sc->sc_status.button |= MOUSE_BUTTON3DOWN;
+			else if ((params->caps & HAS_INTEGRATED_BUTTON) && ntouch == 3)
+				sc->sc_status.button |= MOUSE_BUTTON2DOWN;
+			else 
+				sc->sc_status.button |= MOUSE_BUTTON1DOWN;
 			sc->ibtn = 1;
 		}
 		sc->intr_count++;
