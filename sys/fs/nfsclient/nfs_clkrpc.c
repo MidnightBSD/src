@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clkrpc.c 317524 2017-04-27 21:27:20Z rmacklem $");
 
 #include "opt_kgssapi.h"
 
@@ -45,12 +46,13 @@ __MBSDID("$MidnightBSD$");
 
 NFSDLOCKMUTEX;
 
-SVCPOOL		*nfscbd_pool;
+extern SVCPOOL	*nfscbd_pool;
 
 static int nfs_cbproc(struct nfsrv_descript *, u_int32_t);
 
 extern u_long sb_max_adj;
 extern int nfs_numnfscbd;
+extern int nfscl_debuglevel;
 
 /*
  * NFS client system calls for handling callbacks.
@@ -90,6 +92,7 @@ nfscb_program(struct svc_req *rqst, SVCXPRT *xprt)
 	nd.nd_mreq = NULL;
 	nd.nd_cred = NULL;
 
+	NFSCL_DEBUG(1, "cbproc=%d\n",nd.nd_procnum);
 	if (nd.nd_procnum != NFSPROC_NULL) {
 		if (!svc_getcred(rqst, &nd.nd_cred, &credflavor)) {
 			svcerr_weakauth(rqst);
@@ -133,9 +136,10 @@ nfscb_program(struct svc_req *rqst, SVCXPRT *xprt)
 		svcerr_auth(rqst, nd.nd_repstat & ~NFSERR_AUTHERR);
 		if (nd.nd_mreq != NULL)
 			m_freem(nd.nd_mreq);
-	} else if (!svc_sendreply_mbuf(rqst, nd.nd_mreq)) {
+	} else if (!svc_sendreply_mbuf(rqst, nd.nd_mreq))
 		svcerr_systemerr(rqst);
-	}
+	else
+		NFSCL_DEBUG(1, "cbrep sent\n");
 	svc_freereq(rqst);
 }
 
@@ -271,19 +275,24 @@ nfsrvd_cbinit(int terminating)
 	NFSD_LOCK_ASSERT();
 
 	if (terminating) {
-		NFSD_UNLOCK();
-		svcpool_destroy(nfscbd_pool);
-		nfscbd_pool = NULL;
-		NFSD_LOCK();
+		/* Wait for any xprt registrations to complete. */
+		while (nfs_numnfscbd > 0)
+			msleep(&nfs_numnfscbd, NFSDLOCKMUTEXPTR, PZERO, 
+			    "nfscbdt", 0);
+		if (nfscbd_pool != NULL) {
+			NFSD_UNLOCK();
+			svcpool_close(nfscbd_pool);
+			NFSD_LOCK();
+		}
 	}
 
-	NFSD_UNLOCK();
-
-	nfscbd_pool = svcpool_create("nfscbd", NULL);
-	nfscbd_pool->sp_rcache = NULL;
-	nfscbd_pool->sp_assign = NULL;
-	nfscbd_pool->sp_done = NULL;
-
-	NFSD_LOCK();
+	if (nfscbd_pool == NULL) {
+		NFSD_UNLOCK();
+		nfscbd_pool = svcpool_create("nfscbd", NULL);
+		nfscbd_pool->sp_rcache = NULL;
+		nfscbd_pool->sp_assign = NULL;
+		nfscbd_pool->sp_done = NULL;
+		NFSD_LOCK();
+	}
 }
 

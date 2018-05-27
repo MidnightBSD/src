@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/nfs/nfsdport.h 284216 2015-06-10 12:17:19Z rmacklem $
  */
 
 /*
@@ -88,13 +89,11 @@ struct nfsexstuff {
      bcmp(&(f1)->fh_fid, &(f2)->fh_fid, sizeof(struct fid)) == 0)
 
 #define	NFSLOCKHASH(f) 							\
-	(&nfslockhash[nfsrv_hashfh(f) % NFSLOCKHASHSIZE])
+	(&nfslockhash[nfsrv_hashfh(f) % nfsrv_lockhashsize])
 
 #define	NFSFPVNODE(f)	((struct vnode *)((f)->f_data))
 #define	NFSFPCRED(f)	((f)->f_cred)
 #define	NFSFPFLAG(f)	((f)->f_flag)
-
-int fp_getfvp(NFSPROC_T *, int, struct file **, struct vnode **);
 
 #define	NFSNAMEICNDSET(n, c, o, f)	do {				\
 	(n)->cn_cred = (c);						\
@@ -116,4 +115,10 @@ int fp_getfvp(NFSPROC_T *, int, struct file **, struct vnode **);
  */
 #define	NFSRV_MINFH	(sizeof (fhandle_t))
 #define	NFSRV_MAXFH	(sizeof (fhandle_t))
+
+/* Use this macro for debug printfs. */
+#define	NFSD_DEBUG(level, ...)	do {					\
+		if (nfsd_debuglevel >= (level))				\
+			printf(__VA_ARGS__);				\
+	} while (0)
 

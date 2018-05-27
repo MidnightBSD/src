@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clnode.c 321031 2017-07-15 19:24:54Z rmacklem $");
 
 #include "opt_kdtrace.h"
 
@@ -65,6 +66,8 @@ extern struct buf_ops buf_ops_newnfs;
 MALLOC_DECLARE(M_NEWNFSREQ);
 
 uma_zone_t newnfsnode_zone;
+
+const char nfs_vnode_tag[] = "newnfs";
 
 static void	nfs_freesillyrename(void *arg, __unused int pending);
 
@@ -122,15 +125,9 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 		*npp = VTONFS(nvp);
 		return (0);
 	}
-
-	/*
-	 * Allocate before getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if zalloc should block.
-	 */
 	np = uma_zalloc(newnfsnode_zone, M_WAITOK | M_ZERO);
 
-	error = getnewvnode("newnfs", mntp, &newnfs_vnodeops, &nvp);
+	error = getnewvnode(nfs_vnode_tag, mntp, &newnfs_vnodeops, &nvp);
 	if (error) {
 		uma_zfree(newnfsnode_zone, np);
 		return (error);
@@ -204,45 +201,23 @@ nfs_freesillyrename(void *arg, __unused int pending)
 	free(sp, M_NEWNFSREQ);
 }
 
-int
-ncl_inactive(struct vop_inactive_args *ap)
+static void
+ncl_releasesillyrename(struct vnode *vp, struct thread *td)
 {
 	struct nfsnode *np;
 	struct sillyrename *sp;
-	struct vnode *vp = ap->a_vp;
-	boolean_t retv;
 
+	ASSERT_VOP_ELOCKED(vp, "releasesillyrename");
 	np = VTONFS(vp);
-
-	if (NFS_ISV4(vp) && vp->v_type == VREG) {
-		/*
-		 * Since mmap()'d files do I/O after VOP_CLOSE(), the NFSv4
-		 * Close operations are delayed until now. Any dirty
-		 * buffers/pages must be flushed before the close, so that the
-		 * stateid is available for the writes.
-		 */
-		if (vp->v_object != NULL) {
-			VM_OBJECT_LOCK(vp->v_object);
-			retv = vm_object_page_clean(vp->v_object, 0, 0,
-			    OBJPC_SYNC);
-			VM_OBJECT_UNLOCK(vp->v_object);
-		} else
-			retv = TRUE;
-		if (retv == TRUE) {
-			(void)ncl_flush(vp, MNT_WAIT, NULL, ap->a_td, 1, 0);
-			(void)nfsrpc_close(vp, 1, ap->a_td);
-		}
-	}
-
-	mtx_lock(&np->n_mtx);
+	mtx_assert(&np->n_mtx, MA_OWNED);
 	if (vp->v_type != VDIR) {
 		sp = np->n_sillyrename;
 		np->n_sillyrename = NULL;
 	} else
 		sp = NULL;
-	if (sp) {
+	if (sp != NULL) {
 		mtx_unlock(&np->n_mtx);
-		(void) ncl_vinvalbuf(vp, 0, ap->a_td, 1);
+		(void) ncl_vinvalbuf(vp, 0, td, 1);
 		/*
 		 * Remove the silly file that was rename'd earlier
 		 */
@@ -252,7 +227,47 @@ ncl_inactive(struct vop_inactive_args *ap)
 		taskqueue_enqueue(taskqueue_thread, &sp->s_task);
 		mtx_lock(&np->n_mtx);
 	}
-	np->n_flag &= NMODIFIED;
+}
+
+int
+ncl_inactive(struct vop_inactive_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	struct nfsnode *np;
+	boolean_t retv;
+
+	if (NFS_ISV4(vp) && vp->v_type == VREG) {
+		/*
+		 * Since mmap()'d files do I/O after VOP_CLOSE(), the NFSv4
+		 * Close operations are delayed until now. Any dirty
+		 * buffers/pages must be flushed before the close, so that the
+		 * stateid is available for the writes.
+		 */
+		if (vp->v_object != NULL) {
+			VM_OBJECT_WLOCK(vp->v_object);
+			retv = vm_object_page_clean(vp->v_object, 0, 0,
+			    OBJPC_SYNC);
+			VM_OBJECT_WUNLOCK(vp->v_object);
+		} else
+			retv = TRUE;
+		if (retv == TRUE) {
+			(void)ncl_flush(vp, MNT_WAIT, ap->a_td, 1, 0);
+			(void)nfsrpc_close(vp, 1, ap->a_td);
+		}
+	}
+
+	np = VTONFS(vp);
+	mtx_lock(&np->n_mtx);
+	ncl_releasesillyrename(vp, ap->a_td);
+
+	/*
+	 * NMODIFIED means that there might be dirty/stale buffers
+	 * associated with the NFS vnode.
+	 * NDSCOMMIT means that the file is on a pNFS server and commits
+	 * should be done to the DS.
+	 * None of the other flags are meaningful after the vnode is unused.
+	 */
+	np->n_flag &= (NMODIFIED | NDSCOMMIT);
 	mtx_unlock(&np->n_mtx);
 	return (0);
 }
@@ -273,6 +288,10 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 	 */
 	if (nfs_reclaim_p != NULL)
 		nfs_reclaim_p(ap);
+
+	mtx_lock(&np->n_mtx);
+	ncl_releasesillyrename(vp, ap->a_td);
+	mtx_unlock(&np->n_mtx);
 
 	/*
 	 * Destroy the vm object and flush associated pages.
@@ -338,4 +357,3 @@ ncl_invalcaches(struct vnode *vp)
 	KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
 	mtx_unlock(&np->n_mtx);
 }
-

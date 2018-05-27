@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/nfsclient/nfsmount.h 317404 2017-04-25 11:36:25Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -70,10 +71,12 @@ struct	nfsmount {
 	int	nm_negnametimeo;	/* timeout for -ve entries (sec) */
 
 	/* Newnfs additions */
+	TAILQ_HEAD(, nfsclds) nm_sess;	/* Session(s) for NFSv4.1. */
 	struct	nfsclclient *nm_clp;
 	uid_t	nm_uid;			/* Uid for SetClientID etc. */
 	u_int64_t nm_clval;		/* identifies which clientid */
 	u_int64_t nm_fsid[2];		/* NFSv4 fsid */
+	int	nm_minorvers;		/* Minor version # for NFSv4 */
 	u_int16_t nm_krbnamelen;	/* Krb5 host principal, if any */
 	u_int16_t nm_dirpathlen;	/* and mount dirpath, for V4 */
 	u_int16_t nm_srvkrbnamelen;	/* and the server's target name */
@@ -106,6 +109,25 @@ struct	nfsmount {
  * Convert mount ptr to nfsmount ptr.
  */
 #define	VFSTONFS(mp)	((struct nfsmount *)((mp)->mnt_data))
+
+/*
+ * Get a pointer to the MDS session, which is always the first element
+ * in the list.
+ * This macro can only be safely used when the NFSLOCKMNT() lock is held.
+ * The inline function can be used when the lock isn't held.
+ */
+#define	NFSMNT_MDSSESSION(m)	(&(TAILQ_FIRST(&((m)->nm_sess))->nfsclds_sess))
+
+static __inline struct nfsclsession *
+nfsmnt_mdssession(struct nfsmount *nmp)
+{
+	struct nfsclsession *tsep;
+
+	mtx_lock(&nmp->nm_mtx);
+	tsep = NFSMNT_MDSSESSION(nmp);
+	mtx_unlock(&nmp->nm_mtx);
+	return (tsep);
+}
 
 #ifndef NFS_DEFAULT_NAMETIMEO
 #define NFS_DEFAULT_NAMETIMEO		60

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  *	@(#)null_vfsops.c	8.2 (Berkeley) 1/21/94
  *
  * @(#)lofs_vfsops.c	1.2 (Berkeley) 6/18/92
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/nullfs/null_vfsops.c 309530 2016-12-04 13:56:15Z kib $
  */
 
 /*
@@ -188,18 +189,21 @@ nullfs_mount(struct mount *mp)
 	}
 
 	xmp->nullm_flags |= NULLM_CACHE;
-	if (vfs_getopt(mp->mnt_optnew, "nocache", NULL, NULL) == 0)
+	if (vfs_getopt(mp->mnt_optnew, "nocache", NULL, NULL) == 0 ||
+	    (xmp->nullm_vfs->mnt_kern_flag & MNTK_NULL_NOCACHE) != 0)
 		xmp->nullm_flags &= ~NULLM_CACHE;
 
 	MNT_ILOCK(mp);
 	if ((xmp->nullm_flags & NULLM_CACHE) != 0) {
 		mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag &
-		    (MNTK_MPSAFE | MNTK_SHARED_WRITES | MNTK_LOOKUP_SHARED |
+		    (MNTK_SHARED_WRITES | MNTK_LOOKUP_SHARED |
 		    MNTK_EXTENDED_SHARED);
 	}
 	mp->mnt_kern_flag |= MNTK_LOOKUP_EXCL_DOTDOT;
+	mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag &
+	    (MNTK_USES_BCACHE | MNTK_NO_IOPF | MNTK_UNMAPPED_BUFS);
 	MNT_IUNLOCK(mp);
-	mp->mnt_data =  xmp;
+	mp->mnt_data = xmp;
 	vfs_getnewfsid(mp);
 	if ((xmp->nullm_flags & NULLM_CACHE) != 0) {
 		MNT_ILOCK(xmp->nullm_vfs);
@@ -312,7 +316,8 @@ nullfs_statfs(mp, sbp)
 
 	/* now copy across the "interesting" information and fake the rest */
 	sbp->f_type = mstat.f_type;
-	sbp->f_flags = mstat.f_flags;
+	sbp->f_flags = (sbp->f_flags & (MNT_RDONLY | MNT_NOEXEC | MNT_NOSUID |
+	    MNT_UNION | MNT_NOSYMFOLLOW)) | (mstat.f_flags & ~MNT_ROOTFS);
 	sbp->f_bsize = mstat.f_bsize;
 	sbp->f_iosize = mstat.f_iosize;
 	sbp->f_blocks = mstat.f_blocks;

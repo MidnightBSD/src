@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)null_subr.c	8.7 (Berkeley) 5/14/95
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/nullfs/null_subr.c 250505 2013-05-11 11:17:44Z kib $
  */
 
 #include <sys/param.h>
@@ -235,10 +236,6 @@ null_nodeget(mp, lowervp, vpp)
 	 * duplicates later, when adding new vnode to hash.
 	 * Note that duplicate can only appear in hash if the lowervp is
 	 * locked LK_SHARED.
-	 *
-	 * Do the MALLOC before the getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if MALLOC should block.
 	 */
 	xp = malloc(sizeof(struct null_node), M_NULLFSNODE, M_WAITOK);
 

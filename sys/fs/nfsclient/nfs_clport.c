@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,12 +33,12 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clport.c 321057 2017-07-16 19:36:44Z rmacklem $");
 
 #include "opt_inet6.h"
 #include "opt_kdtrace.h"
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 
 /*
  * generally, I don't like #includes inside .h files, but it seems to
@@ -78,7 +79,6 @@ extern short nfsv4_cbport;
 extern int nfscl_enablecallb;
 extern int nfs_numnfscbd;
 extern int nfscl_inited;
-struct mtx nfs_clstate_mutex;
 struct mtx ncl_iod_mutex;
 NFSDLOCKMUTEX;
 
@@ -197,15 +197,9 @@ nfscl_nget(struct mount *mntp, struct vnode *dvp, struct nfsfh *nfhp,
 		FREE((caddr_t)nfhp, M_NFSFH);
 		return (0);
 	}
-
-	/*
-	 * Allocate before getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if zalloc should block.
-	 */
 	np = uma_zalloc(newnfsnode_zone, M_WAITOK | M_ZERO);
 
-	error = getnewvnode("newnfs", mntp, &newnfs_vnodeops, &nvp);
+	error = getnewvnode(nfs_vnode_tag, mntp, &newnfs_vnodeops, &nvp);
 	if (error) {
 		uma_zfree(newnfsnode_zone, np);
 		FREE((caddr_t)nfhp, M_NFSFH);
@@ -285,7 +279,7 @@ nfscl_nget(struct mount *mntp, struct vnode *dvp, struct nfsfh *nfhp,
 }
 
 /*
- * Anothe variant of nfs_nget(). This one is only used by reopen. It
+ * Another variant of nfs_nget(). This one is only used by reopen. It
  * takes almost the same args as nfs_nget(), but only succeeds if an entry
  * exists in the cache. (Since files should already be "open" with a
  * vnode ref cnt on the node when reopen calls this, it should always
@@ -324,21 +318,24 @@ nfscl_ngetreopen(struct mount *mntp, u_int8_t *fhp, int fhsize,
 		NFSVOPUNLOCK(nvp, 0);
 	} else if (error == EBUSY) {
 		/*
-		 * The LK_EXCLOTHER lock type tells nfs_lock1() to not try
-		 * and lock the vnode, but just get a v_usecount on it.
-		 * LK_NOWAIT is set so that when vget() returns ENOENT,
-		 * vfs_hash_get() fails instead of looping.
-		 * If this succeeds, it is safe so long as a vflush() with
+		 * It is safe so long as a vflush() with
 		 * FORCECLOSE has not been done. Since the Renew thread is
 		 * stopped and the MNTK_UNMOUNTF flag is set before doing
 		 * a vflush() with FORCECLOSE, we should be ok here.
 		 */
 		if ((mntp->mnt_kern_flag & MNTK_UNMOUNTF))
 			error = EINTR;
-		else
-			error = vfs_hash_get(mntp, hash,
-			    (LK_EXCLOTHER | LK_NOWAIT), td, &nvp,
-			    newnfs_vncmpf, nfhp);
+		else {
+			vfs_hash_ref(mntp, hash, td, &nvp, newnfs_vncmpf, nfhp);
+			if (nvp == NULL) {
+				error = ENOENT;
+			} else if ((nvp->v_iflag & VI_DOOMED) != 0) {
+				error = ENOENT;
+				vrele(nvp);
+			} else {
+				error = 0;
+			}
+		}
 	}
 	FREE(nfhp, M_NFSFH);
 	if (error)
@@ -439,6 +436,7 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 				vap->va_size = np->n_size;
 				np->n_attrstamp = 0;
 				KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
+				vnode_pager_setsize(vp, np->n_size);
 			} else if (np->n_flag & NMODIFIED) {
 				/*
 				 * We've modified the file: Use the larger
@@ -450,12 +448,22 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 					np->n_size = vap->va_size;
 					np->n_flag |= NSIZECHANGED;
 				}
+				vnode_pager_setsize(vp, np->n_size);
+			} else if (vap->va_size < np->n_size) {
+				/*
+				 * When shrinking the size, the call to
+				 * vnode_pager_setsize() cannot be done
+				 * with the mutex held, so delay it until
+				 * after the mtx_unlock call.
+				 */
+				nsize = np->n_size = vap->va_size;
+				np->n_flag |= NSIZECHANGED;
+				setnsize = 1;
 			} else {
 				np->n_size = vap->va_size;
 				np->n_flag |= NSIZECHANGED;
+				vnode_pager_setsize(vp, np->n_size);
 			}
-			setnsize = 1;
-			nsize = vap->va_size;
 		} else {
 			np->n_size = vap->va_size;
 		}
@@ -550,7 +558,7 @@ nfscl_filllockowner(void *id, u_int8_t *cp, int flags)
 	struct proc *p;
 
 	if (id == NULL) {
-		printf("NULL id\n");
+		/* Return the single open_owner of all 0 bytes. */
 		bzero(cp, NFSV4CL_LOCKNAMELEN);
 		return;
 	}
@@ -659,6 +667,8 @@ nfscl_wcc_data(struct nfsrv_descript *nd, struct vnode *vp,
 			}
 		}
 		error = nfscl_postop_attr(nd, nap, flagp, stuff);
+		if (wccflagp != NULL && *flagp == 0)
+			*wccflagp = 0;
 	} else if ((nd->nd_flag & (ND_NOMOREDATA | ND_NFSV4 | ND_V4WCCATTR))
 	    == (ND_NFSV4 | ND_V4WCCATTR)) {
 		error = nfsv4_loadattr(nd, NULL, &nfsva, NULL,
@@ -864,7 +874,7 @@ nfscl_request(struct nfsrv_descript *nd, struct vnode *vp, NFSPROC_T *p,
 	else
 		vers = NFS_VER2;
 	ret = newnfs_request(nd, nmp, NULL, &nmp->nm_sockreq, vp, p, cred,
-		NFS_PROG, vers, NULL, 1, NULL);
+		NFS_PROG, vers, NULL, 1, NULL, NULL);
 	return (ret);
 }
 
@@ -1092,9 +1102,16 @@ nfscl_checksattr(struct vattr *vap, struct nfsvattr *nvap)
 	 * us to do a SETATTR RPC. FreeBSD servers store the verifier
 	 * in atime, but we can't really assume that all servers will
 	 * so we ensure that our SETATTR sets both atime and mtime.
+	 * Set the VA_UTIMES_NULL flag for this case, so that
+	 * the server's time will be used.  This is needed to
+	 * work around a bug in some Solaris servers, where
+	 * setting the time TOCLIENT causes the Setattr RPC
+	 * to return NFS_OK, but not set va_mode.
 	 */
-	if (vap->va_mtime.tv_sec == VNOVAL)
+	if (vap->va_mtime.tv_sec == VNOVAL) {
 		vfs_timestamp(&vap->va_mtime);
+		vap->va_vaflags |= VA_UTIMES_NULL;
+	}
 	if (vap->va_atime.tv_sec == VNOVAL)
 		vap->va_atime = vap->va_mtime;
 	return (1);
@@ -1111,7 +1128,7 @@ nfscl_maperr(struct thread *td, int error, uid_t uid, gid_t gid)
 {
 	struct proc *p;
 
-	if (error < 10000)
+	if (error < 10000 || error >= NFSERR_STALEWRITEVERF)
 		return (error);
 	if (td != NULL)
 		p = td->td_proc;
@@ -1123,10 +1140,15 @@ nfscl_maperr(struct thread *td, int error, uid_t uid, gid_t gid)
 		    "No name and/or group mapping for uid,gid:(%d,%d)\n",
 		    uid, gid);
 		return (EPERM);
+	case NFSERR_BADNAME:
+	case NFSERR_BADCHAR:
+		printf("nfsv4 char/name not handled by server\n");
+		return (ENOENT);
 	case NFSERR_STALECLIENTID:
 	case NFSERR_STALESTATEID:
 	case NFSERR_EXPIRED:
 	case NFSERR_BADSTATEID:
+	case NFSERR_BADSESSION:
 		printf("nfsv4 recover err returned %d\n", error);
 		return (EIO);
 	case NFSERR_BADHANDLE:
@@ -1142,8 +1164,6 @@ nfscl_maperr(struct thread *td, int error, uid_t uid, gid_t gid)
 	case NFSERR_LEASEMOVED:
 	case NFSERR_RECLAIMBAD:
 	case NFSERR_BADXDR:
-	case NFSERR_BADCHAR:
-	case NFSERR_BADNAME:
 	case NFSERR_OPILLEGAL:
 		printf("nfsv4 client/server protocol prob err=%d\n",
 		    error);
@@ -1167,7 +1187,14 @@ nfscl_procdoesntexist(u_int8_t *own)
 	} tl;
 	struct proc *p;
 	pid_t pid;
-	int ret = 0;
+	int i, ret = 0;
+
+	/* For the single open_owner of all 0 bytes, just return 0. */
+	for (i = 0; i < NFSV4CL_LOCKNAMELEN; i++)
+		if (own[i] != 0)
+			break;
+	if (i == NFSV4CL_LOCKNAMELEN)
+		return (0);
 
 	tl.cval[0] = *own++;
 	tl.cval[1] = *own++;
@@ -1211,10 +1238,11 @@ nfssvc_nfscl(struct thread *td, struct nfssvc_args *uap)
 	struct file *fp;
 	struct nfscbd_args nfscbdarg;
 	struct nfsd_nfscbd_args nfscbdarg2;
-	int error;
 	struct nameidata nd;
 	struct nfscl_dumpmntopts dumpmntopts;
+	cap_rights_t rights;
 	char *buf;
+	int error;
 
 	if (uap->flag & NFSSVC_CBADDSOCK) {
 		error = copyin(uap->argp, (caddr_t)&nfscbdarg, sizeof(nfscbdarg));
@@ -1225,10 +1253,10 @@ nfssvc_nfscl(struct thread *td, struct nfssvc_args *uap)
 		 * pretend that we need them all. It is better to be too
 		 * careful than too reckless.
 		 */
-		if ((error = fget(td, nfscbdarg.sock, CAP_SOCK_ALL, &fp))
-		    != 0) {
+		error = fget(td, nfscbdarg.sock,
+		    cap_rights_init(&rights, CAP_SOCK_CLIENT), &fp);
+		if (error)
 			return (error);
-		}
 		if (fp->f_type != DTYPE_SOCKET) {
 			fdrop(fp, td);
 			return (EPERM);
@@ -1291,8 +1319,6 @@ nfscl_modevent(module_t mod, int type, void *data)
 		if (loaded)
 			return (0);
 		newnfs_portinit();
-		mtx_init(&nfs_clstate_mutex, "nfs_clstate_mutex", NULL,
-		    MTX_DEF);
 		mtx_init(&ncl_iod_mutex, "ncl_iod_mutex", NULL, MTX_DEF);
 		nfscl_init();
 		NFSD_LOCK();
@@ -1316,7 +1342,6 @@ nfscl_modevent(module_t mod, int type, void *data)
 		ncl_call_invalcaches = NULL;
 		nfsd_call_nfscl = NULL;
 		/* and get rid of the mutexes */
-		mtx_destroy(&nfs_clstate_mutex);
 		mtx_destroy(&ncl_iod_mutex);
 		loaded = 0;
 		break;

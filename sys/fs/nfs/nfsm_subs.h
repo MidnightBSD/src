@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/nfs/nfsm_subs.h 249592 2013-04-17 21:00:22Z ken $
  */
 
 #ifndef _NFS_NFSM_SUBS_H_
@@ -73,7 +74,7 @@ nfsm_build(struct nfsrv_descript *nd, int siz)
 	struct mbuf *mb2;
 
 	if (siz > M_TRAILINGSPACE(nd->nd_mb)) {
-		NFSMCLGET(mb2, M_DONTWAIT);
+		NFSMCLGET(mb2, M_NOWAIT);
 		if (siz > MLEN)
 			panic("build > MLEN");
 		mbuf_setlen(mb2, 0);

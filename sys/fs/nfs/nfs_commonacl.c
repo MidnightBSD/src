@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/nfs/nfs_commonacl.c 240720 2012-09-20 02:49:25Z rmacklem $");
 
 #ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>

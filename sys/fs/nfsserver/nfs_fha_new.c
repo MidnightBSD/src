@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/nfsserver/nfs_fha_new.c 322138 2017-08-07 07:40:00Z mav $");
 
 #include <fs/nfs/nfsport.h>
 
@@ -42,7 +42,7 @@ static void fhanew_init(void *foo);
 static void fhanew_uninit(void *foo);
 rpcproc_t fhanew_get_procnum(rpcproc_t procnum);
 int fhanew_realign(struct mbuf **mb, int malloc_flags);
-int fhanew_get_fh(fhandle_t *fh, int v3, struct mbuf **md, caddr_t *dpos);
+int fhanew_get_fh(uint64_t *fh, int v3, struct mbuf **md, caddr_t *dpos);
 int fhanew_is_read(rpcproc_t procnum);
 int fhanew_is_write(rpcproc_t procnum);
 int fhanew_get_offset(struct mbuf **md, caddr_t *dpos, int v3,
@@ -94,7 +94,7 @@ fhanew_init(void *foo)
 	sysctl_ctx_init(&softc->sysctl_ctx);
 	softc->sysctl_tree = SYSCTL_ADD_NODE(&softc->sysctl_ctx,
 	    SYSCTL_STATIC_CHILDREN(_vfs_nfsd), OID_AUTO, "fha", CTLFLAG_RD,
-	    0, "fha node");
+	    0, "NFS File Handle Affinity (FHA)");
 	if (softc->sysctl_tree == NULL) {
 		printf("%s: unable to allocate sysctl tree\n", __func__);
 		return;
@@ -129,11 +129,13 @@ fhanew_realign(struct mbuf **mb, int malloc_flags)
 }
 
 int
-fhanew_get_fh(fhandle_t *fh, int v3, struct mbuf **md, caddr_t *dpos)
+fhanew_get_fh(uint64_t *fh, int v3, struct mbuf **md, caddr_t *dpos)
 {
 	struct nfsrv_descript lnd, *nd;
 	uint32_t *tl;
-	int error, len;
+	uint8_t *buf;
+	uint64_t t;
+	int error, len, i;
 
 	error = 0;
 	len = 0;
@@ -152,11 +154,13 @@ fhanew_get_fh(fhandle_t *fh, int v3, struct mbuf **md, caddr_t *dpos)
 		len = NFSX_V2FH;
 	}
 
+	t = 0;
 	if (len != 0) {
-		NFSM_DISSECT_NONBLOCK(tl, uint32_t *, len);
-		bcopy(tl, fh, len);
-	} else
-		bzero(fh, sizeof(*fh));
+		NFSM_DISSECT_NONBLOCK(buf, uint8_t *, len);
+		for (i = 0; i < len; i++)
+			t ^= ((uint64_t)buf[i] << (i & 7) * 8);
+	}
+	*fh = t;
 
 nfsmout:
 	*md = nd->nd_md;

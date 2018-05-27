@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/nfs/nfs_commonport.c 317404 2017-04-25 11:36:25Z rmacklem $");
 
 /*
  * Functions that need to be different for different versions of BSD
@@ -63,6 +64,7 @@ int nfs_numnfscbd = 0;
 int nfscl_debuglevel = 0;
 char nfsv4_callbackaddr[INET6_ADDRSTRLEN];
 struct callout newnfsd_callout;
+int nfsrv_lughashsize = 100;
 void (*nfsd_call_servertimer)(void) = NULL;
 void (*ncl_call_invalcaches)(struct vnode *) = NULL;
 
@@ -79,6 +81,9 @@ SYSCTL_STRING(_vfs_nfs, OID_AUTO, callback_addr, CTLFLAG_RW,
     "NFSv4 callback addr for server to use");
 SYSCTL_INT(_vfs_nfs, OID_AUTO, debuglevel, CTLFLAG_RW, &nfscl_debuglevel,
     0, "Debug level for new nfs client");
+TUNABLE_INT("vfs.nfs.userhashsize", &nfsrv_lughashsize);
+SYSCTL_INT(_vfs_nfs, OID_AUTO, userhashsize, CTLFLAG_RDTUN, &nfsrv_lughashsize,
+    0, "Size of hash tables for uid/name mapping");
 
 /*
  * Defines for malloc
@@ -106,6 +111,13 @@ MALLOC_DEFINE(M_NEWNFSDIROFF, "NFSCL diroffdiroff",
     "New NFS directory offset data");
 MALLOC_DEFINE(M_NEWNFSDROLLBACK, "NFSD rollback",
     "New NFS local lock rollback");
+MALLOC_DEFINE(M_NEWNFSLAYOUT, "NFSCL layout", "NFSv4.1 Layout");
+MALLOC_DEFINE(M_NEWNFSFLAYOUT, "NFSCL flayout", "NFSv4.1 File Layout");
+MALLOC_DEFINE(M_NEWNFSDEVINFO, "NFSCL devinfo", "NFSv4.1 Device Info");
+MALLOC_DEFINE(M_NEWNFSSOCKREQ, "NFSCL sockreq", "NFS Sock Req");
+MALLOC_DEFINE(M_NEWNFSCLDS, "NFSCL session", "NFSv4.1 Session");
+MALLOC_DEFINE(M_NEWNFSLAYRECALL, "NFSCL layrecall", "NFSv4.1 Layout Recall");
+MALLOC_DEFINE(M_NEWNFSDSESSION, "NFSD session", "NFSD Session for a client");
 
 /*
  * Definition of mutex locks.
@@ -118,6 +130,7 @@ struct mtx nfs_state_mutex;
 struct mtx nfs_nameid_mutex;
 struct mtx nfs_req_mutex;
 struct mtx nfs_slock_mutex;
+struct mtx nfs_clstate_mutex;
 
 /* local functions */
 static int nfssvc_call(struct thread *, struct nfssvc_args *, struct ucred *);
@@ -213,7 +226,7 @@ nfsrv_lookupfilename(struct nameidata *ndp, char *fname, NFSPROC_T *p)
 {
 	int error;
 
-	NDINIT(ndp, LOOKUP, FOLLOW | LOCKLEAF | MPSAFE, UIO_USERSPACE, fname,
+	NDINIT(ndp, LOOKUP, FOLLOW | LOCKLEAF, UIO_USERSPACE, fname,
 	    p);
 	error = namei(ndp);
 	if (!error) {
@@ -274,11 +287,11 @@ nfsvno_getfs(struct nfsfsinfo *sip, int isdgram)
 	if (isdgram)
 		pref = NFS_MAXDGRAMDATA;
 	else
-		pref = NFS_MAXDATA;
-	sip->fs_rtmax = NFS_MAXDATA;
+		pref = NFS_SRVMAXIO;
+	sip->fs_rtmax = NFS_SRVMAXIO;
 	sip->fs_rtpref = pref;
 	sip->fs_rtmult = NFS_FABLKSIZE;
-	sip->fs_wtmax = NFS_MAXDATA;
+	sip->fs_wtmax = NFS_SRVMAXIO;
 	sip->fs_wtpref = pref;
 	sip->fs_wtmult = NFS_FABLKSIZE;
 	sip->fs_dtpref = pref;
@@ -438,9 +451,25 @@ nfssvc_call(struct thread *p, struct nfssvc_args *uap, struct ucred *cred)
 {
 	int error = EINVAL;
 	struct nfsd_idargs nid;
+	struct nfsd_oidargs onid;
 
 	if (uap->flag & NFSSVC_IDNAME) {
-		error = copyin(uap->argp, (caddr_t)&nid, sizeof (nid));
+		if ((uap->flag & NFSSVC_NEWSTRUCT) != 0)
+			error = copyin(uap->argp, &nid, sizeof(nid));
+		else {
+			error = copyin(uap->argp, &onid, sizeof(onid));
+			if (error == 0) {
+				nid.nid_flag = onid.nid_flag;
+				nid.nid_uid = onid.nid_uid;
+				nid.nid_gid = onid.nid_gid;
+				nid.nid_usermax = onid.nid_usermax;
+				nid.nid_usertimeout = onid.nid_usertimeout;
+				nid.nid_name = onid.nid_name;
+				nid.nid_namelen = onid.nid_namelen;
+				nid.nid_ngroup = 0;
+				nid.nid_grps = NULL;
+			}
+		}
 		if (error)
 			goto out;
 		error = nfssvc_idname(&nid);
@@ -538,6 +567,7 @@ newnfs_portinit(void)
 	/* Initialize SMP locks used by both client and server. */
 	mtx_init(&newnfsd_mtx, "newnfsd_mtx", NULL, MTX_DEF);
 	mtx_init(&nfs_state_mutex, "nfs_state_mutex", NULL, MTX_DEF);
+	mtx_init(&nfs_clstate_mutex, "nfs_clstate_mutex", NULL, MTX_DEF);
 }
 
 /*
@@ -582,7 +612,7 @@ nfscommon_modevent(module_t mod, int type, void *data)
 		mtx_init(&nfs_req_mutex, "nfs_req_mutex", NULL, MTX_DEF);
 		mtx_init(&nfsrv_nfsuserdsock.nr_mtx, "nfsuserd", NULL,
 		    MTX_DEF);
-		callout_init(&newnfsd_callout, CALLOUT_MPSAFE);
+		callout_init(&newnfsd_callout, 1);
 		newnfs_init();
 		nfsd_call_nfscommon = nfssvc_nfscommon;
 		loaded = 1;
@@ -597,10 +627,13 @@ nfscommon_modevent(module_t mod, int type, void *data)
 
 		nfsd_call_nfscommon = NULL;
 		callout_drain(&newnfsd_callout);
+		/* Clean out the name<-->id cache. */
+		nfsrv_cleanusergroup();
 		/* and get rid of the mutexes */
 		mtx_destroy(&nfs_nameid_mutex);
 		mtx_destroy(&newnfsd_mtx);
 		mtx_destroy(&nfs_state_mutex);
+		mtx_destroy(&nfs_clstate_mutex);
 		mtx_destroy(&nfs_sockl_mutex);
 		mtx_destroy(&nfs_slock_mutex);
 		mtx_destroy(&nfs_req_mutex);

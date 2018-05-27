@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/nfsclient/nfsnode.h 321031 2017-07-15 19:24:54Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
@@ -99,9 +100,6 @@ struct nfsnode {
 	time_t			n_attrstamp;	/* Attr. cache timestamp */
 	struct nfs_accesscache	n_accesscache[NFS_ACCESSCACHESIZE];
 	struct timespec		n_mtime;	/* Prev modify time. */
-	struct timespec		n_unused0;
-	struct timespec		n_unused1;
-	int			n_unused2;
 	struct nfsfh		*n_fhp;		/* NFS File Handle */
 	struct vnode		*n_vnode;	/* associated vnode */
 	struct vnode		*n_dvp;		/* parent vnode */
@@ -158,6 +156,10 @@ struct nfsnode {
 #define	NREMOVEWANT	0x00004000  /* Want notification that remove is done */
 #define	NLOCK		0x00008000  /* Sleep lock the node */
 #define	NLOCKWANT	0x00010000  /* Want the sleep lock */
+#define	NNOLAYOUT	0x00020000  /* Can't get a layout for this file */
+#define	NWRITEOPENED	0x00040000  /* Has been opened for writing */
+#define	NHASBEENLOCKED	0x00080000  /* Has been file locked. */
+#define	NDSCOMMIT	0x00100000  /* Commit is done via the DS. */
 
 /*
  * Convert between nfsnode pointers and vnode pointers
@@ -185,7 +187,6 @@ nfsuint64 *ncl_getcookie(struct nfsnode *, off_t, int);
 void	ncl_invaldir(struct vnode *);
 int	ncl_upgrade_vnlock(struct vnode *);
 void	ncl_downgrade_vnlock(struct vnode *, int);
-void	ncl_printf(const char *, ...);
 void	ncl_dircookie_lock(struct nfsnode *);
 void	ncl_dircookie_unlock(struct nfsnode *);
 
