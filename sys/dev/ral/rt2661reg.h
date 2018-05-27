@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/ral/rt2661reg.h 261455 2014-02-04 03:36:42Z eadler $	*/
 
 /*-
  * Copyright (c) 2006
@@ -182,7 +183,7 @@
 
 /* possible flags for register PHY_CSR4 */
 #define RT2661_RF_21BIT	(21 << 24)
-#define RT2661_RF_BUSY	(1 << 31)
+#define RT2661_RF_BUSY	(1U << 31)
 
 /* possible values for register STA_CSR4 */
 #define RT2661_TX_STAT_VALID	(1 << 0)

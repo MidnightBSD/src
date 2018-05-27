@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/ral/rt2560.c 262007 2014-02-17 01:36:53Z kevlo $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ral/rt2560.c 262007 2014-02-17 01:36:53Z kevlo $");
 
 /*-
  * Ralink Technology RT2560 chipset driver
@@ -1557,7 +1558,7 @@ rt2560_tx_mgt(struct rt2560_softc *sc, struct mbuf *m0,
 
 	wh = mtod(m0, struct ieee80211_frame *);
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -1803,7 +1804,7 @@ rt2560_tx_data(struct rt2560_softc *sc, struct mbuf *m0,
 		rate = ni->ni_txrate;
 	}
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -2370,7 +2371,7 @@ rt2560_set_basicrates(struct rt2560_softc *sc,
 		if (!(rate & IEEE80211_RATE_BASIC))
 			continue;
 
-		mask |= 1 << ic->ic_rt->rateCodeToIndex[RV(rate)];
+		mask |= 1 << ieee80211_legacy_rate_lookup(ic->ic_rt, RV(rate));
 	}
 
 	RAL_WRITE(sc, RT2560_ARSP_PLCP_1, mask);

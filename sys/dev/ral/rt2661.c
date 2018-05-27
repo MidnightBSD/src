@@ -1,4 +1,5 @@
-/*	$FreeBSD: release/9.2.0/sys/dev/ral/rt2661.c 248078 2013-03-09 00:39:54Z marius $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/ral/rt2661.c 262007 2014-02-17 01:36:53Z kevlo $	*/
 
 /*-
  * Copyright (c) 2006
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/ral/rt2661.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ral/rt2661.c 262007 2014-02-17 01:36:53Z kevlo $");
 
 /*-
  * Ralink Technology RT2561, RT2561S and RT2661 chipset driver
@@ -1318,7 +1319,7 @@ rt2661_tx_mgt(struct rt2661_softc *sc, struct mbuf *m0,
 
 	wh = mtod(m0, struct ieee80211_frame *);
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -1493,7 +1494,7 @@ rt2661_tx_data(struct rt2661_softc *sc, struct mbuf *m0,
 		noack = cap->cap_wmeParams[ac].wmep_noackPolicy;
 	}
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -1923,7 +1924,7 @@ rt2661_set_basicrates(struct rt2661_softc *sc,
 		if (!(rate & IEEE80211_RATE_BASIC))
 			continue;
 
-		mask |= 1 << ic->ic_rt->rateCodeToIndex[RV(rate)];
+		mask |= 1 << ieee80211_legacy_rate_lookup(ic->ic_rt, RV(rate));
 	}
 
 	RAL_WRITE(sc, RT2661_TXRX_CSR5, mask);

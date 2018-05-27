@@ -1,6 +1,7 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2000-2013 Mark R V Murray
+ * Copyright (c) 2013 Arthur Mesh <arthurmesh@gmail.com>
+ * Copyright (c) 2013 Mark R V Murray
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,40 +25,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/random/randomdev.h 256414 2013-10-13 00:13:57Z markm $
+ * $FreeBSD: stable/10/sys/dev/random/live_entropy_sources.h 295480 2016-02-10 18:29:37Z jhb $
  */
 
-#ifndef SYS_DEV_RANDOM_RANDOMDEV_H_INCLUDED
-#define SYS_DEV_RANDOM_RANDOMDEV_H_INCLUDED
+#ifndef SYS_DEV_RANDOM_LIVE_ENTROPY_SOURCES_H_INCLUDED
+#define SYS_DEV_RANDOM_LIVE_ENTROPY_SOURCES_H_INCLUDED
 
-/* This header contains only those definitions that are global
- * and non algorithm-specific for the entropy processor
+/*
+ * Live entropy source is a source of entropy that can provide
+ * specified or approximate amount of entropy immediately upon request or within
+ * an acceptable amount of time.
  */
-
-typedef void random_init_func_t(void);
-typedef void random_deinit_func_t(void);
-typedef int random_block_func_t(int);
-typedef int random_read_func_t(void *, int);
-typedef int random_poll_func_t(int, struct thread *);
-typedef void random_reseed_func_t(void);
-
-struct random_adaptor {
-	struct selinfo		rsel;
-	const char		*ident;
-	int			seeded;
-	unsigned		priority;
-	random_init_func_t	*init;
-	random_deinit_func_t	*deinit;
-	random_block_func_t	*block;
-	random_read_func_t	*read;
-	random_poll_func_t	*poll;
-	random_reseed_func_t	*reseed;
+struct live_entropy_sources {
+	LIST_ENTRY(live_entropy_sources) entries;	/* list of providers */
+	struct random_hardware_source	*rsource;	/* associated random adaptor */
 };
 
-struct random_hardware_source {
-	const char		*ident;
-	enum esource		source;
-	random_read_func_t	*read;
-};
+extern struct mtx live_mtx;
 
-#endif
+void live_entropy_source_register(struct random_hardware_source *);
+void live_entropy_source_deregister(struct random_hardware_source *);
+void live_entropy_sources_feed(int, event_proc_f);
+
+#define LIVE_ENTROPY_SRC_MODULE(name, modevent, ver)		\
+    static moduledata_t name##_mod = {				\
+	#name,							\
+	modevent,						\
+	0							\
+    };								\
+    DECLARE_MODULE(name, name##_mod, SI_SUB_RANDOM,		\
+		   SI_ORDER_SECOND);				\
+    MODULE_VERSION(name, ver);					\
+    MODULE_DEPEND(name, random, 1, 1, 1);
+
+#endif /* SYS_DEV_RANDOM_LIVE_ENTROPY_SOURCES_H_INCLUDED */

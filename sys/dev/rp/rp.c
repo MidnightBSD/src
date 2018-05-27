@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) Comtrol Corporation <support@comtrol.com>
  * All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/rp/rp.c 196403 2009-08-20 19:17:53Z jhb $");
 
 /* 
  * rp.c - for RocketPort FreeBSD

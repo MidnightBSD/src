@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/ral/rt2661var.h 206358 2010-04-07 15:29:13Z rpaulo $	*/
 
 /*-
  * Copyright (c) 2005

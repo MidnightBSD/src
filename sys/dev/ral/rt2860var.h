@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Damien Bergamini <damien.bergamini@free.fr>
  * Copyright (c) 2012 Bernhard Schmidt <bschmidt@FreeBSD.org>
@@ -15,7 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * $OpenBSD: rt2860var.h,v 1.20 2010/09/07 16:21:42 deraadt Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ral/rt2860var.h 235233 2012-05-10 17:41:16Z bschmidt $
  */
 
 #define RT2860_TX_RING_COUNT	64
