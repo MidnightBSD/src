@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994, 1995 Jan-Simon Pendry.
  * Copyright (c) 1992, 1993, 1994, 1995
@@ -34,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_vnops.c	8.32 (Berkeley) 6/23/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/unionfs/union_vnops.c 276500 2015-01-01 10:44:20Z kib $
  *
  */
 
@@ -160,8 +161,7 @@ unionfs_lookup(struct vop_cachedlookup_args *ap)
 				    LK_RETRY);
 
 			vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY);
-		} else if (error == ENOENT && (cnflags & MAKEENTRY) &&
-		    nameiop != CREATE)
+		} else if (error == ENOENT && (cnflags & MAKEENTRY) != 0)
 			cache_enter(dvp, NULLVP, cnp);
 
 		UNIONFS_INTERNAL_DEBUG("unionfs_lookup: leave (%d)\n", error);
@@ -337,7 +337,7 @@ unionfs_lookup_out:
 	if (lvp != NULLVP)
 		vrele(lvp);
 
-	if (error == ENOENT && (cnflags & MAKEENTRY) && nameiop != CREATE)
+	if (error == ENOENT && (cnflags & MAKEENTRY) != 0)
 		cache_enter(dvp, NULLVP, cnp);
 
 	UNIONFS_INTERNAL_DEBUG("unionfs_lookup: leave (%d)\n", error);
@@ -1721,7 +1721,7 @@ static int
 unionfs_inactive(struct vop_inactive_args *ap)
 {
 	ap->a_vp->v_object = NULL;
-	vrecycle(ap->a_vp, ap->a_td);
+	vrecycle(ap->a_vp);
 	return (0);
 }
 
@@ -1867,8 +1867,7 @@ unionfs_lock(struct vop_lock1_args *ap)
 	if ((revlock = unionfs_get_llt_revlock(vp, flags)) == 0)
 		panic("unknown lock type: 0x%x", flags & LK_TYPE_MASK);
 
-	if ((mp->mnt_kern_flag & MNTK_MPSAFE) != 0 &&
-	    (vp->v_iflag & VI_OWEINACT) != 0)
+	if ((vp->v_iflag & VI_OWEINACT) != 0)
 		flags |= LK_NOWAIT;
 
 	/*

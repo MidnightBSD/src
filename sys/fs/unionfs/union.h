@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 The Regents of the University of California.
  * Copyright (c) 1994 Jan-Simon Pendry.
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union.h	8.9 (Berkeley) 12/10/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/unionfs/union.h 185283 2008-11-25 03:18:35Z daichi $
  */
 
 #ifdef _KERNEL
