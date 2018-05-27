@@ -58391,6 +58391,7 @@ sys/dev/usb/input/wsp.c svneol=native#text/plain
 sys/dev/usb/misc/udbp.c -text
 sys/dev/usb/misc/udbp.h -text
 sys/dev/usb/misc/ufm.c -text
+sys/dev/usb/misc/uled.c svneol=native#text/plain
 sys/dev/usb/net/if_aue.c -text
 sys/dev/usb/net/if_auereg.h -text
 sys/dev/usb/net/if_axe.c -text

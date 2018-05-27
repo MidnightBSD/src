@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-2000 Whistle Communications, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/misc/udbp.c 263166 2014-03-14 10:18:53Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/misc/udbp.c 249039 2013-04-03 06:45:21Z hselasky $");
 
 /* Driver for arbitrary double bulk pipe devices.
  * The driver assumes that there will be the same driver on the other side.
@@ -248,7 +249,8 @@ static device_method_t udbp_methods[] = {
 	DEVMETHOD(device_probe, udbp_probe),
 	DEVMETHOD(device_attach, udbp_attach),
 	DEVMETHOD(device_detach, udbp_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t udbp_driver = {
