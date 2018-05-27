@@ -58411,6 +58411,8 @@ sys/dev/usb/net/if_mos.c -text
 sys/dev/usb/net/if_mosreg.h -text
 sys/dev/usb/net/if_rue.c -text
 sys/dev/usb/net/if_ruereg.h -text
+sys/dev/usb/net/if_smsc.c svneol=native#text/plain
+sys/dev/usb/net/if_smscreg.h svneol=native#text/plain
 sys/dev/usb/net/if_udav.c -text
 sys/dev/usb/net/if_udavreg.h -text
 sys/dev/usb/net/if_urndis.c svneol=native#text/plain
