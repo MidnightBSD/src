@@ -50,93 +50,26 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * $FreeBSD: stable/10/sys/dev/mmc/mmcbrvar.h 322120 2017-08-06 16:07:34Z marius $
+ * $FreeBSD: stable/10/sys/dev/mmc/mmc_private.h 322120 2017-08-06 16:07:34Z marius $
  */
 
-#ifndef DEV_MMC_MMCBRVAR_H
-#define	DEV_MMC_MMCBRVAR_H
+#ifndef DEV_MMC_PRIVATE_H
+#define	DEV_MMC_PRIVATE_H
 
-#include <dev/mmc/mmcreg.h>
-
-#include "mmcbr_if.h"
-
-enum mmcbr_device_ivars {
-    MMCBR_IVAR_BUS_MODE,
-    MMCBR_IVAR_BUS_WIDTH,
-    MMCBR_IVAR_CHIP_SELECT,
-    MMCBR_IVAR_CLOCK,
-    MMCBR_IVAR_F_MIN,
-    MMCBR_IVAR_F_MAX,
-    MMCBR_IVAR_HOST_OCR,
-    MMCBR_IVAR_MODE,
-    MMCBR_IVAR_OCR,
-    MMCBR_IVAR_POWER_MODE,
-    MMCBR_IVAR_RETUNE_REQ,
-    MMCBR_IVAR_VDD,
-    MMCBR_IVAR_VCCQ,
-    MMCBR_IVAR_CAPS,
-    MMCBR_IVAR_TIMING,
-    MMCBR_IVAR_MAX_DATA,
-    MMCBR_IVAR_MAX_BUSY_TIMEOUT
+struct mmc_softc {
+	device_t dev;
+	struct mtx sc_mtx;
+	struct intr_config_hook config_intrhook;
+	device_t owner;
+	device_t *child_list;
+	int child_count;
+	uint16_t last_rca;
+	uint16_t retune_paused;
+	uint8_t retune_needed;
+	uint8_t retune_ongoing;
+	uint16_t squelched;	/* suppress reporting of (expected) errors */
+	int log_count;
+	struct timeval log_time;
 };
 
-/*
- * Simplified accessors for bridge devices
- */
-#define	MMCBR_ACCESSOR(var, ivar, type)					\
-	__BUS_ACCESSOR(mmcbr, var, MMCBR, ivar, type)
-
-MMCBR_ACCESSOR(bus_mode, BUS_MODE, int)
-MMCBR_ACCESSOR(bus_width, BUS_WIDTH, int)
-MMCBR_ACCESSOR(chip_select, CHIP_SELECT, int)
-MMCBR_ACCESSOR(clock, CLOCK, int)
-MMCBR_ACCESSOR(f_max, F_MAX, int)
-MMCBR_ACCESSOR(f_min, F_MIN, int)
-MMCBR_ACCESSOR(host_ocr, HOST_OCR, int)
-MMCBR_ACCESSOR(mode, MODE, int)
-MMCBR_ACCESSOR(ocr, OCR, int)
-MMCBR_ACCESSOR(power_mode, POWER_MODE, int)
-MMCBR_ACCESSOR(retune_req, RETUNE_REQ, int)
-MMCBR_ACCESSOR(vdd, VDD, int)
-MMCBR_ACCESSOR(vccq, VCCQ, int)
-MMCBR_ACCESSOR(caps, CAPS, int)
-MMCBR_ACCESSOR(timing, TIMING, int)
-MMCBR_ACCESSOR(max_data, MAX_DATA, int)
-MMCBR_ACCESSOR(max_busy_timeout, MAX_BUSY_TIMEOUT, u_int)
-
-static int __inline
-mmcbr_update_ios(device_t dev)
-{
-
-	return (MMCBR_UPDATE_IOS(device_get_parent(dev), dev));
-}
-
-static int __inline
-mmcbr_tune(device_t dev, bool hs400)
-{
-
-	return (MMCBR_TUNE(device_get_parent(dev), dev, hs400));
-}
-
-static int __inline
-mmcbr_retune(device_t dev, bool reset)
-{
-
-	return (MMCBR_RETUNE(device_get_parent(dev), dev, reset));
-}
-
-static int __inline
-mmcbr_switch_vccq(device_t dev)
-{
-
-	return (MMCBR_SWITCH_VCCQ(device_get_parent(dev), dev));
-}
-
-static int __inline
-mmcbr_get_ro(device_t dev)
-{
-
-	return (MMCBR_GET_RO(device_get_parent(dev), dev));
-}
-
-#endif /* DEV_MMC_MMCBRVAR_H */
+#endif /* DEV_MMC_PRIVATE_H */

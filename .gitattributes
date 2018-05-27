@@ -57607,6 +57607,10 @@ sys/dev/mly/mlyreg.h -text
 sys/dev/mly/mlyvar.h -text
 sys/dev/mmc/bridge.h -text
 sys/dev/mmc/mmc.c -text
+sys/dev/mmc/mmc_ioctl.h svneol=native#text/plain
+sys/dev/mmc/mmc_private.h svneol=native#text/plain
+sys/dev/mmc/mmc_subr.c svneol=native#text/plain
+sys/dev/mmc/mmc_subr.h svneol=native#text/plain
 sys/dev/mmc/mmcbr_if.m -text
 sys/dev/mmc/mmcbrvar.h -text
 sys/dev/mmc/mmcbus_if.m -text
