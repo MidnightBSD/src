@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Scott Long
  * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
@@ -59,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/esp/esp_sbus.c 263763 2014-03-26 07:31:57Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -165,7 +166,7 @@ static int	espattach(struct esp_softc *esc,
 		    const struct ncr53c9x_glue *gluep);
 static int	espdetach(struct esp_softc *esc);
 
-static const struct ncr53c9x_glue const esp_sbus_glue = {
+static const struct ncr53c9x_glue esp_sbus_glue = {
 	esp_read_reg,
 	esp_write_reg,
 	esp_dma_isintr,

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Herb Peyerl <hpeyerl@novatel.ca>
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ep/if_ep.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  *	Modified from the FreeBSD 1.1.5.1 version by:
@@ -301,7 +302,6 @@ ep_attach(struct ep_softc *sc)
 
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(sc->dev), device_get_unit(sc->dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = epstart;
 	ifp->if_ioctl = epioctl;

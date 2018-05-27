@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: midway.c,v 1.30 1997/09/29 17:40:38 chuck Exp $	*/
 /*	(sync'd to midway.c 1.68)	*/
 
@@ -32,7 +33,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/en/midway.c 260275 2014-01-04 18:48:29Z dim $");
 
 /*
  *
@@ -343,6 +344,7 @@ en_k2sz(int k)
 }
 #define en_log2(X) en_k2sz(X)
 
+#if 0
 /*
  * en_b2sz: convert a DMA burst code to its byte size
  */
@@ -364,6 +366,7 @@ en_b2sz(int b)
 	}
 	return (0);
 }
+#endif
 
 /*
  * en_sz2b: convert a burst size (bytes) to DMA burst code

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * EISA bus probe and attach routines 
  *
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/eisa/eisaconf.c 227843 2011-11-22 21:28:20Z marius $");
 
 #include "opt_eisa.h"
 

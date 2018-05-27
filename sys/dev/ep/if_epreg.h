@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Herb Peyerl (hpeyerl@novatel.ca) All rights reserved.
  *
@@ -19,7 +20,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ep/if_epreg.h 218909 2011-02-21 09:01:34Z brucec $
  */
 
 /*

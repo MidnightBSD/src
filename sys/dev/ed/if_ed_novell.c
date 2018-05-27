@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh
  * All rights reserved.
@@ -29,7 +30,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_novell.c 211793 2010-08-25 02:09:07Z imp $");
 
 #include "opt_ed.h"
 

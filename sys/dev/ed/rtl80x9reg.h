@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, David Madole
  * All rights reserved.
@@ -28,7 +29,7 @@
  *
  * Based on patches subitted by: David Madole, edited by M. Warner Losh.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ed/rtl80x9reg.h 150957 2005-10-05 05:21:07Z imp $
  */
 
 /*

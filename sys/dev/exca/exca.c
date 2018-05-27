@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2005 M Warner Losh.  All rights reserved.
  *
@@ -53,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/exca/exca.c 189579 2009-03-09 13:29:13Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

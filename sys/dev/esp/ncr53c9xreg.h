@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ncr53c9xreg.h,v 1.16 2009/09/07 13:31:44 tsutsui Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/esp/ncr53c9xreg.h 226950 2011-10-30 21:45:36Z marius $ */
 
 #ifndef _NCR53C9XREG_H_
 #define	_NCR53C9XREG_H_

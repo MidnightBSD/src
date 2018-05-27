@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh.
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ed/tc5299jreg.h 264942 2014-04-25 21:32:34Z marius $
  */
 
 /* Tamarack TC5299J */
@@ -34,5 +35,5 @@
 
 #define ED_TC5299J_MII_CLK	0x01
 #define ED_TC5299J_MII_DATAOUT	0x02
-#define ED_TC5299J_MII_DIROUT	0x04
+#define ED_TC5299J_MII_DIRIN	0x04
 #define ED_TC5299J_MII_DATAIN	0x08

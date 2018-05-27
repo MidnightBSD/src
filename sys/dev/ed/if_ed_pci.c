@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Stefan Esser <se@freebsd.org>
  * All rights reserved.
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_pci.c 211792 2010-08-25 02:03:48Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

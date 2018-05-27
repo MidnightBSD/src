@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh.
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ed/dl100xxreg.h 190650 2009-04-02 18:02:00Z imp $
  */
 
 /* Dlink chipset used on some Netgear and Dlink PCMCIA cards */

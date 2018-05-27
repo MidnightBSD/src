@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Scott Long
  * Copyright (c) 2005, 2008 Marius Strobl <marius@FreeBSD.org>
@@ -98,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/esp/ncr53c9x.c 315813 2017-03-23 06:41:13Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -316,7 +317,7 @@ ncr53c9x_attach(struct ncr53c9x_softc *sc)
 	 * The recommended timeout is 250ms.  This register is loaded
 	 * with a value calculated as follows, from the docs:
 	 *
-	 *		(timout period) x (CLK frequency)
+	 *		(timeout period) x (CLK frequency)
 	 *	reg = -------------------------------------
 	 *		 8192 x (Clock Conversion Factor)
 	 *
@@ -1013,9 +1014,9 @@ ncr53c9x_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->max_target = sc->sc_ntarg - 1;
 		cpi->max_lun = 7;
 		cpi->initiator_id = sc->sc_id;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "NCR", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "NCR", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->bus_id = 0;
 		cpi->base_transfer_speed = 3300;
@@ -1502,7 +1503,7 @@ ncr53c9x_dequeue(struct ncr53c9x_softc *sc, struct ncr53c9x_ecb *ecb)
 	li = TINFO_LUN(ti, lun);
 #ifdef DIAGNOSTIC
 	if (li == NULL || li->lun != lun)
-		panic("%s: lun %qx for ecb %p does not exist", __func__,
+		panic("%s: lun %llx for ecb %p does not exist", __func__,
 		    (long long)lun, ecb);
 #endif
 	if (li->untagged == ecb) {
@@ -1513,7 +1514,7 @@ ncr53c9x_dequeue(struct ncr53c9x_softc *sc, struct ncr53c9x_ecb *ecb)
 #ifdef DIAGNOSTIC
 		if (li->queued[ecb->tag[1]] != NULL &&
 		    (li->queued[ecb->tag[1]] != ecb))
-			panic("%s: slot %d for lun %qx has %p instead of ecb "
+			panic("%s: slot %d for lun %llx has %p instead of ecb "
 			    "%p", __func__, ecb->tag[1], (long long)lun,
 			    li->queued[ecb->tag[1]], ecb);
 #endif

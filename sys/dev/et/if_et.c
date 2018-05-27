@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Sepherosa Ziehau.  All rights reserved.
  *
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/et/if_et.c 243857 2012-12-04 09:32:43Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Herb Peyerl <hpeyerl@novatel.ca>
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ep/if_ep_pccard.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -223,7 +224,7 @@ static device_method_t ep_pccard_methods[] = {
 	DEVMETHOD(device_attach, ep_pccard_attach),
 	DEVMETHOD(device_detach, ep_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ep_pccard_driver = {

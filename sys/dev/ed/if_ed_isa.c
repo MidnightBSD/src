@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_isa.c 211764 2010-08-24 18:17:40Z yongari $");
 
 #include "opt_ed.h"
 

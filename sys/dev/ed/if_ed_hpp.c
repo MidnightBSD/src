@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_hpp.c 264942 2014-04-25 21:32:34Z marius $");
 
 #include "opt_ed.h"
 
@@ -564,7 +565,11 @@ ed_hpp_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 	int use_32bit_accesses = !(sc->hpp_id & ED_HPP_ID_16_BIT_ACCESS);
 
 	/* select page 0 registers */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/* reset remote DMA complete flag */
 	ed_nic_outb(sc, ED_P0_ISR, ED_ISR_RDC);

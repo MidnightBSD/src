@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -26,6 +27,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
+ * $FreeBSD: stable/10/sys/dev/fatm/if_fatmvar.h 199559 2009-11-19 22:06:40Z jhb $
  *
  * Fore PCA200E driver definitions.
  */

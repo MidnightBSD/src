@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -30,6 +31,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/fatm/if_fatm.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -2828,21 +2830,13 @@ fatm_attach(device_t dev)
 	ifp->if_linkmiblen = sizeof(IFP2IFATM(sc->ifp)->mib);
 
 	/*
-	 * Enable memory and bustmaster
+	 * Enable busmaster
 	 */
-	cfg = pci_read_config(dev, PCIR_COMMAND, 2);
-	cfg |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, cfg, 2);
+	pci_enable_busmaster(dev);
 
 	/*
 	 * Map memory
 	 */
-	cfg = pci_read_config(dev, PCIR_COMMAND, 2);
-	if (!(cfg & PCIM_CMD_MEMEN)) {
-		if_printf(ifp, "failed to enable memory mapping\n");
-		error = ENXIO;
-		goto fail;
-	}
 	sc->memid = 0x10;
 	sc->memres = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->memid,
 	    RF_ACTIVE);

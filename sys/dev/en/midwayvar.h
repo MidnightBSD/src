@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: midwayvar.h,v 1.10 1997/03/20 21:34:46 chuck Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/en/midwayvar.h 147256 2005-06-10 16:49:24Z brooks $
  */
 
 /*

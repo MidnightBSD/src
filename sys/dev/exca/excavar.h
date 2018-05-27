@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/exca/excavar.h 139749 2005-01-06 01:43:34Z imp $ */
 
 /*-
  * Copyright (c) 2002 M Warner Losh.  All rights reserved.

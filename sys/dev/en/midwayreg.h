@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: midwayreg.h,v 1.6 1997/03/20 21:34:47 chuck Exp $	*/
 
 /*
@@ -6,7 +7,7 @@
  * this file contains the description of the ENI ATM midway chip
  * data structures.   see midway.c for more details.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/en/midwayreg.h 114018 2003-04-25 16:14:03Z harti $
  */
 
 #define MID_SZTOB(X) 	((X) * 256 * 4) /* size to bytes */
