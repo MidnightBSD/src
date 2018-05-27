@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * All rights reserved.
@@ -22,7 +23,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sec/sec.h 235938 2012-05-24 21:24:23Z raj $
  */
 
 #ifndef	_SEC_H
@@ -46,6 +47,7 @@
 /* SEC information */
 #define SEC_20_ID			0x0000000000000040ULL
 #define SEC_30_ID			0x0030030000000000ULL
+#define SEC_31_ID			0x0030030100000000ULL
 #define SEC_CHANNELS			4
 #define SEC_POINTERS			7
 #define SEC_MAX_DMA_BLOCK_SIZE		0xFFFF

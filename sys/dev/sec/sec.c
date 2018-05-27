@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sec/sec.c 266152 2014-05-15 16:11:06Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -199,6 +200,9 @@ sec_probe(device_t dev)
 	struct sec_softc *sc;
 	uint64_t id;
 
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "fsl,sec2.0"))
 		return (ENXIO);
 
@@ -225,6 +229,10 @@ sec_probe(device_t dev)
 		break;
 	case SEC_30_ID:
 		device_set_desc(dev, "Freescale Security Engine 3.0");
+		sc->sc_version = 3;
+		break;
+	case SEC_31_ID:
+		device_set_desc(dev, "Freescale Security Engine 3.1");
 		sc->sc_version = 3;
 		break;
 	default:
