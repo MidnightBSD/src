@@ -57950,6 +57950,8 @@ sys/dev/random/yarrow.h -text
 sys/dev/rc/rc.c -text
 sys/dev/rc/rcreg.h -text
 sys/dev/re/if_re.c -text
+sys/dev/rl/if_rl.c svneol=native#text/plain
+sys/dev/rl/if_rlreg.h svneol=native#text/plain
 sys/dev/rndtest/rndtest.c -text
 sys/dev/rndtest/rndtest.h -text
 sys/dev/rp/rp.c -text
