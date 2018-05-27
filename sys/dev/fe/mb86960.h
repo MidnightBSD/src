@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * All Rights Reserved, Copyright (C) Fujitsu Limited 1995
  *
@@ -19,7 +20,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/fe/mb86960.h 142135 2005-02-20 19:33:13Z imp $
  */
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
@@ -31,11 +32,11 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/firewire/sbp.h 261455 2014-02-04 03:36:42Z eadler $
  *
  */
 
-#define ORB_NOTIFY	(1 << 31)
+#define ORB_NOTIFY	(1U << 31)
 #define	ORB_FMT_STD	(0 << 29)
 #define	ORB_FMT_VED	(2 << 29)
 #define	ORB_FMT_NOP	(3 << 29)

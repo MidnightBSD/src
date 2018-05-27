@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jonathan Lemon
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/fxp/inphy.c 226154 2011-10-08 12:33:10Z marius $");
 
 /*
  * driver for Intel 82553 and 82555 PHYs

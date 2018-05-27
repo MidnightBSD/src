@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/firewire/fwohci_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #define BOUNCE_BUFFER_TEST	0
 
@@ -242,7 +243,7 @@ fwohci_pci_init(device_t self)
 	uint16_t cmd;
 
 	cmd = pci_read_config(self, PCIR_COMMAND, 2);
-	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
+	cmd |= PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
 #if 1  /* for broken hardware */
 	cmd &= ~PCIM_CMD_MWRICEN; 
 #endif

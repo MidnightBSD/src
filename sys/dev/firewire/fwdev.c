@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
@@ -31,7 +32,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/firewire/fwdev.c 299230 2016-05-08 09:02:51Z kib $
  *
  */
 
@@ -98,7 +99,6 @@ struct cdevsw firewire_cdevsw = {
 	.d_mmap =	fw_mmap,
 	.d_strategy =	fw_strategy,
 	.d_name =	"fw",
-	.d_flags =	D_MEM
 #else
 #define CDEV_MAJOR 127
 	fw_open, fw_close, fw_read, fw_write, fw_ioctl,
@@ -992,11 +992,9 @@ found:
 	sc = devclass_get_softc(firewire_devclass, unit);
 	if (sc == NULL)
 		return;
-	*dev = make_dev(&firewire_cdevsw, MAKEMINOR(devflag[i], unit, sub),
-		       UID_ROOT, GID_OPERATOR, 0660,
-		       "%s%d.%d", devnames[i], unit, sub);
-	dev_ref(*dev);
-	(*dev)->si_flags |= SI_CHEAPCLONE;
+	*dev = make_dev_credf(MAKEDEV_REF, &firewire_cdevsw,
+	    MAKEMINOR(devflag[i], unit, sub), cred, UID_ROOT, GID_OPERATOR,
+	    0660, "%s%d.%d", devnames[i], unit, sub);
 	dev_depends(sc->dev, *dev);
 	return;
 }

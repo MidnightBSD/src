@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * Copyright (c) 2001 Jonathan Lemon <jlemon@freebsd.org>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/fxp/if_fxp.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /*
  * Intel EtherExpress Pro/100B PCI Fast Ethernet driver
@@ -2593,7 +2594,7 @@ fxp_ifmedia_upd(struct ifnet *ifp)
 {
 	struct fxp_softc *sc = ifp->if_softc;
 	struct mii_data *mii;
-		struct mii_softc	*miisc;
+	struct mii_softc	*miisc;
 
 	mii = device_get_softc(sc->miibus);
 	FXP_LOCK(sc);

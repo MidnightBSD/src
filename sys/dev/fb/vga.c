@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
- * Copyright (c) 1992-1998 Søren Schmidt
+ * Copyright (c) 1992-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/fb/vga.c 233892 2012-04-04 21:19:55Z jkim $");
 
 #include "opt_vga.h"
 #include "opt_fb.h"
@@ -2160,10 +2161,6 @@ vga_save_state(video_adapter_t *adp, void *p, size_t size)
 	    buf[1] = info.vi_height - 1;	/* ROWS */
 	}
 	buf[2] = info.vi_cheight;		/* POINTS */
-    } else {
-	/* XXX: shouldn't be happening... */
-	printf("vga%d: %s: failed to obtain mode info. (vga_save_state())\n",
-	       adp->va_unit, adp->va_name);
     }
 #else
     buf[0] = readb(BIOS_PADDRTOVADDR(0x44a));	/* COLS */

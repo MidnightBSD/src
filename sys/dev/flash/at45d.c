@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 M. Warner Losh
  * Copyright (c) 2011-2012 Ian Lepore
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/flash/at45d.c 242625 2012-11-05 19:16:27Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

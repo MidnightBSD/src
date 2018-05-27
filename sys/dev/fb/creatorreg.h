@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2000 David S. Miller (davem@redhat.com)
  *
@@ -45,7 +46,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/fb/creatorreg.h 166059 2007-01-16 21:08:22Z marius $
  */
 
 #ifndef _DEV_FB_CREATORREG_H_

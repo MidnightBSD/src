@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/firewire/if_fwe.c 243857 2012-12-04 09:32:43Z glebius $
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
@@ -214,7 +215,6 @@ fwe_attach(device_t dev)
 #endif
 	ifp->if_start = fwe_start;
 	ifp->if_ioctl = fwe_ioctl;
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = (IFF_BROADCAST|IFF_SIMPLEX|IFF_MULTICAST);
 	ifp->if_snd.ifq_maxlen = TX_MAX_QUEUE;
 

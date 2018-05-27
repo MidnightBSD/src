@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -35,7 +36,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/firewire/fwmem.c 227309 2011-11-07 15:43:11Z ed $");
 #endif
 
 #include <sys/param.h>

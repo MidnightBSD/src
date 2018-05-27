@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * All Rights Reserved, Copyright (C) Fujitsu Limited 1995
  *
@@ -22,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/fe/if_fe_pccard.c 199798 2009-11-25 13:31:17Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

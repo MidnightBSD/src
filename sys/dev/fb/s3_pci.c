@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Alcove - Nicolas Souchu <nsouch@freebsd.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/fb/s3_pci.c 234362 2012-04-16 23:29:12Z jkim $");
 
 /* Enable LFB on S3 cards that has only VESA 1.2 BIOS */
 
@@ -513,7 +514,7 @@ s3pci_attach(device_t dev)
 	/* Attach the driver to the VGA/VESA framework
 	 */
 	for (i = 0; (adp = vid_get_adapter(i)) != NULL; ++i) {
-		if ((adp->va_type == KD_VGA))
+		if (adp->va_type == KD_VGA)
 			break;
 	}
 

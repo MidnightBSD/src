@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/firewire/firewire.c 310078 2016-12-14 16:43:09Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -374,6 +375,7 @@ firewire_xfer_timeout(void *arg, int pending)
 				"tl=0x%x flag=0x%02x\n", i, xfer->flag);
 			fw_dump_hdr(&xfer->send.hdr, "send");
 			xfer->resp = ETIMEDOUT;
+			xfer->tl = -1;
 			STAILQ_REMOVE_HEAD(&fc->tlabels[i], tlabel);
 			STAILQ_INSERT_TAIL(&xfer_timeout, xfer, tlabel);
 		}
@@ -608,6 +610,7 @@ fw_drain_txq(struct firewire_comm *fc)
 		while ((xfer = STAILQ_FIRST(&fc->tlabels[i])) != NULL) {
 			if (firewire_debug)
 				printf("tl=%d flag=%d\n", i, xfer->flag);
+			xfer->tl = -1;
 			xfer->resp = EAGAIN;
 			STAILQ_REMOVE_HEAD(&fc->tlabels[i], tlabel);
 			STAILQ_INSERT_TAIL(&xfer_drain, xfer, tlabel);
@@ -647,7 +650,7 @@ fw_reset_csr(struct firewire_comm *fc)
 	CSRARC(fc, BANDWIDTH_AV) = 4915;
 	CSRARC(fc, CHANNELS_AV_HI) = 0xffffffff;
 	CSRARC(fc, CHANNELS_AV_LO) = 0xffffffff;
-	CSRARC(fc, IP_CHANNELS) = (1 << 31);
+	CSRARC(fc, IP_CHANNELS) = (1U << 31);
 
 	CSRARC(fc, CONF_ROM) = 0x04 << 24;
 	CSRARC(fc, CONF_ROM + 4) = 0x31333934; /* means strings 1394 */
@@ -1044,11 +1047,12 @@ fw_tl_free(struct firewire_comm *fc, struct fw_xfer *xfer)
 	struct fw_xfer *txfer;
 	int s;
 
-	if (xfer->tl < 0)
-		return;
-
 	s = splfw();
 	mtx_lock(&fc->tlabel_lock);
+	if (xfer->tl < 0) {
+		mtx_unlock(&fc->tlabel_lock);
+		return;
+	}
 #if 1	/* make sure the label is allocated */
 	STAILQ_FOREACH(txfer, &fc->tlabels[xfer->tl], tlabel)
 		if(txfer == xfer)
@@ -1067,6 +1071,7 @@ fw_tl_free(struct firewire_comm *fc, struct fw_xfer *xfer)
 #endif
 
 	STAILQ_REMOVE(&fc->tlabels[xfer->tl], xfer, fw_xfer, tlabel);
+	xfer->tl = -1;
 	mtx_unlock(&fc->tlabel_lock);
 	splx(s);
 	return;
@@ -1122,6 +1127,7 @@ fw_xfer_alloc(struct malloc_type *type)
 		return xfer;
 
 	xfer->malloc = type;
+	xfer->tl = -1;
 
 	return xfer;
 }
@@ -1191,6 +1197,11 @@ fw_xfer_unload(struct fw_xfer* xfer)
 		splx(s);
 	}
 	if (xfer->fc != NULL) {
+		/*
+		 * Ensure that any tlabel owner can't access this
+		 * xfer after it's freed.
+		 */
+		fw_tl_free(xfer->fc, xfer);
 #if 1
 		if(xfer->flag & FWXF_START)
 			/*

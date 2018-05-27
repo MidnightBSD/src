@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004
  *	Doug Rabson
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/firewire/if_fwipvar.h 170374 2007-06-06 14:31:36Z simokawa $
  */
 
 #ifndef _NET_IF_FWIPVAR_H_

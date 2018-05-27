@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * Copyright (c) 2001 Jonathan Lemon <jlemon@freebsd.org>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/fxp/if_fxpreg.h 264442 2014-04-14 04:51:59Z yongari $
  */
 
 #define FXP_VENDORID_INTEL	0x8086
@@ -250,7 +251,7 @@ struct fxp_cb_ucode {
 /*
  * Number of DMA segments in a TxCB.
  */
-#define FXP_NTXSEG	32
+#define FXP_NTXSEG	35
 
 struct fxp_tbd {
 	uint32_t tb_addr;
