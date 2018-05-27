@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mn/if_mn.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /*
  * Stuff to describe the MUNIC32X and FALC54 chips.
@@ -1254,24 +1255,6 @@ mn_intr(void *xsc)
 	sc->m32x->stat = stat;
 }
 
-static void
-mn_timeout(void *xsc)
-{
-	static int round = 0;
-	struct mn_softc *sc;
-
-	mn_intr(xsc);
-	sc = xsc;
-	timeout(mn_timeout, xsc, 10 * hz);
-	round++;
-	if (round == 2) {
-		sc->m32_mem.ccb = 0x00008004;
-		sc->m32x->cmd = 0x1;
-	} else if (round > 2) {
-		printf("%s: timeout\n", sc->name);
-	}
-}
-
 /*
  * PCI initialization stuff
  */
@@ -1364,9 +1347,9 @@ mn_attach (device_t self)
 		return(ENXIO);
 	}
 
-	u = pci_read_config(self, PCIR_COMMAND, 1);
+	u = pci_read_config(self, PCIR_COMMAND, 2);
 	printf("%x\n", u);
-	pci_write_config(self, PCIR_COMMAND, u | PCIM_CMD_PERRESPEN | PCIM_CMD_BUSMASTEREN | PCIM_CMD_MEMEN, 1);
+	pci_write_config(self, PCIR_COMMAND, u | PCIM_CMD_PERRESPEN | PCIM_CMD_BUSMASTEREN, 2);
 #if 0
 	pci_write_config(self, PCIR_COMMAND, 0x02800046, 4);
 #endif
@@ -1436,7 +1419,7 @@ static device_method_t mn_methods[] = {
         DEVMETHOD(device_resume,        bus_generic_resume),
         DEVMETHOD(device_shutdown,      bus_generic_shutdown),
 
-        {0, 0}
+	DEVMETHOD_END
 };
  
 static driver_t mn_driver = {
