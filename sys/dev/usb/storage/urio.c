@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Iwasa Kazmi
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/storage/urio.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/storage/urio.c 246128 2013-01-30 18:01:20Z sbz $");
 
 
 /*
@@ -185,7 +186,8 @@ static device_method_t urio_methods[] = {
 	DEVMETHOD(device_probe, urio_probe),
 	DEVMETHOD(device_attach, urio_attach),
 	DEVMETHOD(device_detach, urio_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t urio_driver = {

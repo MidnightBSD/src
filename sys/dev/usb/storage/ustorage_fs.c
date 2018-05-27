@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/storage/ustorage_fs.c 260575 2014-01-12 21:21:19Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/storage/ustorage_fs.c 246128 2013-01-30 18:01:20Z sbz $ */
 /*-
  * Copyright (C) 2003-2005 Alan Stern
  * Copyright (C) 2008 Hans Petter Selasky
@@ -36,6 +37,9 @@
  * Linux USB gadget stack.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -62,6 +66,7 @@
 
 #define	USB_DEBUG_VAR ustorage_fs_debug
 #include <dev/usb/usb_debug.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #ifdef USB_DEBUG
 static int ustorage_fs_debug = 0;
@@ -252,7 +257,7 @@ static device_method_t ustorage_fs_methods[] = {
 	DEVMETHOD(device_suspend, ustorage_fs_suspend),
 	DEVMETHOD(device_resume, ustorage_fs_resume),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ustorage_fs_driver = {

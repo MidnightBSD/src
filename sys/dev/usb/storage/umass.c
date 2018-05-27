@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/storage/umass.c 255663 2013-09-18 06:38:40Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/storage/umass.c 255472 2013-09-11 10:18:36Z hselasky $");
 
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
@@ -27,7 +28,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/storage/umass.c 255663 2013-09-18 06:38
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/9/sys/dev/usb/storage/umass.c 255663 2013-09-18 06:38:40Z hselasky $
+ *	$FreeBSD: stable/10/sys/dev/usb/storage/umass.c 255472 2013-09-11 10:18:36Z hselasky $
  *	$NetBSD: umass.c,v 1.28 2000/04/02 23:46:53 augustss Exp $
  */
 
@@ -698,7 +699,8 @@ static device_method_t umass_methods[] = {
 	DEVMETHOD(device_probe, umass_probe),
 	DEVMETHOD(device_attach, umass_attach),
 	DEVMETHOD(device_detach, umass_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t umass_driver = {
