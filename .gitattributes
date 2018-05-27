@@ -57720,6 +57720,14 @@ sys/dev/nsp/nsp.c -text
 sys/dev/nsp/nsp_pccard.c -text
 sys/dev/nsp/nspreg.h -text
 sys/dev/nsp/nspvar.h -text
+sys/dev/ntb/if_ntb/if_ntb.c svneol=native#text/plain
+sys/dev/ntb/ntb.c svneol=native#text/plain
+sys/dev/ntb/ntb.h svneol=native#text/plain
+sys/dev/ntb/ntb_hw/ntb_hw.c svneol=native#text/plain
+sys/dev/ntb/ntb_hw/ntb_regs.h svneol=native#text/plain
+sys/dev/ntb/ntb_if.m -text
+sys/dev/ntb/ntb_transport.c svneol=native#text/plain
+sys/dev/ntb/ntb_transport.h svneol=native#text/plain
 sys/dev/null/null.c -text
 sys/dev/nvd/nvd.c svneol=native#text/plain
 sys/dev/nve/if_nve.c -text
