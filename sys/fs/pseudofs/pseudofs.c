@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2001 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/pseudofs/pseudofs.c 303907 2016-08-10 12:36:54Z kib $");
 
 #include "opt_pseudofs.h"
 
@@ -52,9 +53,11 @@ static MALLOC_DEFINE(M_PFSNODES, "pfs_nodes", "pseudofs nodes");
 SYSCTL_NODE(_vfs, OID_AUTO, pfs, CTLFLAG_RW, 0,
     "pseudofs");
 
+#ifdef PSEUDOFS_TRACE
 int pfs_trace;
 SYSCTL_INT(_vfs_pfs, OID_AUTO, trace, CTLFLAG_RW, &pfs_trace, 0,
     "enable tracing of pseudofs vnode operations");
+#endif
 
 #if PFS_FSNAMELEN != MFSNAMELEN
 #error "PFS_FSNAMELEN is not equal to MFSNAMELEN"
@@ -308,7 +311,6 @@ pfs_mount(struct pfs_info *pi, struct mount *mp)
 
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
 	MNT_IUNLOCK(mp);
 	mp->mnt_data = pi;
 	vfs_getnewfsid(mp);
@@ -382,11 +384,9 @@ pfs_init(struct pfs_info *pi, struct vfsconf *vfc)
 	struct pfs_node *root;
 	int error;
 
-	mtx_assert(&Giant, MA_OWNED);
-
 	pfs_fileno_init(pi);
 
-	/* set up the root diretory */
+	/* set up the root directory */
 	root = pfs_alloc_node(pi, "/", pfstype_root);
 	pi->pi_root = root;
 	pfs_fileno_alloc(root);
@@ -412,8 +412,6 @@ int
 pfs_uninit(struct pfs_info *pi, struct vfsconf *vfc)
 {
 	int error;
-
-	mtx_assert(&Giant, MA_OWNED);
 
 	pfs_destroy(pi->pi_root);
 	pi->pi_root = NULL;

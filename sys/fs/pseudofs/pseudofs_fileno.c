@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2001 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/pseudofs/pseudofs_fileno.c 303907 2016-08-10 12:36:54Z kib $");
 
 #include "opt_pseudofs.h"
 
@@ -52,7 +53,6 @@ void
 pfs_fileno_init(struct pfs_info *pi)
 {
 
-	mtx_assert(&Giant, MA_OWNED);
 	mtx_init(&pi->pi_mutex, "pfs_fileno", NULL, MTX_DEF);
 	pi->pi_unrhdr = new_unrhdr(3, INT_MAX / NO_PID, &pi->pi_mutex);
 }
@@ -64,7 +64,6 @@ void
 pfs_fileno_uninit(struct pfs_info *pi)
 {
 
-	mtx_assert(&Giant, MA_OWNED);
 	delete_unrhdr(pi->pi_unrhdr);
 	pi->pi_unrhdr = NULL;
 	mtx_destroy(&pi->pi_mutex);
