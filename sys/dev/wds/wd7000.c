@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wds/wd7000.c,v 1.3 2009/01/18 19:29:05 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Ludd, University of Lule}, Sweden.
  * Copyright (c) 2000 Sergey A. Babkin
@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/wds/wd7000.c 246713 2013-02-12 16:57:20Z kib $");
 
 /* All bugs are subject to removal without further notice */
 
@@ -1067,7 +1067,7 @@ wds_scsi_io(struct cam_sim * sim, struct ccb_scsiio * csio)
 		xpt_done((union ccb *) csio);
 		return;
 	}
-	if (ccb_h->flags & (CAM_CDB_PHYS | CAM_SCATTER_VALID | CAM_DATA_PHYS)) {
+	if ((ccb_h->flags & CAM_DATA_MASK) != CAM_DATA_VADDR) {
 		/* don't support these */
 		ccb_h->status = CAM_REQ_INVALID;
 		xpt_done((union ccb *) csio);
@@ -1225,7 +1225,7 @@ wds_action(struct cam_sim * sim, union ccb * ccb)
 		cpi->hba_misc = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "WD/FDC", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

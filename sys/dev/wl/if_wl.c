@@ -174,7 +174,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/wl/if_wl.c 320923 2017-07-12 22:16:54Z jhb $");
 
 /*
  * NOTE:
@@ -576,6 +576,8 @@ wlattach(device_t device)
 
     if (bootverbose)
 	wldump(sc);
+    device_printf(device,
+	"WARNING: This driver is deprecated and will be removed.\n");
     return (0);
 }
 

@@ -58630,6 +58630,7 @@ sys/dev/wbwd/wbwd.c -text
 sys/dev/wds/wd7000.c -text
 sys/dev/wi/if_wavelan_ieee.h -text
 sys/dev/wi/if_wi.c -text
+sys/dev/wi/if_wi_macio.c svneol=native#text/plain
 sys/dev/wi/if_wi_pccard.c -text
 sys/dev/wi/if_wi_pci.c -text
 sys/dev/wi/if_wireg.h -text
