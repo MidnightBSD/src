@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 OGAWA Takaya <t-ogawa@triaez.kaisei.org>
  * Copyright (c) 2004 TAKAHASHI Yoshihiro <nyan@FreeBSD.org>
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_panasonic.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -118,7 +119,7 @@ static device_method_t acpi_panasonic_methods[] = {
 	DEVMETHOD(device_detach,	acpi_panasonic_detach),
 	DEVMETHOD(device_shutdown,	acpi_panasonic_shutdown),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_panasonic_driver = {

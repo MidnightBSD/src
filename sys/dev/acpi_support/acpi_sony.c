@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Takanori Watanabe
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_sony.c 273736 2014-10-27 14:38:00Z hselasky $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -95,7 +96,7 @@ static device_method_t acpi_sony_methods[] = {
 	DEVMETHOD(device_attach, acpi_sony_attach),
 	DEVMETHOD(device_detach, acpi_sony_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t	acpi_sony_driver = {
@@ -132,13 +133,22 @@ acpi_sony_attach(device_t dev)
 	sc = device_get_softc(dev);
 	acpi_GetInteger(acpi_get_handle(dev), ACPI_SONY_GET_PID, &sc->pid);
 	device_printf(dev, "PID %x\n", sc->pid);
-	for (i = 0 ; acpi_sony_oids[i].nodename != NULL; i++){
-		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
-		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-		    i, acpi_sony_oids[i].nodename , CTLTYPE_INT |
-		    ((acpi_sony_oids[i].setmethod)? CTLFLAG_RW: CTLFLAG_RD),
-		    dev, i, sysctl_acpi_sony_gen_handler, "I",
-		    acpi_sony_oids[i].comment);
+	for (i = 0 ; acpi_sony_oids[i].nodename != NULL; i++) {
+		if (acpi_sony_oids[i].setmethod != NULL) {
+			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
+			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+			    i, acpi_sony_oids[i].nodename ,
+			    CTLTYPE_INT | CTLFLAG_RW,
+			    dev, i, sysctl_acpi_sony_gen_handler, "I",
+			    acpi_sony_oids[i].comment);
+		} else {
+			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
+			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+			    i, acpi_sony_oids[i].nodename ,
+			    CTLTYPE_INT | CTLFLAG_RD,
+			    dev, i, sysctl_acpi_sony_gen_handler, "I",
+			    acpi_sony_oids[i].comment);
+		}
 	}
 	return (0);
 }

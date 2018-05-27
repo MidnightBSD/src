@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Michael Gmelin <freebsd@grem.de>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_wmi.c 241537 2012-10-14 09:31:11Z avg $");
 
 /*
  * Driver for acpi-wmi mapping, provides an interface for vendor specific

@@ -55777,10 +55777,12 @@ sys/dev/aacraid/aacraid_reg.h svneol=native#text/plain
 sys/dev/aacraid/aacraid_var.h svneol=native#text/plain
 sys/dev/acpi_support/acpi_aiboost.c -text
 sys/dev/acpi_support/acpi_asus.c -text
+sys/dev/acpi_support/acpi_asus_wmi.c svneol=native#text/plain
 sys/dev/acpi_support/acpi_fujitsu.c -text
 sys/dev/acpi_support/acpi_hp.c -text
 sys/dev/acpi_support/acpi_ibm.c -text
 sys/dev/acpi_support/acpi_panasonic.c -text
+sys/dev/acpi_support/acpi_rapidstart.c svneol=native#text/plain
 sys/dev/acpi_support/acpi_sony.c -text
 sys/dev/acpi_support/acpi_toshiba.c -text
 sys/dev/acpi_support/acpi_wmi.c -text

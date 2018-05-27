@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Sean Bullington <seanATstalker.org>
  *               2003-2008 Anish Mistry <amistry@am-productions.biz>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_fujitsu.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -154,7 +155,8 @@ static device_method_t acpi_fujitsu_methods[] = {
 	DEVMETHOD(device_detach,	acpi_fujitsu_detach),
 	DEVMETHOD(device_suspend,	acpi_fujitsu_suspend),
 	DEVMETHOD(device_resume,	acpi_fujitsu_resume),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t acpi_fujitsu_driver = {
