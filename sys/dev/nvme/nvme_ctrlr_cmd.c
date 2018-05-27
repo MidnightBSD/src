@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/nvme/nvme_ctrlr_cmd.c 267619 2014-06-18 19:28:55Z jimharris $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/nvme/nvme_ctrlr_cmd.c 267620 2014-06-18 19:32:38Z jimharris $");
 
 #include "nvme_private.h"
 

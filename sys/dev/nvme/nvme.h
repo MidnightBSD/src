@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/nvme/nvme.h 263273 2014-03-17 21:42:31Z jimharris $
+ * $FreeBSD: stable/10/sys/dev/nvme/nvme.h 291214 2015-11-23 17:27:29Z jimharris $
  */
 
 #ifndef __NVME_H__
@@ -871,6 +871,7 @@ const char *	nvme_ns_get_serial_number(struct nvme_namespace *ns);
 const char *	nvme_ns_get_model_number(struct nvme_namespace *ns);
 const struct nvme_namespace_data *
 		nvme_ns_get_data(struct nvme_namespace *ns);
+uint32_t	nvme_ns_get_stripesize(struct nvme_namespace *ns);
 
 int	nvme_ns_bio_process(struct nvme_namespace *ns, struct bio *bp,
 			    nvme_cb_fn_t cb_fn);
