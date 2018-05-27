@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_vf.c 294958 2016-01-27 22:31:08Z marius $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_vf.c 333216 2018-05-03 15:47:49Z marius $*/
 
 
 #include "e1000_api.h"
@@ -487,8 +488,10 @@ s32 e1000_promisc_set_vf(struct e1000_hw *hw, enum e1000_promisc_type type)
 		break;
 	case e1000_promisc_enabled:
 		msgbuf |= E1000_VF_SET_PROMISC_MULTICAST;
+		/* FALLTHROUGH */
 	case e1000_promisc_unicast:
 		msgbuf |= E1000_VF_SET_PROMISC_UNICAST;
+		/* FALLTHROUGH */
 	case e1000_promisc_disabled:
 		break;
 	default:

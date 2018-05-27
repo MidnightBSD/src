@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_mbx.c 296055 2016-02-25 19:15:06Z erj $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_mbx.c 333216 2018-05-03 15:47:49Z marius $*/
 
 #include "e1000_mbx.h"
 
@@ -778,6 +779,7 @@ s32 e1000_init_mbx_params_pf(struct e1000_hw *hw)
 		mbx->stats.reqs = 0;
 		mbx->stats.acks = 0;
 		mbx->stats.rsts = 0;
+		/* FALLTHROUGH */
 	default:
 		return E1000_SUCCESS;
 	}

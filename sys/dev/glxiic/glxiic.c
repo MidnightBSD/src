@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Henrik Brix Andersen <brix@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/glxiic/glxiic.c 275982 2014-12-21 03:06:11Z smh $");
 /*
  * AMD Geode LX CS5536 System Management Bus controller.
  *
@@ -562,8 +563,8 @@ glxiic_start_timeout_locked(struct glxiic_softc *sc)
 
 	GLXIIC_ASSERT_LOCKED(sc);
 
-	callout_reset(&sc->callout, sc->timeout * 1000 / hz, glxiic_timeout,
-	    sc);
+	callout_reset_sbt(&sc->callout, SBT_1MS * sc->timeout, 0,
+	    glxiic_timeout, sc, 0);
 }
 
 static void
@@ -711,6 +712,7 @@ static int
 glxiic_state_master_addr_callback(struct glxiic_softc *sc, uint8_t status)
 {
 	uint8_t slave;
+	uint8_t ctrl1;
 
 	GLXIIC_ASSERT_LOCKED(sc);
 
@@ -745,6 +747,13 @@ glxiic_state_master_addr_callback(struct glxiic_softc *sc, uint8_t status)
 		glxiic_set_state_locked(sc, GLXIIC_STATE_MASTER_STOP);
 
 	bus_write_1(sc->smb_res, GLXIIC_SMB_SDA, slave);
+
+	if ((sc->msg->flags & IIC_M_RD) != 0 && sc->ndata == 1) {
+		/* Last byte from slave, set NACK. */
+		ctrl1 = bus_read_1(sc->smb_res, GLXIIC_SMB_CTRL1);
+		bus_write_1(sc->smb_res, GLXIIC_SMB_CTRL1,
+		    ctrl1 | GLXIIC_SMB_CTRL1_ACK_BIT);
+	}
 
 	return (IIC_NOERR);
 }
@@ -811,13 +820,6 @@ glxiic_state_master_rx_callback(struct glxiic_softc *sc, uint8_t status)
 		return (IIC_ENOACK);
 	}
 
-	if (sc->ndata == 1) {
-		/* Last byte from slave, set NACK. */
-		ctrl1 = bus_read_1(sc->smb_res, GLXIIC_SMB_CTRL1);
-		bus_write_1(sc->smb_res, GLXIIC_SMB_CTRL1,
-		    ctrl1 | GLXIIC_SMB_CTRL1_ACK_BIT);
-	}
-
 	if ((status & GLXIIC_SMB_STS_STASTR_BIT) != 0) {
 		/* Bus is stalled, clear and wait for data. */
 		bus_write_1(sc->smb_res, GLXIIC_SMB_STS,
@@ -835,6 +837,13 @@ glxiic_state_master_rx_callback(struct glxiic_softc *sc, uint8_t status)
 		/* Proceed with stop on reading last byte. */
 		glxiic_set_state_locked(sc, GLXIIC_STATE_MASTER_STOP);
 		return (glxiic_state_table[sc->state].callback(sc, status));
+	}
+
+	if (sc->ndata == 1) {
+		/* Last byte from slave, set NACK. */
+		ctrl1 = bus_read_1(sc->smb_res, GLXIIC_SMB_CTRL1);
+		bus_write_1(sc->smb_res, GLXIIC_SMB_CTRL1,
+		    ctrl1 | GLXIIC_SMB_CTRL1_ACK_BIT);
 	}
 
 	glxiic_start_timeout_locked(sc);

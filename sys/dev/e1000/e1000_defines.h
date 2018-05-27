@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_defines.h 296055 2016-02-25 19:15:06Z erj $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_defines.h 323080 2017-08-31 23:59:46Z marius $*/
 
 #ifndef _E1000_DEFINES_H_
 #define _E1000_DEFINES_H_
@@ -469,6 +470,8 @@
 
 #define ETHERNET_FCS_SIZE		4
 #define MAX_JUMBO_FRAME_SIZE		0x3F00
+/* The datasheet maximum supported RX size is 9.5KB (9728 bytes) */
+#define MAX_RX_JUMBO_FRAME_SIZE		0x2600
 #define E1000_TX_PTR_GAP		0x1F
 
 /* Extended Configuration Control and Size */

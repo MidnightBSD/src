@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/if_lem.c 303117 2016-07-20 22:32:19Z sbruno $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/if_lem.c 323293 2017-09-08 00:11:35Z marius $*/
 
 /*
  * Uncomment the following extensions for better performance in a VM,
@@ -2336,7 +2337,7 @@ lem_allocate_pci_resources(struct adapter *adapter)
  *  Setup the Legacy or MSI Interrupt handler
  *
  **********************************************************************/
-int
+static int
 lem_allocate_irq(struct adapter *adapter)
 {
 	device_t dev = adapter->dev;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsuru IWASAKI
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ex/if_ex_pccard.c 182227 2008-08-27 04:11:03Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_phy.c 304338 2016-08-18 07:32:02Z sbruno $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_phy.c 333216 2018-05-03 15:47:49Z marius $*/
 
 #include "e1000_api.h"
 
@@ -1297,6 +1298,7 @@ s32 e1000_copper_link_setup_m88_gen2(struct e1000_hw *hw)
 			phy_data |= M88E1000_PSCR_AUTO_X_1000T;
 			break;
 		}
+		/* FALLTHROUGH */
 	case 0:
 	default:
 		phy_data |= M88E1000_PSCR_AUTO_X_MODE;

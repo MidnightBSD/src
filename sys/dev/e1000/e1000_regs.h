@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_regs.h 296055 2016-02-25 19:15:06Z erj $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_regs.h 333214 2018-05-03 15:41:04Z marius $*/
 
 #ifndef _E1000_REGS_H_
 #define _E1000_REGS_H_
@@ -214,7 +215,7 @@
 /* QAV Tx mode control register bitfields masks */
 #define E1000_TQAVCC_IDLE_SLOPE		0xFFFF /* Idle slope */
 #define E1000_TQAVCC_KEEP_CREDITS	(1 << 30) /* Keep credits opt enable */
-#define E1000_TQAVCC_QUEUE_MODE		(1 << 31) /* SP vs. SR Tx mode */
+#define E1000_TQAVCC_QUEUE_MODE		(1U << 31) /* SP vs. SR Tx mode */
 
 /* Good transmitted packets counter registers */
 #define E1000_PQGPTC(_n)		(0x010014 + (0x100 * (_n)))

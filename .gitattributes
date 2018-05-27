@@ -56872,6 +56872,8 @@ sys/dev/fe/if_fe_pccard.c -text
 sys/dev/fe/if_fereg.h -text
 sys/dev/fe/if_fevar.h -text
 sys/dev/fe/mb86960.h -text
+sys/dev/ffec/if_ffec.c svneol=native#text/plain
+sys/dev/ffec/if_ffecreg.h svneol=native#text/plain
 sys/dev/filemon/filemon.c -text
 sys/dev/filemon/filemon.h -text
 sys/dev/filemon/filemon_lock.c -text

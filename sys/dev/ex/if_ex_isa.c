@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Matthew N. Dodd
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ex/if_ex_isa.c 182088 2008-08-24 00:22:42Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
