@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010, LSI Corp.
  * All rights reserved.
@@ -31,7 +32,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/tws/tws_hdm.c 275977 2014-12-21 02:39:10Z smh $
  */
 
 
@@ -99,7 +100,7 @@ tws_init_ctlr(struct tws_softc *sc)
         regh = tws_read_reg(sc, TWS_I2O0_IOPOBQPH, 4);
         regl = tws_read_reg(sc, TWS_I2O0_IOPOBQPL, 4);
         reg = (((u_int64_t)regh) << 32) | regl;
-        TWS_TRACE_DEBUG(sc, "host outbound clenup",reg, regl);
+        TWS_TRACE_DEBUG(sc, "host outbound cleanup",reg, regl);
         if ( regh == TWS_FIFO_EMPTY32 )
             break;
     } 
@@ -161,7 +162,7 @@ tws_init_connect(struct tws_softc *sc, u_int16_t mcreadits )
     req->error_code = TWS_REQ_RET_INVALID;
     req->cb = NULL;
     req->ccb_ptr = NULL;
-    req->thandle.callout = NULL;
+    callout_stop(&req->timeout);
     req->next = req->prev = NULL;
     req->state = TWS_REQ_STATE_BUSY;
 #endif // 0

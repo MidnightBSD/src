@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 The FreeBSD Project
  * All rights reserved.
@@ -25,10 +26,10 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/tdfx/tdfx_linux.c 280258 2015-03-19 13:37:36Z rwatson $");
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/file.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -45,6 +46,7 @@ LINUX_IOCTL_SET(tdfx, LINUX_IOCTL_TDFX_MIN, LINUX_IOCTL_TDFX_MAX);
 static int
 linux_ioctl_tdfx(struct thread *td, struct linux_ioctl_args* args)
 {
+   cap_rights_t rights;
    int error = 0;
    u_long cmd = args->cmd & 0xffff;
 
@@ -54,7 +56,8 @@ linux_ioctl_tdfx(struct thread *td, struct linux_ioctl_args* args)
 
    struct file *fp;
 
-   if ((error = fget(td, args->fd, CAP_IOCTL, &fp)) != 0)
+   error = fget(td, args->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+   if (error != 0)
 	   return (error);
    /* We simply copy the data and send it right to ioctl */
    copyin((caddr_t)args->arg, &d_pio, sizeof(d_pio));

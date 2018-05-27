@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010, LSI Corp.
  * All rights reserved.
@@ -31,7 +32,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/tws/tws_services.c 275977 2014-12-21 02:39:10Z smh $
  */
 
 #include <dev/tws/tws.h>
@@ -395,7 +396,6 @@ tws_print_stats(void *arg)
                                       , sc->stats.num_intrs);
     TWS_TRACE(sc, "reqs(ioctls, scsi)", sc->stats.ioctls
                                       , sc->stats.scsi_ios);
-    timeout(tws_print_stats, sc, 300*hz);
-
+    callout_reset(&sc->stats_timer, 300 * hz, tws_print_stats, sc);
 }
 /* --------------------- misc service end --------------------- */

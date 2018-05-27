@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_txp.c,v 1.48 2001/06/27 06:34:50 kjc Exp $	*/
 
 /*-
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/txp/if_txp.c 327590 2018-01-05 17:23:17Z pfg $");
 
 /*
  * Driver for 3c990 (Typhoon) Ethernet ASIC
@@ -369,7 +370,7 @@ txp_attach(device_t dev)
 	 * diagnose sleep image specific issues.
 	 */
 	rsp = NULL;
-	if (txp_ext_command(sc, TXP_CMD_READ_VERSION, 0, 0, 0, NULL, 0,
+	if (txp_ext_command(sc, TXP_CMD_VERSIONS_READ, 0, 0, 0, NULL, 0,
 	    &rsp, TXP_CMD_WAIT)) {
 		device_printf(dev, "can not read sleep image version\n");
 		error = ENXIO;

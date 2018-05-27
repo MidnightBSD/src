@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * Copyright (C) 2006-2007 Semihalf, Piotr Kruszynski
@@ -23,7 +24,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/tsec/if_tsecreg.h 259235 2013-12-11 22:36:20Z andreast $
  */
 
 #define	TSEC_REG_ID		0x000	/* Controller ID register #1. */
@@ -77,12 +78,13 @@
 				       * register */
 #define TSEC_REG_HAFDUP		0x50c /* Half-duplex register */
 #define TSEC_REG_MAXFRM		0x510 /* Maximum frame length register */
-#define TSEC_REG_MIIMCFG	0x520 /* MII Management configuration register */
-#define TSEC_REG_MIIMCOM	0x524 /* MII Management command register */
-#define TSEC_REG_MIIMADD	0x528 /* MII Management address register */
-#define TSEC_REG_MIIMCON	0x52c /* MII Management control register */
-#define TSEC_REG_MIIMSTAT	0x530 /* MII Management status register */
-#define TSEC_REG_MIIMIND	0x534 /* MII Management indicator register */
+#define TSEC_REG_MIIBASE	0x520 /* MII Management base, rest offsets */
+#define TSEC_REG_MIIMCFG	0x0   /* MII Management configuration register */
+#define TSEC_REG_MIIMCOM	0x4   /* MII Management command register */
+#define TSEC_REG_MIIMADD	0x8   /* MII Management address register */
+#define TSEC_REG_MIIMCON	0xc   /* MII Management control register */
+#define TSEC_REG_MIIMSTAT	0x10  /* MII Management status register */
+#define TSEC_REG_MIIMIND	0x14  /* MII Management indicator register */
 #define TSEC_REG_IFSTAT		0x53c /* Interface status register */
 #define TSEC_REG_MACSTNADDR1	0x540 /* Station address register, part 1 */
 #define TSEC_REG_MACSTNADDR2	0x544 /* Station address register, part 2 */

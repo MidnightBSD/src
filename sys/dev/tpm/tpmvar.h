@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008, 2009 Michael Shalayeff
  * Copyright (c) 2009, 2010 Hans-Joerg Hoexer
@@ -15,7 +16,7 @@
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/tpm/tpmvar.h 211201 2010-08-12 00:16:18Z takawata $
  */
 
 #ifndef _TPMVAR_H

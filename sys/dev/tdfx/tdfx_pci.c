@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 by Coleman Kane <cokane@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/tdfx/tdfx_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* 3dfx driver for FreeBSD 4.x - Finished 11 May 2000, 12:25AM ET
  *
@@ -145,7 +146,6 @@ tdfx_attach(device_t dev) {
 	 * small, whole number.
 	 */
 	struct tdfx_softc *tdfx_info;
-	u_long	val;
 	/* rid value tells bus_alloc_resource where to find the addresses of ports or
 	 * of memory ranges in the PCI config space*/
 	int rid = PCIR_BAR(0);
@@ -153,12 +153,6 @@ tdfx_attach(device_t dev) {
 	/* Increment the card counter (for the ioctl code) */
 	tdfx_count++;
 
- 	/* Enable MemMap on Voodoo */
-	val = pci_read_config(dev, PCIR_COMMAND, 2);
-	val |= (PCIM_CMD_MEMEN);
-	pci_write_config(dev, PCIR_COMMAND, val, 2);
-	val = pci_read_config(dev, PCIR_COMMAND, 2);
-	
 	/* Fill the soft config struct with info about this device*/
 	tdfx_info = device_get_softc(dev);
 	tdfx_info->dev = dev;

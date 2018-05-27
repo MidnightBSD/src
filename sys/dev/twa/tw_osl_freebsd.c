@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/twa/tw_osl_freebsd.c 314667 2017-03-04 13:03:31Z avg $");
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
@@ -284,7 +285,6 @@ static TW_INT32
 twa_attach(device_t dev)
 {
 	struct twa_softc	*sc = device_get_softc(dev);
-	TW_UINT32		command;
 	TW_INT32		bar_num;
 	TW_INT32		bar0_offset;
 	TW_INT32		bar_size;
@@ -323,22 +323,8 @@ twa_attach(device_t dev)
 		OID_AUTO, "driver_version", CTLFLAG_RD,
 		TW_OSL_DRIVER_VERSION_STRING, 0, "TWA driver version");
 
-	/* Make sure we are going to be able to talk to this board. */
-	command = pci_read_config(dev, PCIR_COMMAND, 2);
-	if ((command & PCIM_CMD_PORTEN) == 0) {
-		tw_osli_printf(sc, "error = %d",
-			TW_CL_SEVERITY_ERROR_STRING,
-			TW_CL_MESSAGE_SOURCE_FREEBSD_DRIVER,
-			0x2001,
-			"Register window not available",
-			ENXIO);
-		tw_osli_free_resources(sc);
-		return(ENXIO);
-	}
-
 	/* Force the busmaster enable bit on, in case the BIOS forgot. */
-	command |= PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, command, 2);
+	pci_enable_busmaster(dev);
 
 	/* Allocate the PCI register window. */
 	if ((error = tw_cl_get_pci_bar_info(sc->device_id, TW_CL_BAR_TYPE_MEM,
@@ -438,8 +424,8 @@ twa_attach(device_t dev)
 	}
 
 	sc->watchdog_index = 0;
-	callout_init(&(sc->watchdog_callout[0]), CALLOUT_MPSAFE);
-	callout_init(&(sc->watchdog_callout[1]), CALLOUT_MPSAFE);
+	callout_init(&(sc->watchdog_callout[0]), 1);
+	callout_init(&(sc->watchdog_callout[1]), 1);
 	callout_reset(&(sc->watchdog_callout[0]), 5*hz, twa_watchdog, &sc->ctlr_handle);
 
 	return(0);
@@ -1473,6 +1459,10 @@ tw_osli_map_request(struct tw_osli_req_context *req)
 				twa_map_load_data_callback, req,
 				BUS_DMA_WAITOK);
 			mtx_unlock_spin(sc->io_lock);
+		} else if (req->flags & TW_OSLI_REQ_FLAGS_CCB) {
+			error = bus_dmamap_load_ccb(sc->dma_tag, req->dma_map,
+				req->orig_req, twa_map_load_data_callback, req,
+				BUS_DMA_WAITOK);
 		} else {
 			/*
 			 * There's only one CAM I/O thread running at a time.

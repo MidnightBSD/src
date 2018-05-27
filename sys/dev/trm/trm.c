@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  *      O.S   : FreeBSD CAM
  *	FILE NAME  : trm.c					      
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/trm/trm.c 315813 2017-03-23 06:41:13Z mav $");
 
 /*
  *	HISTORY:					
@@ -68,7 +69,9 @@ __FBSDID("$FreeBSD$");
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/queue.h>
+#if __FreeBSD_version >= 500000
 #include <sys/bio.h>
+#endif
 #include <sys/buf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -471,10 +474,6 @@ trm_ExecuteSRB(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 		return;
 	}
 	ccb->ccb_h.status |= CAM_SIM_QUEUED;
-#if 0
-	/* XXX Need a timeout handler */
-	ccb->ccb_h.timeout_ch = timeout(trmtimeout, (caddr_t)srb, (ccb->ccb_h.timeout * hz) / 1000);
-#endif
 	trm_SendSRB(pACB, pSRB);
 	splx(flags);
 	return;
@@ -557,6 +556,7 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			PDCB			pDCB = NULL;
 			PSRB			pSRB;
 			struct ccb_scsiio	*pcsio;
+			int			error;
      
 			pcsio = &pccb->csio;
 			TRM_DPRINTF(" XPT_SCSI_IO \n");
@@ -612,71 +612,18 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			} else
 				bcopy(pcsio->cdb_io.cdb_bytes,
 				    pSRB->CmdBlock, pcsio->cdb_len);
-			if ((pccb->ccb_h.flags & CAM_DIR_MASK)
-			    != CAM_DIR_NONE) {
-				if ((pccb->ccb_h.flags &
-				      CAM_SCATTER_VALID) == 0) {
-					if ((pccb->ccb_h.flags 
-					      & CAM_DATA_PHYS) == 0) {
-						int vmflags;
-						int error;
-
-						vmflags = splsoftvm();
-						error = bus_dmamap_load(
-						    pACB->buffer_dmat,
+			error = bus_dmamap_load_ccb(pACB->buffer_dmat,
 						    pSRB->dmamap,
-						    pcsio->data_ptr,
-						    pcsio->dxfer_len,
+						    pccb,
 						    trm_ExecuteSRB,
 						    pSRB,
 						    0);
-						if (error == EINPROGRESS) {
-							xpt_freeze_simq(
-							    pACB->psim,
-							    1);
-							pccb->ccb_h.status |=
-							  CAM_RELEASE_SIMQ;
-						}
-						splx(vmflags);
-					} else {   
-						struct bus_dma_segment seg;
-
-						/* Pointer to physical buffer */
-						seg.ds_addr = 
-						  (bus_addr_t)pcsio->data_ptr;
-						seg.ds_len = pcsio->dxfer_len;
-						trm_ExecuteSRB(pSRB, &seg, 1,
-						    0);
-					}
-				} else { 
-					/*  CAM_SCATTER_VALID */
-					struct bus_dma_segment *segs;
-
-					if ((pccb->ccb_h.flags &
-					     CAM_SG_LIST_PHYS) == 0 ||
-					     (pccb->ccb_h.flags 
-					     & CAM_DATA_PHYS) != 0) {
-						pSRB->pNextSRB = pACB->pFreeSRB;
-						pACB->pFreeSRB = pSRB;
-						pccb->ccb_h.status = 
-						  CAM_PROVIDE_FAIL;
-						xpt_done(pccb);
-						splx(actionflags);
-						return;
-					}
-
-					/* cam SG list is physical,
-					 *  cam data is virtual 
-					 */
-					segs = (struct bus_dma_segment *)
-					    pcsio->data_ptr;
-					trm_ExecuteSRB(pSRB, segs,
-					    pcsio->sglist_cnt, 1);
-				}   /*  CAM_SCATTER_VALID */
-			} else
-				trm_ExecuteSRB(pSRB, NULL, 0, 0);
-				  }
+			if (error == EINPROGRESS) {
+				xpt_freeze_simq(pACB->psim, 1);
+				pccb->ccb_h.status |= CAM_RELEASE_SIMQ;
+			}
 			break;
+		}
 		case XPT_GDEV_TYPE:		    
 			TRM_DPRINTF(" XPT_GDEV_TYPE \n");
 	    		pccb->ccb_h.status = CAM_REQ_INVALID;
@@ -705,9 +652,9 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			cpi->initiator_id = pACB->AdaptSCSIID;
 			cpi->bus_id = cam_sim_bus(psim);
 			cpi->base_transfer_speed = 3300;
-			strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-			strncpy(cpi->hba_vid, "Tekram_TRM", HBA_IDLEN);
-			strncpy(cpi->dev_name, cam_sim_name(psim), DEV_IDLEN);
+			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->hba_vid, "Tekram_TRM", HBA_IDLEN);
+			strlcpy(cpi->dev_name, cam_sim_name(psim), DEV_IDLEN);
 			cpi->unit_number = cam_sim_unit(psim);
 			cpi->transport = XPORT_SPI;
 			cpi->transport_version = 2;
@@ -3436,7 +3383,7 @@ trm_init(u_int16_t unit, device_t dev)
 	/*highaddr*/	BUS_SPACE_MAXADDR,
 	/*filter*/	NULL, 
 	/*filterarg*/	NULL,
-	/*maxsize*/	MAXBSIZE,
+	/*maxsize*/	TRM_MAXPHYS,
 	/*nsegments*/	TRM_NSEG,
 	/*maxsegsz*/	TRM_MAXTRANSFER_SIZE,
 	/*flags*/	BUS_DMA_ALLOCNOW,

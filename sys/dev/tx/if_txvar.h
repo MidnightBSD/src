@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/tx/if_txvar.h,v 1.2 2009/11/28 22:44:33 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Semen Ustimenko
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/tx/if_txvar.h 179706 2008-06-10 17:59:43Z jhb $
  */
 
 /*
