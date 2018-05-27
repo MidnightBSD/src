@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2005-2009 Marcel Moolenaar
  * All rights reserved.
@@ -25,11 +26,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part.c,v 1.9.2.7 2009/03/17 19:38:40 marcel Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part.c 286207 2015-08-02 16:25:21Z ae $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
-#include <sys/diskmbr.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -71,6 +71,7 @@ struct g_part_alias_list {
 	enum g_part_alias alias;
 } g_part_alias_list[G_PART_ALIAS_COUNT] = {
 	{ "apple-boot", G_PART_ALIAS_APPLE_BOOT },
+	{ "apple-core-storage", G_PART_ALIAS_APPLE_CORE_STORAGE },
 	{ "apple-hfs", G_PART_ALIAS_APPLE_HFS },
 	{ "apple-label", G_PART_ALIAS_APPLE_LABEL },
 	{ "apple-raid", G_PART_ALIAS_APPLE_RAID },
@@ -115,6 +116,17 @@ struct g_part_alias_list {
 	{ "vmware-vmfs", G_PART_ALIAS_VMFS },
 	{ "vmware-vmkdiag", G_PART_ALIAS_VMKDIAG },
 	{ "vmware-reserved", G_PART_ALIAS_VMRESERVED },
+	{ "vmware-vsanhdr", G_PART_ALIAS_VMVSANHDR },
+	{ "dragonfly-label32", G_PART_ALIAS_DFBSD },
+	{ "dragonfly-label64", G_PART_ALIAS_DFBSD64 },
+	{ "dragonfly-swap", G_PART_ALIAS_DFBSD_SWAP },
+	{ "dragonfly-ufs", G_PART_ALIAS_DFBSD_UFS },
+	{ "dragonfly-vinum", G_PART_ALIAS_DFBSD_VINUM },
+	{ "dragonfly-ccd", G_PART_ALIAS_DFBSD_CCD },
+	{ "dragonfly-legacy", G_PART_ALIAS_DFBSD_LEGACY },
+	{ "dragonfly-hammer", G_PART_ALIAS_DFBSD_HAMMER },
+	{ "dragonfly-hammer2", G_PART_ALIAS_DFBSD_HAMMER2 },
+	{ "prep-boot", G_PART_ALIAS_PREP_BOOT },
 };
 
 SYSCTL_DECL(_kern_geom);
@@ -140,6 +152,7 @@ static g_dumpconf_t g_part_dumpconf;
 static g_orphan_t g_part_orphan;
 static g_spoiled_t g_part_spoiled;
 static g_start_t g_part_start;
+static g_resize_t g_part_resize;
 
 static struct g_class g_part_class = {
 	.name = "PART",
@@ -156,6 +169,7 @@ static struct g_class g_part_class = {
 	.orphan = g_part_orphan,
 	.spoiled = g_part_spoiled,
 	.start = g_part_start,
+	.resize = g_part_resize
 };
 
 DECLARE_GEOM_CLASS(g_part_class, g_part);
@@ -315,8 +329,10 @@ g_part_check_integrity(struct g_part_table *table, struct g_consumer *cp)
 			if (e1->gpe_offset > offset)
 				offset = e1->gpe_offset;
 			if ((offset + pp->stripeoffset) % pp->stripesize) {
-				DPRINTF("partition %d is not aligned on %u "
-				    "bytes\n", e1->gpe_index, pp->stripesize);
+				DPRINTF("partition %d on (%s, %s) is not "
+				    "aligned on %u bytes\n", e1->gpe_index,
+				    pp->name, table->gpt_scheme->name,
+				    pp->stripesize);
 				/* Don't treat this as a critical failure */
 			}
 		}
@@ -424,6 +440,7 @@ g_part_new_provider(struct g_geom *gp, struct g_part_table *table,
 		sbuf_finish(sb);
 		entry->gpe_pp = g_new_providerf(gp, "%s", sbuf_data(sb));
 		sbuf_delete(sb);
+		entry->gpe_pp->flags |= G_PF_DIRECT_SEND | G_PF_DIRECT_RECEIVE;
 		entry->gpe_pp->private = entry;		/* Close the circle. */
 	}
 	entry->gpe_pp->index = entry->gpe_index - 1;	/* index is 1-based. */
@@ -431,11 +448,11 @@ g_part_new_provider(struct g_geom *gp, struct g_part_table *table,
 	    pp->sectorsize;
 	entry->gpe_pp->mediasize -= entry->gpe_offset - offset;
 	entry->gpe_pp->sectorsize = pp->sectorsize;
-	entry->gpe_pp->flags = pp->flags & G_PF_CANDELETE;
 	entry->gpe_pp->stripesize = pp->stripesize;
 	entry->gpe_pp->stripeoffset = pp->stripeoffset + entry->gpe_offset;
 	if (pp->stripesize > 0)
 		entry->gpe_pp->stripeoffset %= pp->stripesize;
+	entry->gpe_pp->flags |= pp->flags & G_PF_ACCEPT_UNMAPPED;
 	g_error_provider(entry->gpe_pp, 0);
 }
 
@@ -444,7 +461,8 @@ g_part_find_geom(const char *name)
 {
 	struct g_geom *gp;
 	LIST_FOREACH(gp, &g_part_class.geom, geom) {
-		if (!strcmp(name, gp->name))
+		if ((gp->flags & G_GEOM_WITHER) == 0 &&
+		    strcmp(name, gp->name) == 0)
 			break;
 	}
 	return (gp);
@@ -465,10 +483,6 @@ g_part_parm_geom(struct gctl_req *req, const char *name, struct g_geom **v)
 	if (gp == NULL) {
 		gctl_error(req, "%d %s '%s'", EINVAL, name, gname);
 		return (EINVAL);
-	}
-	if ((gp->flags & G_GEOM_WITHER) != 0) {
-		gctl_error(req, "%d %s", ENXIO, gname);
-		return (ENXIO);
 	}
 	*v = gp;
 	return (0);
@@ -936,6 +950,7 @@ g_part_ctl_create(struct gctl_req *req, struct g_part_parms *gpp)
 	LIST_INIT(&table->gpt_entry);
 	if (null == NULL) {
 		cp = g_new_consumer(gp);
+		cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
 		error = g_attach(cp, pp);
 		if (error == 0)
 			error = g_access(cp, 1, 1, 1);
@@ -1265,6 +1280,7 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 	struct sbuf *sb;
 	quad_t end;
 	int error;
+	off_t mediasize;
 
 	gp = gpp->gpp_geom;
 	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, gp->name));
@@ -1309,13 +1325,18 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 	pp = entry->gpe_pp;
 	if ((g_debugflags & 16) == 0 &&
 	    (pp->acr > 0 || pp->acw > 0 || pp->ace > 0)) {
-		gctl_error(req, "%d", EBUSY);
-		return (EBUSY);
+		if (entry->gpe_end - entry->gpe_start + 1 > gpp->gpp_size) {
+			/* Deny shrinking of an opened partition. */
+			gctl_error(req, "%d", EBUSY);
+			return (EBUSY);
+		} 
 	}
 
 	error = G_PART_RESIZE(table, entry, gpp);
 	if (error) {
-		gctl_error(req, "%d", error);
+		gctl_error(req, "%d%s", error, error != EBUSY ? "":
+		    " resizing will lead to unexpected shrinking"
+		    " due to alignment");
 		return (error);
 	}
 
@@ -1323,8 +1344,9 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 		entry->gpe_modified = 1;
 
 	/* update mediasize of changed provider */
-	pp->mediasize = (entry->gpe_end - entry->gpe_start + 1) *
+	mediasize = (entry->gpe_end - entry->gpe_start + 1) *
 		pp->sectorsize;
+	g_resize_provider(pp, mediasize);
 
 	/* Provide feedback if so requested. */
 	if (gpp->gpp_parms & G_PART_PARM_OUTPUT) {
@@ -1354,16 +1376,20 @@ g_part_ctl_setunset(struct gctl_req *req, struct g_part_parms *gpp,
 
 	table = gp->softc;
 
-	LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
-		if (entry->gpe_deleted || entry->gpe_internal)
-			continue;
-		if (entry->gpe_index == gpp->gpp_index)
-			break;
-	}
-	if (entry == NULL) {
-		gctl_error(req, "%d index '%d'", ENOENT, gpp->gpp_index);
-		return (ENOENT);
-	}
+	if (gpp->gpp_parms & G_PART_PARM_INDEX) {
+		LIST_FOREACH(entry, &table->gpt_entry, gpe_entry) {
+			if (entry->gpe_deleted || entry->gpe_internal)
+				continue;
+			if (entry->gpe_index == gpp->gpp_index)
+				break;
+		}
+		if (entry == NULL) {
+			gctl_error(req, "%d index '%d'", ENOENT,
+			    gpp->gpp_index);
+			return (ENOENT);
+		}
+	} else
+		entry = NULL;
 
 	error = G_PART_SETUNSET(table, entry, gpp->gpp_attrib, set);
 	if (error) {
@@ -1376,8 +1402,11 @@ g_part_ctl_setunset(struct gctl_req *req, struct g_part_parms *gpp,
 		sb = sbuf_new_auto();
 		sbuf_printf(sb, "%s %sset on ", gpp->gpp_attrib,
 		    (set) ? "" : "un");
-		G_PART_FULLNAME(table, entry, sb, gp->name);
-		sbuf_printf(sb, "\n");
+		if (entry)
+			G_PART_FULLNAME(table, entry, sb, gp->name);
+		else
+			sbuf_cat(sb, gp->name);
+		sbuf_cat(sb, "\n");
 		sbuf_finish(sb);
 		gctl_set_param(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);
 		sbuf_delete(sb);
@@ -1583,8 +1612,8 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 	case 's':
 		if (!strcmp(verb, "set")) {
 			ctlreq = G_PART_CTL_SET;
-			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM |
-			    G_PART_PARM_INDEX;
+			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM;
+			oparms |= G_PART_PARM_INDEX;
 		}
 		break;
 	case 'u':
@@ -1594,8 +1623,8 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			modifies = 0;
 		} else if (!strcmp(verb, "unset")) {
 			ctlreq = G_PART_CTL_UNSET;
-			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM |
-			    G_PART_PARM_INDEX;
+			mparms |= G_PART_PARM_ATTRIB | G_PART_PARM_GEOM;
+			oparms |= G_PART_PARM_INDEX;
 		}
 		break;
 	}
@@ -1880,6 +1909,7 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	 */
 	gp = g_new_geomf(mp, "%s", pp->name);
 	cp = g_new_consumer(gp);
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
 	error = g_attach(cp, pp);
 	if (error == 0)
 		error = g_access(cp, 1, 0, 0);
@@ -2035,6 +2065,32 @@ g_part_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 		sbuf_printf(sb, "%s<modified>%s</modified>\n", indent,
 		    table->gpt_opened ? "true": "false");
 		G_PART_DUMPCONF(table, NULL, sb, indent);
+	}
+}
+
+static void
+g_part_resize(struct g_consumer *cp)
+{
+	struct g_part_table *table;
+
+	G_PART_TRACE((G_T_TOPOLOGY, "%s(%s)", __func__, cp->provider->name));
+	g_topology_assert();
+
+	table = cp->geom->softc;
+	if (table->gpt_opened == 0) {
+		if (g_access(cp, 1, 1, 1) != 0)
+			return;
+		table->gpt_opened = 1;
+	}
+	if (G_PART_RESIZE(table, NULL, NULL) == 0)
+		printf("GEOM_PART: %s was automatically resized.\n"
+		    "  Use `gpart commit %s` to save changes or "
+		    "`gpart undo %s` to revert them.\n", cp->geom->name,
+		    cp->geom->name, cp->geom->name);
+	if (g_part_check_integrity(table, cp) != 0) {
+		g_access(cp, -1, -1, -1);
+		table->gpt_opened = 0;
+		g_part_wither(table->gpt_gp, ENXIO);
 	}
 }
 
