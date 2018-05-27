@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Sam Leffler, Errno Consulting
  * Copyright (c) 2003 Global Technology Associates, Inc.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/safe/safevar.h 158705 2006-05-17 18:34:26Z pjd $
  */
 #ifndef _SAFE_SAFEVAR_H_
 #define	_SAFE_SAFEVAR_H_

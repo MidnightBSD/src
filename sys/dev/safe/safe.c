@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Sam Leffler, Errno Consulting
  * Copyright (c) 2003 Global Technology Associates, Inc.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/safe/safe.c 314667 2017-03-04 13:03:31Z avg $");
 
 /*
  * SafeNet SafeXcel-1141 hardware crypto accelerator
@@ -211,7 +212,7 @@ safe_partname(struct safe_softc *sc)
 static void
 default_harvest(struct rndtest_state *rsp, void *buf, u_int count)
 {
-	random_harvest(buf, count, count*NBBY, 0, RANDOM_PURE);
+	random_harvest(buf, count, count*NBBY/2, RANDOM_PURE_SAFE);
 }
 #endif /* SAFE_NO_RNG */
 
@@ -425,7 +426,7 @@ safe_attach(device_t dev)
 #endif
 		safe_rng_init(sc);
 
-		callout_init(&sc->sc_rngto, CALLOUT_MPSAFE);
+		callout_init(&sc->sc_rngto, 1);
 		callout_reset(&sc->sc_rngto, hz*safe_rnginterval, safe_rng, sc);
 	}
 #endif /* SAFE_NO_RNG */
