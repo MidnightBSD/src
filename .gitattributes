@@ -57863,6 +57863,8 @@ sys/dev/pdq/pdq_freebsd.h -text
 sys/dev/pdq/pdq_ifsubr.c -text
 sys/dev/pdq/pdqreg.h -text
 sys/dev/pdq/pdqvar.h -text
+sys/dev/powermac_nvram/powermac_nvram.c svneol=native#text/plain
+sys/dev/powermac_nvram/powermac_nvramvar.h svneol=native#text/plain
 sys/dev/ppbus/if_plip.c -text
 sys/dev/ppbus/immio.c -text
 sys/dev/ppbus/lpbb.c -text
