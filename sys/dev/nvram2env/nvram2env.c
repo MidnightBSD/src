@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Aleksandr Rybalko.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/nvram2env/nvram2env.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -303,7 +304,8 @@ static device_method_t nvram2env_methods[] = {
 	DEVMETHOD(device_identify, 	nvram2env_identify),
 	DEVMETHOD(device_probe,		nvram2env_probe),
 	DEVMETHOD(device_attach,	nvram2env_attach),
-	{0, 0},
+
+	DEVMETHOD_END
 };
 
 static driver_t nvram2env_driver = {

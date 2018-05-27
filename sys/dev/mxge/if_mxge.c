@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
 Copyright (c) 2006-2013, Myricom Inc.
@@ -28,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mxge/if_mxge.c 329834 2018-02-22 19:40:03Z rpokala $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -127,7 +128,8 @@ static device_method_t mxge_methods[] =
   DEVMETHOD(device_attach, mxge_attach),
   DEVMETHOD(device_detach, mxge_detach),
   DEVMETHOD(device_shutdown, mxge_shutdown),
-  {0, 0}
+
+  DEVMETHOD_END
 };
 
 static driver_t mxge_driver =
@@ -1466,15 +1468,15 @@ mxge_add_sysctls(mxge_softc_t *sc)
 	/* random information */
 	SYSCTL_ADD_STRING(ctx, children, OID_AUTO, 
 		       "firmware_version",
-		       CTLFLAG_RD, &sc->fw_version,
+		       CTLFLAG_RD, sc->fw_version,
 		       0, "firmware version");
 	SYSCTL_ADD_STRING(ctx, children, OID_AUTO, 
 		       "serial_number",
-		       CTLFLAG_RD, &sc->serial_number_string,
+		       CTLFLAG_RD, sc->serial_number_string,
 		       0, "serial number");
 	SYSCTL_ADD_STRING(ctx, children, OID_AUTO, 
 		       "product_code",
-		       CTLFLAG_RD, &sc->product_code_string,
+		       CTLFLAG_RD, sc->product_code_string,
 		       0, "product_code");
 	SYSCTL_ADD_INT(ctx, children, OID_AUTO, 
 		       "pcie_link_width",
@@ -2700,8 +2702,12 @@ mxge_rx_done_big(struct mxge_slice_state *ss, uint32_t len,
 	if (eh->ether_type == htons(ETHERTYPE_VLAN)) {
 		mxge_vlan_tag_remove(m, &csum);
 	}
+	/* flowid only valid if RSS hashing is enabled */
+	if (sc->num_slices > 1) {
+		m->m_pkthdr.flowid = (ss - sc->ss);
+		M_HASHTYPE_SET(m, M_HASHTYPE_OPAQUE);
+	}
 	/* if the checksum is valid, mark it in the mbuf header */
-	
 	if ((ifp->if_capenable & (IFCAP_RXCSUM_IPV6 | IFCAP_RXCSUM)) &&
 	    (0 == mxge_rx_csum(m, csum))) {
 		/* Tell the stack that the  checksum is good */
@@ -2713,11 +2719,6 @@ mxge_rx_done_big(struct mxge_slice_state *ss, uint32_t len,
 		if (lro && (0 == tcp_lro_rx(&ss->lc, m, 0)))
 			return;
 #endif
-	}
-	/* flowid only valid if RSS hashing is enabled */
-	if (sc->num_slices > 1) {
-		m->m_pkthdr.flowid = (ss - sc->ss);
-		m->m_flags |= M_FLOWID;
 	}
 	/* pass the frame up the stack */
 	(*ifp->if_input)(ifp, m);
@@ -2769,6 +2770,11 @@ mxge_rx_done_small(struct mxge_slice_state *ss, uint32_t len,
 	if (eh->ether_type == htons(ETHERTYPE_VLAN)) {
 		mxge_vlan_tag_remove(m, &csum);
 	}
+	/* flowid only valid if RSS hashing is enabled */
+	if (sc->num_slices > 1) {
+		m->m_pkthdr.flowid = (ss - sc->ss);
+		M_HASHTYPE_SET(m, M_HASHTYPE_OPAQUE);
+	}
 	/* if the checksum is valid, mark it in the mbuf header */
 	if ((ifp->if_capenable & (IFCAP_RXCSUM_IPV6 | IFCAP_RXCSUM)) &&
 	    (0 == mxge_rx_csum(m, csum))) {
@@ -2781,11 +2787,6 @@ mxge_rx_done_small(struct mxge_slice_state *ss, uint32_t len,
 		if (lro && (0 == tcp_lro_rx(&ss->lc, m, csum)))
 			return;
 #endif
-	}
-	/* flowid only valid if RSS hashing is enabled */
-	if (sc->num_slices > 1) {
-		m->m_pkthdr.flowid = (ss - sc->ss);
-		m->m_flags |= M_FLOWID;
 	}
 	/* pass the frame up the stack */
 	(*ifp->if_input)(ifp, m);
@@ -2946,7 +2947,7 @@ mxge_media_init(mxge_softc_t *sc)
 	}
 
 	for (i = 0; i < 3; i++, ptr++) {
-		ptr = index(ptr, '-');
+		ptr = strchr(ptr, '-');
 		if (ptr == NULL) {
 			device_printf(sc->dev,
 				      "only %d dashes in PC?!?\n", i);
@@ -3138,7 +3139,7 @@ mxge_intr(void *arg)
 			sc->link_state = stats->link_up;
 			if (sc->link_state) {
 				if_link_state_change(sc->ifp, LINK_STATE_UP);
-				 sc->ifp->if_baudrate = IF_Gbps(10UL);
+				if_initbaudrate(sc->ifp, IF_Gbps(10));
 				if (mxge_verbose)
 					device_printf(sc->dev, "link up\n");
 			} else {
@@ -3417,7 +3418,7 @@ mxge_alloc_slice_rings(struct mxge_slice_state *ss, int rx_ring_entries,
 		return err;
 	}
 
-	/* now allocate TX resouces */
+	/* now allocate TX resources */
 
 #ifndef IFNET_BUF_RING
 	/* only use a single TX ring for now */
@@ -3826,7 +3827,7 @@ mxge_setup_cfg_space(mxge_softc_t *sc)
 {
 	device_t dev = sc->dev;
 	int reg;
-	uint16_t cmd, lnk, pectl;
+	uint16_t lnk, pectl;
 
 	/* find the PCIe link width and set max read request to 4KB*/
 	if (pci_find_cap(dev, PCIY_EXPRESS, &reg) == 0) {
@@ -3846,9 +3847,6 @@ mxge_setup_cfg_space(mxge_softc_t *sc)
 
 	/* Enable DMA and Memory space access */
 	pci_enable_busmaster(dev);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
-	cmd |= PCIM_CMD_MEMEN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 2);
 }
 
 static uint32_t
@@ -4171,11 +4169,6 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 	err = 0;
 	switch (command) {
-	case SIOCSIFADDR:
-	case SIOCGIFADDR:
-		err = ether_ioctl(ifp, command, data);
-		break;
-
 	case SIOCSIFMTU:
 		err = mxge_change_mtu(sc, ifr->ifr_mtu);
 		break;
@@ -4299,7 +4292,8 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
                 break;
 
 	default:
-		err = ENOTTY;
+		err = ether_ioctl(ifp, command, data);
+		break;
         }
 	return err;
 }
@@ -4888,7 +4882,7 @@ mxge_attach(device_t dev)
 		goto abort_with_rings;
 	}
 
-	ifp->if_baudrate = IF_Gbps(10UL);
+	if_initbaudrate(ifp, IF_Gbps(10));
 	ifp->if_capabilities = IFCAP_RXCSUM | IFCAP_TXCSUM | IFCAP_TSO4 |
 		IFCAP_VLAN_MTU | IFCAP_LINKSTATE | IFCAP_TXCSUM_IPV6 |
 		IFCAP_RXCSUM_IPV6;

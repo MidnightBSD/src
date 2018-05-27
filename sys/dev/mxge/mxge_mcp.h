@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2006-2009, Myricom Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$MidnightBSD$
+$FreeBSD: stable/10/sys/dev/mxge/mxge_mcp.h 261455 2014-02-04 03:36:42Z eadler $
 ***************************************************************************/
 
 #ifndef _myri10ge_mcp_h
@@ -226,7 +227,7 @@ enum myri10ge_mcp_cmd_type {
      a power of 2 number of entries.  */
 
   MXGEFW_CMD_SET_INTRQ_SIZE = 13, 	/* in bytes */
-#define MXGEFW_CMD_SET_INTRQ_SIZE_FLAG_NO_STRICT_SIZE_CHECK  (1 << 31)
+#define MXGEFW_CMD_SET_INTRQ_SIZE_FLAG_NO_STRICT_SIZE_CHECK  (1U << 31)
 
   /* command to bring ethernet interface up.  Above parameters
      (plus mtu & mac address) must have been exchanged prior

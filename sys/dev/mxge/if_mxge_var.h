@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2006-2013, Myricom Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$MidnightBSD$
+$FreeBSD: stable/10/sys/dev/mxge/if_mxge_var.h 247160 2013-02-22 19:23:33Z gallatin $
 
 ***************************************************************************/
 
@@ -50,6 +51,19 @@ $MidnightBSD$
 #define IFNET_BUF_RING 1
 #endif
 
+#if (__FreeBSD_version < 1000020)
+#undef IF_Kbps
+#undef IF_Mbps
+#undef IF_Gbps
+#define	IF_Kbps(x)	((uintmax_t)(x) * 1000)	/* kilobits/sec. */
+#define	IF_Mbps(x)	(IF_Kbps((x) * 1000))	/* megabits/sec. */
+#define	IF_Gbps(x)	(IF_Mbps((x) * 1000))	/* gigabits/sec. */
+static __inline void
+if_initbaudrate(struct ifnet *ifp, uintmax_t baud)
+{
+	ifp->if_baudrate = baud;
+}
+#endif
 #ifndef VLAN_CAPABILITIES
 #define VLAN_CAPABILITIES(ifp)
 #define mxge_vlans_active(sc) (sc)->ifp->if_nvlans

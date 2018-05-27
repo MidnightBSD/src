@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Myson Technology Inc.
  * All rights reserved.
@@ -25,7 +26,7 @@
  *
  * Written by: yen_cw@myson.com.tw  available at: http://www.myson.com.tw/
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/my/if_myreg.h 199540 2009-11-19 18:43:43Z jhb $
  *
  * Myson MTD80x register definitions.
  *

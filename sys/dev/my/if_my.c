@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Written by: yen_cw@myson.com.tw
  * Copyright (c) 2002 Myson Technology Inc.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/my/if_my.c 266921 2014-05-31 11:08:22Z brueffer $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,11 +80,6 @@ static int      MY_USEIOSPACE = 1;
 
 
 #include <dev/my/if_myreg.h>
-
-#ifndef lint
-static          const char rcsid[] =
-"$Id: if_my.c,v 1.2 2013-01-08 03:53:24 laffer1 Exp $";
-#endif
 
 /*
  * Various supported device vendors/types and their names.
@@ -153,7 +149,7 @@ static device_method_t my_methods[] = {
 	DEVMETHOD(device_detach, my_detach),
 	DEVMETHOD(device_shutdown, my_shutdown),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t my_driver = {
@@ -662,10 +658,8 @@ static void
 my_setmode_mii(struct my_softc * sc, int media)
 {
 	u_int16_t       bmcr;
-	struct ifnet   *ifp;
 
 	MY_LOCK_ASSERT(sc);
-	ifp = sc->my_ifp;
 	/*
 	 * If an autoneg session is in progress, stop it.
 	 */
@@ -895,7 +889,6 @@ my_attach(device_t dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = my_ioctl;
 	ifp->if_start = my_start;

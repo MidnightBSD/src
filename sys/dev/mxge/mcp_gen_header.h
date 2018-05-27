@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2006-2007, Myricom Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$MidnightBSD$
+$FreeBSD: stable/10/sys/dev/mxge/mcp_gen_header.h 171405 2007-07-12 16:04:55Z gallatin $
 ***************************************************************************/
 
 #ifndef _mcp_gen_header_h
@@ -51,7 +52,7 @@ $MidnightBSD$
    mcp_gen_header_t gen_mcp_header = {
       .header_length = sizeof(mcp_gen_header_t),
       .mcp_type = MCP_TYPE_XXX,
-      .version = "something $Id: mcp_gen_header.h,v 1.2 2013-01-08 03:53:24 laffer1 Exp $",
+      .version = "something $Id: mcp_gen_header.h,v 1.1 2005/12/23 02:10:44 gallatin Exp $",
       .mcp_globals = (unsigned)&Globals
    };
 */

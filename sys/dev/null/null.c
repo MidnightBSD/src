@@ -2,7 +2,6 @@
 /*-
  * Copyright (c) 2000 Mark R. V. Murray & Jeroen C. van Gelderen
  * Copyright (c) 2001-2004 Mark R. V. Murray
- * Copyright (c) 2014 Eitan Adler
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/null/null.c 291215 2015-11-23 18:00:55Z smh $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,7 +37,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
-#include <sys/priv.h>
 #include <sys/disk.h>
 #include <sys/bus.h>
 #include <sys/filio.h>
@@ -49,9 +47,7 @@ __FBSDID("$FreeBSD$");
 /* For use with destroy_dev(9). */
 static struct cdev *null_dev;
 static struct cdev *zero_dev;
-static struct cdev *full_dev;
 
-static d_write_t full_write;
 static d_write_t null_write;
 static d_ioctl_t null_ioctl;
 static d_ioctl_t zero_ioctl;
@@ -74,23 +70,6 @@ static struct cdevsw zero_cdevsw = {
 	.d_flags =	D_MMAP_ANON,
 };
 
-static struct cdevsw full_cdevsw = {
-	.d_version =	D_VERSION,
-	.d_read =	zero_read,
-	.d_write =	full_write,
-	.d_ioctl =	zero_ioctl,
-	.d_name =	"full",
-};
-
-
-/* ARGSUSED */
-static int
-full_write(struct cdev *dev __unused, struct uio *uio, int flags __unused)
-{
-
-	return (ENOSPC);
-}
-
 /* ARGSUSED */
 static int
 null_write(struct cdev *dev __unused, struct uio *uio, int flags __unused)
@@ -110,9 +89,7 @@ null_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data __unused,
 
 	switch (cmd) {
 	case DIOCSKERNELDUMP:
-		error = priv_check(td, PRIV_SETDUMPER);
-		if (error == 0)
-			error = set_dumper(NULL);
+		error = set_dumper(NULL, NULL, td);
 		break;
 	case FIONBIO:
 		break;
@@ -176,9 +153,7 @@ null_modevent(module_t mod __unused, int type, void *data __unused)
 	switch(type) {
 	case MOD_LOAD:
 		if (bootverbose)
-			printf("null: <full device, null device, zero device>\n");
-		full_dev = make_dev_credf(MAKEDEV_ETERNAL_KLD, &full_cdevsw, 0,
-		    NULL, UID_ROOT, GID_WHEEL, 0666, "full");
+			printf("null: <null device, zero device>\n");
 		null_dev = make_dev_credf(MAKEDEV_ETERNAL_KLD, &null_cdevsw, 0,
 		    NULL, UID_ROOT, GID_WHEEL, 0666, "null");
 		zero_dev = make_dev_credf(MAKEDEV_ETERNAL_KLD, &zero_cdevsw, 0,
@@ -186,7 +161,6 @@ null_modevent(module_t mod __unused, int type, void *data __unused)
 		break;
 
 	case MOD_UNLOAD:
-		destroy_dev(full_dev);
 		destroy_dev(null_dev);
 		destroy_dev(zero_dev);
 		break;
