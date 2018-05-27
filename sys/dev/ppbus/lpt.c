@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 William F. Jolitz, TeleMuse
  * All rights reserved.
@@ -51,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/lpt.c 227814 2011-11-22 11:35:24Z attilio $");
 
 /*
  * Device Driver for AT parallel printer port

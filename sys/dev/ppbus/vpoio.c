@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Nicolas Souchu
  * Copyright (c) 2000 Alcove - Nicolas Souchu
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/vpoio.c 187576 2009-01-21 23:10:06Z jhb $");
 
 #ifdef _KERNEL
 #include <sys/param.h>

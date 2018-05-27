@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -23,11 +24,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/puc/puc_bfe.h 287926 2015-09-17 17:56:23Z rstone $
  */
 
 #ifndef _DEV_PUC_BFE_H_
-#define	_DEV_PUC_BFE_H
+#define	_DEV_PUC_BFE_H_
 
 #define	PUC_PCI_BARS	6
 
@@ -66,6 +67,7 @@ struct puc_softc {
 	int		sc_fastintr:1;
 	int		sc_leaving:1;
 	int		sc_polled:1;
+	int		sc_msi:1;
 
 	int		sc_ilr;
 
@@ -93,5 +95,7 @@ int puc_bus_release_resource(device_t, device_t, int, int, struct resource *);
 int puc_bus_setup_intr(device_t, device_t, struct resource *, int,
     driver_filter_t *, driver_intr_t *, void *, void **);
 int puc_bus_teardown_intr(device_t, device_t, struct resource *, void *);
+
+SYSCTL_DECL(_hw_puc);
 
 #endif /* _DEV_PUC_BFE_H_ */

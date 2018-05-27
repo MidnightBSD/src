@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2001,2002,2003 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pst/pst-pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,9 +89,7 @@ iop_pci_attach(device_t dev)
 				       RF_SHAREABLE | RF_ACTIVE);
 
     /* now setup the infrastructure to talk to the device */
-    pci_write_config(dev, PCIR_COMMAND,
-		     pci_read_config(dev, PCIR_COMMAND, 1) |
-		     PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN, 1);
+    pci_enable_busmaster(dev);
 
     sc->ibase = rman_get_virtual(sc->r_mem);
     sc->reg = (struct i2o_registers *)sc->ibase;

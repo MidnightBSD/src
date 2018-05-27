@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/if_plip.c 255471 2013-09-11 09:19:44Z glebius $");
 
 /*
  * Parallel port TCP/IP interfaces added.  I looked at the driver from
@@ -173,7 +174,7 @@ static u_char *ctxmith;
 /* Functions for the lp# interface */
 static int lpinittables(void);
 static int lpioctl(struct ifnet *, u_long, caddr_t);
-static int lpoutput(struct ifnet *, struct mbuf *, struct sockaddr *,
+static int lpoutput(struct ifnet *, struct mbuf *, const struct sockaddr *,
        struct route *);
 static void lpstop(struct lp_data *);
 static void lp_intr(void *);
@@ -410,7 +411,6 @@ lpioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	int error;
 
 	switch (cmd) {
-	case SIOCSIFDSTADDR:
 	case SIOCAIFADDR:
 	case SIOCSIFADDR:
 		if (ifa->ifa_addr->sa_family != AF_INET)
@@ -682,7 +682,7 @@ lpoutbyte(u_char byte, int spin, device_t ppbus)
 }
 
 static int
-lpoutput(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
+lpoutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
     struct route *ro)
 {
 	struct lp_data *sc = ifp->if_softc;

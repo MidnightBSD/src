@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu, Michael Smith
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/ppi.c 187576 2009-01-21 23:10:06Z jhb $");
 #include "opt_ppb_1284.h"
 
 #include <sys/param.h>

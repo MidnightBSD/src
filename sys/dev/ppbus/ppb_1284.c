@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Nicolas Souchu
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/ppb_1284.c 305555 2016-09-07 19:02:47Z dim $");
 
 /*
  * General purpose routines for the IEEE1284-1994 Standard
@@ -57,13 +58,13 @@ __MBSDID("$MidnightBSD$");
  * Wait for the peripherial up to 40ms
  */
 static int
-do_1284_wait(device_t bus, char mask, char status)
+do_1284_wait(device_t bus, uint8_t mask, uint8_t status)
 {
 	return (ppb_poll_bus(bus, 4, mask, status, PPB_NOINTR | PPB_POLL));
 }
 
 static int
-do_peripheral_wait(device_t bus, char mask, char status)
+do_peripheral_wait(device_t bus, uint8_t mask, uint8_t status)
 {
 	return (ppb_poll_bus(bus, 100, mask, status, PPB_NOINTR | PPB_POLL));
 }

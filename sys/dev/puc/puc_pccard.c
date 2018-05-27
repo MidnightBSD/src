@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp.  All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/puc/puc_pccard.c 287926 2015-09-17 17:56:23Z rstone $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,6 +35,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/malloc.h>
+#include <sys/sysctl.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
