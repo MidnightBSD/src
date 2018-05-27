@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Fredrik Lindberg <fli@shapeshifter.se>
  * All rights reserved.
@@ -24,7 +25,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/uhso.c 301447 2016-06-05 15:05:53Z pfg $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/uhso.c 301446 2016-06-05 15:03:55Z pfg $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -469,8 +470,8 @@ static void uhso_if_init(void *);
 static void uhso_if_start(struct ifnet *);
 static void uhso_if_stop(struct uhso_softc *);
 static int  uhso_if_ioctl(struct ifnet *, u_long, caddr_t);
-static int  uhso_if_output(struct ifnet *, struct mbuf *, struct sockaddr *,
-    struct route *);
+static int  uhso_if_output(struct ifnet *, struct mbuf *,
+    const struct sockaddr *, struct route *);
 static void uhso_if_rxflush(void *);
 
 static device_probe_t uhso_probe;
@@ -1857,7 +1858,6 @@ uhso_if_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		}
 		break;
 	case SIOCSIFADDR:
-	case SIOCSIFDSTADDR:
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		break;
@@ -1884,7 +1884,7 @@ uhso_if_init(void *priv)
 }
 
 static int
-uhso_if_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
+uhso_if_output(struct ifnet *ifp, struct mbuf *m0, const struct sockaddr *dst,
     struct route *ro)
 {
 	int error;

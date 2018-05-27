@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_aue.c 271356 2014-09-10 06:54:05Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_aue.c 271355 2014-09-10 06:48:23Z hselasky $");
 
 /*
  * ADMtek AN986 Pegasus and AN8511 Pegasus II USB to ethernet driver.
@@ -1006,14 +1007,15 @@ aue_ifmedia_upd(struct ifnet *ifp)
 	struct aue_softc *sc = ifp->if_softc;
 	struct mii_data *mii = GET_MII(sc);
 	struct mii_softc *miisc;
+	int error;
 
 	AUE_LOCK_ASSERT(sc, MA_OWNED);
 
         sc->sc_flags &= ~AUE_FLAG_LINK;
 	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
 		PHY_RESET(miisc);
-	mii_mediachg(mii);
-	return (0);
+	error = mii_mediachg(mii);
+	return (error);
 }
 
 /*

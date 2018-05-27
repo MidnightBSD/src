@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_udav.c,v 1.2 2003/09/04 15:17:38 tsutsui Exp $	*/
 /*	$nabe: if_udav.c,v 1.3 2003/08/21 16:57:19 nabe Exp $	*/
-/*	$FreeBSD: stable/9/sys/dev/usb/net/if_udav.c 248085 2013-03-09 02:36:32Z marius $	*/
+/*	$FreeBSD: stable/10/sys/dev/usb/net/if_udav.c 254404 2013-08-16 07:42:06Z kevlo $	*/
 /*-
  * Copyright (c) 2003
  *     Shingo WATANABE <nabe@nabechan.org>.  All rights reserved.
@@ -34,7 +35,7 @@
 /*
  * DM9601(DAVICOM USB to Ethernet MAC Controller with Integrated 10/100 PHY)
  * The spec can be found at the following url.
- *   http://www.davicom.com.tw/big5/download/Data%20Sheet/DM9601-DS-P01-930914.pdf
+ *   http://ptm2.cc.utu.fi/ftp/network/cards/DM9601/From_NET/DM9601-DS-P01-930914.pdf
  */
 
 /*
@@ -44,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_udav.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_udav.c 254404 2013-08-16 07:42:06Z kevlo $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -750,14 +751,15 @@ udav_ifmedia_upd(struct ifnet *ifp)
 	struct udav_softc *sc = ifp->if_softc;
 	struct mii_data *mii = GET_MII(sc);
 	struct mii_softc *miisc;
+	int error;
 
 	UDAV_LOCK_ASSERT(sc, MA_OWNED);
 
         sc->sc_flags &= ~UDAV_FLAG_LINK;
 	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
 		PHY_RESET(miisc);
-	mii_mediachg(mii);
-	return (0);
+	error = mii_mediachg(mii);
+	return (error);
 }
 
 static void

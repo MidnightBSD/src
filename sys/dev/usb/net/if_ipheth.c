@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2009 Diego Giagio. All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_ipheth.c 251701 2013-06-13 20:40:39Z eadler $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_ipheth.c 253670 2013-07-26 09:58:56Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -116,7 +117,7 @@ static device_method_t ipheth_methods[] = {
 	DEVMETHOD(device_attach, ipheth_attach),
 	DEVMETHOD(device_detach, ipheth_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ipheth_driver = {
@@ -149,6 +150,7 @@ static const struct usb_ether_methods ipheth_ue_methods = {
     USB_IFACE_PROTOCOL(pt)
 
 static const STRUCT_USB_HOST_ID ipheth_devs[] = {
+#if 0
 	{IPHETH_ID(USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE,
 	    IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
 	    IPHETH_USBINTF_PROTO)},
@@ -167,6 +169,13 @@ static const STRUCT_USB_HOST_ID ipheth_devs[] = {
 	{IPHETH_ID(USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE_5,
 	    IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
 	    IPHETH_USBINTF_PROTO)},
+#else
+	/* product agnostic interface match */
+	{USB_VENDOR(USB_VENDOR_APPLE),
+	 USB_IFACE_CLASS(IPHETH_USBINTF_CLASS),
+	 USB_IFACE_SUBCLASS(IPHETH_USBINTF_SUBCLASS),
+	 USB_IFACE_PROTOCOL(IPHETH_USBINTF_PROTO)},
+#endif
 };
 
 static int

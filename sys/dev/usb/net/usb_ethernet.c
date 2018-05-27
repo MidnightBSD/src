@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.c 262594 2014-02-28 01:35:24Z rodrigc $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.c 262436 2014-02-24 08:50:06Z rodrigc $ */
 /*-
  * Copyright (c) 2009 Andrew Thompson (thompsa@FreeBSD.org)
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.c 262594 2014-02-28 01:35:24Z rodrigc $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.c 262436 2014-02-24 08:50:06Z rodrigc $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -220,7 +221,6 @@ ue_attach_post_task(struct usb_proc_msg *_task)
 		ue->ue_ifp = ifp;
 		error = ue->ue_methods->ue_attach_post_sub(ue);
 	} else {
-		ifp->if_mtu = ETHERMTU;
 		ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 		if (ue->ue_methods->ue_ioctl != NULL)
 			ifp->if_ioctl = ue->ue_methods->ue_ioctl;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000-2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/net/if_axereg.h 229106 2011-12-31 14:47:35Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/usb/net/if_axereg.h 251679 2013-06-13 05:46:19Z kevlo $
  */
 
 /*
@@ -349,7 +350,6 @@ struct axe_softc {
 	uint8_t			sc_phyaddrs[2];
 	uint16_t		sc_pwrcfg;
 	uint16_t		sc_lenmask;
-	int			sc_tx_bufsz;
 };
 
 #define	AXE_IS_178_FAMILY(sc)						  \

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2014 Kevin Lo
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_axge.c 268736 2014-07-16 06:18:02Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_axge.c 268737 2014-07-16 06:20:18Z hselasky $");
 
 /*
  * ASIX Electronics AX88178A/AX88179 USB 2.0/3.0 gigabit ethernet driver.

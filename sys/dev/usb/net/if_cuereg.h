@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/net/if_cuereg.h 196219 2009-08-14 20:03:53Z jhb $
+ * $FreeBSD: stable/10/sys/dev/usb/net/if_cuereg.h 251674 2013-06-13 01:33:01Z kevlo $
  */
 
 /*
@@ -111,7 +112,7 @@
 #define	CUE_CONFIG_IDX		0	/* config number 1 */
 #define	CUE_IFACE_IDX		0
 
-/* The interrupt endpoint is currently unused by the KLSI part. */
+/* The interrupt endpoint is currently unused by the CATC part. */
 enum {
 	CUE_BULK_DT_WR,
 	CUE_BULK_DT_RD,

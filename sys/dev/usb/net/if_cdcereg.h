@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005 Craig Boston
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/net/if_cdcereg.h 221077 2011-04-26 19:40:37Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/usb/net/if_cdcereg.h 221077 2011-04-26 19:40:37Z hselasky $
  */
 
 #ifndef _USB_IF_CDCEREG_H_

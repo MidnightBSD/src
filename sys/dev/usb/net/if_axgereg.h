@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2014 Kevin Lo
  * All rights reserved.
@@ -23,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/net/if_axgereg.h 268222 2014-07-03 16:34:01Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/usb/net/if_axgereg.h 266991 2014-06-03 01:39:55Z kevlo $
  */
 
 #define	AXGE_ACCESS_MAC			0x01

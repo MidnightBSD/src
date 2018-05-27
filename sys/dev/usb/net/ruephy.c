@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003, Shunsuke Akiyama <akiyama@FreeBSD.org>.
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/ruephy.c 235000 2012-05-04 15:05:30Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/ruephy.c 233774 2012-04-02 10:50:42Z hselasky $");
 
 /*
  * driver for RealTek RTL8150 internal PHY

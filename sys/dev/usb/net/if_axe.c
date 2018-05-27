@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000-2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_axe.c 263166 2014-03-14 10:18:53Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_axe.c 252185 2013-06-25 00:26:30Z yongari $");
 
 /*
  * ASIX Electronics AX88172/AX88178/AX88778 USB 2.0 ethernet driver.
@@ -834,19 +835,15 @@ axe_attach_post(struct usb_ether *ue)
 	/* Initialize controller and get station address. */
 	if (sc->sc_flags & AXE_FLAG_178) {
 		axe_ax88178_init(sc);
-		sc->sc_tx_bufsz = 16 * 1024;
 		axe_cmd(sc, AXE_178_CMD_READ_NODEID, 0, 0, ue->ue_eaddr);
 	} else if (sc->sc_flags & AXE_FLAG_772) {
 		axe_ax88772_init(sc);
-		sc->sc_tx_bufsz = 8 * 1024;
 		axe_cmd(sc, AXE_178_CMD_READ_NODEID, 0, 0, ue->ue_eaddr);
 	} else if (sc->sc_flags & AXE_FLAG_772A) {
 		axe_ax88772a_init(sc);
-		sc->sc_tx_bufsz = 8 * 1024;
 		axe_cmd(sc, AXE_178_CMD_READ_NODEID, 0, 0, ue->ue_eaddr);
 	} else if (sc->sc_flags & AXE_FLAG_772B) {
 		axe_ax88772b_init(sc);
-		sc->sc_tx_bufsz = 8 * 1024;
 	} else
 		axe_cmd(sc, AXE_172_CMD_READ_NODEID, 0, 0, ue->ue_eaddr);
 

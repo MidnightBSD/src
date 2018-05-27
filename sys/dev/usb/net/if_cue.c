@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_cue.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_cue.c 246128 2013-01-30 18:01:20Z sbz $");
 
 /*
  * CATC USB-EL1210A USB to ethernet driver. Used in the CATC Netmate
@@ -157,7 +158,7 @@ static device_method_t cue_methods[] = {
 	DEVMETHOD(device_attach, cue_attach),
 	DEVMETHOD(device_detach, cue_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t cue_driver = {

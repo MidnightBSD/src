@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003, Shunsuke Akiyama <akiyama@FreeBSD.org>.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/net/if_ruereg.h 215335 2010-11-15 06:04:25Z kevlo $
+ * $FreeBSD: stable/10/sys/dev/usb/net/if_ruereg.h 215335 2010-11-15 06:04:25Z kevlo $
  */
 
 #define	RUE_CONFIG_IDX		0	/* config number 1 */

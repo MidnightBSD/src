@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Rick van der Zwet <info@rickvanderzwet.nl>
  *
@@ -79,7 +80,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_mos.c 248085 2013-03-09 02:36:32Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_mos.c 251734 2013-06-14 05:36:47Z kevlo $");
 
 /*
  * Moschip MCS7730/MCS7830/MCS7832 USB to Ethernet controller
@@ -526,16 +527,15 @@ mos_ifmedia_upd(struct ifnet *ifp)
 	struct mos_softc *sc = ifp->if_softc;
 	struct mii_data *mii = GET_MII(sc);
 	struct mii_softc *miisc;
+	int error;
 
 	MOS_LOCK_ASSERT(sc, MA_OWNED);
 
 	sc->mos_link = 0;
-	if (mii->mii_instance) {
-		LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
-		    mii_phy_reset(miisc);
-	}
-	mii_mediachg(mii);
-	return (0);
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		PHY_RESET(miisc);
+	error = mii_mediachg(mii);
+	return (error);
 }
 
 /*
