@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1994-1996 Søren Schmidt
+ * Copyright (c) 1994-1996 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Based heavily on /sys/kern/imgact_aout.c which is:
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/linux/imgact_linux.c 255426 2013-09-09 18:11:59Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -139,8 +140,8 @@ exec_linux_imgact(struct image_params *imgp)
 	 */
 	vmaddr = virtual_offset;
 	error = vm_map_find(&vmspace->vm_map, NULL, 0, &vmaddr,
-			    a_out->a_text + a_out->a_data + bss_size, FALSE,
-			    VM_PROT_ALL, VM_PROT_ALL, 0);
+	    a_out->a_text + a_out->a_data + bss_size, 0, VMFS_NO_SPACE,
+	    VM_PROT_ALL, VM_PROT_ALL, 0);
 	if (error)
 	    goto fail;
 
@@ -204,7 +205,7 @@ exec_linux_imgact(struct image_params *imgp)
 	if (bss_size != 0) {
 	    vmaddr = virtual_offset + a_out->a_text + a_out->a_data;
 	    error = vm_map_find(&vmspace->vm_map, NULL, 0, &vmaddr,
-				bss_size, FALSE, VM_PROT_ALL, VM_PROT_ALL, 0);
+		bss_size, 0, VMFS_NO_SPACE, VM_PROT_ALL, VM_PROT_ALL, 0);
 	    if (error)
 		goto fail;
 #ifdef DEBUG

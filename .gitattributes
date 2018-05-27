@@ -59454,6 +59454,7 @@ sys/i386/linux/linux_syscalls.c -text
 sys/i386/linux/linux_sysent.c -text
 sys/i386/linux/linux_systrace_args.c -text
 sys/i386/linux/linux_sysvec.c -text
+sys/i386/linux/linux_vdso.lds.s svneol=native#text/plain
 sys/i386/linux/syscalls.conf -text
 sys/i386/linux/syscalls.master -text
 sys/i386/pci/pci_bus.c -text

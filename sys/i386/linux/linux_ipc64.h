@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/linux/linux_ipc64.h 104893 2002-10-11 11:43:09Z sobomax $
  */
 
 #ifndef _I386_LINUX_LINUX_IPC64_H_
