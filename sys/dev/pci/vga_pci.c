@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -10,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pci/vga_pci.c 284503 2015-06-17 07:41:53Z hselasky $");
 
 /*
  * Simple driver for PCI VGA display devices.  Drivers such as agp(4) and
@@ -46,6 +44,11 @@ __MBSDID("$MidnightBSD$");
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
+#if defined(__amd64__) || defined(__i386__) || defined(__ia64__)
+#include <vm/vm.h>
+#include <vm/pmap.h>
+#endif
+
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
@@ -56,22 +59,153 @@ struct vga_resource {
 
 struct vga_pci_softc {
 	device_t	vga_msi_child;	/* Child driver using MSI. */
-	struct vga_resource vga_res[PCIR_MAX_BAR_0 + 1];
+	struct vga_resource vga_bars[PCIR_MAX_BAR_0 + 1];
+	struct vga_resource vga_bios;
 };
 
 SYSCTL_DECL(_hw_pci);
+
+static struct vga_resource *lookup_res(struct vga_pci_softc *sc, int rid);
+static struct resource *vga_pci_alloc_resource(device_t dev, device_t child,
+    int type, int *rid, u_long start, u_long end, u_long count, u_int flags);
+static int	vga_pci_release_resource(device_t dev, device_t child, int type,
+    int rid, struct resource *r);
 
 int vga_pci_default_unit = -1;
 TUNABLE_INT("hw.pci.default_vgapci_unit", &vga_pci_default_unit);
 SYSCTL_INT(_hw_pci, OID_AUTO, default_vgapci_unit, CTLFLAG_RDTUN,
     &vga_pci_default_unit, -1, "Default VGA-compatible display");
 
+int
+vga_pci_is_boot_display(device_t dev)
+{
+	int unit;
+	device_t pcib;
+	uint16_t config;
+
+	/* Check that the given device is a video card */
+	if ((pci_get_class(dev) != PCIC_DISPLAY &&
+	    (pci_get_class(dev) != PCIC_OLD ||
+	     pci_get_subclass(dev) != PCIS_OLD_VGA)))
+		return (0);
+
+	unit = device_get_unit(dev);
+
+	if (vga_pci_default_unit >= 0) {
+		/*
+		 * The boot display device was determined by a previous
+		 * call to this function, or the user forced it using
+		 * the hw.pci.default_vgapci_unit tunable.
+		 */
+		return (vga_pci_default_unit == unit);
+	}
+
+	/*
+	 * The primary video card used as a boot display must have the
+	 * "I/O" and "Memory Address Space Decoding" bits set in its
+	 * Command register.
+	 *
+	 * Furthermore, if the card is attached to a bridge, instead of
+	 * the root PCI bus, the bridge must have the "VGA Enable" bit
+	 * set in its Control register.
+	 */
+
+	pcib = device_get_parent(device_get_parent(dev));
+	if (device_get_devclass(device_get_parent(pcib)) ==
+	    devclass_find("pci")) {
+		/*
+		 * The parent bridge is a PCI-to-PCI bridge: check the
+		 * value of the "VGA Enable" bit.
+		 */
+		config = pci_read_config(pcib, PCIR_BRIDGECTL_1, 2);
+		if ((config & PCIB_BCR_VGA_ENABLE) == 0)
+			return (0);
+	}
+
+	config = pci_read_config(dev, PCIR_COMMAND, 2);
+	if ((config & (PCIM_CMD_PORTEN | PCIM_CMD_MEMEN)) == 0)
+		return (0);
+
+	/*
+	 * Disable interrupts until a chipset driver is loaded for
+	 * this PCI device. Else unhandled display adapter interrupts
+	 * might freeze the CPU.
+	 */
+	pci_write_config(dev, PCIR_COMMAND, config | PCIM_CMD_INTxDIS, 2);
+
+	/* This video card is the boot display: record its unit number. */
+	vga_pci_default_unit = unit;
+	device_set_flags(dev, 1);
+
+	return (1);
+}
+
+void *
+vga_pci_map_bios(device_t dev, size_t *size)
+{
+	int rid;
+	struct resource *res;
+
+#if defined(__amd64__) || defined(__i386__) || defined(__ia64__)
+	if (vga_pci_is_boot_display(dev)) {
+		/*
+		 * On x86, the System BIOS copy the default display
+		 * device's Video BIOS at a fixed location in system
+		 * memory (0xC0000, 128 kBytes long) at boot time.
+		 *
+		 * We use this copy for the default boot device, because
+		 * the original ROM may not be valid after boot.
+		 */
+
+		*size = VGA_PCI_BIOS_SHADOW_SIZE;
+		return (pmap_mapbios(VGA_PCI_BIOS_SHADOW_ADDR, *size));
+	}
+#endif
+
+	rid = PCIR_BIOS;
+	res = vga_pci_alloc_resource(dev, NULL, SYS_RES_MEMORY, &rid, 0ul,
+	    ~0ul, 1, RF_ACTIVE);
+	if (res == NULL) {
+		return (NULL);
+	}
+
+	*size = rman_get_size(res);
+	return (rman_get_virtual(res));
+}
+
+void
+vga_pci_unmap_bios(device_t dev, void *bios)
+{
+	struct vga_resource *vr;
+
+	if (bios == NULL) {
+		return;
+	}
+
+#if defined(__amd64__) || defined(__i386__) || defined(__ia64__)
+	if (vga_pci_is_boot_display(dev)) {
+		/* We mapped the BIOS shadow copy located at 0xC0000. */
+		pmap_unmapdev((vm_offset_t)bios, VGA_PCI_BIOS_SHADOW_SIZE);
+
+		return;
+	}
+#endif
+
+	/*
+	 * Look up the PCIR_BIOS resource in our softc.  It should match
+	 * the address we returned previously.
+	 */
+	vr = lookup_res(device_get_softc(dev), PCIR_BIOS);
+	KASSERT(vr->vr_res != NULL, ("vga_pci_unmap_bios: bios not mapped"));
+	KASSERT(rman_get_virtual(vr->vr_res) == bios,
+	    ("vga_pci_unmap_bios: mismatch"));
+	vga_pci_release_resource(dev, NULL, SYS_RES_MEMORY, PCIR_BIOS,
+	    vr->vr_res);
+}
+
 static int
 vga_pci_probe(device_t dev)
 {
-	device_t bdev;
-	int unit;
-	uint16_t bctl;
 
 	switch (pci_get_class(dev)) {
 	case PCIC_DISPLAY:
@@ -85,13 +219,7 @@ vga_pci_probe(device_t dev)
 	}
 
 	/* Probe default display. */
-	unit = device_get_unit(dev);
-	bdev = device_get_parent(device_get_parent(dev));
-	bctl = pci_read_config(bdev, PCIR_BRIDGECTL_1, 2);
-	if (vga_pci_default_unit < 0 && (bctl & PCIB_BCR_VGA_ENABLE) != 0)
-		vga_pci_default_unit = unit;
-	if (vga_pci_default_unit == unit)
-		device_set_flags(dev, 1);
+	vga_pci_is_boot_display(dev);
 
 	device_set_desc(dev, "VGA-compatible display");
 	return (BUS_PROBE_GENERIC);
@@ -107,6 +235,10 @@ vga_pci_attach(device_t dev)
 	device_add_child(dev, "drm", -1);
 	device_add_child(dev, "drmn", -1);
 	bus_generic_attach(dev);
+
+	if (vga_pci_is_boot_display(dev))
+		device_printf(dev, "Boot video device\n");
+
 	return (0);
 }
 
@@ -156,12 +288,24 @@ vga_pci_teardown_intr(device_t dev, device_t child, struct resource *irq,
 	return (BUS_TEARDOWN_INTR(device_get_parent(dev), dev, irq, cookie));
 }
 
+static struct vga_resource *
+lookup_res(struct vga_pci_softc *sc, int rid)
+{
+	int bar;
+
+	if (rid == PCIR_BIOS)
+		return (&sc->vga_bios);
+	bar = PCI_RID2BAR(rid);
+	if (bar >= 0 && bar <= PCIR_MAX_BAR_0)
+		return (&sc->vga_bars[bar]);
+	return (NULL);
+}
+
 static struct resource *
 vga_pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
     u_long start, u_long end, u_long count, u_int flags)
 {
-	struct vga_pci_softc *sc;
-	int bar;
+	struct vga_resource *vr;
 
 	switch (type) {
 	case SYS_RES_MEMORY:
@@ -170,16 +314,15 @@ vga_pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
 		 * For BARs, we cache the resource so that we only allocate it
 		 * from the PCI bus once.
 		 */
-		bar = PCI_RID2BAR(*rid);
-		if (bar < 0 || bar > PCIR_MAX_BAR_0)
+		vr = lookup_res(device_get_softc(dev), *rid);
+		if (vr == NULL)
 			return (NULL);
-		sc = device_get_softc(dev);
-		if (sc->vga_res[bar].vr_res == NULL)
-			sc->vga_res[bar].vr_res = bus_alloc_resource(dev, type,
-			    rid, start, end, count, flags);
-		if (sc->vga_res[bar].vr_res != NULL)
-			sc->vga_res[bar].vr_refs++;
-		return (sc->vga_res[bar].vr_res);
+		if (vr->vr_res == NULL)
+			vr->vr_res = bus_alloc_resource(dev, type, rid, start,
+			    end, count, flags);
+		if (vr->vr_res != NULL)
+			vr->vr_refs++;
+		return (vr->vr_res);
 	}
 	return (bus_alloc_resource(dev, type, rid, start, end, count, flags));
 }
@@ -188,8 +331,8 @@ static int
 vga_pci_release_resource(device_t dev, device_t child, int type, int rid,
     struct resource *r)
 {
-	struct vga_pci_softc *sc;
-	int bar, error;
+	struct vga_resource *vr;
+	int error;
 
 	switch (type) {
 	case SYS_RES_MEMORY:
@@ -198,24 +341,22 @@ vga_pci_release_resource(device_t dev, device_t child, int type, int rid,
 		 * For BARs, we release the resource from the PCI bus
 		 * when the last child reference goes away.
 		 */
-		bar = PCI_RID2BAR(rid);
-		if (bar < 0 || bar > PCIR_MAX_BAR_0)
+		vr = lookup_res(device_get_softc(dev), rid);
+		if (vr == NULL)
 			return (EINVAL);
-		sc = device_get_softc(dev);
-		if (sc->vga_res[bar].vr_res == NULL)
+		if (vr->vr_res == NULL)
 			return (EINVAL);
-		KASSERT(sc->vga_res[bar].vr_res == r,
-		    ("vga_pci resource mismatch"));
-		if (sc->vga_res[bar].vr_refs > 1) {
-			sc->vga_res[bar].vr_refs--;
+		KASSERT(vr->vr_res == r, ("vga_pci resource mismatch"));
+		if (vr->vr_refs > 1) {
+			vr->vr_refs--;
 			return (0);
 		}
-		KASSERT(sc->vga_res[bar].vr_refs > 0,
+		KASSERT(vr->vr_refs > 0,
 		    ("vga_pci resource reference count underflow"));
 		error = bus_release_resource(dev, type, rid, r);
 		if (error == 0) {
-			sc->vga_res[bar].vr_res = NULL;
-			sc->vga_res[bar].vr_refs = 0;
+			vr->vr_res = NULL;
+			vr->vr_refs = 0;
 		}
 		return (error);
 	}
@@ -315,11 +456,27 @@ vga_pci_assign_interrupt(device_t dev, device_t child)
 }
 
 static int
+vga_pci_find_cap(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+
+	return (pci_find_cap(dev, capability, capreg));
+}
+
+static int
 vga_pci_find_extcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
 
 	return (pci_find_extcap(dev, capability, capreg));
+}
+
+static int
+vga_pci_find_htcap(device_t dev, device_t child, int capability,
+    int *capreg)
+{
+
+	return (pci_find_htcap(dev, capability, capreg));
 }
 
 static int
@@ -431,7 +588,9 @@ static device_method_t vga_pci_methods[] = {
 	DEVMETHOD(pci_get_powerstate,	vga_pci_get_powerstate),
 	DEVMETHOD(pci_set_powerstate,	vga_pci_set_powerstate),
 	DEVMETHOD(pci_assign_interrupt,	vga_pci_assign_interrupt),
+	DEVMETHOD(pci_find_cap,		vga_pci_find_cap),
 	DEVMETHOD(pci_find_extcap,	vga_pci_find_extcap),
+	DEVMETHOD(pci_find_htcap,	vga_pci_find_htcap),
 	DEVMETHOD(pci_alloc_msi,	vga_pci_alloc_msi),
 	DEVMETHOD(pci_alloc_msix,	vga_pci_alloc_msix),
 	DEVMETHOD(pci_remap_msix,	vga_pci_remap_msix),

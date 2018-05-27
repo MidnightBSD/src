@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 2000 Doug Rabson
 # All rights reserved.
@@ -23,11 +24,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/pci/pcib_if.m 279472 2015-03-01 04:28:30Z rstone $
 #
 
 #include <sys/bus.h>
+#include <sys/rman.h>
 #include <dev/pci/pcivar.h>
+#include <dev/pci/pcib_private.h>
 
 INTERFACE pcib;
 
@@ -45,6 +48,14 @@ CODE {
 METHOD int maxslots {
 	device_t	dev;
 };
+
+#
+#
+# Return the number of functions on the attached PCI bus.
+#
+METHOD int maxfuncs {
+	device_t	dev;
+} DEFAULT pcib_maxfuncs;
 
 #
 # Read configuration space on the PCI bus. The bus, slot and func
@@ -154,3 +165,21 @@ METHOD int power_for_sleep {
 	device_t	dev;
 	int		*pstate;
 };
+
+#
+# Return the PCI Routing Identifier (RID) for the device.
+#
+METHOD uint16_t get_rid {
+	device_t	pcib;
+	device_t	dev;
+} DEFAULT pcib_get_rid;
+
+#
+# Enable Alternative RID Interpretation if both the downstream port (pcib)
+# and the endpoint device (dev) both support it.
+#
+METHOD int try_enable_ari {
+	device_t	pcib;
+	device_t	dev;
+};
+

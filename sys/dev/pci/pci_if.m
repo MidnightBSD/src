@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 1998 Doug Rabson
 # All rights reserved.
@@ -23,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/pci/pci_if.m 294340 2016-01-19 21:08:31Z jhb $
 #
 
 #include <sys/bus.h>
@@ -35,6 +36,12 @@ CODE {
 	null_msi_count(device_t dev, device_t child)
 	{
 		return (0);
+	}
+
+	static int
+	null_msix_bar(device_t dev, device_t child)
+	{
+		return (-1);
 	}
 };
 
@@ -105,7 +112,21 @@ METHOD int assign_interrupt {
 	device_t	child;
 };
 
+METHOD int find_cap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		*capreg;
+};
+
 METHOD int find_extcap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		*capreg;
+};
+
+METHOD int find_htcap {
 	device_t	dev;
 	device_t	child;
 	int		capability;
@@ -122,6 +143,26 @@ METHOD int alloc_msix {
 	device_t	dev;
 	device_t	child;
 	int		*count;
+};
+
+METHOD void enable_msi {
+	device_t	dev;
+	device_t	child;
+	uint64_t	address;
+	uint16_t	data;
+};
+
+METHOD void enable_msix {
+	device_t	dev;
+	device_t	child;
+	u_int		index;
+	uint64_t	address;
+	uint32_t	data;
+};
+
+METHOD void disable_msi {
+	device_t	dev;
+	device_t	child;
 };
 
 METHOD int remap_msix {
@@ -145,3 +186,23 @@ METHOD int msix_count {
 	device_t	dev;
 	device_t	child;
 } DEFAULT null_msi_count;
+
+METHOD int msix_pba_bar {
+	device_t	dev;
+	device_t	child;
+} DEFAULT null_msix_bar;
+
+METHOD int msix_table_bar {
+	device_t	dev;
+	device_t	child;
+} DEFAULT null_msix_bar;
+
+METHOD uint16_t get_rid {
+	device_t	dev;
+	device_t	child;
+};
+
+METHOD void child_added {
+	device_t	dev;
+	device_t	child;
+};

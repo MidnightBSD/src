@@ -57851,6 +57851,7 @@ sys/dev/pci/pci_subr.c -text
 sys/dev/pci/pci_user.c -text
 sys/dev/pci/pcib_if.m -text
 sys/dev/pci/pcib_private.h -text
+sys/dev/pci/pcib_support.c svneol=native#text/plain
 sys/dev/pci/pcireg.h -text
 sys/dev/pci/pcivar.h -text
 sys/dev/pci/vga_pci.c -text

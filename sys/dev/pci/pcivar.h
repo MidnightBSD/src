@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/pci/pcivar.h 306520 2016-09-30 18:47:34Z jhb $
  *
  */
 
@@ -57,6 +58,7 @@ struct pci_map {
 struct vpd_readonly {
     char	keyword[2];
     char	*value;
+    int		len;
 };
 
 struct vpd_write {
@@ -123,6 +125,25 @@ struct pcicfg_ht {
     uint64_t	ht_msiaddr;	/* MSI mapping base address */
 };
 
+/* Interesting values for PCI-express */
+struct pcicfg_pcie {
+    uint8_t	pcie_location;	/* Offset of PCI-e capability registers. */
+    uint8_t	pcie_type;	/* Device type. */
+    uint16_t	pcie_flags;	/* Device capabilities register. */
+    uint16_t	pcie_device_ctl; /* Device control register. */
+    uint16_t	pcie_link_ctl;	/* Link control register. */
+    uint16_t	pcie_slot_ctl;	/* Slot control register. */
+    uint16_t	pcie_root_ctl;	/* Root control register. */
+    uint16_t	pcie_device_ctl2; /* Second device control register. */
+    uint16_t	pcie_link_ctl2;	/* Second link control register. */
+    uint16_t	pcie_slot_ctl2;	/* Second slot control register. */
+};
+
+struct pcicfg_pcix {
+    uint16_t	pcix_command;
+    uint8_t	pcix_location;	/* Offset of PCI-X capability registers. */
+};
+
 /* config header information common to all header types */
 typedef struct pcicfg {
     struct device *dev;		/* device which owns this */
@@ -164,14 +185,11 @@ typedef struct pcicfg {
     struct pcicfg_msi msi;	/* PCI MSI */
     struct pcicfg_msix msix;	/* PCI MSI-X */
     struct pcicfg_ht ht;	/* HyperTransport */
+    struct pcicfg_pcie pcie;	/* PCI Express */
+    struct pcicfg_pcix pcix;	/* PCI-X */
 } pcicfgregs;
 
 /* additional type 1 device config header information (PCI to PCI bridge) */
-
-#define	PCI_PPBMEMBASE(h,l)  ((((pci_addr_t)(h) << 32) + ((l)<<16)) & ~0xfffff)
-#define	PCI_PPBMEMLIMIT(h,l) ((((pci_addr_t)(h) << 32) + ((l)<<16)) | 0xfffff)
-#define	PCI_PPBIOBASE(h,l)   ((((h)<<16) + ((l)<<8)) & ~0xfff)
-#define	PCI_PPBIOLIMIT(h,l)  ((((h)<<16) + ((l)<<8)) | 0xfff)
 
 typedef struct {
     pci_addr_t	pmembase;	/* base address of prefetchable memory */
@@ -350,9 +368,9 @@ pci_get_vpd_ident(device_t dev, const char **identptr)
 }
 
 static __inline int
-pci_get_vpd_readonly(device_t dev, const char *kw, const char **identptr)
+pci_get_vpd_readonly(device_t dev, const char *kw, const char **vptr)
 {
-    return(PCI_GET_VPD_READONLY(device_get_parent(dev), dev, kw, identptr));
+    return(PCI_GET_VPD_READONLY(device_get_parent(dev), dev, kw, vptr));
 }
 
 /*
@@ -409,13 +427,19 @@ pci_get_powerstate(device_t dev)
 static __inline int
 pci_find_cap(device_t dev, int capability, int *capreg)
 {
-    return (PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg));
+    return (PCI_FIND_CAP(device_get_parent(dev), dev, capability, capreg));
 }
 
 static __inline int
 pci_find_extcap(device_t dev, int capability, int *capreg)
 {
     return (PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg));
+}
+
+static __inline int
+pci_find_htcap(device_t dev, int capability, int *capreg)
+{
+    return (PCI_FIND_HTCAP(device_get_parent(dev), dev, capability, capreg));
 }
 
 static __inline int
@@ -428,6 +452,24 @@ static __inline int
 pci_alloc_msix(device_t dev, int *count)
 {
     return (PCI_ALLOC_MSIX(device_get_parent(dev), dev, count));
+}
+
+static __inline void
+pci_enable_msi(device_t dev, uint64_t address, uint16_t data)
+{
+    PCI_ENABLE_MSI(device_get_parent(dev), dev, address, data);
+}
+
+static __inline void
+pci_enable_msix(device_t dev, u_int index, uint64_t address, uint32_t data)
+{
+    PCI_ENABLE_MSIX(device_get_parent(dev), dev, index, address, data);
+}
+
+static __inline void
+pci_disable_msi(device_t dev)
+{
+    PCI_DISABLE_MSI(device_get_parent(dev), dev);
 }
 
 static __inline int
@@ -454,6 +496,31 @@ pci_msix_count(device_t dev)
     return (PCI_MSIX_COUNT(device_get_parent(dev), dev));
 }
 
+static __inline int
+pci_msix_pba_bar(device_t dev)
+{
+    return (PCI_MSIX_PBA_BAR(device_get_parent(dev), dev));
+}
+
+static __inline int
+pci_msix_table_bar(device_t dev)
+{
+    return (PCI_MSIX_TABLE_BAR(device_get_parent(dev), dev));
+}
+
+static __inline uint16_t
+pci_get_rid(device_t dev)
+{
+	return (PCI_GET_RID(device_get_parent(dev), dev));
+}
+
+static __inline void
+pci_child_added(device_t dev)
+{
+
+    return (PCI_CHILD_ADDED(device_get_parent(dev), dev));
+}
+
 device_t pci_find_bsf(uint8_t, uint8_t, uint8_t);
 device_t pci_find_dbsf(uint32_t, uint8_t, uint8_t, uint8_t);
 device_t pci_find_device(uint16_t, uint16_t);
@@ -463,13 +530,31 @@ device_t pci_find_class(uint8_t class, uint8_t subclass);
 int	pci_pending_msix(device_t dev, u_int index);
 
 int	pci_msi_device_blacklisted(device_t dev);
+int	pci_msix_device_blacklisted(device_t dev);
 
 void	pci_ht_map_msi(device_t dev, uint64_t addr);
 
+device_t pci_find_pcie_root_port(device_t dev);
+int	pci_get_max_payload(device_t dev);
 int	pci_get_max_read_req(device_t dev);
 void	pci_restore_state(device_t dev);
 void	pci_save_state(device_t dev);
 int	pci_set_max_read_req(device_t dev, int size);
+uint32_t pcie_read_config(device_t dev, int reg, int width);
+void	pcie_write_config(device_t dev, int reg, uint32_t value, int width);
+uint32_t pcie_adjust_config(device_t dev, int reg, uint32_t mask,
+	    uint32_t value, int width);
+bool	pcie_flr(device_t dev, u_int max_delay, bool force);
+int	pcie_get_max_completion_timeout(device_t dev);
+bool	pcie_wait_for_pending_transactions(device_t dev, u_int max_delay);
+
+#ifdef BUS_SPACE_MAXADDR
+#if (BUS_SPACE_MAXADDR > 0xFFFFFFFF)
+#define	PCI_DMA_BOUNDARY	0x100000000
+#else
+#define	PCI_DMA_BOUNDARY	0
+#endif
+#endif
 
 #endif	/* _SYS_BUS_H_ */
 
@@ -488,5 +573,13 @@ extern uint32_t	pci_generation;
 
 struct pci_map *pci_find_bar(device_t dev, int reg);
 int	pci_bar_enabled(device_t dev, struct pci_map *pm);
+struct pcicfg_vpd *pci_fetch_vpd_list(device_t dev);
+
+#define	VGA_PCI_BIOS_SHADOW_ADDR	0xC0000
+#define	VGA_PCI_BIOS_SHADOW_SIZE	131072
+
+int	vga_pci_is_boot_display(device_t dev);
+void *	vga_pci_map_bios(device_t dev, size_t *size);
+void	vga_pci_unmap_bios(device_t dev, void *bios);
 
 #endif /* _PCIVAR_H_ */

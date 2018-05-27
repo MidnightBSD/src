@@ -1,7 +1,6 @@
 /* $MidnightBSD$ */
-/*-
- * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
- * Copyright (c) 2000 BSDi
+/*
+ * Copyright (c) 2014 Sandvine Inc.  All rights reserved.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,47 +26,44 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pci/ignore_pci.c 129876 2004-05-30 17:57:46Z phk $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pci/pcib_support.c 279470 2015-03-01 04:22:06Z rstone $");
 
 /*
- * 'Ignore' driver - eats devices that show up errnoeously on PCI
- * but shouldn't ever be listed or handled by a driver.
+ * Support functions for the PCI:PCI bridge driver.  This has to be in a
+ * separate file because kernel configurations end up referencing the functions
+ * here even when pci support is compiled out of the kernel.
  */
 
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/module.h>
+#include <sys/rman.h>
+#include <sys/sysctl.h>
+#include <sys/systm.h>
 
 #include <dev/pci/pcivar.h>
+#include <dev/pci/pcireg.h>
+#include <dev/pci/pcib_private.h>
 
-static int	ignore_pci_probe(device_t dev);
+#include "pcib_if.h"
 
-static device_method_t ignore_pci_methods[] = {
-    /* Device interface */
-    DEVMETHOD(device_probe,		ignore_pci_probe),
-    DEVMETHOD(device_attach,		bus_generic_attach),
-    { 0, 0 }
-};
-
-static driver_t ignore_pci_driver = {
-    "ignore_pci",
-    ignore_pci_methods,
-    0,
-};
-
-static devclass_t ignore_pci_devclass;
-
-DRIVER_MODULE(ignore_pci, pci, ignore_pci_driver, ignore_pci_devclass, 0, 0);
-
-static int
-ignore_pci_probe(device_t dev)
+int
+pcib_maxfuncs(device_t dev)
 {
-    switch (pci_get_devid(dev)) {
-    case 0x10001042ul:	/* SMC 37C665 */
-	device_set_desc(dev, "ignored");
-	device_quiet(dev);
-	return(-10000);
-    }
-    return(ENXIO);
+	return (PCI_FUNCMAX);
 }
+
+uint16_t
+pcib_get_rid(device_t pcib, device_t dev)
+{
+	uint8_t bus, slot, func;
+
+	bus = pci_get_bus(dev);
+	slot = pci_get_slot(dev);
+	func = pci_get_function(dev);
+
+	return (PCI_RID(bus, slot, func));
+}
+
