@@ -58663,6 +58663,11 @@ sys/dev/xen/xenpci/xenpcivar.h -text
 sys/dev/xl/if_xl.c -text
 sys/dev/xl/if_xlreg.h -text
 sys/dev/xl/xlphy.c -text
+sys/fs/autofs/autofs.c svneol=native#text/plain
+sys/fs/autofs/autofs.h svneol=native#text/plain
+sys/fs/autofs/autofs_ioctl.h svneol=native#text/plain
+sys/fs/autofs/autofs_vfsops.c svneol=native#text/plain
+sys/fs/autofs/autofs_vnops.c svneol=native#text/plain
 sys/fs/cd9660/TODO -text
 sys/fs/cd9660/TODO.hibler -text
 sys/fs/cd9660/cd9660_bmap.c -text
