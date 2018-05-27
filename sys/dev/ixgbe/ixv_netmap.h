@@ -31,25 +31,28 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_82598.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/10/sys/dev/ixgbe/ixv_netmap.h 323830 2017-09-20 21:22:20Z marius $*/
 
-#ifndef _IXGBE_82598_H_
-#define _IXGBE_82598_H_
 
-u32 ixgbe_get_pcie_msix_count_82598(struct ixgbe_hw *hw);
-s32 ixgbe_fc_enable_82598(struct ixgbe_hw *hw);
-s32 ixgbe_start_hw_82598(struct ixgbe_hw *hw);
-void ixgbe_enable_relaxed_ordering_82598(struct ixgbe_hw *hw);
-s32 ixgbe_set_vmdq_82598(struct ixgbe_hw *hw, u32 rar, u32 vmdq);
-s32 ixgbe_set_vfta_82598(struct ixgbe_hw *hw, u32 vlan, u32 vind, bool vlan_on,
-			 bool vlvf_bypass);
-s32 ixgbe_read_analog_reg8_82598(struct ixgbe_hw *hw, u32 reg, u8 *val);
-s32 ixgbe_write_analog_reg8_82598(struct ixgbe_hw *hw, u32 reg, u8 val);
-s32 ixgbe_read_i2c_eeprom_82598(struct ixgbe_hw *hw, u8 byte_offset,
-				u8 *eeprom_data);
-u32 ixgbe_get_supported_physical_layer_82598(struct ixgbe_hw *hw);
-s32 ixgbe_init_phy_ops_82598(struct ixgbe_hw *hw);
-void ixgbe_set_lan_id_multi_port_pcie_82598(struct ixgbe_hw *hw);
-void ixgbe_set_pcie_completion_timeout(struct ixgbe_hw *hw);
-s32 ixgbe_enable_rx_dma_82598(struct ixgbe_hw *hw, u32 regval);
-#endif /* _IXGBE_82598_H_ */
+#ifndef _IXV_NETMAP_H_
+#define _IXV_NETMAP_H_
+
+#ifdef DEV_NETMAP
+
+#include <net/netmap.h>
+#include <sys/selinfo.h>
+#include <dev/netmap/netmap_kern.h>
+
+/*
+ * ixv_netmap.c contains functions for netmap
+ * support that extend the standard driver.  See additional
+ * comments in ixv_netmap.c.
+ */
+void ixv_netmap_attach(struct adapter *adapter);
+
+#else
+#define ixv_netmap_attach(a)
+#define netmap_detach(a)
+#endif /* DEV_NETMAP */
+
+#endif /* _IXV_NETMAP_H_ */

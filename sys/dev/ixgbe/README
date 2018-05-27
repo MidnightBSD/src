@@ -1,6 +1,7 @@
 FreeBSD Driver for Intel(R) Ethernet 10 Gigabit PCI Express Server Adapters
 ============================================================================
-/*$FreeBSD: release/9.2.0/sys/dev/ixgbe/README 252898 2013-07-06 21:38:55Z jfv $*/
+/*$FreeBSD: stable/10/sys/dev/ixgbe/README 251964 2013-06-18 21:28:19Z jfv $*/
+$MidnightBSD$
 
 Jun 18, 2013
 
