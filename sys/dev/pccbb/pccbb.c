@@ -76,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pccbb/pccbb.c 284034 2015-06-05 17:05:09Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -98,6 +98,7 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
+#include <dev/pci/pcib_private.h>
 
 #include <dev/pccard/pccardreg.h>
 #include <dev/pccard/pccardvar.h>
@@ -461,6 +462,13 @@ cbb_event_thread(void *arg)
 	int err;
 	int not_a_card = 0;
 
+	/*
+	 * We need to act as a power sequencer on startup.  Delay 2s/channel
+	 * to ensure the other channels have had a chance to come up.  We likely
+	 * should add a lock that's shared on a per-slot basis so that only
+	 * one power event can happen per slot at a time.
+	 */
+	pause("cbbstart", hz * device_get_unit(sc->dev) * 2);
 	mtx_lock(&sc->mtx);
 	sc->flags |= CBB_KTHREAD_RUNNING;
 	while ((sc->flags & CBB_KTHREAD_DONE) == 0) {
@@ -989,8 +997,6 @@ cbb_cardbus_reset_power(device_t brdev, device_t child, int on)
 	 * a cardbus bus, so that's the only register we check here.
 	 */
 	if (on && CBB_CARD_PRESENT(cbb_get(sc, CBB_SOCKET_STATE))) {
-		/*
-		 */
 		PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL,
 		    &~CBBM_BRIDGECTRL_RESET, 2);
 		b = pcib_get_bus(child);
@@ -1032,6 +1038,13 @@ cbb_cardbus_power_disable_socket(device_t brdev, device_t child)
 /* CardBus Resource							*/
 /************************************************************************/
 
+static void
+cbb_activate_window(device_t brdev, int type)
+{
+
+	PCI_ENABLE_IO(device_get_parent(brdev), brdev, type);
+}
+
 static int
 cbb_cardbus_io_open(device_t brdev, int win, uint32_t start, uint32_t end)
 {
@@ -1049,6 +1062,7 @@ cbb_cardbus_io_open(device_t brdev, int win, uint32_t start, uint32_t end)
 
 	pci_write_config(brdev, basereg, start, 4);
 	pci_write_config(brdev, limitreg, end, 4);
+	cbb_activate_window(brdev, SYS_RES_IOPORT);
 	return (0);
 }
 
@@ -1069,6 +1083,7 @@ cbb_cardbus_mem_open(device_t brdev, int win, uint32_t start, uint32_t end)
 
 	pci_write_config(brdev, basereg, start, 4);
 	pci_write_config(brdev, limitreg, end, 4);
+	cbb_activate_window(brdev, SYS_RES_MEMORY);
 	return (0);
 }
 
@@ -1336,7 +1351,12 @@ cbb_pcic_activate_resource(device_t brdev, device_t child, int type, int rid,
     struct resource *res)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
-	return (exca_activate_resource(&sc->exca[0], child, type, rid, res));
+	int error;
+
+	error = exca_activate_resource(&sc->exca[0], child, type, rid, res);
+	if (error == 0)
+		cbb_activate_window(brdev, type);
+	return (error);
 }
 
 static int
@@ -1528,7 +1548,7 @@ cbb_read_ivar(device_t brdev, device_t child, int which, uintptr_t *result)
 		*result = sc->domain;
 		return (0);
 	case PCIB_IVAR_BUS:
-		*result = sc->secbus;
+		*result = sc->bus.sec;
 		return (0);
 	}
 	return (ENOENT);
@@ -1537,67 +1557,14 @@ cbb_read_ivar(device_t brdev, device_t child, int which, uintptr_t *result)
 int
 cbb_write_ivar(device_t brdev, device_t child, int which, uintptr_t value)
 {
-	struct cbb_softc *sc = device_get_softc(brdev);
 
 	switch (which) {
 	case PCIB_IVAR_DOMAIN:
 		return (EINVAL);
 	case PCIB_IVAR_BUS:
-		sc->secbus = value;
-		return (0);
+		return (EINVAL);
 	}
 	return (ENOENT);
-}
-
-int
-cbb_suspend(device_t self)
-{
-	int			error = 0;
-	struct cbb_softc	*sc = device_get_softc(self);
-
-	error = bus_generic_suspend(self);
-	if (error != 0)
-		return (error);
-	cbb_set(sc, CBB_SOCKET_MASK, 0);	/* Quiet hardware */
-	sc->cardok = 0;				/* Card is bogus now */
-	return (0);
-}
-
-int
-cbb_resume(device_t self)
-{
-	int	error = 0;
-	struct cbb_softc *sc = (struct cbb_softc *)device_get_softc(self);
-	uint32_t tmp;
-
-	/*
-	 * Some BIOSes will not save the BARs for the pci chips, so we
-	 * must do it ourselves.  If the BAR is reset to 0 for an I/O
-	 * device, it will read back as 0x1, so no explicit test for
-	 * memory devices are needed.
-	 *
-	 * Note: The PCI bus code should do this automatically for us on
-	 * suspend/resume, but until it does, we have to cope.
-	 */
-	pci_write_config(self, CBBR_SOCKBASE, rman_get_start(sc->base_res), 4);
-	DEVPRINTF((self, "PCI Memory allocated: %08lx\n",
-	    rman_get_start(sc->base_res)));
-
-	sc->chipinit(sc);
-
-	/* reset interrupt -- Do we really need to do this? */
-	tmp = cbb_get(sc, CBB_SOCKET_EVENT);
-	cbb_set(sc, CBB_SOCKET_EVENT, tmp);
-
-	/* CSC Interrupt: Card detect interrupt on */
-	cbb_setb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD);
-
-	/* Signal the thread to wakeup. */
-	wakeup(&sc->intrhand);
-
-	error = bus_generic_resume(self);
-
-	return (error);
 }
 
 int

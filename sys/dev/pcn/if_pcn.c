@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Berkeley Software Design, Inc.
  * Copyright (c) 1997, 1998, 1999, 2000
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pcn/if_pcn.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * AMD Am79c972 fast ethernet PCI NIC driver. Datasheets are available
@@ -966,7 +967,7 @@ pcn_tick(xsc)
 	mii_tick(mii);
 
 	/* link just died */
-	if (sc->pcn_link & !(mii->mii_media_status & IFM_ACTIVE))
+	if (sc->pcn_link && !(mii->mii_media_status & IFM_ACTIVE))
 		sc->pcn_link = 0;
 
 	/* link just came up, restart */

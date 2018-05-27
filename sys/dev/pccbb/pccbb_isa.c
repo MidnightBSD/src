@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pccbb/pccbb_isa.c 284034 2015-06-05 17:05:09Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +51,9 @@ __FBSDID("$FreeBSD$");
 #include <machine/resource.h>
 
 #include <isa/isavar.h>
+
+#include <dev/pci/pcivar.h>
+#include <dev/pci/pcib_private.h>
 
 #include <dev/pccard/pccardreg.h>
 #include <dev/pccard/pccardvar.h>
@@ -203,13 +206,25 @@ cbb_isa_attach(device_t dev)
 	return (ENOMEM);
 }
 
+static int
+cbb_isa_suspend(device_t dev)
+{
+	return (0);
+}
+
+static int
+cbb_isa_resume(device_t dev)
+{
+	return (0);
+}
+
 static device_method_t cbb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,			cbb_isa_probe),
 	DEVMETHOD(device_attach,		cbb_isa_attach),
 	DEVMETHOD(device_detach,		cbb_detach),
-	DEVMETHOD(device_suspend,		cbb_suspend),
-	DEVMETHOD(device_resume,		cbb_resume),
+	DEVMETHOD(device_suspend,		cbb_isa_suspend),
+	DEVMETHOD(device_resume,		cbb_isa_resume),
 
 	/* bus methods */
 	DEVMETHOD(bus_read_ivar,		cbb_read_ivar),

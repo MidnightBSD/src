@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -26,7 +27,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/patm/if_patmvar.h 147256 2005-06-10 16:49:24Z brooks $
  *
  * Driver for IDT77252 (ABR) based cards like ProSum's.
  */

@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pcmcia_cis_quirks.c,v 1.6 2000/04/12 21:07:55 scw Exp $ */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pccard/pccard_cis_quirks.c 182142 2008-08-25 04:59:43Z imp $");
 
 #define	PCCARDDEBUG
 

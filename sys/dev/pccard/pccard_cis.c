@@ -1,5 +1,6 @@
-/* $NetBSD: pcmcia_cis.c,v 1.17 2000/02/10 09:01:52 chopps Exp $ */
 /* $MidnightBSD$ */
+/* $NetBSD: pcmcia_cis.c,v 1.17 2000/02/10 09:01:52 chopps Exp $ */
+/* $FreeBSD: stable/10/sys/dev/pccard/pccard_cis.c 189682 2009-03-11 08:14:44Z imp $ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.

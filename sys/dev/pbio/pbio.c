@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2000-2004
  *          Diomidis D. Spinellis, Athens, Greece
@@ -25,11 +26,11 @@
  *  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  *  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: pbio.c,v 1.2 2013-01-08 03:53:25 laffer1 Exp $
+ * $Id: pbio.c,v 1.12 2003/10/11 13:05:08 dds Exp dds $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pbio/pbio.c 183397 2008-09-27 08:51:18Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Berkeley Software Design, Inc.
  * Copyright (c) 1997, 1998, 1999, 2000
@@ -30,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/pcn/if_pcnreg.h 199560 2009-11-19 22:14:23Z jhb $
  */
 
 /*

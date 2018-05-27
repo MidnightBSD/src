@@ -1,5 +1,6 @@
-/*	$NetBSD: pcmciavar.h,v 1.12 2000/02/08 12:51:31 enami Exp $	*/
 /* $MidnightBSD$ */
+/*	$NetBSD: pcmciavar.h,v 1.12 2000/02/08 12:51:31 enami Exp $	*/
+/* $FreeBSD: stable/10/sys/dev/pccard/pccardvar.h 228471 2011-12-13 14:06:01Z ed $ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.
@@ -106,7 +107,7 @@ typedef int (*pccard_product_match_fn) (device_t dev,
  * make this inline so that we don't have to worry about dangling references
  * to it in the modules or the code.
  */
-static __inline const struct pccard_product *
+static inline const struct pccard_product *
 pccard_product_lookup(device_t dev, const struct pccard_product *tab,
     size_t ent_size, pccard_product_match_fn matchfn)
 {
@@ -150,31 +151,31 @@ pccard_product_lookup(device_t dev, const struct pccard_product *tab,
 
 /* Convenience functions */
 
-static __inline int
+static inline int
 pccard_cis_scan(device_t dev, pccard_scan_t fct, void *arg)
 {
 	return (CARD_CIS_SCAN(device_get_parent(dev), dev, fct, arg));
 }
 
-static __inline int
+static inline int
 pccard_attr_read_1(device_t dev, uint32_t offset, uint8_t *val)
 {
 	return (CARD_ATTR_READ(device_get_parent(dev), dev, offset, val));
 }
 
-static __inline int
+static inline int
 pccard_attr_write_1(device_t dev, uint32_t offset, uint8_t val)
 {
 	return (CARD_ATTR_WRITE(device_get_parent(dev), dev, offset, val));
 }
 
-static __inline int
+static inline int
 pccard_ccr_read_1(device_t dev, uint32_t offset, uint8_t *val)
 {
 	return (CARD_CCR_READ(device_get_parent(dev), dev, offset, val));
 }
 
-static __inline int
+static inline int
 pccard_ccr_write_1(device_t dev, uint32_t offset, uint8_t val)
 {
 	return (CARD_CCR_WRITE(device_get_parent(dev), dev, offset, val));
@@ -199,7 +200,7 @@ enum {
 };
 
 #define PCCARD_ACCESSOR(A, B, T)					\
-__inline static int							\
+static inline int							\
 pccard_get_ ## A(device_t dev, T *t)					\
 {									\
 	return BUS_READ_IVAR(device_get_parent(dev), dev,		\

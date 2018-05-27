@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/pccbb/pccbbvar.h,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Warner Losh.
  * Copyright (c) 2000,2001 Jonathan Chen.
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/pccbb/pccbbvar.h 284034 2015-06-05 17:05:09Z jhb $
  */
 
 /*
@@ -65,8 +65,7 @@ struct cbb_softc {
 	bus_space_handle_t bsh;
 	uint32_t	domain;
 	unsigned int	pribus;
-	unsigned int	secbus;
-	unsigned int	subbus;
+	struct pcib_secbus bus;
 	struct mtx	mtx;
 	int		cardok;
 	u_int32_t	flags;
@@ -136,11 +135,9 @@ int	cbb_read_ivar(device_t brdev, device_t child, int which,
 	    uintptr_t *result);
 int	cbb_release_resource(device_t brdev, device_t child,
 	    int type, int rid, struct resource *r);
-int	cbb_resume(device_t self);
 int	cbb_setup_intr(device_t dev, device_t child, struct resource *irq,
 	    int flags, driver_filter_t *filt, driver_intr_t *intr, void *arg,
 	    void **cookiep);
-int	cbb_suspend(device_t self);
 int	cbb_teardown_intr(device_t dev, device_t child, struct resource *irq,
 	    void *cookie);
 int	cbb_write_ivar(device_t brdev, device_t child, int which,

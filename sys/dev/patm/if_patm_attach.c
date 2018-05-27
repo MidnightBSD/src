@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/patm/if_patm_attach.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -207,7 +208,7 @@ patm_attach(device_t dev)
 	mtx_init(&sc->tst_lock, "tst lock", NULL, MTX_DEF);
 	cv_init(&sc->vcc_cv, "vcc_close");
 
-	callout_init(&sc->tst_callout, CALLOUT_MPSAFE);
+	callout_init(&sc->tst_callout, 1);
 
 	sysctl_ctx_init(&sc->sysctl_ctx);
 

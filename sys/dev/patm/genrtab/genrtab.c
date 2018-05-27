@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -31,7 +32,7 @@
  * IDT manual.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/patm/genrtab/genrtab.c 139749 2005-01-06 01:43:34Z imp $");
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -445,7 +446,7 @@ main(int argc, char *argv[])
 	printf(" */\n");
 	printf("\n");
 	printf("#include <sys/cdefs.h>\n");
-	printf("__MBSDID(\"$MidnightBSD$\");\n");
+	printf("__FBSDID(\"$FreeBSD: stable/10/sys/dev/patm/genrtab/genrtab.c 139749 2005-01-06 01:43:34Z imp $\");\n");
 	printf("\n");
 	printf("#include <sys/types.h>\n");
 	printf("\n");
