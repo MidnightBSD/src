@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/smbfs/smbfs.h 250236 2013-05-04 14:03:18Z davide $
  */
 #ifndef _SMBFS_SMBFS_H_
 #define _SMBFS_SMBFS_H_
@@ -61,10 +62,6 @@ struct smbfs_args {
 
 #include <sys/_sx.h>
 
-#ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_SMBFSMNT);
-#endif
-
 struct smbnode;
 struct smb_share;
 struct u_cred;
@@ -79,16 +76,13 @@ struct smbmount {
 	mode_t 			sm_dir_mode;
 	struct mount * 		sm_mp;
 	struct smbnode *	sm_root;
+	struct smb_dev *	sm_dev;
 	struct ucred *		sm_owner;
 	uint64_t		sm_flags;
 	long			sm_nextino;
 	struct smb_share * 	sm_share;
-/*	struct simplelock	sm_npslock;*/
 	struct smbnode *	sm_npstack[SMBFS_MAXPATHCOMP];
 	int			sm_caseopt;
-	struct sx		sm_hashlock;
-	LIST_HEAD(smbnode_hashhead, smbnode) *sm_hash;
-	u_long			sm_hashlen;
 	int			sm_didrele;
 };
 

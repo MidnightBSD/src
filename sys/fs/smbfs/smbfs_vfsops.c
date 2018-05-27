@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_vfsops.c 276002 2014-12-21 11:33:18Z trasz $
  */
 
 #include <sys/param.h>
@@ -54,18 +55,9 @@ static int smbfs_debuglevel = 0;
 
 static int smbfs_version = SMBFS_VERSION;
 
-#ifdef SMBFS_USEZONE
-#include <vm/vm.h>
-#include <vm/vm_extern.h>
-
-vm_zone_t smbfsmount_zone;
-#endif
-
 SYSCTL_NODE(_vfs, OID_AUTO, smbfs, CTLFLAG_RW, 0, "SMB/CIFS filesystem");
 SYSCTL_INT(_vfs_smbfs, OID_AUTO, version, CTLFLAG_RD, &smbfs_version, 0, "");
 SYSCTL_INT(_vfs_smbfs, OID_AUTO, debuglevel, CTLFLAG_RW, &smbfs_debuglevel, 0, "");
-
-static MALLOC_DEFINE(M_SMBFSHASH, "smbfs_hash", "SMBFS hash table");
 
 static vfs_init_t       smbfs_init;
 static vfs_uninit_t     smbfs_uninit;
@@ -131,7 +123,7 @@ smbfs_cmount(struct mntarg *ma, void * data, uint64_t flags)
 }
 
 static const char *smbfs_opts[] = {
-	"dev", "soft", "intr", "strong", "have_nls", "long",
+	"fd", "soft", "intr", "strong", "have_nls", "long",
 	"mountpoint", "rootpath", "uid", "gid", "file_mode", "dir_mode",
 	"caseopt", "errmsg", NULL
 };
@@ -144,10 +136,12 @@ smbfs_mount(struct mount *mp)
 	struct smb_share *ssp = NULL;
 	struct vnode *vp;
 	struct thread *td;
-	struct smb_cred scred;
+	struct smb_dev *dev;
+	struct smb_cred *scred;
 	int error, v;
 	char *pc, *pe;
 
+	dev = NULL;
 	td = curthread;
 	if (mp->mnt_flag & (MNT_UPDATE | MNT_ROOTFS))
 		return EOPNOTSUPP;
@@ -157,40 +151,31 @@ smbfs_mount(struct mount *mp)
 		return (EINVAL);
 	}
 
-	smb_makescred(&scred, td, td->td_ucred);
-	if (1 != vfs_scanopt(mp->mnt_optnew, "dev", "%d", &v)) {
-		vfs_mount_error(mp, "No dev option");
+	scred = smbfs_malloc_scred();
+	smb_makescred(scred, td, td->td_ucred);
+	
+	/* Ask userspace of `fd`, the file descriptor of this session */
+	if (1 != vfs_scanopt(mp->mnt_optnew, "fd", "%d", &v)) {
+		vfs_mount_error(mp, "No fd option");
+		smbfs_free_scred(scred);
 		return (EINVAL);
 	}
-	error = smb_dev2share(v, SMBM_EXEC, &scred, &ssp);
+	error = smb_dev2share(v, SMBM_EXEC, scred, &ssp, &dev);
+	smp = malloc(sizeof(*smp), M_SMBFSDATA, M_WAITOK | M_ZERO);
 	if (error) {
 		printf("invalid device handle %d (%d)\n", v, error);
-		vfs_mount_error(mp, "invalid device handle %d (%d)\n", v, error);
+		vfs_mount_error(mp, "invalid device handle %d %d\n", v, error);
+		smbfs_free_scred(scred);
+		free(smp, M_SMBFSDATA);
 		return error;
 	}
 	vcp = SSTOVC(ssp);
-	smb_share_unlock(ssp, 0);
+	smb_share_unlock(ssp);
 	mp->mnt_stat.f_iosize = SSTOVC(ssp)->vc_txmax;
-
-#ifdef SMBFS_USEZONE
-	smp = zalloc(smbfsmount_zone);
-#else
-	smp = malloc(sizeof(*smp), M_SMBFSDATA, M_WAITOK);
-#endif
-        if (smp == NULL) {
-		printf("could not alloc smbmount\n");
-		vfs_mount_error(mp, "could not alloc smbmount", v, error);
-		error = ENOMEM;
-		goto bad;
-        }
-	bzero(smp, sizeof(*smp));
-        mp->mnt_data = smp;
-	smp->sm_hash = hashinit(desiredvnodes, M_SMBFSHASH, &smp->sm_hashlen);
-	if (smp->sm_hash == NULL)
-		goto bad;
-	sx_init(&smp->sm_hashlock, "smbfsh");
+	mp->mnt_data = smp;
 	smp->sm_share = ssp;
 	smp->sm_root = NULL;
+	smp->sm_dev = dev;
 	if (1 != vfs_scanopt(mp->mnt_optnew,
 	    "caseopt", "%d", &smp->sm_caseopt)) {
 		vfs_mount_error(mp, "Invalid caseopt");
@@ -228,16 +213,15 @@ smbfs_mount(struct mount *mp)
 	vfs_flagopt(mp->mnt_optnew,
 	    "nolong", &smp->sm_flags, SMBFS_MOUNT_NO_LONG);
 
-/*	simple_lock_init(&smp->sm_npslock);*/
 	pc = mp->mnt_stat.f_mntfromname;
 	pe = pc + sizeof(mp->mnt_stat.f_mntfromname);
 	bzero(pc, MNAMELEN);
 	*pc++ = '/';
 	*pc++ = '/';
-	pc=index(strncpy(pc, vcp->vc_username, pe - pc - 2), 0);
+	pc = strchr(strncpy(pc, vcp->vc_username, pe - pc - 2), 0);
 	if (pc < pe-1) {
 		*(pc++) = '@';
-		pc = index(strncpy(pc, vcp->vc_srvname, pe - pc - 2), 0);
+		pc = strchr(strncpy(pc, vcp->vc_srvname, pe - pc - 2), 0);
 		if (pc < pe - 1) {
 			*(pc++) = '/';
 			strncpy(pc, ssp->ss_name, pe - pc - 2);
@@ -255,21 +239,20 @@ smbfs_mount(struct mount *mp)
 #ifdef DIAGNOSTIC
 	SMBERROR("mp=%p\n", mp);
 #endif
+	smbfs_free_scred(scred);
 	return error;
 bad:
-        if (smp) {
-		if (smp->sm_hash)
-			free(smp->sm_hash, M_SMBFSHASH);
-		sx_destroy(&smp->sm_hashlock);
-#ifdef SMBFS_USEZONE
-		zfree(smbfsmount_zone, smp);
-#else
-		free(smp, M_SMBFSDATA);
-#endif
-	}
 	if (ssp)
-		smb_share_put(ssp, &scred);
-        return error;
+		smb_share_put(ssp, scred);
+	smbfs_free_scred(scred);	
+	SMB_LOCK();
+	if (error && smp->sm_dev == dev) {
+		smp->sm_dev = NULL;
+		sdp_trydestroy(dev);
+	}
+	SMB_UNLOCK();
+	free(smp, M_SMBFSDATA);
+	return error;
 }
 
 /* Unmount the filesystem described by mp. */
@@ -278,7 +261,8 @@ smbfs_unmount(struct mount *mp, int mntflags)
 {
 	struct thread *td;
 	struct smbmount *smp = VFSTOSMBFS(mp);
-	struct smb_cred scred;
+	struct smb_cred *scred;
+	struct smb_dev *dev;
 	int error, flags;
 
 	SMBVDEBUG("smbfs_unmount: flags=%04x\n", mntflags);
@@ -301,24 +285,25 @@ smbfs_unmount(struct mount *mp, int mntflags)
 	} while (error == EBUSY && smp->sm_didrele != 0);
 	if (error)
 		return error;
-	smb_makescred(&scred, td, td->td_ucred);
-	error = smb_share_lock(smp->sm_share, LK_EXCLUSIVE);
+	scred = smbfs_malloc_scred();
+	smb_makescred(scred, td, td->td_ucred);
+	error = smb_share_lock(smp->sm_share);
 	if (error)
-		return error;
-	smb_share_put(smp->sm_share, &scred);
+		goto out;
+	smb_share_put(smp->sm_share, scred);
+	SMB_LOCK();
+	dev = smp->sm_dev;
+	if (!dev)
+		panic("No private data for mount point");
+	sdp_trydestroy(dev);
 	mp->mnt_data = NULL;
-
-	if (smp->sm_hash)
-		free(smp->sm_hash, M_SMBFSHASH);
-	sx_destroy(&smp->sm_hashlock);
-#ifdef SMBFS_USEZONE
-	zfree(smbfsmount_zone, smp);
-#else
+	SMB_UNLOCK();
 	free(smp, M_SMBFSDATA);
-#endif
 	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
 	MNT_IUNLOCK(mp);
+out:
+	smbfs_free_scred(scred);
 	return error;
 }
 
@@ -334,34 +319,32 @@ smbfs_root(struct mount *mp, int flags, struct vnode **vpp)
 	struct smbfattr fattr;
 	struct thread *td;
 	struct ucred *cred;
-	struct smb_cred scred;
+	struct smb_cred *scred;
 	int error;
 
 	td = curthread;
 	cred = td->td_ucred;
 
-	if (smp == NULL) {
-		SMBERROR("smp == NULL (bug in umount)\n");
-		vfs_mount_error(mp, "smp == NULL (bug in umount)");
-		return EINVAL;
-	}
 	if (smp->sm_root) {
 		*vpp = SMBTOV(smp->sm_root);
 		return vget(*vpp, LK_EXCLUSIVE | LK_RETRY, td);
 	}
-	smb_makescred(&scred, td, cred);
-	error = smbfs_smb_lookup(NULL, NULL, 0, &fattr, &scred);
+	scred = smbfs_malloc_scred();
+	smb_makescred(scred, td, cred);
+	error = smbfs_smb_lookup(NULL, NULL, 0, &fattr, scred);
 	if (error)
-		return error;
-	error = smbfs_nget(mp, NULL, "TheRooT", 7, &fattr, &vp);
+		goto out;
+	error = smbfs_nget(mp, NULL, NULL, 0, &fattr, &vp);
 	if (error)
-		return error;
+		goto out;
 	ASSERT_VOP_LOCKED(vp, "smbfs_root");
 	vp->v_vflag |= VV_ROOT;
 	np = VTOSMB(vp);
 	smp->sm_root = np;
 	*vpp = vp;
-	return 0;
+out:
+	smbfs_free_scred(scred);
+	return error;
 }
 
 /*
@@ -383,9 +366,6 @@ smbfs_quotactl(mp, cmd, uid, arg)
 int
 smbfs_init(struct vfsconf *vfsp)
 {
-#ifdef SMBFS_USEZONE
-	smbfsmount_zone = zinit("SMBFSMOUNT", sizeof(struct smbmount), 0, 0, 1);
-#endif
 	smbfs_pbuf_freecnt = nswbuf / 2 + 1;
 	SMBVDEBUG("done.\n");
 	return 0;
@@ -410,8 +390,8 @@ smbfs_statfs(struct mount *mp, struct statfs *sbp)
 	struct smbmount *smp = VFSTOSMBFS(mp);
 	struct smbnode *np = smp->sm_root;
 	struct smb_share *ssp = smp->sm_share;
-	struct smb_cred scred;
-	int error = 0;
+	struct smb_cred *scred;
+	int error;
 
 	if (np == NULL) {
 		vfs_mount_error(mp, "np == NULL");
@@ -419,14 +399,9 @@ smbfs_statfs(struct mount *mp, struct statfs *sbp)
 	}
 	
 	sbp->f_iosize = SSTOVC(ssp)->vc_txmax;		/* optimal transfer block size */
-	smb_makescred(&scred, td, td->td_ucred);
-
-	if (SMB_DIALECT(SSTOVC(ssp)) >= SMB_DIALECT_LANMAN2_0)
-		error = smbfs_smb_statfs2(ssp, sbp, &scred);
-	else
-		error = smbfs_smb_statfs(ssp, sbp, &scred);
-	if (error)
-		return error;
-	sbp->f_flags = 0;		/* copy of mount exported flags */
-	return 0;
+	scred = smbfs_malloc_scred();
+	smb_makescred(scred, td, td->td_ucred);
+	error = smbfs_smb_statfs(ssp, sbp, scred);
+	smbfs_free_scred(scred);
+	return (error);
 }

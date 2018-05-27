@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -23,13 +24,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_subr.h 294263 2016-01-18 11:47:03Z ae $
  */
 #ifndef _FS_SMBFS_SMBFS_SUBR_H_
 #define _FS_SMBFS_SMBFS_SUBR_H_
 
 #ifdef MALLOC_DECLARE
 MALLOC_DECLARE(M_SMBFSDATA);
+MALLOC_DECLARE(M_SMBFSCRED);
 #endif
 
 #define SMBFSERR(format, args...) printf("%s: "format, __func__ ,## args)
@@ -125,11 +127,10 @@ struct smbfs_fctx {
  */
 int  smbfs_smb_lock(struct smbnode *np, int op, caddr_t id,
 	off_t start, off_t end,	struct smb_cred *scred);
-int  smbfs_smb_statfs2(struct smb_share *ssp, struct statfs *sbp,
-	struct smb_cred *scred);
 int  smbfs_smb_statfs(struct smb_share *ssp, struct statfs *sbp,
 	struct smb_cred *scred);
-int  smbfs_smb_setfsize(struct smbnode *np, int newsize, struct smb_cred *scred);
+int  smbfs_smb_setfsize(struct smbnode *np, int64_t newsize,
+	struct smb_cred *scred);
 
 int  smbfs_smb_query_info(struct smbnode *np, const char *name, int len,
 	struct smbfattr *fap, struct smb_cred *scred);
@@ -178,4 +179,6 @@ void  smb_time_unix2dos(struct timespec *tsp, int tzoff, u_int16_t *ddp,
 	     u_int16_t *dtp, u_int8_t *dhp);
 void smb_dos2unixtime (u_int dd, u_int dt, u_int dh, int tzoff, struct timespec *tsp);
 
+void *smbfs_malloc_scred(void);
+void smbfs_free_scred(void *);
 #endif /* !_FS_SMBFS_SMBFS_SUBR_H_ */
