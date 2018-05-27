@@ -58958,6 +58958,7 @@ sys/geom/part/g_part.c -text
 sys/geom/part/g_part.h -text
 sys/geom/part/g_part_apm.c -text
 sys/geom/part/g_part_bsd.c -text
+sys/geom/part/g_part_bsd64.c svneol=native#text/plain
 sys/geom/part/g_part_ebr.c -text
 sys/geom/part/g_part_gpt.c -text
 sys/geom/part/g_part_if.m -text
