@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mvs/mvs.c 315813 2017-03-23 06:41:13Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -107,7 +108,7 @@ mvs_ch_probe(device_t dev)
 {
 
 	device_set_desc_copy(dev, "Marvell SATA channel");
-	return (0);
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
@@ -654,9 +655,7 @@ mvs_ch_intr_locked(void *data)
 	struct mvs_channel *ch = device_get_softc(dev);
 
 	mtx_lock(&ch->mtx);
-	xpt_batch_start(ch->sim);
 	mvs_ch_intr(data);
-	xpt_batch_done(ch->sim);
 	mtx_unlock(&ch->mtx);
 }
 
@@ -894,7 +893,7 @@ mvs_legacy_intr(device_t dev, int poll)
 		    if (ccb->ataio.dxfer_len > ch->donecount) {
 			/* Set this transfer size according to HW capabilities */
 			ch->transfersize = min(ccb->ataio.dxfer_len - ch->donecount,
-			    ch->curr[ccb->ccb_h.target_id].bytecount);
+			    ch->transfersize);
 			/* If data write command - put them */
 			if ((ccb->ccb_h.flags & CAM_DIR_MASK) == CAM_DIR_OUT) {
 				if (mvs_wait(dev, ATA_S_DRQ, ATA_S_BUSY, 1000) < 0) {
@@ -1260,19 +1259,9 @@ mvs_begin_transaction(device_t dev, union ccb *ccb)
 		mvs_set_edma_mode(dev, MVS_EDMA_OFF);
 	}
 	if (ch->numpslots == 0 || ch->basic_dma) {
-		void *buf;
-		bus_size_t size;
-
 		slot->state = MVS_SLOT_LOADING;
-		if (ccb->ccb_h.func_code == XPT_ATA_IO) {
-			buf = ccb->ataio.data_ptr;
-			size = ccb->ataio.dxfer_len;
-		} else {
-			buf = ccb->csio.data_ptr;
-			size = ccb->csio.dxfer_len;
-		}
-		bus_dmamap_load(ch->dma.data_tag, slot->dma.data_map,
-		    buf, size, mvs_dmasetprd, slot, 0);
+		bus_dmamap_load_ccb(ch->dma.data_tag, slot->dma.data_map,
+		    ccb, mvs_dmasetprd, slot, 0);
 	} else
 		mvs_legacy_execute_transaction(slot);
 }
@@ -1344,8 +1333,14 @@ mvs_legacy_execute_transaction(struct mvs_slot *slot)
 			return;
 		}
 		ch->donecount = 0;
-		ch->transfersize = min(ccb->ataio.dxfer_len,
-		    ch->curr[port].bytecount);
+		if (ccb->ataio.cmd.command == ATA_READ_MUL ||
+		    ccb->ataio.cmd.command == ATA_READ_MUL48 ||
+		    ccb->ataio.cmd.command == ATA_WRITE_MUL ||
+		    ccb->ataio.cmd.command == ATA_WRITE_MUL48) {
+			ch->transfersize = min(ccb->ataio.dxfer_len,
+			    ch->curr[port].bytecount);
+		} else
+			ch->transfersize = min(ccb->ataio.dxfer_len, 512);
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE)
 			ch->fake_busy = 1;
 		/* If data write command - output the data */
@@ -1422,8 +1417,8 @@ mvs_legacy_execute_transaction(struct mvs_slot *slot)
 		}
 	}
 	/* Start command execution timeout */
-	callout_reset(&slot->timeout, (int)ccb->ccb_h.timeout * hz / 1000,
-	    (timeout_t*)mvs_timeout, slot);
+	callout_reset_sbt(&slot->timeout, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    (timeout_t*)mvs_timeout, slot, 0);
 }
 
 /* Must be called with channel locked. */
@@ -1536,8 +1531,8 @@ mvs_execute_transaction(struct mvs_slot *slot)
 	ATA_OUTL(ch->r_mem, EDMA_REQQIP,
 	    ch->dma.workrq_bus + MVS_CRQB_OFFSET + (MVS_CRQB_SIZE * ch->out_idx));
 	/* Start command execution timeout */
-	callout_reset(&slot->timeout, (int)ccb->ccb_h.timeout * hz / 1000,
-	    (timeout_t*)mvs_timeout, slot);
+	callout_reset_sbt(&slot->timeout, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    (timeout_t*)mvs_timeout, slot, 0);
 	return;
 }
 
@@ -1574,9 +1569,9 @@ mvs_rearm_timeout(device_t dev)
 			continue;
 		if ((ch->toslots & (1 << i)) == 0)
 			continue;
-		callout_reset(&slot->timeout,
-		    (int)slot->ccb->ccb_h.timeout * hz / 2000,
-		    (timeout_t*)mvs_timeout, slot);
+		callout_reset_sbt(&slot->timeout,
+		    SBT_1MS * slot->ccb->ccb_h.timeout / 2, 0,
+		    (timeout_t*)mvs_timeout, slot, 0);
 	}
 }
 
@@ -2418,9 +2413,9 @@ mvsaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Marvell", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Marvell", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->transport = XPORT_SATA;
 		cpi->transport_version = XPORT_VERSION_UNSPECIFIED;

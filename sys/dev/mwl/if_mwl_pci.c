@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Marvell Semiconductor, Inc.
@@ -30,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mwl/if_mwl_pci.c 278415 2015-02-08 22:27:17Z marius $");
 #endif
 
 /*
@@ -120,29 +121,6 @@ mwl_pci_probe(device_t dev)
 	return ENXIO;
 }
 
-static u_int32_t
-mwl_pci_setup(device_t dev)
-{
-	u_int32_t cmd;
-
-	/*
-	 * Enable memory mapping and bus mastering.
-	 */
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 4);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	if ((cmd & PCIM_CMD_MEMEN) == 0) {
-		device_printf(dev, "failed to enable memory mapping\n");
-		return 0;
-	}
-	if ((cmd & PCIM_CMD_BUSMASTEREN) == 0) {
-		device_printf(dev, "failed to enable bus mastering\n");
-		return 0;
-	}
-	return 1;
-}
-
 static int
 mwl_pci_attach(device_t dev)
 {
@@ -152,11 +130,8 @@ mwl_pci_attach(device_t dev)
 
 	sc->sc_dev = dev;
 
-	/*
-	 * Enable memory mapping and bus mastering.
-	 */
-	if (!mwl_pci_setup(dev))
-		return 0;
+	pci_enable_busmaster(dev);
+
 	/* 
 	 * Setup memory-mapping of PCI registers.
 	 */
@@ -201,9 +176,9 @@ mwl_pci_attach(device_t dev)
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
 			       NULL, NULL,		/* filter, filterarg */
-			       BUS_SPACE_MAXADDR,	/* maxsize */
+			       BUS_SPACE_MAXSIZE,	/* maxsize */
 			       MWL_TXDESC,		/* nsegments */
-			       BUS_SPACE_MAXADDR,	/* maxsegsize */
+			       BUS_SPACE_MAXSIZE,	/* maxsegsize */
 			       0,			/* flags */
 			       NULL,			/* lockfunc */
 			       NULL,			/* lockarg */
@@ -285,8 +260,7 @@ mwl_pci_resume(device_t dev)
 {
 	struct mwl_pci_softc *psc = device_get_softc(dev);
 
-	if (!mwl_pci_setup(dev))
-		return ENXIO;
+	pci_enable_busmaster(dev);
 
 	mwl_resume(&psc->sc_sc);
 

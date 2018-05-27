@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2008 Marvell Semiconductor, Inc.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mwl/if_mwl.c 314667 2017-03-04 13:03:31Z avg $");
 
 /*
  * Driver for the Marvell 88W8363 Wireless LAN controller.
@@ -37,6 +38,7 @@ __MBSDID("$MidnightBSD$");
 
 #include "opt_inet.h"
 #include "opt_mwl.h"
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/systm.h> 
@@ -280,11 +282,13 @@ struct mwltxrec {
  * that all BAR 1 operations are done in the "hal" and
  * there should be no reference to them here.
  */
+#ifdef MWL_DEBUG
 static __inline uint32_t
 RD4(struct mwl_softc *sc, bus_size_t off)
 {
 	return bus_space_read_4(sc->sc_io0t, sc->sc_io0h, off);
 }
+#endif
 
 static __inline void
 WR4(struct mwl_softc *sc, bus_size_t off, uint32_t val)
@@ -308,6 +312,12 @@ mwl_attach(uint16_t devid, struct mwl_softc *sc)
 		return ENOSPC;
 	}
 	ic = ifp->if_l2com;
+
+	/*
+	 * Setup the RX free list lock early, so it can be consistently
+	 * removed.
+	 */
+	MWL_RXFREE_INIT(sc);
 
 	/* set these up early for if_printf use */
 	if_initname(ifp, device_get_name(sc->sc_dev),
@@ -359,7 +369,7 @@ mwl_attach(uint16_t devid, struct mwl_softc *sc)
 	if (error != 0)			/* NB: mwl_setupdma prints msg */
 		goto bad1;
 
-	callout_init(&sc->sc_timer, CALLOUT_MPSAFE);
+	callout_init(&sc->sc_timer, 1);
 	callout_init_mtx(&sc->sc_watchdog, &sc->sc_mtx, 0);
 
 	sc->sc_tq = taskqueue_create("mwl_taskq", M_NOWAIT,
@@ -530,6 +540,7 @@ bad2:
 bad1:
 	mwl_hal_detach(mh);
 bad:
+	MWL_RXFREE_DESTROY(sc);
 	if_free(ifp);
 	sc->sc_invalid = 1;
 	return error;
@@ -560,6 +571,7 @@ mwl_detach(struct mwl_softc *sc)
 	ieee80211_ifdetach(ic);
 	callout_drain(&sc->sc_watchdog);
 	mwl_dma_cleanup(sc);
+	MWL_RXFREE_DESTROY(sc);
 	mwl_tx_cleanup(sc);
 	mwl_hal_detach(sc->sc_mh);
 	if_free(ifp);
@@ -2057,9 +2069,10 @@ mwl_desc_setup(struct mwl_softc *sc, const char *name,
 
 	ds = dd->dd_desc;
 	memset(ds, 0, dd->dd_desc_len);
-	DPRINTF(sc, MWL_DEBUG_RESET, "%s: %s DMA map: %p (%lu) -> %p (%lu)\n",
+	DPRINTF(sc, MWL_DEBUG_RESET,
+	    "%s: %s DMA map: %p (%lu) -> 0x%jx (%lu)\n",
 	    __func__, dd->dd_name, ds, (u_long) dd->dd_desc_len,
-	    (caddr_t) dd->dd_desc_paddr, /*XXX*/ (u_long) dd->dd_desc_len);
+	    (uintmax_t) dd->dd_desc_paddr, /*XXX*/ (u_long) dd->dd_desc_len);
 
 	return 0;
 fail2:
@@ -2273,7 +2286,6 @@ mwl_rxdma_setup(struct mwl_softc *sc)
 		SLIST_INSERT_HEAD(&sc->sc_rxfree, rbuf, next);
 		sc->sc_nrxfree++;
 	}
-	MWL_RXFREE_INIT(sc);
 	return 0;
 }
 #undef DS2PHYS
@@ -2297,7 +2309,6 @@ mwl_rxdma_cleanup(struct mwl_softc *sc)
 	}
 	if (sc->sc_rxdma.dd_desc_len != 0)
 		mwl_desc_cleanup(sc, &sc->sc_rxdma);
-	MWL_RXFREE_DESTROY(sc);
 }
 
 static int
@@ -2614,8 +2625,8 @@ mwl_rxbuf_init(struct mwl_softc *sc, struct mwl_rxbuf *bf)
 	return 0;
 }
 
-static void
-mwl_ext_free(void *data, void *arg)
+static int
+mwl_ext_free(struct mbuf *m, void *data, void *arg)
 {
 	struct mwl_softc *sc = arg;
 
@@ -2630,6 +2641,7 @@ mwl_ext_free(void *data, void *arg)
 		sc->sc_rxblocked = 0;
 		mwl_hal_intrset(sc->sc_mh, sc->sc_imask);
 	}
+	return (EXT_FREE_OK);
 }
 
 struct mwl_frame_bar {
@@ -2875,12 +2887,13 @@ mwl_rx_proc(void *arg, int npending)
 		 * upper layer to put a station in power save
 		 * (except when configured with MWL_HOST_PS_SUPPORT).
 		 */
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP)
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)
 			m->m_flags |= M_WEP;
 #ifdef MWL_HOST_PS_SUPPORT
-		wh->i_fc[1] &= ~IEEE80211_FC1_WEP;
+		wh->i_fc[1] &= ~IEEE80211_FC1_PROTECTED;
 #else
-		wh->i_fc[1] &= ~(IEEE80211_FC1_WEP | IEEE80211_FC1_PWR_MGT);
+		wh->i_fc[1] &= ~(IEEE80211_FC1_PROTECTED |
+		    IEEE80211_FC1_PWR_MGT);
 #endif
 
 		if (ieee80211_radiotap_active(ic)) {
@@ -3194,7 +3207,7 @@ mwl_tx_start(struct mwl_softc *sc, struct ieee80211_node *ni, struct mwl_txbuf *
 #endif
 
 	wh = mtod(m0, struct ieee80211_frame *);
-	iswep = wh->i_fc[1] & IEEE80211_FC1_WEP;
+	iswep = wh->i_fc[1] & IEEE80211_FC1_PROTECTED;
 	ismcast = IEEE80211_IS_MULTICAST(wh->i_addr1);
 	hdrlen = ieee80211_anyhdrsize(wh);
 	copyhdrlen = hdrlen;
@@ -3739,7 +3752,7 @@ mwl_addba_request(struct ieee80211_node *ni, struct ieee80211_tx_ampdu *tap,
 		/* NB: no held reference to ni */
 		sp = mwl_hal_bastream_alloc(MWL_VAP(vap)->mv_hvap,
 		    (baparamset & IEEE80211_BAPS_POLICY_IMMEDIATE) != 0,
-		    ni->ni_macaddr, WME_AC_TO_TID(tap->txa_ac), ni->ni_htparam,
+		    ni->ni_macaddr, tap->txa_tid, ni->ni_htparam,
 		    ni, tap);
 		if (sp == NULL) {
 			/*
@@ -3776,8 +3789,8 @@ mwl_addba_response(struct ieee80211_node *ni, struct ieee80211_tx_ampdu *tap,
 	if (bas == NULL) {
 		/* XXX should not happen */
 		DPRINTF(sc, MWL_DEBUG_AMPDU,
-		    "%s: no BA stream allocated, AC %d\n",
-		    __func__, tap->txa_ac);
+		    "%s: no BA stream allocated, TID %d\n",
+		    __func__, tap->txa_tid);
 		sc->sc_stats.mst_addba_nostream++;
 		return 0;
 	}
@@ -3805,18 +3818,18 @@ mwl_addba_response(struct ieee80211_node *ni, struct ieee80211_tx_ampdu *tap,
 			tap->txa_private = NULL;
 
 			DPRINTF(sc, MWL_DEBUG_AMPDU,
-			    "%s: create failed, error %d, bufsiz %d AC %d "
+			    "%s: create failed, error %d, bufsiz %d TID %d "
 			    "htparam 0x%x\n", __func__, error, bufsiz,
-			    tap->txa_ac, ni->ni_htparam);
+			    tap->txa_tid, ni->ni_htparam);
 			sc->sc_stats.mst_bacreate_failed++;
 			return 0;
 		}
 		/* NB: cache txq to avoid ptr indirect */
-		mwl_bastream_setup(bas, tap->txa_ac, bas->bastream->txq);
+		mwl_bastream_setup(bas, tap->txa_tid, bas->bastream->txq);
 		DPRINTF(sc, MWL_DEBUG_AMPDU,
-		    "%s: bastream %p assigned to txq %d AC %d bufsiz %d "
+		    "%s: bastream %p assigned to txq %d TID %d bufsiz %d "
 		    "htparam 0x%x\n", __func__, bas->bastream,
-		    bas->txq, tap->txa_ac, bufsiz, ni->ni_htparam);
+		    bas->txq, tap->txa_tid, bufsiz, ni->ni_htparam);
 	} else {
 		/*
 		 * Other side NAK'd us; return the resources.
@@ -4696,11 +4709,10 @@ mwl_printrxbuf(const struct mwl_rxbuf *bf, u_int ix)
 	const struct mwl_rxdesc *ds = bf->bf_desc;
 	uint32_t status = le32toh(ds->Status);
 
-	printf("R[%2u] (DS.V:%p DS.P:%p) NEXT:%08x DATA:%08x RC:%02x%s\n"
+	printf("R[%2u] (DS.V:%p DS.P:0x%jx) NEXT:%08x DATA:%08x RC:%02x%s\n"
 	       "      STAT:%02x LEN:%04x RSSI:%02x CHAN:%02x RATE:%02x QOS:%04x HT:%04x\n",
-	    ix, ds, (const struct mwl_desc *)bf->bf_daddr,
-	    le32toh(ds->pPhysNext), le32toh(ds->pPhysBuffData),
-	    ds->RxControl, 
+	    ix, ds, (uintmax_t)bf->bf_daddr, le32toh(ds->pPhysNext),
+	    le32toh(ds->pPhysBuffData), ds->RxControl, 
 	    ds->RxControl != EAGLE_RXD_CTRL_DRIVER_OWN ?
 	        "" : (status & EAGLE_RXD_STATUS_OK) ? " *" : " !",
 	    ds->Status, le16toh(ds->PktLen), ds->RSSI, ds->Channel,
@@ -4714,8 +4726,7 @@ mwl_printtxbuf(const struct mwl_txbuf *bf, u_int qnum, u_int ix)
 	uint32_t status = le32toh(ds->Status);
 
 	printf("Q%u[%3u]", qnum, ix);
-	printf(" (DS.V:%p DS.P:%p)\n",
-	    ds, (const struct mwl_txdesc *)bf->bf_daddr);
+	printf(" (DS.V:%p DS.P:0x%jx)\n", ds, (uintmax_t)bf->bf_daddr);
 	printf("    NEXT:%08x DATA:%08x LEN:%04x STAT:%08x%s\n",
 	    le32toh(ds->pPhysNext),
 	    le32toh(ds->PktPtr), le16toh(ds->PktLen), status,

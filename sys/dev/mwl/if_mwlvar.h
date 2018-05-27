@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Marvell Semiconductor, Inc.
@@ -27,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mwl/if_mwlvar.h 234324 2012-04-15 20:29:39Z adrian $
  */
 
 /*
@@ -187,10 +188,10 @@ struct mwl_bastate {
 };
 
 static __inline__ void
-mwl_bastream_setup(struct mwl_bastate *bas, int ac, int txq)
+mwl_bastream_setup(struct mwl_bastate *bas, int tid, int txq)
 {
 	bas->txq = txq;
-	bas->qos = htole16(WME_AC_TO_TID(ac) | IEEE80211_QOS_ACKPOLICY_BA);
+	bas->qos = htole16(tid | IEEE80211_QOS_ACKPOLICY_BA);
 }
 
 static __inline__ void

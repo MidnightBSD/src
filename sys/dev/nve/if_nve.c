@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 by David E. O'Brien <obrien@FreeBSD.org>.
  * Copyright (c) 2003,2004 by Quinton Dolan <q@onthenet.com.au>. 
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: if_nve.c,v 1.6 2013-01-08 00:45:19 laffer1 Exp $
+ * $Id: if_nv.c,v 1.19 2004/08/12 14:00:05 q Exp $
  */
 /*
  * NVIDIA nForce MCP Networking Adapter driver
@@ -72,7 +73,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/nve/if_nve.c 243857 2012-12-04 09:32:43Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -532,7 +533,6 @@ nve_attach(device_t dev)
 	ifp->if_ioctl = nve_ioctl;
 	ifp->if_start = nve_ifstart;
 	ifp->if_init = nve_init;
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_baudrate = IF_Mbps(100);
 	IFQ_SET_MAXLEN(&ifp->if_snd, TX_RING_SIZE - 1);
 	ifp->if_snd.ifq_drv_maxlen = TX_RING_SIZE - 1;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_nfe.c,v 1.54 2006/04/07 12:38:12 jsg Exp $	*/
 
 /*-
@@ -21,6 +22,7 @@
 /* Driver for NVIDIA nForce MCP Fast Ethernet and Gigabit Ethernet */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/nfe/if_nfe.c 266921 2014-05-31 11:08:22Z brueffer $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -77,6 +79,7 @@ static int  nfe_suspend(device_t);
 static int  nfe_resume(device_t);
 static int nfe_shutdown(device_t);
 static int  nfe_can_use_msix(struct nfe_softc *);
+static int  nfe_detect_msik9(struct nfe_softc *);
 static void nfe_power(struct nfe_softc *);
 static int  nfe_miibus_readreg(device_t, int, int);
 static int  nfe_miibus_writereg(device_t, int, int, int);
@@ -332,13 +335,38 @@ nfe_alloc_msix(struct nfe_softc *sc, int count)
 	}
 }
 
+
+static int
+nfe_detect_msik9(struct nfe_softc *sc)
+{
+	static const char *maker = "MSI";
+	static const char *product = "K9N6PGM2-V2 (MS-7309)";
+	char *m, *p;
+	int found;
+
+	found = 0;
+	m = getenv("smbios.planar.maker");
+	p = getenv("smbios.planar.product");
+	if (m != NULL && p != NULL) {
+		if (strcmp(m, maker) == 0 && strcmp(p, product) == 0)
+			found = 1;
+	}
+	if (m != NULL)
+		freeenv(m);
+	if (p != NULL)
+		freeenv(p);
+
+	return (found);
+}
+
+
 static int
 nfe_attach(device_t dev)
 {
 	struct nfe_softc *sc;
 	struct ifnet *ifp;
 	bus_addr_t dma_addr_max;
-	int error = 0, i, msic, reg, rid;
+	int error = 0, i, msic, phyloc, reg, rid;
 
 	sc = device_get_softc(dev);
 	sc->nfe_dev = dev;
@@ -564,7 +592,6 @@ nfe_attach(device_t dev)
 
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = nfe_ioctl;
 	ifp->if_start = nfe_start;
@@ -607,8 +634,16 @@ nfe_attach(device_t dev)
 #endif
 
 	/* Do MII setup */
+	phyloc = MII_PHY_ANY;
+	if (sc->nfe_devid == PCI_PRODUCT_NVIDIA_MCP61_LAN1 ||
+	    sc->nfe_devid == PCI_PRODUCT_NVIDIA_MCP61_LAN2 ||
+	    sc->nfe_devid == PCI_PRODUCT_NVIDIA_MCP61_LAN3 ||
+	    sc->nfe_devid == PCI_PRODUCT_NVIDIA_MCP61_LAN4) {
+		if (nfe_detect_msik9(sc) != 0)
+			phyloc = 0;
+	}
 	error = mii_attach(dev, &sc->nfe_miibus, ifp, nfe_ifmedia_upd,
-	    nfe_ifmedia_sts, BMSR_DEFCAPMASK, MII_PHY_ANY, MII_OFFSET_ANY,
+	    nfe_ifmedia_sts, BMSR_DEFCAPMASK, phyloc, MII_OFFSET_ANY,
 	    MIIF_DOPAUSE);
 	if (error != 0) {
 		device_printf(dev, "attaching PHYs failed\n");
@@ -1341,15 +1376,12 @@ nfe_free_rx_ring(struct nfe_softc *sc, struct nfe_rx_ring *ring)
 {
 	struct nfe_rx_data *data;
 	void *desc;
-	int i, descsize;
+	int i;
 
-	if (sc->nfe_flags & NFE_40BIT_ADDR) {
+	if (sc->nfe_flags & NFE_40BIT_ADDR)
 		desc = ring->desc64;
-		descsize = sizeof (struct nfe_desc64);
-	} else {
+	else
 		desc = ring->desc32;
-		descsize = sizeof (struct nfe_desc32);
-	}
 
 	for (i = 0; i < NFE_RX_RING_COUNT; i++) {
 		data = &ring->data[i];
@@ -2390,7 +2422,7 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 	bus_dmamap_t map;
 	bus_dma_segment_t segs[NFE_MAX_SCATTER];
 	int error, i, nsegs, prod, si;
-	uint32_t tso_segsz;
+	uint32_t tsosegsz;
 	uint16_t cflags, flags;
 	struct mbuf *m;
 
@@ -2429,9 +2461,9 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 
 	m = *m_head;
 	cflags = flags = 0;
-	tso_segsz = 0;
+	tsosegsz = 0;
 	if ((m->m_pkthdr.csum_flags & CSUM_TSO) != 0) {
-		tso_segsz = (uint32_t)m->m_pkthdr.tso_segsz <<
+		tsosegsz = (uint32_t)m->m_pkthdr.tso_segsz <<
 		    NFE_TX_TSO_SHIFT;
 		cflags &= ~(NFE_TX_IP_CSUM | NFE_TX_TCP_UDP_CSUM);
 		cflags |= NFE_TX_TSO;
@@ -2482,14 +2514,14 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 		if ((m->m_flags & M_VLANTAG) != 0)
 			desc64->vtag = htole32(NFE_TX_VTAG |
 			    m->m_pkthdr.ether_vtag);
-		if (tso_segsz != 0) {
+		if (tsosegsz != 0) {
 			/*
 			 * XXX
 			 * The following indicates the descriptor element
 			 * is a 32bit quantity.
 			 */
-			desc64->length |= htole16((uint16_t)tso_segsz);
-			desc64->flags |= htole16(tso_segsz >> 16);
+			desc64->length |= htole16((uint16_t)tsosegsz);
+			desc64->flags |= htole16(tsosegsz >> 16);
 		}
 		/*
 		 * finally, set the valid/checksum/TSO bit in the first
@@ -2502,14 +2534,14 @@ nfe_encap(struct nfe_softc *sc, struct mbuf **m_head)
 		else
 			desc32->flags |= htole16(NFE_TX_LASTFRAG_V1);
 		desc32 = &sc->txq.desc32[si];
-		if (tso_segsz != 0) {
+		if (tsosegsz != 0) {
 			/*
 			 * XXX
 			 * The following indicates the descriptor element
 			 * is a 32bit quantity.
 			 */
-			desc32->length |= htole16((uint16_t)tso_segsz);
-			desc32->flags |= htole16(tso_segsz >> 16);
+			desc32->length |= htole16((uint16_t)tsosegsz);
+			desc32->flags |= htole16(tsosegsz >> 16);
 		}
 		/*
 		 * finally, set the valid/checksum/TSO bit in the first
@@ -3205,8 +3237,8 @@ nfe_stats_clear(struct nfe_softc *sc)
 	else
 		return;
 
-	for (i = 0; i < mib_cnt; i += sizeof(uint32_t))
-		NFE_READ(sc, NFE_TX_OCTET + i);
+	for (i = 0; i < mib_cnt; i++)
+		NFE_READ(sc, NFE_TX_OCTET + i * sizeof(uint32_t));
 
 	if ((sc->nfe_flags & NFE_MIB_V3) != 0) {
 		NFE_READ(sc, NFE_TX_UNICAST);
@@ -3260,7 +3292,7 @@ nfe_stats_update(struct nfe_softc *sc)
 	if ((sc->nfe_flags & NFE_MIB_V3) != 0) {
 		stats->tx_unicast += NFE_READ(sc, NFE_TX_UNICAST);
 		stats->tx_multicast += NFE_READ(sc, NFE_TX_MULTICAST);
-		stats->rx_broadcast += NFE_READ(sc, NFE_TX_BROADCAST);
+		stats->tx_broadcast += NFE_READ(sc, NFE_TX_BROADCAST);
 	}
 }
 
