@@ -57330,6 +57330,7 @@ sys/dev/iscsi/initiator/iscsi.c -text
 sys/dev/iscsi/initiator/iscsi.h -text
 sys/dev/iscsi/initiator/iscsi_subr.c -text
 sys/dev/iscsi/initiator/iscsivar.h -text
+sys/dev/ismt/ismt.c svneol=native#text/plain
 sys/dev/isp/DriverManual.txt -text
 sys/dev/isp/Hardware.txt -text
 sys/dev/isp/isp.c -text
@@ -57363,6 +57364,7 @@ sys/dev/iwi/if_iwi.c -text
 sys/dev/iwi/if_iwireg.h -text
 sys/dev/iwi/if_iwivar.h -text
 sys/dev/iwn/if_iwn.c -text
+sys/dev/iwn/if_iwn_devid.h svneol=native#text/plain
 sys/dev/iwn/if_iwnreg.h -text
 sys/dev/iwn/if_iwnvar.h -text
 sys/dev/ixgb/LICENSE -text
@@ -57463,6 +57465,9 @@ sys/dev/ixl/ixl_txrx.c svneol=native#text/plain
 sys/dev/ixl/ixlv.h svneol=native#text/plain
 sys/dev/ixl/ixlv_vc_mgr.h svneol=native#text/plain
 sys/dev/ixl/ixlvc.c svneol=native#text/plain
+sys/dev/jedec_dimm/jedec_dimm.c svneol=native#text/plain
+sys/dev/jedec_dimm/jedec_dimm.h svneol=native#text/plain
+sys/dev/jedec_ts/jedec_ts.c svneol=native#text/plain
 sys/dev/jme/if_jme.c -text
 sys/dev/jme/if_jmereg.h -text
 sys/dev/jme/if_jmevar.h -text

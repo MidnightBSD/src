@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2001-2004, Intel Corporation
@@ -31,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$MidnightBSD$*/
+/*$FreeBSD: stable/10/sys/dev/ixgb/if_ixgb_osdep.h 158651 2006-05-16 14:37:58Z phk $*/
 
 #ifndef _FREEBSD_OS_H_
 #define _FREEBSD_OS_H_

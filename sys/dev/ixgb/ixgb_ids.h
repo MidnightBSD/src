@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
   Copyright (c) 2001-2004, Intel Corporation
@@ -31,18 +32,14 @@
 
 *******************************************************************************/
 
-/*$MidnightBSD$*/
+/*$FreeBSD: stable/10/sys/dev/ixgb/ixgb_ids.h 253102 2013-07-09 18:15:59Z jkim $*/
 
 #ifndef _IXGB_IDS_H_
 #define _IXGB_IDS_H_
 
 /**********************************************************************
-** The Device and Vendor IDs for 10 Gigabit MACs
+** The Device IDs for 10 Gigabit MACs
 **********************************************************************/
-
-#define INTEL_VENDOR_ID         0x8086
-#define INTEL_SUBVENDOR_ID      0x8086
-
 
 #define IXGB_DEVICE_ID_82597EX      0x1048   /* Cibolo A1, -LR (1310nm) */
 #define IXGB_DEVICE_ID_82597EX_SR   0x1A48   /* Cibolo B0, -SR (850nm)  */

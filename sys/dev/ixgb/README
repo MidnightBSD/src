@@ -1,4 +1,4 @@
-/*$MidnightBSD$*/
+/*$FreeBSD: stable/10/sys/dev/ixgb/README 250168 2013-05-02 01:36:52Z eadler $*/
 FreeBSD Driver for Intel(R) PRO/10GbE Server Adapters
 =====================================================
 
@@ -217,7 +217,7 @@ For general information and support, go to the Intel support website at:
 
 If an issue is identified with the released source code on the supported
 kernel with a supported adapter, email the specific information related to 
-the issue to freebsdnic@mailbox.intel.com.
+the issue to freebsd@intel.com.
 
 
 

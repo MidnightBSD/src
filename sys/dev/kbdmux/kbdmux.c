@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * kbdmux.c
  */
@@ -27,12 +28,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbdmux.c,v 1.7 2013-01-08 03:53:23 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: kbdmux.c,v 1.4 2005/07/14 17:38:35 max Exp $
+ * $FreeBSD: stable/10/sys/dev/kbdmux/kbdmux.c 298430 2016-04-21 19:25:33Z emaste $
  */
 
 #include "opt_compat.h"
 #include "opt_kbd.h"
+#include "opt_kbdmux.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -54,6 +56,13 @@
 #include <sys/taskqueue.h>
 #include <sys/uio.h>
 #include <dev/kbd/kbdreg.h>
+
+/* the initial key map, accent map and fkey strings */
+#ifdef KBDMUX_DFLT_KEYMAP
+#define KBD_DFLT_KEYMAP
+#include "kbdmuxmap.h"
+#endif
+
 #include <dev/kbd/kbdtables.h>
 
 #define KEYBOARD_NAME	"kbdmux"

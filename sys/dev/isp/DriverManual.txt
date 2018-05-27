@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/isp/DriverManual.txt 227458 2011-11-11 22:27:09Z eadler $ */
 
 		Driver Theory of Operation Manual
 

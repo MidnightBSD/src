@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2001-2004, Intel Corporation
@@ -30,7 +31,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: stable/10/sys/dev/ixgb/if_ixgb.h 211913 2010-08-28 00:34:22Z yongari $*/
 
 #ifndef _IXGB_H_DEFINED_
 #define _IXGB_H_DEFINED_

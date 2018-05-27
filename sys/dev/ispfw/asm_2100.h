@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/ispfw/asm_2100.h 139749 2005-01-06 01:43:34Z imp $ */
 /*-
  * Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000 Qlogic, Inc.
  * All rights reserved.

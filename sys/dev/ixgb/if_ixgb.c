@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2001-2004, Intel Corporation
@@ -31,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$MidnightBSD$*/
+/*$FreeBSD: stable/10/sys/dev/ixgb/if_ixgb.c 303107 2016-07-20 18:26:48Z sbruno $*/
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -72,8 +73,8 @@ char            ixgb_copyright[] = "Copyright (c) 2001-2004 Intel Corporation.";
 static ixgb_vendor_info_t ixgb_vendor_info_array[] =
 {
 	/* Intel(R) PRO/10000 Network Connection */
-	{INTEL_VENDOR_ID, IXGB_DEVICE_ID_82597EX, PCI_ANY_ID, PCI_ANY_ID, 0},
-	{INTEL_VENDOR_ID, IXGB_DEVICE_ID_82597EX_SR, PCI_ANY_ID, PCI_ANY_ID, 0},
+	{IXGB_VENDOR_ID, IXGB_DEVICE_ID_82597EX, PCI_ANY_ID, PCI_ANY_ID, 0},
+	{IXGB_VENDOR_ID, IXGB_DEVICE_ID_82597EX_SR, PCI_ANY_ID, PCI_ANY_ID, 0},
 	/* required last entry */
 	{0, 0, 0, 0, 0}
 };
@@ -159,7 +160,8 @@ static device_method_t ixgb_methods[] = {
 	DEVMETHOD(device_attach, ixgb_attach),
 	DEVMETHOD(device_detach, ixgb_detach),
 	DEVMETHOD(device_shutdown, ixgb_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t ixgb_driver = {
@@ -537,7 +539,8 @@ ixgb_ioctl(struct ifnet * ifp, IOCTL_CMD_TYPE command, caddr_t data)
 			adapter->hw.max_frame_size =
 				ifp->if_mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
 
-			ixgb_init_locked(adapter);
+			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+				ixgb_init_locked(adapter);
 			IXGB_UNLOCK(adapter);
 		}
 		break;
@@ -1209,15 +1212,9 @@ ixgb_identify_hardware(struct adapter * adapter)
 	device_t        dev = adapter->dev;
 
 	/* Make sure our PCI config space has the necessary stuff set */
+	pci_enable_busmaster(dev);
 	adapter->hw.pci_cmd_word = pci_read_config(dev, PCIR_COMMAND, 2);
-	if (!((adapter->hw.pci_cmd_word & PCIM_CMD_BUSMASTEREN) &&
-	      (adapter->hw.pci_cmd_word & PCIM_CMD_MEMEN))) {
-		device_printf(dev,
-		    "Memory Access and/or Bus Master bits were not set!\n");
-		adapter->hw.pci_cmd_word |=
-			(PCIM_CMD_BUSMASTEREN | PCIM_CMD_MEMEN);
-		pci_write_config(dev, PCIR_COMMAND, adapter->hw.pci_cmd_word, 2);
-	}
+
 	/* Save off the information about this board */
 	adapter->hw.vendor_id = pci_get_vendor(dev);
 	adapter->hw.device_id = pci_get_device(dev);
@@ -1354,7 +1351,6 @@ ixgb_setup_interface(device_t dev, struct adapter * adapter)
 	ifp->if_unit = device_get_unit(dev);
 	ifp->if_name = "ixgb";
 #endif
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_baudrate = 1000000000;
 	ifp->if_init = ixgb_init;
 	ifp->if_softc = adapter;
@@ -1465,7 +1461,6 @@ fail_2:
 fail_1:
 	bus_dma_tag_destroy(dma->dma_tag);
 fail_0:
-	dma->dma_map = NULL;
 	dma->dma_tag = NULL;
 	return (r);
 }

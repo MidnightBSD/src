@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -9,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/led/led.c 247008 2013-02-19 19:25:50Z mav $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -43,6 +44,7 @@ static struct mtx led_mtx;
 static struct sx led_sx;
 static LIST_HEAD(, ledsc) led_list = LIST_HEAD_INITIALIZER(led_list);
 static struct callout led_ch;
+static int blinkers = 0;
 
 static MALLOC_DEFINE(M_LED, "LED", "LED driver");
 
@@ -51,7 +53,6 @@ led_timeout(void *p)
 {
 	struct ledsc	*sc;
 
-	mtx_lock(&led_mtx);
 	LIST_FOREACH(sc, &led_list, list) {
 		if (sc->ptr == NULL)
 			continue;
@@ -61,6 +62,7 @@ led_timeout(void *p)
 		}
 		if (*sc->ptr == '.') {
 			sc->ptr = NULL;
+			blinkers--;
 			continue;
 		} else if (*sc->ptr == 'U' || *sc->ptr == 'u') {
 			if (sc->last_second == time_second)
@@ -78,9 +80,8 @@ led_timeout(void *p)
 		if (*sc->ptr == '\0')
 			sc->ptr = sc->str;
 	}
-	mtx_unlock(&led_mtx);
-	callout_reset(&led_ch, hz / 10, led_timeout, p);
-	return;
+	if (blinkers > 0)
+		callout_reset(&led_ch, hz / 10, led_timeout, p);
 }
 
 static int
@@ -92,9 +93,15 @@ led_state(struct ledsc *sc, struct sbuf **sb, int state)
 	sc->spec = *sb;
 	if (*sb != NULL) {
 		sc->str = sbuf_data(*sb);
+		if (sc->ptr == NULL) {
+			blinkers++;
+			callout_reset(&led_ch, hz / 10, led_timeout, NULL);
+		}
 		sc->ptr = sc->str;
 	} else {
 		sc->str = NULL;
+		if (sc->ptr != NULL)
+			blinkers--;
 		sc->ptr = NULL;
 		sc->func(sc->private, state);
 	}
@@ -286,8 +293,6 @@ led_create_state(led_t *func, void *priv, char const *name, int state)
 
 	mtx_lock(&led_mtx);
 	sc->dev->si_drv1 = sc;
-	if (LIST_EMPTY(&led_list))
-		callout_reset(&led_ch, hz / 10, led_timeout, NULL);
 	LIST_INSERT_HEAD(&led_list, sc, list);
 	sc->func(sc->private, state != 0);
 	mtx_unlock(&led_mtx);
@@ -303,7 +308,8 @@ led_destroy(struct cdev *dev)
 	mtx_lock(&led_mtx);
 	sc = dev->si_drv1;
 	dev->si_drv1 = NULL;
-
+	if (sc->ptr != NULL)
+		blinkers--;
 	LIST_REMOVE(sc, list);
 	if (LIST_EMPTY(&led_list))
 		callout_stop(&led_ch);
@@ -326,7 +332,7 @@ led_drvinit(void *unused)
 	led_unit = new_unrhdr(0, INT_MAX, NULL);
 	mtx_init(&led_mtx, "LED mtx", NULL, MTX_DEF);
 	sx_init(&led_sx, "LED sx");
-	callout_init(&led_ch, CALLOUT_MPSAFE);
+	callout_init_mtx(&led_ch, &led_mtx, 0);
 }
 
 SYSINIT(leddev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, led_drvinit, NULL);
