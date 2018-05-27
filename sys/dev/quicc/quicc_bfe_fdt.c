@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Juniper Networks.
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/quicc/quicc_bfe_fdt.c 266152 2014-05-15 16:11:06Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,6 +75,9 @@ quicc_fdt_probe(device_t dev)
 {
 	phandle_t par;
 	pcell_t clock;
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "fsl,cpm2"))
 		return (ENXIO);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2006 by Juniper Networks.
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/quicc/quicc_core.c 227293 2011-11-07 06:44:47Z ed $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
