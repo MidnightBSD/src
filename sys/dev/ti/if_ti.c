@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -77,7 +78,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ti/if_ti.c 291202 2015-11-23 13:36:41Z hselasky $");
 
 #include "opt_ti.h"
 
@@ -1562,7 +1563,6 @@ ti_newbuf_jumbo(struct ti_softc *sc, int idx, struct mbuf *m_old)
 	struct mbuf *m[3] = {NULL, NULL, NULL};
 	struct ti_rx_desc_ext *r;
 	vm_page_t frame;
-	static int color;
 	/* 1 extra buf to make nobufs easy*/
 	struct sf_buf *sf[3] = {NULL, NULL, NULL};
 	int i;
@@ -1605,7 +1605,7 @@ ti_newbuf_jumbo(struct ti_softc *sc, int idx, struct mbuf *m_old)
 				    "failed -- packet dropped!\n");
 				goto nobufs;
 			}
-			frame = vm_page_alloc(NULL, color++,
+			frame = vm_page_alloc(NULL, 0,
 			    VM_ALLOC_INTERRUPT | VM_ALLOC_NOOBJ |
 			    VM_ALLOC_WIRED);
 			if (frame == NULL) {
@@ -3160,24 +3160,6 @@ ti_start_locked(struct ifnet *ifp)
 			break;
 
 		/*
-		 * XXX
-		 * safety overkill.  If this is a fragmented packet chain
-		 * with delayed TCP/UDP checksums, then only encapsulate
-		 * it if we have enough descriptors to handle the entire
-		 * chain at once.
-		 * (paranoia -- may not actually be needed)
-		 */
-		if (m_head->m_flags & M_FIRSTFRAG &&
-		    m_head->m_pkthdr.csum_flags & (CSUM_DELAY_DATA)) {
-			if ((TI_TX_RING_CNT - sc->ti_txcnt) <
-			    m_head->m_pkthdr.csum_data + 16) {
-				IFQ_DRV_PREPEND(&ifp->if_snd, m_head);
-				ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-				break;
-			}
-		}
-
-		/*
 		 * Pack the data into the transmit ring. If we
 		 * don't have room, set the OACTIVE flag and wait
 		 * for the NIC to drain the ring.
@@ -3354,7 +3336,7 @@ ti_ifmedia_upd(struct ifnet *ifp)
 
 	sc = ifp->if_softc;
 	TI_LOCK(sc);
-	error = ti_ifmedia_upd(ifp);
+	error = ti_ifmedia_upd_locked(sc);
 	TI_UNLOCK(sc);
 
 	return (error);
