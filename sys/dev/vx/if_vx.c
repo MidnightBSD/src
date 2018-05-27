@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Herb Peyerl <hpeyerl@novatel.ca>
  * All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support
@@ -188,7 +189,6 @@ vx_attach(device_t dev)
 		eaddr[(i << 1) + 1] = x;
 	}
 
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = vx_start;

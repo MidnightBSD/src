@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996 Naoki Hamada <nao@tom-yam.or.jp>
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx_eisa.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -177,7 +178,7 @@ static device_method_t vx_eisa_methods[] = {
 	DEVMETHOD(device_probe, vx_eisa_probe),
 	DEVMETHOD(device_attach, vx_eisa_attach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t vx_eisa_driver = {

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996 Naoki Hamada <nao@tom-yam.or.jp>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx_pci.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,7 +62,7 @@ static device_method_t vx_methods[] = {
 	DEVMETHOD(device_attach, vx_pci_attach),
 	DEVMETHOD(device_shutdown, vx_pci_shutdown),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t vx_driver = {
