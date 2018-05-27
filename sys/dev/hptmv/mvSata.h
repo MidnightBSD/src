@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 MARVELL SEMICONDUCTOR ISRAEL, LTD.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hptmv/mvSata.h 190809 2009-04-07 16:38:25Z delphij $
  */
 #ifndef __INCmvSatah
 #define __INCmvSatah

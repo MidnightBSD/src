@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_x86.c 250581 2013-05-12 22:01:22Z hiren $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_x86.c 280455 2015-03-24 20:00:11Z rrs $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -41,7 +41,11 @@ __FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_x86.c 250581 2013-05-12 22
 #include <machine/cpu.h>
 #include <machine/cputypes.h>
 #include <machine/intr_machdep.h>
+#if (__FreeBSD_version >= 1100000)
+#include <x86/apicvar.h>
+#else
 #include <machine/apicvar.h>
+#endif
 #include <machine/pmc_mdep.h>
 #include <machine/md_var.h>
 

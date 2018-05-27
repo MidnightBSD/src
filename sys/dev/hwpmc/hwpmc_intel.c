@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_intel.c 250373 2013-05-08 16:43:52Z hiren $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_intel.c 320113 2017-06-19 15:34:07Z avg $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -47,14 +47,14 @@ intel_switch_in(struct pmc_cpu *pc, struct pmc_process *pp)
 {
 	(void) pc;
 
-	PMCDBG(MDP,SWI,1, "pc=%p pp=%p enable-msr=%d", pc, pp,
+	PMCDBG3(MDP,SWI,1, "pc=%p pp=%p enable-msr=%d", pc, pp,
 	    pp->pp_flags & PMC_PP_ENABLE_MSR_ACCESS);
 
 	/* allow the RDPMC instruction if needed */
 	if (pp->pp_flags & PMC_PP_ENABLE_MSR_ACCESS)
 		load_cr4(rcr4() | CR4_PCE);
 
-	PMCDBG(MDP,SWI,1, "cr4=0x%jx", (uintmax_t) rcr4());
+	PMCDBG1(MDP,SWI,1, "cr4=0x%jx", (uintmax_t) rcr4());
 
 	return 0;
 }
@@ -65,7 +65,7 @@ intel_switch_out(struct pmc_cpu *pc, struct pmc_process *pp)
 	(void) pc;
 	(void) pp;		/* can be NULL */
 
-	PMCDBG(MDP,SWO,1, "pc=%p pp=%p cr4=0x%jx", pc, pp,
+	PMCDBG3(MDP,SWO,1, "pc=%p pp=%p cr4=0x%jx", pc, pp,
 	    (uintmax_t) rcr4());
 
 	/* always turn off the RDPMC instruction */
@@ -79,17 +79,19 @@ pmc_intel_initialize(void)
 {
 	struct pmc_mdep *pmc_mdep;
 	enum pmc_cputype cputype;
-	int error, model, nclasses, ncpus;
+	int error, model, nclasses, ncpus, stepping, verov;
 
 	KASSERT(cpu_vendor_id == CPU_VENDOR_INTEL,
 	    ("[intel,%d] Initializing non-intel processor", __LINE__));
 
-	PMCDBG(MDP,INI,0, "intel-initialize cpuid=0x%x", cpu_id);
+	PMCDBG1(MDP,INI,0, "intel-initialize cpuid=0x%x", cpu_id);
 
 	cputype = -1;
 	nclasses = 2;
-
+	error = 0;
+	verov = 0;
 	model = ((cpu_id & 0xF0000) >> 12) | ((cpu_id & 0xF0) >> 4);
+	stepping = cpu_id & 0xF;
 
 	switch (cpu_id & 0xF00) {
 #if	defined(__i386__)
@@ -120,8 +122,14 @@ pmc_intel_initialize(void)
 			cputype = PMC_CPU_INTEL_CORE;
 			break;
 		case 0xF:
-			cputype = PMC_CPU_INTEL_CORE2;
-			nclasses = 3;
+			/* Per Intel document 315338-020. */
+			if (stepping == 0x7) {
+				cputype = PMC_CPU_INTEL_CORE;
+				verov = 1;
+			} else {
+				cputype = PMC_CPU_INTEL_CORE2;
+				nclasses = 3;
+			}
 			break;
 		case 0x17:
 			cputype = PMC_CPU_INTEL_CORE2EXTREME;
@@ -140,14 +148,21 @@ pmc_intel_initialize(void)
 				 * Per Intel document 253669-032 9/2009,
 				 * pages A-2 and A-57
 				 */
-		case 0x2E:
 			cputype = PMC_CPU_INTEL_COREI7;
 			nclasses = 5;
+			break;
+		case 0x2E:
+			cputype = PMC_CPU_INTEL_NEHALEM_EX;
+			nclasses = 3;
 			break;
 		case 0x25:	/* Per Intel document 253669-033US 12/2009. */
 		case 0x2C:	/* Per Intel document 253669-033US 12/2009. */
 			cputype = PMC_CPU_INTEL_WESTMERE;
 			nclasses = 5;
+			break;
+		case 0x2F:	/* Westmere-EX, seen in wild */
+			cputype = PMC_CPU_INTEL_WESTMERE_EX;
+			nclasses = 3;
 			break;
 		case 0x2A:	/* Per Intel document 253669-039US 05/2011. */
 			cputype = PMC_CPU_INTEL_SANDYBRIDGE;
@@ -165,9 +180,35 @@ pmc_intel_initialize(void)
 			cputype = PMC_CPU_INTEL_IVYBRIDGE_XEON;
 			nclasses = 3;
 			break;
+		case 0x4e:
+		case 0x5e:
+			cputype = PMC_CPU_INTEL_SKYLAKE;
+			nclasses = 3;
+			break;
+		case 0x3D:
+		case 0x47:
+			cputype = PMC_CPU_INTEL_BROADWELL;
+			nclasses = 3;
+			break;
+		case 0x4f:
+		case 0x56:
+			cputype = PMC_CPU_INTEL_BROADWELL_XEON;
+			nclasses = 3;
+			break;
+		case 0x3F:	/* Per Intel document 325462-045US 09/2014. */
+		case 0x46:	/* Per Intel document 325462-045US 09/2014. */
+			        /* Should 46 be XEON. probably its own? */
+			cputype = PMC_CPU_INTEL_HASWELL_XEON;
+			nclasses = 3;
+			break;
 		case 0x3C:	/* Per Intel document 325462-045US 01/2013. */
+		case 0x45:	/* Per Intel document 325462-045US 09/2014. */
 			cputype = PMC_CPU_INTEL_HASWELL;
 			nclasses = 5;
+			break;
+		case 0x4D:      /* Per Intel document 330061-001 01/2014. */
+			cputype = PMC_CPU_INTEL_ATOM_SILVERMONT;
+			nclasses = 3;
 			break;
 		}
 		break;
@@ -192,28 +233,33 @@ pmc_intel_initialize(void)
 	pmc_mdep->pmd_switch_out = intel_switch_out;
 
 	ncpus = pmc_cpu_max();
-
 	error = pmc_tsc_initialize(pmc_mdep, ncpus);
 	if (error)
 		goto error;
-
 	switch (cputype) {
 #if	defined(__i386__) || defined(__amd64__)
 		/*
 		 * Intel Core, Core 2 and Atom processors.
 		 */
 	case PMC_CPU_INTEL_ATOM:
+	case PMC_CPU_INTEL_ATOM_SILVERMONT:
+	case PMC_CPU_INTEL_BROADWELL:
+	case PMC_CPU_INTEL_BROADWELL_XEON:
+	case PMC_CPU_INTEL_SKYLAKE:
 	case PMC_CPU_INTEL_CORE:
 	case PMC_CPU_INTEL_CORE2:
 	case PMC_CPU_INTEL_CORE2EXTREME:
 	case PMC_CPU_INTEL_COREI7:
+	case PMC_CPU_INTEL_NEHALEM_EX:
 	case PMC_CPU_INTEL_IVYBRIDGE:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
+	case PMC_CPU_INTEL_WESTMERE_EX:
 	case PMC_CPU_INTEL_SANDYBRIDGE_XEON:
 	case PMC_CPU_INTEL_IVYBRIDGE_XEON:
 	case PMC_CPU_INTEL_HASWELL:
-		error = pmc_core_initialize(pmc_mdep, ncpus);
+	case PMC_CPU_INTEL_HASWELL_XEON:
+		error = pmc_core_initialize(pmc_mdep, ncpus, verov);
 		break;
 
 		/*
@@ -251,8 +297,10 @@ pmc_intel_initialize(void)
 		KASSERT(0, ("[intel,%d] Unknown CPU type", __LINE__));
 	}
 
-	if (error)
+	if (error) {
+		pmc_tsc_finalize(pmc_mdep);
 		goto error;
+	}
 
 	/*
 	 * Init the uncore class.
@@ -266,16 +314,16 @@ pmc_intel_initialize(void)
 	case PMC_CPU_INTEL_HASWELL:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
+	case PMC_CPU_INTEL_BROADWELL:
 		error = pmc_uncore_initialize(pmc_mdep, ncpus);
 		break;
 	default:
 		break;
 	}
 #endif
-
   error:
 	if (error) {
-		free(pmc_mdep, M_PMC);
+		pmc_mdep_free(pmc_mdep);
 		pmc_mdep = NULL;
 	}
 
@@ -290,14 +338,21 @@ pmc_intel_finalize(struct pmc_mdep *md)
 	switch (md->pmd_cputype) {
 #if	defined(__i386__) || defined(__amd64__)
 	case PMC_CPU_INTEL_ATOM:
+	case PMC_CPU_INTEL_ATOM_SILVERMONT:
+	case PMC_CPU_INTEL_BROADWELL:
+	case PMC_CPU_INTEL_BROADWELL_XEON:
+	case PMC_CPU_INTEL_SKYLAKE:
 	case PMC_CPU_INTEL_CORE:
 	case PMC_CPU_INTEL_CORE2:
 	case PMC_CPU_INTEL_CORE2EXTREME:
 	case PMC_CPU_INTEL_COREI7:
+	case PMC_CPU_INTEL_NEHALEM_EX:
 	case PMC_CPU_INTEL_HASWELL:
+	case PMC_CPU_INTEL_HASWELL_XEON:
 	case PMC_CPU_INTEL_IVYBRIDGE:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
+	case PMC_CPU_INTEL_WESTMERE_EX:
 	case PMC_CPU_INTEL_SANDYBRIDGE_XEON:
 	case PMC_CPU_INTEL_IVYBRIDGE_XEON:
 		pmc_core_finalize(md);
@@ -328,6 +383,7 @@ pmc_intel_finalize(struct pmc_mdep *md)
 	 */
 #if	defined(__i386__) || defined(__amd64__)
 	switch (md->pmd_cputype) {
+	case PMC_CPU_INTEL_BROADWELL:
 	case PMC_CPU_INTEL_COREI7:
 	case PMC_CPU_INTEL_HASWELL:
 	case PMC_CPU_INTEL_SANDYBRIDGE:

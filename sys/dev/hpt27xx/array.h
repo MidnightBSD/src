@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2011 HighPoint Technologies, Inc.
+ * Copyright (c) 2004-2011 HighPoint Technologies, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hpt27xx/array.h 284879 2015-06-26 19:55:01Z delphij $
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>

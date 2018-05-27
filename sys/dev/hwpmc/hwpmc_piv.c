@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_piv.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_piv.c 322543 2017-08-15 14:21:44Z kib $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -40,9 +40,12 @@ __FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_piv.c 236238 2012-05-29 14
 #include <sys/pmckern.h>
 #include <sys/smp.h>
 #include <sys/systm.h>
-
 #include <machine/intr_machdep.h>
+#if (__FreeBSD_version >= 1100000)
+#include <x86/apicvar.h>
+#else
 #include <machine/apicvar.h>
+#endif
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
 #include <machine/cputypes.h>
@@ -561,7 +564,7 @@ p4_pcpu_init(struct pmc_mdep *md, int cpu)
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[p4,%d] insane cpu number %d", __LINE__, cpu));
 
-	PMCDBG(MDP,INI,0, "p4-init cpu=%d is-primary=%d", cpu,
+	PMCDBG2(MDP,INI,0, "p4-init cpu=%d is-primary=%d", cpu,
 	    pmc_cpu_is_primary(cpu) != 0);
 
 	first_ri = md->pmd_classdep[PMC_MDEP_CLASS_INDEX_P4].pcd_ri;
@@ -588,7 +591,7 @@ p4_pcpu_init(struct pmc_mdep *md, int cpu)
 
 		KASSERT(plc != pc, ("[p4,%d] per-cpu config error", __LINE__));
 
-		PMCDBG(MDP,INI,1, "p4-init cpu=%d phycpu=%d pc=%p", cpu,
+		PMCDBG3(MDP,INI,1, "p4-init cpu=%d phycpu=%d pc=%p", cpu,
 		    phycpu, pc);
 		KASSERT(pc, ("[p4,%d] Null Per-Cpu state cpu=%d phycpu=%d",
 		    __LINE__, cpu, phycpu));
@@ -640,7 +643,7 @@ p4_pcpu_fini(struct pmc_mdep *md, int cpu)
 	struct p4_cpu *p4c;
 	struct pmc_cpu *pc;
 
-	PMCDBG(MDP,INI,0, "p4-cleanup cpu=%d", cpu);
+	PMCDBG1(MDP,INI,0, "p4-cleanup cpu=%d", cpu);
 
 	pc = pmc_pcpu[cpu];
 	first_ri = md->pmd_classdep[PMC_MDEP_CLASS_INDEX_P4].pcd_ri;
@@ -700,7 +703,7 @@ p4_read_pmc(int cpu, int ri, pmc_value_t *v)
 
 	mode = PMC_TO_MODE(pm);
 
-	PMCDBG(MDP,REA,1, "p4-read cpu=%d ri=%d mode=%d", cpu, ri, mode);
+	PMCDBG3(MDP,REA,1, "p4-read cpu=%d ri=%d mode=%d", cpu, ri, mode);
 
 	KASSERT(pd->pm_descr.pd_class == PMC_CLASS_P4,
 	    ("[p4,%d] unknown PMC class %d", __LINE__, pd->pm_descr.pd_class));
@@ -721,7 +724,7 @@ p4_read_pmc(int cpu, int ri, pmc_value_t *v)
 	else
 		*v = tmp;
 
-	PMCDBG(MDP,REA,2, "p4-read -> %jx", *v);
+	PMCDBG1(MDP,REA,2, "p4-read -> %jx", *v);
 
 	return (0);
 }
@@ -755,7 +758,7 @@ p4_write_pmc(int cpu, int ri, pmc_value_t v)
 
 	mode = PMC_TO_MODE(pm);
 
-	PMCDBG(MDP,WRI,1, "p4-write cpu=%d ri=%d mode=%d v=%jx", cpu, ri,
+	PMCDBG4(MDP,WRI,1, "p4-write cpu=%d ri=%d mode=%d v=%jx", cpu, ri,
 	    mode, v);
 
 	/*
@@ -798,7 +801,7 @@ p4_config_pmc(int cpu, int ri, struct pmc *pm)
 	KASSERT(ri >= 0 && ri < P4_NPMCS,
 	    ("[p4,%d] illegal row-index %d", __LINE__, ri));
 
-	PMCDBG(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
+	PMCDBG3(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
 
 	pc  = p4_pcpu[P4_TO_HTT_PRIMARY(cpu)];
 	phw = &pc->pc_p4pmcs[ri];
@@ -810,8 +813,8 @@ p4_config_pmc(int cpu, int ri, struct pmc *pm)
 	mtx_lock_spin(&pc->pc_mtx);
 	cfgflags = P4_PCPU_GET_CFGFLAGS(pc,ri);
 
-	KASSERT(cfgflags >= 0 || cfgflags <= 3,
-	    ("[p4,%d] illegal cfgflags cfg=%d on cpu=%d ri=%d", __LINE__,
+	KASSERT((cfgflags & ~0x3) == 0,
+	    ("[p4,%d] illegal cfgflags cfg=%#x on cpu=%d ri=%d", __LINE__,
 		cfgflags, cpu, ri));
 
 	KASSERT(cfgflags == 0 || phw->phw_pmc,
@@ -836,8 +839,8 @@ p4_config_pmc(int cpu, int ri, struct pmc *pm)
 			phw->phw_pmc = NULL;
 	}
 
-	KASSERT(cfgflags >= 0 || cfgflags <= 3,
-	    ("[p4,%d] illegal runcount cfg=%d on cpu=%d ri=%d", __LINE__,
+	KASSERT((cfgflags & ~0x3) == 0,
+	    ("[p4,%d] illegal runcount cfg=%#x on cpu=%d ri=%d", __LINE__,
 		cfgflags, cpu, ri));
 
 	P4_PCPU_SET_CFGFLAGS(pc,ri,cfgflags);
@@ -928,7 +931,7 @@ p4_allocate_pmc(int cpu, int ri, struct pmc *pm,
 
 	pd = &p4_pmcdesc[ri];
 
-	PMCDBG(MDP,ALL,1, "p4-allocate ri=%d class=%d pmccaps=0x%x "
+	PMCDBG4(MDP,ALL,1, "p4-allocate ri=%d class=%d pmccaps=0x%x "
 	    "reqcaps=0x%x", ri, pd->pm_descr.pd_class, pd->pm_descr.pd_caps,
 	    pm->pm_caps);
 
@@ -963,7 +966,7 @@ p4_allocate_pmc(int cpu, int ri, struct pmc *pm,
 	if ((pevent = p4_find_event(pm->pm_event)) == NULL)
 		return (ESRCH);
 
-	PMCDBG(MDP,ALL,2, "pevent={ev=%d,escrsel=0x%x,cccrsel=0x%x,isti=%d}",
+	PMCDBG4(MDP,ALL,2, "pevent={ev=%d,escrsel=0x%x,cccrsel=0x%x,isti=%d}",
 	    pevent->pm_event, pevent->pm_escr_eventselect,
 	    pevent->pm_cccr_select, pevent->pm_is_ti_event);
 
@@ -1103,7 +1106,7 @@ p4_allocate_pmc(int cpu, int ri, struct pmc *pm,
 	pm->pm_md.pm_p4.pm_p4_cccrvalue = cccrvalue;
 	pm->pm_md.pm_p4.pm_p4_escrvalue = escrvalue;
 
-	PMCDBG(MDP,ALL,2, "p4-allocate cccrsel=0x%x cccrval=0x%x "
+	PMCDBG5(MDP,ALL,2, "p4-allocate cccrsel=0x%x cccrval=0x%x "
 	    "escr=%d escrmsr=0x%x escrval=0x%x", pevent->pm_cccr_select,
 	    cccrvalue, escr, pm->pm_md.pm_p4.pm_p4_escrmsr, escrvalue);
 
@@ -1125,7 +1128,7 @@ p4_release_pmc(int cpu, int ri, struct pmc *pm)
 
 	escr = pm->pm_md.pm_p4.pm_p4_escr;
 
-	PMCDBG(MDP,REL,1, "p4-release cpu=%d ri=%d escr=%d", cpu, ri, escr);
+	PMCDBG3(MDP,REL,1, "p4-release cpu=%d ri=%d escr=%d", cpu, ri, escr);
 
 	if (PMC_IS_SYSTEM_MODE(PMC_TO_MODE(pm))) {
 		pc  = p4_pcpu[P4_TO_HTT_PRIMARY(cpu)];
@@ -1169,7 +1172,7 @@ p4_start_pmc(int cpu, int ri)
 	KASSERT(pm != NULL,
 	    ("[p4,%d] starting cpu%d,pmc%d with null pmc", __LINE__, cpu, ri));
 
-	PMCDBG(MDP,STA,1, "p4-start cpu=%d ri=%d", cpu, ri);
+	PMCDBG2(MDP,STA,1, "p4-start cpu=%d ri=%d", cpu, ri);
 
 	KASSERT(pd->pm_descr.pd_class == PMC_CLASS_P4,
 	    ("[p4,%d] wrong PMC class %d", __LINE__,
@@ -1281,9 +1284,10 @@ p4_start_pmc(int cpu, int ri)
 
 	mtx_unlock_spin(&pc->pc_mtx);
 
-	PMCDBG(MDP,STA,2,"p4-start cpu=%d rc=%d ri=%d escr=%d "
-	    "escrmsr=0x%x escrvalue=0x%x cccr_config=0x%x v=%jx", cpu, rc,
-	    ri, pm->pm_md.pm_p4.pm_p4_escr, escrmsr, escrvalue,
+	PMCDBG6(MDP,STA,2,"p4-start cpu=%d rc=%d ri=%d escr=%d "
+	    "escrmsr=0x%x escrvalue=0x%x", cpu, rc,
+	    ri, pm->pm_md.pm_p4.pm_p4_escr, escrmsr, escrvalue);
+	PMCDBG2(MDP,STA,2,"cccr_config=0x%x v=%jx",
 	    cccrvalue, P4_PCPU_HW_VALUE(pc,ri,cpu));
 
 	return (0);
@@ -1315,7 +1319,7 @@ p4_stop_pmc(int cpu, int ri)
 	KASSERT(pm != NULL,
 	    ("[p4,%d] null pmc for cpu%d, ri%d", __LINE__, cpu, ri));
 
-	PMCDBG(MDP,STO,1, "p4-stop cpu=%d ri=%d", cpu, ri);
+	PMCDBG2(MDP,STO,1, "p4-stop cpu=%d ri=%d", cpu, ri);
 
 	if (PMC_IS_SYSTEM_MODE(PMC_TO_MODE(pm))) {
 		wrmsr(pd->pm_cccr_msr,
@@ -1383,9 +1387,9 @@ p4_stop_pmc(int cpu, int ri)
 
 	mtx_unlock_spin(&pc->pc_mtx);
 
-	PMCDBG(MDP,STO,2, "p4-stop cpu=%d rc=%d ri=%d escrmsr=0x%x "
-	    "escrval=0x%x cccrval=0x%x v=%jx", cpu, rc, ri, escrmsr,
-	    escrvalue, cccrvalue, tmp);
+	PMCDBG5(MDP,STO,2, "p4-stop cpu=%d rc=%d ri=%d escrmsr=0x%x "
+	    "escrval=0x%x", cpu, rc, ri, escrmsr, escrvalue);
+	PMCDBG2(MDP,STO,2, "cccrval=0x%x v=%jx", cccrvalue, tmp);
 
 	if (tmp < P4_PCPU_HW_VALUE(pc,ri,cpu)) /* 40 bit counter overflow */
 		tmp += (P4_PERFCTR_MASK + 1) - P4_PCPU_HW_VALUE(pc,ri,cpu);
@@ -1420,7 +1424,7 @@ p4_intr(int cpu, struct trapframe *tf)
 	struct pmc *pm;
 	pmc_value_t v;
 
-	PMCDBG(MDP,INT, 1, "cpu=%d tf=0x%p um=%d", cpu, (void *) tf,
+	PMCDBG3(MDP,INT, 1, "cpu=%d tf=0x%p um=%d", cpu, (void *) tf,
 	    TRAPF_USERMODE(tf));
 
 	pc = p4_pcpu[P4_TO_HTT_PRIMARY(cpu)];
@@ -1490,7 +1494,7 @@ p4_intr(int cpu, struct trapframe *tf)
 
 		v = rdmsr(P4_PERFCTR_MSR_FIRST + ri);
 
-		PMCDBG(MDP,INT, 2, "ri=%d v=%jx", ri, v);
+		PMCDBG2(MDP,INT, 2, "ri=%d v=%jx", ri, v);
 
 		/* Stop the counter, and reset the overflow  bit */
 		cccrval &= ~(P4_CCCR_OVF | P4_CCCR_ENABLE);
@@ -1566,7 +1570,7 @@ p4_describe(int cpu, int ri, struct pmc_info *pi,
 	KASSERT(ri >= 0 && ri < P4_NPMCS,
 	    ("[p4,%d] row-index %d out of range", __LINE__, ri));
 
-	PMCDBG(MDP,OPS,1,"p4-describe cpu=%d ri=%d", cpu, ri);
+	PMCDBG2(MDP,OPS,1,"p4-describe cpu=%d ri=%d", cpu, ri);
 
 	if (P4_CPU_IS_HTT_SECONDARY(cpu))
 		return (EINVAL);
@@ -1602,7 +1606,7 @@ p4_get_msr(int ri, uint32_t *msr)
 
 	*msr = p4_pmcdesc[ri].pm_pmc_msr - P4_PERFCTR_MSR_FIRST;
 
-	PMCDBG(MDP,OPS, 1, "ri=%d getmsr=0x%x", ri, *msr);
+	PMCDBG2(MDP,OPS, 1, "ri=%d getmsr=0x%x", ri, *msr);
 
 	return 0;
 }
@@ -1618,11 +1622,10 @@ pmc_p4_initialize(struct pmc_mdep *md, int ncpus)
 	KASSERT(cpu_vendor_id == CPU_VENDOR_INTEL,
 	    ("[p4,%d] Initializing non-intel processor", __LINE__));
 
-	PMCDBG(MDP,INI,1, "%s", "p4-initialize");
+	PMCDBG0(MDP,INI,1, "p4-initialize");
 
 	/* Allocate space for pointers to per-cpu descriptors. */
-	p4_pcpu = malloc(sizeof(struct p4_cpu **) * ncpus, M_PMC,
-	    M_ZERO|M_WAITOK);
+	p4_pcpu = malloc(sizeof(*p4_pcpu) * ncpus, M_PMC, M_ZERO | M_WAITOK);
 
 	/* Fill in the class dependent descriptor. */
 	pcd = &md->pmd_classdep[PMC_MDEP_CLASS_INDEX_P4];

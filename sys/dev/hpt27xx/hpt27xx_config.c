@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hpt27xx/hpt27xx_config.c 326006 2017-11-20 06:49:05Z delphij $
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -60,7 +61,7 @@ int init_config(void)
 
 const char driver_name[] = "hpt27xx";
 const char driver_name_long[] = "RocketRAID 27xx controller driver";
-const char driver_ver[] = "v1.0";
+const char driver_ver[] = "v1.2.8";
 int  osm_max_targets = 0xff;
 
 

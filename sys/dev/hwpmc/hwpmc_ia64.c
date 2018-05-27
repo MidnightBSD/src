@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_ia64.c 185168 2008-11-22 12:34:49Z jkoshy $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_ia64.c 185168 2008-11-22 12:34:49Z jkoshy $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>

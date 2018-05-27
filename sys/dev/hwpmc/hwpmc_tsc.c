@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_tsc.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_tsc.c 283884 2015-06-01 17:57:05Z jhb $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -100,7 +100,7 @@ tsc_config_pmc(int cpu, int ri, struct pmc *pm)
 {
 	struct pmc_hw *phw;
 
-	PMCDBG(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
+	PMCDBG3(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[tsc,%d] illegal CPU value %d", __LINE__, cpu));
@@ -254,7 +254,7 @@ tsc_read_pmc(int cpu, int ri, pmc_value_t *v)
 	KASSERT(mode == PMC_MODE_SC,
 	    ("[tsc,%d] illegal pmc mode %d", __LINE__, mode));
 
-	PMCDBG(MDP,REA,1,"tsc-read id=%d", ri);
+	PMCDBG1(MDP,REA,1,"tsc-read id=%d", ri);
 
 	*v = rdtsc();
 

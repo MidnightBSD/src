@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_uncore.h 237444 2012-06-22 14:58:40Z gnn $
+ * $FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_uncore.h 266452 2014-05-19 19:49:06Z markj $
  */
 
 #ifndef _DEV_HWPMC_UNCORE_H_
@@ -115,8 +115,6 @@ struct pmc_md_ucp_pmc {
 
 int	pmc_uncore_initialize(struct pmc_mdep *_md, int _maxcpu);
 void	pmc_uncore_finalize(struct pmc_mdep *_md);
-
-void	pmc_uncore_mark_started(int _cpu, int _pmc);
 
 int	pmc_ucf_initialize(struct pmc_mdep *_md, int _maxcpu, int _npmc, int _width);
 void	pmc_ucf_finalize(struct pmc_mdep *_md);

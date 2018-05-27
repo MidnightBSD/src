@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_xscale.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_xscale.c 283884 2015-06-01 17:57:05Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -278,7 +278,7 @@ xscale_allocate_pmc(int cpu, int ri, struct pmc *pm,
 		return EINVAL;
 	pm->pm_md.pm_xscale.pm_xscale_evsel = config;
 
-	PMCDBG(MDP,ALL,2,"xscale-allocate ri=%d -> config=0x%x", ri, config);
+	PMCDBG2(MDP,ALL,2,"xscale-allocate ri=%d -> config=0x%x", ri, config);
 
 	return 0;
 }
@@ -297,7 +297,7 @@ xscale_read_pmc(int cpu, int ri, pmc_value_t *v)
 
 	pm  = xscale_pcpu[cpu]->pc_xscalepmcs[ri].phw_pmc;
 	tmp = xscale_pmcn_read(ri);
-	PMCDBG(MDP,REA,2,"xscale-read id=%d -> %jd", ri, tmp);
+	PMCDBG2(MDP,REA,2,"xscale-read id=%d -> %jd", ri, tmp);
 	if (PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm)))
 		*v = XSCALE_PERFCTR_VALUE_TO_RELOAD_COUNT(tmp);
 	else
@@ -321,7 +321,7 @@ xscale_write_pmc(int cpu, int ri, pmc_value_t v)
 	if (PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm)))
 		v = XSCALE_RELOAD_COUNT_TO_PERFCTR_VALUE(v);
 	
-	PMCDBG(MDP,WRI,1,"xscale-write cpu=%d ri=%d v=%jx", cpu, ri, v);
+	PMCDBG3(MDP,WRI,1,"xscale-write cpu=%d ri=%d v=%jx", cpu, ri, v);
 
 	xscale_pmcn_write(ri, v);
 
@@ -333,7 +333,7 @@ xscale_config_pmc(int cpu, int ri, struct pmc *pm)
 {
 	struct pmc_hw *phw;
 
-	PMCDBG(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
+	PMCDBG3(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[xscale,%d] illegal CPU value %d", __LINE__, cpu));
@@ -569,7 +569,7 @@ xscale_pcpu_init(struct pmc_mdep *md, int cpu)
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[xscale,%d] wrong cpu number %d", __LINE__, cpu));
-	PMCDBG(MDP,INI,1,"xscale-init cpu=%d", cpu);
+	PMCDBG1(MDP,INI,1,"xscale-init cpu=%d", cpu);
 
 	xscale_pcpu[cpu] = pac = malloc(sizeof(struct xscale_cpu), M_PMC,
 	    M_WAITOK|M_ZERO);
@@ -629,7 +629,7 @@ pmc_xscale_initialize()
 		printf("%s: unknown XScale core generation\n", __func__);
 		return (NULL);
 	}
-	PMCDBG(MDP,INI,1,"xscale-init npmcs=%d", xscale_npmcs);
+	PMCDBG1(MDP,INI,1,"xscale-init npmcs=%d", xscale_npmcs);
 	
 	/*
 	 * Allocate space for pointers to PMC HW descriptors and for

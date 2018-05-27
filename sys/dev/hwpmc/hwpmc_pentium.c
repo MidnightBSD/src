@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_pentium.c 184802 2008-11-09 17:37:54Z jkoshy $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_pentium.c 184802 2008-11-09 17:37:54Z jkoshy $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

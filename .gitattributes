@@ -56892,6 +56892,8 @@ sys/dev/hpt27xx/him.h -text
 sys/dev/hpt27xx/himfuncs.h -text
 sys/dev/hpt27xx/hpt27xx_config.c -text
 sys/dev/hpt27xx/hpt27xx_config.h -text
+sys/dev/hpt27xx/hpt27xx_os_bsd.c svneol=native#text/plain
+sys/dev/hpt27xx/hpt27xx_osm_bsd.c svneol=native#text/plain
 sys/dev/hpt27xx/hptintf.h -text
 sys/dev/hpt27xx/i386-elf.hpt27xx_lib.o.uu -text
 sys/dev/hpt27xx/ldm.h -text
@@ -56949,11 +56951,15 @@ sys/dev/hwpmc/hwpmc_mips.c -text
 sys/dev/hwpmc/hwpmc_mips24k.c -text
 sys/dev/hwpmc/hwpmc_mips24k.h -text
 sys/dev/hwpmc/hwpmc_mod.c -text
+sys/dev/hwpmc/hwpmc_mpc7xxx.c svneol=native#text/plain
+sys/dev/hwpmc/hwpmc_octeon.c svneol=native#text/plain
 sys/dev/hwpmc/hwpmc_pentium.c -text
 sys/dev/hwpmc/hwpmc_pentium.h -text
 sys/dev/hwpmc/hwpmc_piv.c -text
 sys/dev/hwpmc/hwpmc_piv.h -text
 sys/dev/hwpmc/hwpmc_powerpc.c -text
+sys/dev/hwpmc/hwpmc_powerpc.h svneol=native#text/plain
+sys/dev/hwpmc/hwpmc_ppc970.c svneol=native#text/plain
 sys/dev/hwpmc/hwpmc_ppro.c -text
 sys/dev/hwpmc/hwpmc_ppro.h -text
 sys/dev/hwpmc/hwpmc_soft.c -text

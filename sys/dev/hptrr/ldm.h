@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) HighPoint Technologies, Inc.
  * All rights reserved.
@@ -23,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hptrr/ldm.h 314224 2017-02-24 21:22:13Z pfg $
  */
 #include <dev/hptrr/hptrr_config.h>
 /*
- * $Id: ldm.h,v 1.2 2013-01-08 03:53:20 laffer1 Exp $
+ * $Id: ldm.h,v 1.69 2007/11/22 07:31:55 gmm Exp $
  * Copyright (C) 2004-2005 HighPoint Technologies, Inc. All rights reserved.
  */
 #ifndef _HPT_LDM_H_
@@ -57,10 +58,6 @@ extern "C" {
 #if defined(__MAX_PARTITIONS_PER_DISK) && MAX_PARTITIONS_PER_DISK > __MAX_PARTITIONS_PER_DISK
 #error "Please redefine MAX_PARTITIONS_PER_DISK!!!"
 #endif
-
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#define MIN(a,b) (((a)<(b))?(a):(b))
-
 
 typedef char check_HPT_TIME_is_unsigned[ (HPT_TIME)(-1) > 0 ? 1 : -1 ];
 

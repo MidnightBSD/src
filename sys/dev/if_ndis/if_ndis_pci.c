@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/if_ndis/if_ndis_pci.c 292614 2015-12-22 18:39:07Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -295,7 +296,7 @@ ndis_attach_pci(dev)
 			BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
                         BUS_SPACE_MAXADDR,	/* highaddr */
 			NULL, NULL,		/* filter, filterarg */
-			MAXBSIZE, NDIS_NSEG_NEW,/* maxsize, nsegments */
+			DFLTPHYS, NDIS_NSEG_NEW,/* maxsize, nsegments */
 			BUS_SPACE_MAXSIZE_32BIT,/* maxsegsize */
 			BUS_DMA_ALLOCNOW,       /* flags */
 			NULL, NULL,		/* lockfunc, lockarg */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hpt27xx/hpt27xx_config.h 284879 2015-06-26 19:55:01Z delphij $
  */
 
 #ifndef hpt27xx_CONFIG_H
@@ -149,7 +150,9 @@
 #define os_stallexec hpt27xx_os_stallexec
 #define os_unmap_pci_bar hpt27xx_os_unmap_pci_bar
 #define osm_max_targets hpt27xx_osm_max_targets
+#define pcicfg_read_byte hpt27xx_pcicfg_read_byte
 #define pcicfg_read_dword hpt27xx_pcicfg_read_dword
 #define vbus_list hpt27xx_vbus_list
 #define vdev_queue_cmd hpt27xx_vdev_queue_cmd
+#define get_dmapool_phy_addr hpt27xx_get_dmapool_phy_addr
 #endif

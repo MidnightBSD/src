@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2008 Joseph Koshy
+ * Copyright (c) 2013 Justin Hibbits
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,21 +24,39 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_tsc.h 184802 2008-11-09 17:37:54Z jkoshy $
+ * $FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_powerpc.h 263122 2014-03-14 00:12:53Z jhibbits $
  */
 
-#ifndef _DEV_HWPMC_TSC_H_
-#define	_DEV_HWPMC_TSC_H_ 1
+#ifndef _DEV_HWPMC_POWERPC_H_
+#define	_DEV_HWPMC_POWERPC_H_ 1
 
-#ifdef	_KERNEL
+#ifdef _KERNEL
 
-#define	TSC_NPMCS	1
+#define	POWERPC_PMC_CAPS	(PMC_CAP_INTERRUPT | PMC_CAP_USER |     \
+				 PMC_CAP_SYSTEM | PMC_CAP_EDGE |	\
+				 PMC_CAP_THRESHOLD | PMC_CAP_READ |	\
+				 PMC_CAP_WRITE | PMC_CAP_INVERT |	\
+				 PMC_CAP_QUALIFIER)
 
-/*
- * Prototypes.
- */
+#define POWERPC_PMC_KERNEL_ENABLE	(0x1 << 30)
+#define POWERPC_PMC_USER_ENABLE		(0x1 << 31)
 
-int	pmc_tsc_initialize(struct pmc_mdep *_md, int _maxcpu);
-void	pmc_tsc_finalize(struct pmc_mdep *_md);
-#endif	/* _KERNEL */
-#endif	/* _DEV_HWPMC_TSC_H */
+#define POWERPC_PMC_ENABLE	(POWERPC_PMC_KERNEL_ENABLE | POWERPC_PMC_USER_ENABLE)
+#define	POWERPC_RELOAD_COUNT_TO_PERFCTR_VALUE(V)	(0x80000000-(V))
+#define	POWERPC_PERFCTR_VALUE_TO_RELOAD_COUNT(P)	(0x80000000-(P))
+
+struct powerpc_cpu {
+	struct pmc_hw   *pc_ppcpmcs;
+	enum pmc_class	 pc_class;
+};
+
+extern struct powerpc_cpu **powerpc_pcpu;
+
+extern int pmc_mpc7xxx_initialize(struct pmc_mdep *pmc_mdep);
+extern int pmc_ppc970_initialize(struct pmc_mdep *pmc_mdep);
+
+extern int powerpc_describe(int cpu, int ri, struct pmc_info *pi, struct pmc **ppmc);
+extern int powerpc_get_config(int cpu, int ri, struct pmc **ppm);
+#endif /* _KERNEL */
+
+#endif	/* _DEV_HWPMC_POWERPC_H_ */

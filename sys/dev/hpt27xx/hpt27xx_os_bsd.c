@@ -1,6 +1,8 @@
 /* $MidnightBSD$ */
-/*
- * Copyright (c) HighPoint Technologies, Inc.
+/*-
+ * HighPoint RAID Driver for FreeBSD
+ *
+ * Copyright (C) 2005-2011 HighPoint Technologies, Inc. All Rights Reserved.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,16 +26,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptrr/hptrr_os_bsd.c 312398 2017-01-18 23:23:46Z marius $
- */
-#include <dev/hptrr/hptrr_config.h>
-/* $Id: os_bsd.c,v 1.11 2005/06/03 14:06:38 kdh Exp $
- *
- * HighPoint RAID Driver for FreeBSD
- * Copyright (C) 2005 HighPoint Technologies, Inc. All Rights Reserved.
+ * $FreeBSD: stable/10/sys/dev/hpt27xx/hpt27xx_os_bsd.c 312398 2017-01-18 23:23:46Z marius $
  */
 
-#include <dev/hptrr/os_bsd.h>
+#include <dev/hpt27xx/hpt27xx_config.h>
+
+#include <dev/hpt27xx/os_bsd.h>
+
+BUS_ADDRESS get_dmapool_phy_addr(void *osext, void * dmapool_virt_addr);
 
 /* hardware access */
 HPT_U8   os_inb  (void *port) { return inb((unsigned)(HPT_UPTR)port); }
@@ -83,6 +83,29 @@ void os_pci_writel (void *osext, HPT_U8 offset, HPT_U32 value)
     pci_write_config(((PHBA)osext)->pcidev, offset, value, 4);
 }
 
+BUS_ADDRESS get_dmapool_phy_addr(void *osext, void * dmapool_virt_addr)
+{
+	return (BUS_ADDRESS)vtophys(dmapool_virt_addr);
+}
+
+/* PCI space access */
+HPT_U8 pcicfg_read_byte (HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
+{
+	return (HPT_U8)pci_cfgregread(bus, dev, func, reg, 1);
+}
+HPT_U32 pcicfg_read_dword(HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
+{
+	return (HPT_U32)pci_cfgregread(bus, dev, func, reg, 4);
+}
+void pcicfg_write_byte (HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg, HPT_U8 v)
+{
+	pci_cfgregwrite(bus, dev, func, reg, v, 1);
+}
+void pcicfg_write_dword(HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg, HPT_U32 v)
+{
+	pci_cfgregwrite(bus, dev, func, reg, v, 4);
+}/* PCI space access */
+
 void *os_map_pci_bar(
     void *osext, 
     int index,   
@@ -91,18 +114,23 @@ void *os_map_pci_bar(
 )
 {
 	PHBA hba = (PHBA)osext;
+	HPT_U32 base;
 
-    hba->pcibar[index].rid = 0x10 + index * 4;
-    
-    if (pci_read_config(hba->pcidev, hba->pcibar[index].rid, 4) & 1)
-    	hba->pcibar[index].type = SYS_RES_IOPORT;
-    else
-    	hba->pcibar[index].type = SYS_RES_MEMORY;
+	hba->pcibar[index].rid = 0x10 + index * 4;
+	base = pci_read_config(hba->pcidev, hba->pcibar[index].rid, 4);
 
-    hba->pcibar[index].res = bus_alloc_resource_any(hba->pcidev,
-		hba->pcibar[index].type, &hba->pcibar[index].rid, RF_ACTIVE);
-	
-	hba->pcibar[index].base = (char *)rman_get_virtual(hba->pcibar[index].res) + offset;
+	if (base & 1) {
+		hba->pcibar[index].type = SYS_RES_IOPORT;
+		hba->pcibar[index].res = bus_alloc_resource_any(hba->pcidev,
+			hba->pcibar[index].type, &hba->pcibar[index].rid, RF_ACTIVE);
+		hba->pcibar[index].base = (void *)(unsigned long)(base & ~0x1);
+	} else {
+		hba->pcibar[index].type = SYS_RES_MEMORY;
+		hba->pcibar[index].res = bus_alloc_resource_any(hba->pcidev,
+			hba->pcibar[index].type, &hba->pcibar[index].rid, RF_ACTIVE);
+		hba->pcibar[index].base = (char *)rman_get_virtual(hba->pcibar[index].res) + offset;
+	}
+
 	return hba->pcibar[index].base;
 }
 
@@ -222,8 +250,13 @@ void  os_request_timer(void * osext, HPT_U32 interval)
 
 	HPT_ASSERT(vbus_ext->ext_type==EXT_TYPE_VBUS);
 
+#if (__FreeBSD_version >= 1000510)
 	callout_reset_sbt(&vbus_ext->timer, SBT_1US * interval, 0,
 	    os_timer_for_ldm, vbus_ext, 0);
+#else 
+	untimeout(os_timer_for_ldm, vbus_ext, vbus_ext->timer);
+	vbus_ext->timer = timeout(os_timer_for_ldm, vbus_ext, interval * hz / 1000000);
+#endif
 }
 
 HPT_TIME os_query_time(void)
@@ -285,5 +318,5 @@ void __os_dbgbreak(const char *file, int line)
     while (1);
 }
 
-int hptrr_dbg_level = 1;
+int hpt_dbg_level = 1;
 #endif

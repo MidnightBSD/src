@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_soft.c 250600 2013-05-13 15:18:36Z fabient $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_soft.c 283884 2015-06-01 17:57:05Z jhb $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -117,7 +117,7 @@ soft_allocate_pmc(int cpu, int ri, struct pmc *pm,
 		return (EPERM);
 
 	ev = pm->pm_event;
-	if (ev < PMC_EV_SOFT_FIRST || ev > PMC_EV_SOFT_LAST)
+	if ((int)ev < PMC_EV_SOFT_FIRST || (int)ev > PMC_EV_SOFT_LAST)
 		return (EINVAL);
 
 	/* Check if event is registered. */
@@ -137,7 +137,7 @@ soft_config_pmc(int cpu, int ri, struct pmc *pm)
 {
 	struct pmc_hw *phw;
 
-	PMCDBG(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
+	PMCDBG3(MDP,CFG,1, "cpu=%d ri=%d pm=%p", cpu, ri, pm);
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[soft,%d] illegal CPU value %d", __LINE__, cpu));
@@ -242,9 +242,6 @@ soft_pcpu_init(struct pmc_mdep *md, int cpu)
 	    __LINE__));
 
 	soft_pc = malloc(sizeof(struct soft_cpu), M_PMC, M_WAITOK|M_ZERO);
-	if (soft_pc == NULL)
-		return (ENOMEM);
-
 	pc = pmc_pcpu[cpu];
 
 	KASSERT(pc != NULL, ("[soft,%d] cpu %d null per-cpu", __LINE__, cpu));
@@ -280,7 +277,7 @@ soft_read_pmc(int cpu, int ri, pmc_value_t *v)
 	KASSERT(pm != NULL,
 	    ("[soft,%d] no owner for PHW [cpu%d,pmc%d]", __LINE__, cpu, ri));
 
-	PMCDBG(MDP,REA,1,"soft-read id=%d", ri);
+	PMCDBG1(MDP,REA,1,"soft-read id=%d", ri);
 
 	*v = soft_pcpu[cpu]->soft_values[ri];
 
@@ -304,7 +301,7 @@ soft_write_pmc(int cpu, int ri, pmc_value_t v)
 	KASSERT(pm,
 	    ("[soft,%d] cpu %d ri %d pmc not configured", __LINE__, cpu, ri));
 
-	PMCDBG(MDP,WRI,1, "soft-write cpu=%d ri=%d v=%jx", cpu, ri, v);
+	PMCDBG3(MDP,WRI,1, "soft-write cpu=%d ri=%d v=%jx", cpu, ri, v);
 
 	soft_pcpu[cpu]->soft_values[ri] = v;
 
@@ -421,8 +418,11 @@ pmc_soft_intr(struct pmckern_soft *ks)
 		}
 
 		processed = 1;
-		pc->soft_values[ri]++;
 		if (PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm))) {
+			if ((pc->soft_values[ri]--) <= 0)
+				pc->soft_values[ri] += pm->pm_sc.pm_reloadcount;
+			else
+				continue;
 			user_mode = TRAPF_USERMODE(ks->pm_tf);
 			error = pmc_process_interrupt(ks->pm_cpu, PMC_SR, pm,
 			    ks->pm_tf, user_mode);
@@ -437,7 +437,8 @@ pmc_soft_intr(struct pmckern_soft *ks)
 				 */
 				curthread->td_flags |= TDF_ASTPENDING;
 			}
-		}
+		} else
+			pc->soft_values[ri]++;
 	}
 
 	atomic_add_int(processed ? &pmc_stats.pm_intr_processed :

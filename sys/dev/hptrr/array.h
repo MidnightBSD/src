@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) HighPoint Technologies, Inc.
  * All rights reserved.
@@ -23,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hptrr/array.h 176018 2008-02-06 01:02:20Z scottl $
  */
 #include <dev/hptrr/hptrr_config.h>
 /*
- * $Id: array.h,v 1.2 2013-01-08 03:53:20 laffer1 Exp $
+ * $Id: array.h,v 1.44 2007/11/01 03:05:27 gmm Exp $
  * Copyright (C) 2004-2005 HighPoint Technologies, Inc. All rights reserved.
  */
 #ifndef _HPT_ARRAY_H_
