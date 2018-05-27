@@ -77,7 +77,7 @@ gdb_cninit(struct consdev *cp)
 	/* setup tx buffer and callout */
 	if (c->npending == -1) {
 		c->npending = 0;
-		callout_init(&c->flush, CALLOUT_MPSAFE);
+		callout_init(&c->flush, 1);
 		cp->cn_arg = c;
 	}
 }
@@ -136,7 +136,7 @@ oktousecallout(void *data __unused)
 {
 	calloutok = 1;
 }
-SYSINIT(gdbhack, SI_SUB_RUN_SCHEDULER, SI_ORDER_MIDDLE, oktousecallout, NULL);
+SYSINIT(gdbhack, SI_SUB_LAST, SI_ORDER_MIDDLE, oktousecallout, NULL);
 
 static void
 gdb_cnputc(struct consdev *cp, int c)
