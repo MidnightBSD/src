@@ -58547,6 +58547,9 @@ sys/dev/virtio/virtqueue.c -text
 sys/dev/virtio/virtqueue.h -text
 sys/dev/vkbd/vkbd.c -text
 sys/dev/vkbd/vkbd_var.h -text
+sys/dev/vmware/vmxnet3/if_vmx.c svneol=native#text/plain
+sys/dev/vmware/vmxnet3/if_vmxreg.h svneol=native#text/plain
+sys/dev/vmware/vmxnet3/if_vmxvar.h svneol=native#text/plain
 sys/dev/vr/if_vr.c -text
 sys/dev/vr/if_vrreg.h -text
 sys/dev/vte/if_vte.c -text
