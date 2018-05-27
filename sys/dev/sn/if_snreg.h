@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Gardner Buchanan <gbuchanan@shl.com>
  * All rights reserved.
@@ -28,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *   $MidnightBSD$
+ *   $FreeBSD: stable/10/sys/dev/sn/if_snreg.h 150459 2005-09-22 05:56:32Z imp $
  */
 
 /*

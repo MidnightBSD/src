@@ -58118,6 +58118,7 @@ sys/dev/sound/macio/aoa.h -text
 sys/dev/sound/macio/davbus.c -text
 sys/dev/sound/macio/davbusreg.h -text
 sys/dev/sound/macio/i2s.c -text
+sys/dev/sound/macio/onyx.c svneol=native#text/plain
 sys/dev/sound/macio/snapper.c -text
 sys/dev/sound/macio/tumbler.c -text
 sys/dev/sound/midi/midi.c -text

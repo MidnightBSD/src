@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Gardner Buchanan <gbuchanan@shl.com>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sn/if_sn.c 250460 2013-05-10 16:41:26Z eadler $");
 
 /*
  * This is a driver for SMC's 9000 series of Ethernet adapters.
@@ -201,7 +202,6 @@ sn_attach(device_t dev)
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = snstart;
 	ifp->if_ioctl = snioctl;
@@ -444,7 +444,7 @@ startagain:
 	/*
 	 * Wait a short amount of time to see if the allocation request
 	 * completes.  Otherwise, I enable the interrupt and wait for
-	 * completion asyncronously.
+	 * completion asynchronously.
 	 */
 
 	time_out = MEMORY_WAIT_TIME;

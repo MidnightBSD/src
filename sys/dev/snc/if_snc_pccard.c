@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/snc/if_snc_pccard.c 181393 2008-08-07 20:55:20Z imp $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
