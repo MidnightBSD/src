@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -41,7 +42,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/csapcm.c 193640 2009-06-07 19:12:08Z ariff $");
 
 /* Buffer size on dma transfer. Fixed for CS416x. */
 #define CS461x_BUFFSIZE   (4 * 1024)

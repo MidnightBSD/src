@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -35,7 +36,7 @@
 #include "feeder_if.h"
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/mixer.c 271193 2014-09-06 15:24:48Z mav $");
 
 static MALLOC_DEFINE(M_MIXER, "mixer", "mixer");
 
@@ -1222,6 +1223,15 @@ mixer_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 	return (ret);
 }
 
+static void
+mixer_mixerinfo(struct snd_mixer *m, mixer_info *mi)
+{
+	bzero((void *)mi, sizeof(*mi));
+	strlcpy(mi->id, m->name, sizeof(mi->id));
+	strlcpy(mi->name, device_get_desc(m->dev), sizeof(mi->name));
+	mi->modify_counter = m->modify_counter;
+}
+
 /*
  * XXX Make sure you can guarantee concurrency safety before calling this
  *     function, be it through Giant, PCM_*, etc !
@@ -1278,6 +1288,10 @@ mixer_ioctl_cmd(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 		goto done;
 	case OSS_GETVERSION:
 		*arg_i = SOUND_VERSION;
+		ret = 0;
+		goto done;
+	case SOUND_MIXER_INFO:
+		mixer_mixerinfo(m, (mixer_info *)arg);
 		ret = 0;
 		goto done;
 	}

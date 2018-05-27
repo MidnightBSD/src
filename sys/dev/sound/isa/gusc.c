@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Seigo Tanimura
  * Copyright (c) 1999 Ville-Pertti Keinonen
@@ -46,7 +47,7 @@
 #include <isa/isavar.h>
 #include <isa/isa_common.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/isa/gusc.c 227843 2011-11-22 21:28:20Z marius $");
 
 #define LOGICALID_NOPNP 0
 #define LOGICALID_PCM   0x0000561e

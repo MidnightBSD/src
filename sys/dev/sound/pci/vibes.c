@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Orion Hodson <O.Hodson@cs.ucl.ac.uk>
  * All rights reserved.
@@ -42,7 +43,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/vibes.c 312398 2017-01-18 23:23:46Z marius $");
 
 /* ------------------------------------------------------------------------- */
 /* Constants */
@@ -728,10 +729,7 @@ sv_attach(device_t dev) {
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->dev = dev;
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 #if __FreeBSD_version > 500000
         if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0) {
@@ -742,9 +740,8 @@ sv_attach(device_t dev) {
 #endif
 	sc->enh_rid  = SV_PCI_ENHANCED;
 	sc->enh_type = SYS_RES_IOPORT;
-	sc->enh_reg  = bus_alloc_resource(dev, sc->enh_type,
-					  &sc->enh_rid, 0, ~0,
-					  SV_PCI_ENHANCED_SIZE, RF_ACTIVE);
+	sc->enh_reg  = bus_alloc_resource_any(dev, sc->enh_type,
+					      &sc->enh_rid, RF_ACTIVE);
 	if (sc->enh_reg == NULL) {
 		device_printf(dev, "sv_attach: cannot allocate enh\n");
 		return ENXIO;
@@ -835,9 +832,8 @@ sv_attach(device_t dev) {
 	/* Cache resource short-cuts for dma_a */
 	sc->dmaa_rid = SV_PCI_DMAA;
 	sc->dmaa_type = SYS_RES_IOPORT;
-	sc->dmaa_reg  = bus_alloc_resource(dev, sc->dmaa_type,
-					   &sc->dmaa_rid, 0, ~0,
-					   SV_PCI_ENHANCED_SIZE, RF_ACTIVE);
+	sc->dmaa_reg  = bus_alloc_resource_any(dev, sc->dmaa_type,
+					       &sc->dmaa_rid, RF_ACTIVE);
 	if (sc->dmaa_reg == NULL) {
 		device_printf(dev, "sv_attach: cannot allocate dmaa\n");
 		goto fail;
@@ -854,9 +850,8 @@ sv_attach(device_t dev) {
 	/* Cache resource short-cuts for dma_c */
 	sc->dmac_rid = SV_PCI_DMAC;
 	sc->dmac_type = SYS_RES_IOPORT;
-	sc->dmac_reg  = bus_alloc_resource(dev, sc->dmac_type,
-					   &sc->dmac_rid, 0, ~0,
-					   SV_PCI_ENHANCED_SIZE, RF_ACTIVE);
+	sc->dmac_reg  = bus_alloc_resource_any(dev, sc->dmac_type,
+					       &sc->dmac_rid, RF_ACTIVE);
 	if (sc->dmac_reg == NULL) {
 		device_printf(dev, "sv_attach: cannot allocate dmac\n");
 		goto fail;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mathew Kanner
  * Copyright (c) 1993 Hannu Savolainen
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sound/midi/sequencer.c 194990 2009-06-25 18:46:30Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -42,11 +43,12 @@
 #include <dev/sound/pci/hda/hdaa.h>
 #include <dev/sound/pci/hda/hda_reg.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hda/hdaa_patches.c 312367 2017-01-18 02:57:22Z yongari $");
 
 static const struct {
 	uint32_t model;
 	uint32_t id;
+	uint32_t subsystemid;
 	uint32_t set, unset;
 	uint32_t gpio;
 } hdac_quirks[] = {
@@ -55,77 +57,90 @@ static const struct {
 	 *     on few codecs (especially ALC880) seems broken or
 	 *     perhaps unsupported.
 	 */
-	{ HDA_MATCH_ALL, HDA_MATCH_ALL,
+	{ HDA_MATCH_ALL, HDA_MATCH_ALL, HDA_MATCH_ALL,
 	    HDAA_QUIRK_FORCESTEREO | HDAA_QUIRK_IVREF, 0,
 	    0 },
-	{ ACER_ALL_SUBVENDOR, HDA_MATCH_ALL,
+	{ ACER_ALL_SUBVENDOR, HDA_MATCH_ALL, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ ASUS_G2K_SUBVENDOR, HDA_CODEC_ALC660,
+	{ ASUS_G2K_SUBVENDOR, HDA_CODEC_ALC660, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ ASUS_M5200_SUBVENDOR, HDA_CODEC_ALC880,
+	{ ASUS_M5200_SUBVENDOR, HDA_CODEC_ALC880, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ ASUS_A7M_SUBVENDOR, HDA_CODEC_ALC880,
+	{ ASUS_A7M_SUBVENDOR, HDA_CODEC_ALC880, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ ASUS_A7T_SUBVENDOR, HDA_CODEC_ALC882,
+	{ ASUS_A7T_SUBVENDOR, HDA_CODEC_ALC882, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ ASUS_W2J_SUBVENDOR, HDA_CODEC_ALC882,
+	{ ASUS_W2J_SUBVENDOR, HDA_CODEC_ALC882, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ ASUS_U5F_SUBVENDOR, HDA_CODEC_AD1986A,
+	{ ASUS_U5F_SUBVENDOR, HDA_CODEC_AD1986A, HDA_MATCH_ALL,
 	    HDAA_QUIRK_EAPDINV, 0,
 	    0 },
-	{ ASUS_A8X_SUBVENDOR, HDA_CODEC_AD1986A,
+	{ ASUS_A8X_SUBVENDOR, HDA_CODEC_AD1986A, HDA_MATCH_ALL,
 	    HDAA_QUIRK_EAPDINV, 0,
 	    0 },
-	{ ASUS_F3JC_SUBVENDOR, HDA_CODEC_ALC861,
+	{ ASUS_F3JC_SUBVENDOR, HDA_CODEC_ALC861, HDA_MATCH_ALL,
 	    HDAA_QUIRK_OVREF, 0,
 	    0 },
-	{ UNIWILL_9075_SUBVENDOR, HDA_CODEC_ALC861,
+	{ UNIWILL_9075_SUBVENDOR, HDA_CODEC_ALC861, HDA_MATCH_ALL,
 	    HDAA_QUIRK_OVREF, 0,
 	    0 },
-	/*{ ASUS_M2N_SUBVENDOR, HDA_CODEC_AD1988,
+	/*{ ASUS_M2N_SUBVENDOR, HDA_CODEC_AD1988, HDA_MATCH_ALL,
 	    HDAA_QUIRK_IVREF80, HDAA_QUIRK_IVREF50 | HDAA_QUIRK_IVREF100,
 	    0 },*/
-	{ MEDION_MD95257_SUBVENDOR, HDA_CODEC_ALC880,
+	{ MEDION_MD95257_SUBVENDOR, HDA_CODEC_ALC880, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(1) },
-	{ LENOVO_3KN100_SUBVENDOR, HDA_CODEC_AD1986A,
+	{ LENOVO_3KN100_SUBVENDOR, HDA_CODEC_AD1986A, HDA_MATCH_ALL,
 	    HDAA_QUIRK_EAPDINV | HDAA_QUIRK_SENSEINV, 0,
 	    0 },
-	{ SAMSUNG_Q1_SUBVENDOR, HDA_CODEC_AD1986A,
+	{ SAMSUNG_Q1_SUBVENDOR, HDA_CODEC_AD1986A, HDA_MATCH_ALL,
 	    HDAA_QUIRK_EAPDINV, 0,
 	    0 },
-	{ APPLE_MB3_SUBVENDOR, HDA_CODEC_ALC885,
+	{ APPLE_MB3_SUBVENDOR, HDA_CODEC_ALC885, HDA_MATCH_ALL,
 	    HDAA_QUIRK_OVREF50, 0,
 	    HDAA_GPIO_SET(0) },
-	{ APPLE_INTEL_MAC, HDA_CODEC_STAC9221,
+	{ APPLE_INTEL_MAC, HDA_CODEC_STAC9221, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) | HDAA_GPIO_SET(1) },
-	{ APPLE_MACBOOKPRO55, HDA_CODEC_CS4206,
+	{ APPLE_MACBOOKAIR31, HDA_CODEC_CS4206, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
-	{ DELL_D630_SUBVENDOR, HDA_CODEC_STAC9205X,
+	{ APPLE_MACBOOKPRO55, HDA_CODEC_CS4206, HDA_MATCH_ALL,
+	    0, 0,
+	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
+	{ APPLE_MACBOOKPRO71, HDA_CODEC_CS4206, HDA_MATCH_ALL,
+	    0, 0,
+	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
+	{ HDA_INTEL_MACBOOKPRO92, HDA_CODEC_CS4206, HDA_MATCH_ALL,
+	    0, 0,
+	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
+	{ DELL_D630_SUBVENDOR, HDA_CODEC_STAC9205X, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ DELL_V1400_SUBVENDOR, HDA_CODEC_STAC9228X,
+	{ DELL_V1400_SUBVENDOR, HDA_CODEC_STAC9228X, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(2) },
-	{ DELL_V1500_SUBVENDOR, HDA_CODEC_STAC9205X,
+	{ DELL_V1500_SUBVENDOR, HDA_CODEC_STAC9205X, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) },
-	{ HDA_MATCH_ALL, HDA_CODEC_AD1988,
+	{ HDA_MATCH_ALL, HDA_CODEC_AD1988, HDA_MATCH_ALL,
 	    HDAA_QUIRK_IVREF80, HDAA_QUIRK_IVREF50 | HDAA_QUIRK_IVREF100,
 	    0 },
-	{ HDA_MATCH_ALL, HDA_CODEC_AD1988B,
+	{ HDA_MATCH_ALL, HDA_CODEC_AD1988B, HDA_MATCH_ALL,
 	    HDAA_QUIRK_IVREF80, HDAA_QUIRK_IVREF50 | HDAA_QUIRK_IVREF100,
 	    0 },
-	{ HDA_MATCH_ALL, HDA_CODEC_CX20549,
+	{ HDA_MATCH_ALL, HDA_CODEC_CX20549, HDA_MATCH_ALL,
 	    0, HDAA_QUIRK_FORCESTEREO,
+	    0 },
+	/* Mac Pro 1,1 requires ovref for proper volume level. */
+	{ 0x00000000, HDA_CODEC_ALC885, 0x106b0c00,
+	    0, HDAA_QUIRK_OVREF,
 	    0 }
 };
 #define HDAC_QUIRKS_LEN (sizeof(hdac_quirks) / sizeof(hdac_quirks[0]))
@@ -334,9 +349,54 @@ hdac_pin_patch(struct hdaa_widget *w)
 			break;
 		}
 	} else if (id == HDA_CODEC_CX20590 &&
-	    subid == LENOVO_X220_SUBVENDOR) {
+	    (subid == LENOVO_X1_SUBVENDOR ||
+	    subid == LENOVO_X220_SUBVENDOR ||
+	    subid == LENOVO_T420_SUBVENDOR ||
+	    subid == LENOVO_T520_SUBVENDOR ||
+	    subid == LENOVO_G580_SUBVENDOR)) {
 		switch (nid) {
 		case 25:
+			patch = "as=1 seq=15";
+			break;
+		/*
+		 * Group onboard mic and headphone mic
+		 * together.  Fixes onboard mic.
+		 */
+		case 27:
+			patch = "as=2 seq=15";
+			break;
+		case 35:
+			patch = "as=2";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC269 &&
+	    (subid == LENOVO_X1CRBN_SUBVENDOR ||
+	    subid == LENOVO_T430_SUBVENDOR ||
+	    subid == LENOVO_T430S_SUBVENDOR ||
+	    subid == LENOVO_T530_SUBVENDOR)) {
+		switch (nid) {
+		case 21:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC269 &&
+	    subid == ASUS_UX31A_SUBVENDOR) {
+		switch (nid) {
+		case 33:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC892 &&
+	    subid == INTEL_DH87RL_SUBVENDOR) {
+		switch (nid) {
+		case 27:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC292 &&
+	    subid == LENOVO_X120BS_SUBVENDOR) {
+		switch (nid) {
+		case 21:
 			patch = "as=1 seq=15";
 			break;
 		}
@@ -412,18 +472,20 @@ void
 hdaa_patch(struct hdaa_devinfo *devinfo)
 {
 	struct hdaa_widget *w;
-	uint32_t id, subid;
+	uint32_t id, subid, subsystemid;
 	int i;
 
 	id = hdaa_codec_id(devinfo);
 	subid = hdaa_card_id(devinfo);
+	subsystemid = hda_get_subsystem_id(devinfo->dev);
 
 	/*
 	 * Quirks
 	 */
 	for (i = 0; i < HDAC_QUIRKS_LEN; i++) {
 		if (!(HDA_DEV_MATCH(hdac_quirks[i].model, subid) &&
-		    HDA_DEV_MATCH(hdac_quirks[i].id, id)))
+		    HDA_DEV_MATCH(hdac_quirks[i].id, id) &&
+		    HDA_DEV_MATCH(hdac_quirks[i].subsystemid, subsystemid)))
 			continue;
 		devinfo->quirks |= hdac_quirks[i].set;
 		devinfo->quirks &= ~(hdac_quirks[i].unset);
@@ -652,6 +714,15 @@ hdaa_patch_direct(struct hdaa_devinfo *devinfo)
 		/* Don't bypass mixer. */
 		hda_command(dev, HDA_CMD_12BIT(0, devinfo->nid,
 		    0xf88, 0xc0));
+		break;
+	case HDA_CODEC_ALC1150:
+		if (subid == 0xd9781462) {
+			/* Too low volume on MSI H170 GAMING M3. */
+			hda_command(dev, HDA_CMD_SET_COEFF_INDEX(0, 0x20,
+			    0x07));
+			hda_command(dev, HDA_CMD_SET_PROCESSING_COEFF(0, 0x20,
+			    0x7cb));
+		}
 		break;
 	}
 	if (subid == APPLE_INTEL_MAC)

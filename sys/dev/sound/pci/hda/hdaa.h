@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-7
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/pci/hda/hdaa.h 261455 2014-02-04 03:36:42Z eadler $
  */
 
 /*
@@ -56,7 +57,7 @@
 #define HDAA_QUIRK_IVREF100	(1 << 28)
 #define HDAA_QUIRK_OVREF50	(1 << 29)
 #define HDAA_QUIRK_OVREF80	(1 << 30)
-#define HDAA_QUIRK_OVREF100	(1 << 31)
+#define HDAA_QUIRK_OVREF100	(1U << 31)
 
 #define HDAA_QUIRK_IVREF	(HDAA_QUIRK_IVREF50 | HDAA_QUIRK_IVREF80 | \
 						HDAA_QUIRK_IVREF100)

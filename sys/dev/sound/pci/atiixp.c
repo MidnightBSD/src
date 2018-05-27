@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -67,7 +68,7 @@
 
 #include <dev/sound/pci/atiixp.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/atiixp.c 314667 2017-03-04 13:03:31Z avg $");
 
 #define ATI_IXP_DMA_RETRY_MAX	100
 
@@ -1193,7 +1194,7 @@ atiixp_pci_attach(device_t dev)
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_atiixp softc");
 	sc->dev = dev;
 
-	callout_init(&sc->poll_timer, CALLOUT_MPSAFE);
+	callout_init(&sc->poll_timer, 1);
 	sc->poll_ticks = 1;
 
 	if (resource_int_value(device_get_name(sc->dev),

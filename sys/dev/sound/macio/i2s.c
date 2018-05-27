@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/macio/i2s.c 223554 2011-06-26 00:35:11Z nwhitehorn $
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -34,7 +35,7 @@
 
 #include <isa/isavar.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/isa/sbc.c 227843 2011-11-22 21:28:20Z marius $");
 
 #define IO_MAX	3
 #define IRQ_MAX	1

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -24,8 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/pcm/mixer.h 246454 2013-02-07 08:20:03Z hselasky $
  */
+
+#ifndef _PCM_MIXER_H_
+#define	_PCM_MIXER_H_
 
 struct snd_mixer *mixer_create(device_t dev, kobj_class_t cls, void *devinfo,
     const char *desc);
@@ -79,3 +83,5 @@ extern int mixer_count;
 			    sizeof(oss_mixer_enuminfo))
 
 #define MIXER_DECLARE(name) static DEFINE_CLASS(name, name ## _methods, MIXER_SIZE)
+
+#endif				/* _PCM_MIXER_H_ */

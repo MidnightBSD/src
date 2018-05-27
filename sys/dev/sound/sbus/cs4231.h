@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/sound/sbus/cs4231.h 192452 2009-05-20 18:04:56Z joel $	*/
 /*-
  * Copyright (c) 1996 The NetBSD Foundation, Inc.
  * All rights reserved.

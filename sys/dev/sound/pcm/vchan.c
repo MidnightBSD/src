@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2001 Cameron Grant <cg@FreeBSD.org>
@@ -34,7 +35,7 @@
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/vchan.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/vchan.c 193640 2009-06-07 19:12:08Z ariff $");
 
 /*
  * [ac3 , dts , linear , 0, linear, 0]

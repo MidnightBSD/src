@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 David Jones <dej@ox.org>
  * All rights reserved.
@@ -37,7 +38,7 @@
 
 #include <dev/sound/pci/via82c686.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/via82c686.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #define VIA_PCI_ID 0x30581106
 #define	NSEGS		4	/* Number of segments in SGD table */
@@ -485,11 +486,7 @@ via_attach(device_t dev)
 	via->lock = snd_mtxcreate(device_get_nameunit(dev),
 	    "snd_via82c686 softc");
 
-	/* Get resources */
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	/* Wake up and reset AC97 if necessary */
 	data = pci_read_config(dev, VIA_AC97STATUS, 1);

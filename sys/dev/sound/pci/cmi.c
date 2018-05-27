@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Orion Hodson <O.Hodson@cs.ucl.ac.uk>
  * All rights reserved.
@@ -59,7 +60,7 @@
 #include "mixer_if.h"
 #include "mpufoi_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/cmi.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* Supported chip ID's */
 #define CMI8338A_PCI_ID   0x010013f6
@@ -935,15 +936,11 @@ static int
 cmi_attach(device_t dev)
 {
 	struct sc_info		*sc;
-	u_int32_t		data;
 	char			status[SND_STATUSLEN];
 
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_cmi softc");
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	sc->dev = dev;
 	sc->regid = PCIR_BAR(0);

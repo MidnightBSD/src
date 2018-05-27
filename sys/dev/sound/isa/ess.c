@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 1997,1998 Luigi Rizzo
@@ -42,7 +43,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/isa/ess.c 193640 2009-06-07 19:12:08Z ariff $");
 
 #define ESS_BUFFSIZE (4096)
 #define ABS(x) (((x) < 0)? -(x) : (x))

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Orion Hodson <O.Hodson@cs.ucl.ac.uk>
  * All rights reserved.
@@ -43,7 +44,7 @@
 
 #include <dev/sound/pci/cs4281.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/cs4281.c 312398 2017-01-18 23:23:46Z marius $");
 
 #define CS4281_DEFAULT_BUFSZ 16384
 
@@ -760,16 +761,13 @@ cs4281_pci_attach(device_t dev)
 {
     struct sc_info *sc;
     struct ac97_info *codec = NULL;
-    u_int32_t data;
     char status[SND_STATUSLEN];
 
     sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
     sc->dev = dev;
     sc->type = pci_get_devid(dev);
 
-    data = pci_read_config(dev, PCIR_COMMAND, 2);
-    data |= (PCIM_CMD_PORTEN | PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN);
-    pci_write_config(dev, PCIR_COMMAND, data, 2);
+    pci_enable_busmaster(dev);
 
 #if __FreeBSD_version > 500000
     if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0) {
@@ -793,12 +791,11 @@ cs4281_pci_attach(device_t dev)
 
     sc->regid   = PCIR_BAR(0);
     sc->regtype = SYS_RES_MEMORY;
-    sc->reg = bus_alloc_resource(dev, sc->regtype, &sc->regid,
-				 0, ~0, CS4281PCI_BA0_SIZE, RF_ACTIVE);
+    sc->reg = bus_alloc_resource_any(dev, sc->regtype, &sc->regid, RF_ACTIVE);
     if (!sc->reg) {
 	sc->regtype = SYS_RES_IOPORT;
-	sc->reg = bus_alloc_resource(dev, sc->regtype, &sc->regid,
-				     0, ~0, CS4281PCI_BA0_SIZE, RF_ACTIVE);
+	sc->reg = bus_alloc_resource_any(dev, sc->regtype, &sc->regid,
+					 RF_ACTIVE);
 	if (!sc->reg) {
 	    device_printf(dev, "unable to allocate register space\n");
 	    goto bad;
@@ -808,8 +805,8 @@ cs4281_pci_attach(device_t dev)
     sc->sh = rman_get_bushandle(sc->reg);
 
     sc->memid = PCIR_BAR(1);
-    sc->mem = bus_alloc_resource(dev, SYS_RES_MEMORY, &sc->memid, 0,
-				 ~0, CS4281PCI_BA1_SIZE, RF_ACTIVE);
+    sc->mem = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->memid,
+				     RF_ACTIVE);
     if (sc->mem == NULL) {
 	device_printf(dev, "unable to allocate fifo space\n");
 	goto bad;

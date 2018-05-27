@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -38,7 +39,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/neomagic.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* -------------------------------------------------------------------- */
 
@@ -599,7 +600,7 @@ nm_pci_probe(device_t dev)
 {
 	struct sc_info *sc = NULL;
 	char *s = NULL;
-	u_int32_t subdev, i, data;
+	u_int32_t subdev, i;
 
 	subdev = (pci_get_subdevice(dev) << 16) | pci_get_subvendor(dev);
 	switch (pci_get_devid(dev)) {
@@ -616,11 +617,6 @@ nm_pci_probe(device_t dev)
 				return ENXIO;
 			}
 
-			data = pci_read_config(dev, PCIR_COMMAND, 2);
-			pci_write_config(dev, PCIR_COMMAND, data |
-					 PCIM_CMD_PORTEN | PCIM_CMD_MEMEN |
-					 PCIM_CMD_BUSMASTEREN, 2);
-
 			sc->regid = PCIR_BAR(1);
 			sc->reg = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
 							 &sc->regid,
@@ -628,7 +624,6 @@ nm_pci_probe(device_t dev)
 
 			if (!sc->reg) {
 				device_printf(dev, "unable to map register space\n");
-				pci_write_config(dev, PCIR_COMMAND, data, 2);
 				free(sc, M_DEVBUF);
 				return ENXIO;
 			}
@@ -645,7 +640,6 @@ nm_pci_probe(device_t dev)
 				DEB(device_printf(dev, "subdev = 0x%x - badcard?\n",
 				    subdev));
 			}
-			pci_write_config(dev, PCIR_COMMAND, data, 2);
 			bus_release_resource(dev, SYS_RES_MEMORY, sc->regid,
 					     sc->reg);
 			free(sc, M_DEVBUF);
@@ -670,7 +664,6 @@ nm_pci_probe(device_t dev)
 static int
 nm_pci_attach(device_t dev)
 {
-	u_int32_t	data;
 	struct sc_info *sc;
 	struct ac97_info *codec = 0;
 	char 		status[SND_STATUSLEN];
@@ -679,10 +672,7 @@ nm_pci_attach(device_t dev)
 	sc->dev = dev;
 	sc->type = pci_get_devid(dev);
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_MEMEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	sc->bufid = PCIR_BAR(0);
 	sc->buf = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->bufid,

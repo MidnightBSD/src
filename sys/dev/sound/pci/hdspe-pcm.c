@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -38,7 +39,7 @@
 
 #include <mixer_if.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hdspe-pcm.c 241066 2012-09-30 09:21:10Z kevlo $");
 
 struct hdspe_latency {
 	uint32_t n;
@@ -207,6 +208,7 @@ hdspe_running(struct sc_info *sc)
 		}
 	}
 
+	free(devlist, M_TEMP);
 	return 0;
 bad:
 
@@ -214,6 +216,7 @@ bad:
 	device_printf(sc->dev,"hdspe is running\n");
 #endif
 
+	free(devlist, M_TEMP);
 	return 1;
 }
 

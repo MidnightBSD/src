@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/macio/aoa.h 188259 2009-02-07 01:15:13Z nwhitehorn $
  */
 
 #ifndef SOUND_AOA_H

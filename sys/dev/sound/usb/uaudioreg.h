@@ -1,5 +1,6 @@
-/*	$NetBSD: uaudioreg.h,v 1.12 2004/11/05 19:08:29 kent Exp $	*/
 /* $MidnightBSD$ */
+/*	$NetBSD: uaudioreg.h,v 1.12 2004/11/05 19:08:29 kent Exp $	*/
+/* $FreeBSD: stable/10/sys/dev/sound/usb/uaudioreg.h 272423 2014-10-02 16:57:44Z hselasky $ */
 
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
@@ -117,6 +118,13 @@ struct usb_audio_streaming_endpoint_descriptor {
 #define	UA_SED_MAXPACKETSONLY	0x80
 	uByte	bLockDelayUnits;
 	uWord	wLockDelay;
+} __packed;
+
+struct usb_midi_streaming_endpoint_descriptor {
+	uByte	bLength;
+	uByte	bDescriptorType;
+	uByte	bDescriptorSubtype;
+	uByte	bNumEmbMIDIJack;
 } __packed;
 
 struct usb_audio_streaming_type1_descriptor {
@@ -378,6 +386,7 @@ struct usb_audio_extension_unit_1 {
 
 #define	MASTER_CHAN	0
 
+#define	MS_GENERAL	1
 #define	AS_GENERAL	1
 #define	FORMAT_TYPE	2
 #define	FORMAT_SPECIFIC 3

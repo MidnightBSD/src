@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -41,7 +42,7 @@
 #include <dev/sound/pci/hda/hda_reg.h>
 #include <dev/sound/pci/hda/hdac.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hda/hdacc.c 312367 2017-01-18 02:57:22Z yongari $");
 
 struct hdacc_fg {
 	device_t	dev;
@@ -71,7 +72,7 @@ MALLOC_DEFINE(M_HDACC, "hdacc", "HDA CODEC");
 static const struct {
 	uint32_t id;
 	uint16_t revid;
-	char *name;
+	const char *name;
 } hdacc_codecs[] = {
 	{ HDA_CODEC_CS4206, 0,		"Cirrus Logic CS4206" },
 	{ HDA_CODEC_CS4207, 0,		"Cirrus Logic CS4207" },
@@ -87,6 +88,8 @@ static const struct {
 	{ HDA_CODEC_ALC273, 0,		"Realtek ALC273" },
 	{ HDA_CODEC_ALC275, 0,		"Realtek ALC275" },
 	{ HDA_CODEC_ALC276, 0,		"Realtek ALC276" },
+	{ HDA_CODEC_ALC292, 0,		"Realtek ALC292" },
+	{ HDA_CODEC_ALC295, 0,		"Realtek ALC295" },
 	{ HDA_CODEC_ALC660, 0,		"Realtek ALC660-VD" },
 	{ HDA_CODEC_ALC662, 0x0002,	"Realtek ALC662 rev2" },
 	{ HDA_CODEC_ALC662, 0,		"Realtek ALC662" },
@@ -109,6 +112,7 @@ static const struct {
 	{ HDA_CODEC_ALC889, 0,		"Realtek ALC889" },
 	{ HDA_CODEC_ALC892, 0,		"Realtek ALC892" },
 	{ HDA_CODEC_ALC899, 0,		"Realtek ALC899" },
+	{ HDA_CODEC_ALC1150, 0,		"Realtek ALC1150" },
 	{ HDA_CODEC_AD1882, 0,		"Analog Devices AD1882" },
 	{ HDA_CODEC_AD1882A, 0,		"Analog Devices AD1882A" },
 	{ HDA_CODEC_AD1883, 0,		"Analog Devices AD1883" },
@@ -318,6 +322,10 @@ static const struct {
 	{ HDA_CODEC_INTELIP2, 0,	"Intel Ibex Peak" },
 	{ HDA_CODEC_INTELCPT, 0,	"Intel Cougar Point" },
 	{ HDA_CODEC_INTELPPT, 0,	"Intel Panther Point" },
+	{ HDA_CODEC_INTELHSW, 0,	"Intel Haswell" },
+	{ HDA_CODEC_INTELBDW, 0,	"Intel Broadwell" },
+	{ HDA_CODEC_INTELSKLK, 0,	"Intel Skylake" },
+	{ HDA_CODEC_INTELKBLK, 0,	"Intel Kabylake" },
 	{ HDA_CODEC_INTELCL, 0,		"Intel Crestline" },
 	{ HDA_CODEC_SII1390, 0,		"Silicon Image SiI1390" },
 	{ HDA_CODEC_SII1392, 0,		"Silicon Image SiI1392" },
@@ -340,7 +348,6 @@ static const struct {
 	{ HDA_CODEC_STACXXXX, 0,	"Sigmatel" },
 	{ HDA_CODEC_VTXXXX, 0,		"VIA" },
 };
-#define HDACC_CODECS_LEN	(sizeof(hdacc_codecs) / sizeof(hdacc_codecs[0]))
 
 static int
 hdacc_suspend(device_t dev)
@@ -380,7 +387,7 @@ hdacc_probe(device_t dev)
 	id = ((uint32_t)hda_get_vendor_id(dev) << 16) + hda_get_device_id(dev);
 	revid = ((uint32_t)hda_get_revision_id(dev) << 8) + hda_get_stepping_id(dev);
 
-	for (i = 0; i < HDACC_CODECS_LEN; i++) {
+	for (i = 0; i < nitems(hdacc_codecs); i++) {
 		if (!HDA_DEV_MATCH(hdacc_codecs[i].id, id))
 			continue;
 		if (hdacc_codecs[i].revid != 0 &&
@@ -388,7 +395,7 @@ hdacc_probe(device_t dev)
 			continue;
 		break;
 	}
-	if (i < HDACC_CODECS_LEN) {
+	if (i < nitems(hdacc_codecs)) {
 		if ((hdacc_codecs[i].id & 0xffff) != 0xffff)
 			strlcpy(buf, hdacc_codecs[i].name, sizeof(buf));
 		else
@@ -460,8 +467,12 @@ hdacc_attach(device_t dev)
 static int
 hdacc_detach(device_t dev)
 {
+	struct hdacc_softc *codec = device_get_softc(dev);
+	int error;
 
-	return (device_delete_children(dev));
+	error = device_delete_children(dev);
+	free(codec->fgs, M_HDACC);
+	return (error);
 }
 
 static int
@@ -708,7 +719,7 @@ static device_method_t hdacc_methods[] = {
 	DEVMETHOD(hdac_unsol_free,	hdacc_unsol_free),
 	DEVMETHOD(hdac_unsol_intr,	hdacc_unsol_intr),
 	DEVMETHOD(hdac_pindump,		hdacc_pindump),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t hdacc_driver = {
@@ -719,4 +730,4 @@ static driver_t hdacc_driver = {
 
 static devclass_t hdacc_devclass;
 
-DRIVER_MODULE(snd_hda, hdac, hdacc_driver, hdacc_devclass, 0, 0);
+DRIVER_MODULE(snd_hda, hdac, hdacc_driver, hdacc_devclass, NULL, NULL);

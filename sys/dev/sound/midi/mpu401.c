@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mathew Kanner
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sound/midi/mpu401.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -185,7 +186,7 @@ mpu401_init(kobj_class_t cls, void *cookie, driver_intr_t softintr,
 
 	kobj_init((kobj_t)m, cls);
 
-	callout_init(&m->timer, CALLOUT_MPSAFE);
+	callout_init(&m->timer, 1);
 
 	m->si = softintr;
 	m->cookie = cookie;

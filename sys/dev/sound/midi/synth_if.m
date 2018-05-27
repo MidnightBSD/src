@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 2003 Mathew Kanner
 # All rights reserved.
@@ -23,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/sound/midi/synth_if.m 166971 2007-02-25 13:51:52Z netchild $
 #
 
 INTERFACE synth;

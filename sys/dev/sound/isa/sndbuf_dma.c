@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -32,7 +33,7 @@
 
 #include <isa/isavar.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/isa/sndbuf_dma.c 193640 2009-06-07 19:12:08Z ariff $");
 
 int
 sndbuf_dmasetup(struct snd_dbuf *b, struct resource *drq)

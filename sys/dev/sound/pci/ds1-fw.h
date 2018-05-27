@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * =============================================================================
  *  Copyright (c) 1997-1999	Yamaha Corporation.	All Rights Reserved.
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/pci/ds1-fw.h 230133 2012-01-15 13:23:33Z uqs $
  */
 #ifndef _HWMCODE_
 #define _HWMCODE_
@@ -822,9 +823,9 @@ static u_int32_t	CntrlInst[] = {
 	1999/06/21
 	Buf441 slot is Enabled.
    --------------------------------------------
-   04/09Å@creat
+   04/09  @creat
    04/12  stop nise fix
-   06/21Å@WorkingOff timming
+   06/21  @WorkingOff timming
 */
 
 static u_int32_t	CntrlInst1E[] = {

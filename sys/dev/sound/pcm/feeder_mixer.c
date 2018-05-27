@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -36,7 +37,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder_mixer.c 318979 2017-05-27 08:27:11Z hselasky $");
 #endif
 
 #undef SND_FEEDER_MULTIFORMAT
@@ -131,10 +132,10 @@ static struct feed_mixer_info feed_mixer_info_tab[] = {
 				  sizeof(feed_mixer_info_tab[0])))
 
 #define FEEDMIXER_DATA(i, c)	((void *)				\
-				 ((uintptr_t)((((i) & 0x1f) << 5) |	\
-				 ((c) & 0x1f))))
-#define FEEDMIXER_INFOIDX(d)	((uint32_t)((uintptr_t)(d) >> 5) & 0x1f)
-#define FEEDMIXER_CHANNELS(d)	((uint32_t)((uintptr_t)(d)) & 0x1f)
+				 ((uintptr_t)((((i) & 0x1f) << 7) |	\
+				 ((c) & 0x7f))))
+#define FEEDMIXER_INFOIDX(d)	((uint32_t)((uintptr_t)(d) >> 7) & 0x1f)
+#define FEEDMIXER_CHANNELS(d)	((uint32_t)((uintptr_t)(d)) & 0x7f)
 
 static int
 feed_mixer_init(struct pcm_feeder *f)

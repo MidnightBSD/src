@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -36,7 +37,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/ac97.c 227293 2011-11-07 06:44:47Z ed $");
 
 static MALLOC_DEFINE(M_AC97, "ac97", "ac97 codec");
 

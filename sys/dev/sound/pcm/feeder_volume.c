@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -37,7 +38,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder_volume.c 193640 2009-06-07 19:12:08Z ariff $");
 #endif
 
 typedef void (*feed_volume_t)(int *, int *, uint32_t, uint8_t *, uint32_t);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -48,7 +49,7 @@
 
 #define HDA_DRV_TEST_REV	"20120126_0002"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hda/hdac.c 314667 2017-03-04 13:03:31Z avg $");
 
 #define hdac_lock(sc)		snd_mtxlock((sc)->lock)
 #define hdac_unlock(sc)		snd_mtxunlock((sc)->lock)
@@ -60,29 +61,43 @@ SND_DECLARE_FILE("$MidnightBSD$");
 #define HDAC_QUIRK_MSI		(1 << 2)
 
 static const struct {
-	char *key;
+	const char *key;
 	uint32_t value;
 } hdac_quirks_tab[] = {
 	{ "64bit", HDAC_QUIRK_DMAPOS },
 	{ "dmapos", HDAC_QUIRK_DMAPOS },
 	{ "msi", HDAC_QUIRK_MSI },
 };
-#define HDAC_QUIRKS_TAB_LEN	\
-		(sizeof(hdac_quirks_tab) / sizeof(hdac_quirks_tab[0]))
 
 MALLOC_DEFINE(M_HDAC, "hdac", "HDA Controller");
 
 static const struct {
 	uint32_t	model;
-	char		*desc;
+	const char	*desc;
 	char		quirks_on;
 	char		quirks_off;
 } hdac_devices[] = {
+	{ HDA_INTEL_OAK,     "Intel Oaktrail",	0, 0 },
+	{ HDA_INTEL_BAY,     "Intel BayTrail",	0, 0 },
+	{ HDA_INTEL_HSW1,    "Intel Haswell",	0, 0 },
+	{ HDA_INTEL_HSW2,    "Intel Haswell",	0, 0 },
+	{ HDA_INTEL_HSW3,    "Intel Haswell",	0, 0 },
+	{ HDA_INTEL_BDW1,    "Intel Broadwell",	0, 0 },
+	{ HDA_INTEL_BDW2,    "Intel Broadwell",	0, 0 },
 	{ HDA_INTEL_CPT,     "Intel Cougar Point",	0, 0 },
 	{ HDA_INTEL_PATSBURG,"Intel Patsburg",  0, 0 },
 	{ HDA_INTEL_PPT1,    "Intel Panther Point",	0, 0 },
 	{ HDA_INTEL_LPT1,    "Intel Lynx Point",	0, 0 },
 	{ HDA_INTEL_LPT2,    "Intel Lynx Point",	0, 0 },
+	{ HDA_INTEL_WCPT,    "Intel Wildcat Point",	0, 0 },
+	{ HDA_INTEL_WELLS1,  "Intel Wellsburg",	0, 0 },
+	{ HDA_INTEL_WELLS2,  "Intel Wellsburg",	0, 0 },
+	{ HDA_INTEL_LPTLP1,  "Intel Lynx Point-LP",	0, 0 },
+	{ HDA_INTEL_LPTLP2,  "Intel Lynx Point-LP",	0, 0 },
+	{ HDA_INTEL_SRPTLP,  "Intel Sunrise Point-LP",	0, 0 },
+	{ HDA_INTEL_KBLKLP,  "Intel Kabylake-LP",	0, 0 },
+	{ HDA_INTEL_SRPT,    "Intel Sunrise Point",	0, 0 },
+	{ HDA_INTEL_KBLK,    "Intel Kabylake",	0, 0 },
 	{ HDA_INTEL_82801F,  "Intel 82801F",	0, 0 },
 	{ HDA_INTEL_63XXESB, "Intel 631x/632xESB",	0, 0 },
 	{ HDA_INTEL_82801G,  "Intel 82801G",	0, 0 },
@@ -149,6 +164,7 @@ static const struct {
 	{ HDA_ATI_RV940,     "ATI RV940",	0, 0 },
 	{ HDA_ATI_RV970,     "ATI RV970",	0, 0 },
 	{ HDA_ATI_R1000,     "ATI R1000",	0, 0 },
+	{ HDA_AMD_HUDSON2,   "AMD Hudson-2",	0, 0 },
 	{ HDA_RDC_M3010,     "RDC M3010",	0, 0 },
 	{ HDA_VIA_VT82XX,    "VIA VT8251/8237A",0, 0 },
 	{ HDA_SIS_966,       "SiS 966",		0, 0 },
@@ -157,11 +173,11 @@ static const struct {
 	{ HDA_INTEL_ALL,  "Intel",		0, 0 },
 	{ HDA_NVIDIA_ALL, "NVIDIA",		0, 0 },
 	{ HDA_ATI_ALL,    "ATI",		0, 0 },
+	{ HDA_AMD_ALL,    "AMD",		0, 0 },
 	{ HDA_VIA_ALL,    "VIA",		0, 0 },
 	{ HDA_SIS_ALL,    "SiS",		0, 0 },
 	{ HDA_ULI_ALL,    "ULI",		0, 0 },
 };
-#define HDAC_DEVICES_LEN (sizeof(hdac_devices) / sizeof(hdac_devices[0]))
 
 static const struct {
 	uint16_t vendor;
@@ -173,8 +189,6 @@ static const struct {
 	{    ATI_VENDORID, 0x42, 0xf8, 0x02 },
 	{ NVIDIA_VENDORID, 0x4e, 0xf0, 0x0f },
 };
-#define HDAC_PCIESNOOP_LEN	\
-			(sizeof(hdac_pcie_snoop) / sizeof(hdac_pcie_snoop[0]))
 
 /****************************************************************************
  * Function prototypes
@@ -245,7 +259,7 @@ hdac_config_fetch(struct hdac_softc *sc, uint32_t *on, uint32_t *off)
 			inv = 2;
 		else
 			inv = 0;
-		for (k = 0; len > inv && k < HDAC_QUIRKS_TAB_LEN; k++) {
+		for (k = 0; len > inv && k < nitems(hdac_quirks_tab); k++) {
 			if (strncmp(res + i + inv,
 			    hdac_quirks_tab[k].key, len - inv) != 0)
 				continue;
@@ -1015,7 +1029,7 @@ hdac_probe(device_t dev)
 
 	bzero(desc, sizeof(desc));
 	result = ENXIO;
-	for (i = 0; i < HDAC_DEVICES_LEN; i++) {
+	for (i = 0; i < nitems(hdac_devices); i++) {
 		if (hdac_devices[i].model == model) {
 			strlcpy(desc, hdac_devices[i].desc, sizeof(desc));
 			result = BUS_PROBE_DEFAULT;
@@ -1087,7 +1101,7 @@ hdac_attach(device_t dev)
 	class = pci_get_class(dev);
 	subclass = pci_get_subclass(dev);
 
-	for (i = 0; i < HDAC_DEVICES_LEN; i++) {
+	for (i = 0; i < nitems(hdac_devices); i++) {
 		if (hdac_devices[i].model == model) {
 			devid = i;
 			break;
@@ -1103,7 +1117,7 @@ hdac_attach(device_t dev)
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "HDA driver mutex");
 	sc->dev = dev;
 	TASK_INIT(&sc->unsolq_task, 0, hdac_unsolq_task, sc);
-	callout_init(&sc->poll_callout, CALLOUT_MPSAFE);
+	callout_init(&sc->poll_callout, 1);
 	for (i = 0; i < HDAC_CODEC_MAX; i++)
 		sc->codecs[i].dev = NULL;
 	if (devid >= 0) {
@@ -1166,7 +1180,7 @@ hdac_attach(device_t dev)
 		 *
 		 * http://msdn2.microsoft.com/en-us/library/ms790324.aspx
 		 */
-		for (i = 0; i < HDAC_PCIESNOOP_LEN; i++) {
+		for (i = 0; i < nitems(hdac_pcie_snoop); i++) {
 			if (hdac_pcie_snoop[i].vendor != vendor)
 				continue;
 			sc->flags &= ~HDAC_F_DMA_NOCACHE;
@@ -2069,7 +2083,7 @@ static device_method_t hdac_methods[] = {
 	DEVMETHOD(hdac_stream_getptr,	hdac_stream_getptr),
 	DEVMETHOD(hdac_unsol_alloc,	hdac_unsol_alloc),
 	DEVMETHOD(hdac_unsol_free,	hdac_unsol_free),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t hdac_driver = {
@@ -2080,4 +2094,4 @@ static driver_t hdac_driver = {
 
 static devclass_t hdac_devclass;
 
-DRIVER_MODULE(snd_hda, pci, hdac_driver, hdac_devclass, 0, 0);
+DRIVER_MODULE(snd_hda, pci, hdac_driver, hdac_devclass, NULL, NULL);

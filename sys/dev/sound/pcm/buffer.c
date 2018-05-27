@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -35,9 +36,10 @@
 #include "feeder_if.h"
 
 #define SND_USE_FXDIV
+#define	SND_DECLARE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/buffer.c 319066 2017-05-28 10:44:43Z hselasky $");
 
 struct snd_dbuf *
 sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel)
@@ -70,7 +72,7 @@ sndbuf_setmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
 	struct snd_dbuf *b = (struct snd_dbuf *)arg;
 
-	if (bootverbose) {
+	if (snd_verbose > 3) {
 		device_printf(b->dev, "sndbuf_setmap %lx, %lx; ",
 		    (u_long)segs[0].ds_addr, (u_long)segs[0].ds_len);
 		printf("%p -> %lx\n", b->buf, (u_long)segs[0].ds_addr);

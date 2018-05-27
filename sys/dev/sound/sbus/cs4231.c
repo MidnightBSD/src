@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Jason L. Wright (jason@thought.net)
  * Copyright (c) 2004 Pyun YongHyeon
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sound/sbus/cs4231.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -231,7 +232,8 @@ static device_method_t cs4231_sbus_methods[] = {
 	DEVMETHOD(device_detach,	cs4231_bus_detach),
 	DEVMETHOD(device_suspend,	cs4231_bus_suspend),
 	DEVMETHOD(device_resume,	cs4231_bus_resume),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t cs4231_sbus_driver = {
@@ -249,7 +251,8 @@ static device_method_t cs4231_ebus_methods[] = {
 	DEVMETHOD(device_detach,	cs4231_bus_detach),
 	DEVMETHOD(device_suspend,	cs4231_bus_suspend),
 	DEVMETHOD(device_resume,	cs4231_bus_resume),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t cs4231_ebus_driver = {

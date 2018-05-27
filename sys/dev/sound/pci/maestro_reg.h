@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2000 Taku YAMAMOTO <taku@cent.saitama-u.ac.jp>
  * All rights reserved.
@@ -24,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	maestro_reg.h,v 1.13 2001/11/11 18:29:46 taku Exp
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/pci/maestro_reg.h 137500 2004-11-10 04:29:09Z julian $
  */
 
 #ifndef	MAESTRO_REG_H_INCLUDED

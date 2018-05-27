@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Orion Hodson <oho@acm.org>
  * All rights reserved.
@@ -46,7 +47,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/als4000.c 312398 2017-01-18 23:23:46Z marius $");
 
 /* Debugging macro's */
 #undef DEB
@@ -760,8 +761,8 @@ static int
 als_resource_grab(device_t dev, struct sc_info *sc)
 {
 	sc->regid = PCIR_BAR(0);
-	sc->reg = bus_alloc_resource(dev, SYS_RES_IOPORT, &sc->regid, 0, ~0,
-				     ALS_CONFIG_SPACE_BYTES, RF_ACTIVE);
+	sc->reg = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &sc->regid,
+					 RF_ACTIVE);
 	if (sc->reg == 0) {
 		device_printf(dev, "unable to allocate register space\n");
 		goto bad;
@@ -806,16 +807,13 @@ static int
 als_pci_attach(device_t dev)
 {
 	struct sc_info *sc;
-	u_int32_t data;
 	char status[SND_STATUSLEN];
 
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_als4000 softc");
 	sc->dev = dev;
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
+	pci_enable_busmaster(dev);
 	/*
 	 * By default the power to the various components on the
          * ALS4000 is entirely controlled by the pci powerstate.  We

@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/sound/sbus/apcdmareg.h 139749 2005-01-06 01:43:34Z imp $	*/
 /*	$OpenBSD: apcdmareg.h,v 1.2 2003/06/02 18:53:18 jason Exp $	*/
 
 /*-

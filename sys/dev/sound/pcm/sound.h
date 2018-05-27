@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/pcm/sound.h 283950 2015-06-03 15:32:43Z hselasky $
  */
 
 /*
@@ -220,10 +221,12 @@ struct snd_mixer;
  * ~(0xb00ff7ff)
  */
 #define AFMT_ENCODING_MASK	0xf00fffff
-#define AFMT_CHANNEL_MASK	0x01f00000
+#define AFMT_CHANNEL_MASK	0x07f00000
 #define AFMT_CHANNEL_SHIFT	20
-#define AFMT_EXTCHANNEL_MASK	0x0e000000
-#define AFMT_EXTCHANNEL_SHIFT	25
+#define AFMT_CHANNEL_MAX	0x7f
+#define AFMT_EXTCHANNEL_MASK	0x08000000
+#define AFMT_EXTCHANNEL_SHIFT	27
+#define AFMT_EXTCHANNEL_MAX	1
 
 #define AFMT_ENCODING(v)	((v) & AFMT_ENCODING_MASK)
 

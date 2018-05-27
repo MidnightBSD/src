@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -52,7 +53,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder_matrix.c 317794 2017-05-04 14:50:25Z pfg $");
 #endif
 
 #define FEEDMATRIX_RESERVOIR	(SND_CHN_MAX * PCM_32_BPS)
@@ -86,12 +87,14 @@ static struct pcmchan_matrix feeder_matrix_maps[SND_CHN_MATRIX_MAX] = {
 	[SND_CHN_MATRIX_2_0] = SND_CHN_MATRIX_MAP_2_0,
 	[SND_CHN_MATRIX_2_1] = SND_CHN_MATRIX_MAP_2_1,
 	[SND_CHN_MATRIX_3_0] = SND_CHN_MATRIX_MAP_3_0,
+	[SND_CHN_MATRIX_3_1] = SND_CHN_MATRIX_MAP_3_1,
 	[SND_CHN_MATRIX_4_0] = SND_CHN_MATRIX_MAP_4_0,
 	[SND_CHN_MATRIX_4_1] = SND_CHN_MATRIX_MAP_4_1,
 	[SND_CHN_MATRIX_5_0] = SND_CHN_MATRIX_MAP_5_0,
 	[SND_CHN_MATRIX_5_1] = SND_CHN_MATRIX_MAP_5_1,
 	[SND_CHN_MATRIX_6_0] = SND_CHN_MATRIX_MAP_6_0,
 	[SND_CHN_MATRIX_6_1] = SND_CHN_MATRIX_MAP_6_1,
+	[SND_CHN_MATRIX_7_0] = SND_CHN_MATRIX_MAP_7_0,
 	[SND_CHN_MATRIX_7_1] = SND_CHN_MATRIX_MAP_7_1
 };
 
@@ -748,8 +751,8 @@ feeder_matrix_oss_get_channel_order(struct pcmchan_matrix *m,
 
 	tmpmap = 0x0000000000000000ULL;
 
-	for (i = 0; m->map[i].type != SND_CHN_T_MAX &&
-	    i < SND_CHN_OSS_MAX; i++) {
+	for (i = 0; i < SND_CHN_OSS_MAX && m->map[i].type != SND_CHN_T_MAX;
+	    i++) {
 		if ((1 << m->map[i].type) & ~SND_CHN_OSS_VALIDMASK)
 			return (EINVAL);
 		tmpmap |=

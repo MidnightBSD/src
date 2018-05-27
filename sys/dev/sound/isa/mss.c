@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 George Reid <greid@ukug.uk.freebsd.org>
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
@@ -33,7 +34,7 @@
 
 #include <dev/sound/pcm/sound.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/isa/mss.c 193640 2009-06-07 19:12:08Z ariff $");
 
 /* board-specific include files */
 #include <dev/sound/isa/mss.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/macio/tumbler.c 193694 2009-06-08 08:10:52Z ariff $
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Orion Hodson <orion@freebsd.org>
  * Portions of this code derived from via82c686.c:
@@ -48,7 +49,7 @@
 
 #include <dev/sound/pci/via8233.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/via8233.c 314667 2017-03-04 13:03:31Z avg $");
 
 #define VIA8233_PCI_ID 0x30591106
 
@@ -1175,7 +1176,7 @@ via_attach(device_t dev)
 	    "snd_via8233 softc");
 	via->dev = dev;
 
-	callout_init(&via->poll_timer, CALLOUT_MPSAFE);
+	callout_init(&via->poll_timer, 1);
 	via->poll_ticks = 1;
 
 	if (resource_int_value(device_get_name(dev),

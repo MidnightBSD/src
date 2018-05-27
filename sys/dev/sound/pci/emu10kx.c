@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 2003-2007 Yuriy Tsibizov <yuriy.tsibizov@gfk.ru>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/sound/pci/emu10kx.c 254263 2013-08-12 23:30:01Z scottl $
  */
 
 #include <sys/param.h>
@@ -158,7 +159,7 @@
 #define	OUT_ADC_REC	OUT_ADC_REC_L
 #define	OUT_MIC_CAP	0x0c
 
-/* Live! 5.1 Digital, non-standart 5.1 (center & sub) outputs */
+/* Live! 5.1 Digital, non-standard 5.1 (center & sub) outputs */
 #define	OUT_A_CENTER	0x11
 #define	OUT_A_SUB	0x12
 
@@ -806,7 +807,7 @@ emu_enable_ir(struct emu_sc_info *sc)
 
 
 /*
- * emu_timer_ - HW timer managment
+ * emu_timer_ - HW timer management
  */
 int
 emu_timer_create(struct emu_sc_info *sc)
@@ -913,7 +914,7 @@ emu_timer_clear(struct emu_sc_info *sc, int timer)
 }
 
 /*
- * emu_intr_ - HW interrupt handler managment
+ * emu_intr_ - HW interrupt handler management
  */
 int
 emu_intr_register(struct emu_sc_info *sc, uint32_t inte_mask, uint32_t intr_mask, uint32_t(*func) (void *softc, uint32_t irq), void *isc)
@@ -1012,7 +1013,7 @@ emu_intr(void *p)
 			if (sc->dbg_level > 1)
 				device_printf(sc->dev, "EMU_IPR2: %08x\n", stat);
 
-			break;	/* to avoid infinite loop. shoud be removed
+			break;	/* to avoid infinite loop. should be removed
 				 * after completion of P16V interface. */
 		}
 
@@ -1928,7 +1929,7 @@ emu_initefx(struct emu_sc_info *sc)
 			/*
 			 * Substream map (in byte offsets, each substream is 2 bytes):
 			 *	0x00..0x1E - outputs
-			 *	0x20..0x3E - FX, inputs ans sync stream
+			 *	0x20..0x3E - FX, inputs and sync stream
 			 */
 
 			/* First 2 channels (offset 0x20,0x22) are empty */
@@ -3040,7 +3041,6 @@ emu_pci_attach(device_t dev)
 #if 0
 	struct emu_midiinfo *midiinfo;
 #endif
-	uint32_t data;
 	int i;
 	int device_flags;
 	char status[255];
@@ -3168,7 +3168,7 @@ emu_pci_attach(device_t dev)
 		sc->output_base = 0x20;
 		/*
 		 * XXX 5.1 Analog outputs are inside efxc address space!
-		 * They use ouput+0x11/+0x12 (=efxc+1/+2).
+		 * They use output+0x11/+0x12 (=efxc+1/+2).
 		 * Don't use this efx registers for recording on SB Live! 5.1!
 		 */
 		sc->efxc_base = 0x30;
@@ -3181,11 +3181,6 @@ emu_pci_attach(device_t dev)
 	}
 	if (sc->opcode_shift == 0)
 		goto bad;
-
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
 
 	pci_enable_busmaster(dev);
 
@@ -3529,7 +3524,7 @@ static device_method_t emu_methods[] = {
 	DEVMETHOD(bus_read_ivar, emu_read_ivar),
 	DEVMETHOD(bus_write_ivar, emu_write_ivar),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 

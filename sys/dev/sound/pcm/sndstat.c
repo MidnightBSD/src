@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2001 Cameron Grant <cg@FreeBSD.org>
@@ -34,7 +35,7 @@
 #include <dev/sound/version.h>
 #include <sys/sx.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/sndstat.c 248381 2013-03-16 17:57:00Z joel $");
 
 #define	SS_TYPE_MODULE		0
 #define	SS_TYPE_FIRST		1
@@ -345,8 +346,12 @@ sndstat_prepare(struct sbuf *s)
 	struct snddev_info *d;
     	int i, j;
 
-	sbuf_printf(s, "FreeBSD Audio Driver (newpcm: %ubit %d/%s)\n",
-	    (u_int)sizeof(intpcm32_t) << 3, SND_DRV_VERSION, MACHINE_ARCH);
+	if (snd_verbose > 0) {
+		sbuf_printf(s, "FreeBSD Audio Driver (%ubit %d/%s)\n",
+		    (u_int)sizeof(intpcm32_t) << 3, SND_DRV_VERSION,
+		    MACHINE_ARCH);
+	}
+
 	if (SLIST_EMPTY(&sndstat_devlist)) {
 		sbuf_printf(s, "No devices installed.\n");
 		sbuf_finish(s);

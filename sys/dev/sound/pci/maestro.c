@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2004 Taku YAMAMOTO <taku@tackymt.homeip.net>
  * All rights reserved.
@@ -58,7 +59,7 @@
 
 #include <dev/sound/pci/maestro_reg.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/maestro.c 260298 2014-01-04 23:12:01Z dim $");
 
 /*
  * PCI IDs of supported chips:
@@ -207,9 +208,11 @@ SYSCTL_UINT(_debug_maestro, OID_AUTO, powerstate_init, CTLFLAG_RW,
 
 static void	agg_sleep(struct agg_info*, const char *wmesg, int msec);
 
+#if 0
 static __inline u_int32_t	agg_rd(struct agg_info*, int, int size);
 static __inline void		agg_wr(struct agg_info*, int, u_int32_t data,
 								int size);
+#endif
 static int	agg_rdcodec(struct agg_info*, int);
 static int	agg_wrcodec(struct agg_info*, int, u_int32_t);
 
@@ -286,6 +289,7 @@ agg_sleep(struct agg_info *sc, const char *wmesg, int msec)
 
 /* I/O port */
 
+#if 0
 static __inline u_int32_t
 agg_rd(struct agg_info *sc, int regno, int size)
 {
@@ -300,12 +304,14 @@ agg_rd(struct agg_info *sc, int regno, int size)
 		return ~(u_int32_t)0;
 	}
 }
+#endif
 
 #define AGG_RD(sc, regno, size)           \
 	bus_space_read_##size(            \
 	    ((struct agg_info*)(sc))->st, \
 	    ((struct agg_info*)(sc))->sh, (regno))
 
+#if 0
 static __inline void
 agg_wr(struct agg_info *sc, int regno, u_int32_t data, int size)
 {
@@ -321,6 +327,7 @@ agg_wr(struct agg_info *sc, int regno, u_int32_t data, int size)
 		break;
 	}
 }
+#endif
 
 #define AGG_WR(sc, regno, data, size)     \
 	bus_space_write_##size(           \
@@ -1844,15 +1851,10 @@ agg_attach(device_t dev)
 	ess->curpwr = PCI_POWERSTATE_D3;
 	pci_set_powerstate(dev, PCI_POWERSTATE_D0);
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	/* Allocate resources. */
-	if (data & PCIM_CMD_PORTEN)
-		reg = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &regid,
-		    RF_ACTIVE);
+	reg = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &regid, RF_ACTIVE);
 	if (reg != NULL) {
 		ess->reg = reg;
 		ess->regid = regid;

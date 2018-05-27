@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
  * Copyright (c) 2001 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
@@ -51,7 +52,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/envy24ht.c 254263 2013-08-12 23:30:01Z scottl $");
 
 static MALLOC_DEFINE(M_ENVY24HT, "envy24ht", "envy24ht audio");
 
@@ -2450,7 +2451,6 @@ envy24ht_alloc_resource(struct sc_info *sc)
 static int
 envy24ht_pci_attach(device_t dev)
 {
-	u_int32_t		data;
 	struct sc_info 		*sc;
 	char 			status[SND_STATUSLEN];
 	int			err = 0;
@@ -2471,10 +2471,7 @@ envy24ht_pci_attach(device_t dev)
 	sc->dev = dev;
 
 	/* initialize PCI interface */
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	/* allocate resources */
 	err = envy24ht_alloc_resource(sc);

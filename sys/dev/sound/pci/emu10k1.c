@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David O'Brien <obrien@FreeBSD.org>
  * Copyright (c) 2003 Orlando Bassotto <orlando.bassotto@ieo-research.it>
@@ -41,7 +42,7 @@
 #include <dev/sound/midi/mpu401.h>
 #include "mpufoi_if.h"
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/emu10k1.c 267043 2014-06-04 09:54:01Z marius $");
 
 /* -------------------------------------------------------------------- */
 
@@ -1378,7 +1379,7 @@ emu_memalloc(struct sc_info *sc, u_int32_t sz, bus_addr_t *addr)
 	ofs = 0;
 	for (idx = start; idx < start + blksz; idx++) {
 		mem->bmap[idx >> 3] |= 1 << (idx & 7);
-		tmp = (u_int32_t)(u_long)((u_int8_t *)blk->buf_addr + ofs);
+		tmp = (uint32_t)(blk->buf_addr + ofs);
 #ifdef EMUDEBUG
 		printf("pte[%d] -> %x phys, %x virt\n", idx, tmp,
 		    ((u_int32_t)buf) + ofs);
@@ -2067,7 +2068,6 @@ emu_pci_attach(device_t dev)
 {
 	struct ac97_info *codec = NULL;
 	struct sc_info *sc;
-	u_int32_t data;
 	int i, gotmic;
 	char status[SND_STATUSLEN];
 
@@ -2081,10 +2081,7 @@ emu_pci_attach(device_t dev)
 	sc->nchans = sc->audigy ? 8 : 4;
 	sc->addrmask = sc->audigy ? EMU_A_PTR_ADDR_MASK : EMU_PTR_ADDR_MASK;
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
 	i = PCIR_BAR(0);
 	sc->reg = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &i, RF_ACTIVE);
@@ -2186,7 +2183,7 @@ static device_method_t emu_methods[] = {
 	DEVMETHOD(device_attach,	emu_pci_attach),
 	DEVMETHOD(device_detach,	emu_pci_detach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t emu_driver = {
@@ -2195,7 +2192,7 @@ static driver_t emu_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_emu10k1, pci, emu_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_emu10k1, pci, emu_driver, pcm_devclass, NULL, NULL);
 MODULE_DEPEND(snd_emu10k1, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_emu10k1, 1);
 MODULE_DEPEND(snd_emu10k1, midi, 1, 1, 1);
@@ -2224,12 +2221,14 @@ emujoy_pci_probe(device_t dev)
 static int
 emujoy_pci_attach(device_t dev)
 {
+
 	return 0;
 }
 
 static int
 emujoy_pci_detach(device_t dev)
 {
+
 	return 0;
 }
 
@@ -2238,16 +2237,15 @@ static device_method_t emujoy_methods[] = {
 	DEVMETHOD(device_attach,	emujoy_pci_attach),
 	DEVMETHOD(device_detach,	emujoy_pci_detach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t emujoy_driver = {
 	"emujoy",
 	emujoy_methods,
-	8,
+	1	/* no softc */
 };
 
 static devclass_t emujoy_devclass;
 
-DRIVER_MODULE(emujoy, pci, emujoy_driver, emujoy_devclass, 0, 0);
-
+DRIVER_MODULE(emujoy, pci, emujoy_driver, emujoy_devclass, NULL, NULL);

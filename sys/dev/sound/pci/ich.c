@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * Copyright (c) 2001 Cameron Grant <cg@freebsd.org>
@@ -36,7 +37,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$MidnightBSD$");
+SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/ich.c 216518 2010-12-18 14:21:28Z tijl $");
 
 /* -------------------------------------------------------------------- */
 

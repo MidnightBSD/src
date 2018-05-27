@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mathew Kanner
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -35,7 +36,7 @@
   */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sound/midi/midi.c 299632 2016-05-13 09:01:20Z ngie $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -86,7 +87,7 @@ enum midi_states {
 };
 
 /*
- * The MPU interface current has init() uninit() inqsize(( outqsize()
+ * The MPU interface current has init() uninit() inqsize() outqsize()
  * callback() : fiddle with the tx|rx status.
  */
 
@@ -160,10 +161,15 @@ DEFINE_CLASS(midisynth, midisynth_methods, 0);
 /*
  * Module Exports & Interface
  *
- * struct midi_chan *midi_init(MPU_CLASS cls, int unit, int chan) int
- * midi_uninit(struct snd_midi *) 0 == no error EBUSY or other error int
- * Midi_in(struct midi_chan *, char *buf, int count) int Midi_out(struct
- * midi_chan *, char *buf, int count)
+ * struct midi_chan *midi_init(MPU_CLASS cls, int unit, int chan,
+ *     void *cookie)
+ * int midi_uninit(struct snd_midi *)
+ *
+ * 0 == no error
+ * EBUSY or other error
+ *
+ * int midi_in(struct snd_midi *, char *buf, int count)
+ * int midi_out(struct snd_midi *, char *buf, int count)
  *
  * midi_{in,out} return actual size transfered
  *
@@ -314,6 +320,8 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 		goto err0;
 
 	m->synth = malloc(sizeof(*m->synth), M_MIDI, M_NOWAIT | M_ZERO);
+	if (m->synth == NULL)
+		goto err1;
 	kobj_init((kobj_t)m->synth, &midisynth_class);
 	m->synth->m = m;
 	kobj_init((kobj_t)m, cls);
@@ -322,7 +330,7 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 
 	MIDI_DEBUG(1, printf("midiinit queues %d/%d.\n", inqsize, outqsize));
 	if (!inqsize && !outqsize)
-		goto err1;
+		goto err2;
 
 	mtx_init(&m->lock, "raw midi", NULL, 0);
 	mtx_init(&m->qlock, "q raw midi", NULL, 0);
@@ -347,7 +355,7 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 
 	if ((inqsize && !MIDIQ_BUF(m->inq)) ||
 	    (outqsize && !MIDIQ_BUF(m->outq)))
-		goto err2;
+		goto err3;
 
 
 	m->busy = 0;
@@ -357,7 +365,7 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 	m->cookie = cookie;
 
 	if (MPU_INIT(m, cookie))
-		goto err2;
+		goto err3;
 
 	mtx_unlock(&m->lock);
 	mtx_unlock(&m->qlock);
@@ -373,13 +381,14 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 
 	return m;
 
-err2:	mtx_destroy(&m->qlock);
+err3:	mtx_destroy(&m->qlock);
 	mtx_destroy(&m->lock);
 
 	if (MIDIQ_BUF(m->inq))
 		free(MIDIQ_BUF(m->inq), M_MIDI);
 	if (MIDIQ_BUF(m->outq))
 		free(MIDIQ_BUF(m->outq), M_MIDI);
+err2:	free(m->synth, M_MIDI);
 err1:	free(m, M_MIDI);
 err0:	mtx_unlock(&midistat_lock);
 	MIDI_DEBUG(1, printf("midi_init ended in error\n"));
@@ -388,7 +397,7 @@ err0:	mtx_unlock(&midistat_lock);
 
 /*
  * midi_uninit does not call MIDI_UNINIT, as since this is the implementors
- * entry point. midi_unint if fact, does not send any methods. A call to
+ * entry point. midi_uninit if fact, does not send any methods. A call to
  * midi_uninit is a defacto promise that you won't manipulate ch anymore
  *
  */
@@ -398,7 +407,7 @@ midi_uninit(struct snd_midi *m)
 {
 	int err;
 
-	err = ENXIO;
+	err = EBUSY;
 	mtx_lock(&midistat_lock);
 	mtx_lock(&m->lock);
 	if (m->busy) {
@@ -1383,6 +1392,7 @@ midi_destroy(struct snd_midi *m, int midiuninit)
 	free(MIDIQ_BUF(m->outq), M_MIDI);
 	mtx_destroy(&m->qlock);
 	mtx_destroy(&m->lock);
+	free(m->synth, M_MIDI);
 	free(m, M_MIDI);
 	return 0;
 }
@@ -1392,7 +1402,7 @@ midi_destroy(struct snd_midi *m, int midiuninit)
  */
 
 static int
-midi_load()
+midi_load(void)
 {
 	mtx_init(&midistat_lock, "midistat lock", NULL, 0);
 	TAILQ_INIT(&midi_devs);		/* Initialize the queue. */
@@ -1405,9 +1415,9 @@ midi_load()
 }
 
 static int
-midi_unload()
+midi_unload(void)
 {
-	struct snd_midi *m;
+	struct snd_midi *m, *tmp;
 	int retval;
 
 	MIDI_DEBUG(1, printf("midi_unload()\n"));
@@ -1416,7 +1426,7 @@ midi_unload()
 	if (midistat_isopen)
 		goto exit0;
 
-	TAILQ_FOREACH(m, &midi_devs, link) {
+	TAILQ_FOREACH_SAFE(m, &midi_devs, link, tmp) {
 		mtx_lock(&m->lock);
 		if (m->busy)
 			retval = EBUSY;
