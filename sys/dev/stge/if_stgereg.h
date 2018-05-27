@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_stgereg.h,v 1.3 2003/02/10 21:10:07 christos Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/stge/if_stgereg.h 226995 2011-11-01 16:13:59Z marius $ */
 
 /*
  * Sundance Technology PCI vendor ID

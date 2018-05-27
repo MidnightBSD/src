@@ -58185,6 +58185,7 @@ sys/dev/sound/usb/uaudioreg.h -text
 sys/dev/sound/version.h -text
 sys/dev/speaker/speaker.h -text
 sys/dev/speaker/spkr.c -text
+sys/dev/spibus/ofw_spibus.c svneol=native#text/plain
 sys/dev/spibus/spi.h -text
 sys/dev/spibus/spibus.c -text
 sys/dev/spibus/spibus_if.m -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
@@ -26,13 +27,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/twe/twe_compat.h 240209 2012-09-07 18:41:19Z jhb $
  */
 /*
  * Portability and compatibility interfaces.
  */
 
-#if defined(__MidnightBSD__) || defined(__FreeBSD__)
+#ifdef __FreeBSD__
 /******************************************************************************
  * FreeBSD
  */

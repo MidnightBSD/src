@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/10/sys/dev/twe/twe.c 281826 2015-04-21 11:27:50Z mav $
  */
 
 /*
@@ -985,7 +986,7 @@ twe_immediate_request(struct twe_request *tr, int usetmp)
 
     if (usetmp && (tr->tr_data != NULL)) {
 	tr->tr_flags |= TWE_CMD_IMMEDIATE;
-	if (tr->tr_length > MAXBSIZE)
+	if (tr->tr_length > DFLTPHYS)
 	    return (EINVAL);
 	bcopy(tr->tr_data, sc->twe_immediate, tr->tr_length);
     }

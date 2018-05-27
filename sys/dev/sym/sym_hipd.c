@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/sym/sym_hipd.c 315813 2017-03-23 06:41:13Z mav $");
 
 #define SYM_DRIVER_NAME	"sym-1.6.5-20000902"
 
@@ -87,6 +87,7 @@ __FBSDID("$FreeBSD$");
 
 #include <machine/bus.h>
 #include <machine/resource.h>
+#include <machine/atomic.h>
 
 #ifdef __sparc64__
 #include <dev/ofw/openfirm.h>
@@ -130,8 +131,14 @@ typedef	u_int32_t u32;
  */
 #if	defined	__i386__ || defined __amd64__
 #define MEMORY_BARRIER()	do { ; } while(0)
+#elif	defined	__powerpc__
+#define MEMORY_BARRIER()	__asm__ volatile("eieio; sync" : : : "memory")
+#elif	defined	__ia64__
+#define MEMORY_BARRIER()	__asm__ volatile("mf.a; mf" : : : "memory")
 #elif	defined	__sparc64__
 #define MEMORY_BARRIER()	__asm__ volatile("membar #Sync" : : : "memory")
+#elif	defined	__arm__
+#define MEMORY_BARRIER()	dmb()
 #else
 #error	"Not supported platform"
 #endif
@@ -147,16 +154,6 @@ typedef struct sym_quehead {
 #define sym_que_init(ptr) do { \
 	(ptr)->flink = (ptr); (ptr)->blink = (ptr); \
 } while (0)
-
-static __inline struct sym_quehead *sym_que_first(struct sym_quehead *head)
-{
-	return (head->flink == head) ? NULL : head->flink;
-}
-
-static __inline struct sym_quehead *sym_que_last(struct sym_quehead *head)
-{
-	return (head->blink == head) ? NULL : head->blink;
-}
 
 static __inline void __sym_que_add(struct sym_quehead * new,
 	struct sym_quehead * blink,
@@ -218,17 +215,6 @@ static __inline struct sym_quehead *sym_remque_head(struct sym_quehead *head)
 }
 
 #define sym_insque_tail(new, head)	__sym_que_add(new, (head)->blink, head)
-
-static __inline struct sym_quehead *sym_remque_tail(struct sym_quehead *head)
-{
-	struct sym_quehead *elem = head->blink;
-
-	if (elem != head)
-		__sym_que_del(elem->blink, head);
-	else
-		elem = NULL;
-	return elem;
-}
 
 /*
  *  This one may be useful.
@@ -2350,8 +2336,8 @@ static void sym_enqueue_cam_ccb(ccb_p cp)
 	assert(!(ccb->ccb_h.status & CAM_SIM_QUEUED));
 	ccb->ccb_h.status = CAM_REQ_INPROG;
 
-	callout_reset(&cp->ch, ccb->ccb_h.timeout * hz / 1000, sym_callout,
-			(caddr_t) ccb);
+	callout_reset_sbt(&cp->ch, SBT_1MS * ccb->ccb_h.timeout, 0, sym_callout,
+	    (caddr_t)ccb, 0);
 	ccb->ccb_h.status |= CAM_SIM_QUEUED;
 	ccb->ccb_h.sym_hcb_ptr = np;
 
@@ -3427,7 +3413,6 @@ sym_getsync(hcb_p np, u_char dt, u_char sfac, u_char *divp, u_char *fakp)
 	/*
 	 *  Check against our hardware limits, or bugs :).
 	 */
-	if (fak < 0)	{fak = 0; ret = -1;}
 	if (fak > 2)	{fak = 2; ret = -1;}
 
 	/*
@@ -7858,51 +7843,14 @@ sym_setup_data_and_start(hcb_p np, struct ccb_scsiio *csio, ccb_p cp)
 		return;
 	}
 
-	if (!(ccb_h->flags & CAM_SCATTER_VALID)) {
-		/* Single buffer */
-		if (!(ccb_h->flags & CAM_DATA_PHYS)) {
-			/* Buffer is virtual */
-			cp->dmamapped = (dir == CAM_DIR_IN) ?
-						SYM_DMA_READ : SYM_DMA_WRITE;
-			retv = bus_dmamap_load(np->data_dmat, cp->dmamap,
-					       csio->data_ptr, csio->dxfer_len,
-					       sym_execute_ccb, cp, 0);
-			if (retv == EINPROGRESS) {
-				cp->host_status	= HS_WAIT;
-				xpt_freeze_simq(np->sim, 1);
-				csio->ccb_h.status |= CAM_RELEASE_SIMQ;
-			}
-		} else {
-			/* Buffer is physical */
-			struct bus_dma_segment seg;
-
-			seg.ds_addr = (bus_addr_t) csio->data_ptr;
-			sym_execute_ccb(cp, &seg, 1, 0);
-		}
-	} else {
-		/* Scatter/gather list */
-		struct bus_dma_segment *segs;
-
-		if ((ccb_h->flags & CAM_SG_LIST_PHYS) != 0) {
-			/* The SG list pointer is physical */
-			sym_set_cam_status(cp->cam_ccb, CAM_REQ_INVALID);
-			goto out_abort;
-		}
-
-		if (!(ccb_h->flags & CAM_DATA_PHYS)) {
-			/* SG buffer pointers are virtual */
-			sym_set_cam_status(cp->cam_ccb, CAM_REQ_INVALID);
-			goto out_abort;
-		}
-
-		/* SG buffer pointers are physical */
-		segs  = (struct bus_dma_segment *)csio->data_ptr;
-		sym_execute_ccb(cp, segs, csio->sglist_cnt, 0);
+	cp->dmamapped = (dir == CAM_DIR_IN) ?  SYM_DMA_READ : SYM_DMA_WRITE;
+	retv = bus_dmamap_load_ccb(np->data_dmat, cp->dmamap,
+			       (union ccb *)csio, sym_execute_ccb, cp, 0);
+	if (retv == EINPROGRESS) {
+		cp->host_status	= HS_WAIT;
+		xpt_freeze_simq(np->sim, 1);
+		csio->ccb_h.status |= CAM_RELEASE_SIMQ;
 	}
-	return;
-out_abort:
-	sym_xpt_done(np, (union ccb *) csio, cp);
-	sym_free_ccb(np, cp);
 }
 
 /*
@@ -8088,7 +8036,7 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		if ((np->features & FE_WIDE) != 0)
 			cpi->hba_inquiry |= PI_WIDE_16;
 		cpi->target_sprt = 0;
-		cpi->hba_misc = 0;
+		cpi->hba_misc = PIM_UNMAPPED;
 		if (np->usrflags & SYM_SCAN_TARGETS_HILO)
 			cpi->hba_misc |= PIM_SCANHILO;
 		if (np->usrflags & SYM_AVOID_BUS_RESET)
@@ -8102,9 +8050,9 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->initiator_id = np->myaddr;
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Symbios", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Symbios", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 
 		cpi->protocol = PROTO_SCSI;
@@ -8560,11 +8508,9 @@ sym_pci_attach(device_t dev)
 	/*
 	 *  Alloc/get/map/retrieve everything that deals with MMIO.
 	 */
-	if ((command & PCIM_CMD_MEMEN) != 0) {
-		int regs_id = SYM_PCI_MMIO;
-		np->mmio_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-						      &regs_id, RF_ACTIVE);
-	}
+	i = SYM_PCI_MMIO;
+	np->mmio_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &i,
+	    RF_ACTIVE);
 	if (!np->mmio_res) {
 		device_printf(dev, "failed to allocate MMIO resources\n");
 		goto attach_failed;
@@ -8587,11 +8533,8 @@ sym_pci_attach(device_t dev)
 	 *  User want us to use normal IO with PCI.
 	 *  Alloc/get/map/retrieve everything that deals with IO.
 	 */
-	if ((command & PCI_COMMAND_IO_ENABLE) != 0) {
-		int regs_id = SYM_PCI_IO;
-		np->io_res = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
-						    &regs_id, RF_ACTIVE);
-	}
+	i = SYM_PCI_IO;
+	np->io_res = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &i, RF_ACTIVE);
 	if (!np->io_res) {
 		device_printf(dev, "failed to allocate IO resources\n");
 		goto attach_failed;
@@ -8603,8 +8546,7 @@ sym_pci_attach(device_t dev)
 	 *  If the chip has RAM.
 	 *  Alloc/get/map/retrieve the corresponding resources.
 	 */
-	if ((np->features & (FE_RAM|FE_RAM8K)) &&
-	    (command & PCIM_CMD_MEMEN) != 0) {
+	if (np->features & (FE_RAM|FE_RAM8K)) {
 		int regs_id = SYM_PCI_RAM;
 		if (np->features & FE_64BIT)
 			regs_id = SYM_PCI_RAM64;
@@ -8953,6 +8895,7 @@ static int sym_cam_attach(hcb_p np)
 	if (xpt_bus_register(sim, np->device, 0) != CAM_SUCCESS)
 		goto fail;
 	np->sim = sim;
+	sim = NULL;
 
 	if (xpt_create_path(&path, NULL,
 			    cam_sim_path(np->sim), CAM_TARGET_WILDCARD,
@@ -8964,7 +8907,7 @@ static int sym_cam_attach(hcb_p np)
 	/*
 	 *  Establish our async notification handler.
 	 */
-	if (xpt_register_async(AC_LOST_DEVICE, sym_async, sim, path) !=
+	if (xpt_register_async(AC_LOST_DEVICE, sym_async, np->sim, path) !=
 	    CAM_REQ_CMP)
 		goto fail;
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_stge.c,v 1.32 2005/12/11 12:22:49 christos Exp $	*/
 
 /*-
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/stge/if_stge.c 312362 2017-01-18 02:16:17Z yongari $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -507,7 +508,7 @@ stge_attach(device_t dev)
 		}
 	}
 
-	if ((error = stge_dma_alloc(sc) != 0))
+	if ((error = stge_dma_alloc(sc)) != 0)
 		goto fail;
 
 	/*
@@ -573,7 +574,6 @@ stge_attach(device_t dev)
 	ifp->if_ioctl = stge_ioctl;
 	ifp->if_start = stge_start;
 	ifp->if_init = stge_init;
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_snd.ifq_drv_maxlen = STGE_TX_RING_CNT - 1;
 	IFQ_SET_MAXLEN(&ifp->if_snd, ifp->if_snd.ifq_drv_maxlen);
 	IFQ_SET_READY(&ifp->if_snd);

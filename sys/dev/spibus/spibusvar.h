@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/spibus/spibusvar.h 260489 2014-01-09 18:28:58Z loos $ */
 
 #define SPIBUS_IVAR(d) (struct spibus_ivar *) device_get_ivars(d)
 #define SPIBUS_SOFTC(d) (struct spibus_softc *) device_get_softc(d)
@@ -18,7 +19,7 @@ enum {
 };
 
 #define SPIBUS_ACCESSOR(A, B, T)					\
-__inline static int							\
+static inline int							\
 spibus_get_ ## A(device_t dev, T *t)					\
 {									\
 	return BUS_READ_IVAR(device_get_parent(dev), dev,		\
@@ -26,3 +27,6 @@ spibus_get_ ## A(device_t dev, T *t)					\
 }
 	
 SPIBUS_ACCESSOR(cs,		CS,		uint32_t)
+
+extern driver_t spibus_driver;
+extern devclass_t spibus_devclass;

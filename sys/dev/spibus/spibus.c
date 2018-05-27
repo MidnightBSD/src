@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/spibus/spibus.c 260489 2014-01-09 18:28:58Z loos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -23,7 +24,7 @@ static int
 spibus_probe(device_t dev)
 {
 	device_set_desc(dev, "spibus bus");
-	return (0);
+	return (BUS_PROBE_GENERIC);
 }
 
 static int
@@ -185,7 +186,7 @@ static device_method_t spibus_methods[] = {
 	DEVMETHOD_END
 };
 
-static driver_t spibus_driver = {
+driver_t spibus_driver = {
 	"spibus",
 	spibus_methods,
 	sizeof(struct spibus_softc)

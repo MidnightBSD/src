@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/streams/streams.c 321020 2017-07-15 17:25:40Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,6 +99,7 @@ static struct fileops svr4_netops = {
 	.fo_close =  svr4_soo_close,
 	.fo_chmod = invfo_chmod,
 	.fo_chown = invfo_chown,
+	.fo_sendfile = invfo_sendfile,
 };
  
 static struct cdevsw streams_cdevsw = {
@@ -175,6 +177,7 @@ static moduledata_t streams_mod = {
 };
 DECLARE_MODULE(streams, streams_mod, SI_SUB_DRIVERS, SI_ORDER_ANY);
 MODULE_VERSION(streams, 1);
+MODULE_DEPEND(streams, svr4elf, 1, 1, 1);
 
 /*
  * We only need open() and close() routines.  open() calls socreate()
@@ -186,7 +189,6 @@ MODULE_VERSION(streams, 1);
 static  int
 streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 {
-	struct filedesc *fdp;
 	struct svr4_strm *st;
 	struct socket *so;
 	struct file *fp;
@@ -242,14 +244,13 @@ streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	  return EOPNOTSUPP;
 	}
 
-	fdp = td->td_proc->p_fd;
 	if ((error = falloc(td, &fp, &fd, 0)) != 0)
 	  return error;
 	/* An extra reference on `fp' has been held for us by falloc(). */
 
 	error = socreate(family, &so, type, protocol, td->td_ucred, td);
 	if (error) {
-	   fdclose(fdp, fp, fd, td);
+	   fdclose(td, fp, fd);
 	   fdrop(fp, td);
 	   return error;
 	}
@@ -327,19 +328,6 @@ svr4_ptm_alloc(td)
 	return ENOENT;
 }
 
-
-struct svr4_strm *
-svr4_stream_get(fp)
-	struct file *fp;
-{
-	struct socket *so;
-
-	if (fp == NULL || fp->f_type != DTYPE_SOCKET)
-		return NULL;
-
-	so = fp->f_data;
-	return so->so_emuldata;
-}
 
 static int
 svr4_soo_close(struct file *fp, struct thread *td)
