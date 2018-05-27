@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_upgtvar.h,v 1.14 2008/02/02 13:48:44 mglocker Exp $ */
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_upgtvar.h 259460 2013-12-16 09:34:01Z hselasky $ */
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_upgtvar.h 253757 2013-07-29 05:54:13Z hselasky $ */
 
 /*
  * Copyright (c) 2007 Marcus Glocker <mglocker@openbsd.org>

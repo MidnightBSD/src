@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Weongyo Jeong <weongyo@FreeBSD.org>
  *
@@ -15,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_urtw.c 260575 2014-01-12 21:21:19Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_urtw.c 262007 2014-02-17 01:36:53Z kevlo $");
 #include <sys/param.h>
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
@@ -1696,7 +1697,7 @@ urtw_tx_start(struct urtw_softc *sc, struct ieee80211_node *ni, struct mbuf *m0,
 	/*
 	 * Software crypto.
 	 */
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			device_printf(sc->sc_dev,

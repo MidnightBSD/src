@@ -1,4 +1,5 @@
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_uralreg.h 196219 2009-08-14 20:03:53Z jhb $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_uralreg.h 261455 2014-02-04 03:36:42Z eadler $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -197,7 +198,7 @@ struct ural_rx_desc {
 } __packed;
 
 #define RAL_RF_LOBUSY	(1 << 15)
-#define RAL_RF_BUSY	(1 << 31)
+#define RAL_RF_BUSY	(1U << 31)
 #define RAL_RF_20BIT	(20 << 24)
 
 #define RAL_RF1	0

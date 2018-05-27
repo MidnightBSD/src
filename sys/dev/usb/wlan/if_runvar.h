@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_runvar.h,v 1.3 2009/03/26 20:17:27 damien Exp $	*/
 
 /*-
@@ -17,7 +18,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/wlan/if_runvar.h 262605 2014-02-28 16:11:43Z kevlo $
+ * $FreeBSD: stable/10/sys/dev/usb/wlan/if_runvar.h 262604 2014-02-28 16:08:31Z kevlo $
  */
 
 #ifndef _IF_RUNVAR_H_

@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_upgt.c,v 1.35 2008/04/16 18:32:15 damien Exp $ */
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_upgt.c 292184 2015-12-14 09:42:39Z hselasky $ */
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_upgt.c 292183 2015-12-14 09:24:40Z hselasky $ */
 
 /*
  * Copyright (c) 2007 Marcus Glocker <mglocker@openbsd.org>
@@ -2222,7 +2223,7 @@ upgt_tx_start(struct upgt_softc *sc, struct mbuf *m, struct ieee80211_node *ni,
 	 * Software crypto.
 	 */
 	wh = mtod(m, struct ieee80211_frame *);
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m);
 		if (k == NULL) {
 			device_printf(sc->sc_dev,

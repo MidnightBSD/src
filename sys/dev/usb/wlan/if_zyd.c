@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_zyd.c,v 1.52 2007/02/11 00:08:04 jsg Exp $	*/
 /*	$NetBSD: if_zyd.c,v 1.7 2007/06/21 04:04:29 kiyohara Exp $	*/
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_zyd.c 269267 2014-07-29 22:00:54Z hselasky $	*/
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_zyd.c 269266 2014-07-29 21:59:24Z hselasky $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -20,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_zyd.c 269267 2014-07-29 22:00:54Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_zyd.c 269266 2014-07-29 21:59:24Z hselasky $");
 
 /*
  * ZyDAS ZD1211/ZD1211B USB WLAN driver.
@@ -2506,7 +2507,7 @@ zyd_tx_start(struct zyd_softc *sc, struct mbuf *m0, struct ieee80211_node *ni)
 		}
 	}
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);

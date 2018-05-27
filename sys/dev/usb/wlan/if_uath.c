@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Sam Leffler, Errno Consulting
  * Copyright (c) 2008-2009 Weongyo Jeong <weongyo@freebsd.org>
@@ -49,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_uath.c 259457 2013-12-16 09:07:09Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_uath.c 262007 2014-02-17 01:36:53Z kevlo $");
 
 /*-
  * Driver for Atheros AR5523 USB parts.
@@ -1625,7 +1626,7 @@ uath_tx_start(struct uath_softc *sc, struct mbuf *m0, struct ieee80211_node *ni,
 	}
 
 	wh = mtod(m0, struct ieee80211_frame *);
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -2459,11 +2460,8 @@ uath_intr_tx_callback(struct usb_xfer *xfer, usb_error_t error)
 
 	UATH_ASSERT_LOCKED(sc);
 
-	switch (USB_GET_STATE(xfer)) {
-	case USB_ST_TRANSFERRED:
-		cmd = STAILQ_FIRST(&sc->sc_cmd_active);
-		if (cmd == NULL)
-			goto setup;
+	cmd = STAILQ_FIRST(&sc->sc_cmd_active);
+	if (cmd != NULL && USB_GET_STATE(xfer) != USB_ST_SETUP) {
 		STAILQ_REMOVE_HEAD(&sc->sc_cmd_active, next);
 		UATH_STAT_DEC(sc, st_cmd_active);
 		STAILQ_INSERT_TAIL((cmd->flags & UATH_CMD_FLAG_READ) ?
@@ -2472,7 +2470,10 @@ uath_intr_tx_callback(struct usb_xfer *xfer, usb_error_t error)
 			UATH_STAT_INC(sc, st_cmd_waiting);
 		else
 			UATH_STAT_INC(sc, st_cmd_inactive);
-		/* FALLTHROUGH */
+	}
+
+	switch (USB_GET_STATE(xfer)) {
+	case USB_ST_TRANSFERRED:
 	case USB_ST_SETUP:
 setup:
 		cmd = STAILQ_FIRST(&sc->sc_cmd_pending);

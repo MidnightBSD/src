@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: rt2860reg.h,v 1.19 2009/05/18 19:25:07 damien Exp $	*/
 
 /*-
@@ -16,7 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/9/sys/dev/usb/wlan/if_runreg.h 294903 2016-01-27 07:34:23Z delphij $
+ * $FreeBSD: stable/10/sys/dev/usb/wlan/if_runreg.h 261868 2014-02-14 03:45:49Z kevlo $
  */
 
 #ifndef _IF_RUNREG_H_
@@ -960,6 +961,31 @@ struct rt2860_rxwi {
 #define	RT2860_RIDX_CCK11	 3
 #define	RT2860_RIDX_OFDM6	 4
 #define	RT2860_RIDX_MAX		12
+
+/*
+ * Control and status registers access macros.
+ */
+#define RAL_READ(sc, reg)						\
+	bus_space_read_4((sc)->sc_st, (sc)->sc_sh, (reg))
+
+#define RAL_WRITE(sc, reg, val)						\
+	bus_space_write_4((sc)->sc_st, (sc)->sc_sh, (reg), (val))
+
+#define RAL_BARRIER_WRITE(sc)						\
+	bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, 0x1800,		\
+	    BUS_SPACE_BARRIER_WRITE)
+
+#define RAL_BARRIER_READ_WRITE(sc)					\
+	bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, 0x1800,		\
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE)
+
+#define RAL_WRITE_REGION_1(sc, offset, datap, count)			\
+	bus_space_write_region_1((sc)->sc_st, (sc)->sc_sh, (offset),	\
+	    (datap), (count))
+
+#define RAL_SET_REGION_4(sc, offset, val, count)			\
+	bus_space_set_region_4((sc)->sc_st, (sc)->sc_sh, (offset),	\
+	    (val), (count))
 
 /*
  * EEPROM access macro.

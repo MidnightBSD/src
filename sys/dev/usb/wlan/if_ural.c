@@ -1,4 +1,5 @@
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_ural.c 269267 2014-07-29 22:00:54Z hselasky $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 269266 2014-07-29 21:59:24Z hselasky $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -21,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_ural.c 269267 2014-07-29 22:00:54Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 269266 2014-07-29 21:59:24Z hselasky $");
 
 /*-
  * Ralink Technology RT2500USB chipset driver
@@ -1121,7 +1122,7 @@ ural_tx_mgt(struct ural_softc *sc, struct mbuf *m0, struct ieee80211_node *ni)
 	tp = &vap->iv_txparms[ieee80211_chan2mode(ic->ic_curchan)];
 
 	wh = mtod(m0, struct ieee80211_frame *);
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -1290,7 +1291,7 @@ ural_tx_data(struct ural_softc *sc, struct mbuf *m0, struct ieee80211_node *ni)
 	else
 		rate = ni->ni_txrate;
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);

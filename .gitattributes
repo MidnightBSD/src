@@ -58493,6 +58493,8 @@ sys/dev/usb/usbdevs -text
 sys/dev/usb/usbdi.h -text
 sys/dev/usb/usbdi_util.h -text
 sys/dev/usb/usbhid.h -text
+sys/dev/usb/wlan/if_rsu.c svneol=native#text/plain
+sys/dev/usb/wlan/if_rsureg.h svneol=native#text/plain
 sys/dev/usb/wlan/if_rum.c -text
 sys/dev/usb/wlan/if_rumfw.h -text
 sys/dev/usb/wlan/if_rumreg.h -text
@@ -58509,6 +58511,7 @@ sys/dev/usb/wlan/if_ural.c -text
 sys/dev/usb/wlan/if_uralreg.h -text
 sys/dev/usb/wlan/if_uralvar.h -text
 sys/dev/usb/wlan/if_urtw.c -text
+sys/dev/usb/wlan/if_urtwnreg.h svneol=native#text/plain
 sys/dev/usb/wlan/if_urtwreg.h -text
 sys/dev/usb/wlan/if_urtwvar.h -text
 sys/dev/usb/wlan/if_zyd.c -text

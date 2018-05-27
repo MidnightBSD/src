@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_zydreg.h,v 1.19 2006/11/30 19:28:07 damien Exp $	*/
 /*	$NetBSD: if_zydreg.h,v 1.2 2007/06/16 11:18:45 kiyohara Exp $	*/
-/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_zydreg.h 269267 2014-07-29 22:00:54Z hselasky $	*/
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_zydreg.h 269266 2014-07-29 21:59:24Z hselasky $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -112,7 +113,7 @@
 #define ZYD_MACB_MAX_RETRY	0x9b28
 
 /*
- * Miscellanous registers.
+ * Miscellaneous registers.
  */
 #define ZYD_FIRMWARE_START_ADDR	0xee00
 #define ZYD_FIRMWARE_BASE_ADDR	0xee1d /* Firmware base address */
@@ -1007,7 +1008,7 @@
 #define ZYD_FILTER_CTS		(1 << 28)
 #define ZYD_FILTER_ACK		(1 << 29)
 #define ZYD_FILTER_CFE		(1 << 30)
-#define ZYD_FILTER_CFE_A	(1 << 31)
+#define ZYD_FILTER_CFE_A	(1U << 31)
 
 /* helpers for register ZYD_MAC_RXFILTER */
 #define ZYD_FILTER_MONITOR	0xffffffff
