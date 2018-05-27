@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pdq.c,v 1.33 2001/11/13 13:14:43 lukem Exp $	*/
 
 /*-
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pdq/pdq.c 147256 2005-06-10 16:49:24Z brooks $");
 
 /*
  * DEC PDQ FDDI Controller O/S independent code

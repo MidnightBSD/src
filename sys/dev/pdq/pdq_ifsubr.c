@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pdq_ifsubr.c,v 1.38 2001/12/21 23:21:47 matt Exp $	*/
 
 /*-
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/pdq/pdq_ifsubr.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  * DEC PDQ FDDI Controller; code for BSD derived operating systems

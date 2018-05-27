@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pdqreg.h,v 1.14 2001/06/13 10:46:03 wiz Exp $	*/
 
 /*-
@@ -24,7 +25,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Id: pdqreg.h,v 1.11 1997/03/21 21:16:04 thomas Exp
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/pdq/pdqreg.h 170413 2007-06-08 01:48:23Z mjacob $
  *
  */
 
