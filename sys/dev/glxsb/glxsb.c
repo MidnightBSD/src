@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: glxsb.c,v 1.7 2007/02/12 14:31:45 tom Exp $ */
 
 /*
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/glxsb/glxsb.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -331,7 +332,7 @@ glxsb_attach(device_t dev)
 		sc->sc_rnghz = hz / 100;
 	else
 		sc->sc_rnghz = 1;
-	callout_init(&sc->sc_rngco, CALLOUT_MPSAFE);
+	callout_init(&sc->sc_rngco, 1);
 	glxsb_rnd(sc);
 
 	return (0);
@@ -476,7 +477,7 @@ glxsb_rnd(void *v)
 	if (status & SB_RNS_TRNG_VALID) {
 		value = bus_read_4(sc->sc_sr, SB_RANDOM_NUM);
 		/* feed with one uint32 */
-		random_harvest(&value, 4, 32, 0, RANDOM_PURE);
+		random_harvest(&value, 4, 32/2, RANDOM_PURE_GLXSB);
 	}
 
 	callout_reset(&sc->sc_rngco, sc->sc_rnghz, glxsb_rnd, sc);

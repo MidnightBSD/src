@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -28,7 +29,7 @@
  *
  *	from: NetBSD: hmereg.h,v 1.16 2003/11/02 11:07:45 wiz Exp
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/hme/if_hmereg.h 220940 2011-04-22 09:39:05Z marius $
  */
 
 /*

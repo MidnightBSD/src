@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2011 HighPoint Technologies, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -24,35 +24,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/glxsb/glxsb.h 181467 2008-08-09 14:52:31Z philip $
+ * $FreeBSD: stable/10/sys/dev/hptnr/hptnr_config.c 326006 2017-11-20 06:49:05Z delphij $
  */
 
-#ifndef _GLXSB_H_
-#define _GLXSB_H_
+#include <dev/hptnr/hptnr_config.h>
+/****************************************************************************
+ * config.c - auto-generated file
+ ****************************************************************************/
+#include <dev/hptnr/os_bsd.h>
 
-#include <opencrypto/cryptodev.h>
+extern int init_module_him_r750(void);
+extern int init_module_him_dc7280(void);
+extern int init_module_vdev_raw(void);
 
-#define SB_AES_BLOCK_SIZE       0x0010
+int init_config(void)
+{
+	init_module_him_r750();	
+	init_module_him_dc7280();	
+	init_module_vdev_raw();
+	return 0;
+}
 
-struct glxsb_session {
-	uint32_t	ses_key[4];		/* key */
-	uint8_t		ses_iv[SB_AES_BLOCK_SIZE]; /* initialization vector */
-	int		ses_klen;		/* key len */
-	int		ses_used;		/* session is used */
-	uint32_t	ses_id;			/* session id*/
-	struct auth_hash *ses_axf;
-	uint8_t		*ses_ictx;
-	uint8_t		*ses_octx;
-	int		ses_mlen;
-	TAILQ_ENTRY(glxsb_session) ses_next;
-};
+const char driver_name[] = "hptnr";
+const char driver_name_long[] = "R750/DC7280 controller driver";
+const char driver_ver[] = "v1.1.5";
+int  osm_max_targets = 0xff;
 
-int glxsb_hash_setup(struct glxsb_session *ses,
-	    struct cryptoini *macini);
 
-int glxsb_hash_process(struct glxsb_session *ses,
-	    struct cryptodesc *maccrd, struct cryptop *crp);
-
-void glxsb_hash_free(struct glxsb_session *ses);
-
-#endif	/* !_GLXSB_H_ */
+int os_max_cache_size = 0x1000000;

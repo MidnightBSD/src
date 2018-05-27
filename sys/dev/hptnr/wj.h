@@ -1,6 +1,7 @@
 /* $MidnightBSD$ */
+/* $Id: wj.h,v 1.1 2007/11/01 03:05:51 gmm Exp $ */
 /*-
- * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2011 HighPoint Technologies, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -24,35 +25,34 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/glxsb/glxsb.h 181467 2008-08-09 14:52:31Z philip $
+ * $FreeBSD: stable/10/sys/dev/hptnr/wj.h 252867 2013-07-06 07:49:41Z delphij $
  */
 
-#ifndef _GLXSB_H_
-#define _GLXSB_H_
+#include <dev/hptnr/hptnr_config.h>
+ *
+ * NVRAM write journaling interface.
+ */
 
-#include <opencrypto/cryptodev.h>
+#ifndef _WJ_H_
+#define _WJ_H_
 
-#define SB_AES_BLOCK_SIZE       0x0010
+#if defined(SUPPORT_BBU) || defined(SUPPORT_NVRAM)
 
-struct glxsb_session {
-	uint32_t	ses_key[4];		/* key */
-	uint8_t		ses_iv[SB_AES_BLOCK_SIZE]; /* initialization vector */
-	int		ses_klen;		/* key len */
-	int		ses_used;		/* session is used */
-	uint32_t	ses_id;			/* session id*/
-	struct auth_hash *ses_axf;
-	uint8_t		*ses_ictx;
-	uint8_t		*ses_octx;
-	int		ses_mlen;
-	TAILQ_ENTRY(glxsb_session) ses_next;
-};
+void wj_init(PVBUS vbus, void *nvram_addr, HPT_U32 nvram_size);
+void *wj_add_entry(PVBUS vbus, PVDEV vd, HPT_LBA lba, HPT_U16 sectors);
+void *wj_get_entry(PVBUS vbus, PVDEV *vd_p, HPT_LBA *lba_p, HPT_U16 *sectors_p);
+void wj_del_entry(PVBUS vbus, void *handle);
+void wj_del_vd(PVBUS vbus, PVDEV vd);
+void wj_sync_stamp(PVBUS vbus, PVDEV vd);
 
-int glxsb_hash_setup(struct glxsb_session *ses,
-	    struct cryptoini *macini);
+#else 
 
-int glxsb_hash_process(struct glxsb_session *ses,
-	    struct cryptodesc *maccrd, struct cryptop *crp);
+#define wj_add_entry(vbus, vd, lba, sectors) 0
+#define wj_get_entry(vbus, vd_p, lba_p, sectors_p) 0
+#define wj_del_entry(vbus, handle) 0
+#define wj_del_vd(vbus, vd) 0
+#define wj_sync_stamp(vbus, vd) 0
 
-void glxsb_hash_free(struct glxsb_session *ses);
+#endif
 
-#endif	/* !_GLXSB_H_ */
+#endif

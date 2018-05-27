@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * All rights reserved.
@@ -26,7 +27,7 @@
  *
  *	from: NetBSD: gemreg.h,v 1.9 2006/11/24 13:01:07 martin Exp
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/gem/if_gemreg.h 223944 2011-07-12 08:20:15Z marius $
  */
 
 #ifndef	_IF_GEMREG_H

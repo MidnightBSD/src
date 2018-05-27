@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * Copyright (c) 2001-2003 Thomas Moestl <tmm@FreeBSD.org>.
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hme/if_hme.c 253134 2013-07-10 06:46:46Z yongari $");
 
 /*
  * HME Ethernet module driver.

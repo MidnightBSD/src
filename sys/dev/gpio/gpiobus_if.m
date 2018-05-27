@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
 # All rights reserved.
@@ -23,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/gpio/gpiobus_if.m 278783 2015-02-14 20:50:38Z loos $
 #
 
 #include <sys/bus.h>
@@ -32,25 +33,12 @@
 INTERFACE gpiobus;
 
 #
-# Lock the gpio bus
-#
-METHOD void lock_bus {
-	device_t busdev;
-};
-
-#
-# Unlock the gpio bus
-#
-METHOD void unlock_bus {
-	device_t busdev;
-};
-
-#
 # Dedicate the gpio bus control for a child
 #
-METHOD void acquire_bus {
+METHOD int acquire_bus {
 	device_t busdev;
 	device_t dev;
+	int how;
 };
 
 #

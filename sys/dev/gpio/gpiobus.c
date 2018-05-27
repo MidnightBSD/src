@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -25,28 +26,28 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/gpio/gpiobus.c 278786 2015-02-14 21:16:19Z loos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/bus.h>
+#include <sys/gpio.h>
+#include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
-#include <sys/kernel.h>
-#include <sys/queue.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
 
-#include <sys/bus.h>
-#include <machine/bus.h>
-#include <sys/rman.h>
-#include <machine/resource.h>
-
-#include <sys/gpio.h>
 #include <dev/gpio/gpiobusvar.h>
-#include "gpio_if.h"
+
 #include "gpiobus_if.h"
 
-static void gpiobus_print_pins(struct gpiobus_ivar *);
+#undef GPIOBUS_DEBUG
+#ifdef GPIOBUS_DEBUG
+#define	dprintf printf
+#else
+#define	dprintf(x, arg...)
+#endif
+
+static void gpiobus_print_pins(struct gpiobus_ivar *, char *, size_t);
 static int gpiobus_parse_pins(struct gpiobus_softc *, device_t, int);
 static int gpiobus_probe(device_t);
 static int gpiobus_attach(device_t);
@@ -62,9 +63,7 @@ static void gpiobus_hinted_child(device_t, const char *, int);
 /*
  * GPIOBUS interface
  */
-static void gpiobus_lock_bus(device_t);
-static void gpiobus_unlock_bus(device_t);
-static void gpiobus_acquire_bus(device_t, device_t);
+static int gpiobus_acquire_bus(device_t, device_t, int);
 static void gpiobus_release_bus(device_t, device_t);
 static int gpiobus_pin_setflags(device_t, device_t, uint32_t, uint32_t);
 static int gpiobus_pin_getflags(device_t, device_t, uint32_t, uint32_t*);
@@ -73,21 +72,28 @@ static int gpiobus_pin_set(device_t, device_t, uint32_t, unsigned int);
 static int gpiobus_pin_get(device_t, device_t, uint32_t, unsigned int*);
 static int gpiobus_pin_toggle(device_t, device_t, uint32_t);
 
-#define	GPIOBUS_LOCK(_sc) mtx_lock(&(_sc)->sc_mtx)
-#define	GPIOBUS_UNLOCK(_sc) mtx_unlock(&(_sc)->sc_mtx)
-#define	GPIOBUS_LOCK_INIT(_sc) \
-	mtx_init(&_sc->sc_mtx, device_get_nameunit(_sc->sc_dev), \
-	    "gpiobus", MTX_DEF)
-#define	GPIOBUS_LOCK_DESTROY(_sc) mtx_destroy(&_sc->sc_mtx);
-#define	GPIOBUS_ASSERT_LOCKED(_sc) mtx_assert(&_sc->sc_mtx, MA_OWNED);
-#define	GPIOBUS_ASSERT_UNLOCKED(_sc) mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);
+int
+gpio_check_flags(uint32_t caps, uint32_t flags)
+{
 
+	/* Check for unwanted flags. */
+	if ((flags & caps) == 0 || (flags & caps) != flags)
+		return (EINVAL);
+	/* Cannot mix input/output together. */
+	if (flags & GPIO_PIN_INPUT && flags & GPIO_PIN_OUTPUT)
+		return (EINVAL);
+	/* Cannot mix pull-up/pull-down together. */
+	if (flags & GPIO_PIN_PULLUP && flags & GPIO_PIN_PULLDOWN)
+		return (EINVAL);
+
+	return (0);
+}
 
 static void
-gpiobus_print_pins(struct gpiobus_ivar *devi)
+gpiobus_print_pins(struct gpiobus_ivar *devi, char *buf, size_t buflen)
 {
-	int range_start, range_stop, need_coma;
-	int i;
+	char tmp[128];
+	int i, range_start, range_stop, need_coma;
 
 	if (devi->npins == 0)
 		return;
@@ -97,11 +103,15 @@ gpiobus_print_pins(struct gpiobus_ivar *devi)
 	for (i = 1; i < devi->npins; i++) {
 		if (devi->pins[i] != (range_stop + 1)) {
 			if (need_coma)
-				printf(",");
+				strlcat(buf, ",", buflen);
+			memset(tmp, 0, sizeof(tmp));
 			if (range_start != range_stop)
-				printf("%d-%d", range_start, range_stop);
+				snprintf(tmp, sizeof(tmp) - 1, "%d-%d",
+				    range_start, range_stop);
 			else
-				printf("%d", range_start);
+				snprintf(tmp, sizeof(tmp) - 1, "%d",
+				    range_start);
+			strlcat(buf, tmp, buflen);
 
 			range_start = range_stop = devi->pins[i];
 			need_coma = 1;
@@ -111,11 +121,48 @@ gpiobus_print_pins(struct gpiobus_ivar *devi)
 	}
 
 	if (need_coma)
-		printf(",");
+		strlcat(buf, ",", buflen);
+	memset(tmp, 0, sizeof(tmp));
 	if (range_start != range_stop)
-		printf("%d-%d", range_start, range_stop);
+		snprintf(tmp, sizeof(tmp) - 1, "%d-%d",
+		    range_start, range_stop);
 	else
-		printf("%d", range_start);
+		snprintf(tmp, sizeof(tmp) - 1, "%d",
+		    range_start);
+	strlcat(buf, tmp, buflen);
+}
+
+int
+gpiobus_init_softc(device_t dev)
+{
+	struct gpiobus_softc *sc;
+
+	sc = GPIOBUS_SOFTC(dev);
+	sc->sc_busdev = dev;
+	sc->sc_dev = device_get_parent(dev);
+	sc->sc_intr_rman.rm_type = RMAN_ARRAY;
+	sc->sc_intr_rman.rm_descr = "GPIO Interrupts";
+	if (rman_init(&sc->sc_intr_rman) != 0 ||
+	    rman_manage_region(&sc->sc_intr_rman, 0, ~0) != 0)
+		panic("%s: failed to set up rman.", __func__);
+
+	if (GPIO_PIN_MAX(sc->sc_dev, &sc->sc_npins) != 0)
+		return (ENXIO);
+
+	KASSERT(sc->sc_npins != 0, ("GPIO device with no pins"));
+
+	/* Pins = GPIO_PIN_MAX() + 1 */
+	sc->sc_npins++;
+
+	sc->sc_pins_mapped = malloc(sizeof(int) * sc->sc_npins, M_DEVBUF, 
+	    M_NOWAIT | M_ZERO);
+	if (sc->sc_pins_mapped == NULL)
+		return (ENOMEM);
+
+	/* Initialize the bus lock. */
+	GPIOBUS_LOCK_INIT(sc);
+
+	return (0);
 }
 
 static int
@@ -131,7 +178,7 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 	}
 
 	if (npins == 0) {
-		device_printf(child, "empty pin mask");
+		device_printf(child, "empty pin mask\n");
 		return (EINVAL);
 	}
 
@@ -151,6 +198,7 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 		if (i >= sc->sc_npins) {
 			device_printf(child, 
 			    "invalid pin %d, max: %d\n", i, sc->sc_npins - 1);
+			free(devi->pins, M_DEVBUF);
 			return (EINVAL);
 		}
 
@@ -161,6 +209,7 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 		if (sc->sc_pins_mapped[i]) {
 			device_printf(child, 
 			    "warning: pin %d is already mapped\n", i);
+			free(devi->pins, M_DEVBUF);
 			return (EINVAL);
 		}
 		sc->sc_pins_mapped[i] = 1;
@@ -173,41 +222,25 @@ static int
 gpiobus_probe(device_t dev)
 {
 	device_set_desc(dev, "GPIO bus");
-	return (0);
+
+	return (BUS_PROBE_GENERIC);
 }
 
 static int
 gpiobus_attach(device_t dev)
 {
-	struct gpiobus_softc *sc = GPIOBUS_SOFTC(dev);
-	int res;
+	int err;
 
-	sc->sc_busdev = dev;
-	sc->sc_dev = device_get_parent(dev);
-	res = GPIO_PIN_MAX(sc->sc_dev, &sc->sc_npins);
-	if (res)
-		return (ENXIO);
-
-	/*
-	 * Increase to get number of pins
-	 */
-	sc->sc_npins++;
-
-	KASSERT(sc->sc_npins != 0, ("GPIO device with no pins"));
-
-	sc->sc_pins_mapped = malloc(sizeof(int) * sc->sc_npins, M_DEVBUF, 
-	    M_NOWAIT | M_ZERO);
-
-	if (!sc->sc_pins_mapped)
-		return (ENOMEM);
-
-	/* init bus lock */
-	GPIOBUS_LOCK_INIT(sc);
+	err = gpiobus_init_softc(dev);
+	if (err != 0)
+		return (err);
 
 	/*
 	 * Get parent's pins and mark them as unmapped
 	 */
+	bus_generic_probe(dev);
 	bus_enumerate_hinted_children(dev);
+
 	return (bus_generic_attach(dev));
 }
 
@@ -218,9 +251,12 @@ gpiobus_attach(device_t dev)
 static int
 gpiobus_detach(device_t dev)
 {
-	struct gpiobus_softc *sc = GPIOBUS_SOFTC(dev);
-	int err;
+	struct gpiobus_softc *sc;
+	struct gpiobus_ivar *devi;
+	device_t *devlist;
+	int i, err, ndevs;
 
+	sc = GPIOBUS_SOFTC(dev);
 	KASSERT(mtx_initialized(&sc->sc_mtx),
 	    ("gpiobus mutex not initialized"));
 	GPIOBUS_LOCK_DESTROY(sc);
@@ -228,8 +264,17 @@ gpiobus_detach(device_t dev)
 	if ((err = bus_generic_detach(dev)) != 0)
 		return (err);
 
-	/* detach and delete all children */
-	device_delete_children(dev);
+	if ((err = device_get_children(dev, &devlist, &ndevs)) != 0)
+		return (err);
+	for (i = 0; i < ndevs; i++) {
+		device_delete_child(dev, devlist[i]);
+		devi = GPIOBUS_IVAR(devlist[i]);
+		if (devi->pins) {
+			free(devi->pins, M_DEVBUF);
+			devi->pins = NULL;
+		}
+	}
+	free(devlist, M_TEMP);
 
 	if (sc->sc_pins_mapped) {
 		free(sc->sc_pins_mapped, M_DEVBUF);
@@ -256,12 +301,17 @@ gpiobus_resume(device_t dev)
 static int
 gpiobus_print_child(device_t dev, device_t child)
 {
-	struct gpiobus_ivar *devi = GPIOBUS_IVAR(child);
+	char pins[128];
 	int retval = 0;
+	struct gpiobus_ivar *devi;
 
+	devi = GPIOBUS_IVAR(child);
+	memset(pins, 0, sizeof(pins));
 	retval += bus_print_child_header(dev, child);
 	retval += printf(" at pin(s) ");
-	gpiobus_print_pins(devi);
+	gpiobus_print_pins(devi, pins, sizeof(pins));
+	retval += printf("%s", pins);
+	resource_list_print_type(&devi->rl, "irq", SYS_RES_IRQ, "%ld");
 	retval += bus_print_child_footer(dev, child);
 
 	return (retval);
@@ -271,9 +321,12 @@ static int
 gpiobus_child_location_str(device_t bus, device_t child, char *buf,
     size_t buflen)
 {
-	// struct gpiobus_ivar *devi = GPIOBUS_IVAR(child);
+	struct gpiobus_ivar *devi;
 
-	snprintf(buf, buflen, "pins=?");
+	devi = GPIOBUS_IVAR(child);
+	strlcpy(buf, "pin(s)=", buflen);
+	gpiobus_print_pins(devi, buf, buflen);
+
 	return (0);
 }
 
@@ -300,7 +353,9 @@ gpiobus_add_child(device_t dev, u_int order, const char *name, int unit)
 		device_delete_child(dev, child);
 		return (0);
 	}
+	resource_list_init(&devi->rl);
 	device_set_ivars(child, devi);
+
 	return (child);
 }
 
@@ -310,47 +365,125 @@ gpiobus_hinted_child(device_t bus, const char *dname, int dunit)
 	struct gpiobus_softc *sc = GPIOBUS_SOFTC(bus);
 	struct gpiobus_ivar *devi;
 	device_t child;
-	int pins;
-
+	int irq, pins;
 
 	child = BUS_ADD_CHILD(bus, 0, dname, dunit);
 	devi = GPIOBUS_IVAR(child);
 	resource_int_value(dname, dunit, "pins", &pins);
 	if (gpiobus_parse_pins(sc, child, pins))
 		device_delete_child(bus, child);
+	if (resource_int_value(dname, dunit, "irq", &irq) == 0) {
+		if (bus_set_resource(child, SYS_RES_IRQ, 0, irq, 1) != 0)
+			device_printf(bus,
+			    "warning: bus_set_resource() failed\n");
+	}
 }
 
-static void
-gpiobus_lock_bus(device_t busdev)
+static int
+gpiobus_set_resource(device_t dev, device_t child, int type, int rid,
+    u_long start, u_long count)
+{
+	struct gpiobus_ivar *devi;
+	struct resource_list_entry *rle;
+
+	dprintf("%s: entry (%p, %p, %d, %d, %p, %ld)\n",
+	    __func__, dev, child, type, rid, (void *)(intptr_t)start, count);
+	devi = GPIOBUS_IVAR(child);
+	rle = resource_list_add(&devi->rl, type, rid, start,
+	    start + count - 1, count);
+	if (rle == NULL)
+		return (ENXIO);
+
+	return (0);
+}
+
+static struct resource *
+gpiobus_alloc_resource(device_t bus, device_t child, int type, int *rid,
+    u_long start, u_long end, u_long count, u_int flags)
+{
+	struct gpiobus_softc *sc;
+	struct resource *rv;
+	struct resource_list *rl;
+	struct resource_list_entry *rle;
+	int isdefault;
+
+	if (type != SYS_RES_IRQ)
+		return (NULL);
+	isdefault = (start == 0UL && end == ~0UL && count == 1);
+	rle = NULL;
+	if (isdefault) {
+		rl = BUS_GET_RESOURCE_LIST(bus, child);
+		if (rl == NULL)
+			return (NULL);
+		rle = resource_list_find(rl, type, *rid);
+		if (rle == NULL)
+			return (NULL);
+		if (rle->res != NULL)
+			panic("%s: resource entry is busy", __func__);
+		start = rle->start;
+		count = rle->count;
+		end = rle->end;
+	}
+	sc = device_get_softc(bus);
+	rv = rman_reserve_resource(&sc->sc_intr_rman, start, end, count, flags,
+	    child);
+	if (rv == NULL)
+		return (NULL);
+	rman_set_rid(rv, *rid);
+	if ((flags & RF_ACTIVE) != 0 &&
+	    bus_activate_resource(child, type, *rid, rv) != 0) {
+		rman_release_resource(rv);
+		return (NULL);
+	}
+
+	return (rv);
+}
+
+static int
+gpiobus_release_resource(device_t bus __unused, device_t child, int type,
+    int rid, struct resource *r)
+{
+	int error;
+
+	if (rman_get_flags(r) & RF_ACTIVE) {
+		error = bus_deactivate_resource(child, type, rid, r);
+		if (error)
+			return (error);
+	}
+
+	return (rman_release_resource(r));
+}
+
+static struct resource_list *
+gpiobus_get_resource_list(device_t bus __unused, device_t child)
+{
+	struct gpiobus_ivar *ivar;
+
+	ivar = GPIOBUS_IVAR(child);
+
+	return (&ivar->rl);
+}
+
+static int
+gpiobus_acquire_bus(device_t busdev, device_t child, int how)
 {
 	struct gpiobus_softc *sc;
 
 	sc = device_get_softc(busdev);
 	GPIOBUS_ASSERT_UNLOCKED(sc);
 	GPIOBUS_LOCK(sc);
-}
-
-static void
-gpiobus_unlock_bus(device_t busdev)
-{
-	struct gpiobus_softc *sc;
-
-	sc = device_get_softc(busdev);
-	GPIOBUS_ASSERT_LOCKED(sc);
-	GPIOBUS_UNLOCK(sc);
-}
-
-static void
-gpiobus_acquire_bus(device_t busdev, device_t child)
-{
-	struct gpiobus_softc *sc;
-
-	sc = device_get_softc(busdev);
-	GPIOBUS_ASSERT_LOCKED(sc);
-
-	if (sc->sc_owner)
-		panic("rb_cpldbus: cannot serialize the access to device.");
+	if (sc->sc_owner != NULL) {
+		if (how == GPIOBUS_DONTWAIT) {
+			GPIOBUS_UNLOCK(sc);
+			return (EWOULDBLOCK);
+		}
+		while (sc->sc_owner != NULL)
+			mtx_sleep(sc, &sc->sc_mtx, 0, "gpiobuswait", 0);
+	}
 	sc->sc_owner = child;
+	GPIOBUS_UNLOCK(sc);
+
+	return (0);
 }
 
 static void
@@ -359,14 +492,15 @@ gpiobus_release_bus(device_t busdev, device_t child)
 	struct gpiobus_softc *sc;
 
 	sc = device_get_softc(busdev);
-	GPIOBUS_ASSERT_LOCKED(sc);
-
-	if (!sc->sc_owner)
-		panic("rb_cpldbus: releasing unowned bus.");
+	GPIOBUS_ASSERT_UNLOCKED(sc);
+	GPIOBUS_LOCK(sc);
+	if (sc->sc_owner == NULL)
+		panic("gpiobus: releasing unowned bus.");
 	if (sc->sc_owner != child)
-		panic("rb_cpldbus: you don't own the bus. game over.");
-
+		panic("gpiobus: you don't own the bus. game over.");
 	sc->sc_owner = NULL;
+	wakeup(sc);
+	GPIOBUS_UNLOCK(sc);
 }
 
 static int
@@ -375,11 +509,16 @@ gpiobus_pin_setflags(device_t dev, device_t child, uint32_t pin,
 {
 	struct gpiobus_softc *sc = GPIOBUS_SOFTC(dev);
 	struct gpiobus_ivar *devi = GPIOBUS_IVAR(child);
+	uint32_t caps;
 
 	if (pin >= devi->npins)
 		return (EINVAL);
+	if (GPIO_PIN_GETCAPS(sc->sc_dev, devi->pins[pin], &caps) != 0)
+		return (EINVAL);
+	if (gpio_check_flags(caps, flags) != 0)
+		return (EINVAL);
 
-	return GPIO_PIN_SETFLAGS(sc->sc_dev, devi->pins[pin], flags);
+	return (GPIO_PIN_SETFLAGS(sc->sc_dev, devi->pins[pin], flags));
 }
 
 static int
@@ -456,6 +595,15 @@ static device_method_t gpiobus_methods[] = {
 	DEVMETHOD(device_resume,	gpiobus_resume),
 
 	/* Bus interface */
+	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
+	DEVMETHOD(bus_config_intr,	bus_generic_config_intr),
+	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
+	DEVMETHOD(bus_set_resource,	gpiobus_set_resource),
+	DEVMETHOD(bus_alloc_resource,	gpiobus_alloc_resource),
+	DEVMETHOD(bus_release_resource,	gpiobus_release_resource),
+	DEVMETHOD(bus_activate_resource,	bus_generic_activate_resource),
+	DEVMETHOD(bus_deactivate_resource,	bus_generic_deactivate_resource),
+	DEVMETHOD(bus_get_resource_list,	gpiobus_get_resource_list),
 	DEVMETHOD(bus_add_child,	gpiobus_add_child),
 	DEVMETHOD(bus_print_child,	gpiobus_print_child),
 	DEVMETHOD(bus_child_pnpinfo_str, gpiobus_child_pnpinfo_str),
@@ -463,8 +611,6 @@ static device_method_t gpiobus_methods[] = {
 	DEVMETHOD(bus_hinted_child,	gpiobus_hinted_child),
 
 	/* GPIO protocol */
-	DEVMETHOD(gpiobus_lock_bus,	gpiobus_lock_bus),
-	DEVMETHOD(gpiobus_unlock_bus,	gpiobus_unlock_bus),
 	DEVMETHOD(gpiobus_acquire_bus,	gpiobus_acquire_bus),
 	DEVMETHOD(gpiobus_release_bus,	gpiobus_release_bus),
 	DEVMETHOD(gpiobus_pin_getflags,	gpiobus_pin_getflags),

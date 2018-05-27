@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Matthew R. Green
  * Copyright (c) 2007 Marius Strobl <marius@FreeBSD.org>
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hme/if_hme_pci.c 227843 2011-11-22 21:28:20Z marius $");
 
 /*
  * PCI front-end device driver for the HME ethernet device.

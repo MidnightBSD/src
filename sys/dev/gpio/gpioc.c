@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -25,23 +26,20 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/gpio/gpioc.c 278786 2015-02-14 21:16:19Z loos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/types.h>
-
 #include <sys/bus.h>
 #include <sys/conf.h>
+#include <sys/gpio.h>
 #include <sys/ioccom.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
-#include <sys/queue.h>
-#include <machine/bus.h>
-#include <machine/resource.h>
 
-#include <sys/gpio.h>
+#include <dev/gpio/gpiobusvar.h>
+
 #include "gpio_if.h"
 
 #undef GPIOC_DEBUG
@@ -61,9 +59,6 @@ static struct cdevsw gpioc_cdevsw = {
 	.d_version	= D_VERSION,
 	.d_ioctl	= gpioc_ioctl,
 	.d_name		= "gpioc",
-#if __FreeBSD_version >= 800039
-	.d_flags	= D_PSEUDO | D_NEEDMINOR
-#endif
 };
 
 struct gpioc_softc {
@@ -105,7 +100,7 @@ gpioc_detach(device_t dev)
 	struct gpioc_softc *sc = device_get_softc(dev);
 	int err;
 
-	if (sc->sc_ctl_dev);
+	if (sc->sc_ctl_dev)
 		destroy_dev(sc->sc_ctl_dev);
 
 	if ((err = bus_generic_detach(dev)) != 0)
@@ -122,6 +117,7 @@ gpioc_ioctl(struct cdev *cdev, u_long cmd, caddr_t arg, int fflag,
 	struct gpioc_softc *sc = cdev->si_drv1;
 	struct gpio_pin pin;
 	struct gpio_req req;
+	uint32_t caps;
 
 	switch (cmd) {
 		case GPIOMAXPIN:
@@ -144,8 +140,12 @@ gpioc_ioctl(struct cdev *cdev, u_long cmd, caddr_t arg, int fflag,
 		case GPIOSETCONFIG:
 			bcopy(arg, &pin, sizeof(pin));
 			dprintf("set config pin %d\n", pin.gp_pin);
-			res = GPIO_PIN_SETFLAGS(sc->sc_pdev, pin.gp_pin,
-			    pin.gp_flags);
+			res = GPIO_PIN_GETCAPS(sc->sc_pdev, pin.gp_pin, &caps);
+			if (res == 0)
+				res = gpio_check_flags(caps, pin.gp_flags);
+			if (res == 0)
+				res = GPIO_PIN_SETFLAGS(sc->sc_pdev, pin.gp_pin,
+				    pin.gp_flags);
 			break;
 		case GPIOGET:
 			bcopy(arg, &req, sizeof(req));

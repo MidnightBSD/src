@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/hatm/if_hatm.c 273736 2014-10-27 14:38:00Z hselasky $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -1311,9 +1312,17 @@ kenv_getuint(struct hatm_softc *sc, const char *var,
 
 	*ptr = def;
 
-	if (SYSCTL_ADD_UINT(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, var, rw ? CTLFLAG_RW : CTLFLAG_RD, ptr, 0, "") == NULL)
-		return (ENOMEM);
+	if (rw != 0) {
+		if (SYSCTL_ADD_UINT(&sc->sysctl_ctx,
+		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO, var,
+		    CTLFLAG_RW, ptr, 0, "") == NULL)
+			return (ENOMEM);
+	} else {
+		if (SYSCTL_ADD_UINT(&sc->sysctl_ctx,
+		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO, var,
+		    CTLFLAG_RD, ptr, 0, "") == NULL)
+			return (ENOMEM);
+	}
 
 	snprintf(full, sizeof(full), "hw.%s.%s",
 	    device_get_nameunit(sc->dev), var);
@@ -1686,7 +1695,7 @@ hatm_attach(device_t dev)
 	 * 4.2 BIOS Configuration
 	 */
 	v = pci_read_config(dev, PCIR_COMMAND, 2);
-	v |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
+	v |= PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
 	pci_write_config(dev, PCIR_COMMAND, v, 2);
 
 	/*
@@ -1702,12 +1711,6 @@ hatm_attach(device_t dev)
 	/*
 	 * Map memory
 	 */
-	v = pci_read_config(dev, PCIR_COMMAND, 2);
-	if (!(v & PCIM_CMD_MEMEN)) {
-		device_printf(dev, "failed to enable memory\n");
-		error = ENXIO;
-		goto failed;
-	}
 	sc->memid = PCIR_BAR(0);
 	sc->memres = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->memid,
 	    RF_ACTIVE);
