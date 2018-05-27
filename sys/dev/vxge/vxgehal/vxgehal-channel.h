@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxgehal/vxgehal-channel.h 236659 2012-06-06 06:32:50Z eadler $*/
+/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxgehal-channel.h 236377 2012-06-01 04:23:20Z eadler $*/
 
 #ifndef	VXGE_HAL_CHANNEL_H
 #define	VXGE_HAL_CHANNEL_H

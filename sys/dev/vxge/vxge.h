@@ -29,10 +29,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxge.h 221389 2011-05-03 15:58:24Z gnn $*/
+/*$FreeBSD: stable/10/sys/dev/vxge/vxge.h 251862 2013-06-17 20:11:04Z pluknet $*/
 
 #ifndef	_VXGE_H_
-#define	__VXGE_H_
+#define	_VXGE_H_
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 #include <dev/vxge/vxge-osdep.h>

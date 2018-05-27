@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxgehal/vxgehal-ring.c 229461 2012-01-04 03:37:41Z eadler $*/
+/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxgehal-ring.c 260286 2014-01-04 21:23:49Z dim $*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 
@@ -63,6 +63,7 @@ __hal_ring_block_memblock_idx_set(
 	    VXGE_HAL_RING_MEMBLOCK_IDX_OFFSET))) = memblock_idx;
 }
 
+#if 0
 /*
  * __hal_ring_block_next_pointer - Returns the dma address of next block
  * @block: RxD block
@@ -77,6 +78,7 @@ __hal_ring_block_next_pointer(
 	return (dma_addr_t)*((u64 *) ((void *)((u8 *) block +
 	    VXGE_HAL_RING_NEXT_BLOCK_POINTER_OFFSET)));
 }
+#endif
 
 /*
  * __hal_ring_block_next_pointer_set - Sets the next block pointer in RxD block

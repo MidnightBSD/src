@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/9.2.0/sys/dev/vxge/include/vxge-debug.h 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD: stable/10/sys/dev/vxge/include/vxge-debug.h 221167 2011-04-28 14:33:15Z gnn $*/
 
 #ifndef	VXGE_DEBUG_H
 #define	VXGE_DEBUG_H

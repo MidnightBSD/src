@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxgehal/vxgehal-pcicfgmgmt-reg.h 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxgehal-pcicfgmgmt-reg.h 221167 2011-04-28 14:33:15Z gnn $*/
 
 #ifndef	VXGE_HAL_PCICFGMGMT_REGS_H
 #define	VXGE_HAL_PCICFGMGMT_REGS_H

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxgehal/vxgehal-config.c 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxgehal-config.c 314939 2017-03-09 02:59:02Z pfg $*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 
@@ -2313,9 +2313,6 @@ vxge_hal_device_config_default_get(
 		port_config->host_chosen_aggr =
 		    VXGE_HAL_LAG_PORT_HOST_CHOSEN_AGGR_DEFAULT;
 
-		port_config->host_chosen_aggr =
-		    VXGE_HAL_LAG_PORT_HOST_CHOSEN_AGGR_DEFAULT;
-
 		port_config->discard_unknown_slow_proto =
 		    VXGE_HAL_LAG_PORT_DISCARD_UNKNOWN_SLOW_PROTO_DEFAULT;
 
@@ -2345,9 +2342,6 @@ vxge_hal_device_config_default_get(
 
 		port_config->actor_collecting =
 		    VXGE_HAL_LAG_PORT_ACTOR_COLLECTING_DEFAULT;
-
-		port_config->actor_distributing =
-		    VXGE_HAL_LAG_PORT_ACTOR_DISTRIBUTING_DEFAULT;
 
 		port_config->actor_distributing =
 		    VXGE_HAL_LAG_PORT_ACTOR_DISTRIBUTING_DEFAULT;
@@ -2384,9 +2378,6 @@ vxge_hal_device_config_default_get(
 
 		port_config->partner_collecting =
 		    VXGE_HAL_LAG_PORT_PARTNER_COLLECTING_DEFAULT;
-
-		port_config->partner_distributing =
-		    VXGE_HAL_LAG_PORT_PARTNER_DISTRIBUTING_DEFAULT;
 
 		port_config->partner_distributing =
 		    VXGE_HAL_LAG_PORT_PARTNER_DISTRIBUTING_DEFAULT;
