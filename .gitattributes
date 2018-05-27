@@ -58909,6 +58909,7 @@ sys/geom/geom_disk.c -text
 sys/geom/geom_disk.h -text
 sys/geom/geom_dump.c -text
 sys/geom/geom_event.c -text
+sys/geom/geom_flashmap.c svneol=native#text/plain
 sys/geom/geom_fox.c -text
 sys/geom/geom_int.h -text
 sys/geom/geom_io.c -text

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_fox.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_fox.c,v 1.11 2005/11/30 22:15:00 sobomax Exp $
+ * $FreeBSD: stable/10/sys/geom/geom_fox.c 219029 2011-02-25 10:24:35Z netchild $
  */
 
 /* This is a GEOM module for handling path selection for multi-path

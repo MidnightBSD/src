@@ -33,13 +33,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_int.h,v 1.29 2004/10/25 12:28:28 phk Exp $
+ * $FreeBSD: stable/10/sys/geom/geom_int.h 260479 2014-01-09 11:13:03Z mav $
  */
 
 LIST_HEAD(class_list_head, g_class);
 TAILQ_HEAD(g_tailq_head, g_geom);
 
 extern int g_collectstats;
+#define G_STATS_PROVIDERS	1	/* Collect I/O stats for providers */
+#define G_STATS_CONSUMERS	2	/* Collect I/O stats for consumers */
+
 extern int g_debugflags;
 /*
  * 1	G_T_TOPOLOGY
@@ -55,6 +58,7 @@ extern int g_debugflags;
 /* geom_dump.c */
 void g_confxml(void *, int flag);
 void g_conf_specific(struct sbuf *sb, struct g_class *mp, struct g_geom *gp, struct g_provider *pp, struct g_consumer *cp);
+void g_conf_printf_escaped(struct sbuf *sb, const char *fmt, ...);
 void g_confdot(void *, int flag);
 void g_conftxt(void *, int flag);
 
@@ -76,6 +80,7 @@ void g_io_schedule_up(struct thread *tp);
 /* geom_kern.c / geom_kernsim.c */
 void g_init(void);
 extern int g_shutdown;
+extern int g_notaste;
 
 /* geom_ctl.c */
 void g_ctl_init(void);
