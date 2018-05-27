@@ -55767,6 +55767,14 @@ sys/dev/aac/aac_pci.c -text
 sys/dev/aac/aac_tables.h -text
 sys/dev/aac/aacreg.h -text
 sys/dev/aac/aacvar.h -text
+sys/dev/aacraid/aacraid.c svneol=native#text/plain
+sys/dev/aacraid/aacraid_cam.c svneol=native#text/plain
+sys/dev/aacraid/aacraid_debug.c svneol=native#text/plain
+sys/dev/aacraid/aacraid_debug.h svneol=native#text/plain
+sys/dev/aacraid/aacraid_linux.c svneol=native#text/plain
+sys/dev/aacraid/aacraid_pci.c svneol=native#text/plain
+sys/dev/aacraid/aacraid_reg.h svneol=native#text/plain
+sys/dev/aacraid/aacraid_var.h svneol=native#text/plain
 sys/dev/acpi_support/acpi_aiboost.c -text
 sys/dev/acpi_support/acpi_asus.c -text
 sys/dev/acpi_support/acpi_fujitsu.c -text
