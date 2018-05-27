@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mii_bitbang.h,v 1.6 2009/05/12 14:31:27 cegger Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mii/mii_bitbang.h 226995 2011-11-01 16:13:59Z marius $
  */
 
 #define	MII_BIT_MDO		0	/* data out (host->PHY) */

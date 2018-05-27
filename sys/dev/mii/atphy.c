@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/atphy.c 266000 2014-05-14 01:53:20Z ian $");
 
 /*
  * Driver for the Attansic/Atheros F1 10/100/1000 PHY.
@@ -80,6 +81,7 @@ static int	atphy_setmedia(struct mii_softc *, int);
 static const struct mii_phydesc atphys[] = {
 	MII_PHY_DESC(xxATHEROS, F1),
 	MII_PHY_DESC(xxATHEROS, F1_7),
+	MII_PHY_DESC(xxATHEROS, AR8021),
 	MII_PHY_DESC(xxATHEROS, F2),
 	MII_PHY_END
 };

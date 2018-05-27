@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: nsphy.c,v 1.18 1999/07/14 23:57:36 thorpej Exp $	*/
 
 /*-
@@ -55,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/nsphy.c 227908 2011-11-23 20:27:26Z marius $");
 
 /*
  * driver for National Semiconductor's DP83840A ethernet 10/100 PHY

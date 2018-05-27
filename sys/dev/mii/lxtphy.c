@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	OpenBSD: lxtphy.c,v 1.5 2000/08/26 20:04:17 nate Exp 	*/
 /*	NetBSD: lxtphy.c,v 1.19 2000/02/02 23:34:57 thorpej Exp 	*/
 
@@ -56,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/lxtphy.c 227908 2011-11-23 20:27:26Z marius $");
 
 /*
  * driver for Level One's LXT-970 ethernet 10/100 PHY

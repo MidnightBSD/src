@@ -57737,6 +57737,9 @@ sys/dev/ncv/ncr53c500hw.h -text
 sys/dev/ncv/ncr53c500hwtab.h -text
 sys/dev/ncv/ncr53c500reg.h -text
 sys/dev/ncv/ncr53c500var.h -text
+sys/dev/netfpga10g/nf10bmac/if_nf10bmac.c svneol=native#text/plain
+sys/dev/netfpga10g/nf10bmac/if_nf10bmac_fdt.c svneol=native#text/plain
+sys/dev/netfpga10g/nf10bmac/if_nf10bmacreg.h svneol=native#text/plain
 sys/dev/netmap/if_em_netmap.h -text
 sys/dev/netmap/if_igb_netmap.h -text
 sys/dev/netmap/if_ixl_netmap.h svneol=native#text/plain

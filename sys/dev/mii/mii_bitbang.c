@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mii_bitbang.c,v 1.12 2008/05/04 17:06:09 xtraeme Exp $	*/
 
 /*-
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/mii_bitbang.c 226995 2011-11-01 16:13:59Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

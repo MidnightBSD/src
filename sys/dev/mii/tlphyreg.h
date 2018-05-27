@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tlphyreg.h,v 1.1 1998/08/10 23:59:58 thorpej Exp $	*/
  
 /*-
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mii/tlphyreg.h 213188 2010-09-26 22:11:41Z marius $
  */
 
 #ifndef _DEV_MII_TLPHYREG_H_

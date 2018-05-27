@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/sys/dev/mly/mly.c 323826 2017-09-20 20:48:21Z jhb $
  */
 
 #include <sys/param.h>
@@ -333,7 +334,6 @@ static int
 mly_pci_attach(struct mly_softc *sc)
 {
     int			i, error;
-    u_int32_t		command;
 
     debug_called(1);
 
@@ -342,21 +342,8 @@ mly_pci_attach(struct mly_softc *sc)
 
     /* 
      * Verify that the adapter is correctly set up in PCI space.
-     * 
-     * XXX we shouldn't do this; the PCI code should.
      */
-    command = pci_read_config(sc->mly_dev, PCIR_COMMAND, 2);
-    command |= PCIM_CMD_BUSMASTEREN;
-    pci_write_config(sc->mly_dev, PCIR_COMMAND, command, 2);
-    command = pci_read_config(sc->mly_dev, PCIR_COMMAND, 2);
-    if (!(command & PCIM_CMD_BUSMASTEREN)) {
-	mly_printf(sc, "can't enable busmaster feature\n");
-	goto fail;
-    }
-    if ((command & PCIM_CMD_MEMEN) == 0) {
-	mly_printf(sc, "memory window not available\n");
-	goto fail;
-    }
+    pci_enable_busmaster(sc->mly_dev);
 
     /*
      * Allocate the PCI register window.
@@ -397,7 +384,8 @@ mly_pci_attach(struct mly_softc *sc)
 			   BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			   BUS_SPACE_MAXADDR, 		/* highaddr */
 			   NULL, NULL, 			/* filter, filterarg */
-			   MAXBSIZE, MLY_MAX_SGENTRIES,	/* maxsize, nsegments */
+			   BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
+			   BUS_SPACE_UNRESTRICTED,	/* nsegments */
 			   BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			   BUS_DMA_ALLOCNOW,		/* flags */
 			   NULL,			/* lockfunc */
@@ -415,7 +403,8 @@ mly_pci_attach(struct mly_softc *sc)
 			   BUS_SPACE_MAXADDR,		/* lowaddr */
 			   BUS_SPACE_MAXADDR, 		/* highaddr */
 			   NULL, NULL, 			/* filter, filterarg */
-			   MAXBSIZE, MLY_MAX_SGENTRIES,	/* maxsize, nsegments */
+			   DFLTPHYS,			/* maxsize */
+			   MLY_MAX_SGENTRIES,		/* nsegments */
 			   BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			   0,				/* flags */
 			   busdma_lock_mutex,		/* lockfunc */
@@ -1350,7 +1339,6 @@ mly_process_event(struct mly_softc *sc, struct mly_event *me)
 	if (action == 'r')
 	    sc->mly_btl[bus][target].mb_flags |= MLY_BTL_RESCAN;
 	break;
-      break;
     case 's':		/* report of sense data */
 	if (((ssd->flags & SSD_KEY) == SSD_KEY_NO_SENSE) ||
 	    (((ssd->flags & SSD_KEY) == SSD_KEY_NOT_READY) && 
@@ -1865,9 +1853,13 @@ mly_map_command(struct mly_command *mc)
 
     /* does the command have a data buffer? */
     if (mc->mc_data != NULL) {
-	bus_dmamap_load(sc->mly_buffer_dmat, mc->mc_datamap, mc->mc_data, mc->mc_length, 
-			mly_map_command_sg, mc, 0);
-	
+	if (mc->mc_flags & MLY_CMD_CCB)
+		bus_dmamap_load_ccb(sc->mly_buffer_dmat, mc->mc_datamap,
+				mc->mc_data, mly_map_command_sg, mc, 0);
+	else 
+		bus_dmamap_load(sc->mly_buffer_dmat, mc->mc_datamap,
+				mc->mc_data, mc->mc_length, 
+				mly_map_command_sg, mc, 0);
 	if (mc->mc_flags & MLY_CMD_DATAIN)
 	    bus_dmamap_sync(sc->mly_buffer_dmat, mc->mc_datamap, BUS_DMASYNC_PREREAD);
 	if (mc->mc_flags & MLY_CMD_DATAOUT)
@@ -2022,7 +2014,7 @@ mly_cam_rescan_btl(struct mly_softc *sc, int bus, int target)
 	mly_printf(sc, "rescan failed (can't allocate CCB)\n");
 	return;
     }
-    if (xpt_create_path(&ccb->ccb_h.path, xpt_periph, 
+    if (xpt_create_path(&ccb->ccb_h.path, NULL,
 	    cam_sim_path(sc->mly_cam_sim[bus]), target, 0) != CAM_REQ_CMP) {
 	mly_printf(sc, "rescan failed (can't create path)\n");
 	xpt_free_ccb(ccb);
@@ -2085,9 +2077,9 @@ mly_cam_action(struct cam_sim *sim, union ccb *ccb)
 	cpi->max_target = MLY_MAX_TARGETS - 1;
 	cpi->max_lun = MLY_MAX_LUNS - 1;
 	cpi->initiator_id = sc->mly_controllerparam->initiator_id;
-	strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-        strncpy(cpi->hba_vid, "FreeBSD", HBA_IDLEN);
-        strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+	strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+        strlcpy(cpi->hba_vid, "Mylex", HBA_IDLEN);
+        strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
         cpi->unit_number = cam_sim_unit(sim);
         cpi->bus_id = cam_sim_bus(sim);
 	cpi->base_transfer_speed = 132 * 1024;	/* XXX what to set this to? */
@@ -2221,18 +2213,6 @@ mly_cam_action_io(struct cam_sim *sim, struct ccb_scsiio *csio)
 	csio->ccb_h.status = CAM_REQ_CMP_ERR;
     }
 
-    /* if there is data transfer, it must be to/from a virtual address */
-    if ((csio->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-	if (csio->ccb_h.flags & CAM_DATA_PHYS) {		/* we can't map it */
-	    debug(0, "  data pointer is to physical address");
-	    csio->ccb_h.status = CAM_REQ_CMP_ERR;
-	}
-	if (csio->ccb_h.flags & CAM_SCATTER_VALID) {	/* we want to do the s/g setup */
-	    debug(0, "  data has premature s/g setup");
-	    csio->ccb_h.status = CAM_REQ_CMP_ERR;
-	}
-    }
-
     /* abandon aborted ccbs or those that have failed validation */
     if ((csio->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_INPROG) {
 	debug(2, "abandoning CCB due to abort/validation failure");
@@ -2252,10 +2232,12 @@ mly_cam_action_io(struct cam_sim *sim, struct ccb_scsiio *csio)
     }
     
     /* build the command */
-    mc->mc_data = csio->data_ptr;
+    mc->mc_data = csio;
     mc->mc_length = csio->dxfer_len;
     mc->mc_complete = mly_cam_complete;
     mc->mc_private = csio;
+    mc->mc_flags |= MLY_CMD_CCB;
+    /* XXX This code doesn't set the data direction in mc_flags. */
 
     /* save the bus number in the ccb for later recovery XXX should be a better way */
      csio->ccb_h.sim_priv.entries[0].field = bus;
@@ -2880,8 +2862,7 @@ mly_user_command(struct mly_softc *sc, struct mly_user_command *uc)
 
     /* allocate a command */
     if (mly_alloc_command(sc, &mc)) {
-	error = ENOMEM;
-	goto out;		/* XXX Linux version will wait for a command */
+	return (ENOMEM);	/* XXX Linux version will wait for a command */
     }
 
     /* handle data size/direction */
@@ -2937,8 +2918,7 @@ mly_user_command(struct mly_softc *sc, struct mly_user_command *uc)
  out:
     if (mc->mc_data != NULL)
 	free(mc->mc_data, M_DEVBUF);
-    if (mc != NULL)
-	mly_release_command(mc);
+    mly_release_command(mc);
     return(error);
 }
 

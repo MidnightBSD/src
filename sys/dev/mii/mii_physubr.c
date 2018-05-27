@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mii_physubr.c,v 1.5 1999/08/03 19:41:49 drochner Exp $	*/
 
 /*-
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/mii_physubr.c 225014 2011-08-19 19:12:58Z marius $");
 
 /*
  * Subroutines common to all PHYs.

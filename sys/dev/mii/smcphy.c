@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Benno Rice.  All rights reserved.
  *
@@ -23,10 +24,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/smcphy.c 239275 2012-08-15 04:03:55Z gonzo $");
 
 /*
- * Driver for the internal PHY on the SMSC LAN91C111.
+ * Driver for the SEEQ 80220 and 84220.
+ * (Originally developed for the internal PHY on the SMSC LAN91C111.)
  */
 
 #include <sys/param.h>

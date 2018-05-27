@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/ip1000phy.c 227908 2011-11-23 20:27:26Z marius $");
 
 /*
  * Driver for the IC Plus IP1000A/IP1001 10/100/1000 PHY.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: gentbi.c,v 1.15 2006/03/29 07:05:24 thorpej Exp $	*/
 
 /*-
@@ -62,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/gentbi.c 227908 2011-11-23 20:27:26Z marius $");
 
 /*
  * Driver for generic unknown ten-bit interfaces(1000BASE-{LX,SX}

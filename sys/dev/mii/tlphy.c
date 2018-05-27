@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tlphy.c,v 1.18 1999/05/14 11:40:28 drochner Exp $	*/
 
 /*-
@@ -55,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/tlphy.c 227908 2011-11-23 20:27:26Z marius $");
 
 /*
  * Driver for Texas Instruments's ThunderLAN PHYs

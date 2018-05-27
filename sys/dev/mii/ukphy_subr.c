@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ukphy_subr.c,v 1.2 1998/11/05 04:08:02 thorpej Exp $	*/
 
 /*-
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/ukphy_subr.c 215297 2010-11-14 13:26:10Z marius $");
 
 /*
  * Subroutines shared by the ukphy driver and other PHY drivers.

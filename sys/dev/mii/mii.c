@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mii.c,v 1.12 1999/08/03 19:41:49 drochner Exp $	*/
 
 /*-
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/mii.c 279158 2015-02-22 15:28:49Z kevlo $");
 
 /*
  * MII bus layer, glues MII-capable network interface drivers to sharable
@@ -373,7 +374,7 @@ mii_attach(device_t dev, device_t *miibus, struct ifnet *ifp,
 	}
 
 	if (offloc != MII_OFFSET_ANY && (offloc < 0 || offloc >= MII_NPHY)) {
-		printf("%s: ivalid offloc %d\n", __func__, offloc);
+		printf("%s: invalid offloc %d\n", __func__, offloc);
 		return (EINVAL);
 	}
 
@@ -382,7 +383,7 @@ mii_attach(device_t dev, device_t *miibus, struct ifnet *ifp,
 		phymax = MII_NPHY - 1;
 	} else {
 		if (phyloc < 0 || phyloc >= MII_NPHY) {
-			printf("%s: ivalid phyloc %d\n", __func__, phyloc);
+			printf("%s: invalid phyloc %d\n", __func__, phyloc);
 			return (EINVAL);
 		}
 		phymin = phymax = phyloc;

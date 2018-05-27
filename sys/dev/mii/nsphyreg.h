@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: nsphyreg.h,v 1.1 1998/08/10 23:58:39 thorpej Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mii/nsphyreg.h 204646 2010-03-03 17:55:51Z joel $
  */
 
 #ifndef _DEV_MII_NSPHYREG_H_

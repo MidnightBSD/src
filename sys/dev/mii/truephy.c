@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/mii_layer/truephy.c,v 1.3 2008/02/10 07:29:27 sephe Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mii/truephy.c 227908 2011-11-23 20:27:26Z marius $
  */
 
 #include <sys/param.h>

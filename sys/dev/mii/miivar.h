@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: miivar.h,v 1.8 1999/04/23 04:24:32 thorpej Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mii/miivar.h 227688 2011-11-18 22:58:13Z marius $
  */
 
 #ifndef _DEV_MII_MIIVAR_H_

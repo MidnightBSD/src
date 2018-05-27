@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ukphy.c,v 1.2 1999/04/23 04:24:32 thorpej Exp $	*/
 
 /*-
@@ -55,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/ukphy.c 227908 2011-11-23 20:27:26Z marius $");
 
 /*
  * driver for generic unknown PHYs

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: nsphyter.c,v 1.28 2008/01/20 07:58:19 msaitoh Exp $	*/
 
 /*-
@@ -55,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mii/nsphyter.c 231914 2012-02-19 12:25:58Z marius $");
 
 /*
  * Driver for the National Semiconductor's DP83843, DP83847 and DP83849
