@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Brian Scott Dean, brdean@unx.sas.com.
  *                    All rights reserved.
@@ -39,8 +40,8 @@
  *	From: @(#)procfs_regs.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_dbregs.c,v 1.5 2013-01-17 23:29:36 laffer1 Exp $
- * $MidnightBSD$
+ *	$Id: procfs_regs.c,v 3.2 1993/12/15 09:40:17 jsp Exp $
+ * $FreeBSD: stable/10/sys/fs/procfs/procfs_dbregs.c 217896 2011-01-26 20:03:58Z dchagin $
  */
 
 #include "opt_compat.h"

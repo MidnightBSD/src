@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -33,7 +34,7 @@
  *	@(#)procfs.h	8.9 (Berkeley) 5/14/95
  *
  * From:
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/procfs/procfs.h 197428 2009-09-23 12:08:08Z kib $
  */
 
 #ifdef _KERNEL

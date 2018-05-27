@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -32,7 +33,7 @@
  *
  *	@(#)procfs_status.c	8.3 (Berkeley) 2/17/94
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/fs/procfs/procfs_map.c 288499 2015-10-02 14:36:41Z vangyzen $
  */
 
 #include "opt_compat.h"
@@ -43,9 +44,9 @@
 #include <sys/filedesc.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
-#include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/sbuf.h>
 #ifdef COMPAT_FREEBSD32
 #include <sys/sysent.h>
@@ -84,7 +85,7 @@ procfs_doprocmap(PFS_FILL_ARGS)
 	struct vnode *vp;
 	char *fullpath, *freepath;
 	struct ucred *cred;
-	int error, vfslocked;
+	int error;
 	unsigned int last_timestamp;
 #ifdef COMPAT_FREEBSD32
 	int wrap32 = 0;
@@ -132,7 +133,7 @@ procfs_doprocmap(PFS_FILL_ARGS)
 		privateresident = 0;
 		obj = entry->object.vm_object;
 		if (obj != NULL) {
-			VM_OBJECT_LOCK(obj);
+			VM_OBJECT_RLOCK(obj);
 			if (obj->shadow_count == 1)
 				privateresident = obj->resident_page_count;
 		}
@@ -148,9 +149,9 @@ procfs_doprocmap(PFS_FILL_ARGS)
 
 		for (lobj = tobj = obj; tobj; tobj = tobj->backing_object) {
 			if (tobj != obj)
-				VM_OBJECT_LOCK(tobj);
+				VM_OBJECT_RLOCK(tobj);
 			if (lobj != obj)
-				VM_OBJECT_UNLOCK(lobj);
+				VM_OBJECT_RUNLOCK(lobj);
 			lobj = tobj;
 		}
 		last_timestamp = map->timestamp;
@@ -159,11 +160,11 @@ procfs_doprocmap(PFS_FILL_ARGS)
 		freepath = NULL;
 		fullpath = "-";
 		if (lobj) {
+			vp = NULL;
 			switch (lobj->type) {
 			default:
 			case OBJT_DEFAULT:
 				type = "default";
-				vp = NULL;
 				break;
 			case OBJT_VNODE:
 				type = "vnode";
@@ -171,27 +172,31 @@ procfs_doprocmap(PFS_FILL_ARGS)
 				vref(vp);
 				break;
 			case OBJT_SWAP:
-				type = "swap";
-				vp = NULL;
+				if ((lobj->flags & OBJ_TMPFS_NODE) != 0) {
+					type = "vnode";
+					if ((lobj->flags & OBJ_TMPFS) != 0) {
+						vp = lobj->un_pager.swp.swp_tmpfs;
+						vref(vp);
+					}
+				} else {
+					type = "swap";
+				}
 				break;
 			case OBJT_SG:
 			case OBJT_DEVICE:
 				type = "device";
-				vp = NULL;
 				break;
 			}
 			if (lobj != obj)
-				VM_OBJECT_UNLOCK(lobj);
+				VM_OBJECT_RUNLOCK(lobj);
 
 			flags = obj->flags;
 			ref_count = obj->ref_count;
 			shadow_count = obj->shadow_count;
-			VM_OBJECT_UNLOCK(obj);
+			VM_OBJECT_RUNLOCK(obj);
 			if (vp != NULL) {
 				vn_fullpath(td, vp, &fullpath, &freepath);
-				vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 				vrele(vp);
-				VFS_UNLOCK_GIANT(vfslocked);
 			}
 		} else {
 			type = "none";

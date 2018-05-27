@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -33,8 +34,8 @@
  *	@(#)procfs_status.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_status.c,v 1.5 2013-01-17 23:29:36 laffer1 Exp $
- * $MidnightBSD$
+ *	$Id: procfs_status.c,v 3.1 1993/12/15 09:40:17 jsp Exp $
+ * $FreeBSD: stable/10/sys/fs/procfs/procfs_status.c 293473 2016-01-09 14:08:10Z dchagin $
  */
 
 #include <sys/param.h>
@@ -125,9 +126,9 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 	if (p->p_flag & P_INMEM) {
 		struct timeval start, ut, st;
 
-		PROC_SLOCK(p);
+		PROC_STATLOCK(p);
 		calcru(p, &ut, &st);
-		PROC_SUNLOCK(p);
+		PROC_STATUNLOCK(p);
 		start = p->p_stats->p_start;
 		timevaladd(&start, &boottime);
 		sbuf_printf(sb, " %jd,%ld %jd,%ld %jd,%ld",

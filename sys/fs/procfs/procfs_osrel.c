@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Konstantin Belousov
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/fs/procfs/procfs_osrel.c 197428 2009-09-23 12:08:08Z kib $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
