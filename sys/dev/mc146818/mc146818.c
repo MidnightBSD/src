@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Izumi Tsutsui.  All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mc146818/mc146818.c,v 1.5.2.2 2010/01/15 16:29:41 marius Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mc146818/mc146818.c 201009 2009-12-25 22:58:43Z marius $");
 
 /*
  * mc146818 and compatible time of day chip subroutines

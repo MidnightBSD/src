@@ -57505,6 +57505,7 @@ sys/dev/malo/if_malo_pci.c -text
 sys/dev/malo/if_malohal.c -text
 sys/dev/malo/if_malohal.h -text
 sys/dev/malo/if_maloioctl.h -text
+sys/dev/mbox/mbox_if.m -text
 sys/dev/mc146818/mc146818.c -text
 sys/dev/mc146818/mc146818reg.h -text
 sys/dev/mc146818/mc146818var.h -text
