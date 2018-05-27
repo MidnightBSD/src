@@ -58512,6 +58512,7 @@ sys/dev/usb/wlan/if_ural.c -text
 sys/dev/usb/wlan/if_uralreg.h -text
 sys/dev/usb/wlan/if_uralvar.h -text
 sys/dev/usb/wlan/if_urtw.c -text
+sys/dev/usb/wlan/if_urtwn.c svneol=native#text/plain
 sys/dev/usb/wlan/if_urtwnreg.h svneol=native#text/plain
 sys/dev/usb/wlan/if_urtwreg.h -text
 sys/dev/usb/wlan/if_urtwvar.h -text
