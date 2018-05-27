@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/i386/swtch.s 282065 2015-04-27 08:02:12Z kib $
  */
 
 #include "opt_npx.h"
@@ -174,7 +175,7 @@ ENTRY(cpu_switch)
 
 	/* switch address space */
 	movl	PCB_CR3(%edx),%eax
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	cmpl	%eax,IdlePDPT			/* Kernel address space? */
 #else
 	cmpl	%eax,IdlePTD			/* Kernel address space? */
@@ -386,70 +387,6 @@ ENTRY(savectx)
 	pushfl
 	popl	PCB_PSL(%ecx)
 
-#ifdef DEV_NPX
-	/*
-	 * If fpcurthread == NULL, then the npx h/w state is irrelevant and the
-	 * state had better already be in the pcb.  This is true for forks
-	 * but not for dumps (the old book-keeping with FP flags in the pcb
-	 * always lost for dumps because the dump pcb has 0 flags).
-	 *
-	 * If fpcurthread != NULL, then we have to save the npx h/w state to
-	 * fpcurthread's pcb and copy it to the requested pcb, or save to the
-	 * requested pcb and reload.  Copying is easier because we would
-	 * have to handle h/w bugs for reloading.  We used to lose the
-	 * parent's npx state for forks by forgetting to reload.
-	 */
-	pushfl
-	CLI
-	movl	PCPU(FPCURTHREAD),%eax
-	testl	%eax,%eax
-	je	1f
-
-	pushl	%ecx
-	movl	TD_PCB(%eax),%eax
-	movl	PCB_SAVEFPU(%eax),%eax
-	pushl	%eax
-	pushl	%eax
-	call	npxsave
-	addl	$4,%esp
-	popl	%eax
-	popl	%ecx
-
-	pushl	$PCB_SAVEFPU_SIZE
-	leal	PCB_USERFPU(%ecx),%ecx
-	pushl	%ecx
-	pushl	%eax
-	call	bcopy
-	addl	$12,%esp
-1:
-	popfl
-#endif	/* DEV_NPX */
-
-	ret
-END(savectx)
-
-/*
- * suspendctx(pcb)
- * Update pcb, suspending current processor state.
- */
-ENTRY(suspendctx)
-	/* Fetch PCB. */
-	movl	4(%esp),%ecx
-
-	/* Save context by calling savectx(). */
-	pushl	%ecx
-	call	savectx
-	addl	$4,%esp
-
-	/* Fetch PCB again. */
-	movl	4(%esp),%ecx
-
-	/* Update caller's return address and stack pointer. */
-	movl	(%esp),%eax
-	movl	%eax,PCB_EIP(%ecx)
-	movl	%esp,PCB_ESP(%ecx)
-
-	/* Save other registers and descriptor tables. */
 	movl	%cr0,%eax
 	movl	%eax,PCB_CR0(%ecx)
 	movl	%cr2,%eax
@@ -482,16 +419,13 @@ ENTRY(suspendctx)
 
 	movl	$1,%eax
 	ret
-END(suspendctx)
+END(savectx)
 
 /*
- * resumectx(pcb in %esi)
+ * resumectx(pcb) __fastcall
  * Resuming processor state from pcb.
  */
 ENTRY(resumectx)
-	/* Fetch PCB. */
-	movl	%esi,%ecx
-
 	/* Restore GDT. */
 	lgdt	PCB_GDT(%ecx)
 
@@ -546,10 +480,6 @@ ENTRY(resumectx)
 	movl	%eax,%dr6
 	movl	PCB_DR7(%ecx),%eax
 	movl	%eax,%dr7
-
-#ifdef DEV_NPX
-	/* XXX FIX ME */
-#endif
 
 	/* Restore other registers */
 	movl	PCB_EDI(%ecx),%edi

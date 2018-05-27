@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/i386/acpica/Makefile,v 1.8 2006/10/19 05:55:09 ru Exp $
 
 # Correct path for kernel builds

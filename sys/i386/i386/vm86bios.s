@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Jonathan Lemon
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/i386/vm86bios.s 282065 2015-04-27 08:02:12Z kib $
  */
 
 #include "opt_npx.h"
@@ -122,7 +123,7 @@ ENTRY(vm86_bioscall)
 	movl	SCR_NEWPTD(%edx),%eax	/* mapping for vm86 page table */
 	movl	%eax,0(%ebx)		/* ... install as PTD entry 0 */
 
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	movl	IdlePDPT,%ecx
 #endif
 	movl	%ecx,%cr3		/* new page tables */

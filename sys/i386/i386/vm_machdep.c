@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
  * Copyright (c) 1989, 1990 William Jolitz
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/i386/vm_machdep.c 332759 2018-04-19 06:20:53Z avg $");
 
 #include "opt_isa.h"
 #include "opt_npx.h"
@@ -106,9 +107,14 @@ __FBSDID("$FreeBSD$");
 #define	NSFBUFS		(512 + maxusers * 16)
 #endif
 
-CTASSERT((struct thread **)OFFSETOF_CURTHREAD ==
-    &((struct pcpu *)NULL)->pc_curthread);
-CTASSERT((struct pcb **)OFFSETOF_CURPCB == &((struct pcpu *)NULL)->pc_curpcb);
+#if !defined(CPU_DISABLE_SSE) && defined(I686_CPU)
+#define CPU_ENABLE_SSE
+#endif
+
+_Static_assert(OFFSETOF_CURTHREAD == offsetof(struct pcpu, pc_curthread),
+    "OFFSETOF_CURTHREAD does not correspond with offset of pc_curthread.");
+_Static_assert(OFFSETOF_CURPCB == offsetof(struct pcpu, pc_curpcb),
+    "OFFSETOF_CURPCB does not correspond with offset of pc_curpcb.");
 
 static void	cpu_reset_real(void);
 #ifdef SMP
@@ -116,6 +122,18 @@ static void	cpu_reset_proxy(void);
 static u_int	cpu_reset_proxyid;
 static volatile u_int	cpu_reset_proxy_active;
 #endif
+
+static int nsfbufs;
+static int nsfbufspeak;
+static int nsfbufsused;
+
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufs, CTLFLAG_RDTUN, &nsfbufs, 0,
+    "Maximum number of sendfile(2) sf_bufs available");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufspeak, CTLFLAG_RD, &nsfbufspeak, 0,
+    "Number of sendfile(2) sf_bufs at peak usage");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufsused, CTLFLAG_RD, &nsfbufsused, 0,
+    "Number of sendfile(2) sf_bufs in use");
+
 static void	sf_buf_init(void *arg);
 SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
 
@@ -137,7 +155,54 @@ static u_int	sf_buf_alloc_want;
  */
 static struct mtx sf_buf_lock;
 
-extern int	_ucodesel, _udatasel;
+union savefpu *
+get_pcb_user_save_td(struct thread *td)
+{
+	vm_offset_t p;
+	p = td->td_kstack + td->td_kstack_pages * PAGE_SIZE -
+	    roundup2(cpu_max_ext_state_size, XSAVE_AREA_ALIGN);
+	KASSERT((p % XSAVE_AREA_ALIGN) == 0, ("Unaligned pcb_user_save area"));
+	return ((union savefpu *)p);
+}
+
+union savefpu *
+get_pcb_user_save_pcb(struct pcb *pcb)
+{
+	vm_offset_t p;
+
+	p = (vm_offset_t)(pcb + 1);
+	return ((union savefpu *)p);
+}
+
+struct pcb *
+get_pcb_td(struct thread *td)
+{
+	vm_offset_t p;
+
+	p = td->td_kstack + td->td_kstack_pages * PAGE_SIZE -
+	    roundup2(cpu_max_ext_state_size, XSAVE_AREA_ALIGN) -
+	    sizeof(struct pcb);
+	return ((struct pcb *)p);
+}
+
+void *
+alloc_fpusave(int flags)
+{
+	void *res;
+#ifdef CPU_ENABLE_SSE
+	struct savefpu_ymm *sf;
+#endif
+
+	res = malloc(cpu_max_ext_state_size, M_DEVBUF, flags);
+#ifdef CPU_ENABLE_SSE
+	if (use_xsave) {
+		sf = (struct savefpu_ymm *)res;
+		bzero(&sf->sv_xstate.sx_hd, sizeof(sf->sv_xstate.sx_hd));
+		sf->sv_xstate.sx_hd.xstate_bv = xsave_mask;
+	}
+#endif
+	return (res);
+}
 
 /*
  * Finish a fork operation, with process p2 nearly set up.
@@ -145,11 +210,7 @@ extern int	_ucodesel, _udatasel;
  * ready to run and return to user mode.
  */
 void
-cpu_fork(td1, p2, td2, flags)
-	register struct thread *td1;
-	register struct proc *p2;
-	struct thread *td2;
-	int flags;
+cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 {
 	register struct proc *p1;
 	struct pcb *pcb2;
@@ -188,15 +249,16 @@ cpu_fork(td1, p2, td2, flags)
 #endif
 
 	/* Point the pcb to the top of the stack */
-	pcb2 = (struct pcb *)(td2->td_kstack +
-	    td2->td_kstack_pages * PAGE_SIZE) - 1;
+	pcb2 = get_pcb_td(td2);
 	td2->td_pcb = pcb2;
 
 	/* Copy td1's pcb */
 	bcopy(td1->td_pcb, pcb2, sizeof(*pcb2));
 
 	/* Properly initialize pcb_save */
-	pcb2->pcb_save = &pcb2->pcb_user_save;
+	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
+	bcopy(get_pcb_user_save_td(td1), get_pcb_user_save_pcb(pcb2),
+	    cpu_max_ext_state_size);
 
 	/* Point mdproc and then copy over td1's contents */
 	mdp2 = &p2->p_md;
@@ -230,7 +292,7 @@ cpu_fork(td1, p2, td2, flags)
 	 * Set registers for trampoline to user mode.  Leave space for the
 	 * return address on stack.  These are the kernel mode register values.
 	 */
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	pcb2->pcb_cr3 = vtophys(vmspace_pmap(p2->p_vmspace)->pm_pdpt);
 #else
 	pcb2->pcb_cr3 = vtophys(vmspace_pmap(p2->p_vmspace)->pm_pdir);
@@ -354,7 +416,7 @@ cpu_thread_clean(struct thread *td)
 		 * XXX do we need to move the TSS off the allocated pages
 		 * before freeing them?  (not done here)
 		 */
-		kmem_free(kernel_map, (vm_offset_t)pcb->pcb_ext,
+		kmem_free(kernel_arena, (vm_offset_t)pcb->pcb_ext,
 		    ctob(IOPAGES + 1));
 		pcb->pcb_ext = NULL;
 	}
@@ -373,12 +435,22 @@ cpu_thread_swapout(struct thread *td)
 void
 cpu_thread_alloc(struct thread *td)
 {
+	struct pcb *pcb;
+#ifdef CPU_ENABLE_SSE
+	struct xstate_hdr *xhdr;
+#endif
 
-	td->td_pcb = (struct pcb *)(td->td_kstack +
-	    td->td_kstack_pages * PAGE_SIZE) - 1;
-	td->td_frame = (struct trapframe *)((caddr_t)td->td_pcb - 16) - 1;
-	td->td_pcb->pcb_ext = NULL; 
-	td->td_pcb->pcb_save = &td->td_pcb->pcb_user_save;
+	td->td_pcb = pcb = get_pcb_td(td);
+	td->td_frame = (struct trapframe *)((caddr_t)pcb - 16) - 1;
+	pcb->pcb_ext = NULL; 
+	pcb->pcb_save = get_pcb_user_save_pcb(pcb);
+#ifdef CPU_ENABLE_SSE
+	if (use_xsave) {
+		xhdr = (struct xstate_hdr *)(pcb->pcb_save + 1);
+		bzero(xhdr, sizeof(*xhdr));
+		xhdr->xstate_bv = xsave_mask;
+	}
+#endif
 }
 
 void
@@ -411,13 +483,7 @@ cpu_set_syscall_retval(struct thread *td, int error)
 		break;
 
 	default:
-		if (td->td_proc->p_sysent->sv_errsize) {
-			if (error >= td->td_proc->p_sysent->sv_errsize)
-				error = -1;	/* XXX */
-			else
-				error = td->td_proc->p_sysent->sv_errtbl[error];
-		}
-		td->td_frame->tf_eax = error;
+		td->td_frame->tf_eax = SV_ABI_ERRNO(td->td_proc, error);
 		td->td_frame->tf_eflags |= PSL_C;
 		break;
 	}
@@ -444,8 +510,11 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	 * values here.
 	 */
 	bcopy(td0->td_pcb, pcb2, sizeof(*pcb2));
-	pcb2->pcb_flags &= ~(PCB_NPXINITDONE | PCB_NPXUSERINITDONE);
-	pcb2->pcb_save = &pcb2->pcb_user_save;
+	pcb2->pcb_flags &= ~(PCB_NPXINITDONE | PCB_NPXUSERINITDONE |
+	    PCB_KERNNPX);
+	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
+	bcopy(get_pcb_user_save_td(td0), pcb2->pcb_save,
+	    cpu_max_ext_state_size);
 
 	/*
 	 * Create a new fresh stack for the new thread.
@@ -577,13 +646,11 @@ kvtop(void *addr)
 static void
 cpu_reset_proxy()
 {
-	cpuset_t tcrp;
 
 	cpu_reset_proxy_active = 1;
 	while (cpu_reset_proxy_active == 1)
-		;	/* Wait for other cpu to see that we've started */
-	CPU_SETOF(cpu_reset_proxyid, &tcrp);
-	stop_cpus(tcrp);
+		ia32_pause(); /* Wait for other cpu to see that we've started */
+
 	printf("cpu_reset_proxy: Stopped CPU %d\n", cpu_reset_proxyid);
 	DELAY(1000000);
 	cpu_reset_real();
@@ -605,7 +672,7 @@ cpu_reset()
 	cpuset_t map;
 	u_int cnt;
 
-	if (smp_active) {
+	if (smp_started) {
 		map = all_cpus;
 		CPU_CLR(PCPU_GET(cpuid), &map);
 		CPU_NAND(&map, &stopped_cpus);
@@ -621,20 +688,22 @@ cpu_reset()
 			printf("cpu_reset: Restarting BSP\n");
 
 			/* Restart CPU #0. */
-			/* XXX: restart_cpus(1 << 0); */
 			CPU_SETOF(0, &started_cpus);
 			wmb();
 
 			cnt = 0;
-			while (cpu_reset_proxy_active == 0 && cnt < 10000000)
+			while (cpu_reset_proxy_active == 0 && cnt < 10000000) {
+				ia32_pause();
 				cnt++;	/* Wait for BSP to announce restart */
-			if (cpu_reset_proxy_active == 0)
+			}
+			if (cpu_reset_proxy_active == 0) {
 				printf("cpu_reset: Failed to restart BSP\n");
-			enable_intr();
-			cpu_reset_proxy_active = 2;
-
-			while (1);
-			/* NOTREACHED */
+			} else {
+				cpu_reset_proxy_active = 2;
+				while (1)
+					ia32_pause();
+				/* NOTREACHED */
+			}
 		}
 
 		DELAY(1000000);
@@ -750,7 +819,7 @@ sf_buf_init(void *arg)
 
 	sf_buf_active = hashinit(nsfbufs, M_TEMP, &sf_buf_hashmask);
 	TAILQ_INIT(&sf_buf_freelist);
-	sf_base = kmem_alloc_nofault(kernel_map, nsfbufs * PAGE_SIZE);
+	sf_base = kva_alloc(nsfbufs * PAGE_SIZE);
 	sf_bufs = malloc(nsfbufs * sizeof(struct sf_buf), M_TEMP,
 	    M_NOWAIT | M_ZERO);
 	for (i = 0; i < nsfbufs; i++) {
@@ -785,7 +854,7 @@ sf_buf_invalidate_cache(vm_page_t m)
 			 */
 			pmap_qenter(sf->kva, &m, 1);
 			pmap_invalidate_cache_range(sf->kva, sf->kva +
-			    PAGE_SIZE);
+			    PAGE_SIZE, FALSE);
 			ret = TRUE;
 			break;
 		}
@@ -832,7 +901,7 @@ sf_buf_alloc(struct vm_page *m, int flags)
 		if (flags & SFB_NOWAIT)
 			goto done;
 		sf_buf_alloc_want++;
-		mbstat.sf_allocwait++;
+		SFSTAT_INC(sf_allocwait);
 		error = msleep(&sf_buf_freelist, &sf_buf_lock,
 		    (flags & SFB_CATCH) ? PCATCH | PVM : PVM, "sfbufa", 0);
 		sf_buf_alloc_want--;

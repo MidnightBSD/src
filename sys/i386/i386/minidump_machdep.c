@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Peter Wemm
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/i386/minidump_machdep.c 282065 2015-04-27 08:02:12Z kib $");
 
 #include "opt_watchdog.h"
 
@@ -265,7 +266,7 @@ minidumpsys(struct dumperinfo *di)
 	mdhdr.bitmapsize = vm_page_dump_size;
 	mdhdr.ptesize = ptesize;
 	mdhdr.kernbase = KERNBASE;
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	mdhdr.paemode = 1;
 #endif
 

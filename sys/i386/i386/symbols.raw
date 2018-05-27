@@ -1,7 +1,7 @@
 #	@(#)symbols.raw	7.6 (Berkeley) 5/8/91
 #
-# $FreeBSD$
-#
+# $FreeBSD: stable/10/sys/i386/i386/symbols.raw 253361 2013-07-15 12:18:36Z glebius $
+# $MidnightBSD$
 
 
 #gdb
@@ -43,7 +43,6 @@
 	_averunnable
 	_boottime
 #netstat
-	_mbstat
 	_ipstat
 	_tcb
 	_tcpstat

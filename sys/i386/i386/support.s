@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/i386/support.s 274648 2014-11-18 12:53:32Z kib $
  */
 
 #include "opt_npx.h"
@@ -62,8 +63,8 @@ ENTRY(bzero)
 	stosb
 	popl	%edi
 	ret
-END(bzero)	
-	
+END(bzero)
+
 ENTRY(sse2_pagezero)
 	pushl	%ebx
 	movl	8(%esp),%ecx
@@ -181,11 +182,13 @@ END(bcopyb)
  *  ws@tools.de     (Wolfgang Solfrank, TooLs GmbH) +49-228-985800
  */
 ENTRY(bcopy)
+	pushl	%ebp
+	movl	%esp,%ebp
 	pushl	%esi
 	pushl	%edi
-	movl	12(%esp),%esi
-	movl	16(%esp),%edi
-	movl	20(%esp),%ecx
+	movl	8(%ebp),%esi
+	movl	12(%ebp),%edi
+	movl	16(%ebp),%ecx
 
 	movl	%edi,%eax
 	subl	%esi,%eax
@@ -196,12 +199,13 @@ ENTRY(bcopy)
 	cld					/* nope, copy forwards */
 	rep
 	movsl
-	movl	20(%esp),%ecx
+	movl	16(%ebp),%ecx
 	andl	$3,%ecx				/* any bytes left? */
 	rep
 	movsb
 	popl	%edi
 	popl	%esi
+	popl	%ebp
 	ret
 
 	ALIGN_TEXT
@@ -214,7 +218,7 @@ ENTRY(bcopy)
 	std
 	rep
 	movsb
-	movl	20(%esp),%ecx			/* copy remainder by 32-bit words */
+	movl	16(%ebp),%ecx			/* copy remainder by 32-bit words */
 	shrl	$2,%ecx
 	subl	$3,%esi
 	subl	$3,%edi
@@ -223,6 +227,7 @@ ENTRY(bcopy)
 	popl	%edi
 	popl	%esi
 	cld
+	popl	%ebp
 	ret
 END(bcopy)
 
@@ -385,16 +390,16 @@ copyin_fault:
 	ret
 
 /*
- * casuword.  Compare and set user word.  Returns -1 or the current value.
+ * casueword.  Compare and set user word.  Returns -1 on fault,
+ * 0 on non-faulting access.  The current value is in *oldp.
  */
-
-ALTENTRY(casuword32)
-ENTRY(casuword)
+ALTENTRY(casueword32)
+ENTRY(casueword)
 	movl	PCPU(CURPCB),%ecx
 	movl	$fusufault,PCB_ONFAULT(%ecx)
 	movl	4(%esp),%edx			/* dst */
 	movl	8(%esp),%eax			/* old */
-	movl	12(%esp),%ecx			/* new */
+	movl	16(%esp),%ecx			/* new */
 
 	cmpl	$VM_MAXUSER_ADDRESS-4,%edx	/* verify address is valid */
 	ja	fusufault
@@ -412,17 +417,20 @@ ENTRY(casuword)
 
 	movl	PCPU(CURPCB),%ecx
 	movl	$0,PCB_ONFAULT(%ecx)
+	movl	12(%esp),%edx			/* oldp */
+	movl	%eax,(%edx)
+	xorl	%eax,%eax
 	ret
-END(casuword32)
-END(casuword)
+END(casueword32)
+END(casueword)
 
 /*
  * Fetch (load) a 32-bit word, a 16-bit word, or an 8-bit byte from user
- * memory.  All these functions are MPSAFE.
+ * memory.
  */
 
-ALTENTRY(fuword32)
-ENTRY(fuword)
+ALTENTRY(fueword32)
+ENTRY(fueword)
 	movl	PCPU(CURPCB),%ecx
 	movl	$fusufault,PCB_ONFAULT(%ecx)
 	movl	4(%esp),%edx			/* from */
@@ -432,9 +440,12 @@ ENTRY(fuword)
 
 	movl	(%edx),%eax
 	movl	$0,PCB_ONFAULT(%ecx)
+	movl	8(%esp),%edx
+	movl	%eax,(%edx)
+	xorl	%eax,%eax
 	ret
-END(fuword32)
-END(fuword)
+END(fueword32)
+END(fueword)
 
 /*
  * fuswintr() and suswintr() are specialized variants of fuword16() and
@@ -690,7 +701,7 @@ ENTRY(lgdt)
 	movl	4(%esp),%eax
 	lgdt	(%eax)
 #endif
-	
+
 	/* flush the prefetch q */
 	jmp	1f
 	nop
@@ -736,13 +747,13 @@ END(ssdtosd)
 
 /* void reset_dbregs() */
 ENTRY(reset_dbregs)
-	movl    $0,%eax
-	movl    %eax,%dr7     /* disable all breapoints first */
-	movl    %eax,%dr0
-	movl    %eax,%dr1
-	movl    %eax,%dr2
-	movl    %eax,%dr3
-	movl    %eax,%dr6
+	movl	$0,%eax
+	movl	%eax,%dr7	/* disable all breakpoints first */
+	movl	%eax,%dr0
+	movl	%eax,%dr1
+	movl	%eax,%dr2
+	movl	%eax,%dr3
+	movl	%eax,%dr6
 	ret
 END(reset_dbregs)
 

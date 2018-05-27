@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Poul-Henning Kamp
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/i386/geode.c 208111 2010-05-15 10:31:11Z phk $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

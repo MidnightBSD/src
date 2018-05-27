@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Jack F. Vogel
  * All rights reserved.
@@ -26,7 +27,7 @@
  * mpboot.s:	FreeBSD machine support for the Intel MP Spec
  *		multiprocessor systems.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/i386/i386/mpboot.s 282065 2015-04-27 08:02:12Z kib $
  */
 
 #include "opt_pmap.h"
@@ -99,7 +100,7 @@ NON_GPROF_ENTRY(MPentry)
 	movl	%eax,%cr4
 
 	/* Now enable paging mode */
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	movl	R(IdlePDPT), %eax
 	movl	%eax, %cr3
 	movl	%cr4, %eax

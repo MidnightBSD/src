@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 2001-2012 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/i386/acpica/acpi_wakecode.S 235796 2012-05-22 17:44:01Z iwasaki $
+ * $FreeBSD: stable/10/sys/i386/acpica/acpi_wakecode.S 237027 2012-06-13 21:03:01Z jkim $
  */
 
 #include <machine/asmacros.h>
@@ -142,8 +143,8 @@ wakeup_32:
 	mov	%ax, %ds
 
 	/* Get PCB and return address. */
-	movl	wakeup_pcb - wakeup_start(%ebx), %esi
-	movl	wakeup_ret - wakeup_start(%ebx), %edi
+	movl	wakeup_pcb - wakeup_start(%ebx), %ecx
+	movl	wakeup_ret - wakeup_start(%ebx), %edx
 
 	/* Restore CR4 and CR3. */
 	movl	wakeup_cr4 - wakeup_start(%ebx), %eax
@@ -166,7 +167,7 @@ wakeup_32:
 	jmp	1f
 1:
 	/* Jump to return address. */
-	jmp	*%edi
+	jmp	*%edx
 
 	.data
 
@@ -201,5 +202,8 @@ wakeup_cr3:
 wakeup_pcb:
 	.long	0
 wakeup_ret:
+	.long	0
+wakeup_gdt:		/* not used */
+	.word	0
 	.long	0
 dummy:

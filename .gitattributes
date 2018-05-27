@@ -59348,6 +59348,7 @@ sys/i386/include/bootinfo.h -text
 sys/i386/include/bus.h -text
 sys/i386/include/bus_dma.h -text
 sys/i386/include/clock.h -text
+sys/i386/include/counter.h svneol=native#text/plain
 sys/i386/include/cpu.h -text
 sys/i386/include/cpufunc.h -text
 sys/i386/include/cputypes.h -text
@@ -59357,6 +59358,7 @@ sys/i386/include/elan_mmcr.h -text
 sys/i386/include/elf.h -text
 sys/i386/include/endian.h -text
 sys/i386/include/exec.h -text
+sys/i386/include/fdt.h svneol=native#text/plain
 sys/i386/include/float.h -text
 sys/i386/include/floatingpoint.h -text
 sys/i386/include/frame.h -text
@@ -59378,6 +59380,7 @@ sys/i386/include/minidump.h -text
 sys/i386/include/mp_watchdog.h -text
 sys/i386/include/nexusvar.h -text
 sys/i386/include/npx.h -text
+sys/i386/include/ofw_machdep.h svneol=native#text/plain
 sys/i386/include/param.h -text
 sys/i386/include/pc/bios.h -text
 sys/i386/include/pc/display.h -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/i386/bios.c 282065 2015-04-27 08:02:12Z kib $");
 
 /*
  * Code for dealing with the BIOS in x86 PC systems.
@@ -372,9 +373,11 @@ bios16(struct bios_args *args, char *fmt, ...)
 	    break;
 
 	default:
+	    va_end(ap);
 	    return (EINVAL);
 	}
     }
+    va_end(ap);
 
     if (flags & BIOSARGS_FLAG) {
 	if (arg_end - arg_start > ctob(16))
@@ -387,7 +390,7 @@ bios16(struct bios_args *args, char *fmt, ...)
     args->seg.code32.limit = 0xffff;	
 
     ptd = (pd_entry_t *)rcr3();
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
     if (ptd == IdlePDPT)
 #else
     if (ptd == IdlePTD)
@@ -448,9 +451,11 @@ bios16(struct bios_args *args, char *fmt, ...)
 	    break;
 
 	default:
+	    va_end(ap);
 	    return (EINVAL);
 	}
     }
+    va_end(ap);
 
     set_bios_selectors(&args->seg, flags);
     bioscall_vector.vec16.offset = (u_short)args->entry;

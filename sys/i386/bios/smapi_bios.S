@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/i386/bios/smapi_bios.S 239869 2012-08-29 18:22:52Z dim $");
 
 /*
  * This is cribbed from the Linux thinkpad-4.1 driver by
