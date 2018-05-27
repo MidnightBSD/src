@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Justin T. Gibbs, Spectra Logic Corporation
  * All rights reserved.
@@ -89,7 +90,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/xen/control/control.c 315676 2017-03-21 09:38:59Z royger $");
 
 /**
  * \file control.c
@@ -119,31 +120,39 @@ __MBSDID("$MidnightBSD$");
 #include <sys/taskqueue.h>
 #include <sys/types.h>
 #include <sys/vnode.h>
-
-#ifndef XENHVM
 #include <sys/sched.h>
 #include <sys/smp.h>
-#endif
+#include <sys/eventhandler.h>
 
 #include <geom/geom.h>
 
 #include <machine/_inttypes.h>
-#include <machine/xen/xen-os.h>
+#include <machine/intr_machdep.h>
+#include <machine/apicvar.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
 
+#include <xen/xen-os.h>
 #include <xen/blkif.h>
 #include <xen/evtchn.h>
 #include <xen/gnttab.h>
 #include <xen/xen_intr.h>
+
+#ifdef XENHVM
+#include <xen/hvm.h>
+#endif
 
 #include <xen/interface/event_channel.h>
 #include <xen/interface/grant_table.h>
 
 #include <xen/xenbus/xenbusvar.h>
 
+#include <machine/xen/xenvar.h>
+#include <machine/xen/xenfunc.h>
+
+bool xen_suspend_cancelled;
 /*--------------------------- Forward Declarations --------------------------*/
 /** Function signature for shutdown event handlers. */
 typedef	void (xctrl_shutdown_handler_t)(void);
@@ -152,7 +161,6 @@ static xctrl_shutdown_handler_t xctrl_poweroff;
 static xctrl_shutdown_handler_t xctrl_reboot;
 static xctrl_shutdown_handler_t xctrl_suspend;
 static xctrl_shutdown_handler_t xctrl_crash;
-static xctrl_shutdown_handler_t xctrl_halt;
 
 /*-------------------------- Private Data Structures -------------------------*/
 /** Element type for lookup table of event name to handler. */
@@ -167,7 +175,7 @@ static const struct xctrl_shutdown_reason xctrl_shutdown_reasons[] = {
 	{ "reboot",   xctrl_reboot   },
 	{ "suspend",  xctrl_suspend  },
 	{ "crash",    xctrl_crash    },
-	{ "halt",     xctrl_halt     },
+	{ "halt",     xctrl_poweroff },
 };
 
 struct xctrl_softc {
@@ -195,7 +203,7 @@ extern void xencons_resume(void);
 static void
 xctrl_suspend()
 {
-	int i, j, k, fpp;
+	int i, j, k, fpp, suspend_cancelled;
 	unsigned long max_pfn, start_info_mfn;
 
 	EVENTHANDLER_INVOKE(power_suspend);
@@ -242,6 +250,7 @@ xctrl_suspend()
 
 	xencons_suspend();
 	gnttab_suspend();
+	intr_suspend();
 
 	max_pfn = HYPERVISOR_shared_info->arch.max_pfn;
 
@@ -259,7 +268,7 @@ xctrl_suspend()
 	 */
 	start_info_mfn = VTOMFN(xen_start_info);
 	pmap_suspend();
-	HYPERVISOR_suspend(start_info_mfn);
+	suspend_cancelled = HYPERVISOR_suspend(start_info_mfn);
 	pmap_resume();
 
 	pmap_kenter_ma((vm_offset_t) shared_info, xen_start_info->shared_info);
@@ -282,7 +291,7 @@ xctrl_suspend()
 	HYPERVISOR_shared_info->arch.max_pfn = max_pfn;
 
 	gnttab_resume();
-	irq_resume();
+	intr_resume(suspend_cancelled != 0);
 	local_irq_enable();
 	xencons_resume();
 
@@ -326,15 +335,33 @@ xen_pv_shutdown_final(void *arg, int howto)
 }
 
 #else
-extern void xenpci_resume(void);
 
 /* HVM mode suspension. */
 static void
 xctrl_suspend()
 {
-	int suspend_cancelled;
+#ifdef SMP
+	cpuset_t cpu_suspend_map;
+#endif
 
+	EVENTHANDLER_INVOKE(power_suspend_early);
+	xs_lock();
+	stop_all_proc();
+	xs_unlock();
 	EVENTHANDLER_INVOKE(power_suspend);
+
+	if (smp_started) {
+		thread_lock(curthread);
+		sched_bind(curthread, 0);
+		thread_unlock(curthread);
+	}
+	KASSERT((PCPU_GET(cpuid) == 0), ("Not running on CPU#0"));
+
+	/*
+	 * Clear our XenStore node so the toolstack knows we are
+	 * responding to the suspend request.
+	 */
+	xs_write(XST_NIL, "control", "shutdown", "");
 
 	/*
 	 * Be sure to hold Giant across DEVICE_SUSPEND/RESUME since non-MPSAFE
@@ -348,33 +375,76 @@ xctrl_suspend()
 	}
 	mtx_unlock(&Giant);
 
+#ifdef SMP
+	CPU_ZERO(&cpu_suspend_map);	/* silence gcc */
+	if (smp_started) {
+		/*
+		 * Suspend other CPUs. This prevents IPIs while we
+		 * are resuming, and will allow us to reset per-cpu
+		 * vcpu_info on resume.
+		 */
+		cpu_suspend_map = all_cpus;
+		CPU_CLR(PCPU_GET(cpuid), &cpu_suspend_map);
+		if (!CPU_EMPTY(&cpu_suspend_map))
+			suspend_cpus(cpu_suspend_map);
+	}
+#endif
+
 	/*
 	 * Prevent any races with evtchn_interrupt() handler.
 	 */
 	disable_intr();
-	irq_suspend();
+	intr_suspend();
+	xen_hvm_suspend();
 
-	suspend_cancelled = HYPERVISOR_suspend(0);
-	if (suspend_cancelled)
-		irq_resume();
-	else
-		xenpci_resume();
+	xen_suspend_cancelled = !!HYPERVISOR_suspend(0);
+
+	if (!xen_suspend_cancelled) {
+		xen_hvm_resume(false);
+	}
+	intr_resume(xen_suspend_cancelled != 0);
+	enable_intr();
 
 	/*
-	 * Re-enable interrupts and put the scheduler back to normal.
+	 * Reset grant table info.
 	 */
-	enable_intr();
+	if (!xen_suspend_cancelled) {
+		gnttab_resume();
+	}
+
+#ifdef SMP
+	/* Send an IPI_BITMAP in case there are pending bitmap IPIs. */
+	lapic_ipi_vectored(IPI_BITMAP_VECTOR, APIC_IPI_DEST_ALL);
+	if (smp_started && !CPU_EMPTY(&cpu_suspend_map)) {
+		/*
+		 * Now that event channels have been initialized,
+		 * resume CPUs.
+		 */
+		resume_cpus(cpu_suspend_map);
+	}
+#endif
 
 	/*
 	 * FreeBSD really needs to add DEVICE_SUSPEND_CANCEL or
 	 * similar.
 	 */
 	mtx_lock(&Giant);
-	if (!suspend_cancelled)
-		DEVICE_RESUME(root_bus);
+	DEVICE_RESUME(root_bus);
 	mtx_unlock(&Giant);
 
+	if (smp_started) {
+		thread_lock(curthread);
+		sched_unbind(curthread);
+		thread_unlock(curthread);
+	}
+
+	resume_all_proc();
+
 	EVENTHANDLER_INVOKE(power_resume);
+
+	if (bootverbose)
+		printf("System resumed after suspension\n");
+
 }
 #endif
 
@@ -382,12 +452,6 @@ static void
 xctrl_crash()
 {
 	panic("Xen directed crash");
-}
-
-static void
-xctrl_halt()
-{
-	shutdown_nice(RB_HALT);
 }
 
 /*------------------------------ Event Reception -----------------------------*/

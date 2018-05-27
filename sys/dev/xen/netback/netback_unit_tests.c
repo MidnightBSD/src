@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2011 Spectra Logic Corporation
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/xen/netback/netback_unit_tests.c 319222 2017-05-30 16:15:52Z asomers $");
 
 /**
  * \file netback_unit_tests.c
@@ -104,10 +105,6 @@ struct test_fixture {
 
 typedef struct test_fixture test_fixture_t;
 
-static void	xnb_fill_eh_and_ip(struct mbuf *m, uint16_t ip_len,
-				   uint16_t ip_id, uint16_t ip_p,
-				   uint16_t ip_off, uint16_t ip_sum);
-static void	xnb_fill_tcp(struct mbuf *m);
 static int	xnb_get1pkt(struct xnb_pkt *pkt, size_t size, uint16_t flags);
 static int	xnb_unit_test_runner(test_fixture_t const tests[], int ntests,
 				     char *buffer, size_t buflen);
@@ -163,17 +160,24 @@ static testcase_t xnb_rxpkt2rsp_extra;
 static testcase_t xnb_rxpkt2rsp_2short;
 static testcase_t xnb_rxpkt2rsp_2slots;
 static testcase_t xnb_rxpkt2rsp_copyerror;
+static testcase_t xnb_sscanf_llu;
+static testcase_t xnb_sscanf_lld;
+static testcase_t xnb_sscanf_hhu;
+static testcase_t xnb_sscanf_hhd;
+static testcase_t xnb_sscanf_hhn;
+
+#if defined(INET) || defined(INET6)
 /* TODO: add test cases for xnb_add_mbuf_cksum for IPV6 tcp and udp */
 static testcase_t xnb_add_mbuf_cksum_arp;
 static testcase_t xnb_add_mbuf_cksum_tcp;
 static testcase_t xnb_add_mbuf_cksum_udp;
 static testcase_t xnb_add_mbuf_cksum_icmp;
 static testcase_t xnb_add_mbuf_cksum_tcp_swcksum;
-static testcase_t xnb_sscanf_llu;
-static testcase_t xnb_sscanf_lld;
-static testcase_t xnb_sscanf_hhu;
-static testcase_t xnb_sscanf_hhd;
-static testcase_t xnb_sscanf_hhn;
+static void	xnb_fill_eh_and_ip(struct mbuf *m, uint16_t ip_len,
+				   uint16_t ip_id, uint16_t ip_p,
+				   uint16_t ip_off, uint16_t ip_sum);
+static void	xnb_fill_tcp(struct mbuf *m);
+#endif /* INET || INET6 */
 
 /** Private data used by unit tests */
 static struct {
@@ -307,11 +311,13 @@ xnb_unit_test_main(SYSCTL_HANDLER_ARGS) {
 		{setup_pvt_data, xnb_rxpkt2rsp_2short, teardown_pvt_data},
 		{setup_pvt_data, xnb_rxpkt2rsp_2slots, teardown_pvt_data},
 		{setup_pvt_data, xnb_rxpkt2rsp_copyerror, teardown_pvt_data},
+#if defined(INET) || defined(INET6)
 		{null_setup, xnb_add_mbuf_cksum_arp, null_teardown},
 		{null_setup, xnb_add_mbuf_cksum_icmp, null_teardown},
 		{null_setup, xnb_add_mbuf_cksum_tcp, null_teardown},
 		{null_setup, xnb_add_mbuf_cksum_tcp_swcksum, null_teardown},
 		{null_setup, xnb_add_mbuf_cksum_udp, null_teardown},
+#endif
 		{null_setup, xnb_sscanf_hhd, null_teardown},
 		{null_setup, xnb_sscanf_hhu, null_teardown},
 		{null_setup, xnb_sscanf_lld, null_teardown},
@@ -1222,6 +1228,10 @@ xnb_txpkt2gnttab_2cluster(char *buffer, size_t buflen)
 	xnb_ring2pkt(&pkt, &xnb_unit_pvt.txb, xnb_unit_pvt.txb.req_cons);
 
 	pMbuf = xnb_pkt2mbufc(&pkt, xnb_unit_pvt.ifp);
+	XNB_ASSERT(pMbuf != NULL);
+	if (pMbuf == NULL)
+		return;
+
 	n_entries = xnb_txpkt2gnttab(&pkt, pMbuf, xnb_unit_pvt.gnttab,
 	    &xnb_unit_pvt.txb, DOMID_FIRST_RESERVED);
 
@@ -1266,8 +1276,7 @@ xnb_txpkt2gnttab_2cluster(char *buffer, size_t buflen)
 		/* should never get here */
 		XNB_ASSERT(0);
 	}
-	if (pMbuf != NULL)
-		m_freem(pMbuf);
+	m_freem(pMbuf);
 }
 
 
@@ -1478,7 +1487,7 @@ xnb_mbufc2pkt_1cluster(char *buffer, size_t buflen) {
 	safe_m_freem(&mbuf);
 }
 
-/** xnb_mbufc2pkt on a a two-mbuf chain with short data regions */
+/** xnb_mbufc2pkt on a two-mbuf chain with short data regions */
 static void
 xnb_mbufc2pkt_2short(char *buffer, size_t buflen) {
 	struct xnb_pkt pkt;
@@ -1489,15 +1498,14 @@ xnb_mbufc2pkt_2short(char *buffer, size_t buflen) {
 	struct mbuf *mbufc, *mbufc2;
 
 	mbufc = m_getm(NULL, size1, M_WAITOK, MT_DATA);
-	mbufc->m_flags |= M_PKTHDR;
-	if (mbufc == NULL) {
-		XNB_ASSERT(mbufc != NULL);
+	XNB_ASSERT(mbufc != NULL);
+	if (mbufc == NULL)
 		return;
-	}
+	mbufc->m_flags |= M_PKTHDR;
 
 	mbufc2 = m_getm(mbufc, size2, M_WAITOK, MT_DATA);
+	XNB_ASSERT(mbufc2 != NULL);
 	if (mbufc2 == NULL) {
-		XNB_ASSERT(mbufc2 != NULL);
 		safe_m_freem(&mbufc);
 		return;
 	}
@@ -1521,7 +1529,7 @@ xnb_mbufc2pkt_2short(char *buffer, size_t buflen) {
 	safe_m_freem(&mbufc2);
 }
 
-/** xnb_mbufc2pkt on a a mbuf chain with >1 mbuf cluster */
+/** xnb_mbufc2pkt on a mbuf chain with >1 mbuf cluster */
 static void
 xnb_mbufc2pkt_long(char *buffer, size_t buflen) {
 	struct xnb_pkt pkt;
@@ -1532,11 +1540,10 @@ xnb_mbufc2pkt_long(char *buffer, size_t buflen) {
 	struct mbuf *mbufc, *m;
 
 	mbufc = m_getm(NULL, size, M_WAITOK, MT_DATA);
-	mbufc->m_flags |= M_PKTHDR;
-	if (mbufc == NULL) {
-		XNB_ASSERT(mbufc != NULL);
+	XNB_ASSERT(mbufc != NULL);
+	if (mbufc == NULL)
 		return;
-	}
+	mbufc->m_flags |= M_PKTHDR;
 
 	mbufc->m_pkthdr.len = size;
 	size_remaining = size;
@@ -1560,7 +1567,7 @@ xnb_mbufc2pkt_long(char *buffer, size_t buflen) {
 	safe_m_freem(&mbufc);
 }
 
-/** xnb_mbufc2pkt on a a mbuf chain with >1 mbuf cluster and extra info */
+/** xnb_mbufc2pkt on a mbuf chain with >1 mbuf cluster and extra info */
 static void
 xnb_mbufc2pkt_extra(char *buffer, size_t buflen) {
 	struct xnb_pkt pkt;
@@ -1571,10 +1578,9 @@ xnb_mbufc2pkt_extra(char *buffer, size_t buflen) {
 	struct mbuf *mbufc, *m;
 
 	mbufc = m_getm(NULL, size, M_WAITOK, MT_DATA);
-	if (mbufc == NULL) {
-		XNB_ASSERT(mbufc != NULL);
+	XNB_ASSERT(mbufc != NULL);
+	if (mbufc == NULL)
 		return;
-	}
 
 	mbufc->m_flags |= M_PKTHDR;
 	mbufc->m_pkthdr.len = size;
@@ -1614,11 +1620,10 @@ xnb_mbufc2pkt_nospace(char *buffer, size_t buflen) {
 	int error;
 
 	mbufc = m_getm(NULL, size, M_WAITOK, MT_DATA);
-	mbufc->m_flags |= M_PKTHDR;
-	if (mbufc == NULL) {
-		XNB_ASSERT(mbufc != NULL);
+	XNB_ASSERT(mbufc != NULL);
+	if (mbufc == NULL)
 		return;
-	}
+	mbufc->m_flags |= M_PKTHDR;
 
 	mbufc->m_pkthdr.len = size;
 	size_remaining = size;
@@ -1835,10 +1840,9 @@ xnb_rxpkt2rsp_extra(char *buffer, size_t buflen)
 	struct netif_extra_info *ext;
 
 	mbufc = m_getm(NULL, size, M_WAITOK, MT_DATA);
-	if (mbufc == NULL) {
-		XNB_ASSERT(mbufc != NULL);
+	XNB_ASSERT(mbufc != NULL);
+	if (mbufc == NULL)
 		return;
-	}
 
 	mbufc->m_flags |= M_PKTHDR;
 	mbufc->m_pkthdr.len = size;
@@ -1969,11 +1973,10 @@ xnb_rxpkt2rsp_2short(char *buffer, size_t buflen) {
 	struct mbuf *mbufc;
 
 	mbufc = m_getm(NULL, size1, M_WAITOK, MT_DATA);
-	mbufc->m_flags |= M_PKTHDR;
-	if (mbufc == NULL) {
-		XNB_ASSERT(mbufc != NULL);
+	XNB_ASSERT(mbufc != NULL);
+	if (mbufc == NULL)
 		return;
-	}
+	mbufc->m_flags |= M_PKTHDR;
 
 	m_getm(mbufc, size2, M_WAITOK, MT_DATA);
 	XNB_ASSERT(mbufc->m_next != NULL);
@@ -2066,6 +2069,7 @@ xnb_rxpkt2rsp_copyerror(char *buffer, size_t buflen)
 	safe_m_freem(&mbuf);
 }
 
+#if defined(INET) || defined(INET6)
 /**
  * xnb_add_mbuf_cksum on an ARP request packet
  */
@@ -2430,6 +2434,7 @@ xnb_add_mbuf_cksum_tcp_swcksum(char *buffer, size_t buflen)
 
 	m_freem(mbufc);
 }
+#endif /* INET || INET6 */
 
 /**
  * sscanf on unsigned chars
@@ -2444,7 +2449,7 @@ xnb_sscanf_hhu(char *buffer, size_t buflen)
 	for (i = 0; i < 12; i++)
 		dest[i] = 'X';
 
-	sscanf(mystr, "%hhu", &dest[4]);
+	XNB_ASSERT(sscanf(mystr, "%hhu", &dest[4]) == 1);
 	for (i = 0; i < 12; i++)
 		XNB_ASSERT(dest[i] == (i == 4 ? 137 : 'X'));
 }
@@ -2462,7 +2467,7 @@ xnb_sscanf_hhd(char *buffer, size_t buflen)
 	for (i = 0; i < 12; i++)
 		dest[i] = 'X';
 
-	sscanf(mystr, "%hhd", &dest[4]);
+	XNB_ASSERT(sscanf(mystr, "%hhd", &dest[4]) == 1);
 	for (i = 0; i < 12; i++)
 		XNB_ASSERT(dest[i] == (i == 4 ? -27 : 'X'));
 }
@@ -2480,7 +2485,7 @@ xnb_sscanf_lld(char *buffer, size_t buflen)
 	for (i = 0; i < 3; i++)
 		dest[i] = (long long)0xdeadbeefdeadbeef;
 
-	sscanf(mystr, "%lld", &dest[1]);
+	XNB_ASSERT(sscanf(mystr, "%lld", &dest[1]) == 1);
 	for (i = 0; i < 3; i++)
 		XNB_ASSERT(dest[i] == (i != 1 ? (long long)0xdeadbeefdeadbeef :
 		    -123456789012345));
@@ -2499,7 +2504,7 @@ xnb_sscanf_llu(char *buffer, size_t buflen)
 	for (i = 0; i < 3; i++)
 		dest[i] = (long long)0xdeadbeefdeadbeef;
 
-	sscanf(mystr, "%llu", &dest[1]);
+	XNB_ASSERT(sscanf(mystr, "%llu", &dest[1]) == 1);
 	for (i = 0; i < 3; i++)
 		XNB_ASSERT(dest[i] == (i != 1 ? (long long)0xdeadbeefdeadbeef :
 		    12802747070103273189ull));
@@ -2521,10 +2526,10 @@ xnb_sscanf_hhn(char *buffer, size_t buflen)
 	for (i = 0; i < 12; i++)
 		dest[i] = (unsigned char)'X';
 
-	sscanf(mystr,
+	XNB_ASSERT(sscanf(mystr,
 	    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
 	    "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
-	    "404142434445464748494a4b4c4d4e4f%hhn", &dest[4]);
+	    "404142434445464748494a4b4c4d4e4f%hhn", &dest[4]) == 0);
 	for (i = 0; i < 12; i++)
 		XNB_ASSERT(dest[i] == (i == 4 ? 160 : 'X'));
 }

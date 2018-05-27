@@ -58657,6 +58657,7 @@ sys/dev/xen/netback/netback_unit_tests.c -text
 sys/dev/xen/netfront/mbufq.h -text
 sys/dev/xen/netfront/netfront.c -text
 sys/dev/xen/pcifront/pcifront.c -text
+sys/dev/xen/timer/timer.c svneol=native#text/plain
 sys/dev/xen/xenpci/evtchn.c -text
 sys/dev/xen/xenpci/xenpci.c -text
 sys/dev/xen/xenpci/xenpcivar.h -text

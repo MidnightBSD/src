@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006, Cisco Systems, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/xen/pcifront/pcifront.c 265999 2014-05-14 01:35:43Z ian $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -441,7 +442,7 @@ xpcife_probe(device_t dev)
 	struct pcifront_device *pdev = (struct pcifront_device *)device_get_ivars(dev);
 	DPRINTF("xpcife probe (unit=%d)\n", pdev->unit);
 #endif
-	return 0;
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 /* Newbus xpcife device driver attach */
