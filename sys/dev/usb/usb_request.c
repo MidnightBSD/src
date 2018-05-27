@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_request.c 305735 2016-09-12 10:20:44Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_request.c 305734 2016-09-12 10:17:25Z hselasky $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -26,6 +27,9 @@
  * SUCH DAMAGE.
  */ 
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -65,6 +69,7 @@
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
 #include <sys/ctype.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 static int usb_no_cs_fail;
 
@@ -224,6 +229,7 @@ usb_do_clear_stall_callback(struct usb_xfer *xfer, usb_error_t error)
 	struct usb_endpoint *ep;
 	struct usb_endpoint *ep_end;
 	struct usb_endpoint *ep_first;
+	usb_stream_t x;
 	uint8_t to;
 
 	udev = xfer->xroot->udev;
@@ -251,9 +257,11 @@ tr_transferred:
 			ep->is_stalled = 0;
 			/* some hardware needs a callback to clear the data toggle */
 			usbd_clear_stall_locked(udev, ep);
-			/* start up the current or next transfer, if any */
-			usb_command_wrapper(&ep->endpoint_q,
-			    ep->endpoint_q.curr);
+			for (x = 0; x != USB_MAX_EP_STREAMS; x++) {
+				/* start the current or next transfer, if any */
+				usb_command_wrapper(&ep->endpoint_q[x],
+				    ep->endpoint_q[x].curr);
+			}
 		}
 		ep++;
 
@@ -1254,10 +1262,49 @@ done:
 }
 
 /*------------------------------------------------------------------------*
+ *	usbd_alloc_config_desc
+ *
+ * This function is used to allocate a zeroed configuration
+ * descriptor.
+ *
+ * Returns:
+ * NULL: Failure
+ * Else: Success
+ *------------------------------------------------------------------------*/
+void *
+usbd_alloc_config_desc(struct usb_device *udev, uint32_t size)
+{
+	if (size > USB_CONFIG_MAX) {
+		DPRINTF("Configuration descriptor too big\n");
+		return (NULL);
+	}
+#if (USB_HAVE_FIXED_CONFIG == 0)
+	return (malloc(size, M_USBDEV, M_ZERO | M_WAITOK));
+#else
+	memset(udev->config_data, 0, sizeof(udev->config_data));
+	return (udev->config_data);
+#endif
+}
+
+/*------------------------------------------------------------------------*
+ *	usbd_alloc_config_desc
+ *
+ * This function is used to free a configuration descriptor.
+ *------------------------------------------------------------------------*/
+void
+usbd_free_config_desc(struct usb_device *udev, void *ptr)
+{
+#if (USB_HAVE_FIXED_CONFIG == 0)
+	free(ptr, M_USBDEV);
+#endif
+}
+
+/*------------------------------------------------------------------------*
  *	usbd_req_get_config_desc_full
  *
  * This function gets the complete USB configuration descriptor and
- * ensures that "wTotalLength" is correct.
+ * ensures that "wTotalLength" is correct. The returned configuration
+ * descriptor is freed by calling "usbd_free_config_desc()".
  *
  * Returns:
  *    0: Success
@@ -1265,12 +1312,11 @@ done:
  *------------------------------------------------------------------------*/
 usb_error_t
 usbd_req_get_config_desc_full(struct usb_device *udev, struct mtx *mtx,
-    struct usb_config_descriptor **ppcd, struct malloc_type *mtype,
-    uint8_t index)
+    struct usb_config_descriptor **ppcd, uint8_t index)
 {
 	struct usb_config_descriptor cd;
 	struct usb_config_descriptor *cdesc;
-	uint16_t len;
+	uint32_t len;
 	usb_error_t err;
 
 	DPRINTFN(4, "index=%d\n", index);
@@ -1278,23 +1324,25 @@ usbd_req_get_config_desc_full(struct usb_device *udev, struct mtx *mtx,
 	*ppcd = NULL;
 
 	err = usbd_req_get_config_desc(udev, mtx, &cd, index);
-	if (err) {
+	if (err)
 		return (err);
-	}
+
 	/* get full descriptor */
 	len = UGETW(cd.wTotalLength);
-	if (len < sizeof(*cdesc)) {
+	if (len < (uint32_t)sizeof(*cdesc)) {
 		/* corrupt descriptor */
 		return (USB_ERR_INVAL);
+	} else if (len > USB_CONFIG_MAX) {
+		DPRINTF("Configuration descriptor was truncated\n");
+		len = USB_CONFIG_MAX;
 	}
-	cdesc = malloc(len, mtype, M_WAITOK);
-	if (cdesc == NULL) {
+	cdesc = usbd_alloc_config_desc(udev, len);
+	if (cdesc == NULL)
 		return (USB_ERR_NOMEM);
-	}
 	err = usbd_req_get_desc(udev, mtx, NULL, cdesc, len, len, 0,
 	    UDESC_CONFIG, index, 3);
 	if (err) {
-		free(cdesc, mtype);
+		usbd_free_config_desc(udev, cdesc);
 		return (err);
 	}
 	/* make sure that the device is not fooling us: */
@@ -1904,9 +1952,9 @@ usbd_setup_device_desc(struct usb_device *udev, struct mtx *mtx)
 		break;
 
 	default:
-		DPRINTF("Minimum MaxPacketSize is large enough "
+		DPRINTF("Minimum bMaxPacketSize is large enough "
 		    "to hold the complete device descriptor or "
-		    "only once MaxPacketSize choice\n");
+		    "only one bMaxPacketSize choice\n");
 
 		/* get the full device descriptor */
 		err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);

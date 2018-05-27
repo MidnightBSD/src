@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_msctest.c 283174 2015-05-21 06:53:55Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_msctest.c 283173 2015-05-21 06:47:20Z hselasky $ */
 /*-
  * Copyright (c) 2008,2011 Hans Petter Selasky. All rights reserved.
  *
@@ -32,6 +33,9 @@
  * mass storage quirks for not supported SCSI commands!
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -66,6 +70,7 @@
 #include <dev/usb/usb_request.h>
 #include <dev/usb/usb_util.h>
 #include <dev/usb/quirk/usb_quirk.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 enum {
 	ST_COMMAND,

@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_busdma.c 291251 2015-11-24 12:19:20Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_busdma.c 291250 2015-11-24 12:17:00Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -59,6 +63,7 @@
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if USB_HAVE_BUSDMA
 static void	usb_dma_tag_create(struct usb_dma_tag *, usb_size_t, usb_size_t);
@@ -240,7 +245,9 @@ usbd_m_copy_in(struct usb_page_cache *cache, usb_frlength_t dst_offset,
     struct mbuf *m, usb_size_t src_offset, usb_frlength_t src_len)
 {
 	struct usb_m_copy_in_arg arg = {cache, dst_offset};
-	(void) m_apply(m, src_offset, src_len, &usbd_m_copy_in_cb, &arg);
+	int error;
+
+	error = m_apply(m, src_offset, src_len, &usbd_m_copy_in_cb, &arg);
 }
 #endif
 

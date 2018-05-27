@@ -1,8 +1,6 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_hid.c 296444 2016-03-07 09:37:07Z hselasky $ */
 /*	$NetBSD: hid.c,v 1.17 2001/11/13 06:24:53 lukem Exp $	*/
-
-
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/usb_hid.c 296445 2016-03-07 09:39:35Z hselasky $");
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -33,6 +31,9 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/usb_hid.c 296445 2016-03-07 09:39:35Z h
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -64,6 +65,7 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/usb/usb_hid.c 296445 2016-03-07 09:39:35Z h
 #include <dev/usb/usb_process.h>
 #include <dev/usb/usb_device.h>
 #include <dev/usb/usb_request.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 static void hid_clear_local(struct hid_item *);
 static uint8_t hid_get_byte(struct hid_data *s, const uint16_t wSize);

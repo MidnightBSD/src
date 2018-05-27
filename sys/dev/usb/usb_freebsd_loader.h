@@ -1,7 +1,7 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_freebsd.h 277364 2015-01-19 07:06:15Z hselasky $ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_freebsd_loader.h 277364 2015-01-19 07:06:15Z hselasky $ */
 /*-
- * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,33 +26,32 @@
  */
 
 /*
- * Including this file is mandatory for all USB related c-files in the kernel.
+ * Including this file is mandatory for all USB related c-files in the loader.
  */
 
-#ifndef _USB_FREEBSD_H_
-#define	_USB_FREEBSD_H_
+#ifndef _USB_FREEBSD_LOADER_H_
+#define	_USB_FREEBSD_LOADER_H_
 
 /* Default USB configuration */
-#define	USB_HAVE_UGEN 1
-#define	USB_HAVE_DEVCTL 1
+#define	USB_HAVE_UGEN 0
+#define	USB_HAVE_DEVCTL 0
 #define	USB_HAVE_BUSDMA 1
-#define	USB_HAVE_COMPAT_LINUX 1
-#define	USB_HAVE_USER_IO 1
-#define	USB_HAVE_MBUF 1
+#define	USB_HAVE_COMPAT_LINUX 0
+#define	USB_HAVE_USER_IO 0
+#define	USB_HAVE_MBUF 0
 #define	USB_HAVE_TT_SUPPORT 1
 #define	USB_HAVE_POWERD 1
-#define	USB_HAVE_MSCTEST 1
-#define	USB_HAVE_PF 1
-#define	USB_HAVE_ROOT_MOUNT_HOLD 1
-#define	USB_HAVE_ID_SECTION 1
-#define	USB_HAVE_PER_BUS_PROCESS 1
+#define	USB_HAVE_MSCTEST 0
+#define	USB_HAVE_PF 0
+#define	USB_HAVE_ROOT_MOUNT_HOLD 0
+#define	USB_HAVE_ID_SECTION 0
+#define	USB_HAVE_PER_BUS_PROCESS 0
 #define	USB_HAVE_FIXED_ENDPOINT 0
 #define	USB_HAVE_FIXED_IFACE 0
 #define	USB_HAVE_FIXED_CONFIG 0
 #define	USB_HAVE_FIXED_PORT 0
-#define	USB_HAVE_DISABLE_ENUM 1
+#define	USB_HAVE_DISABLE_ENUM 0
 
-/* define zero ticks callout value */
 #define	USB_CALLOUT_ZERO_TICKS 1
 
 #define	USB_TD_GET_PROC(td) (td)->td_proc
@@ -61,11 +60,7 @@
 #if (!defined(USB_HOST_ALIGN)) || (USB_HOST_ALIGN <= 0)
 /* Use default value. */
 #undef USB_HOST_ALIGN
-#if defined(__arm__) || defined(__mips__) || defined(__powerpc__)
-#define USB_HOST_ALIGN	32		/* Arm and MIPS need at least this much, if not more */
-#else
 #define	USB_HOST_ALIGN    8		/* bytes, must be power of two */
-#endif
 #endif
 /* Sanity check for USB_HOST_ALIGN: Verify power of two. */
 #if ((-USB_HOST_ALIGN) & USB_HOST_ALIGN) != USB_HOST_ALIGN
@@ -77,8 +72,8 @@
 #define	USB_CONFIG_MAX 65535		/* bytes */
 #define	USB_IFACE_MAX 32		/* units */
 #define	USB_FIFO_MAX 128		/* units */
-#define	USB_MAX_EP_STREAMS 8		/* units */
 #define	USB_MAX_EP_UNITS 32		/* units */
+#define	USB_MAX_EP_STREAMS 8		/* units */
 #define	USB_MAX_PORTS 255		/* units */
 
 #define	USB_MAX_FS_ISOC_FRAMES_PER_XFER (120)	/* units */
@@ -98,4 +93,4 @@ typedef uint32_t usb_ticks_t;		/* system defined */
 typedef uint16_t usb_power_mask_t;	/* see "USB_HW_POWER_XXX" */
 typedef uint16_t usb_stream_t;		/* stream ID */
 
-#endif	/* _USB_FREEBSD_H_ */
+#endif					/* _USB_FREEBSD_LOADER_H_ */

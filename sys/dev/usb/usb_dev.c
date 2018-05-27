@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_dev.c 301254 2016-06-03 08:56:54Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_dev.c 301253 2016-06-03 08:55:28Z hselasky $ */
 /*-
  * Copyright (c) 2006-2008 Hans Petter Selasky. All rights reserved.
  *
@@ -27,6 +28,9 @@
  * usb_dev.c - An abstraction layer for creating devices under /dev/...
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -75,6 +79,7 @@
 #include <sys/syscallsubr.h>
 
 #include <machine/stdarg.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if USB_HAVE_UGEN
 

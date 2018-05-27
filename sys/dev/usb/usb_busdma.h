@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_busdma.h 291063 2015-11-19 09:54:28Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_busdma.h 291062 2015-11-19 09:52:46Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -27,10 +28,12 @@
 #ifndef _USB_BUSDMA_H_
 #define	_USB_BUSDMA_H_
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <sys/uio.h>
 #include <sys/mbuf.h>
 
 #include <machine/bus.h>
+#endif
 
 /* defines */
 

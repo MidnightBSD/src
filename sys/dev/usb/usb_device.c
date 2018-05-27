@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_device.c 310283 2016-12-19 18:32:26Z trasz $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_device.c 310281 2016-12-19 18:27:22Z trasz $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -78,6 +82,7 @@
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 /* function prototypes  */
 
@@ -108,7 +113,11 @@ static void	usb_cdev_free(struct usb_device *);
 
 /* This variable is global to allow easy access to it: */
 
-int	usb_template = 0;
+#ifdef	USB_TEMPLATE
+int	usb_template = USB_TEMPLATE;
+#else
+int	usb_template;
+#endif
 
 TUNABLE_INT("hw.usb.usb_template", &usb_template);
 SYSCTL_INT(_hw_usb, OID_AUTO, template, CTLFLAG_RW | CTLFLAG_TUN,
@@ -202,7 +211,7 @@ usbd_get_ep_by_addr(struct usb_device *udev, uint8_t ea_val)
 	/*
 	 * The default endpoint is always present and is checked separately:
 	 */
-	if ((udev->ctrl_ep.edesc) &&
+	if ((udev->ctrl_ep.edesc != NULL) &&
 	    ((udev->ctrl_ep.edesc->bEndpointAddress & EA_MASK) == ea_val)) {
 		ep = &udev->ctrl_ep;
 		goto found;
@@ -320,7 +329,7 @@ usbd_get_endpoint(struct usb_device *udev, uint8_t iface_index,
 	 * address" and "any direction" returns the first endpoint of the
 	 * interface. "iface_index" and "direction" is ignored:
 	 */
-	if ((udev->ctrl_ep.edesc) &&
+	if ((udev->ctrl_ep.edesc != NULL) &&
 	    ((udev->ctrl_ep.edesc->bEndpointAddress & ea_mask) == ea_val) &&
 	    ((udev->ctrl_ep.edesc->bmAttributes & type_mask) == type_val) &&
 	    (!index)) {
@@ -355,7 +364,6 @@ usbd_interface_count(struct usb_device *udev, uint8_t *count)
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-
 /*------------------------------------------------------------------------*
  *	usb_init_endpoint
  *
@@ -370,6 +378,7 @@ usb_init_endpoint(struct usb_device *udev, uint8_t iface_index,
     struct usb_endpoint *ep)
 {
 	struct usb_bus_methods *methods;
+	usb_stream_t x;
 
 	methods = udev->bus->methods;
 
@@ -379,12 +388,25 @@ usb_init_endpoint(struct usb_device *udev, uint8_t iface_index,
 	ep->edesc = edesc;
 	ep->ecomp = ecomp;
 	ep->iface_index = iface_index;
-	TAILQ_INIT(&ep->endpoint_q.head);
-	ep->endpoint_q.command = &usbd_pipe_start;
+
+	/* setup USB stream queues */
+	for (x = 0; x != USB_MAX_EP_STREAMS; x++) {
+		TAILQ_INIT(&ep->endpoint_q[x].head);
+		ep->endpoint_q[x].command = &usbd_pipe_start;
+	}
 
 	/* the pipe is not supported by the hardware */
  	if (ep->methods == NULL)
 		return;
+
+	/* check for SUPER-speed streams mode endpoint */
+	if (udev->speed == USB_SPEED_SUPER && ecomp != NULL &&
+	    (edesc->bmAttributes & UE_XFERTYPE) == UE_BULK &&
+	    (UE_GET_BULK_STREAMS(ecomp->bmAttributes) != 0)) {
+		usbd_set_endpoint_mode(udev, ep, USB_EP_MODE_STREAMS);
+	} else {
+		usbd_set_endpoint_mode(udev, ep, USB_EP_MODE_DEFAULT);
+	}
 
 	/* clear stall, if any */
 	if (methods->clear_stall != NULL) {
@@ -499,7 +521,7 @@ usb_unconfigure(struct usb_device *udev, uint8_t flag)
 	/* free "cdesc" after "ifaces" and "endpoints", if any */
 	if (udev->cdesc != NULL) {
 		if (udev->flags.usb_mode != USB_MODE_DEVICE)
-			free(udev->cdesc, M_USB);
+			usbd_free_config_desc(udev, udev->cdesc);
 		udev->cdesc = NULL;
 	}
 	/* set unconfigured state */
@@ -558,7 +580,7 @@ usbd_set_config_index(struct usb_device *udev, uint8_t index)
 	} else {
 		/* normal request */
 		err = usbd_req_get_config_desc_full(udev,
-		    NULL, &cdp, M_USB, index);
+		    NULL, &cdp, index);
 	}
 	if (err) {
 		goto done;
@@ -735,10 +757,6 @@ usb_config_parse(struct usb_device *udev, uint8_t iface_index, uint8_t cmd)
 
 	while ((id = usb_idesc_foreach(udev->cdesc, &ips))) {
 
-		/* check for interface overflow */
-		if (ips.iface_index == USB_IFACE_MAX)
-			break;			/* crazy */
-
 		iface = udev->ifaces + ips.iface_index;
 
 		/* check for specific interface match */
@@ -785,8 +803,11 @@ usb_config_parse(struct usb_device *udev, uint8_t iface_index, uint8_t cmd)
 		/* iterate all the endpoint descriptors */
 		while ((ed = usb_edesc_foreach(udev->cdesc, ed))) {
 
-			if (temp == USB_EP_MAX)
-				break;			/* crazy */
+			/* check if endpoint limit has been reached */
+			if (temp >= USB_MAX_EP_UNITS) {
+				DPRINTF("Endpoint limit reached\n");
+				break;
+			}
 
 			ep = udev->endpoints + temp;
 
@@ -813,6 +834,7 @@ usb_config_parse(struct usb_device *udev, uint8_t iface_index, uint8_t cmd)
 
 	if (cmd == USB_CFG_ALLOC) {
 		udev->ifaces_max = ips.iface_index;
+#if (USB_HAVE_FIXED_IFACE == 0)
 		udev->ifaces = NULL;
 		if (udev->ifaces_max != 0) {
 			udev->ifaces = malloc(sizeof(*iface) * udev->ifaces_max,
@@ -822,6 +844,8 @@ usb_config_parse(struct usb_device *udev, uint8_t iface_index, uint8_t cmd)
 				goto done;
 			}
 		}
+#endif
+#if (USB_HAVE_FIXED_ENDPOINT == 0)
 		if (ep_max != 0) {
 			udev->endpoints = malloc(sizeof(*ep) * ep_max,
 			        M_USB, M_WAITOK | M_ZERO);
@@ -832,14 +856,16 @@ usb_config_parse(struct usb_device *udev, uint8_t iface_index, uint8_t cmd)
 		} else {
 			udev->endpoints = NULL;
 		}
+#endif
 		USB_BUS_LOCK(udev->bus);
 		udev->endpoints_max = ep_max;
 		/* reset any ongoing clear-stall */
 		udev->ep_curr = NULL;
 		USB_BUS_UNLOCK(udev->bus);
 	}
-
+#if (USB_HAVE_FIXED_IFACE == 0) || (USB_HAVE_FIXED_ENDPOINT == 0) 
 done:
+#endif
 	if (err) {
 		if (cmd == USB_CFG_ALLOC) {
 cleanup:
@@ -849,14 +875,14 @@ cleanup:
 			udev->ep_curr = NULL;
 			USB_BUS_UNLOCK(udev->bus);
 
-			/* cleanup */
-			if (udev->ifaces != NULL)
-				free(udev->ifaces, M_USB);
-			if (udev->endpoints != NULL)
-				free(udev->endpoints, M_USB);
-
+#if (USB_HAVE_FIXED_IFACE == 0)
+			free(udev->ifaces, M_USB);
 			udev->ifaces = NULL;
+#endif
+#if (USB_HAVE_FIXED_ENDPOINT == 0)
+			free(udev->endpoints, M_USB);
 			udev->endpoints = NULL;
+#endif
 			udev->ifaces_max = 0;
 		}
 	}
@@ -942,6 +968,7 @@ usbd_set_endpoint_stall(struct usb_device *udev, struct usb_endpoint *ep,
     uint8_t do_stall)
 {
 	struct usb_xfer *xfer;
+	usb_stream_t x;
 	uint8_t et;
 	uint8_t was_stalled;
 
@@ -984,18 +1011,22 @@ usbd_set_endpoint_stall(struct usb_device *udev, struct usb_endpoint *ep,
 
 	if (do_stall || (!was_stalled)) {
 		if (!was_stalled) {
-			/* lookup the current USB transfer, if any */
-			xfer = ep->endpoint_q.curr;
-		} else {
-			xfer = NULL;
+			for (x = 0; x != USB_MAX_EP_STREAMS; x++) {
+				/* lookup the current USB transfer, if any */
+				xfer = ep->endpoint_q[x].curr;
+				if (xfer != NULL) {
+					/*
+					 * The "xfer_stall" method
+					 * will complete the USB
+					 * transfer like in case of a
+					 * timeout setting the error
+					 * code "USB_ERR_STALLED".
+					 */
+					(udev->bus->methods->xfer_stall) (xfer);
+				}
+			}
 		}
-
-		/*
-		 * If "xfer" is non-NULL the "set_stall" method will
-		 * complete the USB transfer like in case of a timeout
-		 * setting the error code "USB_ERR_STALLED".
-		 */
-		(udev->bus->methods->set_stall) (udev, xfer, ep, &do_stall);
+		(udev->bus->methods->set_stall) (udev, ep, &do_stall);
 	}
 	if (!do_stall) {
 		ep->toggle_next = 0;	/* reset data toggle */
@@ -1003,8 +1034,11 @@ usbd_set_endpoint_stall(struct usb_device *udev, struct usb_endpoint *ep,
 
 		(udev->bus->methods->clear_stall) (udev, ep);
 
-		/* start up the current or next transfer, if any */
-		usb_command_wrapper(&ep->endpoint_q, ep->endpoint_q.curr);
+		/* start the current or next transfer, if any */
+		for (x = 0; x != USB_MAX_EP_STREAMS; x++) {
+			usb_command_wrapper(&ep->endpoint_q[x],
+			    ep->endpoint_q[x].curr);
+		}
 	}
 	USB_BUS_UNLOCK(udev->bus);
 	return (0);
@@ -1862,6 +1896,7 @@ repeat_set_config:
 			config_index++;
 			goto repeat_set_config;
 		}
+#if USB_HAVE_MSCTEST
 		if (config_index == 0) {
 			/*
 			 * Try to figure out if we have an
@@ -1874,7 +1909,9 @@ repeat_set_config:
 				goto repeat_set_config;
 			}
 		}
+#endif
 	}
+#if USB_HAVE_MSCTEST
 	if (set_config_failed == 0 && config_index == 0 &&
 	    usb_test_quirk(&uaa, UQ_MSC_NO_SYNC_CACHE) == 0 &&
 	    usb_test_quirk(&uaa, UQ_MSC_NO_GETMAXLUN) == 0) {
@@ -1890,6 +1927,7 @@ repeat_set_config:
 			goto repeat_set_config;
 		}
 	}
+#endif
 
 config_done:
 	DPRINTF("new dev (addr %d), udev=%p, parent_hub=%p\n",
@@ -1999,7 +2037,7 @@ usb_destroy_dev(struct usb_fs_privdata *pd)
 	USB_BUS_LOCK(bus);
 	LIST_INSERT_HEAD(&bus->pd_cleanup_list, pd, pd_next);
 	/* get cleanup going */
-	usb_proc_msignal(&bus->explore_proc,
+	usb_proc_msignal(USB_BUS_EXPLORE_PROC(bus),
 	    &bus->cleanup_msg[0], &bus->cleanup_msg[1]);
 	USB_BUS_UNLOCK(bus);
 }
@@ -2149,7 +2187,7 @@ usb_free_device(struct usb_device *udev, uint8_t flag)
 	 * anywhere:
 	 */
 	USB_BUS_LOCK(udev->bus);
-	usb_proc_mwait(&udev->bus->non_giant_callback_proc,
+	usb_proc_mwait(USB_BUS_CS_PROC(udev->bus),
 	    &udev->cs_msg[0], &udev->cs_msg[1]);
 	USB_BUS_UNLOCK(udev->bus);
 
@@ -2868,4 +2906,42 @@ usbd_add_dynamic_quirk(struct usb_device *udev, uint16_t quirk)
 		}
 	}
 	return (USB_ERR_NOMEM);
+}
+
+/*
+ * The following function is used to select the endpoint mode. It
+ * should not be called outside enumeration context.
+ */
+
+usb_error_t
+usbd_set_endpoint_mode(struct usb_device *udev, struct usb_endpoint *ep,
+    uint8_t ep_mode)
+{   
+	usb_error_t error;
+	uint8_t do_unlock;
+
+	/* Prevent re-enumeration */
+	do_unlock = usbd_enum_lock(udev);
+
+	if (udev->bus->methods->set_endpoint_mode != NULL) {
+		error = (udev->bus->methods->set_endpoint_mode) (
+		    udev, ep, ep_mode);
+	} else if (ep_mode != USB_EP_MODE_DEFAULT) {
+		error = USB_ERR_INVAL;
+	} else {
+		error = 0;
+	}
+
+	/* only set new mode regardless of error */
+	ep->ep_mode = ep_mode;
+
+	if (do_unlock)
+		usbd_enum_unlock(udev);
+	return (error);
+}
+
+uint8_t
+usbd_get_endpoint_mode(struct usb_device *udev, struct usb_endpoint *ep)
+{
+	return (ep->ep_mode);
 }

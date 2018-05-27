@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_core.c 217265 2011-01-11 13:59:06Z jhb $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_core.c 246123 2013-01-30 15:46:26Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -30,6 +31,9 @@
  * http://www.usb.org/developers/devclass_docs/
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -51,6 +55,12 @@
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
+
+const struct usb_string_lang usb_string_lang_en = {
+	sizeof(usb_string_lang_en), UDESC_STRING,
+	{ 0x09, 0x04 } /* American English */
+};
 
 MALLOC_DEFINE(M_USB, "USB", "USB");
 MALLOC_DEFINE(M_USBDEV, "USBdev", "USB device");

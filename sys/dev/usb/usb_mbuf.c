@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_mbuf.c 217265 2011-01-11 13:59:06Z jhb $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_mbuf.c 246122 2013-01-30 15:26:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -47,6 +51,7 @@
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usb_dev.h>
 #include <dev/usb/usb_mbuf.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 /*------------------------------------------------------------------------*
  *      usb_alloc_mbufs - allocate mbufs to an usbd interface queue

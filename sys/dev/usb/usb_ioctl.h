@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_ioctl.h 254566 2013-08-20 14:19:00Z emaste $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_ioctl.h 269922 2014-08-13 08:21:52Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -29,6 +30,7 @@
 #ifndef _USB_IOCTL_H_
 #define	_USB_IOCTL_H_
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <sys/ioccom.h>
 #include <sys/cdefs.h>
 
@@ -36,6 +38,7 @@
 
 #include <dev/usb/usb_endian.h>
 #include <dev/usb/usb.h>
+#endif
 
 #define	USB_DEVICE_NAME "usbctl"
 #define	USB_DEVICE_DIR "usb"
@@ -62,6 +65,7 @@ enum {
 	USB_TEMP_AUDIO,		/* USB Audio */
 	USB_TEMP_KBD,		/* USB Keyboard */
 	USB_TEMP_MOUSE,		/* USB Mouse */
+	USB_TEMP_PHONE,		/* USB Phone */
 	USB_TEMP_MAX,
 };
 
@@ -329,6 +333,7 @@ struct usb_gen_quirk {
 #define	USB_FS_OPEN		_IOWR('U', 197, struct usb_fs_open)
 #define	USB_FS_CLOSE		_IOW ('U', 198, struct usb_fs_close)
 #define	USB_FS_CLEAR_STALL_SYNC _IOW ('U', 199, struct usb_fs_clear_stall_sync)
+#define	USB_FS_OPEN_STREAM	_IOWR('U', 200, struct usb_fs_open_stream)
 
 /* USB quirk system interface */
 #define	USB_DEV_QUIRK_GET	_IOWR('Q', 0, struct usb_gen_quirk)

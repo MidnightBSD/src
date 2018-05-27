@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_dev.h 247090 2013-02-21 07:48:07Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_dev.h 246759 2013-02-13 12:35:17Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -27,11 +28,13 @@
 #ifndef _USB_DEV_H_
 #define	_USB_DEV_H_
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <sys/file.h>
 #include <sys/selinfo.h>
 #include <sys/poll.h>
 #include <sys/signalvar.h>
 #include <sys/proc.h>
+#endif
 
 struct usb_fifo;
 struct usb_mbuf;

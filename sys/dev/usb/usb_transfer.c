@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_transfer.c 305735 2016-09-12 10:20:44Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_transfer.c 305734 2016-09-12 10:17:25Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -61,6 +65,7 @@
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
 #include <dev/usb/usb_pf.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 struct usb_std_packet_size {
 	struct {
@@ -181,6 +186,10 @@ usbd_get_dma_delay(struct usb_device *udev)
  * according to "size", "align" and "count" arguments. "ppc" is
  * pointed to a linear array of USB page caches afterwards.
  *
+ * If the "align" argument is equal to "1" a non-contiguous allocation
+ * can happen. Else if the "align" argument is greater than "1", the
+ * allocation will always be contiguous in memory.
+ *
  * Returns:
  *    0: Success
  * Else: Failure
@@ -195,13 +204,14 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 	struct usb_page *pg;
 	void *buf;
 	usb_size_t n_dma_pc;
+	usb_size_t n_dma_pg;
 	usb_size_t n_obj;
 	usb_size_t x;
 	usb_size_t y;
 	usb_size_t r;
 	usb_size_t z;
 
-	USB_ASSERT(align > 1, ("Invalid alignment, 0x%08x\n",
+	USB_ASSERT(align > 0, ("Invalid alignment, 0x%08x\n",
 	    align));
 	USB_ASSERT(size > 0, ("Invalid size = 0\n"));
 
@@ -217,24 +227,43 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 	 * Try multi-allocation chunks to reduce the number of DMA
 	 * allocations, hence DMA allocations are slow.
 	 */
-	if (size >= USB_PAGE_SIZE) {
+	if (align == 1) {
+		/* special case - non-cached multi page DMA memory */
 		n_dma_pc = count;
+		n_dma_pg = (2 + (size / USB_PAGE_SIZE));
+		n_obj = 1;
+	} else if (size >= USB_PAGE_SIZE) {
+		n_dma_pc = count;
+		n_dma_pg = 1;
 		n_obj = 1;
 	} else {
 		/* compute number of objects per page */
+#ifdef USB_DMA_SINGLE_ALLOC
+		n_obj = 1;
+#else
 		n_obj = (USB_PAGE_SIZE / size);
+#endif
 		/*
 		 * Compute number of DMA chunks, rounded up
 		 * to nearest one:
 		 */
 		n_dma_pc = ((count + n_obj - 1) / n_obj);
+		n_dma_pg = 1;
 	}
 
+	/*
+	 * DMA memory is allocated once, but mapped twice. That's why
+	 * there is one list for auto-free and another list for
+	 * non-auto-free which only holds the mapping and not the
+	 * allocation.
+	 */
 	if (parm->buf == NULL) {
-		/* for the future */
-		parm->dma_page_ptr += n_dma_pc;
+		/* reserve memory (auto-free) */
+		parm->dma_page_ptr += n_dma_pc * n_dma_pg;
 		parm->dma_page_cache_ptr += n_dma_pc;
-		parm->dma_page_ptr += count;
+
+		/* reserve memory (no-auto-free) */
+		parm->dma_page_ptr += count * n_dma_pg;
 		parm->xfer_page_cache_ptr += count;
 		return (0);
 	}
@@ -249,15 +278,33 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 		    &parm->curr_xfer->xroot->dma_parent_tag;
 	}
 
-	if (ppc) {
-		*ppc = parm->xfer_page_cache_ptr;
+	if (ppc != NULL) {
+		if (n_obj != 1)
+			*ppc = parm->xfer_page_cache_ptr;
+		else
+			*ppc = parm->dma_page_cache_ptr;
 	}
 	r = count;			/* set remainder count */
 	z = n_obj * size;		/* set allocation size */
 	pc = parm->xfer_page_cache_ptr;
 	pg = parm->dma_page_ptr;
 
-	for (x = 0; x != n_dma_pc; x++) {
+	if (n_obj == 1) {
+	    /*
+	     * Avoid mapping memory twice if only a single object
+	     * should be allocated per page cache:
+	     */
+	    for (x = 0; x != n_dma_pc; x++) {
+		if (usb_pc_alloc_mem(parm->dma_page_cache_ptr,
+		    pg, z, align)) {
+			return (1);	/* failure */
+		}
+		/* Make room for one DMA page cache and "n_dma_pg" pages */
+		parm->dma_page_cache_ptr++;
+		pg += n_dma_pg;
+	    }
+	} else {
+	    for (x = 0; x != n_dma_pc; x++) {
 
 		if (r < n_obj) {
 			/* compute last remainder */
@@ -270,11 +317,11 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 		}
 		/* Set beginning of current buffer */
 		buf = parm->dma_page_cache_ptr->buffer;
-		/* Make room for one DMA page cache and one page */
+		/* Make room for one DMA page cache and "n_dma_pg" pages */
 		parm->dma_page_cache_ptr++;
-		pg++;
+		pg += n_dma_pg;
 
-		for (y = 0; (y != n_obj); y++, r--, pc++, pg++) {
+		for (y = 0; (y != n_obj); y++, r--, pc++, pg += n_dma_pg) {
 
 			/* Load sub-chunk into DMA */
 			if (usb_pc_dmamap_create(pc, size)) {
@@ -290,6 +337,7 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 			}
 			mtx_unlock(pc->tag_parent->mtx);
 		}
+	    }
 	}
 
 	parm->xfer_page_cache_ptr = pc;
@@ -359,7 +407,8 @@ usbd_transfer_setup_sub(struct usb_setup_params *parm)
 		switch (type) {
 		case UE_ISOCHRONOUS:
 		case UE_INTERRUPT:
-			xfer->max_packet_count += (xfer->max_packet_size >> 11) & 3;
+			xfer->max_packet_count +=
+			    (xfer->max_packet_size >> 11) & 3;
 
 			/* check for invalid max packet count */
 			if (xfer->max_packet_count > 3)
@@ -388,7 +437,8 @@ usbd_transfer_setup_sub(struct usb_setup_params *parm)
 			if (ecomp != NULL) {
 				uint8_t mult;
 
-				mult = (ecomp->bmAttributes & 3) + 1;
+				mult = UE_GET_SS_ISO_MULT(
+				    ecomp->bmAttributes) + 1;
 				if (mult > 3)
 					mult = 3;
 
@@ -699,12 +749,30 @@ usbd_transfer_setup_sub(struct usb_setup_params *parm)
 	 */
 
 	if (!xfer->flags.ext_buffer) {
+#if USB_HAVE_BUSDMA
+		struct usb_page_search page_info;
+		struct usb_page_cache *pc;
 
+		if (usbd_transfer_setup_sub_malloc(parm,
+		    &pc, parm->bufsize, 1, 1)) {
+			parm->err = USB_ERR_NOMEM;
+		} else if (parm->buf != NULL) {
+
+			usbd_get_page(pc, 0, &page_info);
+
+			xfer->local_buffer = page_info.buffer;
+
+			usbd_xfer_set_frame_offset(xfer, 0, 0);
+
+			if ((type == UE_CONTROL) && (n_frbuffers > 1)) {
+				usbd_xfer_set_frame_offset(xfer, REQ_SIZE, 1);
+			}
+		}
+#else
 		/* align data */
 		parm->size[0] += ((-parm->size[0]) & (USB_HOST_ALIGN - 1));
 
-		if (parm->buf) {
-
+		if (parm->buf != NULL) {
 			xfer->local_buffer =
 			    USB_ADD_BYTES(parm->buf, parm->size[0]);
 
@@ -718,6 +786,7 @@ usbd_transfer_setup_sub(struct usb_setup_params *parm)
 
 		/* align data again */
 		parm->size[0] += ((-parm->size[0]) & (USB_HOST_ALIGN - 1));
+#endif
 	}
 	/*
 	 * Compute maximum buffer size
@@ -802,6 +871,19 @@ done:
 		xfer->nframes = 0;
 		xfer->max_frame_count = 0;
 	}
+}
+
+static uint8_t
+usbd_transfer_setup_has_bulk(const struct usb_config *setup_start,
+    uint16_t n_setup)
+{
+	while (n_setup--) {
+		uint8_t type = setup_start[n_setup].type;
+		if (type == UE_BULK || type == UE_BULK_INTR ||
+		    type == UE_TYPE_ANY)
+			return (1);
+	}
+	return (0);
 }
 
 /*------------------------------------------------------------------------*
@@ -940,14 +1022,17 @@ usbd_transfer_setup(struct usb_device *udev,
 			 * deadlock!
 			 */
 			if (setup_start == usb_control_ep_cfg)
-				info->done_p = 
-				    &udev->bus->control_xfer_proc;
+				info->done_p =
+				    USB_BUS_CONTROL_XFER_PROC(udev->bus);
 			else if (xfer_mtx == &Giant)
-				info->done_p = 
-				    &udev->bus->giant_callback_proc;
+				info->done_p =
+				    USB_BUS_GIANT_PROC(udev->bus);
+			else if (usbd_transfer_setup_has_bulk(setup_start, n_setup))
+				info->done_p =
+				    USB_BUS_NON_GIANT_BULK_PROC(udev->bus);
 			else
-				info->done_p = 
-				    &udev->bus->non_giant_callback_proc;
+				info->done_p =
+				    USB_BUS_NON_GIANT_ISOC_PROC(udev->bus);
 		}
 		/* reset sizes */
 
@@ -966,7 +1051,20 @@ usbd_transfer_setup(struct usb_device *udev,
 			ep = usbd_get_endpoint(udev,
 			    ifaces[setup->if_index], setup);
 
-			if ((ep == NULL) || (ep->methods == NULL)) {
+			/*
+			 * Check that the USB PIPE is valid and that
+			 * the endpoint mode is proper.
+			 *
+			 * Make sure we don't allocate a streams
+			 * transfer when such a combination is not
+			 * valid.
+			 */
+			if ((ep == NULL) || (ep->methods == NULL) ||
+			    ((ep->ep_mode != USB_EP_MODE_STREAMS) &&
+			    (ep->ep_mode != USB_EP_MODE_DEFAULT)) ||
+			    (setup->stream_id != 0 &&
+			    (setup->stream_id >= USB_MAX_EP_STREAMS ||
+			    (ep->ep_mode != USB_EP_MODE_STREAMS)))) {
 				if (setup->flags.no_pipe_ok)
 					continue;
 				if ((setup->usb_mode != USB_MODE_DUAL) &&
@@ -1009,6 +1107,9 @@ usbd_transfer_setup(struct usb_device *udev,
 
 			/* set transfer endpoint pointer */
 			xfer->endpoint = ep;
+
+			/* set transfer stream ID */
+			xfer->stream_id = setup->stream_id;
 
 			parm->size[0] += sizeof(xfer[0]);
 			parm->methods = xfer->endpoint->methods;
@@ -1080,9 +1181,12 @@ usbd_transfer_setup(struct usb_device *udev,
 		 * The number of DMA tags required depends on
 		 * the number of endpoints. The current estimate
 		 * for maximum number of DMA tags per endpoint
-		 * is two.
+		 * is three:
+		 * 1) for loading memory
+		 * 2) for allocating memory
+		 * 3) for fixing memory [UHCI]
 		 */
-		parm->dma_tag_max += 2 * MIN(n_setup, USB_EP_MAX);
+		parm->dma_tag_max += 3 * MIN(n_setup, USB_EP_MAX);
 
 		/*
 		 * DMA tags for QH, TD, Data and more.
@@ -1630,7 +1734,8 @@ usbd_transfer_submit(struct usb_xfer *xfer)
 			USB_BUS_LOCK(bus);
 			xfer->flags_int.can_cancel_immed = 1;
 			/* start the transfer */
-			usb_command_wrapper(&xfer->endpoint->endpoint_q, xfer);
+			usb_command_wrapper(&xfer->endpoint->
+			    endpoint_q[xfer->stream_id], xfer);
 			USB_BUS_UNLOCK(bus);
 			return;
 		}
@@ -1751,7 +1856,7 @@ usbd_pipe_enter(struct usb_xfer *xfer)
 	}
 
 	/* start the transfer */
-	usb_command_wrapper(&ep->endpoint_q, xfer);
+	usb_command_wrapper(&ep->endpoint_q[xfer->stream_id], xfer);
 	USB_BUS_UNLOCK(xfer->xroot->bus);
 }
 
@@ -1872,8 +1977,9 @@ usbd_transfer_stop(struct usb_xfer *xfer)
 		 * If the current USB transfer is completing we need
 		 * to start the next one:
 		 */
-		if (ep->endpoint_q.curr == xfer) {
-			usb_command_wrapper(&ep->endpoint_q, NULL);
+		if (ep->endpoint_q[xfer->stream_id].curr == xfer) {
+			usb_command_wrapper(
+			    &ep->endpoint_q[xfer->stream_id], NULL);
 		}
 	}
 
@@ -2191,10 +2297,8 @@ usbd_callback_ss_done_defer(struct usb_xfer *xfer)
 	         * will have a Lock Order Reversal, LOR, if we try to
 	         * proceed !
 	         */
-		if (usb_proc_msignal(info->done_p,
-		    &info->done_m[0], &info->done_m[1])) {
-			/* ignore */
-		}
+		(void) usb_proc_msignal(info->done_p,
+		    &info->done_m[0], &info->done_m[1]);
 	} else {
 		/* clear second recurse flag */
 		pq->recurse_2 = 0;
@@ -2218,23 +2322,26 @@ usbd_callback_wrapper(struct usb_xfer_queue *pq)
 	struct usb_xfer_root *info = xfer->xroot;
 
 	USB_BUS_LOCK_ASSERT(info->bus, MA_OWNED);
-	if (!mtx_owned(info->xfer_mtx) && !SCHEDULER_STOPPED()) {
+	if ((pq->recurse_3 != 0 || mtx_owned(info->xfer_mtx) == 0) &&
+	    SCHEDULER_STOPPED() == 0) {
 		/*
 	       	 * Cases that end up here:
 		 *
 		 * 5) HW interrupt done callback or other source.
+		 * 6) HW completed transfer during callback
 		 */
-		DPRINTFN(3, "case 5\n");
+		DPRINTFN(3, "case 5 and 6\n");
 
 		/*
 	         * We have to postpone the callback due to the fact we
 	         * will have a Lock Order Reversal, LOR, if we try to
-	         * proceed !
+	         * proceed!
+		 *
+		 * Postponing the callback also ensures that other USB
+		 * transfer queues get a chance.
 	         */
-		if (usb_proc_msignal(info->done_p,
-		    &info->done_m[0], &info->done_m[1])) {
-			/* ignore */
-		}
+		(void) usb_proc_msignal(info->done_p,
+		    &info->done_m[0], &info->done_m[1]);
 		return;
 	}
 	/*
@@ -2604,11 +2711,11 @@ usbd_pipe_start(struct usb_xfer_queue *pq)
 
 			if (udev->flags.usb_mode == USB_MODE_DEVICE) {
 				(udev->bus->methods->set_stall) (
-				    udev, NULL, ep, &did_stall);
+				    udev, ep, &did_stall);
 			} else if (udev->ctrl_xfer[1]) {
 				info = udev->ctrl_xfer[1]->xroot;
 				usb_proc_msignal(
-				    &info->bus->non_giant_callback_proc,
+				    USB_BUS_CS_PROC(info->bus),
 				    &udev->cs_msg[0], &udev->cs_msg[1]);
 			} else {
 				/* should not happen */
@@ -2887,10 +2994,11 @@ usbd_callback_wrapper_sub(struct usb_xfer *xfer)
 	 * next one:
 	 */
 	USB_BUS_LOCK(bus);
-	if (ep->endpoint_q.curr == xfer) {
-		usb_command_wrapper(&ep->endpoint_q, NULL);
+	if (ep->endpoint_q[xfer->stream_id].curr == xfer) {
+		usb_command_wrapper(&ep->endpoint_q[xfer->stream_id], NULL);
 
-		if (ep->endpoint_q.curr || TAILQ_FIRST(&ep->endpoint_q.head)) {
+		if (ep->endpoint_q[xfer->stream_id].curr != NULL ||
+		    TAILQ_FIRST(&ep->endpoint_q[xfer->stream_id].head) != NULL) {
 			/* there is another USB transfer waiting */
 		} else {
 			/* this is the last USB transfer */
@@ -2932,9 +3040,11 @@ usb_command_wrapper(struct usb_xfer_queue *pq, struct usb_xfer *xfer)
 
 	if (!pq->recurse_1) {
 
-		do {
+		/* clear third recurse flag */
+		pq->recurse_3 = 0;
 
-			/* set both recurse flags */
+		do {
+			/* set two first recurse flags */
 			pq->recurse_1 = 1;
 			pq->recurse_2 = 1;
 
@@ -2952,6 +3062,12 @@ usb_command_wrapper(struct usb_xfer_queue *pq, struct usb_xfer *xfer)
 			DPRINTFN(6, "cb %p (enter)\n", pq->curr);
 			(pq->command) (pq);
 			DPRINTFN(6, "cb %p (leave)\n", pq->curr);
+
+			/*
+			 * Set third recurse flag to indicate
+			 * recursion happened:
+			 */
+			pq->recurse_3 = 1;
 
 		} while (!pq->recurse_2);
 
@@ -3225,10 +3341,11 @@ usbd_transfer_poll(struct usb_xfer **ppxfer, uint16_t max)
 		}
 
 		/* Make sure cv_signal() and cv_broadcast() is not called */
-		udev->bus->control_xfer_proc.up_msleep = 0;
-		udev->bus->explore_proc.up_msleep = 0;
-		udev->bus->giant_callback_proc.up_msleep = 0;
-		udev->bus->non_giant_callback_proc.up_msleep = 0;
+		USB_BUS_CONTROL_XFER_PROC(udev->bus)->up_msleep = 0;
+		USB_BUS_EXPLORE_PROC(udev->bus)->up_msleep = 0;
+		USB_BUS_GIANT_PROC(udev->bus)->up_msleep = 0;
+		USB_BUS_NON_GIANT_ISOC_PROC(udev->bus)->up_msleep = 0;
+		USB_BUS_NON_GIANT_BULK_PROC(udev->bus)->up_msleep = 0;
 
 		/* poll USB hardware */
 		(udev->bus->methods->xfer_poll) (udev->bus);

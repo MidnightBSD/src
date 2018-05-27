@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_generic.c 305735 2016-09-12 10:20:44Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_generic.c 305734 2016-09-12 10:17:25Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -67,6 +71,7 @@
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if USB_HAVE_UGEN
 
@@ -252,6 +257,7 @@ ugen_open_pipe_write(struct usb_fifo *f)
 
 	usb_config[0].type = ed->bmAttributes & UE_XFERTYPE;
 	usb_config[0].endpoint = ed->bEndpointAddress & UE_ADDR;
+	usb_config[0].stream_id = 0;	/* XXX support more stream ID's */
 	usb_config[0].direction = UE_DIR_TX;
 	usb_config[0].interval = USB_DEFAULT_INTERVAL;
 	usb_config[0].flags.proxy_buffer = 1;
@@ -320,6 +326,7 @@ ugen_open_pipe_read(struct usb_fifo *f)
 
 	usb_config[0].type = ed->bmAttributes & UE_XFERTYPE;
 	usb_config[0].endpoint = ed->bEndpointAddress & UE_ADDR;
+	usb_config[0].stream_id = 0;	/* XXX support more stream ID's */
 	usb_config[0].direction = UE_DIR_RX;
 	usb_config[0].interval = USB_DEFAULT_INTERVAL;
 	usb_config[0].flags.proxy_buffer = 1;
@@ -675,18 +682,21 @@ ugen_get_cdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 	if ((ugd->ugd_config_index == USB_UNCONFIG_INDEX) ||
 	    (ugd->ugd_config_index == udev->curr_config_index)) {
 		cdesc = usbd_get_config_descriptor(udev);
-		if (cdesc == NULL) {
+		if (cdesc == NULL)
 			return (ENXIO);
-		}
 		free_data = 0;
 
 	} else {
+#if (USB_HAVE_FIXED_CONFIG == 0)
 		if (usbd_req_get_config_desc_full(udev,
-		    NULL, &cdesc, M_USBDEV,
-		    ugd->ugd_config_index)) {
+		    NULL, &cdesc, ugd->ugd_config_index)) {
 			return (ENXIO);
 		}
 		free_data = 1;
+#else
+		/* configuration descriptor data is shared */
+		return (EINVAL);
+#endif
 	}
 
 	len = UGETW(cdesc->wTotalLength);
@@ -700,9 +710,9 @@ ugen_get_cdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 
 	error = copyout(cdesc, ugd->ugd_data, len);
 
-	if (free_data) {
-		free(cdesc, M_USBDEV);
-	}
+	if (free_data)
+		usbd_free_config_desc(udev, cdesc);
+
 	return (error);
 }
 
@@ -1388,6 +1398,7 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		struct usb_fs_start *pstart;
 		struct usb_fs_stop *pstop;
 		struct usb_fs_open *popen;
+		struct usb_fs_open_stream *popen_stream;
 		struct usb_fs_close *pclose;
 		struct usb_fs_clear_stall_sync *pstall;
 		void   *addr;
@@ -1452,6 +1463,7 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		break;
 
 	case USB_FS_OPEN:
+	case USB_FS_OPEN_STREAM:
 		if (u.popen->ep_index >= f->fs_ep_max) {
 			error = EINVAL;
 			break;
@@ -1503,6 +1515,8 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		usb_config[0].frames = u.popen->max_frames;
 		usb_config[0].bufsize = u.popen->max_bufsize;
 		usb_config[0].usb_mode = USB_MODE_DUAL;	/* both modes */
+		if (cmd == USB_FS_OPEN_STREAM)
+			usb_config[0].stream_id = u.popen_stream->stream_id;
 
 		if (usb_config[0].type == UE_CONTROL) {
 			if (f->udev->flags.usb_mode != USB_MODE_HOST) {

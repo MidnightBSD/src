@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_endian.h 196219 2009-08-14 20:03:53Z jhb $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_endian.h 246122 2013-01-30 15:26:04Z hselasky $ */
 /*
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -27,8 +28,10 @@
 #ifndef _USB_ENDIAN_H_
 #define	_USB_ENDIAN_H_
 
+#ifndef USB_GLOBAL_INCLUDE_FILE
 #include <sys/stdint.h>
 #include <sys/endian.h>
+#endif
 
 /*
  * Declare the basic USB record types. USB records have an alignment

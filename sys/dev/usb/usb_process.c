@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_process.c 273889 2014-10-31 08:06:21Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_process.c 311799 2017-01-09 17:13:35Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -55,6 +59,7 @@
 #include <sys/proc.h>
 #include <sys/kthread.h>
 #include <sys/sched.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 #if (__FreeBSD_version < 700000)
 #define	thread_lock(td) mtx_lock_spin(&sched_lock)
@@ -67,13 +72,17 @@ static int usb_pcount;
 #define	USB_THREAD_CREATE(f, s, p, ...) \
 		kproc_kthread_add((f), (s), &usbproc, (p), RFHIGHPID, \
 		    0, "usb", __VA_ARGS__)
+#if (__FreeBSD_version >= 900000)
 #define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check()
+#else
+#define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check(curthread)
+#endif
 #define	USB_THREAD_SUSPEND(p)   kthread_suspend(p,0)
 #define	USB_THREAD_EXIT(err)	kthread_exit()
 #else
 #define	USB_THREAD_CREATE(f, s, p, ...) \
 		kthread_create((f), (s), (p), RFHIGHPID, 0, __VA_ARGS__)
-#define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check()
+#define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check(curproc)
 #define	USB_THREAD_SUSPEND(p)   kthread_suspend(p,0)
 #define	USB_THREAD_EXIT(err)	kthread_exit(err)
 #endif
@@ -447,14 +456,15 @@ usb_proc_drain(struct usb_process *up)
 			up->up_csleep = 0;
 			cv_signal(&up->up_cv);
 		}
+#ifndef EARLY_AP_STARTUP
 		/* Check if we are still cold booted */
-
 		if (cold) {
 			USB_THREAD_SUSPEND(up->up_ptr);
 			printf("WARNING: A USB process has "
 			    "been left suspended\n");
 			break;
 		}
+#endif
 		cv_wait(&up->up_cv, up->up_mtx);
 	}
 	/* Check if someone is waiting - should not happen */

@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_request.h 236898 2012-06-11 17:27:53Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_request.h 250207 2013-05-03 11:10:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -44,7 +45,7 @@ usb_error_t usbd_req_get_config_desc(struct usb_device *udev, struct mtx *mtx,
 		    struct usb_config_descriptor *d, uint8_t conf_index);
 usb_error_t usbd_req_get_config_desc_full(struct usb_device *udev,
 		    struct mtx *mtx, struct usb_config_descriptor **ppcd,
-		    struct malloc_type *mtype, uint8_t conf_index);
+		    uint8_t conf_index);
 usb_error_t usbd_req_get_desc(struct usb_device *udev, struct mtx *mtx,
 		    uint16_t *actlen, void *desc, uint16_t min_len,
 		    uint16_t max_len, uint16_t id, uint8_t type,
@@ -93,5 +94,8 @@ usb_error_t usbd_req_set_port_link_state(struct usb_device *udev,
 		    struct mtx *mtx, uint8_t port, uint8_t link_state);
 usb_error_t usbd_req_set_lpm_info(struct usb_device *udev, struct mtx *mtx,
 		    uint8_t port, uint8_t besl, uint8_t addr, uint8_t rwe);
+
+void *	usbd_alloc_config_desc(struct usb_device *, uint32_t);
+void	usbd_free_config_desc(struct usb_device *, void *);
 
 #endif					/* _USB_REQUEST_H_ */

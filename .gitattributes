@@ -58465,6 +58465,7 @@ sys/dev/usb/template/usb_template_mtp.c -text
 sys/dev/usb/template/usb_template_phone.c svneol=native#text/plain
 sys/dev/usb/ufm_ioctl.h -text
 sys/dev/usb/uftdiio.h svneol=native#text/plain
+sys/dev/usb/uled_ioctl.h svneol=native#text/plain
 sys/dev/usb/usb.h -text
 sys/dev/usb/usb_bus.h -text
 sys/dev/usb/usb_busdma.c -text
@@ -58486,6 +58487,7 @@ sys/dev/usb/usb_dynamic.h -text
 sys/dev/usb/usb_endian.h -text
 sys/dev/usb/usb_error.c -text
 sys/dev/usb/usb_freebsd.h -text
+sys/dev/usb/usb_freebsd_loader.h svneol=native#text/plain
 sys/dev/usb/usb_generic.c -text
 sys/dev/usb/usb_generic.h -text
 sys/dev/usb/usb_handle_request.c -text

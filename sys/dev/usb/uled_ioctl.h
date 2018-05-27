@@ -1,7 +1,7 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_pci.h 246122 2013-01-30 15:26:04Z hselasky $ */
 /*-
- * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2014 Kevin Lo
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,20 +23,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/sys/dev/usb/uled_ioctl.h 273882 2014-10-31 07:33:56Z hselasky $
  */
 
-#ifndef _USB_PCI_H_
-#define	_USB_PCI_H_
+#ifndef _ULED_IOCTL_H_
+#define _ULED_IOCTL_H_
 
-/*
- * We don't want the following files included everywhere, that's why
- * they are in a separate file.
- */
-#ifndef USB_GLOBAL_INCLUDE_FILE
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <sys/ioccom.h>
 
-#include <sys/rman.h>
-#endif
+struct uled_color {
+	uint8_t	red;
+	uint8_t	green;
+	uint8_t	blue;
+};
 
-#endif					/* _USB_PCI_H_ */
+#define	ULED_GET_COLOR	_IOR('U', 205, struct uled_color)
+#define	ULED_SET_COLOR	_IOW('U', 206, struct uled_color)
+
+#endif	/* _ULED_IOCTL_H_ */

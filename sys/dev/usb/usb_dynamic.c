@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_dynamic.c 273889 2014-10-31 08:06:21Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_dynamic.c 250207 2013-05-03 11:10:04Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,6 +25,9 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USB_GLOBAL_INCLUDE_FILE
+#include USB_GLOBAL_INCLUDE_FILE
+#else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -50,6 +54,8 @@
 #include <dev/usb/usb_process.h>
 #include <dev/usb/usb_device.h>
 #include <dev/usb/usb_dynamic.h>
+#include <dev/usb/usb_request.h>
+#endif			/* USB_GLOBAL_INCLUDE_FILE */
 
 /* function prototypes */
 static usb_handle_req_t usb_temp_get_desc_w;
@@ -94,12 +100,8 @@ usb_temp_get_desc_w(struct usb_device *udev, struct usb_device_request *req, con
 static void
 usb_temp_unsetup_w(struct usb_device *udev)
 {
-	if (udev->usb_template_ptr) {
-
-		free(udev->usb_template_ptr, M_USB);
-
-		udev->usb_template_ptr = NULL;
-	}
+	usbd_free_config_desc(udev, udev->usb_template_ptr);
+	udev->usb_template_ptr = NULL;
 }
 
 void

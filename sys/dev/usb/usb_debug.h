@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/usb_debug.h 242775 2012-11-08 16:13:51Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_debug.h 250205 2013-05-03 10:13:29Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -38,7 +39,7 @@ extern int usb_debug;
 #define	DPRINTFN(n,fmt,...) do {		\
   if ((USB_DEBUG_VAR) >= (n)) {			\
     printf("%s: " fmt,				\
-	   __FUNCTION__,## __VA_ARGS__);	\
+	   __FUNCTION__ ,##__VA_ARGS__);	\
   }						\
 } while (0)
 #define	DPRINTF(...)	DPRINTFN(1, __VA_ARGS__)
