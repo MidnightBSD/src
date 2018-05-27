@@ -57790,12 +57790,14 @@ sys/dev/ofw/ofw_bus_if.m -text
 sys/dev/ofw/ofw_bus_subr.c -text
 sys/dev/ofw/ofw_bus_subr.h -text
 sys/dev/ofw/ofw_console.c -text
+sys/dev/ofw/ofw_cpu.c svneol=native#text/plain
 sys/dev/ofw/ofw_disk.c -text
 sys/dev/ofw/ofw_fdt.c -text
 sys/dev/ofw/ofw_if.m -text
 sys/dev/ofw/ofw_iicbus.c -text
 sys/dev/ofw/ofw_pci.h -text
 sys/dev/ofw/ofw_standard.c -text
+sys/dev/ofw/ofwbus.c svneol=native#text/plain
 sys/dev/ofw/ofwvar.h -text
 sys/dev/ofw/openfirm.c -text
 sys/dev/ofw/openfirm.h -text

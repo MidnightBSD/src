@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice <benno@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/ofw_disk.c 194139 2009-06-14 00:15:26Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 2008 Nathan Whitehorn
 # All rights reserved.
@@ -23,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/ofw/ofw_if.m 212477 2010-09-11 18:55:00Z marius $
 #
 
 #include <dev/ofw/openfirm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2003 by Thomas Moestl <tmm@FreeBSD.org>
  * Copyright (c) 2004 by Marius Strobl <marius@FreeBSD.org>
@@ -23,7 +24,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ofw/ofw_bus.h 266128 2014-05-15 14:26:11Z ian $
  */
 
 #ifndef	_DEV_OFW_OFW_BUS_H_
@@ -68,6 +69,12 @@ ofw_bus_get_type(device_t dev)
 {
 
 	return (OFW_BUS_GET_TYPE(device_get_parent(dev), dev));
+}
+
+static __inline int
+ofw_bus_map_intr(device_t dev, phandle_t iparent, int icells, pcell_t *intr)
+{
+	return (OFW_BUS_MAP_INTR(dev, dev, iparent, icells, intr));
 }
 
 #endif /* !_DEV_OFW_OFW_BUS_H_ */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/ofw_fdt.c 273652 2014-10-26 01:30:46Z ian $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -109,41 +110,45 @@ ofw_fdt_init(ofw_t ofw, void *data)
 }
 
 /*
- * Device tree functions
+ * Device tree functions.
+ *
+ * We use the offset from fdtp to the node as the 'phandle' in OF interface.
+ *
+ * phandle is a u32 value, therefore we cannot use the pointer to node as
+ * phandle in 64 bit. We also do not use the usual fdt offset as phandle,
+ * as it can be 0, and the OF interface has special meaning for phandle 0.
  */
+
+static phandle_t
+fdt_offset_phandle(int offset)
+{
+	if (offset < 0)
+		return (0);
+	return ((phandle_t)offset + fdt_off_dt_struct(fdtp));
+}
 
 static int
 fdt_phandle_offset(phandle_t p)
 {
-	const char *dt_struct;
-	int offset;
+	int pint = (int)p;
+	int dtoff = fdt_off_dt_struct(fdtp);
 
-	dt_struct = (const char *)fdtp + fdt_off_dt_struct(fdtp);
-
-	if (((const char *)p < dt_struct) ||
-	    (const char *)p > (dt_struct + fdt_size_dt_struct(fdtp)))
+	if (pint < dtoff)
 		return (-1);
-
-	offset = (const char *)p - dt_struct;
-	if (offset < 0)
-		return (-1);
-
-	return (offset);
+	return (pint - dtoff);
 }
 
 /* Return the next sibling of this node or 0. */
 static phandle_t
 ofw_fdt_peer(ofw_t ofw, phandle_t node)
 {
-	phandle_t p;
 	int depth, offset;
 
 	if (node == 0) {
 		/* Find root node */
 		offset = fdt_path_offset(fdtp, "/");
-		p = (phandle_t)fdt_offset_ptr(fdtp, offset, sizeof(p));
 
-		return (p);
+		return (fdt_offset_phandle(offset));
 	}
 
 	offset = fdt_phandle_offset(node);
@@ -155,10 +160,8 @@ ofw_fdt_peer(ofw_t ofw, phandle_t node)
 	    offset = fdt_next_node(fdtp, offset, &depth)) {
 		if (depth < 0)
 			return (0);
-		if (depth == 1) {
-			p = (phandle_t)fdt_offset_ptr(fdtp, offset, sizeof(p));
-			return (p);
-		}
+		if (depth == 1)
+			return (fdt_offset_phandle(offset));
 	}
 
 	return (0);
@@ -168,7 +171,6 @@ ofw_fdt_peer(ofw_t ofw, phandle_t node)
 static phandle_t
 ofw_fdt_child(ofw_t ofw, phandle_t node)
 {
-	phandle_t p;
 	int depth, offset;
 
 	offset = fdt_phandle_offset(node);
@@ -180,10 +182,8 @@ ofw_fdt_child(ofw_t ofw, phandle_t node)
 	    offset = fdt_next_node(fdtp, offset, &depth)) {
 		if (depth < 0)
 			return (0);
-		if (depth == 1) {
-			p = (phandle_t)fdt_offset_ptr(fdtp, offset, sizeof(p));
-			return (p);
-		}
+		if (depth == 1)
+			return (fdt_offset_phandle(offset));
 	}
 
 	return (0);
@@ -193,7 +193,6 @@ ofw_fdt_child(ofw_t ofw, phandle_t node)
 static phandle_t
 ofw_fdt_parent(ofw_t ofw, phandle_t node)
 {
-	phandle_t p;
 	int offset, paroffset;
 
 	offset = fdt_phandle_offset(node);
@@ -201,30 +200,16 @@ ofw_fdt_parent(ofw_t ofw, phandle_t node)
 		return (0);
 
 	paroffset = fdt_parent_offset(fdtp, offset);
-	p = (phandle_t)fdt_offset_ptr(fdtp, paroffset, sizeof(phandle_t));
-	return (p);
+	return (fdt_offset_phandle(paroffset));
 }
 
 /* Return the package handle that corresponds to an instance handle. */
 static phandle_t
 ofw_fdt_instance_to_package(ofw_t ofw, ihandle_t instance)
 {
-	phandle_t p;
-	int offset;
 
-	/*
-	 * Note: FDT does not have the notion of instances, but we somewhat
-	 * abuse the semantics and let treat as 'instance' the internal
-	 * 'phandle' prop, so that ofw I/F consumers have a uniform way of
-	 * translation between internal representation (which appear in some
-	 * contexts as property values) and effective phandles.
-	 */
-	offset = fdt_node_offset_by_phandle(fdtp, instance);
-	if (offset < 0)
-		return (-1);
-
-	p = (phandle_t)fdt_offset_ptr(fdtp, offset, sizeof(phandle_t));
-	return (p);
+	/* Where real OF uses ihandles in the tree, FDT uses xref phandles */
+	return (OF_node_from_xref(instance));
 }
 
 /* Get the length of a property of a package. */
@@ -282,70 +267,53 @@ ofw_fdt_getprop(ofw_t ofw, phandle_t package, const char *propname, void *buf,
 	return (len);
 }
 
-static int
-fdt_nextprop(int offset, char *buf, size_t size)
-{
-	const struct fdt_property *prop;
-	const char *name;
-	uint32_t tag;
-	int nextoffset, depth;
-
-	depth = 0;
-	tag = fdt_next_tag(fdtp, offset, &nextoffset);
-
-	/* Find the next prop */
-	do {
-		offset = nextoffset;
-		tag = fdt_next_tag(fdtp, offset, &nextoffset);
-
-		if (tag == FDT_BEGIN_NODE)
-			depth++;
-		else if (tag == FDT_END_NODE)
-			depth--;
-		else if ((tag == FDT_PROP) && (depth == 0)) {
-			prop =
-			    (const struct fdt_property *)fdt_offset_ptr(fdtp,
-			    offset, sizeof(*prop));
-			name = fdt_string(fdtp,
-			    fdt32_to_cpu(prop->nameoff));
-			strncpy(buf, name, size);
-			return (strlen(name));
-		} else
-			depth = -1;
-	} while (depth >= 0);
-
-	return (-1);
-}
-
 /*
- * Get the next property of a package. Return the actual len of retrieved
- * prop name.
+ * Get the next property of a package. Return values:
+ *  -1: package or previous property does not exist
+ *   0: no more properties
+ *   1: success
  */
 static int
 ofw_fdt_nextprop(ofw_t ofw, phandle_t package, const char *previous, char *buf,
     size_t size)
 {
 	const struct fdt_property *prop;
-	int offset, rv;
+	const char *name;
+	int offset;
 
 	offset = fdt_phandle_offset(package);
 	if (offset < 0)
 		return (-1);
 
-	if (previous == NULL)
-		/* Find the first prop in the node */
-		return (fdt_nextprop(offset, buf, size));
+	/* Find the first prop in the node */
+	offset = fdt_first_property_offset(fdtp, offset);
+	if (offset < 0)
+		return (0); /* No properties */
 
-	/*
-	 * Advance to the previous prop
-	 */
-	prop = fdt_get_property(fdtp, offset, previous, NULL);
+	if (previous != NULL) {
+		while (offset >= 0) {
+			prop = fdt_get_property_by_offset(fdtp, offset, NULL);
+			if (prop == NULL)
+				return (-1); /* Internal error */
+
+			offset = fdt_next_property_offset(fdtp, offset);
+			if (offset < 0)
+				return (0); /* No more properties */
+
+			/* Check if the last one was the one we wanted */
+			name = fdt_string(fdtp, fdt32_to_cpu(prop->nameoff));
+			if (strcmp(name, previous) == 0)
+				break;
+		}
+	}
+
+	prop = fdt_get_property_by_offset(fdtp, offset, &offset);
 	if (prop == NULL)
-		return (-1);
+		return (-1); /* Internal error */
 
-	offset = fdt_phandle_offset((phandle_t)prop);
-	rv = fdt_nextprop(offset, buf, size);
-	return (rv);
+	strncpy(buf, fdt_string(fdtp, fdt32_to_cpu(prop->nameoff)), size);
+
+	return (1);
 }
 
 /* Set the value of a property of a package. */
@@ -374,22 +342,25 @@ ofw_fdt_canon(ofw_t ofw, const char *device, char *buf, size_t len)
 static phandle_t
 ofw_fdt_finddevice(ofw_t ofw, const char *device)
 {
-	phandle_t p;
 	int offset;
 
 	offset = fdt_path_offset(fdtp, device);
-
-	p = (phandle_t)fdt_offset_ptr(fdtp, offset, sizeof(p));
-
-	return (p);
+	if (offset < 0)
+		return (-1);
+	return (fdt_offset_phandle(offset));
 }
 
 /* Return the fully qualified pathname corresponding to an instance. */
 static ssize_t
 ofw_fdt_instance_to_path(ofw_t ofw, ihandle_t instance, char *buf, size_t len)
 {
+	phandle_t phandle;
 
-	return (-1);
+	phandle = OF_instance_to_package(instance);
+	if (phandle == -1)
+		return (-1);
+
+	return (OF_package_to_path(phandle, buf, len));
 }
 
 /* Return the fully qualified pathname corresponding to a package. */
@@ -409,7 +380,7 @@ ofw_fdt_fixup(ofw_t ofw)
 	ssize_t len;
 	int i;
 
-	if ((root = ofw_fdt_finddevice(ofw, "/")) == 0)
+	if ((root = ofw_fdt_finddevice(ofw, "/")) == -1)
 		return (ENODEV);
 
 	if ((len = ofw_fdt_getproplen(ofw, root, "model")) <= 0)

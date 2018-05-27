@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 2001, 2003 by Thomas Moestl <tmm@FreeBSD.org>
 # Copyright (c) 2004, 2005 by Marius Strobl <marius@FreeBSD.org>
@@ -23,7 +24,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/dev/ofw/ofw_bus_if.m 266135 2014-05-15 15:15:23Z loos $
 
 # Interface for retrieving the package handle and a subset, namely
 # 'compatible', 'device_type', 'model' and 'name', of the standard
@@ -46,6 +47,7 @@ HEADER {
 		char		*obd_model;
 		char		*obd_name;
 		char		*obd_type;
+		char		*obd_status;
 	};
 };
 
@@ -56,6 +58,7 @@ CODE {
 	static ofw_bus_get_name_t ofw_bus_default_get_name;
 	static ofw_bus_get_node_t ofw_bus_default_get_node;
 	static ofw_bus_get_type_t ofw_bus_default_get_type;
+	static ofw_bus_map_intr_t ofw_bus_default_map_intr;
 
 	static const struct ofw_bus_devinfo *
 	ofw_bus_default_get_devinfo(device_t bus, device_t dev)
@@ -98,6 +101,19 @@ CODE {
 
 		return (NULL);
 	}
+
+	int
+	ofw_bus_default_map_intr(device_t bus, device_t dev, phandle_t iparent,
+	    int icells, pcell_t *interrupt)
+	{
+		/* Propagate up the bus hierarchy until someone handles it. */	
+		if (device_get_parent(bus) != NULL)
+			return OFW_BUS_MAP_INTR(device_get_parent(bus), dev,
+			    iparent, icells, interrupt);
+
+		/* If that fails, then assume a one-domain system */
+		return (interrupt[0]);
+	}
 };
 
 # Get the ofw_bus_devinfo struct for the device dev on the bus. Used for bus
@@ -131,7 +147,7 @@ METHOD const char * get_name {
 } DEFAULT ofw_bus_default_get_name;
 
 # Get the firmware node for the device dev on the bus. The default method will
-# return 0, which signals that there is no such node.
+# return -1, which signals that there is no such node.
 METHOD phandle_t get_node {
 	device_t bus;
 	device_t dev;
@@ -143,3 +159,14 @@ METHOD const char * get_type {
 	device_t bus;
 	device_t dev;
 } DEFAULT ofw_bus_default_get_type;
+
+# Map an (interrupt parent, IRQ) pair to a unique system-wide interrupt number.
+# If the interrupt encoding includes a sense field, the interrupt sense will
+# also be configured.
+METHOD int map_intr {
+	device_t bus;
+	device_t dev;
+	phandle_t iparent;
+	int icells;
+	pcell_t *interrupt;
+} DEFAULT ofw_bus_default_map_intr;

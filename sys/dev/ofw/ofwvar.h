@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Peter Grehan
  * Copyright (c) 2008 Nathan Whitehorn
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ofw/ofwvar.h 194138 2009-06-14 00:05:38Z marius $
  */
 
 #ifndef _DEV_OFW_OFWVAR_H_

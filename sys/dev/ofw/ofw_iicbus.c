@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Nathan Whitehorn <nwhitehorn@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/ofw_iicbus.c 294672 2016-01-24 18:50:37Z ian $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -80,6 +81,7 @@ static devclass_t ofwiicbus_devclass;
 
 DEFINE_CLASS_1(iicbus, ofw_iicbus_driver, ofw_iicbus_methods,
     sizeof(struct iicbus_softc), iicbus_driver);
+DRIVER_MODULE(ofw_iicbus, iicbb, ofw_iicbus_driver, ofwiicbus_devclass, 0, 0);
 DRIVER_MODULE(ofw_iicbus, iichb, ofw_iicbus_driver, ofwiicbus_devclass, 0, 0);
 MODULE_VERSION(ofw_iicbus, 1);
 MODULE_DEPEND(ofw_iicbus, iicbus, 1, 1, 1);
@@ -100,12 +102,24 @@ ofw_iicbus_attach(device_t dev)
 {
 	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
 	struct ofw_iicbus_devinfo *dinfo;
-	phandle_t child;
+	phandle_t child, node;
+	pcell_t freq, paddr;
 	device_t childdev;
-	uint32_t addr;
 
 	sc->dev = dev;
 	mtx_init(&sc->lock, "iicbus", NULL, MTX_DEF);
+
+	/*
+	 * If there is a clock-frequency property for the device node, use it as
+	 * the starting value for the bus frequency.  Then call the common
+	 * routine that handles the tunable/sysctl which allows the FDT value to
+	 * be overridden by the user.
+	 */
+	node = ofw_bus_get_node(dev);
+	freq = 0;
+	OF_getencprop(node, "clock-frequency", &freq, sizeof(freq));
+	iicbus_init_frequency(dev, freq);
+	
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
 
 	bus_generic_probe(dev);
@@ -114,15 +128,16 @@ ofw_iicbus_attach(device_t dev)
 	/*
 	 * Attach those children represented in the device tree.
 	 */
-	for (child = OF_child(ofw_bus_get_node(dev)); child != 0;
-	    child = OF_peer(child)) {
+	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
 		/*
 		 * Try to get the I2C address first from the i2c-address
 		 * property, then try the reg property.  It moves around
 		 * on different systems.
 		 */
-		if (OF_getprop(child, "i2c-address", &addr, sizeof(addr)) == -1)
-			if (OF_getprop(child, "reg", &addr, sizeof(addr)) == -1)
+		if (OF_getencprop(child, "i2c-address", &paddr,
+		    sizeof(paddr)) == -1)
+			if (OF_getencprop(child, "reg", &paddr,
+			    sizeof(paddr)) == -1)
 				continue;
 
 		/*
@@ -133,7 +148,11 @@ ofw_iicbus_attach(device_t dev)
 		    M_NOWAIT | M_ZERO);
 		if (dinfo == NULL)
 			continue;
-		dinfo->opd_dinfo.addr = addr;
+		/*
+		 * OFW uses 7-bit I2C address format (see ePAPR),
+		 * but system expect 8-bit.
+		 */
+		dinfo->opd_dinfo.addr = paddr << 1;
 		if (ofw_bus_gen_setup_devinfo(&dinfo->opd_obdinfo, child) !=
 		    0) {
 			free(dinfo, M_DEVBUF);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: Locore.c,v 1.7 2000/08/20 07:04:59 tsubai Exp $	*/
 
 /*-
@@ -56,14 +57,18 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/openfirm.c 283477 2015-05-24 17:51:57Z ian $");
 
 #include "opt_platform.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
+#include <sys/queue.h>
 #include <sys/systm.h>
+#include <sys/endian.h>
 
 #include <machine/stdarg.h>
 
@@ -82,6 +87,106 @@ static ofw_def_t	*ofw_def_impl = NULL;
 static ofw_t		ofw_obj;
 static struct ofw_kobj	ofw_kernel_obj;
 static struct kobj_ops	ofw_kernel_kops;
+
+struct xrefinfo {
+	phandle_t	xref;
+	phandle_t 	node;
+	device_t  	dev;
+	SLIST_ENTRY(xrefinfo) next_entry;
+};
+
+static SLIST_HEAD(, xrefinfo) xreflist = SLIST_HEAD_INITIALIZER(xreflist);
+static struct mtx xreflist_lock;
+static boolean_t xref_init_done;
+
+#define	FIND_BY_XREF	0
+#define	FIND_BY_NODE	1
+#define	FIND_BY_DEV	2
+
+/*
+ * xref-phandle-device lookup helper routines.
+ *
+ * As soon as we are able to use malloc(), walk the node tree and build a list
+ * of info that cross-references node handles, xref handles, and device_t
+ * instances.  This list exists primarily to allow association of a device_t
+ * with an xref handle, but it is also used to speed up translation between xref
+ * and node handles.  Before malloc() is available we have to recursively search
+ * the node tree each time we want to translate between a node and xref handle.
+ * Afterwards we can do the translations by searching this much shorter list.
+ */
+static void
+xrefinfo_create(phandle_t node)
+{
+	struct xrefinfo * xi;
+	phandle_t child, xref;
+
+	/*
+	 * Recursively descend from parent, looking for nodes with a property
+	 * named either "phandle", "ibm,phandle", or "linux,phandle".  For each
+	 * such node found create an entry in the xreflist.
+	 */
+	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
+		xrefinfo_create(child);
+		if (OF_getencprop(child, "phandle", &xref, sizeof(xref)) ==
+		    -1 && OF_getencprop(child, "ibm,phandle", &xref,
+		    sizeof(xref)) == -1 && OF_getencprop(child,
+		    "linux,phandle", &xref, sizeof(xref)) == -1)
+			continue;
+		xi = malloc(sizeof(*xi), M_OFWPROP, M_WAITOK | M_ZERO);
+		xi->node = child;
+		xi->xref = xref;
+		SLIST_INSERT_HEAD(&xreflist, xi, next_entry);
+	}
+}
+
+static void
+xrefinfo_init(void *unsed)
+{
+
+	/*
+	 * There is no locking during this init because it runs much earlier
+	 * than any of the clients/consumers of the xref list data, but we do
+	 * initialize the mutex that will be used for access later.
+	 */
+	mtx_init(&xreflist_lock, "OF xreflist lock", NULL, MTX_DEF);
+	xrefinfo_create(OF_peer(0));
+	xref_init_done = true;
+}
+SYSINIT(xrefinfo, SI_SUB_KMEM, SI_ORDER_ANY, xrefinfo_init, NULL);
+
+static struct xrefinfo *
+xrefinfo_find(uintptr_t key, int find_by)
+{
+	struct xrefinfo *rv, *xi;
+
+	rv = NULL;
+	mtx_lock(&xreflist_lock);
+	SLIST_FOREACH(xi, &xreflist, next_entry) {
+		if ((find_by == FIND_BY_XREF && (phandle_t)key == xi->xref) ||
+		    (find_by == FIND_BY_NODE && (phandle_t)key == xi->node) ||
+		    (find_by == FIND_BY_DEV && key == (uintptr_t)xi->dev)) {
+			rv = xi;
+			break;
+		}
+	}
+	mtx_unlock(&xreflist_lock);
+	return (rv);
+}
+
+static struct xrefinfo *
+xrefinfo_add(phandle_t node, phandle_t xref, device_t dev)
+{
+	struct xrefinfo *xi;
+
+	xi = malloc(sizeof(*xi), M_OFWPROP, M_WAITOK);
+	xi->node = node;
+	xi->xref = xref;
+	xi->dev  = dev;
+	mtx_lock(&xreflist_lock);
+	SLIST_INSERT_HEAD(&xreflist, xi, next_entry);
+	mtx_unlock(&xreflist_lock);
+	return (xi);
+}
 
 /*
  * OFW install routines.  Highest priority wins, equal priority also
@@ -133,8 +238,9 @@ OF_init(void *cookie)
 
 	rv = OFW_INIT(ofw_obj, cookie);
 
-	if ((chosen = OF_finddevice("/chosen")) > 0)
-		if (OF_getprop(chosen, "stdout", &stdout, sizeof(stdout)) == -1)
+	if ((chosen = OF_finddevice("/chosen")) != -1)
+		if (OF_getencprop(chosen, "stdout", &stdout,
+		    sizeof(stdout)) == -1)
 			stdout = -1;
 
 	return (rv);
@@ -261,6 +367,14 @@ OF_getproplen(phandle_t package, const char *propname)
 	return (OFW_GETPROPLEN(ofw_obj, package, propname));
 }
 
+/* Check existence of a property of a package. */
+int
+OF_hasprop(phandle_t package, const char *propname)
+{
+
+	return (OF_getproplen(package, propname) >= 0 ? 1 : 0);
+}
+
 /* Get the value of a property of a package. */
 ssize_t
 OF_getprop(phandle_t package, const char *propname, void *buf, size_t buflen)
@@ -270,6 +384,21 @@ OF_getprop(phandle_t package, const char *propname, void *buf, size_t buflen)
 		return (-1);
 
 	return (OFW_GETPROP(ofw_obj, package, propname, buf, buflen));
+}
+
+ssize_t
+OF_getencprop(phandle_t node, const char *propname, pcell_t *buf, size_t len)
+{
+	ssize_t retval;
+	int i;
+
+	KASSERT(len % 4 == 0, ("Need a multiple of 4 bytes"));
+
+	retval = OF_getprop(node, propname, buf, len);
+	for (i = 0; i < len/4; i++)
+		buf[i] = be32toh(buf[i]);
+
+	return (retval);
 }
 
 /*
@@ -284,6 +413,17 @@ OF_searchprop(phandle_t node, const char *propname, void *buf, size_t len)
 
 	for (; node != 0; node = OF_parent(node))
 		if ((rv = OF_getprop(node, propname, buf, len)) != -1)
+			return (rv);
+	return (-1);
+}
+
+ssize_t
+OF_searchencprop(phandle_t node, const char *propname, void *buf, size_t len)
+{
+	ssize_t rv;
+
+	for (; node != 0; node = OF_parent(node))
+		if ((rv = OF_getencprop(node, propname, buf, len)) != -1)
 			return (rv);
 	return (-1);
 }
@@ -310,6 +450,24 @@ OF_getprop_alloc(phandle_t package, const char *propname, int elsz, void **buf)
 		return (-1);
 	}
 	return (len / elsz);
+}
+
+ssize_t
+OF_getencprop_alloc(phandle_t package, const char *name, int elsz, void **buf)
+{
+	ssize_t retval;
+	pcell_t *cell;
+	int i;
+
+	retval = OF_getprop_alloc(package, name, elsz, buf);
+	if (retval == -1 || retval*elsz % 4 != 0)
+		return (-1);
+
+	cell = *buf;
+	for (i = 0; i < retval*elsz/4; i++)
+		cell[i] = be32toh(cell[i]);
+
+	return (retval);
 }
 
 /* Get the next property of a package. */
@@ -376,6 +534,120 @@ OF_package_to_path(phandle_t package, char *buf, size_t len)
 		return (-1);
 
 	return (OFW_PACKAGE_TO_PATH(ofw_obj, package, buf, len));
+}
+
+/* Look up effective phandle (see FDT/PAPR spec) */
+static phandle_t
+OF_child_xref_phandle(phandle_t parent, phandle_t xref)
+{
+	phandle_t child, rxref;
+
+	/*
+	 * Recursively descend from parent, looking for a node with a property
+	 * named either "phandle", "ibm,phandle", or "linux,phandle" that
+	 * matches the xref we are looking for.
+	 */
+
+	for (child = OF_child(parent); child != 0; child = OF_peer(child)) {
+		rxref = OF_child_xref_phandle(child, xref);
+		if (rxref != -1)
+			return (rxref);
+
+		if (OF_getencprop(child, "phandle", &rxref, sizeof(rxref)) ==
+		    -1 && OF_getencprop(child, "ibm,phandle", &rxref,
+		    sizeof(rxref)) == -1 && OF_getencprop(child,
+		    "linux,phandle", &rxref, sizeof(rxref)) == -1)
+			continue;
+
+		if (rxref == xref)
+			return (child);
+	}
+
+	return (-1);
+}
+
+phandle_t
+OF_node_from_xref(phandle_t xref)
+{
+	struct xrefinfo *xi;
+	phandle_t node;
+
+	if (xref_init_done) {
+		if ((xi = xrefinfo_find(xref, FIND_BY_XREF)) == NULL)
+			return (xref);
+		return (xi->node);
+	}
+
+	if ((node = OF_child_xref_phandle(OF_peer(0), xref)) == -1)
+		return (xref);
+	return (node);
+}
+
+phandle_t
+OF_xref_from_node(phandle_t node)
+{
+	struct xrefinfo *xi;
+	phandle_t xref;
+
+	if (xref_init_done) {
+		if ((xi = xrefinfo_find(node, FIND_BY_NODE)) == NULL)
+			return (node);
+		return (xi->xref);
+	}
+
+	if (OF_getencprop(node, "phandle", &xref, sizeof(xref)) ==
+	    -1 && OF_getencprop(node, "ibm,phandle", &xref,
+	    sizeof(xref)) == -1 && OF_getencprop(node,
+	    "linux,phandle", &xref, sizeof(xref)) == -1)
+		return (node);
+	return (xref);
+}
+
+device_t
+OF_device_from_xref(phandle_t xref)
+{
+	struct xrefinfo *xi;
+
+	if (xref_init_done) {
+		if ((xi = xrefinfo_find(xref, FIND_BY_XREF)) == NULL)
+			return (NULL);
+		return (xi->dev);
+	}
+	panic("Attempt to find device before xreflist_init");
+}
+
+phandle_t
+OF_xref_from_device(device_t dev)
+{
+	struct xrefinfo *xi;
+
+	if (xref_init_done) {
+		if ((xi = xrefinfo_find((uintptr_t)dev, FIND_BY_DEV)) == NULL)
+			return (0);
+		return (xi->xref);
+	}
+	panic("Attempt to find xref before xreflist_init");
+}
+
+int
+OF_device_register_xref(phandle_t xref, device_t dev)
+{
+	struct xrefinfo *xi;
+
+	/*
+	 * If the given xref handle doesn't already exist in the list then we
+	 * add a list entry.  In theory this can only happen on a system where
+	 * nodes don't contain phandle properties and xref and node handles are
+	 * synonymous, so the xref handle is added as the node handle as well.
+	 */
+	if (xref_init_done) {
+		if ((xi = xrefinfo_find(xref, FIND_BY_XREF)) == NULL)
+			xrefinfo_add(xref, xref, dev);
+		else 
+			xi->dev = dev;
+		return (0);
+	}
+	panic("Attempt to register device before xreflist_init");
 }
 
 /*  Call the method in the scope of a given instance. */

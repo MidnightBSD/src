@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: Locore.c,v 1.7 2000/08/20 07:04:59 tsubai Exp $	*/
 
 /*-
@@ -56,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/ofw_standard.c 212477 2010-09-11 18:55:00Z marius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
