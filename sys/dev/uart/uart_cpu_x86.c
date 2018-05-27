@@ -1,7 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2008 TAKAHASHI Yoshihiro
- * Copyright (c) 2003 M. Warner Losh, Marcel Moolenaar
+ * Copyright (c) 2003, 2004 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_pc98.c 216592 2010-12-20 16:39:43Z tijl $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_x86.c 234118 2012-04-11 02:42:01Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,34 +40,11 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_pc98.c 216592 2010-12-20 16:
 bus_space_tag_t uart_bus_space_io = X86_BUS_SPACE_IO;
 bus_space_tag_t uart_bus_space_mem = X86_BUS_SPACE_MEM;
 
-static struct {
-	u_long iobase;
-	struct uart_class *class;
-} uart_pc98_devs[] = {
-	{ 0x238, &uart_ns8250_class },
-	{ 0, NULL }
-};
-
-struct uart_class *
-uart_pc98_getdev(u_long port)
-{
-	int i;
-
-	for (i = 0; uart_pc98_devs[i].iobase; i++) {
-		if (port == uart_pc98_devs[i].iobase)
-			return (uart_pc98_devs[i].class);
-	}
-	return (NULL);
-}
-
 int
 uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)
 {
 
-	if (bus_space_compare(b1->bst, b1->bsh, b2->bst, b2->bsh) == 0)
-		return (1);
-
-	return (0);
+	return ((b1->bsh == b2->bsh && b1->bst == b2->bst) ? 1 : 0);
 }
 
 int
@@ -86,11 +62,11 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 		return (0);
 
 	/*
-	 * There is a serial port on all pc98 hardware.  It is 8251 or
-	 * an enhance version of that.  Some pc98 have the second serial
-	 * port which is 16550A compatible.
+	 * Scan the hints. We only try units 0 to 3 (inclusive). This
+	 * covers the ISA legacy where 4 UARTs had their resources
+	 * predefined.
 	 */
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 4; i++) {
 		if (resource_int_value("uart", i, "flags", &ivar))
 			continue;
 		if (devtype == UART_DEV_CONSOLE && !UART_FLAGS_CONSOLE(ivar))
@@ -107,11 +83,10 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 		if (resource_int_value("uart", i, "port", &ivar) != 0 ||
 		    ivar == 0)
 			continue;
-
-		class = uart_pc98_getdev(ivar);
-		if (class == NULL)
-			continue;
-
+		/*
+		 * Got it. Fill in the instance and return it. We only have
+		 * ns8250 and successors on i386.
+		 */
 		di->ops = uart_getops(class);
 		di->bas.chan = 0;
 		di->bas.bst = uart_bus_space_io;

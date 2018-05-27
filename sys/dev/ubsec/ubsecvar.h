@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/sys/dev/ubsec/ubsecvar.h,v 1.9 2006/05/17 18:34:26 pjd Exp $ */
+/* $FreeBSD: stable/10/sys/dev/ubsec/ubsecvar.h 158705 2006-05-17 18:34:26Z pjd $ */
 /*	$OpenBSD: ubsecvar.h,v 1.35 2002/09/24 18:33:26 jason Exp $	*/
 
 /*-

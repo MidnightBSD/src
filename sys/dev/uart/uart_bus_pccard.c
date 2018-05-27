@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  * Copyright (c) 2003 Norikatsu Shigemura, Takenori Watanabe All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_pccard.c 151791 2005-10-28 06:27:53Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

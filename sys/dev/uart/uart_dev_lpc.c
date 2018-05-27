@@ -25,51 +25,41 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "opt_platform.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_ns8250.c 294229 2016-01-17 18:18:01Z ian $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_lpc.c 283327 2015-05-23 20:54:25Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
-#include <sys/kernel.h>
-#include <sys/sysctl.h>
 #include <machine/bus.h>
-
-#ifdef FDT
-#include <dev/fdt/fdt_common.h>
-#include <dev/ofw/ofw_bus.h>
-#include <dev/ofw/ofw_bus_subr.h>
-#endif
+#include <machine/fdt.h>
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
-#ifdef FDT
 #include <dev/uart/uart_cpu_fdt.h>
-#endif
 #include <dev/uart/uart_bus.h>
-#include <dev/uart/uart_dev_ns8250.h>
-#include <dev/uart/uart_ppstypes.h>
 
 #include <dev/ic/ns16550.h>
+#include <arm/lpc/lpcreg.h>
 
 #include "uart_if.h"
 
-#define	DEFAULT_RCLK	1843200
+#define	DEFAULT_RCLK		(13 * 1000 * 1000)
 
-static int broken_txfifo = 0;
-SYSCTL_INT(_hw, OID_AUTO, broken_txfifo, CTLFLAG_RW | CTLFLAG_TUN,
-	&broken_txfifo, 0, "UART FIFO has QEMU emulation bug");
-TUNABLE_INT("hw.broken_txfifo", &broken_txfifo);
+static bus_space_handle_t bsh_clkpwr;
+
+#define	lpc_ns8250_get_clkreg(_bas, _reg)	\
+    bus_space_read_4(fdtbus_bs_tag, bsh_clkpwr, (_reg))
+#define	lpc_ns8250_set_clkreg(_bas, _reg, _val)	\
+    bus_space_write_4(fdtbus_bs_tag, bsh_clkpwr, (_reg), (_val))
 
 /*
  * Clear pending interrupts. THRE is cleared by reading IIR. Data
  * that may have been received gets lost here.
  */
 static void
-ns8250_clrint(struct uart_bas *bas)
+lpc_ns8250_clrint(struct uart_bas *bas)
 {
 	uint8_t iir, lsr;
 
@@ -90,55 +80,70 @@ ns8250_clrint(struct uart_bas *bas)
 }
 
 static int
-ns8250_delay(struct uart_bas *bas)
+lpc_ns8250_delay(struct uart_bas *bas)
 {
-	int divisor;
-	u_char lcr;
+	uint32_t uclk;
+	int x, y;
 
-	lcr = uart_getreg(bas, REG_LCR);
-	uart_setreg(bas, REG_LCR, lcr | LCR_DLAB);
-	uart_barrier(bas);
-	divisor = uart_getreg(bas, REG_DLL) | (uart_getreg(bas, REG_DLH) << 8);
-	uart_barrier(bas);
-	uart_setreg(bas, REG_LCR, lcr);
-	uart_barrier(bas);
+	uclk = lpc_ns8250_get_clkreg(bas, LPC_CLKPWR_UART_U5CLK);
+	
+	x = (uclk >> 8) & 0xff;
+	y = uclk & 0xff;
 
-	/* 1/10th the time to transmit 1 character (estimate). */
-	if (divisor <= 134)
-		return (16000000 * divisor / bas->rclk);
-	return (16000 * divisor / (bas->rclk / 1000));
+	return (16000000 / (bas->rclk * x / y));
+}
+
+static void
+lpc_ns8250_divisor(int rclk, int baudrate, int *x, int *y)
+{
+
+	switch (baudrate) {
+	case 2400:
+		*x = 1;
+		*y = 255;
+		return;
+	case 4800:
+		*x = 1;
+		*y = 169;
+		return;
+	case 9600:
+		*x = 3;
+		*y = 254;
+		return;
+	case 19200:
+		*x = 3;
+		*y = 127;
+		return;
+	case 38400:
+		*x = 6;
+		*y = 127;
+		return;
+	case 57600:
+		*x = 9;
+		*y = 127;
+		return;
+	default:
+	case 115200:
+		*x = 19;
+		*y = 134;
+		return;
+	case 230400:
+		*x = 19;
+		*y = 67;
+		return;	
+	case 460800:
+		*x = 38;
+		*y = 67;
+		return;
+	}
 }
 
 static int
-ns8250_divisor(int rclk, int baudrate)
-{
-	int actual_baud, divisor;
-	int error;
-
-	if (baudrate == 0)
-		return (0);
-
-	divisor = (rclk / (baudrate << 3) + 1) >> 1;
-	if (divisor == 0 || divisor >= 65536)
-		return (0);
-	actual_baud = rclk / (divisor << 4);
-
-	/* 10 times error in percent: */
-	error = ((actual_baud - baudrate) * 2000 / baudrate + 1) >> 1;
-
-	/* 3.0% maximum error tolerance: */
-	if (error < -30 || error > 30)
-		return (0);
-
-	return (divisor);
-}
-
-static int
-ns8250_drain(struct uart_bas *bas, int what)
+lpc_ns8250_drain(struct uart_bas *bas, int what)
 {
 	int delay, limit;
 
-	delay = ns8250_delay(bas);
+	delay = lpc_ns8250_delay(bas);
 
 	if (what & UART_DRAIN_TRANSMITTER) {
 		/*
@@ -150,7 +155,7 @@ ns8250_drain(struct uart_bas *bas, int what)
 		while ((uart_getreg(bas, REG_LSR) & LSR_TEMT) == 0 && --limit)
 			DELAY(delay);
 		if (limit == 0) {
-			/* printf("ns8250: transmitter appears stuck... "); */
+			/* printf("lpc_ns8250: transmitter appears stuck... "); */
 			return (EIO);
 		}
 	}
@@ -171,7 +176,7 @@ ns8250_drain(struct uart_bas *bas, int what)
 			DELAY(delay << 2);
 		}
 		if (limit == 0) {
-			/* printf("ns8250: receiver appears broken... "); */
+			/* printf("lpc_ns8250: receiver appears broken... "); */
 			return (EIO);
 		}
 	}
@@ -184,7 +189,7 @@ ns8250_drain(struct uart_bas *bas, int what)
  * drained. WARNING: this function clobbers the FIFO setting!
  */
 static void
-ns8250_flush(struct uart_bas *bas, int what)
+lpc_ns8250_flush(struct uart_bas *bas, int what)
 {
 	uint8_t fcr;
 
@@ -198,10 +203,10 @@ ns8250_flush(struct uart_bas *bas, int what)
 }
 
 static int
-ns8250_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
+lpc_ns8250_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
     int parity)
 {
-	int divisor;
+	int xdiv, ydiv;
 	uint8_t lcr;
 
 	lcr = 0;
@@ -219,14 +224,17 @@ ns8250_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 
 	/* Set baudrate. */
 	if (baudrate > 0) {
-		divisor = ns8250_divisor(bas->rclk, baudrate);
-		if (divisor == 0)
-			return (EINVAL);
 		uart_setreg(bas, REG_LCR, lcr | LCR_DLAB);
 		uart_barrier(bas);
-		uart_setreg(bas, REG_DLL, divisor & 0xff);
-		uart_setreg(bas, REG_DLH, (divisor >> 8) & 0xff);
+		uart_setreg(bas, REG_DLL, 0x00);
+		uart_setreg(bas, REG_DLH, 0x00);
 		uart_barrier(bas);
+
+		lpc_ns8250_divisor(bas->rclk, baudrate, &xdiv, &ydiv);
+		lpc_ns8250_set_clkreg(bas,
+		    LPC_CLKPWR_UART_U5CLK,
+		    LPC_CLKPWR_UART_UCLK_X(xdiv) |
+		    LPC_CLKPWR_UART_UCLK_Y(ydiv));
 	}
 
 	/* Set LCR and clear DLAB. */
@@ -238,25 +246,26 @@ ns8250_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 /*
  * Low-level UART interface.
  */
-static int ns8250_probe(struct uart_bas *bas);
-static void ns8250_init(struct uart_bas *bas, int, int, int, int);
-static void ns8250_term(struct uart_bas *bas);
-static void ns8250_putc(struct uart_bas *bas, int);
-static int ns8250_rxready(struct uart_bas *bas);
-static int ns8250_getc(struct uart_bas *bas, struct mtx *);
+static int lpc_ns8250_probe(struct uart_bas *bas);
+static void lpc_ns8250_init(struct uart_bas *bas, int, int, int, int);
+static void lpc_ns8250_term(struct uart_bas *bas);
+static void lpc_ns8250_putc(struct uart_bas *bas, int);
+static int lpc_ns8250_rxready(struct uart_bas *bas);
+static int lpc_ns8250_getc(struct uart_bas *bas, struct mtx *);
 
-struct uart_ops uart_ns8250_ops = {
-	.probe = ns8250_probe,
-	.init = ns8250_init,
-	.term = ns8250_term,
-	.putc = ns8250_putc,
-	.rxready = ns8250_rxready,
-	.getc = ns8250_getc,
+static struct uart_ops uart_lpc_ns8250_ops = {
+	.probe = lpc_ns8250_probe,
+	.init = lpc_ns8250_init,
+	.term = lpc_ns8250_term,
+	.putc = lpc_ns8250_putc,
+	.rxready = lpc_ns8250_rxready,
+	.getc = lpc_ns8250_getc,
 };
 
 static int
-ns8250_probe(struct uart_bas *bas)
+lpc_ns8250_probe(struct uart_bas *bas)
 {
+#if 0
 	u_char val;
 
 	/* Check known 0 bits that don't depend on DLAB. */
@@ -272,19 +281,31 @@ ns8250_probe(struct uart_bas *bas)
 	val = uart_getreg(bas, REG_MCR);
 	if (val & 0xa0)
 		return (ENXIO);
-
+#endif
 	return (0);
 }
 
 static void
-ns8250_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
+lpc_ns8250_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
     int parity)
 {
 	u_char	ier;
+	u_long	clkmode;
+	
+	/* Enable UART clock */
+	bus_space_map(fdtbus_bs_tag, LPC_CLKPWR_PHYS_BASE, LPC_CLKPWR_SIZE, 0,
+	    &bsh_clkpwr);
+	clkmode = lpc_ns8250_get_clkreg(bas, LPC_UART_CLKMODE);
+	lpc_ns8250_set_clkreg(bas, LPC_UART_CLKMODE, clkmode | 
+	    LPC_UART_CLKMODE_UART5(1));
 
+#if 0
+	/* Work around H/W bug */
+	uart_setreg(bas, REG_DATA, 0x00);
+#endif
 	if (bas->rclk == 0)
 		bas->rclk = DEFAULT_RCLK;
-	ns8250_param(bas, baudrate, databits, stopbits, parity);
+	lpc_ns8250_param(bas, baudrate, databits, stopbits, parity);
 
 	/* Disable all interrupt sources. */
 	/*
@@ -304,11 +325,11 @@ ns8250_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 	uart_setreg(bas, REG_MCR, MCR_IE | MCR_RTS | MCR_DTR);
 	uart_barrier(bas);
 
-	ns8250_clrint(bas);
+	lpc_ns8250_clrint(bas);
 }
 
 static void
-ns8250_term(struct uart_bas *bas)
+lpc_ns8250_term(struct uart_bas *bas)
 {
 
 	/* Clear RTS & DTR. */
@@ -317,7 +338,7 @@ ns8250_term(struct uart_bas *bas)
 }
 
 static void
-ns8250_putc(struct uart_bas *bas, int c)
+lpc_ns8250_putc(struct uart_bas *bas, int c)
 {
 	int limit;
 
@@ -332,14 +353,14 @@ ns8250_putc(struct uart_bas *bas, int c)
 }
 
 static int
-ns8250_rxready(struct uart_bas *bas)
+lpc_ns8250_rxready(struct uart_bas *bas)
 {
 
 	return ((uart_getreg(bas, REG_LSR) & LSR_RXRDY) != 0 ? 1 : 0);
 }
 
 static int
-ns8250_getc(struct uart_bas *bas, struct mtx *hwmtx)
+lpc_ns8250_getc(struct uart_bas *bas, struct mtx *hwmtx)
 {
 	int c;
 
@@ -358,236 +379,186 @@ ns8250_getc(struct uart_bas *bas, struct mtx *hwmtx)
 	return (c);
 }
 
-static kobj_method_t ns8250_methods[] = {
-	KOBJMETHOD(uart_attach,		ns8250_bus_attach),
-	KOBJMETHOD(uart_detach,		ns8250_bus_detach),
-	KOBJMETHOD(uart_flush,		ns8250_bus_flush),
-	KOBJMETHOD(uart_getsig,		ns8250_bus_getsig),
-	KOBJMETHOD(uart_ioctl,		ns8250_bus_ioctl),
-	KOBJMETHOD(uart_ipend,		ns8250_bus_ipend),
-	KOBJMETHOD(uart_param,		ns8250_bus_param),
-	KOBJMETHOD(uart_probe,		ns8250_bus_probe),
-	KOBJMETHOD(uart_receive,	ns8250_bus_receive),
-	KOBJMETHOD(uart_setsig,		ns8250_bus_setsig),
-	KOBJMETHOD(uart_transmit,	ns8250_bus_transmit),
-	KOBJMETHOD(uart_grab,		ns8250_bus_grab),
-	KOBJMETHOD(uart_ungrab,		ns8250_bus_ungrab),
+/*
+ * High-level UART interface.
+ */
+struct lpc_ns8250_softc {
+	struct uart_softc base;
+	uint8_t		fcr;
+	uint8_t		ier;
+	uint8_t		mcr;
+	
+	uint8_t		ier_mask;
+	uint8_t		ier_rxbits;
+};
+
+static int lpc_ns8250_bus_attach(struct uart_softc *);
+static int lpc_ns8250_bus_detach(struct uart_softc *);
+static int lpc_ns8250_bus_flush(struct uart_softc *, int);
+static int lpc_ns8250_bus_getsig(struct uart_softc *);
+static int lpc_ns8250_bus_ioctl(struct uart_softc *, int, intptr_t);
+static int lpc_ns8250_bus_ipend(struct uart_softc *);
+static int lpc_ns8250_bus_param(struct uart_softc *, int, int, int, int);
+static int lpc_ns8250_bus_probe(struct uart_softc *);
+static int lpc_ns8250_bus_receive(struct uart_softc *);
+static int lpc_ns8250_bus_setsig(struct uart_softc *, int);
+static int lpc_ns8250_bus_transmit(struct uart_softc *);
+static void lpc_ns8250_bus_grab(struct uart_softc *);
+static void lpc_ns8250_bus_ungrab(struct uart_softc *);
+
+static kobj_method_t lpc_ns8250_methods[] = {
+	KOBJMETHOD(uart_attach,		lpc_ns8250_bus_attach),
+	KOBJMETHOD(uart_detach,		lpc_ns8250_bus_detach),
+	KOBJMETHOD(uart_flush,		lpc_ns8250_bus_flush),
+	KOBJMETHOD(uart_getsig,		lpc_ns8250_bus_getsig),
+	KOBJMETHOD(uart_ioctl,		lpc_ns8250_bus_ioctl),
+	KOBJMETHOD(uart_ipend,		lpc_ns8250_bus_ipend),
+	KOBJMETHOD(uart_param,		lpc_ns8250_bus_param),
+	KOBJMETHOD(uart_probe,		lpc_ns8250_bus_probe),
+	KOBJMETHOD(uart_receive,	lpc_ns8250_bus_receive),
+	KOBJMETHOD(uart_setsig,		lpc_ns8250_bus_setsig),
+	KOBJMETHOD(uart_transmit,	lpc_ns8250_bus_transmit),
+	KOBJMETHOD(uart_grab,		lpc_ns8250_bus_grab),
+	KOBJMETHOD(uart_ungrab,		lpc_ns8250_bus_ungrab),
 	{ 0, 0 }
 };
 
-struct uart_class uart_ns8250_class = {
-	"ns8250",
-	ns8250_methods,
-	sizeof(struct ns8250_softc),
-	.uc_ops = &uart_ns8250_ops,
+static struct uart_class uart_lpc_class = {
+	"lpc_ns8250",
+	lpc_ns8250_methods,
+	sizeof(struct lpc_ns8250_softc),
+	.uc_ops = &uart_lpc_ns8250_ops,
 	.uc_range = 8,
 	.uc_rclk = DEFAULT_RCLK
 };
 
-#ifdef FDT
 static struct ofw_compat_data compat_data[] = {
-	{"ns16550",		(uintptr_t)&uart_ns8250_class},
+	{"lpc,uart",		(uintptr_t)&uart_lpc_class},
 	{NULL,			(uintptr_t)NULL},
 };
 UART_FDT_CLASS_AND_DEVICE(compat_data);
-#endif
 
-/* Use token-pasting to form SER_ and MSR_ named constants. */
-#define	SER(sig)	SER_##sig
-#define	SERD(sig)	SER_D##sig
-#define	MSR(sig)	MSR_##sig
-#define	MSRD(sig)	MSR_D##sig
-
-/*
- * Detect signal changes using software delta detection.  The previous state of
- * the signals is in 'var' the new hardware state is in 'msr', and 'sig' is the
- * short name (DCD, CTS, etc) of the signal bit being processed; 'var' gets the
- * new state of both the signal and the delta bits.
- */
-#define SIGCHGSW(var, msr, sig)					\
-	if ((msr) & MSR(sig)) {					\
-		if ((var & SER(sig)) == 0)			\
-			var |= SERD(sig) | SER(sig);		\
-	} else {						\
-		if ((var & SER(sig)) != 0)			\
-			var = SERD(sig) | (var & ~SER(sig));	\
+#define	SIGCHG(c, i, s, d)				\
+	if (c) {					\
+		i |= (i & s) ? s : s | d;		\
+	} else {					\
+		i = (i & s) ? (i & ~s) | d : i;		\
 	}
 
-/*
- * Detect signal changes using the hardware msr delta bits.  This is currently
- * used only when PPS timing information is being captured using the "narrow
- * pulse" option.  With a narrow PPS pulse the signal may not still be asserted
- * by time the interrupt handler is invoked.  The hardware will latch the fact
- * that it changed in the delta bits.
- */
-#define SIGCHGHW(var, msr, sig)					\
-	if ((msr) & MSRD(sig)) {				\
-		if (((msr) & MSR(sig)) != 0)			\
-			var |= SERD(sig) | SER(sig);		\
-		else						\
-			var = SERD(sig) | (var & ~SER(sig));	\
-	}
-
-int
-ns8250_bus_attach(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_attach(struct uart_softc *sc)
 {
-	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
+	struct lpc_ns8250_softc *lpc_ns8250 = (struct lpc_ns8250_softc*)sc;
 	struct uart_bas *bas;
 	unsigned int ivar;
-#ifdef FDT
-	phandle_t node;
-	pcell_t cell;
-#endif
-
-	ns8250->busy_detect = 0;
-
-#ifdef FDT
-	/* 
-	 * Check whether uart requires to read USR reg when IIR_BUSY and 
-	 * has broken txfifo. 
-	 */
-	node = ofw_bus_get_node(sc->sc_dev);
-	if ((OF_getprop(node, "busy-detect", &cell, sizeof(cell))) > 0)
-		ns8250->busy_detect = 1;
-	if ((OF_getprop(node, "broken-txfifo", &cell, sizeof(cell))) > 0)
-		broken_txfifo = 1;
-#endif
 
 	bas = &sc->sc_bas;
 
-	ns8250->mcr = uart_getreg(bas, REG_MCR);
-	ns8250->fcr = FCR_ENABLE;
+	lpc_ns8250->mcr = uart_getreg(bas, REG_MCR);
+	lpc_ns8250->fcr = FCR_ENABLE | FCR_DMA;
 	if (!resource_int_value("uart", device_get_unit(sc->sc_dev), "flags",
 	    &ivar)) {
 		if (UART_FLAGS_FCR_RX_LOW(ivar)) 
-			ns8250->fcr |= FCR_RX_LOW;
+			lpc_ns8250->fcr |= FCR_RX_LOW;
 		else if (UART_FLAGS_FCR_RX_MEDL(ivar)) 
-			ns8250->fcr |= FCR_RX_MEDL;
+			lpc_ns8250->fcr |= FCR_RX_MEDL;
 		else if (UART_FLAGS_FCR_RX_HIGH(ivar)) 
-			ns8250->fcr |= FCR_RX_HIGH;
+			lpc_ns8250->fcr |= FCR_RX_HIGH;
 		else
-			ns8250->fcr |= FCR_RX_MEDH;
+			lpc_ns8250->fcr |= FCR_RX_MEDH;
 	} else 
-		ns8250->fcr |= FCR_RX_MEDH;
+		lpc_ns8250->fcr |= FCR_RX_HIGH;
 	
 	/* Get IER mask */
 	ivar = 0xf0;
 	resource_int_value("uart", device_get_unit(sc->sc_dev), "ier_mask",
 	    &ivar);
-	ns8250->ier_mask = (uint8_t)(ivar & 0xff);
+	lpc_ns8250->ier_mask = (uint8_t)(ivar & 0xff);
 	
 	/* Get IER RX interrupt bits */
 	ivar = IER_EMSC | IER_ERLS | IER_ERXRDY;
 	resource_int_value("uart", device_get_unit(sc->sc_dev), "ier_rxbits",
 	    &ivar);
-	ns8250->ier_rxbits = (uint8_t)(ivar & 0xff);
+	lpc_ns8250->ier_rxbits = (uint8_t)(ivar & 0xff);
 	
-	uart_setreg(bas, REG_FCR, ns8250->fcr);
+	uart_setreg(bas, REG_FCR, lpc_ns8250->fcr);
 	uart_barrier(bas);
-	ns8250_bus_flush(sc, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
+	lpc_ns8250_bus_flush(sc, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
 
-	if (ns8250->mcr & MCR_DTR)
+	if (lpc_ns8250->mcr & MCR_DTR)
 		sc->sc_hwsig |= SER_DTR;
-	if (ns8250->mcr & MCR_RTS)
+	if (lpc_ns8250->mcr & MCR_RTS)
 		sc->sc_hwsig |= SER_RTS;
-	ns8250_bus_getsig(sc);
+	lpc_ns8250_bus_getsig(sc);
 
-	ns8250_clrint(bas);
-	ns8250->ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
-	ns8250->ier |= ns8250->ier_rxbits;
-	uart_setreg(bas, REG_IER, ns8250->ier);
+	lpc_ns8250_clrint(bas);
+	lpc_ns8250->ier = uart_getreg(bas, REG_IER) & lpc_ns8250->ier_mask;
+	lpc_ns8250->ier |= lpc_ns8250->ier_rxbits;
+	uart_setreg(bas, REG_IER, lpc_ns8250->ier);
 	uart_barrier(bas);
-
-	/*
-	 * Timing of the H/W access was changed with r253161 of uart_core.c
-	 * It has been observed that an ITE IT8513E would signal a break
-	 * condition with pretty much every character it received, unless
-	 * it had enough time to settle between ns8250_bus_attach() and
-	 * ns8250_bus_ipend() -- which it accidentally had before r253161.
-	 * It's not understood why the UART chip behaves this way and it
-	 * could very well be that the DELAY make the H/W work in the same
-	 * accidental manner as before. More analysis is warranted, but
-	 * at least now we fixed a known regression.
-	 */
-	DELAY(200);
+	
 	return (0);
 }
 
-int
-ns8250_bus_detach(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_detach(struct uart_softc *sc)
 {
-	struct ns8250_softc *ns8250;
+	struct lpc_ns8250_softc *lpc_ns8250;
 	struct uart_bas *bas;
 	u_char ier;
 
-	ns8250 = (struct ns8250_softc *)sc;
+	lpc_ns8250 = (struct lpc_ns8250_softc *)sc;
 	bas = &sc->sc_bas;
-	ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
+	ier = uart_getreg(bas, REG_IER) & lpc_ns8250->ier_mask;
 	uart_setreg(bas, REG_IER, ier);
 	uart_barrier(bas);
-	ns8250_clrint(bas);
+	lpc_ns8250_clrint(bas);
 	return (0);
 }
 
-int
-ns8250_bus_flush(struct uart_softc *sc, int what)
+static int
+lpc_ns8250_bus_flush(struct uart_softc *sc, int what)
 {
-	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
+	struct lpc_ns8250_softc *lpc_ns8250 = (struct lpc_ns8250_softc*)sc;
 	struct uart_bas *bas;
 	int error;
 
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
 	if (sc->sc_rxfifosz > 1) {
-		ns8250_flush(bas, what);
-		uart_setreg(bas, REG_FCR, ns8250->fcr);
+		lpc_ns8250_flush(bas, what);
+		uart_setreg(bas, REG_FCR, lpc_ns8250->fcr);
 		uart_barrier(bas);
 		error = 0;
 	} else
-		error = ns8250_drain(bas, what);
+		error = lpc_ns8250_drain(bas, what);
 	uart_unlock(sc->sc_hwmtx);
 	return (error);
 }
 
-int
-ns8250_bus_getsig(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_getsig(struct uart_softc *sc)
 {
-	uint32_t old, sig;
+	uint32_t new, old, sig;
 	uint8_t msr;
 
-	/*
-	 * The delta bits are reputed to be broken on some hardware, so use
-	 * software delta detection by default.  Use the hardware delta bits
-	 * when capturing PPS pulses which are too narrow for software detection
-	 * to see the edges.  Hardware delta for RI doesn't work like the
-	 * others, so always use software for it.  Other threads may be changing
-	 * other (non-MSR) bits in sc_hwsig, so loop until it can succesfully
-	 * update without other changes happening.  Note that the SIGCHGxx()
-	 * macros carefully preserve the delta bits when we have to loop several
-	 * times and a signal transitions between iterations.
-	 */
 	do {
 		old = sc->sc_hwsig;
 		sig = old;
 		uart_lock(sc->sc_hwmtx);
 		msr = uart_getreg(&sc->sc_bas, REG_MSR);
 		uart_unlock(sc->sc_hwmtx);
-		if (sc->sc_pps_mode & UART_PPS_NARROW_PULSE) {
-			SIGCHGHW(sig, msr, DSR);
-			SIGCHGHW(sig, msr, CTS);
-			SIGCHGHW(sig, msr, DCD);
-		} else {
-			SIGCHGSW(sig, msr, DSR);
-			SIGCHGSW(sig, msr, CTS);
-			SIGCHGSW(sig, msr, DCD);
-		}
-		SIGCHGSW(sig, msr, RI);
-	} while (!atomic_cmpset_32(&sc->sc_hwsig, old, sig & ~SER_MASK_DELTA));
+		SIGCHG(msr & MSR_DSR, sig, SER_DSR, SER_DDSR);
+		SIGCHG(msr & MSR_CTS, sig, SER_CTS, SER_DCTS);
+		SIGCHG(msr & MSR_DCD, sig, SER_DCD, SER_DDCD);
+		SIGCHG(msr & MSR_RI,  sig, SER_RI,  SER_DRI);
+		new = sig & ~SER_MASK_DELTA;
+	} while (!atomic_cmpset_32(&sc->sc_hwsig, old, new));
 	return (sig);
 }
 
-int
-ns8250_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
+static int
+lpc_ns8250_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 {
 	struct uart_bas *bas;
 	int baudrate, divisor, error;
@@ -659,24 +630,18 @@ ns8250_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 	return (error);
 }
 
-int
-ns8250_bus_ipend(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_ipend(struct uart_softc *sc)
 {
 	struct uart_bas *bas;
-	struct ns8250_softc *ns8250;
+	struct lpc_ns8250_softc *lpc_ns8250;
 	int ipend;
 	uint8_t iir, lsr;
 
-	ns8250 = (struct ns8250_softc *)sc;
+	lpc_ns8250 = (struct lpc_ns8250_softc *)sc;
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
 	iir = uart_getreg(bas, REG_IIR);
-
-	if (ns8250->busy_detect && (iir & IIR_BUSY) == IIR_BUSY) {
-		(void)uart_getreg(bas, DW_REG_USR);
-		uart_unlock(sc->sc_hwmtx);
-		return (0);
-	}
 	if (iir & IIR_NOPEND) {
 		uart_unlock(sc->sc_hwmtx);
 		return (0);
@@ -693,77 +658,53 @@ ns8250_bus_ipend(struct uart_softc *sc)
 	} else {
 		if (iir & IIR_TXRDY) {
 			ipend |= SER_INT_TXIDLE;
-			uart_setreg(bas, REG_IER, ns8250->ier);
+			uart_setreg(bas, REG_IER, lpc_ns8250->ier);
 		} else
 			ipend |= SER_INT_SIGCHG;
 	}
 	if (ipend == 0)
-		ns8250_clrint(bas);
+		lpc_ns8250_clrint(bas);
 	uart_unlock(sc->sc_hwmtx);
 	return (ipend);
 }
 
-int
-ns8250_bus_param(struct uart_softc *sc, int baudrate, int databits,
+static int
+lpc_ns8250_bus_param(struct uart_softc *sc, int baudrate, int databits,
     int stopbits, int parity)
 {
-	struct ns8250_softc *ns8250;
 	struct uart_bas *bas;
-	int error, limit;
+	int error;
 
-	ns8250 = (struct ns8250_softc*)sc;
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
-	/*
-	 * When using DW UART with BUSY detection it is necessary to wait
-	 * until all serial transfers are finished before manipulating the
-	 * line control. LCR will not be affected when UART is busy.
-	 */
-	if (ns8250->busy_detect != 0) {
-		/*
-		 * Pick an arbitrary high limit to avoid getting stuck in
-		 * an infinite loop in case when the hardware is broken.
-		 */
-		limit = 10 * 1024;
-		while (((uart_getreg(bas, DW_REG_USR) & USR_BUSY) != 0) &&
-		    --limit)
-			DELAY(4);
-
-		if (limit <= 0) {
-			/* UART appears to be stuck */
-			uart_unlock(sc->sc_hwmtx);
-			return (EIO);
-		}
-	}
-
-	error = ns8250_param(bas, baudrate, databits, stopbits, parity);
+	error = lpc_ns8250_param(bas, baudrate, databits, stopbits, parity);
 	uart_unlock(sc->sc_hwmtx);
 	return (error);
 }
 
-int
-ns8250_bus_probe(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_probe(struct uart_softc *sc)
 {
-	struct ns8250_softc *ns8250;
+	struct lpc_ns8250_softc *lpc_ns8250;
 	struct uart_bas *bas;
 	int count, delay, error, limit;
 	uint8_t lsr, mcr, ier;
 
-	ns8250 = (struct ns8250_softc *)sc;
+	lpc_ns8250 = (struct lpc_ns8250_softc *)sc;
 	bas = &sc->sc_bas;
 
-	error = ns8250_probe(bas);
+	error = lpc_ns8250_probe(bas);
 	if (error)
 		return (error);
 
 	mcr = MCR_IE;
 	if (sc->sc_sysdev == NULL) {
-		/* By using ns8250_init() we also set DTR and RTS. */
-		ns8250_init(bas, 115200, 8, 1, UART_PARITY_NONE);
+		/* By using lpc_ns8250_init() we also set DTR and RTS. */
+		lpc_ns8250_init(bas, 115200, 8, 1, UART_PARITY_NONE);
 	} else
 		mcr |= MCR_DTR | MCR_RTS;
 
-	error = ns8250_drain(bas, UART_DRAIN_TRANSMITTER);
+	error = lpc_ns8250_drain(bas, UART_DRAIN_TRANSMITTER);
 	if (error)
 		return (error);
 
@@ -799,15 +740,15 @@ ns8250_bus_probe(struct uart_softc *sc)
 	uart_barrier(bas);
 
 	count = 0;
-	delay = ns8250_delay(bas);
+	delay = lpc_ns8250_delay(bas);
 
 	/* We have FIFOs. Drain the transmitter and receiver. */
-	error = ns8250_drain(bas, UART_DRAIN_RECEIVER|UART_DRAIN_TRANSMITTER);
+	error = lpc_ns8250_drain(bas, UART_DRAIN_RECEIVER|UART_DRAIN_TRANSMITTER);
 	if (error) {
 		uart_setreg(bas, REG_MCR, mcr);
 		uart_setreg(bas, REG_FCR, 0);
 		uart_barrier(bas);
-		goto describe;
+		goto done;
 	}
 
 	/*
@@ -832,13 +773,13 @@ ns8250_bus_probe(struct uart_softc *sc)
 		    --limit)
 			DELAY(delay);
 		if (limit == 0) {
-			ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
+			ier = uart_getreg(bas, REG_IER) & lpc_ns8250->ier_mask;
 			uart_setreg(bas, REG_IER, ier);
 			uart_setreg(bas, REG_MCR, mcr);
 			uart_setreg(bas, REG_FCR, 0);
 			uart_barrier(bas);
 			count = 0;
-			goto describe;
+			goto done;
 		}
 	} while ((lsr & LSR_OE) == 0 && count < 130);
 	count--;
@@ -846,26 +787,11 @@ ns8250_bus_probe(struct uart_softc *sc)
 	uart_setreg(bas, REG_MCR, mcr);
 
 	/* Reset FIFOs. */
-	ns8250_flush(bas, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
+	lpc_ns8250_flush(bas, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
 
- describe:
-	if (count >= 14 && count <= 16) {
-		sc->sc_rxfifosz = 16;
-		device_set_desc(sc->sc_dev, "16550 or compatible");
-	} else if (count >= 28 && count <= 32) {
-		sc->sc_rxfifosz = 32;
-		device_set_desc(sc->sc_dev, "16650 or compatible");
-	} else if (count >= 56 && count <= 64) {
-		sc->sc_rxfifosz = 64;
-		device_set_desc(sc->sc_dev, "16750 or compatible");
-	} else if (count >= 112 && count <= 128) {
-		sc->sc_rxfifosz = 128;
-		device_set_desc(sc->sc_dev, "16950 or compatible");
-	} else {
-		sc->sc_rxfifosz = 16;
-		device_set_desc(sc->sc_dev,
-		    "Non-standard ns8250 class UART with FIFOs");
-	}
+done:
+	sc->sc_rxfifosz = 64;
+	device_set_desc(sc->sc_dev, "LPC32x0 UART with FIFOs");
 
 	/*
 	 * Force the Tx FIFO size to 16 bytes for now. We don't program the
@@ -887,12 +813,11 @@ ns8250_bus_probe(struct uart_softc *sc)
 		sc->sc_hwoflow = 1;
 	}
 #endif
-
 	return (0);
 }
 
-int
-ns8250_bus_receive(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_receive(struct uart_softc *sc)
 {
 	struct uart_bas *bas;
 	int xc;
@@ -924,10 +849,10 @@ ns8250_bus_receive(struct uart_softc *sc)
  	return (0);
 }
 
-int
-ns8250_bus_setsig(struct uart_softc *sc, int sig)
+static int
+lpc_ns8250_bus_setsig(struct uart_softc *sc, int sig)
 {
-	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
+	struct lpc_ns8250_softc *lpc_ns8250 = (struct lpc_ns8250_softc*)sc;
 	struct uart_bas *bas;
 	uint32_t new, old;
 
@@ -936,28 +861,30 @@ ns8250_bus_setsig(struct uart_softc *sc, int sig)
 		old = sc->sc_hwsig;
 		new = old;
 		if (sig & SER_DDTR) {
-			new = (new & ~SER_DTR) | (sig & (SER_DTR | SER_DDTR));
+			SIGCHG(sig & SER_DTR, new, SER_DTR,
+			    SER_DDTR);
 		}
 		if (sig & SER_DRTS) {
-			new = (new & ~SER_RTS) | (sig & (SER_RTS | SER_DRTS));
+			SIGCHG(sig & SER_RTS, new, SER_RTS,
+			    SER_DRTS);
 		}
 	} while (!atomic_cmpset_32(&sc->sc_hwsig, old, new));
 	uart_lock(sc->sc_hwmtx);
-	ns8250->mcr &= ~(MCR_DTR|MCR_RTS);
+	lpc_ns8250->mcr &= ~(MCR_DTR|MCR_RTS);
 	if (new & SER_DTR)
-		ns8250->mcr |= MCR_DTR;
+		lpc_ns8250->mcr |= MCR_DTR;
 	if (new & SER_RTS)
-		ns8250->mcr |= MCR_RTS;
-	uart_setreg(bas, REG_MCR, ns8250->mcr);
+		lpc_ns8250->mcr |= MCR_RTS;
+	uart_setreg(bas, REG_MCR, lpc_ns8250->mcr);
 	uart_barrier(bas);
 	uart_unlock(sc->sc_hwmtx);
 	return (0);
 }
 
-int
-ns8250_bus_transmit(struct uart_softc *sc)
+static int
+lpc_ns8250_bus_transmit(struct uart_softc *sc)
 {
-	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
+	struct lpc_ns8250_softc *lpc_ns8250 = (struct lpc_ns8250_softc*)sc;
 	struct uart_bas *bas;
 	int i;
 
@@ -965,24 +892,19 @@ ns8250_bus_transmit(struct uart_softc *sc)
 	uart_lock(sc->sc_hwmtx);
 	while ((uart_getreg(bas, REG_LSR) & LSR_THRE) == 0)
 		;
-	uart_setreg(bas, REG_IER, ns8250->ier | IER_ETXRDY);
+	uart_setreg(bas, REG_IER, lpc_ns8250->ier | IER_ETXRDY);
 	uart_barrier(bas);
 	for (i = 0; i < sc->sc_txdatasz; i++) {
 		uart_setreg(bas, REG_DATA, sc->sc_txbuf[i]);
 		uart_barrier(bas);
 	}
-	if (broken_txfifo)
-		ns8250_drain(bas, UART_DRAIN_TRANSMITTER);
-	else
-		sc->sc_txbusy = 1;
+	sc->sc_txbusy = 1;
 	uart_unlock(sc->sc_hwmtx);
-	if (broken_txfifo)
-		uart_sched_softih(sc, SER_INT_TXIDLE);
 	return (0);
 }
 
 void
-ns8250_bus_grab(struct uart_softc *sc)
+lpc_ns8250_bus_grab(struct uart_softc *sc)
 {
 	struct uart_bas *bas = &sc->sc_bas;
 
@@ -998,16 +920,16 @@ ns8250_bus_grab(struct uart_softc *sc)
 }
 
 void
-ns8250_bus_ungrab(struct uart_softc *sc)
+lpc_ns8250_bus_ungrab(struct uart_softc *sc)
 {
-	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
+	struct lpc_ns8250_softc *lpc_ns8250 = (struct lpc_ns8250_softc*)sc;
 	struct uart_bas *bas = &sc->sc_bas;
 
 	/*
 	 * Restore previous interrupt mask
 	 */
 	uart_lock(sc->sc_hwmtx);
-	uart_setreg(bas, REG_IER, ns8250->ier);
+	uart_setreg(bas, REG_IER, lpc_ns8250->ier);
 	uart_barrier(bas);
 	uart_unlock(sc->sc_hwmtx);
 }

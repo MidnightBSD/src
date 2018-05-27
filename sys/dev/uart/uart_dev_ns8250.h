@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2004 Marcel Moolenaar
+ * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,72 +23,41 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/sys/dev/uart/uart_dev_ns8250.h 262649 2014-03-01 04:16:54Z imp $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dbg.c 158950 2006-05-26 11:54:32Z phk $");
+#ifndef _DEV_UART_DEV_NS8250_H_
+#define _DEV_UART_DEV_NS8250_H_
 
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/bus.h>
-#include <sys/kernel.h>
-#include <machine/bus.h>
+/*
+ * High-level UART interface.
+ */
+struct ns8250_softc {
+	struct uart_softc base;
+	uint8_t		fcr;
+	uint8_t		ier;
+	uint8_t		mcr;
+	
+	uint8_t		ier_mask;
+	uint8_t		ier_rxbits;
+	uint8_t		busy_detect;
+};
 
-#include <gdb/gdb.h>
+extern struct uart_ops uart_ns8250_ops;
 
-#include <dev/uart/uart.h>
-#include <dev/uart/uart_cpu.h>
+int ns8250_bus_attach(struct uart_softc *);
+int ns8250_bus_detach(struct uart_softc *);
+int ns8250_bus_flush(struct uart_softc *, int);
+int ns8250_bus_getsig(struct uart_softc *);
+int ns8250_bus_ioctl(struct uart_softc *, int, intptr_t);
+int ns8250_bus_ipend(struct uart_softc *);
+int ns8250_bus_param(struct uart_softc *, int, int, int, int);
+int ns8250_bus_probe(struct uart_softc *);
+int ns8250_bus_receive(struct uart_softc *);
+int ns8250_bus_setsig(struct uart_softc *, int);
+int ns8250_bus_transmit(struct uart_softc *);
+void ns8250_bus_grab(struct uart_softc *);
+void ns8250_bus_ungrab(struct uart_softc *);
 
-static gdb_probe_f uart_dbg_probe;
-static gdb_init_f uart_dbg_init;
-static gdb_term_f uart_dbg_term;
-static gdb_getc_f uart_dbg_getc;
-static gdb_putc_f uart_dbg_putc;
-
-GDB_DBGPORT(uart, uart_dbg_probe, uart_dbg_init, uart_dbg_term,
-    uart_dbg_getc, uart_dbg_putc);
-
-static struct uart_devinfo uart_dbgport;
-
-static int
-uart_dbg_probe(void)
-{
-
-	if (uart_cpu_getdev(UART_DEV_DBGPORT, &uart_dbgport))
-		return (-1);
-
-	if (uart_probe(&uart_dbgport))
-		return (-1);
-
-	return (0);
-}
-
-static void
-uart_dbg_init(void)
-{
-
-	uart_dbgport.type = UART_DEV_DBGPORT;
-	uart_add_sysdev(&uart_dbgport);
-	uart_init(&uart_dbgport);
-}
-
-static void
-uart_dbg_term(void)
-{
-
-	uart_term(&uart_dbgport);
-}
-
-static void
-uart_dbg_putc(int c)
-{
-
-	uart_putc(&uart_dbgport, c);
-}
-
-static int
-uart_dbg_getc(void)
-{
-
-	return (uart_poll(&uart_dbgport));
-}
+#endif /* _DEV_UART_DEV_NS8250_H_ */

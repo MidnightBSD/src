@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_kbd_sun.c 224126 2011-07-17 08:19:19Z ed $");
 
 #include "opt_compat.h"
 #include "opt_kbd.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  *
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_acpi.c 315417 2017-03-16 15:43:32Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,6 +65,7 @@ static struct isa_pnp_id acpi_ns8250_ids[] = {
 	{0x1005d041, "Generic IRDA-compatible device"},	/* PNP0510 */
 	{0x1105d041, "Generic IRDA-compatible device"},	/* PNP0511 */
 	{0x04f0235c, "Wacom Tablet PC Screen"},		/* WACF004 */
+	{0x0ef0235c, "Wacom Tablet PC Screen 00e"},	/* WACF00e */
 	{0xe502aa1a, "Wacom Tablet at FuS Lifebook T"},	/* FUJ02E5 */
 	{0}
 };

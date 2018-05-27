@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2004 Marcel Moolenaar
+ * Copyright (c) 2015 	Ian Lepore
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,72 +23,25 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/sys/dev/uart/uart_ppstypes.h 294229 2016-01-17 18:18:01Z ian $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dbg.c 158950 2006-05-26 11:54:32Z phk $");
+#ifndef _DEV_UART_PPSTYPES_H_
+#define _DEV_UART_PPSTYPES_H_
 
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/bus.h>
-#include <sys/kernel.h>
-#include <machine/bus.h>
+/*
+ * These constants are shared by several drivers including uart and usb_serial.
+ */
 
-#include <gdb/gdb.h>
+#define	UART_PPS_SIGNAL_MASK	0x0f
+#define	UART_PPS_OPTION_MASK	0xf0
 
-#include <dev/uart/uart.h>
-#include <dev/uart/uart_cpu.h>
+#define	UART_PPS_DISABLED	0x00
+#define	UART_PPS_CTS		0x01
+#define	UART_PPS_DCD		0x02
 
-static gdb_probe_f uart_dbg_probe;
-static gdb_init_f uart_dbg_init;
-static gdb_term_f uart_dbg_term;
-static gdb_getc_f uart_dbg_getc;
-static gdb_putc_f uart_dbg_putc;
+#define	UART_PPS_INVERT_PULSE	0x10
+#define	UART_PPS_NARROW_PULSE	0x20
 
-GDB_DBGPORT(uart, uart_dbg_probe, uart_dbg_init, uart_dbg_term,
-    uart_dbg_getc, uart_dbg_putc);
-
-static struct uart_devinfo uart_dbgport;
-
-static int
-uart_dbg_probe(void)
-{
-
-	if (uart_cpu_getdev(UART_DEV_DBGPORT, &uart_dbgport))
-		return (-1);
-
-	if (uart_probe(&uart_dbgport))
-		return (-1);
-
-	return (0);
-}
-
-static void
-uart_dbg_init(void)
-{
-
-	uart_dbgport.type = UART_DEV_DBGPORT;
-	uart_add_sysdev(&uart_dbgport);
-	uart_init(&uart_dbgport);
-}
-
-static void
-uart_dbg_term(void)
-{
-
-	uart_term(&uart_dbgport);
-}
-
-static void
-uart_dbg_putc(int c)
-{
-
-	uart_putc(&uart_dbgport, c);
-}
-
-static int
-uart_dbg_getc(void)
-{
-
-	return (uart_poll(&uart_dbgport));
-}
+#endif /* _DEV_UART_PPSTYPES_H_ */

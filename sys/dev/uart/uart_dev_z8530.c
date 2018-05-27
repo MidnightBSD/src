@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_z8530.c 262649 2014-03-01 04:16:54Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -281,6 +282,8 @@ static int z8530_bus_probe(struct uart_softc *);
 static int z8530_bus_receive(struct uart_softc *);
 static int z8530_bus_setsig(struct uart_softc *, int);
 static int z8530_bus_transmit(struct uart_softc *);
+static void z8530_bus_grab(struct uart_softc *);
+static void z8530_bus_ungrab(struct uart_softc *);
 
 static kobj_method_t z8530_methods[] = {
 	KOBJMETHOD(uart_attach,		z8530_bus_attach),
@@ -294,6 +297,8 @@ static kobj_method_t z8530_methods[] = {
 	KOBJMETHOD(uart_receive,	z8530_bus_receive),
 	KOBJMETHOD(uart_setsig,		z8530_bus_setsig),
 	KOBJMETHOD(uart_transmit,	z8530_bus_transmit),
+	KOBJMETHOD(uart_grab,		z8530_bus_grab),
+	KOBJMETHOD(uart_ungrab,		z8530_bus_ungrab),
 	{ 0, 0 }
 };
 
@@ -331,9 +336,6 @@ z8530_bus_attach(struct uart_softc *sc)
 		z8530->tpc &= ~(TPC_DTR|TPC_RTS);
 	}
 	z8530->txidle = 1;	/* Report SER_INT_TXIDLE. */
-
-	sc->sc_rxfifosz = 3;
-	sc->sc_txfifosz = 1;
 
 	(void)z8530_bus_getsig(sc);
 
@@ -515,6 +517,9 @@ z8530_bus_probe(struct uart_softc *sc)
 	if (error)
 		return (error);
 
+	sc->sc_rxfifosz = 3;
+	sc->sc_txfifosz = 1;
+
 	ch = sc->sc_bas.chan - 1 + 'A';
 
 	snprintf(buf, sizeof(buf), "z8530, channel %c", ch);
@@ -620,4 +625,28 @@ z8530_bus_transmit(struct uart_softc *sc)
 	z8530->txidle = 1;	/* Report SER_INT_TXIDLE again. */
 	uart_unlock(sc->sc_hwmtx);
 	return (0);
+}
+
+static void
+z8530_bus_grab(struct uart_softc *sc)
+{
+	struct uart_bas *bas;
+
+	bas = &sc->sc_bas;
+	uart_lock(sc->sc_hwmtx);
+	uart_setmreg(bas, WR_IDT, IDT_XIE | IDT_TIE);
+	uart_barrier(bas);
+	uart_unlock(sc->sc_hwmtx);
+}
+
+static void
+z8530_bus_ungrab(struct uart_softc *sc)
+{
+	struct uart_bas *bas;
+
+	bas = &sc->sc_bas;
+	uart_lock(sc->sc_hwmtx);
+	uart_setmreg(bas, WR_IDT, IDT_XIE | IDT_TIE | IDT_RIA);
+	uart_barrier(bas);
+	uart_unlock(sc->sc_hwmtx);
 }

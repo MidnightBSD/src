@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar.  All rights reserved.
  * Copyright (c) 2002 JF Hay.  All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_puc.c 158124 2006-04-28 21:21:53Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
