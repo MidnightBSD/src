@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_sunlabel.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_sunlabel.c,v 1.46 2005/11/30 22:15:00 sobomax Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/geom_sunlabel.c 223921 2011-07-11 05:22:31Z ae $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

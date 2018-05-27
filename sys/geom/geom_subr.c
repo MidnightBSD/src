@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.91.2.6 2009/05/29 19:37:17 lulf Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/geom_subr.c 332096 2018-04-06 12:23:59Z avg $");
 
 #include "opt_ddb.h"
 
@@ -68,9 +69,11 @@ static struct g_tailq_head geoms = TAILQ_HEAD_INITIALIZER(geoms);
 char *g_wait_event, *g_wait_up, *g_wait_down, *g_wait_sim;
 
 struct g_hh00 {
-	struct g_class	*mp;
-	int		error;
-	int		post;
+	struct g_class		*mp;
+	struct g_provider	*pp;
+	off_t			size;
+	int			error;
+	int			post;
 };
 
 /*
@@ -269,7 +272,7 @@ g_retaste_event(void *arg, int flag)
 	g_topology_assert();
 	if (flag == EV_CANCEL)  /* XXX: can't happen ? */
 		return;
-	if (g_shutdown)
+	if (g_shutdown || g_notaste)
 		return;
 
 	hh = arg;
@@ -360,6 +363,7 @@ g_new_geomf(struct g_class *mp, const char *fmt, ...)
 	gp->access = mp->access;
 	gp->orphan = mp->orphan;
 	gp->ioctl = mp->ioctl;
+	gp->resize = mp->resize;
 	return (gp);
 }
 
@@ -537,6 +541,8 @@ g_new_provider_event(void *arg, int flag)
 		    cp->geom->attrchanged != NULL)
 			cp->geom->attrchanged(cp, "GEOM::media");
 	}
+	if (g_notaste)
+		return;
 	LIST_FOREACH(mp, &g_classes, class) {
 		if (mp->taste == NULL)
 			continue;
@@ -597,6 +603,78 @@ g_error_provider(struct g_provider *pp, int error)
 	pp->error = error;
 }
 
+static void
+g_resize_provider_event(void *arg, int flag)
+{
+	struct g_hh00 *hh;
+	struct g_class *mp;
+	struct g_geom *gp;
+	struct g_provider *pp;
+	struct g_consumer *cp, *cp2;
+	off_t size;
+
+	g_topology_assert();
+	if (g_shutdown)
+		return;
+
+	hh = arg;
+	pp = hh->pp;
+	size = hh->size;
+	g_free(hh);
+
+	G_VALID_PROVIDER(pp);
+	g_trace(G_T_TOPOLOGY, "g_resize_provider_event(%p)", pp);
+
+	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
+		gp = cp->geom;
+		if (gp->resize == NULL && size < pp->mediasize) {
+			cp->flags |= G_CF_ORPHAN;
+			cp->geom->orphan(cp);
+		}
+	}
+
+	pp->mediasize = size;
+	
+	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
+		gp = cp->geom;
+		if (gp->resize != NULL)
+			gp->resize(cp);
+	}
+
+	/*
+	 * After resizing, the previously invalid GEOM class metadata
+	 * might become valid.  This means we should retaste.
+	 */
+	LIST_FOREACH(mp, &g_classes, class) {
+		if (mp->taste == NULL)
+			continue;
+		LIST_FOREACH(cp, &pp->consumers, consumers)
+			if (cp->geom->class == mp &&
+			    (cp->flags & G_CF_ORPHAN) == 0)
+				break;
+		if (cp != NULL)
+			continue;
+		mp->taste(mp, pp, 0);
+		g_topology_assert();
+	}
+}
+
+void
+g_resize_provider(struct g_provider *pp, off_t size)
+{
+	struct g_hh00 *hh;
+
+	G_VALID_PROVIDER(pp);
+
+	if (size == pp->mediasize)
+		return;
+
+	hh = g_malloc(sizeof *hh, M_WAITOK | M_ZERO);
+	hh->pp = pp;
+	hh->size = size;
+	g_post_event(g_resize_provider_event, hh, M_WAITOK, NULL);
+}
+
 #ifndef	_PATH_DEV
 #define	_PATH_DEV	"/dev/"
 #endif
@@ -606,21 +684,27 @@ g_provider_by_name(char const *arg)
 {
 	struct g_class *cp;
 	struct g_geom *gp;
-	struct g_provider *pp;
+	struct g_provider *pp, *wpp;
 
 	if (strncmp(arg, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
 		arg += sizeof(_PATH_DEV) - 1;
 
+	wpp = NULL;
 	LIST_FOREACH(cp, &g_classes, class) {
 		LIST_FOREACH(gp, &cp->geom, geom) {
 			LIST_FOREACH(pp, &gp->provider, provider) {
-				if (!strcmp(arg, pp->name))
+				if (strcmp(arg, pp->name) != 0)
+					continue;
+				if ((gp->flags & G_GEOM_WITHER) == 0 &&
+				    (pp->flags & G_PF_WITHER) == 0)
 					return (pp);
+				else
+					wpp = pp;
 			}
 		}
 	}
 
-	return (NULL);
+	return (wpp);
 }
 
 void
@@ -776,7 +860,11 @@ int
 g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 {
 	struct g_provider *pp;
-	int pr,pw,pe;
+	struct g_geom *gp;
+	int pw, pe;
+#ifdef INVARIANTS
+	int sr, sw, se;
+#endif
 	int error;
 
 	g_topology_assert();
@@ -784,6 +872,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	pp = cp->provider;
 	KASSERT(pp != NULL, ("access but not attached"));
 	G_VALID_PROVIDER(pp);
+	gp = pp->geom;
 
 	g_trace(G_T_ACCESS, "g_access(%p(%s), %d, %d, %d)",
 	    cp, pp->name, dcr, dcw, dce);
@@ -792,7 +881,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	KASSERT(cp->acw + dcw >= 0, ("access resulting in negative acw"));
 	KASSERT(cp->ace + dce >= 0, ("access resulting in negative ace"));
 	KASSERT(dcr != 0 || dcw != 0 || dce != 0, ("NOP access request"));
-	KASSERT(pp->geom->access != NULL, ("NULL geom->access"));
+	KASSERT(gp->access != NULL, ("NULL geom->access"));
 
 	/*
 	 * If our class cares about being spoiled, and we have been, we
@@ -804,10 +893,30 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 		return (ENXIO);
 
 	/*
+	 * A number of GEOM classes either need to perform an I/O on the first
+	 * open or to acquire a different subsystem's lock.  To do that they
+	 * may have to drop the topology lock.
+	 * Other GEOM classes perform special actions when opening a lower rank
+	 * geom for the first time.  As a result, more than one thread may
+	 * end up performing the special actions.
+	 * So, we prevent concurrent "first" opens by marking the consumer with
+	 * special flag.
+	 *
+	 * Note that if the geom's access method never drops the topology lock,
+	 * then we will never see G_GEOM_IN_ACCESS here.
+	 */
+	while ((gp->flags & G_GEOM_IN_ACCESS) != 0) {
+		g_trace(G_T_ACCESS,
+		    "%s: race on geom %s via provider %s and consumer of %s",
+		    __func__, gp->name, pp->name, cp->geom->name);
+		gp->flags |= G_GEOM_ACCESS_WAIT;
+		g_topology_sleep(gp, 0);
+	}
+
+	/*
 	 * Figure out what counts the provider would have had, if this
 	 * consumer had (r0w0e0) at this time.
 	 */
-	pr = pp->acr - cp->acr;
 	pw = pp->acw - cp->acw;
 	pe = pp->ace - cp->ace;
 
@@ -819,7 +928,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	    pp, pp->name);
 
 	/* If foot-shooting is enabled, any open on rank#1 is OK */
-	if ((g_debugflags & 16) && pp->geom->rank == 1)
+	if ((g_debugflags & 16) && gp->rank == 1)
 		;
 	/* If we try exclusive but already write: fail */
 	else if (dce > 0 && pw > 0)
@@ -833,10 +942,27 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 
 	/* Ok then... */
 
-	error = pp->geom->access(pp, dcr, dcw, dce);
+#ifdef INVARIANTS
+	sr = cp->acr;
+	sw = cp->acw;
+	se = cp->ace;
+#endif
+	gp->flags |= G_GEOM_IN_ACCESS;
+	error = gp->access(pp, dcr, dcw, dce);
 	KASSERT(dcr > 0 || dcw > 0 || dce > 0 || error == 0,
-	    ("Geom provider %s::%s failed closing ->access()",
-	    pp->geom->class->name, pp->name));
+	    ("Geom provider %s::%s dcr=%d dcw=%d dce=%d error=%d failed "
+	    "closing ->access()", gp->class->name, pp->name, dcr, dcw,
+	    dce, error));
+
+	g_topology_assert();
+	gp->flags &= ~G_GEOM_IN_ACCESS;
+	KASSERT(cp->acr == sr && cp->acw == sw && cp->ace == se,
+	    ("Access counts changed during geom->access"));
+	if ((gp->flags & G_GEOM_ACCESS_WAIT) != 0) {
+		gp->flags &= ~G_GEOM_ACCESS_WAIT;
+		wakeup(gp);
+	}
+
 	if (!error) {
 		/*
 		 * If we open first write, spoil any partner consumers.
@@ -846,7 +972,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 		if (pp->acw == 0 && dcw != 0)
 			g_spoil(pp, cp);
 		else if (pp->acw != 0 && pp->acw == -dcw && pp->error == 0 &&
-		    !(pp->geom->flags & G_GEOM_WITHER))
+		    !(gp->flags & G_GEOM_WITHER))
 			g_post_event(g_new_provider_event, pp, M_WAITOK, 
 			    pp, NULL);
 
@@ -868,6 +994,13 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 
 int
 g_handleattr_int(struct bio *bp, const char *attribute, int val)
+{
+
+	return (g_handleattr(bp, attribute, &val, sizeof val));
+}
+
+int
+g_handleattr_uint16_t(struct bio *bp, const char *attribute, uint16_t val)
 {
 
 	return (g_handleattr(bp, attribute, &val, sizeof val));
@@ -986,6 +1119,8 @@ g_spoil_event(void *arg, int flag)
 		return;
 	pp = arg;
 	G_VALID_PROVIDER(pp);
+	g_trace(G_T_TOPOLOGY, "%s %p(%s:%s:%s)", __func__, pp,
+	    pp->geom->class->name, pp->geom->name, pp->name);
 	for (cp = LIST_FIRST(&pp->consumers); cp != NULL; cp = cp2) {
 		cp2 = LIST_NEXT(cp, consumers);
 		if ((cp->flags & G_CF_SPOILED) == 0)
@@ -1183,7 +1318,6 @@ provider_flags_to_string(struct g_provider *pp, char *str, size_t size)
 		strlcpy(str, "NONE", size);
 		return (str);
 	}
-	ADDFLAG(pp, G_PF_CANDELETE, "G_PF_CANDELETE");
 	ADDFLAG(pp, G_PF_WITHER, "G_PF_WITHER");
 	ADDFLAG(pp, G_PF_ORPHAN, "G_PF_ORPHAN");
 	return (str);

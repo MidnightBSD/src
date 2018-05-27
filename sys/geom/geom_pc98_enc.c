@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 TAKAHASHI Yoshihiro
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/geom/geom_pc98_enc.c 145761 2005-05-01 09:44:50Z nyan $");
 
 #include <sys/types.h>
 #include <sys/diskpc98.h>

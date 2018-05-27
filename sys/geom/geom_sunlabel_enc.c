@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_sunlabel_enc.c,v 1.6 2005/03/30 09:33:09 joerg Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/geom_sunlabel_enc.c 144328 2005-03-30 09:33:10Z joerg $");
 
 #include <sys/types.h>
 #include <sys/endian.h>

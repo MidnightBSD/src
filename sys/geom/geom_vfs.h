@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_vfs.h,v 1.2 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_vfs.h,v 1.3 2005/02/10 12:10:35 phk Exp $
+ * $FreeBSD: stable/10/sys/geom/geom_vfs.h 183754 2008-10-10 21:23:50Z attilio $
  */
 
 #ifndef _GEOM_GEOM_VFS_H_

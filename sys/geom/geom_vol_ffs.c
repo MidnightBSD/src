@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_vol_ffs.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_vol_ffs.c,v 1.16 2005/11/30 22:15:00 sobomax Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/geom/geom_vol_ffs.c 219029 2011-02-25 10:24:35Z netchild $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
