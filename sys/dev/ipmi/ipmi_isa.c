@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ipmi/ipmi_isa.c 253813 2013-07-30 18:54:24Z sbruno $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,6 +78,14 @@ ipmi_isa_identify(driver_t *driver, device_t parent)
 static int
 ipmi_isa_probe(device_t dev)
 {
+
+	/*
+	 * Give other drivers precedence.  Unfortunately, this doesn't
+	 * work if we have an SMBIOS table that duplicates a PCI device
+	 * that's later on the bus than the PCI-ISA bridge.
+	 */
+	if (ipmi_attached)
+		return (ENXIO);
 
 	/* Skip any PNP devices. */
 	if (isa_get_logicalid(dev) != 0)
@@ -174,14 +183,6 @@ ipmi_isa_attach(device_t dev)
 	if (!ipmi_smbios_identify(&info) &&
 	    !ipmi_hint_identify(dev, &info))
 		return (ENXIO);
-
-	/*
-	 * Give other drivers precedence.  Unfortunately, this doesn't
-	 * work if we have an SMBIOS table that duplicates a PCI device
-	 * that's later on the bus than the PCI-ISA bridge.
-	 */
-	if (ipmi_attached)
-		return (EBUSY);
 
 	switch (info.iface_type) {
 	case KCS_MODE:

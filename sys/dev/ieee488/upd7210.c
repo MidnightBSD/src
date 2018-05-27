@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp <phk@FreeBSD.org>
  * Copyright (c) 2010 Joerg Wunsch <joerg@FreeBSD.org>
@@ -24,12 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * High-level driver for µPD7210 based GPIB cards.
+ * High-level driver for ÂµPD7210 based GPIB cards.
  *
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ieee488/upd7210.c 230134 2012-01-15 13:23:43Z uqs $");
 
 #  define	GPIB_DEBUG
 #  undef	GPIB_DEBUG
@@ -252,7 +253,7 @@ gpib_l_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 		bus_write_1(u->reg_res[0], cmdr, 0x04); /* GO */
 		bus_write_1(u->reg_res[0], imr3, 0x04); /* NEF IE */
 	} else {
-		/* µPD7210/NAT7210, or TNT4882 in non-FIFO mode */
+		/* ÂµPD7210/NAT7210, or TNT4882 in non-FIFO mode */
 		upd7210_wr(u, IMR1, 0x01); /* data in interrupt enable */
 	}
 	return (0);

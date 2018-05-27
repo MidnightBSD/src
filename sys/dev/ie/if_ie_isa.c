@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd
  * All rights reserved.
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ie/if_ie_isa.c 241066 2012-09-30 09:21:10Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -875,6 +876,7 @@ ie_modevent (mod, what, arg)
 		devclass_get_devices(ie_devclass, &devs, &count);
 		for (i = 0; i < count; i++)
 			device_delete_child(device_get_parent(devs[i]), devs[i]);
+		free(devs, M_TEMP);
 		break;
 	default:
 		break;

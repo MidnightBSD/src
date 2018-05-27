@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp <phk@FreeBSD.org>
  * Copyright (c) 2010 Joerg Wunsch <joerg@FreeBSD.org>
@@ -24,15 +25,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ieee488/upd7210.h 230134 2012-01-15 13:23:43Z uqs $
  *
- * Locating an actual µPD7210 data book has proven quite impossible for me.
- * There are a fair number of newer chips which are supersets of the µPD7210
+ * Locating an actual ÂµPD7210 data book has proven quite impossible for me.
+ * There are a fair number of newer chips which are supersets of the ÂµPD7210
  * but they are particular eager to comprehensively mark what the extensions
  * are and what is in the base set.  Some even give the registers and their
  * bits new names.
  *
- * The following information is based on a description of the µPD7210 found
+ * The following information is based on a description of the ÂµPD7210 found
  * in an old manual for a VME board which used the chip.
  */
 

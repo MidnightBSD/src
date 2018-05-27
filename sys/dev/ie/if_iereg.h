@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ie/if_iereg.h 112790 2003-03-29 13:36:41Z mdodd $
  * definitions for AT&T StarLAN 10 etc...
  */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * All rights reserved.
@@ -26,7 +27,7 @@
  * This file defines the ABI between the userland gpib library and the
  * kernel.  This file should not be used anywhere else.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ieee488/ibfoo_int.h 141768 2005-02-12 21:07:09Z phk $
  */
 
 #include <sys/ioccom.h>

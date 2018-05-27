@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Adaptec Inc.
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ips/ips_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>

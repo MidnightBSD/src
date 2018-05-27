@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Jonathan Lemon
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ida/ida_pci.c 281826 2015-04-21 11:27:50Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -236,23 +237,14 @@ ida_pci_attach(device_t dev)
 	struct ida_board *board = ida_pci_match(dev);
 	u_int32_t id = pci_get_devid(dev);
 	struct ida_softc *ida;
-	u_int command;
 	int error, rid;
-
-	command = pci_read_config(dev, PCIR_COMMAND, 1);
-
-	/*
-	 * it appears that this board only does MEMIO access.
-	 */
-	if ((command & PCIM_CMD_MEMEN) == 0) {
-	        device_printf(dev, "Only memory mapped I/O is supported\n");
-		return (ENXIO);
-	}
 
 	ida = (struct ida_softc *)device_get_softc(dev);
 	ida->dev = dev;
 	ida->cmd = *board->accessor;
 	ida->flags = board->flags;
+	mtx_init(&ida->lock, "ida", NULL, MTX_DEF);
+	callout_init_mtx(&ida->ch, &ida->lock, 0);
 
 	ida->regs_res_type = SYS_RES_MEMORY;
 	ida->regs_res_id = IDA_PCI_MEMADDR;
@@ -274,8 +266,8 @@ ida_pci_attach(device_t dev)
 		/* highaddr	*/ BUS_SPACE_MAXADDR,
 		/* filter	*/ NULL,
 		/* filterarg	*/ NULL,
-		/* maxsize	*/ MAXBSIZE,
-		/* nsegments	*/ IDA_NSEG,
+		/* maxsize	*/ BUS_SPACE_MAXSIZE_32BIT,
+		/* nsegments	*/ BUS_SPACE_UNRESTRICTED,
 		/* maxsegsize	*/ BUS_SPACE_MAXSIZE_32BIT,
 		/* flags	*/ BUS_DMA_ALLOCNOW,
 		/* lockfunc	*/ NULL,
@@ -295,7 +287,7 @@ ida_pci_attach(device_t dev)
 	        ida_free(ida);
 	        return (ENOMEM);
 	}
-	error = bus_setup_intr(dev, ida->irq, INTR_TYPE_BIO | INTR_ENTROPY,
+	error = bus_setup_intr(dev, ida->irq, INTR_TYPE_BIO | INTR_ENTROPY | INTR_MPSAFE,
 	    NULL, ida_intr, ida, &ida->ih);
 	if (error) {
 		device_printf(dev, "can't setup interrupt\n");
@@ -308,8 +300,6 @@ ida_pci_attach(device_t dev)
 	        ida_free(ida);
 	        return (error);
 	}
-	ida_attach(ida);
-	ida->flags |= IDA_ATTACHED;
 
 	return (0);
 }

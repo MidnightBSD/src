@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ie/if_ie507.h 112734 2003-03-28 06:27:08Z mdodd $
  * Definitions for 3C507
  */
 

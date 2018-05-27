@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Written by: David Jeffery
  * Copyright (c) 2002 Adaptec Inc.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ips/ips.c 249595 2013-04-17 21:21:27Z hiren $");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
@@ -578,7 +579,7 @@ static int ips_copperhead_queue_init(ips_softc_t *sc)
 {
 	int error;
 	bus_dma_tag_t dmatag;
-	bus_dmamap_t dmamap = NULL;
+	bus_dmamap_t dmamap;
        	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
 				/* alignemnt */	1,
 				/* boundary  */	0,
@@ -595,7 +596,7 @@ static int ips_copperhead_queue_init(ips_softc_t *sc)
 				&dmatag) != 0) {
                 device_printf(sc->dev, "can't alloc dma tag for statue queue\n");
 		error = ENOMEM;
-		goto exit;
+		return error;
         }
 	if(bus_dmamem_alloc(dmatag, (void *)&(sc->copper_queue), 
 	   		    BUS_DMA_NOWAIT, &dmamap)){
@@ -623,7 +624,8 @@ static int ips_copperhead_queue_init(ips_softc_t *sc)
 	
 	return 0;
 exit:
-	bus_dmamem_free(dmatag, sc->copper_queue, dmamap);
+	if (sc->copper_queue != NULL)
+		bus_dmamem_free(dmatag, sc->copper_queue, dmamap);
 	bus_dma_tag_destroy(dmatag);
 	return error;
 }

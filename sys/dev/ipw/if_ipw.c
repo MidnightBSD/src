@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/ipw/if_ipw.c 262007 2014-02-17 01:36:53Z kevlo $	*/
 
 /*-
  * Copyright (c) 2004-2006
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ipw/if_ipw.c 262007 2014-02-17 01:36:53Z kevlo $");
 
 /*-
  * Intel(R) PRO/Wireless 2100 MiniPCI driver
@@ -1604,7 +1605,7 @@ ipw_tx_start(struct ifnet *ifp, struct mbuf *m0, struct ieee80211_node *ni)
 
 	wh = mtod(m0, struct ieee80211_frame *);
 
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
@@ -1628,7 +1629,7 @@ ipw_tx_start(struct ifnet *ifp, struct mbuf *m0, struct ieee80211_node *ni)
 
 	shdr->hdr.type = htole32(IPW_HDR_TYPE_SEND);
 	shdr->hdr.subtype = 0;
-	shdr->hdr.encrypted = (wh->i_fc[1] & IEEE80211_FC1_WEP) ? 1 : 0;
+	shdr->hdr.encrypted = (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) ? 1 : 0;
 	shdr->hdr.encrypt = 0;
 	shdr->hdr.keyidx = 0;
 	shdr->hdr.keysz = 0;

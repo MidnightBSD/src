@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp <phk@FreeBSD.org>
  * Copyright (c) 2010 Joerg Wunsch <joerg@FreeBSD.org>
@@ -24,12 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * High-level driver for µPD7210 based GPIB cards.
+ * High-level driver for ÂµPD7210 based GPIB cards.
  *
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ieee488/ibfoo.c 230134 2012-01-15 13:23:43Z uqs $");
 
 #  define	IBDEBUG
 #  undef	IBDEBUG

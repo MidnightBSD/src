@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Written by: David Jeffery
  * Copyright (c) 2002 Adaptec Inc.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ips/ips_disk.c 198329 2009-10-21 15:04:50Z brueffer $");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
