@@ -58373,6 +58373,14 @@ sys/dev/usb/controller/xhci.c -text
 sys/dev/usb/controller/xhci.h -text
 sys/dev/usb/controller/xhci_pci.c -text
 sys/dev/usb/controller/xhcireg.h -text
+sys/dev/usb/gadget/g_audio.c svneol=native#text/plain
+sys/dev/usb/gadget/g_audio.h svneol=native#text/plain
+sys/dev/usb/gadget/g_keyboard.c svneol=native#text/plain
+sys/dev/usb/gadget/g_keyboard.h svneol=native#text/plain
+sys/dev/usb/gadget/g_modem.c svneol=native#text/plain
+sys/dev/usb/gadget/g_modem.h svneol=native#text/plain
+sys/dev/usb/gadget/g_mouse.c svneol=native#text/plain
+sys/dev/usb/gadget/g_mouse.h svneol=native#text/plain
 sys/dev/usb/input/atp.c -text
 sys/dev/usb/input/uep.c -text
 sys/dev/usb/input/uhid.c -text
