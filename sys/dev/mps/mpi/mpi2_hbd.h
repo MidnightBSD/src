@@ -1,5 +1,7 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2011, 2012 LSI Corp.
+ * Copyright (c) 2009-2015 LSI Corp.
+ * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,13 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mps/mpi/mpi2_hbd.h 281564 2015-04-15 21:47:15Z slm $
  */
 
 /*
- *  Copyright (c) 2009-2012 LSI Corporation.
+ *  Copyright (c) 2009-2015 LSI Corporation.
+ *  Copyright (c) 2013-2015 Avago Technologies
  *
  *
  *           Name:  mpi2_hbd.h

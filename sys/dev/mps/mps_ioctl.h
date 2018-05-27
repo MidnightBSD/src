@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -27,12 +28,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD userland interface
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD userland interface
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mps/mps_ioctl.h 281564 2015-04-15 21:47:15Z slm $
  */
 /*-
- * Copyright (c) 2011, 2012 LSI Corp.
+ * Copyright (c) 2011-2015 LSI Corp.
+ * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,9 +58,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/mps/mps_ioctl.h 281564 2015-04-15 21:47:15Z slm $
  */
 
 #ifndef _MPS_IOCTL_H_

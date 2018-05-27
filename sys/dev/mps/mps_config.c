@@ -1,5 +1,7 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2011, 2012 LSI Corp.
+ * Copyright (c) 2011-2015 LSI Corp.
+ * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_config.c 322661 2017-08-18 15:38:08Z ken $");
 
 /* TODO Move headers to mpsvar */
 #include <sys/types.h>
@@ -70,7 +72,7 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
     Mpi2IOCPage8_t *config_page)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	MPI2_CONFIG_PAGE_IOC_8 *page = NULL;
 	int error = 0;
@@ -93,12 +95,16 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	request->Header.PageVersion = MPI2_IOCPAGE8_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for header completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -107,7 +113,10 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: header read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -144,12 +153,17 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		goto out;
 	}
 	cm->cm_data = page;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for page completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -158,7 +172,10 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: page read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -186,7 +203,7 @@ int
 mps_config_get_man_pg10(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	pMpi2ManufacturingPagePS_t page = NULL;
 	uint32_t *pPS_info;
@@ -211,8 +228,14 @@ mps_config_get_man_pg10(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply)
 	request->Header.PageVersion = MPI2_MANUFACTURING10_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+
+	/*
+	 * This page must be polled because the IOC isn't ready yet when this
+	 * page is needed.
+	 */  
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
@@ -262,8 +285,14 @@ mps_config_get_man_pg10(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply)
 		goto out;
 	}
 	cm->cm_data = page;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+
+	/*
+	 * This page must be polled because the IOC isn't ready yet when this
+	 * page is needed.
+	 */  
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
@@ -475,7 +504,8 @@ mps_wd_config_pages(struct mps_softc *sc)
 		 */
 		if (mps_config_get_raid_volume_pg0(sc, &mpi_reply,
 		    raid_vol_pg0, (u32)raid_vol_pg0->DevHandle)) {
-			if (mpi_reply.IOCStatus !=
+			if ((le16toh(mpi_reply.IOCStatus) &
+			    MPI2_IOCSTATUS_MASK) !=
 			    MPI2_IOCSTATUS_CONFIG_INVALID_PAGE) {
 				mps_dprint(sc, MPS_FAULT,
 				    "Multiple RAID Volume Page0! Direct Drive "
@@ -534,7 +564,7 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
     Mpi2DriverMappingPage0_t *config_page, u16 sz)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	Mpi2DriverMappingPage0_t *page = NULL;
 	int error = 0;
@@ -561,12 +591,16 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	    MPI2_DPM_PGAD_ENTRY_COUNT_SHIFT;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for header completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -575,7 +609,10 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: header read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -615,12 +652,16 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		goto out;
 	}
 	cm->cm_data = page;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for page completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -629,7 +670,10 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: page read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -658,7 +702,7 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
     Mpi2DriverMappingPage0_t *config_page, u16 entry_idx)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	MPI2_CONFIG_PAGE_DRIVER_MAPPING_0 *page = NULL;	
 	int error = 0;
@@ -685,12 +729,16 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	request->PageAddress |= htole16(entry_idx);
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for header completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -699,7 +747,10 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: header read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -741,12 +792,16 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(config_page, page, MIN(cm->cm_length, 
 	    (sizeof(Mpi2DriverMappingPage0_t))));
 	cm->cm_data = page;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request to write page completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -755,7 +810,10 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: page written with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -784,7 +842,7 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
     *mpi_reply, Mpi2SasDevicePage0_t *config_page, u32 form, u16 handle)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	Mpi2SasDevicePage0_t *page = NULL;
 	int error = 0;
@@ -808,12 +866,16 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	request->Header.PageVersion = MPI2_SASDEVICE0_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for header completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -822,7 +884,10 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: header read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -862,12 +927,16 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	}
 	cm->cm_data = page;
 
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for page completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -876,7 +945,10 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: page read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -905,7 +977,7 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
     Mpi2BiosPage3_t *config_page)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	Mpi2BiosPage3_t *page = NULL;
 	int error = 0;
@@ -928,12 +1000,16 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	request->Header.PageVersion = MPI2_BIOSPAGE3_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for header completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -942,7 +1018,10 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: header read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -980,12 +1059,16 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	}
 	cm->cm_data = page;
 
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for page completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -994,7 +1077,10 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: page read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -1023,7 +1109,7 @@ mps_config_get_raid_volume_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
     *mpi_reply, Mpi2RaidVolPage0_t *config_page, u32 page_address)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	Mpi2RaidVolPage0_t *page = NULL;
 	int error = 0;
@@ -1046,8 +1132,14 @@ mps_config_get_raid_volume_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	request->Header.PageVersion = MPI2_RAIDVOLPAGE0_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+
+	/*
+	 * This page must be polled because the IOC isn't ready yet when this
+	 * page is needed.
+	 */  
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
@@ -1099,8 +1191,13 @@ mps_config_get_raid_volume_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	}
 	cm->cm_data = page;
 
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	/*
+	 * This page must be polled because the IOC isn't ready yet when this
+	 * page is needed.
+	 */  
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
@@ -1143,7 +1240,7 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
     *mpi_reply, Mpi2RaidVolPage1_t *config_page, u32 form, u16 handle)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	Mpi2RaidVolPage1_t *page = NULL;
 	int error = 0;
@@ -1166,12 +1263,16 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
 	request->Header.PageVersion = MPI2_RAIDVOLPAGE1_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for header completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1180,7 +1281,10 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: header read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -1219,12 +1323,16 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
 	}
 	cm->cm_data = page;
 
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
+		printf("%s: request for page completed with error %d",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1233,7 +1341,10 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
 	bcopy(reply, mpi_reply, sizeof(MPI2_CONFIG_REPLY));
 	if (ioc_status != MPI2_IOCSTATUS_SUCCESS) {
 		/* FIXME */
-		/* If the poll returns error then we need to do diag reset */ 
+		/*
+		 * If the request returns an error then we need to do a diag
+		 * reset
+		 */ 
 		printf("%s: page read with error; iocstatus = 0x%x\n",
 		    __func__, ioc_status);
 		error = ENXIO;
@@ -1288,7 +1399,7 @@ mps_config_get_raid_pd_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
     Mpi2RaidPhysDiskPage0_t *config_page, u32 page_address)
 {
 	MPI2_CONFIG_REQUEST *request;
-	MPI2_CONFIG_REPLY *reply;
+	MPI2_CONFIG_REPLY *reply = NULL;
 	struct mps_command *cm;
 	Mpi2RaidPhysDiskPage0_t *page = NULL;
 	int error = 0;
@@ -1311,8 +1422,14 @@ mps_config_get_raid_pd_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	request->Header.PageVersion = MPI2_RAIDPHYSDISKPAGE0_PAGEVERSION;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+
+	/*
+	 * This page must be polled because the IOC isn't ready yet when this
+	 * page is needed.
+	 */  
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
@@ -1364,8 +1481,13 @@ mps_config_get_raid_pd_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	}
 	cm->cm_data = page;
 
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
+	/*
+	 * This page must be polled because the IOC isn't ready yet when this
+	 * page is needed.
+	 */  
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_CONFIG_REPLY *)cm->cm_reply;
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
