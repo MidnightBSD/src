@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uipaq.c,v 1.4 2006/11/16 01:33:27 christos Exp $	*/
 /*	$OpenBSD: uipaq.c,v 1.1 2005/06/17 23:50:33 deraadt Exp $	*/
 
@@ -42,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/uipaq.c 240659 2012-09-18 16:28:49Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uipaq.c 239299 2012-08-15 15:42:57Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

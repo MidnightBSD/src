@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uftdireg.h,v 1.6 2002/07/11 21:14:28 augustss Exp $ */
-/*	$FreeBSD: stable/9/sys/dev/usb/serial/uftdi_reg.h 273888 2014-10-31 08:00:22Z hselasky $	*/
+/*	$FreeBSD: stable/10/sys/dev/usb/serial/uftdi_reg.h 287035 2015-08-23 16:17:00Z ian $	*/
 
 /*
  * Definitions for the FTDI USB Single Port Serial Converter -
@@ -31,7 +32,10 @@
 #define	FTDI_SIO_SET_LATENCY	9	/* Set the latency timer */
 #define	FTDI_SIO_GET_LATENCY	10	/* Read the latency timer */
 #define	FTDI_SIO_SET_BITMODE	11	/* Set the bit bang I/O mode */
-#define	FTDI_SIO_GET_BITMODE	12	/* Read pin states in bit bang mode */
+#define	FTDI_SIO_GET_BITMODE	12	/* Read pin states from any mode */
+#define	FTDI_SIO_READ_EEPROM	144	/* Read eeprom word */
+#define	FTDI_SIO_WRITE_EEPROM	145	/* Write eeprom word */
+#define	FTDI_SIO_ERASE_EEPROM	146	/* Erase entire eeprom */
 
 /* Port Identifier Table */
 #define	FTDI_PIT_DEFAULT 	0	/* SIOA */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Lev Serebryakov <lev@FreeBSD.org>.
  * All rights reserved.
@@ -38,7 +39,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/umcs.c 269721 2014-08-08 14:56:04Z joerg $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/umcs.c 269718 2014-08-08 14:48:26Z joerg $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

@@ -1,8 +1,9 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/ucycom.c 240659 2012-09-18 16:28:49Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/ucycom.c 239299 2012-08-15 15:42:57Z hselasky $");
 
 /*-
- * Copyright (c) 2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2004 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
