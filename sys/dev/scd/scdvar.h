@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/scd/scdvar.h 130585 2004-06-16 09:47:26Z phk $
  */
 
 struct scd_mbx {

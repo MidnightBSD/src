@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Aleksandr Rybalko
  * based on hard work
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/rt/if_rt.c 294689 2016-01-24 22:14:37Z ian $");
 
 #include "if_rtvar.h"
 #include "if_rtreg.h"
@@ -148,7 +149,7 @@ static int
 rt_probe(device_t dev)
 {
 	device_set_desc(dev, "Ralink RT305XF onChip Ethernet MAC");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 /*
@@ -176,20 +177,6 @@ macaddr_atoi(const char *str, uint8_t *mac)
 }
 
 #ifdef USE_GENERATED_MAC_ADDRESS
-static char *
-kernenv_next(char *cp)
-{
-
-	if (cp != NULL) {
-		while (*cp != 0)
-			cp++;
-		cp++;
-		if (*cp == 0)
-			cp = NULL;
-	}
-	return (cp);
-}
-
 /*
  * generate_mac(uin8_t *mac)
  * This is MAC address generator for cases when real device MAC address
@@ -208,14 +195,8 @@ generate_mac(uint8_t *mac)
 	uint32_t crc = 0xffffffff;
 
 	/* Generate CRC32 on kenv */
-	if (dynamic_kenv) {
-		for (cp = kenvp[0]; cp != NULL; cp = kenvp[++i]) {
-			crc = calculate_crc32c(crc, cp, strlen(cp) + 1);
-		}
-	} else {
-		for (cp = kern_envp; cp != NULL; cp = kernenv_next(cp)) {
-			crc = calculate_crc32c(crc, cp, strlen(cp) + 1);
-		}
+	for (cp = kenvp[0]; cp != NULL; cp = kenvp[++i]) {
+		crc = calculate_crc32c(crc, cp, strlen(cp) + 1);
 	}
 	crc = ~crc;
 
@@ -383,7 +364,6 @@ rt_attach(device_t dev)
 	ifp->if_init = rt_init;
 	ifp->if_ioctl = rt_ioctl;
 	ifp->if_start = rt_start;
-	ifp->if_mtu = ETHERMTU;
 #define	RT_TX_QLEN	256
 
 	IFQ_SET_MAXLEN(&ifp->if_snd, RT_TX_QLEN);
@@ -476,20 +456,16 @@ rt_ifmedia_upd(struct ifnet *ifp)
 	struct rt_softc *sc;
 #ifdef IF_RT_PHY_SUPPORT
 	struct mii_data *mii;
+	struct mii_softc *miisc;
 	int error = 0;
 
 	sc = ifp->if_softc;
 	RT_SOFTC_LOCK(sc);
 
 	mii = device_get_softc(sc->rt_miibus);
-	if (mii->mii_instance) {
-		struct mii_softc *miisc;
-		for (miisc = LIST_FIRST(&mii->mii_phys); miisc != NULL;
-				miisc = LIST_NEXT(miisc, mii_list))
-			mii_phy_reset(miisc);
-	}
-	if (mii)
-		error = mii_mediachg(mii);
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		PHY_RESET(miisc);
+	error = mii_mediachg(mii);
 	RT_SOFTC_UNLOCK(sc);
 
 	return (error);
@@ -2344,45 +2320,45 @@ rt_sysctl_attach(struct rt_softc *sc)
 	stats = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 	    "stats", CTLFLAG_RD, 0, "statistic");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "interrupts", CTLFLAG_RD, &sc->interrupts, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "interrupts", CTLFLAG_RD, &sc->interrupts,
 	    "all interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "tx_coherent_interrupts", CTLFLAG_RD, &sc->tx_coherent_interrupts,
-	    0, "Tx coherent interrupts");
+	    "Tx coherent interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "rx_coherent_interrupts", CTLFLAG_RD, &sc->rx_coherent_interrupts,
-	    0, "Rx coherent interrupts");
+	    "Rx coherent interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_interrupts", CTLFLAG_RD, &sc->rx_interrupts, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_interrupts", CTLFLAG_RD, &sc->rx_interrupts,
 	    "Rx interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_delay_interrupts", CTLFLAG_RD, &sc->rx_delay_interrupts, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_delay_interrupts", CTLFLAG_RD, &sc->rx_delay_interrupts,
 	    "Rx delay interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "TXQ3_interrupts", CTLFLAG_RD, &sc->tx_interrupts[3], 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "TXQ3_interrupts", CTLFLAG_RD, &sc->tx_interrupts[3],
 	    "Tx AC3 interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "TXQ2_interrupts", CTLFLAG_RD, &sc->tx_interrupts[2], 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "TXQ2_interrupts", CTLFLAG_RD, &sc->tx_interrupts[2],
 	    "Tx AC2 interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "TXQ1_interrupts", CTLFLAG_RD, &sc->tx_interrupts[1], 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "TXQ1_interrupts", CTLFLAG_RD, &sc->tx_interrupts[1],
 	    "Tx AC1 interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "TXQ0_interrupts", CTLFLAG_RD, &sc->tx_interrupts[0], 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "TXQ0_interrupts", CTLFLAG_RD, &sc->tx_interrupts[0],
 	    "Tx AC0 interrupts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "tx_delay_interrupts", CTLFLAG_RD, &sc->tx_delay_interrupts,
-	    0, "Tx delay interrupts");
+	    "Tx delay interrupts");
 
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ3_desc_queued", CTLFLAG_RD, &sc->tx_ring[3].desc_queued,
@@ -2416,93 +2392,96 @@ rt_sysctl_attach(struct rt_softc *sc)
 	    "TXQ0_data_queued", CTLFLAG_RD, &sc->tx_ring[0].data_queued,
 	    0, "Tx AC0 data queued");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ3_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[3],
-	    0, "Tx AC3 data queue full");
+	    "Tx AC3 data queue full");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ2_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[2],
-	    0, "Tx AC2 data queue full");
+	    "Tx AC2 data queue full");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ1_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[1],
-	    0, "Tx AC1 data queue full");
+	    "Tx AC1 data queue full");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ0_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[0],
-	    0, "Tx AC0 data queue full");
+	    "Tx AC0 data queue full");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "tx_watchdog_timeouts", CTLFLAG_RD, &sc->tx_watchdog_timeouts,
-	    0, "Tx watchdog timeouts");
+	    "Tx watchdog timeouts");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "tx_defrag_packets", CTLFLAG_RD, &sc->tx_defrag_packets, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "tx_defrag_packets", CTLFLAG_RD, &sc->tx_defrag_packets,
 	    "Tx defragmented packets");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "no_tx_desc_avail", CTLFLAG_RD, &sc->no_tx_desc_avail, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "no_tx_desc_avail", CTLFLAG_RD, &sc->no_tx_desc_avail,
 	    "no Tx descriptors available");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "rx_mbuf_alloc_errors", CTLFLAG_RD, &sc->rx_mbuf_alloc_errors,
-	    0, "Rx mbuf allocation errors");
+	    "Rx mbuf allocation errors");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "rx_mbuf_dmamap_errors", CTLFLAG_RD, &sc->rx_mbuf_dmamap_errors,
-	    0, "Rx mbuf DMA mapping errors");
+	    "Rx mbuf DMA mapping errors");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "tx_queue_0_not_empty", CTLFLAG_RD, &sc->tx_queue_not_empty[0],
-	    0, "Tx queue 0 not empty");
+	    "Tx queue 0 not empty");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "tx_queue_1_not_empty", CTLFLAG_RD, &sc->tx_queue_not_empty[1],
-	    0, "Tx queue 1 not empty");
+	    "Tx queue 1 not empty");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_packets", CTLFLAG_RD, &sc->rx_packets, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_packets", CTLFLAG_RD, &sc->rx_packets,
 	    "Rx packets");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_crc_errors", CTLFLAG_RD, &sc->rx_crc_err, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_crc_errors", CTLFLAG_RD, &sc->rx_crc_err,
 	    "Rx CRC errors");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_phy_errors", CTLFLAG_RD, &sc->rx_phy_err, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_phy_errors", CTLFLAG_RD, &sc->rx_phy_err,
 	    "Rx PHY errors");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_dup_packets", CTLFLAG_RD, &sc->rx_dup_packets, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_dup_packets", CTLFLAG_RD, &sc->rx_dup_packets,
 	    "Rx duplicate packets");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_fifo_overflows", CTLFLAG_RD, &sc->rx_fifo_overflows, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_fifo_overflows", CTLFLAG_RD, &sc->rx_fifo_overflows,
 	    "Rx FIFO overflows");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_bytes", CTLFLAG_RD, &sc->rx_bytes, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_bytes", CTLFLAG_RD, &sc->rx_bytes,
 	    "Rx bytes");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_long_err", CTLFLAG_RD, &sc->rx_long_err, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_long_err", CTLFLAG_RD, &sc->rx_long_err,
 	    "Rx too long frame errors");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "rx_short_err", CTLFLAG_RD, &sc->rx_short_err, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "rx_short_err", CTLFLAG_RD, &sc->rx_short_err,
 	    "Rx too short frame errors");
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "tx_bytes", CTLFLAG_RD, &sc->tx_bytes, 0,
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "tx_bytes", CTLFLAG_RD, &sc->tx_bytes,
 	    "Tx bytes");
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "tx_packets", CTLFLAG_RD, &sc->tx_packets, 0,
+
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "tx_packets", CTLFLAG_RD, &sc->tx_packets,
 	    "Tx packets");
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "tx_skip", CTLFLAG_RD, &sc->tx_skip, 0,
+
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "tx_skip", CTLFLAG_RD, &sc->tx_skip,
 	    "Tx skip count for GDMA ports");
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
-	    "tx_collision", CTLFLAG_RD, &sc->tx_collision, 0,
+
+	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
+	    "tx_collision", CTLFLAG_RD, &sc->tx_collision,
 	    "Tx collision count for GDMA ports");
 }
 

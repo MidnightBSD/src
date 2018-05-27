@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Mikael Hybsch
  * All rights reserved.
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/scd/scd.c 320923 2017-07-12 22:16:54Z jhb $");
 
 
 #undef	SCD_DEBUG
@@ -172,6 +173,8 @@ scd_attach(struct scd_softc *sc)
 	sc->scd_dev_t = make_dev(&scd_cdevsw, 8 * unit,
 		UID_ROOT, GID_OPERATOR, 0640, "scd%d", unit);
 	sc->scd_dev_t->si_drv1 = (void *)sc;
+	device_printf(sc->dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 
 	return (0);
 }

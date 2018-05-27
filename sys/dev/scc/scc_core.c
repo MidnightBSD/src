@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/scc/scc_core.c 253902 2013-08-02 23:31:51Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +47,7 @@ __MBSDID("$MidnightBSD$");
 #include "scc_if.h"
 
 devclass_t scc_devclass;
-char scc_driver_name[] = "scc";
+const char scc_driver_name[] = "scc";
 
 static MALLOC_DEFINE(M_SCC, "SCC", "SCC driver");
 

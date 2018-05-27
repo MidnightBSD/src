@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2011 Aleksandr Rybalko <ray@ddteam.net>
  * Copyright (c) 2009-2010 Alexander Egorenkov <egorenar@gmail.com>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/rt/if_rtvar.h 223927 2011-07-11 08:23:59Z ray $
  */
 
 #ifndef _IF_RTVAR_H_

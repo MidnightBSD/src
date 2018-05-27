@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/scc/scc_bfe.h 253902 2013-08-02 23:31:51Z marius $
  */
 
 #ifndef _DEV_SCC_BFE_H_
@@ -136,7 +137,7 @@ struct scc_softc {
 };
 
 extern devclass_t scc_devclass;
-extern char scc_driver_name[];
+extern const char scc_driver_name[];
 
 int scc_bfe_attach(device_t dev, u_int ipc);
 int scc_bfe_detach(device_t dev);

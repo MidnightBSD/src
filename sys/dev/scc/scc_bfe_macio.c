@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/scc/scc_bfe_macio.c 253900 2013-08-02 23:30:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -90,4 +91,4 @@ static driver_t scc_macio_driver = {
 	sizeof(struct scc_softc),
 };
 
-DRIVER_MODULE(scc, macio, scc_macio_driver, scc_devclass, 0, 0);
+DRIVER_MODULE(scc, macio, scc_macio_driver, scc_devclass, NULL, NULL);
