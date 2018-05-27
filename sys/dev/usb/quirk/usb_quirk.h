@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/quirk/usb_quirk.h 315250 2017-03-14 15:25:49Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/quirk/usb_quirk.h 315249 2017-03-14 15:21:41Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -54,7 +55,6 @@ enum {
 	UQ_MS_LEADING_BYTE,	/* mouse sends an unknown leading byte */
 	UQ_MS_REVZ,		/* mouse has Z-axis reversed */
 	UQ_NO_STRINGS,		/* string descriptors are broken */
-	UQ_OPEN_CLEARSTALL,	/* device needs clear endpoint stall */
 	UQ_POWER_CLAIM,		/* hub lies about power status */
 	UQ_SPUR_BUT_UP,		/* spurious mouse button up events */
 	UQ_SWAP_UNICODE,	/* has some Unicode strings swapped */

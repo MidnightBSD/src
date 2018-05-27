@@ -1,4 +1,5 @@
-/* $FreeBSD: stable/9/sys/dev/usb/quirk/usb_quirk.c 315250 2017-03-14 15:25:49Z hselasky $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/usb/quirk/usb_quirk.c 330014 2018-02-26 07:57:56Z hselasky $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -113,6 +114,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(CYBERPOWER, 1500CAVRLCD, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(CYPRESS, SILVERSHIELD, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(DELORME, EARTHMATE, 0x0000, 0xffff, UQ_HID_IGNORE),
+	USB_QUIRK(DREAMLINK, DL100B, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(ITUNERNET, USBLCD2X20, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(ITUNERNET, USBLCD4X20, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(LIEBERT, POWERSURE_PXT, 0x0000, 0xffff, UQ_HID_IGNORE),
@@ -135,6 +137,8 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(CORSAIR, K60, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 	/* Quirk for Corsair Vengeance K70 keyboard */
 	USB_QUIRK(CORSAIR, K70, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	/* Quirk for Corsair K70 RGB keyboard */
+	USB_QUIRK(CORSAIR, K70_RGB, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 	/* Quirk for Corsair STRAFE Gaming keyboard */
 	USB_QUIRK(CORSAIR, STRAFE, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 	/* umodem(4) device quirks */
@@ -332,7 +336,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE,
 	    UQ_MSC_NO_START_STOP),
 	USB_QUIRK(PROLIFIC, PL2506, 0x0000, 0xffff,
-	    UQ_MSC_NO_SYNC_CACHE),
+	    UQ_MSC_NO_SYNC_CACHE, UQ_MSC_NO_PREVENT_ALLOW),
 	USB_QUIRK_VP(USB_VENDOR_SAMSUNG_TECHWIN,
 	    USB_PRODUCT_SAMSUNG_TECHWIN_DIGIMAX_410, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
@@ -506,6 +510,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(ROLAND, SD20, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(ROLAND, SD80, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(ROLAND, UA700, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
+	USB_QUIRK(ROLAND, PCR300, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(EGO, M4U, 0x0000, 0xffff, UQ_SINGLE_CMD_MIDI),
 	USB_QUIRK(LOGILINK, U2M, 0x0000, 0xffff, UQ_SINGLE_CMD_MIDI),
 	USB_QUIRK(MEDELI, DD305, 0x0000, 0xffff, UQ_SINGLE_CMD_MIDI, UQ_MATCH_VENDOR_ONLY),
@@ -557,7 +562,6 @@ static const char *usb_quirk_str[USB_QUIRK_MAX] = {
 	[UQ_MS_LEADING_BYTE]	= "UQ_MS_LEADING_BYTE",
 	[UQ_MS_REVZ]		= "UQ_MS_REVZ",
 	[UQ_NO_STRINGS]		= "UQ_NO_STRINGS",
-	[UQ_OPEN_CLEARSTALL]	= "UQ_OPEN_CLEARSTALL",
 	[UQ_POWER_CLAIM]	= "UQ_POWER_CLAIM",
 	[UQ_SPUR_BUT_UP]	= "UQ_SPUR_BUT_UP",
 	[UQ_SWAP_UNICODE]	= "UQ_SWAP_UNICODE",
