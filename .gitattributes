@@ -57987,6 +57987,10 @@ sys/dev/scd/scdreg.h -text
 sys/dev/scd/scdvar.h -text
 sys/dev/sdhci/sdhci.c -text
 sys/dev/sdhci/sdhci.h -text
+sys/dev/sdhci/sdhci_acpi.c svneol=native#text/plain
+sys/dev/sdhci/sdhci_fdt.c svneol=native#text/plain
+sys/dev/sdhci/sdhci_if.m -text
+sys/dev/sdhci/sdhci_pci.c svneol=native#text/plain
 sys/dev/sec/sec.c -text
 sys/dev/sec/sec.h -text
 sys/dev/sf/if_sf.c -text
