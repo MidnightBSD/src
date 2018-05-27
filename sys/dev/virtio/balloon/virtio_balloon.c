@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
 /* Driver for VirtIO memory balloon devices. */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/virtio/balloon/virtio_balloon.c 292906 2015-12-30 08:15:43Z royger $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -334,7 +335,7 @@ vtballoon_inflate(struct vtballoon_softc *sc, int npages)
 
 		KASSERT(m->queue == PQ_NONE,
 		    ("%s: allocated page %p on queue", __func__, m));
-		TAILQ_INSERT_TAIL(&sc->vtballoon_pages, m, pageq);
+		TAILQ_INSERT_TAIL(&sc->vtballoon_pages, m, plinks.q);
 	}
 
 	if (i > 0)
@@ -362,8 +363,8 @@ vtballoon_deflate(struct vtballoon_softc *sc, int npages)
 		sc->vtballoon_page_frames[i] =
 		    VM_PAGE_TO_PHYS(m) >> VIRTIO_BALLOON_PFN_SHIFT;
 
-		TAILQ_REMOVE(&sc->vtballoon_pages, m, pageq);
-		TAILQ_INSERT_TAIL(&free_pages, m, pageq);
+		TAILQ_REMOVE(&sc->vtballoon_pages, m, plinks.q);
+		TAILQ_INSERT_TAIL(&free_pages, m, plinks.q);
 	}
 
 	if (i > 0) {
@@ -371,7 +372,7 @@ vtballoon_deflate(struct vtballoon_softc *sc, int npages)
 		vtballoon_send_page_frames(sc, vq, i);
 
 		while ((m = TAILQ_FIRST(&free_pages)) != NULL) {
-			TAILQ_REMOVE(&free_pages, m, pageq);
+			TAILQ_REMOVE(&free_pages, m, plinks.q);
 			vtballoon_free_page(sc, m);
 		}
 	}
@@ -438,8 +439,7 @@ vtballoon_alloc_page(struct vtballoon_softc *sc)
 {
 	vm_page_t m;
 
-	m = vm_page_alloc(NULL, 0, VM_ALLOC_NORMAL | VM_ALLOC_WIRED |
-	    VM_ALLOC_NOOBJ);
+	m = vm_page_alloc(NULL, 0, VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ);
 	if (m != NULL)
 		sc->vtballoon_current_npages++;
 
@@ -450,7 +450,6 @@ static void
 vtballoon_free_page(struct vtballoon_softc *sc, vm_page_t m)
 {
 
-	vm_page_unwire(m, 0);
 	vm_page_free(m);
 	sc->vtballoon_current_npages--;
 }

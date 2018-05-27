@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -25,8 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
+__FBSDID("$FreeBSD: stable/10/sys/dev/virtio/virtio.c 267312 2014-06-10 03:23:35Z bryanv $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,6 +41,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/rman.h>
 
 #include <dev/virtio/virtio.h>
+#include <dev/virtio/virtio_config.h>
 #include <dev/virtio/virtqueue.h>
 
 #include "virtio_bus_if.h"
@@ -148,7 +149,7 @@ virtio_describe(device_t dev, const char *msg,
 	if (n > 0)
 		sbuf_cat(&sb, ">");
 
-#if __MidnightBSD_version < 4016
+#if __FreeBSD_version < 900020
 	sbuf_finish(&sb);
 	if (sbuf_overflowed(&sb) == 0)
 #else

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
 /* Driver for the VirtIO PCI interface. */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/virtio/pci/virtio_pci.c 310080 2016-12-14 16:44:38Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -169,6 +170,9 @@ static void	vtpci_config_intr(void *);
 
 #define vtpci_setup_msi_interrupt vtpci_setup_legacy_interrupt
 
+#define VIRTIO_PCI_CONFIG(_sc) \
+    VIRTIO_PCI_CONFIG_OFF((((_sc)->vtpci_flags & VTPCI_FLAG_MSIX)) != 0)
+
 /*
  * I/O port read/write wrappers.
  */
@@ -272,10 +276,10 @@ vtpci_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	if (pci_find_extcap(dev, PCIY_MSI, NULL) != 0)
+	if (pci_find_cap(dev, PCIY_MSI, NULL) != 0)
 		sc->vtpci_flags |= VTPCI_FLAG_NO_MSI;
 
-	if (pci_find_extcap(dev, PCIY_MSIX, NULL) == 0) {
+	if (pci_find_cap(dev, PCIY_MSIX, NULL) == 0) {
 		rid = PCIR_BAR(1);
 		sc->vtpci_msix_res = bus_alloc_resource_any(dev,
 		    SYS_RES_MEMORY, &rid, RF_ACTIVE);
@@ -727,7 +731,7 @@ vtpci_describe_features(struct vtpci_softc *sc, const char *msg,
 	dev = sc->vtpci_dev;
 	child = sc->vtpci_child_dev;
 
-	if (device_is_attached(child) && bootverbose == 0)
+	if (device_is_attached(child) || bootverbose == 0)
 		return;
 
 	virtio_describe(dev, msg, features, sc->vtpci_child_feat_desc);
@@ -757,8 +761,10 @@ vtpci_probe_and_attach_child(struct vtpci_softc *sc)
 		vtpci_release_child_resources(sc);
 		/* Reset status for future attempt. */
 		vtpci_set_status(dev, VIRTIO_CONFIG_STATUS_ACK);
-	} else
+	} else {
 		vtpci_set_status(dev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
+		VIRTIO_ATTACH_COMPLETED(child);
+	}
 }
 
 static int
@@ -1082,7 +1088,8 @@ vtpci_set_host_msix_vectors(struct vtpci_softc *sc)
 		 * For shared MSIX, all the virtqueues share the first
 		 * interrupt.
 		 */
-		if ((sc->vtpci_flags & VTPCI_FLAG_SHARED_MSIX) == 0)
+		if (!sc->vtpci_vqs[idx].vtv_no_intr &&
+		    (sc->vtpci_flags & VTPCI_FLAG_SHARED_MSIX) == 0)
 			intr++;
 	}
 

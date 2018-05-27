@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/virtio/virtqueue.c 270270 2014-08-21 13:27:05Z bryanv $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -127,7 +128,7 @@ static uint16_t	vq_ring_enqueue_segments(struct virtqueue *,
 static int	vq_ring_use_indirect(struct virtqueue *, int);
 static void	vq_ring_enqueue_indirect(struct virtqueue *, void *,
 		    struct sglist *, int, int);
-static int 	vq_ring_enable_interrupt(struct virtqueue *, uint16_t);
+static int	vq_ring_enable_interrupt(struct virtqueue *, uint16_t);
 static int	vq_ring_must_notify_host(struct virtqueue *);
 static void	vq_ring_notify_host(struct virtqueue *);
 static void	vq_ring_free_chain(struct virtqueue *, uint16_t);
@@ -375,6 +376,13 @@ virtqueue_size(struct virtqueue *vq)
 }
 
 int
+virtqueue_nfree(struct virtqueue *vq)
+{
+
+	return (vq->vq_free_cnt);
+}
+
+int
 virtqueue_empty(struct virtqueue *vq)
 {
 
@@ -440,28 +448,38 @@ virtqueue_enable_intr(struct virtqueue *vq)
 }
 
 int
-virtqueue_postpone_intr(struct virtqueue *vq)
+virtqueue_postpone_intr(struct virtqueue *vq, vq_postpone_t hint)
 {
 	uint16_t ndesc, avail_idx;
 
-	/*
-	 * Request the next interrupt be postponed until at least half
-	 * of the available descriptors have been consumed.
-	 */
 	avail_idx = vq->vq_ring.avail->idx;
-	ndesc = (uint16_t)(avail_idx - vq->vq_used_cons_idx) / 2;
+	ndesc = (uint16_t)(avail_idx - vq->vq_used_cons_idx);
+
+	switch (hint) {
+	case VQ_POSTPONE_SHORT:
+		ndesc = ndesc / 4;
+		break;
+	case VQ_POSTPONE_LONG:
+		ndesc = (ndesc * 3) / 4;
+		break;
+	case VQ_POSTPONE_EMPTIED:
+		break;
+	}
 
 	return (vq_ring_enable_interrupt(vq, ndesc));
 }
 
+/*
+ * Note this is only considered a hint to the host.
+ */
 void
 virtqueue_disable_intr(struct virtqueue *vq)
 {
 
-	/*
-	 * Note this is only considered a hint to the host.
-	 */
-	if ((vq->vq_flags & VIRTQUEUE_FLAG_EVENT_IDX) == 0)
+	if (vq->vq_flags & VIRTQUEUE_FLAG_EVENT_IDX) {
+		vring_used_event(&vq->vq_ring) = vq->vq_used_cons_idx -
+		    vq->vq_nentries - 1;
+	} else
 		vq->vq_ring.avail->flags |= VRING_AVAIL_F_NO_INTERRUPT;
 }
 
@@ -531,7 +549,7 @@ virtqueue_dequeue(struct virtqueue *vq, uint32_t *len)
 	used_idx = vq->vq_used_cons_idx++ & (vq->vq_nentries - 1);
 	uep = &vq->vq_ring.used->ring[used_idx];
 
-	mb();
+	rmb();
 	desc_idx = (uint16_t) uep->id;
 	if (len != NULL)
 		*len = uep->len;
@@ -629,7 +647,7 @@ vq_ring_update_avail(struct virtqueue *vq, uint16_t desc_idx)
 	avail_idx = vq->vq_ring.avail->idx & (vq->vq_nentries - 1);
 	vq->vq_ring.avail->ring[avail_idx] = desc_idx;
 
-	mb();
+	wmb();
 	vq->vq_ring.avail->idx++;
 
 	/* Keep pending count until virtqueue_notify(). */

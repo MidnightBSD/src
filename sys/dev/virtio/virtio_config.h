@@ -26,38 +26,43 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/balloon/virtio_balloon.h 238072 2012-07-03 15:15:41Z obrien $
+ * $FreeBSD: stable/10/sys/dev/virtio/virtio_config.h 268010 2014-06-29 00:37:59Z bryanv $
  */
 
-#ifndef _VIRTIO_BALLOON_H
-#define _VIRTIO_BALLOON_H
+#ifndef _VIRTIO_CONFIG_H_
+#define _VIRTIO_CONFIG_H_
 
-/* Feature bits. */
-#define VIRTIO_BALLOON_F_MUST_TELL_HOST	0x1 /* Tell before reclaiming pages */
-#define VIRTIO_BALLOON_F_STATS_VQ	0x2 /* Memory stats virtqueue */
+/* Status byte for guest to report progress. */
+#define VIRTIO_CONFIG_STATUS_RESET	0x00
+#define VIRTIO_CONFIG_STATUS_ACK	0x01
+#define VIRTIO_CONFIG_STATUS_DRIVER	0x03
+#define VIRTIO_CONFIG_STATUS_DRIVER_OK	0x04
+#define VIRTIO_CONFIG_STATUS_FAILED	0x80
 
-/* Size of a PFN in the balloon interface. */
-#define VIRTIO_BALLOON_PFN_SHIFT 12
+/*
+ * Generate interrupt when the virtqueue ring is
+ * completely used, even if we've suppressed them.
+ */
+#define VIRTIO_F_NOTIFY_ON_EMPTY (1 << 24)
 
-struct virtio_balloon_config {
-	/* Number of pages host wants Guest to give up. */
-	uint32_t num_pages;
+/* Support for indirect buffer descriptors. */
+#define VIRTIO_RING_F_INDIRECT_DESC	(1 << 28)
 
-	/* Number of pages we've actually got in balloon. */
-	uint32_t actual;
-};
+/* Support to suppress interrupt until specific index is reached. */
+#define VIRTIO_RING_F_EVENT_IDX		(1 << 29)
 
-#define VIRTIO_BALLOON_S_SWAP_IN  0   /* Amount of memory swapped in */
-#define VIRTIO_BALLOON_S_SWAP_OUT 1   /* Amount of memory swapped out */
-#define VIRTIO_BALLOON_S_MAJFLT   2   /* Number of major faults */
-#define VIRTIO_BALLOON_S_MINFLT   3   /* Number of minor faults */
-#define VIRTIO_BALLOON_S_MEMFREE  4   /* Total amount of free memory */
-#define VIRTIO_BALLOON_S_MEMTOT   5   /* Total amount of memory */
-#define VIRTIO_BALLOON_S_NR       6
+/*
+ * The guest should never negotiate this feature; it
+ * is used to detect faulty drivers.
+ */
+#define VIRTIO_F_BAD_FEATURE (1 << 30)
 
-struct virtio_balloon_stat {
-	uint16_t tag;
-	uint64_t val;
-} __packed;
+/*
+ * Some VirtIO feature bits (currently bits 28 through 31) are
+ * reserved for the transport being used (eg. virtio_ring), the
+ * rest are per-device feature bits.
+ */
+#define VIRTIO_TRANSPORT_F_START	28
+#define VIRTIO_TRANSPORT_F_END		32
 
-#endif /* _VIRTIO_BALLOON_H */
+#endif /* _VIRTIO_CONFIG_H_ */

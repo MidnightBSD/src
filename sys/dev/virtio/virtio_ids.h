@@ -26,38 +26,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/balloon/virtio_balloon.h 238072 2012-07-03 15:15:41Z obrien $
+ * $FreeBSD: stable/10/sys/dev/virtio/virtio_ids.h 267312 2014-06-10 03:23:35Z bryanv $
  */
 
-#ifndef _VIRTIO_BALLOON_H
-#define _VIRTIO_BALLOON_H
+#ifndef _VIRTIO_IDS_H_
+#define _VIRTIO_IDS_H_
 
-/* Feature bits. */
-#define VIRTIO_BALLOON_F_MUST_TELL_HOST	0x1 /* Tell before reclaiming pages */
-#define VIRTIO_BALLOON_F_STATS_VQ	0x2 /* Memory stats virtqueue */
+/* VirtIO device IDs. */
+#define VIRTIO_ID_NETWORK	0x01
+#define VIRTIO_ID_BLOCK		0x02
+#define VIRTIO_ID_CONSOLE	0x03
+#define VIRTIO_ID_ENTROPY	0x04
+#define VIRTIO_ID_BALLOON	0x05
+#define VIRTIO_ID_IOMEMORY	0x06
+#define VIRTIO_ID_SCSI		0x08
+#define VIRTIO_ID_9P		0x09
 
-/* Size of a PFN in the balloon interface. */
-#define VIRTIO_BALLOON_PFN_SHIFT 12
-
-struct virtio_balloon_config {
-	/* Number of pages host wants Guest to give up. */
-	uint32_t num_pages;
-
-	/* Number of pages we've actually got in balloon. */
-	uint32_t actual;
-};
-
-#define VIRTIO_BALLOON_S_SWAP_IN  0   /* Amount of memory swapped in */
-#define VIRTIO_BALLOON_S_SWAP_OUT 1   /* Amount of memory swapped out */
-#define VIRTIO_BALLOON_S_MAJFLT   2   /* Number of major faults */
-#define VIRTIO_BALLOON_S_MINFLT   3   /* Number of minor faults */
-#define VIRTIO_BALLOON_S_MEMFREE  4   /* Total amount of free memory */
-#define VIRTIO_BALLOON_S_MEMTOT   5   /* Total amount of memory */
-#define VIRTIO_BALLOON_S_NR       6
-
-struct virtio_balloon_stat {
-	uint16_t tag;
-	uint64_t val;
-} __packed;
-
-#endif /* _VIRTIO_BALLOON_H */
+#endif /* _VIRTIO_IDS_H_ */

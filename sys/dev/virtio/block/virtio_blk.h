@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/virtio/block/virtio_blk.h 280243 2015-03-19 09:53:00Z mav $
  */
 
 #ifndef _VIRTIO_BLK_H
@@ -67,7 +68,7 @@ struct virtio_blk_config {
 		uint8_t physical_block_exp;
 		uint8_t alignment_offset;
 		uint16_t min_io_size;
-		uint16_t opt_io_size;
+		uint32_t opt_io_size;
 	} topology;
 
 	/* Writeback mode (if VIRTIO_BLK_F_CONFIG_WCE) */
