@@ -55654,6 +55654,8 @@ sys/contrib/rdma/rdma_iwcm.c -text
 sys/contrib/rdma/rdma_user_cm.h -text
 sys/contrib/rdma/rdma_verbs.c -text
 sys/contrib/rdma/types.h -text
+sys/contrib/v4l/videodev.h svneol=native#text/plain
+sys/contrib/v4l/videodev2.h svneol=native#text/plain
 sys/contrib/x86emu/x86emu.c -text
 sys/contrib/x86emu/x86emu.h -text
 sys/contrib/x86emu/x86emu_regs.h -text
