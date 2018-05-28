@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003,2004
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -31,8 +32,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons.c,v 1.2 2013-01-08 03:53:17 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: dcons.c,v 1.65 2003/10/24 03:24:55 simokawa Exp $
+ * $FreeBSD: stable/10/sys/dev/dcons/dcons.c 169972 2007-05-25 05:00:39Z simokawa $
  */
 
 #include <sys/param.h>

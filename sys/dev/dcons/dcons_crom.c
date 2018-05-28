@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -31,8 +32,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons_crom.c,v 1.2 2013-01-08 03:53:17 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: dcons_crom.c,v 1.8 2003/10/23 15:47:21 simokawa Exp $
+ * $FreeBSD: stable/10/sys/dev/dcons/dcons_crom.c 186876 2009-01-07 21:25:44Z marius $
  */
 
 #include <sys/param.h>

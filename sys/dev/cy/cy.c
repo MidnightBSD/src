@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * cyclades cyclom-y serial driver
  *	Andrew Herbert <andrew@werple.apana.org.au>, 17 August 1993
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cy/cy.c 166901 2007-02-23 12:19:07Z piso $");
 
 #include "opt_compat.h"
 

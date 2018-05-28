@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  *   based on work by Slawa Olhovchenkov
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/digi/digi_isa.c 246128 2013-01-30 18:01:20Z sbz $");
 
 /*-
  * TODO:
@@ -462,7 +463,8 @@ static device_method_t digi_isa_methods[] = {
 	DEVMETHOD(device_attach, digi_isa_attach),
 	DEVMETHOD(device_detach, digi_detach),
 	DEVMETHOD(device_shutdown, digi_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t digi_isa_drv = {

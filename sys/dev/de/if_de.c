@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_de.c,v 1.86 1999/06/01 19:17:59 thorpej Exp $	*/
 /*-
  * Copyright (c) 1994-1997 Matt Thomas (matt@3am-software.com)
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/de/if_de.c 332291 2018-04-08 17:03:39Z brooks $");
 
 #define	TULIP_HDR_DATA
 
@@ -1567,7 +1568,7 @@ tulip_null_media_poll(tulip_softc_t * const sc, tulip_mediapoll_event_t event)
 #endif
 }
 
-__inline static void
+static inline void
 tulip_21140_mediainit(tulip_softc_t * const sc, tulip_media_info_t * const mip,
     tulip_media_t const media, unsigned gpdata, unsigned cmdmode)
 {
@@ -4263,18 +4264,6 @@ tulip_ifioctl(struct ifnet * ifp, u_long cmd, caddr_t data)
 	    break;
 	}
 
-#ifdef SIOCGADDRROM
-	case SIOCGADDRROM: {
-	    error = copyout(sc->tulip_rombuf, ifr->ifr_data, sizeof(sc->tulip_rombuf));
-	    break;
-	}
-#endif
-#ifdef SIOCGCHIPID
-	case SIOCGCHIPID: {
-	    ifr->ifr_metric = (int) sc->tulip_chipid;
-	    break;
-	}
-#endif
 	default: {
 	    error = ether_ioctl(ifp, cmd, data);
 	    break;

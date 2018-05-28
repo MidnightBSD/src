@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, David Greenman
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cy/cy_pci.c 166901 2007-02-23 12:19:07Z piso $");
 
 #include "opt_cy_pci_fastintr.h"
 

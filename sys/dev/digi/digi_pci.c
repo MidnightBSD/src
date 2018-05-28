@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  *   based on work by Slawa Olhovchenkov
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/digi/digi_pci.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 
@@ -219,7 +220,8 @@ static device_method_t digi_pci_methods[] = {
 	DEVMETHOD(device_attach, digi_pci_attach),
 	DEVMETHOD(device_detach, digi_detach),
 	DEVMETHOD(device_shutdown, digi_shutdown),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t digi_pci_drv = {

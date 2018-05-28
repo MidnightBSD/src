@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -59,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/dpms/dpms.c 200584 2009-12-15 19:58:23Z jkim $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

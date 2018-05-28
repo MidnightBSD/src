@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  *   based on work by Slawa Olhovchenkov
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/digi/digi.c 320923 2017-07-12 22:16:54Z jhb $
  */
 
 /*-
@@ -1458,6 +1459,8 @@ digi_attach(struct digi_softc *sc)
 	digi_loadmoduledata(sc);
 	digi_init(sc);
 	digi_freemoduledata(sc);
+	device_printf(dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 
 	return (0);
 }

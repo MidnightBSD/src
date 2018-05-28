@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: dc21040reg.h,v 1.15 1998/05/22 18:50:59 matt Exp $	*/
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/de/dc21040reg.h 97748 2002-06-02 20:05:59Z schweikh $ */
 
 /*-
  * Copyright (c) 1994, 1995, 1996 Matt Thomas <matt@3am-software.com>

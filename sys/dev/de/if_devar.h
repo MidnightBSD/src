@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_devar.h,v 1.32 1999/04/01 14:55:25 tsubai Exp $	*/
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/de/if_devar.h 332291 2018-04-08 17:03:39Z brooks $ */
 
 /*-
  * Copyright (c) 1994-1997 Matt Thomas (matt@3am-software.com)
@@ -873,11 +874,6 @@ static const struct {
 	_TULIP_MAP_SYNC(ri, di, BUS_DMASYNC_PREWRITE)
 #define	TULIP_TXMAP_POSTSYNC(ri, di)					\
 	_TULIP_MAP_SYNC(ri, di, BUS_DMASYNC_POSTWRITE)
-
-#ifdef notyet
-#define	SIOCGADDRROM		_IOW('i', 240, struct ifreq)	/* get 128 bytes of ROM */
-#define	SIOCGCHIPID		_IOWR('i', 241, struct ifreq)	/* get chipid */
-#endif
 
 #if defined(TULIP_HDR_DATA)
 static tulip_softc_t	*tulips[TULIP_MAX_DEVICES];

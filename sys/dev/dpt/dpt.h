@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *       Copyright (c) 1997 by Simon Shapiro
  *       All Rights Reserved
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/dpt/dpt.h 249348 2013-04-10 23:20:09Z sbruno $
  */
 
 /*
@@ -1109,16 +1110,6 @@ typedef struct dpt_softc {
 #define DPT_HA_SHUTDOWN_ACTIVE  0x00000040
 #define DPT_HA_COMMAND_ACTIVE  	0x00000080
 #define DPT_HA_QUIET            0x00000100
-
-#ifdef DPT_LOST_IRQ
-#define DPT_LOST_IRQ_SET	0x10000000
-#define DPT_LOST_IRQ_ACTIVE	0x20000000
-#endif
-	
-#ifdef DPT_HANDLE_TIMEOUTS
-#define DPT_HA_TIMEOUTS_SET	0x40000000
-#define DPT_HA_TIMEOUTS_ACTIVE	0x80000000
-#endif
 
 	u_int8_t  primary;	/* true if primary */	
 
