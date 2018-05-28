@@ -56333,6 +56333,7 @@ sys/dev/cfe/cfe_ioctl.h -text
 sys/dev/cfe/cfe_resource.c -text
 sys/dev/cfi/cfi_bus_fdt.c -text
 sys/dev/cfi/cfi_bus_ixp4xx.c -text
+sys/dev/cfi/cfi_bus_nexus.c svneol=native#text/plain
 sys/dev/cfi/cfi_core.c -text
 sys/dev/cfi/cfi_dev.c -text
 sys/dev/cfi/cfi_disk.c -text

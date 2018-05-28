@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2008 Marius Strobl <marius@FreeBSD.org>
@@ -27,7 +28,7 @@
  *	from: NetBSD: gemvar.h,v 1.8 2002/05/15 02:36:12 matt Exp
  *	from: FreeBSD: if_gemvar.h 177560 2008-03-24 17:23:53Z marius
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/cas/if_casvar.h 249583 2013-04-17 11:42:40Z gabor $
  */
 
 #ifndef	_IF_CASVAR_H
@@ -56,7 +57,7 @@
 
 /*
  * Receive completion ring size - we have one completion per
- * incoming packet (though the opposite isn't necesarrily true),
+ * incoming packet (though the opposite isn't necessarily true),
  * so this logic is a little simpler.
  */
 #define	CAS_NRXCOMP		4096

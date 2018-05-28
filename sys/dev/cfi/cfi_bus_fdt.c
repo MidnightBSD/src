@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, Juniper Networks, Inc.
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_bus_fdt.c 266152 2014-05-15 16:11:06Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +52,7 @@ static device_method_t cfi_fdt_methods[] = {
 	DEVMETHOD(device_attach,	cfi_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t cfi_fdt_driver = {
@@ -61,10 +62,14 @@ static driver_t cfi_fdt_driver = {
 };
 
 DRIVER_MODULE (cfi, lbc, cfi_fdt_driver, cfi_devclass, 0, 0);
+DRIVER_MODULE (cfi, simplebus, cfi_fdt_driver, cfi_devclass, 0, 0);
 
 static int
 cfi_fdt_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "cfi-flash"))
 		return (ENXIO);

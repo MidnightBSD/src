@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2011 Semihalf.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/cesa/cesa.h 261455 2014-02-04 03:36:42Z eadler $
  */
 
 #ifndef _DEV_CESA_H_
@@ -297,8 +298,8 @@ struct cesa_chain_info {
 #define CESA_CSH_AES_KLEN_MASK		(3 << 24)
 
 #define CESA_CSHD_FRAG_FIRST		(1 << 30)
-#define CESA_CSHD_FRAG_LAST		(2 << 30)
-#define CESA_CSHD_FRAG_MIDDLE		(3 << 30)
+#define CESA_CSHD_FRAG_LAST		(2U << 30)
+#define CESA_CSHD_FRAG_MIDDLE		(3U << 30)
 
 /* CESA registers definitions */
 #define CESA_ICR			0xDE20
@@ -332,6 +333,11 @@ struct cesa_chain_info {
 #define CESA_TDMA_EMR_DOUBLE_HIT	CESA_TDMA_ECR_DOUBLE_HIT
 #define CESA_TDMA_EMR_BOTH_HIT		CESA_TDMA_ECR_BOTH_HIT
 #define CESA_TDMA_EMR_DATA_ERROR	CESA_TDMA_ECR_DATA_ERROR
+
+/*  CESA TDMA address decoding registers */
+#define MV_WIN_CESA_CTRL(n)		(0x8 * (n) + 0xA04)
+#define MV_WIN_CESA_BASE(n)		(0x8 * (n) + 0xA00)
+#define MV_WIN_CESA_MAX			4
 
 /* CESA SA registers definitions */
 #define CESA_SA_CMD			0xDE00

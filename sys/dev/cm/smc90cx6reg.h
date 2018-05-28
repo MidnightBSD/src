@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/sys/dev/cm/smc90cx6reg.h,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*	$NetBSD: smc90cx6reg.h,v 1.7 1999/02/16 23:34:13 is Exp $ */
-/*	$FreeBSD$ */
+/*	$FreeBSD: stable/10/sys/dev/cm/smc90cx6reg.h 204520 2010-03-01 16:52:11Z joel $ */
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.

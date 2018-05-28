@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cmx/cmx_pccard.c 176868 2008-03-06 08:09:45Z rink $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

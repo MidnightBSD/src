@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008, M. Warner Losh
  * Copyright (c) 2000,2001 Jonathan Chen.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cardbus/cardbus_cis.c 225515 2011-09-12 15:21:52Z jhb $");
 
 /*
  * CIS Handling for the Cardbus Bus

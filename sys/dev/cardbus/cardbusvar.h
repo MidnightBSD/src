@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, M. Warner Losh
  * Copyright (c) 2000,2001 Jonathan Chen.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/cardbus/cardbusvar.h 280970 2015-04-01 21:48:54Z jhb $
  */
 
 /*
@@ -69,6 +70,9 @@ struct cardbus_devinfo
 struct cardbus_softc 
 {
 	device_t	sc_dev;
+#ifdef PCI_RES_BUS
+	struct resource *sc_bus;
+#endif
 };
 
 /*

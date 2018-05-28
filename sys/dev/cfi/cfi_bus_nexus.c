@@ -1,8 +1,14 @@
 /* $MidnightBSD$ */
 /*-
+ * Copyright (c) 2012 SRI International
  * Copyright (c) 2009 Roelof Jonkman, Carlson Wireless Inc.
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
+ *
+ * Portions of this software were developed by SRI International and the
+ * University of Cambridge Computer Laboratory under DARPA/AFRL contract
+ * (FA8750-10-C-0237) ("CTSRD"), as part of the DARPA CRASH research
+ * programme.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_bus_ixp4xx.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_bus_nexus.c 265959 2014-05-13 17:12:07Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,40 +48,36 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_bus_ixp4xx.c 246128 2013-01-30 18:
 
 #include <dev/cfi/cfi_var.h>
 
-#include <arm/xscale/ixp425/ixp425reg.h>
-#include <arm/xscale/ixp425/ixp425var.h>
-
 static int
-cfi_ixp4xx_probe(device_t dev)
+cfi_nexus_probe(device_t dev)
 {
-	struct cfi_softc *sc = device_get_softc(dev);
-	/*
-	 * NB: we assume the boot loader sets up EXP_TIMING_CS0_OFFSET
-	 * according to the flash on the board.  If it does not then it
-	 * can be done here.
-	 */
-	if (bootverbose) {
-		struct ixp425_softc *sa =
-		    device_get_softc(device_get_parent(dev));
-		device_printf(dev, "EXP_TIMING_CS0_OFFSET 0x%x\n",
-		    EXP_BUS_READ_4(sa, EXP_TIMING_CS0_OFFSET));
-	}
-	sc->sc_width = 2;		/* NB: don't probe interface width */
-	return cfi_probe(dev);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
-static device_method_t cfi_ixp4xx_methods[] = {
+static int
+cfi_nexus_attach(device_t dev)
+{
+	int error;
+
+	error = cfi_probe(dev);
+	if (error != 0)
+		return (error);
+
+	return cfi_attach(dev);
+}
+
+static device_method_t cfi_nexus_methods[] = {
 	/* device interface */
-	DEVMETHOD(device_probe,		cfi_ixp4xx_probe),
-	DEVMETHOD(device_attach,	cfi_attach),
+	DEVMETHOD(device_probe,		cfi_nexus_probe),
+	DEVMETHOD(device_attach,	cfi_nexus_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
 
-	DEVMETHOD_END
+	{0, 0}
 };
 
-static driver_t cfi_ixp4xx_driver = {
+static driver_t cfi_nexus_driver = {
 	cfi_driver_name,
-	cfi_ixp4xx_methods,
+	cfi_nexus_methods,
 	sizeof(struct cfi_softc),
 };
-DRIVER_MODULE(cfi, ixp, cfi_ixp4xx_driver, cfi_devclass, 0, 0);
+DRIVER_MODULE(cfi, nexus, cfi_nexus_driver, cfi_devclass, 0, 0);

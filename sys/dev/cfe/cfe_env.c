@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Neelkanth Natu
  * All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <dev/cfe/cfe_api.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cfe/cfe_env.c 211158 2010-08-11 02:13:50Z neel $");
 
 #ifndef	CFE_ENV_SIZE
 #define	CFE_ENV_SIZE	PAGE_SIZE	/* default is one page */

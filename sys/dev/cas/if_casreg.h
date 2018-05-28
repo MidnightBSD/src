@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2008 Marius Strobl <marius@FreeBSD.org>
@@ -27,7 +28,7 @@
  *	from: NetBSD: gemreg.h,v 1.8 2005/12/11 12:21:26 christos Exp
  *	from: FreeBSD: if_gemreg.h 174987 2007-12-30 01:32:03Z marius
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/cas/if_casreg.h 207585 2010-05-03 20:57:16Z marius $
  */
 
 #ifndef	_IF_CASREG_H

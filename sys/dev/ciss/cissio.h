@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ciss/cissio.h,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/10/sys/dev/ciss/cissio.h 180454 2008-07-11 21:20:51Z scottl $
  */
 
 /*

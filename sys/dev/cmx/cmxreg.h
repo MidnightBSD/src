@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Daniel Roethlisberger <daniel@roe.ch>
  * Copyright (c) 2000-2004 OMNIKEY GmbH (www.omnikey.com)
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/cmx/cmxreg.h 176868 2008-03-06 08:09:45Z rink $
  */
 
 /* I/O port registers */

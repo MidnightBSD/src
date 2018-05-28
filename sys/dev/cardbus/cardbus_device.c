@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008, M. Warner Losh
  * All rights reserved.
@@ -26,7 +27,7 @@
  *
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cardbus/cardbus_device.c 188216 2009-02-06 00:55:19Z wkoszek $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

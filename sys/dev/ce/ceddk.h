@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Middle-level code for Cronyx Tau32-PCI adapters.
  *
@@ -13,7 +14,7 @@
  * works or modified versions.
  *
  * $Cronyx: ceddk.h,v 1.2.6.1 2005/11/09 13:01:39 rik Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ce/ceddk.h 180132 2008-06-30 21:18:27Z rik $
  */
 
 #define TAU32_UserContext_Add	void	*sys;

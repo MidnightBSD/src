@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2008 M. Warner Losh.  All Rights Reserved.
  * Copyright (c) 2000,2001 Jonathan Chen.  All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cardbus/cardbus.c 330938 2018-03-14 19:04:40Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -96,17 +97,36 @@ static int
 cardbus_attach(device_t cbdev)
 {
 	struct cardbus_softc *sc;
+#ifdef PCI_RES_BUS
+	int rid;
+#endif
 
 	sc = device_get_softc(cbdev);
 	sc->sc_dev = cbdev;
+#ifdef PCI_RES_BUS
+	rid = 0;
+	sc->sc_bus = bus_alloc_resource(cbdev, PCI_RES_BUS, &rid,
+	    pcib_get_bus(cbdev), pcib_get_bus(cbdev), 1, 0);
+	if (sc->sc_bus == NULL) {
+		device_printf(cbdev, "failed to allocate bus number\n");
+		return (ENXIO);
+	}
+#endif
 	return (0);
 }
 
 static int
 cardbus_detach(device_t cbdev)
 {
+#ifdef PCI_RES_BUS
+	struct cardbus_softc *sc;
+#endif
 
 	cardbus_detach_card(cbdev);
+#ifdef PCI_RES_BUS
+	sc = device_get_softc(cbdev);
+	(void)bus_release_resource(cbdev, PCI_RES_BUS, 0, sc->sc_bus);
+#endif
 	return (0);
 }
 
@@ -207,31 +227,30 @@ cardbus_attach_card(device_t cbdev)
 	return (ENOENT);
 }
 
+static void
+cardbus_child_deleted(device_t cbdev, device_t child)
+{
+	struct cardbus_devinfo *dinfo = device_get_ivars(child);
+
+	if (dinfo->pci.cfg.dev != child)
+		device_printf(cbdev, "devinfo dev mismatch\n");
+	cardbus_device_destroy(dinfo);
+	pci_child_deleted(cbdev, child);
+}
+
 static int
 cardbus_detach_card(device_t cbdev)
 {
-	int numdevs;
-	device_t *devlist;
-	int tmp;
 	int err = 0;
 
-	if (device_get_children(cbdev, &devlist, &numdevs) != 0)
-		return (ENOENT);
-	if (numdevs == 0) {
-		free(devlist, M_TEMP);
-		return (ENOENT);
-	}
+	err = bus_generic_detach(cbdev);
+	if (err)
+		return (err);
+	err = device_delete_children(cbdev);
+	if (err)
+		return (err);
 
-	for (tmp = 0; tmp < numdevs; tmp++) {
-		struct cardbus_devinfo *dinfo = device_get_ivars(devlist[tmp]);
-
-		if (dinfo->pci.cfg.dev != devlist[tmp])
-			device_printf(cbdev, "devinfo dev mismatch\n");
-		cardbus_device_destroy(dinfo);
-		pci_delete_child(cbdev, devlist[tmp]);
-	}
 	POWER_DISABLE_SOCKET(device_get_parent(cbdev), cbdev);
-	free(devlist, M_TEMP);
 	return (err);
 }
 
@@ -316,6 +335,7 @@ static device_method_t cardbus_methods[] = {
 	DEVMETHOD(device_resume,	cardbus_resume),
 
 	/* Bus interface */
+	DEVMETHOD(bus_child_deleted,	cardbus_child_deleted),
 	DEVMETHOD(bus_get_dma_tag,	bus_generic_get_dma_tag),
 	DEVMETHOD(bus_read_ivar,	cardbus_read_ivar),
 	DEVMETHOD(bus_driver_added,	cardbus_driver_added),

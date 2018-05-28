@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Middle-level code for Cronyx Tau32-PCI adapters.
  *
@@ -16,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ce/ceddk.c 154899 2006-01-27 09:02:09Z rik $");
 
 #include <dev/cx/machdep.h>
 #include <dev/ce/ceddk.h>

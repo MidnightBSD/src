@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Bruce M. Simpson.
  * All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cfe/cfe_resource.c 265999 2014-05-14 01:35:43Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,7 +62,7 @@ static int
 cferes_probe(device_t dev)
 {
 
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2001-2003 Thomas Moestl
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cas/if_cas.c 254842 2013-08-25 10:57:09Z andre $");
 
 /*
  * driver for Sun Cassini/Cassini+ and National Semiconductor DP83065
@@ -132,7 +133,7 @@ static void	cas_detach(struct cas_softc *sc);
 static int	cas_disable_rx(struct cas_softc *sc);
 static int	cas_disable_tx(struct cas_softc *sc);
 static void	cas_eint(struct cas_softc *sc, u_int status);
-static void	cas_free(void *arg1, void* arg2);
+static int	cas_free(struct mbuf *m, void *arg1, void* arg2);
 static void	cas_init(void *xsc);
 static void	cas_init_locked(struct cas_softc *sc);
 static void	cas_init_regs(struct cas_softc *sc);
@@ -1887,8 +1888,8 @@ cas_rint(struct cas_softc *sc)
 #endif
 }
 
-static void
-cas_free(void *arg1, void *arg2)
+static int
+cas_free(struct mbuf *m, void *arg1, void *arg2)
 {
 	struct cas_rxdsoft *rxds;
 	struct cas_softc *sc;
@@ -1904,7 +1905,7 @@ cas_free(void *arg1, void *arg2)
 	rxds = &sc->sc_rxdsoft[idx];
 #endif
 	if (refcount_release(&rxds->rxds_refcount) == 0)
-		return;
+		return (EXT_FREE_OK);
 
 	/*
 	 * NB: this function can be called via m_freem(9) within
@@ -1915,6 +1916,7 @@ cas_free(void *arg1, void *arg2)
 	cas_add_rxdesc(sc, idx);
 	if (locked == 0)
 		CAS_UNLOCK(sc);
+	return (EXT_FREE_OK);
 }
 
 static inline void

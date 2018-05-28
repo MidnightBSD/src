@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: cfe_error.h,v 1.2 2003/02/07 17:38:48 cgd Exp $ */
 /* from: SiByte Id: cfe_error.h,v 1.2 2002/07/09 19:37:52 cgd Exp $ */
 
@@ -32,7 +33,7 @@
  *    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  *    OR OTHERWISE), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/cfe/cfe_error.h 183370 2008-09-26 03:53:10Z imp $
  */
 
 /*  *********************************************************************
