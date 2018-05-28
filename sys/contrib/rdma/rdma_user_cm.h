@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005-2006 Intel Corporation.  All rights reserved.
  *
