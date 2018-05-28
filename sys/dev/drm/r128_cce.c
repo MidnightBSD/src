@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* r128_cce.c -- ATI Rage 128 driver -*- linux-c -*-
  * Created: Wed Apr  5 19:24:19 2000 by kevin@precisioninsight.com
  */
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r128_cce.c 207067 2010-04-22 18:44:23Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

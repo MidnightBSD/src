@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* r300_cmdbuf.c -- Command buffer emission for R300 -*- linux-c -*-
  *
  * Copyright (C) The Weather Channel, Inc.  2002.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r300_cmdbuf.c 190833 2009-04-07 22:26:53Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

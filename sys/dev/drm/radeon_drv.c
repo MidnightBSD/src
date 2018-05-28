@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* radeon_drv.c -- ATI Radeon driver -*- linux-c -*-
  * Created: Wed Feb 14 17:10:04 2001 by gareth@valinux.com
  */
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

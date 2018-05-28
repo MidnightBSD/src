@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008-2009 Advanced Micro Devices, Inc.
  * Copyright 2008 Red Hat Inc.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r600_cp.c 207069 2010-04-22 18:47:30Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

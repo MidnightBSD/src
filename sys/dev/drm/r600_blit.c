@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2009 Advanced Micro Devices, Inc.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r600_blit.c 261455 2014-02-04 03:36:42Z eadler $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -1428,12 +1429,12 @@ set_scissors(drm_radeon_private_t *dev_priv, int x1, int y1, int x2, int y2)
 
 	OUT_RING(CP_PACKET3(R600_IT_SET_CONTEXT_REG, 2));
         OUT_RING((R600_PA_SC_GENERIC_SCISSOR_TL - R600_SET_CONTEXT_REG_OFFSET) >> 2);
-	OUT_RING((x1 << 0) | (y1 << 16) | (1 << 31));
+	OUT_RING((x1 << 0) | (y1 << 16) | (1U << 31));
 	OUT_RING((x2 << 0) | (y2 << 16));
 
 	OUT_RING(CP_PACKET3(R600_IT_SET_CONTEXT_REG, 2));
         OUT_RING((R600_PA_SC_WINDOW_SCISSOR_TL - R600_SET_CONTEXT_REG_OFFSET) >> 2);
-	OUT_RING((x1 << 0) | (y1 << 16) | (1 << 31));
+	OUT_RING((x1 << 0) | (y1 << 16) | (1U << 31));
 	OUT_RING((x2 << 0) | (y2 << 16));
 	ADVANCE_RING();
 }

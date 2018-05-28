@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mach64_drm.h -- Public header for the mach64 driver -*- linux-c -*-
  * Created: Thu Nov 30 20:04:32 2000 by gareth@valinux.com
  */
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mach64_drm.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef __MACH64_DRM_H__
 #define __MACH64_DRM_H__

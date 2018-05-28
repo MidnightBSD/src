@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm.h
  * Header for the Direct Rendering Manager
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm.h 183573 2008-10-03 16:59:11Z rnoland $");
 
 /**
  * \mainpage

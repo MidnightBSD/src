@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* r128_drm.h -- Public header for the r128 driver -*- linux-c -*-
  * Created: Wed Apr  5 19:24:19 2000 by kevin@precisioninsight.com
  */
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r128_drm.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef __R128_DRM_H__
 #define __R128_DRM_H__

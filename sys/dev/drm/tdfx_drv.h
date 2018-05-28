@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* tdfx.h -- 3dfx DRM template customization -*- linux-c -*-
  * Created: Wed Feb 14 12:32:32 2001 by gareth@valinux.com
  */
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/tdfx_drv.h 152909 2005-11-28 23:13:57Z anholt $");
 
 #ifndef __TDFX_H__
 #define __TDFX_H__

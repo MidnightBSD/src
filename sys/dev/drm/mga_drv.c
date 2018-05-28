@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_drv.c -- Matrox G200/G400 driver -*- linux-c -*-
  * Created: Mon Dec 13 01:56:22 1999 by jhartmann@precisioninsight.com
  */
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

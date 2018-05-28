@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_drv.h -- Private header for the I915 driver -*- linux-c -*-
  */
 /*
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/i915_drv.h 228443 2011-12-12 18:43:24Z mdf $");
 
 #ifndef _I915_DRV_H_
 #define _I915_DRV_H_

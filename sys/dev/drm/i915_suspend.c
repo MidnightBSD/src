@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_suspend.c -- i830,i845,i855,i865,i915 driver -*- linux-c -*-
  */
 /*
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/i915_suspend.c 190164 2009-03-20 17:51:26Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

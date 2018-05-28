@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_drv.c -- Intel i915 driver -*- linux-c -*-
  * Created: Wed Feb 14 17:10:04 2001 by gareth@valinux.com
  */
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/i915_drv.c 203287 2010-01-31 14:25:29Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

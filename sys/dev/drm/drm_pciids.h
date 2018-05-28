@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/drm/drm_pciids.h 210819 2010-08-03 16:30:56Z olli $
  */
 /*
    This file is auto-generated from the drm_pciids.txt in the DRM CVS

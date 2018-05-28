@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Eric Anholt
  * All Rights Reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_irq.c 331410 2018-03-23 02:34:45Z emaste $");
 
 /** @file drm_irq.c
  * Support code for handling setup/teardown of interrupt handlers and
@@ -357,7 +358,7 @@ int drm_modeset_ctl(struct drm_device *dev, void *data,
 		goto out;
 
 	crtc = modeset->crtc;
-	if (crtc >= dev->num_crtcs) {
+	if (crtc < 0 || crtc >= dev->num_crtcs) {
 		ret = EINVAL;
 		goto out;
 	}

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2007 Advanced Micro Devices, Inc.
  * All Rights Reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r600_microcode.h 189499 2009-03-07 21:36:57Z rnoland $");
 
 static const int ME_JUMP_TABLE_START = 1764;
 static const int ME_JUMP_TABLE_END   = 1792;

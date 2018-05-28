@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* sis_drv.h -- Private header for sis driver -*- linux-c -*- */
 /*-
  * Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/sis_drv.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef _SIS_DRV_H_
 #define _SIS_DRV_H_

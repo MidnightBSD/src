@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* via_irq.c
  *
  * Copyright 2004 BEAM Ltd.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_irq.c 261455 2014-02-04 03:36:42Z eadler $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -46,7 +47,7 @@ __MBSDID("$MidnightBSD$");
 #define VIA_REG_INTERRUPT       0x200
 
 /* VIA_REG_INTERRUPT */
-#define VIA_IRQ_GLOBAL	  (1 << 31)
+#define VIA_IRQ_GLOBAL	  (1U << 31)
 #define VIA_IRQ_VBLANK_ENABLE   (1 << 19)
 #define VIA_IRQ_VBLANK_PENDING  (1 << 3)
 #define VIA_IRQ_HQV0_ENABLE     (1 << 11)

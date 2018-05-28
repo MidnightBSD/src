@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_ucode.h -- Matrox G200/G400 WARP engine microcode -*- linux-c -*-
  * Created: Thu Jan 11 21:20:43 2001 by gareth@valinux.com
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_ucode.h 152909 2005-11-28 23:13:57Z anholt $");
 
 /*
  * WARP pipes are named according to the functions they perform, where:

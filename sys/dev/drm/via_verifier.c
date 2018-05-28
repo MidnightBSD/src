@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2004 The Unichrome Project. All Rights Reserved.
  * Copyright 2005 Thomas Hellstrom. All Rights Reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_verifier.c 203288 2010-01-31 14:30:39Z rnoland $");
 
 #include "dev/drm/via_3d_reg.h"
 #include "dev/drm/drmP.h"

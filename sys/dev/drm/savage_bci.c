@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* savage_bci.c -- BCI support for Savage
  *
  * Copyright 2004  Felix Kuehling
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/savage_bci.c 207066 2010-04-22 18:21:25Z rnoland $");
 #include "dev/drm/drmP.h"
 #include "dev/drm/savage_drm.h"
 #include "dev/drm/savage_drv.h"

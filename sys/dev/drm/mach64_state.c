@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mach64_state.c -- State support for mach64 (Rage Pro) driver -*- linux-c -*-
  * Created: Sun Dec 03 19:20:26 2000 by gareth@valinux.com
  */
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mach64_state.c 198332 2009-10-21 15:54:45Z brueffer $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

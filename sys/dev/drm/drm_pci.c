@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Eric Anholt.
  * All Rights Reserved.
@@ -22,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_pci.c 190565 2009-03-30 18:01:42Z rnoland $");
 
 /**
  * \file drm_pci.h

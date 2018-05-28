@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* via_dmablit.c -- PCI DMA BitBlt support for the VIA Unichrome/Pro
  *
  * Copyright (C) 2005 Thomas Hellstrom, All Rights Reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_dmablit.c 242825 2012-11-09 14:46:23Z rdivacky $");
 
 /*
  * Unmaps the DMA mappings.
@@ -210,7 +211,7 @@ via_fire_dmablit(struct drm_device *dev, drm_via_sg_info_t *vsg, int engine)
 	VIA_WRITE(VIA_PCI_DMA_DPR0 + engine*0x10, vsg->chain_start);
 	DRM_WRITEMEMORYBARRIER();
 	VIA_WRITE(VIA_PCI_DMA_CSR0 + engine*0x04, VIA_DMA_CSR_DE | VIA_DMA_CSR_TS);
-	VIA_READ(VIA_PCI_DMA_CSR0 + engine*0x04);
+	(void)VIA_READ(VIA_PCI_DMA_CSR0 + engine*0x04);
 }
 
 

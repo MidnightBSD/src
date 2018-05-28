@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* r128_state.c -- State support for r128 -*- linux-c -*-
  * Created: Thu Jan 27 02:53:43 2000 by gareth@valinux.com
  */
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r128_state.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

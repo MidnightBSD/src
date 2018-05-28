@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_dma.c -- DMA support for the I915 -*- linux-c -*-
  */
 /*-
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/i915_dma.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

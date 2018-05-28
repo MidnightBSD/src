@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1999, 2000 Precision Insight, Inc., Cedar Park, Texas.
  * Copyright 2000 VA Linux Systems, Inc., Sunnyvale, California.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_bufs.c 331412 2018-03-23 02:38:31Z emaste $");
 
 /** @file drm_bufs.c
  * Implementation of the ioctls for setup of DRM mappings and DMA buffers.
@@ -935,6 +936,7 @@ int drm_infobufs(struct drm_device *dev, void *data, struct drm_file *file_priv)
 			if (dma->bufs[i].buf_count) {
 				struct drm_buf_desc from;
 
+				memset(&from, 0, sizeof(from));
 				from.count = dma->bufs[i].buf_count;
 				from.size = dma->bufs[i].buf_size;
 				from.low_mark = dma->bufs[i].freelist.low_mark;

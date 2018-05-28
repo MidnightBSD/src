@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_warp.c -- Matrox G200/G400 WARP engine management -*- linux-c -*-
  * Created: Thu Jan 11 21:29:32 2001 by gareth@valinux.com
  */
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_warp.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

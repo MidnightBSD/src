@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* radeon_drm.h -- Public header for the radeon driver -*- linux-c -*-
  *
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_drm.h 196471 2009-08-23 15:02:58Z rnoland $");
 
 #ifndef __RADEON_DRM_H__
 #define __RADEON_DRM_H__

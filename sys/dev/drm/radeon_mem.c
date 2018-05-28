@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* radeon_mem.c -- Simple GART/fb memory manager for radeon -*- linux-c -*- */
 /*-
  * Copyright (C) The Weather Channel, Inc.  2002.  All Rights Reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_mem.c 182080 2008-08-23 20:59:12Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

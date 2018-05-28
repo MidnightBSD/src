@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2000 VA Linux Systems, Inc., Fremont, California.
  * All Rights Reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_state.c 228979 2011-12-30 02:07:50Z dim $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

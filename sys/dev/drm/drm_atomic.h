@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm_atomic.h
  * Atomic operations used in the DRM which may or may not be provided by the OS.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_atomic.h 183573 2008-10-03 16:59:11Z rnoland $");
 
 /* Many of these implementations are rather fake, but good enough. */
 

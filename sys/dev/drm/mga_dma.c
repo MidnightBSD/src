@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_dma.c -- DMA support for mga g200/g400 -*- linux-c -*-
  * Created: Mon Dec 13 01:50:01 1999 by jhartmann@precisioninsight.com
  */
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_dma.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 /**
  * \file mga_dma.c

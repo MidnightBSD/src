@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2005 Thomas Hellstrom. All Rights Reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_video.c 207318 2010-04-28 10:33:41Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/via_drm.h"

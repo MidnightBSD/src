@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_state.c -- State support for MGA G200/G400 -*- linux-c -*-
  * Created: Thu Jan 27 02:53:43 2000 by jhartmann@precisioninsight.com
  */
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_state.c 182080 2008-08-23 20:59:12Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

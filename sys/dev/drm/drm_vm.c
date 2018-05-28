@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Eric Anholt
  * All Rights Reserved.
@@ -22,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_vm.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 /** @file drm_vm.c
  * Support code for mmaping of DRM maps.

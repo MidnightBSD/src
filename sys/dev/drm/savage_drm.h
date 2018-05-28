@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* savage_drm.h -- Public header for the savage driver
  *
  * Copyright 2004  Felix Kuehling
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm/savage_drm.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef __SAVAGE_DRM_H__
 #define __SAVAGE_DRM_H__
