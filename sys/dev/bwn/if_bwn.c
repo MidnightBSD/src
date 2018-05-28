@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Weongyo Jeong <weongyo@freebsd.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bwn/if_bwn.c 281826 2015-04-21 11:27:50Z mav $");
 
 /*
  * The Broadcom Wireless LAN controller driver.
@@ -1316,7 +1317,7 @@ bwn_start_locked(struct ifnet *ifp)
 		}
 		KASSERT(ni != NULL, ("%s:%d: fail", __func__, __LINE__));
 		wh = mtod(m, struct ieee80211_frame *);
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			k = ieee80211_crypto_encap(ni, m);
 			if (k == NULL) {
 				ieee80211_free_node(ni);
@@ -9179,7 +9180,7 @@ bwn_dma_newbuf(struct bwn_dma_ring *dr, struct bwn_dmadesc_generic *desc,
 	struct bwn_dma *dma = &mac->mac_method.dma;
 	struct bwn_rxhdr4 *hdr;
 	bus_dmamap_t map;
-	bus_addr_t paddr = 0;
+	bus_addr_t paddr;
 	struct mbuf *m;
 	int error;
 
@@ -9242,7 +9243,7 @@ back:
 	/*
 	 * Setup RX buf descriptor
 	 */
-	dr->setdesc(dr, desc, paddr, meta->mt_m->m_len -
+	dr->setdesc(dr, desc, meta->mt_paddr, meta->mt_m->m_len -
 	    sizeof(*hdr), 0, 0, 0);
 	return (error);
 }
@@ -9780,7 +9781,7 @@ bwn_set_txhdr(struct bwn_mac *mac, struct ieee80211_node *ni,
 	 */
 	if (ieee80211_radiotap_active_vap(vap)) {
 		sc->sc_tx_th.wt_flags = 0;
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP)
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)
 			sc->sc_tx_th.wt_flags |= IEEE80211_RADIOTAP_F_WEP;
 		if (isshort &&
 		    (rate == BWN_CCK_RATE_2MB || rate == BWN_CCK_RATE_5MB ||
@@ -10319,7 +10320,7 @@ bwn_rx_radiotap(struct bwn_mac *mac, struct mbuf *m,
 		sc->sc_rx_th.wr_flags |= IEEE80211_RADIOTAP_F_SHORTPRE;
 
 	wh = mtod(m, const struct ieee80211_frame_min *);
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP)
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)
 		sc->sc_rx_th.wr_flags |= IEEE80211_RADIOTAP_F_WEP;
 
 	bwn_tsf_read(mac, &tsf);
@@ -10381,7 +10382,7 @@ bwn_dma_attach(struct bwn_mac *mac)
 			       lowaddr,			/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
 			       NULL, NULL,		/* filter, filterarg */
-			       MAXBSIZE,		/* maxsize */
+			       BUS_SPACE_MAXSIZE,	/* maxsize */
 			       BUS_SPACE_UNRESTRICTED,	/* nsegments */
 			       BUS_SPACE_MAXSIZE,	/* maxsegsize */
 			       0,			/* flags */

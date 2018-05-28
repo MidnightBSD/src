@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -35,10 +36,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bwi/bwirf.c 235338 2012-05-12 15:11:53Z adrian $");
 
 #include "opt_inet.h"
 #include "opt_bwi.h"
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/endian.h>

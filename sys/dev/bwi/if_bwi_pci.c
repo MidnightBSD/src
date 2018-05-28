@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -28,11 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bwi/if_bwi_pci.c 235338 2012-05-12 15:11:53Z adrian $");
 
 /*
  * PCI/Cardbus front-end for the Broadcom Wireless LAN controller driver.
  */
+
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/systm.h> 

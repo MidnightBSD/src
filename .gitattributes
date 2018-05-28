@@ -56276,6 +56276,8 @@ sys/dev/buslogic/bt_isa.c -text
 sys/dev/buslogic/bt_mca.c -text
 sys/dev/buslogic/bt_pci.c -text
 sys/dev/buslogic/btreg.h -text
+sys/dev/bvm/bvm_console.c svneol=native#text/plain
+sys/dev/bvm/bvm_dbg.c svneol=native#text/plain
 sys/dev/bwi/bitops.h -text
 sys/dev/bwi/bwimac.c -text
 sys/dev/bwi/bwimac.h -text

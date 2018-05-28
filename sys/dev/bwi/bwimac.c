@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -35,10 +36,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bwi/bwimac.c 254279 2013-08-13 09:58:27Z adrian $");
 
 #include "opt_inet.h"
 #include "opt_bwi.h"
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -1426,7 +1428,8 @@ bwi_mac_set_ackrates(struct bwi_mac *mac, const struct ieee80211_rate_table *rt,
 		enum ieee80211_phytype modtype;
 		uint16_t ofs;
 
-		modtype = ieee80211_rate2phytype(rt, rs->rs_rates[i]);
+		modtype = ieee80211_rate2phytype(rt,
+		    rs->rs_rates[i] & IEEE80211_RATE_VAL);
 		switch (modtype) {
 		case IEEE80211_T_DS:
 			ofs = 0x4c0;
@@ -1437,7 +1440,9 @@ bwi_mac_set_ackrates(struct bwi_mac *mac, const struct ieee80211_rate_table *rt,
 		default:
 			panic("unsupported modtype %u\n", modtype);
 		}
-		ofs += 2*(ieee80211_rate2plcp(rs->rs_rates[i], modtype) & 0xf);
+		ofs += 2*(ieee80211_rate2plcp(
+		    rs->rs_rates[i] & IEEE80211_RATE_VAL,
+		    modtype) & 0xf);
 
 		MOBJ_WRITE_2(mac, BWI_COMM_MOBJ, ofs + 0x20,
 			     MOBJ_READ_2(mac, BWI_COMM_MOBJ, ofs));

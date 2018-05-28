@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-1999
  * Kazutaka YOKOTA (yokota@zodiac.mech.utsunomiya-u.ac.jp)
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/atkbdc/atkbdc.c 216592 2010-12-20 16:39:43Z tijl $");
 
 #include "opt_kbd.h"
 

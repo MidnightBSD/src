@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/atkbdc/atkbdc_ebus.c 207354 2010-04-29 06:16:00Z sobomax $");
 
 #include "opt_kbd.h"
 

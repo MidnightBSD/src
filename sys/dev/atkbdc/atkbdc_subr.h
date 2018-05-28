@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -24,7 +25,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/isa/atkbdc_isa.c,v 1.31 2005/05/29 04:42:28 nyan Exp
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/atkbdc/atkbdc_subr.h 147271 2005-06-10 20:56:38Z marius $
  */
 
 #ifndef _DEV_ATKBDC_ATKBDC_SUBR_H_

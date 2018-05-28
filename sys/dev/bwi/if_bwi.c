@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -35,10 +36,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bwi/if_bwi.c 308367 2016-11-06 13:50:54Z avos $");
 
 #include "opt_inet.h"
 #include "opt_bwi.h"
+#include "opt_wlan.h"
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -1394,7 +1396,7 @@ bwi_start_locked(struct ifnet *ifp)
 
 		ni = (struct ieee80211_node *) m->m_pkthdr.rcvif;
 		wh = mtod(m, struct ieee80211_frame *);
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			k = ieee80211_crypto_encap(ni, m);
 			if (k == NULL) {
 				ieee80211_free_node(ni);
@@ -1914,10 +1916,10 @@ bwi_dma_alloc(struct bwi_softc *sc)
 			       lowaddr,			/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
 			       NULL, NULL,		/* filter, filterarg */
-			       MAXBSIZE,		/* maxsize */
+			       BUS_SPACE_MAXSIZE,	/* maxsize */
 			       BUS_SPACE_UNRESTRICTED,	/* nsegments */
 			       BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
-			       BUS_DMA_ALLOCNOW,	/* flags */
+			       0,			/* flags */
 			       NULL, NULL,		/* lockfunc, lockarg */
 			       &sc->sc_parent_dtag);
 	if (error) {
@@ -1938,7 +1940,7 @@ bwi_dma_alloc(struct bwi_softc *sc)
 				tx_ring_sz,
 				1,
 				BUS_SPACE_MAXSIZE_32BIT,
-				BUS_DMA_ALLOCNOW,
+				0,
 				NULL, NULL,
 				&sc->sc_txring_dtag);
 	if (error) {
@@ -1968,7 +1970,7 @@ bwi_dma_alloc(struct bwi_softc *sc)
 				rx_ring_sz,
 				1,
 				BUS_SPACE_MAXSIZE_32BIT,
-				BUS_DMA_ALLOCNOW,
+				0,
 				NULL, NULL,
 				&sc->sc_rxring_dtag);
 	if (error) {
@@ -2093,7 +2095,7 @@ bwi_dma_txstats_alloc(struct bwi_softc *sc, uint32_t ctrl_base,
 				dma_size,
 				1,
 				BUS_SPACE_MAXSIZE_32BIT,
-				BUS_DMA_ALLOCNOW,
+				0,
 				NULL, NULL,
 				&st->stats_ring_dtag);
 	if (error) {
@@ -2141,7 +2143,7 @@ bwi_dma_txstats_alloc(struct bwi_softc *sc, uint32_t ctrl_base,
 				dma_size,
 				1,
 				BUS_SPACE_MAXSIZE_32BIT,
-				BUS_DMA_ALLOCNOW,
+				0,
 				NULL, NULL,
 				&st->stats_dtag);
 	if (error) {
@@ -2223,7 +2225,7 @@ bwi_dma_mbuf_create(struct bwi_softc *sc)
 				NULL, NULL,
 				MCLBYTES,
 				1,
-				BUS_SPACE_MAXSIZE_32BIT,
+				MCLBYTES,
 				BUS_DMA_ALLOCNOW,
 				NULL, NULL,
 				&sc->sc_buf_dtag);
@@ -2999,7 +3001,7 @@ bwi_encap(struct bwi_softc *sc, int idx, struct mbuf *m,
 	 */
 	if (ieee80211_radiotap_active_vap(vap)) {
 		sc->sc_tx_th.wt_flags = 0;
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP)
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)
 			sc->sc_tx_th.wt_flags |= IEEE80211_RADIOTAP_F_WEP;
 		if (ieee80211_rate2phytype(sc->sc_rates, rate) == IEEE80211_T_DS &&
 		    (ic->ic_flags & IEEE80211_F_SHPREAMBLE) &&
@@ -3182,7 +3184,7 @@ bwi_encap_raw(struct bwi_softc *sc, int idx, struct mbuf *m,
 	if (ieee80211_radiotap_active_vap(vap)) {
 		sc->sc_tx_th.wt_flags = 0;
 		/* XXX IEEE80211_BPF_CRYPTO */
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP)
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)
 			sc->sc_tx_th.wt_flags |= IEEE80211_RADIOTAP_F_WEP;
 		if (params->ibp_flags & IEEE80211_BPF_SHORTPRE)
 			sc->sc_tx_th.wt_flags |= IEEE80211_RADIOTAP_F_SHORTPRE;
@@ -3818,7 +3820,7 @@ bwi_rx_radiotap(struct bwi_softc *sc, struct mbuf *m,
 		sc->sc_rx_th.wr_flags |= IEEE80211_RADIOTAP_F_SHORTPRE;
 
 	wh = mtod(m, const struct ieee80211_frame_min *);
-	if (wh->i_fc[1] & IEEE80211_FC1_WEP)
+	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)
 		sc->sc_rx_th.wr_flags |= IEEE80211_RADIOTAP_F_WEP;
 
 	sc->sc_rx_th.wr_tsf = hdr->rxh_tsf; /* No endian convertion */
