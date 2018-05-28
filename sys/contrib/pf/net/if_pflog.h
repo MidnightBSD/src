@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: if_pflog.h,v 1.13 2006/10/23 12:46:09 henning Exp $ */
 /*
  * Copyright 2001 Niels Provos <provos@citi.umich.edu>
