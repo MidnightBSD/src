@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/crypto/via/padlock.c 268033 2014-06-30 09:48:44Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -170,7 +172,7 @@ padlock_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 	struct padlock_session *ses = NULL;
 	struct cryptoini *encini, *macini;
 	struct thread *td;
-	int error, saved_ctx;
+	int error;
 
 	if (sidp == NULL || cri == NULL)
 		return (EINVAL);
@@ -245,18 +247,11 @@ padlock_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 
 	if (macini != NULL) {
 		td = curthread;
-		if (!is_fpu_kern_thread(0)) {
-			error = fpu_kern_enter(td, ses->ses_fpu_ctx,
-			    FPU_KERN_NORMAL);
-			saved_ctx = 1;
-		} else {
-			error = 0;
-			saved_ctx = 0;
-		}
+		error = fpu_kern_enter(td, ses->ses_fpu_ctx, FPU_KERN_NORMAL |
+		    FPU_KERN_KTHR);
 		if (error == 0) {
 			error = padlock_hash_setup(ses, macini);
-			if (saved_ctx)
-				fpu_kern_leave(td, ses->ses_fpu_ctx);
+			fpu_kern_leave(td, ses->ses_fpu_ctx);
 		}
 		if (error != 0) {
 			padlock_freesession_one(sc, ses, 0);

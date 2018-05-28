@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* camellia.h ver 1.1.0
  *
  * Copyright (c) 2006
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/crypto/camellia/camellia.h 169425 2007-05-09 19:37:02Z gnn $
  */
 
 #ifndef _CAMELLIA_H

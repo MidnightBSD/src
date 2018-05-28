@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2010 Konstantin Belousov <kib@FreeBSD.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/crypto/aesni/aesni.c 323871 2017-09-21 19:30:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,20 +40,42 @@ __MBSDID("$MidnightBSD$");
 #include <sys/rwlock.h>
 #include <sys/bus.h>
 #include <sys/uio.h>
+#include <sys/smp.h>
 #include <crypto/aesni/aesni.h>
-#include "cryptodev_if.h"
+#include <cryptodev_if.h>
+
+static struct mtx_padalign *ctx_mtx;
+static struct fpu_kern_ctx **ctx_fpu;
 
 struct aesni_softc {
+	int	dieing;
 	int32_t cid;
 	uint32_t sid;
 	TAILQ_HEAD(aesni_sessions_head, aesni_session) sessions;
 	struct rwlock lock;
 };
 
+#define AQUIRE_CTX(i, ctx)					\
+	do {							\
+		(i) = PCPU_GET(cpuid);				\
+		mtx_lock(&ctx_mtx[(i)]);			\
+		(ctx) = ctx_fpu[(i)];				\
+	} while (0)
+#define RELEASE_CTX(i, ctx)					\
+	do {							\
+		mtx_unlock(&ctx_mtx[(i)]);			\
+		(i) = -1;					\
+		(ctx) = NULL;					\
+	} while (0)
+
 static int aesni_newsession(device_t, uint32_t *sidp, struct cryptoini *cri);
 static int aesni_freesession(device_t, uint64_t tid);
 static void aesni_freesession_locked(struct aesni_softc *sc,
     struct aesni_session *ses);
+static int aesni_cipher_setup(struct aesni_session *ses,
+    struct cryptoini *encini);
+static int aesni_cipher_process(struct aesni_session *ses,
+    struct cryptodesc *enccrd, struct cryptop *crp);
 
 MALLOC_DEFINE(M_AESNI, "aesni_data", "AESNI Data");
 
@@ -74,22 +97,61 @@ aesni_probe(device_t dev)
 		device_printf(dev, "No AESNI support.\n");
 		return (EINVAL);
 	}
+
+	if ((cpu_feature & CPUID_SSE2) == 0) {
+		device_printf(dev, "No SSE2 support but AESNI!?!\n");
+		return (EINVAL);
+	}
+
 	device_set_desc_copy(dev, "AES-CBC,AES-XTS");
 	return (0);
+}
+
+static void
+aensi_cleanctx(void)
+{
+	int i;
+
+	/* XXX - no way to return driverid */
+	CPU_FOREACH(i) {
+		if (ctx_fpu[i] != NULL) {
+			mtx_destroy(&ctx_mtx[i]);
+			fpu_kern_free_ctx(ctx_fpu[i]);
+		}
+		ctx_fpu[i] = NULL;
+	}
+	free(ctx_mtx, M_AESNI);
+	ctx_mtx = NULL;
+	free(ctx_fpu, M_AESNI);
+	ctx_fpu = NULL;
 }
 
 static int
 aesni_attach(device_t dev)
 {
 	struct aesni_softc *sc;
+	int i;
 
 	sc = device_get_softc(dev);
+	sc->dieing = 0;
 	TAILQ_INIT(&sc->sessions);
 	sc->sid = 1;
-	sc->cid = crypto_get_driverid(dev, CRYPTOCAP_F_HARDWARE);
+
+	sc->cid = crypto_get_driverid(dev, CRYPTOCAP_F_HARDWARE |
+	    CRYPTOCAP_F_SYNC);
 	if (sc->cid < 0) {
 		device_printf(dev, "Could not get crypto driver id.\n");
 		return (ENOMEM);
+	}
+
+	ctx_mtx = malloc(sizeof *ctx_mtx * (mp_maxid + 1), M_AESNI,
+	    M_WAITOK|M_ZERO);
+	ctx_fpu = malloc(sizeof *ctx_fpu * (mp_maxid + 1), M_AESNI,
+	    M_WAITOK|M_ZERO);
+
+	CPU_FOREACH(i) {
+		ctx_fpu[i] = fpu_kern_alloc_ctx(0);
+		mtx_init(&ctx_mtx[i], "anifpumtx", NULL, MTX_DEF|MTX_NEW);
 	}
 
 	rw_init(&sc->lock, "aesni_lock");
@@ -105,6 +167,7 @@ aesni_detach(device_t dev)
 	struct aesni_session *ses;
 
 	sc = device_get_softc(dev);
+
 	rw_wlock(&sc->lock);
 	TAILQ_FOREACH(ses, &sc->sessions, next) {
 		if (ses->used) {
@@ -114,14 +177,18 @@ aesni_detach(device_t dev)
 			return (EBUSY);
 		}
 	}
+	sc->dieing = 1;
 	while ((ses = TAILQ_FIRST(&sc->sessions)) != NULL) {
 		TAILQ_REMOVE(&sc->sessions, ses, next);
-		fpu_kern_free_ctx(ses->fpu_ctx);
 		free(ses, M_AESNI);
 	}
 	rw_wunlock(&sc->lock);
-	rw_destroy(&sc->lock);
 	crypto_unregister_all(sc->cid);
+
+	rw_destroy(&sc->lock);
+
+	aensi_cleanctx();
+
 	return (0);
 }
 
@@ -137,6 +204,9 @@ aesni_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 		return (EINVAL);
 
 	sc = device_get_softc(dev);
+	if (sc->dieing)
+		return (EINVAL);
+
 	ses = NULL;
 	encini = NULL;
 	for (; cri != NULL; cri = cri->cri_next) {
@@ -155,6 +225,10 @@ aesni_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 		return (EINVAL);
 
 	rw_wlock(&sc->lock);
+	if (sc->dieing) {
+		rw_wunlock(&sc->lock);
+		return (EINVAL);
+	}
 	/*
 	 * Free sessions goes first, so if first session is used, we need to
 	 * allocate one.
@@ -163,13 +237,6 @@ aesni_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 	if (ses == NULL || ses->used) {
 		ses = malloc(sizeof(*ses), M_AESNI, M_NOWAIT | M_ZERO);
 		if (ses == NULL) {
-			rw_wunlock(&sc->lock);
-			return (ENOMEM);
-		}
-		ses->fpu_ctx = fpu_kern_alloc_ctx(FPU_KERN_NORMAL |
-		    FPU_KERN_NOWAIT);
-		if (ses->fpu_ctx == NULL) {
-			free(ses, M_AESNI);
 			rw_wunlock(&sc->lock);
 			return (ENOMEM);
 		}
@@ -197,15 +264,14 @@ aesni_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 static void
 aesni_freesession_locked(struct aesni_softc *sc, struct aesni_session *ses)
 {
-	struct fpu_kern_ctx *ctx;
 	uint32_t sid;
+
+	rw_assert(&sc->lock, RA_WLOCKED);
 
 	sid = ses->id;
 	TAILQ_REMOVE(&sc->sessions, ses, next);
-	ctx = ses->fpu_ctx;
 	bzero(ses, sizeof(*ses));
 	ses->id = sid;
-	ses->fpu_ctx = ctx;
 	TAILQ_INSERT_HEAD(&sc->sessions, ses, next);
 }
 
@@ -347,3 +413,110 @@ static devclass_t aesni_devclass;
 DRIVER_MODULE(aesni, nexus, aesni_driver, aesni_devclass, 0, 0);
 MODULE_VERSION(aesni, 1);
 MODULE_DEPEND(aesni, crypto, 1, 1, 1);
+
+static int
+aesni_cipher_setup(struct aesni_session *ses, struct cryptoini *encini)
+{
+	struct fpu_kern_ctx *ctx;
+	int error;
+	int kt, ctxidx;
+
+	kt = is_fpu_kern_thread(0);
+	if (!kt) {
+		AQUIRE_CTX(ctxidx, ctx);
+		error = fpu_kern_enter(curthread, ctx,
+		    FPU_KERN_NORMAL | FPU_KERN_KTHR);
+		if (error != 0)
+			goto out;
+	}
+
+	error = aesni_cipher_setup_common(ses, encini->cri_key,
+	    encini->cri_klen);
+
+	if (!kt) {
+		fpu_kern_leave(curthread, ctx);
+out:
+		RELEASE_CTX(ctxidx, ctx);
+	}
+	return (error);
+}
+
+static int
+aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
+    struct cryptop *crp)
+{
+	struct fpu_kern_ctx *ctx;
+	uint8_t *buf;
+	int error, allocated;
+	int kt, ctxidx;
+
+	buf = aesni_cipher_alloc(enccrd, crp, &allocated);
+	if (buf == NULL)
+		return (ENOMEM);
+
+	error = 0;
+	kt = is_fpu_kern_thread(0);
+	if (!kt) {
+		AQUIRE_CTX(ctxidx, ctx);
+		error = fpu_kern_enter(curthread, ctx,
+		    FPU_KERN_NORMAL|FPU_KERN_KTHR);
+		if (error != 0)
+			goto out2;
+	}
+
+	if ((enccrd->crd_flags & CRD_F_KEY_EXPLICIT) != 0) {
+		error = aesni_cipher_setup_common(ses, enccrd->crd_key,
+		    enccrd->crd_klen);
+		if (error != 0)
+			goto out;
+	}
+
+	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0) {
+		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
+			bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
+		if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0)
+			crypto_copyback(crp->crp_flags, crp->crp_buf,
+			    enccrd->crd_inject, AES_BLOCK_LEN, ses->iv);
+		if (ses->algo == CRYPTO_AES_CBC) {
+			aesni_encrypt_cbc(ses->rounds, ses->enc_schedule,
+			    enccrd->crd_len, buf, buf, ses->iv);
+		} else /* if (ses->algo == CRYPTO_AES_XTS) */ {
+			aesni_encrypt_xts(ses->rounds, ses->enc_schedule,
+			    ses->xts_schedule, enccrd->crd_len, buf, buf,
+			    ses->iv);
+		}
+	} else {
+		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
+			bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
+		else
+			crypto_copydata(crp->crp_flags, crp->crp_buf,
+			    enccrd->crd_inject, AES_BLOCK_LEN, ses->iv);
+		if (ses->algo == CRYPTO_AES_CBC) {
+			aesni_decrypt_cbc(ses->rounds, ses->dec_schedule,
+			    enccrd->crd_len, buf, ses->iv);
+		} else /* if (ses->algo == CRYPTO_AES_XTS) */ {
+			aesni_decrypt_xts(ses->rounds, ses->dec_schedule,
+			    ses->xts_schedule, enccrd->crd_len, buf, buf,
+			    ses->iv);
+		}
+	}
+	if (allocated)
+		crypto_copyback(crp->crp_flags, crp->crp_buf, enccrd->crd_skip,
+		    enccrd->crd_len, buf);
+	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0)
+		crypto_copydata(crp->crp_flags, crp->crp_buf,
+		    enccrd->crd_skip + enccrd->crd_len - AES_BLOCK_LEN,
+		    AES_BLOCK_LEN, ses->iv);
+out:
+	if (!kt) {
+		fpu_kern_leave(curthread, ctx);
+out2:
+		RELEASE_CTX(ctxidx, ctx);
+	}
+
+	if (allocated) {
+		bzero(buf, enccrd->crd_len);
+		free(buf, M_AESNI);
+	}
+	return (error);
+}

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: sha1.c,v 1.5 2000/11/08 06:13:08 itojun Exp $	*/
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/crypto/sha1.c 116174 2003-06-10 21:44:29Z obrien $");
 
 #include <sys/types.h>
 #include <sys/cdefs.h>

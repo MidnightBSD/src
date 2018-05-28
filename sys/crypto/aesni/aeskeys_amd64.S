@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
 * The white paper of AES-NI instructions can be downloaded from:
  *   http://softwarecommunity.intel.com/isn/downloads/intelavx/AES-Instructions-Set_WP.pdf
@@ -125,103 +126,72 @@ ENTRY(aesni_set_enckey)
 	movups	0x10(%rdi),%xmm2	# other user key
 	movaps	%xmm2,(%rsi)
 	addq	$0x10,%rsi
-//	aeskeygenassist $0x1,%xmm2,%xmm1	# round 1
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x01
+	aeskeygenassist $0x1,%xmm2,%xmm1	# round 1
 	call	_key_expansion_256a
-//	aeskeygenassist $0x1,%xmm0,%xmm1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x01
+	aeskeygenassist $0x1,%xmm0,%xmm1
 	call	_key_expansion_256b
-//	aeskeygenassist $0x2,%xmm2,%xmm1	# round 2
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x02
+	aeskeygenassist $0x2,%xmm2,%xmm1	# round 2
 	call	_key_expansion_256a
-//	aeskeygenassist $0x2,%xmm0,%xmm1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x02
+	aeskeygenassist $0x2,%xmm0,%xmm1
 	call	_key_expansion_256b
-//	aeskeygenassist $0x4,%xmm2,%xmm1	# round 3
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x04
+	aeskeygenassist $0x4,%xmm2,%xmm1	# round 3
 	call	_key_expansion_256a
-//	aeskeygenassist $0x4,%xmm0,%xmm1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x04
+	aeskeygenassist $0x4,%xmm0,%xmm1
 	call	_key_expansion_256b
-//	aeskeygenassist $0x8,%xmm2,%xmm1	# round 4
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x08
+	aeskeygenassist $0x8,%xmm2,%xmm1	# round 4
 	call	_key_expansion_256a
-//	aeskeygenassist $0x8,%xmm0,%xmm1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x08
+	aeskeygenassist $0x8,%xmm0,%xmm1
 	call	_key_expansion_256b
-//	aeskeygenassist $0x10,%xmm2,%xmm1	# round 5
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x10
+	aeskeygenassist $0x10,%xmm2,%xmm1	# round 5
 	call	_key_expansion_256a
-//	aeskeygenassist $0x10,%xmm0,%xmm1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x10
+	aeskeygenassist $0x10,%xmm0,%xmm1
 	call	_key_expansion_256b
-//	aeskeygenassist $0x20,%xmm2,%xmm1	# round 6
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x20
+	aeskeygenassist $0x20,%xmm2,%xmm1	# round 6
 	call	_key_expansion_256a
-//	aeskeygenassist $0x20,%xmm0,%xmm1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x20
+	aeskeygenassist $0x20,%xmm0,%xmm1
 	call	_key_expansion_256b
-//	aeskeygenassist $0x40,%xmm2,%xmm1	# round 7
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x40
+	aeskeygenassist $0x40,%xmm2,%xmm1	# round 7
 	call	_key_expansion_256a
 	retq
 .Lenc_key192:
 	movq	0x10(%rdi),%xmm2		# other user key
-//	aeskeygenassist $0x1,%xmm2,%xmm1	# round 1
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x01
+	aeskeygenassist $0x1,%xmm2,%xmm1	# round 1
 	call	_key_expansion_192a
-//	aeskeygenassist $0x2,%xmm2,%xmm1	# round 2
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x02
+	aeskeygenassist $0x2,%xmm2,%xmm1	# round 2
 	call	_key_expansion_192b
-//	aeskeygenassist $0x4,%xmm2,%xmm1	# round 3
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x04
+	aeskeygenassist $0x4,%xmm2,%xmm1	# round 3
 	call	_key_expansion_192a
-//	aeskeygenassist $0x8,%xmm2,%xmm1	# round 4
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x08
+	aeskeygenassist $0x8,%xmm2,%xmm1	# round 4
 	call	_key_expansion_192b
-//	aeskeygenassist $0x10,%xmm2,%xmm1	# round 5
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x10
+	aeskeygenassist $0x10,%xmm2,%xmm1	# round 5
 	call	_key_expansion_192a
-//	aeskeygenassist $0x20,%xmm2,%xmm1	# round 6
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x20
+	aeskeygenassist $0x20,%xmm2,%xmm1	# round 6
 	call	_key_expansion_192b
-//	aeskeygenassist $0x40,%xmm2,%xmm1	# round 7
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x40
+	aeskeygenassist $0x40,%xmm2,%xmm1	# round 7
 	call	_key_expansion_192a
-//	aeskeygenassist $0x80,%xmm2,%xmm1	# round 8
-	.byte	0x66,0x0f,0x3a,0xdf,0xca,0x80
+	aeskeygenassist $0x80,%xmm2,%xmm1	# round 8
 	call	_key_expansion_192b
 	retq
 .Lenc_key128:
-//	aeskeygenassist $0x1,%xmm0,%xmm1	# round 1
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x01
+	aeskeygenassist $0x1,%xmm0,%xmm1	# round 1
 	call	_key_expansion_128
-//	aeskeygenassist $0x2,%xmm0,%xmm1	# round 2
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x02
+	aeskeygenassist $0x2,%xmm0,%xmm1	# round 2
 	call	_key_expansion_128
-//	aeskeygenassist $0x4,%xmm0,%xmm1	# round 3
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x04
+	aeskeygenassist $0x4,%xmm0,%xmm1	# round 3
 	call	_key_expansion_128
-//	aeskeygenassist $0x8,%xmm0,%xmm1	# round 4
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x08
+	aeskeygenassist $0x8,%xmm0,%xmm1	# round 4
 	call	_key_expansion_128
-//	aeskeygenassist $0x10,%xmm0,%xmm1	# round 5
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x10
+	aeskeygenassist $0x10,%xmm0,%xmm1	# round 5
 	call	_key_expansion_128
-//	aeskeygenassist $0x20,%xmm0,%xmm1	# round 6
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x20
+	aeskeygenassist $0x20,%xmm0,%xmm1	# round 6
 	call	_key_expansion_128
-//	aeskeygenassist $0x40,%xmm0,%xmm1	# round 7
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x40
+	aeskeygenassist $0x40,%xmm0,%xmm1	# round 7
 	call	_key_expansion_128
-//	aeskeygenassist $0x80,%xmm0,%xmm1	# round 8
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x80
+	aeskeygenassist $0x80,%xmm0,%xmm1	# round 8
 	call	_key_expansion_128
-//	aeskeygenassist $0x1b,%xmm0,%xmm1	# round 9
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x1b
+	aeskeygenassist $0x1b,%xmm0,%xmm1	# round 9
 	call	_key_expansion_128
-//	aeskeygenassist $0x36,%xmm0,%xmm1	# round 10
-	.byte	0x66,0x0f,0x3a,0xdf,0xc8,0x36
+	aeskeygenassist $0x36,%xmm0,%xmm1	# round 10
 	call	_key_expansion_128
 	retq
 	.cfi_endproc
@@ -238,8 +208,7 @@ ENTRY(aesni_set_deckey)
 1:
 	addq	$0x10,%rsi
 	subq	$0x10,%rdi
-//	aesimc	(%rdi),%xmm1
-	.byte	0x66,0x0f,0x38,0xdb,0x0f
+	aesimc	(%rdi),%xmm1
 	movdqa	%xmm1,(%rsi)
 	decl	%edx
 	jne	1b
@@ -252,4 +221,4 @@ ENTRY(aesni_set_deckey)
 	.cfi_endproc
 END(aesni_set_deckey)
 
-	.ident	"$MidnightBSD$"
+	.ident	"$FreeBSD: stable/10/sys/crypto/aesni/aeskeys_amd64.S 255187 2013-09-03 18:31:23Z jmg $"

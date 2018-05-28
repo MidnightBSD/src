@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: des_enc.c,v 1.1 2001/09/10 04:03:58 itojun Exp $	*/
 
 /* crypto/des/des_enc.c */
@@ -60,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/crypto/des/des_enc.c 130443 2004-06-14 00:38:54Z obrien $");
 
 #include <sys/types.h>
 #include <crypto/des/des_locl.h>

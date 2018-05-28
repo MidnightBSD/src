@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: rijndael-api-fst.c,v 1.10 2001/05/27 09:34:18 itojun Exp $	*/
 
 /*
@@ -16,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/crypto/rijndael/rijndael-api-fst.c 143420 2005-03-11 16:26:10Z ume $");
 
 #include <sys/param.h>
 #ifdef _KERNEL

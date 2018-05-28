@@ -55683,6 +55683,7 @@ sys/contrib/xz-embedded/userspace/boottest.c -text
 sys/contrib/xz-embedded/userspace/buftest.c -text
 sys/contrib/xz-embedded/userspace/xz_config.h -text
 sys/contrib/xz-embedded/userspace/xzminidec.c -text
+sys/crypto/aesni/aesencdec.h svneol=native#text/plain
 sys/crypto/aesni/aesencdec_amd64.S -text
 sys/crypto/aesni/aesencdec_i386.S -text
 sys/crypto/aesni/aeskeys_amd64.S -text
@@ -55725,6 +55726,15 @@ sys/crypto/sha1.c -text
 sys/crypto/sha1.h -text
 sys/crypto/sha2/sha2.c -text
 sys/crypto/sha2/sha2.h -text
+sys/crypto/sha2/sha256.h svneol=native#text/plain
+sys/crypto/sha2/sha256c.c svneol=native#text/plain
+sys/crypto/sha2/sha384.h svneol=native#text/plain
+sys/crypto/sha2/sha512.h svneol=native#text/plain
+sys/crypto/sha2/sha512c.c svneol=native#text/plain
+sys/crypto/sha2/sha512t.h svneol=native#text/plain
+sys/crypto/siphash/siphash.c svneol=native#text/plain
+sys/crypto/siphash/siphash.h svneol=native#text/plain
+sys/crypto/siphash/siphash_test.c svneol=native#text/plain
 sys/crypto/via/padlock.c -text
 sys/crypto/via/padlock.h -text
 sys/crypto/via/padlock_cipher.c -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: bf_skey.c,v 1.7 2002/02/27 01:33:59 itojun Exp $	*/
 
 /* crypto/bf/bf_skey.c */
@@ -60,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/crypto/blowfish/bf_skey.c 116174 2003-06-10 21:44:29Z obrien $");
 
 #include <sys/types.h>
 #include <sys/time.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  *
  * Copyright (c) 2006
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/crypto/camellia/camellia-api.c 169425 2007-05-09 19:37:02Z gnn $
  */
 
 #include <sys/cdefs.h>

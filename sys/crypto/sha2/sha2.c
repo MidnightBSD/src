@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: sha2.c,v 1.8 2001/11/08 01:07:52 itojun Exp $	*/
 
 /*

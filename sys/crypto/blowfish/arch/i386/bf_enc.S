@@ -1,5 +1,5 @@
 /*	$NetBSD: bf_enc.S,v 1.1 2001/09/09 11:01:01 tls Exp $	*/
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/sys/crypto/blowfish/arch/i386/bf_enc.S 137784 2004-11-16 20:42:32Z jhb $	*/
 
 /*
  * Written by Jason R. Thorpe <thorpej@zembu.com> and Thor Lancelot Simon

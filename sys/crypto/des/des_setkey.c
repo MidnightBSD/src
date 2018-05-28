@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: des_setkey.c,v 1.7 2001/09/10 04:03:58 itojun Exp $	*/
 
 /* crypto/des/set_key.c */
@@ -57,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/crypto/des/des_setkey.c 130443 2004-06-14 00:38:54Z obrien $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * rc4.h
@@ -34,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/crypto/rc4/rc4.h 63249 2000-07-16 05:53:14Z peter $
  */
 
 #ifndef _SYS_CRYPTO_RC4_RC4_H_
