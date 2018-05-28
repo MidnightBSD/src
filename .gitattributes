@@ -55509,6 +55509,9 @@ sys/contrib/ipfilter/netinet/fil.c -text
 sys/contrib/ipfilter/netinet/ip_auth.c -text
 sys/contrib/ipfilter/netinet/ip_auth.h -text
 sys/contrib/ipfilter/netinet/ip_compat.h -text
+sys/contrib/ipfilter/netinet/ip_dns_pxy.c svneol=native#text/plain
+sys/contrib/ipfilter/netinet/ip_dstlist.c svneol=native#text/plain
+sys/contrib/ipfilter/netinet/ip_dstlist.h svneol=native#text/plain
 sys/contrib/ipfilter/netinet/ip_fil.h -text
 sys/contrib/ipfilter/netinet/ip_fil_freebsd.c -text
 sys/contrib/ipfilter/netinet/ip_frag.c -text
@@ -55523,6 +55526,7 @@ sys/contrib/ipfilter/netinet/ip_lookup.c -text
 sys/contrib/ipfilter/netinet/ip_lookup.h -text
 sys/contrib/ipfilter/netinet/ip_nat.c -text
 sys/contrib/ipfilter/netinet/ip_nat.h -text
+sys/contrib/ipfilter/netinet/ip_nat6.c svneol=native#text/plain
 sys/contrib/ipfilter/netinet/ip_netbios_pxy.c -text
 sys/contrib/ipfilter/netinet/ip_pool.c -text
 sys/contrib/ipfilter/netinet/ip_pool.h -text
@@ -55540,8 +55544,12 @@ sys/contrib/ipfilter/netinet/ip_state.c -text
 sys/contrib/ipfilter/netinet/ip_state.h -text
 sys/contrib/ipfilter/netinet/ip_sync.c -text
 sys/contrib/ipfilter/netinet/ip_sync.h -text
+sys/contrib/ipfilter/netinet/ip_tftp_pxy.c svneol=native#text/plain
+sys/contrib/ipfilter/netinet/ipf_rb.h svneol=native#text/plain
 sys/contrib/ipfilter/netinet/ipl.h -text
 sys/contrib/ipfilter/netinet/mlfk_ipl.c -text
+sys/contrib/ipfilter/netinet/radix_ipf.c svneol=native#text/plain
+sys/contrib/ipfilter/netinet/radix_ipf.h svneol=native#text/plain
 sys/contrib/libfdt/fdt.c svneol=native#text/plain
 sys/contrib/libfdt/fdt.h svneol=native#text/plain
 sys/contrib/libfdt/fdt_empty_tree.c svneol=native#text/plain
