@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cs/if_cs.c 243857 2012-12-04 09:32:43Z glebius $");
 
 /*
  *

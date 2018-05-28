@@ -2,7 +2,7 @@
 /*	$NecBSD: ct_isa.c,v 1.6 1999/07/26 06:32:01 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ct/ct_isa.c 281826 2015-04-21 11:27:50Z mav $");
 /*	$NetBSD$	*/
 
 /*-
@@ -43,36 +43,12 @@ __MBSDID("$MidnightBSD$");
 #include <sys/buf.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
-#include <sys/device_port.h>
+#include <sys/bus.h>
+#include <sys/module.h>
 #include <sys/errno.h>
 
 #include <vm/vm.h>
 
-#ifdef __NetBSD__
-#include <machine/bus.h>
-#include <machine/intr.h>
-
-#include <dev/scsipi/scsi_all.h>
-#include <dev/scsipi/scsipi_all.h>
-#include <dev/scsipi/scsiconf.h>
-#include <dev/scsipi/scsi_disk.h>
-
-#include <dev/isa/isareg.h>
-#include <dev/isa/isavar.h>
-#include <dev/isa/isadmavar.h>
-
-#include <machine/dvcfg.h>
-#include <machine/physio_proc.h>
-#include <machine/syspmgr.h>
-
-#include <i386/Cbus/dev/scsi_low.h>
-
-#include <dev/ic/wd33c93reg.h>
-#include <i386/Cbus/dev/ct/ctvar.h>
-#include <i386/Cbus/dev/ct/bshwvar.h>
-#endif /* __NetBSD__ */
-
-#ifdef __FreeBSD__
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
@@ -83,14 +59,12 @@ __MBSDID("$MidnightBSD$");
 #include <isa/isavar.h>
 
 #include <compat/netbsd/dvcfg.h>
-#include <compat/netbsd/physio_proc.h>
 
 #include <cam/scsi/scsi_low.h>
 
 #include <dev/ic/wd33c93reg.h>
 #include <dev/ct/ctvar.h>
 #include <dev/ct/bshwvar.h>
-#endif /* __FreeBSD__ */
 
 #define	BSHW_IOSZ	0x08
 #define	BSHW_IOBASE 	0xcc0
@@ -241,7 +215,7 @@ ct_isa_attach(device_t dev)
 	/* setup DMA map */
 	if (bus_dma_tag_create(NULL, 1, 0,
 			       BUS_SPACE_MAXADDR_24BIT, BUS_SPACE_MAXADDR,
-			       NULL, NULL, MAXBSIZE, 1,
+			       NULL, NULL, DFLTPHYS, 1,
 			       BUS_SPACE_MAXSIZE_32BIT,
 			       BUS_DMA_ALLOCNOW, NULL, NULL,
 			       &ct->sc_dmat) != 0) {
@@ -257,7 +231,7 @@ ct_isa_attach(device_t dev)
 		return ENXIO;
 	}
 
-	bus_dmamap_load(ct->sc_dmat, ct->sc_dmamapt, vaddr, MAXBSIZE,
+	bus_dmamap_load(ct->sc_dmat, ct->sc_dmamapt, vaddr, DFLTPHYS,
 			ct_dmamap, &addr, BUS_DMA_NOWAIT);
 
 	/* setup machdep softc */
@@ -265,7 +239,7 @@ ct_isa_attach(device_t dev)
 	bs->sc_io_control = 0;
 	bs->sc_bounce_phys = (u_int8_t *)addr;
 	bs->sc_bounce_addr = vaddr;
-	bs->sc_bounce_size = MAXBSIZE;
+	bs->sc_bounce_size = DFLTPHYS;
 	bs->sc_minphys = (1 << 24);
 	bs->sc_dmasync_before = ct_isa_dmasync_before;
 	bs->sc_dmasync_after = ct_isa_dmasync_after;
@@ -323,7 +297,6 @@ ct_isa_attach(device_t dev)
 
 	slp->sl_dev = dev;
 	slp->sl_hostid = bs->sc_hostid;
-	slp->sl_irq = isa_get_irq(dev);
 	slp->sl_cfgflags = device_get_flags(dev);
 
 	s = splcam();

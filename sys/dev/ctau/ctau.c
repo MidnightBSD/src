@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ctau/ctau.c,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Low-level subroutines for Cronyx-Tau adapter.
  *
@@ -18,7 +18,7 @@
  * Cronyx Id: ctau.c,v 1.1.2.4 2003/12/11 17:33:43 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ctau/ctau.c 218909 2011-02-21 09:01:34Z brucec $");
 
 #include <dev/cx/machdep.h>
 #include <dev/ctau/ctddk.h>

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ctau/ctddk.h,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Defines for Cronyx-Tau adapter driver.
  *
@@ -13,7 +13,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: ctddk.h,v 1.1.2.3 2003/12/11 17:33:44 rik Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ctau/ctddk.h 218909 2011-02-21 09:01:34Z brucec $
  */
 #define NBRD		3	/* the maximum number of installed boards */
 #define NPORT		32	/* the number of i/o ports per board */

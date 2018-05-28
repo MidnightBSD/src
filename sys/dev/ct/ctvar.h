@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/sys/dev/ct/ctvar.h,v 1.4 2005/01/06 01:42:33 imp Exp $ */
+/* $FreeBSD: stable/10/sys/dev/ct/ctvar.h 240325 2012-09-10 18:49:49Z jhb $ */
 /*	$NecBSD: ctvar.h,v 1.4.14.3 2001/06/20 06:13:34 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -67,13 +67,6 @@ struct ct_softc {
 
 	struct ct_bus_access_handle sc_ch;	/* bus access handle */
 
-#ifdef	__NetBSD__
-	bus_dma_tag_t sc_dmat;			/* data DMA tag */
-
-	void *sc_ih;
-#endif	/* __NetBSD__ */
-
-#ifdef	__FreeBSD__
 	struct resource *port_res;
 	struct resource *mem_res;
 	struct resource *irq_res;
@@ -83,7 +76,6 @@ struct ct_softc {
 	bus_dmamap_t sc_dmamapt;		/* data DMAMAP tag */
 
 	void *sc_ih;
-#endif	/* __FreeBSD__ */
 
 	int sc_chiprev;			/* chip version */	
 #define	CT_WD33C93			0x00000
@@ -141,6 +133,5 @@ struct ct_targ_info {
  *****************************************************************/
 int ctprobesubr(struct ct_bus_access_handle *, u_int, int, u_int, int *);
 void ctattachsubr(struct ct_softc *);
-int ctprint(void *, const char *);
 int ctintr(void *);
 #endif	/* !_CTVAR_H_ */

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cs/if_csvar.h,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 M. Warner Losh <imp@village.org> 
  * All rights reserved.
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/cs/if_csvar.h 218055 2011-01-29 00:53:58Z andrew $
  */
 
 #ifndef _IF_CSVAR_H

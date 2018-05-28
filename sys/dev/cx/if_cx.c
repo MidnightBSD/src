@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*-
  * Cronyx-Sigma adapter driver for FreeBSD.
  * Supports PPP/HDLC and Cisco/HDLC protocol in synchronous mode,
- * and asyncronous channels with full modem control.
+ * and asynchronous channels with full modem control.
  * Keepalive protocol implemented in both Cisco and PPP modes.
  *
  * Copyright (C) 1994-2002 Cronyx Engineering.
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cx/if_cx.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <sys/param.h>
 
@@ -113,7 +114,8 @@ static device_method_t cx_isa_methods [] = {
 	DEVMETHOD(device_probe,		cx_probe),
 	DEVMETHOD(device_attach,	cx_attach),
 	DEVMETHOD(device_detach,	cx_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 typedef struct _cx_dma_mem_t {
@@ -761,7 +763,7 @@ static int cx_attach (device_t dev)
  		return ENXIO;
 	}
 	b->sys = bd;
-	callout_init (&led_timo[b->num], CALLOUT_MPSAFE);
+	callout_init (&led_timo[b->num], 1);
 	s = splhigh ();
 	if (bus_setup_intr (dev, bd->irq_res,
 			   INTR_TYPE_NET|INTR_MPSAFE,
@@ -811,7 +813,7 @@ static int cx_attach (device_t dev)
 		case T_UNIV_RS232:
 		case T_UNIV_RS449:
 		case T_UNIV_V35:
-		callout_init (&d->timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&d->timeout_handle, 1);
 #ifdef NETGRAPH
 		if (ng_make_node_common (&typestruct, &d->node) != 0) {
 			printf ("%s: cannot make common node\n", d->name);
@@ -882,7 +884,7 @@ static int cx_attach (device_t dev)
 		ttycreate(d->tty, TS_CALLOUT, "x%r%r", b->num, c->num);
 		d->devt = make_dev (&cx_cdevsw, b->num*NCHAN + c->num + 64, UID_ROOT, GID_WHEEL, 0600, "cx%d", b->num*NCHAN + c->num);
 		d->devt->si_drv1 = d;
-		callout_init (&d->dcd_timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&d->dcd_timeout_handle, 1);
 	}
 	splx (s);
 
@@ -2513,7 +2515,7 @@ static int cx_modevent (module_t mod, int type, void *unused)
 #endif
 		++load_count;
 
-		callout_init (&timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&timeout_handle, 1);
 		callout_reset (&timeout_handle, hz*5, cx_timeout, 0);
 		/* Software interrupt. */
 		swi_add(&tty_intr_event, "cx", cx_softintr, NULL, SWI_TTY,

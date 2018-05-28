@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Cronyx-Sigma Driver Development Kit.
  *
@@ -17,7 +18,7 @@
  * Cronyx Id: cxddk.c,v 1.1.2.2 2003/11/27 14:24:50 rik Exp $
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cx/cxddk.c 139749 2005-01-06 01:43:34Z imp $");
 
 #include <dev/cx/machdep.h>
 #include <dev/cx/cxddk.h>

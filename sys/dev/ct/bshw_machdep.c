@@ -2,7 +2,7 @@
 /*	$NecBSD: bshw_machdep.c,v 1.8.12.6 2001/06/29 06:28:05 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ct/bshw_machdep.c 242871 2012-11-10 14:58:06Z nyan $");
 /*	$NetBSD$	*/
 
 /*-
@@ -42,9 +42,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#if defined(__FreeBSD__) && __FreeBSD_version > 500001
 #include <sys/bio.h>
-#endif	/* __ FreeBSD__ */
 #include <sys/buf.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
@@ -52,34 +50,10 @@ __MBSDID("$MidnightBSD$");
 
 #include <vm/vm.h>
 
-#ifdef __NetBSD__
-#include <sys/device.h>
-
-#include <machine/bus.h>
-#include <machine/intr.h>
-
-#include <dev/scsipi/scsi_all.h>
-#include <dev/scsipi/scsipi_all.h>
-#include <dev/scsipi/scsiconf.h>
-#include <dev/scsipi/scsi_disk.h>
-
-#include <machine/dvcfg.h>
-#include <machine/physio_proc.h>
-
-#include <i386/Cbus/dev/scsi_low.h>
-
-#include <dev/ic/wd33c93reg.h>
-#include <i386/Cbus/dev/ct/ctvar.h>
-#include <i386/Cbus/dev/ct/ct_machdep.h>
-#include <i386/Cbus/dev/ct/bshwvar.h>
-#endif /* __NetBSD__ */
-
-#ifdef __FreeBSD__
 #include <machine/bus.h>
 #include <machine/md_var.h>
 
 #include <compat/netbsd/dvcfg.h>
-#include <compat/netbsd/physio_proc.h>
 
 #include <cam/scsi/scsi_low.h>
 
@@ -89,7 +63,6 @@ __MBSDID("$MidnightBSD$");
 #include <dev/ct/bshwvar.h>
 
 #include <vm/pmap.h>
-#endif /* __FreeBSD__ */
 
 #define	BSHW_IO_CONTROL_FLAGS	0
 
@@ -100,14 +73,7 @@ int bshw_data_write_bytes = 4096;
 /*********************************************************
  * OS dep part
  *********************************************************/
-#ifdef	__NetBSD__
-#define	BSHW_PAGE_SIZE NBPG
-#endif	/* __NetBSD__ */
-
-#ifdef	__FreeBSD__
-#define	BSHW_PAGE_SIZE PAGE_SIZE
 typedef	unsigned long vaddr_t;
-#endif /* __FreeBSD__ */
 
 /*********************************************************
  * GENERIC MACHDEP FUNCTIONS
@@ -145,8 +111,9 @@ bshw_bus_reset(struct ct_softc *ct)
 	/* open hardware busmaster mode */
 	if (hw->hw_dma_init != NULL && ((*hw->hw_dma_init)(ct)) != 0)
 	{
-		printf("%s: change mode using external DMA (%x)\n",
-		    slp->sl_xname, (u_int)ct_cr_read_1(chp, 0x37));
+		device_printf(slp->sl_dev,
+		    "change mode using external DMA (%x)\n",
+		    (u_int)ct_cr_read_1(chp, 0x37));
 	}
 
 	/* clear hardware synch registers */
@@ -167,7 +134,7 @@ bshw_bus_reset(struct ct_softc *ct)
 	regv &= ~MBR_IEN;
 	ct_cr_write_1(chp, wd3s_mbank, regv);
 
-	SCSI_LOW_DELAY(500000);
+	DELAY(500000);
 
 	/* reset signal off */
 	regv &= ~MBR_RST;
@@ -262,7 +229,7 @@ bshw_lc_smit_fstat(struct ct_softc *ct, int wc, int read)
 		}
 	}
 
-	printf("%s: SMIT fifo status timeout\n", ct->sc_sclow.sl_xname);
+	device_printf(ct->sc_sclow.sl_dev, "SMIT fifo status timeout\n");
 	return EIO;
 }
 
@@ -300,14 +267,15 @@ bshw_smit_xfer_stop(struct ct_softc *ct)
 		else if (count > bs->sc_sdatalen)
 		{
 bad:
-			printf("%s: smit_xfer_end: cnt error\n", slp->sl_xname);
+			device_printf(slp->sl_dev,
+			    "smit_xfer_end: cnt error\n");
 			slp->sl_error |= PDMAERR;
 		}
 		scsi_low_data_finish(slp);
 	}
 	else
 	{
-		printf("%s: smit_xfer_end: phase miss\n", slp->sl_xname);
+		device_printf(slp->sl_dev, "smit_xfer_end: phase miss\n");
 		slp->sl_error |= PDMAERR;
 	}
 }
@@ -452,14 +420,14 @@ bshw_dma_xfer_start(struct ct_softc *ct)
 		endva = (vaddr_t) round_page((vaddr_t) sp->scp_data + sp->scp_datalen);
 		for (va = (vaddr_t) sp->scp_data; ; phys = nphys)
 		{
-			if ((va += BSHW_PAGE_SIZE) >= endva)
+			if ((va += PAGE_SIZE) >= endva)
 			{
 				bs->sc_seglen = sp->scp_datalen;
 				break;
 			}
 
 			nphys = vtophys(va);
-			if (phys + BSHW_PAGE_SIZE != nphys || nphys >= bs->sc_minphys)
+			if (phys + PAGE_SIZE != nphys || nphys >= bs->sc_minphys)
 			{
 				bs->sc_seglen =
 				    (u_int8_t *) trunc_page(va) - sp->scp_data;
@@ -506,8 +474,9 @@ bshw_dma_xfer_stop(struct ct_softc *ct)
 		}
 		else if (count > (u_int) bs->sc_seglen)
 		{
-			printf("%s: port data %x != seglen %x\n",
-				slp->sl_xname, count, bs->sc_seglen);
+			device_printf(slp->sl_dev,
+			    "port data %x != seglen %x\n",
+			    count, bs->sc_seglen);
 			slp->sl_error |= PDMAERR;
 		}
 
@@ -515,7 +484,7 @@ bshw_dma_xfer_stop(struct ct_softc *ct)
 	}
 	else
 	{
-		printf("%s: extra DMA interrupt\n", slp->sl_xname);
+		device_printf(slp->sl_dev, "extra DMA interrupt\n");
 		slp->sl_error |= PDMAERR;
 	}
 

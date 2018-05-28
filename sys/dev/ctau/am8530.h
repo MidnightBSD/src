@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ctau/am8530.h,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * AMD Am83C30 serial communication controller registers.
  *
@@ -13,7 +13,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: am8530.h,v 1.1.2.2 2003/11/12 17:31:21 rik Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ctau/am8530.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 /*

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ctau/ds2153.h,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Dallas DS2153, DS21x54 single-chip E1 tranceiver registers.
  *
@@ -13,7 +13,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: ds2153.h,v 1.2.4.1 2003/11/12 17:22:33 rik Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ctau/ds2153.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 /*

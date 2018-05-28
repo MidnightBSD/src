@@ -2,7 +2,7 @@
 /*-
  * Cronyx-Tau-PCI adapter driver for FreeBSD.
  * Supports PPP/HDLC, Cisco/HDLC and FrameRelay protocol in synchronous mode,
- * and asyncronous channels with full modem control.
+ * and asynchronous channels with full modem control.
  * Keepalive protocol implemented in both Cisco and PPP modes.
  *
  * Copyright (C) 1999-2004 Cronyx Engineering.
@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cp/if_cp.c 314667 2017-03-04 13:03:31Z avg $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -94,7 +94,7 @@ static	device_method_t cp_methods[] = {
 	DEVMETHOD(device_attach,	cp_attach),
 	DEVMETHOD(device_detach,	cp_detach),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 typedef struct _cp_dma_mem_t {
@@ -462,7 +462,7 @@ static int cp_attach (device_t dev)
 		splx (s);
 		return (ENXIO);
 	}
-	callout_init (&led_timo[unit], CALLOUT_MPSAFE);
+	callout_init (&led_timo[unit], 1);
 	error  = bus_setup_intr (dev, bd->cp_irq,
 				INTR_TYPE_NET|INTR_MPSAFE,
 				NULL, cp_intr, bd, &bd->cp_intrhand);
@@ -491,7 +491,7 @@ static int cp_attach (device_t dev)
 		d->board = b;
 		d->chan = c;
 		c->sys = d;
-		callout_init (&d->timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&d->timeout_handle, 1);
 #ifdef NETGRAPH
 		if (ng_make_node_common (&typestruct, &d->node) != 0) {
 			printf ("%s: cannot make common node\n", d->name);
@@ -2241,7 +2241,7 @@ static int cp_modevent (module_t mod, int type, void *unused)
 			printf ("Failed to register ng_cp\n");
 #endif
 		++load_count;
-		callout_init (&timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&timeout_handle, 1);
 		callout_reset (&timeout_handle, hz*5, cp_timeout, 0);
 		break;
 	case MOD_UNLOAD:

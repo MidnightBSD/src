@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/sys/dev/ct/bshwvar.h,v 1.4 2005/01/06 01:42:33 imp Exp $ */
+/* $FreeBSD: stable/10/sys/dev/ct/bshwvar.h 139749 2005-01-06 01:43:34Z imp $ */
 /*	$NecBSD: bshwvar.h,v 1.3.14.3 2001/06/21 04:07:37 honda Exp $	*/
 /*	$NetBSD$	*/
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cp/cpddk.h,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Cronyx Tau-PCI DDK definitions.
  *
@@ -17,7 +17,7 @@
  * works or modified versions.
  *
  * $Cronyx: cpddk.h,v 1.8.4.20 2004/12/06 16:21:06 rik Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/cp/cpddk.h 180132 2008-06-30 21:18:27Z rik $
  */
 #define NBRD		6	/* the maximum number of installed boards */
 #define NCHAN		4	/* the number of channels on the board */

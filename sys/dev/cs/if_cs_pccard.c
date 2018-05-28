@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cs/if_cs_pccard.c,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 M. Warner Losh <imp@village.org> 
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cs/if_cs_pccard.c 179618 2008-06-06 16:10:10Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

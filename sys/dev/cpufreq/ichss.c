@@ -26,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/cpufreq/ichss.c 247332 2013-02-26 18:30:47Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -113,7 +114,7 @@ static device_method_t ichss_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	ichss_get),
 	DEVMETHOD(cpufreq_drv_type,	ichss_type),
 	DEVMETHOD(cpufreq_drv_settings,	ichss_settings),
-	{0, 0}
+	DEVMETHOD_END
 };
 static driver_t ichss_driver = {
 	"ichss", ichss_methods, sizeof(struct ichss_softc)
