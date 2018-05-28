@@ -1,7 +1,8 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2012 Chelsio Communications, Inc.
+ * Copyright (c) 2014 Chelsio Communications, Inc.
  * All rights reserved.
+ * Written by: Navdeep Parhar <np@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,31 +25,45 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/tom/t4_tom_l2t.h 309442 2016-12-02 21:29:52Z jhb $
+ * $FreeBSD: stable/10/sys/dev/cxgbe/t4_mp_ring.h 284052 2015-06-06 09:28:40Z np $
  *
  */
 
-#ifndef __T4_TOM_L2T_H
-#define __T4_TOM_L2T_H
+#ifndef __CXGBE_MP_RING_H
+#define __CXGBE_MP_RING_H
 
-#include "t4_l2t.h"
+#ifndef _KERNEL
+#error "no user-serviceable parts inside"
+#endif
 
-int t4_l2t_send_slow(struct adapter *, struct wrqe *, struct l2t_entry *);
-struct l2t_entry *t4_l2t_get(struct port_info *, struct ifnet *,
-    struct sockaddr *);
-void t4_l2_update(struct toedev *, struct ifnet *, struct sockaddr *,
-    uint8_t *, uint16_t);
-int do_l2t_write_rpl2(struct sge_iq *, const struct rss_header *,
-    struct mbuf *);
+struct mp_ring;
+typedef u_int (*ring_drain_t)(struct mp_ring *, u_int, u_int);
+typedef u_int (*ring_can_drain_t)(struct mp_ring *);
 
-static inline int
-t4_l2t_send(struct adapter *sc, struct wrqe *wr, struct l2t_entry *e)
-{
-	if (__predict_true(e->state == L2T_STATE_VALID)) {
-		t4_wrq_tx(sc, wr);
-		return (0);
-	} else
-		return (t4_l2t_send_slow(sc, wr, e));
-}
+struct mp_ring {
+	volatile uint64_t	state __aligned(CACHE_LINE_SIZE);
 
-#endif  /* __T4_TOM_L2T_H */
+	int			size __aligned(CACHE_LINE_SIZE);
+	void *			cookie;
+	struct malloc_type *	mt;
+	ring_drain_t		drain;
+	ring_can_drain_t	can_drain;	/* cheap, may be unreliable */
+	counter_u64_t		enqueues;
+	counter_u64_t		drops;
+	counter_u64_t		starts;
+	counter_u64_t		stalls;
+	counter_u64_t		restarts;	/* recovered after stalling */
+	counter_u64_t		abdications;
+
+	void * volatile		items[] __aligned(CACHE_LINE_SIZE);
+};
+
+int mp_ring_alloc(struct mp_ring **, int, void *, ring_drain_t,
+    ring_can_drain_t, struct malloc_type *, int);
+void mp_ring_free(struct mp_ring *);
+int mp_ring_enqueue(struct mp_ring *, void **, int, int);
+void mp_ring_check_drainage(struct mp_ring *, int);
+void mp_ring_reset_stats(struct mp_ring *);
+int mp_ring_is_idle(struct mp_ring *);
+
+#endif

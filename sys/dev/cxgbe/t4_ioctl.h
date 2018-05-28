@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/cxgbe/t4_ioctl.h 241573 2012-10-15 06:41:54Z np $
+ * $FreeBSD: stable/10/sys/dev/cxgbe/t4_ioctl.h 309569 2016-12-05 23:02:26Z jhb $
  *
  */
 
@@ -51,6 +52,12 @@ enum {
 	T4_GET_MEM,			/* read memory */
 	T4_GET_I2C,			/* read from i2c addressible device */
 	T4_CLEAR_STATS,			/* clear a port's MAC statistics */
+	T4_SET_OFLD_POLICY,		/* Set offload policy */
+	T4_SET_SCHED_CLASS,             /* set sched class */
+	T4_SET_SCHED_QUEUE,             /* set queue class */
+	T4_GET_TRACER,			/* get information about a tracer */
+	T4_SET_TRACER,			/* program a tracer */
+	T4_LOAD_CFG,			/* copy a config file to card's flash */
 };
 
 struct t4_reg {
@@ -60,6 +67,7 @@ struct t4_reg {
 };
 
 #define T4_REGDUMP_SIZE  (160 * 1024)
+#define T5_REGDUMP_SIZE  (332 * 1024)
 struct t4_regdump {
 	uint32_t version;
 	uint32_t len; /* bytes */
@@ -98,6 +106,12 @@ struct t4_i2c_data {
 #define T4_FILTER_MAC_IDX	0x2000	/* MPS MAC address match index */
 #define T4_FILTER_MPS_HIT_TYPE	0x4000	/* MPS match type */
 #define T4_FILTER_IP_FRAGMENT	0x8000	/* IP fragment */
+
+#define T4_FILTER_IC_VNIC	0x80000000	/* TP Ingress Config's F_VNIC
+						   bit.  It indicates whether
+						   T4_FILTER_VNIC bit means VNIC
+						   id (PF/VF) or outer VLAN.
+						   0 = oVLAN, 1 = VNIC */
 
 /* Filter action */
 enum {
@@ -148,7 +162,7 @@ struct t4_filter_tuple {
 	 * is used to select the global mode and all filters are limited to the
 	 * set of fields allowed by the global mode.
 	 */
-	uint16_t vnic;		/* VNIC id or outer VLAN tag */
+	uint16_t vnic;		/* VNIC id (PF/VF) or outer VLAN tag */
 	uint16_t vlan;		/* VLAN tag */
 	uint16_t ethtype;	/* Ethernet type */
 	uint8_t  tos;		/* TOS/Traffic Type */
@@ -159,7 +173,8 @@ struct t4_filter_tuple {
 	uint32_t frag:1;	/* fragmentation extension header */
 	uint32_t macidx:9;	/* exact match MAC index */
 	uint32_t vlan_vld:1;	/* VLAN valid */
-	uint32_t vnic_vld:1;	/* VNIC id/outer VLAN tag valid */
+	uint32_t ovlan_vld:1;	/* outer VLAN tag valid, value in "vnic" */
+	uint32_t pfvf_vld:1;	/* VNIC id (PF/VF) valid, value in "vnic" */
 };
 
 struct t4_filter_specification {
@@ -202,6 +217,76 @@ struct t4_filter {
 	struct t4_filter_specification fs;
 };
 
+/* Tx Scheduling Class parameters */
+struct t4_sched_class_params {
+	int8_t   level;		/* scheduler hierarchy level */
+	int8_t   mode;		/* per-class or per-flow */
+	int8_t   rateunit;	/* bit or packet rate */
+	int8_t   ratemode;	/* %port relative or kbps absolute */
+	int8_t   channel;	/* scheduler channel [0..N] */
+	int8_t   cl;		/* scheduler class [0..N] */
+	int32_t  minrate;	/* minimum rate */
+	int32_t  maxrate;	/* maximum rate */
+	int16_t  weight;	/* percent weight */
+	int16_t  pktsize;	/* average packet size */
+};
+
+/*
+ * Support for "sched-class" command to allow a TX Scheduling Class to be
+ * programmed with various parameters.
+ */
+struct t4_sched_params {
+	int8_t   subcmd;		/* sub-command */
+	int8_t   type;			/* packet or flow */
+	union {
+		struct {		/* sub-command SCHED_CLASS_CONFIG */
+			int8_t   minmax;	/* minmax enable */
+		} config;
+		struct t4_sched_class_params params;
+		uint8_t     reserved[6 + 8 * 8];
+	} u;
+};
+
+enum {
+	SCHED_CLASS_SUBCMD_CONFIG,	/* config sub-command */
+	SCHED_CLASS_SUBCMD_PARAMS,	/* params sub-command */
+};
+
+enum {
+	SCHED_CLASS_TYPE_PACKET,
+};
+
+enum {
+	SCHED_CLASS_LEVEL_CL_RL,	/* class rate limiter */
+	SCHED_CLASS_LEVEL_CL_WRR,	/* class weighted round robin */
+	SCHED_CLASS_LEVEL_CH_RL,	/* channel rate limiter */
+};
+
+enum {
+	SCHED_CLASS_MODE_CLASS,		/* per-class scheduling */
+	SCHED_CLASS_MODE_FLOW,		/* per-flow scheduling */
+};
+
+enum {
+	SCHED_CLASS_RATEUNIT_BITS,	/* bit rate scheduling */
+	SCHED_CLASS_RATEUNIT_PKTS,	/* packet rate scheduling */
+};
+
+enum {
+	SCHED_CLASS_RATEMODE_REL,	/* percent of port bandwidth */
+	SCHED_CLASS_RATEMODE_ABS,	/* Kb/s */
+};
+
+/*
+ * Support for "sched_queue" command to allow one or more NIC TX Queues to be
+ * bound to a TX Scheduling Class.
+ */
+struct t4_sched_queue {
+	uint8_t  port;
+	int8_t   queue;	/* queue index; -1 => all queues */
+	int8_t   cl;	/* class index; -1 => unbind */
+};
+
 #define T4_SGE_CONTEXT_SIZE 24
 enum {
 	SGE_CONTEXT_EGRESS,
@@ -222,6 +307,25 @@ struct t4_mem_range {
 	uint32_t *data;
 };
 
+#define T4_TRACE_LEN 112
+struct t4_trace_params {
+	uint32_t data[T4_TRACE_LEN / 4];
+	uint32_t mask[T4_TRACE_LEN / 4];
+	uint16_t snap_len;
+	uint16_t min_len;
+	uint8_t skip_ofst;
+	uint8_t skip_len;
+	uint8_t invert;
+	uint8_t port;
+};
+
+struct t4_tracer {
+	uint8_t idx;
+	uint8_t enabled;
+	uint8_t valid;
+	struct t4_trace_params tp;
+};
+
 #define CHELSIO_T4_GETREG	_IOWR('f', T4_GETREG, struct t4_reg)
 #define CHELSIO_T4_SETREG	_IOW('f', T4_SETREG, struct t4_reg)
 #define CHELSIO_T4_REGDUMP	_IOWR('f', T4_REGDUMP, struct t4_regdump)
@@ -236,4 +340,11 @@ struct t4_mem_range {
 #define CHELSIO_T4_GET_MEM	_IOW('f', T4_GET_MEM, struct t4_mem_range)
 #define CHELSIO_T4_GET_I2C	_IOWR('f', T4_GET_I2C, struct t4_i2c_data)
 #define CHELSIO_T4_CLEAR_STATS	_IOW('f', T4_CLEAR_STATS, uint32_t)
+#define CHELSIO_T4_SCHED_CLASS  _IOW('f', T4_SET_SCHED_CLASS, \
+    struct t4_sched_params)
+#define CHELSIO_T4_SCHED_QUEUE  _IOW('f', T4_SET_SCHED_QUEUE, \
+    struct t4_sched_queue)
+#define CHELSIO_T4_GET_TRACER	_IOWR('f', T4_GET_TRACER, struct t4_tracer)
+#define CHELSIO_T4_SET_TRACER	_IOW('f', T4_SET_TRACER, struct t4_tracer)
+#define CHELSIO_T4_LOAD_CFG	_IOW('f', T4_LOAD_CFG, struct t4_data)
 #endif

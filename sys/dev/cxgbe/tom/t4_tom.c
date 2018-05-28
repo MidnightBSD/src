@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_tom.c 247434 2013-02-28 00:44:54Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/tom/t4_tom.c 330303 2018-03-03 00:54:12Z jhb $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -36,11 +37,13 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_tom.c 247434 2013-02-28 00:44:
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
+#include <sys/limits.h>
 #include <sys/module.h>
 #include <sys/protosw.h>
 #include <sys/domain.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#include <sys/taskqueue.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/in_pcb.h>
@@ -51,12 +54,15 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_tom.c 247434 2013-02-28 00:44:
 #include <netinet6/scope6_var.h>
 #define TCPSTATES
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_timer.h>
 #include <netinet/toecore.h>
 
 #ifdef TCP_OFFLOAD
 #include "common/common.h"
 #include "common/t4_msg.h"
 #include "common/t4_regs.h"
+#include "common/t4_regs_values.h"
+#include "common/t4_tcb.h"
 #include "tom/t4_tom_l2t.h"
 #include "tom/t4_tom.h"
 
@@ -89,12 +95,54 @@ static int add_lip(struct adapter *, struct in6_addr *);
 static int delete_lip(struct adapter *, struct in6_addr *);
 static struct clip_entry *search_lip(struct tom_data *, struct in6_addr *);
 static void init_clip_table(struct adapter *, struct tom_data *);
+static void update_clip(struct adapter *, void *);
+static void t4_clip_task(void *, int);
+static void update_clip_table(struct adapter *, struct tom_data *);
 static void destroy_clip_table(struct adapter *, struct tom_data *);
 static void free_tom_data(struct adapter *, struct tom_data *);
+static void reclaim_wr_resources(void *, int);
 
-struct toepcb *
-alloc_toepcb(struct port_info *pi, int txqid, int rxqid, int flags)
+static int in6_ifaddr_gen;
+static eventhandler_tag ifaddr_evhandler;
+static struct timeout_task clip_task;
+
+static void
+mbufq_init(struct mbufq *q, int limit)
 {
+
+	q->head = q->tail = NULL;
+}
+
+static void
+mbufq_drain(struct mbufq *q)
+{
+	struct mbuf *m;
+
+	while ((m = q->head) != NULL) {
+		q->head = m->m_nextpkt;
+		m_freem(m);
+	}
+	q->tail = NULL;
+}
+
+#ifdef INVARIANTS
+static inline int
+mbufq_len(const struct mbufq *q)
+{
+	struct mbuf *m;
+	int len;
+
+	len = 0;
+	for (m = q->head; m != NULL; m = m->m_nextpkt)
+		len++;
+	return (len);
+}
+#endif
+	
+struct toepcb *
+alloc_toepcb(struct vi_info *vi, int txqid, int rxqid, int flags)
+{
+	struct port_info *pi = vi->pi;
 	struct adapter *sc = pi->adapter;
 	struct toepcb *toep;
 	int tx_credits, txsd_total, len;
@@ -113,21 +161,21 @@ alloc_toepcb(struct port_info *pi, int txqid, int rxqid, int flags)
 	 * units of 16 byte.  Calculate the maximum work requests possible.
 	 */
 	txsd_total = tx_credits /
-	    howmany((sizeof(struct fw_ofld_tx_data_wr) + 1), 16);
+	    howmany(sizeof(struct fw_ofld_tx_data_wr) + 1, 16);
 
 	if (txqid < 0)
-		txqid = (arc4random() % pi->nofldtxq) + pi->first_ofld_txq;
-	KASSERT(txqid >= pi->first_ofld_txq &&
-	    txqid < pi->first_ofld_txq + pi->nofldtxq,
-	    ("%s: txqid %d for port %p (first %d, n %d)", __func__, txqid, pi,
-		pi->first_ofld_txq, pi->nofldtxq));
+		txqid = (arc4random() % vi->nofldtxq) + vi->first_ofld_txq;
+	KASSERT(txqid >= vi->first_ofld_txq &&
+	    txqid < vi->first_ofld_txq + vi->nofldtxq,
+	    ("%s: txqid %d for vi %p (first %d, n %d)", __func__, txqid, vi,
+		vi->first_ofld_txq, vi->nofldtxq));
 
 	if (rxqid < 0)
-		rxqid = (arc4random() % pi->nofldrxq) + pi->first_ofld_rxq;
-	KASSERT(rxqid >= pi->first_ofld_rxq &&
-	    rxqid < pi->first_ofld_rxq + pi->nofldrxq,
-	    ("%s: rxqid %d for port %p (first %d, n %d)", __func__, rxqid, pi,
-		pi->first_ofld_rxq, pi->nofldrxq));
+		rxqid = (arc4random() % vi->nofldrxq) + vi->first_ofld_rxq;
+	KASSERT(rxqid >= vi->first_ofld_rxq &&
+	    rxqid < vi->first_ofld_rxq + vi->nofldrxq,
+	    ("%s: rxqid %d for vi %p (first %d, n %d)", __func__, rxqid, vi,
+		vi->first_ofld_rxq, vi->nofldrxq));
 
 	len = offsetof(struct toepcb, txsd) +
 	    txsd_total * sizeof(struct ofld_tx_sdesc);
@@ -137,11 +185,14 @@ alloc_toepcb(struct port_info *pi, int txqid, int rxqid, int flags)
 		return (NULL);
 
 	toep->td = sc->tom_softc;
-	toep->port = pi;
+	toep->vi = vi;
+	toep->tx_total = tx_credits;
 	toep->tx_credits = tx_credits;
 	toep->ofld_txq = &sc->sge.ofld_txq[txqid];
 	toep->ofld_rxq = &sc->sge.ofld_rxq[rxqid];
 	toep->ctrlq = &sc->sge.ctrlq[pi->port_id];
+	mbufq_init(&toep->ulp_pduq, INT_MAX);
+	mbufq_init(&toep->ulp_pdu_reclaimq, INT_MAX);
 	toep->txsd_total = txsd_total;
 	toep->txsd_avail = txsd_total;
 	toep->txsd_pidx = 0;
@@ -257,6 +308,14 @@ release_offload_resources(struct toepcb *toep)
 	CTR5(KTR_CXGBE, "%s: toep %p (tid %d, l2te %p, ce %p)",
 	    __func__, toep, tid, toep->l2te, toep->ce);
 
+	/*
+	 * These queues should have been emptied at approximately the same time
+	 * that a normal connection's socket's so_snd would have been purged or
+	 * drained.  Do _not_ clean up here.
+	 */
+	MPASS(mbufq_len(&toep->ulp_pduq) == 0);
+	MPASS(mbufq_len(&toep->ulp_pdu_reclaimq) == 0);
+
 	if (toep->ulp_mode == ULP_MODE_TCPDDP)
 		release_ddp_resources(toep);
 
@@ -264,7 +323,7 @@ release_offload_resources(struct toepcb *toep)
 		t4_l2t_release(toep->l2te);
 
 	if (tid >= 0) {
-		remove_tid(sc, tid);
+		remove_tid(sc, tid, toep->ce ? 2 : 1);
 		release_tid(sc, tid, toep->ctrlq);
 	}
 
@@ -322,6 +381,31 @@ t4_pcb_detach(struct toedev *tod __unused, struct tcpcb *tp)
 }
 
 /*
+ * setsockopt handler.
+ */
+static void
+t4_ctloutput(struct toedev *tod, struct tcpcb *tp, int dir, int name)
+{
+	struct adapter *sc = tod->tod_softc;
+	struct toepcb *toep = tp->t_toe;
+
+	if (dir == SOPT_GET)
+		return;
+
+	CTR4(KTR_CXGBE, "%s: tp %p, dir %u, name %u", __func__, tp, dir, name);
+
+	switch (name) {
+	case TCP_NODELAY:
+		t4_set_tcb_field(sc, toep->ctrlq, toep->tid, W_TCB_T_FLAGS,
+		    V_TF_NAGLE(1), V_TF_NAGLE(tp->t_flags & TF_NODELAY ? 0 : 1),
+		    0, 0, toep->ofld_rxq->iq.abs_id);
+		break;
+	default:
+		break;
+	}
+}
+
+/*
  * The TOE driver will not receive any more CPLs for the tid associated with the
  * toepcb; release the hold on the inpcb.
  */
@@ -340,6 +424,7 @@ final_cpl_received(struct toepcb *toep)
 
 	toep->inp = NULL;
 	toep->flags &= ~TPF_CPL_PENDING;
+	mbufq_drain(&toep->ulp_pdu_reclaimq);
 
 	if (!(toep->flags & TPF_ATTACHED))
 		release_offload_resources(toep);
@@ -349,12 +434,12 @@ final_cpl_received(struct toepcb *toep)
 }
 
 void
-insert_tid(struct adapter *sc, int tid, void *ctx)
+insert_tid(struct adapter *sc, int tid, void *ctx, int ntids)
 {
 	struct tid_info *t = &sc->tids;
 
 	t->tid_tab[tid] = ctx;
-	atomic_add_int(&t->tids_in_use, 1);
+	atomic_add_int(&t->tids_in_use, ntids);
 }
 
 void *
@@ -374,12 +459,12 @@ update_tid(struct adapter *sc, int tid, void *ctx)
 }
 
 void
-remove_tid(struct adapter *sc, int tid)
+remove_tid(struct adapter *sc, int tid, int ntids)
 {
 	struct tid_info *t = &sc->tids;
 
 	t->tid_tab[tid] = NULL;
-	atomic_subtract_int(&t->tids_in_use, 1);
+	atomic_subtract_int(&t->tids_in_use, ntids);
 }
 
 void
@@ -466,14 +551,11 @@ select_rcv_wscale(void)
 	return (wscale);
 }
 
-extern int always_keepalive;
-#define VIID_SMACIDX(v)	(((unsigned int)(v) & 0x7f) << 1)
-
 /*
  * socket so could be a listening socket too.
  */
 uint64_t
-calc_opt0(struct socket *so, struct port_info *pi, struct l2t_entry *e,
+calc_opt0(struct socket *so, struct vi_info *vi, struct l2t_entry *e,
     int mtu_idx, int rscale, int rx_credits, int ulp_mode)
 {
 	uint64_t opt0;
@@ -487,7 +569,7 @@ calc_opt0(struct socket *so, struct port_info *pi, struct l2t_entry *e,
 	if (so != NULL) {
 		struct inpcb *inp = sotoinpcb(so);
 		struct tcpcb *tp = intotcpcb(inp);
-		int keepalive = always_keepalive ||
+		int keepalive = tcp_always_keepalive ||
 		    so_options_get(so) & SO_KEEPALIVE;
 
 		opt0 |= V_NAGLE((tp->t_flags & TF_NODELAY) == 0);
@@ -497,45 +579,48 @@ calc_opt0(struct socket *so, struct port_info *pi, struct l2t_entry *e,
 	if (e != NULL)
 		opt0 |= V_L2T_IDX(e->idx);
 
-	if (pi != NULL) {
-		opt0 |= V_SMAC_SEL(VIID_SMACIDX(pi->viid));
-		opt0 |= V_TX_CHAN(pi->tx_chan);
+	if (vi != NULL) {
+		opt0 |= V_SMAC_SEL(vi->smt_idx);
+		opt0 |= V_TX_CHAN(vi->pi->tx_chan);
 	}
 
 	return htobe64(opt0);
 }
 
-#define FILTER_SEL_WIDTH_P_FC (3 + 1)
-#define FILTER_SEL_WIDTH_VIN_P_FC (6 + 7 + FILTER_SEL_WIDTH_P_FC)
-#define FILTER_SEL_WIDTH_TAG_P_FC (3 + FILTER_SEL_WIDTH_VIN_P_FC)
-#define FILTER_SEL_WIDTH_VLD_TAG_P_FC (1 + FILTER_SEL_WIDTH_TAG_P_FC)
-#define VLAN_NONE 0xfff
-#define FILTER_SEL_VLAN_NONE 0xffff
-
-uint32_t
-select_ntuple(struct port_info *pi, struct l2t_entry *e, uint32_t filter_mode)
+uint64_t
+select_ntuple(struct vi_info *vi, struct l2t_entry *e)
 {
-	uint16_t viid = pi->viid;
-	uint32_t ntuple = 0;
+	struct adapter *sc = vi->pi->adapter;
+	struct tp_params *tp = &sc->params.tp;
+	uint16_t viid = vi->viid;
+	uint64_t ntuple = 0;
 
-	if (filter_mode == HW_TPL_FR_MT_PR_IV_P_FC) {
-                if (e->vlan == VLAN_NONE)
-			ntuple |= FILTER_SEL_VLAN_NONE << FILTER_SEL_WIDTH_P_FC;
-                else {
-                        ntuple |= e->vlan << FILTER_SEL_WIDTH_P_FC;
-                        ntuple |= 1 << FILTER_SEL_WIDTH_VLD_TAG_P_FC;
-                }
-                ntuple |= e->lport << S_PORT;
-		ntuple |= IPPROTO_TCP << FILTER_SEL_WIDTH_VLD_TAG_P_FC;
-	} else if (filter_mode == HW_TPL_FR_MT_PR_OV_P_FC) {
-                ntuple |= G_FW_VIID_VIN(viid) << FILTER_SEL_WIDTH_P_FC;
-                ntuple |= G_FW_VIID_PFN(viid) << FILTER_SEL_WIDTH_VIN_P_FC;
-                ntuple |= G_FW_VIID_VIVLD(viid) << FILTER_SEL_WIDTH_TAG_P_FC;
-                ntuple |= e->lport << S_PORT;
-		ntuple |= IPPROTO_TCP << FILTER_SEL_WIDTH_VLD_TAG_P_FC;
-        }
+	/*
+	 * Initialize each of the fields which we care about which are present
+	 * in the Compressed Filter Tuple.
+	 */
+	if (tp->vlan_shift >= 0 && e->vlan != CPL_L2T_VLAN_NONE)
+		ntuple |= (uint64_t)(F_FT_VLAN_VLD | e->vlan) << tp->vlan_shift;
 
-	return (htobe32(ntuple));
+	if (tp->port_shift >= 0)
+		ntuple |= (uint64_t)e->lport << tp->port_shift;
+
+	if (tp->protocol_shift >= 0)
+		ntuple |= (uint64_t)IPPROTO_TCP << tp->protocol_shift;
+
+	if (tp->vnic_shift >= 0) {
+		uint32_t vf = G_FW_VIID_VIN(viid);
+		uint32_t pf = G_FW_VIID_PFN(viid);
+		uint32_t vld = G_FW_VIID_VIVLD(viid);
+
+		ntuple |= (uint64_t)(V_FT_VNID_ID_VF(vf) | V_FT_VNID_ID_PF(pf) |
+		    V_FT_VNID_ID_VLD(vld)) << tp->vnic_shift;
+	}
+
+	if (is_t4(sc))
+		return (htobe32((uint32_t)ntuple));
+	else
+		return (htobe64(V_FILTER_TUPLE(ntuple)));
 }
 
 void
@@ -623,7 +708,7 @@ add_lip(struct adapter *sc, struct in6_addr *lip)
         c.ip_hi = *(uint64_t *)&lip->s6_addr[0];
         c.ip_lo = *(uint64_t *)&lip->s6_addr[8];
 
-	return (t4_wr_mbox_ns(sc, sc->mbox, &c, sizeof(c), &c));
+	return (-t4_wr_mbox_ns(sc, sc->mbox, &c, sizeof(c), &c));
 }
 
 static int
@@ -641,7 +726,7 @@ delete_lip(struct adapter *sc, struct in6_addr *lip)
         c.ip_hi = *(uint64_t *)&lip->s6_addr[0];
         c.ip_lo = *(uint64_t *)&lip->s6_addr[8];
 
-	return (t4_wr_mbox_ns(sc, sc->mbox, &c, sizeof(c), &c));
+	return (-t4_wr_mbox_ns(sc, sc->mbox, &c, sizeof(c), &c));
 }
 
 static struct clip_entry *
@@ -660,12 +745,12 @@ search_lip(struct tom_data *td, struct in6_addr *lip)
 }
 
 struct clip_entry *
-hold_lip(struct tom_data *td, struct in6_addr *lip)
+hold_lip(struct tom_data *td, struct in6_addr *lip, struct clip_entry *ce)
 {
-	struct clip_entry *ce;
 
 	mtx_lock(&td->clip_table_lock);
-	ce = search_lip(td, lip);
+	if (ce == NULL)
+		ce = search_lip(td, lip);
 	if (ce != NULL)
 		ce->refcount++;
 	mtx_unlock(&td->clip_table_lock);
@@ -689,47 +774,161 @@ release_lip(struct tom_data *td, struct clip_entry *ce)
 static void
 init_clip_table(struct adapter *sc, struct tom_data *td)
 {
-	struct in6_ifaddr *ia;
-	struct in6_addr *lip, tlip;
-	struct clip_entry *ce;
 
 	ASSERT_SYNCHRONIZED_OP(sc);
 
 	mtx_init(&td->clip_table_lock, "CLIP table lock", NULL, MTX_DEF);
 	TAILQ_INIT(&td->clip_table);
+	td->clip_gen = -1;
+
+	update_clip_table(sc, td);
+}
+
+static void
+update_clip(struct adapter *sc, void *arg __unused)
+{
+
+	if (begin_synchronized_op(sc, NULL, HOLD_LOCK, "t4tomuc"))
+		return;
+
+	if (uld_active(sc, ULD_TOM))
+		update_clip_table(sc, sc->tom_softc);
+
+	end_synchronized_op(sc, LOCK_HELD);
+}
+
+static void
+t4_clip_task(void *arg, int count)
+{
+
+	t4_iterate(update_clip, NULL);
+}
+
+static void
+update_clip_table(struct adapter *sc, struct tom_data *td)
+{
+	struct in6_ifaddr *ia;
+	struct in6_addr *lip, tlip;
+	struct clip_head stale;
+	struct clip_entry *ce, *ce_temp;
+	struct vi_info *vi;
+	int rc, gen, i, j;
+	uintptr_t last_vnet;
+
+	ASSERT_SYNCHRONIZED_OP(sc);
 
 	IN6_IFADDR_RLOCK();
-	TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
-		lip = &ia->ia_addr.sin6_addr;
+	mtx_lock(&td->clip_table_lock);
 
-		KASSERT(!IN6_IS_ADDR_MULTICAST(lip),
-		    ("%s: mcast address in in6_ifaddr list", __func__));
+	gen = atomic_load_acq_int(&in6_ifaddr_gen);
+	if (gen == td->clip_gen)
+		goto done;
 
-		if (IN6_IS_ADDR_LOOPBACK(lip))
+	TAILQ_INIT(&stale);
+	TAILQ_CONCAT(&stale, &td->clip_table, link);
+
+	/*
+	 * last_vnet optimizes the common cases where all if_vnet = NULL (no
+	 * VIMAGE) or all if_vnet = vnet0.
+	 */
+	last_vnet = (uintptr_t)(-1);
+	for_each_port(sc, i)
+	for_each_vi(sc->port[i], j, vi) {
+		if (last_vnet == (uintptr_t)vi->ifp->if_vnet)
 			continue;
-		if (IN6_IS_SCOPE_EMBED(lip)) {
-			/* Remove the embedded scope */
-			tlip = *lip;
-			lip = &tlip;
-			in6_clearscope(lip);
-		}
-		/*
-		 * XXX: how to weed out the link local address for the loopback
-		 * interface?  It's fe80::1 usually (always?).
-		 */
 
-		mtx_lock(&td->clip_table_lock);
-		if (search_lip(td, lip) == NULL) {
+		/* XXX: races with if_vmove */
+		CURVNET_SET(vi->ifp->if_vnet);
+		TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
+			lip = &ia->ia_addr.sin6_addr;
+
+			KASSERT(!IN6_IS_ADDR_MULTICAST(lip),
+			    ("%s: mcast address in in6_ifaddr list", __func__));
+
+			if (IN6_IS_ADDR_LOOPBACK(lip))
+				continue;
+			if (IN6_IS_SCOPE_EMBED(lip)) {
+				/* Remove the embedded scope */
+				tlip = *lip;
+				lip = &tlip;
+				in6_clearscope(lip);
+			}
+			/*
+			 * XXX: how to weed out the link local address for the
+			 * loopback interface?  It's fe80::1 usually (always?).
+			 */
+
+			/*
+			 * If it's in the main list then we already know it's
+			 * not stale.
+			 */
+			TAILQ_FOREACH(ce, &td->clip_table, link) {
+				if (IN6_ARE_ADDR_EQUAL(&ce->lip, lip))
+					goto next;
+			}
+
+			/*
+			 * If it's in the stale list we should move it to the
+			 * main list.
+			 */
+			TAILQ_FOREACH(ce, &stale, link) {
+				if (IN6_ARE_ADDR_EQUAL(&ce->lip, lip)) {
+					TAILQ_REMOVE(&stale, ce, link);
+					TAILQ_INSERT_TAIL(&td->clip_table, ce,
+					    link);
+					goto next;
+				}
+			}
+
+			/* A new IP6 address; add it to the CLIP table */
 			ce = malloc(sizeof(*ce), M_CXGBE, M_NOWAIT);
 			memcpy(&ce->lip, lip, sizeof(ce->lip));
 			ce->refcount = 0;
-			if (add_lip(sc, lip) == 0)
+			rc = add_lip(sc, lip);
+			if (rc == 0)
 				TAILQ_INSERT_TAIL(&td->clip_table, ce, link);
-			else
+			else {
+				char ip[INET6_ADDRSTRLEN];
+
+				inet_ntop(AF_INET6, &ce->lip, &ip[0],
+				    sizeof(ip));
+				log(LOG_ERR, "%s: could not add %s (%d)\n",
+				    __func__, ip, rc);
 				free(ce, M_CXGBE);
+			}
+next:
+			continue;
 		}
-		mtx_unlock(&td->clip_table_lock);
+		CURVNET_RESTORE();
+		last_vnet = (uintptr_t)vi->ifp->if_vnet;
 	}
+
+	/*
+	 * Remove stale addresses (those no longer in V_in6_ifaddrhead) that are
+	 * no longer referenced by the driver.
+	 */
+	TAILQ_FOREACH_SAFE(ce, &stale, link, ce_temp) {
+		if (ce->refcount == 0) {
+			rc = delete_lip(sc, &ce->lip);
+			if (rc == 0) {
+				TAILQ_REMOVE(&stale, ce, link);
+				free(ce, M_CXGBE);
+			} else {
+				char ip[INET6_ADDRSTRLEN];
+
+				inet_ntop(AF_INET6, &ce->lip, &ip[0],
+				    sizeof(ip));
+				log(LOG_ERR, "%s: could not delete %s (%d)\n",
+				    __func__, ip, rc);
+			}
+		}
+	}
+	/* The ones that are still referenced need to stay in the CLIP table */
+	TAILQ_CONCAT(&td->clip_table, &stale, link);
+
+	td->clip_gen = gen;
+done:
+	mtx_unlock(&td->clip_table_lock);
 	IN6_IFADDR_RUNLOCK();
 }
 
@@ -764,14 +963,14 @@ free_tom_data(struct adapter *sc, struct tom_data *td)
 	KASSERT(td->lctx_count == 0,
 	    ("%s: lctx hash table is not empty.", __func__));
 
-	t4_uninit_l2t_cpl_handlers(sc);
-	t4_uninit_cpl_io_handlers(sc);
-	t4_uninit_ddp(sc, td);
+	t4_free_ppod_region(&td->pr);
 	destroy_clip_table(sc, td);
 
 	if (td->listen_mask != 0)
 		hashdestroy(td->listen_hash, M_CXGBE, td->listen_mask);
 
+	if (mtx_initialized(&td->unsent_wr_lock))
+		mtx_destroy(&td->unsent_wr_lock);
 	if (mtx_initialized(&td->lctx_hash_lock))
 		mtx_destroy(&td->lctx_hash_lock);
 	if (mtx_initialized(&td->toep_list_lock))
@@ -779,6 +978,44 @@ free_tom_data(struct adapter *sc, struct tom_data *td)
 
 	free_tid_tabs(&sc->tids);
 	free(td, M_CXGBE);
+}
+
+static void
+reclaim_wr_resources(void *arg, int count)
+{
+	struct tom_data *td = arg;
+	STAILQ_HEAD(, wrqe) twr_list = STAILQ_HEAD_INITIALIZER(twr_list);
+	struct cpl_act_open_req *cpl;
+	u_int opcode, atid;
+	struct wrqe *wr;
+	struct adapter *sc;
+
+	mtx_lock(&td->unsent_wr_lock);
+	STAILQ_SWAP(&td->unsent_wr_list, &twr_list, wrqe);
+	mtx_unlock(&td->unsent_wr_lock);
+
+	while ((wr = STAILQ_FIRST(&twr_list)) != NULL) {
+		STAILQ_REMOVE_HEAD(&twr_list, link);
+
+		cpl = wrtod(wr);
+		opcode = GET_OPCODE(cpl);
+
+		switch (opcode) {
+		case CPL_ACT_OPEN_REQ:
+		case CPL_ACT_OPEN_REQ6:
+			atid = G_TID_TID(be32toh(OPCODE_TID(cpl)));
+			sc = td_adapter(td);
+
+			CTR2(KTR_CXGBE, "%s: atid %u ", __func__, atid);
+			act_open_failure_cleanup(sc, atid, EHOSTUNREACH);
+			free(wr, M_CXGBE);
+			break;
+		default:
+			log(LOG_ERR, "%s: leaked work request %p, wr_len %d, "
+			    "opcode %x\n", __func__, wr, wr->wr_len, opcode);
+			/* WR not freed here; go look at it with a debugger.  */
+		}
+	}
 }
 
 /*
@@ -790,7 +1027,9 @@ t4_tom_activate(struct adapter *sc)
 {
 	struct tom_data *td;
 	struct toedev *tod;
-	int i, rc;
+	struct vi_info *vi;
+	struct sge_ofld_rxq *ofld_rxq;
+	int i, j, rc, v;
 
 	ASSERT_SYNCHRONIZED_OP(sc);
 
@@ -808,22 +1047,25 @@ t4_tom_activate(struct adapter *sc)
 	td->listen_hash = hashinit_flags(LISTEN_HASH_SIZE, M_CXGBE,
 	    &td->listen_mask, HASH_NOWAIT);
 
+	/* List of WRs for which L2 resolution failed */
+	mtx_init(&td->unsent_wr_lock, "Unsent WR list lock", NULL, MTX_DEF);
+	STAILQ_INIT(&td->unsent_wr_list);
+	TASK_INIT(&td->reclaim_wr_resources, 0, reclaim_wr_resources, td);
+
 	/* TID tables */
 	rc = alloc_tid_tabs(&sc->tids);
 	if (rc != 0)
 		goto done;
 
-	/* DDP page pods and CPL handlers */
-	t4_init_ddp(sc, td);
+	rc = t4_init_ppod_region(&td->pr, &sc->vres.ddp,
+	    t4_read_reg(sc, A_ULP_RX_TDDP_PSZ), "TDDP page pods");
+	if (rc != 0)
+		goto done;
+	t4_set_reg_field(sc, A_ULP_RX_TDDP_TAGMASK,
+	    V_TDDPTAGMASK(M_TDDPTAGMASK), td->pr.pr_tag_mask);
 
 	/* CLIP table for IPv6 offload */
 	init_clip_table(sc, td);
-
-	/* CPL handlers */
-	t4_init_connect_cpl_handlers(sc);
-	t4_init_l2t_cpl_handlers(sc);
-	t4_init_listen_cpl_handlers(sc);
-	t4_init_cpl_io_handlers(sc);
 
 	/* toedev ops */
 	tod = &td->tod;
@@ -842,12 +1084,19 @@ t4_tom_activate(struct adapter *sc)
 	tod->tod_syncache_removed = t4_syncache_removed;
 	tod->tod_syncache_respond = t4_syncache_respond;
 	tod->tod_offload_socket = t4_offload_socket;
+	tod->tod_ctloutput = t4_ctloutput;
 
-	for_each_port(sc, i)
-		TOEDEV(sc->port[i]->ifp) = &td->tod;
+	for_each_port(sc, i) {
+		for_each_vi(sc->port[i], v, vi) {
+			TOEDEV(vi->ifp) = &td->tod;
+			for_each_ofld_rxq(vi, j, ofld_rxq) {
+				ofld_rxq->iq.set_tcb_rpl = do_set_tcb_rpl;
+				ofld_rxq->iq.l2t_write_rpl = do_l2t_write_rpl2;
+			}
+		}
+	}
 
 	sc->tom_softc = td;
-	sc->flags |= TOM_INIT_DONE;
 	register_toedev(sc->tom_softc);
 
 done:
@@ -870,6 +1119,9 @@ t4_tom_deactivate(struct adapter *sc)
 	if (sc->offload_map != 0)
 		return (EBUSY);	/* at least one port has IFCAP_TOE enabled */
 
+	if (uld_active(sc, ULD_IWARP) || uld_active(sc, ULD_ISCSI))
+		return (EBUSY);	/* both iWARP and iSCSI rely on the TOE. */
+
 	mtx_lock(&td->toep_list_lock);
 	if (!TAILQ_EMPTY(&td->toep_list))
 		rc = EBUSY;
@@ -880,14 +1132,27 @@ t4_tom_deactivate(struct adapter *sc)
 		rc = EBUSY;
 	mtx_unlock(&td->lctx_hash_lock);
 
+	taskqueue_drain(taskqueue_thread, &td->reclaim_wr_resources);
+	mtx_lock(&td->unsent_wr_lock);
+	if (!STAILQ_EMPTY(&td->unsent_wr_list))
+		rc = EBUSY;
+	mtx_unlock(&td->unsent_wr_lock);
+
 	if (rc == 0) {
 		unregister_toedev(sc->tom_softc);
 		free_tom_data(sc, td);
 		sc->tom_softc = NULL;
-		sc->flags &= ~TOM_INIT_DONE;
 	}
 
 	return (rc);
+}
+
+static void
+t4_tom_ifaddr_event(void *arg __unused, struct ifnet *ifp)
+{
+
+	atomic_add_rel_int(&in6_ifaddr_gen, 1);
+	taskqueue_enqueue_timeout(taskqueue_thread, &clip_task, -hz / 4);
 }
 
 static int
@@ -895,6 +1160,15 @@ t4_tom_mod_load(void)
 {
 	int rc;
 	struct protosw *tcp_protosw, *tcp6_protosw;
+
+	/* CPL handlers */
+	t4_init_connect_cpl_handlers();
+	t4_init_listen_cpl_handlers();
+	t4_init_cpl_io_handlers();
+
+	rc = t4_ddp_mod_load();
+	if (rc != 0)
+		return (rc);
 
 	tcp_protosw = pffindproto(PF_INET, IPPROTO_TCP, SOCK_STREAM);
 	if (tcp_protosw == NULL)
@@ -912,6 +1186,10 @@ t4_tom_mod_load(void)
 	ddp6_usrreqs.pru_soreceive = t4_soreceive_ddp;
 	ddp6_protosw.pr_usrreqs = &ddp6_usrreqs;
 
+	TIMEOUT_TASK_INIT(taskqueue_thread, &clip_task, 0, t4_clip_task, NULL);
+	ifaddr_evhandler = EVENTHANDLER_REGISTER(ifaddr_event,
+	    t4_tom_ifaddr_event, NULL, EVENTHANDLER_PRI_ANY);
+
 	rc = t4_register_uld(&tom_uld_info);
 	if (rc != 0)
 		t4_tom_mod_unload();
@@ -922,14 +1200,14 @@ t4_tom_mod_load(void)
 static void
 tom_uninit(struct adapter *sc, void *arg __unused)
 {
-	if (begin_synchronized_op(sc, NULL, HOLD_LOCK, "t4tomun"))
+	if (begin_synchronized_op(sc, NULL, SLEEP_OK | INTR_OK, "t4tomun"))
 		return;
 
 	/* Try to free resources (works only if no port has IFCAP_TOE) */
-	if (sc->flags & TOM_INIT_DONE)
+	if (uld_active(sc, ULD_TOM))
 		t4_deactivate_uld(sc, ULD_TOM);
 
-	end_synchronized_op(sc, LOCK_HELD);
+	end_synchronized_op(sc, 0);
 }
 
 static int
@@ -939,6 +1217,17 @@ t4_tom_mod_unload(void)
 
 	if (t4_unregister_uld(&tom_uld_info) == EBUSY)
 		return (EBUSY);
+
+	if (ifaddr_evhandler) {
+		EVENTHANDLER_DEREGISTER(ifaddr_event, ifaddr_evhandler);
+		taskqueue_cancel_timeout(taskqueue_thread, &clip_task, NULL);
+	}
+
+	t4_ddp_mod_unload();
+
+	t4_uninit_connect_cpl_handlers();
+	t4_uninit_listen_cpl_handlers();
+	t4_uninit_cpl_io_handlers();
 
 	return (0);
 }

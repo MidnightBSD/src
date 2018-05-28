@@ -1,7 +1,8 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2012 Chelsio Communications, Inc.
+ * Copyright (c) 2016 Chelsio Communications, Inc.
  * All rights reserved.
+ * Written by: Navdeep Parhar <np@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,32 +24,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/sys/dev/cxgbe/tom/t4_tom_l2t.h 309442 2016-12-02 21:29:52Z jhb $
- *
  */
 
-#ifndef __T4_TOM_L2T_H
-#define __T4_TOM_L2T_H
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/if_cc.c 309560 2016-12-05 20:43:25Z jhb $");
 
-#include "t4_l2t.h"
+#include <sys/param.h>
+#include <sys/kernel.h>
+#include <sys/module.h>
 
-int t4_l2t_send_slow(struct adapter *, struct wrqe *, struct l2t_entry *);
-struct l2t_entry *t4_l2t_get(struct port_info *, struct ifnet *,
-    struct sockaddr *);
-void t4_l2_update(struct toedev *, struct ifnet *, struct sockaddr *,
-    uint8_t *, uint16_t);
-int do_l2t_write_rpl2(struct sge_iq *, const struct rss_header *,
-    struct mbuf *);
-
-static inline int
-t4_l2t_send(struct adapter *sc, struct wrqe *wr, struct l2t_entry *e)
+static int
+mod_event(module_t mod, int cmd, void *arg)
 {
-	if (__predict_true(e->state == L2T_STATE_VALID)) {
-		t4_wrq_tx(sc, wr);
-		return (0);
-	} else
-		return (t4_l2t_send_slow(sc, wr, e));
-}
 
-#endif  /* __T4_TOM_L2T_H */
+	return (0);
+}
+static moduledata_t if_cc_mod = {"if_cc", mod_event};
+DECLARE_MODULE(if_cc, if_cc_mod, SI_SUB_EXEC, SI_ORDER_ANY);
+MODULE_VERSION(if_cc, 1);
+MODULE_DEPEND(if_cc, cc, 1, 1, 1);

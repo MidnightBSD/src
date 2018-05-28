@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/cxgbe/osdep.h 242015 2012-10-24 19:04:17Z gavin $
+ * $FreeBSD: stable/10/sys/dev/cxgbe/osdep.h 308304 2016-11-04 18:45:06Z jhb $
  *
  */
 
@@ -45,6 +46,7 @@
 #define CH_ALERT(adap, fmt, ...) log(LOG_ALERT, fmt, ##__VA_ARGS__)
 #define CH_WARN_RATELIMIT(adap, fmt, ...) log(LOG_WARNING, fmt, ##__VA_ARGS__)
 
+#ifndef LINUX_TYPES_DEFINED
 typedef int8_t  s8;
 typedef int16_t s16;
 typedef int32_t s32;
@@ -64,8 +66,11 @@ typedef uint64_t __be64;
 
 #if BYTE_ORDER == BIG_ENDIAN
 #define __BIG_ENDIAN_BITFIELD
+#define htobe32_const(x) (x)
 #elif BYTE_ORDER == LITTLE_ENDIAN
 #define __LITTLE_ENDIAN_BITFIELD
+#define htobe32_const(x) (((x) >> 24) | (((x) >> 8) & 0xff00) |	\
+    ((((x) & 0xffffff) << 8) & 0xff0000) | ((((x) & 0xff) << 24) & 0xff000000))
 #else
 #error "Must set BYTE_ORDER"
 #endif
@@ -76,19 +81,20 @@ typedef boolean_t bool;
 #define true TRUE
 #endif
 
+#define __force
+
 #define mdelay(x) DELAY((x) * 1000)
 #define udelay(x) DELAY(x)
 
-#define __devinit
 #define simple_strtoul strtoul
 #define DIV_ROUND_UP(x, y) howmany(x, y)
 
 #define ARRAY_SIZE(x) nitems(x)
 #define container_of(p, s, f) ((s *)(((uint8_t *)(p)) - offsetof(s, f)))
 
-#define swab16(x) bswap16(x) 
-#define swab32(x) bswap32(x) 
-#define swab64(x) bswap64(x) 
+#define swab16(x) bswap16(x)
+#define swab32(x) bswap32(x)
+#define swab64(x) bswap64(x)
 #define le16_to_cpu(x) le16toh(x)
 #define le32_to_cpu(x) le32toh(x)
 #define le64_to_cpu(x) le64toh(x)
@@ -102,10 +108,6 @@ typedef boolean_t bool;
 #define cpu_to_be32(x) htobe32(x)
 #define cpu_to_be64(x) htobe64(x)
 
-#define SPEED_10	10
-#define SPEED_100	100
-#define SPEED_1000	1000
-#define SPEED_10000	10000
 #define DUPLEX_HALF	0
 #define DUPLEX_FULL	1
 #define AUTONEG_DISABLE	0
@@ -125,7 +127,7 @@ typedef boolean_t bool;
 #define PCI_EXP_LNKSTA		PCIER_LINK_STA
 #define PCI_EXP_LNKSTA_CLS	PCIEM_LINK_STA_SPEED
 #define PCI_EXP_LNKSTA_NLW	PCIEM_LINK_STA_WIDTH
-#define PCI_EXP_DEVCTL2		0x28
+#define PCI_EXP_DEVCTL2		PCIER_DEVICE_CTL2
 
 static inline int
 ilog2(long x)
@@ -152,5 +154,6 @@ strstrip(char *s)
 
 	return (r);
 }
+#endif /* LINUX_TYPES_DEFINED */
 
 #endif

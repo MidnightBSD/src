@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_ddp.c 248078 2013-03-09 00:39:54Z marius $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/tom/t4_ddp.c 312337 2017-01-17 07:43:37Z np $");
 
 #include "opt_inet.h"
 
@@ -65,119 +66,38 @@ __FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_ddp.c 248078 2013-03-09 00:39:
 #include "common/t4_tcb.h"
 #include "tom/t4_tom.h"
 
-#define PPOD_SZ(n)	((n) * sizeof(struct pagepod))
-#define PPOD_SIZE	(PPOD_SZ(1))
+VNET_DECLARE(int, tcp_do_autorcvbuf);
+#define V_tcp_do_autorcvbuf VNET(tcp_do_autorcvbuf)
+VNET_DECLARE(int, tcp_autorcvbuf_inc);
+#define V_tcp_autorcvbuf_inc VNET(tcp_autorcvbuf_inc)
+VNET_DECLARE(int, tcp_autorcvbuf_max);
+#define V_tcp_autorcvbuf_max VNET(tcp_autorcvbuf_max)
 
-/* XXX: must match A_ULP_RX_TDDP_PSZ */ 
-static int t4_ddp_pgsz[] = {4096, 4096 << 2, 4096 << 4, 4096 << 6};
-
-#if 0
-static void
-t4_dump_tcb(struct adapter *sc, int tid)
-{
-	uint32_t tcb_base, off, i, j;
-
-	/* Dump TCB for the tid */
-	tcb_base = t4_read_reg(sc, A_TP_CMM_TCB_BASE);
-	t4_write_reg(sc, PCIE_MEM_ACCESS_REG(A_PCIE_MEM_ACCESS_OFFSET, 2),
-	    tcb_base + tid * TCB_SIZE);
-	t4_read_reg(sc, PCIE_MEM_ACCESS_REG(A_PCIE_MEM_ACCESS_OFFSET, 2));
-	off = 0;
-	printf("\n");
-	for (i = 0; i < 4; i++) {
-		uint32_t buf[8];
-		for (j = 0; j < 8; j++, off += 4)
-			buf[j] = htonl(t4_read_reg(sc, MEMWIN2_BASE + off));
-
-		printf("%08x %08x %08x %08x %08x %08x %08x %08x\n",
-		    buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6],
-		    buf[7]);
-	}
-}
-#endif
+static struct mbuf *get_ddp_mbuf(int len);
 
 #define MAX_DDP_BUFFER_SIZE		(M_TCB_RX_DDP_BUF0_LEN)
-static int
-alloc_ppods(struct tom_data *td, int n, struct ppod_region *pr)
+
+static struct ddp_buffer *
+alloc_ddp_buffer(vm_page_t *pages, int npages, int offset, int len)
 {
-	int ppod;
+	struct ddp_buffer *db;
 
-	KASSERT(n > 0, ("%s: nonsense allocation (%d)", __func__, n));
-
-	mtx_lock(&td->ppod_lock);
-	if (n > td->nppods_free) {
-		mtx_unlock(&td->ppod_lock);
-		return (-1);
+	db = malloc(sizeof(*db), M_CXGBE, M_NOWAIT | M_ZERO);
+	if (db == NULL) {
+		CTR1(KTR_CXGBE, "%s: malloc failed.", __func__);
+		return (NULL);
 	}
 
-	if (td->nppods_free_head >= n) {
-		td->nppods_free_head -= n;
-		ppod = td->nppods_free_head;
-		TAILQ_INSERT_HEAD(&td->ppods, pr, link);
-	} else {
-		struct ppod_region *p;
+	db->npages = npages;
+	db->pages = pages;
+	db->offset = offset;
+	db->len = len;
 
-		ppod = td->nppods_free_head;
-		TAILQ_FOREACH(p, &td->ppods, link) {
-			ppod += p->used + p->free;
-			if (n <= p->free) {
-				ppod -= n;
-				p->free -= n;
-				TAILQ_INSERT_AFTER(&td->ppods, p, pr, link);
-				goto allocated;
-			}
-		}
-
-		if (__predict_false(ppod != td->nppods)) {
-			panic("%s: ppods TAILQ (%p) corrupt."
-			    "  At %d instead of %d at the end of the queue.",
-			    __func__, &td->ppods, ppod, td->nppods);
-		}
-
-		mtx_unlock(&td->ppod_lock);
-		return (-1);
-	}
-
-allocated:
-	pr->used = n;
-	pr->free = 0;
-	td->nppods_free -= n;
-	mtx_unlock(&td->ppod_lock);
-
-	return (ppod);
+	return (db);
 }
 
 static void
-free_ppods(struct tom_data *td, struct ppod_region *pr)
-{
-	struct ppod_region *p;
-
-	KASSERT(pr->used > 0, ("%s: nonsense free (%d)", __func__, pr->used));
-
-	mtx_lock(&td->ppod_lock);
-	p = TAILQ_PREV(pr, ppod_head, link);
-	if (p != NULL)
-		p->free += pr->used + pr->free;
-	else
-		td->nppods_free_head += pr->used + pr->free;
-	td->nppods_free += pr->used;
-	KASSERT(td->nppods_free <= td->nppods,
-	    ("%s: nppods_free (%d) > nppods (%d).  %d freed this time.",
-	    __func__, td->nppods_free, td->nppods, pr->used));
-	TAILQ_REMOVE(&td->ppods, pr, link);
-	mtx_unlock(&td->ppod_lock);
-}
-
-static inline int
-pages_to_nppods(int npages, int ddp_pgsz)
-{
-	int nsegs = npages * PAGE_SIZE / ddp_pgsz;
-
-	return (howmany(nsegs, PPOD_PAGES));
-}
-
-static void
-free_ddp_buffer(struct tom_data *td, struct ddp_buffer *db)
+free_ddp_buffer(struct ddp_buffer *db)
 {
 
 	if (db == NULL)
@@ -186,8 +106,8 @@ free_ddp_buffer(struct tom_data *td, struct ddp_buffer *db)
 	if (db->pages)
 		free(db->pages, M_CXGBE);
 
-	if (db->nppods > 0)
-		free_ppods(td, &db->ppod_region);
+	if (db->prsv.prsv_nppods > 0)
+		t4_free_page_pods(&db->prsv);
 
 	free(db, M_CXGBE);
 }
@@ -199,7 +119,7 @@ release_ddp_resources(struct toepcb *toep)
 
 	for (i = 0; i < nitems(toep->db); i++) {
 		if (toep->db[i] != NULL) {
-			free_ddp_buffer(toep->td, toep->db[i]);
+			free_ddp_buffer(toep->db[i]);
 			toep->db[i] = NULL;
 		}
 	}
@@ -217,13 +137,7 @@ insert_ddp_data(struct toepcb *toep, uint32_t n)
 	INP_WLOCK_ASSERT(inp);
 	SOCKBUF_LOCK_ASSERT(sb);
 
-	m = m_get(M_NOWAIT, MT_DATA);
-	if (m == NULL)
-		CXGBE_UNIMPLEMENTED("mbuf alloc failure");
-	m->m_len = n;
-	m->m_flags |= M_DDP;	/* Data is already where it should be */
-	m->m_data = "nothing to see here";
-
+	m = get_ddp_mbuf(n);
 	tp->rcv_nxt += n;
 #ifndef USE_DDP_RX_FLOW_CONTROL
 	KASSERT(tp->rcv_wnd >= n, ("%s: negative window size", __func__));
@@ -358,8 +272,8 @@ mk_update_tcb_for_ddp(struct adapter *sc, struct toepcb *toep, int db_idx,
 	 * The ULPTX master commands that follow must all end at 16B boundaries
 	 * too so we round up the size to 16.
 	 */
-	len = sizeof(*wrh) + 3 * roundup(LEN__SET_TCB_FIELD_ULP, 16) +
-	    roundup(LEN__RX_DATA_ACK_ULP, 16);
+	len = sizeof(*wrh) + 3 * roundup2(LEN__SET_TCB_FIELD_ULP, 16) +
+	    roundup2(LEN__RX_DATA_ACK_ULP, 16);
 
 	wr = alloc_wrqe(len, toep->ctrlq);
 	if (wr == NULL)
@@ -372,7 +286,7 @@ mk_update_tcb_for_ddp(struct adapter *sc, struct toepcb *toep, int db_idx,
 	ulpmc = mk_set_tcb_field_ulp(ulpmc, toep,
 	    W_TCB_RX_DDP_BUF0_TAG + db_idx,
 	    V_TCB_RX_DDP_BUF0_TAG(M_TCB_RX_DDP_BUF0_TAG),
-	    V_TCB_RX_DDP_BUF0_TAG(db->tag));
+	    V_TCB_RX_DDP_BUF0_TAG(db->prsv.prsv_tag));
 
 	/* Update the current offset in the DDP buffer and its total length */
 	if (db_idx == 0)
@@ -450,6 +364,19 @@ handle_ddp_data(struct toepcb *toep, __be32 ddp_report, __be32 rcv_nxt, int len)
 	}
 
 	tp = intotcpcb(inp);
+
+	/*
+	 * For RX_DDP_COMPLETE, len will be zero and rcv_nxt is the
+	 * sequence number of the next byte to receive.  The length of
+	 * the data received for this message must be computed by
+	 * comparing the new and old values of rcv_nxt.
+	 * 
+	 * For RX_DATA_DDP, len might be non-zero, but it is only the
+	 * length of the most recent DMA.  It does not include the
+	 * total length of the data received since the previous update
+	 * for this DDP buffer.  rcv_nxt is the sequence number of the
+	 * first received byte from the most recent DMA.
+	 */
 	len += be32toh(rcv_nxt) - tp->rcv_nxt;
 	tp->rcv_nxt += len;
 	tp->t_rcvtime = ticks;
@@ -457,19 +384,31 @@ handle_ddp_data(struct toepcb *toep, __be32 ddp_report, __be32 rcv_nxt, int len)
 	KASSERT(tp->rcv_wnd >= len, ("%s: negative window size", __func__));
 	tp->rcv_wnd -= len;
 #endif
-
-	m = m_get(M_NOWAIT, MT_DATA);
-	if (m == NULL)
-		CXGBE_UNIMPLEMENTED("mbuf alloc failure");
-	m->m_len = len;
-	m->m_flags |= M_DDP;	/* Data is already where it should be */
-	m->m_data = "nothing to see here";
+	m = get_ddp_mbuf(len);
 
 	SOCKBUF_LOCK(sb);
 	if (report & F_DDP_BUF_COMPLETE)
 		toep->ddp_score = DDP_HIGH_SCORE;
 	else
 		discourage_ddp(toep);
+
+	/* receive buffer autosize */
+	MPASS(toep->vnet == so->so_vnet);
+	CURVNET_SET(toep->vnet);
+	if (sb->sb_flags & SB_AUTOSIZE &&
+	    V_tcp_do_autorcvbuf &&
+	    sb->sb_hiwat < V_tcp_autorcvbuf_max &&
+	    len > (sbspace(sb) / 8 * 7)) {
+		unsigned int hiwat = sb->sb_hiwat;
+		unsigned int newsize = min(hiwat + V_tcp_autorcvbuf_inc,
+		    V_tcp_autorcvbuf_max);
+
+		if (!sbreserve_locked(sb, newsize, so, NULL))
+			sb->sb_flags &= ~SB_AUTOSIZE;
+		else
+			toep->rx_credits += newsize - hiwat;
+	}
+	CURVNET_RESTORE();
 
 	KASSERT(toep->sb_cc >= sb->sb_cc,
 	    ("%s: sb %p has more data (%d) than last time (%d).",
@@ -492,10 +431,43 @@ wakeup:
 	return (0);
 }
 
+void
+handle_ddp_close(struct toepcb *toep, struct tcpcb *tp, struct sockbuf *sb,
+    __be32 rcv_nxt)
+{
+	struct mbuf *m;
+	int len;
+
+	SOCKBUF_LOCK_ASSERT(sb);
+	INP_WLOCK_ASSERT(toep->inp);
+	len = be32toh(rcv_nxt) - tp->rcv_nxt;
+
+	/* Signal handle_ddp() to break out of its sleep loop. */
+	toep->ddp_flags &= ~(DDP_BUF0_ACTIVE | DDP_BUF1_ACTIVE);
+	if (len == 0)
+		return;
+
+	tp->rcv_nxt += len;
+	KASSERT(toep->sb_cc >= sb->sb_cc,
+	    ("%s: sb %p has more data (%d) than last time (%d).",
+	    __func__, sb, sb->sb_cc, toep->sb_cc));
+	toep->rx_credits += toep->sb_cc - sb->sb_cc;
+#ifdef USE_DDP_RX_FLOW_CONTROL
+	toep->rx_credits -= len;	/* adjust for F_RX_FC_DDP */
+#endif
+
+	m = get_ddp_mbuf(len);
+
+	sbappendstream_locked(sb, m);
+	toep->sb_cc = sb->sb_cc;
+}
+
 #define DDP_ERR (F_DDP_PPOD_MISMATCH | F_DDP_LLIMIT_ERR | F_DDP_ULIMIT_ERR |\
 	 F_DDP_PPOD_PARITY_ERR | F_DDP_PADDING_ERR | F_DDP_OFFSET_ERR |\
 	 F_DDP_INVALID_TAG | F_DDP_COLOR_ERR | F_DDP_TID_MISMATCH |\
 	 F_DDP_INVALID_PPOD | F_DDP_HDRCRC_ERR | F_DDP_DATACRC_ERR)
+
+extern cpl_handler_t t4_cpl_handler[];
 
 static int
 do_rx_data_ddp(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
@@ -515,6 +487,11 @@ do_rx_data_ddp(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	if (__predict_false(vld & DDP_ERR)) {
 		panic("%s: DDP error 0x%x (tid %d, toep %p)",
 		    __func__, vld, tid, toep);
+	}
+
+	if (toep->ulp_mode == ULP_MODE_ISCSI) {
+		t4_cpl_handler[CPL_RX_ISCSI_DDP](iq, rss, m);
+		return (0);
 	}
 
 	handle_ddp_data(toep, cpl->u.ddp_report, cpl->seq, be16toh(cpl->len));
@@ -553,13 +530,14 @@ enable_ddp(struct adapter *sc, struct toepcb *toep)
 	    __func__, toep->tid, time_uptime);
 
 	toep->ddp_flags |= DDP_SC_REQ;
-	t4_set_tcb_field(sc, toep, W_TCB_RX_DDP_FLAGS,
+	t4_set_tcb_field(sc, toep->ctrlq, toep->tid, W_TCB_RX_DDP_FLAGS,
 	    V_TF_DDP_OFF(1) | V_TF_DDP_INDICATE_OUT(1) |
 	    V_TF_DDP_BUF0_INDICATE(1) | V_TF_DDP_BUF1_INDICATE(1) |
 	    V_TF_DDP_BUF0_VALID(1) | V_TF_DDP_BUF1_VALID(1),
-	    V_TF_DDP_BUF0_INDICATE(1) | V_TF_DDP_BUF1_INDICATE(1));
-	t4_set_tcb_field(sc, toep, W_TCB_T_FLAGS,
-	    V_TF_RCV_COALESCE_ENABLE(1), 0);
+	    V_TF_DDP_BUF0_INDICATE(1) | V_TF_DDP_BUF1_INDICATE(1), 0, 0,
+	    toep->ofld_rxq->iq.abs_id);
+	t4_set_tcb_field(sc, toep->ctrlq, toep->tid, W_TCB_T_FLAGS,
+	    V_TF_RCV_COALESCE_ENABLE(1), 0, 0, 0, toep->ofld_rxq->iq.abs_id);
 }
 
 static inline void
@@ -574,10 +552,11 @@ disable_ddp(struct adapter *sc, struct toepcb *toep)
 	    __func__, toep->tid, time_uptime);
 
 	toep->ddp_flags |= DDP_SC_REQ;
-	t4_set_tcb_field(sc, toep, W_TCB_T_FLAGS,
-	    V_TF_RCV_COALESCE_ENABLE(1), V_TF_RCV_COALESCE_ENABLE(1));
-	t4_set_tcb_field(sc, toep, W_TCB_RX_DDP_FLAGS, V_TF_DDP_OFF(1),
-	    V_TF_DDP_OFF(1));
+	t4_set_tcb_field(sc, toep->ctrlq, toep->tid, W_TCB_T_FLAGS,
+	    V_TF_RCV_COALESCE_ENABLE(1), V_TF_RCV_COALESCE_ENABLE(1), 0, 0,
+	    toep->ofld_rxq->iq.abs_id);
+	t4_set_tcb_field(sc, toep->ctrlq, toep->tid, W_TCB_RX_DDP_FLAGS,
+	    V_TF_DDP_OFF(1), V_TF_DDP_OFF(1), 0, 0, toep->ofld_rxq->iq.abs_id);
 }
 
 static int
@@ -659,12 +638,52 @@ calculate_hcf(int n1, int n2)
 	return (b);
 }
 
-static struct ddp_buffer *
-alloc_ddp_buffer(struct tom_data *td, vm_page_t *pages, int npages, int offset,
-    int len)
+static inline int
+pages_to_nppods(int npages, int ddp_page_shift)
 {
-	int i, hcf, seglen, idx, ppod, nppods;
-	struct ddp_buffer *db;
+
+	MPASS(ddp_page_shift >= PAGE_SHIFT);
+
+	return (howmany(npages >> (ddp_page_shift - PAGE_SHIFT), PPOD_PAGES));
+}
+
+static int
+alloc_page_pods(struct ppod_region *pr, u_int nppods, u_int pgsz_idx,
+    struct ppod_reservation *prsv)
+{
+	vmem_addr_t addr;       /* relative to start of region */
+
+	if (vmem_alloc(pr->pr_arena, PPOD_SZ(nppods), M_NOWAIT | M_FIRSTFIT,
+	    &addr) != 0)
+		return (ENOMEM);
+
+	CTR5(KTR_CXGBE, "%-17s arena %p, addr 0x%08x, nppods %d, pgsz %d",
+	    __func__, pr->pr_arena, (uint32_t)addr & pr->pr_tag_mask,
+	    nppods, 1 << pr->pr_page_shift[pgsz_idx]);
+
+	/*
+	 * The hardware tagmask includes an extra invalid bit but the arena was
+	 * seeded with valid values only.  An allocation out of this arena will
+	 * fit inside the tagmask but won't have the invalid bit set.
+	 */
+	MPASS((addr & pr->pr_tag_mask) == addr);
+	MPASS((addr & pr->pr_invalid_bit) == 0);
+
+	prsv->prsv_pr = pr;
+	prsv->prsv_tag = V_PPOD_PGSZ(pgsz_idx) | addr;
+	prsv->prsv_nppods = nppods;
+
+	return (0);
+}
+
+int
+t4_alloc_page_pods_for_db(struct ppod_region *pr, struct ddp_buffer *db)
+{
+	int i, hcf, seglen, idx, nppods;
+	struct ppod_reservation *prsv = &db->prsv;
+
+	KASSERT(prsv->prsv_nppods == 0,
+	    ("%s: page pods already allocated", __func__));
 
 	/*
 	 * The DDP page size is unrelated to the VM page size.  We combine
@@ -674,97 +693,157 @@ alloc_ddp_buffer(struct tom_data *td, vm_page_t *pages, int npages, int offset,
 	 * the page list.
 	 */
 	hcf = 0;
-	for (i = 0; i < npages; i++) {
+	for (i = 0; i < db->npages; i++) {
 		seglen = PAGE_SIZE;
-		while (i < npages - 1 &&
-		    pages[i]->phys_addr + PAGE_SIZE == pages[i + 1]->phys_addr) {
+		while (i < db->npages - 1 &&
+		    db->pages[i]->phys_addr + PAGE_SIZE ==
+		    db->pages[i + 1]->phys_addr) {
 			seglen += PAGE_SIZE;
 			i++;
 		}
 
 		hcf = calculate_hcf(hcf, seglen);
-		if (hcf < t4_ddp_pgsz[1]) {
+		if (hcf < (1 << pr->pr_page_shift[1])) {
 			idx = 0;
 			goto have_pgsz;	/* give up, short circuit */
 		}
 	}
 
-	if (hcf % t4_ddp_pgsz[0] != 0) {
-		/* hmmm.  This could only happen when PAGE_SIZE < 4K */
-		KASSERT(PAGE_SIZE < 4096,
-		    ("%s: PAGE_SIZE %d, hcf %d", __func__, PAGE_SIZE, hcf));
-		CTR3(KTR_CXGBE, "%s: PAGE_SIZE %d, hcf %d",
-		    __func__, PAGE_SIZE, hcf);
-		return (NULL);
-	}
-
-	for (idx = nitems(t4_ddp_pgsz) - 1; idx > 0; idx--) {
-		if (hcf % t4_ddp_pgsz[idx] == 0)
+#define PR_PAGE_MASK(x) ((1 << pr->pr_page_shift[(x)]) - 1)
+	MPASS((hcf & PR_PAGE_MASK(0)) == 0); /* PAGE_SIZE is >= 4K everywhere */
+	for (idx = nitems(pr->pr_page_shift) - 1; idx > 0; idx--) {
+		if ((hcf & PR_PAGE_MASK(idx)) == 0)
 			break;
 	}
+#undef PR_PAGE_MASK
+
 have_pgsz:
+	MPASS(idx <= M_PPOD_PGSZ);
 
-	db = malloc(sizeof(*db), M_CXGBE, M_NOWAIT);
-	if (db == NULL) {
-		CTR1(KTR_CXGBE, "%s: malloc failed.", __func__);
-		return (NULL);
+	nppods = pages_to_nppods(db->npages, pr->pr_page_shift[idx]);
+	if (alloc_page_pods(pr, nppods, idx, prsv) != 0)
+		return (0);
+	MPASS(prsv->prsv_nppods > 0);
+
+	return (1);
+}
+
+int
+t4_alloc_page_pods_for_buf(struct ppod_region *pr, vm_offset_t buf, int len,
+    struct ppod_reservation *prsv)
+{
+	int hcf, seglen, idx, npages, nppods;
+	uintptr_t start_pva, end_pva, pva, p1;
+
+	MPASS(buf > 0);
+	MPASS(len > 0);
+
+	/*
+	 * The DDP page size is unrelated to the VM page size.  We combine
+	 * contiguous physical pages into larger segments to get the best DDP
+	 * page size possible.  This is the largest of the four sizes in
+	 * A_ULP_RX_ISCSI_PSZ that evenly divides the HCF of the segment sizes
+	 * in the page list.
+	 */
+	hcf = 0;
+	start_pva = trunc_page(buf);
+	end_pva = trunc_page(buf + len - 1);
+	pva = start_pva;
+	while (pva <= end_pva) {
+		seglen = PAGE_SIZE;
+		p1 = pmap_kextract(pva);
+		pva += PAGE_SIZE;
+		while (pva <= end_pva && p1 + seglen == pmap_kextract(pva)) {
+			seglen += PAGE_SIZE;
+			pva += PAGE_SIZE;
+		}
+
+		hcf = calculate_hcf(hcf, seglen);
+		if (hcf < (1 << pr->pr_page_shift[1])) {
+			idx = 0;
+			goto have_pgsz;	/* give up, short circuit */
+		}
 	}
 
-	nppods = pages_to_nppods(npages, t4_ddp_pgsz[idx]);
-	ppod = alloc_ppods(td, nppods, &db->ppod_region);
-	if (ppod < 0) {
-		free(db, M_CXGBE);
-		CTR4(KTR_CXGBE, "%s: no pods, nppods %d, resid %d, pgsz %d",
-		    __func__, nppods, len, t4_ddp_pgsz[idx]);
-		return (NULL);
+#define PR_PAGE_MASK(x) ((1 << pr->pr_page_shift[(x)]) - 1)
+	MPASS((hcf & PR_PAGE_MASK(0)) == 0); /* PAGE_SIZE is >= 4K everywhere */
+	for (idx = nitems(pr->pr_page_shift) - 1; idx > 0; idx--) {
+		if ((hcf & PR_PAGE_MASK(idx)) == 0)
+			break;
 	}
+#undef PR_PAGE_MASK
 
-	KASSERT(idx <= M_PPOD_PGSZ && ppod <= M_PPOD_TAG,
-	    ("%s: DDP pgsz_idx = %d, ppod = %d", __func__, idx, ppod));
+have_pgsz:
+	MPASS(idx <= M_PPOD_PGSZ);
 
-	db->tag = V_PPOD_PGSZ(idx) | V_PPOD_TAG(ppod);
-	db->nppods = nppods;
-	db->npages = npages;
-	db->pages = pages;
-	db->offset = offset;
-	db->len = len;
+	npages = 1;
+	npages += (end_pva - start_pva) >> pr->pr_page_shift[idx];
+	nppods = howmany(npages, PPOD_PAGES);
+	if (alloc_page_pods(pr, nppods, idx, prsv) != 0)
+		return (ENOMEM);
+	MPASS(prsv->prsv_nppods > 0);
 
-	CTR6(KTR_CXGBE, "New DDP buffer.  "
-	    "ddp_pgsz %d, ppod 0x%x, npages %d, nppods %d, offset %d, len %d",
-	    t4_ddp_pgsz[idx], ppod, db->npages, db->nppods, db->offset,
-	    db->len);
+	return (0);
+}
 
-	return (db);
+void
+t4_free_page_pods(struct ppod_reservation *prsv)
+{
+	struct ppod_region *pr = prsv->prsv_pr;
+	vmem_addr_t addr;
+
+	MPASS(prsv != NULL);
+	MPASS(prsv->prsv_nppods != 0);
+
+	addr = prsv->prsv_tag & pr->pr_tag_mask;
+	MPASS((addr & pr->pr_invalid_bit) == 0);
+
+	CTR4(KTR_CXGBE, "%-17s arena %p, addr 0x%08x, nppods %d", __func__,
+	    pr->pr_arena, addr, prsv->prsv_nppods);
+
+	vmem_free(pr->pr_arena, addr, PPOD_SZ(prsv->prsv_nppods));
+	prsv->prsv_nppods = 0;
 }
 
 #define NUM_ULP_TX_SC_IMM_PPODS (256 / PPOD_SIZE)
 
-static int
-write_page_pods(struct adapter *sc, struct toepcb *toep, struct ddp_buffer *db)
+int
+t4_write_page_pods_for_db(struct adapter *sc, struct sge_wrq *wrq, int tid,
+    struct ddp_buffer *db)
 {
 	struct wrqe *wr;
 	struct ulp_mem_io *ulpmc;
 	struct ulptx_idata *ulpsc;
 	struct pagepod *ppod;
-	int i, j, k, n, chunk, len, ddp_pgsz, idx, ppod_addr;
+	int i, j, k, n, chunk, len, ddp_pgsz, idx;
+	u_int ppod_addr;
+	uint32_t cmd;
+	struct ppod_reservation *prsv = &db->prsv;
+	struct ppod_region *pr = prsv->prsv_pr;
 
-	ddp_pgsz = t4_ddp_pgsz[G_PPOD_PGSZ(db->tag)];
-	ppod_addr = sc->vres.ddp.start + G_PPOD_TAG(db->tag) * PPOD_SIZE;
-	for (i = 0; i < db->nppods; ppod_addr += chunk) {
+	MPASS(prsv->prsv_nppods > 0);
+
+	cmd = htobe32(V_ULPTX_CMD(ULP_TX_MEM_WRITE));
+	if (is_t4(sc))
+		cmd |= htobe32(F_ULP_MEMIO_ORDER);
+	else
+		cmd |= htobe32(F_T5_ULP_MEMIO_IMM);
+	ddp_pgsz = 1 << pr->pr_page_shift[G_PPOD_PGSZ(prsv->prsv_tag)];
+	ppod_addr = pr->pr_start + (prsv->prsv_tag & pr->pr_tag_mask);
+	for (i = 0; i < prsv->prsv_nppods; ppod_addr += chunk) {
 
 		/* How many page pods are we writing in this cycle */
-		n = min(db->nppods - i, NUM_ULP_TX_SC_IMM_PPODS);
+		n = min(prsv->prsv_nppods - i, NUM_ULP_TX_SC_IMM_PPODS);
 		chunk = PPOD_SZ(n);
-		len = roundup(sizeof(*ulpmc) + sizeof(*ulpsc) + chunk, 16);
+		len = roundup2(sizeof(*ulpmc) + sizeof(*ulpsc) + chunk, 16);
 
-		wr = alloc_wrqe(len, toep->ctrlq);
+		wr = alloc_wrqe(len, wrq);
 		if (wr == NULL)
 			return (ENOMEM);	/* ok to just bail out */
 		ulpmc = wrtod(wr);
 
 		INIT_ULPTX_WR(ulpmc, len, 0, 0);
-		ulpmc->cmd = htobe32(V_ULPTX_CMD(ULP_TX_MEM_WRITE) |
-		    F_ULP_MEMIO_ORDER);
+		ulpmc->cmd = cmd;
 		ulpmc->dlen = htobe32(V_ULP_MEMIO_DATA_LEN(chunk / 32));
 		ulpmc->len16 = htobe32(howmany(len - sizeof(ulpmc->wr), 16));
 		ulpmc->lock_addr = htobe32(V_ULP_MEMIO_ADDR(ppod_addr >> 5));
@@ -776,7 +855,7 @@ write_page_pods(struct adapter *sc, struct toepcb *toep, struct ddp_buffer *db)
 		ppod = (struct pagepod *)(ulpsc + 1);
 		for (j = 0; j < n; i++, j++, ppod++) {
 			ppod->vld_tid_pgsz_tag_color = htobe64(F_PPOD_VALID |
-			    V_PPOD_TID(toep->tid) | db->tag);
+			    V_PPOD_TID(tid) | prsv->prsv_tag);
 			ppod->len_offset = htobe64(V_PPOD_LEN(db->len) |
 			    V_PPOD_OFST(db->offset));
 			ppod->rsvd = 0;
@@ -804,6 +883,94 @@ write_page_pods(struct adapter *sc, struct toepcb *toep, struct ddp_buffer *db)
 	return (0);
 }
 
+int
+t4_write_page_pods_for_buf(struct adapter *sc, struct sge_wrq *wrq, int tid,
+    struct ppod_reservation *prsv, vm_offset_t buf, int buflen)
+{
+	struct wrqe *wr;
+	struct ulp_mem_io *ulpmc;
+	struct ulptx_idata *ulpsc;
+	struct pagepod *ppod;
+	int i, j, k, n, chunk, len, ddp_pgsz;
+	u_int ppod_addr, offset;
+	uint32_t cmd;
+	struct ppod_region *pr = prsv->prsv_pr;
+	uintptr_t end_pva, pva, pa;
+
+	cmd = htobe32(V_ULPTX_CMD(ULP_TX_MEM_WRITE));
+	if (is_t4(sc))
+		cmd |= htobe32(F_ULP_MEMIO_ORDER);
+	else
+		cmd |= htobe32(F_T5_ULP_MEMIO_IMM);
+	ddp_pgsz = 1 << pr->pr_page_shift[G_PPOD_PGSZ(prsv->prsv_tag)];
+	offset = buf & PAGE_MASK;
+	ppod_addr = pr->pr_start + (prsv->prsv_tag & pr->pr_tag_mask);
+	pva = trunc_page(buf);
+	end_pva = trunc_page(buf + buflen - 1);
+	for (i = 0; i < prsv->prsv_nppods; ppod_addr += chunk) {
+
+		/* How many page pods are we writing in this cycle */
+		n = min(prsv->prsv_nppods - i, NUM_ULP_TX_SC_IMM_PPODS);
+		MPASS(n > 0);
+		chunk = PPOD_SZ(n);
+		len = roundup2(sizeof(*ulpmc) + sizeof(*ulpsc) + chunk, 16);
+
+		wr = alloc_wrqe(len, wrq);
+		if (wr == NULL)
+			return (ENOMEM);	/* ok to just bail out */
+		ulpmc = wrtod(wr);
+
+		INIT_ULPTX_WR(ulpmc, len, 0, 0);
+		ulpmc->cmd = cmd;
+		ulpmc->dlen = htobe32(V_ULP_MEMIO_DATA_LEN(chunk / 32));
+		ulpmc->len16 = htobe32(howmany(len - sizeof(ulpmc->wr), 16));
+		ulpmc->lock_addr = htobe32(V_ULP_MEMIO_ADDR(ppod_addr >> 5));
+
+		ulpsc = (struct ulptx_idata *)(ulpmc + 1);
+		ulpsc->cmd_more = htobe32(V_ULPTX_CMD(ULP_TX_SC_IMM));
+		ulpsc->len = htobe32(chunk);
+
+		ppod = (struct pagepod *)(ulpsc + 1);
+		for (j = 0; j < n; i++, j++, ppod++) {
+			ppod->vld_tid_pgsz_tag_color = htobe64(F_PPOD_VALID |
+			    V_PPOD_TID(tid) |
+			    (prsv->prsv_tag & ~V_PPOD_PGSZ(M_PPOD_PGSZ)));
+			ppod->len_offset = htobe64(V_PPOD_LEN(buflen) |
+			    V_PPOD_OFST(offset));
+			ppod->rsvd = 0;
+
+			for (k = 0; k < nitems(ppod->addr); k++) {
+				if (pva > end_pva)
+					ppod->addr[k] = 0;
+				else {
+					pa = pmap_kextract(pva);
+					ppod->addr[k] = htobe64(pa);
+					pva += ddp_pgsz;
+				}
+#if 0
+				CTR5(KTR_CXGBE,
+				    "%s: tid %d ppod[%d]->addr[%d] = %p",
+				    __func__, tid, i, k,
+				    htobe64(ppod->addr[k]));
+#endif
+			}
+
+			/*
+			 * Walk back 1 segment so that the first address in the
+			 * next pod is the same as the last one in the current
+			 * pod.
+			 */
+			pva -= ddp_pgsz;
+		}
+
+		t4_wrq_tx(sc, wr);
+	}
+
+	MPASS(pva <= end_pva);
+
+	return (0);
+}
+
 /*
  * Reuse, or allocate (and program the page pods for) a new DDP buffer.  The
  * "pages" array is handed over to this function and should not be used in any
@@ -827,27 +994,32 @@ select_ddp_buffer(struct adapter *sc, struct toepcb *toep, vm_page_t *pages,
 	}
 
 	/* Allocate new buffer, write its page pods. */
-	db = alloc_ddp_buffer(td, pages, npages, db_off, db_len);
+	db = alloc_ddp_buffer(pages, npages, db_off, db_len);
 	if (db == NULL) {
 		vm_page_unhold_pages(pages, npages);
 		free(pages, M_CXGBE);
 		return (-1);
 	}
-	if (write_page_pods(sc, toep, db) != 0) {
+	if (t4_alloc_page_pods_for_db(&td->pr, db)) {
 		vm_page_unhold_pages(pages, npages);
-		free_ddp_buffer(td, db);
+		free_ddp_buffer(db);
+		return (-1);
+	}
+	if (t4_write_page_pods_for_db(sc, toep->ctrlq, toep->tid, db) != 0) {
+		vm_page_unhold_pages(pages, npages);
+		free_ddp_buffer(db);
 		return (-1);
 	}
 
 	i = empty_slot;
 	if (i < 0) {
 		i = arc4random() % nitems(toep->db);
-		free_ddp_buffer(td, toep->db[i]);
+		free_ddp_buffer(toep->db[i]);
 	}
 	toep->db[i] = db;
 
 	CTR5(KTR_CXGBE, "%s: tid %d, DDP buffer[%d] = %p (tag 0x%x)",
-	    __func__, toep->tid, i, db, db->tag);
+	    __func__, toep->tid, i, db, db->prsv.prsv_tag);
 
 	return (i);
 }
@@ -979,31 +1151,52 @@ no_ddp:
 	return (0);
 }
 
-void
-t4_init_ddp(struct adapter *sc, struct tom_data *td)
+int
+t4_init_ppod_region(struct ppod_region *pr, struct t4_range *r, u_int psz,
+    const char *name)
 {
-	int nppods = sc->vres.ddp.size / PPOD_SIZE;
+	int i;
 
-	td->nppods = nppods;
-	td->nppods_free = nppods;
-	td->nppods_free_head = nppods;
-	TAILQ_INIT(&td->ppods);
-	mtx_init(&td->ppod_lock, "page pods", NULL, MTX_DEF);
+	MPASS(pr != NULL);
+	MPASS(r->size > 0);
 
-	t4_register_cpl_handler(sc, CPL_RX_DATA_DDP, do_rx_data_ddp);
-	t4_register_cpl_handler(sc, CPL_RX_DDP_COMPLETE, do_rx_ddp_complete);
+	pr->pr_start = r->start;
+	pr->pr_len = r->size;
+	pr->pr_page_shift[0] = 12 + G_HPZ0(psz);
+	pr->pr_page_shift[1] = 12 + G_HPZ1(psz);
+	pr->pr_page_shift[2] = 12 + G_HPZ2(psz);
+	pr->pr_page_shift[3] = 12 + G_HPZ3(psz);
+
+	/* The SGL -> page pod algorithm requires the sizes to be in order. */
+	for (i = 1; i < nitems(pr->pr_page_shift); i++) {
+		if (pr->pr_page_shift[i] <= pr->pr_page_shift[i - 1])
+			return (ENXIO);
+	}
+
+	pr->pr_tag_mask = ((1 << fls(r->size)) - 1) & V_PPOD_TAG(M_PPOD_TAG);
+	pr->pr_alias_mask = V_PPOD_TAG(M_PPOD_TAG) & ~pr->pr_tag_mask;
+	if (pr->pr_tag_mask == 0 || pr->pr_alias_mask == 0)
+		return (ENXIO);
+	pr->pr_alias_shift = fls(pr->pr_tag_mask);
+	pr->pr_invalid_bit = 1 << (pr->pr_alias_shift - 1);
+
+	pr->pr_arena = vmem_create(name, 0, pr->pr_len, PPOD_SIZE, 0,
+	    M_FIRSTFIT | M_NOWAIT);
+	if (pr->pr_arena == NULL)
+		return (ENOMEM);
+
+	return (0);
 }
 
 void
-t4_uninit_ddp(struct adapter *sc __unused, struct tom_data *td)
+t4_free_ppod_region(struct ppod_region *pr)
 {
 
-	KASSERT(td->nppods == td->nppods_free,
-	    ("%s: page pods still in use, nppods = %d, free = %d",
-	    __func__, td->nppods, td->nppods_free));
+	MPASS(pr != NULL);
 
-	if (mtx_initialized(&td->ppod_lock))
-		mtx_destroy(&td->ppod_lock);
+	if (pr->pr_arena)
+		vmem_destroy(pr->pr_arena);
+	bzero(pr, sizeof(*pr));
 }
 
 #define	VNET_SO_ASSERT(so)						\
@@ -1015,6 +1208,29 @@ soreceive_rcvoob(struct socket *so, struct uio *uio, int flags)
 {
 
 	CXGBE_UNIMPLEMENTED(__func__);
+}
+
+static char ddp_magic_str[] = "nothing to see here";
+
+static struct mbuf *
+get_ddp_mbuf(int len)
+{
+	struct mbuf *m;
+
+	m = m_get(M_NOWAIT, MT_DATA);
+	if (m == NULL)
+		CXGBE_UNIMPLEMENTED("mbuf alloc failure");
+	m->m_len = len;
+	m->m_data = &ddp_magic_str[0];
+
+	return (m);
+}
+
+static inline int
+is_ddp_mbuf(struct mbuf *m)
+{
+
+	return (m->m_data == &ddp_magic_str[0]);
 }
 
 /*
@@ -1035,7 +1251,7 @@ m_mbuftouio_ddp(struct uio *uio, struct mbuf *m, int len)
 	for (; m != NULL; m = m->m_next) {
 		length = min(m->m_len, total - progress);
 
-		if (m->m_flags & M_DDP) {
+		if (is_ddp_mbuf(m)) {
 			enum uio_seg segflag = uio->uio_segflg;
 
 			uio->uio_segflg	= UIO_NOCOPY;
@@ -1083,9 +1299,9 @@ t4_soreceive_ddp(struct socket *so, struct sockaddr **psa, struct uio *uio,
 
 	/* Prevent other readers from entering the socket. */
 	error = sblock(sb, SBLOCKWAIT(flags));
+	SOCKBUF_LOCK(sb);
 	if (error)
 		goto out;
-	SOCKBUF_LOCK(sb);
 
 	/* Easy one, no space to copyout anything. */
 	if (uio->uio_resid == 0) {
@@ -1145,7 +1361,7 @@ restart:
 
 	/* Socket buffer got some data that we shall deliver now. */
 	if (sb->sb_cc > 0 && !(flags & MSG_WAITALL) &&
-	    ((sb->sb_flags & SS_NBIO) ||
+	    ((so->so_state & SS_NBIO) ||
 	     (flags & (MSG_DONTWAIT|MSG_NBIO)) ||
 	     sb->sb_cc >= sb->sb_lowat ||
 	     sb->sb_cc >= uio->uio_resid ||
@@ -1266,4 +1482,20 @@ out:
 	return (error);
 }
 
+int
+t4_ddp_mod_load(void)
+{
+
+	t4_register_cpl_handler(CPL_RX_DATA_DDP, do_rx_data_ddp);
+	t4_register_cpl_handler(CPL_RX_DDP_COMPLETE, do_rx_ddp_complete);
+	return (0);
+}
+
+void
+t4_ddp_mod_unload(void)
+{
+
+	t4_register_cpl_handler(CPL_RX_DATA_DDP, NULL);
+	t4_register_cpl_handler(CPL_RX_DDP_COMPLETE, NULL);
+}
 #endif

@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2011 Chelsio Communications, Inc.
+ * Copyright (c) 2011, 2016 Chelsio Communications, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/sys/dev/cxgbe/common/t4_regs_values.h 218792 2011-02-18 08:00:26Z np $
+ * $FreeBSD: stable/10/sys/dev/cxgbe/common/t4_regs_values.h 308304 2016-11-04 18:45:06Z jhb $
  *
  */
 
@@ -82,6 +83,16 @@
 #define X_INGPCIEBOUNDARY_2048B		6
 #define X_INGPCIEBOUNDARY_4096B		7
 
+#define X_T6_INGPADBOUNDARY_SHIFT	3
+#define X_T6_INGPADBOUNDARY_8B		0
+#define X_T6_INGPADBOUNDARY_16B		1
+#define X_T6_INGPADBOUNDARY_32B		2
+#define X_T6_INGPADBOUNDARY_64B		3
+#define X_T6_INGPADBOUNDARY_128B	4
+#define X_T6_INGPADBOUNDARY_256B	5
+#define X_T6_INGPADBOUNDARY_512B	6
+#define X_T6_INGPADBOUNDARY_1024B	7
+
 #define X_INGPADBOUNDARY_SHIFT		5
 #define X_INGPADBOUNDARY_32B		0
 #define X_INGPADBOUNDARY_64B		1
@@ -101,6 +112,17 @@
 #define X_EGRPCIEBOUNDARY_1024B		5
 #define X_EGRPCIEBOUNDARY_2048B		6
 #define X_EGRPCIEBOUNDARY_4096B		7
+
+/* CONTROL2 register */
+#define X_INGPACKBOUNDARY_SHIFT		5	// *most* of the values ...
+#define X_INGPACKBOUNDARY_16B		0	// Note weird value!
+#define X_INGPACKBOUNDARY_64B		1
+#define X_INGPACKBOUNDARY_128B		2
+#define X_INGPACKBOUNDARY_256B		3
+#define X_INGPACKBOUNDARY_512B		4
+#define X_INGPACKBOUNDARY_1024B		5
+#define X_INGPACKBOUNDARY_2048B		6
+#define X_INGPACKBOUNDARY_4096B		7
 
 /* GTS register */
 #define SGE_TIMERREGS			6
@@ -178,6 +200,52 @@
 #define X_RSPD_TYPE_INTR		2
 
 /*
+ * Context field definitions.  This is by no means a complete list of SGE
+ * Context fields.  In the vast majority of cases the firmware initializes
+ * things the way they need to be set up.  But in a few small cases, we need
+ * to compute new values and ship them off to the firmware to be applied to
+ * the SGE Conexts ...
+ */
+
+/*
+ * Congestion Manager Definitions.
+ */
+#define S_CONMCTXT_CNGTPMODE		19
+#define M_CONMCTXT_CNGTPMODE		0x3
+#define V_CONMCTXT_CNGTPMODE(x)		((x) << S_CONMCTXT_CNGTPMODE)
+#define G_CONMCTXT_CNGTPMODE(x)  \
+	(((x) >> S_CONMCTXT_CNGTPMODE) & M_CONMCTXT_CNGTPMODE)
+#define S_CONMCTXT_CNGCHMAP		0
+#define M_CONMCTXT_CNGCHMAP		0xffff
+#define V_CONMCTXT_CNGCHMAP(x)		((x) << S_CONMCTXT_CNGCHMAP)
+#define G_CONMCTXT_CNGCHMAP(x)   \
+	(((x) >> S_CONMCTXT_CNGCHMAP) & M_CONMCTXT_CNGCHMAP)
+
+#define X_CONMCTXT_CNGTPMODE_DISABLE	0
+#define X_CONMCTXT_CNGTPMODE_QUEUE	1
+#define X_CONMCTXT_CNGTPMODE_CHANNEL	2
+#define X_CONMCTXT_CNGTPMODE_BOTH	3
+
+/*
+ * T5 and later support a new BAR2-based doorbell mechanism for Egress Queues.
+ * The User Doorbells are each 128 bytes in length with a Simple Doorbell at
+ * offsets 8x and a Write Combining single 64-byte Egress Queue Unit
+ * (X_IDXSIZE_UNIT) Gather Buffer interface at offset 64.  For Ingress Queues,
+ * we have a Going To Sleep register at offsets 8x+4.
+ *
+ * As noted above, we have many instances of the Simple Doorbell and Going To
+ * Sleep registers at offsets 8x and 8x+4, respectively.  We want to use a
+ * non-64-byte aligned offset for the Simple Doorbell in order to attempt to
+ * avoid buffering of the writes to the Simple Doorbell and we want to use a
+ * non-contiguous offset for the Going To Sleep writes in order to avoid
+ * possible combining between them.
+ */
+#define SGE_UDB_SIZE		128
+#define SGE_UDB_KDOORBELL	8
+#define SGE_UDB_GTS		20
+#define SGE_UDB_WCDOORBELL	64
+
+/*
  * CIM definitions.
  * ================
  */
@@ -188,5 +256,62 @@
 #define X_MBOWNER_NONE			0
 #define X_MBOWNER_FW			1
 #define X_MBOWNER_PL			2
+#define X_MBOWNER_FW_DEFERRED		3
+
+/*
+ * PCI-E definitions.
+ * ==================
+ */
+
+#define X_WINDOW_SHIFT			10
+#define X_PCIEOFST_SHIFT		10
+
+/*
+ * TP definitions.
+ * ===============
+ */
+
+/*
+ * TP_VLAN_PRI_MAP controls which subset of fields will be present in the
+ * Compressed Filter Tuple for LE filters.  Each bit set in TP_VLAN_PRI_MAP
+ * selects for a particular field being present.  These fields, when present
+ * in the Compressed Filter Tuple, have the following widths in bits.
+ */
+#define S_FT_FIRST			S_FCOE
+#define S_FT_LAST			S_FRAGMENTATION
+
+#define W_FT_FCOE			1
+#define W_FT_PORT			3
+#define W_FT_VNIC_ID			17
+#define W_FT_VLAN			17
+#define W_FT_TOS			8
+#define W_FT_PROTOCOL			8
+#define W_FT_ETHERTYPE			16
+#define W_FT_MACMATCH			9
+#define W_FT_MPSHITTYPE			3
+#define W_FT_FRAGMENTATION		1
+
+/*
+ * Some of the Compressed Filter Tuple fields have internal structure.  These
+ * bit shifts/masks describe those structures.  All shifts are relative to the
+ * base position of the fields within the Compressed Filter Tuple
+ */
+#define S_FT_VLAN_VLD			16
+#define V_FT_VLAN_VLD(x)		((x) << S_FT_VLAN_VLD)
+#define F_FT_VLAN_VLD			V_FT_VLAN_VLD(1U)
+
+#define S_FT_VNID_ID_VF			0
+#define M_FT_VNID_ID_VF			0x7fU
+#define V_FT_VNID_ID_VF(x)		((x) << S_FT_VNID_ID_VF)
+#define G_FT_VNID_ID_VF(x)		(((x) >> S_FT_VNID_ID_VF) & M_FT_VNID_ID_VF)
+
+#define S_FT_VNID_ID_PF			7
+#define M_FT_VNID_ID_PF			0x7U
+#define V_FT_VNID_ID_PF(x)		((x) << S_FT_VNID_ID_PF)
+#define G_FT_VNID_ID_PF(x)		(((x) >> S_FT_VNID_ID_PF) & M_FT_VNID_ID_PF)
+
+#define S_FT_VNID_ID_VLD		16
+#define V_FT_VNID_ID_VLD(x)		((x) << S_FT_VNID_ID_VLD)
+#define F_FT_VNID_ID_VLD(x)		V_FT_VNID_ID_VLD(1U)
 
 #endif /* __T4_REGS_VALUES_H__ */
