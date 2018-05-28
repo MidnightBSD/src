@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_red.c 263086 2014-03-12 10:45:58Z glebius $	*/
 /*	$KAME: altq_red.c,v 1.18 2003/09/05 22:40:36 itojun Exp $	*/
 
 /*
@@ -86,6 +87,7 @@
 #endif /* ALTQ3_COMPAT */
 
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -94,7 +96,9 @@
 #include <netinet/ip6.h>
 #endif
 
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
+#include <netpfil/pf/pf_altq.h>
+#include <netpfil/pf/pf_mtag.h>
 #include <altq/altq.h>
 #include <altq/altq_red.h>
 #ifdef ALTQ3_COMPAT
@@ -231,18 +235,25 @@ red_alloc(int weight, int inv_pmax, int th_min, int th_max, int flags,
 	int	 w, i;
 	int	 npkts_per_sec;
 
-	rp = malloc(sizeof(red_t), M_DEVBUF, M_WAITOK);
+	rp = malloc(sizeof(red_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (rp == NULL)
 		return (NULL);
-	bzero(rp, sizeof(red_t));
-
-	rp->red_avg = 0;
-	rp->red_idle = 1;
 
 	if (weight == 0)
 		rp->red_weight = W_WEIGHT;
 	else
 		rp->red_weight = weight;
+
+	/* allocate weight table */
+	rp->red_wtab = wtab_alloc(rp->red_weight);
+	if (rp->red_wtab == NULL) {
+		free(rp, M_DEVBUF);
+		return (NULL);
+	}
+
+	rp->red_avg = 0;
+	rp->red_idle = 1;
+
 	if (inv_pmax == 0)
 		rp->red_inv_pmax = default_inv_pmax;
 	else
@@ -301,9 +312,6 @@ red_alloc(int weight, int inv_pmax, int th_min, int th_max, int flags,
 	 */
 	rp->red_probd = (2 * (rp->red_thmax - rp->red_thmin)
 			 * rp->red_inv_pmax) << FP_SHIFT;
-
-	/* allocate weight table */
-	rp->red_wtab = wtab_alloc(rp->red_weight);
 
 	microtime(&rp->red_last);
 	return (rp);
@@ -639,10 +647,9 @@ wtab_alloc(int weight)
 			return (w);
 		}
 
-	w = malloc(sizeof(struct wtab), M_DEVBUF, M_WAITOK);
+	w = malloc(sizeof(struct wtab), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (w == NULL)
-		panic("wtab_alloc: malloc failed!");
-	bzero(w, sizeof(struct wtab));
+		return (NULL);
 	w->w_weight = weight;
 	w->w_refcount = 1;
 	w->w_next = wtab_list;

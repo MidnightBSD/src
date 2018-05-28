@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: altq_rmclass_debug.h,v 1.3 2002/11/29 04:36:24 kjc Exp $	*/
 
 /*

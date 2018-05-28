@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_cdnr.c 263086 2014-03-12 10:45:58Z glebius $	*/
 /*	$KAME: altq_cdnr.c,v 1.15 2005/04/13 03:44:24 suz Exp $	*/
 
 /*
@@ -55,6 +56,7 @@
 #include <netinet/ip6.h>
 #endif
 
+#include <altq/if_altq.h>
 #include <altq/altq.h>
 #ifdef ALTQ3_COMPAT
 #include <altq/altq_conf.h>

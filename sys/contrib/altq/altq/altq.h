@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq.h 298133 2016-04-16 22:02:32Z loos $	*/
 /*	$KAME: altq.h,v 1.10 2003/07/10 12:07:47 kjc Exp $	*/
 
 /*
@@ -63,7 +64,9 @@
 #define	ALTQT_BLUE		10	/* blue */
 #define	ALTQT_PRIQ		11	/* priority queue */
 #define	ALTQT_JOBS		12	/* JoBS */
-#define	ALTQT_MAX		13	/* should be max discipline type + 1 */
+#define	ALTQT_FAIRQ		13	/* fairq */
+#define	ALTQT_CODEL		14      /* CoDel */
+#define	ALTQT_MAX		15	/* should be max discipline type + 1 */
 
 #ifdef ALTQ3_COMPAT
 struct	altqreq {

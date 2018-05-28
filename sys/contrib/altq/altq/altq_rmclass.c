@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_rmclass.c 298133 2016-04-16 22:02:32Z loos $	*/
 /*	$KAME: altq_rmclass.c,v 1.19 2005/04/13 03:44:25 suz Exp $	*/
 
 /*
@@ -35,10 +36,9 @@
  *
  * LBL code modified by speer@eng.sun.com, May 1977.
  * For questions and/or comments, please send mail to cbq@ee.lbl.gov
+ *
+ * @(#)rm_class.c  1.48     97/12/05 SMI
  */
-
-#ident "@(#)rm_class.c  1.48     97/12/05 SMI"
-
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
@@ -60,13 +60,16 @@
 #endif
 
 #include <net/if.h>
+#include <net/if_var.h>
 #ifdef ALTQ3_COMPAT
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #endif
 
+#include <altq/if_altq.h>
 #include <altq/altq.h>
+#include <altq/altq_codel.h>
 #include <altq/altq_rmclass.h>
 #include <altq/altq_rmclass_debug.h>
 #include <altq/altq_red.h>
@@ -217,20 +220,24 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, u_int nsecPerByte,
 		return (NULL);
 	}
 #endif
+#ifndef ALTQ_CODEL
+	if (flags & RMCF_CODEL) {
+#ifdef ALTQ_DEBUG
+		printf("rmc_newclass: CODEL not configured for CBQ!\n");
+#endif
+		return (NULL);
+	}
+#endif
 
-	cl = malloc(sizeof(struct rm_class),
-	       M_DEVBUF, M_WAITOK);
+	cl = malloc(sizeof(struct rm_class), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cl == NULL)
 		return (NULL);
-	bzero(cl, sizeof(struct rm_class));
 	CALLOUT_INIT(&cl->callout_);
-	cl->q_ = malloc(sizeof(class_queue_t),
-	       M_DEVBUF, M_WAITOK);
+	cl->q_ = malloc(sizeof(class_queue_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cl->q_ == NULL) {
 		free(cl, M_DEVBUF);
 		return (NULL);
 	}
-	bzero(cl->q_, sizeof(class_queue_t));
 
 	/*
 	 * Class initialization.
@@ -305,6 +312,13 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, u_int nsecPerByte,
 #endif
 	}
 #endif /* ALTQ_RED */
+#ifdef ALTQ_CODEL
+	if (flags & RMCF_CODEL) {
+		cl->codel_ = codel_alloc(5, 100, 0);
+		if (cl->codel_ != NULL)
+			qtype(cl->q_) = Q_CODEL;
+	}
+#endif
 
 	/*
 	 * put the class into the class tree
@@ -654,6 +668,10 @@ rmc_delete_class(struct rm_ifdat *ifd, struct rm_class *cl)
 #ifdef ALTQ_RED
 		if (q_is_red(cl->q_))
 			red_destroy(cl->red_);
+#endif
+#ifdef ALTQ_CODEL
+		if (q_is_codel(cl->q_))
+			codel_destroy(cl->codel_);
 #endif
 	}
 	free(cl->q_, M_DEVBUF);
@@ -1621,6 +1639,10 @@ _rmc_addq(rm_class_t *cl, mbuf_t *m)
 	if (q_is_red(cl->q_))
 		return red_addq(cl->red_, cl->q_, m, cl->pktattr_);
 #endif /* ALTQ_RED */
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->q_))
+		return codel_addq(cl->codel_, cl->q_, m);
+#endif
 
 	if (cl->flags_ & RMCF_CLEARDSCP)
 		write_dsfield(m, cl->pktattr_, 0);
@@ -1649,6 +1671,10 @@ _rmc_getq(rm_class_t *cl)
 #ifdef ALTQ_RED
 	if (q_is_red(cl->q_))
 		return red_getq(cl->red_, cl->q_);
+#endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->q_))
+		return codel_getq(cl->codel_, cl->q_);
 #endif
 	return _getq(cl->q_);
 }
@@ -1720,7 +1746,8 @@ void cbqtrace_dump(int counter)
 #endif /* CBQ_TRACE */
 #endif /* ALTQ_CBQ */
 
-#if defined(ALTQ_CBQ) || defined(ALTQ_RED) || defined(ALTQ_RIO) || defined(ALTQ_HFSC) || defined(ALTQ_PRIQ)
+#if defined(ALTQ_CBQ) || defined(ALTQ_RED) || defined(ALTQ_RIO) || \
+    defined(ALTQ_HFSC) || defined(ALTQ_PRIQ) || defined(ALTQ_CODEL)
 #if !defined(__GNUC__) || defined(ALTQ_DEBUG)
 
 void

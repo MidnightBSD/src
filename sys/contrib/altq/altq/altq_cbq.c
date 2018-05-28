@@ -1,4 +1,5 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_cbq.c,v 1.5 2007/07/03 12:46:05 mlaier Exp $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_cbq.c 298133 2016-04-16 22:02:32Z loos $	*/
 /*	$KAME: altq_cbq.c,v 1.19 2003/09/17 14:23:25 kjc Exp $	*/
 
 /*
@@ -54,9 +55,12 @@
 #endif
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <netinet/in.h>
 
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
+#include <netpfil/pf/pf_altq.h>
+#include <netpfil/pf/pf_mtag.h>
 #include <altq/altq.h>
 #include <altq/altq_cbq.h>
 #ifdef ALTQ3_COMPAT
@@ -238,6 +242,10 @@ get_class_stats(class_stats_t *statsp, struct rm_class *cl)
 	if (q_is_rio(cl->q_))
 		rio_getstats((rio_t *)cl->red_, &statsp->red[0]);
 #endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->q_))
+		codel_getstats(cl->codel_, &statsp->codel);
+#endif
 }
 
 int
@@ -271,10 +279,9 @@ cbq_add_altq(struct pf_altq *a)
 		return (ENODEV);
 
 	/* allocate and initialize cbq_state_t */
-	cbqp = malloc(sizeof(cbq_state_t), M_DEVBUF, M_WAITOK);
+	cbqp = malloc(sizeof(cbq_state_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cbqp == NULL)
 		return (ENOMEM);
-	bzero(cbqp, sizeof(cbq_state_t));
 	CALLOUT_INIT(&cbqp->cbq_callout);
 	cbqp->cbq_qlen = 0;
 	cbqp->ifnp.ifq_ = &ifp->if_snd;	    /* keep the ifq */

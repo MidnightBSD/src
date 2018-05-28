@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_hfsc.c 298133 2016-04-16 22:02:32Z loos $	*/
 /*	$KAME: altq_hfsc.c,v 1.24 2003/12/05 05:40:46 kjc Exp $	*/
 
 /*
@@ -66,9 +67,12 @@
 #endif /* ALTQ3_COMPAT */
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <netinet/in.h>
 
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
+#include <netpfil/pf/pf_altq.h>
+#include <netpfil/pf/pf_mtag.h>
 #include <altq/altq.h>
 #include <altq/altq_hfsc.h>
 #ifdef ALTQ3_COMPAT
@@ -104,14 +108,10 @@ static void		 update_ed(struct hfsc_class *, int);
 static void		 update_d(struct hfsc_class *, int);
 static void		 init_vf(struct hfsc_class *, int);
 static void		 update_vf(struct hfsc_class *, int, u_int64_t);
-static ellist_t		*ellist_alloc(void);
-static void		 ellist_destroy(ellist_t *);
 static void		 ellist_insert(struct hfsc_class *);
 static void		 ellist_remove(struct hfsc_class *);
 static void		 ellist_update(struct hfsc_class *);
-struct hfsc_class	*ellist_get_mindl(ellist_t *, u_int64_t);
-static actlist_t	*actlist_alloc(void);
-static void		 actlist_destroy(actlist_t *);
+struct hfsc_class	*hfsc_get_mindl(struct hfsc_if *, u_int64_t);
 static void		 actlist_insert(struct hfsc_class *);
 static void		 actlist_remove(struct hfsc_class *);
 static void		 actlist_update(struct hfsc_class *);
@@ -200,17 +200,11 @@ hfsc_add_altq(struct pf_altq *a)
 	if (!ALTQ_IS_READY(&ifp->if_snd))
 		return (ENODEV);
 
-	hif = malloc(sizeof(struct hfsc_if), M_DEVBUF, M_WAITOK);
+	hif = malloc(sizeof(struct hfsc_if), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (hif == NULL)
 		return (ENOMEM);
-	bzero(hif, sizeof(struct hfsc_if));
 
-	hif->hif_eligible = ellist_alloc();
-	if (hif->hif_eligible == NULL) {
-		free(hif, M_DEVBUF);
-		return (ENOMEM);
-	}
-
+	TAILQ_INIT(&hif->hif_eligible);
 	hif->hif_ifq = &ifp->if_snd;
 
 	/* keep the state in pf_altq */
@@ -230,8 +224,6 @@ hfsc_remove_altq(struct pf_altq *a)
 
 	(void)hfsc_clear_interface(hif);
 	(void)hfsc_class_destroy(hif->hif_rootclass);
-
-	ellist_destroy(hif->hif_eligible);
 
 	free(hif, M_DEVBUF);
 
@@ -400,26 +392,31 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 		return (NULL);
 	}
 #endif
+#ifndef ALTQ_CODEL
+	if (flags & HFCF_CODEL) {
+#ifdef ALTQ_DEBUG
+		printf("hfsc_class_create: CODEL not configured for HFSC!\n");
+#endif
+		return (NULL);
+	}
+#endif
 
-	cl = malloc(sizeof(struct hfsc_class), M_DEVBUF, M_WAITOK);
+	cl = malloc(sizeof(struct hfsc_class), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cl == NULL)
 		return (NULL);
-	bzero(cl, sizeof(struct hfsc_class));
 
-	cl->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF, M_WAITOK);
+	cl->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (cl->cl_q == NULL)
 		goto err_ret;
-	bzero(cl->cl_q, sizeof(class_queue_t));
 
-	cl->cl_actc = actlist_alloc();
-	if (cl->cl_actc == NULL)
-		goto err_ret;
+	TAILQ_INIT(&cl->cl_actc);
 
 	if (qlimit == 0)
 		qlimit = 50;  /* use default */
 	qlimit(cl->cl_q) = qlimit;
 	qtype(cl->cl_q) = Q_DROPTAIL;
 	qlen(cl->cl_q) = 0;
+	qsize(cl->cl_q) = 0;
 	cl->cl_flags = flags;
 #ifdef ALTQ_RED
 	if (flags & (HFCF_RED|HFCF_RIO)) {
@@ -464,10 +461,17 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 #endif
 	}
 #endif /* ALTQ_RED */
+#ifdef ALTQ_CODEL
+	if (flags & HFCF_CODEL) {
+		cl->cl_codel = codel_alloc(5, 100, 0);
+		if (cl->cl_codel != NULL)
+			qtype(cl->cl_q) = Q_CODEL;
+	}
+#endif
 
 	if (rsc != NULL && (rsc->m1 != 0 || rsc->m2 != 0)) {
 		cl->cl_rsc = malloc(sizeof(struct internal_sc),
-		    M_DEVBUF, M_WAITOK);
+		    M_DEVBUF, M_NOWAIT);
 		if (cl->cl_rsc == NULL)
 			goto err_ret;
 		sc2isc(rsc, cl->cl_rsc);
@@ -476,7 +480,7 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 	}
 	if (fsc != NULL && (fsc->m1 != 0 || fsc->m2 != 0)) {
 		cl->cl_fsc = malloc(sizeof(struct internal_sc),
-		    M_DEVBUF, M_WAITOK);
+		    M_DEVBUF, M_NOWAIT);
 		if (cl->cl_fsc == NULL)
 			goto err_ret;
 		sc2isc(fsc, cl->cl_fsc);
@@ -484,7 +488,7 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 	}
 	if (usc != NULL && (usc->m1 != 0 || usc->m2 != 0)) {
 		cl->cl_usc = malloc(sizeof(struct internal_sc),
-		    M_DEVBUF, M_WAITOK);
+		    M_DEVBUF, M_NOWAIT);
 		if (cl->cl_usc == NULL)
 			goto err_ret;
 		sc2isc(usc, cl->cl_usc);
@@ -547,8 +551,6 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 	return (cl);
 
  err_ret:
-	if (cl->cl_actc != NULL)
-		actlist_destroy(cl->cl_actc);
 	if (cl->cl_red != NULL) {
 #ifdef ALTQ_RIO
 		if (q_is_rio(cl->cl_q))
@@ -557,6 +559,10 @@ hfsc_class_create(struct hfsc_if *hif, struct service_curve *rsc,
 #ifdef ALTQ_RED
 		if (q_is_red(cl->cl_q))
 			red_destroy(cl->cl_red);
+#endif
+#ifdef ALTQ_CODEL
+		if (q_is_codel(cl->cl_q))
+			codel_destroy(cl->cl_codel);
 #endif
 	}
 	if (cl->cl_fsc != NULL)
@@ -623,8 +629,6 @@ hfsc_class_destroy(struct hfsc_class *cl)
 	IFQ_UNLOCK(cl->cl_hif->hif_ifq);
 	splx(s);
 
-	actlist_destroy(cl->cl_actc);
-
 	if (cl->cl_red != NULL) {
 #ifdef ALTQ_RIO
 		if (q_is_rio(cl->cl_q))
@@ -633,6 +637,10 @@ hfsc_class_destroy(struct hfsc_class *cl)
 #ifdef ALTQ_RED
 		if (q_is_red(cl->cl_q))
 			red_destroy(cl->cl_red);
+#endif
+#ifdef ALTQ_CODEL
+		if (q_is_codel(cl->cl_q))
+			codel_destroy(cl->cl_codel);
 #endif
 	}
 
@@ -777,7 +785,7 @@ hfsc_dequeue(struct ifaltq *ifq, int op)
 		 * find the class with the minimum deadline among
 		 * the eligible classes.
 		 */
-		if ((cl = ellist_get_mindl(hif->hif_eligible, cur_time))
+		if ((cl = hfsc_get_mindl(hif, cur_time))
 		    != NULL) {
 			realtime = 1;
 		} else {
@@ -861,6 +869,10 @@ hfsc_addq(struct hfsc_class *cl, struct mbuf *m)
 	if (q_is_red(cl->cl_q))
 		return red_addq(cl->cl_red, cl->cl_q, m, cl->cl_pktattr);
 #endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->cl_q))
+		return codel_addq(cl->cl_codel, cl->cl_q, m);
+#endif
 	if (qlen(cl->cl_q) >= qlimit(cl->cl_q)) {
 		m_freem(m);
 		return (-1);
@@ -884,6 +896,10 @@ hfsc_getq(struct hfsc_class *cl)
 #ifdef ALTQ_RED
 	if (q_is_red(cl->cl_q))
 		return red_getq(cl->cl_red, cl->cl_q);
+#endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->cl_q))
+		return codel_getq(cl->cl_codel, cl->cl_q);
 #endif
 	return _getq(cl->cl_q);
 }
@@ -997,7 +1013,7 @@ init_vf(struct hfsc_class *cl, int len)
 			go_active = 0;
 
 		if (go_active) {
-			max_cl = actlist_last(cl->cl_parent->cl_actc);
+			max_cl = TAILQ_LAST(&cl->cl_parent->cl_actc, acthead);
 			if (max_cl != NULL) {
 				/*
 				 * set vt to the average of the min and max
@@ -1162,12 +1178,12 @@ update_cfmin(struct hfsc_class *cl)
 	struct hfsc_class *p;
 	u_int64_t cfmin;
 
-	if (TAILQ_EMPTY(cl->cl_actc)) {
+	if (TAILQ_EMPTY(&cl->cl_actc)) {
 		cl->cl_cfmin = 0;
 		return;
 	}
 	cfmin = HT_INFINITY;
-	TAILQ_FOREACH(p, cl->cl_actc, cl_actlist) {
+	TAILQ_FOREACH(p, &cl->cl_actc, cl_actlist) {
 		if (p->cl_f == 0) {
 			cl->cl_cfmin = 0;
 			return;
@@ -1187,22 +1203,6 @@ update_cfmin(struct hfsc_class *cl)
  * there is one eligible list per interface.
  */
 
-static ellist_t *
-ellist_alloc(void)
-{
-	ellist_t *head;
-
-	head = malloc(sizeof(ellist_t), M_DEVBUF, M_WAITOK);
-	TAILQ_INIT(head);
-	return (head);
-}
-
-static void
-ellist_destroy(ellist_t *head)
-{
-	free(head, M_DEVBUF);
-}
-
 static void
 ellist_insert(struct hfsc_class *cl)
 {
@@ -1210,13 +1210,13 @@ ellist_insert(struct hfsc_class *cl)
 	struct hfsc_class *p;
 
 	/* check the last entry first */
-	if ((p = TAILQ_LAST(hif->hif_eligible, _eligible)) == NULL ||
+	if ((p = TAILQ_LAST(&hif->hif_eligible, elighead)) == NULL ||
 	    p->cl_e <= cl->cl_e) {
-		TAILQ_INSERT_TAIL(hif->hif_eligible, cl, cl_ellist);
+		TAILQ_INSERT_TAIL(&hif->hif_eligible, cl, cl_ellist);
 		return;
 	}
 
-	TAILQ_FOREACH(p, hif->hif_eligible, cl_ellist) {
+	TAILQ_FOREACH(p, &hif->hif_eligible, cl_ellist) {
 		if (cl->cl_e < p->cl_e) {
 			TAILQ_INSERT_BEFORE(p, cl, cl_ellist);
 			return;
@@ -1230,7 +1230,7 @@ ellist_remove(struct hfsc_class *cl)
 {
 	struct hfsc_if	*hif = cl->cl_hif;
 
-	TAILQ_REMOVE(hif->hif_eligible, cl, cl_ellist);
+	TAILQ_REMOVE(&hif->hif_eligible, cl, cl_ellist);
 }
 
 static void
@@ -1248,11 +1248,11 @@ ellist_update(struct hfsc_class *cl)
 		return;
 
 	/* check the last entry */
-	last = TAILQ_LAST(hif->hif_eligible, _eligible);
+	last = TAILQ_LAST(&hif->hif_eligible, elighead);
 	ASSERT(last != NULL);
 	if (last->cl_e <= cl->cl_e) {
-		TAILQ_REMOVE(hif->hif_eligible, cl, cl_ellist);
-		TAILQ_INSERT_TAIL(hif->hif_eligible, cl, cl_ellist);
+		TAILQ_REMOVE(&hif->hif_eligible, cl, cl_ellist);
+		TAILQ_INSERT_TAIL(&hif->hif_eligible, cl, cl_ellist);
 		return;
 	}
 
@@ -1262,7 +1262,7 @@ ellist_update(struct hfsc_class *cl)
 	 */
 	while ((p = TAILQ_NEXT(p, cl_ellist)) != NULL) {
 		if (cl->cl_e < p->cl_e) {
-			TAILQ_REMOVE(hif->hif_eligible, cl, cl_ellist);
+			TAILQ_REMOVE(&hif->hif_eligible, cl, cl_ellist);
 			TAILQ_INSERT_BEFORE(p, cl, cl_ellist);
 			return;
 		}
@@ -1272,11 +1272,11 @@ ellist_update(struct hfsc_class *cl)
 
 /* find the class with the minimum deadline among the eligible classes */
 struct hfsc_class *
-ellist_get_mindl(ellist_t *head, u_int64_t cur_time)
+hfsc_get_mindl(struct hfsc_if *hif, u_int64_t cur_time)
 {
 	struct hfsc_class *p, *cl = NULL;
 
-	TAILQ_FOREACH(p, head, cl_ellist) {
+	TAILQ_FOREACH(p, &hif->hif_eligible, cl_ellist) {
 		if (p->cl_e > cur_time)
 			break;
 		if (cl == NULL || p->cl_d < cl->cl_d)
@@ -1290,34 +1290,20 @@ ellist_get_mindl(ellist_t *head, u_int64_t cur_time)
  * by their virtual time.
  * each intermediate class has one active children list.
  */
-static actlist_t *
-actlist_alloc(void)
-{
-	actlist_t *head;
 
-	head = malloc(sizeof(actlist_t), M_DEVBUF, M_WAITOK);
-	TAILQ_INIT(head);
-	return (head);
-}
-
-static void
-actlist_destroy(actlist_t *head)
-{
-	free(head, M_DEVBUF);
-}
 static void
 actlist_insert(struct hfsc_class *cl)
 {
 	struct hfsc_class *p;
 
 	/* check the last entry first */
-	if ((p = TAILQ_LAST(cl->cl_parent->cl_actc, _active)) == NULL
+	if ((p = TAILQ_LAST(&cl->cl_parent->cl_actc, acthead)) == NULL
 	    || p->cl_vt <= cl->cl_vt) {
-		TAILQ_INSERT_TAIL(cl->cl_parent->cl_actc, cl, cl_actlist);
+		TAILQ_INSERT_TAIL(&cl->cl_parent->cl_actc, cl, cl_actlist);
 		return;
 	}
 
-	TAILQ_FOREACH(p, cl->cl_parent->cl_actc, cl_actlist) {
+	TAILQ_FOREACH(p, &cl->cl_parent->cl_actc, cl_actlist) {
 		if (cl->cl_vt < p->cl_vt) {
 			TAILQ_INSERT_BEFORE(p, cl, cl_actlist);
 			return;
@@ -1329,7 +1315,7 @@ actlist_insert(struct hfsc_class *cl)
 static void
 actlist_remove(struct hfsc_class *cl)
 {
-	TAILQ_REMOVE(cl->cl_parent->cl_actc, cl, cl_actlist);
+	TAILQ_REMOVE(&cl->cl_parent->cl_actc, cl, cl_actlist);
 }
 
 static void
@@ -1347,11 +1333,11 @@ actlist_update(struct hfsc_class *cl)
 		return;
 
 	/* check the last entry */
-	last = TAILQ_LAST(cl->cl_parent->cl_actc, _active);
+	last = TAILQ_LAST(&cl->cl_parent->cl_actc, acthead);
 	ASSERT(last != NULL);
 	if (last->cl_vt <= cl->cl_vt) {
-		TAILQ_REMOVE(cl->cl_parent->cl_actc, cl, cl_actlist);
-		TAILQ_INSERT_TAIL(cl->cl_parent->cl_actc, cl, cl_actlist);
+		TAILQ_REMOVE(&cl->cl_parent->cl_actc, cl, cl_actlist);
+		TAILQ_INSERT_TAIL(&cl->cl_parent->cl_actc, cl, cl_actlist);
 		return;
 	}
 
@@ -1361,7 +1347,7 @@ actlist_update(struct hfsc_class *cl)
 	 */
 	while ((p = TAILQ_NEXT(p, cl_actlist)) != NULL) {
 		if (cl->cl_vt < p->cl_vt) {
-			TAILQ_REMOVE(cl->cl_parent->cl_actc, cl, cl_actlist);
+			TAILQ_REMOVE(&cl->cl_parent->cl_actc, cl, cl_actlist);
 			TAILQ_INSERT_BEFORE(p, cl, cl_actlist);
 			return;
 		}
@@ -1374,7 +1360,7 @@ actlist_firstfit(struct hfsc_class *cl, u_int64_t cur_time)
 {
 	struct hfsc_class *p;
 
-	TAILQ_FOREACH(p, cl->cl_actc, cl_actlist) {
+	TAILQ_FOREACH(p, &cl->cl_actc, cl_actlist) {
 		if (p->cl_f <= cur_time)
 			return (p);
 	}
@@ -1698,6 +1684,10 @@ get_class_stats(struct hfsc_classstats *sp, struct hfsc_class *cl)
 #ifdef ALTQ_RIO
 	if (q_is_rio(cl->cl_q))
 		rio_getstats((rio_t *)cl->cl_red, &sp->red[0]);
+#endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->cl_q))
+		codel_getstats(cl->cl_codel, &sp->codel);
 #endif
 }
 

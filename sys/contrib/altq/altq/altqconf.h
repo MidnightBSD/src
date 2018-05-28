@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: altqconf.h,v 1.1 2001/06/27 05:28:36 kjc Exp $	*/
 /*	$NetBSD: altqconf.h,v 1.2 2001/05/30 11:57:16 mrg Exp $	*/
 

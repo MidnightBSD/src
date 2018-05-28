@@ -55102,6 +55102,10 @@ sys/contrib/altq/altq/altq_cbq.h -text
 sys/contrib/altq/altq/altq_cdnr.c -text
 sys/contrib/altq/altq/altq_cdnr.h -text
 sys/contrib/altq/altq/altq_classq.h -text
+sys/contrib/altq/altq/altq_codel.c svneol=native#text/plain
+sys/contrib/altq/altq/altq_codel.h svneol=native#text/plain
+sys/contrib/altq/altq/altq_fairq.c svneol=native#text/plain
+sys/contrib/altq/altq/altq_fairq.h svneol=native#text/plain
 sys/contrib/altq/altq/altq_hfsc.c -text
 sys/contrib/altq/altq/altq_hfsc.h -text
 sys/contrib/altq/altq/altq_priq.c -text

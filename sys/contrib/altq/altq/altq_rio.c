@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_rio.c 263086 2014-03-12 10:45:58Z glebius $	*/
 /*	$KAME: altq_rio.c,v 1.17 2003/07/10 12:07:49 kjc Exp $	*/
 
 /*
@@ -81,6 +82,7 @@
 #endif
 
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -89,7 +91,8 @@
 #include <netinet/ip6.h>
 #endif
 
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
+#include <netpfil/pf/pf_altq.h>
 #include <altq/altq.h>
 #include <altq/altq_cdnr.h>
 #include <altq/altq_red.h>
@@ -204,10 +207,9 @@ rio_alloc(int weight, struct redparams *params, int flags, int pkttime)
 	int	 w, i;
 	int	 npkts_per_sec;
 
-	rp = malloc(sizeof(rio_t), M_DEVBUF, M_WAITOK);
+	rp = malloc(sizeof(rio_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (rp == NULL)
 		return (NULL);
-	bzero(rp, sizeof(rio_t));
 
 	rp->rio_flags = flags;
 	if (pkttime == 0)

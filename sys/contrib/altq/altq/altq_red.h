@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: altq_red.h,v 1.8 2003/07/10 12:07:49 kjc Exp $	*/
 
 /*

@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_subr.c 298133 2016-04-16 22:02:32Z loos $	*/
 /*	$KAME: altq_subr.c,v 1.21 2003/11/06 06:32:53 kjc Exp $	*/
 
 /*
@@ -49,6 +50,7 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #ifdef __FreeBSD__
@@ -64,7 +66,8 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
+#include <netpfil/pf/pf_altq.h>
 #include <altq/altq.h>
 #ifdef ALTQ3_COMPAT
 #include <altq/altq_conf.h>
@@ -401,14 +404,11 @@ tbr_set(ifq, profile)
 		return (0);
 	}
 
-	IFQ_UNLOCK(ifq);
-	tbr = malloc(sizeof(struct tb_regulator),
-	       M_DEVBUF, M_WAITOK);
-	if (tbr == NULL) {		/* can not happen */
+	tbr = malloc(sizeof(struct tb_regulator), M_DEVBUF, M_NOWAIT | M_ZERO);
+	if (tbr == NULL) {
 		IFQ_UNLOCK(ifq);
 		return (ENOMEM);
 	}
-	bzero(tbr, sizeof(struct tb_regulator));
 
 	tbr->tbr_rate = TBR_SCALE(profile->rate / 8) / machclk_freq;
 	tbr->tbr_depth = TBR_SCALE(profile->depth);
@@ -420,7 +420,6 @@ tbr_set(ifq, profile)
 	tbr->tbr_last = read_machclk();
 	tbr->tbr_lastop = ALTDQ_REMOVE;
 
-	IFQ_LOCK(ifq);
 	otbr = ifq->altq_tbr;
 	ifq->altq_tbr = tbr;	/* set the new tbr */
 
@@ -539,6 +538,16 @@ altq_pfattach(struct pf_altq *a)
 		error = hfsc_pfattach(a);
 		break;
 #endif
+#ifdef ALTQ_FAIRQ
+	case ALTQT_FAIRQ:
+		error = fairq_pfattach(a);
+		break;
+#endif
+#ifdef ALTQ_CODEL
+	case ALTQT_CODEL:
+		error = codel_pfattach(a);
+		break;
+#endif
 	default:
 		error = ENXIO;
 	}
@@ -614,6 +623,16 @@ altq_add(struct pf_altq *a)
 		error = hfsc_add_altq(a);
 		break;
 #endif
+#ifdef ALTQ_FAIRQ
+        case ALTQT_FAIRQ:
+                error = fairq_add_altq(a);
+                break;
+#endif
+#ifdef ALTQ_CODEL
+	case ALTQT_CODEL:
+		error = codel_add_altq(a);
+		break;
+#endif
 	default:
 		error = ENXIO;
 	}
@@ -650,6 +669,16 @@ altq_remove(struct pf_altq *a)
 		error = hfsc_remove_altq(a);
 		break;
 #endif
+#ifdef ALTQ_FAIRQ
+        case ALTQT_FAIRQ:
+                error = fairq_remove_altq(a);
+                break;
+#endif
+#ifdef ALTQ_CODEL
+	case ALTQT_CODEL:
+		error = codel_remove_altq(a);
+		break;
+#endif
 	default:
 		error = ENXIO;
 	}
@@ -682,6 +711,11 @@ altq_add_queue(struct pf_altq *a)
 	case ALTQT_HFSC:
 		error = hfsc_add_queue(a);
 		break;
+#endif
+#ifdef ALTQ_FAIRQ
+        case ALTQT_FAIRQ:
+                error = fairq_add_queue(a);
+                break;
 #endif
 	default:
 		error = ENXIO;
@@ -716,6 +750,11 @@ altq_remove_queue(struct pf_altq *a)
 		error = hfsc_remove_queue(a);
 		break;
 #endif
+#ifdef ALTQ_FAIRQ
+        case ALTQT_FAIRQ:
+                error = fairq_remove_queue(a);
+                break;
+#endif
 	default:
 		error = ENXIO;
 	}
@@ -747,6 +786,16 @@ altq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
 #ifdef ALTQ_HFSC
 	case ALTQT_HFSC:
 		error = hfsc_getqstats(a, ubuf, nbytes);
+		break;
+#endif
+#ifdef ALTQ_FAIRQ
+        case ALTQT_FAIRQ:
+                error = fairq_getqstats(a, ubuf, nbytes);
+                break;
+#endif
+#ifdef ALTQ_CODEL
+	case ALTQT_CODEL:
+		error = codel_getqstats(a, ubuf, nbytes);
 		break;
 #endif
 	default:

@@ -1,4 +1,5 @@
-/*	$FreeBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/sys/contrib/altq/altq/altq_priq.c 298133 2016-04-16 22:02:32Z loos $	*/
 /*	$KAME: altq_priq.c,v 1.11 2003/09/17 14:23:25 kjc Exp $	*/
 /*
  * Copyright (C) 2000-2003
@@ -51,9 +52,12 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <netinet/in.h>
 
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
+#include <netpfil/pf/pf_altq.h>
+#include <netpfil/pf/pf_mtag.h>
 #include <altq/altq.h>
 #ifdef ALTQ3_COMPAT
 #include <altq/altq_conf.h>
@@ -132,11 +136,9 @@ priq_add_altq(struct pf_altq *a)
 	if (!ALTQ_IS_READY(&ifp->if_snd))
 		return (ENODEV);
 
-	pif = malloc(sizeof(struct priq_if),
-	    M_DEVBUF, M_WAITOK);
+	pif = malloc(sizeof(struct priq_if), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (pif == NULL)
 		return (ENOMEM);
-	bzero(pif, sizeof(struct priq_if));
 	pif->pif_bandwidth = a->ifbandwidth;
 	pif->pif_maxpri = -1;
 	pif->pif_ifq = &ifp->if_snd;
@@ -296,6 +298,14 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 		return (NULL);
 	}
 #endif
+#ifndef ALTQ_CODEL
+	if (flags & PRCF_CODEL) {
+#ifdef ALTQ_DEBUG
+		printf("priq_class_create: CODEL not configured for PRIQ!\n");
+#endif
+		return (NULL);
+	}
+#endif
 
 	if ((cl = pif->pif_classes[pri]) != NULL) {
 		/* modify the class instead of creating a new one */
@@ -317,18 +327,20 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 		if (q_is_red(cl->cl_q))
 			red_destroy(cl->cl_red);
 #endif
+#ifdef ALTQ_CODEL
+		if (q_is_codel(cl->cl_q))
+			codel_destroy(cl->cl_codel);
+#endif
 	} else {
-		cl = malloc(sizeof(struct priq_class),
-		       M_DEVBUF, M_WAITOK);
+		cl = malloc(sizeof(struct priq_class), M_DEVBUF,
+		    M_NOWAIT | M_ZERO);
 		if (cl == NULL)
 			return (NULL);
-		bzero(cl, sizeof(struct priq_class));
 
-		cl->cl_q = malloc(sizeof(class_queue_t),
-		       M_DEVBUF, M_WAITOK);
+		cl->cl_q = malloc(sizeof(class_queue_t), M_DEVBUF,
+		    M_NOWAIT | M_ZERO);
 		if (cl->cl_q == NULL)
 			goto err_ret;
-		bzero(cl->cl_q, sizeof(class_queue_t));
 	}
 
 	pif->pif_classes[pri] = cl;
@@ -339,6 +351,7 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 	qlimit(cl->cl_q) = qlimit;
 	qtype(cl->cl_q) = Q_DROPTAIL;
 	qlen(cl->cl_q) = 0;
+	qsize(cl->cl_q) = 0;
 	cl->cl_flags = flags;
 	cl->cl_pri = pri;
 	if (pri > pif->pif_maxpri)
@@ -366,8 +379,9 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 		if (flags & PRCF_RIO) {
 			cl->cl_red = (red_t *)rio_alloc(0, NULL,
 						red_flags, red_pkttime);
-			if (cl->cl_red != NULL)
-				qtype(cl->cl_q) = Q_RIO;
+			if (cl->cl_red == NULL)
+				goto err_ret;
+			qtype(cl->cl_q) = Q_RIO;
 		} else
 #endif
 		if (flags & PRCF_RED) {
@@ -375,11 +389,19 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 			    qlimit(cl->cl_q) * 10/100,
 			    qlimit(cl->cl_q) * 30/100,
 			    red_flags, red_pkttime);
-			if (cl->cl_red != NULL)
-				qtype(cl->cl_q) = Q_RED;
+			if (cl->cl_red == NULL)
+				goto err_ret;
+			qtype(cl->cl_q) = Q_RED;
 		}
 	}
 #endif /* ALTQ_RED */
+#ifdef ALTQ_CODEL
+	if (flags & PRCF_CODEL) {
+		cl->cl_codel = codel_alloc(5, 100, 0);
+		if (cl->cl_codel != NULL)
+			qtype(cl->cl_q) = Q_CODEL;
+	}
+#endif
 
 	return (cl);
 
@@ -392,6 +414,10 @@ priq_class_create(struct priq_if *pif, int pri, int qlimit, int flags, int qid)
 #ifdef ALTQ_RED
 		if (q_is_red(cl->cl_q))
 			red_destroy(cl->cl_red);
+#endif
+#ifdef ALTQ_CODEL
+		if (q_is_codel(cl->cl_q))
+			codel_destroy(cl->cl_codel);
 #endif
 	}
 	if (cl->cl_q != NULL)
@@ -443,6 +469,10 @@ priq_class_destroy(struct priq_class *cl)
 #ifdef ALTQ_RED
 		if (q_is_red(cl->cl_q))
 			red_destroy(cl->cl_red);
+#endif
+#ifdef ALTQ_CODEL
+		if (q_is_codel(cl->cl_q))
+			codel_destroy(cl->cl_codel);
 #endif
 	}
 	free(cl->cl_q, M_DEVBUF);
@@ -559,6 +589,10 @@ priq_addq(struct priq_class *cl, struct mbuf *m)
 	if (q_is_red(cl->cl_q))
 		return red_addq(cl->cl_red, cl->cl_q, m, cl->cl_pktattr);
 #endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->cl_q))
+		return codel_addq(cl->cl_codel, cl->cl_q, m);
+#endif
 	if (qlen(cl->cl_q) >= qlimit(cl->cl_q)) {
 		m_freem(m);
 		return (-1);
@@ -582,6 +616,10 @@ priq_getq(struct priq_class *cl)
 #ifdef ALTQ_RED
 	if (q_is_red(cl->cl_q))
 		return red_getq(cl->cl_red, cl->cl_q);
+#endif
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->cl_q))
+		return codel_getq(cl->cl_codel, cl->cl_q);
 #endif
 	return _getq(cl->cl_q);
 }
@@ -627,7 +665,10 @@ get_class_stats(struct priq_classstats *sp, struct priq_class *cl)
 	if (q_is_rio(cl->cl_q))
 		rio_getstats((rio_t *)cl->cl_red, &sp->red[0]);
 #endif
-
+#ifdef ALTQ_CODEL
+	if (q_is_codel(cl->cl_q))
+		codel_getstats(cl->cl_codel, &sp->codel);
+#endif
 }
 
 /* convert a class handle to the corresponding class pointer */
