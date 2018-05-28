@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2001 Gerd Knorr <kraxel@bytesex.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/bktr/msp34xx.c 332920 2018-04-24 10:02:17Z riggs $
  */
 
 /*
@@ -109,10 +110,6 @@
 #define VIDEO_SOUND_LANG2	8
 
 #define DFP_COUNT 0x41
-static const int bl_dfp[] = {
-	0x00, 0x01, 0x02, 0x03,  0x06, 0x08, 0x09, 0x0a,
-	0x0b, 0x0d, 0x0e, 0x10
-};
 
 struct msp3400c {
 	int simple;

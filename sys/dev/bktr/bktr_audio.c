@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_audio.c 242692 2012-11-07 07:00:59Z kevlo $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -498,7 +499,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
   }
 
 
-  /* MSP3415D SPECIAL CASE Use the Tuner's Mono audio ouput for the MSP */
+  /* MSP3415D SPECIAL CASE Use the Tuner's Mono audio output for the MSP */
   /* (for Hauppauge 44xxx card with Tuner Type 0x2a) */
   else if (  ( (strncmp("3415D", bktr->msp_version_string, 5) == 0)
                &&(bktr->msp_use_mono_source == 1)

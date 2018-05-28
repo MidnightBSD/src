@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/auxio/auxio.c,v 1.3 2012/08/06 01:22:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Pyun YongHyeon
  * All rights reserved.
@@ -62,6 +62,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/auxio/auxio.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -131,7 +132,8 @@ static device_method_t auxio_sbus_methods[] = {
 	DEVMETHOD(device_probe,		auxio_bus_probe),
 	DEVMETHOD(device_attach,	auxio_sbus_attach),
 	DEVMETHOD(device_detach,	auxio_bus_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t auxio_sbus_driver = {
@@ -151,7 +153,8 @@ static device_method_t auxio_ebus_methods[] = {
 	DEVMETHOD(device_probe,		auxio_bus_probe),
 	DEVMETHOD(device_attach,	auxio_ebus_attach),
 	DEVMETHOD(device_detach,	auxio_bus_detach),
-	{0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t auxio_ebus_driver = {

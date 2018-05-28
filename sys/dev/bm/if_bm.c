@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008 Nathan Whitehorn. All rights reserved.
  * Copyright 2003 by Peter Grehan. All rights reserved.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bm/if_bm.c 243857 2012-12-04 09:32:43Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -468,7 +469,6 @@ bm_attach(device_t dev)
 
 	if_initname(ifp, device_get_name(sc->sc_dev),
 	    device_get_unit(sc->sc_dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = bm_start;
 	ifp->if_ioctl = bm_ioctl;

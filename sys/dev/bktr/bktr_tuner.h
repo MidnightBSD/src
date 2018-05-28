@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/bktr/bktr_tuner.h 152375 2005-11-13 13:26:37Z netchild $ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)

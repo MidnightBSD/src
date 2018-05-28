@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1991-1998 by Open Software Foundation, Inc.
  *              All Rights Reserved
@@ -44,7 +45,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/bm/if_bmreg.h 226995 2011-11-01 16:13:59Z marius $
  */
 
 /*

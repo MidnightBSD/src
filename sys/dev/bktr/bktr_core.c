@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the 
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -63,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_core.c 261455 2014-02-04 03:36:42Z eadler $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -109,6 +110,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
@@ -1801,8 +1803,10 @@ video_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thr
 #else
                                 buf = get_bktr_mem(unit, temp*PAGE_SIZE);
                                 if (buf != 0) {
-                                        kmem_free(kernel_map, bktr->bigbuf,
-                                          (bktr->alloc_pages * PAGE_SIZE));
+					contigfree(
+					  (void *)(uintptr_t)bktr->bigbuf,
+                                          (bktr->alloc_pages * PAGE_SIZE),
+					  M_DEVBUF);
 #endif                                          
 
 					bktr->bigbuf = buf;
@@ -1936,7 +1940,7 @@ int
 tuner_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thread* td )
 {
 	int		tmp_int;
-	unsigned int	temp, temp1;
+	int		temp, temp1;
 	int		offset;
 	int		count;
 	u_char		*buf;
@@ -2596,7 +2600,7 @@ dump_bt848( bktr_ptr_t bktr )
 #define BKTR_TEST_RISC_STATUS_BIT0 (1 << 28)
 #define BKTR_TEST_RISC_STATUS_BIT1 (1 << 29)
 #define BKTR_TEST_RISC_STATUS_BIT2 (1 << 30)
-#define BKTR_TEST_RISC_STATUS_BIT3 (1 << 31)
+#define BKTR_TEST_RISC_STATUS_BIT3 (1U << 31)
 
 static bool_t notclipped (bktr_reg_t * bktr, int x, int width) {
     int i;

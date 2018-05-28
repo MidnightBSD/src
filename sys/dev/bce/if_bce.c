@@ -1,6 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2006-2010 Broadcom Corporation
- *	David Christensen <davidch@broadcom.com>.  All rights reserved.
+ * Copyright (c) 2006-2014 QLogic Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -11,9 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Broadcom Corporation nor the name of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written consent.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS'
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -29,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bce/if_bce.c 265917 2014-05-12 15:52:49Z davidcs $");
 
 /*
  * The following controllers are supported by this driver:
@@ -106,13 +103,13 @@ static const struct bce_type bce_devs[] = {
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5706,  HP_VENDORID, 0x1709,
 		"HP NC371i Multifunction Gigabit Server Adapter" },
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5706,  PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5706 1000Base-T" },
+		"QLogic NetXtreme II BCM5706 1000Base-T" },
 
 	/* BCM5706S controllers and OEM boards. */
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5706S, HP_VENDORID, 0x3102,
 		"HP NC370F Multifunction Gigabit Server Adapter" },
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5706S, PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5706 1000Base-SX" },
+		"QLogic NetXtreme II BCM5706 1000Base-SX" },
 
 	/* BCM5708C controllers and OEM boards. */
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5708,  HP_VENDORID, 0x7037,
@@ -122,7 +119,7 @@ static const struct bce_type bce_devs[] = {
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5708,  HP_VENDORID, 0x7045,
 		"HP NC374m PCIe Multifunction Adapter" },
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5708,  PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5708 1000Base-T" },
+		"QLogic NetXtreme II BCM5708 1000Base-T" },
 
 	/* BCM5708S controllers and OEM boards. */
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5708S,  HP_VENDORID, 0x1706,
@@ -132,7 +129,7 @@ static const struct bce_type bce_devs[] = {
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5708S,  HP_VENDORID, 0x703d,
 		"HP NC373F PCIe Multifunc Giga Server Adapter" },
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5708S,  PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5708 1000Base-SX" },
+		"QLogic NetXtreme II BCM5708 1000Base-SX" },
 
 	/* BCM5709C controllers and OEM boards. */
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5709,  HP_VENDORID, 0x7055,
@@ -140,7 +137,7 @@ static const struct bce_type bce_devs[] = {
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5709,  HP_VENDORID, 0x7059,
 		"HP NC382T PCIe DP Multifunction Gigabit Server Adapter" },
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5709,  PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5709 1000Base-T" },
+		"QLogic NetXtreme II BCM5709 1000Base-T" },
 
 	/* BCM5709S controllers and OEM boards. */
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5709S,  HP_VENDORID, 0x171d,
@@ -148,11 +145,11 @@ static const struct bce_type bce_devs[] = {
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5709S,  HP_VENDORID, 0x7056,
 		"HP NC382i DP Multifunction Gigabit Server Adapter" },
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5709S,  PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5709 1000Base-SX" },
+		"QLogic NetXtreme II BCM5709 1000Base-SX" },
 
 	/* BCM5716 controllers and OEM boards. */
 	{ BRCM_VENDORID, BRCM_DEVICEID_BCM5716,  PCI_ANY_ID,  PCI_ANY_ID,
-		"Broadcom NetXtreme II BCM5716 1000Base-T" },
+		"QLogic NetXtreme II BCM5716 1000Base-T" },
 
 	{ 0, 0, 0, 0, NULL }
 };
@@ -529,7 +526,7 @@ SYSCTL_UINT(_hw_bce, OID_AUTO, hdr_split, CTLFLAG_RDTUN, &bce_hdr_split, 0,
 /* Allowable values are TRUE or FALSE. */
 static int bce_strict_rx_mtu = FALSE;
 TUNABLE_INT("hw.bce.strict_rx_mtu", &bce_strict_rx_mtu);
-SYSCTL_UINT(_hw_bce, OID_AUTO, loose_rx_mtu, CTLFLAG_RDTUN,
+SYSCTL_UINT(_hw_bce, OID_AUTO, strict_rx_mtu, CTLFLAG_RDTUN,
     &bce_strict_rx_mtu, 0,
     "Enable/Disable strict RX frame size checking");
 
@@ -2077,10 +2074,12 @@ bce_miibus_statchg(device_t dev)
 		DBPRINT(sc, BCE_INFO_PHY,
 		    "%s(): Enabling RX flow control.\n", __FUNCTION__);
 		BCE_SETBIT(sc, BCE_EMAC_RX_MODE, BCE_EMAC_RX_MODE_FLOW_EN);
+		sc->bce_flags |= BCE_USING_RX_FLOW_CONTROL;
 	} else {
 		DBPRINT(sc, BCE_INFO_PHY,
 		    "%s(): Disabling RX flow control.\n", __FUNCTION__);
 		BCE_CLRBIT(sc, BCE_EMAC_RX_MODE, BCE_EMAC_RX_MODE_FLOW_EN);
+		sc->bce_flags &= ~BCE_USING_RX_FLOW_CONTROL;
 	}
 
 	if ((IFM_OPTIONS(media_active) & IFM_ETH_TXPAUSE) != 0) {
@@ -5062,9 +5061,11 @@ bce_reset(struct bce_softc *sc, u32 reset_code)
 
 bce_reset_exit:
 	/* Restore EMAC Mode bits needed to keep ASF/IPMI running. */
-	val = REG_RD(sc, BCE_EMAC_MODE);
-	val = (val & ~emac_mode_mask) | emac_mode_save;
-	REG_WR(sc, BCE_EMAC_MODE, val);
+	if (reset_code == BCE_DRV_MSG_CODE_RESET) {
+		val = REG_RD(sc, BCE_EMAC_MODE);
+		val = (val & ~emac_mode_mask) | emac_mode_save;
+		REG_WR(sc, BCE_EMAC_MODE, val);
+	}
 
 	DBEXIT(BCE_VERBOSE_RESET);
 	return (rc);
@@ -5466,10 +5467,10 @@ bce_get_rx_buf_exit:
 static int
 bce_get_pg_buf(struct bce_softc *sc, u16 prod, u16 prod_idx)
 {
-	bus_addr_t busaddr;
+	bus_dma_segment_t segs[1];
 	struct mbuf *m_new = NULL;
 	struct rx_bd *pgbd;
-	int error, rc = 0;
+	int error, nsegs, rc = 0;
 #ifdef BCE_DEBUG
 	u16 debug_prod_idx = prod_idx;
 #endif
@@ -5512,12 +5513,11 @@ bce_get_pg_buf(struct bce_softc *sc, u16 prod, u16 prod_idx)
 	/* ToDo: Consider calling m_fragment() to test error handling. */
 
 	/* Map the mbuf cluster into device memory. */
-	error = bus_dmamap_load(sc->pg_mbuf_tag, sc->pg_mbuf_map[prod_idx],
-	    mtod(m_new, void *), MCLBYTES, bce_dma_map_addr, &busaddr,
-	    BUS_DMA_NOWAIT);
+	error = bus_dmamap_load_mbuf_sg(sc->pg_mbuf_tag,
+	    sc->pg_mbuf_map[prod_idx], m_new, segs, &nsegs, BUS_DMA_NOWAIT);
 
 	/* Handle any mapping errors. */
-	if (error || busaddr == 0) {
+	if (error) {
 		BCE_PRINTF("%s(%d): Error mapping mbuf into page chain!\n",
 		    __FILE__, __LINE__);
 
@@ -5528,6 +5528,10 @@ bce_get_pg_buf(struct bce_softc *sc, u16 prod, u16 prod_idx)
 		goto bce_get_pg_buf_exit;
 	}
 
+	/* All mbufs must map to a single segment. */
+	KASSERT(nsegs == 1, ("%s(): Too many segments returned (%d)!",
+	    __FUNCTION__, nsegs));
+
 	/* ToDo: Do we need bus_dmamap_sync(,,BUS_DMASYNC_PREREAD) here? */
 
 	/*
@@ -5536,8 +5540,8 @@ bce_get_pg_buf(struct bce_softc *sc, u16 prod, u16 prod_idx)
 	 */
 	pgbd = &sc->pg_bd_chain[PG_PAGE(prod_idx)][PG_IDX(prod_idx)];
 
-	pgbd->rx_bd_haddr_lo  = htole32(BCE_ADDR_LO(busaddr));
-	pgbd->rx_bd_haddr_hi  = htole32(BCE_ADDR_HI(busaddr));
+	pgbd->rx_bd_haddr_lo  = htole32(BCE_ADDR_LO(segs[0].ds_addr));
+	pgbd->rx_bd_haddr_hi  = htole32(BCE_ADDR_HI(segs[0].ds_addr));
 	pgbd->rx_bd_len       = htole32(MCLBYTES);
 	pgbd->rx_bd_flags     = htole32(RX_BD_FLAGS_START | RX_BD_FLAGS_END);
 
@@ -7825,18 +7829,42 @@ bce_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 static void
 bce_watchdog(struct bce_softc *sc)
 {
+	uint32_t status;
+
 	DBENTER(BCE_EXTREME_SEND);
 
 	BCE_LOCK_ASSERT(sc);
 
+	status = 0;
 	/* If the watchdog timer hasn't expired then just exit. */
 	if (sc->watchdog_timer == 0 || --sc->watchdog_timer)
 		goto bce_watchdog_exit;
 
+	status = REG_RD(sc, BCE_EMAC_RX_STATUS);
 	/* If pause frames are active then don't reset the hardware. */
-	/* ToDo: Should we reset the timer here? */
-	if (REG_RD(sc, BCE_EMAC_TX_STATUS) & BCE_EMAC_TX_STATUS_XOFFED)
-		goto bce_watchdog_exit;
+	if ((sc->bce_flags & BCE_USING_RX_FLOW_CONTROL) != 0) {
+		if ((status & BCE_EMAC_RX_STATUS_FFED) != 0) {
+			/*
+			 * If link partner has us in XOFF state then wait for
+			 * the condition to clear.
+			 */
+			sc->watchdog_timer = BCE_TX_TIMEOUT;
+			goto bce_watchdog_exit;
+		} else if ((status & BCE_EMAC_RX_STATUS_FF_RECEIVED) != 0 &&
+			(status & BCE_EMAC_RX_STATUS_N_RECEIVED) != 0) {
+			/*
+			 * If we're not currently XOFF'ed but have recently
+			 * been XOFF'd/XON'd then assume that's delaying TX
+			 * this time around.
+			 */
+			sc->watchdog_timer = BCE_TX_TIMEOUT;
+			goto bce_watchdog_exit;
+		}
+		/*
+		 * Any other condition is unexpected and the controller
+		 * should be reset.
+		 */
+	}
 
 	BCE_PRINTF("%s(%d): Watchdog timeout occurred, resetting!\n",
 	    __FILE__, __LINE__);
@@ -7860,6 +7888,7 @@ bce_watchdog(struct bce_softc *sc)
 	sc->bce_ifp->if_oerrors++;
 
 bce_watchdog_exit:
+	REG_WR(sc, BCE_EMAC_RX_STATUS, status);
 	DBEXIT(BCE_EXTREME_SEND);
 }
 
@@ -9791,11 +9820,9 @@ bce_dump_mbuf(struct bce_softc *sc, struct mbuf *m)
 		if (mp->m_flags & M_PKTHDR) {
 			BCE_PRINTF("- m_pkthdr: len = %d, flags = 0x%b, "
 			    "csum_flags = %b\n", mp->m_pkthdr.len,
-			    mp->m_flags, "\20\12M_BCAST\13M_MCAST\14M_FRAG"
-			    "\15M_FIRSTFRAG\16M_LASTFRAG\21M_VLANTAG"
-			    "\22M_PROMISC\23M_NOFREE",
+			    mp->m_flags, M_FLAG_PRINTF,
 			    mp->m_pkthdr.csum_flags,
-			    "\20\1CSUM_IP\2CSUM_TCP\3CSUM_UDP\4CSUM_IP_FRAGS"
+			    "\20\1CSUM_IP\2CSUM_TCP\3CSUM_UDP"
 			    "\5CSUM_FRAGMENT\6CSUM_TSO\11CSUM_IP_CHECKED"
 			    "\12CSUM_IP_VALID\13CSUM_DATA_VALID"
 			    "\14CSUM_PSEUDO_HDR");

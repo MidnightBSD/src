@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Stuart Walsh
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/dev/bfe/if_bfereg.h 181994 2008-08-22 06:46:55Z yongari $ */
 
 #ifndef _BFE_H
 #define _BFE_H

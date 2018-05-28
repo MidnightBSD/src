@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Stuart Walsh<stu@ipng.org.uk>
  * and Duncan Barclay<dmlb@dmlb.org>
@@ -26,7 +27,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bfe/if_bfe.c 243857 2012-12-04 09:32:43Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -489,7 +490,6 @@ bfe_attach(device_t dev)
 	ifp->if_ioctl = bfe_ioctl;
 	ifp->if_start = bfe_start;
 	ifp->if_init = bfe_init;
-	ifp->if_mtu = ETHERMTU;
 	IFQ_SET_MAXLEN(&ifp->if_snd, BFE_TX_QLEN);
 	ifp->if_snd.ifq_drv_maxlen = BFE_TX_QLEN;
 	IFQ_SET_READY(&ifp->if_snd);

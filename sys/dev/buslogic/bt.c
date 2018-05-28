@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/buslogic/bt.c 315813 2017-03-23 06:41:13Z mav $");
 
  /*
   * Special thanks to Leonard N. Zubkoff for writing such a complete and
@@ -729,7 +729,7 @@ bt_init(device_t dev)
 				/* highaddr	*/ BUS_SPACE_MAXADDR,
 				/* filter	*/ NULL,
 				/* filterarg	*/ NULL,
-				/* maxsize	*/ MAXBSIZE,
+				/* maxsize	*/ DFLTPHYS,
 				/* nsegments	*/ BT_NSEG,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ BUS_DMA_ALLOCNOW,
@@ -1159,6 +1159,7 @@ btaction(struct cam_sim *sim, union ccb *ccb)
 		if (ccb->ccb_h.func_code == XPT_SCSI_IO) {
 			struct ccb_scsiio *csio;
 			struct ccb_hdr *ccbh;
+			int error;
 
 			csio = &ccb->csio;
 			ccbh = &csio->ccb_h;
@@ -1206,67 +1207,21 @@ btaction(struct cam_sim *sim, union ccb *ccb)
 			 * If we have any data to send with this command,
 			 * map it into bus space.
 			 */
-		        /* Only use S/G if there is a transfer */
-			if ((ccbh->flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-				if ((ccbh->flags & CAM_SCATTER_VALID) == 0) {
-					/*
-					 * We've been given a pointer
-					 * to a single buffer.
-					 */
-					if ((ccbh->flags & CAM_DATA_PHYS)==0) {
-						int error;
-
-						error = bus_dmamap_load(
-						    bt->buffer_dmat,
-						    bccb->dmamap,
-						    csio->data_ptr,
-						    csio->dxfer_len,
-						    btexecuteccb,
-						    bccb,
-						    /*flags*/0);
-						if (error == EINPROGRESS) {
-							/*
-							 * So as to maintain
-							 * ordering, freeze the
-							 * controller queue
-							 * until our mapping is
-							 * returned.
-							 */
-							xpt_freeze_simq(bt->sim,
-									1);
-							csio->ccb_h.status |=
-							    CAM_RELEASE_SIMQ;
-						}
-					} else {
-						struct bus_dma_segment seg; 
-
-						/* Pointer to physical buffer */
-						seg.ds_addr =
-						    (bus_addr_t)csio->data_ptr;
-						seg.ds_len = csio->dxfer_len;
-						btexecuteccb(bccb, &seg, 1, 0);
-					}
-				} else {
-					struct bus_dma_segment *segs;
-
-					if ((ccbh->flags & CAM_DATA_PHYS) != 0)
-						panic("btaction - Physical "
-						      "segment pointers "
-						      "unsupported");
-
-					if ((ccbh->flags&CAM_SG_LIST_PHYS)==0)
-						panic("btaction - Virtual "
-						      "segment addresses "
-						      "unsupported");
-
-					/* Just use the segments provided */
-					segs = (struct bus_dma_segment *)
-					    csio->data_ptr;
-					btexecuteccb(bccb, segs,
-						     csio->sglist_cnt, 0);
-				}
-			} else {
-				btexecuteccb(bccb, NULL, 0, 0);
+			error = bus_dmamap_load_ccb(
+			    bt->buffer_dmat,
+			    bccb->dmamap,
+			    ccb,
+			    btexecuteccb,
+			    bccb,
+			    /*flags*/0);
+			if (error == EINPROGRESS) {
+				/*
+				 * So as to maintain ordering, freeze the
+				 * controller queue until our mapping is
+				 * returned.
+				 */
+				xpt_freeze_simq(bt->sim, 1);
+				csio->ccb_h.status |= CAM_RELEASE_SIMQ;
 			}
 		} else {
 			hccb->opcode = INITIATOR_BUS_DEV_RESET;
@@ -1415,9 +1370,9 @@ btaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = bt->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "BusLogic", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "BusLogic", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		cpi->transport = XPORT_SPI;
@@ -1513,8 +1468,8 @@ btexecuteccb(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	ccb->ccb_h.status |= CAM_SIM_QUEUED;
 	LIST_INSERT_HEAD(&bt->pending_ccbs, &ccb->ccb_h, sim_links.le);
 
-	callout_reset(&bccb->timer, (ccb->ccb_h.timeout * hz) / 1000,
-	    bttimeout, bccb);
+	callout_reset_sbt(&bccb->timer, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    bttimeout, bccb, 0);
 
 	/* Tell the adapter about this command */
 	bt->cur_outbox->ccb_addr = btccbvtop(bt, bccb);
@@ -1632,8 +1587,10 @@ btdone(struct bt_softc *bt, struct bt_ccb *bccb, bt_mbi_comp_code_t comp_code)
 					bccb->hccb.target_id,
 					CAM_LUN_WILDCARD);
 		
-		if (error == CAM_REQ_CMP)
+		if (error == CAM_REQ_CMP) {
 			xpt_async(AC_SENT_BDR, path, NULL);
+			xpt_free_path(path);
+		}
 
 		ccb_h = LIST_FIRST(&bt->pending_ccbs);
 		while (ccb_h != NULL) {
@@ -1646,9 +1603,9 @@ btdone(struct bt_softc *bt, struct bt_ccb *bccb, bt_mbi_comp_code_t comp_code)
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 				btdone(bt, pending_bccb, BMBI_ERROR);
 			} else {
-				callout_reset(&pending_bccb->timer,
-				    (ccb_h->timeout * hz) / 1000,
-				    bttimeout, pending_bccb);
+				callout_reset_sbt(&pending_bccb->timer,
+				    SBT_1MS * ccb_h->timeout, 0, bttimeout,
+				    pending_bccb, 0);
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 			}
 		}

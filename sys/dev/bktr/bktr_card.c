@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_card.c 218909 2011-02-21 09:01:34Z brucec $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
