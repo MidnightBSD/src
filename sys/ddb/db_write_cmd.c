@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_write_cmd.c 273265 2014-10-18 19:22:59Z pfg $");
 
 #include <sys/param.h>
 
@@ -43,11 +44,8 @@ __MBSDID("$MidnightBSD$");
  */
 /*ARGSUSED*/
 void
-db_write_cmd(address, have_addr, count, modif)
-	db_expr_t	address;
-	boolean_t	have_addr;
-	db_expr_t	count;
-	char *		modif;
+db_write_cmd(db_expr_t address, boolean_t have_addr, db_expr_t count,
+    char * modif)
 {
 	register
 	db_addr_t	addr;

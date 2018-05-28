@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_lex.c 273265 2014-10-18 19:22:59Z pfg $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -49,7 +50,7 @@ static int 	db_read_char(void);
 static void 	db_unread_char(int);
 
 int
-db_read_line()
+db_read_line(void)
 {
 	int	i;
 
@@ -97,7 +98,7 @@ db_flush_line()
 static int	db_look_char = 0;
 
 static int
-db_read_char()
+db_read_char(void)
 {
 	int	c;
 
@@ -148,7 +149,7 @@ char	db_tok_string[TOK_STRING_SIZE];
 db_expr_t	db_radix = 16;
 
 void
-db_flush_lex()
+db_flush_lex(void)
 {
 	db_flush_line();
 	db_look_char = 0;
@@ -156,7 +157,7 @@ db_flush_lex()
 }
 
 static int
-db_lex()
+db_lex(void)
 {
 	int	c;
 

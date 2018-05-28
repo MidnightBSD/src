@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -23,7 +24,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ddb/db_command.h 208509 2010-05-24 16:41:05Z bz $
  */
 
 #ifndef _DDB_DB_COMMAND_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_input.c 273265 2014-10-18 19:22:59Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -253,7 +254,7 @@ db_inputchar(c)
 		db_putnchars(BACKUP, db_lc - db_lbuf_start);
 		db_putnchars(BLANK, db_le - db_lbuf_start);
 		db_putnchars(BACKUP, db_le - db_lbuf_start);
-		db_le = index(db_lbuf_start, '\0');
+		db_le = strchr(db_lbuf_start, '\0');
 		if (db_le[-1] == '\r' || db_le[-1] == '\n')
 		    *--db_le = '\0';
 		db_lc = db_le;
@@ -346,7 +347,7 @@ db_readline(lstart, lsize)
 }
 
 void
-db_check_interrupt()
+db_check_interrupt(void)
 {
 	register int	c;
 

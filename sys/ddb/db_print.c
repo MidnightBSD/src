@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -25,7 +26,7 @@
  *
  */
 /*
- * 	Author: David B. Golub, Carnegie Mellon University
+ *	Author: David B. Golub, Carnegie Mellon University
  *	Date:	7/90
  */
 
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_print.c 290731 2015-11-12 23:49:47Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -56,7 +57,8 @@ db_show_regs(db_expr_t _1, boolean_t _2, db_expr_t _3, char *_4)
 	for (regp = db_regs; regp < db_eregs; regp++) {
 		if (!db_read_variable(regp, &value))
 			continue;
-		db_printf("%-12s%#10lr", regp->name, (unsigned long)value);
+		db_printf("%-12s%#*lr", regp->name,
+		    (int)(sizeof(unsigned long) * 2 + 2), (unsigned long)value);
 		db_find_xtrn_sym_and_offset((db_addr_t)value, &name, &offset);
 		if (name != NULL && offset <= (unsigned long)db_maxoff &&
 		    offset != value) {

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -23,14 +24,14 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ddb/db_output.h 273265 2014-10-18 19:22:59Z pfg $
  */
 
 #ifndef _DDB_DB_OUTPUT_H_
 #define	_DDB_DB_OUTPUT_H_
 
 /*
- * 	Author: David B. Golub, Carnegie Mellon University
+ *	Author: David B. Golub, Carnegie Mellon University
  *	Date:	8/90
  */
 

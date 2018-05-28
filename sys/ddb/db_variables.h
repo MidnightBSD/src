@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -23,11 +24,11 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/ddb/db_variables.h 273265 2014-10-18 19:22:59Z pfg $
  */
 
 /*
- * 	Author: David B. Golub, Carnegie Mellon University
+ *	Author: David B. Golub, Carnegie Mellon University
  *	Date:	7/90
  */
 
@@ -44,8 +45,8 @@ struct db_variable {
 	db_expr_t *valuep;	/* value of variable */
 				/* function to call when reading/writing */
 	db_varfcn_t *fcn;
-#define DB_VAR_GET	0
-#define DB_VAR_SET	1
+#define	DB_VAR_GET	0
+#define	DB_VAR_SET	1
 };
 #define	FCN_NULL	((db_varfcn_t *)0)
 

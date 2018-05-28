@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_output.c 273265 2014-10-18 19:22:59Z pfg $");
 
 #include "opt_ddb.h"
 
@@ -91,7 +92,7 @@ static void	db_pager(void);
  * Force pending whitespace.
  */
 void
-db_force_whitespace()
+db_force_whitespace(void)
 {
 	register int last_print, next_tab;
 
@@ -308,7 +309,7 @@ db_pager(void)
  * Return output position
  */
 int
-db_print_position()
+db_print_position(void)
 {
 	return (db_output_position);
 }

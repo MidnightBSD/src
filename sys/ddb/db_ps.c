@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_ps.c 304905 2016-08-27 11:45:05Z kib $");
 
 #include <sys/param.h>
 #include <sys/cons.h>
@@ -155,7 +156,7 @@ db_ps(db_expr_t addr, boolean_t hasaddr, db_expr_t count, char *modif)
 				else if (wflag)
 					state[0] = 'W';
 				else
-					state[0] = '?';				
+					state[0] = '?';
 			}
 			break;
 		case PRS_NEW:
@@ -181,7 +182,8 @@ db_ps(db_expr_t addr, boolean_t hasaddr, db_expr_t count, char *modif)
 			strlcat(state, "V", sizeof(state));
 		if (p->p_flag & P_SYSTEM || p->p_lock > 0)
 			strlcat(state, "L", sizeof(state));
-		if (p->p_session != NULL && SESS_LEADER(p))
+		if (p->p_pgrp != NULL && p->p_session != NULL &&
+		    SESS_LEADER(p))
 			strlcat(state, "s", sizeof(state));
 		/* Cheated here and didn't compare pgid's. */
 		if (p->p_flag & P_CONTROLT)
@@ -211,7 +213,7 @@ db_ps(db_expr_t addr, boolean_t hasaddr, db_expr_t count, char *modif)
 		p = LIST_NEXT(p, p_list);
 		if (p == NULL && np > 0)
 			p = LIST_FIRST(&zombproc);
-    	}
+	}
 }
 
 static void
@@ -370,8 +372,13 @@ DB_SHOW_COMMAND(thread, db_show_thread)
 		db_printf(" lock: %s  turnstile: %p\n", td->td_lockname,
 		    td->td_blocked);
 	if (TD_ON_SLEEPQ(td))
-		db_printf(" wmesg: %s  wchan: %p\n", td->td_wmesg,
-		    td->td_wchan);
+		db_printf(
+	    " wmesg: %s  wchan: %p sleeptimo %lx. %jx (curr %lx. %jx)\n",
+		    td->td_wmesg, td->td_wchan,
+		    (long)sbttobt(td->td_sleeptimo).sec,
+		    (uintmax_t)sbttobt(td->td_sleeptimo).frac,
+		    (long)sbttobt(sbinuptime()).sec,
+		    (uintmax_t)sbttobt(sbinuptime()).frac);
 	db_printf(" priority: %d\n", td->td_priority);
 	db_printf(" container lock: %s (%p)\n", lock->lo_name, lock);
 }

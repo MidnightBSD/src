@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -54,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/ddb/db_script.c 331301 2018-03-21 15:05:45Z avg $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -294,7 +295,7 @@ db_script_exec(const char *scriptname, int warnifnotfound)
 	buffer = drd->drd_buffer;
 	strcpy(buffer, dsp->ds_script);
 	while ((command = strsep(&buffer, ";")) != NULL) {
-		db_printf("db:%d:%s> %s\n", db_recursion, scriptname,
+		db_printf("db:%d:%s> %s\n", db_recursion, dsp->ds_scriptname,
 		    command);
 		db_command_trim(&command);
 		prev_jb = kdb_jmpbuf(jb);
