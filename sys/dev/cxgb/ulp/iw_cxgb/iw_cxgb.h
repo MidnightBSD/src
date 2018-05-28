@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, 2008 Chelsio Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.h 237920 2012-07-01 12:00:36Z np $
+$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.h 309378 2016-12-01 23:38:52Z jhb $
 
 ***************************************************************************/
 
@@ -174,4 +175,5 @@ static inline void remove_handle(struct iwch_dev *rhp, struct idr *idr, u32 id)
 }
 
 void iwch_ev_dispatch(struct iwch_dev *, struct mbuf *);
+void process_newconn(struct iw_cm_id *parent_cm_id, struct socket *child_so);
 #endif

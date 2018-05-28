@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/9.2.0/sys/dev/cxgb/common/cxgb_tcb.h 176472 2008-02-23 01:06:17Z kmacy $
+$FreeBSD: stable/10/sys/dev/cxgb/common/cxgb_tcb.h 176472 2008-02-23 01:06:17Z kmacy $
 
 ***************************************************************************/
 

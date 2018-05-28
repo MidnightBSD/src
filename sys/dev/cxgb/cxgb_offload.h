@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2008, Chelsio Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_offload.h 237920 2012-07-01 12:00:36Z np $
+$FreeBSD: stable/10/sys/dev/cxgb/cxgb_offload.h 237263 2012-06-19 07:34:13Z np $
 
 ***************************************************************************/
 

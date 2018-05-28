@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/tom/cxgb_cpl_io.c 252555 2013-07-03 09:25:29Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_cpl_io.c 330303 2018-03-03 00:54:12Z jhb $");
 
 #include "opt_inet.h"
 
@@ -86,7 +87,6 @@ VNET_DECLARE(int, tcp_autorcvbuf_inc);
 #define V_tcp_autorcvbuf_inc VNET(tcp_autorcvbuf_inc)
 VNET_DECLARE(int, tcp_autorcvbuf_max);
 #define V_tcp_autorcvbuf_max VNET(tcp_autorcvbuf_max)
-extern int always_keepalive;
 
 /*
  * For ULP connections HW may add headers, e.g., for digests, that aren't part
@@ -638,7 +638,7 @@ t3_send_fin(struct toedev *tod, struct tcpcb *tp)
 	unsigned int tid = toep->tp_tid;
 #endif
 
-	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+	INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(inp);
 
 	CTR4(KTR_CXGB, "%s: tid %d, toep %p, flags %x", __func__, tid, toep,
@@ -839,7 +839,7 @@ calc_opt0h(struct socket *so, int mtu_idx, int rscale, struct l2t_entry *e)
 	if (so != NULL) {
 		struct inpcb *inp = sotoinpcb(so);
 		struct tcpcb *tp = intotcpcb(inp);
-		int keepalive = always_keepalive ||
+		int keepalive = tcp_always_keepalive ||
 		    so_options_get(so) & SO_KEEPALIVE;
 
 		opt0h |= V_NAGLE((tp->t_flags & TF_NODELAY) == 0);
@@ -924,12 +924,12 @@ do_act_open_rpl(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 
 	rc = act_open_rpl_status_to_errno(s);
 	if (rc != EAGAIN)
-		INP_INFO_WLOCK(&V_tcbinfo);
+		INP_INFO_RLOCK(&V_tcbinfo);
 	INP_WLOCK(inp);
 	toe_connect_failed(tod, inp, rc);
 	toepcb_release(toep);	/* unlocks inp */
 	if (rc != EAGAIN)
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 
 	m_freem(m);
 	return (0);
@@ -1060,7 +1060,7 @@ send_reset(struct toepcb *toep)
 	struct adapter *sc = tod->tod_softc;
 	struct mbuf *m;
 
-	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+	INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(inp);
 
 	CTR4(KTR_CXGB, "%s: tid %d, toep %p (%x)", __func__, tid, toep,
@@ -1171,12 +1171,12 @@ do_rx_data(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		SOCKBUF_UNLOCK(so_rcv);
 		INP_WUNLOCK(inp);
 
-		INP_INFO_WLOCK(&V_tcbinfo);
+		INP_INFO_RLOCK(&V_tcbinfo);
 		INP_WLOCK(inp);
 		tp = tcp_drop(tp, ECONNRESET);
 		if (tp)
 			INP_WUNLOCK(inp);
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 
 		m_freem(m);
 		return (0);
@@ -1221,7 +1221,7 @@ do_peer_close(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	struct tcpcb *tp;
 	struct socket *so;
 
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	INP_WLOCK(inp);
 	tp = intotcpcb(inp);
 
@@ -1249,7 +1249,7 @@ do_peer_close(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	case TCPS_FIN_WAIT_2:
 		tcp_twstart(tp);
 		INP_UNLOCK_ASSERT(inp);	/* safe, we have a ref on the  inp */
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 
 		INP_WLOCK(inp);
 		toepcb_release(toep);	/* no more CPLs expected */
@@ -1263,7 +1263,7 @@ do_peer_close(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 
 done:
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 
 	m_freem(m);
 	return (0);
@@ -1284,7 +1284,7 @@ do_close_con_rpl(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	struct tcpcb *tp;
 	struct socket *so;
 
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 	INP_WLOCK(inp);
 	tp = intotcpcb(inp);
 
@@ -1302,7 +1302,7 @@ do_close_con_rpl(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		tcp_twstart(tp);
 release:
 		INP_UNLOCK_ASSERT(inp);	/* safe, we have a ref on the  inp */
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 
 		INP_WLOCK(inp);
 		toepcb_release(toep);	/* no more CPLs expected */
@@ -1327,7 +1327,7 @@ release:
 
 done:
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 
 	m_freem(m);
 	return (0);
@@ -1488,7 +1488,7 @@ do_abort_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		return (do_abort_req_synqe(qs, r, m));
 
 	inp = toep->tp_inp;
-	INP_INFO_WLOCK(&V_tcbinfo);	/* for tcp_close */
+	INP_INFO_RLOCK(&V_tcbinfo);	/* for tcp_close */
 	INP_WLOCK(inp);
 
 	tp = intotcpcb(inp);
@@ -1502,7 +1502,7 @@ do_abort_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		toep->tp_flags |= TP_ABORT_REQ_RCVD;
 		toep->tp_flags |= TP_ABORT_SHUTDOWN;
 		INP_WUNLOCK(inp);
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		m_freem(m);
 		return (0);
 	}
@@ -1522,7 +1522,7 @@ do_abort_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 			INP_WLOCK(inp);	/* re-acquire */
 		toepcb_release(toep);	/* no more CPLs expected */
 	}
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 
 	send_abort_rpl(tod, tid, qset);
 	m_freem(m);
@@ -1621,10 +1621,9 @@ fixup_and_send_ofo(struct toepcb *toep)
 	struct mbuf *m;
 	struct toedev *tod = toep->tp_tod;
 	struct adapter *sc = tod->tod_softc;
-	struct inpcb *inp = toep->tp_inp;
 	unsigned int tid = toep->tp_tid;
 
-	inp_lock_assert(inp);
+	inp_lock_assert(toep->tp_inp);
 
 	while ((m = mbufq_dequeue(&toep->out_of_order_queue)) != NULL) {
 		struct ofld_hdr *oh = mtod(m, void *);
@@ -1792,53 +1791,6 @@ do_wr_ack(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		wr_ack(toep, m);
 
 	return (0);
-}
-
-/*
- * Build a CPL_BARRIER message as payload of a ULP_TX_PKT command.
- */
-static inline void
-mk_cpl_barrier_ulp(struct cpl_barrier *b)
-{
-	struct ulp_txpkt *txpkt = (struct ulp_txpkt *)b;
-
-	txpkt->cmd_dest = htonl(V_ULPTX_CMD(ULP_TXPKT));
-	txpkt->len = htonl(V_ULPTX_NFLITS(sizeof(*b) / 8));
-	b->opcode = CPL_BARRIER;
-}
-
-/*
- * Build a CPL_GET_TCB message as payload of a ULP_TX_PKT command.
- */
-static inline void
-mk_get_tcb_ulp(struct cpl_get_tcb *req, unsigned int tid, unsigned int cpuno)
-{
-	struct ulp_txpkt *txpkt = (struct ulp_txpkt *)req;
-
-	txpkt = (struct ulp_txpkt *)req;
-	txpkt->cmd_dest = htonl(V_ULPTX_CMD(ULP_TXPKT));
-	txpkt->len = htonl(V_ULPTX_NFLITS(sizeof(*req) / 8));
-	OPCODE_TID(req) = htonl(MK_OPCODE_TID(CPL_GET_TCB, tid));
-	req->cpuno = htons(cpuno);
-}
-
-/*
- * Build a CPL_SET_TCB_FIELD message as payload of a ULP_TX_PKT command.
- */
-static inline void
-mk_set_tcb_field_ulp(struct cpl_set_tcb_field *req, unsigned int tid,
-                     unsigned int word, uint64_t mask, uint64_t val)
-{
-	struct ulp_txpkt *txpkt = (struct ulp_txpkt *)req;
-
-	txpkt->cmd_dest = htonl(V_ULPTX_CMD(ULP_TXPKT));
-	txpkt->len = htonl(V_ULPTX_NFLITS(sizeof(*req) / 8));
-	OPCODE_TID(req) = htonl(MK_OPCODE_TID(CPL_SET_TCB_FIELD, tid));
-	req->reply = V_NO_REPLY(1);
-	req->cpu_idx = 0;
-	req->word = htons(word);
-	req->mask = htobe64(mask);
-	req->val = htobe64(val);
 }
 
 void

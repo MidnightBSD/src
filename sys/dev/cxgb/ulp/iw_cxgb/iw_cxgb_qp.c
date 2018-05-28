@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -27,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_qp.c 237920 2012-07-01 12:00:36Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_qp.c 254731 2013-08-23 18:45:39Z np $");
 
 #include "opt_inet.h"
 
@@ -1097,9 +1098,8 @@ out:
 	 * If free is 1, then we've disassociated the EP from the QP
 	 * and we need to dereference the EP.
 	 */
-	if (free) 
+	if (free)
 		put_ep(&ep->com);
-	
 
 	CTR2(KTR_IW_CXGB, "%s exit state %d", __FUNCTION__, qhp->attr.state);
 	return ret;

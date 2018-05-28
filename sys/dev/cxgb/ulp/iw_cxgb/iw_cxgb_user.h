@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007, 2008 Chelsio, Inc. All rights reserved.
  *
@@ -29,7 +30,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_user.h 237920 2012-07-01 12:00:36Z np $
+ * $FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_user.h 237263 2012-06-19 07:34:13Z np $
  */
 #ifndef __IWCH_USER_H__
 #define __IWCH_USER_H__

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009, Chelsio Inc.
  * All rights reserved.
@@ -24,7 +25,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/tom/cxgb_toepcb.h 240169 2012-09-06 17:28:47Z np $
+ * $FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_toepcb.h 239544 2012-08-21 22:23:17Z np $
  */
 #ifndef CXGB_TOEPCB_H_
 #define CXGB_TOEPCB_H_

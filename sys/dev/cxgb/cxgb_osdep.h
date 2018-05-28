@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -26,7 +27,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_osdep.h 242015 2012-10-24 19:04:17Z gavin $
+$FreeBSD: stable/10/sys/dev/cxgb/cxgb_osdep.h 278744 2015-02-14 06:58:32Z ngie $
 
 ***************************************************************************/
 
@@ -38,6 +39,8 @@ $FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_osdep.h 242015 2012-10-24 19:04:17Z ga
 
 #include <sys/lock.h>
 #include <sys/mutex.h>
+
+#include <sys/kdb.h>
 
 #include <dev/mii/mii.h>
 
@@ -91,8 +94,6 @@ struct t3_mbuf_hdr {
 #endif
 #endif
 
-#define __read_mostly __attribute__((__section__(".data.read_mostly")))
-
 /*
  * Workaround for weird Chelsio issue
  */
@@ -130,10 +131,8 @@ void prefetch(void *x)
 #define smp_mb() mb()
 
 #define L1_CACHE_BYTES 128
-extern void kdb_backtrace(void);
-
 #define WARN_ON(condition) do { \
-       if (__predict_false((condition)!=0)) {  \
+	if (__predict_false((condition)!=0)) {  \
                 log(LOG_WARNING, "BUG: warning at %s:%d/%s()\n", __FILE__, __LINE__, __FUNCTION__); \
                 kdb_backtrace(); \
         } \

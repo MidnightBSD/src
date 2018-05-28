@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -28,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/common/cxgb_mv88e1xxx.c 197791 2009-10-05 20:21:41Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/common/cxgb_mv88e1xxx.c 277343 2015-01-18 20:38:38Z np $");
 
 #include <cxgb_include.h>
 
@@ -185,7 +186,7 @@ static int mv88e1xxx_set_loopback(struct cphy *cphy, int mmd, int dir, int on)
 			 	   on ? BMCR_LOOPBACK : 0);
 }
 
-static int mv88e1xxx_get_link_status(struct cphy *cphy, int *link_ok,
+static int mv88e1xxx_get_link_status(struct cphy *cphy, int *link_state,
 				     int *speed, int *duplex, int *fc)
 {
 	u32 status;
@@ -206,8 +207,9 @@ static int mv88e1xxx_get_link_status(struct cphy *cphy, int *link_ok,
 		else
 			sp = SPEED_1000;
 	}
-	if (link_ok)
-		*link_ok = (status & V_PSSR_LINK) != 0;
+	if (link_state)
+		*link_state = status & V_PSSR_LINK ? PHY_LINK_UP :
+		    PHY_LINK_DOWN;
 	if (speed)
 		*speed = sp;
 	if (duplex)

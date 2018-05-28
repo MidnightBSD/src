@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -27,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.c 237920 2012-07-01 12:00:36Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.c 256303 2013-10-10 22:44:29Z np $");
 
 #include "opt_inet.h"
 
@@ -298,3 +299,4 @@ DECLARE_MODULE(iw_cxgb, iwch_mod_data, SI_SUB_EXEC, SI_ORDER_ANY);
 MODULE_DEPEND(t3_tom, cxgbc, 1, 1, 1);
 MODULE_DEPEND(iw_cxgb, toecore, 1, 1, 1);
 MODULE_DEPEND(iw_cxgb, t3_tom, 1, 1, 1);
+MODULE_DEPEND(iw_cxgb, ibcore, 1, 1, 1);

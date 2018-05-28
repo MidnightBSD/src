@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -27,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_provider.c 239522 2012-08-21 19:19:29Z dim $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_provider.c 318799 2017-05-24 18:16:20Z np $");
 
 #include "opt_inet.h"
 
@@ -302,7 +303,7 @@ iwch_arm_cq(struct ib_cq *ibcq, enum ib_cq_notify_flags flags)
 	else
 		cq_op = CQ_ARM_AN;
 	if (chp->user_rptr_addr) {
-		if (copyin(&rptr, chp->user_rptr_addr, 4))
+		if (copyin(chp->user_rptr_addr, &rptr, sizeof(rptr)))
 			return (-EFAULT);
 		mtx_lock(&chp->lock);
 		chp->cq.rptr = rptr;
@@ -541,7 +542,8 @@ static int iwch_reregister_phys_mem(struct ib_mr *mr,
 
 
 static struct ib_mr *iwch_reg_user_mr(struct ib_pd *pd, u64 start, u64 length,
-				      u64 virt, int acc, struct ib_udata *udata)
+				      u64 virt, int acc, struct ib_udata *udata,
+				      int mr_id)
 {
 	__be64 *pages;
 	int shift, i, n;
@@ -1084,7 +1086,7 @@ int iwch_register_device(struct iwch_dev *dev)
 	memcpy(dev->ibdev.node_desc, IWCH_NODE_DESC, sizeof(IWCH_NODE_DESC));
 	dev->ibdev.phys_port_cnt = sc->params.nports;
 	dev->ibdev.num_comp_vectors = 1;
-	dev->ibdev.dma_device = dev->rdev.adap->dev;
+	dev->ibdev.dma_device = NULL;
 	dev->ibdev.query_device = iwch_query_device;
 	dev->ibdev.query_port = iwch_query_port;
 	dev->ibdev.modify_port = iwch_modify_port;
@@ -1130,13 +1132,14 @@ int iwch_register_device(struct iwch_dev *dev)
 	dev->ibdev.iwcm->connect = iwch_connect;
 	dev->ibdev.iwcm->accept = iwch_accept_cr;
 	dev->ibdev.iwcm->reject = iwch_reject_cr;
-	dev->ibdev.iwcm->create_listen = iwch_create_listen;
-	dev->ibdev.iwcm->destroy_listen = iwch_destroy_listen;
+	dev->ibdev.iwcm->create_listen_ep = iwch_create_listen_ep;
+	dev->ibdev.iwcm->destroy_listen_ep = iwch_destroy_listen_ep;
+	dev->ibdev.iwcm->newconn = process_newconn;
 	dev->ibdev.iwcm->add_ref = iwch_qp_add_ref;
 	dev->ibdev.iwcm->rem_ref = iwch_qp_rem_ref;
 	dev->ibdev.iwcm->get_qp = iwch_get_qp;
 
-	ret = ib_register_device(&dev->ibdev);
+	ret = ib_register_device(&dev->ibdev, NULL);
 	if (ret)
 		goto bail1;
 

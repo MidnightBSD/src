@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, 2008 Chelsio Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_cm.h 237920 2012-07-01 12:00:36Z np $
+$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_cm.h 309378 2016-12-01 23:38:52Z jhb $
 
 ***************************************************************************/
 
@@ -231,8 +232,8 @@ iwch_wakeup(struct cv *cv, struct mtx *lock, int *rpl_done)
 /* CM prototypes */
 
 int iwch_connect(struct iw_cm_id *cm_id, struct iw_cm_conn_param *conn_param);
-int iwch_create_listen(struct iw_cm_id *cm_id, int backlog);
-int iwch_destroy_listen(struct iw_cm_id *cm_id);
+int iwch_create_listen_ep(struct iw_cm_id *cm_id, int backlog);
+void iwch_destroy_listen_ep(struct iw_cm_id *cm_id);
 int iwch_reject_cr(struct iw_cm_id *cm_id, const void *pdata, u8 pdata_len);
 int iwch_accept_cr(struct iw_cm_id *cm_id, struct iw_cm_conn_param *conn_param);
 int iwch_ep_disconnect(struct iwch_ep *ep, int abrupt, int flags);

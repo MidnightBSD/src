@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2009, Chelsio Inc.
@@ -28,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_main.c 252495 2013-07-02 04:27:16Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/cxgb_main.c 331320 2018-03-21 20:13:24Z np $");
 
 #include "opt_inet.h"
 
@@ -993,7 +994,7 @@ cxgb_makedev(struct port_info *pi)
 #define CXGB_CAP (IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU | IFCAP_HWCSUM | \
     IFCAP_VLAN_HWCSUM | IFCAP_TSO | IFCAP_JUMBO_MTU | IFCAP_LRO | \
     IFCAP_VLAN_HWTSO | IFCAP_LINKSTATE | IFCAP_HWCSUM_IPV6)
-#define CXGB_CAP_ENABLE (CXGB_CAP)
+#define CXGB_CAP_ENABLE CXGB_CAP
 
 static int
 cxgb_port_attach(device_t dev)
@@ -1009,7 +1010,7 @@ cxgb_port_attach(device_t dev)
 	    device_get_unit(device_get_parent(dev)), p->port_id);
 	PORT_LOCK_INIT(p, p->lockbuf);
 
-	callout_init(&p->link_check_ch, CALLOUT_MPSAFE);
+	callout_init(&p->link_check_ch, 1);
 	TASK_INIT(&p->link_check_task, 0, check_link_status, p);
 
 	/* Allocate an ifnet object and set it up */
@@ -2226,7 +2227,8 @@ check_link_status(void *arg, int pending)
 
 	t3_link_changed(sc, pi->port_id);
 
-	if (pi->link_fault || !(pi->phy.caps & SUPPORTED_LINK_IRQ))
+	if (pi->link_fault || !(pi->phy.caps & SUPPORTED_LINK_IRQ) ||
+	    pi->link_config.link_ok == 0)
 		callout_reset(&pi->link_check_ch, hz, link_check_callout, pi);
 }
 
@@ -2913,8 +2915,14 @@ cxgb_extension_ioctl(struct cdev *dev, unsigned long cmd, caddr_t data,
 	case CHELSIO_GET_EEPROM: {
 		int i;
 		struct ch_eeprom *e = (struct ch_eeprom *)data;
-		uint8_t *buf = malloc(EEPROMSIZE, M_DEVBUF, M_NOWAIT);
+		uint8_t *buf;
 
+		if (e->offset & 3 || e->offset >= EEPROMSIZE ||
+		    e->len > EEPROMSIZE || e->offset + e->len > EEPROMSIZE) {
+			return (EINVAL);
+		}
+
+		buf = malloc(EEPROMSIZE, M_DEVBUF, M_NOWAIT);
 		if (buf == NULL) {
 			return (ENOMEM);
 		}

@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- *  $FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_include.h 183321 2008-09-24 01:19:08Z kmacy $
+ *  $FreeBSD: stable/10/sys/dev/cxgb/cxgb_include.h 183321 2008-09-24 01:19:08Z kmacy $
  */
 
 #include <sys/cdefs.h>

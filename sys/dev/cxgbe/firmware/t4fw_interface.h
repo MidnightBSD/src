@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: trunk/sys/dev/cxgbe/firmware/t4fw_interface.h 10120 2018-05-28 00:17:55Z laffer1 $ */
 /*-
  * Copyright (c) 2012-2017 Chelsio Communications, Inc.
  * All rights reserved.

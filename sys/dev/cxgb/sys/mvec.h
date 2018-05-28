@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2009 Kip Macy <kmacy@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/cxgb/sys/mvec.h 237920 2012-07-01 12:00:36Z np $
+ * $FreeBSD: stable/10/sys/dev/cxgb/sys/mvec.h 237263 2012-06-19 07:34:13Z np $
  *
  */
 

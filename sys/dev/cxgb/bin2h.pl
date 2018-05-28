@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w 
 
-#$FreeBSD: release/9.2.0/sys/dev/cxgb/bin2h.pl 189643 2009-03-10 19:22:45Z gnn $
+# $MidnightBSD$
+#$FreeBSD: stable/10/sys/dev/cxgb/bin2h.pl 189643 2009-03-10 19:22:45Z gnn $
 
 if ($#ARGV != 1) {
   print "bin2h.pl <firmware> <headername>\n";

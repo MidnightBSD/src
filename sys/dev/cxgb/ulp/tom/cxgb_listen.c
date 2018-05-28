@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/tom/cxgb_listen.c 240169 2012-09-06 17:28:47Z np $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_listen.c 309108 2016-11-24 14:48:46Z jch $");
 
 #include "opt_inet.h"
 
@@ -553,11 +554,11 @@ do_pass_accept_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 			REJECT_PASS_ACCEPT();	/* no l2te, or ifp mismatch */
 	}
 
-	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_INFO_RLOCK(&V_tcbinfo);
 
 	/* Don't offload if the 4-tuple is already in use */
 	if (toe_4tuple_check(&inc, &th, ifp) != 0) {
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		REJECT_PASS_ACCEPT();
 	}
 
@@ -570,7 +571,7 @@ do_pass_accept_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		 * resources tied to this listen context.
 		 */
 		INP_WUNLOCK(inp);
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		REJECT_PASS_ACCEPT();
 	}
 	so = inp->inp_socket;
@@ -698,7 +699,7 @@ do_pass_establish(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	struct toepcb *toep;
 	struct socket *so;
 	struct listen_ctx *lctx = synqe->lctx;
-	struct inpcb *inp = lctx->inp;
+	struct inpcb *inp = lctx->inp, *new_inp;
 	struct tcpopt to;
 	struct tcphdr th;
 	struct in_conninfo inc;
@@ -712,7 +713,7 @@ do_pass_establish(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	KASSERT(qs->idx == synqe->qset,
 	    ("%s qset mismatch %d %d", __func__, qs->idx, synqe->qset));
 
-	INP_INFO_WLOCK(&V_tcbinfo);	/* for syncache_expand */
+	INP_INFO_RLOCK(&V_tcbinfo);	/* for syncache_expand */
 	INP_WLOCK(inp);
 
 	if (__predict_false(inp->inp_flags & INP_DROPPED)) {
@@ -726,7 +727,7 @@ do_pass_establish(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 		    ("%s: listen socket dropped but tid %u not aborted.",
 		    __func__, tid));
 		INP_WUNLOCK(inp);
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		m_freem(m);
 		return (0);
 	}
@@ -742,7 +743,7 @@ do_pass_establish(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 reset:
 		t3_send_reset_synqe(tod, synqe);
 		INP_WUNLOCK(inp);
-		INP_INFO_WUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK(&V_tcbinfo);
 		m_freem(m);
 		return (0);
 	}
@@ -760,21 +761,23 @@ reset:
 		goto reset;
 	}
 
-	if (__predict_false(!(synqe->flags & TP_SYNQE_EXPANDED))) {
-		struct inpcb *new_inp = sotoinpcb(so);
+	/* New connection inpcb is already locked by syncache_expand(). */
+	new_inp = sotoinpcb(so);
+	INP_WLOCK_ASSERT(new_inp);
 
-		INP_WLOCK(new_inp);
+	if (__predict_false(!(synqe->flags & TP_SYNQE_EXPANDED))) {
 		tcp_timer_activate(intotcpcb(new_inp), TT_KEEP, 0);
 		t3_offload_socket(tod, synqe, so);
-		INP_WUNLOCK(new_inp);
 	}
+
+	INP_WUNLOCK(new_inp);
 
 	/* Remove the synq entry and release its reference on the lctx */
 	TAILQ_REMOVE(&lctx->synq, synqe, link);
 	inp = release_lctx(td, lctx);
 	if (inp)
 		INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK(&V_tcbinfo);
 	release_synqe(synqe);
 
 	m_freem(m);
@@ -1140,7 +1143,7 @@ t3_offload_socket(struct toedev *tod, void *arg, struct socket *so)
 	struct cpl_pass_establish *cpl = synqe->cpl;
 	struct toepcb *toep = synqe->toep;
 
-	INP_INFO_LOCK_ASSERT(&V_tcbinfo); /* prevents bad race with accept() */
+	INP_INFO_RLOCK_ASSERT(&V_tcbinfo); /* prevents bad race with accept() */
 	INP_WLOCK_ASSERT(inp);
 
 	offload_socket(so, toep);

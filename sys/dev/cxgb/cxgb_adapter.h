@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2009, Chelsio Inc.
@@ -25,7 +26,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_adapter.h 238302 2012-07-09 17:25:56Z np $
+$FreeBSD: stable/10/sys/dev/cxgb/cxgb_adapter.h 237832 2012-06-30 02:11:53Z np $
 
 ***************************************************************************/
 
