@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/asr/asr.c,v 1.3 2012/04/12 01:48:58 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-2000 Distributed Processing Technology Corporation
  * Copyright (c) 2000-2001 Adaptec Corporation
@@ -161,7 +161,7 @@
 
 #include	<dev/asr/sys_info.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/asr/asr.c 275982 2014-12-21 03:06:11Z smh $");
 
 #define	ASR_VERSION	1
 #define	ASR_REVISION	'1'
@@ -385,7 +385,6 @@ typedef struct Asr_softc {
 
 static STAILQ_HEAD(, Asr_softc) Asr_softc_list =
 	STAILQ_HEAD_INITIALIZER(Asr_softc_list);
-
 /*
  *	Prototypes of the routines we have in this object.
  */
@@ -407,6 +406,25 @@ static int	ASR_acquireHrt(Asr_softc_t *sc);
 static void	asr_action(struct cam_sim *sim, union ccb *ccb);
 static void	asr_poll(struct cam_sim *sim);
 static int	ASR_queue(Asr_softc_t *sc, PI2O_MESSAGE_FRAME Message);
+
+static __inline void
+set_ccb_timeout_ch(union asr_ccb *ccb)
+{
+	struct callout_handle ch;
+
+	ch = timeout(asr_timeout, (caddr_t)ccb,
+	    (int)((u_int64_t)(ccb->ccb_h.timeout) * (u_int32_t)hz / 1000));
+	ccb->ccb_h.sim_priv.entries[0].ptr = ch.callout;
+}
+
+static __inline struct callout_handle
+get_ccb_timeout_ch(union asr_ccb *ccb)
+{
+	struct callout_handle ch;
+
+	ch.callout = ccb->ccb_h.sim_priv.entries[0].ptr;
+	return ch;
+}
 
 /*
  *	Here is the auto-probe structure used to nest our tests appropriately
@@ -798,8 +816,7 @@ ASR_ccbAdd(Asr_softc_t *sc, union asr_ccb *ccb)
 			 */
 			ccb->ccb_h.timeout = 6 * 60 * 1000;
 		}
-		ccb->ccb_h.timeout_ch = timeout(asr_timeout, (caddr_t)ccb,
-		  (ccb->ccb_h.timeout * hz) / 1000);
+		set_ccb_timeout_ch(ccb);
 	}
 	splx(s);
 } /* ASR_ccbAdd */
@@ -813,7 +830,7 @@ ASR_ccbRemove(Asr_softc_t *sc, union asr_ccb *ccb)
 	int s;
 
 	s = splcam();
-	untimeout(asr_timeout, (caddr_t)ccb, ccb->ccb_h.timeout_ch);
+	untimeout(asr_timeout, (caddr_t)ccb, get_ccb_timeout_ch(ccb));
 	LIST_REMOVE(&(ccb->ccb_h), sim_links.le);
 	splx(s);
 } /* ASR_ccbRemove */
@@ -1323,9 +1340,7 @@ asr_timeout(void *arg)
 		  cam_sim_unit(xpt_path_sim(ccb->ccb_h.path)), s);
 		if (ASR_reset (sc) == ENXIO) {
 			/* Try again later */
-			ccb->ccb_h.timeout_ch = timeout(asr_timeout,
-			  (caddr_t)ccb,
-			  (ccb->ccb_h.timeout * hz) / 1000);
+			set_ccb_timeout_ch(ccb);
 		}
 		return;
 	}
@@ -1339,9 +1354,7 @@ asr_timeout(void *arg)
 	if ((ccb->ccb_h.status & CAM_STATUS_MASK) == CAM_CMD_TIMEOUT) {
 		debug_asr_printf (" AGAIN\nreinitializing adapter\n");
 		if (ASR_reset (sc) == ENXIO) {
-			ccb->ccb_h.timeout_ch = timeout(asr_timeout,
-			  (caddr_t)ccb,
-			  (ccb->ccb_h.timeout * hz) / 1000);
+			set_ccb_timeout_ch(ccb);
 		}
 		splx(s);
 		return;
@@ -1350,8 +1363,7 @@ asr_timeout(void *arg)
 	/* If the BUS reset does not take, then an adapter reset is next! */
 	ccb->ccb_h.status &= ~CAM_STATUS_MASK;
 	ccb->ccb_h.status |= CAM_CMD_TIMEOUT;
-	ccb->ccb_h.timeout_ch = timeout(asr_timeout, (caddr_t)ccb,
-	  (ccb->ccb_h.timeout * hz) / 1000);
+	set_ccb_timeout_ch(ccb);
 	ASR_resetBus (sc, cam_sim_bus(xpt_path_sim(ccb->ccb_h.path)));
 	xpt_async (AC_BUS_RESET, ccb->ccb_h.path, NULL);
 	splx(s);
@@ -2429,9 +2441,7 @@ asr_attach(device_t dev)
 		return(ENXIO);
 	}
 	/* Enable if not formerly enabled */
-	pci_write_config(dev, PCIR_COMMAND,
-	    pci_read_config(dev, PCIR_COMMAND, sizeof(char)) |
-	    PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN, sizeof(char));
+	pci_enable_busmaster(dev);
 
 	sc->ha_pciBusNum = pci_get_bus(dev);
 	sc->ha_pciDeviceNum = (pci_get_slot(dev) << 3) | pci_get_function(dev);

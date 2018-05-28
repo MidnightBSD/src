@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/asr/i2otypes.h,v 1.2 2008/12/02 02:24:33 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  ****************************************************************
  * Copyright (c) 1996-2000 Distributed Processing Technology Corporation
@@ -78,7 +78,7 @@
  * Developer of the I2O SIG, sign up at the Web site or call 415.750.8352
  * (United States).
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/asr/i2otypes.h 139749 2005-01-06 01:43:34Z imp $
  *
  ****************************************************************/
 

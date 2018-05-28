@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-intel.c 291456 2015-11-29 17:14:05Z mav $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -81,7 +81,6 @@ static void ata_intel_31244_tf_write(struct ata_request *request);
 static void ata_intel_31244_reset(device_t dev);
 
 /* misc defines */
-#define INTEL_AHCI	1
 #define INTEL_ICH5	2
 #define INTEL_6CH	4
 #define INTEL_6CH2	8
@@ -128,105 +127,69 @@ ata_intel_probe(device_t dev)
      { ATA_I6300ESB_S1,  0, INTEL_ICH5, 2, ATA_SA150, "6300ESB" },
      { ATA_I6300ESB_R1,  0, INTEL_ICH5, 2, ATA_SA150, "6300ESB" },
      { ATA_I82801FB,     0,          0, 2, ATA_UDMA5, "ICH6" },
-     { ATA_I82801FB_S1,  0, INTEL_AHCI, 0, ATA_SA150, "ICH6" },
-     { ATA_I82801FB_R1,  0, INTEL_AHCI, 0, ATA_SA150, "ICH6" },
-     { ATA_I82801FBM,    0, INTEL_AHCI, 0, ATA_SA150, "ICH6M" },
+     { ATA_I82801FB_S1,  0,          0, 0, ATA_SA150, "ICH6" },
+     { ATA_I82801FB_R1,  0,          0, 0, ATA_SA150, "ICH6" },
+     { ATA_I82801FBM,    0,          0, 0, ATA_SA150, "ICH6M" },
      { ATA_I82801GB,     0,          0, 1, ATA_UDMA5, "ICH7" },
      { ATA_I82801GB_S1,  0, INTEL_ICH7, 0, ATA_SA300, "ICH7" },
-     { ATA_I82801GB_R1,  0, INTEL_AHCI, 0, ATA_SA300, "ICH7" },
-     { ATA_I82801GB_AH,  0, INTEL_AHCI, 0, ATA_SA300, "ICH7" },
      { ATA_I82801GBM_S1, 0, INTEL_ICH7, 0, ATA_SA150, "ICH7M" },
-     { ATA_I82801GBM_R1, 0, INTEL_AHCI, 0, ATA_SA150, "ICH7M" },
-     { ATA_I82801GBM_AH, 0, INTEL_AHCI, 0, ATA_SA150, "ICH7M" },
      { ATA_I63XXESB2,    0,          0, 1, ATA_UDMA5, "63XXESB2" },
      { ATA_I63XXESB2_S1, 0,          0, 0, ATA_SA300, "63XXESB2" },
-     { ATA_I63XXESB2_S2, 0, INTEL_AHCI, 0, ATA_SA300, "63XXESB2" },
-     { ATA_I63XXESB2_R1, 0, INTEL_AHCI, 0, ATA_SA300, "63XXESB2" },
-     { ATA_I63XXESB2_R2, 0, INTEL_AHCI, 0, ATA_SA300, "63XXESB2" },
      { ATA_I82801HB_S1,  0, INTEL_6CH,  0, ATA_SA300, "ICH8" },
      { ATA_I82801HB_S2,  0, INTEL_6CH2, 0, ATA_SA300, "ICH8" },
-     { ATA_I82801HB_R1,  0, INTEL_AHCI, 0, ATA_SA300, "ICH8" },
-     { ATA_I82801HB_AH4, 0, INTEL_AHCI, 0, ATA_SA300, "ICH8" },
-     { ATA_I82801HB_AH6, 0, INTEL_AHCI, 0, ATA_SA300, "ICH8" },
      { ATA_I82801HBM,    0,          0, 1, ATA_UDMA5, "ICH8M" },
      { ATA_I82801HBM_S1, 0, INTEL_6CH,  0, ATA_SA300, "ICH8M" },
-     { ATA_I82801HBM_S2, 0, INTEL_AHCI, 0, ATA_SA300, "ICH8M" },
-     { ATA_I82801HBM_S3, 0, INTEL_AHCI, 0, ATA_SA300, "ICH8M" },
      { ATA_I82801IB_S1,  0, INTEL_6CH,  0, ATA_SA300, "ICH9" },
      { ATA_I82801IB_S2,  0, INTEL_6CH2, 0, ATA_SA300, "ICH9" },
      { ATA_I82801IB_S3,  0, INTEL_6CH2, 0, ATA_SA300, "ICH9" },
-     { ATA_I82801IB_AH4, 0, INTEL_AHCI, 0, ATA_SA300, "ICH9" },
-     { ATA_I82801IB_AH6, 0, INTEL_AHCI, 0, ATA_SA300, "ICH9" },
-     { ATA_I82801IB_R1,  0, INTEL_AHCI, 0, ATA_SA300, "ICH9" },
      { ATA_I82801IBM_S1, 0, INTEL_6CH2, 0, ATA_SA300, "ICH9M" },
-     { ATA_I82801IBM_AH, 0, INTEL_AHCI, 0, ATA_SA300, "ICH9M" },
-     { ATA_I82801IBM_R1, 0, INTEL_AHCI, 0, ATA_SA300, "ICH9M" },
      { ATA_I82801IBM_S2, 0, INTEL_6CH2, 0, ATA_SA300, "ICH9M" },
      { ATA_I82801JIB_S1, 0, INTEL_6CH,  0, ATA_SA300, "ICH10" },
-     { ATA_I82801JIB_AH, 0, INTEL_AHCI, 0, ATA_SA300, "ICH10" },
-     { ATA_I82801JIB_R1, 0, INTEL_AHCI, 0, ATA_SA300, "ICH10" },
      { ATA_I82801JIB_S2, 0, INTEL_6CH2, 0, ATA_SA300, "ICH10" },
      { ATA_I82801JD_S1,  0, INTEL_6CH,  0, ATA_SA300, "ICH10" },
-     { ATA_I82801JD_AH,  0, INTEL_AHCI, 0, ATA_SA300, "ICH10" },
-     { ATA_I82801JD_R1,  0, INTEL_AHCI, 0, ATA_SA300, "ICH10" },
      { ATA_I82801JD_S2,  0, INTEL_6CH2, 0, ATA_SA300, "ICH10" },
      { ATA_I82801JI_S1,  0, INTEL_6CH,  0, ATA_SA300, "ICH10" },
-     { ATA_I82801JI_AH,  0, INTEL_AHCI, 0, ATA_SA300, "ICH10" },
-     { ATA_I82801JI_R1,  0, INTEL_AHCI, 0, ATA_SA300, "ICH10" },
      { ATA_I82801JI_S2,  0, INTEL_6CH2, 0, ATA_SA300, "ICH10" },
      { ATA_5Series_S1,   0, INTEL_6CH,  0, ATA_SA300, "5 Series/3400 Series PCH" },
      { ATA_5Series_S2,   0, INTEL_6CH2, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_AH1,  0, INTEL_AHCI, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_AH2,  0, INTEL_AHCI, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_R1,   0, INTEL_AHCI, 0, ATA_SA300, "5 Series/3400 Series PCH" },
      { ATA_5Series_S3,   0, INTEL_6CH2, 0, ATA_SA300, "5 Series/3400 Series PCH" },
      { ATA_5Series_S4,   0, INTEL_6CH,  0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_AH3,  0, INTEL_AHCI, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_R2,   0, INTEL_AHCI, 0, ATA_SA300, "5 Series/3400 Series PCH" },
      { ATA_5Series_S5,   0, INTEL_6CH2, 0, ATA_SA300, "5 Series/3400 Series PCH" },
      { ATA_5Series_S6,   0, INTEL_6CH,  0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_AH4,  0, INTEL_AHCI, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_CPT_S1,       0, INTEL_6CH,  0, ATA_SA300, "Cougar Point" },
-     { ATA_CPT_S2,       0, INTEL_6CH,  0, ATA_SA300, "Cougar Point" },
-     { ATA_CPT_AH1,      0, INTEL_AHCI, 0, ATA_SA300, "Cougar Point" },
-     { ATA_CPT_AH2,      0, INTEL_AHCI, 0, ATA_SA300, "Cougar Point" },
-     { ATA_CPT_R1,       0, INTEL_AHCI, 0, ATA_SA300, "Cougar Point" },
-     { ATA_CPT_R2,       0, INTEL_AHCI, 0, ATA_SA300, "Cougar Point" },
+     { ATA_CPT_S1,       0, INTEL_6CH,  0, ATA_SA600, "Cougar Point" },
+     { ATA_CPT_S2,       0, INTEL_6CH,  0, ATA_SA600, "Cougar Point" },
      { ATA_CPT_S3,       0, INTEL_6CH2, 0, ATA_SA300, "Cougar Point" },
      { ATA_CPT_S4,       0, INTEL_6CH2, 0, ATA_SA300, "Cougar Point" },
-     { ATA_PBG_S1,       0, INTEL_6CH,  0, ATA_SA300, "Patsburg" },
-     { ATA_PBG_AH1,      0, INTEL_AHCI, 0, ATA_SA300, "Patsburg" },
-     { ATA_PBG_R1,       0, INTEL_AHCI, 0, ATA_SA300, "Patsburg" },
-     { ATA_PBG_R2,       0, INTEL_AHCI, 0, ATA_SA300, "Patsburg" },
-     { ATA_PBG_R3,       0, INTEL_AHCI, 0, ATA_SA300, "Patsburg" },
+     { ATA_PBG_S1,       0, INTEL_6CH,  0, ATA_SA600, "Patsburg" },
      { ATA_PBG_S2,       0, INTEL_6CH2, 0, ATA_SA300, "Patsburg" },
-     { ATA_PPT_S1,       0, INTEL_6CH,  0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_S2,       0, INTEL_6CH,  0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_AH1,      0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_AH2,      0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_R1,       0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_R2,       0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_R3,       0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_R4,       0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
+     { ATA_PPT_S1,       0, INTEL_6CH,  0, ATA_SA600, "Panther Point" },
+     { ATA_PPT_S2,       0, INTEL_6CH,  0, ATA_SA600, "Panther Point" },
      { ATA_PPT_S3,       0, INTEL_6CH2, 0, ATA_SA300, "Panther Point" },
      { ATA_PPT_S4,       0, INTEL_6CH2, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_R5,       0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_PPT_R6,       0, INTEL_AHCI, 0, ATA_SA300, "Panther Point" },
-     { ATA_LPT_S1,       0, INTEL_6CH,  0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_S2,       0, INTEL_6CH,  0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_AH1,      0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_AH2,      0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_R1,       0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_R2,       0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_R3,       0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_R4,       0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_S3,       0, INTEL_6CH2, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_S4,       0, INTEL_6CH2, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_R5,       0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
-     { ATA_LPT_R6,       0, INTEL_AHCI, 0, ATA_SA300, "Lynx Point" },
+     { ATA_AVOTON_S1,    0, INTEL_6CH,  0, ATA_SA600, "Avoton" },
+     { ATA_AVOTON_S2,    0, INTEL_6CH,  0, ATA_SA600, "Avoton" },
+     { ATA_AVOTON_S3,    0, INTEL_6CH2, 0, ATA_SA300, "Avoton" },
+     { ATA_AVOTON_S4,    0, INTEL_6CH2, 0, ATA_SA300, "Avoton" },
+     { ATA_LPT_S1,       0, INTEL_6CH,  0, ATA_SA600, "Lynx Point" },
+     { ATA_LPT_S2,       0, INTEL_6CH,  0, ATA_SA600, "Lynx Point" },
+     { ATA_LPT_S3,       0, INTEL_6CH2, 0, ATA_SA600, "Lynx Point" },
+     { ATA_LPT_S4,       0, INTEL_6CH2, 0, ATA_SA600, "Lynx Point" },
+     { ATA_WCPT_S1,      0, INTEL_6CH,  0, ATA_SA600, "Wildcat Point" },
+     { ATA_WCPT_S2,      0, INTEL_6CH,  0, ATA_SA600, "Wildcat Point" },
+     { ATA_WCPT_S3,      0, INTEL_6CH2, 0, ATA_SA600, "Wildcat Point" },
+     { ATA_WCPT_S4,      0, INTEL_6CH2, 0, ATA_SA600, "Wildcat Point" },
+     { ATA_WELLS_S1,     0, INTEL_6CH,  0, ATA_SA600, "Wellsburg" },
+     { ATA_WELLS_S2,     0, INTEL_6CH2, 0, ATA_SA600, "Wellsburg" },
+     { ATA_WELLS_S3,     0, INTEL_6CH,  0, ATA_SA600, "Wellsburg" },
+     { ATA_WELLS_S4,     0, INTEL_6CH2, 0, ATA_SA600, "Wellsburg" },
+     { ATA_LPTLP_S1,     0, INTEL_6CH,  0, ATA_SA600, "Lynx Point-LP" },
+     { ATA_LPTLP_S2,     0, INTEL_6CH,  0, ATA_SA600, "Lynx Point-LP" },
+     { ATA_LPTLP_S3,     0, INTEL_6CH2, 0, ATA_SA300, "Lynx Point-LP" },
+     { ATA_LPTLP_S4,     0, INTEL_6CH2, 0, ATA_SA300, "Lynx Point-LP" },
      { ATA_I31244,       0,          0, 2, ATA_SA150, "31244" },
      { ATA_ISCH,         0,          0, 1, ATA_UDMA5, "SCH" },
-     { ATA_DH89XXCC,     0, INTEL_AHCI, 0, ATA_SA300, "DH89xxCC" },
+     { ATA_COLETOCRK_S1, 0, INTEL_6CH2, 0, ATA_SA300, "COLETOCRK" },
+     { ATA_COLETOCRK_S2, 0, INTEL_6CH2, 0, ATA_SA300, "COLETOCRK" },
      { 0, 0, 0, 0, 0, 0}};
 
     if (pci_get_vendor(dev) != ATA_INTEL_ID)
@@ -238,7 +201,7 @@ ata_intel_probe(device_t dev)
     ata_set_desc(dev);
     ctlr->chipinit = ata_intel_chipinit;
     ctlr->chipdeinit = ata_intel_chipdeinit;
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int
@@ -299,15 +262,6 @@ ata_intel_chipinit(device_t dev)
 	ctlr->ch_attach = ata_intel_ch_attach;
 	ctlr->ch_detach = ata_pci_ch_detach;
 	ctlr->reset = ata_intel_reset;
-
-	/* 
-	 * if we have AHCI capability and AHCI or RAID mode enabled
-	 * in BIOS we try for AHCI mode
-	 */ 
-	if ((ctlr->chip->cfg1 & INTEL_AHCI) &&
-	    (pci_read_config(dev, 0x90, 1) & 0xc0) &&
-	    (ata_ahci_chipinit(dev) != ENXIO))
-	    return 0;
 
 	/* BAR(5) may point to SATA interface registers */
 	if ((ctlr->chip->cfg1 & INTEL_ICH7)) {
@@ -441,6 +395,8 @@ ata_intel_ch_attach(device_t dev)
 			}
 		} else
 			ctlr->setmode = ata_intel_new_setmode;
+		if (ctlr->chip->max_dma >= ATA_SA600)
+			ch->flags |= ATA_USE_16BIT;
 	} else if (ctlr->chip->chipid != ATA_ISCH)
 		ch->flags |= ATA_CHECKS_CABLE;
 	return (0);
@@ -467,7 +423,7 @@ ata_intel_reset(device_t dev)
 		mask |= (1 << smap[1]);
 	pci_write_config(parent, 0x92,
 	    pci_read_config(parent, 0x92, 2) & ~mask, 2);
-	DELAY(10);
+	DELAY(100);
 	pci_write_config(parent, 0x92,
 	    pci_read_config(parent, 0x92, 2) | mask, 2);
 
@@ -933,9 +889,6 @@ static void
 ata_intel_31244_tf_write(struct ata_request *request)
 {
     struct ata_channel *ch = device_get_softc(request->parent);
-#ifndef ATA_CAM
-    struct ata_device *atadev = device_get_softc(request->dev);
-#endif
 
     if (request->flags & ATA_R_48BIT) {
 	ATA_IDX_OUTW(ch, ATA_FEATURE, request->u.ata.feature);
@@ -951,38 +904,12 @@ ata_intel_31244_tf_write(struct ata_request *request)
     else {
 	ATA_IDX_OUTB(ch, ATA_FEATURE, request->u.ata.feature);
 	ATA_IDX_OUTB(ch, ATA_COUNT, request->u.ata.count);
-#ifndef ATA_CAM
-	if (atadev->flags & ATA_D_USE_CHS) {
-	    int heads, sectors;
-    
-	    if (atadev->param.atavalid & ATA_FLAG_54_58) {
-		heads = atadev->param.current_heads;
-		sectors = atadev->param.current_sectors;
-	    }
-	    else {
-		heads = atadev->param.heads;
-		sectors = atadev->param.sectors;
-	    }
-	    ATA_IDX_OUTB(ch, ATA_SECTOR, (request->u.ata.lba % sectors)+1);
-	    ATA_IDX_OUTB(ch, ATA_CYL_LSB,
-			 (request->u.ata.lba / (sectors * heads)));
-	    ATA_IDX_OUTB(ch, ATA_CYL_MSB,
-			 (request->u.ata.lba / (sectors * heads)) >> 8);
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(request->unit) | 
-			 (((request->u.ata.lba% (sectors * heads)) /
-			   sectors) & 0xf));
-	}
-	else {
-#endif
 	    ATA_IDX_OUTB(ch, ATA_SECTOR, request->u.ata.lba);
 	    ATA_IDX_OUTB(ch, ATA_CYL_LSB, request->u.ata.lba >> 8);
 	    ATA_IDX_OUTB(ch, ATA_CYL_MSB, request->u.ata.lba >> 16);
 	    ATA_IDX_OUTB(ch, ATA_DRIVE,
 			 ATA_D_IBM | ATA_D_LBA | ATA_DEV(request->unit) |
 			 ((request->u.ata.lba >> 24) & 0x0f));
-#ifndef ATA_CAM
-	}
-#endif
     }
 }
 
@@ -998,4 +925,3 @@ ata_intel_31244_reset(device_t dev)
 }
 
 ATA_DECLARE_DRIVER(ata_intel);
-MODULE_DEPEND(ata_intel, ata_ahci, 1, 1, 1);

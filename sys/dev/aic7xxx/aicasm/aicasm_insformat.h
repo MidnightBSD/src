@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Instruction formats for the sequencer program downloaded to
  * Aic7xxx SCSI host adapters
@@ -37,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_insformat.h,v 1.1.1.3 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_insformat.h#11 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_insformat.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 struct ins_format1 {

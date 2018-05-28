@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * FreeBSD, VLB/ISA product support functions
  *
@@ -32,11 +33,11 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ahc_isa.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/ahc_isa.c 249574 2013-04-17 02:33:56Z neel $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 
@@ -98,7 +99,7 @@ ahc_isa_identify(driver_t *driver, device_t parent)
 					  RF_ACTIVE);
 		if (regs == NULL) {
 			if (bootverbose)
-				printf("ahc_isa_probe %d: ioport 0x%x "
+				printf("ahc_isa_identify %d: ioport 0x%x "
 				       "alloc failed\n", slot, iobase);
 			continue;
 		}

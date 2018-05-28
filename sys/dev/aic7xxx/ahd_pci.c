@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * FreeBSD, PCI product support functions
  *
@@ -28,11 +29,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahd_pci.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/ahd_pci.c#17 $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/ahd_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <dev/aic7xxx/aic79xx_osm.h>
 
@@ -143,13 +144,11 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 {
 	struct	resource *regs;
 	struct	resource *regs2;
-	u_int	command;
 	int	regs_type;
 	int	regs_id;
 	int	regs_id2;
 	int	allow_memio;
 
-	command = aic_pci_read_config(ahd->dev_softc, PCIR_COMMAND, /*bytes*/1);
 	regs = NULL;
 	regs2 = NULL;
 	regs_type = 0;
@@ -165,8 +164,7 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 		allow_memio = 1;
 	}
 
-	if ((command & PCIM_CMD_MEMEN) != 0
-	 && (ahd->bugs & AHD_PCIX_MMAPIO_BUG) == 0
+	if ((ahd->bugs & AHD_PCIX_MMAPIO_BUG) == 0
 	 && allow_memio != 0) {
 
 		regs_type = SYS_RES_MEMORY;
@@ -199,15 +197,10 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 						     regs_id, regs);
 				regs = NULL;
 				AHD_CORRECTABLE_ERROR(ahd);
-			} else {
-				command &= ~PCIM_CMD_PORTEN;
-				aic_pci_write_config(ahd->dev_softc,
-						     PCIR_COMMAND,
-						     command, /*bytes*/1);
 			}
 		}
 	}
-	if (regs == NULL && (command & PCIM_CMD_PORTEN) != 0) {
+	if (regs == NULL) {
 		regs_type = SYS_RES_IOPORT;
 		regs_id = AHD_PCI_IOADDR0;
 		regs = bus_alloc_resource_any(ahd->dev_softc, regs_type,
@@ -233,9 +226,6 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 		}
 		ahd->tags[1] = rman_get_bustag(regs2);
 		ahd->bshs[1] = rman_get_bushandle(regs2);
-		command &= ~PCIM_CMD_MEMEN;
-		aic_pci_write_config(ahd->dev_softc, PCIR_COMMAND,
-				     command, /*bytes*/1);
 		ahd->platform_data->regs_res_type[1] = regs_type;
 		ahd->platform_data->regs_res_id[1] = regs_id2;
 		ahd->platform_data->regs[1] = regs2;

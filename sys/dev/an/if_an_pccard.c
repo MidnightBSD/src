@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/an/if_an_pccard.c,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/an/if_an_pccard.c 265614 2014-05-07 21:38:33Z gavin $");
 
 #include "opt_inet.h"
 
@@ -141,8 +141,6 @@ an_pccard_attach(device_t dev)
 		goto fail;
 
 	an_alloc_irq(dev, sc->irq_rid, 0);
-
-	sc->an_dev = dev;
 
 	error = an_attach(sc, flags);
 	if (error)

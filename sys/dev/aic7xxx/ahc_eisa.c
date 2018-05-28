@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * FreeBSD, EISA product support functions
  * 
@@ -26,11 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahc_eisa.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/ahc_eisa.c#13 $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/ahc_eisa.c 232882 2012-03-12 19:29:32Z jmallett $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 

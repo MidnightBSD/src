@@ -1,7 +1,8 @@
+# $MidnightBSD$
 #
-# $Id: Makefile,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
+# $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aicasm/Makefile#2 $
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	aicasm
 
@@ -15,7 +16,7 @@ SRCS=	${GENHDRS} ${CSRCS} ${YSRCS} ${LSRCS}
 CLEANFILES+= ${GENHDRS} ${YSRCS:R:C/(.*)/\1.output/g}
 DPADD=	${LIBL}
 LDADD=	-ll
-WARNS?=	5
+WARNS?=	0
 
 # Correct path for kernel builds
 # Don't rely on the kernel's .depend file
@@ -24,11 +25,11 @@ WARNS?=	5
 DEPENDFILE=	.depend_aicasm
 .endif
 
-CFLAGS+= -I.
+CFLAGS+= -I${.CURDIR}
 .ifdef MAKESRCPATH
 CFLAGS+= -I${MAKESRCPATH}
 .endif
-NO_MAN=
+MAN=
 YFLAGS= -b ${.TARGET:R} ${.TARGET:M*macro*:S/$(.TARGET)/-p mm/} -d
 LFLAGS+= ${.TARGET:M*macro*:S/$(.TARGET)/-Pmm/}
 
@@ -38,4 +39,9 @@ YFLAGS+= -t -v
 LFLAGS+= -d
 .endif
 
+BINDIR=/usr/bin
+
+build-tools: ${PROG}
+
 .include <bsd.prog.mk>
+CFLAGS+= -Wno-missing-prototypes

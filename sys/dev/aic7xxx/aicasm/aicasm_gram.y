@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Parser for the Aic7xxx SCSI Host adapter sequencer assembler.
@@ -38,9 +39,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_gram.y,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_gram.y#29 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_gram.y 300060 2016-05-17 15:18:01Z pfg $
  */
 
 #include <sys/types.h>
@@ -103,7 +104,6 @@ static void add_version(const char *verstring);
 static int  is_download_const(expression_t *immed);
 
 extern int yylex (void);
-extern int yyparse (void);
 
 #define SRAM_SYMNAME "SRAM_BASE"
 #define SCB_SYMNAME "SCB_BASE"
@@ -1287,8 +1287,8 @@ code:
 ;
 
 	/*
-	 * This grammer differs from the one in the aic7xxx
-	 * reference manual since the grammer listed there is
+	 * This grammar differs from the one in the aic7xxx
+	 * reference manual since the grammar listed there is
 	 * ambiguous and causes a shift/reduce conflict.
 	 * It also seems more logical as the "immediate"
 	 * argument is listed as the second arg like the
@@ -1754,7 +1754,7 @@ format_3_instr(int opcode, symbol_ref_t *src,
 	instr = seq_alloc();
 	f3_instr = &instr->format.format3;
 	if (address->symbol == NULL) {
-		/* 'dot' referrence.  Use the current instruction pointer */
+		/* 'dot' reference.  Use the current instruction pointer */
 		addr = instruction_ptr + address->offset;
 	} else if (address->symbol->type == UNINITIALIZED) {
 		/* forward reference */

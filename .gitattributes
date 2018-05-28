@@ -55801,6 +55801,7 @@ sys/dev/acpica/acpi_acad.c -text
 sys/dev/acpica/acpi_battery.c -text
 sys/dev/acpica/acpi_button.c -text
 sys/dev/acpica/acpi_cmbat.c -text
+sys/dev/acpica/acpi_container.c svneol=native#text/plain
 sys/dev/acpica/acpi_cpu.c -text
 sys/dev/acpica/acpi_dock.c -text
 sys/dev/acpica/acpi_ec.c -text
@@ -55884,6 +55885,8 @@ sys/dev/ahb/ahb.c -text
 sys/dev/ahb/ahbreg.h -text
 sys/dev/ahci/ahci.c -text
 sys/dev/ahci/ahci.h -text
+sys/dev/ahci/ahci_pci.c svneol=native#text/plain
+sys/dev/ahci/ahciem.c svneol=native#text/plain
 sys/dev/aic/aic.c -text
 sys/dev/aic/aic6360reg.h -text
 sys/dev/aic/aic_cbus.c -text
@@ -55903,6 +55906,9 @@ sys/dev/aic7xxx/aic79xx_inline.h -text
 sys/dev/aic7xxx/aic79xx_osm.c -text
 sys/dev/aic7xxx/aic79xx_osm.h -text
 sys/dev/aic7xxx/aic79xx_pci.c -text
+sys/dev/aic7xxx/aic79xx_reg.h svneol=native#text/plain
+sys/dev/aic7xxx/aic79xx_reg_print.c svneol=native#text/plain
+sys/dev/aic7xxx/aic79xx_seq.h svneol=native#text/plain
 sys/dev/aic7xxx/aic7xxx.c -text
 sys/dev/aic7xxx/aic7xxx.h -text
 sys/dev/aic7xxx/aic7xxx.reg -text
@@ -55914,6 +55920,8 @@ sys/dev/aic7xxx/aic7xxx_osm.c -text
 sys/dev/aic7xxx/aic7xxx_osm.h -text
 sys/dev/aic7xxx/aic7xxx_pci.c -text
 sys/dev/aic7xxx/aic7xxx_reg.h svneol=native#text/plain
+sys/dev/aic7xxx/aic7xxx_reg_print.c svneol=native#text/plain
+sys/dev/aic7xxx/aic7xxx_seq.h svneol=native#text/plain
 sys/dev/aic7xxx/aic_osm_lib.c -text
 sys/dev/aic7xxx/aic_osm_lib.h -text
 sys/dev/aic7xxx/aicasm/Makefile -text
@@ -56024,6 +56032,7 @@ sys/dev/ata/chipsets/ata-ati.c -text
 sys/dev/ata/chipsets/ata-cenatek.c -text
 sys/dev/ata/chipsets/ata-cypress.c -text
 sys/dev/ata/chipsets/ata-cyrix.c -text
+sys/dev/ata/chipsets/ata-fsl.c svneol=native#text/plain
 sys/dev/ata/chipsets/ata-highpoint.c -text
 sys/dev/ata/chipsets/ata-intel.c -text
 sys/dev/ata/chipsets/ata-ite.c -text
@@ -56159,6 +56168,7 @@ sys/dev/ath/ath_hal/ar5416/ar5416_power.c -text
 sys/dev/ath/ath_hal/ar5416/ar5416_radar.c svneol=native#text/plain
 sys/dev/ath/ath_hal/ar5416/ar5416_recv.c -text
 sys/dev/ath/ath_hal/ar5416/ar5416_reset.c -text
+sys/dev/ath/ath_hal/ar5416/ar5416_spectral.c svneol=native#text/plain
 sys/dev/ath/ath_hal/ar5416/ar5416_xmit.c -text
 sys/dev/ath/ath_hal/ar5416/ar5416desc.h -text
 sys/dev/ath/ath_hal/ar5416/ar5416phy.h -text

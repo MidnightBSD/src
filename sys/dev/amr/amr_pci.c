@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -55,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/amr/amr_pci.c 281826 2015-04-21 11:27:50Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -184,7 +185,6 @@ amr_pci_attach(device_t dev)
     struct amr_softc	*sc;
     struct amr_ident	*id;
     int			rid, rtype, error;
-    u_int32_t		command;
 
     debug_called(1);
 
@@ -204,24 +204,8 @@ amr_pci_attach(device_t dev)
     if ((id = amr_find_ident(dev)) == NULL)
 	return (ENXIO);
 
-    command = pci_read_config(dev, PCIR_COMMAND, 1);
     if (id->flags & AMR_ID_QUARTZ) {
-	/*
-	 * Make sure we are going to be able to talk to this board.
-	 */
-	if ((command & PCIM_CMD_MEMEN) == 0) {
-	    device_printf(dev, "memory window not available\n");
-	    return (ENXIO);
-	}
 	sc->amr_type |= AMR_TYPE_QUARTZ;
-    } else {
-	/*
-	 * Make sure we are going to be able to talk to this board.
-	 */
-	if ((command & PCIM_CMD_PORTEN) == 0) {
-	    device_printf(dev, "I/O window not available\n");
-	    return (ENXIO);
-	}
     }
 
     if ((amr_force_sg32 == 0) && (id->flags & AMR_ID_DO_SG64) &&
@@ -231,11 +215,7 @@ amr_pci_attach(device_t dev)
     }
 
     /* force the busmaster enable bit on */
-    if (!(command & PCIM_CMD_BUSMASTEREN)) {
-	device_printf(dev, "busmaster bit not set, enabling\n");
-	command |= PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, command, 2);
-    }
+    pci_enable_busmaster(dev);
 
     /*
      * Allocate the PCI register window.
@@ -282,7 +262,8 @@ amr_pci_attach(device_t dev)
 			   BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			   BUS_SPACE_MAXADDR, 		/* highaddr */
 			   NULL, NULL, 			/* filter, filterarg */
-			   MAXBSIZE, AMR_NSEG,		/* maxsize, nsegments */
+			   BUS_SPACE_MAXSIZE,		/* maxsize */
+			   BUS_SPACE_UNRESTRICTED,	/* nsegments */
 			   BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			   0,				/* flags */
 			   NULL, NULL,			/* lockfunc, lockarg */
@@ -299,8 +280,9 @@ amr_pci_attach(device_t dev)
 			   BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			   BUS_SPACE_MAXADDR,		/* highaddr */
 			   NULL, NULL,			/* filter, filterarg */
-			   MAXBSIZE, AMR_NSEG,		/* maxsize, nsegments */
-			   MAXBSIZE,			/* maxsegsize */
+			   DFLTPHYS,			/* maxsize */
+			   AMR_NSEG,			/* nsegments */
+			   BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			   0,		/* flags */
 			   busdma_lock_mutex,		/* lockfunc */
 			   &sc->amr_list_lock,		/* lockarg */
@@ -314,8 +296,9 @@ amr_pci_attach(device_t dev)
 			   BUS_SPACE_MAXADDR,		/* lowaddr */
 			   BUS_SPACE_MAXADDR,		/* highaddr */
 			   NULL, NULL,			/* filter, filterarg */
-			   MAXBSIZE, AMR_NSEG,		/* maxsize, nsegments */
-			   MAXBSIZE,			/* maxsegsize */
+			   DFLTPHYS,			/* maxsize */
+			   AMR_NSEG,			/* nsegments */
+			   BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			   0,		/* flags */
 			   busdma_lock_mutex,		/* lockfunc */
 			   &sc->amr_list_lock,		/* lockarg */
@@ -339,11 +322,11 @@ amr_pci_attach(device_t dev)
     /*
      * Build the scatter/gather buffers.
      */
-    if (amr_sglist_map(sc))
+    if ((error = amr_sglist_map(sc)) != 0)
 	goto out;
     debug(2, "s/g list mapped");
 
-    if (amr_ccb_map(sc))
+    if ((error = amr_ccb_map(sc)) != 0)
 	goto out;
     debug(2, "ccb mapped");
 

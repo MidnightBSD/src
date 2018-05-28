@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ahb/ahbreg.h 241590 2012-10-15 16:05:02Z jhb $
  */
 
 /* Resource Constatns */

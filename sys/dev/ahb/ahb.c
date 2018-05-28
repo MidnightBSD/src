@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ahb/ahb.c 315813 2017-03-23 06:41:13Z mav $
  */
 
 #include <sys/param.h>
@@ -299,7 +299,7 @@ ahbattach(device_t dev)
 				/* highaddr	*/ BUS_SPACE_MAXADDR,
 				/* filter	*/ NULL,
 				/* filterarg	*/ NULL,
-				/* maxsize	*/ MAXBSIZE,
+				/* maxsize	*/ DFLTPHYS,
 				/* nsegments	*/ AHB_NSEG,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ BUS_DMA_ALLOCNOW,
@@ -618,9 +618,9 @@ ahbhandleimmed(struct ahb_softc *ahb, u_int32_t mbox, u_int intstat)
 			xpt_done(ccb);
 		} else if (ahb->immed_ecb != NULL) {
 			/* Re-instate timeout */
-			callout_reset(&pending_ecb->timer, 
-			    (ccb->ccb_h.timeout * hz) / 1000,
-			    ahbtimeout, pending_ecb);
+			callout_reset_sbt(&pending_ecb->timer,
+			    SBT_1MS * ccb->ccb_h.timeout, 0, ahbtimeout,
+			    pending_ecb, 0);
 		}
 	}
 
@@ -987,8 +987,8 @@ ahbexecuteecb(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	/* Tell the adapter about this command */
 	ahbqueuembox(ahb, ecb_paddr, ATTN_STARTECB|ccb->ccb_h.target_id);
 
-	callout_reset(&ecb->timer, (ccb->ccb_h.timeout * hz) / 1000, ahbtimeout,
-	    ecb);
+	callout_reset_sbt(&ecb->timer, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    ahbtimeout, ecb, 0);
 }
 
 static void
@@ -1007,6 +1007,7 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 	{
 		struct ecb *ecb;
 		struct hardware_ecb *hecb;
+		int error;
 
 		/*
 		 * get an ecb to use.
@@ -1057,65 +1058,19 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 			      hecb->cdb, hecb->cdb_len);
 		}
 
-		/*
-		 * If we have any data to send with this command,
-		 * map it into bus space.
-		 */
-		if ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-			if ((ccb->ccb_h.flags & CAM_SCATTER_VALID) == 0) {
-				/*
-				 * We've been given a pointer
-				 * to a single buffer.
-				 */
-				if ((ccb->ccb_h.flags & CAM_DATA_PHYS)==0) {
-					int error;
-
-					error = bus_dmamap_load(
-					    ahb->buffer_dmat,
-					    ecb->dmamap,
-					    ccb->csio.data_ptr,
-					    ccb->csio.dxfer_len,
-					    ahbexecuteecb,
-					    ecb, /*flags*/0);
-					if (error == EINPROGRESS) {
-						/*
-						 * So as to maintain ordering,
-						 * freeze the controller queue
-						 * until our mapping is
-						 * returned.
-						 */
-						xpt_freeze_simq(ahb->sim, 1);
-						ccb->ccb_h.status |=
-						    CAM_RELEASE_SIMQ;
-					}
-				} else {
-					struct bus_dma_segment seg; 
-
-					/* Pointer to physical buffer */
-					seg.ds_addr =
-					    (bus_addr_t)ccb->csio.data_ptr;
-					seg.ds_len = ccb->csio.dxfer_len;
-					ahbexecuteecb(ecb, &seg, 1, 0);
-				}
-			} else {
-				struct bus_dma_segment *segs;
-
-				if ((ccb->ccb_h.flags & CAM_DATA_PHYS) != 0)
-					panic("ahbaction - Physical segment "
-					      "pointers unsupported");
-
-				if ((ccb->ccb_h.flags & CAM_SG_LIST_PHYS) == 0)
-					panic("btaction - Virtual segment "
-					      "addresses unsupported");
-
-				/* Just use the segments provided */
-				segs = (struct bus_dma_segment *)
-				    ccb->csio.data_ptr;
-				ahbexecuteecb(ecb, segs, ccb->csio.sglist_cnt,
-					     0);
-			}
-		} else {
-			ahbexecuteecb(ecb, NULL, 0, 0);
+		error = bus_dmamap_load_ccb(
+		    ahb->buffer_dmat,
+		    ecb->dmamap,
+		    ccb,
+		    ahbexecuteecb,
+		    ecb, /*flags*/0);
+		if (error == EINPROGRESS) {
+			/*
+			 * So as to maintain ordering, freeze the controller
+			 * queue until our mapping is returned.
+			 */
+			xpt_freeze_simq(ahb->sim, 1);
+			ccb->ccb_h.status |= CAM_RELEASE_SIMQ;
 		}
 		break;
 	}
@@ -1225,9 +1180,9 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = ahb->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
                 cpi->transport = XPORT_SPI;
                 cpi->transport_version = 2;

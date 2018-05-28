@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -55,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/amr/amr_cam.c 315813 2017-03-23 06:41:13Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -274,11 +275,8 @@ amr_cam_action(struct cam_sim *sim, union ccb *ccb)
 		 * address
 		 */
 		if ((ccbh->flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-			if (ccbh->flags & CAM_DATA_PHYS)
+			if ((ccbh->flags & CAM_DATA_MASK) != CAM_DATA_VADDR)
 				/* we can't map it */
-				ccbh->status = CAM_REQ_INVALID;
-			if (ccbh->flags & CAM_SCATTER_VALID)
-				/* we want to do the s/g setup */
 				ccbh->status = CAM_REQ_INVALID;
 		}
 	
@@ -326,9 +324,9 @@ amr_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->max_target = AMR_MAX_TARGETS;
 		cpi->max_lun = 0 /* AMR_MAX_LUNS*/;
 		cpi->initiator_id = 7;		  /* XXX variable? */
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "LSI", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "LSI", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 132 * 1024;  /* XXX */

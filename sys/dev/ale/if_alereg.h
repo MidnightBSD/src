@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ale/if_alereg.h 273357 2014-10-21 01:14:56Z yongari $
  */
 
 #ifndef	_IF_ALEREG_H
@@ -605,7 +606,6 @@ struct smb {
 	uint32_t tx_multi_colls;
 	uint32_t tx_late_colls;
 	uint32_t tx_excess_colls;
-	uint32_t tx_abort;
 	uint32_t tx_underrun;
 	uint32_t tx_desc_underrun;
 	uint32_t tx_lenerrs;

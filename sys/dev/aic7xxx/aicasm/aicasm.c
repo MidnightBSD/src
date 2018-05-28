@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Aic7xxx SCSI host adapter firmware asssembler
  *
@@ -37,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm.c,v 1.3 2012-08-06 01:19:11 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.c#23 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm.c 300060 2016-05-17 15:18:01Z pfg $
  */
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -668,7 +669,7 @@ check_patch(patch_t **start_patch, unsigned int start_instr,
 				cur_patch = STAILQ_NEXT(cur_patch, links);
 		} else {
 			/* Accepted this patch.  Advance to the next
-			 * one and wait for our intruction pointer to
+			 * one and wait for our instruction pointer to
 			 * hit this point.
 			 */
 			cur_patch = STAILQ_NEXT(cur_patch, links);

@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ata/ata-pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -99,11 +99,8 @@ ata_pci_attach(device_t dev)
     ctlr->dev = dev;
 
     /* if needed try to enable busmastering */
+    pci_enable_busmaster(dev);
     cmd = pci_read_config(dev, PCIR_COMMAND, 2);
-    if (!(cmd & PCIM_CMD_BUSMASTEREN)) {
-	pci_write_config(dev, PCIR_COMMAND, cmd | PCIM_CMD_BUSMASTEREN, 2);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
-    }
 
     /* if busmastering mode "stuck" use it */
     if ((cmd & PCIM_CMD_BUSMASTEREN) == PCIM_CMD_BUSMASTEREN) {
@@ -706,21 +703,6 @@ ata_pcichannel_resume(device_t dev)
     return ata_resume(dev);
 }
 
-
-#ifndef ATA_CAM
-static int
-ata_pcichannel_locking(device_t dev, int mode)
-{
-    struct ata_pci_controller *ctlr = device_get_softc(device_get_parent(dev));
-    struct ata_channel *ch = device_get_softc(dev);
-
-    if (ctlr->locking)
-	return ctlr->locking(dev, mode);
-    else
-	return ch->unit;
-}
-#endif
-
 static void
 ata_pcichannel_reset(device_t dev)
 {
@@ -776,9 +758,6 @@ static device_method_t ata_pcichannel_methods[] = {
     /* ATA methods */
     DEVMETHOD(ata_setmode,      ata_pcichannel_setmode),
     DEVMETHOD(ata_getrev,       ata_pcichannel_getrev),
-#ifndef ATA_CAM
-    DEVMETHOD(ata_locking,      ata_pcichannel_locking),
-#endif
     DEVMETHOD(ata_reset,        ata_pcichannel_reset),
 
     DEVMETHOD_END

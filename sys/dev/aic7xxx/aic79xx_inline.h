@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Inline routines shareable across OS platforms.
  *
@@ -37,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic79xx_inline.h,v 1.1.1.3 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aic79xx_inline.h#57 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aic79xx_inline.h 300060 2016-05-17 15:18:01Z pfg $
  */
 
 #ifndef _AIC79XX_INLINE_H_
@@ -417,7 +418,7 @@ ahd_targetcmd_offset(struct ahd_softc *ahd, u_int index)
 	       - (uint8_t *)ahd->qoutfifo);
 }
 
-/*********************** Miscelaneous Support Functions ***********************/
+/********************** Miscellaneous Support Functions ***********************/
 static __inline void	ahd_complete_scb(struct ahd_softc *ahd,
 					 struct scb *scb);
 static __inline void	ahd_update_residual(struct ahd_softc *ahd,
@@ -534,7 +535,7 @@ static __inline void
 ahd_outw(struct ahd_softc *ahd, u_int port, u_int value)
 {
 	/*
-	 * Write low byte first to accomodate registers
+	 * Write low byte first to accommodate registers
 	 * such as PRGMCNT where the order maters.
 	 */
 	ahd_outb(ahd, port, value & 0xFF);

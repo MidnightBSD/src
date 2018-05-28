@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * FreeBSD OSM Library for the aic7xxx aic79xx based Adaptec SCSI controllers
  *
@@ -29,11 +30,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/dev/aic7xxx/aic_osm_lib.c,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
- * $Id: aic_osm_lib.c,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
+ * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aic_osm_lib.c#5 $
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/aic_osm_lib.c 239047 2012-08-05 08:08:34Z eadler $");
 
 static void	aic_recovery_thread(void *arg);
 
@@ -54,9 +55,6 @@ aic_set_recoveryscb(struct aic_softc *aic, struct scb *scb)
 		 * them after we've successfully fixed this problem.
 		 */
 		LIST_FOREACH(list_scb, &aic->pending_scbs, pending_links) {
-			union ccb *ccb;
-
-			ccb = list_scb->io_ctx;
 			callout_stop(&scb->io_timer);
 		}
 	}
@@ -131,6 +129,23 @@ aic_recovery_thread(void *arg)
 void
 aic_calc_geometry(struct ccb_calc_geometry *ccg, int extended)
 {
+#if __FreeBSD_version >= 500000
 	cam_calc_geometry(ccg, extended);
+#else
+	uint32_t size_mb;
+	uint32_t secs_per_cylinder;
+
+	size_mb = ccg->volume_size / ((1024L * 1024L) / ccg->block_size);
+	if (size_mb > 1024 && extended) {
+		ccg->heads = 255;
+		ccg->secs_per_track = 63;
+	} else {
+		ccg->heads = 64;
+		ccg->secs_per_track = 32;
+	}
+	secs_per_cylinder = ccg->heads * ccg->secs_per_track;
+	ccg->cylinders = ccg->volume_size / secs_per_cylinder;
+	ccg->ccb_h.status = CAM_REQ_CMP;
+#endif
 }
 

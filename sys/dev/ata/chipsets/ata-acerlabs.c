@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-acerlabs.c 287016 2015-08-22 07:32:47Z mav $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -97,7 +97,7 @@ ata_ali_probe(device_t dev)
     ata_set_desc(dev);
     ctlr->chipinit = ata_ali_chipinit;
     ctlr->chipdeinit = ata_ali_chipdeinit;
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int
@@ -118,11 +118,6 @@ ata_ali_chipinit(device_t dev)
 	ctlr->setmode = ata_sata_setmode;
 	ctlr->getrev = ata_sata_getrev;
 
-	/* AHCI mode is correctly supported only on the ALi 5288. */
-	if ((ctlr->chip->chipid == ATA_ALI_5288) &&
-	    (ata_ahci_chipinit(dev) != ENXIO))
-            return 0;
-
 	/* Allocate resources for later use by channel attach routines. */
 	res = malloc(sizeof(struct ali_sata_resources), M_ATAPCI, M_WAITOK);
 	for (i = 0; i < 4; i++) {
@@ -134,7 +129,7 @@ ata_ali_chipinit(device_t dev)
 			for (i--; i >=0; i--)
 				bus_release_resource(dev, SYS_RES_IOPORT,
 				    PCIR_BAR(i), res->bars[i]);
-			free(res, M_TEMP);
+			free(res, M_ATAPCI);
 			return ENXIO;
 		}
 	}
@@ -213,10 +208,8 @@ ata_ali_ch_attach(device_t dev)
 	if (ch->dma.max_iosize > 256 * 512)
 		ch->dma.max_iosize = 256 * 512;
     }
-#ifdef ATA_CAM
 	if (ctlr->chip->cfg2 & ALI_NEW)
 		ch->flags |= ATA_NO_ATAPI_DMA;
-#endif
 
     return 0;
 }
@@ -350,4 +343,3 @@ ata_ali_setmode(device_t dev, int target, int mode)
 }
 
 ATA_DECLARE_DRIVER(ata_ali);
-MODULE_DEPEND(ata_ali, ata_ahci, 1, 1, 1);

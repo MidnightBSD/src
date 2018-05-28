@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/age/if_agevar.h 264442 2014-04-14 04:51:59Z yongari $
  */
 
 #ifndef	_IF_AGEVAR_H
@@ -42,7 +43,7 @@
 
 #define	AGE_TSO_MAXSEGSIZE	4096
 #define	AGE_TSO_MAXSIZE		(65535 + sizeof(struct ether_vlan_header))
-#define	AGE_MAXTXSEGS		32
+#define	AGE_MAXTXSEGS		35
 #define	AGE_RX_BUF_ALIGN	8
 #ifndef __NO_STRICT_ALIGNMENT
 #define	AGE_RX_BUF_SIZE		(MCLBYTES - AGE_RX_BUF_ALIGN)	

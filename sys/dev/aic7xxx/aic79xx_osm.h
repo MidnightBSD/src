@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * FreeBSD platform specific driver option settings, data structures,
  * function declarations and includes.
@@ -30,9 +31,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic79xx_osm.h,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
+ * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aic79xx_osm.h#23 $
  *
- * $MidnightBSD: src/sys/dev/aic7xxx/aic79xx_osm.h,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aic79xx_osm.h 218909 2011-02-21 09:01:34Z brucec $
  */
 
 #ifndef _AIC79XX_FREEBSD_H_
@@ -43,7 +44,9 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>		/* For device_t */
+#if __FreeBSD_version >= 500000
 #include <sys/endian.h>
+#endif
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -58,8 +61,13 @@
 
 #include <sys/rman.h>
 
+#if __FreeBSD_version >= 500000
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
+#else
+#include <pci/pcireg.h>
+#include <pci/pcivar.h>
+#endif
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>

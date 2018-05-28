@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Sub-parser for macro invocation in the Aic7xxx SCSI
@@ -38,9 +39,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_macro_gram.y,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_gram.y#5 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y 224046 2011-07-15 00:36:47Z emaste $
  */
 
 #include <sys/types.h>

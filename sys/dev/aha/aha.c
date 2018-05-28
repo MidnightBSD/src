@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/aha/aha.c 315813 2017-03-23 06:41:13Z mav $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -208,9 +208,9 @@ aha_free(struct aha_softc *aha)
 	case 7:
 		bus_dmamap_unload(aha->ccb_dmat, aha->ccb_dmamap);
 	case 6:
-		bus_dmamap_destroy(aha->ccb_dmat, aha->ccb_dmamap);
 		bus_dmamem_free(aha->ccb_dmat, aha->aha_ccb_array,
 		    aha->ccb_dmamap);
+		bus_dmamap_destroy(aha->ccb_dmat, aha->ccb_dmamap);
 	case 5:
 		bus_dma_tag_destroy(aha->ccb_dmat);
 	case 4:
@@ -461,7 +461,7 @@ aha_init(struct aha_softc* aha)
 				/* highaddr	*/ BUS_SPACE_MAXADDR,
 				/* filter	*/ NULL,
 				/* filterarg	*/ NULL,
-				/* maxsize	*/ MAXBSIZE,
+				/* maxsize	*/ DFLTPHYS,
 				/* nsegments	*/ AHA_NSEG,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_24BIT,
 				/* flags	*/ BUS_DMA_ALLOCNOW,
@@ -779,6 +779,7 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 		if (ccb->ccb_h.func_code == XPT_SCSI_IO) {
 			struct ccb_scsiio *csio;
 			struct ccb_hdr *ccbh;
+			int error;
 
 			csio = &ccb->csio;
 			ccbh = &csio->ccb_h;
@@ -812,67 +813,22 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 			 * If we have any data to send with this command,
 			 * map it into bus space.
 			 */
-		        /* Only use S/G if there is a transfer */
-			if ((ccbh->flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
-				if ((ccbh->flags & CAM_SCATTER_VALID) == 0) {
-					/*
-					 * We've been given a pointer
-					 * to a single buffer.
-					 */
-					if ((ccbh->flags & CAM_DATA_PHYS)==0) {
-						int error;
 
-						error = bus_dmamap_load(
-						    aha->buffer_dmat,
-						    accb->dmamap,
-						    csio->data_ptr,
-						    csio->dxfer_len,
-						    ahaexecuteccb,
-						    accb,
-						    /*flags*/0);
-						if (error == EINPROGRESS) {
-							/*
-							 * So as to maintain
-							 * ordering, freeze the
-							 * controller queue
-							 * until our mapping is
-							 * returned.
-							 */
-							xpt_freeze_simq(aha->sim,
-									1);
-							csio->ccb_h.status |=
-							    CAM_RELEASE_SIMQ;
-						}
-					} else {
-						struct bus_dma_segment seg;
-
-						/* Pointer to physical buffer */
-						seg.ds_addr =
-						    (bus_addr_t)csio->data_ptr;
-						seg.ds_len = csio->dxfer_len;
-						ahaexecuteccb(accb, &seg, 1, 0);
-					}
-				} else {
-					struct bus_dma_segment *segs;
-
-					if ((ccbh->flags & CAM_DATA_PHYS) != 0)
-						panic("ahaaction - Physical "
-						      "segment pointers "
-						      "unsupported");
-
-					if ((ccbh->flags&CAM_SG_LIST_PHYS)==0)
-						panic("ahaaction - Virtual "
-						      "segment addresses "
-						      "unsupported");
-
-					/* Just use the segments provided */
-					segs = (struct bus_dma_segment *)
-					    csio->data_ptr;
-					ahaexecuteccb(accb, segs,
-						     csio->sglist_cnt, 0);
-				}
-			} else {
-				ahaexecuteccb(accb, NULL, 0, 0);
+			error = bus_dmamap_load_ccb(
+			    aha->buffer_dmat,
+			    accb->dmamap,
+			    ccb,
+			    ahaexecuteccb,
+			    accb,
+			    /*flags*/0);
+			if (error == EINPROGRESS) {
+				/*
+				 * So as to maintain ordering, freeze the
+				 * controller queue until our mapping is
+				 * returned.
+				 */
+				xpt_freeze_simq(aha->sim, 1);
+				csio->ccb_h.status |= CAM_RELEASE_SIMQ;
 			}
 		} else {
 			hccb->opcode = INITIATOR_BUS_DEV_RESET;
@@ -994,9 +950,9 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = aha->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
                 cpi->transport = XPORT_SPI;
                 cpi->transport_version = 2;
@@ -1094,8 +1050,8 @@ ahaexecuteccb(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	ccb->ccb_h.status |= CAM_SIM_QUEUED;
 	LIST_INSERT_HEAD(&aha->pending_ccbs, &ccb->ccb_h, sim_links.le);
 
-	callout_reset(&accb->timer, (ccb->ccb_h.timeout * hz) / 1000,
-	    ahatimeout, accb);
+	callout_reset_sbt(&accb->timer, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    ahatimeout, accb, 0);
 
 	/* Tell the adapter about this command */
 	if (aha->cur_outbox->action_code != AMBO_FREE) {
@@ -1213,8 +1169,10 @@ ahadone(struct aha_softc *aha, struct aha_ccb *accb, aha_mbi_comp_code_t comp_co
 		    cam_sim_path(aha->sim), accb->hccb.target,
 		    CAM_LUN_WILDCARD);
 
-		if (error == CAM_REQ_CMP)
+		if (error == CAM_REQ_CMP) {
 			xpt_async(AC_SENT_BDR, path, NULL);
+			xpt_free_path(path);
+		}
 
 		ccb_h = LIST_FIRST(&aha->pending_ccbs);
 		while (ccb_h != NULL) {
@@ -1226,9 +1184,9 @@ ahadone(struct aha_softc *aha, struct aha_ccb *accb, aha_mbi_comp_code_t comp_co
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 				ahadone(aha, pending_accb, AMBI_ERROR);
 			} else {
-				callout_reset(&pending_accb->timer,
-				    (ccb_h->timeout * hz) / 1000,
-				    ahatimeout, pending_accb);
+				callout_reset_sbt(&pending_accb->timer,
+				    SBT_1MS * ccb_h->timeout, 0, ahatimeout,
+				    pending_accb, 0);
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 			}
 		}

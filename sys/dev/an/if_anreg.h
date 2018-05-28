@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/an/if_anreg.h,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/an/if_anreg.h 199757 2009-11-24 16:57:35Z jhb $
  */
 
 #define AN_TIMEOUT	65536

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Aic7xxx SCSI host adapter firmware asssembler symbol table implementation
  *
@@ -37,14 +38,14 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_symbol.c,v 1.3 2012-08-06 01:19:11 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_symbol.c#24 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_symbol.c 233479 2012-03-25 21:54:36Z rmh $
  */
 
 #include <sys/types.h>
 #include <sys/param.h>
-#ifdef BSD
+#if defined(BSD) && !defined(__GNU__)
 #include <db.h>
 #else
 #include <db_185.h>

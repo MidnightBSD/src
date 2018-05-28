@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-via.c 287016 2015-08-22 07:32:47Z mav $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -79,7 +79,6 @@ static int ata_via_sata_status(device_t dev);
 #define VIACLK          0x01
 #define VIABUG          0x02
 #define VIABAR          0x04
-#define VIAAHCI         0x08
 #define VIASATA         0x10
 
 /*
@@ -121,7 +120,6 @@ ata_via_probe(device_t dev)
      { ATA_VIA8237S,  0x00, 7,      0x00,    ATA_SA150, "8237S" },
      { ATA_VIA8237_5372, 0x00, 7,   0x00,    ATA_SA300, "8237" },
      { ATA_VIA8237_7372, 0x00, 7,   0x00,    ATA_SA300, "8237" },
-     { ATA_VIA8251,   0x00, 0,      VIAAHCI, ATA_SA300, "8251" },
      { 0, 0, 0, 0, 0, 0 }};
 
     if (pci_get_vendor(dev) != ATA_VIA_ID)
@@ -142,7 +140,7 @@ ata_via_probe(device_t dev)
 
     ata_set_desc(dev);
     ctlr->chipinit = ata_via_chipinit;
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int
@@ -153,11 +151,6 @@ ata_via_chipinit(device_t dev)
     if (ata_setup_interrupt(dev, ata_generic_intr))
 	return ENXIO;
 
-    /* AHCI SATA */
-    if (ctlr->chip->cfg2 & VIAAHCI) {
-	if (ata_ahci_chipinit(dev) != ENXIO)
-	    return (0);
-    }
     /* 2 SATA with "SATA registers" at PCI config space + PATA on secondary */
     if (ctlr->chip->cfg2 & VIASATA) {
 	ctlr->ch_attach = ata_via_sata_ch_attach;
@@ -555,4 +548,3 @@ ata_via_sata_status(device_t dev)
 }
 
 ATA_DECLARE_DRIVER(ata_via);
-MODULE_DEPEND(ata_via, ata_ahci, 1, 1, 1);

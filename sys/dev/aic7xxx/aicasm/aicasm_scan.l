@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Lexical Analyzer for the Aic7xxx SCSI Host adapter sequencer assembler.
@@ -38,9 +39,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_scan.l,v 1.1.1.3 2012-07-21 15:16:50 laffer1 Exp $
+ * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_scan.l#19 $
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_scan.l 228556 2011-12-16 00:04:28Z dim $
  */
 
 #include <sys/types.h>

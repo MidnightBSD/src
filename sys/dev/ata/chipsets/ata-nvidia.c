@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 SÃ¸ren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-nvidia.c 287016 2015-08-22 07:32:47Z mav $");
 
-#include "opt_ata.h"
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -63,10 +63,6 @@ static int ata_nvidia_setmode(device_t dev, int target, int mode);
 #define NV4             0x01
 #define NVQ             0x02
 #define NVAHCI          0x04
-#define NVNOFORCE       0x08
-
-static int force_ahci = 1;
-TUNABLE_INT("hw.ahci.force", &force_ahci);
 
 /*
  * nVidia chipset support functions
@@ -162,7 +158,7 @@ ata_nvidia_probe(device_t dev)
      { ATA_NFORCE_MCP79_AA, 0, NVAHCI,  0, ATA_SA300, "nForce MCP79" },
      { ATA_NFORCE_MCP79_AB, 0, NVAHCI,  0, ATA_SA300, "nForce MCP79" },
      { ATA_NFORCE_MCP89_A0, 0, NVAHCI,  0, ATA_SA300, "nForce MCP89" },
-     { ATA_NFORCE_MCP89_A1, 0, NVAHCI|NVNOFORCE, 0, ATA_SA300, "nForce MCP89" },
+     { ATA_NFORCE_MCP89_A1, 0, NVAHCI,  0, ATA_SA300, "nForce MCP89" },
      { ATA_NFORCE_MCP89_A2, 0, NVAHCI,  0, ATA_SA300, "nForce MCP89" },
      { ATA_NFORCE_MCP89_A3, 0, NVAHCI,  0, ATA_SA300, "nForce MCP89" },
      { ATA_NFORCE_MCP89_A4, 0, NVAHCI,  0, ATA_SA300, "nForce MCP89" },
@@ -181,14 +177,13 @@ ata_nvidia_probe(device_t dev)
     if (!(ctlr->chip = ata_match_chip(dev, ids)))
 	return ENXIO;
 
-    ata_set_desc(dev);
     if ((ctlr->chip->cfg1 & NVAHCI) &&
-	((force_ahci == 1 && (ctlr->chip->cfg1 & NVNOFORCE) == 0) ||
-	 pci_get_subclass(dev) != PCIS_STORAGE_IDE))
-	ctlr->chipinit = ata_ahci_chipinit;
-    else
-	ctlr->chipinit = ata_nvidia_chipinit;
-    return (BUS_PROBE_DEFAULT);
+	    pci_get_subclass(dev) != PCIS_STORAGE_IDE)
+	return (ENXIO);
+
+    ata_set_desc(dev);
+    ctlr->chipinit = ata_nvidia_chipinit;
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int
@@ -352,4 +347,3 @@ ata_nvidia_setmode(device_t dev, int target, int mode)
 }
 
 ATA_DECLARE_DRIVER(ata_nvidia);
-MODULE_DEPEND(ata_nvidia, ata_ahci, 1, 1, 1);

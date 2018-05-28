@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/asr/dptalign.h,v 1.2 2008/12/02 02:24:33 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-1999 Distributed Processing Technology Corporation
  * All rights reserved.
@@ -21,7 +21,7 @@
  *
  * DPT Alignment Description File
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/asr/dptalign.h 139749 2005-01-06 01:43:34Z imp $
  */
 #if (!defined(__DPTALIGN_H))
 #define	      __DPTALIGN_H
