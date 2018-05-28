@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008-2010 Atheros Communications Inc.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9287_cal.h 222301 2011-05-26 09:15:33Z adrian $
  */
 #ifndef	__AR9287_CAL_H__
 #define	__AR9287_CAL_H__

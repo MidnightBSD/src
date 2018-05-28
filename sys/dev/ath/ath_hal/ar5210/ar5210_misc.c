@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2004 Atheros Communications, Inc.
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5210/ar5210_misc.c 247286 2013-02-25 22:42:43Z adrian $
  */
 #include "opt_ah.h"
 
@@ -576,8 +577,6 @@ ar5210MibEvent(struct ath_hal *ah, const HAL_NODE_STATS *stats)
 {
 }
 
-#define	AR_DIAG_SW_DIS_CRYPTO	(AR_DIAG_SW_DIS_ENC | AR_DIAG_SW_DIS_DEC)
-
 HAL_STATUS
 ar5210GetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 	uint32_t capability, uint32_t *result)
@@ -585,7 +584,11 @@ ar5210GetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 
 	switch (type) {
 	case HAL_CAP_CIPHER:		/* cipher handled in hardware */
+#if 0
 		return (capability == HAL_CIPHER_WEP ? HAL_OK : HAL_ENOTSUPP);
+#else
+		return HAL_ENOTSUPP;
+#endif
 	default:
 		return ath_hal_getcapability(ah, type, capability, result);
 	}
@@ -608,7 +611,7 @@ ar5210SetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 #else
 		AH_PRIVATE(ah)->ah_diagreg = setting & 0x6;	/* ACK+CTS */
 #endif
-		OS_REG_WRITE(ah, AR_DIAG_SW, AH_PRIVATE(ah)->ah_diagreg);
+		ar5210UpdateDiagReg(ah, AH_PRIVATE(ah)->ah_diagreg);
 		return AH_TRUE;
 	case HAL_CAP_RXORN_FATAL:	/* HAL_INT_RXORN treated as fatal  */
 		return AH_FALSE;	/* NB: disallow */
@@ -645,4 +648,56 @@ ar5210GetDiagState(struct ath_hal *ah, int request,
 #endif
 	return ath_hal_getdiagstate(ah, request,
 		args, argsize, result, resultsize);
+}
+
+/*
+ * Return what percentage of the extension channel is busy.
+ * This is always disabled for AR5210 series NICs.
+ */
+uint32_t
+ar5210Get11nExtBusy(struct ath_hal *ah)
+{
+
+	return (0);
+}
+
+/*
+ * There's no channel survey support for the AR5210.
+ */
+HAL_BOOL
+ar5210GetMibCycleCounts(struct ath_hal *ah, HAL_SURVEY_SAMPLE *hsample)
+{
+
+	return (AH_FALSE);
+}
+
+void
+ar5210SetChainMasks(struct ath_hal *ah, uint32_t txchainmask,
+    uint32_t rxchainmask)
+{
+}
+
+void
+ar5210EnableDfs(struct ath_hal *ah, HAL_PHYERR_PARAM *pe)
+{
+}
+
+void
+ar5210GetDfsThresh(struct ath_hal *ah, HAL_PHYERR_PARAM *pe)
+{
+}
+
+/*
+ * Update the diagnostic register.
+ *
+ * This merges in the diagnostic register setting with the default
+ * value, which may or may not involve disabling hardware encryption.
+ */
+void
+ar5210UpdateDiagReg(struct ath_hal *ah, uint32_t val)
+{
+
+	/* Disable all hardware encryption */
+	val |= AR_DIAG_SW_DIS_CRYPTO;
+	OS_REG_WRITE(ah, AR_DIAG_SW, val);
 }

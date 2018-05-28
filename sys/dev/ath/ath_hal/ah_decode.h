@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ah_decode.h 233887 2012-04-04 20:46:20Z adrian $
  */
 #ifndef _ATH_AH_DECODE_H_
 #define _ATH_AH_DECODE_H_
@@ -29,6 +30,7 @@
  * existing file.
  */
 struct athregrec {
+	uint32_t	threadid;
 	uint32_t	op	: 8,
 			reg	: 24;
 	uint32_t	val;

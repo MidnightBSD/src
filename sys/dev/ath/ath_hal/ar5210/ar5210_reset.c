@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2004 Atheros Communications, Inc.
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5210/ar5210_reset.c 243317 2012-11-19 23:42:46Z adrian $
  */
 #include "opt_ah.h"
 
@@ -190,7 +191,7 @@ ar5210Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 	OS_REG_WRITE(ah, AR_CLR_TMASK, 1);
 	OS_REG_WRITE(ah, AR_TRIG_LEV, 1);	/* minimum */
 
-	OS_REG_WRITE(ah, AR_DIAG_SW, 0);
+	ar5210UpdateDiagReg(ah, 0);
 
 	OS_REG_WRITE(ah, AR_CFP_PERIOD, 0);
 	OS_REG_WRITE(ah, AR_TIMER0, 0);		/* next beacon time */
@@ -285,7 +286,7 @@ ar5210Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 	if (ahp->ah_ctstimeout != (u_int) -1)
 		ar5210SetCTSTimeout(ah, ahp->ah_ctstimeout);
 	if (AH_PRIVATE(ah)->ah_diagreg != 0)
-		OS_REG_WRITE(ah, AR_DIAG_SW, AH_PRIVATE(ah)->ah_diagreg);
+		ar5210UpdateDiagReg(ah, AH_PRIVATE(ah)->ah_diagreg);
 
 	AH_PRIVATE(ah)->ah_opmode = opmode;	/* record operating mode */
 
@@ -454,7 +455,7 @@ ar5210PerCalibrationN(struct ath_hal *ah,
 	if (ichan == AH_NULL)
 		return AH_FALSE;
 	/* Disable tx and rx */
-	OS_REG_WRITE(ah, AR_DIAG_SW,
+	ar5210UpdateDiagReg(ah,
 		OS_REG_READ(ah, AR_DIAG_SW) | (AR_DIAG_SW_DIS_TX | AR_DIAG_SW_DIS_RX));
 
 	/* Disable Beacon Enable */
@@ -551,7 +552,7 @@ ar5210PerCalibrationN(struct ath_hal *ah,
 	}
 
 	/* Clear tx and rx disable bit */
-	OS_REG_WRITE(ah, AR_DIAG_SW,
+	ar5210UpdateDiagReg(ah,
 		 OS_REG_READ(ah, AR_DIAG_SW) & ~(AR_DIAG_SW_DIS_TX | AR_DIAG_SW_DIS_RX));
 
 	/* Re-enable Beacons */
@@ -594,12 +595,10 @@ ar5210SetResetReg(struct ath_hal *ah, uint32_t resetMask, u_int delay)
         if ((resetMask & AR_RC_RMAC) == 0) {
 		if (isBigEndian()) {
 			/*
-			 * Set CFG, little-endian for register
-			 * and descriptor accesses.
+			 * Set CFG, little-endian for descriptor accesses.
 			 */
-			mask = INIT_CONFIG_STATUS |
-				AR_CFG_SWTD | AR_CFG_SWRD | AR_CFG_SWRG;
-			OS_REG_WRITE(ah, AR_CFG, LE_READ_4(&mask));
+			mask = INIT_CONFIG_STATUS | AR_CFG_SWTD | AR_CFG_SWRD;
+			OS_REG_WRITE(ah, AR_CFG, mask);
 		} else
 			OS_REG_WRITE(ah, AR_CFG, INIT_CONFIG_STATUS);
 	}

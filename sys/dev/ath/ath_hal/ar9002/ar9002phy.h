@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010-2011 Adrian Chadd, Xenion Pty Ltd.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9002phy.h 220590 2011-04-13 04:40:59Z adrian $
  */
 #ifndef	__ATH_AR9002PHY_H__
 #define	__ATH_AR9002PHY_H__

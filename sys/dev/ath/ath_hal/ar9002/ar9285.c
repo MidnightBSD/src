@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9285.c 228517 2011-12-15 00:59:11Z adrian $
  */
 #include "opt_ah.h"
 
@@ -77,3 +78,11 @@ ar9285RfAttach(struct ath_hal *ah, HAL_STATUS *status)
 
 	return AH_TRUE;
 }
+
+static HAL_BOOL
+ar9285RfProbe(struct ath_hal *ah)
+{
+	return (AR_SREV_KITE(ah));
+}
+
+AH_RF(RF9285, ar9285RfProbe, ar9285RfAttach);

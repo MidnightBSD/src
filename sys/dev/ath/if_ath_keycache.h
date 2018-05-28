@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/if_ath_keycache.h 227357 2011-11-08 19:25:52Z adrian $
  */
 
 #ifndef	__IF_ATH_CRYPTO_H__
@@ -37,7 +38,7 @@ extern int ath_key_alloc(struct ieee80211vap *, struct ieee80211_key *,
 extern int ath_key_delete(struct ieee80211vap *, const struct ieee80211_key *);
 extern int ath_key_set(struct ieee80211vap *, const struct ieee80211_key *,
     const u_int8_t mac[IEEE80211_ADDR_LEN]);
-extern int ath_keyset(struct ath_softc *sc, const struct ieee80211_key *k,
-    struct ieee80211_node *bss);
+extern int ath_keyset(struct ath_softc *sc, struct ieee80211vap *vap,
+    const struct ieee80211_key *k, struct ieee80211_node *bss);
 
 #endif

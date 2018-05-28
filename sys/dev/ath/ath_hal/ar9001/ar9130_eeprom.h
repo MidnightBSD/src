@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Adrian Chadd, Xenion Pty Ltd
  * Copyright (c) 2010 Atheros Communications, Inc.
@@ -14,11 +15,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9001/ar9130_eeprom.h 230147 2012-01-15 19:22:34Z adrian $
  */
 #ifndef	__AR9130_EEPROM_H__
 #define	__AR9130_EEPROM_H__
-
-extern	HAL_BOOL ar9130EepromRead(struct ath_hal *ah, u_int off, uint16_t *data);
 
 #endif

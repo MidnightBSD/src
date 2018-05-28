@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5212/ar5212_reset.c 275471 2014-12-04 01:10:50Z dim $
  */
 #include "opt_ah.h"
 
@@ -94,6 +95,16 @@ write_common(struct ath_hal *ah, const HAL_INI_ARRAY *ia,
 }
 
 #define IS_DISABLE_FAST_ADC_CHAN(x) (((x) == 2462) || ((x) == 2467))
+
+/*
+ * XXX NDIS 5.x code had MAX_RESET_WAIT set to 2000 for AP code
+ * and 10 for Client code
+ */
+#define	MAX_RESET_WAIT			10
+
+#define	TX_QUEUEPEND_CHECK		1
+#define	TX_ENABLE_CHECK			2
+#define	RX_ENABLE_CHECK			4
 
 /*
  * Places the device in and out of reset and then places sane
@@ -185,6 +196,9 @@ ar5212Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 		saveFrameSeqCount = OS_REG_READ(ah, AR_D_SEQNUM);
 	} else
 		saveFrameSeqCount = 0;		/* NB: silence compiler */
+
+	/* Blank the channel survey statistics */
+	OS_MEMZERO(&ahp->ah_chansurvey, sizeof(ahp->ah_chansurvey));
 #if 0
 	/*
 	 * XXX disable for now; this appears to sometimes cause OFDM
@@ -428,9 +442,10 @@ ar5212Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 	/* Restore previous antenna */
 	OS_REG_WRITE(ah, AR_DEF_ANTENNA, saveDefAntenna);
 
-	/* then our BSSID */
+	/* then our BSSID and associate id */
 	OS_REG_WRITE(ah, AR_BSS_ID0, LE_READ_4(ahp->ah_bssid));
-	OS_REG_WRITE(ah, AR_BSS_ID1, LE_READ_2(ahp->ah_bssid + 4));
+	OS_REG_WRITE(ah, AR_BSS_ID1, LE_READ_2(ahp->ah_bssid + 4) |
+	    (ahp->ah_assocId & 0x3fff) << AR_BSS_ID1_AID_S);
 
 	/* Restore bmiss rssi & count thresholds */
 	OS_REG_WRITE(ah, AR_RSSI_THR, ahp->ah_rssiThr);
@@ -1104,6 +1119,76 @@ ar5212ResetCalValid(struct ath_hal *ah, const struct ieee80211_channel *chan)
 	return AH_TRUE;
 }
 
+/**************************************************************
+ * ar5212MacStop
+ *
+ * Disables all active QCUs and ensure that the mac is in a
+ * quiessence state.
+ */
+static HAL_BOOL
+ar5212MacStop(struct ath_hal *ah)
+{
+	HAL_BOOL     status;
+	uint32_t    count;
+	uint32_t    pendFrameCount;
+	uint32_t    macStateFlag;
+	uint32_t    queue;
+
+	status = AH_FALSE;
+
+	/* Disable Rx Operation ***********************************/
+	OS_REG_SET_BIT(ah, AR_CR, AR_CR_RXD);
+
+	/* Disable TX Operation ***********************************/
+#ifdef NOT_YET
+	ar5212SetTxdpInvalid(ah);
+#endif
+	OS_REG_SET_BIT(ah, AR_Q_TXD, AR_Q_TXD_M);
+
+	/* Polling operation for completion of disable ************/
+	macStateFlag = TX_ENABLE_CHECK | RX_ENABLE_CHECK;
+
+	for (count = 0; count < MAX_RESET_WAIT; count++) {
+		if (macStateFlag & RX_ENABLE_CHECK) {
+			if (!OS_REG_IS_BIT_SET(ah, AR_CR, AR_CR_RXE)) {
+				macStateFlag &= ~RX_ENABLE_CHECK;
+			}
+		}
+
+		if (macStateFlag & TX_ENABLE_CHECK) {
+			if (!OS_REG_IS_BIT_SET(ah, AR_Q_TXE, AR_Q_TXE_M)) {
+				macStateFlag &= ~TX_ENABLE_CHECK;
+				macStateFlag |= TX_QUEUEPEND_CHECK;
+			}
+		}
+		if (macStateFlag & TX_QUEUEPEND_CHECK) {
+			pendFrameCount = 0;
+			for (queue = 0; queue < AR_NUM_DCU; queue++) {
+				pendFrameCount += OS_REG_READ(ah,
+				    AR_Q0_STS + (queue * 4)) &
+				    AR_Q_STS_PEND_FR_CNT;
+			}
+			if (pendFrameCount == 0) {
+				macStateFlag &= ~TX_QUEUEPEND_CHECK;
+			}
+		}
+		if (macStateFlag == 0) {
+			status = AH_TRUE;
+			break;
+		}
+		OS_DELAY(50);
+	}
+
+	if (status != AH_TRUE) {
+		HALDEBUG(ah, HAL_DEBUG_RESET,
+		    "%s:Failed to stop the MAC state 0x%x\n",
+		    __func__, macStateFlag);
+	}
+
+	return status;
+}
+
+
 /*
  * Write the given reset bit mask into the reset register
  */
@@ -1113,10 +1198,73 @@ ar5212SetResetReg(struct ath_hal *ah, uint32_t resetMask)
 	uint32_t mask = resetMask ? resetMask : ~0;
 	HAL_BOOL rt;
 
-	/* XXX ar5212MacStop & co. */
-
+	/* Never reset the PCIE core */
 	if (AH_PRIVATE(ah)->ah_ispcie) {
 		resetMask &= ~AR_RC_PCI;
+	}
+
+	if (resetMask & (AR_RC_MAC | AR_RC_PCI)) {
+		/*
+		 * To ensure that the driver can reset the
+		 * MAC, wake up the chip
+		 */
+		rt = ar5212SetPowerMode(ah, HAL_PM_AWAKE, AH_TRUE);
+
+		if (rt != AH_TRUE) {
+			return rt;
+		}
+
+		/*
+		 * Disable interrupts
+		 */
+		OS_REG_WRITE(ah, AR_IER, AR_IER_DISABLE);
+		OS_REG_READ(ah, AR_IER);
+
+		if (ar5212MacStop(ah) != AH_TRUE) {
+			/*
+			 * Failed to stop the MAC gracefully; let's be more forceful then
+			 */
+
+			/* need some delay before flush any pending MMR writes */
+			OS_DELAY(15);
+			OS_REG_READ(ah, AR_RXDP);
+
+			resetMask |= AR_RC_MAC | AR_RC_BB;
+			/* _Never_ reset PCI Express core */
+			if (! AH_PRIVATE(ah)->ah_ispcie) {
+				resetMask |= AR_RC_PCI;
+			}
+#if 0
+			/*
+			 * Flush the park address of the PCI controller
+			*/
+			/* Read PCI slot information less than Hainan revision */
+			if (AH_PRIVATE(ah)->ah_bustype == HAL_BUS_TYPE_PCI) {
+				if (!IS_5112_REV5_UP(ah)) {
+#define PCI_COMMON_CONFIG_STATUS    0x06
+					u_int32_t    i;
+					u_int16_t    reg16;
+
+					for (i = 0; i < 32; i++) {
+						ath_hal_read_pci_config_space(ah,
+						    PCI_COMMON_CONFIG_STATUS,
+						    &reg16, sizeof(reg16));
+					}
+				}
+#undef PCI_COMMON_CONFIG_STATUS
+			}
+#endif
+		} else {
+			/*
+			 * MAC stopped gracefully; no need to warm-reset the PCI bus
+			 */
+
+			resetMask &= ~AR_RC_PCI;
+
+			/* need some delay before flush any pending MMR writes */
+			OS_DELAY(15);
+			OS_REG_READ(ah, AR_RXDP);
+		}
 	}
 
 	(void) OS_REG_READ(ah, AR_RXDP);/* flush any pending MMR writes */
@@ -1129,14 +1277,13 @@ ar5212SetResetReg(struct ath_hal *ah, uint32_t resetMask)
         if ((resetMask & AR_RC_MAC) == 0) {
 		if (isBigEndian()) {
 			/*
-			 * Set CFG, little-endian for register
-			 * and descriptor accesses.
+			 * Set CFG, little-endian for descriptor accesses.
 			 */
-			mask = INIT_CONFIG_STATUS | AR_CFG_SWRD | AR_CFG_SWRG;
+			mask = INIT_CONFIG_STATUS | AR_CFG_SWRD;
 #ifndef AH_NEED_DESC_SWAP
 			mask |= AR_CFG_SWTD;
 #endif
-			OS_REG_WRITE(ah, AR_CFG, LE_READ_4(&mask));
+			OS_REG_WRITE(ah, AR_CFG, mask);
 		} else
 			OS_REG_WRITE(ah, AR_CFG, INIT_CONFIG_STATUS);
 		if (ar5212SetPowerMode(ah, HAL_PM_AWAKE, AH_TRUE))
@@ -2459,6 +2606,12 @@ ar5212GetTargetPowers(struct ath_hal *ah, const struct ieee80211_channel *chan,
 		powInfo[ixlo].twicePwr54, powInfo[ixhi].twicePwr54);
 }
 
+static uint32_t
+udiff(uint32_t u, uint32_t v)
+{
+	return (u >= v ? u - v : v - u);
+}
+
 /*
  * Search a list for a specified value v that is within
  * EEP_DELTA of the search values.  Return the closest
@@ -2493,7 +2646,7 @@ ar5212GetLowerUpperValues(uint16_t v, uint16_t *lp, uint16_t listSize,
 		 * If value is close to the current value of the list
 		 * then target is not between values, it is one of the values
 		 */
-		if (abs(lp[0] * EEP_SCALE - target) < EEP_DELTA) {
+		if (udiff(lp[0] * EEP_SCALE, target) < EEP_DELTA) {
 			*vlo = *vhi = lp[0];
 			return;
 		}

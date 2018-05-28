@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008-2009 Atheros Communications Inc.
  *
@@ -13,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ah_eeprom_9287.h 223615 2011-06-28 00:01:55Z adrian $
  */
 
 #ifndef	__AH_EEPROM_9287_H__

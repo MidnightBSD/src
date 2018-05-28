@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -28,11 +29,12 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_pci.c 246453 2013-02-07 07:50:16Z adrian $");
 
 /*
  * PCI/Cardbus front-end for the Atheros Wireless LAN controller driver.
  */
+#include "opt_ath.h"
 
 #include <sys/param.h>
 #include <sys/systm.h> 
@@ -60,6 +62,12 @@ __MBSDID("$MidnightBSD$");
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
 
+/* For EEPROM firmware */
+#ifdef	ATH_EEPROM_FIRMWARE
+#include <sys/linker.h>
+#include <sys/firmware.h>
+#endif	/* ATH_EEPROM_FIRMWARE */
+
 /*
  * PCI glue.
  */
@@ -73,6 +81,49 @@ struct ath_pci_softc {
 
 #define	BS_BAR	0x10
 #define	PCIR_RETRY_TIMEOUT	0x41
+#define	PCIR_CFG_PMCSR		0x48
+
+#define	DEFAULT_CACHESIZE	32
+
+static void
+ath_pci_setup(device_t dev)
+{
+	uint8_t cz;
+
+	/* XXX TODO: need to override the _system_ saved copies of this */
+
+	/*
+	 * If the cache line size is 0, force it to a reasonable
+	 * value.
+	 */
+	cz = pci_read_config(dev, PCIR_CACHELNSZ, 1);
+	if (cz == 0) {
+		pci_write_config(dev, PCIR_CACHELNSZ,
+		    DEFAULT_CACHESIZE / 4, 1);
+	}
+
+	/* Override the system latency timer */
+	pci_write_config(dev, PCIR_LATTIMER, 0xa8, 1);
+
+	/* If a PCI NIC, force wakeup */
+#ifdef	ATH_PCI_WAKEUP_WAR
+	/* XXX TODO: don't do this for non-PCI (ie, PCIe, Cardbus!) */
+	if (1) {
+		uint16_t pmcsr;
+		pmcsr = pci_read_config(dev, PCIR_CFG_PMCSR, 2);
+		pmcsr |= 3;
+		pci_write_config(dev, PCIR_CFG_PMCSR, pmcsr, 2);
+		pmcsr &= ~3;
+		pci_write_config(dev, PCIR_CFG_PMCSR, pmcsr, 2);
+	}
+#endif
+
+	/*
+	 * Disable retry timeout to keep PCI Tx retries from
+	 * interfering with C3 CPU state.
+	 */
+	pci_write_config(dev, PCIR_RETRY_TIMEOUT, 0, 1);
+}
 
 static int
 ath_pci_probe(device_t dev)
@@ -94,6 +145,10 @@ ath_pci_attach(device_t dev)
 	struct ath_softc *sc = &psc->sc_sc;
 	int error = ENXIO;
 	int rid;
+#ifdef	ATH_EEPROM_FIRMWARE
+	const struct firmware *fw = NULL;
+	const char *buf;
+#endif
 
 	sc->sc_dev = dev;
 
@@ -103,10 +158,9 @@ ath_pci_attach(device_t dev)
 	pci_enable_busmaster(dev);
 
 	/*
-	 * Disable retry timeout to keep PCI Tx retries from
-	 * interfering with C3 CPU state.
+	 * Setup other PCI bus configuration parameters.
 	 */
-	pci_write_config(dev, PCIR_RETRY_TIMEOUT, 0, 1);
+	ath_pci_setup(dev);
 
 	/* 
 	 * Setup memory-mapping of PCI registers.
@@ -163,12 +217,53 @@ ath_pci_attach(device_t dev)
 		goto bad3;
 	}
 
+#ifdef	ATH_EEPROM_FIRMWARE
+	/*
+	 * If there's an EEPROM firmware image, load that in.
+	 */
+	if (resource_string_value(device_get_name(dev), device_get_unit(dev),
+	    "eeprom_firmware", &buf) == 0) {
+		if (bootverbose)
+			device_printf(dev, "%s: looking up firmware @ '%s'\n",
+			    __func__, buf);
+
+		fw = firmware_get(buf);
+		if (fw == NULL) {
+			device_printf(dev, "%s: couldn't find firmware\n",
+			    __func__);
+			goto bad3;
+		}
+
+		device_printf(dev, "%s: EEPROM firmware @ %p\n",
+		    __func__, fw->data);
+		sc->sc_eepromdata =
+		    malloc(fw->datasize, M_TEMP, M_WAITOK | M_ZERO);
+		if (! sc->sc_eepromdata) {
+			device_printf(dev, "%s: can't malloc eepromdata\n",
+			    __func__);
+			goto bad3;
+		}
+		memcpy(sc->sc_eepromdata, fw->data, fw->datasize);
+		firmware_put(fw, 0);
+	}
+#endif /* ATH_EEPROM_FIRMWARE */
+
 	ATH_LOCK_INIT(sc);
+	ATH_PCU_LOCK_INIT(sc);
+	ATH_RX_LOCK_INIT(sc);
+	ATH_TX_LOCK_INIT(sc);
+	ATH_TX_IC_LOCK_INIT(sc);
+	ATH_TXSTATUS_LOCK_INIT(sc);
 
 	error = ath_attach(pci_get_device(dev), sc);
 	if (error == 0)					/* success */
 		return 0;
 
+	ATH_TXSTATUS_LOCK_DESTROY(sc);
+	ATH_PCU_LOCK_DESTROY(sc);
+	ATH_RX_LOCK_DESTROY(sc);
+	ATH_TX_IC_LOCK_DESTROY(sc);
+	ATH_TX_LOCK_DESTROY(sc);
 	ATH_LOCK_DESTROY(sc);
 	bus_dma_tag_destroy(sc->sc_dmat);
 bad3:
@@ -190,6 +285,11 @@ ath_pci_detach(device_t dev)
 	/* check if device was removed */
 	sc->sc_invalid = !bus_child_present(dev);
 
+	/*
+	 * Do a config read to clear pre-existing pci error status.
+	 */
+	(void) pci_read_config(dev, PCIR_COMMAND, 4);
+
 	ath_detach(sc);
 
 	bus_generic_detach(dev);
@@ -199,6 +299,14 @@ ath_pci_detach(device_t dev)
 	bus_dma_tag_destroy(sc->sc_dmat);
 	bus_release_resource(dev, SYS_RES_MEMORY, BS_BAR, psc->sc_sr);
 
+	if (sc->sc_eepromdata)
+		free(sc->sc_eepromdata, M_TEMP);
+
+	ATH_TXSTATUS_LOCK_DESTROY(sc);
+	ATH_PCU_LOCK_DESTROY(sc);
+	ATH_RX_LOCK_DESTROY(sc);
+	ATH_TX_IC_LOCK_DESTROY(sc);
+	ATH_TX_LOCK_DESTROY(sc);
 	ATH_LOCK_DESTROY(sc);
 
 	return (0);
@@ -227,6 +335,11 @@ static int
 ath_pci_resume(device_t dev)
 {
 	struct ath_pci_softc *psc = device_get_softc(dev);
+
+	/*
+	 * Suspend/resume resets the PCI configuration space.
+	 */
+	ath_pci_setup(dev);
 
 	ath_resume(&psc->sc_sc);
 

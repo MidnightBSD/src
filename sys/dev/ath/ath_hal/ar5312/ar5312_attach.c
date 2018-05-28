@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -14,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5312/ar5312_attach.c 225883 2011-09-30 05:17:57Z adrian $
  */
 #include "opt_ah.h"
 
@@ -71,13 +72,13 @@ ar5312Attach(uint16_t devid, HAL_SOFTC sc,
 	uint16_t eeval;
 	HAL_STATUS ecode;
 
-	HALDEBUG_G(AH_NULL, HAL_DEBUG_ATTACH, "%s: sc %p st %p sh %p\n",
+	HALDEBUG(AH_NULL, HAL_DEBUG_ATTACH, "%s: sc %p st %p sh %p\n",
 		 __func__, sc, st, (void*) sh);
 
 	/* NB: memory is returned zero'd */
 	ahp = ath_hal_malloc(sizeof (struct ath_hal_5212));
 	if (ahp == AH_NULL) {
-		HALDEBUG_G(AH_NULL, HAL_DEBUG_ANY,
+		HALDEBUG(AH_NULL, HAL_DEBUG_ANY,
 		    "%s: cannot allocate memory for state block\n", __func__);
 		*status = HAL_ENOMEM;
 		return AH_NULL;
