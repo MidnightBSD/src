@@ -55542,6 +55542,17 @@ sys/contrib/ipfilter/netinet/ip_sync.c -text
 sys/contrib/ipfilter/netinet/ip_sync.h -text
 sys/contrib/ipfilter/netinet/ipl.h -text
 sys/contrib/ipfilter/netinet/mlfk_ipl.c -text
+sys/contrib/libfdt/fdt.c svneol=native#text/plain
+sys/contrib/libfdt/fdt.h svneol=native#text/plain
+sys/contrib/libfdt/fdt_empty_tree.c svneol=native#text/plain
+sys/contrib/libfdt/fdt_ro.c svneol=native#text/plain
+sys/contrib/libfdt/fdt_rw.c svneol=native#text/plain
+sys/contrib/libfdt/fdt_strerror.c svneol=native#text/plain
+sys/contrib/libfdt/fdt_sw.c svneol=native#text/plain
+sys/contrib/libfdt/fdt_wip.c svneol=native#text/plain
+sys/contrib/libfdt/libfdt.h svneol=native#text/plain
+sys/contrib/libfdt/libfdt_env.h svneol=native#text/plain
+sys/contrib/libfdt/libfdt_internal.h svneol=native#text/plain
 sys/contrib/ngatm/FREEBSD-Xlist -text
 sys/contrib/ngatm/FREEBSD-upgrade -text
 sys/contrib/ngatm/netnatm/addr.h -text
