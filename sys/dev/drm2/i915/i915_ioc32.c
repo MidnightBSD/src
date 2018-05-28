@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) Paul Mackerras 2005
  * Copyright (C) Alan Hourihane 2005
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/i915/i915_ioc32.c 282199 2015-04-28 19:35:05Z dumbbell $");
 
 #include "opt_compat.h"
 
@@ -127,12 +128,12 @@ typedef struct drm_i915_mem_alloc32 {
 	u32 region_offset;	/* offset from start of fb or agp */
 } drm_i915_mem_alloc32_t;
 
-drm_ioctl_desc_t i915_compat_ioctls[] = {
+struct drm_ioctl_desc i915_compat_ioctls[] = {
 	DRM_IOCTL_DEF(DRM_I915_BATCHBUFFER, compat_i915_batchbuffer, DRM_AUTH),
 	DRM_IOCTL_DEF(DRM_I915_CMDBUFFER, compat_i915_cmdbuffer, DRM_AUTH),
 	DRM_IOCTL_DEF(DRM_I915_GETPARAM, compat_i915_getparam, DRM_AUTH),
 	DRM_IOCTL_DEF(DRM_I915_IRQ_EMIT, compat_i915_irq_emit, DRM_AUTH)
 };
-int i915_compat_ioctls_nr = DRM_ARRAY_SIZE(i915_compat_ioctls);
+int i915_compat_ioctls_nr = ARRAY_SIZE(i915_compat_ioctls);
 
 #endif

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright © 2006-2007 Intel Corporation
  *
@@ -23,7 +24,7 @@
  * Authors:
  *	Eric Anholt <eric@anholt.net>
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/dev/drm2/i915/intel_sdvo_regs.h 235783 2012-05-22 11:07:44Z kib $
  */
 
 /**

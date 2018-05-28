@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright © 2008 Intel Corporation
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/i915/i915_gem_tiling.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/i915/i915_gem_tiling.c 282199 2015-04-28 19:35:05Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -352,16 +353,24 @@ i915_gem_set_tiling(struct drm_device *dev, void *data,
 		}
 	}
 
+	DRM_LOCK(dev);
 	if (args->tiling_mode != obj->tiling_mode ||
 	    args->stride != obj->stride) {
 		/* We need to rebind the object if its current allocation
 		 * no longer meets the alignment restrictions for its new
 		 * tiling mode. Otherwise we can just leave it alone, but
-		 * need to ensure that any fence register is cleared.
+		 * need to ensure that any fence register is updated before
+		 * the next fenced (either through the GTT or by the BLT unit
+		 * on older GPUs) access.
+		 *
+		 * After updating the tiling parameters, we then flag whether
+		 * we need to update an associated fence register. Note this
+		 * has to also include the unfenced register the GPU uses
+		 * whilst executing a fenced command for an untiled object.
 		 */
-		i915_gem_release_mmap(obj);
 
-		obj->map_and_fenceable = obj->gtt_space == NULL ||
+		obj->map_and_fenceable =
+			obj->gtt_space == NULL ||
 		    (obj->gtt_offset + obj->base.size <=
 		    dev_priv->mm.gtt_mappable_end &&
 		    i915_gem_object_fence_ok(obj, args->tiling_mode));
@@ -374,16 +383,25 @@ i915_gem_set_tiling(struct drm_device *dev, void *data,
 			if (obj->gtt_offset & (unfenced_alignment - 1))
 				ret = i915_gem_object_unbind(obj);
 		}
+
 		if (ret == 0) {
-			obj->tiling_changed = true;
+			obj->fence_dirty =
+				obj->fenced_gpu_access ||
+				obj->fence_reg != I915_FENCE_REG_NONE;
+
+
 			obj->tiling_mode = args->tiling_mode;
 			obj->stride = args->stride;
+
+			/* Force the fence to be reacquired for GTT access */
+			i915_gem_release_mmap(obj);
 		}
- 	}
+	}
 	/* we have to maintain this existing ABI... */
 	args->stride = obj->stride;
 	args->tiling_mode = obj->tiling_mode;
 	drm_gem_object_unreference(&obj->base);
+	DRM_UNLOCK(dev);
 
 	return (ret);
 }
@@ -402,6 +420,8 @@ i915_gem_get_tiling(struct drm_device *dev, void *data,
 	obj = to_intel_bo(drm_gem_object_lookup(dev, file, args->handle));
 	if (&obj->base == NULL)
 		return -ENOENT;
+
+	DRM_LOCK(dev);
 
 	args->tiling_mode = obj->tiling_mode;
 	switch (obj->tiling_mode) {
@@ -425,6 +445,7 @@ i915_gem_get_tiling(struct drm_device *dev, void *data,
 		args->swizzle_mode = I915_BIT_6_SWIZZLE_9_10;
 
 	drm_gem_object_unreference(&obj->base);
+	DRM_UNLOCK(dev);
 
 	return 0;
 }
@@ -453,6 +474,22 @@ i915_gem_swizzle_page(vm_page_t m)
 	}
 
 	sf_buf_free(sf);
+}
+
+void
+i915_gem_object_do_bit_17_swizzle_page(struct drm_i915_gem_object *obj,
+    vm_page_t m)
+{
+	char new_bit_17;
+
+	if (obj->bit_17 == NULL)
+		return;
+
+	new_bit_17 = VM_PAGE_TO_PHYS(m) >> 17;
+	if ((new_bit_17 & 0x1) != (test_bit(m->pindex, obj->bit_17) != 0)) {
+		i915_gem_swizzle_page(m);
+		vm_page_dirty(m);
+	}
 }
 
 void

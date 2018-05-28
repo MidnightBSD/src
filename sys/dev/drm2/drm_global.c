@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright 2008-2009 VMware, Inc., Palo Alto, CA., USA
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm_global.c 262988 2014-03-10 23:16:19Z dumbbell $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_global.c 282199 2015-04-28 19:35:05Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_global.h>
@@ -76,7 +77,11 @@ int drm_global_item_ref(struct drm_global_reference *ref)
 	sx_xlock(&item->mutex);
 	if (item->refcount == 0) {
 		item->object = malloc(ref->size, M_DRM_GLOBAL,
-		    M_WAITOK | M_ZERO);
+		    M_NOWAIT | M_ZERO);
+		if (unlikely(item->object == NULL)) {
+			ret = -ENOMEM;
+			goto out_err;
+		}
 
 		ref->object = item->object;
 		ret = ref->init(ref);
@@ -94,6 +99,7 @@ out_err:
 	item->object = NULL;
 	return ret;
 }
+EXPORT_SYMBOL(drm_global_item_ref);
 
 void drm_global_item_unref(struct drm_global_reference *ref)
 {
@@ -109,3 +115,4 @@ void drm_global_item_unref(struct drm_global_reference *ref)
 	}
 	sx_xunlock(&item->mutex);
 }
+EXPORT_SYMBOL(drm_global_item_unref);

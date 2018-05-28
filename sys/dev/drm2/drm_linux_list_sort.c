@@ -29,7 +29,7 @@
  */
 
 #include <dev/drm2/drmP.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm_linux_list_sort.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_linux_list_sort.c 258707 2013-11-28 10:04:53Z dumbbell $");
 
 struct drm_list_sort_thunk {
 	int (*cmp)(void *, struct list_head *, struct list_head *);
@@ -43,8 +43,8 @@ drm_le_cmp(void *priv, const void *d1, const void *d2)
 	struct drm_list_sort_thunk *thunk;
 
 	thunk = priv;
-	le1 = __DECONST(struct list_head *, d1);
-	le2 = __DECONST(struct list_head *, d2);
+	le1 = *(__DECONST(struct list_head **, d1));
+	le2 = *(__DECONST(struct list_head **, d2));
 	return ((thunk->cmp)(thunk->priv, le1, le2));
 }
 

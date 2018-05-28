@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm_dp_iic_helper.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_dp_iic_helper.c 282199 2015-04-28 19:35:05Z dumbbell $");
 
 #include <sys/types.h>
 #include <sys/kobj.h>
@@ -42,7 +42,9 @@ iic_dp_aux_transaction(device_t idev, int mode, uint8_t write_byte,
 
 	aux_data = device_get_softc(idev);
 	ret = (*aux_data->aux_ch)(idev, mode, write_byte, read_byte);
-	return (ret);
+	if (ret < 0)
+		return (ret);
+	return (0);
 }
 
 /*
@@ -107,7 +109,7 @@ iic_dp_aux_put_byte(device_t idev, u8 byte)
 	aux_data = device_get_softc(idev);
 
 	if (!aux_data->running)
-		return (EIO);
+		return (-EIO);
 
 	ret = iic_dp_aux_transaction(idev, MODE_I2C_WRITE, byte, NULL);
 	return (ret);
@@ -126,7 +128,7 @@ iic_dp_aux_get_byte(device_t idev, u8 *byte_ret)
 	aux_data = device_get_softc(idev);
 
 	if (!aux_data->running)
-		return (EIO);
+		return (-EIO);
 
 	ret = iic_dp_aux_transaction(idev, MODE_I2C_READ, 0, byte_ret);
 	return (ret);
@@ -147,7 +149,7 @@ iic_dp_aux_xfer(device_t idev, struct iic_msg *msgs, uint32_t num)
 		len = msgs[m].len;
 		buf = msgs[m].buf;
 		reading = (msgs[m].flags & IIC_M_RD) != 0;
-		ret = iic_dp_aux_address(idev, msgs[m].slave, reading);
+		ret = iic_dp_aux_address(idev, msgs[m].slave >> 1, reading);
 		if (ret != 0)
 			break;
 		if (reading) {
@@ -168,7 +170,7 @@ iic_dp_aux_xfer(device_t idev, struct iic_msg *msgs, uint32_t num)
 	}
 	iic_dp_aux_stop(idev, reading);
 	DRM_DEBUG_KMS("dp_aux_xfer return %d\n", ret);
-	return (ret);
+	return (-ret);
 }
 
 static void
@@ -184,7 +186,7 @@ iic_dp_aux_reset(device_t idev, u_char speed, u_char addr, u_char *oldaddr)
 {
 
 	iic_dp_aux_reset_bus(idev);
-	return (0);				   
+	return (0);
 }
 
 static int
@@ -214,22 +216,6 @@ iic_dp_aux_attach(device_t idev)
 		return (ENXIO);
 	device_quiet(aux_data->port);
 	bus_generic_attach(idev);
-	return (0);
-}
-
-static int
-iic_dp_aux_detach(device_t idev)
-{
-	struct iic_dp_aux_data *aux_data;
-	device_t port;
-
-	aux_data = device_get_softc(idev);
-
-	port = aux_data->port;
-	bus_generic_detach(idev);
-	if (port != NULL)
-		device_delete_child(idev, port);
-
 	return (0);
 }
 
@@ -272,13 +258,13 @@ iic_dp_aux_add_bus(device_t dev, const char *name,
 		*adapter = data->port;
 	}
 	mtx_unlock(&Giant);
-	return (error);
+	return (-error);
 }
 
 static device_method_t drm_iic_dp_aux_methods[] = {
 	DEVMETHOD(device_probe,		iic_dp_aux_probe),
 	DEVMETHOD(device_attach,	iic_dp_aux_attach),
-	DEVMETHOD(device_detach,	iic_dp_aux_detach),
+	DEVMETHOD(device_detach,	bus_generic_detach),
 	DEVMETHOD(iicbus_reset,		iic_dp_aux_reset),
 	DEVMETHOD(iicbus_transfer,	iic_dp_aux_xfer),
 	DEVMETHOD_END

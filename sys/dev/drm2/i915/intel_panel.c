@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright © 2006-2010 Intel Corporation
  * Copyright (c) 2006 Dave Airlie <airlied@linux.ie>
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/i915/intel_panel.c 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/i915/intel_panel.c 282199 2015-04-28 19:35:05Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -59,7 +60,7 @@ intel_fixed_panel_mode(struct drm_display_mode *fixed_mode,
 void
 intel_pch_panel_fitting(struct drm_device *dev,
 			int fitting_mode,
-			struct drm_display_mode *mode,
+			const struct drm_display_mode *mode,
 			struct drm_display_mode *adjusted_mode)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -197,6 +198,20 @@ u32 intel_panel_get_max_backlight(struct drm_device *dev)
 	return max;
 }
 
+static u32 intel_panel_compute_brightness(struct drm_device *dev, u32 val)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	if (i915_panel_invert_brightness < 0)
+		return val;
+
+	if (i915_panel_invert_brightness > 0 ||
+	    dev_priv->quirks & QUIRK_INVERT_BRIGHTNESS)
+		return intel_panel_get_max_backlight(dev) - val;
+
+	return val;
+}
+
 u32 intel_panel_get_backlight(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -212,12 +227,13 @@ u32 intel_panel_get_backlight(struct drm_device *dev)
 		if (is_backlight_combination_mode(dev)) {
 			u8 lbpc;
 
-			lbpc = pci_read_config(dev->device, PCI_LBPC, 1);
+			lbpc = pci_read_config(dev->dev, PCI_LBPC, 1);
 			val *= lbpc;
 		}
 	}
 
-	DRM_DEBUG("get backlight PWM = %d\n", val);
+	val = intel_panel_compute_brightness(dev, val);
+	DRM_DEBUG_DRIVER("get backlight PWM = %d\n", val);
 	return val;
 }
 
@@ -233,7 +249,8 @@ static void intel_panel_actually_set_backlight(struct drm_device *dev, u32 level
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	u32 tmp;
 
-	DRM_DEBUG("set backlight PWM = %d\n", level);
+	DRM_DEBUG_DRIVER("set backlight PWM = %d\n", level);
+	level = intel_panel_compute_brightness(dev, level);
 
 	if (HAS_PCH_SPLIT(dev))
 		return intel_pch_panel_set_backlight(dev, level);
@@ -244,7 +261,7 @@ static void intel_panel_actually_set_backlight(struct drm_device *dev, u32 level
 
 		lbpc = level * 0xfe / max + 1;
 		level /= lbpc;
-		pci_write_config(dev->device, PCI_LBPC, lbpc, 4);
+		pci_write_config(dev->dev, PCI_LBPC, lbpc, 4);
 	}
 
 	tmp = I915_READ(BLC_PWM_CTL);
