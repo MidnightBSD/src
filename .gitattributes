@@ -56641,6 +56641,7 @@ sys/dev/drm2/drm_buffer.c svneol=native#text/plain
 sys/dev/drm2/drm_buffer.h svneol=native#text/plain
 sys/dev/drm2/drm_bufs.c -text
 sys/dev/drm2/drm_context.c -text
+sys/dev/drm2/drm_core.h svneol=native#text/plain
 sys/dev/drm2/drm_crtc.c -text
 sys/dev/drm2/drm_crtc.h -text
 sys/dev/drm2/drm_crtc_helper.c -text
@@ -56656,6 +56657,7 @@ sys/dev/drm2/drm_edid.h -text
 sys/dev/drm2/drm_edid_modes.h -text
 sys/dev/drm2/drm_fb_helper.c -text
 sys/dev/drm2/drm_fb_helper.h -text
+sys/dev/drm2/drm_fixed.h svneol=native#text/plain
 sys/dev/drm2/drm_fops.c -text
 sys/dev/drm2/drm_fourcc.h -text
 sys/dev/drm2/drm_gem.c -text
@@ -56677,6 +56679,8 @@ sys/dev/drm2/drm_mm.c -text
 sys/dev/drm2/drm_mm.h -text
 sys/dev/drm2/drm_mode.h -text
 sys/dev/drm2/drm_modes.c -text
+sys/dev/drm2/drm_os_freebsd.c svneol=native#text/plain
+sys/dev/drm2/drm_os_freebsd.h svneol=native#text/plain
 sys/dev/drm2/drm_pci.c -text
 sys/dev/drm2/drm_pciids.h -text
 sys/dev/drm2/drm_sarea.h -text
@@ -56692,9 +56696,11 @@ sys/dev/drm2/i915/i915_drm.h -text
 sys/dev/drm2/i915/i915_drv.c -text
 sys/dev/drm2/i915/i915_drv.h -text
 sys/dev/drm2/i915/i915_gem.c -text
+sys/dev/drm2/i915/i915_gem_context.c svneol=native#text/plain
 sys/dev/drm2/i915/i915_gem_evict.c -text
 sys/dev/drm2/i915/i915_gem_execbuffer.c -text
 sys/dev/drm2/i915/i915_gem_gtt.c -text
+sys/dev/drm2/i915/i915_gem_stolen.c svneol=native#text/plain
 sys/dev/drm2/i915/i915_gem_tiling.c -text
 sys/dev/drm2/i915/i915_ioc32.c -text
 sys/dev/drm2/i915/i915_irq.c -text
@@ -56703,6 +56709,7 @@ sys/dev/drm2/i915/i915_suspend.c -text
 sys/dev/drm2/i915/intel_bios.c -text
 sys/dev/drm2/i915/intel_bios.h -text
 sys/dev/drm2/i915/intel_crt.c -text
+sys/dev/drm2/i915/intel_ddi.c svneol=native#text/plain
 sys/dev/drm2/i915/intel_display.c -text
 sys/dev/drm2/i915/intel_dp.c -text
 sys/dev/drm2/i915/intel_drv.h -text
@@ -56714,6 +56721,7 @@ sys/dev/drm2/i915/intel_modes.c -text
 sys/dev/drm2/i915/intel_opregion.c -text
 sys/dev/drm2/i915/intel_overlay.c -text
 sys/dev/drm2/i915/intel_panel.c -text
+sys/dev/drm2/i915/intel_pm.c svneol=native#text/plain
 sys/dev/drm2/i915/intel_ringbuffer.c -text
 sys/dev/drm2/i915/intel_ringbuffer.h -text
 sys/dev/drm2/i915/intel_sdvo.c -text
