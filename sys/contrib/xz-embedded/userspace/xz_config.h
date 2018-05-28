@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Private includes and definitions for userspace use of XZ Embedded
  *

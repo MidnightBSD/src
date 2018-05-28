@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Aleksandr Rybalko
  * All rights reserved.

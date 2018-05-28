@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Branch/Call/Jump (BCJ) filter decoders
  *

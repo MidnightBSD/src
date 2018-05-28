@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Definitions for handling the .xz file format
  *

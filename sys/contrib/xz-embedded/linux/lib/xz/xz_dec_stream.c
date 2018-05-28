@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * .xz Stream decoder
  *

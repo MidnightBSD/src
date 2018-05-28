@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Simple XZ decoder command line tool
  *

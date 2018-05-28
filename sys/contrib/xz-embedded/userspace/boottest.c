@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Test application for xz_boot.c
  *

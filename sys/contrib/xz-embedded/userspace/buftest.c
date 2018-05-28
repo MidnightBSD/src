@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Test application to test buffer-to-buffer decoding
  *

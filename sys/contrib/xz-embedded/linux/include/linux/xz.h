@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * XZ decompressor
  *
