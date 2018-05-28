@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: dswload - Dispatcher first pass namespace load callbacks

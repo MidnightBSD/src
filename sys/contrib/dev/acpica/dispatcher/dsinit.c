@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: dsinit - Object initialization namespace walk

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: dmresrcl.c - "Large" Resource Descriptor disassembly

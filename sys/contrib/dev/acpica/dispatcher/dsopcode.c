@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: dsopcode - Dispatcher suport for regions and fields

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: nsnames - Name manipulation and search

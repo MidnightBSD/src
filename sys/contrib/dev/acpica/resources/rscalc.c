@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: rscalc - Calculate stream and list lengths

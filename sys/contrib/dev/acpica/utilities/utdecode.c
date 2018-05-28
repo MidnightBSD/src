@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: utdecode - Utility decoding routines (value-to-string)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: dbnames - Debugger commands for the acpi namespace

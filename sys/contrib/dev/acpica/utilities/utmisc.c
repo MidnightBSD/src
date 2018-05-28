@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: utmisc - common utility procedures

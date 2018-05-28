@@ -1,4 +1,4 @@
-
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslrestype2q - Large QWord address resource descriptors
@@ -6,7 +6,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2016, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  */
 
-
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
 #include "aslcompiler.y.h"
 
@@ -61,9 +60,7 @@
  *
  * FUNCTION:    RsDoQwordIoDescriptor
  *
- * PARAMETERS:  Op                  - Parent resource descriptor parse node
- *              CurrentByteOffset   - Offset into the resource template AML
- *                                    buffer (to track references to the desc)
+ * PARAMETERS:  Info                - Parse Op and resource template offset
  *
  * RETURN:      Completed resource node
  *
@@ -73,8 +70,7 @@
 
 ASL_RESOURCE_NODE *
 RsDoQwordIoDescriptor (
-    ACPI_PARSE_OBJECT       *Op,
-    UINT32                  CurrentByteOffset)
+    ASL_RESOURCE_INFO       *Info)
 {
     AML_RESOURCE            *Descriptor;
     ACPI_PARSE_OBJECT       *InitializerOp;
@@ -86,19 +82,21 @@ RsDoQwordIoDescriptor (
     UINT8                   *OptionalFields;
     UINT16                  StringLength = 0;
     UINT32                  OptionIndex = 0;
+    UINT32                  CurrentByteOffset;
     UINT32                  i;
     BOOLEAN                 ResSourceIndex = FALSE;
 
 
-    InitializerOp = Op->Asl.Child;
+    InitializerOp = Info->DescriptorTypeOp->Asl.Child;
     StringLength = RsGetStringDataLength (InitializerOp);
+    CurrentByteOffset = Info->CurrentByteOffset;
 
     Rnode = RsAllocateResourceNode (
-                sizeof (AML_RESOURCE_ADDRESS64) + 1 + StringLength);
+        sizeof (AML_RESOURCE_ADDRESS64) + 1 + StringLength);
 
     Descriptor = Rnode->Buffer;
-    Descriptor->Address64.DescriptorType  = ACPI_RESOURCE_NAME_ADDRESS64;
-    Descriptor->Address64.ResourceType    = ACPI_ADDRESS_TYPE_IO_RANGE;
+    Descriptor->Address64.DescriptorType = ACPI_RESOURCE_NAME_ADDRESS64;
+    Descriptor->Address64.ResourceType = ACPI_ADDRESS_TYPE_IO_RANGE;
 
     /*
      * Initial descriptor length -- may be enlarged if there are
@@ -144,14 +142,14 @@ RsDoQwordIoDescriptor (
         case 4: /* Range Type */
 
             RsSetFlagBits (&Descriptor->Address64.SpecificFlags, InitializerOp, 0, 3);
-            RsCreateBitField (InitializerOp, ACPI_RESTAG_RANGETYPE,
-                CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.SpecificFlags), 0);
+            RsCreateMultiBitField (InitializerOp, ACPI_RESTAG_RANGETYPE,
+                CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.SpecificFlags), 0, 2);
             break;
 
         case 5: /* Address Granularity */
 
             Descriptor->Address64.Granularity = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_GRANULARITY,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_GRANULARITY,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Granularity));
             GranOp = InitializerOp;
             break;
@@ -159,7 +157,7 @@ RsDoQwordIoDescriptor (
         case 6: /* Address Min */
 
             Descriptor->Address64.Minimum = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_MINADDR,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_MINADDR,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Minimum));
             MinOp = InitializerOp;
             break;
@@ -167,7 +165,7 @@ RsDoQwordIoDescriptor (
         case 7: /* Address Max */
 
             Descriptor->Address64.Maximum = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_MAXADDR,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_MAXADDR,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Maximum));
             MaxOp = InitializerOp;
             break;
@@ -182,7 +180,7 @@ RsDoQwordIoDescriptor (
         case 9: /* Address Length */
 
             Descriptor->Address64.AddressLength = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_LENGTH,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_LENGTH,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.AddressLength));
             LengthOp = InitializerOp;
             break;
@@ -237,7 +235,7 @@ RsDoQwordIoDescriptor (
 
         case 12: /* ResourceTag */
 
-            UtAttachNamepathToOwner (Op, InitializerOp);
+            UtAttachNamepathToOwner (Info->DescriptorTypeOp, InitializerOp);
             break;
 
         case 13: /* Type */
@@ -271,10 +269,10 @@ RsDoQwordIoDescriptor (
         Descriptor->Address64.AddressLength,
         Descriptor->Address64.Granularity,
         Descriptor->Address64.Flags,
-        MinOp, MaxOp, LengthOp, GranOp, Op);
+        MinOp, MaxOp, LengthOp, GranOp, Info->DescriptorTypeOp);
 
     Rnode->BufferLength = sizeof (AML_RESOURCE_ADDRESS64) +
-                            OptionIndex + StringLength;
+        OptionIndex + StringLength;
     return (Rnode);
 }
 
@@ -283,9 +281,7 @@ RsDoQwordIoDescriptor (
  *
  * FUNCTION:    RsDoQwordMemoryDescriptor
  *
- * PARAMETERS:  Op                  - Parent resource descriptor parse node
- *              CurrentByteOffset   - Offset into the resource template AML
- *                                    buffer (to track references to the desc)
+ * PARAMETERS:  Info                - Parse Op and resource template offset
  *
  * RETURN:      Completed resource node
  *
@@ -295,8 +291,7 @@ RsDoQwordIoDescriptor (
 
 ASL_RESOURCE_NODE *
 RsDoQwordMemoryDescriptor (
-    ACPI_PARSE_OBJECT       *Op,
-    UINT32                  CurrentByteOffset)
+    ASL_RESOURCE_INFO       *Info)
 {
     AML_RESOURCE            *Descriptor;
     ACPI_PARSE_OBJECT       *InitializerOp;
@@ -308,19 +303,21 @@ RsDoQwordMemoryDescriptor (
     UINT8                   *OptionalFields;
     UINT16                  StringLength = 0;
     UINT32                  OptionIndex = 0;
+    UINT32                  CurrentByteOffset;
     UINT32                  i;
     BOOLEAN                 ResSourceIndex = FALSE;
 
 
-    InitializerOp = Op->Asl.Child;
+    InitializerOp = Info->DescriptorTypeOp->Asl.Child;
     StringLength = RsGetStringDataLength (InitializerOp);
+    CurrentByteOffset = Info->CurrentByteOffset;
 
     Rnode = RsAllocateResourceNode (
-                sizeof (AML_RESOURCE_ADDRESS64) + 1 + StringLength);
+        sizeof (AML_RESOURCE_ADDRESS64) + 1 + StringLength);
 
     Descriptor = Rnode->Buffer;
-    Descriptor->Address64.DescriptorType  = ACPI_RESOURCE_NAME_ADDRESS64;
-    Descriptor->Address64.ResourceType    = ACPI_ADDRESS_TYPE_MEMORY_RANGE;
+    Descriptor->Address64.DescriptorType = ACPI_RESOURCE_NAME_ADDRESS64;
+    Descriptor->Address64.ResourceType = ACPI_ADDRESS_TYPE_MEMORY_RANGE;
 
     /*
      * Initial descriptor length -- may be enlarged if there are
@@ -366,8 +363,8 @@ RsDoQwordMemoryDescriptor (
         case 4: /* Memory Type */
 
             RsSetFlagBits (&Descriptor->Address64.SpecificFlags, InitializerOp, 1, 0);
-            RsCreateBitField (InitializerOp, ACPI_RESTAG_MEMTYPE,
-                CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.SpecificFlags), 1);
+            RsCreateMultiBitField (InitializerOp, ACPI_RESTAG_MEMTYPE,
+                CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.SpecificFlags), 1, 2);
             break;
 
         case 5: /* Read/Write Type */
@@ -380,7 +377,7 @@ RsDoQwordMemoryDescriptor (
         case 6: /* Address Granularity */
 
             Descriptor->Address64.Granularity = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_GRANULARITY,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_GRANULARITY,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Granularity));
             GranOp = InitializerOp;
             break;
@@ -388,7 +385,7 @@ RsDoQwordMemoryDescriptor (
         case 7: /* Min Address */
 
             Descriptor->Address64.Minimum = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_MINADDR,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_MINADDR,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Minimum));
             MinOp = InitializerOp;
             break;
@@ -396,7 +393,7 @@ RsDoQwordMemoryDescriptor (
         case 8: /* Max Address */
 
             Descriptor->Address64.Maximum = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_MAXADDR,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_MAXADDR,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Maximum));
             MaxOp = InitializerOp;
             break;
@@ -404,14 +401,14 @@ RsDoQwordMemoryDescriptor (
         case 9: /* Translation Offset */
 
             Descriptor->Address64.TranslationOffset = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_TRANSLATION,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_TRANSLATION,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.TranslationOffset));
             break;
 
         case 10: /* Address Length */
 
             Descriptor->Address64.AddressLength = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_LENGTH,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_LENGTH,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.AddressLength));
             LengthOp = InitializerOp;
             break;
@@ -466,15 +463,15 @@ RsDoQwordMemoryDescriptor (
 
         case 13: /* ResourceTag */
 
-            UtAttachNamepathToOwner (Op, InitializerOp);
+            UtAttachNamepathToOwner (Info->DescriptorTypeOp, InitializerOp);
             break;
 
 
         case 14: /* Address Range */
 
             RsSetFlagBits (&Descriptor->Address64.SpecificFlags, InitializerOp, 3, 0);
-            RsCreateBitField (InitializerOp, ACPI_RESTAG_MEMATTRIBUTES,
-                CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.SpecificFlags), 3);
+            RsCreateMultiBitField (InitializerOp, ACPI_RESTAG_MEMATTRIBUTES,
+                CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.SpecificFlags), 3, 2);
             break;
 
         case 15: /* Type */
@@ -501,10 +498,10 @@ RsDoQwordMemoryDescriptor (
         Descriptor->Address64.AddressLength,
         Descriptor->Address64.Granularity,
         Descriptor->Address64.Flags,
-        MinOp, MaxOp, LengthOp, GranOp, Op);
+        MinOp, MaxOp, LengthOp, GranOp, Info->DescriptorTypeOp);
 
     Rnode->BufferLength = sizeof (AML_RESOURCE_ADDRESS64) +
-                            OptionIndex + StringLength;
+        OptionIndex + StringLength;
     return (Rnode);
 }
 
@@ -513,9 +510,7 @@ RsDoQwordMemoryDescriptor (
  *
  * FUNCTION:    RsDoQwordSpaceDescriptor
  *
- * PARAMETERS:  Op                  - Parent resource descriptor parse node
- *              CurrentByteOffset   - Offset into the resource template AML
- *                                    buffer (to track references to the desc)
+ * PARAMETERS:  Info                - Parse Op and resource template offset
  *
  * RETURN:      Completed resource node
  *
@@ -525,8 +520,7 @@ RsDoQwordMemoryDescriptor (
 
 ASL_RESOURCE_NODE *
 RsDoQwordSpaceDescriptor (
-    ACPI_PARSE_OBJECT       *Op,
-    UINT32                  CurrentByteOffset)
+    ASL_RESOURCE_INFO       *Info)
 {
     AML_RESOURCE            *Descriptor;
     ACPI_PARSE_OBJECT       *InitializerOp;
@@ -538,15 +532,17 @@ RsDoQwordSpaceDescriptor (
     UINT8                   *OptionalFields;
     UINT16                  StringLength = 0;
     UINT32                  OptionIndex = 0;
+    UINT32                  CurrentByteOffset;
     UINT32                  i;
     BOOLEAN                 ResSourceIndex = FALSE;
 
 
-    InitializerOp = Op->Asl.Child;
+    InitializerOp = Info->DescriptorTypeOp->Asl.Child;
     StringLength = RsGetStringDataLength (InitializerOp);
+    CurrentByteOffset = Info->CurrentByteOffset;
 
     Rnode = RsAllocateResourceNode (
-                sizeof (AML_RESOURCE_ADDRESS64) + 1 + StringLength);
+        sizeof (AML_RESOURCE_ADDRESS64) + 1 + StringLength);
 
     Descriptor = Rnode->Buffer;
     Descriptor->Address64.DescriptorType = ACPI_RESOURCE_NAME_ADDRESS64;
@@ -607,7 +603,7 @@ RsDoQwordSpaceDescriptor (
         case 6: /* Address Granularity */
 
             Descriptor->Address64.Granularity = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_GRANULARITY,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_GRANULARITY,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Granularity));
             GranOp = InitializerOp;
             break;
@@ -615,7 +611,7 @@ RsDoQwordSpaceDescriptor (
         case 7: /* Min Address */
 
             Descriptor->Address64.Minimum = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_MINADDR,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_MINADDR,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Minimum));
             MinOp = InitializerOp;
             break;
@@ -623,7 +619,7 @@ RsDoQwordSpaceDescriptor (
         case 8: /* Max Address */
 
             Descriptor->Address64.Maximum = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_MAXADDR,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_MAXADDR,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.Maximum));
             MaxOp = InitializerOp;
             break;
@@ -631,14 +627,14 @@ RsDoQwordSpaceDescriptor (
         case 9: /* Translation Offset */
 
             Descriptor->Address64.TranslationOffset = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_TRANSLATION,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_TRANSLATION,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.TranslationOffset));
             break;
 
         case 10: /* Address Length */
 
             Descriptor->Address64.AddressLength = InitializerOp->Asl.Value.Integer;
-            RsCreateByteField (InitializerOp, ACPI_RESTAG_LENGTH,
+            RsCreateQwordField (InitializerOp, ACPI_RESTAG_LENGTH,
                 CurrentByteOffset + ASL_RESDESC_OFFSET (Address64.AddressLength));
             LengthOp = InitializerOp;
             break;
@@ -693,7 +689,7 @@ RsDoQwordSpaceDescriptor (
 
         case 13: /* ResourceTag */
 
-            UtAttachNamepathToOwner (Op, InitializerOp);
+            UtAttachNamepathToOwner (Info->DescriptorTypeOp, InitializerOp);
             break;
 
         default:
@@ -713,9 +709,9 @@ RsDoQwordSpaceDescriptor (
         Descriptor->Address64.AddressLength,
         Descriptor->Address64.Granularity,
         Descriptor->Address64.Flags,
-        MinOp, MaxOp, LengthOp, GranOp, Op);
+        MinOp, MaxOp, LengthOp, GranOp, Info->DescriptorTypeOp);
 
     Rnode->BufferLength = sizeof (AML_RESOURCE_ADDRESS64) +
-                            OptionIndex + StringLength;
+        OptionIndex + StringLength;
     return (Rnode);
 }

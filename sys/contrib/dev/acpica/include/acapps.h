@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: acapps - common include for ACPI applications/tools
@@ -5,7 +6,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2016, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +45,7 @@
 #ifndef _ACAPPS
 #define _ACAPPS
 
+#include <stdio.h>
 
 #ifdef _MSC_VER                 /* disable some level-4 warnings */
 #pragma warning(disable:4100)   /* warning C4100: unreferenced formal parameter */
@@ -52,7 +54,7 @@
 /* Common info for tool signons */
 
 #define ACPICA_NAME                 "Intel ACPI Component Architecture"
-#define ACPICA_COPYRIGHT            "Copyright (c) 2000 - 2011 Intel Corporation"
+#define ACPICA_COPYRIGHT            "Copyright (c) 2000 - 2016 Intel Corporation"
 
 #if ACPI_MACHINE_WIDTH == 64
 #define ACPI_WIDTH          "-64"
@@ -81,8 +83,58 @@
     Prefix, ACPICA_COPYRIGHT, \
     Prefix
 
+/* Macros for usage messages */
+
+#define ACPI_USAGE_HEADER(Usage) \
+    AcpiOsPrintf ("Usage: %s\nOptions:\n", Usage);
+
+#define ACPI_USAGE_TEXT(Description) \
+    AcpiOsPrintf (Description);
+
+#define ACPI_OPTION(Name, Description) \
+    AcpiOsPrintf ("  %-20s%s\n", Name, Description);
+
+
+/* Check for unexpected exceptions */
+
+#define ACPI_CHECK_STATUS(Name, Status, Expected) \
+    if (Status != Expected) \
+    { \
+        AcpiOsPrintf ("Unexpected %s from %s (%s-%d)\n", \
+            AcpiFormatException (Status), #Name, _AcpiModuleName, __LINE__); \
+    }
+
+/* Check for unexpected non-AE_OK errors */
+
+
+#define ACPI_CHECK_OK(Name, Status)   ACPI_CHECK_STATUS (Name, Status, AE_OK);
+
 #define FILE_SUFFIX_DISASSEMBLY     "dsl"
-#define ACPI_TABLE_FILE_SUFFIX      ".dat"
+#define FILE_SUFFIX_BINARY_TABLE    ".dat" /* Needs the dot */
+
+
+/* acfileio */
+
+ACPI_STATUS
+AcGetAllTablesFromFile (
+    char                    *Filename,
+    UINT8                   GetOnlyAmlTables,
+    ACPI_NEW_TABLE_DESC     **ReturnListHead);
+
+BOOLEAN
+AcIsFileBinary (
+    FILE                    *File);
+
+ACPI_STATUS
+AcValidateTableHeader (
+    FILE                    *File,
+    long                    TableOffset);
+
+
+/* Values for GetOnlyAmlTables */
+
+#define ACPI_GET_ONLY_AML_TABLES    TRUE
+#define ACPI_GET_ALL_TABLES         FALSE
 
 
 /*
@@ -94,55 +146,23 @@ AcpiGetopt(
     char                    **argv,
     char                    *opts);
 
+int
+AcpiGetoptArgument (
+    int                     argc,
+    char                    **argv);
+
 extern int                  AcpiGbl_Optind;
 extern int                  AcpiGbl_Opterr;
+extern int                  AcpiGbl_SubOptChar;
 extern char                 *AcpiGbl_Optarg;
 
 
 /*
- * adisasm
+ * cmfsize - Common get file size function
  */
-ACPI_STATUS
-AdAmlDisassemble (
-    BOOLEAN                 OutToFile,
-    char                    *Filename,
-    char                    *Prefix,
-    char                    **OutFilename,
-    BOOLEAN                 GetAllTables);
-
-void
-AdPrintStatistics (
-    void);
-
-ACPI_STATUS
-AdFindDsdt(
-    UINT8                   **DsdtPtr,
-    UINT32                  *DsdtLength);
-
-void
-AdDumpTables (
-    void);
-
-ACPI_STATUS
-AdGetLocalTables (
-    char                    *Filename,
-    BOOLEAN                 GetAllTables);
-
-ACPI_STATUS
-AdParseTable (
-    ACPI_TABLE_HEADER       *Table,
-    ACPI_OWNER_ID           *OwnerId,
-    BOOLEAN                 LoadTable,
-    BOOLEAN                 External);
-
-ACPI_STATUS
-AdDisplayTables (
-    char                    *Filename,
-    ACPI_TABLE_HEADER       *Table);
-
-ACPI_STATUS
-AdDisplayStatistics (
-    void);
+UINT32
+CmGetFileSize (
+    ACPI_FILE               File);
 
 
 /*
@@ -205,4 +225,3 @@ AdWriteTable (
     char                    *OemTableId);
 
 #endif /* _ACAPPS */
-

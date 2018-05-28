@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Sam Leffler, Errno Consulting
  * Copyright (c) 2006 Atheros Communications, Inc.

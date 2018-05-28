@@ -1,12 +1,12 @@
-
+/* $MidnightBSD$ */
 /******************************************************************************
  *
- * Module Name: aslfiles - file I/O suppoert
+ * Module Name: aslfiles - File support functions
  *
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2016, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@
 
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
 #include <contrib/dev/acpica/include/acapps.h>
+#include <contrib/dev/acpica/compiler/dtcompiler.h>
 
 #define _COMPONENT          ACPI_COMPILER
         ACPI_MODULE_NAME    ("aslfiles")
@@ -53,322 +54,14 @@
 static FILE *
 FlOpenIncludeWithPrefix (
     char                    *PrefixDir,
+    ACPI_PARSE_OBJECT       *Op,
     char                    *Filename);
-
 
 #ifdef ACPI_OBSOLETE_FUNCTIONS
 ACPI_STATUS
 FlParseInputPathname (
     char                    *InputFilename);
 #endif
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AslAbort
- *
- * PARAMETERS:  None
- *
- * RETURN:      None
- *
- * DESCRIPTION: Dump the error log and abort the compiler.  Used for serious
- *              I/O errors
- *
- ******************************************************************************/
-
-void
-AslAbort (
-    void)
-{
-
-    AePrintErrorLog (ASL_FILE_STDOUT);
-    if (Gbl_DebugFlag)
-    {
-        /* Print error summary to the debug file */
-
-        AePrintErrorLog (ASL_FILE_STDERR);
-    }
-
-    exit (1);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlFileError
- *
- * PARAMETERS:  FileId              - Index into file info array
- *              ErrorId             - Index into error message array
- *
- * RETURN:      None
- *
- * DESCRIPTION: Decode errno to an error message and add the entire error
- *              to the error log.
- *
- ******************************************************************************/
-
-void
-FlFileError (
-    UINT32                  FileId,
-    UINT8                   ErrorId)
-{
-
-    sprintf (MsgBuffer, "\"%s\" (%s)", Gbl_Files[FileId].Filename,
-        strerror (errno));
-    AslCommonError (ASL_ERROR, ErrorId, 0, 0, 0, 0, NULL, MsgBuffer);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlOpenFile
- *
- * PARAMETERS:  FileId              - Index into file info array
- *              Filename            - file pathname to open
- *              Mode                - Open mode for fopen
- *
- * RETURN:      None
- *
- * DESCRIPTION: Open a file.
- *              NOTE: Aborts compiler on any error.
- *
- ******************************************************************************/
-
-void
-FlOpenFile (
-    UINT32                  FileId,
-    char                    *Filename,
-    char                    *Mode)
-{
-    FILE                    *File;
-
-
-    File = fopen (Filename, Mode);
-
-    Gbl_Files[FileId].Filename = Filename;
-    Gbl_Files[FileId].Handle   = File;
-
-    if (!File)
-    {
-        FlFileError (FileId, ASL_MSG_OPEN);
-        AslAbort ();
-    }
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlGetFileSize
- *
- * PARAMETERS:  FileId              - Index into file info array
- *
- * RETURN:      File Size
- *
- * DESCRIPTION: Get current file size. Uses seek-to-EOF. File must be open.
- *
- ******************************************************************************/
-
-UINT32
-FlGetFileSize (
-    UINT32                  FileId)
-{
-    FILE                    *fp;
-    UINT32                  FileSize;
-
-
-    fp = Gbl_Files[FileId].Handle;
-
-    fseek (fp, 0, SEEK_END);
-    FileSize = (UINT32) ftell (fp);
-    fseek (fp, 0, SEEK_SET);
-
-    return (FileSize);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlReadFile
- *
- * PARAMETERS:  FileId              - Index into file info array
- *              Buffer              - Where to place the data
- *              Length              - Amount to read
- *
- * RETURN:      Status.  AE_ERROR indicates EOF.
- *
- * DESCRIPTION: Read data from an open file.
- *              NOTE: Aborts compiler on any error.
- *
- ******************************************************************************/
-
-ACPI_STATUS
-FlReadFile (
-    UINT32                  FileId,
-    void                    *Buffer,
-    UINT32                  Length)
-{
-    UINT32                  Actual;
-
-
-    /* Read and check for error */
-
-    Actual = fread (Buffer, 1, Length, Gbl_Files[FileId].Handle);
-    if (Actual != Length)
-    {
-        if (feof (Gbl_Files[FileId].Handle))
-        {
-            /* End-of-file, just return error */
-
-            return (AE_ERROR);
-        }
-
-        FlFileError (FileId, ASL_MSG_READ);
-        AslAbort ();
-    }
-
-    return (AE_OK);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlWriteFile
- *
- * PARAMETERS:  FileId              - Index into file info array
- *              Buffer              - Data to write
- *              Length              - Amount of data to write
- *
- * RETURN:      None
- *
- * DESCRIPTION: Write data to an open file.
- *              NOTE: Aborts compiler on any error.
- *
- ******************************************************************************/
-
-void
-FlWriteFile (
-    UINT32                  FileId,
-    void                    *Buffer,
-    UINT32                  Length)
-{
-    UINT32                  Actual;
-
-
-    /* Write and check for error */
-
-    Actual = fwrite ((char *) Buffer, 1, Length, Gbl_Files[FileId].Handle);
-    if (Actual != Length)
-    {
-        FlFileError (FileId, ASL_MSG_WRITE);
-        AslAbort ();
-    }
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlPrintFile
- *
- * PARAMETERS:  FileId              - Index into file info array
- *              Format              - Printf format string
- *              ...                 - Printf arguments
- *
- * RETURN:      None
- *
- * DESCRIPTION: Formatted write to an open file.
- *              NOTE: Aborts compiler on any error.
- *
- ******************************************************************************/
-
-void
-FlPrintFile (
-    UINT32                  FileId,
-    char                    *Format,
-    ...)
-{
-    INT32                   Actual;
-    va_list                 Args;
-
-
-    va_start (Args, Format);
-
-    Actual = vfprintf (Gbl_Files[FileId].Handle, Format, Args);
-    va_end (Args);
-
-    if (Actual == -1)
-    {
-        FlFileError (FileId, ASL_MSG_WRITE);
-        AslAbort ();
-    }
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlSeekFile
- *
- * PARAMETERS:  FileId              - Index into file info array
- *              Offset              - Absolute byte offset in file
- *
- * RETURN:      None
- *
- * DESCRIPTION: Seek to absolute offset
- *              NOTE: Aborts compiler on any error.
- *
- ******************************************************************************/
-
-void
-FlSeekFile (
-    UINT32                  FileId,
-    long                    Offset)
-{
-    int                     Error;
-
-
-    Error = fseek (Gbl_Files[FileId].Handle, Offset, SEEK_SET);
-    if (Error)
-    {
-        FlFileError (FileId, ASL_MSG_SEEK);
-        AslAbort ();
-    }
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    FlCloseFile
- *
- * PARAMETERS:  FileId              - Index into file info array
- *
- * RETURN:      None
- *
- * DESCRIPTION: Close an open file.  Aborts compiler on error
- *
- ******************************************************************************/
-
-void
-FlCloseFile (
-    UINT32                  FileId)
-{
-    int                     Error;
-
-
-    if (!Gbl_Files[FileId].Handle)
-    {
-        return;
-    }
-
-    Error = fclose (Gbl_Files[FileId].Handle);
-    Gbl_Files[FileId].Handle = NULL;
-
-    if (Error)
-    {
-        FlFileError (FileId, ASL_MSG_CLOSE);
-        AslAbort ();
-    }
-
-    return;
-}
 
 
 /*******************************************************************************
@@ -385,11 +78,39 @@ FlCloseFile (
 
 void
 FlSetLineNumber (
-    ACPI_PARSE_OBJECT       *Op)
+    UINT32                  LineNumber)
 {
 
-    Gbl_CurrentLineNumber = (UINT32) Op->Asl.Value.Integer;
-    Gbl_LogicalLineNumber = (UINT32) Op->Asl.Value.Integer;
+    DbgPrint (ASL_PARSE_OUTPUT, "\n#line: New line number %u (old %u)\n",
+         LineNumber, Gbl_LogicalLineNumber);
+
+    Gbl_CurrentLineNumber = LineNumber;
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    FlSetFilename
+ *
+ * PARAMETERS:  Op        - Parse node for the LINE asl statement
+ *
+ * RETURN:      None.
+ *
+ * DESCRIPTION: Set the current filename
+ *
+ ******************************************************************************/
+
+void
+FlSetFilename (
+    char                    *Filename)
+{
+
+    DbgPrint (ASL_PARSE_OUTPUT, "\n#line: New filename %s (old %s)\n",
+         Filename, Gbl_Files[ASL_FILE_INPUT].Filename);
+
+    /* No need to free any existing filename */
+
+    Gbl_Files[ASL_FILE_INPUT].Filename = Filename;
 }
 
 
@@ -462,6 +183,107 @@ FlAddIncludeDirectory (
 
 /*******************************************************************************
  *
+ * FUNCTION:    FlMergePathnames
+ *
+ * PARAMETERS:  PrefixDir       - Prefix directory pathname. Can be NULL or
+ *                                a zero length string.
+ *              FilePathname    - The include filename from the source ASL.
+ *
+ * RETURN:      Merged pathname string
+ *
+ * DESCRIPTION: Merge two pathnames that (probably) have common elements, to
+ *              arrive at a minimal length string. Merge can occur if the
+ *              FilePathname is relative to the PrefixDir.
+ *
+ ******************************************************************************/
+
+char *
+FlMergePathnames (
+    char                    *PrefixDir,
+    char                    *FilePathname)
+{
+    char                    *CommonPath;
+    char                    *Pathname;
+    char                    *LastElement;
+
+
+    DbgPrint (ASL_PARSE_OUTPUT, "Include: Prefix path - \"%s\"\n"
+        "Include: FilePathname - \"%s\"\n",
+         PrefixDir, FilePathname);
+
+    /*
+     * If there is no prefix directory or if the file pathname is absolute,
+     * just return the original file pathname
+     */
+    if (!PrefixDir || (!*PrefixDir) ||
+        (*FilePathname == '/') ||
+         (FilePathname[1] == ':'))
+    {
+        Pathname = UtStringCacheCalloc (strlen (FilePathname) + 1);
+        strcpy (Pathname, FilePathname);
+        goto ConvertBackslashes;
+    }
+
+    /* Need a local copy of the prefix directory path */
+
+    CommonPath = UtStringCacheCalloc (strlen (PrefixDir) + 1);
+    strcpy (CommonPath, PrefixDir);
+
+    /*
+     * Walk forward through the file path, and simultaneously backward
+     * through the prefix directory path until there are no more
+     * relative references at the start of the file path.
+     */
+    while (*FilePathname && (!strncmp (FilePathname, "../", 3)))
+    {
+        /* Remove last element of the prefix directory path */
+
+        LastElement = strrchr (CommonPath, '/');
+        if (!LastElement)
+        {
+            goto ConcatenatePaths;
+        }
+
+        *LastElement = 0;   /* Terminate CommonPath string */
+        FilePathname += 3;  /* Point to next path element */
+    }
+
+    /*
+     * Remove the last element of the prefix directory path (it is the same as
+     * the first element of the file pathname), and build the final merged
+     * pathname.
+     */
+    LastElement = strrchr (CommonPath, '/');
+    if (LastElement)
+    {
+        *LastElement = 0;
+    }
+
+    /* Build the final merged pathname */
+
+ConcatenatePaths:
+    Pathname = UtStringCacheCalloc (
+        strlen (CommonPath) + strlen (FilePathname) + 2);
+    if (LastElement && *CommonPath)
+    {
+        strcpy (Pathname, CommonPath);
+        strcat (Pathname, "/");
+    }
+    strcat (Pathname, FilePathname);
+
+    /* Convert all backslashes to normal slashes */
+
+ConvertBackslashes:
+    UtConvertBackslashes (Pathname);
+
+    DbgPrint (ASL_PARSE_OUTPUT, "Include: Merged Pathname - \"%s\"\n",
+         Pathname);
+    return (Pathname);
+}
+
+
+/*******************************************************************************
+ *
  * FUNCTION:    FlOpenIncludeWithPrefix
  *
  * PARAMETERS:  PrefixDir       - Prefix directory pathname. Can be a zero
@@ -477,35 +299,64 @@ FlAddIncludeDirectory (
 static FILE *
 FlOpenIncludeWithPrefix (
     char                    *PrefixDir,
+    ACPI_PARSE_OBJECT       *Op,
     char                    *Filename)
 {
     FILE                    *IncludeFile;
     char                    *Pathname;
+    UINT32                  OriginalLineNumber;
 
 
     /* Build the full pathname to the file */
 
-    Pathname = ACPI_ALLOCATE (strlen (PrefixDir) + strlen (Filename) + 1);
+    Pathname = FlMergePathnames (PrefixDir, Filename);
 
-    strcpy (Pathname, PrefixDir);
-    strcat (Pathname, Filename);
-
-    DbgPrint (ASL_PARSE_OUTPUT, "\nAttempt to open include file: path %s\n\n",
+    DbgPrint (ASL_PARSE_OUTPUT, "Include: Opening file - \"%s\"\n\n",
         Pathname);
 
     /* Attempt to open the file, push if successful */
 
     IncludeFile = fopen (Pathname, "r");
-    if (IncludeFile)
+    if (!IncludeFile)
     {
-        /* Push the include file on the open input file stack */
-
-        AslPushInputFileStack (IncludeFile, Pathname);
-        return (IncludeFile);
+        fprintf (stderr, "Could not open include file %s\n", Pathname);
+        ACPI_FREE (Pathname);
+        return (NULL);
     }
 
-    ACPI_FREE (Pathname);
-    return (NULL);
+    /*
+     * Check the entire include file for any # preprocessor directives.
+     * This is because there may be some confusion between the #include
+     * preprocessor directive and the ASL Include statement. A file included
+     * by the ASL include cannot contain preprocessor directives because
+     * the preprocessor has already run by the time the ASL include is
+     * recognized (by the compiler, not the preprocessor.)
+     *
+     * Note: DtGetNextLine strips/ignores comments.
+     * Save current line number since DtGetNextLine modifies it.
+     */
+    Gbl_CurrentLineNumber--;
+    OriginalLineNumber = Gbl_CurrentLineNumber;
+
+    while (DtGetNextLine (IncludeFile, DT_ALLOW_MULTILINE_QUOTES) != ASL_EOF)
+    {
+        if (Gbl_CurrentLineBuffer[0] == '#')
+        {
+            AslError (ASL_ERROR, ASL_MSG_INCLUDE_FILE,
+                Op, "use #include instead");
+        }
+    }
+
+    Gbl_CurrentLineNumber = OriginalLineNumber;
+
+    /* Must seek back to the start of the file */
+
+    fseek (IncludeFile, 0, SEEK_SET);
+
+    /* Push the include file on the open input file stack */
+
+    AslPushInputFileStack (IncludeFile, Pathname);
+    return (IncludeFile);
 }
 
 
@@ -545,7 +396,7 @@ FlOpenIncludeFile (
      * Flush out the "include ()" statement on this line, start
      * the actual include file on the next line
      */
-    ResetCurrentLineBuffer ();
+    AslResetCurrentLineBuffer ();
     FlPrintFile (ASL_FILE_SOURCE_OUTPUT, "\n");
     Gbl_CurrentLineOffset++;
 
@@ -558,7 +409,7 @@ FlOpenIncludeFile (
         (Op->Asl.Value.String[0] == '\\') ||
         (Op->Asl.Value.String[1] == ':'))
     {
-        IncludeFile = FlOpenIncludeWithPrefix ("", Op->Asl.Value.String);
+        IncludeFile = FlOpenIncludeWithPrefix ("", Op, Op->Asl.Value.String);
         if (!IncludeFile)
         {
             goto ErrorExit;
@@ -574,7 +425,8 @@ FlOpenIncludeFile (
      *
      * Construct the file pathname from the global directory name.
      */
-    IncludeFile = FlOpenIncludeWithPrefix (Gbl_DirectoryPath, Op->Asl.Value.String);
+    IncludeFile = FlOpenIncludeWithPrefix (
+        Gbl_DirectoryPath, Op, Op->Asl.Value.String);
     if (IncludeFile)
     {
         return;
@@ -587,7 +439,8 @@ FlOpenIncludeFile (
     NextDir = Gbl_IncludeDirList;
     while (NextDir)
     {
-        IncludeFile = FlOpenIncludeWithPrefix (NextDir->Dir, Op->Asl.Value.String);
+        IncludeFile = FlOpenIncludeWithPrefix (
+            NextDir->Dir, Op, Op->Asl.Value.String);
         if (IncludeFile)
         {
             return;
@@ -626,7 +479,7 @@ FlOpenInputFile (
 
     /* Open the input ASL file, text mode */
 
-    FlOpenFile (ASL_FILE_INPUT, InputFilename, "r");
+    FlOpenFile (ASL_FILE_INPUT, InputFilename, "rt");
     AslCompilerin = Gbl_Files[ASL_FILE_INPUT].Handle;
 
     return (AE_OK);
@@ -641,7 +494,7 @@ FlOpenInputFile (
  *
  * RETURN:      Status
  *
- * DESCRIPTION: Create the output filename (*.AML) and open the file.  The file
+ * DESCRIPTION: Create the output filename (*.AML) and open the file. The file
  *              is created in the same directory as the parent input file.
  *
  ******************************************************************************/
@@ -667,6 +520,8 @@ FlOpenAmlOutputFile (
                 0, 0, 0, 0, NULL, NULL);
             return (AE_ERROR);
         }
+
+        Gbl_Files[ASL_FILE_AML_OUTPUT].Filename = Filename;
     }
 
     /* Open the output AML file in binary mode */
@@ -696,6 +551,33 @@ FlOpenMiscOutputFiles (
     char                    *Filename;
 
 
+     /* Create/Open a map file if requested */
+
+    if (Gbl_MapfileFlag)
+    {
+        Filename = FlGenerateFilename (FilenamePrefix, FILE_SUFFIX_MAP);
+        if (!Filename)
+        {
+            AslCommonError (ASL_ERROR, ASL_MSG_LISTING_FILENAME,
+                0, 0, 0, 0, NULL, NULL);
+            return (AE_ERROR);
+        }
+
+        /* Open the hex file, text mode (closed at compiler exit) */
+
+        FlOpenFile (ASL_FILE_MAP_OUTPUT, Filename, "w+t");
+
+        AslCompilerSignon (ASL_FILE_MAP_OUTPUT);
+        AslCompilerFileHeader (ASL_FILE_MAP_OUTPUT);
+    }
+
+    /* All done for disassembler */
+
+    if (Gbl_FileType == ASL_INPUT_TYPE_BINARY_ACPI_TABLE)
+    {
+        return (AE_OK);
+    }
+
     /* Create/Open a hex output file if asked */
 
     if (Gbl_HexOutputFlag)
@@ -710,7 +592,7 @@ FlOpenMiscOutputFiles (
 
         /* Open the hex file, text mode */
 
-        FlOpenFile (ASL_FILE_HEX_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_HEX_OUTPUT, Filename, "w+t");
 
         AslCompilerSignon (ASL_FILE_HEX_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_HEX_OUTPUT);
@@ -730,14 +612,44 @@ FlOpenMiscOutputFiles (
 
         /* Open the debug file as STDERR, text mode */
 
-        /* TBD: hide this behind a FlReopenFile function */
-
         Gbl_Files[ASL_FILE_DEBUG_OUTPUT].Filename = Filename;
         Gbl_Files[ASL_FILE_DEBUG_OUTPUT].Handle =
             freopen (Filename, "w+t", stderr);
 
+        if (!Gbl_Files[ASL_FILE_DEBUG_OUTPUT].Handle)
+        {
+            /*
+             * A problem with freopen is that on error, we no longer
+             * have stderr and cannot emit normal error messages.
+             * Emit error to stdout, close files, and exit.
+             */
+            fprintf (stdout,
+                "\nCould not open debug output file: %s\n\n", Filename);
+
+            CmCleanupAndExit ();
+            exit (1);
+        }
+
         AslCompilerSignon (ASL_FILE_DEBUG_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_DEBUG_OUTPUT);
+    }
+
+    /* Create/Open a cross-reference output file if asked */
+
+    if (Gbl_CrossReferenceOutput)
+    {
+        Filename = FlGenerateFilename (FilenamePrefix, FILE_SUFFIX_XREF);
+        if (!Filename)
+        {
+            AslCommonError (ASL_ERROR, ASL_MSG_DEBUG_FILENAME,
+                0, 0, 0, 0, NULL, NULL);
+            return (AE_ERROR);
+        }
+
+        FlOpenFile (ASL_FILE_XREF_OUTPUT, Filename, "w+t");
+
+        AslCompilerSignon (ASL_FILE_XREF_OUTPUT);
+        AslCompilerFileHeader (ASL_FILE_XREF_OUTPUT);
     }
 
     /* Create/Open a listing output file if asked */
@@ -754,11 +666,45 @@ FlOpenMiscOutputFiles (
 
         /* Open the listing file, text mode */
 
-        FlOpenFile (ASL_FILE_LISTING_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_LISTING_OUTPUT, Filename, "w+t");
 
         AslCompilerSignon (ASL_FILE_LISTING_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_LISTING_OUTPUT);
     }
+
+    /* Create the preprocessor output temp file if preprocessor enabled */
+
+    if (Gbl_PreprocessFlag)
+    {
+        Filename = FlGenerateFilename (FilenamePrefix, FILE_SUFFIX_PREPROCESSOR);
+        if (!Filename)
+        {
+            AslCommonError (ASL_ERROR, ASL_MSG_PREPROCESSOR_FILENAME,
+                0, 0, 0, 0, NULL, NULL);
+            return (AE_ERROR);
+        }
+
+        FlOpenFile (ASL_FILE_PREPROCESSOR, Filename, "w+t");
+    }
+
+    /*
+     * Create the "user" preprocessor output file if -li flag set.
+     * Note, this file contains no embedded #line directives.
+     */
+    if (Gbl_PreprocessorOutputFlag)
+    {
+        Filename = FlGenerateFilename (FilenamePrefix, FILE_SUFFIX_PREPROC_USER);
+        if (!Filename)
+        {
+            AslCommonError (ASL_ERROR, ASL_MSG_PREPROCESSOR_FILENAME,
+                0, 0, 0, 0, NULL, NULL);
+            return (AE_ERROR);
+        }
+
+        FlOpenFile (ASL_FILE_PREPROCESSOR_USER, Filename, "w+t");
+    }
+
+    /* All done for data table compiler */
 
     if (Gbl_FileType == ASL_INPUT_TYPE_ASCII_DATA)
     {
@@ -782,6 +728,10 @@ FlOpenMiscOutputFiles (
      */
     FlOpenFile (ASL_FILE_SOURCE_OUTPUT, Filename, "w+b");
 
+/*
+// TBD: TEMP
+//    AslCompilerin = Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Handle;
+*/
     /* Create/Open a assembly code source output file if asked */
 
     if (Gbl_AsmOutputFlag)
@@ -796,7 +746,7 @@ FlOpenMiscOutputFiles (
 
         /* Open the assembly code source file, text mode */
 
-        FlOpenFile (ASL_FILE_ASM_SOURCE_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_ASM_SOURCE_OUTPUT, Filename, "w+t");
 
         AslCompilerSignon (ASL_FILE_ASM_SOURCE_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_ASM_SOURCE_OUTPUT);
@@ -816,11 +766,32 @@ FlOpenMiscOutputFiles (
 
         /* Open the C code source file, text mode */
 
-        FlOpenFile (ASL_FILE_C_SOURCE_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_C_SOURCE_OUTPUT, Filename, "w+t");
 
         FlPrintFile (ASL_FILE_C_SOURCE_OUTPUT, "/*\n");
         AslCompilerSignon (ASL_FILE_C_SOURCE_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_C_SOURCE_OUTPUT);
+    }
+
+    /* Create/Open a C code source output file for the offset table if asked */
+
+    if (Gbl_C_OffsetTableFlag)
+    {
+        Filename = FlGenerateFilename (FilenamePrefix, FILE_SUFFIX_C_OFFSET);
+        if (!Filename)
+        {
+            AslCommonError (ASL_ERROR, ASL_MSG_LISTING_FILENAME,
+                0, 0, 0, 0, NULL, NULL);
+            return (AE_ERROR);
+        }
+
+        /* Open the C code source file, text mode */
+
+        FlOpenFile (ASL_FILE_C_OFFSET_OUTPUT, Filename, "w+t");
+
+        FlPrintFile (ASL_FILE_C_OFFSET_OUTPUT, "/*\n");
+        AslCompilerSignon (ASL_FILE_C_OFFSET_OUTPUT);
+        AslCompilerFileHeader (ASL_FILE_C_OFFSET_OUTPUT);
     }
 
     /* Create/Open a assembly include output file if asked */
@@ -837,7 +808,7 @@ FlOpenMiscOutputFiles (
 
         /* Open the assembly include file, text mode */
 
-        FlOpenFile (ASL_FILE_ASM_INCLUDE_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_ASM_INCLUDE_OUTPUT, Filename, "w+t");
 
         AslCompilerSignon (ASL_FILE_ASM_INCLUDE_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_ASM_INCLUDE_OUTPUT);
@@ -857,7 +828,7 @@ FlOpenMiscOutputFiles (
 
         /* Open the C include file, text mode */
 
-        FlOpenFile (ASL_FILE_C_INCLUDE_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_C_INCLUDE_OUTPUT, Filename, "w+t");
 
         FlPrintFile (ASL_FILE_C_INCLUDE_OUTPUT, "/*\n");
         AslCompilerSignon (ASL_FILE_C_INCLUDE_OUTPUT);
@@ -878,7 +849,7 @@ FlOpenMiscOutputFiles (
 
         /* Open the namespace file, text mode */
 
-        FlOpenFile (ASL_FILE_NAMESPACE_OUTPUT, Filename, "w+");
+        FlOpenFile (ASL_FILE_NAMESPACE_OUTPUT, Filename, "w+t");
 
         AslCompilerSignon (ASL_FILE_NAMESPACE_OUTPUT);
         AslCompilerFileHeader (ASL_FILE_NAMESPACE_OUTPUT);
@@ -951,8 +922,7 @@ FlParseInputPathname (
         *(Substring+1) = 0;
     }
 
+    UtConvertBackslashes (Gbl_OutputFilenamePrefix);
     return (AE_OK);
 }
 #endif
-
-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /***************************************************************************\
 |*                                                                           *|
 |*       Copyright 2001-2004 NVIDIA Corporation.  All Rights Reserved.       *|
@@ -26,7 +27,7 @@
 
 #include "phy.h"
 
-#define HDO_VERSION_STRING "HDR O: $Revision: 1.1.1.2 $";
+#define HDO_VERSION_STRING "HDR O: $Revision: #21 $";
 
 // This is the maximum packet size that we will be sending
 // #define MAX_PACKET_SIZE     2048

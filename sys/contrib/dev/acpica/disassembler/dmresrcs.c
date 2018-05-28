@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: dmresrcs.c - "Small" Resource Descriptor disassembly

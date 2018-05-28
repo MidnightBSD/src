@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: dtsubtable.c - handling of subtables within ACPI tables
@@ -5,7 +6,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2016, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,8 +42,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  */
 
-#define __DTSUBTABLE_C__
-
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
 #include <contrib/dev/acpica/compiler/dtcompiler.h>
 
@@ -73,14 +72,16 @@ DtCreateSubtable (
     DT_SUBTABLE             **RetSubtable)
 {
     DT_SUBTABLE             *Subtable;
+    char                    *String;
 
 
-    Subtable = UtLocalCalloc (sizeof (DT_SUBTABLE));
+    Subtable = UtSubtableCacheCalloc ();
 
     /* Create a new buffer for the subtable data */
 
-    Subtable->Buffer = UtLocalCalloc (Length);
-    ACPI_MEMCPY (Subtable->Buffer, Buffer, Length);
+    String = UtStringCacheCalloc (Length);
+    Subtable->Buffer = ACPI_CAST_PTR (UINT8, String);
+    memcpy (Subtable->Buffer, Buffer, Length);
 
     Subtable->Length = Length;
     Subtable->TotalLength = Length;
@@ -112,6 +113,7 @@ DtInsertSubtable (
 
     Subtable->Peer = NULL;
     Subtable->Parent = ParentTable;
+    Subtable->Depth = ParentTable->Depth + 1;
 
     /* Link the new entry into the child list */
 
@@ -296,6 +298,11 @@ DtGetSubtableLength (
 
     for (; Info->Name; Info++)
     {
+        if (Info->Opcode == ACPI_DMT_EXTRA_TEXT)
+        {
+            continue;
+        }
+
         if (!Field)
         {
             goto Error;
@@ -306,14 +313,22 @@ DtGetSubtableLength (
         switch (Info->Opcode)
         {
         case ACPI_DMT_GAS:
+
             Step = 5;
             break;
 
         case ACPI_DMT_HESTNTFY:
+
             Step = 9;
             break;
 
+        case ACPI_DMT_IORTMEM:
+
+            Step = 10;
+            break;
+
         default:
+
             Step = 1;
             break;
         }
@@ -365,6 +380,6 @@ DtSetSubtableLength (
         return;
     }
 
-    ACPI_MEMCPY (Subtable->LengthField, &Subtable->TotalLength,
+    memcpy (Subtable->LengthField, &Subtable->TotalLength,
         Subtable->SizeOfLengthField);
 }

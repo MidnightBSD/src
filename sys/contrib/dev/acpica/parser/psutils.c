@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: psutils - Parser miscellaneous utilities (Parser only)

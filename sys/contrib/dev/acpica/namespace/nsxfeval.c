@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: nsxfeval - Public interfaces to the ACPI subsystem

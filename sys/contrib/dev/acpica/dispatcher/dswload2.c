@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: dswload2 - Dispatcher second pass namespace load callbacks

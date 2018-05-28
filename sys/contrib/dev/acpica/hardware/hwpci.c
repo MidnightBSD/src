@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: hwpci - Obtain PCI bus, device, and function numbers

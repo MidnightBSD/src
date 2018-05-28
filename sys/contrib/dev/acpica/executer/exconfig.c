@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: exconfig - Namespace reconfiguration (Load/Unload opcodes)

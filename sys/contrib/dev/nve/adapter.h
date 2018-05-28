@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /***************************************************************************\
 |*                                                                           *|
 |*       Copyright 2001-2004 NVIDIA Corporation.  All Rights Reserved.       *|
@@ -27,7 +28,7 @@
 extern "C" {
 #endif
 
-#define HDA_VERSION_STRING "HDR A: $Revision: 1.2 $"
+#define HDA_VERSION_STRING "HDR A: $Revision: #46 $"
 
 #ifdef MODS_NETWORK_BUILD
 #ifndef _DRVAPP_H_

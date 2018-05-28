@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: exfield - ACPI AML (p-code) execution - field manipulation

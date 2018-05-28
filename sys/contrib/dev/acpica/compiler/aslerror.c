@@ -1,4 +1,4 @@
-
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslerror - Error handling and statistics
@@ -6,7 +6,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2011, Intel Corp.
+ * Copyright (C) 2000 - 2016, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  */
 
-#define ASL_EXCEPTIONS
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
 
 #define _COMPONENT          ACPI_COMPILER
@@ -54,6 +53,48 @@ static void
 AeAddToErrorLog (
     ASL_ERROR_MSG           *Enode);
 
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AslAbort
+ *
+ * PARAMETERS:  None
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Dump the error log and abort the compiler. Used for serious
+ *              I/O errors.
+ *
+ ******************************************************************************/
+
+void
+AslAbort (
+    void)
+{
+
+    AePrintErrorLog (ASL_FILE_STDERR);
+    if (Gbl_DebugFlag)
+    {
+        /* Print error summary to stdout also */
+
+        AePrintErrorLog (ASL_FILE_STDOUT);
+    }
+
+    exit (1);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AeClearErrorLog
+ *
+ * PARAMETERS:  None
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Empty the error list
+ *
+ ******************************************************************************/
 
 void
 AeClearErrorLog (
@@ -83,7 +124,7 @@ AeClearErrorLog (
  *
  * RETURN:      None
  *
- * DESCRIPTION: Add a new error node to the error log.  The error log is
+ * DESCRIPTION: Add a new error node to the error log. The error log is
  *              ordered by the "logical" line number (cumulative line number
  *              including all include files.)
  *
@@ -163,14 +204,15 @@ AePrintException (
     int                     Actual;
     size_t                  RActual;
     UINT32                  MsgLength;
-    char                    *MainMessage;
+    const char              *MainMessage;
     char                    *ExtraMessage;
     UINT32                  SourceColumn;
     UINT32                  ErrorColumn;
     FILE                    *OutputFile;
-    FILE                    *SourceFile;
+    FILE                    *SourceFile = NULL;
     long                    FileSize;
     BOOLEAN                 PrematureEOF = FALSE;
+    UINT32                  Total = 0;
 
 
     if (Gbl_NoErrors)
@@ -188,7 +230,18 @@ AePrintException (
 
         switch (Enode->Level)
         {
+        case ASL_WARNING:
+        case ASL_WARNING2:
+        case ASL_WARNING3:
+
+            if (!Gbl_DisplayWarnings)
+            {
+                return;
+            }
+            break;
+
         case ASL_REMARK:
+
             if (!Gbl_DisplayRemarks)
             {
                 return;
@@ -196,6 +249,7 @@ AePrintException (
             break;
 
         case ASL_OPTIMIZATION:
+
             if (!Gbl_DisplayOptimizations)
             {
                 return;
@@ -203,32 +257,38 @@ AePrintException (
             break;
 
         default:
+
             break;
         }
     }
 
-    /* Get the file handles */
+    /* Get the various required file handles */
 
     OutputFile = Gbl_Files[FileId].Handle;
 
-    /* Use the merged header/source file if present, otherwise use input file */
-
-    SourceFile = Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Handle;
-    if (!SourceFile)
+    if (!Enode->SourceLine)
     {
-        SourceFile = Gbl_Files[ASL_FILE_INPUT].Handle;
-    }
-
-    if (SourceFile)
-    {
-        /* Determine if the error occurred at source file EOF */
-
-        fseek (SourceFile, 0, SEEK_END);
-        FileSize = ftell (SourceFile);
-
-        if ((long) Enode->LogicalByteOffset >= FileSize)
+        /*
+         * Use the merged header/source file if present, otherwise
+         * use input file
+         */
+        SourceFile = Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Handle;
+        if (!SourceFile)
         {
-            PrematureEOF = TRUE;
+            SourceFile = Gbl_Files[ASL_FILE_INPUT].Handle;
+        }
+
+        if (SourceFile)
+        {
+            /* Determine if the error occurred at source file EOF */
+
+            fseek (SourceFile, 0, SEEK_END);
+            FileSize = ftell (SourceFile);
+
+            if ((long) Enode->LogicalByteOffset >= FileSize)
+            {
+                PrematureEOF = TRUE;
+            }
         }
     }
 
@@ -243,136 +303,191 @@ AePrintException (
     {
         if (Gbl_VerboseErrors)
         {
-            fprintf (OutputFile, "%6s", Enode->Filename);
+            fprintf (OutputFile, "%-8s", Enode->Filename);
 
             if (Enode->LineNumber)
             {
-                fprintf (OutputFile, " %6u: ", Enode->LineNumber);
-
-                /*
-                 * If not at EOF, get the corresponding source code line and
-                 * display it. Don't attempt this if we have a premature EOF
-                 * condition.
-                 */
-                if (!PrematureEOF)
+                if (Enode->SourceLine)
                 {
+                    fprintf (OutputFile, " %6u: %s",
+                        Enode->LineNumber, Enode->SourceLine);
+                }
+                else
+                {
+                    fprintf (OutputFile, " %6u: ", Enode->LineNumber);
+
                     /*
-                     * Seek to the offset in the combined source file, read
-                     * the source line, and write it to the output.
+                     * If not at EOF, get the corresponding source code line
+                     * and display it. Don't attempt this if we have a
+                     * premature EOF condition.
                      */
-                    Actual = fseek (SourceFile, (long) Enode->LogicalByteOffset,
-                                (int) SEEK_SET);
-                    if (Actual)
+                    if (!PrematureEOF)
                     {
-                        fprintf (OutputFile,
-                            "[*** iASL: Seek error on source code temp file %s ***]",
-                            Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Filename);
-                    }
-                    else
-                    {
-                        RActual = fread (&SourceByte, 1, 1, SourceFile);
-                        if (!RActual)
+                        /*
+                         * Seek to the offset in the combined source file,
+                         * read the source line, and write it to the output.
+                         */
+                        Actual = fseek (SourceFile,
+                            (long) Enode->LogicalByteOffset, (int) SEEK_SET);
+                        if (Actual)
                         {
                             fprintf (OutputFile,
-                                "[*** iASL: Read error on source code temp file %s ***]",
+                                "[*** iASL: Seek error on source code temp file %s ***]",
                                 Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Filename);
                         }
-
-                        else while (RActual && SourceByte && (SourceByte != '\n'))
+                        else
                         {
-                            fwrite (&SourceByte, 1, 1, OutputFile);
                             RActual = fread (&SourceByte, 1, 1, SourceFile);
+                            if (RActual != 1)
+                            {
+                                fprintf (OutputFile,
+                                    "[*** iASL: Read error on source code temp file %s ***]",
+                                    Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Filename);
+                            }
+                            else
+                            {
+                                /* Read/write the source line, up to the maximum line length */
+
+                                while (RActual && SourceByte && (SourceByte != '\n'))
+                                {
+                                    if (Total < 256)
+                                    {
+                                        /* After the max line length, we will just read the line, no write */
+
+                                        if (fwrite (&SourceByte, 1, 1, OutputFile) != 1)
+                                        {
+                                            printf ("[*** iASL: Write error on output file ***]\n");
+                                            return;
+                                        }
+                                    }
+                                    else if (Total == 256)
+                                    {
+                                        fprintf (OutputFile,
+                                            "\n[*** iASL: Very long input line, message below refers to column %u ***]",
+                                            Enode->Column);
+                                    }
+
+                                    RActual = fread (&SourceByte, 1, 1, SourceFile);
+                                    if (RActual != 1)
+                                    {
+                                        fprintf (OutputFile,
+                                            "[*** iASL: Read error on source code temp file %s ***]",
+                                            Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Filename);
+                                        return;
+                                    }
+                                    Total++;
+                                }
+                            }
                         }
                     }
-                }
 
-                fprintf (OutputFile, "\n");
+                    fprintf (OutputFile, "\n");
+                }
             }
         }
         else
         {
+            /*
+             * Less verbose version of the error message, enabled via the
+             * -vi switch. The format is compatible with MS Visual Studio.
+             */
             fprintf (OutputFile, "%s", Enode->Filename);
 
             if (Enode->LineNumber)
             {
-                fprintf (OutputFile, "(%u) : ", Enode->LineNumber);
+                fprintf (OutputFile, "(%u) : ",
+                    Enode->LineNumber);
             }
         }
     }
 
-    /* NULL message ID, just print the raw message */
+    /* If a NULL message ID, just print the raw message */
 
     if (Enode->MessageId == 0)
     {
         fprintf (OutputFile, "%s\n", Enode->Message);
+        return;
     }
-    else
+
+    /* Decode the message ID */
+
+    fprintf (OutputFile, "%s %4.4d -",
+        AeDecodeExceptionLevel (Enode->Level),
+        AeBuildFullExceptionCode (Enode->Level, Enode->MessageId));
+
+    MainMessage = AeDecodeMessageId (Enode->MessageId);
+    ExtraMessage = Enode->Message;
+
+    /* If a NULL line number, just print the decoded message */
+
+    if (!Enode->LineNumber)
     {
-        /* Decode the message ID */
+        fprintf (OutputFile, " %s %s\n\n", MainMessage, ExtraMessage);
+        return;
+    }
 
-        fprintf (OutputFile, "%s %4.4d - ",
-                    AslErrorLevel[Enode->Level],
-                    Enode->MessageId + ((Enode->Level+1) * 1000));
+    MsgLength = strlen (MainMessage);
+    if (MsgLength == 0)
+    {
+        /* Use the secondary/extra message as main message */
 
-        MainMessage = AslMessages[Enode->MessageId];
-        ExtraMessage = Enode->Message;
-
-        if (Enode->LineNumber)
+        MainMessage = Enode->Message;
+        if (!MainMessage)
         {
-            MsgLength = strlen (MainMessage);
-            if (MsgLength == 0)
-            {
-                MainMessage = Enode->Message;
+            MainMessage = "";
+        }
 
-                MsgLength = strlen (MainMessage);
-                ExtraMessage = NULL;
-            }
+        MsgLength = strlen (MainMessage);
+        ExtraMessage = NULL;
+    }
 
-            if (Gbl_VerboseErrors && !PrematureEOF)
-            {
-                SourceColumn = Enode->Column + Enode->FilenameLength + 6 + 2;
-                ErrorColumn = ASL_ERROR_LEVEL_LENGTH + 5 + 2 + 1;
-
-                if ((MsgLength + ErrorColumn) < (SourceColumn - 1))
-                {
-                    fprintf (OutputFile, "%*s%s",
-                        (int) ((SourceColumn - 1) - ErrorColumn),
-                        MainMessage, " ^ ");
-                }
-                else
-                {
-                    fprintf (OutputFile, "%*s %s",
-                        (int) ((SourceColumn - ErrorColumn) + 1), "^",
-                        MainMessage);
-                }
-            }
-            else
-            {
-                fprintf (OutputFile, " %s", MainMessage);
-            }
-
-            /* Print the extra info message if present */
-
-            if (ExtraMessage)
-            {
-                fprintf (OutputFile, " (%s)", ExtraMessage);
-            }
-
-            if (PrematureEOF)
-            {
-                fprintf (OutputFile, " and premature End-Of-File");
-            }
-
-            fprintf (OutputFile, "\n");
-            if (Gbl_VerboseErrors)
-            {
-                fprintf (OutputFile, "\n");
-            }
+    if (Gbl_VerboseErrors && !PrematureEOF)
+    {
+        if (Total >= 256)
+        {
+            fprintf (OutputFile, "    %s",
+                MainMessage);
         }
         else
         {
-            fprintf (OutputFile, " %s %s\n\n", MainMessage, ExtraMessage);
+            SourceColumn = Enode->Column + Enode->FilenameLength + 6 + 2;
+            ErrorColumn = ASL_ERROR_LEVEL_LENGTH + 5 + 2 + 1;
+
+            if ((MsgLength + ErrorColumn) < (SourceColumn - 1))
+            {
+                fprintf (OutputFile, "%*s%s",
+                    (int) ((SourceColumn - 1) - ErrorColumn),
+                    MainMessage, " ^ ");
+            }
+            else
+            {
+                fprintf (OutputFile, "%*s %s",
+                    (int) ((SourceColumn - ErrorColumn) + 1), "^",
+                    MainMessage);
+            }
         }
+    }
+    else
+    {
+        fprintf (OutputFile, " %s", MainMessage);
+    }
+
+    /* Print the extra info message if present */
+
+    if (ExtraMessage)
+    {
+        fprintf (OutputFile, " (%s)", ExtraMessage);
+    }
+
+    if (PrematureEOF)
+    {
+        fprintf (OutputFile, " and premature End-Of-File");
+    }
+
+    fprintf (OutputFile, "\n");
+    if (Gbl_VerboseErrors)
+    {
+        fprintf (OutputFile, "\n");
     }
 }
 
@@ -408,6 +523,91 @@ AePrintErrorLog (
 
 /*******************************************************************************
  *
+ * FUNCTION:    AslCommonError2
+ *
+ * PARAMETERS:  Level               - Seriousness (Warning/error, etc.)
+ *              MessageId           - Index into global message buffer
+ *              LineNumber          - Actual file line number
+ *              Column              - Column in current line
+ *              SourceLine          - Actual source code line
+ *              Filename            - source filename
+ *              ExtraMessage        - additional error message
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Create a new error node and add it to the error log
+ *
+ ******************************************************************************/
+
+void
+AslCommonError2 (
+    UINT8                   Level,
+    UINT16                  MessageId,
+    UINT32                  LineNumber,
+    UINT32                  Column,
+    char                    *SourceLine,
+    char                    *Filename,
+    char                    *ExtraMessage)
+{
+    char                    *MessageBuffer = NULL;
+    char                    *LineBuffer;
+    ASL_ERROR_MSG           *Enode;
+
+
+    Enode = UtLocalCalloc (sizeof (ASL_ERROR_MSG));
+
+    if (ExtraMessage)
+    {
+        /* Allocate a buffer for the message and a new error node */
+
+        MessageBuffer = UtStringCacheCalloc (strlen (ExtraMessage) + 1);
+
+        /* Keep a copy of the extra message */
+
+        strcpy (MessageBuffer, ExtraMessage);
+    }
+
+    LineBuffer = UtLocalCalloc (strlen (SourceLine) + 1);
+    strcpy (LineBuffer, SourceLine);
+
+    /* Initialize the error node */
+
+    if (Filename)
+    {
+        Enode->Filename = Filename;
+        Enode->FilenameLength = strlen (Filename);
+        if (Enode->FilenameLength < 6)
+        {
+            Enode->FilenameLength = 6;
+        }
+    }
+
+    Enode->MessageId            = MessageId;
+    Enode->Level                = Level;
+    Enode->LineNumber           = LineNumber;
+    Enode->LogicalLineNumber    = LineNumber;
+    Enode->LogicalByteOffset    = 0;
+    Enode->Column               = Column;
+    Enode->Message              = MessageBuffer;
+    Enode->SourceLine           = LineBuffer;
+
+    /* Add the new node to the error node list */
+
+    AeAddToErrorLog (Enode);
+
+    if (Gbl_DebugFlag)
+    {
+        /* stderr is a file, send error to it immediately */
+
+        AePrintException (ASL_FILE_STDERR, Enode, NULL);
+    }
+
+    Gbl_ExceptionCount[Level]++;
+}
+
+
+/*******************************************************************************
+ *
  * FUNCTION:    AslCommonError
  *
  * PARAMETERS:  Level               - Seriousness (Warning/error, etc.)
@@ -428,7 +628,7 @@ AePrintErrorLog (
 void
 AslCommonError (
     UINT8                   Level,
-    UINT8                   MessageId,
+    UINT16                  MessageId,
     UINT32                  CurrentLineNumber,
     UINT32                  LogicalLineNumber,
     UINT32                  LogicalByteOffset,
@@ -436,7 +636,6 @@ AslCommonError (
     char                    *Filename,
     char                    *ExtraMessage)
 {
-    UINT32                  MessageSize;
     char                    *MessageBuffer = NULL;
     ASL_ERROR_MSG           *Enode;
 
@@ -447,19 +646,18 @@ AslCommonError (
     {
         /* Allocate a buffer for the message and a new error node */
 
-        MessageSize   = strlen (ExtraMessage) + 1;
-        MessageBuffer = UtLocalCalloc (MessageSize);
+        MessageBuffer = UtStringCacheCalloc (strlen (ExtraMessage) + 1);
 
         /* Keep a copy of the extra message */
 
-        ACPI_STRCPY (MessageBuffer, ExtraMessage);
+        strcpy (MessageBuffer, ExtraMessage);
     }
 
     /* Initialize the error node */
 
     if (Filename)
     {
-        Enode->Filename       = Filename;
+        Enode->Filename = Filename;
         Enode->FilenameLength = strlen (Filename);
         if (Enode->FilenameLength < 6)
         {
@@ -474,6 +672,7 @@ AslCommonError (
     Enode->LogicalByteOffset    = LogicalByteOffset;
     Enode->Column               = Column;
     Enode->Message              = MessageBuffer;
+    Enode->SourceLine           = NULL;
 
     /* Add the new node to the error node list */
 
@@ -493,12 +692,118 @@ AslCommonError (
 
         Gbl_SourceLine = 0;
         Gbl_NextError = Gbl_ErrorLog;
-        CmDoOutputFiles ();
         CmCleanupAndExit ();
         exit(1);
     }
 
     return;
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AslDisableException
+ *
+ * PARAMETERS:  MessageIdString     - ID to be disabled
+ *
+ * RETURN:      Status
+ *
+ * DESCRIPTION: Enter a message ID into the global disabled messages table
+ *
+ ******************************************************************************/
+
+ACPI_STATUS
+AslDisableException (
+    char                    *MessageIdString)
+{
+    UINT32                  MessageId;
+
+
+    /* Convert argument to an integer and validate it */
+
+    MessageId = (UINT32) strtoul (MessageIdString, NULL, 0);
+
+    if ((MessageId < 2000) || (MessageId > 5999))
+    {
+        printf ("\"%s\" is not a valid warning/remark ID\n",
+            MessageIdString);
+        return (AE_BAD_PARAMETER);
+    }
+
+    /* Insert value into the global disabled message array */
+
+    if (Gbl_DisabledMessagesIndex >= ASL_MAX_DISABLED_MESSAGES)
+    {
+        printf ("Too many messages have been disabled (max %u)\n",
+            ASL_MAX_DISABLED_MESSAGES);
+        return (AE_LIMIT);
+    }
+
+    Gbl_DisabledMessages[Gbl_DisabledMessagesIndex] = MessageId;
+    Gbl_DisabledMessagesIndex++;
+    return (AE_OK);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AslIsExceptionDisabled
+ *
+ * PARAMETERS:  Level               - Seriousness (Warning/error, etc.)
+ *              MessageId           - Index into global message buffer
+ *
+ * RETURN:      TRUE if exception/message should be ignored
+ *
+ * DESCRIPTION: Check if the user has specified options such that this
+ *              exception should be ignored
+ *
+ ******************************************************************************/
+
+BOOLEAN
+AslIsExceptionDisabled (
+    UINT8                   Level,
+    UINT16                  MessageId)
+{
+    UINT32                  EncodedMessageId;
+    UINT32                  i;
+
+
+    switch (Level)
+    {
+    case ASL_WARNING2:
+    case ASL_WARNING3:
+
+        /* Check for global disable via -w1/-w2/-w3 options */
+
+        if (Level > Gbl_WarningLevel)
+        {
+            return (TRUE);
+        }
+        /* Fall through */
+
+    case ASL_WARNING:
+    case ASL_REMARK:
+        /*
+         * Ignore this warning/remark if it has been disabled by
+         * the user (-vw option)
+         */
+        EncodedMessageId = AeBuildFullExceptionCode (Level, MessageId);
+        for (i = 0; i < Gbl_DisabledMessagesIndex; i++)
+        {
+            /* Simple implementation via fixed array */
+
+            if (EncodedMessageId == Gbl_DisabledMessages[i])
+            {
+                return (TRUE);
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return (FALSE);
 }
 
 
@@ -521,38 +826,31 @@ AslCommonError (
 void
 AslError (
     UINT8                   Level,
-    UINT8                   MessageId,
+    UINT16                  MessageId,
     ACPI_PARSE_OBJECT       *Op,
     char                    *ExtraMessage)
 {
 
-    switch (Level)
+    /* Check if user wants to ignore this exception */
+
+    if (Gbl_AllExceptionsDisabled ||
+        AslIsExceptionDisabled (Level, MessageId))
     {
-    case ASL_WARNING2:
-    case ASL_WARNING3:
-        if (Gbl_WarningLevel < Level)
-        {
-            return;
-        }
-        break;
-
-    default:
-        break;
+        return;
     }
-
 
     if (Op)
     {
         AslCommonError (Level, MessageId, Op->Asl.LineNumber,
-                        Op->Asl.LogicalLineNumber,
-                        Op->Asl.LogicalByteOffset,
-                        Op->Asl.Column,
-                        Op->Asl.Filename, ExtraMessage);
+            Op->Asl.LogicalLineNumber,
+            Op->Asl.LogicalByteOffset,
+            Op->Asl.Column,
+            Op->Asl.Filename, ExtraMessage);
     }
     else
     {
         AslCommonError (Level, MessageId, 0,
-                        0, 0, 0, NULL, ExtraMessage);
+            0, 0, 0, NULL, ExtraMessage);
     }
 }
 
@@ -562,14 +860,14 @@ AslError (
  * FUNCTION:    AslCoreSubsystemError
  *
  * PARAMETERS:  Op                  - Parse node where error happened
- *              Status              - The ACPI CA Exception
+ *              Status              - The ACPICA Exception
  *              ExtraMessage        - additional error message
  *              Abort               - TRUE -> Abort compilation
  *
  * RETURN:      None
  *
- * DESCRIPTION: Error reporting routine for exceptions returned by the ACPI
- *              CA core subsystem.
+ * DESCRIPTION: Error reporting routine for exceptions returned by the ACPICA
+ *              core subsystem.
  *
  ******************************************************************************/
 
@@ -585,16 +883,17 @@ AslCoreSubsystemError (
 
     if (Op)
     {
-        AslCommonError (ASL_ERROR, ASL_MSG_CORE_EXCEPTION, Op->Asl.LineNumber,
-                        Op->Asl.LogicalLineNumber,
-                        Op->Asl.LogicalByteOffset,
-                        Op->Asl.Column,
-                        Op->Asl.Filename, MsgBuffer);
+        AslCommonError (ASL_ERROR, ASL_MSG_CORE_EXCEPTION,
+            Op->Asl.LineNumber,
+            Op->Asl.LogicalLineNumber,
+            Op->Asl.LogicalByteOffset,
+            Op->Asl.Column,
+            Op->Asl.Filename, MsgBuffer);
     }
     else
     {
-        AslCommonError (ASL_ERROR, ASL_MSG_CORE_EXCEPTION, 0,
-                        0, 0, 0, NULL, MsgBuffer);
+        AslCommonError (ASL_ERROR, ASL_MSG_CORE_EXCEPTION,
+            0, 0, 0, 0, NULL, MsgBuffer);
     }
 
     if (Abort)
@@ -620,15 +919,15 @@ AslCoreSubsystemError (
 
 int
 AslCompilererror (
-    char                    *CompilerMessage)
+    const char              *CompilerMessage)
 {
 
+    Gbl_SyntaxError++;
+
     AslCommonError (ASL_ERROR, ASL_MSG_SYNTAX, Gbl_CurrentLineNumber,
-                    Gbl_LogicalLineNumber, Gbl_CurrentLineOffset,
-                    Gbl_CurrentColumn, Gbl_Files[ASL_FILE_INPUT].Filename,
-                    CompilerMessage);
+        Gbl_LogicalLineNumber, Gbl_CurrentLineOffset,
+        Gbl_CurrentColumn, Gbl_Files[ASL_FILE_INPUT].Filename,
+        ACPI_CAST_PTR (char, CompilerMessage));
 
-    return 0;
+    return (0);
 }
-
-

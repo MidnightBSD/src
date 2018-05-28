@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * $FreeBSD: src/sys/contrib/dev/oltr/trlldbm.c,v 1.4 2000/03/18 23:51:51 lile Exp $
  *

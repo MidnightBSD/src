@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: nsxfname - Public interfaces to the ACPI subsystem

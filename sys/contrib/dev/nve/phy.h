@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /***************************************************************************\
 |*                                                                           *|
 |*       Copyright 2001-2004 NVIDIA Corporation.  All Rights Reserved.       *|
@@ -32,7 +33,7 @@ extern "C" {
 #define DEFAULT_PHY_ADDRESS   1
 
 
-#define HDP_VERSION_STRING "HDR P: $Revision: 1.1.1.2 $"
+#define HDP_VERSION_STRING "HDR P: $Revision: #23 $"
 
 //
 // Defaults for PHY timeout values.

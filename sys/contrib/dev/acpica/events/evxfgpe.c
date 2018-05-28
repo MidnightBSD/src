@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: evxfgpe - External Interfaces for General Purpose Events (GPEs)
