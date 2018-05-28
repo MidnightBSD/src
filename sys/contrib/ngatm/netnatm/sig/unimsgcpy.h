@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /* This file was created automatically
  * Source file: $Begemot: libunimsg/atm/msg/msg.def,v 1.3 2003/09/19 11:58:15 hbb Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/contrib/ngatm/netnatm/sig/unimsgcpy.h 122207 2003-11-07 08:48:43Z harti $
  */
 
 

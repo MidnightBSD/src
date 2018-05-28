@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /* This file was created automatically
  * Source file: $Begemot: libunimsg/atm/msg/ie.def,v 1.3 2003/09/19 11:58:15 hbb Exp $
- * $FreeBSD: release/9.2.0/sys/contrib/ngatm/netnatm/msg/uni_ie.h 121936 2003-11-03 09:11:53Z harti $
+ * $FreeBSD: stable/10/sys/contrib/ngatm/netnatm/msg/uni_ie.h 121936 2003-11-03 09:11:53Z harti $
  */
 
 #ifndef _NETNATM_MSG_UNI_IE_H_
