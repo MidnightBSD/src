@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_signal.h,v 1.2 2008/12/03 00:24:35 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/freebsd32/freebsd32_signal.h,v 1.1 2006/10/05 01:58:08 davidxu Exp $
+ * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_signal.h 253527 2013-07-21 19:33:48Z kib $
  */
 
 #ifndef _COMPAT_FREEBSD32_SIGNAL_H_
@@ -98,6 +98,8 @@ struct sigevent32 {
 	} _sigev_un;
 };
 
+struct sigevent;
+int convert_sigevent32(struct sigevent32 *sig32, struct sigevent *sig);
 void siginfo_to_siginfo32(const siginfo_t *src, struct siginfo32 *dst);
 
 #endif /* !_COMPAT_FREEBSD32_SIGNAL_H_ */

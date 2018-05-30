@@ -1,7 +1,7 @@
+# $MidnightBSD$
 # Makefile for syscall tables
 #
-# $FreeBSD: src/sys/compat/freebsd32/Makefile,v 1.4 2005/10/23 23:58:23 obrien Exp $
-# $MidnightBSD: src/sys/compat/freebsd32/Makefile,v 1.3 2011/10/15 20:18:31 laffer1 Exp $
+# $FreeBSD: stable/10/sys/compat/freebsd32/Makefile 315063 2017-03-11 08:40:59Z dchagin $
 
 all:
 	@echo "make sysent only"
@@ -10,11 +10,6 @@ sysent:  freebsd32_sysent.c freebsd32_syscall.h freebsd32_proto.h freebsd32_syst
 
 freebsd32_sysent.c freebsd32_syscalls.c freebsd32_syscall.h freebsd32_proto.h freebsd32_systrace_args.c : \
 	    ../../kern/makesyscalls.sh syscalls.master syscalls.conf
-	-mv -f freebsd32_sysent.c freebsd32_sysent.c.bak
-	-mv -f freebsd32_syscalls.c freebsd32_syscalls.c.bak
-	-mv -f freebsd32_syscall.h freebsd32_syscall.h.bak
-	-mv -f freebsd32_proto.h freebsd32_proto.h.bak
-	-mv -f freebsd32_systrace_args.c  freebsd32_systrace_args.c.bak
 	sh ../../kern/makesyscalls.sh syscalls.master syscalls.conf
 
 clean:

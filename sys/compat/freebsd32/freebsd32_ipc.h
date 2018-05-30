@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_ipc.h,v 1.3 2012/01/04 01:35:37 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/freebsd32/freebsd32_ipc.h,v 1.2.2.2 2007/12/19 20:43:41 jhb Exp $
+ * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_ipc.h 205322 2010-03-19 11:01:51Z kib $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_IPC_H_

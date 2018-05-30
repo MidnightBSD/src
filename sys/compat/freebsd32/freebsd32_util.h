@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_util.h,v 1.3 2012/02/19 16:59:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-1999 Andrew Gallatin
  * All rights reserved.
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/freebsd32/freebsd32_util.h,v 1.10 2005/06/29 15:16:20 jhb Exp $
+ * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_util.h 225617 2011-09-16 13:58:51Z kmacy $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_UTIL_H_

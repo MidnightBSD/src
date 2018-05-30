@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * Copyright (c) 2003 Peter Wemm
@@ -26,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/compat/ia32/ia32_signal.h 230426 2012-01-21 17:45:27Z kib $
  */
 
 #ifndef	_COMPAT_IA32_IA32_SIGNAL_H

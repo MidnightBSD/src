@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David E. O'Brien
  * All rights reserved.
@@ -26,11 +27,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/compat/freebsd32/freebsd32_ioctl.h,v 1.2 2011/12/31 21:42:59 laffer1 Exp $
+ * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_ioctl.h 268139 2014-07-02 10:16:12Z mav $
  */
 
 #ifndef _COMPAT_FREEBSD32_IOCTL_H_
 #define	_COMPAT_FREEBSD32_IOCTL_H_
+
+#include <cam/scsi/scsi_sg.h>
 
 typedef __uint32_t caddr_t32;
 
@@ -122,5 +125,6 @@ struct pci_conf_io32 {
 #define	MEMRANGE_GET32	_IOWR('m', 50, struct mem_range_op32)
 #define	MEMRANGE_SET32	_IOW('m', 51, struct mem_range_op32)
 #define	PCIOCGETCONF_32	_IOWR('p', 5, struct pci_conf_io32)
+#define	SG_IO_32	_IOWR(SGIOC, 0x85, struct sg_io_hdr32)
 
 #endif	/* _COMPAT_FREEBSD32_IOCTL_H_ */

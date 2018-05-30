@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/freebsd32/freebsd32.h,v 1.6.2.1 2007/12/19 20:37:53 jhb Exp $
+ * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32.h 310121 2016-12-15 16:52:17Z vangyzen $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
@@ -43,8 +43,17 @@
 #define PTROUT_CP(src,dst,fld) \
 	do { (dst).fld = PTROUT((src).fld); } while (0)
 
+/*
+ * Being a newer port, 32-bit FreeBSD/MIPS uses 64-bit time_t.
+ */
+#ifdef __mips__
+typedef	int64_t	time32_t;
+#else
+typedef	int32_t	time32_t;
+#endif
+
 struct timeval32 {
-	int32_t	tv_sec;
+	time32_t tv_sec;
 	int32_t tv_usec;
 };
 #define TV_CP(src,dst,fld) do {			\
@@ -53,12 +62,21 @@ struct timeval32 {
 } while (0)
 
 struct timespec32 {
-	int32_t tv_sec;
+	time32_t tv_sec;
 	int32_t tv_nsec;
 };
 #define TS_CP(src,dst,fld) do {			\
 	CP((src).fld,(dst).fld,tv_sec);		\
 	CP((src).fld,(dst).fld,tv_nsec);	\
+} while (0)
+
+struct itimerspec32 {
+	struct timespec32  it_interval;
+	struct timespec32  it_value;
+};
+#define ITS_CP(src, dst) do {			\
+	TS_CP((src), (dst), it_interval);	\
+	TS_CP((src), (dst), it_value);		\
 } while (0)
 
 struct rusage32 {
@@ -158,6 +176,7 @@ struct stat32 {
 	u_int32_t st_blksize;
 	u_int32_t st_flags;
 	u_int32_t st_gen;
+	int32_t	st_lspare;
 	struct timespec32 st_birthtim;
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
@@ -223,32 +242,6 @@ struct i386_ldt_args32 {
 	uint32_t start;
 	uint32_t descs;
 	uint32_t num;
-};
-
-/*
- * Alternative layouts for <sys/procfs.h>
- */
-struct prstatus32 {
-        int     pr_version;
-        u_int   pr_statussz;
-        u_int   pr_gregsetsz;
-        u_int   pr_fpregsetsz;
-        int     pr_osreldate;
-        int     pr_cursig;
-        pid_t   pr_pid;
-        struct reg32 pr_reg;
-};
-
-struct prpsinfo32 {
-        int     pr_version;
-        u_int   pr_psinfosz;
-        char    pr_fname[PRFNAMESZ+1];
-        char    pr_psargs[PRARGSZ+1];
-};
-
-struct thrmisc32 {
-        char    pr_tname[MAXCOMLEN+1];
-        u_int   _pad;
 };
 
 struct mq_attr32 {
@@ -323,8 +316,11 @@ struct kinfo_proc32 {
 	char	ki_comm[COMMLEN+1];
 	char	ki_emul[KI_EMULNAMELEN+1];
 	char	ki_loginclass[LOGINCLASSLEN+1];
-	char	ki_sparestrings[50];
+	char	ki_moretdname[MAXCOMLEN-TDNAMLEN+1];
+	char	ki_sparestrings[46];
 	int	ki_spareints[KI_NSPARE_INT];
+	int	ki_flag2;
+	int	ki_fibnum;
 	u_int	ki_cr_flags;
 	int	ki_jid;
 	int	ki_numthreads;
@@ -340,6 +336,12 @@ struct kinfo_proc32 {
 	int	ki_sparelongs[KI_NSPARE_LONG];
 	int	ki_sflag;
 	int	ki_tdflags;
+};
+
+struct kinfo_sigtramp32 {
+	uint32_t ksigtramp_start;
+	uint32_t ksigtramp_end;
+	uint32_t ksigtramp_spare[4];
 };
 
 struct kld32_file_stat_1 {
@@ -359,6 +361,12 @@ struct kld32_file_stat {
 	uint32_t address;	/* load address */
 	uint32_t size;		/* size in bytes */
 	char	pathname[MAXPATHLEN];
+};
+
+struct procctl_reaper_pids32 {
+	u_int	rp_count;
+	u_int	rp_pad0[15];
+	uint32_t rp_pids;
 };
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_H_ */
