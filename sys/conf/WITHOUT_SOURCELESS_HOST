@@ -2,9 +2,10 @@
 # WITHOUT_SOURCELESS_HOST -- Disable drivers that include sourceless
 # native code for host CPU.
 #
-# $FreeBSD$
+# $MidnightBSD$
 
 nodevice	hpt27xx
 nodevice	hptmv
+nodevice	hptnr
 nodevice	hptrr
 nodevice	nve
