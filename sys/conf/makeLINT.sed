@@ -1,7 +1,8 @@
 #!/usr/bin/sed -E -n -f
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/conf/makeLINT.sed 226013 2011-10-04 17:11:38Z marcel $
+# $MidnightBSD$
 
-/^(machine|ident|device|nodevice|makeoptions|nomakeoption|options|option|nooption|profile|cpu|maxusers)[[:space:]]/ {
+/^(machine|files|ident|(no)?device|(no)?makeoption(s)?|(no)?option(s)?|profile|cpu|maxusers)[[:space:]]/ {
     s/[[:space:]]*#.*$//
     p
 }

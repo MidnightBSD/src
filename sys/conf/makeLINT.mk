@@ -1,5 +1,8 @@
 # $MidnightBSD$
 
+# The LINT files need to end up in the kernel source directory.
+.OBJDIR: ${.CURDIR}
+
 all:
 	@echo "make LINT only"
 
@@ -9,9 +12,10 @@ clean:
 	rm -f LINT-VIMAGE LINT-NOINET LINT-NOINET6 LINT-NOIP
 .endif
 
-NOTES=	../../conf/NOTES NOTES
-LINT: ${NOTES} ../../conf/makeLINT.sed
-	cat ${NOTES} | sed -E -n -f ../../conf/makeLINT.sed > ${.TARGET}
+NOTES=	${.CURDIR}/../../conf/NOTES ${.CURDIR}/NOTES
+MAKELINT_SED= ${.CURDIR}/../../conf/makeLINT.sed
+LINT: ${NOTES} ${MAKELINT_SED}
+	cat ${NOTES} | sed -E -n -f ${MAKELINT_SED} > ${.TARGET}
 .if ${TARGET} == "amd64" || ${TARGET} == "i386"
 	echo "include ${.TARGET}"	>  ${.TARGET}-VIMAGE
 	echo "ident ${.TARGET}-VIMAGE"	>> ${.TARGET}-VIMAGE
@@ -46,6 +50,12 @@ LINT: ${NOTES} ../../conf/makeLINT.sed
 	echo "nodevice txp"		>> ${.TARGET}-NOIP
 	echo "nodevice vxge"		>> ${.TARGET}-NOIP
 .endif
-.if ${TARGET} == "powerpc" || ${TARGET} == "mips"
+.if ${TARGET} == "mips"
 	echo "machine	${TARGET} ${TARGET_ARCH}" >> ${.TARGET}
+.endif
+.if ${TARGET} == "powerpc"
+	# cat is available, not sure if cp is?
+	cat ${.TARGET} > ${.TARGET}64
+	echo "machine	${TARGET} powerpc" >> ${.TARGET}
+	echo "machine	${TARGET} powerpc64" >> ${.TARGET}64
 .endif
