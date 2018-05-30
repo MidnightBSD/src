@@ -55099,6 +55099,7 @@ sys/conf/WITHOUT_SOURCELESS -text
 sys/conf/WITHOUT_SOURCELESS_HOST -text
 sys/conf/WITHOUT_SOURCELESS_UCODE -text
 sys/conf/defines -text
+sys/conf/dtb.mk svneol=native#text/plain
 sys/conf/files -text
 sys/conf/files.amd64 -text
 sys/conf/files.i386 -text
