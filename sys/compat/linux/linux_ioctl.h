@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/linux_ioctl.h 293596 2016-01-09 18:03:09Z dchagin $
  */
 
 #ifndef _LINUX_IOCTL_H_
@@ -581,13 +582,6 @@
 #define	LINUX_IOCTL_DRM_MAX	0x64ff
 
 /*
- * This doesn't really belong here, but I can't think of a better
- * place to put it.
- */
-struct ifnet;
-int		 linux_ifname(struct ifnet *, char *, size_t);
-
-/*
  * video
  */
 #define LINUX_VIDIOCGCAP		0x7601
@@ -744,8 +738,33 @@ int		 linux_ifname(struct ifnet *, char *, size_t);
 #define	FBSD_LUSB_SET_IMMED		0xffe2
 #define	FBSD_LUSB_SET_POWER_MODE	0xffe1
 #define	FBSD_LUSB_SET_TEMPLATE		0xffe0
+#define	FBSD_LUSB_FS_OPEN_STREAM	0xffdf
+#define	FBSD_LUSB_GET_DEV_PORT_PATH	0xffde
+#define	FBSD_LUSB_GET_POWER_USAGE	0xffdd
 
 #define	FBSD_LUSB_MAX			0xffff
-#define	FBSD_LUSB_MIN			0xffe0
+#define	FBSD_LUSB_MIN			0xffdd
+
+/*
+ * Linux btrfs clone operation
+ */
+#define LINUX_BTRFS_IOC_CLONE		0x9409 /* 0x40049409 */
+
+
+/*
+ * Pluggable ioctl handlers
+ */
+struct linux_ioctl_args;
+struct thread;
+
+typedef int linux_ioctl_function_t(struct thread *, struct linux_ioctl_args *);
+
+struct linux_ioctl_handler {
+	linux_ioctl_function_t *func;
+	int	low, high;
+};
+
+int	linux_ioctl_register_handler(struct linux_ioctl_handler *h);
+int	linux_ioctl_unregister_handler(struct linux_ioctl_handler *h);
 
 #endif /* !_LINUX_IOCTL_H_ */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: linux_futex.h,v 1.2 2005/12/11 12:20:19 christos Exp $ */
 
 /*-
@@ -30,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/linux_futex.h 293493 2016-01-09 15:16:13Z dchagin $
  */
 
 #ifndef _LINUX_FUTEX_H
@@ -76,6 +77,7 @@ extern struct mtx futex_mtx;
 #define	FUTEX_TID_MASK		0x3fffffff
 #define	FUTEX_BITSET_MATCH_ANY	0xffffffff
 
-void	release_futexes(struct proc *);
+void	release_futexes(struct thread *,
+			struct linux_emuldata *);
 
 #endif	/* !_LINUX_FUTEX_H */

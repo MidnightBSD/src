@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Marcel Moolenaar
  * All rights reserved.
@@ -25,11 +26,53 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/linux_ipc.h 293522 2016-01-09 15:56:01Z dchagin $
  */
 
 #ifndef _LINUX_IPC_H_
 #define _LINUX_IPC_H_
+
+/*
+ * SystemV IPC defines
+ */
+#define	LINUX_SEMOP		1
+#define	LINUX_SEMGET		2
+#define	LINUX_SEMCTL		3
+#define	LINUX_MSGSND		11
+#define	LINUX_MSGRCV		12
+#define	LINUX_MSGGET		13
+#define	LINUX_MSGCTL		14
+#define	LINUX_SHMAT		21
+#define	LINUX_SHMDT		22
+#define	LINUX_SHMGET		23
+#define	LINUX_SHMCTL		24
+
+#define	LINUX_IPC_RMID		0
+#define	LINUX_IPC_SET		1
+#define	LINUX_IPC_STAT		2
+#define	LINUX_IPC_INFO		3
+
+#define	LINUX_MSG_INFO	12
+
+#define	LINUX_SHM_LOCK		11
+#define	LINUX_SHM_UNLOCK	12
+#define	LINUX_SHM_STAT		13
+#define	LINUX_SHM_INFO		14
+
+#define	LINUX_SHM_RDONLY	0x1000
+#define	LINUX_SHM_RND		0x2000
+#define	LINUX_SHM_REMAP		0x4000
+
+/* semctl commands */
+#define	LINUX_GETPID		11
+#define	LINUX_GETVAL		12
+#define	LINUX_GETALL		13
+#define	LINUX_GETNCNT		14
+#define	LINUX_GETZCNT		15
+#define	LINUX_SETVAL		16
+#define	LINUX_SETALL		17
+#define	LINUX_SEM_STAT		18
+#define	LINUX_SEM_INFO		19
 
 /*
  * Version flags for semctl, msgctl, and shmctl commands
@@ -40,7 +83,7 @@
 #define	LINUX_IPC_64	0x0100	/* New version (support 32-bit UIDs, bigger
 				   message sizes, etc. */
 
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__i386__) || (defined(__amd64__) && defined(COMPAT_LINUX32))
 
 struct linux_msgctl_args 
 {
@@ -135,8 +178,6 @@ int linux_shmctl(struct thread *, struct linux_shmctl_args *);
 int linux_shmdt(struct thread *, struct linux_shmdt_args *);
 int linux_shmget(struct thread *, struct linux_shmget_args *);
 
-#define	LINUX_MSG_INFO	12
-
-#endif	/* __i386__ || __amd64__ */
+#endif	/* __i386__ || (__amd64__ && COMPAT_LINUX32) */
 
 #endif /* _LINUX_IPC_H_ */

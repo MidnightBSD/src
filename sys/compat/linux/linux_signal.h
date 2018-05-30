@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Marcel Moolenaar
  * All rights reserved.
@@ -25,22 +26,27 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/linux_signal.h 293575 2016-01-09 17:29:08Z dchagin $
  */
 
 #ifndef _LINUX_SIGNAL_H_
 #define _LINUX_SIGNAL_H_
 
-#define	LINUX_SI_TKILL		-6;
+/*
+ * si_code values
+ */
+#define	LINUX_SI_USER		0	/* sent by kill, sigsend, raise */
+#define	LINUX_SI_KERNEL		0x80	/* sent by the kernel from somewhere */
+#define	LINUX_SI_QUEUE		-1	/* sent by sigqueue */
+#define	LINUX_SI_TIMER		-2	/* sent by timer expiration */
+#define	LINUX_SI_MESGQ		-3	/* sent by real time mesq state change */
+#define	LINUX_SI_ASYNCIO	-4	/* sent by AIO completion */
+#define	LINUX_SI_SIGIO		-5	/* sent by queued SIGIO */
+#define	LINUX_SI_TKILL		-6	/* sent by tkill system call */
 
-void linux_to_bsd_sigset(l_sigset_t *, sigset_t *);
-void bsd_to_linux_sigset(sigset_t *, l_sigset_t *);
 int linux_do_sigaction(struct thread *, int, l_sigaction_t *, l_sigaction_t *);
-void ksiginfo_to_lsiginfo(ksiginfo_t *ksi, l_siginfo_t *lsi, l_int sig);
-
-#define LINUX_SIG_VALID(sig)	((sig) <= LINUX_NSIG && (sig) > 0)
-
-#define BSD_TO_LINUX_SIGNAL(sig)				\
-	(((sig) <= LINUX_SIGTBLSZ) ? bsd_to_linux_signal[_SIG_IDX(sig)] : sig)
+void ksiginfo_to_lsiginfo(const ksiginfo_t *ksi, l_siginfo_t *lsi, l_int sig);
+void siginfo_to_lsiginfo(const siginfo_t *si, l_siginfo_t *lsi, l_int sig);
+void lsiginfo_to_ksiginfo(const l_siginfo_t *lsi, ksiginfo_t *ksi, int sig);
 
 #endif /* _LINUX_SIGNAL_H_ */

@@ -25,7 +25,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/trace_futexes.d 299705 2016-05-14 00:35:49Z pfg $
  */
 
 /**
@@ -120,7 +121,7 @@ linuxulator*:locks:futex_mtx:locked
 linuxulator*:locks:futex_mtx:unlock
 /check[probefunc, arg0] == 0/
 {
-	printf("ERROR: unlock attemt of unlocked %s (%p),", probefunc, arg0);
+	printf("ERROR: unlock attempt of unlocked %s (%p),", probefunc, arg0);
 	printf("       missing SDT probe in kernel, or dtrace program started");
 	printf("       while the %s was already held (race condition).", probefunc);
 	printf("       Stack trace follows:");

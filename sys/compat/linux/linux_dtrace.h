@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2012 Alexander Leidinger <netchild@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/linux_dtrace.h 302237 2016-06-27 22:10:07Z bdrewery $
  */
 
 #ifndef _LINUX_DTRACE_H_
@@ -48,37 +49,32 @@
     LINUX_DTRACE, a, b, c)
 
 #define	_LIN_SDT_PROBE_DEFINE0(a, b, c, d)		SDT_PROBE_DEFINE(a, \
-    b, c, d, d)
+    b, c, d)
 #define	LIN_SDT_PROBE_DEFINE0(a, b, c)			_LIN_SDT_PROBE_DEFINE0(\
     LINUX_DTRACE, a, b, c)
 #define	_LIN_SDT_PROBE_DEFINE1(a, b, c, d, e)		SDT_PROBE_DEFINE1(a, \
-    b, c, d, d, e)
+    b, c, d, e)
 #define	LIN_SDT_PROBE_DEFINE1(a, b, c, d)		_LIN_SDT_PROBE_DEFINE1(\
     LINUX_DTRACE, a, b, c, d)
 #define	_LIN_SDT_PROBE_DEFINE2(a, b, c, d, e, f)	SDT_PROBE_DEFINE2(a, \
-    b, c, d, d, e, f)
+    b, c, d, e, f)
 #define	LIN_SDT_PROBE_DEFINE2(a, b, c, d, e)		_LIN_SDT_PROBE_DEFINE2(\
     LINUX_DTRACE, a, b, c, d, e)
 #define	_LIN_SDT_PROBE_DEFINE3(a, b, c, d, e, f, g)	SDT_PROBE_DEFINE3(a, \
-    b, c, d, d, e, f, g)
+    b, c, d, e, f, g)
 #define	LIN_SDT_PROBE_DEFINE3(a, b, c, d, e, f)		_LIN_SDT_PROBE_DEFINE3(\
     LINUX_DTRACE, a, b, c, d, e, f)
 #define	_LIN_SDT_PROBE_DEFINE4(a, b, c, d, e, f, g, h)	SDT_PROBE_DEFINE4(a, \
-    b, c, d, d, e, f, g, h)
+    b, c, d, e, f, g, h)
 #define	LIN_SDT_PROBE_DEFINE4(a, b, c, d, e, f, g)	_LIN_SDT_PROBE_DEFINE4(\
     LINUX_DTRACE, a, b, c, d, e, f, g)
 #define	_LIN_SDT_PROBE_DEFINE5(a, b, c, d, e, f, g, h, i) \
-    SDT_PROBE_DEFINE5(a, b, c, d, d, e, f, g, h, i)
+    SDT_PROBE_DEFINE5(a, b, c, d, e, f, g, h, i)
 #define	LIN_SDT_PROBE_DEFINE5(a, b, c, d, e, f, g, h)	_LIN_SDT_PROBE_DEFINE5(\
     LINUX_DTRACE, a, b, c, d, e, f, g, h)
 
-#define	_LIN_SDT_PROBE_ARGTYPE(a, b, c, d, e, f)	SDT_PROBE_ARGTYPE(a, b,\
-    c, d, e, f)
-#define LIN_SDT_PROBE_ARGTYPE(a, b, c, d, e)	_LIN_SDT_PROBE_ARGTYPE( \
-    LINUX_DTRACE, a, b, c, d, e)
-
-#define	LIN_SDT_PROBE0(a, b, c)			SDT_PROBE1(LINUX_DTRACE, a, b, \
-    c, 0)
+#define	LIN_SDT_PROBE0(a, b, c)			SDT_PROBE0(LINUX_DTRACE, a, b, \
+    c)
 #define	LIN_SDT_PROBE1(a, b, c, d)		SDT_PROBE1(LINUX_DTRACE, a, b, \
     c, d)
 #define	LIN_SDT_PROBE2(a, b, c, d, e)		SDT_PROBE2(LINUX_DTRACE, a, b, \
@@ -87,7 +83,7 @@
     c, d, e, f)
 #define	LIN_SDT_PROBE4(a, b, c, d, e, f, g)	SDT_PROBE4(LINUX_DTRACE, a, b, \
     c, d, e, f, g)
-#define	_LIN_SDT_PROBE5(a, b, c, d, e, f, g, h, i)	SDT_PROBE(a, b, c, d, \
+#define	_LIN_SDT_PROBE5(a, b, c, d, e, f, g, h, i)	SDT_PROBE5(a, b, c, d, \
     e, f, g, h, i)
 #define	LIN_SDT_PROBE5(a, b, c, d, e, f, g, h)	_LIN_SDT_PROBE5(LINUX_DTRACE, \
     a, b, c, d, e, f, g, h)

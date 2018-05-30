@@ -1,6 +1,9 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2005 Travis Poppe
+ * Copyright (c) 2004 Tim J. Robbins
+ * Copyright (c) 2002 Doug Rabson
+ * Copyright (c) 2000 Marcel Moolenaar
+ * Copyright (c) 1994-1995 Søren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,12 +29,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux_sysproto.h 143197 2005-03-07 00:18:06Z sobomax $
+ * $FreeBSD: stable/10/sys/compat/linux/linux_mmap.h 302964 2016-07-17 15:23:32Z dchagin $
  */
 
-#ifndef LINUX_SYSPROTO
-#define LINUX_SYSPROTO
+#ifndef _LINUX_MMAP_H_
+#define	_LINUX_MMAP_H_
 
-int linux_nosys(struct thread *, struct nosys_args *);
+/* mmap options */
+#define	LINUX_MAP_SHARED	0x0001
+#define	LINUX_MAP_PRIVATE	0x0002
+#define	LINUX_MAP_FIXED		0x0010
+#define	LINUX_MAP_ANON		0x0020
+#define	LINUX_MAP_GROWSDOWN	0x0100
 
-#endif
+
+int linux_mmap_common(struct thread *, uintptr_t, size_t, int, int,
+			int, off_t);
+int linux_mprotect_common(struct thread *, uintptr_t, size_t, int);
+
+#endif	/* _LINUX_MMAP_H_ */

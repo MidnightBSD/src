@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_ipc.c 332039 2018-04-04 17:45:05Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -116,16 +117,6 @@ bsd_to_linux_shm_info( struct shm_info *bpp, struct l_shm_info *lpp)
 	lpp->swap_attempts = bpp->swap_attempts ;
 	lpp->swap_successes = bpp->swap_successes ;
 }
-
-struct l_ipc_perm {
-	l_key_t		key;
-	l_uid16_t	uid;
-	l_gid16_t	gid;
-	l_uid16_t	cuid;
-	l_gid16_t	cgid;
-	l_ushort	mode;
-	l_ushort	seq;
-};
 
 static void
 linux_to_bsd_ipc_perm(struct l_ipc_perm *lpp, struct ipc_perm *bpp)
@@ -526,6 +517,9 @@ linux_semctl(struct thread *td, struct linux_semctl_args *args)
 	register_t rval;
 	int cmd, error;
 
+	memset(&linux_seminfo, 0, sizeof(linux_seminfo));
+	memset(&linux_semid, 0, sizeof(linux_semid));
+
 	switch (args->cmd & ~LINUX_IPC_64) {
 	case LINUX_IPC_RMID:
 		cmd = IPC_RMID;
@@ -671,12 +665,15 @@ linux_msgctl(struct thread *td, struct linux_msgctl_args *args)
 	struct l_msqid_ds linux_msqid;
 	struct msqid_ds bsd_msqid;
 
+	memset(&linux_msqid, 0, sizeof(linux_msqid));
+
 	bsd_cmd = args->cmd & ~LINUX_IPC_64;
 	switch (bsd_cmd) {
 	case LINUX_IPC_INFO:
 	case LINUX_MSG_INFO: {
 		struct l_msginfo linux_msginfo;
 
+		memset(&linux_msginfo, 0, sizeof(linux_msginfo));
 		/*
 		 * XXX MSG_INFO uses the same data structure but returns different
 		 * dynamic counters in msgpool, msgmap, and msgtql fields.
@@ -798,6 +795,10 @@ linux_shmctl(struct thread *td, struct linux_shmctl_args *args)
 	struct l_shm_info linux_shm_info;
 	struct shmid_ds bsd_shmid;
 	int error;
+
+	memset(&linux_shm_info, 0, sizeof(linux_shm_info));
+	memset(&linux_shmid, 0, sizeof(linux_shmid));
+	memset(&linux_shminfo, 0, sizeof(linux_shminfo));
 
 	switch (args->cmd & ~LINUX_IPC_64) {
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001  The FreeBSD Project
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_uid16.c 302229 2016-06-27 21:25:01Z bdrewery $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -87,7 +88,7 @@ LIN_SDT_PROBE_DEFINE1(uid16, linux_setgid16, entry, "l_gid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setgid16, return, "int");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setuid16, entry, "l_uid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setuid16, return, "int");
-LIN_SDT_PROBE_DEFINE2(uid16, linux_setregid16, entry, "l_git16_t", "l_git16_t");
+LIN_SDT_PROBE_DEFINE2(uid16, linux_setregid16, entry, "l_gid16_t", "l_gid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setregid16, return, "int");
 LIN_SDT_PROBE_DEFINE2(uid16, linux_setreuid16, entry, "l_uid16_t", "l_uid16_t");
 LIN_SDT_PROBE_DEFINE1(uid16, linux_setreuid16, return, "int");
@@ -172,12 +173,12 @@ linux_setgroups16(struct thread *td, struct linux_setgroups16_args *args)
 		LIN_SDT_PROBE1(uid16, linux_setgroups16, return, EINVAL);
 		return (EINVAL);
 	}
-	linux_gidset = malloc(ngrp * sizeof(*linux_gidset), M_TEMP, M_WAITOK);
+	linux_gidset = malloc(ngrp * sizeof(*linux_gidset), M_LINUX, M_WAITOK);
 	error = copyin(args->gidset, linux_gidset, ngrp * sizeof(l_gid16_t));
 	if (error) {
 		LIN_SDT_PROBE1(uid16, linux_setgroups16, copyin_error, error);
 		LIN_SDT_PROBE1(uid16, linux_setgroups16, return, error);
-		free(linux_gidset, M_TEMP);
+		free(linux_gidset, M_LINUX);
 		return (error);
 	}
 	newcred = crget();
@@ -214,12 +215,12 @@ linux_setgroups16(struct thread *td, struct linux_setgroups16_args *args)
 		newcred->cr_ngroups = 1;
 
 	setsugid(td->td_proc);
-	p->p_ucred = newcred;
+	proc_set_cred(p, newcred);
 	PROC_UNLOCK(p);
 	crfree(oldcred);
 	error = 0;
 out:
-	free(linux_gidset, M_TEMP);
+	free(linux_gidset, M_LINUX);
 
 	LIN_SDT_PROBE1(uid16, linux_setgroups16, return, error);
 	return (error);
@@ -260,14 +261,14 @@ linux_getgroups16(struct thread *td, struct linux_getgroups16_args *args)
 
 	ngrp = 0;
 	linux_gidset = malloc(bsd_gidsetsz * sizeof(*linux_gidset),
-	    M_TEMP, M_WAITOK);
+	    M_LINUX, M_WAITOK);
 	while (ngrp < bsd_gidsetsz) {
 		linux_gidset[ngrp] = bsd_gidset[ngrp + 1];
 		ngrp++;
 	}
 
 	error = copyout(linux_gidset, args->gidset, ngrp * sizeof(l_gid16_t));
-	free(linux_gidset, M_TEMP);
+	free(linux_gidset, M_LINUX);
 	if (error) {
 		LIN_SDT_PROBE1(uid16, linux_getgroups16, copyout_error, error);
 		LIN_SDT_PROBE1(uid16, linux_getgroups16, return, error);

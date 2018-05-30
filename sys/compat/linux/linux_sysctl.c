@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_sysctl.c 293532 2016-01-09 16:20:29Z dchagin $");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
@@ -52,6 +53,7 @@ __MBSDID("$MidnightBSD$");
 #endif
 
 #include <compat/linux/linux_dtrace.h>
+#include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_util.h>
 
 #define	LINUX_CTL_KERN		1
@@ -140,12 +142,12 @@ linux_sysctl(struct thread *td, struct linux_sysctl_args *args)
 		return (ENOTDIR);
 	}
 
-	mib = malloc(la.nlen * sizeof(l_int), M_TEMP, M_WAITOK);
+	mib = malloc(la.nlen * sizeof(l_int), M_LINUX, M_WAITOK);
 	error = copyin(PTRIN(la.name), mib, la.nlen * sizeof(l_int));
 	if (error) {
 		LIN_SDT_PROBE1(sysctl, linux_sysctl, copyin_error, error);
 		LIN_SDT_PROBE1(sysctl, linux_sysctl, return, error);
-		free(mib, M_TEMP);
+		free(mib, M_LINUX);
 		return (error);
 	}
 
@@ -157,7 +159,7 @@ linux_sysctl(struct thread *td, struct linux_sysctl_args *args)
 		switch (mib[1]) {
 		case LINUX_KERN_VERSION:
 			error = handle_string(&la, version);
-			free(mib, M_TEMP);
+			free(mib, M_LINUX);
 			LIN_SDT_PROBE1(sysctl, linux_sysctl, return, error);
 			return (error);
 		default:
@@ -186,7 +188,7 @@ linux_sysctl(struct thread *td, struct linux_sysctl_args *args)
 		sbuf_delete(sb);
 	}
 
-	free(mib, M_TEMP);
+	free(mib, M_LINUX);
 
 	LIN_SDT_PROBE1(sysctl, linux_sysctl, return, ENOTDIR);
 	return (ENOTDIR);

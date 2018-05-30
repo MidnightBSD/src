@@ -25,7 +25,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/linux/check_error.d 293493 2016-01-09 15:16:13Z dchagin $
  */
 
 /*
@@ -36,8 +37,8 @@
  */
 
 linuxulator*:dummy::not_implemented,
-linuxulator*:emul:proc_exit:child_clear_tid_error,
-linuxulator*:emul:proc_exit:futex_failed,
+linuxulator*:emul:linux_thread_detach:child_clear_tid_error,
+linuxulator*:emul:linux_thread_detach:futex_failed,
 linuxulator*:emul:linux_schedtail:copyout_error,
 linuxulator*:futex:futex_get:error,
 linuxulator*:futex:futex_sleep:requeue_error,
