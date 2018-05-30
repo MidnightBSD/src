@@ -2489,7 +2489,7 @@ MmAllocateContiguousMemorySpecifyCache(size, lowest, highest,
 		break;
 	}
 
-	ret = (void *)kmem_alloc_contig(kernel_map, size, M_ZERO | M_NOWAIT,
+	ret = (void *)kmem_alloc_contig(kernel_arena, size, M_ZERO | M_NOWAIT,
 	    lowest, highest, PAGE_SIZE, boundary, memattr);
 	if (ret != NULL)
 		malloc_type_allocated(M_DEVBUF, round_page(size));
@@ -3188,17 +3188,14 @@ atol(str)
 static int
 rand(void)
 {
-	struct timeval		tv;
 
-	microtime(&tv);
-	srandom(tv.tv_usec);
-	return ((int)random());
+	return (random());
 }
 
 static void
-srand(seed)
-	unsigned int		seed;
+srand(unsigned int seed)
 {
+
 	srandom(seed);
 }
 
@@ -3591,6 +3588,7 @@ DbgPrint(char *fmt, ...)
 	if (bootverbose) {
 		va_start(ap, fmt);
 		vprintf(fmt, ap);
+		va_end(ap);
 	}
 
 	return (STATUS_SUCCESS);
@@ -3748,7 +3746,7 @@ ntoskrnl_insert_timer(timer, ticks)
 
 	timer->k_callout = c;
 
-	callout_init(c, CALLOUT_MPSAFE);
+	callout_init(c, 1);
 	callout_reset(c, ticks, ntoskrnl_timercall, timer);
 }
 
