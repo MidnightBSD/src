@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_sysvec.c 299215 2016-05-07 08:30:21Z dchagin $");
 
 /* XXX we use functions that might not exist. */
 #include "opt_compat.h"
@@ -196,6 +197,8 @@ struct sysentvec svr4_sysvec = {
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = NULL,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 
 const char      svr4_emul_path[] = "/compat/svr4";
@@ -311,4 +314,4 @@ static moduledata_t svr4_elf_mod = {
 	0
 };
 DECLARE_MODULE_TIED(svr4elf, svr4_elf_mod, SI_SUB_EXEC, SI_ORDER_ANY);
-MODULE_DEPEND(svr4elf, streams, 1, 1, 1);
+MODULE_VERSION(svr4elf, 1);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -27,11 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_ioctl.c 280258 2015-03-19 13:37:36Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/fcntl.h>
@@ -84,6 +85,7 @@ svr4_sys_ioctl(td, uap)
 	struct svr4_sys_ioctl_args *uap;
 {
 	int             *retval;
+	cap_rights_t	 rights;
 	struct file	*fp;
 	u_long		 cmd;
 	int (*fun)(struct file *, struct thread *, register_t *,
@@ -103,7 +105,8 @@ svr4_sys_ioctl(td, uap)
 	retval = td->td_retval;
 	cmd = uap->com;
 
-	if ((error = fget(td, uap->fd, CAP_IOCTL, &fp)) != 0)
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	if (error != 0)
 		return (error);
 
 	if ((fp->f_flag & (FREAD | FWRITE)) == 0) {

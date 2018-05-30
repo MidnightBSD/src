@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -33,11 +34,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_misc.c 331749 2018-03-29 22:31:14Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/dirent.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
@@ -167,15 +168,22 @@ svr4_sys_execv(td, uap)
 	struct svr4_sys_execv_args *uap;
 {
 	struct image_args eargs;
+	struct vmspace *oldvmspace;
 	char *path;
 	int error;
 
 	CHECKALTEXIST(td, uap->path, &path);
 
+	error = pre_execve(td, &oldvmspace);
+	if (error != 0) {
+		free(path, M_TEMP);
+		return (error);
+	}
 	error = exec_copyin_args(&eargs, path, UIO_SYSSPACE, uap->argp, NULL);
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
+	post_execve(td, error, oldvmspace);
 	return (error);
 }
 
@@ -185,16 +193,23 @@ svr4_sys_execve(td, uap)
 	struct svr4_sys_execve_args *uap;
 {
 	struct image_args eargs;
+	struct vmspace *oldvmspace;
 	char *path;
 	int error;
 
 	CHECKALTEXIST(td, uap->path, &path);
 
+	error = pre_execve(td, &oldvmspace);
+	if (error != 0) {
+		free(path, M_TEMP);
+		return (error);
+	}
 	error = exec_copyin_args(&eargs, path, UIO_SYSSPACE, uap->argp,
 	    uap->envp);
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
+	post_execve(td, error, oldvmspace);
 	return (error);
 }
 
@@ -236,21 +251,23 @@ svr4_sys_getdents64(td, uap)
 	int len, reclen;		/* BSD-format */
 	caddr_t outp;			/* SVR4-format */
 	int resid, svr4reclen=0;	/* SVR4-format */
+	cap_rights_t rights;
 	struct file *fp;
 	struct uio auio;
 	struct iovec aiov;
 	off_t off;
 	struct svr4_dirent64 svr4_dirent;
-	int buflen, error, eofflag, nbytes, justone, vfslocked;
+	int buflen, error, eofflag, nbytes, justone;
 	u_long *cookies = NULL, *cookiep;
 	int ncookies;
 
+	memset(&svr4_dirent, 0, sizeof(svr4_dirent));
 	DPRINTF(("svr4_sys_getdents64(%d, *, %d)\n",
 		uap->fd, uap->nbytes));
-	if ((error = getvnode(td->td_proc->p_fd, uap->fd,
-	    CAP_READ | CAP_SEEK, &fp)) != 0) {
+	error = getvnode(td->td_proc->p_fd, uap->fd,
+	    cap_rights_init(&rights, CAP_READ), &fp);
+	if (error != 0)
 		return (error);
-	}
 
 	if ((fp->f_flag & FREAD) == 0) {
 		fdrop(fp, td);
@@ -258,9 +275,7 @@ svr4_sys_getdents64(td, uap)
 	}
 
 	vp = fp->f_vnode;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type != VDIR) {
-		VFS_UNLOCK_GIANT(vfslocked);
 		fdrop(fp, td);
 		return (EINVAL);
 	}
@@ -397,7 +412,6 @@ eof:
 	td->td_retval[0] = nbytes - resid;
 out:
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookies)
 		free(cookies, M_TEMP);
@@ -417,20 +431,22 @@ svr4_sys_getdents(td, uap)
 	int len, reclen;	/* BSD-format */
 	caddr_t outp;		/* SVR4-format */
 	int resid, svr4_reclen;	/* SVR4-format */
+	cap_rights_t rights;
 	struct file *fp;
 	struct uio auio;
 	struct iovec aiov;
 	struct svr4_dirent idb;
 	off_t off;		/* true file offset */
-	int buflen, error, eofflag, vfslocked;
+	int buflen, error, eofflag;
 	u_long *cookiebuf = NULL, *cookie;
 	int ncookies = 0, *retval = td->td_retval;
 
 	if (uap->nbytes < 0)
 		return (EINVAL);
 
-	if ((error = getvnode(td->td_proc->p_fd, uap->fd,
-	    CAP_READ | CAP_SEEK, &fp)) != 0)
+	error = getvnode(td->td_proc->p_fd, uap->fd,
+	    cap_rights_init(&rights, CAP_READ), &fp);
+	if (error != 0)
 		return (error);
 
 	if ((fp->f_flag & FREAD) == 0) {
@@ -439,9 +455,7 @@ svr4_sys_getdents(td, uap)
 	}
 
 	vp = fp->f_vnode;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type != VDIR) {
-		VFS_UNLOCK_GIANT(vfslocked);
 		fdrop(fp, td);
 		return (EINVAL);
 	}
@@ -534,7 +548,6 @@ eof:
 	*retval = uap->nbytes - resid;
 out:
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookiebuf)
 		free(cookiebuf, M_TEMP);
@@ -614,7 +627,7 @@ svr4_sys_fchroot(td, uap)
 	struct filedesc	*fdp = td->td_proc->p_fd;
 	struct vnode	*vp;
 	struct file	*fp;
-	int		 error, vfslocked;
+	int		 error;
 
 	if ((error = priv_check(td, PRIV_VFS_FCHROOT)) != 0)
 		return error;
@@ -624,7 +637,6 @@ svr4_sys_fchroot(td, uap)
 	vp = fp->f_vnode;
 	VREF(vp);
 	fdrop(fp, td);
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	error = change_dir(vp, td);
 	if (error)
@@ -637,11 +649,9 @@ svr4_sys_fchroot(td, uap)
 	VOP_UNLOCK(vp, 0);
 	error = change_root(vp, td);
 	vrele(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 fail:
 	vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -867,9 +877,9 @@ svr4_sys_times(td, uap)
 
 	p = td->td_proc;
 	PROC_LOCK(p);
-	PROC_SLOCK(p);
+	PROC_STATLOCK(p);
 	calcru(p, &utime, &stime);
-	PROC_SUNLOCK(p);
+	PROC_STATUNLOCK(p);
 	calccru(p, &cutime, &cstime);
 	PROC_UNLOCK(p);
 
@@ -1280,9 +1290,9 @@ loop:
 			pid = p->p_pid;
 			status = p->p_xstat;
 			ru = p->p_ru;
-			PROC_SLOCK(p);
+			PROC_STATLOCK(p);
 			calcru(p, &ru.ru_utime, &ru.ru_stime);
-			PROC_SUNLOCK(p);
+			PROC_STATUNLOCK(p);
 			PROC_UNLOCK(p);
 			sx_sunlock(&proctree_lock);
 
@@ -1307,9 +1317,9 @@ loop:
 			pid = p->p_pid;
 			status = W_STOPCODE(p->p_xstat);
 			ru = p->p_ru;
-			PROC_SLOCK(p);
+			PROC_STATLOCK(p);
 			calcru(p, &ru.ru_utime, &ru.ru_stime);
-			PROC_SUNLOCK(p);
+			PROC_STATUNLOCK(p);
 			PROC_UNLOCK(p);
 
 		        if (((uap->options & SVR4_WNOWAIT)) == 0) {
@@ -1331,9 +1341,9 @@ loop:
 			pid = p->p_pid;
 			ru = p->p_ru;
 			status = SIGCONT;
-			PROC_SLOCK(p);
+			PROC_STATLOCK(p);
 			calcru(p, &ru.ru_utime, &ru.ru_stime);
-			PROC_SUNLOCK(p);
+			PROC_STATUNLOCK(p);
 			PROC_UNLOCK(p);
 
 		        if (((uap->options & SVR4_WNOWAIT)) == 0) {
@@ -1652,13 +1662,12 @@ svr4_sys_resolvepath(td, uap)
 	int error, *retval = td->td_retval;
 	unsigned int ncopy;
 
-	NDINIT(&nd, LOOKUP, NOFOLLOW | SAVENAME | MPSAFE, UIO_USERSPACE,
+	NDINIT(&nd, LOOKUP, NOFOLLOW | SAVENAME, UIO_USERSPACE,
 	    uap->path, td);
 
 	if ((error = namei(&nd)) != 0)
 		return (error);
 	NDFREE(&nd, NDF_NO_FREE_PNBUF);
-	VFS_UNLOCK_GIANT(NDHASGIANT(&nd));
 
 	ncopy = min(uap->bufsiz, strlen(nd.ni_cnd.cn_pnbuf) + 1);
 	if ((error = copyout(nd.ni_cnd.cn_pnbuf, uap->buf, ncopy)) != 0)

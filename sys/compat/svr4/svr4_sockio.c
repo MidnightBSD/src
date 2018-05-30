@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1995 Christos Zoulas
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_sockio.c 196019 2009-08-01 19:26:27Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

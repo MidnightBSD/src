@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton.  All rights reserved.
  * Copyright (c) 1994, 1996 Christos Zoulas.  All rights reserved.
@@ -36,14 +37,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_stream.c 321020 2017-07-15 17:25:40Z dchagin $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
 #include <sys/filio.h>
@@ -1446,10 +1447,12 @@ svr4_sys_putmsg(td, uap)
 	struct thread *td;
 	struct svr4_sys_putmsg_args *uap;
 {
-	struct file     *fp;
+	cap_rights_t rights;
+	struct file *fp;
 	int error;
 
-	if ((error = fget(td, uap->fd, CAP_WRITE, &fp)) != 0) {
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_SEND), &fp);
+	if (error != 0) {
 #ifdef DEBUG_SVR4
 	        uprintf("putmsg: bad fp\n");
 #endif
@@ -1618,10 +1621,12 @@ svr4_sys_getmsg(td, uap)
 	struct thread *td;
 	struct svr4_sys_getmsg_args *uap;
 {
-	struct file     *fp;
+	cap_rights_t rights;
+	struct file *fp;
 	int error;
 
-	if ((error = fget(td, uap->fd, CAP_READ, &fp)) != 0) {
+	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_RECV), &fp);
+	if (error != 0) {
 #ifdef DEBUG_SVR4
 	        uprintf("getmsg: bad fp\n");
 #endif
@@ -1824,7 +1829,7 @@ svr4_do_getmsg(td, uap, fp)
 			break;
 
 		default:
-			fdclose(td->td_proc->p_fd, afp, st->s_afd, td);
+			fdclose(td, afp, st->s_afd);
 			fdrop(afp, td);
 			st->s_afd = -1;
 			mtx_unlock(&Giant);
@@ -1962,7 +1967,7 @@ svr4_do_getmsg(td, uap, fp)
 
 	if (error) {
 		if (afp) {
-			fdclose(td->td_proc->p_fd, afp, st->s_afd, td);
+			fdclose(td, afp, st->s_afd);
 			fdrop(afp, td);
 			st->s_afd = -1;
 		}

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -25,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/compat/svr4/svr4_siginfo.h 151463 2005-10-19 09:33:15Z davidxu $
  */
 
 #ifndef	_SVR4_SIGINFO_H_
