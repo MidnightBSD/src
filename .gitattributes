@@ -55108,7 +55108,13 @@ sys/conf/makeLINT.sed -text
 sys/conf/newvers.sh -text
 sys/conf/options -text
 sys/conf/options.amd64 -text
+sys/conf/options.arm -text
 sys/conf/options.i386 -text
+sys/conf/options.ia64 -text
+sys/conf/options.mips -text
+sys/conf/options.pc98 -text
+sys/conf/options.powerpc -text
+sys/conf/options.sparc64 -text
 sys/conf/systags.sh -text
 sys/contrib/altq/altq/altq.h -text
 sys/contrib/altq/altq/altq_cbq.c -text

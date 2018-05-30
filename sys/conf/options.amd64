@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/conf/options.amd64 283280 2015-05-22 09:03:55Z whu $
 # Options specific to AMD64 platform kernels
 
 AUTO_EOI_1		opt_auto_eoi.h
@@ -21,6 +22,7 @@ COMPAT_FREEBSD32	opt_compat.h
 COMPAT_LINUX32		opt_compat.h
 #COMPAT_SVR4		opt_dontuse.h
 #DEBUG_SVR4		opt_svr4.h
+IMAGACT_BINMISC		opt_dontuse.h
 LINPROCFS		opt_dontuse.h
 LINSYSFS		opt_dontuse.h
 NDISAPI			opt_dontuse.h
@@ -66,9 +68,7 @@ BPF_JITTER		opt_bpf.h
 
 XENHVM			opt_global.h
 
+HYPERV			opt_global.h
+
 # options for the Intel C600 SAS driver (isci)
 ISCI_LOGGING	opt_isci.h
-
-# hw random number generators for random(4)
-PADLOCK_RNG		opt_cpu.h
-RDRAND_RNG		opt_cpu.h
