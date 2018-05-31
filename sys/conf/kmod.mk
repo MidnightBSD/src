@@ -1,5 +1,5 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: src/sys/conf/kmod.mk,v 1.219 2007/07/11 01:20:37 marcel Exp $
+# $FreeBSD: stable/10/sys/conf/kmod.mk 324643 2017-10-15 22:45:25Z brooks $
 # $MidnightBSD$
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
@@ -32,6 +32,9 @@
 # MFILES	Optionally a list of interfaces used by the module.
 #		This file contains a default list of interfaces.
 #
+# KMODISLOADED	Command to check whether a kernel module is
+#		loaded [/sbin/kldstat -q -n]
+#
 # PROG		The name of the kernel module to build.
 #		If not supplied, ${KMOD}.ko is used.
 #
@@ -60,13 +63,17 @@
 # 	unload:
 #		Unload a module.
 #
+#	reload:
+#		Unload if loaded, then load.
+#
 
 # backwards compat option for older systems.
-MACHINE_CPUARCH?=${MACHINE_ARCH}
+MACHINE_CPUARCH?=${MACHINE_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 
 AWK?=		awk
 KMODLOAD?=	/sbin/kldload
 KMODUNLOAD?=	/sbin/kldunload
+KMODISLOADED?=	/sbin/kldstat -q -n
 OBJCOPY?=	objcopy
 
 .if defined(KMODDEPS)
@@ -78,8 +85,8 @@ OBJCOPY?=	objcopy
 
 .SUFFIXES: .out .o .c .cc .cxx .C .y .l .s .S
 
-# amd64 uses direct linking for kmod, all others use shared binaries
-.if ${MACHINE_CPUARCH} != amd64
+# amd64 and mips use direct linking for kmod, all others use shared binaries
+.if ${MACHINE_CPUARCH} != amd64 && ${MACHINE_CPUARCH} != mips
 __KLD_SHARED=yes
 .else
 __KLD_SHARED=no
@@ -126,6 +133,21 @@ CFLAGS+=	${DEBUG_FLAGS}
 CFLAGS+=	-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
 .endif
 
+# Temporary workaround for PR 196407, which contains the fascinating details.
+# Don't allow clang to use fpu instructions or registers in kernel modules.
+.if ${MACHINE_CPUARCH} == arm
+CFLAGS.clang+=	-mllvm -arm-use-movt=0
+CFLAGS.clang+=	-mfpu=none
+.endif
+
+.if ${MACHINE_CPUARCH} == powerpc
+CFLAGS+=	-mlongcall -fno-omit-frame-pointer
+.endif
+
+.if ${MACHINE_CPUARCH} == mips
+CFLAGS+=	-G0 -fno-pic -mno-abicalls -mlong-calls
+.endif
+
 .if defined(DEBUG) || defined(DEBUG_FLAGS)
 CTFFLAGS+=	-g
 .endif
@@ -143,7 +165,7 @@ SRCS+=	${KMOD:S/$/.c/}
 CLEANFILES+=	${KMOD:S/$/.c/}
 
 .for _firmw in ${FIRMWS}
-${_firmw:C/\:.*$/.fwo/}:	${_firmw:C/\:.*$//}
+${_firmw:C/\:.*$/.fwo/:T}:	${_firmw:C/\:.*$//}
 	@${ECHO} ${_firmw:C/\:.*$//} ${.ALLSRC:M*${_firmw:C/\:.*$//}}
 	@if [ -e ${_firmw:C/\:.*$//} ]; then			\
 		${LD} -b binary --no-warn-mismatch ${LDFLAGS}	\
@@ -155,7 +177,7 @@ ${_firmw:C/\:.*$/.fwo/}:	${_firmw:C/\:.*$//}
 		rm ${_firmw:C/\:.*$//};				\
 	fi
 
-OBJS+=	${_firmw:C/\:.*$/.fwo/}
+OBJS+=	${_firmw:C/\:.*$/.fwo/:T}
 .endfor
 .endif
 
@@ -231,7 +253,7 @@ beforedepend: ${_ILINKS}
 # causes all the modules to be rebuilt when the directory pointed to changes.
 .for _link in ${_ILINKS}
 .if !exists(${.OBJDIR}/${_link})
-${OBJS}: ${_link}
+${OBJS}: ${.OBJDIR}/${_link}
 .endif
 .endfor
 
@@ -245,18 +267,23 @@ SYSDIR=	${_dir}
 .error "can't find kernel source tree"
 .endif
 
-${_ILINKS}:
-	@case ${.TARGET} in \
+.for _link in ${_ILINKS}
+.PHONY: ${_link}
+${_link}: ${.OBJDIR}/${_link}
+
+${.OBJDIR}/${_link}:
+	@case ${.TARGET:T} in \
 	machine) \
 		path=${SYSDIR}/${MACHINE}/include ;; \
 	@) \
 		path=${SYSDIR} ;; \
 	*) \
-		path=${SYSDIR}/${.TARGET}/include ;; \
+		path=${SYSDIR}/${.TARGET:T}/include ;; \
 	esac ; \
 	path=`(cd $$path && /bin/pwd)` ; \
-	${ECHO} ${.TARGET} "->" $$path ; \
-	ln -sf $$path ${.TARGET}
+	${ECHO} ${.TARGET:T} "->" $$path ; \
+	ln -sf $$path ${.TARGET:T}
+.endfor
 
 CLEANFILES+= ${PROG} ${KMOD}.kld ${OBJS}
 
@@ -277,8 +304,7 @@ realinstall: _kmodinstall
 _kmodinstall:
 	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${KMODDIR}
-.if defined(DEBUG_FLAGS) && !defined(INSTALL_NODEBUG) && \
-    (defined(MK_KERNEL_SYMBOLS) && ${MK_KERNEL_SYMBOLS} != "no")
+.if defined(DEBUG_FLAGS) && !defined(INSTALL_NODEBUG) && ${MK_KERNEL_SYMBOLS} != "no"
 	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG}.symbols ${DESTDIR}${KMODDIR}
 .endif
@@ -306,7 +332,11 @@ load: ${PROG}
 
 .if !target(unload)
 unload:
-	${KMODUNLOAD} -v ${PROG}
+	if ${KMODISLOADED} ${PROG} ; then ${KMODUNLOAD} -v ${PROG} ; fi
+.endif
+
+.if !target(reload)
+reload: unload load
 .endif
 
 .if defined(KERNBUILDDIR)
@@ -330,15 +360,18 @@ ${_src}:
 .endif
 
 # Respect configuration-specific C flags.
-CFLAGS+=	${CONF_CFLAGS}
+CFLAGS+=	${ARCH_FLAGS} ${CONF_CFLAGS}
 
 MFILES?= dev/acpica/acpi_if.m dev/acpi_support/acpi_wmi_if.m \
 	dev/agp/agp_if.m dev/ata/ata_if.m dev/eisa/eisa_if.m \
+	dev/fb/fb_if.m dev/gpio/gpio_if.m dev/gpio/gpiobus_if.m \
+	dev/hyperv/vmbus/vmbus_if.m \
 	dev/iicbus/iicbb_if.m dev/iicbus/iicbus_if.m \
 	dev/mmc/mmcbr_if.m dev/mmc/mmcbus_if.m \
 	dev/mii/miibus_if.m dev/mvs/mvs_if.m dev/ofw/ofw_bus_if.m \
 	dev/pccard/card_if.m dev/pccard/power_if.m dev/pci/pci_if.m \
-	dev/pci/pcib_if.m dev/ppbus/ppbus_if.m dev/smbus/smbus_if.m \
+	dev/pci/pcib_if.m dev/ppbus/ppbus_if.m \
+	dev/sdhci/sdhci_if.m dev/smbus/smbus_if.m dev/spibus/spibus_if.m \
 	dev/sound/pci/hda/hdac_if.m \
 	dev/sound/pcm/ac97_if.m dev/sound/pcm/channel_if.m \
 	dev/sound/pcm/feeder_if.m dev/sound/pcm/mixer_if.m \
@@ -347,7 +380,7 @@ MFILES?= dev/acpica/acpi_if.m dev/acpi_support/acpi_wmi_if.m \
 	kern/bus_if.m kern/clock_if.m \
 	kern/cpufreq_if.m kern/device_if.m kern/serdev_if.m \
 	libkern/iconv_converter_if.m opencrypto/cryptodev_if.m \
-	pc98/pc98/canbus_if.m
+	pc98/pc98/canbus_if.m dev/etherswitch/mdio_if.m
 
 .for _srcsrc in ${MFILES}
 .for _ext in c h
