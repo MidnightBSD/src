@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/dtrace_unload.c 211611 2010-08-22 11:05:37Z rpaulo $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_unload.c 284136 2015-06-07 20:45:13Z pfg $
  *
  */
 
@@ -29,23 +29,8 @@ dtrace_unload()
 	dtrace_state_t *state;
 	int error = 0;
 
-#if __FreeBSD_version < 800039
-	/*
-	 * Check if there is still an event handler callback
-	 * registered.
-	 */
-	if (eh_tag != 0) {
-		/* De-register the device cloning event handler. */
-		EVENTHANDLER_DEREGISTER(dev_clone, eh_tag);
-		eh_tag = 0;
-
-		/* Stop device cloning. */
-		clone_cleanup(&dtrace_clones);
-	}
-#else
 	destroy_dev(dtrace_dev);
 	destroy_dev(helper_dev);
-#endif
 
 	mutex_enter(&dtrace_provider_lock);
 	mutex_enter(&dtrace_lock);
@@ -68,6 +53,8 @@ dtrace_unload()
 	}
 
 	dtrace_provider = NULL;
+	EVENTHANDLER_DEREGISTER(kld_load, dtrace_kld_load_tag);
+	EVENTHANDLER_DEREGISTER(kld_unload_try, dtrace_kld_unload_try_tag);
 
 	if ((state = dtrace_anon_grab()) != NULL) {
 		/*
@@ -82,11 +69,6 @@ dtrace_unload()
 	bzero(&dtrace_anon, sizeof (dtrace_anon_t));
 
 	mutex_exit(&cpu_lock);
-
-	if (dtrace_helptrace_enabled) {
-		kmem_free(dtrace_helptrace_buffer, 0);
-		dtrace_helptrace_buffer = NULL;
-	}
 
 	if (dtrace_probes != NULL) {
 		kmem_free(dtrace_probes, 0);
@@ -122,10 +104,11 @@ dtrace_unload()
 	mutex_destroy(&dtrace_meta_lock);
 	mutex_destroy(&dtrace_provider_lock);
 	mutex_destroy(&dtrace_lock);
+#ifdef DEBUG
 	mutex_destroy(&dtrace_errlock);
+#endif
 
-	/* XXX Hack */
-	mutex_destroy(&mod_lock);
+	taskq_destroy(dtrace_taskq);
 
 	/* Reset our hook for exceptions. */
 	dtrace_invop_uninit();

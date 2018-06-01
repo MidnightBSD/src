@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/amd64/dtrace_subr.c 251666 2013-06-12 20:08:30Z gnn $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/amd64/dtrace_subr.c 315012 2017-03-10 18:52:37Z markj $
  *
  */
 /*
@@ -42,7 +42,9 @@
 #include <sys/dtrace_impl.h>
 #include <sys/dtrace_bsd.h>
 #include <machine/clock.h>
+#include <machine/cpufunc.h>
 #include <machine/frame.h>
+#include <machine/psl.h>
 #include <vm/pmap.h>
 
 extern uintptr_t 	dtrace_in_probe_addr;
@@ -143,7 +145,6 @@ dtrace_sync(void)
 }
 
 #ifdef notyet
-int (*dtrace_fasttrap_probe_ptr)(struct regs *);
 int (*dtrace_pid_probe_ptr)(struct regs *);
 int (*dtrace_return_probe_ptr)(struct regs *);
 
@@ -213,13 +214,6 @@ dtrace_user_probe(struct regs *rp, caddr_t addr, processorid_t cpuid)
 			(void) (*dtrace_return_probe_ptr)(rp);
 		rw_exit(rwp);
 		rp->r_pc = npc;
-
-	} else if (rp->r_trapno == T_DTRACE_PROBE) {
-		rwp = &CPU->cpu_ft_lock;
-		rw_enter(rwp, RW_READER);
-		if (dtrace_fasttrap_probe_ptr != NULL)
-			(void) (*dtrace_fasttrap_probe_ptr)(rp);
-		rw_exit(rwp);
 
 	} else if (rp->r_trapno == T_BPTFLT) {
 		uint8_t instr;
@@ -454,7 +448,7 @@ dtrace_gethrtime()
 	 * (see nsec_scale calculations) taking into account 32-bit shift of
 	 * the higher half and finally add.
 	 */
-	tsc = rdtsc() + tsc_skew[curcpu];
+	tsc = rdtsc() - tsc_skew[curcpu];
 	lo = tsc;
 	hi = tsc >> 32;
 	return (((lo * nsec_scale) >> SCALE_SHIFT) +
@@ -475,6 +469,8 @@ dtrace_gethrestime(void)
 int
 dtrace_trap(struct trapframe *frame, u_int type)
 {
+	uint16_t nofault;
+
 	/*
 	 * A trap can occur while DTrace executes a probe. Before
 	 * executing the probe, DTrace blocks re-scheduling and sets
@@ -485,7 +481,12 @@ dtrace_trap(struct trapframe *frame, u_int type)
 	 * Check if DTrace has enabled 'no-fault' mode:
 	 *
 	 */
-	if ((cpu_core[curcpu].cpuc_dtrace_flags & CPU_DTRACE_NOFAULT) != 0) {
+	sched_pin();
+	nofault = cpu_core[curcpu].cpuc_dtrace_flags & CPU_DTRACE_NOFAULT;
+	sched_unpin();
+	if (nofault) {
+		KASSERT((read_rflags() & PSL_I) == 0, ("interrupts enabled"));
+
 		/*
 		 * There are only a couple of trap types that are expected.
 		 * All the rest will be handled in the usual way.

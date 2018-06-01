@@ -19,12 +19,13 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/dtrace_ioctl.c 211608 2010-08-22 10:53:32Z rpaulo $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_ioctl.c 297077 2016-03-20 20:00:25Z mav $
  *
  */
 
 static int dtrace_verbose_ioctl;
-SYSCTL_INT(_debug_dtrace, OID_AUTO, verbose_ioctl, CTLFLAG_RW, &dtrace_verbose_ioctl, 0, "");
+SYSCTL_INT(_debug_dtrace, OID_AUTO, verbose_ioctl, CTLFLAG_RW,
+    &dtrace_verbose_ioctl, 0, "log DTrace ioctls");
 
 #define DTRACE_IOCTL_PRINTF(fmt, ...)	if (dtrace_verbose_ioctl) printf(fmt, ## __VA_ARGS__ )
 
@@ -40,11 +41,7 @@ dtrace_ioctl_helper(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 	case DTRACEHIOC_ADDDOF:
 		dhp = (dof_helper_t *)addr;
 		/* XXX all because dofhp_dof is 64 bit */
-#ifdef __i386
-		addr = (caddr_t)(uint32_t)dhp->dofhp_dof;
-#else
-		addr = (caddr_t)dhp->dofhp_dof;
-#endif
+		addr = (caddr_t)(vm_offset_t)dhp->dofhp_dof;
 		/* FALLTHROUGH */
 	case DTRACEHIOC_ADD:
 		dof = dtrace_dof_copyin((intptr_t)addr, &rval);
@@ -82,12 +79,9 @@ static int
 dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
     int flags __unused, struct thread *td)
 {
-#if __FreeBSD_version < 800039
-	dtrace_state_t *state = dev->si_drv1;
-#else
 	dtrace_state_t *state;
 	devfs_get_cdevpriv((void **) &state);
-#endif
+
 	int error = 0;
 	if (state == NULL)
 		return (EINVAL);
@@ -220,7 +214,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 		    "DTRACEIOC_AGGSNAP":"DTRACEIOC_BUFSNAP",
 		    curcpu, desc.dtbd_cpu);
 
-		if (desc.dtbd_cpu < 0 || desc.dtbd_cpu >= NCPU)
+		if (desc.dtbd_cpu >= NCPU)
 			return (ENOENT);
 		if (pcpu_find(desc.dtbd_cpu) == NULL)
 			return (ENOENT);
@@ -279,6 +273,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 			desc.dtbd_drops = buf->dtb_drops;
 			desc.dtbd_errors = buf->dtb_errors;
 			desc.dtbd_oldest = buf->dtb_xamot_offset;
+			desc.dtbd_timestamp = dtrace_gethrtime();
 
 			mutex_exit(&dtrace_lock);
 
@@ -333,6 +328,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 		desc.dtbd_drops = buf->dtb_xamot_drops;
 		desc.dtbd_errors = buf->dtb_xamot_errors;
 		desc.dtbd_oldest = 0;
+		desc.dtbd_timestamp = buf->dtb_switched;
 
 		mutex_exit(&dtrace_lock);
 
@@ -583,19 +579,25 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 			return (EINVAL);
 
 		mutex_enter(&dtrace_provider_lock);
+#ifdef illumos
 		mutex_enter(&mod_lock);
+#endif
 		mutex_enter(&dtrace_lock);
 
 		if (desc->dtargd_id > dtrace_nprobes) {
 			mutex_exit(&dtrace_lock);
+#ifdef illumos
 			mutex_exit(&mod_lock);
+#endif
 			mutex_exit(&dtrace_provider_lock);
 			return (EINVAL);
 		}
 
 		if ((probe = dtrace_probes[desc->dtargd_id - 1]) == NULL) {
 			mutex_exit(&dtrace_lock);
+#ifdef illumos
 			mutex_exit(&mod_lock);
+#endif
 			mutex_exit(&dtrace_provider_lock);
 			return (EINVAL);
 		}
@@ -619,7 +621,9 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 			    probe->dtpr_id, probe->dtpr_arg, desc);
 		}
 
+#ifdef illumos
 		mutex_exit(&mod_lock);
+#endif
 		mutex_exit(&dtrace_provider_lock);
 
 		return (0);
@@ -776,7 +780,7 @@ dtrace_ioctl(struct cdev *dev, u_long cmd, caddr_t addr,
 		dstate = &state->dts_vstate.dtvs_dynvars;
 
 		for (i = 0; i < NCPU; i++) {
-#if !defined(sun)
+#ifndef illumos
 			if (pcpu_find(i) == NULL)
 				continue;
 #endif

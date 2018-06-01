@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/amd64/instr_size.c 211607 2010-08-22 10:40:15Z rpaulo $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/amd64/instr_size.c 297077 2016-03-20 20:00:25Z mav $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -31,14 +31,14 @@
 /*	  All Rights Reserved	*/
 
 
-#if defined(sun)
+#ifdef illumos
 #pragma ident	"@(#)instr_size.c	1.14	05/07/08 SMI"
 #endif
 
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/proc.h>
-#if defined(sun)
+#ifdef illumos
 #include <sys/cmn_err.h>
 #include <sys/archsystm.h>
 #include <sys/copyops.h>
@@ -105,7 +105,7 @@ dtrace_dis_isize(uchar_t *instr, dis_isize_t which, model_t model, int *rmindex)
 	dis86_t	x;
 	uint_t mode = SIZE64;
 
-#if defined(sun)
+#ifdef illumos
 	mode = (model == DATAMODEL_LP64) ? SIZE64 : SIZE32;
 #endif
 

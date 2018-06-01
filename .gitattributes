@@ -54933,6 +54933,17 @@ sys/cddl/dev/dtrace/i386/dtrace_isa.c -text
 sys/cddl/dev/dtrace/i386/dtrace_subr.c -text
 sys/cddl/dev/dtrace/i386/instr_size.c -text
 sys/cddl/dev/dtrace/i386/regset.h -text
+sys/cddl/dev/dtrace/mips/dtrace_asm.S svneol=native#text/plain
+sys/cddl/dev/dtrace/mips/dtrace_isa.c svneol=native#text/plain
+sys/cddl/dev/dtrace/mips/dtrace_subr.c svneol=native#text/plain
+sys/cddl/dev/dtrace/mips/regset.h svneol=native#text/plain
+sys/cddl/dev/dtrace/powerpc/dtrace_asm.S svneol=native#text/plain
+sys/cddl/dev/dtrace/powerpc/dtrace_isa.c svneol=native#text/plain
+sys/cddl/dev/dtrace/powerpc/dtrace_subr.c svneol=native#text/plain
+sys/cddl/dev/dtrace/powerpc/regset.h svneol=native#text/plain
+sys/cddl/dev/dtrace/x86/dis_tables.c svneol=native#text/plain
+sys/cddl/dev/dtrace/x86/dis_tables.h svneol=native#text/plain
+sys/cddl/dev/dtrace/x86/regset.h svneol=native#text/plain
 sys/cddl/dev/fasttrap/fasttrap.c -text
 sys/cddl/dev/fbt/fbt.c -text
 sys/cddl/dev/lockstat/lockstat.c -text

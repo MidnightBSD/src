@@ -20,7 +20,9 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 289786 2015-10-23 07:31:04Z avg $
+ * Portions Copyright 2012,2013 Justin Hibbits <jhibbits@freebsd.org>
+ *
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/powerpc/dtrace_isa.c 289786 2015-10-23 07:31:04Z avg $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -32,6 +34,7 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/stack.h>
+#include <sys/sysent.h>
 #include <sys/pcpu.h>
 
 #include <machine/frame.h>
@@ -45,20 +48,25 @@
 
 #include "regset.h"
 
-uint8_t dtrace_fuword8_nocheck(void *);
-uint16_t dtrace_fuword16_nocheck(void *);
-uint32_t dtrace_fuword32_nocheck(void *);
-uint64_t dtrace_fuword64_nocheck(void *);
+/* Offset to the LR Save word (ppc32) */
+#define RETURN_OFFSET	4
+#define RETURN_OFFSET64	8
 
-int	dtrace_ustackdepth_max = 2048;
+#define INKERNEL(x)	((x) <= VM_MAX_KERNEL_ADDRESS && \
+		(x) >= VM_MIN_KERNEL_ADDRESS)
+
+greg_t
+dtrace_getfp(void)
+{
+	return (greg_t)__builtin_frame_address(0);
+}
 
 void
 dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
     uint32_t *intrpc)
 {
 	int depth = 0;
-	register_t rbp;
-	struct amd64_frame *frame;
+	register_t sp;
 	vm_offset_t callpc;
 	pc_t caller = (pc_t) solaris_cpu[curcpu].cpu_dtrace_caller;
 
@@ -67,14 +75,17 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 
 	aframes++;
 
-	__asm __volatile("movq %%rbp,%0" : "=r" (rbp));
+	sp = dtrace_getfp();
 
-	frame = (struct amd64_frame *)rbp;
 	while (depth < pcstack_limit) {
-		if (!INKERNEL((long) frame))
+		if (!INKERNEL((long) sp))
 			break;
 
-		callpc = frame->f_retaddr;
+#ifdef __powerpc64__
+		callpc = *(uintptr_t *)(sp + RETURN_OFFSET64);
+#else
+		callpc = *(uintptr_t *)(sp + RETURN_OFFSET);
+#endif
 
 		if (!INKERNEL(callpc))
 			break;
@@ -89,11 +100,7 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 			pcstack[depth++] = callpc;
 		}
 
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
-		    curthread->td_kstack_pages * PAGE_SIZE)
-			break;
-		frame = frame->f_frame;
+		sp = *(uintptr_t*)sp;
 	}
 
 	for (; depth < pcstack_limit; depth++) {
@@ -105,25 +112,13 @@ static int
 dtrace_getustack_common(uint64_t *pcstack, int pcstack_limit, uintptr_t pc,
     uintptr_t sp)
 {
-	uintptr_t oldsp;
-	volatile uint16_t *flags =
-	    (volatile uint16_t *)&cpu_core[curcpu].cpuc_dtrace_flags;
+	proc_t *p = curproc;
 	int ret = 0;
 
 	ASSERT(pcstack == NULL || pcstack_limit > 0);
-	ASSERT(dtrace_ustackdepth_max > 0);
 
 	while (pc != 0) {
-		/*
-		 * We limit the number of times we can go around this
-		 * loop to account for a circular stack.
-		 */
-		if (ret++ >= dtrace_ustackdepth_max) {
-			*flags |= CPU_DTRACE_BADSTACK;
-			cpu_core[curcpu].cpuc_dtrace_illval = sp;
-			break;
-		}
-
+		ret++;
 		if (pcstack != NULL) {
 			*pcstack++ = (uint64_t)pc;
 			pcstack_limit--;
@@ -134,26 +129,13 @@ dtrace_getustack_common(uint64_t *pcstack, int pcstack_limit, uintptr_t pc,
 		if (sp == 0)
 			break;
 
-		oldsp = sp;
-
-		pc = dtrace_fuword64((void *)(sp +
-			offsetof(struct amd64_frame, f_retaddr)));
-		sp = dtrace_fuword64((void *)sp);
-
-		if (sp == oldsp) {
-			*flags |= CPU_DTRACE_BADSTACK;
-			cpu_core[curcpu].cpuc_dtrace_illval = sp;
-			break;
+		if (SV_PROC_FLAG(p, SV_ILP32)) {
+			pc = dtrace_fuword32((void *)(sp + RETURN_OFFSET));
+			sp = dtrace_fuword32((void *)sp);
 		}
-
-		/*
-		 * This is totally bogus:  if we faulted, we're going to clear
-		 * the fault and break.  This is to deal with the apparently
-		 * broken Java stacks on x86.
-		 */
-		if (*flags & CPU_DTRACE_FAULT) {
-			*flags &= ~CPU_DTRACE_FAULT;
-			break;
+		else {
+			pc = dtrace_fuword64((void *)(sp + RETURN_OFFSET64));
+			sp = dtrace_fuword64((void *)sp);
 		}
 	}
 
@@ -165,7 +147,7 @@ dtrace_getupcstack(uint64_t *pcstack, int pcstack_limit)
 {
 	proc_t *p = curproc;
 	struct trapframe *tf;
-	uintptr_t pc, sp, fp;
+	uintptr_t pc, sp;
 	volatile uint16_t *flags =
 	    (volatile uint16_t *)&cpu_core[curcpu].cpuc_dtrace_flags;
 	int n;
@@ -188,9 +170,8 @@ dtrace_getupcstack(uint64_t *pcstack, int pcstack_limit)
 	if (pcstack_limit <= 0)
 		return;
 
-	pc = tf->tf_rip;
-	fp = tf->tf_rbp;
-	sp = tf->tf_rsp;
+	pc = tf->srr0;
+	sp = tf->fixreg[1];
 
 	if (DTRACE_CPUFLAG_ISSET(CPU_DTRACE_ENTRY)) {
 		/* 
@@ -207,10 +188,10 @@ dtrace_getupcstack(uint64_t *pcstack, int pcstack_limit)
 		if (pcstack_limit <= 0)
 			return;
 
-		pc = dtrace_fuword64((void *) sp);
+		pc = tf->lr;
 	}
 
-	n = dtrace_getustack_common(pcstack, pcstack_limit, pc, fp);
+	n = dtrace_getustack_common(pcstack, pcstack_limit, pc, sp);
 	ASSERT(n >= 0);
 	ASSERT(n <= pcstack_limit);
 
@@ -227,7 +208,7 @@ dtrace_getustackdepth(void)
 {
 	proc_t *p = curproc;
 	struct trapframe *tf;
-	uintptr_t pc, fp, sp;
+	uintptr_t pc, sp;
 	int n = 0;
 
 	if (p == NULL || (tf = curthread->td_frame) == NULL)
@@ -236,9 +217,8 @@ dtrace_getustackdepth(void)
 	if (DTRACE_CPUFLAG_ISSET(CPU_DTRACE_FAULT))
 		return (-1);
 
-	pc = tf->tf_rip;
-	fp = tf->tf_rbp;
-	sp = tf->tf_rsp;
+	pc = tf->srr0;
+	sp = tf->fixreg[1];
 
 	if (DTRACE_CPUFLAG_ISSET(CPU_DTRACE_ENTRY)) {
 		/* 
@@ -250,11 +230,15 @@ dtrace_getustackdepth(void)
 		 * instruction puts it there right before the branch.
 		 */
 
-		pc = dtrace_fuword64((void *) sp);
+		if (SV_PROC_FLAG(p, SV_ILP32)) {
+			pc = dtrace_fuword32((void *) sp);
+		}
+		else
+			pc = dtrace_fuword64((void *) sp);
 		n++;
 	}
 
-	n += dtrace_getustack_common(NULL, 0, pc, fp);
+	n += dtrace_getustack_common(NULL, 0, pc, sp);
 
 	return (n);
 }
@@ -264,7 +248,7 @@ dtrace_getufpstack(uint64_t *pcstack, uint64_t *fpstack, int pcstack_limit)
 {
 	proc_t *p = curproc;
 	struct trapframe *tf;
-	uintptr_t pc, sp, fp;
+	uintptr_t pc, sp;
 	volatile uint16_t *flags =
 	    (volatile uint16_t *)&cpu_core[curcpu].cpuc_dtrace_flags;
 #ifdef notyet	/* XXX signal stack */
@@ -290,9 +274,8 @@ dtrace_getufpstack(uint64_t *pcstack, uint64_t *fpstack, int pcstack_limit)
 	if (pcstack_limit <= 0)
 		return;
 
-	pc = tf->tf_rip;
-	sp = tf->tf_rsp;
-	fp = tf->tf_rbp;
+	pc = tf->srr0;
+	sp = tf->fixreg[1];
 
 #ifdef notyet /* XXX signal stack */
 	oldcontext = lwp->lwp_oldcontext;
@@ -307,17 +290,22 @@ dtrace_getufpstack(uint64_t *pcstack, uint64_t *fpstack, int pcstack_limit)
 		if (pcstack_limit <= 0)
 			return;
 
-		pc = dtrace_fuword64((void *)sp);
+		if (SV_PROC_FLAG(p, SV_ILP32)) {
+			pc = dtrace_fuword32((void *)sp);
+		}
+		else {
+			pc = dtrace_fuword64((void *)sp);
+		}
 	}
 
 	while (pc != 0) {
 		*pcstack++ = (uint64_t)pc;
-		*fpstack++ = fp;
+		*fpstack++ = sp;
 		pcstack_limit--;
 		if (pcstack_limit <= 0)
 			break;
 
-		if (fp == 0)
+		if (sp == 0)
 			break;
 
 #ifdef notyet /* XXX signal stack */
@@ -332,9 +320,14 @@ dtrace_getufpstack(uint64_t *pcstack, uint64_t *fpstack, int pcstack_limit)
 		} else
 #endif /* XXX */
 		{
-			pc = dtrace_fuword64((void *)(fp +
-				offsetof(struct amd64_frame, f_retaddr)));
-			fp = dtrace_fuword64((void *)fp);
+			if (SV_PROC_FLAG(p, SV_ILP32)) {
+				pc = dtrace_fuword32((void *)(sp + RETURN_OFFSET));
+				sp = dtrace_fuword32((void *)sp);
+			}
+			else {
+				pc = dtrace_fuword64((void *)(sp + RETURN_OFFSET64));
+				sp = dtrace_fuword64((void *)sp);
+			}
 		}
 
 		/*
@@ -358,61 +351,45 @@ uint64_t
 dtrace_getarg(int arg, int aframes)
 {
 	uintptr_t val;
-	struct amd64_frame *fp = (struct amd64_frame *)dtrace_getfp();
+	uintptr_t *fp = (uintptr_t *)dtrace_getfp();
 	uintptr_t *stack;
 	int i;
 
 	/*
-	 * A total of 6 arguments are passed via registers; any argument with
-	 * index of 5 or lower is therefore in a register.
+	 * A total of 8 arguments are passed via registers; any argument with
+	 * index of 7 or lower is therefore in a register.
 	 */
-	int inreg = 5;
+	int inreg = 7;
 
 	for (i = 1; i <= aframes; i++) {
-		fp = fp->f_frame;
+		fp = (uintptr_t *)*fp;
 
-		if (P2ROUNDUP(fp->f_retaddr, 16) ==
-		    (long)dtrace_invop_callsite) {
+		/*
+		 * On ppc32 AIM, and booke, trapexit() is the immediately following
+		 * label.  On ppc64 AIM trapexit() follows a nop.
+		 */
+		if (((long)(fp[1]) == (long)trapexit) ||
+				(((long)(fp[1]) + 4 == (long)trapexit))) {
 			/*
-			 * In the case of amd64, we will use the pointer to the
-			 * regs structure that was pushed when we took the
-			 * trap.  To get this structure, we must increment
-			 * beyond the frame structure, and then again beyond
-			 * the calling RIP stored in dtrace_invop().  If the
-			 * argument that we're seeking is passed on the stack,
-			 * we'll pull the true stack pointer out of the saved
-			 * registers and decrement our argument by the number
-			 * of arguments passed in registers; if the argument
-			 * we're seeking is passed in regsiters, we can just
+			 * In the case of powerpc, we will use the pointer to the regs
+			 * structure that was pushed when we took the trap.  To get this
+			 * structure, we must increment beyond the frame structure.  If the
+			 * argument that we're seeking is passed on the stack, we'll pull
+			 * the true stack pointer out of the saved registers and decrement
+			 * our argument by the number of arguments passed in registers; if
+			 * the argument we're seeking is passed in regsiters, we can just
 			 * load it directly.
 			 */
-			struct trapframe *tf =
-			    (struct trapframe *)((uintptr_t)&fp[1]);
+#ifdef __powerpc64__
+			struct reg *rp = (struct reg *)((uintptr_t)fp[0] + 48);
+#else
+			struct reg *rp = (struct reg *)((uintptr_t)fp[0] + 8);
+#endif
 
 			if (arg <= inreg) {
-				switch (arg) {
-				case 0:
-					stack = (uintptr_t *)&tf->tf_rdi;
-					break;
-				case 1:
-					stack = (uintptr_t *)&tf->tf_rsi;
-					break;
-				case 2:
-					stack = (uintptr_t *)&tf->tf_rdx;
-					break;
-				case 3:
-					stack = (uintptr_t *)&tf->tf_rcx;
-					break;
-				case 4:
-					stack = (uintptr_t *)&tf->tf_r8;
-					break;
-				case 5:
-					stack = (uintptr_t *)&tf->tf_r9;
-					break;
-				}
-				arg = 0;
+				stack = &rp->fixreg[3];
 			} else {
-				stack = (uintptr_t *)(tf->tf_rsp);
+				stack = (uintptr_t *)(rp->fixreg[1]);
 				arg -= inreg;
 			}
 			goto load;
@@ -441,7 +418,7 @@ dtrace_getarg(int arg, int aframes)
 	}
 
 	arg -= (inreg + 1);
-	stack = (uintptr_t *)fp + 2;
+	stack = fp + 2;
 
 load:
 	DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);
@@ -455,24 +432,18 @@ int
 dtrace_getstackdepth(int aframes)
 {
 	int depth = 0;
-	struct amd64_frame *frame;
-	vm_offset_t rbp;
+	register_t sp;
 
 	aframes++;
-	rbp = dtrace_getfp();
-	frame = (struct amd64_frame *)rbp;
+	sp = dtrace_getfp();
 	depth++;
 	for(;;) {
-		if (!INKERNEL((long) frame))
+		if (!INKERNEL((long) sp))
 			break;
-		if (!INKERNEL((long) frame->f_frame))
+		if (!INKERNEL((long) *(void **)sp))
 			break;
 		depth++;
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
-		    curthread->td_kstack_pages * PAGE_SIZE)
-			break;
-		frame = frame->f_frame;
+		sp = *(uintptr_t *)sp;
 	}
 	if (depth < aframes)
 		return 0;
@@ -483,94 +454,24 @@ dtrace_getstackdepth(int aframes)
 ulong_t
 dtrace_getreg(struct trapframe *rp, uint_t reg)
 {
-	/* This table is dependent on reg.d. */
-	int regmap[] = {
-		REG_GS,		/* 0  GS */
-		REG_FS,		/* 1  FS */
-		REG_ES,		/* 2  ES */
-		REG_DS,		/* 3  DS */
-		REG_RDI,	/* 4  EDI */
-		REG_RSI,	/* 5  ESI */
-		REG_RBP,	/* 6  EBP, REG_FP */
-		REG_RSP,	/* 7  ESP */
-		REG_RBX,	/* 8  EBX, REG_R1 */
-		REG_RDX,	/* 9  EDX */
-		REG_RCX,	/* 10 ECX */
-		REG_RAX,	/* 11 EAX, REG_R0 */
-		REG_TRAPNO,	/* 12 TRAPNO */
-		REG_ERR,	/* 13 ERR */
-		REG_RIP,	/* 14 EIP, REG_PC */
-		REG_CS,		/* 15 CS */
-		REG_RFL,	/* 16 EFL, REG_PS */
-		REG_RSP,	/* 17 UESP, REG_SP */
-		REG_SS		/* 18 SS */
-	};
-
-	if (reg <= SS) {
-		if (reg >= sizeof (regmap) / sizeof (int)) {
-			DTRACE_CPUFLAG_SET(CPU_DTRACE_ILLOP);
-			return (0);
-		}
-
-		reg = regmap[reg];
-	} else {
-		/* This is dependent on reg.d. */
-		reg -= SS + 1;
-	}
+	if (reg < 32)
+		return (rp->fixreg[reg]);
 
 	switch (reg) {
-	case REG_RDI:
-		return (rp->tf_rdi);
-	case REG_RSI:
-		return (rp->tf_rsi);
-	case REG_RDX:
-		return (rp->tf_rdx);
-	case REG_RCX:
-		return (rp->tf_rcx);
-	case REG_R8:
-		return (rp->tf_r8);
-	case REG_R9:
-		return (rp->tf_r9);
-	case REG_RAX:
-		return (rp->tf_rax);
-	case REG_RBX:
-		return (rp->tf_rbx);
-	case REG_RBP:
-		return (rp->tf_rbp);
-	case REG_R10:
-		return (rp->tf_r10);
-	case REG_R11:
-		return (rp->tf_r11);
-	case REG_R12:
-		return (rp->tf_r12);
-	case REG_R13:
-		return (rp->tf_r13);
-	case REG_R14:
-		return (rp->tf_r14);
-	case REG_R15:
-		return (rp->tf_r15);
-	case REG_DS:
-		return (rp->tf_ds);
-	case REG_ES:
-		return (rp->tf_es);
-	case REG_FS:
-		return (rp->tf_fs);
-	case REG_GS:
-		return (rp->tf_gs);
-	case REG_TRAPNO:
-		return (rp->tf_trapno);
-	case REG_ERR:
-		return (rp->tf_err);
-	case REG_RIP:
-		return (rp->tf_rip);
-	case REG_CS:
-		return (rp->tf_cs);
-	case REG_SS:
-		return (rp->tf_ss);
-	case REG_RFL:
-		return (rp->tf_rflags);
-	case REG_RSP:
-		return (rp->tf_rsp);
+	case 33:
+		return (rp->lr);
+	case 34:
+		return (rp->cr);
+	case 35:
+		return (rp->xer);
+	case 36:
+		return (rp->ctr);
+	case 37:
+		return (rp->srr0);
+	case 38:
+		return (rp->srr1);
+	case 39:
+		return (rp->exc);
 	default:
 		DTRACE_CPUFLAG_SET(CPU_DTRACE_ILLOP);
 		return (0);
@@ -596,31 +497,63 @@ dtrace_copyin(uintptr_t uaddr, uintptr_t kaddr, size_t size,
     volatile uint16_t *flags)
 {
 	if (dtrace_copycheck(uaddr, kaddr, size))
-		dtrace_copy(uaddr, kaddr, size);
+		if (copyin((const void *)uaddr, (void *)kaddr, size)) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
 }
 
 void
 dtrace_copyout(uintptr_t kaddr, uintptr_t uaddr, size_t size,
     volatile uint16_t *flags)
 {
-	if (dtrace_copycheck(uaddr, kaddr, size))
-		dtrace_copy(kaddr, uaddr, size);
+	if (dtrace_copycheck(uaddr, kaddr, size)) {
+		if (copyout((const void *)kaddr, (void *)uaddr, size)) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
+	}
 }
 
 void
 dtrace_copyinstr(uintptr_t uaddr, uintptr_t kaddr, size_t size,
     volatile uint16_t *flags)
 {
-	if (dtrace_copycheck(uaddr, kaddr, size))
-		dtrace_copystr(uaddr, kaddr, size, flags);
+	size_t actual;
+	int    error;
+
+	if (dtrace_copycheck(uaddr, kaddr, size)) {
+		error = copyinstr((const void *)uaddr, (void *)kaddr,
+		    size, &actual);
+		
+		/* ENAMETOOLONG is not a fault condition. */
+		if (error && error != ENAMETOOLONG) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
+	}
 }
 
+/*
+ * The bulk of this function could be replaced to match dtrace_copyinstr() 
+ * if we ever implement a copyoutstr().
+ */
 void
 dtrace_copyoutstr(uintptr_t kaddr, uintptr_t uaddr, size_t size,
     volatile uint16_t *flags)
 {
-	if (dtrace_copycheck(uaddr, kaddr, size))
-		dtrace_copystr(kaddr, uaddr, size, flags);
+	size_t len;
+
+	if (dtrace_copycheck(uaddr, kaddr, size)) {
+		len = strlen((const char *)kaddr);
+		if (len > size)
+			len = size;
+
+		if (copyout((const void *)kaddr, (void *)uaddr, len)) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
+	}
 }
 
 uint8_t
@@ -631,18 +564,21 @@ dtrace_fuword8(void *uaddr)
 		cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
 		return (0);
 	}
-	return (dtrace_fuword8_nocheck(uaddr));
+	return (fubyte(uaddr));
 }
 
 uint16_t
 dtrace_fuword16(void *uaddr)
 {
-	if ((uintptr_t)uaddr > VM_MAXUSER_ADDRESS) {
-		DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
-		cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
-		return (0);
+	uint16_t ret = 0;
+
+	if (dtrace_copycheck((uintptr_t)uaddr, (uintptr_t)&ret, sizeof(ret))) {
+		if (copyin((const void *)uaddr, (void *)&ret, sizeof(ret))) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
 	}
-	return (dtrace_fuword16_nocheck(uaddr));
+	return ret;
 }
 
 uint32_t
@@ -653,16 +589,33 @@ dtrace_fuword32(void *uaddr)
 		cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
 		return (0);
 	}
-	return (dtrace_fuword32_nocheck(uaddr));
+	return (fuword32(uaddr));
 }
 
 uint64_t
 dtrace_fuword64(void *uaddr)
 {
-	if ((uintptr_t)uaddr > VM_MAXUSER_ADDRESS) {
-		DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
-		cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
-		return (0);
+	uint64_t ret = 0;
+
+	if (dtrace_copycheck((uintptr_t)uaddr, (uintptr_t)&ret, sizeof(ret))) {
+		if (copyin((const void *)uaddr, (void *)&ret, sizeof(ret))) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
 	}
-	return (dtrace_fuword64_nocheck(uaddr));
+	return ret;
+}
+
+uintptr_t
+dtrace_fulword(void *uaddr)
+{
+	uintptr_t ret = 0;
+
+	if (dtrace_copycheck((uintptr_t)uaddr, (uintptr_t)&ret, sizeof(ret))) {
+		if (copyin((const void *)uaddr, (void *)&ret, sizeof(ret))) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = (uintptr_t)uaddr;
+		}
+	}
+	return ret;
 }

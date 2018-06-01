@@ -19,9 +19,11 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/dtrace_sysctl.c 179237 2008-05-23 05:59:42Z jb $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_sysctl.c 273736 2014-10-27 14:38:00Z hselasky $
  *
  */
+
+SYSCTL_NODE(_debug, OID_AUTO, dtrace, CTLFLAG_RD, 0, "DTrace debug parameters");
 
 int	dtrace_debug = 0;
 TUNABLE_INT("debug.dtrace.debug", &dtrace_debug);
@@ -79,5 +81,15 @@ sysctl_dtrace_providers(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_PROC(_debug_dtrace, OID_AUTO, providers, CTLTYPE_STRING | CTLFLAG_RD,
-    0, 0, sysctl_dtrace_providers, "A", "");
+    0, 0, sysctl_dtrace_providers, "A", "available DTrace providers");
 
+SYSCTL_NODE(_kern, OID_AUTO, dtrace, CTLFLAG_RD, 0, "DTrace parameters");
+
+SYSCTL_QUAD(_kern_dtrace, OID_AUTO, dof_maxsize, CTLFLAG_RW,
+    &dtrace_dof_maxsize, 0, "largest allowed DOF table");
+
+SYSCTL_QUAD(_kern_dtrace, OID_AUTO, helper_actions_max, CTLFLAG_RW,
+    &dtrace_helper_actions_max, 0, "maximum number of allowed helper actions");
+
+SYSCTL_INT(_kern_dtrace, OID_AUTO, memstr_max, CTLFLAG_RW, &dtrace_memstr_max,
+    0, "largest allowed argument to memstr(), 0 indicates no limit");

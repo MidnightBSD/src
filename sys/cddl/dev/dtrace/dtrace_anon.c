@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/dtrace_anon.c 179237 2008-05-23 05:59:42Z jb $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_anon.c 179237 2008-05-23 05:59:42Z jb $
  */
 
 /*
