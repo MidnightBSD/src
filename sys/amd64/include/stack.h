@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -23,7 +24,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/stack.h 286305 2015-08-05 07:21:44Z kib $
  */
 
 #ifndef _MACHINE_STACK_H_
@@ -32,8 +33,6 @@
 /*
  * Stack trace.
  */
-#define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
-	    || ((va) >= VM_MIN_KERNEL_ADDRESS && (va) < VM_MAX_KERNEL_ADDRESS))
 
 struct amd64_frame {
 	struct amd64_frame	*f_frame;

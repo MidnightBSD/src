@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/cpu.h 261275 2014-01-29 21:23:37Z jhb $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -54,8 +55,24 @@
 #define	TRAPF_PC(framep)	((framep)->tf_rip)
 
 #ifdef _KERNEL
+/*
+ * Struct containing pointers to CPU management functions whose
+ * implementation is run time selectable.  Selection can be made,
+ * for example, based on detection of a particular CPU variant or
+ * hypervisor environment.
+ */
+struct cpu_ops {
+	void (*cpu_init)(void);
+	void (*cpu_resume)(void);
+	void (*ipi_vectored)(u_int, int);
+};
+
+extern struct	cpu_ops cpu_ops;
 extern char	btext[];
 extern char	etext[];
+
+/* Resume hook for VMM. */
+extern	void (*vmm_resume_p)(void);
 
 void	cpu_halt(void);
 void	cpu_reset(void);

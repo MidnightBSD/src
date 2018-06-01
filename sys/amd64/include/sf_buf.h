@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2005 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/sf_buf.h 255289 2013-09-06 05:37:49Z glebius $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -40,6 +41,18 @@
  * actual mapping is provided by the direct virtual-to-physical mapping.  
  */
 struct sf_buf;
+
+static inline struct sf_buf *
+sf_buf_alloc(struct vm_page *m, int pri)
+{
+
+	return ((struct sf_buf *)m);
+}
+
+static inline void
+sf_buf_free(struct sf_buf *sf)
+{
+}
 
 static __inline vm_offset_t
 sf_buf_kva(struct sf_buf *sf)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005 TAKAHASHI Yoshihiro. All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/timerreg.h 177642 2008-03-26 20:09:21Z phk $
  */
 
 /*

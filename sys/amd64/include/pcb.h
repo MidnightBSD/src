@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pcb.h	5.10 (Berkeley) 5/12/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/pcb.h 294283 2016-01-18 18:27:21Z jhb $
  */
 
 #ifndef _AMD64_PCB_H_
@@ -43,15 +44,20 @@
 #include <machine/fpu.h>
 #include <machine/segments.h>
 
+#ifdef __amd64__
+/*
+ * NB: The fields marked with (*) are used by kernel debuggers.  Their
+ * ABI should be preserved.
+ */
 struct pcb {
-	register_t	pcb_r15;
-	register_t	pcb_r14;
-	register_t	pcb_r13;
-	register_t	pcb_r12;
-	register_t	pcb_rbp;
-	register_t	pcb_rsp;
-	register_t	pcb_rbx;
-	register_t	pcb_rip;
+	register_t	pcb_r15;	/* (*) */
+	register_t	pcb_r14;	/* (*) */
+	register_t	pcb_r13;	/* (*) */
+	register_t	pcb_r12;	/* (*) */
+	register_t	pcb_rbp;	/* (*) */
+	register_t	pcb_rsp;	/* (*) */
+	register_t	pcb_rbx;	/* (*) */
+	register_t	pcb_rip;	/* (*) */
 	register_t	pcb_fsbase;
 	register_t	pcb_gsbase;
 	register_t	pcb_kgsbase;
@@ -84,16 +90,31 @@ struct pcb {
 	/* copyin/out fault recovery */
 	caddr_t		pcb_onfault;
 
-	/* 32-bit segment descriptor */
-	struct user_segment_descriptor pcb_gs32sd;
+	uint64_t	pcb_pad0;
 
 	/* local tss, with i/o bitmap; NULL for common */
 	struct amd64tss *pcb_tssp;
 
+	/* model specific registers */
+	register_t	pcb_efer;
+	register_t	pcb_star;
+	register_t	pcb_lstar;
+	register_t	pcb_cstar;
+	register_t	pcb_sfmask;
+
 	struct savefpu	*pcb_save;
 
-	uint64_t	pcb_pad[2];
+	uint64_t	pcb_pad[5];
 };
+
+/* Per-CPU state saved during suspend and resume. */
+struct susppcb {
+	struct pcb	sp_pcb;
+
+	/* fpu context for suspend/resume */
+	void		*sp_fpususpend;
+};
+#endif
 
 #ifdef _KERNEL
 struct trapframe;
@@ -130,6 +151,7 @@ clear_pcb_flags(struct pcb *pcb, const u_int flags)
 
 void	makectx(struct trapframe *, struct pcb *);
 int	savectx(struct pcb *) __returns_twice;
+void	resumectx(struct pcb *);
 
 #endif
 

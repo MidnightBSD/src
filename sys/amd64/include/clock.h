@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /*-
  * Kernel interface to machine-dependent clock driver.
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/clock.h 249324 2013-04-10 05:59:07Z neel $
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -20,6 +21,9 @@ extern int	i8254_max_count;
 extern uint64_t	tsc_freq;
 extern int	tsc_is_invariant;
 extern int	tsc_perf_stat;
+#ifdef SMP
+extern int	smp_tsc;
+#endif
 
 void	i8254_init(void);
 

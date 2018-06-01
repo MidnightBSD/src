@@ -53952,6 +53952,7 @@ sys/amd64/include/atomic.h -text
 sys/amd64/include/bus.h -text
 sys/amd64/include/bus_dma.h -text
 sys/amd64/include/clock.h -text
+sys/amd64/include/counter.h svneol=native#text/plain
 sys/amd64/include/cpu.h -text
 sys/amd64/include/cpufunc.h -text
 sys/amd64/include/cputypes.h -text
@@ -53959,6 +53960,7 @@ sys/amd64/include/db_machdep.h -text
 sys/amd64/include/elf.h -text
 sys/amd64/include/endian.h -text
 sys/amd64/include/exec.h -text
+sys/amd64/include/fdt.h svneol=native#text/plain
 sys/amd64/include/float.h -text
 sys/amd64/include/floatingpoint.h -text
 sys/amd64/include/fpu.h -text
@@ -53977,6 +53979,8 @@ sys/amd64/include/metadata.h -text
 sys/amd64/include/minidump.h -text
 sys/amd64/include/mp_watchdog.h -text
 sys/amd64/include/nexusvar.h -text
+sys/amd64/include/npx.h svneol=native#text/plain
+sys/amd64/include/ofw_machdep.h svneol=native#text/plain
 sys/amd64/include/param.h -text
 sys/amd64/include/pc/bios.h -text
 sys/amd64/include/pc/display.h -text
@@ -54011,6 +54015,9 @@ sys/amd64/include/ucontext.h -text
 sys/amd64/include/varargs.h -text
 sys/amd64/include/vdso.h svneol=native#text/plain
 sys/amd64/include/vm.h -text
+sys/amd64/include/vmm.h svneol=native#text/plain
+sys/amd64/include/vmm_dev.h svneol=native#text/plain
+sys/amd64/include/vmm_instruction_emul.h svneol=native#text/plain
 sys/amd64/include/vmparam.h -text
 sys/amd64/include/xen/hypercall.h -text
 sys/amd64/include/xen/synch_bitops.h -text

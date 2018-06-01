@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Robert N. M. Watson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/mp_watchdog.h 133759 2004-08-15 18:02:09Z rwatson $
  */
 
 #ifndef	_MACHINE_MP_WATCHDOG_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1992, 1993
@@ -36,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/param.h 286305 2015-08-05 07:21:44Z kib $
  */
 
 
@@ -69,6 +70,10 @@
 #endif
 #else
 #define MAXCPU		1
+#endif
+
+#ifndef MAXMEMDOM
+#define	MAXMEMDOM	1
 #endif
 
 #define	ALIGNBYTES		_ALIGNBYTES
@@ -138,5 +143,8 @@
 #define	amd64_ptob(x)	((unsigned long)(x) << PAGE_SHIFT)
 
 #define	pgtok(x)	((unsigned long)(x) * (PAGE_SIZE / 1024)) 
+
+#define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
+    || ((va) >= VM_MIN_KERNEL_ADDRESS && (va) < VM_MAX_KERNEL_ADDRESS))
 
 #endif /* !_AMD64_INCLUDE_PARAM_H_ */

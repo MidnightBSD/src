@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Kip Macy
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/xen/xenvar.h 207673 2010-05-05 20:39:02Z joel $
  */
 #ifndef XENVAR_H_
 #define XENVAR_H_

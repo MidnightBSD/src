@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  *
  * Copyright (c) 2004 Christian Limpach.

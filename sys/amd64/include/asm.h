@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/asm.h 254463 2013-08-17 19:24:58Z jilles $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -43,7 +44,6 @@
 #define	PIC_GOT(x)	x@GOTPCREL(%rip)
 #else
 #define	PIC_PLT(x)	x
-#define	PIC_GOT(x)	x
 #endif
 
 /*
@@ -81,11 +81,11 @@
 
 #define RCSID(x)	.text; .asciz x
 
-#undef __MBSDID
+#undef __FBSDID
 #if !defined(lint) && !defined(STRIP_FBSDID)
-#define __MBSDID(s)	.ident s
+#define __FBSDID(s)	.ident s
 #else
-#define __MBSDID(s)	/* nothing */
+#define __FBSDID(s)	/* nothing */
 #endif /* not lint and not STRIP_FBSDID */
 
 #endif /* !_MACHINE_ASM_H_ */

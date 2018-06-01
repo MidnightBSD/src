@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/proc.h 233291 2012-03-22 04:52:51Z alc $
  */
 
 #ifndef _MACHINE_PROC_H_

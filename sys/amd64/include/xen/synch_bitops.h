@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XEN_SYNCH_BITOPS_H__
 #define __XEN_SYNCH_BITOPS_H__
 

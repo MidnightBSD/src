@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2001 Jake Burkholder <jake@FreeBSD.org>
+ * Copyright (c) 2012 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,24 +24,67 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/include/runq.h 139731 2005-01-05 20:17:21Z imp $
+ * $FreeBSD: stable/10/sys/amd64/include/counter.h 252434 2013-07-01 02:48:27Z kib $
  */
 
-#ifndef	_MACHINE_RUNQ_H_
-#define	_MACHINE_RUNQ_H_
+#ifndef __MACHINE_COUNTER_H__
+#define __MACHINE_COUNTER_H__
 
-#define	RQB_LEN		(1)		/* Number of priority status words. */
-#define	RQB_L2BPW	(6)		/* Log2(sizeof(rqb_word_t) * NBBY)). */
-#define	RQB_BPW		(1<<RQB_L2BPW)	/* Bits in an rqb_word_t. */
+#include <sys/pcpu.h>
 
-#define	RQB_BIT(pri)	(1ul << ((pri) & (RQB_BPW - 1)))
-#define	RQB_WORD(pri)	((pri) >> RQB_L2BPW)
+extern struct pcpu __pcpu[1];
 
-#define	RQB_FFS(word)	(bsfq(word))
+#define	counter_enter()	do {} while (0)
+#define	counter_exit()	do {} while (0)
 
-/*
- * Type of run queue status word.
- */
-typedef	u_int64_t	rqb_word_t;
+#ifdef IN_SUBR_COUNTER_C
+static inline uint64_t
+counter_u64_read_one(uint64_t *p, int cpu)
+{
 
+	return (*(uint64_t *)((char *)p + sizeof(struct pcpu) * cpu));
+}
+
+static inline uint64_t
+counter_u64_fetch_inline(uint64_t *p)
+{
+	uint64_t r;
+	int i;
+
+	r = 0;
+	for (i = 0; i < mp_ncpus; i++)
+		r += counter_u64_read_one((uint64_t *)p, i);
+
+	return (r);
+}
+
+static void
+counter_u64_zero_one_cpu(void *arg)
+{
+
+	*((uint64_t *)((char *)arg + sizeof(struct pcpu) *
+	    PCPU_GET(cpuid))) = 0;
+}
+
+static inline void
+counter_u64_zero_inline(counter_u64_t c)
+{
+
+	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendevous_barrier, c);
+}
 #endif
+
+#define	counter_u64_add_protected(c, i)	counter_u64_add(c, i)
+
+static inline void
+counter_u64_add(counter_u64_t c, int64_t inc)
+{
+
+	__asm __volatile("addq\t%1,%%gs:(%0)"
+	    :
+	    : "r" ((char *)c - (char *)&__pcpu[0]), "ri" (inc)
+	    : "memory", "cc");
+}
+
+#endif	/* ! __MACHINE_COUNTER_H__ */

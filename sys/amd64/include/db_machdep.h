@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -23,7 +24,7 @@
  * any improvements or extensions that they make and grant Carnegie Mellon
  * the rights to redistribute these changes.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/db_machdep.h 139731 2005-01-05 20:17:21Z imp $
  */
 
 #ifndef _MACHINE_DB_MACHDEP_H_

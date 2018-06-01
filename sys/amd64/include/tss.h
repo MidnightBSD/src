@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)tss.h	5.4 (Berkeley) 1/18/91
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/include/tss.h 145120 2005-04-15 18:39:31Z peter $
  */
 
 #ifndef _MACHINE_TSS_H_
