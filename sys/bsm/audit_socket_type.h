@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Apple Inc.
  * All rights reserved.
@@ -26,8 +27,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE. 
  *
- * P4: //depot/projects/trustedbsd/openbsm/sys/bsm/audit_socket_type.h#1
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/bsm/audit_socket_type.h 293163 2016-01-04 16:51:56Z brueffer $
  */
 
 #ifndef _BSM_AUDIT_SOCKET_TYPE_H_

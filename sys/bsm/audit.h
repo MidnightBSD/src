@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/sys/bsm/audit.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $ */
-/*
- * Copyright (c) 2005 Apple Inc.
+/* $MidnightBSD$ */
+/*-
+ * Copyright (c) 2005-2009 Apple Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,9 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit.h#40
- * $FreeBSD: src/sys/bsm/audit.h,v 1.9.2.1 2007/11/04 12:50:40 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $
+ * $FreeBSD: stable/10/sys/bsm/audit.h 293163 2016-01-04 16:51:56Z brueffer $
  */
 
 #ifndef	_BSM_AUDIT_H
