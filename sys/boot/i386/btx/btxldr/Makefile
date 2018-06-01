@@ -1,9 +1,9 @@
-# $MidnightBSD: src/sys/boot/i386/btx/btxldr/Makefile,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
-# $FreeBSD: src/sys/boot/i386/btx/btxldr/Makefile,v 1.18 2004/12/21 08:47:13 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/btx/btxldr/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	btxldr
 INTERNALPROG=
-NO_MAN=
+MAN=
 SRCS=	btxldr.S
 
 CFLAGS+=-DLOADER_ADDRESS=${LOADER_ADDRESS}

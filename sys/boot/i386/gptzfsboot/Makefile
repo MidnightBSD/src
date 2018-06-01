@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: stable/9/sys/boot/i386/gptzfsboot/Makefile 272697 2014-10-07 13:37:10Z avg $
+# $FreeBSD: stable/10/sys/boot/i386/gptzfsboot/Makefile 308915 2016-11-21 10:14:36Z avg $
 
 .PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../gptboot \
 		${.CURDIR}/../zfsboot ${.CURDIR}/../common \
@@ -20,7 +20,7 @@ ORG2=	0x0
 
 CFLAGS=	-DBOOTPROG=\"gptzfsboot\" \
 	-O1 \
-	-DGPT -DBOOT2 \
+	-DGPT -DZFS -DBOOT2 \
 	-DSIOPRT=${BOOT_COMCONSOLE_PORT} \
 	-DSIOFMT=${B2SIOFMT} \
 	-DSIOSPD=${BOOT_COMCONSOLE_SPEED} \
@@ -40,6 +40,8 @@ CFLAGS.gcc+=	--param max-inline-insns-single=100
 
 LD_FLAGS=-static -N --gc-sections
 
+LIBSTAND=	${.OBJDIR}/../../libstand32/libstand.a
+
 # Pick up ../Makefile.inc early.
 .include <bsd.init.mk>
 
@@ -52,7 +54,7 @@ gptzfsboot: gptldr.bin gptzfsboot.bin ${BTXKERN}
 CLEANFILES+=	gptldr.bin gptldr.out gptldr.o
 
 gptldr.bin: gptldr.out
-	objcopy -S -O binary gptldr.out ${.TARGET}
+	${OBJCOPY} -S -O binary gptldr.out ${.TARGET}
 
 gptldr.out: gptldr.o
 	${LD} ${LD_FLAGS} -e start -Ttext ${ORG1} -o ${.TARGET} gptldr.o
@@ -61,7 +63,7 @@ CLEANFILES+=	gptzfsboot.bin gptzfsboot.out zfsboot.o sio.o cons.o \
 		drv.o gpt.o util.o
 
 gptzfsboot.bin: gptzfsboot.out
-	objcopy -S -O binary gptzfsboot.out ${.TARGET}
+	${OBJCOPY} -S -O binary gptzfsboot.out ${.TARGET}
 
 gptzfsboot.out: ${BTXCRT} zfsboot.o sio.o gpt.o drv.o cons.o util.o
 	${LD} ${LD_FLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC} ${LIBSTAND}

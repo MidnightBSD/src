@@ -1,9 +1,10 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/boot0/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG?=	boot0
 STRIP=
 BINMODE=${NOBINMODE}
-NO_MAN=
+MAN=
 SRCS=	${PROG}.S
 
 # Additional options that you can specify with make OPTS="..."

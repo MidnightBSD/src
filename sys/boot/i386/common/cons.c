@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/common/cons.c 226746 2011-10-25 19:45:12Z jhb $");
 
 #include <sys/param.h>
 

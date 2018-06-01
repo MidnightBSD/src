@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2014  Roger Pau Monné <royger@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -24,26 +24,29 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/boot/i386/common/drv.h 308915 2016-11-21 10:14:36Z avg $
+ * $FreeBSD: stable/10/sys/boot/i386/libi386/multiboot_tramp.S 294417 2016-01-20 13:23:02Z royger $
  */
 
-#ifndef _DRV_H_
-#define _DRV_H_
+#define ASM_FILE
+#include "multiboot.h"
 
-struct dsk {
-	unsigned int drive;
-	unsigned int type;
-	unsigned int unit;
-	unsigned int slice;
-	int part;
-	daddr_t start;
-	int init;
-};
+/*
+ * The multiboot specification requires the executable to be launched
+ * with %cs set to a flat read/execute segment with offset 0 and limit
+ * 0xFFFFFFFF, and the rest of the segment registers (%ds, %es, %fs,
+ * %gs, %ss) to flat read/write segments with the same offset and limit.
+ * This is already done by the BTX code before calling multiboot_tramp,
+ * so there is no need to do anything here.
+ */
 
-int drvread(struct dsk *dskp, void *buf, daddr_t lba, unsigned nblk);
-#if defined(GPT) || defined(ZFS)
-int drvwrite(struct dsk *dskp, void *buf, daddr_t lba, unsigned nblk);
-uint64_t drvsize(struct dsk *dskp);
-#endif	/* GPT || ZFS */
+	.globl	multiboot_tramp
+multiboot_tramp:
+	/* Be sure that interrupts are disabled. */
+	cli
 
-#endif	/* !_DRV_H_ */
+	movl    $MULTIBOOT_BOOTLOADER_MAGIC, %eax
+	/* Get the entry point and address of the multiboot_info parameter. */
+	movl	8(%esp), %ebx
+	movl	4(%esp), %ecx
+
+	call    *%ecx

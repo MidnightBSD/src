@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/devicename.c,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/devicename.c 245424 2013-01-14 15:05:22Z sbruno $");
 
 #include <stand.h>
 #include <string.h>
@@ -129,7 +129,7 @@ i386_parsedev(struct i386_devdesc **dev, const char *devspec, const char **path)
 		goto fail;
 	    }
 	} else {
-		cp = np;
+		cp = (char *)np;
 	}
 	if (*cp && (*cp != ':')) {
 	    err = EINVAL;

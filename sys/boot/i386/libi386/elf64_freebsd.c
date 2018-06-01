@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/elf64_freebsd.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/elf64_freebsd.c 294417 2016-01-20 13:23:02Z royger $");
 
 #define __ELF_WORD_SIZE 64
 #include <sys/param.h>
@@ -82,7 +82,7 @@ elf64_exec(struct preloaded_file *fp)
 	return(EFTYPE);
     ehdr = (Elf_Ehdr *)&(md->md_data);
 
-    err = bi_load64(fp->f_args, &modulep, &kernend);
+    err = bi_load64(fp->f_args, 0, &modulep, &kernend, 1);
     if (err != 0)
 	return(err);
 

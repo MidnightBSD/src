@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sys/boot/i386/gptzfsboot/gptzfsboot.8 272697 2014-10-07 13:37:10Z avg $
+.\" $FreeBSD: stable/10/sys/boot/i386/gptzfsboot/gptzfsboot.8 306378 2016-09-27 19:00:22Z pluknet $
 .\"
 .Dd September 15, 2014
 .Dt GPTZFSBOOT 8
@@ -177,6 +177,9 @@ gpart bootcode -p /boot/gptzfsboot -i 1 ada0
 .Sh HISTORY
 .Nm
 appeared in FreeBSD 7.3.
+.Sh AUTHORS
+This manual page was written by
+.An Andriy Gapon Aq avg@FreeBSD.org .
 .Sh BUGS
 .Nm
 looks for ZFS meta-data only in MBR partitions
@@ -189,6 +192,3 @@ found at the fixed offsets relative to a slice, then
 .Nm
 will recognize the partition as a part of a ZFS pool,
 but this is not guaranteed to happen.
-.Sh AUTHORS
-This manual page was written by
-.An Andriy Gapon Aq avg@FreeBSD.org .

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -14,7 +15,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/i386/boot2/lib.h 241301 2012-10-06 20:08:29Z avg $
  */
 
 int sio_init(int) __attribute__((regparm (3)));

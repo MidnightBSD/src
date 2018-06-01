@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -14,8 +15,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-/* $FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -34,51 +33,26 @@ __MBSDID("$MidnightBSD$");
 
 #include "boot2.h"
 #include "lib.h"
+#include "paths.h"
+#include "rbx.h"
+
+/* Define to 0 to omit serial support */
+#ifndef SERIAL
+#define SERIAL 1
+#endif
 
 #define IO_KEYBOARD	1
 #define IO_SERIAL	2
 
+#if SERIAL
+#define DO_KBD (ioctrl & IO_KEYBOARD)
+#define DO_SIO (ioctrl & IO_SERIAL)
+#else
+#define DO_KBD (1)
+#define DO_SIO (0)
+#endif
+
 #define SECOND		18	/* Circa that many ticks in a second. */
-
-#define RBX_ASKNAME	0x0	/* -a */
-#define RBX_SINGLE	0x1	/* -s */
-/* 0x2 is reserved for log2(RB_NOSYNC). */
-/* 0x3 is reserved for log2(RB_HALT). */
-/* 0x4 is reserved for log2(RB_INITNAME). */
-#define RBX_DFLTROOT	0x5	/* -r */
-#define RBX_KDB 	0x6	/* -d */
-/* 0x7 is reserved for log2(RB_RDONLY). */
-/* 0x8 is reserved for log2(RB_DUMP). */
-/* 0x9 is reserved for log2(RB_MINIROOT). */
-#define RBX_CONFIG	0xa	/* -c */
-#define RBX_VERBOSE	0xb	/* -v */
-#define RBX_SERIAL	0xc	/* -h */
-#define RBX_CDROM	0xd	/* -C */
-/* 0xe is reserved for log2(RB_POWEROFF). */
-#define RBX_GDB 	0xf	/* -g */
-#define RBX_MUTE	0x10	/* -m */
-/* 0x11 is reserved for log2(RB_SELFTEST). */
-/* 0x12 is reserved for boot programs. */
-/* 0x13 is reserved for boot programs. */
-#define RBX_PAUSE	0x14	/* -p */
-#define RBX_QUIET	0x15	/* -q */
-#define RBX_NOINTR	0x1c	/* -n */
-/* 0x1d is reserved for log2(RB_MULTIPLE) and is just misnamed here. */
-#define RBX_DUAL	0x1d	/* -D */
-/* 0x1f is reserved for log2(RB_BOOTINFO). */
-
-/* pass: -a, -s, -r, -d, -c, -v, -h, -C, -g, -m, -p, -D */
-#define RBX_MASK	(OPT_SET(RBX_ASKNAME) | OPT_SET(RBX_SINGLE) | \
-			OPT_SET(RBX_DFLTROOT) | OPT_SET(RBX_KDB ) | \
-			OPT_SET(RBX_CONFIG) | OPT_SET(RBX_VERBOSE) | \
-			OPT_SET(RBX_SERIAL) | OPT_SET(RBX_CDROM) | \
-			OPT_SET(RBX_GDB ) | OPT_SET(RBX_MUTE) | \
-			OPT_SET(RBX_PAUSE) | OPT_SET(RBX_DUAL))
-
-#define PATH_DOTCONFIG	"/boot.config"
-#define PATH_CONFIG	"/boot/config"
-#define PATH_BOOT3	"/boot/loader"
-#define PATH_KERNEL	"/boot/kernel/kernel"
 
 #define ARGS		0x900
 #define NOPT		14
@@ -93,9 +67,6 @@ __MBSDID("$MidnightBSD$");
 #define TYPE_DA		1
 #define TYPE_MAXHARD	TYPE_DA
 #define TYPE_FD		2
-
-#define OPT_SET(opt)	(1 << (opt))
-#define OPT_CHECK(opt)	((opts) & OPT_SET(opt))
 
 extern uint32_t _end;
 
@@ -131,15 +102,16 @@ static struct dsk {
 } dsk;
 static char cmd[512], cmddup[512], knamebuf[1024];
 static const char *kname;
-static uint32_t opts;
-static int comspeed = SIOSPD;
+uint32_t opts;
 static struct bootinfo bootinfo;
+#if SERIAL
+static int comspeed = SIOSPD;
 static uint8_t ioctrl = IO_KEYBOARD;
+#endif
 
 void exit(int);
 static void load(void);
 static int parse(void);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, unsigned, unsigned);
 static void printf(const char *,...);
 static void putchar(int);
@@ -171,7 +143,7 @@ strcmp(const char *s1, const char *s2)
 #include "ufsread.c"
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
     if ((size_t)fsread(inode, buf, nbyte) != nbyte) {
 	printf("Invalid %s\n", "format");
@@ -223,7 +195,7 @@ int
 main(void)
 {
     uint8_t autoboot;
-    ino_t ino;
+    ufs_ino_t ino;
     size_t nbyte;
 
     dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
@@ -262,7 +234,7 @@ main(void)
      */
 
     if (!kname) {
-	kname = PATH_BOOT3;
+	kname = PATH_LOADER;
 	if (autoboot && !keyhit(3*SECOND)) {
 	    load();
 	    kname = PATH_KERNEL;
@@ -278,7 +250,7 @@ main(void)
 		   "boot: ",
 		   dsk.drive & DRV_MASK, dev_nm[dsk.type], dsk.unit,
 		   'a' + dsk.part, kname);
-	if (ioctrl & IO_SERIAL)
+	if (DO_SIO)
 	    sio_flush();
 	if (!autoboot || keyhit(3*SECOND))
 	    getstr();
@@ -308,7 +280,7 @@ load(void)
     static Elf32_Phdr ep[2];
     static Elf32_Shdr es[2];
     caddr_t p;
-    ino_t ino;
+    ufs_ino_t ino;
     uint32_t addr;
     int i, j;
 
@@ -400,6 +372,7 @@ parse()
 		    }
 		    printf("Keyboard: %s\n", cp);
 		    continue;
+#if SERIAL
 		} else if (c == 'S') {
 		    j = 0;
 		    while ((unsigned int)(i = *arg++ - '0') <= 9)
@@ -409,18 +382,21 @@ parse()
 			break;
 		    }
 		    /* Fall through to error below ('S' not in optstr[]). */
+#endif
 		}
 		for (i = 0; c != optstr[i]; i++)
 		    if (i == NOPT - 1)
 			return -1;
 		opts ^= OPT_SET(flags[i]);
 	    }
+#if SERIAL
 	    ioctrl = OPT_CHECK(RBX_DUAL) ? (IO_SERIAL|IO_KEYBOARD) :
 		     OPT_CHECK(RBX_SERIAL) ? IO_SERIAL : IO_KEYBOARD;
-	    if (ioctrl & IO_SERIAL) {
+	    if (DO_SIO) {
 	        if (sio_init(115200 / comspeed) != 0)
 		    ioctrl &= ~IO_SERIAL;
 	    }
+#endif
 	} else {
 	    for (q = arg--; *q && *q != '('; q++);
 	    if (*q) {
@@ -628,9 +604,9 @@ keyhit(unsigned ticks)
 static int
 xputc(int c)
 {
-    if (ioctrl & IO_KEYBOARD)
+    if (DO_KBD)
 	putc(c);
-    if (ioctrl & IO_SERIAL)
+    if (DO_SIO)
 	sio_putc(c);
     return c;
 }
@@ -650,9 +626,9 @@ xgetc(int fn)
     if (OPT_CHECK(RBX_NOINTR))
 	return 0;
     for (;;) {
-	if (ioctrl & IO_KEYBOARD && getc(1))
+	if (DO_KBD && getc(1))
 	    return fn ? 1 : getc(0);
-	if (ioctrl & IO_SERIAL && sio_ischar())
+	if (DO_SIO && sio_ischar())
 	    return fn ? 1 : sio_getc();
 	if (fn)
 	    return 0;

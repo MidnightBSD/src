@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -13,8 +14,8 @@
  * purpose.
  */
 
-/* $MidnightBSD: src/sys/boot/i386/btx/lib/btxv86.h,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
- * $FreeBSD: src/sys/boot/i386/btx/lib/btxv86.h,v 1.5.52.1 2008/11/25 02:59:29 kensmith Exp $
+/*
+ * $FreeBSD: stable/10/sys/boot/i386/btx/lib/btxv86.h 226746 2011-10-25 19:45:12Z jhb $
  */
 
 #ifndef _BTXV86_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003  Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/i386/libi386/amd64_tramp.S,v 1.4.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: stable/10/sys/boot/i386/libi386/amd64_tramp.S 129240 2004-05-14 20:29:30Z ru $
  */
 
 /*

@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: stable/9/sys/boot/i386/gptboot/Makefile 260497 2014-01-09 23:08:56Z dim $
+# $FreeBSD: stable/10/sys/boot/i386/gptboot/Makefile 281289 2015-04-09 06:38:32Z dim $
 
 .PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../common ${.CURDIR}/../../common
 
@@ -42,6 +42,8 @@ CFLAGS.gcc+=	--param max-inline-insns-single=100
 
 LD_FLAGS=-static -N --gc-sections
 
+LIBSTAND=	${.OBJDIR}/../../libstand32/libstand.a
+
 # Pick up ../Makefile.inc early.
 .include <bsd.init.mk>
 
@@ -54,7 +56,7 @@ gptboot: gptldr.bin gptboot.bin ${BTXKERN}
 CLEANFILES+=	gptldr.bin gptldr.out gptldr.o
 
 gptldr.bin: gptldr.out
-	objcopy -S -O binary gptldr.out ${.TARGET}
+	${OBJCOPY} -S -O binary gptldr.out ${.TARGET}
 
 gptldr.out: gptldr.o
 	${LD} ${LD_FLAGS} -e start -Ttext ${ORG1} -o ${.TARGET} gptldr.o
@@ -63,7 +65,7 @@ CLEANFILES+=	gptboot.bin gptboot.out gptboot.o sio.o gpt.o crc32.o drv.o \
 		cons.o util.o
 
 gptboot.bin: gptboot.out
-	objcopy -S -O binary gptboot.out ${.TARGET}
+	${OBJCOPY} -S -O binary gptboot.out ${.TARGET}
 
 gptboot.out: ${BTXCRT} gptboot.o sio.o gpt.o crc32.o drv.o cons.o util.o
 	${LD} ${LD_FLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC} ${LIBSTAND}

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Robert Nordier
  * Copyright (c) 2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -15,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/common/drv.c 308915 2016-11-21 10:14:36Z avg $");
 
 #include <sys/param.h>
 
@@ -93,7 +94,7 @@ drvread(struct dsk *dskp, void *buf, daddr_t lba, unsigned nblk)
 	return (0);
 }
 
-#ifdef GPT
+#if defined(GPT) || defined(ZFS)
 int
 drvwrite(struct dsk *dskp, void *buf, daddr_t lba, unsigned nblk)
 {
@@ -116,4 +117,4 @@ drvwrite(struct dsk *dskp, void *buf, daddr_t lba, unsigned nblk)
 	}
 	return (0);
 }
-#endif	/* GPT */
+#endif	/* GPT || ZFS */

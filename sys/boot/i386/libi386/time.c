@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/time.c,v 1.5.28.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/time.c 228782 2011-12-21 16:47:01Z ed $");
 
 #include <stand.h>
 #include <btxv86.h>
@@ -63,7 +63,7 @@ bios_seconds(void)
  * Some BIOSes (notably qemu) don't correctly read the RTC
  * registers in an atomic way, sometimes returning bogus values.
  * Therefore we "debounce" the reading by accepting it only when
- * we got two identical values in succession.
+ * we got 8 identical values in succession.
  *
  * If we pass midnight, don't wrap back to 0.
  */
@@ -72,14 +72,16 @@ time(time_t *t)
 {
     static time_t lasttime;
     time_t now, check;
-    int try;
+    int same, try;
 
-    try = 0;
+    same = try = 0;
     check = bios_seconds();
     do {
 	now = check;
 	check = bios_seconds();
-    } while (now != check && ++try < 1000);
+	if (check != now)
+	    same = 0;
+    } while (++same < 8 && ++try < 1000);
 
     if (now < lasttime)
 	now += 24 * 3600;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #
 # Copyright (c) 2001 John Baldwin <jhb@FreeBSD.org>
 # All rights reserved.
@@ -10,9 +11,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 3. Neither the name of the author nor the names of any co-contributors
-#    may be used to endorse or promote products derived from this software
-#    without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -27,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD$
+# $FreeBSD: stable/10/sys/boot/i386/cdboot/cdboot.S 262192 2014-02-18 20:27:17Z jhb $
 
 #
 # This program is a freestanding boot program to load an a.out binary

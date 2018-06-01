@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/i386/libi386/libi386.h,v 1.27.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: stable/10/sys/boot/i386/libi386/libi386.h 294417 2016-01-20 13:23:02Z royger $
  */
 
 
@@ -111,8 +111,6 @@ uint32_t biospci_locator(int8_t bus, uint8_t device, uint8_t function);
 
 void	biosacpi_detect(void);
 
-void	smbios_detect(void);
-
 int	i386_autoload(void);
 
 int	bi_getboothowto(char *kargs);
@@ -120,6 +118,7 @@ void	bi_setboothowto(int howto);
 vm_offset_t	bi_copyenv(vm_offset_t addr);
 int	bi_load32(char *args, int *howtop, int *bootdevp, vm_offset_t *bip,
 	    vm_offset_t *modulep, vm_offset_t *kernend);
-int	bi_load64(char *args, vm_offset_t *modulep, vm_offset_t *kernend);
+int	bi_load64(char *args, vm_offset_t addr, vm_offset_t *modulep,
+	    vm_offset_t *kernend, int add_smap);
 
 void	pxe_enable(void *pxeinfo);

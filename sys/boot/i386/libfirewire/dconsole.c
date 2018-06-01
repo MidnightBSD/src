@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Hidetoshi Shimokawa
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libfirewire/dconsole.c 170101 2007-05-29 14:35:57Z simokawa $");
 
 #include <stand.h>
 #include <bootstrap.h>

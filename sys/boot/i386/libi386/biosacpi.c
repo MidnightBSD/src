@@ -26,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/biosacpi.c 254733 2013-08-23 18:52:36Z jkim $");
 
 #include <stand.h>
 #include <machine/stdarg.h>
@@ -61,7 +62,7 @@ biosacpi_detect(void)
 	return;
 
     /* export values from the RSDP */
-    sprintf(buf, "%u", VTOP(rsdp));
+    sprintf(buf, "0x%08x", VTOP(rsdp));
     setenv("hint.acpi.0.rsdp", buf, 1);
     revision = rsdp->Revision;
     if (revision == 0)

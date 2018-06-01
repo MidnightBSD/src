@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #
 # Copyright (c) 1998 Robert Nordier
 # All rights reserved.
@@ -13,8 +14,7 @@
 # purpose.
 #
 
-# $MidnightBSD$
-# $FreeBSD: src/sys/boot/i386/btx/lib/btxsys.s,v 1.2.52.1 2008/11/25 02:59:29 kensmith Exp $
+# $FreeBSD: stable/10/sys/boot/i386/btx/lib/btxsys.s 50477 1999-08-28 01:08:13Z peter $
 
 #
 # BTX system calls.

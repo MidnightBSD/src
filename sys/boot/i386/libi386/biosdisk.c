@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 2012 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/biosdisk.c 305458 2016-09-06 06:13:47Z avg $");
 
 /*
  * BIOS disk device handling.
@@ -42,7 +43,6 @@ __MBSDID("$MidnightBSD$");
 #include <stand.h>
 #include <machine/bootinfo.h>
 #include <stdarg.h>
-#include <stdint.h>
 
 #include <bootstrap.h>
 #include <btxv86.h>

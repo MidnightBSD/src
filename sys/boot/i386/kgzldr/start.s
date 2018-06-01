@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #
 # Copyright (c) 1999 Global Technology Associates, Inc.
 # All rights reserved.
@@ -23,7 +24,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/kgzldr/start.s 103436 2002-09-17 01:49:00Z peter $
 #
 
 		.set entry,0x10			# kgz.entry

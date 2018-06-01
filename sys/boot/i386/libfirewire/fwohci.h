@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 Hidetoshi Shimokawa
  * All rights reserved.
@@ -30,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/i386/libfirewire/fwohci.h 261455 2014-02-04 03:36:42Z eadler $
  *
  */
 
@@ -76,7 +77,7 @@ void fwohci_poll(struct fwohci_softc *);
 #define	OHCI_CROMHDR		0x18
 #define OHCI_BUS_ID		0x1c
 #define	OHCI_BUS_OPT		0x20
-#define	OHCI_BUSIRMC		(1 << 31)
+#define	OHCI_BUSIRMC		(1U << 31)
 #define	OHCI_BUSCMC		(1 << 30)
 #define	OHCI_BUSISC		(1 << 29)
 #define	OHCI_BUSBMC		(1 << 28)
@@ -102,7 +103,7 @@ void fwohci_poll(struct fwohci_softc *);
 
 #define	OHCI_SID_BUF		0x64
 #define	OHCI_SID_CNT		0x68
-#define OHCI_SID_ERR		(1 << 31)
+#define OHCI_SID_ERR		(1U << 31)
 #define OHCI_SID_CNT_MASK	0xffc
 
 #define	OHCI_IT_STAT		0x90

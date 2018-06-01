@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -14,7 +15,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/gpt.h>
@@ -37,11 +37,7 @@ __MBSDID("$MidnightBSD$");
 #include "util.h"
 #include "cons.h"
 #include "gpt.h"
-
-#define PATH_DOTCONFIG  "/boot.config"
-#define PATH_CONFIG	"/boot/config"
-#define PATH_BOOT3	"/boot/loader"
-#define PATH_KERNEL	"/boot/kernel/kernel"
+#include "paths.h"
 
 #define ARGS		0x900
 #define NOPT		14
@@ -90,14 +86,13 @@ static struct bootinfo bootinfo;
 void exit(int);
 static void load(void);
 static int parse(char *, int *);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, daddr_t, unsigned);
 static uint32_t memsize(void);
 
 #include "ufsread.c"
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
 
 	if ((size_t)fsread(inode, buf, nbyte) != nbyte) {
@@ -137,8 +132,9 @@ int
 main(void)
 {
 	char cmd[512], cmdtmp[512];
+	ssize_t sz;
 	int autoboot, dskupdated;
-	ino_t ino;
+	ufs_ino_t ino;
 
 	dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
 	v86.ctl = V86_FLAGS;
@@ -165,9 +161,10 @@ main(void)
 	for (;;) {
 		*kname = '\0';
 		if ((ino = lookup(PATH_CONFIG)) ||
-		    (ino = lookup(PATH_DOTCONFIG)))
-			fsread(ino, cmd, sizeof(cmd));
-
+		    (ino = lookup(PATH_DOTCONFIG))) {
+			sz = fsread(ino, cmd, sizeof(cmd) - 1);
+			cmd[(sz < 0) ? 0 : sz] = '\0';
+		}
 		if (*cmd != '\0') {
 			memcpy(cmdtmp, cmd, sizeof(cmdtmp));
 			if (parse(cmdtmp, &dskupdated))
@@ -181,7 +178,7 @@ main(void)
 
 		if (autoboot && keyhit(3)) {
 			if (*kname == '\0')
-				memcpy(kname, PATH_BOOT3, sizeof(PATH_BOOT3));
+				memcpy(kname, PATH_LOADER, sizeof(PATH_LOADER));
 			break;
 		}
 		autoboot = 0;
@@ -193,7 +190,7 @@ main(void)
 		 */
 		if (*kname != '\0')
 			load();
-		memcpy(kname, PATH_BOOT3, sizeof(PATH_BOOT3));
+		memcpy(kname, PATH_LOADER, sizeof(PATH_LOADER));
 		load();
 		memcpy(kname, PATH_KERNEL, sizeof(PATH_KERNEL));
 		load();
@@ -207,7 +204,7 @@ main(void)
 
 	for (;;) {
 		if (!OPT_CHECK(RBX_QUIET)) {
-			printf("\nMidnightBSD/x86 boot\n"
+			printf("\nFreeBSD/x86 boot\n"
 			    "Default: %u:%s(%up%u)%s\n"
 			    "boot: ",
 			    dsk.drive & DRV_MASK, dev_nm[dsk.type], dsk.unit,
@@ -247,7 +244,7 @@ load(void)
     static Elf32_Phdr ep[2];
     static Elf32_Shdr es[2];
     caddr_t p;
-    ino_t ino;
+    ufs_ino_t ino;
     uint32_t addr, x;
     int fmt, i, j;
 

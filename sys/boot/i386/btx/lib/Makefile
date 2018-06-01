@@ -1,9 +1,9 @@
-# $MidnightBSD: src/sys/boot/i386/btx/lib/Makefile,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
-# $FreeBSD: src/sys/boot/i386/btx/lib/Makefile,v 1.13.18.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/btx/lib/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	crt0.o
 INTERNALPROG=
-NO_MAN=
+MAN=
 SRCS=	btxcsu.S btxsys.s btxv86.s
 CFLAGS+=-I${.CURDIR}/../../common
 LDFLAGS=-Wl,-r

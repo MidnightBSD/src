@@ -1,9 +1,10 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/cdboot/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	cdboot
 STRIP=
 BINMODE=${NOBINMODE}
-NO_MAN=
+MAN=
 SRCS=	${PROG}.S
 
 CFLAGS+=-I${.CURDIR}/../common

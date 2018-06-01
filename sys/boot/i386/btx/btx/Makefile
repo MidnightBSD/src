@@ -1,9 +1,9 @@
-# $MidnightBSD: src/sys/boot/i386/btx/btx/Makefile,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
-# $FreeBSD: src/sys/boot/i386/btx/btx/Makefile,v 1.19.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/btx/btx/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	btx
 INTERNALPROG=
-NO_MAN=
+MAN=
 SRCS=	btx.S
 
 .if defined(BOOT_BTX_NOHANG)

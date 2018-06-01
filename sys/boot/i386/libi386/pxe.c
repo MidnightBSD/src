@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/pxe.c,v 1.22.18.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/pxe.c 301056 2016-05-31 17:01:54Z ian $");
 
 #include <stand.h>
 #include <string.h>
@@ -88,6 +88,12 @@ static int	pxe_netif_get(struct iodesc *desc, void *pkt, size_t len,
 			      time_t timeout);
 static int	pxe_netif_put(struct iodesc *desc, void *pkt, size_t len);
 static void	pxe_netif_end(struct netif *nif);
+
+#ifdef OLD_NFSV2
+int nfs_getrootfh(struct iodesc*, char*, u_char*);
+#else
+int nfs_getrootfh(struct iodesc*, char*, uint32_t*, u_char*);
+#endif
 
 extern struct netif_stats	pxe_st[];
 extern u_int16_t		__bangpxeseg;
@@ -307,6 +313,11 @@ pxe_open(struct open_file *f, ...)
 		    sprintf(temp, "%6D", bootplayer.CAddr, ":");
 		    setenv("boot.netif.hwaddr", temp, 1);
 		}
+		if (intf_mtu != 0) {
+			char mtu[16];
+			sprintf(mtu, "%u", intf_mtu);
+			setenv("boot.netif.mtu", mtu, 1);
+		}
 		setenv("boot.nfsroot.server", inet_ntoa(rootip), 1);
 		setenv("boot.nfsroot.path", rootpath, 1);
 		setenv("dhcp.host-name", hostname, 1);
@@ -356,18 +367,11 @@ pxe_close(struct open_file *f)
 static void
 pxe_print(int verbose)
 {
-	if (pxe_call != NULL) {
-		if (*bootplayer.Sname == '\0') {
-			printf("      "IP_STR":%s\n",
-			       IP_ARGS(htonl(bootplayer.sip)),
-			       bootplayer.bootfile);
-		} else {
-			printf("      %s:%s\n", bootplayer.Sname,
-			       bootplayer.bootfile);
-		}
-	}
 
-	return;
+	if (pxe_call == NULL)
+		return;
+
+	printf("    pxe0:    %s:%s\n", inet_ntoa(rootip), rootpath);
 }
 
 static void

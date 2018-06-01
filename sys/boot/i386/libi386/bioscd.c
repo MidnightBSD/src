@@ -27,6 +27,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/bioscd.c 227389 2011-11-09 14:37:47Z jhb $");
 
 /*
  * BIOS CD device handling for CD's that have been booted off of via no

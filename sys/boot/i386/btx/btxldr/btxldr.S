@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -12,8 +13,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $MidnightBSD: src/sys/boot/i386/btx/btxldr/btxldr.S,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
- * $FreeBSD: src/sys/boot/i386/btx/btxldr/btxldr.S,v 1.17 2004/05/14 20:29:30 ru Exp $
+ * $FreeBSD: stable/10/sys/boot/i386/btx/btxldr/btxldr.S 235154 2012-05-09 08:04:29Z avg $
  */
 
 #include <bootargs.h>

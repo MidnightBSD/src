@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/sys/boot/i386/pmbr/pmbr.s,v 1.1 2011/10/16 21:11:09 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/sys/boot/i386/pmbr/pmbr.s,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # Partly from: src/sys/boot/i386/mbr/mbr.s 1.7

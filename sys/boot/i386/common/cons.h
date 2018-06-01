@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -12,8 +13,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/9/sys/boot/i386/common/cons.h 300462 2016-05-23 05:25:34Z ngie $
+ * $FreeBSD: stable/10/sys/boot/i386/common/cons.h 300460 2016-05-23 05:23:53Z ngie $
  */
 
 #ifndef _CONS_H_

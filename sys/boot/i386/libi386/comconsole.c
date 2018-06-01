@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/libi386/comconsole.c 261574 2014-02-07 04:10:30Z mav $");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/libi386/comconsole.c 271880 2014-09-19 21:30:45Z emaste $");
 
 #include <stand.h>
 #include <bootstrap.h>
@@ -215,6 +215,9 @@ comc_port_set(struct env_var *ev, int flags, const void *value)
 static uint32_t
 comc_parse_pcidev(const char *string)
 {
+#ifdef NO_PCI
+	return (0);
+#else
 	char *p, *p1;
 	uint8_t bus, dev, func, bar;
 	uint32_t locator;
@@ -248,11 +251,15 @@ comc_parse_pcidev(const char *string)
 
 	locator = (bar << 16) | biospci_locator(bus, dev, func);
 	return (locator);
+#endif
 }
 
 static int
 comc_pcidev_handle(uint32_t locator)
 {
+#ifdef NO_PCI
+	return (CMD_ERROR);
+#else
 	char intbuf[64];
 	uint32_t port;
 
@@ -276,6 +283,7 @@ comc_pcidev_handle(uint32_t locator)
 	comc_locator = locator;
 
 	return (CMD_OK);
+#endif
 }
 
 static int

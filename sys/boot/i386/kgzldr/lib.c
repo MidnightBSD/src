@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Global Technology Associates, Inc.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/kgzldr/lib.c 119482 2003-08-25 23:28:32Z obrien $");
 
 #include <sys/types.h>
 #include <stddef.h>
