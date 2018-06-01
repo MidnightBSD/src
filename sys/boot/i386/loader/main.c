@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/loader/main.c 295475 2016-02-10 17:49:22Z allanjude $");
 
 /*
  * MD bootstrap main() and assorted miscellaneous
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD$");
 #include "bootstrap.h"
 #include "common/bootargs.h"
 #include "libi386/libi386.h"
+#include "libi386/smbios.h"
 #include "btxv86.h"
 
 #ifdef LOADER_ZFS_SUPPORT
@@ -116,7 +117,7 @@ main(void)
     }
     setheap(heap_bottom, heap_top);
 
-    /* 
+    /*
      * XXX Chicken-and-egg problem; we want to have console output early, but some
      * console attributes may depend on reading from eg. the boot device, which we
      * can't do yet.
@@ -182,7 +183,7 @@ main(void)
     biosacpi_detect();
 
     /* detect SMBIOS for future reference */
-    smbios_detect();
+    smbios_detect(NULL);
 
     printf("\n");
     printf("%s, Revision %s\n", bootprog_name, bootprog_rev);
@@ -291,6 +292,11 @@ extract_currdev(void)
 	new_currdev.d_unit = 0;
     }
 
+#ifdef LOADER_ZFS_SUPPORT
+    if (new_currdev.d_type == DEVT_ZFS)
+	init_zfs_bootenv(zfs_fmtdev(&new_currdev));
+#endif
+
     env_setenv("currdev", EV_VOLATILE, i386_fmtdev(&new_currdev),
 	       i386_setcurrdev, env_nounset);
     env_setenv("loaddev", EV_VOLATILE, i386_fmtdev(&new_currdev), env_noset,
@@ -350,6 +356,40 @@ command_lszfs(int argc, char *argv[])
 	command_errmsg = strerror(err);
 	return (CMD_ERROR);
     }
+
+    return (CMD_OK);
+}
+
+COMMAND_SET(reloadbe, "reloadbe", "refresh the list of ZFS Boot Environments",
+    command_reloadbe);
+
+static int
+command_reloadbe(int argc, char *argv[])
+{
+    int err;
+    char *root;
+
+    if (argc > 2) {
+	command_errmsg = "wrong number of arguments";
+	return (CMD_ERROR);
+    }
+
+    if (argc == 2) {
+	err = zfs_bootenv(argv[1]);
+    } else {
+	root = getenv("zfs_be_root");
+	if (root == NULL) {
+	    /* There does not appear to be a ZFS pool here, exit without error */
+	    return (CMD_OK);
+	}
+	err = zfs_bootenv(getenv("zfs_be_root"));
+    }
+
+    if (err != 0) {
+	command_errmsg = strerror(err);
+	return (CMD_ERROR);
+    }
+
     return (CMD_OK);
 }
 #endif

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sys/boot/i386/loader/conf.c 277947 2015-01-30 18:55:16Z jhb $");
+__FBSDID("$FreeBSD: stable/10/sys/boot/i386/loader/conf.c 294417 2016-01-20 13:23:02Z royger $");
 
 #include <stand.h>
 #include <bootstrap.h>
@@ -78,6 +78,9 @@ struct fs_ops *file_system[] = {
     &ext2fs_fsops,
     &dosfs_fsops,
     &cd9660_fsops,
+#if defined(LOADER_NANDFS_SUPPORT)
+    &nandfs_fsops,
+#endif
 #ifdef LOADER_NFS_SUPPORT 
     &nfs_fsops,
 #endif
@@ -105,8 +108,12 @@ extern struct file_format	i386_elf;
 extern struct file_format	i386_elf_obj;
 extern struct file_format	amd64_elf;
 extern struct file_format	amd64_elf_obj;
+extern struct file_format	multiboot;
+extern struct file_format	multiboot_obj;
 
 struct file_format *file_formats[] = {
+	&multiboot,
+	&multiboot_obj,
 #ifdef LOADER_PREFER_AMD64
     &amd64_elf,
     &amd64_elf_obj,
