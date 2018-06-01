@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Benno Rice <benno@jeamland.net>
  * Copyright (c) 2000 Stephane Potvin <sepotvin@videotron.ca>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/ofw/common/main.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <stand.h>
 #include "openfirm.h"
@@ -133,7 +134,7 @@ main(int (*openfirm)(void *))
 	printf("Memory: %lldKB\n", memsize() / 1024);
 
 	OF_getprop(chosen, "bootpath", bootpath, 64);
-	ch = index(bootpath, ':');
+	ch = strchr(bootpath, ':');
 	*ch = '\0';
 	printf("Booted from: %s\n", bootpath);
 
