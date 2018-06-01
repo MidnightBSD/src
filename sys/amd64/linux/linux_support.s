@@ -27,10 +27,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/linux32/linux32_support.s 169895 2007-05-23 08:33:06Z kib $
+ * $FreeBSD: stable/10/sys/amd64/linux/linux_support.s 293604 2016-01-09 18:19:18Z dchagin $
  */
 
-#include "linux32_assym.h"		/* system definitions */
+#include "linux_assym.h"		/* system definitions */
 #include <machine/asmacros.h>		/* miscellaneous asm macros */
 
 #include "assym.s"

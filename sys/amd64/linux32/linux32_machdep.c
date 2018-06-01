@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Tim J. Robbins
  * Copyright (c) 2002 Doug Rabson
@@ -29,12 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/linux32/linux32_machdep.c 302964 2016-07-17 15:23:32Z dchagin $");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/file.h>
 #include <sys/fcntl.h>
 #include <sys/clock.h>
@@ -48,7 +51,6 @@ __MBSDID("$MidnightBSD$");
 #include <sys/proc.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
-#include <sys/sched.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
 #include <sys/unistd.h>
@@ -69,9 +71,12 @@ __MBSDID("$MidnightBSD$");
 #include <amd64/linux32/linux32_proto.h>
 #include <compat/linux/linux_ipc.h>
 #include <compat/linux/linux_misc.h>
+#include <compat/linux/linux_mmap.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
 #include <compat/linux/linux_emul.h>
+
+static void	bsd_to_linux_rusage(struct rusage *ru, struct l_rusage *lru);
 
 struct l_old_select_argv {
 	l_int		nfds;
@@ -81,33 +86,6 @@ struct l_old_select_argv {
 	l_uintptr_t	timeout;
 } __packed;
 
-int
-linux_to_bsd_sigaltstack(int lsa)
-{
-	int bsa = 0;
-
-	if (lsa & LINUX_SS_DISABLE)
-		bsa |= SS_DISABLE;
-	if (lsa & LINUX_SS_ONSTACK)
-		bsa |= SS_ONSTACK;
-	return (bsa);
-}
-
-static int	linux_mmap_common(struct thread *td, l_uintptr_t addr,
-		    l_size_t len, l_int prot, l_int flags, l_int fd,
-		    l_loff_t pos);
-
-int
-bsd_to_linux_sigaltstack(int bsa)
-{
-	int lsa = 0;
-
-	if (bsa & SS_DISABLE)
-		lsa |= LINUX_SS_DISABLE;
-	if (bsa & SS_ONSTACK)
-		lsa |= LINUX_SS_ONSTACK;
-	return (lsa);
-}
 
 static void
 bsd_to_linux_rusage(struct rusage *ru, struct l_rusage *lru)
@@ -134,6 +112,16 @@ bsd_to_linux_rusage(struct rusage *ru, struct l_rusage *lru)
 }
 
 int
+linux_copyout_rusage(struct rusage *ru, void *uaddr)
+{
+	struct l_rusage lru;
+
+	bsd_to_linux_rusage(ru, &lru);
+
+	return (copyout(&lru, uaddr, sizeof(struct l_rusage)));
+}
+
+int
 linux_execve(struct thread *td, struct linux_execve_args *args)
 {
 	struct image_args eargs;
@@ -151,15 +139,7 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 	    args->argp, args->envp);
 	free(path, M_TEMP);
 	if (error == 0)
-		error = kern_execve(td, &eargs, NULL);
-	if (error == 0)
-		/* Linux process can execute FreeBSD one, do not attempt
-		 * to create emuldata for such process using
-		 * linux_proc_init, this leads to a panic on KASSERT
-		 * because such process has p->p_emuldata == NULL.
-		 */
-		if (SV_PROC_ABI(td->td_proc) == SV_ABI_LINUX)
-			error = linux_proc_init(td, 0, 0);
+		error = linux_common_execve(td, &eargs);
 	return (error);
 }
 
@@ -445,7 +425,6 @@ linux_set_cloned_tls(struct thread *td, void *desc)
 #endif
 		pcb = td->td_pcb;
 		pcb->pcb_gsbase = (register_t)info.base_addr;
-/* XXXKIB	pcb->pcb_gs32sd = sd; */
 		td->td_frame->tf_gs = GSEL(GUGS32_SEL, SEL_UPL);
 		set_pcb_flags(pcb, PCB_32BIT);
 	}
@@ -457,13 +436,16 @@ int
 linux_set_upcall_kse(struct thread *td, register_t stack)
 {
 
-	td->td_frame->tf_rsp = stack;
+	if (stack)
+		td->td_frame->tf_rsp = stack;
 
+	/*
+	 * The newly created Linux thread returns
+	 * to the user space by the same path that a parent do.
+	 */
+	td->td_frame->tf_rax = 0;
 	return (0);
 }
-
-#define STACK_SIZE  (2 * 1024 * 1024)
-#define GUARD_SIZE  (4 * PAGE_SIZE)
 
 int
 linux_mmap2(struct thread *td, struct linux_mmap2_args *args)
@@ -503,181 +485,11 @@ linux_mmap(struct thread *td, struct linux_mmap_args *args)
 	    (uint32_t)linux_args.pgoff));
 }
 
-static int
-linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
-    l_int flags, l_int fd, l_loff_t pos)
-{
-	struct proc *p = td->td_proc;
-	struct mmap_args /* {
-		caddr_t addr;
-		size_t len;
-		int prot;
-		int flags;
-		int fd;
-		long pad;
-		off_t pos;
-	} */ bsd_args;
-	int error;
-	struct file *fp;
-
-	error = 0;
-	bsd_args.flags = 0;
-	fp = NULL;
-
-	/*
-	 * Linux mmap(2):
-	 * You must specify exactly one of MAP_SHARED and MAP_PRIVATE
-	 */
-	if (!((flags & LINUX_MAP_SHARED) ^ (flags & LINUX_MAP_PRIVATE)))
-		return (EINVAL);
-
-	if (flags & LINUX_MAP_SHARED)
-		bsd_args.flags |= MAP_SHARED;
-	if (flags & LINUX_MAP_PRIVATE)
-		bsd_args.flags |= MAP_PRIVATE;
-	if (flags & LINUX_MAP_FIXED)
-		bsd_args.flags |= MAP_FIXED;
-	if (flags & LINUX_MAP_ANON) {
-		/* Enforce pos to be on page boundary, then ignore. */
-		if ((pos & PAGE_MASK) != 0)
-			return (EINVAL);
-		pos = 0;
-		bsd_args.flags |= MAP_ANON;
-	} else
-		bsd_args.flags |= MAP_NOSYNC;
-	if (flags & LINUX_MAP_GROWSDOWN)
-		bsd_args.flags |= MAP_STACK;
-
-	/*
-	 * PROT_READ, PROT_WRITE, or PROT_EXEC implies PROT_READ and PROT_EXEC
-	 * on Linux/i386. We do this to ensure maximum compatibility.
-	 * Linux/ia64 does the same in i386 emulation mode.
-	 */
-	bsd_args.prot = prot;
-	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
-		bsd_args.prot |= PROT_READ | PROT_EXEC;
-
-	/* Linux does not check file descriptor when MAP_ANONYMOUS is set. */
-	bsd_args.fd = (bsd_args.flags & MAP_ANON) ? -1 : fd;
-	if (bsd_args.fd != -1) {
-		/*
-		 * Linux follows Solaris mmap(2) description:
-		 * The file descriptor fildes is opened with
-		 * read permission, regardless of the
-		 * protection options specified.
-		 */
-
-		if ((error = fget(td, bsd_args.fd, CAP_MMAP, &fp)) != 0)
-			return (error);
-		if (fp->f_type != DTYPE_VNODE) {
-			fdrop(fp, td);
-			return (EINVAL);
-		}
-
-		/* Linux mmap() just fails for O_WRONLY files */
-		if (!(fp->f_flag & FREAD)) {
-			fdrop(fp, td);
-			return (EACCES);
-		}
-
-		fdrop(fp, td);
-	}
-
-	if (flags & LINUX_MAP_GROWSDOWN) {
-		/*
-		 * The Linux MAP_GROWSDOWN option does not limit auto
-		 * growth of the region.  Linux mmap with this option
-		 * takes as addr the inital BOS, and as len, the initial
-		 * region size.  It can then grow down from addr without
-		 * limit.  However, Linux threads has an implicit internal
-		 * limit to stack size of STACK_SIZE.  Its just not
-		 * enforced explicitly in Linux.  But, here we impose
-		 * a limit of (STACK_SIZE - GUARD_SIZE) on the stack
-		 * region, since we can do this with our mmap.
-		 *
-		 * Our mmap with MAP_STACK takes addr as the maximum
-		 * downsize limit on BOS, and as len the max size of
-		 * the region.  It then maps the top SGROWSIZ bytes,
-		 * and auto grows the region down, up to the limit
-		 * in addr.
-		 *
-		 * If we don't use the MAP_STACK option, the effect
-		 * of this code is to allocate a stack region of a
-		 * fixed size of (STACK_SIZE - GUARD_SIZE).
-		 */
-
-		if ((caddr_t)PTRIN(addr) + len > p->p_vmspace->vm_maxsaddr) {
-			/*
-			 * Some Linux apps will attempt to mmap
-			 * thread stacks near the top of their
-			 * address space.  If their TOS is greater
-			 * than vm_maxsaddr, vm_map_growstack()
-			 * will confuse the thread stack with the
-			 * process stack and deliver a SEGV if they
-			 * attempt to grow the thread stack past their
-			 * current stacksize rlimit.  To avoid this,
-			 * adjust vm_maxsaddr upwards to reflect
-			 * the current stacksize rlimit rather
-			 * than the maximum possible stacksize.
-			 * It would be better to adjust the
-			 * mmap'ed region, but some apps do not check
-			 * mmap's return value.
-			 */
-			PROC_LOCK(p);
-			p->p_vmspace->vm_maxsaddr = (char *)LINUX32_USRSTACK -
-			    lim_cur(p, RLIMIT_STACK);
-			PROC_UNLOCK(p);
-		}
-
-		/*
-		 * This gives us our maximum stack size and a new BOS.
-		 * If we're using VM_STACK, then mmap will just map
-		 * the top SGROWSIZ bytes, and let the stack grow down
-		 * to the limit at BOS.  If we're not using VM_STACK
-		 * we map the full stack, since we don't have a way
-		 * to autogrow it.
-		 */
-		if (len > STACK_SIZE - GUARD_SIZE) {
-			bsd_args.addr = (caddr_t)PTRIN(addr);
-			bsd_args.len = len;
-		} else {
-			bsd_args.addr = (caddr_t)PTRIN(addr) -
-			    (STACK_SIZE - GUARD_SIZE - len);
-			bsd_args.len = STACK_SIZE - GUARD_SIZE;
-		}
-	} else {
-		bsd_args.addr = (caddr_t)PTRIN(addr);
-		bsd_args.len  = len;
-	}
-	bsd_args.pos = pos;
-
-#ifdef DEBUG
-	if (ldebug(mmap))
-		printf("-> %s(%p, %d, %d, 0x%08x, %d, 0x%x)\n",
-		    __func__,
-		    (void *)bsd_args.addr, (int)bsd_args.len, bsd_args.prot,
-		    bsd_args.flags, bsd_args.fd, (int)bsd_args.pos);
-#endif
-	error = sys_mmap(td, &bsd_args);
-#ifdef DEBUG
-	if (ldebug(mmap))
-		printf("-> %s() return: 0x%x (0x%08x)\n",
-			__func__, error, (u_int)td->td_retval[0]);
-#endif
-	return (error);
-}
-
 int
 linux_mprotect(struct thread *td, struct linux_mprotect_args *uap)
 {
-	struct mprotect_args bsd_args;
 
-	bsd_args.addr = uap->addr;
-	bsd_args.len = uap->len;
-	bsd_args.prot = uap->prot;
-	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
-		bsd_args.prot |= PROT_READ | PROT_EXEC;
-	return (sys_mprotect(td, &bsd_args));
+	return (linux_mprotect_common(td, PTROUT(uap->addr), uap->len, uap->prot));
 }
 
 int
@@ -718,7 +530,7 @@ linux_sigaction(struct thread *td, struct linux_sigaction_args *args)
 		act.lsa_flags = osa.lsa_flags;
 		act.lsa_restorer = osa.lsa_restorer;
 		LINUX_SIGEMPTYSET(act.lsa_mask);
-		act.lsa_mask.__bits[0] = osa.lsa_mask;
+		act.lsa_mask.__mask = osa.lsa_mask;
 	}
 
 	error = linux_do_sigaction(td, args->sig, args->nsa ? &act : NULL,
@@ -728,7 +540,7 @@ linux_sigaction(struct thread *td, struct linux_sigaction_args *args)
 		osa.lsa_handler = oact.lsa_handler;
 		osa.lsa_flags = oact.lsa_flags;
 		osa.lsa_restorer = oact.lsa_restorer;
-		osa.lsa_mask = oact.lsa_mask.__bits[0];
+		osa.lsa_mask = oact.lsa_mask.__mask;
 		error = copyout(&osa, args->osa, sizeof(l_osigaction_t));
 	}
 
@@ -752,7 +564,7 @@ linux_sigsuspend(struct thread *td, struct linux_sigsuspend_args *args)
 #endif
 
 	LINUX_SIGEMPTYSET(mask);
-	mask.__bits[0] = args->mask;
+	mask.__mask = args->mask;
 	linux_to_bsd_sigset(&mask, &sigmask);
 	return (kern_sigsuspend(td, sigmask));
 }
@@ -899,34 +711,15 @@ linux_settimeofday(struct thread *td, struct linux_settimeofday_args *uap)
 int
 linux_getrusage(struct thread *td, struct linux_getrusage_args *uap)
 {
-	struct l_rusage s32;
 	struct rusage s;
 	int error;
 
 	error = kern_getrusage(td, uap->who, &s);
 	if (error != 0)
 		return (error);
-	if (uap->rusage != NULL) {
-		bsd_to_linux_rusage(&s, &s32);
-		error = copyout(&s32, uap->rusage, sizeof(s32));
-	}
+	if (uap->rusage != NULL)
+		error = linux_copyout_rusage(&s, uap->rusage);
 	return (error);
-}
-
-int
-linux_sched_rr_get_interval(struct thread *td,
-    struct linux_sched_rr_get_interval_args *uap)
-{
-	struct timespec ts;
-	struct l_timespec ts32;
-	int error;
-
-	error = kern_sched_rr_get_interval(td, uap->pid, &ts);
-	if (error != 0)
-		return (error);
-	ts32.tv_sec = ts.tv_sec;
-	ts32.tv_nsec = ts.tv_nsec;
-	return (copyout(&ts32, uap->interval, sizeof(ts32)));
 }
 
 int
@@ -1030,38 +823,4 @@ linux_set_thread_area(struct thread *td,
 	update_gdt_gsbase(td, info.base_addr);
 
 	return (0);
-}
-
-int
-linux_wait4(struct thread *td, struct linux_wait4_args *args)
-{
-	int error, options;
-	struct rusage ru, *rup;
-	struct l_rusage lru;
-
-#ifdef DEBUG
-	if (ldebug(wait4))
-		printf(ARGS(wait4, "%d, %p, %d, %p"),
-		    args->pid, (void *)args->status, args->options,
-		    (void *)args->rusage);
-#endif
-
-	options = (args->options & (WNOHANG | WUNTRACED));
-	/* WLINUXCLONE should be equal to __WCLONE, but we make sure */
-	if (args->options & __WCLONE)
-		options |= WLINUXCLONE;
-
-	if (args->rusage != NULL)
-		rup = &ru;
-	else
-		rup = NULL;
-	error = linux_common_wait(td, args->pid, args->status, options, rup);
-	if (error)
-		return (error);
-	if (args->rusage != NULL) {
-		bsd_to_linux_rusage(rup, &lru);
-		error = copyout(&lru, args->rusage, sizeof(lru));
-	}
-
-	return (error);
 }

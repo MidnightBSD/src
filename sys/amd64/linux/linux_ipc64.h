@@ -7,7 +7,7 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer 
+ *    notice, this list of conditions and the following disclaimer
  *    in this position and unchanged.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/linux32/linux32_ipc64.h 133819 2004-08-16 07:55:06Z tjr $
+ * $FreeBSD: stable/10/sys/amd64/linux/linux_ipc64.h 283424 2015-05-24 16:07:11Z dchagin $
  */
 
 #ifndef _AMD64_LINUX_LINUX_IPC64_H_
@@ -55,7 +55,7 @@ struct l_ipc64_perm
 	l_ushort	__pad2;
 	l_ulong		__unused1;
 	l_ulong		__unused2;
-} __packed;
+};
 
 /*
  * The msqid64_ds structure for i386 architecture.
@@ -82,7 +82,7 @@ struct l_msqid64_ds {
 	l_pid_t		msg_lrpid;	/* last receive pid */
 	l_ulong		__unused4;
 	l_ulong		__unused5;
-} __packed;
+};
 
 /*
  * The semid64_ds structure for i386 architecture.
@@ -103,7 +103,7 @@ struct l_semid64_ds {
 	l_ulong		sem_nsems;	/* no. of semaphores in array */
 	l_ulong		__unused3;
 	l_ulong		__unused4;
-} __packed;
+};
 
 /*
  * The shmid64_ds structure for i386 architecture.
@@ -119,28 +119,25 @@ struct l_shmid64_ds {
 	struct l_ipc64_perm shm_perm;	/* operation perms */
 	l_size_t	shm_segsz;	/* size of segment (bytes) */
 	l_time_t	shm_atime;	/* last attach time */
-	l_ulong		__unused1;
 	l_time_t	shm_dtime;	/* last detach time */
-	l_ulong		__unused2;
 	l_time_t	shm_ctime;	/* last change time */
-	l_ulong		__unused3;
 	l_pid_t		shm_cpid;	/* pid of creator */
 	l_pid_t		shm_lpid;	/* pid of last operator */
 	l_ulong		shm_nattch;	/* no. of current attaches */
 	l_ulong		__unused4;
 	l_ulong		__unused5;
-} __packed;
+};
 
 struct l_shminfo64 {
-	l_ulong   	shmmax;
-	l_ulong   	shmmin;
-	l_ulong   	shmmni;
-	l_ulong   	shmseg;
-	l_ulong   	shmall;
+	l_ulong		shmmax;
+	l_ulong		shmmin;
+	l_ulong		shmmni;
+	l_ulong		shmseg;
+	l_ulong		shmall;
 	l_ulong   	__unused1;
-	l_ulong   	__unused2;
-	l_ulong   	__unused3;
-	l_ulong   	__unused4;
-} __packed;
+	l_ulong		__unused2;
+	l_ulong		__unused3;
+	l_ulong		__unused4;
+};
 
 #endif /* !_AMD64_LINUX_LINUX_IPC64_H_ */
