@@ -54518,6 +54518,16 @@ sys/boot/uboot/lib/module.c -text
 sys/boot/uboot/lib/net.c -text
 sys/boot/uboot/lib/reboot.c -text
 sys/boot/uboot/lib/time.c -text
+sys/boot/usb/Makefile svneol=native#text/plain
+sys/boot/usb/Makefile.test svneol=native#text/plain
+sys/boot/usb/bsd_busspace.c svneol=native#text/plain
+sys/boot/usb/bsd_global.h svneol=native#text/plain
+sys/boot/usb/bsd_kernel.c svneol=native#text/plain
+sys/boot/usb/bsd_kernel.h svneol=native#text/plain
+sys/boot/usb/bsd_usbloader_test.c svneol=native#text/plain
+sys/boot/usb/tools/sysinit.c svneol=native#text/plain
+sys/boot/usb/tools/sysinit.h svneol=native#text/plain
+sys/boot/usb/usb_busdma_loader.c svneol=native#text/plain
 sys/boot/userboot/Makefile -text
 sys/boot/userboot/ficl/Makefile -text
 sys/boot/userboot/libstand/Makefile -text
