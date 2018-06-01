@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Konstantin Belousov
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/ia32/ia32_misc.c 220238 2011-04-01 11:16:29Z kib $");
 
 #include "opt_compat.h"
 
