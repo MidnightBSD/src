@@ -55102,7 +55102,10 @@ sys/conf/defines -text
 sys/conf/dtb.mk svneol=native#text/plain
 sys/conf/files -text
 sys/conf/files.amd64 -text
+sys/conf/files.arm -text
 sys/conf/files.i386 -text
+sys/conf/files.ia64 -text
+sys/conf/files.mips -text
 sys/conf/files.pc98 -text
 sys/conf/files.powerpc -text
 sys/conf/files.sparc64 -text
