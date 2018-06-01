@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Benno Rice <benno@FreeBSD.org>
  * Copyright (c) 2007 Semihalf, Rafal Jaworowski <raj@semihalf.com>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/uboot/lib/elf_freebsd.c 283505 2015-05-25 01:06:55Z ian $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -38,6 +39,7 @@ __MBSDID("$MidnightBSD$");
 #include <stand.h>
 
 #include "bootstrap.h"
+#include "libuboot.h"
 
 extern vm_offset_t md_load(char *, vm_offset_t *);
 
@@ -69,6 +71,7 @@ __elfN(uboot_exec)(struct preloaded_file *fp)
 	vm_offset_t mdp;
 	Elf_Ehdr *e;
 	int error;
+	void (*entry)(void *);
 
 	if ((fmp = file_findmetadata(fp, MODINFOMD_ELFHDR)) == NULL)
 		return (EFTYPE);
@@ -78,11 +81,13 @@ __elfN(uboot_exec)(struct preloaded_file *fp)
 	if ((error = md_load(fp->f_args, &mdp)) != 0)
 		return (error);
 
-	printf("Kernel entry at 0x%x ...\n", e->e_entry);
+	entry = (void *)e->e_entry;
+	printf("Kernel entry at 0x%x...\n", (unsigned)entry);
 
 	dev_cleanup();
+	printf("Kernel args: %s\n", fp->f_args);
 
-	(*(void (*)())e->e_entry)((void *)mdp);
+	(*entry)((void *)mdp);
 	panic("exec returned");
 }
 

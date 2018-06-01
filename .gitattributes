@@ -54562,6 +54562,8 @@ sys/boot/uboot/Makefile.inc -text
 sys/boot/uboot/common/Makefile.inc -text
 sys/boot/uboot/common/main.c -text
 sys/boot/uboot/common/metadata.c -text
+sys/boot/uboot/fdt/Makefile svneol=native#text/plain
+sys/boot/uboot/fdt/uboot_fdt.c svneol=native#text/plain
 sys/boot/uboot/lib/Makefile -text
 sys/boot/uboot/lib/api_public.h -text
 sys/boot/uboot/lib/console.c -text

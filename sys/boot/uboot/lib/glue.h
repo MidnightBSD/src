@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Semihalf, Rafal Jaworowski <raj@semihalf.com>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/uboot/lib/glue.h 283409 2015-05-24 15:29:56Z ian $
  */
 
 /*
@@ -40,7 +41,7 @@ void *syscall_ptr;
 
 int api_search_sig(struct api_signature **sig);
 
-#define	UB_MAX_MR	5		/* max mem regions number */
+#define	UB_MAX_MR	16		/* max mem regions number */
 #define	UB_MAX_DEV	6		/* max devices number */
 
 /*

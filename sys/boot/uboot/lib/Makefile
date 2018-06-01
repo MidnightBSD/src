@@ -1,4 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/uboot/lib/Makefile 275763 2014-12-14 15:33:45Z andrew $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../common
 
@@ -16,6 +19,16 @@ CFLAGS+=	-I${.CURDIR}/../../../../lib/libstand/
 .if !defined(LOADER_NO_DISK_SUPPORT)
 SRCS+=	disk.c
 CFLAGS+= -DLOADER_DISK_SUPPORT
+.endif
+
+.if ${MK_FDT} != "no"
+LOADER_FDT_SUPPORT=	yes
+.else
+LOADER_FDT_SUPPORT=	no
+.endif
+
+.if ${LOADER_FDT_SUPPORT} == "yes"
+CFLAGS+= -DLOADER_FDT_SUPPORT -I${.CURDIR}/../../fdt
 .endif
 
 # Pick up FDT includes

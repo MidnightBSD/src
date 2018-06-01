@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2000 Benno Rice.
  * Copyright (C) 2007 Semihalf, Rafal Jaworowski <raj@semihalf.com>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/uboot/lib/libuboot.h 283505 2015-05-25 01:06:55Z ian $
  */
 
 struct uboot_devdesc
@@ -32,9 +33,9 @@ struct uboot_devdesc
 	struct devsw	*d_dev;
 	int		d_type;
 	int		d_unit;
+	void		*d_opendata;
 	union {
 		struct {
-			void	*data;
 			int	slice;
 			int	partition;
 			off_t	offset;
@@ -57,6 +58,10 @@ extern int devs_no;
 extern struct netif_driver uboot_net;
 extern struct devsw uboot_storage;
 
+extern uintptr_t uboot_heap_start;
+extern uintptr_t uboot_heap_end;
+
+uint64_t uboot_loadaddr(u_int type, void *data, uint64_t addr);
 ssize_t	uboot_copyin(const void *src, vm_offset_t dest, const size_t len);
 ssize_t	uboot_copyout(const vm_offset_t src, void *dest, const size_t len);
 ssize_t	uboot_readin(const int fd, vm_offset_t dest, const size_t len);
@@ -68,3 +73,6 @@ struct file_format;
 extern struct file_format uboot_elf;
 
 void reboot(void);
+
+int uboot_diskgetunit(int type, int type_unit);
+

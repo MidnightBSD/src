@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * (C) Copyright 2007-2008 Semihalf
  *
@@ -48,7 +49,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/uboot/lib/api_public.h 265071 2014-04-29 00:45:42Z ian $
  *
  * This file needs to be kept in sync with U-Boot reference:
  * http://www.denx.de/cgi-bin/gitweb.cgi?p=u-boot.git;a=blob;f=include/api_public.h
@@ -132,6 +133,7 @@ typedef unsigned long lbastart_t;
 #define	DT_STOR_SCSI	0x0020
 #define	DT_STOR_USB	0x0040
 #define	DT_STOR_MMC	0x0080
+#define	DT_STOR_SATA	0x0100
 
 #define	DEV_STA_CLOSED	0x0000		/* invalid, closed */
 #define	DEV_STA_OPEN	0x0001		/* open i.e. active */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -25,23 +26,31 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/uboot/lib/module.c 275763 2014-12-14 15:33:45Z andrew $");
 
 /*
  * U-Boot-specific module functionality.
- *
- * XXX not much for now...
- *
  */
 
 #include <stand.h>
 #include <string.h>
 
+#if defined(LOADER_FDT_SUPPORT)
+#include <fdt_platform.h>
+#endif
+
 #include "bootstrap.h"
+#include "libuboot.h"
 
 int
 uboot_autoload(void)
 {
+#if defined(LOADER_FDT_SUPPORT)
+	int err;
+
+	if ((err = fdt_setup_fdtp()) != 0)
+		return (err);
+#endif
 
 	return(0);
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 Semihalf, Rafal Jaworowski <raj@semihalf.com>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/uboot/lib/glue.c 265071 2014-04-29 00:45:42Z ian $");
 
 #include <sys/types.h>
 
@@ -33,9 +34,6 @@ __MBSDID("$MidnightBSD$");
 #include <stand.h>
 #include "api_public.h"
 #include "glue.h"
-
-#define DEBUG
-#undef DEBUG
 
 #ifdef DEBUG
 #define	debugf(fmt, args...) do { printf("%s(): ", __func__); printf(fmt,##args); } while (0)
@@ -406,6 +404,9 @@ ub_stor_type(int type)
 
 	if (type & DT_STOR_MMC)
 		return ("MMC");
+
+	if (type & DT_STOR_SATA)
+		return ("SATA");
 
 	return ("Unknown");
 }

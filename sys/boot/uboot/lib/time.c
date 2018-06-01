@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Benno Rice
  * Copyright (c) 2007 Semihalf, Rafal Jaworowski <raj@semihalf.com>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/uboot/lib/time.c 204318 2010-02-25 15:30:26Z raj $");
 
 #include <stand.h>
 
