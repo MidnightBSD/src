@@ -1,10 +1,10 @@
-# $MidnightBSD: src/sys/boot/i386/pmbr/Makefile,v 1.1 2011/10/16 21:11:09 laffer1 Exp $
-# $FreeBSD: src/sys/boot/i386/pmbr/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/pmbr/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	pmbr
 STRIP=
 BINMODE=${NOBINMODE}
-NO_MAN=
+MAN=
 SRCS=	${PROG}.s
 
 ORG=	0x600

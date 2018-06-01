@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1999 Doug White
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sys/boot/i386/pxeldr/pxeboot.8 307203 2016-10-13 08:09:40Z sephe $
 .\"
 .Dd May 1, 2000
 .Dt PXEBOOT 8
@@ -84,6 +85,14 @@ Note that
 expects to fetch
 .Pa /boot/loader.rc
 from the specified server before loading any other files.
+.Pp
+.Nm
+defaults to a conservative 1024 byte NFS data packet size.
+This may be changed by setting the
+.Va nfs.read_size
+variable in
+.Pa /boot/loader.conf .
+Valid values range from 1024 to 4096 bytes.
 .Pp
 In all other respects,
 .Nm

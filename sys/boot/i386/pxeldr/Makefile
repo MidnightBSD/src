@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/pxeldr/Makefile 319025 2017-05-28 01:14:59Z ngie $
 
 # Pick up ../Makefile.inc early.
 .include <bsd.init.mk>
@@ -31,7 +32,7 @@ CLEANFILES+= ${BOOT}.tmp
 
 ${BOOT}: ${LDR} ${LOADER}
 	cat ${LDR} ${LOADER} > ${.TARGET}.tmp
-	dd if=${.TARGET}.tmp of=${.TARGET} obs=2k conv=osync
+	${DD} if=${.TARGET}.tmp of=${.TARGET} obs=2k conv=osync
 	rm ${.TARGET}.tmp
 
 LDFLAGS+=-e start -Ttext ${ORG} -Wl,-N,-S,--oformat,binary
