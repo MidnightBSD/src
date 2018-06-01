@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -27,8 +28,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ctl_ser_table.c,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_ser_table.c#1 $
+ * $FreeBSD: stable/10/sys/cam/ctl/ctl_ser_table.c 288802 2015-10-05 11:05:04Z mav $
  */
 
 /*
@@ -54,28 +55,29 @@
 /****************************************************************************/
 
 #define	sK	CTL_SER_SKIP		/* Skip */
-#define	pS	CTL_SER_PASS		/* pS */
+#define	pS	CTL_SER_PASS		/* Pass */
 #define	bK	CTL_SER_BLOCK		/* Blocked */
+#define	bO	CTL_SER_BLOCKOPT	/* Optional block */
 #define	xT	CTL_SER_EXTENT		/* Extent check */
+#define	xO	CTL_SER_EXTENTOPT	/* Optional extent check */
+#define	xS	CTL_SER_EXTENTSEQ	/* Sequential extent check */
 
-static ctl_serialize_action
+const static ctl_serialize_action
 ctl_serialize_table[CTL_SERIDX_COUNT][CTL_SERIDX_COUNT] = {
-/**>IDX_ :: 2nd:TUR RD  WRT  MDSN MDSL RQSN INQ  RDCP RES  REL LSNS FMT STR PRIN PROT MAININ*/
-/*TUR     */{   pS, pS, pS,  bK,  bK,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*READ    */{   pS, pS, xT,  bK,  bK,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*WRITE   */{   pS, xT, xT,  bK,  bK,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*MD_SNS  */{   bK, bK, bK,  pS,  bK,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*MD_SEL  */{   bK, bK, bK,  bK,  bK,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*RQ_SNS  */{   pS, pS, pS,  pS,  pS,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*INQ     */{   pS, pS, pS,  pS,  pS,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*RD_CAP  */{   pS, pS, pS,  pS,  pS,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*RESV    */{   bK, bK, bK,  bK,  bK,  bK,  bK,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  bK},
-/*REL     */{   bK, bK, bK,  bK,  bK,  bK,  bK,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  bK},
-/*LOG_SNS */{   pS, pS, pS,  pS,  bK,  bK,  pS,  pS,  bK,  bK, pS,  bK, bK, bK,  bK,  bK},
-/*FORMAT  */{   pS, bK, bK,  bK,  bK,  pS,  pS,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  bK},
-/*START   */{   bK, bK, bK,  bK,  bK,  bK,  pS,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  bK},
-/*PRES_IN */{   bK, bK, bK,  bK,  bK,  bK,  bK,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  bK},
-/*PRES_OUT*/{   bK, bK, bK,  bK,  bK,  bK,  bK,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  bK},
-/*MAIN_IN */{   bK, bK, bK,  bK,  bK,  bK,  pS,  bK,  bK,  bK, bK,  bK, bK, bK,  bK,  pS}
+/**>IDX_ :: 2nd:TUR RD  WRT UNM SYN MDSN MDSL RQSN INQ RDCP RES LSNS FMT STR*/
+/*TUR     */{   pS, pS, pS, pS, pS, bK,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*READ    */{   pS, xS, xT, bO, pS, bK,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*WRITE   */{   pS, xT, xT, bO, bO, bK,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*UNMAP   */{   pS, xO, xO, pS, pS, bK,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*SYNC    */{   pS, pS, pS, pS, pS, bK,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*MD_SNS  */{   bK, bK, bK, bK, bK, pS,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*MD_SEL  */{   bK, bK, bK, bK, bK, bK,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*RQ_SNS  */{   pS, pS, pS, pS, pS, pS,  pS,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*INQ     */{   pS, pS, pS, pS, pS, pS,  pS,  bK,  pS, pS,  pS, pS,  bK, bK},
+/*RD_CAP  */{   pS, pS, pS, pS, pS, pS,  pS,  bK,  pS, pS,  pS, pS,  bK, pS},
+/*RES     */{   bK, bK, bK, bK, bK, bK,  bK,  bK,  pS, bK,  bK, bK,  bK, bK},
+/*LOG_SNS */{   pS, pS, pS, pS, pS, pS,  bK,  bK,  pS, pS,  bK, pS,  bK, bK},
+/*FORMAT  */{   pS, bK, bK, bK, bK, bK,  bK,  pS,  pS, bK,  bK, bK,  bK, bK},
+/*START   */{   bK, bK, bK, bK, bK, bK,  bK,  bK,  pS, bK,  bK, bK,  bK, bK},
 };
 

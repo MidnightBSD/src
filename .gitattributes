@@ -54473,6 +54473,8 @@ sys/cam/ata/ata_xpt.c -text
 sys/cam/cam.c -text
 sys/cam/cam.h -text
 sys/cam/cam_ccb.h -text
+sys/cam/cam_compat.c svneol=native#text/plain
+sys/cam/cam_compat.h svneol=native#text/plain
 sys/cam/cam_debug.h -text
 sys/cam/cam_periph.c -text
 sys/cam/cam_periph.h -text
@@ -54502,6 +54504,10 @@ sys/cam/ctl/ctl_frontend.h -text
 sys/cam/ctl/ctl_frontend_cam_sim.c -text
 sys/cam/ctl/ctl_frontend_internal.c -text
 sys/cam/ctl/ctl_frontend_internal.h -text
+sys/cam/ctl/ctl_frontend_ioctl.c svneol=native#text/plain
+sys/cam/ctl/ctl_frontend_iscsi.c svneol=native#text/plain
+sys/cam/ctl/ctl_frontend_iscsi.h svneol=native#text/plain
+sys/cam/ctl/ctl_ha.c svneol=native#text/plain
 sys/cam/ctl/ctl_ha.h -text
 sys/cam/ctl/ctl_io.h -text
 sys/cam/ctl/ctl_ioctl.h -text
@@ -54511,6 +54517,9 @@ sys/cam/ctl/ctl_private.h -text
 sys/cam/ctl/ctl_scsi_all.c -text
 sys/cam/ctl/ctl_scsi_all.h -text
 sys/cam/ctl/ctl_ser_table.c -text
+sys/cam/ctl/ctl_tpc.c svneol=native#text/plain
+sys/cam/ctl/ctl_tpc.h svneol=native#text/plain
+sys/cam/ctl/ctl_tpc_local.c svneol=native#text/plain
 sys/cam/ctl/ctl_util.c -text
 sys/cam/ctl/ctl_util.h -text
 sys/cam/ctl/scsi_ctl.c -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_target.c 288817 2015-10-05 11:45:28Z mav $");
 
 
 #include <sys/param.h>
@@ -94,14 +95,12 @@ struct targ_softc {
 	struct cam_periph	*periph;
 	struct cam_path		*path;
 	targ_state		 state;
+	u_int			 maxio;
 	struct selinfo		 read_select;
 	struct devstat		 device_stats;
-	struct callout		destroy_dev_callout;
-	struct mtx		destroy_mtx;
 };
 
 static d_open_t		targopen;
-static d_close_t	targclose;
 static d_read_t		targread;
 static d_write_t	targwrite;
 static d_ioctl_t	targioctl;
@@ -119,7 +118,6 @@ static struct cdevsw targ_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_flags =	D_NEEDGIANT,
 	.d_open =	targopen,
-	.d_close =	targclose,
 	.d_read =	targread,
 	.d_write =	targwrite,
 	.d_ioctl =	targioctl,
@@ -152,15 +150,12 @@ static void		targfreeccb(struct targ_softc *softc, union ccb *ccb);
 static struct targ_cmd_descr *
 			targgetdescr(struct targ_softc *softc);
 static periph_init_t	targinit;
-static void		targclone(void *arg, struct ucred *cred, char *name,
-				  int namelen, struct cdev **dev);
 static void		targasync(void *callback_arg, u_int32_t code,
 				  struct cam_path *path, void *arg);
 static void		abort_all_pending(struct targ_softc *softc);
 static void		notify_user(struct targ_softc *softc);
 static int		targcamstatus(cam_status status);
 static size_t		targccblen(xpt_opcode func_code);
-static void		targdestroy(void *);
 
 static struct periph_driver targdriver =
 {
@@ -171,31 +166,50 @@ PERIPHDRIVER_DECLARE(targ, targdriver);
 
 static MALLOC_DEFINE(M_TARG, "TARG", "TARG data");
 
+/* Disable LUN if enabled and teardown softc */
+static void
+targcdevdtor(void *data)
+{
+	struct targ_softc *softc;
+	struct cam_periph *periph;
+
+	softc = data;
+	if (softc->periph == NULL) {
+		printf("%s: destroying non-enabled target\n", __func__);
+		free(softc, M_TARG);
+		return;
+	}
+
+	/*
+	 * Acquire a hold on the periph so that it doesn't go away before
+	 * we are ready at the end of the function.
+	 */
+	periph = softc->periph;
+	cam_periph_acquire(periph);
+	cam_periph_lock(periph);
+	(void)targdisable(softc);
+	if (softc->periph != NULL) {
+		cam_periph_invalidate(softc->periph);
+		softc->periph = NULL;
+	}
+	cam_periph_unlock(periph);
+	cam_periph_release(periph);
+	free(softc, M_TARG);
+}
+
 /*
- * Create softc and initialize it. Only one proc can open each targ device.
- * There is no locking here because a periph doesn't get created until an
- * ioctl is issued to do so, and that can't happen until this method returns.
+ * Create softc and initialize it.  There is no locking here because a
+ * periph doesn't get created until an ioctl is issued to do so, and
+ * that can't happen until this method returns.
  */
 static int
 targopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	struct targ_softc *softc;
 
-	if (dev->si_drv1 != 0) {
-		return (EBUSY);
-	}
-	
-	/* Mark device busy before any potentially blocking operations */
-	dev->si_drv1 = (void *)~0;
-
-	/* Create the targ device, allocate its softc, initialize it */
-	if ((dev->si_flags & SI_NAMED) == 0) {
-		make_dev(&targ_cdevsw, dev2unit(dev), UID_ROOT, GID_WHEEL, 0600,
-			 "targ%d", dev2unit(dev));
-	}
+	/* Allocate its softc, initialize it */
 	softc = malloc(sizeof(*softc), M_TARG,
 	       M_WAITOK | M_ZERO);
-	dev->si_drv1 = softc;
 	softc->state = TARG_STATE_OPENED;
 	softc->periph = NULL;
 	softc->path = NULL;
@@ -206,59 +220,8 @@ targopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	TAILQ_INIT(&softc->user_ccb_queue);
 	knlist_init_mtx(&softc->read_select.si_note, NULL);
 
+	devfs_set_cdevpriv(softc, targcdevdtor);
 	return (0);
-}
-
-/* Disable LUN if enabled and teardown softc */
-static int
-targclose(struct cdev *dev, int flag, int fmt, struct thread *td)
-{
-	struct targ_softc     *softc;
-	struct cam_periph     *periph;
-	int    error;
-
-	softc = (struct targ_softc *)dev->si_drv1;
-	mtx_init(&softc->destroy_mtx, "targ_destroy", "SCSI Target dev destroy", MTX_DEF);
- 	callout_init_mtx(&softc->destroy_dev_callout, &softc->destroy_mtx, CALLOUT_RETURNUNLOCKED);
-	if (softc->periph == NULL) {
-#if 0
-		destroy_dev(dev);
-		free(softc, M_TARG);
-#endif
-		printf("%s: destroying non-enabled target\n", __func__);
-		mtx_lock(&softc->destroy_mtx);
-       		callout_reset(&softc->destroy_dev_callout, hz / 2,
-                        (void *)targdestroy, (void *)dev);
-		mtx_unlock(&softc->destroy_mtx);
-		return (0);
-	}
-
-	/*
-	 * Acquire a hold on the periph so that it doesn't go away before
-	 * we are ready at the end of the function.
-	 */
-	periph = softc->periph;
-	cam_periph_acquire(periph);
-	cam_periph_lock(periph);
-	error = targdisable(softc);
-	if (softc->periph != NULL) {
-		cam_periph_invalidate(softc->periph);
-		softc->periph = NULL;
-	}
-	cam_periph_unlock(periph);
-	cam_periph_release(periph);
-
-#if 0
-	destroy_dev(dev);
-	free(softc, M_TARG);
-#endif
-
-	printf("%s: close finished error(%d)\n", __func__, error);
-	mtx_lock(&softc->destroy_mtx);
-      	callout_reset(&softc->destroy_dev_callout, hz / 2,
-		(void *)targdestroy, (void *)dev);
-	mtx_unlock(&softc->destroy_mtx);
-	return (error);
 }
 
 /* Enable/disable LUNs, set debugging level */
@@ -268,30 +231,28 @@ targioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *t
 	struct targ_softc *softc;
 	cam_status	   status;
 
-	softc = (struct targ_softc *)dev->si_drv1;
+	devfs_get_cdevpriv((void **)&softc);
 
 	switch (cmd) {
 	case TARGIOCENABLE:
 	{
 		struct ioc_enable_lun	*new_lun;
 		struct cam_path		*path;
-		struct cam_sim		*sim;
 
 		new_lun = (struct ioc_enable_lun *)addr;
-		status = xpt_create_path_unlocked(&path, /*periph*/NULL,
-						  new_lun->path_id,
-						  new_lun->target_id,
-						  new_lun->lun_id);
+		status = xpt_create_path(&path, /*periph*/NULL,
+					  new_lun->path_id,
+					  new_lun->target_id,
+					  new_lun->lun_id);
 		if (status != CAM_REQ_CMP) {
 			printf("Couldn't create path, status %#x\n", status);
 			break;
 		}
-		sim = xpt_path_sim(path);
-		mtx_lock(sim->mtx);
+		xpt_path_lock(path);
 		status = targenable(softc, path, new_lun->grp6_len,
 				    new_lun->grp7_len);
+		xpt_path_unlock(path);
 		xpt_free_path(path);
-		mtx_unlock(sim->mtx);
 		break;
 	}
 	case TARGIOCDISABLE:
@@ -317,13 +278,10 @@ targioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *t
 			cdbg.flags = CAM_DEBUG_PERIPH;
 		else
 			cdbg.flags = CAM_DEBUG_NONE;
-		cam_periph_lock(softc->periph);
 		xpt_setup_ccb(&cdbg.ccb_h, softc->path, CAM_PRIORITY_NORMAL);
 		cdbg.ccb_h.func_code = XPT_DEBUG;
 		cdbg.ccb_h.cbfcnp = targdone;
-
 		xpt_action((union ccb *)&cdbg);
-		cam_periph_unlock(softc->periph);
 		status = cdbg.ccb_h.status & CAM_STATUS_MASK;
 		break;
 	}
@@ -342,7 +300,7 @@ targpoll(struct cdev *dev, int poll_events, struct thread *td)
 	struct targ_softc *softc;
 	int	revents;
 
-	softc = (struct targ_softc *)dev->si_drv1;
+	devfs_get_cdevpriv((void **)&softc);
 
 	/* Poll for write() is always ok. */
 	revents = poll_events & (POLLOUT | POLLWRNORM);
@@ -367,7 +325,7 @@ targkqfilter(struct cdev *dev, struct knote *kn)
 {
 	struct  targ_softc *softc;
 
-	softc = (struct targ_softc *)dev->si_drv1;
+	devfs_get_cdevpriv((void **)&softc);
 	kn->kn_hook = (caddr_t)softc;
 	kn->kn_fop = &targread_filtops;
 	knlist_add(&softc->read_select.si_note, kn, 0);
@@ -447,6 +405,12 @@ targenable(struct targ_softc *softc, struct cam_path *path, int grp6_len,
 		status = CAM_FUNC_NOTAVAIL;
 		goto enable_fail;
 	}
+	if (cpi.maxio == 0)
+		softc->maxio = DFLTPHYS;	/* traditional default */
+	else if (cpi.maxio > MAXPHYS)
+		softc->maxio = MAXPHYS;		/* for safety */
+	else
+		softc->maxio = cpi.maxio;	/* real value */
 
 	/* Destroy any periph on our path if it is disabled */
 	periph = cam_periph_find(path, "targ");
@@ -568,7 +532,7 @@ targwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	int write_len, error;
 	int func_code, priority;
 
-	softc = (struct targ_softc *)dev->si_drv1;
+	devfs_get_cdevpriv((void **)&softc);
 	write_len = error = 0;
 	CAM_DEBUG(softc->path, CAM_DEBUG_PERIPH,
 		  ("write - uio_resid %zd\n", uio->uio_resid));
@@ -590,6 +554,7 @@ targwrite(struct cdev *dev, struct uio *uio, int ioflag)
 		switch (func_code) {
 		case XPT_ACCEPT_TARGET_IO:
 		case XPT_IMMED_NOTIFY:
+		case XPT_IMMEDIATE_NOTIFY:
 			cam_periph_lock(softc->periph);
 			ccb = targgetccb(softc, func_code, priority);
 			descr = (struct targ_cmd_descr *)ccb->ccb_h.targ_descr;
@@ -765,23 +730,10 @@ targsendccb(struct targ_softc *softc, union ccb *ccb,
 	ccb_h->cbfcnp = targdone;
 	ccb_h->targ_descr = descr;
 
-	/*
-	 * We only attempt to map the user memory into kernel space
-	 * if they haven't passed in a physical memory pointer,
-	 * and if there is actually an I/O operation to perform.
-	 * Right now cam_periph_mapmem() only supports SCSI and device
-	 * match CCBs.  For the SCSI CCBs, we only pass the CCB in if
-	 * there's actually data to map.  cam_periph_mapmem() will do the
-	 * right thing, even if there isn't data to map, but since CCBs
-	 * without data are a reasonably common occurance (e.g. test unit
-	 * ready), it will save a few cycles if we check for it here.
-	 */
-	if (((ccb_h->flags & CAM_DATA_PHYS) == 0)
-	 && (((ccb_h->func_code == XPT_CONT_TARGET_IO)
-	    && ((ccb_h->flags & CAM_DIR_MASK) != CAM_DIR_NONE))
-	  || (ccb_h->func_code == XPT_DEV_MATCH))) {
+	if ((ccb_h->func_code == XPT_CONT_TARGET_IO) ||
+	    (ccb_h->func_code == XPT_DEV_MATCH)) {
 
-		error = cam_periph_mapmem(ccb, mapinfo);
+		error = cam_periph_mapmem(ccb, mapinfo, softc->maxio);
 
 		/*
 		 * cam_periph_mapmem returned an error, we can't continue.
@@ -833,6 +785,7 @@ targdone(struct cam_periph *periph, union ccb *done_ccb)
 	switch (done_ccb->ccb_h.func_code) {
 	/* All FC_*_QUEUED CCBs go back to userland */
 	case XPT_IMMED_NOTIFY:
+	case XPT_IMMEDIATE_NOTIFY:
 	case XPT_ACCEPT_TARGET_IO:
 	case XPT_CONT_TARGET_IO:
 		TAILQ_INSERT_TAIL(&softc->user_ccb_queue, &done_ccb->ccb_h,
@@ -862,7 +815,7 @@ targread(struct cdev *dev, struct uio *uio, int ioflag)
 
 	error = 0;
 	read_len = 0;
-	softc = (struct targ_softc *)dev->si_drv1;
+	devfs_get_cdevpriv((void **)&softc);
 	user_queue = &softc->user_ccb_queue;
 	abort_queue = &softc->abort_queue;
 	CAM_DEBUG(softc->path, CAM_DEBUG_PERIPH, ("targread\n"));
@@ -873,7 +826,7 @@ targread(struct cdev *dev, struct uio *uio, int ioflag)
 	user_descr = TAILQ_FIRST(abort_queue);
 	while (ccb_h == NULL && user_descr == NULL) {
 		if ((ioflag & IO_NDELAY) == 0) {
-			error = msleep(user_queue, softc->periph->sim->mtx,
+			error = cam_periph_sleep(softc->periph, user_queue,
 			    PRIBIO | PCATCH, "targrd", 0);
 			ccb_h = TAILQ_FIRST(user_queue);
 			user_descr = TAILQ_FIRST(abort_queue);
@@ -1013,6 +966,7 @@ targfreeccb(struct targ_softc *softc, union ccb *ccb)
 	switch (ccb->ccb_h.func_code) {
 	case XPT_ACCEPT_TARGET_IO:
 	case XPT_IMMED_NOTIFY:
+	case XPT_IMMEDIATE_NOTIFY:
 		CAM_DEBUG_PRINT(CAM_DEBUG_PERIPH, ("freeing ccb %p\n", ccb));
 		free(ccb, M_TARG);
 		break;
@@ -1047,23 +1001,11 @@ targgetdescr(struct targ_softc *softc)
 static void
 targinit(void)
 {
-	EVENTHANDLER_REGISTER(dev_clone, targclone, 0, 1000);
-}
+	struct cdev *dev;
 
-static void
-targclone(void *arg, struct ucred *cred, char *name, int namelen,
-    struct cdev **dev)
-{
-	int u;
-
-	if (*dev != NULL)
-		return;
-	if (dev_stdclone(name, NULL, "targ", &u) != 1)
-		return;
-	*dev = make_dev(&targ_cdevsw, u, UID_ROOT, GID_WHEEL,
-			0600, "targ%d", u);
-	dev_ref(*dev);
-	(*dev)->si_flags |= SI_CHEAPCLONE;
+	/* Add symbolic link to targ0 for compatibility. */
+	dev = make_dev(&targ_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "targ");
+	make_dev_alias(dev, "targ0");
 }
 
 static void
@@ -1080,7 +1022,6 @@ abort_all_pending(struct targ_softc *softc)
 	struct targ_cmd_descr   *descr;
 	struct ccb_abort	 cab;
 	struct ccb_hdr		*ccb_h;
-	struct cam_sim		*sim;
 
 	CAM_DEBUG(softc->path, CAM_DEBUG_PERIPH, ("abort_all_pending\n"));
 
@@ -1113,8 +1054,7 @@ abort_all_pending(struct targ_softc *softc)
 
 	/* If we aborted at least one pending CCB ok, wait for it. */
 	if (cab.ccb_h.status == CAM_REQ_CMP) {
-		sim = xpt_path_sim(softc->path);
-		msleep(&softc->pending_ccb_queue, sim->mtx,
+		cam_periph_sleep(softc->periph, &softc->pending_ccb_queue,
 		       PRIBIO | PCATCH, "tgabrt", 0);
 	}
 
@@ -1195,6 +1135,9 @@ targccblen(xpt_opcode func_code)
 	case XPT_IMMED_NOTIFY:
 		len = sizeof(struct ccb_immed_notify);
 		break;
+	case XPT_IMMEDIATE_NOTIFY:
+		len = sizeof(struct ccb_immediate_notify);
+		break;
 	case XPT_REL_SIMQ:
 		len = sizeof(struct ccb_relsim);
 		break;
@@ -1216,26 +1159,4 @@ targccblen(xpt_opcode func_code)
 	}
 
 	return (len);
-}
-
-/*
- * work around to destroy targ device
- * outside of targclose
- */
-static void
-targdestroy(void *dev)
-{
-	struct cdev *device = (struct cdev *)dev;
-	struct targ_softc *softc = (struct targ_softc *)device->si_drv1;
-
-#if 0
-	callout_stop(&softc->destroy_dev_callout);
-#endif
-
-	mtx_unlock(&softc->destroy_mtx);
-	mtx_destroy(&softc->destroy_mtx);
-	free(softc, M_TARG);
-	device->si_drv1 = 0;
-	destroy_dev(device);
-	printf("%s: destroyed dev\n", __func__);
 }

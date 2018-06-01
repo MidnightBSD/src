@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/cam/ata/ata_pmp.c 290768 2015-11-13 10:34:14Z mav $");
 
 #include <sys/param.h>
 
@@ -158,8 +159,6 @@ static struct periph_driver pmpdriver =
 
 PERIPHDRIVER_DECLARE(pmp, pmpdriver);
 
-static MALLOC_DEFINE(M_ATPMP, "ata_pmp", "ata_pmp buffers");
-
 static void
 pmpinit(void)
 {
@@ -193,8 +192,7 @@ pmpfreeze(struct cam_periph *periph, int mask)
 		    i, 0) == CAM_REQ_CMP) {
 			softc->frozen |= (1 << i);
 			xpt_acquire_device(dpath->device);
-			cam_freeze_devq_arg(dpath,
-			    RELSIM_RELEASE_RUNLEVEL, CAM_RL_BUS + 1);
+			cam_freeze_devq(dpath);
 			xpt_free_path(dpath);
 		}
 	}
@@ -215,8 +213,7 @@ pmprelease(struct cam_periph *periph, int mask)
 		    xpt_path_path_id(periph->path),
 		    i, 0) == CAM_REQ_CMP) {
 			softc->frozen &= ~(1 << i);
-			cam_release_devq(dpath,
-			    RELSIM_RELEASE_RUNLEVEL, 0, CAM_RL_BUS + 1, FALSE);
+			cam_release_devq(dpath, 0, 0, 0, FALSE);
 			xpt_release_device(dpath->device);
 			xpt_free_path(dpath);
 		}
@@ -243,7 +240,6 @@ pmponinvalidate(struct cam_periph *periph)
 		}
 	}
 	pmprelease(periph, -1);
-	xpt_print(periph->path, "lost device\n");
 }
 
 static void
@@ -253,7 +249,6 @@ pmpcleanup(struct cam_periph *periph)
 
 	softc = (struct pmp_softc *)periph->softc;
 
-	xpt_print(periph->path, "removing device entry\n");
 	cam_periph_unlock(periph);
 
 	/*
@@ -297,7 +292,7 @@ pmpasync(void *callback_arg, u_int32_t code,
 		status = cam_periph_alloc(pmpregister, pmponinvalidate,
 					  pmpcleanup, pmpstart,
 					  "pmp", CAM_PERIPH_BIO,
-					  cgd->ccb_h.path, pmpasync,
+					  path, pmpasync,
 					  AC_FOUND_DEVICE, cgd);
 
 		if (status != CAM_REQ_CMP
@@ -322,13 +317,17 @@ pmpasync(void *callback_arg, u_int32_t code,
 		if (code == AC_SENT_BDR || code == AC_BUS_RESET)
 			softc->found = 0; /* We have to reset everything. */
 		if (softc->state == PMP_STATE_NORMAL) {
-			if (softc->pm_pid == 0x37261095 ||
-			    softc->pm_pid == 0x38261095)
-				softc->state = PMP_STATE_PM_QUIRKS_1;
-			else
-				softc->state = PMP_STATE_PRECONFIG;
-			cam_periph_acquire(periph);
-			xpt_schedule(periph, CAM_PRIORITY_DEV);
+			if (cam_periph_acquire(periph) == CAM_REQ_CMP) {
+				if (softc->pm_pid == 0x37261095 ||
+				    softc->pm_pid == 0x38261095)
+					softc->state = PMP_STATE_PM_QUIRKS_1;
+				else
+					softc->state = PMP_STATE_PRECONFIG;
+				xpt_schedule(periph, CAM_PRIORITY_DEV);
+			} else {
+				pmprelease(periph, softc->found);
+				xpt_release_boot();
+			}
 		} else
 			softc->restart = 1;
 		break;

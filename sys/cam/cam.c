@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic utility routines for the Common Access Method layer.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/cam/cam.c 284435 2015-06-16 02:31:11Z ken $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -157,6 +158,56 @@ cam_strvis(u_int8_t *dst, const u_int8_t *src, int srclen, int dstlen)
 	}
 	*dst = '\0';
 }
+
+void
+cam_strvis_sbuf(struct sbuf *sb, const u_int8_t *src, int srclen,
+		uint32_t flags)
+{
+
+	/* Trim leading/trailing spaces, nulls. */
+	while (srclen > 0 && src[0] == ' ')
+		src++, srclen--;
+	while (srclen > 0
+	    && (src[srclen-1] == ' ' || src[srclen-1] == '\0'))
+		srclen--;
+
+	while (srclen > 0) {
+		if (*src < 0x20 || *src >= 0x80) {
+			/* SCSI-II Specifies that these should never occur. */
+			/* non-printable character */
+			switch (flags & CAM_STRVIS_FLAG_NONASCII_MASK) {
+			case CAM_STRVIS_FLAG_NONASCII_ESC:
+				sbuf_printf(sb, "\\%c%c%c", 
+				    ((*src & 0300) >> 6) + '0',
+				    ((*src & 0070) >> 3) + '0',
+				    ((*src & 0007) >> 0) + '0');
+				break;
+			case CAM_STRVIS_FLAG_NONASCII_RAW:
+				/*
+				 * If we run into a NUL, just transform it
+				 * into a space.
+				 */
+				if (*src != 0x00)
+					sbuf_putc(sb, *src);
+				else
+					sbuf_putc(sb, ' ');
+				break;
+			case CAM_STRVIS_FLAG_NONASCII_SPC:
+				sbuf_putc(sb, ' ');
+				break;
+			case CAM_STRVIS_FLAG_NONASCII_TRIM:
+			default:
+				break;
+			}
+		} else {
+			/* normal character */
+			sbuf_putc(sb, *src);
+		}
+		src++;
+		srclen--;
+	}
+}
+
 
 /*
  * Compare string with pattern, returning 0 on match.

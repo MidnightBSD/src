@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
@@ -68,7 +69,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_ch.c 316791 2017-04-13 20:36:40Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -99,10 +100,10 @@ __MBSDID("$MidnightBSD$");
  */
 
 static const u_int32_t	CH_TIMEOUT_MODE_SENSE                = 6000;
-static const u_int32_t	CH_TIMEOUT_MOVE_MEDIUM               = 100000;
-static const u_int32_t	CH_TIMEOUT_EXCHANGE_MEDIUM           = 100000;
-static const u_int32_t	CH_TIMEOUT_POSITION_TO_ELEMENT       = 100000;
-static const u_int32_t	CH_TIMEOUT_READ_ELEMENT_STATUS       = 10000;
+static const u_int32_t	CH_TIMEOUT_MOVE_MEDIUM               = 15 * 60 * 1000;
+static const u_int32_t	CH_TIMEOUT_EXCHANGE_MEDIUM           = 15 * 60 * 1000;
+static const u_int32_t	CH_TIMEOUT_POSITION_TO_ELEMENT       = 15 * 60 * 1000;
+static const u_int32_t	CH_TIMEOUT_READ_ELEMENT_STATUS       = 5 * 60 * 1000;
 static const u_int32_t	CH_TIMEOUT_SEND_VOLTAG		     = 10000;
 static const u_int32_t	CH_TIMEOUT_INITIALIZE_ELEMENT_STATUS = 500000;
 
@@ -116,18 +117,19 @@ typedef enum {
 } ch_state;
 
 typedef enum {
-	CH_CCB_PROBE,
-	CH_CCB_WAITING
+	CH_CCB_PROBE
 } ch_ccb_types;
 
 typedef enum {
 	CH_Q_NONE	= 0x00,
-	CH_Q_NO_DBD	= 0x01
+	CH_Q_NO_DBD	= 0x01,
+	CH_Q_NO_DVCID	= 0x02
 } ch_quirks;
 
 #define CH_Q_BIT_STRING	\
 	"\020"		\
-	"\001NO_DBD"
+	"\001NO_DBD"	\
+	"\002NO_DVCID"
 
 #define ccb_state	ppriv_field0
 #define ccb_bp		ppriv_ptr1
@@ -198,12 +200,14 @@ static	int		chexchange(struct cam_periph *periph,
 static	int		chposition(struct cam_periph *periph,
 				   struct changer_position *cp);
 static	int		chgetelemstatus(struct cam_periph *periph,
+				int scsi_version, u_long cmd,
 				struct changer_element_status_request *csr);
 static	int		chsetvoltag(struct cam_periph *periph,
 				    struct changer_set_voltag_request *csvr);
 static	int		chielem(struct cam_periph *periph, 
 				unsigned int timeout);
 static	int		chgetparams(struct cam_periph *periph);
+static	int		chscsiversion(struct cam_periph *periph);
 
 static struct periph_driver chdriver =
 {
@@ -244,19 +248,18 @@ chinit(void)
 static void
 chdevgonecb(void *arg)
 {
-	struct cam_sim	  *sim;
 	struct ch_softc   *softc;
 	struct cam_periph *periph;
+	struct mtx *mtx;
 	int i;
 
 	periph = (struct cam_periph *)arg;
-	sim = periph->sim;
-	softc = (struct ch_softc *)periph->softc;
+	mtx = cam_periph_mtx(periph);
+	mtx_lock(mtx);
 
+	softc = (struct ch_softc *)periph->softc;
 	KASSERT(softc->open_count >= 0, ("Negative open count %d",
 		softc->open_count));
-
-	mtx_lock(sim->mtx);
 
 	/*
 	 * When we get this callback, we will get no more close calls from
@@ -274,13 +277,13 @@ chdevgonecb(void *arg)
 	cam_periph_release_locked(periph);
 
 	/*
-	 * We reference the SIM lock directly here, instead of using
+	 * We reference the lock directly here, instead of using
 	 * cam_periph_unlock().  The reason is that the final call to
 	 * cam_periph_release_locked() above could result in the periph
 	 * getting freed.  If that is the case, dereferencing the periph
 	 * with a cam_periph_unlock() call would cause a page fault.
 	 */
-	mtx_unlock(sim->mtx);
+	mtx_unlock(mtx);
 }
 
 static void
@@ -302,9 +305,6 @@ choninvalidate(struct cam_periph *periph)
 	 * when it has cleaned up its state.
 	 */
 	destroy_dev_sched_cb(softc->dev, chdevgonecb, periph);
-
-	xpt_print(periph->path, "lost device\n");
-
 }
 
 static void
@@ -313,8 +313,6 @@ chcleanup(struct cam_periph *periph)
 	struct ch_softc *softc;
 
 	softc = (struct ch_softc *)periph->softc;
-
-	xpt_print(periph->path, "removing device entry\n");
 
 	devstat_remove_entry(softc->device_stats);
 
@@ -340,7 +338,8 @@ chasync(void *callback_arg, u_int32_t code, struct cam_path *path, void *arg)
 
 		if (cgd->protocol != PROTO_SCSI)
 			break;
-
+		if (SID_QUAL(&cgd->inq_data) != SID_QUAL_LU_CONNECTED)
+			break;
 		if (SID_TYPE(&cgd->inq_data)!= T_CHANGER)
 			break;
 
@@ -351,7 +350,7 @@ chasync(void *callback_arg, u_int32_t code, struct cam_path *path, void *arg)
 		 */
 		status = cam_periph_alloc(chregister, choninvalidate,
 					  chcleanup, chstart, "ch",
-					  CAM_PERIPH_BIO, cgd->ccb_h.path,
+					  CAM_PERIPH_BIO, path,
 					  chasync, AC_FOUND_DEVICE, cgd);
 
 		if (status != CAM_REQ_CMP
@@ -374,6 +373,8 @@ chregister(struct cam_periph *periph, void *arg)
 	struct ch_softc *softc;
 	struct ccb_getdev *cgd;
 	struct ccb_pathinq cpi;
+	struct make_dev_args args;
+	int error;
 
 	cgd = (struct ccb_getdev *)arg;
 	if (cgd == NULL) {
@@ -393,6 +394,14 @@ chregister(struct cam_periph *periph, void *arg)
 	softc->state = CH_STATE_PROBE;
 	periph->softc = softc;
 	softc->quirks = CH_Q_NONE;
+
+	/*
+	 * The DVCID and CURDATA bits were not introduced until the SMC
+	 * spec.  If this device claims SCSI-2 or earlier support, then it
+	 * very likely does not support these bits.
+	 */
+	if (cgd->inq_data.version <= SCSI_REV_2)
+		softc->quirks |= CH_Q_NO_DVCID;
 
 	bzero(&cpi, sizeof(cpi));
 	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
@@ -425,11 +434,20 @@ chregister(struct cam_periph *periph, void *arg)
 
 
 	/* Register the device */
-	softc->dev = make_dev(&ch_cdevsw, periph->unit_number, UID_ROOT,
-			      GID_OPERATOR, 0600, "%s%d", periph->periph_name,
-			      periph->unit_number);
+	make_dev_args_init(&args);
+	args.mda_devsw = &ch_cdevsw;
+	args.mda_unit = periph->unit_number;
+	args.mda_uid = UID_ROOT;
+	args.mda_gid = GID_OPERATOR;
+	args.mda_mode = 0600;
+	args.mda_si_drv1 = periph;
+	error = make_dev_s(&args, &softc->dev, "%s%d", periph->periph_name,
+	    periph->unit_number);
 	cam_periph_lock(periph);
-	softc->dev->si_drv1 = periph;
+	if (error != 0) {
+		cam_periph_release_locked(periph);
+		return (CAM_REQ_CMP_ERR);
+	}
 
 	/*
 	 * Add an async callback so that we get
@@ -478,6 +496,7 @@ chopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 * Load information about this changer device into the softc.
 	 */
 	if ((error = chgetparams(periph)) != 0) {
+		cam_periph_unhold(periph);
 		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
 		return(error);
@@ -495,25 +514,21 @@ chopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 static int
 chclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 {
-	struct	cam_sim *sim;
 	struct	cam_periph *periph;
 	struct  ch_softc *softc;
+	struct mtx *mtx;
 
 	periph = (struct cam_periph *)dev->si_drv1;
-	if (periph == NULL)
-		return(ENXIO);
+	mtx = cam_periph_mtx(periph);
+	mtx_lock(mtx);
 
-	sim = periph->sim;
 	softc = (struct ch_softc *)periph->softc;
-
-	mtx_lock(sim->mtx);
-
 	softc->open_count--;
 
 	cam_periph_release_locked(periph);
 
 	/*
-	 * We reference the SIM lock directly here, instead of using
+	 * We reference the lock directly here, instead of using
 	 * cam_periph_unlock().  The reason is that the call to
 	 * cam_periph_release_locked() above could result in the periph
 	 * getting freed.  If that is the case, dereferencing the periph
@@ -524,7 +539,7 @@ chclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 	 * protect the open count and avoid another lock acquisition and
 	 * release.
 	 */
-	mtx_unlock(sim->mtx);
+	mtx_unlock(mtx);
 
 	return(0);
 }
@@ -539,14 +554,7 @@ chstart(struct cam_periph *periph, union ccb *start_ccb)
 	switch (softc->state) {
 	case CH_STATE_NORMAL:
 	{
-		if (periph->immediate_priority <= periph->pinfo.priority){
-			start_ccb->ccb_h.ccb_state = CH_CCB_WAITING;
-
-			SLIST_INSERT_HEAD(&periph->ccb_list, &start_ccb->ccb_h,
-					  periph_links.sle);
-			periph->immediate_priority = CAM_PRIORITY_NONE;
-			wakeup(&periph->ccb_list);
-		}
+		xpt_release_ccb(start_ccb);
 		break;
 	}
 	case CH_STATE_PROBE:
@@ -579,7 +587,7 @@ chstart(struct cam_periph *periph, union ccb *start_ccb)
 				/* tag_action */ MSG_SIMPLE_Q_TAG,
 				/* dbd */ (softc->quirks & CH_Q_NO_DBD) ?
 					FALSE : TRUE,
-				/* page_code */ SMS_PAGE_CTRL_CURRENT,
+				/* pc */ SMS_PAGE_CTRL_CURRENT,
 				/* page */ CH_ELEMENT_ADDR_ASSIGN_PAGE,
 				/* param_buf */ (u_int8_t *)mode_buffer,
 				/* param_len */ mode_buffer_len,
@@ -641,6 +649,11 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 		    		softc->sc_counts[CHET_IE],
 				PLURAL(softc->sc_counts[CHET_IE]));
 #undef PLURAL
+			if (announce_buf[0] != '\0') {
+				xpt_announce_periph(periph, announce_buf);
+				xpt_announce_quirks(periph, softc->quirks,
+				    CH_Q_BIT_STRING);
+			}
 		} else {
 			int error;
 
@@ -657,11 +670,13 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 				 */
 				return;
 			} else if (error != 0) {
-				int retry_scheduled;
 				struct scsi_mode_sense_6 *sms;
+				int frozen, retry_scheduled;
 
 				sms = (struct scsi_mode_sense_6 *)
 					done_ccb->csio.cdb_io.cdb_bytes;
+				frozen = (done_ccb->ccb_h.status &
+				    CAM_DEV_QFRZN) != 0;
 
 				/*
 				 * Check to see if block descriptors were
@@ -672,7 +687,8 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 				 * block descriptors were disabled, enable
 				 * them and re-send the command.
 				 */
-				if (sms->byte2 & SMS_DBD) {
+				if ((sms->byte2 & SMS_DBD) != 0 &&
+				    (periph->flags & CAM_PERIPH_INVALID) == 0) {
 					sms->byte2 &= ~SMS_DBD;
 					xpt_action(done_ccb);
 					softc->quirks |= CH_Q_NO_DBD;
@@ -681,7 +697,7 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 					retry_scheduled = 0;
 
 				/* Don't wedge this device's queue */
-				if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0)
+				if (frozen)
 					cam_release_devq(done_ccb->ccb_h.path,
 						 /*relsim_flags*/0,
 						 /*reduction*/0,
@@ -704,13 +720,7 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 
 				cam_periph_invalidate(periph);
 
-				announce_buf[0] = '\0';
 			}
-		}
-		if (announce_buf[0] != '\0') {
-			xpt_announce_periph(periph, announce_buf);
-			xpt_announce_quirks(periph, softc->quirks,
-			    CH_Q_BIT_STRING);
 		}
 		softc->state = CH_STATE_NORMAL;
 		free(mode_header, M_SCSICH);
@@ -724,12 +734,6 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 		 */
 		xpt_release_ccb(done_ccb);
 		cam_periph_unhold(periph);
-		return;
-	}
-	case CH_CCB_WAITING:
-	{
-		/* Caller will release the CCB */
-		wakeup(&done_ccb->ccb_h.cbfcnp);
 		return;
 	}
 	default:
@@ -759,9 +763,6 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 	int error;
 
 	periph = (struct cam_periph *)dev->si_drv1;
-	if (periph == NULL)
-		return(ENXIO);
-
 	cam_periph_lock(periph);
 	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE, ("entering chioctl\n"));
 
@@ -779,6 +780,7 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 	switch (cmd) {
 	case CHIOGPICKER:
 	case CHIOGPARAMS:
+	case OCHIOGSTATUS:
 	case CHIOGSTATUS:
 		break;
 
@@ -831,10 +833,26 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 		error = chielem(periph, *(unsigned int *)addr);
 		break;
 
+	case OCHIOGSTATUS:
+	{
+		error = chgetelemstatus(periph, SCSI_REV_2, cmd,
+		    (struct changer_element_status_request *)addr);
+		break;
+	}
+
 	case CHIOGSTATUS:
 	{
-		error = chgetelemstatus(periph,
-			       (struct changer_element_status_request *) addr);
+		int scsi_version;
+
+		scsi_version = chscsiversion(periph);
+		if (scsi_version >= SCSI_REV_0) {
+			error = chgetelemstatus(periph, scsi_version, cmd,
+			    (struct changer_element_status_request *)addr);
+	  	}
+		else { /* unable to determine the SCSI version */
+			cam_periph_unlock(periph);
+			return (ENXIO);
+		}
 		break;
 	}
 
@@ -1041,18 +1059,20 @@ copy_voltag(struct changer_voltag *uvoltag, struct volume_tag *voltag)
 }
 
 /*
- * Copy an an element status descriptor to a user-mode
+ * Copy an element status descriptor to a user-mode
  * changer_element_status structure.
  */
-
-static	void
+static void
 copy_element_status(struct ch_softc *softc,
 		    u_int16_t flags,
 		    struct read_element_status_descriptor *desc,
-		    struct changer_element_status *ces)
+		    struct changer_element_status *ces,
+		    int scsi_version)
 {
 	u_int16_t eaddr = scsi_2btoul(desc->eaddr);
 	u_int16_t et;
+	struct volume_tag *pvol_tag = NULL, *avol_tag = NULL;
+	struct read_element_status_device_id *devid = NULL;
 
 	ces->ces_int_addr = eaddr;
 	/* set up logical address in element status */
@@ -1083,7 +1103,7 @@ copy_element_status(struct ch_softc *softc,
 			if ((softc->sc_firsts[et] <= eaddr)
 			    && ((softc->sc_firsts[et] + softc->sc_counts[et])
 				> eaddr)) {
-				ces->ces_source_addr = 
+				ces->ces_source_addr =
 					eaddr - softc->sc_firsts[et];
 				ces->ces_source_type = et;
 				ces->ces_flags |= CES_SOURCE_VALID;
@@ -1096,27 +1116,88 @@ copy_element_status(struct ch_softc *softc,
 			       "address %ud to a valid element type\n",
 			       eaddr);
 	}
-			
 
+	/*
+	 * pvoltag and avoltag are common between SCSI-2 and later versions
+	 */
 	if (flags & READ_ELEMENT_STATUS_PVOLTAG)
-		copy_voltag(&(ces->ces_pvoltag), &(desc->pvoltag));
+		pvol_tag = &desc->voltag_devid.pvoltag;
 	if (flags & READ_ELEMENT_STATUS_AVOLTAG)
-		copy_voltag(&(ces->ces_avoltag), &(desc->avoltag));
-
-	if (desc->dt_scsi_flags & READ_ELEMENT_STATUS_DT_IDVALID) {
-		ces->ces_flags |= CES_SCSIID_VALID;
-		ces->ces_scsi_id = desc->dt_scsi_addr;
+		avol_tag = (flags & READ_ELEMENT_STATUS_PVOLTAG) ?
+		    &desc->voltag_devid.voltag[1] :&desc->voltag_devid.pvoltag;
+	/*
+	 * For SCSI-3 and later, element status can carry designator and
+	 * other information.
+	 */
+	if (scsi_version >= SCSI_REV_SPC) {
+		if ((flags & READ_ELEMENT_STATUS_PVOLTAG) ^
+		    (flags & READ_ELEMENT_STATUS_AVOLTAG))
+			devid = &desc->voltag_devid.pvol_and_devid.devid;
+		else if (!(flags & READ_ELEMENT_STATUS_PVOLTAG) &&
+			 !(flags & READ_ELEMENT_STATUS_AVOLTAG))
+			devid = &desc->voltag_devid.devid;
+		else /* Have both PVOLTAG and AVOLTAG */
+			devid = &desc->voltag_devid.vol_tags_and_devid.devid;
 	}
 
-	if (desc->dt_scsi_addr & READ_ELEMENT_STATUS_DT_LUVALID) {
-		ces->ces_flags |= CES_LUN_VALID;
-		ces->ces_scsi_lun = 
-			desc->dt_scsi_flags & READ_ELEMENT_STATUS_DT_LUNMASK;
+	if (pvol_tag)
+		copy_voltag(&(ces->ces_pvoltag), pvol_tag);
+	if (avol_tag)
+		copy_voltag(&(ces->ces_pvoltag), avol_tag);
+	if (devid != NULL) {
+		if (devid->designator_length > 0) {
+			bcopy((void *)devid->designator,
+			      (void *)ces->ces_designator,
+			      devid->designator_length);
+			ces->ces_designator_length = devid->designator_length;
+			/*
+			 * Make sure we are always NUL terminated.  The
+			 * This won't matter for the binary code set,
+			 * since the user will only pay attention to the
+			 * length field.
+			 */
+			ces->ces_designator[devid->designator_length]= '\0';
+		}
+		if (devid->piv_assoc_designator_type &
+		    READ_ELEMENT_STATUS_PIV_SET) {
+			ces->ces_flags |= CES_PIV;
+			ces->ces_protocol_id =
+			    READ_ELEMENT_STATUS_PROTOCOL_ID(
+			    devid->prot_code_set);
+		}
+		ces->ces_code_set =
+		    READ_ELEMENT_STATUS_CODE_SET(devid->prot_code_set);
+		ces->ces_assoc = READ_ELEMENT_STATUS_ASSOCIATION(
+		    devid->piv_assoc_designator_type);
+		ces->ces_designator_type = READ_ELEMENT_STATUS_DESIGNATOR_TYPE(
+		    devid->piv_assoc_designator_type);
+	} else if (scsi_version > SCSI_REV_2) {
+		/* SCSI-SPC and No devid, no designator */
+		ces->ces_designator_length = 0;
+		ces->ces_designator[0] = '\0';
+		ces->ces_protocol_id = CES_PROTOCOL_ID_FCP_4;
+	}
+
+	if (scsi_version <= SCSI_REV_2) {
+		if (desc->dt_or_obsolete.scsi_2.dt_scsi_flags &
+		    READ_ELEMENT_STATUS_DT_IDVALID) {
+			ces->ces_flags |= CES_SCSIID_VALID;
+			ces->ces_scsi_id =
+			    desc->dt_or_obsolete.scsi_2.dt_scsi_addr;
+		}
+
+		if (desc->dt_or_obsolete.scsi_2.dt_scsi_addr &
+		    READ_ELEMENT_STATUS_DT_LUVALID) {
+			ces->ces_flags |= CES_LUN_VALID;
+			ces->ces_scsi_lun =
+			    desc->dt_or_obsolete.scsi_2.dt_scsi_flags &
+			    READ_ELEMENT_STATUS_DT_LUNMASK;
+		}
 	}
 }
 
 static int
-chgetelemstatus(struct cam_periph *periph, 
+chgetelemstatus(struct cam_periph *periph, int scsi_version, u_long cmd,
 		struct changer_element_status_request *cesr)
 {
 	struct read_element_status_header *st_hdr;
@@ -1125,6 +1206,8 @@ chgetelemstatus(struct cam_periph *periph,
 	caddr_t data = NULL;
 	size_t size, desclen;
 	int avail, i, error = 0;
+	int curdata, dvcid, sense_flags;
+	int try_no_dvcid = 0;
 	struct changer_element_status *user_data = NULL;
 	struct ch_softc *softc;
 	union ccb *ccb;
@@ -1156,12 +1239,31 @@ chgetelemstatus(struct cam_periph *periph,
 	cam_periph_lock(periph);
 	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
+	sense_flags = SF_RETRY_UA;
+	if (softc->quirks & CH_Q_NO_DVCID) {
+		dvcid = 0;
+		curdata = 0;
+	} else {
+		dvcid = 1;
+		curdata = 1;
+		/*
+		 * Don't print anything for an Illegal Request, because
+		 * these flags can cause some changers to complain.  We'll
+		 * retry without them if we get an error.
+		 */
+		sense_flags |= SF_QUIET_IR;
+	}
+
+retry_einval:
+
 	scsi_read_element_status(&ccb->csio,
 				 /* retries */ 1,
 				 /* cbfcnp */ chdone,
 				 /* tag_action */ MSG_SIMPLE_Q_TAG,
 				 /* voltag */ want_voltags,
 				 /* sea */ softc->sc_firsts[chet],
+				 /* curdata */ curdata,
+				 /* dvcid */ dvcid,
 				 /* count */ 1,
 				 /* data_ptr */ data,
 				 /* dxfer_len */ 1024,
@@ -1169,8 +1271,37 @@ chgetelemstatus(struct cam_periph *periph,
 				 /* timeout */ CH_TIMEOUT_READ_ELEMENT_STATUS);
 
 	error = cam_periph_runccb(ccb, cherror, /*cam_flags*/ CAM_RETRY_SELTO,
-				  /*sense_flags*/ SF_RETRY_UA,
+				  /*sense_flags*/ sense_flags,
 				  softc->device_stats);
+
+	/*
+	 * An Illegal Request sense key (only used if there is no asc/ascq)
+	 * or 0x24,0x00 for an ASC/ASCQ both map to EINVAL.  If dvcid or
+	 * curdata are set (we set both or neither), try turning them off
+	 * and see if the command is successful.
+	 */
+	if ((error == EINVAL)
+	 && (dvcid || curdata))  {
+		dvcid = 0;
+		curdata = 0;
+		error = 0;
+		/* At this point we want to report any Illegal Request */
+		sense_flags &= ~SF_QUIET_IR;
+		try_no_dvcid = 1;
+		goto retry_einval;
+	}
+
+	/*
+	 * In this case, we tried a read element status with dvcid and
+	 * curdata set, and it failed.  We retried without those bits, and
+	 * it succeeded.  Suggest to the user that he set a quirk, so we
+	 * don't go through the retry process the first time in the future.
+	 * This should only happen on changers that claim SCSI-3 or higher,
+	 * but don't support these bits.
+	 */
+	if ((try_no_dvcid != 0)
+	 && (error == 0))
+		softc->quirks |= CH_Q_NO_DVCID;
 
 	if (error)
 		goto done;
@@ -1184,7 +1315,6 @@ chgetelemstatus(struct cam_periph *periph,
 	size = sizeof(struct read_element_status_header) +
 	       sizeof(struct read_element_status_page_header) +
 	       (desclen * cesr->cesr_element_count);
-
 	/*
 	 * Reallocate storage for descriptors and get them from the
 	 * device.
@@ -1200,12 +1330,14 @@ chgetelemstatus(struct cam_periph *periph,
 				 /* voltag */ want_voltags,
 				 /* sea */ softc->sc_firsts[chet]
 				 + cesr->cesr_element_base,
+				 /* curdata */ curdata,
+				 /* dvcid */ dvcid,
 				 /* count */ cesr->cesr_element_count,
 				 /* data_ptr */ data,
 				 /* dxfer_len */ size,
 				 /* sense_len */ SSD_FULL_SIZE,
 				 /* timeout */ CH_TIMEOUT_READ_ELEMENT_STATUS);
-	
+
 	error = cam_periph_runccb(ccb, cherror, /*cam_flags*/ CAM_RETRY_SELTO,
 				  /*sense_flags*/ SF_RETRY_UA,
 				  softc->device_stats);
@@ -1238,18 +1370,41 @@ chgetelemstatus(struct cam_periph *periph,
 	 * Set up the individual element status structures
 	 */
 	for (i = 0; i < avail; ++i) {
-		struct changer_element_status *ces = &(user_data[i]);
+		struct changer_element_status *ces;
 
-		copy_element_status(softc, pg_hdr->flags, desc, ces);
+		/*
+		 * In the changer_element_status structure, fields from
+		 * the beginning to the field of ces_scsi_lun are common
+		 * between SCSI-2 and SCSI-3, while all the rest are new
+		 * from SCSI-3. In order to maintain backward compatibility
+		 * of the chio command, the ces pointer, below, is computed
+		 * such that it lines up with the structure boundary
+		 * corresponding to the SCSI version.
+		 */
+		ces = cmd == OCHIOGSTATUS ?
+		    (struct changer_element_status *)
+		    ((unsigned char *)user_data + i *
+		     (offsetof(struct changer_element_status,ces_scsi_lun)+1)):
+		    &user_data[i];
+
+		copy_element_status(softc, pg_hdr->flags, desc,
+				    ces, scsi_version);
 
 		desc = (struct read_element_status_descriptor *)
-		       ((uintptr_t)desc + desclen);
+		       ((unsigned char *)desc + desclen);
 	}
 
 	/* Copy element status structures out to userspace. */
-	error = copyout(user_data,
-			cesr->cesr_element_status,
-			avail * sizeof(struct changer_element_status));
+	if (cmd == OCHIOGSTATUS)
+		error = copyout(user_data,
+				cesr->cesr_element_status,
+				avail* (offsetof(struct changer_element_status,
+				ces_scsi_lun) + 1));
+	else
+		error = copyout(user_data,
+				cesr->cesr_element_status,
+				avail * sizeof(struct changer_element_status));
+
 	cam_periph_lock(periph);
 
  done:
@@ -1415,6 +1570,7 @@ chgetparams(struct cam_periph *periph)
 
 	if (mode_buffer == NULL) {
 		printf("chgetparams: couldn't malloc mode sense data\n");
+		xpt_release_ccb(ccb);
 		return(ENOSPC);
 	}
 
@@ -1433,7 +1589,7 @@ chgetparams(struct cam_periph *periph)
 			/* cbfcnp */ chdone,
 			/* tag_action */ MSG_SIMPLE_Q_TAG,
 			/* dbd */ dbd,
-			/* page_code */ SMS_PAGE_CTRL_CURRENT,
+			/* pc */ SMS_PAGE_CTRL_CURRENT,
 			/* page */ CH_ELEMENT_ADDR_ASSIGN_PAGE,
 			/* param_buf */ (u_int8_t *)mode_buffer,
 			/* param_len */ mode_buffer_len,
@@ -1496,7 +1652,7 @@ chgetparams(struct cam_periph *periph)
 			/* cbfcnp */ chdone,
 			/* tag_action */ MSG_SIMPLE_Q_TAG,
 			/* dbd */ dbd,
-			/* page_code */ SMS_PAGE_CTRL_CURRENT,
+			/* pc */ SMS_PAGE_CTRL_CURRENT,
 			/* page */ CH_DEVICE_CAP_PAGE,
 			/* param_buf */ (u_int8_t *)mode_buffer,
 			/* param_len */ mode_buffer_len,
@@ -1554,6 +1710,37 @@ chgetparams(struct cam_periph *periph)
 	free(mode_buffer, M_SCSICH);
 
 	return(error);
+}
+
+static int
+chscsiversion(struct cam_periph *periph)
+{
+	struct scsi_inquiry_data *inq_data;
+	struct ccb_getdev *cgd;
+	int dev_scsi_version;
+
+	cam_periph_assert(periph, MA_OWNED);
+	if ((cgd = (struct ccb_getdev *)xpt_alloc_ccb_nowait()) == NULL)
+		return (-1);
+	/*
+	 * Get the device information.
+	 */
+	xpt_setup_ccb(&cgd->ccb_h,
+		      periph->path,
+		      CAM_PRIORITY_NORMAL);
+	cgd->ccb_h.func_code = XPT_GDEV_TYPE;
+	xpt_action((union ccb *)cgd);
+
+	if (cgd->ccb_h.status != CAM_REQ_CMP) {
+		xpt_free_ccb((union ccb *)cgd);
+		return -1;
+	}
+
+	inq_data = &cgd->inq_data;
+	dev_scsi_version = inq_data->version;
+	xpt_free_ccb((union ccb *)cgd);
+
+	return dev_scsi_version;
 }
 
 void
@@ -1661,6 +1848,7 @@ void
 scsi_read_element_status(struct ccb_scsiio *csio, u_int32_t retries,
 			 void (*cbfcnp)(struct cam_periph *, union ccb *),
 			 u_int8_t tag_action, int voltag, u_int32_t sea,
+			 int curdata, int dvcid,
 			 u_int32_t count, u_int8_t *data_ptr,
 			 u_int32_t dxfer_len, u_int8_t sense_len,
 			 u_int32_t timeout)
@@ -1675,6 +1863,10 @@ scsi_read_element_status(struct ccb_scsiio *csio, u_int32_t retries,
 	scsi_ulto2b(sea, scsi_cmd->sea);
 	scsi_ulto2b(count, scsi_cmd->count);
 	scsi_ulto3b(dxfer_len, scsi_cmd->len);
+	if (dvcid)
+		scsi_cmd->flags |= READ_ELEMENT_STATUS_DVCID;
+	if (curdata)
+		scsi_cmd->flags |= READ_ELEMENT_STATUS_CURDATA;
 
 	if (voltag)
 		scsi_cmd->byte2 |= READ_ELEMENT_STATUS_VOLTAG;

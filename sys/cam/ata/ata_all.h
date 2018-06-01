@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/cam/ata/ata_all.h 298100 2016-04-16 05:14:55Z scottl $
  */
 
 #ifndef	CAM_ATA_ALL_H
@@ -103,12 +104,14 @@ int	ata_version(int ver);
 
 char *	ata_op_string(struct ata_cmd *cmd);
 char *	ata_cmd_string(struct ata_cmd *cmd, char *cmd_string, size_t len);
+void	ata_cmd_sbuf(struct ata_cmd *cmd, struct sbuf *sb);
 char *	ata_res_string(struct ata_res *res, char *res_string, size_t len);
 int	ata_command_sbuf(struct ccb_ataio *ataio, struct sbuf *sb);
 int	ata_status_sbuf(struct ccb_ataio *ataio, struct sbuf *sb);
 int	ata_res_sbuf(struct ccb_ataio *ataio, struct sbuf *sb);
 
 void	ata_print_ident(struct ata_params *ident_data);
+void	ata_print_ident_short(struct ata_params *ident_data);
 
 uint32_t	ata_logical_sector_size(struct ata_params *ident_data);
 uint64_t	ata_physical_sector_size(struct ata_params *ident_data);
@@ -143,6 +146,7 @@ int	ata_identify_match(caddr_t identbuffer, caddr_t table_entry);
 int	ata_static_identify_match(caddr_t identbuffer, caddr_t table_entry);
 
 void	semb_print_ident(struct sep_identify_data *ident_data);
+void	semb_print_ident_short(struct sep_identify_data *ident_data);
 
 void semb_receive_diagnostic_results(struct ccb_ataio *ataio,
 	u_int32_t retries, void (*cbfcnp)(struct cam_periph *, union ccb*),

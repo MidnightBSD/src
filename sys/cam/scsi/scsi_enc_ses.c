@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Matthew Jacob
  * Copyright (c) 2010 Spectra Logic Corporation
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_enc_ses.c 320474 2017-06-29 17:29:07Z markj $");
 
 #include <sys/param.h>
 
@@ -345,8 +346,9 @@ typedef struct ses_cache {
 	const struct ses_cfg_page		*cfg_page;
 
 	/* References into the config page. */
+	int					 ses_nsubencs;
 	const struct ses_enc_desc * const	*subencs;
-	uint8_t					 ses_ntypes;
+	int					 ses_ntypes;
 	const ses_type_t			*ses_types;
 
 	/* Source for all the status pointers */
@@ -549,6 +551,7 @@ static int ses_set_timed_completion(enc_softc_t *, uint8_t);
 static int ses_putstatus(enc_softc_t *, int, struct ses_comstat *);
 #endif
 
+static void ses_poll_status(enc_softc_t *);
 static void ses_print_addl_data(enc_softc_t *, enc_element_t *);
 
 /*=========================== SES cleanup routines ===========================*/
@@ -567,8 +570,8 @@ ses_cache_free_elm_addlstatus(enc_softc_t *enc, enc_cache_t *cache)
 		return;
 
 	for (cur_elm = cache->elm_map,
-	     last_elm = &cache->elm_map[cache->nelms - 1];
-	     cur_elm <= last_elm; cur_elm++) {
+	     last_elm = &cache->elm_map[cache->nelms];
+	     cur_elm != last_elm; cur_elm++) {
 		ses_element_t *elmpriv;
 
 		elmpriv = cur_elm->elm_private;
@@ -598,8 +601,8 @@ ses_cache_free_elm_descs(enc_softc_t *enc, enc_cache_t *cache)
 		return;
 
 	for (cur_elm = cache->elm_map,
-	     last_elm = &cache->elm_map[cache->nelms - 1];
-	     cur_elm <= last_elm; cur_elm++) {
+	     last_elm = &cache->elm_map[cache->nelms];
+	     cur_elm != last_elm; cur_elm++) {
 		ses_element_t *elmpriv;
 
 		elmpriv = cur_elm->elm_private;
@@ -644,8 +647,8 @@ ses_cache_free_elm_map(enc_softc_t *enc, enc_cache_t *cache)
 	ses_cache_free_elm_descs(enc, cache);
 	ses_cache_free_elm_addlstatus(enc, cache);
 	for (cur_elm = cache->elm_map,
-	     last_elm = &cache->elm_map[cache->nelms - 1];
-	     cur_elm <= last_elm; cur_elm++) {
+	     last_elm = &cache->elm_map[cache->nelms];
+	     cur_elm != last_elm; cur_elm++) {
 
 		ENC_FREE_AND_NULL(cur_elm->elm_private);
 	}
@@ -714,13 +717,15 @@ ses_cache_clone(enc_softc_t *enc, enc_cache_t *src, enc_cache_t *dst)
 	 * The element map is independent even though it starts out
 	 * pointing to the same constant page data.
 	 */
-	dst->elm_map = ENC_MALLOCZ(dst->nelms * sizeof(enc_element_t));
+	dst->elm_map = malloc(dst->nelms * sizeof(enc_element_t),
+	    M_SCSIENC, M_WAITOK);
 	memcpy(dst->elm_map, src->elm_map, dst->nelms * sizeof(enc_element_t));
 	for (dst_elm = dst->elm_map, src_elm = src->elm_map,
-	     last_elm = &src->elm_map[src->nelms - 1];
-	     src_elm <= last_elm; src_elm++, dst_elm++) {
+	     last_elm = &src->elm_map[src->nelms];
+	     src_elm != last_elm; src_elm++, dst_elm++) {
 
-		dst_elm->elm_private = ENC_MALLOCZ(sizeof(ses_element_t));
+		dst_elm->elm_private = malloc(sizeof(ses_element_t),
+		    M_SCSIENC, M_WAITOK);
 		memcpy(dst_elm->elm_private, src_elm->elm_private,
 		       sizeof(ses_element_t));
 	}
@@ -888,7 +893,6 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 	struct device_match_result  *device_match;
 	struct device_match_pattern *device_pattern;
 	ses_path_iter_args_t	    *args;
-	struct cam_sim		    *sim;
 
 	args = (ses_path_iter_args_t *)arg;
 	match_pattern.type = DEV_MATCH_DEVICE;
@@ -901,10 +905,10 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 	       device_pattern->data.devid_pat.id_len);
 
 	memset(&cdm, 0, sizeof(cdm));
-	if (xpt_create_path_unlocked(&cdm.ccb_h.path, /*periph*/NULL,
-				     CAM_XPT_PATH_ID,
-				     CAM_TARGET_WILDCARD,
-				     CAM_LUN_WILDCARD) != CAM_REQ_CMP)
+	if (xpt_create_path(&cdm.ccb_h.path, /*periph*/NULL,
+			     CAM_XPT_PATH_ID,
+			     CAM_TARGET_WILDCARD,
+			     CAM_LUN_WILDCARD) != CAM_REQ_CMP)
 		return;
 
 	cdm.ccb_h.func_code = XPT_DEV_MATCH;
@@ -914,11 +918,8 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 	cdm.match_buf_len   = sizeof(match_result);
 	cdm.matches         = &match_result;
 
-	sim = xpt_path_sim(cdm.ccb_h.path);
-	CAM_SIM_LOCK(sim);
 	xpt_action((union ccb *)&cdm);
 	xpt_free_path(cdm.ccb_h.path);
-	CAM_SIM_UNLOCK(sim);
 
 	if ((cdm.ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP
 	 || (cdm.status != CAM_DEV_MATCH_LAST
@@ -927,18 +928,15 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 		return;
 
 	device_match = &match_result.result.device_result;
-	if (xpt_create_path_unlocked(&cdm.ccb_h.path, /*periph*/NULL,
-				     device_match->path_id,
-				     device_match->target_id,
-				     device_match->target_lun) != CAM_REQ_CMP)
+	if (xpt_create_path(&cdm.ccb_h.path, /*periph*/NULL,
+			     device_match->path_id,
+			     device_match->target_id,
+			     device_match->target_lun) != CAM_REQ_CMP)
 		return;
 
 	args->callback(enc, elem, cdm.ccb_h.path, args->callback_arg);
 
-	sim = xpt_path_sim(cdm.ccb_h.path);
-	CAM_SIM_LOCK(sim);
 	xpt_free_path(cdm.ccb_h.path);
-	CAM_SIM_UNLOCK(sim);
 }
 
 /**
@@ -1014,7 +1012,7 @@ ses_setphyspath_callback(enc_softc_t *enc, enc_element_t *elm,
 	xpt_setup_ccb(&cdai.ccb_h, path, CAM_PRIORITY_NORMAL);
 	cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
 	cdai.buftype = CDAI_TYPE_PHYS_PATH;
-	cdai.flags = 0;
+	cdai.flags = CDAI_FLAG_NONE;
 	cdai.bufsiz = MAXPATHLEN;
 	cdai.buf = old_physpath;
 	xpt_action((union ccb *)&cdai);
@@ -1026,7 +1024,7 @@ ses_setphyspath_callback(enc_softc_t *enc, enc_element_t *elm,
 		xpt_setup_ccb(&cdai.ccb_h, path, CAM_PRIORITY_NORMAL);
 		cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
 		cdai.buftype = CDAI_TYPE_PHYS_PATH;
-		cdai.flags |= CDAI_FLAG_STORE;
+		cdai.flags = CDAI_FLAG_STORE;
 		cdai.bufsiz = sbuf_len(args->physpath);
 		cdai.buf = sbuf_data(args->physpath);
 		xpt_action((union ccb *)&cdai);
@@ -1056,7 +1054,8 @@ ses_set_physpath(enc_softc_t *enc, enc_element_t *elm,
 	ses_setphyspath_callback_args_t args;
 	int i, ret;
 	struct sbuf sb;
-	uint8_t *devid, *elmaddr;
+	struct scsi_vpd_id_descriptor *idd;
+	uint8_t *devid;
 	ses_element_t *elmpriv;
 	const char *c;
 
@@ -1069,13 +1068,10 @@ ses_set_physpath(enc_softc_t *enc, enc_element_t *elm,
 	 */
 	xpt_setup_ccb(&cdai.ccb_h, enc->periph->path, CAM_PRIORITY_NORMAL);
 	cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
+	cdai.flags = CDAI_FLAG_NONE;
 	cdai.buftype = CDAI_TYPE_SCSI_DEVID;
 	cdai.bufsiz = CAM_SCSI_DEVID_MAXLEN;
-	cdai.buf = devid = ENC_MALLOCZ(cdai.bufsiz);
-	if (devid == NULL) {
-		ret = ENOMEM;
-		goto out;
-	}
+	cdai.buf = devid = malloc(cdai.bufsiz, M_SCSIENC, M_WAITOK|M_ZERO);
 	cam_periph_lock(enc->periph);
 	xpt_action((union ccb *)&cdai);
 	if ((cdai.ccb_h.status & CAM_DEV_QFRZN) != 0)
@@ -1084,9 +1080,9 @@ ses_set_physpath(enc_softc_t *enc, enc_element_t *elm,
 	if (cdai.ccb_h.status != CAM_REQ_CMP)
 		goto out;
 
-	elmaddr = scsi_get_devid((struct scsi_vpd_device_id *)cdai.buf,
+	idd = scsi_get_devid((struct scsi_vpd_device_id *)cdai.buf,
 	    cdai.provsiz, scsi_devid_is_naa_ieee_reg);
-	if (elmaddr == NULL)
+	if (idd == NULL)
 		goto out;
 
 	if (sbuf_new(&sb, NULL, 128, SBUF_AUTOEXTEND) == NULL) {
@@ -1095,7 +1091,7 @@ ses_set_physpath(enc_softc_t *enc, enc_element_t *elm,
 	}
 	/* Next, generate the physical path string */
 	sbuf_printf(&sb, "id1,enc@n%jx/type@%x/slot@%x",
-	    scsi_8btou64(elmaddr), iter->type_index,
+	    scsi_8btou64(idd->identifier), iter->type_index,
 	    iter->type_element_index);
 	/* Append the element descriptor if one exists */
 	elmpriv = elm->elm_private;
@@ -1185,7 +1181,7 @@ ses_set_timed_completion(enc_softc_t *enc, uint8_t tc_en)
 	if (mode_buf == NULL)
 		goto out;
 
-	scsi_mode_sense(&ccb->csio, /*retries*/4, enc_done, MSG_SIMPLE_Q_TAG,
+	scsi_mode_sense(&ccb->csio, /*retries*/4, NULL, MSG_SIMPLE_Q_TAG,
 	    /*dbd*/FALSE, SMS_PAGE_CTRL_CURRENT, SES_MGMT_MODE_PAGE_CODE,
 	    mode_buf, mode_buf_len, SSD_FULL_SIZE, /*timeout*/60 * 1000);
 
@@ -1213,7 +1209,7 @@ ses_set_timed_completion(enc_softc_t *enc, uint8_t tc_en)
 	/* SES2r20: a completion time of zero means as long as possible */
 	bzero(&mgmt->max_comp_time, sizeof(mgmt->max_comp_time));
 
-	scsi_mode_select(&ccb->csio, 5, enc_done, MSG_SIMPLE_Q_TAG,
+	scsi_mode_select(&ccb->csio, 5, NULL, MSG_SIMPLE_Q_TAG,
 	    /*page_fmt*/FALSE, /*save_pages*/TRUE, mode_buf, mode_buf_len,
 	    SSD_FULL_SIZE, /*timeout*/60 * 1000);
 
@@ -1332,7 +1328,7 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	enc_cache = &enc->enc_daemon_cache;
 	ses_cache = enc_cache->private;
 	buf = *bufp;
-	err = -1;;
+	err = -1;
 
 	if (error != 0) {
 		err = error;
@@ -1376,12 +1372,8 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	 * Now waltz through all the subenclosures summing the number of
 	 * types available in each.
 	 */
-	subencs = ENC_MALLOCZ(ses_cfg_page_get_num_subenc(cfg_page)
-			    * sizeof(*subencs));
-	if (subencs == NULL) {
-		err = ENOMEM;
-		goto out;
-	}
+	subencs = malloc(ses_cfg_page_get_num_subenc(cfg_page)
+	    * sizeof(*subencs), M_SCSIENC, M_WAITOK|M_ZERO);
 	/*
 	 * Sub-enclosure data is const after construction (i.e. when
 	 * accessed via our cache object.
@@ -1389,11 +1381,12 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	 * The cast here is not required in C++ but C99 is not so
 	 * sophisticated (see C99 6.5.16.1(1)).
 	 */
+	ses_cache->ses_nsubencs = ses_cfg_page_get_num_subenc(cfg_page);
 	ses_cache->subencs = subencs;
 
 	buf_subenc = cfg_page->subencs;
 	cur_subenc = subencs;
-	last_subenc = &subencs[ses_cfg_page_get_num_subenc(cfg_page) - 1];
+	last_subenc = &subencs[ses_cache->ses_nsubencs - 1];
 	ntype = 0;
 	while (cur_subenc <= last_subenc) {
 
@@ -1418,15 +1411,13 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	}
 
 	/* Process the type headers. */
-	ses_types = ENC_MALLOCZ(ntype * sizeof(*ses_types));
-	if (ses_types == NULL) {
-		err = ENOMEM;
-		goto out;
-	}
+	ses_types = malloc(ntype * sizeof(*ses_types),
+	    M_SCSIENC, M_WAITOK|M_ZERO);
 	/*
 	 * Type data is const after construction (i.e. when accessed via
 	 * our cache object.
 	 */
+	ses_cache->ses_ntypes = ntype;
 	ses_cache->ses_types = ses_types;
 
 	cur_buf_type = (const struct ses_elm_type_desc *)
@@ -1458,12 +1449,8 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	}
 
 	/* Create the object map. */
-	enc_cache->elm_map = ENC_MALLOCZ(nelm * sizeof(enc_element_t));
-	if (enc_cache->elm_map == NULL) {
-		err = ENOMEM;
-		goto out;
-	}
-	ses_cache->ses_ntypes = (uint8_t)ntype;
+	enc_cache->elm_map = malloc(nelm * sizeof(enc_element_t),
+	    M_SCSIENC, M_WAITOK|M_ZERO);
 	enc_cache->nelms = nelm;
 
 	ses_iter_init(enc, enc_cache, &iter);
@@ -1477,11 +1464,8 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 		element->subenclosure = thdr->etype_subenc;
 		element->enctype = thdr->etype_elm_type;
 		element->overall_status_elem = iter.type_element_index == 0;
-		element->elm_private = ENC_MALLOCZ(sizeof(ses_element_t));
-		if (element->elm_private == NULL) {
-			err = ENOMEM;
-			goto out;
-		}
+		element->elm_private = malloc(sizeof(ses_element_t),
+		    M_SCSIENC, M_WAITOK|M_ZERO);
 		ENC_DLOG(enc, "%s: creating elmpriv %d(%d,%d) subenc %d "
 		    "type 0x%x\n", __func__, iter.global_element_index,
 		    iter.type_index, iter.type_element_index,
@@ -1494,11 +1478,7 @@ out:
 	if (err)
 		ses_cache_free(enc, enc_cache);
 	else {
-		enc_update_request(enc, SES_UPDATE_GETSTATUS);
-		if (ses->ses_flags & SES_FLAG_DESC)
-			enc_update_request(enc, SES_UPDATE_GETELMDESCS);
-		if (ses->ses_flags & SES_FLAG_ADDLSTATUS)
-			enc_update_request(enc, SES_UPDATE_GETELMADDLSTATUS);
+		ses_poll_status(enc);
 		enc_update_request(enc, SES_PUBLISH_CACHE);
 	}
 	ENC_DLOG(enc, "%s: exiting with err %d\n", __func__, err);
@@ -1554,6 +1534,18 @@ ses_process_status(enc_softc_t *enc, struct enc_fsm_state *state,
 		ENC_VLOG(enc, "Enclosure Status Page Too Long\n");
 		goto out;
 	}
+
+	/* Check for simple enclosure reporting short enclosure status. */
+	if (length >= 4 && page->hdr.page_code == SesShortStatus) {
+		ENC_DLOG(enc, "Got Short Enclosure Status page\n");
+		ses->ses_flags &= ~(SES_FLAG_ADDLSTATUS | SES_FLAG_DESC);
+		ses_cache_free(enc, enc_cache);
+		enc_cache->enc_status = page->hdr.page_specific_flags;
+		enc_update_request(enc, SES_PUBLISH_CACHE);
+		err = 0;
+		goto out;
+	}
+
 	/* Make sure the length contains at least one header and status */
 	if (length < (sizeof(*page) + sizeof(*page->elements))) {
 		ENC_VLOG(enc, "Enclosure Status Page Too Short\n");
@@ -1766,14 +1758,20 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 		eip = ses_elm_addlstatus_eip(elm_hdr);
 		if (eip && !ignore_index) {
 			struct ses_elm_addlstatus_eip_hdr *eip_hdr;
-			int expected_index;
+			int expected_index, index;
+			ses_elem_index_type_t index_type;
 
 			eip_hdr = (struct ses_elm_addlstatus_eip_hdr *)elm_hdr;
-			expected_index = iter.individual_element_index;
+			if (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) {
+				index_type = SES_ELEM_INDEX_GLOBAL;
+				expected_index = iter.global_element_index;
+			} else {
+				index_type = SES_ELEM_INDEX_INDIVIDUAL;
+				expected_index = iter.individual_element_index;
+			}
 			titer = iter;
 			telement = ses_iter_seek_to(&titer,
-						   eip_hdr->element_index,
-						   SES_ELEM_INDEX_INDIVIDUAL);
+			    eip_hdr->element_index, index_type);
 			if (telement != NULL &&
 			    (ses_typehasaddlstatus(enc, titer.type_index) !=
 			     TYPE_ADDLSTATUS_NONE ||
@@ -1783,13 +1781,18 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 			} else
 				ignore_index = 1;
 
-			if (iter.individual_element_index > expected_index
+			if (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE)
+				index = iter.global_element_index;
+			else
+				index = iter.individual_element_index;
+			if (index > expected_index
 			 && status_type == TYPE_ADDLSTATUS_MANDATORY) {
-				ENC_VLOG(enc, "%s: provided element "
+				ENC_VLOG(enc, "%s: provided %s element"
 					"index %d skips mandatory status "
 					" element at index %d\n",
-					__func__, eip_hdr->element_index,
-					expected_index);
+					__func__, (eip_hdr->byte2 &
+					SES_ADDL_EIP_EIIOE) ? "global " : "",
+					index, expected_index);
 			}
 		}
 		elmpriv = element->elm_private;
@@ -1865,7 +1868,7 @@ ses_process_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 	 *  o Some SCSI status error.
 	 */
 	ses_terminate_control_requests(&ses->ses_pending_requests, error);
-	enc_update_request(enc, SES_UPDATE_GETSTATUS);
+	ses_poll_status(enc);
 	return (0);
 }
 
@@ -2017,12 +2020,12 @@ ses_fill_rcv_diag_io(enc_softc_t *enc, struct enc_fsm_state *state,
 
 	if (enc->enc_type == ENC_SEMB_SES) {
 		semb_receive_diagnostic_results(&ccb->ataio, /*retries*/5,
-					enc_done, MSG_SIMPLE_Q_TAG, /*pcv*/1,
+					NULL, MSG_SIMPLE_Q_TAG, /*pcv*/1,
 					state->page_code, buf, state->buf_size,
 					state->timeout);
 	} else {
 		scsi_receive_diagnostic_results(&ccb->csio, /*retries*/5,
-					enc_done, MSG_SIMPLE_Q_TAG, /*pcv*/1,
+					NULL, MSG_SIMPLE_Q_TAG, /*pcv*/1,
 					state->page_code, buf, state->buf_size,
 					SSD_FULL_SIZE, state->timeout);
 	}
@@ -2140,12 +2143,12 @@ ses_fill_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 
 	/* Fill out the ccb */
 	if (enc->enc_type == ENC_SEMB_SES) {
-		semb_send_diagnostic(&ccb->ataio, /*retries*/5, enc_done,
+		semb_send_diagnostic(&ccb->ataio, /*retries*/5, NULL,
 			     MSG_SIMPLE_Q_TAG,
 			     buf, ses_page_length(&ses_cache->status_page->hdr),
 			     state->timeout);
 	} else {
-		scsi_send_diagnostic(&ccb->csio, /*retries*/5, enc_done,
+		scsi_send_diagnostic(&ccb->csio, /*retries*/5, NULL,
 			     MSG_SIMPLE_Q_TAG, /*unit_offline*/0,
 			     /*device_offline*/0, /*self_test*/0,
 			     /*page_format*/1, /*self_test_code*/0,
@@ -2682,13 +2685,14 @@ ses_get_elm_devnames(enc_softc_t *enc, encioc_elm_devnames_t *elmdn)
 	if (len < 0)
 		return (EINVAL);
 
-	sbuf_new(&sb, elmdn->elm_devnames, len, 0);
-
 	cam_periph_unlock(enc->periph);
+	sbuf_new(&sb, NULL, len, SBUF_FIXEDLEN);
 	ses_paths_iter(enc, &enc->enc_cache.elm_map[elmdn->elm_idx],
-		       ses_elmdevname_callback, &sb);
+	    ses_elmdevname_callback, &sb);
 	sbuf_finish(&sb);
 	elmdn->elm_names_len = sbuf_len(&sb);
+	copyout(sbuf_data(&sb), elmdn->elm_devnames, elmdn->elm_names_len + 1);
+	sbuf_delete(&sb);
 	cam_periph_lock(enc->periph);
 	return (elmdn->elm_names_len > 0 ? 0 : ENODEV);
 }
@@ -2706,9 +2710,22 @@ ses_get_elm_devnames(enc_softc_t *enc, encioc_elm_devnames_t *elmdn)
 static int
 ses_handle_string(enc_softc_t *enc, encioc_string_t *sstr, int ioc)
 {
+	ses_softc_t *ses;
+	enc_cache_t *enc_cache;
+	ses_cache_t *ses_cache;
+	const struct ses_enc_desc *enc_desc;
 	int amt, payload, ret;
 	char cdb[6];
+	char str[32];
+	char vendor[9];
+	char product[17];
+	char rev[5];
 	uint8_t *buf;
+	size_t size, rsize;
+
+	ses = enc->enc_private;
+	enc_cache = &enc->enc_daemon_cache;
+	ses_cache = enc_cache->private;
 
 	/* Implement SES2r20 6.1.6 */
 	if (sstr->bufsiz > 0xffff)
@@ -2733,6 +2750,40 @@ ses_handle_string(enc_softc_t *enc, encioc_string_t *sstr, int ioc)
 		amt = payload;
 		ses_page_cdb(cdb, payload, SesStringIn, CAM_DIR_IN);
 		buf = sstr->buf;
+	} else if (ioc == ENCIOC_GETENCNAME) {
+		if (ses_cache->ses_nsubencs < 1)
+			return (ENODEV);
+		enc_desc = ses_cache->subencs[0];
+		cam_strvis(vendor, enc_desc->vendor_id,
+		    sizeof(enc_desc->vendor_id), sizeof(vendor));
+		cam_strvis(product, enc_desc->product_id,
+		    sizeof(enc_desc->product_id), sizeof(product));
+		cam_strvis(rev, enc_desc->product_rev,
+		    sizeof(enc_desc->product_rev), sizeof(rev));
+		rsize = snprintf(str, sizeof(str), "%s %s %s",
+		    vendor, product, rev) + 1;
+		if (rsize > sizeof(str))
+			rsize = sizeof(str);
+		copyout(&rsize, &sstr->bufsiz, sizeof(rsize));
+		size = rsize;
+		if (size > sstr->bufsiz)
+			size = sstr->bufsiz;
+		copyout(str, sstr->buf, size);
+		return (size == rsize ? 0 : ENOMEM);
+	} else if (ioc == ENCIOC_GETENCID) {
+		if (ses_cache->ses_nsubencs < 1)
+			return (ENODEV);
+		enc_desc = ses_cache->subencs[0];
+		rsize = snprintf(str, sizeof(str), "%16jx",
+		    scsi_8btou64(enc_desc->logical_id)) + 1;
+		if (rsize > sizeof(str))
+			rsize = sizeof(str);
+		copyout(&rsize, &sstr->bufsiz, sizeof(rsize));
+		size = rsize;
+		if (size > sstr->bufsiz)
+			size = sstr->bufsiz;
+		copyout(str, sstr->buf, size);
+		return (size == rsize ? 0 : ENOMEM);
 	} else
 		return EINVAL;
 
@@ -2752,6 +2803,8 @@ ses_poll_status(enc_softc_t *enc)
 
 	ses = enc->enc_private;
 	enc_update_request(enc, SES_UPDATE_GETSTATUS);
+	if (ses->ses_flags & SES_FLAG_DESC)
+		enc_update_request(enc, SES_UPDATE_GETELMDESCS);
 	if (ses->ses_flags & SES_FLAG_ADDLSTATUS)
 		enc_update_request(enc, SES_UPDATE_GETELMADDLSTATUS);
 }

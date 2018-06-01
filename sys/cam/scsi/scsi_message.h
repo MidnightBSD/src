@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*-
  * This file is in the public domain.
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/cam/scsi/scsi_message.h 290775 2015-11-13 19:23:22Z mav $
  */
 
 /* Messages (1 byte) */		     /* I/T (M)andatory or (O)ptional */
@@ -68,3 +69,9 @@
 #define	MSG_EXT_PPR_QAS_REQ	0x04
 #define	MSG_EXT_PPR_DT_REQ	0x02
 #define	MSG_EXT_PPR_IU_REQ	0x01
+
+/* Fake messages not defined for SPI, but needed for other transports */
+#define	MSG_QUERY_TASK		0x100
+#define	MSG_QUERY_TASK_SET	0x101
+#define	MSG_QUERY_ASYNC_EVENT	0x102
+

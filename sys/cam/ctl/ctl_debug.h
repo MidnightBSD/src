@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -27,8 +28,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ctl_debug.h,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_debug.h#2 $
+ * $FreeBSD: stable/10/sys/cam/ctl/ctl_debug.h 273531 2014-10-23 07:36:33Z mav $
  */
 /*
  * CAM Target Layer debugging interface.
@@ -38,6 +39,16 @@
 
 #ifndef	_CTL_DEBUG_H_
 #define	_CTL_DEBUG_H_
+
+/*
+ * Debugging flags.
+ */
+typedef enum {
+	CTL_DEBUG_NONE		= 0x00,	/* no debugging */
+	CTL_DEBUG_INFO		= 0x01,	/* SCSI errors */
+	CTL_DEBUG_CDB		= 0x02,	/* SCSI CDBs and tasks */
+	CTL_DEBUG_CDB_DATA	= 0x04	/* SCSI CDB DATA */
+} ctl_debug_flags;
 
 #ifdef	CAM_CTL_DEBUG
 #define	CTL_DEBUG_PRINT(X)		\

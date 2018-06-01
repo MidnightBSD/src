@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for dealing with the 
  * Common Access Method Transport (xpt) layer from peripheral
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/cam/cam_xpt_periph.h 257049 2013-10-24 10:33:31Z mav $
  */
 
 #ifndef _CAM_CAM_XPT_PERIPH_H
@@ -42,12 +43,12 @@ void		xpt_polled_action(union ccb *ccb);
 void		xpt_release_ccb(union ccb *released_ccb);
 void		xpt_schedule(struct cam_periph *perph, u_int32_t new_priority);
 int32_t		xpt_add_periph(struct cam_periph *periph);
-void		xpt_remove_periph(struct cam_periph *periph,
-				  int topology_lock_held);
+void		xpt_remove_periph(struct cam_periph *periph);
 void		xpt_announce_periph(struct cam_periph *periph,
 				    char *announce_string);
 void		xpt_announce_quirks(struct cam_periph *periph,
 				    int quirks, char *bit_string);
+void		xpt_denounce_periph(struct cam_periph *periph);
 #endif
 
 #endif /* _CAM_CAM_XPT_PERIPH_H */

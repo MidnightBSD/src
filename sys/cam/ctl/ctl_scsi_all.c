@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Implementation of Utility functions for all SCSI device types.
  *
@@ -26,12 +27,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ctl_scsi_all.c,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
+ * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_scsi_all.c#2 $
  */
 
 #include <sys/param.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_scsi_all.c 288731 2015-10-05 08:55:59Z mav $");
 
 #include <sys/types.h>
 #ifdef _KERNEL
@@ -112,32 +113,10 @@ ctl_scsi_command_string(struct ctl_scsiio *ctsio,
 void
 ctl_scsi_path_string(union ctl_io *io, char *path_str, int len)
 {
-	if (io->io_hdr.nexus.targ_target.wwid[0] == 0) {
-		snprintf(path_str, len, "(%ju:%d:%ju:%d): ",
-			 (uintmax_t)io->io_hdr.nexus.initid.id,
-			 io->io_hdr.nexus.targ_port,
-			 (uintmax_t)io->io_hdr.nexus.targ_target.id,
-			 io->io_hdr.nexus.targ_lun);
-	} else {
-		/*
-		 * XXX KDM find a better way to display FC WWIDs.
-		 */
-#ifdef _KERNEL
-		snprintf(path_str, len, "(%ju:%d:%#jx,%#jx:%d): ",
-			 (uintmax_t)io->io_hdr.nexus.initid.id,
-			 io->io_hdr.nexus.targ_port,
-			 (intmax_t)io->io_hdr.nexus.targ_target.wwid[0],
-			 (intmax_t)io->io_hdr.nexus.targ_target.wwid[1],
-			 io->io_hdr.nexus.targ_lun);
-#else /* _KERNEL */
-		snprintf(path_str, len, "(%ju:%d:%#jx,%#jx:%d): ",
-			 (uintmax_t)io->io_hdr.nexus.initid.id,
-			 io->io_hdr.nexus.targ_port,
-			 (intmax_t)io->io_hdr.nexus.targ_target.wwid[0],
-			 (intmax_t)io->io_hdr.nexus.targ_target.wwid[1],
-			 io->io_hdr.nexus.targ_lun);
-#endif /* _KERNEL */
-	}
+
+	snprintf(path_str, len, "(%u:%u:%u/%u): ",
+	    io->io_hdr.nexus.initid, io->io_hdr.nexus.targ_port,
+	    io->io_hdr.nexus.targ_lun, io->io_hdr.nexus.targ_mapped_lun);
 }
 
 /*
