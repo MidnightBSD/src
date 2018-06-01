@@ -1,12 +1,12 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/conf/kern.mk,v 1.52 2007/05/24 21:53:42 obrien Exp $
+# $FreeBSD: stable/10/sys/conf/kern.mk 278679 2015-02-13 16:08:45Z ian $
 
 #
 # Warning flags for compiling the kernel and components of the kernel:
 #
 CWARNFLAGS?=	-Wall -Wredundant-decls -Wnested-externs -Wstrict-prototypes \
 		-Wmissing-prototypes -Wpointer-arith -Winline -Wcast-qual \
-		-Wundef -Wno-pointer-sign -fformat-extensions \
+		-Wundef -Wno-pointer-sign ${FORMAT_EXTENSIONS} \
 		-Wmissing-include-dirs -fdiagnostics-show-option \
 		${CWARNEXTRA}
 #
@@ -30,8 +30,21 @@ NO_WSOMETIMES_UNINITIALIZED=	-Wno-error-sometimes-uninitialized
 # enough to error out the whole kernel build.  Display them anyway, so there is
 # some incentive to fix them eventually.
 CWARNEXTRA?=	-Wno-error-tautological-compare -Wno-error-empty-body \
-		-Wno-error-parentheses-equality -Wno-unused-function \
+		-Wno-error-parentheses-equality -Wno-error-unused-function \
 		${NO_WFORMAT}
+.endif
+
+.if ${COMPILER_TYPE} == "gcc"
+# For gcc 4.2, eliminate the too-often-wrong warnings about uninitialized vars.
+CWARNEXTRA?=	-Wno-uninitialized
+.endif
+
+# External compilers may not support our format extensions.  Allow them
+# to be disabled.  WARNING: format checking is disabled in this case.
+.if ${MK_FORMAT_EXTENSIONS} == "no"
+NO_WFORMAT=		-Wno-format
+.else
+FORMAT_EXTENSIONS=	-fformat-extensions
 .endif
 
 #
@@ -83,7 +96,11 @@ INLINE_LIMIT?=	15000
 # operations which it has a tendency to do.
 #
 .if ${MACHINE_CPUARCH} == "sparc64"
+.if ${COMPILER_TYPE} == "clang"
+CFLAGS+=	-mcmodel=large -fno-dwarf2-cfi-asm
+.else
 CFLAGS+=	-mcmodel=medany -msoft-float
+.endif
 INLINE_LIMIT?=	15000
 .endif
 
@@ -111,6 +128,31 @@ INLINE_LIMIT?=	8000
 .endif
 
 #
+# For PowerPC we tell gcc to use floating point emulation.  This avoids using
+# floating point registers for integer operations which it has a tendency to do.
+# Also explicitly disable Altivec instructions inside the kernel.
+#
+.if ${MACHINE_CPUARCH} == "powerpc"
+CFLAGS+=	-msoft-float -mno-altivec
+INLINE_LIMIT?=	15000
+.endif
+
+#
+# Use dot symbols on powerpc64 to make ddb happy
+#
+.if ${MACHINE_ARCH} == "powerpc64"
+CFLAGS+=	-mcall-aixdesc
+.endif
+
+#
+# For MIPS we also tell gcc to use floating point emulation
+#
+.if ${MACHINE_CPUARCH} == "mips"
+CFLAGS+=	-msoft-float
+INLINE_LIMIT?=	8000
+.endif
+
+#
 # GCC 3.0 and above like to do certain optimizations based on the
 # assumption that the program is linked against libc.  Stop this.
 #
@@ -119,6 +161,14 @@ CFLAGS+=	-ffreestanding
 #
 # GCC SSP support
 #
-.if ${MK_SSP} != "no" 
+.if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "ia64" && \
+    ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
 CFLAGS+=	-fstack-protector
+.endif
+
+#
+# Add -gdwarf-2 when compiling -g
+#
+.if ${COMPILER_TYPE} == "clang" && ${CFLAGS:M-g} != "" && ${CFLAGS:M-gdwarf} == ""
+CFLAGS+=	-gdwarf-2
 .endif
