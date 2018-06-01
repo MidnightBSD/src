@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,6 +20,8 @@
  * CDDL HEADER END
  */
 /*
+ * Copyright 2014 Garrett D'Amore <garrett@damore.org>
+ *
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
@@ -187,11 +190,12 @@ typedef struct ace_object {
     ACE_DIRECTORY_INHERIT_ACE | \
     ACE_NO_PROPAGATE_INHERIT_ACE | \
     ACE_INHERIT_ONLY_ACE | \
+    ACE_INHERITED_ACE | \
     ACE_IDENTIFIER_GROUP)
 
 #define	ACE_TYPE_FLAGS		(ACE_OWNER|ACE_GROUP|ACE_EVERYONE| \
     ACE_IDENTIFIER_GROUP)
-#define	ACE_INHERIT_FLAGS	(ACE_FILE_INHERIT_ACE| \
+#define	ACE_INHERIT_FLAGS	(ACE_FILE_INHERIT_ACE| ACL_INHERITED_ACE| \
     ACE_DIRECTORY_INHERIT_ACE|ACE_NO_PROPAGATE_INHERIT_ACE|ACE_INHERIT_ONLY_ACE)
 
 /* cmd args to acl(2) for aclent_t  */
@@ -299,13 +303,8 @@ extern int cmp2acls(void *, void *);
 
 #endif	/* !defined(_KERNEL) */
 
-#if defined(__STDC__)
 extern int acl(const char *path, int cmd, int cnt, void *buf);
 extern int facl(int fd, int cmd, int cnt, void *buf);
-#else	/* !__STDC__ */
-extern int acl();
-extern int facl();
-#endif	/* defined(__STDC__) */
 
 #ifdef	__cplusplus
 }

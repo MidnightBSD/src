@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,8 +21,10 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
  * Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
+ * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
+ * Copyright (c) 2014 Integros [integros.com]
  */
 
 /* Portions Copyright 2010 Robert Milkowski */
@@ -74,30 +77,39 @@ struct objset {
 	arc_buf_t *os_phys_buf;
 	objset_phys_t *os_phys;
 	/*
-	 * The following "special" dnodes have no parent and are exempt from
-	 * dnode_move(), but they root their descendents in this objset using
-	 * handles anyway, so that all access to dnodes from dbufs consistently
-	 * uses handles.
+	 * The following "special" dnodes have no parent, are exempt
+	 * from dnode_move(), and are not recorded in os_dnodes, but they
+	 * root their descendents in this objset using handles anyway, so
+	 * that all access to dnodes from dbufs consistently uses handles.
 	 */
 	dnode_handle_t os_meta_dnode;
 	dnode_handle_t os_userused_dnode;
 	dnode_handle_t os_groupused_dnode;
 	zilog_t *os_zil;
 
+	list_node_t os_evicting_node;
+
 	/* can change, under dsl_dir's locks: */
-	uint8_t os_checksum;
-	uint8_t os_compress;
+	enum zio_checksum os_checksum;
+	enum zio_compress os_compress;
 	uint8_t os_copies;
-	uint8_t os_dedup_checksum;
-	uint8_t os_dedup_verify;
-	uint8_t os_logbias;
-	uint8_t os_primary_cache;
-	uint8_t os_secondary_cache;
-	uint8_t os_sync;
+	enum zio_checksum os_dedup_checksum;
+	boolean_t os_dedup_verify;
+	zfs_logbias_op_t os_logbias;
+	zfs_cache_type_t os_primary_cache;
+	zfs_cache_type_t os_secondary_cache;
+	zfs_sync_type_t os_sync;
+	zfs_redundant_metadata_type_t os_redundant_metadata;
+	int os_recordsize;
+
+	/*
+	 * Pointer is constant; the blkptr it points to is protected by
+	 * os_dsl_dataset->ds_bp_rwlock
+	 */
+	blkptr_t *os_rootbp;
 
 	/* no lock needed: */
 	struct dmu_tx *os_synctx; /* XXX sketchy */
-	blkptr_t *os_rootbp;
 	zil_header_t os_zil_header;
 	list_t os_synced_dnodes;
 	uint64_t os_flags;
@@ -130,12 +142,16 @@ struct objset {
 	((os)->os_secondary_cache == ZFS_CACHE_ALL ||		\
 	(os)->os_secondary_cache == ZFS_CACHE_METADATA)
 
-#define	DMU_OS_IS_L2COMPRESSIBLE(os)	((os)->os_compress != ZIO_COMPRESS_OFF)
+#define	DMU_OS_IS_L2COMPRESSIBLE(os)	(zfs_mdcomp_disable == B_FALSE)
 
 /* called from zpl */
 int dmu_objset_hold(const char *name, void *tag, objset_t **osp);
 int dmu_objset_own(const char *name, dmu_objset_type_t type,
     boolean_t readonly, void *tag, objset_t **osp);
+int dmu_objset_own_obj(struct dsl_pool *dp, uint64_t obj,
+    dmu_objset_type_t type, boolean_t readonly, void *tag, objset_t **osp);
+void dmu_objset_refresh_ownership(struct dsl_dataset *ds,
+    struct dsl_dataset **newds, void *tag);
 void dmu_objset_rele(objset_t *os, void *tag);
 void dmu_objset_disown(objset_t *os, void *tag);
 int dmu_objset_from_ds(struct dsl_dataset *ds, objset_t **osp);
@@ -166,6 +182,8 @@ boolean_t dmu_objset_userused_enabled(objset_t *os);
 int dmu_objset_userspace_upgrade(objset_t *os);
 boolean_t dmu_objset_userspace_present(objset_t *os);
 int dmu_fsname(const char *snapname, char *buf);
+
+void dmu_objset_evict_done(objset_t *os);
 
 void dmu_objset_init(void);
 void dmu_objset_fini(void);

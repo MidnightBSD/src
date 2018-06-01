@@ -21,7 +21,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
  * Copyright (c) 2013 Steven Hartland. All rights reserved.
  */
 
@@ -65,10 +65,10 @@ dsl_dataset_user_hold_check_one(dsl_dataset_t *ds, const char *htag,
 		return (SET_ERROR(E2BIG));
 
 	/* tags must be unique (if ds already exists) */
-	if (ds != NULL && ds->ds_phys->ds_userrefs_obj != 0) {
+	if (ds != NULL && dsl_dataset_phys(ds)->ds_userrefs_obj != 0) {
 		uint64_t value;
 
-		error = zap_lookup(mos, ds->ds_phys->ds_userrefs_obj,
+		error = zap_lookup(mos, dsl_dataset_phys(ds)->ds_userrefs_obj,
 		    htag, 8, 1, &value);
 		if (error == 0)
 			error = SET_ERROR(EEXIST);
@@ -141,16 +141,16 @@ dsl_dataset_user_hold_sync_one_impl(nvlist_t *tmpholds, dsl_dataset_t *ds,
 
 	ASSERT(RRW_WRITE_HELD(&dp->dp_config_rwlock));
 
-	if (ds->ds_phys->ds_userrefs_obj == 0) {
+	if (dsl_dataset_phys(ds)->ds_userrefs_obj == 0) {
 		/*
 		 * This is the first user hold for this dataset.  Create
 		 * the userrefs zap object.
 		 */
 		dmu_buf_will_dirty(ds->ds_dbuf, tx);
-		zapobj = ds->ds_phys->ds_userrefs_obj =
+		zapobj = dsl_dataset_phys(ds)->ds_userrefs_obj =
 		    zap_create(mos, DMU_OT_USERREFS, DMU_OT_NONE, 0, tx);
 	} else {
-		zapobj = ds->ds_phys->ds_userrefs_obj;
+		zapobj = dsl_dataset_phys(ds)->ds_userrefs_obj;
 	}
 	ds->ds_userrefs++;
 
@@ -181,7 +181,7 @@ dsl_dataset_user_hold_sync_one_impl(nvlist_t *tmpholds, dsl_dataset_t *ds,
 }
 
 typedef struct zfs_hold_cleanup_arg {
-	char zhca_spaname[MAXNAMELEN];
+	char zhca_spaname[ZFS_MAX_DATASET_NAME_LEN];
 	uint64_t zhca_spa_load_guid;
 	nvlist_t *zhca_holds;
 } zfs_hold_cleanup_arg_t;
@@ -318,7 +318,8 @@ dsl_dataset_user_hold(nvlist_t *holds, minor_t cleanup_minor, nvlist_t *errlist)
 	dduha.dduha_minor = cleanup_minor;
 
 	ret = dsl_sync_task(nvpair_name(pair), dsl_dataset_user_hold_check,
-	    dsl_dataset_user_hold_sync, &dduha, fnvlist_num_pairs(holds));
+	    dsl_dataset_user_hold_sync, &dduha,
+	    fnvlist_num_pairs(holds), ZFS_SPACE_CHECK_RESERVED);
 	fnvlist_free(dduha.dduha_chkholds);
 
 	return (ret);
@@ -352,7 +353,7 @@ dsl_dataset_user_release_check_one(dsl_dataset_user_release_arg_t *ddura,
 	objset_t *mos;
 	int numholds;
 
-	if (!dsl_dataset_is_snapshot(ds))
+	if (!ds->ds_is_snapshot)
 		return (SET_ERROR(EINVAL));
 
 	if (nvlist_empty(holds))
@@ -360,7 +361,7 @@ dsl_dataset_user_release_check_one(dsl_dataset_user_release_arg_t *ddura,
 
 	numholds = 0;
 	mos = ds->ds_dir->dd_pool->dp_meta_objset;
-	zapobj = ds->ds_phys->ds_userrefs_obj;
+	zapobj = dsl_dataset_phys(ds)->ds_userrefs_obj;
 	holds_found = fnvlist_alloc();
 
 	for (nvpair_t *pair = nvlist_next_nvpair(holds, NULL); pair != NULL;
@@ -398,7 +399,8 @@ dsl_dataset_user_release_check_one(dsl_dataset_user_release_arg_t *ddura,
 		numholds++;
 	}
 
-	if (DS_IS_DEFER_DESTROY(ds) && ds->ds_phys->ds_num_children == 1 &&
+	if (DS_IS_DEFER_DESTROY(ds) &&
+	    dsl_dataset_phys(ds)->ds_num_children == 1 &&
 	    ds->ds_userrefs == numholds) {
 		/* we need to destroy the snapshot as well */
 		if (dsl_dataset_long_held(ds)) {
@@ -484,8 +486,8 @@ dsl_dataset_user_release_sync_one(dsl_dataset_t *ds, nvlist_t *holds,
 		error = dsl_pool_user_release(dp, ds->ds_object, holdname, tx);
 		VERIFY(error == 0 || error == ENOENT);
 
-		VERIFY0(zap_remove(mos, ds->ds_phys->ds_userrefs_obj, holdname,
-		    tx));
+		VERIFY0(zap_remove(mos, dsl_dataset_phys(ds)->ds_userrefs_obj,
+		    holdname, tx));
 		ds->ds_userrefs--;
 
 		spa_history_log_internal_ds(ds, "release", tx,
@@ -514,7 +516,7 @@ dsl_dataset_user_release_sync(void *arg, dmu_tx_t *tx)
 		    fnvpair_value_nvlist(pair), tx);
 		if (nvlist_exists(ddura->ddura_todelete, name)) {
 			ASSERT(ds->ds_userrefs == 0 &&
-			    ds->ds_phys->ds_num_children == 1 &&
+			    dsl_dataset_phys(ds)->ds_num_children == 1 &&
 			    DS_IS_DEFER_DESTROY(ds));
 			dsl_destroy_snapshot_sync_impl(ds, B_FALSE, tx);
 		}
@@ -565,21 +567,23 @@ dsl_dataset_user_release_impl(nvlist_t *holds, nvlist_t *errlist,
 		ddura.ddura_holdfunc = dsl_dataset_hold_obj_string;
 		pool = spa_name(tmpdp->dp_spa);
 #ifdef _KERNEL
-		dsl_pool_config_enter(tmpdp, FTAG);
 		for (pair = nvlist_next_nvpair(holds, NULL); pair != NULL;
 		    pair = nvlist_next_nvpair(holds, pair)) {
 			dsl_dataset_t *ds;
 
+			dsl_pool_config_enter(tmpdp, FTAG);
 			error = dsl_dataset_hold_obj_string(tmpdp,
 			    nvpair_name(pair), FTAG, &ds);
 			if (error == 0) {
-				char name[MAXNAMELEN];
+				char name[ZFS_MAX_DATASET_NAME_LEN];
 				dsl_dataset_name(ds, name);
+				dsl_pool_config_exit(tmpdp, FTAG);
 				dsl_dataset_rele(ds, FTAG);
 				(void) zfs_unmount_snap(name);
+			} else {
+				dsl_pool_config_exit(tmpdp, FTAG);
 			}
 		}
-		dsl_pool_config_exit(tmpdp, FTAG);
 #endif
 	} else {
 		/* Non-temporary holds are specified by name. */
@@ -599,8 +603,7 @@ dsl_dataset_user_release_impl(nvlist_t *holds, nvlist_t *errlist,
 	ddura.ddura_chkholds = fnvlist_alloc();
 
 	error = dsl_sync_task(pool, dsl_dataset_user_release_check,
-	    dsl_dataset_user_release_sync, &ddura,
-	    fnvlist_num_pairs(holds));
+	    dsl_dataset_user_release_sync, &ddura, 0, ZFS_SPACE_CHECK_NONE);
 	fnvlist_free(ddura.ddura_todelete);
 	fnvlist_free(ddura.ddura_chkholds);
 
@@ -643,13 +646,13 @@ dsl_dataset_get_holds(const char *dsname, nvlist_t *nvl)
 		return (err);
 	}
 
-	if (ds->ds_phys->ds_userrefs_obj != 0) {
+	if (dsl_dataset_phys(ds)->ds_userrefs_obj != 0) {
 		zap_attribute_t *za;
 		zap_cursor_t zc;
 
 		za = kmem_alloc(sizeof (zap_attribute_t), KM_SLEEP);
 		for (zap_cursor_init(&zc, ds->ds_dir->dd_pool->dp_meta_objset,
-		    ds->ds_phys->ds_userrefs_obj);
+		    dsl_dataset_phys(ds)->ds_userrefs_obj);
 		    zap_cursor_retrieve(&zc, za) == 0;
 		    zap_cursor_advance(&zc)) {
 			fnvlist_add_uint64(nvl, za->za_name,

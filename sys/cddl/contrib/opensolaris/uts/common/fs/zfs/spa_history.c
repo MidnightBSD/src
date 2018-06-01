@@ -22,7 +22,8 @@
 
 /*
  * Copyright (c) 2006, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2014 Integros [integros.com]
  */
 
 #include <sys/spa.h>
@@ -91,7 +92,7 @@ spa_history_create_obj(spa_t *spa, dmu_tx_t *tx)
 
 	ASSERT(spa->spa_history == 0);
 	spa->spa_history = dmu_object_alloc(mos, DMU_OT_SPA_HISTORY,
-	    SPA_MAXBLOCKSIZE, DMU_OT_SPA_HISTORY_OFFSETS,
+	    SPA_OLD_MAXBLOCKSIZE, DMU_OT_SPA_HISTORY_OFFSETS,
 	    sizeof (spa_history_phys_t), tx);
 
 	VERIFY(zap_add(mos, DMU_POOL_DIRECTORY_OBJECT,
@@ -325,7 +326,7 @@ spa_history_log_nvl(spa_t *spa, nvlist_t *nvl)
 
 	/* Kick this off asynchronously; errors are ignored. */
 	dsl_sync_task_nowait(spa_get_dsl(spa), spa_history_log_sync,
-	    nvarg, 0, tx);
+	    nvarg, 0, ZFS_SPACE_CHECK_NONE, tx);
 	dmu_tx_commit(tx);
 
 	/* spa_history_log_sync will free nvl */
@@ -466,7 +467,7 @@ log_internal(nvlist_t *nvl, const char *operation, spa_t *spa,
 		spa_history_log_sync(nvl, tx);
 	} else {
 		dsl_sync_task_nowait(spa_get_dsl(spa),
-		    spa_history_log_sync, nvl, 0, tx);
+		    spa_history_log_sync, nvl, 0, ZFS_SPACE_CHECK_NONE, tx);
 	}
 	/* spa_history_log_sync() will free nvl */
 }
@@ -501,7 +502,7 @@ spa_history_log_internal_ds(dsl_dataset_t *ds, const char *operation,
     dmu_tx_t *tx, const char *fmt, ...)
 {
 	va_list adx;
-	char namebuf[MAXNAMELEN];
+	char namebuf[ZFS_MAX_DATASET_NAME_LEN];
 	nvlist_t *nvl = fnvlist_alloc();
 
 	ASSERT(tx != NULL);
@@ -520,7 +521,7 @@ spa_history_log_internal_dd(dsl_dir_t *dd, const char *operation,
     dmu_tx_t *tx, const char *fmt, ...)
 {
 	va_list adx;
-	char namebuf[MAXNAMELEN];
+	char namebuf[ZFS_MAX_DATASET_NAME_LEN];
 	nvlist_t *nvl = fnvlist_alloc();
 
 	ASSERT(tx != NULL);
@@ -528,7 +529,7 @@ spa_history_log_internal_dd(dsl_dir_t *dd, const char *operation,
 	dsl_dir_name(dd, namebuf);
 	fnvlist_add_string(nvl, ZPOOL_HIST_DSNAME, namebuf);
 	fnvlist_add_uint64(nvl, ZPOOL_HIST_DSID,
-	    dd->dd_phys->dd_head_dataset_obj);
+	    dsl_dir_phys(dd)->dd_head_dataset_obj);
 
 	va_start(adx, fmt);
 	log_internal(nvl, operation, dd->dd_pool->dp_spa, tx, fmt, adx);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -27,7 +28,7 @@
 #ifndef	_CTF_H
 #define	_CTF_H
 
-#if defined(sun)
+#ifdef illumos
 #pragma ident	"%Z%%M%	%I%	%E% SMI"
 #endif
 

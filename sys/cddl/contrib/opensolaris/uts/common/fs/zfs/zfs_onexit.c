@@ -123,10 +123,11 @@ zfs_onexit_fd_hold(int fd, minor_t *minorp)
 {
 	file_t *fp, *tmpfp;
 	zfs_onexit_t *zo;
+	cap_rights_t rights;
 	void *data;
 	int error;
 
-	fp = getf(fd);
+	fp = getf(fd, cap_rights_init(&rights));
 	if (fp == NULL)
 		return (SET_ERROR(EBADF));
 
@@ -137,7 +138,7 @@ zfs_onexit_fd_hold(int fd, minor_t *minorp)
 		*minorp = (minor_t)(uintptr_t)data;
 	curthread->td_fpop = tmpfp;
 	if (error != 0)
-		return (error);
+		return (SET_ERROR(EBADF));
 	return (zfs_onexit_minor_to_state(*minorp, &zo));
 }
 

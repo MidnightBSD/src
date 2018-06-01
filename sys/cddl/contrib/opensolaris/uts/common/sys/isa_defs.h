@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -235,7 +236,7 @@ extern "C" {
 /*
  * Define the appropriate "processor characteristics"
  */
-#if defined(sun)
+#ifdef illumos
 #define	_LITTLE_ENDIAN
 #endif
 #define	_STACK_GROWS_DOWNWARD
@@ -302,7 +303,7 @@ extern "C" {
 /*
  * Define the appropriate "processor characteristics"
  */
-#if defined(sun)
+#ifdef illumos
 #define	_LITTLE_ENDIAN
 #endif
 #define	_STACK_GROWS_DOWNWARD
@@ -504,7 +505,7 @@ extern "C" {
  * Define the appropriate "processor characteristics" shared between
  * all Solaris on SPARC systems.
  */
-#if defined(sun)
+#ifdef illumos
 #define	_BIG_ENDIAN
 #endif
 #define	_STACK_GROWS_DOWNWARD

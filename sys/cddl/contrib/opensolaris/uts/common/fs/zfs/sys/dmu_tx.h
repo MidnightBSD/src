@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -23,7 +24,7 @@
  * Use is subject to license terms.
  */
 /*
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
  */
 
 #ifndef	_SYS_DMU_TX_H
@@ -59,8 +60,22 @@ struct dmu_tx {
 	txg_handle_t tx_txgh;
 	void *tx_tempreserve_cookie;
 	struct dmu_tx_hold *tx_needassign_txh;
-	list_t tx_callbacks; /* list of dmu_tx_callback_t on this dmu_tx */
-	uint8_t tx_anyobj;
+
+	/* list of dmu_tx_callback_t on this dmu_tx */
+	list_t tx_callbacks;
+
+	/* placeholder for syncing context, doesn't need specific holds */
+	boolean_t tx_anyobj;
+
+	/* time this transaction was created */
+	hrtime_t tx_start;
+
+	/* need to wait for sufficient dirty space */
+	boolean_t tx_wait_dirty;
+
+	/* has this transaction already been delayed? */
+	boolean_t tx_dirty_delayed;
+
 	int tx_err;
 #ifdef ZFS_DEBUG
 	uint64_t tx_space_towrite;
@@ -87,12 +102,12 @@ typedef struct dmu_tx_hold {
 	dmu_tx_t *txh_tx;
 	list_node_t txh_node;
 	struct dnode *txh_dnode;
-	uint64_t txh_space_towrite;
-	uint64_t txh_space_tofree;
-	uint64_t txh_space_tooverwrite;
-	uint64_t txh_space_tounref;
-	uint64_t txh_memory_tohold;
-	uint64_t txh_fudge;
+	refcount_t txh_space_towrite;
+	refcount_t txh_space_tofree;
+	refcount_t txh_space_tooverwrite;
+	refcount_t txh_space_tounref;
+	refcount_t txh_memory_tohold;
+	refcount_t txh_fudge;
 #ifdef ZFS_DEBUG
 	enum dmu_tx_hold_type txh_type;
 	uint64_t txh_arg1;
@@ -110,7 +125,7 @@ typedef struct dmu_tx_callback {
  * These routines are defined in dmu.h, and are called by the user.
  */
 dmu_tx_t *dmu_tx_create(objset_t *dd);
-int dmu_tx_assign(dmu_tx_t *tx, txg_how_t txg_how);
+int dmu_tx_assign(dmu_tx_t *tx, uint64_t txg_how);
 void dmu_tx_commit(dmu_tx_t *tx);
 void dmu_tx_abort(dmu_tx_t *tx);
 uint64_t dmu_tx_get_txg(dmu_tx_t *tx);

@@ -22,7 +22,7 @@
 
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
  */
 
 /*
@@ -186,7 +186,7 @@ vdev_label_number(uint64_t psize, uint64_t offset)
 
 static void
 vdev_label_read(zio_t *zio, vdev_t *vd, int l, void *buf, uint64_t offset,
-	uint64_t size, zio_done_func_t *done, void *private, int flags)
+    uint64_t size, zio_done_func_t *done, void *private, int flags)
 {
 	ASSERT(spa_config_held(zio->io_spa, SCL_STATE_ALL, RW_WRITER) ==
 	    SCL_STATE_ALL);
@@ -200,7 +200,7 @@ vdev_label_read(zio_t *zio, vdev_t *vd, int l, void *buf, uint64_t offset,
 
 static void
 vdev_label_write(zio_t *zio, vdev_t *vd, int l, void *buf, uint64_t offset,
-	uint64_t size, zio_done_func_t *done, void *private, int flags)
+    uint64_t size, zio_done_func_t *done, void *private, int flags)
 {
 	ASSERT(spa_config_held(zio->io_spa, SCL_ALL, RW_WRITER) == SCL_ALL ||
 	    (spa_config_held(zio->io_spa, SCL_CONFIG | SCL_STATE, RW_READER) ==
@@ -223,30 +223,25 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 {
 	nvlist_t *nv = NULL;
 
-	VERIFY(nvlist_alloc(&nv, NV_UNIQUE_NAME, KM_SLEEP) == 0);
+	nv = fnvlist_alloc();
 
-	VERIFY(nvlist_add_string(nv, ZPOOL_CONFIG_TYPE,
-	    vd->vdev_ops->vdev_op_type) == 0);
+	fnvlist_add_string(nv, ZPOOL_CONFIG_TYPE, vd->vdev_ops->vdev_op_type);
 	if (!(flags & (VDEV_CONFIG_SPARE | VDEV_CONFIG_L2CACHE)))
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_ID, vd->vdev_id)
-		    == 0);
-	VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_GUID, vd->vdev_guid) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_ID, vd->vdev_id);
+	fnvlist_add_uint64(nv, ZPOOL_CONFIG_GUID, vd->vdev_guid);
 
 	if (vd->vdev_path != NULL)
-		VERIFY(nvlist_add_string(nv, ZPOOL_CONFIG_PATH,
-		    vd->vdev_path) == 0);
+		fnvlist_add_string(nv, ZPOOL_CONFIG_PATH, vd->vdev_path);
 
 	if (vd->vdev_devid != NULL)
-		VERIFY(nvlist_add_string(nv, ZPOOL_CONFIG_DEVID,
-		    vd->vdev_devid) == 0);
+		fnvlist_add_string(nv, ZPOOL_CONFIG_DEVID, vd->vdev_devid);
 
 	if (vd->vdev_physpath != NULL)
-		VERIFY(nvlist_add_string(nv, ZPOOL_CONFIG_PHYS_PATH,
-		    vd->vdev_physpath) == 0);
+		fnvlist_add_string(nv, ZPOOL_CONFIG_PHYS_PATH,
+		    vd->vdev_physpath);
 
 	if (vd->vdev_fru != NULL)
-		VERIFY(nvlist_add_string(nv, ZPOOL_CONFIG_FRU,
-		    vd->vdev_fru) == 0);
+		fnvlist_add_string(nv, ZPOOL_CONFIG_FRU, vd->vdev_fru);
 
 	if (vd->vdev_nparity != 0) {
 		ASSERT(strcmp(vd->vdev_ops->vdev_op_type,
@@ -267,59 +262,55 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 		 * that only support a single parity device -- older software
 		 * will just ignore it.
 		 */
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_NPARITY,
-		    vd->vdev_nparity) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_NPARITY, vd->vdev_nparity);
 	}
 
 	if (vd->vdev_wholedisk != -1ULL)
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_WHOLE_DISK,
-		    vd->vdev_wholedisk) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_WHOLE_DISK,
+		    vd->vdev_wholedisk);
 
 	if (vd->vdev_not_present)
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_NOT_PRESENT, 1) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_NOT_PRESENT, 1);
 
 	if (vd->vdev_isspare)
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_IS_SPARE, 1) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_IS_SPARE, 1);
 
 	if (!(flags & (VDEV_CONFIG_SPARE | VDEV_CONFIG_L2CACHE)) &&
 	    vd == vd->vdev_top) {
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_METASLAB_ARRAY,
-		    vd->vdev_ms_array) == 0);
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_METASLAB_SHIFT,
-		    vd->vdev_ms_shift) == 0);
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_ASHIFT,
-		    vd->vdev_ashift) == 0);
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_ASIZE,
-		    vd->vdev_asize) == 0);
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_IS_LOG,
-		    vd->vdev_islog) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_METASLAB_ARRAY,
+		    vd->vdev_ms_array);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_METASLAB_SHIFT,
+		    vd->vdev_ms_shift);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_ASHIFT, vd->vdev_ashift);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_ASIZE,
+		    vd->vdev_asize);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_IS_LOG, vd->vdev_islog);
 		if (vd->vdev_removing)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_REMOVING,
-			    vd->vdev_removing) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_REMOVING,
+			    vd->vdev_removing);
 	}
 
-	if (vd->vdev_dtl_smo.smo_object != 0)
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_DTL,
-		    vd->vdev_dtl_smo.smo_object) == 0);
+	if (vd->vdev_dtl_sm != NULL) {
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_DTL,
+		    space_map_object(vd->vdev_dtl_sm));
+	}
 
 	if (vd->vdev_crtxg)
-		VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_CREATE_TXG,
-		    vd->vdev_crtxg) == 0);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_CREATE_TXG, vd->vdev_crtxg);
 
 	if (getstats) {
 		vdev_stat_t vs;
 		pool_scan_stat_t ps;
 
 		vdev_get_stats(vd, &vs);
-		VERIFY(nvlist_add_uint64_array(nv, ZPOOL_CONFIG_VDEV_STATS,
-		    (uint64_t *)&vs, sizeof (vs) / sizeof (uint64_t)) == 0);
+		fnvlist_add_uint64_array(nv, ZPOOL_CONFIG_VDEV_STATS,
+		    (uint64_t *)&vs, sizeof (vs) / sizeof (uint64_t));
 
 		/* provide either current or previous scan information */
 		if (spa_scan_get_stats(spa, &ps) == 0) {
-			VERIFY(nvlist_add_uint64_array(nv,
+			fnvlist_add_uint64_array(nv,
 			    ZPOOL_CONFIG_SCAN_STATS, (uint64_t *)&ps,
-			    sizeof (pool_scan_stat_t) / sizeof (uint64_t))
-			    == 0);
+			    sizeof (pool_scan_stat_t) / sizeof (uint64_t));
 		}
 	}
 
@@ -349,8 +340,8 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 		}
 
 		if (idx) {
-			VERIFY(nvlist_add_nvlist_array(nv,
-			    ZPOOL_CONFIG_CHILDREN, child, idx) == 0);
+			fnvlist_add_nvlist_array(nv, ZPOOL_CONFIG_CHILDREN,
+			    child, idx);
 		}
 
 		for (c = 0; c < idx; c++)
@@ -362,26 +353,20 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 		const char *aux = NULL;
 
 		if (vd->vdev_offline && !vd->vdev_tmpoffline)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_OFFLINE,
-			    B_TRUE) == 0);
-		if (vd->vdev_resilvering)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_RESILVERING,
-			    B_TRUE) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_OFFLINE, B_TRUE);
+		if (vd->vdev_resilver_txg != 0)
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_RESILVER_TXG,
+			    vd->vdev_resilver_txg);
 		if (vd->vdev_faulted)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_FAULTED,
-			    B_TRUE) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_FAULTED, B_TRUE);
 		if (vd->vdev_degraded)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_DEGRADED,
-			    B_TRUE) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_DEGRADED, B_TRUE);
 		if (vd->vdev_removed)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_REMOVED,
-			    B_TRUE) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_REMOVED, B_TRUE);
 		if (vd->vdev_unspare)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_UNSPARE,
-			    B_TRUE) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_UNSPARE, B_TRUE);
 		if (vd->vdev_ishole)
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_IS_HOLE,
-			    B_TRUE) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_IS_HOLE, B_TRUE);
 
 		switch (vd->vdev_stat.vs_aux) {
 		case VDEV_AUX_ERR_EXCEEDED:
@@ -394,12 +379,11 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 		}
 
 		if (aux != NULL)
-			VERIFY(nvlist_add_string(nv, ZPOOL_CONFIG_AUX_STATE,
-			    aux) == 0);
+			fnvlist_add_string(nv, ZPOOL_CONFIG_AUX_STATE, aux);
 
 		if (vd->vdev_splitting && vd->vdev_orig_guid != 0LL) {
-			VERIFY(nvlist_add_uint64(nv, ZPOOL_CONFIG_ORIG_GUID,
-			    vd->vdev_orig_guid) == 0);
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_ORIG_GUID,
+			    vd->vdev_orig_guid);
 		}
 	}
 
@@ -619,7 +603,8 @@ vdev_inuse(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason,
 	 * read-only.  Instead we look to see if the pools is marked
 	 * read-only in the namespace and set the state to active.
 	 */
-	if ((spa = spa_by_guid(pool_guid, device_guid)) != NULL &&
+	if (state != POOL_STATE_SPARE && state != POOL_STATE_L2CACHE &&
+	    (spa = spa_by_guid(pool_guid, device_guid)) != NULL &&
 	    spa_mode(spa) == FREAD)
 		state = POOL_STATE_ACTIVE;
 
@@ -663,7 +648,7 @@ vdev_label_init(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason)
 	/* Track the creation time for this vdev */
 	vd->vdev_crtxg = crtxg;
 
-	if (!vd->vdev_ops->vdev_op_leaf)
+	if (!vd->vdev_ops->vdev_op_leaf || !spa_writeable(spa))
 		return (0);
 
 	/*
@@ -730,8 +715,9 @@ vdev_label_init(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason)
 	 * Don't TRIM if removing so that we don't interfere with zpool
 	 * disaster recovery.
 	 */
-	if (zfs_trim_enabled && vdev_trim_on_init && (reason == VDEV_LABEL_CREATE ||
-	    reason == VDEV_LABEL_SPARE || reason == VDEV_LABEL_L2CACHE))
+	if (zfs_trim_enabled && vdev_trim_on_init && !vd->vdev_notrim && 
+	    (reason == VDEV_LABEL_CREATE || reason == VDEV_LABEL_SPARE ||
+	    reason == VDEV_LABEL_L2CACHE))
 		zio_wait(zio_trim(NULL, spa, vd, 0, vd->vdev_psize));
 
 	/*
@@ -872,6 +858,44 @@ retry:
 	return (error);
 }
 
+int
+vdev_label_write_pad2(vdev_t *vd, const char *buf, size_t size)
+{
+	spa_t *spa = vd->vdev_spa;
+	zio_t *zio;
+	char *pad2;
+	int flags = ZIO_FLAG_CONFIG_WRITER | ZIO_FLAG_CANFAIL;
+	int error;
+
+	if (size > VDEV_PAD_SIZE)
+		return (EINVAL);
+
+	if (!vd->vdev_ops->vdev_op_leaf)
+		return (ENODEV);
+	if (vdev_is_dead(vd))
+		return (ENXIO);
+
+	ASSERT(spa_config_held(spa, SCL_ALL, RW_WRITER) == SCL_ALL);
+
+	pad2 = zio_buf_alloc(VDEV_PAD_SIZE);
+	bzero(pad2, VDEV_PAD_SIZE);
+	memcpy(pad2, buf, size);
+
+retry:
+	zio = zio_root(spa, NULL, NULL, flags);
+	vdev_label_write(zio, vd, 0, pad2,
+	    offsetof(vdev_label_t, vl_pad2),
+	    VDEV_PAD_SIZE, NULL, NULL, flags);
+	error = zio_wait(zio);
+	if (error != 0 && !(flags & ZIO_FLAG_TRYHARD)) {
+		flags |= ZIO_FLAG_TRYHARD;
+		goto retry;
+	}
+
+	zio_buf_free(pad2, VDEV_PAD_SIZE);
+	return (error);
+}
+
 /*
  * ==========================================================================
  * uberblock load/sync
@@ -1009,7 +1033,7 @@ vdev_uberblock_sync_done(zio_t *zio)
 	uint64_t *good_writes = zio->io_private;
 
 	if (zio->io_error == 0 && zio->io_vd->vdev_top->vdev_ms_array != 0)
-		atomic_add_64(good_writes, 1);
+		atomic_inc_64(good_writes);
 }
 
 /*
@@ -1084,7 +1108,7 @@ vdev_label_sync_done(zio_t *zio)
 	uint64_t *good_writes = zio->io_private;
 
 	if (zio->io_error == 0)
-		atomic_add_64(good_writes, 1);
+		atomic_inc_64(good_writes);
 }
 
 /*
@@ -1209,15 +1233,16 @@ vdev_label_sync_list(spa_t *spa, int l, uint64_t txg, int flags)
  * at any time, you can just call it again, and it will resume its work.
  */
 int
-vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg, boolean_t tryhard)
+vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg)
 {
 	spa_t *spa = svd[0]->vdev_spa;
 	uberblock_t *ub = &spa->spa_uberblock;
 	vdev_t *vd;
 	zio_t *zio;
-	int error;
+	int error = 0;
 	int flags = ZIO_FLAG_CONFIG_WRITER | ZIO_FLAG_CANFAIL;
 
+retry:
 	/*
 	 * Normally, we don't want to try too hard to write every label and
 	 * uberblock.  If there is a flaky disk, we don't want the rest of the
@@ -1225,8 +1250,11 @@ vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg, boolean_t tryhard)
 	 * single label out, we should retry with ZIO_FLAG_TRYHARD before
 	 * bailing out and declaring the pool faulted.
 	 */
-	if (tryhard)
+	if (error != 0) {
+		if ((flags & ZIO_FLAG_TRYHARD) != 0)
+			return (error);
 		flags |= ZIO_FLAG_TRYHARD;
+	}
 
 	ASSERT(ub->ub_txg <= txg);
 
@@ -1270,7 +1298,7 @@ vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg, boolean_t tryhard)
 	 * are committed to stable storage before the uberblock update.
 	 */
 	if ((error = vdev_label_sync_list(spa, 0, txg, flags)) != 0)
-		return (error);
+		goto retry;
 
 	/*
 	 * Sync the uberblocks to all vdevs in svd[].
@@ -1288,7 +1316,7 @@ vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg, boolean_t tryhard)
 	 *	to the new uberblocks.
 	 */
 	if ((error = vdev_uberblock_sync_list(svd, svdcount, ub, flags)) != 0)
-		return (error);
+		goto retry;
 
 	/*
 	 * Sync out odd labels for every dirty vdev.  If the system dies
@@ -1301,7 +1329,7 @@ vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg, boolean_t tryhard)
 	 * stable storage before the next transaction group begins.
 	 */
 	if ((error = vdev_label_sync_list(spa, 1, txg, flags)) != 0)
-		return (error);
+		goto retry;;
 
 	trim_thread_wakeup(spa);
 

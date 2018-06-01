@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/zmod/zmod.c,v 1.2 2008/12/03 00:24:34 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *

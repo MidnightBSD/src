@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +21,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2016 by Delphix. All rights reserved.
  */
 
 #ifndef	_SYS_ZAP_H
@@ -80,6 +81,7 @@
  */
 
 #include <sys/dmu.h>
+#include <sys/refcount.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -139,6 +141,12 @@ uint64_t zap_create_flags(objset_t *os, int normflags, zap_flags_t flags,
     dmu_object_type_t bonustype, int bonuslen, dmu_tx_t *tx);
 uint64_t zap_create_link(objset_t *os, dmu_object_type_t ot,
     uint64_t parent_obj, const char *name, dmu_tx_t *tx);
+
+/*
+ * Initialize an already-allocated object.
+ */
+void mzap_create_impl(objset_t *os, uint64_t obj, int normflags,
+    zap_flags_t flags, dmu_tx_t *tx);
 
 /*
  * Create a new zapobj with no attributes from the given (unallocated)
@@ -209,9 +217,15 @@ int zap_lookup_uint64(objset_t *os, uint64_t zapobj, const uint64_t *key,
 int zap_contains(objset_t *ds, uint64_t zapobj, const char *name);
 int zap_prefetch_uint64(objset_t *os, uint64_t zapobj, const uint64_t *key,
     int key_numints);
+int zap_lookup_by_dnode(dnode_t *dn, const char *name,
+    uint64_t integer_size, uint64_t num_integers, void *buf);
+int zap_lookup_norm_by_dnode(dnode_t *dn, const char *name,
+    uint64_t integer_size, uint64_t num_integers, void *buf,
+    matchtype_t mt, char *realname, int rn_len,
+    boolean_t *ncp);
 
-int zap_count_write(objset_t *os, uint64_t zapobj, const char *name,
-    int add, uint64_t *towrite, uint64_t *tooverwrite);
+int zap_count_write_by_dnode(dnode_t *dn, const char *name,
+    int add, refcount_t *towrite, refcount_t *tooverwrite);
 
 /*
  * Create an attribute with the given name and value.
@@ -337,7 +351,7 @@ typedef struct {
 	boolean_t za_normalization_conflict;
 	uint64_t za_num_integers;
 	uint64_t za_first_integer;	/* no sign extension for <8byte ints */
-	char za_name[MAXNAMELEN];
+	char za_name[ZAP_MAXNAMELEN];
 } zap_attribute_t;
 
 /*

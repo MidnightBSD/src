@@ -21,7 +21,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -35,6 +35,21 @@
 /*
  * Virtual device vector for files.
  */
+
+static taskq_t *vdev_file_taskq;
+
+void
+vdev_file_init(void)
+{
+	vdev_file_taskq = taskq_create("z_vdev_file", MAX(max_ncpus, 16),
+	    minclsyspri, max_ncpus, INT_MAX, 0);
+}
+
+void
+vdev_file_fini(void)
+{
+	taskq_destroy(vdev_file_taskq);
+}
 
 static void
 vdev_file_hold(vdev_t *vd)
@@ -50,12 +65,12 @@ vdev_file_rele(vdev_t *vd)
 
 static int
 vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
-    uint64_t *ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift)
 {
 	vdev_file_t *vf;
 	vnode_t *vp;
 	vattr_t vattr;
-	int error, vfslocked;
+	int error;
 
 	/*
 	 * We must have a pathname, and it must be absolute.
@@ -119,11 +134,9 @@ skip_open:
 	 * Determine the physical size of the file.
 	 */
 	vattr.va_mask = AT_SIZE;
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_lock(vp, LK_SHARED | LK_RETRY);
 	error = VOP_GETATTR(vp, &vattr, kcred);
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	if (error) {
 		(void) VOP_CLOSE(vp, spa_mode(vd->vdev_spa), 1, 0, kcred, NULL);
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
@@ -132,8 +145,11 @@ skip_open:
 		return (error);
 	}
 
+	vd->vdev_notrim = B_TRUE;
+
 	*max_psize = *psize = vattr.va_size;
-	*ashift = SPA_MINBLOCKSHIFT;
+	*logical_ashift = SPA_MINBLOCKSHIFT;
+	*physical_ashift = SPA_MINBLOCKSHIFT;
 
 	return (0);
 }
@@ -156,35 +172,31 @@ vdev_file_close(vdev_t *vd)
 	vd->vdev_tsd = NULL;
 }
 
-static int
-vdev_file_io_start(zio_t *zio)
+/*
+ * Implements the interrupt side for file vdev types. This routine will be
+ * called when the I/O completes allowing us to transfer the I/O to the
+ * interrupt taskqs. For consistency, the code structure mimics disk vdev
+ * types.
+ */
+static void
+vdev_file_io_intr(zio_t *zio)
 {
+	zio_delay_interrupt(zio);
+}
+
+static void
+vdev_file_io_strategy(void *arg)
+{
+	zio_t *zio = arg;
 	vdev_t *vd = zio->io_vd;
 	vdev_file_t *vf;
 	vnode_t *vp;
 	ssize_t resid;
 
-	if (!vdev_readable(vd)) {
-		zio->io_error = SET_ERROR(ENXIO);
-		return (ZIO_PIPELINE_CONTINUE);
-	}
-
 	vf = vd->vdev_tsd;
 	vp = vf->vf_vnode;
 
-	if (zio->io_type == ZIO_TYPE_IOCTL) {
-		switch (zio->io_cmd) {
-		case DKIOCFLUSHWRITECACHE:
-			zio->io_error = VOP_FSYNC(vp, FSYNC | FDSYNC,
-			    kcred, NULL);
-			break;
-		default:
-			zio->io_error = SET_ERROR(ENOTSUP);
-		}
-
-		return (ZIO_PIPELINE_CONTINUE);
-	}
-
+	ASSERT(zio->io_type == ZIO_TYPE_READ || zio->io_type == ZIO_TYPE_WRITE);
 	zio->io_error = vn_rdwr(zio->io_type == ZIO_TYPE_READ ?
 	    UIO_READ : UIO_WRITE, vp, zio->io_data, zio->io_size,
 	    zio->io_offset, UIO_SYSSPACE, 0, RLIM64_INFINITY, kcred, &resid);
@@ -192,9 +204,41 @@ vdev_file_io_start(zio_t *zio)
 	if (resid != 0 && zio->io_error == 0)
 		zio->io_error = ENOSPC;
 
-	zio_interrupt(zio);
+	vdev_file_io_intr(zio);
+}
 
-	return (ZIO_PIPELINE_STOP);
+static void
+vdev_file_io_start(zio_t *zio)
+{
+	vdev_t *vd = zio->io_vd;
+	vdev_file_t *vf = vd->vdev_tsd;
+
+	if (zio->io_type == ZIO_TYPE_IOCTL) {
+		/* XXPOLICY */
+		if (!vdev_readable(vd)) {
+			zio->io_error = SET_ERROR(ENXIO);
+			zio_interrupt(zio);
+			return;
+		}
+
+		switch (zio->io_cmd) {
+		case DKIOCFLUSHWRITECACHE:
+			zio->io_error = VOP_FSYNC(vf->vf_vnode, FSYNC | FDSYNC,
+			    kcred, NULL);
+			break;
+		default:
+			zio->io_error = SET_ERROR(ENOTSUP);
+		}
+
+		zio_execute(zio);
+		return;
+	}
+
+	ASSERT(zio->io_type == ZIO_TYPE_READ || zio->io_type == ZIO_TYPE_WRITE);
+	zio->io_target_timestamp = zio_handle_io_delay(zio);
+
+	VERIFY3U(taskq_dispatch(vdev_file_taskq, vdev_file_io_strategy, zio,
+	    TQ_SLEEP), !=, 0);
 }
 
 /* ARGSUSED */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,9 +21,11 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
  * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright 2013 Martin Matuska <mm@FreeBSD.org>. All rights reserved.
+ * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
+ * Copyright 2013 Saso Kiselkov. All rights reserved.
  */
 
 #ifndef _SYS_SPA_IMPL_H
@@ -39,15 +42,17 @@
 #include <sys/refcount.h>
 #include <sys/bplist.h>
 #include <sys/bpobj.h>
+#include <sys/zfeature.h>
+#include <zfeature_common.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 typedef struct spa_error_entry {
-	zbookmark_t	se_bookmark;
-	char		*se_name;
-	avl_node_t	se_avl;
+	zbookmark_phys_t	se_bookmark;
+	char			*se_name;
+	avl_node_t		se_avl;
 } spa_error_entry_t;
 
 typedef struct spa_history_phys {
@@ -81,16 +86,16 @@ typedef struct spa_config_dirent {
 	char		*scd_path;
 } spa_config_dirent_t;
 
-enum zio_taskq_type {
+typedef enum zio_taskq_type {
 	ZIO_TASKQ_ISSUE = 0,
 	ZIO_TASKQ_ISSUE_HIGH,
 	ZIO_TASKQ_INTERRUPT,
 	ZIO_TASKQ_INTERRUPT_HIGH,
 	ZIO_TASKQ_TYPES
-};
+} zio_taskq_type_t;
 
 /*
- * State machine for the zpool-pooname process.  The states transitions
+ * State machine for the zpool-poolname process.  The states transitions
  * are done as follows:
  *
  *	From		   To			Routine
@@ -108,11 +113,16 @@ typedef enum spa_proc_state {
 	SPA_PROC_GONE		/* spa_thread() is exiting, spa_proc = &p0 */
 } spa_proc_state_t;
 
+typedef struct spa_taskqs {
+	uint_t stqs_count;
+	taskq_t **stqs_taskq;
+} spa_taskqs_t;
+
 struct spa {
 	/*
 	 * Fields protected by spa_namespace_lock.
 	 */
-	char		spa_name[MAXNAMELEN];	/* pool name */
+	char		spa_name[ZFS_MAX_DATASET_NAME_LEN];	/* pool name */
 	char		*spa_comment;		/* comment */
 	avl_node_t	spa_avl;		/* node in spa_namespace_avl */
 	nvlist_t	*spa_config;		/* last synced config */
@@ -126,7 +136,7 @@ struct spa {
 	uint8_t		spa_sync_on;		/* sync threads are running */
 	spa_load_state_t spa_load_state;	/* current load operation */
 	uint64_t	spa_import_flags;	/* import specific flags */
-	taskq_t		*spa_zio_taskq[ZIO_TYPES][ZIO_TASKQ_TYPES];
+	spa_taskqs_t	spa_zio_taskq[ZIO_TYPES][ZIO_TASKQ_TYPES];
 	dsl_pool_t	*spa_dsl_pool;
 	boolean_t	spa_is_initializing;	/* true while opening pool */
 	metaslab_class_t *spa_normal_class;	/* normal data class */
@@ -138,13 +148,20 @@ struct spa {
 	uint64_t	spa_claim_max_txg;	/* highest claimed birth txg */
 	timespec_t	spa_loaded_ts;		/* 1st successful open time */
 	objset_t	*spa_meta_objset;	/* copy of dp->dp_meta_objset */
+	kmutex_t	spa_evicting_os_lock;	/* Evicting objset list lock */
+	list_t		spa_evicting_os_list;	/* Objsets being evicted. */
+	kcondvar_t	spa_evicting_os_cv;	/* Objset Eviction Completion */
 	txg_list_t	spa_vdev_txg_list;	/* per-txg dirty vdev list */
 	vdev_t		*spa_root_vdev;		/* top-level vdev container */
+	int		spa_min_ashift;		/* of vdevs in normal class */
+	int		spa_max_ashift;		/* of vdevs in normal class */
 	uint64_t	spa_config_guid;	/* config pool guid */
 	uint64_t	spa_load_guid;		/* spa_load initialized guid */
 	uint64_t	spa_last_synced_guid;	/* last synced guid */
 	list_t		spa_config_dirty_list;	/* vdevs with dirty config */
 	list_t		spa_state_dirty_list;	/* vdevs with dirty state */
+	kmutex_t	spa_alloc_lock;
+	avl_tree_t	spa_alloc_tree;
 	spa_aux_vdev_t	spa_spares;		/* hot spares */
 	spa_aux_vdev_t	spa_l2cache;		/* L2ARC cache devices */
 	nvlist_t	*spa_label_features;	/* Features for reading MOS */
@@ -153,6 +170,10 @@ struct spa {
 	uint64_t	spa_syncing_txg;	/* txg currently syncing */
 	bpobj_t		spa_deferred_bpobj;	/* deferred-free bplist */
 	bplist_t	spa_free_bplist[TXG_SIZE]; /* bplist of stuff to free */
+	zio_cksum_salt_t spa_cksum_salt;	/* secret salt for cksum */
+	/* checksum context templates */
+	kmutex_t	spa_cksum_tmpls_lock;
+	void		*spa_cksum_tmpls[ZIO_CHECKSUM_FUNCTIONS];
 	uberblock_t	spa_ubsync;		/* last synced uberblock */
 	uberblock_t	spa_uberblock;		/* current uberblock */
 	boolean_t	spa_extreme_rewind;	/* rewind past deferred frees */
@@ -169,6 +190,7 @@ struct spa {
 	uint64_t	spa_scan_pass_exam;	/* examined bytes per pass */
 	kmutex_t	spa_async_lock;		/* protect async state */
 	kthread_t	*spa_async_thread;	/* thread doing async task */
+	kthread_t	*spa_async_thread_vd;	/* thread doing vd async task */
 	int		spa_async_suspended;	/* async tasks suspended */
 	kcondvar_t	spa_async_cv;		/* wait for thread_exit() */
 	uint16_t	spa_async_tasks;	/* async task mask */
@@ -198,7 +220,8 @@ struct spa {
 	uint64_t	spa_failmode;		/* failure mode for the pool */
 	uint64_t	spa_delegation;		/* delegation on/off */
 	list_t		spa_config_list;	/* previous cache file(s) */
-	zio_t		*spa_async_zio_root;	/* root of all async I/O */
+	/* per-CPU array of root of async I/O: */
+	zio_t		**spa_async_zio_root;
 	zio_t		*spa_suspend_zio_root;	/* root of all suspended I/O */
 	kmutex_t	spa_suspend_lock;	/* protects suspend_zio_root */
 	kcondvar_t	spa_suspend_cv;		/* notification of resume */
@@ -231,17 +254,34 @@ struct spa {
 	uint64_t	spa_feat_for_write_obj;	/* required to write to pool */
 	uint64_t	spa_feat_for_read_obj;	/* required to read from pool */
 	uint64_t	spa_feat_desc_obj;	/* Feature descriptions */
+	uint64_t	spa_feat_enabled_txg_obj; /* Feature enabled txg */
+	/* cache feature refcounts */
+	uint64_t	spa_feat_refcount_cache[SPA_FEATURES];
 #ifdef illumos
 	cyclic_id_t	spa_deadman_cycid;	/* cyclic id */
-#else	/* FreeBSD */
+#else	/* !illumos */
 #ifdef _KERNEL
 	struct callout	spa_deadman_cycid;	/* callout id */
+	struct task	spa_deadman_task;
 #endif
 #endif	/* illumos */
 	uint64_t	spa_deadman_calls;	/* number of deadman calls */
-	uint64_t	spa_sync_starttime;	/* starting time fo spa_sync */
+	hrtime_t	spa_sync_starttime;	/* starting time fo spa_sync */
 	uint64_t	spa_deadman_synctime;	/* deadman expiration timer */
+#ifdef illumos
+	/*
+	 * spa_iokstat_lock protects spa_iokstat and
+	 * spa_queue_stats[].
+	 */
+	kmutex_t	spa_iokstat_lock;
+	struct kstat	*spa_iokstat;		/* kstat of io to this pool */
+	struct {
+		int spa_active;
+		int spa_queued;
+	} spa_queue_stats[ZIO_PRIORITY_NUM_QUEUEABLE];
+#endif
 	hrtime_t	spa_ccw_fail_time;	/* Conf cache write fail time */
+
 	/*
 	 * spa_refcount & spa_config_lock must be the last elements
 	 * because refcount_t changes size based on compilation options.
@@ -250,12 +290,15 @@ struct spa {
 	 */
 	spa_config_lock_t spa_config_lock[SCL_LOCKS]; /* config changes */
 	refcount_t	spa_refcount;		/* number of opens */
-#ifndef sun
+#ifndef illumos
 	boolean_t	spa_splitting_newspa;	/* creating new spa in split */
 #endif
 };
 
 extern const char *spa_config_path;
+
+extern void spa_taskq_dispatch_ent(spa_t *spa, zio_type_t t, zio_taskq_type_t q,
+    task_func_t *func, void *arg, uint_t flags, taskq_ent_t *ent);
 
 #ifdef	__cplusplus
 }

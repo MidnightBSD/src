@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -143,7 +144,7 @@ typedef struct procset {
 
 #endif /* !defined(_XPG4_2) || defined(__EXTENSIONS__) */
 
-#if defined(sun)
+#ifdef illumos
 #ifdef _KERNEL
 
 struct proc;

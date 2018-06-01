@@ -23,7 +23,7 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2011 Nexenta Systems, Inc. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2013 by Delphix. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -141,6 +141,26 @@ out:
 	kobj_close_file(file);
 }
 
+static void
+spa_config_clean(nvlist_t *nvl)
+{
+	nvlist_t **child;
+	nvlist_t *nvroot = NULL;
+	uint_t c, children;
+
+	if (nvlist_lookup_nvlist_array(nvl, ZPOOL_CONFIG_CHILDREN, &child,
+	    &children) == 0) {
+		for (c = 0; c < children; c++)
+			spa_config_clean(child[c]);
+	}
+
+	if (nvlist_lookup_nvlist(nvl, ZPOOL_CONFIG_VDEV_TREE, &nvroot) == 0)
+		spa_config_clean(nvroot);
+
+	nvlist_remove(nvl, ZPOOL_CONFIG_VDEV_STATS, DATA_TYPE_UINT64_ARRAY);
+	nvlist_remove(nvl, ZPOOL_CONFIG_SCAN_STATS, DATA_TYPE_UINT64_ARRAY);
+}
+
 static int
 spa_config_write(spa_config_dirent_t *dp, nvlist_t *nvl)
 {
@@ -197,7 +217,12 @@ spa_config_write(spa_config_dirent_t *dp, nvlist_t *nvl)
 
 /*
  * Synchronize pool configuration to disk.  This must be called with the
- * namespace lock held.
+ * namespace lock held. Synchronizing the pool cache is typically done after
+ * the configuration has been synced to the MOS. This exposes a window where
+ * the MOS config will have been updated but the cache file has not. If
+ * the system were to crash at that instant then the cached config may not
+ * contain the correct information to open the pool and an explicity import
+ * would be required.
  */
 void
 spa_config_sync(spa_t *target, boolean_t removing, boolean_t postsysevent)
@@ -206,6 +231,7 @@ spa_config_sync(spa_t *target, boolean_t removing, boolean_t postsysevent)
 	nvlist_t *nvl;
 	boolean_t ccw_failure;
 	int error;
+	char *pool_name;
 
 	ASSERT(MUTEX_HELD(&spa_namespace_lock));
 
@@ -229,6 +255,7 @@ spa_config_sync(spa_t *target, boolean_t removing, boolean_t postsysevent)
 		 */
 		nvl = NULL;
 		while ((spa = spa_next(spa)) != NULL) {
+			nvlist_t *nvroot = NULL;
 			/*
 			 * Skip over our own pool if we're about to remove
 			 * ourselves from the spa namespace or any pool that
@@ -237,7 +264,8 @@ spa_config_sync(spa_t *target, boolean_t removing, boolean_t postsysevent)
 			 * we don't allow them to be written to the cache file.
 			 */
 			if ((spa == target && removing) ||
-			    !spa_writeable(spa))
+			    (spa_state(spa) == POOL_STATE_ACTIVE &&
+			    !spa_writeable(spa)))
 				continue;
 
 			mutex_enter(&spa->spa_props_lock);
@@ -253,9 +281,19 @@ spa_config_sync(spa_t *target, boolean_t removing, boolean_t postsysevent)
 				VERIFY(nvlist_alloc(&nvl, NV_UNIQUE_NAME,
 				    KM_SLEEP) == 0);
 
-			VERIFY(nvlist_add_nvlist(nvl, spa->spa_name,
-			    spa->spa_config) == 0);
+			if (spa->spa_import_flags & ZFS_IMPORT_TEMP_NAME) {
+				pool_name = fnvlist_lookup_string(spa->spa_config,
+					ZPOOL_CONFIG_POOL_NAME);
+			} else {
+				pool_name = spa_name(spa);
+			}
+
+			fnvlist_add_nvlist(nvl, pool_name,
+			    spa->spa_config);
 			mutex_exit(&spa->spa_props_lock);
+
+			if (nvlist_lookup_nvlist(nvl, pool_name, &nvroot) == 0)
+				spa_config_clean(nvroot);
 		}
 
 		error = spa_config_write(dp, nvl);
@@ -338,8 +376,7 @@ void
 spa_config_set(spa_t *spa, nvlist_t *config)
 {
 	mutex_enter(&spa->spa_props_lock);
-	if (spa->spa_config != NULL)
-		nvlist_free(spa->spa_config);
+	nvlist_free(spa->spa_config);
 	spa->spa_config = config;
 	mutex_exit(&spa->spa_props_lock);
 }
@@ -358,6 +395,7 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 	unsigned long hostid = 0;
 	boolean_t locked = B_FALSE;
 	uint64_t split_guid;
+	char *pool_name;
 
 	if (vd == NULL) {
 		vd = rvd;
@@ -374,20 +412,34 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 	if (txg == -1ULL)
 		txg = spa->spa_config_txg;
 
-	VERIFY(nvlist_alloc(&config, NV_UNIQUE_NAME, KM_SLEEP) == 0);
+	/*
+	 * Originally, users had to handle spa namespace collisions by either
+	 * exporting the already imported pool or by specifying a new name for
+	 * the pool with a conflicting name. In the case of root pools from
+	 * virtual guests, neither approach to collision resolution is
+	 * reasonable. This is addressed by extending the new name syntax with
+	 * an option to specify that the new name is temporary. When specified,
+	 * ZFS_IMPORT_TEMP_NAME will be set in spa->spa_import_flags to tell us
+	 * to use the previous name, which we do below.
+	 */
+	if (spa->spa_import_flags & ZFS_IMPORT_TEMP_NAME) {
+		pool_name = fnvlist_lookup_string(spa->spa_config,
+			ZPOOL_CONFIG_POOL_NAME);
+	} else {
+		pool_name = spa_name(spa);
+	}
 
-	VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_VERSION,
-	    spa_version(spa)) == 0);
-	VERIFY(nvlist_add_string(config, ZPOOL_CONFIG_POOL_NAME,
-	    spa_name(spa)) == 0);
-	VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_POOL_STATE,
-	    spa_state(spa)) == 0);
-	VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_POOL_TXG,
-	    txg) == 0);
-	VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_POOL_GUID,
-	    spa_guid(spa)) == 0);
-	VERIFY(spa->spa_comment == NULL || nvlist_add_string(config,
-	    ZPOOL_CONFIG_COMMENT, spa->spa_comment) == 0);
+	config = fnvlist_alloc();
+
+	fnvlist_add_uint64(config, ZPOOL_CONFIG_VERSION, spa_version(spa));
+	fnvlist_add_string(config, ZPOOL_CONFIG_POOL_NAME, pool_name);
+	fnvlist_add_uint64(config, ZPOOL_CONFIG_POOL_STATE, spa_state(spa));
+	fnvlist_add_uint64(config, ZPOOL_CONFIG_POOL_TXG, txg);
+	fnvlist_add_uint64(config, ZPOOL_CONFIG_POOL_GUID, spa_guid(spa));
+	if (spa->spa_comment != NULL) {
+		fnvlist_add_string(config, ZPOOL_CONFIG_COMMENT,
+		    spa->spa_comment);
+	}
 
 
 #ifdef	_KERNEL
@@ -515,8 +567,10 @@ spa_config_update(spa_t *spa, int what)
 		 */
 		for (c = 0; c < rvd->vdev_children; c++) {
 			vdev_t *tvd = rvd->vdev_child[c];
-			if (tvd->vdev_ms_array == 0)
+			if (tvd->vdev_ms_array == 0) {
+				vdev_ashift_optimize(tvd);
 				vdev_metaslab_set_size(tvd);
+			}
 			vdev_expand(tvd, txg);
 		}
 	}
@@ -530,8 +584,7 @@ spa_config_update(spa_t *spa, int what)
 	/*
 	 * Update the global config cache to reflect the new mosconfig.
 	 */
-	if (!spa->spa_is_root)
-		spa_config_sync(spa, B_FALSE, what != SPA_CONFIG_UPDATE_POOL);
+	spa_config_sync(spa, B_FALSE, what != SPA_CONFIG_UPDATE_POOL);
 
 	if (what == SPA_CONFIG_UPDATE_POOL)
 		spa_config_update(spa, SPA_CONFIG_UPDATE_VDEVS);

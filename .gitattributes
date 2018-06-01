@@ -54901,6 +54901,10 @@ sys/cddl/contrib/opensolaris/uts/common/zmod/zutil.c -text
 sys/cddl/contrib/opensolaris/uts/common/zmod/zutil.h -text
 sys/cddl/contrib/opensolaris/uts/intel/dtrace/fasttrap_isa.c -text
 sys/cddl/contrib/opensolaris/uts/intel/sys/fasttrap_isa.h -text
+sys/cddl/contrib/opensolaris/uts/mips/dtrace/fasttrap_isa.c svneol=native#text/plain
+sys/cddl/contrib/opensolaris/uts/mips/sys/fasttrap_isa.h svneol=native#text/plain
+sys/cddl/contrib/opensolaris/uts/powerpc/dtrace/fasttrap_isa.c svneol=native#text/plain
+sys/cddl/contrib/opensolaris/uts/powerpc/sys/fasttrap_isa.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/sparc/dtrace/fasttrap_isa.c -text
 sys/cddl/contrib/opensolaris/uts/sparc/sys/fasttrap_isa.h -text
 sys/cddl/dev/cyclic/cyclic.c -text

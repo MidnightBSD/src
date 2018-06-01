@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +22,7 @@
 
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2013 by Delphix. All rights reserved.
  */
 
 #ifndef _SYS_VDEV_H
@@ -61,6 +62,7 @@ extern zio_t *vdev_probe(vdev_t *vd, zio_t *pio);
 extern boolean_t vdev_is_bootable(vdev_t *vd);
 extern vdev_t *vdev_lookup_top(spa_t *spa, uint64_t vdev);
 extern vdev_t *vdev_lookup_by_guid(vdev_t *vd, uint64_t guid);
+extern int vdev_count_leaves(spa_t *spa);
 extern void vdev_dtl_dirty(vdev_t *vd, vdev_dtl_type_t d,
     uint64_t txg, uint64_t size);
 extern boolean_t vdev_dtl_contains(vdev_t *vd, vdev_dtl_type_t d,
@@ -78,6 +80,7 @@ extern void vdev_rele(vdev_t *);
 extern int vdev_metaslab_init(vdev_t *vd, uint64_t txg);
 extern void vdev_metaslab_fini(vdev_t *vd);
 extern void vdev_metaslab_set_size(vdev_t *);
+extern void vdev_ashift_optimize(vdev_t *);
 extern void vdev_expand(vdev_t *vd, uint64_t txg);
 extern void vdev_split(vdev_t *vd);
 extern void vdev_deadman(vdev_t *vd);
@@ -111,7 +114,7 @@ extern boolean_t vdev_accessible(vdev_t *vd, zio_t *zio);
 
 extern void vdev_cache_init(vdev_t *vd);
 extern void vdev_cache_fini(vdev_t *vd);
-extern int vdev_cache_read(zio_t *zio);
+extern boolean_t vdev_cache_read(zio_t *zio);
 extern void vdev_cache_write(zio_t *zio);
 extern void vdev_cache_purge(vdev_t *vd);
 
@@ -119,11 +122,13 @@ extern void vdev_queue_init(vdev_t *vd);
 extern void vdev_queue_fini(vdev_t *vd);
 extern zio_t *vdev_queue_io(zio_t *zio);
 extern void vdev_queue_io_done(zio_t *zio);
+extern int vdev_queue_length(vdev_t *vd);
+extern uint64_t vdev_queue_lastoffset(vdev_t *vd);
+extern void vdev_queue_register_lastoffset(vdev_t *vd, zio_t *zio);
 
 extern void vdev_config_dirty(vdev_t *vd);
 extern void vdev_config_clean(vdev_t *vd);
-extern int vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg,
-    boolean_t);
+extern int vdev_config_sync(vdev_t **svd, int svdcount, uint64_t txg);
 
 extern void vdev_state_dirty(vdev_t *vd);
 extern void vdev_state_clean(vdev_t *vd);
@@ -157,6 +162,8 @@ typedef enum {
 } vdev_labeltype_t;
 
 extern int vdev_label_init(vdev_t *vd, uint64_t txg, vdev_labeltype_t reason);
+
+extern int vdev_label_write_pad2(vdev_t *vd, const char *buf, size_t size);
 
 #ifdef	__cplusplus
 }
