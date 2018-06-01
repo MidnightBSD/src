@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/cred.h 249643 2013-04-19 09:19:10Z mm $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/cred.h 248571 2013-03-21 08:38:03Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_CRED_H_

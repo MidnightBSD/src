@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,26 +24,26 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/sdt.h 249643 2013-04-19 09:19:10Z mm $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sdt.h 272877 2014-10-10 00:26:00Z smh $
  */
 
 #ifndef _OPENSOLARIS_SYS_SDT_H_
 #define	_OPENSOLARIS_SYS_SDT_H_
 
+#ifdef _KERNEL
+#include <opt_kdtrace.h>
+#endif
 #include_next <sys/sdt.h>
 
-#undef	DTRACE_PROBE
-#undef	DTRACE_PROBE1
-#undef	DTRACE_PROBE2
-#undef	DTRACE_PROBE3
-#undef	DTRACE_PROBE4
+#ifdef KDTRACE_HOOKS
+SDT_PROBE_DECLARE(sdt, , , set__error);
 
-#define	DTRACE_PROBE(name)
-#define	DTRACE_PROBE1(name, type1, arg1)
-#define	DTRACE_PROBE2(name, type1, arg1, type2, arg2)
-#define	DTRACE_PROBE3(name, type1, arg1, type2, arg2, type3, arg3)
-#define	DTRACE_PROBE4(name, type1, arg1, type2, arg2, type3, arg3, type4, arg4)
-
-#define	SET_ERROR(err)	(err)
+#define SET_ERROR(err) \
+	((sdt_sdt___set__error->id ? \
+	(*sdt_probe_func)(sdt_sdt___set__error->id, \
+	    (uintptr_t)err, 0, 0, 0, 0) : 0), err)
+#else
+#define SET_ERROR(err) (err)
+#endif
 
 #endif	/* _OPENSOLARIS_SYS_SDT_H_ */

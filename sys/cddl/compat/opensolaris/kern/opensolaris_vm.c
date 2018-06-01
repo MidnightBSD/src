@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2013 EMC Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,40 +26,46 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_lookup.c 315844 2017-03-23 08:16:29Z avg $");
- 
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
-#include <sys/pathname.h>
-#include <sys/vfs.h>
-#include <sys/vnode.h>
+__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_vm.c 260786 2014-01-16 18:15:59Z avg $");
 
-int
-lookupname(char *dirname, enum uio_seg seg, enum symfollow follow,
-    vnode_t **dirvpp, vnode_t **compvpp)
+#include <sys/param.h>
+#include <sys/lock.h>
+#include <sys/freebsd_rwlock.h>
+
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page.h>
+#include <vm/vm_pager.h>
+
+const int zfs_vm_pagerret_bad = VM_PAGER_BAD;
+const int zfs_vm_pagerret_error = VM_PAGER_ERROR;
+const int zfs_vm_pagerret_ok = VM_PAGER_OK;
+const int zfs_vm_pagerput_sync = VM_PAGER_PUT_SYNC;
+const int zfs_vm_pagerput_inval = VM_PAGER_PUT_INVAL;
+
+void
+zfs_vmobject_assert_wlocked(vm_object_t object)
 {
 
-	return (lookupnameat(dirname, seg, follow, dirvpp, compvpp, NULL));
+	/*
+	 * This is not ideal because FILE/LINE used by assertions will not
+	 * be too helpful, but it must be an hard function for
+	 * compatibility reasons.
+	 */
+	VM_OBJECT_ASSERT_WLOCKED(object);
 }
 
-int
-lookupnameat(char *dirname, enum uio_seg seg, enum symfollow follow,
-    vnode_t **dirvpp, vnode_t **compvpp, vnode_t *startvp)
+void
+zfs_vmobject_wlock(vm_object_t object)
 {
-	struct nameidata nd;
-	int error, ltype;
 
-	ASSERT(dirvpp == NULL);
+	VM_OBJECT_WLOCK(object);
+}
 
-	vref(startvp);
-	ltype = VOP_ISLOCKED(startvp);
-	VOP_UNLOCK(startvp, 0);
-	NDINIT_ATVP(&nd, LOOKUP, LOCKLEAF | follow, seg, dirname,
-	    startvp, curthread);
-	error = namei(&nd);
-	*compvpp = nd.ni_vp;
-	NDFREE(&nd, NDF_ONLY_PNBUF);
-	vn_lock(startvp, ltype | LK_RETRY);
-	return (error);
+void
+zfs_vmobject_wunlock(vm_object_t object)
+{
+
+	VM_OBJECT_WUNLOCK(object);
 }

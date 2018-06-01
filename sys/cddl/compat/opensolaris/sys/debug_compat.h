@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2013 Andriy Gapon <avg@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,43 +23,16 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/debug_compat.h 253996 2013-08-06 15:51:56Z avg $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_lookup.c 315844 2017-03-23 08:16:29Z avg $");
- 
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
-#include <sys/pathname.h>
-#include <sys/vfs.h>
-#include <sys/vnode.h>
+/*
+ * This is a special file that SHOULD NOT be included using #include directive.
+ */
 
-int
-lookupname(char *dirname, enum uio_seg seg, enum symfollow follow,
-    vnode_t **dirvpp, vnode_t **compvpp)
-{
-
-	return (lookupnameat(dirname, seg, follow, dirvpp, compvpp, NULL));
-}
-
-int
-lookupnameat(char *dirname, enum uio_seg seg, enum symfollow follow,
-    vnode_t **dirvpp, vnode_t **compvpp, vnode_t *startvp)
-{
-	struct nameidata nd;
-	int error, ltype;
-
-	ASSERT(dirvpp == NULL);
-
-	vref(startvp);
-	ltype = VOP_ISLOCKED(startvp);
-	VOP_UNLOCK(startvp, 0);
-	NDINIT_ATVP(&nd, LOOKUP, LOCKLEAF | follow, seg, dirname,
-	    startvp, curthread);
-	error = namei(&nd);
-	*compvpp = nd.ni_vp;
-	NDFREE(&nd, NDF_ONLY_PNBUF);
-	vn_lock(startvp, ltype | LK_RETRY);
-	return (error);
-}
+#if defined(INVARIANTS)
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif

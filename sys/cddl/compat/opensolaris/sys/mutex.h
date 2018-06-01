@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/mutex.h 252308 2013-06-27 18:20:19Z smh $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/mutex.h 253996 2013-08-06 15:51:56Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_MUTEX_H_
@@ -46,7 +47,7 @@ typedef enum {
 
 typedef struct sx	kmutex_t;
 
-#ifndef DEBUG
+#ifndef OPENSOLARIS_WITNESS
 #define	MUTEX_FLAGS	(SX_DUPOK | SX_NOWITNESS)
 #else
 #define	MUTEX_FLAGS	(SX_DUPOK)

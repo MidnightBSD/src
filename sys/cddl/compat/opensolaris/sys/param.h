@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2007 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/param.h 185029 2008-11-17 20:49:29Z pjd $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/param.h 185029 2008-11-17 20:49:29Z pjd $
  *
  */
 

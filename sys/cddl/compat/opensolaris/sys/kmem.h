@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/kmem.h 246533 2013-02-08 07:59:13Z avg $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/kmem.h 272875 2014-10-10 00:12:16Z smh $
  */
 
 #ifndef _OPENSOLARIS_SYS_KMEM_H_
@@ -32,6 +33,7 @@
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/malloc.h>
+#include <sys/vmem.h>
 
 #include <vm/uma.h>
 #include <vm/vm.h>
@@ -46,8 +48,9 @@ MALLOC_DECLARE(M_SOLARIS);
 #define	KM_PUSHPAGE		M_WAITOK
 #define	KM_NOSLEEP		M_NOWAIT
 #define	KM_NODEBUG		M_NODUMP
-#define	KMC_NOTOUCH		0
+#define	KM_NORMALPRI		0
 #define	KMC_NODEBUG		UMA_ZONE_NODUMP
+#define	KMC_NOTOUCH		0
 
 typedef struct kmem_cache {
 	char		kc_name[32];
@@ -61,12 +64,9 @@ typedef struct kmem_cache {
 	void		*kc_private;
 } kmem_cache_t;
 
-#define vmem_t	void
-
 void *zfs_kmem_alloc(size_t size, int kmflags);
 void zfs_kmem_free(void *buf, size_t size);
 uint64_t kmem_size(void);
-uint64_t kmem_used(void);
 kmem_cache_t *kmem_cache_create(char *name, size_t bufsize, size_t align,
     int (*constructor)(void *, void *, int), void (*destructor)(void *, void *),
     void (*reclaim)(void *) __unused, void *private, vmem_t *vmp, int cflags);
@@ -78,6 +78,9 @@ void kmem_reap(void);
 int kmem_debugging(void);
 void *calloc(size_t n, size_t s);
 
+#define	freemem				(cnt.v_free_count + cnt.v_cache_count)
+#define	minfree				cnt.v_free_min
+#define	heap_arena			kmem_arena
 #define	kmem_alloc(size, kmflags)	zfs_kmem_alloc((size), (kmflags))
 #define	kmem_zalloc(size, kmflags)	zfs_kmem_alloc((size), (kmflags) | M_ZERO)
 #define	kmem_free(buf, size)		zfs_kmem_free((buf), (size))

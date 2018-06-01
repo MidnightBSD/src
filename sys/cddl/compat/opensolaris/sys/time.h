@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/time.h 251419 2013-06-05 13:03:47Z smh $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/time.h 297116 2016-03-21 00:22:55Z mav $
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_
@@ -36,6 +37,12 @@
 #define MICROSEC	1000000
 #define NANOSEC		1000000000
 #define TIME_MAX	LLONG_MAX
+
+#define	MSEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / MILLISEC))
+#define	NSEC2MSEC(n)	((n) / (NANOSEC / MILLISEC))
+
+#define	NSEC2SEC(n)	((n) / (NANOSEC / SEC))
+#define	SEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / SEC))
 
 typedef longlong_t	hrtime_t;
 
@@ -68,19 +75,9 @@ gethrtime(void) {
 
 extern int nsec_per_tick;	/* nanoseconds per clock tick */
 
-static __inline int64_t
-ddi_get_lbolt64(void)
-{
-
-	return (gethrtime() / nsec_per_tick);
-}
-
-static __inline clock_t
-ddi_get_lbolt(void)
-{
-
-	return (ddi_get_lbolt64());
-}
+#define ddi_get_lbolt64()				\
+    (int64_t)(((getsbinuptime() >> 16) * hz) >> 16)
+#define ddi_get_lbolt()		(clock_t)ddi_get_lbolt64()
 
 #else
 

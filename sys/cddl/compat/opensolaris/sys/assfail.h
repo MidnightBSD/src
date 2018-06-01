@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Martin Matuska <mm@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/assfail.h 243674 2012-11-29 14:05:04Z mm $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/assfail.h 274623 2014-11-17 13:26:50Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_ASSFAIL_H_
@@ -46,20 +47,24 @@ void assfail3(const char *, uintmax_t, const char *, uintmax_t, const char *,
 #else	/* !defined(_KERNEL) */
 
 #ifndef HAVE_ASSFAIL
+extern int aok;
+
 static __inline int
 __assfail(const char *expr, const char *file, int line)
 {
 
 	(void)fprintf(stderr, "Assertion failed: (%s), file %s, line %d.\n",
 	    expr, file, line);
-	abort();
-	/* NOTREACHED */
+	if (!aok)
+		abort();
 	return (0);
 }
 #define assfail __assfail
 #endif
 
 #ifndef HAVE_ASSFAIL3
+extern int aok;
+
 static __inline void
 __assfail3(const char *expr, uintmax_t lv, const char *op, uintmax_t rv,
     const char *file, int line) {
@@ -67,8 +72,8 @@ __assfail3(const char *expr, uintmax_t lv, const char *op, uintmax_t rv,
 	(void)fprintf(stderr,
 	    "Assertion failed: %s (0x%jx %s 0x%jx), file %s, line %d.\n",
 	    expr, lv, op, rv, file, line);
-        abort();
-        /* NOTREACHED */
+	if (!aok)
+		abort();
 }
 #define assfail3 __assfail3
 #endif

@@ -1,4 +1,4 @@
-$FreeBSD: release/9.2.0/sys/cddl/boot/zfs/README 247309 2013-02-26 05:58:05Z delphij $
+$FreeBSD: stable/10/sys/cddl/boot/zfs/README 268649 2014-07-15 04:53:34Z delphij $
 
 This directory contains various files derived from CDDL sources that
 are used by the ZFS bootstrap:
@@ -7,9 +7,10 @@ are used by the ZFS bootstrap:
     sha256.c			checksum support
     lz4.c			compression support
     lzjb.c			compression support
+    blkptr.c			ZFS embedded-data block pointers support
     zfssubr.c			checksum, compression and raidz support
     zfsimpl.h			mostly describing the physical layout
 
-The files fletcher.c, lzjb.c and sha256.c are largely identical to the
-ZFS base code (with write support removed) and could be shared but
-that might complicate future imports from OpenSolaris.
+The files fletcher.c, lzjb.c, lz4.c, sha256.c and blkptr.c are largely identical
+to the ZFS base code (with write support removed) and could be shared but that
+might complicate future imports from Illumos.

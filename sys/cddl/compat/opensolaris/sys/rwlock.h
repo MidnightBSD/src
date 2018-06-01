@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/rwlock.h 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/rwlock.h 253996 2013-08-06 15:51:56Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_RWLOCK_H_
@@ -47,7 +48,7 @@ typedef enum {
 
 typedef	struct sx	krwlock_t;
 
-#ifndef DEBUG
+#ifndef OPENSOLARIS_WITNESS
 #define	RW_FLAGS	(SX_DUPOK | SX_NOWITNESS)
 #else
 #define	RW_FLAGS	(SX_DUPOK)

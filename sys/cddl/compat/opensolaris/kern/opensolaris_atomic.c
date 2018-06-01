@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_atomic.c 219089 2011-02-27 19:41:40Z pjd $");
+__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_atomic.c 269798 2014-08-11 02:20:24Z ian $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -52,7 +53,7 @@ atomic_init(void)
 }
 #endif
 
-#if !defined(__LP64__) && !defined(__mips_n32)
+#if !defined(__LP64__) && !defined(__mips_n32) && !defined(ARM_HAVE_ATOMIC64)
 void
 atomic_add_64(volatile uint64_t *target, int64_t delta)
 {

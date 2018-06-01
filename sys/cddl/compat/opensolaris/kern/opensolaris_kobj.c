@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_kobj.c 218665 2011-02-13 19:46:55Z marcel $");
+__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kobj.c 241896 2012-10-22 17:50:54Z kib $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -69,7 +70,7 @@ kobj_open_file_vnode(const char *file)
 	struct thread *td = curthread;
 	struct filedesc *fd;
 	struct nameidata nd;
-	int error, flags, vfslocked;
+	int error, flags;
 
 	fd = td->td_proc->p_fd;
 	FILEDESC_XLOCK(fd);
@@ -84,15 +85,13 @@ kobj_open_file_vnode(const char *file)
 	FILEDESC_XUNLOCK(fd);
 
 	flags = FREAD | O_NOFOLLOW;
-	NDINIT(&nd, LOOKUP, MPSAFE, UIO_SYSSPACE, file, td);
+	NDINIT(&nd, LOOKUP, 0, UIO_SYSSPACE, file, td);
 	error = vn_open_cred(&nd, &flags, 0, 0, curthread->td_ucred, NULL);
 	if (error != 0)
 		return (NULL);
-	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	/* We just unlock so we hold a reference. */
 	VOP_UNLOCK(nd.ni_vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (nd.ni_vp);
 }
 
@@ -130,15 +129,13 @@ kobj_get_filesize_vnode(struct _buf *file, uint64_t *size)
 {
 	struct vnode *vp = file->ptr;
 	struct vattr va;
-	int error, vfslocked;
+	int error;
 
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_lock(vp, LK_SHARED | LK_RETRY);
 	error = VOP_GETATTR(vp, &va, curthread->td_ucred);
 	VOP_UNLOCK(vp, 0);
 	if (error == 0)
 		*size = (uint64_t)va.va_size;
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
@@ -171,7 +168,7 @@ kobj_read_file_vnode(struct _buf *file, char *buf, unsigned size, unsigned off)
 	struct thread *td = curthread;
 	struct uio auio;
 	struct iovec aiov;
-	int error, vfslocked;
+	int error;
 
 	bzero(&aiov, sizeof(aiov));
 	bzero(&auio, sizeof(auio));
@@ -187,11 +184,9 @@ kobj_read_file_vnode(struct _buf *file, char *buf, unsigned size, unsigned off)
 	auio.uio_resid = size;
 	auio.uio_td = td;
 
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_lock(vp, LK_SHARED | LK_RETRY);
 	error = VOP_READ(vp, &auio, IO_UNIT | IO_SYNC, td->td_ucred);
 	VOP_UNLOCK(vp, 0);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error != 0 ? -1 : size - auio.uio_resid);
 }
 
@@ -221,14 +216,7 @@ void
 kobj_close_file(struct _buf *file)
 {
 
-	if (file->mounted) {
-		struct vnode *vp = file->ptr;
-		struct thread *td = curthread;
-		int vfslocked;
-
-		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
-		vn_close(vp, FREAD, td->td_ucred, td);
-		VFS_UNLOCK_GIANT(vfslocked);
-	}
+	if (file->mounted)
+		vn_close(file->ptr, FREAD, curthread->td_ucred, curthread);
 	kmem_free(file, sizeof(*file));
 }

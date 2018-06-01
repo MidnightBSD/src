@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef _SYS_SYSTEMINFO_H_
 #define	_SYS_SYSTEMINFO_H_
 

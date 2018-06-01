@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_kstat.c 251419 2013-06-05 13:03:47Z smh $");
+__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kstat.c 244155 2012-12-12 16:14:14Z smh $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

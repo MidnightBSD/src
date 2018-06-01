@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2007 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/sema.h 179203 2008-05-22 08:35:03Z jb $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sema.h 179203 2008-05-22 08:35:03Z jb $
  *
  */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/kstat.h 251419 2013-06-05 13:03:47Z smh $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/kstat.h 288551 2015-10-03 07:31:42Z mav $
  */
 
 #ifndef _OPENSOLARIS_SYS_KSTAT_H_
@@ -35,6 +36,9 @@
 
 #define	KSTAT_FLAG_VIRTUAL	0x01
 
+#define	KSTAT_READ	0
+#define	KSTAT_WRITE	1
+
 typedef struct kstat {
 	void	*ks_data;
 	u_int	 ks_ndata;
@@ -42,6 +46,8 @@ typedef struct kstat {
 	struct sysctl_ctx_list ks_sysctl_ctx;
 	struct sysctl_oid *ks_sysctl_root;
 #endif
+	int		(*ks_update)(struct kstat *, int); /* dynamic update */
+	void		*ks_private;	/* arbitrary provider-private data */
 } kstat_t;
 
 typedef struct kstat_named {

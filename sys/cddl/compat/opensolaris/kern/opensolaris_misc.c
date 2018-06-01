@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c 219089 2011-02-27 19:41:40Z pjd $");
+__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c 219089 2011-02-27 19:41:40Z pjd $");
 
 #include <sys/param.h>
 #include <sys/jail.h>

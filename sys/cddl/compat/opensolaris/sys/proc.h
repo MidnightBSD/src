@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/proc.h 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/proc.h 286843 2015-08-17 12:51:46Z ed $
  */
 
 #ifndef _OPENSOLARIS_SYS_PROC_H_
@@ -63,7 +64,7 @@ typedef struct proc	proc_t;
 extern struct proc *zfsproc;
 
 static __inline kthread_t *
-thread_create(caddr_t stk, size_t stksize, void (*proc)(void *), void *arg,
+do_thread_create(caddr_t stk, size_t stksize, void (*proc)(void *), void *arg,
     size_t len, proc_t *pp, int state, pri_t pri)
 {
 	kthread_t *td = NULL;
@@ -88,6 +89,8 @@ thread_create(caddr_t stk, size_t stksize, void (*proc)(void *), void *arg,
 	return (td);
 }
 
+#define	thread_create(stk, stksize, proc, arg, len, pp, state, pri) \
+	do_thread_create(stk, stksize, proc, arg, len, pp, state, pri)
 #define	thread_exit()	kthread_exit()
 
 #endif	/* _KERNEL */

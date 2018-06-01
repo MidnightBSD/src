@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -18,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_string.c 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_string.c 219089 2011-02-27 19:41:40Z pjd $
  */
 /*
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.

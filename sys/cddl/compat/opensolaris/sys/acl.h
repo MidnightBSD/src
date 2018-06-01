@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/acl.h 192804 2009-05-26 11:42:06Z trasz $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/acl.h 192804 2009-05-26 11:42:06Z trasz $
  */
 
 #ifndef OPENSOLARIS_SYS_ACL_H

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c 219089 2011-02-27 19:41:40Z pjd $");
+__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c 272875 2014-10-10 00:12:16Z smh $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -61,6 +62,8 @@ static LIST_HEAD(, kmem_item) kmem_items;
 static struct mtx kmem_items_mtx;
 MTX_SYSINIT(kmem_items_mtx, &kmem_items_mtx, "kmem_items", MTX_DEF);
 #endif	/* KMEM_DEBUG */
+
+#include <sys/vmem.h>
 
 void *
 zfs_kmem_alloc(size_t size, int kmflags)
@@ -129,13 +132,6 @@ kmem_size(void)
 {
 
 	return (kmem_size_val);
-}
-
-uint64_t
-kmem_used(void)
-{
-
-	return (kmem_map->size);
 }
 
 static int

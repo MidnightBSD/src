@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2013 EMC Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,43 +23,40 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/vm.h 260786 2014-01-16 18:15:59Z avg $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_lookup.c 315844 2017-03-23 08:16:29Z avg $");
- 
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
-#include <sys/pathname.h>
-#include <sys/vfs.h>
-#include <sys/vnode.h>
+#ifndef _OPENSOLARIS_SYS_VM_H_
+#define	_OPENSOLARIS_SYS_VM_H_
 
-int
-lookupname(char *dirname, enum uio_seg seg, enum symfollow follow,
-    vnode_t **dirvpp, vnode_t **compvpp)
+#ifdef _KERNEL
+
+#include <sys/sf_buf.h>
+
+extern const int zfs_vm_pagerret_bad;
+extern const int zfs_vm_pagerret_error;
+extern const int zfs_vm_pagerret_ok;
+extern const int zfs_vm_pagerput_sync;
+extern const int zfs_vm_pagerput_inval;
+
+void	zfs_vmobject_assert_wlocked(vm_object_t object);
+void	zfs_vmobject_wlock(vm_object_t object);
+void	zfs_vmobject_wunlock(vm_object_t object);
+
+static inline caddr_t
+zfs_map_page(vm_page_t pp, struct sf_buf **sfp)
 {
-
-	return (lookupnameat(dirname, seg, follow, dirvpp, compvpp, NULL));
+	*sfp = sf_buf_alloc(pp, 0);
+	return ((caddr_t)sf_buf_kva(*sfp));
 }
 
-int
-lookupnameat(char *dirname, enum uio_seg seg, enum symfollow follow,
-    vnode_t **dirvpp, vnode_t **compvpp, vnode_t *startvp)
+static inline void
+zfs_unmap_page(struct sf_buf *sf)
 {
-	struct nameidata nd;
-	int error, ltype;
-
-	ASSERT(dirvpp == NULL);
-
-	vref(startvp);
-	ltype = VOP_ISLOCKED(startvp);
-	VOP_UNLOCK(startvp, 0);
-	NDINIT_ATVP(&nd, LOOKUP, LOCKLEAF | follow, seg, dirname,
-	    startvp, curthread);
-	error = namei(&nd);
-	*compvpp = nd.ni_vp;
-	NDFREE(&nd, NDF_ONLY_PNBUF);
-	vn_lock(startvp, ltype | LK_RETRY);
-	return (error);
+	sf_buf_free(sf);
 }
+
+#endif	/* _KERNEL */
+
+#endif	/* _OPENSOLARIS_SYS_VM_H_ */

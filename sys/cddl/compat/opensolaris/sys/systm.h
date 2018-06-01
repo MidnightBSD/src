@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/systm.h 221409 2011-05-03 20:13:27Z marius $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/systm.h 297108 2016-03-21 00:13:39Z mav $
  */
 
 #ifndef _OPENSOLARIS_SYS_SYSTM_H_
@@ -41,6 +42,9 @@
 #define	PAGEMASK	(~PAGEOFFSET)
 
 #define	delay(x)	pause("soldelay", (x))
+
+#define	timeout_generic(type, fn, arg, t, r, f)			\
+    timeout(fn, arg, t / (NANOSEC/hz) + 1)
 
 #endif	/* _KERNEL */
 

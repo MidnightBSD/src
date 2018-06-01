@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/sid.h 240258 2012-09-09 07:38:15Z mm $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sid.h 240162 2012-09-06 13:43:48Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_SID_H_

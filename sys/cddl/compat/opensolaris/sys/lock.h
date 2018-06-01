@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/lock.h 179035 2008-05-16 02:09:13Z attilio $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/lock.h 179035 2008-05-16 02:09:13Z attilio $
  */
 
 #ifndef _OPENSOLARIS_SYS_LOCK_H_

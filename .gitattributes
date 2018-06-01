@@ -54573,6 +54573,7 @@ sys/cddl/compat/opensolaris/kern/opensolaris_sysevent.c -text
 sys/cddl/compat/opensolaris/kern/opensolaris_taskq.c -text
 sys/cddl/compat/opensolaris/kern/opensolaris_uio.c -text
 sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c -text
+sys/cddl/compat/opensolaris/kern/opensolaris_vm.c svneol=native#text/plain
 sys/cddl/compat/opensolaris/kern/opensolaris_zone.c -text
 sys/cddl/compat/opensolaris/rpc/xdr.h -text
 sys/cddl/compat/opensolaris/sys/acl.h -text
@@ -54580,6 +54581,7 @@ sys/cddl/compat/opensolaris/sys/assfail.h svneol=native#text/plain
 sys/cddl/compat/opensolaris/sys/atomic.h -text
 sys/cddl/compat/opensolaris/sys/bitmap.h -text
 sys/cddl/compat/opensolaris/sys/byteorder.h -text
+sys/cddl/compat/opensolaris/sys/callo.h svneol=native#text/plain
 sys/cddl/compat/opensolaris/sys/cmn_err.h -text
 sys/cddl/compat/opensolaris/sys/cpupart.h -text
 sys/cddl/compat/opensolaris/sys/cpuvar.h -text
@@ -54588,7 +54590,9 @@ sys/cddl/compat/opensolaris/sys/cred.h -text
 sys/cddl/compat/opensolaris/sys/cyclic.h -text
 sys/cddl/compat/opensolaris/sys/cyclic_impl.h -text
 sys/cddl/compat/opensolaris/sys/debug.h -text
+sys/cddl/compat/opensolaris/sys/debug_compat.h svneol=native#text/plain
 sys/cddl/compat/opensolaris/sys/dirent.h -text
+sys/cddl/compat/opensolaris/sys/disp.h svneol=native#text/plain
 sys/cddl/compat/opensolaris/sys/dkio.h -text
 sys/cddl/compat/opensolaris/sys/dnlc.h -text
 sys/cddl/compat/opensolaris/sys/elf.h -text
@@ -54631,6 +54635,7 @@ sys/cddl/compat/opensolaris/sys/types.h -text
 sys/cddl/compat/opensolaris/sys/uio.h -text
 sys/cddl/compat/opensolaris/sys/varargs.h -text
 sys/cddl/compat/opensolaris/sys/vfs.h -text
+sys/cddl/compat/opensolaris/sys/vm.h svneol=native#text/plain
 sys/cddl/compat/opensolaris/sys/vnode.h -text
 sys/cddl/compat/opensolaris/sys/zone.h -text
 sys/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE -text

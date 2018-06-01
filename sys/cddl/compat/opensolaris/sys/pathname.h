@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/pathname.h 185029 2008-11-17 20:49:29Z pjd $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/pathname.h 315844 2017-03-23 08:16:29Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_PATHNAME_H_
@@ -34,20 +35,9 @@
 #include <sys/param.h>
 #include <sys/vnode.h>
 
-typedef struct pathname {
-	char	*pn_buf;		/* underlying storage */
-	char	*pn_path;		/* remaining pathname */
-	size_t	pn_pathlen;		/* remaining length */
-	size_t	pn_bufsize;		/* total size of pn_buf */
-} pathname_t;
-
-#define	pn_alloc(pnp)	panic("pn_alloc() called")
-#define	pn_free(pnp)	panic("pn_free() called")
-
 int lookupname(char *, enum uio_seg, enum symfollow, vnode_t **, vnode_t **);
 int lookupnameat(char *, enum uio_seg, enum symfollow, vnode_t **, vnode_t **,
     vnode_t *);
-int traverse(vnode_t **, int);
 
 #endif	/* _KERNEL */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -18,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/dkio.h 251419 2013-06-05 13:03:47Z smh $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/dkio.h 270312 2014-08-21 22:44:08Z smh $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
@@ -74,8 +75,6 @@ extern "C" {
  * returns.  The caller's locking strategy should be prepared for this case.
  */
 #define	DKIOCFLUSHWRITECACHE	(DKIOC|34)	/* flush cache to phys medium */
-
-#define	DKIOCTRIM		(DKIOC|35)	/* TRIM a block */
 
 struct dk_callback {
 	void (*dkc_callback)(void *dkc_cookie, int error);

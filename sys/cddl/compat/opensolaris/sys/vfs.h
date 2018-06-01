@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/vfs.h 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/vfs.h 298533 2016-04-24 08:39:55Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_VFS_H_
@@ -53,17 +54,6 @@ typedef	struct mount	vfs_t;
 #define	VFS_RDONLY	MNT_RDONLY
 #define	VFS_NOSETUID	MNT_NOSUID
 #define	VFS_NOEXEC	MNT_NOEXEC
-
-#define	VFS_HOLD(vfsp)	do {						\
-	MNT_ILOCK(vfsp);						\
-	MNT_REF(vfsp);							\
-	MNT_IUNLOCK(vfsp);						\
-} while (0)
-#define	VFS_RELE(vfsp)	do {						\
-	MNT_ILOCK(vfsp);						\
-	MNT_REL(vfsp);							\
-	MNT_IUNLOCK(vfsp);						\
-} while (0)
 
 #define	fs_vscan(vp, cr, async)	(0)
 

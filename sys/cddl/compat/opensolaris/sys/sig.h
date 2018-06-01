@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/sig.h 195702 2009-07-14 22:52:46Z kib $
+ * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sig.h 248470 2013-03-18 17:23:58Z jhb $
  */
 
 #ifndef _OPENSOLARIS_SYS_SIG_H_
@@ -55,7 +56,7 @@ issig(int why)
 		p = td->td_proc;
 		PROC_LOCK(p);
 		mtx_lock(&p->p_sigacts->ps_mtx);
-		sig = cursig(td, SIG_STOP_ALLOWED);
+		sig = cursig(td);
 		mtx_unlock(&p->p_sigacts->ps_mtx);
 		PROC_UNLOCK(p);
 		if (sig != 0)
