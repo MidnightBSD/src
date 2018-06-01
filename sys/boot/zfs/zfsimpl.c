@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Doug Rabson
  * All rights reserved.
@@ -25,8 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: stable/9/sys/boot/zfs/zfsimpl.c 284510 2015-06-17 11:48:00Z avg $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/zfs/zfsimpl.c 316323 2017-03-31 04:51:08Z ngie $");
 
 /*
  *	Stand-alone ZFS file reader.
@@ -57,6 +57,8 @@ static const char *features_for_read[] = {
 	"org.illumos:lz4_compress",
 	"com.delphix:hole_birth",
 	"com.delphix:extensible_dataset",
+	"com.delphix:embedded_data",
+	"org.open-zfs:large_blocks",
 	NULL
 };
 
@@ -65,7 +67,6 @@ static const char *features_for_read[] = {
  */
 static spa_list_t zfs_pools;
 
-static uint64_t zfs_crc64_table[256];
 static const dnode_phys_t *dnode_cache_obj = 0;
 static uint64_t dnode_cache_bn;
 static char *dnode_cache_buf;
@@ -488,7 +489,7 @@ vdev_find(uint64_t guid)
 }
 
 static vdev_t *
-vdev_create(uint64_t guid, vdev_read_t *read)
+vdev_create(uint64_t guid, vdev_read_t *_read)
 {
 	vdev_t *vdev;
 
@@ -497,7 +498,7 @@ vdev_create(uint64_t guid, vdev_read_t *read)
 	STAILQ_INIT(&vdev->v_children);
 	vdev->v_guid = guid;
 	vdev->v_state = VDEV_STATE_OFFLINE;
-	vdev->v_read = read;
+	vdev->v_read = _read;
 	vdev->v_phys_read = 0;
 	vdev->v_read_priv = 0;
 	STAILQ_INSERT_TAIL(&zfs_vdevs, vdev, v_alllink);
@@ -874,7 +875,7 @@ spa_all_status(void)
 }
 
 static int
-vdev_probe(vdev_phys_read_t *read, void *read_priv, spa_t **spap)
+vdev_probe(vdev_phys_read_t *_read, void *read_priv, spa_t **spap)
 {
 	vdev_t vtmp;
 	vdev_phys_t *vdev_label = (vdev_phys_t *) zap_scratch;
@@ -899,7 +900,7 @@ vdev_probe(vdev_phys_read_t *read, void *read_priv, spa_t **spap)
 	 * uberblock is most current.
 	 */
 	memset(&vtmp, 0, sizeof(vtmp));
-	vtmp.v_phys_read = read;
+	vtmp.v_phys_read = _read;
 	vtmp.v_read_priv = read_priv;
 	off = offsetof(vdev_label_t, vl_vdev_phys);
 	BP_ZERO(&bp);
@@ -1025,7 +1026,7 @@ vdev_probe(vdev_phys_read_t *read, void *read_priv, spa_t **spap)
 	 */
 	vdev = vdev_find(guid);
 	if (vdev) {
-		vdev->v_phys_read = read;
+		vdev->v_phys_read = _read;
 		vdev->v_read_priv = read_priv;
 		vdev->v_state = VDEV_STATE_HEALTHY;
 	} else {
@@ -1134,6 +1135,34 @@ zio_read(const spa_t *spa, const blkptr_t *bp, void *buf)
 	void *pbuf;
 	int i, error;
 
+	/*
+	 * Process data embedded in block pointer
+	 */
+	if (BP_IS_EMBEDDED(bp)) {
+		ASSERT(BPE_GET_ETYPE(bp) == BP_EMBEDDED_TYPE_DATA);
+
+		size = BPE_GET_PSIZE(bp);
+		ASSERT(size <= BPE_PAYLOAD_SIZE);
+
+		if (cpfunc != ZIO_COMPRESS_OFF)
+			pbuf = zfs_alloc(size);
+		else
+			pbuf = buf;
+
+		decode_embedded_bp_compressed(bp, pbuf);
+		error = 0;
+
+		if (cpfunc != ZIO_COMPRESS_OFF) {
+			error = zio_decompress_data(cpfunc, pbuf,
+			    size, buf, BP_GET_LSIZE(bp));
+			zfs_free(pbuf, size);
+		}
+		if (error != 0)
+			printf("ZFS: i/o error - unable to decompress block pointer data, error %d\n",
+			    error);
+		return (error);
+	}
+
 	error = EIO;
 
 	for (i = 0; i < SPA_DVAS_PER_BP; i++) {
@@ -1193,6 +1222,11 @@ dnode_read(const spa_t *spa, const dnode_phys_t *dnode, off_t offset, void *buf,
 	int bsize = dnode->dn_datablkszsec << SPA_MINBLOCKSHIFT;
 	int nlevels = dnode->dn_nlevels;
 	int i, rc;
+
+	if (bsize > SPA_MAXBLOCKSIZE) {
+		printf("ZFS: I/O error - blocks larger than 128K are not supported\n");
+		return (EIO);
+	}
 
 	/*
 	 * Note: bsize may not be a power of two here so we need to do an
@@ -1439,7 +1473,7 @@ zap_lookup(const spa_t *spa, const dnode_phys_t *dnode, const char *name, uint64
  * the directory contents.
  */
 static int
-mzap_list(const dnode_phys_t *dnode)
+mzap_list(const dnode_phys_t *dnode, int (*callback)(const char *))
 {
 	const mzap_phys_t *mz;
 	const mzap_ent_phys_t *mze;
@@ -1458,7 +1492,7 @@ mzap_list(const dnode_phys_t *dnode)
 		mze = &mz->mz_chunk[i];
 		if (mze->mze_name[0])
 			//printf("%-32s 0x%jx\n", mze->mze_name, (uintmax_t)mze->mze_value);
-			printf("%s\n", mze->mze_name);
+			callback(mze->mze_name);
 	}
 
 	return (0);
@@ -1469,7 +1503,7 @@ mzap_list(const dnode_phys_t *dnode)
  * the directory header.
  */
 static int
-fzap_list(const spa_t *spa, const dnode_phys_t *dnode)
+fzap_list(const spa_t *spa, const dnode_phys_t *dnode, int (*callback)(const char *))
 {
 	int bsize = dnode->dn_datablkszsec << SPA_MINBLOCKSHIFT;
 	zap_phys_t zh = *(zap_phys_t *) zap_scratch;
@@ -1532,9 +1566,17 @@ fzap_list(const spa_t *spa, const dnode_phys_t *dnode)
 			value = fzap_leaf_value(&zl, zc);
 
 			//printf("%s 0x%jx\n", name, (uintmax_t)value);
-			printf("%s\n", name);
+			callback((const char *)name);
 		}
 	}
+
+	return (0);
+}
+
+static int zfs_printf(const char *name)
+{
+
+	printf("%s\n", name);
 
 	return (0);
 }
@@ -1553,9 +1595,9 @@ zap_list(const spa_t *spa, const dnode_phys_t *dnode)
 
 	zap_type = *(uint64_t *) zap_scratch;
 	if (zap_type == ZBT_MICRO)
-		return mzap_list(dnode);
+		return mzap_list(dnode, zfs_printf);
 	else
-		return fzap_list(spa, dnode);
+		return fzap_list(spa, dnode, zfs_printf);
 }
 
 static int
@@ -1824,6 +1866,48 @@ zfs_list_dataset(const spa_t *spa, uint64_t objnum/*, int pos, char *entry*/)
 
 	return (zap_list(spa, &child_dir_zap) != 0);
 }
+
+int
+zfs_callback_dataset(const spa_t *spa, uint64_t objnum, int (*callback)(const char *name))
+{
+	uint64_t dir_obj, child_dir_zapobj, zap_type;
+	dnode_phys_t child_dir_zap, dir, dataset;
+	dsl_dataset_phys_t *ds;
+	dsl_dir_phys_t *dd;
+	int err;
+
+	err = objset_get_dnode(spa, &spa->spa_mos, objnum, &dataset);
+	if (err != 0) {
+		printf("ZFS: can't find dataset %ju\n", (uintmax_t)objnum);
+		return (err);
+	}
+	ds = (dsl_dataset_phys_t *) &dataset.dn_bonus;
+	dir_obj = ds->ds_dir_obj;
+
+	err = objset_get_dnode(spa, &spa->spa_mos, dir_obj, &dir);
+	if (err != 0) {
+		printf("ZFS: can't find dirobj %ju\n", (uintmax_t)dir_obj);
+		return (err);
+	}
+	dd = (dsl_dir_phys_t *)&dir.dn_bonus;
+
+	child_dir_zapobj = dd->dd_child_dir_zapobj;
+	err = objset_get_dnode(spa, &spa->spa_mos, child_dir_zapobj, &child_dir_zap);
+	if (err != 0) {
+		printf("ZFS: can't find child zap %ju\n", (uintmax_t)dir_obj);
+		return (err);
+	}
+
+	err = dnode_read(spa, &child_dir_zap, 0, zap_scratch, child_dir_zap.dn_datablkszsec * 512);
+	if (err != 0)
+		return (err);
+
+	zap_type = *(uint64_t *) zap_scratch;
+	if (zap_type == ZBT_MICRO)
+		return mzap_list(&child_dir_zap, callback);
+	else
+		return fzap_list(spa, &child_dir_zap, callback);
+}
 #endif
 
 /*
@@ -2081,7 +2165,13 @@ zfs_lookup(const struct zfsmount *mount, const char *upath, dnode_phys_t *dnode)
 				strcpy(&path[sb.st_size], p);
 			else
 				path[sb.st_size] = 0;
-			if (sb.st_size + sizeof(znode_phys_t) <= dn.dn_bonuslen) {
+			/*
+			 * Second test is purely to silence bogus compiler
+			 * warning about accessing past the end of dn_bonus.
+			 */
+			if (sb.st_size + sizeof(znode_phys_t) <=
+			    dn.dn_bonuslen && sizeof(znode_phys_t) <=
+			    sizeof(dn.dn_bonus)) {
 				memcpy(path, &dn.dn_bonus[sizeof(znode_phys_t)],
 					sb.st_size);
 			} else {

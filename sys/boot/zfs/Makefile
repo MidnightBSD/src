@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/zfs/Makefile 260096 2013-12-30 20:15:46Z dim $
 
 LIB=		zfsboot
 INTERNALLIB=
@@ -15,6 +16,9 @@ CFLAGS+=	-ffreestanding
 CFLAGS+=	-march=i386
 CFLAGS.gcc+=	-mpreferred-stack-boundary=2
 CFLAGS+=	-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3 -msoft-float
+.endif
+.if ${MACHINE_CPUARCH} == "powerpc" || ${MACHINE_CPUARCH} == "arm"
+CFLAGS+=	-msoft-float
 .endif
 .if ${MACHINE_CPUARCH} == "amd64"
 CFLAGS+=	-m32
