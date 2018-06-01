@@ -1,8 +1,8 @@
 # $MidnightBSD$
-# $FreeBSD: stable/9/sys/boot/userboot/test/Makefile 256266 2013-10-10 12:46:26Z bdrewery $
+# $FreeBSD: stable/10/sys/boot/userboot/test/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 
-NO_MAN=
+MAN=
 
 .include <bsd.own.mk>
 MK_SSP=		no

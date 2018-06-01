@@ -54527,6 +54527,7 @@ sys/boot/userboot/test/test.c -text
 sys/boot/userboot/userboot.h -text
 sys/boot/userboot/userboot/Makefile -text
 sys/boot/userboot/userboot/autoload.c -text
+sys/boot/userboot/userboot/biossmap.c svneol=native#text/plain
 sys/boot/userboot/userboot/bootinfo.c -text
 sys/boot/userboot/userboot/bootinfo32.c -text
 sys/boot/userboot/userboot/bootinfo64.c -text
@@ -54541,6 +54542,7 @@ sys/boot/userboot/userboot/main.c -text
 sys/boot/userboot/userboot/userboot_cons.c -text
 sys/boot/userboot/userboot/userboot_disk.c -text
 sys/boot/userboot/userboot/version -text
+sys/boot/userboot/zfs/Makefile svneol=native#text/plain
 sys/boot/zfs/Makefile -text
 sys/boot/zfs/devicename_stubs.c -text
 sys/boot/zfs/libzfs.h -text

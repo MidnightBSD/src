@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/userboot/userboot.h 242935 2012-11-12 22:38:54Z neel $
  */
 
 /*
@@ -31,6 +32,7 @@
  */
 #define	USERBOOT_VERSION_1      1
 #define	USERBOOT_VERSION_2      2
+#define	USERBOOT_VERSION_3      3
 
 /*
  * Exit codes from the loader
@@ -176,9 +178,22 @@ struct loader_callbacks {
          */
 	void		(*getmem)(void *arg, uint64_t *lowmem,
             uint64_t *highmem);
+
 	/*
 	 * ioctl interface to the disk device
 	 */
 	int		(*diskioctl)(void *arg, int unit, u_long cmd,
 	    void *data);
+
+	/*
+	 * Returns an environment variable in the form "name=value".
+	 *
+	 * If there are no more variables that need to be set in the
+	 * loader environment then return NULL.
+	 *
+	 * 'num' is used as a handle for the callback to identify which
+	 * environment variable to return next. It will begin at 0 and
+	 * each invocation will add 1 to the previous value of 'num'.
+	 */
+	const char *	(*getenv)(void *arg, int num);
 };

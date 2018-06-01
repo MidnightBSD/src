@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Google, Inc.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/userboot/test/test.c 242935 2012-11-12 22:38:54Z neel $
  */
 
 #include <sys/types.h>
@@ -364,6 +365,18 @@ test_getmem(void *arg, uint64_t *lowmem, uint64_t *highmem)
         *highmem = 0;
 }
 
+const char *
+test_getenv(void *arg, int idx)
+{
+	static const char *vars[] = {
+		"foo=bar",
+		"bar=barbar",
+		NULL
+	};
+
+	return (vars[idx]);
+}
+
 struct loader_callbacks cb = {
 	.putc = test_putc,
 	.getc = test_getc,
@@ -391,6 +404,8 @@ struct loader_callbacks cb = {
 	.delay = test_delay,
 	.exit = test_exit,
         .getmem = test_getmem,
+
+	.getenv = test_getenv,
 };
 
 void
@@ -450,5 +465,5 @@ main(int argc, char** argv)
 	term.c_lflag &= ~(ICANON|ECHO);
 	tcsetattr(0, TCSAFLUSH, &term);
 
-	func(&cb, NULL, USERBOOT_VERSION_2, disk_fd >= 0);
+	func(&cb, NULL, USERBOOT_VERSION_3, disk_fd >= 0);
 }

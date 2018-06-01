@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/userboot/userboot/devicename.c 268932 2014-07-20 22:54:03Z jhb $");
 
 #include <stand.h>
 #include <string.h>
@@ -34,6 +34,10 @@ __FBSDID("$FreeBSD$");
 #include "bootstrap.h"
 #include "disk.h"
 #include "libuserboot.h"
+
+#if defined(USERBOOT_ZFS_SUPPORT)
+#include "../zfs/libzfs.h"
+#endif
 
 static int	userboot_parsedev(struct disk_devdesc **dev, const char *devspec, const char **path);
 
@@ -120,7 +124,6 @@ userboot_parsedev(struct disk_devdesc **dev, const char *devspec, const char **p
 
     case DEVT_CD:
     case DEVT_NET:
-    case DEVT_ZFS:
 	unit = 0;
 
 	if (*np && (*np != ':')) {
@@ -141,6 +144,16 @@ userboot_parsedev(struct disk_devdesc **dev, const char *devspec, const char **p
 	if (path != NULL)
 	    *path = (*cp == 0) ? cp : cp + 1;
 	break;
+
+    case DEVT_ZFS:
+#if defined(USERBOOT_ZFS_SUPPORT)
+	    err = zfs_parsedev((struct zfs_devdesc *)idev, np, path);
+	    if (err != 0)
+		    goto fail;
+	    break;
+#else
+	    /* FALLTHROUGH */
+#endif
 
     default:
 	err = EINVAL;
@@ -180,8 +193,15 @@ userboot_fmtdev(void *vdev)
 	return (disk_fmtdev(vdev));
 
     case DEVT_NET:
-    case DEVT_ZFS:
 	sprintf(buf, "%s%d:", dev->d_dev->dv_name, dev->d_unit);
+	break;
+
+    case DEVT_ZFS:
+#if defined(USERBOOT_ZFS_SUPPORT)
+	return (zfs_fmtdev(vdev));
+#else
+	sprintf(buf, "%s%d:", dev->d_dev->dv_name, dev->d_unit);
+#endif
 	break;
     }
     return(buf);

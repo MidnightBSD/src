@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/userboot/userboot/main.c 295475 2016-02-10 17:49:22Z allanjude $");
 
 #include <stand.h>
 #include <string.h>
@@ -37,7 +37,16 @@ __FBSDID("$FreeBSD$");
 #include "disk.h"
 #include "libuserboot.h"
 
-#define	USERBOOT_VERSION	USERBOOT_VERSION_2
+#if defined(USERBOOT_ZFS_SUPPORT)
+#include "../zfs/libzfs.h"
+
+static void userboot_zfs_probe(void);
+static int userboot_zfs_found;
+#endif
+
+#define	USERBOOT_VERSION	USERBOOT_VERSION_3
+
+#define	MALLOCSZ		(10*1024*1024)
 
 struct loader_callbacks *callbacks;
 void *callbacks_arg;
@@ -70,7 +79,8 @@ exit(int v)
 void
 loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 {
-	static char malloc[512*1024];
+	static char mallocbuf[MALLOCSZ];
+	const char *var;
 	int i;
 
         if (version != USERBOOT_VERSION)
@@ -82,22 +92,14 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 
 	/*
 	 * initialise the heap as early as possible.  Once this is done,
-	 * alloc() is usable. The stack is buried inside us, so this is
-	 * safe.
+	 * alloc() is usable.
 	 */
-	setheap((void *)malloc, (void *)(malloc + 512*1024));
+	setheap((void *)mallocbuf, (void *)(mallocbuf + sizeof(mallocbuf)));
 
         /*
          * Hook up the console
          */
 	cons_probe();
-
-	/*
-	 * March through the device switch probing for things.
-	 */
-	for (i = 0; devsw[i] != NULL; i++)
-		if (devsw[i]->dv_init != NULL)
-			(devsw[i]->dv_init)();
 
 	printf("\n");
 	printf("%s, Revision %s\n", bootprog_name, bootprog_rev);
@@ -108,11 +110,32 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 
 	setenv("LINES", "24", 1);	/* optional */
 
+	/*
+	 * Set custom environment variables
+	 */
+	i = 0;
+	while (1) {
+		var = CALLBACK(getenv, i++);
+		if (var == NULL)
+			break;
+		putenv(var);
+	}
+
 	archsw.arch_autoload = userboot_autoload;
 	archsw.arch_getdev = userboot_getdev;
 	archsw.arch_copyin = userboot_copyin;
 	archsw.arch_copyout = userboot_copyout;
 	archsw.arch_readin = userboot_readin;
+#if defined(USERBOOT_ZFS_SUPPORT)
+	archsw.arch_zfs_probe = userboot_zfs_probe;
+#endif
+
+	/*
+	 * March through the device switch probing for things.
+	 */
+	for (i = 0; devsw[i] != NULL; i++)
+		if (devsw[i]->dv_init != NULL)
+			(devsw[i]->dv_init)();
 
 	extract_currdev();
 
@@ -135,6 +158,20 @@ extract_currdev(void)
 
 	//bzero(&dev, sizeof(dev));
 
+#if defined(USERBOOT_ZFS_SUPPORT)
+	if (userboot_zfs_found) {
+		struct zfs_devdesc zdev;
+	
+		/* Leave the pool/root guid's unassigned */
+		bzero(&zdev, sizeof(zdev));
+		zdev.d_dev = &zfs_dev;
+		zdev.d_type = zdev.d_dev->dv_type;
+		
+		dev = *(struct disk_devdesc *)&zdev;
+		init_zfs_bootenv(zfs_fmtdev(&dev));
+	} else
+#endif
+
 	if (userboot_disk_maxunit > 0) {
 		dev.d_dev = &userboot_disk;
 		dev.d_type = dev.d_dev->dv_type;
@@ -142,11 +179,13 @@ extract_currdev(void)
 		dev.d_slice = 0;
 		dev.d_partition = 0;
 		/*
-		 * Figure out if we are using MBR or GPT - for GPT we
-		 * set the partition to 0 since everything is a GPT slice.
+		 * If we cannot auto-detect the partition type then
+		 * access the disk as a raw device.
 		 */
-		if (dev.d_dev->dv_open(NULL, &dev))
-			dev.d_partition = 255;
+		if (dev.d_dev->dv_open(NULL, &dev)) {
+			dev.d_slice = -1;
+			dev.d_partition = -1;
+		}
 	} else {
 		dev.d_dev = &host_dev;
 		dev.d_type = dev.d_dev->dv_type;
@@ -158,6 +197,81 @@ extract_currdev(void)
 	env_setenv("loaddev", EV_VOLATILE, userboot_fmtdev(&dev),
             env_noset, env_nounset);
 }
+
+#if defined(USERBOOT_ZFS_SUPPORT)
+static void
+userboot_zfs_probe(void)
+{
+	char devname[32];
+	uint64_t pool_guid;
+	int unit;
+
+	/*
+	 * Open all the disks we can find and see if we can reconstruct
+	 * ZFS pools from them. Record if any were found.
+	 */
+	for (unit = 0; unit < userboot_disk_maxunit; unit++) {
+		sprintf(devname, "disk%d:", unit);
+		pool_guid = 0;
+		zfs_probe_dev(devname, &pool_guid);
+		if (pool_guid != 0)
+			userboot_zfs_found = 1;
+	}
+}
+
+COMMAND_SET(lszfs, "lszfs", "list child datasets of a zfs dataset",
+	    command_lszfs);
+
+static int
+command_lszfs(int argc, char *argv[])
+{
+	int err;
+
+	if (argc != 2) {
+		command_errmsg = "a single dataset must be supplied";
+		return (CMD_ERROR);
+	}
+
+	err = zfs_list(argv[1]);
+	if (err != 0) {
+		command_errmsg = strerror(err);
+		return (CMD_ERROR);
+	}
+	return (CMD_OK);
+}
+
+COMMAND_SET(reloadbe, "reloadbe", "refresh the list of ZFS Boot Environments",
+	    command_reloadbe);
+
+static int
+command_reloadbe(int argc, char *argv[])
+{
+	int err;
+	char *root;
+
+	if (argc > 2) {
+		command_errmsg = "wrong number of arguments";
+		return (CMD_ERROR);
+	}
+
+	if (argc == 2) {
+		err = zfs_bootenv(argv[1]);
+	} else {
+		root = getenv("zfs_be_root");
+		if (root == NULL) {
+			return (CMD_OK);
+		}
+		err = zfs_bootenv(root);
+	}
+
+	if (err != 0) {
+		command_errmsg = strerror(err);
+		return (CMD_ERROR);
+	}
+
+	return (CMD_OK);
+}
+#endif /* USERBOOT_ZFS_SUPPORT */
 
 COMMAND_SET(quit, "quit", "exit the loader", command_quit);
 

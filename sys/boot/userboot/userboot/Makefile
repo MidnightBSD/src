@@ -1,7 +1,7 @@
 # $MidnightBSD$
-# $FreeBSD: stable/9/sys/boot/userboot/userboot/Makefile 256266 2013-10-10 12:46:26Z bdrewery $
+# $FreeBSD: stable/10/sys/boot/userboot/userboot/Makefile 314922 2017-03-08 22:39:45Z pfg $
 
-NO_MAN=
+MAN=
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -12,6 +12,7 @@ STRIP=
 LIBDIR=		/boot
 
 SRCS=		autoload.c
+SRCS+=		biossmap.c
 SRCS+=		bootinfo.c
 SRCS+=		bootinfo32.c
 SRCS+=		bootinfo64.c
@@ -45,9 +46,16 @@ CLEANFILES=	vers.c
 
 .if ${MK_FORTH} != "no"
 BOOT_FORTH=	yes
-CFLAGS+=        -DBOOT_FORTH -I${.CURDIR}/../../ficl -I${.CURDIR}/../../ficl/i386
+CFLAGS+=        -DBOOT_FORTH -I${.CURDIR}/../../ficl
+CFLAGS+=        -I${.CURDIR}/../../ficl/i386
+CFLAGS+=	-DBF_DICTSIZE=15000
 LIBFICL=	${.OBJDIR}/../ficl/libficl.a
 LIBSTAND=	${.OBJDIR}/../libstand/libstand.a
+.endif
+
+.if ${MK_ZFS} != "no"
+CFLAGS+=	-DUSERBOOT_ZFS_SUPPORT
+LIBZFSBOOT=	${.OBJDIR}/../zfs/libzfsboot.a
 .endif
 
 # Always add MI sources 
@@ -55,7 +63,7 @@ LIBSTAND=	${.OBJDIR}/../libstand/libstand.a
 .include	"${.CURDIR}/../../common/Makefile.inc"
 CFLAGS+=	-I${.CURDIR}/../../common
 CFLAGS+=	-I.
-DPADD=		${LIBFICL} ${LIBSTAND}
-LDADD=		${LIBFICL} ${LIBSTAND}
+DPADD+=		${LIBFICL} ${LIBZFSBOOT} ${LIBSTAND} 
+LDADD+=		${LIBFICL} ${LIBZFSBOOT} ${LIBSTAND}
 
 .include <bsd.lib.mk>
