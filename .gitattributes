@@ -55103,6 +55103,9 @@ sys/conf/dtb.mk svneol=native#text/plain
 sys/conf/files -text
 sys/conf/files.amd64 -text
 sys/conf/files.i386 -text
+sys/conf/files.pc98 -text
+sys/conf/files.powerpc -text
+sys/conf/files.sparc64 -text
 sys/conf/kern.mk -text
 sys/conf/kern.post.mk -text
 sys/conf/kern.pre.mk -text
