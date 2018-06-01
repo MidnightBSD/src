@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/amd64/conf/Makefile,v 1.9 2003/02/26 23:36:58 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/amd64/conf/Makefile 201813 2010-01-08 18:57:31Z bz $
 
 TARGET=amd64
 
