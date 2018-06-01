@@ -3,7 +3,7 @@
  * This file is freeware. You are free to use it and add your own
  * license.
  *
- * $FreeBSD: src/sys/cddl/dev/prototype.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: stable/10/sys/cddl/dev/prototype.c 179237 2008-05-23 05:59:42Z jb $
  *
  */
 

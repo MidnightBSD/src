@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +21,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/dtmalloc/dtmalloc.c 252860 2013-07-06 03:39:40Z markj $
+ * $FreeBSD: stable/10/sys/cddl/dev/dtmalloc/dtmalloc.c 252325 2013-06-28 03:14:40Z markj $
  *
  */
 

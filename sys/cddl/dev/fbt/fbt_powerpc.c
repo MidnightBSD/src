@@ -20,8 +20,9 @@
  * CDDL HEADER END
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
+ * Portions Copyright 2013 Justin Hibbits jhibbits@freebsd.org
  *
- * $FreeBSD: stable/10/sys/cddl/dev/fbt/fbt.c 282748 2015-05-11 07:54:39Z avg $
+ * $FreeBSD: stable/10/sys/cddl/dev/fbt/fbt_powerpc.c 260670 2014-01-15 05:19:37Z jhibbits $
  *
  */
 
@@ -57,6 +58,7 @@
 #include <sys/sysproto.h>
 #include <sys/uio.h>
 #include <sys/unistd.h>
+#include <machine/md_var.h>
 #include <machine/stdarg.h>
 
 #include <sys/dtrace.h>
@@ -64,23 +66,14 @@
 
 static MALLOC_DEFINE(M_FBT, "fbt", "Function Boundary Tracing");
 
-#define	FBT_PUSHL_EBP		0x55
-#define	FBT_MOVL_ESP_EBP0_V0	0x8b
-#define	FBT_MOVL_ESP_EBP1_V0	0xec
-#define	FBT_MOVL_ESP_EBP0_V1	0x89
-#define	FBT_MOVL_ESP_EBP1_V1	0xe5
-#define	FBT_REX_RSP_RBP		0x48
-
-#define	FBT_POPL_EBP		0x5d
-#define	FBT_RET			0xc3
-#define	FBT_RET_IMM16		0xc2
-#define	FBT_LEAVE		0xc9
-
-#ifdef __amd64__
-#define	FBT_PATCHVAL		0xcc
-#else
-#define	FBT_PATCHVAL		0xf0
-#endif
+#define FBT_PATCHVAL		0x7c810808
+#define FBT_MFLR_R0		0x7c0802a6
+#define FBT_MTLR_R0		0x7c0803a6
+#define FBT_BLR			0x4e800020
+#define FBT_BCTR		0x4e800030
+#define FBT_BRANCH		0x48000000
+#define FBT_BR_MASK		0x03fffffc
+#define FBT_IS_JUMP(instr)	((instr & ~FBT_BR_MASK) == FBT_BRANCH)
 
 static d_open_t	fbt_open;
 static int	fbt_unload(void);
@@ -127,10 +120,10 @@ static dtrace_pops_t fbt_pops = {
 
 typedef struct fbt_probe {
 	struct fbt_probe *fbtp_hashnext;
-	uint8_t		*fbtp_patchpoint;
+	uint32_t	*fbtp_patchpoint;
 	int8_t		fbtp_rval;
-	uint8_t		fbtp_patchval;
-	uint8_t		fbtp_savedval;
+	uint32_t	fbtp_patchval;
+	uint32_t	fbtp_savedval;
 	uintptr_t	fbtp_roffset;
 	dtrace_id_t	fbtp_id;
 	const char	*fbtp_name;
@@ -149,69 +142,45 @@ static int			fbt_probetab_size;
 static int			fbt_probetab_mask;
 static int			fbt_verbose = 0;
 
-static void
-fbt_doubletrap(void)
-{
-	fbt_probe_t *fbt;
-	int i;
-
-	for (i = 0; i < fbt_probetab_size; i++) {
-		fbt = fbt_probetab[i];
-
-		for (; fbt != NULL; fbt = fbt->fbtp_next)
-			*fbt->fbtp_patchpoint = fbt->fbtp_savedval;
-	}
-}
-
 static int
 fbt_invop(uintptr_t addr, uintptr_t *stack, uintptr_t rval)
 {
+	struct trapframe *frame = (struct trapframe *)stack;
 	solaris_cpu_t *cpu = &solaris_cpu[curcpu];
-	uintptr_t stack0, stack1, stack2, stack3, stack4;
 	fbt_probe_t *fbt = fbt_probetab[FBT_ADDR2NDX(addr)];
+	uintptr_t tmp;
 
 	for (; fbt != NULL; fbt = fbt->fbtp_hashnext) {
 		if ((uintptr_t)fbt->fbtp_patchpoint == addr) {
 			fbt->fbtp_invop_cnt++;
 			if (fbt->fbtp_roffset == 0) {
-				int i = 0;
-				/*
-				 * When accessing the arguments on the stack,
-				 * we must protect against accessing beyond
-				 * the stack.  We can safely set NOFAULT here
-				 * -- we know that interrupts are already
-				 * disabled.
-				 */
-				DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);
-				cpu->cpu_dtrace_caller = stack[i++];
-				stack0 = stack[i++];
-				stack1 = stack[i++];
-				stack2 = stack[i++];
-				stack3 = stack[i++];
-				stack4 = stack[i++];
-				DTRACE_CPUFLAG_CLEAR(CPU_DTRACE_NOFAULT |
-				    CPU_DTRACE_BADADDR);
+				cpu->cpu_dtrace_caller = addr;
 
-				dtrace_probe(fbt->fbtp_id, stack0, stack1,
-				    stack2, stack3, stack4);
+				dtrace_probe(fbt->fbtp_id, frame->fixreg[3],
+				    frame->fixreg[4], frame->fixreg[5],
+				    frame->fixreg[6], frame->fixreg[7]);
 
 				cpu->cpu_dtrace_caller = 0;
 			} else {
-#ifdef __amd64__
-				/*
-				 * On amd64, we instrument the ret, not the
-				 * leave.  We therefore need to set the caller
-				 * to assure that the top frame of a stack()
-				 * action is correct.
-				 */
-				DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);
-				cpu->cpu_dtrace_caller = stack[0];
-				DTRACE_CPUFLAG_CLEAR(CPU_DTRACE_NOFAULT |
-				    CPU_DTRACE_BADADDR);
-#endif
 
 				dtrace_probe(fbt->fbtp_id, fbt->fbtp_roffset,
 				    rval, 0, 0, 0);
+				/*
+				 * The caller doesn't have the fbt item, so
+				 * fixup tail calls here.
+				 */
+				if (fbt->fbtp_rval == DTRACE_INVOP_JUMP) {
+					frame->srr0 = (uintptr_t)fbt->fbtp_patchpoint;
+					tmp = fbt->fbtp_savedval & FBT_BR_MASK;
+					/* Sign extend. */
+					if (tmp & 0x02000000)
+#ifdef __powerpc64__
+						tmp |= 0xfffffffffc000000ULL;
+#else
+						tmp |= 0xfc000000UL;
+#endif
+					frame->srr0 += tmp;
+				}
 				cpu->cpu_dtrace_caller = 0;
 			}
 
@@ -230,8 +199,11 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	const char *name = symval->name;
 	fbt_probe_t *fbt, *retfbt;
 	int j;
-	int size;
-	u_int8_t *instr, *limit;
+	u_int32_t *instr, *limit;
+
+	/* PowerPC64 uses '.' prefixes on symbol names, ignore it. */
+	if (name[0] == '.')
+		name++;
 
 	if (strncmp(name, "dtrace_", 7) == 0 &&
 	    strncmp(name, "dtrace_safe_", 12) != 0) {
@@ -247,40 +219,15 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	if (name[0] == '_' && name[1] == '_')
 		return (0);
 
-	size = symval->size;
+	instr = (u_int32_t *) symval->value;
+	limit = (u_int32_t *) (symval->value + symval->size);
 
-	instr = (u_int8_t *) symval->value;
-	limit = (u_int8_t *) symval->value + symval->size;
-
-#ifdef __amd64__
-	while (instr < limit) {
-		if (*instr == FBT_PUSHL_EBP)
+	for (; instr < limit; instr++)
+		if (*instr == FBT_MFLR_R0)
 			break;
 
-		if ((size = dtrace_instr_size(instr)) <= 0)
-			break;
-
-		instr += size;
-	}
-
-	if (instr >= limit || *instr != FBT_PUSHL_EBP) {
-		/*
-		 * We either don't save the frame pointer in this
-		 * function, or we ran into some disassembly
-		 * screw-up.  Either way, we bail.
-		 */
+	if (*instr != FBT_MFLR_R0)
 		return (0);
-	}
-#else
-	if (instr[0] != FBT_PUSHL_EBP)
-		return (0);
-
-	if (!(instr[1] == FBT_MOVL_ESP_EBP0_V0 &&
-	    instr[2] == FBT_MOVL_ESP_EBP1_V0) &&
-	    !(instr[1] == FBT_MOVL_ESP_EBP0_V1 &&
-	    instr[2] == FBT_MOVL_ESP_EBP1_V1))
-		return (0);
-#endif
 
 	fbt = malloc(sizeof (fbt_probe_t), M_FBT, M_WAITOK | M_ZERO);
 	fbt->fbtp_name = name;
@@ -289,9 +236,9 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	fbt->fbtp_patchpoint = instr;
 	fbt->fbtp_ctl = lf;
 	fbt->fbtp_loadcnt = lf->loadcnt;
-	fbt->fbtp_rval = DTRACE_INVOP_PUSHL_EBP;
 	fbt->fbtp_savedval = *instr;
 	fbt->fbtp_patchval = FBT_PATCHVAL;
+	fbt->fbtp_rval = DTRACE_INVOP_MFLR_R0;
 	fbt->fbtp_symindx = symindx;
 
 	fbt->fbtp_hashnext = fbt_probetab[FBT_ADDR2NDX(instr)];
@@ -305,61 +252,40 @@ again:
 		return (0);
 
 	/*
-	 * If this disassembly fails, then we've likely walked off into
-	 * a jump table or some other unsuitable area.  Bail out of the
-	 * disassembly now.
-	 */
-	if ((size = dtrace_instr_size(instr)) <= 0)
-		return (0);
-
-#ifdef __amd64__
-	/*
-	 * We only instrument "ret" on amd64 -- we don't yet instrument
-	 * ret imm16, largely because the compiler doesn't seem to
-	 * (yet) emit them in the kernel...
-	 */
-	if (*instr != FBT_RET) {
-		instr += size;
-		goto again;
-	}
-#else
-	if (!(size == 1 &&
-	    (*instr == FBT_POPL_EBP || *instr == FBT_LEAVE) &&
-	    (*(instr + 1) == FBT_RET ||
-	    *(instr + 1) == FBT_RET_IMM16))) {
-		instr += size;
-		goto again;
-	}
-#endif
-
-	/*
 	 * We (desperately) want to avoid erroneously instrumenting a
-	 * jump table, especially given that our markers are pretty
-	 * short:  two bytes on x86, and just one byte on amd64.  To
-	 * determine if we're looking at a true instruction sequence
-	 * or an inline jump table that happens to contain the same
-	 * byte sequences, we resort to some heuristic sleeze:  we
-	 * treat this instruction as being contained within a pointer,
-	 * and see if that pointer points to within the body of the
-	 * function.  If it does, we refuse to instrument it.
+	 * jump table To determine if we're looking at a true instruction
+	 * sequence or an inline jump table that happens to contain the same
+	 * byte sequences, we resort to some heuristic sleeze:  we treat this
+	 * instruction as being contained within a pointer, and see if that
+	 * pointer points to within the body of the function.  If it does, we
+	 * refuse to instrument it.
 	 */
-	for (j = 0; j < sizeof (uintptr_t); j++) {
-		caddr_t check = (caddr_t) instr - j;
-		uint8_t *ptr;
+	{
+		uint32_t *ptr;
 
-		if (check < symval->value)
-			break;
+		ptr = *(uint32_t **)instr;
 
-		if (check + sizeof (caddr_t) > (caddr_t)limit)
-			continue;
-
-		ptr = *(uint8_t **)check;
-
-		if (ptr >= (uint8_t *) symval->value && ptr < limit) {
-			instr += size;
+		if (ptr >= (uint32_t *) symval->value && ptr < limit) {
+			instr++;
 			goto again;
 		}
 	}
+
+	if (*instr != FBT_MTLR_R0) {
+		instr++;
+		goto again;
+	}
+
+	instr++;
+
+	for (j = 0; j < 12 && instr < limit; j++, instr++) {
+		if ((*instr == FBT_BCTR) || (*instr == FBT_BLR) ||
+		    FBT_IS_JUMP(*instr))
+			break;
+	}
+
+	if (!(*instr == FBT_BCTR || *instr == FBT_BLR || FBT_IS_JUMP(*instr)))
+		goto again;
 
 	/*
 	 * We have a winner!
@@ -369,7 +295,7 @@ again:
 
 	if (retfbt == NULL) {
 		fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
-		    name, FBT_RETURN, 3, fbt);
+		    name, FBT_RETURN, 5, fbt);
 	} else {
 		retfbt->fbtp_next = fbt;
 		fbt->fbtp_id = retfbt->fbtp_id;
@@ -381,22 +307,12 @@ again:
 	fbt->fbtp_loadcnt = lf->loadcnt;
 	fbt->fbtp_symindx = symindx;
 
-#ifndef __amd64__
-	if (*instr == FBT_POPL_EBP) {
-		fbt->fbtp_rval = DTRACE_INVOP_POPL_EBP;
-	} else {
-		ASSERT(*instr == FBT_LEAVE);
-		fbt->fbtp_rval = DTRACE_INVOP_LEAVE;
-	}
-	fbt->fbtp_roffset =
-	    (uintptr_t)(instr - (uint8_t *) symval->value) + 1;
-
-#else
-	ASSERT(*instr == FBT_RET);
-	fbt->fbtp_rval = DTRACE_INVOP_RET;
-	fbt->fbtp_roffset =
-	    (uintptr_t)(instr - (uint8_t *) symval->value);
-#endif
+	if (*instr == FBT_BCTR)
+		fbt->fbtp_rval = DTRACE_INVOP_BCTR;
+	else if (*instr == FBT_BLR)
+		fbt->fbtp_rval = DTRACE_INVOP_RET;
+	else
+		fbt->fbtp_rval = DTRACE_INVOP_JUMP;
 
 	fbt->fbtp_savedval = *instr;
 	fbt->fbtp_patchval = FBT_PATCHVAL;
@@ -405,7 +321,7 @@ again:
 
 	lf->fbt_nentries++;
 
-	instr += size;
+	instr += 4;
 	goto again;
 }
 
@@ -426,6 +342,13 @@ fbt_provide_module(void *arg, modctl_t *lf)
 	 * where prohibited.
 	 */
 	if (strcmp(modname, "dtrace") == 0)
+		return;
+
+	/*
+	 * The cyclic timer subsystem can be built as a module and DTrace
+	 * depends on that, so it is ineligible too.
+	 */
+	if (strcmp(modname, "cyclic") == 0)
 		return;
 
 	/*
@@ -515,6 +438,7 @@ fbt_enable(void *arg, dtrace_id_t id, void *parg)
 
 	for (; fbt != NULL; fbt = fbt->fbtp_next) {
 		*fbt->fbtp_patchpoint = fbt->fbtp_patchval;
+		__syncicache(fbt->fbtp_patchpoint, 4);
 	}
 }
 
@@ -530,8 +454,10 @@ fbt_disable(void *arg, dtrace_id_t id, void *parg)
 	if ((ctl->loadcnt != fbt->fbtp_loadcnt))
 		return;
 
-	for (; fbt != NULL; fbt = fbt->fbtp_next)
+	for (; fbt != NULL; fbt = fbt->fbtp_next) {
 		*fbt->fbtp_patchpoint = fbt->fbtp_savedval;
+		__syncicache(fbt->fbtp_patchpoint, 4);
+	}
 }
 
 static void
@@ -545,8 +471,10 @@ fbt_suspend(void *arg, dtrace_id_t id, void *parg)
 	if ((ctl->loadcnt != fbt->fbtp_loadcnt))
 		return;
 
-	for (; fbt != NULL; fbt = fbt->fbtp_next)
+	for (; fbt != NULL; fbt = fbt->fbtp_next) {
 		*fbt->fbtp_patchpoint = fbt->fbtp_savedval;
+		__syncicache(fbt->fbtp_patchpoint, 4);
+	}
 }
 
 static void
@@ -560,8 +488,10 @@ fbt_resume(void *arg, dtrace_id_t id, void *parg)
 	if ((ctl->loadcnt != fbt->fbtp_loadcnt))
 		return;
 
-	for (; fbt != NULL; fbt = fbt->fbtp_next)
+	for (; fbt != NULL; fbt = fbt->fbtp_next) {
 		*fbt->fbtp_patchpoint = fbt->fbtp_patchval;
+		__syncicache(fbt->fbtp_patchpoint, 4);
+	}
 }
 
 static int
@@ -1350,7 +1280,6 @@ fbt_load(void *dummy)
 	fbt_probetab =
 	    malloc(fbt_probetab_size * sizeof (fbt_probe_t *), M_FBT, M_WAITOK | M_ZERO);
 
-	dtrace_doubletrap_func = fbt_doubletrap;
 	dtrace_invop_add(fbt_invop);
 
 	if (dtrace_register("fbt", &fbt_attr, DTRACE_PRIV_USER,
@@ -1361,6 +1290,7 @@ fbt_load(void *dummy)
 	linker_file_foreach(fbt_linker_file_cb, NULL);
 }
 
+
 static int
 fbt_unload()
 {
@@ -1368,8 +1298,6 @@ fbt_unload()
 
 	/* De-register the invalid opcode handler. */
 	dtrace_invop_remove(fbt_invop);
-
-	dtrace_doubletrap_func = NULL;
 
 	/* De-register this DTrace provider. */
 	if ((error = dtrace_unregister(fbt_id)) != 0)

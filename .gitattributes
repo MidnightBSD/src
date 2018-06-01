@@ -54946,6 +54946,7 @@ sys/cddl/dev/dtrace/x86/dis_tables.h svneol=native#text/plain
 sys/cddl/dev/dtrace/x86/regset.h svneol=native#text/plain
 sys/cddl/dev/fasttrap/fasttrap.c -text
 sys/cddl/dev/fbt/fbt.c -text
+sys/cddl/dev/fbt/fbt_powerpc.c svneol=native#text/plain
 sys/cddl/dev/lockstat/lockstat.c -text
 sys/cddl/dev/profile/profile.c -text
 sys/cddl/dev/prototype.c -text

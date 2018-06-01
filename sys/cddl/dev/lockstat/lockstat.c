@@ -21,7 +21,7 @@
  *
  * Portions Copyright (c) 2008-2009 Stacey Son <sson@FreeBSD.org> 
  *
- * $FreeBSD: release/9.2.0/sys/cddl/dev/lockstat/lockstat.c 192853 2009-05-26 20:28:22Z sson $
+ * $FreeBSD: stable/10/sys/cddl/dev/lockstat/lockstat.c 285759 2015-07-21 17:16:37Z markj $
  *
  */
 
@@ -46,7 +46,8 @@
 #include <sys/dtrace.h>
 #include <sys/lockstat.h>
 
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__i386__) || defined(__amd64__) || \
+	defined(__mips__) || defined(__powerpc__)
 #define LOCKSTAT_AFRAMES 1
 #else
 #error "architecture not supported"
@@ -66,12 +67,12 @@ typedef struct lockstat_probe {
 	char		*lsp_name;
 	int		lsp_probe;
 	dtrace_id_t	lsp_id;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	int		lsp_frame;
 #endif
 } lockstat_probe_t;
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 lockstat_probe_t lockstat_probes[] =
 {
   /* Spin Locks */
@@ -161,6 +162,8 @@ lockstat_enable(void *arg, dtrace_id_t id, void *parg)
 
 	ASSERT(!lockstat_probemap[probe->lsp_probe]);
 
+	lockstat_enabled++;
+
 	lockstat_probemap[probe->lsp_probe] = id;
 #ifdef DOODAD
 	membar_producer();
@@ -183,6 +186,8 @@ lockstat_disable(void *arg, dtrace_id_t id, void *parg)
 	int i;
 
 	ASSERT(lockstat_probemap[probe->lsp_probe]);
+
+	lockstat_enabled--;
 
 	lockstat_probemap[probe->lsp_probe] = 0;
 #ifdef DOODAD
@@ -228,7 +233,7 @@ lockstat_provide(void *arg, dtrace_probedesc_t *desc)
 			continue;
 
 		ASSERT(!probe->lsp_id);
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		probe->lsp_id = dtrace_probe_create(lockstat_id,
 		    "kernel", probe->lsp_func, probe->lsp_name,
 		    probe->lsp_frame, probe);
