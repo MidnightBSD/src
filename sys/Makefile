@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/Makefile 319309 2017-05-31 08:47:09Z ngie $
 
 .include <bsd.own.mk>
 
@@ -10,12 +11,12 @@ SUBDIR=	boot
 # Directories to include in cscope name file and TAGS.
 CSCOPEDIRS=	boot bsm cam cddl compat conf contrib crypto ddb dev fs gdb \
 		geom gnu isa kern libkern modules net net80211 netatalk \
-		netgraph netinet netinet6 netipsec netipx netnatm netncp \
+		netgraph netinet netinet6 netipsec netipx netnatm \
 		netsmb nfs nfsclient nfsserver nlm ofed opencrypto \
 		pci rpc security sys ufs vm xdr xen ${CSCOPE_ARCHDIR}
 .if !defined(CSCOPE_ARCHDIR)
 .if defined(ALL_ARCH)
-CSCOPE_ARCHDIR = amd64 i386 x86
+CSCOPE_ARCHDIR = amd64 arm i386 ia64 mips pc98 powerpc sparc64 x86
 .else
 CSCOPE_ARCHDIR = ${MACHINE} 
 .if ${MACHINE} != ${MACHINE_CPUARCH}
@@ -38,14 +39,15 @@ HTAGSFLAGS+= -at `awk -F= '/^RELEASE *=/{release=$2}; END {print "MidnightBSD", 
 # You need the devel/cscope port for this.
 cscope: cscope.out
 cscope.out: ${.CURDIR}/cscope.files
-	cd ${.CURDIR}; cscope -k -buq -p4
+	cd ${.CURDIR}; cscope -k -buq -p4 -v
 
 ${.CURDIR}/cscope.files: .PHONY
 	cd ${.CURDIR}; \
 		find ${CSCOPEDIRS} -name "*.[chSsly]" -a -type f > ${.TARGET}
 
 cscope-clean:
-	rm -f cscope.files cscope.out cscope.in.out cscope.po.out
+	cd ${.CURDIR}; \
+	    rm -f cscope.files cscope.out cscope.in.out cscope.po.out
 
 # You need the devel/global and one of editor/emacs* ports for that.
 TAGS ${.CURDIR}/TAGS: ${.CURDIR}/cscope.files
