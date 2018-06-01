@@ -1,9 +1,10 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/i386/mbr/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	mbr
 STRIP=
 BINMODE=${NOBINMODE}
-NO_MAN=
+MAN=
 SRCS=	${PROG}.s
 
 # MBR flags: 0x80 -- try packet interface (also known as EDD or LBA)
