@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Robert N. M. Watson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/amd64/mp_watchdog.c 314667 2017-03-04 13:03:31Z avg $
  */
 
 #include "opt_mp_watchdog.h"
@@ -86,7 +87,7 @@ static void
 watchdog_init(void *arg)
 {
 
-	callout_init(&watchdog_callout, CALLOUT_MPSAFE);
+	callout_init(&watchdog_callout, 1);
 	if (watchdog_cpu != -1)
 		watchdog_change(watchdog_cpu);
 }

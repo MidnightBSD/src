@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/amd64/atpic_vector.S 204309 2010-02-25 14:13:39Z attilio $
  */
 
 /*

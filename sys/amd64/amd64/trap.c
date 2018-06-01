@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
@@ -38,13 +39,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/trap.c 333370 2018-05-08 17:05:39Z emaste $");
 
 /*
  * AMD64 Trap and System call handling
  */
 
 #include "opt_clock.h"
+#include "opt_compat.h"
 #include "opt_cpu.h"
 #include "opt_hwpmc_hooks.h"
 #include "opt_isa.h"
@@ -96,30 +98,10 @@ PMC_SOFT_DEFINE( , , page_fault, write);
 
 #ifdef KDTRACE_HOOKS
 #include <sys/dtrace_bsd.h>
-
-/*
- * This is a hook which is initialised by the dtrace module
- * to handle traps which might occur during DTrace probe
- * execution.
- */
-dtrace_trap_func_t	dtrace_trap_func;
-
-dtrace_doubletrap_func_t	dtrace_doubletrap_func;
-
-/*
- * This is a hook which is initialised by the systrace module
- * when it is loaded. This keeps the DTrace syscall provider
- * implementation opaque. 
- */
-systrace_probe_func_t	systrace_probe_func;
-
-/*
- * These hooks are necessary for the pid, usdt and fasttrap providers.
- */
-dtrace_fasttrap_probe_ptr_t	dtrace_fasttrap_probe_ptr;
-dtrace_pid_probe_ptr_t		dtrace_pid_probe_ptr;
-dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
 #endif
+
+extern inthand_t IDTVEC(bpt), IDTVEC(dbg), IDTVEC(fast_syscall),
+    IDTVEC(fast_syscall32), IDTVEC(int0x80_syscall);
 
 extern void trap(struct trapframe *frame);
 extern void syscall(struct trapframe *frame);
@@ -128,7 +110,7 @@ void dblfault_handler(struct trapframe *frame);
 static int trap_pfault(struct trapframe *, int);
 static void trap_fatal(struct trapframe *, vm_offset_t);
 
-#define MAX_TRAP_MSG		33
+#define MAX_TRAP_MSG		32
 static char *trap_msg[] = {
 	"",					/*  0 unused */
 	"privileged instruction fault",		/*  1 T_PRIVINFLT */
@@ -163,7 +145,6 @@ static char *trap_msg[] = {
 	"reserved (unknown) fault",		/* 30 T_RESERVED */
 	"",					/* 31 unused (reserved) */
 	"DTrace pid return trap",		/* 32 T_DTRACE_RET */
-	"DTrace fasttrap probe trap",		/* 33 T_DTRACE_PROBE */
 };
 
 #ifdef KDB
@@ -195,6 +176,9 @@ SYSCTL_INT(_machdep, OID_AUTO, uprintf_signal, CTLFLAG_RW,
 void
 trap(struct trapframe *frame)
 {
+#ifdef KDTRACE_HOOKS
+	struct reg regs;
+#endif
 	struct thread *td = curthread;
 	struct proc *p = td->td_proc;
 	int i = 0, ucode = 0, code;
@@ -246,33 +230,10 @@ trap(struct trapframe *frame)
 	/*
 	 * A trap can occur while DTrace executes a probe. Before
 	 * executing the probe, DTrace blocks re-scheduling and sets
-	 * a flag in it's per-cpu flags to indicate that it doesn't
+	 * a flag in its per-cpu flags to indicate that it doesn't
 	 * want to fault. On returning from the probe, the no-fault
 	 * flag is cleared and finally re-scheduling is enabled.
-	 *
-	 * If the DTrace kernel module has registered a trap handler,
-	 * call it and if it returns non-zero, assume that it has
-	 * handled the trap and modified the trap frame so that this
-	 * function can return normally.
 	 */
-	if (type == T_DTRACE_PROBE || type == T_DTRACE_RET ||
-	    type == T_BPTFLT) {
-		struct reg regs;
-
-		fill_frame_regs(frame, &regs);
-		if (type == T_DTRACE_PROBE &&
-		    dtrace_fasttrap_probe_ptr != NULL &&
-		    dtrace_fasttrap_probe_ptr(&regs) == 0)
-			goto out;
-		else if (type == T_BPTFLT &&
-		    dtrace_pid_probe_ptr != NULL &&
-		    dtrace_pid_probe_ptr(&regs) == 0)
-			goto out;
-		else if (type == T_DTRACE_RET &&
-		    dtrace_return_probe_ptr != NULL &&
-		    dtrace_return_probe_ptr(&regs) == 0)
-			goto out;
-	}
 	if (dtrace_trap_func != NULL && (*dtrace_trap_func)(frame, type))
 		goto out;
 #endif
@@ -327,6 +288,14 @@ trap(struct trapframe *frame)
 		case T_BPTFLT:		/* bpt instruction fault */
 		case T_TRCTRAP:		/* trace trap */
 			enable_intr();
+#ifdef KDTRACE_HOOKS
+			if (type == T_BPTFLT) {
+				fill_frame_regs(frame, &regs);
+				if (dtrace_pid_probe_ptr != NULL &&
+				    dtrace_pid_probe_ptr(&regs) == 0)
+					goto out;
+			}
+#endif
 			frame->tf_rflags &= ~PSL_T;
 			i = SIGTRAP;
 			ucode = (type == T_TRCTRAP ? TRAP_TRACE : TRAP_BRKPT);
@@ -352,6 +321,10 @@ trap(struct trapframe *frame)
 			i = SIGBUS;
 			ucode = BUS_OBJERR;
 			break;
+		case T_ALIGNFLT:
+			i = SIGBUS;
+			ucode = BUS_ADRALN;
+			break;
 		case T_DOUBLEFLT:	/* double fault */
 		default:
 			i = SIGBUS;
@@ -359,6 +332,13 @@ trap(struct trapframe *frame)
 			break;
 
 		case T_PAGEFLT:		/* page fault */
+			/*
+			 * Emulator can take care about this trap?
+			 */
+			if (*p->p_sysent->sv_trap != NULL &&
+			    (*p->p_sysent->sv_trap)(td) == 0)
+				goto userout;
+
 			addr = frame->tf_addr;
 			i = trap_pfault(frame, TRUE);
 			if (i == -1)
@@ -421,7 +401,7 @@ trap(struct trapframe *frame)
 				goto userout;
 			} else if (panic_on_nmi)
 				panic("NMI indicates hardware failure");
-			break;
+			goto out;
 #endif /* DEV_ISA */
 
 		case T_OFLOW:		/* integer overflow fault */
@@ -452,6 +432,15 @@ trap(struct trapframe *frame)
 				goto userout;
 			i = SIGFPE;
 			break;
+#ifdef KDTRACE_HOOKS
+		case T_DTRACE_RET:
+			enable_intr();
+			fill_frame_regs(frame, &regs);
+			if (dtrace_return_probe_ptr != NULL &&
+			    dtrace_return_probe_ptr(&regs) == 0)
+				goto out;
+			goto userout;
+#endif
 		}
 	} else {
 		/* kernel trap */
@@ -464,8 +453,8 @@ trap(struct trapframe *frame)
 			goto out;
 
 		case T_DNA:
-			KASSERT(!PCB_USER_FPU(td->td_pcb),
-			    ("Unregistered use of FPU in kernel"));
+			if (PCB_USER_FPU(td->td_pcb))
+				panic("Unregistered use of FPU in kernel");
 			fpudna();
 			goto out;
 
@@ -473,8 +462,8 @@ trap(struct trapframe *frame)
 		case T_XMMFLT:		/* SIMD floating-point exception */
 		case T_FPOPFLT:		/* FPU operand fetch fault */
 			/*
-			 * XXXKIB for now disable any FPU traps in kernel
-			 * handler registration seems to be overkill
+			 * For now, supporting kernel handler
+			 * registration for FPU traps is overkill.
 			 */
 			trap_fatal(frame, 0);
 			goto out;
@@ -565,6 +554,39 @@ trap(struct trapframe *frame)
 				load_dr6(rdr6() & 0xfffffff0);
 				goto out;
 			}
+
+			/*
+			 * Malicious user code can configure a debug
+			 * register watchpoint to trap on data access
+			 * to the top of stack and then execute 'pop
+			 * %ss; int 3'.  Due to exception deferral for
+			 * 'pop %ss', the CPU will not interrupt 'int
+			 * 3' to raise the DB# exception for the debug
+			 * register but will postpone the DB# until
+			 * execution of the first instruction of the
+			 * BP# handler (in kernel mode).  Normally the
+			 * previous check would ignore DB# exceptions
+			 * for watchpoints on user addresses raised in
+			 * kernel mode.  However, some CPU errata
+			 * include cases where DB# exceptions do not
+			 * properly set bits in %dr6, e.g. Haswell
+			 * HSD23 and Skylake-X SKZ24.
+			 *
+			 * A deferred DB# can also be raised on the
+			 * first instructions of system call entry
+			 * points or single-step traps via similar use
+			 * of 'pop %ss' or 'mov xxx, %ss'.
+			 */
+			if (frame->tf_rip == (uintptr_t)IDTVEC(fast_syscall) ||
+#ifdef COMPAT_FREEBSD32
+			    frame->tf_rip ==
+			    (uintptr_t)IDTVEC(int0x80_syscall) ||
+#endif
+			    frame->tf_rip == (uintptr_t)IDTVEC(bpt) ||
+			    frame->tf_rip == (uintptr_t)IDTVEC(dbg) ||
+			    /* Needed for AMD. */
+			    frame->tf_rip == (uintptr_t)IDTVEC(fast_syscall32))
+				return;
 			/*
 			 * FALLTHROUGH (TRCTRAP kernel mode, kernel address)
 			 */
@@ -633,7 +655,6 @@ trap(struct trapframe *frame)
 
 user:
 	userret(td, frame);
-	mtx_assert(&Giant, MA_NOTOWNED);
 	KASSERT(PCB_USER_FPU(td->td_pcb),
 	    ("Return from trap with kernel FPU ctx leaked"));
 userout:
@@ -647,7 +668,7 @@ trap_pfault(frame, usermode)
 	int usermode;
 {
 	vm_offset_t va;
-	struct vmspace *vm = NULL;
+	struct vmspace *vm;
 	vm_map_t map;
 	int rv = 0;
 	vm_prot_t ftype;
@@ -710,14 +731,10 @@ trap_pfault(frame, usermode)
 		map = kernel_map;
 	} else {
 		/*
-		 * This is a fault on non-kernel virtual memory.
-		 * vm is initialized above to NULL. If curproc is NULL
-		 * or curproc->p_vmspace is NULL the fault is fatal.
+		 * This is a fault on non-kernel virtual memory.  If either
+		 * p or p->p_vmspace is NULL, then the fault is fatal.
 		 */
-		if (p != NULL)
-			vm = p->p_vmspace;
-
-		if (vm == NULL)
+		if (p == NULL || (vm = p->p_vmspace) == NULL)
 			goto nogo;
 
 		map = &vm->vm_map;
@@ -734,6 +751,14 @@ trap_pfault(frame, usermode)
 			trap_fatal(frame, eva);
 			return (-1);
 		}
+	}
+
+	/*
+	 * If the trap was caused by errant bits in the PTE then panic.
+	 */
+	if (frame->tf_err & PGEX_RSV) {
+		trap_fatal(frame, eva);
+		return (-1);
 	}
 
 	/*
@@ -793,8 +818,7 @@ nogo:
 		trap_fatal(frame, eva);
 		return (-1);
 	}
-
-	return((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
+	return ((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
 }
 
 static void
@@ -807,6 +831,9 @@ trap_fatal(frame, eva)
 	long esp;
 	struct soft_segment_descriptor softseg;
 	char *msg;
+#ifdef KDB
+	bool handled;
+#endif
 
 	code = frame->tf_err;
 	type = frame->tf_trapno;
@@ -830,6 +857,7 @@ trap_fatal(frame, eva)
 			code & PGEX_U ? "user" : "supervisor",
 			code & PGEX_W ? "write" : "read",
 			code & PGEX_I ? "instruction" : "data",
+			code & PGEX_RSV ? "reserved bits in PTE" :
 			code & PGEX_P ? "protection violation" : "page not present");
 	}
 	printf("instruction pointer	= 0x%lx:0x%lx\n",
@@ -858,19 +886,17 @@ trap_fatal(frame, eva)
 	if (frame->tf_rflags & PSL_RF)
 		printf("resume, ");
 	printf("IOPL = %ld\n", (frame->tf_rflags & PSL_IOPL) >> 12);
-	printf("current process		= ");
-	if (curproc) {
-		printf("%lu (%s)\n",
-		    (u_long)curproc->p_pid, curthread->td_name ?
-		    curthread->td_name : "");
-	} else {
-		printf("Idle\n");
-	}
+	printf("current process		= %d (%s)\n",
+	    curproc->p_pid, curthread->td_name);
 
 #ifdef KDB
-	if (debugger_on_panic || kdb_active)
-		if (kdb_trap(type, 0, frame))
+	if (debugger_on_panic) {
+		kdb_why = KDB_WHY_TRAP;
+		handled = kdb_trap(type, 0, frame);
+		kdb_why = KDB_WHY_UNSET;
+		if (handled)
 			return;
+	}
 #endif
 	printf("trap number		= %d\n", type);
 	if (type <= MAX_TRAP_MSG)
@@ -990,7 +1016,7 @@ amd64_syscall(struct thread *td, int traced)
 	}
 
 	KASSERT(PCB_USER_FPU(td->td_pcb),
-	    ("System call %s returing with kernel FPU ctx leaked",
+	    ("System call %s returning with kernel FPU ctx leaked",
 	     syscallname(td->td_proc, sa.code)));
 	KASSERT(td->td_pcb->pcb_save == get_pcb_user_save_td(td),
 	    ("System call %s returning with mangled pcb_save",

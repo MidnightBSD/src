@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/amd64/apic_vector.S 302041 2016-06-21 04:51:55Z sephe $
  */
 
 /*
@@ -42,6 +43,12 @@
 #include <x86/apicreg.h>
 
 #include "assym.s"
+
+#ifdef SMP
+#define LK	lock ;
+#else
+#define LK
+#endif
 
 /*
  * I/O Interrupt Entry Point.  Rather than having one entry point for
@@ -128,72 +135,67 @@ IDTVEC(errorint)
 	MEXITCOUNT
 	jmp	doreti
 
+#ifdef XENHVM
+/*
+ * Xen event channel upcall interrupt handler.
+ * Only used when the hypervisor supports direct vector callbacks.
+ */
+	.text
+	SUPERALIGN_TEXT
+IDTVEC(xen_intr_upcall)
+	PUSH_FRAME
+	FAKE_MCOUNT(TF_RIP(%rsp))
+	movq	%rsp, %rdi
+	call	xen_intr_handle_upcall
+	MEXITCOUNT
+	jmp	doreti
+#endif
+
 #ifdef SMP
 /*
  * Global address space TLB shootdown.
  */
 	.text
+
 	SUPERALIGN_TEXT
-IDTVEC(invltlb)
-#if defined(COUNT_XINVLTLB_HITS) || defined(COUNT_IPIS)
-	PUSH_FRAME
-	movl	PCPU(CPUID), %eax
-#ifdef COUNT_XINVLTLB_HITS
-	incl	xhits_gbl(,%rax,4)
-#endif
-#ifdef COUNT_IPIS
-	movq	ipi_invltlb_counts(,%rax,8),%rax
-	incq	(%rax)
-#endif
-	POP_FRAME
-#endif
-
-	pushq	%rax
-
-	movq	%cr3, %rax		/* invalidate the TLB */
-	movq	%rax, %cr3
-
+invltlb_ret:
 	movq	lapic, %rax
 	movl	$0, LA_EOI(%rax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popq	%rax
+	POP_FRAME
 	jmp	doreti_iret
+
+	SUPERALIGN_TEXT
+IDTVEC(invltlb_pcid)
+	PUSH_FRAME
+
+	call	invltlb_pcid_handler
+	jmp	invltlb_ret
+
+
+	SUPERALIGN_TEXT
+IDTVEC(invltlb)
+	PUSH_FRAME
+
+	call	invltlb_handler
+	jmp	invltlb_ret
 
 /*
  * Single page TLB shootdown
  */
 	.text
 	SUPERALIGN_TEXT
-IDTVEC(invlpg)
-#if defined(COUNT_XINVLTLB_HITS) || defined(COUNT_IPIS)
+IDTVEC(invlpg_pcid)
 	PUSH_FRAME
-	movl	PCPU(CPUID), %eax
-#ifdef COUNT_XINVLTLB_HITS
-	incl	xhits_pg(,%rax,4)
-#endif
-#ifdef COUNT_IPIS
-	movq	ipi_invlpg_counts(,%rax,8),%rax
-	incq	(%rax)
-#endif
-	POP_FRAME
-#endif
 
-	pushq	%rax
+	call	invlpg_pcid_handler
+	jmp	invltlb_ret
 
-	movq	smp_tlb_addr1, %rax
-	invlpg	(%rax)			/* invalidate single page */
+	SUPERALIGN_TEXT
+IDTVEC(invlpg)
+	PUSH_FRAME
 
-	movq	lapic, %rax
-	movl	$0, LA_EOI(%rax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popq	%rax
-	jmp	doreti_iret
+	call	invlpg_handler
+	jmp	invltlb_ret
 
 /*
  * Page range TLB shootdown.
@@ -201,38 +203,10 @@ IDTVEC(invlpg)
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(invlrng)
-#if defined(COUNT_XINVLTLB_HITS) || defined(COUNT_IPIS)
 	PUSH_FRAME
-	movl	PCPU(CPUID), %eax
-#ifdef COUNT_XINVLTLB_HITS
-	incl	xhits_rng(,%rax,4)
-#endif
-#ifdef COUNT_IPIS
-	movq	ipi_invlrng_counts(,%rax,8),%rax
-	incq	(%rax)
-#endif
-	POP_FRAME
-#endif
 
-	pushq	%rax
-	pushq	%rdx
-
-	movq	smp_tlb_addr1, %rdx
-	movq	smp_tlb_addr2, %rax
-1:	invlpg	(%rdx)			/* invalidate single page */
-	addq	$PAGE_SIZE, %rdx
-	cmpq	%rax, %rdx
-	jb	1b
-
-	movq	lapic, %rax
-	movl	$0, LA_EOI(%rax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popq	%rdx
-	popq	%rax
-	jmp	doreti_iret
+	call	invlrng_handler
+	jmp	invltlb_ret
 
 /*
  * Invalidate cache.
@@ -240,26 +214,10 @@ IDTVEC(invlrng)
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(invlcache)
-#ifdef COUNT_IPIS
 	PUSH_FRAME
-	movl	PCPU(CPUID), %eax
-	movq	ipi_invlcache_counts(,%rax,8),%rax
-	incq	(%rax)
-	POP_FRAME
-#endif
 
-	pushq	%rax
-
-	wbinvd
-
-	movq	lapic, %rax
-	movl	$0, LA_EOI(%rax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popq	%rax
-	jmp	doreti_iret
+	call	invlcache_handler
+	jmp	invltlb_ret
 
 /*
  * Handler for IPIs sent via the per-cpu IPI bitmap.

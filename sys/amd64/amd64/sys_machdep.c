@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -31,13 +32,13 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/sys_machdep.c 307940 2016-10-25 17:16:08Z glebius $");
 
 #include "opt_capsicum.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -207,6 +208,10 @@ sysarch(td, uap)
 
 		case I386_SET_IOPERM:
 		default:
+#ifdef KTRACE
+			if (KTRPOINT(td, KTR_CAPFAIL))
+				ktrcapfail(CAPFAIL_SYSCALL, NULL, NULL);
+#endif
 			return (ECAPMODE);
 		}
 	}
@@ -316,7 +321,7 @@ sysarch(td, uap)
 		fpugetregs(td);
 		error = copyout((char *)(get_pcb_user_save_td(td) + 1),
 		    a64xfpu.addr, a64xfpu.len);
-		return (error);
+		break;
 
 	default:
 		error = EINVAL;
@@ -330,18 +335,20 @@ amd64_set_ioperm(td, uap)
 	struct thread *td;
 	struct i386_ioperm_args *uap;
 {
-	int i, error;
 	char *iomap;
 	struct amd64tss *tssp;
 	struct system_segment_descriptor *tss_sd;
 	u_long *addr;
 	struct pcb *pcb;
+	u_int i;
+	int error;
 
 	if ((error = priv_check(td, PRIV_IO)) != 0)
 		return (error);
 	if ((error = securelevel_gt(td->td_ucred, 0)) != 0)
 		return (error);
-	if (uap->start + uap->length > IOPAGES * PAGE_SIZE * NBBY)
+	if (uap->start > uap->start + uap->length ||
+	    uap->start + uap->length > IOPAGES * PAGE_SIZE * NBBY)
 		return (EINVAL);
 
 	/*
@@ -352,8 +359,8 @@ amd64_set_ioperm(td, uap)
 	 */
 	pcb = td->td_pcb;
 	if (pcb->pcb_tssp == NULL) {
-		tssp = (struct amd64tss *)kmem_alloc(kernel_map,
-		    ctob(IOPAGES+1));
+		tssp = (struct amd64tss *)kmem_malloc(kernel_arena,
+		    ctob(IOPAGES+1), M_WAITOK);
 		if (tssp == NULL)
 			return (ENOMEM);
 		iomap = (char *)&tssp[1];
@@ -459,8 +466,9 @@ user_ldt_alloc(struct proc *p, int force)
 		return (mdp->md_ldt);
 	mtx_unlock(&dt_lock);
 	new_ldt = malloc(sizeof(struct proc_ldt), M_SUBPROC, M_WAITOK);
-	new_ldt->ldt_base = (caddr_t)kmem_alloc(kernel_map,
-	     max_ldt_segment * sizeof(struct user_segment_descriptor));
+	new_ldt->ldt_base = (caddr_t)kmem_malloc(kernel_arena,
+	     max_ldt_segment * sizeof(struct user_segment_descriptor),
+	     M_WAITOK | M_ZERO);
 	if (new_ldt->ldt_base == NULL) {
 		FREE(new_ldt, M_SUBPROC);
 		mtx_lock(&dt_lock);
@@ -479,7 +487,7 @@ user_ldt_alloc(struct proc *p, int force)
 	mtx_lock(&dt_lock);
 	pldt = mdp->md_ldt;
 	if (pldt != NULL && !force) {
-		kmem_free(kernel_map, (vm_offset_t)new_ldt->ldt_base,
+		kmem_free(kernel_arena, (vm_offset_t)new_ldt->ldt_base,
 		    max_ldt_segment * sizeof(struct user_segment_descriptor));
 		free(new_ldt, M_SUBPROC);
 		return (pldt);
@@ -524,7 +532,7 @@ user_ldt_derefl(struct proc_ldt *pldt)
 {
 
 	if (--pldt->ldt_refcnt == 0) {
-		kmem_free(kernel_map, (vm_offset_t)pldt->ldt_base,
+		kmem_free(kernel_arena, (vm_offset_t)pldt->ldt_base,
 		    max_ldt_segment * sizeof(struct user_segment_descriptor));
 		free(pldt, M_SUBPROC);
 	}

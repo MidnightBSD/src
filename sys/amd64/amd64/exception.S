@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/amd64/amd64/exception.S 333370 2018-05-08 17:05:39Z emaste $
  */
 
 #include "opt_atpic.h"
@@ -80,18 +81,22 @@ dtrace_invop_calltrap_addr:
  * This is equivalent to the i386 port's use of SDT_SYS386TGT.
  *
  * The cpu will push a certain amount of state onto the kernel stack for
- * the current process.  See amd64/include/frame.h.  
- * This includes the current RFLAGS (status register, which includes 
+ * the current process.  See amd64/include/frame.h.
+ * This includes the current RFLAGS (status register, which includes
  * the interrupt disable state prior to the trap), the code segment register,
- * and the return instruction pointer are pushed by the cpu.  The cpu 
- * will also push an 'error' code for certain traps.  We push a dummy 
- * error code for those traps where the cpu doesn't in order to maintain 
+ * and the return instruction pointer are pushed by the cpu.  The cpu
+ * will also push an 'error' code for certain traps.  We push a dummy
+ * error code for those traps where the cpu doesn't in order to maintain
  * a consistent frame.  We also push a contrived 'trap number'.
  *
- * The cpu does not push the general registers, we must do that, and we 
- * must restore them prior to calling 'iret'.  The cpu adjusts the %cs and
- * %ss segment registers, but does not mess with %ds, %es, or %fs.  Thus we
- * must load them with appropriate values for supervisor mode operation.
+ * The CPU does not push the general registers, so we must do that, and we
+ * must restore them prior to calling 'iret'.  The CPU adjusts %cs and %ss
+ * but does not mess with %ds, %es, %gs or %fs.  We swap the %gs base for
+ * for the kernel mode operation shortly, without changes to the selector
+ * loaded.  Since superuser long mode works with any selectors loaded into
+ * segment registers other then %cs, which makes them mostly unused in long
+ * mode, and kernel does not reference %fs, leave them alone.  The segment
+ * registers are reloaded on return to the usermode.
  */
 
 MCOUNT_LABEL(user)
@@ -104,8 +109,6 @@ MCOUNT_LABEL(btrap)
 	movq $0,TF_ADDR(%rsp) ; \
 	movq $0,TF_ERR(%rsp) ; \
 	jmp alltraps_noen
-IDTVEC(dbg)
-	TRAP_NOEN(T_TRCTRAP)
 IDTVEC(bpt)
 	TRAP_NOEN(T_BPTFLT)
 #ifdef KDTRACE_HOOKS
@@ -208,6 +211,8 @@ alltraps_pushregs_no_rdi:
 	 * interrupt. For all other trap types, just handle them in
 	 * the usual way.
 	 */
+	testb	$SEL_RPL_MASK,TF_CS(%rsp) /* Did we come from kernel? */
+	jnz	calltrap		/* ignore userland traps */
 	cmpl	$T_BPTFLT,TF_TRAPNO(%rsp)
 	jne	calltrap
 
@@ -430,6 +435,101 @@ IDTVEC(fast_syscall32)
 	sysret
 
 /*
+ * DB# handler is very similar to NM#, because 'mov/pop %ss' delay
+ * generation of exception until the next instruction is executed,
+ * which might be a kernel entry.  So we must execute the handler
+ * on IST stack and be ready for non-kernel GSBASE.
+ */
+IDTVEC(dbg)
+	subq	$TF_RIP,%rsp
+	movl	$(T_TRCTRAP),TF_TRAPNO(%rsp)
+	movq	$0,TF_ADDR(%rsp)
+	movq	$0,TF_ERR(%rsp)
+	movq	%rdi,TF_RDI(%rsp)
+	movq	%rsi,TF_RSI(%rsp)
+	movq	%rdx,TF_RDX(%rsp)
+	movq	%rcx,TF_RCX(%rsp)
+	movq	%r8,TF_R8(%rsp)
+	movq	%r9,TF_R9(%rsp)
+	movq	%rax,TF_RAX(%rsp)
+	movq	%rbx,TF_RBX(%rsp)
+	movq	%rbp,TF_RBP(%rsp)
+	movq	%r10,TF_R10(%rsp)
+	movq	%r11,TF_R11(%rsp)
+	movq	%r12,TF_R12(%rsp)
+	movq	%r13,TF_R13(%rsp)
+	movq	%r14,TF_R14(%rsp)
+	movq	%r15,TF_R15(%rsp)
+	movw	%fs,TF_FS(%rsp)
+	movw	%gs,TF_GS(%rsp)
+	movw	%es,TF_ES(%rsp)
+	movw	%ds,TF_DS(%rsp)
+	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
+	cld
+	testb	$SEL_RPL_MASK,TF_CS(%rsp)
+	jnz	dbg_fromuserspace
+	/*
+	 * We've interrupted the kernel.  Preserve GS.base in %r12.
+	 */
+	movl	$MSR_GSBASE,%ecx
+	rdmsr
+	movq	%rax,%r12
+	shlq	$32,%rdx
+	orq	%rdx,%r12
+	/* Retrieve and load the canonical value for GS.base. */
+	movq	TF_SIZE(%rsp),%rdx
+	movl	%edx,%eax
+	shrq	$32,%rdx
+	wrmsr
+	FAKE_MCOUNT(TF_RIP(%rsp))
+	movq	%rsp,%rdi
+	call	trap
+	MEXITCOUNT
+	/*
+	 * Put back the preserved MSR_GSBASE value.
+	 */
+	movl	$MSR_GSBASE,%ecx
+	movq	%r12,%rdx
+	movl	%edx,%eax
+	shrq	$32,%rdx
+	wrmsr
+	movq	TF_RDI(%rsp),%rdi
+	movq	TF_RSI(%rsp),%rsi
+	movq	TF_RDX(%rsp),%rdx
+	movq	TF_RCX(%rsp),%rcx
+	movq	TF_R8(%rsp),%r8
+	movq	TF_R9(%rsp),%r9
+	movq	TF_RAX(%rsp),%rax
+	movq	TF_RBX(%rsp),%rbx
+	movq	TF_RBP(%rsp),%rbp
+	movq	TF_R10(%rsp),%r10
+	movq	TF_R11(%rsp),%r11
+	movq	TF_R12(%rsp),%r12
+	movq	TF_R13(%rsp),%r13
+	movq	TF_R14(%rsp),%r14
+	movq	TF_R15(%rsp),%r15
+	addq	$TF_RIP,%rsp
+	jmp	doreti_iret
+dbg_fromuserspace:
+	/*
+	 * Switch to kernel GSBASE and kernel page table, and copy frame
+	 * from the IST stack to the normal kernel stack, since trap()
+	 * re-enables interrupts, and since we might trap on DB# while
+	 * in trap().
+	 */
+	swapgs
+	movq	PCPU(RSP0),%rax
+	movl	$TF_SIZE,%ecx
+	subq	%rcx,%rax
+	movq	%rax,%rdi
+	movq	%rsp,%rsi
+	rep;movsb
+	movq	%rax,%rsp
+	movq	PCPU(CURPCB),%rdi
+	orl	$PCB_FULL_IRET,PCB_FLAGS(%rdi)
+	jmp	calltrap
+
+/*
  * NMI handling is special.
  *
  * First, NMIs do not respect the state of the processor's RFLAGS.IF
@@ -508,7 +608,7 @@ nmi_calltrap:
 #ifdef HWPMC_HOOKS
 	/*
 	 * Capture a userspace callchain if needed.
-	 * 
+	 *
 	 * - Check if the current trap was from user mode.
 	 * - Check if the current thread is valid.
 	 * - Check if the thread requires a user call chain to be
@@ -554,7 +654,7 @@ outofnmi:
 	 * At this point the processor has exited NMI mode and is running
 	 * with interrupts turned off on the normal kernel stack.
 	 *
-	 * If a pending NMI gets recognized at or after this point, it 
+	 * If a pending NMI gets recognized at or after this point, it
 	 * will cause a kernel callchain to be traced.
 	 *
 	 * We turn interrupts back on, and call the user callchain capture hook.
@@ -572,7 +672,7 @@ nocallchain:
 #endif
 	testl	%ebx,%ebx
 	jnz	doreti_exit
-nmi_kernelexit:	
+nmi_kernelexit:
 	/*
 	 * Put back the preserved MSR_GSBASE value.
 	 */
@@ -655,6 +755,7 @@ MCOUNT_LABEL(eintr)
 	.text
 	SUPERALIGN_TEXT
 	.type	doreti,@function
+	.globl	doreti
 doreti:
 	FAKE_MCOUNT($bintr)		/* init "from" bintr -> doreti */
 	/*
@@ -723,21 +824,38 @@ ld_fsbase:
 	pushfq
 	cli
 	movl	$MSR_GSBASE,%ecx
+	/* Save current kernel %gs base into %r12d:%r13d */
 	rdmsr
+	movl	%eax,%r12d
+	movl	%edx,%r13d
 	.globl	ld_gs
 ld_gs:
 	movw	%si,%gs
+	/* Save user %gs base into %r14d:%r15d */
+	rdmsr
+	movl	%eax,%r14d
+	movl	%edx,%r15d
+	/* Restore kernel %gs base */
+	movl	%r12d,%eax
+	movl	%r13d,%edx
 	wrmsr
 	popfq
+	/*
+	 * Restore user %gs base, either from PCB if used for TLS, or
+	 * from the previously saved msr read.
+	 */
+	movl	$MSR_KGSBASE,%ecx
 	cmpw	$KUG32SEL,%si
 	jne	1f
-	movl	$MSR_KGSBASE,%ecx
 	movl	PCB_GSBASE(%r8),%eax
 	movl	PCB_GSBASE+4(%r8),%edx
+	jmp	ld_gsbase
+1:
+	movl	%r14d,%eax
+	movl	%r15d,%edx
 	.globl	ld_gsbase
 ld_gsbase:
-	wrmsr
-1:
+	wrmsr	/* May trap if non-canonical, but only for TLS. */
 	.globl	ld_es
 ld_es:
 	movw	TF_ES(%rsp),%es

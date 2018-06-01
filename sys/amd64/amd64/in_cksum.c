@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: in_cksum.c,v 1.7 1997/09/02 13:18:15 thorpej Exp $ */
 
 /*-
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>			/* RCS ID & Copyright macro defns */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/in_cksum.c 139731 2005-01-05 20:17:21Z imp $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

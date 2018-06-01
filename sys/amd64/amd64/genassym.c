@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1990 The Regents of the University of California.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/genassym.c 286308 2015-08-05 07:35:34Z kib $");
 
 #include "opt_compat.h"
 #include "opt_hwpmc_hooks.h"
@@ -76,6 +77,8 @@ __MBSDID("$MidnightBSD$");
 ASSYM(P_VMSPACE, offsetof(struct proc, p_vmspace));
 ASSYM(VM_PMAP, offsetof(struct vmspace, vm_pmap));
 ASSYM(PM_ACTIVE, offsetof(struct pmap, pm_active));
+ASSYM(PM_SAVE, offsetof(struct pmap, pm_save));
+ASSYM(PM_PCID, offsetof(struct pmap, pm_pcid));
 
 ASSYM(P_MD, offsetof(struct proc, p_md));
 ASSYM(MD_LDT, offsetof(struct mdproc, md_ldt));
@@ -109,7 +112,6 @@ ASSYM(addr_PML4map, addr_PML4map);
 ASSYM(addr_PML4pml4e, addr_PML4pml4e);
 ASSYM(PDESIZE, sizeof(pd_entry_t));
 ASSYM(PTESIZE, sizeof(pt_entry_t));
-ASSYM(PTESHIFT, PTESHIFT);
 ASSYM(PAGE_SHIFT, PAGE_SHIFT);
 ASSYM(PAGE_MASK, PAGE_MASK);
 ASSYM(PDRSHIFT, PDRSHIFT);
@@ -152,11 +154,13 @@ ASSYM(PCB_LDT, offsetof(struct pcb, pcb_ldt));
 ASSYM(PCB_TR, offsetof(struct pcb, pcb_tr));
 ASSYM(PCB_FLAGS, offsetof(struct pcb, pcb_flags));
 ASSYM(PCB_ONFAULT, offsetof(struct pcb, pcb_onfault));
-ASSYM(PCB_GS32SD, offsetof(struct pcb, pcb_gs32sd));
 ASSYM(PCB_TSSP, offsetof(struct pcb, pcb_tssp));
 ASSYM(PCB_SAVEFPU, offsetof(struct pcb, pcb_save));
-ASSYM(PCB_SAVEFPU_SIZE, sizeof(struct savefpu));
-ASSYM(PCB_USERFPU, sizeof(struct pcb));
+ASSYM(PCB_EFER, offsetof(struct pcb, pcb_efer));
+ASSYM(PCB_STAR, offsetof(struct pcb, pcb_star));
+ASSYM(PCB_LSTAR, offsetof(struct pcb, pcb_lstar));
+ASSYM(PCB_CSTAR, offsetof(struct pcb, pcb_cstar));
+ASSYM(PCB_SFMASK, offsetof(struct pcb, pcb_sfmask));
 ASSYM(PCB_SIZE, sizeof(struct pcb));
 ASSYM(PCB_FULL_IRET, PCB_FULL_IRET);
 ASSYM(PCB_DBREGS, PCB_DBREGS);
@@ -219,6 +223,7 @@ ASSYM(PC_GS32P, offsetof(struct pcpu, pc_gs32p));
 ASSYM(PC_LDT, offsetof(struct pcpu, pc_ldt));
 ASSYM(PC_COMMONTSSP, offsetof(struct pcpu, pc_commontssp));
 ASSYM(PC_TSS, offsetof(struct pcpu, pc_tss));
+ASSYM(PC_PM_SAVE_CNT, offsetof(struct pcpu, pc_pm_save_cnt));
  
 ASSYM(LA_VER, offsetof(struct LAPIC, version));
 ASSYM(LA_TPR, offsetof(struct LAPIC, tpr));

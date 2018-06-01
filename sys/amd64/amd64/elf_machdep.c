@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/elf_machdep.c 294136 2016-01-16 07:56:49Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -36,7 +37,6 @@ __MBSDID("$MidnightBSD$");
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
 #include <sys/syscall.h>
-#include <sys/sysent.h>
 #include <sys/signalvar.h>
 #include <sys/vnode.h>
 
@@ -45,6 +45,7 @@ __MBSDID("$MidnightBSD$");
 #include <vm/vm_param.h>
 
 #include <machine/elf.h>
+#include <machine/fpu.h>
 #include <machine/md_var.h>
 
 struct sysentvec elf64_freebsd_sysvec = {
@@ -82,27 +83,10 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_shared_page_base = SHAREDPAGE,
 	.sv_shared_page_len = PAGE_SIZE,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 INIT_SYSENTVEC(elf64_sysvec, &elf64_freebsd_sysvec);
-
-void
-amd64_lower_shared_page(struct sysentvec *sv)
-{
-	if (hw_lower_amd64_sharedpage != 0) {
-		sv->sv_maxuser -= PAGE_SIZE;
-		sv->sv_shared_page_base -= PAGE_SIZE;
-		sv->sv_usrstack -= PAGE_SIZE;
-		sv->sv_psstrings -= PAGE_SIZE;
-	}
-}
-
-/*
- * Do this fixup before INIT_SYSENTVEC (SI_ORDER_ANY) because the latter
- * uses the value of sv_shared_page_base.
- */
-SYSINIT(elf64_sysvec_fixup, SI_SUB_EXEC, SI_ORDER_FIRST,
-	(sysinit_cfunc_t) amd64_lower_shared_page,
-	&elf64_freebsd_sysvec);
 
 static Elf64_Brandinfo freebsd_brand_info = {
 	.brand		= ELFOSABI_FREEBSD,
@@ -136,12 +120,43 @@ SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_oinfo);
 
-void
-elf64_dump_thread(struct thread *td __unused, void *dst __unused,
-    size_t *off __unused)
-{
-}
+static Elf64_Brandinfo kfreebsd_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_X86_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld-kfreebsd-x86-64.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
 
+SYSINIT(kelf64, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf64_insert_brand_entry,
+	&kfreebsd_brand_info);
+
+void
+elf64_dump_thread(struct thread *td, void *dst, size_t *off)
+{
+	void *buf;
+	size_t len;
+
+	len = 0;
+	if (use_xsave) {
+		if (dst != NULL) {
+			fpugetregs(td);
+			len += elf64_populate_note(NT_X86_XSTATE,
+			    get_pcb_user_save_td(td), dst,
+			    cpu_max_ext_state_size, &buf);
+			*(uint64_t *)((char *)buf + X86_XSTATE_XCR0_OFFSET) =
+			    xsave_mask;
+		} else
+			len += elf64_populate_note(NT_X86_XSTATE, NULL, NULL,
+			    cpu_max_ext_state_size, NULL);
+	}
+	*off = len;
+}
 
 /* Process one elf relocation with addend. */
 static int
@@ -155,6 +170,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
+	int error;
 
 	switch (type) {
 	case ELF_RELOC_REL:
@@ -190,29 +206,29 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			break;
 
 		case R_X86_64_64:		/* S + A */
-			addr = lookup(lf, symidx, 1);
+			error = lookup(lf, symidx, 1, &addr);
 			val = addr + addend;
-			if (addr == 0)
+			if (error != 0)
 				return -1;
 			if (*where != val)
 				*where = val;
 			break;
 
 		case R_X86_64_PC32:	/* S + A - P */
-			addr = lookup(lf, symidx, 1);
+			error = lookup(lf, symidx, 1, &addr);
 			where32 = (Elf32_Addr *)where;
 			val32 = (Elf32_Addr)(addr + addend - (Elf_Addr)where);
-			if (addr == 0)
+			if (error != 0)
 				return -1;
 			if (*where32 != val32)
 				*where32 = val32;
 			break;
 
 		case R_X86_64_32S:	/* S + A sign extend */
-			addr = lookup(lf, symidx, 1);
+			error = lookup(lf, symidx, 1, &addr);
 			val32 = (Elf32_Addr)(addr + addend);
 			where32 = (Elf32_Addr *)where;
-			if (addr == 0)
+			if (error != 0)
 				return -1;
 			if (*where32 != val32)
 				*where32 = val32;
@@ -229,8 +245,8 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 
 		case R_X86_64_GLOB_DAT:	/* S */
 		case R_X86_64_JMP_SLOT:	/* XXX need addend + offset */
-			addr = lookup(lf, symidx, 1);
-			if (addr == 0)
+			error = lookup(lf, symidx, 1, &addr);
+			if (error != 0)
 				return -1;
 			if (*where != addr)
 				*where = addr;
