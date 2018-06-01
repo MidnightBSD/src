@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/conf/kern.post.mk,v 1.100 2007/03/23 21:55:59 imp Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sys/conf/kern.post.mk 316218 2017-03-30 05:15:00Z ngie $
 
 # Part of a unified Makefile for building kernels.  This part includes all
 # the definitions that need to be after all the % directives except %RULES
@@ -66,7 +67,7 @@ PORTSMODULESENV=\
 all:
 .for __i in ${PORTS_MODULES}
 	@${ECHO} "===> Ports module ${__i} (all)"
-	cd $${PORTSDIR:-/usr/ports}/${__i}; ${PORTSMODULESENV} ${MAKE} -B clean all
+	cd $${PORTSDIR:-/usr/ports}/${__i}; ${PORTSMODULESENV} ${MAKE} -B clean build
 .endfor
 
 .for __target in install reinstall clean
@@ -121,7 +122,7 @@ gdbinit:
 .endif
 .endif
 
-${FULLKERNEL}: ${SYSTEM_DEP} vers.o
+${FULLKERNEL}: ${SYSTEM_DEP} vers.o ${MFS_IMAGE}
 	@rm -f ${.TARGET}
 	@echo linking ${.TARGET}
 	${SYSTEM_LD}
@@ -133,7 +134,7 @@ ${FULLKERNEL}: ${SYSTEM_DEP} vers.o
 .endif
 	${SYSTEM_LD_TAIL}
 .if defined(MFS_IMAGE)
-	@sh ${S}/tools/embed_mfs.sh ${FULLKERNEL} ${MFS_IMAGE}
+	sh ${S}/tools/embed_mfs.sh ${FULLKERNEL} ${MFS_IMAGE}
 .endif
 
 .if !exists(${.OBJDIR}/.depend)
@@ -154,7 +155,7 @@ ${mfile:T:S/.m$/.h/}: ${mfile}
 kernel-clean:
 	rm -f *.o *.so *.So *.ko *.s eddep errs \
 	    ${FULLKERNEL} ${KERNEL_KO} ${KERNEL_KO}.symbols \
-	    linterrs makelinks tags vers.c \
+	    linterrs tags vers.c \
 	    vnode_if.c vnode_if.h vnode_if_newproto.h vnode_if_typedef.h \
 	    ${MFILES:T:S/.m$/.c/} ${MFILES:T:S/.m$/.h/} \
 	    ${CLEAN}
@@ -183,6 +184,20 @@ genassym.o: $S/$M/$M/genassym.c
 
 ${SYSTEM_OBJS} genassym.o vers.o: opt_global.h
 
+# Normal files first
+CFILES_NORMAL=	${CFILES:N*/opensolaris/*:N*/ofed/*:N*/dev/mlx5/*}
+SFILES_NORMAL=	${SFILES:N*/opensolaris/*}
+
+# We have "special" -I include paths for zfs/dtrace files in 'depend'.
+CFILES_ZFS=	${CFILES:M*/opensolaris/*}
+SFILES_ZFS=	${SFILES:M*/opensolaris/*}
+
+# We have "special" -I include paths for OFED.
+CFILES_OFED=${CFILES:M*/ofed/*}
+
+# We have "special" -I include paths for MLX5.
+CFILES_MLX5=${CFILES:M*/dev/mlx5/*}
+
 kernel-depend: .depend
 # The argument list can be very long, so use make -V and xargs to
 # pass it to mkdep.
@@ -190,13 +205,21 @@ SRCS=	assym.s vnode_if.h ${BEFORE_DEPEND} ${CFILES} \
 	${SYSTEM_CFILES} ${GEN_CFILES} ${SFILES} \
 	${MFILES:T:S/.m$/.h/}
 .depend: .PRECIOUS ${SRCS}
-	rm -f .newdep
-	${MAKE} -V CFILES -V SYSTEM_CFILES -V GEN_CFILES | \
-	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f .newdep ${CFLAGS}
-	${MAKE} -V SFILES | \
-	    MKDEP_CPP="${CC} -E" xargs mkdep -a -f .newdep ${ASM_CFLAGS}
-	rm -f .depend
-	mv .newdep .depend
+	rm -f ${.TARGET}.tmp
+# C files
+	${MAKE} -V CFILES_NORMAL -V SYSTEM_CFILES -V GEN_CFILES | \
+	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f ${.TARGET}.tmp ${CFLAGS}
+	${MAKE} -V CFILES_ZFS | \
+	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f ${.TARGET}.tmp ${ZFS_CFLAGS}
+	${MAKE} -V CFILES_OFED -V CFILES_MLX5 | \
+	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f ${.TARGET}.tmp \
+		${CFLAGS} ${OFEDINCLUDES}
+# Assembly files
+	${MAKE} -V SFILES_NORMAL | \
+	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f ${.TARGET}.tmp ${ASM_CFLAGS}
+	${MAKE} -V SFILES_ZFS | \
+	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f ${.TARGET}.tmp ${ZFS_ASM_CFLAGS}
+	mv ${.TARGET}.tmp ${.TARGET}
 
 _ILINKS= machine
 .if ${MACHINE} != ${MACHINE_CPUARCH}
@@ -209,7 +232,7 @@ _ILINKS+= x86
 # Ensure that the link exists without depending on it when it exists.
 .for _link in ${_ILINKS}
 .if !exists(${.OBJDIR}/${_link})
-${SRCS}: ${_link}
+${SRCS} ${CLEAN:M*.o}: ${_link}
 .endif
 .endfor
 
@@ -226,14 +249,6 @@ ${_ILINKS}:
 # .depend needs include links so we remove them only together.
 kernel-cleandepend:
 	rm -f .depend ${_ILINKS}
-
-links:
-	egrep '#if' ${CFILES} | sed -f $S/conf/defines | \
-	    sed -e 's/:.*//' -e 's/\.c/.o/' | sort -u > dontlink
-	${MAKE} -V CFILES | tr -s ' ' '\12' | sed 's/\.c/.o/' | \
-	    sort -u | comm -23 - dontlink | \
-	    sed 's,../.*/\(.*.o\),rm -f \1;ln -s ../GENERIC/\1 \1,' > makelinks
-	sh makelinks; rm -f dontlink
 
 kernel-tags:
 	@[ -f .depend ] || { echo "you must make depend first"; exit 1; }
@@ -260,8 +275,7 @@ kernel-install:
 .endif
 	mkdir -p ${DESTDIR}${KODIR}
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO} ${DESTDIR}${KODIR}
-.if defined(DEBUG) && !defined(INSTALL_NODEBUG) && \
-    (defined(MK_KERNEL_SYMBOLS) && ${MK_KERNEL_SYMBOLS} != "no")
+.if defined(DEBUG) && !defined(INSTALL_NODEBUG) && ${MK_KERNEL_SYMBOLS} != "no"
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 .if defined(KERNEL_EXTRA_INSTALL)
@@ -273,8 +287,7 @@ kernel-install:
 kernel-reinstall:
 	@-chflags -R noschg ${DESTDIR}${KODIR}
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO} ${DESTDIR}${KODIR}
-.if defined(DEBUG) && !defined(INSTALL_NODEBUG) && \
-    (defined(MK_KERNEL_SYMBOLS) && ${MK_KERNEL_SYMBOLS} != "no")
+.if defined(DEBUG) && !defined(INSTALL_NODEBUG) && ${MK_KERNEL_SYMBOLS} != "no"
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 
