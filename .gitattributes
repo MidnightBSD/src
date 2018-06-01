@@ -54638,11 +54638,16 @@ sys/cddl/contrib/opensolaris/common/acl/acl_common.c -text
 sys/cddl/contrib/opensolaris/common/acl/acl_common.h -text
 sys/cddl/contrib/opensolaris/common/atomic/amd64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/i386/opensolaris_atomic.S -text
+sys/cddl/contrib/opensolaris/common/atomic/ia64/opensolaris_atomic.S svneol=native#text/plain
+sys/cddl/contrib/opensolaris/common/atomic/powerpc64/opensolaris_atomic.S svneol=native#text/plain
 sys/cddl/contrib/opensolaris/common/atomic/sparc64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/avl/avl.c -text
 sys/cddl/contrib/opensolaris/common/nvpair/fnvpair.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair.c -text
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair_alloc_fixed.c -text
+sys/cddl/contrib/opensolaris/common/nvpair/opensolaris_fnvpair.c svneol=native#text/plain
+sys/cddl/contrib/opensolaris/common/nvpair/opensolaris_nvpair.c svneol=native#text/plain
+sys/cddl/contrib/opensolaris/common/nvpair/opensolaris_nvpair_alloc_fixed.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/common/unicode/u8_textprep.c -text
 sys/cddl/contrib/opensolaris/common/zfs/zfeature_common.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/common/zfs/zfeature_common.h svneol=native#text/plain

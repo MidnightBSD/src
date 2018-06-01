@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -22,6 +23,9 @@
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright (c) 2013 by Delphix. All rights reserved.
+ */
 
 /*
  * Common name validation routines for ZFS.  These routines are shared by the
@@ -41,6 +45,7 @@
 #include <string.h>
 #endif
 
+#include <sys/dsl_dir.h>
 #include <sys/param.h>
 #include <sys/nvpair.h>
 #include "zfs_namecheck.h"
@@ -62,11 +67,11 @@ valid_char(char c)
  * 	[-_.: ]
  */
 int
-snapshot_namecheck(const char *path, namecheck_err_t *why, char *what)
+zfs_component_namecheck(const char *path, namecheck_err_t *why, char *what)
 {
 	const char *loc;
 
-	if (strlen(path) >= MAXNAMELEN) {
+	if (strlen(path) >= ZFS_MAX_DATASET_NAME_LEN) {
 		if (why)
 			*why = NAME_ERR_TOOLONG;
 		return (-1);
@@ -113,7 +118,7 @@ permset_namecheck(const char *path, namecheck_err_t *why, char *what)
 		return (-1);
 	}
 
-	return (snapshot_namecheck(&path[1], why, what));
+	return (zfs_component_namecheck(&path[1], why, what));
 }
 
 /*
@@ -137,14 +142,9 @@ dataset_namecheck(const char *path, namecheck_err_t *why, char *what)
 
 	/*
 	 * Make sure the name is not too long.
-	 *
-	 * ZFS_MAXNAMELEN is the maximum dataset length used in the userland
-	 * which is the same as MAXNAMELEN used in the kernel.
-	 * If ZFS_MAXNAMELEN value is changed, make sure to cleanup all
-	 * places using MAXNAMELEN.
 	 */
 
-	if (strlen(path) >= MAXNAMELEN) {
+	if (strlen(path) >= ZFS_MAX_DATASET_NAME_LEN) {
 		if (why)
 			*why = NAME_ERR_TOOLONG;
 		return (-1);
@@ -273,7 +273,7 @@ mountpoint_namecheck(const char *path, namecheck_err_t *why)
 		while (*end != '/' && *end != '\0')
 			end++;
 
-		if (end - start >= MAXNAMELEN) {
+		if (end - start >= ZFS_MAX_DATASET_NAME_LEN) {
 			if (why)
 				*why = NAME_ERR_TOOLONG;
 			return (-1);
@@ -298,13 +298,14 @@ pool_namecheck(const char *pool, namecheck_err_t *why, char *what)
 
 	/*
 	 * Make sure the name is not too long.
-	 *
-	 * ZPOOL_MAXNAMELEN is the maximum pool length used in the userland
-	 * which is the same as MAXNAMELEN used in the kernel.
-	 * If ZPOOL_MAXNAMELEN value is changed, make sure to cleanup all
-	 * places using MAXNAMELEN.
+	 * If we're creating a pool with version >= SPA_VERSION_DSL_SCRUB (v11)
+	 * we need to account for additional space needed by the origin ds which
+	 * will also be snapshotted: "poolname"+"/"+"$ORIGIN"+"@"+"$ORIGIN".
+	 * Play it safe and enforce this limit even if the pool version is < 11
+	 * so it can be upgraded without issues.
 	 */
-	if (strlen(pool) >= MAXNAMELEN) {
+	if (strlen(pool) >= (ZFS_MAX_DATASET_NAME_LEN - 2 -
+	    strlen(ORIGIN_DIR_NAME) * 2)) {
 		if (why)
 			*why = NAME_ERR_TOOLONG;
 		return (-1);
