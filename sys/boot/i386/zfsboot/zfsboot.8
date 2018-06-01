@@ -23,10 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/9/sys/boot/i386/zfsboot/zfsboot.8 272697 2014-10-07 13:37:10Z avg $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sys/boot/i386/zfsboot/zfsboot.8 331928 2018-04-03 14:09:34Z eugen $
 .\"
-.Dd September 15, 2014
+.Dd March 27, 2018
 .Dt ZFSBOOT 8
 .Os
 .Sh NAME
@@ -101,9 +100,9 @@ can also be installed in an MBR slice:
 .Bd -literal -offset indent
 gpart create -s mbr ada0
 gpart add -t freebsd ada0
-gpart create -s BSD ada0s1
 gpart bootcode -b /boot/boot0 ada0
 gpart set -a active -i 1 ada0
+dd if=/dev/zero of=/dev/ada0s1 count=2
 dd if=/boot/zfsboot of=/dev/ada0s1 count=1
 dd if=/boot/zfsboot of=/dev/ada0s1 iseek=1 oseek=1024
 .Ed

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
@@ -14,8 +15,6 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: stable/9/sys/boot/i386/zfsboot/zfsboot.c 300466 2016-05-23 05:30:24Z ngie $ */
-__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -43,13 +42,9 @@ __MBSDID("$MidnightBSD$");
 #include "util.h"
 #include "cons.h"
 #include "bootargs.h"
+#include "paths.h"
 
 #include "libzfs.h"
-
-#define PATH_DOTCONFIG	"/boot.config"
-#define PATH_CONFIG	"/boot/config"
-#define PATH_BOOT3	"/boot/zfsloader"
-#define PATH_KERNEL	"/boot/kernel/kernel"
 
 #define ARGS		0x900
 #define NOPT		14
@@ -67,7 +62,7 @@ __MBSDID("$MidnightBSD$");
 extern uint32_t _end;
 
 #ifdef GPT
-static const uuid_t freebsd_zfs_uuid = GPT_ENT_TYPE_FREEBSD_ZFS;
+static const uuid_t midnightbsd_zfs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 #endif
 static const char optstr[NOPT] = "DhaCcdgmnpqrsv"; /* Also 'P', 'S' */
 static const unsigned char flags[NOPT] = {
@@ -122,6 +117,7 @@ struct dmadat {
 static struct dmadat *dmadat;
 
 void exit(int);
+void reboot(void);
 static void load(void);
 static int parse(void);
 static void bios_getmem(void);
@@ -163,7 +159,7 @@ zfs_read(spa_t *spa, const dnode_phys_t *dnode, off_t *offp, void *start, size_t
 	n = size;
 	if (*offp + n > zp->zp_size)
 		n = zp->zp_size - *offp;
-	
+
 	rc = dnode_read(spa, dnode, *offp, start, n);
 	if (rc)
 		return (-1);
@@ -213,6 +209,35 @@ vdev_read(vdev_t *vdev, void *priv, off_t off, void *buf, size_t bytes)
 }
 
 static int
+vdev_write(vdev_t *vdev, void *priv, off_t off, void *buf, size_t bytes)
+{
+	char *p;
+	daddr_t lba;
+	unsigned int nb;
+	struct dsk *dsk = (struct dsk *) priv;
+
+	if ((off & (DEV_BSIZE - 1)) || (bytes & (DEV_BSIZE - 1)))
+		return -1;
+
+	p = buf;
+	lba = off / DEV_BSIZE;
+	lba += dsk->start;
+	while (bytes > 0) {
+		nb = bytes / DEV_BSIZE;
+		if (nb > READ_BUF_SIZE / DEV_BSIZE)
+			nb = READ_BUF_SIZE / DEV_BSIZE;
+		memcpy(dmadat->rdbuf, p, nb * DEV_BSIZE);
+		if (drvwrite(dsk, dmadat->rdbuf, lba, nb))
+			return -1;
+		p += nb * DEV_BSIZE;
+		lba += nb;
+		bytes -= nb * DEV_BSIZE;
+	}
+
+	return 0;
+}
+
+static int
 xfsread(const dnode_phys_t *dnode, off_t *offp, void *buf, size_t nbyte)
 {
     if ((size_t)zfs_read(spa, dnode, offp, buf, nbyte) != nbyte) {
@@ -220,6 +245,52 @@ xfsread(const dnode_phys_t *dnode, off_t *offp, void *buf, size_t nbyte)
 	return -1;
     }
     return 0;
+}
+
+/*
+ * Read Pad2 (formerly "Boot Block Header") area of the first
+ * vdev label of the given vdev.
+ */
+static int
+vdev_read_pad2(vdev_t *vdev, char *buf, size_t size)
+{
+	blkptr_t bp;
+	char *tmp = zap_scratch;
+	off_t off = offsetof(vdev_label_t, vl_pad2);
+
+	if (size > VDEV_PAD_SIZE)
+		size = VDEV_PAD_SIZE;
+
+	BP_ZERO(&bp);
+	BP_SET_LSIZE(&bp, VDEV_PAD_SIZE);
+	BP_SET_PSIZE(&bp, VDEV_PAD_SIZE);
+	BP_SET_CHECKSUM(&bp, ZIO_CHECKSUM_LABEL);
+	BP_SET_COMPRESS(&bp, ZIO_COMPRESS_OFF);
+	DVA_SET_OFFSET(BP_IDENTITY(&bp), off);
+	if (vdev_read_phys(vdev, &bp, tmp, off, 0))
+		return (EIO);
+	memcpy(buf, tmp, size);
+	return (0);
+}
+
+static int
+vdev_clear_pad2(vdev_t *vdev)
+{
+	char *zeroes = zap_scratch;
+	uint64_t *end;
+	off_t off = offsetof(vdev_label_t, vl_pad2);
+
+	memset(zeroes, 0, VDEV_PAD_SIZE);
+	end = (uint64_t *)(zeroes + VDEV_PAD_SIZE);
+	/* ZIO_CHECKSUM_LABEL magic and pre-calcualted checksum for all zeros */
+	end[-5] = 0x0210da7ab10c7a11;
+	end[-4] = 0x97f48f807f6e2a3f;
+	end[-3] = 0xaf909f1658aacefc;
+	end[-2] = 0xcbd1ea57ff6db48b;
+	end[-1] = 0x6ec692db0d465fab;
+	if (vdev_write(vdev, vdev->v_read_priv, off, zeroes, VDEV_PAD_SIZE))
+		return (EIO);
+	return (0);
 }
 
 static void
@@ -238,7 +309,7 @@ bios_getmem(void)
 	v86.es = VTOPSEG(&smap);
 	v86.edi = VTOPOFF(&smap);
 	v86int();
-	if ((v86.efl & 1) || (v86.eax != SMAP_SIG))
+	if (V86_CY(v86.efl) || (v86.eax != SMAP_SIG))
 	    break;
 	/* look for a low-memory segment that's large enough */
 	if ((smap.type == SMAP_TYPE_MEMORY) && (smap.base == 0) &&
@@ -285,7 +356,7 @@ bios_getmem(void)
 	v86.addr = 0x15;		/* int 0x15 function 0xe801*/
 	v86.eax = 0xe801;
 	v86int();
-	if (!(v86.efl & 1)) {
+	if (!V86_CY(v86.efl)) {
 	    bios_extmem = ((v86.ecx & 0xffff) + ((v86.edx & 0xffff) * 64)) * 1024;
 	}
     }
@@ -320,7 +391,7 @@ int13probe(int drive)
     v86.edx = drive;
     v86int();
     
-    if (!(v86.efl & 0x1) &&				/* carry clear */
+    if (!V86_CY(v86.efl) &&				/* carry clear */
 	((v86.edx & 0xff) != (drive & DRV_MASK))) {	/* unit # OK */
 	if ((v86.ecx & 0x3f) == 0) {			/* absurd sector size */
 		return(0);				/* skip device */
@@ -397,7 +468,7 @@ probe_drive(struct dsk *dsk)
 	    return;
 	for (part = 0; part < entries_per_sec; part++) {
 	    ent = (struct gpt_ent *)(sec + part * hdr.hdr_entsz);
-	    if (memcmp(&ent->ent_type, &freebsd_zfs_uuid,
+	    if (memcmp(&ent->ent_type, &midnightbsd_zfs_uuid,
 		     sizeof(uuid_t)) == 0) {
 		dsk->start = ent->ent_lba_start;
 		if (vdev_probe(vdev_read, dsk, NULL) == 0) {
@@ -436,10 +507,12 @@ trymbr:
 int
 main(void)
 {
-    int autoboot, i;
     dnode_phys_t dn;
     off_t off;
     struct dsk *dsk;
+    int autoboot, i;
+    int nextboot;
+    int rc;
 
     dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
 
@@ -470,7 +543,7 @@ main(void)
     bootinfo.bi_bios_dev = dsk->drive;
 
     bootdev = MAKEBOOTDEV(dev_maj[dsk->type],
-			  dsk->slice, dsk->unit, dsk->part),
+			  dsk->slice, dsk->unit, dsk->part);
 
     /* Process configuration file */
 
@@ -525,7 +598,39 @@ main(void)
     primary_spa = spa;
     primary_vdev = spa_get_primary_vdev(spa);
 
-    if (zfs_spa_init(spa) != 0 || zfs_mount(spa, 0, &zfsmount) != 0) {
+    nextboot = 0;
+    rc  = vdev_read_pad2(primary_vdev, cmd, sizeof(cmd));
+    if (vdev_clear_pad2(primary_vdev))
+	printf("failed to clear pad2 area of primary vdev\n");
+    if (rc == 0) {
+	if (*cmd) {
+	    /*
+	     * We could find an old-style ZFS Boot Block header here.
+	     * Simply ignore it.
+	     */
+	    if (*(uint64_t *)cmd != 0x2f5b007b10c) {
+		/*
+		 * Note that parse() is destructive to cmd[] and we also want
+		 * to honor RBX_QUIET option that could be present in cmd[].
+		 */
+		nextboot = 1;
+		memcpy(cmddup, cmd, sizeof(cmd));
+		if (parse()) {
+		    printf("failed to parse pad2 area of primary vdev\n");
+		    reboot();
+		}
+		if (!OPT_CHECK(RBX_QUIET))
+		    printf("zfs nextboot: %s\n", cmddup);
+	    }
+	    /* Do not process this command twice */
+	    *cmd = 0;
+	}
+    } else
+	printf("failed to read pad2 area of primary vdev\n");
+
+    /* Mount ZFS only if it's not already mounted via nextboot parsing. */
+    if (zfsmount.spa == NULL &&
+	(zfs_spa_init(spa) != 0 || zfs_mount(spa, 0, &zfsmount) != 0)) {
 	printf("%s: failed to mount default pool %s\n",
 	    BOOTPROG, spa->spa_name);
 	autoboot = 0;
@@ -549,13 +654,17 @@ main(void)
 	*cmd = 0;
     }
 
+    /* Do not risk waiting at the prompt forever. */
+    if (nextboot && !autoboot)
+	reboot();
+
     /*
-     * Try to exec stage 3 boot loader. If interrupted by a keypress,
+     * Try to exec /boot/loader. If interrupted by a keypress,
      * or in case of failure, try to load a kernel directly instead.
      */
 
     if (autoboot && !*kname) {
-	memcpy(kname, PATH_BOOT3, sizeof(PATH_BOOT3));
+	memcpy(kname, PATH_LOADER_ZFS, sizeof(PATH_LOADER_ZFS));
 	if (!keyhit(3)) {
 	    load();
 	    memcpy(kname, PATH_KERNEL, sizeof(PATH_KERNEL));
@@ -598,6 +707,13 @@ main(void)
 void
 exit(int x)
 {
+    __exit(x);
+}
+
+void
+reboot(void)
+{
+    __exit(0);
 }
 
 static void

@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: stable/9/sys/boot/i386/zfsboot/Makefile 272697 2014-10-07 13:37:10Z avg $
+# $FreeBSD: stable/10/sys/boot/i386/zfsboot/Makefile 319025 2017-05-28 01:14:59Z ngie $
 
 .PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../common ${.CURDIR}/../../common
 
@@ -18,7 +18,7 @@ ORG2=	0x2000
 
 CFLAGS=	-DBOOTPROG=\"zfsboot\" \
 	-O1 \
-	-DBOOT2 \
+	-DZFS -DBOOT2 \
 	-DSIOPRT=${BOOT_COMCONSOLE_PORT} \
 	-DSIOFMT=${B2SIOFMT} \
 	-DSIOSPD=${BOOT_COMCONSOLE_SPEED} \
@@ -37,6 +37,8 @@ CFLAGS.gcc+=	--param max-inline-insns-single=100
 
 LD_FLAGS=-static -N --gc-sections
 
+LIBSTAND=	${.OBJDIR}/../../libstand32/libstand.a
+
 # Pick up ../Makefile.inc early.
 .include <bsd.init.mk>
 
@@ -48,7 +50,7 @@ zfsboot: zfsboot1 zfsboot2
 CLEANFILES+=	zfsboot1 zfsldr.out zfsldr.o
 
 zfsboot1: zfsldr.out
-	objcopy -S -O binary zfsldr.out ${.TARGET}
+	${OBJCOPY} -S -O binary zfsldr.out ${.TARGET}
 
 zfsldr.out: zfsldr.o
 	${LD} ${LD_FLAGS} -e start -Ttext ${ORG1} -o ${.TARGET} zfsldr.o
@@ -62,9 +64,9 @@ CLEANFILES+=	zfsboot2 zfsboot.ld zfsboot.ldr zfsboot.bin zfsboot.out \
 BOOT2SIZE=	65536
 
 zfsboot2: zfsboot.ld
-	@set -- `ls -l zfsboot.ld`; x=$$((${BOOT2SIZE}-$$5)); \
+	@set -- `ls -l ${.ALLSRC}`; x=$$((${BOOT2SIZE}-$$5)); \
 	    echo "$$x bytes available"; test $$x -ge 0
-	dd if=zfsboot.ld of=${.TARGET} obs=${BOOT2SIZE} conv=osync
+	${DD} if=${.ALLSRC} of=${.TARGET} obs=${BOOT2SIZE} conv=osync
 
 zfsboot.ld: zfsboot.ldr zfsboot.bin ${BTXKERN}
 	btxld -v -E ${ORG2} -f bin -b ${BTXKERN} -l zfsboot.ldr \
@@ -74,7 +76,7 @@ zfsboot.ldr:
 	cp /dev/null ${.TARGET}
 
 zfsboot.bin: zfsboot.out
-	objcopy -S -O binary zfsboot.out ${.TARGET}
+	${OBJCOPY} -S -O binary zfsboot.out ${.TARGET}
 
 zfsboot.out: ${BTXCRT} zfsboot.o sio.o drv.o cons.o util.o
 	${LD} ${LD_FLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC} ${LIBSTAND}
