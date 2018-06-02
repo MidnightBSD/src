@@ -1,7 +1,22 @@
-# $FreeBSD: src/share/mk/bsd.port.subdir.mk,v 1.31 2004/07/02 20:47:18 eik Exp $
-# $MidnightBSD: src/share/mk/bsd.port.subdir.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD$
 
-PORTSDIR?=	/usr/mports
+.if !defined(PORTSDIR)
+# Autodetect if the command is being run in a ports tree that's not rooted
+# in the default /usr/ports.  The ../../.. case is in case ports ever grows
+# a third level.
+.for RELPATH in . .. ../.. ../../..
+.if !defined(_PORTSDIR) && exists(${.CURDIR}/${RELPATH}/Mk/bsd.port.mk)
+_PORTSDIR=	${.CURDIR}/${RELPATH}
+.endif
+.endfor
+_PORTSDIR?=	/usr/mports
+.if defined(.PARSEDIR)
+PORTSDIR=	${_PORTSDIR:tA}
+.else # fmake doesn't have :tA
+PORTSDIR!=	realpath ${_PORTSDIR}
+.endif
+.endif
+
 BSDPORTSUBDIRMK?=	${PORTSDIR}/Mk/bsd.port.subdir.mk
 
 .include "${BSDPORTSUBDIRMK}"
