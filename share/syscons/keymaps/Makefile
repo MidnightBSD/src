@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/syscons/keymaps/Makefile 243935 2012-12-06 01:44:19Z eadler $
 
 FILES=	INDEX.keymaps \
 	be.iso.kbd be.iso.acc.kbd \
@@ -37,6 +38,7 @@ FILES=	INDEX.keymaps \
 	ru.cp866.kbd ru.iso5.kbd \
 	si.iso.kbd \
 	sk.iso2.kbd \
+	spanish.dvorak.kbd \
 	spanish.iso.kbd spanish.iso.acc.kbd spanish.iso15.acc.kbd \
 	swedish.iso.kbd swedish.cp850.kbd \
 	swissfrench.iso.kbd swissfrench.iso.acc.kbd swissfrench.cp850.kbd \
@@ -46,8 +48,8 @@ FILES=	INDEX.keymaps \
 	ua.koi8-u.kbd ua.koi8-u.shift.alt.kbd ua.iso5.kbd \
 	uk.iso.kbd uk.iso-ctrl.kbd uk.cp850.kbd uk.cp850-ctrl.kbd \
 	uk.dvorak.kbd \
-	us.iso.kbd us.dvorak.kbd us.dvorakl.kbd us.dvorakr.kbd us.dvorakx.kbd \
-	us.emacs.kbd us.pc-ctrl.kbd us.unix.kbd us.iso.acc.kbd
+	us.iso.kbd us.dvorak.kbd us.dvorakl.kbd us.dvorakr.kbd us.dvorakp.kbd \
+	us.dvorakx.kbd us.emacs.kbd us.pc-ctrl.kbd us.unix.kbd us.iso.acc.kbd
 
 FILESDIR= ${SHAREDIR}/syscons/keymaps
 

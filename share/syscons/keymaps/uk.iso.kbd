@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/syscons/keymaps/uk.iso.kbd 270307 2014-08-21 21:48:33Z se $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state
@@ -46,7 +47,7 @@
   040   '''    '@'    nul    nul    '''    '@'    nul    nul     O
   041   '`'    172    nop    nop    '|'    '|'    nop    nop     O
   042   lshift lshift lshift lshift lshift lshift lshift lshift  O
-  043   '#'    '~'    nop    nop    '~'    '~'    nop    nop     O
+  043   '#'    '~'    nop    nop    '#'    '~'    nop    nop     O
   044   'z'    'Z'    sub    sub    'z'    'Z'    sub    sub     C
   045   'x'    'X'    can    can    'x'    'X'    can    can     C
   046   'c'    'C'    etx    etx    'c'    'C'    etx    etx     C

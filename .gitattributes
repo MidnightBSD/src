@@ -54332,6 +54332,7 @@ share/syscons/keymaps/ru.koi8-r.shift.kbd -text
 share/syscons/keymaps/ru.koi8-r.win.kbd -text
 share/syscons/keymaps/si.iso.kbd -text
 share/syscons/keymaps/sk.iso2.kbd -text
+share/syscons/keymaps/spanish.dvorak.kbd -text
 share/syscons/keymaps/spanish.iso.acc.kbd -text
 share/syscons/keymaps/spanish.iso.kbd -text
 share/syscons/keymaps/spanish.iso15.acc.kbd -text
@@ -54355,6 +54356,7 @@ share/syscons/keymaps/uk.iso-ctrl.kbd -text
 share/syscons/keymaps/uk.iso.kbd -text
 share/syscons/keymaps/us.dvorak.kbd -text
 share/syscons/keymaps/us.dvorakl.kbd -text
+share/syscons/keymaps/us.dvorakp.kbd -text
 share/syscons/keymaps/us.dvorakr.kbd -text
 share/syscons/keymaps/us.dvorakx.kbd -text
 share/syscons/keymaps/us.emacs.kbd -text

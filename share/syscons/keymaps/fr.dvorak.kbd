@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # A Dvorak keyboard for French
 #
 # This is a Dvorak-like layout for French
@@ -6,7 +7,7 @@
 #
 #   -Frédéric Praca <frederic.praca@freebsd-fr.org>
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/share/syscons/keymaps/fr.dvorak.kbd 115051 2003-05-16 03:46:53Z murray $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state
