@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 McAfee, Inc.
  * All rights reserved.
@@ -44,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/ufsread.c 294997 2016-01-28 16:52:02Z smh $");
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>
@@ -57,6 +58,8 @@ __MBSDID("$MidnightBSD$");
 #undef cgbase
 #define cgbase(fs, c)   ((ufs2_daddr_t)((fs)->fs_fpg * (c)))
 #endif
+
+typedef	uint32_t	ufs_ino_t;
 
 /*
  * We use 4k `virtual' blocks for filesystem data, whatever the actual
@@ -85,14 +88,14 @@ struct dmadat {
 };
 static struct dmadat *dmadat;
 
-static ino_t lookup(const char *);
-static ssize_t fsread(ino_t, void *, size_t);
+static ufs_ino_t lookup(const char *);
+static ssize_t fsread(ufs_ino_t, void *, size_t);
 
 static uint8_t ls, dsk_meta;
 static uint32_t fs_off;
 
 static __inline uint8_t
-fsfind(const char *name, ino_t * ino)
+fsfind(const char *name, ufs_ino_t * ino)
 {
 	static char buf[DEV_BSIZE];
 	struct direct *d;
@@ -116,12 +119,12 @@ fsfind(const char *name, ino_t * ino)
 	return 0;
 }
 
-static ino_t
+static ufs_ino_t
 lookup(const char *path)
 {
 	static char name[MAXNAMLEN + 1];
 	const char *s;
-	ino_t ino;
+	ufs_ino_t ino;
 	ssize_t n;
 	uint8_t dt;
 
@@ -163,7 +166,7 @@ static int sblock_try[] = SBLOCKSEARCH;
 #endif
 
 static ssize_t
-fsread(ino_t inode, void *buf, size_t nbyte)
+fsread_size(ufs_ino_t inode, void *buf, size_t nbyte, size_t *fsizep)
 {
 #ifndef UFS2_ONLY
 	static struct ufs1_dinode dp1;
@@ -173,7 +176,7 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 	static struct ufs2_dinode dp2;
 #endif
 	static struct fs fs;
-	static ino_t inomap;
+	static ufs_ino_t inomap;
 	char *blkbuf;
 	void *indbuf;
 	char *s;
@@ -183,10 +186,21 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 	static ufs2_daddr_t blkmap, indmap;
 	u_int u;
 
+	/* Basic parameter validation. */
+	if ((buf == NULL && nbyte != 0) || dmadat == NULL)
+		return (-1);
+
 	blkbuf = dmadat->blkbuf;
 	indbuf = dmadat->indbuf;
-	if (!dsk_meta) {
+
+	/*
+	 * Force probe if inode is zero to ensure we have a valid fs, otherwise
+	 * when probing multiple paritions, reads from subsequent parititions
+	 * will incorrectly succeed.
+	 */
+	if (!dsk_meta || inode == 0) {
 		inomap = 0;
+		dsk_meta = 0;
 		for (n = 0; sblock_try[n] != -1; n++) {
 			if (dskread(dmadat->sbbuf, sblock_try[n] / DEV_BSIZE,
 			    SBLOCKSIZE / DEV_BSIZE))
@@ -205,11 +219,10 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 #endif
 			    ) &&
 			    fs.fs_bsize <= MAXBSIZE &&
-			    fs.fs_bsize >= sizeof(struct fs))
+			    fs.fs_bsize >= (int32_t)sizeof(struct fs))
 				break;
 		}
 		if (sblock_try[n] == -1) {
-			printf("Not ufs\n");
 			return -1;
 		}
 		dsk_meta++;
@@ -223,18 +236,18 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 			return -1;
 		n = INO_TO_VBO(n, inode);
 #if defined(UFS1_ONLY)
-		memcpy(&dp1, (struct ufs1_dinode *)blkbuf + n,
-		    sizeof(struct ufs1_dinode));
+		memcpy(&dp1, (struct ufs1_dinode *)(void *)blkbuf + n,
+		    sizeof(dp1));
 #elif defined(UFS2_ONLY)
-		memcpy(&dp2, (struct ufs2_dinode *)blkbuf + n,
-		    sizeof(struct ufs2_dinode));
+		memcpy(&dp2, (struct ufs2_dinode *)(void *)blkbuf + n,
+		    sizeof(dp2));
 #else
 		if (fs.fs_magic == FS_UFS1_MAGIC)
-			memcpy(&dp1, (struct ufs1_dinode *)blkbuf + n,
-			    sizeof(struct ufs1_dinode));
+			memcpy(&dp1, (struct ufs1_dinode *)(void *)blkbuf + n,
+			    sizeof(dp1));
 		else
-			memcpy(&dp2, (struct ufs2_dinode *)blkbuf + n,
-			    sizeof(struct ufs2_dinode));
+			memcpy(&dp2, (struct ufs2_dinode *)(void *)blkbuf + n,
+			    sizeof(dp2));
 #endif
 		inomap = inode;
 		fs_off = 0;
@@ -282,7 +295,7 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 			return -1;
 		vbaddr = fsbtodb(&fs, addr2) + (off >> VBLKSHIFT) * DBPERVBLK;
 		vboff = off & VBLKMASK;
-		n = sblksize(&fs, size, lbn) - (off & ~VBLKMASK);
+		n = sblksize(&fs, (off_t)size, lbn) - (off & ~VBLKMASK);
 		if (n > VBLKSIZE)
 			n = VBLKSIZE;
 		if (blkmap != vbaddr) {
@@ -298,5 +311,17 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 		fs_off += n;
 		nb -= n;
 	}
+
+	if (fsizep != NULL)
+		*fsizep = size;
+
 	return nbyte;
 }
+
+static ssize_t
+fsread(ufs_ino_t inode, void *buf, size_t nbyte)
+{
+
+	return fsread_size(inode, buf, nbyte, NULL);
+}
+

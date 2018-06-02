@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/misc.c 294981 2016-01-28 12:11:42Z smh $");
 
 #include <string.h>
 #include <stand.h>
@@ -118,14 +119,12 @@ kern_bzero(vm_offset_t dest, size_t len)
 int
 kern_pread(int fd, vm_offset_t dest, size_t len, off_t off)
 {
-	ssize_t nread;
 
 	if (lseek(fd, off, SEEK_SET) == -1) {
 		printf("\nlseek failed\n");
 		return (-1);
 	}
-	nread = archsw.arch_readin(fd, dest, len);
-	if (nread != len) {
+	if ((size_t)archsw.arch_readin(fd, dest, len) != len) {
 		printf("\nreadin failed\n");
 		return (-1);
 	}
@@ -140,7 +139,6 @@ void *
 alloc_pread(int fd, off_t off, size_t len)
 {
 	void *buf;
-	ssize_t nread;
 
 	buf = malloc(len);
 	if (buf == NULL) {
@@ -152,8 +150,7 @@ alloc_pread(int fd, off_t off, size_t len)
 		free(buf);
 		return (NULL);
 	}
-	nread = read(fd, buf, len);
-	if (nread != len) {
+	if ((size_t)read(fd, buf, len) != len) {
 		printf("\nread failed\n");
 		free(buf);
 		return (NULL);

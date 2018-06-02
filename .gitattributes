@@ -54250,10 +54250,13 @@ sys/boot/common/newvers.sh -text
 sys/boot/common/panic.c -text
 sys/boot/common/part.c svneol=native#text/plain
 sys/boot/common/part.h svneol=native#text/plain
+sys/boot/common/paths.h svneol=native#text/plain
 sys/boot/common/pnp.c -text
+sys/boot/common/rbx.h svneol=native#text/plain
 sys/boot/common/reloc_elf.c -text
 sys/boot/common/reloc_elf32.c -text
 sys/boot/common/reloc_elf64.c -text
+sys/boot/common/self_reloc.c svneol=native#text/plain
 sys/boot/common/ufsread.c -text
 sys/boot/common/util.c -text
 sys/boot/common/util.h -text

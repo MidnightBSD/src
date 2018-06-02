@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/interp_forth.c 294985 2016-01-28 12:23:25Z smh $");
 
 #include <sys/param.h>		/* to pick up __FreeBSD_version */
 #include <string.h>
@@ -49,6 +50,13 @@ extern char bootprog_rev[];
  * just in this file, it is getting defined.
  */
 #define BF_PARSE 100
+
+/*
+ * FreeBSD loader default dictionary cells
+ */
+#ifndef	BF_DICTSIZE
+#define	BF_DICTSIZE	10000
+#endif
 
 /*
  * BootForth   Interface to Ficl Forth interpreter.
@@ -131,7 +139,23 @@ bf_command(FICL_VM *vm)
     } else {
 	result=BF_PARSE;
     }
+
+    switch (result) {
+    case CMD_CRIT:
+	printf("%s\n", command_errmsg);
+	break;
+    case CMD_FATAL:
+	panic("%s\n", command_errmsg);
+    }
+
     free(line);
+    /*
+     * If there was error during nested ficlExec(), we may no longer have
+     * valid environment to return.  Throw all exceptions from here.
+     */
+    if (result != CMD_OK)
+	vmThrow(vm, result);
+
     /* This is going to be thrown!!! */
     stackPushINT(vm->pStack,result);
 }
@@ -233,8 +257,8 @@ bf_init(void)
     struct bootblk_command	**cmdp;
     char create_buf[41];	/* 31 characters-long builtins */
     int fd;
-   
-    bf_sys = ficlInitSystem(10000);	/* Default dictionary ~4000 cells */
+
+    bf_sys = ficlInitSystem(BF_DICTSIZE);
     bf_vm = ficlNewVM(bf_sys);
 
     /* Put all private definitions in a "builtins" vocabulary */

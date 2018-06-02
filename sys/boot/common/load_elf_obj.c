@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Ian Dowse <iedowse@freebsd.org>
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/load_elf_obj.c 298493 2016-04-22 21:38:37Z emaste $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -129,17 +130,10 @@ __elfN(obj_loadfile)(char *filename, u_int64_t dest,
 		goto oerr;
 	}
 
-	kfp = file_findfile(NULL, NULL);
+	kfp = file_findfile(NULL, __elfN(obj_kerneltype));
 	if (kfp == NULL) {
 		printf("elf" __XSTRING(__ELF_WORD_SIZE)
 		    "_obj_loadfile: can't load module before kernel\n");
-		err = EPERM;
-		goto oerr;
-	}
-	if (strcmp(__elfN(obj_kerneltype), kfp->f_type)) {
-		printf("elf" __XSTRING(__ELF_WORD_SIZE)
-		    "_obj_loadfile: can't load module with kernel type '%s'\n",
-		    kfp->f_type);
 		err = EPERM;
 		goto oerr;
 	}
@@ -419,6 +413,7 @@ __elfN(obj_parse_modmetadata)(struct preloaded_file *fp, elf_file_t ef)
 			modcnt++;
 			break;
 		case MDT_MODULE:
+		case MDT_PNP_INFO:
 			break;
 		default:
 			printf("unknown type %d\n", md.md_type);
@@ -529,10 +524,8 @@ __elfN(obj_symaddr)(struct elf_file *ef, Elf_Size symidx)
 {
 	Elf_Sym sym;
 	Elf_Addr base;
-	int symcnt;
 
-	symcnt = ef->e_shdr[ef->symtabindex].sh_size / sizeof(Elf_Sym);
-	if (symidx >= symcnt)
+	if (symidx >= ef->e_shdr[ef->symtabindex].sh_size / sizeof(Elf_Sym))
 		return (0);
 	COPYOUT(ef->e_shdr[ef->symtabindex].sh_addr + symidx * sizeof(Elf_Sym),
 	    &sym, sizeof(sym));

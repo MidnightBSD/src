@@ -23,9 +23,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: stable/9/sys/boot/common/loader.8 266013 2014-05-14 13:45:51Z marius $
+.\" $FreeBSD: stable/10/sys/boot/common/loader.8 291295 2015-11-25 08:58:07Z smh $
 .\"
-.Dd October 1, 2013
+.Dd November 18, 2015
 .Dt LOADER 8
 .Os
 .Sh NAME
@@ -208,12 +208,18 @@ returns an error itself (see
 .Op Fl t Ar type
 .Ar file Cm ...
 .Xc
-Loads a kernel, kernel loadable module (kld), or file of opaque
-contents tagged as being of the type
+Loads a kernel, kernel loadable module (kld), disk image,
+or file of opaque contents tagged as being of the type
 .Ar type .
 Kernel and modules can be either in a.out or ELF format.
 Any arguments passed after the name of the file to be loaded
 will be passed as arguments to that file.
+Use the
+.Li md_image
+type to make the kernel create a file-backed
+.Xr md 4
+disk.
+This is useful for booting from a temporary rootfs.
 Currently, argument passing does not work for the kernel.
 .Pp
 .It Ic load_geli Xo
@@ -466,6 +472,14 @@ userland output (e.g.\& from
 .It Va currdev
 Selects the default device.
 Syntax for devices is odd.
+.It Va dumpdev
+Sets the device for kernel dumps.
+This can be used to ensure that a device is configured before the corresponding
+.Va dumpdev
+directive from
+.Xr rc.conf 5
+has been processed, allowing kernel panics that happen during the early stages
+of boot to be captured.
 .It Va init_chroot
 If set to a valid directory in the root file system, it causes
 .Xr init 8
@@ -481,7 +495,7 @@ Sets the list of binaries which the kernel will try to run as the initial
 process.
 The first matching binary is used.
 The default list is
-.Dq Li /sbin/init:/sbin/oinit:/sbin/init.bak:\:/rescue/init:/stand/sysinstall .
+.Dq Li /sbin/init:/sbin/oinit:/sbin/init.bak:\:/rescue/init .
 .It Va init_script
 If set to a valid file name in the root file system,
 instructs
@@ -671,6 +685,13 @@ Overrides the compile-time set value of
 .Dv TCBHASHSIZE
 or the preset default of 512.
 Must be a power of 2.
+.It Va twiddle_divisor
+Throttles the output of the 
+.Sq twiddle
+I/O progress indicator displayed while loading the kernel and modules.
+This is useful on slow serial consoles where the time spent waiting for
+these characters to be written can add up to many seconds.
+The default is 1 (full speed); a value of 2 spins half as fast, and so on.
 .It Va vm.kmem_size
 Sets the size of kernel memory (bytes).
 This overrides the value determined when the kernel was compiled.

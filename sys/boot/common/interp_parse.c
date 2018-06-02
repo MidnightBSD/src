@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/interp_parse.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <stand.h>
 #include <string.h>
@@ -137,7 +138,7 @@ parse(int *argc, char ***argv, char *str)
 
 	case VAR:
 	    if (token) {
-		PARSE_FAIL((q = index(p, token)) == NULL);
+		PARSE_FAIL((q = strchr(p, token)) == NULL);
 	    } else {
 		q = p;
 		while (*q && !isspace(*q))

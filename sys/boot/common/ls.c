@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * $NetBSD: ls.c,v 1.3 1997/06/13 13:48:47 drochner Exp $
  */
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/ls.c 316319 2017-03-31 04:43:25Z ngie $");
 
 #include <sys/param.h>
 #include <ufs/ufs/dinode.h>
@@ -139,9 +140,8 @@ ls_getdir(char **pathp)
     struct stat	sb;
     int		fd;
     const char	*cp;
-    char	*path, *tail;
+    char	*path;
     
-    tail = NULL;
     fd = -1;
 
     /* one extra byte for a possible trailing slash required */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/module.c 294985 2016-01-28 12:23:25Z smh $");
 
 /*
  * file/module function dispatcher, support, etc.
@@ -52,7 +53,6 @@ struct moduledir {
 };
 
 static int			file_load(char *filename, vm_offset_t dest, struct preloaded_file **result);
-static int			file_loadraw(char *type, char *name);
 static int			file_load_dependencies(struct preloaded_file *base_mod);
 static char *			file_search(const char *name, char **extlist);
 static struct kernel_module *	file_findmodule(struct preloaded_file *fp, char *modname, struct mod_depend *verinfo);
@@ -66,7 +66,12 @@ static void			moduledir_rebuild(void);
 /* load address should be tweaked by first module loaded (kernel) */
 static vm_offset_t	loadaddr = 0;
 
+#if defined(LOADER_FDT_SUPPORT)
+static const char	*default_searchpath =
+    "/boot/kernel;/boot/modules;/boot/dtb";
+#else
 static const char	*default_searchpath ="/boot/kernel;/boot/modules";
+#endif
 
 static STAILQ_HEAD(, moduledir) moduledir_list = STAILQ_HEAD_INITIALIZER(moduledir_list);
 
@@ -97,6 +102,7 @@ COMMAND_SET(load, "load", "load a kernel or module", command_load);
 static int
 command_load(int argc, char *argv[])
 {
+    struct preloaded_file *fp;
     char	*typestr;
     int		dofile, dokld, ch, error;
     
@@ -106,7 +112,7 @@ command_load(int argc, char *argv[])
     typestr = NULL;
     if (argc == 1) {
 	command_errmsg = "no filename specified";
-	return(CMD_ERROR);
+	return (CMD_CRIT);
     }
     while ((ch = getopt(argc, argv, "kt:")) != -1) {
 	switch(ch) {
@@ -120,7 +126,7 @@ command_load(int argc, char *argv[])
 	case '?':
 	default:
 	    /* getopt has already reported an error */
-	    return(CMD_OK);
+	    return (CMD_OK);
 	}
     }
     argv += (optind - 1);
@@ -132,26 +138,46 @@ command_load(int argc, char *argv[])
     if (dofile) {
 	if ((argc != 2) || (typestr == NULL) || (*typestr == 0)) {
 	    command_errmsg = "invalid load type";
-	    return(CMD_ERROR);
+	    return (CMD_CRIT);
 	}
-	return(file_loadraw(typestr, argv[1]));
+
+	fp = file_findfile(argv[1], typestr);
+	if (fp) {
+		sprintf(command_errbuf, "warning: file '%s' already loaded", argv[1]);
+		return (CMD_WARN);
+	}
+
+	if (file_loadraw(argv[1], typestr, 1) != NULL)
+		return (CMD_OK);
+
+	/* Failing to load mfs_root is never going to end well! */
+	if (strcmp("mfs_root", typestr) == 0)
+		return (CMD_FATAL);
+
+	return (CMD_ERROR);
     }
     /*
      * Do we have explicit KLD load ?
      */
     if (dokld || file_havepath(argv[1])) {
 	error = mod_loadkld(argv[1], argc - 2, argv + 2);
-	if (error == EEXIST)
+	if (error == EEXIST) {
 	    sprintf(command_errbuf, "warning: KLD '%s' already loaded", argv[1]);
-	return (error == 0 ? CMD_OK : CMD_ERROR);
+	    return (CMD_WARN);
+	}
+	
+	return (error == 0 ? CMD_OK : CMD_CRIT);
     }
     /*
      * Looks like a request for a module.
      */
     error = mod_load(argv[1], NULL, argc - 2, argv + 2);
-    if (error == EEXIST)
+    if (error == EEXIST) {
 	sprintf(command_errbuf, "warning: module '%s' already loaded", argv[1]);
-    return (error == 0 ? CMD_OK : CMD_ERROR);
+	return (CMD_WARN);
+    }
+
+    return (error == 0 ? CMD_OK : CMD_CRIT);
 }
 
 COMMAND_SET(load_geli, "load_geli", "load a geli key", command_load_geli);
@@ -189,7 +215,7 @@ command_load_geli(int argc, char *argv[])
     argv += (optind - 1);
     argc -= (optind - 1);
     sprintf(typestr, "%s:geli_keyfile%d", argv[1], num);
-    return(file_loadraw(typestr, argv[2]));
+    return (file_loadraw(argv[2], typestr, 1) ? CMD_OK : CMD_ERROR);
 }
 
 COMMAND_SET(unload, "unload", "unload all modules", command_unload);
@@ -352,36 +378,36 @@ file_load_dependencies(struct preloaded_file *base_file)
     }
     return (error);
 }
+
 /*
- * We've been asked to load (name) as (type), so just suck it in,
+ * We've been asked to load (fname) as (type), so just suck it in,
  * no arguments or anything.
  */
-int
-file_loadraw(char *type, char *name)
+struct preloaded_file *
+file_loadraw(const char *fname, char *type, int insert)
 {
     struct preloaded_file	*fp;
-    char			*cp;
+    char			*name;
     int				fd, got;
     vm_offset_t			laddr;
 
     /* We can't load first */
     if ((file_findfile(NULL, NULL)) == NULL) {
 	command_errmsg = "can't load file before kernel";
-	return(CMD_ERROR);
+	return(NULL);
     }
 
     /* locate the file on the load path */
-    cp = file_search(name, NULL);
-    if (cp == NULL) {
-	sprintf(command_errbuf, "can't find '%s'", name);
-	return(CMD_ERROR);
+    name = file_search(fname, NULL);
+    if (name == NULL) {
+	sprintf(command_errbuf, "can't find '%s'", fname);
+	return(NULL);
     }
-    name = cp;
 
     if ((fd = open(name, O_RDONLY)) < 0) {
 	sprintf(command_errbuf, "can't open '%s': %s", name, strerror(errno));
 	free(name);
-	return(CMD_ERROR);
+	return(NULL);
     }
 
     if (archsw.arch_loadaddr != NULL)
@@ -397,7 +423,7 @@ file_loadraw(char *type, char *name)
 	    sprintf(command_errbuf, "error reading '%s': %s", name, strerror(errno));
 	    free(name);
 	    close(fd);
-	    return(CMD_ERROR);
+	    return(NULL);
 	}
 	laddr += got;
     }
@@ -416,9 +442,10 @@ file_loadraw(char *type, char *name)
     loadaddr = laddr;
 
     /* Add to the list of loaded files */
-    file_insert_tail(fp);
+    if (insert != 0)
+    	file_insert_tail(fp);
     close(fd);
-    return(CMD_OK);
+    return(fp);
 }
 
 /*
@@ -519,7 +546,7 @@ mod_loadkld(const char *kldname, int argc, char *argv[])
  * NULL may be passed as a wildcard to either.
  */
 struct preloaded_file *
-file_findfile(char *name, char *type)
+file_findfile(const char *name, const char *type)
 {
     struct preloaded_file *fp;
 
@@ -956,7 +983,7 @@ moduledir_rebuild(void)
 {
     struct	moduledir *mdp, *mtmp;
     const char	*path, *cp, *ep;
-    int		cplen;
+    size_t	cplen;
 
     path = getenv("module_path");
     if (path == NULL)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, Michael Smith
  * Copyright (c) 1996, Sujal M. Patel
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/common/isapnp.c 119483 2003-08-25 23:30:41Z obrien $");
 
 /*
  * Machine-independant ISA PnP enumerator implementing a subset of the
