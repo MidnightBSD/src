@@ -1,5 +1,5 @@
-#
 # $MidnightBSD$
+# $FreeBSD: stable/10/Makefile 321341 2017-07-21 17:58:06Z bdrewery $
 #
 # The user-driven targets are:
 #
@@ -18,19 +18,33 @@
 # reinstallkernel.debug
 # kernel              - buildkernel + installkernel.
 # kernel-toolchain    - Builds the subset of world necessary to build a kernel
+# kernel-toolchains   - Build kernel-toolchain for all universe targets.
 # doxygen             - Build API documentation of the kernel, needs doxygen.
-# update              - Convenient way to update your source tree (cvs).
+# update              - Convenient way to update your source tree(s).
+# checkworld          - Run test suite on installed world.
 # check-old           - List obsolete directories/files/libraries.
 # check-old-dirs      - List obsolete directories.
 # check-old-files     - List obsolete files.
 # check-old-libs      - List obsolete libraries.
-# delete-old          - Delete obsolete directories/files/libraries.
+# delete-old          - Delete obsolete directories/files.
 # delete-old-dirs     - Delete obsolete directories.
 # delete-old-files    - Delete obsolete files.
 # delete-old-libs     - Delete obsolete libraries.
 # targets             - Print a list of supported TARGET/TARGET_ARCH pairs
 #                       for world and kernel targets.
 # toolchains          - Build a toolchain for all world and kernel targets.
+# xdev                - xdev-build + xdev-install for the architecture
+#                       specified with XDEV and XDEV_ARCH.
+# xdev-build          - Build cross-development tools.
+# xdev-install        - Install cross-development tools.
+# native-xtools       - Create host binaries that produce target objects
+#                       for use in qemu user-mode jails.
+# 
+# "quick" way to test all kernel builds:
+# 	_jflag=`sysctl -n hw.ncpu`
+# 	_jflag=$(($_jflag * 2))
+# 	[ $_jflag -gt 12 ] && _jflag=12
+# 	make universe -DMAKE_JUST_KERNELS JFLAG=-j${_jflag}
 #
 # This makefile is simple by design. The MidnightBSD make automatically reads
 # the /usr/share/mk/sys.mk unless the -m argument is specified on the
@@ -64,14 +78,14 @@
 #  5.  `reboot'        (in single user mode: boot -s from the loader prompt).
 #  6.  `mergemaster -p'
 #  7.  `make installworld'
-#  8.  `make delete-old'
-#  9.  `mergemaster' (you may wish to use -i, along with -U or -F)
+#  8.  `mergemaster'		(you may wish to use -i, along with -U or -F).
+#  9.  `make delete-old'
 # 10.  `reboot'
 # 11.  `make delete-old-libs' (in case no 3rd party program uses them anymore)
 #
 # See src/UPDATING `COMMON ITEMS' for more complete information.
 #
-# If TARGET=machine (e.g. amd64, ...) is specified you can
+# If TARGET=machine (e.g. ia64, sparc64, ...) is specified you can
 # cross build world for other machine types using the buildworld target,
 # and once the world is built you can cross build a kernel using the
 # buildkernel target.
@@ -86,25 +100,22 @@
 # For more information, see the build(7) manual page.
 #
 TGTS=	all all-man buildenv buildenvvars buildkernel buildworld \
-	check-old check-old-dirs check-old-files check-old-libs \
-	checkdpadd clean cleandepend cleandir \
+	check check-old check-old-dirs check-old-files check-old-libs \
+	checkdpadd checkworld clean cleandepend cleandir \
 	delete-old delete-old-dirs delete-old-files delete-old-libs \
 	depend distribute distributekernel distributekernel.debug \
 	distributeworld distrib-dirs distribution doxygen \
-	everything hierarchy install installcheck installkernel \
+	everything hier hierarchy install installcheck installkernel \
 	installkernel.debug packagekernel packageworld \
 	reinstallkernel reinstallkernel.debug \
 	installworld kernel-toolchain libraries lint maninstall \
-	obj objlink regress rerelease showconfig tags toolchain update \
+	obj objlink rerelease showconfig tags toolchain update \
 	_worldtmp _legacy _bootstrap-tools _cleanobj _obj \
 	_build-tools _cross-tools _includes _libraries _depend \
 	build32 builddtb distribute32 install32 xdev xdev-build xdev-install \
+	native-xtools \
 
 TGTS+=	${SUBDIR_TARGETS}
-
-# XXX: clang integrated-as doesn't grok .codeNN directives yet
-CFLAGS.cdboot.S=	${CLANG_NO_IAS}
-CFLAGS+=		${CFLAGS.${.IMPSRC:T}}
 
 BITGTS=	files includes
 BITGTS:=${BITGTS} ${BITGTS:S/^/build/} ${BITGTS:S/^/install/}
@@ -113,6 +124,8 @@ TGTS+=	${BITGTS}
 .ORDER: buildworld installworld
 .ORDER: buildworld distributeworld
 .ORDER: buildworld buildkernel
+.ORDER: installworld distribution
+.ORDER: installworld installkernel
 .ORDER: buildkernel installkernel
 .ORDER: buildkernel installkernel.debug
 .ORDER: buildkernel reinstallkernel
@@ -127,18 +140,60 @@ _MAKEOBJDIRPREFIX!= /usr/bin/env -i PATH=${PATH} ${MAKE} \
 .error MAKEOBJDIRPREFIX can only be set in environment, not as a global\
 	(in make.conf(5)) or command-line variable.
 .endif
-MAKEPATH=	${MAKEOBJDIRPREFIX}${.CURDIR}/make.${MACHINE}
-BINMAKE= \
-	`if [ -x ${MAKEPATH}/make ]; then echo ${MAKEPATH}/make; else echo ${MAKE}; fi` \
+
+# We often need to use the tree's version of make to build it.
+# Choices add to complexity though.
+# We cannot blindly use a make which may not be the one we want
+# so be exlicit - until all choice is removed.
+.if !defined(WITHOUT_BMAKE)
+WANT_MAKE=	bmake
+.else
+WANT_MAKE=	fmake
+.endif
+MYMAKE=		${MAKEOBJDIRPREFIX}${.CURDIR}/make.${MACHINE}/${WANT_MAKE}
+.if defined(.PARSEDIR)
+HAVE_MAKE=	bmake
+.else
+HAVE_MAKE=	fmake
+.endif
+.if defined(ALWAYS_BOOTSTRAP_MAKE) || \
+    ${HAVE_MAKE} != ${WANT_MAKE} || \
+    (defined(WANT_MAKE_VERSION) && ${MAKE_VERSION} < ${WANT_MAKE_VERSION})
+NEED_MAKE_UPGRADE= t
+.endif
+.if exists(${MYMAKE})
+SUB_MAKE:= ${MYMAKE} -m ${.CURDIR}/share/mk
+.elif defined(NEED_MAKE_UPGRADE) || ${WANT_MAKE} != "bmake"
+# It may not exist yet but we may cause it to.
+# In the case of fmake, upgrade_checks may cause a newer version to be built.
+SUB_MAKE= `test -x ${MYMAKE} && echo ${MYMAKE} || echo ${MAKE}` \
 	-m ${.CURDIR}/share/mk
-_MAKE=	PATH=${PATH} ${BINMAKE} -f Makefile.inc1 TARGET=${_TARGET} TARGET_ARCH=${_TARGET_ARCH}
+.else
+SUB_MAKE= ${MAKE} -m ${.CURDIR}/share/mk
+.endif
+
+_MAKE=	PATH=${PATH} ${SUB_MAKE} -f Makefile.inc1 TARGET=${_TARGET} TARGET_ARCH=${_TARGET_ARCH}
 
 # Guess machine architecture from machine type, and vice versa.
 .if !defined(TARGET_ARCH) && defined(TARGET)
-_TARGET_ARCH= ${TARGET}
+_TARGET_ARCH=	${TARGET:S/pc98/i386/}
 .elif !defined(TARGET) && defined(TARGET_ARCH) && \
     ${TARGET_ARCH} != ${MACHINE_ARCH}
-_TARGET=	${TARGET_ARCH}
+_TARGET=		${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/}
+.endif
+# Legacy names, for another transition period mips:mips(n32|64)?eb -> mips:mips\1
+.if defined(TARGET) && defined(TARGET_ARCH) && \
+    ${TARGET} == "mips" && ${TARGET_ARCH:Mmips*eb}
+_TARGET_ARCH=		${TARGET_ARCH:C/eb$//}
+.warning "TARGET_ARCH of ${TARGET_ARCH} is deprecated in favor of ${_TARGET_ARCH}"
+.endif
+.if defined(TARGET) && ${TARGET} == "mips" && defined(TARGET_BIG_ENDIAN)
+.warning "TARGET_BIG_ENDIAN is no longer necessary for MIPS.  Big-endian is not the default."
+.endif
+# arm with TARGET_BIG_ENDIAN -> armeb
+.if defined(TARGET_ARCH) && ${TARGET_ARCH} == "arm" && defined(TARGET_BIG_ENDIAN)
+.warning "TARGET_ARCH of arm with TARGET_BIG_ENDIAN is deprecated.  use armeb"
+_TARGET_ARCH=armeb
 .endif
 .if defined(TARGET) && !defined(_TARGET)
 _TARGET=${TARGET}
@@ -156,7 +211,7 @@ _TARGET_ARCH?=	${MACHINE_ARCH}
 # The user can define ALWAYS_CHECK_MAKE to have this check performed
 # for all targets.
 #
-.if defined(ALWAYS_CHECK_MAKE)
+.if defined(ALWAYS_CHECK_MAKE) || !defined(.PARSEDIR)
 ${TGTS}: upgrade_checks
 .else
 buildworld: upgrade_checks
@@ -171,10 +226,12 @@ buildworld: upgrade_checks
 #
 # In the following, the first 'rm' in a series will usually remove all
 # files and directories.  If it does not, then there are probably some
-# files with chflags set, so this unsets them and tries the 'rm' a
+# files with file flags set, so this unsets them and tries the 'rm' a
 # second time.  There are situations where this target will be cleaning
 # some directories via more than one method, but that duplication is
-# needed to correctly handle all the possible situations.
+# needed to correctly handle all the possible situations.  Removing all
+# files without file flags set in the first 'rm' instance saves time,
+# because 'chflags' will need to operate on fewer files afterwards.
 #
 BW_CANONICALOBJDIR:=${MAKEOBJDIRPREFIX}${.CURDIR}
 cleanworld:
@@ -196,7 +253,14 @@ cleanworld:
 # Handle the user-driven targets, using the source relative mk files.
 #
 
-${TGTS}:
+.if !(!empty(.MAKEFLAGS:M-n) && ${.MAKEFLAGS:M-n} == "-n")
+# skip this for -n to avoid changing previous behavior of 
+# 'make -n buildworld' etc.  Using -n -n will run it.
+${TGTS}: .MAKE
+tinderbox toolchains kernel-toolchains: .MAKE
+.endif
+
+${TGTS}: .PHONY
 	${_+_}@cd ${.CURDIR}; ${_MAKE} ${.TARGET}
 
 # The historic default "all" target creates files which may cause stale
@@ -276,7 +340,9 @@ kernel: buildkernel installkernel
 # for building the world.
 #
 upgrade_checks:
-.if !defined(.PARSEDIR)
+.if defined(NEED_MAKE_UPGRADE)
+	@${_+_}(cd ${.CURDIR} && ${MAKE} ${WANT_MAKE:S,^f,,})
+.elif ${WANT_MAKE} == "fmake"
 	@if ! (cd ${.CURDIR}/tools/build/make_check && \
 	    PATH=${PATH} ${BINMAKE} obj >/dev/null 2>&1 && \
 	    PATH=${PATH} ${BINMAKE} >/dev/null 2>&1); \
@@ -290,30 +356,40 @@ upgrade_checks:
 # headers, libraries and tools.  Also, allow the location of
 # the system bsdmake-like utility to be overridden.
 #
-MMAKEENV=	MAKEOBJDIRPREFIX=${MAKEPATH} \
+MMAKEENV=	MAKEOBJDIRPREFIX=${MYMAKE:H} \
 		DESTDIR= \
 		INSTALL="sh ${.CURDIR}/tools/install.sh"
 MMAKE=		${MMAKEENV} ${MAKE} \
 		-D_UPGRADING \
 		-DNOMAN -DNO_MAN -DNOSHARED -DNO_SHARED \
-		-DNO_CPU_CFLAGS -DNO_WERROR
+		-DNO_CPU_CFLAGS -DNO_WERROR \
+		DESTDIR= -DNO_TESTS PROGNAME=${MYMAKE:T}
 
-make: .PHONY
+make bmake: .PHONY
 	@echo
 	@echo "--------------------------------------------------------------"
 	@echo ">>> Building an up-to-date make(1)"
 	@echo "--------------------------------------------------------------"
-	${_+_}@cd ${.CURDIR}/usr.bin/make; \
-		${MMAKE} obj && \
-		${MMAKE} depend && \
-		${MMAKE} all && \
-		${MMAKE} install DESTDIR=${MAKEPATH} BINDIR=
+	${_+_}@cd ${.CURDIR}/usr.bin/${.TARGET}; \
+		${MMAKE} obj; \
+		${MMAKE} depend; \
+		${MMAKE} all; \
+		${MMAKE} install DESTDIR=${MYMAKE:H} BINDIR=
+
+regress: .PHONY
+	@echo "'make regress' has been renamed 'make check'" | /usr/bin/fmt
+	@false
+
+tinderbox toolchains kernel-toolchains: upgrade_checks
 
 tinderbox:
-	@cd ${.CURDIR} && ${MAKE} DOING_TINDERBOX=YES universe
+	@cd ${.CURDIR}; ${SUB_MAKE} DOING_TINDERBOX=YES universe
 
 toolchains:
-	@cd ${.CURDIR} && ${MAKE} UNIVERSE_TARGET=toolchain universe
+	@cd ${.CURDIR}; ${SUB_MAKE} UNIVERSE_TARGET=toolchain universe
+
+kernel-toolchains:
+	@cd ${.CURDIR}; ${SUB_MAKE} UNIVERSE_TARGET=kernel-toolchain universe
 
 #
 # universe
@@ -323,7 +399,11 @@ toolchains:
 # existing system is.
 #
 .if make(universe) || make(universe_kernels) || make(tinderbox) || make(targets)
-TARGETS?=amd64 i386
+TARGETS?=amd64 arm i386 ia64 mips pc98 powerpc sparc64
+TARGET_ARCHES_arm?=	arm armeb armv6
+TARGET_ARCHES_mips?=	mipsel mips mips64el mips64 mipsn32
+TARGET_ARCHES_powerpc?=	powerpc powerpc64
+TARGET_ARCHES_pc98?=	i386
 .for target in ${TARGETS}
 TARGET_ARCHES_${target}?= ${target}
 .endfor
@@ -350,7 +430,8 @@ MAKEFAIL=tee -a ${FAILFILE}
 MAKEFAIL=cat
 .endif
 
-universe: universe_prologue upgrade_checks
+universe_prologue:  upgrade_checks
+universe: universe_prologue
 universe_prologue:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> make universe started on ${STARTTIME}"
@@ -360,17 +441,17 @@ universe_prologue:
 .endif
 .for target in ${TARGETS}
 universe: universe_${target}
-.ORDER: universe_prologue upgrade_checks universe_${target}_prologue universe_${target} universe_epilogue
+universe_epilogue: universe_${target}
 universe_${target}: universe_${target}_prologue
-universe_${target}_prologue:
+universe_${target}_prologue: universe_prologue
 	@echo ">> ${target} started on `LC_ALL=C date`"
 .if !defined(MAKE_JUST_KERNELS)
 .for target_arch in ${TARGET_ARCHES_${target}}
 universe_${target}: universe_${target}_${target_arch}
-universe_${target}_${target_arch}: universe_${target}_prologue
+universe_${target}_${target_arch}: universe_${target}_prologue .MAKE
 	@echo ">> ${target}.${target_arch} ${UNIVERSE_TARGET} started on `LC_ALL=C date`"
 	@(cd ${.CURDIR} && env __MAKE_CONF=/dev/null \
-	    ${MAKE} ${JFLAG} ${UNIVERSE_TARGET} \
+	    ${SUB_MAKE} ${JFLAG} ${UNIVERSE_TARGET} \
 	    TARGET=${target} \
 	    TARGET_ARCH=${target_arch} \
 	    > _.${target}.${target_arch}.${UNIVERSE_TARGET} 2>&1 || \
@@ -381,13 +462,21 @@ universe_${target}_${target_arch}: universe_${target}_prologue
 .endfor
 .endif
 .if !defined(MAKE_JUST_WORLDS)
+# If we are building world and kernels wait for the required worlds to finish
+.if !defined(MAKE_JUST_KERNELS)
+.for target_arch in ${TARGET_ARCHES_${target}}
+universe_${target}_kernels: universe_${target}_${target_arch}
+.endfor
+.endif
+universe_${target}: universe_${target}_kernels
+universe_${target}_kernels: universe_${target}_prologue .MAKE
 .if exists(${KERNSRCDIR}/${target}/conf/NOTES)
 	@(cd ${KERNSRCDIR}/${target}/conf && env __MAKE_CONF=/dev/null \
-	    ${MAKE} LINT > ${.CURDIR}/_.${target}.makeLINT 2>&1 || \
+	    ${SUB_MAKE} LINT > ${.CURDIR}/_.${target}.makeLINT 2>&1 || \
 	    (echo "${target} 'make LINT' failed," \
 	    "check _.${target}.makeLINT for details"| ${MAKEFAIL}))
 .endif
-	@cd ${.CURDIR} && ${MAKE} ${.MAKEFLAGS} TARGET=${target} \
+	@cd ${.CURDIR}; ${SUB_MAKE} ${.MAKEFLAGS} TARGET=${target} \
 	    universe_kernels
 .endif
 	@echo ">> ${target} completed on `LC_ALL=C date`"
@@ -396,9 +485,16 @@ universe_kernels: universe_kernconfs
 .if !defined(TARGET)
 TARGET!=	uname -m
 .endif
+.if defined(MAKE_ALL_KERNELS)
+_THINNER=cat
+.else
+_THINNER=xargs grep -L "^.NO_UNIVERSE" || true
+.endif
 KERNCONFS!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
-		find [A-Z0-9]*[A-Z0-9] -type f -maxdepth 0 \
-		! -name DEFAULTS ! -name NOTES
+		find [[:upper:][:digit:]]*[[:upper:][:digit:]] \
+		-type f -maxdepth 0 \
+		! -name DEFAULTS ! -name NOTES | \
+		${_THINNER}
 universe_kernconfs:
 .for kernel in ${KERNCONFS}
 TARGET_ARCH_${kernel}!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
@@ -408,9 +504,9 @@ TARGET_ARCH_${kernel}!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
 .error "Target architecture for ${TARGET}/conf/${kernel} unknown.  config(8) likely too old."
 .endif
 universe_kernconfs: universe_kernconf_${TARGET}_${kernel}
-universe_kernconf_${TARGET}_${kernel}:
+universe_kernconf_${TARGET}_${kernel}: .MAKE
 	@(cd ${.CURDIR} && env __MAKE_CONF=/dev/null \
-	    ${MAKE} ${JFLAG} buildkernel \
+	    ${SUB_MAKE} ${JFLAG} buildkernel \
 	    TARGET=${TARGET} \
 	    TARGET_ARCH=${TARGET_ARCH_${kernel}} \
 	    KERNCONF=${kernel} \
@@ -430,5 +526,16 @@ universe_epilogue:
 		cat ${FAILFILE} ;\
 		exit 1 ;\
 	fi
+.endif
+.endif
+
+buildLINT:
+	${MAKE} -C ${.CURDIR}/sys/${_TARGET}/conf LINT
+
+.if defined(.PARSEDIR)
+.if make(universe)
+# we do not want a failure of one branch abort all.
+MAKE_JOB_ERROR_TOKEN= no
+.export MAKE_JOB_ERROR_TOKEN
 .endif
 .endif
