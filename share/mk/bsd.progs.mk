@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/bsd.progs.mk 291791 2015-12-04 18:09:51Z bdrewery $
+# $FreeBSD: stable/10/share/mk/bsd.progs.mk 304145 2016-08-15 09:39:26Z bdrewery $
 # $Id: progs.mk,v 1.11 2012/11/06 17:18:54 sjg Exp $
 #
 #	@(#) Copyright (c) 2006, Simon J. Gerraty
@@ -32,24 +32,12 @@ UPDATE_DEPENDFILE_PROG = ${PROGS:[1]}
 UPDATE_DEPENDFILE_PROG?= no
 .endif
 
-.ifndef PROG
-# They may have asked us to build just one
-.for t in ${PROGS}
-.if make($t)
-.if ${PROGS_CXX:U:M${t}}
-PROG_CXX ?= $t
-.endif
-PROG ?= $t
-.endif
-.endfor
-.endif
-
 .if defined(PROG)
 # just one of many
 PROG_OVERRIDE_VARS +=	BINDIR BINGRP BINOWN BINMODE DPSRCS MAN NO_WERROR \
-			PROGNAME SRCS WARNS
-PROG_VARS +=	CFLAGS CPPFLAGS CXXFLAGS DPADD DPLIBS LDADD LINKS \
-		LDFLAGS MLINKS ${PROG_OVERRIDE_VARS}
+			PROGNAME SRCS STRIP WARNS
+PROG_VARS +=	CFLAGS CXXFLAGS DEBUG_FLAGS DPADD INTERNALPROG LDADD LIBADD \
+		LINKS LDFLAGS MLINKS ${PROG_OVERRIDE_VARS}
 .for v in ${PROG_VARS:O:u}
 .if empty(${PROG_OVERRIDE_VARS:M$v})
 .if defined(${v}.${PROG})
@@ -83,7 +71,7 @@ UPDATE_DEPENDFILE = NO
 
 # These are handled by the main make process.
 .ifdef _RECURSING_PROGS
-_PROGS_GLOBAL_VARS= CLEANFILES CLEANDIRS FILESGROUPS SCRIPTS
+_PROGS_GLOBAL_VARS= CLEANFILES CLEANDIRS FILESGROUPS INCSGROUPS SCRIPTS
 .for v in ${_PROGS_GLOBAL_VARS}
 $v =
 .endfor
@@ -127,7 +115,7 @@ x.$p= PROG_CXX=$p
 # Main PROG target
 $p ${p}_p: .PHONY .MAKE
 	(cd ${.CURDIR} && \
-	    NO_SUBDIR=1 ${MAKE} -f ${MAKEFILE} _RECURSING_PROGS= \
+	    NO_SUBDIR=1 ${MAKE} -f ${MAKEFILE} _RECURSING_PROGS=t \
 	    PROG=$p \
 	    DEPENDFILE=.depend.$p .MAKE.DEPENDFILE=.depend.$p \
 	    ${x.$p})
@@ -136,7 +124,7 @@ $p ${p}_p: .PHONY .MAKE
 .for t in ${PROGS_TARGETS:O:u}
 $p.$t: .PHONY .MAKE
 	(cd ${.CURDIR} && \
-	    NO_SUBDIR=1 ${MAKE} -f ${MAKEFILE} _RECURSING_PROGS= \
+	    NO_SUBDIR=1 ${MAKE} -f ${MAKEFILE} _RECURSING_PROGS=t \
 	    PROG=$p \
 	    DEPENDFILE=.depend.$p .MAKE.DEPENDFILE=.depend.$p \
 	    ${x.$p} ${@:E})
@@ -145,6 +133,8 @@ $p.$t: .PHONY .MAKE
 
 # Depend main pseudo targets on all PROG.pseudo targets too.
 .for t in ${PROGS_TARGETS:O:u}
+.if make(${t})
 $t: ${PROGS:%=%.$t}
+.endif
 .endfor
 .endif	# !empty(PROGS) && !defined(_RECURSING_PROGS) && !defined(PROG)
