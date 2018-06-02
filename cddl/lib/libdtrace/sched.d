@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +21,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: release/9.2.0/cddl/lib/libdtrace/sched.d 179189 2008-05-22 04:26:42Z jb $
+ * $FreeBSD: stable/10/cddl/lib/libdtrace/sched.d 179189 2008-05-22 04:26:42Z jb $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

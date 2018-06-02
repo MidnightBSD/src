@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +21,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: release/9.2.0/cddl/lib/libdtrace/nfssrv.d 250486 2013-05-10 21:39:41Z pfg $
+ * $FreeBSD: stable/10/cddl/lib/libdtrace/nfssrv.d 249600 2013-04-18 01:20:08Z pfg $
  */
 
 /*

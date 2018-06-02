@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +22,7 @@
  *
  * Portions Copyright 2006 John Birrell jb@freebsd.org
  *
- * $FreeBSD: release/9.2.0/cddl/lib/libdtrace/psinfo.d 179189 2008-05-22 04:26:42Z jb $
+ * $FreeBSD: stable/10/cddl/lib/libdtrace/psinfo.d 305748 2016-09-12 17:05:42Z gnn $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -42,6 +43,7 @@ typedef struct psinfo {
 		pr_addr;	/* address of process */
 	string	pr_psargs;	/* process arguments */
 	u_int	pr_arglen;	/* process argument length */
+	u_int	pr_jailid;	/* jail id */
 } psinfo_t;
 
 #pragma D binding "1.0" translator
@@ -56,8 +58,10 @@ translator psinfo_t < struct proc *T > {
 	pr_gid = T->p_ucred->cr_rgid;
 	pr_egid = T->p_ucred->cr_groups[0];
 	pr_addr = 0;
-	pr_psargs = stringof(T->p_args->ar_args);
+	pr_psargs = (T->p_args == 0) ? "" :
+	    memstr(T->p_args->ar_args, ' ', T->p_args->ar_length);
 	pr_arglen = T->p_args->ar_length;
+	pr_jailid = T->p_ucred->cr_prison->pr_id;
 };
 
 typedef struct lwpsinfo {

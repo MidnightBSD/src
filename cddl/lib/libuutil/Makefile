@@ -1,8 +1,8 @@
-# $MidnightBSD: src/cddl/lib/libuutil/Makefile,v 1.2 2008/10/15 19:10:20 laffer1 Exp $
-# $FreeBSD: src/cddl/lib/libuutil/Makefile,v 1.2 2007/04/16 21:20:25 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/cddl/lib/libuutil/Makefile 321270 2017-07-20 01:01:16Z ngie $
 
-.PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libuutil/common
-.PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/avl
+.PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libuutil/common
+.PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/avl
 
 LIB=	uutil
 SRCS=	avl.c \
@@ -16,12 +16,12 @@ SRCS=	avl.c \
 	uu_pname.c \
 	uu_strtoint.c
 
-WARNS?=	0
+WARNS?=	1
 CFLAGS+= -DNATIVE_BUILD
-CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libuutil/common
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
-CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/include
-CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/head
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libuutil/common
+CFLAGS+= -I${SRCTOP}/sys/cddl/compat/opensolaris
+CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 
 .include <bsd.lib.mk>

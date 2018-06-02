@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -18,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/9.2.0/cddl/lib/libdtrace/io.d 243989 2012-12-07 19:06:40Z gnn $
+ * $FreeBSD: stable/10/cddl/lib/libdtrace/io.d 248846 2013-03-28 20:22:43Z gnn $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
