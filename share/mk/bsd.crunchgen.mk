@@ -1,5 +1,7 @@
 #################################################################
 #
+# Generate crunched binaries using crunchgen(1).
+#
 # General notes:
 #
 # A number of Make variables are used to generate the crunchgen config file.
@@ -22,8 +24,11 @@
 # Specific links can be suppressed by setting
 # CRUNCH_SUPPRESS_LINK_$(NAME) to 1.
 #
+# If CRUNCH_GENERATE_LINKS is set to no, no links will be generated.
+#
 
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/mk/bsd.crunchgen.mk 291786 2015-12-04 18:04:09Z bdrewery $
 
 ##################################################################
 #  The following is pretty nearly a generic crunchgen-handling makefile
@@ -41,11 +46,12 @@ CANONICALOBJDIR:=${MAKEOBJDIR}
 .else
 CANONICALOBJDIR:= /usr/obj${.CURDIR}
 .endif
+CRUNCH_GENERATE_LINKS?=	yes
 
 CLEANFILES+= $(CONF) *.o *.lo *.c *.mk *.cache *.a *.h
 
 # Don't try to extract debug info from ${PROG}.
-NO_DEBUG_FILES=
+MK_DEBUG_FILES=no
 
 # Program names and their aliases contribute hardlinks to 'rescue' executable,
 # except for those that get suppressed.
@@ -56,6 +62,7 @@ $(OUTPUTS): $(CRUNCH_SRCDIR_${P})/Makefile
 .else
 $(OUTPUTS): $(.CURDIR)/../../$(D)/$(P)/Makefile
 .endif
+.if ${CRUNCH_GENERATE_LINKS} == "yes"
 .ifndef CRUNCH_SUPPRESS_LINK_${P}
 LINKS+= $(BINDIR)/$(PROG) $(BINDIR)/$(P)
 .endif
@@ -64,6 +71,7 @@ LINKS+= $(BINDIR)/$(PROG) $(BINDIR)/$(P)
 LINKS+= $(BINDIR)/$(PROG) $(BINDIR)/$(A)
 .endif
 .endfor
+.endif
 .endfor
 .endfor
 
