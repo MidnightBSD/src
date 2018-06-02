@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
+# $FreeBSD: stable/10/share/mk/bsd.own.mk 324140 2017-09-30 20:46:34Z ngie $
 #
 # The include file <bsd.own.mk> set common variables for owner,
 # group, mode, and directories. Defaults are in brackets.
@@ -28,6 +28,8 @@
 # LIBDIR	Base path for libraries. [/usr/lib]
 #
 # LIBCOMPATDIR	Base path for compat libraries. [/usr/lib/compat]
+#
+# LIBPRIVATEDIR	Base path for private libraries. [/usr/lib/private]
 #
 # LIBDATADIR	Base path for misc. utility data files. [/usr/libdata]
 #
@@ -142,9 +144,14 @@ KMODDIR?=	/boot/kernel
 KMODOWN?=	${BINOWN}
 KMODGRP?=	${BINGRP}
 KMODMODE?=	${BINMODE}
+DTBDIR?=	/boot/dtb
+DTBOWN?=	root
+DTBGRP?=	wheel
+DTBMODE?=	444
 
 LIBDIR?=	/usr/lib
 LIBCOMPATDIR?=	/usr/lib/compat
+LIBPRIVATEDIR?=	/usr/lib/private
 LIBDATADIR?=	/usr/libdata
 LIBEXECDIR?=	/usr/libexec
 LINTLIBDIR?=	/usr/libdata/lint
@@ -207,6 +214,15 @@ STRIP?=		-s
 COMPRESS_CMD?=	gzip -cn
 COMPRESS_EXT?=	.gz
 
+# Set XZ_THREADS to 1 to disable multi-threading.
+XZ_THREADS?=	0
+
+.if !empty(XZ_THREADS)
+XZ_CMD?=	xz -T ${XZ_THREADS}
+.else
+XZ_CMD?=	xz
+.endif
+
 .if !defined(_WITHOUT_SRCCONF)
 #
 # Define MK_* variables (which are either "yes" or "no") for users
@@ -228,87 +244,11 @@ COMPRESS_EXT?=	.gz
     PROFILE
 .if defined(NO_${var})
 .if defined(WITH_${var})
-.warning unsetting WITH_${var}
 .undef WITH_${var}
-.if defined(WITH_${var})
-.error wtf
-.endif
 .endif
 WITHOUT_${var}=
 .endif
 .endfor
-
-#
-# Compat NO_* options (same as above, except their use is deprecated).
-#
-.if !defined(BURN_BRIDGES)
-.for var in \
-    ACPI \
-    ASH \
-    ATM \
-    AUDIT \
-    AUTHPF \
-    BIND \
-    BIND_ETC \
-    BIND_LIBS_LWRES \
-    BIND_MTREE \
-    BIND_UTILS \
-    BLUETOOTH \
-    BOOT \
-    CALENDAR \
-    CPP \
-    CRYPT \
-    CVS \
-    CXX \
-    DICT \
-    DYNAMICROOT \
-    EXAMPLES \
-    FORTH \
-    FP_LIBC \
-    GAMES \
-    GCOV \
-    GDB \
-    GNU \
-    GPIB \
-    HTML \
-    INET6 \
-    INFO \
-    IPFILTER \
-    IPX \
-    KERBEROS \
-    LIB32 \
-    LIBPTHREAD \
-    LIBTHR \
-    LOCALES \
-    LPR \
-    MAILWRAPPER \
-    NETCAT \
-    NIS \
-    NLS \
-    NLS_CATALOGS \
-    NS_CACHING \
-    OBJC \
-    OPENSSH \
-    OPENSSL \
-    PAM \
-    PF \
-    RCMDS \
-    RCS \
-    RESCUE \
-    SENDMAIL \
-    SETUID_LOGIN \
-    SHAREDOCS \
-    SYSCONS \
-    TCSH \
-    TOOLCHAIN \
-    USB \
-    WPA_SUPPLICANT_EAPOL
-.if defined(NO_${var})
-#.warning NO_${var} is deprecated in favour of WITHOUT_${var}=
-WITHOUT_${var}=
-.endif
-.endfor
-.endif # !defined(BURN_BRIDGES)
 
 #
 # Older-style variables that enabled behaviour when set.
@@ -316,70 +256,81 @@ WITHOUT_${var}=
 .if defined(YES_HESIOD)
 WITH_HESIOD=
 .endif
-.if defined(MAKE_IDEA)
-WITH_IDEA=
-.endif
 
 __DEFAULT_YES_OPTIONS = \
     ACCT \
     ACPI \
     AMD \
-    APACHE \
     APM \
-    ASH \
+    ARM_EABI \
     ASSERT_DEBUG \
     AT \
     ATM \
     AUDIT \
     AUTHPF \
-    BIND \
-    BIND_ETC \
-    BIND_LIBS_LWRES \
-    BIND_MTREE \
-    BIND_UTILS \
+    AUTOFS \
+    BHYVE \
     BINUTILS \
     BLUETOOTH \
+    BMAKE \
     BOOT \
+    BOOTPARAMD \
+    BOOTPD \
     BSD_CPIO \
+    BSDINSTALL \
     BSNMP \
-    SOURCELESS \
-    SOURCELESS_HOST \
-    SOURCELESS_UCODE \
     BZIP2 \
     CALENDAR \
+    CAPSICUM \
+    CCD \
     CDDL \
-    CLANG_IS_CC \
     CPP \
+    CROSS_COMPILER \
     CRYPT \
     CTM \
-    CVS \
     CXX \
+    DIALOG \
     DICT \
     DYNAMICROOT \
+    ED_CRYPTO \
+    EE \
     EXAMPLES \
+    FILE \
+    FINGER \
     FLOPPY \
+    FMTREE \
+    FORMAT_EXTENSIONS \
     FORTH \
     FP_LIBC \
+    FREEBSD_UPDATE \
+    FTP \
     GAMES \
-    GCC \
     GCOV \
     GDB \
     GNU \
     GPIB \
     GPIO \
+    GPL_DTC \
+    GROFF \
+    HAST \
     HTML \
     ICONV \
     INET \
     INET6 \
+    INETD \
     INFO \
     INSTALLLIB \
     IPFILTER \
     IPFW \
     IPX \
+    ISCSI \
     JAIL \
+    KDUMP \
     KERBEROS \
     KERNEL_SYMBOLS \
     KVM \
+    LDNS \
+    LDNS_UTILS \
     LEGACY_CONSOLE \
     LIB32 \
     LIBPTHREAD \
@@ -387,29 +338,34 @@ __DEFAULT_YES_OPTIONS = \
     LOCALES \
     LOCATE \
     LPR \
+    LS_COLORS \
     MAIL \
     MAILWRAPPER \
     MAKE \
     MAN \
-    NCP \
+    NCURSESW \
     NDIS \
     NETCAT \
     NETGRAPH \
     NIS \
     NLS \
     NLS_CATALOGS \
+    NMTREE \
     NS_CACHING \
     NTP \
-    OBJC \
     OPENSSH \
     OPENSSL \
     PAM \
     PC_SYSINSTALL \
     PF \
+    PKGBOOTSTRAP \
     PMC \
+    PORTSNAP \
     PPP \
     PROFILE \
     QUOTAS \
+    RADIUS_SUPPORT \
+    RBOOTD \
     RCMDS \
     RCS \
     RESCUE \
@@ -417,17 +373,25 @@ __DEFAULT_YES_OPTIONS = \
     SENDMAIL \
     SETUID_LOGIN \
     SHAREDOCS \
+    SOURCELESS \
+    SOURCELESS_HOST \
+    SOURCELESS_UCODE \
     SSP \
     SVNLITE \
-    SYSINSTALL \
     SYMVER \
     SYSCONS \
+    TALK \
     TCSH \
+    TCP_WRAPPERS \
     TELNET \
     TEXTPROC \
+    TFTP \
+    TIMED \
     TOOLCHAIN \
+    UNBOUND \
     USB \
     UTMPX \
+    VT \
     WIRELESS \
     WPA_SUPPLICANT_EAPOL \
     ZFS \
@@ -435,24 +399,23 @@ __DEFAULT_YES_OPTIONS = \
 
 __DEFAULT_NO_OPTIONS = \
     BSD_GREP \
-    BIND_IDN \
-    BIND_LARGE_FILE \
-    BIND_LIBS \
-    BIND_SIGCHASE \
-    BIND_XML \
-    BMAKE \
     CLANG_EXTRAS \
     CTF \
     DEBUG_FILES \
-    GNUCXX \
     HESIOD \
-    IDEA \
+    INSTALL_AS_USER \
     LLDB \
-    NMTREE \
+    NAND \
     OFED \
+    PKGTOOLS \
+    RPCBIND_WARMSTART_SUPPORT \
     SHARED_TOOLCHAIN \
     SVN \
-    TESTS
+    TESTS \
+    USB_GADGET_EXAMPLES \
+    ZONEINFO_LEAPSECONDS_SUPPORT \
+    ZONEINFO_OLD_TIMEZONES_SUPPORT \
+
 
 #
 # Default behaviour of some options depends on the architecture.  Unfortunately
@@ -467,30 +430,78 @@ __T=${TARGET_ARCH}
 .else
 __T=${MACHINE_ARCH}
 .endif
-# Clang is only for x86 right now, by default.
-.if ${__T} == "amd64" || ${__T} == "i386"
+.if defined(TARGET)
+__TT=${TARGET}
+.else
+__TT=${MACHINE}
+.endif
+# Clang is only for x86, powerpc and little-endian arm right now, by default.
+.if ${__T} == "amd64" || ${__T} == "i386" || ${__T:Mpowerpc*}
 __DEFAULT_YES_OPTIONS+=CLANG CLANG_FULL
+.elif ${__T} == "arm" || ${__T} == "armv6"
+__DEFAULT_YES_OPTIONS+=CLANG
+# GCC is unable to build the full clang on arm, disable it by default.
+__DEFAULT_NO_OPTIONS+=CLANG_FULL
 .else
 __DEFAULT_NO_OPTIONS+=CLANG CLANG_FULL
 .endif
+# Clang the default system compiler only on little-endian arm and x86.
+.if ${__T} == "amd64" || ${__T} == "arm" || ${__T} == "armv6" || \
+    ${__T} == "i386"
+__DEFAULT_YES_OPTIONS+=CLANG_IS_CC
+# The pc98 bootloader requires gcc to build and so we must leave gcc enabled
+# for pc98 for now.
+.if ${__TT} == "pc98"
+__DEFAULT_NO_OPTIONS+=GNUCXX
+__DEFAULT_YES_OPTIONS+=GCC
+.else
+__DEFAULT_NO_OPTIONS+=GCC GNUCXX
+.endif
+.else
+# If clang is not cc, then build gcc by default
+__DEFAULT_NO_OPTIONS+=CLANG_IS_CC
+__DEFAULT_YES_OPTIONS+=GCC
+# And if g++ is c++, build the rest of the GNU C++ stack
+.if defined(WITHOUT_CXX)
+__DEFAULT_NO_OPTIONS+=GNUCXX
+.else
+__DEFAULT_YES_OPTIONS+=GNUCXX
+.endif
+.endif
+.if ${__T} == "amd64" || ${__T} == "i386" || \
+    ${__T} == "powerpc64" || ${__T} == "sparc64"
+__DEFAULT_YES_OPTIONS+=CXGBETOOL
+.else
+__DEFAULT_NO_OPTIONS+=CXGBETOOL
+.endif
+# FDT is needed only for arm, mips and powerpc
+.if ${__T:Marm*} || ${__T:Mpowerpc*} || ${__T:Mmips*}
+__DEFAULT_YES_OPTIONS+=FDT
+.else
 __DEFAULT_NO_OPTIONS+=FDT
+.endif
+# HyperV is only available for x86 and amd64.
+.if ${__T} == "amd64" || ${__T} == "i386"
+__DEFAULT_YES_OPTIONS+=HYPERV
+.else
+__DEFAULT_NO_OPTIONS+=HYPERV
+.endif
 .undef __T
 
 #
 # MK_* options which default to "yes".
 #
 .for var in ${__DEFAULT_YES_OPTIONS}
+.if !defined(MK_${var})
 .if defined(WITH_${var}) && defined(WITHOUT_${var})
 .error WITH_${var} and WITHOUT_${var} can't both be set.
-.endif
-.if defined(MK_${var})
-.error MK_${var} can't be set by a user.
 .endif
 .if defined(WITHOUT_${var})
 MK_${var}:=	no
 .else
 MK_${var}:=	yes
 .endif
+.endif	# !defined(MK_${var})
 .endfor
 .undef __DEFAULT_YES_OPTIONS
 
@@ -498,17 +509,16 @@ MK_${var}:=	yes
 # MK_* options which default to "no".
 #
 .for var in ${__DEFAULT_NO_OPTIONS}
+.if !defined(MK_${var})
 .if defined(WITH_${var}) && defined(WITHOUT_${var})
 .error WITH_${var} and WITHOUT_${var} can't both be set.
-.endif
-.if defined(MK_${var})
-.error MK_${var} can't be set by a user.
 .endif
 .if defined(WITH_${var})
 MK_${var}:=	yes
 .else
 MK_${var}:=	no
 .endif
+.endif	# !defined(MK_${var})
 .endfor
 .undef __DEFAULT_NO_OPTIONS
 
@@ -520,20 +530,9 @@ MK_${var}:=	no
 MK_LIBTHR:=	no
 .endif
 
-.if ${MK_LIBTHR} == "no"
-MK_BIND:=	no
-.endif
-
-.if ${MK_BIND} == "no"
-MK_BIND_ETC:=	no
-MK_BIND_LIBS:=	no
-MK_BIND_LIBS_LWRES:= no
-MK_BIND_MTREE:=	no
-MK_BIND_UTILS:=	no
-.endif
-
-.if ${MK_BIND_MTREE} == "no"
-MK_BIND_ETC:=	no
+.if ${MK_LDNS} == "no"
+MK_LDNS_UTILS:=	no
+MK_UNBOUND:= no
 .endif
 
 .if ${MK_SOURCELESS} == "no"
@@ -554,10 +553,11 @@ MK_KERBEROS:=	no
 
 .if ${MK_CXX} == "no"
 MK_CLANG:=	no
+MK_GROFF:=	no
 .endif
 
-.if ${MK_IPX} == "no"
-MK_NCP:=	no
+.if ${MK_DIALOG} == "no"
+MK_BSDINSTALL:=	no
 .endif
 
 .if ${MK_MAIL} == "no"
@@ -570,6 +570,10 @@ MK_ATM:=	no
 MK_BLUETOOTH:=	no
 .endif
 
+.if ${MK_NLS} == "no"
+MK_NLS_CATALOGS:= no
+.endif
+
 .if ${MK_OPENSSL} == "no"
 MK_OPENSSH:=	no
 MK_KERBEROS:=	no
@@ -579,6 +583,10 @@ MK_KERBEROS:=	no
 MK_AUTHPF:=	no
 .endif
 
+.if ${MK_TEXTPROC} == "no"
+MK_GROFF:=	no
+.endif
+
 .if ${MK_TOOLCHAIN} == "no"
 MK_BINUTILS:=	no
 MK_CLANG:=	no
@@ -586,9 +594,13 @@ MK_GCC:=	no
 MK_GDB:=	no
 .endif
 
+.if ${MK_ZONEINFO} == "no"
+MK_ZONEINFO_LEAPSECONDS_SUPPORT:= no
+MK_ZONEINFO_OLD_TIMEZONES_SUPPORT:= no
+.endif
+
 .if ${MK_CLANG} == "no"
 MK_CLANG_EXTRAS:= no
-MK_CLANG_IS_CC:= no
 MK_CLANG_FULL:= no
 .endif
 
@@ -596,9 +608,41 @@ MK_CLANG_FULL:= no
 MK_LLDB:= no
 .endif
 
+.if defined(NO_TESTS)
+# This should be handled above along the handling of all other NO_*  options.
+# However, the above is broken when WITH_*=yes are passed to make(1) as
+# command line arguments.  See PR bin/183762.
+#
+# Because the TESTS option is new and it will default to yes, it's likely
+# that people will pass WITHOUT_TESTS=yes to make(1) directly and get a broken
+# build.  So, just in case, it's better to explicitly handle this case here.
+#
+# TODO(jmmv): Either fix make to allow us putting this override where it
+# belongs above or fix this file to cope with the make bug.
+MK_TESTS:= no
+.endif
+
 #
 # Set defaults for the MK_*_SUPPORT variables.
 #
+
+#
+# MK_* options whose default value depends on another option.
+#
+.for vv in \
+    GSSAPI/KERBEROS \
+    MAN_UTILS/MAN
+.if defined(WITH_${vv:H}) && defined(WITHOUT_${vv:H})
+.error WITH_${vv:H} and WITHOUT_${vv:H} can't both be set.
+.endif
+.if defined(WITH_${vv:H})
+MK_${vv:H}:=	yes
+.elif defined(WITHOUT_${vv:H})
+MK_${vv:H}:=	no
+.else
+MK_${vv:H}:=	${MK_${vv:T}}
+.endif
+.endfor
 
 #
 # MK_*_SUPPORT options which default to "yes" unless their corresponding
@@ -618,34 +662,10 @@ MK_LLDB:= no
 .if defined(WITH_${var}_SUPPORT) && defined(WITHOUT_${var}_SUPPORT)
 .error WITH_${var}_SUPPORT and WITHOUT_${var}_SUPPORT can't both be set.
 .endif
-.if defined(MK_${var}_SUPPORT)
-.error MK_${var}_SUPPORT can't be set by a user.
-.endif
 .if defined(WITHOUT_${var}_SUPPORT) || ${MK_${var}} == "no"
 MK_${var}_SUPPORT:= no
 .else
 MK_${var}_SUPPORT:= yes
-.endif
-.endfor
-
-#
-# MK_* options whose default value depends on another option.
-#
-.for vv in \
-    GSSAPI/KERBEROS \
-    MAN_UTILS/MAN
-.if defined(WITH_${vv:H}) && defined(WITHOUT_${vv:H})
-.error WITH_${vv:H} and WITHOUT_${vv:H} can't both be set.
-.endif
-.if defined(MK_${vv:H})
-.error MK_${vv:H} can't be set by a user.
-.endif
-.if defined(WITH_${vv:H})
-MK_${vv:H}:=	yes
-.elif defined(WITHOUT_${vv:H})
-MK_${vv:H}:=	no
-.else
-MK_${vv:H}:=	${MK_${vv:T}}
 .endif
 .endfor
 
@@ -657,9 +677,6 @@ MK_${vv:H}:=	${MK_${vv:T}}
     LIBCPLUSPLUS
 .if defined(WITH_${var}) && defined(WITHOUT_${var})
 .error WITH_${var} and WITHOUT_${var} can't both be set.
-.endif
-.if defined(MK_${var})
-.error MK_${var} can't be set by a user.
 .endif
 .if ${COMPILER_FEATURES:Mc++11}
 .if defined(WITHOUT_${var})
@@ -678,20 +695,30 @@ MK_${var}:=	no
 
 .if ${MK_CTF} != "no"
 CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
-.elif defined(.PARSEDIR) || ${MAKE_VERSION} >= 9201210220
+.elif defined(.PARSEDIR) || (defined(MAKE_VERSION) && ${MAKE_VERSION} >= 5201111300)
 CTFCONVERT_CMD=
 .else
 CTFCONVERT_CMD=	@:
 .endif 
 
-.if ${MK_CTF} != "no"
-CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
-.elif ${MAKE_VERSION} >= 9201210220
-CTFCONVERT_CMD=
-.else
-CTFCONVERT_CMD=	@:
-.endif 
+.if ${MK_INSTALL_AS_USER} != "no"
+_uid!=	id -u
+.if ${_uid} != 0
+.if !defined(USER)
+USER!=	id -un
+.endif
+_gid!=	id -gn
+.for x in BIN CONF DOC DTB INFO KMOD LIB MAN NLS SHARE
+$xOWN=	${USER}
+$xGRP=	${_gid}
+.endfor
+.endif
+.endif
 
 .endif # !_WITHOUT_SRCCONF
+
+# Pointer to the top directory into which tests are installed.  Should not be
+# overriden by Makefiles, but the user may choose to set this in src.conf(5).
+TESTSBASE?= /usr/tests
 
 .endif	# !target(__<bsd.own.mk>__)
