@@ -54260,6 +54260,14 @@ sys/boot/common/util.h -text
 sys/boot/common/zfsloader.8 svneol=native#text/plain
 sys/boot/efi/Makefile -text
 sys/boot/efi/Makefile.inc -text
+sys/boot/efi/boot1/Makefile svneol=native#text/plain
+sys/boot/efi/boot1/Makefile.fat svneol=native#text/plain
+sys/boot/efi/boot1/boot1.c svneol=native#text/plain
+sys/boot/efi/boot1/boot_module.h svneol=native#text/plain
+sys/boot/efi/boot1/fat-amd64.tmpl.bz2.uu -text
+sys/boot/efi/boot1/generate-fat.sh svneol=native#text/plain
+sys/boot/efi/boot1/ufs_module.c svneol=native#text/plain
+sys/boot/efi/boot1/zfs_module.c svneol=native#text/plain
 sys/boot/efi/include/README -text
 sys/boot/efi/include/efi.h -text
 sys/boot/efi/include/efi_nii.h -text
