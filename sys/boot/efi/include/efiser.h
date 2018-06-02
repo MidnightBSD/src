@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/efiser.h 294981 2016-01-28 12:11:42Z smh $ */
 #ifndef _EFI_SER_H
 #define _EFI_SER_H
 
@@ -30,7 +31,7 @@ Revision History
 //
 
 #define SERIAL_IO_PROTOCOL \
-    { 0xBB25CF6F, 0xF1D4, 0x11D2, 0x9A, 0x0C, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0xFD }
+    { 0xBB25CF6F, 0xF1D4, 0x11D2, {0x9A, 0x0C, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0xFD} }
 
 INTERFACE_DECL(_SERIAL_IO_INTERFACE);
 

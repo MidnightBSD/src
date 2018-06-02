@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/boot/efi/include/i386/pe.h 163898 2006-11-02 02:42:48Z marcel $ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/ia64/pe.h 163898 2006-11-02 02:42:48Z marcel $ */
 /* 
     PE32+ header file
  */
@@ -12,6 +12,21 @@
 #define IMAGE_NT_SIGNATURE                  0x00004550  // PE00  
 #define IMAGE_EDOS_SIGNATURE                0x44454550  // PEED
 
+/*****************************************************************************
+ * The following stuff comes from winnt.h from the ia64sdk, plus the Plabel for
+ * loading EM executables.
+ *****************************************************************************/
+//
+// Intel IA64 specific
+//
+
+#define IMAGE_REL_BASED_IA64_IMM64            9
+#define IMAGE_REL_BASED_IA64_DIR64            10
+
+struct Plabel { 
+    UINT64  EntryPoint;
+    UINT64  NewGP;
+};
 
 typedef struct _IMAGE_DOS_HEADER {      // DOS .EXE header
     UINT16   e_magic;                     // Magic number
@@ -113,52 +128,6 @@ typedef struct _IMAGE_DATA_DIRECTORY {
 
 #define IMAGE_NUMBEROF_DIRECTORY_ENTRIES    16
 
-//
-// Optional header format.
-//
-
-typedef struct _IMAGE_OPTIONAL_HEADER {
-    //
-    // Standard fields.
-    //
-
-    UINT16    Magic;
-    UINT8     MajorLinkerVersion;
-    UINT8     MinorLinkerVersion;
-    UINT32    SizeOfCode;
-    UINT32    SizeOfInitializedData;
-    UINT32    SizeOfUninitializedData;
-    UINT32    AddressOfEntryPoint;
-    UINT32    BaseOfCode;
-    UINT32    BaseOfData;
-                
-    //
-    // NT additional fields.
-    //
-
-    UINT32   ImageBase;
-    UINT32   SectionAlignment;
-    UINT32   FileAlignment;
-    UINT16   MajorOperatingSystemVersion;
-    UINT16   MinorOperatingSystemVersion;
-    UINT16   MajorImageVersion;
-    UINT16   MinorImageVersion;
-    UINT16   MajorSubsystemVersion;
-    UINT16   MinorSubsystemVersion;
-    UINT32   Reserved1;
-    UINT32   SizeOfImage;
-    UINT32   SizeOfHeaders;
-    UINT32   CheckSum;
-    UINT16   Subsystem;
-    UINT16   DllCharacteristics;
-    UINT32   SizeOfStackReserve;
-    UINT32   SizeOfStackCommit;
-    UINT32   SizeOfHeapReserve;
-    UINT32   SizeOfHeapCommit;
-    UINT32   LoaderFlags;
-    UINT32   NumberOfRvaAndSizes;
-    IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
-} IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;
 
 typedef struct _IMAGE_ROM_OPTIONAL_HEADER {
     UINT16  Magic;
@@ -176,11 +145,48 @@ typedef struct _IMAGE_ROM_OPTIONAL_HEADER {
     UINT32  GpValue;
 } IMAGE_ROM_OPTIONAL_HEADER, *PIMAGE_ROM_OPTIONAL_HEADER;
 
+typedef struct _IMAGE_OPTIONAL_HEADER {
+    UINT16      Magic;
+    UINT8       MajorLinkerVersion;
+    UINT8       MinorLinkerVersion;
+    UINT32      SizeOfCode;
+    UINT32      SizeOfInitializedData;
+    UINT32      SizeOfUninitializedData;
+    UINT32      AddressOfEntryPoint;
+    UINT32      BaseOfCode;
+    // UINT32       BaseOfData;
+    UINT64      ImageBase;
+    UINT32      SectionAlignment;
+    UINT32      FileAlignment;
+    UINT16      MajorOperatingSystemVersion;
+    UINT16      MinorOperatingSystemVersion;
+    UINT16      MajorImageVersion;
+    UINT16      MinorImageVersion;
+    UINT16      MajorSubsystemVersion;
+    UINT16      MinorSubsystemVersion;
+    UINT32      Win32VersionValue;
+    UINT32      SizeOfImage;
+    UINT32      SizeOfHeaders;
+    UINT32      CheckSum;
+    UINT16      Subsystem;
+    UINT16      DllCharacteristics;
+    UINT64      SizeOfStackReserve;
+    UINT64      SizeOfStackCommit;
+    UINT64      SizeOfHeapReserve;
+    UINT64      SizeOfHeapCommit;
+    UINT32      LoaderFlags;
+    UINT32      NumberOfRvaAndSizes;
+    IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
+} IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;
+
+
 #define IMAGE_SIZEOF_ROM_OPTIONAL_HEADER      56
 #define IMAGE_SIZEOF_STD_OPTIONAL_HEADER      28
 #define IMAGE_SIZEOF_NT_OPTIONAL_HEADER      224
+#define IMAGE_SIZEOF_NT_OPTIONAL64_HEADER    244
 
 #define IMAGE_NT_OPTIONAL_HDR_MAGIC        0x10b
+#define IMAGE_NT_OPTIONAL_HDR64_MAGIC      0x20b
 #define IMAGE_ROM_OPTIONAL_HDR_MAGIC       0x107
 
 typedef struct _IMAGE_NT_HEADERS {
@@ -389,7 +395,7 @@ typedef struct _IMAGE_SECTION_HEADER {
 typedef struct _IMAGE_RELOCATION {
     UINT32   VirtualAddress;
     UINT32   SymbolTableIndex;
-    UINT16    Type;
+    UINT16   Type;
 } IMAGE_RELOCATION;
 
 #define IMAGE_SIZEOF_RELOCATION              10
@@ -556,9 +562,9 @@ typedef struct _IMAGE_EXPORT_DIRECTORY {
     UINT32   Base;
     UINT32   NumberOfFunctions;
     UINT32   NumberOfNames;
-    UINT32   *AddressOfFunctions;
-    UINT32   *AddressOfNames;
-    UINT32   *AddressOfNameOrdinals;
+    UINT32   AddressOfFunctions;
+    UINT32   AddressOfNames;
+    UINT32   AddressOfNameOrdinals;
 } IMAGE_EXPORT_DIRECTORY, *PIMAGE_EXPORT_DIRECTORY;
 
 //

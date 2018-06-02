@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/efi.h 271135 2014-09-04 21:01:10Z emaste $ */
 /*++
 
 Copyright (c)  1999 - 2002 Intel Corporation. All rights reserved
@@ -52,6 +53,7 @@ Revision History
 #include "efiapi.h"
 #include "efifs.h"
 #include "efierr.h"
+#include "efigop.h"
 
 #define EFI_STRINGIZE(a)                #a 
 #define EFI_PROTOCOL_DEFINITION(a)      EFI_STRINGIZE(Protocol/a/a.h) 

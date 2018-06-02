@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/efinet.h 294981 2016-01-28 12:11:42Z smh $ */
 #ifndef _EFINET_H
 #define _EFINET_H
 
@@ -29,7 +30,7 @@ Revision History
 //
 
 #define EFI_SIMPLE_NETWORK_PROTOCOL \
-    { 0xA19832B9, 0xAC25, 0x11D3, 0x9A, 0x2D, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D }
+    { 0xA19832B9, 0xAC25, 0x11D3, {0x9A, 0x2D, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D} }
 
 
 INTERFACE_DECL(_EFI_SIMPLE_NETWORK);

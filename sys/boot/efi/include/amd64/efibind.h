@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/boot/efi/include/i386/efibind.h 294715 2016-01-25 10:41:23Z smh $ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/amd64/efibind.h 294715 2016-01-25 10:41:23Z smh $ */
 /*++
 
 Copyright (c)  1999 - 2003 Intel Corporation. All rights reserved
@@ -104,8 +104,8 @@ typedef int8_t     INT8;
 #define VOID    void
 
 
-typedef int32_t    INTN;
-typedef uint32_t   UINTN;
+typedef int64_t    INTN;
+typedef uint64_t   UINTN;
 
 #ifdef EFI_NT_EMULATOR
     #define POST_CODE(_Data)
@@ -117,13 +117,13 @@ typedef uint32_t   UINTN;
     #endif  
 #endif
 
-#define EFIERR(a)           (0x80000000 | a)
-#define EFI_ERROR_MASK      0x80000000
-#define EFIERR_OEM(a)       (0xc0000000 | a)      
+#define EFIERR(a)           (0x8000000000000000 | a)
+#define EFI_ERROR_MASK      0x8000000000000000
+#define EFIERR_OEM(a)       (0xc000000000000000 | a)      
 
 
-#define BAD_POINTER         0xFBFBFBFB
-#define MAX_ADDRESS         0xFFFFFFFF
+#define BAD_POINTER         0xFBFBFBFBFBFBFBFB
+#define MAX_ADDRESS         0xFFFFFFFFFFFFFFFF
 
 #define BREAKPOINT()        __asm { int 3 }
 
@@ -156,6 +156,10 @@ typedef uint32_t   UINTN;
 // RUNTIME_CODE - pragma macro for declaring runtime code    
 //
 
+#ifdef	__amd64__
+#define	EFIAPI	__attribute__((ms_abi))
+#endif
+
 #ifndef EFIAPI                  // Forces EFI calling conventions reguardless of compiler options 
     #ifdef _MSC_EXTENSIONS
         #define EFIAPI __cdecl  // Force C calling convention for Microsoft C compiler 
@@ -173,7 +177,7 @@ typedef uint32_t   UINTN;
 
 #define RUNTIME_CODE(a)         alloc_text("rtcode", a)
 #define BEGIN_RUNTIME_DATA()    data_seg("rtdata")
-#define END_RUNTIME_DATA()      data_seg()
+#define END_RUNTIME_DATA()      data_seg("")
 
 #define VOLATILE    volatile
 

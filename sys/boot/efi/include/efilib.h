@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * Copyright (c) 2006 Marcel Moolenaar
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/efi/include/efilib.h 294999 2016-01-28 17:24:40Z smh $
  */
 
 #include <stand.h>
@@ -39,14 +40,15 @@ extern struct devsw efinet_dev;
 extern struct netif_driver efinetif;
 
 void *efi_get_table(EFI_GUID *tbl);
-void efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table);
 
-int efi_register_handles(struct devsw *, EFI_HANDLE *, int);
+int efi_register_handles(struct devsw *, EFI_HANDLE *, EFI_HANDLE *, int);
 EFI_HANDLE efi_find_handle(struct devsw *, int);
-int efi_handle_lookup(EFI_HANDLE, struct devsw **, int *);
+int efi_handle_lookup(EFI_HANDLE, struct devsw **, int *,  uint64_t *);
+int efi_handle_update_dev(EFI_HANDLE, struct devsw *, int, uint64_t);
 
 int efi_status_to_errno(EFI_STATUS);
 time_t efi_time(EFI_TIME *);
 
 EFI_STATUS main(int argc, CHAR16 *argv[]);
 void exit(EFI_STATUS status);
+void delay(int usecs);

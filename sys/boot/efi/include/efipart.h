@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/efipart.h 163898 2006-11-02 02:42:48Z marcel $ */
 #ifndef _EFI_PART_H
 #define _EFI_PART_H
 

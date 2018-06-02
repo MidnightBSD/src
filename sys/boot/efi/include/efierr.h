@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/efierr.h 294981 2016-01-28 12:11:42Z smh $ */
 #ifndef _EFI_ERR_H
 #define _EFI_ERR_H
 
@@ -30,7 +31,8 @@ Revision History
 
 
 #define EFIWARN(a)                            (a)
-#define EFI_ERROR(a)              (((INTN) a) < 0)
+#define EFI_ERROR(a)             (((INTN) a) < 0)
+#define EFI_ERROR_CODE(a)   (unsigned long)(a & ~EFI_ERROR_MASK)
 
 
 #define EFI_SUCCESS                             0

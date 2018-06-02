@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/efi/include/efistdarg.h 163898 2006-11-02 02:42:48Z marcel $ */
 #ifndef _EFISTDARG_H_
 #define _EFISTDARG_H_
 
