@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * time.h - DTrace Time include file.
  *

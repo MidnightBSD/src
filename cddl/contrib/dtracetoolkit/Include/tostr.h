@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * tostr.h - DTrace To-String include file.
  *
