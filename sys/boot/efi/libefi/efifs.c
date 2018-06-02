@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Doug Rabson
  * Copyright (c) 2006 Marcel Moolenaar

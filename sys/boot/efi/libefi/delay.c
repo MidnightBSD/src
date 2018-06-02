@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Doug Rabson
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/efi/libefi/delay.c 113038 2003-04-03 21:36:33Z obrien $");
 
 #include <efi.h>
 #include <efilib.h>

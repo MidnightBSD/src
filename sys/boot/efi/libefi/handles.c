@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -25,22 +26,25 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/efi/libefi/handles.c 294999 2016-01-28 17:24:40Z smh $");
 
 #include <efi.h>
 #include <efilib.h>
 
 struct entry {
 	EFI_HANDLE handle;
+	EFI_HANDLE alias;
 	struct devsw *dev;
 	int unit;
+	uint64_t extra;
 };
 
 struct entry *entry;
 int nentries;
 
 int
-efi_register_handles(struct devsw *sw, EFI_HANDLE *handles, int count)
+efi_register_handles(struct devsw *sw, EFI_HANDLE *handles,
+    EFI_HANDLE *aliases, int count)
 {
 	size_t sz;
 	int idx, unit;
@@ -51,6 +55,10 @@ efi_register_handles(struct devsw *sw, EFI_HANDLE *handles, int count)
 	entry = (entry == NULL) ? malloc(sz) : realloc(entry, sz);
 	for (unit = 0; idx < nentries; idx++, unit++) {
 		entry[idx].handle = handles[unit];
+		if (aliases != NULL)
+			entry[idx].alias = aliases[unit];
+		else
+			entry[idx].alias = NULL;
 		entry[idx].dev = sw;
 		entry[idx].unit = unit;
 	}
@@ -73,18 +81,39 @@ efi_find_handle(struct devsw *dev, int unit)
 }
 
 int
-efi_handle_lookup(EFI_HANDLE h, struct devsw **dev, int *unit)
+efi_handle_lookup(EFI_HANDLE h, struct devsw **dev, int *unit, uint64_t *extra)
+{
+	int idx;
+
+	for (idx = 0; idx < nentries; idx++) {
+		if (entry[idx].handle != h && entry[idx].alias != h)
+			continue;
+		if (dev != NULL)
+			*dev = entry[idx].dev;
+		if (unit != NULL)
+			*unit = entry[idx].unit;
+		if (extra != NULL)
+			*extra = entry[idx].extra;
+		return (0);
+	}
+	return (ENOENT);
+}
+
+int
+efi_handle_update_dev(EFI_HANDLE h, struct devsw *dev, int unit,
+    uint64_t guid)
 {
 	int idx;
 
 	for (idx = 0; idx < nentries; idx++) {
 		if (entry[idx].handle != h)
 			continue;
-		if (dev != NULL)
-			*dev = entry[idx].dev;
-		if (unit != NULL)
-			*unit = entry[idx].unit;
+		entry[idx].dev = dev;
+		entry[idx].unit = unit;
+		entry[idx].alias = NULL;
+		entry[idx].extra = guid;
 		return (0);
 	}
+
 	return (ENOENT);
 }

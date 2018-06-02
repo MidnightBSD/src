@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/efi/libefi/errno.c 164010 2006-11-05 22:03:04Z marcel $");
 
 #include <efi.h>
 #include <efilib.h>
