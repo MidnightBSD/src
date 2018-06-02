@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/cddl/usr.sbin/Makefile.inc,v 1.1 2007/04/06 01:08:58 pjd Exp $
+# $FreeBSD: stable/10/cddl/usr.sbin/Makefile.inc 168404 2007-04-06 01:09:06Z pjd $
 
 BINDIR?=	/usr/sbin
 
