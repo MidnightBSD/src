@@ -1,5 +1,5 @@
-# $FreeBSD: src/share/mk/bsd.kmod.mk,v 1.91 2004/06/21 16:12:02 bde Exp $
-# $MidnightBSD: src/share/mk/bsd.kmod.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/mk/bsd.kmod.mk 231834 2012-02-16 21:04:47Z imp $
 
 # Search for kernel source tree in standard places.
 .for _dir in ${.CURDIR}/../.. ${.CURDIR}/../../.. ${.CURDIR}/../../../.. \
@@ -10,7 +10,7 @@ SYSDIR=	${_dir}
 .endfor
 .if !defined(SYSDIR) || !exists(${SYSDIR}/kern/) || \
     !exists(${SYSDIR}/conf/kmod.mk)
-.error "can't find kernel source tree"
+.error Unable to locate the kernel source tree. Set SYSDIR to override.
 .endif
 
 .include "${SYSDIR}/conf/kmod.mk"
