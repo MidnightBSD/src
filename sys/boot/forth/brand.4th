@@ -1,4 +1,4 @@
-\ Copyright (c) 2006-2011 Devin Teske <devinteske@hotmail.com>
+\ Copyright (c) 2006-2015 Devin Teske <dteske@FreeBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -21,71 +21,55 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $MidnightBSD$
+\
+\ $MidnightBSD$ 
+\ $FreeBSD: stable/10/sys/boot/forth/brand.4th 281843 2015-04-22 01:08:40Z dteske $
 
 marker task-brand.4th
 
 variable brandX
 variable brandY
 
-\ Initialize logo placement
+\ Initialize brand placement to defaults
 2 brandX !
 1 brandY !
 
-: mbsd-logo ( x y -- ) \ "MidnightBSD" [wide] logo in B/W (7 rows x 42 columns)
-
-	2dup at-xy ."                       ____   _____ _____  " 1+
-	2dup at-xy ."                      |  _ \ / ____|  __ \ " 1+
-	2dup at-xy ."                      | |_) | (___ | |  | |" 1+
-	2dup at-xy ."     M i d n i g h t  |  _ < \___ \| |  | |" 1+
-	2dup at-xy ."                      | |_) |____) | |__| |" 1+
-	2dup at-xy ."                      |     |      |      |" 1+
-	     at-xy ."                      |____/|_____/|_____/ "
-
-	\ Put the cursor back at the bottom
-	0 25 at-xy
-;
-
-\ This function draws any number of company logos at (loader_brand_x,
-\ loader_brand_y) if defined, or (2,1) (top-left) if not defined. To choose
-\ your logo, set the variable `loader_brand' to the respective logo name.
+\ This function draws any number of company brands at (loader_brand_x,
+\ loader_brand_y) if defined, or (2,1) (top-left). To choose your brand, set
+\ the variable `loader_brand' to the respective brand name.
 \ 
-\ Currently available:
-\
-\ 	NAME        DESCRIPTION
-\ 	mbsd        MidnightBSD logo
+\ NOTE: Each is defined as a brand function in /boot/brand-${loader_brand}.4th
+\ NOTE: If `/boot/brand-${loader_brand}.4th' does not exist or does not define
+\       a `brand' function, no brand is drawn.
 \ 
-\ NOTE: Setting `loader_brand' to an undefined value (such as "none") will
-\       prevent any brand from being drawn.
-\ 
-: draw-brand ( -- )
+: draw-brand ( -- ) \ at (loader_brand_x,loader_brand_y), else (2,1)
 
 	s" loader_brand_x" getenv dup -1 <> if
-		?number 1 = if
-			brandX !
-		then
-	else
-		drop
-	then
-
+		?number 1 = if brandX ! then
+	else drop then
  	s" loader_brand_y" getenv dup -1 <> if
- 		?number 1 = if
-			brandY !
+ 		?number 1 = if brandY ! then
+ 	else drop then
+
+	\ If `brand' is defined, execute it
+	s" brand" sfind ( -- xt|0 bool ) if
+		brandX @ brandY @ rot execute
+	else
+		\ Not defined; try-include desired brand file
+		drop ( xt = 0 ) \ cruft
+		s" loader_brand" getenv dup -1 = over 0= or if
+			dup 0= if 2drop else drop then \ getenv result unused
+			s" try-include /boot/brand-mbsd.4th"
+		else
+			2drop ( c-addr/u -- ) \ getenv result unused
+			s" try-include /boot/brand-${loader_brand}.4th"
 		then
- 	else
-		drop
-	then
+		evaluate
+		1 spaces
 
-	s" loader_brand" getenv dup -1 = if
-		brandX @ brandY @ mbsd-logo
-		drop exit
+		\ Execute `brand' if defined now
+		s" brand" sfind if
+			brandX @ brandY @ rot execute
+		else drop then
 	then
-
-	2dup s" mbsd" compare-insensitive 0= if
-		brandX @ brandY @ mbsd-logo
-		2drop exit
-	then
-
-	2drop
 ;
