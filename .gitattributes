@@ -469,6 +469,7 @@ bin/sh/var.h -text
 bin/sleep/Makefile -text
 bin/sleep/sleep.1 -text
 bin/sleep/sleep.c -text
+bin/sleep/tests/Makefile svneol=native#text/plain
 bin/stty/Makefile -text
 bin/stty/cchar.c -text
 bin/stty/extern.h -text
