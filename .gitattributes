@@ -3359,6 +3359,7 @@ cddl/usr.bin/ctfdump/ctfdump.1 -text
 cddl/usr.bin/ctfmerge/Makefile -text
 cddl/usr.bin/ctfmerge/ctfmerge.1 -text
 cddl/usr.bin/sgsmsg/Makefile -text
+cddl/usr.bin/tests/Makefile svneol=native#text/plain
 cddl/usr.bin/zinject/Makefile -text
 cddl/usr.bin/zlook/Makefile -text
 cddl/usr.bin/zstreamdump/Makefile -text
