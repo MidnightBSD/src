@@ -53941,6 +53941,7 @@ share/mk/bsd.subdir.mk -text
 share/mk/bsd.symver.mk -text
 share/mk/bsd.sys.mk -text
 share/mk/bsd.test.mk svneol=native#text/plain
+share/mk/local.sys.mk svneol=native#text/plain
 share/mk/netbsd-tests.test.mk svneol=native#text/plain
 share/mk/plain.test.mk svneol=native#text/plain
 share/mk/suite.test.mk svneol=native#text/plain
