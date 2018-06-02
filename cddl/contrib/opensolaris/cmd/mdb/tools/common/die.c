@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -40,7 +41,7 @@ die(char *format, ...)
 {
 	va_list ap;
 	int err = errno;
-#if !defined(sun)
+#ifndef illumos
 	const char *progname = getprogname();
 #endif
 
@@ -54,7 +55,7 @@ die(char *format, ...)
 	if (format[strlen(format) - 1] != '\n')
 		(void) fprintf(stderr, ": %s\n", strerror(err));
 
-#if defined(__FreeBSD__)
+#ifndef illumos
 	exit(0);
 #else
 	exit(1);
@@ -65,7 +66,7 @@ void
 elfdie(char *format, ...)
 {
 	va_list ap;
-#if !defined(sun)
+#ifndef illumos
 	const char *progname = getprogname();
 #endif
 
@@ -79,7 +80,7 @@ elfdie(char *format, ...)
 	if (format[strlen(format) - 1] != '\n')
 		(void) fprintf(stderr, ": %s\n", elf_errmsg(elf_errno()));
 
-#if defined(__FreeBSD__)
+#ifndef illumos
 	exit(0);
 #else
 	exit(1);
