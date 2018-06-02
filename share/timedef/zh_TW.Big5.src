@@ -1,21 +1,22 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/timedef/zh_TW.Big5.src 290150 2015-10-29 17:00:51Z delphij $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
 #
 # Short month names
- 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
+ 1月
+ 2月
+ 3月
+ 4月
+ 5月
+ 6月
+ 7月
+ 8月
+ 9月
+10月
+11月
+12月
 #
 # Long month names (as in a date)
 #
@@ -74,7 +75,7 @@
 #
 # date_fmt
 #
-%Y年%b月%e日 %A %X %Z
+%Y年%_m月%e日 %A %X %Z
 #
 # Long month names (without case ending)
 #

@@ -54399,101 +54399,101 @@ share/termcap/tck -text
 share/termcap/termcap.5 -text
 share/termcap/termcap.src -text
 share/timedef/Makefile -text
-share/timedef/am_ET.UTF-8.src -text
-share/timedef/be_BY.CP1131.src -text
-share/timedef/be_BY.CP1251.src -text
-share/timedef/be_BY.ISO8859-5.src -text
-share/timedef/be_BY.UTF-8.src -text
-share/timedef/bg_BG.CP1251.src -text
-share/timedef/bg_BG.UTF-8.src -text
-share/timedef/ca_ES.ISO8859-1.src -text
-share/timedef/ca_ES.UTF-8.src -text
-share/timedef/cs_CZ.ISO8859-2.src -text
-share/timedef/cs_CZ.UTF-8.src -text
-share/timedef/da_DK.ISO8859-1.src -text
-share/timedef/da_DK.UTF-8.src -text
-share/timedef/de_AT.ISO8859-1.src -text
-share/timedef/de_AT.UTF-8.src -text
-share/timedef/de_DE.ISO8859-1.src -text
-share/timedef/de_DE.UTF-8.src -text
-share/timedef/el_GR.ISO8859-7.src -text
-share/timedef/el_GR.UTF-8.src -text
-share/timedef/en_GB.ISO8859-1.src -text
-share/timedef/en_US.ISO8859-1.src -text
-share/timedef/es_ES.ISO8859-1.src -text
-share/timedef/es_ES.UTF-8.src -text
-share/timedef/et_EE.ISO8859-15.src -text
-share/timedef/et_EE.UTF-8.src -text
-share/timedef/eu_ES.ISO8859-1.src -text
-share/timedef/fi_FI.ISO8859-1.src -text
-share/timedef/fi_FI.UTF-8.src -text
-share/timedef/fr_FR.ISO8859-1.src -text
-share/timedef/fr_FR.UTF-8.src -text
-share/timedef/he_IL.UTF-8.src -text
-share/timedef/hi_IN.ISCII-DEV.src -text
-share/timedef/hr_HR.ISO8859-2.src -text
-share/timedef/hr_HR.UTF-8.src -text
-share/timedef/hu_HU.ISO8859-2.src -text
-share/timedef/hu_HU.UTF-8.src -text
-share/timedef/hy_AM.ARMSCII-8.src -text
-share/timedef/hy_AM.UTF-8.src -text
-share/timedef/is_IS.ISO8859-1.src -text
-share/timedef/is_IS.UTF-8.src -text
-share/timedef/it_IT.ISO8859-1.src -text
-share/timedef/it_IT.UTF-8.src -text
-share/timedef/ja_JP.SJIS.src -text
-share/timedef/ja_JP.UTF-8.src -text
-share/timedef/ja_JP.eucJP.src -text
-share/timedef/kk_KZ.PT154.src -text
-share/timedef/kk_KZ.UTF-8.src -text
-share/timedef/ko_KR.UTF-8.src -text
-share/timedef/ko_KR.eucKR.src -text
-share/timedef/la_LN.ISO8859-1.src -text
-share/timedef/lt_LT.ISO8859-13.src -text
-share/timedef/lt_LT.ISO8859-4.src -text
-share/timedef/lt_LT.UTF-8.src -text
-share/timedef/lv_LV.ISO8859-13.src -text
-share/timedef/lv_LV.UTF-8.src -text
-share/timedef/mn_MN.UTF-8.src -text
-share/timedef/nb_NO.ISO8859-1.src -text
-share/timedef/nb_NO.UTF-8.src -text
-share/timedef/nl_NL.ISO8859-1.src -text
-share/timedef/nn_NO.ISO8859-1.src -text
-share/timedef/nn_NO.UTF-8.src -text
-share/timedef/pl_PL.ISO8859-2.src -text
-share/timedef/pl_PL.UTF-8.src -text
-share/timedef/pt_BR.ISO8859-1.src -text
-share/timedef/pt_BR.UTF-8.src -text
-share/timedef/pt_PT.ISO8859-1.src -text
-share/timedef/pt_PT.UTF-8.src -text
-share/timedef/ro_RO.ISO8859-2.src -text
-share/timedef/ro_RO.UTF-8.src -text
-share/timedef/ru_RU.CP1251.src -text
-share/timedef/ru_RU.CP866.src -text
-share/timedef/ru_RU.ISO8859-5.src -text
-share/timedef/ru_RU.KOI8-R.src -text
-share/timedef/ru_RU.UTF-8.src -text
-share/timedef/sk_SK.ISO8859-2.src -text
-share/timedef/sk_SK.UTF-8.src -text
-share/timedef/sl_SI.ISO8859-2.src -text
-share/timedef/sl_SI.UTF-8.src -text
-share/timedef/sr_YU.ISO8859-2.src -text
-share/timedef/sr_YU.ISO8859-5.src -text
-share/timedef/sr_YU.UTF-8.src -text
-share/timedef/sv_SE.ISO8859-1.src -text
-share/timedef/sv_SE.UTF-8.src -text
-share/timedef/tr_TR.ISO8859-9.src -text
-share/timedef/tr_TR.UTF-8.src -text
-share/timedef/uk_UA.CP1251.src -text
-share/timedef/uk_UA.ISO8859-5.src -text
-share/timedef/uk_UA.KOI8-U.src -text
-share/timedef/uk_UA.UTF-8.src -text
-share/timedef/zh_CN.GB18030.src -text
-share/timedef/zh_CN.GB2312.src -text
-share/timedef/zh_CN.UTF-8.src -text
-share/timedef/zh_CN.eucCN.src -text
-share/timedef/zh_TW.Big5.src -text
-share/timedef/zh_TW.UTF-8.src -text
+share/timedef/am_ET.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/be_BY.CP1131.src -text svneol=unset#application/octet-stream
+share/timedef/be_BY.CP1251.src -text svneol=unset#application/octet-stream
+share/timedef/be_BY.ISO8859-5.src -text svneol=unset#application/octet-stream
+share/timedef/be_BY.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/bg_BG.CP1251.src -text svneol=unset#application/octet-stream
+share/timedef/bg_BG.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ca_ES.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/ca_ES.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/cs_CZ.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/cs_CZ.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/da_DK.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/da_DK.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/de_AT.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/de_AT.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/de_DE.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/de_DE.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/el_GR.ISO8859-7.src -text svneol=unset#application/octet-stream
+share/timedef/el_GR.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/en_GB.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/en_US.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/es_ES.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/es_ES.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/et_EE.ISO8859-15.src -text svneol=unset#application/octet-stream
+share/timedef/et_EE.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/eu_ES.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/fi_FI.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/fi_FI.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/fr_FR.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/fr_FR.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/he_IL.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/hi_IN.ISCII-DEV.src -text svneol=unset#application/octet-stream
+share/timedef/hr_HR.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/hr_HR.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/hu_HU.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/hu_HU.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/hy_AM.ARMSCII-8.src -text svneol=unset#application/octet-stream
+share/timedef/hy_AM.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/is_IS.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/is_IS.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/it_IT.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/it_IT.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ja_JP.SJIS.src -text svneol=unset#application/octet-stream
+share/timedef/ja_JP.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ja_JP.eucJP.src -text svneol=unset#application/octet-stream
+share/timedef/kk_KZ.PT154.src -text svneol=unset#application/octet-stream
+share/timedef/kk_KZ.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ko_KR.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ko_KR.eucKR.src -text svneol=unset#application/octet-stream
+share/timedef/la_LN.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/lt_LT.ISO8859-13.src -text svneol=unset#application/octet-stream
+share/timedef/lt_LT.ISO8859-4.src -text svneol=unset#application/octet-stream
+share/timedef/lt_LT.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/lv_LV.ISO8859-13.src -text svneol=unset#application/octet-stream
+share/timedef/lv_LV.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/mn_MN.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/nb_NO.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/nb_NO.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/nl_NL.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/nn_NO.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/nn_NO.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/pl_PL.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/pl_PL.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/pt_BR.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/pt_BR.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/pt_PT.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/pt_PT.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ro_RO.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/ro_RO.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/ru_RU.CP1251.src -text svneol=unset#application/octet-stream
+share/timedef/ru_RU.CP866.src -text svneol=unset#application/octet-stream
+share/timedef/ru_RU.ISO8859-5.src -text svneol=unset#application/octet-stream
+share/timedef/ru_RU.KOI8-R.src -text svneol=unset#application/octet-stream
+share/timedef/ru_RU.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/sk_SK.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/sk_SK.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/sl_SI.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/sl_SI.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/sr_YU.ISO8859-2.src -text svneol=unset#application/octet-stream
+share/timedef/sr_YU.ISO8859-5.src -text svneol=unset#application/octet-stream
+share/timedef/sr_YU.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/sv_SE.ISO8859-1.src -text svneol=unset#application/octet-stream
+share/timedef/sv_SE.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/tr_TR.ISO8859-9.src -text svneol=unset#application/octet-stream
+share/timedef/tr_TR.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/uk_UA.CP1251.src -text svneol=unset#application/octet-stream
+share/timedef/uk_UA.ISO8859-5.src -text svneol=unset#application/octet-stream
+share/timedef/uk_UA.KOI8-U.src -text svneol=unset#application/octet-stream
+share/timedef/uk_UA.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/zh_CN.GB18030.src -text svneol=unset#application/octet-stream
+share/timedef/zh_CN.GB2312.src -text svneol=unset#application/octet-stream
+share/timedef/zh_CN.UTF-8.src -text svneol=unset#application/octet-stream
+share/timedef/zh_CN.eucCN.src -text svneol=unset#application/octet-stream
+share/timedef/zh_TW.Big5.src -text svneol=unset#application/octet-stream
+share/timedef/zh_TW.UTF-8.src -text svneol=unset#application/octet-stream
 share/vt/Makefile svneol=native#text/plain
 share/vt/fonts/Makefile svneol=native#text/plain
 share/vt/fonts/gallant.fnt.uu -text

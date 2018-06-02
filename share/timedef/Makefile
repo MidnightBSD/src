@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/timedef/Makefile 291794 2015-12-04 18:21:05Z bdrewery $
 
 LOCALES=	am_ET.UTF-8 \
 		be_BY.CP1131 \
@@ -96,7 +97,7 @@ LOCALES=	am_ET.UTF-8 \
 		zh_TW.Big5 \
 		zh_TW.UTF-8
 
-LOCALEDIR=      /usr/share/locale
+LOCALEDIR=      ${SHAREDIR}/locale
 
 .SUFFIXES: .src .out
 
