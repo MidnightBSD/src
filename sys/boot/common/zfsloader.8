@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
+.\" $FreeBSD: stable/10/sys/boot/common/zfsloader.8 306378 2016-09-27 19:00:22Z pluknet $
 .\" $MidnightBSD$
-.\" $FreeBSD: stable/9/sys/boot/common/zfsloader.8 272697 2014-10-07 13:37:10Z avg $
 .\"
 .Dd September 15, 2014
 .Dt ZFSLOADER 8
@@ -63,7 +63,6 @@ refers to a ZFS filesystem, then
 will instruct kernel to use that filesystem as the root filesystem.
 .Sh ZFS COMMAND EXTENSIONS
 .Bl -tag -width Ds -compact
-.Pp
 .It Ic lsdev Op Fl v
 Lists ZFS pools in addition to disks and partitions.
 Adding
@@ -88,11 +87,9 @@ itself.
 .El
 .Sh EXAMPLES
 Set the default device used for loading a kernel from a ZFS filesystem:
-.Pp
 .Bd -literal -offset indent
 set currdev=zfs:tank/ROOT/knowngood:
 .Ed
-.Pp
 .Sh SEE ALSO
 .Xr gptzfsboot 8 ,
 .Xr loader 8 ,
