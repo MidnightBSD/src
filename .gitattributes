@@ -53906,7 +53906,6 @@ share/mk/Makefile -text
 share/mk/atf.test.mk svneol=native#text/plain
 share/mk/bsd.README -text
 share/mk/bsd.arch.inc.mk -text
-share/mk/bsd.compat.mk -text
 share/mk/bsd.compiler.mk -text
 share/mk/bsd.cpu.mk -text
 share/mk/bsd.crunchgen.mk -text
