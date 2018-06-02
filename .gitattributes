@@ -54473,6 +54473,11 @@ sys/boot/forth/loader.4th.8 -text
 sys/boot/forth/loader.conf -text
 sys/boot/forth/loader.conf.5 -text
 sys/boot/forth/loader.rc -text
+sys/boot/forth/logo-beastie.4th -text
+sys/boot/forth/logo-beastiebw.4th -text
+sys/boot/forth/logo-mbsdbw.4th -text
+sys/boot/forth/logo-orb.4th -text
+sys/boot/forth/logo-orbbw.4th -text
 sys/boot/forth/menu-commands.4th -text
 sys/boot/forth/menu.4th -text
 sys/boot/forth/menu.4th.8 -text
