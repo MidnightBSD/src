@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -28,6 +29,7 @@
 
 #include <stdio.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 /*ARGSUSED*/
 int

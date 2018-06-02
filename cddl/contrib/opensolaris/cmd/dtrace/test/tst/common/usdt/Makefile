@@ -1,3 +1,4 @@
+# $MidnightBSD$
 all: main
 
 main: main.o prov.o

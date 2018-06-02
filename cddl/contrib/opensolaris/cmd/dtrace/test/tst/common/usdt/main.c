@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #include <stdlib.h>
 #include <sys/sdt.h>
 #include "prov.h"
