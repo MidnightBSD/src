@@ -54495,6 +54495,9 @@ share/timedef/zh_CN.eucCN.src -text
 share/timedef/zh_TW.Big5.src -text
 share/timedef/zh_TW.UTF-8.src -text
 share/zoneinfo/Makefile -text
+share/zoneinfo/tests/Makefile svneol=native#text/plain
+share/zoneinfo/tests/backward_test.sh svneol=native#text/plain
+share/zoneinfo/tests/zoneinfo_common.sh svneol=native#text/plain
 sys/Makefile -text
 sys/amd64/Makefile -text
 sys/amd64/acpica/acpi_machdep.c -text
