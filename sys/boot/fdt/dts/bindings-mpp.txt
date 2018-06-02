@@ -1,4 +1,5 @@
-$FreeBSD$
+$MidnightBSD$
+$FreeBSD: stable/10/sys/boot/fdt/dts/bindings-mpp.txt 208561 2010-05-26 09:50:09Z raj $
 
 * Multi purpose pin (MPP) configuration.
 

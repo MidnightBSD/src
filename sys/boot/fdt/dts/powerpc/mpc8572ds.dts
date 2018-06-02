@@ -58,7 +58,7 @@
  * You may select the license of your choice.
  *------------------------------------------------------------------
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/fdt/dts/powerpc/mpc8572ds.dts 262614 2014-02-28 18:29:09Z imp $
  */
 
 /dts-v1/;

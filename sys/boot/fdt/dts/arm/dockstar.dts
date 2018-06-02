@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*
- * Copyright (c) 2009-2010 The FreeBSD Foundation
+ * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
  *
  * This software was developed by Semihalf under sponsorship from
@@ -27,23 +27,22 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Marvell DB-88F6281 Device Tree Source.
+ * Seagate DockStar (Marvell SheevaPlug based) Device Tree Source.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/dockstar.dts 262614 2014-02-28 18:29:09Z imp $
  */
 
 /dts-v1/;
 
 / {
-	model = "mrvl,DB-88F6281";
-	compatible = "DB-88F6281-BP", "DB-88F6281-BP-A";
+	model = "seagate,DockStar";
+	compatible = "DockStar";
 	#address-cells = <1>;
 	#size-cells = <1>;
 
 	aliases {
 		ethernet0 = &enet0;
 		mpp = &MPP;
-		pci0 = &pci0;
 		serial0 = &serial0;
 		serial1 = &serial1;
 		soc = &SOC;
@@ -70,7 +69,7 @@
 
 	memory {
 		device_type = "memory";
-		reg = <0x0 0x20000000>;		// 512M at 0x0
+		reg = <0x0 0x8000000>;		// 128M at 0x0
 	};
 
 	localbus@f1000000 {
@@ -78,41 +77,14 @@
 		#size-cells = <1>;
 		compatible = "mrvl,lbc";
 
-		/* This reflects CPU decode windows setup. */
-		ranges = <0x0 0x0f 0xf9300000 0x00100000
-			  0x1 0x1e 0xfa000000 0x00100000
-			  0x2 0x1d 0xfa100000 0x02000000
-			  0x3 0x1b 0xfc100000 0x00000400>;
+		/* This reflects CPU decode windows setup for NAND access. */
+		ranges = <0x0 0x2f 0xf9300000 0x00100000>;
 
-		nor@0,0 {
+		nand@0,0 {
 			#address-cells = <1>;
 			#size-cells = <1>;
-			compatible = "cfi-flash";
+			compatible = "mrvl,nfc";
 			reg = <0x0 0x0 0x00100000>;
-			bank-width = <2>;
-			device-width = <1>;
-		};
-
-		led@1,0 {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "led";
-			reg = <0x1 0x0 0x00100000>;
-		};
-
-		nor@2,0 {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "cfi-flash";
-			reg = <0x2 0x0 0x02000000>;
-			bank-width = <2>;
-			device-width = <1>;
-		};
-
-		nand@3,0 {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			reg = <0x3 0x0 0x00100000>;
 			bank-width = <2>;
 			device-width = <1>;
 		};
@@ -154,9 +126,8 @@
 				4  1		/* MPP[4]:  NF_IO[6] */
 				5  1		/* MPP[5]:  NF_IO[7] */
 				6  1		/* MPP[6]:  SYSRST_OUTn */
-				7  2		/* MPP[7]:  SPI_SCn */
-				8  1		/* MPP[8]:  TW_SDA */
-				9  1		/* MPP[9]:  TW_SCK */
+				8  2		/* MPP[8]:  UA0_RTS */
+				9  2		/* MPP[9]:  UA0_CTS */
 				10 3		/* MPP[10]: UA0_TXD */
 				11 3		/* MPP[11]: UA0_RXD */
 				12 1		/* MPP[12]: SD_CLK */
@@ -167,8 +138,7 @@
 				17 1		/* MPP[17]: SD_D[3] */
 				18 1		/* MPP[18]: NF_IO[0] */
 				19 1		/* MPP[19]: NF_IO[1] */
-				20 5		/* MPP[20]: SATA1_AC */
-				21 5 >;		/* MPP[21]: SATA0_AC */
+				29 1 >;		/* MPP[29]: TSMP[9] */
 		};
 
 		GPIO: gpio@10100 {
@@ -212,7 +182,7 @@
 				compatible = "mrvl,mdio";
 
 				phy0: ethernet-phy@0 {
-					reg = <0x8>;
+					reg = <0x0>;
 				};
 			};
 		};
@@ -257,13 +227,6 @@
 			interrupts = <5 6 7 8>;
 			interrupt-parent = <&PIC>;
 		};
-
-		sata@80000 {
-			compatible = "mrvl,sata";
-			reg = <0x80000 0x6000>;
-			interrupts = <21>;
-			interrupt-parent = <&PIC>;
-		};
 	};
 
 	SRAM: sram@fd000000 {
@@ -271,39 +234,8 @@
 		reg = <0xfd000000 0x00100000>;
 	};
 
-	pci0: pcie@f1040000 {
-		compatible = "mrvl,pcie";
-		device_type = "pci";
-		#interrupt-cells = <1>;
-		#size-cells = <2>;
-		#address-cells = <3>;
-		reg = <0xf1040000 0x2000>;
-		bus-range = <0 255>;
-		ranges = <0x02000000 0x0 0xf1300000 0xf1300000 0x0 0x04000000
-			  0x01000000 0x0 0x00000000 0xf1100000 0x0 0x00100000>;
-		clock-frequency = <33333333>;
-		interrupt-parent = <&PIC>;
-		interrupts = <44>;
-		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
-		interrupt-map = <
-			/* IDSEL 0x1 */
-			0x0800 0x0 0x0 0x1 &PIC 0x9
-			0x0800 0x0 0x0 0x2 &PIC 0x9
-			0x0800 0x0 0x0 0x3 &PIC 0x9
-			0x0800 0x0 0x0 0x4 &PIC 0x9
-			>;
-		pcie@0 {
-			reg = <0x0 0x0 0x0 0x0 0x0>;
-			#size-cells = <2>;
-			#address-cells = <3>;
-			device_type = "pci";
-			ranges = <0x02000000 0x0 0xf1300000
-				  0x02000000 0x0 0xf1300000
-				  0x0 0x04000000
-
-				  0x01000000 0x0 0x0
-				  0x01000000 0x0 0x0
-				  0x0 0x00100000>;
-		};
+	chosen {
+		stdin = "serial0";
+		stdout = "serial0";
 	};
 };
