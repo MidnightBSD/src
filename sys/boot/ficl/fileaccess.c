@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/fileaccess.c 231042 2012-02-05 20:00:39Z rpaulo $ */
 
 #include <errno.h>
 #include <stdlib.h>
@@ -420,6 +421,6 @@ void ficlCompileFile(FICL_SYSTEM *pSys)
     ficlSetEnv(pSys, "file-ext", FICL_TRUE);
 #endif /* FICL_HAVE_FTRUNCATE */
 #else
-    &pSys;
+    (void)pSys;
 #endif /* FICL_WANT_FILE */
 }

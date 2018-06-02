@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** f i c l . c
 ** Forth Inspired Command Language - external interface
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
-** $Id: ficl.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: ficl.c,v 1.16 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** This is an ANS Forth interpreter written in C.
@@ -55,7 +56,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/ficl.c 94290 2002-04-09 17:45:28Z dcs $ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>

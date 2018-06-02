@@ -47,8 +47,9 @@
 ** contact me by email at the address above.
 **
 ** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
-** $FreeBSD: stable/10/sys/boot/ficl/arm/sysdep.h 249222 2013-04-07 05:40:49Z kientzle $
 */
+
+/* $FreeBSD: stable/10/sys/boot/ficl/sparc64/sysdep.h 96962 2002-05-19 23:20:56Z jake $ */
 
 #if !defined (__SYSDEP_H__)
 #define __SYSDEP_H__ 
@@ -60,7 +61,7 @@
 #include <assert.h>
 
 #if !defined IGNORE		/* Macro to silence unused param warnings */
-#define IGNORE(x) (void)(x)
+#define IGNORE(x) &x
 #endif
 
 /*
@@ -106,11 +107,11 @@
 ** (11/2000: same for FICL_FLOAT)
 */
 #if !defined FICL_INT
-#define FICL_INT INT32
+#define FICL_INT long
 #endif
 
 #if !defined FICL_UNS
-#define FICL_UNS UNS32
+#define FICL_UNS unsigned long
 #endif
 
 #if !defined FICL_FLOAT
@@ -121,7 +122,7 @@
 ** Ficl presently supports values of 32 and 64 for BITS_PER_CELL
 */
 #if !defined BITS_PER_CELL
-#define BITS_PER_CELL 32
+#define BITS_PER_CELL 64
 #endif
 
 #if ((BITS_PER_CELL != 32) && (BITS_PER_CELL != 64))
@@ -162,7 +163,6 @@ typedef struct
 #endif
 #if (FICL_MINIMAL)
 #define FICL_WANT_SOFTWORDS  0
-#define FICL_WANT_FILE	     0
 #define FICL_WANT_FLOAT      0
 #define FICL_WANT_USER       0
 #define FICL_WANT_LOCALS     0
@@ -170,7 +170,7 @@ typedef struct
 #define FICL_WANT_OOP        0
 #define FICL_PLATFORM_EXTEND 0
 #define FICL_MULTITHREAD     0
-#define FICL_ROBUST         1 
+#define FICL_ROBUST          0
 #define FICL_EXTENDED_PREFIX 0
 #endif
 
@@ -180,16 +180,6 @@ typedef struct
 */
 #if !defined (FICL_PLATFORM_EXTEND)
 #define FICL_PLATFORM_EXTEND 1
-#endif
-
-/*
-** FICL_WANT_FILE
-** Includes the FILE and FILE-EXT wordset and associated code. Turn this off if you do not
-** have a filesystem!
-** Contributed by Larry Hastings
-*/
-#if !defined (FICL_WANT_FILE)
-#define FICL_WANT_FILE 0
 #endif
 
 /*
@@ -367,7 +357,7 @@ typedef struct
 ** machine. 3 would be appropriate for a 64 bit machine.
 */
 #if !defined FICL_ALIGN
-#define FICL_ALIGN 2
+#define FICL_ALIGN 3
 #define FICL_ALIGN_ADD ((1 << FICL_ALIGN) - 1)
 #endif
 
@@ -407,7 +397,7 @@ void *ficlRealloc(void *p, size_t size);
 #if FICL_MULTITHREAD
 int ficlLockDictionary(short fLock);
 #else
-#define ficlLockDictionary(x) /* ignore */
+#define ficlLockDictionary(x) 0 /* ignore */
 #endif
 
 /*
@@ -419,15 +409,5 @@ int ficlLockDictionary(short fLock);
 */
 DPUNS ficlLongMul(FICL_UNS x, FICL_UNS y);
 UNSQR ficlLongDiv(DPUNS    q, FICL_UNS y);
-
-/*
-** FICL_HAVE_FTRUNCATE indicates whether the current OS supports
-** the ftruncate() function (available on most UNIXes).  This
-** function is necessary to provide the complete File-Access wordset.
-*/
-#if !defined (FICL_HAVE_FTRUNCATE)
-#define FICL_HAVE_FTRUNCATE 0
-#endif
-
 
 #endif /*__SYSDEP_H__*/

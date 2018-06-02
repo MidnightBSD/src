@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** p r e f i x . c
 ** Forth Inspired Command Language
 ** Parser extensions for Ficl
 ** Authors: Larry Hastings & John Sadler (john_sadler@alum.mit.edu)
 ** Created: April 2001
-** $Id: prefix.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: prefix.c,v 1.6 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +42,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/prefix.c 102657 2002-08-31 01:04:53Z scottl $ */
 
 #include <string.h>
 #include <ctype.h>

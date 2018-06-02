@@ -47,7 +47,7 @@
 ** contact me by email at the address above.
 **
 ** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
-** $FreeBSD: stable/10/sys/boot/ficl/arm/sysdep.h 249222 2013-04-07 05:40:49Z kientzle $
+** $FreeBSD: stable/10/sys/boot/ficl/powerpc/sysdep.h 123372 2003-12-10 09:05:08Z grehan $
 */
 
 #if !defined (__SYSDEP_H__)
@@ -60,7 +60,7 @@
 #include <assert.h>
 
 #if !defined IGNORE		/* Macro to silence unused param warnings */
-#define IGNORE(x) (void)(x)
+#define IGNORE(x) &x
 #endif
 
 /*
@@ -407,7 +407,7 @@ void *ficlRealloc(void *p, size_t size);
 #if FICL_MULTITHREAD
 int ficlLockDictionary(short fLock);
 #else
-#define ficlLockDictionary(x) /* ignore */
+#define ficlLockDictionary(x) 0 /* ignore */
 #endif
 
 /*

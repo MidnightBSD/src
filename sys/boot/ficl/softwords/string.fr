@@ -11,7 +11,7 @@
 \   s" woof woof woof " str --> cat
 \   str --> type  cr
 \
-\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/ficl/softwords/string.fr 76116 2001-04-29 02:36:36Z dcs $
 
 also oop definitions
 

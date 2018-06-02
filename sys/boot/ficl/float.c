@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** f l o a t . c
 ** Forth Inspired Command Language
 ** ANS Forth FLOAT word-set written in C
 ** Author: Guy Carver & John Sadler (john_sadler@alum.mit.edu)
 ** Created: Apr 2001
-** $Id: float.c,v 1.3 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: float.c,v 1.8 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +42,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/float.c 167850 2007-03-23 22:26:01Z jkim $ */
 
 #include <stdlib.h>
 #include <stdio.h>

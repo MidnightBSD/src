@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** f i c l . h
 ** Forth Inspired Command Language
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
 ** Dedicated to RHS, in loving memory
-** $Id: ficl.h,v 1.3 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: ficl.h,v 1.18 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +42,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/ficl.h 209361 2010-06-20 08:03:06Z brian $ */
 
 #if !defined (__FICL_H__)
 #define __FICL_H__

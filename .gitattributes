@@ -54315,9 +54315,15 @@ sys/boot/ficl/fileaccess.c -text
 sys/boot/ficl/float.c -text
 sys/boot/ficl/i386/sysdep.c -text
 sys/boot/ficl/i386/sysdep.h -text
+sys/boot/ficl/ia64/sysdep.c svneol=native#text/plain
+sys/boot/ficl/ia64/sysdep.h svneol=native#text/plain
 sys/boot/ficl/loader.c -text
 sys/boot/ficl/math64.c -text
 sys/boot/ficl/math64.h -text
+sys/boot/ficl/mips/sysdep.c svneol=native#text/plain
+sys/boot/ficl/mips/sysdep.h svneol=native#text/plain
+sys/boot/ficl/powerpc/sysdep.c svneol=native#text/plain
+sys/boot/ficl/powerpc/sysdep.h svneol=native#text/plain
 sys/boot/ficl/prefix.c -text
 sys/boot/ficl/search.c -text
 sys/boot/ficl/softwords/classes.fr -text
@@ -54334,6 +54340,8 @@ sys/boot/ficl/softwords/prefix.fr -text
 sys/boot/ficl/softwords/softcore.awk -text
 sys/boot/ficl/softwords/softcore.fr -text
 sys/boot/ficl/softwords/string.fr -text
+sys/boot/ficl/sparc64/sysdep.c svneol=native#text/plain
+sys/boot/ficl/sparc64/sysdep.h svneol=native#text/plain
 sys/boot/ficl/stack.c -text
 sys/boot/ficl/testmain.c -text
 sys/boot/ficl/tools.c -text

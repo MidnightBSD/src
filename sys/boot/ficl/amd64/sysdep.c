@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** s y s d e p . c
 ** Forth Inspired Command Language
@@ -7,7 +8,7 @@
 **
 *******************************************************************/
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/amd64/sysdep.c 294445 2016-01-20 16:53:38Z emaste $ */
 
 #ifdef TESTMAIN
 #include <stdio.h>
@@ -55,7 +56,7 @@ void  ficlTextOut(FICL_VM *pVM, char *msg, int fNewline)
     IGNORE(pVM);
 
     while(*msg != 0)
-	putchar(*(msg++));
+	putchar((unsigned char)*(msg++));
     if (fNewline)
 	putchar('\n');
 

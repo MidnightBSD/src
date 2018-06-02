@@ -10,13 +10,18 @@
 ** FICL_ROBUST is enabled. This may require some consideration
 ** in firmware systems since assert often
 ** assumes stderr/stdout.  
-** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
+** $Id: sysdep.h,v 1.11 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
 ** All rights reserved.
 **
 ** Get the latest Ficl release at http://ficl.sourceforge.net
+**
+** I am interested in hearing from anyone who uses ficl. If you have
+** a problem, a success story, a defect, an enhancement request, or
+** if you would like to contribute to the ficl release, please
+** contact me by email at the address above.
 **
 ** L I C E N S E  and  D I S C L A I M E R
 ** 
@@ -41,14 +46,10 @@
 ** OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 ** SUCH DAMAGE.
 **
-** I am interested in hearing from anyone who uses ficl. If you have
-** a problem, a success story, a defect, an enhancement request, or
-** if you would like to contribute to the ficl release, please send
-** contact me by email at the address above.
-**
 ** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
-** $FreeBSD: stable/10/sys/boot/ficl/arm/sysdep.h 249222 2013-04-07 05:40:49Z kientzle $
 */
+
+/* $FreeBSD: stable/10/sys/boot/ficl/ia64/sysdep.h 96755 2002-05-16 21:28:32Z trhodes $ */
 
 #if !defined (__SYSDEP_H__)
 #define __SYSDEP_H__ 
@@ -60,7 +61,7 @@
 #include <assert.h>
 
 #if !defined IGNORE		/* Macro to silence unused param warnings */
-#define IGNORE(x) (void)(x)
+#define IGNORE(x) &x
 #endif
 
 /*
@@ -74,7 +75,6 @@
 #if !defined FALSE
 #define FALSE 0
 #endif
-
 
 /*
 ** System dependent data type declarations...
@@ -106,11 +106,11 @@
 ** (11/2000: same for FICL_FLOAT)
 */
 #if !defined FICL_INT
-#define FICL_INT INT32
+#define FICL_INT long
 #endif
 
 #if !defined FICL_UNS
-#define FICL_UNS UNS32
+#define FICL_UNS unsigned long
 #endif
 
 #if !defined FICL_FLOAT
@@ -121,7 +121,7 @@
 ** Ficl presently supports values of 32 and 64 for BITS_PER_CELL
 */
 #if !defined BITS_PER_CELL
-#define BITS_PER_CELL 32
+#define BITS_PER_CELL 64
 #endif
 
 #if ((BITS_PER_CELL != 32) && (BITS_PER_CELL != 64))
@@ -162,7 +162,7 @@ typedef struct
 #endif
 #if (FICL_MINIMAL)
 #define FICL_WANT_SOFTWORDS  0
-#define FICL_WANT_FILE	     0
+#define FICL_WANT_FILE       0
 #define FICL_WANT_FLOAT      0
 #define FICL_WANT_USER       0
 #define FICL_WANT_LOCALS     0
@@ -170,7 +170,7 @@ typedef struct
 #define FICL_WANT_OOP        0
 #define FICL_PLATFORM_EXTEND 0
 #define FICL_MULTITHREAD     0
-#define FICL_ROBUST         1 
+#define FICL_ROBUST          0
 #define FICL_EXTENDED_PREFIX 0
 #endif
 
@@ -181,6 +181,7 @@ typedef struct
 #if !defined (FICL_PLATFORM_EXTEND)
 #define FICL_PLATFORM_EXTEND 1
 #endif
+
 
 /*
 ** FICL_WANT_FILE
@@ -207,6 +208,14 @@ typedef struct
 */
 #if !defined (FICL_WANT_DEBUGGER)
 #define FICL_WANT_DEBUGGER 1
+#endif
+
+/*
+** FICL_EXTENDED_PREFIX enables a bunch of extra prefixes in prefix.c and prefix.fr (if
+** included as part of softcore.c)
+*/
+#if !defined FICL_EXTENDED_PREFIX
+#define FICL_EXTENDED_PREFIX 0
 #endif
 
 /*
@@ -352,14 +361,6 @@ typedef struct
 #endif
 
 /*
-** FICL_EXTENDED_PREFIX enables a bunch of extra prefixes in prefix.c and prefix.fr (if
-** included as part of softcore.c)
-*/
-#if !defined FICL_EXTENDED_PREFIX
-#define FICL_EXTENDED_PREFIX 0
-#endif
-
-/*
 ** FICL_ALIGN is the power of two to which the dictionary
 ** pointer address must be aligned. This value is usually
 ** either 1 or 2, depending on the memory architecture
@@ -367,7 +368,7 @@ typedef struct
 ** machine. 3 would be appropriate for a 64 bit machine.
 */
 #if !defined FICL_ALIGN
-#define FICL_ALIGN 2
+#define FICL_ALIGN 3
 #define FICL_ALIGN_ADD ((1 << FICL_ALIGN) - 1)
 #endif
 
@@ -407,7 +408,7 @@ void *ficlRealloc(void *p, size_t size);
 #if FICL_MULTITHREAD
 int ficlLockDictionary(short fLock);
 #else
-#define ficlLockDictionary(x) /* ignore */
+#define ficlLockDictionary(x) 0 /* ignore */
 #endif
 
 /*
@@ -419,6 +420,7 @@ int ficlLockDictionary(short fLock);
 */
 DPUNS ficlLongMul(FICL_UNS x, FICL_UNS y);
 UNSQR ficlLongDiv(DPUNS    q, FICL_UNS y);
+
 
 /*
 ** FICL_HAVE_FTRUNCATE indicates whether the current OS supports

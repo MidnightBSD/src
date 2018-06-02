@@ -7,7 +7,7 @@
 \ ** C - W O R D
 \ Models a FICL_WORD
 \
-\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/ficl/softwords/ficlclass.fr 94290 2002-04-09 17:45:28Z dcs $
 
 object subclass c-word
     c-word     ref: .link

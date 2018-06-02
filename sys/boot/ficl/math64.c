@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** m a t h 6 4 . c
 ** Forth Inspired Command Language - 64 bit math support routines
@@ -5,7 +6,7 @@
 ** Created: 25 January 1998
 ** Rev 2.03: Support for 128 bit DP math. This file really ouught to
 ** be renamed!
-** $Id: math64.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: math64.c,v 1.9 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -42,7 +43,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/math64.c 94290 2002-04-09 17:45:28Z dcs $ */
 
 #include "ficl.h"
 #include "math64.h"

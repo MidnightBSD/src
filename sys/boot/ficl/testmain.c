@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*
 ** stub main for testing FICL under userland
-** $Id: testmain.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: testmain.c,v 1.13 2001/12/05 07:21:34 jsadler Exp $
 */
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -37,7 +38,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/testmain.c 94290 2002-04-09 17:45:28Z dcs $ */
 
 #include <stdlib.h>
 #include <stdio.h>

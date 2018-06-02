@@ -7,7 +7,7 @@
 \ locstate: 0 = looking for -- or }}
 \           1 = found --
 \
-\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/ficl/softwords/ficllocal.fr 51786 1999-09-29 04:43:16Z dcs $
 
 hide
 0 constant zero

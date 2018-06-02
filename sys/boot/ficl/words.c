@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** w o r d s . c
 ** Forth Inspired Command Language
 ** ANS Forth CORE word-set written in C
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
-** $Id: words.c,v 1.3 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: words.c,v 1.17 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +42,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/words.c 271135 2014-09-04 21:01:10Z emaste $ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>
@@ -2567,7 +2568,7 @@ static void setObjectFlag(FICL_VM *pVM)
 
 static void isObject(FICL_VM *pVM)
 {
-    int flag;
+    FICL_INT flag;
     FICL_WORD *pFW = (FICL_WORD *)stackPopPtr(pVM->pStack);
     
     flag = ((pFW != NULL) && (pFW->flags & FW_ISOBJECT)) ? FICL_TRUE : FICL_FALSE;

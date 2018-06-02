@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** m a t h 6 4 . h
 ** Forth Inspired Command Language - 64 bit math support routines
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 25 January 1998
-** $Id: math64.h,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: math64.h,v 1.9 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -40,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/math64.h 94290 2002-04-09 17:45:28Z dcs $ */
 
 #if !defined (__MATH64_H__)
 #define __MATH64_H__

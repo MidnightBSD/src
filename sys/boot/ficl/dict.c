@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /*******************************************************************
 ** d i c t . c
 ** Forth Inspired Command Language - dictionary methods
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
-** $Id: dict.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
+** $Id: dict.c,v 1.14 2001/12/05 07:21:34 jsadler Exp $
 *******************************************************************/
 /*
 ** This file implements the dictionary -- FICL's model of 
@@ -51,7 +52,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sys/boot/ficl/dict.c 94290 2002-04-09 17:45:28Z dcs $ */
 
 #ifdef TESTMAIN
 #include <stdio.h>
