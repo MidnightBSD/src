@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/share/sendmail/Makefile,v 1.10 2004/12/21 08:46:54 ru Exp $
+# $FreeBSD: stable/10/share/sendmail/Makefile 291794 2015-12-04 18:21:05Z bdrewery $
 #
 # Doing a make install builds /usr/share/sendmail/
 
@@ -8,7 +8,7 @@ CFDIR=	cf
 CFDIRS!=	(cd ${SENDMAIL_DIR}; find -L ${CFDIR} \( \( -name CVS -o -name .svn \) -prune \) -o -type d -print)
 CFFILES!=	(cd ${SENDMAIL_DIR}; find -L ${CFDIR} \( \( -name CVS -o -name .svn \) -prune \) -o -type f -print)
 
-DDIR=	${DESTDIR}/usr/share/sendmail
+DDIR=	${DESTDIR}${SHAREDIR}/sendmail
 
 NO_OBJ=
 
