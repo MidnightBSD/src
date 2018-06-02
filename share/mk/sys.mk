@@ -1,5 +1,5 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
-# $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
+# $FreeBSD: stable/10/share/mk/sys.mk 330425 2018-03-04 23:34:04Z bdrewery $
 # $MidnightBSD$
 
 unix		?=	We run MidnightBSD, not UNIX.
@@ -14,7 +14,7 @@ unix		?=	We run MidnightBSD, not UNIX.
 # and/or endian.  This is called MACHINE_CPU in NetBSD, but that's used
 # for something different in MidnightBSD.
 #
-MACHINE_CPUARCH=${MACHINE_ARCH}
+MACHINE_CPUARCH=${MACHINE_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .endif
 
 # Set any local definitions first. Place this early, but it needs
@@ -40,9 +40,12 @@ AR		?=	ar
 .if defined(%POSIX)
 ARFLAGS		?=	-rv
 .else
-ARFLAGS		?=	rl
+ARFLAGS		?=	-crD
 .endif
 RANLIB		?=	ranlib
+.if !defined(%POSIX)
+RANLIBFLAGS	?=	-D
+.endif
 
 AS		?=	as
 AFLAGS		?=
@@ -53,7 +56,11 @@ CC		?=	c89
 CFLAGS		?=	-O
 .else
 CC		?=	cc
+.if ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "mips"
+CFLAGS		?=	-O -pipe
+.else
 CFLAGS		?=	-O2 -pipe
+.endif
 .if defined(NO_STRICT_ALIASING)
 CFLAGS		+=	-fno-strict-aliasing
 .endif
@@ -92,7 +99,13 @@ ECHODIR		?=	true
 .endif
 .endif
 
-.if !empty(.MAKEFLAGS:M-n) && ${.MAKEFLAGS:M-n} == "-n"
+.if defined(.PARSEDIR)
+# _+_ appears to be a workaround for the special src .MAKE not working.
+# setting it to + interferes with -N
+_+_		?=
+.elif !empty(.MAKEFLAGS:M-n) && ${.MAKEFLAGS:M-n} == "-n"
+# the check above matches only a single -n, so -n -n will result
+# in _+_ = +
 _+_		?=
 .else
 _+_		?=	+
@@ -124,16 +137,22 @@ LINTLIBFLAGS	?=	-cghapbxu -C ${LIB}
 
 MAKE		?=	make
 
+.if !defined(%POSIX)
+NM		?=	nm
+
 OBJC		?=	cc
 OBJCFLAGS	?=	${OBJCINCLUDES} ${CFLAGS} -Wno-import
 
 OBJCOPY		?=	objcopy
+
+OBJDUMP		?=	objdump
 
 PC		?=	pc
 PFLAGS		?=
 
 RC		?=	f77
 RFLAGS		?=
+.endif
 
 SHELL		?=	sh
 
@@ -177,14 +196,14 @@ YFLAGS		?=	-d
 
 .y.o:
 	${YACC} ${YFLAGS} ${.IMPSRC}
-	${CC} ${CPPFLAGS} ${CFLAGS} -c y.tab.c
+	${CC} ${CFLAGS} -c y.tab.c
 	rm -f y.tab.c
 	mv y.tab.o ${.TARGET}
 	${CTFCONVERT_CMD}
 
 .l.o:
 	${LEX} ${LFLAGS} ${.IMPSRC}
-	${CC} ${CPPFLAGS} ${CFLAGS} -c lex.yy.c
+	${CC} ${CFLAGS} -c lex.yy.c
 	rm -f lex.yy.c
 	mv lex.yy.o ${.TARGET}
 	${CTFCONVERT_CMD}
@@ -198,7 +217,7 @@ YFLAGS		?=	-d
 	mv lex.yy.c ${.TARGET}
 
 .c.a:
-	${CC} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
+	${CC} ${CFLAGS} -c ${.IMPSRC}
 	${AR} ${ARFLAGS} ${.TARGET} ${.PREFIX}.o
 	rm -f ${.PREFIX}.o
 
@@ -224,29 +243,25 @@ YFLAGS		?=	-d
 	    touch ${.TARGET}
 
 .c:
-	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CC} ${CFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
+	${CTFCONVERT_CMD}
 
 .c.o:
-	${CC} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CC} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CTFCONVERT_CMD}
 
 .cc .cpp .cxx .C:
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
 
 .cc.o .cpp.o .cxx.o .C.o:
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c ${.IMPSRC}
+	${CXX} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .m.o:
-	${OBJC} ${OBJCFLAGS} -c ${.IMPSRC}
+	${OBJC} ${OBJCFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 	${CTFCONVERT_CMD}
 
 .p.o:
-	${PC} ${PFLAGS} -c ${.IMPSRC}
+	${PC} ${PFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 	${CTFCONVERT_CMD}
 
 .e .r .F .f:
@@ -254,14 +269,15 @@ YFLAGS		?=	-d
 	    -o ${.TARGET}
 
 .e.o .r.o .F.o .f.o:
-	${FC} ${RFLAGS} ${EFLAGS} ${FFLAGS} -c ${.IMPSRC}
+	${FC} ${RFLAGS} ${EFLAGS} ${FFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .S.o:
-	${CC} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC}
+	${CC} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 	${CTFCONVERT_CMD}
 
 .asm.o:
-	${CC} -x assembler-with-cpp ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC}
+	${CC} -x assembler-with-cpp ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} \
+	    -o ${.TARGET}
 	${CTFCONVERT_CMD}
 
 .s.o:
@@ -323,10 +339,6 @@ SHELL=	${__MAKE_SHELL}
 .SHELL: path=${__MAKE_SHELL}
 .endif
 
-# Default executable format
-# XXX hint for bsd.port.mk
-OBJFORMAT?=	elf
-
 .if !defined(.PARSEDIR)
 # We are not bmake, which is more aggressive about searching .PATH
 # It is sometime necessary to curb its enthusiasm with .NOPATH
@@ -337,6 +349,7 @@ OBJFORMAT?=	elf
 # Toggle on warnings
 .WARN: dirsyntax
 .endif
+
 .endif
 
 .if defined(.PARSEDIR)
@@ -344,20 +357,20 @@ OBJFORMAT?=	elf
 .MAKE.EXPAND_VARIABLES= yes
 
 # Tell bmake the makefile preference
-.MAKE.MAKEFILE_PREFERENCE= BSDmakefile makefile Makefile
+MAKEFILE_PREFERENCE?= BSDmakefile makefile Makefile
+.MAKE.MAKEFILE_PREFERENCE= ${MAKEFILE_PREFERENCE}
 
 # By default bmake does *not* use set -e
 # when running target scripts, this is a problem for many makefiles here.
-# So define a shell that will do what FreeBSD expects.
+# So define a shell that will do what MidnightBSD expects.
 .ifndef WITHOUT_SHELL_ERRCTL
 .SHELL: name=sh \
- 	quiet="set -" echo="set -v" filter="set -" \
- 	hasErrCtl=yes check="set -e" ignore="set +e" \
- 	echoFlag=v errFlag=e \
- 	path=${__MAKE_SHELL:U/bin/sh}
+	quiet="set -" echo="set -v" filter="set -" \
+	hasErrCtl=yes check="set -e" ignore="set +e" \
+	echoFlag=v errFlag=e \
+	path=${__MAKE_SHELL:U/bin/sh}
 .endif
 
 .endif
 
-.include <bsd.compat.mk>
 .include <bsd.cpu.mk>
