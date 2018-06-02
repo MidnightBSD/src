@@ -3350,6 +3350,7 @@ cddl/sbin/Makefile -text
 cddl/sbin/Makefile.inc -text
 cddl/sbin/zfs/Makefile -text
 cddl/sbin/zpool/Makefile -text
+cddl/tests/Makefile svneol=native#text/plain
 cddl/usr.bin/Makefile -text
 cddl/usr.bin/Makefile.inc -text
 cddl/usr.bin/ctfconvert/Makefile -text
