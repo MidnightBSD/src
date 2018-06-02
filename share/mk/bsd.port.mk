@@ -1,11 +1,26 @@
-# $FreeBSD: src/share/mk/bsd.port.mk,v 1.307 2004/07/02 20:47:18 eik Exp $
-# $MidnightBSD: src/share/mk/bsd.port.mk,v 1.7 2008/10/14 21:13:54 laffer1 Exp $
+# $MidnightBSD$
 
-PORTSDIR?=	/usr/mports
+.if !defined(PORTSDIR)
+# Autodetect if the command is being run in a mports tree that's not rooted
+# in the default /usr/mports.  The ../../.. case is in case ports ever grows
+# a third level.
+.for RELPATH in . .. ../.. ../../..
+.if !defined(_PORTSDIR) && exists(${.CURDIR}/${RELPATH}/Mk/bsd.mport.mk)
+_PORTSDIR=	${.CURDIR}/${RELPATH}
+.endif
+.endfor
+_PORTSDIR?=	/usr/mports
+.if defined(.PARSEDIR)
+PORTSDIR=	${_PORTSDIR:tA}
+.else # fmake doesn't have :tA
+PORTSDIR!=	realpath ${_PORTSDIR}
+.endif
+.endif
+
 BSDPORTMK?=	${PORTSDIR}/Mk/bsd.mport.mk
 
 # Needed to keep bsd.own.mk from reading in /etc/src.conf
-# and setting MK_* variables when building ports.
+# and setting MK_* variables when building mports.
 _WITHOUT_SRCCONF=
 
 # Enable CTF conversion on request.
