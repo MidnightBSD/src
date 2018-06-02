@@ -1,19 +1,15 @@
 # $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/netbsd-tests.test.mk 276478 2014-12-31 20:13:31Z ngie $
+# $FreeBSD: stable/10/share/mk/netbsd-tests.test.mk 292278 2015-12-15 17:58:10Z ngie $
 
 .if !target(__netbsd_tests.test.mk__)
 __netbsd_tests.test.mk__:
 
-.if !defined(OBJTOP)
-.error "Please define OBJTOP to the absolute path of the top of the object tree"
-.endif
+OBJTOP?=	${.OBJDIR:S/${RELDIR}//}
 
-.if !defined(SRCTOP)
-.error "Please define SRCTOP to the absolute path of the top of the source tree"
-.endif
+TESTSRC?=	${SRCTOP}/contrib/netbsd-tests/${RELDIR:H}
 
-.if !defined(TESTSRC)
-.error "Please define TESTSRC to the absolute path of the test sources, e.g. contrib/netbsd-tests/lib/libc/stdio"
+.if !exists(${TESTSRC}/)
+.error "Please define TESTSRC to the absolute path of the test sources, e.g. $${SRCTOP}/contrib/netbsd-tests/lib/libc/stdio"
 .endif
 
 .PATH: ${TESTSRC}
