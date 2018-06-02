@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,8 +21,9 @@
  */
 
 /*
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2014 by Delphix. All rights reserved.
  * Copyright (c) 2013 Steven Hartland. All rights reserved.
+ * Copyright (c) 2014 Integros [integros.com]
  */
 
 /*
@@ -217,11 +219,11 @@ out:
 }
 
 int
-lzc_create(const char *fsname, dmu_objset_type_t type, nvlist_t *props)
+lzc_create(const char *fsname, enum lzc_dataset_type type, nvlist_t *props)
 {
 	int error;
 	nvlist_t *args = fnvlist_alloc();
-	fnvlist_add_int32(args, "type", type);
+	fnvlist_add_int32(args, "type", (dmu_objset_type_t)type);
 	if (props != NULL)
 		fnvlist_add_nvlist(args, "props", props);
 	error = lzc_ioctl(ZFS_IOC_CREATE, fsname, args, NULL);
@@ -264,7 +266,7 @@ lzc_snapshot(nvlist_t *snaps, nvlist_t *props, nvlist_t **errlist)
 	nvpair_t *elem;
 	nvlist_t *args;
 	int error;
-	char pool[MAXNAMELEN];
+	char pool[ZFS_MAX_DATASET_NAME_LEN];
 
 	*errlist = NULL;
 
@@ -316,7 +318,7 @@ lzc_destroy_snaps(nvlist_t *snaps, boolean_t defer, nvlist_t **errlist)
 	nvpair_t *elem;
 	nvlist_t *args;
 	int error;
-	char pool[MAXNAMELEN];
+	char pool[ZFS_MAX_DATASET_NAME_LEN];
 
 	/* determine the pool name */
 	elem = nvlist_next_nvpair(snaps, NULL);
@@ -343,7 +345,7 @@ lzc_snaprange_space(const char *firstsnap, const char *lastsnap,
 	nvlist_t *args;
 	nvlist_t *result;
 	int err;
-	char fs[MAXNAMELEN];
+	char fs[ZFS_MAX_DATASET_NAME_LEN];
 	char *atp;
 
 	/* determine the fs name */
@@ -408,7 +410,7 @@ lzc_exists(const char *dataset)
 int
 lzc_hold(nvlist_t *holds, int cleanup_fd, nvlist_t **errlist)
 {
-	char pool[MAXNAMELEN];
+	char pool[ZFS_MAX_DATASET_NAME_LEN];
 	nvlist_t *args;
 	nvpair_t *elem;
 	int error;
@@ -455,7 +457,7 @@ lzc_hold(nvlist_t *holds, int cleanup_fd, nvlist_t **errlist)
 int
 lzc_release(nvlist_t *holds, nvlist_t **errlist)
 {
-	char pool[MAXNAMELEN];
+	char pool[ZFS_MAX_DATASET_NAME_LEN];
 	nvpair_t *elem;
 
 	/* determine the pool name */
@@ -486,36 +488,87 @@ lzc_get_holds(const char *snapname, nvlist_t **holdsp)
 }
 
 /*
- * If fromsnap is NULL, a full (non-incremental) stream will be sent.
+ * Generate a zfs send stream for the specified snapshot and write it to
+ * the specified file descriptor.
+ *
+ * "snapname" is the full name of the snapshot to send (e.g. "pool/fs@snap")
+ *
+ * If "from" is NULL, a full (non-incremental) stream will be sent.
+ * If "from" is non-NULL, it must be the full name of a snapshot or
+ * bookmark to send an incremental from (e.g. "pool/fs@earlier_snap" or
+ * "pool/fs#earlier_bmark").  If non-NULL, the specified snapshot or
+ * bookmark must represent an earlier point in the history of "snapname").
+ * It can be an earlier snapshot in the same filesystem or zvol as "snapname",
+ * or it can be the origin of "snapname"'s filesystem, or an earlier
+ * snapshot in the origin, etc.
+ *
+ * "fd" is the file descriptor to write the send stream to.
+ *
+ * If "flags" contains LZC_SEND_FLAG_LARGE_BLOCK, the stream is permitted
+ * to contain DRR_WRITE records with drr_length > 128K, and DRR_OBJECT
+ * records with drr_blksz > 128K.
+ *
+ * If "flags" contains LZC_SEND_FLAG_EMBED_DATA, the stream is permitted
+ * to contain DRR_WRITE_EMBEDDED records with drr_etype==BP_EMBEDDED_TYPE_DATA,
+ * which the receiving system must support (as indicated by support
+ * for the "embedded_data" feature).
  */
 int
-lzc_send(const char *snapname, const char *fromsnap, int fd)
+lzc_send(const char *snapname, const char *from, int fd,
+    enum lzc_send_flags flags)
+{
+	return (lzc_send_resume(snapname, from, fd, flags, 0, 0));
+}
+
+int
+lzc_send_resume(const char *snapname, const char *from, int fd,
+    enum lzc_send_flags flags, uint64_t resumeobj, uint64_t resumeoff)
 {
 	nvlist_t *args;
 	int err;
 
 	args = fnvlist_alloc();
 	fnvlist_add_int32(args, "fd", fd);
-	if (fromsnap != NULL)
-		fnvlist_add_string(args, "fromsnap", fromsnap);
+	if (from != NULL)
+		fnvlist_add_string(args, "fromsnap", from);
+	if (flags & LZC_SEND_FLAG_LARGE_BLOCK)
+		fnvlist_add_boolean(args, "largeblockok");
+	if (flags & LZC_SEND_FLAG_EMBED_DATA)
+		fnvlist_add_boolean(args, "embedok");
+	if (resumeobj != 0 || resumeoff != 0) {
+		fnvlist_add_uint64(args, "resume_object", resumeobj);
+		fnvlist_add_uint64(args, "resume_offset", resumeoff);
+	}
 	err = lzc_ioctl(ZFS_IOC_SEND_NEW, snapname, args, NULL);
 	nvlist_free(args);
 	return (err);
 }
 
 /*
- * If fromsnap is NULL, a full (non-incremental) stream will be estimated.
+ * "from" can be NULL, a snapshot, or a bookmark.
+ *
+ * If from is NULL, a full (non-incremental) stream will be estimated.  This
+ * is calculated very efficiently.
+ *
+ * If from is a snapshot, lzc_send_space uses the deadlists attached to
+ * each snapshot to efficiently estimate the stream size.
+ *
+ * If from is a bookmark, the indirect blocks in the destination snapshot
+ * are traversed, looking for blocks with a birth time since the creation TXG of
+ * the snapshot this bookmark was created from.  This will result in
+ * significantly more I/O and be less efficient than a send space estimation on
+ * an equivalent snapshot.
  */
 int
-lzc_send_space(const char *snapname, const char *fromsnap, uint64_t *spacep)
+lzc_send_space(const char *snapname, const char *from, uint64_t *spacep)
 {
 	nvlist_t *args;
 	nvlist_t *result;
 	int err;
 
 	args = fnvlist_alloc();
-	if (fromsnap != NULL)
-		fnvlist_add_string(args, "fromsnap", fromsnap);
+	if (from != NULL)
+		fnvlist_add_string(args, "from", from);
 	err = lzc_ioctl(ZFS_IOC_SEND_SPACE, snapname, args, &result);
 	nvlist_free(args);
 	if (err == 0)
@@ -543,22 +596,10 @@ recv_read(int fd, void *buf, int ilen)
 	return (0);
 }
 
-/*
- * The simplest receive case: receive from the specified fd, creating the
- * specified snapshot.  Apply the specified properties a "received" properties
- * (which can be overridden by locally-set properties).  If the stream is a
- * clone, its origin snapshot must be specified by 'origin'.  The 'force'
- * flag will cause the target filesystem to be rolled back or destroyed if
- * necessary to receive.
- *
- * Return 0 on success or an errno on failure.
- *
- * Note: this interface does not work on dedup'd streams
- * (those with DMU_BACKUP_FEATURE_DEDUP).
- */
-int
-lzc_receive(const char *snapname, nvlist_t *props, const char *origin,
-    boolean_t force, int fd)
+static int
+recv_impl(const char *snapname, nvlist_t *props, const char *origin,
+    boolean_t force, boolean_t resumable, int fd,
+    const dmu_replay_record_t *begin_record)
 {
 	/*
 	 * The receive ioctl is still legacy, so we need to construct our own
@@ -568,7 +609,6 @@ lzc_receive(const char *snapname, nvlist_t *props, const char *origin,
 	char *atp;
 	char *packed = NULL;
 	size_t size;
-	dmu_replay_record_t drr;
 	int error;
 
 	ASSERT3S(g_refcount, >, 0);
@@ -604,16 +644,22 @@ lzc_receive(const char *snapname, nvlist_t *props, const char *origin,
 		(void) strlcpy(zc.zc_string, origin, sizeof (zc.zc_string));
 
 	/* zc_begin_record is non-byteswapped BEGIN record */
-	error = recv_read(fd, &drr, sizeof (drr));
-	if (error != 0)
-		goto out;
-	zc.zc_begin_record = drr.drr_u.drr_begin;
+	if (begin_record == NULL) {
+		error = recv_read(fd, &zc.zc_begin_record,
+		    sizeof (zc.zc_begin_record));
+		if (error != 0)
+			goto out;
+	} else {
+		zc.zc_begin_record = *begin_record;
+	}
 
 	/* zc_cookie is fd to read from */
 	zc.zc_cookie = fd;
 
 	/* zc guid is force flag */
 	zc.zc_guid = force;
+
+	zc.zc_resumable = resumable;
 
 	/* zc_cleanup_fd is unused */
 	zc.zc_cleanup_fd = -1;
@@ -626,5 +672,178 @@ out:
 	if (packed != NULL)
 		fnvlist_pack_free(packed, size);
 	free((void*)(uintptr_t)zc.zc_nvlist_dst);
+	return (error);
+}
+
+/*
+ * The simplest receive case: receive from the specified fd, creating the
+ * specified snapshot.  Apply the specified properties as "received" properties
+ * (which can be overridden by locally-set properties).  If the stream is a
+ * clone, its origin snapshot must be specified by 'origin'.  The 'force'
+ * flag will cause the target filesystem to be rolled back or destroyed if
+ * necessary to receive.
+ *
+ * Return 0 on success or an errno on failure.
+ *
+ * Note: this interface does not work on dedup'd streams
+ * (those with DMU_BACKUP_FEATURE_DEDUP).
+ */
+int
+lzc_receive(const char *snapname, nvlist_t *props, const char *origin,
+    boolean_t force, int fd)
+{
+	return (recv_impl(snapname, props, origin, force, B_FALSE, fd, NULL));
+}
+
+/*
+ * Like lzc_receive, but if the receive fails due to premature stream
+ * termination, the intermediate state will be preserved on disk.  In this
+ * case, ECKSUM will be returned.  The receive may subsequently be resumed
+ * with a resuming send stream generated by lzc_send_resume().
+ */
+int
+lzc_receive_resumable(const char *snapname, nvlist_t *props, const char *origin,
+    boolean_t force, int fd)
+{
+	return (recv_impl(snapname, props, origin, force, B_TRUE, fd, NULL));
+}
+
+/*
+ * Like lzc_receive, but allows the caller to read the begin record and then to
+ * pass it in.  That could be useful if the caller wants to derive, for example,
+ * the snapname or the origin parameters based on the information contained in
+ * the begin record.
+ * The begin record must be in its original form as read from the stream,
+ * in other words, it should not be byteswapped.
+ *
+ * The 'resumable' parameter allows to obtain the same behavior as with
+ * lzc_receive_resumable.
+ */
+int
+lzc_receive_with_header(const char *snapname, nvlist_t *props,
+    const char *origin, boolean_t force, boolean_t resumable, int fd,
+    const dmu_replay_record_t *begin_record)
+{
+	if (begin_record == NULL)
+		return (EINVAL);
+	return (recv_impl(snapname, props, origin, force, resumable, fd,
+	    begin_record));
+}
+
+/*
+ * Roll back this filesystem or volume to its most recent snapshot.
+ * If snapnamebuf is not NULL, it will be filled in with the name
+ * of the most recent snapshot.
+ *
+ * Return 0 on success or an errno on failure.
+ */
+int
+lzc_rollback(const char *fsname, char *snapnamebuf, int snapnamelen)
+{
+	nvlist_t *args;
+	nvlist_t *result;
+	int err;
+
+	args = fnvlist_alloc();
+	err = lzc_ioctl(ZFS_IOC_ROLLBACK, fsname, args, &result);
+	nvlist_free(args);
+	if (err == 0 && snapnamebuf != NULL) {
+		const char *snapname = fnvlist_lookup_string(result, "target");
+		(void) strlcpy(snapnamebuf, snapname, snapnamelen);
+	}
+	return (err);
+}
+
+/*
+ * Creates bookmarks.
+ *
+ * The bookmarks nvlist maps from name of the bookmark (e.g. "pool/fs#bmark") to
+ * the name of the snapshot (e.g. "pool/fs@snap").  All the bookmarks and
+ * snapshots must be in the same pool.
+ *
+ * The returned results nvlist will have an entry for each bookmark that failed.
+ * The value will be the (int32) error code.
+ *
+ * The return value will be 0 if all bookmarks were created, otherwise it will
+ * be the errno of a (undetermined) bookmarks that failed.
+ */
+int
+lzc_bookmark(nvlist_t *bookmarks, nvlist_t **errlist)
+{
+	nvpair_t *elem;
+	int error;
+	char pool[ZFS_MAX_DATASET_NAME_LEN];
+
+	/* determine the pool name */
+	elem = nvlist_next_nvpair(bookmarks, NULL);
+	if (elem == NULL)
+		return (0);
+	(void) strlcpy(pool, nvpair_name(elem), sizeof (pool));
+	pool[strcspn(pool, "/#")] = '\0';
+
+	error = lzc_ioctl(ZFS_IOC_BOOKMARK, pool, bookmarks, errlist);
+
+	return (error);
+}
+
+/*
+ * Retrieve bookmarks.
+ *
+ * Retrieve the list of bookmarks for the given file system. The props
+ * parameter is an nvlist of property names (with no values) that will be
+ * returned for each bookmark.
+ *
+ * The following are valid properties on bookmarks, all of which are numbers
+ * (represented as uint64 in the nvlist)
+ *
+ * "guid" - globally unique identifier of the snapshot it refers to
+ * "createtxg" - txg when the snapshot it refers to was created
+ * "creation" - timestamp when the snapshot it refers to was created
+ *
+ * The format of the returned nvlist as follows:
+ * <short name of bookmark> -> {
+ *     <name of property> -> {
+ *         "value" -> uint64
+ *     }
+ *  }
+ */
+int
+lzc_get_bookmarks(const char *fsname, nvlist_t *props, nvlist_t **bmarks)
+{
+	return (lzc_ioctl(ZFS_IOC_GET_BOOKMARKS, fsname, props, bmarks));
+}
+
+/*
+ * Destroys bookmarks.
+ *
+ * The keys in the bmarks nvlist are the bookmarks to be destroyed.
+ * They must all be in the same pool.  Bookmarks are specified as
+ * <fs>#<bmark>.
+ *
+ * Bookmarks that do not exist will be silently ignored.
+ *
+ * The return value will be 0 if all bookmarks that existed were destroyed.
+ *
+ * Otherwise the return value will be the errno of a (undetermined) bookmark
+ * that failed, no bookmarks will be destroyed, and the errlist will have an
+ * entry for each bookmarks that failed.  The value in the errlist will be
+ * the (int32) error code.
+ */
+int
+lzc_destroy_bookmarks(nvlist_t *bmarks, nvlist_t **errlist)
+{
+	nvpair_t *elem;
+	int error;
+	char pool[ZFS_MAX_DATASET_NAME_LEN];
+
+	/* determine the pool name */
+	elem = nvlist_next_nvpair(bmarks, NULL);
+	if (elem == NULL)
+		return (0);
+	(void) strlcpy(pool, nvpair_name(elem), sizeof (pool));
+	pool[strcspn(pool, "/#")] = '\0';
+
+	error = lzc_ioctl(ZFS_IOC_DESTROY_BOOKMARKS, pool, bmarks, errlist);
+
 	return (error);
 }

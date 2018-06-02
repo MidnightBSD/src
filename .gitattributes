@@ -3234,6 +3234,7 @@ cddl/contrib/opensolaris/common/ctf/ctf_lookup.c -text
 cddl/contrib/opensolaris/common/ctf/ctf_open.c -text
 cddl/contrib/opensolaris/common/ctf/ctf_types.c -text
 cddl/contrib/opensolaris/common/ctf/ctf_util.c -text
+cddl/contrib/opensolaris/common/util/strtolctype.h svneol=native#text/plain
 cddl/contrib/opensolaris/head/assert.h -text
 cddl/contrib/opensolaris/head/atomic.h -text
 cddl/contrib/opensolaris/head/libintl.h -text
@@ -3244,6 +3245,8 @@ cddl/contrib/opensolaris/head/storclass.h -text
 cddl/contrib/opensolaris/head/syms.h -text
 cddl/contrib/opensolaris/head/synch.h -text
 cddl/contrib/opensolaris/head/thread.h -text
+cddl/contrib/opensolaris/lib/libcmdutils/common/nicenum.c svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libcmdutils/libcmdutils.h svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libctf/common/ctf_lib.c -text
 cddl/contrib/opensolaris/lib/libctf/common/ctf_subr.c -text
 cddl/contrib/opensolaris/lib/libctf/common/libctf.h -text
@@ -3285,6 +3288,8 @@ cddl/contrib/opensolaris/lib/libdtrace/common/dt_pcb.c -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pcb.h -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pid.c -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pid.h -text
+cddl/contrib/opensolaris/lib/libdtrace/common/dt_pq.c svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libdtrace/common/dt_pq.h svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pragma.c -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_print.c svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_printf.c -text
@@ -3313,12 +3318,15 @@ cddl/contrib/opensolaris/lib/libdtrace/common/mksignal.sh -text
 cddl/contrib/opensolaris/lib/libdtrace/i386/dt_isadep.c -text
 cddl/contrib/opensolaris/lib/libdtrace/i386/regs.d.in -text
 cddl/contrib/opensolaris/lib/libdtrace/i386/regs.sed.in -text
+cddl/contrib/opensolaris/lib/libdtrace/mips/dt_isadep.c svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libdtrace/powerpc/dt_isadep.c svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libdtrace/sparc/dt_isadep.c -text
 cddl/contrib/opensolaris/lib/libdtrace/sparc/regs.d -text
 cddl/contrib/opensolaris/lib/libgen/common/gmatch.c -text
 cddl/contrib/opensolaris/lib/libnvpair/libnvpair.c -text
 cddl/contrib/opensolaris/lib/libnvpair/libnvpair.h -text
 cddl/contrib/opensolaris/lib/libnvpair/nvpair_alloc_system.c -text
+cddl/contrib/opensolaris/lib/libnvpair/nvpair_json.c svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libuutil/common/libuutil.h -text
 cddl/contrib/opensolaris/lib/libuutil/common/libuutil_common.h -text
 cddl/contrib/opensolaris/lib/libuutil/common/libuutil_impl.h -text

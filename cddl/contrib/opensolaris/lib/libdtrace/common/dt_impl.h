@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -25,8 +26,8 @@
  */
 
 /*
- * Copyright (c) 2011, Joyent, Inc. All rights reserved.
- * Copyright (c) 2011 by Delphix. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2012 by Delphix. All rights reserved.
  */
 
 #ifndef	_DT_IMPL_H
@@ -34,7 +35,7 @@
 
 #include <sys/param.h>
 #include <sys/objfs.h>
-#if !defined(sun)
+#ifndef illumos
 #include <sys/bitmap.h>
 #include <sys/utsname.h>
 #include <sys/ioccom.h>
@@ -45,7 +46,7 @@
 #include <libctf.h>
 #include <dtrace.h>
 #include <gelf.h>
-#if defined(sun)
+#ifdef illumos
 #include <synch.h>
 #endif
 
@@ -64,6 +65,7 @@ extern "C" {
 #include <dt_proc.h>
 #include <dt_dof.h>
 #include <dt_pcb.h>
+#include <dt_pq.h>
 
 struct dt_module;		/* see below */
 struct dt_pfdict;		/* see <dt_printf.h> */
@@ -141,10 +143,14 @@ typedef struct dt_module {
 	GElf_Addr dm_bss_va;	/* virtual address of BSS */
 	GElf_Xword dm_bss_size;	/* size in bytes of BSS */
 	dt_idhash_t *dm_extern;	/* external symbol definitions */
-#if !defined(sun)
+#ifndef illumos
 	caddr_t dm_reloc_offset;	/* Symbol relocation offset. */
 	uintptr_t *dm_sec_offsets;
 #endif
+	pid_t dm_pid;		/* pid for this module */
+	uint_t dm_nctflibs;	/* number of ctf children libraries */
+	ctf_file_t **dm_libctfp; /* process library ctf pointers */
+	char **dm_libctfn;	/* names of process ctf containers */
 } dt_module_t;
 
 #define	DT_DM_LOADED	0x1	/* module symbol and type data is loaded */
@@ -188,6 +194,9 @@ typedef struct dt_print_aggdata {
 	dtrace_aggvarid_t dtpa_id;	/* aggregation variable of interest */
 	FILE *dtpa_fp;			/* file pointer */
 	int dtpa_allunprint;		/* print only unprinted aggregations */
+	int dtpa_agghist;		/* print aggregation as histogram */
+	int dtpa_agghisthdr;		/* aggregation histogram hdr printed */
+	int dtpa_aggpack;		/* pack quantized aggregations */
 } dt_print_aggdata_t;
 
 typedef struct dt_dirpath {
@@ -239,6 +248,7 @@ struct dtrace_hdl {
 	uint_t dt_provbuckets;	/* number of provider hash buckets */
 	uint_t dt_nprovs;	/* number of providers in hash and list */
 	dt_proc_hash_t *dt_procs; /* hash table of grabbed process handles */
+	char **dt_proc_env;	/* additional environment variables */
 	dt_intdesc_t dt_ints[6]; /* cached integer type descriptions */
 	ctf_id_t dt_type_func;	/* cached CTF identifier for function type */
 	ctf_id_t dt_type_fptr;	/* cached CTF identifier for function pointer */
@@ -257,7 +267,7 @@ struct dtrace_hdl {
 	int dt_maxstrdata;	/* max strdata ID */
 	char **dt_strdata;	/* pointer to strdata array */
 	dt_aggregate_t dt_aggregate; /* aggregate */
-	dtrace_bufdesc_t dt_buf; /* staging buffer */
+	dt_pq_t *dt_bufq;	/* CPU-specific data queue */
 	struct dt_pfdict *dt_pfdict; /* dictionary of printf conversions */
 	dt_version_t dt_vmax;	/* optional ceiling on program API binding */
 	dtrace_attribute_t dt_amin; /* optional floor on program attributes */
@@ -281,12 +291,13 @@ struct dtrace_hdl {
 	uint_t dt_linktype;	/* dtrace link output file type (see below) */
 	uint_t dt_xlatemode;	/* dtrace translator linking mode (see below) */
 	uint_t dt_stdcmode;	/* dtrace stdc compatibility mode (see below) */
+	uint_t dt_encoding;	/* dtrace output encoding (see below) */
 	uint_t dt_treedump;	/* dtrace tree debug bitmap (see below) */
 	uint64_t dt_options[DTRACEOPT_MAX]; /* dtrace run-time options */
 	int dt_version;		/* library version requested by client */
 	int dt_ctferr;		/* error resulting from last CTF failure */
 	int dt_errno;		/* error resulting from last failed operation */
-#if !defined(sun)
+#ifndef illumos
 	const char *dt_errfile;
 	int dt_errline;
 #endif
@@ -295,7 +306,7 @@ struct dtrace_hdl {
 	int dt_fterr;		/* saved errno from failed open of dt_ftfd */
 	int dt_cdefs_fd;	/* file descriptor for C CTF debugging cache */
 	int dt_ddefs_fd;	/* file descriptor for D CTF debugging cache */
-#if defined(sun)
+#ifdef illumos
 	int dt_stdout_fd;	/* file descriptor for saved stdout */
 #else
 	FILE *dt_freopen_fp;	/* file pointer for freopened stdout */
@@ -326,6 +337,11 @@ struct dtrace_hdl {
 	struct utsname dt_uts;	/* uname(2) information for system */
 	dt_list_t dt_lib_dep;	/* scratch linked-list of lib dependencies */
 	dt_list_t dt_lib_dep_sorted;	/* dependency sorted library list */
+	dtrace_flowkind_t dt_flow;	/* flow kind */
+	const char *dt_prefix;	/* recommended flow prefix */
+	int dt_indent;		/* recommended flow indent */
+	dtrace_epid_t dt_last_epid;	/* most recently consumed EPID */
+	uint64_t dt_last_timestamp;	/* most recently consumed timestamp */
 };
 
 /*
@@ -365,6 +381,14 @@ struct dtrace_hdl {
 #define	DT_STDC_XC	1	/* Strict ISO C: __STDC__=1 */
 #define	DT_STDC_XS	2	/* K&R C: __STDC__ not defined */
 #define	DT_STDC_XT	3	/* ISO C + K&R C compat with ISO: __STDC__=0 */
+
+/*
+ * Values for the dt_encoding property, which is used to force a particular
+ * character encoding (overriding default behavior and/or automatic detection).
+ */
+#define	DT_ENCODING_UNSET	0
+#define	DT_ENCODING_ASCII	1
+#define	DT_ENCODING_UTF8	2
 
 /*
  * Macro to test whether a given pass bit is set in the dt_treedump bit-vector.
@@ -461,7 +485,6 @@ enum {
 	EDT_VERSREDUCED,	/* requested API version has been reduced */
 	EDT_CTF,		/* libctf called failed (dt_ctferr has more) */
 	EDT_COMPILER,		/* error in D program compilation */
-	EDT_NOREG,		/* register allocation failure */
 	EDT_NOTUPREG,		/* tuple register allocation failure */
 	EDT_NOMEM,		/* memory allocation failure */
 	EDT_INT2BIG,		/* integer limit exceeded */
@@ -529,7 +552,9 @@ enum {
 	EDT_BADSTACKPC,		/* invalid stack program counter size */
 	EDT_BADAGGVAR,		/* invalid aggregation variable identifier */
 	EDT_OVERSION,		/* client is requesting deprecated version */
-	EDT_ENABLING_ERR	/* failed to enable probe */
+	EDT_ENABLING_ERR,	/* failed to enable probe */
+	EDT_NOPROBES,		/* no probes sites for declared provider */
+	EDT_CANTLOAD		/* failed to load a module */
 };
 
 /*
@@ -572,7 +597,7 @@ extern int dt_version_defined(dt_version_t);
 extern char *dt_cpp_add_arg(dtrace_hdl_t *, const char *);
 extern char *dt_cpp_pop_arg(dtrace_hdl_t *);
 
-#if defined(sun)
+#ifdef illumos
 extern int dt_set_errno(dtrace_hdl_t *, int);
 #else
 int _dt_set_errno(dtrace_hdl_t *, int, const char *, int);
@@ -582,7 +607,7 @@ void dt_get_errloc(dtrace_hdl_t *, const char **, int *);
 extern void dt_set_errmsg(dtrace_hdl_t *, const char *, const char *,
     const char *, int, const char *, va_list);
 
-#if defined(sun)
+#ifdef illumos
 extern int dt_ioctl(dtrace_hdl_t *, int, void *);
 #else
 extern int dt_ioctl(dtrace_hdl_t *, u_long, void *);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -23,8 +24,9 @@
  * Copyright 2003 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
+/*
+ * Copyright (c) 2012, Joyent, Inc.
+ */
 
 #include <ctf_impl.h>
 
@@ -73,6 +75,8 @@ static const char *const _ctf_errlist[] = {
 	"Limit on number of dynamic types reached",	 /* ECTF_FULL */
 	"Duplicate member name definition",		 /* ECTF_DUPMEMBER */
 	"Conflicting type is already defined",		 /* ECTF_CONFLICT */
+	"Type has outstanding references",		 /* ECTF_REFERENCED */
+	"Type is not a dynamic type"			 /* ECTF_NOTDYN */
 };
 
 static const int _ctf_nerr = sizeof (_ctf_errlist) / sizeof (_ctf_errlist[0]);

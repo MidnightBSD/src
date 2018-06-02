@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,8 +22,8 @@
 
 /*
  * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2011, Joyent Inc. All rights reserved.
- * Copyright (c) 2011 by Delphix. All rights reserved.
+ * Copyright (c) 2013, Joyent Inc. All rights reserved.
+ * Copyright (c) 2012 by Delphix. All rights reserved.
  */
 
 /*
@@ -663,63 +664,75 @@ dt_action_printflike(dtrace_hdl_t *dtp, dt_node_t *dnp, dtrace_stmtdesc_t *sdp,
 static void
 dt_action_trace(dtrace_hdl_t *dtp, dt_node_t *dnp, dtrace_stmtdesc_t *sdp)
 {
+	int ctflib;
+
 	dtrace_actdesc_t *ap = dt_stmt_action(dtp, sdp);
+	boolean_t istrace = (dnp->dn_ident->di_id == DT_ACT_TRACE);
+	const char *act = istrace ?  "trace" : "print";
 
 	if (dt_node_is_void(dnp->dn_args)) {
-		dnerror(dnp->dn_args, D_TRACE_VOID,
-		    "trace( ) may not be applied to a void expression\n");
+		dnerror(dnp->dn_args, istrace ? D_TRACE_VOID : D_PRINT_VOID,
+		    "%s( ) may not be applied to a void expression\n", act);
 	}
 
-	if (dt_node_is_dynamic(dnp->dn_args)) {
-		dnerror(dnp->dn_args, D_TRACE_DYN,
-		    "trace( ) may not be applied to a dynamic expression\n");
+	if (dt_node_resolve(dnp->dn_args, DT_IDENT_XLPTR) != NULL) {
+		dnerror(dnp->dn_args, istrace ? D_TRACE_DYN : D_PRINT_DYN,
+		    "%s( ) may not be applied to a translated pointer\n", act);
 	}
 
-	dt_cg(yypcb, dnp->dn_args);
-	ap->dtad_difo = dt_as(yypcb);
-	ap->dtad_kind = DTRACEACT_DIFEXPR;
-}
-
-/*
- * The print() action behaves identically to trace(), except that it stores the
- * CTF type of the argument (if present) within the DOF for the DIFEXPR action.
- * To do this, we set the 'dtsd_strdata' to point to the fully-qualified CTF
- * type ID for the result of the DIF action.  We use the ID instead of the name
- * to handles complex types like arrays and function pointers that can't be
- * resolved by ctf_type_lookup().  This is later processed by
- * dtrace_dof_create() and turned into a reference into the string table so
- * that we can get the type information when we process the data after the
- * fact.
- */
-static void
-dt_action_print(dtrace_hdl_t *dtp, dt_node_t *dnp, dtrace_stmtdesc_t *sdp)
-{
-	dtrace_actdesc_t *ap = dt_stmt_action(dtp, sdp);
-	dt_node_t *dret;
-	size_t len;
-	dt_module_t *dmp;
-
-	if (dt_node_is_void(dnp->dn_args)) {
-		dnerror(dnp->dn_args, D_PRINT_VOID,
-		    "print( ) may not be applied to a void expression\n");
-	}
-
-	if (dt_node_is_dynamic(dnp->dn_args)) {
-		dnerror(dnp->dn_args, D_PRINT_DYN,
-		    "print( ) may not be applied to a dynamic expression\n");
+	if (dnp->dn_args->dn_kind == DT_NODE_AGG) {
+		dnerror(dnp->dn_args, istrace ? D_TRACE_AGG : D_PRINT_AGG,
+		    "%s( ) may not be applied to an aggregation%s\n", act,
+		    istrace ? "" : " -- did you mean printa()?");
 	}
 
 	dt_cg(yypcb, dnp->dn_args);
 
-	dret = yypcb->pcb_dret;
-	dmp = dt_module_lookup_by_ctf(dtp, dret->dn_ctfp);
+	/*
+	 * The print() action behaves identically to trace(), except that it
+	 * stores the CTF type of the argument (if present) within the DOF for
+	 * the DIFEXPR action.  To do this, we set the 'dtsd_strdata' to point
+	 * to the fully-qualified CTF type ID for the result of the DIF
+	 * action.  We use the ID instead of the name to handles complex types
+	 * like arrays and function pointers that can't be resolved by
+	 * ctf_type_lookup().  This is later processed by dtrace_dof_create()
+	 * and turned into a reference into the string table so that we can
+	 * get the type information when we process the data after the fact.  In
+	 * the case where we are referring to userland CTF data, we also need to
+	 * to identify which ctf container in question we care about and encode
+	 * that within the name.
+	 */
+	if (dnp->dn_ident->di_id == DT_ACT_PRINT) {
+		dt_node_t *dret;
+		size_t n;
+		dt_module_t *dmp;
 
-	len = snprintf(NULL, 0, "%s`%ld", dmp->dm_name, dret->dn_type) + 1;
-	sdp->dtsd_strdata = dt_alloc(dtp, len);
-	if (sdp->dtsd_strdata == NULL)
-		longjmp(yypcb->pcb_jmpbuf, EDT_NOMEM);
-	(void) snprintf(sdp->dtsd_strdata, len, "%s`%ld", dmp->dm_name,
-	    dret->dn_type);
+		dret = yypcb->pcb_dret;
+		dmp = dt_module_lookup_by_ctf(dtp, dret->dn_ctfp);
+
+		n = snprintf(NULL, 0, "%s`%ld", dmp->dm_name, dret->dn_type) + 1;
+		if (dmp->dm_pid != 0) {
+			ctflib = dt_module_getlibid(dtp, dmp, dret->dn_ctfp);
+			assert(ctflib >= 0);
+			n = snprintf(NULL, 0, "%s`%d`%ld", dmp->dm_name,
+			    ctflib, dret->dn_type) + 1;
+		} else {
+			n = snprintf(NULL, 0, "%s`%ld", dmp->dm_name,
+			    dret->dn_type) + 1;
+		}
+		sdp->dtsd_strdata = dt_alloc(dtp, n);
+		if (sdp->dtsd_strdata == NULL)
+			longjmp(yypcb->pcb_jmpbuf, EDT_NOMEM);
+		(void) snprintf(sdp->dtsd_strdata, n, "%s`%ld", dmp->dm_name,
+		    dret->dn_type);
+		if (dmp->dm_pid != 0) {
+			(void) snprintf(sdp->dtsd_strdata, n, "%s`%d`%ld",
+			    dmp->dm_name, ctflib, dret->dn_type);
+		} else {
+			(void) snprintf(sdp->dtsd_strdata, n, "%s`%ld",
+			    dmp->dm_name, dret->dn_type);
+		}
+	}
 
 	ap->dtad_difo = dt_as(yypcb);
 	ap->dtad_kind = DTRACEACT_DIFEXPR;
@@ -1145,6 +1158,9 @@ dt_compile_fun(dtrace_hdl_t *dtp, dt_node_t *dnp, dtrace_stmtdesc_t *sdp)
 	case DT_ACT_PANIC:
 		dt_action_panic(dtp, dnp->dn_expr, sdp);
 		break;
+	case DT_ACT_PRINT:
+		dt_action_trace(dtp, dnp->dn_expr, sdp);
+		break;
 	case DT_ACT_PRINTA:
 		dt_action_printa(dtp, dnp->dn_expr, sdp);
 		break;
@@ -1180,9 +1196,6 @@ dt_compile_fun(dtrace_hdl_t *dtp, dt_node_t *dnp, dtrace_stmtdesc_t *sdp)
 		break;
 	case DT_ACT_TRACE:
 		dt_action_trace(dtp, dnp->dn_expr, sdp);
-		break;
-	case DT_ACT_PRINT:
-		dt_action_print(dtp, dnp->dn_expr, sdp);
 		break;
 	case DT_ACT_TRACEMEM:
 		dt_action_tracemem(dtp, dnp->dn_expr, sdp);
@@ -1876,7 +1889,7 @@ dt_preproc(dtrace_hdl_t *dtp, FILE *ifp)
 	char **argv = malloc(sizeof (char *) * (argc + 5));
 	FILE *ofp = tmpfile();
 
-#if defined(sun)
+#ifdef illumos
 	char ipath[20], opath[20]; /* big enough for /dev/fd/ + INT_MAX + \0 */
 #endif
 	char verdef[32]; /* big enough for -D__SUNW_D_VERSION=0x%08x + \0 */
@@ -1886,7 +1899,7 @@ dt_preproc(dtrace_hdl_t *dtp, FILE *ifp)
 
 	int wstat, estat;
 	pid_t pid;
-#if defined(sun)
+#ifdef illumos
 	off64_t off;
 #else
 	off_t off = 0;
@@ -1917,7 +1930,7 @@ dt_preproc(dtrace_hdl_t *dtp, FILE *ifp)
 		(void) fseeko64(ifp, off, SEEK_SET);
 	}
 
-#if defined(sun)
+#ifdef illumos
 	(void) snprintf(ipath, sizeof (ipath), "/dev/fd/%d", fileno(ifp));
 	(void) snprintf(opath, sizeof (opath), "/dev/fd/%d", fileno(ofp));
 #endif
@@ -1928,7 +1941,7 @@ dt_preproc(dtrace_hdl_t *dtp, FILE *ifp)
 	    "-D__SUNW_D_VERSION=0x%08x", dtp->dt_vmax);
 	argv[argc++] = verdef;
 
-#if defined(sun)
+#ifdef illumos
 	switch (dtp->dt_stdcmode) {
 	case DT_STDC_XA:
 	case DT_STDC_XT:
@@ -1970,7 +1983,7 @@ dt_preproc(dtrace_hdl_t *dtp, FILE *ifp)
 	}
 
 	if (pid == 0) {
-#if !defined(sun)
+#ifndef illumos
 		if (isatty(fileno(ifp)) == 0)
 			lseek(fileno(ifp), off, SEEK_SET);
 		dup2(fileno(ifp), 0);
@@ -2277,12 +2290,15 @@ dt_load_libs_dir(dtrace_hdl_t *dtp, const char *path)
 			dt_dprintf("skipping library %s, already processed "
 			    "library with the same name: %s", dp->d_name,
 			    dld->dtld_library);
+			(void) fclose(fp);
 			continue;
 		}
 
 		dtp->dt_filetag = fname;
-		if (dt_lib_depend_add(dtp, &dtp->dt_lib_dep, fname) != 0)
+		if (dt_lib_depend_add(dtp, &dtp->dt_lib_dep, fname) != 0) {
+			(void) fclose(fp);
 			return (-1); /* preserve dt_errno */
+		}
 
 		rv = dt_compile(dtp, DT_CTX_DPROG,
 		    DTRACE_PROBESPEC_NAME, NULL,
@@ -2290,8 +2306,10 @@ dt_load_libs_dir(dtrace_hdl_t *dtp, const char *path)
 
 		if (rv != NULL && dtp->dt_errno &&
 		    (dtp->dt_errno != EDT_COMPILER ||
-		    dtp->dt_errtag != dt_errtag(D_PRAGMA_DEPEND)))
+		    dtp->dt_errtag != dt_errtag(D_PRAGMA_DEPEND))) {
+			(void) fclose(fp);
 			return (-1); /* preserve dt_errno */
+		}
 
 		if (dtp->dt_errno)
 			dt_dprintf("error parsing library %s: %s\n",
@@ -2559,7 +2577,8 @@ dt_compile(dtrace_hdl_t *dtp, int context, dtrace_probespec_t pspec, void *arg,
 	}
 
 out:
-	if (context != DT_CTX_DTYPE && DT_TREEDUMP_PASS(dtp, 3))
+	if (context != DT_CTX_DTYPE && yypcb->pcb_root != NULL &&
+	    DT_TREEDUMP_PASS(dtp, 3))
 		dt_node_printr(yypcb->pcb_root, stderr, 0);
 
 	if (dtp->dt_cdefs_fd != -1 && (ftruncate64(dtp->dt_cdefs_fd, 0) == -1 ||
