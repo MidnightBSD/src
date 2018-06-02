@@ -1,0 +1,5 @@
+# $FreeBSD: stable/10/bin/sh/tests/expansion/ifs7.0 287755 2015-09-13 14:24:12Z jilles $
+
+IFS=2
+set -- $((123))
+[ "$#|$1|$2|$3" = "2|1|3|" ]

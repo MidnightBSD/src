@@ -1,0 +1,6 @@
+# $FreeBSD: stable/10/bin/sh/tests/expansion/cmdsubst21.0 316942 2017-04-14 21:42:27Z jilles $
+
+set -T
+trapped=''
+trap "trapped=x$trapped" TERM
+[ "x$($SH -c "kill $$")y" = xy ] && [ "$trapped" = x ]

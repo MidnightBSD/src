@@ -1,0 +1,4 @@
+# $FreeBSD: stable/10/bin/sh/tests/expansion/ifs5.0 287755 2015-09-13 14:24:12Z jilles $
+
+set -- $(echo a b c d)
+[ "$#" = 4 ]

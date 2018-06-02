@@ -1,0 +1,6 @@
+# $FreeBSD: stable/10/bin/sh/tests/expansion/cmdsubst18.0 315179 2017-03-12 19:49:08Z jilles $
+
+x=X
+unset n
+r=${x+$(echo a)}${x-$(echo b)}${n+$(echo c)}${n-$(echo d)}$(echo e)
+[ "$r" = aXde ]

@@ -1,0 +1,7 @@
+# $FreeBSD: stable/10/bin/sh/tests/parser/line-cont3.0 287755 2015-09-13 14:24:12Z jilles $
+
+v=`printf %s 'a\
+b'`
+w="`printf %s 'c\
+d'`"
+[ "$v$w" = abcd ]
