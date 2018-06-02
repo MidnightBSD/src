@@ -486,6 +486,8 @@ bin/sync/sync.c -text
 bin/test/Makefile -text
 bin/test/test.1 -text
 bin/test/test.c -text
+bin/test/tests/Makefile svneol=native#text/plain
+bin/test/tests/legacy_test.sh svneol=native#text/plain
 bin/tests/Makefile svneol=native#text/plain
 bin/uuidgen/Makefile -text
 bin/uuidgen/uuidgen.1 -text

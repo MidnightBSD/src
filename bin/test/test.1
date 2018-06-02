@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,10 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)test.1	8.1 (Berkeley) 5/31/93
-.\" $FreeBSD: src/bin/test/test.1,v 1.23 2005/01/10 08:39:26 imp Exp $
-.\" $MidnightBSD: src/bin/test/test.1,v 1.3 2012/03/09 04:18:38 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/test/test.1 307423 2016-10-16 23:18:35Z sevan $
 .\"
-.Dd June 1, 2013
+.Dd October 5, 2016
 .Dt TEST 1
 .Os
 .Sh NAME
@@ -44,7 +44,7 @@
 .Nm
 .Ar expression
 .Nm \&[
-.Ar expression Cm ]
+.Ar expression Cm \&]
 .Sh DESCRIPTION
 The
 .Nm
@@ -377,6 +377,11 @@ The primaries
 and
 .Fl O
 are extensions.
+.Sh HISTORY
+A
+.Nm
+utility appeared in
+.At v7 .
 .Sh BUGS
 Both sides are always evaluated in
 .Fl a
