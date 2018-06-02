@@ -1,5 +1,5 @@
-# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.8 2012/06/13 02:05:35 laffer1 Exp $
-# $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.62.2.1 2007/10/19 17:08:38 cognet Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/mk/bsd.cpu.mk 324135 2017-09-30 20:07:57Z ngie $
 
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
 # compile flags must support the minimum CPU type for each architecture but
@@ -11,10 +11,16 @@ _CPUCFLAGS =
 MACHINE_CPU = i486
 . elif ${MACHINE_CPUARCH} == "amd64"
 MACHINE_CPU = amd64 sse2 sse mmx
+. elif ${MACHINE_CPUARCH} == "ia64"
+MACHINE_CPU = itanium
+. elif ${MACHINE_CPUARCH} == "powerpc"
+MACHINE_CPU = aim
 . elif ${MACHINE_CPUARCH} == "sparc64"
 MACHINE_CPU = ultrasparc
 . elif ${MACHINE_CPUARCH} == "arm"
 MACHINE_CPU = arm
+. elif ${MACHINE_CPUARCH} == "mips"
+MACHINE_CPU = mips
 . endif
 .else
 
@@ -22,8 +28,12 @@ MACHINE_CPU = arm
 # between e.g. i586 and pentium)
 
 . if ${MACHINE_CPUARCH} == "i386"
-.  if ${CPUTYPE} == "nocona"
-CPUTYPE = prescott
+.  if ${CPUTYPE} == "barcelona"
+CPUTYPE = amdfam10
+.  elif ${CPUTYPE} == "k7"
+CPUTYPE = athlon
+.  elif ${CPUTYPE} == "westmere" || ${CPUTYPE} == "nehalem"
+CPUTYPE = corei7
 .  elif ${CPUTYPE} == "core"
 CPUTYPE = prescott
 .  elif ${CPUTYPE} == "p4"
@@ -44,17 +54,13 @@ CPUTYPE = pentiumpro
 CPUTYPE = pentium-mmx
 .  elif ${CPUTYPE} == "i586"
 CPUTYPE = pentium
-.  elif ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3" || \
-     ${CPUTYPE} == "k8-sse3"
-CPUTYPE = prescott
-.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64" || \
-     ${CPUTYPE} == "k8"
-CPUTYPE = athlon-mp
-.  elif ${CPUTYPE} == "k7"
-CPUTYPE = athlon
 .  endif
 . elif ${MACHINE_CPUARCH} == "amd64"
-.  if ${CPUTYPE} == "prescott"
+.  if ${CPUTYPE} == "barcelona"
+CPUTYPE = amdfam10
+.  elif ${CPUTYPE} == "westmere" || ${CPUTYPE} == "nehalem"
+CPUTYPE = corei7
+.  elif ${CPUTYPE} == "prescott"
 CPUTYPE = nocona
 .  endif
 . elif ${MACHINE_ARCH} == "sparc64"
@@ -69,19 +75,23 @@ CPUTYPE = ultrasparc3
 # Logic to set up correct gcc optimization flag.  This must be included
 # after /etc/make.conf so it can react to the local value of CPUTYPE
 # defined therein.  Consult:
+#	http://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
+#	http://gcc.gnu.org/onlinedocs/gcc/IA_002d64-Options.html
+#	http://gcc.gnu.org/onlinedocs/gcc/RS_002f6000-and-PowerPC-Options.html
+#	http://gcc.gnu.org/onlinedocs/gcc/MIPS-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/SPARC-Options.html
-#	http://gcc.gnu.org/onlinedocs/gcc/i386-and-x86-64-Options.html
+#	http://gcc.gnu.org/onlinedocs/gcc/i386-and-x86_002d64-Options.html
 
 . if ${MACHINE_CPUARCH} == "i386"
 .  if ${CPUTYPE} == "crusoe"
 _CPUCFLAGS = -march=i686 -falign-functions=0 -falign-jumps=0 -falign-loops=0
 .  elif ${CPUTYPE} == "k5"
 _CPUCFLAGS = -march=pentium
-.  elif ${CPUTYPE} == "core2"
-_CPUCFLAGS = -march=prescott
+.  elif ${CPUTYPE} == "c7"
+_CPUCFLAGS = -march=c3-2
 .  else
 _CPUCFLAGS = -march=${CPUTYPE}
-.  endif # GCC on 'i386'
+.  endif
 . elif ${MACHINE_CPUARCH} == "amd64"
 _CPUCFLAGS = -march=${CPUTYPE}
 . elif ${MACHINE_CPUARCH} == "arm"
@@ -89,8 +99,34 @@ _CPUCFLAGS = -march=${CPUTYPE}
 #XXX: gcc doesn't seem to like -mcpu=xscale, and dies while rebuilding itself
 #_CPUCFLAGS = -mcpu=xscale
 _CPUCFLAGS = -march=armv5te -D__XSCALE__
+. elif ${CPUTYPE} == "armv6"
+_CPUCFLAGS = -march=${CPUTYPE} -DARM_ARCH_6=1
+. elif ${CPUTYPE} == "cortexa"
+_CPUCFLAGS = -DARM_ARCH_6=1 -mfpu=vfp
 .  else
 _CPUCFLAGS = -mcpu=${CPUTYPE}
+.  endif
+. elif ${MACHINE_ARCH} == "powerpc"
+.  if ${CPUTYPE} == "e500"
+_CPUCFLAGS = -Wa,-me500 -msoft-float
+.  else
+_CPUCFLAGS = -mcpu=${CPUTYPE} -mno-powerpc64
+.  endif
+. elif ${MACHINE_ARCH} == "powerpc64"
+_CPUCFLAGS = -mcpu=${CPUTYPE}
+. elif ${MACHINE_CPUARCH} == "mips"
+.  if ${CPUTYPE} == "mips32"
+_CPUCFLAGS = -march=mips32
+.  elif ${CPUTYPE} == "mips32r2"
+_CPUCFLAGS = -march=mips32r2
+.  elif ${CPUTYPE} == "mips64"
+_CPUCFLAGS = -march=mips64
+.  elif ${CPUTYPE} == "mips64r2"
+_CPUCFLAGS = -march=mips64r2
+.  elif ${CPUTYPE} == "mips4kc"
+_CPUCFLAGS = -march=4kc
+.  elif ${CPUTYPE} == "mips24kc"
+_CPUCFLAGS = -march=24kc
 .  endif
 . elif ${MACHINE_ARCH} == "sparc64"
 .  if ${CPUTYPE} == "v9"
@@ -107,59 +143,106 @@ _CPUCFLAGS = -mcpu=ultrasparc3
 # presence of a CPU feature.
 
 . if ${MACHINE_CPUARCH} == "i386"
-.  if ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3"
-MACHINE_CPU = athlon-xp athlon k7 3dnow sse3 sse2 sse mmx k6 k5 i586 i486 i386
-.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64"
-MACHINE_CPU = athlon-xp athlon k7 3dnow sse2 sse mmx k6 k5 i586 i486 i386
+.  if ${CPUTYPE} == "bdver3" || ${CPUTYPE} == "bdver2" || \
+    ${CPUTYPE} == "bdver1"
+MACHINE_CPU = xop avx sse42 sse41 ssse3 sse4a sse3 sse2 sse mmx k6 k5 i586
+.  elif ${CPUTYPE} == "btver2"
+MACHINE_CPU = avx sse42 sse41 ssse3 sse4a sse3 sse2 sse mmx k6 k5 i586
+.  elif ${CPUTYPE} == "btver1"
+MACHINE_CPU = ssse3 sse4a sse3 sse2 sse mmx k6 k5 i586
+.  elif ${CPUTYPE} == "amdfam10"
+MACHINE_CPU = athlon-xp athlon k7 3dnow sse4a sse3 sse2 sse mmx k6 k5 i586
+.  elif ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3"
+MACHINE_CPU = athlon-xp athlon k7 3dnow sse3 sse2 sse mmx k6 k5 i586
+.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64" || \
+    ${CPUTYPE} == "athlon-fx"
+MACHINE_CPU = athlon-xp athlon k7 3dnow sse2 sse mmx k6 k5 i586
 .  elif ${CPUTYPE} == "athlon-mp" || ${CPUTYPE} == "athlon-xp" || \
     ${CPUTYPE} == "athlon-4"
-MACHINE_CPU = athlon-xp athlon k7 3dnow sse mmx k6 k5 i586 i486 i386
+MACHINE_CPU = athlon-xp athlon k7 3dnow sse mmx k6 k5 i586
 .  elif ${CPUTYPE} == "athlon" || ${CPUTYPE} == "athlon-tbird"
-MACHINE_CPU = athlon k7 3dnow mmx k6 k5 i586 i486 i386
+MACHINE_CPU = athlon k7 3dnow mmx k6 k5 i586
 .  elif ${CPUTYPE} == "k6-3" || ${CPUTYPE} == "k6-2" || ${CPUTYPE} == "geode"
-MACHINE_CPU = 3dnow mmx k6 k5 i586 i486 i386
+MACHINE_CPU = 3dnow mmx k6 k5 i586
 .  elif ${CPUTYPE} == "k6"
-MACHINE_CPU = mmx k6 k5 i586 i486 i386
+MACHINE_CPU = mmx k6 k5 i586
 .  elif ${CPUTYPE} == "k5"
-MACHINE_CPU = k5 i586 i486 i386
-.  elif ${CPUTYPE} == "c3"
-MACHINE_CPU = 3dnow mmx i586 i486 i386
-.  elif ${CPUTYPE} == "c3-2"
-MACHINE_CPU = sse mmx i586 i486 i386
-.  elif ${CPUTYPE} == "c7"
-MACHINE_CPU = sse3 sse2 sse i686 mmx i586 i486 i386
-.  elif ${CPUTYPE} == "core2"
-MACHINE_CPU = ssse3 sse3 sse2 sse i686 mmx i586 i486 i386
-.  elif ${CPUTYPE} == "prescott"
-MACHINE_CPU = sse3 sse2 sse i686 mmx i586 i486 i386
-.  elif ${CPUTYPE} == "pentium4" || ${CPUTYPE} == "pentium4m" || ${CPUTYPE} == "pentium-m"
-MACHINE_CPU = sse2 sse i686 mmx i586 i486 i386
+MACHINE_CPU = k5 i586
+.  elif ${CPUTYPE} == "core-avx2"
+MACHINE_CPU = avx2 avx sse42 sse41 ssse3 sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "core-avx-i" || ${CPUTYPE} == "corei7-avx"
+MACHINE_CPU = avx sse42 sse41 ssse3 sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "slm" || ${CPUTYPE} == "corei7"
+MACHINE_CPU = sse42 sse41 ssse3 sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "penryn"
+MACHINE_CPU = sse41 ssse3 sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "atom" || ${CPUTYPE} == "core2"
+MACHINE_CPU = ssse3 sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "yonah" || ${CPUTYPE} == "prescott"
+MACHINE_CPU = sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "pentium4" || ${CPUTYPE} == "pentium4m" || \
+    ${CPUTYPE} == "pentium-m"
+MACHINE_CPU = sse2 sse i686 mmx i586
 .  elif ${CPUTYPE} == "pentium3" || ${CPUTYPE} == "pentium3m"
-MACHINE_CPU = sse i686 mmx i586 i486 i386
+MACHINE_CPU = sse i686 mmx i586
 .  elif ${CPUTYPE} == "pentium2"
-MACHINE_CPU = i686 mmx i586 i486 i386
+MACHINE_CPU = i686 mmx i586
 .  elif ${CPUTYPE} == "pentiumpro"
-MACHINE_CPU = i686 i586 i486 i386
+MACHINE_CPU = i686 i586
 .  elif ${CPUTYPE} == "pentium-mmx"
-MACHINE_CPU = mmx i586 i486 i386
+MACHINE_CPU = mmx i586
 .  elif ${CPUTYPE} == "pentium"
-MACHINE_CPU = i586 i486 i386
-.  elif ${CPUTYPE} == "i486"
-MACHINE_CPU = i486 i386
-.  elif ${CPUTYPE} == "i386"
-MACHINE_CPU = i386
+MACHINE_CPU = i586
+.  elif ${CPUTYPE} == "c7"
+MACHINE_CPU = sse3 sse2 sse i686 mmx i586
+.  elif ${CPUTYPE} == "c3-2"
+MACHINE_CPU = sse i686 mmx i586
+.  elif ${CPUTYPE} == "c3"
+MACHINE_CPU = 3dnow mmx i586
+.  elif ${CPUTYPE} == "winchip2"
+MACHINE_CPU = 3dnow mmx
+.  elif ${CPUTYPE} == "winchip-c6"
+MACHINE_CPU = mmx
 .  endif
+MACHINE_CPU += i486
 . elif ${MACHINE_CPUARCH} == "amd64"
-.  if ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3" || ${CPUTYPE} == "k8-sse3"
+.  if ${CPUTYPE} == "bdver3" || ${CPUTYPE} == "bdver2" || \
+    ${CPUTYPE} == "bdver1"
+MACHINE_CPU = xop avx sse42 sse41 ssse3 sse4a sse3
+.  elif ${CPUTYPE} == "btver2"
+MACHINE_CPU = avx sse42 sse41 ssse3 sse4a sse3
+.  elif ${CPUTYPE} == "btver1"
+MACHINE_CPU = ssse3 sse4a sse3
+.  elif ${CPUTYPE} == "amdfam10"
+MACHINE_CPU = k8 3dnow sse4a sse3
+.  elif ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3" || \
+    ${CPUTYPE} == "k8-sse3"
 MACHINE_CPU = k8 3dnow sse3
-.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64" || ${CPUTYPE} == "k8"
+.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64" || \
+    ${CPUTYPE} == "athlon-fx" || ${CPUTYPE} == "k8"
 MACHINE_CPU = k8 3dnow
-.  elif ${CPUTYPE} == "core2"
+.  elif ${CPUTYPE} == "core-avx2"
+MACHINE_CPU = avx2 avx sse42 sse41 ssse3 sse3
+.  elif ${CPUTYPE} == "core-avx-i" || ${CPUTYPE} == "corei7-avx"
+MACHINE_CPU = avx sse42 sse41 ssse3 sse3
+.  elif ${CPUTYPE} == "slm" || ${CPUTYPE} == "corei7"
+MACHINE_CPU = sse42 sse41 ssse3 sse3
+.  elif ${CPUTYPE} == "penryn"
+MACHINE_CPU = sse41 ssse3 sse3
+.  elif ${CPUTYPE} == "atom" || ${CPUTYPE} == "core2"
 MACHINE_CPU = ssse3 sse3
 .  elif ${CPUTYPE} == "nocona"
 MACHINE_CPU = sse3
 .  endif
 MACHINE_CPU += amd64 sse2 sse mmx
+. elif ${MACHINE_CPUARCH} == "ia64"
+.  if ${CPUTYPE} == "itanium"
+MACHINE_CPU = itanium
+.  endif
+. elif ${MACHINE_ARCH} == "powerpc"
+.  if ${CPUTYPE} == "e500"
+MACHINE_CPU = booke
+.  endif
 . elif ${MACHINE_ARCH} == "sparc64"
 .  if ${CPUTYPE} == "v9"
 MACHINE_CPU = v9
@@ -171,8 +254,42 @@ MACHINE_CPU = v9 ultrasparc ultrasparc3
 . endif
 .endif
 
+.if ${MACHINE_CPUARCH} == "mips"
+CFLAGS += -G0
+.endif
+
+.if ${MACHINE_ARCH} == "armv6"
+_CPUCFLAGS += -mfloat-abi=softfp
+.endif
+
 # NB: COPTFLAGS is handled in /usr/src/sys/conf/kern.pre.mk
 
 .if !defined(NO_CPU_CFLAGS)
 CFLAGS += ${_CPUCFLAGS}
 .endif
+
+#
+# Prohibit the compiler from emitting SIMD instructions.
+# These flags are added to CFLAGS in areas where the extra context-switch
+# cost outweighs the advantages of SIMD instructions.
+#
+# gcc:
+# Setting -mno-mmx implies -mno-3dnow
+# Setting -mno-sse implies -mno-sse2, -mno-sse3, -mno-ssse3 and -mfpmath=387
+#
+# clang:
+# Setting -mno-mmx implies -mno-3dnow and -mno-3dnowa
+# Setting -mno-sse implies -mno-sse2, -mno-sse3, -mno-ssse3, -mno-sse41 and
+# -mno-sse42
+# (-mfpmath= is not supported)
+#
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+CFLAGS_NO_SIMD.clang= -mno-avx
+CFLAGS_NO_SIMD= -mno-mmx -mno-sse
+.endif
+CFLAGS_NO_SIMD += ${CFLAGS_NO_SIMD.${COMPILER_TYPE}}
+
+# Add in any architecture-specific CFLAGS.
+# These come from make.conf or the command line or the environment.
+CFLAGS += ${CFLAGS.${MACHINE_ARCH}}
+CXXFLAGS += ${CXXFLAGS.${MACHINE_ARCH}}
