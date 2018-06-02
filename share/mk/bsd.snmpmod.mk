@@ -1,5 +1,4 @@
-# $FreeBSD: src/share/mk/bsd.snmpmod.mk,v 1.2.2.1 2006/01/25 13:22:58 harti Exp $
-# $MidnightBSD: src/share/mk/bsd.snmpmod.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD$
 
 INCSDIR=	${INCLUDEDIR}/bsnmp
 
@@ -24,5 +23,19 @@ DEFSDIR=	${SHAREDIR}/snmp/defs
 FILESGROUPS+=	BMIBS
 BMIBSDIR=	${SHAREDIR}/snmp/mibs
 .endif
+
+.if !target(smilint) && !empty(BMIBS)
+LOCALBASE?=	/usr/local
+
+SMILINT?=	${LOCALBASE}/bin/smilint
+
+SMIPATH?=	${BMIBSDIR}:${LOCALBASE}/share/snmp/mibs
+
+SMILINT_FLAGS?=	-c /dev/null -l6 -i group-membership
+
+smilint: ${BMIBS}
+	SMIPATH=${SMIPATH} ${SMILINT} ${SMILINT_FLAGS} ${.ALLSRC}
+.endif
+smilint: .PHONY
 
 .include <bsd.lib.mk>
