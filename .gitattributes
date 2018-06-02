@@ -54461,6 +54461,7 @@ sys/boot/forth/Makefile svneol=native#text/plain
 sys/boot/forth/Makefile.inc svneol=native#text/plain
 sys/boot/forth/beastie.4th -text
 sys/boot/forth/beastie.4th.8 -text
+sys/boot/forth/brand-mbsd.4th -text
 sys/boot/forth/brand.4th -text
 sys/boot/forth/brand.4th.8 -text
 sys/boot/forth/check-password.4th -text
