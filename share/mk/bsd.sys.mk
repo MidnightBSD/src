@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: release/9.2.0/share/mk/bsd.sys.mk 252048 2013-06-20 22:50:08Z sjg $
+# $FreeBSD: stable/10/share/mk/bsd.sys.mk 313790 2017-02-16 05:14:07Z ngie $
 #
 # This file contains common settings used for building MidnightBSD
 # sources.
@@ -55,6 +55,10 @@ CWARNFLAGS+=	-Wcast-align
 .if ${WARNS} >= 6
 CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls\
 		-Wold-style-definition
+.if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD) && \
+    !defined(NO_WMISSING_VARIABLE_DECLARATIONS)
+CWARNFLAGS+=	-Wmissing-variable-declarations
+.endif
 .endif # WARNS >= 6
 .if ${WARNS} >= 2 && ${WARNS} <= 4
 # XXX Delete -Wuninitialized by default for now -- the compiler doesn't
@@ -66,7 +70,10 @@ CWARNFLAGS+=	-Wno-pointer-sign
 # is set to low values, these have to be disabled explicitly.
 .if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD)
 .if ${WARNS} <= 6
-CWARNFLAGS+=	-Wno-empty-body -Wno-string-plus-int -Wno-unused-const-variable
+CWARNFLAGS+=	-Wno-empty-body -Wno-string-plus-int
+.if ${COMPILER_VERSION} > 30300
+CWARNFLAGS+=	-Wno-unused-const-variable
+.endif
 .endif # WARNS <= 6
 .if ${WARNS} <= 3
 CWARNFLAGS+=	-Wno-tautological-compare -Wno-unused-value\
@@ -115,41 +122,53 @@ CWARNFLAGS+=	-Wno-unknown-pragmas
 .if ${COMPILER_TYPE} == "clang"
 CLANG_NO_IAS=	 -no-integrated-as
 CLANG_OPT_SMALL= -mstack-alignment=8 -mllvm -inline-threshold=3\
-		 -mllvm -simplifycfg-dup-ret
-.if ${COMPILER_VERSION} >= 30500
-CLANG_OPT_SMALL+= -mllvm -enable-gvn=false
-.else
-CLANG_OPT_SMALL+= -mllvm -enable-load-pre=false
-.endif
+		 -mllvm -enable-load-pre=false -mllvm -simplifycfg-dup-ret
 CFLAGS+=	 -Qunused-arguments
-CFLAGS+=	${CFLAGS.clang}
-CXXFLAGS+=	${CXXFLAGS.clang}
-.else
-CFLAGS+=	${CFLAGS.gcc}
-CXXFLAGS+=	${CXXFLAGS.gcc}
+.if ${MACHINE_CPUARCH} == "sparc64"
+# Don't emit .cfi directives, since we must use GNU as on sparc64, for now.
+CFLAGS+=	 -fno-dwarf2-cfi-asm
+.endif # SPARC64
+# The libc++ headers use c++11 extensions.  These are normally silenced because
+# they are treated as system headers, but we explicitly disable that warning
+# suppression when building the base system to catch bugs in our headers.
+# Eventually we'll want to start building the base system C++ code as C++11,
+# but not yet.
+CXXFLAGS+=	 -Wno-c++11-extensions
+CFLAGS+=	 ${CFLAGS.clang}
+CXXFLAGS+=	 ${CXXFLAGS.clang}
+.else # !CLANG
+GCC_MS_EXTENSIONS= -fms-extensions
+CFLAGS+=	 ${CFLAGS.gcc}
+CXXFLAGS+=	 ${CXXFLAGS.gcc}
 .endif # CLANG
 .endif # !EARLY_BUILD
 
-.if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "arm" 
+.if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "ia64" && \
+    ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
 # Don't use -Wstack-protector as it breaks world with -Werror.
 SSP_CFLAGS?=	-fstack-protector
 CFLAGS+=	${SSP_CFLAGS}
-.endif # SSP && !ARM
+.endif # SSP && !IA64 && !ARM && !MIPS
 
-# Allow user-specified additional warning flags
-CFLAGS+=	${CWARNFLAGS}
+# Allow user-specified additional warning flags and file specific flag
+# overrides.
+CFLAGS+=	${CWARNFLAGS} ${CWARNFLAGS.${.IMPSRC:T}}
 
 
 # Tell bmake not to mistake standard targets for things to be searched for
 # or expect to ever be up-to-date.
 PHONY_NOTMAIN = afterdepend afterinstall all beforedepend beforeinstall \
 		beforelinking build build-tools buildfiles buildincludes \
-		checkdpadd clean cleandepend cleandir cleanobj configure \
-		depend dependall distclean distribute exe extract fetch \
+		check checkdpadd clean cleandepend cleandir cleanobj configure \
+		depend dependall distclean distribute exe extract \
 		html includes install installfiles installincludes lint \
-		obj objlink objs objwarn patch realall realdepend \
-		realinstall regress subdir-all subdir-depend subdir-install \
+		obj objlink objs objwarn realall realdepend \
+		realinstall subdir-all subdir-depend subdir-install \
 		tags whereobj
+
+.if defined(PORTNAME)
+PHONY_NOTMAIN+=	fetch patch
+.endif
 
 .PHONY: ${PHONY_NOTMAIN}
 .NOTMAIN: ${PHONY_NOTMAIN}
