@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/arm/at91/boot2/bwct_board.c 204900 2010-03-09 00:50:58Z ticso $");
 
 #include <sys/param.h>
 

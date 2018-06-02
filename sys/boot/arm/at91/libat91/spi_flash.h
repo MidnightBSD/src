@@ -18,7 +18,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/libat91/spi_flash.h 165400 2006-12-20 18:25:16Z imp $
  ******************************************************************************/
 
 #ifndef _SPI_FLASH_H_

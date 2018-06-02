@@ -54209,6 +54209,7 @@ sys/boot/arm/uboot/Makefile svneol=native#text/plain
 sys/boot/arm/uboot/conf.c svneol=native#text/plain
 sys/boot/arm/uboot/help.uboot -text
 sys/boot/arm/uboot/ldscript.arm -text
+sys/boot/arm/uboot/loader.conf svneol=native#text/plain
 sys/boot/arm/uboot/start.S svneol=native#text/plain
 sys/boot/arm/uboot/version -text
 sys/boot/common/Makefile.inc -text

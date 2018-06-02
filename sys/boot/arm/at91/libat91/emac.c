@@ -20,7 +20,7 @@
  * only.
  * END_BLOCK
  * 
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/libat91/emac.c 172991 2007-10-25 22:50:25Z cognet $
  ******************************************************************************/
 
 #include "at91rm9200.h"

@@ -20,7 +20,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/libat91/spi_flash.c 238463 2012-07-15 05:35:14Z imp $
  *****************************************************************************/
 
 #include "at91rm9200.h"
@@ -224,10 +224,10 @@ SPI_InitFlash(void)
 
 	// enable CS0, CLK, MOSI, MISO
 	pPio = (AT91PS_PIO)AT91C_BASE_PIOA;
-	pPio->PIO_ASR = AT91C_PA3_NPCS0 | AT91C_PA1_MOSI | AT91C_PA0_MISO |
-	    AT91C_PA2_SPCK;
-	pPio->PIO_PDR = AT91C_PA3_NPCS0 | AT91C_PA1_MOSI | AT91C_PA0_MISO |
-	    AT91C_PA2_SPCK;
+	pPio->PIO_ASR = AT91C_PIO_PA3 | AT91C_PIO_PA1 | AT91C_PIO_PA0 |
+	    AT91C_PIO_PA2;
+	pPio->PIO_PDR = AT91C_PIO_PA3 | AT91C_PIO_PA1 | AT91C_PIO_PA0 |
+	    AT91C_PIO_PA2;
 
 	// enable clocks to SPI
 	AT91C_BASE_PMC->PMC_PCER = 1u << AT91C_ID_SPI;

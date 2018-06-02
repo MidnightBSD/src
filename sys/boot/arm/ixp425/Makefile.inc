@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sys/boot/arm/ixp425/Makefile.inc 251250 2013-06-02 11:44:23Z tijl $
 
 .if !target(__ixp425_boot_Makefile.inc__)
 .PATH:	${.CURDIR}/../../../../libkern ${.CURDIR}/../../../../libkern/arm
@@ -21,7 +22,7 @@ CFLAGS+=-Os -ffreestanding \
 
 # -Wstrict-prototypes 
 
-CFLAGS+=-DBOOT_${BOOT_FLAVOR:U}
+CFLAGS+=-DBOOT_${BOOT_FLAVOR:tu}
 
 LD ?= ld
 OBJCOPY ?= objcopy

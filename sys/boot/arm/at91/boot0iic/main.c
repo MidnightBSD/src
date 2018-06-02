@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  *
@@ -21,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/boot0iic/main.c 164322 2006-11-16 00:49:50Z imp $
  */
 
 #include "at91rm9200.h"

@@ -25,7 +25,7 @@
  * This software is derived from software provide by Kwikbyte who specifically
  * disclaimed copyright on the code.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/libat91/lib_AT91RM9200.h 238463 2012-07-15 05:35:14Z imp $
  */
 
 #ifndef __LIBAT91RM9200_H
@@ -135,17 +135,17 @@ AT91F_MCI_CfgPIO(void)
 	// Configure PIO controllers to periph mode
 	AT91F_PIO_CfgPeriph(
 		AT91C_BASE_PIOA, // PIO controller base address
-		((unsigned int) AT91C_PA28_MCCDA   ) |
-		((unsigned int) AT91C_PA29_MCDA0   ) |
-		((unsigned int) AT91C_PA27_MCCK    ), // Peripheral A
+		((unsigned int) AT91C_PIO_PA28   ) |
+		((unsigned int) AT91C_PIO_PA29   ) |
+		((unsigned int) AT91C_PIO_PA27    ), // Peripheral A
 		0); // Peripheral B
 	// Configure PIO controllers to periph mode
 	AT91F_PIO_CfgPeriph(
 		AT91C_BASE_PIOB, // PIO controller base address
 		0, // Peripheral A
-		((unsigned int) AT91C_PB5_MCDA3   ) |
-		((unsigned int) AT91C_PB3_MCDA1   ) |
-		((unsigned int) AT91C_PB4_MCDA2   )); // Peripheral B
+		((unsigned int) AT91C_PIO_PB5   ) |
+		((unsigned int) AT91C_PIO_PB3   ) |
+		((unsigned int) AT91C_PIO_PB4   )); // Peripheral B
 }
 
 

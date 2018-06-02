@@ -25,7 +25,7 @@
  * This software is derived from software provide by Kwikbyte who specifically
  * disclaimed copyright on the code.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/libat91/sd-card.c 228471 2011-12-13 14:06:01Z ed $
  */
 
 //*----------------------------------------------------------------------------
@@ -95,14 +95,14 @@ MCIDeviceWaitReady(unsigned int timeout)
 	}	// End of if AT91C_MCI_RXBUFF
 }
 
-inline static unsigned int
+static inline unsigned int
 swap(unsigned int a)
 {
     return (((a & 0xff) << 24) | ((a & 0xff00) << 8) | ((a & 0xff0000) >> 8)
       | ((a & 0xff000000) >> 24));
 }
 
-inline static void
+static inline void
 wait_ready()
 {
 	int status;

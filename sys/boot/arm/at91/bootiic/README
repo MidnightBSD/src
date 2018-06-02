@@ -1,4 +1,5 @@
 $MidnightBSD$
+$FreeBSD: stable/10/sys/boot/arm/at91/bootiic/README 157873 2006-04-19 17:16:49Z imp $
 
 This image is intended to be programmed into boot EEPROM.  The image is nearly
 0x4000 so it will not fit in KB9200's 0x2000.  It is intended for KB9201 or

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/arm/uboot/conf.c 235537 2012-05-17 10:11:18Z gber $");
 
 #include <stand.h>
 #include "bootstrap.h"
@@ -56,6 +56,9 @@ struct fs_ops *file_system[] = {
 #endif
 #if defined(LOADER_EXT2FS_SUPPORT)
 	&ext2fs_fsops,
+#endif
+#if defined(LOADER_NANDFS_SUPPORT)
+	&nandfs_fsops,
 #endif
 #if defined(LOADER_NFS_SUPPORT)
 	&nfs_fsops,

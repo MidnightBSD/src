@@ -1,7 +1,7 @@
 /* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 John Hay
- * Copyright (c) 2006 Warner Losh
+ * Copyright (c) 2006 M Warner Losh <imp@freebsd.org>
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
  *
@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/sys/boot/arm/at91/boot2/boot2.c 295453 2016-02-09 22:32:24Z emaste $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -31,51 +31,15 @@ __FBSDID("$FreeBSD$");
 
 #include "lib.h"
 #include "board.h"
+#include "paths.h"
+#include "rbx.h"
 
-#define RBX_ASKNAME	0x0	/* -a */
-#define RBX_SINGLE	0x1	/* -s */
-/* 0x2 is reserved for log2(RB_NOSYNC). */
-/* 0x3 is reserved for log2(RB_HALT). */
-/* 0x4 is reserved for log2(RB_INITNAME). */
-#define RBX_DFLTROOT	0x5	/* -r */
-/* #define RBX_KDB 	0x6	   -d */
-/* 0x7 is reserved for log2(RB_RDONLY). */
-/* 0x8 is reserved for log2(RB_DUMP). */
-/* 0x9 is reserved for log2(RB_MINIROOT). */
-#define RBX_CONFIG	0xa	/* -c */
-#define RBX_VERBOSE	0xb	/* -v */
-/* #define RBX_SERIAL	0xc	   -h */
-/* #define RBX_CDROM	0xd	   -C */
-/* 0xe is reserved for log2(RB_POWEROFF). */
-#define RBX_GDB 	0xf	/* -g */
-/* #define RBX_MUTE	0x10	   -m */
-/* 0x11 is reserved for log2(RB_SELFTEST). */
-/* 0x12 is reserved for boot programs. */
-/* 0x13 is reserved for boot programs. */
-/* #define RBX_PAUSE	0x14	   -p */
-/* #define RBX_QUIET	0x15	   -q */
-#define RBX_NOINTR	0x1c	/* -n */
-/* 0x1d is reserved for log2(RB_MULTIPLE) and is just misnamed here. */
-/* #define RBX_DUAL	0x1d	   -D */
-/* 0x1f is reserved for log2(RB_BOOTINFO). */
-
-/* pass: -a, -s, -r, -v, -g */
-#define RBX_MASK	(OPT_SET(RBX_ASKNAME) | OPT_SET(RBX_SINGLE) | \
-			OPT_SET(RBX_DFLTROOT) | \
-			OPT_SET(RBX_VERBOSE) | \
-			OPT_SET(RBX_GDB))
-
-#define PATH_DOTCONFIG	"/boot.config"
-#define PATH_CONFIG	"/boot/config"
-//#define PATH_KERNEL	"/boot/kernel/kernel"
+#undef PATH_KERNEL
 #define PATH_KERNEL	"/boot/kernel/kernel.gz.tramp"
 
 extern uint32_t _end;
 
 #define NOPT		6
-
-#define OPT_SET(opt)	(1 << (opt))
-#define OPT_CHECK(opt)	((opts) & OPT_SET(opt))
 
 static const char optstr[NOPT] = "agnrsv";
 static const unsigned char flags[NOPT] = {
@@ -87,15 +51,15 @@ static const unsigned char flags[NOPT] = {
 	RBX_VERBOSE
 };
 
+unsigned board_id; /* board type to pass to kernel, if set by board_* code */
 unsigned dsk_start;
 static char cmd[512];
 static char kname[1024];
 static uint32_t opts;
-static int dsk_meta;
+static uint8_t dsk_meta;
 
 static void load(void);
 static int parse(void);
-static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, unsigned, unsigned);
 #ifdef FIXUP_BOOT_DRV
 static void fixup_boot_drv(caddr_t, int, int, int);
@@ -111,7 +75,7 @@ static void fixup_boot_drv(caddr_t, int, int, int);
 #endif
 
 static inline int
-xfsread(ino_t inode, void *buf, size_t nbyte)
+xfsread(ufs_ino_t inode, void *buf, size_t nbyte)
 {
 	if ((size_t)fsread(inode, buf, nbyte) != nbyte)
 		return -1;
@@ -154,7 +118,7 @@ int
 main(void)
 {
 	int autoboot, c = 0;
-	ino_t ino;
+	ufs_ino_t ino;
 
 	dmadat = (void *)(0x20000000 + (16 << 20));
 	board_init();
@@ -199,7 +163,7 @@ load(void)
 	Elf32_Ehdr eh;
 	static Elf32_Phdr ep[2];
 	caddr_t p;
-	ino_t ino;
+	ufs_ino_t ino;
 	uint32_t addr;
 	int i, j;
 #ifdef FIXUP_BOOT_DRV
@@ -242,7 +206,7 @@ load(void)
 #ifdef FIXUP_BOOT_DRV
 	fixup_boot_drv(staddr, klen, bootslice, bootpart);
 #endif
-	((void(*)(int))addr)(opts & RBX_MASK);
+	((void(*)(int, int, int, int))addr)(opts & RBX_MASK, board_id, 0, 0);
 }
 
 static int

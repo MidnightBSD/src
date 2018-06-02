@@ -19,7 +19,7 @@
  * only.
  * END_BLOCK
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/boot/arm/at91/bootspi/ee.c 238463 2012-07-15 05:35:14Z imp $
  *****************************************************************************/
 
 #include "at91rm9200_lowlevel.h"
@@ -60,11 +60,11 @@ EEInit(void)
 	AT91PS_PIO pPio = (AT91PS_PIO)AT91C_BASE_PIOA;
 	AT91PS_PMC pPMC = (AT91PS_PMC)AT91C_BASE_PMC;
 
-	pPio->PIO_ASR = AT91C_PA25_TWD | AT91C_PA26_TWCK;
-	pPio->PIO_PDR = AT91C_PA25_TWD | AT91C_PA26_TWCK;
+	pPio->PIO_ASR = AT91C_PIO_PA25 | AT91C_PIO_PA26;
+	pPio->PIO_PDR = AT91C_PIO_PA25 | AT91C_PIO_PA26;
 
-	pPio->PIO_MDDR = ~AT91C_PA25_TWD;
-	pPio->PIO_MDER = AT91C_PA25_TWD;
+	pPio->PIO_MDDR = ~AT91C_PIO_PA25;
+	pPio->PIO_MDER = AT91C_PIO_PA25;
 
 	pPMC->PMC_PCER = 1u << AT91C_ID_TWI;
 
