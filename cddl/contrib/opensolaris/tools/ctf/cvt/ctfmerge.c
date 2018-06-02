@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -176,20 +177,20 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <assert.h>
-#if defined(sun)
+#ifdef illumos
 #include <synch.h>
 #endif
 #include <signal.h>
 #include <libgen.h>
 #include <string.h>
 #include <errno.h>
-#if defined(sun)
+#ifdef illumos
 #include <alloca.h>
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#if defined(sun)
+#ifdef illumos
 #include <sys/sysconf.h>
 #endif
 
@@ -232,7 +233,7 @@ usage(void)
 	    progname, progname);
 }
 
-#if defined(sun)
+#ifdef illumos
 static void
 bigheap(void)
 {
@@ -280,7 +281,7 @@ bigheap(void)
 
 	(void) memcntl(NULL, 0, MC_HAT_ADVISE, (caddr_t)&mha, 0, 0);
 }
-#endif
+#endif	/* illumos */
 
 static void
 finalize_phase_one(workqueue_t *wq)
@@ -620,7 +621,7 @@ copy_ctf_data(char *srcfile, char *destfile, int keep_stabs)
 		terminate("No CTF data found in source file %s\n", srcfile);
 
 	tmpname = mktmpname(destfile, ".ctf");
-	write_ctf(srctd, destfile, tmpname, CTF_COMPRESS | keep_stabs);
+	write_ctf(srctd, destfile, tmpname, CTF_COMPRESS | CTF_SWAP_BYTES | keep_stabs);
 	if (rename(tmpname, destfile) != 0) {
 		terminate("Couldn't rename temp file %s to %s", tmpname,
 		    destfile);
@@ -707,7 +708,7 @@ start_threads(workqueue_t *wq)
 		    (void *(*)(void *))worker_thread, wq);
 	}
 
-#if defined(sun)
+#ifdef illumos
 	sigset(SIGINT, handle_sig);
 	sigset(SIGQUIT, handle_sig);
 	sigset(SIGTERM, handle_sig);
@@ -1015,7 +1016,7 @@ main(int argc, char **argv)
 
 	tmpname = mktmpname(outfile, ".ctf");
 	write_ctf(savetd, outfile, tmpname,
-	    CTF_COMPRESS | write_fuzzy_match | dynsym | keep_stabs);
+	    CTF_COMPRESS | CTF_SWAP_BYTES | write_fuzzy_match | dynsym | keep_stabs);
 	if (rename(tmpname, outfile) != 0)
 		terminate("Couldn't rename output temp file %s", tmpname);
 	free(tmpname);

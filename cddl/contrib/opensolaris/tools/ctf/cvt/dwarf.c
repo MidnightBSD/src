@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -22,8 +23,6 @@
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 /*
  * DWARF to tdata conversion
@@ -491,16 +490,59 @@ die_mem_offset(dwarf_t *dw, Dwarf_Die die, Dwarf_Half name,
 {
 	Dwarf_Locdesc *loc = NULL;
 	Dwarf_Signed locnum = 0;
+	Dwarf_Attribute at;
+	Dwarf_Half form;
 
-	if (dwarf_locdesc(die, name, &loc, &locnum, &dw->dw_err) != DW_DLV_OK)
+	if (name != DW_AT_data_member_location)
+		terminate("die %llu: can only process attribute "
+		    "DW_AT_data_member_location\n", die_off(dw, die));
+
+	if ((at = die_attr(dw, die, name, 0)) == NULL)
 		return (0);
 
-	if (locnum != 1 || loc->ld_s->lr_atom != DW_OP_plus_uconst) {
-		terminate("die %llu: cannot parse member offset\n",
-		    die_off(dw, die));
-	}
+	if (dwarf_whatform(at, &form, &dw->dw_err) != DW_DLV_OK)
+		return (0);
 
-	*valp = loc->ld_s->lr_number;
+	switch (form) {
+	case DW_FORM_block:
+	case DW_FORM_block1:
+	case DW_FORM_block2:
+	case DW_FORM_block4:
+		/*
+		 * GCC in base and Clang (3.3 or below) generates
+		 * DW_AT_data_member_location attribute with DW_FORM_block*
+		 * form. The attribute contains one DW_OP_plus_uconst
+		 * operator. The member offset stores in the operand.
+		 */
+		if (dwarf_locdesc(die, name, &loc, &locnum, &dw->dw_err) !=
+		    DW_DLV_OK)
+			return (0);
+		if (locnum != 1 || loc->ld_s->lr_atom != DW_OP_plus_uconst) {
+			terminate("die %llu: cannot parse member offset\n",
+			    die_off(dw, die));
+		}
+		*valp = loc->ld_s->lr_number;
+		break;
+
+	case DW_FORM_data1:
+	case DW_FORM_data2:
+	case DW_FORM_data4:
+	case DW_FORM_data8:
+	case DW_FORM_udata:
+		/*
+		 * Clang 3.4 generates DW_AT_data_member_location attribute
+		 * with DW_FORM_data* form (constant class). The attribute
+		 * stores a contant value which is the member offset.
+		 */
+		if (dwarf_attrval_unsigned(die, name, valp, &dw->dw_err) !=
+		    DW_DLV_OK)
+			return (0);
+		break;
+
+	default:
+		terminate("die %llu: cannot parse member offset with form "
+		    "%u\n", die_off(dw, die), form);
+	}
 
 	if (loc != NULL)
 		if (dwarf_locdesc_free(loc, &dw->dw_err) != DW_DLV_OK)
@@ -634,6 +676,10 @@ tdesc_array_create(dwarf_t *dw, Dwarf_Die dim, tdesc_t *arrtdp,
 		ar->ad_nelems = uval + 1;
 	else if (die_signed(dw, dim, DW_AT_upper_bound, &sval, 0))
 		ar->ad_nelems = sval + 1;
+	else if (die_unsigned(dw, dim, DW_AT_count, &uval, 0))
+		ar->ad_nelems = uval;
+	else if (die_signed(dw, dim, DW_AT_count, &sval, 0))
+		ar->ad_nelems = sval;
 	else
 		ar->ad_nelems = 0;
 
@@ -674,6 +720,13 @@ die_array_create(dwarf_t *dw, Dwarf_Die arr, Dwarf_Off off, tdesc_t *tdp)
 		tdesc_t *dimtdp;
 		int flags;
 
+		/* Check for bogus gcc DW_AT_byte_size attribute */
+		if (uval == (unsigned)-1) {
+			printf("dwarf.c:%s() working around bogus -1 DW_AT_byte_size\n",
+			    __func__);
+			uval = 0;
+		}
+		
 		tdp->t_size = uval;
 
 		/*
@@ -755,11 +808,22 @@ die_enum_create(dwarf_t *dw, Dwarf_Die die, Dwarf_Off off, tdesc_t *tdp)
 	Dwarf_Unsigned uval;
 	Dwarf_Signed sval;
 
+	if (die_isdecl(dw, die)) {
+		tdp->t_type = FORWARD;
+		return;
+	}
+
 	debug(3, "die %llu: creating enum\n", off);
 
 	tdp->t_type = ENUM;
 
 	(void) die_unsigned(dw, die, DW_AT_byte_size, &uval, DW_ATTR_REQ);
+	/* Check for bogus gcc DW_AT_byte_size attribute */
+	if (uval == (unsigned)-1) {
+		printf("dwarf.c:%s() working around bogus -1 DW_AT_byte_size\n",
+		    __func__); 
+		uval = 0;
+	}
 	tdp->t_size = uval;
 
 	if ((mem = die_child(dw, die)) != NULL) {
@@ -873,7 +937,10 @@ static void
 die_sou_create(dwarf_t *dw, Dwarf_Die str, Dwarf_Off off, tdesc_t *tdp,
     int type, const char *typename)
 {
-	Dwarf_Unsigned sz, bitsz, bitoff;
+	Dwarf_Unsigned sz, bitsz, bitoff, maxsz=0;
+#if BYTE_ORDER == _LITTLE_ENDIAN
+	Dwarf_Unsigned bysz;
+#endif
 	Dwarf_Die mem;
 	mlist_t *ml, **mlastp;
 	iidesc_t *ii;
@@ -929,6 +996,8 @@ die_sou_create(dwarf_t *dw, Dwarf_Die str, Dwarf_Off off, tdesc_t *tdp,
 			ml->ml_name = NULL;
 
 		ml->ml_type = die_lookup_pass1(dw, mem, DW_AT_type);
+		debug(3, "die_sou_create(): ml_type = %p t_id = %d\n",
+		    ml->ml_type, ml->ml_type->t_id);
 
 		if (die_mem_offset(dw, mem, DW_AT_data_member_location,
 		    &mloff, 0)) {
@@ -946,8 +1015,26 @@ die_sou_create(dwarf_t *dw, Dwarf_Die str, Dwarf_Off off, tdesc_t *tdp,
 #if BYTE_ORDER == _BIG_ENDIAN
 			ml->ml_offset += bitoff;
 #else
-			ml->ml_offset += tdesc_bitsize(ml->ml_type) - bitoff -
-			    ml->ml_size;
+			/*
+			 * Note that Clang 3.4 will sometimes generate
+			 * member DIE before generating the DIE for the
+			 * member's type. The code can not handle this
+			 * properly so that tdesc_bitsize(ml->ml_type) will
+			 * return 0 because ml->ml_type is unknown. As a
+			 * result, a wrong member offset will be calculated.
+			 * To workaround this, we can instead try to
+			 * retrieve the value of DW_AT_byte_size attribute
+			 * which stores the byte size of the space occupied
+			 * by the type. If this attribute exists, its value
+			 * should equal to tdesc_bitsize(ml->ml_type)/NBBY.
+			 */
+			if (die_unsigned(dw, mem, DW_AT_byte_size, &bysz, 0) &&
+			    bysz > 0)
+				ml->ml_offset += bysz * NBBY - bitoff -
+					ml->ml_size;
+			else
+				ml->ml_offset += tdesc_bitsize(ml->ml_type) -
+					bitoff - ml->ml_size;
 #endif
 		}
 
@@ -956,7 +1043,23 @@ die_sou_create(dwarf_t *dw, Dwarf_Die str, Dwarf_Off off, tdesc_t *tdp,
 
 		*mlastp = ml;
 		mlastp = &ml->ml_next;
+
+		/* Find the size of the largest member to work around a gcc
+		 * bug.  See GCC Bugzilla 35998.
+		 */
+		if (maxsz < ml->ml_size)
+			maxsz = ml->ml_size;
+
 	} while ((mem = die_sibling(dw, mem)) != NULL);
+
+	/* See if we got a bogus DW_AT_byte_size.  GCC will sometimes
+	 * emit this.
+	 */
+	if (sz == (unsigned)-1) {
+		 printf("dwarf.c:%s() working around bogus -1 DW_AT_byte_size\n",
+		     __func__);
+		 tdp->t_size = maxsz / 8;  /* maxsz is in bits, t_size is bytes */
+	}
 
 	/*
 	 * GCC will attempt to eliminate unused types, thus decreasing the
@@ -1054,7 +1157,7 @@ die_sou_resolve(tdesc_t *tdp, tdesc_t **tdpp __unused, void *private)
 		}
 
 		if (ml->ml_size != 0 && mt->t_type == INTRINSIC &&
-		    mt->t_intr->intr_nbits != ml->ml_size) {
+		    mt->t_intr->intr_nbits != (int)ml->ml_size) {
 			/*
 			 * This member is a bitfield, and needs to reference
 			 * an intrinsic type with the same width.  If the
@@ -1283,7 +1386,7 @@ die_base_type2enc(dwarf_t *dw, Dwarf_Off off, Dwarf_Signed enc, size_t sz)
 		mult = 2;
 		col = 1;
 	} else if (enc == DW_ATE_imaginary_float
-#if defined(sun)
+#ifdef illumos
 	    || enc == DW_ATE_SUN_imaginary_float
 #endif
 	    )
@@ -1334,7 +1437,7 @@ die_base_from_dwarf(dwarf_t *dw, Dwarf_Die base, Dwarf_Off off, size_t sz)
 	case DW_ATE_float:
 	case DW_ATE_complex_float:
 	case DW_ATE_imaginary_float:
-#if defined(sun)
+#ifdef illumos
 	case DW_ATE_SUN_imaginary_float:
 	case DW_ATE_SUN_interval_float:
 #endif
@@ -1369,6 +1472,13 @@ die_base_create(dwarf_t *dw, Dwarf_Die base, Dwarf_Off off, tdesc_t *tdp)
 	 * the data model.
 	 */
 	(void) die_unsigned(dw, base, DW_AT_byte_size, &sz, DW_ATTR_REQ);
+
+	/* Check for bogus gcc DW_AT_byte_size attribute */
+	if (sz == (unsigned)-1) {
+		printf("dwarf.c:%s() working around bogus -1 DW_AT_byte_size\n",
+		    __func__);
+		sz = 0;
+	}
 
 	if (tdp->t_name == NULL)
 		terminate("die %llu: base type without name\n", off);
@@ -1758,6 +1868,59 @@ die_resolve(dwarf_t *dw)
 	} while (dw->dw_nunres != 0);
 }
 
+/*
+ * Any object containing a function or object symbol at any scope should also
+ * contain DWARF data.
+ */
+static boolean_t
+should_have_dwarf(Elf *elf)
+{
+	Elf_Scn *scn = NULL;
+	Elf_Data *data = NULL;
+	GElf_Shdr shdr;
+	GElf_Sym sym;
+	uint32_t symdx = 0;
+	size_t nsyms = 0;
+	boolean_t found = B_FALSE;
+
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
+		gelf_getshdr(scn, &shdr);
+
+		if (shdr.sh_type == SHT_SYMTAB) {
+			found = B_TRUE;
+			break;
+		}
+	}
+
+	if (!found)
+		terminate("cannot convert stripped objects\n");
+
+	data = elf_getdata(scn, NULL);
+	nsyms = shdr.sh_size / shdr.sh_entsize;
+
+	for (symdx = 0; symdx < nsyms; symdx++) {
+		gelf_getsym(data, symdx, &sym);
+
+		if ((GELF_ST_TYPE(sym.st_info) == STT_FUNC) ||
+		    (GELF_ST_TYPE(sym.st_info) == STT_TLS) ||
+		    (GELF_ST_TYPE(sym.st_info) == STT_OBJECT)) {
+			char *name;
+
+			name = elf_strptr(elf, shdr.sh_link, sym.st_name);
+
+			/* Studio emits these local symbols regardless */
+			if ((strcmp(name, "Bbss.bss") != 0) &&
+			    (strcmp(name, "Ttbss.bss") != 0) &&
+			    (strcmp(name, "Ddata.data") != 0) &&
+			    (strcmp(name, "Ttdata.data") != 0) &&
+			    (strcmp(name, "Drodata.rodata") != 0))
+				return (B_TRUE);
+		}
+	}
+
+	return (B_FALSE);
+}
+
 /*ARGSUSED*/
 int
 dw_read(tdata_t *td, Elf *elf, char *filename __unused)
@@ -1782,8 +1945,12 @@ dw_read(tdata_t *td, Elf *elf, char *filename __unused)
 
 	if ((rc = dwarf_elf_init(elf, DW_DLC_READ, &dw.dw_dw,
 	    &dw.dw_err)) == DW_DLV_NO_ENTRY) {
-		errno = ENOENT;
-		return (-1);
+		if (should_have_dwarf(elf)) {
+			errno = ENOENT;
+			return (-1);
+		} else {
+			return (0);
+		}
 	} else if (rc != DW_DLV_OK) {
 		if (dwarf_errno(&dw.dw_err) == DW_DLE_DEBUG_INFO_NULL) {
 			/*
@@ -1801,9 +1968,14 @@ dw_read(tdata_t *td, Elf *elf, char *filename __unused)
 	    &addrsz, &nxthdr, &dw.dw_err)) != DW_DLV_OK)
 		terminate("rc = %d %s\n", rc, dwarf_errmsg(&dw.dw_err));
 
-	if ((cu = die_sibling(&dw, NULL)) == NULL)
+	if ((cu = die_sibling(&dw, NULL)) == NULL ||
+	    (((child = die_child(&dw, cu)) == NULL) &&
+	    should_have_dwarf(elf))) {
 		terminate("file does not contain dwarf type data "
 		    "(try compiling with -g)\n");
+	} else if (child == NULL) {
+		return (0);
+	}
 
 	dw.dw_maxoff = nxthdr - 1;
 

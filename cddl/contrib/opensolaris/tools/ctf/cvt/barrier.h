@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -33,7 +34,7 @@
  * APIs for the barrier synchronization primitive.
  */
 
-#if defined(sun)
+#ifdef illumos
 #include <synch.h>
 #else
 #include <semaphore.h>
