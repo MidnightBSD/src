@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2007 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -23,14 +24,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/cddl/compat/opensolaris/include/stdlib.h 234856 2012-04-30 23:12:16Z rmh $
  *
  */
 
+#include_next <stdlib.h>
+
 #ifndef _COMPAT_OPENSOLARIS_STDLIB_H_
 #define _COMPAT_OPENSOLARIS_STDLIB_H_
-
-#include_next <stdlib.h>
 
 #define getexecname	getprogname
 

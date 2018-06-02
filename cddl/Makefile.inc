@@ -1,4 +1,5 @@
-# $MidnightBSD: src/cddl/Makefile.inc,v 1.4 2012/04/06 02:23:54 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/cddl/Makefile.inc 215455 2010-11-18 16:32:52Z markm $
 
 OPENSOLARIS_USR_DISTDIR= ${.CURDIR}/../../../cddl/contrib/opensolaris
 OPENSOLARIS_SYS_DISTDIR= ${.CURDIR}/../../../sys/cddl/contrib/opensolaris

@@ -19,6 +19,8 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
+ *
+ * $FreeBSD: stable/10/cddl/compat/opensolaris/lib/libumem/umem.h 178414 2008-04-22 07:43:00Z jb $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

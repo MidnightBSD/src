@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/cddl/compat/opensolaris/misc/mnttab.c 209962 2010-07-12 23:49:04Z mm $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

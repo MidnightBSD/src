@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/cddl/compat/opensolaris/misc/deviceid.c 238112 2012-07-04 17:36:26Z pjd $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -45,7 +46,7 @@ devid_str_decode(char *devidstr, ddi_devid_t *retdevid, char **retminor_name)
 		return (EINVAL);
 	}
 	*retminor_name = strdup("");
-	if (*retminor_name == NULL);
+	if (*retminor_name == NULL)
 		return (ENOMEM);
 	return (0);
 }

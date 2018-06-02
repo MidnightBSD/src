@@ -516,6 +516,8 @@ cddl/compat/opensolaris/misc/deviceid.c -text
 cddl/compat/opensolaris/misc/fsshare.c -text
 cddl/compat/opensolaris/misc/mkdirp.c -text
 cddl/compat/opensolaris/misc/mnttab.c -text
+cddl/compat/opensolaris/misc/thread_pool.c svneol=native#text/plain
+cddl/compat/opensolaris/misc/thread_pool_impl.h svneol=native#text/plain
 cddl/compat/opensolaris/misc/zmount.c -text
 cddl/compat/opensolaris/misc/zone.c -text
 cddl/contrib/dtracetoolkit/Apps/Readme -text
