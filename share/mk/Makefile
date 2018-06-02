@@ -1,4 +1,3 @@
-# $FreeBSD: src/share/mk/Makefile,v 1.46.2.1 2006/01/25 13:22:58 harti Exp $
 # $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
 
@@ -13,13 +12,12 @@
 FILES=	\
 	bsd.README \
 	bsd.arch.inc.mk \
-	bsd.compat.mk \
 	bsd.compiler.mk \
 	bsd.cpu.mk \
 	bsd.crunchgen.mk \
 	bsd.dep.mk \
 	bsd.doc.mk \
-	bsd.dtrace.mk \
+	bsd.dtb.mk \
 	bsd.endian.mk \
 	bsd.files.mk \
 	bsd.incs.mk \
