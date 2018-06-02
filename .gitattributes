@@ -5,24 +5,6 @@
 /ObsoleteFiles.inc -text
 /README -text
 /UPDATING -text
-apache/LICENSE -text
-apache/Makefile -text
-apache/Makefile.inc -text
-apache/lib/Makefile -text
-apache/lib/Makefile.inc -text
-apache/lib/libdispatch/Makefile -text
-apache/lib/libdispatch/config/config.h svneol=native#text/plain
-apache/lib/libdns_sd/Makefile -text
-apache/lib/libnss_mdns/Makefile -text
-apache/lib/libnss_mdns/netbsd.c -text
-apache/usr.bin/Makefile -text
-apache/usr.bin/Makefile.inc -text
-apache/usr.bin/dns-sd/Makefile -text
-apache/usr.bin/mDNSResponderPosix/Makefile -text
-apache/usr.sbin/Makefile -text
-apache/usr.sbin/Makefile.inc -text
-apache/usr.sbin/dnsextd/Makefile -text
-apache/usr.sbin/mdnsd/Makefile -text
 bin/Makefile -text
 bin/Makefile.inc -text
 bin/cat/Makefile -text
@@ -48211,6 +48193,9 @@ lib/libdisk/write_amd64_disk.c -text
 lib/libdisk/write_disk.c -text
 lib/libdisk/write_i386_disk.c -text
 lib/libdisk/write_sparc64_disk.c -text
+lib/libdispatch/Makefile -text
+lib/libdispatch/config/config.h svneol=native#text/plain
+lib/libdns_sd/Makefile -text
 lib/libdwarf/Makefile -text
 lib/libdwarf/_libdwarf.h -text
 lib/libdwarf/dwarf.h -text
@@ -48792,6 +48777,8 @@ lib/libnetgraph/netgraph.3 -text
 lib/libnetgraph/netgraph.h -text
 lib/libnetgraph/sock.c -text
 lib/libngatm/Makefile -text
+lib/libnss_mdns/Makefile -text
+lib/libnss_mdns/netbsd.c -text
 lib/libopie/Makefile -text
 lib/libopie/config.h -text
 lib/libopie/opieextra.c -text
@@ -70385,6 +70372,7 @@ usr.bin/dc/stack.c -text
 usr.bin/dig/Makefile -text
 usr.bin/dirname/Makefile -text
 usr.bin/dirname/dirname.c -text
+usr.bin/dns-sd/Makefile -text
 usr.bin/doas/LICENSE -text
 usr.bin/doas/Makefile svneol=native#text/plain
 usr.bin/doas/doas.1 svneol=native#text/plain
@@ -70837,6 +70825,7 @@ usr.bin/m4/tests/translit.m4 -text
 usr.bin/m4/tests/translit2.m4 -text
 usr.bin/m4/tokenizer.l -text
 usr.bin/m4/trace.c -text
+usr.bin/mDNSResponderPosix/Makefile -text
 usr.bin/mail/Makefile -text
 usr.bin/mail/USD.doc/mail0.nr -text
 usr.bin/mail/USD.doc/mail1.nr -text
@@ -72137,6 +72126,7 @@ usr.sbin/digictl/digictl.c -text
 usr.sbin/diskinfo/Makefile -text
 usr.sbin/diskinfo/diskinfo.8 -text
 usr.sbin/diskinfo/diskinfo.c -text
+usr.sbin/dnsextd/Makefile -text
 usr.sbin/dumpcis/Makefile -text
 usr.sbin/dumpcis/cardinfo.h -text
 usr.sbin/dumpcis/cis.h -text
@@ -72439,6 +72429,7 @@ usr.sbin/makemap/Makefile -text
 usr.sbin/manctl/Makefile -text
 usr.sbin/manctl/manctl.8 -text
 usr.sbin/manctl/manctl.sh -text
+usr.sbin/mdnsd/Makefile -text
 usr.sbin/memcontrol/Makefile -text
 usr.sbin/memcontrol/memcontrol.8 -text
 usr.sbin/memcontrol/memcontrol.c -text

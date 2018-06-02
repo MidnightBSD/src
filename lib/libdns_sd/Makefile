@@ -2,8 +2,8 @@
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
-SRCDIR=	${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
+SRCDIR=	${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 SHLIB_MAJOR=	1
 
 LIB=		dns_sd
@@ -20,8 +20,8 @@ CFLAGS+=	-march=athlon64
 CFLAGS+=	-march=i586
 .endif
 CFLAGS+=	-I${.CURDIR}
-CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder
-CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder/mDNShared
+CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder
+CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder/mDNShared
 CFLAGS+=	-DTARGET_OS_FREEBSD
 
 .if ${MK_INET6_SUPPORT} != "no"

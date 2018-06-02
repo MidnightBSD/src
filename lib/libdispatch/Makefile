@@ -1,7 +1,7 @@
 # $MidnightBSD$
 
-.PATH: ${.CURDIR}/../../../contrib/libdispatch/src
-SRCDIR=	${.CURDIR}/../../../contrib/libdispatch/src
+.PATH: ${.CURDIR}/../../contrib/libdispatch/src
+SRCDIR=	${.CURDIR}/../../contrib/libdispatch/src
 SHLIB_MAJOR=	0
 
 LIB=		dispatch
@@ -14,10 +14,10 @@ CSTD=	gnu99
 
 CFLAGS+=	-fblocks -D__BLOCKS__=1
 
-.PATH: ${.CURDIR}/../../../contrib/libdispatch/src/shims
+.PATH: ${.CURDIR}/../../contrib/libdispatch/src/shims
 SRCS+=	tsd.c time_2.c
 
-.PATH:  ${.CURDIR}/../../../contrib/libdispatch/dispatch
+.PATH:  ${.CURDIR}/../../contrib/libdispatch/dispatch
 INCS=	base.h dispatch.h group.h object.h once.h \
 	queue.h semaphore.h source.h time.h
 INCSDIR=	${INCLUDEDIR}/dispatch
@@ -29,8 +29,8 @@ CFLAGS+=	-march=athlon64
 CFLAGS+=	-march=i586
 .endif
 CFLAGS+=	-I${.CURDIR}
-CFLAGS+=	-I${.CURDIR}/../../../contrib/libdispatch/
-CFLAGS+=	-I${.CURDIR}/../../../contrib/libdispatch/src
+CFLAGS+=	-I${.CURDIR}/../../contrib/libdispatch/
+CFLAGS+=	-I${.CURDIR}/../../contrib/libdispatch/src
 
 .PATH: ${.CURDIR}/../../../contrib/libdispatch/man
 MAN=	dispatch.3 dispatch_after.3 dispatch_api.3 dispatch_apply.3 \
