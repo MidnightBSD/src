@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)error.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/error.h 220978 2011-04-23 22:28:56Z jilles $
  */
 
 /*

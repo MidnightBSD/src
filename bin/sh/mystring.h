@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mystring.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/mystring.h 262951 2014-03-09 17:04:31Z jmmv $
  */
 
 #include <string.h>
@@ -40,4 +41,3 @@ int number(const char *);
 int is_number(const char *);
 
 #define equal(s1, s2)	(strcmp(s1, s2) == 0)
-#define scopy(s1, s2)	((void)strcpy(s2, s1))

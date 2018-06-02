@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)input.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/input.h 253650 2013-07-25 15:08:41Z jilles $
  */
 
 /* PEOF (the end of file marker) is defined in syntax.h */
@@ -42,20 +43,21 @@
  */
 extern int plinno;
 extern int parsenleft;		/* number of characters left in input buffer */
-extern char *parsenextc;	/* next character in input buffer */
-extern int init_editline;	/* 0 == not setup, 1 == OK, -1 == failed */
+extern const char *parsenextc;	/* next character in input buffer */
 
+struct alias;
 struct parsefile;
 
+void resetinput(void);
 char *pfgets(char *, int);
 int pgetc(void);
 int preadbuffer(void);
 int preadateof(void);
 void pungetc(void);
-void pushstring(char *, int, void *);
+void pushstring(char *, int, struct alias *);
 void setinputfile(const char *, int);
 void setinputfd(int, int);
-void setinputstring(char *, int);
+void setinputstring(const char *, int);
 void popfile(void);
 struct parsefile *getcurrentfile(void);
 void popfilesupto(struct parsefile *);

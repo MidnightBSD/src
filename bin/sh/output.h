@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)output.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/output.h 244162 2012-12-12 22:01:10Z jilles $
  */
 
 #ifndef OUTPUT_INCL
@@ -66,6 +67,8 @@ void emptyoutbuf(struct output *);
 void flushall(void);
 void flushout(struct output *);
 void freestdout(void);
+int outiserror(struct output *);
+void outclearerror(struct output *);
 void outfmt(struct output *, const char *, ...) __printflike(2, 3);
 void out1fmt(const char *, ...) __printflike(1, 2);
 void out2fmt_flush(const char *, ...) __printflike(1, 2);

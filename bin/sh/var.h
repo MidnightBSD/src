@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/var.h 262951 2014-03-09 17:04:31Z jmmv $
  */
 
 /*
@@ -75,7 +76,6 @@ extern struct var vifs;
 extern struct var vmail;
 extern struct var vmpath;
 extern struct var vpath;
-extern struct var vppid;
 extern struct var vps1;
 extern struct var vps2;
 extern struct var vps4;

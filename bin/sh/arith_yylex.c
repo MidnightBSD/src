@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002
  *	Herbert Xu.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/sh/arith_yylex.c 254806 2013-08-24 20:06:00Z jilles $");
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -53,7 +54,7 @@ __MBSDID("$MidnightBSD$");
 extern const char *arith_buf;
 
 int
-yylex()
+yylex(void)
 {
 	int value;
 	const char *buf = arith_buf;
@@ -218,9 +219,13 @@ checkeqcur:
 			value += ARITH_REM - '%';
 			goto checkeq;
 		case '+':
+			if (buf[1] == '+')
+				return ARITH_BAD;
 			value += ARITH_ADD - '+';
 			goto checkeq;
 		case '-':
+			if (buf[1] == '-')
+				return ARITH_BAD;
 			value += ARITH_SUB - '-';
 			goto checkeq;
 		case '~':

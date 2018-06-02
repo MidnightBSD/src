@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)output.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/sh/output.c 253649 2013-07-25 13:09:17Z jilles $");
 
 /*
  * Shell output routines.  We use our own output routines because:
@@ -74,25 +75,6 @@ struct output errout = {NULL, 0, NULL, 256, 2, 0};
 struct output memout = {NULL, 0, NULL, 0, MEM_OUT, 0};
 struct output *out1 = &output;
 struct output *out2 = &errout;
-
-
-
-#ifdef mkinit
-
-INCLUDE "output.h"
-INCLUDE "memalloc.h"
-
-RESET {
-	out1 = &output;
-	out2 = &errout;
-	if (memout.buf != NULL) {
-		ckfree(memout.buf);
-		memout.buf = NULL;
-	}
-}
-
-#endif
-
 
 void
 outcslow(int c, struct output *file)
@@ -236,6 +218,20 @@ freestdout(void)
 		output.nleft = 0;
 	}
 	INTON;
+}
+
+
+int
+outiserror(struct output *file)
+{
+	return (file->flags & OUTPUT_ERR);
+}
+
+
+void
+outclearerror(struct output *file)
+{
+	file->flags &= ~OUTPUT_ERR;
 }
 
 

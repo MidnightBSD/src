@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/eval.h 255215 2013-09-04 22:10:16Z jilles $
  */
 
 extern char *commandname;	/* currently executing command */
@@ -45,6 +46,8 @@ struct backcmd {		/* result of evalbackcmd */
 	int nleft;		/* number of chars in buffer */
 	struct job *jp;		/* job structure for command */
 };
+
+void reseteval(void);
 
 /* flags in argument to evaltree/evalstring */
 #define EV_EXIT 01		/* exit after evaluating tree */
@@ -65,5 +68,4 @@ extern int skipcount;
 /* reasons for skipping commands (see comment on breakcmd routine) */
 #define SKIPBREAK	1
 #define SKIPCONT	2
-#define SKIPFUNC	3
-#define SKIPFILE	4
+#define SKIPRETURN	3

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,10 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	from: @(#)sh.1	8.6 (Berkeley) 5/4/95
-.\" $FreeBSD: release/9.2.0/bin/sh/sh.1 252611 2013-07-03 21:31:13Z jilles $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/bin/sh/sh.1 302334 2016-07-04 14:23:36Z wblock $
 .\"
-.Dd June 14, 2013
+.Dd May 30, 2016
 .Dt SH 1
 .Os
 .Sh NAME
@@ -41,14 +41,14 @@
 .Nd command interpreter (shell)
 .Sh SYNOPSIS
 .Nm
-.Op Fl /+abCEefIimnPpTuVvx
+.Op Fl /+abCEefhIimnPpTuVvx
 .Op Fl /+o Ar longname
 .Oo
 .Ar script
 .Op Ar arg ...
 .Oc
 .Nm
-.Op Fl /+abCEefIimnPpTuVvx
+.Op Fl /+abCEefhIimnPpTuVvx
 .Op Fl /+o Ar longname
 .Fl c Ar string
 .Oo
@@ -56,7 +56,7 @@
 .Op Ar arg ...
 .Oc
 .Nm
-.Op Fl /+abCEefIimnPpTuVvx
+.Op Fl /+abCEefhIimnPpTuVvx
 .Op Fl /+o Ar longname
 .Fl s
 .Op Ar arg ...
@@ -139,10 +139,10 @@ variable to some file by placing the following line in the file
 .Pa .profile
 in the home directory,
 substituting for
-.Pa .shinit
+.Pa .shrc
 the filename desired:
 .Pp
-.Dl "ENV=$HOME/.shinit; export ENV"
+.Dl "ENV=$HOME/.shrc; export ENV"
 .Pp
 The first non-option argument specified on the command line
 will be treated as the
@@ -236,10 +236,16 @@ or
 .Dq Li ||
 operator; or if the command is a pipeline preceded by the
 .Ic !\&
-operator.
+keyword.
 If a shell function is executed and its exit status is explicitly
 tested, all commands of the function are considered to be tested as
 well.
+.Pp
+It is recommended to check for failures explicitly
+instead of relying on
+.Fl e
+because it tends to behave in unexpected ways,
+particularly in larger scripts.
 .It Fl f Li noglob
 Disable pathname expansion.
 .It Fl h Li trackall
@@ -376,13 +382,13 @@ The following is a list of valid operators:
 .Bl -tag -width indent
 .It Control operators:
 .Bl -column "XXX" "XXX" "XXX" "XXX" "XXX" -offset center -compact
-.It Li & Ta Li && Ta Li ( Ta Li ) Ta Li \en
-.It Li ;; Ta Li ;& Ta Li ; Ta Li | Ta Li ||
+.It Li & Ta Li && Ta Li \&( Ta Li \&) Ta Li \en
+.It Li ;; Ta Li ;& Ta Li \&; Ta Li \&| Ta Li ||
 .El
 .It Redirection operators:
 .Bl -column "XXX" "XXX" "XXX" "XXX" "XXX" -offset center -compact
 .It Li < Ta Li > Ta Li << Ta Li >> Ta Li <>
-.It Li <& Ta Li >& Ta Li <<- Ta Li >|
+.It Li <& Ta Li >& Ta Li <<- Ta Li >| Ta \&
 .El
 .El
 .Pp
@@ -488,8 +494,9 @@ and backslash
 The backslash inside double quotes is historically weird.
 It remains literal unless it precedes the following characters,
 which it serves to quote:
+.Pp
 .Bl -column "XXX" "XXX" "XXX" "XXX" "XXX" -offset center -compact
-.It Li $ Ta Li ` Ta Li \&" Ta Li \e\  Ta Li \en
+.It Li $ Ta Li ` Ta Li \&" Ta Li \e Ta Li \en
 .El
 .It Backslash
 A backslash preserves the literal meaning of the following
@@ -526,6 +533,20 @@ then the input
 would become
 .Pp
 .Dl "ls -F foobar"
+.Pp
+Aliases are also recognized after an alias
+whose value ends with a space or tab.
+For example, if there is also an alias called
+.Dq Li nohup
+with the value
+.Dq Li "nohup " ,
+then the input
+.Pp
+.Dl "nohup lf foobar"
+.Pp
+would become
+.Pp
+.Dl "nohup ls -F foobar"
 .Pp
 Aliases provide a convenient way for naive users to
 create shorthands for commands without having to learn how
@@ -564,7 +585,8 @@ the following actions:
 Leading words of the form
 .Dq Li name=value
 are stripped off and assigned to the environment of
-the simple command.
+the simple command
+(they do not affect expansions).
 Redirection operators and
 their arguments (as described below) are stripped
 off and saved for processing.
@@ -649,8 +671,8 @@ The following redirection is often called a
 .Dq here-document .
 .Bd -unfilled -offset indent
 .Oo Ar n Oc Ns Li << Ar delimiter
-.D1 Ar here-doc-text
-.D1 ...
+.Ar here-doc-text
+.Ar ...
 .Ar delimiter
 .Ed
 .Pp
@@ -1028,7 +1050,6 @@ or
 .Pp
 The first form executes the commands in a subshell environment.
 A subshell environment has its own copy of:
-.Pp
 .Bl -enum
 .It
 The current working directory as set by
@@ -1146,8 +1167,10 @@ command is
 .Pp
 .D1 Ic return Op Ar exitstatus
 .Pp
-It terminates the current executional scope, returning from the previous
-nested function, sourced script, or shell instance, in that order.
+It terminates the current executional scope, returning from the closest
+nested function or sourced script;
+if no function or sourced script is being executed,
+it exits the shell instance.
 The
 .Ic return
 command is implemented as a special built-in command.
@@ -1172,6 +1195,20 @@ Assignments are expanded differently from other words:
 tilde expansion is also performed after the equals sign and after any colon
 and usernames are also terminated by colons,
 and field splitting and pathname expansion are not performed.
+.Pp
+This special expansion applies not only to assignments that form a simple
+command by themselves or precede a command word,
+but also to words passed to the
+.Ic export ,
+.Ic local
+or
+.Ic readonly
+built-in commands that have this form.
+For this, the builtin's name must be literal
+(not the result of an expansion)
+and may optionally be preceded by one or more literal instances of
+.Ic command
+without options.
 .Ss Positional Parameters
 A positional parameter is a parameter denoted by a number greater than zero.
 The shell sets these initially to the values of its command line
@@ -1330,9 +1367,33 @@ The primary prompt string, which defaults to
 .Dq Li "$ " ,
 unless you are the superuser, in which case it defaults to
 .Dq Li "# " .
+.Va PS1
+may include any of the following formatting sequences,
+which are replaced by the given information:
+.Bl -tag -width indent
+.It Li \eH
+This system's fully-qualified hostname (FQDN).
+.It Li \eh
+This system's hostname.
+.It Li \eW
+The final component of the current working directory.
+.It Li \ew
+The entire path of the current working directory.
+.It Li \e$
+Superuser status.
+.Dq Li "$ "
+for normal users and
+.Dq Li "# "
+for superusers.
+.It Li \e\e
+A literal backslash.
+.El
 .It Va PS2
 The secondary prompt string, which defaults to
 .Dq Li "> " .
+.Va PS2
+may include any of the formatting sequences from
+.Va PS1 .
 .It Va PS4
 The prefix for the trace output (if
 .Fl x
@@ -2222,10 +2283,6 @@ The shell maintains a hash table which remembers the locations of commands.
 With no arguments whatsoever, the
 .Ic hash
 command prints out the contents of this table.
-Entries which have not been looked at since the last
-.Ic cd
-command are marked with an asterisk;
-it is possible for these entries to be invalid.
 .Pp
 With arguments, the
 .Ic hash
@@ -2342,7 +2399,9 @@ option is specified and the
 elapses before a complete line of input is supplied,
 the
 .Ic read
-command will return an exit status of 1 without assigning any values.
+command will return an exit status as if terminated by
+.Dv SIGALRM
+without assigning any values.
 The
 .Ar timeout
 value may optionally be followed by one of
@@ -2358,6 +2417,11 @@ is assumed.
 The
 .Fl e
 option exists only for backward compatibility with older scripts.
+.Pp
+The exit status is 0 on success, 1 on end of file,
+between 2 and 128 if an error occurs
+and greater than 128 if a trapped signal interrupts
+.Ic read .
 .It Ic readonly Oo Fl p Oc Op Ar name ...
 Each specified
 .Ar name
@@ -2453,7 +2517,8 @@ and so on,
 decreasing the value of
 .Li $#
 by one.
-If there are zero positional parameters, shifting does not do anything.
+For portability, shifting if there are zero positional parameters
+should be avoided, since the shell may abort.
 .It Ic test
 A built-in equivalent of
 .Xr test 1 .
@@ -2605,12 +2670,17 @@ If the
 option is specified, the
 .Ar name
 arguments are treated as function names.
-.It Ic wait Op Ar job
-Wait for the specified
+.It Ic wait Op Ar job ...
+Wait for each specified
 .Ar job
 to complete and return the exit status of the last process in the
+last specified
 .Ar job .
-If the argument is omitted, wait for all jobs to complete
+If any
+.Ar job
+specified is unknown to the shell, it is treated as if it
+were a known job that exited with exit status 127.
+If no operands are given, wait for all jobs to complete
 and return an exit status of zero.
 .El
 .Ss Commandline Editing
@@ -2681,6 +2751,17 @@ Additionally, all environment variables are turned into shell variables
 at startup,
 which may affect the shell as described under
 .Sx Special Variables .
+.Sh FILES
+.Bl -tag -width "/etc/suid_profileXX" -compact
+.It Pa ~/.profile
+User's login profile.
+.It Pa /etc/profile
+System login profile.
+.It Pa /etc/shells
+Shell database.
+.It Pa /etc/suid_profile
+Privileged shell profile.
+.El
 .Sh EXIT STATUS
 Errors that are detected by the shell, such as a syntax error, will
 cause the shell to exit with a non-zero exit status.
@@ -2706,7 +2787,8 @@ will return the argument.
 .Xr getrlimit 2 ,
 .Xr umask 2 ,
 .Xr wctype 3 ,
-.Xr editrc 5
+.Xr editrc 5 ,
+.Xr shells 5
 .Sh HISTORY
 A
 .Nm

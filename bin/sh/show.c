@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)show.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/sh/show.c 262951 2014-03-09 17:04:31Z jmmv $");
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -390,11 +391,11 @@ opentrace(void)
 			else
 				p = "/tmp";
 		}
-		scopy(p, s);
+		strcpy(s, p);
 		strcat(s, "/trace");
 	}
 #else
-	scopy("./trace", s);
+	strcpy(s, "./trace");
 #endif /* not_this_way */
 	if ((tracefile = fopen(s, "a")) == NULL) {
 		fprintf(stderr, "Can't open %s: %s\n", s, strerror(errno));

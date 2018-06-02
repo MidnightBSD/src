@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.3 (Berkeley) 6/8/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/exec.h 238468 2012-07-15 10:19:43Z jilles $
  */
 
 /* values of cmdtype */
@@ -72,5 +73,6 @@ void hashcd(void);
 void changepath(const char *);
 void defun(const char *, union node *);
 int unsetfunc(const char *);
+int isfunc(const char *);
 int typecmd_impl(int, char **, int, const char *);
 void clearcmdentry(void);

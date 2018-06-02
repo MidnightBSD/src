@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)shell.h	8.2 (Berkeley) 5/4/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/sh/shell.h 253658 2013-07-25 19:48:15Z jilles $
  */
 
 #ifndef SHELL_H_
@@ -63,7 +64,6 @@ typedef intmax_t arith_t;
 #define	ARITH_MAX INTMAX_MAX
 
 typedef void *pointer;
-#define MKINIT  /* empty */
 
 #include <sys/cdefs.h>
 
