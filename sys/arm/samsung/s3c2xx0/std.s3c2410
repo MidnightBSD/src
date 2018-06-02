@@ -1,0 +1,8 @@
+# $FreeBSD: stable/10/sys/arm/samsung/s3c2xx0/std.s3c2410 272103 2014-09-25 11:38:26Z gavin $
+
+files	"../samsung/s3c2xx0/files.s3c2xx0"
+cpu	CPU_ARM9
+machine 	arm
+
+makeoptions	CONF_CFLAGS=-mcpu=arm920t
+options		NO_EVENTTIMERS

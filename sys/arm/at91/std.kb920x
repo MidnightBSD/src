@@ -1,0 +1,9 @@
+#$FreeBSD: stable/10/sys/arm/at91/std.kb920x 266110 2014-05-15 02:41:23Z ian $
+include "../at91/std.at91"
+
+makeoptions	KERNPHYSADDR=0x20000000
+options		KERNPHYSADDR=0x20000000	
+makeoptions	KERNVIRTADDR=0xc0000000
+options		KERNVIRTADDR=0xc0000000
+
+device		at91_board_kb920x

@@ -1,0 +1,7 @@
+#
+# DEFAULTS -- Default kernel configuration file for FreeBSD/arm
+#
+# $FreeBSD: stable/10/sys/arm/conf/DEFAULTS 266277 2014-05-17 00:53:12Z ian $
+
+device		mem
+

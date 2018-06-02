@@ -1,0 +1,9 @@
+# $FreeBSD: stable/10/sys/arm/conf/QILA9G20.hints 236988 2012-06-13 04:40:29Z imp $
+# Kernel configuration hits for Calao Syatems QIL-A9G20 development card
+# http://www.calao-systems.com
+
+# STMicroelctrtronics M41T94 Real-Time Clock
+# on SPI0 NPCS0
+
+# STMicroelctrtronics M95640 8k x 8 EEPROM
+# on SPI0 NPCS1

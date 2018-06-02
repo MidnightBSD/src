@@ -1,0 +1,7 @@
+# $FreeBSD: stable/10/sys/arm/mv/std.mv 239362 2012-08-18 05:48:19Z andrew $
+
+files		"../mv/files.mv"
+cpu		CPU_ARM9E
+machine 	arm
+makeoptions	CONF_CFLAGS="-march=armv5te"
+options		FREEBSD_BOOT_LOADER
