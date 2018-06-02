@@ -30,10 +30,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)stty.1	8.4 (Berkeley) 4/18/94
-.\" $FreeBSD: src/bin/stty/stty.1,v 1.33 2005/02/09 17:37:39 ru Exp $
-.\" $MidnightBSD: src/bin/stty/stty.1,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/stty/stty.1 307422 2016-10-16 23:16:05Z sevan $
+.\" $MidnightBSD$
 .\"
-.Dd August 23, 2008
+.Dd October 5, 2016
 .Dt STTY 1
 .Os
 .Sh NAME
@@ -91,7 +91,6 @@ to restore the current terminal state as per
 The following arguments are available to set the terminal
 characteristics:
 .Ss Control Modes:
-.Pp
 Control mode flags affect hardware characteristics associated with the
 terminal.
 This corresponds to the c_cflag in the termios structure.
@@ -257,7 +256,6 @@ Do not (do) output CRs at column zero.
 On the terminal NL performs (does not perform) the CR function.
 .El
 .Ss Local Modes:
-.Pp
 Local mode flags (lflags) affect various and sundry characteristics of terminal
 processing.
 Historically the term "local" pertained to new job control features
@@ -387,7 +385,7 @@ is disabled (i.e., set to
 Recognized control-characters:
 .Bd -ragged -offset indent
 .Bl -column character Subscript
-.It control-
+.It control- Ta \& Ta \&
 .It character Ta Subscript Ta Description
 .It _________ Ta _________ Ta _______________
 .It eof Ta Tn VEOF Ta EOF No character
@@ -514,7 +512,6 @@ The size of the terminal is printed as two numbers on a single line,
 first rows, then columns.
 .El
 .Ss Compatibility Modes:
-.Pp
 These modes remain for compatibility with the previous version of
 the
 .Nm
@@ -605,3 +602,8 @@ and
 .Fl f
 are
 extensions to the standard.
+.Sh HISTORY
+A
+.Nm
+command appeared in
+.At v2 .
