@@ -1,5 +1,5 @@
-# $FreeBSD: src/share/mk/bsd.obj.mk,v 1.54 2005/04/11 07:13:29 harti Exp $
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/mk/bsd.obj.mk 292240 2015-12-15 01:37:46Z bdrewery $
 #
 # The include file <bsd.obj.mk> handles creating the 'obj' directory
 # and cleaning up object files, etc.
@@ -45,11 +45,14 @@ __<bsd.obj.mk>__:
 
 .if defined(MAKEOBJDIRPREFIX)
 CANONICALOBJDIR:=${MAKEOBJDIRPREFIX}${.CURDIR}
-.elif defined(MAKEOBJDIR) &&${MAKEOBJDIR:M/*} != ""
+.elif defined(MAKEOBJDIR) && ${MAKEOBJDIR:M/*} != ""
 CANONICALOBJDIR:=${MAKEOBJDIR}
+OBJTOP?= ${MAKEOBJDIR}
 .else
 CANONICALOBJDIR:=/usr/obj${.CURDIR}
 .endif
+
+OBJTOP?= ${.OBJDIR:S,${.CURDIR},,}${SRCTOP}
 
 #
 # Warn of unorthodox object directory.
@@ -90,6 +93,16 @@ obj: .PHONY
 		fi; \
 		${ECHO} "${CANONICALOBJDIR} created for ${.CURDIR}"; \
 	fi
+.for dir in ${SRCS:H:O:u}
+	@if ! test -d ${CANONICALOBJDIR}/${dir}/; then \
+		mkdir -p ${CANONICALOBJDIR}/${dir}; \
+		if ! test -d ${CANONICALOBJDIR}/${dir}/; then \
+			${ECHO} "Unable to create ${CANONICALOBJDIR}/${dir}."; \
+			exit 1; \
+		fi; \
+		${ECHO} "${CANONICALOBJDIR}/${dir} created for ${.CURDIR}"; \
+	fi
+.endfor
 .endif
 
 .if !target(objlink)
