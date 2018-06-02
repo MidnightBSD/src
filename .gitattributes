@@ -3348,6 +3348,7 @@ cddl/lib/libzfs_core/libzfs_core_compat.h svneol=native#text/plain
 cddl/lib/libzpool/Makefile -text
 cddl/sbin/Makefile -text
 cddl/sbin/Makefile.inc -text
+cddl/sbin/tests/Makefile svneol=native#text/plain
 cddl/sbin/zfs/Makefile -text
 cddl/sbin/zpool/Makefile -text
 cddl/tests/Makefile svneol=native#text/plain

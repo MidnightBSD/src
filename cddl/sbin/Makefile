@@ -1,13 +1,19 @@
 # $MidnightBSD$
-# $FreeBSD: src/cddl/sbin/Makefile,v 1.2 2007/04/16 21:20:25 ru Exp $
+# $FreeBSD: stable/10/cddl/sbin/Makefile 283853 2015-05-31 23:00:35Z ngie $
 
 .include <bsd.own.mk>
 
-SUBDIR=	${_zfs} ${_zpool}
+SUBDIR=	${_tests} ${_zfs} ${_zpool}
+
+.if ${MK_TESTS} != "no"
+_tests=	tests
+.endif
 
 .if ${MK_ZFS} != "no"
 _zfs=	zfs
 _zpool=	zpool
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
