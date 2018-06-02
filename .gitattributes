@@ -54394,10 +54394,9 @@ share/tabset/xerox1730.uu -text
 share/tabset/zenith29.uu -text
 share/termcap/Makefile -text
 share/termcap/README -text
-share/termcap/reorder -text
 share/termcap/tck -text
+share/termcap/termcap -text
 share/termcap/termcap.5 -text
-share/termcap/termcap.src -text
 share/tests/Makefile svneol=native#text/plain
 share/timedef/Makefile -text
 share/timedef/am_ET.UTF-8.src -text svneol=unset#application/octet-stream
