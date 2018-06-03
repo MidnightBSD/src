@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/pw/psdate.h 326849 2017-12-14 13:10:22Z eugen $
  */
 
 #ifndef _PSDATE_H_
@@ -33,6 +34,7 @@
 #include <sys/cdefs.h>
 
 __BEGIN_DECLS
+int numerics(char const * str);
 time_t parse_date(time_t dt, char const * str);
 void print_date(char *buf, time_t t, int dotime);
 __END_DECLS
