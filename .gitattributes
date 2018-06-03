@@ -53460,7 +53460,6 @@ share/man/man5/stab.5 -text
 share/man/man5/style.Makefile.5 -text
 share/man/man5/sysctl.conf.5 -text
 share/man/man5/tmpfs.5 -text
-share/man/man5/xfs.5 -text
 share/man/man6/Makefile -text
 share/man/man6/intro.6 -text
 share/man/man7/Makefile -text
