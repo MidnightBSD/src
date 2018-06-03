@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2003  - Garance Alistair Drosehn <gad@FreeBSD.org>.
@@ -29,7 +30,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/newsyslog/extern.h 321263 2017-07-20 00:44:01Z ngie $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 
@@ -60,6 +61,8 @@ int		 ptime_free(struct ptime_data *_ptime);
 int		 ptime_relparse(struct ptime_data *_ptime, int _parseopts,
 		    time_t _basetime, const char *_str);
 const char	*ptimeget_ctime(const struct ptime_data *_ptime);
+char		*ptimeget_ctime_rfc5424(const struct ptime_data *_ptime,
+		    char *timebuf, size_t bufsize);
 double		 ptimeget_diff(const struct ptime_data *_minuend,
 		    const struct ptime_data *_subtrahend);
 time_t		 ptimeget_secs(const struct ptime_data *_ptime);

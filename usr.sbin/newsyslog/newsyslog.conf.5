@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" This file was split from the newsyslog(8) manual page by Tom Rhodes
 .\" and includes modifications as appropriate.
 .\" The original header is included below:
@@ -5,7 +6,7 @@
 .\" This file contains changes from the Open Software Foundation.
 .\"
 .\"     from: @(#)newsyslog.8
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/newsyslog/newsyslog.conf.5 321263 2017-07-20 00:44:01Z ngie $
 .\"
 .\" Copyright 1988, 1989 by the Massachusetts Institute of Technology
 .\"
@@ -21,7 +22,7 @@
 .\" the suitability of this software for any purpose.  It is
 .\" provided "as is" without express or implied warranty.
 .\"
-.Dd March 21, 2012
+.Dd May 19, 2017
 .Dt NEWSYSLOG.CONF 5
 .Os
 .Sh NAME
@@ -155,12 +156,17 @@ The particular format of the time in restricted
 .Tn ISO 8601
 is:
 .Sm off
+.Oo Oo Oo Oo Oo
+.Va cc Oc
+.Va yy Oc
+.Va mm Oc
+.Va dd Oc
 .Oo
-.Op Oo Oo Oo Va cc Oc Va yy Oc Va mm Oc Va dd
-.Oo
-.Li T
-.Op Va hh Oo Va mm Oo Va ss Oc Oc Oc
-.Oc .
+.Li T Oo
+.Va hh Oo
+.Va mm Oo
+.Va ss
+.Oc Oc Oc Oc Oc .
 .Sm on
 Optional date fields default to the appropriate component of the
 current date; optional time fields default to midnight; hence if today
@@ -237,7 +243,7 @@ rotate at the first day of every month at midnight
 (i.e., the start of the day; same as
 .Li @01T00 )
 .It Li $M5D6
-rotate on every 5th day of month at 6:00
+rotate on every fifth day of month at 6:00
 (same as
 .Li @05T06 )
 .El
@@ -308,6 +314,11 @@ will run shell command defined in
 .Ar path_to_pid_cmd_file
 after rotation instead of trying to send signal to a process id
 stored in the file.
+.It Cm T
+if this flag is set the informational rotation message written to
+the log file will be in the format specified by RFC5424.
+Normally, the rotation message is written in the traditional (RFC3164)
+syslog format.
 .It Cm U
 indicates that the file specified by
 .Ar path_to_pid_cmd_file
@@ -332,7 +343,7 @@ process ID or to find a group process ID if the
 .Cm U
 flag was specified.
 If this field is present, a
-.Ar signal_number
+.Ar signal
 is sent to the process ID contained in this file.
 If this field is not present and the
 .Cm N
@@ -353,14 +364,23 @@ flag, the file is treated as a path to a binary to be executed
 by the
 .Xr newsyslog 8
 after rotation instead of sending the signal out.
-.It Ar signal_number
-This optional field specifies the signal number that will be sent
-to the daemon process (or to all processes in a process group, if the
+.It Ar signal
+This optional field specifies the signal that will be sent to the daemon
+process (or to all processes in a process group, if the
 .Cm U
 flag was specified).
 If this field is not present, then a
 .Dv SIGHUP
 signal will be sent.
+Signal names
+must start with
+.Dq SIG
+and be the signal name, e.g.,
+.Dv SIGUSR1 .
+Alternatively,
+.Ar signal
+can be the signal number, e.g., 30 for
+.Dv SIGUSR1 .
 .El
 .Sh EXAMPLES
 The following is an example of the
@@ -375,6 +395,17 @@ entry:
 .Xr chown 8 ,
 .Xr newsyslog 8 ,
 .Xr syslogd 8
+.Pp
+.Rs
+.%A C. Lonvick
+.%T The BSD syslog Protocol
+.%O RFC3164
+.Re
+.Rs
+.%A R. Gerhards
+.%T The Syslog Protocol
+.%O RFC5424
+.Re
 .Sh HISTORY
 This manual page first appeared in
 .Fx 4.10 .
