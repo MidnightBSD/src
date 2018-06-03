@@ -73795,6 +73795,13 @@ usr.sbin/tzsetup/tzsetup.c -text
 usr.sbin/uathload/Makefile -text
 usr.sbin/uathload/uathload.8 -text
 usr.sbin/uathload/uathload.c -text
+usr.sbin/uefisign/Makefile svneol=native#text/plain
+usr.sbin/uefisign/child.c svneol=native#text/plain
+usr.sbin/uefisign/magic.h svneol=native#text/plain
+usr.sbin/uefisign/pe.c svneol=native#text/plain
+usr.sbin/uefisign/uefisign.8 svneol=native#text/plain
+usr.sbin/uefisign/uefisign.c svneol=native#text/plain
+usr.sbin/uefisign/uefisign.h svneol=native#text/plain
 usr.sbin/ugidfw/Makefile -text
 usr.sbin/ugidfw/ugidfw.8 -text
 usr.sbin/ugidfw/ugidfw.c -text
