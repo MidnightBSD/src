@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/service/service.sh,v 1.3.4.2 2009/12/30 19:38:57 dougb Exp $
+# $FreeBSD: stable/10/usr.sbin/service/service.sh 294100 2016-01-15 20:59:57Z allanjude $
 
 #  Copyright (c) 2009 Douglas Barton
 #  All rights reserved.
@@ -72,6 +72,9 @@ if [ -n "$RESTART" ]; then
 		if grep -q ^rcvar $file; then
 			eval `grep ^name= $file`
 			eval `grep ^rcvar $file`
+			if [ -n "$rcvar" ]; then
+				load_rc_config_var ${name} ${rcvar}
+			fi
 			checkyesno $rcvar 2>/dev/null && run_rc_script ${file} stop
 		fi
 	done
@@ -101,6 +104,9 @@ if [ -n "$ENABLED" ]; then
 		if grep -q ^rcvar $file; then
 			eval `grep ^name= $file`
 			eval `grep ^rcvar $file`
+			if [ -n "$rcvar" ]; then
+				load_rc_config_var ${name} ${rcvar}
+			fi
 			checkyesno $rcvar 2>/dev/null && echo $file
 		fi
 	done
