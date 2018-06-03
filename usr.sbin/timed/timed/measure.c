@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 static char sccsid[] = "@(#)measure.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/timed/timed/measure.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
 #include "globals.h"
@@ -56,14 +57,12 @@ static n_short seqno = 0;
 /*
  * Measures the differences between machines' clocks using
  * ICMP timestamp messages.
+ * maxmsec	wait this many msec at most
+ * wmsec	msec to wait for an answer
+ * print	print complaints on stderr
  */
 int					/* status val defined in globals.h */
-measure(maxmsec, wmsec, hname, addr, print)
-	u_long maxmsec;			/* wait this many msec at most */
-	u_long wmsec;			/* msec to wait for an answer */
-	char *hname;
-	struct sockaddr_in *addr;
-	int print;			/* print complaints on stderr */
+measure(u_long maxmsec, u_long wmsec, char *hname, struct sockaddr_in *addr, int print)
 {
 	int length;
 	int measure_status;
@@ -128,7 +127,7 @@ measure(maxmsec, wmsec, hname, addr, print)
 
 	FD_ZERO(&ready);
 
-	(void)gettimeofday(&tdone, 0);
+	(void)gettimeofday(&tdone, NULL);
 	mstotvround(&tout, maxmsec);
 	timevaladd(&tdone, &tout);		/* when we give up */
 
@@ -136,7 +135,7 @@ measure(maxmsec, wmsec, hname, addr, print)
 
 	rcvcount = 0;
 	while (rcvcount < MSGS) {
-		(void)gettimeofday(&tcur, 0);
+		(void)gettimeofday(&tcur, NULL);
 
 		/*
 		 * keep sending until we have sent the max
@@ -173,7 +172,7 @@ measure(maxmsec, wmsec, hname, addr, print)
 			FD_SET(sock_raw, &ready);
 			count = select(sock_raw+1, &ready, (fd_set *)0,
 				       (fd_set *)0, &tout);
-			(void)gettimeofday(&tcur, (struct timezone *)0);
+			(void)gettimeofday(&tcur, NULL);
 			if (count <= 0)
 				break;
 
@@ -292,9 +291,7 @@ quit:
  * round a number of milliseconds into a struct timeval
  */
 void
-mstotvround(res, x)
-	struct timeval *res;
-	long x;
+mstotvround(struct timeval *res, long x)
 {
 	if (x < 0)
 		x = -((-x + 3)/5);
@@ -310,8 +307,7 @@ mstotvround(res, x)
 }
 
 void
-timevaladd(tv1, tv2)
-	struct timeval *tv1, *tv2;
+timevaladd(struct timeval *tv1, struct timeval *tv2)
 {
 	tv1->tv_sec += tv2->tv_sec;
 	tv1->tv_usec += tv2->tv_usec;
@@ -326,8 +322,7 @@ timevaladd(tv1, tv2)
 }
 
 void
-timevalsub(res, tv1, tv2)
-	struct timeval *res, *tv1, *tv2;
+timevalsub(struct timeval *res, struct timeval *tv1, struct timeval *tv2)
 {
 	res->tv_sec = tv1->tv_sec - tv2->tv_sec;
 	res->tv_usec = tv1->tv_usec - tv2->tv_usec;

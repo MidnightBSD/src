@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,12 +33,11 @@
 static char sccsid[] = "@(#)readmsg.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/timed/timed/readmsg.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
+#define	TSPTYPES
 #include "globals.h"
-
-extern char *tsptype[];
 
 /*
  * LOOKAT checks if the message is of the requested type and comes from
@@ -70,11 +70,7 @@ struct timeval from_when;
  */
 
 struct tsp *
-readmsg(type, machfrom, intvl, netfrom)
-	int type;
-	char *machfrom;
-	struct timeval *intvl;
-	struct netinfo *netfrom;
+readmsg(int type, char *machfrom, struct timeval *intvl, struct netinfo *netfrom)
 {
 	int length;
 	fd_set ready;
@@ -169,11 +165,11 @@ again:
 	 * right one, return it, otherwise insert it in the linked list.
 	 */
 
-	(void)gettimeofday(&rtout, 0);
+	(void)gettimeofday(&rtout, NULL);
 	timevaladd(&rtout, intvl);
 	FD_ZERO(&ready);
 	for (;;) {
-		(void)gettimeofday(&rtime, 0);
+		(void)gettimeofday(&rtime, NULL);
 		timevalsub(&rwait, &rtout, &rtime);
 		if (rwait.tv_sec < 0)
 			rwait.tv_sec = rwait.tv_usec = 0;
@@ -220,7 +216,7 @@ again:
 			      inet_ntoa(from.sin_addr));
 			continue;
 		}
-		(void)gettimeofday(&from_when, (struct timezone *)0);
+		(void)gettimeofday(&from_when, NULL);
 		bytehostorder(&msgin);
 
 		if (msgin.tsp_vers > TSPVERSION) {
@@ -343,7 +339,7 @@ again:
  * only the type ACK is to be sent by a slave
  */
 void
-slaveack()
+slaveack(void)
 {
 	switch(msgin.tsp_type) {
 
@@ -375,7 +371,7 @@ slaveack()
  * These packets should be acknowledged.
  */
 void
-ignoreack()
+ignoreack(void)
 {
 	switch(msgin.tsp_type) {
 
@@ -403,7 +399,7 @@ ignoreack()
  * to the messages received by a master
  */
 void
-masterack()
+masterack(void)
 {
 	struct tsp resp;
 
@@ -446,9 +442,7 @@ masterack()
  * Print a TSP message
  */
 void
-print(msg, addr)
-	struct tsp *msg;
-	struct sockaddr_in *addr;
+print(struct tsp *msg, struct sockaddr_in *addr)
 {
 	char tm[26];
 	time_t tsp_time_sec;
