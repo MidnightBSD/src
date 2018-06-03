@@ -73350,6 +73350,7 @@ usr.sbin/ppp/fsm.c -text
 usr.sbin/ppp/fsm.h -text
 usr.sbin/ppp/hdlc.c -text
 usr.sbin/ppp/hdlc.h -text
+usr.sbin/ppp/i4b.h svneol=native#text/plain
 usr.sbin/ppp/id.c -text
 usr.sbin/ppp/id.h -text
 usr.sbin/ppp/iface.c -text
@@ -73391,6 +73392,7 @@ usr.sbin/ppp/pap.c -text
 usr.sbin/ppp/pap.h -text
 usr.sbin/ppp/physical.c -text
 usr.sbin/ppp/physical.h -text
+usr.sbin/ppp/ppp.8 svneol=native#text/plain
 usr.sbin/ppp/ppp.8.m4 -text
 usr.sbin/ppp/pred.c -text
 usr.sbin/ppp/pred.h -text
