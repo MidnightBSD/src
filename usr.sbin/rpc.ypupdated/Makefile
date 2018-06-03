@@ -1,9 +1,10 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/rpc.ypupdated/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 .PATH: ${.CURDIR}/../ypserv ${.CURDIR}/../../libexec/ypxfr
 
 PROG=	rpc.ypupdated
-NO_MAN=
+MAN=
 SRCS=	ypupdate_prot_svc.c ypupdate_prot.h ypupdated_main.c \
 	yp_error.c update.c ypupdated_server.c \
 	yp_dblookup.c yp_dbwrite.c yp_dbdelete.c yp_dbupdate.c
