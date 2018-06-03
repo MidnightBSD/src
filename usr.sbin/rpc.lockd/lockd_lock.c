@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: lockd_lock.c,v 1.5 2000/11/21 03:47:41 enami Exp $	*/
 
 /*
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.lockd/lockd_lock.c 302455 2016-07-08 20:50:44Z ngie $");
 
 #define LOCKD_DEBUG
 
@@ -69,7 +70,7 @@ __MBSDID("$MidnightBSD$");
  * A set of utilities for managing file locking
  *
  * XXX: All locks are in a linked list, a better structure should be used
- * to improve search/access effeciency.
+ * to improve search/access efficiency.
  */
 
 /* struct describing a lock */
@@ -98,7 +99,7 @@ struct blockedlocklist_head blockedlocklist_head = LIST_HEAD_INITIALIZER(blocked
 #define LKST_LOCKED	1 /* lock is locked */
 /* XXX: Is this flag file specific or lock specific? */
 #define LKST_WAITING	2 /* file is already locked by another host */
-#define LKST_PROCESSING	3 /* child is trying to aquire the lock */
+#define LKST_PROCESSING	3 /* child is trying to acquire the lock */
 #define LKST_DYING	4 /* must dies when we get news from the child */
 
 /* struct describing a monitored host */
@@ -494,8 +495,6 @@ regions_overlap(start1, len1, start2, len2)
 	} else {
 		return 1;
 	}
-
-	return (result);
 }
 
 /*
@@ -1428,6 +1427,7 @@ lock_partialfilelock(struct file_lock *fl)
 		break;
 	case NFS_RESERR:
 		retval = PFL_NFSRESERR;
+		break;
 	default:
 		debuglog("Unmatched lnlstatus %d\n");
 		retval = PFL_NFSDENIED_NOLOCK;
@@ -1602,6 +1602,7 @@ unlock_partialfilelock(const struct file_lock *fl)
 				 */
 
 				deallocate_file_lock(releasedfl);
+				releasedfl = NULL;
 			}
 		}
 
@@ -1917,7 +1918,7 @@ testlock(struct nlm4_lock *lock, bool_t exclusive, int flags __unused)
 }
 
 /*
- * getlock: try to aquire the lock.
+ * getlock: try to acquire the lock.
  * If file is already locked and we can sleep, put the lock in the list with
  * status LKST_WAITING; it'll be processed later.
  * Otherwise try to lock. If we're allowed to block, fork a child which
@@ -1947,7 +1948,7 @@ getlock(nlm4_lockargs *lckarg, struct svc_req *rqstp, const int flags)
 	}
 
 	if (lckarg->alock.fh.n_len != sizeof(fhandle_t)) {
-		debuglog("recieved fhandle size %d, local size %d",
+		debuglog("received fhandle size %d, local size %d",
 		    lckarg->alock.fh.n_len, (int)sizeof(fhandle_t));
 	}
 

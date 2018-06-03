@@ -1,5 +1,6 @@
-#	$NetBSD: Makefile,v 1.12 2000/08/07 16:23:31 thorpej Exp $
 # $MidnightBSD$
+#	$NetBSD: Makefile,v 1.12 2000/08/07 16:23:31 thorpej Exp $
+# $FreeBSD: stable/10/usr.sbin/rpc.lockd/Makefile 321274 2017-07-20 01:03:50Z ngie $
 
 PROG=	rpc.lockd
 MAN=	rpc.lockd.8
@@ -18,10 +19,10 @@ RPCSRC= ${DESTDIR}/usr/include/rpcsvc/nlm_prot.x
 RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -L -C
 
 nlm_prot_svc.c: ${RPCSRC}
-	${RPCGEN} -m -o ${.TARGET} ${RPCSRC}
+	${RPCGEN} -m -o ${.TARGET} ${.ALLSRC}
 
 nlm_prot.h: ${RPCSRC}
-	${RPCGEN} -h -o ${.TARGET} ${RPCSRC}
+	${RPCGEN} -h -o ${.TARGET} ${.ALLSRC}
 
 test: ${.CURDIR}/test.c
 	cc -o test ${.CURDIR}/test.c -lrpcsvc
