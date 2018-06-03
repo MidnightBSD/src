@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Written by Eivind Eklund <eivind@yes.no>
  *    for Yes Interactive
@@ -16,7 +17,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/physical.c 230349 2012-01-20 01:37:49Z eadler $
  *
  */
 
@@ -585,7 +586,7 @@ iov2physical(struct datalink *dl, struct iovec *iov, int *niov, int maxiov,
              int fd, int *auxfd, int *nauxfd)
 {
   struct physical *p;
-  int len, type;
+  int type;
   unsigned h;
 
   p = (struct physical *)iov[(*niov)++].iov_base;
@@ -598,7 +599,6 @@ iov2physical(struct datalink *dl, struct iovec *iov, int *niov, int maxiov,
   p->desc.Write = physical_DescriptorWrite;
   p->type = PHYS_DIRECT;
   p->dl = dl;
-  len = strlen(_PATH_DEV);
   p->out = NULL;
   p->connect_count = 1;
 

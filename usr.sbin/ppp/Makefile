@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/ppp/Makefile 278569 2015-02-11 08:52:29Z ngie $
 
 .include <bsd.own.mk>
 
@@ -31,11 +32,14 @@ PPP_NO_NETGRAPH=
 .if ${MK_PAM_SUPPORT} == "no"
 PPP_NO_PAM=
 .endif
+.if ${MK_RADIUS_SUPPORT} == "no"
+PPP_NO_RADIUS=
+.endif
 
 .if defined(PPP_NO_SUID)
-BINMODE=550
+BINMODE=554
 .else
-BINMODE=4550
+BINMODE=4554
 BINOWN=	root
 .endif
 BINGRP=	network
@@ -43,13 +47,6 @@ M4FLAGS=
 
 LDADD= -lcrypt -lmd -lutil -lz
 DPADD=	${LIBCRYPT} ${LIBMD} ${LIBUTIL} ${LIBZ}
-
-.SUFFIXES: .8 .8.m4
-
-.8.m4.8:
-	m4 ${M4FLAGS} ${.IMPSRC} >${.TARGET}
-
-CLEANFILES= ppp.8
 
 .if defined(PPP_CONFDIR) && !empty(PPP_CONFDIR)
 CFLAGS+=-DPPP_CONFDIR=\"${PPP_CONFDIR}\"

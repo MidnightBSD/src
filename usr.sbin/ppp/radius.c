@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1999 Internet Business Solutions Ltd., Switzerland
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/radius.c 241844 2012-10-22 03:00:37Z eadler $
  *
  */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/chat.h 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #define CHAT_EXPECT 0
@@ -52,8 +53,8 @@ struct chat {
   char *nargptr;			/* Our next for expect-send-expect */
 
   char buf[LINE_LEN*2];			/* Our input */
-  char *bufstart;			/* start of relevent data */
-  char *bufend;				/* end of relevent data */
+  char *bufstart;			/* start of relevant data */
+  char *bufend;				/* end of relevant data */
 
   int TimeoutSec;			/* Expect timeout value */
   int TimedOut;				/* We timed out */

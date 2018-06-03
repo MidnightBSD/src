@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997        Gabor Kincses <gabor@acm.org>
  *               1997 - 2001 Brian Somers <brian@Awfulhak.org>
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/chap_ms.c 134789 2004-09-05 01:46:52Z brian $
  */
 
 #include <ctype.h>

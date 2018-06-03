@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/command.c 249582 2013-04-17 11:40:10Z gabor $
  */
 
 #include <sys/param.h>
@@ -416,7 +417,7 @@ DialCommand(struct cmdargs const *arg)
 static char *
 strstrword(char *big, const char *little)
 {
-  /* Get the first occurance of the word ``little'' in ``big'' */
+  /* Get the first occurrence of the word ``little'' in ``big'' */
   char *pos;
   int len;
 
@@ -1852,13 +1853,13 @@ SetVariable(struct cmdargs const *arg)
       case PHASE_ESTABLISH:
         /* Make sure none of our links are DATALINK_LCP or greater */
         if (bundle_HighestState(arg->bundle) >= DATALINK_LCP) {
-          log_Printf(LogWARN, "mrru: Only changable before LCP negotiations\n");
+          log_Printf(LogWARN, "mrru: Only changeable before LCP negotiations\n");
           res = 1;
           break;
         }
         break;
       default:
-        log_Printf(LogWARN, "mrru: Only changable at phase DEAD/ESTABLISH\n");
+        log_Printf(LogWARN, "mrru: Only changeable at phase DEAD/ESTABLISH\n");
         res = 1;
         break;
     }
@@ -2944,13 +2945,13 @@ NegotiateSet(struct cmdargs const *arg)
         case PHASE_ESTABLISH:
           /* Make sure none of our links are DATALINK_LCP or greater */
           if (bundle_HighestState(arg->bundle) >= DATALINK_LCP) {
-            log_Printf(LogWARN, "shortseq: Only changable before"
+            log_Printf(LogWARN, "shortseq: Only changeable before"
                        " LCP negotiations\n");
             return 1;
           }
           break;
         default:
-          log_Printf(LogWARN, "shortseq: Only changable at phase"
+          log_Printf(LogWARN, "shortseq: Only changeable at phase"
                      " DEAD/ESTABLISH\n");
           return 1;
       }

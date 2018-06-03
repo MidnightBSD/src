@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/cbcp.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #include <sys/param.h>
@@ -353,7 +354,7 @@ static int
 cbcp_AdjustResponse(struct cbcp *cbcp, struct cbcp_data *data)
 {
   /*
-   * We've received a REQ (data).  Adjust our reponse (cbcp->fsm.*)
+   * We've received a REQ (data).  Adjust our response (cbcp->fsm.*)
    * so that we (hopefully) agree with the peer
    */
   struct cbcp_addr *addr;

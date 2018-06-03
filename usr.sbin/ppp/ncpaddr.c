@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/ncpaddr.c 330805 2018-03-12 17:37:38Z eugen $
  */
 
 #include <sys/types.h>
@@ -75,8 +76,6 @@
 #define ncprange_ip6width	u.ip6.width
 #define ncpaddr_ip6addr		u.ip6addr
 #endif
-
-#define	NCP_ASCIIBUFFERSIZE	52
 
 static struct in_addr
 bits2mask4(int bits)

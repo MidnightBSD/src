@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Written by Eivind Eklund <eivind@yes.no>
  *    for Yes Interactive
@@ -16,7 +17,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/physical.h 202192 2010-01-13 17:54:32Z ed $
  *
  */
 

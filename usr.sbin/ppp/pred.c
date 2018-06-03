@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Brian Somers <brian@Awfulhak.org>
  *                    Ian Donaldson <iand@labtam.labtam.oz.au>
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/pred.c 134789 2004-09-05 01:46:52Z brian $
  */
 
 #include <sys/types.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
  * Van Jacobson (van@helios.ee.lbl.gov), Dec 31, 1989:
  *	- Initial distribution.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/slcompress.c 139979 2005-01-10 11:47:17Z brian $
  */
 
 #include <sys/param.h>

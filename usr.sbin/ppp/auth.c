@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/auth.c 231994 2012-02-22 06:27:20Z kevlo $
  */
 
 #include <sys/param.h>
@@ -126,9 +127,11 @@ auth_CheckPasswd(const char *name, const char *data, const char *key)
     /* Then look up the real password database */
     struct passwd *pw;
     int result;
+    char *cryptpw;
 
+    cryptpw = crypt(key, pw->pw_passwd);
     result = (pw = getpwnam(name)) &&
-             !strcmp(crypt(key, pw->pw_passwd), pw->pw_passwd);
+             (cryptpw == NULL || !strcmp(cryptpw, pw->pw_passwd));
     endpwent();
     return result;
 #else /* !NOPAM */

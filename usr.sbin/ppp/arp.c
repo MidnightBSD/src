@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * sys-bsd.c - System-dependent procedures for setting up
  * PPP interfaces on bsd-4.4-ish systems (including 386BSD, NetBSD, etc.)
@@ -17,7 +18,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ppp/arp.c 246143 2013-01-31 08:55:21Z glebius $
  *
  */
 
@@ -91,7 +92,7 @@
  */
 static struct {
   struct rt_msghdr hdr;
-  struct sockaddr_inarp dst;
+  struct sockaddr_in dst;
   struct sockaddr_dl hwa;
   char extra[128];
 } arpmsg;
@@ -124,10 +125,9 @@ arp_ProxySub(struct bundle *bundle, struct in_addr addr, int add)
   arpmsg.hdr.rtm_seq = ++bundle->routing_seq;
   arpmsg.hdr.rtm_addrs = RTA_DST | RTA_GATEWAY;
   arpmsg.hdr.rtm_inits = RTV_EXPIRE;
-  arpmsg.dst.sin_len = sizeof(struct sockaddr_inarp);
+  arpmsg.dst.sin_len = sizeof(struct sockaddr_in);
   arpmsg.dst.sin_family = AF_INET;
   arpmsg.dst.sin_addr.s_addr = addr.s_addr;
-  arpmsg.dst.sin_other = SIN_PROXY;
 
   arpmsg.hdr.rtm_msglen = (char *) &arpmsg.hwa - (char *) &arpmsg
     + arpmsg.hwa.sdl_len;
