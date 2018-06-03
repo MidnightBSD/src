@@ -1,5 +1,5 @@
-# $MidnightBSD: src/usr.sbin/pnpinfo/Makefile,v 1.2 2009/03/25 16:51:02 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/pnpinfo/Makefile,v 1.11 2005/01/27 14:52:47 delphij Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/pnpinfo/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 .PATH: ${.CURDIR}/../../contrib/pnpinfo
 
@@ -7,6 +7,10 @@ PROG=	pnpinfo
 MAN=	pnpinfo.8
 
 CFLAGS+= -I${.CURDIR}/../../sys
+
+.if ${MACHINE} == "pc98"
+CFLAGS+= -DPC98
+.endif
 
 WARNS?=	2
 
