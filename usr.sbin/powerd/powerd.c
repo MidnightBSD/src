@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/powerd/powerd.c,v 1.21.2.2 2009/01/09 22:10:07 mav Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/powerd/powerd.c 280751 2015-03-27 09:01:25Z mav $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -292,6 +292,12 @@ acline_init(void)
 		acline_mode = ac_sysctl;
 		if (vflag)
 			warnx("using sysctl for AC line status");
+#if __powerpc__
+	} else if (sysctlnametomib(PMUAC, acline_mib, &acline_mib_len) == 0) {
+		acline_mode = ac_sysctl;
+		if (vflag)
+			warnx("using sysctl for AC line status");
+#endif
 #ifdef USE_APM
 	} else if ((apm_fd = open(APMDEV, O_RDONLY)) >= 0) {
 		if (vflag)
