@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: dump.c,v 1.13 2003/10/05 00:09:36 itojun Exp $	*/
 
 /*
@@ -28,11 +29,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/rtsold/dump.c 254462 2013-08-17 19:23:35Z hrs $
  */
 
 #include <sys/types.h>
-#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/queue.h>
 
@@ -51,8 +51,6 @@
 
 static FILE *fp;
 
-extern struct ifinfo *iflist;
-
 static void dump_interface_status(void);
 static const char * const ifstatstr[] = {"IDLE", "DELAY", "PROBE", "DOWN", "TENTATIVE"};
 
@@ -62,10 +60,10 @@ dump_interface_status(void)
 	struct ifinfo *ifi;
 	struct rainfo *rai;
 	struct ra_opt *rao;
-	struct timeval now;
+	struct timespec now;
 	char ntopbuf[INET6_ADDRSTRLEN];
 
-	gettimeofday(&now, NULL);
+	clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 
 	TAILQ_FOREACH(ifi, &ifinfo_head, ifi_next) {
 		fprintf(fp, "Interface %s\n", ifi->ifname);
@@ -87,12 +85,12 @@ dump_interface_status(void)
 		fprintf(fp, "  probes: %d, dadcount = %d\n",
 		    ifi->probes, ifi->dadcount);
 		if (ifi->timer.tv_sec == tm_max.tv_sec &&
-		    ifi->timer.tv_usec == tm_max.tv_usec)
+		    ifi->timer.tv_nsec == tm_max.tv_nsec)
 			fprintf(fp, "  no timer\n");
 		else {
 			fprintf(fp, "  timer: interval=%d:%d, expire=%s\n",
 			    (int)ifi->timer.tv_sec,
-			    (int)ifi->timer.tv_usec,
+			    (int)ifi->timer.tv_nsec / 1000,
 			    (ifi->expire.tv_sec < now.tv_sec) ? "expired"
 			    : sec2str(&ifi->expire));
 		}
@@ -137,7 +135,7 @@ rtsold_dump_file(const char *dumpfile)
 }
 
 const char *
-sec2str(const struct timeval *total)
+sec2str(const struct timespec *total)
 {
 	static char result[256];
 	int days, hours, mins, secs;
@@ -145,14 +143,14 @@ sec2str(const struct timeval *total)
 	char *p = result;
 	char *ep = &result[sizeof(result)];
 	int n;
-	struct timeval now;
+	struct timespec now;
 	time_t tsec;
 
-	gettimeofday(&now, NULL);
+	clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 	tsec  = total->tv_sec;
-	tsec += total->tv_usec / 1000000;
+	tsec += total->tv_nsec / 1000 / 1000000;
 	tsec -= now.tv_sec;
-	tsec -= now.tv_usec / 1000000;
+	tsec -= now.tv_nsec / 1000 / 1000000;
 
 	days = tsec / 3600 / 24;
 	hours = (tsec / 3600) % 24;

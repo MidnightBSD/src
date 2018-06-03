@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: if.c,v 1.27 2003/10/05 00:09:36 itojun Exp $	*/
 
 /*
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/rtsold/if.c 300283 2016-05-20 07:08:19Z truckman $
  */
 
 #include <sys/param.h>
@@ -61,7 +62,6 @@
 #include <ifaddrs.h>
 #include "rtsold.h"
 
-extern int rssock;
 static int ifsock;
 
 static int get_llflag(const char *);
@@ -84,7 +84,7 @@ interface_up(char *name)
 	int s;
 
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	memset(&nd, 0, sizeof(nd));
 	strlcpy(nd.ifname, name, sizeof(nd.ifname));
 
@@ -182,7 +182,7 @@ interface_status(struct ifinfo *ifinfo)
 
 	/* get interface flags */
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(ifsock, SIOCGIFFLAGS, &ifr) < 0) {
 		warnmsg(LOG_ERR, __func__, "ioctl(SIOCGIFFLAGS) on %s: %s",
 		    ifname, strerror(errno));
@@ -198,7 +198,7 @@ interface_status(struct ifinfo *ifinfo)
 	if (!ifinfo->mediareqok)
 		goto active;
 	memset(&ifmr, 0, sizeof(ifmr));
-	strncpy(ifmr.ifm_name, ifname, sizeof(ifmr.ifm_name));
+	strlcpy(ifmr.ifm_name, ifname, sizeof(ifmr.ifm_name));
 
 	if (ioctl(ifsock, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
 		if (errno != EINVAL) {
@@ -304,13 +304,13 @@ if_nametosdl(char *name)
 
 	lim = buf + len;
 	for (next = buf; next < lim; next += ifm->ifm_msglen) {
-		ifm = (struct if_msghdr *)next;
+		ifm = (struct if_msghdr *)(void *)next;
 		if (ifm->ifm_type == RTM_IFINFO) {
 			sa = (struct sockaddr *)(ifm + 1);
 			get_rtaddrs(ifm->ifm_addrs, sa, rti_info);
 			if ((sa = rti_info[RTAX_IFP]) != NULL) {
 				if (sa->sa_family == AF_LINK) {
-					sdl = (struct sockaddr_dl *)sa;
+					sdl = (struct sockaddr_dl *)(void *)sa;
 					if (strlen(name) != sdl->sdl_nlen)
 						continue; /* not same len */
 					if (strncmp(&sdl->sdl_data[0],
@@ -397,12 +397,12 @@ get_llflag(const char *name)
 			continue;
 		if (ifa->ifa_addr->sa_family != AF_INET6)
 			continue;
-		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		sin6 = (struct sockaddr_in6 *)(void *)ifa->ifa_addr;
 		if (!IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr))
 			continue;
 
 		memset(&ifr6, 0, sizeof(ifr6));
-		strncpy(ifr6.ifr_name, name, sizeof(ifr6.ifr_name));
+		strlcpy(ifr6.ifr_name, name, sizeof(ifr6.ifr_name));
 		memcpy(&ifr6.ifr_ifru.ifru_addr, sin6, sin6->sin6_len);
 		if (ioctl(s, SIOCGIFAFLAG_IN6, &ifr6) < 0) {
 			warnmsg(LOG_ERR, __func__,
