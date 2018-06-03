@@ -1,7 +1,15 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $MidnightBSD: src/share/man/man1/Makefile,v 1.3 2008/11/11 23:01:41 laffer1 Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
 
 MAN=	builtin.1 intro.1
+
+.if ${MK_TESTS} != "no"
+ATF=	${.CURDIR}/../../../contrib/atf
+.PATH:	${ATF}/doc
+MAN+=	atf-test-program.1
+.endif
 
 # Create MLINKS for Shell built in commands for which there are no userland
 # utilities of the same name:
