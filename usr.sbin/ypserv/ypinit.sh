@@ -1,5 +1,6 @@
 #!/bin/sh
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/ypserv/ypinit.sh 293290 2016-01-07 00:40:51Z bdrewery $
 #
 # ypinit.sh - setup a master or slave server.
 # (Taken from OpenBSD and modified for FreeBSD.)
@@ -14,8 +15,9 @@ MAPLIST="master.passwd.byname master.passwd.byuid passwd.byname passwd.byuid \
 	 group.byname group.bygid hosts.byname hosts.byaddr services.byname \
 	 rpc.byname rpc.bynumber networks.byname networks.byaddr netgroup \
 	 netgroup.byuser netgroup.byhost netid.byname publickey.byname \
-	 bootparams ethers.byname ethers.byaddr amd.host mail.aliases \
-	 ypservers protocols.byname protocols.bynumber netmasks.byaddr"
+	 bootparams ethers.byname ethers.byaddr eui64.byname eui64.byid \
+	 amd.host mail.aliases ypservers protocols.byname protocols.bynumber \
+	 netmasks.byaddr"
 
 ERROR_EXISTS="NO"
 umask 077
@@ -234,7 +236,7 @@ then
 
 	for MAP in ${YPMAPLIST}
 	do
-		echo "Transfering ${MAP}..."
+		echo "Transferring ${MAP}..."
 		if ! ${YPXFR} -p ${YP_DIR} -h ${MASTER} -c -d ${DOMAIN} ${MAP}; then
 			echo "Can't transfer map ${MAP}." 1>&2
 			ERROR_EXISTS="YES"

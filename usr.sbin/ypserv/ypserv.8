@@ -29,6 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/ypserv/ypserv.8 233455 2012-03-25 09:18:34Z joel $
 .\"
 .Dd December 13, 2009
 .Dt YPSERV 8
@@ -220,7 +221,6 @@ clients to perform user
 authentication through
 .Tn NIS .
 .El
-.Pp
 .Ss Security
 In general, any remote user can issue an RPC to
 .Nm
@@ -292,7 +292,6 @@ security, they, like the privileged port test, are both vulnerable
 to
 .Dq IP spoofing
 attacks.
-.Pp
 .Ss NIS v1 compatibility
 This version of
 .Nm

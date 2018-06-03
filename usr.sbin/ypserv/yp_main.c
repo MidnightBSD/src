@@ -292,7 +292,7 @@ create_service(const int sock, const struct netconfig *nconf,
 
 				s = __rpc_nconf2fd(nconf);
 				if (s < 0) {
-					if (errno == EPROTONOSUPPORT)
+					if (errno == EAFNOSUPPORT)
 						_msgout("unsupported"
 						    " transport: %s",
 						    nconf->nc_netid);
@@ -329,9 +329,8 @@ create_service(const int sock, const struct netconfig *nconf,
 					return -1;
 				}
 				memset(slep, 0, sizeof(*slep));
-				memcpy(&slep->sle_ss,
-				    (struct sockaddr *)(res->ai_addr),
-				    sizeof(res->ai_addr));
+				memcpy(&slep->sle_ss, res->ai_addr,
+				    res->ai_addrlen);
 				slep->sle_sock = s;
 				SLIST_INSERT_HEAD(&sle_head, slep, sle_next);
 
