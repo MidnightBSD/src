@@ -73551,6 +73551,8 @@ usr.sbin/rpcbind/rpcbind.8 -text
 usr.sbin/rpcbind/rpcbind.c -text
 usr.sbin/rpcbind/rpcbind.h -text
 usr.sbin/rpcbind/security.c -text
+usr.sbin/rpcbind/tests/Makefile svneol=native#text/plain
+usr.sbin/rpcbind/tests/addrmerge_test.c svneol=native#text/plain
 usr.sbin/rpcbind/util.c -text
 usr.sbin/rpcbind/warmstart.c -text
 usr.sbin/rrenumd/Makefile -text

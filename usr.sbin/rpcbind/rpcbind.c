@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rpcbind.c,v 1.3 2002/11/08 00:16:40 fvdl Exp $	*/
-/*	$MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.sbin/rpcbind/rpcbind.c 332348 2018-04-10 03:15:07Z delphij $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -86,17 +87,17 @@ rpcblist_ptr list_rbl;	/* A list of version 3/4 rpcbind services */
 
 #define RPCBINDDLOCK "/var/run/rpcbind.lock"
 
-int runasdaemon = 0;
+static int runasdaemon = 0;
 int insecure = 0;
 int oldstyle_local = 0;
 int verboselog = 0;
 
-char **hosts = NULL;
-struct sockaddr **bound_sa;
-int ipv6_only = 0;
-int nhosts = 0;
-int on = 1;
-int rpcbindlockfd;
+static char **hosts = NULL;
+static struct sockaddr **bound_sa;
+static int ipv6_only = 0;
+static int nhosts = 0;
+static int on = 1;
+static int rpcbindlockfd;
 
 #ifdef WARMSTART
 /* Local Variable */
@@ -289,7 +290,7 @@ init_transport(struct netconfig *nconf)
 	     */
 	    if ((fd = __rpc_nconf2fd(nconf)) < 0) {
 		int non_fatal = 0;
-		if (errno == EPROTONOSUPPORT)
+		if (errno == EAFNOSUPPORT)
 		    non_fatal = 1;
 		syslog(non_fatal?LOG_DEBUG:LOG_ERR, "cannot create socket for %s",
 		    nconf->nc_netid);
@@ -352,7 +353,7 @@ init_transport(struct netconfig *nconf)
 		 */
 		if ((fd = __rpc_nconf2fd(nconf)) < 0) {
 		    int non_fatal = 0;
-		    if (errno == EPROTONOSUPPORT &&
+		    if (errno == EAFNOSUPPORT &&
 			nconf->nc_semantics != NC_TPI_CLTS) 
 			non_fatal = 1;
 		    syslog(non_fatal ? LOG_DEBUG : LOG_ERR, 
@@ -366,7 +367,7 @@ init_transport(struct netconfig *nconf)
 			hints.ai_flags &= AI_NUMERICHOST;
 		    } else {
 			/*
-			 * Skip if we have an AF_INET6 adress.
+			 * Skip if we have an AF_INET6 address.
 			 */
 			if (inet_pton(AF_INET6,
 			    hosts[nhostsbak], host_addr) == 1) {
@@ -381,7 +382,7 @@ init_transport(struct netconfig *nconf)
 			hints.ai_flags &= AI_NUMERICHOST;
 		    } else {
 			/*
-			 * Skip if we have an AF_INET adress.
+			 * Skip if we have an AF_INET address.
 			 */
 			if (inet_pton(AF_INET, hosts[nhostsbak],
 			    host_addr) == 1) {
@@ -548,6 +549,8 @@ init_transport(struct netconfig *nconf)
 		pml->pml_map.pm_port = PMAPPORT;
 		if (strcmp(nconf->nc_proto, NC_TCP) == 0) {
 			if (tcptrans[0]) {
+				free(pml);
+				pml = NULL;
 				syslog(LOG_ERR,
 				"cannot have more than one TCP transport");
 				goto error;
@@ -755,12 +758,13 @@ rbllist_add(rpcprog_t prog, rpcvers_t vers, struct netconfig *nconf,
  * Catch the signal and die
  */
 static void
-terminate(int dummy __unused)
+terminate(int signum __unused)
 {
 	close(rpcbindlockfd);
 #ifdef WARMSTART
 	syslog(LOG_ERR,
-		"rpcbind terminating on signal. Restart with \"rpcbind -w\"");
+	    "rpcbind terminating on signal %d. Restart with \"rpcbind -w\"",
+	    signum);
 	write_warmstart();	/* Dump yourself */
 #endif
 	exit(2);

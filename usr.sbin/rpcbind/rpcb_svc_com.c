@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rpcb_svc_com.c,v 1.9 2002/11/08 00:16:39 fvdl Exp $	*/
-/*	$MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.sbin/rpcbind/rpcb_svc_com.c 319615 2017-06-06 07:22:26Z delphij $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -56,6 +57,7 @@
 #include <stdio.h>
 #ifdef PORTMAP
 #include <netinet/in.h>
+#include <rpc/rpc_com.h>
 #include <rpc/pmap_prot.h>
 #endif /* PORTMAP */
 #include <string.h>
@@ -419,7 +421,8 @@ rpcbproc_taddr2uaddr_com(void *arg, struct svc_req *rqstp __unused,
 static bool_t
 xdr_encap_parms(XDR *xdrs, struct encap_parms *epp)
 {
-	return (xdr_bytes(xdrs, &(epp->args), (u_int *) &(epp->arglen), ~0));
+	return (xdr_bytes(xdrs, &(epp->args), (u_int *) &(epp->arglen),
+	    RPC_MAXDATASIZE));
 }
 
 /*
@@ -430,9 +433,9 @@ static bool_t
 xdr_rmtcall_args(XDR *xdrs, struct r_rmtcall_args *cap)
 {
 	/* does not get the address or the arguments */
-	if (xdr_u_int32_t(xdrs, &(cap->rmt_prog)) &&
-	    xdr_u_int32_t(xdrs, &(cap->rmt_vers)) &&
-	    xdr_u_int32_t(xdrs, &(cap->rmt_proc))) {
+	if (xdr_rpcprog(xdrs, &(cap->rmt_prog)) &&
+	    xdr_rpcvers(xdrs, &(cap->rmt_vers)) &&
+	    xdr_rpcproc(xdrs, &(cap->rmt_proc))) {
 		return (xdr_encap_parms(xdrs, &(cap->rmt_args)));
 	}
 	return (FALSE);

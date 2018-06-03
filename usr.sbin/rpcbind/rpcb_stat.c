@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*
  * $NetBSD: rpcb_stat.c,v 1.2 2000/07/04 20:27:40 matt Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/rpcbind/rpcb_stat.c 302453 2016-07-08 20:39:37Z ngie $
  */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -152,7 +153,7 @@ rpcbs_rmtcall(rpcvers_t rtype, rpcproc_t rpcbproc, rpcprog_t prog,
 	rpcbs_rmtcalllist *rl;
 	struct netconfig *nconf;
 
-	if (rtype > RPCBVERS_STAT)
+	if (rtype >= RPCBVERS_STAT)
 		return;
 	for (rl = inf[rtype].rmtinfo; rl; rl = rl->next) {
 

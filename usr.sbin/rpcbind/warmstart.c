@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -35,7 +36,7 @@
 
 /*
  * #ident	"@(#)warmstart.c	1.7	93/07/05 SMI"
- * $MidnightBSD$/
+ * $FreeBSD: stable/10/usr.sbin/rpcbind/warmstart.c 224001 2011-07-14 07:28:49Z delphij $/
  */
 #include <sys/types.h>
 #include <sys/stat.h>
