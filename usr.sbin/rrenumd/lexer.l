@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: lexer.l,v 1.7 2000/11/08 02:40:53 itojun Exp $	*/
 
 /*
@@ -28,12 +29,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/rrenumd/lexer.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 %{
-#define YY_NO_UNPUT
-
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -42,9 +41,7 @@
 #include <string.h>
 
 #include <net/if.h>
-#if defined(__FreeBSD__) && __FreeBSD__ >= 3
 #include <net/if_var.h>
-#endif /* __FreeBSD__ >= 3 */
 
 #include <netinet/in.h>
 #include <netinet/in_var.h>
@@ -63,6 +60,8 @@ int parse(FILE **);
 void yyerror(const char *);
 int yylex(void);
 %}
+
+%option nounput
 
 /* common section */
 nl		\n
