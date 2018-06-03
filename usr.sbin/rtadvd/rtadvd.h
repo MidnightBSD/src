@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.sbin/rtadvd/rtadvd.h 253970 2013-08-05 20:13:02Z hrs $	*/
 /*	$KAME: rtadvd.h,v 1.26 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -270,7 +271,7 @@ struct	ifinfo {
 	uint32_t	ifi_burstinterval;
 	struct rtadvd_timer	*ifi_ra_timer;
 	/* timestamp when the latest RA was sent */
-	struct timeval		ifi_ra_lastsent;
+	struct timespec		ifi_ra_lastsent;
 	uint16_t	ifi_rs_waitcount;
 
 	/* statistics */
@@ -286,7 +287,7 @@ extern TAILQ_HEAD(ifilist_head_t, ifinfo) ifilist;
 extern char *mcastif;
 
 struct rtadvd_timer	*ra_timeout(void *);
-void			ra_timer_update(void *, struct timeval *);
+void			ra_timer_update(void *, struct timespec *);
 void			ra_output(struct ifinfo *);
 
 int			prefix_match(struct in6_addr *, int,

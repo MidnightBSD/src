@@ -1,4 +1,5 @@
-/*	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.sbin/rtadvd/config.c 301809 2016-06-10 18:21:05Z ngie $	*/
 /*	$KAME: config.c,v 1.84 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -34,7 +35,6 @@
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
@@ -58,6 +58,7 @@
 #include <string.h>
 #include <search.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 #include <ifaddrs.h>
 
@@ -216,7 +217,7 @@ rm_ifinfo(struct ifinfo *ifi)
 		    "<%s> ifname=%s marked as UNCONFIGURED.",
 		    __func__, ifi->ifi_ifname);
 
-		/* XXX: No MC leaving here becasue index is disappeared */
+		/* XXX: No MC leaving here because index is disappeared */
 
 		/* Inactivate timer */
 		rtadvd_remove_timer(ifi->ifi_ra_timer);
@@ -229,7 +230,6 @@ rm_ifinfo(struct ifinfo *ifi)
 		TAILQ_REMOVE(&ifilist, ifi, ifi_next);
 		syslog(LOG_DEBUG, "<%s>: ifinfo (idx=%d) removed.",
 		    __func__, ifi->ifi_ifindex);
-		free(ifi);
 	} else {
 		/* recreate an empty entry */
 		update_persist_ifinfo(&ifilist, ifi->ifi_ifname);
@@ -273,6 +273,8 @@ rm_ifinfo(struct ifinfo *ifi)
 	}
 
 	syslog(LOG_DEBUG, "<%s> leave (%s).", __func__, ifi->ifi_ifname);
+	if (!ifi->ifi_persist)
+		free(ifi);
 	return (0);
 }
 
@@ -296,10 +298,8 @@ rm_rainfo(struct rainfo *rai)
 	if (rai->rai_ra_data != NULL)
 		free(rai->rai_ra_data);
 
-	while ((pfx = TAILQ_FIRST(&rai->rai_prefix)) != NULL) {
-		TAILQ_REMOVE(&rai->rai_prefix, pfx, pfx_next);
-		free(pfx);
-	}
+	while ((pfx = TAILQ_FIRST(&rai->rai_prefix)) != NULL)
+		delete_prefix(pfx);
 	while ((sol = TAILQ_FIRST(&rai->rai_soliciter)) != NULL) {
 		TAILQ_REMOVE(&rai->rai_soliciter, sol, sol_next);
 		free(sol);
@@ -563,8 +563,9 @@ getconfig(struct ifinfo *ifi)
 
 		makeentry(entbuf, sizeof(entbuf), i, "vltimedecr");
 		if (agetflag(entbuf)) {
-			struct timeval now;
-			gettimeofday(&now, 0);
+			struct timespec now;
+
+			clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 			pfx->pfx_vltimeexpire =
 				now.tv_sec + pfx->pfx_validlifetime;
 		}
@@ -583,8 +584,9 @@ getconfig(struct ifinfo *ifi)
 
 		makeentry(entbuf, sizeof(entbuf), i, "pltimedecr");
 		if (agetflag(entbuf)) {
-			struct timeval now;
-			gettimeofday(&now, 0);
+			struct timespec now;
+
+			clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 			pfx->pfx_pltimeexpire =
 			    now.tv_sec + pfx->pfx_preflifetime;
 		}
@@ -634,7 +636,7 @@ getconfig_free_pfx:
 			exit(1);
 		}
 		memset(&ndi, 0, sizeof(ndi));
-		strncpy(ndi.ifname, ifi->ifi_ifname, sizeof(ndi.ifname));
+		strlcpy(ndi.ifname, ifi->ifi_ifname, sizeof(ndi.ifname));
 		if (ioctl(s, SIOCGIFINFO_IN6, (caddr_t)&ndi) < 0)
 			syslog(LOG_INFO, "<%s> ioctl:SIOCGIFINFO_IN6 at %s: %s",
 			    __func__, ifi->ifi_ifname, strerror(errno));
@@ -1123,9 +1125,9 @@ add_prefix(struct rainfo *rai, struct in6_prefixreq *ipr)
 	pfx->pfx_onlinkflg = ipr->ipr_raf_onlink;
 	pfx->pfx_autoconfflg = ipr->ipr_raf_auto;
 	pfx->pfx_origin = PREFIX_FROM_DYNAMIC;
+	pfx->pfx_rainfo = rai;
 
 	TAILQ_INSERT_TAIL(&rai->rai_prefix, pfx, pfx_next);
-	pfx->pfx_rainfo = rai;
 
 	syslog(LOG_DEBUG, "<%s> new prefix %s/%d was added on %s",
 	    __func__,
@@ -1164,7 +1166,7 @@ delete_prefix(struct prefix *pfx)
 void
 invalidate_prefix(struct prefix *pfx)
 {
-	struct timeval timo;
+	struct timespec timo;
 	struct rainfo *rai;
 	struct ifinfo *ifi;
 	char ntopbuf[INET6_ADDRSTRLEN];
@@ -1191,7 +1193,7 @@ invalidate_prefix(struct prefix *pfx)
 		delete_prefix(pfx);
 	}
 	timo.tv_sec = prefix_timo;
-	timo.tv_usec = 0;
+	timo.tv_nsec = 0;
 	rtadvd_set_timer(&timo, pfx->pfx_timer);
 }
 
@@ -1286,7 +1288,7 @@ make_prefix(struct rainfo *rai, int ifindex, struct in6_addr *addr, int plen)
 
 	memset(&ipr, 0, sizeof(ipr));
 	if (if_indextoname(ifindex, ipr.ipr_name) == NULL) {
-		syslog(LOG_ERR, "<%s> Prefix added interface No.%d doesn't"
+		syslog(LOG_ERR, "<%s> Prefix added interface No.%d doesn't "
 		    "exist. This should not happen! %s", __func__,
 		    ifindex, strerror(errno));
 		exit(1);
@@ -1415,7 +1417,7 @@ make_packet(struct rainfo *rai)
 
 	TAILQ_FOREACH(pfx, &rai->rai_prefix, pfx_next) {
 		uint32_t vltime, pltime;
-		struct timeval now;
+		struct timespec now;
 
 		ndopt_pi = (struct nd_opt_prefix_info *)buf;
 		ndopt_pi->nd_opt_pi_type = ND_OPT_PREFIX_INFORMATION;
@@ -1432,7 +1434,7 @@ make_packet(struct rainfo *rai)
 			vltime = 0;
 		else {
 			if (pfx->pfx_vltimeexpire || pfx->pfx_pltimeexpire)
-				gettimeofday(&now, NULL);
+				clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 			if (pfx->pfx_vltimeexpire == 0)
 				vltime = pfx->pfx_validlifetime;
 			else
