@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/colldef/Makefile 291794 2015-12-04 18:21:05Z bdrewery $
 
 LOCALES=	bg_BG.CP1251 \
 		be_BY.CP1131 \
@@ -42,7 +43,7 @@ LOCALES=	bg_BG.CP1251 \
 		uk_UA.ISO8859-5 \
 		uk_UA.KOI8-U
 
-LOCALEDIR=	/usr/share/locale
+LOCALEDIR=	${SHAREDIR}/locale
 
 .SUFFIXES: .src .out
 
