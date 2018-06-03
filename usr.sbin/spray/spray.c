@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.
@@ -30,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/spray/spray.c,v 1.10 2002/07/15 18:53:52 alfred Exp $";
+  "$FreeBSD: stable/10/usr.sbin/spray/spray.c 227261 2011-11-06 19:02:49Z ed $";
 #endif /* not lint */
 
 #include <err.h>
@@ -49,12 +50,12 @@ static void usage(void);
 static void print_xferstats(unsigned int, int, double);
 
 /* spray buffer */
-char spray_buffer[SPRAYMAX];
+static char spray_buffer[SPRAYMAX];
 
 /* RPC timeouts */
-struct timeval NO_DEFAULT = { -1, -1 };
-struct timeval ONE_WAY = { 0, 0 };
-struct timeval TIMEOUT = { 25, 0 };
+static struct timeval NO_DEFAULT = { -1, -1 };
+static struct timeval ONE_WAY = { 0, 0 };
+static struct timeval TIMEOUT = { 25, 0 };
 
 int
 main(int argc, char *argv[])
