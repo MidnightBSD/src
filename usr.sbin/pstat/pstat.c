@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -46,7 +47,7 @@ static char sccsid[] = "@(#)pstat.c	8.16 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/pstat/pstat.c 311753 2017-01-09 05:58:48Z delphij $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -174,8 +175,6 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
-	argc -= optind;
-	argv += optind;
 
 	/*
 	 * Initialize symbol names list.
@@ -339,13 +338,13 @@ static void
 ttyprt(struct xtty *xt)
 {
 	int i, j;
-	char *name;
+	const char *name;
 
 	if (xt->xt_size != sizeof *xt)
 		errx(1, "struct xtty size mismatch");
 	if (usenumflag || xt->xt_dev == 0 ||
 	   (name = devname(xt->xt_dev, S_IFCHR)) == NULL)
-		printf("%5d,%4d ", major(xt->xt_dev), minor(xt->xt_dev));
+		printf("%#10jx ", (uintmax_t)xt->xt_dev);
 	else
 		printf("%10s ", name);
 	printf("%5zu %4zu %4zu %4zu %5zu %4zu %4zu %5u %5d %5d ",
