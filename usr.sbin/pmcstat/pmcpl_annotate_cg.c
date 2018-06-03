@@ -2,6 +2,7 @@
 /*-
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
+ * Copyright (c) 2014, Adrian Chadd, Netflix Inc.
  * All rights reserved.
  *
  * Portions of this software were developed by A. Joseph Koshy under
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate.c 203790 2010-02-11 22:51:44Z fabient $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate_cg.c 265604 2014-05-07 20:20:52Z scottl $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -70,43 +71,58 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate.c 203790 2010-02-1
 
 #include "pmcstat.h"
 #include "pmcstat_log.h"
-#include "pmcpl_annotate.h"
+#include "pmcpl_annotate_cg.h"
 
 /*
  * Record a callchain.
  */
 
 void
-pmcpl_annotate_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
+pmcpl_annotate_cg_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
     uint32_t nsamples, uintfptr_t *cc, int usermode, uint32_t cpu)
 {
 	struct pmcstat_pcmap *map;
 	struct pmcstat_symbol *sym;
 	uintfptr_t newpc;
 	struct pmcstat_image *image;
+	int i;
+	char filename[PATH_MAX], funcname[PATH_MAX];
+	unsigned sline;
 
 	(void) pmcr; (void) nsamples; (void) usermode; (void) cpu;
 
-	map = pmcstat_process_find_map(usermode ? pp : pmcstat_kernproc, cc[0]);
-	if (map == NULL) {
-		/* Unknown offset. */
-		pmcstat_stats.ps_samples_unknown_offset++;
-		return;
+	for (i = 0; i < (int) nsamples; i++) {
+		map = NULL;
+		sym = NULL;
+		image = NULL;
+		filename[0] = '\0';
+		funcname[0] = '\0';
+		sline = 0;
+
+		map = pmcstat_process_find_map(usermode ? pp : pmcstat_kernproc, cc[i]);
+		if (map != NULL) {
+			assert(cc[i] >= map->ppm_lowpc && cc[i] < map->ppm_highpc);
+			image = map->ppm_image;
+			newpc = cc[i] - (map->ppm_lowpc +
+				(image->pi_vaddr - image->pi_start));
+			sym = pmcstat_symbol_search(image, newpc);
+		}
+
+		if (map != NULL && image != NULL && sym != NULL) {
+			(void) pmcstat_image_addr2line(image, cc[i],
+			    filename, sizeof(filename), &sline, funcname, sizeof(funcname));
+		}
+
+		if (map != NULL && sym != NULL) {
+			fprintf(args.pa_graphfile, "%p %s %s:%d\n",
+			    (void *)cc[i],
+			    funcname,
+			    filename,
+			    sline);
+		} else {
+			fprintf(args.pa_graphfile, "%p <unknown> ??:0\n",
+			    (void *) cc[i]);
+		}
 	}
-
-	assert(cc[0] >= map->ppm_lowpc && cc[0] < map->ppm_highpc);
-
-	image = map->ppm_image;
-	newpc = cc[0] - (map->ppm_lowpc +
-		(image->pi_vaddr - image->pi_start));
-	sym = pmcstat_symbol_search(image, newpc);
-	if (sym == NULL)
-		return;
-
-	fprintf(args.pa_graphfile, "%p %s 0x%jx 0x%jx\n",
-		(void *)cc[0],
-		pmcstat_string_unintern(sym->ps_name),
-		(uintmax_t)(sym->ps_start +
-		image->pi_vaddr), (uintmax_t)(sym->ps_end +
-		image->pi_vaddr));
+	fprintf(args.pa_graphfile, "--\n");
 }

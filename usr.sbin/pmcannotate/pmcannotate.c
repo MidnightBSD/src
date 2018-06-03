@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Nokia Corporation
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcannotate/pmcannotate.c 266889 2014-05-30 15:00:50Z gnn $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -41,8 +42,8 @@ __MBSDID("$MidnightBSD$");
 
 #include <unistd.h>
 
-#define	FNBUFF	161
-#define	LNBUFF	161
+#define	FNBUFF	512
+#define	LNBUFF	512
 
 #define	TMPPATH	"/tmp/pmcannotate.XXXXXX"
 
@@ -118,8 +119,6 @@ isasminline(const char *str)
 	void *ptr;
 	int nbytes;
 
-	if (isxdigit(str[1]) == 0)
-		return (0);
 	if (sscanf(str, " %p%n", &ptr, &nbytes) != 1)
 		return (0);
 	if (str[nbytes] != ':' || isspace(str[nbytes + 1]) == 0)

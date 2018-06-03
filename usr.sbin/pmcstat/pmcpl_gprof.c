@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_gprof.c 322399 2017-08-11 11:38:04Z kib $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -73,6 +74,14 @@ __MBSDID("$MidnightBSD$");
 #include "pmcstat_log.h"
 #include "pmcpl_callgraph.h"
 #include "pmcpl_gprof.h"
+
+typedef	uint64_t	WIDEHISTCOUNTER;
+
+#define	WIDEHISTCOUNTER_MAX		UINT64_MAX
+#define	HISTCOUNTER_MAX			USHRT_MAX
+#define	WIDEHISTCOUNTER_GMONTYPE	((int) 64)
+#define	HISTCOUNTER_GMONTYPE		((int) 0)
+static int hc_sz=0;
 
 /*
  * struct pmcstat_gmonfile tracks a given 'gmon.out' file.  These
@@ -126,11 +135,13 @@ pmcstat_gmon_create_file(struct pmcstat_gmonfile *pgf,
 
 	gm.lpc = image->pi_start;
 	gm.hpc = image->pi_end;
-	gm.ncnt = (pgf->pgf_nbuckets * sizeof(HISTCOUNTER)) +
-	    sizeof(struct gmonhdr);
+	gm.ncnt = (pgf->pgf_nbuckets * hc_sz) + sizeof(struct gmonhdr);
 	gm.version = GMONVERSION;
 	gm.profrate = 0;		/* use ticks */
-	gm.histcounter_type = 0;	/* compatibility with moncontrol() */
+	if (args.pa_flags & FLAG_DO_WIDE_GPROF_HC)
+		gm.histcounter_type = WIDEHISTCOUNTER_GMONTYPE;
+	else
+		gm.histcounter_type = HISTCOUNTER_GMONTYPE;
 	gm.spare[0] = gm.spare[1] = 0;
 
 	/* Write out the gmon header */
@@ -326,7 +337,7 @@ pmcpl_gmon_initimage(struct pmcstat_image *pi)
 	else {
 		/*
 		 * Otherwise use a prefix from the original name and
-		 * upto 3 digits.
+		 * up to 3 digits.
 		 */
 		nlen = strlen(sn);
 		nlen = min(nlen, (int) (sizeof(name)-sizeof("~NNN.gmon")));
@@ -400,6 +411,7 @@ pmcpl_gmon_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
 	struct pmcstat_gmonfile *pgf;
 	uintfptr_t bucket;
 	HISTCOUNTER *hc;
+	WIDEHISTCOUNTER *whc;
 	pmc_id_t pmcid;
 
 	(void) nsamples; (void) usermode; (void) cpu;
@@ -437,6 +449,14 @@ pmcpl_gmon_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
 	 */
 	pgf = pmcstat_image_find_gmonfile(image, pmcid);
 	if (pgf == NULL) {
+		if (hc_sz == 0) {
+			/* Determine the correct histcounter size. */
+			if (args.pa_flags & FLAG_DO_WIDE_GPROF_HC)
+				hc_sz = sizeof(WIDEHISTCOUNTER);
+			else
+				hc_sz = sizeof(HISTCOUNTER);
+		}
+
 		if ((pgf = calloc(1, sizeof(*pgf))) == NULL)
 			err(EX_OSERR, "ERROR:");
 
@@ -445,10 +465,10 @@ pmcpl_gmon_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
 		    image, pmcid);
 		pgf->pgf_pmcid = pmcid;
 		assert(image->pi_end > image->pi_start);
-		pgf->pgf_nbuckets = (image->pi_end - image->pi_start) /
-		    FUNCTION_ALIGNMENT;	/* see <machine/profile.h> */
+		pgf->pgf_nbuckets = howmany(image->pi_end - image->pi_start,
+		    FUNCTION_ALIGNMENT);	/* see <machine/profile.h> */
 		pgf->pgf_ndatabytes = sizeof(struct gmonhdr) +
-		    pgf->pgf_nbuckets * sizeof(HISTCOUNTER);
+		    pgf->pgf_nbuckets * hc_sz;
 		pgf->pgf_nsamples = 0;
 		pgf->pgf_file = NULL;
 
@@ -474,14 +494,25 @@ pmcpl_gmon_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
 
 	assert(bucket < pgf->pgf_nbuckets);
 
-	hc = (HISTCOUNTER *) ((uintptr_t) pgf->pgf_gmondata +
-	    sizeof(struct gmonhdr));
+	if (args.pa_flags & FLAG_DO_WIDE_GPROF_HC) {
+		whc = (WIDEHISTCOUNTER *) ((uintptr_t) pgf->pgf_gmondata +
+		    sizeof(struct gmonhdr));
 
-	/* saturating add */
-	if (hc[bucket] < 0xFFFFU)  /* XXX tie this to sizeof(HISTCOUNTER) */
-		hc[bucket]++;
-	else /* mark that an overflow occurred */
-		pgf->pgf_overflow = 1;
+		/* saturating add */
+		if (whc[bucket] < WIDEHISTCOUNTER_MAX)
+			whc[bucket]++;
+		else /* mark that an overflow occurred */
+			pgf->pgf_overflow = 1;
+	} else {
+		hc = (HISTCOUNTER *) ((uintptr_t) pgf->pgf_gmondata +
+		    sizeof(struct gmonhdr));
+
+		/* saturating add */
+		if (hc[bucket] < HISTCOUNTER_MAX)
+			hc[bucket]++;
+		else /* mark that an overflow occurred */
+			pgf->pgf_overflow = 1;
+	}
 
 	pgf->pgf_nsamples++;
 }

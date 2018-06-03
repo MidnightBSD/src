@@ -2,6 +2,7 @@
 /*-
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
+ * Copyright (c) 2014, Adrian Chadd, Netflix Inc.
  * All rights reserved.
  *
  * Portions of this software were developed by A. Joseph Koshy under
@@ -28,15 +29,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate.h 203790 2010-02-11 22:51:44Z fabient $
+ * $FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate_cg.h 265604 2014-05-07 20:20:52Z scottl $
  */
 
-#ifndef	_PMCSTAT_PL_ANNOTATE_H_
-#define	_PMCSTAT_PL_ANNOTATE_H_
+#ifndef	_PMCSTAT_PL_ANNOTATE_CG_H_
+#define	_PMCSTAT_PL_ANNOTATE_CG_H_
 
 /* Function prototypes */
-void pmcpl_annotate_process(
+void pmcpl_annotate_cg_process(
     struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
     uint32_t nsamples, uintfptr_t *cc, int usermode, uint32_t cpu);
 
-#endif	/* _PMCSTAT_PL_ANNOTATE_H_ */
+#endif	/* _PMCSTAT_PL_ANNOTATE_CG_H_ */

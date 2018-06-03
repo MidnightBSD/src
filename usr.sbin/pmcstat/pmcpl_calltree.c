@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012, Fabien Thomas
  * All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_calltree.c 299826 2016-05-15 03:15:36Z pfg $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -125,7 +126,7 @@ struct pmcpl_ct_node_hash {
 	STAILQ_ENTRY(pmcpl_ct_node_hash) pch_next;
 };
 
-struct pmcpl_ct_sample pmcpl_ct_callid;
+static struct pmcpl_ct_sample pmcpl_ct_callid;
 
 #define	PMCPL_CT_MAXCOL		PMC_CALLCHAIN_DEPTH_MAX
 #define	PMCPL_CT_MAXLINE	1024	/* TODO: dynamic. */
@@ -135,8 +136,8 @@ struct pmcpl_ct_line {
 	unsigned	ln_index;
 };
 
-struct pmcpl_ct_line	pmcpl_ct_topmax[PMCPL_CT_MAXLINE+1];
-struct pmcpl_ct_node
+static struct pmcpl_ct_line	pmcpl_ct_topmax[PMCPL_CT_MAXLINE+1];
+static struct pmcpl_ct_node
     *pmcpl_ct_topscreen[PMCPL_CT_MAXCOL+1][PMCPL_CT_MAXLINE+1];
 
 /*
@@ -830,7 +831,7 @@ pmcpl_ct_node_printchild(struct pmcpl_ct_node *ct, uintfptr_t paddr,
 
 	/*
 	 * Child cost.
-	 * TODO: attach child cost to the real position in the funtion.
+	 * TODO: attach child cost to the real position in the function.
 	 * TODO: cfn=<fn> / call <ncall> addr(<fn>) / addr(call <fn>) <arccost>
 	 */
 	for (i=0 ; i<ct->pct_narc; i++) {
@@ -1023,9 +1024,6 @@ _pmcpl_ct_expand_inline(struct pmcpl_ct_node *ct)
 	struct pmcpl_ct_node *child;
 
 	/*
-	 * Child cost.
-	 * TODO: attach child cost to the real position in the funtion.
-	 * TODO: cfn=<fn> / call <ncall> addr(<fn>) / addr(call <fn>) <arccost>
 	 * Resolve parent and compare to each instr location.
 	 */
 	faddr = ct->pct_image->pi_vaddr + ct->pct_func;
