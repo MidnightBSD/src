@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Fredrik Lindberg
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/uhsoctl/uhsoctl.c 292855 2015-12-29 01:08:58Z ngie $
  */
 
 #include <sys/types.h>
@@ -453,9 +454,10 @@ set_nameservers(struct ctx *ctx, const char *respath, int ns, ...)
 			free(ctx->ns[i]);
 		}
 		free(ctx->ns);
+		ctx->ns = NULL;
 	}
 
-	fd = open(respath, O_RDWR | O_CREAT | O_NOFOLLOW);
+	fd = open(respath, O_RDWR | O_CREAT | O_NOFOLLOW, 0666);
 	if (fd < 0)
 		return (-1);
 
@@ -601,7 +603,7 @@ at_cmd(struct ctx *ctx, const char *resp, resp_cb cb, resp_arg *ra, const char *
 	if (resp != NULL) {
 		l = strlen(resp);
 #ifdef DEBUG
-		fprintf(stderr, "SYNC_EXP: %s (%d)\n", resp, l);
+		fprintf(stderr, "SYNC_EXP: %s (%zu)\n", resp, l);
 #endif
 	}
 

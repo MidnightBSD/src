@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008-2009 Fredrik Lindberg
 .\" All rights reserved.
 .\"
@@ -21,7 +22,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/uhsoctl/uhsoctl.1 250604 2013-05-13 18:13:50Z joel $
 .\"
 .Dd Aug 12, 2009
 .Dt UHSOCTL 1
@@ -50,7 +51,7 @@
 is a small connection utility for Option N.V. devices that are based on Options
 packet interface and uses proprietary AT_* calls to establish connections.
 The utility (tries to) configure both default route and name servers
-(/etc/resolv.conf).
+.Po Pa /etc/resolv.conf Pc .
 .Pp
 By default
 .Nm
@@ -76,8 +77,13 @@ Specify username.
 .It Fl k Ar password
 Specify username.
 .It Fl r Ar path
-Path to resolv.conf, default /etc/resolv.conf.
-Use /dev/null to disable updating of name servers.
+Path to
+.Pa resolv.conf ,
+default
+.Pa /etc/resolv.conf .
+Use
+.Pa /dev/null
+to disable updating of name servers.
 .It Fl f Ar path
 Explicitly set the serial port to use as controlling terminal.
 Might be needed if the automatic detection fails.
