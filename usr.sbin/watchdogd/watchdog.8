@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004  Poul-Henning Kamp <phk@FreeBSD.org>
 .\" Copyright (c) 2003  Sean M. Kelly <smkelly@FreeBSD.org>
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/watchdogd/watchdog.8 273621 2014-10-25 01:59:01Z rpaulo $
 .\"
-.Dd September 2, 2006
+.Dd October 18, 2014
 .Dt WATCHDOG 8
 .Os
 .Sh NAME
@@ -50,7 +51,7 @@ The
 option
 specifies the desired timeout period in seconds, a value of
 zero will disable the watchdog.
-The default timeout is 16 seconds.
+The default timeout is 128 seconds.
 .Sh SEE ALSO
 .Xr watchdog 4 ,
 .Xr watchdogd 8 ,
