@@ -1,9 +1,18 @@
-# $MidnightBSD: src/share/mk/bsd.endian.mk,v 1.4 2008/04/28 05:53:25 laffer1 Exp $
-# $FreeBSD: src/share/mk/bsd.endian.mk,v 1.4 2006/11/05 15:33:26 cognet Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/mk/bsd.endian.mk 239272 2012-08-15 03:21:56Z gonzo $
 
 .if ${MACHINE_ARCH} == "amd64" || \
-    ${MACHINE_ARCH} == "i386"
+    ${MACHINE_ARCH} == "i386" || \
+    ${MACHINE_ARCH} == "ia64" || \
+    ${MACHINE_ARCH} == "arm"  || \
+    ${MACHINE_ARCH} == "armv6"  || \
+    ${MACHINE_ARCH:Mmips*el} != ""
 TARGET_ENDIANNESS= 1234
-.elif ${MACHINE_ARCH} == "sparc64"
+.elif ${MACHINE_ARCH} == "powerpc" || \
+    ${MACHINE_ARCH} == "powerpc64" || \
+    ${MACHINE_ARCH} == "sparc64" || \
+    ${MACHINE_ARCH} == "armeb" || \
+    ${MACHINE_ARCH} == "armv6eb" || \
+    ${MACHINE_ARCH:Mmips*} != ""
 TARGET_ENDIANNESS= 4321
 .endif
