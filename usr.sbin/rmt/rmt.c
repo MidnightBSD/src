@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)rmt.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rmt/rmt.c,v 1.13 2004/08/07 04:28:54 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/rmt/rmt.c 227259 2011-11-06 19:02:37Z ed $");
 
 /*
  * rmt
@@ -54,25 +55,25 @@ __FBSDID("$FreeBSD: src/usr.sbin/rmt/rmt.c,v 1.13 2004/08/07 04:28:54 imp Exp $"
 #include <string.h>
 #include <unistd.h>
 
-int	tape = -1;
+static int	tape = -1;
 
-char	*record;
-int	maxrecsize = -1;
+static char	*record;
+static int	maxrecsize = -1;
 
 #define	SSIZE	64
-char	device[SSIZE];
-char	count[SSIZE], mode[SSIZE], pos[SSIZE], op[SSIZE];
+static char	device[SSIZE];
+static char	count[SSIZE], mode[SSIZE], pos[SSIZE], op[SSIZE];
 
-char	resp[BUFSIZ];
+static char	resp[BUFSIZ];
 
-FILE	*debug;
+static FILE	*debug;
 #define	DEBUG(f)	if (debug) fprintf(debug, f)
 #define	DEBUG1(f,a)	if (debug) fprintf(debug, f, a)
 #define	DEBUG2(f,a1,a2)	if (debug) fprintf(debug, f, a1, a2)
 
-char	*checkbuf(char *, int);
-void	 error(int);
-void	 getstring(char *);
+static char	*checkbuf(char *, int);
+static void	 error(int);
+static void	 getstring(char *);
 
 int
 main(int argc, char **argv)
@@ -206,8 +207,7 @@ ioerror:
 }
 
 void
-getstring(bp)
-	char *bp;
+getstring(char *bp)
 {
 	int i;
 	char *cp = bp;
@@ -221,10 +221,8 @@ getstring(bp)
 	cp[i] = '\0';
 }
 
-char *
-checkbuf(rec, size)
-	char *rec;
-	int size;
+static char *
+checkbuf(char *rec, int size)
 {
 
 	if (size <= maxrecsize)
@@ -243,9 +241,8 @@ checkbuf(rec, size)
 	return (rec);
 }
 
-void
-error(num)
-	int num;
+static void
+error(int num)
 {
 
 	DEBUG2("rmtd: E %d (%s)\n", num, strerror(num));
