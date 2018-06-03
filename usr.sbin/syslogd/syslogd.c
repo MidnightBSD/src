@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/syslogd/syslogd.c 333357 2018-05-08 05:11:06Z delphij $");
 
 /*
  *  syslogd -- log system messages
@@ -68,25 +69,28 @@ __MBSDID("$MidnightBSD$");
  * Priority comparison code by Harlan Stenn.
  */
 
+/* Maximum number of characters in time of last occurrence */
+#define	MAXDATELEN	16
 #define	MAXLINE		1024		/* maximum line length */
-#define	MAXSVLINE	120		/* maximum saved line length */
+#define	MAXSVLINE	MAXLINE		/* maximum saved line length */
 #define	DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define	DEFSPRI		(LOG_KERN|LOG_CRIT)
 #define	TIMERINTVL	30		/* interval for checking flush, mark */
 #define	TTYMSGTIME	1		/* timeout passed to ttymsg */
+#define	RCVBUF_MINSIZE	(80 * 1024)	/* minimum size of dgram rcv buffer */
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
 #include <sys/queue.h>
+#include <sys/resource.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/syslimits.h>
+#include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/un.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/syslimits.h>
+#include <sys/wait.h>
 #include <sys/types.h>
 
 #include <netinet/in.h>
@@ -94,6 +98,7 @@ __MBSDID("$MidnightBSD$");
 #include <arpa/inet.h>
 
 #include <ctype.h>
+#include <dirent.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -117,6 +122,8 @@ __MBSDID("$MidnightBSD$");
 const char	*ConfFile = _PATH_LOGCONF;
 const char	*PidFile = _PATH_LOGPID;
 const char	ctty[] = _PATH_CONSOLE;
+static const char	include_str[] = "include";
+static const char	include_ext[] = ".conf";
 
 #define	dprintf		if (Debug) printf
 
@@ -155,7 +162,7 @@ STAILQ_HEAD(, funix) funixes =	{ &funix_default,
  * This structure represents the files that will have log
  * copies printed.
  * We require f_file to be valid if f_type is F_FILE, F_CONSOLE, F_TTY
- * or if f_type if F_PIPE and f_pid > 0.
+ * or if f_type is F_PIPE and f_pid > 0.
  */
 
 struct filed {
@@ -184,7 +191,7 @@ struct filed {
 		} f_pipe;
 	} f_un;
 	char	f_prevline[MAXSVLINE];		/* last message logged */
-	char	f_lasttime[16];			/* time of last occurrence */
+	char	f_lasttime[MAXDATELEN];		/* time of last occurrence */
 	char	f_prevhost[MAXHOSTNAMELEN];	/* host from which recd. */
 	int	f_prevpri;			/* pri of f_prevline */
 	int	f_prevlen;			/* length of f_prevline */
@@ -270,6 +277,7 @@ static struct filed *Files;	/* Log files that we write to */
 static struct filed consfile;	/* Console */
 
 static int	Debug;		/* debug flag */
+static int	Foreground = 0;	/* Run in foreground, instead of daemonizing */
 static int	resolve = 1;	/* resolve hostname */
 static char	LocalHostName[MAXHOSTNAMELEN];	/* our hostname */
 static const char *LocalDomain;	/* our local domain name */
@@ -312,7 +320,7 @@ static void	cfline(const char *, struct filed *,
 static const char *cvthname(struct sockaddr *);
 static void	deadq_enter(pid_t, const char *);
 static int	deadq_remove(pid_t);
-static int	decode(const char *, CODE *);
+static int	decode(const char *, const CODE *);
 static void	die(int);
 static void	dodie(int);
 static void	dofsync(void);
@@ -336,7 +344,35 @@ static void	unmapped(struct sockaddr *);
 static void	wallmsg(struct filed *, struct iovec *, const int iovlen);
 static int	waitdaemon(int, int, int);
 static void	timedout(int);
-static void	double_rbuf(int);
+static void	increase_rcvbuf(int);
+
+static void
+close_filed(struct filed *f)
+{
+
+	if (f == NULL || f->f_file == -1)
+		return;
+
+	switch (f->f_type) {
+	case F_FORW:
+            if (f->f_un.f_forw.f_addr) {
+                freeaddrinfo(f->f_un.f_forw.f_addr);
+                f->f_un.f_forw.f_addr = NULL;
+            }
+            /*FALLTHROUGH*/
+
+	case F_FILE:
+	case F_TTY:
+	case F_CONSOLE:
+		f->f_type = F_UNUSED;
+		break;
+	case F_PIPE:
+		f->f_un.f_pipe.f_pid = 0;
+		break;
+	}
+	(void)close(f->f_file);
+	f->f_file = -1;
+}
 
 int
 main(int argc, char *argv[])
@@ -359,7 +395,7 @@ main(int argc, char *argv[])
 		dprintf("madvise() failed: %s\n", strerror(errno));
 
 	bindhostname = NULL;
-	while ((ch = getopt(argc, argv, "468Aa:b:cCdf:kl:m:nNop:P:sS:Tuv"))
+	while ((ch = getopt(argc, argv, "468Aa:b:cCdf:Fkl:m:nNop:P:sS:Tuv"))
 	    != -1)
 		switch (ch) {
 		case '4':
@@ -394,6 +430,9 @@ main(int argc, char *argv[])
 			break;
 		case 'f':		/* configuration file */
 			ConfFile = optarg;
+			break;
+		case 'F':		/* run in foreground instead of daemon */
+			Foreground++;
 			break;
 		case 'k':		/* keep remote kern fac */
 			KeepKernFac = 1;
@@ -486,14 +525,14 @@ main(int argc, char *argv[])
 		warn("cannot open pid file");
 	}
 
-	if (!Debug) {
+	if ((!Foreground) && (!Debug)) {
 		ppid = waitdaemon(0, 0, 30);
 		if (ppid < 0) {
 			warn("could not become daemon");
 			pidfile_remove(pfh);
 			exit(1);
 		}
-	} else {
+	} else if (Debug) {
 		setlinebuf(stdout);
 	}
 
@@ -547,8 +586,8 @@ main(int argc, char *argv[])
 				STAILQ_REMOVE(&funixes, fx, funix, next);
 				continue;
 			}
-			double_rbuf(fx->s);
 		}
+		increase_rcvbuf(fx->s);
 	}
 	if (SecureMode <= 1)
 		finet = socksetup(family, bindhostname);
@@ -556,7 +595,8 @@ main(int argc, char *argv[])
 	if (finet) {
 		if (SecureMode) {
 			for (i = 0; i < *finet; i++) {
-				if (shutdown(finet[i+1], SHUT_RD) < 0) {
+				if (shutdown(finet[i+1], SHUT_RD) < 0 &&
+				    errno != ENOTCONN) {
 					logerror("shutdown");
 					if (!Debug)
 						die(0);
@@ -604,7 +644,7 @@ main(int argc, char *argv[])
 			fdsrmax = fx->s;
 
 	fdsr = (fd_set *)calloc(howmany(fdsrmax+1, NFDBITS),
-	    sizeof(fd_mask));
+	    sizeof(*fdsr));
 	if (fdsr == NULL)
 		errx(1, "calloc fd_set");
 
@@ -615,7 +655,7 @@ main(int argc, char *argv[])
 			die(WantDie);
 
 		bzero(fdsr, howmany(fdsrmax+1, NFDBITS) *
-		    sizeof(fd_mask));
+		    sizeof(*fdsr));
 
 		if (fklog != -1)
 			FD_SET(fklog, fdsr);
@@ -712,7 +752,7 @@ usage(void)
 {
 
 	fprintf(stderr, "%s\n%s\n%s\n%s\n",
-		"usage: syslogd [-468ACcdknosTuv] [-a allowed_peer]",
+		"usage: syslogd [-468ACcdFknosTuv] [-a allowed_peer]",
 		"               [-b bind_address] [-f config_file]",
 		"               [-l [mode:]path] [-m mark_interval]",
 		"               [-P pid_file] [-p log_socket]");
@@ -921,7 +961,7 @@ logmsg(int pri, const char *msg, const char *from, int flags)
 	 * Check to see if msg looks non-standard.
 	 */
 	msglen = strlen(msg);
-	if (msglen < 16 || msg[3] != ' ' || msg[6] != ' ' ||
+	if (msglen < MAXDATELEN || msg[3] != ' ' || msg[6] != ' ' ||
 	    msg[9] != ':' || msg[12] != ':' || msg[15] != ' ')
 		flags |= ADDDATE;
 
@@ -930,8 +970,8 @@ logmsg(int pri, const char *msg, const char *from, int flags)
 		timestamp = ctime(&now) + 4;
 	} else {
 		timestamp = msg;
-		msg += 16;
-		msglen -= 16;
+		msg += MAXDATELEN;
+		msglen -= MAXDATELEN;
 	}
 
 	/* skip leading blanks */
@@ -984,7 +1024,8 @@ logmsg(int pri, const char *msg, const char *from, int flags)
 			(void)strlcpy(f->f_lasttime, timestamp,
 				sizeof(f->f_lasttime));
 			fprintlog(f, flags, msg);
-			(void)close(f->f_file);
+			close(f->f_file);
+			f->f_file = -1;
 		}
 		(void)sigsetmask(omask);
 		return;
@@ -1019,7 +1060,7 @@ logmsg(int pri, const char *msg, const char *from, int flags)
 		 */
 		if (no_compress - (f->f_type != F_PIPE) < 1 &&
 		    (flags & MARK) == 0 && msglen == f->f_prevlen &&
-		    f->f_prevline && !strcmp(msg, f->f_prevline) &&
+		    !strcmp(msg, f->f_prevline) &&
 		    !strcasecmp(from, f->f_prevhost)) {
 			(void)strlcpy(f->f_lasttime, timestamp,
 				sizeof(f->f_lasttime));
@@ -1123,7 +1164,7 @@ fprintlog(struct filed *f, int flags, const char *msg)
 		char p_n[5];	/* Hollow laugh */
 
 		if (LogFacPri > 1) {
-		  CODE *c;
+		  const CODE *c;
 
 		  for (c = facilitynames; c->c_name; c++) {
 		    if (c->c_val == fac) {
@@ -1174,11 +1215,9 @@ fprintlog(struct filed *f, int flags, const char *msg)
 		v->iov_base = repbuf;
 		v->iov_len = snprintf(repbuf, sizeof repbuf,
 		    "last message repeated %d times", f->f_prevcount);
-	} else if (f->f_prevline) {
+	} else {
 		v->iov_base = f->f_prevline;
 		v->iov_len = f->f_prevlen;
-	} else {
-		return;
 	}
 	v++;
 
@@ -1241,8 +1280,10 @@ fprintlog(struct filed *f, int flags, const char *msg)
 				switch (errno) {
 				case ENOBUFS:
 				case ENETDOWN:
+				case ENETUNREACH:
 				case EHOSTUNREACH:
 				case EHOSTDOWN:
+				case EADDRNOTAVAIL:
 					break;
 				/* case EBADF: */
 				/* case EACCES: */
@@ -1253,7 +1294,7 @@ fprintlog(struct filed *f, int flags, const char *msg)
 				/* case ENOBUFS: */
 				/* case ECONNREFUSED: */
 				default:
-					dprintf("removing entry\n");
+					dprintf("removing entry: errno=%d\n", e);
 					f->f_type = F_UNUSED;
 					break;
 				}
@@ -1273,8 +1314,7 @@ fprintlog(struct filed *f, int flags, const char *msg)
 			 */
 			if (errno != ENOSPC) {
 				int e = errno;
-				(void)close(f->f_file);
-				f->f_type = F_UNUSED;
+				close_filed(f);
 				errno = e;
 				logerror(f->f_un.f_fname);
 			}
@@ -1291,18 +1331,16 @@ fprintlog(struct filed *f, int flags, const char *msg)
 		if (f->f_un.f_pipe.f_pid == 0) {
 			if ((f->f_file = p_open(f->f_un.f_pipe.f_pname,
 						&f->f_un.f_pipe.f_pid)) < 0) {
-				f->f_type = F_UNUSED;
 				logerror(f->f_un.f_pipe.f_pname);
 				break;
 			}
 		}
 		if (writev(f->f_file, iov, IOV_SIZE) < 0) {
 			int e = errno;
-			(void)close(f->f_file);
-			if (f->f_un.f_pipe.f_pid > 0)
-				deadq_enter(f->f_un.f_pipe.f_pid,
-					    f->f_un.f_pipe.f_pname);
-			f->f_un.f_pipe.f_pid = 0;
+
+			close_filed(f);
+			deadq_enter(f->f_un.f_pipe.f_pid,
+				    f->f_un.f_pipe.f_pname);
 			errno = e;
 			logerror(f->f_un.f_pipe.f_pname);
 		}
@@ -1406,8 +1444,7 @@ reapchild(int signo __unused)
 		for (f = Files; f; f = f->f_next)
 			if (f->f_type == F_PIPE &&
 			    f->f_un.f_pipe.f_pid == pid) {
-				(void)close(f->f_file);
-				f->f_un.f_pipe.f_pid = 0;
+				close_filed(f);
 				log_deadchild(pid, status,
 					      f->f_un.f_pipe.f_pname);
 				break;
@@ -1509,10 +1546,8 @@ die(int signo)
 		/* flush any pending output */
 		if (f->f_prevcount)
 			fprintlog(f, 0, (char *)NULL);
-		if (f->f_type == F_PIPE && f->f_un.f_pipe.f_pid > 0) {
-			(void)close(f->f_file);
-			f->f_un.f_pipe.f_pid = 0;
-		}
+		if (f->f_type == F_PIPE && f->f_un.f_pipe.f_pid > 0)
+			close_filed(f);
 	}
 	Initialized = was_initialized;
 	if (signo) {
@@ -1528,6 +1563,157 @@ die(int signo)
 	exit(1);
 }
 
+static int
+configfiles(const struct dirent *dp)
+{
+	const char *p;
+	size_t ext_len;
+
+	if (dp->d_name[0] == '.')
+		return (0);
+
+	ext_len = sizeof(include_ext) -1;
+
+	if (dp->d_namlen <= ext_len)
+		return (0);
+
+	p = &dp->d_name[dp->d_namlen - ext_len];
+	if (strcmp(p, include_ext) != 0)
+		return (0);
+
+	return (1);
+}
+
+static void
+readconfigfile(FILE *cf, struct filed **nextp, int allow_includes)
+{
+	FILE *cf2;
+	struct filed *f;
+	struct dirent **ent;
+	char cline[LINE_MAX];
+	char host[MAXHOSTNAMELEN];
+	char prog[LINE_MAX];
+	char file[MAXPATHLEN];
+	char *p, *tmp;
+	int i, nents;
+	size_t include_len;
+
+	/*
+	 *  Foreach line in the conf table, open that file.
+	 */
+	f = NULL;
+	include_len = sizeof(include_str) -1;
+	(void)strlcpy(host, "*", sizeof(host));
+	(void)strlcpy(prog, "*", sizeof(prog));
+	while (fgets(cline, sizeof(cline), cf) != NULL) {
+		/*
+		 * check for end-of-section, comments, strip off trailing
+		 * spaces and newline character. #!prog is treated specially:
+		 * following lines apply only to that program.
+		 */
+		for (p = cline; isspace(*p); ++p)
+			continue;
+		if (*p == 0)
+			continue;
+		if (allow_includes &&
+		    strncmp(p, include_str, include_len) == 0 &&
+		    isspace(p[include_len])) {
+			p += include_len;
+			while (isspace(*p))
+				p++;
+			tmp = p;
+			while (*tmp != '\0' && !isspace(*tmp))
+				tmp++;
+			*tmp = '\0';
+			dprintf("Trying to include files in '%s'\n", p);
+			nents = scandir(p, &ent, configfiles, alphasort);
+			if (nents == -1) {
+				dprintf("Unable to open '%s': %s\n", p,
+				    strerror(errno));
+				continue;
+			}
+			for (i = 0; i < nents; i++) {
+				if (snprintf(file, sizeof(file), "%s/%s", p,
+				    ent[i]->d_name) >= (int)sizeof(file)) {
+					dprintf("ignoring path too long: "
+					    "'%s/%s'\n", p, ent[i]->d_name);
+					free(ent[i]);
+					continue;
+				}
+				free(ent[i]);
+				cf2 = fopen(file, "r");
+				if (cf2 == NULL)
+					continue;
+				dprintf("reading %s\n", file);
+				readconfigfile(cf2, nextp, 0);
+				fclose(cf2);
+			}
+			free(ent);
+			continue;
+		}
+		if (*p == '#') {
+			p++;
+			if (*p != '!' && *p != '+' && *p != '-')
+				continue;
+		}
+		if (*p == '+' || *p == '-') {
+			host[0] = *p++;
+			while (isspace(*p))
+				p++;
+			if ((!*p) || (*p == '*')) {
+				(void)strlcpy(host, "*", sizeof(host));
+				continue;
+			}
+			if (*p == '@')
+				p = LocalHostName;
+			for (i = 1; i < MAXHOSTNAMELEN - 1; i++) {
+				if (!isalnum(*p) && *p != '.' && *p != '-'
+				    && *p != ',' && *p != ':' && *p != '%')
+					break;
+				host[i] = *p++;
+			}
+			host[i] = '\0';
+			continue;
+		}
+		if (*p == '!') {
+			p++;
+			while (isspace(*p)) p++;
+			if ((!*p) || (*p == '*')) {
+				(void)strlcpy(prog, "*", sizeof(prog));
+				continue;
+			}
+			for (i = 0; i < LINE_MAX - 1; i++) {
+				if (!isprint(p[i]) || isspace(p[i]))
+					break;
+				prog[i] = p[i];
+			}
+			prog[i] = 0;
+			continue;
+		}
+		for (p = cline + 1; *p != '\0'; p++) {
+			if (*p != '#')
+				continue;
+			if (*(p - 1) == '\\') {
+				strcpy(p - 1, p);
+				p--;
+				continue;
+			}
+			*p = '\0';
+			break;
+		}
+		for (i = strlen(cline) - 1; i >= 0 && isspace(cline[i]); i--)
+			cline[i] = '\0';
+		f = (struct filed *)calloc(1, sizeof(*f));
+		if (f == NULL) {
+			logerror("calloc");
+			exit(1);
+		}
+		*nextp = f;
+		nextp = &f->f_next;
+		cfline(cline, f, prog, host);
+	}
+}
+
 /*
  *  INIT -- Initialize syslogd from configuration table
  */
@@ -1538,9 +1724,6 @@ init(int signo)
 	FILE *cf;
 	struct filed *f, *next, **nextp;
 	char *p;
-	char cline[LINE_MAX];
- 	char prog[NAME_MAX+1];
-	char host[MAXHOSTNAMELEN];
 	char oldLocalHostName[MAXHOSTNAMELEN];
 	char hostMsg[2*MAXHOSTNAMELEN+40];
 	char bootfileMsg[LINE_MAX];
@@ -1576,15 +1759,12 @@ init(int signo)
 		case F_FORW:
 		case F_CONSOLE:
 		case F_TTY:
-			(void)close(f->f_file);
+			close_filed(f);
 			break;
 		case F_PIPE:
-			if (f->f_un.f_pipe.f_pid > 0) {
-				(void)close(f->f_file);
-				deadq_enter(f->f_un.f_pipe.f_pid,
-					    f->f_un.f_pipe.f_pname);
-			}
-			f->f_un.f_pipe.f_pid = 0;
+			close_filed(f);
+			deadq_enter(f->f_un.f_pipe.f_pid,
+				    f->f_un.f_pipe.f_pname);
 			break;
 		}
 		next = f->f_next;
@@ -1614,83 +1794,7 @@ init(int signo)
 		return;
 	}
 
-	/*
-	 *  Foreach line in the conf table, open that file.
-	 */
-	f = NULL;
-	(void)strlcpy(host, "*", sizeof(host));
-	(void)strlcpy(prog, "*", sizeof(prog));
-	while (fgets(cline, sizeof(cline), cf) != NULL) {
-		/*
-		 * check for end-of-section, comments, strip off trailing
-		 * spaces and newline character. #!prog is treated specially:
-		 * following lines apply only to that program.
-		 */
-		for (p = cline; isspace(*p); ++p)
-			continue;
-		if (*p == 0)
-			continue;
-		if (*p == '#') {
-			p++;
-			if (*p != '!' && *p != '+' && *p != '-')
-				continue;
-		}
-		if (*p == '+' || *p == '-') {
-			host[0] = *p++;
-			while (isspace(*p))
-				p++;
-			if ((!*p) || (*p == '*')) {
-				(void)strlcpy(host, "*", sizeof(host));
-				continue;
-			}
-			if (*p == '@')
-				p = LocalHostName;
-			for (i = 1; i < MAXHOSTNAMELEN - 1; i++) {
-				if (!isalnum(*p) && *p != '.' && *p != '-'
-				    && *p != ',' && *p != ':' && *p != '%')
-					break;
-				host[i] = *p++;
-			}
-			host[i] = '\0';
-			continue;
-		}
-		if (*p == '!') {
-			p++;
-			while (isspace(*p)) p++;
-			if ((!*p) || (*p == '*')) {
-				(void)strlcpy(prog, "*", sizeof(prog));
-				continue;
-			}
-			for (i = 0; i < NAME_MAX; i++) {
-				if (!isprint(p[i]) || isspace(p[i]))
-					break;
-				prog[i] = p[i];
-			}
-			prog[i] = 0;
-			continue;
-		}
-		for (p = cline + 1; *p != '\0'; p++) {
-			if (*p != '#')
-				continue;
-			if (*(p - 1) == '\\') {
-				strcpy(p - 1, p);
-				p--;
-				continue;
-			}
-			*p = '\0';
-			break;
-		}
-		for (i = strlen(cline) - 1; i >= 0 && isspace(cline[i]); i--)
-			cline[i] = '\0';
-		f = (struct filed *)calloc(1, sizeof(*f));
-		if (f == NULL) {
-			logerror("calloc");
-			exit(1);
-		}
-		*nextp = f;
-		nextp = &f->f_next;
-		cfline(cline, f, prog, host);
-	}
+	readconfigfile(cf, &Files, 1);
 
 	/* close the configuration file */
 	(void)fclose(cf);
@@ -2031,9 +2135,9 @@ cfline(const char *line, struct filed *f, const char *prog, const char *host)
  *  Decode a symbolic name to a numeric value
  */
 static int
-decode(const char *name, CODE *codetab)
+decode(const char *name, const CODE *codetab)
 {
-	CODE *c;
+	const CODE *c;
 	char *p, buf[40];
 
 	if (isdigit(*name))
@@ -2111,7 +2215,7 @@ markit(void)
 
 /*
  * fork off and become a daemon, but wait for the child to come online
- * before returing to the parent, or we get disk thrashing at boot etc.
+ * before returning to the parent, or we get disk thrashing at boot etc.
  * Set a timer so we don't hang forever if it wedges.
  */
 static int
@@ -2562,6 +2666,8 @@ deadq_enter(pid_t pid, const char *name)
 	dq_t p;
 	int status;
 
+	if (pid == 0)
+		return;
 	/*
 	 * Be paranoid, if we can't signal the process, don't enter it
 	 * into the dead queue (perhaps it's already dead).  If possible,
@@ -2720,7 +2826,7 @@ socksetup(int af, char *bindhostname)
 			}
 
 			if (!SecureMode)
-				double_rbuf(*s);
+				increase_rcvbuf(*s);
 		}
 
 		(*socks)++;
@@ -2741,12 +2847,16 @@ socksetup(int af, char *bindhostname)
 }
 
 static void
-double_rbuf(int fd)
+increase_rcvbuf(int fd)
 {
-	socklen_t slen, len;
+	socklen_t len, slen;
+
+	slen = sizeof(len);
 
 	if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &len, &slen) == 0) {
-		len *= 2;
-		setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &len, slen);
+		if (len < RCVBUF_MINSIZE) {
+			len = RCVBUF_MINSIZE;
+			setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &len, sizeof(len));
+		}
 	}
 }
