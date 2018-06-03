@@ -1,17 +1,15 @@
-# $MidnightBSD: src/usr.sbin/traceroute/Makefile,v 1.3 2011/10/01 04:58:18 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/traceroute/Makefile,v 1.22.2.2 2010/01/17 15:21:24 bz Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/traceroute/Makefile 216184 2010-12-04 14:19:27Z uqs $
 
 TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
 
 PROG=	traceroute
 MAN=	traceroute.8
-SRCS=	as.c version.c traceroute.c ifaddrlist.c findsaddr-socket.c
+SRCS=	as.c version.c traceroute.c ifaddrlist.c findsaddr-udp.c
 BINOWN=	root
 BINMODE=4555
 CLEANFILES=	version.c
-
-WARNS?=	0
 
 CFLAGS+= -DHAVE_SYS_SELECT_H=1 -DHAVE_SYS_SOCKIO_H=1 \
 	 -DHAVE_NET_ROUTE_H=1 -DHAVE_NET_IF_DL_H=1 \
@@ -32,7 +30,9 @@ DPADD=	${LIBIPSEC}
 LDADD=	-lipsec
 .endif
 
-CFLAGS+= -I${TRACEROUTE_DISTDIR}/lbl -I${TRACEROUTE_DISTDIR}
+CFLAGS+= -I${TRACEROUTE_DISTDIR}
+
+WARNS?=	3
 
 version.c: ${TRACEROUTE_DISTDIR}/VERSION
 	@rm -f ${.TARGET}

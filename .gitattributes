@@ -73783,6 +73783,7 @@ usr.sbin/timed/timedc/timedc.8 -text
 usr.sbin/timed/timedc/timedc.c -text
 usr.sbin/timed/timedc/timedc.h -text
 usr.sbin/traceroute/Makefile -text
+usr.sbin/traceroute/findsaddr-udp.c svneol=native#text/plain
 usr.sbin/traceroute6/Makefile -text
 usr.sbin/traceroute6/traceroute6.8 -text
 usr.sbin/traceroute6/traceroute6.c -text
