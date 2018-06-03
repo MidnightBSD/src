@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 1991, 1994 Wolfgang Solfrank.
  * Copyright (C) 1991, 1994 TooLs GmbH.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/quot/quot.c 241015 2012-09-27 23:31:19Z mdf $");
 
 #include <sys/param.h>
 #include <sys/stdint.h>
@@ -484,8 +485,8 @@ static void
 donames(int fd, struct fs *super, char *name)
 {
 	int c;
-	ino_t inode;
 	ino_t maxino;
+	uintmax_t inode;
 	union dinode *dp;
 
 	maxino = super->fs_ncg * super->fs_ipg - 1;
@@ -493,9 +494,9 @@ donames(int fd, struct fs *super, char *name)
 	while ((c = getchar()) != EOF && (c < '0' || c > '9'))
 		while ((c = getchar()) != EOF && c != '\n');
 	ungetc(c,stdin);
-	while (scanf("%u",&inode) == 1) {
+	while (scanf("%ju", &inode) == 1) {
 		if (inode > maxino) {
-			warnx("illegal inode %d",inode);
+			warnx("illegal inode %ju", inode);
 			return;
 		}
 		errno = 0;
