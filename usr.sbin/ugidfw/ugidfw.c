@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2004 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ugidfw/ugidfw.c,v 1.6 2006/04/23 17:06:18 dwmalone Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ugidfw/ugidfw.c 186480 2008-12-24 22:40:13Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -71,7 +72,7 @@ usage(void)
 void
 add_rule(int argc, char *argv[])
 {
-	char errstr[BUFSIZ];
+	char errstr[BUFSIZ], charstr[BUFSIZ];
 	struct mac_bsdextended_rule rule;
 	int error, rulenum;
 
@@ -86,7 +87,10 @@ add_rule(int argc, char *argv[])
 		warnx("%s", errstr);
 		return;
 	}
-	printf("Added rule %d\n", rulenum);
+	if (bsde_rule_to_string(&rule, charstr, BUFSIZ) == -1)
+		warnx("Added rule, but unable to print string.");
+	else
+		printf("%d %s\n", rulenum, charstr);
 }
 
 void
