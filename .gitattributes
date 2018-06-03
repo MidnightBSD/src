@@ -53436,6 +53436,7 @@ share/man/man5/moduli.5 -text
 share/man/man5/motd.5 -text
 share/man/man5/mqueuefs.5 -text
 share/man/man5/msdosfs.5 -text
+share/man/man5/nandfs.5 svneol=native#text/plain
 share/man/man5/networks.5 -text
 share/man/man5/nsmb.conf.5 -text
 share/man/man5/nsswitch.conf.5 -text
