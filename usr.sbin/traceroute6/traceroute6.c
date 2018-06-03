@@ -955,6 +955,9 @@ main(argc, argv)
 						break;
 					}
 					break;
+				} else if (deltaT(&t1, &t2) > waittime * 1000) {
+					cc = 0;
+					break;
 				}
 			}
 			if (cc == 0)
@@ -1448,7 +1451,8 @@ usage()
 {
 
 	fprintf(stderr,
-"usage: traceroute6 [-adIlnNrUv] [-f firsthop] [-g gateway] [-m hoplimit]\n"
-"       [-p port] [-q probes] [-s src] [-w waittime] target [datalen]\n");
+"usage: traceroute6 [-adIlnNrUv] [-A as_server] [-f firsthop] [-g gateway]\n"
+"       [-m hoplimit] [-p port] [-q probes] [-s src] [-w waittime] target\n"
+"       [datalen]\n");
 	exit(1);
 }
