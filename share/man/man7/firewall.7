@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (C) 2001 Matthew Dillon. All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -21,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man7/firewall.7 250604 2013-05-13 18:13:50Z joel $
 .\"
 .Dd May 26, 2001
 .Dt FIREWALL 7
@@ -91,7 +92,7 @@ a firewall in the sample firewall section below.
 .Sh IPFW KERNEL CONFIGURATION
 You do not need to create a custom kernel to use the IP firewalling features.
 If you enable firewalling in your
-.Em /etc/rc.conf
+.Pa /etc/rc.conf
 (see below), the ipfw kernel module will be loaded automatically
 when necessary.
 However,
@@ -103,7 +104,7 @@ option set.
 If compiled in the kernel, ipfw denies all
 packets by default, which means that, if you do not load in
 a permissive ruleset via
-.Em /etc/rc.conf ,
+.Pa /etc/rc.conf ,
 rebooting into your new kernel will take the network offline.
 This can prevent you from being able to access your system if you
 are not sitting at the console.

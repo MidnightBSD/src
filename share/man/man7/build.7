@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2000
 .\"	Mike W. Meyer
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man7/build.7 316241 2017-03-30 06:02:39Z ngie $
 .\"
-.Dd October 10, 2012
+.Dd March 22, 2017
 .Dt BUILD 7
 .Os
 .Sh NAME
@@ -40,8 +41,7 @@ normally
 and
 .Pa /usr/ports .
 These directories may be initially empty or non-existent until updated with
-.Xr csup 1 ,
-.Xr svn 1 ,
+.Xr svn 1
 or
 .Xr portsnap 8 .
 Directory
@@ -108,6 +108,16 @@ section below, and by the variables documented in
 The following list provides the names and actions for the targets
 supported by the build system:
 .Bl -tag -width ".Cm cleandepend"
+.It Cm check
+Run tests for a given subdirectory.
+The default directory used is
+.Pa ${.OBJDIR} ,
+but the check directory can be changed with
+.Pa ${CHECKDIR} .
+.It Cm checkworld
+Run the
+.Fx
+test suite on installed world.
 .It Cm clean
 Remove any files created during the build process.
 .It Cm cleandepend
@@ -180,6 +190,12 @@ Build everything but the kernel, configure files in
 .Pa etc ,
 and
 .Pa release .
+The object directory can be changed from the default
+.Pa /usr/obj
+by setting the
+.Pa MAKEOBJDIRPREFIX
+.Xr make 1
+variable.
 The actual build location prefix used is
 .Pa ${MAKEOBJDIRPREFIX}${.CURDIR}
 for native builds, and
@@ -263,6 +279,12 @@ are:
 .Bl -tag -width ".Cm distributekernel"
 .It Cm buildkernel
 Rebuild the kernel and the kernel modules.
+The object directory can be changed from the default
+.Pa /usr/obj
+by setting the
+.Pa MAKEOBJDIRPREFIX
+.Xr make 1
+variable.
 .It Cm installkernel
 Install the kernel and the kernel modules to directory
 .Pa ${DESTDIR}/boot/kernel ,
@@ -332,7 +354,7 @@ should be set as with
 .Dq Li "make installworld" .
 .It Cm delete-old-libs
 Delete obsolete base system libraries interactively.
-This target should only be used if no 3rd party software uses these
+This target should only be used if no third party software uses these
 libraries.
 When
 .Li -DBATCH_DELETE_OLD_FILES
@@ -411,8 +433,31 @@ then
 is set to the value of
 .Va KERNFAST .
 .It Va LOCAL_DIRS
-If set, this variable supplies a list of additional directories to
-build, relative to the root of the source tree.
+If set, this variable supplies a list of additional directories relative to
+the root of the source tree to build as part of the
+.Cm everything
+target.
+.It Va LOCAL_ITOOLS
+If set, this variable supplies a list of additional tools that are used by the
+.Cm installworld
+and
+.Cm distributeworld
+targets.
+.It Va LOCAL_LIB_DIRS
+If set, this variable supplies a list of additional directories relative to
+the root of the source tree to build as part of the
+.Cm libraries
+target.
+.It Va LOCAL_MTREE
+If set, this variable supplies a list of additional mtrees relative to the
+root of the source tree to use as part of the
+.Cm hierarchy
+target.
+.It Va LOCAL_TOOL_DIRS
+If set, this variable supplies a list of additional directories relative to
+the root of the source tree to build as part of the
+.Cm build-tools
+target.
 .It Va PORTS_MODULES
 A list of ports with kernel modules that should be built and installed
 as part of the
@@ -423,6 +468,21 @@ process.
 .Bd -literal -offset indent
 make PORTS_MODULES=emulators/kqemu-kmod kernel
 .Ed
+.It Va STRIPBIN
+Command to use at install time when stripping binaries.
+Be sure to add any additional tools required to run
+.Va STRIPBIN
+to the
+.Va LOCAL_ITOOLS
+.Xr make 1
+variable before running the
+.Cm distributeworld
+or
+.Cm installworld
+targets.
+See
+.Xr install 1
+for more details.
 .It Va SUBDIR_OVERRIDE
 Override the default list of sub-directories and only build the
 sub-directory named in this variable.
@@ -488,7 +548,7 @@ on built objects.
 .It Va NO_SHARE
 If set, the build does not descend into the
 .Pa /usr/src/share
-subdirectory (i.e., manpages, locale data files, timezone data files and
+subdirectory (i.e., manual pages, locale data files, timezone data files and
 other
 .Pa /usr/src/share
 files will not be rebuild from their sources).
@@ -593,7 +653,6 @@ make TARGET=sparc64 DESTDIR=/clients/sparc64 installworld
 .Ed
 .Sh SEE ALSO
 .Xr cc 1 ,
-.Xr csup 1 ,
 .Xr install 1 ,
 .Xr make 1 ,
 .Xr svn 1 ,
@@ -601,6 +660,7 @@ make TARGET=sparc64 DESTDIR=/clients/sparc64 installworld
 .Xr src.conf 5 ,
 .Xr ports 7 ,
 .Xr release 7 ,
+.Xr tests 7 ,
 .Xr config 8 ,
 .Xr mergemaster 8 ,
 .Xr portsnap 8 ,

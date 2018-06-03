@@ -53474,6 +53474,7 @@ share/man/man7/development.7 -text
 share/man/man7/environ.7 -text
 share/man/man7/ffs.7 -text
 share/man/man7/firewall.7 -text
+share/man/man7/growfs.7 svneol=native#text/plain
 share/man/man7/hier.7 -text
 share/man/man7/hostname.7 -text
 share/man/man7/intro.7 -text
@@ -53487,6 +53488,7 @@ share/man/man7/security.7 -text
 share/man/man7/sprog.7 -text
 share/man/man7/stdint.7 -text
 share/man/man7/sticky.7 -text
+share/man/man7/tests.7 svneol=native#text/plain
 share/man/man7/tuning.7 -text
 share/man/man8/Makefile -text
 share/man/man8/crash.8 -text

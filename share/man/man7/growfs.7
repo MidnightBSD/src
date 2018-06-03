@@ -1,6 +1,6 @@
 .\" $MidnightBSD$
-.\" Copyright (c) 1983, 1990, 1993
-.\"	The Regents of the University of California.  All rights reserved.
+.\" Copyright 2014 John-Mark Gurney
+.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -10,18 +10,11 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
-.\"    may be used to endorse or promote products derived from this software
-.\"    without specific prior written permission.
 .\"
-.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 .\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
 .\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 .\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 .\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -30,19 +23,43 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"     @(#)intro.7	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: stable/10/share/man/man7/intro.7 79538 2001-07-10 15:31:11Z ru $
+.\" $FreeBSD: stable/10/share/man/man7/growfs.7 284009 2015-06-05 00:46:49Z cperciva $
 .\"
-.Dd June 5, 1993
-.Dt INTRO 7
+.Dd November 1, 2014
+.Dt GROWFS 7
 .Os
 .Sh NAME
-.Nm intro
-.Nd miscellaneous information pages
+.Nm growfs
+.Nd start up script to grow the root file-system.
 .Sh DESCRIPTION
-This section contains miscellaneous documentation.
-.Sh HISTORY
-The
-.Nm
-section manual page appeared in
-.Bx 4.2 .
+The following options in
+.Pa /etc/rc.conf
+control the behavior of
+.Nm :
+.Bl -tag -width ".Va growfs_enable" -offset indent
+.It Va growfs_enable
+.Pq Dq Li NO
+If set to
+.Dq Li YES ,
+the first time the machine boots, the root file-system will be automatically
+expanded, if possible, to fill up all available space after it.
+.El
+.Pp
+To expand the root file-system with-out rebooting, run the following command:
+.Dl % /etc/rc.d/growfs onestart
+.Sh IMPLEMENTATION NOTES
+The script requires that
+.Pa awk
+be present and on the path.
+This usually means that
+.Pa /usr
+should be mounted prior to running the script.
+.Sh FILES
+.Pa /etc/rc.conf
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr rc.conf 5
+.Sh AUTHORS
+The man page and script were written by
+.An John-Mark Gurney Aq Mt jmg@FreeBSD.org .
