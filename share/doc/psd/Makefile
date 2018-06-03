@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: src/share/doc/psd/Makefile,v 1.21 2004/01/20 13:08:33 ru Exp $
+# $FreeBSD: stable/10/share/doc/psd/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
 
 # The following modules do not build/install:
 # 10.gdb
@@ -35,7 +36,8 @@ SUBDIR+=22.rpcgen \
 	24.xdr \
 	25.xdrrfc \
 	26.rpcrfc \
-	27.nfsrpc \
-	28.cvs
+	27.nfsrpc
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
