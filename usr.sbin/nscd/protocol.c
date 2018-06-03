@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/protocol.c 194093 2009-06-13 00:43:56Z des $");
 
 #include <assert.h>
 #include <stdlib.h>

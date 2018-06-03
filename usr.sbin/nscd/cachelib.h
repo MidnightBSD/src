@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/nscd/cachelib.h 238094 2012-07-04 09:02:12Z se $
  */
 
 #ifndef __NSCD_CACHELIB_H__
@@ -92,6 +93,7 @@ struct common_cache_entry_params {
 	size_t	satisf_elemsize;	/* if entry size is exceeded,
 					 * this number of elements will be left,
 					 * others will be deleted */
+	int	confidence_threshold;	/* number matching replies required */
 	struct timeval	max_lifetime;	/* if 0 then no check is made */
 	enum cache_policy_t policy;	/* policy used for transformations */
 };
@@ -116,6 +118,7 @@ struct cache_ht_item_data_ {
 	size_t	value_size;
 
 	struct cache_policy_item_ *fifo_policy_item;
+	int	confidence;	/* incremented for each verification */
 };
 
 struct cache_ht_item_ {

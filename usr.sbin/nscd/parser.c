@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/parser.c 238094 2012-07-04 09:02:12Z se $");
 
 #include <sys/time.h>
 
@@ -165,6 +166,38 @@ set_negative_time_to_live(struct configuration *config,
 		&lifetime, sizeof(struct timeval));
 
 	TRACE_OUT(set_negative_time_to_live);
+}
+
+static void
+set_positive_confidence_threshold(struct configuration *config,
+	const char *entry_name, int conf_thresh)
+{
+	struct configuration_entry *entry;
+
+	TRACE_IN(set_positive_conf_thresh);
+	assert(conf_thresh > 0);
+	assert(entry_name != NULL);
+
+	entry = find_create_entry(config, entry_name);
+	assert(entry != NULL);
+	entry->positive_cache_params.confidence_threshold = conf_thresh;
+
+	TRACE_OUT(set_positive_conf_thresh);
+}
+
+static void
+set_negative_confidence_threshold(struct configuration *config,
+	const char *entry_name, int conf_thresh)
+{
+	struct configuration_entry *entry;
+
+	TRACE_IN(set_negative_conf_thresh);
+	assert(conf_thresh > 0);
+	assert(entry_name != NULL);
+	entry = find_create_entry(config, entry_name);
+	assert(entry != NULL);
+	entry->negative_cache_params.confidence_threshold = conf_thresh;
+	TRACE_OUT(set_negative_conf_thresh);
 }
 
 /*
@@ -393,6 +426,12 @@ parse_config_file(struct configuration *config,
 					fields[1], value);
 				continue;
 			} else if ((field_count == 3) &&
+			(strcmp(fields[0], "positive-confidence-threshold") == 0) &&
+			((value = get_number(fields[2], 1, -1)) != -1)) {
+				set_positive_confidence_threshold(config,
+					fields[1], value);
+				continue;
+			} else if ((field_count == 3) &&
 			(strcmp(fields[0], "positive-policy") == 0) &&
 			(check_cachename(fields[1]) == 0) &&
 			((value = get_policy(fields[2])) != -1)) {
@@ -413,6 +452,12 @@ parse_config_file(struct configuration *config,
 			(check_cachename(fields[1]) == 0) &&
 			((value = get_number(fields[2], 0, -1)) != -1)) {
 				set_negative_time_to_live(config,
+					fields[1], value);
+				continue;
+			} else if ((field_count == 3) &&
+			(strcmp(fields[0], "negative-confidence-threshold") == 0) &&
+			((value = get_number(fields[2], 1, -1)) != -1)) {
+				set_negative_confidence_threshold(config,
 					fields[1], value);
 				continue;
 			} else if ((field_count == 3) &&

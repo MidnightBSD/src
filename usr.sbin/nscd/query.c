@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/query.c 319178 2017-05-30 03:30:53Z cy $");
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -725,7 +726,7 @@ on_read_request_process(struct query_state *qstate)
 		if (read_response->error_code == -2) {
 			read_response->data = malloc(
 				read_response->data_size);
-			assert(read_response != NULL);
+			assert(read_response->data != NULL);
 			read_response->error_code = cache_read(c_entry,
 				read_request->cache_key,
 		    		read_request->cache_key_size,
@@ -743,9 +744,14 @@ on_read_request_process(struct query_state *qstate)
 				&read_response->data_size);
 
 			if (read_response->error_code == -2) {
-				read_response->error_code = 0;
-				read_response->data = NULL;
-				read_response->data_size = 0;
+				read_response->data = malloc(
+					read_response->data_size);
+				assert(read_response->data != NULL);
+				read_response->error_code = cache_read(neg_c_entry,
+					read_request->cache_key,
+		    			read_request->cache_key_size,
+		    			read_response->data,
+		    			&read_response->data_size);
 			}
 		}
 		configuration_unlock_entry(qstate->config_entry, CELT_NEGATIVE);
@@ -1253,8 +1259,8 @@ init_query_state(int sockfd, size_t kevent_watermark, uid_t euid, gid_t egid)
 	retval->read_func = query_socket_read;
 
 	get_time_func(&retval->creation_time);
-	memcpy(&retval->timeout, &s_configuration->query_timeout,
-		sizeof(struct timeval));
+	retval->timeout.tv_sec = s_configuration->query_timeout;
+	retval->timeout.tv_usec = 0;
 
 	TRACE_OUT(init_query_state);
 	return (retval);

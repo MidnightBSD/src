@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/config.c 315600 2017-03-20 00:55:24Z pfg $");
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -209,6 +210,7 @@ create_def_configuration_entry(const char *name)
 	positive_params.max_elemsize = DEFAULT_POSITIVE_ELEMENTS_SIZE;
 	positive_params.satisf_elemsize = DEFAULT_POSITIVE_ELEMENTS_SIZE / 2;
 	positive_params.max_lifetime.tv_sec = DEFAULT_POSITIVE_LIFETIME;
+	positive_params.confidence_threshold = DEFAULT_POSITIVE_CONF_THRESH;
 	positive_params.policy = CPT_LRU;
 
 	memcpy(&negative_params, &positive_params,
@@ -216,6 +218,7 @@ create_def_configuration_entry(const char *name)
 	negative_params.max_elemsize = DEFAULT_NEGATIVE_ELEMENTS_SIZE;
 	negative_params.satisf_elemsize = DEFAULT_NEGATIVE_ELEMENTS_SIZE / 2;
 	negative_params.max_lifetime.tv_sec = DEFAULT_NEGATIVE_LIFETIME;
+	negative_params.confidence_threshold = DEFAULT_NEGATIVE_CONF_THRESH;
 	negative_params.policy = CPT_FIFO;
 
 	memset(&default_common_timeout, 0, sizeof(struct timeval));
@@ -272,9 +275,8 @@ add_configuration_entry(struct configuration *config,
 		struct configuration_entry **new_entries;
 
 		config->entries_capacity *= 2;
-		new_entries = calloc(1,
-			sizeof(*new_entries) *
-			config->entries_capacity);
+		new_entries = calloc(config->entries_capacity,
+			sizeof(*new_entries));
 		assert(new_entries != NULL);
 		memcpy(new_entries, config->entries,
 			sizeof(struct configuration_entry *) *
@@ -520,9 +522,8 @@ init_configuration(void)
 	assert(retval != NULL);
 
 	retval->entries_capacity = INITIAL_ENTRIES_CAPACITY;
-	retval->entries = calloc(1,
-		sizeof(*retval->entries) *
-		retval->entries_capacity);
+	retval->entries = calloc(retval->entries_capacity,
+		sizeof(*retval->entries));
 	assert(retval->entries != NULL);
 
 	pthread_rwlock_init(&retval->rwlock, NULL);

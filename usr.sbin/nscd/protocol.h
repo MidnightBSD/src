@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/nscd/protocol.h 228990 2011-12-30 10:58:14Z uqs $
  */
 
 #ifndef __NSCD_PROTOCOL_H__
@@ -67,7 +68,7 @@ struct cache_read_response {
 };
 
 enum transformation_type {
-	TT_USER = 0,	// tranform only the entries of the caller
+	TT_USER = 0,	// transform only the entries of the caller
 	TT_ALL = 1	// transform all entries
 };
 

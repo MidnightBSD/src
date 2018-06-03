@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/nscd.c 315600 2017-03-20 00:55:24Z pfg $");
 
 #include <sys/param.h>
 #include <sys/event.h>
@@ -828,8 +829,8 @@ main(int argc, char *argv[])
 	}
 
 	if (s_configuration->threads_num > 1) {
-		threads = calloc(1, sizeof(*threads) *
-			s_configuration->threads_num);
+		threads = calloc(s_configuration->threads_num,
+			sizeof(*threads));
 		for (i = 0; i < s_configuration->threads_num; ++i) {
 			thread_args = malloc(
 				sizeof(*thread_args));

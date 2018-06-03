@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/nscd/hashtable.h 315600 2017-03-20 00:55:24Z pfg $
  */
 
 #ifndef __CACHELIB_HASHTABLE_H__
@@ -75,8 +76,8 @@ typedef unsigned int hashtable_index_t;
 #define HASHTABLE_INIT(table, type, field, _entries_size)		\
 	do {								\
 		hashtable_index_t var;					\
-		(table)->entries = calloc(1,				\
-			sizeof(*(table)->entries) * (_entries_size));	\
+		(table)->entries = calloc(_entries_size,		\
+			sizeof(*(table)->entries));			\
 		(table)->entries_size = (_entries_size);		\
 		for (var = 0; var < HASHTABLE_ENTRIES_COUNT(table); ++var) {\
 			(table)->entries[var].field.capacity = 		\

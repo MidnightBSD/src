@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/cachelib.c 315600 2017-03-20 00:55:24Z pfg $");
 
 #include <sys/time.h>
 
@@ -487,8 +488,8 @@ init_cache(struct cache_params const *params)
 	assert(params != NULL);
 	memcpy(&retval->params, params, sizeof(struct cache_params));
 
-	retval->entries = calloc(1,
-		sizeof(*retval->entries) * INITIAL_ENTRIES_CAPACITY);
+	retval->entries = calloc(INITIAL_ENTRIES_CAPACITY,
+		sizeof(*retval->entries));
 	assert(retval->entries != NULL);
 
 	retval->entries_capacity = INITIAL_ENTRIES_CAPACITY;
@@ -540,8 +541,8 @@ register_cache_entry(struct cache_ *the_cache,
 
 		new_capacity = the_cache->entries_capacity +
 			ENTRIES_CAPACITY_STEP;
-		new_entries = calloc(1,
-			sizeof(*new_entries) * new_capacity);
+		new_entries = calloc(new_capacity,
+			sizeof(*new_entries));
 		assert(new_entries != NULL);
 
 		memcpy(new_entries, the_cache->entries,
@@ -582,8 +583,8 @@ register_cache_entry(struct cache_ *the_cache,
 		else
 			policies_size = 2;
 
-		new_common_entry->policies = calloc(1,
-			sizeof(*new_common_entry->policies) * policies_size);
+		new_common_entry->policies = calloc(policies_size,
+			sizeof(*new_common_entry->policies));
 		assert(new_common_entry->policies != NULL);
 
 		new_common_entry->policies_size = policies_size;
@@ -726,6 +727,12 @@ cache_read(struct cache_entry_ *entry, const char *key, size_t key_size,
 		TRACE_OUT(cache_read);
 		return (-1);
 	}
+	/* pretend that entry was not found if confidence is below threshold*/
+	if (find_res->confidence < 
+	    common_entry->common_params.confidence_threshold) {
+		TRACE_OUT(cache_read);
+		return (-1);
+	}
 
 	if ((common_entry->common_params.max_lifetime.tv_sec != 0) ||
 		(common_entry->common_params.max_lifetime.tv_usec != 0)) {
@@ -826,6 +833,24 @@ cache_write(struct cache_entry_ *entry, const char *key, size_t key_size,
 	item = HASHTABLE_GET_ENTRY(&(common_entry->items), hash);
 	find_res = HASHTABLE_ENTRY_FIND(cache_ht_, item, &item_data);
 	if (find_res != NULL) {
+		if (find_res->confidence < common_entry->common_params.confidence_threshold) {
+		  	/* duplicate entry is no error, if confidence is low */
+			if ((find_res->value_size == value_size) &&
+			    (memcmp(find_res->value, value, value_size) == 0)) {
+				/* increase confidence on exact match (key and values) */
+				find_res->confidence++;
+			} else {
+				/* create new entry with low confidence, if value changed */
+				free(item_data.value);
+				item_data.value = malloc(value_size);
+				assert(item_data.value != NULL);
+				memcpy(item_data.value, value, value_size);
+				item_data.value_size = value_size;
+				find_res->confidence = 1;
+			}
+			TRACE_OUT(cache_write);
+			return (0);
+		}
 		TRACE_OUT(cache_write);
 		return (-1);
 	}
@@ -838,6 +863,8 @@ cache_write(struct cache_entry_ *entry, const char *key, size_t key_size,
 
 	memcpy(item_data.value, value, value_size);
 	item_data.value_size = value_size;
+
+	item_data.confidence = 1;
 
 	policy_item = common_entry->policies[0]->create_item_func();
 	policy_item->key = item_data.key;

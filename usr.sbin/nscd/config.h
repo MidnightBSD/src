@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/nscd/config.h 238094 2012-07-04 09:02:12Z se $
  */
 
 #ifndef __NSCD_CONFIG_H__
@@ -44,9 +45,11 @@
 
 #define DEFAULT_POSITIVE_ELEMENTS_SIZE	(2048)
 #define DEFAULT_POSITIVE_LIFETIME 	(3600)
+#define DEFAULT_POSITIVE_CONF_THRESH 	(1)
 
 #define DEFAULT_NEGATIVE_ELEMENTS_SIZE	(2048)
 #define DEFAULT_NEGATIVE_LIFETIME	(60)
+#define DEFAULT_NEGATIVE_CONF_THRESH 	(1) /* (2) ??? */
 
 #define DEFAULT_MULTIPART_ELEMENTS_SIZE	(1024 * 8)
 #define DEFAULT_MULITPART_SESSIONS_SIZE	(1024)
