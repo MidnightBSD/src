@@ -73461,10 +73461,12 @@ usr.sbin/pw/pw_group.c -text
 usr.sbin/pw/pw_log.c -text
 usr.sbin/pw/pw_nis.c -text
 usr.sbin/pw/pw_user.c -text
+usr.sbin/pw/pw_utils.c svneol=native#text/plain
 usr.sbin/pw/pw_vpw.c -text
 usr.sbin/pw/pwupd.c -text
 usr.sbin/pw/pwupd.h -text
 usr.sbin/pw/rm_r.c -text
+usr.sbin/pw/strtounum.c svneol=native#text/plain
 usr.sbin/pw/tests/Makefile svneol=native#text/plain
 usr.sbin/pw/tests/crypt.c svneol=native#text/plain
 usr.sbin/pw/tests/group -text
