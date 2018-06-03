@@ -73088,6 +73088,15 @@ usr.sbin/moused/moused.c -text
 usr.sbin/mport/Makefile -text
 usr.sbin/mport/mport.1 -text
 usr.sbin/mport/mport.c -text
+usr.sbin/mpsutil/Makefile svneol=native#text/plain
+usr.sbin/mpsutil/mpr_ioctl.h svneol=native#text/plain
+usr.sbin/mpsutil/mps_cmd.c svneol=native#text/plain
+usr.sbin/mpsutil/mps_flash.c svneol=native#text/plain
+usr.sbin/mpsutil/mps_ioctl.h svneol=native#text/plain
+usr.sbin/mpsutil/mps_show.c svneol=native#text/plain
+usr.sbin/mpsutil/mpsutil.8 svneol=native#text/plain
+usr.sbin/mpsutil/mpsutil.c svneol=native#text/plain
+usr.sbin/mpsutil/mpsutil.h svneol=native#text/plain
 usr.sbin/mptable/Makefile -text
 usr.sbin/mptable/mptable.1 -text
 usr.sbin/mptable/mptable.c -text
