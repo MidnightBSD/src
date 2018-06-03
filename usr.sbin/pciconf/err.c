@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2012 Advanced Computing Technologies LLC
+ * Copyright (c) 2012 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "$MidnightBSD$";
+    "$FreeBSD: stable/10/usr.sbin/pciconf/err.c 283927 2015-06-02 19:20:39Z jhb $";
 #endif /* not lint */
 
 #include <sys/param.h>

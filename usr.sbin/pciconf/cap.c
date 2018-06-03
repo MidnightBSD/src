@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Yahoo!, Inc.
  * All rights reserved.
@@ -30,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/pciconf/cap.c 290804 2015-11-13 22:33:51Z jhb $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -391,11 +392,27 @@ link_speed_string(uint8_t speed)
 	}
 }
 
+static const char *
+aspm_string(uint8_t aspm)
+{
+
+	switch (aspm) {
+	case 1:
+		return ("L0s");
+	case 2:
+		return ("L1");
+	case 3:
+		return ("L0s/L1");
+	default:
+		return ("disabled");
+	}
+}
+
 static void
 cap_express(int fd, struct pci_conf *p, uint8_t ptr)
 {
-	uint32_t val;
-	uint16_t flags;
+	uint32_t cap, cap2;
+	uint16_t ctl, flags, sta;
 
 	flags = read_config(fd, &p->pc_sel, ptr + PCIER_FLAGS, 2);
 	printf("PCI-Express %d ", flags & PCIEM_FLAGS_VERSION);
@@ -435,50 +452,66 @@ cap_express(int fd, struct pci_conf *p, uint8_t ptr)
 		printf(" slot");
 	if (flags & PCIEM_FLAGS_IRQ)
 		printf(" IRQ %d", (flags & PCIEM_FLAGS_IRQ) >> 9);
-	val = read_config(fd, &p->pc_sel, ptr + PCIER_DEVICE_CAP, 4);
-	flags = read_config(fd, &p->pc_sel, ptr + PCIER_DEVICE_CTL, 2);
+	cap = read_config(fd, &p->pc_sel, ptr + PCIER_DEVICE_CAP, 4);
+	cap2 = read_config(fd, &p->pc_sel, ptr + PCIER_DEVICE_CAP2, 4);
+	ctl = read_config(fd, &p->pc_sel, ptr + PCIER_DEVICE_CTL, 2);
 	printf(" max data %d(%d)",
-	    MAX_PAYLOAD((flags & PCIEM_CTL_MAX_PAYLOAD) >> 5),
-	    MAX_PAYLOAD(val & PCIEM_CAP_MAX_PAYLOAD));
-	if (val & PCIEM_CAP_FLR)
+	    MAX_PAYLOAD((ctl & PCIEM_CTL_MAX_PAYLOAD) >> 5),
+	    MAX_PAYLOAD(cap & PCIEM_CAP_MAX_PAYLOAD));
+	if ((cap & PCIEM_CAP_FLR) != 0)
 		printf(" FLR");
-	val = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_CAP, 4);
-	flags = read_config(fd, &p->pc_sel, ptr+ PCIER_LINK_STA, 2);
-	printf(" link x%d(x%d)", (flags & PCIEM_LINK_STA_WIDTH) >> 4,
-	    (val & PCIEM_LINK_CAP_MAX_WIDTH) >> 4);
-	/*
-	 * Only print link speed info if the link's max width is
-	 * greater than 0.
-	 */ 
-	if ((val & PCIEM_LINK_CAP_MAX_WIDTH) != 0) {
-		printf("\n                 speed");
-		printf(" %s(%s)", (flags & PCIEM_LINK_STA_WIDTH) == 0 ?
-		    "0.0" : link_speed_string(flags & PCIEM_LINK_STA_SPEED),
-	    	    link_speed_string(val & PCIEM_LINK_CAP_MAX_SPEED));
+	if (ctl & PCIEM_CTL_RELAXED_ORD_ENABLE)
+		printf(" RO");
+	if (ctl & PCIEM_CTL_NOSNOOP_ENABLE)
+		printf(" NS");
+	cap = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_CAP, 4);
+	sta = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_STA, 2);
+	printf(" link x%d(x%d)", (sta & PCIEM_LINK_STA_WIDTH) >> 4,
+	    (cap & PCIEM_LINK_CAP_MAX_WIDTH) >> 4);
+	if ((cap & (PCIEM_LINK_CAP_MAX_WIDTH | PCIEM_LINK_CAP_ASPM)) != 0)
+		printf("\n                ");
+	if ((cap & PCIEM_LINK_CAP_MAX_WIDTH) != 0) {
+		printf(" speed %s(%s)", (sta & PCIEM_LINK_STA_WIDTH) == 0 ?
+		    "0.0" : link_speed_string(sta & PCIEM_LINK_STA_SPEED),
+	    	    link_speed_string(cap & PCIEM_LINK_CAP_MAX_SPEED));
+	}
+	if ((cap & PCIEM_LINK_CAP_ASPM) != 0) {
+		ctl = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_CTL, 2);
+		printf(" ASPM %s(%s)", aspm_string(ctl & PCIEM_LINK_CTL_ASPMC),
+		    aspm_string((cap & PCIEM_LINK_CAP_ASPM) >> 10));
+	}
+	if ((cap2 & PCIEM_CAP2_ARI) != 0) {
+		ctl = read_config(fd, &p->pc_sel, ptr + PCIER_DEVICE_CTL2, 4);
+		printf(" ARI %s",
+		    (ctl & PCIEM_CTL2_ARI) ? "enabled" : "disabled");
 	}
 }
 
 static void
 cap_msix(int fd, struct pci_conf *p, uint8_t ptr)
 {
-	uint32_t val;
+	uint32_t pba_offset, table_offset, val;
+	int msgnum, pba_bar, table_bar;
 	uint16_t ctrl;
-	int msgnum, table_bar, pba_bar;
 
 	ctrl = read_config(fd, &p->pc_sel, ptr + PCIR_MSIX_CTRL, 2);
 	msgnum = (ctrl & PCIM_MSIXCTRL_TABLE_SIZE) + 1;
+
 	val = read_config(fd, &p->pc_sel, ptr + PCIR_MSIX_TABLE, 4);
 	table_bar = PCIR_BAR(val & PCIM_MSIX_BIR_MASK);
+	table_offset = val & ~PCIM_MSIX_BIR_MASK;
+
 	val = read_config(fd, &p->pc_sel, ptr + PCIR_MSIX_PBA, 4);
-	pba_bar = PCIR_BAR(val & PCIM_MSIX_BIR_MASK);	
-	printf("MSI-X supports %d message%s ", msgnum,
-	    (msgnum == 1) ? "" : "s");
-	if (table_bar == pba_bar)
-		printf("in map 0x%x", table_bar);
-	else
-		printf("in maps 0x%x and 0x%x", table_bar, pba_bar);
-	if (ctrl & PCIM_MSIXCTRL_MSIX_ENABLE)
-		printf(" enabled");
+	pba_bar = PCIR_BAR(val & PCIM_MSIX_BIR_MASK);
+	pba_offset = val & ~PCIM_MSIX_BIR_MASK;
+
+	printf("MSI-X supports %d message%s%s\n", msgnum,
+	    (msgnum == 1) ? "" : "s",
+	    (ctrl & PCIM_MSIXCTRL_MSIX_ENABLE) ? ", enabled" : "");
+
+	printf("                 ");
+	printf("Table in map 0x%x[0x%x], PBA in map 0x%x[0x%x]",
+	    table_bar, table_offset, pba_bar, pba_offset);
 }
 
 static void
@@ -698,7 +731,7 @@ list_ecaps(int fd, struct pci_conf *p)
 	if (ecap == 0xffffffff || ecap == 0)
 		return;
 	for (;;) {
-		printf("ecap %04x[%03x] = ", PCI_EXTCAP_ID(ecap), ptr);
+		printf("    ecap %04x[%03x] = ", PCI_EXTCAP_ID(ecap), ptr);
 		switch (PCI_EXTCAP_ID(ecap)) {
 		case PCIZ_AER:
 			ecap_aer(fd, p, ptr, PCI_EXTCAP_VER(ecap));
