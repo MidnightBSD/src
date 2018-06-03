@@ -1,4 +1,4 @@
-$FreeBSD: src/share/dict/freebsd,v 1.11 2005/05/04 14:19:36 murray Exp $
+$MidnightBSD$
 ABI
 ACL
 ACPI
@@ -128,7 +128,6 @@ NNTP
 NSS
 NSSwitch
 NT
-NTFS
 NTP
 Nasdaq
 NetBIOS
