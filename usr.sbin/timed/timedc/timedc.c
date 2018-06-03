@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +39,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)timedc.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/timed/timedc/timedc.c 246209 2013-02-01 14:26:54Z charnier $";
 #endif /* not lint */
 
 #include "timedc.h"
@@ -62,9 +63,7 @@ jmp_buf	toplevel;
 static struct cmd *getcmd(char *);
 
 int
-main(argc, argv)
-	int argc;
-	char *argv[];
+main(int argc, char *argv[])
 {
 	register struct cmd *c;
 
@@ -105,7 +104,7 @@ main(argc, argv)
 			printf("timedc> ");
 			(void) fflush(stdout);
 		}
-		if (fgets(cmdline, sizeof(cmdline), stdin) == 0)
+		if (fgets(cmdline, sizeof(cmdline), stdin) == NULL)
 			quit();
 		if (cmdline[0] == 0)
 			break;
@@ -131,8 +130,7 @@ main(argc, argv)
 }
 
 void
-intr(signo)
-	int signo;
+intr(int signo __unused)
 {
 	if (!fromatty)
 		exit(0);
@@ -141,8 +139,7 @@ intr(signo)
 
 
 static struct cmd *
-getcmd(name)
-	char *name;
+getcmd(char *name)
 {
 	register char *p, *q;
 	register struct cmd *c, *found;
@@ -175,7 +172,7 @@ getcmd(name)
  * Slice a string up into argc/argv.
  */
 void
-makeargv()
+makeargv(void)
 {
 	register char *cp;
 	register char **argp = margv;
@@ -203,9 +200,7 @@ makeargv()
  * Help command.
  */
 void
-help(argc, argv)
-	int argc;
-	char *argv[];
+help(int argc, char *argv[])
 {
 	register struct cmd *c;
 
