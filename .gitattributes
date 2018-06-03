@@ -73648,6 +73648,11 @@ usr.sbin/services_mkdb/Makefile -text
 usr.sbin/services_mkdb/services_mkdb.8 -text
 usr.sbin/services_mkdb/services_mkdb.c -text
 usr.sbin/services_mkdb/uniq.c -text
+usr.sbin/sesutil/Makefile svneol=native#text/plain
+usr.sbin/sesutil/eltsub.c svneol=native#text/plain
+usr.sbin/sesutil/eltsub.h svneol=native#text/plain
+usr.sbin/sesutil/sesutil.8 svneol=native#text/plain
+usr.sbin/sesutil/sesutil.c svneol=native#text/plain
 usr.sbin/setfib/Makefile -text
 usr.sbin/setfib/setfib.1 -text
 usr.sbin/setfib/setfib.c -text
