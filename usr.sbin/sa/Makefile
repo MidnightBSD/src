@@ -1,12 +1,12 @@
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/sa/Makefile,v 1.12 2007/05/22 10:49:42 dds Exp $
+# $FreeBSD: stable/10/usr.sbin/sa/Makefile 264996 2014-04-27 01:15:10Z jmmv $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../usr.bin/lastcomm
 
 PROG=	sa
 MAN=	sa.8
 SRCS=	main.c db.c pdb.c usrdb.c readrec.c
-
-WARNS?=	6
 
 .include <bsd.prog.mk>

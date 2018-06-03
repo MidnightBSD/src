@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1994 Christopher G. Demetriou
 .\" All rights reserved.
@@ -27,10 +28,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\" $FreeBSD: src/usr.sbin/sa/sa.8,v 1.20 2007/05/18 12:36:10 dds Exp $
+.\" $FreeBSD: stable/10/usr.sbin/sa/sa.8 208028 2010-05-13 12:08:11Z uqs $
 .\"
-.Dd November 24, 2008
+.Dd May 18, 2007
 .Dt SA 8
 .Os
 .Sh NAME
@@ -235,6 +235,8 @@ per-user accounting summary database
 .Xr acct 5 ,
 .Xr ac 8 ,
 .Xr accton 8
+.Sh AUTHORS
+.An Chris G. Demetriou Aq cgd@postgres.berkeley.edu
 .Sh CAVEATS
 While the behavior of the options in this version of
 .Nm
@@ -252,8 +254,6 @@ The formats of the summary files created by this version of
 are very different from the those used by the original version.
 This is not considered a problem, however, because the accounting record
 format has changed as well (since user ids are now 32 bits).
-.Sh AUTHORS
-.An Chris G. Demetriou Aq cgd@postgres.berkeley.edu
 .Sh BUGS
 The number of options to this program is absurd, especially considering
 that there is not much logic behind their lettering.
