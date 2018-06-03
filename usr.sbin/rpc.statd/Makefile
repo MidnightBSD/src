@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/rpc.statd/Makefile 321274 2017-07-20 01:03:50Z ngie $
 
 PROG=	rpc.statd
 MAN=	rpc.statd.8
@@ -16,10 +17,10 @@ RPCSRC= ${DESTDIR}/usr/include/rpcsvc/sm_inter.x
 RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -L -C
 
 sm_inter_svc.c: ${RPCSRC}
-	${RPCGEN} -m -o ${.TARGET} ${RPCSRC}
+	${RPCGEN} -m -o ${.TARGET} ${.ALLSRC}
 
 sm_inter.h: ${RPCSRC}
-	${RPCGEN} -h -o ${.TARGET} ${RPCSRC}
+	${RPCGEN} -h -o ${.TARGET} ${.ALLSRC}
 
 test: test.c
 	cc -o test test.c -lrpcsvc
