@@ -1,5 +1,5 @@
-# $FreeBSD: src/share/mk/bsd.dep.mk,v 1.48 2005/01/06 11:12:43 krion Exp $
 # $MidnightBSD$
+# $FreeBSD: stable/10/share/mk/bsd.dep.mk 296763 2016-03-12 19:20:48Z bdrewery $
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #
@@ -74,15 +74,16 @@ tags: ${SRCS}
 CLEANFILES?=
 
 .if !exists(${.OBJDIR}/${DEPENDFILE})
-.for _S in ${SRCS:N*.[hly]}
+.for _S in ${SRCS:N*.[dhly]}
 ${_S:R}.o: ${_S}
 .endfor
 .endif
 
+# Lexical analyzers
 .for _LSRC in ${SRCS:M*.l:N*/*}
 .for _LC in ${_LSRC:R}.c
 ${_LC}: ${_LSRC}
-	${LEX} -t ${LFLAGS} ${.ALLSRC} > ${.TARGET}
+	${LEX} ${LFLAGS} -o${.TARGET} ${.ALLSRC}
 .if !exists(${.OBJDIR}/${DEPENDFILE})
 ${_LC:R}.o: ${_LC}
 .endif
@@ -91,6 +92,7 @@ CLEANFILES+= ${_LC}
 .endfor
 .endfor
 
+# Yacc grammars
 .for _YSRC in ${SRCS:M*.y:N*/*}
 .for _YC in ${_YSRC:R}.c
 SRCS:=	${SRCS:S/${_YSRC}/${_YC}/}
@@ -118,6 +120,38 @@ ${_YC:R}.o: ${_YC}
 .endif
 .endfor
 .endfor
+
+# DTrace probe definitions
+# libelf is currently needed for drti.o
+.if ${SRCS:M*.d}
+LDFLAGS+=	-lelf
+LDADD+=		${LIBELF}
+CFLAGS+=	-D_DTRACE_VERSION=1 -I${.OBJDIR}
+.endif
+.for _DSRC in ${SRCS:M*.d:N*/*}
+.for _D in ${_DSRC:R}
+DHDRS+=	${_D}.h
+${_D}.h: ${_DSRC}
+	${DTRACE} -xnolibs -h -s ${.ALLSRC}
+SRCS:=	${SRCS:S/${_DSRC}/${_D}.h/}
+OBJS+=	${_D}.o
+CLEANFILES+= ${_D}.h ${_D}.o
+${_D}.o: ${_D}.h ${OBJS:S/${_D}.o//}
+	${DTRACE} -xnolibs -G -o ${.TARGET} -s ${.CURDIR}/${_DSRC} \
+		${OBJS:S/${_D}.o//}
+.if defined(LIB)
+CLEANFILES+= ${_D}.So ${_D}.po
+${_D}.So: ${_D}.h ${SOBJS:S/${_D}.So//}
+	${DTRACE} -xnolibs -G -o ${.TARGET} -s ${.CURDIR}/${_DSRC} \
+		${SOBJS:S/${_D}.So//}
+${_D}.po: ${_D}.h ${POBJS:S/${_D}.po//}
+	${DTRACE} -xnolibs -G -o ${.TARGET} -s ${.CURDIR}/${_DSRC} \
+		${POBJS:S/${_D}.po//}
+.endif
+.endfor
+.endfor
+beforedepend: ${DHDRS}
+beforebuild: ${DHDRS}
 .endif
 
 .if !target(depend)
@@ -127,12 +161,18 @@ depend: beforedepend ${DEPENDFILE} afterdepend
 # Tell bmake not to look for generated files via .PATH
 .NOPATH: ${DEPENDFILE}
 
+# Capture -include from CFLAGS.
+# This could be simpler with bmake :tW but needs to support fmake for MFC.
+_CFLAGS_INCLUDES= ${CFLAGS:Q:S/\\ /,/g:C/-include,/-include%/g:C/,/ /g:M-include*:C/%/ /g}
+_CXXFLAGS_INCLUDES= ${CXXFLAGS:Q:S/\\ /,/g:C/-include,/-include%/g:C/,/ /g:M-include*:C/%/ /g}
+
 # Different types of sources are compiled with slightly different flags.
 # Split up the sources, and filter out headers and non-applicable flags.
 MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BIDU]*} ${CFLAGS:M-std=*} \
-		${CFLAGS:M-ansi}
+		${CFLAGS:M-ansi} ${_CFLAGS_INCLUDES}
 MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BIDU]*} \
-		${CXXFLAGS:M-std=*} ${CXXFLAGS:M-ansi} ${CXXFLAGS:M-stdlib=*}
+		${CXXFLAGS:M-std=*} ${CXXFLAGS:M-ansi} ${CXXFLAGS:M-stdlib=*} \
+		${_CXXFLAGS_INCLUDES}
 
 DPSRCS+= ${SRCS}
 ${DEPENDFILE}: ${DPSRCS}
@@ -146,10 +186,6 @@ ${DEPENDFILE}: ${DPSRCS}
 	${MKDEPCMD} -f ${DEPENDFILE} -a ${MKDEP} \
 	    ${MKDEP_CXXFLAGS} \
 	    ${.ALLSRC:M*.cc} ${.ALLSRC:M*.C} ${.ALLSRC:M*.cpp} ${.ALLSRC:M*.cxx}
-.endif
-.if !empty(DPSRCS:M*.m)
-	${MKDEPCMD} -f ${DEPENDFILE} -a ${MKDEP} \
-	    ${MKDEP_OBJCFLAGS} ${.ALLSRC:M*.m}
 .endif
 .if target(_EXTRADEPEND)
 _EXTRADEPEND: .USE
@@ -186,8 +222,10 @@ cleandepend:
 .endif
 
 .if !target(checkdpadd) && (defined(DPADD) || defined(LDADD))
-_LDADD_FROM_DPADD=	${DPADD:C;^/usr/lib/lib(.*)\.a$;-l\1;}
-_LDADD_CANONICALIZED=	${LDADD:S/$//}
+_LDADD_FROM_DPADD=	${DPADD:R:T:C;^lib(.*)$;-l\1;g}
+# Ignore -Wl,--start-group/-Wl,--end-group as it might be required in the
+# LDADD list due to unresolved symbols
+_LDADD_CANONICALIZED=	${LDADD:N:R:T:C;^lib(.*)$;-l\1;g:N-Wl,--[es]*-group}
 checkdpadd:
 .if ${_LDADD_FROM_DPADD} != ${_LDADD_CANONICALIZED}
 	@echo ${.CURDIR}
