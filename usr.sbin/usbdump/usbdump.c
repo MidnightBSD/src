@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Weongyo Jeong <weongyo@freebsd.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/usbdump/usbdump.c 267045 2014-06-04 10:33:30Z hselasky $
  */
 
 #include <sys/param.h>
@@ -472,7 +473,6 @@ print_apacket(const struct header_32 *hdr, const uint8_t *ptr, int ptr_len)
 	 */
 	up->up_totlen = le32toh(up->up_totlen);
 	up->up_busunit = le32toh(up->up_busunit);
-	up->up_address = le32toh(up->up_address);
 	up->up_flags = le32toh(up->up_flags);
 	up->up_status = le32toh(up->up_status);
 	up->up_error = le32toh(up->up_error);
@@ -795,6 +795,8 @@ main(int argc, char *argv[])
 	int o;
 	int filt_unit;
 	int filt_ep;
+	int s;
+	int ifindex;
 	const char *optstring;
 	char *pp;
 
@@ -887,9 +889,20 @@ main(int argc, char *argv[])
 	/* clear ifr structure */
 	memset(&ifr, 0, sizeof(ifr));
 
+	/* Try to create usbusN interface if it is not available. */
+	s = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	if (s < 0)
+		errx(EXIT_FAILURE, "Could not open a socket");
+	ifindex = if_nametoindex(i_arg);
+	if (ifindex == 0) {
+		(void)strlcpy(ifr.ifr_name, i_arg, sizeof(ifr.ifr_name));
+		if (ioctl(s, SIOCIFCREATE2, &ifr) < 0)
+			errx(EXIT_FAILURE, "Invalid bus interface: %s", i_arg);
+	}
+
 	for ( ; v >= USBPF_HDR_LEN; v >>= 1) {
 		(void)ioctl(fd, BIOCSBLEN, (caddr_t)&v);
-		(void)strncpy(ifr.ifr_name, i_arg, sizeof(ifr.ifr_name));
+		(void)strlcpy(ifr.ifr_name, i_arg, sizeof(ifr.ifr_name));
 		if (ioctl(fd, BIOCSETIF, (caddr_t)&ifr) >= 0)
 			break;
 	}
@@ -929,6 +942,17 @@ main(int argc, char *argv[])
 	printf("%d packets captured\n", pkt_captured);
 	printf("%d packets received by filter\n", us.bs_recv);
 	printf("%d packets dropped by kernel\n", us.bs_drop);
+
+	/*
+	 * Destroy the usbusN interface only if it was created by
+	 * usbdump(8).  Ignore when it was already destroyed.
+	 */
+	if (ifindex == 0 && if_nametoindex(i_arg) > 0) {
+		(void)strlcpy(ifr.ifr_name, i_arg, sizeof(ifr.ifr_name));
+		if (ioctl(s, SIOCIFDESTROY, &ifr) < 0)
+			warn("SIOCIFDESTROY ioctl failed");
+	}
+	close(s);
 
 	if (p->fd > 0)
 		close(p->fd);
