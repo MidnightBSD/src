@@ -52698,6 +52698,7 @@ share/man/Makefile -text
 share/man/man1/Makefile -text
 share/man/man1/builtin.1 -text
 share/man/man1/intro.1 -text
+share/man/man3/ATOMIC_VAR_INIT.3 svneol=native#text/plain
 share/man/man3/Makefile -text
 share/man/man3/assert.3 -text
 share/man/man3/bitstring.3 -text
@@ -52705,6 +52706,7 @@ share/man/man3/end.3 -text
 share/man/man3/fpgetround.3 -text
 share/man/man3/intro.3 -text
 share/man/man3/makedev.3 -text
+share/man/man3/offsetof.3 svneol=native#text/plain
 share/man/man3/pthread.3 -text
 share/man/man3/pthread_affinity_np.3 -text
 share/man/man3/pthread_atfork.3 -text
@@ -52729,6 +52731,7 @@ share/man/man3/pthread_detach.3 -text
 share/man/man3/pthread_equal.3 -text
 share/man/man3/pthread_exit.3 -text
 share/man/man3/pthread_getconcurrency.3 -text
+share/man/man3/pthread_getcpuclockid.3 svneol=native#text/plain
 share/man/man3/pthread_getspecific.3 -text
 share/man/man3/pthread_getthreadid_np.3 -text
 share/man/man3/pthread_join.3 -text
@@ -52772,6 +52775,7 @@ share/man/man3/pthread_switch_add_np.3 -text
 share/man/man3/pthread_testcancel.3 -text
 share/man/man3/pthread_yield.3 -text
 share/man/man3/queue.3 -text
+share/man/man3/sigevent.3 svneol=native#text/plain
 share/man/man3/siginfo.3 -text
 share/man/man3/stdarg.3 -text
 share/man/man3/sysexits.3 -text

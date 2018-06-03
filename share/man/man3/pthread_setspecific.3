@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1996 John Birrell <jb@cimlogic.com.au>.
 .\" All rights reserved.
 .\"
@@ -28,7 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man3/pthread_setspecific.3 283977 2015-06-04 04:50:52Z pkelsey $
 .\"
 .Dd April 4, 1996
 .Dt PTHREAD_SETSPECIFIC 3
@@ -67,7 +68,10 @@ is undefined.
 The
 .Fn pthread_setspecific
 function may be called from a thread-specific data destructor function,
-however this may result in lost storage or infinite loops.
+however this may result in lost storage or infinite loops if doing so
+causes non-NULL key values to remain after
+.Bq PTHREAD_DESTRUCTOR_ITERATIONS
+iterations of destructor calls have been made.
 .Sh RETURN VALUES
 If successful, the
 .Fn pthread_setspecific

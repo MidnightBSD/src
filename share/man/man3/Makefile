@@ -1,16 +1,20 @@
-#	@(#)Makefile	8.2 (Berkeley) 12/13/93
 # $MidnightBSD$
+#	@(#)Makefile	8.2 (Berkeley) 12/13/93
+# $FreeBSD: stable/10/share/man/man3/Makefile 303325 2016-07-25 23:38:14Z jhb $
 
 .include <bsd.own.mk>
 
 MAN=		assert.3 \
+		ATOMIC_VAR_INIT.3 \
 		bitstring.3 \
 		end.3 \
 		fpgetround.3 \
 		intro.3 \
 		makedev.3 \
+		offsetof.3 \
 		${PTHREAD_MAN} \
 		queue.3 \
+		sigevent.3 \
 		siginfo.3 \
 		stdarg.3 \
 		sysexits.3 \
@@ -18,7 +22,29 @@ MAN=		assert.3 \
 		timeradd.3 \
 		tree.3
 
-MLINKS=		bitstring.3 bit_alloc.3 \
+MLINKS=		ATOMIC_VAR_INIT.3 atomic_compare_exchange_strong.3 \
+		ATOMIC_VAR_INIT.3 atomic_compare_exchange_strong_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_compare_exchange_weak.3 \
+		ATOMIC_VAR_INIT.3 atomic_compare_exchange_weak_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_exchange.3 \
+		ATOMIC_VAR_INIT.3 atomic_exchange_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_add.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_add_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_and.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_and_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_or.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_or_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_sub.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_sub_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_xor.3 \
+		ATOMIC_VAR_INIT.3 atomic_fetch_xor_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_init.3 \
+		ATOMIC_VAR_INIT.3 atomic_is_lock_free.3 \
+		ATOMIC_VAR_INIT.3 atomic_load.3 \
+		ATOMIC_VAR_INIT.3 atomic_load_explicit.3 \
+		ATOMIC_VAR_INIT.3 atomic_store.3 \
+		ATOMIC_VAR_INIT.3 atomic_store_explicit.3
+MLINKS+=	bitstring.3 bit_alloc.3 \
 		bitstring.3 bit_clear.3 \
 		bitstring.3 bit_decl.3 \
 		bitstring.3 bit_ffc.3 \
@@ -40,10 +66,13 @@ MLINKS+=	fpgetround.3 fpgetmask.3 \
 MLINKS+=	makedev.3 major.3 \
 		makedev.3 minor.3
 MLINKS+=	${PTHREAD_MLINKS}
-MLINKS+=	queue.3 LIST_EMPTY.3 \
+MLINKS+=	queue.3 LIST_CLASS_ENTRY.3 \
+		queue.3 LIST_CLASS_HEAD.3 \
+		queue.3 LIST_EMPTY.3 \
 		queue.3 LIST_ENTRY.3 \
 		queue.3 LIST_FIRST.3 \
 		queue.3 LIST_FOREACH.3 \
+		queue.3 LIST_FOREACH_FROM_SAFE.3 \
 		queue.3 LIST_FOREACH_SAFE.3 \
 		queue.3 LIST_HEAD.3 \
 		queue.3 LIST_HEAD_INITIALIZER.3 \
@@ -55,10 +84,13 @@ MLINKS+=	queue.3 LIST_EMPTY.3 \
 		queue.3 LIST_PREV.3 \
 		queue.3 LIST_REMOVE.3 \
 		queue.3 LIST_SWAP.3 \
+		queue.3 SLIST_CLASS_ENTRY.3 \
+		queue.3 SLIST_CLASS_HEAD.3 \
 		queue.3 SLIST_EMPTY.3 \
 		queue.3 SLIST_ENTRY.3 \
 		queue.3 SLIST_FIRST.3 \
 		queue.3 SLIST_FOREACH.3 \
+		queue.3 SLIST_FOREACH_FROM_SAFE.3 \
 		queue.3 SLIST_FOREACH_SAFE.3 \
 		queue.3 SLIST_HEAD.3 \
 		queue.3 SLIST_HEAD_INITIALIZER.3 \
@@ -70,11 +102,14 @@ MLINKS+=	queue.3 LIST_EMPTY.3 \
 		queue.3 SLIST_REMOVE_AFTER.3 \
 		queue.3 SLIST_REMOVE_HEAD.3 \
 		queue.3 SLIST_SWAP.3 \
+		queue.3 STAILQ_CLASS_ENTRY.3 \
+		queue.3 STAILQ_CLASS_HEAD.3 \
 		queue.3 STAILQ_CONCAT.3 \
 		queue.3 STAILQ_EMPTY.3 \
 		queue.3 STAILQ_ENTRY.3 \
 		queue.3 STAILQ_FIRST.3 \
 		queue.3 STAILQ_FOREACH.3 \
+		queue.3 STAILQ_FOREACH_FROM_SAFE.3 \
 		queue.3 STAILQ_FOREACH_SAFE.3 \
 		queue.3 STAILQ_HEAD.3 \
 		queue.3 STAILQ_HEAD_INITIALIZER.3 \
@@ -88,12 +123,16 @@ MLINKS+=	queue.3 LIST_EMPTY.3 \
 		queue.3 STAILQ_REMOVE_AFTER.3 \
 		queue.3 STAILQ_REMOVE_HEAD.3 \
 		queue.3 STAILQ_SWAP.3 \
+		queue.3 TAILQ_CLASS_ENTRY.3 \
+		queue.3 TAILQ_CLASS_HEAD.3 \
 		queue.3 TAILQ_CONCAT.3 \
 		queue.3 TAILQ_EMPTY.3 \
 		queue.3 TAILQ_ENTRY.3 \
 		queue.3 TAILQ_FIRST.3 \
 		queue.3 TAILQ_FOREACH.3 \
+		queue.3 TAILQ_FOREACH_FROM_SAFE.3 \
 		queue.3 TAILQ_FOREACH_REVERSE.3 \
+		queue.3 TAILQ_FOREACH_REVERSE_FROM_SAFE.3 \
 		queue.3 TAILQ_FOREACH_REVERSE_SAFE.3 \
 		queue.3 TAILQ_FOREACH_SAFE.3 \
 		queue.3 TAILQ_HEAD.3 \
@@ -183,6 +222,7 @@ PTHREAD_MAN=	pthread.3 \
 		pthread_equal.3 \
 		pthread_exit.3 \
 		pthread_getconcurrency.3 \
+		pthread_getcpuclockid.3 \
 		pthread_getspecific.3 \
 		pthread_getthreadid_np.3 \
 		pthread_join.3 \

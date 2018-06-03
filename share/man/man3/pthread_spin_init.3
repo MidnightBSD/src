@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Michael Telahun Makonnen
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man3/pthread_spin_init.3 302010 2016-06-18 13:42:33Z jilles $
 .\"
 .Dd January 22, 2004
 .Dt PTHREAD_SPIN_INIT 3
@@ -129,10 +130,8 @@ does not fully conform to
 because the
 .Fa pshared
 argument is ignored in
-.Lb libthr ,
-and in
-.Lb libkse
+.Lb libthr ;
 if any value other than
-.Dv PTHREAD_PROCESSES_PRIVATE
+.Dv PTHREAD_PROCESS_PRIVATE
 is specified, it returns
 .Er EINVAL .

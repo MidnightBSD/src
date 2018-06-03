@@ -1,5 +1,5 @@
 .\" $MidnightBSD$
-.\" Copyright (c) 1998 Alex Nash
+.\" Copyright (c) 2012 David Xu <davidxu@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -23,81 +23,63 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man3/pthread_rwlock_init.3 172880 2007-10-22 10:08:01Z ru $
+.\" Portions of this text are reprinted and reproduced in electronic form
+.\" from IEEE Std 1003.1, 2004 Edition, Standard for Information Technology --
+.\" Portable Operating System Interface (POSIX), The Open Group Base
+.\" Specifications Issue 6, Copyright (C) 2001-2004 by the Institute of
+.\" Electrical and Electronics Engineers, Inc and The Open Group.  In the
+.\" event of any discrepancy between this version and the original IEEE and
+.\" The Open Group Standard, the original IEEE and The Open Group Standard is
+.\" the referee document.  The original Standard can be obtained online at
+.\"	http://www.opengroup.org/unix/online.html.
 .\"
-.Dd August 4, 1998
-.Dt PTHREAD_RWLOCK_INIT 3
+.\" $FreeBSD: stable/10/share/man/man3/pthread_getcpuclockid.3 239533 2012-08-21 20:40:12Z joel $
+.\"
+.Dd August 21, 2012
+.Dt PTHREAD_GETCPUCLOCKID 3
 .Os
 .Sh NAME
-.Nm pthread_rwlock_init
-.Nd initialize a read/write lock
+.Nm pthread_getcpuclockid
+.Nd access a thread CPU-time clock
 .Sh LIBRARY
 .Lb libpthread
 .Sh SYNOPSIS
 .In pthread.h
+.In time.h
 .Ft int
-.Fn pthread_rwlock_init "pthread_rwlock_t *lock" "const pthread_rwlockattr_t *attr"
+.Fn pthread_getcpuclockid "pthread_t thread_id" "clockid_t *clock_id"
 .Sh DESCRIPTION
 The
-.Fn pthread_rwlock_init
-function is used to initialize a read/write lock, with attributes
-specified by
-.Fa attr .
-If
-.Fa attr
-is NULL, the default read/write lock attributes are used.
-.Pp
-The results of calling
-.Fn pthread_rwlock_init
-with an already initialized lock are undefined.
+.Fn pthread_getcpuclockid
+returns the clock ID of the CPU-time clock of the thread specified by
+.Fa thread_id .
+If the thread described by
+.Fa thread_id
+exists.
 .Sh RETURN VALUES
-If successful, the
-.Fn pthread_rwlock_init
-function will return zero.
-Otherwise an error number will be returned
-to indicate the error.
+Upon successful completion,
+.Fn pthread_getcpuclockid
+returns zero; otherwise, an error number is returned to indicate the
+error.
 .Sh ERRORS
-The
-.Fn pthread_rwlock_init
-function will fail if:
+The pthread_getcpuclockid() function will fail if:
 .Bl -tag -width Er
-.It Bq Er EAGAIN
-The system lacked the necessary resources (other than memory) to
-initialize the lock.
-.It Bq Er ENOMEM
-Insufficient memory exists to initialize the lock.
-.It Bq Er EPERM
-The caller does not have sufficient privilege to perform the
-operation.
-.El
-.Pp
-The
-.Fn pthread_rwlock_init
-function may fail if:
-.Bl -tag -width Er
-.It Bq Er EBUSY
-The system has detected an attempt to re-initialize the object
-referenced by
-.Fa lock ,
-a previously initialized but not yet destroyed read/write lock.
-.It Bq Er EINVAL
+.It Bq Er ESRCH
 The value specified by
-.Fa attr
-is invalid.
+.Fa thread_id
+does not refer to an existing thread.
 .El
 .Sh SEE ALSO
-.Xr pthread_rwlockattr_init 3 ,
-.Xr pthread_rwlockattr_setpshared 3 ,
-.Xr pthread_rwlock_destroy 3
+.Xr clock_gettime 2
 .Sh STANDARDS
 The
-.Fn pthread_rwlock_init
-function is expected to conform to
-.St -susv2 .
+.Fn pthread_getcpuclockid
+function conforms to
+.St -p1003.1-2004 .
 .Sh HISTORY
 The
-.Fn pthread_rwlock_init
+.Fn pthread_getcpuclockid
 function first appeared in
-.Fx 3.0 .
-.Sh BUGS
-The PTHREAD_PROCESS_SHARED attribute is not supported.
+.Fx 10.0 .
+.Sh AUTHORS
+.An David Xu Aq davidxu@FreeBSD.org

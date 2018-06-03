@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Michael Telahun Makonnen
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man3/pthread_barrier_destroy.3 302010 2016-06-18 13:42:33Z jilles $
 .\"
 .Dd February 19, 2004
 .Dt PTHREAD_BARRIER 3
@@ -75,9 +76,7 @@ argument to
 .Fn pthread_barrier_init .
 Once the threads have been released the barrier will be reset.
 .Sh IMPLEMENTATION NOTES
-In both
-.Lb libkse
-and
+In
 .Lb libthr
 the
 .Dv PTHREAD_BARRIER_SERIAL_THREAD

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2010 Xin LI <delphij@FreeBSD.org>
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man3/pthread_affinity_np.3 249716 2013-04-21 06:46:41Z joel $
 .\"
 .Dd March 23, 2010
 .Dt PTHREAD_AFFINITY_NP 3
@@ -49,7 +50,7 @@ allow the manipulation of sets of CPUs available to the specified thread.
 Masks of type
 .Ft cpuset_t
 are composed using the
-.Xr CPU_SET 3
+.Dv CPU_SET
 macros.
 The kernel tolerates large sets as long as all CPUs specified
 in the set exist.
@@ -123,7 +124,6 @@ operation.
 .Xr cpuset 2 ,
 .Xr cpuset_getid 2 ,
 .Xr cpuset_setid 2 ,
-.Xr CPU_SET 3 ,
 .Xr pthread 3 ,
 .Xr pthread_attr_getaffinity_np 3 ,
 .Xr pthread_attr_setaffinity_np 3

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (C) 2000 Jason Evans <jasone@FreeBSD.org>.
 .\" All rights reserved.
 .\"
@@ -25,7 +26,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man3/pthread_condattr.3 302010 2016-06-18 13:42:33Z jilles $
 .Dd May 9, 2010
 .Dt PTHREAD_CONDATTR 3
 .Os
@@ -167,7 +168,7 @@ does not fully conform to
 .St -p1003.2
 because the process-shared attribute is ignored;
 if any value other than
-.Dv PTHREAD_PROCESSES_PRIVATE
+.Dv PTHREAD_PROCESS_PRIVATE
 is specified in a call to
 .Fn pthread_condattr_setpshared ,
 it will return
