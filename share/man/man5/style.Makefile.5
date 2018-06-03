@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2002-2003 David O'Brien <obrien@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -25,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man5/style.Makefile.5 291783 2015-12-04 18:01:11Z bdrewery $
 .\"
-.Dd January 8, 2005
+.Dd October 21, 2015
 .Dt STYLE.MAKEFILE 5
 .Os
 .Sh NAME
@@ -117,6 +118,13 @@ i.e., no space between the variable name and the
 .Ic = .
 Keep values sorted alphabetically, if possible.
 .It
+Variables are expanded with
+.Sy {} ,
+not
+.Sy () .
+Such as
+.Va ${VARIABLE} .
+.It
 Do not use
 .Ic +=
 to set variables that are only set once
@@ -143,7 +151,7 @@ is an important thing.
 The usage of
 .Va WARNS
 is spelled
-.Dq Li "WARNS?=	" ,
+.Dq Li "WARNS?= " ,
 so that it may be overridden on the command line or in
 .Xr make.conf 5 .
 .It
