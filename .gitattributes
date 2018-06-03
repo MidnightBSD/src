@@ -53492,10 +53492,13 @@ share/man/man8/Makefile -text
 share/man/man8/crash.8 -text
 share/man/man8/diskless.8 -text
 share/man/man8/intro.8 -text
+share/man/man8/nanobsd.8 svneol=native#text/plain
+share/man/man8/picobsd.8 svneol=native#text/plain
 share/man/man8/rc.8 -text
 share/man/man8/rc.sendmail.8 -text
 share/man/man8/rc.subr.8 -text
 share/man/man8/rescue.8 -text
+share/man/man8/uefi.8 svneol=native#text/plain
 share/man/man8/yp.8 -text
 share/man/man9/BUF_ISLOCKED.9 -text
 share/man/man9/BUF_LOCK.9 -text

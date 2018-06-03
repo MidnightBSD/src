@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -33,9 +34,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rc.8	8.2 (Berkeley) 12/11/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man8/rc.8 325053 2017-10-28 07:06:57Z se $
 .\"
-.Dd November 17, 2009
+.Dd December 25, 2013
 .Dt RC 8
 .Os
 .Sh NAME
@@ -91,6 +92,9 @@ The
 .Nm rc.d/
 directories contain scripts which will be automatically
 executed at boot time and shutdown time.
+.Pp
+The sysrc(8) command provides a scripting interface to modify system
+config files.
 .Ss Operation of Nm
 .Bl -enum
 .It
@@ -129,6 +133,13 @@ and add
 (only allow vnet-enabled jails) to the list of KEYWORDS to skip in
 .Xr rcorder 8 .
 .It
+If the file
+.Va ${firstboot_sentinel}
+does not exist, add
+.Dq Li firstboot
+to the list of KEYWORDS to skip in
+.Xr rcorder 8 .
+.It
 Invoke
 .Xr rcorder 8
 to order the files in
@@ -156,6 +167,11 @@ Stop processing when the script that is the value of the
 .Va $early_late_divider
 has been run.
 .It
+Check again to see if the file
+.Va ${firstboot_sentinel}
+exists (in case it is located on a newly mounted file system)
+and adjust the list of KEYWORDs to skip appropriately.
+.It
 Re-run
 .Xr rcorder 8 ,
 this time including the scripts in the
@@ -164,6 +180,13 @@ directories.
 Ignore everything up to the
 .Va $early_late_divider ,
 then start executing the scripts as described above.
+.It
+If the file
+.Va ${firstboot_sentinel}
+exists, delete it.
+If the file
+.Va ${firstboot_sentinel}-reboot
+also exists (because it was created by a script), then delete it and reboot.
 .El
 .Ss Operation of Nm rc.shutdown
 .Bl -enum
@@ -223,7 +246,7 @@ network configuration.
 .It Pa SERVERS
 Ensure basic services
 exist for services that start early (such as
-.Pa named ) ,
+.Pa nisdomain ) ,
 because they are required by
 .Pa DAEMON
 below.
@@ -312,6 +335,9 @@ Defaults to displaying the process ID of the program (if running).
 If the script starts a process (rather than performing a one-off
 operation), wait for the command to exit.
 Otherwise it is not necessary to support this argument.
+.It Cm enabled
+Return 0 if the service is enabled and 1 if it is not.
+This command does not print anything.
 .It Cm rcvar
 Display which
 .Xr rc.conf 5
@@ -487,7 +513,7 @@ Most scripts require little more than the following.
 \&. /etc/rc.subr
 
 name="foo"
-rcvar=`set_rcvar`
+rcvar=foo_enable
 command="/usr/local/bin/foo"
 
 load_rc_config $name
@@ -508,7 +534,7 @@ The script may list and define as many commands at it needs.
 \&. /etc/rc.subr
 
 name="foo"
-rcvar=`set_rcvar`
+rcvar=foo_enable
 command="/usr/local/bin/foo"
 extra_commands="nop hello"
 hello_cmd="echo Hello World."
@@ -535,7 +561,8 @@ is unnecessary, but is often included.
 .Xr rcorder 8 ,
 .Xr rc.subr 8 ,
 .Xr reboot 8 ,
-.Xr savecore 8
+.Xr savecore 8 ,
+.Xr sysrc 8
 .Sh HISTORY
 The
 .Nm

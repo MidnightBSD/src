@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" 	$NetBSD: rc.subr.8,v 1.12 2004/01/06 00:52:24 lukem Exp $
 .\"
 .\" Copyright (c) 2002-2004 The NetBSD Foundation, Inc.
@@ -27,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man8/rc.subr.8 273993 2014-11-02 22:41:55Z hrs $
 .\"
-.Dd May 18, 2007
+.Dd October 12, 2014
 .Dt RC.SUBR 8
 .Os
 .Sh NAME
@@ -72,8 +73,6 @@
 .Ic run_rc_command Ar argument
 .It
 .Ic run_rc_script Ar file Ar argument
-.It
-.Ic set_rcvar Op Ar base
 .It
 .Ic wait_for_pids Op Ar pid ...
 .It
@@ -381,6 +380,9 @@ Perform a
 then a
 .Cm start .
 Defaults to displaying the process ID of the program (if running).
+.It Cm enabled
+Return 0 if the service is enabled and 1 if it is not.
+This command does not print anything.
 .It Cm rcvar
 Display which
 .Xr rc.conf 5
@@ -567,6 +569,22 @@ to before running
 Only supported after
 .Pa /usr
 is mounted.
+.It Va ${name}_env
+A list of environment variables to run
+.Va command
+with.
+This will be passed as arguments to
+.Xr env 1
+utility.
+.It Va ${name}_fib
+FIB
+.Pa Routing Table
+number to run
+.Va command
+with.
+See
+.Xr setfib 1
+for more details.
 .It Va ${name}_flags
 Arguments to call
 .Va command
@@ -621,6 +639,14 @@ as.
 Comma separated list of supplementary groups to run the chrooted
 .Va command
 with.
+.It Va ${name}_prepend
+Commands to be prepended to
+.Va command .
+This is a generic version of
+.Va ${name}_env ,
+.Va ${name}_fib ,
+or
+.Va ${name}_nice .
 .It Ar argument Ns Va _cmd
 Shell commands which override the default method for
 .Ar argument .
@@ -832,32 +858,6 @@ signal is sent to the parent
 process, which is assumed to be
 .Xr rc 8 .
 Otherwise, the shell exits with a non-zero status.
-.It Ic set_rcvar Op Ar base
-Set the variable name required to start a service.
-In
-.Fx
-a daemon is usually controlled by an
-.Xr rc.conf 5
-variable consisting of a daemon's name postfixed by the string
-.Dq Li "_enable" .
-This is not the case in
-.Nx .
-When the following line is included in a script:
-.Pp
-.Dl "rcvar=`set_rcvar`"
-.Pp
-this function will use the value of the
-.Va $name
-variable, which should be defined by the calling script,
-to construct the appropriate
-.Xr rc.conf 5
-knob.
-If the
-.Ar base
-argument is set it will use
-.Ar base
-instead of
-.Va $name .
 .It Ic wait_for_pids Op Ar pid ...
 Wait until all of the provided
 .Ar pids
