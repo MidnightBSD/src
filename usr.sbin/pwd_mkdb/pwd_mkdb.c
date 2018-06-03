@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)pwd_mkdb.c	8.5 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/pwd_mkdb/pwd_mkdb.c 296424 2016-03-06 08:40:21Z dwmalone $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -51,6 +52,7 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <limits.h>
 #include <pwd.h>
 #include <signal.h>
@@ -68,7 +70,7 @@ __MBSDID("$MidnightBSD$");
 #define LEGACY_VERSION(x)  _PW_VERSIONED(x, 3)
 #define CURRENT_VERSION(x) _PW_VERSIONED(x, 4)
 
-HASHINFO openinfo = {
+static HASHINFO openinfo = {
 	4096,		/* bsize */
 	32,		/* ffactor */
 	256,		/* nelem */
@@ -714,13 +716,27 @@ void
 mv(char *from, char *to)
 {
 	char buf[MAXPATHLEN];
+	char *to_dir;
+	int to_dir_fd = -1;
 
-	if (rename(from, to)) {
+	/*
+	 * Make sure file is safe on disk. To improve performance we will call
+	 * fsync() to the directory where file lies
+	 */
+	if (rename(from, to) != 0 ||
+	    (to_dir = dirname(to)) == NULL ||
+	    (to_dir_fd = open(to_dir, O_RDONLY|O_DIRECTORY)) == -1 ||
+	    fsync(to_dir_fd) != 0) {
 		int sverrno = errno;
 		(void)snprintf(buf, sizeof(buf), "%s to %s", from, to);
 		errno = sverrno;
+		if (to_dir_fd != -1)
+			close(to_dir_fd);
 		error(buf);
 	}
+
+	if (to_dir_fd != -1)
+		close(to_dir_fd);
 }
 
 void
