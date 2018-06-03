@@ -1,4 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/10/93
+# $FreeBSD: stable/10/share/doc/smm/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
 # $MidnightBSD$
 
 .include <bsd.own.mk>
@@ -13,6 +14,7 @@
 SUBDIR=	title \
 	contents \
 	01.setup \
+	02.config \
 	03.fsck \
 	04.quotas \
 	05.fastfs \
@@ -30,5 +32,7 @@ _08.sendmailop=	08.sendmailop
 .if ${MK_LPR} != "no"
 _07.lpd=	07.lpd
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
