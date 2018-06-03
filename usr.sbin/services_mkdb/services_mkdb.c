@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: services_mkdb.c,v 1.14 2008/04/28 20:24:17 martin Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/services_mkdb/services_mkdb.c 296424 2016-03-06 08:40:21Z dwmalone $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -44,17 +45,18 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <libgen.h>
 #include <libutil.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stringlist.h>
 
+#include "extern.h"
+
 static char tname[MAXPATHLEN];
 
 #define	PMASK		0xffff
 #define PROTOMAX	5
-
-extern void	uniq(const char *);
 
 static void	add(DB *, StringList *, size_t, const char *, size_t *, int);
 static StringList ***parseservices(const char *, StringList *);
@@ -67,7 +69,7 @@ static const char *getprotostr(StringList *, size_t);
 static const char *mkaliases(StringList *, char *, size_t);
 static void	usage(void);
 
-const HASHINFO hinfo = {
+HASHINFO hinfo = {
 	.bsize = 256,
 	.ffactor = 4,
 	.nelem = 32768,
@@ -87,14 +89,23 @@ main(int argc, char *argv[])
 	int	 warndup = 1;
 	int	 unique = 0;
 	int	 otherflag = 0;
+	int	 byteorder = 0;
 	size_t	 cnt = 0;
 	StringList *sl, ***svc;
 	size_t port, proto;
+	char *dbname_dir;
+	int dbname_dir_fd = -1;
 
 	setprogname(argv[0]);
 
-	while ((ch = getopt(argc, argv, "qo:u")) != -1)
+	while ((ch = getopt(argc, argv, "blo:qu")) != -1)
 		switch (ch) {
+		case 'b':
+		case 'l':
+			if (byteorder != 0)
+				usage();
+			byteorder = ch == 'b' ? 4321 : 1234;
+			break;
 		case 'q':
 			otherflag = 1;
 			warndup = 0;
@@ -118,6 +129,9 @@ main(int argc, char *argv[])
 		usage();
 	if (argc == 1)
 		fname = argv[0];
+
+	/* Set byte order. */
+	hinfo.lorder = byteorder;
 
 	if (unique)
 		uniq(fname);
@@ -154,8 +168,21 @@ main(int argc, char *argv[])
 	if ((db->close)(db))
 		err(1, "Error closing temporary database `%s'", tname);
 
-	if (rename(tname, dbname) == -1)
+	/*
+	 * Make sure file is safe on disk. To improve performance we will call
+	 * fsync() to the directory where file lies
+	 */
+	if (rename(tname, dbname) == -1 ||
+	    (dbname_dir = dirname(dbname)) == NULL ||
+	    (dbname_dir_fd = open(dbname_dir, O_RDONLY|O_DIRECTORY)) == -1 ||
+	    fsync(dbname_dir_fd) != 0) {
+		if (dbname_dir_fd != -1)
+			close(dbname_dir_fd);
 		err(1, "Cannot rename `%s' to `%s'", tname, dbname);
+	}
+
+	if (dbname_dir_fd != -1)
+		close(dbname_dir_fd);
 
 	return 0;
 }
@@ -423,7 +450,8 @@ out:
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "Usage:\t%s [-q] [-o <db>] [<servicefile>]\n"
+	(void)fprintf(stderr,
+	    "Usage:\t%s [-b | -l] [-q] [-o <db>] [<servicefile>]\n"
 	    "\t%s -u [<servicefile>]\n", getprogname(), getprogname());
 	exit(1);
 }

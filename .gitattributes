@@ -73645,6 +73645,7 @@ usr.sbin/service/Makefile -text
 usr.sbin/service/service.8 -text
 usr.sbin/service/service.sh -text
 usr.sbin/services_mkdb/Makefile -text
+usr.sbin/services_mkdb/extern.h svneol=native#text/plain
 usr.sbin/services_mkdb/services_mkdb.8 -text
 usr.sbin/services_mkdb/services_mkdb.c -text
 usr.sbin/services_mkdb/uniq.c -text

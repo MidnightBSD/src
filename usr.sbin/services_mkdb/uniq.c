@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uniq.c,v 1.4 2008/04/28 20:24:17 martin Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/services_mkdb/uniq.c 241778 2012-10-20 10:34:55Z ed $");
 
 #include <stdio.h>
 #include <string.h>
@@ -40,9 +41,8 @@ __MBSDID("$MidnightBSD$");
 #include <ctype.h>
 #include <fcntl.h>
 
-extern const HASHINFO hinfo;
+#include "extern.h"
 
-void uniq(const char *);
 static int comp(const char *, char **, size_t *);
 
 /*
