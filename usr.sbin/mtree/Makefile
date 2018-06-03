@@ -1,5 +1,6 @@
-#	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
 # $MidnightBSD$
+#	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
+# $FreeBSD: stable/10/usr.sbin/mtree/Makefile 262654 2014-03-01 13:00:40Z tijl $
 
 .include <bsd.own.mk>
 
@@ -14,10 +15,10 @@ CFLAGS+= -DMD5 -DSHA1 -DRMD160 -DSHA256
 DPADD=	${LIBMD}
 LDADD=	-lmd
 
-#.if ${MK_NMTREE} == "no"
+.if ${MK_NMTREE} == "no"
 LINKS=	${BINDIR}/fmtree ${BINDIR}/mtree
 MLINKS=	fmtree.8 mtree.8
-#.endif
+.endif
 
 CLEANFILES+=	fmtree.8
 

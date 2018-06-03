@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 2000 Massachusetts Institute of Technology
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/mtree/excludes.c 121300 2003-10-21 08:27:05Z phk $");
 
 #include <sys/types.h>
 #include <sys/time.h>		/* XXX for mtree.h */
