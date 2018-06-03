@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*-
+/*
  * Copyright (c) 1990, 1991, 1992, 1993, 1996
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -23,7 +23,7 @@ The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/usr.sbin/rarpd/rarpd.c 251083 2013-05-28 23:43:11Z marius $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/rarpd/rarpd.c 300472 2016-05-23 05:43:59Z truckman $");
 
 /*
  * rarpd - Reverse ARP Daemon
@@ -129,7 +129,7 @@ int
 main(int argc, char *argv[])
 {
 	int op;
-	char *ifname, *hostname, *name;
+	char *ifname, *name;
 
 	int aflag = 0;		/* listen on "all" interfaces  */
 	int fflag = 0;		/* don't fork */
@@ -187,7 +187,6 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	ifname = (aflag == 0) ? argv[0] : NULL;
-	hostname = ifname ? argv[1] : argv[0];
 	
 	if ((aflag && ifname) || (!aflag && ifname == NULL))
 		usage();
@@ -697,11 +696,10 @@ rarp_process(struct if_info *ii, u_char *pkt, u_int len)
  * host (i.e. the guy running rarpd), won't try to ARP for the hardware
  * address of the guy being booted (he cannot answer the ARP).
  */
-static struct sockaddr_inarp sin_inarp = {
-	sizeof(struct sockaddr_inarp), AF_INET, 0,
+static struct sockaddr_in sin_inarp = {
+	sizeof(struct sockaddr_in), AF_INET, 0,
 	{0},
 	{0},
-	0, 0
 };
 
 static struct sockaddr_dl sin_dl = {
@@ -719,7 +717,7 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 {
 	struct timespec tp;
 	int cc;
-	struct sockaddr_inarp *ar, *ar2;
+	struct sockaddr_in *ar, *ar2;
 	struct sockaddr_dl *ll, *ll2;
 	struct rt_msghdr *rt;
 	int xtype, xindex;
@@ -742,12 +740,12 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 
 	/* Get the type and interface index */
 	rt = &rtmsg.rthdr;
-	bzero(rt, sizeof(rtmsg));
+	bzero(&rtmsg, sizeof(rtmsg));
 	rt->rtm_version = RTM_VERSION;
 	rt->rtm_addrs = RTA_DST;
 	rt->rtm_type = RTM_GET;
 	rt->rtm_seq = ++seq;
-	ar2 = (struct sockaddr_inarp *)rtmsg.rtspace;
+	ar2 = (struct sockaddr_in *)rtmsg.rtspace;
 	bcopy(ar, ar2, sizeof(*ar));
 	rt->rtm_msglen = sizeof(*rt) + sizeof(*ar);
 	errno = 0;
