@@ -73188,6 +73188,8 @@ usr.sbin/newsyslog/newsyslog.c -text
 usr.sbin/newsyslog/newsyslog.conf.5 -text
 usr.sbin/newsyslog/pathnames.h -text
 usr.sbin/newsyslog/ptimes.c -text
+usr.sbin/newsyslog/tests/Makefile svneol=native#text/plain
+usr.sbin/newsyslog/tests/legacy_test.sh svneol=native#text/plain
 usr.sbin/nfscbd/Makefile -text
 usr.sbin/nfscbd/nfscbd.8 -text
 usr.sbin/nfscbd/nfscbd.c -text
