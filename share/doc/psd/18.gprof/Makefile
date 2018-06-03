@@ -1,5 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 8/14/93
-# $FreeBSD: src/share/doc/psd/18.gprof/Makefile,v 1.7 2004/10/24 15:32:42 ru Exp $
+# $FreeBSD: stable/10/share/doc/psd/18.gprof/Makefile 216178 2010-12-04 10:11:20Z uqs $
+# $MidnightBSD$
 
 VOLUME=		psd/18.gprof
 SRCS=		header.me abstract.me intro.me profiling.me gathering.me \
@@ -10,6 +11,5 @@ USE_SOELIM=
 USE_PIC=
 USE_TBL=
 USE_EQN=
-SRCDIR=		${.CURDIR}/../../../../usr.bin/gprof/PSD.doc
 
 .include <bsd.doc.mk>
