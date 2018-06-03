@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008 Konstantin Belousov
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/devfs_set_cdevpriv.9 294612 2016-01-23 01:02:28Z jhb $
 .\"
-.Dd September 8, 2008
+.Dd December 2, 2015
 .Dt DEVFS_CDEVPRIV 9
 .Os
 .Sh NAME
@@ -36,12 +37,12 @@
 .In sys/param.h
 .In sys/conf.h
 .Bd -literal
-typedef	void (*cdevpriv_dtr_t)(void *data);
+typedef	void d_priv_dtor_t(void *data);
 .Ed
 .Ft int
 .Fn devfs_get_cdevpriv "void **datap"
 .Ft int
-.Fn devfs_set_cdevpriv "void *priv" "cdevpriv_dtr_t dtr"
+.Fn devfs_set_cdevpriv "void *priv" "d_priv_dtor_t *dtr"
 .Ft void
 .Fn devfs_clear_cdevpriv "void"
 .Sh DESCRIPTION
@@ -79,6 +80,10 @@ finished operating, the
 callback is called, with private data supplied
 .Va data
 argument.
+The
+.Fn devfs_clear_cdevpriv
+function will be also be called if the open callback
+function returns an error code.
 .Pp
 On the last filedescriptor close, system automatically arranges
 .Fn devfs_clear_cdevpriv
@@ -112,8 +117,7 @@ was called.
 .Sh SEE ALSO
 .Xr open 2 ,
 .Xr close 2 ,
-.Xr devfs 5 ,
-.Xr kern_openat 9
+.Xr devfs 5
 .Sh HISTORY
 The
 .Fn devfs_cdevpriv

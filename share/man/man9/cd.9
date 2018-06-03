@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1997
 .\"	John-Mark Gurney.  All rights reserved.
 .\"
@@ -25,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/cd.9 237937 2012-07-01 19:40:51Z schweikh $
 .\"
 .Dd September 2, 2003
 .Dt CD 9
@@ -57,7 +58,7 @@ This can lead to drives requiring special handling in the driver.
 The following is a list of quirks that the driver recognize.
 .Bl -tag -width CD_Q_BCD_TRACKS
 .It Dv CD_Q_NO_TOUCH
-This flag tell the driver not to probe the drive at attach time to see if
+This flag tells the driver not to probe the drive at attach time to see if
 there is a disk in the drive and find out what size it is.
 This flag is currently unimplemented in the CAM
 .Nm

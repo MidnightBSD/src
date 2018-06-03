@@ -53507,6 +53507,7 @@ share/man/man9/BUF_UNLOCK.9 -text
 share/man/man9/BUS_ADD_CHILD.9 -text
 share/man/man9/BUS_BIND_INTR.9 -text
 share/man/man9/BUS_CHILD_DELETED.9 svneol=native#text/plain
+share/man/man9/BUS_CHILD_DETACHED.9 svneol=native#text/plain
 share/man/man9/BUS_CONFIG_INTR.9 -text
 share/man/man9/BUS_DESCRIBE_INTR.9 -text
 share/man/man9/BUS_NEW_PASS.9 -text
@@ -53532,6 +53533,7 @@ share/man/man9/MD5.9 -text
 share/man/man9/MODULE_DEPEND.9 -text
 share/man/man9/MODULE_VERSION.9 -text
 share/man/man9/Makefile -text
+share/man/man9/SDT.9 svneol=native#text/plain
 share/man/man9/SYSCALL_MODULE.9 -text
 share/man/man9/SYSINIT.9 -text
 share/man/man9/VFS.9 -text
@@ -53548,7 +53550,9 @@ share/man/man9/VFS_UNMOUNT.9 -text
 share/man/man9/VFS_VGET.9 -text
 share/man/man9/VOP_ACCESS.9 -text
 share/man/man9/VOP_ACLCHECK.9 -text
+share/man/man9/VOP_ADVISE.9 svneol=native#text/plain
 share/man/man9/VOP_ADVLOCK.9 -text
+share/man/man9/VOP_ALLOCATE.9 svneol=native#text/plain
 share/man/man9/VOP_ATTRIB.9 -text
 share/man/man9/VOP_BWRITE.9 -text
 share/man/man9/VOP_CREATE.9 -text
@@ -53602,16 +53606,19 @@ share/man/man9/bus_generic_new_pass.9 -text
 share/man/man9/bus_generic_print_child.9 -text
 share/man/man9/bus_generic_read_ivar.9 -text
 share/man/man9/bus_generic_shutdown.9 -text
+share/man/man9/bus_get_resource.9 svneol=native#text/plain
 share/man/man9/bus_release_resource.9 -text
 share/man/man9/bus_set_pass.9 -text
 share/man/man9/bus_set_resource.9 -text
 share/man/man9/bus_space.9 -text
 share/man/man9/byteorder.9 -text
+share/man/man9/casuword.9 svneol=native#text/plain
 share/man/man9/cd.9 -text
 share/man/man9/condvar.9 -text
 share/man/man9/config_intrhook.9 -text
 share/man/man9/contigmalloc.9 -text
 share/man/man9/copy.9 -text
+share/man/man9/counter.9 svneol=native#text/plain
 share/man/man9/cr_cansee.9 -text
 share/man/man9/cr_seeothergids.9 -text
 share/man/man9/cr_seeotheruids.9 -text
@@ -53661,6 +53668,7 @@ share/man/man9/fail.9 -text
 share/man/man9/fdclone.9 -text
 share/man/man9/fetch.9 -text
 share/man/man9/firmware.9 -text
+share/man/man9/fpu_kern.9 svneol=native#text/plain
 share/man/man9/g_access.9 -text
 share/man/man9/g_attach.9 -text
 share/man/man9/g_bio.9 -text
@@ -53715,6 +53723,7 @@ share/man/man9/mbpool.9 -text
 share/man/man9/mbuf.9 -text
 share/man/man9/mbuf_tags.9 -text
 share/man/man9/mdchain.9 -text
+share/man/man9/memcchr.9 svneol=native#text/plain
 share/man/man9/memguard.9 -text
 share/man/man9/mi_switch.9 -text
 share/man/man9/microseq.9 -text
@@ -53734,6 +53743,7 @@ share/man/man9/pbuf.9 -text
 share/man/man9/pci.9 -text
 share/man/man9/pfil.9 -text
 share/man/man9/pfind.9 -text
+share/man/man9/pget.9 svneol=native#text/plain
 share/man/man9/pgfind.9 -text
 share/man/man9/physio.9 -text
 share/man/man9/pmap.9 -text
@@ -53758,6 +53768,7 @@ share/man/man9/pmap_qenter.9 -text
 share/man/man9/pmap_release.9 -text
 share/man/man9/pmap_remove.9 -text
 share/man/man9/pmap_resident_count.9 -text
+share/man/man9/pmap_unwire.9 svneol=native#text/plain
 share/man/man9/pmap_zero_page.9 -text
 share/man/man9/printf.9 -text
 share/man/man9/prison_check.9 -text
@@ -53857,6 +53868,7 @@ share/man/man9/vm_map_wire.9 -text
 share/man/man9/vm_page_aflag.9 -text
 share/man/man9/vm_page_alloc.9 -text
 share/man/man9/vm_page_bits.9 -text
+share/man/man9/vm_page_busy.9 svneol=native#text/plain
 share/man/man9/vm_page_cache.9 -text
 share/man/man9/vm_page_deactivate.9 -text
 share/man/man9/vm_page_dontneed.9 -text
@@ -53871,6 +53883,7 @@ share/man/man9/vm_page_sleep_if_busy.9 -text
 share/man/man9/vm_page_wakeup.9 -text
 share/man/man9/vm_page_wire.9 -text
 share/man/man9/vm_set_page_size.9 -text
+share/man/man9/vmem.9 svneol=native#text/plain
 share/man/man9/vn_fullpath.9 -text
 share/man/man9/vn_isdisk.9 -text
 share/man/man9/vnode.9 -text

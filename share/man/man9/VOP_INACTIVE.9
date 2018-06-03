@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 1996 Doug Rabson
@@ -26,9 +27,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/VOP_INACTIVE.9 269285 2014-07-30 04:00:23Z kib $
 .\"
-.Dd July 24, 1996
+.Dd July 27, 2014
 .Dt VOP_INACTIVE 9
 .Os
 .Sh NAME
@@ -63,17 +64,14 @@ is called when a vnode is being reused for a different file system.
 Any file system specific resources associated with the vnode should be
 freed.
 .Sh LOCKS
-For VOP_INACTIVE, the
+For both
+.Fn VOP_INACTIVE
+and
+.Fn VOP_RECLAIM ,
+the
 .Fa vp
-will be locked on entry.
-Your VOP_INACTIVE code
-must unlock the
-.Fa vp
-prior to returning.
-.Pp
-For VOP_RECLAIM, the
-.Fa vp
-will not be locked on entry and should be left unlocked on return.
+will be exclusively locked on entry, and must be left exclusively
+locked on return.
 .Sh SEE ALSO
 .Xr vnode 9
 .Sh AUTHORS

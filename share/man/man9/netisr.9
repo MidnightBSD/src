@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2009 Robert N. M. Watson
 .\" All rights reserved.
@@ -25,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/netisr.9 282781 2015-05-11 20:26:35Z hiren $
 .\"
-.Dd February 22, 2010
+.Dd May 11, 2015
 .Dt NETISR 9
 .Os
 .Sh NAME
@@ -50,7 +51,7 @@
 .Ft void
 .Fn netisr_clearqdrops "const struct netisr_handler *nhp"
 .Ft void
-.Fn netisr_getqdrops "const struct netisr_handler *nhp" "u_int64_t *qdropsp"
+.Fn netisr_getqdrops "const struct netisr_handler *nhp" "uint64_t *qdropsp"
 .Ft void
 .Fn netisr_getqlimit "const struct netisr_handler *nhp" "u_int *qlimitp"
 .Ft int
@@ -83,7 +84,7 @@ and
 .Nm
 supports multi-processor execution of handlers, and relies on a combination
 of source ordering and protocol-specific ordering and work-placement
-policies to decide how do distribute work across one or more worker
+policies to decide how to distribute work across one or more worker
 threads.
 Registering protocols will declare one of three policies:
 .Bl -tag -width NETISR_POLICY_SOURCE

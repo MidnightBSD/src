@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2006 Robert N. M. Watson
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/socket.9 249412 2013-04-12 16:36:18Z trasz $
 .\"
-.Dd December 14, 2006
+.Dd April 12, 2013
 .Dt SOCKET 9
 .Os
 .Sh NAME
@@ -208,12 +209,19 @@ Data may be retrieved directly to kernel or user memory via the
 argument, or as an mbuf chain returned to the caller via
 .Fa mp0 ,
 avoiding a data copy.
-Only one of the
+The
 .Fa uio
-or
-.Fa mp0
-pointers may be
+must always be
 .Pf non- Dv NULL .
+If
+.Fa mp0
+is
+.Pf non- Dv NULL ,
+only the
+.Pf uio_resid
+of
+.Fa uio
+is used.
 The caller may optionally retrieve a socket address on a protocol with the
 .Dv PR_ADDR
 capability by providing storage via

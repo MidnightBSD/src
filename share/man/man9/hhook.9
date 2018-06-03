@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2010-2011 The FreeBSD Foundation
 .\" All rights reserved.
@@ -28,9 +29,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/hhook.9 252052 2013-06-21 03:37:35Z lstewart $
 .\"
-.Dd February 15, 2011
+.Dd June 21, 2013
 .Dt HHOOK 9
 .Os
 .Sh NAME
@@ -380,9 +381,3 @@ This manual page was written by
 .An David Hayes Aq david.hayes@ieee.org
 and
 .An Lawrence Stewart Aq lstewart@FreeBSD.org .
-.Sh BUGS
-The framework does not currently support registering hook points in subsystems
-which have not been virtualised with VIMAGE.
-Fairly minimal internal changes to the
-.Nm
-implementation are required to address this.

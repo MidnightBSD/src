@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2003 Hiten Pandya <hmp@FreeBSD.org>
 .\" Copyright (c) 2009-2010 The FreeBSD Foundation
@@ -29,7 +30,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/alq.9 316247 2017-03-30 06:06:49Z ngie $
 .\"
 .Dd April 26, 2010
 .Dt ALQ 9
@@ -360,8 +361,8 @@ Performance critical code paths may wish to consider using
 .Fn alq_getn
 (variable length queues) or
 .Fn alq_get
-(fixed length queues) to avoid the extra memory copy. Note that a queue
-remains locked between calls to
+(fixed length queues) to avoid the extra memory copy.
+Note that a queue remains locked between calls to
 .Fn alq_getn
 or
 .Fn alq_get

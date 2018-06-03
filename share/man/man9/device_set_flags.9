@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 1999 Doug Rabson
@@ -26,7 +27,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/device_set_flags.9 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd September 6, 1999
 .Dt DEVICE_GET_FLAGS 9
@@ -39,8 +40,8 @@
 .In sys/param.h
 .In sys/bus.h
 .Ft void
-.Fn device_set_flags "device_t dev" "u_int32_t flags"
-.Ft u_int32_t
+.Fn device_set_flags "device_t dev" "uint32_t flags"
+.Ft uint32_t
 .Fn device_get_flags "device_t dev"
 .Sh DESCRIPTION
 Each device supports a set of driver-dependent flags which are often

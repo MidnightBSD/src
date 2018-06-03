@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 1996 Doug Rabson
@@ -26,7 +27,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/VOP_FSYNC.9 256123 2013-10-07 20:29:31Z jhb $
 .\"
 .Dd July 24, 1996
 .Dt VOP_FSYNC 9
@@ -65,15 +66,6 @@ Push data not written by file system syncer.
 .It Fa td
 The calling thread.
 .El
-.Pp
-The argument
-.Fa waitfor
-is either
-.Dv MNT_WAIT
-or
-.Dv MNT_NOWAIT
-and specifies whether or not the function should wait for the writes
-to finish before returning.
 .Sh LOCKS
 The file should be locked on entry.
 .Sh RETURN VALUES

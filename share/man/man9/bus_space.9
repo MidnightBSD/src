@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $NetBSD: bus_space.9,v 1.9 1999/03/06 22:09:29 mycroft Exp $
 .\"
 .\" Copyright (c) 2005 M. Warner Losh.  All Rights Reserved.
@@ -36,13 +37,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgment:
-.\" 	This product includes software developed by the NetBSD
-.\" 	Foundation, Inc. and its contributors.
-.\" 4. Neither the name of The NetBSD Foundation nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -56,7 +50,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/bus_space.9 263687 2014-03-24 13:48:04Z emaste $
 .\"
 .Dd June 13, 2005
 .Dt BUS_SPACE 9
@@ -167,77 +161,77 @@
 .Fo bus_space_free
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t size"
 .Fc
-.Ft u_int8_t
+.Ft uint8_t
 .Fo bus_space_read_1
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int16_t
+.Ft uint16_t
 .Fo bus_space_read_2
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int32_t
+.Ft uint32_t
 .Fo bus_space_read_4
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int64_t
+.Ft uint64_t
 .Fo bus_space_read_8
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int8_t
+.Ft uint8_t
 .Fo bus_space_read_stream_1
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int16_t
+.Ft uint16_t
 .Fo bus_space_read_stream_2
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int32_t
+.Ft uint32_t
 .Fo bus_space_read_stream_4
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
-.Ft u_int64_t
+.Ft uint64_t
 .Fo bus_space_read_stream_8
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle" "bus_size_t offset"
 .Fc
 .Ft void
 .Fo bus_space_write_1
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int8_t value"
+.Fa "bus_size_t offset" "uint8_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_2
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int16_t value"
+.Fa "bus_size_t offset" "uint16_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_4
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int32_t value"
+.Fa "bus_size_t offset" "uint32_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_8
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int64_t value"
+.Fa "bus_size_t offset" "uint64_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_stream_1
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int8_t value"
+.Fa "bus_size_t offset" "uint8_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_stream_2
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int16_t value"
+.Fa "bus_size_t offset" "uint16_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_stream_4
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int32_t value"
+.Fa "bus_size_t offset" "uint32_t value"
 .Fc
 .Ft void
 .Fo bus_space_write_stream_8
 .Fa "bus_space_tag_t space" "bus_space_handle_t handle"
-.Fa "bus_size_t offset" "u_int64_t value"
+.Fa "bus_size_t offset" "uint64_t value"
 .Fc
 .Ft void
 .Fo bus_space_barrier
@@ -247,97 +241,97 @@
 .Ft void
 .Fo bus_space_read_region_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_stream_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_stream_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_stream_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_region_stream_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_stream_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_stream_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_stream_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_region_stream_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
@@ -391,193 +385,193 @@
 .Ft void
 .Fo bus_space_set_region_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_stream_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_stream_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_stream_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_region_stream_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_stream_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_stream_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_stream_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_read_multi_stream_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_stream_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_stream_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_stream_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_write_multi_stream_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t *datap"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t *datap"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_stream_1
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int8_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint8_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_stream_2
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int16_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint16_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_stream_4
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int32_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint32_t value"
 .Fa "bus_size_t count"
 .Fc
 .Ft void
 .Fo bus_space_set_multi_stream_8
 .Fa "bus_space_tag_t space"
-.Fa "bus_space_handle_t handle" "bus_size_t offset" "u_int64_t value"
+.Fa "bus_space_handle_t handle" "bus_size_t offset" "uint64_t value"
 .Fa "bus_size_t count"
 .Fc
 .Sh DESCRIPTION

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"     $NetBSD: panic.9,v 1.2 1996/10/09 17:20:04 explorer Exp $
 .\"
 .\" Copyright (c) 1996 Michael Graff.
@@ -29,9 +30,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/panic.9 283676 2015-05-29 04:01:39Z markj $
 .\"
-.Dd August 11, 1995
+.Dd April 23, 2015
 .Dt PANIC 9
 .Os
 .Sh NAME
@@ -42,10 +43,14 @@
 .In sys/systm.h
 .Ft void
 .Fn panic "const char *fmt" ...
+.Ft void
+.Fn vpanic "const char *fmt" "va_list ap"
 .Sh DESCRIPTION
 The
 .Fn panic
-function terminates the running system.
+and
+.Fn vpanic
+functions terminate the running system.
 The message
 .Fa fmt
 is a

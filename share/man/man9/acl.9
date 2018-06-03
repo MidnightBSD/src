@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1999-2001 Robert N. M. Watson
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/acl.9 290893 2015-11-15 23:54:34Z ngie $
 .\"
-.Dd September 18, 2009
+.Dd September 4, 2015
 .Dt ACL 9
 .Os
 .Sh NAME
@@ -203,7 +204,13 @@ The following values are valid:
 .It Dv ACL_ENTRY_DIRECTORY_INHERIT
 .It Dv ACL_ENTRY_NO_PROPAGATE_INHERIT
 .It Dv ACL_ENTRY_INHERIT_ONLY
+.It Dv ACL_ENTRY_INHERITED
 .El
+The
+.Dv ACL_ENTRY_INHERITED
+flag is set on an ACE that has been inherited from its parent.
+It may also be set programmatically, and is valid on both files
+and directories.
 .El
 .Sh SEE ALSO
 .Xr acl 3 ,

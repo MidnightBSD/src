@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2000-2001
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -23,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/kthread.9 269935 2014-08-13 12:41:31Z gavin $
 .\"
-.Dd January 24, 2010
+.Dd July 15, 2014
 .Dt KTHREAD 9
 .Os
 .Sh NAME
@@ -275,7 +276,7 @@ buf_daemon()
 	    bufdaemonthread, SHUTDOWN_PRI_LAST);
 	...
 	for (;;) {
-		kthread_suspend_check(bufdaemonthread);
+		kthread_suspend_check();
 		...
 	}
 }

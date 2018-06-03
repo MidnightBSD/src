@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002 Kenneth D. Merry.
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/zero_copy.9 242146 2012-10-26 16:40:03Z joel $
 .\"
-.Dd December 5, 2004
+.Dd October 23, 2012
 .Dt ZERO_COPY 9
 .Os
 .Sh NAME
@@ -33,7 +34,8 @@
 .Nm zero_copy_sockets
 .Nd "zero copy sockets code"
 .Sh SYNOPSIS
-.Cd "options ZERO_COPY_SOCKETS"
+.Cd "options SOCKET_SEND_COW"
+.Cd "options SOCKET_RECV_PFLIP"
 .Sh DESCRIPTION
 The
 .Fx
@@ -166,3 +168,5 @@ The zero copy sockets code was originally written by
 .An Andrew Gallatin Aq gallatin@FreeBSD.org
 and substantially modified and updated by
 .An Kenneth Merry Aq ken@FreeBSD.org .
+.Sh BUGS
+The COW based send mechanism is not safe and may result in kernel crashes.

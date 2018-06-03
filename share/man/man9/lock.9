@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (C) 2002 Chad David <davidc@acns.ab.ca>. All rights reserved.
 .\"
@@ -24,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/lock.9 299386 2016-05-10 20:12:27Z wblock $
 .\"
-.Dd June 16, 2009
+.Dd November 2, 2014
 .Dt LOCK 9
 .Os
 .Sh NAME
@@ -60,20 +61,20 @@
 .Ft void
 .Fn lockmgr_disown "struct lock *lkp"
 .Ft void
-.Fn lockmgr_printinfo "struct lock *lkp"
+.Fn lockmgr_printinfo "const struct lock *lkp"
 .Ft int
-.Fn lockmgr_recursed "struct lock *lkp"
+.Fn lockmgr_recursed "const struct lock *lkp"
 .Ft int
 .Fn lockmgr_rw "struct lock *lkp" "u_int flags" "struct rwlock *ilk"
 .Ft int
-.Fn lockmgr_waiters "struct lock *lkp"
+.Fn lockmgr_waiters "const struct lock *lkp"
 .Ft int
-.Fn lockstatus "struct lock *lkp"
+.Fn lockstatus "const struct lock *lkp"
 .Pp
 .Cd "options INVARIANTS"
 .Cd "options INVARIANT_SUPPORT"
 .Ft void
-.Fn lockmgr_assert "struct lock *lkp" "int what"
+.Fn lockmgr_assert "const struct lock *lkp" "int what"
 .Sh DESCRIPTION
 The
 .Fn lockinit
@@ -145,7 +146,7 @@ Their arguments are:
 A pointer to the lock to manipulate.
 .It Fa flags
 Flags indicating what action is to be taken.
-.Bl -tag -width ".Dv LK_CANRECURSE"
+.Bl -tag -width ".Dv LK_NODDLKTREAT"
 .It Dv LK_SHARED
 Acquire a shared lock.
 If an exclusive lock is currently held,
@@ -164,11 +165,17 @@ If an exclusive lock has been recursed, the system will
 .Xr panic 9 .
 .It Dv LK_UPGRADE
 Upgrade a shared lock to an exclusive lock.
-If this call fails, the shared lock is lost.
+If this call fails, the shared lock is lost, even if the
+.Dv LK_NOWAIT
+flag is specified.
 During the upgrade, the shared lock could
 be temporarily dropped.
 Attempts to upgrade an exclusive lock will cause a
 .Xr panic 9 .
+.It Dv LK_TRYUPGRADE
+Try to upgrade a shared lock to an exclusive lock.
+The failure to upgrade does not result in the dropping
+of the shared lock ownership.
 .It Dv LK_RELEASE
 Release the lock.
 Releasing a lock that is not held can cause a
@@ -193,6 +200,29 @@ Allow recursion on an exclusive lock.
 For every lock there must be a release.
 .It Dv LK_INTERLOCK
 Unlock the interlock (which should be locked already).
+.It Dv LK_NODDLKTREAT
+Normally,
+.Fn lockmgr
+postpones serving further shared requests for shared-locked lock if there is
+exclusive waiter, to avoid exclusive lock starvation.
+But, if the thread requesting the shared lock already owns a shared lockmgr
+lock, the request is granted even in presence of the parallel exclusive lock
+request, which is done to avoid deadlocks with recursive shared acquisition.
+.Pp
+The
+.Dv LK_NODDLKTREAT
+flag can only be used by code which requests shared non-recursive lock.
+The flag allows exclusive requests to preempt the current shared request
+even if the current thread owns shared locks.
+This is safe since shared lock is guaranteed to not recurse, and is used
+when thread is known to held unrelated shared locks, to not cause
+unnecessary starvation.  An example is
+.Dv vp
+locking in VFS
+.Xr lookup 9 ,
+when
+.Dv dvp
+is already locked.
 .El
 .It Fa ilk
 An interlock mutex for controlling group access to the lock.
@@ -302,7 +332,6 @@ Assert that the current thread has a recursed lock on
 Assert that the current thread does not have a recursed lock on
 .Fa lkp .
 .El
-.Pp
 .Sh RETURN VALUES
 The
 .Fn lockmgr
@@ -334,7 +363,9 @@ fail if:
 was requested and another thread had already requested a lock upgrade.
 .It Bq Er EBUSY
 .Dv LK_NOWAIT
-was set, and a sleep would have been required.
+was set, and a sleep would have been required, or
+.Dv LK_TRYUPGRADE
+operation was not able to upgrade the lock.
 .It Bq Er ENOLCK
 .Dv LK_SLEEPFAIL
 was set and

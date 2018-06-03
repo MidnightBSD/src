@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (C) 2001 Jason Evans <jasone@FreeBSD.org>.  All rights reserved.
 .\"
@@ -24,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/sx.9 323870 2017-09-21 19:24:11Z marius $
 .\"
-.Dd May 28, 2009
+.Dd March 13, 2016
 .Dt SX 9
 .Os
 .Sh NAME
@@ -88,12 +89,12 @@
 .Ft "struct thread *"
 .Fn sx_xholder "struct sx *sx"
 .Ft int
-.Fn sx_xlocked "struct sx *sx"
+.Fn sx_xlocked "const struct sx *sx"
 .Pp
 .Cd "options INVARIANTS"
 .Cd "options INVARIANT_SUPPORT"
 .Ft void
-.Fn sx_assert "struct sx *sx" "int what"
+.Fn sx_assert "const struct sx *sx" "int what"
 .In sys/kernel.h
 .Fn SX_SYSINIT "name" "struct sx *sx" "const char *description"
 .Sh DESCRIPTION
@@ -124,12 +125,10 @@ specifies a set of optional flags to alter the behavior of
 It contains one or more of the following flags:
 .Bl -tag -width SX_NOADAPTIVE
 .It Dv SX_NOADAPTIVE
-If the kernel is not compiled with
-.Cd "options NO_ADAPTIVE_SX" ,
-then lock operations for
-.Fa sx
-will spin instead of sleeping while an exclusive lock holder is executing on
-another CPU.
+Disable adaptive spinning, rather than sleeping, for lock operations
+while an exclusive lock holder is executing on another CPU.
+Adaptive spinning is the default unless the kernel is compiled with
+.Cd "options NO_ADAPTIVE_SX" .
 .It Dv SX_DUPOK
 Witness should not log messages about duplicate locks being acquired.
 .It Dv SX_NOWITNESS
@@ -144,6 +143,15 @@ Allow threads to recursively acquire exclusive locks for
 .It Dv SX_QUIET
 Do not log any operations for this lock via
 .Xr ktr 4 .
+.It Dv SX_NEW
+If the kernel has been compiled with
+.Cd "options INVARIANTS" ,
+.Fn sx_init
+will assert that the
+.Fa sx
+has not been initialized multiple times without intervening calls to
+.Fn sx_destroy
+unless this option is specified.
 .El
 .Pp
 Shared/exclusive locks are destroyed with

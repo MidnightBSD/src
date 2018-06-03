@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2000 Mark R V Murray
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/get_cyclecount.9 306378 2016-09-27 19:00:22Z pluknet $
 .\"
 .Dd March 15, 2011
 .Dt GET_CYCLECOUNT 9
@@ -34,7 +35,7 @@
 .In sys/param.h
 .In sys/systm.h
 .In machine/cpu.h
-.Ft u_int64_t
+.Ft uint64_t
 .Fn get_cyclecount "void"
 .Sh DESCRIPTION
 The
@@ -77,7 +78,6 @@ and
 processors use the
 .Li TSC
 register.
-.Pp
 The
 .Tn IA64
 processors use the

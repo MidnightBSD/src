@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2004 Tom Rhodes
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/kernel_mount.9 269498 2014-08-04 03:59:48Z gjb $
 .\"
 .Dd December 13, 2004
 .Dt KERNEL_MOUNT 9
@@ -153,12 +154,12 @@ msdosfs_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
 
 	if (data == NULL)
 		return (EINVAL);
-	error = copyin(data, &args, sizeof args);
+	error = copyin(data, &args, sizeof(args));
 	if (error)
 		return (error);
 
 	ma = mount_argsu(ma, "from", args.fspec, MAXPATHLEN);
-	ma = mount_arg(ma, "export", &args.export, sizeof args.export);
+	ma = mount_arg(ma, "export", &args.export, sizeof(args.export));
 	ma = mount_argf(ma, "uid", "%d", args.uid);
 	ma = mount_argf(ma, "gid", "%d", args.gid);
 	ma = mount_argf(ma, "mask", "%d", args.mask);
@@ -194,8 +195,7 @@ must come in pairs, e.g.,
 .Ed
 .Sh SEE ALSO
 .Xr VFS 9 ,
-.Xr VFS_MOUNT 9 ,
-.Xr vfs_mount 9
+.Xr VFS_MOUNT 9
 .Sh HISTORY
 The
 .Fn kernel_mount

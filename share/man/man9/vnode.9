@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1996 Doug Rabson
 .\"
 .\" All rights reserved.
@@ -24,9 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/vnode.9 269286 2014-07-30 04:03:59Z kib $
 .\"
-.Dd February 13, 2010
+.Dd February 12, 2014
 .Dt VNODE 9
 .Os
 .Sh NAME
@@ -69,11 +70,8 @@ and the
 .Va v_holdcnt
 of a vnode reaches zero then the vnode will be put on the freelist
 and may be reused for another file, possibly in another file system.
-The transition to and from the freelist is handled by
-.Xr getnewvnode 9 ,
-.Xr vfree 9
-and
-.Xr vbusy 9 .
+The transition from the freelist is handled by
+.Xr getnewvnode 9 .
 The third is a count of the number of clients which are writing into
 the file.
 It is maintained by the
@@ -82,9 +80,9 @@ and
 .Xr close 2
 system calls.
 .Pp
-Any call which returns a vnode (e.g.\&
+Any call which returns a vnode (e.g.,\&
 .Xr vget 9 ,
-.Xr VOP_LOOKUP 9
+.Xr VOP_LOOKUP 9 ,
 etc.)
 will increase the
 .Va v_usecount
@@ -119,13 +117,13 @@ No type.
 .It Dv VREG
 A regular file; may be with or without VM object backing.
 If you want to make sure this get a backing object, call
-.Xr vfs_object_create 9 .
+.Fn vnode_create_vobject .
 .It Dv VDIR
 A directory.
 .It Dv VBLK
 A block device; may be with or without VM object backing.
 If you want to make sure this get a backing object, call
-.Xr vfs_object_create 9 .
+.Fn vnode_create_vobject .
 .It Dv VCHR
 A character device.
 .It Dv VLNK
@@ -163,7 +161,9 @@ intertwining of VM Objects and Vnodes.
 .Xr malloc 9 ,
 .Xr VOP_ACCESS 9 ,
 .Xr VOP_ACLCHECK 9 ,
+.Xr VOP_ADVISE 9 ,
 .Xr VOP_ADVLOCK 9 ,
+.Xr VOP_ALLOCATE 9 ,
 .Xr VOP_ATTRIB 9 ,
 .Xr VOP_BWRITE 9 ,
 .Xr VOP_CREATE 9 ,
@@ -171,7 +171,6 @@ intertwining of VM Objects and Vnodes.
 .Xr VOP_GETACL 9 ,
 .Xr VOP_GETEXTATTR 9 ,
 .Xr VOP_GETPAGES 9 ,
-.Xr VOP_GETVOBJECT 9 ,
 .Xr VOP_INACTIVE 9 ,
 .Xr VOP_IOCTL 9 ,
 .Xr VOP_LINK 9 ,

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2008 Guillaume Ballet
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/DB_COMMAND.9 316255 2017-03-30 06:14:36Z ngie $
 .\"
 .Dd August 27, 2008
 .Dt DB_COMMAND 9
@@ -42,7 +43,6 @@
 .Fn DB_SHOW_COMMAND "command_name" "command_function"
 .Fn DB_SHOW_ALL_COMMAND "command_name" "command_function"
 .Sh DESCRIPTION
-.Pp
 The
 .Fn DB_COMMAND
 macro adds
@@ -82,7 +82,9 @@ The number of quad words starting at offset
 .Fa addr
 that the command must process.
 .It Fa modif
-A pointer to the string of modifiers. That is, a series of symbols used to pass some options to the command. For example, the
+A pointer to the string of modifiers.
+That is, a series of symbols used to pass some options to the command.
+For example, the
 .Sy examine
 command will display words in decimal form if it is passed the modifier "d".
 .El

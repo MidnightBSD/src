@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002
 .\"	Mark R V Murray.  All rights reserved.
@@ -24,7 +25,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man9/rijndael.9 231564 2012-02-12 18:29:56Z ed $
 .\" "
 .Dd February 6, 2002
 .Dt RIJNDAEL 9
@@ -43,47 +44,47 @@
 .Ft int
 .Fo rijndael_makeKey
 .Fa "keyInstance *key"
-.Fa "u_int8_t direction"
+.Fa "uint8_t direction"
 .Fa "int keyLen"
 .Fa "char *keyMaterial"
 .Fc
 .Ft int
 .Fo rijndael_cipherInit
 .Fa "cipherInstance *cipher"
-.Fa "u_int8_t mode"
+.Fa "uint8_t mode"
 .Fa "char *IV"
 .Fc
 .Ft int
 .Fo rijndael_blockEncrypt
 .Fa "cipherInstance *cipher"
 .Fa "keyInstance *key"
-.Fa "u_int8_t *input"
+.Fa "uint8_t *input"
 .Fa "int inputLen"
-.Fa "u_int8_t *outBuffer"
+.Fa "uint8_t *outBuffer"
 .Fc
 .Ft int
 .Fo rijndael_padEncrypt
 .Fa "cipherInstance *cipher"
 .Fa "keyInstance *key"
-.Fa "u_int8_t *input"
+.Fa "uint8_t *input"
 .Fa "int inputOctets"
-.Fa "u_int8_t *outBuffer"
+.Fa "uint8_t *outBuffer"
 .Fc
 .Ft int
 .Fo rijndael_blockDecrypt
 .Fa "cipherInstance *cipher"
 .Fa "keyInstance *key"
-.Fa "u_int8_t *input"
+.Fa "uint8_t *input"
 .Fa "int inputLen"
-.Fa "u_int8_t *outBuffer"
+.Fa "uint8_t *outBuffer"
 .Fc
 .Ft int
 .Fo rijndael_padDecrypt
 .Fa "cipherInstance *cipher"
 .Fa "keyInstance *key"
-.Fa "u_int8_t *input"
+.Fa "uint8_t *input"
 .Fa "int inputOctets"
-.Fa "u_int8_t *outBuffer"
+.Fa "uint8_t *outBuffer"
 .Fc
 .Sh DESCRIPTION
 The
