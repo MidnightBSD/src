@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/nfscbd/nfscbd.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -66,12 +67,12 @@ __MBSDID("$MidnightBSD$");
 /* Global defs */
 #ifdef DEBUG
 #define	syslog(e, s)	fprintf(stderr,(s))
-int	debug = 1;
+static int	debug = 1;
 #else
-int	debug = 0;
+static int	debug = 0;
 #endif
 
-pid_t children;
+static pid_t	children;
 
 static void	nonfs(int);
 static void	reapchild(int);
