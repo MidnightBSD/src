@@ -1,5 +1,5 @@
 # $MidnightBSD$
-#	$FreeBSD: release/9.2.0/usr.sbin/nmtree/Makefile 245241 2013-01-09 21:07:08Z brooks $
+#	$FreeBSD: stable/10/usr.sbin/nmtree/Makefile 276490 2015-01-01 02:04:44Z ngie $
 
 .include <bsd.own.mk>
 
@@ -8,7 +8,8 @@
 PROG=		nmtree
 MAN=		nmtree.8
 SRCS=		compare.c crc.c create.c excludes.c getid.c misc.c mtree.c \
-		spec.c specspec.c verify.c
+		only.c spec.c specspec.c verify.c
+DPADD+=		${LIBMD} ${LIBUTIL}
 LDADD+=		-lmd -lutil
 
 CFLAGS+=	-I${.CURDIR}/../../contrib/mknod
@@ -30,5 +31,9 @@ CLEANFILES+=	nmtree.8
 
 nmtree.8: mtree.8
 	cp ${.ALLSRC} ${.TARGET}
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>
