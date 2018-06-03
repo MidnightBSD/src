@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1989, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mountd.8	8.4 (Berkeley) 4/28/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/mountd/mountd.8 308453 2016-11-08 21:47:00Z rmacklem $
 .\"
-.Dd October 14, 2012
+.Dd October 24, 2016
 .Dt MOUNTD 8
 .Os
 .Sh NAME
@@ -96,7 +97,7 @@ requests to be logged.
 Allow non-root mount requests to be served.
 This should only be specified if there are clients such as PC's,
 that require it.
-It will automatically clear the vfs.nfsrv.nfs_privport sysctl flag, which
+It will automatically clear the vfs.[nfsrv|nfsd].nfs_privport sysctl flag, which
 controls if the kernel will accept NFS requests from reserved ports only.
 .It Fl o
 This flag forces the system to run the old NFS server, which does not

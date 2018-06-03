@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +44,7 @@ static char sccsid[] = "@(#)mountd.c	8.15 (Berkeley) 5/1/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/mountd/mountd.c 333198 2018-05-03 07:28:49Z avg $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -174,6 +175,7 @@ int	check_options(struct dirlist *);
 int	checkmask(struct sockaddr *sa);
 int	chk_host(struct dirlist *, struct sockaddr *, int *, int *, int *,
 				 int **);
+static char	*strsep_quote(char **stringp, const char *delim);
 static int	create_service(struct netconfig *nconf);
 static void	complete_service(struct netconfig *nconf, char *port_str);
 static void	clearout_service(void);
@@ -276,6 +278,73 @@ void	SYSLOG(int, const char *, ...) __printflike(2, 3);
 #else
 int debug = 0;
 #endif
+
+/*
+ * Similar to strsep(), but it allows for quoted strings
+ * and escaped characters.
+ *
+ * It returns the string (or NULL, if *stringp is NULL),
+ * which is a de-quoted version of the string if necessary.
+ *
+ * It modifies *stringp in place.
+ */
+static char *
+strsep_quote(char **stringp, const char *delim)
+{
+	char *srcptr, *dstptr, *retval;
+	char quot = 0;
+	
+	if (stringp == NULL || *stringp == NULL)
+		return (NULL);
+
+	srcptr = dstptr = retval = *stringp;
+
+	while (*srcptr) {
+		/*
+		 * We're looking for several edge cases here.
+		 * First:  if we're in quote state (quot != 0),
+		 * then we ignore the delim characters, but otherwise
+		 * process as normal, unless it is the quote character.
+		 * Second:  if the current character is a backslash,
+		 * we take the next character as-is, without checking
+		 * for delim, quote, or backslash.  Exception:  if the
+		 * next character is a NUL, that's the end of the string.
+		 * Third:  if the character is a quote character, we toggle
+		 * quote state.
+		 * Otherwise:  check the current character for NUL, or
+		 * being in delim, and end the string if either is true.
+		 */
+		if (*srcptr == '\\') {
+			srcptr++;
+			/*
+			 * The edge case here is if the next character
+			 * is NUL, we want to stop processing.  But if
+			 * it's not NUL, then we simply want to copy it.
+			 */
+			if (*srcptr) {
+				*dstptr++ = *srcptr++;
+			}
+			continue;
+		}
+		if (quot == 0 && (*srcptr == '\'' || *srcptr == '"')) {
+			quot = *srcptr++;
+			continue;
+		}
+		if (quot && *srcptr == quot) {
+			/* End of the quoted part */
+			quot = 0;
+			srcptr++;
+			continue;
+		}
+		if (!quot && strchr(delim, *srcptr))
+			break;
+		*dstptr++ = *srcptr++;
+	}
+
+	*dstptr = 0; /* Terminate the string */
+	*stringp = (*srcptr == '\0') ? NULL : srcptr + 1;
+	return (retval);
+}
 
 /*
  * Mountd server for NFS mount protocol as described in:
@@ -421,11 +490,20 @@ main(int argc, char **argv)
 	rpc_control(RPC_SVC_CONNMAXREC_SET, &maxrec);
 
 	if (!resvport_only) {
-		if (sysctlbyname("vfs.nfsrv.nfs_privport", NULL, NULL,
-		    &resvport_only, sizeof(resvport_only)) != 0 &&
-		    errno != ENOENT) {
-			syslog(LOG_ERR, "sysctl: %m");
-			exit(1);
+		if (run_v4server != 0) {
+			if (sysctlbyname("vfs.nfsd.nfs_privport", NULL, NULL,
+			    &resvport_only, sizeof(resvport_only)) != 0 &&
+			    errno != ENOENT) {
+				syslog(LOG_ERR, "sysctl: %m");
+				exit(1);
+			}
+		} else {
+			if (sysctlbyname("vfs.nfsrv.nfs_privport", NULL, NULL,
+			    &resvport_only, sizeof(resvport_only)) != 0 &&
+			    errno != ENOENT) {
+				syslog(LOG_ERR, "sysctl: %m");
+				exit(1);
+			}
 		}
 	}
 
@@ -627,7 +705,6 @@ create_service(struct netconfig *nconf)
 
 	/* Get mountd's address on this transport */
 	memset(&hints, 0, sizeof hints);
-	hints.ai_flags = AI_PASSIVE;
 	hints.ai_family = si.si_af;
 	hints.ai_socktype = si.si_socktype;
 	hints.ai_protocol = si.si_proto;
@@ -644,12 +721,14 @@ create_service(struct netconfig *nconf)
 		sock_fd[sock_fdcnt++] = -1;	/* Set invalid for now. */
 		mallocd_res = 0;
 
+		hints.ai_flags = AI_PASSIVE;
+
 		/*	
 		 * XXX - using RPC library internal functions.
 		 */
 		if ((fd = __rpc_nconf2fd(nconf)) < 0) {
 			int non_fatal = 0;
-	    		if (errno == EPROTONOSUPPORT &&
+	    		if (errno == EAFNOSUPPORT &&
 			    nconf->nc_semantics != NC_TPI_CLTS) 
 				non_fatal = 1;
 				
@@ -994,8 +1073,6 @@ mntsrv(struct svc_req *rqstp, SVCXPRT *transp)
 		 */
 		if (realpath(rpcpath, dirpath) == NULL ||
 		    stat(dirpath, &stb) < 0 ||
-		    (!S_ISDIR(stb.st_mode) &&
-		    (dir_only || !S_ISREG(stb.st_mode))) ||
 		    statfs(dirpath, &fsb) < 0) {
 			chdir("/");	/* Just in case realpath doesn't */
 			syslog(LOG_NOTICE,
@@ -1005,10 +1082,23 @@ mntsrv(struct svc_req *rqstp, SVCXPRT *transp)
 				warnx("stat failed on %s", dirpath);
 			bad = ENOENT;	/* We will send error reply later */
 		}
+		if (!bad &&
+		    !S_ISDIR(stb.st_mode) &&
+		    (dir_only || !S_ISREG(stb.st_mode))) {
+			syslog(LOG_NOTICE,
+			    "mount request from %s for non-directory path %s",
+			    numerichost, dirpath);
+			if (debug)
+				warnx("mounting non-directory %s", dirpath);
+			bad = ENOTDIR;	/* We will send error reply later */
+		}
 
 		/* Check in the exports list */
 		sigprocmask(SIG_BLOCK, &sighup_mask, NULL);
-		ep = ex_search(&fsb.f_fsid);
+		if (bad)
+			ep = NULL;
+		else
+			ep = ex_search(&fsb.f_fsid);
 		hostset = defset = 0;
 		if (ep && (chk_host(ep->ex_defdir, saddr, &defset, &hostset,
 		    &numsecflavors, &secflavorsp) ||
@@ -1059,7 +1149,8 @@ mntsrv(struct svc_req *rqstp, SVCXPRT *transp)
 				    "mount request succeeded from %s for %s",
 				    numerichost, dirpath);
 		} else {
-			bad = EACCES;
+			if (!bad)
+				bad = EACCES;
 			syslog(LOG_NOTICE,
 			    "mount request denied from %s for %s",
 			    numerichost, dirpath);
@@ -1423,6 +1514,9 @@ get_exportlist_one(void)
 			    }
 			    if (check_dirpath(cp) &&
 				statfs(cp, &fsb) >= 0) {
+				if ((fsb.f_flags & MNT_AUTOMOUNTED) != 0)
+				    syslog(LOG_ERR, "Warning: exporting of "
+					"automounted fs %s not supported", cp);
 				if (got_nondir) {
 				    syslog(LOG_ERR, "dirs must be first");
 				    getexp_err(ep, tgrp);
@@ -1657,9 +1751,8 @@ get_exportlist(void)
 	struct iovec *iov;
 	struct statfs *fsp, *mntbufp;
 	struct xvfsconf vfc;
-	char *dirp;
 	char errmsg[255];
-	int dirplen, num, i;
+	int num, i;
 	int iovlen;
 	int done;
 	struct nfsex_args eargs;
@@ -1669,8 +1762,6 @@ get_exportlist(void)
 	v4root_dirpath[0] = '\0';
 	bzero(&export, sizeof(export));
 	export.ex_flags = MNT_DELEXPORT;
-	dirp = NULL;
-	dirplen = 0;
 	iov = NULL;
 	iovlen = 0;
 	bzero(errmsg, sizeof(errmsg));
@@ -1734,6 +1825,12 @@ get_exportlist(void)
 		}
 
 		/*
+		 * We do not need to delete "export" flag from
+		 * filesystems that do not have it set.
+		 */
+		if (!(fsp->f_flags & MNT_EXPORTED))
+		    continue;
+		/*
 		 * Do not delete export for network filesystem by
 		 * passing "export" arg to nmount().
 		 * It only makes sense to do this for local filesystems.
@@ -1747,9 +1844,14 @@ get_exportlist(void)
 		iov[3].iov_len = strlen(fsp->f_mntonname) + 1;
 		iov[5].iov_base = fsp->f_mntfromname;
 		iov[5].iov_len = strlen(fsp->f_mntfromname) + 1;
+		errmsg[0] = '\0';
 
+		/*
+		 * EXDEV is returned when path exists but is not a
+		 * mount point.  May happens if raced with unmount.
+		 */
 		if (nmount(iov, iovlen, fsp->f_flags) < 0 &&
-		    errno != ENOENT && errno != ENOTSUP) {
+		    errno != ENOENT && errno != ENOTSUP && errno != EXDEV) {
 			syslog(LOG_ERR,
 			    "can't delete exports for %s: %m %s",
 			    fsp->f_mntonname, errmsg);
@@ -2504,6 +2606,7 @@ do_mount(struct exportlist *ep, struct grouplist *grp, int exflags,
 			iov[3].iov_len = strlen(fsb->f_mntonname) + 1;
 			iov[5].iov_base = fsb->f_mntfromname; /* "from" */
 			iov[5].iov_len = strlen(fsb->f_mntfromname) + 1;
+			errmsg[0] = '\0';
 	
 			while (nmount(iov, iovlen, fsb->f_flags) < 0) {
 				if (cp)
@@ -2836,8 +2939,9 @@ parsecred(char *namelist, struct xucred *cr)
 	/*
 	 * Get the user's password table entry.
 	 */
-	names = strsep(&namelist, " \t\n");
+	names = strsep_quote(&namelist, " \t\n");
 	name = strsep(&names, ":");
+	/* Bug?  name could be NULL here */
 	if (isdigit(*name) || *name == '-')
 		pw = getpwuid(atoi(name));
 	else
@@ -2852,8 +2956,11 @@ parsecred(char *namelist, struct xucred *cr)
 		}
 		cr->cr_uid = pw->pw_uid;
 		ngroups = XU_NGROUPS + 1;
-		if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups))
+		if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups)) {
 			syslog(LOG_ERR, "too many groups");
+			ngroups = XU_NGROUPS + 1;
+		}
+
 		/*
 		 * Compress out duplicate.
 		 */
@@ -3144,7 +3251,7 @@ checkmask(struct sockaddr *sa)
 /*
  * Compare two sockaddrs according to a specified mask. Return zero if
  * `sa1' matches `sa2' when filtered by the netmask in `samask'.
- * If samask is NULL, perform a full comparision.
+ * If samask is NULL, perform a full comparison.
  */
 int
 sacmp(struct sockaddr *sa1, struct sockaddr *sa2, struct sockaddr *samask)
