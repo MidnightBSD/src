@@ -1,4 +1,5 @@
 #	@(#)Makefile	8.8 (Berkeley) 3/28/97
+# $FreeBSD: stable/10/usr.sbin/sendmail/Makefile 313225 2017-02-04 16:45:44Z ngie $
 # $MidnightBSD$
 
 .include <bsd.own.mk>
@@ -7,7 +8,7 @@ SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 SMDIR=	${SENDMAIL_DIR}/src
 .PATH: ${SMDIR}
 
-BINDIR=	/usr/libexec/sendmail
+BINDIR=	${LIBEXECDIR}/sendmail
 
 PROG=	sendmail
 MAN=	mailq.1 newaliases.1 aliases.5 sendmail.8 
@@ -37,18 +38,16 @@ NIS=	-DNIS
 MAPS=	-DMAP_REGEX -DDNSMAP
 
 CFLAGS+= -I${SMDIR} -I${SENDMAIL_DIR}/include -I.
-CFLAGS+= ${DBMDEF} ${NIS} -DTCPWRAPPERS ${MAPS}
+CFLAGS+= ${DBMDEF} ${NIS} ${MAPS}
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DNETINET6 -DIPV6_FULL=0
 .endif
 
-NO_WERROR.clang=
-
 WARNS?=	0
 
-DPADD=	${LIBUTIL} ${LIBWRAP}
-LDADD=	-lutil -lwrap
+DPADD=	${LIBUTIL}
+LDADD=	-lutil
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a
@@ -67,6 +66,12 @@ CLEANFILES+=sm_os.h
 CFLAGS+=	-DSTARTTLS -D_FFR_TLS_1
 DPADD+=		${LIBSSL} ${LIBCRYPTO}
 LDADD+=		-lssl -lcrypto
+.endif
+
+.if ${MK_TCP_WRAPPERS} != "no"
+CFLAGS+=	-DTCPWRAPPERS
+DPADD+=		${LIBWRAP}
+LDADD+=		-lwrap
 .endif
 
 # User customizations to the sendmail build environment
