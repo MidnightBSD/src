@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * show.c
@@ -34,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/show.c,v 1.7 2007/02/06 08:48:28 kevlo Exp $
+ * $FreeBSD: stable/10/usr.sbin/ngctl/show.c 166529 2007-02-06 08:48:28Z kevlo $
  */
 
 #include <err.h>

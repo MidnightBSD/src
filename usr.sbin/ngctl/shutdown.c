@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * shutdown.c
@@ -34,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/shutdown.c,v 1.4 2006/06/28 10:38:38 glebius Exp $
+ * $FreeBSD: stable/10/usr.sbin/ngctl/shutdown.c 160002 2006-06-28 10:38:38Z glebius $
  */
 
 #include <err.h>

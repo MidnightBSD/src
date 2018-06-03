@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * main.c
@@ -34,9 +35,11 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/main.c,v 1.23 2007/02/06 08:48:28 kevlo Exp $
  * $Whistle: main.c,v 1.12 1999/11/29 19:17:46 archie Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ngctl/main.c 277577 2015-01-23 17:49:16Z glebius $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -69,7 +72,7 @@
 /* Internal functions */
 static int	ReadFile(FILE *fp);
 static void	ReadSockets(fd_set *);
-static int	DoParseCommand(char *line);
+static int	DoParseCommand(const char *line);
 static int	DoCommand(int ac, char **av);
 static int	DoInteractive(void);
 static const	struct ngcmd *FindCommand(const char *string);
@@ -79,7 +82,7 @@ static int	ReadCmd(int ac, char **av);
 static int	HelpCmd(int ac, char **av);
 static int	QuitCmd(int ac, char **av);
 #ifdef EDITLINE
-static sig_atomic_t	unblock;
+static volatile sig_atomic_t unblock;
 static pthread_mutex_t	mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t	cond = PTHREAD_COND_INITIALIZER;
 #endif
@@ -225,7 +228,7 @@ ReadFile(FILE *fp)
 #ifdef EDITLINE
 /* Signal handler for Monitor() thread. */
 static void
-Unblock(int signal)
+Unblock(int signal __unused)
 {
 
 	unblock = 1;
@@ -236,7 +239,7 @@ Unblock(int signal)
  * can be blocked in el_gets().
  */
 static void *
-Monitor(void *v)
+Monitor(void *v __unused)
 {
 	struct sigaction act;
 	const int maxfd = MAX(csock, dsock) + 1;
@@ -270,7 +273,7 @@ Monitor(void *v)
 }
 
 static char *
-Prompt(EditLine *el)
+Prompt(EditLine *el __unused)
 {
 
 	return (PROMPT);
@@ -322,8 +325,10 @@ DoInteractive(void)
 		history(hist, &hev, H_ENTER, buf);
 		pthread_kill(monitor, SIGUSR1);
 		pthread_mutex_lock(&mutex);
-		if (DoParseCommand((char *)buf) == CMDRTN_QUIT)
+		if (DoParseCommand(buf) == CMDRTN_QUIT) {
+			pthread_mutex_unlock(&mutex);
 			break;
+		}
 		pthread_cond_signal(&cond);
 		pthread_mutex_unlock(&mutex);
 	}
@@ -423,13 +428,13 @@ ReadSockets(fd_set *rfds)
  * Parse a command line and execute the command
  */
 static int
-DoParseCommand(char *line)
+DoParseCommand(const char *line)
 {
 	char *av[MAX_ARGS];
 	int ac;
 
 	/* Parse line */
-	for (ac = 0, av[0] = strtok(line, WHITESPACE);
+	for (ac = 0, av[0] = strtok((char *)line, WHITESPACE);
 	    ac < MAX_ARGS - 1 && av[ac];
 	    av[++ac] = strtok(NULL, WHITESPACE));
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * write.c
@@ -30,7 +31,7 @@
  * THIS SOFTWARE, EVEN IF ARCHIE L. COBBS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/write.c,v 1.3 2006/06/28 10:38:38 glebius Exp $
+ * $FreeBSD: stable/10/usr.sbin/ngctl/write.c 160002 2006-06-28 10:38:38Z glebius $
  */
 
 #include <sys/types.h>

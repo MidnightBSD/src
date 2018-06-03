@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * ngctl.h
@@ -34,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/ngctl.h,v 1.13 2006/05/24 14:46:55 glebius Exp $
+ * $FreeBSD: stable/10/usr.sbin/ngctl/ngctl.h 158882 2006-05-24 14:46:55Z glebius $
  */
 
 #define MAX_CMD_ALIAS	8

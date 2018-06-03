@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * msg.c
@@ -35,8 +36,10 @@
  * OF SUCH DAMAGE.
  *
  * $Whistle: msg.c,v 1.2 1999/11/29 23:38:35 archie Exp $
- * $FreeBSD: src/usr.sbin/ngctl/msg.c,v 1.8 2006/09/21 01:48:47 kan Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ngctl/msg.c 216588 2010-12-20 09:36:54Z charnier $");
 
 #include <err.h>
 #include <netgraph.h>
@@ -121,7 +124,7 @@ MsgCmd(int ac, char **av)
  * Read and display the next incoming control message
  */
 void
-MsgRead()
+MsgRead(void)
 {
 	struct ng_mesg *m, *m2;
 	struct ng_mesg *ascii;
