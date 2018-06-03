@@ -73818,6 +73818,9 @@ usr.sbin/vidcontrol/decode.h -text
 usr.sbin/vidcontrol/path.h -text
 usr.sbin/vidcontrol/vidcontrol.1 -text
 usr.sbin/vidcontrol/vidcontrol.c -text
+usr.sbin/vigr/Makefile svneol=native#text/plain
+usr.sbin/vigr/vigr.8 svneol=native#text/plain
+usr.sbin/vigr/vigr.sh svneol=native#text/plain
 usr.sbin/vipw/Makefile -text
 usr.sbin/vipw/vipw.8 -text
 usr.sbin/vipw/vipw.c -text
