@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$KAME: ndp.8,v 1.28 2002/07/17 08:46:33 itojun Exp $
 .\"
 .\" Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -27,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/ndp/ndp.8 270655 2014-08-26 10:32:08Z ae $
 .\"
-.Dd Jan 10, 2013
+.Dd May 9, 2014
 .Dt NDP 8
 .Os
 .\"
@@ -136,9 +137,26 @@ seconds.
 Erase all the NDP entries.
 .It Fl d
 Delete specified NDP entry.
-.It Fl f
-Parse the file specified by
-.Ar filename .
+.It Fl f Ar filename
+Cause the file
+.Ar filename
+to be read and multiple entries to be set in the
+.Tn NDP
+table.
+Entries
+in the file should be of the form
+.Pp
+.Bd -ragged -offset indent -compact
+.Ar hostname ether_addr
+.Op Cm temp
+.Op Cm proxy
+.Ed
+.Pp
+with argument meanings as given above.
+Leading whitespace and empty lines are ignored.
+A
+.Ql #
+character will mark the rest of the line as a comment.
 .It Fl H
 Harmonize consistency between the routing table and the default router
 list; install the top entry of the list into the kernel routing table.
@@ -192,15 +210,6 @@ on
 This flag is set by
 .Va net.inet6.ip6.auto_linklocal
 sysctl variable.
-.It Ic prefer_source
-Prefer addresses on the
-.Ar interface
-as candidates of the source address for outgoing packets.
-The default value of this flag is off.
-For more details about the entire algorithm of source address
-selection, see the
-.Pa IMPLEMENTATION
-file supplied with the KAME kit.
 .It Ic no_prefer_iface
 The address on the outgoing interface is preferred by source addess
 selection rule.
