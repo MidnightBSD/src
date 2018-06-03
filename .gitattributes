@@ -73801,6 +73801,14 @@ usr.sbin/ugidfw/ugidfw.c -text
 usr.sbin/uhsoctl/Makefile -text
 usr.sbin/uhsoctl/uhsoctl.1 -text
 usr.sbin/uhsoctl/uhsoctl.c -text
+usr.sbin/unbound/Makefile svneol=native#text/plain
+usr.sbin/unbound/Makefile.inc svneol=native#text/plain
+usr.sbin/unbound/anchor/Makefile svneol=native#text/plain
+usr.sbin/unbound/checkconf/Makefile svneol=native#text/plain
+usr.sbin/unbound/control/Makefile svneol=native#text/plain
+usr.sbin/unbound/daemon/Makefile svneol=native#text/plain
+usr.sbin/unbound/local-setup/Makefile svneol=native#text/plain
+usr.sbin/unbound/local-setup/local-unbound-setup.sh svneol=native#text/plain
 usr.sbin/usbconfig/Makefile -text
 usr.sbin/usbconfig/dump.c -text
 usr.sbin/usbconfig/dump.h -text
