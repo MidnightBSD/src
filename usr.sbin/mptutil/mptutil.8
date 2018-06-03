@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2008 Yahoo!, Inc.
 .\" All rights reserved.
@@ -27,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/mptutil/mptutil.8 249373 2013-04-11 18:46:41Z joel $
 .\"
 .Dd August 16, 2009
 .Dt MPTUTIL 8
@@ -196,7 +197,7 @@ If any hot spare drives are configured, then they are listed as well.
 Lists all of the physical drives attached to the controller.
 .It Cm show events
 Display all the entries from the controller's event log.
-Due to lack of documentation this command isn't very useful currently and
+Due to lack of documentation this command is not very useful currently and
 just dumps each log entry in hex.
 .It Cm show volumes
 Lists all of the logical volumes managed by the controller.
@@ -354,7 +355,6 @@ The
 utility first appeared in
 .Fx 8.0 .
 .Sh BUGS
-.Pp
 The handling of spare drives appears to be unreliable.
 The
 .Xr mpt 4
@@ -389,7 +389,7 @@ The mpt version 1 API that is used by
 .Nm
 and
 .Xr mpt 4
-doesn't support volumes above two terabytes.
+does not support volumes above two terabytes.
 This is a limitation of the API.
 If you are using this adapter with volumes larger than two terabytes, use the adapter in JBOD mode.
 Utilize

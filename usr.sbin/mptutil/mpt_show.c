@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$MidnightBSD$");
+__RCSID("$FreeBSD: stable/10/usr.sbin/mptutil/mpt_show.c 236287 2012-05-30 03:57:49Z eadler $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
