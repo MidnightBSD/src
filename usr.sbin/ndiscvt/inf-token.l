@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*
  * Copyright (c) 2003
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/inf-token.l,v 1.3 2004/01/11 21:10:35 mdodd Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ndiscvt/inf-token.l 250227 2013-05-03 23:51:32Z jkim $");
 
 #include <regex.h>
 #include <ctype.h>
@@ -43,7 +44,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/inf-token.l,v 1.3 2004/01/11 21:10:35 m
 #include "y.tab.h"
 
 int lineno = 1;
-#define YY_NO_UNPUT
 
 int yylex(void);
 void yyerror(const char *);
@@ -57,6 +57,9 @@ update_lineno(const char *cp)
 }
 
 %}
+
+%option nounput
+%option noinput
 
 %%
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*
  * Copyright (c) 2003
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/inf-parse.y,v 1.2 2004/01/02 04:31:06 wpaul Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ndiscvt/inf-parse.y 243906 2012-12-05 20:28:44Z bapt $");
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -40,7 +41,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/inf-parse.y,v 1.2 2004/01/02 04:31:06 w
 
 #include "inf.h"
 
-extern int yyparse (void);
 extern int yylex (void);
 extern void yyerror(const char *);
 %}

@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*
- * $Id: inf.h,v 1.1.1.2 2006-02-25 02:38:32 laffer1 Exp $
+ * $Id: inf.h,v 1.3 2003/11/30 21:58:16 winter Exp $
  *
- * $FreeBSD: src/usr.sbin/ndiscvt/inf.h,v 1.1 2003/12/11 22:38:14 wpaul Exp $
+ * $FreeBSD: stable/10/usr.sbin/ndiscvt/inf.h 288924 2015-10-06 15:30:41Z amdmi3 $
  */
 
-#define W_MAX	16
+#define W_MAX	32
 
 struct section {
 	const char *	name;

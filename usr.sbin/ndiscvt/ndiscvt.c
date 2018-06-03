@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/ndiscvt.c,v 1.13 2006/09/21 01:47:32 kan Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ndiscvt/ndiscvt.c 243074 2012-11-15 15:05:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -91,10 +92,8 @@ extern const char *__progname;
 	nt_hdr = (image_nt_header *)(x + dos_hdr->idh_lfanew);		\
 	sect_hdr = IMAGE_FIRST_SECTION(nt_hdr);
 
-static
-int insert_padding(imgbase, imglen)
-	void			**imgbase;
-	int			*imglen;
+static int
+insert_padding(void **imgbase, int *imglen)
 {
         image_section_header	*sect_hdr;
         image_dos_header	*dos_hdr;
@@ -192,7 +191,7 @@ bincvt(char *sysfile, char *outfile, void *img, int fsize)
 	    "objcopy -I binary -O elf32-i386-freebsd -B i386 %s %s.o\n",
 #endif
 #ifdef __amd64__
-	    "objcopy -I binary -O elf64-x86-64 -B i386 %s %s.o\n",
+	    "objcopy -I binary -O elf64-x86-64-freebsd -B i386 %s %s.o\n",
 #endif
 	    tname, outfile);
 	printf("%s", sysbuf);
@@ -207,9 +206,9 @@ bincvt(char *sysfile, char *outfile, void *img, int fsize)
 	}
 
 	snprintf(sysbuf, sizeof(sysbuf),
-	    "objcopy --redefine-sym _binary_%s_start=%s_drv_data_start "
+	    "objcopy --redefine-sym _binary_%s_start=ndis_%s_drv_data_start "
 	    "--strip-symbol _binary_%s_size "
-	    "--redefine-sym _binary_%s_end=%s_drv_data_end %s.o %s.o\n",
+	    "--redefine-sym _binary_%s_end=ndis_%s_drv_data_end %s.o %s.o\n",
 	    tname, sysfile, tname, tname, sysfile, outfile, outfile);
 	printf("%s", sysbuf);
 	system(sysbuf);
@@ -231,7 +230,7 @@ firmcvt(char *firmfile)
 	    "objcopy -I binary -O elf32-i386-freebsd -B i386 %s %s.o\n",
 #endif
 #ifdef __amd64__
-	    "objcopy -I binary -O elf64-x86-64 -B i386 %s %s.o\n",
+	    "objcopy -I binary -O elf64-x86-64-freebsd -B i386 %s %s.o\n",
 #endif
 	    firmfile, outfile);
 	printf("%s", sysbuf);
@@ -386,10 +385,10 @@ main(int argc, char *argv[])
 			ptr++;
 		}
 		fprintf(outfp,
-		    "\nextern unsigned char %s_drv_data_start[];\n",
+		    "\nextern unsigned char ndis_%s_drv_data_start[];\n",
 		    sysfile);
 		fprintf(outfp, "static unsigned char *drv_data = "
-		    "%s_drv_data_start;\n\n", sysfile);
+		    "ndis_%s_drv_data_start;\n\n", sysfile);
 		bincvt(sysfile, outfile, img, fsize);
 		goto done;
 	}

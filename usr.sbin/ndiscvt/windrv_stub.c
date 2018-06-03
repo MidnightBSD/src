@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005
  *      Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/windrv_stub.c,v 1.2 2005/05/08 23:07:51 wpaul Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ndiscvt/windrv_stub.c 186507 2008-12-27 08:03:32Z weongyo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,6 +70,11 @@ struct ndis_pccard_type {
         char                    *ndis_name;
 };
 
+struct ndis_usb_type {
+	uint16_t		ndis_vid;
+	uint16_t		ndis_did;
+	char			*ndis_name;
+};
 
 #ifdef NDIS_PCI_DEV_TABLE
 static struct ndis_pci_type ndis_devs_pci[] = {
@@ -81,6 +87,13 @@ static struct ndis_pci_type ndis_devs_pci[] = {
 static struct ndis_pccard_type ndis_devs_pccard[] = {
         NDIS_PCMCIA_DEV_TABLE
         { NULL, NULL, NULL }
+};
+#endif
+
+#ifdef NDIS_USB_DEV_TABLE
+static struct ndis_usb_type ndis_devs_usb[] = {
+	NDIS_USB_DEV_TABLE
+	{ 0, 0, NULL }
 };
 #endif
 
@@ -224,6 +237,10 @@ windrv_modevent(mod, cmd, arg)
 		windrv_load(mod, drv_data_start, drv_data_len, PCMCIABus,
 		    ndis_devs_pccard, &ndis_regvals);
 #endif
+#ifdef NDIS_USB_DEV_TABLE
+		windrv_load(mod, drv_data_start, drv_data_len, PNPBus,
+		   ndis_devs_usb, &ndis_regvals);
+#endif
 		break;
 	case MOD_UNLOAD:
 		windrv_loaded--;
@@ -233,6 +250,9 @@ windrv_modevent(mod, cmd, arg)
 		windrv_unload(mod, drv_data_start, drv_data_len);
 #endif
 #ifdef NDIS_PCMCIA_DEV_TABLE
+		windrv_unload(mod, drv_data_start, drv_data_len);
+#endif
+#ifdef NDIS_USB_DEV_TABLE
 		windrv_unload(mod, drv_data_start, drv_data_len);
 #endif
 		break;
