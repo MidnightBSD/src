@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1994-1996 Søren Schmidt
+ * Copyright (c) 1994-1996 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Portions of this software are based in part on the work of
@@ -33,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/vidcontrol/vidcontrol.c,v 1.54 2006/09/26 21:46:12 ru Exp $";
+  "$FreeBSD: stable/10/usr.sbin/vidcontrol/vidcontrol.c 313552 2017-02-10 15:02:56Z emaste $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -45,9 +46,12 @@ static const char rcsid[] =
 #include <unistd.h>
 #include <sys/fbio.h>
 #include <sys/consio.h>
+#include <sys/endian.h>
 #include <sys/errno.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include "path.h"
 #include "decode.h"
 
@@ -63,14 +67,14 @@ static const char rcsid[] =
 /* Screen dump file format revision */
 #define DUMP_FMT_REV	1
 
-char 	legal_colors[16][16] = {
+static const char *legal_colors[16] = {
 	"black", "blue", "green", "cyan",
 	"red", "magenta", "brown", "white",
 	"grey", "lightblue", "lightgreen", "lightcyan",
 	"lightred", "lightmagenta", "yellow", "lightwhite"
 };
 
-struct {
+static struct {
 	int			active_vty;
 	vid_info_t		console_info;
 	unsigned char		screen_map[256];
@@ -78,18 +82,26 @@ struct {
 	struct video_info	video_mode_info;
 } cur_info;
 
-int	hex = 0;
-int	number;
-int	vesa_cols;
-int	vesa_rows;
-int	font_height;
-int	colors_changed;
-int	video_mode_changed;
-int	normal_fore_color, normal_back_color;
-int	revers_fore_color, revers_back_color;
-char	letter;
-struct	vid_info info;
-struct	video_info new_mode_info;
+struct vt4font_header {
+	uint8_t		magic[8];
+	uint8_t		width;
+	uint8_t		height;
+	uint16_t	pad;
+	uint32_t	glyph_count;
+	uint32_t	map_count[4];
+} __packed;
+
+static int	hex = 0;
+static int	vesa_cols;
+static int	vesa_rows;
+static int	font_height;
+static int	colors_changed;
+static int	video_mode_changed;
+static int	normal_fore_color, normal_back_color;
+static int	revers_fore_color, revers_back_color;
+static int	vt4_mode = 0;
+static struct	vid_info info;
+static struct	video_info new_mode_info;
 
 
 /*
@@ -117,7 +129,9 @@ init(void)
 	if (ioctl(0, CONS_GETINFO, &cur_info.console_info) == -1)
 		errc(1, errno, "getting console information");
 
-	if (ioctl(0, GIO_SCRNMAP, &cur_info.screen_map) == -1)
+	/* vt(4) use unicode, so no screen mapping required. */
+	if (vt4_mode == 0 &&
+	    ioctl(0, GIO_SCRNMAP, &cur_info.screen_map) == -1)
 		errc(1, errno, "getting screen map");
 
 	if (ioctl(0, CONS_GET, &cur_info.video_mode_number) == -1)
@@ -155,7 +169,8 @@ revert(void)
 	fprintf(stderr, "\033[=%dH", cur_info.console_info.mv_rev.fore);
 	fprintf(stderr, "\033[=%dI", cur_info.console_info.mv_rev.back);
 
-	ioctl(0, PIO_SCRNMAP, &cur_info.screen_map);
+	if (vt4_mode == 0)
+		ioctl(0, PIO_SCRNMAP, &cur_info.screen_map);
 
 	if (cur_info.video_mode_number >= M_VESA_BASE)
 		ioctl(0, _IO('V', cur_info.video_mode_number - M_VESA_BASE),
@@ -181,15 +196,34 @@ revert(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n",
+	if (vt4_mode)
+		fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n",
+"usage: vidcontrol [-CHPpx] [-b color] [-c appearance] [-f [[size] file]]",
+"                  [-g geometry] [-h size] [-i adapter | mode]",
+"                  [-M char] [-m on | off] [-r foreground background]",
+"                  [-S on | off] [-s number] [-T xterm | cons25] [-t N | off]",
+"                  [mode] [foreground [background]] [show]");
+	else
+		fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n",
 "usage: vidcontrol [-CdHLPpx] [-b color] [-c appearance] [-f [size] file]",
 "                  [-g geometry] [-h size] [-i adapter | mode] [-l screen_map]",
 "                  [-M char] [-m on | off] [-r foreground background]",
-"                  [-S on | off] [-s number] [-t N | off] [mode]",
-"                  [foreground [background]] [show]");
+"                  [-S on | off] [-s number] [-T xterm | cons25] [-t N | off]",
+"                  [mode] [foreground [background]] [show]");
 	exit(1);
 }
 
+/* Detect presence of vt(4). */
+static int
+is_vt4(void)
+{
+	char vty_name[4] = "";
+	size_t len = sizeof(vty_name);
+
+	if (sysctlbyname("kern.vty", vty_name, &len, NULL, 0) != 0)
+		return (0);
+	return (strcmp(vty_name, "vt") == 0);
+}
 
 /*
  * Retrieve the next argument from the command line (for options that require
@@ -351,6 +385,94 @@ fsize(FILE *file)
 		return -1;
 }
 
+static vfnt_map_t *
+load_vt4mappingtable(unsigned int nmappings, FILE *f)
+{
+	vfnt_map_t *t;
+	unsigned int i;
+
+	if (nmappings == 0)
+		return (NULL);
+
+	if ((t = malloc(sizeof *t * nmappings)) == NULL) {
+		warn("malloc");
+		return (NULL);
+	}
+
+	if (fread(t, sizeof *t * nmappings, 1, f) != 1) {
+		warn("read mappings");
+		free(t);
+		return (NULL);
+	}
+
+	for (i = 0; i < nmappings; i++) {
+		t[i].src = be32toh(t[i].src);
+		t[i].dst = be16toh(t[i].dst);
+		t[i].len = be16toh(t[i].len);
+	}
+
+	return (t);
+}
+
+/*
+ * Set the default vt font.
+ */
+
+static void
+load_default_vt4font(void)
+{
+	if (ioctl(0, PIO_VFONT_DEFAULT) == -1) {
+		revert();
+		errc(1, errno, "loading default vt font");
+	}
+}
+
+static void
+load_vt4font(FILE *f)
+{
+	struct vt4font_header fh;
+	static vfnt_t vfnt;
+	size_t glyphsize;
+	unsigned int i;
+
+	if (fread(&fh, sizeof fh, 1, f) != 1) {
+		warn("read file_header");
+		return;
+	}
+
+	if (memcmp(fh.magic, "VFNT0002", 8) != 0) {
+		warnx("bad magic in font file\n");
+		return;
+	}
+
+	for (i = 0; i < VFNT_MAPS; i++)
+		vfnt.map_count[i] = be32toh(fh.map_count[i]);
+	vfnt.glyph_count = be32toh(fh.glyph_count);
+	vfnt.width = fh.width;
+	vfnt.height = fh.height;
+
+	glyphsize = howmany(vfnt.width, 8) * vfnt.height * vfnt.glyph_count;
+	if ((vfnt.glyphs = malloc(glyphsize)) == NULL) {
+		warn("malloc");
+		return;
+	}
+
+	if (fread(vfnt.glyphs, glyphsize, 1, f) != 1) {
+		warn("read glyphs");
+		free(vfnt.glyphs);
+		return;
+	}
+
+	for (i = 0; i < VFNT_MAPS; i++)
+		vfnt.map[i] = load_vt4mappingtable(vfnt.map_count[i], f);
+
+	if (ioctl(STDIN_FILENO, PIO_VFONT, &vfnt) == -1)
+		warn("PIO_VFONT");
+
+	for (i = 0; i < VFNT_MAPS; i++)
+		free(vfnt.map[i]);
+	free(vfnt.glyphs);
+}
 
 /*
  * Load a font from file and set it.
@@ -364,6 +486,7 @@ load_font(const char *type, const char *filename)
 	unsigned long io = 0;	/* silence stupid gcc(1) in the Wall mode */
 	char	*name, *fontmap, size_sufx[6];
 	const char	*a[] = {"", FONT_PATH, NULL};
+	const char	*vt4a[] = {"", VT_FONT_PATH, NULL};
 	const char	*b[] = {filename, NULL};
 	const char	*c[] = {"", size_sufx, NULL};
 	const char	*d[] = {"", ".fnt", NULL};
@@ -378,19 +501,29 @@ load_font(const char *type, const char *filename)
 		     {8,  8,  PIO_FONT8x8},
 		     {0,  0,            0}};
 
-	_info.size = sizeof(_info);
-	if (ioctl(0, CONS_GETINFO, &_info) == -1) {
-		revert();
-		warn("failed to obtain current video mode parameters");
-		return;
-	}
+	if (vt4_mode) {
+		size_sufx[0] = '\0';
+	} else {
+		_info.size = sizeof(_info);
+		if (ioctl(0, CONS_GETINFO, &_info) == -1) {
+			revert();
+			warn("failed to obtain current video mode parameters");
+			return;
+		}
 
-	snprintf(size_sufx, sizeof(size_sufx), "-8x%d", _info.font_size);
-	fd = openguess(a, b, c, d, &name);
+		snprintf(size_sufx, sizeof(size_sufx), "-8x%d", _info.font_size);
+	}
+	fd = openguess((vt4_mode == 0) ? a : vt4a, b, c, d, &name);
 
 	if (fd == NULL) {
 		revert();
 		errx(1, "%s: can't load font file", filename);
+	}
+
+	if (vt4_mode) {
+		load_vt4font(fd);
+		fclose(fd);
+		return;
 	}
 
 	if (type != NULL) {
@@ -499,15 +632,15 @@ set_screensaver_timeout(char *arg)
  */
 
 static void
-set_cursor_type(char *appearence)
+set_cursor_type(char *appearance)
 {
 	int type;
 
-	if (!strcmp(appearence, "normal"))
+	if (!strcmp(appearance, "normal"))
 		type = 0;
-	else if (!strcmp(appearence, "blink"))
+	else if (!strcmp(appearance, "blink"))
 		type = 1;
-	else if (!strcmp(appearence, "destructive"))
+	else if (!strcmp(appearance, "destructive"))
 		type = 3;
 	else {
 		revert();
@@ -950,10 +1083,11 @@ show_adapter_info(void)
 static void
 show_mode_info(void)
 {
-	struct video_info _info;
 	char buf[80];
-	int mode;
+	struct video_info _info;
 	int c;
+	int mm;
+	int mode;
 
 	printf("    mode#     flags   type    size       "
 	       "font      window      linear buffer\n");
@@ -972,9 +1106,35 @@ show_mode_info(void)
 		if (_info.vi_flags & V_INFO_GRAPHICS) {
 			c = 'G';
 
-			snprintf(buf, sizeof(buf), "%dx%dx%d %d",
-				 _info.vi_width, _info.vi_height, 
-				 _info.vi_depth, _info.vi_planes);
+			if (_info.vi_mem_model == V_INFO_MM_PLANAR)
+				snprintf(buf, sizeof(buf), "%dx%dx%d %d",
+				    _info.vi_width, _info.vi_height, 
+				    _info.vi_depth, _info.vi_planes);
+			else {
+				switch (_info.vi_mem_model) {
+				case V_INFO_MM_PACKED:
+					mm = 'P';
+					break;
+				case V_INFO_MM_DIRECT:
+					mm = 'D';
+					break;
+				case V_INFO_MM_CGA:
+					mm = 'C';
+					break;
+				case V_INFO_MM_HGC:
+					mm = 'H';
+					break;
+				case V_INFO_MM_VGAX:
+					mm = 'V';
+					break;
+				default:
+					mm = ' ';
+					break;
+				}
+				snprintf(buf, sizeof(buf), "%dx%dx%d %c",
+				    _info.vi_width, _info.vi_height, 
+				    _info.vi_depth, mm);
+			}
 		} else {
 			c = 'T';
 
@@ -1159,13 +1319,26 @@ clear_history(void)
 	}
 }
 
+static void
+set_terminal_mode(char *arg)
+{
+
+	if (strcmp(arg, "xterm") == 0)
+		fprintf(stderr, "\033[=T");
+	else if (strcmp(arg, "cons25") == 0)
+		fprintf(stderr, "\033[=1T");
+}
+
 
 int
 main(int argc, char **argv)
 {
-	char	*font, *type;
+	char    *font, *type, *termmode;
+	const char *opts;
 	int	dumpmod, dumpopt, opt;
 	int	reterr;
+
+	vt4_mode = is_vt4();
 
 	init();
 
@@ -1175,7 +1348,13 @@ main(int argc, char **argv)
 		err(1, "must be on a virtual console");
 	dumpmod = 0;
 	dumpopt = DUMP_FBF;
-	while((opt = getopt(argc, argv, "b:Cc:df:g:h:Hi:l:LM:m:pPr:S:s:t:x")) != -1)
+	termmode = NULL;
+	if (vt4_mode)
+		opts = "b:Cc:fg:h:Hi:M:m:pPr:S:s:T:t:x";
+	else
+		opts = "b:Cc:dfg:h:Hi:l:LM:m:pPr:S:s:T:t:x";
+
+	while ((opt = getopt(argc, argv, opts)) != -1)
 		switch(opt) {
 		case 'b':
 			set_border_color(optarg);
@@ -1187,18 +1366,28 @@ main(int argc, char **argv)
 			set_cursor_type(optarg);
 			break;
 		case 'd':
+			if (vt4_mode)
+				break;
 			print_scrnmap();
 			break;
 		case 'f':
-			type = optarg;
-			font = nextarg(argc, argv, &optind, 'f', 0);
+			optarg = nextarg(argc, argv, &optind, 'f', 0);
+			if (optarg != NULL) {
+				font = nextarg(argc, argv, &optind, 'f', 0);
 
-			if (font == NULL) {
-				type = NULL;
-				font = optarg;
+				if (font == NULL) {
+					type = NULL;
+					font = optarg;
+				} else
+					type = optarg;
+
+				load_font(type, font);
+			} else {
+				if (!vt4_mode)
+					usage(); /* Switch syscons to ROM? */
+
+				load_default_vt4font();
 			}
-
-			load_font(type, font);
 			break;
 		case 'g':
 			if (sscanf(optarg, "%dx%d",
@@ -1218,9 +1407,13 @@ main(int argc, char **argv)
 			show_info(optarg);
 			break;
 		case 'l':
+			if (vt4_mode)
+				break;
 			load_scrnmap(optarg);
 			break;
 		case 'L':
+			if (vt4_mode)
+				break;
 			load_default_scrnmap();
 			break;
 		case 'M':
@@ -1244,6 +1437,12 @@ main(int argc, char **argv)
 		case 's':
 			set_console(optarg);
 			break;
+		case 'T':
+			if (strcmp(optarg, "xterm") != 0 &&
+			    strcmp(optarg, "cons25") != 0)
+				usage();
+			termmode = optarg;
+			break;
 		case 't':
 			set_screensaver_timeout(optarg);
 			break;
@@ -1265,6 +1464,8 @@ main(int argc, char **argv)
 	}
 
 	video_mode(argc, argv, &optind);
+	if (termmode != NULL)
+		set_terminal_mode(termmode);
 
 	get_normal_colors(argc, argv, &optind);
 

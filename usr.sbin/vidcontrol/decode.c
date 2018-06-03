@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1994 Søren Schmidt
+ * Copyright (c) 1994 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/vidcontrol/decode.c,v 1.11 2005/01/13 03:59:44 delphij Exp $";
+  "$FreeBSD: stable/10/usr.sbin/vidcontrol/decode.c 228976 2011-12-30 00:59:08Z uqs $";
 #endif /* not lint */
 
 #include <stdio.h>
