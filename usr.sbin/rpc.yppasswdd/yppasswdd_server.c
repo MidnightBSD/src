@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.yppasswdd/yppasswdd_server.c,v 1.29 2003/06/15 21:24:45 mbr Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/yppasswdd_server.c 301619 2016-06-08 13:49:59Z ngie $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -103,7 +104,10 @@ copy_yp_pass(char *p, int x, int m)
 	}
 
 	t = buf;
-#define EXPAND(e)       e = t; while ((*t++ = *p++));
+#define EXPAND(e) do { \
+	e = t; \
+	while ((*t++ = *p++)); \
+} while (0)
         EXPAND(yp_password.pw_name);
 	yp_password.pw_fields |= _PWF_NAME;
         EXPAND(yp_password.pw_passwd);
@@ -460,6 +464,7 @@ yppasswdproc_update_1_svc(yppasswd *argp, struct svc_req *rqstp)
 	int passwd_changed = 0;
 	int shell_changed = 0;
 	int gecos_changed = 0;
+	char *cryptpw;
 	char *oldshell = NULL;
 	char *oldgecos = NULL;
 	char *passfile_hold;
@@ -537,8 +542,8 @@ yppasswdproc_update_1_svc(yppasswd *argp, struct svc_req *rqstp)
 
 	/* Step 2: check that the supplied oldpass is valid. */
 
-	if (strcmp(crypt(argp->oldpass, yp_password.pw_passwd),
-					yp_password.pw_passwd)) {
+	cryptpw = crypt(argp->oldpass, yp_password.pw_passwd);
+	if (cryptpw == NULL || strcmp(cryptpw, yp_password.pw_passwd)) {
 		yp_error("rejected change attempt -- bad password");
 		yp_error("client address: %s username: %s",
 			  inet_ntoa(rqhost->sin_addr),

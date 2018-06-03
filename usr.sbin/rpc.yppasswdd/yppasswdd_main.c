@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.yppasswdd/yppasswdd_main.c,v 1.26 2005/05/02 14:02:43 delphij Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/yppasswdd_main.c 223492 2011-06-24 07:05:20Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

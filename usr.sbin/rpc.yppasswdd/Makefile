@@ -1,4 +1,5 @@
-# $FreeBSD: src/usr.sbin/rpc.yppasswdd/Makefile,v 1.21 2004/10/18 21:29:20 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
 
 RPCDIR=	${DESTDIR}/usr/include/rpcsvc
 
@@ -7,7 +8,7 @@ RPCDIR=	${DESTDIR}/usr/include/rpcsvc
 
 PROG=	rpc.yppasswdd
 SCRIPTS=yppwupdate
-SCRIPTSDIR= /usr/libexec
+SCRIPTSDIR= ${LIBEXECDIR}
 MAN=	rpc.yppasswdd.8
 SRCS=	util.c yp_access.c yp_dblookup.c yp_dbwrite.c \
 	yp_error.c yppasswdd_main.c yppasswdd_server.c ypxfr_misc.c ${GENSRCS}

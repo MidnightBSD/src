@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +33,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/usr.sbin/rpc.yppasswdd/yppasswd_private.x,v 1.7 2003/05/03 21:06:39 obrien Exp $");
+%__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/yppasswd_private.x 114601 2003-05-03 21:06:42Z obrien $");
 #endif
 
 #ifdef RPC_HDR
