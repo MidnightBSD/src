@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Bruce Simpson.
  * Copyright (c) 2000 Wilbert De Graaf.
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/mtest/mtest.c 244538 2012-12-21 15:54:13Z kevlo $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -204,12 +205,12 @@ main(int argc, char **argv)
 	s6 = -1;
 #ifdef INET
 	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (s == -1 && errno != EPROTONOSUPPORT)
+	if (s == -1 && errno != EAFNOSUPPORT)
 		err(1, "can't open IPv4 socket");
 #endif
 #ifdef INET6
 	s6 = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-	if (s6 == -1 && errno != EPROTONOSUPPORT)
+	if (s6 == -1 && errno != EAFNOSUPPORT)
 		err(1, "can't open IPv6 socket");
 #endif
 	if (s == -1 && s6 == -1)
