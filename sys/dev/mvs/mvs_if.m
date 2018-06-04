@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 # Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
 # All rights reserved.
 #
@@ -24,6 +23,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/mvs/mvs_if.m 207536 2010-05-02 19:28:30Z mav $
+# $MidnightBSD$
 
 INTERFACE mvs;
 

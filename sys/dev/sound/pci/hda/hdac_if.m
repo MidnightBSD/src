@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 # Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
 # All rights reserved.
 #
@@ -24,6 +23,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/sound/pci/hda/hdac_if.m 230326 2012-01-19 01:55:48Z mav $
+# $MidnightBSD$
 
 #include <sys/rman.h>
 

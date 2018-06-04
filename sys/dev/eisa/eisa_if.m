@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2004 M. Warner Losh
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/eisa/eisa_if.m 139749 2005-01-06 01:43:34Z imp $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <sys/types.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/usb/usb_if.m 228483 2011-12-14 00:28:54Z hselasky $
-#
+# $MidnightBSD$
 
 # USB interface description
 #

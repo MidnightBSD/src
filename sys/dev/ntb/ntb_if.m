@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2016 Alexander Motin <mav@FreeBSD.org>
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/ntb/ntb_if.m 304404 2016-08-18 10:59:12Z mav $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <machine/bus.h>

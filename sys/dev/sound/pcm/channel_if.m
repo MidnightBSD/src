@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # KOBJ
 #
@@ -29,7 +28,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/sound/pcm/channel_if.m 193640 2009-06-07 19:12:08Z ariff $
-#
+# $MidnightBSD$
 
 #include <dev/sound/pcm/sound.h>
 

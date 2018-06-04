@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # KOBJ
 #
@@ -27,7 +26,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/sound/pcm/feeder_if.m 139749 2005-01-06 01:43:34Z imp $
-#
+# $MidnightBSD$
 
 #include <dev/sound/pcm/sound.h>
 

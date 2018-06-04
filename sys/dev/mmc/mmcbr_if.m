@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2006 M. Warner Losh
 # All rights reserved.
@@ -52,7 +51,7 @@
 # information, know-how or other confidential information to any third party.
 #
 # $FreeBSD: stable/10/sys/dev/mmc/mmcbr_if.m 322120 2017-08-06 16:07:34Z marius $
-#
+# $MidnightBSD$
 
 #include <sys/types.h>
 #include <dev/mmc/mmcreg.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2003 Mathew Kanner
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/sound/midi/mpufoi_if.m 166971 2007-02-25 13:51:52Z netchild $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <dev/sound/midi/mpu401.h>

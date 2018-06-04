@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2016 Microsoft Corp.
 # All rights reserved.
@@ -25,7 +24,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus_if.m 310768 2016-12-29 09:02:49Z sephe $
-#
+# $MidnightBSD$
 
 #include <sys/param.h>
 #include <sys/bus.h>

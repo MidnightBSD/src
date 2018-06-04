@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 1998 Nicolas Souchu
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/smbus/smbus_if.m 162234 2006-09-11 20:52:41Z jhb $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 

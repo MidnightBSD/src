@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 # Copyright (c) 2004 - 2008 Søren Schmidt <sos@FreeBSD.org>
 # All rights reserved.
 #
@@ -24,6 +23,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/ata/ata_if.m 249083 2013-04-04 07:12:24Z mav $
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <sys/kernel.h>

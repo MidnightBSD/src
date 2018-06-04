@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2001, 2003 by Thomas Moestl <tmm@FreeBSD.org>
 # Copyright (c) 2004, 2005 by Marius Strobl <marius@FreeBSD.org>
@@ -25,6 +24,7 @@
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/ofw/ofw_bus_if.m 266135 2014-05-15 15:15:23Z loos $
+# $MidnightBSD$
 
 # Interface for retrieving the package handle and a subset, namely
 # 'compatible', 'device_type', 'model' and 'name', of the standard

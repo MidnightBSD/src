@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 1998 Nicolas Souchu
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/iicbus/iicbus_if.m 289666 2015-10-20 21:20:34Z ian $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <dev/iicbus/iic.h>

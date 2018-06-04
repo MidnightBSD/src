@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 1999 Doug Rabson
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/isa/isa_if.m 139790 2005-01-06 22:18:23Z imp $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <isa/isavar.h>

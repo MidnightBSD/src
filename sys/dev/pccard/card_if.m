@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 1999 M. Warner Losh.
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/pccard/card_if.m 201453 2010-01-03 23:31:58Z imp $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <machine/bus.h>

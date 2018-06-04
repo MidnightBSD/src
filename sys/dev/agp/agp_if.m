@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2000 Doug Rabson
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/agp/agp_if.m 235782 2012-05-22 10:59:26Z kib $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 

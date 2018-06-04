@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 1999 Nicolas Souchu
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/ppbus/ppbus_if.m 139749 2005-01-06 01:43:34Z imp $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <dev/ppbus/ppbconf.h>

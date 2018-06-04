@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2004-2006 Marcel Moolenaar
 # All rights reserved.
@@ -25,6 +24,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/scc/scc_if.m 188174 2009-02-05 19:32:34Z imp $
+# $MidnightBSD$
 
 #include <sys/param.h>
 #include <sys/bus.h>

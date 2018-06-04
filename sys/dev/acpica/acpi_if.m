@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2004 Nate Lawson
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/acpica/acpi_if.m 214072 2010-10-19 19:53:06Z jkim $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <sys/types.h>

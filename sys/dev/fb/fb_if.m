@@ -1,4 +1,5 @@
-/* $MidnightBSD$ */
+# $MidnightBSD$
+
 #include <sys/bus.h>
 #include <sys/fbio.h>
 

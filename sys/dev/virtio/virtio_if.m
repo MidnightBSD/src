@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
 # All rights reserved.
@@ -25,6 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/virtio/virtio_if.m 255110 2013-09-01 04:20:23Z bryanv $
+# $MidnightBSD$
 
 #include <sys/bus.h>
 

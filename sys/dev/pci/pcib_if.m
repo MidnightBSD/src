@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2000 Doug Rabson
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/pci/pcib_if.m 279472 2015-03-01 04:28:30Z rstone $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <sys/rman.h>

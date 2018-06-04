@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2009 Michael Gmelin
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/sys/dev/acpi_support/acpi_wmi_if.m 195185 2009-06-30 09:51:41Z rpaulo $
-#
+# $MidnightBSD$
 
 #include <sys/bus.h>
 #include <sys/types.h>
