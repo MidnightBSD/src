@@ -14021,6 +14021,7 @@ contrib/gcc/config/mips/crtn.asm -text
 contrib/gcc/config/mips/dbxmdebug.h -text
 contrib/gcc/config/mips/elf.h -text
 contrib/gcc/config/mips/elforion.h -text
+contrib/gcc/config/mips/freebsd.h svneol=native#text/plain
 contrib/gcc/config/mips/generic.md -text
 contrib/gcc/config/mips/iris.h -text
 contrib/gcc/config/mips/iris5.h -text
