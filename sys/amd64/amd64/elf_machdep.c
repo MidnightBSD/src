@@ -120,9 +120,6 @@ SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_oinfo);
 
-SYSINIT(kelf64, SI_SUB_EXEC, SI_ORDER_ANY,
-	(sysinit_cfunc_t) elf64_insert_brand_entry,
-	&kfreebsd_brand_info);
 
 void
 elf64_dump_thread(struct thread *td, void *dst, size_t *off)
