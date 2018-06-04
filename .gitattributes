@@ -68441,7 +68441,6 @@ sys/sys/select.h -text
 sys/sys/selinfo.h -text
 sys/sys/sem.h -text
 sys/sys/sema.h -text
-sys/sys/sensors.h -text
 sys/sys/seq.h svneol=native#text/plain
 sys/sys/serial.h -text
 sys/sys/sf_buf.h -text
