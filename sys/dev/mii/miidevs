@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-$FreeBSD: stable/10/sys/dev/mii/miidevs 266000 2014-05-14 01:53:20Z ian $
+$MidnightBSD$ 
 /*$NetBSD: miidevs,v 1.105 2011/11/25 23:28:14 jakllsch Exp $*/
 
 /*-
