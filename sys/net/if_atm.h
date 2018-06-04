@@ -203,7 +203,7 @@ struct atmio_closevcc {
 
 #if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__)
 #define	RTALLOC1(A,B)		rtalloc1((A),(B))
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 #define	RTALLOC1(A,B)		rtalloc1((A),(B),0UL)
 #endif
 

@@ -208,7 +208,7 @@ fw_open (struct cdev *dev, int flags, int fmt, fw_proc *td)
 	if (dev->si_drv1 == NULL)
 		return (ENOMEM);
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 	if ((dev->si_flags & SI_NAMED) == 0) {
 		int unit = DEV2UNIT(dev);
 		int sub = DEV2SUB(dev);
@@ -956,7 +956,7 @@ fwdev_destroydev(struct firewire_softc *sc)
 	return (err);
 }
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 #define NDEVTYPE 2
 void
 fwdev_clone(void *arg, struct ucred *cred, char *name, int namelen,

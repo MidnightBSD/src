@@ -511,7 +511,7 @@ extern int EXPORT inflateInit OF((z_streamp strm));
    done by inflate().
 */
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #define inflate       _zlib104_inflate     /* FreeBSD already has an inflate :-( */
 #endif
 

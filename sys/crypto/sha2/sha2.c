@@ -67,7 +67,7 @@
  *
  */
 
-#if defined(__bsdi__) || defined(__FreeBSD__)
+#if defined(__bsdi__) || defined(__MidnightBSD__)
 #define assert(x)
 #endif
 

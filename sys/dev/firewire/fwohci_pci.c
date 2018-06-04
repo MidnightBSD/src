@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/firewire/fwohci_pci.c 254263 2013-08-12 23
 #include <machine/bus.h>
 #include <sys/rman.h>
 #include <sys/malloc.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #endif
@@ -356,7 +356,7 @@ fwohci_pci_attach(device_t self)
 	}
 
 	err = bus_dma_tag_create(
-#if defined(__FreeBSD__) && __FreeBSD_version >= 700020
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 700020
 				/*parent*/bus_get_dma_tag(self),
 #else
 				/*parent*/NULL,
@@ -374,7 +374,7 @@ fwohci_pci_attach(device_t self)
 				/*nsegments*/0x20,
 				/*maxsegsz*/0x8000,
 				/*flags*/BUS_DMA_ALLOCNOW,
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102
 				/*lockfunc*/busdma_lock_mutex,
 				/*lockarg*/FW_GMTX(&sc->fc),
 #endif

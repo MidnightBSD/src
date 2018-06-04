@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_action.c 254315 2013-08-14 04:24:25Z rpaulo $");
 #endif
 

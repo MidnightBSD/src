@@ -56,7 +56,7 @@ ports attached to the switch)
  * is present in netmap_kern.h
  */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 __FBSDID("$FreeBSD: stable/10/sys/dev/netmap/netmap_vale.c 270252 2014-08-20 23:34:36Z luigi $");
 

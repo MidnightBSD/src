@@ -123,7 +123,7 @@ static VNET_DEFINE(struct callout, ipfw_timeout);
 #define V_ipfw_timeout                  VNET(ipfw_timeout)
 
 static uma_zone_t ipfw_dyn_rule_zone;
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 DEFINE_SPINLOCK(ipfw_dyn_mtx);
 #else
 static struct mtx ipfw_dyn_mtx;		/* mutex guarding dynamic rules */

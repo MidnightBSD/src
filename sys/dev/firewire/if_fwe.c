@@ -228,7 +228,7 @@ fwe_attach(device_t dev)
 
         /* Tell the upper layer(s) we support long frames. */
 	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 	ifp->if_capabilities |= IFCAP_VLAN_MTU | IFCAP_POLLING;
 	ifp->if_capenable |= IFCAP_VLAN_MTU;
 #endif
@@ -274,7 +274,7 @@ fwe_stop(struct fwe_softc *fwe)
 		fwe->dma_ch = -1;
 	}
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
 #else
 	ifp->if_flags &= ~(IFF_RUNNING | IFF_OACTIVE);
@@ -383,7 +383,7 @@ fwe_init(void *arg)
 	if ((xferq->flag & FWXFERQ_RUNNING) == 0)
 		fc->irx_enable(fc, fwe->dma_ch);
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #else
@@ -409,14 +409,14 @@ fwe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		case SIOCSIFFLAGS:
 			s = splimp();
 			if (ifp->if_flags & IFF_UP) {
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 				if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
 #else
 				if (!(ifp->if_flags & IFF_RUNNING))
 #endif
 					fwe_init(&fwe->eth_softc);
 			} else {
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 				if (ifp->if_drv_flags & IFF_DRV_RUNNING)
 #else
 				if (ifp->if_flags & IFF_RUNNING)
@@ -471,7 +471,7 @@ fwe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		    }
 #endif /* DEVICE_POLLING */
 			break;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 		default:
 #else
 		case SIOCSIFADDR:
@@ -545,7 +545,7 @@ fwe_start(struct ifnet *ifp)
 	}
 
 	s = splimp();
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 #else
 	ifp->if_flags |= IFF_OACTIVE;
@@ -554,7 +554,7 @@ fwe_start(struct ifnet *ifp)
 	if (ifp->if_snd.ifq_len != 0)
 		fwe_as_output(fwe, ifp);
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #else
 	ifp->if_flags &= ~IFF_OACTIVE;

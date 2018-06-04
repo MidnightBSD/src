@@ -89,7 +89,7 @@
 
 /* include architecture/compiler dependencies */
 
-#if ((defined(KERNEL) || defined(_KERNEL)) && defined(__FreeBSD__))
+#if ((defined(KERNEL) || defined(_KERNEL)) && defined(__MidnightBSD__))
 # if (KERN_VERSION < 3)
 #  include "i386/pci/i2odep.h"
 # else

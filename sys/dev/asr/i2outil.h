@@ -94,7 +94,7 @@
 
 #define	I2OUTIL_REV 1_5_4  /* I2OUtil header file revision string */
 
-#if ((defined(KERNEL) || defined(_KERNEL)) && defined(__FreeBSD__))
+#if ((defined(KERNEL) || defined(_KERNEL)) && defined(__MidnightBSD__))
 # if (KERN_VERSION < 3)
 #  include   "i386/pci/i2omsg.h"      /* Include the Base Message file */
 # else

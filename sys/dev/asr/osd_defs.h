@@ -57,7 +57,7 @@
 # define _DPT_LINUX
 #elif (defined(__bsdi__))
 # define _DPT_BSDI
-#elif (defined(__FreeBSD__))
+#elif (defined(__MidnightBSD__))
 # undef _DPT_FREE_BSD
 # define _DPT_FREE_BSD
 #else

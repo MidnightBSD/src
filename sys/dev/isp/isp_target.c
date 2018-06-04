@@ -40,7 +40,7 @@
 #ifdef	__NetBSD__
 #include <dev/ic/isp_netbsd.h>
 #endif
-#ifdef	__FreeBSD__
+#ifdef	__MidnightBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: stable/10/sys/dev/isp/isp_target.c 316173 2017-03-29 19:25:42Z mav $");
 #include <dev/isp/isp_freebsd.h>

@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_audio.c 242692 2012-11-07 07:00:
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */

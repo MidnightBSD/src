@@ -25,7 +25,7 @@
 #define NO_ZCFUNCS
 #define MY_ZCALLOC
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #define	_tr_init		_zlib104_tr_init
 #define	_tr_align		_zlib104_tr_align
 #define	_tr_tally		_zlib104_tr_tally

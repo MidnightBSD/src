@@ -44,7 +44,7 @@
 #include <sys/sysctl.h>
 #include <machine/bus.h>
 #include <sys/malloc.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #endif
@@ -1977,7 +1977,7 @@ END_DEBUG
 				/*maxsize*/0x100000, /*nsegments*/SBP_IND_MAX,
 				/*maxsegsz*/SBP_SEG_MAX,
 				/*flags*/BUS_DMA_ALLOCNOW,
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102
 				/*lockfunc*/busdma_lock_mutex,
 				/*lockarg*/&sbp->mtx,
 #endif
@@ -2516,7 +2516,7 @@ SBP_DEBUG(1)
 			device_get_nameunit(sbp->fd.dev),
 			cam_sim_path(sbp->sim),
 			ccb->ccb_h.target_id, ccb->ccb_h.target_lun,
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 			(uintmax_t)
 #endif
 				ccg->volume_size);

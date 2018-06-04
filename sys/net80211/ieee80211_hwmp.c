@@ -28,7 +28,7 @@
  * SUCH DAMAGE. 
  */ 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_hwmp.c 314667 2017-03-04 13:03:31Z avg $");
 #endif
 

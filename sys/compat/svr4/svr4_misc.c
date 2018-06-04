@@ -89,7 +89,7 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_misc.c 331749 2018-03-29 22:3
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_map.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <vm/uma.h>
 #include <vm/vm_extern.h>
 #endif

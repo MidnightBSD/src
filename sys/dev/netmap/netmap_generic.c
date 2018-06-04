@@ -61,7 +61,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #include <sys/cdefs.h> /* prerequisite */
 __FBSDID("$FreeBSD: stable/10/sys/dev/netmap/netmap_generic.c 297478 2016-04-01 01:39:44Z np $");
@@ -413,11 +413,11 @@ static void
 generic_mbuf_destructor(struct mbuf *m)
 {
 	netmap_generic_irq(MBUF_IFP(m), MBUF_TXQ(m), NULL);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (netmap_verbose)
 		RD(5, "Tx irq (%p) queue %d index %d" , m, MBUF_TXQ(m), (int)(uintptr_t)m->m_ext.ext_arg1);
 	netmap_default_mbuf_destructor(m);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 	IFRATE(rate_ctx.new.txirq++);
 }
 

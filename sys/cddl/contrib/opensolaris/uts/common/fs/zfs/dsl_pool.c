@@ -49,7 +49,7 @@
 #include <sys/zil_impl.h>
 #include <sys/dsl_userhold.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
@@ -133,7 +133,7 @@ int zfs_delay_min_dirty_percent = 60;
 uint64_t zfs_delay_scale = 1000 * 1000 * 1000 / 2000;
 
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 extern int zfs_vdev_async_write_active_max_dirty_percent;
 

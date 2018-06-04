@@ -32,7 +32,7 @@ typedef unsigned long		ulong_t;
 /*
  * Additional type declarations for XFS
  */
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 typedef signed char		__int8_t;
 typedef unsigned char		__uint8_t;
 typedef signed short int	__int16_t;

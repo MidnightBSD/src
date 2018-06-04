@@ -24,7 +24,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ce/ceddk.c 154899 2006-01-27 09:02:09Z rik
 
 #undef CE_DDK_DEBUG_ENABLED
 #ifdef CE_DDK_DEBUG_ENABLED
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 # define CE_DDK_DEBUG(b,c,s) \
 	do { \
 		if (c) { \

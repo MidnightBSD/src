@@ -117,7 +117,7 @@ scsi_low_notify_pisa(dh, ev)
 }
 #endif	/* __NetBSD__ */
 
-#ifdef	__FreeBSD__ 
+#ifdef	__MidnightBSD__ 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -165,4 +165,4 @@ static moduledata_t scsi_low_moduledata = {
 DECLARE_MODULE(scsi_low, scsi_low_moduledata, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 MODULE_VERSION(scsi_low, 1);
 MODULE_DEPEND(scsi_low, cam, 1, 1, 1);
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */

@@ -94,7 +94,7 @@
 
 #define	I2OEXEC_REV 1_5_4  /* I2OExec header file revision string */
 
-#if ((defined(KERNEL) || defined(_KERNEL)) && defined(__FreeBSD__))
+#if ((defined(KERNEL) || defined(_KERNEL)) && defined(__MidnightBSD__))
 # if (!defined(KERN_VERSION))
 #  include <sys/sysctl.h>
 # endif

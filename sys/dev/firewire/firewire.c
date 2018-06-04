@@ -2411,19 +2411,19 @@ static int
 fw_modevent(module_t mode, int type, void *data)
 {
 	int err = 0;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 	static eventhandler_tag fwdev_ehtag = NULL;
 #endif
 
 	switch (type) {
 	case MOD_LOAD:
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 		fwdev_ehtag = EVENTHANDLER_REGISTER(dev_clone,
 						fwdev_clone, 0, 1000);
 #endif
 		break;
 	case MOD_UNLOAD:
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 		if (fwdev_ehtag != NULL)
 			EVENTHANDLER_DEREGISTER(dev_clone, fwdev_ehtag);
 #endif

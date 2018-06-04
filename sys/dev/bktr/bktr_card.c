@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_card.c 218909 2011-02-21 09:01:3
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */

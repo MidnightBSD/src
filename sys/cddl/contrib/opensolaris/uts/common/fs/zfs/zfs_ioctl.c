@@ -134,7 +134,7 @@
  *         distinguish between the operation failing, and
  *         deserialization failing.
  */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_kstack_pages.h"
 #endif
 
@@ -3323,7 +3323,7 @@ zfs_ioc_create(const char *fsname, nvlist_t *innvl, nvlist_t *outnvl)
 		if (error != 0)
 			(void) dsl_destroy_head(fsname);
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (error == 0 && type == DMU_OST_ZVOL)
 		zvol_create_minors(fsname);
 #endif
@@ -3368,7 +3368,7 @@ zfs_ioc_clone(const char *fsname, nvlist_t *innvl, nvlist_t *outnvl)
 		if (error != 0)
 			(void) dsl_destroy_head(fsname);
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (error == 0)
 		zvol_create_minors(fsname);
 #endif
@@ -3477,7 +3477,7 @@ zfs_ioc_log_history(const char *unused, nvlist_t *innvl, nvlist_t *outnvl)
 	return (error);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static int
 zfs_ioc_nextboot(const char *unused, nvlist_t *innvl, nvlist_t *outnvl)
 {
@@ -3642,7 +3642,7 @@ zfs_ioc_destroy_snaps(const char *poolname, nvlist_t *innvl, nvlist_t *outnvl)
 		error = zfs_unmount_snap(name);
 		if (error != 0)
 			return (error);
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 		zvol_remove_minors(name);
 #endif
 	}
@@ -3768,7 +3768,7 @@ zfs_ioc_destroy(zfs_cmd_t *zc)
 	else
 		err = dsl_destroy_head(zc->zc_name);
 	if (zc->zc_objset_type == DMU_OST_ZVOL && err == 0)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		zvol_remove_minors(zc->zc_name);
 #else
 		(void) zvol_remove_minor(zc->zc_name);
@@ -3839,7 +3839,7 @@ zfs_ioc_rename(zfs_cmd_t *zc)
 	char *at;
 	boolean_t allow_mounted = B_TRUE;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	allow_mounted = (zc->zc_cookie & 2) != 0;
 #endif
 
@@ -4519,7 +4519,7 @@ zfs_ioc_recv(zfs_cmd_t *zc)
 	}
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (error == 0)
 		zvol_create_minors(tofs);
 #endif
@@ -6087,7 +6087,7 @@ zfs_ioctl_init(void)
 	    zfs_ioc_tmp_snapshot, zfs_secpolicy_tmp_snapshot,
 	    POOL_CHECK_SUSPENDED | POOL_CHECK_READONLY);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	zfs_ioctl_register_dataset_nolog(ZFS_IOC_JAIL, zfs_ioc_jail,
 	    zfs_secpolicy_config, POOL_CHECK_NONE);
 	zfs_ioctl_register_dataset_nolog(ZFS_IOC_UNJAIL, zfs_ioc_unjail,
@@ -6774,7 +6774,7 @@ static void zfs_shutdown(void *, int);
 
 static eventhandler_tag zfs_shutdown_event_tag;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define ZFS_MIN_KSTACK_PAGES 4
 #endif
 
@@ -6782,7 +6782,7 @@ int
 zfs__init(void)
 {
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #if KSTACK_PAGES < ZFS_MIN_KSTACK_PAGES
 	printf("ZFS NOTICE: KSTACK_PAGES is %d which could result in stack "
 	    "overflow panic!\nPlease consider adding "

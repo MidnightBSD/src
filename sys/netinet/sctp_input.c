@@ -6189,7 +6189,7 @@ out:
 	return;
 }
 
-#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+#if defined(__MidnightBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
 extern int *sctp_cpuarry;
 
 #endif
@@ -6197,7 +6197,7 @@ extern int *sctp_cpuarry;
 void
 sctp_input(struct mbuf *m, int off)
 {
-#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+#if defined(__MidnightBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
 	struct ip *ip;
 	struct sctphdr *sh;
 	int offset;

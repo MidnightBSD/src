@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_hostap.c 262007 2014-02-17 01:36:53Z kevlo $");
 #endif
 

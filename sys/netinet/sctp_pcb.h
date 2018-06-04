@@ -245,7 +245,7 @@ struct sctp_base_info {
 	 * All static structures that anchor the system must be here.
 	 */
 	struct sctp_epinfo sctppcbinfo;
-#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+#if defined(__MidnightBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 	struct sctpstat *sctpstat;
 #else
 	struct sctpstat sctpstat;
@@ -645,7 +645,7 @@ sctp_initiate_iterator(inp_func inpf,
     struct sctp_inpcb *,
     uint8_t co_off);
 
-#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+#if defined(__MidnightBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
 void
      sctp_queue_to_mcore(struct mbuf *m, int off, int cpu_to_use);
 

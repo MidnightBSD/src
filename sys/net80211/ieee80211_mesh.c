@@ -28,7 +28,7 @@
  * SUCH DAMAGE. 
  */ 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_mesh.c 322061 2017-08-04 20:24:23Z pfg $");
 #endif
 

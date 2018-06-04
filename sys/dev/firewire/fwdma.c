@@ -34,7 +34,7 @@
  * 
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: stable/10/sys/dev/firewire/fwdma.c 170374 2007-06-06 14:31:36Z simokawa $");
 #endif
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/firewire/fwdma.c 170374 2007-06-06 14:31:3
 #include <sys/types.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102 
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102 
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #endif
@@ -91,7 +91,7 @@ fwdma_malloc(struct firewire_comm *fc, int alignment, bus_size_t size,
 		/*nsegments*/ 1,
 		/*maxsegsz*/ BUS_SPACE_MAXSIZE_32BIT,
 		/*flags*/ BUS_DMA_ALLOCNOW,
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102 
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102 
 		/*lockfunc*/busdma_lock_mutex,
 		/*lockarg*/FW_GMTX(fc),
 #endif
@@ -189,7 +189,7 @@ fwdma_malloc_multiseg(struct firewire_comm *fc, int alignment,
 			/*nsegments*/ 1,
 			/*maxsegsz*/ BUS_SPACE_MAXSIZE_32BIT,
 			/*flags*/ BUS_DMA_ALLOCNOW,
-#if defined(__FreeBSD__) && __FreeBSD_version >= 501102
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 501102
 			/*lockfunc*/busdma_lock_mutex,
 			/*lockarg*/FW_GMTX(fc),
 #endif

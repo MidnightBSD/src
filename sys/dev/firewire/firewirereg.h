@@ -76,7 +76,7 @@ struct fw_device{
 };
 
 struct firewire_softc {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 	struct cdev *dev;
 #endif
 	struct firewire_comm *fc;

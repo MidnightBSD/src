@@ -372,7 +372,7 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd, struct ip_fw_chain *chain, uin
 				return(1);
 		}
 	} else {
-#ifdef __FreeBSD__	/* and OSX too ? */
+#ifdef __MidnightBSD__	/* and OSX too ? */
 		struct ifaddr *ia;
 
 		if_addr_rlock(ifp);
@@ -386,7 +386,7 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd, struct ip_fw_chain *chain, uin
 			}
 		}
 		if_addr_runlock(ifp);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 	}
 	return(0);	/* no match, fail ... */
 }
@@ -415,7 +415,7 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd, struct ip_fw_chain *chain, uin
 static int
 verify_path(struct in_addr src, struct ifnet *ifp, u_int fib)
 {
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	return 0;
 #else
 	struct route ro;
@@ -460,7 +460,7 @@ verify_path(struct in_addr src, struct ifnet *ifp, u_int fib)
 	/* found valid route */
 	RTFREE(ro.ro_rt);
 	return 1;
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 }
 
 #ifdef INET6
@@ -666,7 +666,7 @@ static int
 check_uidgid(ipfw_insn_u32 *insn, struct ip_fw_args *args, int *ugid_lookupp,
     struct ucred **uc)
 {
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	/* XXX */
 	return cred_check(insn, proto, oif,
 	    dst_ip, dst_port, src_ip, src_port,
@@ -767,7 +767,7 @@ check_uidgid(ipfw_insn_u32 *insn, struct ip_fw_args *args, int *ugid_lookupp,
 	else if (insn->o.opcode == O_JAIL)
 		match = ((*uc)->cr_prison->pr_id == (int)insn->d[0]);
 	return (match);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 }
 
 /*
@@ -892,7 +892,7 @@ ipfw_chk(struct ip_fw_args *args)
 	 * these types of constraints, as well as decrease contention
 	 * on pcb related locks.
 	 */
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	struct bsd_ucred ucred_cache;
 #else
 	struct ucred *ucred_cache = NULL;
@@ -1355,7 +1355,7 @@ do {								\
 					match = check_uidgid(
 						    (ipfw_insn_u32 *)cmd,
 						    args, &ucred_lookup,
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 						    &ucred_cache);
 #else
 						    (void *)&ucred_cache);
@@ -1476,19 +1476,19 @@ do {								\
 					    check_uidgid(
 						(ipfw_insn_u32 *)cmd,
 						args, &ucred_lookup,
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 						&ucred_cache);
 					    if (v == 4 /* O_UID */)
 						key = ucred_cache->cr_uid;
 					    else if (v == 5 /* O_JAIL */)
 						key = ucred_cache->cr_prison->pr_id;
-#else /* !__FreeBSD__ */
+#else /* !__MidnightBSD__ */
 						(void *)&ucred_cache);
 					    if (v ==4 /* O_UID */)
 						key = ucred_cache.uid;
 					    else if (v == 5 /* O_JAIL */)
 						key = ucred_cache.xid;
-#endif /* !__FreeBSD__ */
+#endif /* !__MidnightBSD__ */
 					    key = htonl(key);
 					} else
 					    break;
@@ -2533,7 +2533,7 @@ do {								\
 		printf("ipfw: ouch!, skip past end of rules, denying packet\n");
 	}
 	IPFW_PF_RUNLOCK(chain);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (ucred_cache != NULL)
 		crfree(ucred_cache);
 #endif

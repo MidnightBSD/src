@@ -81,7 +81,7 @@ struct nfsv4lock;
 struct nfsvattr;
 struct nfs_vattr;
 struct NFSSVCARGS;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 NFS_ACCESS_ARGS;
 NFS_OPEN_ARGS;
 NFS_GETATTR_ARGS;

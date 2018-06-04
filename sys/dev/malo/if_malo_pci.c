@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/dev/malo/if_malo_pci.c 278418 2015-02-08 22:29:57Z marius $");
 #endif
 

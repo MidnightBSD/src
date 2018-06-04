@@ -32,7 +32,7 @@
 #include "osx_glue.h"
 #endif /* __APPLE__ */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/cdefs.h> /* prerequisite */
 __FBSDID("$FreeBSD: stable/10/sys/dev/netmap/netmap_mem2.c 283343 2015-05-24 01:48:33Z pkelsey $");
 
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/netmap/netmap_mem2.c 283343 2015-05-24 01:
 #include <net/vnet.h>
 #include <machine/bus.h>	/* bus_dmamap_* */
 
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #include <net/netmap.h>
 #include <dev/netmap/netmap_kern.h>
@@ -1012,7 +1012,7 @@ netmap_mem_unmap(struct netmap_obj_pool *p, struct netmap_adapter *na)
 	if (na->pdev == NULL)
 		return 0;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	(void)i;
 	(void)lim;
 	D("unsupported on FreeBSD");
@@ -1028,7 +1028,7 @@ netmap_mem_unmap(struct netmap_obj_pool *p, struct netmap_adapter *na)
 static int
 netmap_mem_map(struct netmap_obj_pool *p, struct netmap_adapter *na)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	D("unsupported on FreeBSD");
 #else /* linux */
 	int i, lim = p->_objtotal;

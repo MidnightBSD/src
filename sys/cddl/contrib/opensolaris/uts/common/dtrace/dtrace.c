@@ -612,7 +612,7 @@ dtrace_panic(const char *format, ...)
 	va_list alist;
 
 	va_start(alist, format);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	vpanic(format, alist);
 #else
 	dtrace_vpanic(format, alist);

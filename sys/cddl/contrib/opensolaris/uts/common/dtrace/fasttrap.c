@@ -234,7 +234,7 @@ static eventhandler_tag fasttrap_thread_dtor_tag;
 
 static unsigned long tpoints_hash_size = FASTTRAP_TPOINTS_DEFAULT_SIZE;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 SYSCTL_DECL(_kern_dtrace);
 SYSCTL_NODE(_kern_dtrace, OID_AUTO, fasttrap, CTLFLAG_RD, 0, "DTrace fasttrap parameters");
 SYSCTL_UINT(_kern_dtrace_fasttrap, OID_AUTO, max_probes, CTLFLAG_RWTUN, &fasttrap_max,
@@ -1238,7 +1238,7 @@ fasttrap_pid_enable(void *arg, dtrace_id_t id, void *parg)
 	 * the chance to execute the trap instruction we're about to place
 	 * in their process's text.
 	 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * pfind() returns a locked process.
 	 */
@@ -1317,7 +1317,7 @@ fasttrap_pid_disable(void *arg, dtrace_id_t id, void *parg)
 	 * DTrace consumers from disabling this probe.
 	 */
 	if ((p = pfind(probe->ftp_pid)) != NULL) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (p->p_flag & P_WEXIT) {
 			PROC_UNLOCK(p);
 			p = NULL;
@@ -1362,7 +1362,7 @@ fasttrap_pid_disable(void *arg, dtrace_id_t id, void *parg)
 	if (whack)
 		fasttrap_pid_cleanup();
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (p != NULL)
 		PRELE(p);
 #endif

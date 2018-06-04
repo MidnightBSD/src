@@ -234,7 +234,7 @@ int i915_save_state(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	int i;
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	dev_priv->saveLBB = (u8) pci_read_config(dev->device, LBB, 1);
 #else
 	pci_read_config_byte(dev->pdev, LBB, &dev_priv->saveLBB);
@@ -370,7 +370,7 @@ int i915_restore_state(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	int i;
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	pci_write_config(dev->device, LBB, dev_priv->saveLBB, 1);
 #else
 	pci_write_config_byte(dev->pdev, LBB, dev_priv->saveLBB);

@@ -154,7 +154,7 @@ struct dn_alg {
 
 #endif
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 int fls(int);
 #endif
 

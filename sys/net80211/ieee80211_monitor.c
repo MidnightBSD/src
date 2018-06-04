@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_monitor.c 193287 2009-06-02 00:04:10Z sam $");
 #endif
 

@@ -257,7 +257,7 @@ fwip_stop(struct fwip_softc *fwip)
 		fwip->dma_ch = -1;
 	}
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
 #else
 	ifp->if_flags &= ~(IFF_RUNNING | IFF_OACTIVE);
@@ -382,7 +382,7 @@ fwip_init(void *arg)
 	if ((xferq->flag & FWXFERQ_RUNNING) == 0)
 		fc->irx_enable(fc, fwip->dma_ch);
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #else
@@ -406,14 +406,14 @@ fwip_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	case SIOCSIFFLAGS:
 		s = splimp();
 		if (ifp->if_flags & IFF_UP) {
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 			if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
 #else
 			if (!(ifp->if_flags & IFF_RUNNING))
 #endif
 				fwip_init(&fwip->fw_softc);
 		} else {
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
 #else
 			if (ifp->if_flags & IFF_RUNNING)
@@ -455,7 +455,7 @@ fwip_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	    }
 #endif /* DEVICE_POLLING */
 		break;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__MidnightBSD__) && __FreeBSD_version >= 500000
 	default:
 #else
 	case SIOCSIFADDR:
@@ -561,7 +561,7 @@ fwip_start(struct ifnet *ifp)
 	}
 
 	s = splimp();
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 #else
 	ifp->if_flags |= IFF_OACTIVE;
@@ -570,7 +570,7 @@ fwip_start(struct ifnet *ifp)
 	if (ifp->if_snd.ifq_len != 0)
 		fwip_async_output(fwip, ifp);
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #else
 	ifp->if_flags &= ~IFF_OACTIVE;

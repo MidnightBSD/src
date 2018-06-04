@@ -985,7 +985,7 @@ struct dma_desc
 #endif
   u_int32_t address1;		/* buffer1 bus address */
   u_int32_t address2;		/* buffer2 bus address */
-#if (defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__))
+#if (defined(__MidnightBSD__) || defined(__NetBSD__) || defined(__OpenBSD__))
   bus_dmamap_t map;		/* bus dmamap for this descriptor */
 # define TLP_BUS_DSL_VAL	(sizeof(bus_dmamap_t) & TLP_BUS_DSL)
 #else
@@ -1036,7 +1036,7 @@ struct desc_ring
 #elif BSD
   struct mbuf *head;		/* tail-queue of mbufs */
   struct mbuf *tail;
-# if (defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__))
+# if (defined(__MidnightBSD__) || defined(__NetBSD__) || defined(__OpenBSD__))
   bus_dma_tag_t tag;		/* bus_dma tag for desc array */
   bus_dmamap_t map;		/* bus_dma map for desc array */
   bus_dma_segment_t segs[2];	/* bus_dmamap_load() or bus_dmamem_alloc() */
@@ -1069,7 +1069,7 @@ struct card
  */
 #define IOREF_CSR 1  /* access Tulip CSRs with IO cycles if 1 */
 
-#if (defined(__FreeBSD__) && defined(DEVICE_POLLING))
+#if (defined(__MidnightBSD__) && defined(DEVICE_POLLING))
 # define DEV_POLL 1
 #else
 # define DEV_POLL 0
@@ -1152,7 +1152,7 @@ struct softc
 # endif
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
   struct callout callout;	/* watchdog needs this                  */
   struct device	*dev;		/* base device pointer                     */
   bus_space_tag_t csr_tag;	/* bus_space needs this                    */
@@ -1174,7 +1174,7 @@ struct softc
   int		top_spl;	/* lock card->watchdog vs core_ioctl       */
   int		bottom_spl;	/* lock for buf queues & descriptor rings  */
 # endif
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #ifdef __linux__
   struct pci_dev    *pci_dev;	/* READ/WRITE_PCI_CFG macros need this     */
@@ -1211,7 +1211,7 @@ struct softc
 
 /* Hide the minor differences between OS versions */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
   typedef void intr_return_t;
 # define  READ_PCI_CFG(sc, addr)       pci_read_config ((sc)->dev, addr, 4)
 # define WRITE_PCI_CFG(sc, addr, data) pci_write_config((sc)->dev, addr, data, 4)
@@ -1265,7 +1265,7 @@ struct softc
 # if (__FreeBSD_version >= 600000)
 #  define IFF_RUNNING		IFF_DRV_RUNNING
 # endif
-#endif  /* __FreeBSD__ */
+#endif  /* __MidnightBSD__ */
 
 #ifdef __NetBSD__
   typedef int intr_return_t;
@@ -1429,7 +1429,7 @@ READ_PCI_CFG(softc_t *sc, u_int32_t addr)
 #endif
 
 #if (defined(__bsdi__) || /* unconditionally */ \
-    (defined(__FreeBSD__) && (__FreeBSD_version < 503000)) || \
+    (defined(__MidnightBSD__) && (__FreeBSD_version < 503000)) || \
     (defined(__NetBSD__)  && (__NetBSD_Version__ < 106000000)) || \
     (defined(__OpenBSD__) && (  OpenBSD < 200111)))
 # define IFQ_ENQUEUE(ifq, m, pa, err)   \
@@ -1532,7 +1532,7 @@ static void t1_send_bop(softc_t *, int);
 static int  t1_ioctl(softc_t *, struct ioctl *);
 
 #if IFNET
-# if ((defined(__FreeBSD__) && (__FreeBSD_version < 500000)) ||\
+# if ((defined(__MidnightBSD__) && (__FreeBSD_version < 500000)) ||\
         defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__))
 static void netisr_dispatch(int, struct mbuf *);
 # endif
@@ -1542,7 +1542,7 @@ static void lmc_raw_input(struct ifnet *, struct mbuf *);
 #if BSD
 static void mbuf_enqueue(struct desc_ring *, struct mbuf *);
 static struct mbuf* mbuf_dequeue(struct desc_ring *);
-# ifdef __FreeBSD__
+# ifdef __MidnightBSD__
 static void fbsd_dmamap_load(void *, bus_dma_segment_t *, int, int);
 # endif
 static int create_ring(softc_t *, struct desc_ring *, int);
@@ -1571,7 +1571,7 @@ static void check_intr_status(softc_t *);
 static void core_interrupt(void *, int);
 static void user_interrupt(softc_t *, int);
 #if BSD
-# if (defined(__FreeBSD__) && defined(DEVICE_POLLING))
+# if (defined(__MidnightBSD__) && defined(DEVICE_POLLING))
 static int fbsd_poll(struct ifnet *, enum poll_cmd, int);
 # endif
 static intr_return_t bsd_interrupt(void *);
@@ -1639,12 +1639,12 @@ static void shutdown_card(void *);
 static int attach_card(softc_t *, const char *);
 static void detach_card(softc_t *);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static int fbsd_probe(device_t);
 static int fbsd_detach(device_t);
 static int fbsd_shutdown(device_t);
 static int fbsd_attach(device_t);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #ifdef __NetBSD__
 static int nbsd_match(struct device *t, struct cfdata *, void *);

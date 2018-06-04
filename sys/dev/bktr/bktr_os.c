@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_os.c 254263 2013-08-12 23:30:01Z
 /*******************/
 /* *** FreeBSD *** */
 /*******************/
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -26,7 +26,7 @@
 
 /* $FreeBSD: stable/10/sys/dev/netmap/netmap_pipe.c 278779 2015-02-14 19:41:26Z luigi $ */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 
 #include <sys/types.h>

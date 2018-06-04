@@ -40,7 +40,7 @@
 #define WITH_MONITOR
 #define WITH_GENERIC
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 
 #define likely(x)	__builtin_expect((long)!!(x), 1L)
 #define unlikely(x)	__builtin_expect((long)!!(x), 0L)
@@ -918,7 +918,7 @@ nm_set_native_flags(struct netmap_adapter *na)
 #ifdef IFCAP_NETMAP /* or FreeBSD ? */
 	ifp->if_capenable |= IFCAP_NETMAP;
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	na->if_transmit = ifp->if_transmit;
 	ifp->if_transmit = netmap_transmit;
 #else
@@ -935,7 +935,7 @@ nm_clear_native_flags(struct netmap_adapter *na)
 {
 	struct ifnet *ifp = na->ifp;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	ifp->if_transmit = na->if_transmit;
 #else
 	ifp->netdev_ops = (void *)na->if_transmit;
@@ -1218,7 +1218,7 @@ extern int netmap_generic_rings;
  * Macros to determine if an interface is netmap capable or netmap enabled.
  * See the magic field in struct netmap_adapter.
  */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 /*
  * on FreeBSD just use if_capabilities and if_capenable.
  */
@@ -1245,7 +1245,7 @@ extern int netmap_generic_rings;
 
 #endif	/* linux */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 /* Assigns the device IOMMU domain to an allocator.
  * Returns -ENOMEM in case the domain is different */

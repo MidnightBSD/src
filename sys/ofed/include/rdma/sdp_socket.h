@@ -4,7 +4,7 @@
 #ifndef SDP_SOCKET_H
 #define SDP_SOCKET_H
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #ifndef AF_INET_SDP
 #define AF_INET_SDP 27
 #define PF_INET_SDP AF_INET_SDP

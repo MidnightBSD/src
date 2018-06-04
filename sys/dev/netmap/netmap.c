@@ -348,7 +348,7 @@ ports attached to the switch)
  * is present in netmap_kern.h
  */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -811,7 +811,7 @@ netmap_krings_create(struct netmap_adapter *na, u_int tailroom)
 }
 
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static void
 netmap_knlist_destroy(NM_SELINFO_T *si)
 {
@@ -821,7 +821,7 @@ netmap_knlist_destroy(NM_SELINFO_T *si)
 	/* now we don't need the mutex anymore */
 	mtx_destroy(&si->m);
 }
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 
 /* undo the actions performed by netmap_krings_create */
@@ -1055,7 +1055,7 @@ netmap_dtor_locked(struct netmap_priv_d *priv)
 {
 	struct netmap_adapter *na = priv->np_na;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * np_refcount is the number of active mmaps on
 	 * this file descriptor
@@ -1063,7 +1063,7 @@ netmap_dtor_locked(struct netmap_priv_d *priv)
 	if (--priv->np_refcount > 0) {
 		return 0;
 	}
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 	if (!na) {
 	    return 1; //XXX is it correct?
 	}
@@ -2225,7 +2225,7 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	case NIOCCONFIG:
 		error = netmap_bdg_config(nmr);
 		break;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	case FIONBIO:
 	case FIOASYNC:
 		ND("FIONBIO/FIOASYNC are no-ops");
@@ -2585,9 +2585,9 @@ netmap_attach_common(struct netmap_adapter *na)
 	/* the following is only needed for na that use the host port.
 	 * XXX do we have something similar for linux ?
 	 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		na->if_input = ifp->if_input; /* for netmap_send_up */
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 		NETMAP_SET_CAPABLE(ifp);
 	}
@@ -2711,7 +2711,7 @@ netmap_attach(struct netmap_adapter *arg)
 	}
 #endif /* linux */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if_printf(ifp, "netmap queues/slots: TX %d/%d, RX %d/%d\n",
 	    hwna->up.num_tx_rings, hwna->up.num_tx_desc,
 	    hwna->up.num_rx_rings, hwna->up.num_rx_desc);
@@ -3089,7 +3089,7 @@ netmap_init(void)
 		goto fail;
 
 	netmap_init_bridges();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	nm_vi_init_index();
 #endif
 	printf("netmap: loaded module\n");

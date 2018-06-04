@@ -22,7 +22,7 @@
  *		Justin Schoeman
  *		et al.
  */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define __user
 typedef uint64_t	__u64;
 typedef int64_t		__s64;

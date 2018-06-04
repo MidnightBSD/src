@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/10/sys/dev/malo/if_malo.c 278808 2015-02-15 20:02:29Z marius $");
 #endif
 

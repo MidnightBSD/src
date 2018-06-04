@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_vnode.h,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2003 Silicon Graphics, Inc.  All Rights Reserved.
  *
@@ -472,7 +472,7 @@ typedef struct xfs_vattr {
 		XFS_AT_TYPE|XFS_AT_BLKSIZE|XFS_AT_NBLOCKS|XFS_AT_VCODE|\
 		XFS_AT_NEXTENTS|XFS_AT_ANEXTENTS|XFS_AT_GENCOUNT)
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 /*
  *  Modes.
  */
@@ -482,7 +482,7 @@ typedef struct xfs_vattr {
 #define VREAD	S_IRUSR		/* read, write, execute permissions */
 #define VWRITE	S_IWUSR
 #define VEXEC	S_IXUSR
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #define MODEMASK ALLPERMS	/* mode bits plus permission bits */
 

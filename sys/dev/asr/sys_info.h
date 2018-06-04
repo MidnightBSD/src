@@ -54,7 +54,7 @@
 
 #if (defined(KERNEL) && defined(__bsdi__))
 # include	 "i386/isa/dpt_osd_util.h"
-#elif ((defined(KERNEL) || defined(_KERNEL)) && defined(__FreeBSD__))
+#elif ((defined(KERNEL) || defined(_KERNEL)) && defined(__MidnightBSD__))
 # if (KERN_VERSION < 3)
 #  include	  "i386/isa/dpt_osd_util.h"
 # else

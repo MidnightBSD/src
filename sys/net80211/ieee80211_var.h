@@ -35,7 +35,7 @@
 /* NB: portability glue must go first */
 #if defined(__NetBSD__)
 #include <net80211/ieee80211_netbsd.h>
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 #include <net80211/ieee80211_freebsd.h>
 #elif defined(__linux__)
 #include <net80211/ieee80211_linux.h>

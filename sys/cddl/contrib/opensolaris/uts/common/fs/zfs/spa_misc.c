@@ -625,7 +625,7 @@ spa_deadman(void *arg, int pending)
 	    ++spa->spa_deadman_calls);
 	if (zfs_deadman_enabled)
 		vdev_deadman(spa->spa_root_vdev);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 	callout_schedule(&spa->spa_deadman_cycid,
 	    hz * zfs_deadman_checktime_ms / MILLISEC);
@@ -633,7 +633,7 @@ spa_deadman(void *arg, int pending)
 #endif
 }
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 static void
 spa_deadman_timeout(void *arg)
 {

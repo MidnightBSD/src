@@ -67,12 +67,12 @@ typedef struct lockstat_probe {
 	char		*lsp_name;
 	int		lsp_probe;
 	dtrace_id_t	lsp_id;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	int		lsp_frame;
 #endif
 } lockstat_probe_t;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 lockstat_probe_t lockstat_probes[] =
 {
   /* Spin Locks */
@@ -233,7 +233,7 @@ lockstat_provide(void *arg, dtrace_probedesc_t *desc)
 			continue;
 
 		ASSERT(!probe->lsp_id);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		probe->lsp_id = dtrace_probe_create(lockstat_id,
 		    "kernel", probe->lsp_func, probe->lsp_name,
 		    probe->lsp_frame, probe);

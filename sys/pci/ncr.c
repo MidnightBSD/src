@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/pci/ncr.c 254263 2013-08-12 23:30:01Z scottl $
 
 #define NCR_GETCC_WITHMSG
 
-#if defined (__FreeBSD__) && defined(_KERNEL)
+#if defined (__MidnightBSD__) && defined(_KERNEL)
 #include "opt_ncr.h"
 #endif
 
@@ -4373,7 +4373,7 @@ ncr_action (struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = np->myaddr;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "Symbios", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
