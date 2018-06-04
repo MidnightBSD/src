@@ -29,7 +29,7 @@
 
 #if defined(__NetBSD__)
 # include <sys/device.h>
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 # include <sys/module.h>
 # include <sys/bus.h>
 #endif
@@ -43,9 +43,9 @@
 # define DEVPORT_DEVNAME(dev)		(dev).dv_xname
 # define DEVPORT_DEVUNIT(dev)		(dev).dv_unit
 
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 /*
- * FreeBSD (compatibility for struct device)
+ * MidnightBSD (compatibility for struct device)
  */
 #define DEVPORT_DEVICE			device_t
 #define DEVPORT_DEVNAME(dev)		device_get_name(dev)
@@ -67,4 +67,4 @@
 #define DEVPORT_PDEVALLOC_SOFTC(pdev)	device_get_softc(pdev)
 #define DEVPORT_PDEVGET_SOFTC(pdev)	device_get_softc(pdev)
 
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
