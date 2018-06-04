@@ -67294,8 +67294,6 @@ sys/nfsclient/nfsnode.h -text
 sys/nfsclient/nfsstats.h -text
 sys/nfsclient/nlminfo.h -text
 sys/nfsserver/nfs.h -text
-sys/nfsserver/nfs_fha.c -text
-sys/nfsserver/nfs_fha.h -text
 sys/nfsserver/nfs_fha_old.c svneol=native#text/plain
 sys/nfsserver/nfs_fha_old.h svneol=native#text/plain
 sys/nfsserver/nfs_serv.c -text
