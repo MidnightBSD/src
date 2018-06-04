@@ -98,7 +98,6 @@ void	__elfN(dump_thread)(struct thread *, void *, size_t *);
 
 extern int __elfN(fallback_brand);
 extern Elf_Brandnote __elfN(freebsd_brandnote);
-extern Elf_Brandnote __elfN(kfreebsd_brandnote);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_IMGACT_ELF_H_ */
