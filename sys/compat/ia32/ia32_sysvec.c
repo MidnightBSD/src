@@ -177,10 +177,6 @@ SYSINIT(oia32, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf32_insert_brand_entry,
 	&ia32_brand_oinfo);
 
-SYSINIT(kia32, SI_SUB_EXEC, SI_ORDER_ANY,
-	(sysinit_cfunc_t) elf32_insert_brand_entry,
-	&kia32_brand_info);
-
 void
 elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 {
