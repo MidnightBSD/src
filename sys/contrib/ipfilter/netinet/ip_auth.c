@@ -113,7 +113,7 @@ extern struct ifqueue   ipintrq;		/* ip packet input queue */
 #include "netinet/ip_auth.h"
 #if !defined(MENTAT) && !defined(linux)
 # include <net/netisr.h>
-# ifdef __FreeBSD__
+# ifdef __MidnightBSD__
 #  include <machine/cpufunc.h>
 # endif
 #endif

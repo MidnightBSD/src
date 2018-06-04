@@ -450,7 +450,7 @@ ipf_sync_write(softc, uio)
 
 	int err = 0;
 
-#  if BSD_GE_YEAR(199306) || defined(__FreeBSD__) || defined(__osf__)
+#  if BSD_GE_YEAR(199306) || defined(__MidnightBSD__) || defined(__osf__)
 	uio->uio_rw = UIO_WRITE;
 #  endif
 
@@ -598,7 +598,7 @@ ipf_sync_read(softc, uio)
 		return EINVAL;
 	}
 
-#  if BSD_GE_YEAR(199306) || defined(__FreeBSD__) || defined(__osf__)
+#  if BSD_GE_YEAR(199306) || defined(__MidnightBSD__) || defined(__osf__)
 	uio->uio_rw = UIO_READ;
 #  endif
 

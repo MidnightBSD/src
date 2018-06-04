@@ -32,13 +32,13 @@
  * These notices must be retained in any copies of any part of this software.
  */
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__MidnightBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet6.h"
 #endif
-#endif /* __FreeBSD__ || __NetBSD__ */
+#endif /* __MidnightBSD__ || __NetBSD__ */
 #ifdef ALTQ_CBQ	/* cbq is enabled by ALTQ_CBQ option in opt_altq.h */
 
 #include <sys/param.h>

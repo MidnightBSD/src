@@ -356,7 +356,7 @@ static inline int64_t cvmx_atomic_fetch_and_add64_nosync(int64_t *ptr, int64_t i
 {
     uint64_t tmp, ret;
 
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     if (OCTEON_IS_MODEL(OCTEON_CN6XXX) || OCTEON_IS_MODEL(OCTEON_CNF7XXX))
     {
 	CVMX_PUSH_OCTEON2;
@@ -395,7 +395,7 @@ static inline int64_t cvmx_atomic_fetch_and_add64_nosync(int64_t *ptr, int64_t i
             : [val] "+m" (*ptr), [tmp] "=&r" (tmp), [ret] "=&r" (ret)
             : [inc] "r" (incr)
             : "memory");
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     }
 #endif
 
@@ -441,7 +441,7 @@ static inline int32_t cvmx_atomic_fetch_and_add32_nosync(int32_t *ptr, int32_t i
 {
     uint32_t tmp, ret;
 
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     if (OCTEON_IS_MODEL(OCTEON_CN6XXX) || OCTEON_IS_MODEL(OCTEON_CNF7XXX))
     {
 	CVMX_PUSH_OCTEON2;
@@ -480,7 +480,7 @@ static inline int32_t cvmx_atomic_fetch_and_add32_nosync(int32_t *ptr, int32_t i
             : [val] "+m" (*ptr), [tmp] "=&r" (tmp), [ret] "=&r" (ret)
             : [inc] "r" (incr)
             : "memory");
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     }
 #endif
 
@@ -657,7 +657,7 @@ static inline uint64_t cvmx_atomic_swap64_nosync(uint64_t *ptr, uint64_t new_val
 {
     uint64_t tmp, ret;
 
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     if (OCTEON_IS_MODEL(OCTEON_CN6XXX) || OCTEON_IS_MODEL(OCTEON_CNF7XXX))
     {
 	CVMX_PUSH_OCTEON2;
@@ -695,7 +695,7 @@ static inline uint64_t cvmx_atomic_swap64_nosync(uint64_t *ptr, uint64_t new_val
             : [val] "+m" (*ptr), [tmp] "=&r" (tmp), [ret] "=&r" (ret)
             : [new_val] "r"  (new_val)
             : "memory");
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     }
 #endif
 
@@ -719,7 +719,7 @@ static inline uint32_t cvmx_atomic_swap32_nosync(uint32_t *ptr, uint32_t new_val
 {
     uint32_t tmp, ret;
 
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     if (OCTEON_IS_MODEL(OCTEON_CN6XXX) || OCTEON_IS_MODEL(OCTEON_CNF7XXX))
     {
 	CVMX_PUSH_OCTEON2;
@@ -757,7 +757,7 @@ static inline uint32_t cvmx_atomic_swap32_nosync(uint32_t *ptr, uint32_t new_val
         : [val] "+m" (*ptr), [tmp] "=&r" (tmp), [ret] "=&r" (ret)
         : [new_val] "r"  (new_val)
         : "memory");
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
     }
 #endif
 

@@ -33,7 +33,7 @@
  *
  */
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <netgraph/atm/sscop/ng_sscop_cust.h>
 #endif
 #else	/* !_KERNEL */

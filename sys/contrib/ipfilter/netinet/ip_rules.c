@@ -22,7 +22,7 @@
 #endif
 #if defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 399000000)
 #else
-# if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__sgi)
+# if !defined(__MidnightBSD__) && !defined(__OpenBSD__) && !defined(__sgi)
 #  include <sys/systm.h>
 # endif
 #endif
@@ -31,7 +31,7 @@
 #if !defined(__SVR4) && !defined(__svr4__) && !defined(__hpux)
 # include <sys/mbuf.h>
 #endif
-#if defined(__FreeBSD__) && (__FreeBSD_version > 220000)
+#if defined(__MidnightBSD__) && (__FreeBSD_version > 220000)
 # include <sys/sockio.h>
 #else
 # include <sys/ioctl.h>

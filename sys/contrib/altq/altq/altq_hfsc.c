@@ -43,13 +43,13 @@
  * a class whose fit-time exceeds the current time.
  */
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__MidnightBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet6.h"
 #endif
-#endif /* __FreeBSD__ || __NetBSD__ */
+#endif /* __MidnightBSD__ || __NetBSD__ */
 
 #ifdef ALTQ_HFSC  /* hfsc is enabled by ALTQ_HFSC option in opt_altq.h */
 

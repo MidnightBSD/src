@@ -28,13 +28,13 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__MidnightBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet6.h"
 #endif
-#endif /* __FreeBSD__ || __NetBSD__ */
+#endif /* __MidnightBSD__ || __NetBSD__ */
 
 #include <sys/param.h>
 #include <sys/malloc.h>

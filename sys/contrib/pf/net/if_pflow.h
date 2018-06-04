@@ -66,7 +66,7 @@ struct pflow_softc {
 	unsigned int		 sc_maxcount;
 	u_int64_t		 sc_gcounter;
 	struct ip_moptions	 sc_imo;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct callout		 sc_tmo;
 #else
 	struct timeout		 sc_tmo;

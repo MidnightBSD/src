@@ -460,7 +460,7 @@ extern	mb_t	*allocmbt(size_t);
 
 
 #ifdef	USE_INET6
-# if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
+# if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__MidnightBSD__) || \
      defined(__osf__) || defined(linux)
 #  include <netinet/ip6.h>
 #  include <netinet/icmp6.h>
@@ -484,11 +484,11 @@ typedef	struct ip6_hdr	ip6_t;
 #  define	COPYBACK	m_copyback
 # endif
 #  if (defined(__NetBSD_Version__) && (__NetBSD_Version__ < 105180000)) || \
-       defined(__FreeBSD__) || (defined(OpenBSD) && (OpenBSD < 200206)) || \
+       defined(__MidnightBSD__) || (defined(OpenBSD) && (OpenBSD < 200206)) || \
        defined(_BSDI_VERSION)
 #   include <vm/vm.h>
 #  endif
-#  if !defined(__FreeBSD__) || FREEBSD_GE_REV(300000)
+#  if !defined(__MidnightBSD__) || FREEBSD_GE_REV(300000)
 #   if NETBSD_GE_REV(105180000) || OPENBSD_GE_REV(200111)
 #    include <uvm/uvm_extern.h>
 #   else
@@ -496,9 +496,9 @@ typedef	struct ip6_hdr	ip6_t;
 extern  vm_map_t        kmem_map;
 #   endif
 #   include <sys/proc.h>
-#  else /* !__FreeBSD__ || (__FreeBSD__ && __FreeBSD_version >= 300000) */
+#  else /* !__MidnightBSD__ || (__MidnightBSD__ && __FreeBSD_version >= 300000) */
 #   include <vm/vm_kern.h>
-#  endif /* !__FreeBSD__ || (__FreeBSD__ && __FreeBSD_version >= 300000) */
+#  endif /* !__MidnightBSD__ || (__MidnightBSD__ && __FreeBSD_version >= 300000) */
 
 #  ifdef IPFILTER_M_IPFILTER
 #    include <sys/malloc.h>

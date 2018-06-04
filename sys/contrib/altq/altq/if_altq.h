@@ -30,7 +30,7 @@
 #ifndef _ALTQ_IF_ALTQ_H_
 #define	_ALTQ_IF_ALTQ_H_
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/lock.h>		/* XXX */
 #include <sys/mutex.h>		/* XXX */
 #include <sys/event.h>		/* XXX */
@@ -52,7 +52,7 @@ struct	ifaltq {
 	int	ifq_len;
 	int	ifq_maxlen;
 	int	ifq_drops;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct	mtx ifq_mtx;
 #endif
 

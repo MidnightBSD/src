@@ -32,7 +32,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -42,7 +42,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/malloc.h>
 #endif
 #include <sys/mbuf.h>
@@ -50,17 +50,17 @@ __MBSDID("$MidnightBSD$");
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/kernel.h>
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <sys/device.h>
 #endif
 #include <sys/time.h>
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <sys/pool.h>
 #endif
 
 #include <net/if.h>
 #include <net/if_types.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <net/vnet.h>
 #endif
 
@@ -76,7 +76,7 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/ip6.h>
 #endif /* INET6 */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 VNET_DEFINE(struct pfi_kif *,	 pfi_all);
 VNET_DEFINE(uma_zone_t,		 pfi_addr_pl);
 VNET_DEFINE(struct pfi_ifhead,	 pfi_ifs);
@@ -98,7 +98,7 @@ struct pfr_addr		 *pfi_buffer;
 int			  pfi_buffer_cnt;
 int			  pfi_buffer_max;
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 eventhandler_tag	 pfi_attach_cookie;
 eventhandler_tag	 pfi_detach_cookie;
 eventhandler_tag	 pfi_attach_group_cookie;
@@ -117,7 +117,7 @@ void		 pfi_address_add(struct sockaddr *, int, int);
 int		 pfi_if_compare(struct pfi_kif *, struct pfi_kif *);
 int		 pfi_skip_if(const char *, struct pfi_kif *);
 int		 pfi_unmask(void *);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 void		 pfi_attach_ifnet_event(void * __unused, struct ifnet *);
 void		 pfi_detach_ifnet_event(void * __unused, struct ifnet *);
 void		 pfi_attach_group_event(void *, struct ifg_group *);
@@ -135,18 +135,18 @@ RB_GENERATE(pfi_ifhead, pfi_kif, pfik_tree, pfi_if_compare);
 void
 pfi_initialize(void)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (V_pfi_all != NULL)	/* already initialized */
 #else
 	if (pfi_all != NULL)	/* already initialized */
 #endif
 		return;
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	pool_init(&V_pfi_addr_pl, sizeof(struct pfi_dynaddr), 0, 0, 0,
 	    "pfiaddrpl", &pool_allocator_nointr);
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_buffer_max = 64;
 	V_pfi_buffer = malloc(V_pfi_buffer_max * sizeof(*V_pfi_buffer),
 	    PFI_MTYPE, M_WAITOK);
@@ -160,7 +160,7 @@ pfi_initialize(void)
 	if ((pfi_all = pfi_kif_get(IFG_ALL)) == NULL)
 #endif
 		panic("pfi_kif_get for pfi_all failed");
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct ifg_group *ifg;
 	struct ifnet *ifp;
 
@@ -186,7 +186,7 @@ pfi_initialize(void)
 #endif
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 void
 pfi_cleanup(void)
 {
@@ -224,7 +224,7 @@ pfi_kif_get(const char *kif_name)
 
 	bzero(&s, sizeof(s));
 	strlcpy(s.pfik_name, kif_name, sizeof(s.pfik_name));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if ((kif = RB_FIND(pfi_ifhead, &V_pfi_ifs, (struct pfi_kif *)&s)) != NULL)
 #else
 	if ((kif = RB_FIND(pfi_ifhead, &pfi_ifs, (struct pfi_kif *)&s)) != NULL)
@@ -232,7 +232,7 @@ pfi_kif_get(const char *kif_name)
 		return (kif);
 
 	/* create new one */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if ((kif = malloc(sizeof(*kif), PFI_MTYPE, M_NOWAIT | M_ZERO)) == NULL)
 #else
 	if ((kif = malloc(sizeof(*kif), PFI_MTYPE, M_DONTWAIT|M_ZERO)) == NULL)
@@ -240,7 +240,7 @@ pfi_kif_get(const char *kif_name)
 		return (NULL);
 
 	strlcpy(kif->pfik_name, kif_name, sizeof(kif->pfik_name));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * It seems that the value of time_second is in unintialzied state
 	 * when pf sets interface statistics clear time in boot phase if pf
@@ -254,7 +254,7 @@ pfi_kif_get(const char *kif_name)
 #endif
 	TAILQ_INIT(&kif->pfik_dynaddrs);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_INSERT(pfi_ifhead, &V_pfi_ifs, kif);
 #else
 	RB_INSERT(pfi_ifhead, &pfi_ifs, kif);
@@ -305,7 +305,7 @@ pfi_kif_unref(struct pfi_kif *kif, enum pfi_kif_refs what)
 		panic("pfi_kif_unref with unknown type");
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (kif->pfik_ifp != NULL || kif->pfik_group != NULL || kif == V_pfi_all)
 #else
 	if (kif->pfik_ifp != NULL || kif->pfik_group != NULL || kif == pfi_all)
@@ -315,7 +315,7 @@ pfi_kif_unref(struct pfi_kif *kif, enum pfi_kif_refs what)
 	if (kif->pfik_rules || kif->pfik_states)
 		return;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_REMOVE(pfi_ifhead, &V_pfi_ifs, kif);
 #else
 	RB_REMOVE(pfi_ifhead, &pfi_ifs, kif);
@@ -347,7 +347,7 @@ pfi_attach_ifnet(struct ifnet *ifp)
 
 	pfi_initialize();
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_update++;
 #else
 	pfi_update++;
@@ -358,7 +358,7 @@ pfi_attach_ifnet(struct ifnet *ifp)
 	kif->pfik_ifp = ifp;
 	ifp->if_pf_kif = (caddr_t)kif;
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	if ((kif->pfik_ah_cookie = hook_establish(ifp->if_addrhooks, 1,
 	    pfi_kifaddr_update, kif)) == NULL)
 		panic("pfi_attach_ifnet: cannot allocate '%s' address hook",
@@ -380,12 +380,12 @@ pfi_detach_ifnet(struct ifnet *ifp)
 		return;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_update++;
 #else
 	pfi_update++;
 #endif
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	hook_disestablish(ifp->if_addrhooks, kif->pfik_ah_cookie);
 #endif
 	pfi_kif_update(kif);
@@ -404,7 +404,7 @@ pfi_attach_ifgroup(struct ifg_group *ifg)
 
 	pfi_initialize();
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_update++;
 #else
 	pfi_update++;
@@ -428,7 +428,7 @@ pfi_detach_ifgroup(struct ifg_group *ifg)
 		return;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_update++;
 #else
 	pfi_update++;
@@ -447,7 +447,7 @@ pfi_group_change(const char *group)
 	int			 s;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_update++;
 #else
 	pfi_update++;
@@ -505,7 +505,7 @@ pfi_dynaddr_setup(struct pf_addr_wrap *aw, sa_family_t af)
 
 	if (aw->type != PF_ADDR_DYNIFTL)
 		return (0);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if ((dyn = pool_get(&V_pfi_addr_pl, PR_NOWAIT | PR_ZERO))
 #else
 	if ((dyn = pool_get(&pfi_addr_pl, PR_WAITOK | PR_LIMITFAIL | PR_ZERO))
@@ -566,7 +566,7 @@ _bad:
 		pf_remove_if_empty_ruleset(ruleset);
 	if (dyn->pfid_kif != NULL)
 		pfi_kif_unref(dyn->pfid_kif, PFI_KIF_REF_RULE);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	pool_put(&V_pfi_addr_pl, dyn);
 #else
 	pool_put(&pfi_addr_pl, dyn);
@@ -604,14 +604,14 @@ pfi_dynaddr_update(struct pfi_dynaddr *dyn)
 	kif = dyn->pfid_kif;
 	kt = dyn->pfid_kt;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (kt->pfrkt_larg != V_pfi_update) {
 #else
 	if (kt->pfrkt_larg != pfi_update) {
 #endif
 		/* this table needs to be brought up-to-date */
 		pfi_table_update(kt, kif, dyn->pfid_net, dyn->pfid_iflags);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		kt->pfrkt_larg = V_pfi_update;
 #else
 		kt->pfrkt_larg = pfi_update;
@@ -626,7 +626,7 @@ pfi_table_update(struct pfr_ktable *kt, struct pfi_kif *kif, int net, int flags)
 	int			 e, size2 = 0;
 	struct ifg_member	*ifgm;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_buffer_cnt = 0;
 #else
 	pfi_buffer_cnt = 0;
@@ -638,7 +638,7 @@ pfi_table_update(struct pfr_ktable *kt, struct pfi_kif *kif, int net, int flags)
 		TAILQ_FOREACH(ifgm, &kif->pfik_group->ifg_members, ifgm_next)
 			pfi_instance_add(ifgm->ifgm_ifp, net, flags);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if ((e = pfr_set_addrs(&kt->pfrkt_t, V_pfi_buffer, V_pfi_buffer_cnt, &size2,
 	    NULL, NULL, NULL, 0, PFR_TFLAG_ALLMASK)))
 		printf("pfi_table_update: cannot set %d new addresses "
@@ -666,7 +666,7 @@ pfi_instance_add(struct ifnet *ifp, int net, int flags)
 		af = ia->ifa_addr->sa_family;
 		if (af != AF_INET && af != AF_INET6)
 			continue;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		/*
 		 * XXX: For point-to-point interfaces, (ifname:0) and IPv4,
 		 *      jump over addresses without a proper route to work
@@ -726,7 +726,7 @@ pfi_address_add(struct sockaddr *sa, int af, int net)
 	struct pfr_addr	*p;
 	int		 i;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (V_pfi_buffer_cnt >= V_pfi_buffer_max) {
 		int		 new_max = V_pfi_buffer_max * 2;
 #else
@@ -736,7 +736,7 @@ pfi_address_add(struct sockaddr *sa, int af, int net)
 
 		if (new_max > PFI_BUFFER_MAX) {
 			printf("pfi_address_add: address buffer full (%d/%d)\n",
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			    V_pfi_buffer_cnt, PFI_BUFFER_MAX);
 #else
 			    pfi_buffer_cnt, PFI_BUFFER_MAX);
@@ -744,21 +744,21 @@ pfi_address_add(struct sockaddr *sa, int af, int net)
 			return;
 		}
 		p = malloc(new_max * sizeof(*V_pfi_buffer), PFI_MTYPE,
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		    M_NOWAIT);
 #else
 		    M_DONTWAIT);
 #endif
 		if (p == NULL) {
 			printf("pfi_address_add: no memory to grow buffer "
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			    "(%d/%d)\n", V_pfi_buffer_cnt, PFI_BUFFER_MAX);
 #else
 			    "(%d/%d)\n", pfi_buffer_cnt, PFI_BUFFER_MAX);
 #endif
 			return;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		memcpy(V_pfi_buffer, p, V_pfi_buffer_cnt * sizeof(*V_pfi_buffer));
 		/* no need to zero buffer */
 		free(V_pfi_buffer, PFI_MTYPE);
@@ -774,7 +774,7 @@ pfi_address_add(struct sockaddr *sa, int af, int net)
 	}
 	if (af == AF_INET && net > 32)
 		net = 128;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	p = V_pfi_buffer + V_pfi_buffer_cnt++;
 #else
 	p = pfi_buffer + pfi_buffer_cnt++;
@@ -811,7 +811,7 @@ pfi_dynaddr_remove(struct pf_addr_wrap *aw)
 	aw->p.dyn->pfid_kif = NULL;
 	pfr_detach_table(aw->p.dyn->pfid_kt);
 	aw->p.dyn->pfid_kt = NULL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	pool_put(&V_pfi_addr_pl, aw->p.dyn);
 #else
 	pool_put(&pfi_addr_pl, aw->p.dyn);
@@ -836,7 +836,7 @@ pfi_kifaddr_update(void *v)
 	struct pfi_kif		*kif = (struct pfi_kif *)v;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_pfi_update++;
 #else
 	pfi_update++;
@@ -862,7 +862,7 @@ pfi_update_status(const char *name, struct pf_status *pfs)
 
 	strlcpy(key.pfik_name, name, sizeof(key.pfik_name));
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	p = RB_FIND(pfi_ifhead, &V_pfi_ifs, (struct pfi_kif *)&key);
 #else
 	p = RB_FIND(pfi_ifhead, &pfi_ifs, (struct pfi_kif *)&key);
@@ -914,12 +914,12 @@ pfi_get_ifaces(const char *name, struct pfi_kif *buf, int *size)
 {
 	struct pfi_kif	*p, *nextp;
 	int		 s, n = 0;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	int		 error;
 #endif
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	for (p = RB_MIN(pfi_ifhead, &V_pfi_ifs); p; p = nextp) {
 		nextp = RB_NEXT(pfi_ifhead, &V_pfi_ifs, p);
 #else
@@ -932,7 +932,7 @@ pfi_get_ifaces(const char *name, struct pfi_kif *buf, int *size)
 			if (!p->pfik_tzero)
 				p->pfik_tzero = time_second;
 			pfi_kif_ref(p, PFI_KIF_REF_RULE);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_COPYOUT(p, buf++, sizeof(*buf), error);
 			if (error) {
 #else
@@ -942,7 +942,7 @@ pfi_get_ifaces(const char *name, struct pfi_kif *buf, int *size)
 				splx(s);
 				return (EFAULT);
 			}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			nextp = RB_NEXT(pfi_ifhead, &V_pfi_ifs, p);
 #else
 			nextp = RB_NEXT(pfi_ifhead, &pfi_ifs, p);
@@ -981,7 +981,7 @@ pfi_set_flags(const char *name, int flags)
 	int		 s;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_FOREACH(p, pfi_ifhead, &V_pfi_ifs) {
 #else
 	RB_FOREACH(p, pfi_ifhead, &pfi_ifs) {
@@ -1001,7 +1001,7 @@ pfi_clear_flags(const char *name, int flags)
 	int		 s;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_FOREACH(p, pfi_ifhead, &V_pfi_ifs) {
 #else
 	RB_FOREACH(p, pfi_ifhead, &pfi_ifs) {
@@ -1034,7 +1034,7 @@ pfi_unmask(void *addr)
 	return (b);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 void
 pfi_attach_ifnet_event(void *arg __unused, struct ifnet *ifp)
 {
@@ -1107,4 +1107,4 @@ pfi_ifaddr_event(void *arg __unused, struct ifnet *ifp)
 	PF_UNLOCK();
 	CURVNET_RESTORE();
 }
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */

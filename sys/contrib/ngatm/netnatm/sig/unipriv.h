@@ -35,7 +35,7 @@
 #define unipriv_h
 
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <netgraph/atm/uni/ng_uni_cust.h>
 #endif
 #else

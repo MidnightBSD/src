@@ -16,7 +16,7 @@
 # define        KERNEL	1
 # define        _KERNEL	1
 #endif
-#if defined(__FreeBSD__) && !defined(_KERNEL)
+#if defined(__MidnightBSD__) && !defined(_KERNEL)
 # include <osreldate.h>
 #endif
 #ifndef SOLARIS
@@ -788,7 +788,7 @@ ipf_log_read(softc, unit, uio)
 		return EIO;
 	}
 
-# if (defined(BSD) && (BSD >= 199101)) || defined(__FreeBSD__) || \
+# if (defined(BSD) && (BSD >= 199101)) || defined(__MidnightBSD__) || \
      defined(__osf__)
 	uio->uio_rw = UIO_READ;
 # endif

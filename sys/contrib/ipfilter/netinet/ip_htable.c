@@ -31,7 +31,7 @@ struct file;
 #if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #  include <sys/cdefs.h>
 #  include <sys/proc.h>
 #endif

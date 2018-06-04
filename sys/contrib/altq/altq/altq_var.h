@@ -202,7 +202,7 @@ struct callout {
 #define	CALLOUT_STOP(c)		untimeout((c)->c_func,(c)->c_arg)
 #define	CALLOUT_INITIALIZER	{ NULL, NULL }
 #endif
-#if !defined(__FreeBSD__)
+#if !defined(__MidnightBSD__)
 typedef void (timeout_t)(void *);
 #endif
 

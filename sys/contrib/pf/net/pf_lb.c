@@ -35,7 +35,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -43,7 +43,7 @@
 __MBSDID("$MidnightBSD$");
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_bpf.h"
 #include "opt_pf.h"
 
@@ -86,14 +86,14 @@ __MBSDID("$MidnightBSD$");
 #include <sys/socketvar.h>
 #include <sys/kernel.h>
 #include <sys/time.h>
-#ifdef  __FreeBSD__
+#ifdef  __MidnightBSD__
 #include <sys/sysctl.h>
 #endif
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <sys/pool.h>
 #endif
 #include <sys/proc.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/kthread.h>
 #include <sys/lock.h>
 #include <sys/sx.h>
@@ -101,7 +101,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/rwlock.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/md5.h>
 #else
 #include <crypto/md5.h>
@@ -129,7 +129,7 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/icmp_var.h>
 #include <netinet/if_ether.h>
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <dev/rndvar.h>
 #endif
 #include <net/pfvar.h>
@@ -148,7 +148,7 @@ __MBSDID("$MidnightBSD$");
 #endif /* INET6 */
 
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define DPFPRINTF(n, x)	if (V_pf_status.debug >= (n)) printf x
 #else
 #define DPFPRINTF(n, x)	if (pf_status.debug >= (n)) printf x
@@ -279,7 +279,7 @@ pf_match_translation(struct pf_pdesc *pd, struct mbuf *m, int off,
 		    !pf_match_port(dst->port_op, dst->port[0],
 		    dst->port[1], dport))
 			r = r->skip[PF_SKIP_DST_PORT].ptr;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		else if (r->match_tag && !pf_match_tag(m, r, &tag, pd->pf_mtag))
 #else
 		else if (r->match_tag && !pf_match_tag(m, r, &tag))
@@ -304,7 +304,7 @@ pf_match_translation(struct pf_pdesc *pd, struct mbuf *m, int off,
 			pf_step_out_of_anchor(&asd, &ruleset, rs_num, &r,
 			    NULL, NULL);
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (pf_tag_packet(m, tag, rtableid, pd->pf_mtag))
 #else
 	if (pf_tag_packet(m, tag, rtableid))
@@ -370,7 +370,7 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 				high = tmp;
 			}
 			/* low < high */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			cut = htonl(arc4random()) % (1 + high - low) + low;
 #else
 			cut = arc4random_uniform(1 + high - low) + low;
@@ -379,7 +379,7 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 			for (tmp = cut; tmp <= high; ++(tmp)) {
 				key.port[0] = htons(tmp);
 				if (pf_find_state_all(&key, PF_IN, NULL) ==
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				    NULL) {
 #else
 				    NULL && !in_baddynamic(tmp, proto)) {
@@ -391,7 +391,7 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 			for (tmp = cut - 1; tmp >= low; --(tmp)) {
 				key.port[0] = htons(tmp);
 				if (pf_find_state_all(&key, PF_IN, NULL) ==
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				    NULL) {
 #else
 				    NULL && !in_baddynamic(tmp, proto)) {
@@ -438,7 +438,7 @@ pf_map_addr(sa_family_t af, struct pf_rule *r, struct pf_addr *saddr,
 			k.rule.ptr = r;
 		else
 			k.rule.ptr = NULL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		V_pf_status.scounters[SCNT_SRC_NODE_SEARCH]++;
 		*sn = RB_FIND(pf_src_tree, &V_tree_src_tracking, &k);
 #else
@@ -447,7 +447,7 @@ pf_map_addr(sa_family_t af, struct pf_rule *r, struct pf_addr *saddr,
 #endif
 		if (*sn != NULL && !PF_AZERO(&(*sn)->raddr, af)) {
 			PF_ACPY(naddr, &(*sn)->raddr, af);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (V_pf_status.debug >= PF_DEBUG_MISC) {
 #else
 			if (pf_status.debug >= PF_DEBUG_MISC) {
@@ -598,7 +598,7 @@ pf_map_addr(sa_family_t af, struct pf_rule *r, struct pf_addr *saddr,
 	if (*sn != NULL)
 		PF_ACPY(&(*sn)->raddr, naddr, af);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (V_pf_status.debug >= PF_DEBUG_MISC &&
 #else
 	if (pf_status.debug >= PF_DEBUG_MISC &&
@@ -776,7 +776,7 @@ pf_get_translation(struct pf_pdesc *pd, struct mbuf *m, int off, int direction,
 		 * Pretend there was no match.
 		 */
 		if (!bcmp(*skp, *nkp, sizeof(struct pf_state_key_cmp))) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pf_state_key_pl, *nkp);
 			pool_put(&V_pf_state_key_pl, *skp);
 #else

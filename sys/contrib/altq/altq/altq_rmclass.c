@@ -39,13 +39,13 @@
  *
  * @(#)rm_class.c  1.48     97/12/05 SMI
  */
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__MidnightBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet6.h"
 #endif
-#endif /* __FreeBSD__ || __NetBSD__ */
+#endif /* __MidnightBSD__ || __NetBSD__ */
 #ifdef ALTQ_CBQ	/* cbq is enabled by ALTQ_CBQ option in opt_altq.h */
 
 #include <sys/param.h>
@@ -1552,7 +1552,7 @@ rmc_delay_action(struct rm_class *cl, struct rm_class *borrow)
 		 * a 'backstop' to restart this class.
 		 */
 		if (delay > tick * 2) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			/* FreeBSD rounds up the tick */
 			t = hzto(&cl->undertime_);
 #else

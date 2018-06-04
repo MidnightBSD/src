@@ -35,7 +35,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
@@ -52,10 +52,10 @@ __MBSDID("$MidnightBSD$");
 #define		NPFLOG		0
 #endif
 
-#else /* !__FreeBSD__ */
+#else /* !__MidnightBSD__ */
 #include "pfsync.h"
 #include "pflog.h"
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,7 +66,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/socketvar.h>
 #include <sys/kernel.h>
 #include <sys/time.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/ucred.h>
 #include <sys/jail.h>
 #include <sys/module.h>
@@ -80,14 +80,14 @@ __MBSDID("$MidnightBSD$");
 #include <sys/proc.h>
 #include <sys/malloc.h>
 #include <sys/kthread.h>
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <sys/rwlock.h>
 #include <uvm/uvm_extern.h>
 #endif
 
 #include <net/if.h>
 #include <net/if_types.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <net/vnet.h>
 #endif
 #include <net/route.h>
@@ -99,7 +99,7 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/md5.h>
 #else
 #include <dev/rndvar.h>
@@ -122,14 +122,14 @@ __MBSDID("$MidnightBSD$");
 #include <altq/altq.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <net/pfil.h>
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 void			 init_zone_var(void);
 void			 cleanup_pf_zone(void);
 int			 pfattach(void);
@@ -144,7 +144,7 @@ struct pf_pool		*pf_get_pool(char *, u_int32_t, u_int8_t, u_int32_t,
 
 void			 pf_mv_pool(struct pf_palist *, struct pf_palist *);
 void			 pf_empty_pool(struct pf_palist *);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 int			 pfioctl(struct cdev *, u_long, caddr_t, int, struct thread *);
 #else
 int			 pfioctl(dev_t, u_long, caddr_t, int, struct proc *);
@@ -168,7 +168,7 @@ void			 pf_addr_copyout(struct pf_addr_wrap *);
 
 #define	TAGID_MAX	 50000
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 VNET_DEFINE(struct pf_rule,	 pf_default_rule);
 VNET_DEFINE(struct sx,		 pf_consistency_lock);
 
@@ -184,7 +184,7 @@ VNET_DEFINE(struct pf_tags, pf_tags);
 #define	V_pf_qids		VNET(pf_qids)
 VNET_DEFINE(struct pf_tags, pf_qids);
 
-#else /* !__FreeBSD__ */
+#else /* !__MidnightBSD__ */
 struct pf_rule		 pf_default_rule;
 struct rwlock		 pf_consistency_lock = RWLOCK_INITIALIZER("pfcnslk");
 #ifdef ALTQ
@@ -193,7 +193,7 @@ static int		 pf_altq_running;
 
 TAILQ_HEAD(pf_tags, pf_tagname)	pf_tags = TAILQ_HEAD_INITIALIZER(pf_tags),
 				pf_qids = TAILQ_HEAD_INITIALIZER(pf_qids);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #if (PF_QNAME_SIZE != PF_TAG_NAME_SIZE)
 #error PF_QNAME_SIZE must be equal to PF_TAG_NAME_SIZE
@@ -206,13 +206,13 @@ int			 pf_rtlabel_add(struct pf_addr_wrap *);
 void			 pf_rtlabel_remove(struct pf_addr_wrap *);
 void			 pf_rtlabel_copyout(struct pf_addr_wrap *);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define DPFPRINTF(n, x) if (V_pf_status.debug >= (n)) printf x
 #else
 #define DPFPRINTF(n, x) if (pf_status.debug >= (n)) printf x
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 struct cdev *pf_dev;
  
 /*
@@ -429,7 +429,7 @@ pfattach(void)
 
 	return (error);
 }
-#else /* !__FreeBSD__ */
+#else /* !__MidnightBSD__ */
 
 void
 pfattach(int num)
@@ -599,7 +599,7 @@ pf_empty_pool(struct pf_palist *poola)
 		pf_tbladdr_remove(&empty_pool_pa->addr);
 		pfi_kif_unref(empty_pool_pa->kif, PFI_KIF_REF_RULE);
 		TAILQ_REMOVE(poola, empty_pool_pa, entries);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pool_put(&V_pf_pooladdr_pl, empty_pool_pa);
 #else
 		pool_put(&pf_pooladdr_pl, empty_pool_pa);
@@ -650,7 +650,7 @@ pf_rm_rule(struct pf_rulequeue *rulequeue, struct pf_rule *rule)
 	pfi_kif_unref(rule->kif, PFI_KIF_REF_RULE);
 	pf_anchor_remove(rule);
 	pf_empty_pool(&rule->rpool.list);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	pool_put(&V_pf_rule_pl, rule);
 #else
 	pool_put(&pf_rule_pl, rule);
@@ -735,7 +735,7 @@ tag_unref(struct pf_tags *head, u_int16_t tag)
 u_int16_t
 pf_tagname2tag(char *tagname)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	return (tagname2tag(&V_pf_tags, tagname));
 #else
 	return (tagname2tag(&pf_tags, tagname));
@@ -745,7 +745,7 @@ pf_tagname2tag(char *tagname)
 void
 pf_tag2tagname(u_int16_t tagid, char *p)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	tag2tagname(&V_pf_tags, tagid, p);
 #else
 	tag2tagname(&pf_tags, tagid, p);
@@ -757,7 +757,7 @@ pf_tag_ref(u_int16_t tag)
 {
 	struct pf_tagname *t;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	TAILQ_FOREACH(t, &V_pf_tags, entries)
 #else
 	TAILQ_FOREACH(t, &pf_tags, entries)
@@ -771,7 +771,7 @@ pf_tag_ref(u_int16_t tag)
 void
 pf_tag_unref(u_int16_t tag)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	tag_unref(&V_pf_tags, tag);
 #else
 	tag_unref(&pf_tags, tag);
@@ -781,7 +781,7 @@ pf_tag_unref(u_int16_t tag)
 int
 pf_rtlabel_add(struct pf_addr_wrap *a)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/* XXX_IMPORT: later */
 	return (0);
 #else
@@ -795,7 +795,7 @@ pf_rtlabel_add(struct pf_addr_wrap *a)
 void
 pf_rtlabel_remove(struct pf_addr_wrap *a)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/* XXX_IMPORT: later */
 #else
 	if (a->type == PF_ADDR_RTLABEL)
@@ -806,7 +806,7 @@ pf_rtlabel_remove(struct pf_addr_wrap *a)
 void
 pf_rtlabel_copyout(struct pf_addr_wrap *a)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/* XXX_IMPORT: later */
 	if (a->type == PF_ADDR_RTLABEL && a->v.rtlabel)
 		strlcpy(a->v.rtlabelname, "?", sizeof(a->v.rtlabelname));
@@ -828,7 +828,7 @@ pf_rtlabel_copyout(struct pf_addr_wrap *a)
 u_int32_t
 pf_qname2qid(char *qname)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	return ((u_int32_t)tagname2tag(&V_pf_qids, qname));
 #else
 	return ((u_int32_t)tagname2tag(&pf_qids, qname));
@@ -838,7 +838,7 @@ pf_qname2qid(char *qname)
 void
 pf_qid2qname(u_int32_t qid, char *p)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	tag2tagname(&V_pf_qids, (u_int16_t)qid, p);
 #else
 	tag2tagname(&pf_qids, (u_int16_t)qid, p);
@@ -848,7 +848,7 @@ pf_qid2qname(u_int32_t qid, char *p)
 void
 pf_qid_unref(u_int32_t qid)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	tag_unref(&V_pf_qids, (u_int16_t)qid);
 #else
 	tag_unref(&pf_qids, (u_int16_t)qid);
@@ -862,7 +862,7 @@ pf_begin_altq(u_int32_t *ticket)
 	int		 error = 0;
 
 	/* Purge the old altq list */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	while ((altq = TAILQ_FIRST(V_pf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(V_pf_altqs_inactive, altq, entries);
 		if (altq->qname[0] == 0 &&
@@ -876,7 +876,7 @@ pf_begin_altq(u_int32_t *ticket)
 			error = altq_remove(altq);
 		} else
 			pf_qid_unref(altq->qid);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pool_put(&V_pf_altq_pl, altq);
 #else
 		pool_put(&pf_altq_pl, altq);
@@ -884,7 +884,7 @@ pf_begin_altq(u_int32_t *ticket)
 	}
 	if (error)
 		return (error);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	*ticket = ++V_ticket_altqs_inactive;
 	V_altqs_inactive_open = 1;
 #else
@@ -900,7 +900,7 @@ pf_rollback_altq(u_int32_t ticket)
 	struct pf_altq	*altq;
 	int		 error = 0;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (!V_altqs_inactive_open || ticket != V_ticket_altqs_inactive)
 		return (0);
 	/* Purge the old altq list */
@@ -920,13 +920,13 @@ pf_rollback_altq(u_int32_t ticket)
 			error = altq_remove(altq);
 		} else
 			pf_qid_unref(altq->qid);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pool_put(&V_pf_altq_pl, altq);
 #else
 		pool_put(&pf_altq_pl, altq);
 #endif
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_altqs_inactive_open = 0;
 #else
 	altqs_inactive_open = 0;
@@ -941,7 +941,7 @@ pf_commit_altq(u_int32_t ticket)
 	struct pf_altq		*altq;
 	int			 s, err, error = 0;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (!V_altqs_inactive_open || ticket != V_ticket_altqs_inactive)
 #else
 	if (!altqs_inactive_open || ticket != ticket_altqs_inactive)
@@ -950,7 +950,7 @@ pf_commit_altq(u_int32_t ticket)
 
 	/* swap altqs, keep the old. */
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	old_altqs = V_pf_altqs_active;
 	V_pf_altqs_active = V_pf_altqs_inactive;
 	V_pf_altqs_inactive = old_altqs;
@@ -963,7 +963,7 @@ pf_commit_altq(u_int32_t ticket)
 #endif
 
 	/* Attach new disciplines */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	TAILQ_FOREACH(altq, V_pf_altqs_active, entries) {
 	if (altq->qname[0] == 0 &&
 	   (altq->local_flags & PFALTQ_FLAG_IF_REMOVED) == 0) {
@@ -973,7 +973,7 @@ pf_commit_altq(u_int32_t ticket)
 #endif
 			/* attach the discipline */
 			error = altq_pfattach(altq);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (error == 0 && V_pf_altq_running)
 #else
 			if (error == 0 && pf_altq_running)
@@ -987,7 +987,7 @@ pf_commit_altq(u_int32_t ticket)
 	}
 
 	/* Purge the old altq list */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	while ((altq = TAILQ_FIRST(V_pf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(V_pf_altqs_inactive, altq, entries);
 		if (altq->qname[0] == 0 &&
@@ -998,7 +998,7 @@ pf_commit_altq(u_int32_t ticket)
 		if (altq->qname[0] == 0) {
 #endif
 			/* detach and destroy the discipline */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (V_pf_altq_running)
 #else
 			if (pf_altq_running)
@@ -1012,7 +1012,7 @@ pf_commit_altq(u_int32_t ticket)
 				error = err;
 		} else
 			pf_qid_unref(altq->qid);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pool_put(&V_pf_altq_pl, altq);
 #else
 		pool_put(&pf_altq_pl, altq);
@@ -1020,7 +1020,7 @@ pf_commit_altq(u_int32_t ticket)
 	}
 	splx(s);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	V_altqs_inactive_open = 0;
 #else
 	altqs_inactive_open = 0;
@@ -1046,11 +1046,11 @@ pf_enable_altq(struct pf_altq *altq)
 		tb.rate = altq->ifbandwidth;
 		tb.depth = altq->tbrsize;
 		s = splnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		error = tbr_set(&ifp->if_snd, &tb);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		splx(s);
@@ -1082,11 +1082,11 @@ pf_disable_altq(struct pf_altq *altq)
 		/* clear tokenbucket regulator */
 		tb.rate = 0;
 		s = splnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		error = tbr_set(&ifp->if_snd, &tb);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		splx(s);
@@ -1095,7 +1095,7 @@ pf_disable_altq(struct pf_altq *altq)
 	return (error);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 void
 pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 {
@@ -1105,7 +1105,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 	int		 error = 0;
 
 	/* Interrupt userland queue modifications */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (V_altqs_inactive_open)
 		pf_rollback_altq(V_ticket_altqs_inactive);
 #else
@@ -1118,7 +1118,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 		return;
 
 	/* Copy the current active set */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	TAILQ_FOREACH(a1, V_pf_altqs_active, entries) {
 		a2 = pool_get(&V_pf_altq_pl, PR_NOWAIT);
 #else
@@ -1134,7 +1134,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 		if (a2->qname[0] != 0) {
 			if ((a2->qid = pf_qname2qid(a2->qname)) == 0) {
 				error = EBUSY;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_altq_pl, a2);
 #else
 				pool_put(&pf_altq_pl, a2);
@@ -1142,7 +1142,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 				break;
 			}
 			a2->altq_disc = NULL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			TAILQ_FOREACH(a3, V_pf_altqs_inactive, entries) {
 #else
 			TAILQ_FOREACH(a3, pf_altqs_inactive, entries) {
@@ -1164,7 +1164,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 			error = altq_add(a2);
 			PF_LOCK();
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (ticket != V_ticket_altqs_inactive)
 #else
 			if (ticket != ticket_altqs_inactive)
@@ -1172,7 +1172,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 				error = EBUSY;
 
 			if (error) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_altq_pl, a2);
 #else
 				pool_put(&pf_altq_pl, a2);
@@ -1181,7 +1181,7 @@ pf_altq_ifnet_event(struct ifnet *ifp, int remove)
 			}
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_INSERT_TAIL(V_pf_altqs_inactive, a2, entries);
 #else
 		TAILQ_INSERT_TAIL(pf_altqs_inactive, a2, entries);
@@ -1412,7 +1412,7 @@ pf_setup_pfsync_matching(struct pf_ruleset *rs)
 	}
 
 	MD5Final(digest, &ctx);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	memcpy(V_pf_status.pf_chksum, digest, sizeof(V_pf_status.pf_chksum));
 #else
 	memcpy(pf_status.pf_chksum, digest, sizeof(pf_status.pf_chksum));
@@ -1440,7 +1440,7 @@ pf_addr_copyout(struct pf_addr_wrap *addr)
 }
 
 int
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 pfioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags, struct thread *td)
 #else
 pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
@@ -1448,7 +1448,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 {
 	struct pf_pooladdr	*pa = NULL;
 	struct pf_pool		*pool = NULL;
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	int			 s;
 #endif
 	int			 error = 0;
@@ -1456,7 +1456,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	CURVNET_SET(TD_TO_VNET(td));
 
 	/* XXX keep in sync with switch() below */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (securelevel_gt(td->td_ucred, 2))
 #else
 	if (securelevel > 1)
@@ -1496,7 +1496,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		case DIOCGETSRCNODES:
 		case DIOCCLRSRCNODES:
 		case DIOCIGETIFACES:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		case DIOCGIFSPEED:
 #endif
 		case DIOCSETIFFLAG:
@@ -1538,7 +1538,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		case DIOCOSFPGET:
 		case DIOCGETSRCNODES:
 		case DIOCIGETIFACES:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		case DIOCGIFSPEED:
 #endif
 			break;
@@ -1567,7 +1567,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 
 	if (flags & FWRITE)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		sx_xlock(&V_pf_consistency_lock);
 	else
 		sx_slock(&V_pf_consistency_lock);
@@ -1577,7 +1577,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		rw_enter_read(&pf_consistency_lock);
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	PF_LOCK();
 #else
 	s = splsoftnet();
@@ -1585,14 +1585,14 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	switch (cmd) {
 
 	case DIOCSTART:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (V_pf_status.running)
 #else
 		if (pf_status.running)
 #endif
 			error = EEXIST;
 		else {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_UNLOCK();
 			error = hook_pf();
 			PF_LOCK();
@@ -1622,7 +1622,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		break;
 
 	case DIOCSTOP:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (!V_pf_status.running)
 			error = ENOENT;
 		else {
@@ -1670,7 +1670,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		if (pr->ticket != ruleset->rules[rs_num].inactive.ticket) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			DPFPRINTF(PF_DEBUG_MISC,
 			    ("ticket: %d != [%d]%d\n", pr->ticket, rs_num,
 			    ruleset->rules[rs_num].inactive.ticket));
@@ -1678,7 +1678,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EBUSY;
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pr->pool_ticket != V_ticket_pabuf) {
 			DPFPRINTF(PF_DEBUG_MISC,
 			    ("pool_ticket: %d != %d\n", pr->pool_ticket,
@@ -1689,7 +1689,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EBUSY;
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rule = pool_get(&V_pf_rule_pl, PR_NOWAIT);
 #else
 		rule = pool_get(&pf_rule_pl, PR_WAITOK|PR_LIMITFAIL);
@@ -1699,7 +1699,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		bcopy(&pr->rule, rule, sizeof(struct pf_rule));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rule->cuid = td->td_ucred->cr_ruid;
 		rule->cpid = td->td_proc ? td->td_proc->p_pid : 0;
 #else
@@ -1715,7 +1715,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		rule->entries.tqe_prev = NULL;
 #ifndef INET
 		if (rule->af == AF_INET) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pf_rule_pl, rule);
 #else
 			pool_put(&pf_rule_pl, rule);
@@ -1726,7 +1726,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 #endif /* INET */
 #ifndef INET6
 		if (rule->af == AF_INET6) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pf_rule_pl, rule);
 #else
 			pool_put(&pf_rule_pl, rule);
@@ -1744,7 +1744,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		if (rule->ifname[0]) {
 			rule->kif = pfi_kif_get(rule->ifname);
 			if (rule->kif == NULL) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_rule_pl, rule);
 #else
 				pool_put(&pf_rule_pl, rule);
@@ -1755,7 +1755,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			pfi_kif_ref(rule->kif, PFI_KIF_REF_RULE);
 		}
 
-#ifdef __FreeBSD__ /* ROUTING */
+#ifdef __MidnightBSD__ /* ROUTING */
 		if (rule->rtableid > 0 && rule->rtableid >= rt_numfibs)
 #else
 		if (rule->rtableid > 0 && !rtable_exists(rule->rtableid))
@@ -1799,7 +1799,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 		if (pf_anchor_setup(rule, ruleset, pr->anchor_call))
 			error = EINVAL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_FOREACH(pa, &V_pf_pabuf, entries)
 #else
 		TAILQ_FOREACH(pa, &pf_pabuf, entries)
@@ -1816,7 +1816,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				    PFR_TFLAG_ACTIVE;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pf_mv_pool(&V_pf_pabuf, &rule->rpool.list);
 #else
 		pf_mv_pool(&pf_pabuf, &rule->rpool.list);
@@ -1832,7 +1832,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (!V_debug_pfugidhack && (rule->uid.op || rule->gid.op ||
 		    rule->log & PF_LOG_SOCKET_LOOKUP)) {
 			DPFPRINTF(PF_DEBUG_MISC,
@@ -1936,7 +1936,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 
 		if (!(pcr->action == PF_CHANGE_REMOVE ||
 		    pcr->action == PF_CHANGE_GET_TICKET) &&
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		    pcr->pool_ticket != V_ticket_pabuf) {
 #else
 		    pcr->pool_ticket != ticket_pabuf) {
@@ -1977,7 +1977,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 
 		if (pcr->action != PF_CHANGE_REMOVE) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			newrule = pool_get(&V_pf_rule_pl, PR_NOWAIT);
 #else
 			newrule = pool_get(&pf_rule_pl, PR_WAITOK|PR_LIMITFAIL);
@@ -1987,7 +1987,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				break;
 			}
 			bcopy(&pcr->rule, newrule, sizeof(struct pf_rule));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			newrule->cuid = td->td_ucred->cr_ruid;
 			newrule->cpid = td->td_proc ? td->td_proc->p_pid : 0;
 #else
@@ -2000,7 +2000,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			newrule->entries.tqe_prev = NULL;
 #ifndef INET
 			if (newrule->af == AF_INET) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_rule_pl, newrule);
 #else
 				pool_put(&pf_rule_pl, newrule);
@@ -2011,7 +2011,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 #endif /* INET */
 #ifndef INET6
 			if (newrule->af == AF_INET6) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_rule_pl, newrule);
 #else
 				pool_put(&pf_rule_pl, newrule);
@@ -2023,7 +2023,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			if (newrule->ifname[0]) {
 				newrule->kif = pfi_kif_get(newrule->ifname);
 				if (newrule->kif == NULL) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 					pool_put(&V_pf_rule_pl, newrule);
 #else
 					pool_put(&pf_rule_pl, newrule);
@@ -2036,7 +2036,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				newrule->kif = NULL;
 
 			if (newrule->rtableid > 0 &&
-#ifdef __FreeBSD__ /* ROUTING */
+#ifdef __MidnightBSD__ /* ROUTING */
 			    newrule->rtableid >= rt_numfibs)
 #else
 			    !rtable_exists(newrule->rtableid))
@@ -2082,7 +2082,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				error = EINVAL;
 			if (pf_anchor_setup(newrule, ruleset, pcr->anchor_call))
 				error = EINVAL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			TAILQ_FOREACH(pa, &V_pf_pabuf, entries)
 #else
 			TAILQ_FOREACH(pa, &pf_pabuf, entries)
@@ -2100,7 +2100,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 					    PFR_TFLAG_ACTIVE;
 			}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pf_mv_pool(&V_pf_pabuf, &newrule->rpool.list);
 #else
 			pf_mv_pool(&pf_pabuf, &newrule->rpool.list);
@@ -2118,7 +2118,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				break;
 			}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (!V_debug_pfugidhack && (newrule->uid.op ||
 			    newrule->gid.op ||
 			    newrule->log & PF_LOG_SOCKET_LOOKUP)) {
@@ -2133,7 +2133,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			newrule->packets[0] = newrule->packets[1] = 0;
 			newrule->bytes[0] = newrule->bytes[1] = 0;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pf_empty_pool(&V_pf_pabuf);
 #else
 		pf_empty_pool(&pf_pabuf);
@@ -2194,7 +2194,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pfioc_state_kill *psk = (struct pfioc_state_kill *)addr;
 		u_int			 killed = 0;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		for (s = RB_MIN(pf_state_tree_id, &V_tree_id); s; s = nexts) {
 			nexts = RB_NEXT(pf_state_tree_id, &V_tree_id, s);
 #else
@@ -2214,7 +2214,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 		psk->psk_killed = killed;
 #if NPFSYNC > 0
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pfsync_clear_states_ptr != NULL)
 			pfsync_clear_states_ptr(V_pf_status.hostid, psk->psk_ifname);
 #else
@@ -2234,7 +2234,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 
 		if (psk->psk_pfcmp.id) {
 			if (psk->psk_pfcmp.creatorid == 0)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				psk->psk_pfcmp.creatorid = V_pf_status.hostid;
 #else
 				psk->psk_pfcmp.creatorid = pf_status.hostid;
@@ -2246,7 +2246,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		for (s = RB_MIN(pf_state_tree_id, &V_tree_id); s;
 		    s = nexts) {
 			nexts = RB_NEXT(pf_state_tree_id, &V_tree_id, s);
@@ -2308,7 +2308,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pfsync_state_import_ptr != NULL)
 			error = pfsync_state_import_ptr(sp, PFSYNC_SI_IOCTL);
 #else
@@ -2342,7 +2342,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		u_int32_t		 nr = 0;
 
 		if (ps->ps_len == 0) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			nr = V_pf_status.states;
 #else
 			nr = pf_status.states;
@@ -2351,17 +2351,17 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		pstore = malloc(sizeof(*pstore), M_TEMP, M_WAITOK);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 
 		p = ps->ps_states;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		state = TAILQ_FIRST(&V_state_list);
 #else
 		state = TAILQ_FIRST(&state_list);
@@ -2371,7 +2371,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				if ((nr+1) * sizeof(*p) > (unsigned)ps->ps_len)
 					break;
 				pfsync_state_export(pstore, state);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				PF_COPYOUT(pstore, p, sizeof(*p), error);
 #else
 				error = copyout(pstore, p, sizeof(*p));
@@ -2394,7 +2394,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 
 	case DIOCGETSTATUS: {
 		struct pf_status *s = (struct pf_status *)addr;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		bcopy(&V_pf_status, s, sizeof(struct pf_status));
 #else
 		bcopy(&pf_status, s, sizeof(struct pf_status));
@@ -2407,14 +2407,14 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pfioc_if	*pi = (struct pfioc_if *)addr;
 
 		if (pi->ifname[0] == 0) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			bzero(V_pf_status.ifname, IFNAMSIZ);
 #else
 			bzero(pf_status.ifname, IFNAMSIZ);
 #endif
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		strlcpy(V_pf_status.ifname, pi->ifname, IFNAMSIZ);
 #else
 		strlcpy(pf_status.ifname, pi->ifname, IFNAMSIZ);
@@ -2423,7 +2423,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	}
 
 	case DIOCCLRSTATUS: {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		bzero(V_pf_status.counters, sizeof(V_pf_status.counters));
 		bzero(V_pf_status.fcounters, sizeof(V_pf_status.fcounters));
 		bzero(V_pf_status.scounters, sizeof(V_pf_status.scounters));
@@ -2493,14 +2493,14 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		old = V_pf_default_rule.timeout[pt->timeout];
 #else
 		old = pf_default_rule.timeout[pt->timeout];
 #endif
 		if (pt->timeout == PFTM_INTERVAL && pt->seconds == 0)
 			pt->seconds = 1;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		V_pf_default_rule.timeout[pt->timeout] = pt->seconds;
 #else
 		pf_default_rule.timeout[pt->timeout] = pt->seconds;
@@ -2518,7 +2518,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pt->seconds = V_pf_default_rule.timeout[pt->timeout];
 #else
 		pt->seconds = pf_default_rule.timeout[pt->timeout];
@@ -2533,7 +2533,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pl->limit = V_pf_pool_limits[pl->index].limit;
 #else
 		pl->limit = pf_pool_limits[pl->index].limit;
@@ -2546,7 +2546,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		int			 old_limit;
 
 		if (pl->index < 0 || pl->index >= PF_LIMIT_MAX ||
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		    V_pf_pool_limits[pl->index].pp == NULL) {
 #else
 		    pf_pool_limits[pl->index].pp == NULL) {
@@ -2554,7 +2554,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		uma_zone_set_max(V_pf_pool_limits[pl->index].pp, pl->limit);
 		old_limit = V_pf_pool_limits[pl->index].limit;
 		V_pf_pool_limits[pl->index].limit = pl->limit;
@@ -2575,7 +2575,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	case DIOCSETDEBUG: {
 		u_int32_t	*level = (u_int32_t *)addr;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		V_pf_status.debug = *level;
 #else
 		pf_status.debug = *level;
@@ -2597,7 +2597,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		break;
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	case DIOCGIFSPEED: {
 		struct pf_ifspeed	*psp = (struct pf_ifspeed *)addr;
 		struct pf_ifspeed	ps;
@@ -2615,14 +2615,14 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 		break;
 	}
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #ifdef ALTQ
 	case DIOCSTARTALTQ: {
 		struct pf_altq		*altq;
 
 		/* enable all altq interfaces on active list */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_FOREACH(altq, V_pf_altqs_active, entries) {
 			if (altq->qname[0] == 0 && (altq->local_flags &
 			    PFALTQ_FLAG_IF_REMOVED) == 0) {
@@ -2636,7 +2636,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			}
 		}
 		if (error == 0)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			V_pf_altq_running = 1;
 #else
 			pf_altq_running = 1;
@@ -2649,7 +2649,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pf_altq		*altq;
 
 		/* disable all altq interfaces on active list */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_FOREACH(altq, V_pf_altqs_active, entries) {
 			if (altq->qname[0] == 0 && (altq->local_flags &
 			    PFALTQ_FLAG_IF_REMOVED) == 0) {
@@ -2663,7 +2663,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			}
 		}
 		if (error == 0)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			V_pf_altq_running = 0;
 #else
 			pf_altq_running = 0;
@@ -2676,7 +2676,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pfioc_altq	*pa = (struct pfioc_altq *)addr;
 		struct pf_altq		*altq, *a;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pa->ticket != V_ticket_altqs_inactive) {
 #else
 		if (pa->ticket != ticket_altqs_inactive) {
@@ -2684,7 +2684,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EBUSY;
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		altq = pool_get(&V_pf_altq_pl, PR_NOWAIT);
 #else
 		altq = pool_get(&pf_altq_pl, PR_WAITOK|PR_LIMITFAIL);
@@ -2694,7 +2694,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		bcopy(&pa->altq, altq, sizeof(struct pf_altq));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		altq->local_flags = 0;
 #endif
 
@@ -2705,7 +2705,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		if (altq->qname[0] != 0) {
 			if ((altq->qid = pf_qname2qid(altq->qname)) == 0) {
 				error = EBUSY;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_altq_pl, altq);
 #else
 				pool_put(&pf_altq_pl, altq);
@@ -2713,7 +2713,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				break;
 			}
 			altq->altq_disc = NULL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			TAILQ_FOREACH(a, V_pf_altqs_inactive, entries) {
 #else
 			TAILQ_FOREACH(a, pf_altqs_inactive, entries) {
@@ -2726,7 +2726,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			}
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		struct ifnet *ifp;
 
 		if ((ifp = ifunit(altq->ifname)) == NULL) {
@@ -2735,12 +2735,12 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			PF_UNLOCK();
 #endif
 		error = altq_add(altq);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_LOCK();
 		}
 #endif
 		if (error) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pf_altq_pl, altq);
 #else
 			pool_put(&pf_altq_pl, altq);
@@ -2748,7 +2748,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_INSERT_TAIL(V_pf_altqs_inactive, altq, entries);
 #else
 		TAILQ_INSERT_TAIL(pf_altqs_inactive, altq, entries);
@@ -2762,7 +2762,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pf_altq		*altq;
 
 		pa->nr = 0;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_FOREACH(altq, V_pf_altqs_active, entries)
 			pa->nr++;
 		pa->ticket = V_ticket_altqs_active;
@@ -2779,7 +2779,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pf_altq		*altq;
 		u_int32_t		 nr;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pa->ticket != V_ticket_altqs_active) {
 #else
 		if (pa->ticket != ticket_altqs_active) {
@@ -2788,7 +2788,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		nr = 0;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		altq = TAILQ_FIRST(V_pf_altqs_active);
 #else
 		altq = TAILQ_FIRST(pf_altqs_active);
@@ -2816,7 +2816,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		u_int32_t		 nr;
 		int			 nbytes;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pq->ticket != V_ticket_altqs_active) {
 #else
 		if (pq->ticket != ticket_altqs_active) {
@@ -2826,7 +2826,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 		nbytes = pq->nbytes;
 		nr = 0;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		altq = TAILQ_FIRST(V_pf_altqs_active);
 #else
 		altq = TAILQ_FIRST(pf_altqs_active);
@@ -2840,7 +2840,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if ((altq->local_flags & PFALTQ_FLAG_IF_REMOVED) != 0) {
 			error = ENXIO;
 			break;
@@ -2848,7 +2848,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		PF_UNLOCK();
 #endif
 		error = altq_getqstats(altq, pq->buf, &nbytes);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		if (error == 0) {
@@ -2862,7 +2862,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	case DIOCBEGINADDRS: {
 		struct pfioc_pooladdr	*pp = (struct pfioc_pooladdr *)addr;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pf_empty_pool(&V_pf_pabuf);
 		pp->ticket = ++V_ticket_pabuf;
 #else
@@ -2875,7 +2875,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	case DIOCADDADDR: {
 		struct pfioc_pooladdr	*pp = (struct pfioc_pooladdr *)addr;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (pp->ticket != V_ticket_pabuf) {
 #else
 		if (pp->ticket != ticket_pabuf) {
@@ -2901,7 +2901,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pa = pool_get(&V_pf_pooladdr_pl, PR_NOWAIT);
 #else
 		pa = pool_get(&pf_pooladdr_pl, PR_WAITOK|PR_LIMITFAIL);
@@ -2914,7 +2914,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		if (pa->ifname[0]) {
 			pa->kif = pfi_kif_get(pa->ifname);
 			if (pa->kif == NULL) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_pooladdr_pl, pa);
 #else
 				pool_put(&pf_pooladdr_pl, pa);
@@ -2927,7 +2927,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		if (pfi_dynaddr_setup(&pa->addr, pp->af)) {
 			pfi_dynaddr_remove(&pa->addr);
 			pfi_kif_unref(pa->kif, PFI_KIF_REF_RULE);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pf_pooladdr_pl, pa);
 #else
 			pool_put(&pf_pooladdr_pl, pa);
@@ -2935,7 +2935,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			break;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		TAILQ_INSERT_TAIL(&V_pf_pabuf, pa, entries);
 #else
 		TAILQ_INSERT_TAIL(&pf_pabuf, pa, entries);
@@ -3011,7 +3011,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		if (pca->action != PF_CHANGE_REMOVE) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			newpa = pool_get(&V_pf_pooladdr_pl,
 			    PR_NOWAIT);
 #else
@@ -3025,7 +3025,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			bcopy(&pca->addr, newpa, sizeof(struct pf_pooladdr));
 #ifndef INET
 			if (pca->af == AF_INET) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_pooladdr_pl, newpa);
 #else
 				pool_put(&pf_pooladdr_pl, newpa);
@@ -3036,7 +3036,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 #endif /* INET */
 #ifndef INET6
 			if (pca->af == AF_INET6) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_pooladdr_pl, newpa);
 #else
 				pool_put(&pf_pooladdr_pl, newpa);
@@ -3048,7 +3048,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			if (newpa->ifname[0]) {
 				newpa->kif = pfi_kif_get(newpa->ifname);
 				if (newpa->kif == NULL) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 					pool_put(&V_pf_pooladdr_pl, newpa);
 #else
 					pool_put(&pf_pooladdr_pl, newpa);
@@ -3063,7 +3063,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			    pf_tbladdr_setup(ruleset, &newpa->addr)) {
 				pfi_dynaddr_remove(&newpa->addr);
 				pfi_kif_unref(newpa->kif, PFI_KIF_REF_RULE);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				pool_put(&V_pf_pooladdr_pl, newpa);
 #else
 				pool_put(&pf_pooladdr_pl, newpa);
@@ -3096,7 +3096,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			pfi_dynaddr_remove(&oldpa->addr);
 			pf_tbladdr_remove(&oldpa->addr);
 			pfi_kif_unref(oldpa->kif, PFI_KIF_REF_RULE);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pf_pooladdr_pl, oldpa);
 #else
 			pool_put(&pf_pooladdr_pl, oldpa);
@@ -3131,7 +3131,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		pr->nr = 0;
 		if (ruleset->anchor == NULL) {
 			/* XXX kludge for pf_main_ruleset */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			RB_FOREACH(anchor, pf_anchor_global, &V_pf_anchors)
 #else
 			RB_FOREACH(anchor, pf_anchor_global, &pf_anchors)
@@ -3160,7 +3160,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		pr->name[0] = 0;
 		if (ruleset->anchor == NULL) {
 			/* XXX kludge for pf_main_ruleset */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			RB_FOREACH(anchor, pf_anchor_global, &V_pf_anchors)
 #else
 			RB_FOREACH(anchor, pf_anchor_global, &pf_anchors)
@@ -3406,16 +3406,16 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENODEV;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		ioe = malloc(sizeof(*ioe), M_TEMP, M_WAITOK);
 		table = malloc(sizeof(*table), M_TEMP, M_WAITOK);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		for (i = 0; i < io->size; i++) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 		if (error) {
 #else
@@ -3462,7 +3462,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				}
 				break;
 			}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_COPYOUT(ioe, io->array+i, sizeof(io->array[i]),
 			    error);
 			if (error) {
@@ -3490,16 +3490,16 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENODEV;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		ioe = malloc(sizeof(*ioe), M_TEMP, M_WAITOK);
 		table = malloc(sizeof(*table), M_TEMP, M_WAITOK);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		for (i = 0; i < io->size; i++) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -3563,17 +3563,17 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENODEV;
 			goto fail;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		ioe = malloc(sizeof(*ioe), M_TEMP, M_WAITOK);
 		table = malloc(sizeof(*table), M_TEMP, M_WAITOK);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		/* first makes sure everything will succeed */
 		for (i = 0; i < io->size; i++) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -3593,7 +3593,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 					error = EINVAL;
 					goto fail;
 				}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 				if (!V_altqs_inactive_open || ioe->ticket !=
 				    V_ticket_altqs_inactive) {
 #else
@@ -3640,7 +3640,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 		/* now do the commit - no errors should happen here */
 		for (i = 0; i < io->size; i++) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -3694,7 +3694,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		int			 space = psn->psn_len;
 
 		if (space == 0) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			RB_FOREACH(n, pf_src_tree, &V_tree_src_tracking)
 #else
 			RB_FOREACH(n, pf_src_tree, &tree_src_tracking)
@@ -3704,15 +3704,15 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		pstore = malloc(sizeof(*pstore), M_TEMP, M_WAITOK);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		p = psn->psn_src_nodes;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		RB_FOREACH(n, pf_src_tree, &V_tree_src_tracking) {
 #else
 		RB_FOREACH(n, pf_src_tree, &tree_src_tracking) {
@@ -3740,7 +3740,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				    n->conn_rate.count * diff /
 				    n->conn_rate.seconds;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			PF_COPYOUT(pstore, p, sizeof(*p), error);
 #else
 			error = copyout(pstore, p, sizeof(*p));
@@ -3762,7 +3762,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		struct pf_src_node	*n;
 		struct pf_state		*state;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		RB_FOREACH(state, pf_state_tree_id, &V_tree_id) {
 #else
 		RB_FOREACH(state, pf_state_tree_id, &tree_id) {
@@ -3770,7 +3770,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			state->src_node = NULL;
 			state->nat_src_node = NULL;
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		RB_FOREACH(n, pf_src_tree, &V_tree_src_tracking) {
 #else
 		RB_FOREACH(n, pf_src_tree, &tree_src_tracking) {
@@ -3779,7 +3779,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			n->states = 0;
 		}
 		pf_purge_expired_src_nodes(1);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		V_pf_status.src_nodes = 0;
 #else
 		pf_status.src_nodes = 0;
@@ -3794,7 +3794,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		    (struct pfioc_src_node_kill *)addr;
 		u_int			killed = 0;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		RB_FOREACH(sn, pf_src_tree, &V_tree_src_tracking) {
 #else
 		RB_FOREACH(sn, pf_src_tree, &tree_src_tracking) {
@@ -3810,7 +3810,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				/* Handle state to src_node linkage */
 				if (sn->states != 0) {
 					RB_FOREACH(s, pf_state_tree_id,
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 					    &V_tree_id) {
 #else
 					    &tree_id) {
@@ -3837,7 +3837,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 	case DIOCSETHOSTID: {
 		u_int32_t	*hostid = (u_int32_t *)addr;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (*hostid == 0)
 			V_pf_status.hostid = arc4random();
 		else
@@ -3886,7 +3886,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		break;
 	}
 fail:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	PF_UNLOCK();
 
 	if (flags & FWRITE)
@@ -3906,7 +3906,7 @@ fail:
 	return (error);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 void
 pfsync_state_export(struct pfsync_state *sp, struct pf_state *st)
 {
@@ -3976,7 +3976,7 @@ pf_clear_states(void)
 {
 	struct pf_state	*state;
  
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_FOREACH(state, pf_state_tree_id, &V_tree_id) {
 #else
 	RB_FOREACH(state, pf_state_tree_id, &tree_id) {
@@ -4017,7 +4017,7 @@ pf_clear_srcnodes(void)
 	struct pf_src_node	*n;
 	struct pf_state		*state;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_FOREACH(state, pf_state_tree_id, &V_tree_id) {
 #else
 	RB_FOREACH(state, pf_state_tree_id, &tree_id) {
@@ -4025,7 +4025,7 @@ pf_clear_srcnodes(void)
 		state->src_node = NULL;
 		state->nat_src_node = NULL;
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	RB_FOREACH(n, pf_src_tree, &V_tree_src_tracking) {
 #else
 	RB_FOREACH(n, pf_src_tree, &tree_src_tracking) {
@@ -4417,4 +4417,4 @@ static moduledata_t pf_mod = {
 
 DECLARE_MODULE(pf, pf_mod, SI_SUB_PSEUDO, SI_ORDER_FIRST);
 MODULE_VERSION(pf, PF_MODVER);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */

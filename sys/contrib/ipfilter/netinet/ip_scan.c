@@ -36,7 +36,7 @@ struct file;
 #if !defined(__hpux) && !defined(__osf__) && !defined(linux) && !defined(AIX)
 # include <sys/ioccom.h>
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 # include <sys/filio.h>
 # include <sys/malloc.h>
 #else

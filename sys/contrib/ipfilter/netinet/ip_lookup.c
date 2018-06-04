@@ -38,7 +38,7 @@ struct file;
 #endif
 #include <sys/socket.h>
 #include <net/if.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/cdefs.h>
 # include <sys/proc.h>
 #endif

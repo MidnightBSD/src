@@ -31,7 +31,7 @@
 #define	PFLOGIFS_MAX	16
 
 struct pflog_softc {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct ifnet		*sc_ifp;	/* the interface pointer */
 #else
 	struct ifnet		sc_if;		/* the interface */
@@ -75,7 +75,7 @@ struct old_pfloghdr {
 #define	OLD_PFLOG_HDRLEN	sizeof(struct old_pfloghdr)
 
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 struct pf_rule;
 struct pf_ruleset;
 struct pfi_kif;
@@ -91,7 +91,7 @@ extern pflog_packet_t *pflog_packet_ptr;
 	if (pflog_packet_ptr != NULL)			\
 		pflog_packet_ptr(i,a,b,c,d,e,f,g,h);    \
 } while (0)
-#else /* ! __FreeBSD__ */
+#else /* ! __MidnightBSD__ */
 #if NPFLOG > 0
 #define	PFLOG_PACKET(i,x,a,b,c,d,e,f,g,h) pflog_packet(i,a,b,c,d,e,f,g,h)
 #else

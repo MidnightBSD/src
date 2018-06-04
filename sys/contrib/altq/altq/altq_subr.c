@@ -28,13 +28,13 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__MidnightBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
 #include "opt_inet.h"
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet6.h"
 #endif
-#endif /* __FreeBSD__ || __NetBSD__ */
+#endif /* __MidnightBSD__ || __NetBSD__ */
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -53,7 +53,7 @@
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <net/vnet.h>
 #endif
 
@@ -74,7 +74,7 @@
 #endif
 
 /* machine dependent clock related includes */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/bus.h>
 #include <sys/cpu.h>
 #include <sys/eventhandler.h>
@@ -83,7 +83,7 @@
 #if defined(__amd64__) || defined(__i386__)
 #include <machine/cpufunc.h>		/* for pentium tsc */
 #include <machine/specialreg.h>		/* for CPUID_TSC */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <machine/md_var.h>		/* for cpu_feature */
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #include <machine/cpu.h>		/* for cpu_feature */
@@ -97,7 +97,7 @@ static void	tbr_timeout(void *);
 int (*altq_input)(struct mbuf *, int) = NULL;
 static struct mbuf *tbr_dequeue(struct ifaltq *, int);
 static int tbr_timer = 0;	/* token bucket regulator timer */
-#if !defined(__FreeBSD__) || (__FreeBSD_version < 600000)
+#if !defined(__MidnightBSD__) || (__FreeBSD_version < 600000)
 static struct callout tbr_callout = CALLOUT_INITIALIZER;
 #else
 static struct callout tbr_callout;
@@ -445,7 +445,7 @@ static void
 tbr_timeout(arg)
 	void *arg;
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	VNET_ITERATOR_DECL(vnet_iter);
 #endif
 	struct ifnet *ifp;
@@ -457,7 +457,7 @@ tbr_timeout(arg)
 #else
 	s = splimp();
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	IFNET_RLOCK_NOSLEEP();
 	VNET_LIST_RLOCK_NOSLEEP();
 	VNET_FOREACH(vnet_iter) {
@@ -473,7 +473,7 @@ tbr_timeout(arg)
 			    ifp->if_start != NULL)
 				(*ifp->if_start)(ifp);
 		}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		CURVNET_RESTORE();
 	}
 	VNET_LIST_RUNLOCK_NOSLEEP();
@@ -969,7 +969,7 @@ init_machclk_setup(void)
 #if (!defined(__amd64__) && !defined(__i386__)) || defined(ALTQ_NOPCC)
 	machclk_usepcc = 0;
 #endif
-#if defined(__FreeBSD__) && defined(SMP)
+#if defined(__MidnightBSD__) && defined(SMP)
 	machclk_usepcc = 0;
 #endif
 #if defined(__NetBSD__) && defined(MULTIPROCESSOR)
@@ -977,7 +977,7 @@ init_machclk_setup(void)
 #endif
 #if defined(__amd64__) || defined(__i386__)
 	/* check if TSC is available */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if ((cpu_feature & CPUID_TSC) == 0 ||
 	    atomic_load_acq_64(&tsc_freq) == 0)
 #else
@@ -1013,7 +1013,7 @@ init_machclk(void)
 	 * accessible, just use it.
 	 */
 #if defined(__amd64__) || defined(__i386__)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	machclk_freq = atomic_load_acq_64(&tsc_freq);
 #elif defined(__NetBSD__)
 	machclk_freq = (u_int32_t)cpu_tsc_freq;

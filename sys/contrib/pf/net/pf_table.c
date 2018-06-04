@@ -30,7 +30,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -43,7 +43,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/socket.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/malloc.h>
 #else
 #include <sys/pool.h>
@@ -52,7 +52,7 @@ __MBSDID("$MidnightBSD$");
 #include <net/if.h>
 #include <net/route.h>
 #include <netinet/in.h>
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <netinet/ip_ipsp.h>
 #endif
 #include <net/pfvar.h>
@@ -64,7 +64,7 @@ __MBSDID("$MidnightBSD$");
 			return (EINVAL);	\
 	} while (0)
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static inline int
 _copyin(const void *uaddr, void *kaddr, size_t len)
 {
@@ -175,7 +175,7 @@ struct pfr_walktree {
 
 #define	senderr(e)	do { rv = (e); goto _bad; } while (0)
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 VNET_DEFINE(uma_zone_t,			pfr_ktable_pl);
 VNET_DEFINE(uma_zone_t,			pfr_kentry_pl);
 VNET_DEFINE(uma_zone_t,			pfr_kcounters_pl);
@@ -254,7 +254,7 @@ int			 pfr_ktable_cnt;
 void
 pfr_initialize(void)
 {
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	pool_init(&pfr_ktable_pl, sizeof(struct pfr_ktable), 0, 0, 0,
 	    "pfrktable", NULL);
 	pool_init(&pfr_kentry_pl, sizeof(struct pfr_kentry), 0, 0, 0,
@@ -660,13 +660,13 @@ pfr_get_addrs(struct pfr_table *tbl, struct pfr_addr *addr, int *size,
 	w.pfrw_addr = addr;
 	w.pfrw_free = kt->pfrkt_cnt;
 	w.pfrw_flags = flags;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	rv = kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #else
 	rv = rn_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #endif
 	if (!rv)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rv = kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree,
 		    &w);
 #else
@@ -713,13 +713,13 @@ pfr_get_astats(struct pfr_table *tbl, struct pfr_astats *addr, int *size,
 	w.pfrw_flags = flags;
 	if (flags & PFR_FLAG_ATOMIC)
 		s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	rv = kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #else
 	rv = rn_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #endif
 	if (!rv)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rv = kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, 
 		    &w);
 #else
@@ -840,7 +840,7 @@ pfr_enqueue_addrs(struct pfr_ktable *kt, struct pfr_kentryworkq *workq,
 	w.pfrw_op = sweep ? PFRW_SWEEP : PFRW_ENQUEUE;
 	w.pfrw_workq = workq;
 	if (kt->pfrkt_ip4 != NULL)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, 
 		    &w))
 #else
@@ -848,7 +848,7 @@ pfr_enqueue_addrs(struct pfr_ktable *kt, struct pfr_kentryworkq *workq,
 #endif
 			printf("pfr_enqueue_addrs: IPv4 walktree failed.\n");
 	if (kt->pfrkt_ip6 != NULL)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, 
 		    &w))
 #else
@@ -866,13 +866,13 @@ pfr_mark_addrs(struct pfr_ktable *kt)
 
 	bzero(&w, sizeof(w));
 	w.pfrw_op = PFRW_MARK;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w))
 #else
 	if (rn_walktree(kt->pfrkt_ip4, pfr_walktree, &w))
 #endif
 		printf("pfr_mark_addrs: IPv4 walktree failed.\n");
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, &w))
 #else
 	if (rn_walktree(kt->pfrkt_ip6, pfr_walktree, &w))
@@ -885,7 +885,7 @@ struct pfr_kentry *
 pfr_lookup_addr(struct pfr_ktable *kt, struct pfr_addr *ad, int exact)
 {
 	union sockaddr_union	 sa, mask;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct radix_node_head	*head = NULL;
 #else
 	struct radix_node_head	*head;
@@ -904,7 +904,7 @@ pfr_lookup_addr(struct pfr_ktable *kt, struct pfr_addr *ad, int exact)
 	if (ADDR_NETWORK(ad)) {
 		pfr_prepare_network(&mask, ad->pfra_af, ad->pfra_net);
 		s = splsoftnet(); /* rn_lookup makes use of globals */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_LOCK_ASSERT();
 #endif
 		ke = (struct pfr_kentry *)rn_lookup(&sa, &mask, head);
@@ -926,7 +926,7 @@ pfr_create_kentry(struct pfr_addr *ad, int intr)
 {
 	struct pfr_kentry	*ke;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	ke =  pool_get(&V_pfr_kentry_pl, PR_NOWAIT | PR_ZERO);
 #else
 	if (intr)
@@ -962,7 +962,7 @@ void
 pfr_destroy_kentry(struct pfr_kentry *ke)
 {
 	if (ke->pfrke_counters)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		pool_put(&V_pfr_kcounters_pl, ke->pfrke_counters);
 	pool_put(&V_pfr_kentry_pl, ke);
 #else
@@ -1050,7 +1050,7 @@ pfr_clstats_kentries(struct pfr_kentryworkq *workq, long tzero, int negchange)
 		if (negchange)
 			p->pfrke_not = !p->pfrke_not;
 		if (p->pfrke_counters) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pool_put(&V_pfr_kcounters_pl, p->pfrke_counters);
 #else
 			pool_put(&pfr_kcounters_pl, p->pfrke_counters);
@@ -1107,7 +1107,7 @@ pfr_route_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 {
 	union sockaddr_union	 mask;
 	struct radix_node	*rn;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct radix_node_head	*head = NULL;
 #else
 	struct radix_node_head	*head;
@@ -1121,18 +1121,18 @@ pfr_route_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 		head = kt->pfrkt_ip6;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	PF_LOCK_ASSERT();
 #endif
 	if (KENTRY_NETWORK(ke)) {
 		pfr_prepare_network(&mask, ke->pfrke_af, ke->pfrke_net);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rn = rn_addroute(&ke->pfrke_sa, &mask, head, ke->pfrke_node);
 #else
 		rn = rn_addroute(&ke->pfrke_sa, &mask, head, ke->pfrke_node, 0);
 #endif
 	} else
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rn = rn_addroute(&ke->pfrke_sa, NULL, head, ke->pfrke_node);
 #else
 		rn = rn_addroute(&ke->pfrke_sa, NULL, head, ke->pfrke_node, 0);
@@ -1147,7 +1147,7 @@ pfr_unroute_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 {
 	union sockaddr_union	 mask;
 	struct radix_node	*rn;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct radix_node_head	*head = NULL;
 #else
 	struct radix_node_head	*head;
@@ -1160,18 +1160,18 @@ pfr_unroute_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 		head = kt->pfrkt_ip6;
 
 	s = splsoftnet();
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	PF_LOCK_ASSERT();
 #endif
 	if (KENTRY_NETWORK(ke)) {
 		pfr_prepare_network(&mask, ke->pfrke_af, ke->pfrke_net);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rn = rn_delete(&ke->pfrke_sa, &mask, head);
 #else
 		rn = rn_delete(&ke->pfrke_sa, &mask, head, NULL);
 #endif
 	} else
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		rn = rn_delete(&ke->pfrke_sa, NULL, head);
 #else
 		rn = rn_delete(&ke->pfrke_sa, NULL, head, NULL);
@@ -1266,7 +1266,7 @@ pfr_walktree(struct radix_node *rn, void *arg)
 		if (ke->pfrke_af == AF_INET) {
 			if (w->pfrw_dyn->pfid_acnt4++ > 0)
 				break;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pfr_prepare_network(&V_pfr_mask, AF_INET, ke->pfrke_net);
 #else
 			pfr_prepare_network(&pfr_mask, AF_INET, ke->pfrke_net);
@@ -1274,7 +1274,7 @@ pfr_walktree(struct radix_node *rn, void *arg)
 			w->pfrw_dyn->pfid_addr4 = *SUNION2PF(
 			    &ke->pfrke_sa, AF_INET);
 			w->pfrw_dyn->pfid_mask4 = *SUNION2PF(
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			    &V_pfr_mask, AF_INET);
 #else
 			    &pfr_mask, AF_INET);
@@ -1282,7 +1282,7 @@ pfr_walktree(struct radix_node *rn, void *arg)
 		} else if (ke->pfrke_af == AF_INET6){
 			if (w->pfrw_dyn->pfid_acnt6++ > 0)
 				break;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			pfr_prepare_network(&V_pfr_mask, AF_INET6, ke->pfrke_net);
 #else
 			pfr_prepare_network(&pfr_mask, AF_INET6, ke->pfrke_net);
@@ -1290,7 +1290,7 @@ pfr_walktree(struct radix_node *rn, void *arg)
 			w->pfrw_dyn->pfid_addr6 = *SUNION2PF(
 			    &ke->pfrke_sa, AF_INET6);
 			w->pfrw_dyn->pfid_mask6 = *SUNION2PF(
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			    &V_pfr_mask, AF_INET6);
 #else
 			    &pfr_mask, AF_INET6);
@@ -2076,7 +2076,7 @@ pfr_create_ktable(struct pfr_table *tbl, long tzero, int attachruleset,
 	struct pfr_ktable	*kt;
 	struct pf_ruleset	*rs;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	kt = pool_get(&V_pfr_ktable_pl, PR_NOWAIT|PR_ZERO);
 #else
 	if (intr)
@@ -2131,7 +2131,7 @@ pfr_destroy_ktable(struct pfr_ktable *kt, int flushaddr)
 		pfr_clean_node_mask(kt, &addrq);
 		pfr_destroy_kentries(&addrq);
 	}
-#if defined(__FreeBSD__) && (__FreeBSD_version >= 500100)
+#if defined(__MidnightBSD__) && (__FreeBSD_version >= 500100)
 	if (kt->pfrkt_ip4 != NULL) {
 		RADIX_NODE_HEAD_DESTROY(kt->pfrkt_ip4);
 		free((caddr_t)kt->pfrkt_ip4, M_RTABLE);
@@ -2152,7 +2152,7 @@ pfr_destroy_ktable(struct pfr_ktable *kt, int flushaddr)
 		kt->pfrkt_rs->tables--;
 		pf_remove_if_empty_ruleset(kt->pfrkt_rs);
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	pool_put(&V_pfr_ktable_pl, kt);
 #else
 	pool_put(&pfr_ktable_pl, kt);
@@ -2191,7 +2191,7 @@ pfr_match_addr(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af)
 	switch (af) {
 #ifdef INET
 	case AF_INET:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		V_pfr_sin.sin_addr.s_addr = a->addr32[0];
 		ke = (struct pfr_kentry *)rn_match(&V_pfr_sin, kt->pfrkt_ip4);
 #else
@@ -2204,7 +2204,7 @@ pfr_match_addr(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af)
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		bcopy(a, &V_pfr_sin6.sin6_addr, sizeof(V_pfr_sin6.sin6_addr));
 		ke = (struct pfr_kentry *)rn_match(&V_pfr_sin6, kt->pfrkt_ip6);
 #else
@@ -2238,7 +2238,7 @@ pfr_update_stats(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af,
 	switch (af) {
 #ifdef INET
 	case AF_INET:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		V_pfr_sin.sin_addr.s_addr = a->addr32[0];
 		ke = (struct pfr_kentry *)rn_match(&V_pfr_sin, kt->pfrkt_ip4);
 #else
@@ -2251,7 +2251,7 @@ pfr_update_stats(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af,
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		bcopy(a, &V_pfr_sin6.sin6_addr, sizeof(V_pfr_sin6.sin6_addr));
 		ke = (struct pfr_kentry *)rn_match(&V_pfr_sin6, kt->pfrkt_ip6);
 #else
@@ -2275,7 +2275,7 @@ pfr_update_stats(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af,
 	if (ke != NULL && op_pass != PFR_OP_XPASS &&
 	    (kt->pfrkt_flags & PFR_TFLAG_COUNTERS)) {
 		if (ke->pfrke_counters == NULL)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			ke->pfrke_counters = pool_get(&V_pfr_kcounters_pl,
 #else
 			ke->pfrke_counters = pool_get(&pfr_kcounters_pl,
@@ -2338,7 +2338,7 @@ int
 pfr_pool_get(struct pfr_ktable *kt, int *pidx, struct pf_addr *counter,
     struct pf_addr **raddr, struct pf_addr **rmask, sa_family_t af)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct pfr_kentry	*ke, *ke2 = NULL;
 	struct pf_addr		*addr = NULL;
 #else
@@ -2348,7 +2348,7 @@ pfr_pool_get(struct pfr_ktable *kt, int *pidx, struct pf_addr *counter,
 	union sockaddr_union	 mask;
 	int			 idx = -1, use_counter = 0;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (af == AF_INET)
 		addr = (struct pf_addr *)&V_pfr_sin.sin_addr;
 	else if (af == AF_INET6)
@@ -2377,13 +2377,13 @@ _next_block:
 		kt->pfrkt_nomatch++;
 		return (1);
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	pfr_prepare_network(&V_pfr_mask, af, ke->pfrke_net);
 #else
 	pfr_prepare_network(&pfr_mask, af, ke->pfrke_net);
 #endif
 	*raddr = SUNION2PF(&ke->pfrke_sa, af);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	*rmask = SUNION2PF(&V_pfr_mask, af);
 #else
 	*rmask = SUNION2PF(&pfr_mask, af);
@@ -2412,7 +2412,7 @@ _next_block:
 	}
 	for (;;) {
 		/* we don't want to use a nested block */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (af == AF_INET)
 			ke2 = (struct pfr_kentry *)rn_match(&V_pfr_sin,
 			    kt->pfrkt_ip4);
@@ -2438,7 +2438,7 @@ _next_block:
 
 		/* we need to increase the counter past the nested block */
 		pfr_prepare_network(&mask, AF_INET, ke2->pfrke_net);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		PF_POOLMASK(addr, addr, SUNION2PF(&mask, af), &V_pfr_ffaddr, af);
 #else
 		PF_POOLMASK(addr, addr, SUNION2PF(&mask, af), &pfr_ffaddr, af);
@@ -2466,7 +2466,7 @@ pfr_kentry_byidx(struct pfr_ktable *kt, int idx, int af)
 	switch (af) {
 #ifdef INET
 	case AF_INET:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #else
 		rn_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
@@ -2475,7 +2475,7 @@ pfr_kentry_byidx(struct pfr_ktable *kt, int idx, int af)
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, &w);
 #else
 		rn_walktree(kt->pfrkt_ip6, pfr_walktree, &w);
@@ -2501,13 +2501,13 @@ pfr_dynaddr_update(struct pfr_ktable *kt, struct pfi_dynaddr *dyn)
 	dyn->pfid_acnt4 = 0;
 	dyn->pfid_acnt6 = 0;
 	if (!dyn->pfid_af || dyn->pfid_af == AF_INET)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #else
 		rn_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
 #endif
 	if (!dyn->pfid_af || dyn->pfid_af == AF_INET6)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, &w);
 #else
 		rn_walktree(kt->pfrkt_ip6, pfr_walktree, &w);
