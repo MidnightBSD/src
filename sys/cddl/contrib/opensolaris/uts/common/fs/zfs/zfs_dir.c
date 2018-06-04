@@ -703,10 +703,10 @@ zfs_make_xattrdir(znode_t *zp, vattr_t *vap, vnode_t **xvpp, cred_t *cr)
 	*xvpp = NULL;
 
 	/*
-	 * In FreeBSD, access checking for creating an EA is being done
+	 * In MidnightBSD, access checking for creating an EA is being done
 	 * in zfs_setextattr(),
 	 */
-#ifndef __FreeBSD_kernel__
+#ifndef __MidnightBSD_kernel__
 	if (error = zfs_zaccess(zp, ACE_WRITE_NAMED_ATTRS, 0, B_FALSE, cr))
 		return (error);
 #endif

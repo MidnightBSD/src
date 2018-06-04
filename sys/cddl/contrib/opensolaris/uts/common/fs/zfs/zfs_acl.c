@@ -1673,7 +1673,7 @@ zfs_acl_ids_create(znode_t *dzp, int flag, vattr_t *vap, cred_t *cr,
 			} else {
 				acl_ids->z_fgid = zfs_fuid_create_cred(zfsvfs,
 				    ZFS_GROUP, cr, &acl_ids->z_fuidp);
-#ifdef __FreeBSD_kernel__
+#ifdef __MidnightBSD_kernel__
 				gid = acl_ids->z_fgid = dzp->z_gid;
 #else
 				gid = crgetgid(cr);
@@ -2045,7 +2045,7 @@ zfs_zaccess_dataset_check(znode_t *zp, uint32_t v4_mode)
 	}
 #else
 	/*
-	 * In FreeBSD we allow to modify directory's content is ZFS_NOUNLINK
+	 * In MidnightBSD we allow to modify directory's content is ZFS_NOUNLINK
 	 * (sunlnk) is set. We just don't allow directory removal, which is
 	 * handled in zfs_zaccess_delete().
 	 */
@@ -2360,9 +2360,9 @@ zfs_zaccess(znode_t *zp, int mode, int flags, boolean_t skipaclchk, cred_t *cr)
 
 	is_attr = ((zp->z_pflags & ZFS_XATTR) && (ZTOV(zp)->v_type == VDIR));
 
-#ifdef __FreeBSD_kernel__
+#ifdef __MidnightBSD_kernel__
 	/*
-	 * In FreeBSD, we don't care about permissions of individual ADS.
+	 * In MidnightBSD, we don't care about permissions of individual ADS.
 	 * Note that not checking them is not just an optimization - without
 	 * this shortcut, EA operations may bogusly fail with EACCES.
 	 */
