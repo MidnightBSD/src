@@ -25,7 +25,15 @@
 #if __ARM_EABI__
 # define ARM_EABI_FNALIAS(aeabi_name, name)         \
   void __aeabi_##aeabi_name() __attribute__((alias("__" #name)));
-# define COMPILER_RT_ABI __attribute__((pcs("aapcs")))
+
+# if !defined(__clang__) && defined(__GNUC__) && \
+     (__GNUC__ < 4 || __GNUC__ == 4 && __GNUC_MINOR__ < 5)
+/* The pcs attribute was introduced in GCC 4.5.0 */
+#  define COMPILER_RT_ABI
+# else
+#  define COMPILER_RT_ABI __attribute__((pcs("aapcs")))
+# endif
+
 #else
 # define ARM_EABI_FNALIAS(aeabi_name, name)
 # define COMPILER_RT_ABI
@@ -55,7 +63,7 @@
  * This problem has only been observed on FreeBSD for sparc64 and
  * mips64 with GCC 4.2.1.
  */
-#if defined(__FreeBSD__) && (defined(__sparc64__) || \
+#if defined(__MidnightBSD__) && (defined(__sparc64__) || \
     defined(__mips_n64) || defined(__mips_o64))
 si_int __clzsi2(si_int);
 si_int __ctzsi2(si_int);

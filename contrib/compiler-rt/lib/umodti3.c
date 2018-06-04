@@ -12,9 +12,9 @@
  * ===----------------------------------------------------------------------===
  */
 
-#if __x86_64
-
 #include "int_lib.h"
+
+#ifdef CRT_HAS_128BIT
 
 tu_int __udivmodti4(tu_int a, tu_int b, tu_int* rem);
 
@@ -28,4 +28,4 @@ __umodti3(tu_int a, tu_int b)
     return r;
 }
 
-#endif
+#endif /* CRT_HAS_128BIT */

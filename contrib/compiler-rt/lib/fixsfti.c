@@ -12,9 +12,9 @@
  * ===----------------------------------------------------------------------===
  */
 
-#if __x86_64
-
 #include "int_lib.h"
+
+#ifdef CRT_HAS_128BIT
 
 /* Returns: convert a to a signed long long, rounding toward zero. */
 
@@ -42,4 +42,4 @@ __fixsfti(float a)
     return (r ^ s) - s;
 }
 
-#endif
+#endif /* CRT_HAS_128BIT */

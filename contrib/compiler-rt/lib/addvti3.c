@@ -12,9 +12,9 @@
  * ===----------------------------------------------------------------------===
  */
 
-#if __x86_64
-
 #include "int_lib.h"
+
+#ifdef CRT_HAS_128BIT
 
 /* Returns: a + b */
 
@@ -37,4 +37,4 @@ __addvti3(ti_int a, ti_int b)
     return s;
 }
 
-#endif
+#endif /* CRT_HAS_128BIT */

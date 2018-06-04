@@ -11156,6 +11156,14 @@ contrib/compiler-rt/lib/addvsi3.c -text
 contrib/compiler-rt/lib/addvti3.c -text
 contrib/compiler-rt/lib/arm/adddf3vfp.S -text
 contrib/compiler-rt/lib/arm/addsf3vfp.S -text
+contrib/compiler-rt/lib/arm/aeabi_idivmod.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_ldivmod.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_memcmp.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_memcpy.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_memmove.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_memset.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_uidivmod.S svneol=native#text/plain
+contrib/compiler-rt/lib/arm/aeabi_uldivmod.S svneol=native#text/plain
 contrib/compiler-rt/lib/arm/bswapdi2.S -text
 contrib/compiler-rt/lib/arm/bswapsi2.S -text
 contrib/compiler-rt/lib/arm/comparesf2.S -text

@@ -12,9 +12,9 @@
  * ===----------------------------------------------------------------------===
  */
 
-#if __x86_64
-
 #include "int_lib.h"
+
+#ifdef CRT_HAS_128BIT
 
 /* Returns:  if (a <  b) returns 0
  *           if (a == b) returns 1
@@ -39,4 +39,4 @@ __cmpti2(ti_int a, ti_int b)
     return 1;
 }
 
-#endif
+#endif /* CRT_HAS_128BIT */

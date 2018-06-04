@@ -12,9 +12,9 @@
  * ===----------------------------------------------------------------------===
  */
 
-#if __x86_64
-
 #include "int_lib.h"
+
+#ifdef CRT_HAS_128BIT
 
 /* Returns: absolute value */
 
@@ -30,4 +30,5 @@ __absvti2(ti_int a)
     return (a ^ s) - s;
 }
 
-#endif
+#endif /* CRT_HAS_128BIT */
+
