@@ -1,4 +1,4 @@
-/*# $MidnightBSD$ */
+# $MidnightBSD$ 
 # $FreeBSD: stable/10/sys/modules/usb/rsufw/Makefile.inc 253761 2013-07-29 06:57:45Z rpaulo $
 #
 # Common rules for building firmware.  Note this gets auto-included

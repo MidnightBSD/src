@@ -1,4 +1,4 @@
-/*# $MidnightBSD$ */
+# $MidnightBSD$ 
 # $FreeBSD: stable/10/sys/modules/drm2/radeonkmsfw/Makefile.inc 254885 2013-08-25 19:37:15Z dumbbell $
 #
 # Common rules for building firmware.  Note this gets auto-included
