@@ -71,6 +71,7 @@ extern	char	kstack[];
 extern	char	sigcode[];
 extern	int	szsigcode;
 extern	uint64_t *vm_page_dump;
+extern	int	hw_lower_amd64_sharedpage;
 extern	int	vm_page_dump_size;
 extern	int	workaround_erratum383;
 extern	int	_udatasel;
@@ -84,6 +85,7 @@ extern	uint64_t xsave_mask;
 typedef void alias_for_inthand_t(u_int cs, u_int ef, u_int esp, u_int ss);
 struct	pcb;
 struct	savefpu;
+struct	sysentvec;
 struct	thread;
 struct	reg;
 struct	fpreg;
@@ -141,5 +143,6 @@ struct savefpu *get_pcb_user_save_td(struct thread *td);
 struct savefpu *get_pcb_user_save_pcb(struct pcb *pcb);
 struct pcb *get_pcb_td(struct thread *td);
 void	amd64_db_resume_dbreg(void);
+void	amd64_lower_shared_page(struct sysentvec *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */
