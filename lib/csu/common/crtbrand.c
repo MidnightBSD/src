@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2008 Lucas Holt
  * Copyright 2000 David E. O'Brien, John D. Polstra.
@@ -28,26 +29,40 @@
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
-
-#define ABI_VENDOR	"MidnightBSD"
-#define ABI_SECTION	".note.ABI-tag"
-#define ABI_NOTETYPE	1
+#include "notes.h"
 
 /*
  * Special ".note" entry specifying the ABI version.  See
  * http://www.netbsd.org/Documentation/kernel/elf-notes.html
  * for more information.
+ *
+ * For all arches except sparc, gcc emits the section directive for the
+ * following struct with a PROGBITS type.  However, newer versions of binutils
+ * (after 2.16.90) require the section to be of NOTE type, to guarantee that the
+ * .note.ABI-tag section correctly ends up in the first page of the final
+ * executable.
+ *
+ * Unfortunately, there is no clean way to tell gcc to use another section type,
+ * so this C file (or the C file that includes it) must be compiled in multiple
+ * steps:
+ *
+ * - Compile the .c file to a .s file.
+ * - Edit the .s file to change the 'progbits' type to 'note', for the section
+ *   directive that defines the .note.ABI-tag section.
+ * - Compile the .s file to an object file.
+ *
+ * These steps are done in the invididual Makefiles for each applicable arch.
  */
 static const struct {
-    int32_t	namesz;
-    int32_t	descsz;
-    int32_t	type;
-    char	name[sizeof ABI_VENDOR];
-    int32_t	desc;
-} abitag __attribute__ ((section (ABI_SECTION), aligned(4))) __used = {
-    sizeof ABI_VENDOR,
-    sizeof(int32_t),
-    ABI_NOTETYPE,
-    ABI_VENDOR,
-    __MidnightBSD_version
+	int32_t	namesz;
+	int32_t	descsz;
+	int32_t	type;
+	char	name[sizeof(NOTE_MIDNIGHTBSD_VENDOR)];
+	int32_t	desc;
+} abitag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
+	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
+	.descsz = sizeof(int32_t),
+	.type = ABI_NOTETYPE,
+	.name = NOTE_MIDNIGHTBSD_VENDOR,
+	.desc = __MidnightBSD_version
 };
