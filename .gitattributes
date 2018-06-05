@@ -46544,6 +46544,9 @@ lib/libc/amd64/sys/sbrk.S -text
 lib/libc/amd64/sys/setlogin.S -text
 lib/libc/amd64/sys/sigreturn.S -text
 lib/libc/amd64/sys/vfork.S -text
+lib/libc/capability/Makefile.inc svneol=native#text/plain
+lib/libc/capability/Symbol.map -text
+lib/libc/capability/cap_rights_init.3 svneol=native#text/plain
 lib/libc/compat-43/Makefile.inc -text
 lib/libc/compat-43/Symbol.map -text
 lib/libc/compat-43/creat.2 -text
