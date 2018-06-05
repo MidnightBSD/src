@@ -47239,6 +47239,7 @@ lib/libc/locale/wcwidth.c -text
 lib/libc/locale/xlocale.3 -text
 lib/libc/locale/xlocale.c -text
 lib/libc/locale/xlocale_private.h -text
+lib/libc/md/Makefile.inc svneol=native#text/plain
 lib/libc/nameser/Makefile.inc -text
 lib/libc/nameser/Symbol.map -text
 lib/libc/nameser/ns_name.c -text
