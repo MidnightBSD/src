@@ -47857,6 +47857,8 @@ lib/libc/stdlib/imaxdiv.3 -text
 lib/libc/stdlib/imaxdiv.c -text
 lib/libc/stdlib/insque.3 -text
 lib/libc/stdlib/insque.c -text
+lib/libc/stdlib/jemalloc/Makefile.inc svneol=native#text/plain
+lib/libc/stdlib/jemalloc/Symbol.map -text
 lib/libc/stdlib/l64a.c -text
 lib/libc/stdlib/labs.3 -text
 lib/libc/stdlib/labs.c -text
