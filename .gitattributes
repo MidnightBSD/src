@@ -49828,6 +49828,7 @@ lib/ncurses/ncurses/termcap.c -text
 lib/ncurses/ncursesw/Makefile -text
 lib/ncurses/panel/Makefile -text
 lib/ncurses/panelw/Makefile -text
+lib/tests/Makefile svneol=native#text/plain
 libexec/Makefile -text
 libexec/Makefile.inc -text
 libexec/atrun/LEGAL -text
