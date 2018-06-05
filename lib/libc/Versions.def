@@ -1,19 +1,28 @@
-# $MidnightBSD: src/lib/libc/Versions.def,v 1.7 2012/04/01 01:42:33 laffer1 Exp $
+# $MidnightBSD$
 
 # This is our first version; it depends on no other. It is from FreeBSD 7
 FBSD_1.0 {
 };
 
-# This version is from FreeBSD 7.0-stable just before 7.1.
+# This version was first added to FreeBSD 8.0-current.
 FBSD_1.1 {
 } FBSD_1.0;
 
+# This version was first added to FreeBSD 9.0-current.
 FBSD_1.2 {
 } FBSD_1.1;
 
 # This version was first added to FreeBSD 10.0-current.
 FBSD_1.3 {
 } FBSD_1.2;
+
+# This version was first added to FreeBSD 11.0-current.
+FBSD_1.4 {
+} MNBSD_1.2;
+
+# This version was first added to FreeBSD 12.0-current.
+FBSD_1.5 {
+} FBSD_1.4;
 
 # This version was first added to MidnightBSD 0.3-current.
 MNBSD_1.0 {
@@ -26,9 +35,13 @@ MNBSD_1.1 {
 MNBSD_1.2 {
 } MNBSD_1.1;
 
+# This version was first added to MiidnightBSD 1.0-current.
+MNBSD_1.3 {
+} FBSD_1.5;
+
 # This is our private namespace.  Any global interfaces that are
 # strictly for use only by other FreeBSD applications and libraries
 # are listed here.  We use a separate namespace so we can write
 # simple ABI-checking tools.
 FBSDprivate_1.0 {
-} MNBSD_1.2;
+} MNBSD_1.3;
