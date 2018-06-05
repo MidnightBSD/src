@@ -48657,6 +48657,12 @@ lib/libfetch/ftp.c -text
 lib/libfetch/ftp.errors -text
 lib/libfetch/http.c -text
 lib/libfetch/http.errors -text
+lib/libfigpar/Makefile svneol=native#text/plain
+lib/libfigpar/figpar.3 svneol=native#text/plain
+lib/libfigpar/figpar.c svneol=native#text/plain
+lib/libfigpar/figpar.h svneol=native#text/plain
+lib/libfigpar/string_m.c svneol=native#text/plain
+lib/libfigpar/string_m.h svneol=native#text/plain
 lib/libftpio/Makefile -text
 lib/libftpio/ftp.errors -text
 lib/libftpio/ftpio.3 -text
