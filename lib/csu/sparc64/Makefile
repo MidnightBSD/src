@@ -1,12 +1,13 @@
-# $MidnightBSD: src/lib/csu/sparc64/Makefile,v 1.2 2008/05/16 18:43:29 laffer1 Exp $
-# $FreeBSD: src/lib/csu/sparc64/Makefile,v 1.12 2002/07/29 09:40:11 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/csu/sparc64/Makefile 313582 2017-02-11 05:47:56Z ngie $
 
-.PATH: ${.CURDIR}/../common
+.PATH: ${.CURDIR:H}/common
 
 SRCS=		crt1.c crti.S crtn.S
 OBJS=		${SRCS:N*.h:R:S/$/.o/g}
 OBJS+=		Scrt1.o gcrt1.o
-CFLAGS+=	-I${.CURDIR}/../common -I${.CURDIR}/../../libc/include
+CFLAGS+=	-I${.CURDIR:H}/common \
+		-I${SRCTOP}/lib/libc/include
 
 all: ${OBJS}
 
