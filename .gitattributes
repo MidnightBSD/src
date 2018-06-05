@@ -48440,6 +48440,10 @@ lib/libcrypt/crypt.h -text
 lib/libcrypt/misc.c -text
 lib/libcxxrt/Makefile svneol=native#text/plain
 lib/libcxxrt/Version.map -text
+lib/libdevctl/Makefile svneol=native#text/plain
+lib/libdevctl/devctl.3 svneol=native#text/plain
+lib/libdevctl/devctl.c svneol=native#text/plain
+lib/libdevctl/devctl.h svneol=native#text/plain
 lib/libdevinfo/Makefile -text
 lib/libdevinfo/devinfo.3 -text
 lib/libdevinfo/devinfo.c -text
