@@ -46414,6 +46414,8 @@ lib/clang/libllvmx86info/Makefile -text
 lib/clang/libllvmx86instprinter/Makefile -text
 lib/clang/libllvmx86utils/Makefile -text
 lib/clang/lldb.lib.mk svneol=native#text/plain
+lib/csu/Makefile svneol=native#text/plain
+lib/csu/Makefile.inc svneol=native#text/plain
 lib/csu/amd64/Makefile -text
 lib/csu/amd64/crt1.c -text
 lib/csu/amd64/crti.S -text
