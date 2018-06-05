@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* LINTLIBRARY */
 /*-
  * Copyright 1996-1998 John D. Polstra.
@@ -23,29 +24,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/lib/csu/i386-elf/crt1_c.c,v 1.1.4.2 2010/01/19 20:19:52 kib Exp $
+ * $FreeBSD: stable/10/lib/csu/i386-elf/crt1_c.c 300323 2016-05-20 19:14:15Z emaste $
  */
 
-#ifndef lint
-#ifndef __GNUC__
-#error "GCC is needed to compile this file"
-#endif
-#endif /* lint */
+#include <sys/cdefs.h>
 
 #include <stdlib.h>
 
 #include "libc_private.h"
 #include "crtbrand.c"
-
-extern int _DYNAMIC;
-#pragma weak _DYNAMIC
+#include "ignore_init.c"
 
 typedef void (*fptr)(void);
 
-extern void _fini(void);
-extern void _init(void);
-extern int main(int, char **, char **);
 extern void _start(char *, ...);
 
 #ifdef GCRT
@@ -55,9 +46,6 @@ extern int eprol;
 extern int etext;
 #endif
 
-char **environ;
-const char *__progname = "";
-
 void _start1(fptr, int, char *[]) __dead2;
 
 /* The entry function, C part. */
@@ -65,18 +53,9 @@ void
 _start1(fptr cleanup, int argc, char *argv[])
 {
 	char **env;
-	const char *s;
 
 	env = argv + argc + 1;
-	if (environ == NULL)
-		environ = env;
-	if (argc > 0 && argv[0] != NULL) {
-		__progname = argv[0];
-		for (s = __progname; *s != '\0'; s++)
-			if (*s == '/')
-				__progname = s + 1;
-	}
-
+	handle_argv(argc, argv, env);
 	if (&_DYNAMIC != NULL)
 		atexit(cleanup);
 	else
@@ -84,14 +63,12 @@ _start1(fptr cleanup, int argc, char *argv[])
 
 #ifdef GCRT
 	atexit(_mcleanup);
-#endif
-	atexit(_fini);
-#ifdef GCRT
 	monstartup(&eprol, &etext);
 __asm__("eprol:");
 #endif
-	_init();
-	exit( main(argc, argv, env) );
+
+	handle_static_init(argc, argv, env);
+	exit(main(argc, argv, env));
 }
 
 __asm(".hidden	_start1");
