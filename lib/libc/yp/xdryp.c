@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992/3 Theo de Raadt <deraadt@fsa.ca>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/yp/xdryp.c,v 1.14 2002/04/28 15:18:47 des Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/yp/xdryp.c 228826 2011-12-23 01:56:25Z ghelmer $");
 
 #include <rpc/rpc.h>
 #include <rpcsvc/yp.h>
@@ -82,10 +83,21 @@ xdr_ypresp_all_seq(XDR *xdrs, u_long *objp)
 		switch (status) {
 		case YP_TRUE:
 			key = (char *)malloc(out.ypresp_all_u.val.key.keydat_len + 1);
+			if (key == NULL) {
+				xdr_free((xdrproc_t)xdr_ypresp_all, &out);
+				*objp = YP_YPERR;
+				return (FALSE);
+			}
 			bcopy(out.ypresp_all_u.val.key.keydat_val, key,
 				out.ypresp_all_u.val.key.keydat_len);
 			key[out.ypresp_all_u.val.key.keydat_len] = '\0';
 			val = (char *)malloc(out.ypresp_all_u.val.val.valdat_len + 1);
+			if (val == NULL) {
+				free(key);
+				xdr_free((xdrproc_t)xdr_ypresp_all, &out);
+				*objp = YP_YPERR;
+				return (FALSE);
+			}
 			bcopy(out.ypresp_all_u.val.val.valdat_val, val,
 				out.ypresp_all_u.val.val.valdat_len);
 			val[out.ypresp_all_u.val.val.valdat_len] = '\0';
