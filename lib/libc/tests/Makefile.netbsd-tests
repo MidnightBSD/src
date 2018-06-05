@@ -1,0 +1,10 @@
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libc/tests/Makefile.netbsd-tests 313488 2017-02-09 22:49:48Z ngie $
+
+TESTSRC:=	${SRCTOP}/contrib/netbsd-tests/${RELDIR:C/libc\/tests/libc/}
+
+TESTSDIR:=	${TESTSBASE}/${RELDIR:C/libc\/tests/libc/}
+
+WARNS?=		2
+
+.include <netbsd-tests.test.mk>
