@@ -1,13 +1,13 @@
-# $MidnightBSD: src/lib/csu/amd64/Makefile,v 1.3 2011/12/18 02:23:42 laffer1 Exp $
-# $FreeBSD: src/lib/csu/amd64/Makefile,v 1.18.20.2 2010/01/19 20:19:52 kib Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/csu/amd64/Makefile 313582 2017-02-11 05:47:56Z ngie $
 
-.PATH: ${.CURDIR}/../common
+.PATH: ${.CURDIR:H}/common
 
 SRCS=		crt1.c crti.S crtn.S
 OBJS=		${SRCS:N*.h:R:S/$/.o/g}
 OBJS+=		Scrt1.o gcrt1.o
-CFLAGS+=	-I${.CURDIR}/../common \
-		-I${.CURDIR}/../../libc/include
+CFLAGS+=	-I${.CURDIR:H}/common \
+		-I${SRCTOP}/lib/libc/include
 CFLAGS+=	-fno-omit-frame-pointer
 
 all: ${OBJS}
@@ -20,21 +20,21 @@ CLEANFILES+=	crt1.s gcrt1.s Scrt1.s
 
 crt1.s: crt1.c
 	${CC} ${CFLAGS} -S -o ${.TARGET} ${.CURDIR}/crt1.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 crt1.o: crt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} crt1.s
 
 gcrt1.s: crt1.c
 	${CC} ${CFLAGS} -DGCRT -S -o ${.TARGET} ${.CURDIR}/crt1.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 gcrt1.o: gcrt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} gcrt1.s
 
 Scrt1.s: crt1.c
 	${CC} ${CFLAGS} -fPIC -DPIC -S -o ${.TARGET} ${.CURDIR}/crt1.c
-	sed -i "" -e '/\.note\.ABI-tag/s/progbits/note/' ${.TARGET}
+	sed ${SED_FIX_NOTE} ${.TARGET}
 
 Scrt1.o: Scrt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} Scrt1.s
