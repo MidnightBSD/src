@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Error handler for noninteractive utilities
    Copyright (C) 1990-1998, 2000 Free Software Foundation, Inc.
 

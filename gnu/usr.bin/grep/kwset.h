@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* kwset.h - header declaring the keyword set library.
    Copyright (C) 1989, 1998 Free Software Foundation, Inc.
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* exclude.h -- declarations for excluding file names
    Copyright 1992, 1993, 1994, 1997, 1999 Free Software Foundation, Inc.
 

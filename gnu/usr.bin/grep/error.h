@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Declaration for error-reporting function
    Copyright (C) 1995, 1996, 1997 Free Software Foundation, Inc.
 

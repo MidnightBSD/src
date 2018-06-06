@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* grep.h - interface to grep driver for searching subroutines.
    Copyright (C) 1992, 1998, 2001 Free Software Foundation, Inc.
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* xmalloc.c -- malloc with out of memory checking
    Copyright (C) 1990-1999, 2000 Free Software Foundation, Inc.
 

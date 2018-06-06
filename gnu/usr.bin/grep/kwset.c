@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* kwset.c - search for any of a set of keywords.
    Copyright 1989, 1998, 2000 Free Software Foundation, Inc.
 

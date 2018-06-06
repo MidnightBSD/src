@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/grep/Makefile,v 1.30 2004/07/04 10:05:37 tjr Exp $
+# $FreeBSD: stable/10/gnu/usr.bin/grep/Makefile 270776 2014-08-29 01:20:31Z gjb $
 
 .include <bsd.own.mk>
 
@@ -13,6 +13,7 @@ PROG=	gnugrep
 SRCS=	closeout.c dfa.c error.c exclude.c grep.c grepmat.c hard-locale.c \
 	isdir.c kwset.c obstack.c quotearg.c savedir.c search.c xmalloc.c \
 	xstrtoumax.c
+CLEANFILES+=	gnugrep.1
 
 CFLAGS+=-I${.CURDIR} -I${DESTDIR}/usr/include/gnu -DHAVE_CONFIG_H
 

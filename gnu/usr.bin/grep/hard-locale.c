@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* hard-locale.c -- Determine whether a locale is hard.
    Copyright 1997, 1998, 1999 Free Software Foundation, Inc.
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef XSTRTOL_H_
 # define XSTRTOL_H_ 1
 

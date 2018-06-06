@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* search.c - searching subroutines using dfa, kwset and regex for grep.
    Copyright 1992, 1998, 2000 Free Software Foundation, Inc.
 
