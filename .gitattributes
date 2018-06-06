@@ -49400,6 +49400,15 @@ lib/libstand/zalloc_protos.h -text
 lib/libstdbuf/Makefile -text
 lib/libstdbuf/libstdbuf.3 -text
 lib/libstdbuf/stdbuf.c -text
+lib/libstdthreads/Makefile svneol=native#text/plain
+lib/libstdthreads/Symbol.map -text
+lib/libstdthreads/call_once.c svneol=native#text/plain
+lib/libstdthreads/cnd.c svneol=native#text/plain
+lib/libstdthreads/mtx.c svneol=native#text/plain
+lib/libstdthreads/thrd.c svneol=native#text/plain
+lib/libstdthreads/thrd_create.3 svneol=native#text/plain
+lib/libstdthreads/threads.h svneol=native#text/plain
+lib/libstdthreads/tss.c svneol=native#text/plain
 lib/libtacplus/Makefile -text
 lib/libtacplus/libtacplus.3 -text
 lib/libtacplus/taclib.c -text
