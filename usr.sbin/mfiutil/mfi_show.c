@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/mfiutil/mfi_show.c 266400 2014-05-18 15:28:25Z jhb $
  */
 
 #include <sys/types.h>
@@ -40,9 +41,11 @@
 #include <unistd.h>
 #include "mfiutil.h"
 
+static const char* foreign_state = " (FOREIGN)";
+
 MFI_TABLE(top, show);
 
-static void
+void
 format_stripe(char *buf, size_t buflen, uint8_t stripe)
 {
 
@@ -291,7 +294,7 @@ show_battery(int ac, char **av __unused)
 }
 MFI_COMMAND(show, battery, show_battery);
 
-static void
+void
 print_ld(struct mfi_ld_info *info, int state_len)
 {
 	struct mfi_ld_params *params = &info->ld_config.params;
@@ -312,19 +315,24 @@ print_ld(struct mfi_ld_info *info, int state_len)
 		    mfi_ldstate(params->state));
 }
 
-static void
+void
 print_pd(struct mfi_pd_info *info, int state_len)
 {
 	const char *s;
-	char buf[6];
+	char buf[256];
 
-	humanize_number(buf, sizeof(buf), info->raw_size * 512, "",
+	humanize_number(buf, 6, info->raw_size * 512, "",
 	    HN_AUTOSCALE, HN_B | HN_NOSPACE |HN_DECIMAL);
 	printf("(%6s) ", buf);
+	if (info->state.ddf.v.pd_type.is_foreign) {
+		sprintf(buf, "%s%s", mfi_pdstate(info->fw_state), foreign_state);
+		s = buf;
+	} else
+		s = mfi_pdstate(info->fw_state);
 	if (state_len > 0)
-		printf("%-*s", state_len, mfi_pdstate(info->fw_state));
+		printf("%-*s", state_len, s);
 	else
-		printf("%s", mfi_pdstate(info->fw_state));
+		printf("%s",s);
 	s = mfi_pd_inq_string(info);
 	if (s != NULL)
 		printf(" %s", s);
@@ -560,6 +568,8 @@ show_drives(int ac, char **av __unused)
 			goto error;
 		}
 		len = strlen(mfi_pdstate(info.fw_state));
+		if (info.state.ddf.v.pd_type.is_foreign)
+			len += strlen(foreign_state);
 		if (len > state_len)
 			state_len = len;
 	}
@@ -596,36 +606,6 @@ error:
 	return (error);
 }
 MFI_COMMAND(show, drives, show_drives);
-
-int fw_name_width, fw_version_width, fw_date_width, fw_time_width;
-
-static void
-scan_firmware(struct mfi_info_component *comp)
-{
-	int len;
-
-	len = strlen(comp->name);
-	if (fw_name_width < len)
-		fw_name_width = len;
-	len = strlen(comp->version);
-	if (fw_version_width < len)
-		fw_version_width = len;
-	len = strlen(comp->build_date);
-	if (fw_date_width < len)
-		fw_date_width = len;
-	len = strlen(comp->build_time);
-	if (fw_time_width < len)
-		fw_time_width = len;
-}
-
-static void
-display_firmware(struct mfi_info_component *comp, const char *tag)
-{
-
-	printf("%-*s  %-*s  %-*s  %-*s  %s\n", fw_name_width, comp->name,
-	    fw_version_width, comp->version, fw_date_width, comp->build_date,
-	    fw_time_width, comp->build_time, tag);
-}
 
 static int
 show_firmware(int ac, char **av __unused)
@@ -800,3 +780,10 @@ show_progress(int ac, char **av __unused)
 	return (0);
 }
 MFI_COMMAND(show, progress, show_progress);
+
+static int
+show_foreign(int ac, char **av)
+{
+	return(display_format(ac, av, 0/*normal display*/, MFI_DCMD_CFG_FOREIGN_DISPLAY));
+}
+MFI_COMMAND(show, foreign, show_foreign);

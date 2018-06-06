@@ -72926,7 +72926,9 @@ usr.sbin/mfiutil/mfi_config.c -text
 usr.sbin/mfiutil/mfi_drive.c -text
 usr.sbin/mfiutil/mfi_evt.c -text
 usr.sbin/mfiutil/mfi_flash.c -text
+usr.sbin/mfiutil/mfi_foreign.c svneol=native#text/plain
 usr.sbin/mfiutil/mfi_patrol.c -text
+usr.sbin/mfiutil/mfi_properties.c svneol=native#text/plain
 usr.sbin/mfiutil/mfi_show.c -text
 usr.sbin/mfiutil/mfi_volume.c -text
 usr.sbin/mfiutil/mfiutil.8 -text
