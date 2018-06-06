@@ -49027,6 +49027,10 @@ lib/libmsearch/msearch_index.c -text
 lib/libmsearch/msearch_private.h -text
 lib/libmsearch/msearch_search.c -text
 lib/libmsearch/sqlite_functions.c -text
+lib/libmt/Makefile svneol=native#text/plain
+lib/libmt/mt.3 svneol=native#text/plain
+lib/libmt/mtlib.c svneol=native#text/plain
+lib/libmt/mtlib.h svneol=native#text/plain
 lib/libncp/CREDITS -text
 lib/libncp/Makefile -text
 lib/libncp/ipx.c -text
