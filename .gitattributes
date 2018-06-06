@@ -49501,6 +49501,7 @@ lib/libthread_db/libthr_db.c -text
 lib/libthread_db/thread_db.c -text
 lib/libthread_db/thread_db.h -text
 lib/libthread_db/thread_db_int.h -text
+lib/libucl/Makefile svneol=native#text/plain
 lib/libufs/Makefile -text
 lib/libufs/block.c -text
 lib/libufs/bread.3 -text
