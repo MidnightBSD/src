@@ -49640,6 +49640,8 @@ lib/libwrap/libvars.c -text
 lib/liby/Makefile -text
 lib/liby/main.c -text
 lib/liby/yyerror.c -text
+lib/libyaml/Makefile svneol=native#text/plain
+lib/libyaml/config.h svneol=native#text/plain
 lib/libypclnt/Makefile -text
 lib/libypclnt/ypclnt.h -text
 lib/libypclnt/ypclnt_connect.c -text
