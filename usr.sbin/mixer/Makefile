@@ -1,8 +1,7 @@
-# $FreeBSD: src/usr.sbin/mixer/Makefile,v 1.10 2001/07/20 06:20:00 obrien Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/mixer/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	mixer
 MAN=	mixer.8
-
-WARNS?=	2
 
 .include <bsd.prog.mk>
