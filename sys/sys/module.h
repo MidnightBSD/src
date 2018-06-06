@@ -119,18 +119,18 @@ struct mod_metadata {
 
 /*
  * Every kernel has a 'kernel' module with the version set to
- * __FreeBSD_version.  We embed a MODULE_DEPEND() inside every module
+ * __MidnightBSD_version.  We embed a MODULE_DEPEND() inside every module
  * that depends on the 'kernel' module.  It uses the current value of
- * __FreeBSD_version as the minimum and preferred versions.  For the
+ * __MidnightBSD_version as the minimum and preferred versions.  For the
  * maximum version it rounds the version up to the end of its branch
  * (i.e. M99999 for M.x).  This allows a module built on M.x to work
  * on M.y systems where y >= x, but fail on M.z systems where z < x.
  */
-#define	MODULE_KERNEL_MAXVER	(roundup(__FreeBSD_version, 100000) - 1)
+#define	MODULE_KERNEL_MAXVER	(roundup(__MidnightBSD_version, 100000) - 1)
 
 #define	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, maxver)	\
-	MODULE_DEPEND(name, kernel, __FreeBSD_version,			\
-	    __FreeBSD_version, maxver);			\
+	MODULE_DEPEND(name, kernel, __MidnightBSD_version,			\
+	    __MidnightBSD_version, maxver);			\
 	MODULE_METADATA(_md_##name, MDT_MODULE, &data, #name);		\
 	SYSINIT(name##module, sub, order, module_register_init, &data);	\
 	struct __hack
@@ -140,13 +140,13 @@ struct mod_metadata {
 
 /*
  * The module declared with DECLARE_MODULE_TIED can only be loaded
- * into the kernel with exactly the same __FreeBSD_version.
+ * into the kernel with exactly the same __MidnightBSD_version.
  *
  * Use it for modules that use kernel interfaces that are not stable
  * even on STABLE/X branches.
  */
 #define	DECLARE_MODULE_TIED(name, data, sub, order)				\
-	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, __FreeBSD_version)
+	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, __MidnightBSD_version)
 
 #define	MODULE_VERSION(module, version)					\
 	static struct mod_version _##module##_version			\
