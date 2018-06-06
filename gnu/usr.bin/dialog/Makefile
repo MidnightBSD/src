@@ -1,14 +1,24 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/dialog/Makefile 262643 2014-03-01 03:09:16Z brooks $
 
-.PATH: ${.CURDIR}/../../../contrib/dialog
+DIALOG=	${.CURDIR}/../../../contrib/dialog
+PROG=   dialog
 
-PROG=	dialog
+DPADD=	${LIBDIALOG} ${LIBM}
+LDADD=	-ldialog -lm
+CFLAGS+= -I${.CURDIR} -I${DIALOG}
+.PATH:	${DIALOG}
 
-CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../../contrib/dialog
+WARNS?= 6
 
-WARNS?=	3
+.include <bsd.own.mk>
 
-DPADD=	$(LIBDIALOG) $(LIBNCURSES) $(LIBM)
-LDADD=	-ldialog -lncursesw -lm
+.if ${MK_NCURSESW} == "no"
+DPADD+=	${LIBNCURSES}
+LDADD+=	-lncurses
+.else
+DPADD+=	${LIBNCURSESW}
+LDADD+=	-lncursesw
+.endif
 
 .include <bsd.prog.mk>
