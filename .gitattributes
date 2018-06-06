@@ -48548,6 +48548,14 @@ lib/libedit/tokenizer.c -text
 lib/libedit/tty.c -text
 lib/libedit/tty.h -text
 lib/libedit/vi.c -text
+lib/libefi/Makefile svneol=native#text/plain
+lib/libefi/efi_getvar.c svneol=native#text/plain
+lib/libefi/efi_nextvarname.c svneol=native#text/plain
+lib/libefi/efi_setvar.c svneol=native#text/plain
+lib/libefi/libefi.3 svneol=native#text/plain
+lib/libefi/libefi.c svneol=native#text/plain
+lib/libefi/libefi.h svneol=native#text/plain
+lib/libefi/libefi_int.h svneol=native#text/plain
 lib/libelf/Makefile -text
 lib/libelf/README -text
 lib/libelf/Version.map -text
