@@ -5,7 +5,6 @@
 
 SUBDIR= ${_binutils} \
 	${_cc} \
-	${_cvs} \
 	dialog \
 	diff \
 	${_dtc} \
@@ -18,10 +17,6 @@ SUBDIR= ${_binutils} \
 
 .if ${MK_CXX} != "no"
 _gperf=		gperf
-.endif
-
-.if ${MK_CVS} != "no"
-_cvs=		cvs
 .endif
 
 .if ${MK_FDT}	!= "no"
