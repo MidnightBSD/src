@@ -263,6 +263,7 @@ __DEFAULT_YES_OPTIONS = \
     AMD \
     APM \
     ARM_EABI \
+    ASH \
     ASSERT_DEBUG \
     AT \
     ATM \
