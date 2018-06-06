@@ -664,7 +664,7 @@ interpret:
 	VOP_UNLOCK(imgp->vp, 0);
 
 	if (disallow_high_osrel &&
-	    P_OSREL_MAJOR(p->p_osrel) > P_OSREL_MAJOR(__FreeBSD_version)) {
+	    P_OSREL_MAJOR(p->p_osrel) > P_OSREL_MAJOR(__MidnightBSD_version)) {
 		error = ENOEXEC;
 		uprintf("Osrel %d for image %s too high\n", p->p_osrel,
 		    imgp->execpath != NULL ? imgp->execpath : "<unresolved>");
