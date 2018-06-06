@@ -5,7 +5,7 @@
 
 SUBDIR= ${_binutils} \
 	${_cc} \
-	dialog \
+	${_dialog} \
 	diff \
 	${_dtc} \
 	${_gdb} \
@@ -15,11 +15,17 @@ SUBDIR= ${_binutils} \
 	sort \
 	${_texinfo}
 
+SUBDIR_DEPEND_gdb=	${_binutils}
+
 .if ${MK_CXX} != "no"
 _gperf=		gperf
 .endif
 
-.if ${MK_FDT}	!= "no"
+.if ${MK_DIALOG} != "no"
+_dialog=	dialog
+.endif
+
+.if ${MK_GPL_DTC} != "no"
 _dtc=		dtc
 .endif
 
