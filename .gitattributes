@@ -49635,6 +49635,10 @@ lib/libvgl/simple.c -text
 lib/libvgl/text.c -text
 lib/libvgl/vgl.3 -text
 lib/libvgl/vgl.h -text
+lib/libvmmapi/Makefile svneol=native#text/plain
+lib/libvmmapi/vmmapi.c svneol=native#text/plain
+lib/libvmmapi/vmmapi.h svneol=native#text/plain
+lib/libvmmapi/vmmapi_freebsd.c svneol=native#text/plain
 lib/libwrap/Makefile -text
 lib/libwrap/libvars.c -text
 lib/liby/Makefile -text
