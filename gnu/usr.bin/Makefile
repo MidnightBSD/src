@@ -13,6 +13,7 @@ SUBDIR= ${_binutils} \
 	grep \
 	${_rcs} \
 	sort \
+	${_tests} \
 	${_texinfo}
 
 SUBDIR_DEPEND_gdb=	${_binutils}
@@ -35,6 +36,10 @@ _texinfo=	texinfo
 
 .if ${MK_RCS} != "no"
 _rcs=		rcs
+.endif
+
+.if ${MK_TESTS} != "no"
+_tests=		tests
 .endif
 
 .if ${MK_BINUTILS} != "no"
