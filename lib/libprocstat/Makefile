@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libprocstat/Makefile 312285 2017-01-16 12:13:49Z kib $
 
 .include <bsd.own.mk>
 
@@ -8,12 +9,11 @@ SRCS=	cd9660.c	\
 	common_kvm.c	\
 	core.c		\
 	libprocstat.c	\
-        msdosfs.c	\
-	ntfs.c		\
+	msdosfs.c	\
 	smbfs.c		\
 	udf.c
 
-VERSION_DEF=	${.CURDIR}/Versions.def
+VERSION_DEF=	${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 
 INCS=		libprocstat.h
@@ -24,11 +24,6 @@ DPADD=		${LIBELF} ${LIBKVM} ${LIBUTIL}
 LDADD=		-lelf -lkvm -lutil
 
 MAN=		libprocstat.3
-
-.if ${MK_NCP} != "no"
-CFLAGS+=	-DLIBPROCSTAT_NWFS
-SRCS+=	nwfs.c
-.endif
 
 # XXX This is a hack.
 .if ${MK_CDDL} != "no"

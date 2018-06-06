@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 1988, 1993
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libprocstat/libprocstat.c 312036 2017-01-13 08:42:11Z ngie $");
 
 #include <sys/param.h>
 #include <sys/elf.h>
@@ -59,7 +60,9 @@ __MBSDID("$MidnightBSD$");
 #define	_WANT_FILE
 #include <sys/file.h>
 #include <sys/conf.h>
+#include <sys/ksem.h>
 #include <sys/mman.h>
+#include <sys/capsicum.h>
 #define	_KERNEL
 #include <sys/mount.h>
 #include <sys/pipe.h>
@@ -129,6 +132,10 @@ static int	procstat_get_pts_info_sysctl(struct filestat *fst,
     struct ptsstat *pts, char *errbuf);
 static int	procstat_get_pts_info_kvm(kvm_t *kd, struct filestat *fst,
     struct ptsstat *pts, char *errbuf);
+static int	procstat_get_sem_info_sysctl(struct filestat *fst,
+    struct semstat *sem, char *errbuf);
+static int	procstat_get_sem_info_kvm(kvm_t *kd, struct filestat *fst,
+    struct semstat *sem, char *errbuf);
 static int	procstat_get_shm_info_sysctl(struct filestat *fst,
     struct shmstat *shm, char *errbuf);
 static int	procstat_get_shm_info_kvm(kvm_t *kd, struct filestat *fst,
@@ -248,7 +255,7 @@ procstat_getprocs(struct procstat *procstat, int what, int arg,
     unsigned int *count)
 {
 	struct kinfo_proc *p0, *p;
-	size_t len;
+	size_t len, olen;
 	int name[4];
 	int cnt;
 	int error;
@@ -276,7 +283,7 @@ procstat_getprocs(struct procstat *procstat, int what, int arg,
 		name[1] = KERN_PROC;
 		name[2] = what;
 		name[3] = arg;
-		error = sysctl(name, 4, NULL, &len, NULL, 0);
+		error = sysctl(name, nitems(name), NULL, &len, NULL, 0);
 		if (error < 0 && errno != EPERM) {
 			warn("sysctl(kern.proc)");
 			goto fail;
@@ -285,12 +292,16 @@ procstat_getprocs(struct procstat *procstat, int what, int arg,
 			warnx("no processes?");
 			goto fail;
 		}
-		p = malloc(len);
-		if (p == NULL) {
-			warnx("malloc(%zu)", len);
-			goto fail;
-		}
-		error = sysctl(name, 4, p, &len, NULL, 0);
+		do {
+			len += len / 10;
+			p = reallocf(p, len);
+			if (p == NULL) {
+				warnx("reallocf(%zu)", len);
+				goto fail;
+			}
+			olen = len;
+			error = sysctl(name, nitems(name), p, &len, NULL, 0);
+		} while (error < 0 && errno == ENOMEM && olen == len);
 		if (error < 0 && errno != EPERM) {
 			warn("sysctl(kern.proc)");
 			goto fail;
@@ -369,7 +380,7 @@ procstat_freefiles(struct procstat *procstat, struct filestat_list *head)
 
 static struct filestat *
 filestat_new_entry(void *typedep, int type, int fd, int fflags, int uflags,
-    int refcount, off_t offset, char *path, cap_rights_t cap_rights)
+    int refcount, off_t offset, char *path, cap_rights_t *cap_rightsp)
 {
 	struct filestat *entry;
 
@@ -386,7 +397,10 @@ filestat_new_entry(void *typedep, int type, int fd, int fflags, int uflags,
 	entry->fs_ref_count = refcount;
 	entry->fs_offset = offset;
 	entry->fs_path = path;
-	entry->fs_cap_rights = cap_rights;
+	if (cap_rightsp != NULL)
+		entry->fs_cap_rights = *cap_rightsp;
+	else
+		cap_rights_init(&entry->fs_cap_rights);
 	return (entry);
 }
 
@@ -469,21 +483,21 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 	/* root directory vnode, if one. */
 	if (filed.fd_rdir) {
 		entry = filestat_new_entry(filed.fd_rdir, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_RDIR, 0, 0, NULL, 0);
+		    PS_FST_FFLAG_READ, PS_FST_UFLAG_RDIR, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
 	/* current working directory vnode. */
 	if (filed.fd_cdir) {
 		entry = filestat_new_entry(filed.fd_cdir, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_CDIR, 0, 0, NULL, 0);
+		    PS_FST_FFLAG_READ, PS_FST_UFLAG_CDIR, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
 	/* jail root, if any. */
 	if (filed.fd_jdir) {
 		entry = filestat_new_entry(filed.fd_jdir, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_JAIL, 0, 0, NULL, 0);
+		    PS_FST_FFLAG_READ, PS_FST_UFLAG_JAIL, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
@@ -491,14 +505,14 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 	if (kp->ki_tracep) {
 		entry = filestat_new_entry(kp->ki_tracep, PS_FST_TYPE_VNODE, -1,
 		    PS_FST_FFLAG_READ | PS_FST_FFLAG_WRITE,
-		    PS_FST_UFLAG_TRACE, 0, 0, NULL, 0);
+		    PS_FST_UFLAG_TRACE, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
 	/* text vnode, if one */
 	if (kp->ki_textvp) {
 		entry = filestat_new_entry(kp->ki_textvp, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_TEXT, 0, 0, NULL, 0);
+		    PS_FST_FFLAG_READ, PS_FST_UFLAG_TEXT, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
@@ -506,7 +520,7 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 	if ((vp = getctty(kd, kp)) != NULL) {
 		entry = filestat_new_entry(vp, PS_FST_TYPE_VNODE, -1,
 		    PS_FST_FFLAG_READ | PS_FST_FFLAG_WRITE,
-		    PS_FST_UFLAG_CTTY, 0, 0, NULL, 0);
+		    PS_FST_UFLAG_CTTY, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
@@ -556,6 +570,10 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 			data = file.f_data;
 			break;
 #endif
+		case DTYPE_SEM:
+			type = PS_FST_TYPE_SEM;
+			data = file.f_data;
+			break;
 		case DTYPE_SHM:
 			type = PS_FST_TYPE_SHM;
 			data = file.f_data;
@@ -565,7 +583,7 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 		}
 		/* XXXRW: No capability rights support for kvm yet. */
 		entry = filestat_new_entry(data, type, i,
-		    to_filestat_flags(file.f_flag), 0, 0, 0, NULL, 0);
+		    to_filestat_flags(file.f_flag), 0, 0, 0, NULL, NULL);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
@@ -624,7 +642,7 @@ do_mmapped:
 			 */
 			entry = filestat_new_entry(object.handle,
 			    PS_FST_TYPE_VNODE, -1, fflags,
-			    PS_FST_UFLAG_MMAP, 0, 0, NULL, 0);
+			    PS_FST_UFLAG_MMAP, 0, 0, NULL, NULL);
 			if (entry != NULL)
 				STAILQ_INSERT_TAIL(head, entry, next);
 		}
@@ -679,7 +697,6 @@ kinfo_fflags2fst(int kfflags)
 	} kfflags2fst[] = {
 		{ KF_FLAG_APPEND, PS_FST_FFLAG_APPEND },
 		{ KF_FLAG_ASYNC, PS_FST_FFLAG_ASYNC },
-		{ KF_FLAG_CAPABILITY, PS_FST_FFLAG_CAPABILITY },
 		{ KF_FLAG_CREAT, PS_FST_FFLAG_CREAT },
 		{ KF_FLAG_DIRECT, PS_FST_FFLAG_DIRECT },
 		{ KF_FLAG_EXCL, PS_FST_FFLAG_EXCL },
@@ -751,6 +768,8 @@ kinfo_getfile_core(struct procstat_core *core, int *cntp)
 	eb = buf + len;
 	while (bp < eb) {
 		kf = (struct kinfo_file *)(uintptr_t)bp;
+		if (kf->kf_structsize == 0)
+			break;
 		bp += kf->kf_structsize;
 		cnt++;
 	}
@@ -766,6 +785,8 @@ kinfo_getfile_core(struct procstat_core *core, int *cntp)
 	/* Pass 2: unpack */
 	while (bp < eb) {
 		kf = (struct kinfo_file *)(uintptr_t)bp;
+		if (kf->kf_structsize == 0)
+			break;
 		/* Copy/expand into pre-zeroed buffer */
 		memcpy(kp, kf, kf->kf_structsize);
 		/* Advance to next packed record */
@@ -839,7 +860,7 @@ procstat_getfiles_sysctl(struct procstat *procstat, struct kinfo_proc *kp,
 		 * Create filestat entry.
 		 */
 		entry = filestat_new_entry(kif, type, fd, fflags, uflags,
-		    refcount, offset, path, cap_rights);
+		    refcount, offset, path, &cap_rights);
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
@@ -866,7 +887,7 @@ procstat_getfiles_sysctl(struct procstat *procstat, struct kinfo_proc *kp,
 				path = NULL;
 			entry = filestat_new_entry(kve, PS_FST_TYPE_VNODE, -1,
 			    fflags, PS_FST_UFLAG_MMAP, refcount, offset, path,
-			    0);
+			    NULL);
 			if (entry != NULL)
 				STAILQ_INSERT_TAIL(head, entry, next);
 		}
@@ -889,7 +910,8 @@ procstat_get_pipe_info(struct procstat *procstat, struct filestat *fst,
 		return (procstat_get_pipe_info_sysctl(fst, ps, errbuf));
 	} else {
 		warnx("unknown access method: %d", procstat->type);
-		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 		return (1);
 	}
 }
@@ -918,7 +940,8 @@ procstat_get_pipe_info_kvm(kvm_t *kd, struct filestat *fst,
 	return (0);
 
 fail:
-	snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+	if (errbuf != NULL)
+		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 	return (1);
 }
 
@@ -954,7 +977,8 @@ procstat_get_pts_info(struct procstat *procstat, struct filestat *fst,
 		return (procstat_get_pts_info_sysctl(fst, pts, errbuf));
 	} else {
 		warnx("unknown access method: %d", procstat->type);
-		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 		return (1);
 	}
 }
@@ -982,7 +1006,8 @@ procstat_get_pts_info_kvm(kvm_t *kd, struct filestat *fst,
 	return (0);
 
 fail:
-	snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+	if (errbuf != NULL)
+		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 	return (1);
 }
 
@@ -1004,6 +1029,89 @@ procstat_get_pts_info_sysctl(struct filestat *fst, struct ptsstat *pts,
 }
 
 int
+procstat_get_sem_info(struct procstat *procstat, struct filestat *fst,
+    struct semstat *sem, char *errbuf)
+{
+
+	assert(sem);
+	if (procstat->type == PROCSTAT_KVM) {
+		return (procstat_get_sem_info_kvm(procstat->kd, fst, sem,
+		    errbuf));
+	} else if (procstat->type == PROCSTAT_SYSCTL ||
+	    procstat->type == PROCSTAT_CORE) {
+		return (procstat_get_sem_info_sysctl(fst, sem, errbuf));
+	} else {
+		warnx("unknown access method: %d", procstat->type);
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+		return (1);
+	}
+}
+
+static int
+procstat_get_sem_info_kvm(kvm_t *kd, struct filestat *fst,
+    struct semstat *sem, char *errbuf)
+{
+	struct ksem ksem;
+	void *ksemp;
+	char *path;
+	int i;
+
+	assert(kd);
+	assert(sem);
+	assert(fst);
+	bzero(sem, sizeof(*sem));
+	ksemp = fst->fs_typedep;
+	if (ksemp == NULL)
+		goto fail;
+	if (!kvm_read_all(kd, (unsigned long)ksemp, &ksem,
+	    sizeof(struct ksem))) {
+		warnx("can't read ksem at %p", (void *)ksemp);
+		goto fail;
+	}
+	sem->mode = S_IFREG | ksem.ks_mode;
+	sem->value = ksem.ks_value;
+	if (fst->fs_path == NULL && ksem.ks_path != NULL) {
+		path = malloc(MAXPATHLEN);
+		for (i = 0; i < MAXPATHLEN - 1; i++) {
+			if (!kvm_read_all(kd, (unsigned long)ksem.ks_path + i,
+			    path + i, 1))
+				break;
+			if (path[i] == '\0')
+				break;
+		}
+		path[i] = '\0';
+		if (i == 0)
+			free(path);
+		else
+			fst->fs_path = path;
+	}
+	return (0);
+
+fail:
+	if (errbuf != NULL)
+		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+	return (1);
+}
+
+static int
+procstat_get_sem_info_sysctl(struct filestat *fst, struct semstat *sem,
+    char *errbuf __unused)
+{
+	struct kinfo_file *kif;
+
+	assert(sem);
+	assert(fst);
+	bzero(sem, sizeof(*sem));
+	kif = fst->fs_typedep;
+	if (kif == NULL)
+		return (0);
+	sem->value = kif->kf_un.kf_sem.kf_sem_value;
+	sem->mode = kif->kf_un.kf_sem.kf_sem_mode;
+	return (0);
+}
+
+int
 procstat_get_shm_info(struct procstat *procstat, struct filestat *fst,
     struct shmstat *shm, char *errbuf)
 {
@@ -1017,7 +1125,8 @@ procstat_get_shm_info(struct procstat *procstat, struct filestat *fst,
 		return (procstat_get_shm_info_sysctl(fst, shm, errbuf));
 	} else {
 		warnx("unknown access method: %d", procstat->type);
-		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 		return (1);
 	}
 }
@@ -1063,7 +1172,8 @@ procstat_get_shm_info_kvm(kvm_t *kd, struct filestat *fst,
 	return (0);
 
 fail:
-	snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+	if (errbuf != NULL)
+		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 	return (1);
 }
 
@@ -1098,7 +1208,8 @@ procstat_get_vnode_info(struct procstat *procstat, struct filestat *fst,
 		return (procstat_get_vnode_info_sysctl(fst, vn, errbuf));
 	} else {
 		warnx("unknown access method: %d", procstat->type);
-		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 		return (1);
 	}
 }
@@ -1118,10 +1229,6 @@ procstat_get_vnode_info_kvm(kvm_t *kd, struct filestat *fst,
 		FSTYPE(isofs),
 		FSTYPE(msdosfs),
 		FSTYPE(nfs),
-		FSTYPE(ntfs),
-#ifdef LIBPROCSTAT_NWFS
-		FSTYPE(nwfs), 
-#endif
 		FSTYPE(smbfs),
 		FSTYPE(udf), 
 		FSTYPE(ufs),
@@ -1170,7 +1277,8 @@ procstat_get_vnode_info_kvm(kvm_t *kd, struct filestat *fst,
 			break;
 		}
 	if (i == NTYPES) {
-		snprintf(errbuf, _POSIX2_LINE_MAX, "?(%s)", tagstr);
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "?(%s)", tagstr);
 		return (1);
 	}
 	vn->vn_mntdir = getmnton(kd, vnode.v_mount);
@@ -1184,7 +1292,8 @@ procstat_get_vnode_info_kvm(kvm_t *kd, struct filestat *fst,
 	return (0);
 
 fail:
-	snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+	if (errbuf != NULL)
+		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 	return (1);
 }
 
@@ -1265,7 +1374,10 @@ procstat_get_vnode_info_sysctl(struct filestat *fst, struct vnstat *vn,
 	if (vntype == PS_FST_VTYPE_VNON || vntype == PS_FST_VTYPE_VBAD)
 		return (0);
 	if ((status & KF_ATTR_VALID) == 0) {
-		snprintf(errbuf, _POSIX2_LINE_MAX, "? (no info available)");
+		if (errbuf != NULL) {
+			snprintf(errbuf, _POSIX2_LINE_MAX,
+			    "? (no info available)");
+		}
 		return (1);
 	}
 	if (path && *path) {
@@ -1306,7 +1418,8 @@ procstat_get_socket_info(struct procstat *procstat, struct filestat *fst,
 		return (procstat_get_socket_info_sysctl(fst, sock, errbuf));
 	} else {
 		warnx("unknown access method: %d", procstat->type);
-		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+		if (errbuf != NULL)
+			snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 		return (1);
 	}
 }
@@ -1404,7 +1517,8 @@ procstat_get_socket_info_kvm(kvm_t *kd, struct filestat *fst,
 	return (0);
 
 fail:
-	snprintf(errbuf, _POSIX2_LINE_MAX, "error");
+	if (errbuf != NULL)
+		snprintf(errbuf, _POSIX2_LINE_MAX, "error");
 	return (1);
 }
 
@@ -1647,7 +1761,7 @@ getargv(struct procstat *procstat, struct kinfo_proc *kp, size_t nchr, int env)
 		name[2] = env ? KERN_PROC_ENV : KERN_PROC_ARGS;
 		name[3] = kp->ki_pid;
 		len = nchr;
-		error = sysctl(name, 4, av->buf, &len, NULL, 0);
+		error = sysctl(name, nitems(name), av->buf, &len, NULL, 0);
 		if (error != 0 && errno != ESRCH && errno != EPERM)
 			warn("sysctl(kern.proc.%s)", env ? "env" : "args");
 		if (error != 0 || len == 0)
@@ -1754,6 +1868,8 @@ kinfo_getvmmap_core(struct procstat_core *core, int *cntp)
 	eb = buf + len;
 	while (bp < eb) {
 		kv = (struct kinfo_vmentry *)(uintptr_t)bp;
+		if (kv->kve_structsize == 0)
+			break;
 		bp += kv->kve_structsize;
 		cnt++;
 	}
@@ -1769,6 +1885,8 @@ kinfo_getvmmap_core(struct procstat_core *core, int *cntp)
 	/* Pass 2: unpack */
 	while (bp < eb) {
 		kv = (struct kinfo_vmentry *)(uintptr_t)bp;
+		if (kv->kve_structsize == 0)
+			break;
 		/* Copy/expand into pre-zeroed buffer */
 		memcpy(kp, kv, kv->kve_structsize);
 		/* Advance to next packed record */
@@ -1866,7 +1984,7 @@ procstat_getgroups_sysctl(pid_t pid, unsigned int *cntp)
 		warn("malloc(%zu)", len);
 		return (NULL);
 	}
-	if (sysctl(mib, 4, groups, &len, NULL, 0) == -1) {
+	if (sysctl(mib, nitems(mib), groups, &len, NULL, 0) == -1) {
 		warn("sysctl: kern.proc.groups: %d", pid);
 		free(groups);
 		return (NULL);
@@ -1942,8 +2060,8 @@ procstat_getumask_sysctl(pid_t pid, unsigned short *maskp)
 	mib[2] = KERN_PROC_UMASK;
 	mib[3] = pid;
 	len = sizeof(*maskp);
-	error = sysctl(mib, 4, maskp, &len, NULL, 0);
-	if (error != 0 && errno != ESRCH)
+	error = sysctl(mib, nitems(mib), maskp, &len, NULL, 0);
+	if (error != 0 && errno != ESRCH && errno != EPERM)
 		warn("sysctl: kern.proc.umask: %d", pid);
 	return (error);
 }
@@ -2022,7 +2140,7 @@ procstat_getrlimit_sysctl(pid_t pid, int which, struct rlimit* rlimit)
 	name[3] = pid;
 	name[4] = which;
 	len = sizeof(struct rlimit);
-	error = sysctl(name, 5, rlimit, &len, NULL, 0);
+	error = sysctl(name, nitems(name), rlimit, &len, NULL, 0);
 	if (error < 0 && errno != ESRCH) {
 		warn("sysctl: kern.proc.rlimit: %d", pid);
 		return (-1);
@@ -2084,7 +2202,7 @@ procstat_getpathname_sysctl(pid_t pid, char *pathname, size_t maxlen)
 	name[2] = KERN_PROC_PATHNAME;
 	name[3] = pid;
 	len = maxlen;
-	error = sysctl(name, 4, pathname, &len, NULL, 0);
+	error = sysctl(name, nitems(name), pathname, &len, NULL, 0);
 	if (error != 0 && errno != ESRCH)
 		warn("sysctl: kern.proc.pathname: %d", pid);
 	if (len == 0)
@@ -2164,7 +2282,7 @@ procstat_getosrel_sysctl(pid_t pid, int *osrelp)
 	name[2] = KERN_PROC_OSREL;
 	name[3] = pid;
 	len = sizeof(*osrelp);
-	error = sysctl(name, 4, osrelp, &len, NULL, 0);
+	error = sysctl(name, nitems(name), osrelp, &len, NULL, 0);
 	if (error != 0 && errno != ESRCH)
 		warn("sysctl: kern.proc.osrel: %d", pid);
 	return (error);
@@ -2224,7 +2342,7 @@ is_elf32_sysctl(pid_t pid)
 	name[2] = KERN_PROC_SV_NAME;
 	name[3] = pid;
 	len = sizeof(sv_name);
-	error = sysctl(name, 4, sv_name, &len, NULL, 0);
+	error = sysctl(name, nitems(name), sv_name, &len, NULL, 0);
 	if (error != 0 || len == 0)
 		return (0);
 	for (i = 0; i < sizeof(elf32_sv_names) / sizeof(*elf32_sv_names); i++) {
@@ -2255,7 +2373,7 @@ procstat_getauxv32_sysctl(pid_t pid, unsigned int *cntp)
 		warn("malloc(%zu)", len);
 		goto out;
 	}
-	if (sysctl(name, 4, auxv32, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), auxv32, &len, NULL, 0) == -1) {
 		if (errno != ESRCH && errno != EPERM)
 			warn("sysctl: kern.proc.auxv: %d: %d", pid, errno);
 		goto out;
@@ -2304,7 +2422,7 @@ procstat_getauxv_sysctl(pid_t pid, unsigned int *cntp)
 		warn("malloc(%zu)", len);
 		return (NULL);
 	}
-	if (sysctl(name, 4, auxv, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), auxv, &len, NULL, 0) == -1) {
 		if (errno != ESRCH && errno != EPERM)
 			warn("sysctl: kern.proc.auxv: %d: %d", pid, errno);
 		free(auxv);
@@ -2365,7 +2483,7 @@ procstat_getkstack_sysctl(pid_t pid, int *cntp)
 	name[3] = pid;
 
 	len = 0;
-	error = sysctl(name, 4, NULL, &len, NULL, 0);
+	error = sysctl(name, nitems(name), NULL, &len, NULL, 0);
 	if (error < 0 && errno != ESRCH && errno != EPERM && errno != ENOENT) {
 		warn("sysctl: kern.proc.kstack: %d", pid);
 		return (NULL);
@@ -2382,7 +2500,7 @@ procstat_getkstack_sysctl(pid_t pid, int *cntp)
 		warn("malloc(%zu)", len);
 		return (NULL);
 	}
-	if (sysctl(name, 4, kkstp, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), kkstp, &len, NULL, 0) == -1) {
 		warn("sysctl: kern.proc.pid: %d", pid);
 		free(kkstp);
 		return (NULL);

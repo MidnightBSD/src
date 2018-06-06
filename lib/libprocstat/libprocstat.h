@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libprocstat/libprocstat.h 255219 2013-09-05 00:09:56Z pjd $
  */
 
 #ifndef _LIBPROCSTAT_H_
@@ -36,6 +37,7 @@
 #ifndef ZFS
 #include <sys/elf.h>
 #endif
+#include <sys/caprights.h>
 
 /*
  * Vnode types.
@@ -96,7 +98,6 @@
 #define	PS_FST_FFLAG_DIRECT	0x1000
 #define	PS_FST_FFLAG_EXEC	0x2000
 #define	PS_FST_FFLAG_HASLOCK	0x4000
-#define	PS_FST_FFLAG_CAPABILITY	0x8000
 
 struct kinfo_kstack;
 struct kinfo_vmentry;
@@ -133,6 +134,10 @@ struct pipestat {
 	size_t		buffer_cnt;
 	uint64_t	addr;
 	uint64_t	peer;
+};
+struct semstat {
+	uint32_t	value;
+	uint16_t	mode;
 };
 struct shmstat {
 	uint64_t	size;
@@ -178,6 +183,8 @@ int	procstat_get_pipe_info(struct procstat *procstat, struct filestat *fst,
     struct pipestat *pipe, char *errbuf);
 int	procstat_get_pts_info(struct procstat *procstat, struct filestat *fst,
     struct ptsstat *pts, char *errbuf);
+int	procstat_get_sem_info(struct procstat *procstat, struct filestat *fst,
+    struct semstat *sem, char *errbuf);
 int	procstat_get_shm_info(struct procstat *procstat, struct filestat *fst,
     struct shmstat *shm, char *errbuf);
 int	procstat_get_socket_info(struct procstat *procstat, struct filestat *fst,

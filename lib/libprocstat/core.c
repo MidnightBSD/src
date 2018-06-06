@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Mikolaj Golub <trociny@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libprocstat/core.c 249731 2013-04-21 17:10:10Z trociny $");
 
 #include <sys/param.h>
 #include <sys/elf.h>
