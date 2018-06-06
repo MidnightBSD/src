@@ -45517,6 +45517,7 @@ gnu/usr.bin/diff/libdiffutils/warn-on-use.h -text
 gnu/usr.bin/diff/libver/Makefile -text
 gnu/usr.bin/diff/libver/version.c -text
 gnu/usr.bin/diff/libver/version.h -text
+gnu/usr.bin/dtc/Makefile svneol=native#text/plain
 gnu/usr.bin/gdb/Makefile -text
 gnu/usr.bin/gdb/Makefile.inc -text
 gnu/usr.bin/gdb/arch/amd64/Makefile -text
