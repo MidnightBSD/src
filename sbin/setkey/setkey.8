@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$KAME: setkey.8,v 1.89 2003/09/07 22:17:41 itojun Exp $
 .\"
 .\" Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
@@ -27,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/setkey/setkey.8 316205 2017-03-30 02:32:38Z sevan $
 .\"
-.Dd May 13, 2006
+.Dd October 3, 2016
 .Dt SETKEY 8
 .Os
 .\"
@@ -130,7 +131,7 @@ are treated as comment lines.
 .Ar src Ar dst Ar protocol Ar spi
 .Op Ar extensions
 .Ar algorithm ...
-.Li ;
+.Li \&;
 .Xc
 Add an SAD entry.
 .Li add
@@ -141,7 +142,7 @@ including when the key length does not match the specified algorithm.
 .Li get
 .Op Fl 46n
 .Ar src Ar dst Ar protocol Ar spi
-.Li ;
+.Li \&;
 .Xc
 Show an SAD entry.
 .\"
@@ -149,7 +150,7 @@ Show an SAD entry.
 .Li delete
 .Op Fl 46n
 .Ar src Ar dst Ar protocol Ar spi
-.Li ;
+.Li \&;
 .Xc
 Remove an SAD entry.
 .\"
@@ -157,14 +158,14 @@ Remove an SAD entry.
 .Li deleteall
 .Op Fl 46n
 .Ar src Ar dst Ar protocol
-.Li ;
+.Li \&;
 .Xc
 Remove all SAD entries that match the specification.
 .\"
 .It Xo
 .Li flush
 .Op Ar protocol
-.Li ;
+.Li \&;
 .Xc
 Clear all SAD entries matched by the options.
 .Fl F
@@ -173,7 +174,7 @@ on the command line achieves the same functionality.
 .It Xo
 .Li dump
 .Op Ar protocol
-.Li ;
+.Li \&;
 .Xc
 Dumps all SAD entries matched by the options.
 .Fl D
@@ -183,7 +184,7 @@ on the command line achieves the same functionality.
 .Li spdadd
 .Op Fl 46n
 .Ar src_range Ar dst_range Ar upperspec Ar policy
-.Li ;
+.Li \&;
 .Xc
 Add an SPD entry.
 .\"
@@ -191,13 +192,13 @@ Add an SPD entry.
 .Li spddelete
 .Op Fl 46n
 .Ar src_range Ar dst_range Ar upperspec Fl P Ar direction
-.Li ;
+.Li \&;
 .Xc
 Delete an SPD entry.
 .\"
 .It Xo
 .Li spdflush
-.Li ;
+.Li \&;
 .Xc
 Clear all SPD entries.
 .Fl FP
@@ -205,7 +206,7 @@ on the command line achieves the same functionality.
 .\"
 .It Xo
 .Li spddump
-.Li ;
+.Li \&;
 .Xc
 Dumps all SPD entries.
 .Fl DP
@@ -442,7 +443,7 @@ protocols other than TCP, UDP and ICMP may not be suitable to use with IPsec.
 .Ar policy
 is expressed in one of the following three formats:
 .Pp
-.Bl -tag -compact
+.Bl -tag -width 2n -compact
 .It Fl P Ar direction Li discard
 .It Fl P Ar direction Li none
 .It Xo Fl P Ar direction Li ipsec
@@ -514,7 +515,7 @@ the SA from the key exchange daemon.
 A value of
 .Li default
 tells the kernel to use the system wide default protocol
-e.g.\& the one from the
+e.g.,\& the one from the
 .Li esp_trans_deflev
 sysctl variable, when the kernel processes the packet.
 A value of
@@ -553,7 +554,9 @@ For
 example, if an IP header was followed by an AH header followed by an
 ESP header followed by an upper layer protocol header, the rule would
 be:
+.Pp
 .Dl esp/transport//require ah/transport//require ;
+.Pp
 The rule order is very important.
 .Pp
 Note that
@@ -567,7 +570,6 @@ See
 .Xr ipsec_set_policy 3
 for details.
 .El
-.Pp
 .\"
 .Sh ALGORITHMS
 The following list shows the supported algorithms.
@@ -626,7 +628,7 @@ des-deriv	64		ipsec-ciph-des-derived-01
 3des-deriv	192		no document
 rijndael-cbc	128/192/256	rfc3602
 aes-ctr		160/224/288	draft-ietf-ipsec-ciph-aes-ctr-03
-camllia-cbc	128/192/256	rfc4312
+camellia-cbc	128/192/256	rfc4312
 .Ed
 .Pp
 Note that the first 128/192/256 bits of a key for
@@ -652,50 +654,49 @@ deflate		rfc2394
 .Sh EXAMPLES
 Add an ESP SA between two IPv6 addresses using the
 des-cbc encryption algorithm.
-.Bd -literal -offset
+.Bd -literal -offset indent
 add 3ffe:501:4819::1 3ffe:501:481d::1 esp 123457
 	-E des-cbc 0x3ffe05014819ffff ;
-
+.Pp
 .Ed
 .\"
 Add an authentication SA between two FQDN specified hosts:
-.Bd -literal -offset
+.Bd -literal -offset indent
 add -6 myhost.example.com yourhost.example.com ah 123456
 	-A hmac-sha1 "AH SA configuration!" ;
-
+.Pp
 .Ed
 Use both ESP and AH between two numerically specified hosts:
-.Bd -literal -offset
+.Bd -literal -offset indent
 add 10.0.11.41 10.0.11.33 esp 0x10001
 	-E des-cbc 0x3ffe05014819ffff
 	-A hmac-md5 "authentication!!" ;
-
+.Pp
 .Ed
 Get the SA information associated with first example above:
-.Bd -literal -offset
+.Bd -literal -offset indent
 get 3ffe:501:4819::1 3ffe:501:481d::1 ah 123456 ;
-
+.Pp
 .Ed
 Flush all entries from the database:
-.Bd -literal -offset
+.Bd -literal -offset indent
 flush ;
-
+.Pp
 .Ed
 Dump the ESP entries from the database:
-.Bd -literal -offset
+.Bd -literal -offset indent
 dump esp ;
-
+.Pp
 .Ed
 Add a security policy between two networks that uses ESP in tunnel mode:
-.Bd -literal -offset
+.Bd -literal -offset indent
 spdadd 10.0.11.41/32[21] 10.0.11.33/32[any] any
 	-P out ipsec esp/tunnel/192.168.0.1-192.168.1.2/require ;
-
+.Pp
 .Ed
 Use TCP MD5 between two numerically specified hosts:
-.Bd -literal -offset
+.Bd -literal -offset indent
 add 10.1.10.34 10.1.10.36 tcp 0x1000 -A tcp-md5 "TCP-MD5 BGP secret" ;
-
 .Ed
 .\"
 .Sh SEE ALSO
@@ -713,6 +714,8 @@ The
 .Nm
 utility first appeared in WIDE Hydrangea IPv6 protocol stack kit.
 The utility was completely re-designed in June 1998.
+It first appeared in
+.Fx 4.0 .
 .\"
 .Sh BUGS
 The
