@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -67,7 +68,7 @@ __MBSDID("$MidnightBSD$");
 #define	M		*60
 #define	S		*1
 #define	NOLOG_TIME	5*60
-struct interval {
+static struct interval {
 	int timeleft, timetowait;
 } tlist[] = {
 	{ 10 H,  5 H },
@@ -93,7 +94,7 @@ static char mbuf[BUFSIZ];
 static const char *nosync, *whom;
 
 static void badtime(void);
-static void perform_shutdown(void);
+static void die_you_gravy_sucking_pig_dog(void);
 static void finish(int);
 static void getoffset(char *);
 static void loop(void);
@@ -123,7 +124,7 @@ main(int argc, char **argv)
 	 * Test for the special case where the utility is called as
 	 * "poweroff", for which it runs 'shutdown -p now'.
 	 */
-	if ((p = rindex(argv[0], '/')) == NULL)
+	if ((p = strrchr(argv[0], '/')) == NULL)
 		p = argv[0];
 	else
 		++p;
@@ -282,7 +283,7 @@ loop(void)
 		if (!tp->timeleft)
 			break;
 	}
-	perform_shutdown();
+	die_you_gravy_sucking_pig_dog();
 }
 
 static jmp_buf alarmbuf;
@@ -349,14 +350,13 @@ timeout(int signo __unused)
 }
 
 static void
-perform_shutdown(void)
+die_you_gravy_sucking_pig_dog(void)
 {
 	char *empty_environ[] = { NULL };
 
 	syslog(LOG_NOTICE, "%s by %s: %s",
 	    doreboot ? "reboot" : dohalt ? "halt" : dopower ? "power-down" : 
 	    "shutdown", whom, mbuf);
-	(void)sleep(2);
 
 	(void)printf("\r\nSystem shutdown time has arrived\007\007\r\n");
 	if (killflg) {
