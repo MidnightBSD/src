@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/routed/main.c 272872 2014-10-09 23:49:36Z hrs $
  */
 
 #include "defs.h"
@@ -44,7 +44,7 @@ __COPYRIGHT("@(#) Copyright (c) 1983, 1988, 1993 "
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #include <util.h>
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightSD__)
 __RCSID("$MidnightBSD$");
 #else
 __RCSID("$Revision: 2.31 $");
@@ -68,6 +68,7 @@ int	ridhosts;			/* 1=reduce host routes */
 int	mhome;				/* 1=want multi-homed host route */
 int	advertise_mhome;		/* 1=must continue advertising it */
 int	auth_ok = 1;			/* 1=ignore auth if we do not care */
+int	insecure;			/* Reply to special queries or not */
 
 struct timeval epoch;			/* when started */
 struct timeval clk;
@@ -136,8 +137,11 @@ main(int argc,
 	(void)gethostname(myname, sizeof(myname)-1);
 	(void)gethost(myname, &myaddr);
 
-	while ((n = getopt(argc, argv, "sqdghmAtvT:F:P:")) != -1) {
+	while ((n = getopt(argc, argv, "isqdghmAtvT:F:P:")) != -1) {
 		switch (n) {
+		case 'i':
+			insecure++;
+			break;
 		case 's':
 			supplier = 1;
 			supplier_set = 1;
@@ -414,7 +418,7 @@ usage:
 			continue;
 		}
 
-		/* Check the kernel table occassionally for mysteriously
+		/* Check the kernel table occasionally for mysteriously
 		 * evaporated routes
 		 */
 		timevalsub(&t2, &flush_kern_timer, &now);
@@ -446,7 +450,7 @@ usage:
 				 * the previous update was finished.
 				 * Even if we just started after discovering
 				 * a 2nd interface or were otherwise delayed,
-				 * pick a 30-second aniversary of the
+				 * pick a 30-second anniversary of the
 				 * original broadcast time.
 				 */
 				n = 1 + (0-t2.tv_sec)/SUPPLY_INTERVAL;
