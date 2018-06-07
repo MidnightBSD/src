@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Initial implementation:
  * Copyright (c) 2002 Robert Drehmel
@@ -7,7 +8,7 @@
  * unchanged, you can do what ever you want with this file. 
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/remque.c 108644 2003-01-04 07:34:41Z tjr $");
 
 #define	_SEARCH_PRIVATE
 #include <search.h>
