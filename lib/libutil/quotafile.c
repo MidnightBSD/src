@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Dag-Erling Coïdan Smørgrav
  * Copyright (c) 2008 Marshall Kirk McKusick
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libutil/quotafile.c 300272 2016-05-20 06:35:14Z truckman $
  */
 
 #include <sys/types.h>
@@ -84,7 +85,7 @@ hasquota(struct fstab *fs, int type, char *qfnamep, int qfbufsize)
 	}
 	strcpy(buf, fs->fs_mntops);
 	for (opt = strtok(buf, ","); opt; opt = strtok(NULL, ",")) {
-		if ((cp = index(opt, '=')))
+		if ((cp = strchr(opt, '=')))
 			*cp++ = '\0';
 		if (type == USRQUOTA && strcmp(opt, usrname) == 0)
 			break;
@@ -124,7 +125,7 @@ quota_open(struct fstab *fs, int quotatype, int openflags)
 		return (NULL);
 	qf->fd = -1;
 	qf->quotatype = quotatype;
-	strncpy(qf->fsname, fs->fs_file, sizeof(qf->fsname));
+	strlcpy(qf->fsname, fs->fs_file, sizeof(qf->fsname));
 	if (stat(qf->fsname, &st) != 0)
 		goto error;
 	qf->dev = st.st_dev;
@@ -137,7 +138,7 @@ quota_open(struct fstab *fs, int quotatype, int openflags)
 		goto error;
 	}
 	qf->accmode = openflags & O_ACCMODE;
-	if ((qf->fd = open(qf->qfname, qf->accmode)) < 0 &&
+	if ((qf->fd = open(qf->qfname, qf->accmode|O_CLOEXEC)) < 0 &&
 	    (openflags & O_CREAT) != O_CREAT)
 		goto error;
 	/* File open worked, so process it */
@@ -168,7 +169,8 @@ quota_open(struct fstab *fs, int quotatype, int openflags)
 		/* not reached */
 	}
 	/* open failed, but O_CREAT was specified, so create a new file */
-	if ((qf->fd = open(qf->qfname, O_RDWR|O_CREAT|O_TRUNC, 0)) < 0)
+	if ((qf->fd = open(qf->qfname, O_RDWR|O_CREAT|O_TRUNC|O_CLOEXEC, 0)) <
+	    0)
 		goto error;
 	qf->wordsize = 64;
 	memset(&dqh, 0, sizeof(dqh));
@@ -534,7 +536,8 @@ quota_convert(struct quotafile *qf, int wordsize)
 		free(newqf);
 		return (-1);
 	}
-	if ((newqf->fd = open(qf->qfname, O_RDWR|O_CREAT|O_TRUNC, 0)) < 0) {
+	if ((newqf->fd = open(qf->qfname, O_RDWR|O_CREAT|O_TRUNC|O_CLOEXEC,
+	    0)) < 0) {
 		serrno = errno;
 		goto error;
 	}
