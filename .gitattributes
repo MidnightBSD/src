@@ -47960,6 +47960,7 @@ lib/libc/string/strcat.3 -text
 lib/libc/string/strcat.c -text
 lib/libc/string/strchr.3 -text
 lib/libc/string/strchr.c -text
+lib/libc/string/strchrnul.c svneol=native#text/plain
 lib/libc/string/strcmp.3 -text
 lib/libc/string/strcmp.c -text
 lib/libc/string/strcoll.3 -text
