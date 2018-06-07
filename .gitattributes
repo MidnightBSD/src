@@ -49613,6 +49613,13 @@ lib/libutil/realhostname.3 -text
 lib/libutil/realhostname.c -text
 lib/libutil/realhostname_sa.3 -text
 lib/libutil/stub.c -text
+lib/libutil/tests/Makefile svneol=native#text/plain
+lib/libutil/tests/flopen_test.c svneol=native#text/plain
+lib/libutil/tests/grp_test.c svneol=native#text/plain
+lib/libutil/tests/humanize_number_test.c svneol=native#text/plain
+lib/libutil/tests/pidfile_test.c svneol=native#text/plain
+lib/libutil/tests/trimdomain-nodomain_test.c svneol=native#text/plain
+lib/libutil/tests/trimdomain_test.c svneol=native#text/plain
 lib/libutil/trimdomain.3 -text
 lib/libutil/trimdomain.c -text
 lib/libutil/uucplock.3 -text
