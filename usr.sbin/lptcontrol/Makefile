@@ -1,8 +1,7 @@
-# $FreeBSD: src/usr.sbin/lptcontrol/Makefile,v 1.7 2004/10/01 20:04:20 schweikh Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/lptcontrol/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	lptcontrol
 MAN=	lptcontrol.8
-
-WARNS?=	6
 
 .include <bsd.prog.mk>
