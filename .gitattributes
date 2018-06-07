@@ -48237,6 +48237,8 @@ lib/libc/sys/utrace.2 -text
 lib/libc/sys/uuidgen.2 -text
 lib/libc/sys/vfork.2 -text
 lib/libc/sys/wait.2 -text
+lib/libc/sys/wait4.c svneol=native#text/plain
+lib/libc/sys/wait6.c svneol=native#text/plain
 lib/libc/sys/write.2 -text
 lib/libc/sys/write.c svneol=native#text/plain
 lib/libc/sys/writev.c svneol=native#text/plain
