@@ -1,5 +1,5 @@
+.\" $MidnightBSD$
 .\"
-.\" Copyright (c) 2011 Lucas Holt
 .\" Copyright (c) 1998 Jordan Hubbard
 .\"
 .\" All rights reserved.
@@ -24,22 +24,19 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libutil/property.3,v 1.18 2005/01/20 09:17:07 ru Exp $
-.\" $MidnightBSD: src/lib/libutil/property.3,v 1.3 2011/03/19 19:30:28 laffer1 Exp $
-.\"
-.Dd March 15, 2011
-.Os
+.\" $FreeBSD: stable/10/lib/libutil/property.3 236965 2012-06-12 17:02:53Z des $
+.\" "
+.Dd October 7, 1998
 .Dt PROPERTIES 3
+.Os
 .Sh NAME
 .Nm properties_read ,
 .Nm property_find ,
-.Nm properties_free ,
-.Nm property_count
+.Nm properties_free
 .Nd "functions to allow creating simple property lists from ASCII file data"
 .Sh LIBRARY
 .Lb libutil
 .Sh SYNOPSIS
-.In sys/types.h
 .In libutil.h
 .Ft properties
 .Fn properties_read "int fd"
@@ -47,8 +44,6 @@
 .Fn property_find "properties list" "const char *name"
 .Ft void
 .Fn properties_free "properties list"
-.Ft int
-.Fn properties_count "properties list"
 .Sh DESCRIPTION
 .Bd -literal
 typedef struct _properties {
@@ -90,21 +85,12 @@ where
 is an alphanumeric string (and any punctuation not including the `=' character)
 and
 .Fa value
-is an arbitary string of text terminated by a newline character.
+is an arbitrary string of text terminated by a newline character.
 If newlines
 are desired, the entire value should be enclosed in { } (curly-bracket)
 characters.
 Any line beginning with a # or ; character is assumed to
 be a comment and will be ignored.
-.Pp
-The
-.Fn property_count
-function is used to determine the number of properties present in the
-list.
-The return value will be zero if the list is NULL or the number of
-items in the list.
-.Sh SEE ALSO
-.Xr auth_getval 3
 .Sh AUTHORS
 .An Jordan Hubbard
 .Sh BUGS

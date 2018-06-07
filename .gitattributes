@@ -49582,6 +49582,7 @@ lib/libutil/kinfo_getproc.3 -text
 lib/libutil/kinfo_getproc.c -text
 lib/libutil/kinfo_getvmmap.3 -text
 lib/libutil/kinfo_getvmmap.c -text
+lib/libutil/kinfo_getvmobject.3 svneol=native#text/plain
 lib/libutil/kld.3 -text
 lib/libutil/kld.c -text
 lib/libutil/libutil.h -text
@@ -49606,6 +49607,7 @@ lib/libutil/property.3 -text
 lib/libutil/property.c -text
 lib/libutil/pty.3 -text
 lib/libutil/pty.c -text
+lib/libutil/pw_util.3 svneol=native#text/plain
 lib/libutil/pw_util.c -text
 lib/libutil/quotafile.3 -text
 lib/libutil/quotafile.c -text

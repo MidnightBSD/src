@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1999 Brian Somers <brian@Awfulhak.org>
 .\" All rights reserved.
 .\"
@@ -23,6 +24,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libutil/realhostname.3 230234 2012-01-16 21:25:41Z ghelmer $
 .\"
 .Dd April 6, 1999
 .Dt REALHOSTNAME 3
@@ -33,8 +35,6 @@
 .Sh LIBRARY
 .Lb libutil
 .Sh SYNOPSIS
-.In sys/types.h
-.In netinet/in.h
 .In libutil.h
 .Ft int
 .Fn realhostname "char *host" "size_t hsize" "const struct in_addr *ip"

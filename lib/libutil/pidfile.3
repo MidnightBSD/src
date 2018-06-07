@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libutil/pidfile.3 231193 2012-02-08 08:49:30Z pjd $
 .\"
-.Dd October 20, 2008
+.Dd February 8, 2012
 .Dt PIDFILE 3
 .Os
 .Sh NAME
@@ -36,7 +37,6 @@
 .Sh LIBRARY
 .Lb libutil
 .Sh SYNOPSIS
-.In sys/param.h
 .In libutil.h
 .Ft "struct pidfh *"
 .Fn pidfile_open "const char *path" "mode_t mode" "pid_t *pidptr"
@@ -61,11 +61,14 @@ The
 function opens (or creates) a file specified by the
 .Fa path
 argument and locks it.
-If a file can not be locked, a PID of an already running daemon is returned in
-the
+If
 .Fa pidptr
-argument (if it is not
-.Dv NULL ) .
+argument is not
+.Dv NULL
+and file can not be locked, the function will use it to store a PID of an
+already running daemon or
+.Li -1
+in case daemon did not write its PID yet.
 The function does not write process' PID into the file here, so it can be
 used before
 .Fn fork Ns ing
@@ -76,10 +79,16 @@ argument is
 .Dv NULL ,
 .Pa /var/run/ Ns Ao Va progname Ac Ns Pa .pid
 file will be used.
+The
+.Fn pidfile_open
+function sets the O_CLOEXEC close-on-exec flag when opening the pidfile.
 .Pp
 The
 .Fn pidfile_write
 function writes process' PID into a previously opened file.
+The file is truncated before write, so calling the
+.Fn pidfile_write
+function multiple times is supported.
 .Pp
 The
 .Fn pidfile_close
@@ -142,6 +151,11 @@ if (pfh == NULL) {
 	}
 	/* If we cannot create pidfile from other reasons, only warn. */
 	warn("Cannot open or create pidfile");
+	/*
+	 * Eventhough pfh is NULL we can continue, as the other pidfile_*
+	 * function can handle such situation by doing nothing except setting
+	 * errno to EDOOFUS.
+	 */
 }
 
 if (daemon(0, 0) == -1) {
@@ -180,16 +194,18 @@ function will fail if:
 .It Bq Er EEXIST
 Some process already holds the lock on the given pidfile, meaning that a
 daemon is already running.
+If
+.Fa pidptr
+argument is not
+.Dv NULL
+the function will use it to store a PID of an already running daemon or
+.Li -1
+in case daemon did not write its PID yet.
 .It Bq Er ENAMETOOLONG
 Specified pidfile's name is too long.
 .It Bq Er EINVAL
 Some process already holds the lock on the given pidfile, but PID read
 from there is invalid.
-.It Bq Er EAGAIN
-Some process already holds the lock on the given pidfile, but the file
-is truncated.
-Most likely, the existing daemon is writing new PID into
-the file.
 .El
 .Pp
 The
