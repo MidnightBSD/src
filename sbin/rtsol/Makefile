@@ -13,6 +13,7 @@
 # A PARTICULAR PURPOSE.
 #
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/rtsol/Makefile 290149 2015-10-29 16:53:34Z delphij $
 
 SRCDIR=	${.CURDIR}/../../usr.sbin/rtsold
 
@@ -20,9 +21,9 @@ SRCDIR=	${.CURDIR}/../../usr.sbin/rtsold
 
 PROG=	rtsol
 SRCS=	rtsold.c rtsol.c if.c probe.c dump.c rtsock.c
-NO_MAN=
+MAN=
 
 WARNS?=	3
-CFLAGS+= -DHAVE_ARC4RANDOM -DHAVE_POLL_H -DSMALL
+CFLAGS+= -DHAVE_POLL_H -DSMALL
 
 .include <bsd.prog.mk>
