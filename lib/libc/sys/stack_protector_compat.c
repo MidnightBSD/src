@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*
  * Written by Alexander Kabaev <kan@FreeBSD.org>
  * The file is in public domain.
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/stack_protector_compat.c 211748 2010-08-24 12:58:54Z kib $");
 
 void __stack_chk_fail(void);
 

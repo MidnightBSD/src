@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Konstantin Belousov <kib@FreeBSD.org>
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/clock_gettime.c 237434 2012-06-22 07:13:30Z kib $");
 
 #include <sys/syscall.h>
 #include <sys/time.h>

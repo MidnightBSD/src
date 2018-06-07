@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mlock.2	8.2 (Berkeley) 12/11/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/mlock.2 266952 2014-06-01 18:41:33Z bjk $
 .\"
-.Dd December 25, 2012
+.Dd May 17, 2014
 .Dt MLOCK 2
 .Os
 .Sh NAME
@@ -91,14 +92,21 @@ Locked mappings are not inherited by the child process after a
 .Pp
 Since physical memory is a potentially scarce resource, processes are
 limited in how much they can lock down.
-A single process can
+The amount of memory that a single process can
 .Fn mlock
-the minimum of
-a system-wide ``wired pages'' limit
+is limited by both the per-process
+.Dv RLIMIT_MEMLOCK
+resource limit and the
+system-wide
+.Dq wired pages
+limit
+.Va vm.max_wired .
 .Va vm.max_wired
-and the per-process
-.Li RLIMIT_MEMLOCK
-resource limit.
+applies to the system as a whole, so the amount available to a single
+process at any given time is the difference between
+.Va vm.max_wired
+and
+.Va vm.stats.vm.v_wire_count .
 .Pp
 If
 .Va security.bsd.unprivileged_mlock
@@ -138,7 +146,12 @@ is set to 0 and the caller is not the super-user.
 .It Bq Er EINVAL
 The address given is not page aligned or the length is negative.
 .It Bq Er ENOMEM
-Some portion of the indicated address range is not allocated.
+Some or all of the address range specified by the addr and len
+arguments does not correspond to valid mapped pages in the address space
+of the process.
+.It Bq Er ENOMEM
+Locking the pages mapped by the specified range would exceed a limit on
+the amount of memory that the process may lock.
 .El
 .Sh "SEE ALSO"
 .Xr fork 2 ,

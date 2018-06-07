@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 davidxu@freebsd.org
  *
@@ -24,17 +25,25 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/sigwait.c 277317 2015-01-18 11:54:20Z kib $");
 
 #include <errno.h>
 #include <signal.h>
+#include "libc_private.h"
 
-int __sys_sigwait(const sigset_t * restrict, int * restrict);
+__weak_reference(__libc_sigwait, __sigwait);
 
-__weak_reference(__sigwait, sigwait);
+#pragma weak sigwait
+int
+sigwait(const sigset_t *set, int *sig)
+{
+
+	return (((int (*)(const sigset_t *, int *))
+	    __libc_interposing[INTERPOS_sigwait])(set, sig));
+}
 
 int
-__sigwait(const sigset_t * restrict set, int * restrict sig)
+__libc_sigwait(const sigset_t *set, int *sig)
 {
 	int ret;
 

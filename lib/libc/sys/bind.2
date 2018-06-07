@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)bind.2	8.1 (Berkeley) 6/4/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/bind.2 268223 2014-07-03 17:35:01Z pluknet $
 .\"
-.Dd June 4, 1993
+.Dd June 26, 2014
 .Dt BIND 2
 .Os
 .Sh NAME
@@ -85,6 +86,10 @@ is not a valid descriptor.
 .It Bq Er EINVAL
 The socket is already bound to an address, and the protocol does not support
 binding to a new address; or the socket has been shut down.
+.It Bq Er EINVAL
+The
+.Fa addrlen
+argument is not a valid length for the address family.
 .It Bq Er ENOTSOCK
 The
 .Fa s
@@ -94,6 +99,8 @@ is not a socket.
 The specified address is not available from the local machine.
 .It Bq Er EADDRINUSE
 The specified address is already in use.
+.It Bq Er EAFNOSUPPORT
+Addresses in the specified address family cannot be used with this socket.
 .It Bq Er EACCES
 The requested address is protected, and the current user
 has inadequate permission to access it.

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getsockopt.2	8.4 (Berkeley) 5/2/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/getsockopt.2 249166 2013-04-05 18:09:43Z gnn $
 .\"
-.Dd February 26, 2012
+.Dd April 5, 2013
 .Dt GETSOCKOPT 2
 .Os
 .Sh NAME
@@ -437,7 +438,7 @@ The
 .Vt cmsghdr
 fields have the following values for TIMESTAMP:
 .Bd -literal
-     cmsg_len = sizeof(struct timeval);
+     cmsg_len = CMSG_LEN(sizeof(struct timeval));
      cmsg_level = SOL_SOCKET;
      cmsg_type = SCM_TIMESTAMP;
 .Ed
@@ -445,7 +446,7 @@ fields have the following values for TIMESTAMP:
 and for
 .Dv SO_BINTIME :
 .Bd -literal
-     cmsg_len = sizeof(struct bintime);
+     cmsg_len = CMSG_LEN(sizeof(struct bintime));
      cmsg_level = SOL_SOCKET;
      cmsg_type = SCM_BINTIME;
 .Ed

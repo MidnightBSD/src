@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -28,18 +29,29 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/__error.c 277317 2015-01-18 11:54:20Z kib $");
 
 extern int errno;
 
-/*
- * Declare a weak reference in case the application is not linked
- * with libpthread.
- */
-__weak_reference(__error_unthreaded, __error);
-
-int *
+static int *
 __error_unthreaded(void)
 {
-	return(&errno);
+
+	return (&errno);
+}
+
+static int *(*__error_selector)(void) = __error_unthreaded;
+
+void
+__set_error_selector(int *(*arg)(void))
+{
+
+	__error_selector = arg;
+}
+
+int *
+__error(void)
+{
+
+	return (__error_selector());
 }

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)setuid.2	8.1 (Berkeley) 6/4/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/setuid.2 297759 2016-04-09 19:29:39Z jilles $
 .\"
-.Dd June 4, 1993
+.Dd September 13, 2015
 .Dt SETUID 2
 .Os
 .Sh NAME
@@ -178,15 +179,10 @@ pseudocode(void)
 	int fd;
 	/* ... */
 
-	fd = open("/path/to/sensitive/data", O_RDWR);
+	fd = open("/path/to/sensitive/data", O_RDWR | O_CLOEXEC);
 	if (fd == -1)
 		err(1, "open");
 
-	/*
-	 * Set close-on-exec flag; see fcntl(2) for more information.
-	 */
-	if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
-		err(1, "fcntl(F_SETFD)");
 	/* ... */
 	execve(path, argv, environ);
 }

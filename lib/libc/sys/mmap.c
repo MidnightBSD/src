@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)mmap.c	8.1 (Berkeley) 6/17/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/lib/libc/sys/mmap.c,v 1.7 2007/07/04 23:27:38 peter Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/mmap.c 267900 2014-06-26 08:27:01Z kib $");
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -44,18 +45,13 @@ __MBSDID("$FreeBSD: src/lib/libc/sys/mmap.c,v 1.7 2007/07/04 23:27:38 peter Exp 
  * is not supplied by GCC 1.X but is supplied by GCC 2.X.
  */
 void *
-mmap(addr, len, prot, flags, fd, offset)
-	void *	addr;
-	size_t	len;
-	int	prot;
-	int	flags;
-	int	fd;
-	off_t	offset;
+mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 {
 
-	if (__getosreldate() >= 4013) 
+	if (__getosreldate() >= 700051) {
 		return (__sys_mmap(addr, len, prot, flags, fd, offset));
-	else
-
-		return (__sys_freebsd6_mmap(addr, len, prot, flags, fd, 0, offset));
+	} else {
+		return (__sys_freebsd6_mmap(addr, len, prot, flags, fd, 0,
+		    offset));
+	}
 }

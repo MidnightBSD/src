@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008 Cisco Systems.  All rights reserved.
 .\"    Author: Julian Elischer
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/setfib.2 250831 2013-05-20 20:47:40Z julian $
 .\"
 .Dd March 19, 2012
 .Dt SETFIB 2
@@ -47,12 +48,13 @@ The
 argument
 must be greater than or equal to 0
 and less than the current system maximum which
-may be retrieved by the 
+may be retrieved by the
 .Va net.fibs
 sysctl.
 The system maximum is set in the kernel configuration file with
-.Pp
-.Dl options	ROUTETABLES= Ns Em N
+.Bd -ragged -offset indent
+.Cd "options ROUTETABLES=" Ns Em N
+.Ed
 .Pp
 or in
 .Pa /boot/loader.conf
@@ -63,11 +65,14 @@ with
 where
 .Em N
 is an integer.
-However, this maximum is capped at 16 due to the implementation storing
-the fib number in a 4-bit field in
+This maximum is capped at 65536 due to the implementation storing
+the fib number in a 16-bit field in the
 .Xr mbuf 9
-flags.
-The default fib of the process will be applied to all protocol families 
+packet header, however it is not suggested that one use such a large number
+as memory is allocated for every FIB regardless of whether it is used, and
+there are places where all FIBs are iterated over.
+.Pp
+The default fib of the process will be applied to all protocol families
 that support multiple fibs, and ignored by those that do not.
 The default fib for a process may be overridden for a socket with the use
 of the

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)ftruncate.c	8.1 (Berkeley) 6/17/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/lib/libc/sys/ftruncate.c,v 1.7 2007/07/04 23:27:38 peter Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/ftruncate.c 171219 2007-07-04 23:27:38Z peter $");
 
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -48,7 +49,7 @@ ftruncate(fd, length)
 	off_t	length;
 {
 
-	if (__getosreldate() >= 4013)
+	if (__getosreldate() >= 700051)
 		return(__sys_ftruncate(fd, length));
 	else
 		return(__sys_freebsd6_ftruncate(fd, 0, length));

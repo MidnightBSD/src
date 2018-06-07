@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/fcntl.c 281256 2015-04-08 02:21:44Z kib $");
 
 #include <fcntl.h>
 #include <stdarg.h>
@@ -34,7 +35,23 @@ __MBSDID("$MidnightBSD$");
 #include <sys/syscall.h>
 #include "libc_private.h"
 
-__weak_reference(__fcntl_compat, fcntl);
+#pragma weak fcntl
+int
+fcntl(int fd, int cmd, ...)
+{
+	va_list args;
+	long arg;
+
+	va_start(args, cmd);
+	arg = va_arg(args, long);
+	va_end(args);
+
+	return (((int (*)(int, int, ...))
+	    __libc_interposing[INTERPOS_fcntl])(fd, cmd, arg));
+}
+
+#ifdef SYSCALL_COMPAT
+__weak_reference(__fcntl_compat, __fcntl);
 
 int
 __fcntl_compat(int fd, int cmd, ...)
@@ -87,3 +104,4 @@ __fcntl_compat(int fd, int cmd, ...)
 		return (__sys_fcntl(fd, cmd, arg));
 	}
 }
+#endif

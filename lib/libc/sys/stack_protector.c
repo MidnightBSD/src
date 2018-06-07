@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: stack_protector.c,v 1.4 2006/11/22 17:23:25 christos Exp $	*/
 /* $OpenBSD: stack_protector.c,v 1.10 2006/03/31 05:34:44 deraadt Exp $	*/
 /*
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/sys/stack_protector.c 288105 2015-09-22 10:48:28Z jlh $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -41,8 +42,8 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include "libc_private.h"
 
-extern int __sysctl(int *name, u_int namelen, void *oldp, size_t *oldlenp,
-    void *newp, size_t newlen);
+extern int __sysctl(const int *name, u_int namelen, void *oldp,
+    size_t *oldlenp, void *newp, size_t newlen);
 
 long __stack_chk_guard[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static void __guard_setup(void) __attribute__((__constructor__, __used__));
@@ -54,7 +55,7 @@ void __chk_fail(void);
 static void
 __guard_setup(void)
 {
-	int mib[2];
+	static const int mib[2] = { CTL_KERN, KERN_ARND };
 	size_t len;
 	int error;
 
@@ -65,12 +66,9 @@ __guard_setup(void)
 	if (error == 0 && __stack_chk_guard[0] != 0)
 		return;
 
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_ARND;
-
 	len = sizeof(__stack_chk_guard);
-	if (__sysctl(mib, 2, __stack_chk_guard, &len, NULL, 0) == -1 ||
-	    len != sizeof(__stack_chk_guard)) {
+	if (__sysctl(mib, nitems(mib), __stack_chk_guard, &len, NULL, 0) ==
+	    -1 || len != sizeof(__stack_chk_guard)) {
 		/* If sysctl was unsuccessful, use the "terminator canary". */
 		((unsigned char *)(void *)__stack_chk_guard)[0] = 0;
 		((unsigned char *)(void *)__stack_chk_guard)[1] = 0;

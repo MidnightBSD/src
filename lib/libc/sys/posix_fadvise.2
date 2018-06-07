@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)madvise.2	8.1 (Berkeley) 6/9/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/posix_fadvise.2 261560 2014-02-06 19:47:17Z kib $
 .\"
-.Dd June 19, 2012
+.Dd January 30, 2014
 .Dt POSIX_FADVISE 2
 .Os
 .Sh NAME
@@ -88,13 +89,12 @@ The system may decrease the in-memory priority of data once it has been
 read or written.
 Future access to this data may require a read operation.
 .El
-.Pp
 .Sh RETURN VALUES
 .Rv -std posix_fadvise
 .Sh ERRORS
 The
 .Fn posix_fadvise
-system call will fail if:
+system call returns zero on success, and an error on failure:
 .Bl -tag -width Er
 .It Bq Er EBADF
 The

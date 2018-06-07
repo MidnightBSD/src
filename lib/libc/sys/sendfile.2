@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2003, David G. Lawrence
 .\" All rights reserved.
 .\"
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/sendfile.2 243015 2012-11-14 01:45:10Z kevlo $
 .\"
 .Dd January 7, 2010
 .Dt SENDFILE 2
@@ -265,6 +266,8 @@ is negative.
 .It Bq Er EIO
 An error occurred while reading from
 .Fa fd .
+.It Bq Er ENOBUFS
+The system was unable to allocate an internal buffer.
 .It Bq Er ENOTCONN
 The
 .Fa s

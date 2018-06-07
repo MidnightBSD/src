@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008 Christian Brueffer
 .\" Copyright (c) 2008 Jeffrey Roberson
 .\" All rights reserved.
@@ -23,10 +24,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/cpuset_getaffinity.2 249716 2013-04-21 06:46:41Z joel $
 .\"
 .Dd September 10, 2010
-.Dt CPUSET 2
+.Dt CPUSET_GETAFFINITY 2
 .Os
 .Sh NAME
 .Nm cpuset_getaffinity ,
@@ -69,7 +70,7 @@ All resources, however, have a mask which may be manipulated with
 Masks of type
 .Ft cpuset_t
 are composed using the
-.Xr CPU_SET 2
+.Dv CPU_SET
 macros.
 The kernel tolerates large sets as long as all CPUs specified
 in the set exist.
@@ -108,7 +109,6 @@ and
 .Fa id
 to the value in
 .Fa mask .
-.Pp
 .Sh RETURN VALUES
 .Rv -std
 .Sh ERRORS
@@ -153,7 +153,6 @@ operation.
 .Xr cpuset 2 ,
 .Xr cpuset_getid 2 ,
 .Xr cpuset_setid 2 ,
-.Xr CPU_SET 3 ,
 .Xr pthread_affinity_np 3 ,
 .Xr pthread_attr_affinity_np 3
 .Sh HISTORY

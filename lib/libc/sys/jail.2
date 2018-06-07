@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1999 Poul-Henning Kamp.
 .\" Copyright (c) 2009 James Gritton.
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/jail.2 301905 2016-06-15 01:49:01Z jamie $
 .\"
 .Dd February 8, 2012
 .Dt JAIL 2
@@ -106,7 +107,7 @@ pointers can be set to an arrays of IPv4 and IPv6 addresses to be assigned to
 the prison, or NULL if none.
 IPv4 addresses must be in network byte order.
 .Pp
-This is equivalent to the
+This is equivalent to, and deprecated in favor of, the
 .Fn jail_set
 system call (see below), with the parameters
 .Va path ,

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1989, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)nfssvc.2	8.1 (Berkeley) 6/9/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/sys/nfssvc.2 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd June 9, 1993
 .Dt NFSSVC 2
@@ -143,14 +144,14 @@ and a pointer to a
 struct nfsd_srvargs {
 	struct nfsd	*nsd_nfsd;	/* Pointer to in kernel nfsd struct */
 	uid_t		nsd_uid;	/* Effective uid mapped to cred */
-	u_int32_t	nsd_haddr;	/* Ip address of client */
+	uint32_t	nsd_haddr;	/* Ip address of client */
 	struct ucred	nsd_cr;		/* Cred. uid maps to */
 	int		nsd_authlen;	/* Length of auth string (ret) */
 	u_char		*nsd_authstr;	/* Auth string (ret) */
 	int		nsd_verflen;	/* and the verifier */
 	u_char		*nsd_verfstr;
 	struct timeval	nsd_timestamp;	/* timestamp from verifier */
-	u_int32_t	nsd_ttl;	/* credential ttl (sec) */
+	uint32_t	nsd_ttl;	/* credential ttl (sec) */
 	NFSKERBKEY_T	nsd_key;	/* Session key */
 };
 .Ed
