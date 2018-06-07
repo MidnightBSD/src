@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ffs_balloc.c,v 1.13 2004/06/20 22:20:18 jmc Exp $	*/
 /* From NetBSD: ffs_balloc.c,v 1.25 2001/08/08 08:36:36 lukem Exp */
 
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_balloc.c,v 1.1 2008/12/19 18:47:46 sam Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ffs_balloc.c 186334 2008-12-19 18:45:43Z sam $");
 
 #include <sys/param.h>
 #include <sys/time.h>

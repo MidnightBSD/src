@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: makefs.c,v 1.26 2006/10/22 21:11:56 christos Exp $	*/
 
 /*
@@ -36,8 +37,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/makefs.c,v 1.1.2.2 2011/07/26 14:41:54 marius Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/makefs.c 293025 2016-01-01 00:36:59Z ngie $");
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -45,6 +48,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/makefs/makefs.c,v 1.1.2.2 2011/07/26 14:41:54 m
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "makefs.h"
@@ -70,6 +74,7 @@ static fstype_t fstypes[] = {
 };
 
 u_int		debug;
+int		dupsok;
 struct timespec	start_time;
 
 static	fstype_t *get_fstype(const char *);
@@ -79,11 +84,13 @@ int		main(int, char *[]);
 int
 main(int argc, char *argv[])
 {
+	struct stat	 sb;
 	struct timeval	 start;
 	fstype_t	*fstype;
 	fsinfo_t	 fsoptions;
 	fsnode		*root;
-	int	 	 ch, len;
+	int	 	 ch, i, len;
+	char		*subtree;
 	char		*specfile;
 
 	setprogname(argv[0]);
@@ -107,7 +114,7 @@ main(int argc, char *argv[])
 	start_time.tv_sec = start.tv_sec;
 	start_time.tv_nsec = start.tv_usec * 1000;
 
-	while ((ch = getopt(argc, argv, "B:b:d:f:F:M:m:N:o:s:S:t:x")) != -1) {
+	while ((ch = getopt(argc, argv, "B:b:Dd:f:F:M:m:N:o:pR:s:S:t:xZ")) != -1) {
 		switch (ch) {
 
 		case 'B':
@@ -141,6 +148,10 @@ main(int argc, char *argv[])
 				    strsuftoll("free blocks",
 					optarg, 0, LLONG_MAX);
 			}
+			break;
+
+		case 'D':
+			dupsok = 1;
 			break;
 
 		case 'd':
@@ -194,6 +205,16 @@ main(int argc, char *argv[])
 			}
 			break;
 		}
+		case 'p':
+			/* Deprecated in favor of 'Z' */
+			fsoptions.sparse = 1;
+			break;
+
+		case 'R':
+			/* Round image size up to specified block size */
+			fsoptions.roundup =
+			    strsuftoll("roundup-size", optarg, 0, LLONG_MAX);
+			break;
 
 		case 's':
 			fsoptions.minsize = fsoptions.maxsize =
@@ -220,6 +241,11 @@ main(int argc, char *argv[])
 			fsoptions.onlyspec = 1;
 			break;
 
+		case 'Z':
+			/* Superscedes 'p' for compatibility with NetBSD makefs(8) */
+			fsoptions.sparse = 1;
+			break;
+
 		case '?':
 		default:
 			usage();
@@ -236,33 +262,65 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (argc != 2)
+	if (argc < 2)
 		usage();
 
 	/* -x must be accompanied by -F */
 	if (fsoptions.onlyspec != 0 && specfile == NULL)
 		errx(1, "-x requires -F mtree-specfile.");
 
-				/* walk the tree */
-	TIMER_START(start);
-	root = walk_dir(argv[1], NULL);
-	TIMER_RESULTS(start, "walk_dir");
+	/* Accept '-' as meaning "read from standard input". */
+	if (strcmp(argv[1], "-") == 0)
+		sb.st_mode = S_IFREG;
+	else {
+		if (stat(argv[1], &sb) == -1)
+			err(1, "Can't stat `%s'", argv[1]);
+	}
+
+	switch (sb.st_mode & S_IFMT) {
+	case S_IFDIR:		/* walk the tree */
+		subtree = argv[1];
+		TIMER_START(start);
+		root = walk_dir(subtree, ".", NULL, NULL);
+		TIMER_RESULTS(start, "walk_dir");
+		break;
+	case S_IFREG:		/* read the manifest file */
+		subtree = ".";
+		TIMER_START(start);
+		root = read_mtree(argv[1], NULL);
+		TIMER_RESULTS(start, "manifest");
+		break;
+	default:
+		errx(1, "%s: not a file or directory", argv[1]);
+		/* NOTREACHED */
+	}
+
+	/* append extra directory */
+	for (i = 2; i < argc; i++) {
+		if (stat(argv[i], &sb) == -1)
+			err(1, "Can't stat `%s'", argv[i]);
+		if (!S_ISDIR(sb.st_mode))
+			errx(1, "%s: not a directory", argv[i]);
+		TIMER_START(start);
+		root = walk_dir(argv[i], ".", NULL, root);
+		TIMER_RESULTS(start, "walk_dir2");
+	}
 
 	if (specfile) {		/* apply a specfile */
 		TIMER_START(start);
-		apply_specfile(specfile, argv[1], root, fsoptions.onlyspec);
+		apply_specfile(specfile, subtree, root, fsoptions.onlyspec);
 		TIMER_RESULTS(start, "apply_specfile");
 	}
 
 	if (debug & DEBUG_DUMP_FSNODES) {
-		printf("\nparent: %s\n", argv[1]);
-		dump_fsnodes(".", root);
+		printf("\nparent: %s\n", subtree);
+		dump_fsnodes(root);
 		putchar('\n');
 	}
 
 				/* build the file system */
 	TIMER_START(start);
-	fstype->make_fs(argv[0], argv[1], root, &fsoptions);
+	fstype->make_fs(argv[0], subtree, root, &fsoptions);
 	TIMER_RESULTS(start, "make_fs");
 
 	free_fsnodes(root);
@@ -308,9 +366,9 @@ usage(void)
 	prog = getprogname();
 	fprintf(stderr,
 "usage: %s [-t fs-type] [-o fs-options] [-d debug-mask] [-B endian]\n"
-"\t[-S sector-size] [-M minimum-size] [-m maximum-size] [-s image-size]\n"
-"\t[-b free-blocks] [-f free-files] [-F mtree-specfile] [-x]\n"
-"\t[-N userdb-dir] image-file directory\n",
+"\t[-S sector-size] [-M minimum-size] [-m maximum-size] [-R roundup-size]\n"
+"\t[-s image-size] [-b free-blocks] [-f free-files] [-F mtree-specfile]\n"
+"\t[-xZ] [-N userdb-dir] image-file directory | manifest [extra-directory ...]\n",
 	    prog);
 	exit(1);
 }

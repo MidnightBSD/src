@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: buf.h,v 1.2 2001/11/02 03:12:49 lukem Exp $	*/
 
 /*
@@ -34,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/ffs/buf.h,v 1.1 2008/12/19 18:47:46 sam Exp $
+ * $FreeBSD: stable/10/usr.sbin/makefs/ffs/buf.h 186334 2008-12-19 18:45:43Z sam $
  */
 
 #ifndef _FFS_BUF_H

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ffs_subr.c,v 1.32 2003/12/30 12:33:24 pk Exp $	*/
 
 /*
@@ -32,16 +33,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_subr.c,v 1.4 2011/06/16 23:40:10 mckusick Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ffs_subr.c 228990 2011-12-30 10:58:14Z uqs $");
 
 #include <sys/param.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>
+#include "ffs/ffs_extern.h"
 #include "ffs/ufs_bswap.h"
-
-void    panic __P((const char *, ...))
-    __attribute__((__noreturn__,__format__(__printf__,1,2)));
 
 /*
  * Update the frsum fields to reflect addition or deletion 
@@ -80,8 +79,8 @@ ffs_fragacct_swap(struct fs *fs, int fragmap, int32_t fraglist[], int cnt, int n
  * block operations
  *
  * check if a block is available
- *  returns true if all the correponding bits in the free map are 1
- *  returns false if any corresponding bit in the free map is 0 
+ *  returns true if all the corresponding bits in the free map are 1
+ *  returns false if any corresponding bit in the free map is 0
  */
 int
 ffs_isblock(fs, cp, h)

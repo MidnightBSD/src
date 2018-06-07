@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: getid.c,v 1.5 2004/06/20 22:20:18 jmc Exp $	*/
 /*	from: NetBSD: getpwent.c,v 1.48 2000/10/03 03:22:26 enami Exp */
 /*	from: NetBSD: getgrent.c,v 1.41 2002/01/12 23:51:30 lukem Exp */

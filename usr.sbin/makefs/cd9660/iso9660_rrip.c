@@ -1,4 +1,5 @@
-/*	$NetBSD: iso9660_rrip.c,v 1.10 2011/05/29 17:07:58 tsutsui Exp $	*/
+/* $MidnightBSD$ */
+/*	$NetBSD: iso9660_rrip.c,v 1.14 2014/05/30 13:14:47 martin Exp $	*/
 
 /*
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
@@ -42,7 +43,7 @@
 #include <stdio.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/cd9660/iso9660_rrip.c,v 1.1.4.3 2011/08/13 13:15:38 marius Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/cd9660/iso9660_rrip.c 290591 2015-11-09 09:03:24Z ngie $");
 
 static void cd9660_rrip_initialize_inode(cd9660node *);
 static int cd9660_susp_handle_continuation(cd9660node *);
@@ -298,7 +299,7 @@ cd9660_susp_initialize_node(cd9660node *node)
 	 * CE: is added for us where needed
 	 * ST: not sure if it is even required, but if so, should be
 	 *     handled by the CE code
-	 * PD: isnt needed (though might be added for testing)
+	 * PD: isn't needed (though might be added for testing)
 	 * SP: is stored ONLY on the . record of the root directory
 	 * ES: not sure
 	 */
@@ -419,9 +420,9 @@ cd9660_rrip_initialize_node(cd9660node *node, cd9660node *parent,
 		}
 		else if ((node->node != NULL) &&
 			((strlen(node->node->name) !=
-			    (int)node->isoDirRecord->name_len[0]) ||
+			    (uint8_t)node->isoDirRecord->name_len[0]) ||
 			(memcmp(node->node->name,node->isoDirRecord->name,
-				(int) node->isoDirRecord->name_len[0]) != 0))) {
+				(uint8_t)node->isoDirRecord->name_len[0]) != 0))) {
 			cd9660_rrip_NM(node);
 		}
 
@@ -634,7 +635,7 @@ cd9660_createSL(cd9660node *node)
 int
 cd9660node_rrip_px(struct ISO_SUSP_ATTRIBUTES *v, fsnode *pxinfo)
 {
-	v->attr.rr_entry.PX.h.length[0] = 36;
+	v->attr.rr_entry.PX.h.length[0] = 44;
 	v->attr.rr_entry.PX.h.version[0] = 1;
 	cd9660_bothendian_dword(pxinfo->inode->st.st_mode,
 	    v->attr.rr_entry.PX.mode);
@@ -644,8 +645,9 @@ cd9660node_rrip_px(struct ISO_SUSP_ATTRIBUTES *v, fsnode *pxinfo)
 	    v->attr.rr_entry.PX.uid);
 	cd9660_bothendian_dword(pxinfo->inode->st.st_gid,
 	    v->attr.rr_entry.PX.gid);
+	cd9660_bothendian_dword(pxinfo->inode->st.st_ino,
+	    v->attr.rr_entry.PX.serial);
 
-	/* Ignoring the serial number for now */
 	return 1;
 }
 
@@ -655,13 +657,14 @@ cd9660node_rrip_pn(struct ISO_SUSP_ATTRIBUTES *pn_field, fsnode *fnode)
 	pn_field->attr.rr_entry.PN.h.length[0] = 20;
 	pn_field->attr.rr_entry.PN.h.version[0] = 1;
 
-	if (sizeof (fnode->inode->st.st_dev) > 32)
-		cd9660_bothendian_dword((uint64_t)fnode->inode->st.st_dev >> 32,
+	if (sizeof (fnode->inode->st.st_rdev) > 4)
+		cd9660_bothendian_dword(
+		    (uint64_t)fnode->inode->st.st_rdev >> 32,
 		    pn_field->attr.rr_entry.PN.high);
 	else
 		cd9660_bothendian_dword(0, pn_field->attr.rr_entry.PN.high);
 
-	cd9660_bothendian_dword(fnode->inode->st.st_dev & 0xffffffff,
+	cd9660_bothendian_dword(fnode->inode->st.st_rdev & 0xffffffff,
 		pn_field->attr.rr_entry.PN.low);
 	return 1;
 }
@@ -685,7 +688,7 @@ int
 cd9660node_rrip_tf(struct ISO_SUSP_ATTRIBUTES *p, fsnode *_node)
 {
 	p->attr.rr_entry.TF.flags[0] = TF_MODIFY | TF_ACCESS | TF_ATTRIBUTES;
-	p->attr.rr_entry.TF.h.length[0] = 4;
+	p->attr.rr_entry.TF.h.length[0] = 5;
 	p->attr.rr_entry.TF.h.version[0] = 1;
 
 	/*

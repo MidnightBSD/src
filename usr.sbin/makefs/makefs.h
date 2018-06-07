@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: makefs.h,v 1.20 2008/12/28 21:51:46 christos Exp $	*/
 
 /*
@@ -34,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/makefs.h,v 1.3 2011/06/19 18:34:49 marcel Exp $
+ * $FreeBSD: stable/10/usr.sbin/makefs/makefs.h 290589 2015-11-09 08:59:55Z ngie $
  */
 
 #ifndef	_MAKEFS_H
@@ -94,6 +95,8 @@ typedef struct _fsnode {
 	fsinode		*inode;		/* actual inode data */
 	char		*symlink;	/* symlink target */
 	char		*contents;	/* file to provide contents */
+	const char	*root;		/* root path */
+	char		*path;		/* directory name */
 	char		*name;		/* file name */
 	int		flags;		/* misc flags */
 } fsnode;
@@ -127,6 +130,8 @@ typedef struct {
 	int	freeblockpc;	/* free block % */
 	int	needswap;	/* non-zero if byte swapping needed */
 	int	sectorsize;	/* sector size */
+	int	sparse;		/* sparse image, don't fill it with zeros */
+	off_t	roundup;	/* round image size up to this value */
 
 	void	*fs_specific;	/* File system specific additions. */
 } fsinfo_t;
@@ -147,11 +152,11 @@ typedef struct {
 
 
 void		apply_specfile(const char *, const char *, fsnode *, int);
-void		dump_fsnodes(const char *, fsnode *);
+void		dump_fsnodes(fsnode *);
 const char *	inode_type(mode_t);
 fsnode *	read_mtree(const char *, fsnode *);
 int		set_option(option_t *, const char *, const char *);
-fsnode *	walk_dir(const char *, fsnode *);
+fsnode *	walk_dir(const char *, const char *, fsnode *, fsnode *);
 void		free_fsnodes(fsnode *);
 
 void		ffs_prep_opts(fsinfo_t *);
@@ -166,6 +171,7 @@ void		cd9660_makefs(const char *, const char *, fsnode *, fsinfo_t *);
 
 
 extern	u_int		debug;
+extern	int		dupsok;
 extern	struct timespec	start_time;
 
 /*
@@ -276,22 +282,6 @@ extern	struct timespec	start_time;
 struct fs;
 void   ffs_fragacct_swap(struct fs *, int, int32_t [], int, int);
 
-/*
- * Declarations for compat routines.
- */
-long long strsuftoll(const char *, const char *, long long, long long);
-long long strsuftollx(const char *, const char *,
-                       long long, long long, char *, size_t);
-
-struct passwd;
-int uid_from_user(const char *, uid_t *);
-int pwcache_userdb(int (*)(int), void (*)(void),
-               struct passwd * (*)(const char *), struct passwd * (*)(uid_t));
-struct group;
-int gid_from_group(const char *, gid_t *);
-int pwcache_groupdb(int (*)(int), void (*)(void),
-               struct group * (*)(const char *), struct group * (*)(gid_t));
-
-int setup_getid(const char *dir);
+fsinode *link_check(fsinode *);
 
 #endif	/* _MAKEFS_H */

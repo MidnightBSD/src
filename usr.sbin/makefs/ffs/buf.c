@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: buf.c,v 1.12 2004/06/20 22:20:18 jmc Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/buf.c,v 1.2 2010/11/07 16:05:04 cognet Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/buf.c 214921 2010-11-07 16:05:04Z cognet $");
 
 #include <sys/param.h>
 #include <sys/time.h>

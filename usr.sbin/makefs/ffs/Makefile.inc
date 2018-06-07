@@ -1,4 +1,5 @@
-#	$FreeBSD: src/usr.sbin/makefs/ffs/Makefile.inc,v 1.1 2010/11/07 16:05:04 cognet Exp $
+# $MidnightBSD$
+#	$FreeBSD: stable/10/usr.sbin/makefs/ffs/Makefile.inc 214921 2010-11-07 16:05:04Z cognet $
 #
 
 .PATH:	${.CURDIR}/ffs ${.CURDIR}/../../sys/ufs/ffs

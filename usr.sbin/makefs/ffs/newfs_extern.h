@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: newfs_extern.h,v 1.2 2004/06/24 22:30:13 lukem Exp $	*/
 /* From: NetBSD: extern.h,v 1.3 2000/12/01 12:03:27 simonb Exp $ */
 
@@ -29,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/ffs/newfs_extern.h,v 1.1 2008/12/19 18:47:46 sam Exp $
+ * $FreeBSD: stable/10/usr.sbin/makefs/ffs/newfs_extern.h 186334 2008-12-19 18:45:43Z sam $
  */
 
 /* prototypes */

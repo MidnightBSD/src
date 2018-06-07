@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ffs_alloc.c,v 1.14 2004/06/20 22:20:18 jmc Exp $	*/
 /* From: NetBSD: ffs_alloc.c,v 1.50 2001/09/06 02:16:01 lukem Exp */
 
@@ -42,12 +43,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_alloc.c,v 1.2 2010/11/07 16:05:04 cognet Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ffs_alloc.c 241015 2012-09-27 23:31:19Z mdf $");
 
 #include <sys/param.h>
 #include <sys/time.h>
 
 #include <errno.h>
+#include <stdint.h>
 
 #include "makefs.h"
 
@@ -439,8 +441,8 @@ ffs_blkfree(struct inode *ip, daddr_t bno, long size)
 	}
 	cg = dtog(fs, bno);
 	if (bno >= fs->fs_size) {
-		warnx("bad block %lld, ino %llu", (long long)bno,
-		    (unsigned long long)ip->i_number);
+		warnx("bad block %lld, ino %ju", (long long)bno,
+		    (uintmax_t)ip->i_number);
 		return;
 	}
 	error = bread(ip->i_fd, ip->i_fs, fsbtodb(fs, cgtod(fs, cg)),

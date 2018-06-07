@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ffs.c,v 1.44 2009/04/28 22:49:26 joerg Exp $	*/
 
 /*
@@ -66,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs.c,v 1.6 2011/10/09 16:22:31 nwhitehorn Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs.c 290589 2015-11-09 08:59:55Z ngie $");
 
 #include <sys/param.h>
 
@@ -145,7 +146,7 @@ static  void	*ffs_build_dinode2(struct ufs2_dinode *, dirbuf_t *, fsnode *,
 
 int	sectorsize;		/* XXX: for buf.c::getblk() */
 
-	/* publically visible functions */
+	/* publicly visible functions */
 
 void
 ffs_prep_opts(fsinfo_t *fsopts)
@@ -191,7 +192,7 @@ ffs_parse_opts(const char *option, fsinfo_t *fsopts)
 					"bytes per inode" },
 		{ "minfree",	&ffs_opts->minfree,	0,	99,
 					"minfree" },
-		{ "maxbpf",	&ffs_opts->maxbpg,	1,	INT_MAX,
+		{ "maxbpg",	&ffs_opts->maxbpg,	1,	INT_MAX,
 					"max blocks per file in a cg" },
 		{ "avgfilesize", &ffs_opts->avgfilesize,1,	INT_MAX,
 					"expected average file size" },
@@ -410,6 +411,10 @@ ffs_validate(const char *dir, fsnode *root, fsinfo_t *fsopts)
 		/* round up to the next block */
 	fsopts->size = roundup(fsopts->size, ffs_opts->bsize);
 
+		/* round up to requested block size, if any */
+	if (fsopts->roundup > 0)
+		fsopts->size = roundup(fsopts->size, fsopts->roundup);
+
 		/* calculate density if necessary */
 	if (ffs_opts->density == -1)
 		ffs_opts->density = fsopts->size / fsopts->inodes + 1;
@@ -493,13 +498,25 @@ ffs_create_image(const char *image, fsinfo_t *fsopts)
 		bufsize = sfs.f_iosize;
 #endif
 	bufrem = fsopts->size;
-	if (debug & DEBUG_FS_CREATE_IMAGE)
-		printf(
-		    "zero-ing image `%s', %lld sectors, using %d byte chunks\n",
-		    image, (long long)bufrem, bufsize);
-	if ((buf = calloc(1, bufsize)) == NULL) {
-		warn("Can't create buffer for sector");
-		return (-1);
+	if (fsopts->sparse) {
+		if (ftruncate(fsopts->fd, bufrem) == -1) {
+			warn("sparse option disabled.\n");
+			fsopts->sparse = 0;
+		}
+	}
+	if (fsopts->sparse) {
+		/* File truncated at bufrem. Remaining is 0 */
+		bufrem = 0;
+		buf = NULL;
+	} else {
+		if (debug & DEBUG_FS_CREATE_IMAGE)
+			printf("zero-ing image `%s', %lld sectors, "
+			    "using %d byte chunks\n", image, (long long)bufrem,
+			    bufsize);
+		if ((buf = calloc(1, bufsize)) == NULL) {
+			warn("Can't create buffer for sector");
+			return (-1);
+		}
 	}
 	while (bufrem > 0) {
 		i = write(fsopts->fd, buf, MIN(bufsize, bufrem));
@@ -511,7 +528,8 @@ ffs_create_image(const char *image, fsinfo_t *fsopts)
 		}
 		bufrem -= i;
 	}
-	free(buf);
+	if (buf)
+		free(buf);
 
 		/* make the file system */
 	if (debug & DEBUG_FS_CREATE_IMAGE)
@@ -780,8 +798,8 @@ ffs_populate_dir(const char *dir, fsnode *root, fsinfo_t *fsopts)
 		cur->inode->flags |= FI_WRITTEN;
 
 		if (cur->contents == NULL) {
-			if (snprintf(path, sizeof(path), "%s/%s", dir,
-			    cur->name) >= sizeof(path))
+			if (snprintf(path, sizeof(path), "%s/%s/%s", cur->root,
+			    cur->path, cur->name) >= (int)sizeof(path))
 				errx(1, "Pathname too long.");
 		}
 

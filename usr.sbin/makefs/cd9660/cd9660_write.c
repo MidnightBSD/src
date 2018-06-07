@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: cd9660_write.c,v 1.14 2011/01/04 09:48:21 wiz Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
 #include "iso9660_rrip.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/cd9660/cd9660_write.c,v 1.2.4.3 2011/08/13 13:15:38 marius Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/cd9660/cd9660_write.c 290587 2015-11-09 08:03:15Z ngie $");
 
 static int cd9660_write_volume_descriptors(FILE *);
 static int cd9660_write_path_table(FILE *, off_t, int);
@@ -165,7 +166,7 @@ cd9660_write_path_table(FILE *fd, off_t sector, int mode)
 	    diskStructure.pathTableLength);
 	unsigned char *buffer;
 	unsigned char *buffer_head;
-	int len;
+	int len, ret;
 	path_table_entry temp_entry;
 	cd9660node *ptcur;
 
@@ -213,8 +214,10 @@ cd9660_write_path_table(FILE *fd, off_t sector, int mode)
 		ptcur = ptcur->ptnext;
 	}
 
-	return cd9660_write_filedata(fd, sector, buffer_head,
+	ret = cd9660_write_filedata(fd, sector, buffer_head,
 	    path_table_sectors);
+	free(buffer_head);
+	return ret;
 }
 
 
@@ -294,19 +297,21 @@ cd9660_write_file(FILE *fd, cd9660node *writenode)
 			INODE_WARNX(("%s: writing inode %d blocks at %" PRIu32,
 			    __func__, (int)inode->st.st_ino, inode->ino));
 			inode->flags |= FI_WRITTEN;
-			cd9660_compute_full_filename(writenode,
-			    temp_file_name, 0);
+			if (writenode->node->contents == NULL)
+				cd9660_compute_full_filename(writenode,
+				    temp_file_name);
 			ret = cd9660_copy_file(fd, writenode->fileDataSector,
-			    temp_file_name);
+			    (writenode->node->contents != NULL) ?
+			    writenode->node->contents : temp_file_name);
 			if (ret == 0)
 				goto out;
 		}
 	} else {
 		/*
-		 * Here is a new revelation that ECMA didnt explain
+		 * Here is a new revelation that ECMA didn't explain
 		 * (at least not well).
 		 * ALL . and .. records store the name "\0" and "\1"
-		 * resepctively. So, for each directory, we have to
+		 * respectively. So, for each directory, we have to
 		 * make a new node.
 		 *
 		 * This is where it gets kinda messy, since we have to

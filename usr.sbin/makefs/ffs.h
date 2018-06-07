@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ffs.h,v 1.1 2004/12/20 20:51:42 jmc Exp $	*/
 
 /*
@@ -34,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/ffs.h,v 1.2 2011/10/09 16:22:31 nwhitehorn Exp $
+ * $FreeBSD: stable/10/usr.sbin/makefs/ffs.h 226169 2011-10-09 16:22:31Z nwhitehorn $
  */
 
 #ifndef _FFS_H

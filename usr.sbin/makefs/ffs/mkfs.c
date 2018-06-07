@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mkfs.c,v 1.20 2004/06/24 22:30:13 lukem Exp $	*/
 
 /*
@@ -39,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/mkfs.c,v 1.3 2011/10/09 16:22:31 nwhitehorn Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/mkfs.c 290599 2015-11-09 09:28:34Z ngie $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -248,15 +249,16 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 		exit(21);
 	}
 	sblock.fs_fsbtodb = ilog2(sblock.fs_fsize / sectorsize);
-	sblock.fs_size = fssize = dbtofsb(&sblock, fssize);
+	sblock.fs_size = sblock.fs_providersize = fssize =
+	    dbtofsb(&sblock, fssize);
 
 	if (Oflag <= 1) {
 		sblock.fs_magic = FS_UFS1_MAGIC;
 		sblock.fs_sblockloc = SBLOCK_UFS1;
-		sblock.fs_nindir = sblock.fs_bsize / sizeof(int32_t);
+		sblock.fs_nindir = sblock.fs_bsize / sizeof(ufs1_daddr_t);
 		sblock.fs_inopb = sblock.fs_bsize / sizeof(struct ufs1_dinode);
 		sblock.fs_maxsymlinklen = ((NDADDR + NIADDR) *
-		    sizeof (int32_t));
+		    sizeof (ufs1_daddr_t));
 		sblock.fs_old_inodefmt = FS_44INODEFMT;
 		sblock.fs_old_cgoffset = 0;
 		sblock.fs_old_cgmask = 0xffffffff;
@@ -272,15 +274,11 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 		sblock.fs_old_nrpos = 1;
 	} else {
 		sblock.fs_magic = FS_UFS2_MAGIC;
-#if 0 /* XXX makefs is used for small filesystems. */
 		sblock.fs_sblockloc = SBLOCK_UFS2;
-#else
-		sblock.fs_sblockloc = SBLOCK_UFS1;
-#endif
-		sblock.fs_nindir = sblock.fs_bsize / sizeof(int64_t);
+		sblock.fs_nindir = sblock.fs_bsize / sizeof(ufs2_daddr_t);
 		sblock.fs_inopb = sblock.fs_bsize / sizeof(struct ufs2_dinode);
 		sblock.fs_maxsymlinklen = ((NDADDR + NIADDR) *
-		    sizeof (int64_t));
+		    sizeof (ufs2_daddr_t));
 	}
 
 	sblock.fs_sblkno =

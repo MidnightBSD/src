@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: cd9660_debug.c,v 1.11 2010/10/27 18:51:35 christos Exp $	*/
 
 /*
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/cd9660/cd9660_debug.c,v 1.1.4.2 2011/07/26 14:41:54 marius Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/cd9660/cd9660_debug.c 214921 2010-11-07 16:05:04Z cognet $");
 #include <sys/param.h>
 
 #include <sys/mount.h>

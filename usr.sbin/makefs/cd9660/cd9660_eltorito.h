@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: cd9660_eltorito.h,v 1.5 2009/07/04 14:31:38 ahoka Exp $	*/
 
 /*
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/cd9660/cd9660_eltorito.h,v 1.1.4.2 2011/07/26 14:41:54 marius Exp $
+ * $FreeBSD: stable/10/usr.sbin/makefs/cd9660/cd9660_eltorito.h 214921 2010-11-07 16:05:04Z cognet $
  */
 
 #ifndef _CD9660_ELTORITO_H_

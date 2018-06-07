@@ -1,5 +1,5 @@
-#	$FreeBSD: src/usr.sbin/makefs/cd9660/Makefile.inc,v 1.1.4.2 2011/07/26 14:41:54 marius Exp $
-#
+# $MidnightBSD$
+#	$FreeBSD: stable/10/usr.sbin/makefs/cd9660/Makefile.inc 214921 2010-11-07 16:05:04Z cognet $
 
 .PATH:	${.CURDIR}/cd9660 ${.CURDIR}/../../sys/fs/cd9660/
 

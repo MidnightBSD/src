@@ -72907,6 +72907,11 @@ usr.sbin/makefs/getid.c -text
 usr.sbin/makefs/makefs.8 -text
 usr.sbin/makefs/makefs.c -text
 usr.sbin/makefs/makefs.h -text
+usr.sbin/makefs/mtree.c svneol=native#text/plain
+usr.sbin/makefs/tests/Makefile svneol=native#text/plain
+usr.sbin/makefs/tests/makefs_cd9660_tests.sh svneol=native#text/plain
+usr.sbin/makefs/tests/makefs_ffs_tests.sh svneol=native#text/plain
+usr.sbin/makefs/tests/makefs_tests_common.sh svneol=native#text/plain
 usr.sbin/makefs/walk.c -text
 usr.sbin/makemap/Makefile -text
 usr.sbin/manctl/Makefile -text

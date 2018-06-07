@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ufs_bmap.c,v 1.14 2004/06/20 22:20:18 jmc Exp $	*/
 /* From: NetBSD: ufs_bmap.c,v 1.14 2001/11/08 05:00:51 chs Exp */
 
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ufs_bmap.c,v 1.1 2008/12/19 18:47:46 sam Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ufs_bmap.c 239359 2012-08-17 17:45:27Z mjg $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -117,7 +118,6 @@ ufs_getlbns(struct inode *ip, daddr_t bn, struct indir *ap, int *nump)
 	 */
 	ap->in_lbn = metalbn;
 	ap->in_off = off = NIADDR - i;
-	ap->in_exists = 0;
 	ap++;
 	for (++numlevels; i <= NIADDR; i++) {
 		/* If searching for a meta-data block, quit when found. */
@@ -131,7 +131,6 @@ ufs_getlbns(struct inode *ip, daddr_t bn, struct indir *ap, int *nump)
 		++numlevels;
 		ap->in_lbn = metalbn;
 		ap->in_off = off;
-		ap->in_exists = 0;
 		++ap;
 
 		metalbn -= -1 + (off << lbc);
