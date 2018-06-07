@@ -1,4 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
+# $FreeBSD: stable/10/sbin/sysctl/Makefile 203917 2010-02-15 14:08:06Z uqs $
 # $MidnightBSD$
 
 PROG=	sysctl
