@@ -49583,6 +49583,7 @@ lib/libutil/kinfo_getproc.c -text
 lib/libutil/kinfo_getvmmap.3 -text
 lib/libutil/kinfo_getvmmap.c -text
 lib/libutil/kinfo_getvmobject.3 svneol=native#text/plain
+lib/libutil/kinfo_getvmobject.c svneol=native#text/plain
 lib/libutil/kld.3 -text
 lib/libutil/kld.c -text
 lib/libutil/libutil.h -text
