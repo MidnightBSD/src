@@ -24,15 +24,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libutil/kinfo_getallproc.c 312032 2017-01-13 08:39:40Z ngie $
  */
 
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
-#include <sys/user.h>
 #include <sys/sysctl.h>
+#include <sys/user.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -75,14 +75,14 @@ kinfo_getallproc(int *cntp)
 	mib[2] = KERN_PROC_PROC;
 
 	len = 0;
-	if (sysctl(mib, 3, NULL, &len, NULL, 0) < 0)
+	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) < 0)
 		return (NULL);
 
 	kipp = malloc(len);
 	if (kipp == NULL)
 		return (NULL);
 
-	if (sysctl(mib, 3, kipp, &len, NULL, 0) < 0)
+	if (sysctl(mib, nitems(mib), kipp, &len, NULL, 0) < 0)
 		goto bad;
 	if (len % sizeof(*kipp) != 0)
 		goto bad;

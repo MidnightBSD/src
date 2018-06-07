@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.9 2011/10/22 18:52:17 laffer1 Exp $
+# 	$MidnightBSD$
 
 SHLIBDIR?= /lib
 
@@ -7,9 +7,10 @@ SHLIBDIR?= /lib
 
 LIB=	util
 SHLIB_MAJOR= 9
-SRCS=	_secure_path.c expand_number.c flopen.c efun.c fparseln.c gr_util.c \
+SRCS=	_secure_path.c auth.c expand_number.c flopen.c efun.c fparseln.c gr_util.c \
 	hexdump.c humanize_number.c kinfo_getfile.c kinfo_getfile.c \
-	kinfo_getallproc.c kinfo_getproc.c kinfo_getvmmap.c kld.c \
+	kinfo_getallproc.c kinfo_getproc.c kinfo_getvmmap.c \
+	kinfo_getvmobject.c kld.c \
 	login_auth.c login_cap.c \
 	login_class.c login_crypt.c login_ok.c login_times.c login_tty.c \
 	pidfile.c property.c pty.c pw_util.c quotafile.c realhostname.c \
@@ -22,20 +23,17 @@ CFLAGS+= -DLIBC_SCCS
 CFLAGS+= -DINET6
 .endif
 
-CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../libc/gen/
+CFLAGS+= -I${.CURDIR} -I${SRCTOP}/lib/libc/gen/
 
-MAN+=	kld.3 login_auth.3 login_tty.3 pty.3 \
-	login_cap.3 login_class.3 login_times.3 login_ok.3 \
-	_secure_path.3 uucplock.3 property.3 realhostname.3 \
-	realhostname_sa.3 trimdomain.3 fparseln.3 humanize_number.3 \
-	pidfile.3 efun.3 flopen.3 expand_number.3 hexdump.3 \
-	kinfo_getfile.3 kinfo_getallproc.3 kinfo_getproc.3 \
-	kinfo_getvmmap.3 quotafile.3
+MAN+=	expand_number.3 efun.3 flopen.3 fparseln.3 hexdump.3 \
+	humanize_number.3 kinfo_getallproc.3 kinfo_getfile.3 \
+	kinfo_getproc.3 kinfo_getvmmap.3 kinfo_getvmobject.3 kld.3 \
+	login_auth.3 login_cap.3 \
+	login_class.3 login_ok.3 login_times.3 login_tty.3 pidfile.3 \
+	property.3 pty.3 quotafile.3 realhostname.3 realhostname_sa.3 \
+	_secure_path.3 trimdomain.3 uucplock.3 pw_util.3
 MAN+=	login.conf.5
-MLINKS+= kld.3 kld_isloaded.3 kld.3 kld_load.3
-MLINKS+= property.3 properties_read.3  property.3 properties_free.3
-MLINKS+= property.3 property_find.3 property.3 property_count.3
-MLINKS+= pty.3 openpty.3  pty.3 forkpty.3
+MLINKS+=kld.3 kld_isloaded.3 kld.3 kld_load.3
 MLINKS+=login_cap.3 login_getclassbyname.3 login_cap.3 login_close.3 \
 	login_cap.3 login_getclass.3 login_cap.3 login_getuserclass.3 \
 	login_cap.3 login_getcapstr.3 login_cap.3 login_getcaplist.3 \
@@ -51,6 +49,9 @@ MLINKS+=login_times.3 parse_lt.3 login_times.3 in_ltm.3 \
 MLINKS+=login_ok.3 auth_ttyok.3 login_ok.3 auth_hostok.3 \
 	login_ok.3 auth_timeok.3
 MLINKS+=login_auth.3 auth_checknologin.3 login_auth.3 auth_cat.3
+MLINKS+=property.3 properties_read.3  property.3 properties_free.3
+MLINKS+=property.3 property_find.3 property.3 property_count.3
+MLINKS+=pty.3 openpty.3  pty.3 forkpty.3
 MLINKS+=uucplock.3 uu_lock.3 uucplock.3 uu_lock_txfr.3 \
 	uucplock.3 uu_unlock.3 uucplock.3 uu_lockerr.3
 MLINKS+=pidfile.3 pidfile_open.3 \
@@ -75,5 +76,9 @@ MLINKS+=quotafile.3 quota_open.3 \
 	quotafile.3 quota_write_limits.3 \
 	quotafile.3 quota_write_usage.3 \
 	quotafile.3 quota_close.3
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.lib.mk>
