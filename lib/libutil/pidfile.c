@@ -73,7 +73,7 @@ pidfile_read(const char *path, pid_t *pidptr)
 	char buf[16], *endptr;
 	int error, fd, i;
 
-	fd = open(path, O_RDONLY);
+	fd = open(path, O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
 		return (errno);
 
@@ -126,24 +126,30 @@ pidfile_open(const char *path, mode_t mode, pid_t *pidptr)
 	fd = flopen(pfh->pf_path,
 	    O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NONBLOCK, mode);
 	if (fd == -1) {
-		count = 0;
-		rqtp.tv_sec = 0;
-		rqtp.tv_nsec = 5000000;
-		if (errno == EWOULDBLOCK && pidptr != NULL) {
-		again:
-			errno = pidfile_read(pfh->pf_path, pidptr);
-			if (errno == 0)
+		if (errno == EWOULDBLOCK) {
+			if (pidptr == NULL) {
 				errno = EEXIST;
-			else if (errno == EAGAIN) {
-				if (++count <= 3) {
+			} else {
+				count = 20;
+				rqtp.tv_sec = 0;
+				rqtp.tv_nsec = 5000000;
+				for (;;) {
+					errno = pidfile_read(pfh->pf_path,
+					    pidptr);
+					if (errno != EAGAIN || --count == 0)
+						break;
 					nanosleep(&rqtp, 0);
-					goto again;
 				}
+				if (errno == EAGAIN)
+					*pidptr = -1;
+				if (errno == 0 || errno == EAGAIN)
+					errno = EEXIST;
 			}
 		}
 		free(pfh);
 		return (NULL);
 	}
+
 	/*
 	 * Remember file information, so in pidfile_write() we are sure we write
 	 * to the proper descriptor.
