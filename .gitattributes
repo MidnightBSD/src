@@ -50889,6 +50889,10 @@ sbin/shutdown/shutdown.c -text
 sbin/spppcontrol/Makefile -text
 sbin/spppcontrol/spppcontrol.8 -text
 sbin/spppcontrol/spppcontrol.c -text
+sbin/sunlabel/Makefile svneol=native#text/plain
+sbin/sunlabel/runtest.sh svneol=native#text/plain
+sbin/sunlabel/sunlabel.8 svneol=native#text/plain
+sbin/sunlabel/sunlabel.c svneol=native#text/plain
 sbin/swapon/Makefile -text
 sbin/swapon/swapon.8 -text
 sbin/swapon/swapon.c -text
