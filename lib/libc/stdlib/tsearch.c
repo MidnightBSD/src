@@ -1,4 +1,5 @@
-/*	$NetBSD: tsearch.c,v 1.3 1999/09/16 11:45:37 lukem Exp $	*/
+/* $MidnightBSD$ */
+/*	$NetBSD: tsearch.c,v 1.7 2012/06/25 22:32:45 abs Exp $	*/
 
 /*
  * Tree search generalized from Knuth (6.2.2) Algorithm T just like
@@ -14,10 +15,10 @@
 #include <sys/cdefs.h>
 #if 0
 #if defined(LIBC_SCCS) && !defined(lint)
-__RCSID("$NetBSD: tsearch.c,v 1.3 1999/09/16 11:45:37 lukem Exp $");
+__RCSID("$NetBSD: tsearch.c,v 1.7 2012/06/25 22:32:45 abs Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/tsearch.c 268964 2014-07-21 22:47:59Z pfg $");
 
 #define _SEARCH_PRIVATE
 #include <search.h>
@@ -25,10 +26,8 @@ __FBSDID("$FreeBSD$");
 
 /* find or insert datum into search tree */
 void *
-tsearch(vkey, vrootp, compar)
-	const void *vkey;		/* key to be located */
-	void **vrootp;			/* address of tree root */
-	int (*compar)(const void *, const void *);
+tsearch(const void *vkey, void **vrootp,
+    int (*compar)(const void *, const void *))
 {
 	node_t *q;
 	node_t **rootp = (node_t **)vrootp;
@@ -50,8 +49,7 @@ tsearch(vkey, vrootp, compar)
 	q = malloc(sizeof(node_t));		/* T5: key not found */
 	if (q != 0) {				/* make new node */
 		*rootp = q;			/* link new node to old */
-		/* LINTED const castaway ok */
-		q->key = (void *)vkey;		/* initialize new node */
+		q->key = __DECONST(void *, vkey);/* initialize new node */
 		q->llink = q->rlink = NULL;
 	}
 	return q;
