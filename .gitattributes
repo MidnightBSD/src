@@ -47882,6 +47882,7 @@ lib/libc/stdlib/random.3 -text
 lib/libc/stdlib/random.c -text
 lib/libc/stdlib/rb.h -text
 lib/libc/stdlib/reallocarray.c svneol=native#text/plain
+lib/libc/stdlib/reallocf.3 svneol=native#text/plain
 lib/libc/stdlib/reallocf.c -text
 lib/libc/stdlib/realpath.3 -text
 lib/libc/stdlib/realpath.c -text
