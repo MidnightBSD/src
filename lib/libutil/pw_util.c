@@ -179,11 +179,8 @@ pw_lock(void)
 	for (;;) {
 		struct stat st;
 
-		lockfd = open(masterpasswd, O_RDONLY, 0);
-		if (lockfd < 0 || fcntl(lockfd, F_SETFD, 1) == -1)
-			err(1, "%s", masterpasswd);
-		/* XXX vulnerable to race conditions */
-		if (flock(lockfd, LOCK_EX|LOCK_NB) == -1) {
+		lockfd = flopen(masterpasswd, O_RDONLY|O_NONBLOCK|O_CLOEXEC, 0);
+		if (lockfd == -1) {
 			if (errno == EWOULDBLOCK) {
 				errx(1, "the password db file is busy");
 			} else {
@@ -229,7 +226,7 @@ pw_tmp(int mfd)
 		errno = ENAMETOOLONG;
 		return (-1);
 	}
-	if ((tfd = mkstemp(tempname)) == -1)
+	if ((tfd = mkostemp(tempname, 0)) == -1)
 		return (-1);
 	if (mfd != -1) {
 		while ((nr = read(mfd, buf, sizeof(buf))) > 0)
@@ -347,7 +344,8 @@ pw_edit(int notsetuid)
 	sigprocmask(SIG_SETMASK, &oldsigset, NULL);
 	if (stat(tempname, &st2) == -1)
 		return (-1);
-	return (st1.st_mtime != st2.st_mtime);
+	return (st1.st_mtim.tv_sec != st2.st_mtim.tv_sec ||
+	    st1.st_mtim.tv_nsec != st2.st_mtim.tv_nsec);
 }
 
 /*
@@ -430,11 +428,12 @@ pw_make_v7(const struct passwd *pw)
 int
 pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 {
-	char buf[8192], *end, *line, *p, *q, *r, t;
+	char *buf, *end, *line, *p, *q, *r, *tmp;
 	struct passwd *fpw;
 	const struct passwd *spw;
-	size_t len;
+	size_t len, size;
 	int eof, readlen;
+	char t;
 
 	if (old_pw == NULL && pw == NULL)
 			return (-1);
@@ -452,6 +451,10 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 	if (spw == NULL)
 		spw = pw;
 
+	/* initialize the buffer */
+	if ((buf = malloc(size = 1024)) == NULL)
+		goto err;
+
 	eof = 0;
 	len = 0;
 	p = q = end = buf;
@@ -465,10 +468,16 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 		if (q >= end) {
 			if (eof)
 				break;
-			if ((size_t)(q - p) >= sizeof(buf)) {
-				warnx("passwd line too long");
-				errno = EINVAL; /* hack */
-				goto err;
+			while ((size_t)(q - p) >= size) {
+				if ((tmp = realloc(buf, size * 2)) == NULL) {
+					warnx("passwd line too long");
+					goto err;
+				}
+				p = tmp + (p - buf);
+				q = tmp + (q - buf);
+				end = tmp + (end - buf);
+				buf = tmp;
+				size = size * 2;
 			}
 			if (p < end) {
 				q = memmove(buf, p, end - p);
@@ -476,7 +485,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 			} else {
 				p = q = end = buf;
 			}
-			readlen = read(ffd, end, sizeof(buf) - (end - buf));
+			readlen = read(ffd, end, size - (end - buf));
 			if (readlen == -1)
 				goto err;
 			else
@@ -485,7 +494,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 				break;
 			end += len;
 			len = end - buf;
-			if (len < (ssize_t)sizeof(buf)) {
+			if (len < size) {
 				eof = 1;
 				if (len > 0 && buf[len - 1] != '\n')
 					++len, *end++ = '\n';
@@ -548,7 +557,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 			if (write(tfd, q, end - q) != end - q)
 				goto err;
 			q = buf;
-			readlen = read(ffd, buf, sizeof(buf));
+			readlen = read(ffd, buf, size);
 			if (readlen == 0)
 				break;
 			else
@@ -570,12 +579,12 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 	    write(tfd, "\n", 1) != 1)
 		goto err;
  done:
-	if (line != NULL)
-		free(line);
+	free(line);
+	free(buf);
 	return (0);
  err:
-	if (line != NULL)
-		free(line);
+	free(line);
+	free(buf);
 	return (-1);
 }
 
