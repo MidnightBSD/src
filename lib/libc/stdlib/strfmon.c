@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/strfmon.c 268881 2014-07-19 15:12:38Z pfg $");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -526,7 +527,6 @@ __format_grouped_double(double value, int *flags,
 	char		*rslt;
 	char		*avalue;
 	int		avalue_size;
-	char		fmt[32];
 
 	size_t		bufsize;
 	char		*bufend;
@@ -567,14 +567,13 @@ __format_grouped_double(double value, int *flags,
 		left_prec += get_groups(left_prec, grouping);
 
 	/* convert to string */
-	snprintf(fmt, sizeof(fmt), "%%%d.%df", left_prec + right_prec + 1,
-	    right_prec);
-	avalue_size = asprintf(&avalue, fmt, value);
+	avalue_size = asprintf(&avalue, "%*.*f", left_prec + right_prec + 1,
+	    right_prec, value);
 	if (avalue_size < 0)
 		return (NULL);
 
 	/* make sure that we've enough space for result string */
-	bufsize = strlen(avalue)*2+1;
+	bufsize = avalue_size * 2 + 1;
 	rslt = calloc(1, bufsize);
 	if (rslt == NULL) {
 		free(avalue);
