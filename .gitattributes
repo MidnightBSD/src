@@ -48238,6 +48238,8 @@ lib/libc/sys/uuidgen.2 -text
 lib/libc/sys/vfork.2 -text
 lib/libc/sys/wait.2 -text
 lib/libc/sys/write.2 -text
+lib/libc/sys/write.c svneol=native#text/plain
+lib/libc/sys/writev.c svneol=native#text/plain
 lib/libc/tests/Makefile svneol=native#text/plain
 lib/libc/tests/Makefile.netbsd-tests svneol=native#text/plain
 lib/libc/tests/c063/Makefile svneol=native#text/plain
