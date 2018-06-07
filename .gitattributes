@@ -50899,6 +50899,7 @@ sbin/swapon/swapon.c -text
 sbin/sysctl/Makefile -text
 sbin/sysctl/sysctl.8 -text
 sbin/sysctl/sysctl.c -text
+sbin/tests/Makefile svneol=native#text/plain
 sbin/tunefs/Makefile -text
 sbin/tunefs/tunefs.8 -text
 sbin/tunefs/tunefs.c -text
