@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libutil/libutil.h,v 1.7 2011/10/10 23:36:53 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/lib/libutil/libutil.h,v 1.40.8.1 2006/01/15 17:50:35 delphij Exp $
  */
 
@@ -103,6 +103,8 @@ struct kinfo_file *
 	kinfo_getfile(pid_t _pid, int *_cntp);
 struct kinfo_vmentry *
 	kinfo_getvmmap(pid_t _pid, int *_cntp);
+struct kinfo_vmobject *
+	kinfo_getvmobject(int *_cntp);
 struct kinfo_proc *
 	kinfo_getallproc(int *_cntp);
 struct kinfo_proc *
@@ -179,16 +181,21 @@ int	pw_tmp(int _mfd);
 #endif
 
 #ifdef _GRP_H_
-int 	gr_copy(int __ffd, int _tfd, const struct group *_gr, struct group *_old_gr);
-struct group *gr_dup(const struct group *gr);
-int	gr_equal(const struct group *gr1, const struct group *gr2);
+int 	gr_copy(int __ffd, int _tfd, const struct group *_gr,
+	    struct group *_old_gr);
+struct group *
+	gr_dup(const struct group *_gr);
+struct group *
+	gr_add(const struct group *_gr, const char *_newmember);
+int	gr_equal(const struct group *_gr1, const struct group *_gr2);
 void	gr_fini(void);
 int	gr_init(const char *_dir, const char *_master);
 int	gr_lock(void);
-char	*gr_make(const struct group *gr);
+char	*gr_make(const struct group *_gr);
 int	gr_mkdb(void);
+struct group *
+	gr_scan(const char *_line);
 int	gr_tmp(int _mdf);
-struct group *gr_scan(const char *line);
 #endif
 
 #ifdef _UFS_UFS_QUOTA_H_
