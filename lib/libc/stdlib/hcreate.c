@@ -1,4 +1,5 @@
-/* $NetBSD: hcreate.c,v 1.2 2001/02/19 21:26:04 ross Exp $ */
+/* $MidnightBSD$ */
+/* $NetBSD: hcreate.c,v 1.6 2008/07/21 12:05:43 lukem Exp $ */
 
 /*
  * Copyright (c) 2001 Christopher G. Demetriou
@@ -15,7 +16,7 @@
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
  *          This product includes software developed for the
- *          NetBSD Project.  See http://www.netbsd.org/ for
+ *          NetBSD Project.  See http://www.NetBSD.org/ for
  *          information about NetBSD.
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
@@ -49,10 +50,10 @@
 #include <sys/cdefs.h>
 #if 0
 #if defined(LIBC_SCCS) && !defined(lint)
-__RCSID("$NetBSD: hcreate.c,v 1.2 2001/02/19 21:26:04 ross Exp $");
+__RCSID("$NetBSD: hcreate.c,v 1.6 2008/07/21 12:05:43 lukem Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/hcreate.c 269491 2014-08-04 00:51:57Z pfg $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -142,7 +143,6 @@ hdestroy(void)
 		while (!SLIST_EMPTY(&htable[idx])) {
 			ie = SLIST_FIRST(&htable[idx]);
 			SLIST_REMOVE_HEAD(&htable[idx], link);
-			free(ie->ent.key);
 			free(ie);
 		}
 	}

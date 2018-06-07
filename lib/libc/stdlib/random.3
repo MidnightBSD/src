@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -9,7 +10,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)random.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD$
+.\" $FreeBSD: stable/10/lib/libc/stdlib/random.3 301454 2016-06-05 16:21:53Z ache $
 .\"
 .Dd April 2, 2013
 .Dt RANDOM 3
@@ -175,8 +176,8 @@ If
 .Fn initstate
 is called with less than 8 bytes of state information, or if
 .Fn setstate
-detects that the state information has been garbled, error
-messages are printed on the standard error output.
+detects that the state information has been garbled,
+NULL is returned.
 .Sh SEE ALSO
 .Xr arc4random 3 ,
 .Xr lrand48 3 ,

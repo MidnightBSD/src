@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/ptsname.c 240412 2012-09-12 17:54:09Z emaste $");
 #endif /* not lint */
 
 #include "namespace.h"

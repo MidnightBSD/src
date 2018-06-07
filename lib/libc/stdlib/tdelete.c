@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tdelete.c,v 1.2 1999/09/16 11:45:37 lukem Exp $	*/
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/lldiv.c 301459 2016-06-05 18:11:52Z ache $");
 
 #include <stdlib.h>
 
@@ -37,9 +38,11 @@ lldiv(long long numer, long long denom)
 
 	retval.quot = numer / denom;
 	retval.rem = numer % denom;
+#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
 	if (numer >= 0 && retval.rem < 0) {
 		retval.quot++;
 		retval.rem -= denom;
 	}
+#endif
 	return (retval);
 }
