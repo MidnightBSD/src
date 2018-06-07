@@ -50905,6 +50905,9 @@ sbin/tunefs/tunefs.c -text
 sbin/umount/Makefile -text
 sbin/umount/umount.8 -text
 sbin/umount/umount.c -text
+sbin/zfsbootcfg/Makefile svneol=native#text/plain
+sbin/zfsbootcfg/zfsbootcfg.8 svneol=native#text/plain
+sbin/zfsbootcfg/zfsbootcfg.c svneol=native#text/plain
 secure/Makefile -text
 secure/Makefile.inc -text
 secure/lib/Makefile -text
