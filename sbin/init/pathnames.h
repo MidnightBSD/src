@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,12 +31,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- * $FreeBSD: src/sbin/init/pathnames.h,v 1.3 2004/04/09 19:58:30 markm Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/init/pathnames.h 293744 2016-01-12 10:14:57Z trasz $
  */
 
 #include <paths.h>
 
-#define	_PATH_INITLOG	"/var/log/init.log"
-#define	_PATH_RUNCOM	"/etc/rc"
-#define _PATH_RUNDOWN   "/etc/rc.shutdown"
+#define	_PATH_INITLOG		"/var/log/init.log"
+#define	_PATH_SLOGGER		"/sbin/session_logger"
+#define	_PATH_RUNCOM		"/etc/rc"
+#define	_PATH_RUNDOWN		"/etc/rc.shutdown"
+#define	_PATH_REROOT		"/dev/reroot"
+#define	_PATH_REROOT_INIT	_PATH_REROOT "/init"

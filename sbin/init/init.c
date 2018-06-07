@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,15 +29,25 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * @(#) Copyright (c) 1991, 1993 The Regents of the University of California.  All rights reserved.
- * @(#)init.c      8.1 (Berkeley) 7/15/93
- * $FreeBSD: src/sbin/init/init.c,v 1.60.2.2 2006/07/08 15:34:27 kib Exp $
- * $MidnightBSD$
  */
+
+#ifndef lint
+static const char copyright[] =
+"@(#) Copyright (c) 1991, 1993\n\
+	The Regents of the University of California.  All rights reserved.\n";
+#endif /* not lint */
+
+#ifndef lint
+#if 0
+static char sccsid[] = "@(#)init.c	8.1 (Berkeley) 7/15/93";
+#endif
+static const char rcsid[] =
+  "$FreeBSD: stable/10/sbin/init/init.c 321907 2017-08-02 05:47:26Z delphij $";
+#endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/sysctl.h>
 #include <sys/wait.h>
@@ -57,7 +68,6 @@
 #include <time.h>
 #include <ttyent.h>
 #include <unistd.h>
-#include <utmpx.h>
 #include <sys/reboot.h>
 #include <err.h>
 
@@ -71,6 +81,7 @@
 #include <login_cap.h>
 #endif
 
+#include "mntopts.h"
 #include "pathnames.h"
 
 /*
@@ -95,6 +106,7 @@ static void warning(const char *, ...) __printflike(1, 2);
 static void emergency(const char *, ...) __printflike(1, 2);
 static void disaster(int);
 static void badsys(int);
+static void revoke_ttys(void);
 static int  runshutdown(void);
 static char *strk(char *);
 
@@ -114,6 +126,8 @@ static state_func_t clean_ttys(void);
 static state_func_t catatonia(void);
 static state_func_t death(void);
 static state_func_t death_single(void);
+static state_func_t reroot(void);
+static state_func_t reroot_phase_two(void);
 
 static state_func_t run_script(const char *);
 
@@ -172,8 +186,6 @@ static void setprocresources(const char *);
 #endif
 static int clang;
 
-static void clear_session_logs(session_t *);
-
 static int start_session_db(void);
 static void add_session(session_t *);
 static void del_session(session_t *);
@@ -188,7 +200,7 @@ main(int argc, char *argv[])
 {
 	state_t initial_transition = runcom;
 	char kenv_value[PATH_MAX];
-	int c;
+	int c, error;
 	struct sigaction sa;
 	sigset_t mask;
 
@@ -221,6 +233,9 @@ main(int argc, char *argv[])
 				case 'q': /* rescan /etc/ttys */
 					sig = SIGHUP;
 					break;
+				case 'r': /* remount root */
+					sig = SIGEMT;
+					break;
 				default:
 					goto invalid;
 				}
@@ -242,7 +257,7 @@ invalid:
 	/*
 	 * Create an initial session.
 	 */
-	if (setsid() < 0)
+	if (setsid() < 0 && (errno != EPERM || getsid(0) != 1))
 		warning("initial setsid() failed: %m");
 
 	/*
@@ -256,7 +271,7 @@ invalid:
 	 * This code assumes that we always get arguments through flags,
 	 * never through bits set in some random machine register.
 	 */
-	while ((c = getopt(argc, argv, "dsf")) != -1)
+	while ((c = getopt(argc, argv, "dsfr")) != -1)
 		switch (c) {
 		case 'd':
 			devfs = 1;
@@ -266,6 +281,9 @@ invalid:
 			break;
 		case 'f':
 			runcom_mode = FASTBOOT;
+			break;
+		case 'r':
+			initial_transition = reroot_phase_two;
 			break;
 		default:
 			warning("unrecognized flag '-%c'", c);
@@ -282,13 +300,13 @@ invalid:
 	handle(badsys, SIGSYS, 0);
 	handle(disaster, SIGABRT, SIGFPE, SIGILL, SIGSEGV, SIGBUS, SIGXCPU,
 	    SIGXFSZ, 0);
-	handle(transition_handler, SIGHUP, SIGINT, SIGTERM, SIGTSTP, SIGUSR1,
-	    SIGUSR2, 0);
+	handle(transition_handler, SIGHUP, SIGINT, SIGEMT, SIGTERM, SIGTSTP,
+	    SIGUSR1, SIGUSR2, 0);
 	handle(alrm_handler, SIGALRM, 0);
 	sigfillset(&mask);
 	delset(&mask, SIGABRT, SIGFPE, SIGILL, SIGSEGV, SIGBUS, SIGSYS,
-	    SIGXCPU, SIGXFSZ, SIGHUP, SIGINT, SIGTERM, SIGTSTP, SIGALRM,
-	    SIGUSR1, SIGUSR2, 0);
+	    SIGXCPU, SIGXFSZ, SIGHUP, SIGINT, SIGEMT, SIGTERM, SIGTSTP,
+	    SIGALRM, SIGUSR1, SIGUSR2, 0);
 	sigprocmask(SIG_SETMASK, &mask, (sigset_t *) 0);
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
@@ -366,6 +384,16 @@ invalid:
 		nmount(iov, 4, 0);
 		if (s != NULL)
 			free(s);
+	}
+
+	if (initial_transition != reroot_phase_two) {
+		/*
+		 * Unmount reroot leftovers.  This runs after init(8)
+		 * gets reexecuted after reroot_phase_two() is done.
+		 */
+		error = unmount(_PATH_REROOT, MNT_FORCE);
+		if (error != 0 && errno != EINVAL)
+			warning("Cannot unmount %s: %m", _PATH_REROOT);
 	}
 
 	/*
@@ -558,20 +586,6 @@ transition(state_t s)
 }
 
 /*
- * Close out the accounting files for a login session.
- * NB: should send a message to the session logger to avoid blocking.
- */
-static void
-clear_session_logs(session_t *sp __unused)
-{
-
-	/*
-	 * XXX: Use getutxline() and call pututxline() for each entry.
-	 * Is this safe to do this here?  Is it really required anyway?
-	 */
-}
-
-/*
  * Start a session and allocate a controlling terminal.
  * Only called by children of init after forking.
  */
@@ -629,6 +643,229 @@ write_stderr(const char *message)
 	write(STDERR_FILENO, message, strlen(message));
 }
 
+static int
+read_file(const char *path, void **bufp, size_t *bufsizep)
+{
+	struct stat sb;
+	size_t bufsize;
+	void *buf;
+	ssize_t nbytes;
+	int error, fd;
+
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		emergency("%s: %s", path, strerror(errno));
+		return (-1);
+	}
+
+	error = fstat(fd, &sb);
+	if (error != 0) {
+		emergency("fstat: %s", strerror(errno));
+		close(fd);
+		return (error);
+	}
+
+	bufsize = sb.st_size;
+	buf = malloc(bufsize);
+	if (buf == NULL) {
+		emergency("malloc: %s", strerror(errno));
+		close(fd);
+		return (error);
+	}
+
+	nbytes = read(fd, buf, bufsize);
+	if (nbytes != (ssize_t)bufsize) {
+		emergency("read: %s", strerror(errno));
+		close(fd);
+		free(buf);
+		return (error);
+	}
+
+	error = close(fd);
+	if (error != 0) {
+		emergency("close: %s", strerror(errno));
+		free(buf);
+		return (error);
+	}
+
+	*bufp = buf;
+	*bufsizep = bufsize;
+
+	return (0);
+}
+
+static int
+create_file(const char *path, const void *buf, size_t bufsize)
+{
+	ssize_t nbytes;
+	int error, fd;
+
+	fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0700);
+	if (fd < 0) {
+		emergency("%s: %s", path, strerror(errno));
+		return (-1);
+	}
+
+	nbytes = write(fd, buf, bufsize);
+	if (nbytes != (ssize_t)bufsize) {
+		emergency("write: %s", strerror(errno));
+		close(fd);
+		return (-1);
+	}
+
+	error = close(fd);
+	if (error != 0) {
+		emergency("close: %s", strerror(errno));
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+mount_tmpfs(const char *fspath)
+{
+	struct iovec *iov;
+	char errmsg[255];
+	int error, iovlen;
+
+	iov = NULL;
+	iovlen = 0;
+	memset(errmsg, 0, sizeof(errmsg));
+	build_iovec(&iov, &iovlen, "fstype",
+	    __DECONST(void *, "tmpfs"), (size_t)-1);
+	build_iovec(&iov, &iovlen, "fspath",
+	    __DECONST(void *, fspath), (size_t)-1);
+	build_iovec(&iov, &iovlen, "errmsg",
+	    errmsg, sizeof(errmsg));
+
+	error = nmount(iov, iovlen, 0);
+	if (error != 0) {
+		if (*errmsg != '\0') {
+			emergency("cannot mount tmpfs on %s: %s: %s",
+			    fspath, errmsg, strerror(errno));
+		} else {
+			emergency("cannot mount tmpfs on %s: %s",
+			    fspath, strerror(errno));
+		}
+		return (error);
+	}
+	return (0);
+}
+
+static state_func_t
+reroot(void)
+{
+	void *buf;
+	char init_path[PATH_MAX];
+	size_t bufsize, init_path_len;
+	int error, name[4];
+
+	buf = NULL;
+	bufsize = 0;
+
+	name[0] = CTL_KERN;
+	name[1] = KERN_PROC;
+	name[2] = KERN_PROC_PATHNAME;
+	name[3] = -1;
+	init_path_len = sizeof(init_path);
+	error = sysctl(name, 4, init_path, &init_path_len, NULL, 0);
+	if (error != 0) {
+		emergency("failed to get kern.proc.pathname: %s",
+		    strerror(errno));
+		goto out;
+	}
+
+	revoke_ttys();
+	runshutdown();
+
+	/*
+	 * Make sure nobody can interfere with our scheme.
+	 */
+	error = kill(-1, SIGKILL);
+	if (error != 0) {
+		emergency("kill(2) failed: %s", strerror(errno));
+		goto out;
+	}
+
+	/*
+	 * Copy the init binary into tmpfs, so that we can unmount
+	 * the old rootfs without committing suicide.
+	 */
+	error = read_file(init_path, &buf, &bufsize);
+	if (error != 0)
+		goto out;
+	error = mount_tmpfs(_PATH_REROOT);
+	if (error != 0)
+		goto out;
+	error = create_file(_PATH_REROOT_INIT, buf, bufsize);
+	if (error != 0)
+		goto out;
+
+	/*
+	 * Execute the temporary init.
+	 */
+	execl(_PATH_REROOT_INIT, _PATH_REROOT_INIT, "-r", NULL);
+	emergency("cannot exec %s: %s", _PATH_REROOT_INIT, strerror(errno));
+
+out:
+	emergency("reroot failed; going to single user mode");
+	free(buf);
+	return (state_func_t) single_user;
+}
+
+static state_func_t
+reroot_phase_two(void)
+{
+	char init_path[PATH_MAX], *path, *path_component;
+	size_t init_path_len;
+	int nbytes, error;
+
+	/*
+	 * Ask the kernel to mount the new rootfs.
+	 */
+	error = reboot(RB_REROOT);
+	if (error != 0) {
+		emergency("RB_REBOOT failed: %s", strerror(errno));
+		goto out;
+	}
+
+	/*
+	 * Figure out where the destination init(8) binary is.  Note that
+	 * the path could be different than what we've started with.  Use
+	 * the value from kenv, if set, or the one from sysctl otherwise.
+	 * The latter defaults to a hardcoded value, but can be overridden
+	 * by a build time option.
+	 */
+	nbytes = kenv(KENV_GET, "init_path", init_path, sizeof(init_path));
+	if (nbytes <= 0) {
+		init_path_len = sizeof(init_path);
+		error = sysctlbyname("kern.init_path",
+		    init_path, &init_path_len, NULL, 0);
+		if (error != 0) {
+			emergency("failed to retrieve kern.init_path: %s",
+			    strerror(errno));
+			goto out;
+		}
+	}
+
+	/*
+	 * Repeat the init search logic from sys/kern/init_path.c
+	 */
+	path_component = init_path;
+	while ((path = strsep(&path_component, ":")) != NULL) {
+		/*
+		 * Execute init(8) from the new rootfs.
+		 */
+		execl(path, path, NULL);
+	}
+	emergency("cannot exec init from %s: %s", init_path, strerror(errno));
+
+out:
+	emergency("reroot failed; going to single user mode");
+	return (state_func_t) single_user;
+}
+
 /*
  * Bring the system up single user.
  */
@@ -640,6 +877,7 @@ single_user(void)
 	sigset_t mask;
 	const char *shell;
 	char *argv[2];
+	struct timeval tv, tn;
 #ifdef SECURE
 	struct ttyent *typ;
 	struct passwd *pp;
@@ -654,10 +892,13 @@ single_user(void)
 	if (Reboot) {
 		/* Instead of going single user, let's reboot the machine */
 		sync();
-		alarm(2);
-		pause();
-		reboot(howto);
-		_exit(0);
+		if (reboot(howto) == -1) {
+			emergency("reboot(%#x) failed, %s", howto,
+			    strerror(errno));
+			_exit(1); /* panic and reboot */
+		}
+		warning("reboot(%#x) returned", howto);
+		_exit(0); /* panic as well */
 	}
 
 	shell = get_shell();
@@ -774,7 +1015,14 @@ single_user(void)
 			 *  reboot(8) killed shell?
 			 */
 			warning("single user shell terminated.");
-			sleep(STALL_TIMEOUT);
+			gettimeofday(&tv, NULL);
+			tn = tv;
+			tv.tv_sec += STALL_TIMEOUT;
+			while (tv.tv_sec > tn.tv_sec || (tv.tv_sec ==
+			    tn.tv_sec && tv.tv_usec > tn.tv_usec)) {
+				sleep(1);
+				gettimeofday(&tn, NULL);
+			}
 			_exit(0);
 		} else {
 			warning("single user shell terminated, restarting");
@@ -792,17 +1040,12 @@ single_user(void)
 static state_func_t
 runcom(void)
 {
-	struct utmpx utx;
 	state_func_t next_transition;
 
 	if ((next_transition = run_script(_PATH_RUNCOM)) != 0)
 		return next_transition;
 
 	runcom_mode = AUTOBOOT;		/* the default */
-	/* NB: should send a message to the session logger to avoid blocking. */
-	utx.ut_type = BOOT_TIME;
-	gettimeofday(&utx.ut_tv, NULL);
-	pututxline(&utx);
 	return (state_func_t) read_ttys;
 }
 
@@ -867,8 +1110,9 @@ run_script(const char *script)
 		if ((wpid = waitpid(-1, &status, WUNTRACED)) != -1)
 			collect_child(wpid);
 		if (wpid == -1) {
-			if (requested_transition == death_single)
-				return (state_func_t) death_single;
+			if (requested_transition == death_single ||
+			    requested_transition == reroot)
+				return (state_func_t) requested_transition;
 			if (errno == EINTR)
 				continue;
 			warning("wait for %s on %s failed: %m; going to "
@@ -1035,8 +1279,8 @@ new_session(session_t *sprev, int session_index, struct ttyent *typ)
 	sp->se_index = session_index;
 	sp->se_flags |= SE_PRESENT;
 
-	sp->se_device = malloc(sizeof(_PATH_DEV) + strlen(typ->ty_name));
-	sprintf(sp->se_device, "%s%s", _PATH_DEV, typ->ty_name);
+	if (asprintf(&sp->se_device, "%s%s", _PATH_DEV, typ->ty_name) < 0)
+		err(1, "asprintf");
 
 	/*
 	 * Attempt to open the device, if we get "device not configured"
@@ -1079,8 +1323,8 @@ setupargv(session_t *sp, struct ttyent *typ)
 		free(sp->se_getty_argv_space);
 		free(sp->se_getty_argv);
 	}
-	sp->se_getty = malloc(strlen(typ->ty_getty) + strlen(typ->ty_name) + 2);
-	sprintf(sp->se_getty, "%s %s", typ->ty_getty, typ->ty_name);
+	if (asprintf(&sp->se_getty, "%s %s", typ->ty_getty, typ->ty_name) < 0)
+		err(1, "asprintf");
 	sp->se_getty_argv_space = strdup(sp->se_getty);
 	sp->se_getty_argv = construct_argv(sp->se_getty_argv_space);
 	if (sp->se_getty_argv == 0) {
@@ -1131,8 +1375,6 @@ read_ttys(void)
 	 * There shouldn't be any, but just in case...
 	 */
 	for (sp = sessions; sp; sp = snext) {
-		if (sp->se_process)
-			clear_session_logs(sp);
 		snext = sp->se_next;
 		free_session(sp);
 	}
@@ -1196,7 +1438,7 @@ start_window_system(session_t *sp)
 	if (sp->se_type) {
 		/* Don't use malloc after fork */
 		strcpy(term, "TERM=");
-		strncat(term, sp->se_type, sizeof(term) - 6);
+		strlcat(term, sp->se_type, sizeof(term));
 		env[0] = term;
 		env[1] = 0;
 	}
@@ -1260,7 +1502,7 @@ start_getty(session_t *sp)
 	if (sp->se_type) {
 		/* Don't use malloc after fork */
 		strcpy(term, "TERM=");
-		strncat(term, sp->se_type, sizeof(term) - 6);
+		strlcat(term, sp->se_type, sizeof(term));
 		env[0] = term;
 		env[1] = 0;
 	} else
@@ -1286,7 +1528,6 @@ collect_child(pid_t pid)
 	if (! (sp = find_session(pid)))
 		return;
 
-	clear_session_logs(sp);
 	del_session(sp);
 	sp->se_process = 0;
 
@@ -1343,6 +1584,9 @@ transition_handler(int sig)
 		    current_state == clean_ttys ||
 		    current_state == multi_user || current_state == catatonia)
 			requested_transition = catatonia;
+		break;
+	case SIGEMT:
+		requested_transition = reroot;
 		break;
 	default:
 		requested_transition = 0;
@@ -1516,13 +1760,15 @@ alrm_handler(int sig)
 static state_func_t
 death(void)
 {
-	struct utmpx utx;
-	session_t *sp;
+	int block, blocked;
+	size_t len;
 
-	/* NB: should send a message to the session logger to avoid blocking. */
-	utx.ut_type = SHUTDOWN_TIME;
-	gettimeofday(&utx.ut_tv, NULL);
-	pututxline(&utx);
+	/* Temporarily block suspend. */
+	len = sizeof(blocked);
+	block = 1;
+	if (sysctlbyname("kern.suspend_blocked", &blocked, &len,
+	    &block, sizeof(block)) == -1)
+		blocked = 0;
 
 	/*
 	 * Also revoke the TTY here.  Because runshutdown() may reopen
@@ -1530,14 +1776,15 @@ death(void)
 	 * runshutdown() will perform the initial open() call, causing
 	 * the terminal attributes to be misconfigured.
 	 */
-	for (sp = sessions; sp; sp = sp->se_next) {
-		sp->se_flags |= SE_SHUTDOWN;
-		kill(sp->se_process, SIGHUP);
-		revoke(sp->se_device);
-	}
+	revoke_ttys();
 
 	/* Try to run the rc.shutdown script within a period of time */
 	runshutdown();
+
+	/* Unblock suspend if we blocked it. */
+	if (!blocked)
+		sysctlbyname("kern.suspend_blocked", NULL, NULL,
+		    &blocked, sizeof(blocked));
 
 	return (state_func_t) death_single;
 }
@@ -1573,6 +1820,18 @@ death_single(void)
 	warning("some processes would not die; ps axl advised");
 
 	return (state_func_t) single_user;
+}
+
+static void
+revoke_ttys(void)
+{
+	session_t *sp;
+
+	for (sp = sessions; sp; sp = sp->se_next) {
+		sp->se_flags |= SE_SHUTDOWN;
+		kill(sp->se_process, SIGHUP);
+		revoke(sp->se_device);
+	}
 }
 
 /*
@@ -1753,7 +2012,8 @@ setprocresources(const char *cname)
 	login_cap_t *lc;
 	if ((lc = login_getclassbyname(cname, NULL)) != NULL) {
 		setusercontext(lc, (struct passwd*)NULL, 0,
-		    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES);
+		    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES |
+		    LOGIN_SETLOGINCLASS | LOGIN_SETCPUMASK);
 		login_close(lc);
 	}
 }

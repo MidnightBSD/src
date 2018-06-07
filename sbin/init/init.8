@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -29,9 +30,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)init.8	8.3 (Berkeley) 4/18/94
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/init/init.8 306991 2016-10-10 16:30:01Z sevan $
+.\" $MidnghtBSD$
 .\"
-.Dd March 14, 2012
+.Dd October 3, 2016
 .Dt INIT 8
 .Os
 .Sh NAME
@@ -146,14 +148,7 @@ executes a shell for that user.
 When this shell
 dies, either because the user logged out
 or an abnormal termination occurred (a signal),
-.Nm login
-records the logout in the user accounting
-database (see
-.Xr getutxent 3)
-and terminates.
-The cycle is
-then restarted by
-.Nm
+the cycle is restarted by
 executing a new
 .Nm getty
 for the line.
@@ -291,6 +286,7 @@ will signal the original
 as follows:
 .Bl -column Run-level SIGTERM
 .It Sy "Run-level	Signal	Action"
+.It Cm 0 Ta Dv SIGUSR1 Ta "Halt"
 .It Cm 0 Ta Dv SIGUSR2 Ta "Halt and turn the power off"
 .It Cm 1 Ta Dv SIGTERM Ta "Go to single-user mode"
 .It Cm 6 Ta Dv SIGINT Ta "Reboot the machine"
@@ -351,7 +347,7 @@ a persistent device error condition.
 An
 .Nm
 utility appeared in
-.At v6 .
+.At v1 .
 .Sh CAVEATS
 Systems without
 .Xr sysctl 8
