@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2002 Gordon Tetlow
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/reboot/nextboot.8 307403 2016-10-16 22:02:50Z sevan $
 .\"
-.Dd November 19, 2012
+.Dd March 17, 2015
 .Dt NEXTBOOT 8
 .Os
 .Sh NAME
@@ -118,15 +119,21 @@ appeared in
 .Fx 5.0 .
 .Sh AUTHORS
 This manual page was written by
-.An Gordon Tetlow Aq gordon@FreeBSD.org .
+.An Gordon Tetlow Aq Mt gordon@FreeBSD.org .
 .Sh BUGS
 The
 .Nm
 code is implemented in the
 .Xr loader 8 .
-It is not the most throughly tested code.
+It is not the most thoroughly tested code.
 It is also my first attempt to write in Forth.
 .Pp
 Finally, it does some evil things like writing to the file system before it
 has been checked.
 If it scrambles your file system, do not blame me.
+.Pp
+.Xr loader 8
+is only able to read ZFS, not write to it.
+.Pa nextboot.conf
+will NOT be reset in case of a kernel boot failure.
+
