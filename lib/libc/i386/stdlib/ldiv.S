@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/stdlib/ldiv.S 217106 2011-01-07 16:08:40Z kib $");
 
 ENTRY(ldiv)
         movl    4(%esp),%eax
