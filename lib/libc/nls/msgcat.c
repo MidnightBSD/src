@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /***********************************************************
 Copyright 1990, by Alfalfa Software Incorporated, Cambridge, Massachusetts.
 Copyright 2010, Gabor Kovesdan <gabor@FreeBSD.org>
@@ -32,7 +33,7 @@ up-to-date.  Many thanks.
 ******************************************************************/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/nls/msgcat.c 304862 2016-08-26 21:19:23Z ache $");
 
 #define _NLS_PRIVATE
 
@@ -47,7 +48,6 @@ __MBSDID("$MidnightBSD$");
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <locale.h>
 #include <nl_types.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -56,7 +56,7 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include "un-namespace.h"
 
-#include "../locale/setlocale.h"        /* for ENCODING_LEN */
+#include "../locale/xlocale_private.h"
 
 #define _DEFAULT_NLS_PATH "/usr/share/nls/%L/%N.cat:/usr/share/nls/%N/%L:/usr/local/share/nls/%L/%N.cat:/usr/local/share/nls/%N/%L"
 
@@ -82,6 +82,8 @@ __MBSDID("$MidnightBSD$");
 				  if (np != NULL) {				\
 				  	np->name = strdup(n);			\
 					np->path = NULL;			\
+					np->catd = NLERR;			\
+					np->refcount = 0;			\
 					np->lang = (l == NULL) ? NULL :		\
 					    strdup(l);				\
 					np->caterrno = e;			\
@@ -113,9 +115,10 @@ catopen(const char *name, int type)
 {
 	struct stat sbuf;
 	struct catentry *np;
-	char *base, *cptr, *cptr1, *lang, *nlspath, *pathP, *pcode;
-	char *plang, *pter, *tmpptr;
+	char *base, *cptr, *cptr1, *nlspath, *pathP, *pcode;
+	char *plang, *pter;
 	int saverr, spcleft;
+	const char *lang, *tmpptr;
 	char path[PATH_MAX];
 
 	/* sanity checking */
@@ -127,7 +130,7 @@ catopen(const char *name, int type)
 		lang = NULL;
 	else {
 		if (type == NL_CAT_LOCALE)
-			lang = setlocale(LC_MESSAGES, NULL);
+			lang = querylocale(LC_MESSAGES_MASK, __get_locale());
 		else
 			lang = getenv("LANG");
 
@@ -384,7 +387,7 @@ load_msgcat(const char *path, const char *name, const char *lang)
 	}
 	UNLOCK;
 
-	if ((fd = _open(path, O_RDONLY)) == -1) {
+	if ((fd = _open(path, O_RDONLY | O_CLOEXEC)) == -1) {
 		SAVEFAIL(name, lang, errno);
 		NLRETERR(errno);
 	}
