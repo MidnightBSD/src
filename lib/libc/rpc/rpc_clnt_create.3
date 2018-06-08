@@ -1,9 +1,10 @@
+.\" $MidnightBSD$
 .\" @(#)rpc_clnt_create.3n 1.36 93/08/31 SMI; from SVr4
 .\" Copyright 1989 AT&T
 .\" @(#)rpc_clnt_create 1.5 89/07/24 SMI;
 .\" Copyright (c) 1988 Sun Microsystems, Inc. - All Rights Reserved.
 .\" $NetBSD: rpc_clnt_create.3,v 1.2 2000/06/20 00:53:08 fvdl Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/rpc/rpc_clnt_create.3 231564 2012-02-12 18:29:56Z ed $
 .Dd May 7, 1993
 .Dt RPC_CLNT_CREATE 3
 .Os
@@ -106,10 +107,10 @@ Set the timeout argument to 0 for batching calls.
 .It Dv CLGET_FD Ta "int *" Ta "get fd from handle"
 .It Dv CLSET_FD_CLOSE Ta "void" Ta "close fd on destroy"
 .It Dv CLSET_FD_NCLOSE Ta void Ta "do not close fd on destroy"
-.It Dv CLGET_VERS Ta "u_int32_t *" Ta "get RPC program version"
-.It Dv CLSET_VERS Ta "u_int32_t *" Ta "set RPC program version"
-.It Dv CLGET_XID Ta "u_int32_t *" Ta "get XID of previous call"
-.It Dv CLSET_XID Ta "u_int32_t *" Ta "set XID of next call"
+.It Dv CLGET_VERS Ta "uint32_t *" Ta "get RPC program version"
+.It Dv CLSET_VERS Ta "uint32_t *" Ta "set RPC program version"
+.It Dv CLGET_XID Ta "uint32_t *" Ta "get XID of previous call"
+.It Dv CLSET_XID Ta "uint32_t *" Ta "set XID of next call"
 .El
 .Pp
 The following operations are valid for connectionless transports only:

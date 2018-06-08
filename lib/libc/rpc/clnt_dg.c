@@ -1,32 +1,32 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: clnt_dg.c,v 1.4 2000/07/14 08:40:41 fvdl Exp $	*/
 
-/*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user.
+/*-
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its 
+ *   contributors may be used to endorse or promote products derived 
+ *   from this software without specific prior written permission.
  * 
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- * 
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- * 
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- * 
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 /*
  * Copyright (c) 1986-1991 by Sun Microsystems Inc. 
@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/clnt_dg.c 309489 2016-12-03 17:40:58Z ngie $");
 
 /*
  * Implements a connectionless client side RPC.
@@ -154,15 +154,17 @@ struct cu_data {
  * If they are 0, use the transport default.
  *
  * If svcaddr is NULL, returns NULL.
+ *
+ * fd      - open file descriptor
+ * svcaddr - servers address
+ * program - program number
+ * version - version number
+ * sendsz  - buffer recv size
+ * recvsz  - buffer send size
  */
 CLIENT *
-clnt_dg_create(fd, svcaddr, program, version, sendsz, recvsz)
-	int fd;				/* open file descriptor */
-	const struct netbuf *svcaddr;	/* servers address */
-	rpcprog_t program;		/* program number */
-	rpcvers_t version;		/* version number */
-	u_int sendsz;			/* buffer recv size */
-	u_int recvsz;			/* buffer send size */
+clnt_dg_create(int fd, const struct netbuf *svcaddr, rpcprog_t program,
+    rpcvers_t version, u_int sendsz, u_int recvsz)
 {
 	CLIENT *cl = NULL;		/* client handle */
 	struct cu_data *cu = NULL;	/* private data */
@@ -302,15 +304,18 @@ err2:
 	return (NULL);
 }
 
+/*
+ * cl       - client handle
+ * proc     - procedure number
+ * xargs    - xdr routine for args
+ * argsp    - pointer to args
+ * xresults - xdr routine for results
+ * resultsp - pointer to results
+ * utimeout - seconds to wait before giving up
+ */
 static enum clnt_stat
-clnt_dg_call(cl, proc, xargs, argsp, xresults, resultsp, utimeout)
-	CLIENT	*cl;			/* client handle */
-	rpcproc_t	proc;		/* procedure number */
-	xdrproc_t	xargs;		/* xdr routine for args */
-	void		*argsp;		/* pointer to args */
-	xdrproc_t	xresults;	/* xdr routine for results */
-	void		*resultsp;	/* pointer to results */
-	struct timeval	utimeout;	/* seconds to wait before giving up */
+clnt_dg_call(CLIENT *cl, rpcproc_t proc, xdrproc_t xargs, void *argsp,
+    xdrproc_t xresults, void *resultsp, struct timeval utimeout)
 {
 	struct cu_data *cu = (struct cu_data *)cl->cl_private;
 	XDR *xdrs;
@@ -328,7 +333,7 @@ clnt_dg_call(cl, proc, xargs, argsp, xresults, resultsp, utimeout)
 	struct sockaddr *sa;
 	sigset_t mask;
 	sigset_t newmask;
-	socklen_t inlen, salen;
+	socklen_t salen;
 	ssize_t recvlen = 0;
 	int kin_len, n, rpc_lock_value;
 	u_int32_t xid;
@@ -521,7 +526,6 @@ get_reply:
 				goto call_again_same_xid;
 		}
 	}
-	inlen = (socklen_t)recvlen;
 
 	/*
 	 * now decode and validate the response
@@ -604,9 +608,7 @@ out:
 }
 
 static void
-clnt_dg_geterr(cl, errp)
-	CLIENT *cl;
-	struct rpc_err *errp;
+clnt_dg_geterr(CLIENT *cl, struct rpc_err *errp)
 {
 	struct cu_data *cu = (struct cu_data *)cl->cl_private;
 
@@ -614,10 +616,7 @@ clnt_dg_geterr(cl, errp)
 }
 
 static bool_t
-clnt_dg_freeres(cl, xdr_res, res_ptr)
-	CLIENT *cl;
-	xdrproc_t xdr_res;
-	void *res_ptr;
+clnt_dg_freeres(CLIENT *cl, xdrproc_t xdr_res, void *res_ptr)
 {
 	struct cu_data *cu = (struct cu_data *)cl->cl_private;
 	XDR *xdrs = &(cu->cu_outxdrs);
@@ -640,16 +639,12 @@ clnt_dg_freeres(cl, xdr_res, res_ptr)
 
 /*ARGSUSED*/
 static void
-clnt_dg_abort(h)
-	CLIENT *h;
+clnt_dg_abort(CLIENT *h)
 {
 }
 
 static bool_t
-clnt_dg_control(cl, request, info)
-	CLIENT *cl;
-	u_int request;
-	void *info;
+clnt_dg_control(CLIENT *cl, u_int request, void *info)
 {
 	struct cu_data *cu = (struct cu_data *)cl->cl_private;
 	struct netbuf *addr;
@@ -792,8 +787,7 @@ clnt_dg_control(cl, request, info)
 }
 
 static void
-clnt_dg_destroy(cl)
-	CLIENT *cl;
+clnt_dg_destroy(CLIENT *cl)
 {
 	struct cu_data *cu = (struct cu_data *)cl->cl_private;
 	int cu_fd = cu->cu_fd;
@@ -822,7 +816,7 @@ clnt_dg_destroy(cl)
 }
 
 static struct clnt_ops *
-clnt_dg_ops()
+clnt_dg_ops(void)
 {
 	static struct clnt_ops ops;
 	sigset_t mask;
@@ -850,8 +844,7 @@ clnt_dg_ops()
  * Make sure that the time is not garbage.  -1 value is allowed.
  */
 static bool_t
-time_not_ok(t)
-	struct timeval *t;
+time_not_ok(struct timeval *t)
 {
 	return (t->tv_sec < -1 || t->tv_sec > 100000000 ||
 		t->tv_usec < -1 || t->tv_usec > 1000000);

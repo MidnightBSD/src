@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* #pragma ident	"@(#)auth_time.c	1.4	92/11/10 SMI" */
 
 /*
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/auth_time.c 309489 2016-12-03 17:40:58Z ngie $");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -61,8 +62,7 @@ extern int _rpc_dtablesize( void );
 static int saw_alarm = 0;
 
 static void
-alarm_hndler(s)
-	int	s;
+alarm_hndler(int s)
 {
 	saw_alarm = 1;
 	return;
@@ -83,12 +83,7 @@ alarm_hndler(s)
  * Turn a 'universal address' into a struct sockaddr_in.
  * Bletch.
  */
-static int uaddr_to_sockaddr(uaddr, sin)
-#ifdef foo
-	endpoint		*endpt;
-#endif
-	char			*uaddr;
-	struct sockaddr_in	*sin;
+static int uaddr_to_sockaddr(char *uaddr, struct sockaddr_in *sin)
 {
 	unsigned char		p_bytes[2];
 	int			i;
@@ -118,9 +113,7 @@ static int uaddr_to_sockaddr(uaddr, sin)
  * Free the strings that were strduped into the eps structure.
  */
 static void
-free_eps(eps, num)
-	endpoint	eps[];
-	int		num;
+free_eps(endpoint eps[], int num)
 {
 	int		i;
 
@@ -142,14 +135,15 @@ free_eps(eps, num)
  * fact that gethostbyname() could do an NIS search. Ideally, the
  * NIS+ server will call __rpc_get_time_offset() with the nis_server
  * structure already populated.
+ *
+ * host  - name of the time host
+ * srv   - nis_server struct to use.
+ * eps[] - array of endpoints
+ * maxep - max array size
  */
 static nis_server *
-get_server(sin, host, srv, eps, maxep)
-	struct sockaddr_in *sin;
-	char		*host;	/* name of the time host	*/
-	nis_server	*srv;	/* nis_server struct to use.	*/
-	endpoint	eps[];	/* array of endpoints		*/
-	int		maxep;	/* max array size		*/
+get_server(struct sockaddr_in *sin, char *host, nis_server *srv,
+    endpoint eps[], int maxep)
 {
 	char			hname[256];
 	int			num_ep = 0, i;
@@ -236,14 +230,16 @@ get_server(sin, host, srv, eps, maxep)
  * structure and to then contact the machine for the time.
  *
  * td = "server" - "client"
+ *
+ * td    - Time difference
+ * srv   - NIS Server description
+ * thost - if no server, this is the timehost
+ * uaddr - known universal address
+ * netid - known network identifier
  */
 int
-__rpc_get_time_offset(td, srv, thost, uaddr, netid)
-	struct timeval	*td;	 /* Time difference			*/
-	nis_server	*srv;	 /* NIS Server description 		*/
-	char		*thost;	 /* if no server, this is the timehost	*/
-	char		**uaddr; /* known universal address		*/
-	struct sockaddr_in *netid; /* known network identifier		*/
+__rpc_get_time_offset(struct timeval *td, nis_server *srv, char *thost,
+    char **uaddr, struct sockaddr_in *netid)
 {
 	CLIENT			*clnt; 		/* Client handle 	*/
 	endpoint		*ep,		/* useful endpoints	*/
@@ -260,7 +256,7 @@ __rpc_get_time_offset(td, srv, thost, uaddr, netid)
 	char			ut[64], ipuaddr[64];
 	endpoint		teps[32];
 	nis_server		tsrv;
-	void			(*oldsig)() = NULL; /* old alarm handler */
+	void			(*oldsig)(int) = NULL; /* old alarm handler */
 	struct sockaddr_in	sin;
 	socklen_t		len;
 	int			s = RPC_ANYSOCK;
@@ -429,7 +425,7 @@ __rpc_get_time_offset(td, srv, thost, uaddr, netid)
 		} else {
 			int res;
 
-			oldsig = (void (*)())signal(SIGALRM, alarm_hndler);
+			oldsig = (void (*)(int))signal(SIGALRM, alarm_hndler);
 			saw_alarm = 0; /* global tracking the alarm */
 			alarm(20); /* only wait 20 seconds */
 			res = _connect(s, (struct sockaddr *)&sin, sizeof(sin));

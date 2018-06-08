@@ -1,8 +1,9 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mt_misc.c,v 1.1 2000/06/02 23:11:11 fvdl Exp $	*/
 
 /* #pragma ident	"@(#)mt_misc.c	1.24	93/04/29 SMI" */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/mt_misc.c 309487 2016-12-03 17:27:28Z ngie $");
 
 #include "namespace.h"
 #include "reentrant.h"
@@ -93,9 +94,9 @@ rce_key_init(void)
 }
 
 struct rpc_createerr *
-__rpc_createerr()
+__rpc_createerr(void)
 {
-	struct rpc_createerr *rce_addr = 0;
+	struct rpc_createerr *rce_addr = NULL;
 
 	if (thr_main())
 		return (&rpc_createerr);
@@ -106,8 +107,7 @@ __rpc_createerr()
 		rce_addr = (struct rpc_createerr *)
 			malloc(sizeof (struct rpc_createerr));
 		if (thr_setspecific(rce_key, (void *) rce_addr) != 0) {
-			if (rce_addr)
-				free(rce_addr);
+			free(rce_addr);
 			return (&rpc_createerr);
 		}
 		memset(rce_addr, 0, sizeof (struct rpc_createerr));

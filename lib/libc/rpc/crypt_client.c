@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/crypt_client.c 309497 2016-12-03 18:26:41Z ngie $");
 
 #include "namespace.h"
 #include <err.h>
@@ -43,10 +44,7 @@ __MBSDID("$MidnightBSD$");
 #include "un-namespace.h"
 
 int
-_des_crypt_call(buf, len, dparms)
-	char *buf;
-	int len;
-	struct desparams *dparms;
+_des_crypt_call(char *buf, int len, struct desparams *dparms)
 {
 	CLIENT *clnt;
 	desresp  *result_1;
@@ -64,6 +62,7 @@ _des_crypt_call(buf, len, dparms)
 	}
 	if (nconf == NULL) {
 		warnx("getnetconfig: %s", nc_sperror());
+		endnetconfig(localhandle);
 		return(DESERR_HWERROR);
 	}
 	clnt = clnt_tp_create(NULL, CRYPT_PROG, CRYPT_VERS, nconf);

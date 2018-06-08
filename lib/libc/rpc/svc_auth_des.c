@@ -1,35 +1,35 @@
+/* $MidnightBSD$ */
 
 /*
  * Copyright (c) 1988 by Sun Microsystems, Inc.
  */
 
-/*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user.
+/*-
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its 
+ *   contributors may be used to endorse or promote products derived 
+ *   from this software without specific prior written permission.
  * 
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- *
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- *
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- *
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /*
@@ -68,7 +68,7 @@
 static char sccsid[] = 	"@(#)svcauth_des.c	2.3 89/07/11 4.0 RPCSRC; from 1.15 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/svc_auth_des.c 309489 2016-12-03 17:40:58Z ngie $");
 
 extern int key_decryptsession_pk(const char *, netobj *, des_block *);
 
@@ -91,11 +91,11 @@ struct cache_entry {
 static struct cache_entry *authdes_cache/* [AUTHDES_CACHESZ] */;
 static short *authdes_lru/* [AUTHDES_CACHESZ] */;
 
-static void cache_init();	/* initialize the cache */
-static short cache_spot();	/* find an entry in the cache */
-static void cache_ref(/*short sid*/);	/* note that sid was ref'd */
+static void cache_init(void);	/* initialize the cache */
+static short cache_spot(des_block *, char *, struct timeval *); /* find an entry in the cache */
+static void cache_ref(short sid);	/* note that sid was ref'd */
 
-static void invalidate();	/* invalidate entry in cache */
+static void invalidate(char *);	/* invalidate entry in cache */
 
 /*
  * cache statistics 
@@ -110,9 +110,7 @@ static struct {
  * Service side authenticator for AUTH_DES
  */
 enum auth_stat
-_svcauth_des(rqst, msg)
-	struct svc_req *rqst;
-	struct rpc_msg *msg;
+_svcauth_des(struct svc_req *rqst, struct rpc_msg *msg)
 {
 
 	long *ixdr;
@@ -271,7 +269,7 @@ _svcauth_des(rqst, msg)
 			debug("timestamp before last seen");
 			return (AUTH_REJECTEDVERF);	/* replay */
 		}
-		(void) gettimeofday(&current, (struct timezone *)NULL);
+		(void)gettimeofday(&current, NULL);
 		current.tv_sec -= window;	/* allow for expiration */
 		if (!BEFORE(&current, &timestamp)) {
 			debug("timestamp expired");
@@ -356,7 +354,7 @@ _svcauth_des(rqst, msg)
  * Initialize the cache
  */
 static void
-cache_init()
+cache_init(void)
 {
 	int i;
 
@@ -379,7 +377,7 @@ cache_init()
  * Find the lru victim
  */
 static short
-cache_victim()
+cache_victim(void)
 {
 	return (authdes_lru[AUTHDES_CACHESZ-1]);
 }
@@ -388,8 +386,7 @@ cache_victim()
  * Note that sid was referenced
  */
 static void
-cache_ref(sid)
-	short sid;
+cache_ref(short sid)
 {
 	int i;
 	short curr;
@@ -411,10 +408,7 @@ cache_ref(sid)
  * return the spot in the cache.
  */
 static short
-cache_spot(key, name, timestamp)
-	des_block *key;
-	char *name;
-	struct timeval *timestamp;
+cache_spot(des_block *key, char *name, struct timeval *timestamp)
 {
 	struct cache_entry *cp;
 	int i;
@@ -439,7 +433,7 @@ cache_spot(key, name, timestamp)
 }
 
 
-#if (defined(sun) || defined(vax) || defined(__FreeBSD__) || defined(__MidnightBSD__))
+#if (defined(sun) || defined(vax) || defined(__FreeBSD__))
 /*
  * Local credential handling stuff.
  * NOTE: bsd unix dependent.
@@ -462,12 +456,8 @@ struct bsdcred {
  * the credential.
  */
 int
-authdes_getucred(adc, uid, gid, grouplen, groups)
-	struct authdes_cred *adc;
-	uid_t *uid;
-	gid_t *gid;
-	int *grouplen;
-	gid_t *groups;
+authdes_getucred(struct authdes_cred *adc, uid_t *uid, gid_t *gid,
+    int *grouplen, gid_t *groups)
 {
 	unsigned sid;
 	int i;
@@ -526,8 +516,7 @@ authdes_getucred(adc, uid, gid, grouplen, groups)
 }
 
 static void
-invalidate(cred)
-	char *cred;
+invalidate(char *cred)
 {
 	if (cred == NULL) {
 		return;
