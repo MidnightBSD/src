@@ -47836,8 +47836,6 @@ lib/libc/stdlib/getopt_long.3 -text
 lib/libc/stdlib/getopt_long.c -text
 lib/libc/stdlib/getsubopt.3 -text
 lib/libc/stdlib/getsubopt.c -text
-lib/libc/stdlib/grantpt.3 -text
-lib/libc/stdlib/grantpt.c -text
 lib/libc/stdlib/hcreate.3 -text
 lib/libc/stdlib/hcreate.c -text
 lib/libc/stdlib/heapsort.c -text
@@ -47860,15 +47858,11 @@ lib/libc/stdlib/lldiv.3 -text
 lib/libc/stdlib/lldiv.c -text
 lib/libc/stdlib/lsearch.3 -text
 lib/libc/stdlib/lsearch.c -text
-lib/libc/stdlib/malloc.3 -text
-lib/libc/stdlib/malloc.c -text
 lib/libc/stdlib/memory.3 -text
 lib/libc/stdlib/merge.c -text
 lib/libc/stdlib/posix_memalign.3 -text
 lib/libc/stdlib/ptsname.3 -text
 lib/libc/stdlib/ptsname.c -text
-lib/libc/stdlib/ql.h -text
-lib/libc/stdlib/qr.h -text
 lib/libc/stdlib/qsort.3 -text
 lib/libc/stdlib/qsort.c -text
 lib/libc/stdlib/qsort_r.c -text
@@ -47880,7 +47874,6 @@ lib/libc/stdlib/rand.3 -text
 lib/libc/stdlib/rand.c -text
 lib/libc/stdlib/random.3 -text
 lib/libc/stdlib/random.c -text
-lib/libc/stdlib/rb.h -text
 lib/libc/stdlib/reallocarray.c svneol=native#text/plain
 lib/libc/stdlib/reallocf.3 svneol=native#text/plain
 lib/libc/stdlib/reallocf.c -text
