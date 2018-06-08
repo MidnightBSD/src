@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)tmpnam.c	8.3 (Berkeley) 3/28/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/tmpnam.c 249810 2013-04-23 14:36:44Z emaste $");
 
 #include <sys/types.h>
 
@@ -47,8 +48,7 @@ __warn_references(tmpnam,
 extern char *_mktemp(char *);
 
 char *
-tmpnam(s)
-	char *s;
+tmpnam(char *s)
 {
 	static u_long tmpcount;
 	static char buf[L_tmpnam];

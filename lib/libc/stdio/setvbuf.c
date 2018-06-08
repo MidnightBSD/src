@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)setvbuf.c	8.2 (Berkeley) 11/16/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/setvbuf.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -63,7 +64,7 @@ setvbuf(FILE * __restrict fp, char * __restrict buf, int mode, size_t size)
 		if ((mode != _IOFBF && mode != _IOLBF) || (int)size < 0)
 			return (EOF);
 
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	/*
 	 * Write current buffer, if any.  Discard unread input (including
 	 * ungetc data), cancel line buffering, and free old buffer if
@@ -115,8 +116,7 @@ nbf:
 			fp->_w = 0;
 			fp->_bf._base = fp->_p = fp->_nbuf;
 			fp->_bf._size = 1;
-			FUNLOCKFILE(fp);
-			return (ret);
+			goto end;
 		}
 		flags |= __SMBF;
 	}
@@ -156,6 +156,7 @@ nbf:
 	}
 	__cleanup = _cleanup;
 
-	FUNLOCKFILE(fp);
+end:
+	FUNLOCKFILE_CANCELSAFE();
 	return (ret);
 }

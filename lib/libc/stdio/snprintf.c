@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -18,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,8 +40,9 @@
 static char sccsid[] = "@(#)snprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/snprintf.c 249808 2013-04-23 13:33:13Z emaste $");
 
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -59,8 +61,11 @@ snprintf(char * __restrict str, size_t n, char const * __restrict fmt, ...)
 	on = n;
 	if (n != 0)
 		n--;
-	if (n > INT_MAX)
-		n = INT_MAX;
+	if (n > INT_MAX) {
+		errno = EOVERFLOW;
+		*str = '\0';
+		return (EOF);
+	}
 	va_start(ap, fmt);
 	f._flags = __SWR | __SSTR;
 	f._bf._base = f._p = (unsigned char *)str;
@@ -84,8 +89,11 @@ snprintf_l(char * __restrict str, size_t n, locale_t locale,
 	on = n;
 	if (n != 0)
 		n--;
-	if (n > INT_MAX)
-		n = INT_MAX;
+	if (n > INT_MAX) {
+		errno = EOVERFLOW;
+		*str = '\0';
+		return (EOF);
+	}
 	va_start(ap, fmt);
 	f._flags = __SWR | __SSTR;
 	f._bf._base = f._p = (unsigned char *)str;

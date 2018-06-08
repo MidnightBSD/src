@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/vdprintf.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include "namespace.h"
 #include <errno.h>

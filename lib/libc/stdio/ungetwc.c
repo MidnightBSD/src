@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/ungetwc.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
@@ -76,10 +77,10 @@ ungetwc_l(wint_t wc, FILE *fp, locale_t locale)
 	wint_t r;
 	FIX_LOCALE(locale);
 
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	ORIENT(fp, 1);
 	r = __ungetwc(wc, fp, locale);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 
 	return (r);
 }

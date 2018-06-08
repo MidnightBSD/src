@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)fputs.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fputs.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -48,21 +49,19 @@ __FBSDID("$FreeBSD$");
  * Write the given string to the given file.
  */
 int
-fputs(s, fp)
-	const char * __restrict s;
-	FILE * __restrict fp;
+fputs(const char * __restrict s, FILE * __restrict fp)
 {
 	int retval;
 	struct __suio uio;
 	struct __siov iov;
 
 	iov.iov_base = (void *)s;
-	iov.iov_len = uio.uio_resid = strlen(s);
+	uio.uio_resid = iov.iov_len = strlen(s);
 	uio.uio_iov = &iov;
 	uio.uio_iovcnt = 1;
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	ORIENT(fp, -1);
 	retval = __sfvwrite(fp, &uio);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 	return (retval);
 }

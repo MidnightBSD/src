@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fputws.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
@@ -53,11 +54,13 @@ fputws_l(const wchar_t * __restrict ws, FILE * __restrict fp, locale_t locale)
 	const wchar_t *wsp;
 	FIX_LOCALE(locale);
 	struct xlocale_ctype *l = XLOCALE_CTYPE(locale);
+	int ret;
 
-	FLOCKFILE(fp);
+	ret = -1;
+	FLOCKFILE_CANCELSAFE(fp);
 	ORIENT(fp, 1);
 	if (prepwrite(fp) != 0)
-		goto error;
+		goto end;
 	uio.uio_iov = &iov;
 	uio.uio_iovcnt = 1;
 	iov.iov_base = buf;
@@ -66,17 +69,15 @@ fputws_l(const wchar_t * __restrict ws, FILE * __restrict fp, locale_t locale)
 		nbytes = l->__wcsnrtombs(buf, &wsp, SIZE_T_MAX, sizeof(buf),
 		    &fp->_mbstate);
 		if (nbytes == (size_t)-1)
-			goto error;
-		iov.iov_len = uio.uio_resid = nbytes;
+			goto end;
+		uio.uio_resid = iov.iov_len = nbytes;
 		if (__sfvwrite(fp, &uio) != 0)
-			goto error;
+			goto end;
 	} while (wsp != NULL);
-	FUNLOCKFILE(fp);
-	return (0);
-
-error:
-	FUNLOCKFILE(fp);
-	return (-1);
+	ret = 0;
+end:
+	FUNLOCKFILE_CANCELSAFE();
+	return (ret);
 }
 
 int

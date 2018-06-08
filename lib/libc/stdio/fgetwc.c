@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fgetwc.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
@@ -52,13 +53,14 @@ fgetwc_l(FILE *fp, locale_t locale)
 	wint_t r;
 	FIX_LOCALE(locale);
 
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	ORIENT(fp, 1);
 	r = __fgetwc(fp, locale);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 
 	return (r);
 }
+
 wint_t
 fgetwc(FILE *fp)
 {
@@ -66,44 +68,43 @@ fgetwc(FILE *fp)
 }
 
 /*
- * Non-MT-safe version.
+ * Internal (non-MPSAFE) version of fgetwc().  This version takes an
+ * mbstate_t argument specifying the initial conversion state.  For
+ * wide streams, this should always be fp->_mbstate.  On return, *nread
+ * is set to the number of bytes read.
  */
-wint_t
-__fgetwc(FILE *fp, locale_t locale)
+wint_t 
+__fgetwc_mbs(FILE *fp, mbstate_t *mbs, int *nread, locale_t locale)
 {
 	wchar_t wc;
 	size_t nconv;
 	struct xlocale_ctype *l = XLOCALE_CTYPE(locale);
 
+	*nread = 0;
 	if (fp->_r <= 0 && __srefill(fp))
 		return (WEOF);
-	if (MB_CUR_MAX == 1) {
-		/* Fast path for single-byte encodings. */
-		wc = *fp->_p++;
-		fp->_r--;
-		return (wc);
-	}
 	do {
-		nconv = l->__mbrtowc(&wc, fp->_p, fp->_r, &fp->_mbstate);
-		if (nconv == (size_t)-1)
-			break;
-		else if (nconv == (size_t)-2)
+		nconv = l->__mbrtowc(&wc, fp->_p, fp->_r, mbs);
+		if (nconv == (size_t)-1) {
+			fp->_flags |= __SERR;
+			return (WEOF);
+		} else if (nconv == (size_t)-2)
 			continue;
 		else if (nconv == 0) {
-			/*
-			 * Assume that the only valid representation of
-			 * the null wide character is a single null byte.
-			 */
 			fp->_p++;
 			fp->_r--;
+			(*nread)++;
 			return (L'\0');
 		} else {
 			fp->_p += nconv;
 			fp->_r -= nconv;
+			*nread += nconv;
 			return (wc);
 		}
 	} while (__srefill(fp) == 0);
-	fp->_flags |= __SERR;
-	errno = EILSEQ;
+	if (__sfeof(fp)) {
+		fp->_flags |= __SERR;
+		errno = EILSEQ;
+	}
 	return (WEOF);
 }

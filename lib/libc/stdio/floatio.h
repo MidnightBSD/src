@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)floatio.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/stdio/floatio.h 165903 2007-01-09 00:28:16Z imp $
  */
 
 /*

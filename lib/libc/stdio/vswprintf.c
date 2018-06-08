@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: vasprintf.c,v 1.4 1998/06/21 22:13:47 millert Exp $	*/
 
 /*
@@ -36,9 +37,10 @@
 #if 0
 __FBSDID("FreeBSD: src/lib/libc/stdio/vasprintf.c,v 1.16 2002/08/21 16:19:57 mike Exp ");
 #endif
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/vswprintf.c 234531 2012-04-21 06:10:18Z das $");
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
@@ -59,6 +61,11 @@ vswprintf_l(wchar_t * __restrict s, size_t n, locale_t locale,
 
 	if (n == 0) {
 		errno = EINVAL;
+		return (-1);
+	}
+	if (n - 1 > INT_MAX) {
+		errno = EOVERFLOW;
+		*s = L'\0';
 		return (-1);
 	}
 

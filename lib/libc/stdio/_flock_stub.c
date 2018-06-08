@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/_flock_stub.c 291336 2015-11-25 21:43:05Z ngie $");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -54,6 +55,9 @@ __weak_reference(_flockfile, flockfile);
 __weak_reference(_flockfile_debug_stub, _flockfile_debug);
 __weak_reference(_ftrylockfile, ftrylockfile);
 __weak_reference(_funlockfile, funlockfile);
+
+void _flockfile_debug_stub(FILE *, char *, int);
+int _ftrylockfile(FILE *);
 
 void
 _flockfile(FILE *fp)

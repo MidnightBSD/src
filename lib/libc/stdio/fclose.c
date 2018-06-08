@@ -1,6 +1,8 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 1990, 1993 The Regents of the University of California.
+ * Copyright (c) 2013 Mariusz Zaborski <oshogbo@FreeBSD.org>
+ * All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * Chris Torek.
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,10 +36,11 @@
 static char sccsid[] = "@(#)fclose.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fclose.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "un-namespace.h"
@@ -45,19 +48,17 @@ __FBSDID("$FreeBSD$");
 #include "libc_private.h"
 #include "local.h"
 
-int
-fclose(FILE *fp)
+static int
+cleanfile(FILE *fp, bool c)
 {
 	int r;
 
-	if (fp->_flags == 0) {	/* not open! */
-		errno = EBADF;
-		return (EOF);
-	}
-	FLOCKFILE(fp);
 	r = fp->_flags & __SWR ? __sflush(fp) : 0;
-	if (fp->_close != NULL && (*fp->_close)(fp->_cookie) < 0)
-		r = EOF;
+	if (c) {
+		if (fp->_close != NULL && (*fp->_close)(fp->_cookie) < 0)
+			r = EOF;
+	}
+
 	if (fp->_flags & __SMBF)
 		free((char *)fp->_bf._base);
 	if (HASUB(fp))
@@ -80,6 +81,59 @@ fclose(FILE *fp)
 	STDIO_THREAD_LOCK();
 	fp->_flags = 0;		/* Release this FILE for reuse. */
 	STDIO_THREAD_UNLOCK();
-	FUNLOCKFILE(fp);
+
+	return (r);
+}
+
+int
+fdclose(FILE *fp, int *fdp)
+{
+	int r, err;
+
+	if (fdp != NULL)
+		*fdp = -1;
+
+	if (fp->_flags == 0) {	/* not open! */
+		errno = EBADF;
+		return (EOF);
+	}
+
+	FLOCKFILE_CANCELSAFE(fp);
+	r = 0;
+	if (fp->_close != __sclose) {
+		r = EOF;
+		errno = EOPNOTSUPP;
+	} else if (fp->_file < 0) {
+		r = EOF;
+		errno = EBADF;
+	}
+	if (r == EOF) {
+		err = errno;
+		(void)cleanfile(fp, true);
+		errno = err;
+	} else {
+		if (fdp != NULL)
+			*fdp = fp->_file;
+		r = cleanfile(fp, false);
+	}
+	FUNLOCKFILE_CANCELSAFE();
+
+	return (r);
+}
+
+int
+fclose(FILE *fp)
+{
+	int r;
+
+	if (fp->_flags == 0) {	/* not open! */
+		errno = EBADF;
+		return (EOF);
+	}
+
+	FLOCKFILE_CANCELSAFE(fp);
+	r = cleanfile(fp, true);
+	FUNLOCKFILE_CANCELSAFE();
+
 	return (r);
 }

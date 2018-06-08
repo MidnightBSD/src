@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2012 Isabell Long <issyl0@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/10/lib/libc/stdio/printf_l.3 291294 2015-11-25 08:51:43Z ngie $
 .\"
 .Dd April 7, 2012
 .Dt PRINTF_L 3
@@ -43,6 +44,7 @@
 .Lb libc
 .Sh SYNOPSIS
 .In stdio.h
+.In xlocale.h
 .Ft int
 .Fn printf_l "locale_t loc" "const char * restrict format" "..."
 .Ft int

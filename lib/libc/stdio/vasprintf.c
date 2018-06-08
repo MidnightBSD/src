@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: vasprintf.c,v 1.4 1998/06/21 22:13:47 millert Exp $	*/
 
 /*
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/vasprintf.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <stdio.h>
 #include <stdlib.h>

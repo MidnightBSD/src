@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -18,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +42,7 @@ static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/vfwprintf.c 321074 2017-07-17 14:09:34Z kib $");
 
 /*
  * Actual wprintf innards.
@@ -54,6 +55,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/types.h>
 
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <locale.h>
 #include <stdarg.h>
@@ -355,14 +357,14 @@ vfwprintf_l(FILE * __restrict fp, locale_t locale,
 {
 	int ret;
 	FIX_LOCALE(locale);
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	/* optimise fprintf(stderr) (and other unbuffered Unix files) */
 	if ((fp->_flags & (__SNBF|__SWR|__SRW)) == (__SNBF|__SWR) &&
 	    fp->_file >= 0)
 		ret = __sbprintf(fp, locale, fmt0, ap);
 	else
 		ret = __vfwprintf(fp, locale, fmt0, ap);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 	return (ret);
 }
 int
@@ -443,6 +445,7 @@ __vfwprintf(FILE *fp, locale_t locale, const wchar_t *fmt0, va_list ap)
 	int nextarg;		/* 1-based argument index */
 	va_list orgap;		/* original argument pointer */
 	wchar_t *convbuf;	/* multibyte to wide conversion result */
+	int savserr;
 
 	static const char xdigs_lower[16] = "0123456789abcdef";
 	static const char xdigs_upper[16] = "0123456789ABCDEF";
@@ -530,8 +533,13 @@ __vfwprintf(FILE *fp, locale_t locale, const wchar_t *fmt0, va_list ap)
 
 
 	/* sorry, fwprintf(read_only_file, L"") returns WEOF, not 0 */
-	if (prepwrite(fp) != 0)
+	if (prepwrite(fp) != 0) {
+		errno = EBADF;
 		return (EOF);
+	}
+
+	savserr = fp->_flags & __SERR;
+	fp->_flags &= ~__SERR;
 
 	convbuf = NULL;
 	fmt = (wchar_t *)fmt0;
@@ -553,6 +561,7 @@ __vfwprintf(FILE *fp, locale_t locale, const wchar_t *fmt0, va_list ap)
 		if ((n = fmt - cp) != 0) {
 			if ((unsigned)ret + n > INT_MAX) {
 				ret = EOF;
+				errno = EOVERFLOW;
 				goto error;
 			}
 			PRINT(cp, n);
@@ -1003,6 +1012,7 @@ number:			if ((dprec = prec) >= 0)
 		prsize = width > realsz ? width : realsz;
 		if ((unsigned)ret + prsize > INT_MAX) {
 			ret = EOF;
+			errno = EOVERFLOW;
 			goto error;
 		}
 
@@ -1091,6 +1101,8 @@ error:
 		free(convbuf);
 	if (__sferror(fp))
 		ret = EOF;
+	else
+		fp->_flags |= savserr;
 	if ((argtable != NULL) && (argtable != statargtable))
 		free (argtable);
 	return (ret);

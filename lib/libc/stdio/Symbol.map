@@ -1,5 +1,5 @@
-/*
- * $FreeBSD$
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/stdio/Symbol.map 291602 2015-12-01 18:19:23Z ngie $
  */
 
 FBSD_1.0 {
@@ -155,6 +155,15 @@ FBSD_1.3 {
 	getwchar_l;
 	putwc_l;
 	putwchar_l;
+	fmemopen;
+	open_memstream;
+	open_wmemstream;
+	mkostemp;
+	mkostemps;
+};
+
+FBSD_1.4 {
+	fdclose;
 };
 
 FBSDprivate_1.0 {

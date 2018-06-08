@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)freopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/freopen.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -55,10 +56,8 @@ __FBSDID("$FreeBSD$");
  * all possible, no matter what.
  */
 FILE *
-freopen(file, mode, fp)
-	const char * __restrict file;
-	const char * __restrict mode;
-	FILE *fp;
+freopen(const char * __restrict file, const char * __restrict mode,
+    FILE * __restrict fp)
 {
 	int f;
 	int dflags, flags, isopen, oflags, sverrno, wantfd;
@@ -70,7 +69,7 @@ freopen(file, mode, fp)
 		return (NULL);
 	}
 
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 
 	if (!__sdidinit)
 		__sinit();
@@ -83,23 +82,24 @@ freopen(file, mode, fp)
 	if (file == NULL) {
 		/* See comment below regarding freopen() of closed files. */
 		if (fp->_flags == 0) {
-			FUNLOCKFILE(fp);
 			errno = EINVAL;
-			return (NULL);
+			fp = NULL;
+			goto end;
 		}
 		if ((dflags = _fcntl(fp->_file, F_GETFL)) < 0) {
 			sverrno = errno;
 			fclose(fp);
-			FUNLOCKFILE(fp);
 			errno = sverrno;
-			return (NULL);
+			fp = NULL;
+			goto end;
 		}
-		if ((dflags & O_ACCMODE) != O_RDWR && (dflags & O_ACCMODE) !=
-		    (oflags & O_ACCMODE)) {
+		/* Work around incorrect O_ACCMODE. */
+		if ((dflags & O_ACCMODE) != O_RDWR &&
+		    (dflags & (O_ACCMODE | O_EXEC)) != (oflags & O_ACCMODE)) {
 			fclose(fp);
-			FUNLOCKFILE(fp);
-			errno = EINVAL;
-			return (NULL);
+			errno = EBADF;
+			fp = NULL;
+			goto end;
 		}
 		if (fp->_flags & __SWR)
 			(void) __sflush(fp);
@@ -109,15 +109,17 @@ freopen(file, mode, fp)
 			if (_fcntl(fp->_file, F_SETFL, dflags) < 0) {
 				sverrno = errno;
 				fclose(fp);
-				FUNLOCKFILE(fp);
 				errno = sverrno;
-				return (NULL);
+				fp = NULL;
+				goto end;
 			}
 		}
 		if (oflags & O_TRUNC)
 			(void) ftruncate(fp->_file, (off_t)0);
 		if (!(oflags & O_APPEND))
 			(void) _sseek(fp, (fpos_t)0, SEEK_SET);
+		if (oflags & O_CLOEXEC)
+			(void) _fcntl(fp->_file, F_SETFD, FD_CLOEXEC);
 		f = fp->_file;
 		isopen = 0;
 		wantfd = -1;
@@ -150,6 +152,14 @@ freopen(file, mode, fp)
 
 	/* Get a new descriptor to refer to the new file. */
 	f = _open(file, oflags, DEFFILEMODE);
+	/* If out of fd's close the old one and try again. */
+	if (f < 0 && isopen && wantfd > STDERR_FILENO &&
+	    (errno == ENFILE || errno == EMFILE)) {
+		(void) (*fp->_close)(fp->_cookie);
+		isopen = 0;
+		wantfd = -1;
+		f = _open(file, oflags, DEFFILEMODE);
+	}
 	sverrno = errno;
 
 finish:
@@ -178,14 +188,15 @@ finish:
 	fp->_lb._size = 0;
 	fp->_orientation = 0;
 	memset(&fp->_mbstate, 0, sizeof(mbstate_t));
+	fp->_flags2 = 0;
 
 	if (f < 0) {			/* did not get it after all */
 		if (isopen)
 			(void) (*fp->_close)(fp->_cookie);
 		fp->_flags = 0;		/* set it free */
-		FUNLOCKFILE(fp);
 		errno = sverrno;	/* restore in case _close clobbered */
-		return (NULL);
+		fp = NULL;
+		goto end;
 	}
 
 	/*
@@ -194,7 +205,8 @@ finish:
 	 * assume stderr is always fd STDERR_FILENO, even if being freopen'd.
 	 */
 	if (wantfd >= 0) {
-		if (_dup2(f, wantfd) >= 0) {
+		if ((oflags & O_CLOEXEC ? _fcntl(f, F_DUP2FD_CLOEXEC, wantfd) :
+		    _dup2(f, wantfd)) >= 0) {
 			(void)_close(f);
 			f = wantfd;
 		} else
@@ -210,9 +222,9 @@ finish:
 	 */
 	if (f > SHRT_MAX) {
 		fp->_flags = 0;		/* set it free */
-		FUNLOCKFILE(fp);
 		errno = EMFILE;
-		return (NULL);
+		fp = NULL;
+		goto end;
 	}
 
 	fp->_flags = flags;
@@ -230,8 +242,11 @@ finish:
 	 * we can do about this.  (We could set __SAPP and check in
 	 * fseek and ftell.)
 	 */
-	if (oflags & O_APPEND)
+	if (oflags & O_APPEND) {
+		fp->_flags2 |= __S2OAP;
 		(void) _sseek(fp, (fpos_t)0, SEEK_END);
-	FUNLOCKFILE(fp);
+	}
+end:
+	FUNLOCKFILE_CANCELSAFE();
 	return (fp);
 }

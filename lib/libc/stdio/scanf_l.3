@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2012 Isabell Long <issyl0@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/10/lib/libc/stdio/scanf_l.3 291294 2015-11-25 08:51:43Z ngie $
 .\"
 .Dd April 8, 2012
 .Dt SCANF_L 3
@@ -39,6 +40,7 @@
 .Lb libc
 .Sh SYNOPSIS
 .In stdio.h
+.In xlocale.h
 .Ft int
 .Fn scanf_l "locale_t loc" "const char * restrict format" "..."
 .Ft int
@@ -57,7 +59,7 @@ The above functions scan input according to a specified
 in the locale
 .Fa loc .
 They behave in the same way as the versions without the _l suffix, but use
-the specific locale rather than the the global or per-thread locale.
+the specific locale rather than the global or per-thread locale.
 See the specific manual pages for more information.
 .Sh SEE ALSO
 .Xr scanf 3 ,

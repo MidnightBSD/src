@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)findfp.c	8.2 (Berkeley) 1/4/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/findfp.c 291336 2015-11-25 21:43:05Z ngie $");
 
 #include <sys/param.h>
 #include <machine/atomic.h>
@@ -91,8 +92,7 @@ spinlock_t __stdio_thread_lock = _SPINLOCK_INITIALIZER;
 #endif
 
 static struct glue *
-moreglue(n)
-	int n;
+moreglue(int n)
 {
 	struct glue *g;
 	static FILE empty = { ._fl_mutex = PTHREAD_MUTEX_INITIALIZER };
@@ -114,7 +114,7 @@ moreglue(n)
  * Find a free FILE for fopen et al.
  */
 FILE *
-__sfp()
+__sfp(void)
 {
 	FILE	*fp;
 	int	n;
@@ -156,6 +156,7 @@ found:
 /*	fp->_fl_mutex = NULL; */ /* once set always set (reused) */
 	fp->_orientation = 0;
 	memset(&fp->_mbstate, 0, sizeof(mbstate_t));
+	fp->_flags2 = 0;
 	return (fp);
 }
 
@@ -165,6 +166,7 @@ found:
  */
 __warn_references(f_prealloc, 
 	"warning: this program uses f_prealloc(), which is not recommended.");
+void f_prealloc(void);
 
 void
 f_prealloc(void)
@@ -196,7 +198,7 @@ f_prealloc(void)
  * The name `_cleanup' is, alas, fairly well known outside stdio.
  */
 void
-_cleanup()
+_cleanup(void)
 {
 	/* (void) _fwalk(fclose); */
 	(void) _fwalk(__sflush);		/* `cheating' */
@@ -206,7 +208,7 @@ _cleanup()
  * __sinit() is called whenever stdio's internal variables must be set up.
  */
 void
-__sinit()
+__sinit(void)
 {
 
 	/* Make sure we clean up on exit. */

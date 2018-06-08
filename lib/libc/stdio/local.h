@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,8 +36,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)local.h	8.3 (Berkeley) 7/3/94
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/stdio/local.h 321074 2017-07-17 14:09:34Z kib $
  */
+
+#ifndef _STDIO_LOCAL_H
+#define	_STDIO_LOCAL_H
 
 #include <sys/types.h>	/* for off_t */
 #include <pthread.h>
@@ -56,7 +60,7 @@ extern int	_ftello(FILE *, fpos_t *);
 extern int	_fseeko(FILE *, off_t, int, int);
 extern int	__fflush(FILE *fp);
 extern void	__fcloseall(void);
-extern wint_t	__fgetwc(FILE *, locale_t);
+extern wint_t	__fgetwc_mbs(FILE *, mbstate_t *, int *, locale_t);
 extern wint_t	__fputwc(wchar_t, FILE *, locale_t);
 extern int	__sflush(FILE *);
 extern FILE	*__sfp(void);
@@ -85,6 +89,13 @@ extern size_t	__fread(void * __restrict buf, size_t size, size_t count,
 		FILE * __restrict fp);
 extern int	__sdidinit;
 
+static inline wint_t
+__fgetwc(FILE *fp, locale_t locale)
+{
+	int nread;
+
+	return (__fgetwc_mbs(fp, &fp->_mbstate, &nread, locale));
+}
 
 /*
  * Prepare the given FILE for writing, and return 0 iff it
@@ -131,3 +142,26 @@ extern int	__sdidinit;
 	if ((fp)->_orientation == 0)			\
 		(fp)->_orientation = (o);		\
 } while (0)
+
+void __stdio_cancel_cleanup(void *);
+#define	FLOCKFILE_CANCELSAFE(fp)					\
+	{								\
+		struct _pthread_cleanup_info __cleanup_info__;		\
+		if (__isthreaded) {					\
+			_FLOCKFILE(fp);					\
+			___pthread_cleanup_push_imp(			\
+			    __stdio_cancel_cleanup, (fp), 		\
+			    &__cleanup_info__);				\
+		} else {						\
+			___pthread_cleanup_push_imp(			\
+			    __stdio_cancel_cleanup, NULL, 		\
+			    &__cleanup_info__);				\
+		}							\
+		{
+#define	FUNLOCKFILE_CANCELSAFE()					\
+			(void)0;					\
+		}							\
+		___pthread_cleanup_pop_imp(1);				\
+	}
+
+#endif /* _STDIO_LOCAL_H */

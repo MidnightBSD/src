@@ -47683,6 +47683,7 @@ lib/libc/stdio/findfp.c -text
 lib/libc/stdio/flags.c -text
 lib/libc/stdio/floatio.h -text
 lib/libc/stdio/flockfile.3 -text
+lib/libc/stdio/fmemopen.c svneol=native#text/plain
 lib/libc/stdio/fopen.3 -text
 lib/libc/stdio/fopen.c -text
 lib/libc/stdio/fprintf.c -text
@@ -47727,6 +47728,9 @@ lib/libc/stdio/local.h -text
 lib/libc/stdio/makebuf.c -text
 lib/libc/stdio/mktemp.3 -text
 lib/libc/stdio/mktemp.c -text
+lib/libc/stdio/open_memstream.3 svneol=native#text/plain
+lib/libc/stdio/open_memstream.c svneol=native#text/plain
+lib/libc/stdio/open_wmemstream.c svneol=native#text/plain
 lib/libc/stdio/perror.c -text
 lib/libc/stdio/printf-pos.c -text
 lib/libc/stdio/printf.3 -text

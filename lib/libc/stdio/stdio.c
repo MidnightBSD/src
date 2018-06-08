@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)stdio.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/stdio.c 321074 2017-07-17 14:09:34Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
@@ -50,10 +51,7 @@ __FBSDID("$FreeBSD$");
  * Small standard I/O/seek/close functions.
  */
 int
-__sread(cookie, buf, n)
-	void *cookie;
-	char *buf;
-	int n;
+__sread(void *cookie, char *buf, int n)
 {
 	FILE *fp = cookie;
 
@@ -61,10 +59,7 @@ __sread(cookie, buf, n)
 }
 
 int
-__swrite(cookie, buf, n)
-	void *cookie;
-	char const *buf;
-	int n;
+__swrite(void *cookie, char const *buf, int n)
 {
 	FILE *fp = cookie;
 
@@ -72,10 +67,7 @@ __swrite(cookie, buf, n)
 }
 
 fpos_t
-__sseek(cookie, offset, whence)
-	void *cookie;
-	fpos_t offset;
-	int whence;
+__sseek(void *cookie, fpos_t offset, int whence)
 {
 	FILE *fp = cookie;
 
@@ -83,8 +75,7 @@ __sseek(cookie, offset, whence)
 }
 
 int
-__sclose(cookie)
-	void *cookie;
+__sclose(void *cookie)
 {
 
 	return (_close(((FILE *)cookie)->_file));
@@ -94,10 +85,7 @@ __sclose(cookie)
  * Higher level wrappers.
  */
 int
-_sread(fp, buf, n)
-	FILE *fp;
-	char *buf;
-	int n;
+_sread(FILE *fp, char *buf, int n)
 {
 	int ret;
 
@@ -115,10 +103,7 @@ _sread(fp, buf, n)
 }
 
 int
-_swrite(fp, buf, n)
-	FILE *fp;
-	char const *buf;
-	int n;
+_swrite(FILE *fp, char const *buf, int n)
 {
 	int ret;
 	int serrno;
@@ -133,7 +118,7 @@ _swrite(fp, buf, n)
 	ret = (*fp->_write)(fp->_cookie, buf, n);
 	/* __SOFF removed even on success in case O_APPEND mode is set. */
 	if (ret >= 0) {
-		if ((fp->_flags & (__SAPP|__SOFF)) == (__SAPP|__SOFF) &&
+		if ((fp->_flags & __SOFF) && !(fp->_flags2 & __S2OAP) &&
 		    fp->_offset <= OFF_MAX - ret)
 			fp->_offset += ret;
 		else
@@ -145,10 +130,7 @@ _swrite(fp, buf, n)
 }
 
 fpos_t
-_sseek(fp, offset, whence)
-	FILE *fp;
-	fpos_t offset;
-	int whence;
+_sseek(FILE *fp, fpos_t offset, int whence)
 {
 	fpos_t ret;
 	int serrno, errret;
@@ -184,4 +166,12 @@ _sseek(fp, offset, whence)
 		fp->_offset = ret;
 	}
 	return (ret);
+}
+
+void
+__stdio_cancel_cleanup(void * arg)
+{
+
+	if (arg != NULL)
+		_funlockfile((FILE *)arg);
 }
