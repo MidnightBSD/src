@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/regex/engine.c 302168 2016-06-24 02:24:34Z pfg $");
 
 /*
  * The matching engine and friends.  This file is #included by regexec.c
@@ -154,7 +155,7 @@ matcher(struct re_guts *g,
 	int eflags)
 {
 	const char *endp;
-	int i;
+	size_t i;
 	struct match mv;
 	struct match *m = &mv;
 	const char *dp;
@@ -606,9 +607,9 @@ backref(struct match *m,
 				return(NULL);
 			break;
 		case OBOL:
-			if ( (sp == m->beginp && !(m->eflags&REG_NOTBOL)) ||
-					(sp < m->endp && *(sp-1) == '\n' &&
-						(m->g->cflags&REG_NEWLINE)) )
+			if ((sp == m->beginp && !(m->eflags&REG_NOTBOL)) ||
+			    (sp > m->offp && sp < m->endp &&
+			    *(sp-1) == '\n' && (m->g->cflags&REG_NEWLINE)))
 				{ /* yes */ }
 			else
 				return(NULL);
@@ -622,12 +623,9 @@ backref(struct match *m,
 				return(NULL);
 			break;
 		case OBOW:
-			if (( (sp == m->beginp && !(m->eflags&REG_NOTBOL)) ||
-					(sp < m->endp && *(sp-1) == '\n' &&
-						(m->g->cflags&REG_NEWLINE)) ||
-					(sp > m->beginp &&
-							!ISWORD(*(sp-1))) ) &&
-					(sp < m->endp && ISWORD(*sp)) )
+			if (sp < m->endp && ISWORD(*sp) &&
+			    ((sp == m->beginp && !(m->eflags&REG_NOTBOL)) ||
+			    (sp > m->offp && !ISWORD(*(sp-1)))))
 				{ /* yes */ }
 			else
 				return(NULL);
@@ -686,19 +684,16 @@ backref(struct match *m,
 		while (m->g->strip[ss] != SOP(O_BACK, i))
 			ss++;
 		return(backref(m, sp+len, stop, ss+1, stopst, lev, rec));
-		break;
 	case OQUEST_:		/* to null or not */
 		dp = backref(m, sp, stop, ss+1, stopst, lev, rec);
 		if (dp != NULL)
 			return(dp);	/* not */
 		return(backref(m, sp, stop, ss+OPND(s)+1, stopst, lev, rec));
-		break;
 	case OPLUS_:
 		assert(m->lastpos != NULL);
 		assert(lev+1 <= m->g->nplus);
 		m->lastpos[lev+1] = sp;
 		return(backref(m, sp, stop, ss+1, stopst, lev+1, rec));
-		break;
 	case O_PLUS:
 		if (sp == m->lastpos[lev])	/* last pass matched null */
 			return(backref(m, sp, stop, ss+1, stopst, lev-1, rec));
@@ -709,7 +704,6 @@ backref(struct match *m,
 			return(backref(m, sp, stop, ss+1, stopst, lev-1, rec));
 		else
 			return(dp);
-		break;
 	case OCH_:		/* find the right one, if any */
 		ssub = ss + 1;
 		esub = ss + OPND(s) - 1;
@@ -730,6 +724,7 @@ backref(struct match *m,
 			else
 				assert(OP(m->g->strip[esub]) == O_CH);
 		}
+		/* NOTREACHED */
 		break;
 	case OLPAREN:		/* must undo assignment if rest fails */
 		i = OPND(s);
@@ -741,7 +736,6 @@ backref(struct match *m,
 			return(dp);
 		m->pmatch[i].rm_so = offsave;
 		return(NULL);
-		break;
 	case ORPAREN:		/* must undo assignment if rest fails */
 		i = OPND(s);
 		assert(0 < i && i <= m->g->nsub);
@@ -752,7 +746,6 @@ backref(struct match *m,
 			return(dp);
 		m->pmatch[i].rm_eo = offsave;
 		return(NULL);
-		break;
 	default:		/* uh oh */
 		assert(nope);
 		break;
@@ -794,7 +787,7 @@ fast(	struct match *m,
 	ASSIGN(fresh, st);
 	SP("start", st, *p);
 	coldp = NULL;
-	if (start == m->beginp)
+	if (start == m->offp || (start == m->beginp && !(m->eflags&REG_NOTBOL)))
 		c = OUT;
 	else {
 		/*
@@ -899,7 +892,7 @@ slow(	struct match *m,
 	SP("sstart", st, *p);
 	st = step(m->g, startst, stopst, st, NOTHING, st);
 	matchp = NULL;
-	if (start == m->beginp)
+	if (start == m->offp || (start == m->beginp && !(m->eflags&REG_NOTBOL)))
 		c = OUT;
 	else {
 		/*
@@ -1113,7 +1106,7 @@ print(struct match *m,
 	FILE *d)
 {
 	struct re_guts *g = m->g;
-	int i;
+	sopno i;
 	int first = 1;
 
 	if (!(m->eflags&REG_TRACE))

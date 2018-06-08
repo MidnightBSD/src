@@ -1,14 +1,15 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libc/regex/grot/Makefile 313221 2017-02-04 16:36:07Z ngie $
 # You probably want to take -DREDEBUG out of CFLAGS, and put something like
 # -O in, *after* testing (-DREDEBUG strengthens testing by enabling a lot of
 # internal assertion checking).  Take -Dconst= out for an ANSI compiler.
 # Do not take -DPOSIX_MISTAKE out.  REGCFLAGS isn't important to you (it's
 # for my use in some special contexts).
 
-PATHS= ${.CURDIR}/.. ${.CURDIR}/../../locale ${.CURDIR}/../../../../include
+PATHS= ${.CURDIR:H} ${.CURDIR:H:H}/locale ${SRCTOP}/include
 .PATH: ${PATHS}
 
-CFLAGS+= -DPOSIX_MISTAKE -DREDEBUG $(REGCFLAGS)
+CFLAGS+= -static -DPOSIX_MISTAKE -DREDEBUG $(REGCFLAGS)
 .for incpath in ${PATHS}
 CFLAGS+= -I${incpath}
 .endfor
@@ -62,7 +63,8 @@ regexec.o:	engine.c engine.ih
 regerror.o:	regerror.ih
 regerror.o:	utils.h
 debug.o:	debug.ih
-main.o:	main.ih
+main.o:	debug.ih main.ih split.ih
+split.o:	split.ih
 
 r:	re tests
 	./re <tests

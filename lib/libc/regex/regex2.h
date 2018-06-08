@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)regex2.h	8.4 (Berkeley) 3/20/94
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/regex/regex2.h 165903 2007-01-09 00:28:16Z imp $
  */
 
 /*

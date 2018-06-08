@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/regex/grot/debug.c 292144 2015-12-13 03:51:49Z ngie $");
 
 #include <stdio.h>
 #include <string.h>
@@ -186,7 +187,7 @@ FILE *d;
 			fprintf(d, ">");
 			break;
 		default:
-			fprintf(d, "!%d(%d)!", OP(*s), opnd);
+			fprintf(d, "!%ld(%ld)!", OP(*s), (long)opnd);
 			break;
 		}
 		if (!done)
