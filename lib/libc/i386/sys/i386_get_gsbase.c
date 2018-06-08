@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Peter Wemm
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/i386_get_gsbase.c 145036 2005-04-14 00:01:35Z peter $");
 
 #include <machine/sysarch.h>
 

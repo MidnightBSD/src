@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Jonathan Lemon
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/i386_get_ioperm.c 124296 2004-01-09 16:52:09Z nectar $");
 
 #include <machine/sysarch.h>
 
