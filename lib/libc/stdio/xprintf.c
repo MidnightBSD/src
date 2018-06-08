@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * Copyright (c) 1990, 1993
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/stdio/xprintf.c 238111 2012-07-04 17:35:07Z pjd $
  */
 
 #include "namespace.h"
@@ -651,7 +652,7 @@ register_printf_render(int spec, printf_render *render, printf_arginfo_function 
 }
 
 int
-register_printf_render_std(const unsigned char *specs)
+register_printf_render_std(const char *specs)
 {
 
 	for (; *specs != '\0'; specs++) {

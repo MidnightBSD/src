@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * Copyright (c) 1990, 1993
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/stdio/xprintf_float.c 291573 2015-12-01 07:32:35Z ngie $
  */
 
 #include <namespace.h>
@@ -168,7 +169,6 @@ __printf_render_float(struct __printf_io *io, const struct printf_info *pi, cons
 	int realsz;		/* field size expanded by dprec, sign, etc */
 	int dprec;		/* a copy of prec if [diouxX], 0 otherwise */
 	char ox[2];		/* space for 0x; ox[1] is either x, X, or \0 */
-	int prsize;             /* max size of printed field */
 	int ret;		/* return value accumulator */
 	char *decimal_point;	/* locale specific decimal point */
 	int n2;			/* XXX: for PRINTANDPAD */
@@ -343,8 +343,6 @@ here:
 		realsz++;
 	if (ox[1])
 		realsz += 2;
-
-	prsize = pi->width > realsz ? pi->width : realsz;
 
 	/* right-adjusting blank padding */
 	if (pi->pad != '0' && pi->left == 0)
