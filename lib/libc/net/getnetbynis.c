@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, Garrett Wollman
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/getnetbynis.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -80,7 +81,7 @@ _getnetbynis(const char *name, char *map, int af, struct netent *ne,
 	free(result);
 	result = (char *)&ypbuf;
 
-	if ((cp = index(result, '\n')))
+	if ((cp = strchr(result, '\n')))
 		*cp = '\0';
 
 	cp = strpbrk(result, " \t");

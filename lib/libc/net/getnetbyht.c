@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)getnetent.c	8.1 (Berkeley) 6/4/93";
 static char orig_rcsid[] = "From: Id: getnetent.c,v 8.4 1997/06/01 20:34:37 vixie Exp";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/getnetbyht.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -63,7 +64,7 @@ _setnethtent(int f, struct netent_data *ned)
 {
 
 	if (ned->netf == NULL)
-		ned->netf = fopen(_PATH_NETWORKS, "r");
+		ned->netf = fopen(_PATH_NETWORKS, "re");
 	else
 		rewind(ned->netf);
 	ned->stayopen |= f;
@@ -89,7 +90,7 @@ getnetent_p(struct netent *ne, struct netent_data *ned)
 	char line[BUFSIZ + 1];
 
 	if (ned->netf == NULL &&
-	    (ned->netf = fopen(_PATH_NETWORKS, "r")) == NULL)
+	    (ned->netf = fopen(_PATH_NETWORKS, "re")) == NULL)
 		return (-1);
 again:
 	p = fgets(line, sizeof line, ned->netf);

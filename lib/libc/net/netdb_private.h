@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005 The FreeBSD Project.  All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/net/netdb_private.h 293023 2016-01-01 00:35:06Z ume $
  */
 
 #ifndef _NETDB_PRIVATE_H_
@@ -133,8 +134,6 @@ void _endhostdnsent(void);
 void _endhosthtent(struct hostent_data *);
 void _endnetdnsent(void);
 void _endnethtent(struct netent_data *);
-struct hostent *_gethostbynisaddr(const void *, socklen_t, int);
-struct hostent *_gethostbynisname(const char *, int);
 void _map_v4v6_address(const char *, char *);
 void _map_v4v6_hostent(struct hostent *, char **, char *);
 void _sethostdnsent(int);

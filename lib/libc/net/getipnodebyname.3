@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$KAME: getipnodebyname.3,v 1.6 2000/08/09 21:16:17 itojun Exp $
 .\"
 .\" Copyright (c) 1983, 1987, 1991, 1993
@@ -28,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)gethostbyname.3	8.4 (Berkeley) 5/25/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/net/getipnodebyname.3 233522 2012-03-26 21:22:53Z joel $
 .\"
 .Dd August 6, 2004
 .Dt GETIPNODEBYNAME 3
@@ -108,13 +109,13 @@ We note that a special flags value of
 (defined below)
 should handle most applications.
 That is, porting simple applications to use IPv6 replaces the call
-.Bd -literal -offset
-   hptr = gethostbyname(name);
+.Bd -literal -offset indent
+hptr = gethostbyname(name);
 .Ed
 .Pp
 with
-.Bd -literal -offset
-   hptr = getipnodebyname(name, AF_INET6, AI_DEFAULT, &error_num);
+.Bd -literal -offset indent
+hptr = getipnodebyname(name, AF_INET6, AI_DEFAULT, &error_num);
 .Ed
 .Pp
 Applications desiring finer control over the types of addresses
@@ -270,8 +271,8 @@ records are returned as IPv4-mapped IPv6 addresses;
 The special flags value of
 .Dv AI_DEFAULT
 is defined as
-.Bd -literal -offset
-   #define  AI_DEFAULT  (AI_V4MAPPED_CFG | AI_ADDRCONFIG)
+.Bd -literal -offset indent
+#define  AI_DEFAULT  (AI_V4MAPPED_CFG | AI_ADDRCONFIG)
 .Ed
 .Pp
 We noted that the

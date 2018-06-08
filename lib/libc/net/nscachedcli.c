@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/nscachedcli.c 255328 2013-09-06 21:02:06Z jilles $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -200,7 +201,7 @@ __open_cached_connection(struct cached_connection_params const *params)
 
 	assert(params != NULL);
 
-	client_socket = _socket(PF_LOCAL, SOCK_STREAM, 0);
+	client_socket = _socket(PF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	client_address.sun_family = PF_LOCAL;
 	strncpy(client_address.sun_path, params->socket_path,
 	    sizeof(client_address.sun_path));

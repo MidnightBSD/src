@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)getservent.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/getservent.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -335,7 +336,7 @@ files_servent(void *retval, void *mdata, va_list ap)
 	if (st->fp == NULL)
 		st->compat_mode_active = 0;
 
-	if (st->fp == NULL && (st->fp = fopen(_PATH_SERVICES, "r")) == NULL) {
+	if (st->fp == NULL && (st->fp = fopen(_PATH_SERVICES, "re")) == NULL) {
 		*errnop = errno;
 		return (NS_UNAVAIL);
 	}
@@ -406,14 +407,14 @@ files_servent(void *retval, void *mdata, va_list ap)
 
 			continue;
 		gotname:
-			if (proto == 0 || strcmp(serv->s_proto, proto) == 0)
+			if (proto == NULL || strcmp(serv->s_proto, proto) == 0)
 				rv = NS_SUCCESS;
 			break;
 		case nss_lt_id:
 			if (port != serv->s_port)
 				continue;
 
-			if (proto == 0 || strcmp(serv->s_proto, proto) == 0)
+			if (proto == NULL || strcmp(serv->s_proto, proto) == 0)
 				rv = NS_SUCCESS;
 			break;
 		case nss_lt_all:
@@ -449,7 +450,7 @@ files_setservent(void *retval, void *mdata, va_list ap)
 	case SETSERVENT:
 		f = va_arg(ap,int);
 		if (st->fp == NULL)
-			st->fp = fopen(_PATH_SERVICES, "r");
+			st->fp = fopen(_PATH_SERVICES, "re");
 		else
 			rewind(st->fp);
 		st->stayopen |= f;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -51,7 +52,7 @@
 static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/gethostbyht.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -72,7 +73,7 @@ void
 _sethosthtent(int f, struct hostent_data *hed)
 {
 	if (!hed->hostf)
-		hed->hostf = fopen(_PATH_HOSTS, "r");
+		hed->hostf = fopen(_PATH_HOSTS, "re");
 	else
 		rewind(hed->hostf);
 	hed->stayopen = f;
@@ -96,7 +97,7 @@ gethostent_p(struct hostent *he, struct hostent_data *hed, int mapped,
 	int af, len;
 	char hostbuf[BUFSIZ + 1];
 
-	if (!hed->hostf && !(hed->hostf = fopen(_PATH_HOSTS, "r"))) {
+	if (!hed->hostf && !(hed->hostf = fopen(_PATH_HOSTS, "re"))) {
 		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 		return (-1);
 	}

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)getprotoname.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/getprotoname.c 213453 2010-10-05 15:40:59Z ume $");
 
 #include <errno.h>
 #include <netdb.h>

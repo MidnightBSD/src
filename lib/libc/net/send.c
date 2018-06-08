@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,14 +32,12 @@
 static char sccsid[] = "@(#)send.c	8.2 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/send.c 251575 2013-06-09 14:31:59Z jilles $");
 
-#include "namespace.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <stddef.h>
-#include "un-namespace.h"
 
 ssize_t
 send(s, msg, len, flags)
@@ -46,5 +45,9 @@ send(s, msg, len, flags)
 	size_t len;
 	const void *msg;
 {
-	return (_sendto(s, msg, len, flags, NULL, 0));
+	/*
+	 * POSIX says send() shall be a cancellation point, so call the
+	 * cancellation-enabled sendto() and not _sendto().
+	 */
+	return (sendto(s, msg, len, flags, NULL, 0));
 }

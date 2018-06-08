@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996, 1998 by Internet Software Consortium.
  *
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/base64.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -193,12 +194,10 @@ b64_ntop(u_char const *src, size_t srclength, char *target, size_t targsize) {
  */
 
 int
-b64_pton(src, target, targsize)
-	char const *src;
-	u_char *target;
-	size_t targsize;
+b64_pton(const char *src, u_char *target, size_t targsize)
 {
 	int tarindex, state, ch;
+	u_char nextbyte;
 	char *pos;
 
 	state = 0;
@@ -212,7 +211,7 @@ b64_pton(src, target, targsize)
 			break;
 
 		pos = strchr(Base64, ch);
-		if (pos == 0) 		/* A non-base64 character. */
+		if (pos == NULL)		/* A non-base64 character. */
 			return (-1);
 
 		switch (state) {
@@ -226,22 +225,28 @@ b64_pton(src, target, targsize)
 			break;
 		case 1:
 			if (target) {
-				if ((size_t)tarindex + 1 >= targsize)
+				if ((size_t)tarindex >= targsize)
 					return (-1);
 				target[tarindex]   |=  (pos - Base64) >> 4;
-				target[tarindex+1]  = ((pos - Base64) & 0x0f)
-							<< 4 ;
+				nextbyte = ((pos - Base64) & 0x0f) << 4;
+				if ((size_t)tarindex + 1 < targsize)
+					target[tarindex + 1] = nextbyte;
+				else if (nextbyte)
+					return (-1);
 			}
 			tarindex++;
 			state = 2;
 			break;
 		case 2:
 			if (target) {
-				if ((size_t)tarindex + 1 >= targsize)
+				if ((size_t)tarindex >= targsize)
 					return (-1);
 				target[tarindex]   |=  (pos - Base64) >> 2;
-				target[tarindex+1]  = ((pos - Base64) & 0x03)
-							<< 6;
+				nextbyte = ((pos - Base64) & 0x03) << 6;
+				if ((size_t)tarindex + 1 < targsize)
+					target[tarindex + 1] = nextbyte;
+				else if (nextbyte)
+					return (-1);
 			}
 			tarindex++;
 			state = 3;
@@ -299,7 +304,8 @@ b64_pton(src, target, targsize)
 			 * zeros.  If we don't check them, they become a
 			 * subliminal channel.
 			 */
-			if (target && target[tarindex] != 0)
+			if (target && (size_t)tarindex < targsize &&
+			    target[tarindex] != 0)
 				return (-1);
 		}
 	} else {

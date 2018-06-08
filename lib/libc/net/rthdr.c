@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: rthdr.c,v 1.19 2003/06/06 10:48:51 itojun Exp $	*/
 
 /*
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/rthdr.c 168867 2007-04-19 15:48:16Z mtm $");
 
 #include <sys/param.h>
 #include <sys/types.h>

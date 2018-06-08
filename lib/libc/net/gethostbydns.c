@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ++Copyright++ 1985, 1988, 1993
  * -
@@ -54,7 +55,7 @@ static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 static char fromrcsid[] = "From: Id: gethnamaddr.c,v 8.23 1998/04/07 04:59:46 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/gethostbydns.c 211340 2010-08-15 16:28:08Z ume $");
 
 #include <sys/types.h>
 #include <sys/param.h>

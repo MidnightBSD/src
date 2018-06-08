@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, Garrett Wollman
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/getnetnamadr.c 211276 2010-08-13 06:39:54Z ume $");
 
 #include "namespace.h"
 #include "reentrant.h"

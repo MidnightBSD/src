@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)rcmd.c	8.3 (Berkeley) 3/26/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/rcmd.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -58,6 +59,7 @@ __MBSDID("$MidnightBSD$");
 #endif
 #include <arpa/nameser.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 extern int innetgr( const char *, const char *, const char *, const char * );
 
@@ -148,7 +150,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 	refused = 0;
 	sigemptyset(&newmask);
 	sigaddset(&newmask, SIGURG);
-	_sigprocmask(SIG_BLOCK, (const sigset_t *)&newmask, &oldmask);
+	__libc_sigprocmask(SIG_BLOCK, (const sigset_t *)&newmask, &oldmask);
 	for (timo = 1, lport = IPPORT_RESERVED - 1;;) {
 		s = rresvport_af(&lport, ai->ai_family);
 		if (s < 0) {
@@ -163,7 +165,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 				(void)fprintf(stderr, "rcmd: socket: %s\n",
 				    strerror(errno));
 			freeaddrinfo(res);
-			_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask,
+			__libc_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask,
 			    NULL);
 			return (-1);
 		}
@@ -181,7 +183,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 			(void)fprintf(stderr, "%s: %s\n",
 				      *ahost, strerror(errno));
 			freeaddrinfo(res);
-			_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask,
+			__libc_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask,
 			    NULL);
 			return (-1);
 		}
@@ -213,7 +215,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 		}
 	}
 	lport--;
-	if (fd2p == 0) {
+	if (fd2p == NULL) {
 		_write(s, "", 1);
 		lport = 0;
 	} else {
@@ -306,7 +308,7 @@ again:
 		}
 		goto bad2;
 	}
-	_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask, NULL);
+	__libc_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask, NULL);
 	freeaddrinfo(res);
 	return (s);
 bad2:
@@ -314,7 +316,7 @@ bad2:
 		(void)_close(*fd2p);
 bad:
 	(void)_close(s);
-	_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask, NULL);
+	__libc_sigprocmask(SIG_SETMASK, (const sigset_t *)&oldmask, NULL);
 	freeaddrinfo(res);
 	return (-1);
 }
@@ -458,7 +460,7 @@ iruserok_sa(ra, rlen, superuser, ruser, luser)
 	raddr = (struct sockaddr *)&ss;
 
 	first = 1;
-	hostf = superuser ? NULL : fopen(_PATH_HEQUIV, "r");
+	hostf = superuser ? NULL : fopen(_PATH_HEQUIV, "re");
 again:
 	if (hostf) {
 		if (__ivaliduser_sa(hostf, raddr, rlen, luser, ruser) == 0) {
@@ -481,7 +483,7 @@ again:
 		 */
 		uid = geteuid();
 		(void)seteuid(pwd->pw_uid);
-		hostf = fopen(pbuf, "r");
+		hostf = fopen(pbuf, "re");
 		(void)seteuid(uid);
 
 		if (hostf == NULL)

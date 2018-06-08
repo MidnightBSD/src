@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: if_nametoindex.c,v 1.6 2000/11/24 08:18:54 itojun Exp $	*/
 
 /*-
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/if_nametoindex.c 294156 2016-01-16 14:56:30Z tuexen $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -68,8 +69,9 @@ if_nametoindex(const char *ifname)
 	struct ifaddrs *ifaddrs, *ifa;
 	unsigned int ni;
 
-	s = _socket(AF_INET, SOCK_DGRAM, 0);
+	s = _socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
 	if (s != -1) {
+		memset(&ifr, 0, sizeof(ifr));
 		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 		if (_ioctl(s, SIOCGIFINDEX, &ifr) != -1) {
 			_close(s);
@@ -87,7 +89,7 @@ if_nametoindex(const char *ifname)
 		if (ifa->ifa_addr &&
 		    ifa->ifa_addr->sa_family == AF_LINK &&
 		    strcmp(ifa->ifa_name, ifname) == 0) {
-			ni = ((struct sockaddr_dl*)ifa->ifa_addr)->sdl_index;
+			ni = LLINDEX((struct sockaddr_dl*)ifa->ifa_addr);
 			break;
 		}
 	}

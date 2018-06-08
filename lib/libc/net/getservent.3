@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)getservent.3	8.3 (Berkeley) 1/12/94
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/net/getservent.3 243156 2012-11-16 15:02:35Z kevlo $
 .\"
 .Dd July 9, 1995
 .Dt GETSERVENT 3
@@ -65,7 +66,7 @@ containing the broken-out
 fields of a line in the network services data base,
 .Pa /etc/services .
 .Bd -literal -offset indent
-struct	servent {
+struct servent {
 	char	*s_name;	/* official name of service */
 	char	**s_aliases;	/* alias list */
 	int	s_port;		/* port service resides at */
@@ -130,8 +131,7 @@ searches must also match the protocol.
 .It Pa /etc/services
 .El
 .Sh DIAGNOSTICS
-Null pointer
-(0) returned on
+Null pointer returned on
 .Dv EOF
 or error.
 .Sh SEE ALSO

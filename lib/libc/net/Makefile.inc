@@ -1,4 +1,5 @@
 #	from @(#)Makefile.inc	8.2 (Berkeley) 9/5/93
+# $FreeBSD: stable/10/lib/libc/net/Makefile.inc 296765 2016-03-12 19:26:21Z bdrewery $
 # $MidnightBSD$
 
 # machine-independent net sources
@@ -12,7 +13,7 @@ SRCS+=	base64.c ether_addr.c eui64.c \
 	getproto.c getprotoent.c getprotoname.c getservent.c \
 	if_indextoname.c if_nameindex.c if_nametoindex.c \
 	ip6opt.c linkaddr.c map_v4v6.c name6.c ntoh.c \
-	nsdispatch.c nslexer.c nsparser.y nss_compat.c \
+	nsdispatch.c nslexer.l nsparser.y nss_compat.c \
 	rcmd.c rcmdsh.c recv.c rthdr.c sctp_sys_calls.c send.c \
         sockatmark.c sourcefilter.c vars.c
 
@@ -34,11 +35,8 @@ CFLAGS+=-I${.CURDIR}/resolv
 YFLAGS+=-p_nsyy
 LFLAGS+=-P_nsyy
 
-CLEANFILES+=nslexer.c
-
-nslexer.c: nslexer.l
-	${LEX} ${LFLAGS} -o/dev/stdout ${.IMPSRC} | \
-		sed -e '/YY_BUF_SIZE/s/16384/1024/' >${.TARGET}
+CFLAGS.nslexer.c= -DYY_BUF_SIZE=1024
+CFLAGS+=	${CFLAGS.${.IMPSRC:T}}
 
 MAN+=	byteorder.3 ethers.3 eui64.3 \
 	getaddrinfo.3 gai_strerror.3 gethostbyname.3 \
@@ -60,7 +58,7 @@ MLINKS+=ethers.3 ether_aton.3 ethers.3 ether_hostton.3 ethers.3 ether_line.3 \
 	ethers.3 ether_ntoa.3 ethers.3 ether_ntohost.3
 MLINKS+=eui64.3 eui64_aton.3 eui64.3 eui64_hostton.3 \
 	eui64.3 eui64_ntoa.3 eui64.3 eui64_ntohost.3
-MLINKS+=getaddrinfo.3 freeaddrinfo.3 getaddrinfo.3 allocaddrinfo.3
+MLINKS+=getaddrinfo.3 freeaddrinfo.3 
 MLINKS+=gethostbyname.3 endhostent.3 gethostbyname.3 gethostbyaddr.3 \
 	gethostbyname.3 gethostbyname2.3 gethostbyname.3 gethostent.3 \
 	gethostbyname.3 herror.3 gethostbyname.3 hstrerror.3 \

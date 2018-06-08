@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getprotoent.3	8.1 (Berkeley) 6/4/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/net/getprotoent.3 243156 2012-11-16 15:02:35Z kevlo $
 .\"
 .Dd June 4, 1993
 .Dt GETPROTOENT 3
@@ -65,7 +66,7 @@ containing the broken-out
 fields of a line in the network protocol data base,
 .Pa /etc/protocols .
 .Bd -literal -offset indent
-struct	protoent {
+struct protoent {
 	char	*p_name;	/* official name of protocol */
 	char	**p_aliases;	/* alias list */
 	int	p_proto;	/* protocol number */
@@ -117,8 +118,7 @@ or until
 .Dv EOF
 is encountered.
 .Sh RETURN VALUES
-Null pointer
-(0) returned on
+Null pointer returned on
 .Dv EOF
 or error.
 .Sh FILES

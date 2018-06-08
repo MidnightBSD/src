@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: name6.c,v 1.25 2000/06/26 16:44:40 itojun Exp $	*/
 
 /*
@@ -42,11 +43,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -88,7 +85,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libc/net/name6.c 245553 2013-01-17 16:11:38Z ume $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/name6.c 305401 2016-09-05 00:36:52Z ache $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -190,6 +187,7 @@ struct hp_order {
 #define aio_sa aio_un.aiou_sa
 	int aio_matchlen;
 	char *aio_h_addr;
+	int aio_initial_sequence;
 };
 
 static struct	 hostent *_hpcopy(struct hostent *, int *);
@@ -239,7 +237,7 @@ getipnodebyname(const char *name, int af, int flags, int *errp)
 	if (flags & AI_ADDRCONFIG) {
 		int s;
 
-		if ((s = _socket(af, SOCK_DGRAM, 0)) < 0)
+		if ((s = _socket(af, SOCK_DGRAM | SOCK_CLOEXEC, 0)) < 0)
 			return NULL;
 		/*
 		 * TODO:
@@ -659,7 +657,6 @@ _hpreorder(struct hostent *hp)
 #endif
 		break;
 	default:
-		free_addrselectpolicy(&policyhead);
 		return hp;
 	}
 
@@ -716,6 +713,7 @@ _hpreorder(struct hostent *hp)
 		aio[i].aio_dstscope = gai_addr2scopetype(sa);
 		aio[i].aio_dstpolicy = match_addrselectpolicy(sa, &policyhead);
 		set_source(&aio[i], &policyhead);
+		aio[i].aio_initial_sequence = i;
 	}
 
 	/* perform sorting. */
@@ -799,10 +797,9 @@ match_addrselectpolicy(struct sockaddr *addr, struct policyhead *head)
 		memset(&key, 0, sizeof(key));
 		key.sin6_family = AF_INET6;
 		key.sin6_len = sizeof(key);
-		key.sin6_addr.s6_addr[10] = 0xff;
-		key.sin6_addr.s6_addr[11] = 0xff;
-		memcpy(&key.sin6_addr.s6_addr[12],
-		       &((struct sockaddr_in *)addr)->sin_addr, 4);
+		_map_v4v6_address(
+		    (char *)&((struct sockaddr_in *)addr)->sin_addr,
+		    (char *)&key.sin6_addr);
 		break;
 	default:
 		return(NULL);
@@ -872,7 +869,8 @@ set_source(struct hp_order *aio, struct policyhead *ph)
 	}
 
 	/* open a socket to get the source address for the given dst */
-	if ((s = _socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+	if ((s = _socket(ss.ss_family, SOCK_DGRAM | SOCK_CLOEXEC,
+	    IPPROTO_UDP)) < 0)
 		return;		/* give up */
 	if (_connect(s, (struct sockaddr *)&ss, ss.ss_len) < 0)
 		goto cleanup;
@@ -933,7 +931,7 @@ matchlen(struct sockaddr *src, struct sockaddr *dst)
 
 	while (s < lim)
 		if ((r = (*d++ ^ *s++)) != 0) {
-			while (r < addrlen * 8) {
+			while ((r & 0x80) == 0) {
 				match++;
 				r <<= 1;
 			}
@@ -1050,6 +1048,23 @@ comp_dst(const void *arg1, const void *arg2)
 	}
 
 	/* Rule 10: Otherwise, leave the order unchanged. */
+
+	/* 
+	 * Note that qsort is unstable; so, we can't return zero and 
+	 * expect the order to be unchanged.
+	 * That also means we can't depend on the current position of
+	 * dst2 being after dst1.  We must enforce the initial order
+	 * with an explicit compare on the original position.
+	 * The qsort specification requires that "When the same objects 
+	 * (consisting of width bytes, irrespective of their current 
+	 * positions in the array) are passed more than once to the 
+	 * comparison function, the results shall be consistent with one 
+	 * another."  
+	 * In other words, If A < B, then we must also return B > A.
+	 */
+	if (dst2->aio_initial_sequence < dst1->aio_initial_sequence)
+		return(1);
+
 	return(-1);
 }
 

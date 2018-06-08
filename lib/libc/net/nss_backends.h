@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/net/nss_backends.h 113595 2003-04-17 14:14:22Z nectar $
  */
 /*
  * Eventually, the implementations of existing built-in NSS functions

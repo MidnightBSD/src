@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getnetent.3	8.1 (Berkeley) 6/4/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/net/getnetent.3 243156 2012-11-16 15:02:35Z kevlo $
 .\"
 .Dd June 4, 1993
 .Dt GETNETENT 3
@@ -73,7 +74,7 @@ The order of the lookups is controlled by the
 `networks' entry in
 .Xr nsswitch.conf 5 .
 .Bd -literal -offset indent
-struct	netent {
+struct netent {
 	char		*n_name;	/* official name of net */
 	char		**n_aliases;	/* alias list */
 	int		n_addrtype;	/* net number type */
@@ -142,8 +143,7 @@ Network numbers are supplied in host order.
 .It Pa /etc/resolv.conf
 .El
 .Sh DIAGNOSTICS
-Null pointer
-(0) returned on
+Null pointer returned on
 .Dv EOF
 or error.
 .Sh SEE ALSO
