@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.2 2013-02-18 00:12:22 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.10 2005/10/11 00:10:16 marka Exp $";
 #endif /* not lint */
 
 /*
@@ -20,7 +21,7 @@ static const char rcsid[] = "$Id: res_findzonecut.c,v 1.2 2013-02-18 00:12:22 la
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_findzonecut.c 270838 2014-08-30 10:16:25Z ume $");
 
 /* Import. */
 

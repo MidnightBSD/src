@@ -1,3 +1,6 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libc/resolv/res_private.h 292462 2015-12-19 02:41:31Z vangyzen $ */
+
 #ifndef res_private_h
 #define res_private_h
 
@@ -12,6 +15,9 @@ struct __res_state_ext {
 	} sort_list[MAXRESOLVSORT];
 	char nsuffix[64];
 	char nsuffix2[64];
+	struct timespec	conf_mtim;	/* mod time of loaded resolv.conf */
+	time_t		conf_stat;	/* time of last stat(resolv.conf) */
+	u_short	reload_period;		/* seconds between stat(resolv.conf) */
 };
 
 extern int

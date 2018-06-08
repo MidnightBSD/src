@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/mtctxres.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include <port_before.h>
 #ifdef DO_PTHREADS
@@ -75,7 +76,7 @@ __res_init_ctx(void) {
 		return (0);
 	}
 
-	if ((mt = malloc(sizeof (mtctxres_t))) == 0) {
+	if ((mt = malloc(sizeof(mtctxres_t))) == NULL) {
 		errno = ENOMEM;
 		return (-1);
 	}
@@ -94,10 +95,7 @@ __res_init_ctx(void) {
 static void
 __res_destroy_ctx(void *value) {
 
-	mtctxres_t	*mt = (mtctxres_t *)value;
-
-	if (mt != 0)
-		free(mt);
+	free(value);
 }
 #endif
 
@@ -130,9 +128,9 @@ ___mtctxres(void) {
 	 * that fails return a global context.
 	 */
 	if (mt_key_initialized) {
-		if (((mt = pthread_getspecific(key)) != 0) ||
+		if (((mt = pthread_getspecific(key)) != NULL) ||
 		    (__res_init_ctx() == 0 &&
-		     (mt = pthread_getspecific(key)) != 0)) {
+		     (mt = pthread_getspecific(key)) != NULL)) {
 			return (mt);
 		}
 	}

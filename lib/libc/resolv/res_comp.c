@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *    The Regents of the University of California.  All rights reserved.
@@ -66,10 +67,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_comp.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_comp.c,v 1.3 2013-02-18 00:12:22 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_comp.c,v 1.5 2005/07/28 06:51:50 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_comp.c 284559 2015-06-18 16:39:05Z ume $");
 
 #include "port_before.h"
 #include <sys/types.h>
@@ -147,12 +148,12 @@ dn_skipname(const u_char *ptr, const u_char *eom) {
 		   || ((c) >= 0x61 && (c) <= 0x7a))
 #define digitchar(c) ((c) >= 0x30 && (c) <= 0x39)
 
-#define borderchar(c) (alphachar(c) || digitchar(c))
 #ifdef	RES_ENFORCE_RFC1034
-#define middlechar(c) (borderchar(c) || hyphenchar(c))
+#define borderchar(c) (alphachar(c) || digitchar(c))
 #else
-#define middlechar(c) (borderchar(c) || hyphenchar(c) || underscorechar(c))
+#define borderchar(c) (alphachar(c) || digitchar(c) || underscorechar(c))
 #endif
+#define middlechar(c) (borderchar(c) || hyphenchar(c))
 #define	domainchar(c) ((c) > 0x20 && (c) < 0x7f)
 
 int

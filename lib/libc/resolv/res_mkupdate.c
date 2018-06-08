@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-1999 by Internet Software Consortium.
@@ -22,10 +23,10 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.2 2013-02-18 00:12:22 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.10 2008/12/11 09:59:00 marka Exp $";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_mkupdate.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include "port_before.h"
 
@@ -54,7 +55,9 @@ __MBSDID("$MidnightBSD$");
 #include "port_after.h"
 
 /* Options.  Leave them on. */
-#define DEBUG
+#ifndef	DEBUG
+#define	DEBUG
+#endif
 #define MAXPORT 1024
 
 static int getnum_str(u_char **, u_char *);
@@ -116,7 +119,8 @@ res_nmkupdate(res_state statp, ns_updrec *rrecp_in, u_char *buf, int buflen) {
 		return (-1);
 	memset(buf, 0, HFIXEDSZ);
 	hp = (HEADER *) buf;
-	hp->id = htons(++statp->id);
+	statp->id = res_nrandomid(statp);
+	hp->id = htons(statp->id);
 	hp->opcode = ns_o_update;
 	hp->rcode = NOERROR;
 	cp = buf + HFIXEDSZ;
@@ -1172,7 +1176,7 @@ res_protocolname(int num) {
 	if (protolist == (struct valuelist *)0)
 		res_buildprotolist();
 	pp = cgetprotobynumber(num);
-	if (pp == 0)  {
+	if (pp == NULL)  {
 		(void) sprintf(number, "%d", num);
 		return (number);
 	}
@@ -1187,7 +1191,7 @@ res_servicename(u_int16_t port, const char *proto) {	/*%< Host byte order. */
 	if (servicelist == (struct valuelist *)0)
 		res_buildservicelist();
 	ss = cgetservbyport(htons(port), proto);
-	if (ss == 0)  {
+	if (ss == NULL)  {
 		(void) sprintf(number, "%d", port);
 		return (number);
 	}
