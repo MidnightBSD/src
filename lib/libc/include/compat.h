@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2009 Advanced Computing Technologies LLC
+ * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/include/compat.h 283927 2015-06-02 19:20:39Z jhb $
  */
 
 /*
@@ -43,6 +44,15 @@ __sym_compat(msgctl, freebsd7_msgctl, FBSD_1.0);
 __sym_compat(shmctl, freebsd7_shmctl, FBSD_1.0);
 
 #undef __sym_compat
+
+#define	__weak_reference(sym,alias)	\
+	.weak	alias;.equ	alias,sym
+
+#ifndef SYSCALL_COMPAT
+__weak_reference(__sys_fcntl,__fcntl_compat)
+#endif
+
+#undef __weak_reference
 
 #endif	/* __LIBC_COMPAT_H__ */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1997,1999 by Internet Software Consortium.
@@ -15,7 +16,7 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $FreeBSD: src/lib/libc/include/isc/list.h,v 1.3 2007/06/03 18:13:59 ume Exp $ */
+/* $FreeBSD: stable/10/lib/libc/include/isc/list.h 270838 2014-08-30 10:16:25Z ume $ */
 
 #ifndef LIST_H
 #define LIST_H 1
@@ -38,7 +39,8 @@
 	} while (0)
 #define INIT_LINK(elt, link) \
 	INIT_LINK_TYPE(elt, link, void)
-#define LINKED(elt, link) ((void *)((elt)->link.prev) != (void *)(-1))
+#define LINKED(elt, link) ((void *)((elt)->link.prev) != (void *)(-1) && \
+			   (void *)((elt)->link.next) != (void *)(-1))
 
 #define HEAD(list) ((list).head)
 #define TAIL(list) ((list).tail)
