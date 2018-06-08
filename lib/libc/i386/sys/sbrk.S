@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -34,7 +35,7 @@
 	.asciz "@(#)sbrk.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/sbrk.S 240152 2012-09-05 21:41:05Z jilles $");
 
 #include "SYS.h"
 
@@ -59,7 +60,7 @@ ENTRY(sbrk)
 	addl	%eax,4(%esp)
 	mov	$SYS_break,%eax
 	KERNCALL
-	jb	err
+	jb	HIDENAME(cerror)
 	PIC_PROLOGUE
 	movl	PIC_GOT(HIDENAME(curbrk)),%edx
 	movl	(%edx),%eax
@@ -67,9 +68,6 @@ ENTRY(sbrk)
 	PIC_EPILOGUE
 back:
 	ret
-err:
-	PIC_PROLOGUE
-	jmp	PIC_PLT(HIDENAME(cerror))
 
 #else /* !PIC */
 
@@ -80,13 +78,11 @@ err:
 	addl	%eax,4(%esp)
 	mov	$SYS_break,%eax
 	KERNCALL
-	jb	err
+	jb	HIDENAME(cerror)
 	movl	HIDENAME(curbrk),%eax
 	addl	%ecx,HIDENAME(curbrk)
 back:
 	ret
-err:
-	jmp	HIDENAME(cerror)
 #endif /* PIC */
 END(sbrk)
 

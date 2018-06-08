@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/getcontext.S 240152 2012-09-05 21:41:05Z jilles $");
 
 #include <SYS.h>
 
@@ -42,12 +43,9 @@ ENTRY(__sys_getcontext)
 	movl	(%esp),%ecx	/* save getcontext return address */
 	mov	$SYS_getcontext,%eax
 	KERNCALL
-	jb	1f
+	jb	HIDENAME(cerror)
 	addl	$4,%esp		/* remove stale (setcontext) return address */
 	jmp	*%ecx		/* restore return address */
-1:
-	PIC_PROLOGUE
-	jmp	PIC_PLT(HIDENAME(cerror))
 END(__sys_getcontext)
 
 	.section .note.GNU-stack,"",%progbits

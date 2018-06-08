@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -34,7 +35,7 @@
 	.asciz "@(#)syscall.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/syscall.S 240152 2012-09-05 21:41:05Z jilles $");
 
 #include "SYS.h"
 
@@ -45,11 +46,8 @@ ENTRY(syscall)
 	KERNCALL
 	push	%ecx	/* need to push a word to keep stack frame intact
 			   upon return; the word must be the return address. */
-	jb	1f
+	jb	HIDENAME(cerror)
 	ret
-1:
-	PIC_PROLOGUE
-	jmp	PIC_PLT(HIDENAME(cerror))
 END(syscall)
 
 	.section .note.GNU-stack,"",%progbits

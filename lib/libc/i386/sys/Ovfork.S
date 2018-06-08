@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -34,7 +35,7 @@
 	.asciz "@(#)Ovfork.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/Ovfork.S 240152 2012-09-05 21:41:05Z jilles $");
 
 #include "SYS.h"
 
@@ -50,8 +51,7 @@ ENTRY(__sys_vfork)
 	jmp	*%ecx
 1:
 	pushl	%ecx
-	PIC_PROLOGUE
-	jmp     PIC_PLT(HIDENAME(cerror))
+	jmp     HIDENAME(cerror)
 END(__sys_vfork)
 
 	.section .note.GNU-stack,"",%progbits
