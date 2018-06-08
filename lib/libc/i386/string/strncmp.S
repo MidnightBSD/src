@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993,94 Winning Strategies, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/string/strncmp.S 217106 2011-01-07 16:08:40Z kib $");
 
 /*
  * strncmp(s1, s2, n)

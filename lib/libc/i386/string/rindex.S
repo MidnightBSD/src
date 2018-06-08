@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.

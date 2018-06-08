@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.
@@ -29,15 +30,15 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/string/strchr.S 249582 2013-04-17 11:40:10Z gabor $");
 
 /*
  * strchr(s, c)
- *	return a pointer to the first occurance of the character c in
+ *	return a pointer to the first occurrence of the character c in
  *	string s, or NULL if c does not occur in the string.
  *
  * %edx - pointer iterating through string
- * %eax - pointer to first occurance of 'c'
+ * %eax - pointer to first occurrence of 'c'
  * %cl  - character we're comparing against
  * %bl  - character at %edx
  *
@@ -62,5 +63,7 @@ L2:
 	popl	%ebx
 	ret
 END(strchr)
+
+WEAK_ALIAS(index, strchr)
 
 	.section .note.GNU-stack,"",%progbits

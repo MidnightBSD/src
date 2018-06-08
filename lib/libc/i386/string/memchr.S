@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.
@@ -29,11 +30,11 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/string/memchr.S 249582 2013-04-17 11:40:10Z gabor $");
 
 /*
  * memchr (b, c, len)
- *	locates the first occurance of c in string b.
+ *	locates the first occurrence of c in string b.
  *
  * Written by:
  *	J.T. Conklin (jtc@wimsey.com), Winning Strategies, Inc.
