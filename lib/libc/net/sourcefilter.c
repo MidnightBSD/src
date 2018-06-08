@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Bruce Simpson.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/net/sourcefilter.c 269480 2014-08-03 18:03:00Z pfg $");
 
 #include "namespace.h"
 
@@ -120,7 +121,7 @@ __inaddr_to_index(in_addr_t ifaddr)
 		psu = (sockunion_t *)ifa->ifa_addr;
 		if (psu && psu->ss.ss_family == AF_LINK &&
 		    strcmp(ifa->ifa_name, ifname) == 0) {
-			ifindex = psu->sdl.sdl_index;
+			ifindex = LLINDEX(&psu->sdl);
 			break;
 		}
 	}
@@ -337,7 +338,8 @@ getsourcefilter(int s, uint32_t interface, struct sockaddr *group,
 {
 	struct __msfilterreq	 msfr;
 	sockunion_t		*psu;
-	int			 err, level, nsrcs, optlen, optname;
+	socklen_t		 optlen;
+	int			 err, level, nsrcs, optname;
 
 	if (interface == 0 || group == NULL || numsrc == NULL ||
 	    fmode == NULL) {
