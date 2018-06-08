@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/i386/arith.h 114839 2003-05-08 13:50:44Z das $
  */
 
 /*
