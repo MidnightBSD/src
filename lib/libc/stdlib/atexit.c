@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)atexit.c	8.2 (Berkeley) 7/3/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/atexit.c 259288 2013-12-13 05:54:30Z kib $");
 
 #include "namespace.h"
 #include <link.h>
@@ -151,6 +152,8 @@ __cxa_atexit(void (*func)(void *), void *arg, void *dso)
 #pragma weak __pthread_cxa_finalize
 void __pthread_cxa_finalize(const struct dl_phdr_info *);
 
+static int global_exit;
+
 /*
  * Call all handlers registered with __cxa_atexit for the shared
  * object owning 'dso'.  Note: if 'dso' is NULL, then all remaining
@@ -164,10 +167,12 @@ __cxa_finalize(void *dso)
 	struct atexit_fn fn;
 	int n, has_phdr;
 
-	if (dso != NULL)
+	if (dso != NULL) {
 		has_phdr = _rtld_addr_phdr(dso, &phdr_info);
-	else
+	} else {
 		has_phdr = 0;
+		global_exit = 1;
+	}
 
 	_MUTEX_LOCK(&atexit_mutex);
 	for (p = __atexit; p; p = p->next) {
@@ -177,8 +182,9 @@ __cxa_finalize(void *dso)
 			fn = p->fns[n];
 			if (dso != NULL && dso != fn.fn_dso) {
 				/* wrong DSO ? */
-				if (!has_phdr || !__elf_phdr_match_addr(
-				    &phdr_info, fn.fn_ptr.cxa_func))
+				if (!has_phdr || global_exit ||
+				    !__elf_phdr_match_addr(&phdr_info,
+				    fn.fn_ptr.cxa_func))
 					continue;
 			}
 			/*
@@ -200,6 +206,6 @@ __cxa_finalize(void *dso)
 	if (dso == NULL)
 		_MUTEX_DESTROY(&atexit_mutex);
 
-	if (has_phdr && &__pthread_cxa_finalize != NULL)
+	if (has_phdr && !global_exit && &__pthread_cxa_finalize != NULL)
 		__pthread_cxa_finalize(&phdr_info);
 }
