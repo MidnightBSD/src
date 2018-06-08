@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel M. Eischen <deischen@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/makecontext.c 138403 2004-12-05 21:22:08Z deischen $");
 
 #include <sys/param.h>
 #include <sys/signal.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jonathan Mini <mini@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/signalcontext.c 131501 2004-07-02 23:20:05Z davidxu $");
 
 #include <sys/param.h>
 #include <sys/ucontext.h>

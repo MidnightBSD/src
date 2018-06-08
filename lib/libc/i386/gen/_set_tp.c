@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$FreeBSD: stable/10/lib/libc/i386/gen/_set_tp.c 150065 2005-09-12 19:52:42Z stefanf $
  */
 
 #include <string.h>
