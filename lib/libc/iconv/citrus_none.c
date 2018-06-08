@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_none.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/10/lib/libc/iconv/citrus_none.c 326241 2017-11-27 02:44:36Z pfg $ */
 /* $NetBSD: citrus_none.c,v 1.18 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
@@ -165,7 +165,7 @@ _citrus_NONE_stdenc_mbtowc(struct _citrus_stdenc * __restrict ce __unused,
     struct iconv_hooks *hooks)
 {
 
-	if (s == NULL) {
+	if (*s == NULL) {
 		*nresult = 0;
 		return (0);
 	}
@@ -177,7 +177,7 @@ _citrus_NONE_stdenc_mbtowc(struct _citrus_stdenc * __restrict ce __unused,
 	if (pwc != NULL)
 		*pwc = (_wc_t)(unsigned char) **s;
 
-	*nresult = *s == '\0' ? 0 : 1;
+	*nresult = **s == '\0' ? 0 : 1;
 
 	if ((hooks != NULL) && (hooks->wc_hook != NULL))
 		hooks->wc_hook(*pwc, hooks->data);
