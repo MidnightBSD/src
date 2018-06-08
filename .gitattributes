@@ -47057,9 +47057,11 @@ lib/libc/iconv/iconvctl.c svneol=native#text/plain
 lib/libc/iconv/iconvlist.3 -text
 lib/libc/iconv/iconvlist.c svneol=native#text/plain
 lib/libc/include/compat.h -text
+lib/libc/include/errlst.h svneol=native#text/plain
 lib/libc/include/fpmath.h -text
 lib/libc/include/isc/eventlib.h -text
 lib/libc/include/isc/list.h -text
+lib/libc/include/isc/platform.h svneol=native#text/plain
 lib/libc/include/libc_private.h -text
 lib/libc/include/namespace.h -text
 lib/libc/include/nscache.h -text
