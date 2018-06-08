@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
@@ -30,8 +31,9 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/mbtowc.c 297440 2016-03-31 01:36:50Z pfg $");
 
+#include <errno.h>
 #include <stdlib.h>
 #include <wchar.h>
 #include "mblocal.h"
@@ -49,9 +51,15 @@ mbtowc_l(wchar_t * __restrict pwc, const char * __restrict s, size_t n, locale_t
 		return (0);
 	}
 	rval = XLOCALE_CTYPE(locale)->__mbrtowc(pwc, s, n, &locale->mbtowc);
-	if (rval == (size_t)-1 || rval == (size_t)-2)
+	switch (rval) {
+	case (size_t)-2:
+		errno = EILSEQ;
+		/* FALLTHROUGH */
+	case (size_t)-1:
 		return (-1);
-	return ((int)rval);
+	default:
+		return ((int)rval);
+	}
 }
 int
 mbtowc(wchar_t * __restrict pwc, const char * __restrict s, size_t n)

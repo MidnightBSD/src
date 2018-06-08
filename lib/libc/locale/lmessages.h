@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/locale/lmessages.h 227753 2011-11-20 14:45:42Z theraven $
  */
 
 #ifndef _LMESSAGES_H_

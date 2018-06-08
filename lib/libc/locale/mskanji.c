@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2004 Tim J. Robbins. All rights reserved.
  *
@@ -42,7 +43,7 @@
 static char sccsid[] = "@(#)mskanji.c	1.0 (Phase One) 5/5/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/mskanji.c 297798 2016-04-11 02:21:42Z ache $");
 
 #include <sys/types.h>
 #include <errno.h>
@@ -73,7 +74,7 @@ _MSKanji_init(struct xlocale_ctype *l, _RuneLocale *rl)
 	l->__mbsinit = _MSKanji_mbsinit;
 	l->runes = rl;
 	l->__mb_cur_max = 2;
-	l->__mb_sb_limit = 256;
+	l->__mb_sb_limit = 224;
 	return (0);
 }
 

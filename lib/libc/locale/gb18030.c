@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/gb18030.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <errno.h>
 #include <runetype.h>

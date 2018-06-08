@@ -47100,6 +47100,11 @@ lib/libc/locale/big5.5 -text
 lib/libc/locale/big5.c -text
 lib/libc/locale/btowc.3 -text
 lib/libc/locale/btowc.c -text
+lib/libc/locale/c16rtomb.c svneol=native#text/plain
+lib/libc/locale/c16rtomb_iconv.c svneol=native#text/plain
+lib/libc/locale/c32rtomb.c svneol=native#text/plain
+lib/libc/locale/c32rtomb_iconv.c svneol=native#text/plain
+lib/libc/locale/cXXrtomb_iconv.h svneol=native#text/plain
 lib/libc/locale/collate.c -text
 lib/libc/locale/collate.h -text
 lib/libc/locale/collcmp.c -text
@@ -47154,6 +47159,11 @@ lib/libc/locale/mblen.c -text
 lib/libc/locale/mblocal.h -text
 lib/libc/locale/mbrlen.3 -text
 lib/libc/locale/mbrlen.c -text
+lib/libc/locale/mbrtoc16.c svneol=native#text/plain
+lib/libc/locale/mbrtoc16_iconv.c svneol=native#text/plain
+lib/libc/locale/mbrtoc32.c svneol=native#text/plain
+lib/libc/locale/mbrtoc32_iconv.c svneol=native#text/plain
+lib/libc/locale/mbrtocXX_iconv.h svneol=native#text/plain
 lib/libc/locale/mbrtowc.3 -text
 lib/libc/locale/mbrtowc.c -text
 lib/libc/locale/mbsinit.3 -text

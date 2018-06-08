@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins. All rights reserved.
  * Copyright (c) 1993
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/gbk.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <sys/types.h>
 #include <errno.h>

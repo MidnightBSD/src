@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -30,7 +31,7 @@
 .\"
 .\" From @(#)setlocale.3	8.1 (Berkeley) 6/9/93
 .\" From FreeBSD: src/lib/libc/locale/setlocale.3,v 1.28 2003/11/15 02:26:04 tjr Exp
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/locale/localeconv.3 321160 2017-07-18 18:37:56Z ngie $
 .\"
 .Dd November 21, 2003
 .Dt LOCALECONV 3
@@ -202,7 +203,8 @@ result similarly denotes an unavailable value.
 .Pp
 The
 .Fn localeconv_l
-function takes an explicit locale parameter.  For more information, see
+function takes an explicit locale parameter.
+For more information, see
 .Xr xlocale 3 .
 .Sh RETURN VALUES
 The

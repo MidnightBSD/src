@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2011 The FreeBSD Foundation
 .\" All rights reserved.
 .\"
@@ -25,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/locale/duplocale.3 250244 2013-05-04 17:06:47Z pluknet $
 .\"
-.Dd September 17 2011
+.Dd September 17, 2011
 .Dt DUPLOCALE 3
 .Os
 .Sh NAME
@@ -44,10 +45,10 @@ Duplicates an existing
 .Fa locale_t
 returning a new
 .Fa locale_t
-that refers to the same locale values but has independent internal state.
+that refers to the same locale values but has an independent internal state.
 Various functions, such as
 .Xr mblen 3
-require presistent state.
+require a persistent state.
 These functions formerly used static variables and calls to them from multiple
 threads had undefined behavior.
 They now use fields in the
@@ -58,15 +59,6 @@ These calls are therefore only thread safe on threads with a unique per-thread
 locale.
 The locale returned by this call must be freed with
 .Xr freelocale 3 .
-.Sh BUGS
-Ideally,
-.Xr uselocale 3
-should make a copy of the
-.Fa locale_t
-implicitly to ensure thread safety,
-and a copy of the global locale should be installed lazily on each thread.
-The FreeBSD implementation does not do this,
-for compatibility with Darwin.
 .Sh SEE ALSO
 .Xr freelocale 3 ,
 .Xr localeconv 3 ,
@@ -77,3 +69,12 @@ for compatibility with Darwin.
 .Sh STANDARDS
 This function conforms to
 .St -p1003.1-2008 .
+.Sh BUGS
+Ideally,
+.Xr uselocale 3
+should make a copy of the
+.Fa locale_t
+implicitly to ensure thread safety,
+and a copy of the global locale should be installed lazily on each thread.
+The FreeBSD implementation does not do this,
+for compatibility with Darwin.

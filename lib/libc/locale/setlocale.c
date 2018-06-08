@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996 - 2002 FreeBSD Project
  * Copyright (c) 1991, 1993
@@ -35,7 +36,7 @@
 static char sccsid[] = "@(#)setlocale.c	8.1 (Berkeley) 7/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/setlocale.c 228921 2011-12-27 23:28:01Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

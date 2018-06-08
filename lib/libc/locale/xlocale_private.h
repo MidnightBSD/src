@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/locale/xlocale_private.h 309485 2016-12-03 17:17:42Z ngie $
  */
 
 #ifndef _XLOCALE_PRIVATE__H_
@@ -109,6 +110,10 @@ struct _xlocale {
 	__mbstate_t mblen;
 	/** Persistent state used by mbrlen() calls. */
 	__mbstate_t mbrlen;
+	/** Persistent state used by mbrtoc16() calls. */
+	__mbstate_t mbrtoc16;
+	/** Persistent state used by mbrtoc32() calls. */
+	__mbstate_t mbrtoc32;
 	/** Persistent state used by mbrtowc() calls. */
 	__mbstate_t mbrtowc;
 	/** Persistent state used by mbsnrtowcs() calls. */
@@ -117,6 +122,10 @@ struct _xlocale {
 	__mbstate_t mbsrtowcs;
 	/** Persistent state used by mbtowc() calls. */
 	__mbstate_t mbtowc;
+	/** Persistent state used by c16rtomb() calls. */
+	__mbstate_t c16rtomb;
+	/** Persistent state used by c32rtomb() calls. */
+	__mbstate_t c32rtomb;
 	/** Persistent state used by wcrtomb() calls. */
 	__mbstate_t wcrtomb;
 	/** Persistent state used by wcsnrtombs() calls. */
@@ -147,12 +156,11 @@ __attribute__((unused)) static void
 xlocale_release(void *val)
 {
 	struct xlocale_refcounted *obj = val;
-	long count = atomic_fetchadd_long(&(obj->retain_count), -1) - 1;
-	if (count < 0) {
-		if (0 != obj->destructor) {
-			obj->destructor(obj);
-		}
-	}
+	long count;
+
+	count = atomic_fetchadd_long(&(obj->retain_count), -1) - 1;
+	if (count < 0 && obj->destructor != NULL)
+		obj->destructor(obj);
 }
 
 /**

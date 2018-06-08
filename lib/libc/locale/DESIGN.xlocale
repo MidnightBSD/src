@@ -1,4 +1,5 @@
 $MidnightBSD$
+$FreeBSD: stable/10/lib/libc/locale/DESIGN.xlocale 227753 2011-11-20 14:45:42Z theraven $
 
 Design of xlocale
 =================

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2003 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/nl_langinfo.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <langinfo.h>
 #include <limits.h>

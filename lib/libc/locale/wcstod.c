@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/wcstod.c 309334 2016-11-30 20:48:44Z vangyzen $");
 
 #include <stdlib.h>
 #include <wchar.h>
@@ -54,11 +55,13 @@ wcstod_l(const wchar_t * __restrict nptr, wchar_t ** __restrict endptr,
 	mbstate_t mbs;
 	double val;
 	char *buf, *end;
-	const wchar_t *wcp = nptr;
+	const wchar_t *wcp;
 	size_t len;
-	size_t spaces = 0;
+	size_t spaces;
 	FIX_LOCALE(locale);
 
+	wcp = nptr;
+	spaces = 0;
 	while (iswspace_l(*wcp, locale)) {
 		wcp++;
 		spaces++;
@@ -80,8 +83,11 @@ wcstod_l(const wchar_t * __restrict nptr, wchar_t ** __restrict endptr,
 			*endptr = (wchar_t *)nptr;
 		return (0.0);
 	}
-	if ((buf = malloc(len + 1)) == NULL)
+	if ((buf = malloc(len + 1)) == NULL) {
+		if (endptr != NULL)
+			*endptr = (wchar_t *)nptr;
 		return (0.0);
+	}
 	mbs = initial;
 	wcsrtombs_l(buf, &wcp, len + 1, &mbs, locale);
 
@@ -95,12 +101,10 @@ wcstod_l(const wchar_t * __restrict nptr, wchar_t ** __restrict endptr,
 	 * corresponding position in the wide char string.
 	 */
 	if (endptr != NULL) {
-		/* XXX Assume each wide char is one byte. */
 		*endptr = (wchar_t *)nptr + (end - buf);
 		if (buf != end)
 			*endptr += spaces;
 	}
-
 
 	free(buf);
 

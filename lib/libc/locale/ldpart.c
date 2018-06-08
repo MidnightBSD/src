@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/ldpart.c 241046 2012-09-29 11:54:34Z jilles $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -87,7 +88,7 @@ __part_load_locale(const char *name,
 	strcat(filename, name);
 	strcat(filename, "/");
 	strcat(filename, category_filename);
-	if ((fd = _open(filename, O_RDONLY)) < 0)
+	if ((fd = _open(filename, O_RDONLY | O_CLOEXEC)) < 0)
 		return (_LDP_ERROR);
 	if (_fstat(fd, &st) != 0)
 		goto bad_locale;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins. All rights reserved.
  * Copyright (c) 1993
@@ -44,7 +45,7 @@
 static char sccsid[] = "@(#)big5.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/big5.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <sys/types.h>
 #include <errno.h>

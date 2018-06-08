@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@
 static char sccsid[] = "@(#)isctype.c	8.3 (Berkeley) 2/24/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/isctype.c 172619 2007-10-13 16:28:22Z ache $");
 
 #include <ctype.h>
 

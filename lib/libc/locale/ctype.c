@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/locale/ctype.c 227753 2011-11-20 14:45:42Z theraven $
  */
 #define _XLOCALE_INLINE
 #include <ctype.h>

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2011 The FreeBSD Foundation
 .\" All rights reserved.
 .\"
@@ -25,8 +26,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.Dd September 17 2011
+.\" $FreeBSD: stable/10/lib/libc/locale/newlocale.3 250244 2013-05-04 17:06:47Z pluknet $
+.Dd September 17, 2011
 .Dt NEWLOCALE 3
 .Os
 .Sh NAME
@@ -51,7 +52,7 @@ Any other components will be inherited from
 The
 .Fa mask
 is either
-.Fa LC_ALL_MASK,
+.Fa LC_ALL_MASK ,
 indicating all possible locale components,
 or the logical OR of some combination of the following:
 .Bl -tag -width "LC_MESSAGES_MASK" -offset indent
@@ -59,7 +60,7 @@ or the logical OR of some combination of the following:
 The locale for string collation routines.
 This controls alphabetic ordering in
 .Xr strcoll 3
- and
+and
 .Xr strxfrm 3 .
 .It LC_CTYPE_MASK
 The locale for the

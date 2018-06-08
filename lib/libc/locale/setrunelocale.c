@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/setrunelocale.c 284524 2015-06-17 19:12:18Z delphij $");
 
 #define __RUNETYPE_INTERNAL 1
 
@@ -129,7 +130,7 @@ __setrunelocale(struct xlocale_ctype *l, const char *encoding)
 	(void) strcat(name, encoding);
 	(void) strcat(name, "/LC_CTYPE");
 
-	if ((fp = fopen(name, "r")) == NULL)
+	if ((fp = fopen(name, "re")) == NULL)
 		return (errno == 0 ? ENOENT : errno);
 
 	if ((rl = _Read_RuneMagi(fp)) == NULL) {
@@ -202,6 +203,8 @@ __set_thread_rune_locale(locale_t loc)
 
 	if (loc == NULL) {
 		_ThreadRuneLocale = &_DefaultRuneLocale;
+	} else if (loc == LC_GLOBAL_LOCALE) {
+		_ThreadRuneLocale = 0;
 	} else {
 		_ThreadRuneLocale = XLOCALE_CTYPE(loc)->runes;
 	}

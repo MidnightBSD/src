@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Alex Tatmanjants <alex@elvisti.kiev.ua>
  *		at Electronni Visti IA, Kiev, Ukraine.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/locale/collate.h 303185 2016-07-22 14:24:17Z ache $
  */
 
 #ifndef _COLLATE_H_
@@ -72,7 +73,8 @@ u_char	*__collate_strdup(u_char *);
 u_char	*__collate_substitute(struct xlocale_collate *, const u_char *);
 int	__collate_load_tables(const char *);
 void	__collate_lookup(struct xlocale_collate *, const u_char *, int *, int *, int *);
-int	__collate_range_cmp(struct xlocale_collate *, int, int);
+int	__collate_range_cmp(char, char);
+int	__wcollate_range_cmp(wchar_t, wchar_t);
 #ifdef COLLATE_DEBUG
 void	__collate_print_tables(void);
 #endif

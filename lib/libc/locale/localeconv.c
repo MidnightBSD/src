@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * Copyright (c) 1991, 1993
@@ -37,7 +38,7 @@
 static char sccsid[] = "@(#)localeconv.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/localeconv.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <locale.h>
 

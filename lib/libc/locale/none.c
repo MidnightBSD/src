@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins. All rights reserved.
  * Copyright (c) 1993
@@ -40,7 +41,7 @@
 static char sccsid[] = "@(#)none.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/none.c 301245 2016-06-03 07:34:59Z ache $");
 
 #include <errno.h>
 #include <limits.h>
@@ -172,6 +173,7 @@ _none_wcsnrtombs(char * __restrict dst, const wchar_t ** __restrict src,
 	nchr = 0;
 	while (len-- > 0 && nwc-- > 0) {
 		if (*s < 0 || *s > UCHAR_MAX) {
+			*src = s;
 			errno = EILSEQ;
 			return ((size_t)-1);
 		}

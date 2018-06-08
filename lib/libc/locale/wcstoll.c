@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,9 +38,9 @@
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)strtoq.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
-__MBSDID("FreeBSD: src/lib/libc/stdlib/strtoll.c,v 1.19 2002/09/06 11:23:59 tjr Exp ");
+__FBSDID("FreeBSD: src/lib/libc/stdlib/strtoll.c,v 1.19 2002/09/06 11:23:59 tjr Exp ");
 #endif
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/wcstoll.c 227753 2011-11-20 14:45:42Z theraven $");
 
 #include <errno.h>
 #include <limits.h>

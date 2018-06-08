@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Tim J. Robbins.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/locale/rpmatch.c 139922 2005-01-09 03:55:13Z tjr $");
 
 #include <langinfo.h>
 #include <regex.h>
