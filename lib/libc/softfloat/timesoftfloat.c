@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: timesoftfloat.c,v 1.1 2000/06/06 08:15:11 bjh21 Exp $ */
 
 /*
@@ -31,7 +32,7 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/softfloat/timesoftfloat.c,v 1.1 2004/05/14 12:13:04 cognet Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/softfloat/timesoftfloat.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -2068,14 +2069,14 @@ static void
         roundingPrecisionName = "80";
     }
     else {
-        roundingPrecisionName = 0;
+        roundingPrecisionName = NULL;
     }
 #ifdef FLOATX80
     floatx80_rounding_precision = roundingPrecision;
 #endif
     switch ( roundingMode ) {
      case 0:
-        roundingModeName = 0;
+        roundingModeName = NULL;
         roundingCode = float_round_nearest_even;
         break;
      case ROUND_NEAREST_EVEN:
@@ -2098,7 +2099,7 @@ static void
     float_rounding_mode = roundingCode;
     switch ( tininessMode ) {
      case 0:
-        tininessModeName = 0;
+        tininessModeName = NULL;
         tininessCode = float_tininess_after_rounding;
         break;
      case TININESS_BEFORE_ROUNDING:
