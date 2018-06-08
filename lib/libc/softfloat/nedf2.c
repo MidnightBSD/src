@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: nedf2.c,v 1.1 2000/06/06 08:15:07 bjh21 Exp $ */
 
 /*
@@ -9,7 +10,7 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/softfloat/nedf2.c,v 1.1 2004/05/14 12:13:04 cognet Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/softfloat/nedf2.c 129203 2004-05-14 12:13:06Z cognet $");
 
 flag __nedf2(float64, float64);
 
