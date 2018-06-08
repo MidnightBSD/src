@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Chris D. Faulhaber
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_strip.c 219878 2011-03-22 17:44:07Z trasz $");
 
 #include <errno.h>
 #include <stdio.h>

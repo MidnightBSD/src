@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/mac_exec.c 176901 2008-03-07 15:25:56Z rwatson $");
 
 #include <sys/types.h>
 #include <sys/mac.h>

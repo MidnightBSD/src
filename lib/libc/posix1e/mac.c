@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999, 2000, 2001, 2002 Robert N. M. Watson
  * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/mac.c 254700 2013-08-23 13:59:47Z jilles $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -179,7 +180,7 @@ mac_init_internal(int ignore_errors)
 		filename = getenv("MAC_CONFFILE");
 	else
 		filename = MAC_CONFFILE;
-	file = fopen(filename, "r");
+	file = fopen(filename, "re");
 	if (file == NULL)
 		return (0);
 

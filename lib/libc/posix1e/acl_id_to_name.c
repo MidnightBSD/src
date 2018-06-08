@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001, 2008 Robert N. M. Watson
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_id_to_name.c 209147 2010-06-14 02:26:13Z kientzle $");
 
 #include <sys/types.h>
 #include "namespace.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_support_nfs4.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +49,7 @@ struct flagnames_struct a_flags[] =
      { ACL_ENTRY_NO_PROPAGATE_INHERIT, "no_propagate", 'n'},
      { ACL_ENTRY_SUCCESSFUL_ACCESS, "successfull_access", 'S'},
      { ACL_ENTRY_FAILED_ACCESS, "failed_access", 'F'},
+     { ACL_ENTRY_INHERITED, "inherited", 'I' },
      /*
       * There is no ACE_IDENTIFIER_GROUP here - SunOS does not show it
       * in the "flags" field.  There is no ACE_OWNER, ACE_GROUP or
@@ -80,7 +82,7 @@ static const char *
 format_flag(uint32_t *var, const struct flagnames_struct *flags)
 {
 
-	for (; flags->name != 0; flags++) {
+	for (; flags->name != NULL; flags++) {
 		if ((flags->flag & *var) == 0)
 			continue;
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_flag.c 287547 2015-09-08 01:44:37Z delphij $");
 
 #include <stdio.h>
 #include <errno.h>
@@ -71,7 +72,7 @@ acl_clear_flags_np(acl_flagset_t flagset_d)
 		return (-1);
 	}
 
-	*flagset_d |= 0;
+	*flagset_d = 0;
 
 	return (0);
 }

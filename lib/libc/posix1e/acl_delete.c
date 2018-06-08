@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000, 2001, 2002 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_delete.c 192586 2009-05-22 15:56:43Z trasz $");
 
 #include <sys/types.h>
 #include "namespace.h"

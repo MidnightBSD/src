@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002 Chris D. Faulhaber
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_delete_entry.c 200992 2009-12-25 18:05:06Z markus $");
 
 #include <sys/types.h>
 #include "namespace.h"

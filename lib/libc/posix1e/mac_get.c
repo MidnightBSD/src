@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999, 2000, 2001, 2002 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/mac_get.c 176901 2008-03-07 15:25:56Z rwatson $");
 
 #include <sys/types.h>
 #include <sys/mac.h>

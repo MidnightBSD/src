@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2008, 2009 Edward Tomasz Napierala
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/10/lib/libc/posix1e/acl_get_flagset_np.3 275253 2014-11-29 15:50:13Z trasz $
 .\"
-.Dd June 25, 2009
+.Dd October 30, 2014
 .Dt ACL_GET_FLAGSET_NP 3
 .Os
 .Sh NAME
@@ -44,7 +45,7 @@ The
 function
 is a non-portable call that returns via
 .Fa flagset_np_p
-a descriptor to the flagset in the ACL entry
+a descriptor to the flagset in the NFSv4 ACL entry
 .Fa entry_d .
 Subsequent operations using the returned flagset operate
 on the flagset within the ACL entry.
