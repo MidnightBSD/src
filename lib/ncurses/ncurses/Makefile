@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/ncurses/ncurses/Makefile 313595 2017-02-11 06:25:47Z ngie $
 
 SHLIBDIR?=	/lib
 
@@ -8,7 +9,7 @@ NO_MAN=
 
 .include <bsd.own.mk>
 
-.include "${.CURDIR}/../config.mk"
+.include "${.CURDIR:H}/config.mk"
 
 LIB=		ncurses${LIB_SUFFIX}
 SHLIB_MAJOR=	8
@@ -536,12 +537,12 @@ MAN+=	\
 	curs_ins_wstr.3 \
 	curs_printw.3 \
 	curs_scanw.3
-.endif
-
-CLEANFILES+=	${MAN:M*.3}
 
 MAN+=	term.5 terminfo.5
 MAN+=	term.7
+.endif
+
+CLEANFILES+=	${MAN:M*.3}
 
 MLINKS=	ncurses.3 curses.3 \
 	curs_addch.3 addch.3 \

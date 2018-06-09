@@ -1,6 +1,6 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/ncurses/menuw/Makefile,v 1.1 2007/03/09 12:11:57 rafan Exp $
+# $FreeBSD: stable/10/lib/ncurses/menuw/Makefile 313595 2017-02-11 06:25:47Z ngie $
 
 ENABLE_WIDEC=
 
-.include "${.CURDIR}/../menu/Makefile"
+.include "${.CURDIR:H}/menu/Makefile"
