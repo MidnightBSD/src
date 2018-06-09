@@ -73298,6 +73298,26 @@ usr.sbin/fifolog/lib/miniobj.h -text
 usr.sbin/flowctl/Makefile -text
 usr.sbin/flowctl/flowctl.8 -text
 usr.sbin/flowctl/flowctl.c -text
+usr.sbin/fstyp/Makefile svneol=native#text/plain
+usr.sbin/fstyp/cd9660.c svneol=native#text/plain
+usr.sbin/fstyp/ext2fs.c svneol=native#text/plain
+usr.sbin/fstyp/fstyp.8 svneol=native#text/plain
+usr.sbin/fstyp/fstyp.c svneol=native#text/plain
+usr.sbin/fstyp/fstyp.h svneol=native#text/plain
+usr.sbin/fstyp/geli.c svneol=native#text/plain
+usr.sbin/fstyp/msdosfs.c svneol=native#text/plain
+usr.sbin/fstyp/msdosfs.h svneol=native#text/plain
+usr.sbin/fstyp/ntfs.c svneol=native#text/plain
+usr.sbin/fstyp/tests/Makefile svneol=native#text/plain
+usr.sbin/fstyp/tests/ext2.img.bz2 -text svneol=unset#application/x-bzip2
+usr.sbin/fstyp/tests/ext3.img.bz2 -text svneol=unset#application/x-bzip2
+usr.sbin/fstyp/tests/ext4.img.bz2 -text svneol=unset#application/x-bzip2
+usr.sbin/fstyp/tests/ext4_with_label.img.bz2 -text svneol=unset#application/x-bzip2
+usr.sbin/fstyp/tests/fstyp_test.sh svneol=native#text/plain
+usr.sbin/fstyp/tests/ntfs.img.bz2 -text svneol=unset#application/x-bzip2
+usr.sbin/fstyp/tests/ntfs_with_label.img.bz2 -text svneol=unset#application/x-bzip2
+usr.sbin/fstyp/ufs.c svneol=native#text/plain
+usr.sbin/fstyp/zfs.c svneol=native#text/plain
 usr.sbin/ftp-proxy/Makefile -text
 usr.sbin/ftp-proxy/Makefile.inc -text
 usr.sbin/ftp-proxy/ftp-proxy/Makefile -text
