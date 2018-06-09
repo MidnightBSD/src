@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/usr.bin/xz/Makefile,v 1.2.2.3.2.1 2010/12/21 17:09:25 kensmith Exp $
+# $FreeBSD: stable/10/usr.bin/xz/Makefile 292588 2015-12-22 08:03:23Z delphij $
 
 PROG=	xz
 
@@ -42,10 +42,9 @@ WARNS?=	3
 
 CFLAGS+=	-DHAVE_CONFIG_H \
 		-I${LZMALIBDIR} \
-		-I${XZDIR}/common \
-		-std=c99
+		-I${XZDIR}/common
 
-DPADD=	${LIBLZMA}
-LDADD=	-llzma
+DPADD=	${LIBLZMA} ${LIBPTHREAD}
+LDADD=	-llzma -lpthread
 
 .include <bsd.prog.mk>
