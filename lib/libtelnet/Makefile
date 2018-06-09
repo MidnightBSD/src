@@ -1,10 +1,10 @@
+# $MidnightBSD$
 #	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $FreeBSD: src/lib/libtelnet/Makefile,v 1.24 2006/07/31 13:29:35 yar Exp $
-# $MidnightBSD: src/lib/libtelnet/Makefile,v 1.2 2012/04/08 14:33:21 laffer1 Exp $
+# $FreeBSD: stable/10/lib/libtelnet/Makefile 323043 2017-08-31 00:56:10Z cy $
 
 .include <bsd.own.mk>
 
-TELNETDIR=	${.CURDIR}/../../contrib/telnet
+TELNETDIR=	${SRCTOP}/contrib/telnet
 .PATH:		${TELNETDIR}/libtelnet
 
 LIB=		telnet
@@ -24,8 +24,7 @@ CFLAGS+=	-DENCRYPTION -DAUTHENTICATION -DSRA
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
 SRCS+=		kerberos5.c
-CFLAGS+=	-DKRB5 -I${KRB5DIR}/lib/krb5 -I${KRB5OBJDIR} -I${ASN1OBJDIR}
-CFLAGS+=	-DFORWARD -Dnet_write=telnet_net_write
+CFLAGS+=	-DKRB5 -DFORWARD -Dnet_write=telnet_net_write
 .endif
 .endif
 
