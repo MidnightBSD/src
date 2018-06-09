@@ -13,9 +13,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
+.\" $FreeBSD: stable/10/lib/libc/db/man/dbm.3 280394 2015-03-23 19:50:21Z pfg $
+.\" $MidnightBSD$
 .\"
-.Dd April 16, 2006
+.Dd February 19, 2015
 .Dt DBM 3
 .Os
 .Sh NAME
@@ -174,9 +175,7 @@ deletes the entry for
 The
 .Fn dbm_delete
 function
-normally returns zero but returns 1 if there was no entry with
-.Fa key
-in the database or returns -1 and sets
+normally returns zero or returns -1 and sets
 .Va errno
 if there were any errors.
 .Pp
