@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * Copyright (c) 2005 David Xu
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libthread_db/libthr_db.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <proc_service.h>
 #include <stddef.h>
@@ -765,7 +766,7 @@ pt_thr_tls_get_addr(const td_thrhandle_t *th, psaddr_t _linkmap, size_t offset,
 	return (TD_OK);
 }
 
-struct ta_ops libthr_db_ops = {
+static struct ta_ops libthr_db_ops = {
 	.to_init		= pt_init,
 	.to_ta_clear_event	= pt_ta_clear_event,
 	.to_ta_delete		= pt_ta_delete,
