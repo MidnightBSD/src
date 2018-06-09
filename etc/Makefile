@@ -4,7 +4,7 @@
 .include <bsd.own.mk>
 
 .if ${MK_SENDMAIL} != "no"
-SUBDIR=	sendmail
+SUBDIR+=sendmail
 .endif
 
 BIN1=	crontab \
@@ -46,7 +46,6 @@ BIN1=	crontab \
 	rc.subr \
 	remote \
 	rpc \
-	sensorsd.conf \
 	services \
 	shells \
 	sysctl.conf \
@@ -228,14 +227,6 @@ distribution:
 	    ${BSM_ETC_RESTRICTED_FILES} ${BSM_ETC_DIR}
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0500 \
 	    ${BSM_ETC_EXEC_FILES} ${BSM_ETC_DIR}
-.if ${MK_BIND_MTREE} != "no"
-	if [ ! -e ${DESTDIR}/etc/namedb ]; then \
-		ln -s ../var/named/etc/namedb ${DESTDIR}/etc/namedb; \
-	fi
-.endif
-.if ${MK_BIND_ETC} != "no"
-	${_+_}cd ${.CURDIR}/namedb; ${MAKE} install
-.endif
 .if ${MK_SENDMAIL} != "no"
 	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
 .endif
@@ -307,12 +298,6 @@ MTREES=		mtree/BSD.root.dist		/		\
 		mtree/BSD.var.dist		/var		\
 		mtree/BSD.usr.dist		/usr		\
 		mtree/BSD.include.dist		/usr/include
-.if ${MK_BIND_LIBS} != "no"
-MTREES+=	mtree/BIND.include.dist		/usr/include
-.endif
-.if ${MK_BIND_MTREE} != "no"
-MTREES+=	mtree/BIND.chroot.dist		/var/named
-.endif
 .if ${MK_SENDMAIL} != "no"
 MTREES+=	mtree/BSD.sendmail.dist		/
 .endif
