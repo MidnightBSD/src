@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * This module derived from code donated to the FreeBSD Project by 
  * Matthew Dillon <dillon@backplane.com>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/zalloc.c 269101 2014-07-25 23:12:22Z ian $");
 
 /*
  * LIB/MEMORY/ZALLOC.C	- self contained low-overhead memory pool/allocation 
@@ -69,6 +70,15 @@ __MBSDID("$MidnightBSD$");
  */
 
 #include "zalloc_defs.h"
+
+/*
+ * Objects in the pool must be aligned to at least the size of struct MemNode.
+ * They must also be aligned to MALLOCALIGN, which should normally be larger
+ * than the struct, so assert that to be so at compile time.
+ */
+typedef char assert_align[(sizeof(struct MemNode) <= MALLOCALIGN) ? 1 : -1];
+
+#define	MEMNODE_SIZE_MASK	MALLOCALIGN_MASK
 
 /*
  * znalloc() -	allocate memory (without zeroing) from pool.  Call reclaim

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: iodesc.h,v 1.4 1995/09/23 03:31:50 gwr Exp $	*/
 
 /*
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/iodesc.h 165906 2007-01-09 01:02:06Z imp $
  */
 
 #ifndef __SYS_LIBNETBOOT_IODESC_H

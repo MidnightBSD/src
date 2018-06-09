@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ether.c,v 1.11 1997/07/07 15:52:50 drochner Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/ether.c 165906 2007-01-09 01:02:06Z imp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

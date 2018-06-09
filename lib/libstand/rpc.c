@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rpc.c,v 1.18 1998/01/23 19:27:45 thorpej Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/rpc.c 197178 2009-09-13 21:51:01Z emaste $");
 
 /*
  * RPC functions used by NFS and bootparams.

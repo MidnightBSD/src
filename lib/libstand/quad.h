@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quad.h	8.1 (Berkeley) 6/4/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/quad.h 271134 2014-09-04 20:49:11Z emaste $
  */
 
 /*
@@ -54,6 +55,9 @@
 #include <sys/types.h>
 #include <limits.h>
 
+_Static_assert(sizeof(quad_t) == sizeof(int) * 2,
+	"Bitwise function in libstand are broken on this architecture\n");
+
 /*
  * Depending on the desired operation, we view a `long long' (aka quad_t) in
  * one or more of the following formats.
@@ -61,8 +65,8 @@
 union uu {
 	quad_t	q;		/* as a (signed) quad */
 	quad_t	uq;		/* as an unsigned quad */
-	long	sl[2];		/* as two signed longs */
-	u_long	ul[2];		/* as two unsigned longs */
+	int	sl[2];		/* as two signed ints */
+	u_int	ul[2];		/* as two unsigned ints */
 };
 
 /*
@@ -77,8 +81,7 @@ union uu {
  * and assembly.
  */
 #define	QUAD_BITS	(sizeof(quad_t) * CHAR_BIT)
-#define	LONG_BITS	(sizeof(long) * CHAR_BIT)
-#define	HALF_BITS	(sizeof(long) * CHAR_BIT / 2)
+#define	HALF_BITS	(sizeof(int) * CHAR_BIT / 2)
 
 /*
  * Extract high and low shortwords from longword, and move low shortword of

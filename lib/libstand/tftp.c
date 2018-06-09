@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tftp.c,v 1.4 1997/09/17 16:57:07 drochner Exp $	 */
 
 /*
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/tftp.c 278602 2015-02-11 22:55:24Z ian $");
 
 /*
  * Simple TFTP implementation for libsa.
@@ -292,8 +293,15 @@ tftp_makereq(struct tftp_handle *h)
 	wbuf.t.th_opcode = htons((u_short) RRQ);
 	wtail = wbuf.t.th_stuff;
 	l = strlen(h->path);
+#ifdef TFTP_PREPEND_PATH
+	if (l > FNAME_SIZE - (sizeof(TFTP_PREPEND_PATH) - 1))
+		return (ENAMETOOLONG);
+	bcopy(TFTP_PREPEND_PATH, wtail, sizeof(TFTP_PREPEND_PATH) - 1);
+	wtail += sizeof(TFTP_PREPEND_PATH) - 1;
+#else
 	if (l > FNAME_SIZE)
 		return (ENAMETOOLONG);
+#endif
 	bcopy(h->path, wtail, l + 1);
 	wtail += l + 1;
 	bcopy("octet", wtail, 6);
@@ -393,10 +401,14 @@ tftp_open(const char *path, struct open_file *f)
 	struct iodesc  *io;
 	int             res;
 
-#ifndef __i386__
-	if (strcmp(f->f_dev->dv_name, "net") != 0)
+	if (strcmp(f->f_dev->dv_name, "net") != 0) {
+#ifdef __i386__
+		if (strcmp(f->f_dev->dv_name, "pxe") != 0)
+			return (EINVAL);
+#else
 		return (EINVAL);
 #endif
+	}
 
 	if (is_open)
 		return (EBUSY);
@@ -436,14 +448,12 @@ tftp_read(struct open_file *f, void *addr, size_t size,
     size_t *resid /* out */)
 {
 	struct tftp_handle *tftpfile;
-	static int      tc = 0;
 	tftpfile = (struct tftp_handle *) f->f_fsdata;
 
 	while (size > 0) {
 		int needblock, count;
 
-		if (!(tc++ % 16))
-			twiddle();
+		twiddle(32);
 
 		needblock = tftpfile->off / tftpfile->tftp_blksize + 1;
 

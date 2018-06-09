@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: gets.c,v 1.6 1995/10/11 21:16:57 pk Exp $	*/
 
 /*-
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/gets.c 190593 2009-03-31 14:30:46Z jhb $");
 
 #include "stand.h"
 

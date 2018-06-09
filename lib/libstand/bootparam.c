@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: bootparam.c,v 1.11 1997/06/26 19:11:32 drochner Exp $	*/
 
 /*
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/bootparam.c 84221 2001-09-30 22:28:01Z dillon $");
 
 /*
  * RPC/bootparams

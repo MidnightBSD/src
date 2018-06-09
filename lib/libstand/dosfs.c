@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996, 1998 Robert Nordier
  * All rights reserved.
@@ -26,8 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: stable/9/lib/libstand/dosfs.c 281317 2015-04-09 18:45:03Z jhb $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/dosfs.c 281317 2015-04-09 18:45:03Z jhb $");
 
 /*
  * Readonly filesystem for Microsoft FAT12/FAT16/FAT32 filesystems,
@@ -769,7 +769,7 @@ ioget(struct open_file *fd, u_int lsec, void *buf, u_int nsec)
 {
     int	err;
 
-    twiddle();
+    twiddle(1);
     if ((err = (fd->f_dev->dv_strategy)(fd->f_devdata, F_READ, lsec, 
 					secbyt(nsec), buf, NULL)))
 	return(err);

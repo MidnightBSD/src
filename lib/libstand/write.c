@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: write.c,v 1.7 1996/06/21 20:29:30 pk Exp $	*/
 
 /*-
@@ -61,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/write.c 278602 2015-02-11 22:55:24Z ian $");
 
 #include <sys/param.h>
 #include "stand.h"
@@ -80,7 +81,7 @@ write(fd, dest, bcount)
 		return (-1);
 	}
 	if (f->f_flags & F_RAW) {
-		twiddle();
+		twiddle(4);
 		errno = (f->f_dev->dv_strategy)(f->f_devdata, F_WRITE,
 			btodb(f->f_offset), bcount, dest, &resid);
 		if (errno)

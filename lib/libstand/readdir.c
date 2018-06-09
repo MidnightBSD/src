@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Jonathan Lemon <jlemon@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/readdir.c 84221 2001-09-30 22:28:01Z dillon $");
 
 #include <sys/param.h>
 #include "stand.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: bootp.h,v 1.4 1997/09/06 13:55:57 drochner Exp $	*/
 
 /*
@@ -19,7 +20,7 @@
  * suitability of this software for any purpose.  It is provided "as is"
  * without express or implied warranty.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/bootp.h 301056 2016-05-31 17:01:54Z ian $
  */
 
 
@@ -91,6 +92,7 @@ struct bootp {
 #define TAG_DOMAINNAME		((unsigned char)  15)
 #define TAG_SWAPSERVER		((unsigned char)  16)
 #define TAG_ROOTPATH		((unsigned char)  17)
+#define TAG_INTF_MTU		((unsigned char)  26)
 
 #ifdef SUPPORT_DHCP
 #define TAG_REQ_ADDR		((unsigned char)  50)

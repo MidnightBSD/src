@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  * Copyright (c) 2002 Maxim Sobolev
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/splitfs.c 146443 2005-05-20 12:55:38Z charnier $");
 
 #include "stand.h"
 

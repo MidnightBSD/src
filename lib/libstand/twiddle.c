@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,18 +36,35 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/twiddle.c 278602 2015-02-11 22:55:24Z ian $");
 
 #include <sys/types.h>
 #include "stand.h"
 
 /* Extra functions from NetBSD standalone printf.c */
 
+static u_int globaldiv;
+
 void
-twiddle()
+twiddle(u_int callerdiv)
 {
-	static int pos;
+	static u_int callercnt, globalcnt, pos;
+
+	callercnt++;
+	if (callerdiv > 1 && (callercnt % callerdiv) != 0)
+		return;
+
+	globalcnt++;
+	if (globaldiv > 1 && (globalcnt % globaldiv) != 0)
+		return;
 
 	putchar("|/-\\"[pos++ & 3]);
 	putchar('\b');
+}
+
+void
+twiddle_divisor(u_int gdiv)
+{
+
+	globaldiv = gdiv;
 }

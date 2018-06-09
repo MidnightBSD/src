@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  * Copyright (c) 1998 Michael Smith.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/gzipfs.c 321071 2017-07-17 06:46:57Z delphij $");
 
 #include "stand.h"
 
@@ -300,8 +301,6 @@ zf_seek(struct open_file *f, off_t offset, int where)
     case SEEK_CUR:
 	target = offset + zf->zf_zstream.total_out;
 	break;
-    case SEEK_END:
-	target = -1;
     default:
 	errno = EINVAL;
 	return(-1);

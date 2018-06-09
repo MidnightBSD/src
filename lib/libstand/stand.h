@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Michael Smith.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/stand.h 301056 2016-05-31 17:01:54Z ian $
  * From	$NetBSD: stand.h,v 1.22 1997/06/26 19:17:40 drochner Exp $	
  */
 
@@ -118,6 +119,7 @@ extern struct fs_ops ufs_fsops;
 extern struct fs_ops tftp_fsops;
 extern struct fs_ops nfs_fsops;
 extern struct fs_ops cd9660_fsops;
+extern struct fs_ops nandfs_fsops;
 extern struct fs_ops gzipfs_fsops;
 extern struct fs_ops bzipfs_fsops;
 extern struct fs_ops dosfs_fsops;
@@ -237,9 +239,11 @@ extern void	mallocstats(void);
 extern int	printf(const char *fmt, ...) __printflike(1, 2);
 extern void	vprintf(const char *fmt, __va_list);
 extern int	sprintf(char *buf, const char *cfmt, ...) __printflike(2, 3);
+extern int	snprintf(char *buf, size_t size, const char *cfmt, ...) __printflike(3, 4);
 extern void	vsprintf(char *buf, const char *cfmt, __va_list);
 
-extern void	twiddle(void);
+extern void	twiddle(u_int callerdiv);
+extern void	twiddle_divisor(u_int globaldiv);
 
 extern void	ngets(char *, int);
 #define gets(x)	ngets((x), 0)
@@ -260,6 +264,7 @@ extern u_long	random(void);
     
 /* imports from stdlib, locally modified */
 extern long	strtol(const char *, char **, int);
+extern unsigned long	strtoul(const char *, char **, int);
 extern char	*optarg;			/* getopt(3) external variables */
 extern int	optind, opterr, optopt, optreset;
 extern int	getopt(int, char * const [], const char *);
@@ -330,11 +335,6 @@ static __inline quad_t qmin(quad_t a, quad_t b) { return (a < b ? a : b); }
 static __inline u_long ulmax(u_long a, u_long b) { return (a > b ? a : b); }
 static __inline u_long ulmin(u_long a, u_long b) { return (a < b ? a : b); }
 
-/* swaps (undocumented, useful?) */
-#ifdef __i386__
-extern u_int32_t	bswap32(u_int32_t x);
-extern u_int64_t	bswap64(u_int64_t x);
-#endif
 
 /* null functions for device/filesystem switches (undocumented) */
 extern int	nodev(void);

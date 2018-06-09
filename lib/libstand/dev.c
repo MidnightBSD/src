@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: dev.c,v 1.4 1994/10/30 21:48:23 cgd Exp $	*/
 
 /*-
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/dev.c 165906 2007-01-09 01:02:06Z imp $");
 
 #include <sys/param.h>
 #include <sys/reboot.h>

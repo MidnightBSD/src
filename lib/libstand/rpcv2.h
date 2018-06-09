@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rpcv2.h,v 1.1 1996/02/26 23:05:32 gwr Exp $	*/
 
 /*
@@ -33,7 +34,7 @@
  *
  *	@(#)rpcv2.h	8.1 (Berkeley) 6/10/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/rpcv2.h 165906 2007-01-09 01:02:06Z imp $
  */
 
 /*

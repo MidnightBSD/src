@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rpc.h,v 1.8 1996/09/26 23:22:03 cgd Exp $	*/
 
 /*
@@ -32,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/rpc.h 165906 2007-01-09 01:02:06Z imp $
  */
 
 /* XXX defines we can't easily get from system includes */

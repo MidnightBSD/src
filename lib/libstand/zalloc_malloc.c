@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * This module derived from code donated to the FreeBSD Project by 
  * Matthew Dillon <dillon@backplane.com>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/zalloc_malloc.c 223905 2011-07-10 07:25:34Z avatar $");
 
 /*
  * MALLOC.C - malloc equivalent, runs on top of zalloc and uses sbrk

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rarp.c,v 1.16 1997/07/07 15:52:52 drochner Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/rarp.c 165906 2007-01-09 01:02:06Z imp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

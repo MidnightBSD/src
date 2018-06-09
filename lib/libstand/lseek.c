@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: lseek.c,v 1.4 1997/01/22 00:38:10 cgd Exp $	*/
 
 /*-
@@ -61,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/lseek.c 321071 2017-07-17 06:46:57Z delphij $");
 
 #include "stand.h"
 
@@ -87,7 +88,6 @@ lseek(int fd, off_t offset, int where)
 	case SEEK_CUR:
 	    f->f_offset += offset;
 	    break;
-	case SEEK_END:
 	default:
 	    errno = EOFFSET;
 	    return (-1);

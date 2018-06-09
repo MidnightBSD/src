@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  * Copyright (c) 1998 Michael Smith.
  * Copyright (c) 2000 Maxim Sobolev
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/bzipfs.c 321071 2017-07-17 06:46:57Z delphij $");
 
 #ifndef REGRESSION
 #include "stand.h"
@@ -320,8 +321,6 @@ bzf_seek(struct open_file *f, off_t offset, int where)
     case SEEK_CUR:
 	target = offset + bzf->bzf_bzstream.total_out_lo32;
 	break;
-    case SEEK_END:
-	target = -1;
     default:
 	errno = EINVAL;
 	return(-1);

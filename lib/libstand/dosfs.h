@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996, 1998 Robert Nordier
  * All rights reserved.

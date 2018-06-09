@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +43,7 @@
 #endif /* LIBC_SCCS and not lint */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/sparc64/_setjmp.S 165906 2007-01-09 01:02:06Z imp $");
 
 #define	_JB_FP		0x0
 #define	_JB_PC		0x8

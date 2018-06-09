@@ -49722,6 +49722,7 @@ lib/libsmutil/Makefile -text
 lib/libsqlite3/Makefile -text
 lib/libstand/Makefile -text
 lib/libstand/__main.c -text
+lib/libstand/amd64/_setjmp.S svneol=native#text/plain
 lib/libstand/arp.c -text
 lib/libstand/assert.c -text
 lib/libstand/bcd.c -text
@@ -49753,6 +49754,8 @@ lib/libstand/ioctl.c -text
 lib/libstand/iodesc.h -text
 lib/libstand/libstand.3 -text
 lib/libstand/lseek.c -text
+lib/libstand/mips/_setjmp.S svneol=native#text/plain
+lib/libstand/nandfs.c svneol=native#text/plain
 lib/libstand/net.c -text
 lib/libstand/net.h -text
 lib/libstand/netif.c -text
@@ -49762,6 +49765,7 @@ lib/libstand/nfsv2.h -text
 lib/libstand/nullfs.c -text
 lib/libstand/open.c -text
 lib/libstand/pager.c -text
+lib/libstand/powerpc/_setjmp.S svneol=native#text/plain
 lib/libstand/printf.c -text
 lib/libstand/qdivrem.c -text
 lib/libstand/quad.h -text
@@ -49782,6 +49786,7 @@ lib/libstand/strcasecmp.c -text
 lib/libstand/strdup.c -text
 lib/libstand/strerror.c -text
 lib/libstand/strtol.c -text
+lib/libstand/strtoul.c svneol=native#text/plain
 lib/libstand/tftp.c -text
 lib/libstand/tftp.h -text
 lib/libstand/twiddle.c -text

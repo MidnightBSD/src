@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Taken from $NetBSD: net.c,v 1.20 1997/12/26 22:41:30 scottr Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/udp.c 221364 2011-05-03 07:39:54Z rodrigc $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

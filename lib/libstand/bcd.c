@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*
  * Some data-tables that are often used.
  * Cannot be copyrighted.
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/bcd.c 84221 2001-09-30 22:28:01Z dillon $");
 
 #include <sys/types.h>
 

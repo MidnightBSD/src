@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * This module derived from code donated to the FreeBSD Project by 
  * Matthew Dillon <dillon@backplane.com>
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/zalloc_mem.h 269101 2014-07-25 23:12:22Z ian $
  */
 
 /*
@@ -47,8 +48,6 @@ typedef struct MemPool {
     uintptr_t		mp_Size;
     uintptr_t		mp_Used;
 } MemPool;
-
-#define MEMNODE_SIZE_MASK       ((sizeof(MemNode) <= 8) ? 7 : 15)
 
 #define ZNOTE_FREE	0
 #define ZNOTE_REUSE	1

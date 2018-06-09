@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: in_cksum.c,v 1.6 2000/03/31 19:55:09 castor Exp $	*/
 
 /*
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/in_cksum.c 165906 2007-01-09 01:02:06Z imp $");
 
 #include <sys/types.h>
 #include <machine/endian.h>

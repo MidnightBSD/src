@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  * Copyright (c) 1998 Michael Smith.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/environment.c 221358 2011-05-03 04:44:50Z rodrigc $");
 
 /*
  * Manage an environment-like space in which string variables may be stored.

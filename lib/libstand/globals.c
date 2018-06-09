@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: globals.c,v 1.3 1995/09/18 21:19:27 pk Exp $	*/
 
 /*
@@ -8,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/globals.c 301056 2016-05-31 17:01:54Z ian $");
 
 #include <sys/param.h>
 #include <netinet/in.h>
@@ -32,5 +33,6 @@ struct	in_addr rootip;			/* root ip address */
 struct	in_addr swapip;			/* swap ip address */
 struct	in_addr gateip;			/* swap ip address */
 n_long	netmask = 0xffffff00;		/* subnet or net mask */
+u_int	intf_mtu;			/* interface mtu from bootp/dhcp */
 int	errno;				/* our old friend */
 

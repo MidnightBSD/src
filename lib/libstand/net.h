@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: net.h,v 1.10 1995/10/20 00:46:30 cgd Exp $	*/
 
 /*
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libstand/net.h 301056 2016-05-31 17:01:54Z ian $
  */
 
 #ifndef _KERNEL	/* XXX - see <netinet/in.h> */
@@ -83,6 +84,7 @@ extern	struct in_addr swapip;
 extern	struct in_addr gateip;
 extern	struct in_addr nameip;
 extern	n_long netmask;
+extern	u_int intf_mtu;
 
 extern	int debug;			/* defined in the machdep sources */
 

@@ -1,7 +1,10 @@
 /* $MidnightBSD$ */
-/*
- * Copyright (c) 1987, 1993
- *	The Regents of the University of California.  All rights reserved.
+/*-
+ * Copyright (c) 1990 The Regents of the University of California.
+ * All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * William Jolitz.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,47 +31,64 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libstand/strcasecmp.c 165906 2007-01-09 01:02:06Z imp $");
-
-#include <sys/cdefs.h>
-#include <string.h>
-#include "stand.h"
-
 #if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)strcasecmp.c	8.1 (Berkeley) 6/4/93";
+	.asciz "@(#)_setjmp.s	5.1 (Berkeley) 4/23/90"
 #endif /* LIBC_SCCS and not lint */
+#include <machine/asm.h>
+__FBSDID("$FreeBSD: stable/10/lib/libstand/amd64/_setjmp.S 223695 2011-06-30 16:08:56Z dfr $");
 
-int
-strcasecmp(s1, s2)
-	const char *s1, *s2;
-{
-	const u_char
-			*us1 = (const u_char *)s1,
-			*us2 = (const u_char *)s2;
+/*
+ * C library -- _setjmp, _longjmp
+ *
+ *	_longjmp(a,v)
+ * will generate a "return(v)" from the last call to
+ *	_setjmp(a)
+ * by restoring registers from the environment 'a'.
+ * The previous signal state is NOT restored.
+ */
 
-	while (tolower(*us1) == tolower(*us2++))
-		if (*us1++ == '\0')
-			return (0);
-	return (tolower(*us1) - tolower(*--us2));
-}
+ENTRY(_setjmp)
+	movq	%rdi,%rax
+	movq	0(%rsp),%rdx		/* retval */
+	movq	%rdx, 0(%rax)		/* 0; retval */
+	movq	%rbx, 8(%rax)		/* 1; rbx */
+	movq	%rsp,16(%rax)		/* 2; rsp */
+	movq	%rbp,24(%rax)		/* 3; rbp */
+	movq	%r12,32(%rax)		/* 4; r12 */
+	movq	%r13,40(%rax)		/* 5; r13 */
+	movq	%r14,48(%rax)		/* 6; r14 */
+	movq	%r15,56(%rax)		/* 7; r15 */
+	fnstcw	64(%rax)		/* 8; fpu cw */
+	stmxcsr	68(%rax)		/*    and mxcsr */
+	xorq	%rax,%rax
+	ret
+END(_setjmp)
 
-int
-strncasecmp(s1, s2, n)
-	const char *s1, *s2;
-	size_t n;
-{
-	if (n != 0) {
-		const u_char
-				*us1 = (const u_char *)s1,
-				*us2 = (const u_char *)s2;
-
-		do {
-			if (tolower(*us1) != tolower(*us2++))
-				return (tolower(*us1) - tolower(*--us2));
-			if (*us1++ == '\0')
-				break;
-		} while (--n != 0);
-	}
-	return (0);
-}
+	.weak	CNAME(_longjmp)
+ENTRY(_longjmp)
+	movq	%rdi,%rdx
+	/* Restore the mxcsr, but leave exception flags intact. */
+	stmxcsr	-4(%rsp)
+	movl	68(%rdx),%eax
+	andl	$0xffffffc0,%eax
+	movl	-4(%rsp),%edi
+	andl	$0x3f,%edi
+	xorl	%eax,%edi
+	movl	%edi,-4(%rsp)
+	ldmxcsr -4(%rsp)
+	movq	%rsi,%rax		/* retval */
+	movq	0(%rdx),%rcx
+	movq	8(%rdx),%rbx
+	movq	16(%rdx),%rsp
+	movq	24(%rdx),%rbp
+	movq	32(%rdx),%r12
+	movq	40(%rdx),%r13
+	movq	48(%rdx),%r14
+	movq	56(%rdx),%r15
+	fldcw	64(%rdx)
+	testq	%rax,%rax
+	jnz	1f
+	incq	%rax
+1:	movq	%rcx,0(%rsp)
+	ret
+END(_longjmp)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: close.c,v 1.7 1997/01/22 00:38:09 cgd Exp $	*/
 
 /*-
@@ -61,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/close.c 165906 2007-01-09 01:02:06Z imp $");
 
 #include "stand.h"
 

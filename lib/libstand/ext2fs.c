@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Jonathan Lemon <jlemon@freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libstand/ext2fs.c 278602 2015-02-11 22:55:24Z ian $");
 
 /*-
  * Copyright (c) 1993
@@ -353,7 +354,7 @@ ext2fs_open(const char *upath, struct open_file *f)
 	/* allocate space and read super block */
 	fs = (struct ext2fs *)malloc(sizeof(*fs));
 	fp->f_fs = fs;
-	twiddle();
+	twiddle(1);
 	error = (f->f_dev->dv_strategy)(f->f_devdata, F_READ,
 	    EXT2_SBLOCK, EXT2_SBSIZE, (char *)fs, &buf_size);
 	if (error)
@@ -395,7 +396,7 @@ ext2fs_open(const char *upath, struct open_file *f)
 	len = blkgrps * fs->fs_bsize;
 
 	fp->f_bg = malloc(len);
-	twiddle();
+	twiddle(1);
 	error = (f->f_dev->dv_strategy)(f->f_devdata, F_READ,
 	    EXT2_SBLOCK + EXT2_SBSIZE / DEV_BSIZE, len,
 	    (char *)fp->f_bg, &buf_size);
@@ -507,7 +508,7 @@ ext2fs_open(const char *upath, struct open_file *f)
 				if (error)
 					goto out;
 				
-				twiddle();
+				twiddle(1);
 				error = (f->f_dev->dv_strategy)(f->f_devdata,
 				    F_READ, fsb_to_db(fs, disk_block),
 				    fs->fs_bsize, buf, &buf_size);
@@ -568,7 +569,7 @@ read_inode(ino_t inumber, struct open_file *f)
 	 * Read inode and save it.
 	 */
 	buf = malloc(fs->fs_bsize);
-	twiddle();
+	twiddle(1);
 	error = (f->f_dev->dv_strategy)(f->f_devdata, F_READ,
 	    ino_to_db(fs, fp->f_bg, inumber), fs->fs_bsize, buf, &rsize);
 	if (error)
@@ -665,7 +666,7 @@ block_map(struct open_file *f, daddr_t file_block, daddr_t *disk_block_p)
 			if (fp->f_blk[level] == (char *)0)
 				fp->f_blk[level] =
 					malloc(fs->fs_bsize);
-			twiddle();
+			twiddle(1);
 			error = (f->f_dev->dv_strategy)(f->f_devdata, F_READ,
 			    fsb_to_db(fp->f_fs, ind_block_num), fs->fs_bsize,
 			    fp->f_blk[level], &fp->f_blksize[level]);
@@ -723,7 +724,7 @@ buf_read_file(struct open_file *f, char **buf_p, size_t *size_p)
 			bzero(fp->f_buf, block_size);
 			fp->f_buf_size = block_size;
 		} else {
-			twiddle();
+			twiddle(4);
 			error = (f->f_dev->dv_strategy)(f->f_devdata, F_READ,
 			    fsb_to_db(fs, disk_block), block_size,
 			    fp->f_buf, &fp->f_buf_size);
