@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c)1999 Citrus Project,
  * All rights reserved.
@@ -25,8 +26,7 @@
  *
  *	citrus Id: wctype.h,v 1.4 2000/12/21 01:50:21 itojun Exp
  *	$NetBSD: wctype.h,v 1.3 2000/12/22 14:16:16 itojun Exp $
- * $FreeBSD: src/include/wctype.h,v 1.13 2004/08/12 10:29:14 tjr Exp $
- * $MidnightBSD: src/include/wctype.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
+ * $FreeBSD: stable/10/include/wctype.h 232498 2012-03-04 15:31:13Z theraven $
  */
 
 #ifndef _WCTYPE_H_
