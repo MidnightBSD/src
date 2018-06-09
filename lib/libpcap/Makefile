@@ -1,5 +1,6 @@
-# Makefile for libpcap
 # $MidnightBSD$
+# Makefile for libpcap
+# $FreeBSD: stable/10/lib/libpcap/Makefile 313613 2017-02-11 06:47:07Z ngie $
 
 SHLIBDIR?= /lib
 
@@ -7,6 +8,7 @@ SHLIBDIR?= /lib
 
 LIB=	pcap
 SRCS=	grammar.y tokdefs.h version.h pcap-bpf.c \
+	pcap-netmap.c \
 	pcap.c pcap-common.c inet.c fad-getad.c gencode.c optimize.c nametoaddr.c \
 	etherent.c savefile.c bpf_filter.c bpf_image.c bpf_dump.c \
 	scanner.l sf-pcap.c sf-pcap-ng.c version.c
@@ -109,7 +111,7 @@ SHLIB_MAJOR=	8
 #
 # Magic to grab sources out of src/contrib
 #
-PCAP_DISTDIR?=${.CURDIR}/../../contrib/libpcap
+PCAP_DISTDIR?=${SRCTOP}/contrib/libpcap
 CFLAGS+=-I${PCAP_DISTDIR}
 .PATH:	${PCAP_DISTDIR}
 .PATH:	${PCAP_DISTDIR}/bpf/net

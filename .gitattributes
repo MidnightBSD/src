@@ -49573,6 +49573,7 @@ lib/libpam/modules/pam_unix/pam_unix.8 -text
 lib/libpam/modules/pam_unix/pam_unix.c -text
 lib/libpcap/Makefile -text
 lib/libpcap/config.h -text
+lib/libpcap/pcap-netmap.c svneol=native#text/plain
 lib/libpmc/Makefile -text
 lib/libpmc/libpmc.c -text
 lib/libpmc/libpmcinternal.h -text
