@@ -1,12 +1,12 @@
 # $MidnightBSD$
 #
-# $FreeBSD: stable/9/lib/libusb/Makefile 302276 2016-06-29 11:06:13Z hselasky $
+# $FreeBSD: stable/10/lib/libusb/Makefile 302275 2016-06-29 10:58:36Z hselasky $
 #
 # Makefile for the FreeBSD specific LibUSB 2.0
 #
 
 LIB=		usb
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 SHLIB_MINOR=	0
 SRCS=		libusb20.c
 SRCS+=		libusb20_desc.c
@@ -16,11 +16,12 @@ INCS+=		libusb20_desc.h
 MAN=		libusb.3 libusb20.3
 MKLINT=		no
 NOGCCERROR=
+PTHREAD_LIBS?=	-lpthread
 
 WARNS?=		2
 
 DPADD=		${LIBPTHREAD}
-LDADD=		-lpthread
+LDADD=		${PTHREAD_LIBS}
 
 MLINKS+=	libusb.3 usb.3
 
@@ -37,6 +38,32 @@ SRCS+=		libusb10_io.c
 
 .if defined(COMPAT_32BIT)
 CFLAGS+=	-DCOMPAT_32BIT
+.else
+FILES=		libusb-0.1.pc libusb-1.0.pc libusb-2.0.pc
+FILESDIR=	${LIBDATADIR}/pkgconfig
+.endif
+
+#
+# Cross platform support
+#
+# Examples:
+# make LIBUSB_GLOBAL_INCLUDE_FILE=libusb_global_linux.h
+# make COMPAT_32BIT=YES \
+#   LIBUSB_GLOBAL_INCLUDE_FILE=libusb_global_linux.h \
+#   DEBUG_FLAGS="-g"
+#
+# From Ubuntu 10.04:
+# freebsd-make LIBUSB_GLOBAL_INCLUDE_FILE=libusb_global_linux.h \
+#    PTHREAD_LIBS="-lpthread -lrt"
+# freebsd-make COMPAT32_BIT=YES \
+#    LIBUSB_GLOBAL_INCLUDE_FILE=libusb_global_linux.h \
+#    PTHREAD_LIBS="-lpthread -lrt"
+#
+#
+.if defined(LIBUSB_GLOBAL_INCLUDE_FILE)
+CFLAGS+=	-DLIBUSB_GLOBAL_INCLUDE_FILE=\"${LIBUSB_GLOBAL_INCLUDE_FILE}\"
+CFLAGS+=	-DUSB_GLOBAL_INCLUDE_FILE=\"${LIBUSB_GLOBAL_INCLUDE_FILE}\"
+CFLAGS+=	-I ../../sys
 .endif
 
 .include <bsd.lib.mk>

@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb20_desc.h 277848 2015-01-28 19:53:00Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb20_desc.h 277847 2015-01-28 19:49:53Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2007-2008 Daniel Drake.  All rights reserved.
@@ -45,6 +45,10 @@
 
 #ifndef _LIBUSB20_DESC_H_
 #define	_LIBUSB20_DESC_H_
+
+#ifndef LIBUSB_GLOBAL_INCLUDE_FILE
+#include <stdint.h>
+#endif
 
 #ifdef __cplusplus
 extern	"C" {

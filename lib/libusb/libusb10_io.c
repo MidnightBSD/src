@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb10_io.c 302276 2016-06-29 11:06:13Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb10_io.c 302275 2016-06-29 10:58:36Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -25,15 +25,20 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/queue.h>
-
+#ifdef LIBUSB_GLOBAL_INCLUDE_FILE
+#include LIBUSB_GLOBAL_INCLUDE_FILE
+#else
 #include <errno.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/queue.h>
+#include <sys/endian.h>
+#endif
 
 #define	libusb_device_handle libusb20_device
 
@@ -767,8 +772,9 @@ int
 libusb_alloc_streams(libusb_device_handle *dev, uint32_t num_streams,
     unsigned char *endpoints, int num_endpoints)
 {
-
-	return (LIBUSB_ERROR_NOT_SUPPORTED);
+	if (num_streams > 1)
+		return (LIBUSB_ERROR_INVALID_PARAM);
+	return (0);
 }
 
 int

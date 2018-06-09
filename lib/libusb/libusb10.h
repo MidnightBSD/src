@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb10.h 302276 2016-06-29 11:06:13Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb10.h 302275 2016-06-29 10:58:36Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -28,7 +28,9 @@
 #ifndef __LIBUSB10_H__
 #define	__LIBUSB10_H__
 
+#ifndef LIBUSB_GLOBAL_INCLUDE_FILE
 #include <sys/queue.h>
+#endif
 
 #define	GET_CONTEXT(ctx) (((ctx) == NULL) ? usbi_default_context : (ctx))
 #define	UNEXPORTED __attribute__((__visibility__("hidden")))

@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb10_hotplug.c 302276 2016-06-29 11:06:13Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb10_hotplug.c 302275 2016-06-29 10:58:36Z hselasky $ */
 /*-
  * Copyright (c) 2016 Hans Petter Selasky. All rights reserved.
  *

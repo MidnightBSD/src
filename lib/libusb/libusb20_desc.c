@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb20_desc.c 286334 2015-08-05 18:55:26Z pfg $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb20_desc.c 286333 2015-08-05 18:52:40Z pfg $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -25,11 +25,15 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/queue.h>
-
+#ifdef LIBUSB_GLOBAL_INCLUDE_FILE
+#include LIBUSB_GLOBAL_INCLUDE_FILE
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <sys/queue.h>
+#endif
 
 #include "libusb20.h"
 #include "libusb20_desc.h"

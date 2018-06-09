@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb20.c 305642 2016-09-09 06:31:25Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb20.c 305641 2016-09-09 06:27:25Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
@@ -25,13 +25,17 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/queue.h>
-
+#ifdef LIBUSB_GLOBAL_INCLUDE_FILE
+#include LIBUSB_GLOBAL_INCLUDE_FILE
+#else
 #include <ctype.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <sys/queue.h>
+#endif
 
 #include "libusb20.h"
 #include "libusb20_desc.h"
@@ -158,6 +162,13 @@ int
 libusb20_tr_open(struct libusb20_transfer *xfer, uint32_t MaxBufSize,
     uint32_t MaxFrameCount, uint8_t ep_no)
 {
+	return (libusb20_tr_open_stream(xfer, MaxBufSize, MaxFrameCount, ep_no, 0));
+}
+
+int
+libusb20_tr_open_stream(struct libusb20_transfer *xfer, uint32_t MaxBufSize,
+    uint32_t MaxFrameCount, uint8_t ep_no, uint16_t stream_id)
+{
 	uint32_t size;
 	uint8_t pre_scale;
 	int error;
@@ -198,10 +209,10 @@ libusb20_tr_open(struct libusb20_transfer *xfer, uint32_t MaxBufSize,
 
 	if (pre_scale) {
 		error = xfer->pdev->methods->tr_open(xfer, MaxBufSize,
-		    MaxFrameCount / 8, ep_no, 1);
+		    MaxFrameCount / 8, ep_no, stream_id, 1);
 	} else {
 		error = xfer->pdev->methods->tr_open(xfer, MaxBufSize,
-		    MaxFrameCount, ep_no, 0);
+		    MaxFrameCount, ep_no, stream_id, 0);
 	}
 
 	if (error) {
@@ -1209,27 +1220,13 @@ libusb20_be_alloc(const struct libusb20_backend_methods *methods)
 struct libusb20_backend *
 libusb20_be_alloc_linux(void)
 {
-	struct libusb20_backend *pbe;
-
-#ifdef __linux__
-	pbe = libusb20_be_alloc(&libusb20_linux_backend);
-#else
-	pbe = NULL;
-#endif
-	return (pbe);
+	return (NULL);
 }
 
 struct libusb20_backend *
 libusb20_be_alloc_ugen20(void)
 {
-	struct libusb20_backend *pbe;
-
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-	pbe = libusb20_be_alloc(&libusb20_ugen20_backend);
-#else
-	pbe = NULL;
-#endif
-	return (pbe);
+	return (libusb20_be_alloc(&libusb20_ugen20_backend));
 }
 
 struct libusb20_backend *
@@ -1237,10 +1234,12 @@ libusb20_be_alloc_default(void)
 {
 	struct libusb20_backend *pbe;
 
+#ifdef __linux__
 	pbe = libusb20_be_alloc_linux();
 	if (pbe) {
 		return (pbe);
 	}
+#endif
 	pbe = libusb20_be_alloc_ugen20();
 	if (pbe) {
 		return (pbe);

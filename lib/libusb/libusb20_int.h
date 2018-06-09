@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb20_int.h 302276 2016-06-29 11:06:13Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb20_int.h 302275 2016-06-29 10:58:36Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -113,7 +113,7 @@ typedef int (libusb20_set_config_index_t)(struct libusb20_device *pdev, uint8_t 
 typedef int (libusb20_check_connected_t)(struct libusb20_device *pdev);
 
 /* USB transfer specific */
-typedef int (libusb20_tr_open_t)(struct libusb20_transfer *xfer, uint32_t MaxBufSize, uint32_t MaxFrameCount, uint8_t ep_no, uint8_t pre_scale);
+typedef int (libusb20_tr_open_t)(struct libusb20_transfer *xfer, uint32_t MaxBufSize, uint32_t MaxFrameCount, uint8_t ep_no, uint16_t stream_id, uint8_t pre_scale);
 typedef int (libusb20_tr_close_t)(struct libusb20_transfer *xfer);
 typedef int (libusb20_tr_clear_stall_sync_t)(struct libusb20_transfer *xfer);
 typedef void (libusb20_tr_submit_t)(struct libusb20_transfer *xfer);

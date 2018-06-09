@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb10.c 302276 2016-06-29 11:06:13Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb10.c 302275 2016-06-29 10:58:36Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
@@ -26,17 +26,23 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/queue.h>
-
+#ifdef LIBUSB_GLOBAL_INCLUDE_FILE
+#include LIBUSB_GLOBAL_INCLUDE_FILE
+#else
 #include <assert.h>
 #include <errno.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/queue.h>
+#include <sys/endian.h>
+#endif
 
 #define	libusb_device_handle libusb20_device
 
@@ -70,7 +76,7 @@ static const struct libusb_version libusb_version = {
 	.micro = 0,
 	.nano = 2016,
 	.rc = "",
-	.describe = "http://www.midnightbsd.org"
+	.describe = "http://www.freebsd.org"
 };
 
 const struct libusb_version *
@@ -1405,7 +1411,8 @@ found:
 	maxframe = libusb10_get_maxframe(pdev, uxfer);
 
 	/* make sure the transfer is opened */
-	err = libusb20_tr_open(pxfer0, buffsize, maxframe, endpoint);
+	err = libusb20_tr_open_stream(pxfer0, buffsize, maxframe,
+	    endpoint, sxfer->stream_id);
 	if (err && (err != LIBUSB20_ERROR_BUSY)) {
 		goto failure;
 	}
@@ -1417,7 +1424,7 @@ failure:
 
 	/* make sure our event loop spins the done handler */
 	dummy = 0;
-	write(dev->ctx->ctrl_pipe[1], &dummy, sizeof(dummy));
+	err = write(dev->ctx->ctrl_pipe[1], &dummy, sizeof(dummy));
 }
 
 /* The following function must be called unlocked */
@@ -1429,7 +1436,7 @@ libusb_submit_transfer(struct libusb_transfer *uxfer)
 	struct libusb20_transfer *pxfer1;
 	struct libusb_super_transfer *sxfer;
 	struct libusb_device *dev;
-	uint32_t endpoint;
+	uint8_t endpoint;
 	int err;
 
 	if (uxfer == NULL)
@@ -1439,9 +1446,6 @@ libusb_submit_transfer(struct libusb_transfer *uxfer)
 		return (LIBUSB_ERROR_INVALID_PARAM);
 
 	endpoint = uxfer->endpoint;
-
-	if (endpoint > 255)
-		return (LIBUSB_ERROR_INVALID_PARAM);
 
 	dev = libusb_get_device(uxfer->dev_handle);
 
@@ -1492,7 +1496,7 @@ libusb_cancel_transfer(struct libusb_transfer *uxfer)
 	struct libusb20_transfer *pxfer1;
 	struct libusb_super_transfer *sxfer;
 	struct libusb_device *dev;
-	uint32_t endpoint;
+	uint8_t endpoint;
 	int retval;
 
 	if (uxfer == NULL)
@@ -1503,9 +1507,6 @@ libusb_cancel_transfer(struct libusb_transfer *uxfer)
 		return (LIBUSB_ERROR_NOT_FOUND);
 
 	endpoint = uxfer->endpoint;
-
-	if (endpoint > 255)
-		return (LIBUSB_ERROR_INVALID_PARAM);
 
 	dev = libusb_get_device(uxfer->dev_handle);
 

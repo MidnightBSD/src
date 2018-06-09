@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/9/lib/libusb/libusb.h 302276 2016-06-29 11:06:13Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb.h 302275 2016-06-29 10:58:36Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -28,8 +28,11 @@
 #ifndef __LIBUSB_H__
 #define	__LIBUSB_H__
 
+#ifndef LIBUSB_GLOBAL_INCLUDE_FILE
+#include <stdint.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#endif
 
 #define	LIBUSB_API_VERSION 0x01000102
 
@@ -215,6 +218,19 @@ enum libusb_transfer_flags {
 	LIBUSB_TRANSFER_FREE_TRANSFER = 1 << 2,
 };
 
+enum libusb_log_level {
+       LIBUSB_LOG_LEVEL_NONE = 0,
+       LIBUSB_LOG_LEVEL_ERROR,
+       LIBUSB_LOG_LEVEL_WARNING,
+       LIBUSB_LOG_LEVEL_INFO,
+       LIBUSB_LOG_LEVEL_DEBUG
+};
+
+/* XXX */
+/* libusb_set_debug should take parameters from libusb_log_level
+ * above according to
+ *   http://libusb.sourceforge.net/api-1.0/group__lib.html
+ */
 enum libusb_debug_level {
 	LIBUSB_DEBUG_NO=0,
 	LIBUSB_DEBUG_FUNCTION=1,
@@ -411,7 +427,7 @@ typedef void (*libusb_transfer_cb_fn) (struct libusb_transfer *transfer);
 typedef struct libusb_transfer {
 	libusb_device_handle *dev_handle;
 	uint8_t	flags;
-	uint32_t endpoint;
+	uint8_t endpoint;
 	uint8_t type;
 	uint32_t timeout;
 	enum libusb_transfer_status status;
@@ -420,7 +436,6 @@ typedef struct libusb_transfer {
 	libusb_transfer_cb_fn callback;
 	void   *user_data;
 	uint8_t *buffer;
-	void *os_priv;
 	int	num_iso_packets;
 	struct libusb_iso_packet_descriptor iso_packet_desc[0];
 }	libusb_transfer __aligned(sizeof(void *));
