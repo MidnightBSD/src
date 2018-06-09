@@ -74159,10 +74159,6 @@ usr.sbin/sade/termcap.c -text
 usr.sbin/sade/variable.c -text
 usr.sbin/sade/wizard.c -text
 usr.sbin/sendmail/Makefile -text
-usr.sbin/sensorsd/Makefile -text
-usr.sbin/sensorsd/sensorsd.8 -text
-usr.sbin/sensorsd/sensorsd.c -text
-usr.sbin/sensorsd/sensorsd.conf.5 -text
 usr.sbin/service/Makefile -text
 usr.sbin/service/service.8 -text
 usr.sbin/service/service.sh -text
