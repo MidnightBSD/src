@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1997 Kenneth D. Merry.
 .\" All rights reserved.
@@ -25,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/iostat/iostat.8 284671 2015-06-21 06:54:54Z trasz $
 .\"
 .\" Copyright (c) 1985, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -56,7 +57,7 @@
 .\"
 .\"	@(#)iostat.8	8.1 (Berkeley) 6/6/93
 .\"
-.Dd November 24, 2010
+.Dd May 22, 2015
 .Dt IOSTAT 8
 .Os
 .Sh NAME
@@ -366,6 +367,32 @@ average duration of transactions, in milliseconds
 % of time the device had one or more outstanding transactions
 .El
 .Pp
+The extended
+.Nm
+device display, with the
+.Fl x
+and
+.Fl I
+flags specified, shows the following statistics:
+.Pp
+.Bl -tag -width indent -compact
+.It r/i
+read operations per time period
+.It w/i
+write operations per time period
+.It kr/i
+kilobytes read per time period
+.It kw/i
+kilobytes write per time period
+.It qlen
+transactions queue length
+.It tsvc_t/i
+total duration of transactions per time period, in seconds
+.It sb/i
+total time the device had one or more outstanding transactions per
+time period, in seconds
+.El
+.Pp
 The old-style
 .Nm
 display (using
@@ -468,6 +495,7 @@ flags are given, the TTY and CPU displays will be displayed.
 .Xr ps 1 ,
 .Xr systat 1 ,
 .Xr devstat 3 ,
+.Xr ctlstat 8 ,
 .Xr gstat 8 ,
 .Xr pstat 8 ,
 .Xr vmstat 8
