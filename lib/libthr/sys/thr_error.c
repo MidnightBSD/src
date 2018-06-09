@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * Copyright (c) 1994 by Chris Provenzano, proven@mit.edu
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/sys/thr_error.c 277317 2015-01-18 11:54:20Z kib $
  */
 
 #include <pthread.h>
@@ -42,8 +43,9 @@
 #undef errno
 extern	int	errno;
 
+__weak_reference(__error_threaded, __error);
 int *
-__error(void)
+__error_threaded(void)
 {
 	struct pthread *curthread;
 
