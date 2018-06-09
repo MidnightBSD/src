@@ -49826,6 +49826,9 @@ lib/libthr/pthread.map -text
 lib/libthr/support/Makefile.inc -text
 lib/libthr/sys/Makefile.inc -text
 lib/libthr/sys/thr_error.c -text
+lib/libthr/tests/Makefile svneol=native#text/plain
+lib/libthr/tests/dlopen/Makefile svneol=native#text/plain
+lib/libthr/tests/dlopen/dso/Makefile svneol=native#text/plain
 lib/libthr/thread/Makefile.inc -text
 lib/libthr/thread/thr_affinity.c -text
 lib/libthr/thread/thr_attr.c -text
