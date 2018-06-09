@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jonathan Belson <jon@witchspace.com>
  * All rights reserved.
@@ -23,12 +24,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kbdmap/kbdmap.h,v 1.1 2002/07/03 14:56:08 markm Exp $
+ * $FreeBSD: stable/10/usr.sbin/kbdmap/kbdmap.h 270309 2014-08-21 21:57:18Z se $
  */
 
 
 #define DEFAULT_LANG		"en"
-#define DEFAULT_KEYMAP_DIR	"/usr/share/syscons/keymaps"
-#define DEFAULT_FONT_DIR	"/usr/share/syscons/fonts"
 #define DEFAULT_SYSCONFIG	"/etc/rc.conf"
-#define DEFAULT_FONT		"cp437-8x16.fnt"
+
+#define DEFAULT_SC_KEYMAP_DIR	"/usr/share/syscons/keymaps"
+#define DEFAULT_SC_FONT_DIR	"/usr/share/syscons/fonts"
+#define DEFAULT_SC_FONT		"cp437-8x16.fnt"
+
+#define DEFAULT_VT_KEYMAP_DIR	"/usr/share/vt/keymaps"
+#define DEFAULT_VT_FONT_DIR	"/usr/share/vt/fonts"
+#define DEFAULT_VT_FONT		"vgarom-thin-8x16.fnt"
