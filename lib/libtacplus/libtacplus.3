@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1998, 2001, 2002, Juniper Networks, Inc.
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libtacplus/libtacplus.3 250582 2013-05-12 22:22:12Z joel $
 .\"
 .Dd December 11, 2009
 .Dt LIBTACPLUS 3
@@ -380,7 +381,7 @@ the request, and waits for a reply.
 On failure,
 .Fn tac_send_acct
 returns \-1.
-Otherwise, it returns the TACACS+ status code
+Otherwise, it returns the TACACS+ status code.
 Possible status codes, defined in
 .In taclib.h ,
 include:
@@ -513,7 +514,9 @@ without recording an error message.
 .Fn tac_open
 .El
 .Sh FILES
-.Pa /etc/tacplus.conf
+.Bl -tag -width Pa
+.It Pa /etc/tacplus.conf
+.El
 .Sh SEE ALSO
 .Xr tacplus.conf 5
 .Rs
