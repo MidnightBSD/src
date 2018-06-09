@@ -1,16 +1,15 @@
-# $FreeBSD: src/lib/libngatm/Makefile,v 1.7 2007/05/21 02:49:05 deischen Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libngatm/Makefile 313615 2017-02-11 06:50:25Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #
 LIB=	ngatm
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 MAN=	libngatm.3 uniaddr.3 unifunc.3 unimsg.3 unisap.3 unistruct.3
-WARNS?=	6
-CSTD=	c89
 
 # source of the library lives in contrib
-SDIR=	${.CURDIR}/../../sys
-CTRB=	${.CURDIR}/../../contrib/ngatm
+SDIR=	${SRCTOP}/sys
+CTRB=	${SRCTOP}/contrib/ngatm
 LIBBASE= ${SDIR}/contrib/ngatm
 
 CFLAGS+= -I${LIBBASE} -I${.OBJDIR} -I${CTRB}/libngatm
