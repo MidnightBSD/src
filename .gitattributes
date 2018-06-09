@@ -49699,6 +49699,7 @@ lib/librt/aio.c -text
 lib/librt/mq.c -text
 lib/librt/sigev_thread.c -text
 lib/librt/sigev_thread.h -text
+lib/librt/tests/Makefile svneol=native#text/plain
 lib/librt/timer.c -text
 lib/librtld_db/Makefile -text
 lib/librtld_db/librtld_db.3 -text

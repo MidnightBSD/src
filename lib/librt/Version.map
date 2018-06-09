@@ -1,5 +1,5 @@
-/*
- * $MidnightBSD$
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/librt/Version.map 169090 2007-04-29 14:01:45Z deischen $
  */
 
 FBSD_1.0 {

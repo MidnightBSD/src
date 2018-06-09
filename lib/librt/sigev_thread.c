@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,18 +24,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/librt/sigev_thread.c 252412 2013-06-30 08:59:33Z ed $
  *
  */
 
 #include <sys/types.h>
-#include <machine/atomic.h>
 
 #include "namespace.h"
 #include <err.h>
 #include <errno.h>
 #include <ucontext.h>
 #include <sys/thr.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +52,7 @@ LIST_HEAD(sigev_list_head, sigev_node);
 static struct sigev_list_head	sigev_hash[HASH_QUEUES];
 static struct sigev_list_head	sigev_all;
 static LIST_HEAD(,sigev_thread)	sigev_threads;
-static unsigned int		sigev_generation;
+static atomic_int		sigev_generation;
 static pthread_mutex_t		*sigev_list_mtx;
 static pthread_once_t		sigev_once = PTHREAD_ONCE_INIT;
 static pthread_once_t		sigev_once_default = PTHREAD_ONCE_INIT;
@@ -196,7 +197,8 @@ __sigev_alloc(int type, const struct sigevent *evp, struct sigev_node *prev,
 	if (sn != NULL) {
 		sn->sn_value = evp->sigev_value;
 		sn->sn_func  = evp->sigev_notify_function;
-		sn->sn_gen   = atomic_fetchadd_int(&sigev_generation, 1);
+		sn->sn_gen   = atomic_fetch_add_explicit(&sigev_generation, 1,
+		    memory_order_relaxed);
 		sn->sn_type  = type;
 		_pthread_attr_init(&sn->sn_attr);
 		_pthread_attr_setdetachstate(&sn->sn_attr, PTHREAD_CREATE_DETACHED);
@@ -224,11 +226,11 @@ __sigev_get_sigevent(struct sigev_node *sn, struct sigevent *newevp,
 	sigev_id_t id)
 {
 	/*
-	 * Build a new sigevent, and tell kernel to deliver SIGSERVICE
+	 * Build a new sigevent, and tell kernel to deliver SIGLIBRT
 	 * signal to the new thread.
 	 */
 	newevp->sigev_notify = SIGEV_THREAD_ID;
-	newevp->sigev_signo  = SIGSERVICE;
+	newevp->sigev_signo  = SIGLIBRT;
 	newevp->sigev_notify_thread_id = (lwpid_t)sn->sn_tn->tn_lwpid;
 	newevp->sigev_value.sival_ptr = (void *)id;
 }
@@ -279,7 +281,7 @@ __sigev_delete_node(struct sigev_node *sn)
 	LIST_REMOVE(sn, sn_link);
 
 	if (--sn->sn_tn->tn_refcount == 0)
-		_pthread_kill(sn->sn_tn->tn_thread, SIGSERVICE);
+		_pthread_kill(sn->sn_tn->tn_thread, SIGLIBRT);
 	if (sn->sn_flags & SNF_WORKING)
 		sn->sn_flags |= SNF_REMOVED;
 	else
@@ -326,7 +328,7 @@ sigev_thread_create(int usedefault)
 	LIST_INSERT_HEAD(&sigev_threads, tn, tn_link);
 	__sigev_list_unlock();
 
-	sigfillset(&set);	/* SIGSERVICE is masked. */
+	sigfillset(&set);	/* SIGLIBRT is masked. */
 	sigdelset(&set, SIGBUS);
 	sigdelset(&set, SIGILL);
 	sigdelset(&set, SIGFPE);
@@ -378,7 +380,7 @@ sigev_service_loop(void *arg)
 	__sigev_list_unlock();
 
 	sigemptyset(&set);
-	sigaddset(&set, SIGSERVICE);
+	sigaddset(&set, SIGLIBRT);
 	for (;;) {
 		ret = sigwaitinfo(&set, &si);
 

@@ -1,4 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/librt/Makefile 282854 2015-05-13 11:32:55Z ngie $
+
+.include <bsd.own.mk>
 
 LIB=rt
 SHLIB_MAJOR= 1
@@ -17,5 +20,9 @@ SRCS+= aio.c mq.c sigev_thread.c timer.c
 PRECIOUSLIB=
 
 VERSION_MAP=	${.CURDIR}/Version.map
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.lib.mk>
