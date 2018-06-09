@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/jls/jls.8 279347 2015-02-27 02:50:01Z jamie $
 .\"
-.Dd July 8, 2009
+.Dd July 20, 2012
 .Dt JLS 8
 .Os
 .Sh NAME
@@ -33,7 +34,7 @@
 .Nd "list jails"
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhnqsv
+.Op Fl dhNnqsv
 .Op Fl j Ar jail
 .Op Ar parameter ...
 .Sh DESCRIPTION
@@ -71,6 +72,10 @@ Print a header line containing the parameters listed.
 If no parameters are given on the command line,
 .Va all
 is assumed.
+.It Fl N
+In the standard display mode, print each jail's name instead of its
+numeric ID.
+If the jail does not have a name, the numeric ID is printed instead.
 .It Fl n
 Print parameters in
 .Dq name=value
@@ -88,7 +93,8 @@ skipping read-only and unused parameters.
 Implies
 .Fl nq .
 .It Fl v
-Print a multiple-line summary per jail, with the following parameters:
+Extend the standard display with a multiple-line summary per jail,
+containing the following parameters:
 jail identifier (jid), hostname (host.hostname), path (path),
 jail name (name), jail state (dying), cpuset ID (cpuset),
 IP address(es) (ip4.addr and ip6.addr).
