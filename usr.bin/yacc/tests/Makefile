@@ -1,12 +1,11 @@
-# $FreeBSD: stable/10/usr.bin/yacc/tests/Makefile 272973 2014-10-11 23:31:44Z rodrigc $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/yacc/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
 
 .include <bsd.own.mk>
 
-TEST_DIR=	${.CURDIR}/../../../contrib/byacc/test
+TEST_DIR=	${SRCTOP}/contrib/byacc/test
 
 .PATH: ${TEST_DIR} ${TEST_DIR}/yacc
-
-TESTSDIR=	${TESTSBASE}/usr.bin/yacc
 
 PLAIN_TESTS_SH=	yacc_tests
 # NOTE: due to caveats with how permissions are handled on FreeBSD
@@ -16,6 +15,8 @@ TEST_METADATA.yacc_tests+=	required_user="unprivileged"
 
 SCRIPTS=	run_test
 SCRIPTSDIR=	${TESTSDIR}
+
+CLEANFILES=	run_test
 
 FILESGROUPS=	FILES FILEStest FILEStest_yacc
 

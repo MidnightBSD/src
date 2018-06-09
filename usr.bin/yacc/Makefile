@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #	@(#)Makefile	5.3 (Berkeley) 5/12/90
 # $FreeBSD: stable/10/usr.bin/yacc/Makefile 277086 2015-01-12 20:14:31Z jkim $
 
@@ -20,5 +21,9 @@ CFLAGS+=	-DYYPATCH=${YYPATCH}
 
 LINKS=	${BINDIR}/yacc ${BINDIR}/byacc
 MLINKS=	yacc.1 byacc.1
+
+.if ${MK_TESTS} != "no"
+SUBDIR+= tests
+.endif
 
 .include <bsd.prog.mk>
