@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libulog/Makefile 313599 2017-02-11 06:32:05Z ngie $
 
 SHLIBDIR?=/lib
 
@@ -22,7 +23,7 @@ MLINKS+=ulog_login.3 ulog_login_pseudo.3 \
 DPADD=	${LIBMD}
 LDADD=	-lmd
 
-VERSION_DEF= ${.CURDIR}/../libc/Versions.def
+VERSION_DEF= ${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS= ${.CURDIR}/Symbol.map
 
 .if ${MK_INSTALLLIB} != "no"
