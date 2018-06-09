@@ -46053,6 +46053,7 @@ include/stdbool.h -text
 include/stddef.h -text
 include/stdio.h -text
 include/stdlib.h -text
+include/stdnoreturn.h svneol=native#text/plain
 include/string.h -text
 include/stringlist.h -text
 include/strings.h -text
