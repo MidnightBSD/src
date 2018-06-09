@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libradius/radlib.c 243964 2012-12-07 01:36:53Z delphij $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -42,6 +43,8 @@ __MBSDID("$MidnightBSD$");
 #define MD5_DIGEST_LENGTH 16
 #include <md5.h>
 #endif
+
+#define	MAX_FIELDS	7
 
 /* We need the MPPE_KEY_LEN define */
 #include <netgraph/ng_mppc.h>
@@ -379,6 +382,18 @@ int
 rad_add_server(struct rad_handle *h, const char *host, int port,
     const char *secret, int timeout, int tries)
 {
+    	struct in_addr bindto;
+	bindto.s_addr = INADDR_ANY;
+
+	return rad_add_server_ex(h, host, port, secret, timeout, tries,
+		DEAD_TIME, &bindto);
+}
+
+int
+rad_add_server_ex(struct rad_handle *h, const char *host, int port,
+    const char *secret, int timeout, int tries, int dead_time,
+    struct in_addr *bindto)
+{
 	struct rad_server *srvp;
 
 	if (h->num_servers >= MAXSERVERS) {
@@ -421,6 +436,10 @@ rad_add_server(struct rad_handle *h, const char *host, int port,
 	srvp->timeout = timeout;
 	srvp->max_tries = tries;
 	srvp->num_tries = 0;
+	srvp->is_dead = 0;
+	srvp->dead_time = dead_time;
+	srvp->next_probe = 0;
+	srvp->bindto = bindto->s_addr;
 	h->num_servers++;
 	return 0;
 }
@@ -441,6 +460,13 @@ rad_close(struct rad_handle *h)
 	free(h);
 }
 
+void
+rad_bind_to(struct rad_handle *h, in_addr_t addr)
+{
+
+	h->bindto = addr;
+}
+
 int
 rad_config(struct rad_handle *h, const char *path)
 {
@@ -459,7 +485,7 @@ rad_config(struct rad_handle *h, const char *path)
 	linenum = 0;
 	while (fgets(buf, sizeof buf, fp) != NULL) {
 		int len;
-		char *fields[5];
+		char *fields[MAX_FIELDS];
 		int nfields;
 		char msg[ERRSIZE];
 		char *type;
@@ -468,11 +494,15 @@ rad_config(struct rad_handle *h, const char *path)
 		char *secret;
 		char *timeout_str;
 		char *maxtries_str;
+		char *dead_time_str;
+		char *bindto_str;
 		char *end;
 		char *wanttype;
 		unsigned long timeout;
 		unsigned long maxtries;
+		unsigned long dead_time;
 		int port;
+		struct in_addr bindto;
 		int i;
 
 		linenum++;
@@ -491,7 +521,7 @@ rad_config(struct rad_handle *h, const char *path)
 		buf[len - 1] = '\0';
 
 		/* Extract the fields from the line. */
-		nfields = split(buf, fields, 5, msg, sizeof msg);
+		nfields = split(buf, fields, MAX_FIELDS, msg, sizeof msg);
 		if (nfields == -1) {
 			generr(h, "%s:%d: %s", path, linenum, msg);
 			retval = -1;
@@ -507,7 +537,7 @@ rad_config(struct rad_handle *h, const char *path)
 		 */
 		if (strcmp(fields[0], "auth") != 0 &&
 		    strcmp(fields[0], "acct") != 0) {
-			if (nfields >= 5) {
+			if (nfields >= MAX_FIELDS) {
 				generr(h, "%s:%d: invalid service type", path,
 				    linenum);
 				retval = -1;
@@ -529,6 +559,8 @@ rad_config(struct rad_handle *h, const char *path)
 		secret = fields[2];
 		timeout_str = fields[3];
 		maxtries_str = fields[4];
+		dead_time_str = fields[5];
+		bindto_str = fields[6];
 
 		/* Ignore the line if it is for the wrong service type. */
 		wanttype = h->type == RADIUS_AUTH ? "auth" : "acct";
@@ -570,8 +602,30 @@ rad_config(struct rad_handle *h, const char *path)
 		} else
 			maxtries = MAXTRIES;
 
-		if (rad_add_server(h, host, port, secret, timeout, maxtries) ==
-		    -1) {
+		if (dead_time_str != NULL) {
+			dead_time = strtoul(dead_time_str, &end, 10);
+			if (*end != '\0') {
+				generr(h, "%s:%d: invalid dead_time", path,
+				    linenum);
+				retval = -1;
+				break;
+			}
+		} else
+		    	dead_time = DEAD_TIME;
+
+		if (bindto_str != NULL) {
+		    	bindto.s_addr = inet_addr(bindto_str);
+			if (bindto.s_addr == INADDR_NONE) {
+				generr(h, "%s:%d: invalid bindto", path,
+				    linenum);
+				retval = -1;
+				break;
+			}
+		} else
+		    	bindto.s_addr = INADDR_ANY;
+
+		if (rad_add_server_ex(h, host, port, secret, timeout, maxtries,
+			    dead_time, &bindto) == -1) {
 			strcpy(msg, h->errmsg);
 			generr(h, "%s:%d: %s", path, linenum, msg);
 			retval = -1;
@@ -596,7 +650,9 @@ int
 rad_continue_send_request(struct rad_handle *h, int selected, int *fd,
                           struct timeval *tv)
 {
-	int n;
+	int n, cur_srv;
+	time_t now;
+	struct sockaddr_in sin;
 
 	if (h->type == RADIUS_SERVER) {
 		generr(h, "denied function call");
@@ -621,19 +677,61 @@ rad_continue_send_request(struct rad_handle *h, int selected, int *fd,
 		}
 	}
 
-	if (h->try == h->total_tries) {
-		generr(h, "No valid RADIUS responses received");
-		return -1;
-	}
-
 	/*
          * Scan round-robin to the next server that has some
          * tries left.  There is guaranteed to be one, or we
          * would have exited this loop by now.
 	 */
-	while (h->servers[h->srv].num_tries >= h->servers[h->srv].max_tries)
-		if (++h->srv >= h->num_servers)
-			h->srv = 0;
+	cur_srv = h->srv;
+	now = time(NULL);
+	if (h->servers[h->srv].num_tries >= h->servers[h->srv].max_tries) {
+		/* Set next probe time for this server */
+		if (h->servers[h->srv].dead_time) {
+			h->servers[h->srv].is_dead = 1;
+			h->servers[h->srv].next_probe = now +
+			    h->servers[h->srv].dead_time;
+		}
+		do {
+		    	h->srv++;
+			if (h->srv >= h->num_servers)
+				h->srv = 0;
+			if (h->servers[h->srv].is_dead == 0)
+			    	break;
+			if (h->servers[h->srv].dead_time &&
+			    h->servers[h->srv].next_probe <= now) {
+			    	h->servers[h->srv].is_dead = 0;
+				h->servers[h->srv].num_tries = 0;
+				break;
+			}
+		} while (h->srv != cur_srv);
+
+		if (h->srv == cur_srv) {
+			generr(h, "No valid RADIUS responses received");
+			return (-1);
+		}
+	}
+
+	/* Rebind */
+	if (h->bindto != h->servers[h->srv].bindto) {
+	    	h->bindto = h->servers[h->srv].bindto;
+		close(h->fd);
+		if ((h->fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+			generr(h, "Cannot create socket: %s", strerror(errno));
+			return -1;
+		}
+		memset(&sin, 0, sizeof sin);
+		sin.sin_len = sizeof sin;
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = h->bindto;
+		sin.sin_port = 0;
+		if (bind(h->fd, (const struct sockaddr *)&sin,
+		    sizeof sin) == -1) {
+			generr(h, "bind: %s", strerror(errno));
+			close(h->fd);
+			h->fd = -1;
+			return (-1);
+		}
+	}
 
 	if (h->out[POS_CODE] == RAD_ACCESS_REQUEST) {
 		/* Insert the scrambled password into the request */
@@ -641,9 +739,11 @@ rad_continue_send_request(struct rad_handle *h, int selected, int *fd,
 			insert_scrambled_password(h, h->srv);
 	}
 	insert_message_authenticator(h, 0);
+
 	if (h->out[POS_CODE] != RAD_ACCESS_REQUEST) {
 		/* Insert the request authenticator into the request */
-		insert_request_authenticator(h, h->srv);
+		memset(&h->out[POS_AUTH], 0, LEN_AUTH);
+		insert_request_authenticator(h, 0);
 	}
 
 	/* Send the request */
@@ -654,7 +754,6 @@ rad_continue_send_request(struct rad_handle *h, int selected, int *fd,
 		tv->tv_sec = 1; /* Do not wait full timeout if send failed. */
 	else
 		tv->tv_sec = h->servers[h->srv].timeout;
-	h->try++;
 	h->servers[h->srv].num_tries++;
 	tv->tv_usec = 0;
 	*fd = h->fd;
@@ -740,6 +839,10 @@ rad_create_request(struct rad_handle *h, int code)
 		generr(h, "denied function call");
 		return (-1);
 	}
+	if (h->num_servers == 0) {
+	    	generr(h, "No RADIUS servers specified");
+		return (-1);
+	}
 	h->out[POS_CODE] = code;
 	h->out[POS_IDENT] = ++h->ident;
 	if (code == RAD_ACCESS_REQUEST) {
@@ -756,14 +859,7 @@ rad_create_request(struct rad_handle *h, int code)
 	clear_password(h);
 	h->authentic_pos = 0;
 	h->out_created = 1;
-	h->bindto = INADDR_ANY;
 	return 0;
-}
-
-void
-rad_bind_to(struct rad_handle *h, in_addr_t addr)
-{
-    h->bindto = addr;
 }
 
 int
@@ -790,6 +886,15 @@ rad_cvt_addr(const void *data)
 	struct in_addr value;
 
 	memcpy(&value.s_addr, data, sizeof value.s_addr);
+	return value;
+}
+
+struct in6_addr
+rad_cvt_addr6(const void *data)
+{
+	struct in6_addr value;
+
+	memcpy(&value.s6_addr, data, sizeof value.s6_addr);
 	return value;
 }
 
@@ -848,6 +953,8 @@ int
 rad_init_send_request(struct rad_handle *h, int *fd, struct timeval *tv)
 {
 	int srv;
+	time_t now;
+	struct sockaddr_in sin;
 
 	if (h->type == RADIUS_SERVER) {
 		generr(h, "denied function call");
@@ -855,8 +962,6 @@ rad_init_send_request(struct rad_handle *h, int *fd, struct timeval *tv)
 	}
 	/* Make sure we have a socket to use */
 	if (h->fd == -1) {
-		struct sockaddr_in sin;
-
 		if ((h->fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 			generr(h, "Cannot create socket: %s", strerror(errno));
 			return -1;
@@ -902,21 +1007,30 @@ rad_init_send_request(struct rad_handle *h, int *fd, struct timeval *tv)
 	h->out[POS_LENGTH] = h->out_len >> 8;
 	h->out[POS_LENGTH+1] = h->out_len;
 
-	/*
-	 * Count the total number of tries we will make, and zero the
-	 * counter for each server.
-	 */
-	h->total_tries = 0;
-	for (srv = 0;  srv < h->num_servers;  srv++) {
-		h->total_tries += h->servers[srv].max_tries;
+	h->srv = 0;
+	now = time(NULL);
+	for (srv = 0;  srv < h->num_servers;  srv++)
 		h->servers[srv].num_tries = 0;
-	}
-	if (h->total_tries == 0) {
-		generr(h, "No RADIUS servers specified");
-		return -1;
+	/* Find a first good server. */
+	for (srv = 0;  srv < h->num_servers;  srv++) {
+		if (h->servers[srv].is_dead == 0)
+			break;
+		if (h->servers[srv].dead_time &&
+		    h->servers[srv].next_probe <= now) {
+		    	h->servers[srv].is_dead = 0;
+			break;
+		}
+		h->srv++;
 	}
 
-	h->try = h->srv = 0;
+	/* If all servers was dead on the last probe, try from beginning */
+	if (h->srv == h->num_servers) {
+		for (srv = 0;  srv < h->num_servers;  srv++) {
+		    	h->servers[srv].is_dead = 0;
+			h->servers[srv].next_probe = 0;
+		}
+		h->srv = 0;
+	}
 
 	return rad_continue_send_request(h, 0, fd, tv);
 }
@@ -946,6 +1060,7 @@ rad_auth_open(void)
 		h->type = RADIUS_AUTH;
 		h->out_created = 0;
 		h->eap_msg = 0;
+		h->bindto = INADDR_ANY;
 	}
 	return h;
 }
@@ -984,6 +1099,13 @@ int
 rad_put_addr(struct rad_handle *h, int type, struct in_addr addr)
 {
 	return rad_put_attr(h, type, &addr.s_addr, sizeof addr.s_addr);
+}
+
+int
+rad_put_addr6(struct rad_handle *h, int type, struct in6_addr addr)
+{
+
+	return rad_put_attr(h, type, &addr.s6_addr, sizeof addr.s6_addr);
 }
 
 int
@@ -1226,6 +1348,15 @@ rad_put_vendor_addr(struct rad_handle *h, int vendor, int type,
 {
 	return (rad_put_vendor_attr(h, vendor, type, &addr.s_addr,
 	    sizeof addr.s_addr));
+}
+
+int
+rad_put_vendor_addr6(struct rad_handle *h, int vendor, int type,
+    struct in6_addr addr)
+{
+
+	return (rad_put_vendor_attr(h, vendor, type, &addr.s6_addr,
+	    sizeof addr.s6_addr));
 }
 
 int

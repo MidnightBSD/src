@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libradius/radlib_vs.h 243956 2012-12-06 19:00:37Z sem $
  */
 
 #ifndef _RADLIB_VS_H_
@@ -73,6 +74,7 @@ struct rad_handle;
 __BEGIN_DECLS
 int	 rad_get_vendor_attr(u_int32_t *, const void **, size_t *);
 int	 rad_put_vendor_addr(struct rad_handle *, int, int, struct in_addr);
+int	 rad_put_vendor_addr6(struct rad_handle *, int, int, struct in6_addr);
 int	 rad_put_vendor_attr(struct rad_handle *, int, int, const void *,
 	    size_t);
 int	 rad_put_vendor_int(struct rad_handle *, int, int, u_int32_t);
