@@ -50349,6 +50349,7 @@ lib/msun/tests/next_test.c svneol=native#text/plain
 lib/msun/tests/rem_test.c svneol=native#text/plain
 lib/msun/tests/test-utils.h svneol=native#text/plain
 lib/msun/tests/trig_test.c svneol=native#text/plain
+lib/msun/x86/fenv.h svneol=native#text/plain
 lib/ncurses/Makefile -text
 lib/ncurses/Makefile.inc -text
 lib/ncurses/config.mk -text
