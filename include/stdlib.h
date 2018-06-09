@@ -51,7 +51,7 @@ typedef	__size_t	size_t;
 
 #ifndef	__cplusplus
 #ifndef _WCHAR_T_DECLARED
-typedef	__wchar_t	wchar_t;
+typedef	___wchar_t	wchar_t;
 #define	_WCHAR_T_DECLARED
 #endif
 #endif
@@ -128,7 +128,7 @@ size_t	 wcstombs(char * __restrict, const wchar_t * __restrict, size_t);
  *
  * (The only other extension made by C99 in thie header is _Exit().)
  */
-#if __ISO_C_VISIBLE >= 1999
+#if __ISO_C_VISIBLE >= 1999 || defined(__cplusplus)
 #ifdef __LONG_LONG_SUPPORTED
 /* LONGLONG */
 typedef struct {
@@ -156,23 +156,25 @@ _Noreturn void	 _Exit(int);
 #endif /* __ISO_C_VISIBLE >= 1999 */
 
 /*
- * If we're in a mode greater than C99, expose C1x functions.
+ * If we're in a mode greater than C99, expose C11 functions.
  */
 #if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
-void *	aligned_alloc(size_t, size_t);
+void *	aligned_alloc(size_t, size_t) __malloc_like;
+int	at_quick_exit(void (*)(void));
 _Noreturn void
 	quick_exit(int);
-int	at_quick_exit(void (*)(void));
 #endif /* __ISO_C_VISIBLE >= 2011 */
 /*
- * Extensions made by POSIX relative to C.  We don't know yet which edition
- * of POSIX made these extensions, so assume they've always been there until
- * research can be done.
+ * Extensions made by POSIX relative to C.
  */
-#if __POSIX_VISIBLE /* >= ??? */
-int	 posix_memalign(void **, size_t, size_t); /* (ADV) */
-int	 rand_r(unsigned *);			/* (TSF) */
+#if __POSIX_VISIBLE >= 199506 || __XSI_VISIBLE
 char	*realpath(const char * __restrict, char * __restrict);
+#endif
+#if __POSIX_VISIBLE >= 199506
+int	 rand_r(unsigned *);			/* (TSF) */
+#endif
+#if __POSIX_VISIBLE >= 200112
+int	 posix_memalign(void **, size_t, size_t); /* (ADV) */
 int	 setenv(const char *, const char *, int);
 int	 unsetenv(const char *);
 #endif
@@ -232,9 +234,8 @@ int	 unlockpt(int);
 #endif /* __XSI_VISIBLE */
 
 #if __BSD_VISIBLE
-extern const char *_malloc_options;
-extern void (*_malloc_message)(const char *, const char *, const char *,
-	    const char *);
+extern const char *malloc_conf;
+extern void (*malloc_message)(void *, const char *);
 
 /*
  * The alloca() function can't be implemented in C, and on some
@@ -279,12 +280,14 @@ char 	*devname_r(__dev_t, __mode_t, char *, int);
 char	*fdevname(int);
 char 	*fdevname_r(int, char *, int);
 int	 getloadavg(double [], int);
-__const char *
+const char *
 	 getprogname(void);
 
 int	 heapsort(void *, size_t, size_t, int (*)(const void *, const void *));
 int	 l64a_r(long, char *, int);
 int	 mergesort(void *, size_t, size_t, int (*)(const void *, const void *));
+int	 mkostemp(char *, int);
+int	 mkostemps(char *, int, int);
 void	 qsort_r(void *, size_t, size_t, void *,
 	    int (*)(void *, const void *, const void *));
 int	 radixsort(const unsigned char **, int, const unsigned char *,
@@ -299,7 +302,7 @@ void	 srandomdev(void);
 long long
 	strtonum(const char *, long long, long long, const char **);
 
-/* Deprecated interfaces, to be removed in FreeBSD 6.0. */
+/* Deprecated interfaces, to be removed. */
 __int64_t
 	 strtoq(const char *, char **, int);
 __uint64_t
