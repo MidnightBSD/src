@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Michal Hajduk and Bartlomiej Sieka
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/i2c/i2c.c 276876 2015-01-09 03:26:18Z loos $");
 
 #include <err.h>
 #include <errno.h>
@@ -142,6 +143,7 @@ scan_bus(struct iiccmd cmd, char *dev, int skip, char *skip_addr)
 			if (tokens == NULL) {
 				fprintf(stderr, "Error allocating tokens "
 				    "buffer\n");
+				error = -1;
 				goto out;
 			}
 			index = skip_get_tokens(skip_addr, tokens,
@@ -150,6 +152,7 @@ scan_bus(struct iiccmd cmd, char *dev, int skip, char *skip_addr)
 
 		if (!no_range && (addr_range.start > addr_range.end)) {
 			fprintf(stderr, "Skip address out of range\n");
+			error = -1;
 			goto out;
 		}
 	}
@@ -409,8 +412,10 @@ i2c_read(char *dev, struct options i2c_opt, char *i2c_buf)
 		if (i2c_opt.mode == I2C_MODE_STOP_START) {
 			cmd.slave = i2c_opt.addr;
 			error = ioctl(fd, I2CSTOP, &cmd);
-			if (error == -1)
+			if (error == -1) {
+				err_msg = "error sending stop condtion\n";
 				goto err2;
+			}
 		}
 	}
 	cmd.slave = i2c_opt.addr;
@@ -432,8 +437,10 @@ i2c_read(char *dev, struct options i2c_opt, char *i2c_buf)
 		}
 	}
 	error = ioctl(fd, I2CSTOP, &cmd);
-	if (error == -1)
+	if (error == -1) {
+		err_msg = "error sending stop condtion\n";
 		goto err2;
+	}
 
 	for (i = 0; i < i2c_opt.count; i++) {
 		error = read(fd, &i2c_buf[i], 1);
@@ -464,7 +471,7 @@ main(int argc, char** argv)
 {
 	struct iiccmd cmd;
 	struct options i2c_opt;
-	char *dev, *skip_addr, *err_msg, *i2c_buf;
+	char *dev, *skip_addr, *i2c_buf;
 	int error, chunk_size, i, j, ch;
 
 	errno = 0;
@@ -474,7 +481,6 @@ main(int argc, char** argv)
 	chunk_size = 16;
 
 	dev = I2C_DEV;
-	err_msg = NULL;
 
 	/* Default values */
 	i2c_opt.addr_set = 0;
