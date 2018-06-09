@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/include/rpc/rpcsec_gss.h 240062 2012-09-02 22:23:23Z pfg $
  */
 
 #ifndef _RPCSEC_GSS_H

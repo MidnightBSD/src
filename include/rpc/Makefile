@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #	from: @(#)Makefile	2.3 88/08/11 4.0 RPCSRC
-#	$FreeBSD$
+#	$FreeBSD: stable/10/include/rpc/Makefile 231118 2012-02-07 09:27:07Z dim $
 
 .SUFFIXES: .x
 
