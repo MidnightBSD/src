@@ -1,8 +1,8 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/libypclnt/Makefile,v 1.16 2007/05/21 02:49:08 deischen Exp $
+# $FreeBSD: stable/10/lib/libypclnt/Makefile 313597 2017-02-11 06:30:25Z ngie $
 
 LIB=	ypclnt
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 SRCS=	ypclnt_connect.c \
 	ypclnt_error.c \
 	ypclnt_free.c \
@@ -13,7 +13,6 @@ CLEANFILES+= ${GENSRCS}
 INCS= ypclnt.h
 
 CFLAGS+= -I.
-WARNS?=	5
 
 GENSRCS=yp.h \
 	yp_clnt.c \
@@ -24,10 +23,10 @@ GENSRCS=yp.h \
 	yppasswd_private_clnt.c \
 	yppasswd_private_xdr.c
 
-RPCGEN=	rpcgen -C
-RPCSRC=	${.CURDIR}/../../include/rpcsvc/yp.x
-RPCSRC_PW=	${.CURDIR}/../../include/rpcsvc/yppasswd.x
-RPCSRC_PRIV=	${.CURDIR}/../../usr.sbin/rpc.yppasswdd/yppasswd_private.x
+RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -C
+RPCSRC=	${SRCTOP}/include/rpcsvc/yp.x
+RPCSRC_PW=	${SRCTOP}/include/rpcsvc/yppasswd.x
+RPCSRC_PRIV=	${SRCTOP}/usr.sbin/rpc.yppasswdd/yppasswd_private.x
 
 yp.h: ${RPCSRC}
 	${RPCGEN} -h -o ${.TARGET} ${RPCSRC}
