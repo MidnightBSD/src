@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, Boris Popov
  * Copyright (c) 1998-2000 Doug Rabson
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef_obj.c,v 1.5 2006/01/12 08:01:38 jasone Exp $
+ * $FreeBSD: stable/10/usr.sbin/kldxref/ef_obj.c 251440 2013-06-05 21:56:29Z delphij $
  */
 
 #include <sys/param.h>
@@ -44,7 +45,6 @@
 #include <fcntl.h>
 #include <machine/elf.h>
 #define FREEBSD_ELF
-#include <link.h>
 
 #include <err.h>
 
@@ -133,7 +133,7 @@ static struct elf_file_ops ef_obj_file_ops = {
 };
 
 static int
-ef_obj_get_type(elf_file_t ef)
+ef_obj_get_type(elf_file_t __unused ef)
 {
 
 	return (EFT_KLD);
@@ -180,7 +180,7 @@ ef_obj_symaddr(elf_file_t ef, Elf_Size symidx)
 {
 	const Elf_Sym *sym;
 
-	if (symidx >= ef->ddbsymcnt)
+	if (symidx >= (size_t) ef->ddbsymcnt)
 		return (0);
 	sym = ef->ddbsymtab + symidx;
 
@@ -344,7 +344,7 @@ ef_obj_open(const char *filename, struct elf_file *efile, int verbose)
 	if ((fd = open(filename, O_RDONLY)) == -1)
 		return errno;
 
-	ef = malloc(sizeof(*ef));
+	ef = calloc(1, sizeof(*ef));
 	if (ef == NULL) {
 		close(fd);
 		return (ENOMEM);
@@ -353,7 +353,6 @@ ef_obj_open(const char *filename, struct elf_file *efile, int verbose)
 	efile->ef_ef = ef;
 	efile->ef_ops = &ef_obj_file_ops;
 
-	bzero(ef, sizeof(*ef));
 	ef->ef_verbose = verbose;
 	ef->ef_fd = fd;
 	ef->ef_name = strdup(filename);

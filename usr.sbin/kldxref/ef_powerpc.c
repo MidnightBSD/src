@@ -1,6 +1,7 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2003 Jake Burkholder.
+ * Copyright (c) 2005 Peter Grehan.
+ * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,47 +25,51 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/kldxref/ef_sparc64.c 153504 2005-12-18 04:52:37Z marcel $
+ * $FreeBSD: stable/10/usr.sbin/kldxref/ef_powerpc.c 153504 2005-12-18 04:52:37Z marcel $
  */
 
 #include <sys/types.h>
 #include <machine/elf.h>
 
 #include <err.h>
+#include <errno.h>
 #include <string.h>
 
 #include "ef.h"
 
+#include <stdio.h>
+
 /*
- * Apply relocations to the values we got from the file. `relbase' is the
- * target relocation address of the section, and `dataoff' is the target
- * relocation address of the data in `dest'.
+ * Apply relocations to the values obtained from the file. `relbase' is the
+ * target relocation address of the section, and `dataoff/len' is the region
+ * that is to be relocated, and has been copied to *dest
  */
 int
 ef_reloc(struct elf_file *ef, const void *reldata, int reltype, Elf_Off relbase,
     Elf_Off dataoff, size_t len, void *dest)
 {
-	const Elf_Rela *a;
-	Elf_Size w;
+        Elf_Addr *where, addend;
+        Elf_Size rtype, symidx;
+        const Elf_Rela *rela;
 
-	switch (reltype) {
-	case EF_RELOC_RELA:
-		a = reldata;
-		if (relbase + a->r_offset >= dataoff && relbase + a->r_offset <
-		    dataoff + len) {
-			switch (ELF_R_TYPE(a->r_info)) {
-			case R_SPARC_RELATIVE:
-				w = a->r_addend + relbase;
-				memcpy((u_char *)dest + (relbase + a->r_offset -
-				    dataoff), &w, sizeof(w));
-				break;
-			default:
-				warnx("unhandled relocation type %u",
-				    (unsigned int)ELF_R_TYPE(a->r_info));
-				break;
-			}
-		}
+	if (reltype != EF_RELOC_RELA)
+		return (EINVAL);
+
+	rela = (const Elf_Rela *)reldata;
+	where = (Elf_Addr *) ((Elf_Off)dest - dataoff + rela->r_offset);
+	addend = rela->r_addend;
+	rtype = ELF_R_TYPE(rela->r_info);
+	symidx = ELF_R_SYM(rela->r_info);
+
+	 if ((char *)where < (char *)dest || (char *)where >= (char *)dest + len)
+                return (0);
+
+	switch(rtype) {
+	case R_PPC_RELATIVE: /* word32 B + A */
+		*where = relbase + addend;
 		break;
+	default:
+		warnx("unhandled relocation type %d", rtype);
 	}
 	return (0);
 }

@@ -1,14 +1,14 @@
-# $FreeBSD: src/usr.sbin/kldxref/Makefile,v 1.10 2006/08/04 21:29:39 marcel Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/kldxref/Makefile 211934 2010-08-28 15:03:11Z nwhitehorn $
 
 PROG=	kldxref
 MAN=	kldxref.8
 SRCS=	kldxref.c ef.c ef_obj.c
 
+WARNS?=	2
 CFLAGS+=-fno-strict-aliasing
 
-WARNS?=	2
-
-.if exists(ef_${MACHINE_CPUARCH}.c)
+.if exists(ef_${MACHINE_CPUARCH}.c) && ${MACHINE_ARCH} != "powerpc64"
 SRCS+=	ef_${MACHINE_CPUARCH}.c
 .else
 SRCS+=	ef_nop.c

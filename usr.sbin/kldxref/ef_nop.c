@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef_nop.c,v 1.3 2004/08/28 19:31:10 iedowse Exp $
+ * $FreeBSD: stable/10/usr.sbin/kldxref/ef_nop.c 134450 2004-08-28 19:31:10Z iedowse $
  */
 
 #include <sys/types.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * Copyright 1996-1998 John D. Polstra.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef_i386.c,v 1.3 2005/12/18 04:52:37 marcel Exp $
+ * $FreeBSD: stable/10/usr.sbin/kldxref/ef_i386.c 251439 2013-06-05 21:55:20Z delphij $
  */
 
 #include <sys/types.h>
@@ -32,7 +33,6 @@
 
 #include <err.h>
 #include <errno.h>
-#include <string.h>
 
 #include "ef.h"
 
@@ -43,12 +43,13 @@
  */
 int
 ef_reloc(struct elf_file *ef, const void *reldata, int reltype, Elf_Off relbase,
-    Elf_Off dataoff, size_t len, void *dest)
+    Elf_Off dataoff, size_t len, void *_dest)
 {
 	Elf_Addr *where, addr, addend;
 	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
+	char *dest = _dest;
 
 	switch (reltype) {
 	case EF_RELOC_REL:
