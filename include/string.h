@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/string.h 246803 2013-02-14 19:26:58Z zeising $
  */
 
 #ifndef _STRING_H_
@@ -74,6 +75,9 @@ char	*strcasestr(const char *, const char *) __pure;
 #endif
 char	*strcat(char * __restrict, const char * __restrict);
 char	*strchr(const char *, int) __pure;
+#if __BSD_VISIBLE
+char	*strchrnul(const char*, int) __pure;
+#endif
 int	 strcmp(const char *, const char *) __pure;
 int	 strcoll(const char *, const char *);
 char	*strcpy(char * __restrict, const char * __restrict);
