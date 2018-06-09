@@ -51825,6 +51825,7 @@ secure/lib/libssl/man/SSL_want.3 -text
 secure/lib/libssl/man/SSL_write.3 -text
 secure/lib/libssl/man/d2i_SSL_SESSION.3 -text
 secure/lib/libssl/man/ssl.3 -text
+secure/lib/tests/Makefile svneol=native#text/plain
 secure/libexec/Makefile -text
 secure/libexec/Makefile.inc -text
 secure/libexec/sftp-server/Makefile -text
