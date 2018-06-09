@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)lpf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/filters/lpf.c 242091 2012-10-25 20:16:38Z ed $");
 
 /*
  * 	filter which reads the output of nroff and converts lines
@@ -60,17 +61,17 @@ __MBSDID("$MidnightBSD$");
 #define MAXWIDTH  132
 #define MAXREP    10
 
-char	buf[MAXREP][MAXWIDTH];
-int	maxcol[MAXREP] = {-1};
-int	lineno;
-int	width = 132;	/* default line length */
-int	length = 66;	/* page length */
-int	indent;		/* indentation length */
-int	npages = 1;
-int	literal;	/* print control characters */
-char	*name;		/* user's login name */
-char	*host;		/* user's machine name */
-char	*acctfile;	/* accounting information file */
+static char	buf[MAXREP][MAXWIDTH];
+static int	maxcol[MAXREP] = {-1};
+static int	lineno;
+static int	width = 132;	/* default line length */
+static int	length = 66;	/* page length */
+static int	indent;		/* indentation length */
+static int	npages = 1;
+static int	literal;	/* print control characters */
+static char	*name;		/* user's login name */
+static char	*host;		/* user's machine name */
+static char	*acctfile;	/* accounting information file */
 
 int
 main(int argc, char *argv[])
