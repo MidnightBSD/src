@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ldiv.S,v 1.1 2001/06/19 00:25:04 fvdl Exp $	*/
 
 /*-
@@ -6,7 +7,7 @@
  */
 
 #include <machine/asm.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/stdlib/lldiv.S 217106 2011-01-07 16:08:40Z kib $");
 
 ENTRY(lldiv)
 	movq	%rdi,%rax

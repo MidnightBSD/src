@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/gen/signalcontext.c 132795 2004-07-28 13:08:24Z davidxu $");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>

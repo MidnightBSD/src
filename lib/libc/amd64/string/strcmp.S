@@ -1,10 +1,11 @@
+/* $MidnightBSD$ */
 /*
  * Written by J.T. Conklin <jtc@acorntoolworks.com>
  * Public domain.
  */
 
 #include <machine/asm.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/string/strcmp.S 217106 2011-01-07 16:08:40Z kib $");
 
 #if 0
 	RCSID("$NetBSD: strcmp.S,v 1.3 2004/07/19 20:04:41 drochner Exp $")

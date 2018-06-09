@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Peter Wemm <peter@FreeBSD.org>
  * Copyright (c) 2003 Alan L. Cox <alc@cs.rice.edu>
@@ -26,7 +27,7 @@
  */
 
 #include <machine/asm.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/gen/rfork_thread.S 240178 2012-09-06 20:59:49Z jilles $");
 
 /*
  * With thanks to John Dyson for the original version of this.
@@ -93,12 +94,7 @@ ENTRY(rfork_thread)
 2:
 	popq	%r12
 	popq	%rbx
-#ifdef PIC
-	movq	PIC_GOT(HIDENAME(cerror)), %rdx
-	jmp	*%rdx
-#else
 	jmp	HIDENAME(cerror)
-#endif
 END(rfork_thread)
 
 	.section .note.GNU-stack,"",%progbits
