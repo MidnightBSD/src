@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Dima Dorfman.
  * All rights reserved.
@@ -70,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libmp/mpasbn.c 301806 2016-06-10 18:10:32Z ngie $");
 
 #include <ctype.h>
 #include <err.h>
@@ -286,10 +287,10 @@ mp_min(MINT *mp)
 	line = fgetln(stdin, &linelen);
 	if (line == NULL)
 		MPERR(("min"));
-	nline = malloc(linelen);
+	nline = malloc(linelen + 1);
 	if (nline == NULL)
 		MPERR(("min"));
-	strncpy(nline, line, linelen);
+	memcpy(nline, line, linelen);
 	nline[linelen] = '\0';
 	rmp = _dtom("min", nline);
 	_movem("min", rmp, mp);
