@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Juniper Networks, Inc.
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_powerpc.c 217744 2011-01-23 11:08:28Z uqs $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

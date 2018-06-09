@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm.c 316072 2017-03-28 06:05:26Z ngie $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -76,9 +77,14 @@ static char sccsid[] = "@(#)kvm.c	8.2 (Berkeley) 2/13/94";
 /* from src/lib/libc/gen/nlist.c */
 int __fdnlist(int, struct nlist *);
 
+static char _kd_is_null[] = "";
+
 char *
 kvm_geterr(kvm_t *kd)
 {
+
+	if (kd == NULL)
+		return (_kd_is_null);
 	return (kd->errbuf);
 }
 
@@ -198,8 +204,10 @@ _kvm_open(kvm_t *kd, const char *uf, const char *mf, int flag, char *errout)
 			return (kd);
 		}
 	}
+
 	/*
-	 * This is a crash dump.
+	 * This is either a crash dump or a remote live system with its physical
+	 * memory fully accessible via a special device.
 	 * Initialize the virtual address translation machinery,
 	 * but first setup the namelist fd.
 	 */
@@ -207,8 +215,11 @@ _kvm_open(kvm_t *kd, const char *uf, const char *mf, int flag, char *errout)
 		_kvm_syserr(kd, kd->program, "%s", uf);
 		goto failed;
 	}
-	if (strncmp(mf, _PATH_FWMEM, strlen(_PATH_FWMEM)) == 0)
+	if (strncmp(mf, _PATH_FWMEM, strlen(_PATH_FWMEM)) == 0 ||
+	    strncmp(mf, _PATH_DEVVMM, strlen(_PATH_DEVVMM)) == 0) {
 		kd->rawdump = 1;
+		kd->writable = 1;
+	}
 	if (_kvm_initvtop(kd) < 0)
 		goto failed;
 	return (kd);
@@ -219,7 +230,7 @@ failed:
 	if (errout != 0)
 		strlcpy(errout, kd->errbuf, _POSIX2_LINE_MAX);
 	(void)kvm_close(kd);
-	return (0);
+	return (NULL);
 }
 
 kvm_t *
@@ -230,7 +241,7 @@ kvm_openfiles(const char *uf, const char *mf, const char *sf __unused, int flag,
 
 	if ((kd = calloc(1, sizeof(*kd))) == NULL) {
 		(void)strlcpy(errout, strerror(errno), _POSIX2_LINE_MAX);
-		return (0);
+		return (NULL);
 	}
 	kd->program = 0;
 	return (_kvm_open(kd, uf, mf, flag, errout));
@@ -246,7 +257,7 @@ kvm_open(const char *uf, const char *mf, const char *sf __unused, int flag,
 		if (errstr != NULL)
 			(void)fprintf(stderr, "%s: %s\n",
 				      errstr, strerror(errno));
-		return (0);
+		return (NULL);
 	}
 	kd->program = errstr;
 	return (_kvm_open(kd, uf, mf, flag, NULL));
@@ -257,6 +268,10 @@ kvm_close(kvm_t *kd)
 {
 	int error = 0;
 
+	if (kd == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
 	if (kd->pmfd >= 0)
 		error |= close(kd->pmfd);
 	if (kd->vmfd >= 0)
@@ -275,7 +290,7 @@ kvm_close(kvm_t *kd)
 		free((void *)kd->argv);
 	free((void *)kd);
 
-	return (0);
+	return (error);
 }
 
 /*
@@ -557,6 +572,15 @@ ssize_t
 kvm_write(kvm_t *kd, u_long kva, const void *buf, size_t len)
 {
 	int cc;
+	ssize_t cw;
+	off_t pa;
+	const char *cp;
+
+	if (!ISALIVE(kd) && !kd->writable) {
+		_kvm_err(kd, kd->program,
+		    "kvm_write not implemented for dead kernels");
+		return (-1);
+	}
 
 	if (ISALIVE(kd)) {
 		/*
@@ -574,10 +598,36 @@ kvm_write(kvm_t *kd, u_long kva, const void *buf, size_t len)
 		} else if ((size_t)cc < len)
 			_kvm_err(kd, kd->program, "short write");
 		return (cc);
-	} else {
-		_kvm_err(kd, kd->program,
-		    "kvm_write not implemented for dead kernels");
-		return (-1);
 	}
-	/* NOTREACHED */
+
+	cp = buf;
+	while (len > 0) {
+		cc = _kvm_kvatop(kd, kva, &pa);
+		if (cc == 0)
+			return (-1);
+		if (cc > (ssize_t)len)
+			cc = len;
+		errno = 0;
+		if (lseek(kd->pmfd, pa, 0) == -1 && errno != 0) {
+			_kvm_syserr(kd, 0, _PATH_MEM);
+			break;
+		}
+		cw = write(kd->pmfd, cp, cc);
+		if (cw < 0) {
+			_kvm_syserr(kd, kd->program, "kvm_write");
+			break;
+		}
+		/*
+		 * If ka_kvatop returns a bogus value or our core file is
+		 * truncated, we might wind up seeking beyond the end of the
+		 * core file in which case the read will return 0 (EOF).
+		 */
+		if (cw == 0)
+			break;
+		cp += cw;
+		kva += cw;
+		len -= cw;
+	}
+
+	return (cp - (const char *)buf);
 }

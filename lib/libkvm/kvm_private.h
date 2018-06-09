@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kvm_private.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libkvm/kvm_private.h 312382 2017-01-18 14:14:00Z avg $
  */
 
 struct __kvm {
@@ -62,6 +63,7 @@ struct __kvm {
 	 */
 	struct vmstate *vmst;
 	int	rawdump;	/* raw dump format */
+	int	writable;	/* physical memory is writable */
 
 	int		vnet_initialized;	/* vnet fields set up */
 	uintptr_t	vnet_start;	/* start of kernel's vnet region */

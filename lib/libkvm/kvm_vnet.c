@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * Copyright (c) 2009 Bjoern A. Zeeb <bz@FreeBSD.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_vnet.c 217744 2011-01-23 11:08:28Z uqs $");
 
 #include <sys/param.h>
 

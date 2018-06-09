@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Oleksandr Tymoshenko 
  * Copyright (c) 2008 Semihalf, Grzegorz Bernacki
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_minidump_mips.c 217744 2011-01-23 11:08:28Z uqs $");
 
 /*
  * MIPS machine dependent routines for kvm and minidumps.

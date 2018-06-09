@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_cptime.c 217744 2011-01-23 11:08:28Z uqs $");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>

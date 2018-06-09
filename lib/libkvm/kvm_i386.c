@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_i386.c 240301 2012-09-10 08:16:45Z kevlo $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -238,7 +239,6 @@ _kvm_initvtop(kvm_t *kd)
 			return (-1);
 		}
 		kd->vmst->PTD = PTD;
-		return (0);
 		kd->vmst->pae = 0;
 	}
 	return (0);

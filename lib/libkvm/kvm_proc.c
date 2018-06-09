@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +39,7 @@ static char sccsid[] = "@(#)kvm_proc.c	8.3 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_proc.c 310121 2016-12-15 16:52:17Z vangyzen $");
 
 /*
  * Proc traversal interface for kvm.  ps and w are (probably) the exclusive
@@ -424,8 +425,6 @@ nopgrp:
 			kp->ki_pri.pri_native = mtd.td_base_pri;
 			kp->ki_lastcpu = mtd.td_lastcpu;
 			kp->ki_wchan = mtd.td_wchan;
-			if (mtd.td_name[0] != 0)
-				strlcpy(kp->ki_tdname, mtd.td_name, MAXCOMLEN);
 			kp->ki_oncpu = mtd.td_oncpu;
 			if (mtd.td_name[0] != '\0')
 				strlcpy(kp->ki_tdname, mtd.td_name, sizeof(kp->ki_tdname));
@@ -642,6 +641,7 @@ kvm_argv(kvm_t *kd, const struct kinfo_proc *kp, int env, int nchr)
 	static char *buf, *p;
 	static char **bufp;
 	static int argc;
+	char **nbufp;
 
 	if (!ISALIVE(kd)) {
 		_kvm_err(kd, kd->program,
@@ -657,9 +657,15 @@ kvm_argv(kvm_t *kd, const struct kinfo_proc *kp, int env, int nchr)
 			_kvm_err(kd, kd->program, "cannot allocate memory");
 			return (0);
 		}
-		buflen = nchr;
 		argc = 32;
 		bufp = malloc(sizeof(char *) * argc);
+		if (bufp == NULL) {
+			free(buf);
+			buf = NULL;
+			_kvm_err(kd, kd->program, "cannot allocate memory");
+			return (NULL);
+		}
+		buflen = nchr;
 	} else if (nchr > buflen) {
 		p = realloc(buf, nchr);
 		if (p != NULL) {
@@ -693,8 +699,10 @@ kvm_argv(kvm_t *kd, const struct kinfo_proc *kp, int env, int nchr)
 		p += strlen(p) + 1;
 		if (i >= argc) {
 			argc += argc;
-			bufp = realloc(bufp,
-			    sizeof(char *) * argc);
+			nbufp = realloc(bufp, sizeof(char *) * argc);
+			if (nbufp == NULL)
+				return (NULL);
+			bufp = nbufp;
 		}
 	} while (p < buf + bufsz);
 	bufp[i++] = 0;

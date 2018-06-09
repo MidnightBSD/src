@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Semihalf, Grzegorz Bernacki
  * Copyright (c) 2006 Peter Wemm
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_minidump_arm.c 217744 2011-01-23 11:08:28Z uqs $");
 
 /*
  * ARM machine dependent routines for kvm and minidumps.

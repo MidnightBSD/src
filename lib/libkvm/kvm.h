@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,14 +28,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)kvm.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libkvm/kvm.h 312253 2017-01-16 03:52:20Z pfg $
  */
 
 #ifndef _KVM_H_
 #define	_KVM_H_
 
 #include <sys/cdefs.h>
-#include <sys/_types.h>
+#include <sys/types.h>
 #include <nlist.h>
 
 /* Default version symbol. */
@@ -58,11 +59,11 @@ struct proc;
 
 struct kvm_swap {
 	char	ksw_devname[32];
-	int	ksw_used;
-	int	ksw_total;
+	u_int	ksw_used;
+	u_int	ksw_total;
 	int	ksw_flags;
-	int	ksw_reserved1;
-	int	ksw_reserved2;
+	u_int	ksw_reserved1;
+	u_int	ksw_reserved2;
 };
 
 #define SWIF_DEV_PREFIX	0x0002
@@ -77,7 +78,9 @@ char	 *kvm_geterr(kvm_t *);
 char	 *kvm_getfiles(kvm_t *, int, int, int *);
 int	  kvm_getloadavg(kvm_t *, double [], int);
 int	  kvm_getmaxcpu(kvm_t *);
+int	  kvm_getncpus(kvm_t *);
 void	 *kvm_getpcpu(kvm_t *, int);
+uint64_t  kvm_counter_u64_fetch(kvm_t *, u_long);
 struct kinfo_proc *
 	  kvm_getprocs(kvm_t *, int, int, int *);
 int	  kvm_getswapinfo(kvm_t *, struct kvm_swap *, int, int);
@@ -87,8 +90,7 @@ kvm_t	 *kvm_open
 kvm_t	 *kvm_openfiles
 	    (const char *, const char *, const char *, int, char *);
 ssize_t	  kvm_read(kvm_t *, unsigned long, void *, size_t);
-ssize_t	  kvm_uread
-	    (kvm_t *, const struct kinfo_proc *, unsigned long, char *, size_t);
+ssize_t	  kvm_read_zpcpu(kvm_t *, unsigned long, void *, size_t, int);
 ssize_t	  kvm_write(kvm_t *, unsigned long, const void *, size_t);
 __END_DECLS
 

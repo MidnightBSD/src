@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_amd64.c 299649 2016-05-13 09:49:52Z ngie $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -200,6 +201,7 @@ _kvm_initvtop(kvm_t *kd)
 	PML4 = _kvm_malloc(kd, PAGE_SIZE);
 	if (kvm_read(kd, pa, PML4, PAGE_SIZE) != PAGE_SIZE) {
 		_kvm_err(kd, kd->program, "cannot read KPML4phys");
+		free(PML4);
 		return (-1);
 	}
 	kd->vmst->PML4 = PML4;

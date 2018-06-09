@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard
  * Copyright (c) 1989, 1992, 1993
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_arm.c 273828 2014-10-29 16:36:08Z andrew $");
 
 #include <sys/param.h>
 #include <sys/elf32.h>
@@ -128,8 +129,10 @@ _kvm_initvtop(kvm_t *kd)
 	u_long kernbase, physaddr, pa;
 	pd_entry_t *l1pt;
 	Elf32_Ehdr *ehdr;
+	Elf32_Phdr *phdr;
 	size_t hdrsz;
 	char minihdr[8];
+	int found, i;
 
 	if (!kd->rawdump) {
 		if (pread(kd->pmfd, &minihdr, 8, 0) == 8) {
@@ -154,19 +157,33 @@ _kvm_initvtop(kvm_t *kd)
 	hdrsz = ehdr->e_phoff + ehdr->e_phentsize * ehdr->e_phnum;
 	if (_kvm_maphdrs(kd, hdrsz) == -1)
 		return (-1);
-	nl[0].n_name = "kernbase";
-	nl[1].n_name = NULL;
-	if (kvm_nlist(kd, nl) != 0)
-		kernbase = KERNBASE;
-	else
-		kernbase = nl[0].n_value;
 
-	nl[0].n_name = "physaddr";
-	if (kvm_nlist(kd, nl) != 0) {
-		_kvm_err(kd, kd->program, "couldn't get phys addr");
-		return (-1);
+	phdr = (Elf32_Phdr *)((uint8_t *)ehdr + ehdr->e_phoff);
+	found = 0;
+	for (i = 0; i < ehdr->e_phnum; i++) {
+		if (phdr[i].p_type == PT_DUMP_DELTA) {
+			kernbase = phdr[i].p_vaddr;
+			physaddr = phdr[i].p_paddr;
+			found = 1;
+			break;
+		}
 	}
-	physaddr = nl[0].n_value;
+
+	nl[1].n_name = NULL;
+	if (!found) {
+		nl[0].n_name = "kernbase";
+		if (kvm_nlist(kd, nl) != 0)
+			kernbase = KERNBASE;
+		else
+			kernbase = nl[0].n_value;
+
+		nl[0].n_name = "physaddr";
+		if (kvm_nlist(kd, nl) != 0) {
+			_kvm_err(kd, kd->program, "couldn't get phys addr");
+			return (-1);
+		}
+		physaddr = nl[0].n_value;
+	}
 	nl[0].n_name = "kernel_l1pa";
 	if (kvm_nlist(kd, nl) != 0) {
 		_kvm_err(kd, kd->program, "bad namelist");
