@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cproj.c 284810 2015-06-25 13:01:10Z tijl $");
 
 #include <complex.h>
 #include <math.h>
@@ -39,7 +40,7 @@ cproj(double complex z)
 	if (!isinf(creal(z)) && !isinf(cimag(z)))
 		return (z);
 	else
-		return (cpack(INFINITY, copysign(0.0, cimag(z))));
+		return (CMPLX(INFINITY, copysign(0.0, cimag(z))));
 }
 
 #if LDBL_MANT_DIG == 53

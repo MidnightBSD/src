@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* s_scalbnf.c -- float version of s_scalbn.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$MidnightBSD$";
+static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_scalbnf.c 143205 2005-03-07 04:52:43Z das $";
 #endif
 
 #include <sys/cdefs.h>

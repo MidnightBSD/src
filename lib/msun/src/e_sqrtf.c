@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* e_sqrtf.c -- float version of e_sqrt.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$MidnightBSD$";
+static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/e_sqrtf.c 97413 2002-05-28 18:15:04Z alfred $";
 #endif
 
 #include "math.h"

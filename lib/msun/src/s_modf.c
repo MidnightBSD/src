@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_modf.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$MidnightBSD$";
+static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_modf.c 165838 2007-01-06 21:22:38Z das $";
 #endif
 
 /*

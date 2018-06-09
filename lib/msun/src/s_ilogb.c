@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_ilogb.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_ilogb.c 176451 2008-02-22 02:30:36Z das $");
 
 /* ilogb(double x)
  * return the binary exponent of non-zero x

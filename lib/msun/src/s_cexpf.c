@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cexpf.c 284810 2015-06-25 13:01:10Z tijl $");
 
 #include <complex.h>
 #include <math.h>
@@ -34,18 +35,13 @@ __MBSDID("$MidnightBSD$");
 
 static const uint32_t
 exp_ovfl  = 0x42b17218,		/* MAX_EXP * ln2 ~= 88.722839355 */
-cexp_ovfl = 0x43400074,		/* (MAX_EXP - MIN_DENORM_EXP) * ln2 */
-k         = 235;		/* constant for reduction */
-
-static const float
-kln2      =  162.88958740f;	/* k * ln2 */
+cexp_ovfl = 0x43400074;		/* (MAX_EXP - MIN_DENORM_EXP) * ln2 */
 
 float complex
 cexpf(float complex z)
 {
 	float x, y, exp_x;
 	uint32_t hx, hy;
-	int scale;
 
 	x = crealf(z);
 	y = cimagf(z);
@@ -55,35 +51,31 @@ cexpf(float complex z)
 
 	/* cexp(x + I 0) = exp(x) + I 0 */
 	if (hy == 0)
-		return (cpackf(expf(x), y));
+		return (CMPLXF(expf(x), y));
 	GET_FLOAT_WORD(hx, x);
+	/* cexp(0 + I y) = cos(y) + I sin(y) */
+	if ((hx & 0x7fffffff) == 0)
+		return (CMPLXF(cosf(y), sinf(y)));
+
 	if (hy >= 0x7f800000) {
 		if ((hx & 0x7fffffff) != 0x7f800000) {
 			/* cexp(finite|NaN +- I Inf|NaN) = NaN + I NaN */
-			return (cpackf(y - y, y - y));
+			return (CMPLXF(y - y, y - y));
 		} else if (hx & 0x80000000) {
 			/* cexp(-Inf +- I Inf|NaN) = 0 + I 0 */
-			return (cpackf(0.0, 0.0));
+			return (CMPLXF(0.0, 0.0));
 		} else {
 			/* cexp(+Inf +- I Inf|NaN) = Inf + I NaN */
-			return (cpackf(x, y - y));
+			return (CMPLXF(x, y - y));
 		}
 	}
 
 	if (hx >= exp_ovfl && hx <= cexp_ovfl) {
 		/*
 		 * x is between 88.7 and 192, so we must scale to avoid
-		 * overflow in expf(x).  We use exp(x) = exp(x - kln2) * 2**k,
-		 * carefully chosen to minimize |exp(kln2) - 2**k|.  We also
-		 * scale the exponent of exp(x) to MANT_DIG to avoid loss of
-		 * accuracy due to underflow if sin(y) is tiny.
+		 * overflow in expf(x).
 		 */
-		exp_x = expf(x - kln2);
-		GET_FLOAT_WORD(hx, exp_x);
-		SET_FLOAT_WORD(exp_x, (hx & 0x7fffff) | ((0x7f + 23) << 23));
-		scale = (hx >> 23) - (0x7f + 23) + k;
-		return (cpackf(scalbnf(cosf(y) * exp_x, scale),
-			scalbnf(sinf(y) * exp_x, scale)));
+		return (__ldexp_cexpf(z, 0));
 	} else {
 		/*
 		 * Cases covered here:
@@ -93,6 +85,6 @@ cexpf(float complex z)
 		 *  -  x = NaN (spurious inexact exception from y)
 		 */
 		exp_x = expf(x);
-		return (cpackf(exp_x * cosf(y), exp_x * sinf(y)));
+		return (CMPLXF(exp_x * cosf(y), exp_x * sinf(y)));
 	}
 }

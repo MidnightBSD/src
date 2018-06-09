@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_hypot.c 1.3 95/01/18 */
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_hypot.c 226380 2011-10-15 07:00:28Z das $");
 
 /* __ieee754_hypot(x,y)
  *
@@ -54,7 +55,7 @@ __MBSDID("$MidnightBSD$");
 double
 __ieee754_hypot(double x, double y)
 {
-	double a=x,b=y,t1,t2,y1,y2,w;
+	double a,b,t1,t2,y1,y2,w;
 	int32_t j,k,ha,hb;
 
 	GET_HIGH_WORD(ha,x);

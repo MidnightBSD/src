@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -33,7 +34,7 @@
  * is preserved.
  * ====================================================
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/msun/src/s_modfl.c 165855 2007-01-07 07:54:21Z das $
  */
 
 #include <float.h>

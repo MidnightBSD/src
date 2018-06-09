@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_log1p.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_log1p.c 251292 2013-06-03 09:14:31Z das $");
 
 /* double log1p(double x)
  *
@@ -96,6 +97,7 @@ Lp6 = 1.531383769920937332e-01,  /* 3FC39A09 D078C69F */
 Lp7 = 1.479819860511658591e-01;  /* 3FC2F112 DF3E5244 */
 
 static const double zero = 0.0;
+static volatile double vzero = 0.0;
 
 double
 log1p(double x)
@@ -109,7 +111,7 @@ log1p(double x)
 	k = 1;
 	if (hx < 0x3FDA827A) {			/* 1+x < sqrt(2)+ */
 	    if(ax>=0x3ff00000) {		/* x <= -1.0 */
-		if(x==-1.0) return -two54/zero; /* log1p(-1)=+inf */
+		if(x==-1.0) return -two54/vzero; /* log1p(-1)=+inf */
 		else return (x-x)/(x-x);	/* log1p(x<-1)=NaN */
 	    }
 	    if(ax<0x3e200000) {			/* |x| < 2**-29 */
@@ -173,3 +175,7 @@ log1p(double x)
 	if(k==0) return f-(hfsq-s*(hfsq+R)); else
 		 return k*ln2_hi-((hfsq-(s*(hfsq+R)+(k*ln2_lo+c)))-f);
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(log1p, log1pl);
+#endif

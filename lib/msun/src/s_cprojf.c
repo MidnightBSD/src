@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cprojf.c 284810 2015-06-25 13:01:10Z tijl $");
 
 #include <complex.h>
 #include <math.h>
@@ -39,5 +40,5 @@ cprojf(float complex z)
 	if (!isinf(crealf(z)) && !isinf(cimagf(z)))
 		return (z);
 	else
-		return (cpackf(INFINITY, copysignf(0.0, cimagf(z))));
+		return (CMPLXF(INFINITY, copysignf(0.0, cimagf(z))));
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_ceil.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_ceil.c 176305 2008-02-15 07:01:40Z bde $");
 
 /*
  * ceil(x)

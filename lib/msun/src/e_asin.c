@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_asin.c 1.3 95/01/18 */
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_asin.c 218509 2011-02-10 07:37:50Z das $");
 
 /* __ieee754_asin(x)
  * Method :                  

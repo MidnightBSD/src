@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* e_coshf.c -- float version of e_cosh.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_coshf.c 226598 2011-10-21 06:28:47Z das $");
 
 #include "math.h"
 #include "math_private.h"
@@ -51,11 +52,8 @@ __ieee754_coshf(float x)
 	if (ix < 0x42b17217)  return half*__ieee754_expf(fabsf(x));
 
     /* |x| in [log(maxfloat), overflowthresold] */
-	if (ix<=0x42b2d4fc) {
-	    w = __ieee754_expf(half*fabsf(x));
-	    t = half*w;
-	    return t*w;
-	}
+	if (ix<=0x42b2d4fc)
+	    return __ldexp_expf(fabsf(x), -1);
 
     /* |x| > overflowthresold, cosh(x) overflow */
 	return huge*huge;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)k_rem_pio2.c 1.3 95/01/18 */
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/k_rem_pio2.c 242692 2012-11-07 07:00:59Z kevlo $");
 
 /*
  * __kernel_rem_pio2(x,y,e0,nx,prec)
@@ -45,7 +46,7 @@ __MBSDID("$MidnightBSD$");
  *			z    = (z-x[i])*2**24
  *
  *
- *	y[]	ouput result in an array of double precision numbers.
+ *	y[]	output result in an array of double precision numbers.
  *		The dimension of y[] is:
  *			24-bit  precision	1
  *			53-bit  precision	2

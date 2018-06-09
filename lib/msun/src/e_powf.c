@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* e_powf.c -- float version of e_pow.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_powf.c 226595 2011-10-21 06:26:07Z das $");
 
 #include "math.h"
 #include "math_private.h"

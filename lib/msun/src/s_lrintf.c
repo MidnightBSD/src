@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_lrintf.c 140088 2005-01-11 23:12:55Z das $");
 
 #define type		float
 #define	roundit		rintf

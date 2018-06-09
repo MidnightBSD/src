@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* From: @(#)e_hypot.c 1.3 95/01/18 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_hypotl.c 226412 2011-10-16 05:36:39Z das $");
 
 /* long double version of hypot().  See e_hypot.c for most comments. */
 
@@ -21,27 +22,12 @@ __MBSDID("$MidnightBSD$");
 #include "math.h"
 #include "math_private.h"
 
-#define	GET_LDBL_EXPSIGN(i, v) do {	\
-	union IEEEl2bits uv;		\
-					\
-	uv.e = v;			\
-	i = uv.xbits.expsign;		\
-} while (0)
-
 #define	GET_LDBL_MAN(h, l, v) do {	\
 	union IEEEl2bits uv;		\
 					\
 	uv.e = v;			\
 	h = uv.bits.manh;		\
 	l = uv.bits.manl;		\
-} while (0)
-
-#define	SET_LDBL_EXPSIGN(v, i) do {	\
-	union IEEEl2bits uv;		\
-					\
-	uv.e = v;			\
-	uv.xbits.expsign = i;		\
-	v = uv.e;			\
 } while (0)
 
 #undef GET_HIGH_WORD

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* s_fabsf.c -- float version of s_fabs.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_fabsf.c 176451 2008-02-22 02:30:36Z das $");
 
 /*
  * fabsf(x) returns the absolute value of x.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cexp.c 284810 2015-06-25 13:01:10Z tijl $");
 
 #include <complex.h>
 #include <math.h>
@@ -34,18 +35,13 @@ __MBSDID("$MidnightBSD$");
 
 static const uint32_t
 exp_ovfl  = 0x40862e42,			/* high bits of MAX_EXP * ln2 ~= 710 */
-cexp_ovfl = 0x4096b8e4,			/* (MAX_EXP - MIN_DENORM_EXP) * ln2 */
-k         = 1799;			/* constant for reduction */
-
-static const double
-kln2      =  1246.97177782734161156;	/* k * ln2 */
+cexp_ovfl = 0x4096b8e4;			/* (MAX_EXP - MIN_DENORM_EXP) * ln2 */
 
 double complex
 cexp(double complex z)
 {
 	double x, y, exp_x;
 	uint32_t hx, hy, lx, ly;
-	int scale;
 
 	x = creal(z);
 	y = cimag(z);
@@ -55,36 +51,31 @@ cexp(double complex z)
 
 	/* cexp(x + I 0) = exp(x) + I 0 */
 	if ((hy | ly) == 0)
-		return (cpack(exp(x), y));
+		return (CMPLX(exp(x), y));
+	EXTRACT_WORDS(hx, lx, x);
+	/* cexp(0 + I y) = cos(y) + I sin(y) */
+	if (((hx & 0x7fffffff) | lx) == 0)
+		return (CMPLX(cos(y), sin(y)));
+
 	if (hy >= 0x7ff00000) {
-		EXTRACT_WORDS(hx, lx, x);
 		if (lx != 0 || (hx & 0x7fffffff) != 0x7ff00000) {
 			/* cexp(finite|NaN +- I Inf|NaN) = NaN + I NaN */
-			return (cpack(y - y, y - y));
+			return (CMPLX(y - y, y - y));
 		} else if (hx & 0x80000000) {
 			/* cexp(-Inf +- I Inf|NaN) = 0 + I 0 */
-			return (cpack(0.0, 0.0));
+			return (CMPLX(0.0, 0.0));
 		} else {
 			/* cexp(+Inf +- I Inf|NaN) = Inf + I NaN */
-			return (cpack(x, y - y));
+			return (CMPLX(x, y - y));
 		}
 	}
 
-	GET_HIGH_WORD(hx, x);
 	if (hx >= exp_ovfl && hx <= cexp_ovfl) {
 		/*
 		 * x is between 709.7 and 1454.3, so we must scale to avoid
-		 * overflow in exp(x).  We use exp(x) = exp(x - kln2) * 2**k,
-		 * carefully chosen to minimize |exp(kln2) - 2**k|.  We also
-		 * scale the exponent of exp(x) to MANT_DIG to avoid loss of
-		 * accuracy due to underflow if sin(y) is tiny.
+		 * overflow in exp(x).
 		 */
-		exp_x = exp(x - kln2);
-		GET_HIGH_WORD(hx, exp_x);
-		SET_HIGH_WORD(exp_x, (hx & 0xfffff) | ((0x3ff + 52) << 20));
-		scale = (hx >> 20) - (0x3ff + 52) + k;
-		return (cpack(scalbn(cos(y) * exp_x, scale),
-			scalbn(sin(y) * exp_x, scale)));
+		return (__ldexp_cexp(z, 0));
 	} else {
 		/*
 		 * Cases covered here:
@@ -94,6 +85,6 @@ cexp(double complex z)
 		 *  -  x = NaN (spurious inexact exception from y)
 		 */
 		exp_x = exp(x);
-		return (cpack(exp_x * cos(y), exp_x * sin(y)));
+		return (CMPLX(exp_x * cos(y), exp_x * sin(y)));
 	}
 }

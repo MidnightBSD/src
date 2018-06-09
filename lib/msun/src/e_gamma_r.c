@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_gamma_r.c 1.3 95/01/18 */
 /*
@@ -13,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_gamma_r.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __ieee754_gamma_r(x, signgamp)
  * Reentrant version of the logarithm of the Gamma function 

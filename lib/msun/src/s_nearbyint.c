@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_nearbyint.c 251024 2013-05-27 08:50:10Z das $");
 
 #include <fenv.h>
 #include <math.h>
@@ -36,12 +37,16 @@ __MBSDID("$MidnightBSD$");
  * instead of feclearexcept()/feupdateenv() to restore the environment
  * because the only exception defined for rint() is overflow, and
  * rounding can't overflow as long as emax >= p.
+ *
+ * The volatile keyword is needed below because clang incorrectly assumes
+ * that rint won't raise any floating-point exceptions. Declaring ret volatile
+ * is sufficient to trick the compiler into doing the right thing.
  */
 #define	DECL(type, fn, rint)	\
 type				\
 fn(type x)			\
 {				\
-	type ret;		\
+	volatile type ret;	\
 	fenv_t env;		\
 				\
 	fegetenv(&env);		\

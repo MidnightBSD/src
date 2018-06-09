@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * From: @(#)s_ilogb.c 5.1 93/09/24
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$MidnightBSD$";
+static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_logbl.c 174698 2007-12-17 03:53:38Z das $";
 #endif
 
 #include <float.h>

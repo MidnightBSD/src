@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_exp2f.c 251024 2013-05-27 08:50:10Z das $");
 
 #include <float.h>
 
@@ -36,14 +37,15 @@ __MBSDID("$MidnightBSD$");
 #define	TBLSIZE	(1 << TBLBITS)
 
 static const float
-    huge    = 0x1p100f,
     redux   = 0x1.8p23f / TBLSIZE,
     P1	    = 0x1.62e430p-1f,
     P2	    = 0x1.ebfbe0p-3f,
     P3	    = 0x1.c6b348p-5f,
     P4	    = 0x1.3b2c9cp-7f;
 
-static volatile float twom100 = 0x1p-100f;
+static volatile float
+    huge    = 0x1p100f,
+    twom100 = 0x1p-100f;
 
 static const double exp2ft[TBLSIZE] = {
 	0x1.6a09e667f3bcdp-1,

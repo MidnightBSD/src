@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)e_fmod.c 1.3 95/01/18 */
 /*-
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_remquof.c 233973 2012-04-07 03:59:12Z das $");
 
 #include "math.h"
 #include "math_private.h"

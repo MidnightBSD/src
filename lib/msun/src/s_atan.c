@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_atan.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_atan.c 218509 2011-02-10 07:37:50Z das $");
 
 /* atan(x)
  * Method

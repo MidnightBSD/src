@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_rem_pio2.c 1.4 95/01/18 */
 /*
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_rem_pio2.c 239195 2012-08-11 15:47:22Z dim $");
 
 /* __ieee754_rem_pio2(x,y)
  * 

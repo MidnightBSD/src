@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -29,7 +30,7 @@
 #include <math.h>
 
 #ifndef type
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_lrint.c 140088 2005-01-11 23:12:55Z das $");
 #define type		double
 #define	roundit		rint
 #define dtype		long

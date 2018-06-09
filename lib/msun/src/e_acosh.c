@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_acosh.c 1.3 95/01/18 */
 /*
@@ -13,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_acosh.c 251599 2013-06-10 06:04:58Z das $");
 
 /* __ieee754_acosh(x)
  * Method :
@@ -28,6 +29,8 @@ __MBSDID("$MidnightBSD$");
  *	acosh(x) is NaN with signal if x<1.
  *	acosh(NaN) is NaN without signal.
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -60,3 +63,7 @@ __ieee754_acosh(double x)
 	    return log1p(t+sqrt(2.0*t+t*t));
 	}
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(acosh, acoshl);
+#endif

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* e_lgammaf.c -- float version of e_lgamma.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_lgammaf.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __ieee754_lgammaf(x)
  * Return the logarithm of the Gamma function of x.

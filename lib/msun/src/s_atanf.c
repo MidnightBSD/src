@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* s_atanf.c -- float version of s_atan.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_atanf.c 181100 2008-08-01 01:24:25Z das $");
 
 #include "math.h"
 #include "math_private.h"

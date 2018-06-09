@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)k_sin.c 1.3 95/01/18 */
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/k_sin.c 176408 2008-02-19 12:54:14Z bde $");
 
 /* __kernel_sin( x, y, iy)
  * kernel sin function on ~[-pi/4, pi/4] (except on -0), pi/4 ~ 0.7854

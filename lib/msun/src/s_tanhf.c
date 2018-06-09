@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* s_tanhf.c -- float version of s_tanh.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,12 +15,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_tanhf.c 271779 2014-09-18 15:10:22Z tijl $");
 
 #include "math.h"
 #include "math_private.h"
 
-static const float one=1.0, two=2.0, tiny = 1.0e-30, huge = 1.0e30;
+static const volatile float tiny = 1.0e-30;
+static const float one=1.0, two=2.0, huge = 1.0e30;
+
 float
 tanhf(float x)
 {

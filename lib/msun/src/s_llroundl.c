@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_llroundl.c 144772 2005-04-08 01:24:08Z das $");
 
 #define type		long double
 #define	roundit		roundl

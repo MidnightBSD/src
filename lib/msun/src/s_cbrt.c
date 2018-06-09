@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_cbrt.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -13,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cbrt.c 219571 2011-03-12 16:50:39Z kargl $");
 
 #include "math.h"
 #include "math_private.h"

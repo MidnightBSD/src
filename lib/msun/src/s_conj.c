@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Stefan Farfeleder
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/msun/src/s_conj.c 284810 2015-06-25 13:01:10Z tijl $
  */
 
 #include <complex.h>
@@ -34,5 +35,5 @@ double complex
 conj(double complex z)
 {
 
-	return (cpack(creal(z), -cimag(z)));
+	return (CMPLX(creal(z), -cimag(z)));
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* e_logf.c -- float version of e_log.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_logf.c 251024 2013-05-27 08:50:10Z das $");
 
 #include "math.h"
 #include "math_private.h"
@@ -30,6 +31,7 @@ Lg3 =      0x91e9ee.0p-25,	/* 0.28498786688 */
 Lg4 =      0xf89e26.0p-26;	/* 0.24279078841 */
 
 static const float zero   =  0.0;
+static volatile float vzero = 0.0;
 
 float
 __ieee754_logf(float x)
@@ -42,7 +44,7 @@ __ieee754_logf(float x)
 	k=0;
 	if (ix < 0x00800000) {			/* x < 2**-126  */
 	    if ((ix&0x7fffffff)==0)
-		return -two25/zero;		/* log(+-0)=-inf */
+		return -two25/vzero;		/* log(+-0)=-inf */
 	    if (ix<0) return (x-x)/zero;	/* log(-#) = NaN */
 	    k -= 25; x *= two25; /* subnormal number, scale up x */
 	    GET_FLOAT_WORD(ix,x);

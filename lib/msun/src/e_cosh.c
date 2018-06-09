@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_cosh.c 1.3 95/01/18 */
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_cosh.c 271779 2014-09-18 15:10:22Z tijl $");
 
 /* __ieee754_cosh(x)
  * Method : 
@@ -35,6 +36,8 @@ __MBSDID("$MidnightBSD$");
  *	only cosh(0)=1 is exact for finite x.
  */
 
+#include <float.h>
+
 #include "math.h"
 #include "math_private.h"
 
@@ -45,7 +48,6 @@ __ieee754_cosh(double x)
 {
 	double t,w;
 	int32_t ix;
-	u_int32_t lx;
 
     /* High word of |x|. */
 	GET_HIGH_WORD(ix,x);
@@ -72,14 +74,13 @@ __ieee754_cosh(double x)
 	if (ix < 0x40862E42)  return half*__ieee754_exp(fabs(x));
 
     /* |x| in [log(maxdouble), overflowthresold] */
-	GET_LOW_WORD(lx,x);
-	if (ix<0x408633CE ||
-	      ((ix==0x408633ce)&&(lx<=(u_int32_t)0x8fb9f87d))) {
-	    w = __ieee754_exp(half*fabs(x));
-	    t = half*w;
-	    return t*w;
-	}
+	if (ix<=0x408633CE)
+	    return __ldexp_exp(fabs(x), -1);
 
     /* |x| > overflowthresold, cosh(x) overflow */
 	return huge*huge;
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(cosh, coshl);
+#endif

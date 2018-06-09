@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * cabs() wrapper for hypot().
  *
@@ -6,7 +7,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/w_cabs.c 177758 2008-03-30 20:03:06Z das $");
 
 #include <complex.h>
 #include <float.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* s_cbrtf.c -- float version of s_cbrt.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  * Debugged and optimized by Bruce D. Evans.
@@ -15,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cbrtf.c 176451 2008-02-22 02:30:36Z das $");
 
 #include "math.h"
 #include "math_private.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* @(#)s_logb.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_logb.c 176101 2008-02-08 01:22:13Z bde $");
 
 /*
  * double logb(x)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /* @(#)e_remainder.c 1.3 95/01/18 */
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_remainder.c 177765 2008-03-30 20:47:42Z das $");
 
 /* __ieee754_remainder(x,p)
  * Return :                  

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ====================================================
  * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -15,10 +16,12 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cbrtl.c 238924 2012-07-30 21:58:28Z kargl $");
 
 #include <float.h>
+#ifdef __i386__
 #include <ieeefp.h>
+#endif
 
 #include "fpmath.h"    
 #include "math.h"
@@ -51,23 +54,11 @@ cbrtl(long double x)
 	if (k == BIAS + LDBL_MAX_EXP)
 		return (x + x);
 
-#ifdef __i386__
-	fp_prec_t oprec;
-
-	oprec = fpgetprec();
-	if (oprec != FP_PE)
-		fpsetprec(FP_PE);
-#endif
-
+	ENTERI();
 	if (k == 0) {
 		/* If x = +-0, then cbrt(x) = +-0. */
-		if ((u.bits.manh | u.bits.manl) == 0) {
-#ifdef __i386__
-			if (oprec != FP_PE)
-				fpsetprec(oprec);
-#endif
-			return (x);
-	    	}
+		if ((u.bits.manh | u.bits.manl) == 0)
+			RETURNI(x);
 		/* Adjust subnormal numbers. */
 		u.e *= 0x1.0p514;
 		k = u.bits.exp;
@@ -149,9 +140,5 @@ cbrtl(long double x)
 	t=t+t*r;			/* error <= 0.5 + 0.5/3 + epsilon */
 
 	t *= v.e;
-#ifdef __i386__
-	if (oprec != FP_PE)
-		fpsetprec(oprec);
-#endif
-	return (t);
+	RETURNI(t);
 }

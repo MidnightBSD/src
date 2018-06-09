@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_exp2.c 286688 2015-08-12 19:06:35Z dim $");
 
 #include <float.h>
 
@@ -36,7 +37,6 @@ __MBSDID("$MidnightBSD$");
 #define	TBLSIZE	(1 << TBLBITS)
 
 static const double
-    huge     = 0x1p1000,
     redux    = 0x1.8p52 / TBLSIZE,
     P1	     = 0x1.62e42fefa39efp-1,
     P2	     = 0x1.ebfbdff82c575p-3,
@@ -44,7 +44,9 @@ static const double
     P4	     = 0x1.3b2ab88f70400p-7,
     P5	     = 0x1.5d88003875c74p-10;
 
-static volatile double twom1000 = 0x1p-1000;
+static volatile double
+    huge     = 0x1p1000,
+    twom1000 = 0x1p-1000;
 
 static const double tbl[TBLSIZE * 2] = {
 /*	exp2(z + eps)		eps	*/
@@ -375,14 +377,14 @@ exp2(double x)
 	/* Compute r = exp2(y) = exp2t[i0] * p(z - eps[i]). */
 	t = tbl[i0];		/* exp2t[i0] */
 	z -= tbl[i0 + 1];	/* eps[i0]   */
-	if (k >= -1021 << 20)
+	if (k >= -(1021 << 20))
 		INSERT_WORDS(twopk, 0x3ff00000 + k, 0);
 	else
 		INSERT_WORDS(twopkp1000, 0x3ff00000 + k + (1000 << 20), 0);
 	r = t + t * z * (P1 + z * (P2 + z * (P3 + z * (P4 + z * P5))));
 
 	/* Scale by 2**(k>>20). */
-	if(k >= -1021 << 20) {
+	if(k >= -(1021 << 20)) {
 		if (k == 1024 << 20)
 			return (r * 2.0 * 0x1p1023);
 		return (r * twopk);
