@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libufs/Makefile 313600 2017-02-11 06:32:48Z ngie $
 
 LIB=	ufs
 SHLIBDIR?= /lib
@@ -17,7 +18,7 @@ MLINKS+= ufs_disk_close.3 ufs_disk_fillout.3
 MLINKS+= ufs_disk_close.3 ufs_disk_fillout_blank.3
 MLINKS+= ufs_disk_close.3 ufs_disk_write.3
 
-.PATH:  ${.CURDIR}/../../sys/ufs/ffs
+.PATH:  ${SRCTOP}/sys/ufs/ffs
 
 WARNS?=	2
 
