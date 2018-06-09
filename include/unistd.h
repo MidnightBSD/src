@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.12 (Berkeley) 4/27/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/unistd.h 254409 2013-08-16 13:10:30Z jilles $
  */
 
 #ifndef _UNISTD_H_
@@ -100,6 +101,7 @@ typedef	__useconds_t	useconds_t;
  * returns -1, the functions may be stubbed out.
  */
 #define	_POSIX_BARRIERS			200112L
+#define	_POSIX_CPUTIME			200112L
 #define	_POSIX_READER_WRITER_LOCKS	200112L
 #define	_POSIX_REGEXP			1
 #define	_POSIX_SHELL			1
@@ -492,6 +494,7 @@ const char *
 int	 crypt_set_format(const char *);
 int	 des_cipher(const char *, char *, long, int);
 int	 des_setkey(const char *key);
+int	 dup3(int, int, int);
 int	 eaccess(const char *, int);
 void	 endusershell(void);
 int	 exect(const char *, char * const *, char * const *);
@@ -532,6 +535,7 @@ char	*mktemp(char *);
 #endif
 int	 nfssvc(int, void *);
 int	 nlm_syscall(int, int, int, char **);
+int	 pipe2(int *, int);
 int	 profil(char *, size_t, vm_offset_t, int);
 int	 rcmd(char **, int, const char *, const char *, const char *, int *);
 int	 rcmd_af(char **, int, const char *,
