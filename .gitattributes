@@ -73353,6 +73353,16 @@ usr.sbin/ip6addrctl/ip6addrctl.conf.sample -text
 usr.sbin/ipfwpcap/Makefile -text
 usr.sbin/ipfwpcap/ipfwpcap.8 -text
 usr.sbin/ipfwpcap/ipfwpcap.c -text
+usr.sbin/iscsid/Makefile svneol=native#text/plain
+usr.sbin/iscsid/chap.c svneol=native#text/plain
+usr.sbin/iscsid/discovery.c svneol=native#text/plain
+usr.sbin/iscsid/iscsid.8 svneol=native#text/plain
+usr.sbin/iscsid/iscsid.c svneol=native#text/plain
+usr.sbin/iscsid/iscsid.h svneol=native#text/plain
+usr.sbin/iscsid/keys.c svneol=native#text/plain
+usr.sbin/iscsid/log.c svneol=native#text/plain
+usr.sbin/iscsid/login.c svneol=native#text/plain
+usr.sbin/iscsid/pdu.c svneol=native#text/plain
 usr.sbin/jail/Makefile -text
 usr.sbin/jail/command.c -text
 usr.sbin/jail/config.c -text
