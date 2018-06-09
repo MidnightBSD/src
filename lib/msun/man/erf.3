@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1985, 1991 Regents of the University of California.
 .\" All rights reserved.
 .\"
@@ -26,16 +27,18 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     from: @(#)erf.3	6.4 (Berkeley) 4/20/91
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/msun/man/erf.3 271779 2014-09-18 15:10:22Z tijl $
 .\"
-.Dd April 20, 1991
+.Dd July 13, 2014
 .Dt ERF 3
 .Os
 .Sh NAME
 .Nm erf ,
 .Nm erff ,
+.Nm erfl ,
 .Nm erfc ,
-.Nm erfcf
+.Nm erfcf ,
+.Nm erfcl
 .Nd error function operators
 .Sh LIBRARY
 .Lb libm
@@ -45,18 +48,23 @@
 .Fn erf "double x"
 .Ft float
 .Fn erff "float x"
+.Ft "long double"
+.Fn erfl "long double x"
 .Ft double
 .Fn erfc "double x"
 .Ft float
 .Fn erfcf "float x"
+.Ft "long double"
+.Fn erfcl "long double x"
 .Sh DESCRIPTION
 These functions calculate the error function of
 .Fa x .
 .Pp
 The
-.Fn erf
-and the
-.Fn erff
+.Fn erf ,
+.Fn erff ,
+and
+.Fn erfl
 functions calculate the error function of x; where
 .Bd -ragged -offset indent
 .if n \{\
@@ -69,9 +77,10 @@ erf\|(x) :=
 .Ed
 .Pp
 The
-.Fn erfc
-and the
-.Fn erfcf
+.Fn erfc ,
+.Fn erfcf ,
+and
+.Fn erfcl
 functions calculate the complementary error function of
 .Fa x ;
 that is
@@ -79,9 +88,6 @@ that is
 subtracts the result of the error function
 .Fn erf x
 from 1.0.
-This is useful, since for large
-.Fa x
-places disappear.
 .Sh SEE ALSO
 .Xr math 3
 .Sh HISTORY

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2011 Murray Stokely <murray@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/msun/man/complex.3 251121 2013-05-30 04:49:26Z das $
 .\"
-.Dd March 7, 2011
+.Dd October 17, 2011
 .Dt COMPLEX 3
 .Os
 .Sh NAME
@@ -86,6 +87,22 @@ conj	compute the complex conjugate
 cproj	compute projection onto Riemann sphere
 creal	compute the real part
 .El
+.\" Section 7.3.5-6 of ISO C99 standard
+.Ss Trigonometric and Hyperbolic Functions
+.Cl
+cacos	arc cosine
+cacosh	arc hyperbolic cosine
+casin	arc sine
+casinh	arc hyperbolic sine
+catan	arc tangent
+catanh	arc hyperbolic tangent
+ccos	cosine
+ccosh	hyperbolic cosine
+csin	sine
+csinh	hyperbolic sine
+ctan	tangent
+ctanh	hyperbolic tangent
+.El
 .Sh SEE ALSO
 .Xr math 3 ,
 .Xr fenv 3 ,
@@ -101,26 +118,8 @@ The
 functions described here conform to
 .St -isoC-99 .
 .Sh BUGS
-The inverse trigonometric and hyperbolic functions
-.Fn cacos ,
-.Fn cacosh ,
-.Fn casin ,
-.Fn casinh ,
-.Fn catan ,
-.Fn catanh ,
-.Fn ccos ,
-.Fn ccosh ,
-.Fn csin ,
-.Fn csinh ,
-.Fn ctan ,
-and
-.Fn ctanh
-are not implemented.
-.Pp
 The logarithmic functions
 .Fn clog
-are not implemented.
-.Pp
-The power functions
+and the power functions
 .Fn cpow
 are not implemented.

@@ -50083,6 +50083,9 @@ lib/msun/man/asinh.3 -text
 lib/msun/man/atan.3 -text
 lib/msun/man/atan2.3 -text
 lib/msun/man/atanh.3 -text
+lib/msun/man/cacos.3 svneol=native#text/plain
+lib/msun/man/ccos.3 svneol=native#text/plain
+lib/msun/man/ccosh.3 svneol=native#text/plain
 lib/msun/man/ceil.3 -text
 lib/msun/man/cexp.3 -text
 lib/msun/man/cimag.3 -text

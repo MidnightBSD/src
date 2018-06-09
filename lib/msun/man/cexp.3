@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2011 David Schultz <das@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/msun/man/cexp.3 240368 2012-09-11 17:40:06Z joel $
 .\"
 .Dd March 6, 2011
 .Dt CEXP 3
@@ -59,17 +60,17 @@ behaves according to Euler's formula:
 .Bd -ragged -offset indent
 .Fn cexp "x + I*y"
 =
-.Ns ( Sy e Ns ** Ns
+.Po Sy e Ns ** Ns
 .Fa x *
-.Em cos Ns ( Ns
-.Fa y Ns )) + ( Ns
+.Em cos Ns Po Ns
+.Fa y Ns Pc Pc + Po Ns
 .Sy I
 *
 .Sy e Ns ** Ns
 .Fa x
 *
-.Em sin Ns ( Ns
-.Fa y Ns ))
+.Em sin Ns Po Ns
+.Fa y Ns Pc Pc
 .Ed
 .Pp
 Generally speaking, infinities, zeroes and \*(Nas are handled as would
