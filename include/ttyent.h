@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,8 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttyent.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/ttyent.h,v 1.7 2002/03/23 17:24:53 imp Exp $
- * $MidnightBSD: src/include/ttyent.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
+ * $FreeBSD: stable/10/include/ttyent.h 267236 2014-06-08 17:50:07Z nwhitehorn $
  */
 
 #ifndef	_TTYENT_H_
@@ -38,6 +38,7 @@
 
 #define	_TTYS_OFF	"off"
 #define	_TTYS_ON	"on"
+#define	_TTYS_ONIFCONSOLE "onifconsole"
 #define	_TTYS_SECURE	"secure"
 #define	_TTYS_INSECURE	"insecure"
 #define	_TTYS_WINDOW	"window"
