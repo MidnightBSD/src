@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2003 Giorgos Keramidas
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/gstat/gstat.8 268791 2014-07-17 06:36:22Z delphij $
 .\"
-.Dd March 12, 2009
+.Dd July 3, 2014
 .Dt GSTAT 8
 .Os
 .Sh NAME
@@ -32,7 +33,7 @@
 .Nd print statistics about GEOM disks
 .Sh SYNOPSIS
 .Nm
-.Op Fl abcd
+.Op Fl abcdop
 .Op Fl f Ar filter
 .Op Fl I Ar interval
 .Sh DESCRIPTION
@@ -69,6 +70,9 @@ Only devices with the names matching
 will be displayed.
 The format of the regular expression is described in
 .Xr re_format 7 .
+.It Fl o
+Enable display of statistics for other operations
+.Pq Dv BIO_FLUSH .
 .It Fl I Ar interval
 Refresh the
 .Nm
@@ -81,6 +85,8 @@ or
 .Cm us
 (the default) indicates that the update interval is specified in
 seconds, milliseconds, or microseconds, respectively.
+.It Fl p
+Only display physical providers (those with rank of 1).
 .El
 .Sh EXIT STATUS
 .Ex -std
