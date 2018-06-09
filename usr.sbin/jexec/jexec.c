@@ -1,5 +1,7 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
+ * Copyright (c) 2008 Bjoern A. Zeeb <bz@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,52 +25,56 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/jexec/jexec.c,v 1.4 2006/09/29 17:04:03 ru Exp $
+ * $FreeBSD: stable/10/usr.sbin/jexec/jexec.c 286064 2015-07-30 04:53:53Z jamie $
  */
 
 #include <sys/param.h>
 #include <sys/jail.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include <err.h>
 #include <errno.h>
+#include <jail.h>
+#include <limits.h>
 #include <login_cap.h>
+#include <paths.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pwd.h>
+#include <string.h>
 #include <unistd.h>
 
-static void	usage(void);
+extern char **environ;
 
-#define GET_USER_INFO do {						\
-	pwd = getpwnam(username);					\
-	if (pwd == NULL) {						\
-		if (errno)						\
-			err(1, "getpwnam: %s", username);		\
-		else							\
-			errx(1, "%s: no such user", username);		\
-	}								\
-	lcap = login_getpwclass(pwd);					\
-	if (lcap == NULL)						\
-		err(1, "getpwclass: %s", username);			\
-	ngroups = NGROUPS;						\
-	if (getgrouplist(username, pwd->pw_gid, groups, &ngroups) != 0)	\
-		err(1, "getgrouplist: %s", username);			\
-} while (0)
+static void	get_user_info(const char *username, const struct passwd **pwdp,
+    login_cap_t **lcapp);
+static void	usage(void);
 
 int
 main(int argc, char *argv[])
 {
 	int jid;
 	login_cap_t *lcap = NULL;
-	struct passwd *pwd = NULL;
-	gid_t groups[NGROUPS];
-	int ch, ngroups, uflag, Uflag;
-	char *username;
-	ch = uflag = Uflag = 0;
+	int ch, clean, uflag, Uflag;
+	char *cleanenv;
+	const struct passwd *pwd = NULL;
+	const char *username, *shell, *term;
+
+	ch = clean = uflag = Uflag = 0;
 	username = NULL;
 
-	while ((ch = getopt(argc, argv, "u:U:")) != -1) {
+	while ((ch = getopt(argc, argv, "lnu:U:")) != -1) {
 		switch (ch) {
+		case 'l':
+			clean = 1;
+			break;
+		case 'n':
+			/* Specified name, now unused */
+			break;
 		case 'u':
 			username = optarg;
 			uflag = 1;
@@ -83,40 +89,104 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
-	if (argc < 2)
+	if (argc < 1)
 		usage();
 	if (uflag && Uflag)
 		usage();
-	if (uflag)
-		GET_USER_INFO;
-	jid = (int)strtol(argv[0], NULL, 10);
+	if (uflag || (clean && !Uflag))
+		/* User info from the home environment */
+		get_user_info(username, &pwd, &lcap);
+
+	/* Attach to the jail */
+	jid = jail_getid(argv[0]);
+	if (jid < 0)
+		errx(1, "%s", jail_errmsg);
 	if (jail_attach(jid) == -1)
-		err(1, "jail_attach(): %d", jid);
+		err(1, "jail_attach(%d)", jid);
 	if (chdir("/") == -1)
 		err(1, "chdir(): /");
-	if (username != NULL) {
+
+	/* Set up user environment */
+	if (clean || username != NULL) {
 		if (Uflag)
-			GET_USER_INFO;
-		if (setgroups(ngroups, groups) != 0)
-			err(1, "setgroups");
+			/* User info from the jail environment */
+			get_user_info(username, &pwd, &lcap);
+		if (clean) {
+			term = getenv("TERM");
+			cleanenv = NULL;
+			environ = &cleanenv;
+			setenv("PATH", "/bin:/usr/bin", 1);
+			if (term != NULL)
+				setenv("TERM", term, 1);
+		}
 		if (setgid(pwd->pw_gid) != 0)
 			err(1, "setgid");
-		if (setusercontext(lcap, pwd, pwd->pw_uid,
-		    LOGIN_SETALL & ~LOGIN_SETGROUP & ~LOGIN_SETLOGIN) != 0)
+		if (setusercontext(lcap, pwd, pwd->pw_uid, username
+		    ? LOGIN_SETALL & ~LOGIN_SETGROUP & ~LOGIN_SETLOGIN
+		    : LOGIN_SETPATH | LOGIN_SETENV) != 0)
 			err(1, "setusercontext");
 		login_close(lcap);
+		setenv("USER", pwd->pw_name, 1);
+		setenv("HOME", pwd->pw_dir, 1);
+		setenv("SHELL",
+		    *pwd->pw_shell ? pwd->pw_shell : _PATH_BSHELL, 1);
+		if (clean && chdir(pwd->pw_dir) < 0)
+			err(1, "chdir: %s", pwd->pw_dir);
+		endpwent();
 	}
-	if (execvp(argv[1], argv + 1) == -1)
-		err(1, "execvp(): %s", argv[1]);
+
+	/* Run the specified command, or the shell */
+	if (argc > 1) {
+		if (execvp(argv[1], argv + 1) < 0)
+			err(1, "execvp: %s", argv[1]);
+	} else {
+		if (!(shell = getenv("SHELL")))
+			shell = _PATH_BSHELL;
+		if (execlp(shell, shell, "-i", NULL) < 0)
+			err(1, "execlp: %s", shell);
+	}
 	exit(0);
+}
+
+static void
+get_user_info(const char *username, const struct passwd **pwdp,
+    login_cap_t **lcapp)
+{
+	uid_t uid;
+	const struct passwd *pwd;
+
+	errno = 0;
+	if (username) {
+		pwd = getpwnam(username);
+		if (pwd == NULL) {
+			if (errno)
+				err(1, "getpwnam: %s", username);
+			else
+				errx(1, "%s: no such user", username);
+		}
+	} else {
+		uid = getuid();
+		pwd = getpwuid(uid);
+		if (pwd == NULL) {
+			if (errno)
+				err(1, "getpwuid: %d", uid);
+			else
+				errx(1, "unknown uid: %d", uid);
+		}
+	}
+	*pwdp = pwd;
+	*lcapp = login_getpwclass(pwd);
+	if (*lcapp == NULL)
+		err(1, "getpwclass: %s", pwd->pw_name);
+	if (initgroups(pwd->pw_name, pwd->pw_gid) < 0)
+		err(1, "initgroups: %s", pwd->pw_name);
 }
 
 static void
 usage(void)
 {
 
-	fprintf(stderr, "%s%s\n",
-		"usage: jexec [-u username | -U username]",
-		" jid command ...");
+	fprintf(stderr, "%s\n",
+	    "usage: jexec [-l] [-u username | -U username] jail [command ...]");
 	exit(1); 
 }

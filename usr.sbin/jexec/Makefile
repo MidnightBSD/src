@@ -1,9 +1,9 @@
-# $FreeBSD: src/usr.sbin/jexec/Makefile,v 1.2 2006/04/19 10:12:10 delphij Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/jexec/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	jexec
 MAN=	jexec.8
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
-WARNS?=	6
+DPADD=	${LIBJAIL} ${LIBUTIL}
+LDADD=	-ljail -lutil
 
 .include <bsd.prog.mk>
