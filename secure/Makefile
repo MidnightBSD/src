@@ -1,9 +1,15 @@
-# $MidnightBSD: src/secure/Makefile,v 1.3 2012/08/30 00:09:23 laffer1 Exp $
-# $FreeBSD: src/secure/Makefile,v 1.27 2006/03/17 18:54:31 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/secure/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
 
 .include <bsd.own.mk>
 
-SUBDIR= lib libexec usr.bin usr.sbin
+SUBDIR= lib .WAIT \
+	libexec ${_tests} usr.bin usr.sbin
+SUBDIR_PARALLEL=
+
+.if ${MK_TESTS} != "no"
+_tests=	tests
+.endif
 
 # These are the programs which depend on crypto, but not Kerberos.
 SPROGS=	lib/libfetch lib/libpam lib/libradius lib/libtelnet	\
@@ -14,7 +20,7 @@ SPROGS+=usr.sbin/sendmail
 .endif
 
 # This target is used to rebuild these programs with crypto.
-secure:
+secure: .MAKE .PHONY
 .for entry in ${SPROGS}
 	cd ${.CURDIR}/../${entry}; \
 	${MAKE} cleandir; \
@@ -25,7 +31,7 @@ secure:
 .endfor
 
 # This target is used to rebuild these programs without crypto.
-insecure:
+insecure: .MAKE .PHONY
 .for entry in ${SPROGS}
 	cd ${.CURDIR}/../${entry}; \
 	${MAKE} -DWITHOUT_CRYPT cleandir; \
