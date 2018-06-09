@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/secure/Makefile.inc,v 1.25 2006/03/17 18:54:31 ru Exp $
+# $FreeBSD: stable/10/secure/Makefile.inc 249971 2013-04-27 05:44:39Z ed $
 
 .include <bsd.own.mk>
 
@@ -7,10 +7,6 @@
 CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt/obj
 .else
 CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt
-.endif
-
-.if ${MK_IDEA} == "no"
-CFLAGS+= -DNO_IDEA
 .endif
 
 .if ${MK_OPENSSH} != "no"
