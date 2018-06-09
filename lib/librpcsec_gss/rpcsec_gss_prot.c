@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
   rpcsec_gss_prot.c
   
@@ -32,9 +33,9 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: rpcsec_gss_prot.c,v 1.2 2012-11-27 01:40:57 laffer1 Exp $
+  $Id: authgss_prot.c,v 1.18 2000/09/01 04:14:03 dugsong Exp $
 */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/librpcsec_gss/rpcsec_gss_prot.c 181346 2008-08-06 15:33:00Z dfr $ */
 
 #include <stdio.h>
 #include <stdlib.h>

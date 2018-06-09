@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008 Isilon Inc http://www.isilon.com/
 .\" Authors: Doug Rabson <dfr@rabson.org>
 .\" Developed with Red Inc: Alfred Perlstein <alfred@FreeBSD.org>
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/librpcsec_gss/rpc_gss_seccreate.3 236668 2012-06-06 08:07:47Z joel $
 .Dd January 26, 2010
 .Dt RPC_GSS_SECCREATE 3
 .Os
@@ -48,7 +49,7 @@
 This function is used to establish a security context between an
 application and a remote peer using the RPSEC_GSS protocol.
 .Sh PARAMETERS
-.Bl -tag
+.Bl -tag -width "options_req"
 .It clnt
 An RPC handle which is connected to the remote peer
 .It principal
@@ -62,7 +63,7 @@ The value of mechanism should be the name of one of the security
 mechanisms listed in /etc/gss/mech.
 .It service
 Type of service requested.
-.Bl -tag
+.Bl -tag -width "rpc_gss_svc_integrity"
 .It rpc_gss_svc_default
 The default - typically the same as
 .Dv rpc_gss_svc_none .

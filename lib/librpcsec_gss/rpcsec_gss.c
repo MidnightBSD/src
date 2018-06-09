@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/lib/librpcsec_gss/rpcsec_gss.c 181344 2008-08-06 14:02:05Z dfr $
  */
 /*
   auth_gss.c
@@ -61,7 +62,7 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: rpcsec_gss.c,v 1.2 2012-11-27 01:40:57 laffer1 Exp $
+  $Id: auth_gss.c,v 1.32 2002/01/15 15:43:00 andros Exp $
 */
 
 #include <stdio.h>

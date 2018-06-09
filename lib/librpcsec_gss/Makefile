@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/librpcsec_gss/Makefile 313611 2017-02-11 06:44:16Z ngie $
 
 LIB=	rpcsec_gss
 SHLIB_MAJOR= 1
@@ -8,11 +9,11 @@ SRCS+=	rpcsec_gss.c rpcsec_gss_prot.c rpcsec_gss_conf.c rpcsec_gss_misc.c \
 DPADD+=	${LIBGSSAPI}
 LDADD+=	-lgssapi
 
-VERSION_DEF=	${.CURDIR}/../libc/Versions.def
+VERSION_DEF=	${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 
-CFLAGS+= -I${.CURDIR}/../../include
-CFLAGS+= -I${.CURDIR}/../../libc_rpc
+CFLAGS+= -I${SRCTOP}/include
+CFLAGS+= -I${SRCTOP}/lib/libc_rpc
 NO_PROFILE=
 
 MAN=	rpcsec_gss.3
