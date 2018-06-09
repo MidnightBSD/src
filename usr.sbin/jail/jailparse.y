@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Copyright (c) 2011 James Gritton
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/jail/jailparse.y 293290 2016-01-07 00:40:51Z bdrewery $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -103,7 +104,7 @@ param_l	:
 
 /*
  * Parameters have a name and an optional list of value strings,
- * which may have "+=" or "=" preceeding them.
+ * which may have "+=" or "=" preceding them.
  */
 param	: name
 	{

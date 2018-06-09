@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2012 James Gritton
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/jail/jail.conf.5 262836 2014-03-06 10:26:25Z zeising $
 .\"
-.Dd May 23, 2012
+.Dd February 13, 2014
 .Dt JAIL.CONF 5
 .Os
 .Sh NAME
@@ -125,7 +126,7 @@ Variable substitution occurs in unquoted tokens or in double-quoted
 strings, but not in single-quote strings.
 .Pp
 A variable is defined in the same way a parameter is, except that the
-variable name is preceeded with a dollar sign:
+variable name is preceded with a dollar sign:
 .Bd -literal -offset indent
 $parentdir = "/var/jail";
 path = "$parentdir/$name";
@@ -206,8 +207,9 @@ bar {
 }
 .Ed
 .Sh SEE ALSO
-.Xr jail_set 2
-.Xr jail 8
+.Xr jail_set 2 ,
+.Xr rc.conf 5 ,
+.Xr jail 8 ,
 .Xr jls 8
 .Sh HISTORY
 The

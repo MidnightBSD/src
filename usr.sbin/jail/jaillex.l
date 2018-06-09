@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Copyright (c) 2011 James Gritton
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/jail/jaillex.l 316193 2017-03-30 01:37:37Z jamie $");
 
 #include <err.h>
 #include <stddef.h>
@@ -216,7 +217,7 @@ text2lval(size_t triml, size_t trimr, int tovar)
 				*d = *++s - '0';
 			else if (s[1] >= 'A' && s[1] <= 'F')
 				*d = *++s + (0xA - 'A');
-			else if (s[1] >= 'a' && s[1] <= 'a')
+			else if (s[1] >= 'a' && s[1] <= 'f')
 				*d = *++s + (0xa - 'a');
 			else
 				break;
@@ -226,7 +227,7 @@ text2lval(size_t triml, size_t trimr, int tovar)
 				*d = *d * 0x10 + (*++s - '0');
 			else if (s[1] >= 'A' && s[1] <= 'F')
 				*d = *d * 0x10 + (*++s + (0xA - 'A'));
-			else if (s[1] >= 'a' && s[1] <= 'a')
+			else if (s[1] >= 'a' && s[1] <= 'f')
 				*d = *d * 0x10 + (*++s + (0xa - 'a'));
 		}
 	}
