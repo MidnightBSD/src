@@ -1,20 +1,20 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libmd/Makefile 315731 2017-03-22 18:35:48Z bdrewery $
 
 LIB=	md
+SHLIB_MAJOR= 6
 SHLIBDIR?= /lib
-SRCS=	md2c.c md4c.c md5c.c md2hl.c md4hl.c md5hl.c \
+SRCS=	md4c.c md5c.c md4hl.c md5hl.c \
 	rmd160c.c rmd160hl.c \
 	sha0c.c sha0hl.c sha1c.c sha1hl.c \
 	sha256c.c sha256hl.c \
-	sha512c.c sha512hl.c
-INCS=	md2.h md4.h md5.h ripemd.h sha.h sha256.h sha512.h
+	sha384hl.c \
+	sha512c.c sha512hl.c sha512thl.c
+INCS=	md4.h md5.h ripemd.h sha.h sha256.h sha384.h sha512.h sha512t.h
 
 WARNS?=	0
 
-MAN+=	md2.3 md4.3 md5.3 ripemd.3 sha.3 sha256.3 sha512.3
-MLINKS+=md2.3 MD2Init.3 md2.3 MD2Update.3 md2.3 MD2Final.3
-MLINKS+=md2.3 MD2End.3  md2.3 MD2File.3   md2.3 MD2FileChunk.3
-MLINKS+=md2.3 MD2Data.3
+MAN+=	md4.3 md5.3 ripemd.3 sha.3 sha256.3 sha512.3
 MLINKS+=md4.3 MD4Init.3 md4.3 MD4Update.3 md4.3 MD4Final.3
 MLINKS+=md4.3 MD4End.3  md4.3 MD4File.3   md4.3 MD4FileChunk.3
 MLINKS+=md4.3 MD4Data.3
@@ -35,17 +35,40 @@ MLINKS+=sha256.3 SHA256_Init.3  sha256.3 SHA256_Update.3
 MLINKS+=sha256.3 SHA256_Final.3 sha256.3 SHA256_End.3
 MLINKS+=sha256.3 SHA256_File.3  sha256.3 SHA256_FileChunk.3
 MLINKS+=sha256.3 SHA256_Data.3
+MLINKS+=sha512.3 SHA384_Init.3  sha512.3 SHA384_Update.3
+MLINKS+=sha512.3 SHA384_Final.3 sha512.3 SHA384_End.3
+MLINKS+=sha512.3 SHA384_File.3  sha512.3 SHA384_FileChunk.3
+MLINKS+=sha512.3 SHA384_Data.3  sha512.3 sha384.3
 MLINKS+=sha512.3 SHA512_Init.3  sha512.3 SHA512_Update.3
 MLINKS+=sha512.3 SHA512_Final.3 sha512.3 SHA512_End.3
 MLINKS+=sha512.3 SHA512_File.3  sha512.3 SHA512_FileChunk.3
 MLINKS+=sha512.3 SHA512_Data.3
+MLINKS+=sha512.3 SHA512_256_Init.3  sha512.3 SHA512_256_Update.3
+MLINKS+=sha512.3 SHA512_256_Final.3 sha512.3 SHA512_256_End.3
+MLINKS+=sha512.3 SHA512_256_File.3  sha512.3 SHA512_256_FileChunk.3
+MLINKS+=sha512.3 SHA512_256_Data.3
 CLEANFILES+=	md[245]hl.c md[245].ref md[245].3 mddriver \
 		rmd160.ref rmd160hl.c rmddriver \
 		sha0.ref sha0hl.c sha1.ref sha1hl.c shadriver \
-		sha256.ref sha256hl.c sha512.ref sha512hl.c
+		sha256.ref sha256hl.c sha384hl.c sha384.ref \
+		sha512.ref sha512hl.c sha512t256.ref sha512thl.c
 
-CFLAGS+= -I${.CURDIR}
-.PATH: ${.CURDIR}/${MACHINE_ARCH}
+# Need src tree sys/md5.h for MD5FileChunk prototype on older systems.
+SRCS+=		sys/md5.h
+CLEANDIRS=	sys
+CFLAGS+=	-I.
+sys/md5.h: ${.CURDIR}/../../sys/${.TARGET} .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
+
+# Define WEAK_REFS to provide weak aliases for libmd symbols
+#
+# Note that the same sources are also used internally by libcrypt,
+# in which case:
+#   * macros are used to rename symbols to libcrypt internal names
+#   * no weak aliases are generated
+CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../sys/crypto/sha2
+CFLAGS+= -DWEAK_REFS
+.PATH: ${.CURDIR}/${MACHINE_ARCH} ${.CURDIR}/../../sys/crypto/sha2
 
 .if exists(${MACHINE_ARCH}/sha.S)
 SRCS+=	sha.S
@@ -58,10 +81,6 @@ CFLAGS+= -DRMD160_ASM
 .if exists(${MACHINE_ARCH}/sha.S) || exists(${MACHINE_ARCH}/rmd160.S)
 ACFLAGS+= -DELF -Wa,--noexecstack
 .endif
-
-md2hl.c: mdXhl.c
-	(echo '#define LENGTH 16'; \
-		sed -e 's/mdX/md2/g' -e 's/MDX/MD2/g' ${.ALLSRC}) > ${.TARGET}
 
 md4hl.c: mdXhl.c
 	(echo '#define LENGTH 16'; \
@@ -87,10 +106,23 @@ sha256hl.c: mdXhl.c
 			-e  's/SHA256__/SHA256_/g' \
 		${.ALLSRC}) > ${.TARGET}
 
+sha384hl.c: mdXhl.c
+	(echo '#define LENGTH 48'; \
+		sed -e 's/mdX/sha384/g' -e 's/MDX/SHA384_/g'	\
+			-e  's/SHA384__/SHA384_/g' \
+		${.ALLSRC}) > ${.TARGET}
+
 sha512hl.c: mdXhl.c
 	(echo '#define LENGTH 64'; \
 		sed -e 's/mdX/sha512/g' -e 's/MDX/SHA512_/g'	\
 			-e  's/SHA512__/SHA512_/g' \
+		${.ALLSRC}) > ${.TARGET}
+
+sha512thl.c: mdXhl.c
+	(echo '#define LENGTH 32'; \
+		sed -e 's/mdX/sha512t/g' -e 's/MDX/SHA512_256_/g'	\
+			-e  's/SHA512_256__/SHA512_256_/g' \
+			-e 's/SHA512_256_CTX/SHA512_CTX/g' \
 		${.ALLSRC}) > ${.TARGET}
 
 rmd160hl.c: mdXhl.c
@@ -104,16 +136,6 @@ md${i}.3: ${.CURDIR}/mdX.3
 	sed -e "s/mdX/md${i}/g" -e "s/MDX/MD${i}/g" ${.ALLSRC} > ${.TARGET}
 	cat ${.CURDIR}/md${i}.copyright >> ${.TARGET}
 .endfor
-
-md2.ref:
-	echo 'MD2 test suite:' > ${.TARGET}
-	@echo 'MD2 ("") = 8350e5a3e24c153df2275c9f80692773' >> ${.TARGET}
-	@echo 'MD2 ("a") = 32ec01ec4a6dac72c0ab96fb34c0b5d1' >> ${.TARGET}
-	@echo 'MD2 ("abc") = da853b0d3f88d99b30283a69e6ded6bb' >> ${.TARGET}
-	@echo 'MD2 ("message digest") = ab4f496bfb2a530b219ff33031fe06b0' >> ${.TARGET}
-	@echo 'MD2 ("abcdefghijklmnopqrstuvwxyz") = 4e8ddff3650292ab5a4108c3aa47940b' >> ${.TARGET}
-	@echo 'MD2 ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") = da33def2a42df13975352846c30338cd' >> ${.TARGET}
-	@echo 'MD2 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") = d5976f79d83d3a0dc9806c3c66f3efd8' >> ${.TARGET}
 
 md4.ref:
 	echo 'MD4 test suite:' > ${.TARGET}
@@ -177,6 +199,21 @@ sha256.ref:
 	@echo 'SHA-256 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
 		'f371bc4a311f2b009eef952dd83ca80e2b60026c8e935592d0f9c308453c813e' >> ${.TARGET}
 
+sha384.ref:
+	echo 'SHA-384 test suite:' > ${.TARGET}
+	@echo 'SHA-384 ("") =' \
+		'38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b' >> ${.TARGET}
+	@echo 'SHA-384 ("abc") =' \
+		'cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7' >> ${.TARGET}
+	@echo 'SHA-384 ("message digest") =' \
+		'473ed35167ec1f5d8e550368a3db39be54639f828868e9454c239fc8b52e3c61dbd0d8b4de1390c256dcbb5d5fd99cd5' >> ${.TARGET}
+	@echo 'SHA-384 ("abcdefghijklmnopqrstuvwxyz") =' \
+		'feb67349df3db6f5924815d6c3dc133f091809213731fe5c7b5f4999e463479ff2877f5f2936fa63bb43784b12f3ebb4' >> ${.TARGET}
+	@echo 'SHA-384 ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") =' \
+		'1761336e3f7cbfe51deb137f026f89e01a448e3b1fafa64039c1464ee8732f11a5341a6f41e0c202294736ed64db1a84' >> ${.TARGET}
+	@echo 'SHA-384 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
+		'b12932b0627d1c060942f5447764155655bd4da0c9afa6dd9b9ef53129af1b8fb0195996d2de9ca0df9d821ffee67026' >> ${.TARGET}
+
 sha512.ref:
 	echo 'SHA-512 test suite:' > ${.TARGET}
 	@echo 'SHA-512 ("") =' \
@@ -192,6 +229,21 @@ sha512.ref:
 	@echo 'SHA-512 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
 		'72ec1ef1124a45b047e8b7c75a932195135bb61de24ec0d1914042246e0aec3a2354e093d76f3048b456764346900cb130d2a4fd5dd16abb5e30bcb850dee843' >> ${.TARGET}
 
+sha512t256.ref:
+	echo 'SHA-512256 test suite:' > ${.TARGET}
+	@echo 'SHA-512256 ("") =' \
+		'c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a' >> ${.TARGET}
+	@echo 'SHA-512256 ("abc") =' \
+		'53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23' >> ${.TARGET}
+	@echo 'SHA-512256 ("message digest") =' \
+		'0cf471fd17ed69d990daf3433c89b16d63dec1bb9cb42a6094604ee5d7b4e9fb' >> ${.TARGET}
+	@echo 'SHA-512256 ("abcdefghijklmnopqrstuvwxyz") =' \
+		'fc3189443f9c268f626aea08a756abe7b726b05f701cb08222312ccfd6710a26' >> ${.TARGET}
+	@echo 'SHA-512256 ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") =' \
+		'cdf1cc0effe26ecc0c13758f7b4a48e000615df241284185c39eb05d355bb9c8' >> ${.TARGET}
+	@echo 'SHA-512256 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
+		'2c9fdbc0c90bdd87612ee8455474f9044850241dc105b1e8b94b8ddf5fac9148' >> ${.TARGET}
+
 rmd160.ref:
 	echo 'RIPEMD160 test suite:' > ${.TARGET}
 	@echo 'RIPEMD160 ("") = 9c1185a5c5e9fc54612808977ee8f548b2258d31' >> ${.TARGET}
@@ -205,12 +257,10 @@ rmd160.ref:
 	@echo 'RIPEMD160 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
 		'9b752e45573d4b39f4dbd3323cab82bf63326bfb' >> ${.TARGET}
 
-test:	md2.ref md4.ref md5.ref sha0.ref rmd160.ref sha1.ref sha256.ref sha512.ref
+test:	md4.ref md5.ref sha0.ref rmd160.ref sha1.ref sha256.ref sha384.ref \
+		sha512.ref sha512t256.ref
 	@${ECHO} if any of these test fail, the code produces wrong results
 	@${ECHO} and should NOT be used.
-	${CC} ${CFLAGS} ${LDFLAGS} -DMD=2 -o mddriver ${.CURDIR}/mddriver.c ./libmd.a
-	./mddriver | cmp md2.ref -
-	@${ECHO} MD2 passed test
 	${CC} ${CFLAGS} ${LDFLAGS} -DMD=4 -o mddriver ${.CURDIR}/mddriver.c libmd.a
 	./mddriver | cmp md4.ref -
 	@${ECHO} MD4 passed test
@@ -231,9 +281,15 @@ test:	md2.ref md4.ref md5.ref sha0.ref rmd160.ref sha1.ref sha256.ref sha512.ref
 	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=256 -o shadriver ${.CURDIR}/shadriver.c libmd.a
 	./shadriver | cmp sha256.ref -
 	@${ECHO} SHA-256 passed test
+	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=384 -o shadriver ${.CURDIR}/shadriver.c libmd.a
+	./shadriver | cmp sha384.ref -
+	@${ECHO} SHA-384 passed test
 	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=512 -o shadriver ${.CURDIR}/shadriver.c libmd.a
 	./shadriver | cmp sha512.ref -
 	@${ECHO} SHA-512 passed test
+	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=512256 -o shadriver ${.CURDIR}/shadriver.c libmd.a
+	./shadriver | cmp sha512t256.ref -
+	@${ECHO} SHA-512t256 passed test
 	-rm -f shadriver
 
 .include <bsd.lib.mk>

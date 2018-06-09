@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* crypto/sha/sha_dgst.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -57,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libmd/sha0c.c 154479 2006-01-17 15:35:57Z phk $");
 
 #include <sys/types.h>
 

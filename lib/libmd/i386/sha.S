@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD$ */
 /* -*- Fundamental -*- Emacs' assembler mode hoses this file */
 #ifndef PIC

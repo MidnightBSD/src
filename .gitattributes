@@ -49335,9 +49335,6 @@ lib/libmagic/config.h -text
 lib/libmd/Makefile -text
 lib/libmd/i386/rmd160.S -text
 lib/libmd/i386/sha.S -text
-lib/libmd/md2.copyright -text
-lib/libmd/md2.h -text
-lib/libmd/md2c.c -text
 lib/libmd/md4.copyright -text
 lib/libmd/md4.h -text
 lib/libmd/md4c.c -text
@@ -49358,11 +49355,7 @@ lib/libmd/sha.h -text
 lib/libmd/sha0c.c -text
 lib/libmd/sha1c.c -text
 lib/libmd/sha256.3 -text
-lib/libmd/sha256.h -text
-lib/libmd/sha256c.c -text
 lib/libmd/sha512.3 -text
-lib/libmd/sha512.h -text
-lib/libmd/sha512c.c -text
 lib/libmd/sha_locl.h -text
 lib/libmd/shadriver.c -text
 lib/libmemstat/Makefile -text

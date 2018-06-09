@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /* MD4.H - header file for MD4C.C
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libmd/md4.h 314157 2017-02-23 18:54:33Z avg $
  */
 
 /* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
@@ -35,6 +36,34 @@ typedef struct MD4Context {
 #include <sys/cdefs.h>
 
 __BEGIN_DECLS
+
+/* Ensure libmd symbols do not clash with libcrypto */
+
+#ifndef MD4Init
+#define MD4Init		_libmd_MD4Init
+#endif
+#ifndef MD4Update
+#define MD4Update	_libmd_MD4Update
+#endif
+#ifndef MD4Pad
+#define MD4Pad		_libmd_MD4Pad
+#endif
+#ifndef MD4Final
+#define MD4Final	_libmd_MD4Final
+#endif
+#ifndef MD4End
+#define MD4End		_libmd_MD4End
+#endif
+#ifndef MD4File
+#define MD4File		_libmd_MD4File
+#endif
+#ifndef MD4FileChunk
+#define MD4FileChunk	_libmd_MD4FileChunk
+#endif
+#ifndef MD4Data
+#define MD4Data		_libmd_MD4Data
+#endif
+
 void   MD4Init(MD4_CTX *);
 void   MD4Update(MD4_CTX *, const void *, unsigned int);
 void   MD4Pad(MD4_CTX *);

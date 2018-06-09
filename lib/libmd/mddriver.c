@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* MDDRIVER.C - test driver for MD2, MD4 and MD5 */
 
 /* Copyright (C) 1990-2, RSA Data Security, Inc. Created 1990. All rights
@@ -12,7 +13,7 @@
  * documentation and/or software. */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libmd/mddriver.c 220496 2011-04-09 13:56:29Z markm $");
 
 #include <sys/types.h>
 
