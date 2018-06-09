@@ -1,9 +1,10 @@
-#	from: @(#)Makefile    5.10 (Berkeley) 6/24/90
 # $MidnightBSD$
+#	from: @(#)Makefile    5.10 (Berkeley) 6/24/90
+# $FreeBSD: stable/10/lib/librpcsvc/Makefile 313610 2017-02-11 06:42:56Z ngie $
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../include/rpcsvc
+.PATH: ${SRCTOP}/include/rpcsvc
 
 LIB=    rpcsvc
 
