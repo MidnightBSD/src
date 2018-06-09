@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libthr/Makefile 313602 2017-02-11 06:35:29Z ngie $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -15,15 +16,15 @@ MK_SSP=	no
 
 LIB=thr
 SHLIB_MAJOR= 3
-WARNS?=	0
+WARNS?=	3
 CFLAGS+=-DPTHREAD_KERNEL
-CFLAGS+=-I${.CURDIR}/../libc/include -I${.CURDIR}/thread \
-	-I${.CURDIR}/../../include
+CFLAGS+=-I${SRCTOP}/lib/libc/include -I${.CURDIR}/thread \
+	-I${SRCTOP}/include
 CFLAGS+=-I${.CURDIR}/arch/${MACHINE_CPUARCH}/include
 CFLAGS+=-I${.CURDIR}/sys
-CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf
-CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf/${MACHINE_CPUARCH}
-CFLAGS+=-I${.CURDIR}/../libthread_db
+CFLAGS+=-I${SRCTOP}/libexec/rtld-elf
+CFLAGS+=-I${SRCTOP}/libexec/rtld-elf/${MACHINE_CPUARCH}
+CFLAGS+=-I${SRCTOP}/lib/libthread_db
 CFLAGS+=-Winline
 
 .ifndef NO_THREAD_UNWIND_STACK
@@ -33,14 +34,13 @@ CFLAGS+=-D_PTHREAD_FORCED_UNWIND
 
 LDFLAGS+=-Wl,-znodelete
 
-VERSION_DEF=${.CURDIR}/../libc/Versions.def
+VERSION_DEF=${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS=${.CURDIR}/pthread.map
 
 MAN=	libthr.3
 
-# enable extra internal consistancy checks
+# enable extra internal consistency checks
 CFLAGS+=-D_PTHREADS_INVARIANTS
-#CFLAGS+=-g
 
 PRECIOUSLIB=
 
@@ -62,6 +62,10 @@ SYMLINKS+=lib${LIB}_p.a ${LIBDIR}/libpthread_p.a
 
 .if !defined(WITHOUT_SYSCALL_COMPAT)
 CFLAGS+=-DSYSCALL_COMPAT
+.endif
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
 .endif
 
 .include <bsd.lib.mk>

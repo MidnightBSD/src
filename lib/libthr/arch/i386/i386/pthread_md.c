@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003 David Xu <davidxu@freebsd.org>
  * Copyright (c) 2001,2003 Daniel Eischen <deischen@freebsd.org>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/arch/i386/i386/pthread_md.c 157461 2006-04-04 03:26:06Z davidxu $
  */
 
 #include <sys/types.h>
