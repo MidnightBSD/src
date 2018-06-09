@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/inetd/inetd.h,v 1.17 2006/09/14 08:36:53 ru Exp $
+ * $FreeBSD: stable/10/usr.sbin/inetd/inetd.h 236572 2012-06-04 18:02:09Z delphij $
  */
 
 #include <sys/time.h>
@@ -109,7 +110,7 @@ struct	servtab {
 	u_int	se_rpc_lowvers;		/* RPC low version */
 	u_int	se_rpc_highvers;	/* RPC high version */
 	int	se_count;		/* number started since se_time */
-	struct	timeval se_time;	/* start of se_count */
+	struct	timespec se_time;	/* start of se_count */
 	struct	servtab *se_next;
 	struct se_flags {
 		u_int se_nomapped : 1;

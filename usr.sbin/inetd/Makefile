@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/inetd/Makefile,v 1.37 2007/07/05 08:56:46 bz Exp $
+# $FreeBSD: stable/10/usr.sbin/inetd/Makefile 313206 2017-02-04 15:52:08Z ngie $
 
 .include <bsd.own.mk>
 
@@ -8,7 +9,7 @@ MAN=	inetd.8
 MLINKS=	inetd.8 inetd.conf.5
 SRCS=	inetd.c builtins.c
 
-WARNS?=	2
+WARNS?=	3
 CFLAGS+= -DLOGIN_CAP
 #CFLAGS+= -DSANITY_CHECK
 
@@ -16,8 +17,14 @@ CFLAGS+= -DLOGIN_CAP
 CFLAGS+= -DINET6
 .endif
 
-DPADD=	${LIBUTIL} ${LIBWRAP}
-LDADD=	-lutil -lwrap
+DPADD+=		${LIBUTIL}
+LDADD+=		-lutil
+
+.if ${MK_TCP_WRAPPERS} != "no"
+CFLAGS+=	-DLIBWRAP
+DPADD+=		${LIBWRAP}
+LDADD+=		-lwrap
+.endif
 
 # XXX for src/release/picobsd
 .if !defined(RELEASE_CRUNCH)

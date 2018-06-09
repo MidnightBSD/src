@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/inetd/builtins.c,v 1.45 2006/04/17 19:55:25 dwmalone Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/inetd/builtins.c 326761 2017-12-11 05:10:11Z delphij $");
 
 #include <sys/filio.h>
 #include <sys/ioccom.h>
@@ -167,10 +168,8 @@ chargen_stream(int s, struct servtab *sep)
 
 	inetd_setproctitle(sep->se_service, s);
 
-	if (!endring) {
+	if (!endring)
 		initring();
-		rs = ring;
-	}
 
 	text[LINESIZ] = '\r';
 	text[LINESIZ + 1] = '\n';
@@ -691,15 +690,9 @@ printit:
 uint32_t
 machtime(void)
 {
-	struct timeval tv;
 
-	if (gettimeofday(&tv, (struct timezone *)NULL) < 0) {
-		if (debug)
-			warnx("unable to get time of day");
-		return (0L);
-	}
 #define	OFFSET ((uint32_t)25567 * 24*60*60)
-	return (htonl((uint32_t)(tv.tv_sec + OFFSET)));
+	return (htonl((uint32_t)(time(NULL) + OFFSET)));
 #undef OFFSET
 }
 
@@ -745,7 +738,7 @@ machtime_stream(int s, struct servtab *sep __unused)
 #define MAX_SERV_LEN	(256+2)		/* 2 bytes for \r\n */
 #define strwrite(fd, buf)	(void) write(fd, buf, sizeof(buf)-1)
 
-static int		/* # of characters upto \r,\n or \0 */
+static int		/* # of characters up to \r,\n or \0 */
 getline(int fd, char *buf, int len)
 {
 	int count = 0, n;

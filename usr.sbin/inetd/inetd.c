@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)from: inetd.c	8.4 (Berkeley) 4/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.136 2007/07/01 12:08:08 gnn Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/inetd/inetd.c 313206 2017-02-04 15:52:08Z ngie $");
 
 /*
  * Inetd - Internet super-server
@@ -71,7 +72,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.136 2007/07/01 12:08:08 gnn E
  *	socket type			stream/dgram/raw/rdm/seqpacket
  *	protocol			tcp[4][6][/faith], udp[4][6], unix
  *	wait/nowait			single-threaded/multi-threaded
- *	user				user to run daemon as
+ *	user[:group][/login-class]	user/group/login-class to run daemon as
  *	server program			full path name
  *	server program arguments	maximum of MAXARGS (20)
  *
@@ -95,7 +96,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.136 2007/07/01 12:08:08 gnn E
  *	socket type			stream/dgram/raw/rdm/seqpacket
  *	protocol			rpc/tcp[4][6], rpc/udp[4][6]
  *	wait/nowait			single-threaded/multi-threaded
- *	user				user to run daemon as
+ *	user[:group][/login-class]	user/group/login-class to run daemon as
  *	server program			full path name
  *	server program arguments	maximum of MAXARGS
  *
@@ -110,6 +111,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.136 2007/07/01 12:08:08 gnn E
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -137,7 +139,9 @@ __FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.136 2007/07/01 12:08:08 gnn E
 #include <string.h>
 #include <sysexits.h>
 #include <syslog.h>
+#ifdef LIBWRAP
 #include <tcpd.h>
+#endif
 #include <unistd.h>
 
 #include "inetd.h"
@@ -296,6 +300,7 @@ getvalue(const char *arg, int *value, const char *whine)
 	return 0;				/* success */
 }
 
+#ifdef LIBWRAP
 static sa_family_t
 whichaf(struct request_info *req)
 {
@@ -309,6 +314,7 @@ whichaf(struct request_info *req)
 		return AF_INET;
 	return sa->sa_family;
 }
+#endif
 
 int
 main(int argc, char **argv)
@@ -323,19 +329,12 @@ main(int argc, char **argv)
 #ifdef LOGIN_CAP
 	login_cap_t *lc = NULL;
 #endif
+#ifdef LIBWRAP
 	struct request_info req;
 	int denied;
 	char *service = NULL;
-	union {
-		struct sockaddr peer_un;
-		struct sockaddr_in peer_un4;
-		struct sockaddr_in6 peer_un6;
-		struct sockaddr_storage peer_max;
-	} p_un;
-#define peer	p_un.peer_un
-#define peer4	p_un.peer_un4
-#define peer6	p_un.peer_un6
-#define peermax	p_un.peer_max
+#endif
+	struct sockaddr_storage peer;
 	int i;
 	struct addrinfo hints, *res;
 	const char *servname;
@@ -497,6 +496,9 @@ main(int argc, char **argv)
 		}
 	}
 
+	if (madvise(NULL, 0, MADV_PROTECT) != 0)
+		syslog(LOG_WARNING, "madvise() failed: %s", strerror(errno));
+
 	for (i = 0; i < PERIPSIZE; ++i)
 		LIST_INIT(&proctable[i]);
 
@@ -544,13 +546,8 @@ main(int argc, char **argv)
 		(void)setenv("inetd_dummy", dummy, 1);
 	}
 
-	if (pipe(signalpipe) != 0) {
+	if (pipe2(signalpipe, O_CLOEXEC) != 0) {
 		syslog(LOG_ERR, "pipe: %m");
-		exit(EX_OSERR);
-	}
-	if (fcntl(signalpipe[0], F_SETFD, FD_CLOEXEC) < 0 ||
-	    fcntl(signalpipe[1], F_SETFD, FD_CLOEXEC) < 0) {
-		syslog(LOG_ERR, "signalpipe: fcntl (F_SETFD, FD_CLOEXEC): %m");
 		exit(EX_OSERR);
 	}
 	FD_SET(signalpipe[0], &allsock);
@@ -652,24 +649,24 @@ main(int argc, char **argv)
 		    } else
 			    ctrl = sep->se_fd;
 		    if (dolog && !ISWRAP(sep)) {
-			    char pname[INET6_ADDRSTRLEN] = "unknown";
+			    char pname[NI_MAXHOST] = "unknown";
 			    socklen_t sl;
-			    sl = sizeof peermax;
+			    sl = sizeof(peer);
 			    if (getpeername(ctrl, (struct sockaddr *)
-					    &peermax, &sl)) {
-				    sl = sizeof peermax;
+					    &peer, &sl)) {
+				    sl = sizeof(peer);
 				    if (recvfrom(ctrl, buf, sizeof(buf),
 					MSG_PEEK,
-					(struct sockaddr *)&peermax,
+					(struct sockaddr *)&peer,
 					&sl) >= 0) {
-				      getnameinfo((struct sockaddr *)&peermax,
-						  peer.sa_len,
+				      getnameinfo((struct sockaddr *)&peer,
+						  peer.ss_len,
 						  pname, sizeof(pname),
 						  NULL, 0, NI_NUMERICHOST);
 				    }
 			    } else {
-			            getnameinfo((struct sockaddr *)&peermax,
-						peer.sa_len,
+			            getnameinfo((struct sockaddr *)&peer,
+						peer.ss_len,
 						pname, sizeof(pname),
 						NULL, 0, NI_NUMERICHOST);
 			    }
@@ -684,11 +681,11 @@ main(int argc, char **argv)
 		     */
 		    if (dofork) {
 			    if (sep->se_count++ == 0)
-				(void)gettimeofday(&sep->se_time, (struct timezone *)NULL);
+				(void)clock_gettime(CLOCK_MONOTONIC_FAST, &sep->se_time);
 			    else if (toomany > 0 && sep->se_count >= toomany) {
-				struct timeval now;
+				struct timespec now;
 
-				(void)gettimeofday(&now, (struct timezone *)NULL);
+				(void)clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 				if (now.tv_sec - sep->se_time.tv_sec >
 				    CNT_INTVL) {
 					sep->se_time = now;
@@ -746,6 +743,7 @@ main(int argc, char **argv)
 					    _exit(0);
 				    }
 			    }
+#ifdef LIBWRAP
 			    if (ISWRAP(sep)) {
 				inetd_setproctitle("wrapping", ctrl);
 				service = sep->se_server_name ?
@@ -774,6 +772,7 @@ main(int argc, char **argv)
 					(whichaf(&req) == AF_INET6) ? "6" : "");
 				}
 			    }
+#endif
 			    if (sep->se_bi) {
 				(*sep->se_bi->bi_fn)(ctrl, sep);
 			    } else {
@@ -1261,19 +1260,14 @@ setup(struct servtab *sep)
 {
 	int on = 1;
 
-	if ((sep->se_fd = socket(sep->se_family, sep->se_socktype, 0)) < 0) {
+	/* Set all listening sockets to close-on-exec. */
+	if ((sep->se_fd = socket(sep->se_family,
+	    sep->se_socktype | SOCK_CLOEXEC, 0)) < 0) {
 		if (debug)
 			warn("socket failed on %s/%s",
 				sep->se_service, sep->se_proto);
 		syslog(LOG_ERR, "%s/%s: socket: %m",
 		    sep->se_service, sep->se_proto);
-		return;
-	}
-	/* Set all listening sockets to close-on-exec. */
-	if (fcntl(sep->se_fd, F_SETFD, FD_CLOEXEC) < 0) {
-		syslog(LOG_ERR, "%s/%s: fcntl (F_SETFD, FD_CLOEXEC): %m",
-		    sep->se_service, sep->se_proto);
-		close(sep->se_fd);
 		return;
 	}
 #define	turnon(fd, opt) \
@@ -1393,8 +1387,7 @@ setsockopt(fd, SOL_SOCKET, opt, (char *)&on, sizeof (on))
 
 #ifdef IPSEC
 void
-ipsecsetup(sep)
-	struct servtab *sep;
+ipsecsetup(struct servtab *sep)
 {
 	char *buf;
 	char *policy_in = NULL;
@@ -1758,10 +1751,8 @@ more:
                     strlen(sep->se_proto) + 1 - 4);
                 sep->se_rpc = 1;
                 sep->se_rpc_prog = sep->se_rpc_lowvers =
-			sep->se_rpc_lowvers = 0;
-		memcpy(&sep->se_ctrladdr4, bind_sa4,
-		       sizeof(sep->se_ctrladdr4));
-                if ((versp = rindex(sep->se_service, '/'))) {
+			sep->se_rpc_highvers = 0;
+                if ((versp = strrchr(sep->se_service, '/'))) {
                         *versp++ = '\0';
                         switch (sscanf(versp, "%u-%u",
                                        &sep->se_rpc_lowvers,
@@ -1933,7 +1924,7 @@ more:
 	} else
 		sep->se_group = NULL;
 	sep->se_server = newstr(sskip(&cp));
-	if ((sep->se_server_name = rindex(sep->se_server, '/')))
+	if ((sep->se_server_name = strrchr(sep->se_server, '/')))
 		sep->se_server_name++;
 	if (strcmp(sep->se_server, "internal") == 0) {
 		struct biltin *bi;
@@ -2105,7 +2096,7 @@ inetd_setproctitle(const char *a, int s)
 {
 	socklen_t size;
 	struct sockaddr_storage ss;
-	char buf[80], pbuf[INET6_ADDRSTRLEN];
+	char buf[80], pbuf[NI_MAXHOST];
 
 	size = sizeof(ss);
 	if (getpeername(s, (struct sockaddr *)&ss, &size) == 0) {
@@ -2121,7 +2112,7 @@ int
 check_loop(const struct sockaddr *sa, const struct servtab *sep)
 {
 	struct servtab *se2;
-	char pname[INET6_ADDRSTRLEN];
+	char pname[NI_MAXHOST];
 
 	for (se2 = servtab; se2; se2 = se2->se_next) {
 		if (!se2->se_bi || se2->se_socktype != SOCK_DGRAM)
@@ -2135,8 +2126,8 @@ check_loop(const struct sockaddr *sa, const struct servtab *sep)
 			continue;
 #ifdef INET6
 		case AF_INET6:
-			if (((const struct sockaddr_in *)sa)->sin_port ==
-			    se2->se_ctrladdr4.sin_port)
+			if (((const struct sockaddr_in6 *)sa)->sin6_port ==
+			    se2->se_ctrladdr6.sin6_port)
 				goto isloop;
 			continue;
 #endif
@@ -2335,7 +2326,7 @@ cpmip(const struct servtab *sep, int ctrl)
 			}
 		}
 		if ((cnt * 60) / (CHTSIZE * CHTGRAN) > sep->se_maxcpm) {
-			char pname[INET6_ADDRSTRLEN];
+			char pname[NI_MAXHOST];
 
 			getnameinfo((struct sockaddr *)&rss,
 				    ((struct sockaddr *)&rss)->sa_len,

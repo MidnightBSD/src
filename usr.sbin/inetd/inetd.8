@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1985, 1991, 1993, 1994
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     from: @(#)inetd.8	8.3 (Berkeley) 4/13/94
-.\" $FreeBSD: src/usr.sbin/inetd/inetd.8,v 1.84 2006/09/14 08:36:53 ru Exp $
+.\" $FreeBSD: stable/10/usr.sbin/inetd/inetd.8 175254 2008-01-12 21:09:48Z maxim $
 .\"
-.Dd September 14, 2006
+.Dd January 12, 2008
 .Dt INETD 8
 .Os
 .Sh NAME
@@ -177,6 +178,7 @@ service, the entry would contain these fields:
 service-name/version
 socket-type
 rpc/protocol
+{wait|nowait}[/max-child[/max-connections-per-ip-per-minute[/max-child-per-ip]]]
 user[:group][/login-class]
 server-program
 server-program-arguments
