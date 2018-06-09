@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -27,6 +28,7 @@
 #include <machine/asm.h>
 
 #ifndef fn
+__FBSDID("$FreeBSD: stable/10/lib/msun/amd64/s_lrintf.S 217108 2011-01-07 16:13:12Z kib $")
 #define	fn	lrintf
 #endif
 

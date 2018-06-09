@@ -1,5 +1,5 @@
-/*
- * $FreeBSD$
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/msun/amd64/Symbol.map 226218 2011-10-10 15:43:09Z das $
  */
 FBSD_1.0 {
 	fesetexceptflag;
@@ -7,8 +7,6 @@ FBSD_1.0 {
 	fegetenv;
 	feholdexcept;
 	feupdateenv;
-	__feenableexcept;
-	__fedisableexcept;
 	feenableexcept;
 	fedisableexcept;
 };
