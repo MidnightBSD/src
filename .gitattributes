@@ -72812,6 +72812,9 @@ usr.sbin/bhyve/virtio.c svneol=native#text/plain
 usr.sbin/bhyve/virtio.h svneol=native#text/plain
 usr.sbin/bhyve/xmsr.c svneol=native#text/plain
 usr.sbin/bhyve/xmsr.h svneol=native#text/plain
+usr.sbin/bhyvectl/Makefile svneol=native#text/plain
+usr.sbin/bhyvectl/bhyvectl.8 svneol=native#text/plain
+usr.sbin/bhyvectl/bhyvectl.c svneol=native#text/plain
 usr.sbin/bluetooth/Makefile -text
 usr.sbin/bluetooth/Makefile.inc -text
 usr.sbin/bluetooth/ath3kfw/Makefile -text
