@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: util.c,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/util.c,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: util.c,v 1.5 2003/09/08 02:29:35 max Exp $
+ * $FreeBSD: stable/10/lib/libsdp/util.c 161662 2006-08-26 23:16:35Z markus $
  */
 
 #include <netinet/in.h>

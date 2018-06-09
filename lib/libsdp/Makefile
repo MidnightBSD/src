@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.3 2012-11-27 01:40:57 laffer1 Exp $
-# $FreeBSD: src/lib/libsdp/Makefile,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
-# $MidnightBSD: src/lib/libsdp/Makefile,v 1.2 2012/04/10 19:40:33 laffer1 Exp $
+# $MidnightBSD$
+# $Id: Makefile,v 1.2 2003/09/07 20:34:19 max Exp $
+# $FreeBSD: stable/10/lib/libsdp/Makefile 195767 2009-07-19 17:25:24Z kensmith $
 
 LIB=		sdp
 MAN=		sdp.3

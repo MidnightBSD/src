@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdp-int.h,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/sdp-int.h,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: sdp-int.h,v 1.1 2003/09/01 23:01:07 max Exp $
+ * $FreeBSD: stable/10/lib/libsdp/sdp-int.h 124305 2004-01-09 18:19:12Z emax $
  */
 
 #ifndef _SDP_INT_H_

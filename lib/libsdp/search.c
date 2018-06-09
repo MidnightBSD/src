@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: search.c,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/search.c,v 1.7.10.1.4.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: search.c,v 1.2 2003/09/04 22:12:13 max Exp $
+ * $FreeBSD: stable/10/lib/libsdp/search.c 173673 2007-11-16 15:13:12Z emax $
  */
 
 #include <sys/uio.h>

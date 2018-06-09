@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdp.h,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/sdp.h,v 1.7.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: sdp.h,v 1.3 2003/09/05 00:33:59 max Exp $
+ * $FreeBSD: stable/10/lib/libsdp/sdp.h 226426 2011-10-16 08:45:16Z ed $
  */
 
 #ifndef _SDP_H_
@@ -313,13 +313,13 @@ typedef struct sdp_attr *	sdp_attr_p;
 
 /* Inline versions of get/put byte/short/long. Pointer is advanced */
 #define SDP_GET8(b, cp) { \
-	register uint8_t *t_cp = (uint8_t *)(cp); \
+	const uint8_t *t_cp = (const uint8_t *)(cp); \
 	(b) = *t_cp; \
 	(cp) ++; \
 }
 
 #define SDP_GET16(s, cp) { \
-	register uint8_t *t_cp = (uint8_t *)(cp); \
+	const uint8_t *t_cp = (const uint8_t *)(cp); \
 	(s) = ((uint16_t)t_cp[0] << 8) \
 	    | ((uint16_t)t_cp[1]) \
 	    ; \
@@ -327,7 +327,7 @@ typedef struct sdp_attr *	sdp_attr_p;
 }
 
 #define SDP_GET32(l, cp) { \
-	register uint8_t *t_cp = (uint8_t *)(cp); \
+	const uint8_t *t_cp = (const uint8_t *)(cp); \
 	(l) = ((uint32_t)t_cp[0] << 24) \
 	    | ((uint32_t)t_cp[1] << 16) \
 	    | ((uint32_t)t_cp[2] << 8) \
