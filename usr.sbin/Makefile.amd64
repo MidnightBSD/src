@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/Makefile.amd64 294364 2016-01-19 23:36:49Z ian $
 
 # kgzip: builds, but missing support files
 # mptable: broken (not 64 bit clean)
@@ -10,16 +11,21 @@ SUBDIR+=	acpi
 SUBDIR+=	apm
 .endif
 SUBDIR+=	asf
+.if ${MK_BHYVE} != "no"
+SUBDIR+=	bhyve
+SUBDIR+=	bhyvectl
+SUBDIR+=	bhyveload
+.endif
 SUBDIR+=	boot0cfg
 .if ${MK_TOOLCHAIN} != "no"
 SUBDIR+=	btxld
 .endif
 SUBDIR+=	cpucontrol
+.if ${MK_HYPERV} != "no"
+SUBDIR+=	hyperv
+.endif
 SUBDIR+=	kgmon
 SUBDIR+=	lptcontrol
-.if ${MK_NCP} != "no"
-SUBDIR+=	mount_nwfs
-.endif
 SUBDIR+=	mptable
 .if ${MK_NDIS} != "no"
 SUBDIR+=	ndiscvt
