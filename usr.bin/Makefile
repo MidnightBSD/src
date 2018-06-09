@@ -223,12 +223,6 @@ SUBDIR+=	atm
 SUBDIR+=	catman
 .endif
 
-.if ${MK_BIND_UTILS} != "no"
-SUBDIR+=	dig
-SUBDIR+=	host
-SUBDIR+=	nslookup
-.endif
-
 .if ${MK_BLUETOOTH} != "no"
 SUBDIR+=	bluetooth
 .endif
