@@ -1,19 +1,17 @@
 # $MidnightBSD$
-#
 # $FreeBSD: head/lib/libz/Makefile 232263 2012-02-28 18:30:18Z dim $
 #
-
-ZLIBSRC=	${.CURDIR}/../../contrib/zlib
-
-.PATH:		${ZLIBSRC}
 
 LIB=		z
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	6
 MAN=		zlib.3
 
-CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf -I${.CURDIR} -I${.ZLIBSRC}
+ZLIBSRC=	${SRCTOP}/contrib/zlib
 
+.PATH:		${ZLIBSRC}
+
+CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf -I${.CURDIR}
 
 WARNS?=		3
 
@@ -65,3 +63,7 @@ FILESDIR=	${LIBDATADIR}/pkgconfig
 .endif
 
 .include <bsd.lib.mk>
+
+## XXX: clang integrated-as doesn't grok .intel_syntax directives yet
+#ACFLAGS.gvmat64.S=	${CLANG_NO_IAS}
+#ACFLAGS+=		${ACFLAGS.${.IMPSRC:T}}
