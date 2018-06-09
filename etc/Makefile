@@ -124,15 +124,10 @@ BIN1+= regdomain.xml
 # -rwxr-xr-x root:wheel, for the new cron root:wheel
 BIN2=	netstart pccard_ether rc.suspend rc.resume
 
-MTREE=	BSD.include.dist BSD.local.dist BSD.root.dist BSD.usr.dist \
+MTREE=	BSD.debug.dist BSD.include.dist BSD.local.dist BSD.root.dist BSD.usr.dist \
 	BSD.var.dist BSD.x11.dist BSD.x11-4.dist
 .if ${MK_SENDMAIL} != "no"
 MTREE+=	BSD.sendmail.dist
-.endif
-.if ${MK_BIND} != "no"
-MTREE+=	BIND.chroot.dist
-.if ${MK_BIND_LIBS} != "no"
-MTREE+=	BIND.include.dist
 .endif
 .endif
 
