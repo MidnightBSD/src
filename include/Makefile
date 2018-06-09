@@ -5,12 +5,13 @@
 
 .include <bsd.own.mk>
 
-CLEANFILES= osreldate.h version vers.c
-SUBDIR= arpa gssapi protocols rpcsvc rpc xlocale
+CLEANFILES= osreldate.h version
+SUBDIR= arpa protocols rpcsvc rpc xlocale
+SUBDIR_PARALLEL=
 INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
-	fts.h ftw.h getopt.h glob.h grp.h gssapi.h \
+	fts.h ftw.h getopt.h glob.h grp.h \
 	ieeefp.h ifaddrs.h \
 	inttypes.h iso646.h kenv.h langinfo.h libgen.h limits.h link.h \
 	locale.h malloc.h malloc_np.h memory.h monetary.h mpool.h mqueue.h \
@@ -19,11 +20,11 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	printf.h proc_service.h pthread.h \
 	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h \
 	res_update.h resolv.h runetype.h search.h semaphore.h setjmp.h \
-	signal.h spawn.h stab.h stdatomic.h \
-	stdbool.h stddef.h stdio.h stdlib.h string.h stringlist.h \
+	signal.h spawn.h stab.h stdalign.h stdbool.h stddef.h \
+	stdnoreturn.h stdio.h stdlib.h string.h stringlist.h \
 	strings.h sysexits.h tar.h termios.h tgmath.h \
 	time.h timeconv.h timers.h ttyent.h \
-	ulimit.h unistd.h utime.h utmpx.h uuid.h varargs.h \
+	uchar.h ulimit.h unistd.h utime.h utmpx.h uuid.h varargs.h \
 	wchar.h wctype.h wordexp.h xlocale.h
 
 .PATH: ${.CURDIR}/../contrib/libc-vis
@@ -33,25 +34,26 @@ MHDRS=	float.h floatingpoint.h stdarg.h
 
 PHDRS=	sched.h _semaphore.h
 
-LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdint.h syslog.h \
-	ucontext.h
+LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdatomic.h stdint.h \
+	syslog.h ucontext.h
 
 LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
-	netipsec netipx netnatm ${_netncp} netsmb \
+	netipsec ${_netipx} netnatm netsmb \
 	nfs nfsclient nfsserver \
 	sys vm
 
 LSUBDIRS=	cam/ata cam/scsi \
 	dev/acpica dev/agp dev/an dev/bktr dev/ciss dev/filemon dev/firewire \
-	dev/hwpmc \
-	dev/ic dev/iicbus ${_dev_ieee488} dev/io dev/lmc dev/mfi dev/nvme \
-	dev/ofw dev/pbio dev/pci dev/ppbus dev/smbus \
-	dev/speaker dev/usb dev/utopia dev/vkbd dev/wi \
-	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/nfs fs/ntfs fs/nullfs \
-	${_fs_nwfs} fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
+	dev/hwpmc dev/hyperv \
+	dev/ic dev/iicbus ${_dev_ieee488} dev/io dev/lmc dev/mfi dev/mmc \
+	dev/nvme \
+	dev/ofw dev/pbio dev/pci ${_dev_powermac_nvram} dev/ppbus dev/smbus \
+	dev/speaker dev/utopia dev/vkbd dev/wi \
+	fs/devfs fs/fdescfs fs/msdosfs fs/nandfs fs/nfs fs/nullfs \
+	fs/procfs fs/smbfs fs/udf fs/unionfs \
 	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
 	geom/mirror geom/mountver geom/multipath geom/nop \
-	geom/raid geom/raid3 geom/raid5 geom/shsec geom/stripe geom/virstor \
+	geom/raid geom/raid3 geom/shsec geom/stripe geom/virstor \
 	netgraph/atm netgraph/netflow \
 	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
@@ -60,25 +62,39 @@ LSUBDIRS=	cam/ata cam/scsi \
 
 LSUBSUBDIRS=	dev/mpt/mpilib
 
+.if ${MK_BLUETOOTH} != "no"
+LSUBSUBDIRS+=	netgraph/bluetooth/include
+.endif
+
 .if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
+.endif
+
+.if ${MK_GSSAPI} != "no"
+SUBDIR+=	gssapi
+INCS+=		gssapi.h
 .endif
 
 .if ${MK_HESIOD} != "no"
 INCS+=	hesiod.h
 .endif
 
-.if ${MK_ICONV} != "no"
-INCS+=	iconv.h
+# XXX unconditionally needed by <netsmb/netbios.h>
+#.if ${MK_IPX} != "no"
+_netipx=	netipx
+#.endif
+
+# Handle the #define aliases for libiconv
+.if ${MK_ICONV} == "yes"
+INCS+=		iconv.h
 .endif
 
-.if ${MK_BLUETOOTH} != "no"
-LSUBSUBDIRS+=	netgraph/bluetooth/include
+.if ${MK_USB} != "no"
+LSUBDIRS+=	dev/usb
 .endif
 
-.if ${MK_NCP} != "no"
-_netncp=	netncp
-_fs_nwfs=	fs/nwfs
+.if ${MACHINE_ARCH} == "powerpc" || ${MACHINE_ARCH} == "powerpc64"
+_dev_powermac_nvram=	dev/powermac_nvram
 .endif
 
 # Define SHARED to indicate whether you want symbolic links to the system
@@ -90,19 +106,14 @@ SHARED?=	copies
 
 INCS+=	osreldate.h
 
-osreldate.h: ${.CURDIR}/../sys/conf/newvers.sh ${.CURDIR}/../sys/sys/param.h \
-    ${.CURDIR}/Makefile
-	@${ECHO} creating osreldate.h from newvers.sh
-	@MAKE=${MAKE}; \
-	PARAMFILE=${.CURDIR}/../sys/sys/param.h; \
-	. ${.CURDIR}/../sys/conf/newvers.sh; \
-	echo "$$COPYRIGHT" > osreldate.h; \
-	echo "#ifdef _KERNEL" >> osreldate.h; \
-	echo "#error \"<osreldate.h> cannot be used in the kernel, use <sys/param.h>\"" >> osreldate.h; \
-	echo "#else" >> osreldate.h; \
-	echo "#undef __MidnightBSD_version" >> osreldate.h; \
-	echo "#define __MidnightBSD_version $$RELDATE" >> osreldate.h; \
-	echo "#endif" >> osreldate.h
+SYSDIR=			${.CURDIR}/../sys
+NEWVERS_SH=		${SYSDIR}/conf/newvers.sh
+PARAM_H=		${SYSDIR}/sys/param.h
+MK_OSRELDATE_SH=	${.CURDIR}/mk-osreldate.sh
+
+osreldate.h: ${NEWVERS_SH} ${PARAM_H} ${MK_OSRELDATE_SH}
+	env NEWVERS_SH=${NEWVERS_SH} PARAMFILE=${PARAM_H} SYSDIR=${SYSDIR} \
+	    sh ${MK_OSRELDATE_SH}
 
 .for i in ${LHDRS}
 INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
@@ -136,11 +147,6 @@ compat:
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
 	    -f ${.CURDIR}/../etc/mtree/BSD.include.dist \
 	    -p ${DESTDIR}${INCLUDEDIR}
-.if ${MK_BIND_LIBS} != "no"
-	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
-	    -f ${.CURDIR}/../etc/mtree/BIND.include.dist \
-	    -p ${DESTDIR}${INCLUDEDIR}
-.endif
 
 copies:
 .for i in ${LDIRS} ${LSUBDIRS} ${LSUBSUBDIRS} altq crypto machine machine/pc \
@@ -152,13 +158,15 @@ copies:
 	done
 .endif
 .endfor
-.for i in ${LDIRS} ${LSUBDIRS:Ndev/agp:Ndev/acpica:Ndev/bktr:Ndev/pci} ${LSUBSUBDIRS}
+.for i in ${LDIRS} ${LSUBDIRS:Ndev/agp:Ndev/acpica:Ndev/bktr:Ndev/hyperv:Ndev/nand:Ndev/pci} ${LSUBSUBDIRS}
 	cd ${.CURDIR}/../sys; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 $i/*.h \
 	    ${DESTDIR}${INCLUDEDIR}/$i
 .endfor
 	cd ${.CURDIR}/../sys/dev/acpica; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpiio.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/acpica; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpi_hpet.h \
 	    ${DESTDIR}${INCLUDEDIR}/dev/acpica
 	cd ${.CURDIR}/../sys/dev/agp; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 agpreg.h \
@@ -166,6 +174,19 @@ copies:
 	cd ${.CURDIR}/../sys/dev/bktr; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 ioctl_*.h \
 	    ${DESTDIR}${INCLUDEDIR}/dev/bktr
+.if ${MK_NAND} != "no"
+	cd ${.CURDIR}/../sys/dev/nand; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 nandsim.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/nand; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 nand_dev.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/nand
+.endif
+	cd ${.CURDIR}/../sys/dev/hyperv/include; \
+	${INSTALL} -C ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m 444 hyperv.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/hyperv
+	cd ${.CURDIR}/../sys/dev/hyperv/utilities; \
+	${INSTALL} -C ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m 444 hv_snapshot.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/hyperv
 	cd ${.CURDIR}/../sys/dev/pci; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 pcireg.h \
 	    ${DESTDIR}${INCLUDEDIR}/dev/pci
@@ -180,9 +201,11 @@ copies:
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/netinet
 .endif
-	cd ${.CURDIR}/../sys/contrib/pf/net; \
+.if ${MK_PF} != "no"
+	cd ${.CURDIR}/../sys/netpfil/pf; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
-	    ${DESTDIR}${INCLUDEDIR}/net
+	    ${DESTDIR}${INCLUDEDIR}/netpfil/pf
+.endif
 	cd ${.CURDIR}/../sys/crypto; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 rijndael/rijndael.h \
 	    ${DESTDIR}${INCLUDEDIR}/crypto
@@ -216,6 +239,17 @@ copies:
 	cd ${.CURDIR}/../sys/rpc; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 types.h \
 	    ${DESTDIR}${INCLUDEDIR}/rpc
+.if ${MK_CDDL} != "no"
+	cd ${.CURDIR}/../cddl/contrib/opensolaris/lib/libzfs_core/common; \
+	${INSTALL} -C ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m 444 libzfs_core.h \
+	    ${DESTDIR}${INCLUDEDIR}
+	cd ${.CURDIR}/../cddl/contrib/opensolaris/lib/libnvpair; \
+	${INSTALL} -C ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m 444 libnvpair.h \
+	    ${DESTDIR}${INCLUDEDIR}
+	cd ${.CURDIR}/../sys/cddl/contrib/opensolaris/uts/common/sys; \
+	${INSTALL} -C ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m 444 nvpair.h \
+	    ${DESTDIR}${INCLUDEDIR}/sys
+.endif
 
 symlinks:
 	@${ECHO} "Setting up symlinks to kernel source tree..."
@@ -225,14 +259,14 @@ symlinks:
 		ln -fs ../../../sys/$i/$$h ${DESTDIR}${INCLUDEDIR}/$i; \
 	done
 .endfor
-.for i in ${LSUBDIRS:Ndev/agp:Ndev/acpica:Ndev/bktr:Ndev/pci}
+.for i in ${LSUBDIRS:Ndev/agp:Ndev/acpica:Ndev/bktr:Ndev/hyperv:Ndev/nand:Ndev/pci}
 	cd ${.CURDIR}/../sys/$i; \
 	for h in *.h; do \
 		ln -fs ../../../../sys/$i/$$h ${DESTDIR}${INCLUDEDIR}/$i; \
 	done
 .endfor
 	cd ${.CURDIR}/../sys/dev/acpica; \
-	for h in acpiio.h; do \
+	for h in acpiio.h acpi_hpet.h; do \
 		ln -fs ../../../../sys/dev/acpica/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/dev/acpica; \
 	done
@@ -245,6 +279,23 @@ symlinks:
 	for h in ioctl_*.h; do \
 		ln -fs ../../../../sys/dev/bktr/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/dev/bktr; \
+	done
+.if ${MK_NAND} != "no"
+	cd ${.CURDIR}/../sys/dev/nand; \
+	for h in nandsim.h nand_dev.h; do \
+		ln -fs ../../../../sys/dev/nand/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/dev/nand; \
+	done
+.endif
+	cd ${.CURDIR}/../sys/dev/hyperv/include; \
+	for h in hyperv.h; do \
+		${INSTALL_SYMLINK} ${TAG_ARGS} ../../../../sys/dev/hyperv/include/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/dev/hyperv; \
+	done
+	cd ${.CURDIR}/../sys/dev/hyperv/utilities; \
+	for h in hv_snapshot.h; do \
+		${INSTALL_SYMLINK} ${TAG_ARGS} ../../../../sys/dev/hyperv/utilities/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/dev/hyperv; \
 	done
 	cd ${.CURDIR}/../sys/dev/pci; \
 	for h in pcireg.h; do \
@@ -269,11 +320,13 @@ symlinks:
 		    ${DESTDIR}${INCLUDEDIR}/netinet; \
 	done
 .endif
-	cd ${.CURDIR}/../sys/contrib/pf/net; \
+.if ${MK_PF} != "no"
+	cd ${.CURDIR}/../sys/netpfil/pf; \
 	for h in *.h; do \
-		ln -fs ../../../sys/contrib/pf/net/$$h \
-		    ${DESTDIR}${INCLUDEDIR}/net; \
+		ln -fs ../../../../sys/netpfil/pf/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/netpfil/pf; \
 	done
+.endif
 	cd ${.CURDIR}/../sys/crypto; \
 	for h in rijndael/rijndael.h; do \
 		ln -fs ../../../sys/crypto/$$h \
