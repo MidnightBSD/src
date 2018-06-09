@@ -46084,7 +46084,9 @@ include/xlocale/_monetary.h -text
 include/xlocale/_stdio.h -text
 include/xlocale/_stdlib.h -text
 include/xlocale/_string.h -text
+include/xlocale/_strings.h svneol=native#text/plain
 include/xlocale/_time.h -text
+include/xlocale/_uchar.h svneol=native#text/plain
 include/xlocale/_wchar.h -text
 kerberos5/Makefile -text
 kerberos5/Makefile.inc -text
