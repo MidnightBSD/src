@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2002 Hidetoshi Shimokawa
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/fwcontrol/fwcontrol.8 236500 2012-06-03 06:57:47Z joel $
 .\"
 .Dd September 12, 2008
 .Dt FWCONTROL 8
@@ -144,7 +145,7 @@ Hostname will be converted to EUI64 using
 .Xr eui64 5 .
 .El
 .Sh FILES
-.Bl -tag
+.Bl -tag -width "Pa /dev/fw0.0"
 .It Pa /dev/fw0.0
 .El
 .Sh EXAMPLES
@@ -171,7 +172,7 @@ For PAL, replace
 with
 .Dq Li bs=144000 .
 .Pp
-.Dl "fwcontrol -R file.m2t
+.Dl "fwcontrol -R file.m2t"
 .Pp
 Receive an MPEG TS stream from a camera producing MPEG transport stream.
 This has been tested with SONY HDR-FX1E camera that produces HD MPEG-2
@@ -179,7 +180,7 @@ stream at 25 Mbps bandwidth.
 .Pp
 To send the stream from the camera over the network using TCP (which
 surprisingly works better with vlc), you can use
-.Dl "fwcontrol -R - | nc 192.168.10.11 9000
+.Dl "fwcontrol -R - | nc 192.168.10.11 9000"
 with
 .Nm netcat
 from ports and to receive the stream, use
@@ -190,7 +191,7 @@ To netcast via UDP, you need to use
 program from ports, since vlc is not fast enough to read UDP packets from
 buffers and thus it experiences dropouts when run directly.
 The sending side can use
-.Dl "fwcontrol -R - | nc 192.168.10.11 9000
+.Dl "fwcontrol -R - | nc 192.168.10.11 9000"
 and to receive the stream, use
 .Dl nc -l -u -p 9000 | buffer -s 10k -b 1000 -m 20m -p 5 | vlc -
 .Pp

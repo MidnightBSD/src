@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2002
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,9 +33,9 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/fwcontrol/fwcontrol.c 228990 2011-12-30 10:58:14Z uqs $");
 #endif
 
 #include <sys/param.h>
@@ -44,7 +45,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/errno.h>
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/eui64.h>
 #include <dev/firewire/firewire.h>
 #include <dev/firewire/iec13213.h>
@@ -1025,7 +1026,7 @@ main(int argc, char **argv)
 	if (set_fwmem_target) {
 		eui.hi = ntohl(*(u_int32_t*)&(target.octet[0]));
 		eui.lo = ntohl(*(u_int32_t*)&(target.octet[4]));
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 		sysctl_set_int("hw.firewire.fwmem.eui64_hi", eui.hi);
 		sysctl_set_int("hw.firewire.fwmem.eui64_lo", eui.lo);
 #elif defined(__NetBSD__)
@@ -1056,7 +1057,7 @@ main(int argc, char **argv)
 		show_topology_map(fd);
 
 	/*
-	 * Recieve data file from node "-R"
+	 * Receive data file from node "-R"
 	 */
 #define TAG	(1<<6)
 #define CHANNEL	63

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/fwcontrol/fwdv.c 216948 2011-01-04 02:52:22Z emaste $
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -39,7 +40,9 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
+#if __FreeBSD_version >= 500000
 #include <arpa/inet.h>
+#endif
 
 #include <err.h>
 #include <errno.h>

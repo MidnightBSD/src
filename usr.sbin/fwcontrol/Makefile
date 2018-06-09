@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/fwcontrol/Makefile 204585 2010-03-02 16:58:04Z uqs $
 
 PROG=	fwcontrol
 SRCS=	fwcontrol.c fwcrom.c fwdv.c fwmpegts.c
