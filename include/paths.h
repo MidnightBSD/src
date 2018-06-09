@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)paths.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/paths.h 312382 2017-01-18 14:14:00Z avg $
  */
 
 #ifndef _PATHS_H_
@@ -50,6 +51,7 @@
 #define	_PATH_CSHELL	"/bin/csh"
 #define	_PATH_CSMAPPER	"/usr/share/i18n/csmapper"
 #define	_PATH_DEFTAPE	"/dev/sa0"
+#define	_PATH_DEVGPIOC	"/dev/gpioc"
 #define	_PATH_DEVNULL	"/dev/null"
 #define	_PATH_DEVZERO	"/dev/zero"
 #define	_PATH_DRUM	"/dev/drum"
@@ -57,6 +59,8 @@
 #define	_PATH_ETC	"/etc"
 #define	_PATH_FTPUSERS	"/etc/ftpusers"
 #define	_PATH_FWMEM	"/dev/fwmem"
+#define	_PATH_GBDE	"/sbin/gbde"
+#define	_PATH_GELI	"/sbin/geli"
 #define	_PATH_HALT	"/sbin/halt"
 #ifdef COMPAT_32BIT
 #define	_PATH_I18NMODULE	"/usr/lib32/i18n"
@@ -95,6 +99,7 @@
 #define	_PATH_VARDB	"/var/db/"
 #define	_PATH_VARRUN	"/var/run/"
 #define	_PATH_VARTMP	"/var/tmp/"
+#define	_PATH_DEVVMM	"/dev/vmm/"
 #define	_PATH_YP	"/var/yp/"
 #define	_PATH_UUCPLOCK	"/var/spool/lock/"
 
