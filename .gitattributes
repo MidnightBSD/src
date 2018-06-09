@@ -73260,6 +73260,13 @@ usr.sbin/gssd/gssd.c -text
 usr.sbin/gstat/Makefile -text
 usr.sbin/gstat/gstat.8 -text
 usr.sbin/gstat/gstat.c -text
+usr.sbin/hyperv/Makefile svneol=native#text/plain
+usr.sbin/hyperv/Makefile.inc svneol=native#text/plain
+usr.sbin/hyperv/tools/Makefile.inc svneol=native#text/plain
+usr.sbin/hyperv/tools/kvp/Makefile svneol=native#text/plain
+usr.sbin/hyperv/tools/kvp/Makefile.depend svneol=native#text/plain
+usr.sbin/hyperv/tools/vss/Makefile svneol=native#text/plain
+usr.sbin/hyperv/tools/vss/Makefile.depend svneol=native#text/plain
 usr.sbin/i2c/Makefile -text
 usr.sbin/i2c/i2c.8 -text
 usr.sbin/i2c/i2c.c -text
