@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -30,10 +31,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)xargs.1	8.1 (Berkeley) 6/6/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/xargs/xargs.1 293726 2016-01-12 05:51:12Z allanjude $
 .\" $xMach: xargs.1,v 1.2 2002/02/23 05:23:37 tim Exp $
 .\"
-.Dd March 24, 2011
+.Dd August 4, 2015
 .Dt XARGS 1
 .Os
 .Sh NAME
@@ -208,6 +209,11 @@ Parallel mode: run at most
 invocations of
 .Ar utility
 at once.
+If
+.Ar maxprocs
+is set to 0,
+.Nm
+will run as many processes as possible.
 .It Fl p
 Echo each command to be executed and ask the user whether it should be
 executed.
@@ -294,17 +300,17 @@ Undefined behavior may occur if
 .Ar utility
 reads from the standard input.
 .Pp
-The
-.Nm
-utility exits immediately (without processing any further input) if a
-command line cannot be assembled,
-.Ar utility
-cannot be invoked, an invocation of
+If a command line cannot be assembled, or
+cannot be invoked, or if an invocation of
 .Ar utility
 is terminated by a signal,
 or an invocation of
 .Ar utility
-exits with a value of 255.
+exits with a value of 255, the
+.Nm
+utility stops processing input and exits after all invocations of
+.Ar utility
+finish processing.
 .Sh EXIT STATUS
 The
 .Nm
