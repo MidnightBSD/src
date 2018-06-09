@@ -1,8 +1,7 @@
-# $FreeBSD: src/usr.sbin/getfmac/Makefile,v 1.4 2005/01/27 14:52:46 delphij Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/getfmac/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=   getfmac
 MAN=	getfmac.8
-
-WARNS?=	6
 
 .include <bsd.prog.mk>
