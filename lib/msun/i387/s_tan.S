@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 Winning Strategies, Inc.
  * All rights reserved.
@@ -34,23 +35,23 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_tan.S 240566 2012-09-16 16:58:49Z tijl $")
 
 ENTRY(tan)
 	fldl	4(%esp)
 	fptan
 	fnstsw	%ax
-	andw	$0x400,%ax
-	jnz	1f
+	sahf
+	jp	1f
 	fstp	%st(0)
 	ret
 1:	fldpi
 	fadd	%st(0)
 	fxch	%st(1)
-2:	fprem1
-	fstsw	%ax
-	andw	$0x400,%ax
-	jnz	2b
+2:	fprem
+	fnstsw	%ax
+	sahf
+	jp	2b
 	fstp	%st(1)
 	fptan
 	fstp	%st(0)

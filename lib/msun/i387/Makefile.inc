@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/msun/i387/Makefile.inc 177768 2008-03-30 21:21:53Z das $
 
 ARCH_SRCS = e_exp.S e_fmod.S e_log.S e_log10.S \
 	    e_remainder.S e_sqrt.S s_ceil.S s_copysign.S \

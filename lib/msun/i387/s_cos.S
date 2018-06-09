@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 Winning Strategies, Inc.
  * All rights reserved.
@@ -34,22 +35,22 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_cos.S 240566 2012-09-16 16:58:49Z tijl $")
 
 ENTRY(cos)
 	fldl	4(%esp)
 	fcos
 	fnstsw	%ax
-	andw	$0x400,%ax
-	jnz	1f
+	sahf
+	jp	1f
 	ret	
 1:	fldpi
 	fadd	%st(0)
 	fxch	%st(1)
-2:	fprem1
+2:	fprem
 	fnstsw	%ax
-	andw	$0x400,%ax
-	jnz	2b
+	sahf
+	jp	2b
 	fstp	%st(1)
 	fcos
 	ret

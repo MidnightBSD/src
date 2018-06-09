@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$"); 
+__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_remquol.S 217108 2011-01-07 16:13:12Z kib $"); 
 	
 ENTRY(remquol)
 	fldt	16(%esp)

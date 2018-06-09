@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 Winning Strategies, Inc.
  * All rights reserved.
@@ -34,7 +35,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
+__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_scalbn.S 217108 2011-01-07 16:13:12Z kib $")
 
 ENTRY(scalbn)
 	fildl	12(%esp)
