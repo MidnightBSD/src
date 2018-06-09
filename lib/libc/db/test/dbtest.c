@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +38,7 @@ static char copyright[] =
 static char sccsid[] = "@(#)dbtest.c	8.17 (Berkeley) 9/1/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/test/dbtest.c 176380 2008-02-18 03:19:25Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

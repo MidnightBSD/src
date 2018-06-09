@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char copyright[] =
 static char sccsid[] = "@(#)tcreat3.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/test/hash.tests/tcreat3.c 165903 2007-01-09 00:28:16Z imp $");
 
 #include <sys/types.h>
 #include <sys/file.h>
