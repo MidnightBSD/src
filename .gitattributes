@@ -50127,6 +50127,10 @@ lib/msun/man/sqrt.3 -text
 lib/msun/man/tan.3 -text
 lib/msun/man/tanh.3 -text
 lib/msun/man/trunc.3 -text
+lib/msun/powerpc/Makefile.inc svneol=native#text/plain
+lib/msun/powerpc/Symbol.map -text
+lib/msun/powerpc/fenv.c svneol=native#text/plain
+lib/msun/powerpc/fenv.h svneol=native#text/plain
 lib/msun/sparc64/Makefile.inc svneol=native#text/plain
 lib/msun/sparc64/Symbol.map -text
 lib/msun/sparc64/e_sqrt.S svneol=native#text/plain
