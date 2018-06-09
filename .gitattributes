@@ -49427,6 +49427,9 @@ lib/libmt/Makefile svneol=native#text/plain
 lib/libmt/mt.3 svneol=native#text/plain
 lib/libmt/mtlib.c svneol=native#text/plain
 lib/libmt/mtlib.h svneol=native#text/plain
+lib/libnandfs/Makefile svneol=native#text/plain
+lib/libnandfs/libnandfs.h svneol=native#text/plain
+lib/libnandfs/nandfs.c svneol=native#text/plain
 lib/libncp/CREDITS -text
 lib/libncp/Makefile -text
 lib/libncp/ipx.c -text
