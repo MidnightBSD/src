@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* From: @(#)k_cos.c 1.3 95/01/18 */
 /*
  * ====================================================
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/ld128/k_cosl.c 176358 2008-02-17 07:32:31Z das $");
 
 /*
  * ld128 version of k_cos.c.  See ../src/k_cos.c for most comments.

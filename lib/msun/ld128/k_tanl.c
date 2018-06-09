@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* From: @(#)k_tan.c 1.5 04/04/22 SMI */
 
 /*
@@ -12,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/msun/ld128/k_tanl.c 176358 2008-02-17 07:32:31Z das $");
 
 /*
  * ld128 version of k_tan.c.  See ../src/k_tan.c for most comments.
