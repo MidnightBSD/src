@@ -1,8 +1,7 @@
-# $FreeBSD: src/usr.sbin/getpmac/Makefile,v 1.5 2005/01/27 14:52:46 delphij Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/getpmac/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=   getpmac
 MAN=	getpmac.8
-
-WARNS?=	6
 
 .include <bsd.prog.mk>
