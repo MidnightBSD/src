@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #-
 # Copyright (c) 1998 Juniper Networks, Inc.
 # All rights reserved.
@@ -33,15 +34,16 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libpam/libpam/Makefile 313580 2017-02-11 05:43:34Z ngie $
 
-OPENPAM=	${.CURDIR}/../../../contrib/openpam
-.PATH: ${OPENPAM}/include ${OPENPAM}/lib ${OPENPAM}/doc/man
+OPENPAM=	${SRCTOP}/contrib/openpam
+.PATH: ${OPENPAM}/include ${OPENPAM}/lib/libpam ${OPENPAM}/doc/man
 
 LIB=	pam
 NO_PROFILE=
 
-SRCS=	openpam_borrow_cred.c \
+SRCS=	openpam_asprintf.c \
+	openpam_borrow_cred.c \
 	openpam_check_owner_perms.c \
 	openpam_configure.c \
 	openpam_constants.c \
@@ -63,8 +65,12 @@ SRCS=	openpam_borrow_cred.c \
 	openpam_set_feature.c \
 	openpam_set_option.c \
 	openpam_straddch.c \
+	openpam_strlcat.c \
+	openpam_strlcpy.c \
+	openpam_strlset.c \
 	openpam_subst.c \
 	openpam_ttyconv.c \
+	openpam_vasprintf.c \
 	pam_acct_mgmt.c \
 	pam_authenticate.c \
 	pam_chauthtok.c \
@@ -150,7 +156,7 @@ MLINKS=	pam.conf.5 pam.d.5
 CSTD?= c99
 CFLAGS+= -I${.CURDIR} -I${OPENPAM}/include
 CFLAGS+= -DLIB_MAJ=${SHLIB_MAJOR}
-CFLAGS+= -DOPENPAM_MODULES_DIR='"${PAM_MOD_DIR:C/\/*$//}/"'
+CFLAGS+= -DHAVE_DLFUNC=1
 CFLAGS+= -DHAVE_FDLOPEN=1
 CFLAGS+= -DHAVE_FPURGE=1
 CFLAGS+= -DHAVE_STRLCAT=1
@@ -192,5 +198,9 @@ DPSRCS=		openpam_static.c
 # Headers
 INCS=		${HEADERS} ${ADD_HEADERS}
 INCSDIR=	${INCLUDEDIR}/security
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=        tests
+.endif
 
 .include <bsd.lib.mk>

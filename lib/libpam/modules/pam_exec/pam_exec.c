@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001,2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_exec/pam_exec.c 234842 2012-04-30 13:34:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_exec/pam_exec.c 234184 2012-04-12 14:02:59Z dumbbell $");
 
 #include <sys/types.h>
 #include <sys/wait.h>

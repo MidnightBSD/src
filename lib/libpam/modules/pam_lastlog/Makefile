@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # Copyright 2001 Mark R V Murray
 # All rights reserved.
 #
@@ -22,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/9.2.0/lib/libpam/modules/pam_lastlog/Makefile 202566 2010-01-18 11:29:51Z ed $
+# $FreeBSD: stable/10/lib/libpam/modules/pam_lastlog/Makefile 202566 2010-01-18 11:29:51Z ed $
 
 LIB=	pam_lastlog
 SRCS=	pam_lastlog.c

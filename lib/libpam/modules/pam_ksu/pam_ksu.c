@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jacques A. Vidrine <nectar@FreeBSD.org>
  * All rights reserved.

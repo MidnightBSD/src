@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mark R V Murray
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_rootok/pam_rootok.c 94564 2002-04-12 22:27:25Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_rootok/pam_rootok.c 94564 2002-04-12 22:27:25Z des $");
 
 #define _BSD_SOURCE
 

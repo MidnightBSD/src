@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # Copyright 2001 FreeBSD, Inc.
 # All rights reserved.
 #
@@ -22,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libpam/modules/pam_krb5/Makefile 233406 2012-03-24 01:02:03Z stas $
 
 LIB=	pam_krb5
 SRCS=	pam_krb5.c

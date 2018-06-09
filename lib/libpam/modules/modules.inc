@@ -1,4 +1,5 @@
-# $FreeBSD: release/9.2.0/lib/libpam/modules/modules.inc 156813 2006-03-17 18:54:44Z ru $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libpam/modules/modules.inc 278569 2015-02-11 08:52:29Z ngie $
 
 .include <bsd.own.mk>
 
@@ -21,7 +22,9 @@ MODULES		+= pam_opie
 MODULES		+= pam_opieaccess
 MODULES		+= pam_passwdqc
 MODULES		+= pam_permit
+.if ${MK_RADIUS_SUPPORT} != "no"
 MODULES		+= pam_radius
+.endif
 MODULES		+= pam_rhosts
 MODULES		+= pam_rootok
 MODULES		+= pam_securetty

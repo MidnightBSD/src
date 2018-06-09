@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This pam_krb5 module contains code that is:
  *   Copyright (c) Derrick J. Brashear, 1996. All rights reserved.
@@ -48,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_krb5/pam_krb5.c 315152 2017-03-12 13:23:23Z des $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -239,6 +240,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 		retval = PAM_SERVICE_ERR;
 		goto cleanup2;
 	}
+	krb5_get_init_creds_opt_set_default_flags(pam_context,
+	    service, NULL, opts);
 
 	if (openpam_get_option(pamh, PAM_OPT_FORWARDABLE))
 		krb5_get_init_creds_opt_set_forwardable(opts, 1);

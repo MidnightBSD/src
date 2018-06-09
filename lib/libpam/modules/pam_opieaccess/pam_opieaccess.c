@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_opieaccess/pam_opieaccess.c 125668 2004-02-10 20:42:33Z cperciva $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_opieaccess/pam_opieaccess.c 125668 2004-02-10 20:42:33Z cperciva $");
 
 #define _BSD_SOURCE
 

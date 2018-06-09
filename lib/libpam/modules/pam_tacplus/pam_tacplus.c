@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_tacplus/pam_tacplus.c 115470 2003-05-31 17:19:03Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_tacplus/pam_tacplus.c 115470 2003-05-31 17:19:03Z des $");
 
 #include <sys/param.h>
 

@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # Copyright 2002 FreeBSD, Inc.
 # All rights reserved.
 #
@@ -22,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libpam/modules/pam_ksu/Makefile,v 1.6 2004/08/06 07:27:04 cperciva Exp $
+# $FreeBSD: stable/10/lib/libpam/modules/pam_ksu/Makefile 233302 2012-03-22 11:18:14Z stas $
 
 LIB=	pam_ksu
 SRCS=	pam_ksu.c

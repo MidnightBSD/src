@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_unix/pam_unix.c 247568 2013-03-01 19:42:50Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_unix/pam_unix.c 325802 2017-11-14 10:49:07Z des $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -91,7 +92,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 	login_cap_t *lc;
 	struct passwd *pwd;
 	int retval;
-	const char *pass, *user = NULL, *realpw, *prompt;
+	const char *pass, *user, *realpw, *prompt;
 
 	if (openpam_get_option(pamh, PAM_OPT_AUTH_AS_SELF)) {
 		user = getlogin();
@@ -111,6 +112,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 			if (!(flags & PAM_DISALLOW_NULL_AUTHTOK) &&
 			    openpam_get_option(pamh, PAM_OPT_NULLOK))
 				return (PAM_SUCCESS);
+			PAM_LOG("Password is empty, using fake password");
 			realpw = "*";
 		}
 		lc = login_getpwclass(pwd);
@@ -125,6 +127,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 	if (retval != PAM_SUCCESS)
 		return (retval);
 	PAM_LOG("Got password");
+	if (strnlen(pass, _PASSWORD_LEN + 1) > _PASSWORD_LEN) {
+		PAM_LOG("Password is too long, using fake password");
+		realpw = "*";
+	}
 	if (strcmp(crypt(pass, realpw), realpw) == 0)
 		return (PAM_SUCCESS);
 
@@ -278,13 +284,13 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 	int pfd, tfd, retval;
 
 	if (openpam_get_option(pamh, PAM_OPT_AUTH_AS_SELF))
-		pwd = getpwnam(getlogin());
+		user = getlogin();
 	else {
 		retval = pam_get_user(pamh, &user, NULL);
 		if (retval != PAM_SUCCESS)
 			return (retval);
-		pwd = getpwnam(user);
 	}
+	pwd = getpwnam(user);
 
 	if (pwd == NULL)
 		return (PAM_AUTHTOK_RECOVERY_ERR);
@@ -332,6 +338,7 @@ pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 			 * XXX check PAM_DISALLOW_NULL_AUTHTOK
 			 */
 			old_pass = "";
+			retval = PAM_SUCCESS;
 		} else {
 			retval = pam_get_authtok(pamh,
 			    PAM_OLDAUTHTOK, &old_pass, NULL);
@@ -460,14 +467,14 @@ to64(char *s, long v, int n)
 }
 
 /* Salt suitable for traditional DES and MD5 */
-void
-makesalt(char salt[SALTSIZE])
+static void
+makesalt(char salt[SALTSIZE + 1])
 {
 	int i;
 
 	/* These are not really random numbers, they are just
 	 * numbers that change to thwart construction of a
-	 * dictionary. This is exposed to the public.
+	 * dictionary.
 	 */
 	for (i = 0; i < SALTSIZE; i += 4)
 		to64(&salt[i], arc4random(), 4);

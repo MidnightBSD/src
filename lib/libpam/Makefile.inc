@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # Copyright 1998 Juniper Networks, Inc.
 # All rights reserved.
 #
@@ -22,12 +23,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libpam/Makefile.inc 294192 2016-01-16 19:48:03Z des $
 
 CFLAGS+=	-DOPENPAM_DEBUG
 
 SHLIB_MAJOR=	5
-PAM_MOD_DIR=	${LIBDIR}
 
 STATIC_CFLAGS+=	-DOPENPAM_STATIC_MODULES
 

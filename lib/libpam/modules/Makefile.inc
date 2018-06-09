@@ -1,11 +1,12 @@
-# $FreeBSD: release/9.2.0/lib/libpam/modules/Makefile.inc 236115 2012-05-26 17:56:54Z des $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libpam/modules/Makefile.inc 313579 2017-02-11 05:41:53Z ngie $
 
-PAMDIR=		${.CURDIR}/../../../../contrib/openpam
+PAMDIR=		${SRCTOP}/contrib/openpam
 
 NO_INSTALLLIB=
 NO_PROFILE=
 
-CFLAGS+= -I${PAMDIR}/include -I${.CURDIR}/../../libpam
+CFLAGS+= -I${PAMDIR}/include -I${SRCTOP}/lib/libpam
 
 # This is nasty.
 # For the static case, libpam.a depends on the modules.

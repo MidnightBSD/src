@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_chroot/pam_chroot.c 114262 2003-04-30 00:40:24Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_chroot/pam_chroot.c 114262 2003-04-30 00:40:24Z des $");
 
 #include <sys/param.h>
 

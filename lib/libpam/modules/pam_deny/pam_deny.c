@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2001 Mark R V Murray
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_deny/pam_deny.c 147226 2005-06-10 06:16:13Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_deny/pam_deny.c 147226 2005-06-10 06:16:13Z des $");
 
 #include <stddef.h>
 

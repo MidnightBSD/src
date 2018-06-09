@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # Copyright 1998 Juniper Networks, Inc.
 # All rights reserved.
 # Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -32,7 +33,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/9.2.0/lib/libpam/modules/pam_unix/Makefile 247568 2013-03-01 19:42:50Z des $
+# $FreeBSD: stable/10/lib/libpam/modules/pam_unix/Makefile 230311 2012-01-18 18:26:56Z peter $
 
 .include <bsd.init.mk>
 

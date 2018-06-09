@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.

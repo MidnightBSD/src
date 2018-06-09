@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mark R V Murray
  * All rights reserved.
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/lib/libpam/modules/pam_login_access/pam_login_access.h 92297 2002-03-14 23:27:59Z des $
+ * $FreeBSD: stable/10/lib/libpam/modules/pam_login_access/pam_login_access.h 92297 2002-03-14 23:27:59Z des $
  */
 
 extern int login_access(const char *, const char *);

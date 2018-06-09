@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_ftpusers/pam_ftpusers.c 96191 2002-05-08 00:30:10Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_ftpusers/pam_ftpusers.c 96191 2002-05-08 00:30:10Z des $");
 
 #include <ctype.h>
 #include <grp.h>

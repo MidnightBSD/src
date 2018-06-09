@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
  /*
   * This module implements a simple but effective form of login access
   * control based on login names and on host (or domain) names, internet
@@ -14,7 +15,7 @@ static char sccsid[] = "%Z% %M% %I% %E% %U%";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_login_access/login_access.c 169976 2007-05-25 07:50:18Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_login_access/login_access.c 169976 2007-05-25 07:50:18Z des $");
 
 #include <sys/types.h>
 #include <ctype.h>
