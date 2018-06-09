@@ -46047,6 +46047,7 @@ include/si_module.h svneol=native#text/plain
 include/signal.h -text
 include/spawn.h -text
 include/stab.h -text
+include/stdalign.h svneol=native#text/plain
 include/stdatomic.h -text
 include/stdbool.h -text
 include/stddef.h -text
@@ -46063,6 +46064,7 @@ include/time.h -text
 include/timeconv.h -text
 include/timers.h -text
 include/ttyent.h -text
+include/uchar.h svneol=native#text/plain
 include/ulimit.h -text
 include/unistd.h -text
 include/unwind.h -text
