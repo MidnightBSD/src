@@ -49494,6 +49494,7 @@ lib/libpam/libpam/Makefile -text
 lib/libpam/libpam/pam_debug_log.c -text
 lib/libpam/libpam/pam_std_option.c -text
 lib/libpam/libpam/security/pam_mod_misc.h -text
+lib/libpam/libpam/tests/Makefile svneol=native#text/plain
 lib/libpam/modules/Makefile -text
 lib/libpam/modules/Makefile.inc -text
 lib/libpam/modules/modules.inc -text
