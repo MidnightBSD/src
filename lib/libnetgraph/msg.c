@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libnetgraph/msg.c,v 1.14 2007/05/14 14:18:41 mav Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libnetgraph/msg.c 248159 2013-03-11 13:05:11Z glebius $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -235,7 +235,7 @@ NgDeliverMsg(int cs, const char *path,
 	}
 
 	/* Wait for reply if there should be one. */
-	if (msg->header.cmd & NGM_HASREPLY) {
+	if (msg->header.cmd & NGM_HASREPLY && !(msg->header.flags & NGF_RESP)) {
 		struct pollfd rfds;
 		int n;
 
