@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,8 +29,7 @@
  *
  *	@(#)stddef.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD: src/include/stddef.h,v 1.10 2003/12/07 21:10:06 marcel Exp $
- * $MidnightBSD: src/include/stddef.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
+ * $FreeBSD: stable/10/include/stddef.h 325090 2017-10-29 04:33:50Z cy $
  */
 
 #ifndef _STDDEF_H_
@@ -55,11 +55,19 @@ typedef	__size_t	size_t;
 
 #ifndef	__cplusplus
 #ifndef _WCHAR_T_DECLARED
-typedef	__wchar_t	wchar_t;
+typedef	___wchar_t	wchar_t;
 #define	_WCHAR_T_DECLARED
 #endif
 #endif
 
-#define	offsetof(type, member)	__offsetof(type, member)
+#if __STDC_VERSION__ >= 201112L || __cplusplus >= 201103L
+#ifndef __CLANG_MAX_ALIGN_T_DEFINED
+typedef	__max_align_t	max_align_t;
+#define __CLANG_MAX_ALIGN_T_DEFINED
+#define _GCC_MAX_ALIGN_T
+#endif
+#endif
+
+#define	offsetof(type, field)	__offsetof(type, field)
 
 #endif /* _STDDEF_H_ */
