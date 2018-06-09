@@ -49806,8 +49806,12 @@ lib/libthread_db/Makefile -text
 lib/libthread_db/Symbol.map -text
 lib/libthread_db/arch/amd64/libc_r_md.c -text
 lib/libthread_db/arch/amd64/libpthread_md.c -text
+lib/libthread_db/arch/arm/libpthread_md.c svneol=native#text/plain
 lib/libthread_db/arch/i386/libc_r_md.c -text
 lib/libthread_db/arch/i386/libpthread_md.c -text
+lib/libthread_db/arch/ia64/libpthread_md.c svneol=native#text/plain
+lib/libthread_db/arch/mips/libpthread_md.c svneol=native#text/plain
+lib/libthread_db/arch/powerpc/libpthread_md.c svneol=native#text/plain
 lib/libthread_db/arch/sparc64/libc_r_md.c -text
 lib/libthread_db/arch/sparc64/libpthread_md.c -text
 lib/libthread_db/kse.h -text
