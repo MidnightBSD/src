@@ -296,6 +296,9 @@ MTREES=		mtree/BSD.root.dist		/		\
 		mtree/BSD.var.dist		/var		\
 		mtree/BSD.usr.dist		/usr		\
 		mtree/BSD.include.dist		/usr/include
+.if ${MK_TESTS} != "no"
+MTREES+=	mtree/BSD.tests.dist		${TESTSBASE}
+.endif
 .if ${MK_SENDMAIL} != "no"
 MTREES+=	mtree/BSD.sendmail.dist		/
 .endif
