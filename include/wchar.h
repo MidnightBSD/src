@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c)1999 Citrus Project,
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/wchar.h 302008 2016-06-18 12:46:50Z ed $
  */
 
 /*-
@@ -76,9 +77,16 @@ typedef	__size_t	size_t;
 #define	_SIZE_T_DECLARED
 #endif
 
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE
+#ifndef _VA_LIST_DECLARED
+typedef	__va_list	va_list;
+#define	_VA_LIST_DECLARED
+#endif
+#endif
+
 #ifndef	__cplusplus
 #ifndef _WCHAR_T_DECLARED
-typedef	__wchar_t	wchar_t;
+typedef	___wchar_t	wchar_t;
 #define	_WCHAR_T_DECLARED
 #endif
 #endif
@@ -88,10 +96,8 @@ typedef	__wint_t	wint_t;
 #define	_WINT_T_DECLARED
 #endif
 
-#ifndef	WCHAR_MIN 
-#define	WCHAR_MIN	__INT_MIN
-#define	WCHAR_MAX	__INT_MAX
-#endif
+#define	WCHAR_MIN	__WCHAR_MIN
+#define	WCHAR_MAX	__WCHAR_MAX
 
 #ifndef WEOF
 #define	WEOF 	((wint_t)-1)
@@ -209,6 +215,7 @@ int	wcwidth(wchar_t);
 #if __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE
 size_t	mbsnrtowcs(wchar_t * __restrict, const char ** __restrict, size_t,
 	    size_t, mbstate_t * __restrict);
+FILE	*open_wmemstream(wchar_t **, size_t *);
 wchar_t	*wcpcpy(wchar_t * __restrict, const wchar_t * __restrict);
 wchar_t	*wcpncpy(wchar_t * __restrict, const wchar_t * __restrict, size_t);
 wchar_t	*wcsdup(const wchar_t *) __malloc_like;
