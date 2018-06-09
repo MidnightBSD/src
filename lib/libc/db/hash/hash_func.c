@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)hash_func.c	8.2 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/hash/hash_func.c,v 1.6 2007/01/09 00:27:50 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash_func.c 190498 2009-03-28 07:31:02Z delphij $");
 
 #include <sys/types.h>
 

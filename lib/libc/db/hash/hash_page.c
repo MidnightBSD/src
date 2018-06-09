@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)hash_page.c	8.7 (Berkeley) 8/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/hash/hash_page.c,v 1.9 2007/01/09 00:27:51 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash_page.c 313532 2017-02-10 06:34:52Z ngie $");
 
 /*
  * PACKAGE:  hashing
@@ -66,6 +67,7 @@ __FBSDID("$FreeBSD: src/lib/libc/db/hash/hash_page.c,v 1.9 2007/01/09 00:27:51 i
 #include <assert.h>
 #endif
 #include "un-namespace.h"
+#include "libc_private.h"
 
 #include <db.h>
 #include "hash.h"
@@ -571,7 +573,9 @@ __get_page(HTAB *hashp, char *p, u_int32_t bucket, int is_bucket, int is_disk,
 int
 __put_page(HTAB *hashp, char *p, u_int32_t bucket, int is_bucket, int is_bitmap)
 {
-	int fd, page, size, wsize;
+	int fd, page, size;
+	ssize_t wsize;
+	char pbuf[MAX_BSIZE];
 
 	size = hashp->BSIZE;
 	if ((hashp->fp == -1) && open_temp(hashp))
@@ -581,15 +585,18 @@ __put_page(HTAB *hashp, char *p, u_int32_t bucket, int is_bucket, int is_bitmap)
 	if (hashp->LORDER != BYTE_ORDER) {
 		int i, max;
 
+		memcpy(pbuf, p, size);
 		if (is_bitmap) {
 			max = hashp->BSIZE >> 2;	/* divide by 4 */
 			for (i = 0; i < max; i++)
-				M_32_SWAP(((int *)p)[i]);
+				M_32_SWAP(((int *)pbuf)[i]);
 		} else {
-			max = ((u_int16_t *)p)[0] + 2;
+			uint16_t *bp = (uint16_t *)(void *)pbuf;
+			max = bp[0] + 2;
 			for (i = 0; i <= max; i++)
-				M_16_SWAP(((u_int16_t *)p)[i]);
+				M_16_SWAP(bp[i]);
 		}
+		p = pbuf;
 	}
 	if (is_bucket)
 		page = BUCKET_TO_PAGE(bucket);
@@ -861,12 +868,10 @@ open_temp(HTAB *hashp)
 
 	/* Block signals; make sure file goes away at process exit. */
 	(void)sigfillset(&set);
-	(void)_sigprocmask(SIG_BLOCK, &set, &oset);
-	if ((hashp->fp = mkstemp(path)) != -1) {
+	(void)__libc_sigprocmask(SIG_BLOCK, &set, &oset);
+	if ((hashp->fp = mkostemp(path, O_CLOEXEC)) != -1)
 		(void)unlink(path);
-		(void)_fcntl(hashp->fp, F_SETFD, 1);
-	}
-	(void)_sigprocmask(SIG_SETMASK, &oset, (sigset_t *)NULL);
+	(void)__libc_sigprocmask(SIG_SETMASK, &oset, (sigset_t *)NULL);
 	return (hashp->fp != -1 ? 0 : -1);
 }
 

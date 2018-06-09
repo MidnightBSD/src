@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)hash.c	8.9 (Berkeley) 6/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/hash/hash.c,v 1.14 2007/05/25 09:57:48 delphij Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -121,9 +122,8 @@ __hash_open(const char *file, int flags, int mode,
 	hashp->flags = flags;
 
 	if (file) {
-		if ((hashp->fp = _open(file, flags, mode)) == -1)
+		if ((hashp->fp = _open(file, flags | O_CLOEXEC, mode)) == -1)
 			RETURN_ERROR(errno, error0);
-		(void)_fcntl(hashp->fp, F_SETFD, 1);
 		new_table = _fstat(hashp->fp, &statbuf) == 0 &&
 		    statbuf.st_size == 0 && (flags & O_ACCMODE) != O_RDONLY;
 	} else
@@ -423,8 +423,11 @@ hdestroy(HTAB *hashp)
 	if (hashp->tmp_buf)
 		free(hashp->tmp_buf);
 
-	if (hashp->fp != -1)
+	if (hashp->fp != -1) {
+		if (hashp->save_file)
+			(void)_fsync(hashp->fp);
 		(void)_close(hashp->fp);
+	}
 
 	free(hashp);
 
@@ -458,6 +461,8 @@ hash_sync(const DB *dbp, u_int32_t flags)
 	if (!hashp->save_file)
 		return (0);
 	if (__buf_free(hashp, 0, 1) || flush_meta(hashp))
+		return (ERROR);
+	if (hashp->fp != -1 && _fsync(hashp->fp) != 0)
 		return (ERROR);
 	hashp->new_file = 0;
 	return (0);
@@ -767,7 +772,7 @@ next_bucket:
 		if (__big_keydata(hashp, bufp, key, data, 1))
 			return (ERROR);
 	} else {
-		if (hashp->cpage == 0)
+		if (hashp->cpage == NULL)
 			return (ERROR);
 		key->data = (u_char *)hashp->cpage->page + bp[ndx];
 		key->size = (ndx > 1 ? bp[ndx - 1] : hashp->BSIZE) - bp[ndx];

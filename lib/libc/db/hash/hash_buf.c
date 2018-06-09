@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)hash_buf.c	8.5 (Berkeley) 7/15/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/hash/hash_buf.c,v 1.8 2007/01/09 00:27:50 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash_buf.c 309485 2016-12-03 17:17:42Z ngie $");
 
 /*
  * PACKAGE: hash
@@ -245,7 +246,7 @@ newbuf(HTAB *hashp, u_int32_t addr, BUFHEAD *prev_bp)
 			 */
 			for (xbp = bp; xbp->ovfl;) {
 				next_xbp = xbp->ovfl;
-				xbp->ovfl = 0;
+				xbp->ovfl = NULL;
 				xbp = next_xbp;
 
 				/* Check that ovfl pointer is up date. */
@@ -350,7 +351,7 @@ __buf_free(HTAB *hashp, int do_free, int to_disk)
 void
 __reclaim_buf(HTAB *hashp, BUFHEAD *bp)
 {
-	bp->ovfl = 0;
+	bp->ovfl = NULL;
 	bp->addr = 0;
 	bp->flags = 0;
 	BUF_REMOVE(bp);
