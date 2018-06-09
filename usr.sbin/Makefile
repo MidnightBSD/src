@@ -76,7 +76,6 @@ SUBDIR=	adduser \
 	rpc.statd \
 	rpc.umntall \
 	rtprio \
-	sensorsd \
 	service \
 	services_mkdb \
 	setfib \
@@ -299,6 +298,6 @@ SUBDIR+=	wpa
 
 .include <bsd.arch.inc.mk>
 
-SUBDIR:=	${SUBDIR:O}
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
