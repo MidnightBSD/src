@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, 2007, 2008 Apple Inc. All rights reserved.
  *
