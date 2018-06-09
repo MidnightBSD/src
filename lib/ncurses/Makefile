@@ -1,7 +1,19 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/ncurses/Makefile,v 1.2 2007/03/09 12:11:56 rafan Exp $
+# $FreeBSD: stable/10/lib/ncurses/Makefile 276678 2015-01-05 00:15:27Z ngie $
 
-SUBDIR=	ncurses form menu panel \
-	ncursesw formw menuw panelw
+.include <bsd.own.mk>
+
+SUBDIR=	ncurses form menu panel
+
+.if ${MK_NCURSESW} != "no"
+SUBDIR+=	ncursesw formw menuw panelw
+.endif
+
+SUBDIR_PARALLEL=
+
+.for subdir in ${SUBDIR:Nncurses*:N*w}
+SUBDIR_DEPEND_${subdir}=	ncurses
+SUBDIR_DEPEND_${subdir}w=	ncursesw
+.endfor
 
 .include <bsd.subdir.mk>
