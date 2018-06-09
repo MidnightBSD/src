@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.c,v 1.51 2006/11/16 12:27:51 ru Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/kbdcontrol/kbdcontrol.c 298297 2016-04-19 20:56:02Z emaste $");
 
 #include <ctype.h>
 #include <err.h>
@@ -38,6 +39,8 @@ __FBSDID("$FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.c,v 1.51 2006/11/16 12:27
 #include <fcntl.h>
 #include <sys/kbio.h>
 #include <sys/consio.h>
+#include <sys/queue.h>
+#include <sys/sysctl.h>
 #include "path.h"
 #include "lex.h"
 
@@ -55,26 +58,28 @@ __FBSDID("$FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.c,v 1.51 2006/11/16 12:27
 #define PASTE		0xa3		/* paste from cut-paste buffer */
 #endif
 
-char ctrl_names[32][4] = {
+#define	SPECIAL		0x80000000
+
+static const char ctrl_names[32][4] = {
 	"nul", "soh", "stx", "etx", "eot", "enq", "ack", "bel",
 	"bs ", "ht ", "nl ", "vt ", "ff ", "cr ", "so ", "si ",
 	"dle", "dc1", "dc2", "dc3", "dc4", "nak", "syn", "etb",
 	"can", "em ", "sub", "esc", "fs ", "gs ", "rs ", "us "
 	};
 
-char acc_names[15][5] = {
+static const char acc_names[15][5] = {
 	"dgra", "dacu", "dcir", "dtil", "dmac", "dbre", "ddot",
 	"duml", "dsla", "drin", "dced", "dapo", "ddac", "dogo", 
 	"dcar",
 	};
 
-char acc_names_u[15][5] = {
+static const char acc_names_u[15][5] = {
 	"DGRA", "DACU", "DCIR", "DTIL", "DMAC", "DBRE", "DDOT",
 	"DUML", "DSLA", "DRIN", "DCED", "DAPO", "DDAC", "DOGO", 
 	"DCAR",
 	};
 
-char fkey_table[96][MAXFK] = {
+static const char fkey_table[96][MAXFK] = {
 /* 01-04 */	"\033[M", "\033[N", "\033[O", "\033[P",
 /* 05-08 */	"\033[Q", "\033[R", "\033[S", "\033[T",
 /* 09-12 */	"\033[U", "\033[V", "\033[W", "\033[X",
@@ -101,44 +106,65 @@ char fkey_table[96][MAXFK] = {
 /* 93-96 */	""      , ""      , ""      , ""      ,
 	};
 
-const int	delays[]  = {250, 500, 750, 1000};
-const int	repeats[] = { 34,  38,  42,  46,  50,  55,  59,  63,
-			      68,  76,  84,  92, 100, 110, 118, 126,
-			     136, 152, 168, 184, 200, 220, 236, 252,
-			     272, 304, 336, 368, 400, 440, 472, 504};
-const int	ndelays = (sizeof(delays) / sizeof(int));
-const int	nrepeats = (sizeof(repeats) / sizeof(int));
-int 		hex = 0;
-int 		number;
-char 		letter;
-int		token;
+static const int delays[]  = {250, 500, 750, 1000};
+static const int repeats[] = { 34,  38,  42,  46,  50,  55,  59,  63,
+		      68,  76,  84,  92, 100, 110, 118, 126,
+		     136, 152, 168, 184, 200, 220, 236, 252,
+		     272, 304, 336, 368, 400, 440, 472, 504};
+static const int ndelays = (sizeof(delays) / sizeof(int));
+static const int nrepeats = (sizeof(repeats) / sizeof(int));
+static int	hex = 0;
+static int	paths_configured = 0;
+static int	token;
 
-void		dump_accent_definition(char *name, accentmap_t *accentmap);
-void		dump_entry(int value);
-void		dump_key_definition(char *name, keymap_t *keymap);
-int		get_accent_definition_line(accentmap_t *);
-int		get_entry(void);
-int		get_key_definition_line(keymap_t *);
-void		load_keymap(char *opt, int dumponly);
-void		load_default_functionkeys(void);
-char *		nextarg(int ac, char **av, int *indp, int oc);
-char *		mkfullname(const char *s1, const char *s2, const char *s3);
-void		print_accent_definition_line(FILE *fp, int accent,
-			struct acc_t *key);
-void		print_entry(FILE *fp, int value);
-void		print_key_definition_line(FILE *fp, int scancode,
-			struct keyent_t *key);
-void		print_keymap(void);
-void		release_keyboard(void);
-void		mux_keyboard(u_int op, char *kbd);
-void		set_bell_values(char *opt);
-void		set_functionkey(char *keynumstr, char *string);
-void		set_keyboard(char *device);
-void		set_keyrates(char *opt);
-void		show_kbd_info(void);
-void		usage(void) __dead2;
+int		number;
+char		letter;
 
-char *
+static void	add_keymap_path(const char *path);
+static void	dump_accent_definition(char *name, accentmap_t *accentmap);
+static void	dump_entry(int value);
+static void	dump_key_definition(char *name, keymap_t *keymap);
+static int	get_accent_definition_line(accentmap_t *);
+static int	get_entry(void);
+static int	get_key_definition_line(keymap_t *);
+static void	load_keymap(char *opt, int dumponly);
+static void	load_default_functionkeys(void);
+static char *	nextarg(int ac, char **av, int *indp, int oc);
+static char *	mkfullname(const char *s1, const char *s2, const char *s3);
+static void	print_accent_definition_line(FILE *fp, int accent,
+		struct acc_t *key);
+static void	print_entry(FILE *fp, int value);
+static void	print_key_definition_line(FILE *fp, int scancode,
+		struct keyent_t *key);
+static void	print_keymap(void);
+static void	release_keyboard(void);
+static void	mux_keyboard(u_int op, char *kbd);
+static void	set_bell_values(char *opt);
+static void	set_functionkey(char *keynumstr, char *string);
+static void	set_keyboard(char *device);
+static void	set_keyrates(char *opt);
+static void	show_kbd_info(void);
+static void	usage(void) __dead2;
+
+struct pathent {
+	STAILQ_ENTRY(pathent) next;
+	char *path;
+};
+static STAILQ_HEAD(, pathent) pathlist = STAILQ_HEAD_INITIALIZER(pathlist);
+
+/* Detect presence of vt(4). */
+static int
+is_vt4(void)
+{
+	char vty_name[4] = "";
+	size_t len = sizeof(vty_name);
+
+	if (sysctlbyname("kern.vty", vty_name, &len, NULL, 0) != 0)
+		return (0);
+	return (strcmp(vty_name, "vt") == 0);
+}
+
+static char *
 nextarg(int ac, char **av, int *indp, int oc)
 {
 	if (*indp < ac)
@@ -148,7 +174,7 @@ nextarg(int ac, char **av, int *indp, int oc)
 }
 
 
-char *
+static char *
 mkfullname(const char *s1, const char *s2, const char *s3)
 {
 	static char	*buf = NULL;
@@ -175,86 +201,86 @@ mkfullname(const char *s1, const char *s2, const char *s3)
 }
 
 
-int
+static int
 get_entry(void)
 {
 	switch ((token = yylex())) {
 	case TNOP:
-		return NOP | 0x100;
+		return NOP | SPECIAL;
 	case TLSH:
-		return LSH | 0x100;
+		return LSH | SPECIAL;
 	case TRSH:
-		return RSH | 0x100;
+		return RSH | SPECIAL;
 	case TCLK:
-		return CLK | 0x100;
+		return CLK | SPECIAL;
 	case TNLK:
-		return NLK | 0x100;
+		return NLK | SPECIAL;
 	case TSLK:
-		return SLK | 0x100;
+		return SLK | SPECIAL;
 	case TBTAB:
-		return BTAB | 0x100;
+		return BTAB | SPECIAL;
 	case TLALT:
-		return LALT | 0x100;
+		return LALT | SPECIAL;
 	case TLCTR:
-		return LCTR | 0x100;
+		return LCTR | SPECIAL;
 	case TNEXT:
-		return NEXT | 0x100;
+		return NEXT | SPECIAL;
 	case TPREV:
-		return PREV | 0x100;
+		return PREV | SPECIAL;
 	case TRCTR:
-		return RCTR | 0x100;
+		return RCTR | SPECIAL;
 	case TRALT:
-		return RALT | 0x100;
+		return RALT | SPECIAL;
 	case TALK:
-		return ALK | 0x100;
+		return ALK | SPECIAL;
 	case TASH:
-		return ASH | 0x100;
+		return ASH | SPECIAL;
 	case TMETA:
-		return META | 0x100;
+		return META | SPECIAL;
 	case TRBT:
-		return RBT | 0x100;
+		return RBT | SPECIAL;
 	case TDBG:
-		return DBG | 0x100;
+		return DBG | SPECIAL;
 	case TSUSP:
-		return SUSP | 0x100;
+		return SUSP | SPECIAL;
 	case TSPSC:
-		return SPSC | 0x100;
+		return SPSC | SPECIAL;
 	case TPANIC:
-		return PNC | 0x100;
+		return PNC | SPECIAL;
 	case TLSHA:
-		return LSHA | 0x100;
+		return LSHA | SPECIAL;
 	case TRSHA:
-		return RSHA | 0x100;
+		return RSHA | SPECIAL;
 	case TLCTRA:
-		return LCTRA | 0x100;
+		return LCTRA | SPECIAL;
 	case TRCTRA:
-		return RCTRA | 0x100;
+		return RCTRA | SPECIAL;
 	case TLALTA:
-		return LALTA | 0x100;
+		return LALTA | SPECIAL;
 	case TRALTA:
-		return RALTA | 0x100;
+		return RALTA | SPECIAL;
 	case THALT:
-		return HALT | 0x100;
+		return HALT | SPECIAL;
 	case TPDWN:
-		return PDWN | 0x100;
+		return PDWN | SPECIAL;
 	case TPASTE:
-		return PASTE | 0x100;
+		return PASTE | SPECIAL;
 	case TACC:
 		if (ACC(number) > L_ACC)
 			return -1;
-		return ACC(number) | 0x100;
+		return ACC(number) | SPECIAL;
 	case TFUNC:
 		if (F(number) > L_FN)
 			return -1;
-		return F(number) | 0x100;
+		return F(number) | SPECIAL;
 	case TSCRN:
 		if (S(number) > L_SCR)
 			return -1;
-		return S(number) | 0x100;
+		return S(number) | SPECIAL;
 	case TLET:
 		return (unsigned char)letter;
 	case TNUM:
-		if (number < 0 || number > 255)
+		if (number < 0x000000 || number > 0x10FFFF)
 			return -1;
 		return number;
 	default:
@@ -263,11 +289,11 @@ get_entry(void)
 }
 
 static int
-get_definition_line(FILE *fd, keymap_t *keymap, accentmap_t *accentmap)
+get_definition_line(FILE *file, keymap_t *keymap, accentmap_t *accentmap)
 {
 	int c;
 
-	yyin = fd;
+	yyin = file;
 
 	if (token < 0)
 		token = yylex();
@@ -295,7 +321,7 @@ get_definition_line(FILE *fd, keymap_t *keymap, accentmap_t *accentmap)
 	return c;
 }
 
-int
+static int
 get_key_definition_line(keymap_t *map)
 {
 	int i, def, scancode;
@@ -310,9 +336,9 @@ get_key_definition_line(keymap_t *map)
 	for (i=0; i<NUM_STATES; i++) {
 		if ((def = get_entry()) == -1)
 			return -1;
-		if (def & 0x100)
+		if (def & SPECIAL)
 			map->key[scancode].spcl |= (0x80 >> i);
-		map->key[scancode].map[i] = def & 0xFF;
+		map->key[scancode].map[i] = def & ~SPECIAL;
 	}
 	/* get lock state key def */
 	if ((token = yylex()) != TFLAG)
@@ -322,7 +348,7 @@ get_key_definition_line(keymap_t *map)
 	return (scancode + 1);
 }
 
-int
+static int
 get_accent_definition_line(accentmap_t *map)
 {
 	int accent;
@@ -383,104 +409,104 @@ get_accent_definition_line(accentmap_t *map)
 	return (accent + 1);
 }
 
-void
+static void
 print_entry(FILE *fp, int value)
 {
-	int val = value & 0xFF;
+	int val = value & ~SPECIAL;
 
 	switch (value) {
-	case NOP | 0x100:
+	case NOP | SPECIAL:
 		fprintf(fp, " nop   ");
 		break;
-	case LSH | 0x100:
+	case LSH | SPECIAL:
 		fprintf(fp, " lshift");
 		break;
-	case RSH | 0x100:
+	case RSH | SPECIAL:
 		fprintf(fp, " rshift");
 		break;
-	case CLK | 0x100:
+	case CLK | SPECIAL:
 		fprintf(fp, " clock ");
 		break;
-	case NLK | 0x100:
+	case NLK | SPECIAL:
 		fprintf(fp, " nlock ");
 		break;
-	case SLK | 0x100:
+	case SLK | SPECIAL:
 		fprintf(fp, " slock ");
 		break;
-	case BTAB | 0x100:
+	case BTAB | SPECIAL:
 		fprintf(fp, " btab  ");
 		break;
-	case LALT | 0x100:
+	case LALT | SPECIAL:
 		fprintf(fp, " lalt  ");
 		break;
-	case LCTR | 0x100:
+	case LCTR | SPECIAL:
 		fprintf(fp, " lctrl ");
 		break;
-	case NEXT | 0x100:
+	case NEXT | SPECIAL:
 		fprintf(fp, " nscr  ");
 		break;
-	case PREV | 0x100:
+	case PREV | SPECIAL:
 		fprintf(fp, " pscr  ");
 		break;
-	case RCTR | 0x100:
+	case RCTR | SPECIAL:
 		fprintf(fp, " rctrl ");
 		break;
-	case RALT | 0x100:
+	case RALT | SPECIAL:
 		fprintf(fp, " ralt  ");
 		break;
-	case ALK | 0x100:
+	case ALK | SPECIAL:
 		fprintf(fp, " alock ");
 		break;
-	case ASH | 0x100:
+	case ASH | SPECIAL:
 		fprintf(fp, " ashift");
 		break;
-	case META | 0x100:
+	case META | SPECIAL:
 		fprintf(fp, " meta  ");
 		break;
-	case RBT | 0x100:
+	case RBT | SPECIAL:
 		fprintf(fp, " boot  ");
 		break;
-	case DBG | 0x100:
+	case DBG | SPECIAL:
 		fprintf(fp, " debug ");
 		break;
-	case SUSP | 0x100:
+	case SUSP | SPECIAL:
 		fprintf(fp, " susp  ");
 		break;
-	case SPSC | 0x100:
+	case SPSC | SPECIAL:
 		fprintf(fp, " saver ");
 		break;
-	case PNC | 0x100:
+	case PNC | SPECIAL:
 		fprintf(fp, " panic ");
 		break;
-	case LSHA | 0x100:
+	case LSHA | SPECIAL:
 		fprintf(fp, " lshifta");
 		break;
-	case RSHA | 0x100:
+	case RSHA | SPECIAL:
 		fprintf(fp, " rshifta");
 		break;
-	case LCTRA | 0x100:
+	case LCTRA | SPECIAL:
 		fprintf(fp, " lctrla");
 		break;
-	case RCTRA | 0x100:
+	case RCTRA | SPECIAL:
 		fprintf(fp, " rctrla");
 		break;
-	case LALTA | 0x100:
+	case LALTA | SPECIAL:
 		fprintf(fp, " lalta ");
 		break;
-	case RALTA | 0x100:
+	case RALTA | SPECIAL:
 		fprintf(fp, " ralta ");
 		break;
-	case HALT | 0x100:
+	case HALT | SPECIAL:
 		fprintf(fp, " halt  ");
 		break;
-	case PDWN | 0x100:
+	case PDWN | SPECIAL:
 		fprintf(fp, " pdwn  ");
 		break;
-	case PASTE | 0x100:
+	case PASTE | SPECIAL:
 		fprintf(fp, " paste ");
 		break;
 	default:
-		if (value & 0x100) {
+		if (value & SPECIAL) {
 		 	if (val >= F_FN && val <= L_FN)
 				fprintf(fp, " fkey%02d", val - F_FN + 1);
 		 	else if (val >= F_SCR && val <= L_SCR)
@@ -507,7 +533,7 @@ print_entry(FILE *fp, int value)
 	}
 }
 
-void
+static void
 print_key_definition_line(FILE *fp, int scancode, struct keyent_t *key)
 {
 	int i;
@@ -521,7 +547,7 @@ print_key_definition_line(FILE *fp, int scancode, struct keyent_t *key)
 	/* print key definitions */
 	for (i=0; i<NUM_STATES; i++) {
 		if (key->spcl & (0x80 >> i))
-			print_entry(fp, key->map[i] | 0x100);
+			print_entry(fp, key->map[i] | SPECIAL);
 		else
 			print_entry(fp, key->map[i]);
 	}
@@ -543,7 +569,7 @@ print_key_definition_line(FILE *fp, int scancode, struct keyent_t *key)
 	}
 }
 
-void
+static void
 print_accent_definition_line(FILE *fp, int accent, struct acc_t *key)
 {
 	int c;
@@ -584,11 +610,11 @@ print_accent_definition_line(FILE *fp, int accent, struct acc_t *key)
 	fprintf(fp, "\n");
 }
 
-void
+static void
 dump_entry(int value)
 {
-	if (value & 0x100) {
-		value &= 0x00ff;
+	if (value & SPECIAL) {
+		value &= ~SPECIAL;
 		switch (value) {
 		case NOP:
 			printf("  NOP, ");
@@ -702,7 +728,7 @@ dump_entry(int value)
 	}
 }
 
-void
+static void
 dump_key_definition(char *name, keymap_t *keymap)
 {
 	int	i, j;
@@ -719,7 +745,7 @@ dump_key_definition(char *name, keymap_t *keymap)
 		printf("/*%02x*/{{", i);
 		for (j = 0; j < NUM_STATES; j++) {
 			if (keymap->key[i].spcl & (0x80 >> j))
-				dump_entry(keymap->key[i].map[j] | 0x100);
+				dump_entry(keymap->key[i].map[j] | SPECIAL);
 			else
 				dump_entry(keymap->key[i].map[j]);
 		}
@@ -730,7 +756,7 @@ dump_key_definition(char *name, keymap_t *keymap)
 	printf("} };\n\n");
 }
 
-void
+static void
 dump_accent_definition(char *name, accentmap_t *accentmap)
 {
 	int i, j;
@@ -774,30 +800,58 @@ dump_accent_definition(char *name, accentmap_t *accentmap)
 	printf("} };\n\n");
 }
 
-void
+static void
+add_keymap_path(const char *path)
+{
+	struct pathent* pe;
+	size_t len;
+
+	len = strlen(path);
+	if ((pe = malloc(sizeof(*pe))) == NULL ||
+	    (pe->path = malloc(len + 2)) == NULL)
+		err(1, "malloc");
+	memcpy(pe->path, path, len);
+	if (len > 0 && path[len - 1] != '/')
+		pe->path[len++] = '/';
+	pe->path[len] = '\0';
+	STAILQ_INSERT_TAIL(&pathlist, pe, next);
+}
+
+static void
 load_keymap(char *opt, int dumponly)
 {
 	keymap_t keymap;
 	accentmap_t accentmap;
-	FILE	*fd;
-	int	i, j;
+	struct pathent *pe;
+	FILE	*file;
+	int	j;
 	char	*name, *cp;
-	char	blank[] = "", keymap_path[] = KEYMAP_PATH, dotkbd[] = ".kbd";
-	char	*prefix[]  = {blank, blank, keymap_path, NULL};
+	char	blank[] = "", keymap_path[] = KEYMAP_PATH;
+	char	vt_keymap_path[] = VT_KEYMAP_PATH, dotkbd[] = ".kbd";
 	char	*postfix[] = {blank, dotkbd, NULL};
 
-	cp = getenv("KEYMAP_PATH");
-	if (cp != NULL)
-		asprintf(&(prefix[0]), "%s/", cp);
+	if (!paths_configured) {
+		cp = getenv("KEYMAP_PATH");
+		if (cp != NULL)
+			add_keymap_path(cp);
+		add_keymap_path("");
+		if (is_vt4())
+			add_keymap_path(vt_keymap_path);
+		else
+			add_keymap_path(keymap_path);
+		paths_configured = 1;
+	}
 
-	fd = NULL;
-	for (i=0; prefix[i] && fd == NULL; i++) {
-		for (j=0; postfix[j] && fd == NULL; j++) {
-			name = mkfullname(prefix[i], opt, postfix[j]);
-			fd = fopen(name, "r");
+	file = NULL;
+	STAILQ_FOREACH(pe, &pathlist, next) {
+		for (j=0; postfix[j] && file == NULL; j++) {
+			name = mkfullname(pe->path, opt, postfix[j]);
+			file = fopen(name, "r");
+			if (file != NULL)
+				break;
 		}
 	}
-	if (fd == NULL) {
+	if (file == NULL) {
 		warn("keymap file \"%s\" not found", opt);
 		return;
 	}
@@ -805,7 +859,7 @@ load_keymap(char *opt, int dumponly)
 	memset(&accentmap, 0, sizeof(accentmap));
 	token = -1;
 	while (1) {
-		if (get_definition_line(fd, &keymap, &accentmap) < 0)
+		if (get_definition_line(file, &keymap, &accentmap) < 0)
 			break;
     	}
 	if (dumponly) {
@@ -822,18 +876,18 @@ load_keymap(char *opt, int dumponly)
 	}
 	if ((keymap.n_keys > 0) && (ioctl(0, PIO_KEYMAP, &keymap) < 0)) {
 		warn("setting keymap");
-		fclose(fd);
+		fclose(file);
 		return;
 	}
 	if ((accentmap.n_accs > 0) 
 		&& (ioctl(0, PIO_DEADKEYMAP, &accentmap) < 0)) {
 		warn("setting accentmap");
-		fclose(fd);
+		fclose(file);
 		return;
 	}
 }
 
-void
+static void
 print_keymap(void)
 {
 	keymap_t keymap;
@@ -859,7 +913,7 @@ print_keymap(void)
 
 }
 
-void
+static void
 load_default_functionkeys(void)
 {
 	fkeyarg_t fkey;
@@ -874,7 +928,7 @@ load_default_functionkeys(void)
 	}
 }
 
-void
+static void
 set_functionkey(char *keynumstr, char *string)
 {
 	fkeyarg_t fkey;
@@ -900,7 +954,7 @@ set_functionkey(char *keynumstr, char *string)
 		warn("setting function key");
 }
 
-void
+static void
 set_bell_values(char *opt)
 {
 	int bell, duration, pitch;
@@ -940,7 +994,7 @@ badopt:
 		fprintf(stderr, "[=%d;%dB", pitch, duration);
 }
 
-void
+static void
 set_keyrates(char *opt)
 {
 	int arg[2];
@@ -1009,7 +1063,7 @@ get_kbd_type_name(int type)
 	return "unknown";
 }
 
-void
+static void
 show_kbd_info(void)
 {
 	keyboard_info_t info;
@@ -1024,7 +1078,7 @@ show_kbd_info(void)
 		get_kbd_type_name(info.kb_type), info.kb_type);
 }
 
-void
+static void
 set_keyboard(char *device)
 {
 	keyboard_info_t info;
@@ -1058,7 +1112,7 @@ set_keyboard(char *device)
 		warn("unable to set keyboard");
 }
 
-void
+static void
 release_keyboard(void)
 {
 	keyboard_info_t info;
@@ -1081,7 +1135,7 @@ release_keyboard(void)
 		warn("unable to release the keyboard");
 }
 
-void
+static void
 mux_keyboard(u_int op, char *kbd)
 {
 	keyboard_info_t	info;
@@ -1145,13 +1199,13 @@ mux_keyboard(u_int op, char *kbd)
 		warn("unable to (un)mux the keyboard");
 }
 
-void
-usage()
+static void
+usage(void)
 {
 	fprintf(stderr, "%s\n%s\n%s\n",
 "usage: kbdcontrol [-dFKix] [-A name] [-a name] [-b duration.pitch | [quiet.]belltype]",
 "                  [-r delay.repeat | speed] [-l mapfile] [-f # string]",
-"                  [-k device] [-L mapfile]");
+"                  [-k device] [-L mapfile] [-P path]");
 	exit(1);
 }
 
@@ -1159,9 +1213,16 @@ usage()
 int
 main(int argc, char **argv)
 {
+	const char	*optstring = "A:a:b:df:iKk:Fl:L:P:r:x";
 	int		opt;
 
-	while((opt = getopt(argc, argv, "A:a:b:df:iKk:Fl:L:r:x")) != -1)
+	/* Collect any -P arguments, regardless of where they appear. */
+	while ((opt = getopt(argc, argv, optstring)) != -1)
+		if (opt == 'P')
+			add_keymap_path(optarg);
+
+	optind = optreset = 1;
+	while ((opt = getopt(argc, argv, optstring)) != -1)
 		switch(opt) {
 		case 'A':
 		case 'a':
@@ -1178,6 +1239,8 @@ main(int argc, char **argv)
 			break;
 		case 'L':
 			load_keymap(optarg, 1);
+			break;
+		case 'P':
 			break;
 		case 'f':
 			set_functionkey(optarg,

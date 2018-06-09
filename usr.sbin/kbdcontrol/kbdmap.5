@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2000
 .\"	David Malone
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/kbdcontrol/kbdmap.5,v 1.7 2004/08/21 12:58:09 simon Exp $
+.\" $FreeBSD: stable/10/usr.sbin/kbdcontrol/kbdmap.5 293455 2016-01-09 01:01:04Z emaste $
 .\"
-.Dd September 11, 2000
+.Dd January 9, 2016
 .Dt KBDMAP 5
 .Os
 .Sh NAME
@@ -84,7 +85,7 @@ The symbol the key should produce,
 in single quotes.
 .It Ar decnum
 The
-.Tn ASCII
+.Tn Unicode
 value to produce
 as a decimal number
 (see
@@ -92,7 +93,7 @@ as a decimal number
 For example, 32 for space.
 .It 0x Ns Ar hexnum
 The
-.Tn ASCII
+.Tn Unicode
 value to produce
 as a hexadecimal number.
 For example, 0x20 for space.
@@ -111,9 +112,9 @@ ack,
 bel,
 bs,
 ht,
-nl,
+lf,
 vt,
-np,
+ff,
 cr,
 so,
 si,
@@ -132,10 +133,16 @@ esc,
 fs,
 gs,
 rs,
-ns,
 us,
 sp,
 del.
+.It Ar control-alias
+One of the historical aliases for certain
+.Tn ASCII
+control characters:
+nl,
+np,
+ns.
 .It Ar accentname
 By giving one of the accent names,
 the next key pressed will produce
@@ -165,7 +172,15 @@ Act as the
 function key,
 where
 .Ar N
-is a decimal number.
+is a decimal number in the range from 1 to 96.
+Refer to the
+.Xr atkbd 4
+manual page for a list of predefined function keys.
+You can use the
+.Fl f
+option of the
+.Xr kbdcontrol 1
+utility to assign arbitrary strings to function keys.
 .It lshift
 Act as left shift key.
 .It rshift
@@ -266,7 +281,7 @@ This is followed
 by the symbol for the accent,
 given in single quotes or
 as a decimal or hexadecimal
-.Tn ASCII
+.Tn Unicode
 value.
 This symbol will be produced
 if the accent key is pressed and
@@ -282,7 +297,7 @@ Both symbols in a pair can be given
 in either single quotes or
 as decimal or
 hexadecimal
-.Tn ASCII
+.Tn Unicode
 values.
 .Pp
 For example,
@@ -305,13 +320,16 @@ for that vowel with a grave accent.
 .Sh FILES
 .Bl -tag -width /usr/share/syscons/keymaps/* -compact
 .It Pa /usr/share/syscons/keymaps/*
-standard keyboard map files
+standard keyboard map files for syscons
+.It Pa /usr/share/vt/keymaps/*
+standard keyboard map files for vt
 .El
 .Sh SEE ALSO
 .Xr kbdcontrol 1 ,
 .Xr kbdmap 1 ,
 .Xr keyboard 4 ,
 .Xr syscons 4 ,
+.Xr vt 4 ,
 .Xr ascii 7
 .Sh HISTORY
 This manual page first appeared in

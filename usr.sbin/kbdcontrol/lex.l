@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1994-1995 Søren Schmidt
+ * Copyright (c) 1994-1995 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,15 +26,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kbdcontrol/lex.l,v 1.15 2002/07/11 21:12:18 alfred Exp $
+ * $FreeBSD: stable/10/usr.sbin/kbdcontrol/lex.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 %{
 
 #include "lex.h"
-#define YY_NO_UNPUT
 
 %}
+
+%option nounput
+%option noinput
 
 D	[0-9]
 X	[0-9a-fA-F]
