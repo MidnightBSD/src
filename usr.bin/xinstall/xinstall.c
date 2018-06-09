@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012, 2013 SRI International
  * Copyright (c) 1987, 1993
@@ -41,7 +42,7 @@ static char sccsid[] = "@(#)xinstall.c	8.1 (Berkeley) 7/21/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/xinstall/xinstall.c 318096 2017-05-09 19:14:26Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -151,6 +152,7 @@ main(int argc, char *argv[])
 	char *p;
 	const char *to_name;
 
+	fset = 0;
 	iflags = 0;
 	group = owner = NULL;
 	while ((ch = getopt(argc, argv, "B:bCcD:df:g:h:l:M:m:N:o:pSsT:Uv")) !=
@@ -535,7 +537,9 @@ do_link(const char *from_name, const char *to_name,
 			if (target_sb->st_flags & NOCHANGEBITS)
 				(void)chflags(to_name, target_sb->st_flags &
 				     ~NOCHANGEBITS);
-			unlink(to_name);
+			if (verbose)
+				printf("install: link %s -> %s\n",
+				    from_name, to_name);
 			ret = rename(tmpl, to_name);
 			/*
 			 * If rename has posix semantics, then the temporary
@@ -545,8 +549,12 @@ do_link(const char *from_name, const char *to_name,
 			(void)unlink(tmpl);
 		}
 		return (ret);
-	} else
+	} else {
+		if (verbose)
+			printf("install: link %s -> %s\n",
+			    from_name, to_name);
 		return (link(from_name, to_name));
+	}
 }
 
 /*
@@ -575,14 +583,18 @@ do_symlink(const char *from_name, const char *to_name,
 		if (target_sb->st_flags & NOCHANGEBITS)
 			(void)chflags(to_name, target_sb->st_flags &
 			     ~NOCHANGEBITS);
-		unlink(to_name);
-
+		if (verbose)
+			printf("install: symlink %s -> %s\n",
+			    from_name, to_name);
 		if (rename(tmpl, to_name) == -1) {
 			/* Remove temporary link before exiting. */
 			(void)unlink(tmpl);
 			err(EX_OSERR, "%s: rename", to_name);
 		}
 	} else {
+		if (verbose)
+			printf("install: symlink %s -> %s\n",
+			    from_name, to_name);
 		if (symlink(from_name, to_name) == -1)
 			err(EX_OSERR, "symlink %s -> %s", from_name, to_name);
 	}
@@ -658,7 +670,7 @@ makelink(const char *from_name, const char *to_name,
 	}
 
 	if (dolink & LN_RELATIVE) {
-		char *cp, *d, *s;
+		char *to_name_copy, *cp, *d, *s;
 
 		/* Resolve pathnames. */
 		if (realpath(from_name, src) == NULL)
@@ -668,7 +680,10 @@ makelink(const char *from_name, const char *to_name,
 		 * The last component of to_name may be a symlink,
 		 * so use realpath to resolve only the directory.
 		 */
-		cp = dirname(to_name);
+		to_name_copy = strdup(to_name);
+		if (to_name_copy == NULL)
+			err(EX_OSERR, "%s: strdup", to_name);
+		cp = dirname(to_name_copy);
 		if (realpath(cp, dst) == NULL)
 			err(EX_OSERR, "%s: realpath", cp);
 		/* .. and add the last component. */
@@ -676,9 +691,11 @@ makelink(const char *from_name, const char *to_name,
 			if (strlcat(dst, "/", sizeof(dst)) > sizeof(dst))
 				errx(1, "resolved pathname too long");
 		}
-		cp = basename(to_name);
+		strcpy(to_name_copy, to_name);
+		cp = basename(to_name_copy);
 		if (strlcat(dst, cp, sizeof(dst)) > sizeof(dst))
 			errx(1, "resolved pathname too long");
+		free(to_name_copy);
 
 		/* Trim common path components. */
 		for (s = src, d = dst; *s == *d; s++, d++)
@@ -748,10 +765,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 		devnull = 1;
 	}
 
-	if (!dolink)
-		target = (stat(to_name, &to_sb) == 0);
-	else
-		target = (lstat(to_name, &to_sb) == 0);
+	target = (lstat(to_name, &to_sb) == 0);
 
 	if (dolink) {
 		if (target && !safecopy) {
@@ -766,8 +780,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 		return;
 	}
 
-	/* Only install to regular files. */
-	if (target && !S_ISREG(to_sb.st_mode)) {
+	if (target && !S_ISREG(to_sb.st_mode) && !S_ISLNK(to_sb.st_mode)) {
 		errno = EFTYPE;
 		warn("%s", to_name);
 		return;
@@ -780,7 +793,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 		err(EX_OSERR, "%s", from_name);
 
 	/* If we don't strip, we can compare first. */
-	if (docompare && !dostrip && target) {
+	if (docompare && !dostrip && target && S_ISREG(to_sb.st_mode)) {
 		if ((to_fd = open(to_name, O_RDONLY, 0)) < 0)
 			err(EX_OSERR, "%s", to_name);
 		if (devnull)
@@ -832,7 +845,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 	/*
 	 * Compare the stripped temp file with the target.
 	 */
-	if (docompare && dostrip && target) {
+	if (docompare && dostrip && target && S_ISREG(to_sb.st_mode)) {
 		temp_fd = to_fd;
 
 		/* Re-open to_fd using the real target name. */
@@ -866,9 +879,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 			}
 			(void) close(temp_fd);
 		}
-	}
-
-	if (dostrip && (!docompare || !target))
+	} else if (dostrip)
 		digestresult = digest_file(tempfile);
 
 	/*
@@ -888,11 +899,21 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 			}
 			if (verbose)
 				(void)printf("install: %s -> %s\n", to_name, backup);
-			if (rename(to_name, backup) < 0) {
+			if (unlink(backup) < 0 && errno != ENOENT) {
 				serrno = errno;
+				if (to_sb.st_flags & NOCHANGEBITS)
+					(void)chflags(to_name, to_sb.st_flags);
 				unlink(tempfile);
 				errno = serrno;
-				err(EX_OSERR, "rename: %s to %s", to_name,
+				err(EX_OSERR, "unlink: %s", backup);
+			}
+			if (link(to_name, backup) < 0) {
+				serrno = errno;
+				unlink(tempfile);
+				if (to_sb.st_flags & NOCHANGEBITS)
+					(void)chflags(to_name, to_sb.st_flags);
+				errno = serrno;
+				err(EX_OSERR, "link: %s to %s", to_name,
 				     backup);
 			}
 		}
@@ -1115,16 +1136,26 @@ create_newfile(const char *path, int target, struct stat *sbp)
 
 		if (dobackup) {
 			if ((size_t)snprintf(backup, MAXPATHLEN, "%s%s",
-			    path, suffix) != strlen(path) + strlen(suffix))
+			    path, suffix) != strlen(path) + strlen(suffix)) {
+				saved_errno = errno;
+				if (sbp->st_flags & NOCHANGEBITS)
+					(void)chflags(path, sbp->st_flags);
+				errno = saved_errno;
 				errx(EX_OSERR, "%s: backup filename too long",
 				    path);
+			}
 			(void)snprintf(backup, MAXPATHLEN, "%s%s",
 			    path, suffix);
 			if (verbose)
 				(void)printf("install: %s -> %s\n",
 				    path, backup);
-			if (rename(path, backup) < 0)
+			if (rename(path, backup) < 0) {
+				saved_errno = errno;
+				if (sbp->st_flags & NOCHANGEBITS)
+					(void)chflags(path, sbp->st_flags);
+				errno = saved_errno;
 				err(EX_OSERR, "rename: %s to %s", path, backup);
+			}
 		} else
 			if (unlink(path) < 0)
 				saved_errno = errno;
