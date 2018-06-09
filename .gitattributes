@@ -74265,9 +74265,6 @@ usr.sbin/usbdump/usbdump.c -text
 usr.sbin/utx/Makefile svneol=native#text/plain
 usr.sbin/utx/utx.8 svneol=native#text/plain
 usr.sbin/utx/utx.c svneol=native#text/plain
-usr.sbin/utxrm/Makefile -text
-usr.sbin/utxrm/utxrm.8 -text
-usr.sbin/utxrm/utxrm.c -text
 usr.sbin/vidcontrol/Makefile -text
 usr.sbin/vidcontrol/decode.c -text
 usr.sbin/vidcontrol/decode.h -text
