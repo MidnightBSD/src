@@ -1,4 +1,5 @@
-.\" Copyright (c) 2013 Hiren Panchasara <hiren.panchasara@gmail.com> 
+.\" $MidnightBSD$
+.\" Copyright (c) 2013 Hiren Panchasara <hiren.panchasara@gmail.com>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/9.2.0/lib/libpmc/pmc.haswelluc.3 249655 2013-04-19 19:28:48Z hiren $
+.\" $FreeBSD: stable/10/lib/libpmc/pmc.haswelluc.3 248871 2013-03-29 08:32:49Z joel $
 .\"
 .Dd March 22, 2013
 .Dt PMC.HASWELLUC 3
@@ -141,7 +142,7 @@ Filter on cross-core snoops initiated by this Cbox due
 to LLC eviction.
 .It Li UNC_CBO_CACHE_LOOKUP.M
 .Pq Event 34H , Umask 01H
-LLC lookup request that access cache and found line in 
+LLC lookup request that access cache and found line in
 M-state.
 .It Li UNC_CBO_CACHE_LOOKUP.ES
 .Pq Event 34H , Umask 06H
@@ -231,7 +232,7 @@ The
 library was written by
 .An "Joseph Koshy"
 .Aq jkoshy@FreeBSD.org .
-The support for the Haswell 
+The support for the Haswell
 microarchitecture was added by
 .An "Hiren Panchasara"
 .Aq hiren.panchasara@gmail.com .

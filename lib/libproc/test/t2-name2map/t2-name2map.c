@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation 
  * All rights reserved. 
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libproc/test/t2-name2map/t2-name2map.c 210688 2010-07-31 16:10:20Z rpaulo $
  */
 
 #include <sys/types.h>

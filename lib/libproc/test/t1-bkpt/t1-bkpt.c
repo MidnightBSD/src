@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation 
  * All rights reserved. 
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libproc/test/t1-bkpt/t1-bkpt.c 244692 2012-12-26 05:11:48Z pluknet $
  */
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -36,7 +37,7 @@
 #include <string.h>
 #include <libproc.h>
 
-int
+int __noinline
 t1_bkpt_t()
 {
 	printf("TEST OK\n");
@@ -50,12 +51,12 @@ t1_bkpt_d()
 	unsigned long saved;
 
 	proc_create("./t1-bkpt", targv, NULL, NULL, &phdl);
-	proc_bkptset(phdl, (uintptr_t)t1_bkpt_t, &saved);
+	assert(proc_bkptset(phdl, (uintptr_t)t1_bkpt_t, &saved) == 0);
 	proc_continue(phdl);
-	assert(WIFSTOPPED(proc_wstatus(phdl)));
+	assert(proc_wstatus(phdl) == PS_STOP);
 	proc_bkptexec(phdl, saved);
 	proc_continue(phdl);
-	proc_wait(phdl);
+	proc_wstatus(phdl);
 	proc_free(phdl);
 }
 

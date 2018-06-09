@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/lib/libpmc/pmclog.c 236238 2012-05-29 14:50:21Z fabient $");
+__FBSDID("$FreeBSD: stable/10/lib/libpmc/pmclog.c 233628 2012-03-28 20:58:30Z fabient $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>

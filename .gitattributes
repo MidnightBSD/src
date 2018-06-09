@@ -49578,6 +49578,7 @@ lib/libpmc/libpmc.c -text
 lib/libpmc/libpmcinternal.h -text
 lib/libpmc/pmc.3 -text
 lib/libpmc/pmc.atom.3 -text
+lib/libpmc/pmc.atomsilvermont.3 svneol=native#text/plain
 lib/libpmc/pmc.core.3 -text
 lib/libpmc/pmc.core2.3 -text
 lib/libpmc/pmc.corei7.3 -text
@@ -49585,12 +49586,15 @@ lib/libpmc/pmc.corei7uc.3 -text
 lib/libpmc/pmc.h -text
 lib/libpmc/pmc.haswell.3 svneol=native#text/plain
 lib/libpmc/pmc.haswelluc.3 svneol=native#text/plain
+lib/libpmc/pmc.haswellxeon.3 svneol=native#text/plain
 lib/libpmc/pmc.iaf.3 -text
 lib/libpmc/pmc.ivybridge.3 svneol=native#text/plain
 lib/libpmc/pmc.ivybridgexeon.3 svneol=native#text/plain
 lib/libpmc/pmc.k7.3 -text
 lib/libpmc/pmc.k8.3 -text
 lib/libpmc/pmc.mips.3 -text
+lib/libpmc/pmc.mips24k.3 svneol=native#text/plain
+lib/libpmc/pmc.octeon.3 svneol=native#text/plain
 lib/libpmc/pmc.p4.3 -text
 lib/libpmc/pmc.p5.3 -text
 lib/libpmc/pmc.p6.3 -text
@@ -49602,6 +49606,7 @@ lib/libpmc/pmc.tsc.3 -text
 lib/libpmc/pmc.ucf.3 -text
 lib/libpmc/pmc.westmere.3 -text
 lib/libpmc/pmc.westmereuc.3 -text
+lib/libpmc/pmc.xscale.3 svneol=native#text/plain
 lib/libpmc/pmc_allocate.3 -text
 lib/libpmc/pmc_attach.3 -text
 lib/libpmc/pmc_capabilities.3 -text

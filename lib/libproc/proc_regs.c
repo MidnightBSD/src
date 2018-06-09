@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation 
  * All rights reserved. 
@@ -28,7 +29,7 @@
  */ 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libproc/proc_regs.c 259895 2013-12-25 22:36:27Z markj $");
 
 #include <sys/types.h>
 #include <sys/ptrace.h>
@@ -58,6 +59,10 @@ proc_regget(struct proc_handle *phdl, proc_reg_t reg, unsigned long *regvalue)
 		*regvalue = regs.r_rip;
 #elif defined(__i386__)
 		*regvalue = regs.r_eip;
+#elif defined(__mips__)
+		*regvalue = regs.r_regs[PC];
+#elif defined(__powerpc__)
+		*regvalue = regs.pc;
 #endif
 		break;
 	case REG_SP:
@@ -65,10 +70,14 @@ proc_regget(struct proc_handle *phdl, proc_reg_t reg, unsigned long *regvalue)
 		*regvalue = regs.r_rsp;
 #elif defined(__i386__)
 		*regvalue = regs.r_esp;
+#elif defined(__mips__)
+		*regvalue = regs.r_regs[SP];
+#elif defined(__powerpc__)
+		*regvalue = regs.fixreg[1];
 #endif
 		break;
 	default:
-		warn("ERROR: no support for reg number %d", reg);
+		DPRINTFX("ERROR: no support for reg number %d", reg);
 		return (-1);
 	}
 
@@ -93,6 +102,10 @@ proc_regset(struct proc_handle *phdl, proc_reg_t reg, unsigned long regvalue)
 		regs.r_rip = regvalue;
 #elif defined(__i386__)
 		regs.r_eip = regvalue;
+#elif defined(__mips__)
+		regs.r_regs[PC] = regvalue;
+#elif defined(__powerpc__)
+		regs.pc = regvalue;
 #endif
 		break;
 	case REG_SP:
@@ -100,10 +113,14 @@ proc_regset(struct proc_handle *phdl, proc_reg_t reg, unsigned long regvalue)
 		regs.r_rsp = regvalue;
 #elif defined(__i386__)
 		regs.r_esp = regvalue;
+#elif defined(__mips__)
+		regs.r_regs[PC] = regvalue;
+#elif defined(__powerpc__)
+		regs.fixreg[1] = regvalue;
 #endif
 		break;
 	default:
-		warn("ERROR: no support for reg number %d", reg);
+		DPRINTFX("ERROR: no support for reg number %d", reg);
 		return (-1);
 	}
 	if (ptrace(PT_SETREGS, proc_getpid(phdl), (caddr_t)&regs, 0) < 0)

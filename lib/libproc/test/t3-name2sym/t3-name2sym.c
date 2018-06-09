@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation 
  * All rights reserved. 
@@ -26,13 +27,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libproc/test/t3-name2sym/t3-name2sym.c 240154 2012-09-06 01:24:18Z rpaulo $
  */
 #include <sys/types.h>
 #include <assert.h>
 #include <stdio.h>
 #include <libproc.h>
 #include <gelf.h>
+#include <string.h>
 
 int
 main(int argc, char *argv[])

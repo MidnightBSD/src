@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libproc/_libproc.h 270731 2014-08-27 19:51:42Z markj $
  */
 
 #include <sys/cdefs.h>
@@ -46,10 +47,14 @@ struct proc_handle {
 	size_t	rdobjsz;
 	size_t	nobjs;
 	struct lwpstatus lwps;
+	rd_loadobj_t *rdexec;		/* rdobj index of program executable. */
+	char	execname[MAXPATHLEN];	/* Path to program executable. */
 };
 
 #ifdef DEBUG
-#define DPRINTF(fmt, ...) 	warn(fmt, __VA_ARGS__)
+#define	DPRINTF(...) 	warn(__VA_ARGS__)
+#define	DPRINTFX(...)	warnx(__VA_ARGS__)
 #else
-#define DPRINTF(fmt, ...)
+#define	DPRINTF(...)    do { } while (0)
+#define	DPRINTFX(...)   do { } while (0)
 #endif

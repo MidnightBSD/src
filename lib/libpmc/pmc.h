@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/lib/libpmc/pmc.h 229392 2012-01-03 16:35:00Z fabient $
+ * $FreeBSD: stable/10/lib/libpmc/pmc.h 294046 2016-01-14 22:02:21Z jtl $
  */
 
 #ifndef _PMC_H_
@@ -37,14 +37,15 @@
  * Driver statistics.
  */
 struct pmc_driverstats {
-	int	pm_intr_ignored;	/* #interrupts ignored */
-	int	pm_intr_processed;	/* #interrupts processed */
-	int	pm_intr_bufferfull;	/* #interrupts with ENOSPC */
-	int	pm_syscalls;		/* #syscalls */
-	int	pm_syscall_errors;	/* #syscalls with errors */
-	int	pm_buffer_requests;	/* #buffer requests */
-	int	pm_buffer_requests_failed; /* #failed buffer requests */
-	int	pm_log_sweeps;		/* #sample buffer processing passes */
+	unsigned int	pm_intr_ignored;	/* #interrupts ignored */
+	unsigned int	pm_intr_processed;	/* #interrupts processed */
+	unsigned int	pm_intr_bufferfull;	/* #interrupts with ENOSPC */
+	unsigned int	pm_syscalls;		/* #syscalls */
+	unsigned int	pm_syscall_errors;	/* #syscalls with errors */
+	unsigned int	pm_buffer_requests;	/* #buffer requests */
+	unsigned int	pm_buffer_requests_failed; /* #failed buffer requests */
+	unsigned int	pm_log_sweeps;		/* #sample buffer processing
+						   passes */
 };
 
 /*
@@ -99,7 +100,7 @@ int	pmc_npmc(int _cpu);
 int	pmc_cpuinfo(const struct pmc_cpuinfo **_cpu_info);
 int	pmc_pmcinfo(int _cpu, struct pmc_pmcinfo **_pmc_info);
 
-const char	*pmc_name_of_capability(uint32_t _c);
+const char	*pmc_name_of_capability(enum pmc_caps _c);
 const char	*pmc_name_of_class(enum pmc_class _pc);
 const char	*pmc_name_of_cputype(enum pmc_cputype _cp);
 const char	*pmc_name_of_disposition(enum pmc_disp _pd);
