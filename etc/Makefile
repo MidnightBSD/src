@@ -295,7 +295,8 @@ MTREE_CMD?=	mtree
 MTREES=		mtree/BSD.root.dist		/		\
 		mtree/BSD.var.dist		/var		\
 		mtree/BSD.usr.dist		/usr		\
-		mtree/BSD.include.dist		/usr/include
+		mtree/BSD.include.dist		/usr/include	\
+		mtree/BSD.debug.dist		/usr/lib
 .if ${MK_TESTS} != "no"
 MTREES+=	mtree/BSD.tests.dist		${TESTSBASE}
 .endif
