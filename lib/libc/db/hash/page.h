@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)page.h	8.2 (Berkeley) 5/31/94
- * $FreeBSD: src/lib/libc/db/hash/page.h,v 1.3 2007/01/09 00:27:51 imp Exp $
+ * $FreeBSD: stable/10/lib/libc/db/hash/page.h 189327 2009-03-04 00:58:04Z delphij $
  */
 
 /*

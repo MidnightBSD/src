@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)ndbm.c	8.4 (Berkeley) 7/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/hash/ndbm.c,v 1.7 2007/01/09 00:27:51 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/ndbm.c 165903 2007-01-09 00:28:16Z imp $");
 
 /*
  * This package provides a dbm compatible interface to the new hashing
