@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,13 +35,14 @@ static char sccsid[] = "@(#)rmjob.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/common_source/rmjob.c 242091 2012-10-25 20:16:38Z ed $");
 
 #include <sys/param.h>
 #include <sys/uio.h>
 
 #include <ctype.h>
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -68,8 +70,6 @@ static int	all = 0;		/* eliminate all files (root only) */
 static int	cur_daemon;		/* daemon's pid */
 static char	current[7+MAXHOSTNAMELEN];  /* active control file name */
 
-extern uid_t	uid, euid;		/* real and effective user id's */
-
 static	void	alarmhandler(int _signo);
 static	void	do_unlink(char *_file);
 static int	 isowner(char *_owner, char *_file, const char *_cfhost);
@@ -78,7 +78,7 @@ void
 rmjob(const char *printer)
 {
 	register int i, nitems;
-	int assasinated = 0;
+	int assassinated = 0;
 	struct dirent **files;
 	char *cp;
 	struct printer myprinter, *pp = &myprinter;
@@ -110,12 +110,12 @@ rmjob(const char *printer)
 		person = root;
 	}
 
-	seteuid(euid);
+	PRIV_START
 	if (chdir(pp->spool_dir) < 0)
 		fatal(pp, "cannot chdir to spool directory");
 	if ((nitems = scandir(".", &files, iscf, NULL)) < 0)
 		fatal(pp, "cannot access spool directory");
-	seteuid(uid);
+	PRIV_END
 
 	if (nitems) {
 		/*
@@ -124,10 +124,10 @@ rmjob(const char *printer)
 		 *  (after which we have to restart the daemon).
 		 */
 		if (lockchk(pp, pp->lock_file) && chk(current)) {
-			seteuid(euid);
-			assasinated = kill(cur_daemon, SIGINT) == 0;
-			seteuid(uid);
-			if (!assasinated)
+			PRIV_START
+			assassinated = kill(cur_daemon, SIGINT) == 0;
+			PRIV_END
+			if (!assassinated)
 				fatal(pp, "cannot kill printer daemon");
 		}
 		/*
@@ -140,7 +140,7 @@ rmjob(const char *printer)
 	/*
 	 * Restart the printer daemon if it was killed
 	 */
-	if (assasinated && !startdaemon(pp))
+	if (assassinated && !startdaemon(pp))
 		fatal(pp, "cannot restart printer daemon\n");
 	exit(0);
 }
@@ -156,14 +156,14 @@ lockchk(struct printer *pp, char *slockf)
 	register FILE *fp;
 	register int i, n;
 
-	seteuid(euid);
+	PRIV_START
 	if ((fp = fopen(slockf, "r")) == NULL) {
 		if (errno == EACCES)
 			fatal(pp, "%s: %s", slockf, strerror(errno));
 		else
 			return(0);
 	}
-	seteuid(uid);
+	PRIV_END
 	if (!getline(fp)) {
 		(void) fclose(fp);
 		return(0);		/* no daemon present */
@@ -195,10 +195,10 @@ process(const struct printer *pp, char *file)
 
 	if (!chk(file))
 		return;
-	seteuid(euid);
+	PRIV_START
 	if ((cfp = fopen(file, "r")) == NULL)
 		fatal(pp, "cannot open %s", file);
-	seteuid(uid);
+	PRIV_END
 	while (getline(cfp)) {
 		switch (line[0]) {
 		case 'U':  /* unlink associated files */
@@ -218,9 +218,9 @@ do_unlink(char *file)
 
 	if (from_host != local_host)
 		printf("%s: ", local_host);
-	seteuid(euid);
+	PRIV_START
 	ret = unlink(file);
-	seteuid(uid);
+	PRIV_END
 	printf(ret ? "cannot dequeue %s\n" : "%s dequeued\n", file);
 }
 
@@ -248,10 +248,10 @@ chk(char *file)
 	/*
 	 * get the owner's name from the control file.
 	 */
-	seteuid(euid);
+	PRIV_START
 	if ((cfp = fopen(file, "r")) == NULL)
 		return(0);
-	seteuid(uid);
+	PRIV_END
 	while (getline(cfp)) {
 		if (line[0] == 'P')
 			break;

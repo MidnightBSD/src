@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +44,7 @@ static char sccsid[] = "@(#)printcap.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/common_source/printcap.c 117590 2003-07-14 20:17:55Z gad $");
 
 #include <errno.h>
 #include <stdio.h>

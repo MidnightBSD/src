@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2001,2011  - Garance Alistair Drosehn <gad@FreeBSD.org>.
@@ -29,7 +30,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/lpr/common_source/ctlinfo.h 220586 2011-04-13 00:36:19Z gad $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

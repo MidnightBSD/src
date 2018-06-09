@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1997 Massachusetts Institute of Technology
  *
@@ -31,7 +32,7 @@ static const char copyright[] =
 	"Copyright (C) 1997, Massachusetts Institute of Technology\r\n";
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/common_source/request.c 117592 2003-07-14 20:20:58Z gad $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

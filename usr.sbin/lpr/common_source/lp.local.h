@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)lp.local.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/lpr/common_source/lp.local.h 216372 2010-12-11 09:38:12Z joel $
  */
 
 /*

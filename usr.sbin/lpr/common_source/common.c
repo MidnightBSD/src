@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +44,7 @@ static char sccsid[] = "@(#)common.c	8.5 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/common_source/common.c 251044 2013-05-27 22:19:01Z gad $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -52,6 +53,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -68,8 +70,6 @@ __MBSDID("$MidnightBSD$");
  */
 char	line[BUFSIZ];
 const char	*progname;		/* program name */
-
-extern uid_t	uid, euid;
 
 static int compar(const void *_p1, const void *_p2);
 
@@ -125,14 +125,14 @@ getq(const struct printer *pp, struct jobqueue *(*namelist[]))
 	DIR *dirp;
 	int statres;
 
-	seteuid(euid);
+	PRIV_START
 	if ((dirp = opendir(pp->spool_dir)) == NULL) {
-		seteuid(uid);
+		PRIV_END
 		return (-1);
 	}
-	if (fstat(dirp->dd_fd, &stbuf) < 0)
+	if (fstat(dirfd(dirp), &stbuf) < 0)
 		goto errdone;
-	seteuid(uid);
+	PRIV_END
 
 	/*
 	 * Estimate the array size by taking the size of the directory file
@@ -149,9 +149,9 @@ getq(const struct printer *pp, struct jobqueue *(*namelist[]))
 	while ((d = readdir(dirp)) != NULL) {
 		if (d->d_name[0] != 'c' || d->d_name[1] != 'f')
 			continue;	/* daemon control files only */
-		seteuid(euid);
+		PRIV_START
 		statres = stat(d->d_name, &stbuf);
-		seteuid(uid);
+		PRIV_END
 		if (statres < 0)
 			continue;	/* Doesn't exist */
 		entrysz = sizeof(struct jobqueue) - sizeof(q->job_cfname) +
@@ -184,7 +184,7 @@ getq(const struct printer *pp, struct jobqueue *(*namelist[]))
 
 errdone:
 	closedir(dirp);
-	seteuid(uid);
+	PRIV_END
 	return (-1);
 }
 
@@ -340,10 +340,10 @@ set_qstate(int action, const char *lfname)
 	 * Find what the current access-bits are.
 	 */
 	memset(&stbuf, 0, sizeof(stbuf));
-	seteuid(euid);
+	PRIV_START
 	statres = stat(lfname, &stbuf);
 	errsav = errno;
-	seteuid(uid);
+	PRIV_END
 	if ((statres < 0) && (errsav != ENOENT)) {
 		printf("\tcannot stat() lock file\n");
 		return (SQS_STATFAIL);
@@ -402,10 +402,10 @@ set_qstate(int action, const char *lfname)
 	res = 0;
 	if (statres >= 0) {
 		/* The file already exists, so change the access. */
-		seteuid(euid);
+		PRIV_START
 		chres = chmod(lfname, chgbits);
 		errsav = errno;
-		seteuid(uid);
+		PRIV_END
 		res = SQS_CHGOK;
 		if (chres < 0)
 			res = SQS_CHGFAIL;
@@ -424,10 +424,10 @@ set_qstate(int action, const char *lfname)
 		 * all the read/write bits are set as desired.
 		 */
 		oldmask = umask(S_IWOTH);
-		seteuid(euid);
+		PRIV_START
 		fd = open(lfname, O_WRONLY|O_CREAT, newbits);
 		errsav = errno;
-		seteuid(uid);
+		PRIV_END
 		umask(oldmask);
 		res = SQS_CREFAIL;
 		if (fd >= 0) {
@@ -758,16 +758,22 @@ fatal(const struct printer *pp, const char *msg, ...)
 
 /*
  * Close all file descriptors from START on up.
- * This is a horrific kluge, since getdtablesize() might return
- * ``infinity'', in which case we will be spending a long time
- * closing ``files'' which were never open.  Perhaps it would
- * be better to close the first N fds, for some small value of N.
  */
 void
 closeallfds(int start)
 {
-	int stop = getdtablesize();
-	for (; start < stop; start++)
-		close(start);
+	int stop;
+
+	if (USE_CLOSEFROM)		/* The faster, modern solution */
+		closefrom(start);
+	else {
+		/* This older logic can be pretty awful on some OS's.  The
+		 * getdtablesize() might return ``infinity'', and then this
+		 * will waste a lot of time closing file descriptors which
+		 * had never been open()-ed. */
+		stop = getdtablesize();
+		for (; start < stop; start++)
+			close(start);
+	}
 }
 

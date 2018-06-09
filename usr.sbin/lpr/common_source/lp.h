@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * 	From: @(#)lp.h	8.2 (Berkeley) 4/28/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/lpr/common_source/lp.h 242091 2012-10-25 20:16:38Z ed $
  */
 
 #include <sys/queue.h>
@@ -248,6 +249,20 @@ typedef enum { TR_SENDING, TR_RECVING, TR_PRINTING } tr_sendrecv;
 #define	CMD_SHOWQ_SHORT	'\3'
 #define	CMD_SHOWQ_LONG	'\4'
 #define	CMD_RMJOB	'\5'
+
+/*
+ * seteuid() macros.
+*/
+
+extern uid_t	uid, euid;
+
+#define PRIV_START { \
+    if (seteuid(euid) != 0) err(1, "seteuid failed"); \
+}
+#define PRIV_END { \
+    if (seteuid(uid) != 0) err(1, "seteuid failed"); \
+}
+
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
 

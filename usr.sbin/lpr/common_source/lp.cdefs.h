@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*-
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * Copyright (c) 2003  - Garance Alistair Drosehn <gad@FreeBSD.org>.
+ * Copyright (c) 2003,2013  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +30,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/lpr/common_source/lp.cdefs.h 251044 2013-05-27 22:19:01Z gad $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 
@@ -56,6 +57,21 @@
 #endif
 
 /*
+ * FreeBSD added a closefrom() routine in release 8.0.  When compiling
+ * `lpr' on other platforms you might want to include bsd-closefrom.c
+ * from the portable-openssh project.
+ */
+#ifndef	USE_CLOSEFROM
+#  if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#    define	USE_CLOSEFROM	1
+#  endif
+#endif
+/* The macro USE_CLOSEFROM must be defined with a value of 0 or 1. */
+#ifndef	USE_CLOSEFROM
+#  define	USE_CLOSEFROM	0
+#endif
+
+/*
  * __unused is a compiler-specific trick which can be used to avoid
  * warnings about a variable which is defined but never referenced.
  * Some lpr files use this, so define a null version if it was not
@@ -66,18 +82,18 @@
 #endif
 
 /*
- * All the lpr source files will want to reference __MBSDID() to
+ * All the lpr source files will want to reference __FBSDID() to
  * handle rcs id's.
  */
-#if !defined(__MBSDID)
+#if !defined(__FBSDID)
 #  if defined(lint) || defined(STRIP_FBSDID)
-#    define	__MBSDID(s)	struct skip_rcsid_struct
+#    define	__FBSDID(s)	struct skip_rcsid_struct
 #  elif defined(__IDSTRING)			/* NetBSD */
-#    define	__MBSDID(s)	__IDSTRING(rcsid,s)
+#    define	__FBSDID(s)	__IDSTRING(rcsid,s)
 #  else
-#    define	__MBSDID(s)	static const char rcsid[] __unused = s
+#    define	__FBSDID(s)	static const char rcsid[] __unused = s
 #  endif
-#endif /* __MBSDID */
+#endif /* __FBSDID */
 
 /*
  * Some lpr include files use __BEGIN_DECLS and __END_DECLS.
