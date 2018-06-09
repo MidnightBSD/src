@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * First author: Michael Graff.
  * Copyright (c) 1997-2000 Lan Media Corp. (www.lanmedia.com).
@@ -62,7 +63,7 @@
  *    cc -o lmcconfig lmcconfig.c
  * Install the executable program in /usr/local/sbin/lmcconfig.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/lmcconfig/lmcconfig.c 300279 2016-05-20 06:56:43Z truckman $
  */
 
 #include <sys/param.h>
@@ -222,7 +223,7 @@ call_driver(unsigned long cmd, struct iohdr *iohdr)
 {
   int error = 0;
 
-  strncpy(iohdr->ifname, ifname, sizeof(iohdr->ifname));
+  strlcpy(iohdr->ifname, ifname, sizeof(iohdr->ifname));
   iohdr->cookie = NGM_LMC_COOKIE;
   iohdr->iohdr = iohdr;
 
@@ -1074,18 +1075,16 @@ print_hssi_sigs(void)
 static void
 print_events(void)
 {
-  char *time;
-  struct timeval tv;
-  struct timezone tz;
+  const char *reset_time;
+  time_t now;
 
-  gettimeofday(&tv, &tz);
-  time = (char *)ctime((time_t *)&tv);
-  printf("Current time:\t\t%s", time);
+  now = time(NULL);
+  printf("Current time:\t\t%s", ctime(&now));
   if (status.cntrs.reset_time.tv_sec < 1000)
-    time = "Never\n";
+    reset_time = "Never\n";
   else
-    time = (char *)ctime((time_t *)&status.cntrs.reset_time.tv_sec);
-  printf("Cntrs reset:\t\t%s", time);
+    reset_time = ctime(&status.cntrs.reset_time.tv_sec);
+  printf("Cntrs reset:\t\t%s", reset_time);
 
   if (status.cntrs.ibytes)     printf("Rx bytes:\t\t%ju\n",    (uintmax_t)status.cntrs.ibytes);
   if (status.cntrs.obytes)     printf("Tx bytes:\t\t%ju\n",    (uintmax_t)status.cntrs.obytes);
