@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libsmdb/Makefile 313607 2017-02-11 06:39:47Z ngie $
 
-SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
+SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libsmdb
 
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.

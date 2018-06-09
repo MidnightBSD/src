@@ -1,9 +1,9 @@
-# $FreeBSD: src/lib/libsm/Makefile,v 1.12 2007/04/09 01:45:30 gshapiro Exp $
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libsm/Makefile 313608 2017-02-11 06:40:27Z ngie $
 
 .include <bsd.own.mk>
 
-SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
+SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libsm
 
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
@@ -30,7 +30,7 @@ SRCS+=	assert.c debug.c errstring.c exc.c heap.c match.c rpool.c \
 	smstdio.c snprintf.c sscanf.c stdio.c strio.c ungetc.c \
 	vasprintf.c vfprintf.c vfscanf.c vprintf.c vsnprintf.c \
 	wbuf.c wsetup.c string.c stringf.c \
-	xtrap.c strto.c test.c path.c strcasecmp.c strrevcmp.c \
+	xtrap.c strto.c test.c strcasecmp.c strrevcmp.c \
 	signal.c clock.c config.c sem.c shm.c mbdb.c strexit.c cf.c ldap.c \
 	niprop.c mpeix.c memstat.c util.c inet6_ntop.c
 CLEANFILES+=sm_os.h
