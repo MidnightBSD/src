@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -32,7 +33,7 @@
 static char sccsid[] = "@(#)keyserv.c	1.15	94/04/25 SMI";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/keyserv/keyserv.c 239991 2012-09-01 14:45:15Z ed $";
 #endif /* not lint */
 
 /*
@@ -232,7 +233,7 @@ randomize(master)
 
 	seed = 0;
 	for (i = 0; i < 1024; i++) {
-		(void) gettimeofday(&tv, (struct timezone *) NULL);
+		(void)gettimeofday(&tv, NULL);
 		shift = i % 8 * sizeof (int);
 		seed ^= (tv.tv_usec << shift) | (tv.tv_usec >> (32 - shift));
 	}
@@ -575,7 +576,7 @@ key_gen_1_svc_prog(v, s)
 	static des_block keygen;
 	static des_block key;
 
-	(void) gettimeofday(&time, (struct timezone *) NULL);
+	(void)gettimeofday(&time, NULL);
 	keygen.key.high += (time.tv_sec ^ time.tv_usec);
 	keygen.key.low += (time.tv_sec ^ time.tv_usec);
 	ecb_crypt((char *)&masterkey, (char *)&keygen, sizeof (keygen),
