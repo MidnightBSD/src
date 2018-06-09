@@ -1,7 +1,4 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/Makefile.i386 252356 2013-06-28 21:00:08Z davide $
 
-.if ${MK_NCP} != "no"
-SUBDIR+=	ncplist
-SUBDIR+=	ncplogin
-.endif
 SUBDIR+=	smbutil
