@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ip6addrctl.c,v 1.3 2003/12/16 08:14:28 suz Exp $	*/
 
 /*
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/ip6addrctl/ip6addrctl.c 241737 2012-10-19 14:49:42Z ed $
  */
 
 #include <sys/types.h>
@@ -59,7 +60,7 @@ struct policyqueue {
 	struct in6_addrpolicy pc_policy;
 };
 TAILQ_HEAD(policyhead, policyqueue);
-struct policyhead policyhead;
+static struct policyhead policyhead;
 
 static void usage(void);
 static void get_policy(void);
