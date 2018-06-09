@@ -1,8 +1,9 @@
+# $MidnightBSD$
 # Makefile for libopie
 #
-# $FreeBSD: src/lib/libopie/Makefile,v 1.22 2007/05/21 02:49:06 deischen Exp $
+# $FreeBSD: stable/10/lib/libopie/Makefile 313614 2017-02-11 06:47:56Z ngie $
 #
-OPIE_DIST?=	${.CURDIR}/../../contrib/opie
+OPIE_DIST?=	${SRCTOP}/contrib/opie
 DIST_DIR=	${OPIE_DIST}/${.CURDIR:T}
 SHLIB_MAJOR=    7
 
