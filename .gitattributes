@@ -49379,6 +49379,8 @@ lib/libmp/Symbol.map -text
 lib/libmp/libmp.3 -text
 lib/libmp/mp.h -text
 lib/libmp/mpasbn.c -text
+lib/libmp/tests/Makefile svneol=native#text/plain
+lib/libmp/tests/legacy_test.c svneol=native#text/plain
 lib/libmport/Makefile -text
 lib/libmport/asset.c svneol=native#text/plain
 lib/libmport/bundle_read.c -text
