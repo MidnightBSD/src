@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.3 (Berkeley) 3/30/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/signal.h 228468 2011-12-13 13:32:56Z ed $
  */
 
 #ifndef _SIGNAL_H_
@@ -42,9 +43,9 @@
  * XXX should enlarge these, if only to give empty names instead of bounds
  * errors for large signal numbers.
  */
-extern __const char *__const sys_signame[NSIG];
-extern __const char *__const sys_siglist[NSIG];
-extern __const int sys_nsig;
+extern const char * const sys_signame[NSIG];
+extern const char * const sys_siglist[NSIG];
+extern const int sys_nsig;
 #endif
 
 #if __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE
