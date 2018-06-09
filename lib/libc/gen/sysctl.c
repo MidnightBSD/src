@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)sysctl.c	8.2 (Berkeley) 1/4/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/sysctl.c 285604 2015-07-15 16:55:56Z pkelsey $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -50,8 +51,23 @@ int
 sysctl(const int *name, u_int namelen, void *oldp, size_t *oldlenp,
     const void *newp, size_t newlen)
 {
-	if (name[0] != CTL_USER)
-		return (__sysctl(name, namelen, oldp, oldlenp, newp, newlen));
+	int retval;
+	size_t orig_oldlen;
+
+	orig_oldlen = oldlenp ? *oldlenp : 0;
+	retval = __sysctl(name, namelen, oldp, oldlenp, newp, newlen);
+	/*
+	 * All valid names under CTL_USER have a dummy entry in the sysctl
+	 * tree (to support name lookups and enumerations) with an
+	 * empty/zero value, and the true value is supplied by this routine.
+	 * For all such names, __sysctl() is used solely to validate the
+	 * name.
+	 *
+	 * Return here unless there was a successful lookup for a CTL_USER
+	 * name.
+	 */
+	if (retval || name[0] != CTL_USER)
+		return (retval);
 
 	if (newp != NULL) {
 		errno = EPERM;
@@ -64,7 +80,7 @@ sysctl(const int *name, u_int namelen, void *oldp, size_t *oldlenp,
 
 	switch (name[1]) {
 	case USER_CS_PATH:
-		if (oldp && *oldlenp < sizeof(_PATH_STDPATH)) {
+		if (oldp && orig_oldlen < sizeof(_PATH_STDPATH)) {
 			errno = ENOMEM;
 			return -1;
 		}

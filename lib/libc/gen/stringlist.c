@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 Christos Zoulas
  * All rights reserved.
@@ -30,7 +31,7 @@
 static char *rcsid = "$NetBSD: stringlist.c,v 1.2 1997/01/17 07:26:20 lukem Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/stringlist.c 249802 2013-04-23 13:03:03Z eadler $");
 
 #include "namespace.h"
 #include <stdio.h>

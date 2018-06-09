@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)wait.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/wait.c 277317 2015-01-18 11:54:20Z kib $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -40,10 +41,14 @@ __MBSDID("$MidnightBSD$");
 #include <sys/resource.h>
 #include "un-namespace.h"
 
+#include "libc_private.h"
+
 pid_t
 __wait(int *istat)
 {
-	return (_wait4(WAIT_ANY, istat, 0, (struct rusage *)0));
+
+	return (((pid_t (*)(pid_t, int *, int, struct rusage *))
+	    __libc_interposing[INTERPOS_wait4])(WAIT_ANY, istat, 0, NULL));
 }
 
 __weak_reference(__wait, wait);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)err.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/err.c 321124 2017-07-18 08:50:36Z ngie $");
 
 #include "namespace.h"
 #include <err.h>
@@ -99,8 +100,8 @@ errc(int eval, int code, const char *fmt, ...)
 void
 verrc(int eval, int code, const char *fmt, va_list ap)
 {
-	if (err_file == 0)
-		err_set_file((FILE *)0);
+	if (err_file == NULL)
+		err_set_file(NULL);
 	fprintf(err_file, "%s: ", _getprogname());
 	if (fmt != NULL) {
 		vfprintf(err_file, fmt, ap);
@@ -124,8 +125,8 @@ errx(int eval, const char *fmt, ...)
 void
 verrx(int eval, const char *fmt, va_list ap)
 {
-	if (err_file == 0)
-		err_set_file((FILE *)0);
+	if (err_file == NULL)
+		err_set_file(NULL);
 	fprintf(err_file, "%s: ", _getprogname());
 	if (fmt != NULL)
 		vfprintf(err_file, fmt, ap);
@@ -164,8 +165,8 @@ warnc(int code, const char *fmt, ...)
 void
 vwarnc(int code, const char *fmt, va_list ap)
 {
-	if (err_file == 0)
-		err_set_file((FILE *)0);
+	if (err_file == NULL)
+		err_set_file(NULL);
 	fprintf(err_file, "%s: ", _getprogname());
 	if (fmt != NULL) {
 		vfprintf(err_file, fmt, ap);
@@ -186,8 +187,8 @@ warnx(const char *fmt, ...)
 void
 vwarnx(const char *fmt, va_list ap)
 {
-	if (err_file == 0)
-		err_set_file((FILE *)0);
+	if (err_file == NULL)
+		err_set_file(NULL);
 	fprintf(err_file, "%s: ", _getprogname());
 	if (fmt != NULL)
 		vfprintf(err_file, fmt, ap);

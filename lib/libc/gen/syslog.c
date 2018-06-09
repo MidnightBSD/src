@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/syslog.c 320312 2017-06-24 14:44:59Z kib $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -129,8 +130,8 @@ syslog(int pri, const char *fmt, ...)
 	va_end(ap);
 }
 
-void
-vsyslog(int pri, const char *fmt, va_list ap)
+static void
+vsyslog1(int pri, const char *fmt, va_list ap)
 {
 	int cnt;
 	char ch, *p;
@@ -151,13 +152,9 @@ vsyslog(int pri, const char *fmt, va_list ap)
 
 	saved_errno = errno;
 
-	THREAD_LOCK();
-
 	/* Check priority against setlogmask values. */
-	if (!(LOG_MASK(LOG_PRI(pri)) & LogMask)) {
-		THREAD_UNLOCK();
+	if (!(LOG_MASK(LOG_PRI(pri)) & LogMask))
 		return;
-	}
 
 	/* Set default facility if none specified. */
 	if ((pri & LOG_FACMASK) == 0)
@@ -167,10 +164,8 @@ vsyslog(int pri, const char *fmt, va_list ap)
 	tbuf_cookie.base = tbuf;
 	tbuf_cookie.left = sizeof(tbuf);
 	fp = fwopen(&tbuf_cookie, writehook);
-	if (fp == NULL) {
-		THREAD_UNLOCK();
+	if (fp == NULL)
 		return;
-	}
 
 	/* Build the message. */
 	(void)time(&now);
@@ -200,7 +195,6 @@ vsyslog(int pri, const char *fmt, va_list ap)
 		fmt_fp = fwopen(&fmt_cookie, writehook);
 		if (fmt_fp == NULL) {
 			fclose(fp);
-			THREAD_UNLOCK();
 			return;
 		}
 
@@ -261,38 +255,51 @@ vsyslog(int pri, const char *fmt, va_list ap)
 	connectlog();
 
 	/*
-	 * If the send() failed, there are two likely scenarios: 
+	 * If the send() fails, there are two likely scenarios: 
 	 *  1) syslogd was restarted
 	 *  2) /var/run/log is out of socket buffer space, which
 	 *     in most cases means local DoS.
-	 * We attempt to reconnect to /var/run/log[priv] to take care of
-	 * case #1 and keep send()ing data to cover case #2
-	 * to give syslogd a chance to empty its socket buffer.
+	 * If the error does not indicate a full buffer, we address
+	 * case #1 by attempting to reconnect to /var/run/log[priv]
+	 * and resending the message once.
 	 *
-	 * If we are working with a priveleged socket, then take
-	 * only one attempt, because we don't want to freeze a
+	 * If we are working with a privileged socket, the retry
+	 * attempts end there, because we don't want to freeze a
 	 * critical application like su(1) or sshd(8).
 	 *
+	 * Otherwise, we address case #2 by repeatedly retrying the
+	 * send() to give syslogd a chance to empty its socket buffer.
 	 */
 
 	if (send(LogFile, tbuf, cnt, 0) < 0) {
 		if (errno != ENOBUFS) {
+			/*
+			 * Scenario 1: syslogd was restarted
+			 * reconnect and resend once
+			 */
 			disconnectlog();
 			connectlog();
+			if (send(LogFile, tbuf, cnt, 0) >= 0)
+				return;
+			/*
+			 * if the resend failed, fall through to
+			 * possible scenario 2
+			 */
 		}
-		do {
+		while (errno == ENOBUFS) {
+			/*
+			 * Scenario 2: out of socket buffer space
+			 * possible DoS, fail fast on a privileged
+			 * socket
+			 */
 			if (status == CONNPRIV)
 				break;
 			_usleep(1);
-			if (send(LogFile, tbuf, cnt, 0) >= 0) {
-				THREAD_UNLOCK();
+			if (send(LogFile, tbuf, cnt, 0) >= 0)
 				return;
-			}
-		} while (errno == ENOBUFS);
-	} else {
-		THREAD_UNLOCK();
+		}
+	} else
 		return;
-	}
 
 	/*
 	 * Output the message to the console; try not to block
@@ -300,7 +307,8 @@ vsyslog(int pri, const char *fmt, va_list ap)
 	 * Make sure the error reported is the one from the syslogd failure.
 	 */
 	if (LogStat & LOG_CONS &&
-	    (fd = _open(_PATH_CONSOLE, O_WRONLY|O_NONBLOCK, 0)) >= 0) {
+	    (fd = _open(_PATH_CONSOLE, O_WRONLY|O_NONBLOCK|O_CLOEXEC, 0)) >=
+	    0) {
 		struct iovec iov[2];
 		struct iovec *v = iov;
 
@@ -313,8 +321,23 @@ vsyslog(int pri, const char *fmt, va_list ap)
 		(void)_writev(fd, iov, 2);
 		(void)_close(fd);
 	}
+}
+
+static void
+syslog_cancel_cleanup(void *arg __unused)
+{
 
 	THREAD_UNLOCK();
+}
+
+void
+vsyslog(int pri, const char *fmt, va_list ap)
+{
+
+	THREAD_LOCK();
+	pthread_cleanup_push(syslog_cancel_cleanup, NULL);
+	vsyslog1(pri, fmt, ap);
+	pthread_cleanup_pop(1);
 }
 
 /* Should be called with mutex acquired */
@@ -349,7 +372,7 @@ connectlog(void)
 		SyslogAddr.sun_family = AF_UNIX;
 
 		/*
-		 * First try priveleged socket. If no success,
+		 * First try privileged socket. If no success,
 		 * then try default socket.
 		 */
 		(void)strncpy(SyslogAddr.sun_path, _PATH_LOG_PRIV,
@@ -403,9 +426,11 @@ openlog_unlocked(const char *ident, int logstat, int logfac)
 void
 openlog(const char *ident, int logstat, int logfac)
 {
+
 	THREAD_LOCK();
+	pthread_cleanup_push(syslog_cancel_cleanup, NULL);
 	openlog_unlocked(ident, logstat, logfac);
-	THREAD_UNLOCK();
+	pthread_cleanup_pop(1);
 }
 
 

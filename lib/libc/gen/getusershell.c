@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@ static char sccsid[] = "@(#)getusershell.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 /*	$NetBSD: getusershell.c,v 1.17 1999/01/25 01:09:34 lukem Exp $	*/
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getusershell.c 244092 2012-12-10 17:56:51Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -58,12 +59,6 @@ __MBSDID("$MidnightBSD$");
 #endif
 #include "un-namespace.h"
 
-/*
- * Local shells should NOT be added here.  They should be added in
- * /etc/shells.
- */
-
-static const char *const okshells[] = { _PATH_BSHELL, _PATH_CSHELL, NULL };
 static const char *const *curshell;
 static StringList	 *sl;
 
@@ -121,7 +116,7 @@ _local_initshells(rv, cb_data, ap)
 		sl_free(sl, 1);
 	sl = sl_init();
 
-	if ((fp = fopen(_PATH_SHELLS, "r")) == NULL)
+	if ((fp = fopen(_PATH_SHELLS, "re")) == NULL)
 		return NS_UNAVAIL;
 
 	cp = line;
@@ -261,8 +256,13 @@ initshells()
 	    != NS_SUCCESS) {
 		if (sl)
 			sl_free(sl, 1);
-		sl = NULL;
-		return (okshells);
+		sl = sl_init();
+		/*
+		 * Local shells should NOT be added here.  They should be
+		 * added in /etc/shells.
+		 */
+		sl_add(sl, strdup(_PATH_BSHELL));
+		sl_add(sl, strdup(_PATH_CSHELL));
 	}
 	sl_add(sl, NULL);
 

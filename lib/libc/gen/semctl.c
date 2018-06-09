@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -27,7 +28,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/semctl.c 194910 2009-06-24 21:10:52Z jhb $");
 
 #define _WANT_SEMUN_OLD
 

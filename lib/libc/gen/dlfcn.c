@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 John D. Polstra
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/dlfcn.c 283597 2015-05-27 08:23:23Z kib $");
 
 /*
  * Linkage to services provided by the dynamic linker.
@@ -149,10 +150,8 @@ static void
 dl_init_phdr_info(void)
 {
 	Elf_Auxinfo *auxp;
-	size_t phent;
 	unsigned int i;
 
-	phent = 0;
 	for (auxp = __elf_aux_vector; auxp->a_type != AT_NULL; auxp++) {
 		switch (auxp->a_type) {
 		case AT_BASE:
@@ -164,9 +163,6 @@ dl_init_phdr_info(void)
 		case AT_PHDR:
 			phdr_info.dlpi_phdr =
 			    (const Elf_Phdr *)auxp->a_un.a_ptr;
-			break;
-		case AT_PHENT:
-			phent = auxp->a_un.a_val;
 			break;
 		case AT_PHNUM:
 			phdr_info.dlpi_phnum = (Elf_Half)auxp->a_un.a_val;
@@ -233,3 +229,10 @@ _rtld_get_stack_prot(void)
 	return (PROT_EXEC | PROT_READ | PROT_WRITE);
 }
 
+#pragma weak _rtld_is_dlopened
+int
+_rtld_is_dlopened(void *arg)
+{
+
+	return (0);
+}

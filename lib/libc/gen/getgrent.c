@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -31,7 +32,7 @@
  *
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getgrent.c 328943 2018-02-06 19:09:49Z mckusick $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -433,7 +434,7 @@ gr_addgid(gid_t gid, gid_t *groups, int maxgrp, int *grpcnt)
 {
 	int     ret, dupc;
 
-	for (dupc = 0; dupc < MIN(maxgrp, *grpcnt); dupc++) {
+	for (dupc = 1; dupc < MIN(maxgrp, *grpcnt); dupc++) {
 		if (groups[dupc] == gid)
 			return 1;
 	}
@@ -659,14 +660,13 @@ __getgroupmembership(const char *uname, gid_t agroup, gid_t *groups,
 		NS_FALLBACK_CB(getgroupmembership_fallback)
 		{ NULL, NULL, NULL }
 	};
-	int rv;
 
 	assert(uname != NULL);
 	/* groups may be NULL if just sizing when invoked with maxgrp = 0 */
 	assert(grpcnt != NULL);
 
 	*grpcnt = 0;
-	rv = _nsdispatch(NULL, dtab, NSDB_GROUP, "getgroupmembership",
+	(void)_nsdispatch(NULL, dtab, NSDB_GROUP, "getgroupmembership",
 	    defaultsrc, uname, agroup, groups, maxgrp, grpcnt);
 
 	/* too many groups found? */
@@ -810,7 +810,7 @@ files_setgrent(void *retval, void *mdata, va_list ap)
 		if (st->fp != NULL)
 			rewind(st->fp);
 		else if (stayopen)
-			st->fp = fopen(_PATH_GROUP, "r");
+			st->fp = fopen(_PATH_GROUP, "re");
 		break;
 	case ENDGRENT:
 		if (st->fp != NULL) {
@@ -861,7 +861,7 @@ files_group(void *retval, void *mdata, va_list ap)
 	if (*errnop != 0)
 		return (NS_UNAVAIL);
 	if (st->fp == NULL &&
-	    ((st->fp = fopen(_PATH_GROUP, "r")) == NULL)) {
+	    ((st->fp = fopen(_PATH_GROUP, "re")) == NULL)) {
 		*errnop = errno;
 		return (NS_UNAVAIL);
 	}
@@ -1251,7 +1251,7 @@ compat_setgrent(void *retval, void *mdata, va_list ap)
 		if (st->fp != NULL)
 			rewind(st->fp);
 		else if (stayopen)
-			st->fp = fopen(_PATH_GROUP, "r");
+			st->fp = fopen(_PATH_GROUP, "re");
 		set_setent(dtab, mdata);
 		(void)_nsdispatch(NULL, dtab, NSDB_GROUP_COMPAT, "setgrent",
 		    compatsrc, 0);
@@ -1335,7 +1335,7 @@ compat_group(void *retval, void *mdata, va_list ap)
 	if (*errnop != 0)
 		return (NS_UNAVAIL);
 	if (st->fp == NULL &&
-	    ((st->fp = fopen(_PATH_GROUP, "r")) == NULL)) {
+	    ((st->fp = fopen(_PATH_GROUP, "re")) == NULL)) {
 		*errnop = errno;
 		rv = NS_UNAVAIL;
 		goto fin;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,12 +32,13 @@
 static char sccsid[] = "@(#)devname.c	8.2 (Berkeley) 4/29/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/devname.c 225847 2011-09-28 18:53:36Z ed $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -60,8 +62,8 @@ devname_r(dev_t dev, mode_t type, char *buf, int len)
 	}
 
 	/* Finally just format it */
-	snprintf(buf, len, "#%c:%d:0x%x",
-	    S_ISCHR(type) ? 'C' : 'B', major(dev), minor(dev));
+	snprintf(buf, len, "#%c:%#jx",
+	    S_ISCHR(type) ? 'C' : 'B', (uintmax_t)dev);
 	return (buf);
 }
 

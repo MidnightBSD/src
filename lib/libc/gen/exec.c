@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)exec.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/exec.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -159,7 +160,7 @@ execvPe(const char *name, const char *path, char * const *argv,
 	eacces = 0;
 
 	/* If it's an absolute or relative path name, it's easy. */
-	if (index(name, '/')) {
+	if (strchr(name, '/')) {
 		bp = name;
 		cur = NULL;
 		goto retry;

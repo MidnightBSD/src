@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)getlogin.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getlogin.c 269453 2014-08-03 01:51:48Z marcel $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -50,7 +51,7 @@ __MBSDID("$MidnightBSD$");
 
 extern int		_getlogin(char *, int);
 
-int			_logname_valid;		/* known to setlogin() */
+int			_logname_valid __hidden; /* known to setlogin() */
 static pthread_mutex_t	logname_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static char *
@@ -87,11 +88,16 @@ getlogin_r(char *logname, int namelen)
 	char	*result;
 	int	len;
 	int	status;
-	
+
+	if (namelen < 1)
+		return (ERANGE);
+	logname[0] = '\0';
+
 	THREAD_LOCK();
 	result = getlogin_basic(&status);
-	if (status == 0) {
-		if ((len = strlen(result) + 1) > namelen)
+	if (status == 0 && result != NULL) {
+		len = strlen(result) + 1;
+		if (len > namelen)
 			status = ERANGE;
 		else
 			strncpy(logname, result, len);

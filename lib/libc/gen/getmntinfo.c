@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)getmntinfo.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getmntinfo.c 309485 2016-12-03 17:17:42Z ngie $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -58,7 +59,7 @@ getmntinfo(mntbufp, flags)
 		if (mntbuf)
 			free(mntbuf);
 		bufsize = (mntsize + 1) * sizeof(struct statfs);
-		if ((mntbuf = (struct statfs *)malloc(bufsize)) == 0)
+		if ((mntbuf = malloc(bufsize)) == NULL)
 			return (0);
 		if ((mntsize = getfsstat(mntbuf, bufsize, flags)) < 0)
 			return (0);

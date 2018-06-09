@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2002 The FreeBSD Project.
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/lib/libc/gen/getosreldate.3,v 1.4 2012/10/20 03:08:32 laffer1 Exp $
+.\" $FreeBSD: stable/10/lib/libc/gen/getosreldate.3 183495 2008-09-30 11:25:55Z kib $
 .\"
 .Dd September 30, 2008
 .Dt GETOSRELDATE 3
@@ -30,7 +31,7 @@
 .Sh NAME
 .Nm getosreldate
 .Nd get the value of
-.Dv __MidnightBSD_version
+.Dv __FreeBSD_version
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -42,7 +43,7 @@ The
 .Fn getosreldate
 function returns an integer showing the version of the
 currently running
-.Mx
+.Fx
 kernel.
 Definitions of the values can be found in
 .%B "The Porter's Handbook"
@@ -66,7 +67,7 @@ return value.
 .El
 .Sh EXAMPLES
 An example can be found in
-.Pa /usr/share/examples/MidnightBSD_version .
+.Pa /usr/share/examples/FreeBSD_version .
 .Sh ERRORS
 The
 .Fn getosreldate

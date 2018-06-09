@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Martin Birgmeier
  * All rights reserved.
@@ -12,7 +13,9 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/mrand48.c 310320 2016-12-20 07:50:49Z ed $");
+
+#include <stdint.h>
 
 #include "rand48.h"
 
@@ -21,6 +24,8 @@ extern unsigned short _rand48_seed[3];
 long
 mrand48(void)
 {
+
 	_dorand48(_rand48_seed);
-	return ((long) _rand48_seed[2] << 16) + (long) _rand48_seed[1];
+	return ((int32_t)(((uint32_t)_rand48_seed[2] << 16) |
+	    (uint32_t)_rand48_seed[1]));
 }

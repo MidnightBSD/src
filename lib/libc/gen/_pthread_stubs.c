@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel Eischen <deischen@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/_pthread_stubs.c 320823 2017-07-09 03:57:24Z kib $");
 
 #include <signal.h>
 #include <pthread.h>
@@ -271,10 +272,11 @@ STUB_FUNC2(pthread_kill, PJT_KILL, int, void *, int)
 STUB_FUNC2(pthread_setcancelstate, PJT_SETCANCELSTATE, int, int, void *)
 STUB_FUNC2(pthread_setcanceltype, PJT_SETCANCELTYPE, int, int, void *)
 STUB_FUNC(pthread_testcancel, PJT_TESTCANCEL, void)
-STUB_FUNC1(__pthread_cleanup_pop_imp, PJT_CLEANUP_POP_IMP, int, int)
-STUB_FUNC2(__pthread_cleanup_push_imp, PJT_CLEANUP_PUSH_IMP, void, void*, void *);
-STUB_FUNC1(_pthread_cancel_enter, PJT_CANCEL_ENTER, int, int)
-STUB_FUNC1(_pthread_cancel_leave, PJT_CANCEL_LEAVE, int, int)
+STUB_FUNC1(__pthread_cleanup_pop_imp, PJT_CLEANUP_POP_IMP, void, int)
+STUB_FUNC3(__pthread_cleanup_push_imp, PJT_CLEANUP_PUSH_IMP, void, void *,
+    void *, void *);
+STUB_FUNC1(_pthread_cancel_enter, PJT_CANCEL_ENTER, void, int)
+STUB_FUNC1(_pthread_cancel_leave, PJT_CANCEL_LEAVE, void, int)
 
 static int
 stub_zero(void)

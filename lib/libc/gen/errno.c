@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Peter Wemm <peter@freebsd.org>
  * All rights reserved.
@@ -25,6 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/errno.c 104704 2002-10-09 08:04:24Z peter $");
 
 int errno;

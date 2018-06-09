@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Dima Dorfman.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getpeereid.c 330095 2018-02-28 02:39:38Z pfg $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -46,8 +47,10 @@ getpeereid(int s, uid_t *euid, gid_t *egid)
 	error = getsockopt(s, 0, LOCAL_PEERCRED, &xuc, &xuclen);
 	if (error != 0)
 		return (error);
-	if (xuc.cr_version != XUCRED_VERSION)
-		return (EINVAL);
+	if (xuc.cr_version != XUCRED_VERSION) {
+		errno = EINVAL;
+		return (-1);
+	}
 	*euid = xuc.cr_uid;
 	*egid = xuc.cr_gid;
 	return (0);

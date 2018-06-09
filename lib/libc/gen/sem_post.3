@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (C) 2000 Jason Evans <jasone@FreeBSD.org>.
 .\" All rights reserved.
 .\"
@@ -25,9 +26,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/sem_post.3 278410 2015-02-08 21:58:25Z jilles $
 .\"
-.Dd February 15, 2000
+.Dd January 28, 2015
 .Dt SEM_POST 3
 .Os
 .Sh NAME
@@ -65,6 +66,9 @@ The
 .Fa sem
 argument
 points to an invalid semaphore.
+.It Bq Er EOVERFLOW
+The semaphore value would exceed
+.Dv SEM_VALUE_MAX .
 .El
 .Sh SEE ALSO
 .Xr sem_getvalue 3 ,

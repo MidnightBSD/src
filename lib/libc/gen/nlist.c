@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)nlist.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/nlist.c 241046 2012-09-29 11:54:34Z jilles $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -66,7 +67,7 @@ nlist(name, list)
 {
 	int fd, n;
 
-	fd = _open(name, O_RDONLY, 0);
+	fd = _open(name, O_RDONLY | O_CLOEXEC, 0);
 	if (fd < 0)
 		return (-1);
 	n = __fdnlist(fd, list);

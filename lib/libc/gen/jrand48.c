@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Martin Birgmeier
  * All rights reserved.
@@ -12,13 +13,16 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/jrand48.c 310320 2016-12-20 07:50:49Z ed $");
+
+#include <stdint.h>
 
 #include "rand48.h"
 
 long
 jrand48(unsigned short xseed[3])
 {
+
 	_dorand48(xseed);
-	return ((long) xseed[2] << 16) + (long) xseed[1];
+	return ((int32_t)(((uint32_t)xseed[2] << 16) | (uint32_t)xseed[1]));
 }

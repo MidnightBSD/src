@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getpagesizes.c 211416 2010-08-17 09:13:26Z kib $");
 
 #include <sys/param.h>
 #include <sys/mman.h>

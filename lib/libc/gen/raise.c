@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,10 +32,12 @@
 static char sccsid[] = "@(#)raise.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/raise.c 277317 2015-01-18 11:54:20Z kib $");
 
 #include <signal.h>
 #include <unistd.h>
+
+#include "libc_private.h"
 
 __weak_reference(__raise, raise);
 __weak_reference(__raise, _raise);
@@ -42,5 +45,9 @@ __weak_reference(__raise, _raise);
 int
 __raise(int s)
 {
-	return(kill(getpid(), s));
+	long id;
+
+	if (__sys_thr_self(&id) == -1)
+		return (-1);
+	return (__sys_thr_kill(id, s));
 }

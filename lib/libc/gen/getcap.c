@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)getcap.c	8.3 (Berkeley) 3/25/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getcap.c 244092 2012-12-10 17:56:51Z jilles $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -264,7 +265,7 @@ getent(char **cap, u_int *len, char **db_array, int fd, const char *name,
 				*cap = cbuf;
 				return (retval);
 			} else {
-				fd = _open(*db_p, O_RDONLY, 0);
+				fd = _open(*db_p, O_RDONLY | O_CLOEXEC, 0);
 				if (fd < 0)
 					continue;
 				myfd = 1;
@@ -654,7 +655,7 @@ cgetnext(char **bp, char **db_array)
 	if (dbp == NULL)
 		dbp = db_array;
 
-	if (pfp == NULL && (pfp = fopen(*dbp, "r")) == NULL) {
+	if (pfp == NULL && (pfp = fopen(*dbp, "re")) == NULL) {
 		(void)cgetclose();
 		return (-1);
 	}
@@ -679,7 +680,7 @@ cgetnext(char **bp, char **db_array)
 						(void)cgetclose();
 						return (0);
 					} else if ((pfp =
-					    fopen(*dbp, "r")) == NULL) {
+					    fopen(*dbp, "re")) == NULL) {
 						(void)cgetclose();
 						return (-1);
 					} else

@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/setprogname.c 93399 2002-03-29 22:43:43Z markm $");
 
 #include <stdlib.h>
 #include <string.h>

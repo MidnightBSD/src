@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $NetBSD: lockf.3,v 1.10 2008/04/30 13:10:50 martin Exp $
 .\"
 .\" Copyright (c) 1997 The NetBSD Foundation, Inc.
@@ -27,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/lockf.3 255486 2013-09-12 00:53:38Z bdrewery $
 .\"
-.Dd December 19, 1997
+.Dd September 11, 2013
 .Dt LOCKF 3
 .Os
 .Sh NAME
@@ -40,7 +41,7 @@
 .Sh SYNOPSIS
 .In unistd.h
 .Ft int
-.Fn lockf "int filedes" "int function" "off_t size"
+.Fn lockf "int fd" "int function" "off_t size"
 .Sh DESCRIPTION
 The
 .Fn lockf
@@ -52,7 +53,7 @@ either return an error value or block until the section becomes unlocked.
 All the locks for a process are removed when the process terminates.
 .Pp
 The argument
-.Fa filedes
+.Fa fd
 is an open file descriptor.
 The file descriptor must have been opened either for write-only
 .Dv ( O_WRONLY )
@@ -207,7 +208,7 @@ or
 and the section is already locked by another process.
 .It Bq Er EBADF
 The argument
-.Fa filedes
+.Fa fd
 is not a valid open file descriptor.
 .Pp
 The argument
@@ -217,7 +218,7 @@ is
 or
 .Dv F_TLOCK ,
 and
-.Fa filedes
+.Fa fd
 is not a valid file descriptor open for writing.
 .It Bq Er EDEADLK
 The argument
@@ -243,7 +244,7 @@ or
 .Dv F_TEST .
 .Pp
 The argument
-.Fa filedes
+.Fa fd
 refers to a file that does not support locking.
 .It Bq Er ENOLCK
 The argument

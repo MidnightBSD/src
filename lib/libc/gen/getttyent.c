@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,13 +32,16 @@
 static char sccsid[] = "@(#)getttyent.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getttyent.c 316216 2017-03-30 05:13:52Z ngie $");
 
-#include <ttyent.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
+#include <ttyent.h>
 
 static char zapchar;
 static FILE *tf;
@@ -64,6 +68,36 @@ getttynam(const char *tty)
 	return (t);
 }
 
+static int
+auto_tty_status(const char *ty_name)
+{
+	size_t len;
+	char *buf, *cons, *nextcons;
+
+	/* Check if this is an enabled kernel console line */
+	buf = NULL;
+	if (sysctlbyname("kern.console", NULL, &len, NULL, 0) == -1)
+		return (0); /* Errors mean don't enable */
+	buf = malloc(len);
+	if (sysctlbyname("kern.console", buf, &len, NULL, 0) == -1)
+		goto done;
+
+	if ((cons = strchr(buf, '/')) == NULL)
+		goto done;
+	*cons = '\0';
+	nextcons = buf;
+	while ((cons = strsep(&nextcons, ",")) != NULL && strlen(cons) != 0) {
+		if (strcmp(cons, ty_name) == 0) {
+			free(buf);
+			return (TTY_ON);
+		}
+	}
+
+done:
+	free(buf);
+	return (0);
+}
+
 struct ttyent *
 getttyent(void)
 {
@@ -78,7 +112,7 @@ getttyent(void)
 		if (!fgets(p = line, lbsize, tf))
 			return (NULL);
 		/* extend buffer if line was too big, and retry */
-		while (!index(p, '\n') && !feof(tf)) {
+		while (!strchr(p, '\n') && !feof(tf)) {
 			i = strlen(p);
 			lbsize += MALLOCCHUNK;
 			if ((p = realloc(line, lbsize)) == NULL) {
@@ -126,6 +160,8 @@ getttyent(void)
 			tty.ty_status &= ~TTY_ON;
 		else if (scmp(_TTYS_ON))
 			tty.ty_status |= TTY_ON;
+		else if (scmp(_TTYS_ONIFCONSOLE))
+			tty.ty_status |= auto_tty_status(tty.ty_name);
 		else if (scmp(_TTYS_SECURE))
 			tty.ty_status |= TTY_SECURE;
 		else if (scmp(_TTYS_INSECURE))
@@ -148,7 +184,7 @@ getttyent(void)
 	tty.ty_comment = p;
 	if (*p == 0)
 		tty.ty_comment = 0;
-	if ( (p = index(p, '\n')) )
+	if ((p = strchr(p, '\n')))
 		*p = '\0';
 	return (&tty);
 }
@@ -196,7 +232,7 @@ static char *
 value(char *p)
 {
 
-	return ((p = index(p, '=')) ? ++p : NULL);
+	return ((p = strchr(p, '=')) ? ++p : NULL);
 }
 
 int
@@ -211,7 +247,7 @@ setttyent(void)
 	if (tf) {
 		rewind(tf);
 		return (1);
-	} else if ( (tf = fopen(_PATH_TTYS, "r")) )
+	} else if ( (tf = fopen(_PATH_TTYS, "re")) )
 		return (1);
 	return (0);
 }

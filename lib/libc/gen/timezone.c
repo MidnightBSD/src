@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)timezone.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/timezone.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -59,7 +60,7 @@ timezone(int zone, int dst)
 			*end;
 
 	if ( (beg = getenv("TZNAME")) ) {	/* set in environment */
-		if ( (end = index(beg, ',')) ) {/* "PST,PDT" */
+		if ((end = strchr(beg, ','))) {	/* "PST,PDT" */
 			if (dst)
 				return(++end);
 			*end = '\0';

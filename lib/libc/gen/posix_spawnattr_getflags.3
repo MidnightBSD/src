@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -32,7 +33,7 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/posix_spawnattr_getflags.3 236438 2012-06-02 08:47:26Z joel $
 .\"
 .Dd March 24, 2008
 .Dt POSIX_SPAWNATTR_GETFLAGS 3
@@ -70,7 +71,7 @@ or
 It is the bitwise-inclusive OR of zero or more of the following flags
 (see
 .Fn posix_spawn ) :
-.Bl -tag -offset indent
+.Bl -tag -width "POSIX_SPAWN_SETSCHEDPARAM" -offset indent
 .It Dv POSIX_SPAWN_RESETIDS
 .It Dv POSIX_SPAWN_SETPGROUP
 .It Dv POSIX_SPAWN_SETSIGDEF

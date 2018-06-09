@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/sysconf.c 317131 2017-04-19 10:57:57Z kib $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -47,6 +48,7 @@ __MBSDID("$MidnightBSD$");
 #include <limits.h>
 #include <paths.h>
 #include <pthread.h>		/* we just need the limits */
+#include <semaphore.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -298,13 +300,9 @@ do_NAME_MAX:
 		mib[1] = CTL_P1003_1B_RTSIG_MAX;
 		goto yesno;
 	case _SC_SEM_NSEMS_MAX:
-		mib[0] = CTL_P1003_1B;
-		mib[1] = CTL_P1003_1B_SEM_NSEMS_MAX;
-		goto yesno;
+		return (-1);
 	case _SC_SEM_VALUE_MAX:
-		mib[0] = CTL_P1003_1B;
-		mib[1] = CTL_P1003_1B_SEM_VALUE_MAX;
-		goto yesno;
+		return (SEM_VALUE_MAX);
 	case _SC_SIGQUEUE_MAX:
 		mib[0] = CTL_P1003_1B;
 		mib[1] = CTL_P1003_1B_SIGQUEUE_MAX;
@@ -359,11 +357,7 @@ yesno:
 		return (_POSIX_CLOCK_SELECTION);
 #endif
 	case _SC_CPUTIME:
-#if _POSIX_CPUTIME == 0
-#error "_POSIX_CPUTIME"
-#else
 		return (_POSIX_CPUTIME);
-#endif
 #ifdef notdef
 	case _SC_FILE_LOCKING:
 		/*
@@ -371,11 +365,17 @@ yesno:
 		 * _POSIX_FILE_LOCKING, so we can't answer this one.
 		 */
 #endif
-#if _POSIX_THREAD_SAFE_FUNCTIONS > -1
+
+	/*
+	 * SUSv4tc1 says the following about _SC_GETGR_R_SIZE_MAX and
+	 * _SC_GETPW_R_SIZE_MAX:
+	 * Note that sysconf(_SC_GETGR_R_SIZE_MAX) may return -1 if
+	 * there is no hard limit on the size of the buffer needed to
+	 * store all the groups returned.
+	 */
 	case _SC_GETGR_R_SIZE_MAX:
 	case _SC_GETPW_R_SIZE_MAX:
-#error "somebody needs to implement this"
-#endif
+		return (-1);
 	case _SC_HOST_NAME_MAX:
 		return (MAXHOSTNAMELEN - 1); /* does not include \0 */
 	case _SC_LOGIN_NAME_MAX:

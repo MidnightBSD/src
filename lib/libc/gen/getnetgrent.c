@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)getnetgrent.c	8.2 (Berkeley) 4/27/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getnetgrent.c 303680 2016-08-02 21:17:34Z markj $");
 
 #include <ctype.h>
 #include <stdio.h>
@@ -173,7 +174,7 @@ setnetgrent(const char *group)
 		if (((stat(_PATH_NETGROUP, &_yp_statp) < 0) &&
 		    errno == ENOENT) || _yp_statp.st_size == 0)
 			_use_only_yp = _netgr_yp_enabled = 1;
-		if ((netf = fopen(_PATH_NETGROUP,"r")) != NULL ||_use_only_yp){
+		if ((netf = fopen(_PATH_NETGROUP,"re")) != NULL ||_use_only_yp){
 		/*
 		 * Icky: grab the first character of the netgroup file
 		 * and turn on NIS if it's a '+'. rewind the stream
@@ -197,7 +198,7 @@ setnetgrent(const char *group)
 				return;
 			}
 #else
-		if ((netf = fopen(_PATH_NETGROUP, "r"))) {
+		if ((netf = fopen(_PATH_NETGROUP, "re"))) {
 #endif
 			if (parse_netgrp(group))
 				endnetgrent();
@@ -512,6 +513,7 @@ parse_netgrp(const char *group)
 				    ng[NG_DOM] == NULL ? "" : ",",
 				    ng[NG_DOM] == NULL ? "" : ng[NG_DOM],
 				    lp->l_groupname);
+			}
 #endif
 		} else {
 			spos = strsep(&pos, ", \t");
@@ -557,6 +559,10 @@ read_for_group(const char *group)
 					_netgr_yp_enabled = 0;
 					continue;
 				}
+			}
+			if (strlen(result) == 0) {
+				free(result);
+				return (NULL);
 			}
 			snprintf(line, LINSIZ, "%s %s", group, result);
 			free(result);
@@ -614,6 +620,8 @@ read_for_group(const char *group)
 					if (linep == NULL) {
 						free(lp->l_groupname);
 						free(lp);
+						if (olen > 0)
+							free(olinep);
 						return (NULL);
 					}
 					if (olen > 0) {

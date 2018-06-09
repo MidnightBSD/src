@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2010 David Xu <davidxu@freebsd.org>.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libc/gen/sem_new.c 317900 2017-05-07 08:02:28Z kib $
  */
 
 #include "namespace.h"
@@ -41,6 +42,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -66,42 +68,42 @@ __weak_reference(_sem_wait, sem_wait);
 struct sem_nameinfo {
 	int open_count;
 	char *name;
+	dev_t dev;
+	ino_t ino;
 	sem_t *sem;
 	LIST_ENTRY(sem_nameinfo) next;
 };
 
 static pthread_once_t once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t sem_llock;
-static LIST_HEAD(,sem_nameinfo) sem_list = LIST_HEAD_INITIALIZER(sem_list);
+static LIST_HEAD(, sem_nameinfo) sem_list = LIST_HEAD_INITIALIZER(sem_list);
 
 static void
-sem_prefork()
+sem_prefork(void)
 {
 	
 	_pthread_mutex_lock(&sem_llock);
 }
 
 static void
-sem_postfork()
+sem_postfork(void)
 {
+
 	_pthread_mutex_unlock(&sem_llock);
 }
 
 static void
-sem_child_postfork()
+sem_child_postfork(void)
 {
+
 	_pthread_mutex_unlock(&sem_llock);
 }
 
 static void
 sem_module_init(void)
 {
-	pthread_mutexattr_t ma;
 
-	_pthread_mutexattr_init(&ma);
-	_pthread_mutexattr_settype(&ma,  PTHREAD_MUTEX_RECURSIVE);
-	_pthread_mutex_init(&sem_llock, &ma);
-	_pthread_mutexattr_destroy(&ma);
+	_pthread_mutex_init(&sem_llock, NULL);
 	_pthread_atfork(sem_prefork, sem_postfork, sem_child_postfork);
 }
 
@@ -111,10 +113,8 @@ sem_check_validity(sem_t *sem)
 
 	if (sem->_magic == SEM_MAGIC)
 		return (0);
-	else {
-		errno = EINVAL;
-		return (-1);
-	}
+	errno = EINVAL;
+	return (-1);
 }
 
 int
@@ -138,48 +138,62 @@ sem_t *
 _sem_open(const char *name, int flags, ...)
 {
 	char path[PATH_MAX];
-
 	struct stat sb;
 	va_list ap;
-	struct sem_nameinfo *ni = NULL;
-	sem_t *sem = NULL;
-	int fd = -1, mode, len, errsave;
-	int value = 0;
+	struct sem_nameinfo *ni;
+	sem_t *sem, tmp;
+	int errsave, fd, len, mode, value;
+
+	ni = NULL;
+	sem = NULL;
+	fd = -1;
+	value = 0;
 
 	if (name[0] != '/') {
 		errno = EINVAL;
 		return (SEM_FAILED);
 	}
 	name++;
-
+	strcpy(path, SEM_PREFIX);
+	if (strlcat(path, name, sizeof(path)) >= sizeof(path)) {
+		errno = ENAMETOOLONG;
+		return (SEM_FAILED);
+	}
 	if (flags & ~(O_CREAT|O_EXCL)) {
 		errno = EINVAL;
 		return (SEM_FAILED);
 	}
-
-	_pthread_once(&once, sem_module_init);
-
-	_pthread_mutex_lock(&sem_llock);
-	LIST_FOREACH(ni, &sem_list, next) {
-		if (strcmp(name, ni->name) == 0) {
-			if ((flags & (O_CREAT|O_EXCL)) == (O_CREAT|O_EXCL)) {
-				_pthread_mutex_unlock(&sem_llock);
-				errno = EEXIST;
-				return (SEM_FAILED);
-			} else {
-				ni->open_count++;
-				sem = ni->sem;
-				_pthread_mutex_unlock(&sem_llock);
-				return (sem);
-			}
-		}
-	}
-
-	if (flags & O_CREAT) {
+	if ((flags & O_CREAT) != 0) {
 		va_start(ap, flags);
 		mode = va_arg(ap, int);
 		value = va_arg(ap, int);
 		va_end(ap);
+	}
+	fd = -1;
+	_pthread_once(&once, sem_module_init);
+
+	_pthread_mutex_lock(&sem_llock);
+	LIST_FOREACH(ni, &sem_list, next) {
+		if (ni->name != NULL && strcmp(name, ni->name) == 0) {
+			fd = _open(path, flags | O_RDWR | O_CLOEXEC |
+			    O_EXLOCK, mode);
+			if (fd == -1 || _fstat(fd, &sb) == -1) {
+				ni = NULL;
+				goto error;
+			}
+			if ((flags & (O_CREAT | O_EXCL)) == (O_CREAT |
+			    O_EXCL) || ni->dev != sb.st_dev ||
+			    ni->ino != sb.st_ino) {
+				ni->name = NULL;
+				ni = NULL;
+				break;
+			}
+			ni->open_count++;
+			sem = ni->sem;
+			_pthread_mutex_unlock(&sem_llock);
+			_close(fd);
+			return (sem);
+		}
 	}
 
 	len = sizeof(*ni) + strlen(name) + 1;
@@ -192,36 +206,22 @@ _sem_open(const char *name, int flags, ...)
 	ni->name = (char *)(ni+1);
 	strcpy(ni->name, name);
 
-	strcpy(path, SEM_PREFIX);
-	if (strlcat(path, name, sizeof(path)) >= sizeof(path)) {
-		errno = ENAMETOOLONG;
-		goto error;
-	}
-
-	fd = _open(path, flags|O_RDWR, mode);
-	if (fd == -1)
-		goto error;
-	if (flock(fd, LOCK_EX) == -1)
-		goto error;
-	if (_fstat(fd, &sb)) {
-		flock(fd, LOCK_UN);
-		goto error;
+	if (fd == -1) {
+		fd = _open(path, flags | O_RDWR | O_CLOEXEC | O_EXLOCK, mode);
+		if (fd == -1 || _fstat(fd, &sb) == -1)
+			goto error;
 	}
 	if (sb.st_size < sizeof(sem_t)) {
-		sem_t tmp;
-
 		tmp._magic = SEM_MAGIC;
 		tmp._kern._has_waiters = 0;
 		tmp._kern._count = value;
 		tmp._kern._flags = USYNC_PROCESS_SHARED | SEM_NAMED;
-		if (_write(fd, &tmp, sizeof(tmp)) != sizeof(tmp)) {
-			flock(fd, LOCK_UN);
+		if (_write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
 			goto error;
-		}
 	}
 	flock(fd, LOCK_UN);
-	sem = (sem_t *)mmap(NULL, sizeof(sem_t), PROT_READ|PROT_WRITE,
-		MAP_SHARED|MAP_NOSYNC, fd, 0);
+	sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE,
+	    MAP_SHARED | MAP_NOSYNC, fd, 0);
 	if (sem == MAP_FAILED) {
 		sem = NULL;
 		if (errno == ENOMEM)
@@ -234,19 +234,21 @@ _sem_open(const char *name, int flags, ...)
 	}
 	ni->open_count = 1;
 	ni->sem = sem;
+	ni->dev = sb.st_dev;
+	ni->ino = sb.st_ino;
 	LIST_INSERT_HEAD(&sem_list, ni, next);
-	_pthread_mutex_unlock(&sem_llock);
 	_close(fd);
+	_pthread_mutex_unlock(&sem_llock);
 	return (sem);
 
 error:
 	errsave = errno;
-	_pthread_mutex_unlock(&sem_llock);
 	if (fd != -1)
 		_close(fd);
 	if (sem != NULL)
 		munmap(sem, sizeof(sem_t));
 	free(ni);
+	_pthread_mutex_unlock(&sem_llock);
 	errno = errsave;
 	return (SEM_FAILED);
 }
@@ -255,6 +257,7 @@ int
 _sem_close(sem_t *sem)
 {
 	struct sem_nameinfo *ni;
+	bool last;
 
 	if (sem_check_validity(sem) != 0)
 		return (-1);
@@ -269,21 +272,16 @@ _sem_close(sem_t *sem)
 	_pthread_mutex_lock(&sem_llock);
 	LIST_FOREACH(ni, &sem_list, next) {
 		if (sem == ni->sem) {
-			if (--ni->open_count > 0) {
-				_pthread_mutex_unlock(&sem_llock);
-				return (0);
+			last = --ni->open_count == 0;
+			if (last)
+				LIST_REMOVE(ni, next);
+			_pthread_mutex_unlock(&sem_llock);
+			if (last) {
+				munmap(sem, sizeof(*sem));
+				free(ni);
 			}
-			else
-				break;
+			return (0);
 		}
-	}
-
-	if (ni) {
-		LIST_REMOVE(ni, next);
-		_pthread_mutex_unlock(&sem_llock);
-		munmap(sem, sizeof(*sem));
-		free(ni);
-		return (0);
 	}
 	_pthread_mutex_unlock(&sem_llock);
 	errno = EINVAL;
@@ -300,13 +298,13 @@ _sem_unlink(const char *name)
 		return -1;
 	}
 	name++;
-
 	strcpy(path, SEM_PREFIX);
 	if (strlcat(path, name, sizeof(path)) >= sizeof(path)) {
 		errno = ENAMETOOLONG;
 		return (-1);
 	}
-	return unlink(path);
+
+	return (unlink(path));
 }
 
 int
@@ -338,21 +336,28 @@ _sem_getvalue(sem_t * __restrict sem, int * __restrict sval)
 static __inline int
 usem_wake(struct _usem *sem)
 {
-	if (!sem->_has_waiters)
-		return (0);
-	return _umtx_op(sem, UMTX_OP_SEM_WAKE, 0, NULL, NULL);
+
+	return (_umtx_op(sem, UMTX_OP_SEM_WAKE, 0, NULL, NULL));
 }
 
 static __inline int
-usem_wait(struct _usem *sem, const struct timespec *timeout)
+usem_wait(struct _usem *sem, const struct timespec *abstime)
 {
-	if (timeout && (timeout->tv_sec < 0 || (timeout->tv_sec == 0 &&
-	    timeout->tv_nsec <= 0))) {
-		errno = ETIMEDOUT;
-		return (-1);
+	struct _umtx_time *tm_p, timeout;
+	size_t tm_size;
+
+	if (abstime == NULL) {
+		tm_p = NULL;
+		tm_size = 0;
+	} else {
+		timeout._clockid = CLOCK_REALTIME;
+		timeout._flags = UMTX_ABSTIME;
+		timeout._timeout = *abstime;
+		tm_p = &timeout;
+		tm_size = sizeof(timeout);
 	}
-	return _umtx_op(sem, UMTX_OP_SEM_WAIT, 0, NULL,
-			__DECONST(void*, timeout));
+	return _umtx_op(sem, UMTX_OP_SEM_WAIT, 0, 
+		    (void *)tm_size, __DECONST(void*, tm_p));
 }
 
 int
@@ -371,28 +376,17 @@ _sem_trywait(sem_t *sem)
 	return (-1);
 }
 
-#define TIMESPEC_SUB(dst, src, val)                             \
-        do {                                                    \
-                (dst)->tv_sec = (src)->tv_sec - (val)->tv_sec;  \
-                (dst)->tv_nsec = (src)->tv_nsec - (val)->tv_nsec; \
-                if ((dst)->tv_nsec < 0) {                       \
-                        (dst)->tv_sec--;                        \
-                        (dst)->tv_nsec += 1000000000;           \
-                }                                               \
-        } while (0)
-
-
 int
 _sem_timedwait(sem_t * __restrict sem,
 	const struct timespec * __restrict abstime)
 {
-	struct timespec ts, ts2;
 	int val, retval;
 
 	if (sem_check_validity(sem) != 0)
 		return (-1);
 
 	retval = 0;
+	_pthread_testcancel();
 	for (;;) {
 		while ((val = sem->_kern._count) > 0) {
 			if (atomic_cmpset_acq_int(&sem->_kern._count, val, val - 1))
@@ -413,11 +407,9 @@ _sem_timedwait(sem_t * __restrict sem,
 				errno = EINVAL;
 				return (-1);
 			}
-			clock_gettime(CLOCK_REALTIME, &ts);
-			TIMESPEC_SUB(&ts2, abstime, &ts);
 		}
 		_pthread_cancel_enter(1);
-		retval = usem_wait(&sem->_kern, abstime ? &ts2 : NULL);
+		retval = usem_wait(&sem->_kern, abstime);
 		_pthread_cancel_leave(0);
 	}
 	return (retval);
@@ -426,7 +418,8 @@ _sem_timedwait(sem_t * __restrict sem,
 int
 _sem_wait(sem_t *sem)
 {
-	return _sem_timedwait(sem, NULL);
+
+	return (_sem_timedwait(sem, NULL));
 }
 
 /*
@@ -438,10 +431,18 @@ _sem_wait(sem_t *sem)
 int
 _sem_post(sem_t *sem)
 {
+	unsigned int count;
 
 	if (sem_check_validity(sem) != 0)
 		return (-1);
 
-	atomic_add_rel_int(&sem->_kern._count, 1);
-	return usem_wake(&sem->_kern);
+	do {
+		count = sem->_kern._count;
+		if (count + 1 > SEM_VALUE_MAX) {
+			errno = EOVERFLOW;
+			return (-1);
+		}
+	} while(!atomic_cmpset_rel_int(&sem->_kern._count, count, count+1));
+	(void)usem_wake(&sem->_kern);
+	return (0);
 }

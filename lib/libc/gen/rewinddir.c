@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,11 +32,17 @@
 static char sccsid[] = "@(#)rewinddir.c	8.1 (Berkeley) 6/8/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/rewinddir.c 282979 2015-05-15 15:49:24Z julian $");
 
+#include "namespace.h"
 #include <sys/types.h>
 #include <dirent.h>
+#include <pthread.h>
+#include <unistd.h>
+#include "un-namespace.h"
 
+#include "libc_private.h"
+#include "gen-private.h"
 #include "telldir.h"
 
 void
@@ -43,6 +50,17 @@ rewinddir(dirp)
 	DIR *dirp;
 {
 
-	_seekdir(dirp, dirp->dd_rewind);
-	dirp->dd_rewind = telldir(dirp);
+	if (__isthreaded)
+		_pthread_mutex_lock(&dirp->dd_lock);
+	dirp->dd_flags &= ~__DTF_SKIPREAD; /* current contents are invalid */
+	if (dirp->dd_flags & __DTF_READALL)
+		_filldir(dirp, false);
+	else {
+		(void) lseek(dirp->dd_fd, 0, SEEK_SET);
+		dirp->dd_seek = 0;
+	}
+	dirp->dd_loc = 0;
+	_reclaim_telldir(dirp);
+	if (__isthreaded)
+		_pthread_mutex_unlock(&dirp->dd_lock);
 }

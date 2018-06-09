@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fmtmsg.c 244092 2012-12-10 17:56:51Z jilles $");
 
 #include <fmtmsg.h>
 #include <stdio.h>
@@ -44,10 +45,6 @@ static char	*nextcomp(const char *);
 static const char
 		*sevinfo(int);
 static int	 validmsgverb(const char *);
-
-static const char *validlist[] = {
-	"label", "severity", "text", "action", "tag", NULL
-};
 
 int
 fmtmsg(long class, const char *label, int sev, const char *text,
@@ -87,7 +84,7 @@ def:
 		if (output == NULL)
 			return (MM_NOCON);
 		if (*output != '\0') {
-			if ((fp = fopen("/dev/console", "a")) == NULL) {
+			if ((fp = fopen("/dev/console", "ae")) == NULL) {
 				free(output);
 				return (MM_NOCON);
 			}
@@ -205,14 +202,18 @@ sevinfo(int sev)
 static int
 validmsgverb(const char *msgverb)
 {
+	const char *validlist = "label\0severity\0text\0action\0tag\0";
 	char *msgcomp;
-	int i, equality;
+	size_t len1, len2;
+	const char *p;
+	int equality;
 
 	equality = 0;
 	while ((msgcomp = nextcomp(msgverb)) != NULL) {
 		equality--;
-		for (i = 0; validlist[i] != NULL; i++) {
-			if (strcmp(msgcomp, validlist[i]) == 0)
+		len1 = strlen(msgcomp);
+		for (p = validlist; (len2 = strlen(p)) != 0; p += len2 + 1) {
+			if (len1 == len2 && memcmp(msgcomp, p, len1) == 0)
 				equality++;
 		}
 	}

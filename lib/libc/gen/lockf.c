@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: lockf.c,v 1.3 2008/04/28 20:22:59 martin Exp $	*/
 /*-
  * Copyright (c) 1997 The NetBSD Foundation, Inc.
@@ -29,13 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/lockf.c 292762 2015-12-27 00:42:13Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 int
 lockf(int filedes, int function, off_t size)
@@ -62,9 +64,12 @@ lockf(int filedes, int function, off_t size)
 		break;
 	case F_TEST:
 		fl.l_type = F_WRLCK;
-		if (_fcntl(filedes, F_GETLK, &fl) == -1)
+		if (((int (*)(int, int, ...))
+		    __libc_interposing[INTERPOS_fcntl])(filedes, F_GETLK, &fl)
+		    == -1)
 			return (-1);
-		if (fl.l_type == F_UNLCK || (fl.l_sysid == 0 && fl.l_pid == getpid()))
+		if (fl.l_type == F_UNLCK || (fl.l_sysid == 0 &&
+		    fl.l_pid == getpid()))
 			return (0);
 		errno = EAGAIN;
 		return (-1);
@@ -75,5 +80,6 @@ lockf(int filedes, int function, off_t size)
 		/* NOTREACHED */
 	}
 
-	return (_fcntl(filedes, cmd, &fl));
+	return (((int (*)(int, int, ...))
+	    __libc_interposing[INTERPOS_fcntl])(filedes, cmd, &fl));
 }

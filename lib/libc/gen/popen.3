@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)popen.3	8.2 (Berkeley) 5/3/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/popen.3 250827 2013-05-20 17:31:18Z jilles $
 .\"
-.Dd May 3, 1995
+.Dd May 20, 2013
 .Dt POPEN 3
 .Os
 .Sh NAME
@@ -78,6 +79,11 @@ for reading,
 for writing, or
 .Ql r+
 for reading and writing.
+.Pp
+A letter
+.Ql e
+may be appended to that to request that the underlying file descriptor
+be set close-on-exec.
 .Pp
 The
 .Fa command

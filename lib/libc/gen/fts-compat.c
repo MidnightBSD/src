@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)fts.c	8.6 (Berkeley) 8/14/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fts-compat.c 301405 2016-06-04 17:40:23Z bdrewery $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -51,6 +52,8 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include "fts-compat.h"
 #include "un-namespace.h"
+
+#include "gen-private.h"
 
 FTSENT	*__fts_children_44bsd(FTS *, int);
 int	 __fts_close_44bsd(FTS *);
@@ -112,7 +115,6 @@ static const char *ufslike_filesystems[] = {
 	"ufs",
 	"zfs",
 	"nfs",
-	"nfs4",
 	"ext2fs",
 	0
 };
@@ -584,8 +586,10 @@ __fts_children_44bsd(sp, instr)
 	if ((fd = _open(".", O_RDONLY | O_CLOEXEC, 0)) < 0)
 		return (NULL);
 	sp->fts_child = fts_build(sp, instr);
-	if (fchdir(fd))
+	if (fchdir(fd)) {
+		(void)_close(fd);
 		return (NULL);
+	}
 	(void)_close(fd);
 	return (sp->fts_child);
 }
@@ -713,7 +717,7 @@ fts_build(sp, type)
 	 */
 	cderrno = 0;
 	if (nlinks || type == BREAD) {
-		if (fts_safe_changedir(sp, cur, dirfd(dirp), NULL)) {
+		if (fts_safe_changedir(sp, cur, _dirfd(dirp), NULL)) {
 			if (nlinks && type == BREAD)
 				cur->fts_errno = errno;
 			cur->fts_flags |= FTS_DONTCHDIR;

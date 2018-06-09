@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1989, 1991, 1993, 1994
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fts.3	8.5 (Berkeley) 4/16/94
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/fts.3 250888 2013-05-21 21:39:18Z ed $
 .\"
-.Dd March 18, 2012
+.Dd May 21, 2013
 .Dt FTS 3
 .Os
 .Sh NAME
@@ -37,8 +38,6 @@
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
-.In sys/types.h
-.In sys/stat.h
 .In fts.h
 .Ft FTS *
 .Fn fts_open "char * const *path_argv" "int options" "int (*compar)(const FTSENT * const *, const FTSENT * const *)"

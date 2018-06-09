@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 2002 Massachusetts Institute of Technology
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/statvfs.c 103012 2002-09-06 11:24:06Z tjr $");
 
 #include "namespace.h"
 #include <sys/param.h>

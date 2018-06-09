@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/utxdb.c 233345 2012-03-23 08:26:31Z ed $");
 
 #include "namespace.h"
 #include <sys/endian.h>
@@ -126,7 +127,11 @@ utx_to_futx(const struct utmpx *ut, struct futx *fu)
 struct utmpx *
 futx_to_utx(const struct futx *fu)
 {
+#ifdef __NO_TLS
 	static struct utmpx *ut;
+#else
+	static _Thread_local struct utmpx *ut;
+#endif
 
 	if (ut == NULL) {
 		ut = calloc(1, sizeof *ut);

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1995
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)kvm_getvfsbyname.3	8.3 (Berkeley) 5/4/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/getvfsbyname.3 305568 2016-09-07 21:04:39Z jilles $
 .\"
-.Dd April 5, 2007
+.Dd August 30, 2016
 .Dt GETVFSBYNAME 3
 .Os
 .Sh NAME
@@ -97,11 +98,6 @@ sysctl is set to
 .Sh ERRORS
 The following errors may be reported:
 .Bl -tag -width Er
-.It Bq Er EFAULT
-The
-.Fa vfc
-argument
-points to an invalid address.
 .It Bq Er ENOENT
 The
 .Fa name

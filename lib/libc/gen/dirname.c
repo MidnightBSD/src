@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: dirname.c,v 1.13 2005/08/08 08:05:33 espie Exp $	*/
 
 /*
@@ -17,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/dirname.c 184578 2008-11-03 05:19:45Z delphij $");
 
 #include <errno.h>
 #include <libgen.h>

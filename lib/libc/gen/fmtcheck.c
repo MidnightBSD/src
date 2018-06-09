@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: fmtcheck.c,v 1.8 2008/04/28 20:22:59 martin Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fmtcheck.c 194800 2009-06-23 23:52:12Z delphij $");
 
 #include <stdio.h>
 #include <string.h>

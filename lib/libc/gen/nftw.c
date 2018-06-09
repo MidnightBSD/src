@@ -1,4 +1,5 @@
-/*	$OpenBSD: nftw.c,v 1.4 2004/07/07 16:05:23 millert Exp $	*/
+/* $MidnightBSD$ */
+/*	$OpenBSD: nftw.c,v 1.7 2006/03/31 19:41:44 millert Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -20,14 +21,8 @@
  * Materiel Command, USAF, under agreement number F39502-99-1-0512.
  */
 
-#if 0
-#if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$OpenBSD: nftw.c,v 1.4 2004/07/07 16:05:23 millert Exp $";
-#endif /* LIBC_SCCS and not lint */
-#endif
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/nftw.c 239160 2012-08-09 22:05:40Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -71,6 +66,8 @@ nftw(const char *path, int (*fn)(const char *, const struct stat *, int,
 				continue;
 			fnflag = FTW_D;
 			break;
+		case FTS_DC:
+			continue;
 		case FTS_DNR:
 			fnflag = FTW_DNR;
 			break;
@@ -93,9 +90,6 @@ nftw(const char *path, int (*fn)(const char *, const struct stat *, int,
 		case FTS_SLNONE:
 			fnflag = FTW_SLN;
 			break;
-		case FTS_DC:
-			errno = ELOOP;
-			/* FALLTHROUGH */
 		default:
 			error = -1;
 			goto done;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)daemon.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/daemon.c 287480 2015-09-05 08:55:51Z kib $");
 
 #include "namespace.h"
 #include <errno.h>
@@ -41,10 +42,10 @@ __MBSDID("$MidnightBSD$");
 #include <signal.h>
 #include <unistd.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 int
-daemon(nochdir, noclose)
-	int nochdir, noclose;
+daemon(int nochdir, int noclose)
 {
 	struct sigaction osa, sa;
 	int fd;
@@ -56,7 +57,7 @@ daemon(nochdir, noclose)
 	sigemptyset(&sa.sa_mask);
 	sa.sa_handler = SIG_IGN;
 	sa.sa_flags = 0;
-	osa_ok = _sigaction(SIGHUP, &sa, &osa);
+	osa_ok = __libc_sigaction(SIGHUP, &sa, &osa);
 
 	switch (fork()) {
 	case -1:
@@ -74,7 +75,7 @@ daemon(nochdir, noclose)
 	newgrp = setsid();
 	oerrno = errno;
 	if (osa_ok != -1)
-		_sigaction(SIGHUP, &osa, NULL);
+		__libc_sigaction(SIGHUP, &osa, NULL);
 
 	if (newgrp == -1) {
 		errno = oerrno;

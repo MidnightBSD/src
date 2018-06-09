@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)getpagesize.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getpagesize.c 317735 2017-05-03 09:54:37Z kib $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -53,7 +54,7 @@ __MBSDID("$MidnightBSD$");
 int
 getpagesize()
 {
-	int mib[2]; 
+	int mib[2];
 	static int value;
 	size_t size;
 	int error;
@@ -68,8 +69,8 @@ getpagesize()
 	mib[0] = CTL_HW;
 	mib[1] = HW_PAGESIZE;
 	size = sizeof value;
-	if (sysctl(mib, 2, &value, &size, NULL, 0) == -1)
-		return (-1);
+	if (sysctl(mib, nitems(mib), &value, &size, NULL, 0) == -1)
+		return (PAGE_SIZE);
 
 	return (value);
 }

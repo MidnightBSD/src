@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)ttyname.c	8.2 (Berkeley) 1/27/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/ttyname.c 317392 2017-04-24 22:44:59Z brooks $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -61,11 +62,15 @@ ttyname_r(int fd, char *buf, size_t len)
 {
 	size_t used;
 
+	/* Don't write off the end of a zero-length buffer. */
+	if (len < 1)
+		return (ERANGE);
+
 	*buf = '\0';
 
 	/* Must be a terminal. */
 	if (!isatty(fd))
-		return (ENOTTY);
+		return (errno);
 	/* Must have enough room */
 	if (len <= sizeof(_PATH_DEV))
 		return (ERANGE);
@@ -73,7 +78,7 @@ ttyname_r(int fd, char *buf, size_t len)
 	strcpy(buf, _PATH_DEV);
 	used = strlen(buf);
 	if (fdevname_r(fd, buf + used, len - used) == NULL)
-		return (ENOTTY);
+		return (errno == EINVAL ? ERANGE : errno);
 	return (0);
 }
 

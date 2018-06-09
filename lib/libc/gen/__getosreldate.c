@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Peter Wemm
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/__getosreldate.c 211416 2010-08-17 09:13:26Z kib $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

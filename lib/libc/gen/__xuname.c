@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 /*static char sccsid[] = "From: @(#)uname.c	8.1 (Berkeley) 1/4/94";*/
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/__xuname.c 184185 2008-10-22 21:56:57Z kib $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

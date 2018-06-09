@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $OpenBSD: arc4random.3,v 1.2 1997/04/27 22:40:25 angelos Exp $
 .\" Copyright 1997 Niels Provos <provos@physnet.uni-hamburg.de>
 .\" All rights reserved.
@@ -28,7 +29,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" Manual page, using -mandoc macros
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/arc4random.3 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd April 15, 1997
 .Dt ARC4RANDOM 3
@@ -44,12 +45,12 @@
 .Lb libc
 .Sh SYNOPSIS
 .In stdlib.h
-.Ft u_int32_t
+.Ft uint32_t
 .Fn arc4random "void"
 .Ft void
 .Fn arc4random_buf "void *buf" "size_t nbytes"
-.Ft u_int32_t
-.Fn arc4random_uniform "u_int32_t upper_bound"
+.Ft uint32_t
+.Fn arc4random_uniform "uint32_t upper_bound"
 .Ft void
 .Fn arc4random_stir "void"
 .Ft void

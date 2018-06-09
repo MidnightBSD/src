@@ -46639,6 +46639,7 @@ lib/libc/gdtoa/machdep_ldisx.c -text
 lib/libc/gen/Makefile.inc -text
 lib/libc/gen/Symbol.map -text
 lib/libc/gen/__getosreldate.c -text
+lib/libc/gen/__pthread_mutex_init_calloc_cb_stub.c svneol=native#text/plain
 lib/libc/gen/__xuname.c -text
 lib/libc/gen/_once_stub.c -text
 lib/libc/gen/_pthread_stubs.c -text
@@ -46651,12 +46652,18 @@ lib/libc/gen/arc4random.3 -text
 lib/libc/gen/arc4random.c -text
 lib/libc/gen/assert.c -text
 lib/libc/gen/aux.c -text
+lib/libc/gen/auxv.c svneol=native#text/plain
 lib/libc/gen/basename.3 -text
 lib/libc/gen/basename.c -text
+lib/libc/gen/cap_rights_get.3 svneol=native#text/plain
+lib/libc/gen/cap_sandboxed.3 svneol=native#text/plain
+lib/libc/gen/cap_sandboxed.c svneol=native#text/plain
 lib/libc/gen/check_utility_compat.3 -text
 lib/libc/gen/check_utility_compat.c -text
 lib/libc/gen/clock.3 -text
 lib/libc/gen/clock.c -text
+lib/libc/gen/clock_getcpuclockid.3 svneol=native#text/plain
+lib/libc/gen/clock_getcpuclockid.c svneol=native#text/plain
 lib/libc/gen/closedir.c -text
 lib/libc/gen/confstr.3 -text
 lib/libc/gen/confstr.c -text
@@ -46668,6 +46675,7 @@ lib/libc/gen/daemon.c -text
 lib/libc/gen/devname.3 -text
 lib/libc/gen/devname.c -text
 lib/libc/gen/directory.3 -text
+lib/libc/gen/dirfd.c svneol=native#text/plain
 lib/libc/gen/dirname.3 -text
 lib/libc/gen/dirname.c -text
 lib/libc/gen/disklabel.c -text
@@ -46678,6 +46686,8 @@ lib/libc/gen/dlinfo.3 -text
 lib/libc/gen/dllockinit.3 -text
 lib/libc/gen/dlopen.3 -text
 lib/libc/gen/drand48.c -text
+lib/libc/gen/dup3.3 svneol=native#text/plain
+lib/libc/gen/dup3.c svneol=native#text/plain
 lib/libc/gen/elf_utils.c -text
 lib/libc/gen/erand48.c -text
 lib/libc/gen/err.3 -text
@@ -46708,6 +46718,7 @@ lib/libc/gen/fts.3 -text
 lib/libc/gen/fts.c -text
 lib/libc/gen/ftw.3 -text
 lib/libc/gen/ftw.c -text
+lib/libc/gen/gen-private.h svneol=native#text/plain
 lib/libc/gen/getbootfile.3 -text
 lib/libc/gen/getbootfile.c -text
 lib/libc/gen/getbsize.3 -text
@@ -46773,6 +46784,7 @@ lib/libc/gen/lockf.c -text
 lib/libc/gen/lrand48.c -text
 lib/libc/gen/makecontext.3 -text
 lib/libc/gen/modf.3 -text
+lib/libc/gen/modf.c svneol=native#text/plain
 lib/libc/gen/mrand48.c -text
 lib/libc/gen/nftw.c -text
 lib/libc/gen/nice.3 -text

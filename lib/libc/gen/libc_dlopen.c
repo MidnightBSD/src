@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Xin Li <delphij@FreeBSD.org>
  * All rights reserved.
@@ -23,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/gen/libc_dlopen.c 228843 2011-12-23 15:00:37Z cperciva $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/libc_dlopen.c 228843 2011-12-23 15:00:37Z cperciva $");
 
 #include <dlfcn.h>
 #include <stddef.h>

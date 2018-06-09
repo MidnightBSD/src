@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pw_scan.h	8.1 (Berkeley) 4/1/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/gen/pw_scan.h 165903 2007-01-09 00:28:16Z imp $
  */
 
 #define _PWSCAN_MASTER 0x01

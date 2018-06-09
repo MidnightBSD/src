@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,14 +32,13 @@
 static char sccsid[] = "@(#)gethostid.c	8.1 (Berkeley) 6/2/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getosreldate.c 228492 2011-12-14 08:35:08Z ru $");
 
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/sysctl.h>
-#include <errno.h>
-#include <stdlib.h>
 
-#include <osreldate.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 int
 getosreldate(void)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -28,56 +29,53 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/_spinlock_stub.c 279518 2015-03-02 09:15:50Z kib $");
 
 #include <stdio.h>
 
 #include "spinlock.h"
+#include "libc_private.h"
 
 long _atomic_lock_stub(volatile long *);
 void _spinlock_stub(spinlock_t *);
 void _spinunlock_stub(spinlock_t *);
 void _spinlock_debug_stub(spinlock_t *, char *, int);
 
-/*
- * Declare weak definitions in case the application is not linked
- * with libpthread.
- */
 __weak_reference(_atomic_lock_stub, _atomic_lock);
-__weak_reference(_spinlock_stub, _spinlock);
-__weak_reference(_spinunlock_stub, _spinunlock);
-__weak_reference(_spinlock_debug_stub, _spinlock_debug);
 
-/*
- * This function is a stub for the _atomic_lock function in libpthread.
- */
 long
 _atomic_lock_stub(volatile long *lck __unused)
 {
 	return (0L);
 }
 
-
-/*
- * This function is a stub for the spinlock function in libpthread.
- */
+__weak_reference(_spinlock, _spinlock_debug);
+#pragma weak _spinlock
 void
-_spinlock_stub(spinlock_t *lck __unused)
+_spinlock(spinlock_t *lck)
+{
+
+	((void (*)(spinlock_t *lck))__libc_interposing[INTERPOS_spinlock])
+	    (lck);
+
+}
+
+#pragma weak _spinunlock
+void
+_spinunlock(spinlock_t *lck)
+{
+
+	((void (*)(spinlock_t *lck))__libc_interposing[INTERPOS_spinunlock])
+	    (lck);
+
+}
+
+void
+__libc_spinlock_stub(spinlock_t *lck __unused)
 {
 }
 
-/*
- * This function is a stub for the spinunlock function in libpthread.
- */
 void
-_spinunlock_stub(spinlock_t *lck __unused)
-{
-}
-
-/*
- * This function is a stub for the debug spinlock function in libpthread.
- */
-void
-_spinlock_debug_stub(spinlock_t *lck __unused, char *fname __unused, int lineno __unused)
+__libc_spinunlock_stub(spinlock_t *lck __unused)
 {
 }

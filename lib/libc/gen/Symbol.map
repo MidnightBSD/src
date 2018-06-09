@@ -1,6 +1,5 @@
-/*
- * $FreeBSD: src/lib/libc/gen/Symbol.map,v 1.6 2007/05/31 13:01:33 deischen Exp $
- * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.7 2012/10/20 03:08:31 laffer1 Exp $
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/gen/Symbol.map 277317 2015-01-18 11:54:20Z kib $
  */
 
 FBSD_1.0 {
@@ -214,6 +213,7 @@ FBSD_1.0 {
 	ldexp;
 	lockf;
 	lrand48;
+	modf;
 	mrand48;
 	nftw;
 	nice;
@@ -381,7 +381,11 @@ FBSD_1.2 {
 };
 
 FBSD_1.3 {
-	 fdlopen;
+	clock_getcpuclockid;
+	dirfd;
+	dup3;
+	fdclosedir;
+	fdlopen;
 	__FreeBSD_libc_enter_restricted_mode;
 	getcontextx;
 	gid_from_group;
@@ -479,6 +483,7 @@ FBSDprivate_1.0 {
 	_rtld_atfork_post;
 	_rtld_error;		/* for private use */
 	_rtld_get_stack_prot;
+	_rtld_is_dlopened;
 	_rtld_thread_init;	/* for private use */
 	__elf_phdr_match_addr;
 	_err;
@@ -523,6 +528,8 @@ FBSDprivate_1.0 {
 	_libc_sem_timedwait_compat;
 	_libc_sem_post_compat;
 	_libc_sem_getvalue_compat;
+
+	__libc_tcdrain;
 
 	__elf_aux_vector;
 	__pthread_map_stacks_exec;

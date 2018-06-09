@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 2002 Massachusetts Institute of Technology
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/check_utility_compat.c 244568 2012-12-21 22:20:59Z delphij $");
 
 /*
  * I din't use "namespace.h" here because none of the relevant utilities

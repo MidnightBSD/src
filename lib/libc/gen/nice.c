@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)nice.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/nice.c 313479 2017-02-09 21:19:24Z ngie $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -43,14 +44,20 @@ __MBSDID("$MidnightBSD$");
  * Backwards compatible nice.
  */
 int
-nice(incr)
-	int incr;
+nice(int incr)
 {
-	int prio;
+	int saverrno, prio;
 
+	saverrno = errno;
 	errno = 0;
 	prio = getpriority(PRIO_PROCESS, 0);
-	if (prio == -1 && errno)
+	if (prio == -1 && errno != 0)
 		return (-1);
-	return (setpriority(PRIO_PROCESS, 0, prio + incr));
+	if (setpriority(PRIO_PROCESS, 0, prio + incr) == -1) {
+		if (errno == EACCES)
+			errno = EPERM;
+		return (-1);
+	}
+	errno = saverrno;
+	return (0);
 }

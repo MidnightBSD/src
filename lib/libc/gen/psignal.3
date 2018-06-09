@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)psignal.3	8.2 (Berkeley) 2/27/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libc/gen/psignal.3 233510 2012-03-26 15:18:14Z joel $
 .\"
 .Dd February 4, 2011
 .Dt PSIGNAL 3
@@ -79,7 +80,7 @@ immediately followed by a colon and a space.
 If the signal number is not recognized
 .Pq Xr sigaction 2 ,
 the string
-.Dq "Unknown signal
+.Dq "Unknown signal"
 is produced.
 .Pp
 The message strings can be accessed directly

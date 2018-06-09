@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -31,7 +32,7 @@
  *
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getpwent.c 158115 2006-04-28 12:03:38Z ume $");
 
 #include "namespace.h"
 #include <sys/param.h>

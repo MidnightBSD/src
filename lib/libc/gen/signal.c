@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)signal.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libc/gen/signal.c 287480 2015-09-05 08:55:51Z kib $");
 
 /*
  * Almost backwards compatible signal.
@@ -41,12 +42,10 @@ __MBSDID("$MidnightBSD$");
 #include "un-namespace.h"
 #include "libc_private.h"
 
-sigset_t _sigintr;		/* shared with siginterrupt */
+sigset_t _sigintr __hidden;	/* shared with siginterrupt */
 
 sig_t
-signal(s, a)
-	int s;
-	sig_t a;
+signal(int s, sig_t a)
 {
 	struct sigaction sa, osa;
 
@@ -55,7 +54,7 @@ signal(s, a)
 	sa.sa_flags = 0;
 	if (!sigismember(&_sigintr, s))
 		sa.sa_flags |= SA_RESTART;
-	if (_sigaction(s, &sa, &osa) < 0)
+	if (__libc_sigaction(s, &sa, &osa) < 0)
 		return (SIG_ERR);
 	return (osa.sa_handler);
 }

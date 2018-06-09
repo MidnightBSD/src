@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,13 +30,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libc/gen/telldir.h 282979 2015-05-15 15:49:24Z julian $
  */
 
 #ifndef _TELLDIR_H_
 #define	_TELLDIR_H_
 
 #include <sys/queue.h>
+#include <stdbool.h>
 
 /*
  * One of these structures is malloced to describe the current directory
@@ -59,8 +61,10 @@ struct _telldir {
 	long	td_loccnt;	/* index of entry for sequential readdir's */
 };
 
+bool		_filldir(DIR *, bool);
 struct dirent	*_readdir_unlocked(DIR *, int);
 void 		_reclaim_telldir(DIR *);
 void 		_seekdir(DIR *, long);
+void		_fixtelldir(DIR *dirp, long oldseek, long oldloc);
 
 #endif

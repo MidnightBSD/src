@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/lib/libc/gen/tls.c 324617 2017-10-14 16:49:39Z brooks $
  */
 
 /*
@@ -38,6 +39,11 @@
 #include <elf.h>
 
 #include "libc_private.h"
+
+/* Provided by jemalloc to avoid bootstrapping issues. */
+void	*__jemalloc_a0malloc(size_t size);
+void	*__jemalloc_a0calloc(size_t num, size_t size);
+void	__jemalloc_a0free(void *ptr);
 
 __weak_reference(__libc_allocate_tls, _rtld_allocate_tls);
 __weak_reference(__libc_free_tls, _rtld_free_tls);
@@ -66,12 +72,11 @@ void __libc_free_tls(void *tls, size_t tcbsize, size_t tcbalign);
 #error TLS_TCB_ALIGN undefined for target architecture
 #endif
 
-#if defined(__arm__) || defined(__ia64__) || \
+#if defined(__arm__) || defined(__ia64__) || defined(__mips__) || \
     defined(__powerpc__)
 #define TLS_VARIANT_I
 #endif
-#if defined(__i386__) || defined(__amd64__) || defined(__sparc64__) || \
-    defined(__mips__)
+#if defined(__i386__) || defined(__amd64__) || defined(__sparc64__)
 #define TLS_VARIANT_II
 #endif
 
@@ -121,8 +126,8 @@ __libc_free_tls(void *tcb, size_t tcbsize, size_t tcbalign __unused)
 
 	tls = (Elf_Addr **)((Elf_Addr)tcb + tcbsize - TLS_TCB_SIZE);
 	dtv = tls[0];
-	free(dtv);
-	free(tcb);
+	__jemalloc_a0free(dtv);
+	__jemalloc_a0free(tcb);
 }
 
 /*
@@ -138,18 +143,18 @@ __libc_allocate_tls(void *oldtcb, size_t tcbsize, size_t tcbalign __unused)
 	if (oldtcb != NULL && tcbsize == TLS_TCB_SIZE)
 		return (oldtcb);
 
-	tcb = calloc(1, tls_static_space + tcbsize - TLS_TCB_SIZE);
+	tcb = __jemalloc_a0calloc(1, tls_static_space + tcbsize - TLS_TCB_SIZE);
 	tls = (Elf_Addr **)(tcb + tcbsize - TLS_TCB_SIZE);
 
 	if (oldtcb != NULL) {
 		memcpy(tls, oldtcb, tls_static_space);
-		free(oldtcb);
+		__jemalloc_a0free(oldtcb);
 
 		/* Adjust the DTV. */
 		dtv = tls[0];
 		dtv[2] = (Elf_Addr)tls + TLS_TCB_SIZE;
 	} else {
-		dtv = malloc(3 * sizeof(Elf_Addr));
+		dtv = __jemalloc_a0malloc(3 * sizeof(Elf_Addr));
 		tls[0] = dtv;
 		dtv[0] = 1;
 		dtv[1] = 1;
@@ -157,9 +162,6 @@ __libc_allocate_tls(void *oldtcb, size_t tcbsize, size_t tcbalign __unused)
 
 		if (tls_init_size > 0)
 			memcpy((void*)dtv[2], tls_init, tls_init_size);
-		if (tls_static_space > tls_init_size)
-			memset((void*)(dtv[2] + tls_init_size), 0,
-			    tls_static_space - tls_init_size);
 	}
 
 	return(tcb); 
@@ -190,8 +192,8 @@ __libc_free_tls(void *tcb, size_t tcbsize __unused, size_t tcbalign)
 	dtv = ((Elf_Addr**)tcb)[1];
 	tlsend = (Elf_Addr) tcb;
 	tlsstart = tlsend - size;
-	free((void*) tlsstart);
-	free(dtv);
+	__jemalloc_a0free((void*) tlsstart);
+	__jemalloc_a0free(dtv);
 }
 
 /*
@@ -209,8 +211,8 @@ __libc_allocate_tls(void *oldtls, size_t tcbsize, size_t tcbalign)
 
 	if (tcbsize < 2 * sizeof(Elf_Addr))
 		tcbsize = 2 * sizeof(Elf_Addr);
-	tls = calloc(1, size + tcbsize);
-	dtv = malloc(3 * sizeof(Elf_Addr));
+	tls = __jemalloc_a0calloc(1, size + tcbsize);
+	dtv = __jemalloc_a0malloc(3 * sizeof(Elf_Addr));
 
 	segbase = (Elf_Addr)(tls + size);
 	((Elf_Addr*)segbase)[0] = segbase;
@@ -280,7 +282,7 @@ _init_tls()
 	while (*sp++ != 0)
 		;
 	aux = (Elf_Auxinfo *) sp;
-	phdr = 0;
+	phdr = NULL;
 	phent = phnum = 0;
 	for (auxp = aux; auxp->a_type != AT_NULL; auxp++) {
 		switch (auxp->a_type) {
@@ -297,7 +299,7 @@ _init_tls()
 			break;
 		}
 	}
-	if (phdr == 0 || phent != sizeof(Elf_Phdr) || phnum == 0)
+	if (phdr == NULL || phent != sizeof(Elf_Phdr) || phnum == 0)
 		return;
 
 	for (i = 0; (unsigned) i < phnum; i++) {
