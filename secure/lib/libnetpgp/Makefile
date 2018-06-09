@@ -15,15 +15,11 @@ SRCS=	compress.c create.c crypto.c \
 INCS=	netpgp.h
 INCSDIR=${INCLUDEDIR}
 
-NETPGP_SRC=	${.CURDIR}/../../../crypto/netpgp
+NETPGP_SRC=	${SRCTOP}/crypto/netpgp
 
 CFLAGS+= -I${.CURDIR} -I${NETPGP_SRC}/include
 MAN= libnetpgp.3
 WARNS=4
-
-.if ${MK_IDEA} == "no"
-CFLAGS+=	-DOPENSSL_NO_IDEA
-.endif
 
 DPADD=	${LIBCRYPTO} ${LIBZ} ${LIBBZ2}
 LDADD=	-lcrypto -lz -lbz2
