@@ -1,17 +1,21 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/libsbuf/Makefile,v 1.5 2003/08/18 15:25:39 obrien Exp $
+# $FreeBSD: stable/10/lib/libsbuf/Makefile 321113 2017-07-18 08:23:21Z ngie $
 
 LIB=		sbuf
 SHLIBDIR?= 	/lib
-SRCS=		subr_sbuf.c 
-
-WARNS?= 2
+SRCS=		subr_prf.c subr_sbuf.c
 
 SHLIB_MAJOR	= 6
 
 SYMBOL_MAPS=    ${.CURDIR}/Symbol.map
 VERSION_DEF=	${.CURDIR}/Version.def
 
-.PATH:	${.CURDIR}/../../sys/kern
+.include <bsd.own.mk>
+
+.PATH:	${SRCTOP}/sys/kern
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.lib.mk>

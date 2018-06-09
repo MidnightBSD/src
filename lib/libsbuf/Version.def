@@ -1,7 +1,14 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libsbuf/Version.def 321108 2017-07-18 06:45:41Z ngie $
 
 FBSD_1.2 {
 };
 
 FBSD_1.3 {
 } FBSD_1.2;
+
+FBSD_1.4 {
+} FBSD_1.3;
+
+FBSD_1.5 {
+} FBSD_1.4;

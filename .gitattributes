@@ -49707,6 +49707,11 @@ lib/librtld_db/rtld_db.h -text
 lib/libsbuf/Makefile -text
 lib/libsbuf/Symbol.map -text
 lib/libsbuf/Version.def -text
+lib/libsbuf/tests/Makefile svneol=native#text/plain
+lib/libsbuf/tests/sbuf_core_test.c svneol=native#text/plain
+lib/libsbuf/tests/sbuf_stdio_test.c svneol=native#text/plain
+lib/libsbuf/tests/sbuf_string_test.c svneol=native#text/plain
+lib/libsbuf/tests/sbuf_test_common.h svneol=native#text/plain
 lib/libsdp/Makefile -text
 lib/libsdp/sdp-int.h -text
 lib/libsdp/sdp.3 -text

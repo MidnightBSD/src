@@ -1,5 +1,5 @@
-/*
- * $MidnightBSD$
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libsbuf/Symbol.map 321108 2017-07-18 06:45:41Z ngie $
  */
 
 FBSD_1.2 {
@@ -21,9 +21,21 @@ FBSD_1.2 {
 	sbuf_len;
 	sbuf_done;
 	sbuf_delete;
+	sbuf_clear_flags;
+	sbuf_get_flags;
+	sbuf_set_flags;
 };
 
 FBSD_1.3 {
 	sbuf_start_section;
 	sbuf_end_section;
 };
+
+FBSD_1.4 {
+	sbuf_hexdump;
+};
+
+FBSD_1.5 {
+	sbuf_putbuf;
+};
+
