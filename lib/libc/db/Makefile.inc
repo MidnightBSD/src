@@ -1,6 +1,7 @@
 #	from @(#)Makefile.inc	8.2 (Berkeley) 2/21/94
-# $FreeBSD: src/lib/libc/db/Makefile.inc,v 1.5 2006/03/13 01:14:56 deischen Exp $
-#
+# $FreeBSD: stable/10/lib/libc/db/Makefile.inc 156613 2006-03-13 01:15:01Z deischen $
+# $MidnightBSD$
+
 CFLAGS+=-D__DBINTERFACE_PRIVATE
 
 .include "${.CURDIR}/db/btree/Makefile.inc"
