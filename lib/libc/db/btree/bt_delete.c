@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)bt_delete.c	8.13 (Berkeley) 7/28/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/btree/bt_delete.c,v 1.3 2007/01/09 00:27:50 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/btree/bt_delete.c 189327 2009-03-04 00:58:04Z delphij $");
 
 #include <sys/types.h>
 

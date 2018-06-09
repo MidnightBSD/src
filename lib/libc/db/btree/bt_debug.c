@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)bt_debug.c	8.5 (Berkeley) 8/17/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/btree/bt_debug.c,v 1.4 2007/01/09 00:27:50 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/btree/bt_debug.c 190498 2009-03-28 07:31:02Z delphij $");
 
 #include <sys/param.h>
 

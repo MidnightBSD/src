@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
 static char sccsid[] = "@(#)bt_open.c	8.10 (Berkeley) 8/17/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/btree/bt_open.c,v 1.12 2007/01/09 00:27:50 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/lib/libc/db/btree/bt_open.c 287480 2015-09-05 08:55:51Z kib $");
 
 /*
  * Implementation of btree access method for 4.4BSD.
@@ -57,6 +58,7 @@ __FBSDID("$FreeBSD: src/lib/libc/db/btree/bt_open.c,v 1.12 2007/01/09 00:27:50 i
 #include <string.h>
 #include <unistd.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 #include <db.h>
 #include "btree.h"
@@ -196,7 +198,7 @@ __bt_open(const char *fname, int flags, int mode, const BTREEINFO *openinfo, int
 			goto einval;
 		}
 
-		if ((t->bt_fd = _open(fname, flags, mode)) < 0)
+		if ((t->bt_fd = _open(fname, flags | O_CLOEXEC, mode)) < 0)
 			goto err;
 
 	} else {
@@ -206,9 +208,6 @@ __bt_open(const char *fname, int flags, int mode, const BTREEINFO *openinfo, int
 			goto err;
 		F_SET(t, B_INMEM);
 	}
-
-	if (_fcntl(t->bt_fd, F_SETFD, 1) == -1)
-		goto err;
 
 	if (_fstat(t->bt_fd, &sb))
 		goto err;
@@ -404,10 +403,10 @@ tmp(void)
 	}
 
 	(void)sigfillset(&set);
-	(void)_sigprocmask(SIG_BLOCK, &set, &oset);
-	if ((fd = mkstemp(path)) != -1)
+	(void)__libc_sigprocmask(SIG_BLOCK, &set, &oset);
+	if ((fd = mkostemp(path, O_CLOEXEC)) != -1)
 		(void)unlink(path);
-	(void)_sigprocmask(SIG_SETMASK, &oset, NULL);
+	(void)__libc_sigprocmask(SIG_SETMASK, &oset, NULL);
 	return(fd);
 }
 
