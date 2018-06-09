@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2005 Daniel M. Eischen <deischen@freebsd.org>
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
@@ -26,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/9/lib/libthr/thread/thr_private.h 258767 2013-11-30 14:39:56Z kib $
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_private.h 303709 2016-08-03 10:23:42Z kib $
  */
 
 #ifndef _THR_PRIVATE_H
@@ -182,9 +183,11 @@ struct pthread_cond_attr {
 struct pthread_barrier {
 	struct umutex		b_lock;
 	struct ucond		b_cv;
-	volatile int64_t	b_cycle;
-	volatile int		b_count;
-	volatile int		b_waiters;
+	int64_t			b_cycle;
+	int			b_count;
+	int			b_waiters;
+	int			b_refcount;
+	int			b_destroying;
 };
 
 struct pthread_barrierattr {
@@ -702,7 +705,6 @@ extern struct pthread_cond_attr _pthread_condattr_default __hidden;
 
 extern struct pthread_prio _thr_priorities[] __hidden;
 
-extern pid_t	_thr_pid __hidden;
 extern int	_thr_is_smp __hidden;
 
 extern size_t	_thr_guard_default __hidden;
@@ -711,6 +713,7 @@ extern size_t	_thr_stack_initial __hidden;
 extern int	_thr_page_size __hidden;
 extern int	_thr_spinloops __hidden;
 extern int	_thr_yieldloops __hidden;
+extern int	_thr_queuefifo __hidden;
 
 /* Garbage thread count. */
 extern int	_gc_count __hidden;
@@ -721,16 +724,20 @@ extern struct umutex	_rwlock_static_lock __hidden;
 extern struct umutex	_keytable_lock __hidden;
 extern struct urwlock	_thr_list_lock __hidden;
 extern struct umutex	_thr_event_lock __hidden;
+extern struct umutex	_suspend_all_lock __hidden;
+extern int		_suspend_all_waiters __hidden;
+extern int		_suspend_all_cycle __hidden;
+extern struct pthread	*_single_thread __hidden;
 
 /*
  * Function prototype definitions.
  */
 __BEGIN_DECLS
 int	_thr_setthreaded(int) __hidden;
-int	_mutex_cv_lock(struct pthread_mutex *, int count) __hidden;
-int	_mutex_cv_unlock(struct pthread_mutex *, int *count) __hidden;
-int     _mutex_cv_attach(struct pthread_mutex *, int count) __hidden;
-int     _mutex_cv_detach(struct pthread_mutex *, int *count) __hidden;
+int	_mutex_cv_lock(struct pthread_mutex *, int) __hidden;
+int	_mutex_cv_unlock(struct pthread_mutex *, int *, int *) __hidden;
+int     _mutex_cv_attach(struct pthread_mutex *, int) __hidden;
+int     _mutex_cv_detach(struct pthread_mutex *, int *) __hidden;
 int     _mutex_owned(struct pthread *, const struct pthread_mutex *) __hidden;
 int	_mutex_reinit(pthread_mutex_t *) __hidden;
 void	_mutex_fork(struct pthread *curthread) __hidden;
@@ -742,7 +749,6 @@ void	_thr_ref_delete(struct pthread *, struct pthread *) __hidden;
 void	_thr_ref_delete_unlocked(struct pthread *, struct pthread *) __hidden;
 int	_thr_find_thread(struct pthread *, struct pthread *, int) __hidden;
 void	_thr_rtld_init(void) __hidden;
-void	_thr_rtld_fini(void) __hidden;
 void	_thr_rtld_postfork_child(void) __hidden;
 int	_thr_stack_alloc(struct pthread_attr *) __hidden;
 void	_thr_stack_free(struct pthread_attr *) __hidden;
@@ -757,7 +763,7 @@ void	_thr_cancel_leave(struct pthread *, int) __hidden;
 void	_thr_testcancel(struct pthread *) __hidden;
 void	_thr_signal_block(struct pthread *) __hidden;
 void	_thr_signal_unblock(struct pthread *) __hidden;
-void	_thr_signal_init(void) __hidden;
+void	_thr_signal_init(int) __hidden;
 void	_thr_signal_deinit(void) __hidden;
 int	_thr_send_sig(struct pthread *, int sig) __hidden;
 void	_thr_list_init(void) __hidden;
@@ -768,7 +774,6 @@ void	_thr_link(struct pthread *, struct pthread *) __hidden;
 void	_thr_unlink(struct pthread *, struct pthread *) __hidden;
 void	_thr_assert_lock_level(void) __hidden __dead2;
 void	_thr_ast(struct pthread *) __hidden;
-void	_thr_once_init(void) __hidden;
 void	_thr_report_creation(struct pthread *curthread,
 	    struct pthread *newthread) __hidden;
 void	_thr_report_death(struct pthread *curthread) __hidden;
@@ -777,6 +782,8 @@ int	_thr_setscheduler(lwpid_t, int, const struct sched_param *) __hidden;
 void	_thr_signal_prefork(void) __hidden;
 void	_thr_signal_postfork(void) __hidden;
 void	_thr_signal_postfork_child(void) __hidden;
+void	_thr_suspend_all_lock(struct pthread *) __hidden;
+void	_thr_suspend_all_unlock(struct pthread *) __hidden;
 void	_thr_try_gc(struct pthread *, struct pthread *) __hidden;
 int	_rtp_to_schedparam(const struct rtprio *rtp, int *policy,
 		struct sched_param *param) __hidden;
@@ -831,7 +838,6 @@ int     __sys_close(int);
 int	__sys_fork(void);
 pid_t	__sys_getpid(void);
 ssize_t __sys_read(int, void *, size_t);
-ssize_t __sys_write(int, const void *, size_t);
 void	__sys_exit(int);
 #endif
 
@@ -898,11 +904,34 @@ int	_sleepq_remove(struct sleepqueue *, struct pthread *) __hidden;
 void	_sleepq_drop(struct sleepqueue *,
 		void (*cb)(struct pthread *, void *arg), void *) __hidden;
 
+int	_pthread_mutex_init_calloc_cb(pthread_mutex_t *mutex,
+	    void *(calloc_cb)(size_t, size_t));
+
 struct dl_phdr_info;
 void __pthread_cxa_finalize(struct dl_phdr_info *phdr_info);
 void _thr_tsd_unload(struct dl_phdr_info *phdr_info) __hidden;
 void _thr_sigact_unload(struct dl_phdr_info *phdr_info) __hidden;
 void _thr_stack_fix_protection(struct pthread *thrd);
+
+int *__error_threaded(void) __hidden;
+void __thr_interpose_libc(void) __hidden;
+pid_t __thr_fork(void);
+int __thr_setcontext(const ucontext_t *ucp);
+int __thr_sigaction(int sig, const struct sigaction *act,
+    struct sigaction *oact) __hidden;
+int __thr_sigprocmask(int how, const sigset_t *set, sigset_t *oset);
+int __thr_sigsuspend(const sigset_t * set);
+int __thr_sigtimedwait(const sigset_t *set, siginfo_t *info,
+    const struct timespec * timeout);
+int __thr_sigwait(const sigset_t *set, int *sig);
+int __thr_sigwaitinfo(const sigset_t *set, siginfo_t *info);
+int __thr_swapcontext(ucontext_t *oucp, const ucontext_t *ucp);
+
+void __thr_map_stacks_exec(void);
+
+struct _spinlock;
+void __thr_spinunlock(struct _spinlock *lck);
+void __thr_spinlock(struct _spinlock *lck);
 
 __END_DECLS
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 Jung-uk Kim <jkim@FreeBSD.org>
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_getthreadid_np.c 218414 2011-02-07 21:26:46Z jkim $
  */
 
 #include "namespace.h"

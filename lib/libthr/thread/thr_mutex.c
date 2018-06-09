@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * Copyright (c) 2006 David Xu <davidxu@freebsd.org>.
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_mutex.c 279586 2015-03-04 09:32:59Z kib $
  */
 
 #include "namespace.h"
@@ -92,7 +93,7 @@ int	__pthread_mutex_setyieldloops_np(pthread_mutex_t *mutex, int count);
 static int	mutex_self_trylock(pthread_mutex_t);
 static int	mutex_self_lock(pthread_mutex_t,
 				const struct timespec *abstime);
-static int	mutex_unlock_common(struct pthread_mutex *, int);
+static int	mutex_unlock_common(struct pthread_mutex *, int, int *);
 static int	mutex_lock_sleep(struct pthread *, pthread_mutex_t,
 				const struct timespec *);
 
@@ -461,7 +462,7 @@ _pthread_mutex_unlock(pthread_mutex_t *mutex)
 	struct pthread_mutex *mp;
 
 	mp = *mutex;
-	return (mutex_unlock_common(mp, 0));
+	return (mutex_unlock_common(mp, 0, NULL));
 }
 
 int
@@ -476,7 +477,7 @@ _mutex_cv_lock(struct pthread_mutex *m, int count)
 }
 
 int
-_mutex_cv_unlock(struct pthread_mutex *m, int *count)
+_mutex_cv_unlock(struct pthread_mutex *m, int *count, int *defer)
 {
 
 	/*
@@ -484,7 +485,7 @@ _mutex_cv_unlock(struct pthread_mutex *m, int *count)
 	 */
 	*count = m->m_count;
 	m->m_count = 0;
-	(void)mutex_unlock_common(m, 1);
+	(void)mutex_unlock_common(m, 1, defer);
         return (0);
 }
 
@@ -629,11 +630,11 @@ mutex_self_lock(struct pthread_mutex *m, const struct timespec *abstime)
 }
 
 static int
-mutex_unlock_common(struct pthread_mutex *m, int cv)
+mutex_unlock_common(struct pthread_mutex *m, int cv, int *mtx_defer)
 {
 	struct pthread *curthread = _get_curthread();
 	uint32_t id;
-	int defered;
+	int defered, error;
 
 	if (__predict_false(m <= THR_MUTEX_DESTROYED)) {
 		if (m == THR_MUTEX_DESTROYED)
@@ -647,6 +648,7 @@ mutex_unlock_common(struct pthread_mutex *m, int cv)
 	if (__predict_false(m->m_owner != curthread))
 		return (EPERM);
 
+	error = 0;
 	id = TID(curthread);
 	if (__predict_false(
 		PMUTEX_TYPE(m->m_flags) == PTHREAD_MUTEX_RECURSIVE &&
@@ -657,12 +659,12 @@ mutex_unlock_common(struct pthread_mutex *m, int cv)
 			defered = 1;
 			m->m_flags &= ~PMUTEX_FLAG_DEFERED;
         	} else
-                	defered = 0;
+			defered = 0;
 
 		DEQUEUE_MUTEX(curthread, m);
-		_thr_umutex_unlock(&m->m_lock, id);
+		error = _thr_umutex_unlock2(&m->m_lock, id, mtx_defer);
 
-		if (curthread->will_sleep == 0 && defered)  {
+		if (mtx_defer == NULL && defered)  {
 			_thr_wake_all(curthread->defer_waiters,
 				curthread->nwaiter_defer);
 			curthread->nwaiter_defer = 0;
@@ -670,7 +672,7 @@ mutex_unlock_common(struct pthread_mutex *m, int cv)
 	}
 	if (!cv && m->m_flags & PMUTEX_FLAG_PRIVATE)
 		THR_CRITICAL_LEAVE(curthread);
-	return (0);
+	return (error);
 }
 
 int

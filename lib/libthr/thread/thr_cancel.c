@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_cancel.c 332633 2018-04-16 20:45:21Z jhb $
  *
  */
 
@@ -130,8 +131,10 @@ _pthread_setcanceltype(int type, int *oldtype)
 void
 _pthread_testcancel(void)
 {
-	struct pthread *curthread = _get_curthread();
+	struct pthread *curthread;
 
+	_thr_check_init();
+	curthread = _get_curthread();
 	testcancel(curthread);
 }
 

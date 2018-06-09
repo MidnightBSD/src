@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jonathan Mini <mini@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_printf.c 277317 2015-01-18 11:54:20Z kib $
  */
 
 #include <stdarg.h>
@@ -31,6 +32,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include "libc_private.h"
 #include "thr_private.h"
 
 static void	pchar(int fd, char c);

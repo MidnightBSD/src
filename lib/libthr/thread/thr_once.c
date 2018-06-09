@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_once.c 303709 2016-08-03 10:23:42Z kib $
  *
  */
 
@@ -91,9 +92,4 @@ _pthread_once(pthread_once_t *once_control, void (*init_routine) (void))
 	atomic_store_rel_int(&once_control->state, ONCE_DONE);
 	_thr_umtx_wake(&once_control->state, INT_MAX, 0);
 	return (0);
-}
-
-void
-_thr_once_init()
-{
 }

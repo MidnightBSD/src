@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (C) 2003 Daniel M. Eischen <deischen@freebsd.org>
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_kern.c 245630 2013-01-18 23:08:40Z jilles $
  */
 
 #include <sys/types.h>
@@ -57,11 +58,6 @@ _thr_setthreaded(int threaded)
 		return (0);
 
 	__isthreaded = threaded;
-	if (threaded != 0) {
-		_thr_rtld_init();
-	} else {
-		_thr_rtld_fini();
-	}
 	return (0);
 }
 
@@ -198,13 +194,6 @@ int
 _thr_sleep(struct pthread *curthread, int clockid,
 	const struct timespec *abstime)
 {
-
-	curthread->will_sleep = 0;
-	if (curthread->nwaiter_defer > 0) {
-		_thr_wake_all(curthread->defer_waiters,
-			curthread->nwaiter_defer);
-		curthread->nwaiter_defer = 0;
-	}
 
 	if (curthread->wake_addr->value != 0)
 		return (0);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_resume_np.c 299521 2016-05-12 06:53:22Z kib $
  */
 
 #include "namespace.h"
@@ -63,7 +64,11 @@ _pthread_resume_all_np(void)
 {
 	struct pthread *curthread = _get_curthread();
 	struct pthread *thread;
+	int old_nocancel;
 
+	old_nocancel = curthread->no_cancel;
+	curthread->no_cancel = 1;
+	_thr_suspend_all_lock(curthread);
 	/* Take the thread list lock: */
 	THREAD_LIST_RDLOCK(curthread);
 
@@ -77,13 +82,16 @@ _pthread_resume_all_np(void)
 
 	/* Release the thread list lock: */
 	THREAD_LIST_UNLOCK(curthread);
+	_thr_suspend_all_unlock(curthread);
+	curthread->no_cancel = old_nocancel;
+	_thr_testcancel(curthread);
 }
 
 static void
 resume_common(struct pthread *thread)
 {
 	/* Clear the suspend flag: */
-	thread->flags &= ~THR_FLAGS_NEED_SUSPEND;
+	thread->flags &= ~(THR_FLAGS_NEED_SUSPEND | THR_FLAGS_SUSPENDED);
 	thread->cycle++;
 	_thr_umtx_wake(&thread->cycle, 1, 0);
 }

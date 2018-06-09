@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Craig Rodrigues <rodrigc@attbi.com>.
  * All rights reserved.
@@ -90,7 +91,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_attr.c 214653 2010-11-02 02:13:13Z davidxu $
  */
 
 #include "namespace.h"

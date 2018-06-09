@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Daniel M. Eischen <deischen@gdeb.com>
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_create.c 277317 2015-01-18 11:54:20Z kib $
  */
 
 #include "namespace.h"
@@ -40,6 +41,7 @@
 #include <pthread_np.h>
 #include "un-namespace.h"
 
+#include "libc_private.h"
 #include "thr_private.h"
 
 static int  create_stack(struct pthread_attr *pattr);
@@ -66,8 +68,11 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	/*
 	 * Tell libc and others now they need lock to protect their data.
 	 */
-	if (_thr_isthreaded() == 0 && _thr_setthreaded(1))
-		return (EAGAIN);
+	if (_thr_isthreaded() == 0) {
+		_malloc_first_thread();
+		if (_thr_setthreaded(1))
+			return (EAGAIN);
+	}
 
 	curthread = _get_curthread();
 	if ((new_thread = _thr_alloc(curthread)) == NULL)

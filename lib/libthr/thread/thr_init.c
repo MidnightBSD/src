@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Daniel M. Eischen <deischen@freebsd.org>
  * Copyright (c) 1995-1998 John Birrell <jb@cimlogic.com.au>
@@ -30,13 +31,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_init.c 303709 2016-08-03 10:23:42Z kib $
  */
 
 #include "namespace.h"
 #include <sys/types.h>
 #include <sys/signalvar.h>
 #include <sys/ioctl.h>
+#include <sys/link_elf.h>
+#include <sys/resource.h>
 #include <sys/sysctl.h>
 #include <sys/ttycom.h>
 #include <sys/mman.h>
@@ -104,7 +107,6 @@ struct pthread_cond_attr _pthread_condattr_default = {
 	.c_clockid = CLOCK_REALTIME
 };
 
-pid_t		_thr_pid;
 int		_thr_is_smp = 0;
 size_t		_thr_guard_default;
 size_t		_thr_stack_default = THR_STACK_DEFAULT;
@@ -112,6 +114,7 @@ size_t		_thr_stack_initial = THR_STACK_INITIAL;
 int		_thr_page_size;
 int		_thr_spinloops;
 int		_thr_yieldloops;
+int		_thr_queuefifo = 4;
 int		_gc_count;
 struct umutex	_mutex_static_lock = DEFAULT_UMUTEX;
 struct umutex	_cond_static_lock = DEFAULT_UMUTEX;
@@ -119,6 +122,10 @@ struct umutex	_rwlock_static_lock = DEFAULT_UMUTEX;
 struct umutex	_keytable_lock = DEFAULT_UMUTEX;
 struct urwlock	_thr_list_lock = DEFAULT_URWLOCK;
 struct umutex	_thr_event_lock = DEFAULT_UMUTEX;
+struct umutex	_suspend_all_lock = DEFAULT_UMUTEX;
+struct pthread	*_single_thread;
+int		_suspend_all_cycle;
+int		_suspend_all_waiters;
 
 int	__pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *);
 int	__pthread_mutex_lock(pthread_mutex_t *);
@@ -296,7 +303,7 @@ _thread_init_hack(void)
 void
 _libpthread_init(struct pthread *curthread)
 {
-	int fd, first = 0;
+	int first, dlopened;
 
 	/* Check if this function has already been called: */
 	if ((_thr_initial != NULL) && (curthread == NULL))
@@ -310,27 +317,7 @@ _libpthread_init(struct pthread *curthread)
 	if (sizeof(jmp_table) != (sizeof(pthread_func_t) * PJT_MAX * 2))
 		PANIC("Thread jump table not properly initialized");
 	memcpy(__thr_jtable, jmp_table, sizeof(jmp_table));
-
-	/*
-	 * Check for the special case of this process running as
-	 * or in place of init as pid = 1:
-	 */
-	if ((_thr_pid = getpid()) == 1) {
-		/*
-		 * Setup a new session for this process which is
-		 * assumed to be running as root.
-		 */
-		if (setsid() == -1)
-			PANIC("Can't set session ID");
-		if (revoke(_PATH_CONSOLE) != 0)
-			PANIC("Can't revoke console");
-		if ((fd = __sys_open(_PATH_CONSOLE, O_RDWR)) < 0)
-			PANIC("Can't open console");
-		if (setlogin("root") == -1)
-			PANIC("Can't set login to root");
-		if (_ioctl(fd, TIOCSCTTY, (char *) NULL) == -1)
-			PANIC("Can't set controlling terminal");
-	}
+	__thr_interpose_libc();
 
 	/* Initialize pthread private data. */
 	init_private();
@@ -343,7 +330,10 @@ _libpthread_init(struct pthread *curthread)
 		if (curthread == NULL)
 			PANIC("Can't allocate initial thread");
 		init_main_thread(curthread);
+	} else {
+		first = 0;
 	}
+		
 	/*
 	 * Add the thread to the thread list queue.
 	 */
@@ -355,9 +345,16 @@ _libpthread_init(struct pthread *curthread)
 
 	if (first) {
 		_thr_initial = curthread;
-		_thr_signal_init();
+		dlopened = _rtld_is_dlopened(&_thread_autoinit_dummy_decl) != 0;
+		_thr_signal_init(dlopened);
 		if (_thread_event_mask & TD_CREATE)
 			_thr_report_creation(curthread, curthread);
+		/*
+		 * Always use our rtld lock implementation.
+		 * It is faster because it postpones signal handlers
+		 * instead of calling sigprocmask(2).
+		 */
+		_thr_rtld_init();
 	}
 }
 
@@ -430,9 +427,10 @@ init_main_thread(struct pthread *thread)
 static void
 init_private(void)
 {
+	struct rlimit rlim;
 	size_t len;
 	int mib[2];
-	char *env;
+	char *env, *env_bigstack, *env_splitstack;
 
 	_thr_umutex_init(&_mutex_static_lock);
 	_thr_umutex_init(&_cond_static_lock);
@@ -440,11 +438,13 @@ init_private(void)
 	_thr_umutex_init(&_keytable_lock);
 	_thr_urwlock_init(&_thr_atfork_lock);
 	_thr_umutex_init(&_thr_event_lock);
-	_thr_once_init();
+	_thr_umutex_init(&_suspend_all_lock);
 	_thr_spinlock_init();
 	_thr_list_init();
 	_thr_wake_addr_init();
 	_sleepq_init();
+	_single_thread = NULL;
+	_suspend_all_waiters = 0;
 
 	/*
 	 * Avoid reinitializing some things if they don't need to be,
@@ -457,6 +457,13 @@ init_private(void)
 		len = sizeof (_usrstack);
 		if (sysctl(mib, 2, &_usrstack, &len, NULL, 0) == -1)
 			PANIC("Cannot get kern.usrstack from sysctl");
+		env_bigstack = getenv("LIBPTHREAD_BIGSTACK_MAIN");
+		env_splitstack = getenv("LIBPTHREAD_SPLITSTACK_MAIN");
+		if (env_bigstack != NULL || env_splitstack == NULL) {
+			if (getrlimit(RLIMIT_STACK, &rlim) == -1)
+				PANIC("Cannot get stack rlimit");
+			_thr_stack_initial = rlim.rlim_cur;
+		}
 		len = sizeof(_thr_is_smp);
 		sysctlbyname("kern.smp.cpus", &_thr_is_smp, &len, NULL, 0);
 		_thr_is_smp = (_thr_is_smp > 1);
@@ -470,6 +477,9 @@ init_private(void)
 		env = getenv("LIBPTHREAD_YIELDLOOPS");
 		if (env)
 			_thr_yieldloops = atoi(env);
+		env = getenv("LIBPTHREAD_QUEUE_FIFO");
+		if (env)
+			_thr_queuefifo = atoi(env);
 		TAILQ_INIT(&_thr_atfork_list);
 	}
 	init_once = 1;

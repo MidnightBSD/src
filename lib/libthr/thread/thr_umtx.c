@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_umtx.c 294639 2016-01-23 20:49:52Z vangyzen $
  *
  */
 
@@ -51,6 +52,7 @@ void
 _thr_urwlock_init(struct urwlock *rwl)
 {
 	static const struct urwlock default_rwl = DEFAULT_URWLOCK;
+
 	*rwl = default_rwl;
 }
 
@@ -109,23 +111,30 @@ __thr_umutex_lock_spin(struct umutex *mtx, uint32_t id)
 
 int
 __thr_umutex_timedlock(struct umutex *mtx, uint32_t id,
-	const struct timespec *ets)
+	const struct timespec *abstime)
 {
-	struct timespec timo, cts;
+	struct _umtx_time *tm_p, timeout;
+	size_t tm_size;
 	uint32_t owner;
 	int ret;
 
-	clock_gettime(CLOCK_REALTIME, &cts);
-	TIMESPEC_SUB(&timo, ets, &cts);
-
-	if (timo.tv_sec < 0)
-		return (ETIMEDOUT);
+	if (abstime == NULL) {
+		tm_p = NULL;
+		tm_size = 0;
+	} else {
+		timeout._clockid = CLOCK_REALTIME;
+		timeout._flags = UMTX_ABSTIME;
+		timeout._timeout = *abstime;
+		tm_p = &timeout;
+		tm_size = sizeof(timeout);
+	}
 
 	for (;;) {
 		if ((mtx->m_flags & (UMUTEX_PRIO_PROTECT | UMUTEX_PRIO_INHERIT)) == 0) {
 
 			/* wait in kernel */
-			ret = _umtx_op_err(mtx, UMTX_OP_MUTEX_WAIT, 0, 0, &timo);
+			ret = _umtx_op_err(mtx, UMTX_OP_MUTEX_WAIT, 0,
+				 (void *)tm_size, __DECONST(void *, tm_p));
 
 			/* now try to lock it */
 			owner = mtx->m_owner;
@@ -133,18 +142,13 @@ __thr_umutex_timedlock(struct umutex *mtx, uint32_t id,
 			     atomic_cmpset_acq_32(&mtx->m_owner, owner, id|owner))
 				return (0);
 		} else {
-			ret = _umtx_op_err(mtx, UMTX_OP_MUTEX_LOCK, 0, 0, &timo);
+			ret = _umtx_op_err(mtx, UMTX_OP_MUTEX_LOCK, 0, 
+				 (void *)tm_size, __DECONST(void *, tm_p));
 			if (ret == 0)
 				break;
 		}
 		if (ret == ETIMEDOUT)
 			break;
-		clock_gettime(CLOCK_REALTIME, &cts);
-		TIMESPEC_SUB(&timo, ets, &cts);
-		if (timo.tv_sec < 0 || (timo.tv_sec == 0 && timo.tv_nsec == 0)) {
-			ret = ETIMEDOUT;
-			break;
-		}
 	}
 	return (ret);
 }
@@ -152,35 +156,6 @@ __thr_umutex_timedlock(struct umutex *mtx, uint32_t id,
 int
 __thr_umutex_unlock(struct umutex *mtx, uint32_t id)
 {
-	static int wake2_avail = 0;
-
-	if (__predict_false(wake2_avail == 0)) {
-		struct umutex test = DEFAULT_UMUTEX;
-
-		if (_umtx_op(&test, UMTX_OP_MUTEX_WAKE2, test.m_flags, 0, 0) == -1)
-			wake2_avail = -1;
-		else 
-			wake2_avail = 1;
-	}
-
-	if (wake2_avail != 1)
-		goto unlock;
-
-	uint32_t flags = mtx->m_flags;
-
-	if ((flags & (UMUTEX_PRIO_PROTECT | UMUTEX_PRIO_INHERIT)) == 0) {
-		uint32_t owner;
-		do {
-			owner = mtx->m_owner;
-			if (__predict_false((owner & ~UMUTEX_CONTESTED) != id))
-				return (EPERM);
-		} while (__predict_false(!atomic_cmpset_rel_32(&mtx->m_owner,
-					 owner, UMUTEX_UNOWNED)));
-		if ((owner & UMUTEX_CONTESTED))
-			(void)_umtx_op_err(mtx, UMTX_OP_MUTEX_WAKE2, flags, 0, 0);
-		return (0);
-	}
-unlock:
 	return _umtx_op_err(mtx, UMTX_OP_MUTEX_UNLOCK, 0, 0, 0);
 }
 
@@ -222,20 +197,23 @@ int
 _thr_umtx_timedwait_uint(volatile u_int *mtx, u_int id, int clockid,
 	const struct timespec *abstime, int shared)
 {
-	struct timespec ts, ts2, *tsp;
+	struct _umtx_time *tm_p, timeout;
+	size_t tm_size;
 
-	if (abstime != NULL) {
-		clock_gettime(clockid, &ts);
-		TIMESPEC_SUB(&ts2, abstime, &ts);
-		if (ts2.tv_sec < 0 || (ts2.tv_sec == 0 && ts2.tv_nsec <= 0))
-			return (ETIMEDOUT);
-		tsp = &ts2;
+	if (abstime == NULL) {
+		tm_p = NULL;
+		tm_size = 0;
 	} else {
-		tsp = NULL;
+		timeout._clockid = clockid;
+		timeout._flags = UMTX_ABSTIME;
+		timeout._timeout = *abstime;
+		tm_p = &timeout;
+		tm_size = sizeof(timeout);
 	}
+
 	return _umtx_op_err(__DEVOLATILE(void *, mtx), 
-		shared ? UMTX_OP_WAIT_UINT : UMTX_OP_WAIT_UINT_PRIVATE, id, NULL,
-			tsp);
+		shared ? UMTX_OP_WAIT_UINT : UMTX_OP_WAIT_UINT_PRIVATE, id, 
+		(void *)tm_size, __DECONST(void *, tm_p));
 }
 
 int
@@ -282,15 +260,42 @@ _thr_ucond_broadcast(struct ucond *cv)
 }
 
 int
-__thr_rwlock_rdlock(struct urwlock *rwlock, int flags, struct timespec *tsp)
+__thr_rwlock_rdlock(struct urwlock *rwlock, int flags,
+	const struct timespec *tsp)
 {
-	return _umtx_op_err(rwlock, UMTX_OP_RW_RDLOCK, flags, NULL, tsp);
+	struct _umtx_time timeout, *tm_p;
+	size_t tm_size;
+
+	if (tsp == NULL) {
+		tm_p = NULL;
+		tm_size = 0;
+	} else {
+		timeout._timeout = *tsp;
+		timeout._flags = UMTX_ABSTIME;
+		timeout._clockid = CLOCK_REALTIME;
+		tm_p = &timeout;
+		tm_size = sizeof(timeout);
+	}
+	return _umtx_op_err(rwlock, UMTX_OP_RW_RDLOCK, flags, (void *)tm_size, tm_p);
 }
 
 int
-__thr_rwlock_wrlock(struct urwlock *rwlock, struct timespec *tsp)
+__thr_rwlock_wrlock(struct urwlock *rwlock, const struct timespec *tsp)
 {
-	return _umtx_op_err(rwlock, UMTX_OP_RW_WRLOCK, 0, NULL, tsp);
+	struct _umtx_time timeout, *tm_p;
+	size_t tm_size;
+
+	if (tsp == NULL) {
+		tm_p = NULL;
+		tm_size = 0;
+	} else {
+		timeout._timeout = *tsp;
+		timeout._flags = UMTX_ABSTIME;
+		timeout._clockid = CLOCK_REALTIME;
+		tm_p = &timeout;
+		tm_size = sizeof(timeout);
+	}
+	return _umtx_op_err(rwlock, UMTX_OP_RW_WRLOCK, 0, (void *)tm_size, tm_p);
 }
 
 int

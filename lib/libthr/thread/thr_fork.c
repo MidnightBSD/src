@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (c) 2003 Daniel Eischen <deischen@freebsd.org>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_fork.c 277317 2015-01-18 11:54:20Z kib $
  */
 
 /*
@@ -57,6 +58,7 @@
  *
  */
 
+#include <sys/syscall.h>
 #include "namespace.h"
 #include <errno.h>
 #include <link.h>
@@ -127,12 +129,10 @@ __pthread_cxa_finalize(struct dl_phdr_info *phdr_info)
 	_thr_sigact_unload(phdr_info);
 }
 
-__weak_reference(_fork, fork);
-
-pid_t _fork(void);
+__weak_reference(__thr_fork, _fork);
 
 pid_t
-_fork(void)
+__thr_fork(void)
 {
 	struct pthread *curthread;
 	struct pthread_atfork *af;
@@ -174,8 +174,15 @@ _fork(void)
 		was_threaded = 0;
 	}
 
-	/* Fork a new process: */
-	if ((ret = __sys_fork()) == 0) {
+	/*
+	 * Fork a new process.
+	 * There is no easy way to pre-resolve the __sys_fork symbol
+	 * without performing the fork.  Use the syscall(2)
+	 * indirection, the syscall symbol is resolved in
+	 * _thr_rtld_init() with side-effect free call.
+	 */
+	ret = syscall(SYS_fork);
+	if (ret == 0) {
 		/* Child process */
 		errsave = errno;
 		curthread->cancel_pending = 0;
@@ -199,9 +206,6 @@ _fork(void)
 		if (was_threaded)
 			_rtld_atfork_post(rtld_locks);
 		_thr_setthreaded(0);
-
-		/* reinitialize libc spinlocks. */
-		_thr_spinlock_init();
 
 		/* reinitalize library. */
 		_libpthread_init(curthread);
@@ -253,6 +257,5 @@ _fork(void)
 	}
 	errno = errsave;
 
-	/* Return the process ID: */
 	return (ret);
 }

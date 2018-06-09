@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Alfred Perlstein <alfred@freebsd.org>.
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/lib/libthr/thread/thr_autoinit.c 115260 2003-05-23 09:48:20Z mtm $
  */
 
 #include <pthread.h>
