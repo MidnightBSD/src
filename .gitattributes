@@ -50003,6 +50003,13 @@ lib/msun/amd64/s_rintl.S -text
 lib/msun/amd64/s_scalbn.S -text
 lib/msun/amd64/s_scalbnf.S -text
 lib/msun/amd64/s_scalbnl.S -text
+lib/msun/arm/Makefile.inc svneol=native#text/plain
+lib/msun/arm/Symbol.map -text
+lib/msun/arm/fenv-mangle.h svneol=native#text/plain
+lib/msun/arm/fenv-softfp.c svneol=native#text/plain
+lib/msun/arm/fenv-vfp.c svneol=native#text/plain
+lib/msun/arm/fenv.c svneol=native#text/plain
+lib/msun/arm/fenv.h svneol=native#text/plain
 lib/msun/bsdsrc/b_exp.c -text
 lib/msun/bsdsrc/b_log.c -text
 lib/msun/bsdsrc/b_tgamma.c -text

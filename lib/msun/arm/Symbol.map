@@ -1,0 +1,16 @@
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/msun/arm/Symbol.map 309740 2016-12-09 17:17:37Z emaste $
+ */
+FBSD_1.0 {
+};
+
+FBSD_1.3 {
+	fesetexceptflag;
+	feraiseexcept;
+	fegetenv;
+	feholdexcept;
+	feupdateenv;
+	feenableexcept;
+	fedisableexcept;
+	fegetexcept;
+};
