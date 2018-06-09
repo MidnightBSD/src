@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +42,7 @@ static char sccsid[] = "@(#)lpc.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/lpc/lpc.c 241852 2012-10-22 03:31:22Z eadler $");
 
 #include <sys/param.h>
 
@@ -93,7 +94,7 @@ main(int argc, char *argv[])
 
 	euid = geteuid();
 	uid = getuid();
-	seteuid(uid);
+	PRIV_END
 	progname = argv[0];
 	openlog("lpd", 0, LOG_LPR);
 
@@ -188,7 +189,7 @@ cmdscanner(void)
 			history(hist, &he, H_ENTER, bp);
 
 		} else {
-			if (fgets(cmdline, MAX_CMDLINE, stdin) == 0)
+			if (fgets(cmdline, MAX_CMDLINE, stdin) == NULL)
 				quit(0, NULL);
 			if (cmdline[0] == 0 || cmdline[0] == '\n')
 				break;
@@ -405,9 +406,9 @@ setup_myprinter(char *pwanted, struct printer *pp, int sump_opts)
 		printf("%s:\n", pp->printer);
 
 	if (sump_opts & SUMP_CHDIR_SD) {
-		seteuid(euid);
+		PRIV_START
 		cdres = chdir(pp->spool_dir);
-		seteuid(uid);
+		PRIV_END
 		if (cdres < 0) {
 			printf("\tcannot chdir to %s\n", pp->spool_dir);
 			free_printer(pp);

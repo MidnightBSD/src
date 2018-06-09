@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2002   - Garance Alistair Drosehn <gad@FreeBSD.org>.
@@ -33,7 +34,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/lpc/movejobs.c 241852 2012-10-22 03:31:22Z eadler $");
 
 /*
  * movejobs.c - The lpc commands which move jobs around.
@@ -47,6 +48,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <dirent.h>	/* just for MAXNAMLEN, for job_cfname in lp.h! */
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -147,9 +149,9 @@ touch_jqe(void *myinfo, struct jobqueue *jq, struct jobspec *jspec)
 	touch_info = myinfo;
 	tvp[0].tv_sec = tvp[1].tv_sec = ++touch_info->newtime;
 	tvp[0].tv_usec = tvp[1].tv_usec = 0;
-	seteuid(euid);
+	PRIV_START
 	ret = utimes(jq->job_cfname, tvp);
-	seteuid(uid);
+	PRIV_END
 
 	if (ret == 0) {
 		if (jspec->matcheduser)
