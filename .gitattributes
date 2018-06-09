@@ -72815,6 +72815,9 @@ usr.sbin/bhyve/xmsr.h svneol=native#text/plain
 usr.sbin/bhyvectl/Makefile svneol=native#text/plain
 usr.sbin/bhyvectl/bhyvectl.8 svneol=native#text/plain
 usr.sbin/bhyvectl/bhyvectl.c svneol=native#text/plain
+usr.sbin/bhyveload/Makefile svneol=native#text/plain
+usr.sbin/bhyveload/bhyveload.8 svneol=native#text/plain
+usr.sbin/bhyveload/bhyveload.c svneol=native#text/plain
 usr.sbin/bluetooth/Makefile -text
 usr.sbin/bluetooth/Makefile.inc -text
 usr.sbin/bluetooth/ath3kfw/Makefile -text
