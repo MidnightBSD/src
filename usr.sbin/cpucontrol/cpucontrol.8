@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2006, 2008 Stanislav Sedov <stas@FreeBSD.org>.
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/cpucontrol/cpucontrol.8 322617 2017-08-17 11:36:39Z kib $
 .\"
 .Dd June 30, 2009
 .Dt CPUCONTROL 8
@@ -65,6 +66,12 @@ device
 .Ek
 .Nm
 .Op Fl vh
+.Fl i Ar level,level_type
+.Bk
+.Ar device
+.Ek
+.Nm
+.Op Fl vh
 .Op Fl d Ar datadir
 .Fl u
 .Bk
@@ -84,9 +91,10 @@ The following options are available:
 .It Fl d Ar datadir
 Where to look for microcode images.
 The option can be specified multiple times.
-.It Fl m Ar msr Ns Op = Ns Ar value
+.It Fl m Ar msr
 Show value of the specified MSR.
 MSR register number should be given as a hexadecimal number.
+The high word is printed first, then the low word is printed second.
 .It Fl m Ar msr Ns = Ns Ar value
 Store the
 .Ar value
@@ -114,6 +122,9 @@ In this case the inverted value of mask will be used.
 .It Fl i Ar level
 Retrieve CPUID info.
 Level should be given as a hex number.
+.It Fl i Ar level,level_type
+Retrieve CPUID info.
+Level and level_type should be given as hex numbers.
 .It Fl u
 Apply CPU firmware updates.
 The

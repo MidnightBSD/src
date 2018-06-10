@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006, 2008 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/cpucontrol/amd.c 236504 2012-06-03 08:30:00Z avg $");
 
 #include <assert.h>
 #include <stdio.h>
