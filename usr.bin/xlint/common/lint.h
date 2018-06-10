@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$NetBSD: lint.h,v 1.5 2002/03/07 18:29:56 tv Exp $	*/
+/*	$NetBSD: lint.h,v 1.7 2003/10/27 00:12:44 lukem Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -30,6 +30,8 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/10/usr.bin/xlint/common/lint.h 281168 2015-04-06 19:56:27Z pfg $
  */
 
 #if HAVE_CONFIG_H
@@ -91,7 +93,7 @@ typedef	struct {
 	u_int	tt_isftyp : 1;		/* 1 if floating point type */
 	u_int	tt_isatyp : 1;		/* 1 if arithmetic type */
 	u_int	tt_issclt : 1;		/* 1 if scalar type */
-	char	*tt_name;		/* Bezeichnung des Typs */
+	const char *tt_name;		/* Bezeichnung des Typs */
 } ttab_t;
 
 #define size(t)		(ttab[t].tt_sz)
