@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" ----------------------------------------------------------------------------
 .\" "THE BEER-WARE LICENSE" (Revision 42):
@@ -6,12 +7,12 @@
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: src/usr.sbin/fdwrite/fdwrite.1,v 1.24 2005/02/13 22:25:28 ru Exp $
+.\" $FreeBSD: stable/10/usr.sbin/fdwrite/fdwrite.1 233510 2012-03-26 15:18:14Z joel $
 .\"
 .\"
 .Dd September 16, 1993
-.Os
 .Dt FDWRITE 1
+.Os
 .Sh NAME
 .Nm fdwrite
 .Nd format and write floppy disks
@@ -87,7 +88,7 @@ utility
 was planned as a tool to make life easier when writing a set of floppies,
 one such use could be to write a tar-archive:
 .Pp
-.Dl "tar cf - . | gzip -9 | fdwrite -d /dev/fd0.1720 -v
+.Dl tar cf - . | gzip -9 | fdwrite -d /dev/fd0.1720 -v
 .Pp
 The main difference from using
 .Xr tar 1 Ns 's

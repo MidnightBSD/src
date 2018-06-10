@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -6,7 +7,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/usr.sbin/fdwrite/fdwrite.c,v 1.15 2005/01/08 15:46:06 delphij Exp $
+ * $FreeBSD: stable/10/usr.sbin/fdwrite/fdwrite.c 194892 2009-06-24 19:47:53Z joerg $
  *
  */
 
@@ -66,7 +67,7 @@ main(int argc, char **argv)
 {
     int inputfd = -1, c, fdn = 0, i,j,fd;
     int bpt, verbose=1, nbytes=0, track;
-    int interactive = 1, fdopts;
+    int interactive = 1;
     const char *device= "/dev/fd0";
     char *trackbuf = 0,*vrfybuf = 0;
     struct fd_type fdt;
@@ -130,9 +131,6 @@ main(int argc, char **argv)
 
 	if(ioctl(fd, FD_GTYPE, &fdt) < 0)
 	    errx(1, "not a floppy disk: %s", device);
-	fdopts = FDOPT_NOERRLOG;
-	if (ioctl(fd, FD_SOPTS, &fdopts) == -1)
-		err(1, "ioctl(FD_SOPTS, FDOPT_NOERRLOG)");
 
 	bpt = fdt.sectrac * (1<<fdt.secsize) * 128;
 	if(!trackbuf) {
