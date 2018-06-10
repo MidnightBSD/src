@@ -73350,6 +73350,7 @@ usr.sbin/fdcontrol/fdcontrol.8 -text
 usr.sbin/fdcontrol/fdcontrol.c -text
 usr.sbin/fdformat/Makefile -text
 usr.sbin/fdformat/fdformat.1 -text
+usr.sbin/fdformat/fdformat.8 svneol=native#text/plain
 usr.sbin/fdformat/fdformat.c -text
 usr.sbin/fdread/Makefile -text
 usr.sbin/fdread/fdread.1 -text
