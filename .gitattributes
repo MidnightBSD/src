@@ -72624,6 +72624,7 @@ usr.bin/xlint/arch/m68k/targparam.h -text
 usr.bin/xlint/arch/mips/targparam.h -text
 usr.bin/xlint/arch/ns32k/targparam.h -text
 usr.bin/xlint/arch/powerpc/targparam.h -text
+usr.bin/xlint/arch/powerpc64/targparam.h svneol=native#text/plain
 usr.bin/xlint/arch/sh3/targparam.h -text
 usr.bin/xlint/arch/sparc/targparam.h -text
 usr.bin/xlint/arch/sparc64/targparam.h -text

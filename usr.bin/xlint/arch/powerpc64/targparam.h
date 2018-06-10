@@ -31,14 +31,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/xlint/arch/powerpc/targparam.h 212534 2010-09-13 06:35:35Z imp $
+ * $FreeBSD: stable/10/usr.bin/xlint/arch/powerpc64/targparam.h 209921 2010-07-12 00:54:41Z nwhitehorn $
  */
 
 /*
  * Machine-dependent target parameters for lint1.
  */
 
-#include "ilp32.h"
+#include "lp64.h"
 
 /*    
  * Should be set to 1 if the difference of two pointers is of type long
@@ -46,8 +46,8 @@
  * kept in sync with the compiler!
  */     
 
-#define	PTRDIFF_IS_LONG		0
-#define	SIZEOF_IS_ULONG		0
+#define	PTRDIFF_IS_LONG		1
+#define	SIZEOF_IS_ULONG		1
 
 #define	FLOAT_SIZE		(4 * CHAR_BIT)
 #define	DOUBLE_SIZE		(8 * CHAR_BIT)
