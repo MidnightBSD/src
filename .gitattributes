@@ -73281,6 +73281,14 @@ usr.sbin/ctm/mkCTM/ctm_conf.src-special -text
 usr.sbin/ctm/mkCTM/dequeue -text
 usr.sbin/ctm/mkCTM/mkCTM -text
 usr.sbin/ctm/mkCTM/mkctm.c -text
+usr.sbin/cxgbetool/Makefile svneol=native#text/plain
+usr.sbin/cxgbetool/Makefile.depend svneol=native#text/plain
+usr.sbin/cxgbetool/cxgbetool.8 svneol=native#text/plain
+usr.sbin/cxgbetool/cxgbetool.c svneol=native#text/plain
+usr.sbin/cxgbetool/reg_defs_t4.c svneol=native#text/plain
+usr.sbin/cxgbetool/reg_defs_t4vf.c svneol=native#text/plain
+usr.sbin/cxgbetool/reg_defs_t5.c svneol=native#text/plain
+usr.sbin/cxgbetool/reg_defs_t6.c svneol=native#text/plain
 usr.sbin/daemon/Makefile -text
 usr.sbin/daemon/daemon.8 -text
 usr.sbin/daemon/daemon.c -text
