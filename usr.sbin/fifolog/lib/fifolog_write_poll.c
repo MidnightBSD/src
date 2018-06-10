@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/fifolog/lib/fifolog_write_poll.c 306910 2016-10-09 19:58:27Z pfg $
  */
 
 #include <assert.h>
@@ -45,7 +46,7 @@
 static int fifolog_write_gzip(struct fifolog_writer *f, time_t now);
 
 #define ALLOC(ptr, size) do {                   \
-	(*(ptr)) = calloc(size, 1);             \
+	(*(ptr)) = calloc(1, size);             \
 	assert(*(ptr) != NULL);                 \
 } while (0)
 

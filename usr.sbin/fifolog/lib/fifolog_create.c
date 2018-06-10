@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/fifolog/lib/fifolog_create.c 306910 2016-10-09 19:58:27Z pfg $
  */
 
 #include <assert.h>
@@ -97,7 +98,7 @@ fifolog_create(const char *fn, off_t size, ssize_t recsize)
 	if (S_ISREG(st.st_mode) && ftruncate(fd, size) < 0)
 		return ("Could not ftrunc");
 
-	buf = calloc(recsize, 1);
+	buf = calloc(1, recsize);
 	if (buf == NULL)
 		return ("Could not malloc");
 

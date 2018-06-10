@@ -24,11 +24,12 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/fifolog/lib/miniobj.h 306910 2016-10-09 19:58:27Z pfg $
  */
 
 #define ALLOC_OBJ(to, type_magic)					\
 	do {								\
-		(to) = calloc(sizeof *(to), 1);				\
+		(to) = calloc(1, sizeof *(to));				\
 		if ((to) != NULL)					\
 			(to)->magic = (type_magic);			\
 	} while (0)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/fifolog/lib/fifolog_reader.c 306910 2016-10-09 19:58:27Z pfg $
  */
 
 #include <stdio.h>
@@ -67,10 +68,10 @@ fifolog_reader_open(const char *fname)
 	if (retval != NULL)
 		err(1, "%s", retval);
 
-	fr->olen = fr->ff->recsize * 16;
-	fr->obuf = calloc(fr->olen, 1);
+	fr->obuf = calloc(16, fr->ff->recsize);
 	if (fr->obuf == NULL)
 		err(1, "Cannot malloc");
+	fr->olen = fr->ff->recsize * 16;
 
 	i = inflateInit(fr->ff->zs);
 	assert(i == Z_OK);
