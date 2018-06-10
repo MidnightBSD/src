@@ -58976,8 +58976,6 @@ sys/crypto/rijndael/rijndael_local.h -text
 sys/crypto/rijndael/test00.c -text
 sys/crypto/sha1.c -text
 sys/crypto/sha1.h -text
-sys/crypto/sha2/sha2.c -text
-sys/crypto/sha2/sha2.h -text
 sys/crypto/sha2/sha256.h svneol=native#text/plain
 sys/crypto/sha2/sha256c.c svneol=native#text/plain
 sys/crypto/sha2/sha384.h svneol=native#text/plain
