@@ -71993,6 +71993,11 @@ usr.bin/make/util.c -text
 usr.bin/make/util.h -text
 usr.bin/make/var.c -text
 usr.bin/make/var.h -text
+usr.bin/makewhatis/Makefile svneol=native#text/plain
+usr.bin/makewhatis/makewhatis.1 svneol=native#text/plain
+usr.bin/makewhatis/makewhatis.c svneol=native#text/plain
+usr.bin/makewhatis/makewhatis.local.8 svneol=native#text/plain
+usr.bin/makewhatis/makewhatis.local.sh svneol=native#text/plain
 usr.bin/man/Makefile -text
 usr.bin/man/man.1 -text
 usr.bin/man/man.conf.5 -text
