@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/vmstat/vmstat.c 288453 2015-10-01 17:09:20Z jhb $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -53,6 +54,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/resource.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
+#include <sys/user.h>
 #include <sys/vmmeter.h>
 #include <sys/pcpu.h>
 
@@ -143,12 +145,14 @@ static kvm_t   *kd;
 #define	TIMESTAT	0x10
 #define	VMSTAT		0x20
 #define ZMEMSTAT	0x40
+#define	OBJSTAT		0x80
 
 static void	cpustats(void);
 static void	pcpustats(int, u_long, int);
 static void	devstats(void);
 static void	doforkst(void);
 static void	dointr(void);
+static void	doobjstat(void);
 static void	dosum(void);
 static void	dovmstat(unsigned int, int);
 static void	domemstat_malloc(void);
@@ -181,7 +185,7 @@ main(int argc, char *argv[])
 	interval = reps = todo = 0;
 	maxshowdevs = 2;
 	hflag = isatty(1);
-	while ((c = getopt(argc, argv, "ac:fhHiM:mN:n:Pp:stw:z")) != -1) {
+	while ((c = getopt(argc, argv, "ac:fhHiM:mN:n:oPp:stw:z")) != -1) {
 		switch (c) {
 		case 'a':
 			aflag++;
@@ -219,6 +223,9 @@ main(int argc, char *argv[])
 			if (maxshowdevs < 0)
 				errx(1, "number of devices %d is < 0",
 				     maxshowdevs);
+			break;
+		case 'o':
+			todo |= OBJSTAT;
 			break;
 		case 'p':
 			if (devstat_buildmatch(optarg, &matches, &num_matches) != 0)
@@ -289,15 +296,12 @@ main(int argc, char *argv[])
 		argv = getdrivedata(argv);
 	}
 
-#define	BACKWARD_COMPATIBILITY
-#ifdef	BACKWARD_COMPATIBILITY
 	if (*argv) {
 		f = atof(*argv);
 		interval = f * 1000;
 		if (*++argv)
 			reps = atoi(*argv);
 	}
-#endif
 
 	if (interval) {
 		if (!reps)
@@ -313,6 +317,8 @@ main(int argc, char *argv[])
 		domemstat_zone();
 	if (todo & SUMSTAT)
 		dosum();
+	if (todo & OBJSTAT)
+		doobjstat();
 #ifdef notyet
 	if (todo & TIMESTAT)
 		dotimes();
@@ -469,6 +475,7 @@ fill_vmmeter(struct vmmeter *vmmp)
 			ADD_FROM_PCPU(i, v_intr);
 			ADD_FROM_PCPU(i, v_soft);
 			ADD_FROM_PCPU(i, v_vm_faults);
+			ADD_FROM_PCPU(i, v_io_faults);
 			ADD_FROM_PCPU(i, v_cow_faults);
 			ADD_FROM_PCPU(i, v_cow_optim);
 			ADD_FROM_PCPU(i, v_zfod);
@@ -507,6 +514,7 @@ fill_vmmeter(struct vmmeter *vmmp)
 
 		/* vm */
 		GET_VM_STATS(vm, v_vm_faults);
+		GET_VM_STATS(vm, v_io_faults);
 		GET_VM_STATS(vm, v_cow_faults);
 		GET_VM_STATS(vm, v_cow_optim);
 		GET_VM_STATS(vm, v_zfod);
@@ -648,6 +656,8 @@ dovmstat(unsigned int interval, int reps)
 	uptime = getuptime();
 	halfuptime = uptime / 2;
 	rate_adj = 1;
+	ncpus = 1;
+	maxid = 0;
 
 	/*
 	 * If the user stops the program (control-Z) and then resumes it,
@@ -693,7 +703,7 @@ dovmstat(unsigned int interval, int reps)
 	}
 	for (hdrcnt = 1;;) {
 		if (!--hdrcnt)
-			printhdr(ncpus, cpumask);
+			printhdr(maxid, cpumask);
 		if (kd != NULL) {
 			if (kvm_getcptime(kd, cur.cp_time) < 0)
 				errx(1, "kvm_getcptime: %s", kvm_geterr(kd));
@@ -744,7 +754,7 @@ dovmstat(unsigned int interval, int reps)
 				errx(1, "%s", devstat_errbuf);
 				break;
 			case 1:
-				printhdr(ncpus, cpumask);
+				printhdr(maxid, cpumask);
 				break;
 			default:
 				break;
@@ -813,7 +823,7 @@ dovmstat(unsigned int interval, int reps)
 }
 
 static void
-printhdr(int ncpus, u_long cpumask)
+printhdr(int maxid, u_long cpumask)
 {
 	int i, num_shown;
 
@@ -825,7 +835,7 @@ printhdr(int ncpus, u_long cpumask)
 		(void)printf("disk");
 	(void)printf("   faults         ");
 	if (Pflag) {
-		for (i = 0; i < ncpus; i++) {
+		for (i = 0; i <= maxid; i++) {
 			if (cpumask & (1ul << i))
 				printf("cpu%-2d    ", i);
 		}
@@ -841,8 +851,10 @@ printhdr(int ncpus, u_long cpumask)
 				     dev_select[i].unit_number);
 	(void)printf("  in   sy   cs");
 	if (Pflag) {
-		for (i = 0; i < ncpus; i++)
-			printf(" us sy id");
+		for (i = 0; i <= maxid; i++) {
+			if (cpumask & (1ul << i))
+				printf(" us sy id");
+		}
 		printf("\n");
 	} else
 		printf(" us sy id\n");
@@ -968,6 +980,7 @@ dosum(void)
 	(void)printf("%9u zero fill pages prezeroed\n", sum.v_ozfod);
 	(void)printf("%9u intransit blocking page faults\n", sum.v_intrans);
 	(void)printf("%9u total VM faults taken\n", sum.v_vm_faults);
+	(void)printf("%9u page faults requiring I/O\n", sum.v_io_faults);
 	(void)printf("%9u pages affected by kernel thread creation\n", sum.v_kthreadpages);
 	(void)printf("%9u pages affected by  fork()\n", sum.v_forkpages);
 	(void)printf("%9u pages affected by vfork()\n", sum.v_vforkpages);
@@ -1295,6 +1308,129 @@ domemstat_zone(void)
 	printf("\n");
 }
 
+static void
+display_object(struct kinfo_vmobject *kvo)
+{
+	const char *str;
+
+	printf("%5jd ", (uintmax_t)kvo->kvo_resident);
+	printf("%5jd ", (uintmax_t)kvo->kvo_active);
+	printf("%5jd ", (uintmax_t)kvo->kvo_inactive);
+	printf("%3d ", kvo->kvo_ref_count);
+	printf("%3d ", kvo->kvo_shadow_count);
+	switch (kvo->kvo_memattr) {
+#ifdef VM_MEMATTR_UNCACHEABLE
+	case VM_MEMATTR_UNCACHEABLE:
+		str = "UC";
+		break;
+#endif
+#ifdef VM_MEMATTR_WRITE_COMBINING
+	case VM_MEMATTR_WRITE_COMBINING:
+		str = "WC";
+		break;
+#endif
+#ifdef VM_MEMATTR_WRITE_THROUGH
+	case VM_MEMATTR_WRITE_THROUGH:
+		str = "WT";
+		break;
+#endif
+#ifdef VM_MEMATTR_WRITE_PROTECTED
+	case VM_MEMATTR_WRITE_PROTECTED:
+		str = "WP";
+		break;
+#endif
+#ifdef VM_MEMATTR_WRITE_BACK
+	case VM_MEMATTR_WRITE_BACK:
+		str = "WB";
+		break;
+#endif
+#ifdef VM_MEMATTR_WEAK_UNCACHEABLE
+	case VM_MEMATTR_WEAK_UNCACHEABLE:
+		str = "UC-";
+		break;
+#endif
+#ifdef VM_MEMATTR_WB_WA
+	case VM_MEMATTR_WB_WA:
+		str = "WB";
+		break;
+#endif
+#ifdef VM_MEMATTR_NOCACHE
+	case VM_MEMATTR_NOCACHE:
+		str = "NC";
+		break;
+#endif
+#ifdef VM_MEMATTR_DEVICE
+	case VM_MEMATTR_DEVICE:
+		str = "DEV";
+		break;
+#endif
+#ifdef VM_MEMATTR_CACHEABLE
+	case VM_MEMATTR_CACHEABLE:
+		str = "C";
+		break;
+#endif
+#ifdef VM_MEMATTR_PREFETCHABLE
+	case VM_MEMATTR_PREFETCHABLE:
+		str = "PRE";
+		break;
+#endif
+	default:
+		str = "??";
+		break;
+	}
+	printf("%-3s ", str);
+	switch (kvo->kvo_type) {
+	case KVME_TYPE_NONE:
+		str = "--";
+		break;
+	case KVME_TYPE_DEFAULT:
+		str = "df";
+		break;
+	case KVME_TYPE_VNODE:
+		str = "vn";
+		break;
+	case KVME_TYPE_SWAP:
+		str = "sw";
+		break;
+	case KVME_TYPE_DEVICE:
+		str = "dv";
+		break;
+	case KVME_TYPE_PHYS:
+		str = "ph";
+		break;
+	case KVME_TYPE_DEAD:
+		str = "dd";
+		break;
+	case KVME_TYPE_SG:
+		str = "sg";
+		break;
+	case KVME_TYPE_UNKNOWN:
+	default:
+		str = "??";
+		break;
+	}
+	printf("%-2s ", str);
+	printf("%-s\n", kvo->kvo_path);
+}
+
+static void
+doobjstat(void)
+{
+	struct kinfo_vmobject *kvo;
+	int cnt, i;
+
+	kvo = kinfo_getvmobject(&cnt);
+	if (kvo == NULL) {
+		warn("Failed to fetch VM object list");
+		return;
+	}
+	printf("%5s %5s %5s %3s %3s %3s %2s %s\n", "RES", "ACT", "INACT",
+	    "REF", "SHD", "CM", "TP", "PATH");
+	for (i = 0; i < cnt; i++)
+		display_object(&kvo[i]);
+	free(kvo);
+}
+
 /*
  * kread reads something from the kernel, given its nlist index.
  */
@@ -1347,7 +1483,7 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr, "%s%s",
-		"usage: vmstat [-afHhimPsz] [-c count] [-M core [-N system]] [-w wait]\n",
-		"              [-n devs] [-p type,if,pass] [disks]\n");
+		"usage: vmstat [-afHhimoPsz] [-M core [-N system]] [-c count] [-n devs]\n",
+		"              [-p type,if,pass] [-w wait] [disks] [wait [count]]\n");
 	exit(1);
 }
