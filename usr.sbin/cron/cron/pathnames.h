@@ -17,7 +17,7 @@
  */
 
 /*
- * $FreeBSD: src/usr.sbin/cron/cron/pathnames.h,v 1.5 1999/08/28 01:15:50 peter Exp $
+ * $FreeBSD: stable/10/usr.sbin/cron/cron/pathnames.h 321242 2017-07-19 20:24:38Z ngie $
  */
 
 #if (defined(BSD)) && (BSD >= 199103) || defined(__linux) || defined(AIX)
@@ -63,6 +63,8 @@
 
 			/* 4.3BSD-style crontab */
 #define SYSCRONTAB	"/etc/crontab"
+#define SYSCRONTABS	"/etc/cron.d"
+#define LOCALSYSCRONTABS	"/usr/local/etc/cron.d"
 
 			/* what editor to use if no EDITOR or VISUAL
 			 * environment variable specified.

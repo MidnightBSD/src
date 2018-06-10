@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -14,10 +15,10 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
-/* $FreeBSD: src/usr.sbin/cron/cron/do_command.c,v 1.22.8.1 2006/01/15 17:50:36 delphij Exp $ */
+
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/cron/cron/do_command.c,v 1.2 2007/08/18 07:37:09 laffer1 Exp $";
+  "$FreeBSD: stable/10/usr.sbin/cron/cron/do_command.c 321244 2017-07-19 20:29:07Z ngie $";
 #endif
 
 
@@ -147,7 +148,7 @@ child_process(e, u)
 #ifdef USE_SIGCHLD
 	/* our parent is watching for our death by catching SIGCHLD.  we
 	 * do not care to watch for our children's deaths this way -- we
-	 * use wait() explictly.  so we have to disable the signal (which
+	 * use wait() explicitly.  so we have to disable the signal (which
 	 * was inherited from the parent).
 	 */
 	(void) signal(SIGCHLD, SIG_DFL);
@@ -161,8 +162,10 @@ child_process(e, u)
 
 	/* create some pipes to talk to our future child
 	 */
-	pipe(stdin_pipe);	/* child's stdin */
-	pipe(stdout_pipe);	/* child's stdout */
+	if (pipe(stdin_pipe) != 0 || pipe(stdout_pipe) != 0) {
+		log_it("CRON", getpid(), "error", "can't pipe");
+		exit(ERROR_EXIT);
+	}
 
 	/* since we are a forked process, we can diddle the command string
 	 * we were passed -- nobody else is going to use it again, right?
@@ -335,8 +338,9 @@ child_process(e, u)
 				_exit(OK_EXIT);
 			}
 # endif /*DEBUGGING*/
-			execle(shell, shell, "-c", e->cmd, (char *)0, e->envp);
-			warn("execl: couldn't exec `%s'", shell);
+			execle(shell, shell, "-c", e->cmd, (char *)NULL,
+			    e->envp);
+			warn("execle: couldn't exec `%s'", shell);
 			_exit(ERROR_EXIT);
 		}
 		break;
@@ -481,14 +485,17 @@ child_process(e, u)
 				auto char	mailcmd[MAX_COMMAND];
 				auto char	hostname[MAXHOSTNAMELEN];
 
-				(void) gethostname(hostname, MAXHOSTNAMELEN);
+				if (gethostname(hostname, MAXHOSTNAMELEN) == -1)
+					hostname[0] = '\0';
+				hostname[sizeof(hostname) - 1] = '\0';
 				(void) snprintf(mailcmd, sizeof(mailcmd),
 					       MAILARGS, MAILCMD);
 				if (!(mail = cron_popen(mailcmd, "w", e))) {
 					warn("%s", MAILCMD);
 					(void) _exit(ERROR_EXIT);
 				}
-				fprintf(mail, "From: %s (Cron Daemon)\n", usernm);
+				fprintf(mail, "From: Cron Daemon <%s@%s>\n",
+					usernm, hostname);
 				fprintf(mail, "To: %s\n", mailto);
 				fprintf(mail, "Subject: Cron <%s@%s> %s\n",
 					usernm, first_word(hostname, "."),

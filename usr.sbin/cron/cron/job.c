@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/usr.sbin/cron/cron/job.c,v 1.6 1999/08/28 01:15:50 peter Exp $ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -16,6 +15,12 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
+
+#if !defined(lint) && !defined(LINT)
+static const char rcsid[] =
+  "$FreeBSD: stable/10/usr.sbin/cron/cron/job.c 50479 1999-08-28 01:35:59Z peter $";
+#endif
+
 
 #include "cron.h"
 

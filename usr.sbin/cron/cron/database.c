@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -14,11 +15,10 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
-/* $FreeBSD: src/usr.sbin/cron/cron/database.c,v 1.8 1999/08/28 01:15:50 peter Exp $ */
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/cron/cron/database.c,v 1.2 2007/08/18 07:37:09 laffer1 Exp $";
+  "$FreeBSD: stable/10/usr.sbin/cron/cron/database.c 321242 2017-07-19 20:24:38Z ngie $";
 #endif
 
 /* vix 26jan87 [RCS has the log]
@@ -45,10 +45,19 @@ load_database(old_db)
 {
 	DIR		*dir;
 	struct stat	statbuf;
-	struct stat	syscron_stat;
+	struct stat	syscron_stat, st;
+	time_t		maxmtime;
 	DIR_T   	*dp;
 	cron_db		new_db;
 	user		*u, *nu;
+	struct {
+		const char *name;
+		struct stat st;
+	} syscrontabs [] = {
+		{ SYSCRONTABS },
+		{ LOCALSYSCRONTABS }
+	};
+	int i;
 
 	Debug(DLOAD, ("[%d] load_database()\n", getpid()))
 
@@ -66,6 +75,16 @@ load_database(old_db)
 	if (stat(SYSCRONTAB, &syscron_stat) < OK)
 		syscron_stat.st_mtime = 0;
 
+	maxmtime = TMAX(statbuf.st_mtime, syscron_stat.st_mtime);
+
+	for (i = 0; i < nitems(syscrontabs); i++) {
+		if (stat(syscrontabs[i].name, &syscrontabs[i].st) != -1) {
+			maxmtime = TMAX(syscrontabs[i].st.st_mtime, maxmtime);
+		} else {
+			syscrontabs[i].st.st_mtime = 0;
+		}
+	}
+
 	/* if spooldir's mtime has not changed, we don't need to fiddle with
 	 * the database.
 	 *
@@ -73,7 +92,7 @@ load_database(old_db)
 	 * so is guaranteed to be different than the stat() mtime the first
 	 * time this function is called.
 	 */
-	if (old_db->mtime == TMAX(statbuf.st_mtime, syscron_stat.st_mtime)) {
+	if (old_db->mtime == maxmtime) {
 		Debug(DLOAD, ("[%d] spool dir mtime unch, no load needed.\n",
 			      getpid()))
 		return;
@@ -84,13 +103,37 @@ load_database(old_db)
 	 * actually changed.  Whatever is left in the old database when
 	 * we're done is chaff -- crontabs that disappeared.
 	 */
-	new_db.mtime = TMAX(statbuf.st_mtime, syscron_stat.st_mtime);
+	new_db.mtime = maxmtime;
 	new_db.head = new_db.tail = NULL;
 
 	if (syscron_stat.st_mtime) {
 		process_crontab("root", SYS_NAME,
 				SYSCRONTAB, &syscron_stat,
 				&new_db, old_db);
+	}
+
+	for (i = 0; i < nitems(syscrontabs); i++) {
+		char tabname[MAXPATHLEN];
+		if (syscrontabs[i].st.st_mtime == 0)
+			continue;
+		if (!(dir = opendir(syscrontabs[i].name))) {
+			log_it("CRON", getpid(), "OPENDIR FAILED",
+			    syscrontabs[i].name);
+			(void) exit(ERROR_EXIT);
+		}
+
+		while (NULL != (dp = readdir(dir))) {
+			if (dp->d_name[0] == '.')
+				continue;
+			if (fstatat(dirfd(dir), dp->d_name, &st, 0) == 0 &&
+			    !S_ISREG(st.st_mode))
+				continue;
+			snprintf(tabname, sizeof(tabname), "%s/%s",
+			    syscrontabs[i].name, dp->d_name);
+			process_crontab("root", SYS_NAME, tabname,
+			    &syscrontabs[i].st, &new_db, old_db);
+		}
+		closedir(dir);
 	}
 
 	/* we used to keep this dir open all the time, for the sake of

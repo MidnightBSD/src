@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -17,8 +18,7 @@
 
 /* cron.h - header for vixie's cron
  *
- * $MidnightBSD: src/usr.sbin/cron/cron/cron.h,v 1.2 2007/08/18 07:37:09 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/cron/cron/cron.h,v 1.15.8.1 2006/01/15 17:50:36 delphij Exp $
+ * $FreeBSD: stable/10/usr.sbin/cron/cron/cron.h 321242 2017-07-19 20:24:38Z ngie $
  *
  * vix 14nov88 [rest of log is in RCS]
  * vix 14jan87 [0 or 7 can be sunday; thanks, mwm@berkeley]
@@ -74,7 +74,6 @@
 #define	MAX_COMMAND	1000	/* max length of internally generated cmd */
 #define	MAX_ENVSTR	1000	/* max length of envvar=value\0 strings */
 #define	MAX_TEMPSTR	100	/* obvious */
-#define	MAX_UNAME	20	/* max length of username, should be overkill */
 #define	ROOT_UID	0	/* don't change this, it really must be root */
 #define	ROOT_USER	"root"	/* ditto */
 #define	SYS_NAME	"*system*" /* magic owner name for system crontab */
@@ -125,6 +124,10 @@
 			 LineNumber = ln; \
 			}
 
+#define	FIRST_SECOND	0
+#define	LAST_SECOND	59
+#define	SECOND_COUNT	(LAST_SECOND - FIRST_SECOND + 1)
+
 #define	FIRST_MINUTE	0
 #define	LAST_MINUTE	59
 #define	MINUTE_COUNT	(LAST_MINUTE - FIRST_MINUTE + 1)
@@ -166,6 +169,7 @@ typedef	struct _entry {
 #endif
 	char		**envp;
 	char		*cmd;
+	bitstr_t	bit_decl(second, SECOND_COUNT);
 	bitstr_t	bit_decl(minute, MINUTE_COUNT);
 	bitstr_t	bit_decl(hour,   HOUR_COUNT);
 	bitstr_t	bit_decl(dom,    DOM_COUNT);
@@ -177,6 +181,7 @@ typedef	struct _entry {
 #define	WHEN_REBOOT	0x04
 #define	RUN_AT	0x08
 #define	NOT_UNTIL	0x10
+#define	SEC_RES		0x20
 	time_t	lastrun;
 } entry;
 
@@ -214,7 +219,7 @@ void		set_cron_uid(void),
 		unget_char(int, FILE *),
 		free_entry(entry *),
 		skip_comments(FILE *),
-		log_it(char *, int, char *, char *),
+		log_it(char *, int, char *, const char *),
 		log_close(void);
 
 int		job_runqueue(void),
@@ -237,7 +242,7 @@ char		*env_get(char *, char **),
 		**env_copy(char **),
 		**env_set(char **, char *);
 
-user		*load_user(int, struct passwd *, const char *),
+user		*load_user(int, struct passwd *, char *),
 		*find_user(cron_db *, char *);
 
 entry		*load_entry(FILE *, void (*)(char *),

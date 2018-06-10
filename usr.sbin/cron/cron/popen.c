@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988 The Regents of the University of California.
  * All rights reserved.
@@ -22,14 +23,13 @@
 /* this came out of the ftpd sources; it's been modified to avoid the
  * globbing stuff since we don't need it.  also execvp instead of execv.
  */
-/* $FreeBSD: src/usr.sbin/cron/cron/popen.c,v 1.12 2002/02/06 02:00:07 bbraun Exp $ */
 
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)popen.c	5.7 (Berkeley) 2/14/89";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/cron/cron/popen.c 293132 2016-01-04 03:20:41Z pfg $";
 #endif /* not lint */
 
 #include "cron.h"
@@ -83,9 +83,8 @@ cron_popen(program, type, e)
 	if (!pids) {
 		if ((fds = getdtablesize()) <= 0)
 			return(NULL);
-		if (!(pids = (PID_T *)malloc((u_int)(fds * sizeof(PID_T)))))
+		if (!(pids = calloc(fds, sizeof(PID_T))))
 			return(NULL);
-		bzero((char *)pids, fds * sizeof(PID_T));
 	}
 	if (pipe(pdes) < 0)
 		return(NULL);
@@ -173,8 +172,10 @@ cron_popen(program, type, e)
 				/* fall back to the old method */
 				(void) endpwent();
 # endif
-				/* set our directory, uid and gid.  Set gid first,
-				 * since once we set uid, we've lost root privileges.
+				/*
+				 * Set our directory, uid and gid.  Set gid
+				 * first since once we set uid, we've lost
+				 * root privileges.
 				 */
 				if (setgid(e->gid) != 0)
 					_exit(ERROR_EXIT);

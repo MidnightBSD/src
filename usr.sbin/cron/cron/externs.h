@@ -1,4 +1,6 @@
-/* $MidnightBSD: src/usr.sbin/cron/cron/externs.h,v 1.2 2007/08/18 07:37:09 laffer1 Exp $ */
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.sbin/cron/cron/externs.h 173412 2007-11-07 10:53:41Z kevlo $	*/
+
 /* Copyright 1993,1994 by Paul Vixie
  * All rights reserved
  *

@@ -1,5 +1,5 @@
-# $MidnightBSD: src/usr.sbin/cron/cron/Makefile,v 1.3 2009/10/07 02:32:55 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/cron/cron/Makefile,v 1.15 2001/07/20 06:19:40 obrien Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/cron/cron/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	cron
 MAN=	cron.8
