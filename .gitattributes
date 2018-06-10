@@ -73287,6 +73287,9 @@ usr.sbin/daemon/daemon.c -text
 usr.sbin/dconschat/Makefile -text
 usr.sbin/dconschat/dconschat.8 -text
 usr.sbin/dconschat/dconschat.c -text
+usr.sbin/devctl/Makefile svneol=native#text/plain
+usr.sbin/devctl/devctl.8 svneol=native#text/plain
+usr.sbin/devctl/devctl.c svneol=native#text/plain
 usr.sbin/devinfo/Makefile -text
 usr.sbin/devinfo/devinfo.8 -text
 usr.sbin/devinfo/devinfo.c -text
