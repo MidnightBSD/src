@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -14,12 +15,11 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  * From Id: crontab.c,v 2.13 1994/01/17 03:20:37 vixie Exp
- * $FreeBSD: src/usr.sbin/cron/crontab/crontab.c,v 1.22 2004/09/14 19:01:19 dds Exp $
  */
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/cron/crontab/crontab.c,v 1.3 2007/08/18 06:53:01 laffer1 Exp $";
+  "$FreeBSD: stable/10/usr.sbin/cron/crontab/crontab.c 321243 2017-07-19 20:26:35Z ngie $";
 #endif
 
 /* crontab - install and manage per-user crontab files
@@ -29,6 +29,7 @@ static const char rcsid[] =
 
 #define	MAIN_PROGRAM
 
+#include <sys/param.h>
 #include "cron.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -58,11 +59,12 @@ static char	*Options[] = { "???", "list", "delete", "edit", "replace" };
 
 
 static	PID_T		Pid;
-static	char		User[MAX_UNAME], RealUser[MAX_UNAME];
+static	char		User[MAXLOGNAME], RealUser[MAXLOGNAME];
 static	char		Filename[MAX_FNAME];
 static	FILE		*NewCrontab;
 static	int		CheckErrorCount;
 static	enum opt_t	Option;
+static	int		fflag;
 static	struct passwd	*pw;
 static	void		list_cmd(void),
 			delete_cmd(void),
@@ -79,7 +81,7 @@ usage(char *msg)
 	fprintf(stderr, "crontab: usage error: %s\n", msg);
 	fprintf(stderr, "%s\n%s\n",
 		"usage: crontab [-u user] file",
-		"       crontab [-u user] { -e | -l | -r }");
+		"       crontab [-u user] { -l | -r [-f] | -e }");
 	exit(ERROR_EXIT);
 }
 
@@ -142,7 +144,7 @@ parse_args(argc, argv)
 	strcpy(RealUser, User);
 	Filename[0] = '\0';
 	Option = opt_unknown;
-	while ((argch = getopt(argc, argv, "u:lerx:")) != -1) {
+	while ((argch = getopt(argc, argv, "u:lerx:f")) != -1) {
 		switch (argch) {
 		case 'x':
 			if (!set_debug_flags(optarg))
@@ -172,6 +174,9 @@ parse_args(argc, argv)
 				usage("only one operation permitted");
 			Option = opt_edit;
 			break;
+		case 'f':
+			fflag = 1;
+			break;
 		default:
 			usage("unrecognized option");
 		}
@@ -195,6 +200,17 @@ parse_args(argc, argv)
 	}
 
 	if (Option == opt_replace) {
+		/* relinquish the setuid status of the binary during
+		 * the open, lest nonroot users read files they should
+		 * not be able to read.  we can't use access() here
+		 * since there's a race condition.  thanks go out to
+		 * Arnt Gulbrandsen <agulbra@pvv.unit.no> for spotting
+		 * the race.
+		 */
+
+		if (swap_uids() < OK)
+			err(ERROR_EXIT, "swapping uids");
+
 		/* we have to open the file here because we're going to
 		 * chdir(2) into /var/cron before we get around to
 		 * reading the file.
@@ -205,21 +221,11 @@ parse_args(argc, argv)
 		    !strcmp(resolved_path, SYSCRONTAB)) {
 			err(ERROR_EXIT, SYSCRONTAB " must be edited manually");
 		} else {
-			/* relinquish the setuid status of the binary during
-			 * the open, lest nonroot users read files they should
-			 * not be able to read.  we can't use access() here
-			 * since there's a race condition.  thanks go out to
-			 * Arnt Gulbrandsen <agulbra@pvv.unit.no> for spotting
-			 * the race.
-			 */
-
-			if (swap_uids() < OK)
-				err(ERROR_EXIT, "swapping uids");
 			if (!(NewCrontab = fopen(Filename, "r")))
 				err(ERROR_EXIT, "%s", Filename);
-			if (swap_uids_back() < OK)
-				err(ERROR_EXIT, "swapping uids back");
 		}
+		if (swap_uids_back() < OK)
+			err(ERROR_EXIT, "swapping uids back");
 	}
 
 	Debug(DMISC, ("user=%s, file=%s, option=%s\n",
@@ -281,7 +287,7 @@ delete_cmd() {
 	char	n[MAX_FNAME];
 	int ch, first;
 
-	if (isatty(STDIN_FILENO)) {
+	if (!fflag && isatty(STDIN_FILENO)) {
 		(void)fprintf(stderr, "remove crontab for %s? ", User);
 		first = ch = getchar();
 		while (ch != '\n' && ch != EOF)
@@ -364,11 +370,15 @@ edit_cmd() {
 		goto fatal;
 	}
  again:
+	if (swap_uids() < OK)
+		err(ERROR_EXIT, "swapping uids");
 	if (stat(Filename, &statbuf) < 0) {
 		warn("stat");
  fatal:		unlink(Filename);
 		exit(ERROR_EXIT);
 	}
+	if (swap_uids_back() < OK)
+		err(ERROR_EXIT, "swapping uids back");
 	if (statbuf.st_dev != fsbuf.st_dev || statbuf.st_ino != fsbuf.st_ino)
 		errx(ERROR_EXIT, "temp file must be edited in place");
 	if (MD5File(Filename, orig_md5) == NULL) {
@@ -434,6 +444,8 @@ edit_cmd() {
 			editor, WTERMSIG(waiter), WCOREDUMP(waiter) ?"" :"no ");
 		goto fatal;
 	}
+	if (swap_uids() < OK)
+		err(ERROR_EXIT, "swapping uids");
 	if (stat(Filename, &statbuf) < 0) {
 		warn("stat");
 		goto fatal;
@@ -444,6 +456,8 @@ edit_cmd() {
 		warn("MD5");
 		goto fatal;
 	}
+	if (swap_uids_back() < OK)
+		err(ERROR_EXIT, "swapping uids back");
 	if (strcmp(orig_md5, new_md5) == 0 && !syntax_error) {
 		warnx("no changes made to crontab");
 		goto remove;
@@ -524,7 +538,7 @@ replace_cmd() {
 	Set_LineNum(1)
 	while (EOF != (ch = get_char(NewCrontab)))
 		putc(ch, tmp);
-	ftruncate(fileno(tmp), ftell(tmp));
+	ftruncate(fileno(tmp), ftello(tmp));
 	fflush(tmp);  rewind(tmp);
 
 	if (ferror(tmp)) {
@@ -550,7 +564,7 @@ replace_cmd() {
 		case FALSE:
 			e = load_entry(tmp, check_error, pw, envp);
 			if (e)
-				free(e);
+				free_entry(e);
 			break;
 		case TRUE:
 			break;
@@ -600,6 +614,15 @@ replace_cmd() {
 
 	log_it(RealUser, Pid, "REPLACE", User);
 
+	/*
+	 * Creating the 'tn' temp file has already updated the
+	 * modification time of the spool directory.  Sleep for a
+	 * second to ensure that poke_daemon() sets a later
+	 * modification time.  Otherwise, this can race with the cron
+	 * daemon scanning for updated crontabs.
+	 */
+	sleep(1);
+
 	poke_daemon();
 
 	return (0);
@@ -610,9 +633,8 @@ static void
 poke_daemon() {
 #ifdef USE_UTIMES
 	struct timeval tvs[2];
-	struct timezone tz;
 
-	(void) gettimeofday(&tvs[0], &tz);
+	(void)gettimeofday(&tvs[0], NULL);
 	tvs[1] = tvs[0];
 	if (utimes(SPOOL_DIR, tvs) < OK) {
 		warn("can't update mtime on spooldir %s", SPOOL_DIR);

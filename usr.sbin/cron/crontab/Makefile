@@ -1,5 +1,5 @@
-# $MidnightBSD: src/usr.sbin/cron/crontab/Makefile,v 1.2 2007/08/18 06:53:01 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/cron/crontab/Makefile,v 1.14 2004/11/03 18:01:21 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/cron/crontab/Makefile 185040 2008-11-18 00:12:15Z matteo $
 
 BINDIR=	/usr/bin
 
