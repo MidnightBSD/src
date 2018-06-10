@@ -1,10 +1,11 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/fifolog/fifolog_reader/Makefile 321272 2017-07-20 01:02:37Z ngie $
 
 PROG=	fifolog_reader
 
-CFLAGS+= -I${.CURDIR}/../lib
+CFLAGS+= -I${.CURDIR:H}/lib
 
-NO_MAN=	# see ../fifolog_create/fifolog.1
+MAN=
 
 DPADD=	${LIBFIFOLOG} ${LIBUTIL} ${LIBZ}
 LDADD=	${LIBFIFOLOG} -lutil -lz
