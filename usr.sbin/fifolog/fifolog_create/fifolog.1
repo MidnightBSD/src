@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2008 Poul-Henning Kamp
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/fifolog/fifolog_create/fifolog.1 241126 2012-10-02 09:53:50Z pluknet $
 .\"
 .Dd February 9, 2008
 .Dt FIFOLOG 1
@@ -203,7 +204,7 @@ One particular useful use of
 is with
 .Xr syslogd 8
 using a line such as this in
-.Xr /etc/syslog.conf 5 :
+.Xr syslog.conf 5 :
 .Pp
 .Dl "*.* |fifolog_writer /var/log/syslog_fifolog"
 .Sh HISTORY
