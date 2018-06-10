@@ -132,7 +132,6 @@ MTREE+=	BSD.tests.dist
 .if ${MK_SENDMAIL} != "no"
 MTREE+=	BSD.sendmail.dist
 .endif
-.endif
 
 PPPCNF=	ppp.conf
 
@@ -225,6 +224,11 @@ distribution:
 	    ${BSM_ETC_RESTRICTED_FILES} ${BSM_ETC_DIR}
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0500 \
 	    ${BSM_ETC_EXEC_FILES} ${BSM_ETC_DIR}
+.if ${MK_UNBOUND} != "no"
+	if [ ! -e ${DESTDIR}/etc/unbound ]; then \
+		${INSTALL_SYMLINK} ../var/unbound ${DESTDIR}/etc/unbound; \
+	fi
+.endif
 .if ${MK_SENDMAIL} != "no"
 	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
 .endif
@@ -272,8 +276,10 @@ distribution:
 .endif
 	${INSTALL} -o ${BINOWN} -g operator -m 664 /dev/null \
 	    ${DESTDIR}/etc/dumpdates
+.if ${MK_LOCATE} != "no"
 	${INSTALL} -o nobody -g ${BINGRP} -m 644 /dev/null \
 	    ${DESTDIR}/var/db/locate.database
+.endif
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 ${.CURDIR}/minfree \
 	    ${DESTDIR}/var/crash
 	cd ${.CURDIR}/..; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
@@ -334,6 +340,7 @@ distrib-dirs: ${MTREES:N/*}
 	done; true
 .endif
 	${INSTALL_SYMLINK} usr/src/sys ${DESTDIR}/sys
+.if ${MK_MAN} != "no"
 	cd ${DESTDIR}${SHAREDIR}/man; \
 	for mandir in man*; do \
 		${INSTALL_SYMLINK} ../$$mandir \
@@ -341,6 +348,7 @@ distrib-dirs: ${MTREES:N/*}
 		${INSTALL_SYMLINK} ../$$mandir \
 		    ${DESTDIR}${SHAREDIR}/man/en.UTF-8/; \
 	done
+.if ${MK_OPENSSL} != "no"
 	cd ${DESTDIR}${SHAREDIR}/openssl/man; \
 	for mandir in man*; do \
 		${INSTALL_SYMLINK} ../$$mandir \
@@ -353,11 +361,15 @@ distrib-dirs: ${MTREES:N/*}
 		    "${DESTDIR}${SHAREDIR}/openssl/man/$$1"; \
 		shift; shift; \
 	done
+.endif
+.endif
+.if ${MK_NLS} != "no"
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/nls.alias`; \
 	while [ $$# -gt 0 ] ; do \
 		${INSTALL_SYMLINK} "$$2" "${DESTDIR}${SHAREDIR}/nls/$$1"; \
 		shift; shift; \
 	done
+.endif
 
 etc-examples:
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
