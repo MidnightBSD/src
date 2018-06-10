@@ -73180,6 +73180,9 @@ usr.sbin/btxld/elfh.h -text
 usr.sbin/burncd/Makefile -text
 usr.sbin/burncd/burncd.8 -text
 usr.sbin/burncd/burncd.c -text
+usr.sbin/camdd/Makefile svneol=native#text/plain
+usr.sbin/camdd/camdd.8 svneol=native#text/plain
+usr.sbin/camdd/camdd.c svneol=native#text/plain
 usr.sbin/cdcontrol/Makefile -text
 usr.sbin/cdcontrol/cdcontrol.1 -text
 usr.sbin/cdcontrol/cdcontrol.c -text
