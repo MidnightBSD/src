@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/w/w.c 288139 2015-09-23 01:07:45Z delphij $");
 
 #ifndef lint
 static const char copyright[] =
@@ -85,25 +86,24 @@ static const char sccsid[] = "@(#)w.c	8.4 (Berkeley) 4/16/94";
 
 #include "extern.h"
 
-struct timeval	boottime;
-struct utmpx   *utmp;
-struct winsize	ws;
-kvm_t	       *kd;
-time_t		now;		/* the current time of day */
-int		ttywidth;	/* width of tty */
-int		argwidth;	/* width of tty */
-int		header = 1;	/* true if -h flag: don't print heading */
-int		nflag;		/* true if -n flag: don't convert addrs */
-int		dflag;		/* true if -d flag: output debug info */
-int		sortidle;	/* sort by idle time */
+static struct utmpx *utmp;
+static struct winsize ws;
+static kvm_t   *kd;
+static time_t	now;		/* the current time of day */
+static int	ttywidth;	/* width of tty */
+static int	argwidth;	/* width of tty */
+static int	header = 1;	/* true if -h flag: don't print heading */
+static int	nflag;		/* true if -n flag: don't convert addrs */
+static int	dflag;		/* true if -d flag: output debug info */
+static int	sortidle;	/* sort by idle time */
 int		use_ampm;	/* use AM/PM time */
-int             use_comma;      /* use comma as floats separator */
-char	      **sel_users;	/* login array of particular users selected */
+static int	use_comma;      /* use comma as floats separator */
+static char   **sel_users;	/* login array of particular users selected */
 
 /*
  * One of these per active utmp entry.
  */
-struct	entry {
+static struct entry {
 	struct	entry *next;
 	struct	utmpx utmp;
 	dev_t	tdev;			/* dev_t of terminal */
@@ -133,7 +133,7 @@ main(int argc, char *argv[])
 	struct kinfo_proc *dkp;
 	struct stat *stp;
 	time_t touched;
-	int ch, i, nentries, nusers, wcmd, longidle, longattime, dropgid;
+	int ch, i, nentries, nusers, wcmd, longidle, longattime;
 	const char *memf, *nlistf, *p;
 	char *x_suffix;
 	char buf[MAXHOSTNAMELEN], errbuf[_POSIX2_LINE_MAX];
@@ -153,7 +153,6 @@ main(int argc, char *argv[])
 		p = "dhiflM:N:nsuw";
 	}
 
-	dropgid = 0;
 	memf = _PATH_DEVNULL;
 	nlistf = NULL;
 	while ((ch = getopt(argc, argv, p)) != -1)
@@ -170,11 +169,9 @@ main(int argc, char *argv[])
 		case 'M':
 			header = 0;
 			memf = optarg;
-			dropgid = 1;
 			break;
 		case 'N':
 			nlistf = optarg;
-			dropgid = 1;
 			break;
 		case 'n':
 			nflag = 1;
@@ -193,13 +190,6 @@ main(int argc, char *argv[])
 		res_init();
 	_res.retrans = 2;	/* resolver timeout to 2 seconds per try */
 	_res.retry = 1;		/* only try once.. */
-
-	/*
-	 * Discard setgid privileges if not the running kernel so that bad
-	 * guys can't print interesting stuff from kernel memory.
-	 */
-	if (dropgid)
-		setgid(getgid());
 
 	if ((kd = kvm_openfiles(nlistf, memf, NULL, O_RDONLY, errbuf)) == NULL)
 		errx(1, "%s", errbuf);
