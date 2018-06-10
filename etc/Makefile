@@ -16,13 +16,11 @@ BIN1=	crontab \
 	disktab \
 	doas.conf \
 	fbtab \
-	ftpusers \
 	gettytab \
 	group \
 	hosts \
 	hosts.allow \
 	hosts.equiv \
-	inetd.conf \
 	libalias.conf \
 	libmap.conf \
 	login.access \
@@ -41,7 +39,6 @@ BIN1=	crontab \
 	rc.bsdextended \
 	rc.firewall \
 	rc.initdiskless \
-	rc.sendmail \
 	rc.shutdown \
 	rc.subr \
 	remote \
@@ -50,7 +47,11 @@ BIN1=	crontab \
 	shells \
 	sysctl.conf \
 	syslog.conf \
-	termcap.small
+	termcap.small \
+
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "powerpc64"
+BIN1+=	libmap32.conf
+.endif
 
 .if exists(${.CURDIR}/etc.${MACHINE}/ttys)
 BIN1+=	etc.${MACHINE}/ttys
@@ -78,6 +79,18 @@ BIN1+= amd.map
 
 .if ${MK_APM} != "no"
 BIN1+= apmd.conf
+.endif
+
+.if ${MK_AUTOFS} != "no"
+BIN1+= auto_master
+.endif
+
+.if ${MK_FTP} != "no"
+BIN1+= ftpusers
+.endif
+
+.if ${MK_INETD} != "no"
+BIN1+= inetd.conf
 .endif
 
 .if ${MK_LOCATE} != "no"
@@ -110,7 +123,11 @@ BIN1+= nscd.conf
 .endif
 
 .if ${MK_PF} != "no"
-BIN1+= pf.conf pf.os
+BIN1+= pf.os
+.endif
+
+.if ${MK_SENDMAIL} != "no"
+BIN1+=	rc.sendmail
 .endif
 
 .if ${MK_TCSH} != "no"
@@ -154,7 +171,7 @@ afterinstall:
 .endif
 
 distribute:
-	${_+_}cd ${.CURDIR} ; ${MAKE} install DESTDIR=${DISTDIR}/${DISTRIBUTION}
+	${_+_}cd ${.CURDIR} ; ${MAKE} -DNO_TESTS install DESTDIR=${DISTDIR}/${DISTRIBUTION}
 	${_+_}cd ${.CURDIR} ; ${MAKE} distribution DESTDIR=${DISTDIR}/${DISTRIBUTION}
 
 .include <bsd.endian.mk>
@@ -207,12 +224,16 @@ distribution:
 		echo "./etc/spwd.db type=file mode=0600 uname=root gname=wheel"; \
 	) | ${METALOG.add}
 .endif
+.if ${MK_AUTOFS} != "no"
+	${_+_}cd ${.CURDIR}/autofs; ${MAKE} install
+.endif
 .if ${MK_BLUETOOTH} != "no"
 	${_+_}cd ${.CURDIR}/bluetooth; ${MAKE} install
 .endif
 	${_+_}cd ${.CURDIR}/defaults; ${MAKE} install
 	${_+_}cd ${.CURDIR}/devd; ${MAKE} install
 	${_+_}cd ${.CURDIR}/gss; ${MAKE} install
+	${_+_}cd ${.CURDIR}/newsyslog.conf.d; ${MAKE} install
 	${_+_}cd ${.CURDIR}/periodic; ${MAKE} install
 	${_+_}cd ${.CURDIR}/rc.d; ${MAKE} install
 	${_+_}cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap
@@ -233,7 +254,7 @@ distribution:
 	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
 .endif
 .if ${MK_OPENSSH} != "no"
-	${_+_}cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${SSH} ${DESTDIR}/etc/ssh
 .endif
 .if ${MK_OPENSSL} != "no"
