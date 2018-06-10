@@ -73310,6 +73310,11 @@ usr.sbin/edquota/Makefile -text
 usr.sbin/edquota/edquota.8 -text
 usr.sbin/edquota/edquota.c -text
 usr.sbin/edquota/pathnames.h -text
+usr.sbin/eeprom/Makefile svneol=native#text/plain
+usr.sbin/eeprom/eeprom.8 svneol=native#text/plain
+usr.sbin/eeprom/eeprom.c svneol=native#text/plain
+usr.sbin/eeprom/ofw_options.c svneol=native#text/plain
+usr.sbin/eeprom/ofw_options.h svneol=native#text/plain
 usr.sbin/etcupdate/Makefile -text
 usr.sbin/etcupdate/etcupdate.8 -text
 usr.sbin/etcupdate/etcupdate.sh -text
