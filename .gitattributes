@@ -27417,7 +27417,7 @@ contrib/nvi/catalog/polish.base -text
 contrib/nvi/catalog/polish.check -text
 contrib/nvi/catalog/polish.owner -text
 contrib/nvi/catalog/ru_RU.KOI8-R -text
-contrib/nvi/catalog/ru_RU.KOI8-R.base -text
+contrib/nvi/catalog/ru_RU.KOI8-R.base -text svneol=unset#application/octet-stream
 contrib/nvi/catalog/ru_RU.KOI8-R.check -text
 contrib/nvi/catalog/ru_RU.KOI8-R.owner -text
 contrib/nvi/catalog/spanish -text
@@ -27429,8 +27429,10 @@ contrib/nvi/catalog/swedish.base -text
 contrib/nvi/catalog/swedish.check -text
 contrib/nvi/catalog/swedish.owner -text
 contrib/nvi/catalog/uk_UA.KOI8-U -text
-contrib/nvi/catalog/uk_UA.KOI8-U.base -text
+contrib/nvi/catalog/uk_UA.KOI8-U.base -text svneol=unset#application/octet-stream
 contrib/nvi/catalog/uk_UA.KOI8-U.owner -text
+contrib/nvi/catalog/zh_CN.GB2312.base -text svneol=unset#application/octet-stream
+contrib/nvi/catalog/zh_CN.GB2312.owner -text
 contrib/nvi/cl/README.signal -text
 contrib/nvi/cl/cl.h -text
 contrib/nvi/cl/cl_bsd.c -text
@@ -27439,6 +27441,7 @@ contrib/nvi/cl/cl_main.c -text
 contrib/nvi/cl/cl_read.c -text
 contrib/nvi/cl/cl_screen.c -text
 contrib/nvi/cl/cl_term.c -text
+contrib/nvi/cl/extern.h svneol=native#text/plain
 contrib/nvi/clib/bsearch.c -text
 contrib/nvi/clib/env.c -text
 contrib/nvi/clib/gethostname.c -text
@@ -27459,11 +27462,15 @@ contrib/nvi/clib/vsnprintf.c -text
 contrib/nvi/common/api.c -text
 contrib/nvi/common/args.h -text
 contrib/nvi/common/common.h -text
+contrib/nvi/common/conv.c svneol=native#text/plain
+contrib/nvi/common/conv.h svneol=native#text/plain
 contrib/nvi/common/cut.c -text
 contrib/nvi/common/cut.h -text
 contrib/nvi/common/delete.c -text
+contrib/nvi/common/encoding.c svneol=native#text/plain
 contrib/nvi/common/exf.c -text
 contrib/nvi/common/exf.h -text
+contrib/nvi/common/extern.h svneol=native#text/plain
 contrib/nvi/common/gs.h -text
 contrib/nvi/common/key.c -text
 contrib/nvi/common/key.h -text
@@ -27476,9 +27483,11 @@ contrib/nvi/common/mark.h -text
 contrib/nvi/common/mem.h -text
 contrib/nvi/common/msg.c -text
 contrib/nvi/common/msg.h -text
+contrib/nvi/common/multibyte.h svneol=native#text/plain
 contrib/nvi/common/options.awk -text
 contrib/nvi/common/options.c -text
 contrib/nvi/common/options.h -text
+contrib/nvi/common/options_def.h svneol=native#text/plain
 contrib/nvi/common/options_f.c -text
 contrib/nvi/common/put.c -text
 contrib/nvi/common/recover.c -text
@@ -27543,6 +27552,7 @@ contrib/nvi/ex/ex_bang.c -text
 contrib/nvi/ex/ex_cd.c -text
 contrib/nvi/ex/ex_cmd.c -text
 contrib/nvi/ex/ex_cscope.c -text
+contrib/nvi/ex/ex_def.h svneol=native#text/plain
 contrib/nvi/ex/ex_delete.c -text
 contrib/nvi/ex/ex_display.c -text
 contrib/nvi/ex/ex_edit.c -text
@@ -27582,6 +27592,7 @@ contrib/nvi/ex/ex_visual.c -text
 contrib/nvi/ex/ex_write.c -text
 contrib/nvi/ex/ex_yank.c -text
 contrib/nvi/ex/ex_z.c -text
+contrib/nvi/ex/extern.h svneol=native#text/plain
 contrib/nvi/ex/script.h -text
 contrib/nvi/ex/tag.h -text
 contrib/nvi/ex/version.h -text
@@ -27615,6 +27626,20 @@ contrib/nvi/perl_scripts/forall.pl -text
 contrib/nvi/perl_scripts/make.pl -text
 contrib/nvi/perl_scripts/tk.pl -text
 contrib/nvi/perl_scripts/wc.pl -text
+contrib/nvi/regex/COPYRIGHT -text
+contrib/nvi/regex/WHATSNEW -text
+contrib/nvi/regex/cclass.h svneol=native#text/plain
+contrib/nvi/regex/cname.h svneol=native#text/plain
+contrib/nvi/regex/engine.c svneol=native#text/plain
+contrib/nvi/regex/re_format.7 svneol=native#text/plain
+contrib/nvi/regex/regcomp.c svneol=native#text/plain
+contrib/nvi/regex/regerror.c svneol=native#text/plain
+contrib/nvi/regex/regex.3 svneol=native#text/plain
+contrib/nvi/regex/regex.h svneol=native#text/plain
+contrib/nvi/regex/regex2.h svneol=native#text/plain
+contrib/nvi/regex/regexec.c svneol=native#text/plain
+contrib/nvi/regex/regfree.c svneol=native#text/plain
+contrib/nvi/regex/utils.h svneol=native#text/plain
 contrib/nvi/tcl_api/tcl.c -text
 contrib/nvi/tcl_scripts/errors.tcl -text
 contrib/nvi/tcl_scripts/gnats.tcl -text
@@ -27628,6 +27653,7 @@ contrib/nvi/tk/tk_screen.c -text
 contrib/nvi/tk/tk_term.c -text
 contrib/nvi/tk/tk_util.c -text
 contrib/nvi/tk/tki.h -text
+contrib/nvi/vi/extern.h svneol=native#text/plain
 contrib/nvi/vi/getc.c -text
 contrib/nvi/vi/v_at.c -text
 contrib/nvi/vi/v_ch.c -text
