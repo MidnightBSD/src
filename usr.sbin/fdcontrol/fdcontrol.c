@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 1994, 2001 by Joerg Wunsch, Dresden
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/fdcontrol/fdcontrol.c,v 1.14 2005/10/26 22:23:52 peter Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/fdcontrol/fdcontrol.c 194892 2009-06-24 19:47:53Z joerg $");
 
 #include <sys/fdcio.h>
 #include <sys/file.h>
@@ -72,7 +73,7 @@ main(int argc, char **argv)
 	enum fd_drivetype type;
 	struct fd_type ft, newft, *fdtp;
 	const char *name, *descr;
-	int fd, i, mode, autofmt;
+	int fd, i, autofmt;
 
 	autofmt = 0;
 	while((i = getopt(argc, argv, "aFf:s:v")) != -1)
@@ -116,12 +117,7 @@ main(int argc, char **argv)
 	if(argc != 1)
 		usage();
 
-	if (show || showfmt)
-		mode = O_RDONLY | O_NONBLOCK;
-	else
-		mode = O_RDWR;
-
-	if((fd = open(argv[0], mode)) < 0)
+	if((fd = open(argv[0], O_RDONLY | O_NONBLOCK)) < 0)
 		err(EX_UNAVAILABLE, "open(%s)", argv[0]);
 
 	if (ioctl(fd, FD_GDTYPE, &type) == -1)
