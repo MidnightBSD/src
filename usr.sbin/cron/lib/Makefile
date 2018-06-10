@@ -1,5 +1,5 @@
-# $MidnightBSD: src/usr.sbin/cron/lib/Makefile,v 1.2 2007/08/18 07:37:09 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/cron/lib/Makefile,v 1.7 2004/10/24 15:33:02 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/cron/lib/Makefile 185042 2008-11-18 00:59:26Z matteo $
 
 LIB=	cron
 INTERNALLIB=

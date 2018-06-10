@@ -1,5 +1,4 @@
-/* $MidnightBSD: src/usr.sbin/cron/lib/misc.c,v 1.2 2007/08/18 07:37:09 laffer1 Exp $ */
-/* $FreeBSD: src/usr.sbin/cron/lib/misc.c,v 1.12.2.1 2006/01/15 17:50:36 delphij Exp $ */
+/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -16,6 +15,11 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
+
+#if !defined(lint) && !defined(LINT)
+static const char rcsid[] =
+  "$FreeBSD: stable/10/usr.sbin/cron/lib/misc.c 321242 2017-07-19 20:24:38Z ngie $";
+#endif
 
 /* vix 26jan87 [RCS has the rest of the log]
  * vix 30dec86 [written]
@@ -382,13 +386,11 @@ out:	if (allow)
 
 
 void
-log_it(username, xpid, event, detail)
-	char	*username;
-	int	xpid;
-	char	*event;
-	char	*detail;
+log_it(char *username, int xpid, char *event, const char *detail)
 {
+#if defined(LOG_FILE) || DEBUGGING
 	PID_T			pid = xpid;
+#endif
 #if defined(LOG_FILE)
 	char			*msg;
 	TIME_T			now = time((TIME_T) 0);

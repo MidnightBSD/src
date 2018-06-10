@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/usr.sbin/cron/lib/compat.c,v 1.7 2000/12/09 09:35:44 obrien Exp $ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -16,6 +15,10 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
+
+#if !defined(lint) && !defined(LINT)
+static char rcsid[] = "$FreeBSD: stable/10/usr.sbin/cron/lib/compat.c 69793 2000-12-09 09:35:55Z obrien $";
+#endif
 
 /* vix 30dec93 [broke this out of misc.c - see RCS log for history]
  * vix 15jan87 [added TIOCNOTTY, thanks csg@pyramid]
