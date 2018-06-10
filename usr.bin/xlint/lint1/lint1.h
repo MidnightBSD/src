@@ -1,4 +1,5 @@
-/* $NetBSD: lint1.h,v 1.12 2002/01/31 19:33:27 tv Exp $ */
+/* $MidnightBSD$ */
+/* $NetBSD: lint1.h,v 1.16 2002/10/21 22:44:08 christos Exp $ */
 
 /*
  * Copyright (c) 1996 Christopher G. Demetriou.  All Rights Reserved.
@@ -32,7 +33,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint1/lint1.h 281168 2015-04-06 19:56:27Z pfg $");
 
 #include "lint.h"
 #include "op.h"
@@ -106,7 +107,7 @@ typedef struct {
  * Structures of type str_t uniqely identify structures. This can't
  * be done in structures of type type_t, because these are copied
  * if they must be modified. So it would not be possible to check
- * if to structures are identical by comparing the pointers to
+ * if two structures are identical by comparing the pointers to
  * the type structures.
  *
  * The typename is used if the structure is unnamed to identify
@@ -141,7 +142,7 @@ typedef	struct type {
 	u_int	t_const : 1;	/* const modifier */
 	u_int	t_volatile : 1;	/* volatile modifier */
 	u_int	t_proto : 1;	/* function prototype (t_args valid) */
-	u_int	t_vararg : 1;	/* protoype with ... */
+	u_int	t_vararg : 1;	/* prototype with ... */
 	u_int	t_typedef : 1;	/* type defined with typedef */
 	u_int	t_isfield : 1;	/* type is bitfield */
 	u_int	t_isenum : 1;	/* type is (or was) enum (t_enum valid) */
@@ -221,7 +222,7 @@ typedef	struct sym {
 	u_int	s_reg : 1;	/* symbol is register variable */
 	u_int	s_defarg : 1;	/* undefined symbol in old style function
 				   definition */
-	u_int	s_rimpl : 1;	/* return value of function implizit decl. */
+	u_int	s_rimpl : 1;	/* return value of function implicit decl. */
 	u_int	s_osdef : 1;	/* symbol stems from old style function def. */
 	u_int	s_inline : 1;	/* true if this is an inline function */
 	struct	sym *s_xsym;	/* for local declared external symbols pointer
@@ -347,6 +348,7 @@ typedef	struct	istk {
 	type_t	*i_subt;		/* type of next level */
 	u_int	i_brace : 1;		/* need } for pop */
 	u_int	i_nolimit : 1;		/* incomplete array type */
+	u_int	i_namedmem : 1;		/* has c9x named members */
 	sym_t	*i_mem;			/* next structure member */
 	int	i_cnt;			/* # of remaining elements */
 	struct	istk *i_nxt;		/* previous level */
@@ -396,6 +398,11 @@ typedef struct cstk {
 	struct	cstk *c_nxt;		/* outer control statement */
 } cstk_t;
 
+typedef struct {
+	size_t lo;
+	size_t hi;
+} range_t;
+
 #include "externs1.h"
 
 #define	ERR_SETSIZE	1024
@@ -412,5 +419,7 @@ typedef	struct err_set {
 #define	ERR_ISSET(n, p)	\
     ((p)->errs_bits[(n)/__NERRBITS] & (1 << ((n) % __NERRBITS)))
 #define	ERR_ZERO(p)	(void)memset((p), 0, sizeof(*(p)))
+
+#define LERROR(fmt, args...) lerror(__FILE__, __LINE__, fmt, ##args)
 
 extern err_set	msgset;

@@ -1,5 +1,6 @@
-#	$NetBSD: Makefile,v 1.3 1995/07/04 01:53:05 cgd Exp $
 # $MidnightBSD$
+#	$NetBSD: Makefile,v 1.3 1995/07/04 01:53:05 cgd Exp $
+# $FreeBSD: stable/10/usr.bin/xlint/lint1/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
 
 PROG=	lint1
 SRCS=	cgram.y scan.l mem1.c mem.c err.c main1.c decl.c tree.c func.c \
@@ -12,7 +13,7 @@ DPADD=	${LIBL} ${LIBM}
 CFLAGS+= -I. -I${.CURDIR}
 LINTFLAGS=-aehpz
 
-BINDIR=	/usr/libexec
+BINDIR=	${LIBEXECDIR}
 
 .PATH: ${.CURDIR}/../common
 
