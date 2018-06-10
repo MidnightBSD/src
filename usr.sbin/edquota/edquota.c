@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,14 +44,12 @@ static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/edquota/edquota.c 300270 2016-05-20 06:27:58Z truckman $");
 
 /*
  * Disk quota editor.
  */
 
-#include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
@@ -392,7 +391,7 @@ getprivs(long id, int quotatype, char *fspath)
 		if ((qup = (struct quotause *)calloc(1, sizeof(*qup))) == NULL)
 			errx(2, "out of memory");
 		qup->qf = qf;
-		strncpy(qup->fsname, fs->fs_file, sizeof(qup->fsname));
+		strlcpy(qup->fsname, fs->fs_file, sizeof(qup->fsname));
 		if (quota_read(qf, &qup->dqblk, id) == -1) {
 			warn("cannot read quotas on %s", fs->fs_file);
 			freeprivs(qup);
@@ -426,7 +425,7 @@ putprivs(long id, struct quotause *quplist)
 }
 
 /*
- * Take a list of priviledges and get it edited.
+ * Take a list of privileges and get it edited.
  */
 int
 editit(char *tmpf)
