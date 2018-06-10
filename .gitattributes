@@ -72559,6 +72559,16 @@ usr.bin/uuencode/uuencode.c -text
 usr.bin/uuencode/uuencode.format.5 -text
 usr.bin/vacation/Makefile -text
 usr.bin/vi/Makefile -text
+usr.bin/vi/catalog/Makefile svneol=native#text/plain
+usr.bin/vi/catalog/dutch.UTF-8.base -text
+usr.bin/vi/catalog/french.UTF-8.base -text
+usr.bin/vi/catalog/german.UTF-8.base -text
+usr.bin/vi/catalog/polish.UTF-8.base -text
+usr.bin/vi/catalog/ru_RU.UTF-8.base -text svneol=unset#application/octet-stream
+usr.bin/vi/catalog/spanish.UTF-8.base -text
+usr.bin/vi/catalog/swedish.UTF-8.base -text
+usr.bin/vi/catalog/uk_UA.UTF-8.base -text svneol=unset#application/octet-stream
+usr.bin/vi/catalog/zh_CN.UTF-8.base -text svneol=unset#application/octet-stream
 usr.bin/vi/config.h -text
 usr.bin/vi/pathnames.h -text
 usr.bin/vi/port.h -text
