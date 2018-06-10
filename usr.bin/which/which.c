@@ -26,12 +26,10 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/which/which.c,v 1.6 2005/02/10 16:04:22 ru Exp $");
 __MBSDID("$MidnightBSD$");
 
-#include <sys/stat.h>
 #include <sys/param.h>
-
+#include <sys/stat.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,9 +38,9 @@ __MBSDID("$MidnightBSD$");
 
 static void	 usage(void);
 static int	 print_matches(char *, char *);
-	
-int 	silent;
-int 	allpaths;
+
+static int 	 silent;
+static int 	 allpaths;
 
 int
 main(int argc, char **argv)
@@ -82,7 +80,7 @@ main(int argc, char **argv)
 
 	while (argc > 0) {
 		memcpy(path, p, pathlen);
-	
+
 		if (strlen(*argv) >= FILENAME_MAX ||
 		    print_matches(path, *argv) == -1)
 			status = EXIT_FAILURE;
