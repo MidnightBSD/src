@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Joerg Wunsch
  *
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/fdread/fdutil.h,v 1.2 2001/12/15 19:09:04 joerg Exp $
+ * $FreeBSD: stable/10/usr.sbin/fdread/fdutil.h 87992 2001-12-15 19:09:04Z joerg $
  */
 
 

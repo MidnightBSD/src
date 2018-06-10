@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Joerg Wunsch
  *
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/fdread/fdread.c,v 1.8 2006/07/20 09:38:46 stefanf Exp $
+ * $FreeBSD: stable/10/usr.sbin/fdread/fdread.c 227253 2011-11-06 19:01:54Z ed $
  */
 
 #include <sys/types.h>
@@ -44,14 +45,14 @@
 
 #include "fdutil.h"
 
-int	quiet, recover;
-unsigned char fillbyte = 0xf0;	/* "foo" */
+static int	quiet, recover;
+static unsigned char fillbyte = 0xf0;	/* "foo" */
 
-int	doread(int fd, FILE *of, const char *_devname);
-int	doreadid(int fd, unsigned int numids, unsigned int trackno);
-void	usage(void);
+static int	doread(int fd, FILE *of, const char *_devname);
+static int	doreadid(int fd, unsigned int numids, unsigned int trackno);
+static void	usage(void);
 
-void
+static void
 usage(void)
 {
 
@@ -149,13 +150,13 @@ main(int argc, char **argv)
 			err(EX_OSERR, "cannot create output file %s", fname);
 	}
 
-	if ((fd = open(_devname, O_RDWR)) == -1)
+	if ((fd = open(_devname, O_RDONLY)) == -1)
 		err(EX_OSERR, "cannot open device %s", _devname);
 
 	return (numids? doreadid(fd, numids, trackno): doread(fd, of, _devname));
 }
 
-int
+static int
 doread(int fd, FILE *of, const char *_devname)
 {
 	char *trackbuf;
@@ -166,9 +167,6 @@ doread(int fd, FILE *of, const char *_devname)
 
 	if (ioctl(fd, FD_GTYPE, &fdt) == -1)
 		err(EX_OSERR, "ioctl(FD_GTYPE) failed -- not a floppy?");
-	fdopts = FDOPT_NOERRLOG;
-	if (ioctl(fd, FD_SOPTS, &fdopts) == -1)
-		err(EX_OSERR, "ioctl(FD_SOPTS, FDOPT_NOERRLOG)");
 
 	secsize = 128 << fdt.secsize;
 	tracksize = fdt.sectrac * secsize;
@@ -297,10 +295,10 @@ doread(int fd, FILE *of, const char *_devname)
 	return (nerrs? EX_IOERR: EX_OK);
 }
 
-int
+static int
 doreadid(int fd, unsigned int numids, unsigned int trackno)
 {
-	int rv = 0, fdopts;
+	int rv = 0;
 	unsigned int i;
 	struct fdc_readid info;
 	struct fdc_status fdcs;
@@ -308,10 +306,6 @@ doreadid(int fd, unsigned int numids, unsigned int trackno)
 
 	if (ioctl(fd, FD_GTYPE, &fdt) == -1)
 		err(EX_OSERR, "ioctl(FD_GTYPE) failed -- not a floppy?");
-
-	fdopts = FDOPT_NOERRLOG;
-	if (ioctl(fd, FD_SOPTS, &fdopts) == -1)
-		err(EX_OSERR, "ioctl(FD_SOPTS, FDOPT_NOERRLOG)");
 
 	for (i = 0; i < numids; i++) {
 		info.cyl = trackno / fdt.heads;

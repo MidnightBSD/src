@@ -1,9 +1,8 @@
-# $FreeBSD: src/usr.sbin/fdread/Makefile,v 1.5 2005/01/08 15:46:06 delphij Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/fdread/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	fdread
 SRCS=	fdread.c fdutil.c
-
-WARNS?=	6
 
 .if ${MACHINE} == "pc98"
 CFLAGS+= -DPC98
