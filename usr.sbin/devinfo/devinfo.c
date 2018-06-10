@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/devinfo/devinfo.c 227252 2011-11-06 19:01:48Z ed $");
 
 #include <sys/types.h>
 #include <err.h>
@@ -39,8 +40,8 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include "devinfo.h"
 
-int	rflag;
-int	vflag;
+static int	rflag;
+static int	vflag;
 
 static void	print_resource(struct devinfo_res *);
 static int	print_device_matching_resource(struct devinfo_res *, void *);
