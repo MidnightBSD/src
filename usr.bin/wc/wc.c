@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1987, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)wc.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/wc/wc.c 282278 2015-04-30 18:07:48Z bdrewery $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -58,8 +59,8 @@ __MBSDID("$MidnightBSD$");
 #include <wchar.h>
 #include <wctype.h>
 
-uintmax_t tlinect, twordct, tcharct, tlongline;
-int doline, doword, dochar, domulti, dolongline;
+static uintmax_t tlinect, twordct, tcharct, tlongline;
+static int doline, doword, dochar, domulti, dolongline;
 static volatile sig_atomic_t siginfo;
 
 static void	show_cnt(const char *file, uintmax_t linect, uintmax_t wordct,
@@ -72,6 +73,14 @@ siginfo_handler(int sig __unused)
 {
 
 	siginfo = 1;
+}
+
+static void
+reset_siginfo(void)
+{
+
+	signal(SIGINFO, SIG_DFL);
+	siginfo = 0;
 }
 
 int
@@ -207,6 +216,7 @@ cnt(const char *file)
 					} else
 						tmpll++;
 			}
+			reset_siginfo();
 			tlinect += linect;
 			if (dochar)
 				tcharct += charct;
@@ -229,6 +239,7 @@ cnt(const char *file)
 				return (1);
 			}
 			if (S_ISREG(sb.st_mode)) {
+				reset_siginfo();
 				charct = sb.st_size;
 				show_cnt(file, linect, wordct, charct, llct);
 				tcharct += charct;
@@ -289,6 +300,7 @@ word:	gotsp = 1;
 			}
 		}
 	}
+	reset_siginfo();
 	if (domulti && MB_CUR_MAX > 1)
 		if (mbrtowc(NULL, NULL, 0, &mbs) == (size_t)-1 && !warned)
 			warn("%s", file != NULL ? file : "stdin");
