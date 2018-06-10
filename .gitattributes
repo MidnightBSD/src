@@ -73333,6 +73333,8 @@ usr.sbin/etcupdate/etcupdate.sh -text
 usr.sbin/extattr/Makefile -text
 usr.sbin/extattr/rmextattr.8 -text
 usr.sbin/extattr/rmextattr.c -text
+usr.sbin/extattr/tests/Makefile svneol=native#text/plain
+usr.sbin/extattr/tests/extattr_test.sh svneol=native#text/plain
 usr.sbin/extattrctl/Makefile -text
 usr.sbin/extattrctl/extattrctl.8 -text
 usr.sbin/extattrctl/extattrctl.c -text
