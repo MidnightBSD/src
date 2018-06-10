@@ -1,5 +1,5 @@
-/*
- * $FreeBSD$
+/* $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libelf/Version.map 210345 2010-07-21 12:14:50Z kaiw $
  */
 FBSD_1.0 {
 global:
