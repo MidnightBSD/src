@@ -1,7 +1,8 @@
 #
 # Internet protocols
 #
-# $MidnightBSD: src/etc/protocols,v 1.3 2012/12/02 06:46:10 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/etc/protocols 299826 2016-05-15 03:15:36Z pfg $
 #	from: @(#)protocols	5.1 (Berkeley) 4/17/89
 #
 # See also http://www.iana.org/assignments/protocol-numbers
@@ -43,7 +44,7 @@ merit-inp	32	MERIT-INP	# MERIT Internodal Protocol
 dccp	33	DCCP		# Datagram Congestion Control Protocol
 3pc	34	3PC		# Third Party Connect Protocol
 idpr	35	IDPR		# Inter-Domain Policy Routing Protocol
-xtp	36	XTP		# Xpress Tranfer Protocol
+xtp	36	XTP		# Xpress Transfer Protocol
 ddp	37	DDP		# Datagram Delivery Protocol
 idpr-cmtp	38	IDPR-CMTP	# IDPR Control Message Transport Proto
 tp++	39	TP++		# TP++ Transport Protocol
