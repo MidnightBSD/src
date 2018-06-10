@@ -1,5 +1,6 @@
-/*	$NetBSD: extern.h,v 1.5 1998/05/06 13:16:57 mycroft Exp $	*/
 /* $MidnightBSD$ */
+/*	$NetBSD: extern.h,v 1.5 1998/05/06 13:16:57 mycroft Exp $	*/
+/* $FreeBSD: stable/10/usr.sbin/crunch/crunchide/extern.h 292422 2015-12-18 02:34:01Z emaste $ */
 
 /*
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
@@ -31,14 +32,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef NLIST_AOUT
-int	check_aout(int, const char *);
-int	hide_aout(int, const char *);
-#endif
-#ifdef NLIST_ECOFF
-int	check_ecoff(int, const char *);
-int	hide_ecoff(int, const char *);
-#endif
 #ifdef NLIST_ELF32
 int	check_elf32(int, const char *);
 int	hide_elf32(int, const char *);

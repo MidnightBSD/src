@@ -1,5 +1,5 @@
-/*	$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $	*/
 /* $MidnightBSD$ */
+/*	$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $	*/
 /*
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
  * Copyright (c) 1994 University of Maryland
@@ -59,20 +59,22 @@
  *	  that the final crunched binary BSS size is the max of all the
  *	  component programs' BSS sizes, rather than their sum.
  */
+
 #include <sys/cdefs.h>
 #ifndef lint
 __RCSID("$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $");
 #endif
+__FBSDID("$FreeBSD: stable/10/usr.sbin/crunch/crunchide/crunchide.c 292422 2015-12-18 02:34:01Z emaste $");
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/errno.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <a.out.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/errno.h>
 
 #include "extern.h"
 
@@ -89,9 +91,8 @@ int verbose;
 
 int main(int, char *[]);
 
-int main(argc, argv)
-int argc;
-char **argv;
+int
+main(int argc, char **argv)
 {
     int ch, errors;
 
@@ -127,7 +128,8 @@ char **argv;
     return errors;
 }
 
-void usage(void)
+void
+usage(void)
 {
     fprintf(stderr,
 	    "usage: %s [-k <symbol-name>] [-f <keep-list-file>] <files> ...\n",
@@ -142,7 +144,8 @@ struct keep {
     char *sym;
 } *keep_list;
 
-void add_to_keep_list(char *symbol)
+void
+add_to_keep_list(char *symbol)
 {
     struct keep *newp, *prevp, *curp;
     int cmp;
@@ -167,7 +170,8 @@ void add_to_keep_list(char *symbol)
     else keep_list = newp;
 }
 
-int in_keep_list(const char *symbol)
+int
+in_keep_list(const char *symbol)
 {
     struct keep *curp;
     int cmp;
@@ -180,7 +184,8 @@ int in_keep_list(const char *symbol)
     return curp && cmp == 0;
 }
 
-void add_file_to_keep_list(char *filename)
+void
+add_file_to_keep_list(char *filename)
 {
     FILE *keepf;
     char symbol[1024];
@@ -208,12 +213,6 @@ struct {
 	int	(*check)(int, const char *);	/* 1 if match, zero if not */
 	int	(*hide)(int, const char *);	/* non-zero if error */
 } exec_formats[] = {
-#ifdef NLIST_AOUT
-	{	"a.out",	check_aout,	hide_aout,	},
-#endif
-#ifdef NLIST_ECOFF
-	{	"ECOFF",	check_elf64,	hide_elf64,	},
-#endif
 #ifdef NLIST_ELF32
 	{	"ELF32",	check_elf32,	hide_elf32,	},
 #endif
@@ -222,7 +221,8 @@ struct {
 #endif
 };
 
-int hide_syms(const char *filename)
+int
+hide_syms(const char *filename)
 {
 	int fd, i, n, rv;
 
