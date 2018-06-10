@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/Makefile.i386 294364 2016-01-19 23:36:49Z ian $
 
 .if ${MK_APM} != "no"
 SUBDIR+=	apm
@@ -9,12 +10,12 @@ SUBDIR+=	asf
 SUBDIR+=	btxld
 .endif
 SUBDIR+=	cpucontrol
+.if ${MK_HYPERV} != "no"
+SUBDIR+=	hyperv
+.endif
 SUBDIR+=	kgmon
 SUBDIR+=	kgzip
 SUBDIR+=	lptcontrol
-.if ${MK_NCP} != "no"
-SUBDIR+=	mount_nwfs
-.endif
 SUBDIR+=	mptable
 .if ${MK_NDIS} != "no"
 SUBDIR+=	ndiscvt
@@ -24,10 +25,15 @@ SUBDIR+=	sicontrol
 SUBDIR+=	spkrtest
 SUBDIR+=	zzz
 
+# Differentiate between FreeBSD/i386 and FreeBSD/pc98
+.if ${MACHINE} == "i386"
 .if ${MK_ACPI} != "no"
 SUBDIR+=	acpi
 .endif
 SUBDIR+=	boot0cfg
 .if ${MK_WIRELESS} != "no"
 SUBDIR+=	wlconfig
+.endif
+.elif ${MACHINE} == "pc98"
+SUBDIR+=	boot98cfg
 .endif
