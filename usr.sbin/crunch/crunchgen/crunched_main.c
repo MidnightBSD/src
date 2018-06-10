@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 University of Maryland
  * All Rights Reserved.
@@ -22,8 +23,6 @@
  * Author: James da Silva, Systems Design and Analysis Group
  *			   Computer Science Department
  *			   University of Maryland at College Park
- *
- * $MidnightBSD$
  */
 /*
  * crunched_main.c - main program for crunched binaries, it branches to a
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/crunch/crunchgen/crunched_main.c 237625 2012-06-27 04:39:30Z obrien $");
 
 #include <stdio.h>
 #include <stdlib.h>
