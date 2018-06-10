@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Send a compressed CTM delta to a recipient mailing list by encoding it
  * in safe ASCII characters, in mailer-friendly chunks, and passing them
