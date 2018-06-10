@@ -72567,6 +72567,9 @@ usr.bin/vis/Makefile -text
 usr.bin/vmstat/Makefile -text
 usr.bin/vmstat/vmstat.8 -text
 usr.bin/vmstat/vmstat.c -text
+usr.bin/vtfontcvt/Makefile svneol=native#text/plain
+usr.bin/vtfontcvt/vtfontcvt.8 svneol=native#text/plain
+usr.bin/vtfontcvt/vtfontcvt.c svneol=native#text/plain
 usr.bin/w/Makefile -text
 usr.bin/w/extern.h -text
 usr.bin/w/pr_time.c -text
