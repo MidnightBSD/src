@@ -1,7 +1,8 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/ctm/mkCTM/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	mkctm
-NO_MAN=
+MAN=
 
 DPADD=	${LIBMD}
 LDADD=	-lmd
