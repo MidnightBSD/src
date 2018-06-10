@@ -73330,6 +73330,13 @@ usr.sbin/eeprom/ofw_options.h svneol=native#text/plain
 usr.sbin/etcupdate/Makefile -text
 usr.sbin/etcupdate/etcupdate.8 -text
 usr.sbin/etcupdate/etcupdate.sh -text
+usr.sbin/etcupdate/tests/Makefile svneol=native#text/plain
+usr.sbin/etcupdate/tests/always_test.sh svneol=native#text/plain
+usr.sbin/etcupdate/tests/conflicts_test.sh svneol=native#text/plain
+usr.sbin/etcupdate/tests/ignore_test.sh svneol=native#text/plain
+usr.sbin/etcupdate/tests/preworld_test.sh svneol=native#text/plain
+usr.sbin/etcupdate/tests/tests_test.sh svneol=native#text/plain
+usr.sbin/etcupdate/tests/tzsetup_test.sh svneol=native#text/plain
 usr.sbin/extattr/Makefile -text
 usr.sbin/extattr/rmextattr.8 -text
 usr.sbin/extattr/rmextattr.c -text
