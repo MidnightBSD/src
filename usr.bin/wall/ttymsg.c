@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/wall/ttymsg.c 286269 2015-08-04 03:06:23Z pfg $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ttymsg.c	8.2 (Berkeley) 11/16/93";
@@ -62,7 +63,7 @@ ttymsg(struct iovec *iov, int iovcnt, const char *line, int tmout)
 	struct iovec localiov[7];
 	ssize_t left, wret;
 	int cnt, fd;
-	static char device[MAXNAMLEN] = _PATH_DEV;
+	char device[MAXNAMLEN] = _PATH_DEV;
 	static char errbuf[1024];
 	char *p;
 	int forked;
@@ -71,8 +72,8 @@ ttymsg(struct iovec *iov, int iovcnt, const char *line, int tmout)
 	if (iovcnt > (int)(sizeof(localiov) / sizeof(localiov[0])))
 		return ("too many iov's (change code in wall/ttymsg.c)");
 
+	strlcat(device, line, sizeof(device));
 	p = device + sizeof(_PATH_DEV) - 1;
-	strlcpy(p, line, sizeof(device));
 	if (strncmp(p, "pts/", 4) == 0)
 		p += 4;
 	if (strchr(p, '/') != NULL) {

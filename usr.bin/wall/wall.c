@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/wall/wall.c 241848 2012-10-22 03:07:05Z eadler $");
 
 #ifndef lint
 static const char copyright[] =
@@ -70,14 +71,14 @@ static const char sccsid[] = "@(#)wall.c	8.2 (Berkeley) 11/16/93";
 static void makemsg(char *);
 static void usage(void);
 
-struct wallgroup {
+static struct wallgroup {
 	struct wallgroup *next;
 	char		*name;
 	gid_t		gid;
 } *grouplist;
-int nobanner;
-int mbufsize;
-char *mbuf;
+static int nobanner;
+static int mbufsize;
+static char *mbuf;
 
 static int
 ttystat(char *line)
