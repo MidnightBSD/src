@@ -26709,6 +26709,7 @@ contrib/mtree/misc.c -text
 contrib/mtree/mtree.8 -text
 contrib/mtree/mtree.c -text
 contrib/mtree/mtree.h -text
+contrib/mtree/only.c svneol=native#text/plain
 contrib/mtree/spec.c -text
 contrib/mtree/specspec.c -text
 contrib/mtree/verify.c -text

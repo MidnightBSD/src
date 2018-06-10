@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mtree.h,v 1.31 2012/10/05 09:17:29 wiz Exp $	*/
 
 /*-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: crc.c,v 1.9 2012/10/05 00:40:51 christos Exp $	*/
 
 /*-

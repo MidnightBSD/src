@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: specspec.c,v 1.2 2012/10/05 01:27:29 christos Exp $	*/
 
 /*-
