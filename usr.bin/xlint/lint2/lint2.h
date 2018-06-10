@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: lint2.h,v 1.5 2000/06/14 06:49:23 cgd Exp $ */
 
 /*
