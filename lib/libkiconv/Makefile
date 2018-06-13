@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libkiconv/Makefile 313621 2017-02-11 06:57:22Z ngie $
 
 SHLIBDIR?=	/lib
 
@@ -16,7 +17,7 @@ MLINKS+=	kiconv.3 kiconv_add_xlat16_cspair.3 \
 		kiconv.3 kiconv_add_xlat16_cspairs.3 \
 		kiconv.3 kiconv_add_xlat16_table.3
 
-CFLAGS+=	-I${.CURDIR}/../../sys
+CFLAGS+=	-I${SRCTOP}/sys
 
 WARNS?=		1
 
