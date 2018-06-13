@@ -1,8 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libiconv/Makefile 260497 2014-01-09 23:08:56Z dim $
 
 .PATH: ${.CURDIR}/../libc/iconv
-
-WARNS?=	0
 
 LIB=	iconv
 SHLIB_MAJOR= 4
