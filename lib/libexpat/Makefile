@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libexpat/Makefile 313628 2017-02-11 07:03:54Z ngie $
 
-EXPAT=		${.CURDIR}/../../contrib/expat
+EXPAT=		${SRCTOP}/contrib/expat
 
 LIB=		bsdxml
 SHLIBDIR?=	/lib
