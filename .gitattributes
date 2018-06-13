@@ -48852,16 +48852,8 @@ lib/libcam/scsi_cmdparse.c -text
 lib/libcom_err/Makefile -text
 lib/libcom_err/doc/Makefile -text
 lib/libcom_err/doc/com_err.texinfo -text
-lib/libcompat/4.1/ascftime.c -text
-lib/libcompat/4.1/cftime.3 -text
-lib/libcompat/4.1/cftime.c -text
 lib/libcompat/4.1/ftime.3 -text
 lib/libcompat/4.1/ftime.c -text
-lib/libcompat/4.1/getpw.3 -text
-lib/libcompat/4.1/getpw.c -text
-lib/libcompat/4.1/gtty.c -text
-lib/libcompat/4.1/stty.3 -text
-lib/libcompat/4.1/stty.c -text
 lib/libcompat/4.3/cfree.3 -text
 lib/libcompat/4.3/cfree.c -text
 lib/libcompat/4.3/re_comp.3 -text
