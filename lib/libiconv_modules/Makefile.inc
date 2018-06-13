@@ -1,11 +1,11 @@
 # $MidnightBSD$
 # $FreeBSD: stable/10/lib/libiconv_modules/Makefile.inc 313626 2017-02-11 07:02:04Z ngie $
 
-.PATH: ${.CURDIR}/../../libc/iconv
+.PATH: ${SRCTOP}/lib/libc/iconv
 
 SHLIB_MAJOR= 4
 WARNS?=	6
-CFLAGS+= -I${.CURDIR}/../../libc/iconv
+CFLAGS+= -I${SRCTOP}/lib/libc/iconv
 
 CFLAGS+=	-Dbool=_Bool
 
