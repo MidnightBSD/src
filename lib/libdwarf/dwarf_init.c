@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libdwarf/dwarf_init.c 252430 2013-06-30 21:06:47Z kaiw $
  */
 
 #include <stdlib.h>
@@ -192,7 +193,7 @@ dwarf_read_sleb128(Elf_Data **dp, uint64_t *offsetp)
 		shift += 7;
 	} while ((b & 0x80) != 0);
 
-	if (shift < 32 && (b & 0x40) != 0)
+	if (shift < 64 && (b & 0x40) != 0)
 		ret |= (-1 << shift);
 
 	return ret;
