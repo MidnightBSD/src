@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2004 Dag-Erling Smørgrav
  * All rights reserved.
@@ -25,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libfetch/fetch.h 268900 2014-07-20 00:29:41Z bapt $
+ * $FreeBSD: stable/10/lib/libfetch/fetch.h 315904 2017-03-24 14:26:01Z des $
  */
 
 #ifndef _FETCH_H_INCLUDED
@@ -47,6 +48,7 @@ struct url {
 	off_t		 offset;
 	size_t		 length;
 	time_t		 ims_time;
+	int		 netrcfd;
 };
 
 struct url_stat {

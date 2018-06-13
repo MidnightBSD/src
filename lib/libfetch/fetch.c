@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2004 Dag-Erling Smørgrav
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libfetch/fetch.c 252375 2013-06-29 15:51:27Z kientzle $");
+__FBSDID("$FreeBSD: stable/10/lib/libfetch/fetch.c 315904 2017-03-24 14:26:01Z des $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -284,6 +285,7 @@ fetchMakeURL(const char *scheme, const char *host, int port, const char *doc,
 	seturl(pwd);
 #undef seturl
 	u->port = port;
+	u->netrcfd = -2;
 
 	return (u);
 }
@@ -349,6 +351,7 @@ fetchParseURL(const char *URL)
 		fetch_syserr();
 		return (NULL);
 	}
+	u->netrcfd = -2;
 
 	/* scheme name */
 	if ((p = strstr(URL, ":/"))) {
@@ -384,18 +387,17 @@ fetchParseURL(const char *URL)
 	}
 
 	/* hostname */
-#ifdef INET6
 	if (*p == '[' && (q = strchr(p + 1, ']')) != NULL &&
 	    (*++q == '\0' || *q == '/' || *q == ':')) {
-		if ((i = q - p - 2) > MAXHOSTNAMELEN)
+		if ((i = q - p) > MAXHOSTNAMELEN)
 			i = MAXHOSTNAMELEN;
-		strncpy(u->host, ++p, i);
+		strncpy(u->host, p, i);
 		p = q;
-	} else
-#endif
+	} else {
 		for (i = 0; *p && (*p != '/') && (*p != ':'); p++)
 			if (i < MAXHOSTNAMELEN)
 				u->host[i++] = *p;
+	}
 
 	/* port */
 	if (*p == ':') {
@@ -442,12 +444,12 @@ nohost:
 	}
 
 	DEBUG(fprintf(stderr,
-		  "scheme:   [%s]\n"
-		  "user:     [%s]\n"
-		  "password: [%s]\n"
-		  "host:     [%s]\n"
-		  "port:     [%d]\n"
-		  "document: [%s]\n",
+		  "scheme:   \"%s\"\n"
+		  "user:     \"%s\"\n"
+		  "password: \"%s\"\n"
+		  "host:     \"%s\"\n"
+		  "port:     \"%d\"\n"
+		  "document: \"%s\"\n",
 		  u->scheme, u->user, u->pwd,
 		  u->host, u->port, u->doc));
 

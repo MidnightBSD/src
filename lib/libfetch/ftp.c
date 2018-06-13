@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2011 Dag-Erling Smørgrav
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libfetch/ftp.c 226537 2011-10-19 11:43:51Z des $");
+__FBSDID("$FreeBSD: stable/10/lib/libfetch/ftp.c 311863 2017-01-10 08:08:49Z des $");
 
 /*
  * Portions of this code were taken from or based on ftpio.c:
@@ -768,8 +769,8 @@ ftp_transfer(conn_t *conn, const char *oper, const char *file,
 			fetch_info("opening data connection");
 		bindaddr = getenv("FETCH_BIND_ADDRESS");
 		if (bindaddr != NULL && *bindaddr != '\0' &&
-		    fetch_bind(sd, sa.ss_family, bindaddr) != 0)
-			goto sysouch;
+		    (e = fetch_bind(sd, sa.ss_family, bindaddr)) != 0)
+			goto ouch;
 		if (connect(sd, (struct sockaddr *)&sa, sa.ss_len) == -1)
 			goto sysouch;
 
@@ -929,7 +930,7 @@ ftp_authenticate(conn_t *conn, struct url *url, struct url *purl)
 		if (*pwd == '\0')
 			pwd = getenv("FTP_PASSWORD");
 		if (pwd == NULL || *pwd == '\0') {
-			if ((logname = getlogin()) == 0)
+			if ((logname = getlogin()) == NULL)
 				logname = FTP_ANONYMOUS_USER;
 			if ((len = snprintf(pbuf, MAXLOGNAME + 1, "%s@", logname)) < 0)
 				len = 0;
