@@ -1,6 +1,7 @@
-# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.8 2011/10/22 18:57:55 laffer1 Exp $
-# $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.58 2007/08/14 20:49:57 kan Exp $
-GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/lib/libgcc/Makefile 300321 2016-05-20 19:05:33Z emaste $
+
+GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 
 SHLIB_NAME=	libgcc_s.so.1
@@ -15,6 +16,10 @@ MK_SSP=	no
 
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
 
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+CFLAGS+=	-DTARGET_ARM_EABI
+.endif
+
 .PATH: ${GCCDIR}/config/${GCC_CPU} ${GCCDIR}/config ${GCCDIR}
 
 CFLAGS+=	-DIN_GCC -DIN_LIBGCC2 -D__GCC_FLOAT_NOT_NEEDED \
@@ -24,23 +29,27 @@ CFLAGS+=	-DIN_GCC -DIN_LIBGCC2 -D__GCC_FLOAT_NOT_NEEDED \
 		-I${.CURDIR}/../../usr.bin/cc/cc_tools
 
 LDFLAGS+=	-nodefaultlibs
+DPADD+=		${LIBC}
 LDADD+=		-lc
 
-OBJS=		# added to below in various ways depending on TARGET_CPUARCH
+SOBJS=		# added to below in various ways depending on TARGET_CPUARCH
 
 #---------------------------------------------------------------------------
 #
-# When upgrading GCC, get the following defintions straight from Makefile.in
-#
 # Library members defined in libgcc2.c.
+# When upgrading GCC, obtain the following list from mklibgcc.in
+#
 LIB2FUNCS= _muldi3 _negdi2 _lshrdi3 _ashldi3 _ashrdi3 \
-	_cmpdi2 _ucmpdi2 _clear_cache \
+	_cmpdi2 _ucmpdi2 \
 	_enable_execute_stack _trampoline __main _absvsi2 _absvdi2 _addvsi3 \
 	_addvdi3 _subvsi3 _subvdi3 _mulvsi3 _mulvdi3 _negvsi2 _negvdi2 _ctors \
 	_ffssi2 _ffsdi2 _clz _clzsi2 _clzdi2 _ctzsi2 _ctzdi2 _popcount_tab \
 	_popcountsi2 _popcountdi2 _paritysi2 _paritydi2 _powisf2 _powidf2 \
 	_powixf2 _powitf2 _mulsc3 _muldc3 _mulxc3 _multc3 _divsc3 _divdc3 \
-	_divxc3 _divtc3
+	_divxc3 _divtc3 _bswapsi2 _bswapdi2
+.if ${COMPILER_TYPE} != "clang" || ${TARGET_CPUARCH} != "arm"
+LIB2FUNCS+= _clear_cache
+.endif
 
 # The floating-point conversion routines that involve a single-word integer.
 .for mode in sf df xf
@@ -48,10 +57,13 @@ LIB2FUNCS+= _fixuns${mode}si
 .endfor
 
 # Likewise double-word routines.
+.if ${TARGET_CPUARCH} != "arm" || ${MK_ARM_EABI} == "no"
+# These are implemented in an ARM specific file but will not be filtered out
 .for mode in sf df xf tf
 LIB2FUNCS+= _fix${mode}di _fixuns${mode}di
 LIB2FUNCS+= _floatdi${mode} _floatundi${mode}
 .endfor
+.endif
 
 LIB2ADD = $(LIB2FUNCS_EXTRA)
 LIB2ADD_ST = $(LIB2FUNCS_STATIC_EXTRA)
@@ -99,6 +111,55 @@ LIB2_DIVMOD_FUNCS = _divdi3 _moddi3 _udivdi3 _umoddi3 _udiv_w_sdiv _udivmoddi4
 #	Platform specific bits.
 #	When upgrading GCC, get the following definitions from config/<cpu>/t-*
 #
+.if ${TARGET_CPUARCH} == "arm"
+#	from config/arm/t-strongarm-elf
+CFLAGS+=	-Dinhibit_libc -fno-inline
+CFLAGS.clang+=	-fheinous-gnu-extensions
+
+LIB1ASMSRC =	lib1funcs.asm
+LIB1ASMFUNCS =  _dvmd_tls _bb_init_func
+.if ${MK_ARM_EABI} != "no"
+LIB2ADDEH =	unwind-arm.c libunwind.S pr-support.c unwind-c.c
+# Some compilers generate __aeabi_ functions libgcc_s is missing
+DPADD+=		${LIBGCC}
+LDADD+=		-lgcc
+.else
+LIB2FUNCS_EXTRA = floatunsidf.c floatunsisf.c
+.endif
+.endif
+
+.if ${TARGET_CPUARCH} == mips
+LIB2FUNCS_EXTRA = floatunsidf.c floatunsisf.c
+# ABIs other than o32 need this
+.if ${TARGET_ARCH} != "mips" && ${TARGET_ARCH} != "mipsel"
+LIB2FUNCS_EXTRA+= floatdidf.c fixunsdfsi.c
+LIB2FUNCS_EXTRA+= floatdisf.c floatundidf.c
+LIB2FUNCS_EXTRA+= fixsfdi.c floatundisf.c
+LIB2FUNCS_EXTRA+= fixdfdi.c fixunssfsi.c
+.endif
+.endif
+
+.if ${TARGET_CPUARCH} == "ia64"
+#	from config/ia64/t-ia64
+LIB1ASMSRC   = lib1funcs.asm
+LIB1ASMFUNCS = __divxf3 __divdf3 __divsf3 \
+	__divdi3 __moddi3 __udivdi3 __umoddi3 \
+	__divsi3 __modsi3 __udivsi3 __umodsi3 __save_stack_nonlocal \
+	__nonlocal_goto __restore_stack_nonlocal __trampoline \
+	_fixtfdi _fixunstfdi _floatditf
+LIB2ADDEH = unwind-ia64.c unwind-sjlj.c unwind-c.c
+.endif
+
+.if ${TARGET_ARCH} == "powerpc"
+#	from config/rs6000/t-ppccomm
+LIB2FUNCS_EXTRA = tramp.asm
+LIB2FUNCS_STATIC_EXTRA = eabi.asm
+.endif
+
+.if ${TARGET_ARCH} == "powerpc64"
+#	from config/rs6000/t-ppccomm
+LIB2FUNCS_EXTRA = tramp.asm
+.endif
 
 .if ${TARGET_CPUARCH} == "sparc64"
 #	from config/sparc/t-elf
@@ -126,7 +187,7 @@ COMMONHDRS=	tm.h tconfig.h options.h unwind.h gthr-default.h
 HIDE =  -fvisibility=hidden -DHIDE_EXPORTS
 CC_T =	${CC} -c ${CFLAGS} ${HIDE} -fPIC
 CC_P =	${CC} -c ${CFLAGS} ${HIDE} -p -fPIC
-CC_S =	${CC} -c ${CFLAGS} ${PICFLAG} -DSHARED
+CC_S =	${CC} -c ${CFLAGS} ${SHARED_CFLAGS} ${PICFLAG} -DSHARED
 
 #-----------------------------------------------------------------------
 #
@@ -147,7 +208,8 @@ OBJ_GRPS =	STD DIV
 #
 # Floating point emulation functions
 #
-.if ${TARGET_CPUARCH} == "sparc64"
+.if ${TARGET_CPUARCH} == "armNOT_YET" || \
+    ${TARGET_CPUARCH} == "powerpc" || ${TARGET_CPUARCH} == "sparc64"
 
 FPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES -DFLOAT
 DPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES
@@ -166,7 +228,7 @@ OBJ_GRPS +=	FPBIT DPBIT
 ${T}_OBJS_T =	${${T}_FUNCS:S/$/.o/}
 ${T}_OBJS_P =	${${T}_FUNCS:S/$/.po/}
 ${T}_OBJS_S =	${${T}_FUNCS:S/$/.So/}
-OBJS +=		${${T}_FUNCS:S/$/.o/}
+SOBJS +=	${${T}_FUNCS:S/$/.So/}
 
 ${${T}_OBJS_T}: ${${T}_CFILE} ${COMMONHDRS}
 	${CC_T} ${${T}_CFLAGS} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
@@ -181,9 +243,7 @@ ${${T}_OBJS_S}: ${${T}_CFILE} ${COMMONHDRS}
 # Extra objects coming from separate files
 #
 .if !empty(LIB2ADD)
-OBJS  +=	${LIB2ADD:R:S/$/.o/}
 SOBJS +=	${LIB2ADD:R:S/$/.So/}
-POBJS +=	${LIB2ADD:R:S/$/.po/}
 .endif
 
 #-----------------------------------------------------------------------
@@ -209,7 +269,7 @@ ASM_T =		${LIB1ASMFUNCS:S/$/.o/}
 ASM_P =		${LIB1ASMFUNCS:S/$/.po/}
 ASM_S =		${LIB1ASMFUNCS:S/$/.So/}
 ASM_V =		${LIB1ASMFUNCS:S/$/.vis/}
-OBJS +=		${LIB1ASMFUNCS:S/$/.o/}
+SOBJS +=	${LIB1ASMFUNCS:S/$/.So/}
 
 ${ASM_T}: ${LIB1ASMSRC} ${.PREFIX}.vis
 	${CC} -x assembler-with-cpp -c ${CFLAGS} -DL${.PREFIX} \
@@ -223,7 +283,7 @@ ${ASM_S}: ${LIB1ASMSRC}
 ${ASM_V}: ${LIB1ASMSRC}
 	${CC} -x assembler-with-cpp -c ${CFLAGS} -DL${.PREFIX} \
 	    -o ${.PREFIX}.vo ${.ALLSRC:N*.h}
-	( nm -pg ${.PREFIX}.vo | \
+	( ${NM} -pg ${.PREFIX}.vo | \
 		awk 'NF == 3 && $$2 !~ /^[UN]$$/ { print "\t.hidden ", $$3 }'\
 	) > ${.TARGET}
 
@@ -269,10 +329,13 @@ CLEANFILES += cs-*.h option*
 SHLIB_MKMAP      = ${GCCDIR}/mkmap-symver.awk
 SHLIB_MKMAP_OPTS =
 SHLIB_MAPFILES   = ${GCCDIR}/libgcc-std.ver
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+SHLIB_MAPFILES  += ${GCCDIR}/config/arm/libgcc-bpabi.ver
+.endif
 VERSION_MAP      = libgcc.map
 
-libgcc.map: ${SHLIB_MKMAP} ${SHLIB_MAPFILES} ${SOBJS} ${OBJS:R:S/$/.So/}
-	(  nm -pg ${SOBJS};echo %% ; \
+libgcc.map: ${SHLIB_MKMAP} ${SHLIB_MAPFILES} ${SOBJS}
+	(  ${NM} -pg ${SOBJS};echo %% ; \
 	  cat ${SHLIB_MAPFILES} \
 	    | sed -e '/^[   ]*#/d' \
 	          -e 's/^%\(if\|else\|elif\|endif\|define\)/#\1/' \
@@ -288,8 +351,8 @@ CLEANFILES +=	libgcc.map
 libgcc_eh.a:	${EH_OBJS_T}
 	@${ECHO} building static gcc_eh library
 	@rm -f ${.TARGET}
-	@${AR} cq ${.TARGET} `lorder ${EH_OBJS_T} | tsort -q`
-	${RANLIB} ${.TARGET}
+	${AR} ${ARFLAGS} ${.TARGET} `lorder ${EH_OBJS_T} | tsort -q`
+	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
 
 all:	libgcc_eh.a
 
@@ -297,8 +360,8 @@ all:	libgcc_eh.a
 libgcc_eh_p.a:	${EH_OBJS_P}
 	@${ECHO} building profiled gcc_eh library
 	@rm -f ${.TARGET}
-	@${AR} cq ${.TARGET} `lorder ${EH_OBJS_P} | tsort -q`
-	${RANLIB} ${.TARGET}
+	${AR} ${ARFLAGS} ${.TARGET} `lorder ${EH_OBJS_P} | tsort -q`
+	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
 all:	libgcc_eh_p.a
 .endif
 
