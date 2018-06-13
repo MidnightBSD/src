@@ -1,8 +1,7 @@
-# $FreeBSD: src/usr.sbin/cdcontrol/Makefile,v 1.10 2003/04/04 17:49:13 obrien Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/cdcontrol/Makefile 201724 2010-01-07 09:40:34Z dwmalone $
 
 PROG= cdcontrol
-
-WARNS?= 2
 
 DPADD=	${LIBEDIT} ${LIBTERMCAP}
 LDADD=	-ledit -ltermcap
