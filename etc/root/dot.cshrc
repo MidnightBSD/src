@@ -1,16 +1,17 @@
 # $MidnightBSD$
-# $FreeBSD: src/etc/root/dot.cshrc,v 1.29 2004/04/01 19:28:00 krion Exp $
+# $FreeBSD: stable/10/etc/root/dot.cshrc 243893 2012-12-05 13:56:39Z eadler $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
 # see also csh(1), environ(7).
+# more examples available at /usr/share/examples/csh/
 #
 
 alias h		history 25
 alias j		jobs -l
-alias la	ls -a
+alias la	ls -aF
 alias lf	ls -FA
-alias ll	ls -lA
+alias ll	ls -lAF
 
 # A righteous umask
 umask 22
@@ -23,18 +24,21 @@ setenv	BLOCKSIZE	K
 
 if ($?prompt) then
 	# An interactive shell -- set some stuff up
-	if ($uid == 0) then
-		set user = root
-	endif
-	set prompt = "%n@%m:%/ %#"
+	set prompt = "%N@%m:%~ %# "
+	set promptchars = "%#"
+
 	set filec
 	set history = 1000
 	set savehist = (1000 merge)
 	set autolist = ambiguous
+	# Use history to aid expansion
+	set autoexpand
+	set autorehash
 	set mail = (/var/mail/$USER)
 	if ( $?tcsh ) then
 		bindkey "^W" backward-delete-word
 		bindkey -k up history-search-backward
 		bindkey -k down history-search-forward
 	endif
+
 endif
