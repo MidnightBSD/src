@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libcompat/4.3/rexec.c 301152 2016-06-01 17:41:00Z truckman $
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
@@ -330,6 +331,7 @@ retry:
 			goto retry;
 		}
 		perror(hp->h_name);
+		(void) close(s);
 		return (-1);
 	}
 	if (fd2p == 0) {
