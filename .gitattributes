@@ -49160,6 +49160,7 @@ lib/libgeom/geom_xml2tree.c -text
 lib/libgeom/libgeom.3 -text
 lib/libgeom/libgeom.h -text
 lib/libgpib/Makefile -text
+lib/libgpib/gpib.3 svneol=native#text/plain
 lib/libgpib/gpib.h -text
 lib/libgpib/ibfoo.c -text
 lib/libgssapi/Makefile -text
