@@ -18,6 +18,10 @@
     ..
     arpa
     ..
+    atf-c
+    ..
+    atf-c++
+    ..
     bsm
     ..
     bsnmp
@@ -123,6 +127,8 @@
         ..
         hwpmc
         ..
+        hyperv
+        ..
         ic
         ..
         ieee488
@@ -135,9 +141,13 @@
         ..
         mfi
         ..
+        mmc
+        ..
         mpt
             mpilib
             ..
+        ..
+        nand
         ..
         nvme
         ..
@@ -146,6 +156,8 @@
         pbio
         ..
         pci
+        ..
+        powermac_nvram
         ..
         ppbus
         ..
@@ -173,19 +185,13 @@
         ..
         fdescfs
         ..
-        fifofs
-        ..
         msdosfs
+        ..
+        nandfs
         ..
         nfs
         ..
-        ntfs
-        ..
         nullfs
-        ..
-        nwfs
-        ..
-        portalfs
         ..
         procfs
         ..
@@ -225,8 +231,6 @@
         ..
         raid3
         ..
-        raid5
-        ..
         shsec
         ..
         stripe
@@ -261,8 +265,6 @@
     krb5
     ..
     libmilter
-    ..
-    lwres
     ..
     lzma
     ..
@@ -314,7 +316,9 @@
         sig
         ..
     ..
-    netncp
+    netpfil
+        pf
+        ..
     ..
     netsmb
     ..
