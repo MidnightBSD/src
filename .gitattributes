@@ -48849,6 +48849,8 @@ lib/libcam/cam_cdbparse.3 -text
 lib/libcam/camlib.c -text
 lib/libcam/camlib.h -text
 lib/libcam/scsi_cmdparse.c -text
+lib/libcam/tests/Makefile svneol=native#text/plain
+lib/libcam/tests/libcam_test.c svneol=native#text/plain
 lib/libcom_err/Makefile -text
 lib/libcom_err/doc/Makefile -text
 lib/libcom_err/doc/com_err.texinfo -text
