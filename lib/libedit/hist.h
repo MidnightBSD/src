@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)hist.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: hist.h,v 1.10 2003/08/07 16:44:31 agc Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libedit/hist.h 278411 2015-02-08 22:11:24Z bapt $
  */
 
 /*
@@ -65,6 +66,7 @@ typedef struct el_history_t {
 #define	HIST_SET(el, num)	HIST_FUN(el, H_SET, num)
 #define	HIST_LOAD(el, fname)	HIST_FUN(el, H_LOAD fname)
 #define	HIST_SAVE(el, fname)	HIST_FUN(el, H_SAVE fname)
+#define	HIST_SAVE_FP(el, fp)	HIST_FUN(el, H_SAVE_FP fp)
 
 protected int		hist_init(EditLine *);
 protected void		hist_end(EditLine *);

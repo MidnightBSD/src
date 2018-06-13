@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,14 +30,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$NetBSD: common.c,v 1.19 2006/03/06 21:11:56 christos Exp $
+ *	$NetBSD: common.c,v 1.23 2009/02/27 04:18:45 msaitoh Exp $
  */
 
 #if !defined(lint) && !defined(SCCSID)
 static char sccsid[] = "@(#)common.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libedit/common.c 268782 2014-07-17 02:14:25Z pfg $");
 
 /*
  * common.c: Common Editor functions
@@ -121,7 +122,7 @@ ed_delete_prev_word(EditLine *el, int c __unused)
 		*kp++ = *p;
 	el->el_chared.c_kill.last = kp;
 
-	c_delbefore(el, el->el_line.cursor - cp);	/* delete before dot */
+	c_delbefore(el, (int)(el->el_line.cursor - cp));/* delete before dot */
 	el->el_line.cursor = cp;
 	if (el->el_line.cursor < el->el_line.buffer)
 		el->el_line.cursor = el->el_line.buffer; /* bounds check */
@@ -208,9 +209,6 @@ ed_move_to_end(EditLine *el, int c __unused)
 
 	el->el_line.cursor = el->el_line.lastchar;
 	if (el->el_map.type == MAP_VI) {
-#ifdef VI_MOVE
-		el->el_line.cursor--;
-#endif
 		if (el->el_chared.c_vcmd.action != NOP) {
 			cv_delfini(el);
 			return (CC_REFRESH);

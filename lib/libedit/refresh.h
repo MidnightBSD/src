@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)refresh.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: refresh.h,v 1.5 2003/08/07 16:44:33 agc Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libedit/refresh.h 148834 2005-08-07 20:55:59Z stefanf $
  */
 
 /*

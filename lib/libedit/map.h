@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)map.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: map.h,v 1.8 2003/08/07 16:44:32 agc Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libedit/map.h 277931 2015-01-30 14:22:15Z emaste $
  */
 
 /*
@@ -57,7 +58,7 @@ typedef struct el_map_t {
 	int		 type;		/* Emacs or vi			*/
 	el_bindings_t	*help;		/* The help for the editor functions */
 	el_func_t	*func;		/* List of available functions	*/
-	int		 nfunc;		/* The number of functions/help items */
+	size_t		 nfunc;		/* The number of functions/help items */
 } el_map_t;
 
 #define	MAP_EMACS	0

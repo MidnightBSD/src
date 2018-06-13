@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
 static char sccsid[] = "@(#)el.c	8.2 (Berkeley) 1/3/94";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libedit/el.c 238810 2012-07-26 15:48:07Z pfg $");
 
 /*
  * el.c: EditLine interface functions
@@ -473,30 +474,6 @@ el_get(EditLine *el, int op, ...)
 	return (rv);
 }
 
-/* el_data_get():
- *	Set user private data.
- */
-public void
-el_data_set (el, data)
-    EditLine *el;
-    void *data;
-{
-    el->el_data = data;
-
-    return;
-}
-
-/* el_data_get():
- *	Return user private data.
- */
-public void *
-el_data_get (el)
-    EditLine *el;
-{
-    if (el->el_data)
-	return (el->el_data);
-    return (NULL);
-}
 
 /* el_line():
  *	Return editing info

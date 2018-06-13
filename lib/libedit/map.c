@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
 static char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libedit/map.c 277931 2015-01-30 14:22:15Z emaste $");
 
 /*
  * map.c: Editor function definitions
@@ -1395,7 +1396,7 @@ protected int
 map_addfunc(EditLine *el, const char *name, const char *help, el_func_t func)
 {
 	void *p;
-	int nf = el->el_map.nfunc + 1;
+	size_t nf = el->el_map.nfunc + 1;
 
 	if (name == NULL || help == NULL || func == NULL)
 		return (-1);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	@(#)parse.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: parse.h,v 1.6 2005/05/29 04:58:15 lukem Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libedit/parse.h 148834 2005-08-07 20:55:59Z stefanf $
  */
 
 /*

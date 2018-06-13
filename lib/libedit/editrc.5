@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$NetBSD: editrc.5,v 1.24 2009/04/11 22:17:52 wiz Exp $
 .\"
 .\" Copyright (c) 1997-2000 The NetBSD Foundation, Inc.
@@ -26,7 +27,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/lib/libedit/editrc.5 245325 2013-01-12 09:08:37Z joel $
 .\"
 .Dd October 18, 2003
 .Dt EDITRC 5
@@ -473,6 +474,13 @@ Move down one line.
 Editline extended command.
 .El
 .\" End of section automatically generated with makelist
+.Sh FILES
+.Bl -tag -width "~/.editrcXXX"
+.It Pa ~/.editrc
+User configuration file for the
+.Xr editline 3
+library.
+.El
 .Sh SEE ALSO
 .Xr editline 3 ,
 .Xr regex 3 ,

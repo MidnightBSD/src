@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)histedit.h	8.2 (Berkeley) 1/3/94
- *	$NetBSD: histedit.h,v 1.32 2007/06/10 20:20:28 christos Exp $
- * $MidnightBSD$
+ *	$NetBSD: histedit.h,v 1.41 2009/09/07 21:24:33 christos Exp $
+ * $FreeBSD: stable/10/lib/libedit/histedit.h 278411 2015-02-08 22:11:24Z bapt $
  */
 
 /*
@@ -154,13 +155,6 @@ int		el_source(EditLine *, const char *);
  */
 void		 el_resize(EditLine *);
 
-
-/*
- * Set user private data.
- */
-void            el_data_set    __P((EditLine *, void *));
-void *          el_data_get    __P((EditLine *));
-
 /*
  * User-defined function interface.
  */
@@ -215,6 +209,7 @@ int		history(History *, HistEvent *, int, ...);
 #define	H_NEXT_EVDATA	23	/* , const int, histdata_t *);	*/
 #define	H_DELDATA	24	/* , int, histdata_t *);*/
 #define	H_REPLACE	25	/* , const char *, histdata_t);	*/
+#define	H_SAVE_FP	26	/* , FILE*);	*/
 
 
 /*

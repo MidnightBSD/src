@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)sig.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: sig.h,v 1.7 2009/02/15 21:25:01 christos Exp $
- * $MidnightBSD$
+ *	$NetBSD: sig.h,v 1.8 2009/02/19 15:20:22 christos Exp $
+ * $FreeBSD: stable/10/lib/libedit/sig.h 238378 2012-07-11 22:20:19Z pfg $
  */
 
 /*

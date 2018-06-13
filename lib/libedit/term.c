@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
 static char sccsid[] = "@(#)term.c	8.2 (Berkeley) 4/30/95";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libedit/term.c 238810 2012-07-26 15:48:07Z pfg $");
 
 /*
  * term.c: Editor/termcap-curses interface
@@ -340,8 +341,8 @@ term_init(EditLine *el)
 	if (el->el_term.t_val == NULL)
 		return (-1);
 	(void) memset(el->el_term.t_val, 0, T_val * sizeof(int));
-	term_init_arrow(el);
 	(void) term_set(el, NULL);
+	term_init_arrow(el);
 	return (0);
 }
 

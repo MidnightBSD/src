@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)chared.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: chared.h,v 1.17 2006/03/06 21:11:56 christos Exp $
- * $MidnightBSD$
+ *	$NetBSD: chared.h,v 1.18 2009/02/15 21:55:23 christos Exp $
+ * $FreeBSD: stable/10/lib/libedit/chared.h 238178 2012-07-06 19:30:50Z pfg $
  */
 
 /*

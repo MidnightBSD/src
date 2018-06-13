@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)term.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: term.h,v 1.18 2006/11/24 00:01:17 christos Exp $
- * $MidnightBSD$
+ *	$NetBSD: term.h,v 1.20 2009/03/31 17:38:27 christos Exp $
+ * $FreeBSD: stable/10/lib/libedit/term.h 268782 2014-07-17 02:14:25Z pfg $
  */
 
 /*
