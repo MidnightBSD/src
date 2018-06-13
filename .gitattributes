@@ -48963,6 +48963,7 @@ lib/libdwarf/dwarf_init.c -text
 lib/libdwarf/dwarf_loc.c -text
 lib/libdwarf/libdwarf.h -text
 lib/libedit/Makefile -text
+lib/libedit/TEST/tc1.c svneol=native#text/plain
 lib/libedit/TEST/test.c -text
 lib/libedit/chared.c -text
 lib/libedit/chared.h -text
