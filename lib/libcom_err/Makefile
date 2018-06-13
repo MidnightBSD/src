@@ -1,10 +1,11 @@
-# $FreeBSD: src/lib/libcom_err/Makefile,v 1.12 2001/03/27 17:26:58 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libcom_err/Makefile 313622 2017-02-11 06:58:24Z ngie $
 
 LIB=	com_err
 SRCS=	com_err.c error.c
 INCS=	${COM_ERRDIR}/com_err.h ${COM_ERRDIR}/com_right.h
 MAN=	com_err.3
-COM_ERRDIR=	${.CURDIR}/../../contrib/com_err
+COM_ERRDIR=	${SRCTOP}/contrib/com_err
 CFLAGS+=	-I${COM_ERRDIR}
 
 LDFLAGS=	-Wl,--no-undefined
