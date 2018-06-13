@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libdevstat/Makefile 201381 2010-01-02 09:58:07Z ed $
 
 LIB=	devstat
 SHLIBDIR?= /lib

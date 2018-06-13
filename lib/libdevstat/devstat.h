@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997, 1998 Kenneth D. Merry.
  * All rights reserved.
@@ -26,6 +27,7 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libdevstat/devstat.h 244270 2012-12-15 18:19:48Z trociny $
  */
 
 #ifndef _DEVSTAT_H
@@ -97,6 +99,12 @@ typedef enum {
 	DSM_MS_PER_TRANSACTION_FREE,
 	DSM_BUSY_PCT,
 	DSM_QUEUE_LENGTH,
+	DSM_TOTAL_DURATION,
+	DSM_TOTAL_DURATION_READ,
+	DSM_TOTAL_DURATION_WRITE,
+	DSM_TOTAL_DURATION_FREE,
+	DSM_TOTAL_DURATION_OTHER,
+	DSM_TOTAL_BUSY_TIME,
 	DSM_MAX
 } devstat_metric;
 
