@@ -46020,6 +46020,7 @@ include/mach_debug/zone_info.h svneol=native#text/plain
 include/malloc.h -text
 include/malloc_np.h -text
 include/memory.h -text
+include/mk-osreldate.sh svneol=native#text/plain
 include/monetary.h -text
 include/mpool.h -text
 include/mqueue.h -text
