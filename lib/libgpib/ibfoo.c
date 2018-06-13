@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * All rights reserved.
@@ -25,7 +26,7 @@
  *
  * This file merely redirects to the file in <dev/ieee488/ugpib.h>
  *
- * $FreeBSD: src/lib/libgpib/ibfoo.c,v 1.6 2005/02/13 06:21:36 scottl Exp $
+ * $FreeBSD: stable/10/lib/libgpib/ibfoo.c 141783 2005-02-13 06:21:36Z scottl $
  */
 
 #include <stdio.h>
