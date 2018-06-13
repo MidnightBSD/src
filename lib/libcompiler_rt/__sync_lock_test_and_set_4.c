@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD$ */
 #define	NAME		__sync_lock_test_and_set_4
 #define	TYPE		uint32_t

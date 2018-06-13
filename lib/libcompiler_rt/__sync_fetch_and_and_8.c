@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD$ */
 #define	NAME		__sync_fetch_and_and_8
 #define	TYPE		uint64_t

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD$ */
 #define	NAME		__sync_fetch_and_xor_4
 #define	TYPE		uint32_t

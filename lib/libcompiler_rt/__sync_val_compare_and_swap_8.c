@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD$ */
 #define	NAME		__sync_val_compare_and_swap_8
 #define	TYPE		uint64_t

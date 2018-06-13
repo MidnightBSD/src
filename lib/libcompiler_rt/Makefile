@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libcompiler_rt/Makefile 323189 2017-09-05 17:32:14Z dim $
 
 .include <bsd.own.mk>
 
@@ -14,7 +15,7 @@ CRTARCH=x86_64
 CRTARCH=${MACHINE_CPUARCH}
 .endif
 
-CRTSRC=${.CURDIR}/../../contrib/compiler_rt/lib
+CRTSRC=${.CURDIR}/../../contrib/compiler-rt/lib
 
 .PATH: ${CRTSRC}/${CRTARCH} ${CRTSRC}
 
@@ -65,15 +66,9 @@ SRCF=	absvdi2 \
 	fixunsxfti \
 	fixxfdi \
 	fixxfti \
-	floatdidf \
-	floatdisf \
-	floatdixf \
 	floattidf \
 	floattisf \
 	floattixf \
-	floatundidf \
-	floatundisf \
-	floatundixf \
 	floatunsidf \
 	floatunsisf \
 	floatuntidf \
@@ -126,43 +121,79 @@ SRCF=	absvdi2 \
 	umoddi3 \
 	umodti3
 
+# Avoid using SSE2 instructions on i386, if unsupported.
+.if ${MACHINE_CPUARCH} == "i386" && empty(MACHINE_CPU:Msse2)
+SRCS+=		floatdidf.c
+SRCS+=		floatdisf.c
+SRCS+=		floatdixf.c
+SRCS+=		floatundidf.c
+SRCS+=		floatundisf.c
+SRCS+=		floatundixf.c
+.else
+SRCF+=		floatdidf
+SRCF+=		floatdisf
+SRCF+=		floatdixf
+SRCF+=		floatundidf
+SRCF+=		floatundisf
+SRCF+=		floatundixf
+.endif
+
+# These are already shipped by libc.a on arm and mips
+.if ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
 SRCF+=	adddf3 \
 	addsf3 \
 	divdf3 \
 	divsf3 \
-	divsi3 \
 	extendsfdf2 \
 	fixdfsi \
 	fixsfsi \
 	floatsidf \
 	floatsisf \
-	modsi3 \
 	muldf3 \
 	mulsf3 \
 	subdf3 \
 	subsf3 \
-	truncdfsf2 \
+	truncdfsf2
+.endif
+
+.if ${MACHINE_CPUARCH} != "mips" && \
+    (${MACHINE_CPUARCH} != "arm" || ${MK_ARM_EABI} != "no")
+SRCF+=	divsi3 \
+	modsi3 \
 	udivsi3 \
 	umodsi3
+.endif
 
 # FreeBSD-specific atomic intrinsics.
-.if ${MACHINE_ARCH:Mmips64*} != ""
-SRCF+=	__sync_fetch_and_add_8 \
-	__sync_fetch_and_and_8 \
-	__sync_fetch_and_or_8 \
-	__sync_fetch_and_sub_8 \
-	__sync_fetch_and_xor_8 \
-	__sync_lock_test_and_set_8 \
-	__sync_val_compare_and_swap_8
+.if ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "armv6"
+.PATH: ${.CURDIR}/../../sys/arm/arm
+
+SRCF+=	stdatomic
+CFLAGS+=	-DEMIT_SYNC_ATOMICS
+.elif ${MACHINE_CPUARCH} == "mips"
+.PATH: ${.CURDIR}/../../sys/mips/mips
+
+SRCF+=	stdatomic
 .endif
 
 .for file in ${SRCF}
-. if exists(${CRTSRC}/${CRTARCH}/${file}.S)
+. if ${MACHINE_CPUARCH} != "arm" && exists(${CRTSRC}/${CRTARCH}/${file}.S)
 SRCS+=	${file}.S
 . else
 SRCS+=	${file}.c
 . endif
 .endfor
+
+.if ${MACHINE_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+SRCS+=	aeabi_idivmod.S \
+	aeabi_ldivmod.S \
+	aeabi_memcmp.S \
+	aeabi_memcpy.S \
+	aeabi_memmove.S \
+	aeabi_memset.S \
+	aeabi_uidivmod.S \
+	aeabi_uldivmod.S
+.endif
 
 .if ${MK_INSTALLLIB} != "no"
 SYMLINKS+=libcompiler_rt.a ${LIBDIR}/libgcc.a
@@ -171,7 +202,8 @@ SYMLINKS+=libcompiler_rt.a ${LIBDIR}/libgcc.a
 SYMLINKS+=libcompiler_rt_p.a ${LIBDIR}/libgcc_p.a
 .endif
 
-.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386" || \
+    ${MACHINE_CPUARCH} == "powerpc"
 AFLAGS+=--noexecstack
 ACFLAGS+=-Wa,--noexecstack
 .endif
