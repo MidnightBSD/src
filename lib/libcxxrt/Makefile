@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libcxxrt/Makefile 315965 2017-03-25 21:46:02Z dim $
 
-SRCDIR=		${.CURDIR}/../../contrib/libcxxrt
+SRCDIR=		${SRCTOP}/contrib/libcxxrt
 
 SHLIB_MAJOR=	1
 SHLIBDIR?=	/lib
