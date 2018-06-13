@@ -48898,6 +48898,8 @@ lib/libcrypt/crypt.3 -text
 lib/libcrypt/crypt.c -text
 lib/libcrypt/crypt.h -text
 lib/libcrypt/misc.c -text
+lib/libcrypt/tests/Makefile svneol=native#text/plain
+lib/libcrypt/tests/crypt_tests.c svneol=native#text/plain
 lib/libcxxrt/Makefile svneol=native#text/plain
 lib/libcxxrt/Version.map -text
 lib/libdevctl/Makefile svneol=native#text/plain
