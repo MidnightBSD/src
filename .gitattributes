@@ -11218,6 +11218,7 @@ contrib/compiler-rt/lib/ashlti3.c -text
 contrib/compiler-rt/lib/ashrdi3.c -text
 contrib/compiler-rt/lib/ashrti3.c -text
 contrib/compiler-rt/lib/assembly.h -text
+contrib/compiler-rt/lib/atomic.c svneol=native#text/plain
 contrib/compiler-rt/lib/clear_cache.c -text
 contrib/compiler-rt/lib/clzdi2.c -text
 contrib/compiler-rt/lib/clzsi2.c -text
