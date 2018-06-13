@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libexecinfo/Makefile 313627 2017-02-11 07:03:10Z ngie $
 
-LIBEXECINFO=	${.CURDIR}/../../contrib/libexecinfo
+LIBEXECINFO=	${SRCTOP}/contrib/libexecinfo
 
 LIB=		execinfo
 SHLIB_MAJOR=	1
