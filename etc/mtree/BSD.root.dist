@@ -11,6 +11,8 @@
     boot
         defaults
         ..
+        dtb
+        ..
         firmware
         ..
         kernel
@@ -25,19 +27,23 @@
     etc
         X11
         ..
+        autofs
+        ..
         bluetooth
+        ..
+        cron.d
         ..
         defaults
         ..
         devd
-        ..
-        gnats
         ..
         gss
         ..
         mail
         ..
         mtree
+        ..
+        newsyslog.conf.d
         ..
         ntp             mode=0700
         ..
@@ -55,6 +61,8 @@
         ..
         ppp
         ..
+        rc.conf.d
+        ..
         rc.d
         ..
         security
@@ -66,6 +74,8 @@
         ssl
             certs
             ..
+        ..
+        syslog.d
         ..
         zfs
         ..
