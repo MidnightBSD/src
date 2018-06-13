@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -23,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libdwarf/dwarf_errmsg.c 241720 2012-10-19 05:43:38Z ed $
  */
 
 #include <stdio.h>
 #include "_libdwarf.h"
 
-const char *_libdwarf_errors[] = {
+static const char *_libdwarf_errors[] = {
 #define	DEFINE_ERROR(N,S)		[DWARF_E_##N] = S
 	DEFINE_ERROR(NONE,		"No Error"),
 	DEFINE_ERROR(ERROR,		"An error"),
