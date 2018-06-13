@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1986, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -31,7 +32,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/IPXrouted/IPXrouted.8,v 1.18 2004/07/02 23:12:38 ru Exp $
+.\" $FreeBSD: stable/10/usr.sbin/IPXrouted/IPXrouted.8 211936 2010-08-28 16:32:01Z brucec $
 .\"
 .Dd October 11, 1995
 .Dt IPXROUTED 8
@@ -198,7 +199,7 @@ also periodically checks the routing table entries.
 If an entry has not been updated for 3 minutes, the entry's metric
 is set to infinity and marked for deletion.
 Deletions are delayed
-an additional 60 seconds to insure the invalidation is propagated
+an additional 60 seconds to ensure the invalidation is propagated
 to other routers.
 .Pp
 Hosts acting as internetwork routers gratuitously supply their

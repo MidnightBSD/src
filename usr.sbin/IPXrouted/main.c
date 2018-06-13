@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/main.c,v 1.13 2006/09/21 02:01:46 kan Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/main.c 162492 2006-09-21 02:01:46Z kan $
  */
 
 #ifndef lint

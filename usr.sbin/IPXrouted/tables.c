@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/tables.c,v 1.8 2003/11/15 17:10:56 trhodes Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/tables.c 231817 2012-02-16 05:17:06Z eadler $
  */
 
 #ifndef lint
@@ -172,7 +173,6 @@ rtadd_clone(struct rt_entry *ort, struct sockaddr *dst,
 {
 	struct afhash h;
 	register struct rt_entry *rt;
-	struct rthash *rh;
 	int af = dst->sa_family, flags;
 	u_int hash;
 
@@ -183,7 +183,6 @@ rtadd_clone(struct rt_entry *ort, struct sockaddr *dst,
 	(*afswitch[af].af_hash)(dst, &h);
 	flags = (*afswitch[af].af_ishost)(dst) ? RTF_HOST : 0;
 	hash = h.afh_nethash;
-	rh = &nethash[hash & ROUTEHASHMASK];
 	rt = (struct rt_entry *)malloc(sizeof (*rt));
 	if (rt == 0)
 		return;
@@ -213,7 +212,6 @@ rtchange(struct rt_entry *rt, struct sockaddr *gate, short metric,
     short ticks)
 {
 	int doioctl = 0, metricchanged = 0;
-	struct rtuentry oldroute;
 
 	FIXLEN(gate);
 	/*
@@ -281,7 +279,6 @@ rtchange(struct rt_entry *rt, struct sockaddr *gate, short metric,
 	if (doioctl || metricchanged) {
 		TRACE_ACTION("CHANGE FROM", rt);
 		if (doioctl) {
-			oldroute = rt->rt_rt;
 			rt->rt_router = *gate;
 		}
 		rt->rt_metric = metric;

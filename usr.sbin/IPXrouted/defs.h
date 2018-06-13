@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@
  *
  *	@(#)defs.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/defs.h,v 1.9 2002/02/18 20:35:26 mike Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/defs.h 90868 2002-02-18 20:35:27Z mike $
  */
 
 #include <sys/types.h>

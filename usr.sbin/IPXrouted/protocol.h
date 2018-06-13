@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +38,7 @@
  *
  *	@(#)protocol.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/protocol.h,v 1.5 1999/08/28 01:15:03 peter Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/protocol.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 /*

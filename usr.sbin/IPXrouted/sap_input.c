@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Hay.  All rights reserved.
  *
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/sap_input.c,v 1.7 1999/08/28 01:15:04 peter Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/sap_input.c 228990 2011-12-30 10:58:14Z uqs $
  */
 
 /*
@@ -136,7 +137,7 @@ sap_input(from, size)
 			 * The idea here is that if the hop count is more
 			 * than INFINITY it is bogus and should be discarded.
 			 * If it is equal to INFINITY it is a message to say
-			 * that a service went down. If we don't allready
+			 * that a service went down. If we don't already
 			 * have it in our tables discard it. Otherwise
 			 * update our table and set the timer to EXPIRE_TIME
 			 * so that it is removed next time we go through the

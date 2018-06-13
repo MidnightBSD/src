@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Hay.  All rights reserved.
  *
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/sap_output.c,v 1.10 2002/05/30 21:49:15 wollman Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/sap_output.c 97638 2002-05-30 21:49:15Z wollman $
  */
 
 /*

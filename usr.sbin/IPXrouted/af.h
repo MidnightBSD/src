@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
  *
  *	@(#)af.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/af.h,v 1.4 1999/08/28 01:15:01 peter Exp $
+ * $FreeBSD: stable/10/usr.sbin/IPXrouted/af.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 /*

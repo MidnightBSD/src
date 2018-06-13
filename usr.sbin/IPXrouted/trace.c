@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +42,7 @@
 static char sccsid[] = "@(#)trace.c	8.1 (Berkeley) 6/5/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/IPXrouted/trace.c,v 1.11 2005/08/05 07:17:23 stefanf Exp $";
+  "$FreeBSD: stable/10/usr.sbin/IPXrouted/trace.c 173709 2007-11-17 23:09:39Z jb $";
 #endif /* not lint */
 
 /*
