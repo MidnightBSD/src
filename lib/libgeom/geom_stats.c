@@ -27,26 +27,24 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libgeom/geom_stats.c,v 1.3 2003/03/18 09:53:46 phk Exp $
+ * $FreeBSD: stable/10/lib/libgeom/geom_stats.c 319303 2017-05-31 08:40:46Z ngie $
  */
 
-#include <paths.h>
+#include <sys/types.h>
+#include <sys/devicestat.h>
+#include <sys/mman.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <paths.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <libgeom.h>
 
-#include <sys/mman.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/devicestat.h>
-
-
 /************************************************************/
-static uint npages, pagesize, spp;
-static int statsfd = -1;
+static uint npages, spp;
+static int pagesize, statsfd = -1;
 static u_char *statp;
 
 void
@@ -68,8 +66,8 @@ geom_stats_resync(void)
 	if (statsfd == -1)
 		return;
 	for (;;) {
-		p = mmap(statp, (npages + 1) * pagesize, 
-		    PROT_READ, 0, statsfd, 0);
+		p = mmap(statp, (npages + 1) * pagesize,
+		    PROT_READ, MAP_SHARED, statsfd, 0);
 		if (p == MAP_FAILED)
 			break;
 		else
@@ -91,7 +89,7 @@ geom_stats_open(void)
 		return (errno);
 	pagesize = getpagesize();
 	spp = pagesize / sizeof(struct devstat);
-	p = mmap(NULL, pagesize, PROT_READ, 0, statsfd, 0);
+	p = mmap(NULL, pagesize, PROT_READ, MAP_SHARED, statsfd, 0);
 	if (p == MAP_FAILED) {
 		error = errno;
 		close(statsfd);

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libgeom/geom_getxml.c,v 1.4 2009/12/31 01:37:26 ed Exp $
+ * $FreeBSD: stable/10/lib/libgeom/geom_getxml.c 201320 2009-12-31 01:37:26Z ed $
  */
 
 #include <sys/types.h>

@@ -27,26 +27,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libgeom/geom_ctl.c,v 1.7 2010/10/21 10:38:14 pjd Exp $
+ * $FreeBSD: stable/10/lib/libgeom/geom_ctl.c 319018 2017-05-28 00:25:44Z ngie $
  */
 
-#include <stdio.h>
+#include <sys/types.h>
+#include <sys/queue.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
 #include <paths.h>
-
-#include <sys/queue.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define GCTL_TABLE 1
 #include <libgeom.h>
 
-/* 
+/*
  * Global pointer to a string that is used to avoid an errorneous free in
  * gctl_free.
  */
@@ -173,7 +172,7 @@ gctl_param_add(struct gctl_req *req, const char *name, int len, void *value,
 		ap->len = len;
 	else if (len < 0) {
 		ap->flag |= GCTL_PARAM_ASCII;
-		ap->len = strlen(value) + 1;	
+		ap->len = strlen(value) + 1;
 	}
 }
 
