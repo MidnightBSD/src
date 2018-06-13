@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: stable/10/lib/libgssapi/gss_pseudo_random.c 229784 2012-01-07 16:13:56Z uqs $ */
+/* $FreeBSD: stable/10/lib/libgssapi/gss_pseudo_random.c 298314 2016-04-20 00:49:37Z pfg $ */
 /* $Id: gss_pseudo_random.c 20053 2007-01-24 01:31:35Z lha $ */
 
 #include <gssapi/gssapi.h>
@@ -49,7 +49,7 @@ gss_pseudo_random(OM_uint32 *minor_status,
 		  gss_buffer_t prf_out)
 {
     struct _gss_context *ctx = (struct _gss_context *) context;
-    struct _gss_mech_switch *m = ctx->gc_mech;
+    struct _gss_mech_switch *m;
     OM_uint32 major_status;
 
     _gss_buffer_zero(prf_out);
@@ -59,6 +59,7 @@ gss_pseudo_random(OM_uint32 *minor_status,
 	*minor_status = 0;
 	return GSS_S_NO_CONTEXT;
     }
+    m = ctx->gc_mech;
 
     if (m->gm_pseudo_random == NULL)
 	return GSS_S_UNAVAILABLE;

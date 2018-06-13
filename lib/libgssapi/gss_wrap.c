@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_wrap.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: stable/10/lib/libgssapi/gss_wrap.c 298314 2016-04-20 00:49:37Z pfg $
  */
 
 #include <gssapi/gssapi.h>
@@ -43,7 +43,7 @@ gss_wrap(OM_uint32 *minor_status,
     gss_buffer_t output_message_buffer)
 {
 	struct _gss_context *ctx = (struct _gss_context *) context_handle;
-	struct _gss_mech_switch *m = ctx->gc_mech;
+	struct _gss_mech_switch *m;
 
 	if (conf_state)
 		*conf_state = 0;
@@ -52,6 +52,7 @@ gss_wrap(OM_uint32 *minor_status,
 		*minor_status = 0;
 		return (GSS_S_NO_CONTEXT);
 	}
+	m = ctx->gc_mech;
 
 	return (m->gm_wrap(minor_status, ctx->gc_ctx,
 		    conf_req_flag, qop_req, input_message_buffer,

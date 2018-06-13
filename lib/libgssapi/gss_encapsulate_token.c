@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libgssapi/gss_encapsulate_token.c 178828 2008-05-07 13:53:12Z dfr $
+ * $FreeBSD: stable/10/lib/libgssapi/gss_encapsulate_token.c 298314 2016-04-20 00:49:37Z pfg $
  */
 
 #include <gssapi/gssapi.h>
@@ -48,7 +48,7 @@ gss_encapsulate_token(const gss_buffer_t input_token, gss_OID oid,
 	 * First time around, we calculate the size, second time, we
 	 * encode the token.
 	 */
-	p = 0;
+	p = NULL;
 	for (i = 0; i < 2; i++) {
 		len = 0;
 

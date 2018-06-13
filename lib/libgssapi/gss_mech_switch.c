@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_mech_switch.c 201145 2009-12-28 22:56:30Z antoine $
+ *	$FreeBSD: stable/10/lib/libgssapi/gss_mech_switch.c 298314 2016-04-20 00:49:37Z pfg $
  */
 
 #include <gssapi/gssapi.h>
@@ -84,7 +84,7 @@ _gss_string_to_oid(const char* s, gss_OID oid)
 	 * out the size. Second time around, we actually encode the
 	 * number.
 	 */
-	res = 0;
+	res = NULL;
 	for (i = 0; i < 2; i++) {
 		byte_count = 0;
 		for (p = s, j = 0; p; p = q, j++) {

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_verify_mic.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: stable/10/lib/libgssapi/gss_verify_mic.c 298314 2016-04-20 00:49:37Z pfg $
  */
 
 #include <gssapi/gssapi.h>
@@ -40,7 +40,7 @@ gss_verify_mic(OM_uint32 *minor_status,
     gss_qop_t *qop_state)
 {
 	struct _gss_context *ctx = (struct _gss_context *) context_handle;
-	struct _gss_mech_switch *m = ctx->gc_mech;
+	struct _gss_mech_switch *m;
 
 	if (qop_state)
 		*qop_state = 0;
@@ -48,6 +48,7 @@ gss_verify_mic(OM_uint32 *minor_status,
 		*minor_status = 0;
 		return (GSS_S_NO_CONTEXT);
 	}
+	m = ctx->gc_mech;
 
 	return (m->gm_verify_mic(minor_status, ctx->gc_ctx,
 		    message_buffer, token_buffer, qop_state));

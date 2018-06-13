@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_inquire_context.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: stable/10/lib/libgssapi/gss_inquire_context.c 298314 2016-04-20 00:49:37Z pfg $
  */
 
 #include <gssapi/gssapi.h>
@@ -100,7 +100,7 @@ gss_inquire_context(OM_uint32 *minor_status,
 			if (src_name)
 				gss_release_name(minor_status, src_name);
 			m->gm_release_name(minor_status, &src_mn);
-			minor_status = 0;
+			minor_status = NULL;
 			return (GSS_S_FAILURE);
 		}
 		*targ_name = (gss_name_t) name;

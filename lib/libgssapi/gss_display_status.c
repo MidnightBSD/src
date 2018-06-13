@@ -100,9 +100,6 @@
 #include "mech_switch.h"
 #include "utils.h"
 
-void _gss_mg_collect_error(gss_OID mech, OM_uint32 maj, OM_uint32 min);
-
-
 static const char *
 calling_error(OM_uint32 v)
 {
