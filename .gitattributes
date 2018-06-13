@@ -44681,13 +44681,13 @@ etc/man.alias -text
 etc/master.passwd -text
 etc/minfree -text
 etc/motd -text
-etc/mtree/BIND.chroot.dist -text
-etc/mtree/BIND.include.dist -text
+etc/mtree/BSD.debug.dist -text
 etc/mtree/BSD.include.dist -text
 etc/mtree/BSD.local.dist -text
 etc/mtree/BSD.release.dist -text
 etc/mtree/BSD.root.dist -text
 etc/mtree/BSD.sendmail.dist -text
+etc/mtree/BSD.tests.dist -text
 etc/mtree/BSD.usr.dist -text
 etc/mtree/BSD.var.dist -text
 etc/mtree/BSD.x11-4.dist -text

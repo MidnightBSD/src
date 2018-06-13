@@ -1,0 +1,57 @@
+# $MidnightBSD$
+# $FreeBSD: stable/10/etc/mtree/BSD.debug.dist 274344 2014-11-10 14:26:56Z emaste $
+#
+# Please see the file src/etc/mtree/README before making changes to this file.
+#
+
+/set type=dir uname=root gname=wheel mode=0755
+.
+    debug
+        bin
+        ..
+        boot
+        ..
+        lib
+            geom
+            ..
+        ..
+        libexec
+        ..
+        sbin
+        ..
+        usr
+            bin
+            ..
+            games
+            ..
+            lib
+                engines
+                ..
+                i18n
+                ..
+                private
+                ..
+            ..
+            lib32
+                i18n
+                ..
+                private
+                ..
+            ..
+            libexec
+                bsdinstall
+                ..
+                lpr
+                    ru
+                    ..
+                ..
+                sendmail
+                ..
+                sm.bin
+                ..
+            ..
+            sbin
+            ..
+        ..
+    ..
+..
