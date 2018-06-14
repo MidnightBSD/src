@@ -19,7 +19,7 @@ LIBC_NONSHARED_SRCS=
 SRCS=	__stub.c
 
 .if ${MK_ICONV} == "yes"
-.PATH: ${.CURDIR}/../libc/iconv
+.PATH: ${SRCTOP}/lib/libc/iconv
 .include "Makefile.iconv"
 CFLAGS+=-I${SRCTOP}/lib/libc/iconv
 .endif
