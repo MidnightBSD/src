@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * units.c   Copyright (c) 1993 by Adrian Mariano (adrian@cam.cornell.edu)
  *
@@ -17,7 +18,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.bin/units/units.c 227194 2011-11-06 08:18:17Z ed $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -42,9 +43,9 @@ static const char rcsid[] =
 
 #define PRIMITIVECHAR '!'
 
-const char *powerstring = "^";
+static const char *powerstring = "^";
 
-struct {
+static struct {
 	char *uname;
 	char *uval;
 }      unittable[MAXUNITS];
@@ -57,13 +58,13 @@ struct unittype {
 	int quantity;
 };
 
-struct {
+static struct {
 	char *prefixname;
 	char *prefixval;
 }      prefixtable[MAXPREFIXES];
 
 
-char NULLUNIT[] = "";
+static char NULLUNIT[] = "";
 
 #ifdef MSDOS
 #define SEPARATOR      ";"
@@ -71,8 +72,8 @@ char NULLUNIT[] = "";
 #define SEPARATOR      ":"
 #endif
 
-int unitcount;
-int prefixcount;
+static int unitcount;
+static int prefixcount;
 
 char	*dupstr(const char *str);
 void	 readunits(const char *userfile);
