@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
+# $FreeBSD: stable/10/gnu/usr.bin/Makefile 322094 2017-08-05 12:33:00Z marius $
 
 .include <bsd.own.mk>
 
@@ -12,7 +12,7 @@ SUBDIR= ${_binutils} \
 	${_gperf} \
 	grep \
 	${_rcs} \
-	sort \
+	${_tests} \
 	${_tests} \
 	${_texinfo}
 
