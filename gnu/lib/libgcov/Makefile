@@ -1,12 +1,12 @@
-# $MidnightBSD: src/gnu/lib/libgcov/Makefile,v 1.4 2011/10/22 19:02:28 laffer1 Exp $
-# $FreeBSD: src/gnu/lib/libgcov/Makefile,v 1.5 2007/05/19 04:25:55 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/lib/libgcov/Makefile 245539 2013-01-17 05:56:28Z andrew $
 
 NO_PROFILE=
 .include <bsd.own.mk>
 MK_SSP=		no
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
 
-GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 .PATH: ${GCCDIR}/config/${GCC_CPU} ${GCCDIR}
 
@@ -16,6 +16,11 @@ CFLAGS+=	-DIN_GCC -DIN_LIBGCC2 -D__GCC_FLOAT_NOT_NEEDED
 CFLAGS+=	-D_PTHREADS -DGTHREAD_USE_WEAK
 CFLAGS+=	-I${.CURDIR}/../../usr.bin/cc/cc_tools \
 		-I${GCCLIB}/include -I${GCCDIR}/config -I${GCCDIR} -I.
+
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+CFLAGS+=	-DTARGET_ARM_EABI
+.endif
+
 #
 # Library members defined in libgcov.c.
 # Defined in libgcov.c, included only in gcov library
