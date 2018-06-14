@@ -1,4 +1,5 @@
-/* $FreeBSD: src/gnu/lib/libregex/config.h,v 1.1 2005/05/10 11:37:37 tjr Exp $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/gnu/lib/libregex/config.h 251438 2013-06-05 21:31:06Z jkim $ */
 
 #define	_REGEX_RE_COMP	1
 #define	HAVE_LANGINFO_H	1
@@ -10,3 +11,6 @@
 #define	HAVE_WCRTOMB	1
 #define	HAVE_MBRTOWC	1
 #define	HAVE_WCSCOLL	1
+#define	HAVE_ALLOCA	1
+#define	HAVE_STDBOOL_H	1
+#define	HAVE_STDINT_H	1
