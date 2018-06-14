@@ -18928,6 +18928,12 @@ contrib/libexecinfo/symtab.h svneol=native#text/plain
 contrib/libexecinfo/unwind.c svneol=native#text/plain
 contrib/libexecinfo/unwind.h svneol=native#text/plain
 contrib/libexecinfo/unwind_arm_ehabi_stub.c svneol=native#text/plain
+contrib/libgnuregex/regcomp.c svneol=native#text/plain
+contrib/libgnuregex/regex.c svneol=native#text/plain
+contrib/libgnuregex/regex.h svneol=native#text/plain
+contrib/libgnuregex/regex_internal.c svneol=native#text/plain
+contrib/libgnuregex/regex_internal.h svneol=native#text/plain
+contrib/libgnuregex/regexec.c svneol=native#text/plain
 contrib/libpcap/.cvsignore -text
 contrib/libpcap/CHANGES -text
 contrib/libpcap/CREDITS -text
