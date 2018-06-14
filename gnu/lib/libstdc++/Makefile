@@ -4,7 +4,7 @@
 .include <bsd.own.mk>
 
 GCCVER=	4.2
-GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 SRCDIR=	${.CURDIR}/../../../contrib/libstdc++
 SUPDIR=	${SRCDIR}/libsupc++
