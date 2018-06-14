@@ -1,6 +1,9 @@
 # $MidnightBSD$
+#
+# $FreeBSD: stable/10/lib/libauditd/Makefile 313584 2017-02-11 05:53:13Z ngie $
+#
 
-OPENBSMDIR=		${.CURDIR}/../../contrib/openbsm
+OPENBSMDIR=		${SRCTOP}/contrib/openbsm
 LIBAUDITDDIR=		${OPENBSMDIR}/libauditd
 LIBBSMDIR=		${OPENBSMDIR}/libbsm
 
@@ -17,6 +20,6 @@ CFLAGS+=	-I${OPENBSMDIR} -I${LIBBSMDIR}
 
 WARNS?=		3
 
-NO_MAN=
+MAN=
 
 .include <bsd.lib.mk>
