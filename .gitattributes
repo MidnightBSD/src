@@ -46516,6 +46516,7 @@ lib/csu/sparc64/crt1.c -text
 lib/csu/sparc64/crti.S -text
 lib/csu/sparc64/crtn.S -text
 lib/libalias/Makefile -text
+lib/libalias/Makefile.inc svneol=native#text/plain
 lib/libalias/libalias/Makefile -text
 lib/libalias/modules/Makefile -text
 lib/libalias/modules/Makefile.inc -text
