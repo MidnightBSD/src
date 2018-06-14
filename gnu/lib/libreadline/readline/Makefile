@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/lib/libreadline/readline/Makefile,v 1.13 2004/10/18 08:36:40 ache Exp $
+# $FreeBSD: stable/10/gnu/lib/libreadline/readline/Makefile 136658 2004-10-18 08:36:40Z ache $
 
 SUBDIR= doc
 

@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/lib/libreadline/history/Makefile,v 1.6 2001/04/21 22:05:30 ache Exp $
+# $FreeBSD: stable/10/gnu/lib/libreadline/history/Makefile 211243 2010-08-12 20:46:49Z will $
 
 SUBDIR= doc
 
@@ -9,7 +9,7 @@ MAN=    rlhistory.3
 SRCS= $(HISTSRC) xmalloc.c
 
 rlhistory.3: doc/history.3
-	cp ${.ALLSRC} ${.TARGET}
+	cp -f ${.ALLSRC} ${.TARGET}
 
 CLEANFILES+= rlhistory.3
 
