@@ -1,7 +1,7 @@
-# $MidnightBSD: src/lib/libbegemot/Makefile,v 1.2 2012/04/10 19:40:33 laffer1 Exp $
-# $FreeBSD: src/lib/libbegemot/Makefile,v 1.4 2007/05/21 02:49:02 deischen Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libbegemot/Makefile 313585 2017-02-11 05:55:25Z ngie $
 
-LIBBEGEMOT_DIR=${.CURDIR}/../../contrib/libbegemot
+LIBBEGEMOT_DIR=${SRCTOP}/contrib/libbegemot
 
 .PATH: ${LIBBEGEMOT_DIR}
 
