@@ -1,10 +1,10 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/lib/csu/Makefile,v 1.24 2004/09/10 06:48:04 ru Exp $
+# $FreeBSD: stable/10/gnu/lib/csu/Makefile 260096 2013-12-30 20:15:46Z dim $
 
 .include <bsd.own.mk>
 MK_SSP=		no
 
-GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 CCDIR=	${.CURDIR}/../../usr.bin/cc
 .include "${CCDIR}/Makefile.tgt"
