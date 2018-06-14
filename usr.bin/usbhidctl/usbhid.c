@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usbhid.c,v 1.14 2000/07/03 02:51:37 matt Exp $	*/
-/*	$MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.bin/usbhidctl/usbhid.c 235519 2012-05-16 20:30:20Z mav $ */
 
 /*
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -42,7 +43,7 @@
 #include <usbhid.h>
 #include <dev/usb/usbhid.h>
 
-struct variable {
+static struct variable {
 	char *name;
 	int instance;
 	int val;
@@ -50,11 +51,11 @@ struct variable {
 	struct variable *next;
 } *vars;
 
-int verbose = 0;
-int noname = 0;
-int hexdump = 0;
-int wflag = 0;
-int zflag = 0;
+static int verbose = 0;
+static int noname = 0;
+static int hexdump = 0;
+static int wflag = 0;
+static int zflag = 0;
 
 static void usage(void);
 static void dumpitem(const char *label, struct hid_item *h);

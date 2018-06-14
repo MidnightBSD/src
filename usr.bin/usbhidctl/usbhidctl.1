@@ -1,5 +1,6 @@
-.\" $NetBSD: usbhidctl.1,v 1.8 1999/05/11 21:03:58 augustss Exp $
 .\" $MidnightBSD$
+.\" $NetBSD: usbhidctl.1,v 1.8 1999/05/11 21:03:58 augustss Exp $
+.\" $FreeBSD: stable/10/usr.bin/usbhidctl/usbhidctl.1 250582 2013-05-12 22:22:12Z joel $
 .\"
 .\" Copyright (c) 1998 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -136,8 +137,10 @@ supports isolating each item by appending a
 .Sq Cm \&# .
 character and a decimal item instance number, starting at zero.
 .Sh FILES
-.Pa /usr/share/misc/usb_hid_usages
+.Bl -tag -width 30n
+.It Pa /usr/share/misc/usb_hid_usages
 The default HID usage table.
+.El
 .Sh SEE ALSO
 .Xr usbhid 3 ,
 .Xr uhid 4 ,
