@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)uuencode.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/uuencode/uuencode.c 297960 2016-04-14 11:45:52Z gahr $");
 
 /*
  * uuencode [input] output
@@ -60,13 +61,14 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 
-void encode(void);
-void base64_encode(void);
+static void encode(void);
+static void base64_encode(void);
 static void usage(void);
 
-FILE *output;
-int mode;
-char **av;
+static FILE *output;
+static int mode;
+static char raw = 0;
+static char **av;
 
 int
 main(int argc, char *argv[])
@@ -82,13 +84,16 @@ main(int argc, char *argv[])
 	if (strcmp(basename(argv[0]), "b64encode") == 0)
 		base64 = 1;
 
-	while ((ch = getopt(argc, argv, "mo:")) != -1) {
+	while ((ch = getopt(argc, argv, "mo:r")) != -1) {
 		switch (ch) {
 		case 'm':
 			base64 = 1;
 			break;
 		case 'o':
 			outfile = optarg;
+			break;
+		case 'r':
+			raw = 1;
 			break;
 		case '?':
 		default:
@@ -138,7 +143,7 @@ main(int argc, char *argv[])
 /*
  * Copy from in to out, encoding in base64 as you go along.
  */
-void
+static void
 base64_encode(void)
 {
 	/*
@@ -152,7 +157,8 @@ base64_encode(void)
 
 	sequence = 0;
 
-	fprintf(output, "begin-base64 %o %s\n", mode, *av);
+	if (!raw)
+		fprintf(output, "begin-base64 %o %s\n", mode, *av);
 	while ((n = fread(buf, 1, sizeof(buf), stdin))) {
 		++sequence;
 		rv = b64_ntop(buf, n, buf2, (sizeof(buf2) / sizeof(buf2[0])));
@@ -162,20 +168,22 @@ base64_encode(void)
 	}
 	if (sequence % GROUPS)
 		fprintf(output, "\n");
-	fprintf(output, "====\n");
+	if (!raw)
+		fprintf(output, "====\n");
 }
 
 /*
  * Copy from in to out, encoding as you go along.
  */
-void
+static void
 encode(void)
 {
 	register int ch, n;
 	register char *p;
 	char buf[80];
 
-	(void)fprintf(output, "begin %o %s\n", mode, *av);
+	if (!raw)
+		(void)fprintf(output, "begin %o %s\n", mode, *av);
 	while ((n = fread(buf, 1, 45, stdin))) {
 		ch = ENC(n);
 		if (fputc(ch, output) == EOF)
@@ -209,7 +217,8 @@ encode(void)
 	}
 	if (ferror(stdin))
 		errx(1, "read error");
-	(void)fprintf(output, "%c\nend\n", ENC('\0'));
+	if (!raw)
+		(void)fprintf(output, "%c\nend\n", ENC('\0'));
 }
 
 static void
