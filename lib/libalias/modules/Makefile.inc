@@ -1,6 +1,7 @@
-# $FreeBSD: src/lib/libalias/modules/Makefile.inc,v 1.3 2006/10/08 14:01:59 piso Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libalias/modules/Makefile.inc 313581 2017-02-11 05:45:00Z ngie $
 
-.PATH: ${.CURDIR}/../../../../sys/netinet/libalias
+.PATH: ${SRCTOP}/sys/netinet/libalias
 
 SHLIBDIR?= /lib
 LIB?=   alias_${NAME}

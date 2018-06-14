@@ -1,6 +1,7 @@
-# $FreeBSD: src/lib/libalias/modules/Makefile,v 1.2 2006/09/27 12:30:27 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/libalias/modules/Makefile 313581 2017-02-11 05:45:00Z ngie $
 
-.include "${.CURDIR}/../../../sys/modules/libalias/modules/modules.inc"
+.include "${SRCTOP}/sys/modules/libalias/modules/modules.inc"
 
 SUBDIR=	${MODULES}
 
