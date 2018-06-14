@@ -1,10 +1,11 @@
-# $FreeBSD: stable/10/lib/libc++/Makefile 289079 2015-10-09 19:38:53Z dim $
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libc++/Makefile 313592 2017-02-11 06:21:38Z ngie $
+
 .include <bsd.own.mk>
 
-LIBCXXRTDIR=	${.CURDIR}/../../contrib/libcxxrt
-HDRDIR=		${.CURDIR}/../../contrib/libc++/include
-SRCDIR=		${.CURDIR}/../../contrib/libc++/src
+LIBCXXRTDIR=	${SRCTOP}/contrib/libcxxrt
+HDRDIR=		${SRCTOP}/contrib/libc++/include
+SRCDIR=		${SRCTOP}/contrib/libc++/src
 CXXINCLUDEDIR=	${INCLUDEDIR}/c++/v${SHLIB_MAJOR}
 
 .PATH: ${SRCDIR}
