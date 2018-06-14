@@ -1,11 +1,12 @@
-# $MidnightBSD: src/gnu/lib/libssp/Makefile,v 1.1 2009/05/22 00:27:23 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/lib/libssp/Makefile 188995 2009-02-24 16:14:15Z ru $
 
 SHLIBDIR?=	/lib
 
 .include <bsd.own.mk>
 MK_SSP=		no
 
-GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 SRCDIR=	${GCCLIB}/libssp
 
