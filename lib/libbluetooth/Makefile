@@ -1,11 +1,12 @@
-# $Id: Makefile,v 1.3 2012-11-25 21:59:52 laffer1 Exp $
 # $MidnightBSD$
+# $Id: Makefile,v 1.5 2003/07/22 18:38:04 max Exp $
+# $FreeBSD: stable/10/lib/libbluetooth/Makefile 313587 2017-02-11 05:57:35Z ngie $
 
 LIB=		bluetooth
 MAN=		bluetooth.3
 
 WARNS?=		2
-CFLAGS+=	-I${.CURDIR} -I${.CURDIR}/../../sys
+CFLAGS+=	-I${.CURDIR} -I${SRCTOP}/sys
 
 SHLIB_MAJOR=	4
 
