@@ -1,7 +1,7 @@
-# $MidnightBSD: src/gnu/lib/libgomp/Makefile,v 1.1 2009/05/22 00:27:57 laffer1 Exp $
-# $FreeBSD: src/gnu/lib/libgomp/Makefile,v 1.2 2007/05/31 13:21:30 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/lib/libgomp/Makefile 283010 2015-05-16 15:44:13Z pfg $
 
-GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 SRCDIR=	${GCCLIB}/libgomp
 
@@ -13,7 +13,7 @@ SHLIB_MAJOR=	1
 SRCS=	alloc.c barrier.c critical.c env.c \
 	error.c iter.c loop.c ordered.c parallel.c sections.c \
 	single.c team.c work.c lock.c mutex.c proc.c sem.c \
-	bar.c time.c fortran.c
+	bar.c time.c fortran.c affinity.c
 SRCS+=	gstdint.h libgomp_f.h omp.h omp_lib.h
 
 INCS+=	omp.h
@@ -24,7 +24,9 @@ CFLAGS+= -I${.CURDIR} -I. -I${SRCDIR} -I${SRCDIR}/config/posix
 VERSION_MAP=	${SRCDIR}/libgomp.map
 
 # Target-specific OpenMP configuration
-.if ${MACHINE_CPUARCH} == i386
+.if ${MACHINE_CPUARCH} == arm || ${MACHINE_CPUARCH} == i386 || \
+    ${MACHINE_ARCH} == powerpc || \
+    (${MACHINE_CPUARCH} == mips &&  ${MACHINE_ARCH:Mmips64*} == "")
 OMP_LOCK_ALIGN	=	4
 OMP_LOCK_KIND=		4
 OMP_LOCK_SIZE=		4
