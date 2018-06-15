@@ -1,8 +1,9 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/Makefile 313223 2017-02-04 16:40:28Z ngie $
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../../contrib/bsnmp/snmpd
+.PATH: ${SRCTOP}/contrib/bsnmp/snmpd
 
 .if ${MK_ATM} != "no"
 _snmp_atm= snmp_atm
@@ -10,20 +11,31 @@ _snmp_atm= snmp_atm
 
 SUBDIR=	${_snmp_atm} \
 	snmp_bridge \
-	snmp_hast \
 	snmp_hostres \
 	snmp_mibII \
-	snmp_pf \
 	snmp_target \
 	snmp_usm \
 	snmp_vacm \
-	snmp_wlan
+
+.if ${MK_HAST} != "no"
+SUBDIR+=snmp_hast
+.endif
+
+.if ${MK_PF} != "no"
+SUBDIR+=snmp_pf
+.endif
 
 .if ${MK_NETGRAPH_SUPPORT} != "no"
 SUBDIR+=snmp_netgraph
 .endif
 
+.if ${MK_WIRELESS} != "no"
+SUBDIR+=snmp_wlan
+.endif
+
 INCS=	snmpmod.h
 INCSDIR= ${INCLUDEDIR}/bsnmp
+
+SUBDIR_TARGETS+=	smilint
 
 .include <bsd.prog.mk>
