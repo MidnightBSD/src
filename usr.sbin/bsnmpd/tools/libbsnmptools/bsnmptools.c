@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -28,10 +29,10 @@
  *
  * Helper functions for snmp client tools
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.c 311595 2017-01-07 08:46:16Z ngie $
  */
 
-#include <sys/param.h> 
+#include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/uio.h>
 
@@ -87,7 +88,7 @@ static const struct {
 	{ "General error", SNMP_ERR_GENERR },
 	{ "No access", SNMP_ERR_NO_ACCESS },
 	{ "Wrong type", SNMP_ERR_WRONG_TYPE },
-	{ "Wrong lenght", SNMP_ERR_WRONG_LENGTH },
+	{ "Wrong length", SNMP_ERR_WRONG_LENGTH },
 	{ "Wrong encoding", SNMP_ERR_WRONG_ENCODING },
 	{ "Wrong value", SNMP_ERR_WRONG_VALUE },
 	{ "No creation", SNMP_ERR_NO_CREATION },
@@ -117,7 +118,7 @@ static const struct {
 	{ "Gauge", SNMP_SYNTAX_GAUGE },
 	{ "TimeTicks", SNMP_SYNTAX_TIMETICKS },
 	{ "Counter64", SNMP_SYNTAX_COUNTER64 },
-	{ "Unknown", SNMP_SYNTAX_UNKNOWN }, 
+	{ "Unknown", SNMP_SYNTAX_UNKNOWN },
 };
 
 int
@@ -132,6 +133,7 @@ snmptool_init(struct snmp_toolinfo *snmptoolctx)
 	snmptoolctx->flags = SNMP_PDU_GET;	/* XXX */
 	SLIST_INIT(&snmptoolctx->filelist);
 	snmp_client_init(&snmp_client);
+	SET_MAXREP(snmptoolctx, SNMP_MAX_REPETITIONS);
 
 	if (add_filename(snmptoolctx, bsnmpd_defs, &IsoOrgDod_OID, 0) < 0)
 		warnx("Error adding file %s to list", bsnmpd_defs);
@@ -176,7 +178,7 @@ snmptool_init(struct snmp_toolinfo *snmptoolctx)
 		if ((slen = strlen(str)) > MAXSTR)
 			slen = MAXSTR - 1;
 		if ((snmptoolctx->passwd = malloc(slen + 1)) == NULL) {
-			warnx("malloc() failed - %s", strerror(errno));
+			warn("malloc() failed");
 			return (-1);
 		}
 		if (slen > 0)
@@ -188,7 +190,7 @@ snmptool_init(struct snmp_toolinfo *snmptoolctx)
 
 #define	OBJECT_IDX_LIST(o)	o->info->table_idx->index_list
 
-/* 
+/*
  * Walk through the file list and import string<->oid mappings from each file.
  */
 int32_t
@@ -227,12 +229,12 @@ snmp_import_all(struct snmp_toolinfo *snmptoolctx)
 }
 
 /*
- * Add a filename to the file list - the initail idea of keeping a list with all
+ * Add a filename to the file list - the initial idea of keeping a list with all
  * files to read OIDs from was that an application might want to have loaded in
  * memory the OIDs from a single file only and when done with them read the OIDs
  * from another file. This is not used yet but might be a good idea at some
  * point. Size argument is number of bytes in string including trailing '\0',
- * not string lenght.
+ * not string length.
  */
 int32_t
 add_filename(struct snmp_toolinfo *snmptoolctx, const char *filename,
@@ -250,22 +252,19 @@ add_filename(struct snmp_toolinfo *snmptoolctx, const char *filename,
 			return (0);
 	}
 
-	if ((fstring = malloc(strlen(filename) + 1)) == NULL) {
-		warnx("malloc() failed - %s", strerror(errno));
+	if ((fstring = strdup(filename)) == NULL) {
+		warn("strdup() failed");
 		return (-1);
 	}
 
-	if ((entry = malloc(sizeof(struct fname))) == NULL) {
-		warnx("malloc() failed - %s", strerror(errno));
+	if ((entry = calloc(1, sizeof(struct fname))) == NULL) {
+		warn("calloc() failed");
 		free(fstring);
 		return (-1);
 	}
 
-	memset(entry, 0, sizeof(struct fname));
-
 	if (cut != NULL)
 		asn_append_oid(&(entry->cut), cut);
-	strlcpy(fstring, filename, strlen(filename) + 1);
 	entry->name = fstring;
 	entry->done = done;
 	SLIST_INSERT_HEAD(&snmptoolctx->filelist, entry, link);
@@ -289,7 +288,7 @@ free_filelist(struct snmp_toolinfo *snmptoolctx)
 	}
 }
 
-static char 
+static char
 isvalid_fchar(char c, int pos)
 {
 	if (isalpha(c)|| c == '/'|| c == '_' || c == '.' || c == '~' ||
@@ -445,11 +444,12 @@ parse_flist(struct snmp_toolinfo *snmptoolctx, char *value, char *path,
 static int32_t
 parse_ascii(char *ascii, uint8_t *binstr, size_t binlen)
 {
-	int32_t alen, count, saved_errno, i;
-	uint32_t val;
 	char dptr[3];
+	size_t count;
+	int32_t alen, i, saved_errno;
+	uint32_t val;
 
-	/* Filter 0x at the beggining */
+	/* Filter 0x at the beginning */
 	if ((alen = strlen(ascii)) > 2 && ascii[0] == '0' && ascii[1] == 'x')
 		i = 2;
 	else
@@ -468,7 +468,7 @@ parse_ascii(char *ascii, uint8_t *binstr, size_t binlen)
 		}
 		binstr[count] = (uint8_t) val;
 		if (++count >= binlen) {
-			warnx("Key %s too long - truncating to %zu octest",
+			warnx("Key %s too long - truncating to %zu octets",
 			    ascii, binlen);
 			break;
 		}
@@ -482,7 +482,7 @@ parse_ascii(char *ascii, uint8_t *binstr, size_t binlen)
  * snmp_client structure.
  */
 int32_t
-parse_authentication(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
+parse_authentication(struct snmp_toolinfo *snmptoolctx __unused, char *opt_arg)
 {
 	int32_t count, subopt;
 	char *val, *option;
@@ -537,7 +537,7 @@ parse_authentication(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 }
 
 int32_t
-parse_privacy(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
+parse_privacy(struct snmp_toolinfo *snmptoolctx __unused, char *opt_arg)
 {
 	int32_t count, subopt;
 	char *val, *option;
@@ -590,7 +590,7 @@ parse_privacy(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 }
 
 int32_t
-parse_context(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
+parse_context(struct snmp_toolinfo *snmptoolctx __unused, char *opt_arg)
 {
 	int32_t count, subopt;
 	char *val, *option;
@@ -616,8 +616,8 @@ parse_context(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 				warnx("Suboption 'context-engine' - no argument");
 				return (-1);
 			}
-			if ((snmp_client.clen = parse_ascii(val,
-			    snmp_client.cengine, SNMP_ENGINE_ID_SIZ)) < 0) {
+			if ((int32_t)(snmp_client.clen = parse_ascii(val,
+			    snmp_client.cengine, SNMP_ENGINE_ID_SIZ)) == -1) {
 				warnx("Bad EngineID - %s", val);
 				return (-1);
 			}
@@ -632,7 +632,7 @@ parse_context(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 }
 
 int32_t
-parse_user_security(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
+parse_user_security(struct snmp_toolinfo *snmptoolctx __unused, char *opt_arg)
 {
 	int32_t count, subopt, saved_errno;
 	char *val, *option;
@@ -653,9 +653,9 @@ parse_user_security(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 				warnx("Suboption 'engine' - no argument");
 				return (-1);
 			}
-			snmp_client.engine.engine_len = parse_ascii(val, 
+			snmp_client.engine.engine_len = parse_ascii(val,
 			    snmp_client.engine.engine_id, SNMP_ENGINE_ID_SIZ);
-			if (snmp_client.engine.engine_len < 0) {
+			if ((int32_t)snmp_client.engine.engine_len == -1) {
 				warnx("Bad EngineID - %s", val);
 				return (-1);
 			}
@@ -669,8 +669,7 @@ parse_user_security(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 			errno = 0;
 			snmp_client.engine.engine_boots = strtoul(val, NULL, 10);
 			if (errno != 0) {
-				warnx("Bad 'engine-boots' value %s - %s", val,
-				    strerror(errno));
+				warn("Bad 'engine-boots' value %s", val);
 				errno = saved_errno;
 				return (-1);
 			}
@@ -685,8 +684,7 @@ parse_user_security(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 			errno = 0;
 			snmp_client.engine.engine_time = strtoul(val, NULL, 10);
 			if (errno != 0) {
-				warnx("Bad 'engine-time' value %s - %s", val,
-				    strerror(errno));
+				warn("Bad 'engine-time' value %s", val);
 				errno = saved_errno;
 				return (-1);
 			}
@@ -797,7 +795,7 @@ parse_server(char *opt_arg)
 		return (-1);
 
 	if (snmp_client.trans > SNMP_TRANS_UDP && snmp_client.chost == NULL) {
-		if ((snmp_client.chost = malloc(strlen(SNMP_DEFAULT_LOCAL + 1)))
+		if ((snmp_client.chost = malloc(strlen(SNMP_DEFAULT_LOCAL) + 1))
 		    == NULL) {
 			syslog(LOG_ERR, "malloc() failed: %s", strerror(errno));
 			return (-1);
@@ -820,7 +818,7 @@ parse_timeout(char *opt_arg)
 
 	v = strtol(opt_arg, NULL, 10);
 	if (errno != 0) {
-		warnx( "Error parsing timeout value - %s", strerror(errno));
+		warn("Error parsing timeout value");
 		errno = saved_errno;
 		return (-1);
 	}
@@ -843,7 +841,7 @@ parse_retry(char *opt_arg)
 
 	v = strtoul(opt_arg, NULL, 10);
 	if (errno != 0) {
-		warnx("Error parsing retries count - %s", strerror(errno));
+		warn("Error parsing retries count");
 		errno = saved_errno;
 		return (-1);
 	}
@@ -866,7 +864,7 @@ parse_version(char *opt_arg)
 
 	v = strtoul(opt_arg, NULL, 10);
 	if (errno != 0) {
-		warnx("Error parsing version - %s", strerror(errno));
+		warn("Error parsing version");
 		errno = saved_errno;
 		return (-1);
 	}
@@ -918,7 +916,7 @@ parse_buflen(char *opt_arg)
 
 	size = strtoul(opt_arg, NULL, 10);
 	if (errno != 0) {
-		warnx("Error parsing buffer size - %s", strerror(errno));
+		warn("Error parsing buffer size");
 		errno = saved_errno;
 		return (-1);
 	}
@@ -1041,8 +1039,7 @@ snmp_int2asn_oid(char *str, struct asn_oid *oid)
 
 	v = strtol(str, &endptr, 10);
 	if (errno != 0) {
-		warnx("Integer value %s not supported - %s", str,
-		    strerror(errno));
+		warn("Integer value %s not supported", str);
 		errno = saved_errno;
 		return (NULL);
 	}
@@ -1060,7 +1057,7 @@ snmp_oid2asn_oid(struct snmp_toolinfo *snmptoolctx, char *str,
     struct asn_oid *oid)
 {
 	int32_t i;
-	char string[MAXSTR], *endptr;
+	char string[MAXSTR + 1], *endptr;
 	struct snmp_object obj;
 
 	for (i = 0; i < MAXSTR; i++)
@@ -1076,12 +1073,10 @@ snmp_oid2asn_oid(struct snmp_toolinfo *snmptoolctx, char *str,
 			return (NULL);
 	} else {
 		strlcpy(string, str, i + 1);
-		string[i] = '\0';
 		if (snmp_lookup_enumoid(snmptoolctx, &obj, string) < 0) {
-			warnx("Unknown string - %s",string);
+			warnx("Unknown string - %s", string);
 			return (NULL);
 		}
-		free(string);
 	}
 
 	asn_append_oid(oid, &(obj.val.var));
@@ -1096,6 +1091,7 @@ snmp_ip2asn_oid(char *str, struct asn_oid *oid)
 	char *endptr, *ptr;
 
 	ptr = str;
+
 	for (i = 0; i < 4; i++) {
 		v = strtoul(ptr, &endptr, 10);
 		if (v > 0xff)
@@ -1123,8 +1119,7 @@ snmp_uint2asn_oid(char *str, struct asn_oid *oid)
 
 	v = strtoul(str, &endptr, 10);
 	if (errno != 0) {
-		warnx("Integer value %s not supported - %s\n", str,
-		    strerror(errno));
+		warn("Integer value %s not supported", str);
 		errno = saved_errno;
 		return (NULL);
 	}
@@ -1148,8 +1143,7 @@ snmp_cnt64_2asn_oid(char *str, struct asn_oid *oid)
 	v = strtoull(str, &endptr, 10);
 
 	if (errno != 0) {
-		warnx("Integer value %s not supported - %s", str,
-		    strerror(errno));
+		warn("Integer value %s not supported", str);
 		errno = saved_errno;
 		return (NULL);
 	}
@@ -1366,12 +1360,11 @@ snmp_object_add(struct snmp_toolinfo *snmptoolctx, snmp_verify_inoid_f func,
 		return (-1);
 	}
 
-	if ((obj = malloc(sizeof(struct snmp_object))) == NULL) {
+	if ((obj = calloc(1, sizeof(struct snmp_object))) == NULL) {
 		syslog(LOG_ERR, "malloc() failed: %s", strerror(errno));
 		return (-1);
 	}
 
-	memset(obj, 0, sizeof(struct snmp_object));
 	if (func(snmptoolctx, obj, string) < 0) {
 		warnx("Invalid OID - %s", string);
 		free(obj);
@@ -1474,7 +1467,7 @@ snmp_pdu_add_bindings(struct snmp_toolinfo *snmptoolctx,
 	/* Return 0 in case of no more work todo. */
 	if (SLIST_EMPTY(&snmptoolctx->snmp_objectlist))
 		return (0);
-	
+
 	if (maxcount < 0 || maxcount > SNMP_MAX_BINDINGS) {
 		warnx("maxcount out of range: <0 || >SNMP_MAX_BINDINGS");
 		return (-1);
@@ -1523,10 +1516,10 @@ snmp_object_seterror(struct snmp_toolinfo *snmptoolctx,
 }
 
 /*
- * Check a PDU received in responce to a SNMP_PDU_GET/SNMP_PDU_GETBULK request
+ * Check a PDU received in response to a SNMP_PDU_GET/SNMP_PDU_GETBULK request
  * but don't compare syntaxes - when sending a request PDU they must be null.
  * This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
- * checks and some other checks skiped.
+ * checks and some other checks skipped.
  */
 int32_t
 snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
@@ -1605,7 +1598,7 @@ snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 }
 
 /*
- * Should be called to check a responce to get/getnext/getbulk.
+ * Should be called to check a response to get/getnext/getbulk.
  */
 int32_t
 snmp_parse_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
@@ -1624,7 +1617,7 @@ snmp_parse_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 	}
 
 	if (resp->error_status != SNMP_ERR_NOERROR) {
-		warnx("Error %d in responce", resp->error_status);
+		warnx("Error %d in response", resp->error_status);
 		return (-1);
 	}
 
@@ -2011,20 +2004,25 @@ snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp_object *o)
 void
 snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, struct snmp_pdu *pdu)
 {
+	struct snmp_object *object;
 	char buf[ASN_OIDSTRLEN];
-	struct snmp_object object;
 
 	if (pdu == NULL || (pdu->error_index > (int32_t) pdu->nbindings)) {
-		fprintf(stdout,"Invalid error index in PDU\n");
+		fprintf(stdout, "Invalid error index in PDU\n");
+		return;
+	}
+
+	if ((object = calloc(1, sizeof(struct snmp_object))) == NULL) {
+		fprintf(stdout, "calloc: %s", strerror(errno));
 		return;
 	}
 
 	fprintf(stdout, "Agent %s:%s returned error \n", snmp_client.chost,
 	    snmp_client.cport);
 
-	if (!ISSET_NUMERIC(snmptoolctx) && (snmp_fill_object(snmptoolctx, &object,
+	if (!ISSET_NUMERIC(snmptoolctx) && (snmp_fill_object(snmptoolctx, object,
 	    &(pdu->bindings[pdu->error_index - 1])) > 0))
-		snmp_output_object(snmptoolctx, &object);
+		snmp_output_object(snmptoolctx, object);
 	else {
 		asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].var), buf);
 		fprintf(stdout,"%s", buf);
@@ -2036,31 +2034,51 @@ snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, struct snmp_pdu *pdu)
 		fprintf(stdout, "%s\n", error_strings[pdu->error_status].str);
 	else
 		fprintf(stdout,"%s\n", error_strings[SNMP_ERR_UNKNOWN].str);
+
+	free(object);
+	object = NULL;
 }
 
 int32_t
-snmp_output_resp(struct snmp_toolinfo *snmptoolctx, struct snmp_pdu *pdu)
+snmp_output_resp(struct snmp_toolinfo *snmptoolctx, struct snmp_pdu *pdu,
+    struct asn_oid *root)
 {
-	int32_t error;
+	struct snmp_object *object;
 	char p[ASN_OIDSTRLEN];
+	int32_t error;
 	uint32_t i;
-	struct snmp_object object;
 
-	for (i = 0, error = 0; i < pdu->nbindings; i++) {
+	if ((object = calloc(1, sizeof(struct snmp_object))) == NULL)
+		return (-1);
+
+	i = error = 0;
+	while (i < pdu->nbindings) {
+		if (root != NULL && !(asn_is_suboid(root,
+		    &(pdu->bindings[i].var))))
+			break;
+
 		if (GET_OUTPUT(snmptoolctx) != OUTPUT_QUIET) {
 			if (!ISSET_NUMERIC(snmptoolctx) &&
-			    (snmp_fill_object(snmptoolctx, &object,
+			    (snmp_fill_object(snmptoolctx, object,
 			    &(pdu->bindings[i])) > 0))
-				snmp_output_object(snmptoolctx, &object);
+				snmp_output_object(snmptoolctx, object);
 			else {
 				asn_oid2str_r(&(pdu->bindings[i].var), p);
 				fprintf(stdout, "%s", p);
 			}
 		}
-		error |= snmp_output_numval(snmptoolctx, &(pdu->bindings[i]), object.info);
+		error |= snmp_output_numval(snmptoolctx, &(pdu->bindings[i]),
+		    object->info);
+		i++;
 	}
 
-	return (error);
+	free(object);
+	object = NULL;
+
+	if (error)
+		return (-1);
+
+	return (i);
 }
 
 void

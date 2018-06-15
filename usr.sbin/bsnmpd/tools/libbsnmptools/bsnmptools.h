@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -28,7 +29,7 @@
  *
  * Helper functions common for all tools.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.h 301657 2016-06-08 17:34:37Z ngie $
  */
 
 #ifndef	_BSNMP_TOOLS_H_
@@ -46,6 +47,8 @@
 
 #define	SNMP_DEFS_DIR		"/usr/share/snmp/defs/"
 #define	SNMP_DEFAULT_LOCAL	"/var/run/snmpd.sock"
+
+#define	SNMP_MAX_REPETITIONS	10
 
 enum snmp_access {
 	SNMP_ACCESS_NONE = 0,
@@ -185,14 +188,14 @@ extern struct snmp_toolinfo snmptool;
 /* Definitions for some flags' bits. */
 #define	OUTPUT_BITS	0x00000003	/* bits 0-1 for output type */
 #define	NUMERIC_BIT	0x00000004	/* bit 2 for numeric oids */
-#define	RETRY_BIT	0x00000008 	/* bit 3 for retry on error responce */
+#define	RETRY_BIT	0x00000008 	/* bit 3 for retry on error response */
 #define	ERRIGNORE_BIT	0x00000010	/* bit 4 for skip sanity checking */
 #define	ERRIGNORE_BIT	0x00000010	/* bit 4 for skip sanity checking */
 #define	EDISCOVER_BIT	0x00000020	/* bit 5 for SNMP Engine Discovery */
 #define	LOCALKEY_BIT	0x00000040	/* bit 6 for using localized key */
-		/*	0x00000080 */	/* bit 7 reserverd */
+		/*	0x00000080 */	/* bit 7 reserved */
 #define	PDUTYPE_BITS	0x00000f00	/* bits 8-11 for pdu type */
-		/*	0x0000f000 */	/* bit 12-15 reserverd */
+		/*	0x0000f000 */	/* bit 12-15 reserved */
 #define	MAXREP_BITS	0x00ff0000	/* bits 16-23 for max-repetit. value */
 #define	NONREP_BITS	0xff000000	/* bits 24-31 for non-repeaters value */
 
@@ -229,7 +232,7 @@ extern struct snmp_toolinfo snmptool;
 #define	SET_NONREP(ctx, i)	(((ctx)->flags |= (((i) & 0xff) << 24)))
 #define	GET_NONREP(ctx)		(((ctx)->flags & NONREP_BITS) >> 24)
 
-
+extern int _bsnmptools_debug;
 extern const struct asn_oid IsoOrgDod_OID;
 
 int snmptool_init(struct snmp_toolinfo *);
@@ -323,7 +326,7 @@ int32_t snmp_parse_resp(struct snmp_pdu *, struct snmp_pdu *);
 int32_t snmp_output_numval(struct snmp_toolinfo *, struct snmp_value *,
     struct snmp_oid2str *);
 void snmp_output_val(struct snmp_value *);
-int32_t snmp_output_resp(struct snmp_toolinfo *, struct snmp_pdu *);
+int32_t snmp_output_resp(struct snmp_toolinfo *, struct snmp_pdu *, struct asn_oid *);
 void snmp_output_err_resp(struct snmp_toolinfo *, struct snmp_pdu *);
 void snmp_output_engine(void);
 void snmp_output_keys(void);
