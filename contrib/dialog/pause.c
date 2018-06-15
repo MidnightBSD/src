@@ -1,9 +1,9 @@
 /*
- *  $Id: pause.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: pause.c,v 1.36 2012/07/03 00:01:59 tom Exp $
  *
  *  pause.c -- implements the pause dialog
  *
- *  Copyright 2004-2010,2011	Thomas E. Dickey
+ *  Copyright 2004-2011,2012	Thomas E. Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License, version 2.1
@@ -55,13 +55,7 @@ dialog_pause(const char *title,
     static DLG_KEYS_BINDING binding[] = {
 	HELPKEY_BINDINGS,
 	ENTERKEY_BINDINGS,
-	DLG_KEYS_DATA( DLGK_ENTER,	' ' ),
-	DLG_KEYS_DATA( DLGK_FIELD_NEXT,	KEY_DOWN ),
-	DLG_KEYS_DATA( DLGK_FIELD_NEXT, KEY_RIGHT ),
-	DLG_KEYS_DATA( DLGK_FIELD_NEXT, TAB ),
-	DLG_KEYS_DATA( DLGK_FIELD_PREV,	KEY_UP ),
-	DLG_KEYS_DATA( DLGK_FIELD_PREV, KEY_BTAB ),
-	DLG_KEYS_DATA( DLGK_FIELD_PREV, KEY_LEFT ),
+	TRAVERSE_BINDINGS,
 	END_KEYS_BINDING
     };
     /* *INDENT-ON* */
@@ -72,7 +66,7 @@ dialog_pause(const char *title,
 #endif
 
     int i, x, y, step;
-    int button = 0;
+    int button = dlg_default_button();
     int seconds_orig;
     WINDOW *dialog;
     const char **buttons = dlg_ok_labels();
@@ -83,11 +77,13 @@ dialog_pause(const char *title,
     int button_high = (have_buttons ? BTN_HIGH : MARGIN);
     int gauge_y;
     char *prompt = dlg_strclone(cprompt);
+    int save_timeout = dialog_vars.timeout_secs;
 
     curs_set(0);
 
     dlg_tab_correct_str(prompt);
 
+    dialog_vars.timeout_secs = 0;
     seconds_orig = (seconds > 0) ? seconds : 1;
 
 #ifdef KEY_RESIZE
@@ -226,24 +222,25 @@ dialog_pause(const char *title,
 	    case DLGK_ENTER:
 		result = dlg_enter_buttoncode(button);
 		break;
-	    case DLGK_MOUSE(0):
-		result = DLG_EXIT_OK;
-		break;
-	    case DLGK_MOUSE(1):
-		result = DLG_EXIT_CANCEL;
-		break;
 	    case ERR:
 		break;
 	    default:
+		if (is_DLGK_MOUSE(key)) {
+		    result = dlg_ok_buttoncode(key - M_EVENT);
+		    if (result < 0)
+			result = DLG_EXIT_OK;
+		}
 		break;
 	    }
 	}
     } while ((result == DLG_EXIT_UNKNOWN) && (seconds-- > 0));
 
-    nodelay(dialog, FALSE);
     curs_set(1);
     dlg_mouse_free_regions();
     dlg_del_window(dialog);
     free(prompt);
+
+    dialog_vars.timeout_secs = save_timeout;
+
     return ((result == DLG_EXIT_UNKNOWN) ? DLG_EXIT_OK : result);
 }

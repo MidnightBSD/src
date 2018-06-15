@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: msgbox6,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: msgbox6,v 1.5 2010/01/13 10:26:52 tom Exp $
 # this differs from msgbox3 by making a window small enough to force scrolling.
 
 . ./setup-vars

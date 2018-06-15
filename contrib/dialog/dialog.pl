@@ -1,5 +1,5 @@
 # Functions that handle calling dialog(1) -*-perl-*-
-# $Id: dialog.pl,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: dialog.pl,v 1.4 2001/10/13 00:40:22 tom Exp $
 
 # Return values are 1 for success and 0 for failure (or cancel)
 # Resultant text (if any) is in dialog_result

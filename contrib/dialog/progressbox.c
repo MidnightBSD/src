@@ -1,10 +1,10 @@
 /*
- *  $Id: progressbox.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: progressbox.c,v 1.23 2012/12/21 10:00:05 tom Exp $
  *
  *  progressbox.c -- implements the progress box
  *
  *  Copyright 2005	Valery Reznic
- *  Copyright 2006-2011	Thomas E. Dickey
+ *  Copyright 2006-2012	Thomas E. Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License as
@@ -46,7 +46,7 @@ get_line(MY_OBJ * obj)
     int col = 0;
     int j, tmpint, ch;
 
-    while (1) {
+    for (;;) {
 	if ((ch = getc(fp)) == EOF) {
 	    obj->is_eof = 1;
 	    if (col) {
@@ -59,20 +59,23 @@ get_line(MY_OBJ * obj)
 	    break;
 	if (ch == '\r')
 	    break;
+	if (col >= MAX_LEN)
+	    continue;
 	if ((ch == TAB) && (dialog_vars.tab_correct)) {
 	    tmpint = dialog_state.tab_len
 		- (col % dialog_state.tab_len);
 	    for (j = 0; j < tmpint; j++) {
-		if (col < MAX_LEN)
+		if (col < MAX_LEN) {
 		    obj->line[col] = ' ';
-		++col;
+		    ++col;
+		} else {
+		    break;
+		}
 	    }
 	} else {
 	    obj->line[col] = (char) ch;
 	    ++col;
 	}
-	if (col >= MAX_LEN)
-	    break;
     }
 
     obj->line[col] = '\0';
@@ -112,54 +115,79 @@ pause_for_ok(WINDOW *dialog, int height, int width)
     static DLG_KEYS_BINDING binding[] = {
 	HELPKEY_BINDINGS,
 	ENTERKEY_BINDINGS,
-	DLG_KEYS_DATA( DLGK_ENTER,	' ' ),
+	TRAVERSE_BINDINGS,
 	END_KEYS_BINDING
     };
     /* *INDENT-ON* */
 
-    int button = 0;
+    int button;
     int key = 0, fkey;
     int result = DLG_EXIT_UNKNOWN;
     const char **buttons = dlg_ok_label();
     int check;
+    int save_nocancel = dialog_vars.nocancel;
+    bool redraw = TRUE;
+
+    dialog_vars.nocancel = TRUE;
+    button = dlg_default_button();
 
     dlg_register_window(dialog, "progressbox", binding);
     dlg_register_buttons(dialog, "progressbox", buttons);
 
     dlg_draw_bottom_box2(dialog, border_attr, border2_attr, dialog_attr);
     mouse_mkbutton(height - 2, width / 2 - 4, 6, '\n');
-    dlg_draw_buttons(dialog, height - 2, 0, buttons, button, FALSE, width);
 
     while (result == DLG_EXIT_UNKNOWN) {
+	if (redraw) {
+	    redraw = FALSE;
+	    if (button < 0)
+		button = 0;
+	    dlg_draw_buttons(dialog,
+			     height - 2, 0,
+			     buttons, button,
+			     FALSE, width);
+	}
+
 	key = dlg_mouse_wgetch(dialog, &fkey);
 	if (dlg_result_key(key, fkey, &result))
 	    break;
 
 	if (!fkey && (check = dlg_char_to_button(key, buttons)) >= 0) {
-	    result = check ? DLG_EXIT_HELP : DLG_EXIT_OK;
+	    result = dlg_ok_buttoncode(check);
 	    break;
 	}
 
 	if (fkey) {
 	    switch (key) {
+	    case DLGK_FIELD_NEXT:
+		button = dlg_next_button(buttons, button);
+		redraw = TRUE;
+		break;
+	    case DLGK_FIELD_PREV:
+		button = dlg_prev_button(buttons, button);
+		redraw = TRUE;
+		break;
 	    case DLGK_ENTER:
-		result = button ? DLG_EXIT_HELP : DLG_EXIT_OK;
-		break;
-	    case DLGK_MOUSE(0):
-		result = DLG_EXIT_OK;
-		break;
-	    case DLGK_MOUSE(1):
-		result = DLG_EXIT_HELP;
+		result = dlg_ok_buttoncode(button);
 		break;
 	    default:
-		beep();
+		if (is_DLGK_MOUSE(key)) {
+		    result = dlg_ok_buttoncode(key - M_EVENT);
+		    if (result < 0)
+			result = DLG_EXIT_OK;
+		} else {
+		    beep();
+		}
 		break;
 	    }
+
 	} else {
 	    beep();
 	}
     }
     dlg_unregister_window(dialog);
+
+    dialog_vars.nocancel = save_nocancel;
     return result;
 }
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rotated-data,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: rotated-data,v 1.1 2004/12/19 16:43:47 tom Exp $
 # Rotate the second parameter's data by the given shift count.
 if test $# != 0
 then

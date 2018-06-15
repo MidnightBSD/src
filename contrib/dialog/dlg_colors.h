@@ -1,5 +1,5 @@
 /*
- *  $Id: dlg_colors.h,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: dlg_colors.h,v 1.17 2011/10/14 21:19:59 tom Exp $
  *
  *  colors.h -- color attribute definitions
  *

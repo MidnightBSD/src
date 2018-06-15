@@ -1,4 +1,4 @@
-# $Id: debian.rc,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: debian.rc,v 1.7 2011/10/15 01:00:09 tom Exp $
 # vile:confmode
 # Run-time configuration file for dialog, matches Debian color scheme.
 # (these are the default values for dialog)

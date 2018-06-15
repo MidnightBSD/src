@@ -1,9 +1,9 @@
 /*
- * $Id: calendar.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ * $Id: calendar.c,v 1.67 2013/03/17 15:03:41 tom Exp $
  *
  *  calendar.c -- implements the calendar box
  *
- *  Copyright 2001-2010,2011	Thomas E. Dickey
+ *  Copyright 2001-2012,2013	Thomas E. Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License, version 2.1
@@ -436,7 +436,7 @@ dialog_calendar(const char *title,
     WINDOW *dialog;
     time_t now_time = time((time_t *) 0);
     struct tm current;
-    int state = dlg_defaultno_button();
+    int state = dlg_default_button();
     const char **buttons = dlg_ok_labels();
     char *prompt = dlg_strclone(subtitle);
     int mincols = MIN_WIDE;
@@ -681,6 +681,7 @@ dialog_calendar(const char *title,
 
     dlg_add_result(buffer);
     dlg_add_separator();
+    dlg_add_last_key(-1);
 
     return CleanupResult(result, dialog, prompt, &save_vars);
 }

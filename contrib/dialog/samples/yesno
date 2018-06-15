@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: yesno,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: yesno,v 1.9 2010/01/14 01:11:11 tom Exp $
 
 . ./setup-vars
 

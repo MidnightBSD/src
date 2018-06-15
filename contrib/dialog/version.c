@@ -1,5 +1,5 @@
 /*
- *  $Id: version.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: version.c,v 1.6 2010/01/15 23:34:46 tom Exp $
  *
  *  version.c -- dialog's version string
  *

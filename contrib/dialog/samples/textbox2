@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: textbox2,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: textbox2,v 1.8 2010/01/13 10:36:49 tom Exp $
 
 . ./setup-vars
 

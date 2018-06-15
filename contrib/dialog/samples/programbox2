@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: programbox2,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: programbox2,v 1.1 2011/03/02 01:25:31 tom Exp $
 
 . ./setup-vars
 

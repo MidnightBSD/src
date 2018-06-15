@@ -11944,6 +11944,7 @@ contrib/dialog/VERSION -text
 contrib/dialog/aclocal.m4 -text
 contrib/dialog/argv.c -text
 contrib/dialog/arrows.c -text
+contrib/dialog/buildlist.c -text
 contrib/dialog/buttons.c -text
 contrib/dialog/calendar.c -text
 contrib/dialog/checklist.c -text
@@ -11988,8 +11989,13 @@ contrib/dialog/package/debian/rules -text
 contrib/dialog/package/debian/source/format -text
 contrib/dialog/package/debian/watch -text
 contrib/dialog/package/dialog.spec -text
+contrib/dialog/package/freebsd/Makefile -text
+contrib/dialog/package/freebsd/distinfo -text
+contrib/dialog/package/freebsd/pkg-descr -text
+contrib/dialog/package/freebsd/pkg-plist -text
 contrib/dialog/pause.c -text
 contrib/dialog/po/POTFILES.in -text
+contrib/dialog/po/an.po -text
 contrib/dialog/po/ar.po -text
 contrib/dialog/po/be@latin.po -text
 contrib/dialog/po/bg.po -text
@@ -12004,6 +12010,7 @@ contrib/dialog/po/eo.po -text
 contrib/dialog/po/es.po -text
 contrib/dialog/po/et.po -text
 contrib/dialog/po/eu.po -text
+contrib/dialog/po/fa.po -text
 contrib/dialog/po/fi.po -text
 contrib/dialog/po/fr.po -text
 contrib/dialog/po/ga.po -text
@@ -12011,6 +12018,7 @@ contrib/dialog/po/gl.po -text
 contrib/dialog/po/hi.po -text
 contrib/dialog/po/hr.po -text
 contrib/dialog/po/hu.po -text
+contrib/dialog/po/ia.po -text
 contrib/dialog/po/id.po -text
 contrib/dialog/po/is.po -text
 contrib/dialog/po/it.po -text
@@ -12046,9 +12054,12 @@ contrib/dialog/po/zh_CN.po -text
 contrib/dialog/po/zh_TW.po -text
 contrib/dialog/prgbox.c -text
 contrib/dialog/progressbox.c -text
+contrib/dialog/rangebox.c -text
 contrib/dialog/rc.c -text
 contrib/dialog/rename.sh -text
 contrib/dialog/samples/README -text
+contrib/dialog/samples/buildlist -text
+contrib/dialog/samples/buildlist2 -text
 contrib/dialog/samples/calendar -text
 contrib/dialog/samples/calendar-stdout -text
 contrib/dialog/samples/calendar2 -text
@@ -12061,6 +12072,7 @@ contrib/dialog/samples/checklist-utf8 -text
 contrib/dialog/samples/checklist1 -text
 contrib/dialog/samples/checklist10 -text
 contrib/dialog/samples/checklist11 -text
+contrib/dialog/samples/checklist12 -text
 contrib/dialog/samples/checklist2 -text
 contrib/dialog/samples/checklist3 -text
 contrib/dialog/samples/checklist4 -text
@@ -12090,6 +12102,10 @@ contrib/dialog/samples/copifuncs/copi.wheel -text
 contrib/dialog/samples/copifuncs/ifpatch -text
 contrib/dialog/samples/copismall -text
 contrib/dialog/samples/debian.rc -text
+contrib/dialog/samples/dft-cancel -text
+contrib/dialog/samples/dft-extra -text
+contrib/dialog/samples/dft-help -text
+contrib/dialog/samples/dft-no -text
 contrib/dialog/samples/dialog.py -text
 contrib/dialog/samples/editbox -text
 contrib/dialog/samples/editbox-utf8 -text
@@ -12153,6 +12169,7 @@ contrib/dialog/samples/menubox-8bit -text
 contrib/dialog/samples/menubox-utf8 -text
 contrib/dialog/samples/menubox1 -text
 contrib/dialog/samples/menubox10 -text
+contrib/dialog/samples/menubox12 -text
 contrib/dialog/samples/menubox2 -text
 contrib/dialog/samples/menubox3 -text
 contrib/dialog/samples/menubox4 -text
@@ -12166,7 +12183,7 @@ contrib/dialog/samples/mixedform2 -text
 contrib/dialog/samples/mixedgauge -text
 contrib/dialog/samples/msgbox -text
 contrib/dialog/samples/msgbox-help -text
-contrib/dialog/samples/msgbox-utf8 -text
+contrib/dialog/samples/msgbox-utf8 -text svneol=unset#application/octet-stream
 contrib/dialog/samples/msgbox1 -text
 contrib/dialog/samples/msgbox2 -text
 contrib/dialog/samples/msgbox3 -text
@@ -12197,6 +12214,10 @@ contrib/dialog/samples/radiolist10 -text
 contrib/dialog/samples/radiolist2 -text
 contrib/dialog/samples/radiolist3 -text
 contrib/dialog/samples/radiolist4 -text
+contrib/dialog/samples/rangebox -text
+contrib/dialog/samples/rangebox2 -text
+contrib/dialog/samples/rangebox3 -text
+contrib/dialog/samples/rangebox4 -text
 contrib/dialog/samples/report-button -text
 contrib/dialog/samples/report-edit -text
 contrib/dialog/samples/report-string -text
@@ -12226,8 +12247,12 @@ contrib/dialog/samples/timebox -text
 contrib/dialog/samples/timebox-stdout -text
 contrib/dialog/samples/timebox2 -text
 contrib/dialog/samples/timebox2-stdout -text
+contrib/dialog/samples/treeview -text
+contrib/dialog/samples/treeview2 -text
 contrib/dialog/samples/wheel -text
 contrib/dialog/samples/whiptail.rc -text
+contrib/dialog/samples/with-dquotes -text
+contrib/dialog/samples/with-squotes -text
 contrib/dialog/samples/yesno -text
 contrib/dialog/samples/yesno-both -text
 contrib/dialog/samples/yesno-extra -text
@@ -12240,6 +12265,7 @@ contrib/dialog/tailbox.c -text
 contrib/dialog/textbox.c -text
 contrib/dialog/timebox.c -text
 contrib/dialog/trace.c -text
+contrib/dialog/treeview.c -text
 contrib/dialog/ui_getc.c -text
 contrib/dialog/util.c -text
 contrib/dialog/version.c -text
