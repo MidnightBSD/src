@@ -1,10 +1,10 @@
-# $FreeBSD: stable/11/lib/liblzma/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $MidnightBSD$
+# $FreeBSD: stable/10/lib/liblzma/Makefile 313619 2017-02-11 06:55:35Z ngie $
 
-PACKAGE=lib${LIB}
 LIB=		lzma
-LZMADIR=	${.CURDIR}/../../contrib/xz/src/liblzma
+LZMADIR=	${SRCTOP}/contrib/xz/src/liblzma
 
-.PATH: ${LZMADIR}/../common
+.PATH: ${LZMADIR:H}/common
 SRCS+=	tuklib_physmem.c tuklib_cpucores.c
 
 .PATH: ${LZMADIR}/api/lzma
@@ -145,10 +145,10 @@ CFLAGS+=	-DHAVE_CONFIG_H \
 		-I${LZMADIR}/lzma \
 		-I${LZMADIR}/delta \
 		-I${LZMADIR}/simple \
-		-I${LZMADIR}/../common
+		-I${LZMADIR:H}/common
 
-DPADD=  ${LIBPTHREAD}
-LDADD=  -lpthread
+DPADD+=		${LIBPTHREAD}
+LDADD+=		-lpthread
 
 VERSION_DEF=	${.CURDIR}/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
@@ -156,11 +156,10 @@ CFLAGS+=	-DSYMBOL_VERSIONING
 
 CLEANFILES+=	liblzma.pc
 
-FILES=		liblzma.pc
-FILESDIR=	${LIBDATADIR}/pkgconfig
-
+.if !defined(LIBRARIES_ONLY)
+all: liblzma.pc
 liblzma.pc: liblzma.pc.in
-	sed -e 's,@prefix@,/usr,g ; \
+	@sed -e 's,@prefix@,/usr,g ; \
 		s,@exec_prefix@,/usr,g  ; \
 		s,@libdir@,/usr/lib,g ; \
 		s,@includedir@,/usr/include,g ; \
@@ -168,5 +167,10 @@ liblzma.pc: liblzma.pc.in
 		s,@PACKAGE_VERSION@,${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH},g ; \
 		s,@PTHREAD_CFLAGS@,,g ; \
 		s,@PTHREAD_LIBS@,,g' ${.ALLSRC} > ${.TARGET}
+
+beforeinstall:
+	@${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+		liblzma.pc ${DESTDIR}${LIBDATADIR}/pkgconfig
+.endif
 
 .include <bsd.lib.mk>
