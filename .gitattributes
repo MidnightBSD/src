@@ -35,6 +35,7 @@ magic/Localstuff -text
 magic/Magdir/acorn -text
 magic/Magdir/adi -text
 magic/Magdir/adventure -text
+magic/Magdir/algol68 -text
 magic/Magdir/allegro -text
 magic/Magdir/alliant -text
 magic/Magdir/amanda -text
@@ -42,16 +43,22 @@ magic/Magdir/amigaos -text
 magic/Magdir/android -text
 magic/Magdir/animation -text
 magic/Magdir/aout -text
+magic/Magdir/apache -text
 magic/Magdir/apl -text
 magic/Magdir/apple -text
+magic/Magdir/application -text
 magic/Magdir/applix -text
+magic/Magdir/apt -text
 magic/Magdir/archive -text
 magic/Magdir/assembler -text
 magic/Magdir/asterix -text
 magic/Magdir/att3b -text
 magic/Magdir/audio -text
 magic/Magdir/basis -text
+magic/Magdir/ber -text
 magic/Magdir/bflt -text
+magic/Magdir/bhl -text
+magic/Magdir/bioinformatics -text
 magic/Magdir/blackberry -text
 magic/Magdir/blcr -text
 magic/Magdir/blender -text
@@ -64,6 +71,7 @@ magic/Magdir/c-lang -text
 magic/Magdir/c64 -text
 magic/Magdir/cad -text
 magic/Magdir/cafebabe -text
+magic/Magdir/cbor -text
 magic/Magdir/cddb -text
 magic/Magdir/chord -text
 magic/Magdir/cisco -text
@@ -71,11 +79,13 @@ magic/Magdir/citrus -text
 magic/Magdir/clarion -text
 magic/Magdir/claris -text
 magic/Magdir/clipper -text
+magic/Magdir/coff -text
 magic/Magdir/commands -text
 magic/Magdir/communications -text
 magic/Magdir/compress -text
 magic/Magdir/console -text
 magic/Magdir/convex -text
+magic/Magdir/coverage -text
 magic/Magdir/cracklib -text
 magic/Magdir/ctags -text
 magic/Magdir/ctf -text
@@ -83,6 +93,7 @@ magic/Magdir/cubemap -text
 magic/Magdir/cups -text
 magic/Magdir/dact -text
 magic/Magdir/database -text
+magic/Magdir/der -text
 magic/Magdir/diamond -text
 magic/Magdir/diff -text
 magic/Magdir/digital -text
@@ -99,7 +110,9 @@ magic/Magdir/erlang -text
 magic/Magdir/esri -text
 magic/Magdir/fcs -text
 magic/Magdir/filesystems -text
+magic/Magdir/finger -text
 magic/Magdir/flash -text
+magic/Magdir/flif -text
 magic/Magdir/fonts -text
 magic/Magdir/fortran -text
 magic/Magdir/frame -text
@@ -108,6 +121,7 @@ magic/Magdir/fsav -text
 magic/Magdir/fusecompress -text
 magic/Magdir/games -text
 magic/Magdir/gcc -text
+magic/Magdir/gconv -text
 magic/Magdir/geo -text
 magic/Magdir/geos -text
 magic/Magdir/gimp -text
@@ -115,6 +129,7 @@ magic/Magdir/gnome -text
 magic/Magdir/gnu -text
 magic/Magdir/gnumeric -text
 magic/Magdir/gpt -text
+magic/Magdir/gpu -text
 magic/Magdir/grace -text
 magic/Magdir/graphviz -text
 magic/Magdir/gringotts -text
@@ -139,6 +154,7 @@ magic/Magdir/jpeg -text
 magic/Magdir/karma -text
 magic/Magdir/kde -text
 magic/Magdir/keepass -text
+magic/Magdir/kerberos -text
 magic/Magdir/kml -text
 magic/Magdir/lecter -text
 magic/Magdir/lex -text
@@ -164,6 +180,8 @@ magic/Magdir/matroska -text
 magic/Magdir/mcrypt -text
 magic/Magdir/mercurial -text
 magic/Magdir/metastore -text
+magic/Magdir/meteorological -text
+magic/Magdir/microfocus -text
 magic/Magdir/mime -text
 magic/Magdir/mips -text
 magic/Magdir/mirage -text
@@ -180,6 +198,7 @@ magic/Magdir/msvc -text
 magic/Magdir/msx -text
 magic/Magdir/mup -text
 magic/Magdir/music -text
+magic/Magdir/nasa -text
 magic/Magdir/natinst -text
 magic/Magdir/ncr -text
 magic/Magdir/neko -text
@@ -203,6 +222,8 @@ magic/Magdir/parrot -text
 magic/Magdir/pascal -text
 magic/Magdir/pbf -text
 magic/Magdir/pbm -text
+magic/Magdir/pc88 -text
+magic/Magdir/pc98 -text
 magic/Magdir/pdf -text
 magic/Magdir/pdp -text
 magic/Magdir/perl -text
@@ -211,16 +232,18 @@ magic/Magdir/pgp -text
 magic/Magdir/pkgadd -text
 magic/Magdir/plan9 -text
 magic/Magdir/plus5 -text
+magic/Magdir/polyml -text
 magic/Magdir/printer -text
 magic/Magdir/project -text
 magic/Magdir/psdbms -text
+magic/Magdir/psl -text
 magic/Magdir/pulsar -text
 magic/Magdir/pwsafe -text
 magic/Magdir/pyramid -text
 magic/Magdir/python -text
+magic/Magdir/qt -text
 magic/Magdir/revision -text
 magic/Magdir/riff -text
-magic/Magdir/rinex -text
 magic/Magdir/rpm -text
 magic/Magdir/rtf -text
 magic/Magdir/ruby -text
@@ -264,6 +287,7 @@ magic/Magdir/unicode -text
 magic/Magdir/unknown -text
 magic/Magdir/uterus -text
 magic/Magdir/uuencode -text
+magic/Magdir/vacuum-cleaner -text
 magic/Magdir/varied.out -text
 magic/Magdir/varied.script -text
 magic/Magdir/vax -text
@@ -277,15 +301,18 @@ magic/Magdir/vorbis -text
 magic/Magdir/vxl -text
 magic/Magdir/warc -text
 magic/Magdir/weak -text
+magic/Magdir/webassembly -text
 magic/Magdir/windows -text
 magic/Magdir/wireless -text
 magic/Magdir/wordprocessors -text
 magic/Magdir/wsdl -text
+magic/Magdir/x68000 -text
 magic/Magdir/xdelta -text
 magic/Magdir/xenix -text
 magic/Magdir/xilinx -text
 magic/Magdir/xo65 -text
 magic/Magdir/xwindows -text
+magic/Magdir/yara -text
 magic/Magdir/zfs -text
 magic/Magdir/zilog -text
 magic/Magdir/zyxel -text
@@ -310,6 +337,9 @@ src/cdf.h -text
 src/cdf_time.c -text
 src/compress.c -text
 src/ctime_r.c -text
+src/der.c -text
+src/der.h -text
+src/dprintf.c -text
 src/elfclass.h -text
 src/encoding.c -text
 src/file.c -text
@@ -320,9 +350,10 @@ src/fsmagic.c -text
 src/funcs.c -text
 src/getline.c -text
 src/getopt_long.c -text
+src/gmtime_r.c -text
 src/is_tar.c -text
+src/localtime_r.c -text
 src/magic.c -text
-src/magic.h -text
 src/magic.h.in -text
 src/mygetopt.h -text
 src/pread.c -text
@@ -343,6 +374,8 @@ tests/escapevel.result -text
 tests/escapevel.testfile -text svneol=unset#application/zip
 tests/gedcom.result -text
 tests/gedcom.testfile -text
+tests/hddrawcopytool.result -text
+tests/hddrawcopytool.testfile -text
 tests/issue311docx.result -text
 tests/issue311docx.testfile -text svneol=unset#application/zip
 tests/test.c -text
