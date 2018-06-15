@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.ver,v 1.1 2009/05/22 00:52:07 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.ver,v 1.1 2007/05/19 04:25:56 kan Exp $
 
 BASEVER!=	cat ${GCCDIR}/BASE-VER
