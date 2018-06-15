@@ -45525,6 +45525,8 @@ gnu/usr.bin/cc/f771/Makefile -text
 gnu/usr.bin/cc/f77doc/Makefile -text
 gnu/usr.bin/cc/gcov/Makefile -text
 gnu/usr.bin/cc/include/Makefile -text
+gnu/usr.bin/cc/include/__wmmintrin_aes.h svneol=native#text/plain
+gnu/usr.bin/cc/include/__wmmintrin_pclmul.h svneol=native#text/plain
 gnu/usr.bin/cc/libcpp/Makefile -text
 gnu/usr.bin/cc/libcpp/config.h -text
 gnu/usr.bin/cc/libdecnumber/Makefile -text
