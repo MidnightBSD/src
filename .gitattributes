@@ -39071,6 +39071,15 @@ contrib/xz/MIDNIGHTBSD-upgrade -text
 contrib/xz/README -text
 contrib/xz/THANKS -text
 contrib/xz/TODO -text
+contrib/xz/po/LINGUAS -text
+contrib/xz/po/Makevars -text
+contrib/xz/po/POTFILES.in -text
+contrib/xz/po/cs.po -text
+contrib/xz/po/de.po -text
+contrib/xz/po/fr.po -text
+contrib/xz/po/it.po -text
+contrib/xz/po/pl.po -text
+contrib/xz/po/xz.pot -text
 contrib/xz/src/common/mythread.h -text
 contrib/xz/src/common/sysdefs.h -text
 contrib/xz/src/common/tuklib_common.h -text
