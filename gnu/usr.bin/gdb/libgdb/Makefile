@@ -1,11 +1,11 @@
-# $MidnightBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.3 2012/07/19 03:21:20 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.11 2006/04/10 09:00:19 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/gdb/libgdb/Makefile 251858 2013-06-17 18:34:34Z emaste $
 
 # These assignments duplicate much of the functionality of
 # MACHINE_CPUARCH, but there's no easy way to export make functions...
 
 .if defined(TARGET_ARCH)
-TARGET_CPUARCH=${TARGET_ARCH}
+TARGET_CPUARCH=${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
 .endif
@@ -27,7 +27,7 @@ SRCS=	annotate.c arch-utils.c auxv.c ax-gdb.c ax-general.c \
 	elfread.c environ.c eval.c event-loop.c event-top.c exec.c \
 	expprint.c \
 	f-exp.y f-lang.c f-typeprint.c f-valprint.c findvar.c \
-	${_fork_child} frame-base.c frame-unwind-kluge.c frame.c \
+	${_fork_child} frame-base.c frame-unwind.c frame.c \
 	gdb-events.c gdbarch.c gdbtypes.c gnu-v2-abi.c gnu-v3-abi.c \
 	hpacc-abi.c \
 	inf-loop.c infcall.c infcmd.c inflow.c ${_infptrace} infrun.c \
@@ -68,13 +68,7 @@ _infptrace= infptrace.c
 _inftarg= inftarg.c
 .endif
 
-GENSRCS= frame-unwind-kluge.c version.c
-
-frame-unwind-kluge.c: frame-unwind.diff
-	cat ${CNTRB_GDB}/gdb/frame-unwind.c > ${.TARGET}
-	patch ${.TARGET} ${.ALLSRC}
-
-CLEANFILES= frame-unwind-kluge.c.orig
+GENSRCS= version.c
 
 version.c:
 	echo '#include "version.h"' >  ${.TARGET}
