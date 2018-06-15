@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/sparc64/Makefile 224687 2011-08-06 17:53:45Z marius $
 
 .if !defined(GDB_CROSS_DEBUGGER)
 LIBSRCS+= fbsd-threads.c

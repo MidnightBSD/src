@@ -1,4 +1,5 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/amd64/init.c 138383 2004-12-05 06:59:01Z marcel $ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */
