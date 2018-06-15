@@ -1,5 +1,8 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/cc/cc1/Makefile,v 1.35 2007/05/19 04:25:57 kan Exp $
+# $FreeBSD: stable/10/gnu/usr.bin/cc/cc1/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
+
+MAN=
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
 
@@ -7,9 +10,10 @@
 
 PROG=	cc1
 SRCS=	main.c c-parser.c c-lang.c
-BINDIR=	/usr/libexec
-NO_MAN=
+BINDIR=	${LIBEXECDIR}
+.if ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?=yes
+.endif
 
 OBJS+=  ${PROG}-checksum.o
 DPADD=	${LIBBACKEND} ${LIBCPP} ${LIBDECNUMBER} ${LIBIBERTY}
