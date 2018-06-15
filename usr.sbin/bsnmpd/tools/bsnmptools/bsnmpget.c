@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -29,7 +30,7 @@
  * Bsnmpget and bsnmpwalk are simple tools for querying SNMP agents,
  * bsnmpset can be used to set MIB objects in an agent.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/bsnmptools/bsnmpget.c 312050 2017-01-13 08:59:22Z ngie $
  */
 
 #include <sys/queue.h>
@@ -76,8 +77,9 @@ usage(void)
 	    (program == BSNMPWALK) ? "[-dhnK]" :
 	    (program == BSNMPSET) ? "[-adehnK]" :
 	    "",
-	(program == BSNMPGET) ? " [-M max-repetitions] [-N non-repeaters]" : "",
-	(program == BSNMPGET) ? "[-p pdu] " : "",
+	(program == BSNMPGET || program == BSNMPWALK) ?
+	" [-M max-repetitions] [-N non-repeaters]" : "",
+	(program == BSNMPGET || program == BSNMPWALK) ? "[-p pdu] " : "",
 	(program == BSNMPGET) ? " OID [OID ...]" :
 	    (program == BSNMPWALK || program == BSNMPSET) ? " [OID ...]" :
 	    ""
@@ -150,7 +152,7 @@ snmptool_parse_options(struct snmp_toolinfo *snmptoolctx, int argc, char **argv)
 
 	switch (program) {
 		case BSNMPWALK:
-			opts = "dhnKA:b:C:I:i:l:o:P:r:s:t:U:v:";
+			opts = "dhnKA:b:C:I:i:l:M:N:o:P:p:r:s:t:U:v:";
 			break;
 		case BSNMPGET:
 			opts = "aDdehnKA:b:C:I:i:l:M:N:o:P:p:r:s:t:U:v:";
@@ -248,9 +250,9 @@ snmptool_parse_options(struct snmp_toolinfo *snmptoolctx, int argc, char **argv)
 
 /*
  * Read user input OID - one of following formats:
- * 1) 1.2.1.1.2.1.0 - that is if option numeric was giveni;
+ * 1) 1.2.1.1.2.1.0 - that is if option numeric was given;
  * 2) string - in such case append .0 to the asn_oid subs;
- * 3) string.1 - no additional proccessing required in such case.
+ * 3) string.1 - no additional processing required in such case.
  */
 static char *
 snmptools_parse_stroid(struct snmp_toolinfo *snmptoolctx,
@@ -393,19 +395,22 @@ snmptool_get(struct snmp_toolinfo *snmptoolctx)
 			    GET_NONREP(snmptoolctx));
 
 		if (snmp_dialog(&req, &resp) == -1) {
-			warnx("Snmp dialog - %s", strerror(errno));
+			warn("Snmp dialog");
 			break;
 		}
 
 		if (snmp_parse_resp(&resp, &req) >= 0) {
-			snmp_output_resp(snmptoolctx, &resp);
+			snmp_output_resp(snmptoolctx, &resp, NULL);
+			snmp_pdu_free(&resp);
 			break;
 		}
 
 		snmp_output_err_resp(snmptoolctx, &resp);
 		if (GET_PDUTYPE(snmptoolctx) == SNMP_PDU_GETBULK ||
-		    !ISSET_RETRY(snmptoolctx))
+		    !ISSET_RETRY(snmptoolctx)) {
+			snmp_pdu_free(&resp);
 			break;
+		}
 
 		/*
 		 * Loop through the object list and set object->error to the
@@ -413,15 +418,17 @@ snmptool_get(struct snmp_toolinfo *snmptoolctx)
 		 */
 		if (snmp_object_seterror(snmptoolctx,
 		    &(resp.bindings[resp.error_index - 1]),
-		    resp.error_status) <= 0)
+		    resp.error_status) <= 0) {
+			snmp_pdu_free(&resp);
 			break;
+		}
 
 		fprintf(stderr, "Retrying...\n");
 		snmp_pdu_free(&resp);
 		snmp_pdu_create(&req, GET_PDUTYPE(snmptoolctx));
 	}
 
-	snmp_pdu_free(&resp);
+	snmp_pdu_free(&req);
 
 	return (0);
 }
@@ -458,10 +465,16 @@ static int
 snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 {
 	struct snmp_pdu req, resp;
-	struct asn_oid root;	/* Keep the inital oid. */
+	struct asn_oid root;	/* Keep the initial oid. */
 	int32_t outputs, rc;
+	uint32_t op;
 
-	snmp_pdu_create(&req, SNMP_PDU_GETNEXT);
+	if (GET_PDUTYPE(snmptoolctx) == SNMP_PDU_GETBULK)
+		op = SNMP_PDU_GETBULK;
+	else
+		op = SNMP_PDU_GETNEXT;
+
+	snmp_pdu_create(&req, op);
 
 	while ((rc = snmp_pdu_add_bindings(snmptoolctx, NULL,
 	    snmptool_add_vbind, &req, 1)) > 0) {
@@ -469,6 +482,10 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 		/* Remember the root where the walk started from. */
 		memset(&root, 0, sizeof(struct asn_oid));
 		asn_append_oid(&root, &(req.bindings[0].var));
+
+		if (op == SNMP_PDU_GETBULK)
+			snmpget_fix_getbulk(&req, GET_MAXREP(snmptoolctx),
+			    GET_NONREP(snmptoolctx));
 
 		outputs = 0;
 		while (snmp_dialog(&req, &resp) >= 0) {
@@ -479,35 +496,40 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 				break;
 			}
 
-			if (!(asn_is_suboid(&root, &(resp.bindings[0].var)))) {
-				snmp_pdu_free(&resp);
-				break;
-			}
-
-			if (snmp_output_resp(snmptoolctx, &resp)!= 0) {
+			rc = snmp_output_resp(snmptoolctx, &resp, &root);
+			if (rc < 0) {
 				snmp_pdu_free(&resp);
 				outputs = -1;
 				break;
 			}
-			outputs++;
-			snmp_pdu_free(&resp);
 
-			snmpwalk_nextpdu_create(SNMP_PDU_GETNEXT,
-			    &(resp.bindings[0].var), &req);
+			outputs += rc;
+
+			if ((u_int)rc < resp.nbindings) {
+				snmp_pdu_free(&resp);
+				break;
+			}
+
+			snmpwalk_nextpdu_create(op,
+			    &(resp.bindings[resp.nbindings - 1].var), &req);
+			if (op == SNMP_PDU_GETBULK)
+				snmpget_fix_getbulk(&req, GET_MAXREP(snmptoolctx),
+				    GET_NONREP(snmptoolctx));
+			snmp_pdu_free(&resp);
 		}
 
 		/* Just in case our root was a leaf. */
 		if (outputs == 0) {
 			snmpwalk_nextpdu_create(SNMP_PDU_GET, &root, &req);
 			if (snmp_dialog(&req, &resp) == SNMP_CODE_OK) {
-				if (snmp_parse_resp(&resp,&req) < 0)
+				if (snmp_parse_resp(&resp, &req) < 0)
 					snmp_output_err_resp(snmptoolctx, &resp);
 				else
-					snmp_output_resp(snmptoolctx, &(resp));
-
+					snmp_output_resp(snmptoolctx, &resp,
+					    NULL);
 				snmp_pdu_free(&resp);
 			} else
-				warnx("Snmp dialog - %s", strerror(errno));
+				warn("Snmp dialog");
 		}
 
 		if (snmp_object_remove(snmptoolctx, &root) < 0) {
@@ -515,8 +537,11 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 			break;
 		}
 
-		snmp_pdu_create(&req, SNMP_PDU_GETNEXT);
+		snmp_pdu_free(&req);
+		snmp_pdu_create(&req, op);
 	}
+
+	snmp_pdu_free(&req);
 
 	if (rc == 0)
 		return (0);
@@ -540,8 +565,7 @@ parse_oid_numeric(struct snmp_value *value, char *val)
 		errno = 0;
 		suboid = strtoul(val, &endptr, 10);
 		if (errno != 0) {
-			warnx("Value %s not supported - %s", val,
-			    strerror(errno));
+			warn("Value %s not supported", val);
 			errno = saved_errno;
 			return (-1);
 		}
@@ -589,9 +613,9 @@ parse_oid_string(struct snmp_toolinfo *snmptoolctx,
 static int32_t
 parse_ip(struct snmp_value * value, char * val)
 {
-	uint32_t v;
-	int32_t i;
 	char *endptr, *str;
+	int32_t i;
+	uint32_t v;
 
 	str = val;
 	for (i = 0; i < 4; i++) {
@@ -603,8 +627,8 @@ parse_ip(struct snmp_value * value, char * val)
 		str = endptr + 1;
 		value->v.ipaddress[i] = (uint8_t) v;
 	}
-
 	value->syntax = SNMP_SYNTAX_IPADDRESS;
+
 	return (0);
 }
 
@@ -620,7 +644,7 @@ parse_int(struct snmp_value *value, char *val)
 	v = strtol(val, &endptr, 10);
 
 	if (errno != 0) {
-		warnx("Value %s not supported - %s", val, strerror(errno));
+		warn("Value %s not supported", val);
 		errno = saved_errno;
 		return (-1);
 	}
@@ -668,7 +692,7 @@ parse_uint(struct snmp_value *value, char *val)
 	v = strtoul(val, &endptr, 10);
 
 	if (errno != 0) {
-		warnx("Value %s not supported - %s", val, strerror(errno));
+		warn("Value %s not supported", val);
 		errno = saved_errno;
 		return (-1);
 	}
@@ -722,7 +746,7 @@ parse_uint64(struct snmp_value *value, char *val)
 	v = strtoull(val, &endptr, 10);
 
 	if (errno != 0) {
-		warnx("Value %s not supported - %s", val, strerror(errno));
+		warnx("Value %s not supported", val);
 		errno = saved_errno;
 		return (-1);
 	}
@@ -763,7 +787,7 @@ parse_syntax_val(struct snmp_value *value, enum snmp_syntax syntax, char *val)
 }
 
 /*
- * Parse a command line argument of type OID=syntax:value and fill in whatever 
+ * Parse a command line argument of type OID=syntax:value and fill in whatever
  * fields can be derived from the input into snmp_value structure. Reads numeric
  * OIDs.
  */
@@ -807,7 +831,7 @@ parse_pair_numoid_val(char *str, struct snmp_value *snmp_val)
 			break;
 
 	if (ptr[cnt] != '\0') {
-		warnx("Value string too long - %s",ptr);
+		warnx("Value string too long - %s", ptr);
 		return (-1);
 	}
 
@@ -816,7 +840,7 @@ parse_pair_numoid_val(char *str, struct snmp_value *snmp_val)
 	 * to know syntax to check value boundaries.
 	 */
 	if (snmp_parse_numoid(oid_str, &(snmp_val->var)) < 0) {
-		warnx("Error parsing OID %s",oid_str);
+		warnx("Error parsing OID %s", oid_str);
 		return (-1);
 	}
 
@@ -826,10 +850,9 @@ parse_pair_numoid_val(char *str, struct snmp_value *snmp_val)
 	return (1);
 }
 
-/* XXX-BZ aruments should be swapped. */
 static int32_t
-parse_syntax_strval(struct snmp_toolinfo *snmptoolctx, char *str,
-    struct snmp_object *object)
+parse_syntax_strval(struct snmp_toolinfo *snmptoolctx,
+    struct snmp_object *object, char *str)
 {
 	uint32_t len;
 	enum snmp_syntax syn;
@@ -895,13 +918,13 @@ parse_pair_stroid_val(struct snmp_toolinfo *snmptoolctx,
 
 	if ((ptr = snmptools_parse_stroid(snmptoolctx, obj, argv)) == NULL)
 		return (-1);
- 
+
 	if (*ptr != '=') {
 		warnx("Value to set expected after OID");
 		return (-1);
 	}
 
-	if (parse_syntax_strval(snmptoolctx, ptr + 1, obj) < 0)
+	if (parse_syntax_strval(snmptoolctx, obj, ptr + 1) < 0)
 		return (-1);
 
 	return (1);
@@ -942,7 +965,7 @@ static int32_t
 add_octstring_syntax(struct snmp_value *dst, struct snmp_value *src)
 {
 	if (src->v.octetstring.len > ASN_MAXOCTETSTRING) {
-		warnx("OctetString len too big - %u",src->v.octetstring.len);
+		warnx("OctetString len too big - %u", src->v.octetstring.len);
 		return (-1);
 	}
 
@@ -1070,32 +1093,36 @@ snmptool_set(struct snmp_toolinfo *snmptoolctx)
 	while ((snmp_pdu_add_bindings(snmptoolctx, snmpset_verify_vbind,
 	    snmpset_add_vbind, &req, SNMP_MAX_BINDINGS)) > 0) {
 		if (snmp_dialog(&req, &resp)) {
-			warnx("Snmp dialog - %s", strerror(errno));
+			warn("Snmp dialog");
 			break;
 		}
 
 		if (snmp_pdu_check(&req, &resp) > 0) {
 			if (GET_OUTPUT(snmptoolctx) != OUTPUT_QUIET)
-				snmp_output_resp(snmptoolctx, &resp);
+				snmp_output_resp(snmptoolctx, &resp, NULL);
+			snmp_pdu_free(&resp);
 			break;
 		}
 
 		snmp_output_err_resp(snmptoolctx, &resp);
-		if (!ISSET_RETRY(snmptoolctx))
+		if (!ISSET_RETRY(snmptoolctx)) {
+			snmp_pdu_free(&resp);
 			break;
+		}
 
 		if (snmp_object_seterror(snmptoolctx,
 		    &(resp.bindings[resp.error_index - 1]),
-		    resp.error_status) <= 0)
+		    resp.error_status) <= 0) {
+			snmp_pdu_free(&resp);
 			break;
+		}
 
 		fprintf(stderr, "Retrying...\n");
 		snmp_pdu_free(&req);
-		snmp_pdu_free(&resp);
 		snmp_pdu_create(&req, SNMP_PDU_SET);
 	}
 
-	snmp_pdu_free(&resp);
+	snmp_pdu_free(&req);
 
 	return (0);
 }
@@ -1105,13 +1132,13 @@ snmptool_set(struct snmp_toolinfo *snmptoolctx)
  */
 /*
  * According to command line options prepare SNMP Get | GetNext | GetBulk PDU.
- * Wait for a responce and print it.
+ * Wait for a response and print it.
  */
 /*
  * Do a 'snmp walk' - according to command line options request for values
  * lexicographically subsequent and subrooted at a common node. Send a GetNext
- * PDU requesting the value for each next variable and print the responce. Stop
- * when a Responce PDU is received that contains the value of a variable not
+ * PDU requesting the value for each next variable and print the response. Stop
+ * when a Response PDU is received that contains the value of a variable not
  * subrooted at the variable the walk started.
  */
 int
@@ -1215,7 +1242,7 @@ main(int argc, char ** argv)
 	}
 
 	if (snmp_open(NULL, NULL, NULL, NULL)) {
-		warnx("Failed to open snmp session: %s.", strerror(errno));
+		warn("Failed to open snmp session");
 		snmp_tool_freeall(&snmptoolctx);
 		exit(1);
 	}
@@ -1225,7 +1252,7 @@ main(int argc, char ** argv)
 
 	if (ISSET_EDISCOVER(&snmptoolctx) &&
 	    snmp_discover_engine(snmptoolctx.passwd) < 0) {
-		warnx("Unknown SNMP Engine ID: %s.", strerror(errno));
+		warn("Unknown SNMP Engine ID");
 		rc = 1;
 		goto cleanup;
 	}
@@ -1241,7 +1268,7 @@ main(int argc, char ** argv)
 		    snmp_get_local_keys(&snmp_client.user,
 		    snmp_client.engine.engine_id,
 		    snmp_client.engine.engine_len) != SNMP_CODE_OK) {
-		    	warnx("Failed to get keys: %s.", strerror(errno));
+		    	warn("Failed to get keys");
 			rc = 1;
 			goto cleanup;
 		}
