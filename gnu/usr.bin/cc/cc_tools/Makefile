@@ -1,5 +1,5 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.6 2010/02/06 05:12:46 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.88 2007/05/28 00:25:07 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/cc/cc_tools/Makefile 291815 2015-12-04 18:59:20Z bdrewery $
 
 .include <bsd.own.mk>
 
@@ -52,6 +52,9 @@ TARGET_INC+=	${GCC_CPU}/elf.h
 .endif
 .if ${TARGET_CPUARCH} == "arm"
 TARGET_INC+=	${GCC_CPU}/aout.h
+.if ${MK_ARM_EABI} != "no"
+TARGET_INC+=	${GCC_CPU}/bpabi.h
+.endif
 .endif
 .if ${TARGET_ARCH} == "powerpc64"
 TARGET_INC+=	${GCC_CPU}/biarch64.h
@@ -131,10 +134,6 @@ GTFILES_LANG_DIR_NAMES=
 GTFILES_LANG_DIR_NAMES+=	cp
 .endif
 
-.if ${MK_OBJC} != "no"
-GTFILES_LANG_DIR_NAMES+=	objc
-.endif
-
 # The list of language specific files for gengtype
 .for L in ${GTFILES_LANG_DIR_NAMES} c
 .if exists(${GCCDIR}/$L-config-lang.in)
@@ -159,10 +158,6 @@ TREE_DEF_FILES=
 TREE_DEF_FILES+=	cp/cp-tree.def
 .endif
 
-.if ${MK_OBJC} != "no"
-TREE_DEF_FILES+=	objc/objc-tree.def
-.endif
-
 #
 # Option files.
 #
@@ -176,7 +171,11 @@ OPT_FILES+=	${GCCDIR}/config/${GCC_CPU}/${GCC_CPU}.opt
 OPT_FILES+=	${.CURDIR}/${GCC_CPU}-freebsd.opt
 .endif
 
-.if ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_CPUARCH} == "powerpc"
+OPT_FILES+=	${GCCDIR}/config/${GCC_CPU}/sysv4.opt
+.endif
+
+.if ${TARGET_CPUARCH} == "sparc64"
 OPT_FILES+=	${GCCDIR}/config/${GCC_CPU}/long-double-switch.opt
 .endif
 
@@ -219,6 +218,7 @@ tconfig.h:
 
 GENSRCS+=	tconfig.h
 CLEANFILES+=	cs-tconfig.h
+
 # Options
 optionlist: ${OPT_FILES}
 	LC_ALL=C awk -f ${GCCDIR}/opt-gather.awk ${.ALLSRC} > ${.TARGET}
@@ -354,7 +354,13 @@ gthr-default.h: ${GCCDIR}/gthr-posix.h
 
 GENSRCS+=	gthr-default.h
 
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+unwind.h: ${GCCDIR}/config/arm/unwind-arm.h
+.else
 unwind.h: ${GCCDIR}/unwind-generic.h
+.endif
+
+unwind.h:
 	ln -sf ${.ALLSRC} ${.TARGET}
 
 GENSRCS+=	unwind.h
@@ -517,7 +523,7 @@ ${_src:R:S/$/.o/}: ${_src}
 
 ${LIBIBERTY}: ${LIBIBERTY_OBJS}
 	@rm -f ${.TARGET}
-	@${AR} cq ${.TARGET} `lorder ${LIBIBERTY_OBJS} | tsort -q`
+	@${AR} ${ARFLAGS} ${.TARGET} `lorder ${LIBIBERTY_OBJS} | tsort -q`
 	${RANLIB} ${.TARGET}
 CLEANFILES+=	${LIBIBERTY} ${LIBIBERTY_OBJS}
 
