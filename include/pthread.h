@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993, 1994 by Chris Provenzano, proven@mit.edu
  * Copyright (c) 1995-1998 by John Birrell <jb@cimlogic.com.au>
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/pthread.h 257113 2013-10-25 13:27:55Z tijl $
  */
 #ifndef _PTHREAD_H_
 #define _PTHREAD_H_
@@ -175,6 +176,7 @@ int		pthread_barrierattr_setpshared(pthread_barrierattr_t *, int);
 			{
 
 #define		pthread_cleanup_pop(execute)					\
+				(void)0;					\
 			}							\
 			__pthread_cleanup_pop_imp(execute);			\
 		}
@@ -284,12 +286,6 @@ int		pthread_getschedparam(pthread_t pthread, int *,
 			struct sched_param *);
 int		pthread_setschedparam(pthread_t, int,
 			const struct sched_param *);
-
-#ifdef HAVE_MACH
-#include <mach/port.h>
-mach_port_t pthread_mach_thread_np(uintptr_t);
-#endif
-
 #if __XSI_VISIBLE
 int		pthread_getconcurrency(void);
 int		pthread_setconcurrency(int);
