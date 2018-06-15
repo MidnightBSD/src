@@ -1,9 +1,10 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/cc1plus/Makefile,v 1.3 2012/08/25 21:17:57 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/cc/cc1plus/Makefile,v 1.39 2007/05/19 04:25:57 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/cc/cc1plus/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
+
+MAN=
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
-NO_MAN=
-.include <bsd.own.mk>
 
 .PATH: ${GCCDIR}/cp ${GCCDIR}
 
@@ -15,7 +16,7 @@ SRCS+=	main.c cp-lang.c c-opts.c call.c class.c cvt.c cxx-pretty-print.c \
 	search.c semantics.c tree.c typeck.c typeck2.c optimize.c \
 	cp-objcp-common.c cp-gimplify.c tree-mudflap.c
 
-BINDIR=	/usr/libexec
+BINDIR=	${LIBEXECDIR}
 .if ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?=yes
 .endif
