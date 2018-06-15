@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/kthr.c 246893 2013-02-17 02:15:19Z marcel $");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -44,12 +45,10 @@ __MBSDID("$MidnightBSD$");
 #include <frame-unwind.h>
 
 #include "kgdb.h"
-#include <machine/pcb.h>
 
 static CORE_ADDR dumppcb;
 static int dumptid;
 
-static CORE_ADDR stoppcbs;
 static cpuset_t stopped_cpus;
 
 static struct kthr *first;
@@ -98,10 +97,9 @@ kgdb_thr_add_procs(uintptr_t paddr)
 			kt->kaddr = addr;
 			if (td.td_tid == dumptid)
 				kt->pcb = dumppcb;
-			else if (td.td_state == TDS_RUNNING && stoppcbs != 0 &&
+			else if (td.td_state == TDS_RUNNING &&
 			    CPU_ISSET(td.td_oncpu, &stopped_cpus))
-				kt->pcb = (uintptr_t)stoppcbs +
-				    sizeof(struct pcb) * td.td_oncpu;
+				kt->pcb = kgdb_trgt_core_pcb(td.td_oncpu);
 			else
 				kt->pcb = (uintptr_t)td.td_pcb;
 			kt->kstack = td.td_kstack;
@@ -151,8 +149,6 @@ kgdb_thr_init(void)
 	if (cpusetsize != -1 && (u_long)cpusetsize <= sizeof(cpuset_t) &&
 	    addr != 0)
 		kvm_read(kvm, addr, &stopped_cpus, cpusetsize);
-
-	stoppcbs = kgdb_lookup("stoppcbs");
 
 	kgdb_thr_add_procs(paddr);
 	addr = kgdb_lookup("zombproc");

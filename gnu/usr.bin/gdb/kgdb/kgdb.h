@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/kgdb.h 246893 2013-02-17 02:15:19Z marcel $
  */
 
 #ifndef _KGDB_H_
@@ -49,6 +50,8 @@ extern struct kthr *curkthr;
 void initialize_kld_target(void);
 void initialize_kgdb_target(void);
 void kgdb_dmesg(void);
+CORE_ADDR kgdb_trgt_core_pcb(u_int);
+CORE_ADDR kgdb_trgt_stop_pcb(u_int, u_int);
 void kgdb_trgt_new_objfile(struct objfile *);
 void kgdb_trgt_fetch_registers(int);
 void kgdb_trgt_store_registers(int);

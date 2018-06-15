@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/trgt_i386.c 246893 2013-02-17 02:15:19Z marcel $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -48,6 +49,12 @@ __MBSDID("$MidnightBSD$");
 #include "kgdb.h"
 
 static int ofs_fix;
+
+CORE_ADDR
+kgdb_trgt_core_pcb(u_int cpuid)
+{
+	return (kgdb_trgt_stop_pcb(cpuid, sizeof(struct pcb)));
+}
 
 void
 kgdb_trgt_fetch_registers(int regno __unused)

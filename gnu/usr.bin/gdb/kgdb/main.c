@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/main.c 246958 2013-02-19 02:09:18Z adrian $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -83,7 +84,7 @@ usage(void)
 {
 
 	fprintf(stderr,
-	    "usage: %s [-afqvw] [-d crashdir] [-c core | -n dumpnr | -r device]\n"
+	    "usage: %s [-afqvw] [-b rate] [-d crashdir] [-c core | -n dumpnr | -r device]\n"
 	    "\t[kernel [core]]\n", getprogname());
 	exit(1);
 }
@@ -333,11 +334,23 @@ main(int argc, char *argv[])
 	args.argv = malloc(sizeof(char *));
 	args.argv[0] = argv[0];
 
-	while ((ch = getopt(argc, argv, "ac:d:fn:qr:vw")) != -1) {
+	while ((ch = getopt(argc, argv, "ab:c:d:fn:qr:vw")) != -1) {
 		switch (ch) {
 		case 'a':
 			annotation_level++;
 			break;
+		case 'b': {
+			int i;
+			char *p;
+
+			i = strtol(optarg, &p, 0);
+			if (*p != '\0' || p == optarg)
+				warnx("warning: could not set baud rate to `%s'.\n",
+				    optarg);
+			else
+				baud_rate = i;
+			break;
+		}
 		case 'c':	/* use given core file. */
 			if (vmcore != NULL) {
 				warnx("option %c: can only be specified once",

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/trgt.c 286305 2015-08-05 07:21:44Z kib $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -53,6 +54,8 @@ __MBSDID("$MidnightBSD$");
 
 #include "kgdb.h"
 
+static CORE_ADDR stoppcbs;
+
 static void	kgdb_core_cleanup(void *);
 
 static char *vmcore;
@@ -62,7 +65,7 @@ kvm_t *kvm;
 static char kvm_err[_POSIX2_LINE_MAX];
 
 #define	KERNOFF		(kgdb_kernbase ())
-#define	INKERNEL(x)	((x) >= KERNOFF)
+#define	PINKERNEL(x)	((x) >= KERNOFF)
 
 static CORE_ADDR
 kgdb_kernbase (void)
@@ -282,7 +285,7 @@ kgdb_set_proc_cmd (char *arg, int from_tty)
 
 	addr = (CORE_ADDR) parse_and_eval_address (arg);
 
-	if (!INKERNEL (addr)) {
+	if (!PINKERNEL (addr)) {
 		thr = kgdb_thr_lookup_pid((int)addr);
 		if (thr == NULL)
 			error ("invalid pid");
@@ -305,7 +308,7 @@ kgdb_set_tid_cmd (char *arg, int from_tty)
 
 	addr = (CORE_ADDR) parse_and_eval_address (arg);
 
-	if (kvm != NULL && INKERNEL (addr)) {
+	if (kvm != NULL && PINKERNEL (addr)) {
 		thr = kgdb_thr_lookup_taddr(addr);
 		if (thr == NULL)
 			error("invalid thread address");
@@ -351,4 +354,19 @@ initialize_kgdb_target(void)
 	   "Set current process context");
 	add_com ("tid", class_obscure, kgdb_set_tid_cmd,
 	   "Set current thread context");
+}
+
+CORE_ADDR
+kgdb_trgt_stop_pcb(u_int cpuid, u_int pcbsz)
+{
+	static int once = 0;
+
+	if (stoppcbs == 0 && !once) {
+		once = 1;
+		stoppcbs = kgdb_lookup("stoppcbs");
+	}
+	if (stoppcbs == 0)
+		return 0;
+
+	return (stoppcbs + pcbsz * cpuid);
 }

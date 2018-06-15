@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/trgt_amd64.c 290413 2015-11-05 21:22:23Z jhb $");
 
 #include <sys/types.h>
 #include <machine/pcb.h>
@@ -43,6 +44,12 @@ __MBSDID("$MidnightBSD$");
 #include <amd64-tdep.h>
 
 #include "kgdb.h"
+
+CORE_ADDR
+kgdb_trgt_core_pcb(u_int cpuid)
+{
+	return (kgdb_trgt_stop_pcb(cpuid, sizeof(struct pcb)));
+}
 
 void
 kgdb_trgt_fetch_registers(int regno __unused)
@@ -66,7 +73,6 @@ kgdb_trgt_fetch_registers(int regno __unused)
 	supply_register(AMD64_R8_REGNUM + 6, (char *)&pcb.pcb_r14);
 	supply_register(AMD64_R15_REGNUM, (char *)&pcb.pcb_r15);
 	supply_register(AMD64_RIP_REGNUM, (char *)&pcb.pcb_rip);
-	amd64_supply_fxsave(current_regcache, -1, (struct fpusave *)(&pcb + 1));
 }
 
 void
