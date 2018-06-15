@@ -1,14 +1,14 @@
-# $MidnightBSD: src/gnu/usr.bin/binutils/Makefile.inc0,v 1.4 2012/07/04 13:53:10 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/binutils/Makefile.inc0,v 1.38 2007/02/11 07:15:05 marcel Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/binutils/Makefile.inc0 239272 2012-08-15 03:21:56Z gonzo $
 #
 # This is included explicitly at the top of each sub-Makefile.  We can't
 # use the normal "Makefile.inc" mechanism, because we need some of these
 # definitions before the sub-Makefile is processed.
 
-VERSION=	"2.17.50 [MidnightBSD] 2012-08-19"
+VERSION=	"2.17.50 [MidnightBSD] 2007-07-03"
 
 .if defined(TARGET_ARCH)
-TARGET_CPUARCH=${TARGET_ARCH}
+TARGET_CPUARCH=${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
 .endif
@@ -17,6 +17,10 @@ TARGET_VENDOR?=	midnightbsd
 TARGET_OS?=	freebsd
 BINUTILS_ARCH=${TARGET_ARCH:C/amd64/x86_64/}
 TARGET_TUPLE?=	${BINUTILS_ARCH}-${TARGET_VENDOR}-${TARGET_OS}
+.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb" || \
+	(${TARGET_CPUARCH} == "mips" && ${TARGET_ARCH:Mmips*el} == "")
+TARGET_BIG_ENDIAN=t
+.endif
 
 # RELTOP is the relative path to this point in the source or object
 # tree, from any subdirectory of same.  It gets extra "../" prefixes
@@ -26,7 +30,9 @@ RELTOP:= ..
 RELSRC=	${RELTOP}/../../../contrib/binutils
 SRCDIR=	${.CURDIR}/${RELSRC}
 
-.if ${TARGET_CPUARCH} == "i386" 
+.if ${TARGET_CPUARCH} == "arm" || ${TARGET_CPUARCH} == "i386" || \
+	${TARGET_ARCH} == "powerpc" || \
+	(${TARGET_CPUARCH} == "mips" && ${TARGET_ARCH:Mmips64*} == "")
 CFLAGS+= -DBFD_DEFAULT_TARGET_SIZE=32
 .else
 CFLAGS+= -DBFD_DEFAULT_TARGET_SIZE=64
