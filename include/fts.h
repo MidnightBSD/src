@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,21 +28,23 @@
  * SUCH DAMAGE.
  *
  *	@(#)fts.h	8.3 (Berkeley) 8/14/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/fts.h 250887 2013-05-21 21:20:10Z ed $
  */
 
 #ifndef	_FTS_H_
 #define	_FTS_H_
 
+#include <sys/_types.h>
+
 typedef struct {
 	struct _ftsent *fts_cur;	/* current node */
 	struct _ftsent *fts_child;	/* linked list of children */
 	struct _ftsent **fts_array;	/* sort array */
-	dev_t fts_dev;			/* starting device # */
+	__dev_t fts_dev;		/* starting device # */
 	char *fts_path;			/* path for this descent */
 	int fts_rfd;			/* fd for root */
-	size_t fts_pathlen;		/* sizeof(path) */
-	size_t fts_nitems;		/* elements in the sort array */
+	__size_t fts_pathlen;		/* sizeof(path) */
+	__size_t fts_nitems;		/* elements in the sort array */
 	int (*fts_compar)		/* compare function */
 	    (const struct _ftsent * const *, const struct _ftsent * const *);
 
@@ -72,12 +75,12 @@ typedef struct _ftsent {
 	char *fts_path;			/* root path */
 	int fts_errno;			/* errno for this node */
 	int fts_symfd;			/* fd for symlink */
-	size_t fts_pathlen;		/* strlen(fts_path) */
-	size_t fts_namelen;		/* strlen(fts_name) */
+	__size_t fts_pathlen;		/* strlen(fts_path) */
+	__size_t fts_namelen;		/* strlen(fts_name) */
 
-	ino_t fts_ino;			/* inode */
-	dev_t fts_dev;			/* device */
-	nlink_t fts_nlink;		/* link count */
+	__ino_t fts_ino;		/* inode */
+	__dev_t fts_dev;		/* device */
+	__nlink_t fts_nlink;		/* link count */
 
 #define	FTS_ROOTPARENTLEVEL	-1
 #define	FTS_ROOTLEVEL		 0
