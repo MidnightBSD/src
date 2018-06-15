@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Alex Nash
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/iso646.h,v 1.4 2002/09/18 22:23:59 mike Exp $
+ * $FreeBSD: stable/10/include/iso646.h 225801 2011-09-27 16:33:17Z jkim $
  */
 
 #ifndef _ISO646_H_
