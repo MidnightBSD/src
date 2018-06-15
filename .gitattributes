@@ -45427,6 +45427,7 @@ gnu/lib/libstdc++/doc/Makefile -text
 gnu/lib/libsupc++/Makefile -text
 gnu/lib/libsupc++/Version.map -text
 gnu/lib/tests/Makefile svneol=native#text/plain
+gnu/tests/Makefile svneol=native#text/plain
 gnu/usr.bin/Makefile -text
 gnu/usr.bin/Makefile.inc -text
 gnu/usr.bin/binutils/Makefile -text
