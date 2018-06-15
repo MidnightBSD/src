@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_wlan/wlan_snmp.c 310903 2016-12-31 10:34:09Z ngie $
  */
 
 #include <sys/queue.h>
@@ -1841,7 +1842,7 @@ op_wlan_wep_iface(struct snmp_context *ctx, struct snmp_value *val,
 	default:
 		abort();
 	}
-	
+
 	return (SNMP_ERR_NOERROR);
 }
 
@@ -3435,7 +3436,7 @@ wlan_get_channel_type(struct ieee80211_channel *c)
 		return (WlanChannelType_turbo);
 	if (IEEE80211_IS_CHAN_HT(c))
 		return (WlanChannelType_ht);
-		
+
 	return (-1);
 }
 
@@ -3740,7 +3741,7 @@ wlan_scan_add_result(struct wlan_iface *wif, struct wlan_scan_result *sr)
 	    	SLIST_INSERT_HEAD(&wif->scanlist, sr, wsr);
 	    	return (0);
 	}
-	
+
 	SLIST_FOREACH(temp, &wif->scanlist, wsr) {
 		if (wlan_scan_compare_result(sr, temp) < 0)
 			break;

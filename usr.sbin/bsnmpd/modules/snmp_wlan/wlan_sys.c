@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
- 
+
  * This software was developed by Shteryana Sotirova Shopova under
  * sponsorship from the FreeBSD Foundation.
  *
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_wlan/wlan_sys.c 310903 2016-12-31 10:34:09Z ngie $
  */
 
 #include <sys/ioctl.h>
@@ -158,7 +159,7 @@ wlan_kmodules_load(void)
 		syslog(LOG_NOTICE, "SNMP wlan loaded %s module",
 		    wmod_names[WLAN_KMOD_WEP]);
 
-	return (0);	
+	return (0);
 }
 
 /* XXX: FIXME */
@@ -2387,7 +2388,7 @@ wlan_get_mac_policy(struct wlan_iface *wif)
 			wif->mac_policy = wlanMACAccessControlPolicy_open;
 			return (0);
 		}
-		
+
 	}
 
 	wif->macsupported = 1;
