@@ -46735,8 +46735,6 @@ lib/libc/amd64/sys/cerror.S -text
 lib/libc/amd64/sys/exect.S -text
 lib/libc/amd64/sys/getcontext.S -text
 lib/libc/amd64/sys/pipe.S -text
-lib/libc/amd64/sys/ptrace.S -text
-lib/libc/amd64/sys/reboot.S -text
 lib/libc/amd64/sys/sbrk.S -text
 lib/libc/amd64/sys/setlogin.S -text
 lib/libc/amd64/sys/sigreturn.S -text
