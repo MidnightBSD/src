@@ -23,8 +23,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
-#
+# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hast/hast_tree.def 260412 2014-01-07 21:23:41Z trociny $
+# $MidnightBSD$
 
 (1 internet
   (4 private
@@ -59,6 +59,12 @@
                   (19 hastResourceWriteErrors COUNTER64 GET)
                   (20 hastResourceDeleteErrors COUNTER64 GET)
                   (21 hastResourceFlushErrors COUNTER64 GET)
+                  (22 hastResourceWorkerPid INTEGER GET)
+                  (23 hastResourceLocalQueue UNSIGNED32 GET)
+                  (24 hastResourceSendQueue UNSIGNED32 GET)
+                  (25 hastResourceRecvQueue UNSIGNED32 GET)
+                  (26 hastResourceDoneQueue UNSIGNED32 GET)
+                  (27 hastResourceIdleQueue UNSIGNED32 GET)
                 )
               )
             )

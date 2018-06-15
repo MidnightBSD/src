@@ -1,9 +1,9 @@
 # $MidnightBSD$
-# $FreeBSD: release/9.2.0/usr.sbin/bsnmpd/modules/snmp_hast/Makefile 251010 2013-05-26 18:54:05Z trociny $
+# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hast/Makefile 312055 2017-01-13 09:07:25Z ngie $
 
 .include <bsd.own.mk>
 
-.PATH:	${.CURDIR}/../../../../sbin/hastd
+.PATH:	${SRCTOP}/sbin/hastd
 
 MOD=	hast
 SRCS=	ebuf.c
@@ -19,7 +19,7 @@ MAN=	snmp_hast.3
 NO_WFORMAT=
 NO_WCAST_ALIGN=
 NO_WMISSING_VARIABLE_DECLARATIONS=
-CFLAGS+=-I${.CURDIR}/../../../../sbin/hastd
+CFLAGS+=-I${SRCTOP}/sbin/hastd
 CFLAGS+=-DHAVE_CAPSICUM
 CFLAGS+=-DINET
 .if ${MK_INET6_SUPPORT} != "no"
