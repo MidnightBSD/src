@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -51,7 +52,7 @@
 /*
  *      @(#)netdb.h	8.1 (Berkeley) 6/2/93
  *      From: Id: netdb.h,v 8.9 1996/11/19 08:39:29 vixie Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/netdb.h 292760 2015-12-27 00:37:04Z ume $
  */
 
 #ifndef _NETDB_H_
@@ -122,7 +123,7 @@ struct protoent {
 
 struct addrinfo {
 	int	ai_flags;	/* AI_PASSIVE, AI_CANONNAME, AI_NUMERICHOST */
-	int	ai_family;	/* PF_xxx */
+	int	ai_family;	/* AF_xxx */
 	int	ai_socktype;	/* SOCK_xxx */
 	int	ai_protocol;	/* 0 or IPPROTO_xxx for IPv4 and IPv6 */
 	socklen_t ai_addrlen;	/* length of ai_addr */
@@ -179,7 +180,7 @@ struct addrinfo {
 /* valid flags for addrinfo (not a standard def, apps should not use it) */
 #define AI_MASK \
     (AI_PASSIVE | AI_CANONNAME | AI_NUMERICHOST | AI_NUMERICSERV | \
-    AI_ADDRCONFIG)
+    AI_ADDRCONFIG | AI_ALL | AI_V4MAPPED)
 
 #define	AI_ALL		0x00000100 /* IPv6 and IPv4-mapped (with AI_V4MAPPED) */
 #define	AI_V4MAPPED_CFG	0x00000200 /* accept IPv4-mapped if kernel supports */
@@ -276,14 +277,11 @@ int		getservbyport_r(int, const char *, struct servent *, char *,
 int		getservent_r(struct servent *, char *, size_t,
     struct servent **);
 void		herror(const char *);
-__const char	*hstrerror(int);
+const char	*hstrerror(int);
 int		innetgr(const char *, const char *, const char *, const char *);
 void		setnetgrent(const char *);
 #endif
 
-#if (_POSIX_C_SOURCE - 0) >= 200112L || (_XOPEN_SOURCE - 0) >= 520 || __BSD_VISIBLE
-struct addrinfo *allocaddrinfo(socklen_t);
-#endif
 
 /*
  * PRIVATE functions specific to the FreeBSD implementation
