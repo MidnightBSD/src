@@ -1,48 +1,49 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/libmagic/Makefile,v 1.10 2007/05/21 02:49:05 deischen Exp $
-# Copyright (c) David E. O'Brien, 2000-2004
+# $FreeBSD: stable/10/lib/libmagic/Makefile 313618 2017-02-11 06:54:42Z ngie $
+# Copyright (c) David E. O'Brien, 2000-2004, 2006, 2009
 
-CONTRDIR=	${.CURDIR}/../../contrib/file
-.PATH: ${CONTRDIR}
+CONTRDIR=	${SRCTOP}/contrib/file
+.PATH: ${CONTRDIR}/src
+.PATH: ${CONTRDIR}/doc
 
 LIB=	magic
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 DPADD=	${LIBZ}
 LDADD=	-lz
 MAN=	libmagic.3 magic.5
 
-SRCS=	apprentice.c apptype.c ascmagic.c cdf.c cdf_time.c compress.c encoding.c \
-	fsmagic.c funcs.c is_tar.c magic.c print.c readcdf.c readelf.c softmagic.c
+SRCS=	apprentice.c apptype.c ascmagic.c cdf.c cdf_time.c compress.c \
+	der.c encoding.c fsmagic.c funcs.c \
+	is_tar.c magic.c print.c readcdf.c readelf.c softmagic.c
 INCS=	magic.h
 
 MAGICPATH?=	/usr/share/misc
 
 CFLAGS+= -DMAGIC='"${MAGICPATH}/magic"' -DHAVE_CONFIG_H
-CFLAGS+= -I${.CURDIR} -I${CONTRDIR}
+CFLAGS+= -I${.CURDIR} -I${.OBJDIR} -I${CONTRDIR}/src
 
-CLEANFILES+=	magic magic.mgc magic.mime.mgc
+WARNS?=		3
 
-FILES=		magic magic.mgc ${CONTRDIR}/magic.mime magic.mime.mgc
+CLEANFILES+=	magic magic.mgc
+
+FILES=		magic magic.mgc
 FILESDIR=	${MAGICPATH}
 
-MAGFILES=	${CONTRDIR}/Header\
-		${CONTRDIR}/Localstuff\
-		${CONTRDIR}/Magdir/[a-z]*
+MAGFILES=	${CONTRDIR}/magic/Header \
+		${CONTRDIR}/magic/Localstuff \
+		${CONTRDIR}/magic/Magdir/[a-z]*
 
 magic: ${MAGFILES}
-	cat ${.ALLSRC} > ${.TARGET}
+	cat ${.ALLSRC:O} > ${.TARGET}
 
 magic.mgc: mkmagic magic
 	./mkmagic magic
 
-magic.mime.mgc: mkmagic magic.mime
-	./mkmagic ${CONTRDIR}/magic.mime
-
 CLEANFILES+=	mkmagic
 build-tools: mkmagic
-mkmagic: apprentice.c funcs.c magic.c print.c encoding.c cdf_time.c
-	${CC} -DHAVE_CONFIG_H -DCOMPILE_ONLY \
-	    -I${.CURDIR} -I${CONTRDIR} -o ${.TARGET} ${.ALLSRC}
+mkmagic: apprentice.c cdf_time.c encoding.c funcs.c magic.c print.c ${INCS}
+	${CC} ${CFLAGS} -DCOMPILE_ONLY ${LDFLAGS} -o ${.TARGET} ${.ALLSRC:N*.h} \
+	    ${LDADD}
 
 FILEVER!= awk '$$1 == "\#define" && $$2 == "VERSION" { print $$3; exit }' \
 			${.CURDIR}/config.h
@@ -52,6 +53,12 @@ ${mp}: ${mp:C/[0-9]/man/}
 	sed -e 's/__FSECTION__/5/g' -e 's/__CSECTION__/1/g' \
 		-e 's/__VERSION__/${FILEVER}/g' \
 		-e 's,__MAGIC__,${MAGICPATH}/magic,g' ${.ALLSRC} > ${.TARGET}
+.endfor
+
+CLEANFILES+=	${INCS}
+.for inc in ${INCS}
+${inc}: ${inc}.in
+	sed -e 's,X.YY,${FILEVER:S,",,g:S,.,,g},g' ${.ALLSRC} > ${.TARGET}
 .endfor
 
 .include <bsd.lib.mk>
