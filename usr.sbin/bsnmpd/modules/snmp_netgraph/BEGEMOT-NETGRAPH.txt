@@ -27,6 +27,7 @@
 -- NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 -- EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
+-- $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_netgraph/BEGEMOT-NETGRAPH.txt 312257 2017-01-16 06:54:07Z ngie $
 -- $MidnightBSD$
 --
 -- Private MIB for netgraph part of Begemot SNMP daemon.
@@ -59,6 +60,19 @@ begemotNg MODULE-IDENTITY
 	     E-mail:	harti@freebsd.org"
     DESCRIPTION
 	    "The MIB for the NetGraph access module for SNMP."
+    REVISION "200311140000Z"
+    DESCRIPTION
+	    "The maximum width of the following OCTET STRINGs was increased
+	    from 15 to 31:
+
+	    - NgTypeName
+	    - NgNodeName
+	    - NgNodeNameOrEmpty
+	    - NgHookName
+	    "
+    REVISION "200201310000Z"
+    DESCRIPTION
+	    "Initial revision."
     ::= { begemot 2 }
 
 begemotNgObjects	OBJECT IDENTIFIER ::= { begemotNg 1 }
