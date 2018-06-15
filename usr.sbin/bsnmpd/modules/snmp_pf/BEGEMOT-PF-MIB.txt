@@ -1,4 +1,4 @@
--- 
+--
 -- ----------------------------------------------------------------------------
 -- "THE BEER-WARE LICENSE" (Revision 42):
 -- <philip@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -6,8 +6,8 @@
 -- this stuff is worth it, you can buy me a beer in return.   -Philip Paeps
 -- ----------------------------------------------------------------------------
 --
+-- $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_pf/BEGEMOT-PF-MIB.txt 310903 2016-12-31 10:34:09Z ngie $
 -- $MidnightBSD$
--- 
 
 BEGEMOT-PF-MIB DEFINITIONS ::= BEGIN
 
@@ -585,7 +585,7 @@ PfInterfacesIfEntry ::= SEQUENCE {
     pfInterfacesIfDescr		    OCTET STRING,
     pfInterfacesIfType		    INTEGER,
     pfInterfacesIfTZero		    TimeTicks,
-    pfInterfacesIfRefsState	    Unsigned32,
+    pfInterfacesIfRefsState	    Null,
     pfInterfacesIfRefsRule	    Unsigned32,
     pfInterfacesIf4BytesInPass	    Counter64,
     pfInterfacesIf4BytesInBlock	    Counter64,
@@ -612,7 +612,7 @@ pfInterfacesIfIndex OBJECT-TYPE
     DESCRIPTION
 	"A unique value, greater than zero, for each interface."
     ::= { pfInterfacesIfEntry 1 }
-    
+
 pfInterfacesIfDescr OBJECT-TYPE
     SYNTAX	OCTET STRING
     MAX-ACCESS	read-only
@@ -876,7 +876,7 @@ pfTablesTblTZero OBJECT-TYPE
         cleared or the time since this table was loaded, whichever is
         sooner."
     ::= { pfTablesTblEntry 4 }
-	
+
 pfTablesTblRefsAnchor OBJECT-TYPE
     SYNTAX	Integer32
     MAX-ACCESS  read-only
@@ -1294,7 +1294,7 @@ pfLabelsLblIndex OBJECT-TYPE
     STATUS	current
     DESCRIPTION
 	"A unique value, greater than zero, for each label."
-    ::= { pfLabelsLblEntry 1 } 
+    ::= { pfLabelsLblEntry 1 }
 
 pfLabelsLblName OBJECT-TYPE
     SYNTAX	OCTET STRING
