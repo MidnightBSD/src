@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
  /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c 325396 2017-11-04 14:56:58Z pfg $
  */
 
 /*
@@ -123,7 +124,7 @@ device_entry_create(const char *name, const char *location, const char *descr)
 	if (map == NULL) {
 		/* new object - get a new index */
 		if (next_device_index > INT_MAX) {
-		        syslog(LOG_ERR,
+			syslog(LOG_ERR,
 			    "%s: hrDeviceTable index wrap", __func__);
 			/* There isn't much we can do here.
 			 * If the next_swins_index is consumed
@@ -200,7 +201,7 @@ device_entry_create(const char *name, const char *location, const char *descr)
 
 	/*
 	 * From here till the end of this function we reuse name_len
-	 * for a diferrent purpose - for device_entry::descr
+	 * for a different purpose - for device_entry::descr
 	 */
 	if (name[0] != '\0')
 		name_len = strlen(name) + strlen(descr) +
@@ -479,7 +480,9 @@ again:
 	} else {
 		if (read_len == sizeof(buf))
 			goto again;
-		refresh_device_tbl(1);
+		/* Only refresh device table on a device add or remove event. */
+		if (buf[0] == '+' || buf[0] == '-')
+			refresh_device_tbl(1);
 	}
 }
 

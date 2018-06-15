@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,14 +27,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_scalars.c 311720 2017-01-09 01:07:16Z ngie $
  */
 
 /*
  * Host Resources MIB scalars implementation for SNMPd.
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/sysctl.h>
 
 #include <pwd.h>
@@ -85,7 +86,7 @@ OS_getSystemUptime(uint32_t *ut)
 		int mib[2] = { CTL_KERN, KERN_BOOTTIME };
 		size_t len = sizeof(kernel_boot_timestamp);
 
-		if (sysctl(mib, 2, &kernel_boot_timestamp,
+		if (sysctl(mib, nitems(mib), &kernel_boot_timestamp,
 		    &len, NULL, 0) == -1) {
 			syslog(LOG_ERR, "sysctl KERN_BOOTTIME failed: %m");
 			return (SNMP_ERR_GENERR);
@@ -170,8 +171,8 @@ OS_getSystemDate(struct snmp_value *value)
 
 /**
  * Get kernel boot path. For FreeBSD it seems that no arguments are
- * present. Returns NULL if an error occured. The returned data is a
- * pointer to a global strorage.
+ * present. Returns NULL if an error occurred. The returned data is a
+ * pointer to a global storage.
  */
 int
 OS_getSystemInitialLoadParameters(u_char **params)
@@ -193,7 +194,7 @@ OS_getSystemInitialLoadParameters(u_char **params)
 			syslog(LOG_ERR, "malloc failed");
 			return (SNMP_ERR_GENERR);
 		}
-                if (sysctl(mib, 2, buf, &buf_len, NULL, 0)) {
+		if (sysctl(mib, 2, buf, &buf_len, NULL, 0)) {
 			syslog(LOG_ERR,
 			    "sysctl({CTL_KERN,KERN_BOOTFILE}) failed: %m");
 			free(buf);
@@ -296,7 +297,7 @@ OS_getMemorySize(uint32_t *ms)
 		*ms = UINT32_MAX;
 	else
 		*ms = phys_mem_size;
-        return (SNMP_ERR_NOERROR);
+	return (SNMP_ERR_NOERROR);
 }
 
 /*
@@ -360,7 +361,7 @@ OS_setSystemDate(const struct timeval *timeval_to_set)
 	if (settimeofday(timeval_to_set, NULL) == -1) {
 		syslog(LOG_ERR, "settimeofday failed: %m");
 		return (SNMP_ERR_GENERR);
-        }
+	}
 	return (SNMP_ERR_NOERROR);
 }
 
@@ -378,7 +379,7 @@ op_hrSystem(struct snmp_context *ctx, struct snmp_value *value,
 
 	switch (curr_op) {
 
-          case SNMP_OP_GET:
+	  case SNMP_OP_GET:
 		switch (value->var.subs[sub - 1]) {
 
 		case LEAF_hrSystemUptime:

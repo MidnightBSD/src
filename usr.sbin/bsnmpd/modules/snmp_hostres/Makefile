@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #
 # Copyright (c) 2005-2006 The FreeBSD Project
 # All rights reserved.
@@ -25,10 +26,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/Makefile 313223 2017-02-04 16:40:28Z ngie $
 #
 
-LPRSRC=	${.CURDIR}/../../../lpr/common_source
+LPRSRC=	${SRCTOP}/usr.sbin/lpr/common_source
 .PATH: ${LPRSRC}
 
 MOD=	hostres
@@ -76,7 +77,3 @@ LDADD=	-lkvm -ldevinfo -lm -lgeom -lmemstat
 
 printcap.So: printcap.c
 	${CC} ${PICFLAG} -DPIC ${CFLAGS:C/^-W.*//} -c ${.IMPSRC} -o ${.TARGET}
-
-smilint:
-	env SMIPATH=.:/usr/share/snmp/mibs:/usr/local/share/snmp/mibs \
-	    smilint -c /dev/null -l6 -i group-membership BEGEMOT-HOSTRES-MIB

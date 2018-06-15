@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_fs_tbl.c 310900 2016-12-31 10:30:56Z ngie $
  */
 
 /*
@@ -131,7 +132,7 @@ static const struct {
 	const struct asn_oid	*oid;	/* the OID to return */
 } fs_type_map[] = {
 	{ "ufs",	&OIDX_hrFSBerkeleyFFS_c },
-	{ "zfs",        &OIDX_hrFSOther_c },
+	{ "zfs",	&OIDX_hrFSOther_c },
 	{ "cd9660",	&OIDX_hrFSiso9660_c },
 	{ "nfs",	&OIDX_hrFSNFS_c },
 	{ "ext2fs",	&OIDX_hrFSLinuxExt2_c },
@@ -167,7 +168,7 @@ fs_entry_create(const char *name)
 		/* new object - get a new index */
 		if (next_fs_index > INT_MAX) {
 			/* Unrecoverable error - die clean and quicly*/
-		        syslog(LOG_ERR, "%s: hrFSTable index wrap", __func__);
+			syslog(LOG_ERR, "%s: hrFSTable index wrap", __func__);
 			errx(EX_SOFTWARE, "hrFSTable index wrap");
 		}
 

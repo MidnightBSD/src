@@ -25,8 +25,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_tree.def 226683 2011-10-24 12:21:58Z ivoras $
 # $MidnightBSD$
-#
 # This is the .def file for both HOST-RESOURCES-MIB and HOST-RESOURCES-TYPES
 #
 
@@ -149,7 +149,7 @@
             (1 hrDiskStorageEntry : INTEGER op_hrDiskStorageTable
               (1 hrDiskStorageAccess INTEGER GET)
               (2 hrDiskStorageMedia INTEGER GET)
-              (3 hrDiskStorageRemoveble INTEGER GET)
+              (3 hrDiskStorageRemovable INTEGER GET)
               (4 hrDiskStorageCapacity INTEGER GET)
             )
           )

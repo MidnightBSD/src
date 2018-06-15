@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_swrun_tbl.c 240352 2012-09-11 08:28:58Z glebius $
  *
  * Host Resources MIB for SNMPd. Implementation for hrSWRunTable
  */
@@ -319,7 +320,7 @@ kld_file_stat_to_swrun(const struct kld_file_stat *kfs,
 }
 
 /**
- * Get all visible proceses including the kernel visible threads
+ * Get all visible processes including the kernel visible threads
  */
 static void
 swrun_OS_get_procs(void)

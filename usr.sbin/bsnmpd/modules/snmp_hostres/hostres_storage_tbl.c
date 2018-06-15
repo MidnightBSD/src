@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_storage_tbl.c 310900 2016-12-31 10:30:56Z ngie $
  */
 
 /*
@@ -133,7 +134,7 @@ static const struct asn_oid OIDX_hrStorageVirtualMemory_c =
     OIDX_hrStorageVirtualMemory;
 
 /**
- * Create a new entry into the storage table and, if neccessary, an
+ * Create a new entry into the storage table and, if necessary, an
  * entry into the storage map.
  */
 static struct storage_entry *
@@ -153,7 +154,7 @@ storage_entry_create(const char *name)
 	if (map == NULL) {
 		/* new object - get a new index */
 		if (next_storage_index > INT_MAX) {
-		        syslog(LOG_ERR,
+			syslog(LOG_ERR,
 			    "%s: hrStorageTable index wrap", __func__);
 			errx(EX_SOFTWARE, "hrStorageTable index wrap");
 		}
@@ -188,7 +189,7 @@ storage_entry_create(const char *name)
 		syslog(LOG_WARNING, "%s: %m", __func__);
 		return (NULL);
 	}
-        memset(entry, 0, sizeof(*entry));
+	memset(entry, 0, sizeof(*entry));
 
 	entry->index = map->hrIndex;
 
@@ -374,10 +375,13 @@ storage_OS_get_memstat(void)
 static void
 storage_OS_get_swap(void)
 {
-        int nswapdev = 0;
-	size_t len = sizeof(nswapdev);
 	struct storage_entry *entry;
 	char swap_w_prefix[SE_DESC_MLEN];
+	size_t len;
+	int nswapdev;
+
+	len = sizeof(nswapdev);
+	nswapdev = 0;
 
 	if (sysctlbyname("vm.nswapdev", &nswapdev, &len, NULL,0 ) < 0) {
 		syslog(LOG_ERR,

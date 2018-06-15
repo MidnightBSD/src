@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_printer_tbl.c 285851 2015-07-24 19:21:48Z pfg $
  */
 
 /*
@@ -175,7 +176,7 @@ get_printer_status(const struct printer *pp)
 		goto LABEL_DONE;
 	}
 
-	memset(&fline[0], '\0', sizeof(line));
+	memset(&fline[0], '\0', sizeof(fline));
 	if (fgets(fline, sizeof(fline) -1, f) == NULL) {
 		ps = PS_UNKNOWN;
 		goto LABEL_DONE;

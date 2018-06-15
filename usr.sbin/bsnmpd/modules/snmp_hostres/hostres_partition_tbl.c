@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_partition_tbl.c 310900 2016-12-31 10:30:56Z ngie $
  */
 
 /*
@@ -177,7 +178,7 @@ partition_entry_create(int32_t ds_index, const char *chunk_name)
 
 		if (next_partition_index > INT_MAX) {
 			/* Unrecoverable error - die clean and quicly*/
-		        syslog(LOG_ERR, "%s: hrPartitionTable index wrap",
+			syslog(LOG_ERR, "%s: hrPartitionTable index wrap",
 			    __func__);
 			errx(EX_SOFTWARE, "hrPartitionTable index wrap");
 		}
