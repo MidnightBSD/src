@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Remote quota protocol
  * Requires unix authentication
@@ -9,7 +10,7 @@
 %/*static char sccsid[] = "from: @(#)rquota.x	2.1 88/08/01 4.0 RPCSRC";*/
 %#endif /* not lint */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/include/rpcsvc/rquota.x,v 1.7 2003/05/04 02:51:42 obrien Exp $");
+%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/rquota.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 const RQ_PATHLEN = 1024;
