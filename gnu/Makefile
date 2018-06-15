@@ -1,7 +1,16 @@
-#	@(#)Makefile	5.33.1.1 (Berkeley) 5/6/91
-# $FreeBSD: src/gnu/Makefile,v 1.36 2002/06/05 17:02:37 obrien Exp $
 # $MidnightBSD$
+#	@(#)Makefile	5.33.1.1 (Berkeley) 5/6/91
+# $FreeBSD: stable/10/gnu/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
 
-SUBDIR= lib usr.bin
+.include <bsd.own.mk>
+
+SUBDIR= lib .WAIT \
+	${_tests} usr.bin
+
+.if ${MK_TESTS} != "no"
+_tests=	tests
+.endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
