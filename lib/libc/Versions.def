@@ -16,14 +16,6 @@ FBSD_1.2 {
 FBSD_1.3 {
 } FBSD_1.2;
 
-# This version was first added to FreeBSD 11.0-current.
-FBSD_1.4 {
-} MNBSD_1.2;
-
-# This version was first added to FreeBSD 12.0-current.
-FBSD_1.5 {
-} FBSD_1.4;
-
 # This version was first added to MidnightBSD 0.3-current.
 MNBSD_1.0 {
 } FBSD_1.3;
@@ -34,6 +26,14 @@ MNBSD_1.1 {
 
 MNBSD_1.2 {
 } MNBSD_1.1;
+
+# This version was first added to FreeBSD 11.0-current.
+FBSD_1.4 {
+} MNBSD_1.2;
+
+# This version was first added to FreeBSD 12.0-current.
+FBSD_1.5 {
+} FBSD_1.4;
 
 # This version was first added to MiidnightBSD 1.0-current.
 MNBSD_1.3 {
