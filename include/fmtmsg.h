@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -23,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/fmtmsg.h,v 1.2 2002/08/05 16:37:05 mike Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/fmtmsg.h 236629 2012-06-05 19:42:57Z ed $
  */
 
 #ifndef _FMTMSG_H_
@@ -33,7 +33,7 @@
 /* Source of condition is... */
 #define	MM_HARD		0x0001	/* ...hardware. */
 #define	MM_SOFT		0x0002	/* ...software. */
-#define	MM_FIRM		0x0004	/* ...fireware. */
+#define	MM_FIRM		0x0004	/* ...firmware. */
 
 /* Condition detected by... */
 #define	MM_APPL		0x0010	/* ...application. */
