@@ -45449,7 +45449,12 @@ gnu/usr.bin/binutils/doc/Makefile -text
 gnu/usr.bin/binutils/doc/asconfig.texi -text
 gnu/usr.bin/binutils/ld/Makefile -text
 gnu/usr.bin/binutils/ld/Makefile.amd64 -text
+gnu/usr.bin/binutils/ld/Makefile.arm svneol=native#text/plain
 gnu/usr.bin/binutils/ld/Makefile.i386 -text
+gnu/usr.bin/binutils/ld/Makefile.ia64 svneol=native#text/plain
+gnu/usr.bin/binutils/ld/Makefile.mips svneol=native#text/plain
+gnu/usr.bin/binutils/ld/Makefile.powerpc svneol=native#text/plain
+gnu/usr.bin/binutils/ld/Makefile.powerpc64 svneol=native#text/plain
 gnu/usr.bin/binutils/ld/Makefile.sparc64 -text
 gnu/usr.bin/binutils/ld/config.h -text
 gnu/usr.bin/binutils/ld/elf32btsmip_fbsd.sh -text

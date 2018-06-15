@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/binutils/ld/Makefile.amd64 289241 2015-10-13 18:31:23Z bdrewery $
 
 NATIVE_EMULATION= elf_x86_64_fbsd
 
@@ -16,6 +17,7 @@ _i386_path=	\"${TOOLS_PREFIX}/usr/lib32\"
 EMS+=		${X86_EMULATION}
 .for ext in ${ELF_SCR_EXT}
 LDSCRIPTS+=	${X86_EMULATION}.${ext}
+ldscripts/${X86_EMULATION}.${ext}: e${X86_EMULATION}.c
 .endfor
 
 SRCS+=		e${X86_EMULATION}.c

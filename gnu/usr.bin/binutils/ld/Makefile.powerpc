@@ -1,13 +1,13 @@
 # $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/ld/Makefile.i386 219811 2011-03-21 04:03:55Z marcel $
+# $FreeBSD: stable/10/gnu/usr.bin/binutils/ld/Makefile.powerpc 227739 2011-11-19 19:25:57Z andreast $
 
-NATIVE_EMULATION= elf_i386_fbsd
+NATIVE_EMULATION=	elf32ppc_fbsd
 
 SRCS+=		e${NATIVE_EMULATION}.c
 CLEANFILES+=	e${NATIVE_EMULATION}.c
 e${NATIVE_EMULATION}.c: emulparams/${NATIVE_EMULATION}.sh emultempl/elf32.em \
-    scripttempl/elf.sc genscripts.sh stringify.sed
+    scripttempl/elf.sc genscripts.sh stringify.sed ldemul-list.h
 	sh ${.CURDIR}/genscripts.sh ${SRCDIR}/ld ${LIBSEARCHPATH} \
 	    ${TOOLS_PREFIX}/usr \
 	    ${HOST} ${TARGET_TUPLE} ${TARGET_TUPLE} \
-	    ${NATIVE_EMULATION} "" no ${NATIVE_EMULATION} ${TARGET_TUPLE}
+	    ${NATIVE_EMULATION} ""  no ${NATIVE_EMULATION} ${TARGET_TUPLE}
