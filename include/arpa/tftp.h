@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,11 +28,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)tftp.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/arpa/tftp.h,v 1.6 2007/08/01 11:59:09 ticso Exp $
+ * $FreeBSD: stable/10/include/arpa/tftp.h 250887 2013-05-21 21:20:10Z ed $
  */
 
 #ifndef _ARPA_TFTP_H_
 #define	_ARPA_TFTP_H_
+
+#include <sys/cdefs.h>
 
 /*
  * Trivial File Transfer Protocol (IEN-133)

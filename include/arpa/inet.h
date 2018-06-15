@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ++Copyright++ 1983, 1993
  * -
@@ -12,11 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  * 
@@ -55,14 +52,14 @@
 
 /*%
  *	@(#)inet.h	8.1 (Berkeley) 6/2/93
- *	$Id: inet.h,v 1.2 2008-10-01 14:01:16 laffer1 Exp $
- * $FreeBSD: src/include/arpa/inet.h,v 1.30 2007/08/24 20:25:52 bms Exp $
+ *	$Id: inet.h,v 1.3 2005/04/27 04:56:16 sra Exp $
+ * $FreeBSD: stable/10/include/arpa/inet.h 270838 2014-08-30 10:16:25Z ume $
  */
 
 #ifndef _ARPA_INET_H_
 #define	_ARPA_INET_H_
 
-/* External definitions for functions in inet(3), addr2ascii(3) */
+/* External definitions for functions in inet(3). */
 
 #include <sys/cdefs.h>
 #include <sys/_types.h>
@@ -148,7 +145,6 @@ uint16_t	 ntohs(uint16_t);
 
 in_addr_t	 inet_addr(const char *);
 /*const*/ char	*inet_ntoa(struct in_addr);
-char		*inet_ntoa_r(struct in_addr, char *buf, socklen_t size);
 const char	*inet_ntop(int, const void * __restrict, char * __restrict,
 		    socklen_t);
 int		 inet_pton(int, const char * __restrict, void * __restrict);
@@ -162,6 +158,7 @@ in_addr_t	 inet_netof(struct in_addr);
 in_addr_t	 inet_network(const char *);
 char		*inet_net_ntop(int, const void *, int, char *, size_t);
 int		 inet_net_pton(int, const char *, void *, size_t);
+char		*inet_ntoa_r(struct in_addr, char *buf, socklen_t size);
 char		*inet_cidr_ntop(int, const void *, int, char *, size_t);
 int		 inet_cidr_pton(int, const char *, void *, int *);
 unsigned	 inet_nsap_addr(const char *, unsigned char *, int);
