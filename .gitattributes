@@ -45647,7 +45647,6 @@ gnu/usr.bin/binutils/libbfd/Makefile.sparc64 -text
 gnu/usr.bin/binutils/libbfd/bfd.h -text
 gnu/usr.bin/binutils/libbfd/config.h.fbsd -text
 gnu/usr.bin/binutils/libbfd/elf-fbsd-brand.c -text
-gnu/usr.bin/binutils/libbfd/peigen.c svneol=native#text/plain
 gnu/usr.bin/binutils/libbinutils/Makefile -text
 gnu/usr.bin/binutils/libbinutils/config.h -text
 gnu/usr.bin/binutils/libiberty/Makefile -text
