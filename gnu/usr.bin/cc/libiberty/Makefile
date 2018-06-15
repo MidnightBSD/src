@@ -1,5 +1,7 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/libiberty/Makefile,v 1.2 2012/07/08 05:31:13 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/cc/libiberty/Makefile,v 1.1 2007/05/19 04:25:59 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/cc/libiberty/Makefile 245539 2013-01-17 05:56:28Z andrew $
+
+.include <bsd.own.mk>
 
 #
 # Make sure we will pick up our config.h file first, not the one from
@@ -20,7 +22,7 @@ SRCS=	argv.c choose-temp.c concat.c cp-demangle.c cp-demint.c cplus-dem.c \
 	pexecute.c pex-common.c pex-one.c lrealpath.c strverscmp.c \
 	regex.c
 INTERNALLIB=
-WARNS=	1
+WARNS?=	1
 
 CFLAGS+=	-UPREFIX
 
