@@ -5,6 +5,15 @@
 /README -text
 /THANKS -text
 /TODO -text
+po/LINGUAS -text
+po/Makevars -text
+po/POTFILES.in -text
+po/cs.po -text
+po/de.po -text
+po/fr.po -text
+po/it.po -text
+po/pl.po -text
+po/xz.pot -text
 src/common/mythread.h -text
 src/common/sysdefs.h -text
 src/common/tuklib_common.h -text
