@@ -1,5 +1,7 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/cc/libcpp/Makefile,v 1.1 2007/05/19 04:25:59 kan Exp $
+# $FreeBSD: stable/10/gnu/usr.bin/cc/libcpp/Makefile 259405 2013-12-15 03:47:31Z pfg $
+
+.include <bsd.own.mk>
 
 # Use our headers in preference to ones from ../cc_tools.
 CFLAGS+=	-I${.CURDIR} -I.
@@ -10,9 +12,9 @@ CFLAGS+=	-I${.CURDIR} -I.
 
 LIB=	cpp
 SRCS=	localedir.h
-SRCS+=	charset.c directives.c errors.c expr.c files.c \
-	identifiers.c init.c lex.c line-map.c macro.c mkdeps.c \
-	pch.c symtab.c traditional.c
+SRCS+=	charset.c directives.c directives-only.c errors.c expr.c \
+	files.c identifiers.c init.c lex.c line-map.c macro.c \
+	mkdeps.c pch.c symtab.c traditional.c
 INTERNALLIB=
 WARNS?=	1
 
