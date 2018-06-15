@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/gdb/Makefile.inc,v 1.4 2012/07/19 03:21:20 laffer1 Exp $
+# $MidnightBSD$
 
 VERSION= "6.1.1 [MidnightBSD]"
 VENDOR= midnightbsd
@@ -20,7 +20,7 @@ OBJ_GDB= ${OBJ_ROOT}/gdb
 # MACHINE_CPUARCH, but there's no easy way to export make functions...
 
 .if defined(TARGET_ARCH)
-TARGET_CPUARCH=${TARGET_ARCH}
+TARGET_CPUARCH=${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/:C/powerpc64/powerpc/}
 .else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
 .endif
@@ -37,6 +37,7 @@ GDB_CROSS_DEBUGGER=
 	${CNTRB_GDB}/gdb/signals ${CNTRB_GDB}/gdb/tui ${TARGET_SUBDIR}
 
 CFLAGS+= -DHAVE_CONFIG_H -DRL_NO_COMPAT -DMI_OUT=1 -DTUI=1
+CFLAGS+= -DDEBUGDIR=\"${DEBUGDIR}\"
 CFLAGS+= -I.
 CFLAGS+= -I${TARGET_SUBDIR}
 CFLAGS+= -I${BMAKE_BU}/libbfd -I${BMAKE_BU}/libbfd/${TARGET_CPUARCH}
@@ -51,7 +52,7 @@ GENSRCS+= nm.h tm.h
 .if defined(GDB_CROSS_DEBUGGER)
 CFLAGS+= -DCROSS_DEBUGGER -I${BMAKE_ROOT}/../..
 GDB_SUFFIX= -${TARGET_ARCH}
-NO_MAN=
+MAN=
 .endif
 
 .include "${TARGET_SUBDIR}/Makefile"
