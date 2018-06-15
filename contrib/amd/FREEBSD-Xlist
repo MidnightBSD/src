@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/10/contrib/amd/FREEBSD-Xlist 174537 2007-12-11 19:16:51Z obrien $
 *LSM.am-utils
 *Makefile.*
 *README.autofs
