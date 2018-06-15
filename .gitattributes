@@ -45462,7 +45462,12 @@ gnu/usr.bin/binutils/ld/genscripts.sh -text
 gnu/usr.bin/binutils/ld/ld.1 -text
 gnu/usr.bin/binutils/libbfd/Makefile -text
 gnu/usr.bin/binutils/libbfd/Makefile.amd64 -text
+gnu/usr.bin/binutils/libbfd/Makefile.arm svneol=native#text/plain
 gnu/usr.bin/binutils/libbfd/Makefile.i386 -text
+gnu/usr.bin/binutils/libbfd/Makefile.ia64 svneol=native#text/plain
+gnu/usr.bin/binutils/libbfd/Makefile.mips svneol=native#text/plain
+gnu/usr.bin/binutils/libbfd/Makefile.powerpc svneol=native#text/plain
+gnu/usr.bin/binutils/libbfd/Makefile.powerpc64 svneol=native#text/plain
 gnu/usr.bin/binutils/libbfd/Makefile.sparc64 -text
 gnu/usr.bin/binutils/libbfd/bfd.h -text
 gnu/usr.bin/binutils/libbfd/config.h.fbsd -text

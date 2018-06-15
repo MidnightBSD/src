@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/binutils/libbfd/Makefile.i386 288607 2015-10-03 16:01:16Z bdrewery $
 
 DEFAULT_VECTOR=	bfd_elf32_i386_freebsd_vec
 
@@ -17,3 +18,5 @@ VECS=	${DEFAULT_VECTOR} \
 
 peigen.c: peXXigen.c
 	sed -e s/XX/pe/g ${.ALLSRC} > ${.TARGET}
+
+CLEANFILES+=	peigen.c

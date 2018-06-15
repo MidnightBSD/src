@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/binutils/libbfd/Makefile 267734 2014-06-22 16:48:21Z gavin $
 
 .include "../Makefile.inc0"
 
@@ -42,7 +43,7 @@ SRCS+=	archive.c \
 	targets.c \
 	targmatch.h \
 	tekhex.c
-.if (${TARGET_ARCH} == "sparc64")
+.if (${TARGET_ARCH} == "ia64" || ${TARGET_ARCH} == "sparc64")
 WARNS?=	2
 .endif
 CFLAGS+= -D_GNU_SOURCE
