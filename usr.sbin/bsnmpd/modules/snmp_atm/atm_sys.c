@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -7,7 +8,7 @@
  *	All rights reserved.
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -16,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_atm/atm_sys.c,v 1.1 2004/08/09 16:36:04 harti Exp $
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_atm/atm_sys.c 310903 2016-12-31 10:34:09Z ngie $
  *
  * SNMP module for ATM hardware interfaces - FreeBSD/Ng specific part.
  */
@@ -215,7 +216,7 @@ atmif_sys_attach_if(struct atmif_priv *aif)
 	return (0);
 }
 
-/* 
+/*
  * Table of all ATM interfaces - Ng part
  */
 int
