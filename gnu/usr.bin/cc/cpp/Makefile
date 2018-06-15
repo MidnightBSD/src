@@ -1,5 +1,5 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/cpp/Makefile,v 1.3 2009/05/22 00:51:28 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/cc/cpp/Makefile,v 1.27 2007/05/19 04:25:58 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/cc/cpp/Makefile 232322 2012-02-29 22:58:51Z dim $
 
 .include <bsd.own.mk>
 
