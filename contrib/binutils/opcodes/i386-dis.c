@@ -85,7 +85,6 @@ static void OP_MS (int, int);
 static void OP_XS (int, int);
 static void OP_M (int, int);
 static void OP_VMX (int, int);
-static void OP_VMX2 (int, int);
 static void OP_0fae (int, int);
 static void OP_0f07 (int, int);
 static void NOP_Fixup1 (int, int);
@@ -319,7 +318,6 @@ fetch_data (struct disassemble_info *info, bfd_byte *addr)
 #define EMC { OP_EMC, v_mode }
 #define MXC { OP_MXC, 0 }
 #define VM { OP_VMX, q_mode }
-#define VM2 { OP_VMX2, q_mode }
 #define OPSUF { OP_3DNowSuffix, 0 }
 #define OPSIMD { OP_SIMD_Suffix, 0 }
 #define XMM0 { XMM_Fixup, 0 }
@@ -1302,7 +1300,7 @@ static const unsigned char twobyte_uses_REPZ_prefix[256] = {
   /* 70 */ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1, /* 7f */
   /* 80 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 8f */
   /* 90 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 9f */
-  /* a0 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0, /* af */
+  /* a0 */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* af */
   /* b0 */ 0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0, /* bf */
   /* c0 */ 0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0, /* cf */
   /* d0 */ 0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0, /* df */
@@ -1734,7 +1732,7 @@ static const struct dis386 grps[][8] = {
     { "(bad)",	{ XX } },
     { "(bad)",	{ XX } },
     { "",	{ VM } },		/* See OP_VMX.  */
-    { "",	{ VM2 } },		/* See OP_VMX2.  */
+    { "vmptrst", { Mq } },
   },
   /* GRP11_C6 */
   {
@@ -1793,10 +1791,10 @@ static const struct dis386 grps[][8] = {
   },
   /* GRP15 */
   {
-    { "fxsave",		{ { OP_0fae, v_mode } } },
-    { "fxrstor",	{ { OP_0fae, v_mode } } },
-    { "ldmxcsr",	{ { OP_0fae, v_mode } } },
-    { "stmxcsr",	{ { OP_0fae, v_mode } } },
+    { "fxsave",		{ Ev } },
+    { "fxrstor",	{ Ev } },
+    { "ldmxcsr",	{ Ev } },
+    { "stmxcsr",	{ Ev } },
     { "xsave",		{ Ev } },
     { "xrstor",		{ { OP_0fae, v_mode } } },
     { "xsaveopt",	{ { OP_0fae, v_mode } } },
@@ -3476,7 +3474,7 @@ static bfd_vma start_pc;
  * The function returns the length of this instruction in bytes.
  */
 
-static int intel_syntax;
+static char intel_syntax;
 static char open_char;
 static char close_char;
 static char separator_char;
@@ -3549,7 +3547,7 @@ print_insn (bfd_vma pc, disassemble_info *info)
   else
     address_mode = mode_32bit;
 
-  if (intel_syntax == -1)
+  if (intel_syntax == (char) -1)
     intel_syntax = (info->mach == bfd_mach_i386_i386_intel_syntax
 		    || info->mach == bfd_mach_x86_64_intel_syntax);
 
@@ -4328,7 +4326,7 @@ dofloat (int sizeflag)
 static void
 OP_ST (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
-  oappend (&"%st"[intel_syntax]);
+  oappend ("%st" + intel_syntax);
 }
 
 static void
@@ -4679,32 +4677,32 @@ append_seg (void)
   if (prefixes & PREFIX_CS)
     {
       used_prefixes |= PREFIX_CS;
-      oappend (&"%cs:"[intel_syntax]);
+      oappend ("%cs:" + intel_syntax);
     }
   if (prefixes & PREFIX_DS)
     {
       used_prefixes |= PREFIX_DS;
-      oappend (&"%ds:"[intel_syntax]);
+      oappend ("%ds:" + intel_syntax);
     }
   if (prefixes & PREFIX_SS)
     {
       used_prefixes |= PREFIX_SS;
-      oappend (&"%ss:"[intel_syntax]);
+      oappend ("%ss:" + intel_syntax);
     }
   if (prefixes & PREFIX_ES)
     {
       used_prefixes |= PREFIX_ES;
-      oappend (&"%es:"[intel_syntax]);
+      oappend ("%es:" + intel_syntax);
     }
   if (prefixes & PREFIX_FS)
     {
       used_prefixes |= PREFIX_FS;
-      oappend (&"%fs:"[intel_syntax]);
+      oappend ("%fs:" + intel_syntax);
     }
   if (prefixes & PREFIX_GS)
     {
       used_prefixes |= PREFIX_GS;
-      oappend (&"%gs:"[intel_syntax]);
+      oappend ("%gs:" + intel_syntax);
     }
 }
 
@@ -5476,7 +5474,7 @@ OP_I (int bytemode, int sizeflag)
   op &= mask;
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
   scratchbuf[0] = '\0';
 }
 
@@ -5527,7 +5525,7 @@ OP_I64 (int bytemode, int sizeflag)
   op &= mask;
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
   scratchbuf[0] = '\0';
 }
 
@@ -5577,7 +5575,7 @@ OP_sI (int bytemode, int sizeflag)
 
   scratchbuf[0] = '$';
   print_operand_value (scratchbuf + 1, 1, op);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5757,7 +5755,7 @@ OP_ESreg (int code, int sizeflag)
 	  intel_operand_size (b_mode, sizeflag);
 	}
     }
-  oappend (&"%es:"[intel_syntax]);
+  oappend ("%es:" + intel_syntax);
   ptr_reg (code, sizeflag);
 }
 
@@ -5807,7 +5805,7 @@ OP_C (int dummy ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
       add = 8;
     }
   sprintf (scratchbuf, "%%cr%d", modrm.reg + add);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5828,7 +5826,7 @@ static void
 OP_T (int dummy ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
   sprintf (scratchbuf, "%%tr%d", modrm.reg);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5854,7 +5852,7 @@ OP_MMX (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
     }
   else
     sprintf (scratchbuf, "%%mm%d", modrm.reg);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5865,7 +5863,7 @@ OP_XMM (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
   if (rex & REX_R)
     add = 8;
   sprintf (scratchbuf, "%%xmm%d", modrm.reg + add);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5897,7 +5895,7 @@ OP_EM (int bytemode, int sizeflag)
     }
   else
     sprintf (scratchbuf, "%%mm%d", modrm.rm);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 /* cvt* are the only instructions in sse2 which have
@@ -5924,7 +5922,7 @@ OP_EMC (int bytemode, int sizeflag)
   codep++;
   used_prefixes |= (prefixes & PREFIX_DATA);
   sprintf (scratchbuf, "%%mm%d", modrm.rm);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5932,7 +5930,7 @@ OP_MXC (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 {
   used_prefixes |= (prefixes & PREFIX_DATA);
   sprintf (scratchbuf, "%%mm%d", modrm.reg);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5952,7 +5950,7 @@ OP_EX (int bytemode, int sizeflag)
   MODRM_CHECK;
   codep++;
   sprintf (scratchbuf, "%%xmm%d", modrm.rm + add);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void
@@ -5997,34 +5995,19 @@ OP_0fae (int bytemode, int sizeflag)
 {
   if (modrm.mod == 3)
     {
-      if (modrm.reg >= 5 && modrm.reg <= 7 && modrm.rm == 0)
+      if (modrm.reg == 7)
+	strcpy (obuf + strlen (obuf) - sizeof ("clflush") + 1, "sfence");
+      else if (modrm.reg == 6)
+	strcpy (obuf + strlen (obuf) - sizeof ("xsaveopt") + 1, "mfence");
+      else if (modrm.reg == 5)
+	strcpy (obuf + strlen (obuf) - sizeof ("xrstor") + 1, "lfence");
+
+      if (modrm.reg < 5 || modrm.rm != 0)
 	{
-	  if (modrm.reg == 7)
-	    strcpy (obuf + strlen (obuf) - sizeof ("clflush") + 1, "sfence");
-	  else if (modrm.reg == 6)
-	    strcpy (obuf + strlen (obuf) - sizeof ("xsaveopt") + 1, "mfence");
-	  else if (modrm.reg == 5)
-	    strcpy (obuf + strlen (obuf) - sizeof ("xrstor") + 1, "lfence");
-	  bytemode = 0;
-	}
-      else if (modrm.reg <= 3 && (prefixes & PREFIX_REPZ) != 0)
-	{
-	  if (modrm.reg == 0)
-	    strcpy (obuf + strlen (obuf) - sizeof ("fxsave") + 1, "rdfsbase");
-	  else if (modrm.reg == 1)
-	    strcpy (obuf + strlen (obuf) - sizeof ("fxrstor") + 1, "rdgsbase");
-	  else if (modrm.reg == 2)
-	    strcpy (obuf + strlen (obuf) - sizeof ("ldmxcsr") + 1, "wrfsbase");
-	  else if (modrm.reg == 3)
-	    strcpy (obuf + strlen (obuf) - sizeof ("stmxcsr") + 1, "wrgsbase");
-	  used_prefixes |= PREFIX_REPZ;
-	  bytemode = dq_mode;
-	}
-      else
-	{
-	  BadOp ();
+	  BadOp ();	/* bad sfence, mfence, or lfence */
 	  return;
 	}
+      bytemode = 0;
     }
 
   OP_E (bytemode, sizeflag);
@@ -6484,21 +6467,6 @@ OP_VMX (int bytemode, int sizeflag)
 }
 
 static void
-OP_VMX2 (int bytemode, int sizeflag)
-{
-  if (modrm.mod == 3)
-    {
-      strcpy (obuf, "rdseed");
-      OP_E (v_mode, sizeflag);
-    }
-  else
-    {
-      strcpy (obuf, "vmptrst");
-      OP_M (q_mode, sizeflag);
-    }
-}
-
-static void
 REP_Fixup (int bytemode, int sizeflag)
 {
   /* The 0xf3 prefix should be displayed as "rep" for ins, outs, movs,
@@ -6589,7 +6557,7 @@ static void
 XMM_Fixup (int reg, int sizeflag ATTRIBUTE_UNUSED)
 {
   sprintf (scratchbuf, "%%xmm%d", reg);
-  oappend (&scratchbuf[intel_syntax]);
+  oappend (scratchbuf + intel_syntax);
 }
 
 static void

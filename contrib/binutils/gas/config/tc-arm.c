@@ -4720,23 +4720,6 @@ parse_address_main (char **str, int i, int group_relocations,
 	      return PARSE_OPERAND_FAIL;
 	}
     }
-  else if (skip_past_char (&p, ':') == SUCCESS)
-    {
-      /* FIXME: '@' should be used here, but it's filtered out by generic
-         code before we get to see it here. This may be subject to
-         change.  */
-      expressionS exp;
-      my_get_expression (&exp, &p, GE_NO_PREFIX);
-      if (exp.X_op != O_constant)
-        {
-          inst.error = _("alignment must be constant");
-          return PARSE_OPERAND_FAIL;
-        }
-      inst.operands[i].imm = exp.X_add_number << 8;
-      inst.operands[i].immisalign = 1;
-      /* Alignments are not pre-indexes.  */
-      inst.operands[i].preind = 0;
-    }
 
   if (skip_past_char (&p, ']') == FAIL)
     {
@@ -5211,6 +5194,12 @@ parse_neon_mov (char **str, int *which_operand)
               inst.operands[i].present = 1;
             }
         }
+      else if (parse_qfloat_immediate (&ptr, &inst.operands[i].imm) == SUCCESS)
+          /* Case 2: VMOV<c><q>.<dt> <Qd>, #<float-imm>
+             Case 3: VMOV<c><q>.<dt> <Dd>, #<float-imm>
+             Case 10: VMOV.F32 <Sd>, #<imm>
+             Case 11: VMOV.F64 <Dd>, #<imm>  */
+        inst.operands[i].immisfloat = 1;
       else if ((val = arm_typed_reg_parse (&ptr, REG_TYPE_NSDQ, &rtype,
                                            &optype)) != FAIL)
         {
@@ -5247,15 +5236,9 @@ parse_neon_mov (char **str, int *which_operand)
               
               inst.operands[i].reg = val;
               inst.operands[i].isreg = 1;
-              inst.operands[i].present = 1;
+              inst.operands[i++].present = 1;
             }
         }
-      else if (parse_qfloat_immediate (&ptr, &inst.operands[i].imm) == SUCCESS)
-          /* Case 2: VMOV<c><q>.<dt> <Qd>, #<float-imm>
-             Case 3: VMOV<c><q>.<dt> <Dd>, #<float-imm>
-             Case 10: VMOV.F32 <Sd>, #<imm>
-             Case 11: VMOV.F64 <Dd>, #<imm>  */
-        inst.operands[i].immisfloat = 1;
       else if (parse_big_immediate (&ptr, i) == SUCCESS)
           /* Case 2: VMOV<c><q>.<dt> <Qd>, #<imm>
              Case 3: VMOV<c><q>.<dt> <Dd>, #<imm>  */
@@ -5337,7 +5320,7 @@ parse_neon_mov (char **str, int *which_operand)
           inst.operands[i].isvec = 1;
           inst.operands[i].issingle = 1;
           inst.operands[i].vectype = optype;
-          inst.operands[i].present = 1;
+          inst.operands[i++].present = 1;
         }
     }
   else
@@ -6620,7 +6603,6 @@ do_barrier (void)
   if (inst.operands[0].present)
     {
       constraint ((inst.instruction & 0xf0) != 0x40
-		  && (inst.instruction & 0xf0) != 0x50
 		  && inst.operands[0].imm != 0xf,
 		  "bad barrier type");
       inst.instruction |= inst.operands[0].imm;
@@ -14748,18 +14730,10 @@ static const struct asm_cond conds[] =
 
 static struct asm_barrier_opt barrier_opt_names[] =
 {
-  { "sy",    0xf },
-  { "un",    0x7 },
-  { "st",    0xe },
-  { "unst",  0x6 },
-  { "ish",   0xb },
-  { "sh",    0xb },
-  { "ishst", 0xa },
-  { "shst",  0xa },
-  { "nsh",   0x7 },
-  { "nshst", 0x6 },
-  { "osh",   0x3 },
-  { "oshst", 0x2 }
+  { "sy",   0xf },
+  { "un",   0x7 },
+  { "st",   0xe },
+  { "unst", 0x6 }
 };
 
 /* Table of ARM-format instructions.	*/
