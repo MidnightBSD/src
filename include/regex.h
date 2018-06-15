@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Henry Spencer.
  * Copyright (c) 1992, 1993
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)regex.h	8.2 (Berkeley) 1/3/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/regex.h 228468 2011-12-13 13:32:56Z ed $
  */
 
 #ifndef _REGEX_H_
@@ -51,7 +52,7 @@ typedef	__size_t	size_t;
 typedef struct {
 	int re_magic;
 	size_t re_nsub;		/* number of parenthesized subexpressions */
-	__const char *re_endp;	/* end pointer for REG_PEND */
+	const char *re_endp;	/* end pointer for REG_PEND */
 	struct re_guts *re_g;	/* none of your business :-) */
 } regex_t;
 
