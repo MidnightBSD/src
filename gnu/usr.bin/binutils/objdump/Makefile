@@ -1,5 +1,5 @@
-# $MidnightBSD: src/gnu/usr.bin/binutils/objdump/Makefile,v 1.2 2009/11/26 15:22:10 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/binutils/objdump/Makefile,v 1.14 2004/06/16 07:09:42 obrien Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/binutils/objdump/Makefile 218822 2011-02-18 20:54:12Z dim $
 
 .include "../Makefile.inc0"
 
