@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/mqueue.h,v 1.3 2007/01/06 11:30:04 davidxu Exp $
+ * $FreeBSD: stable/10/include/mqueue.h 240297 2012-09-10 05:12:45Z davidxu $
  */
 
 #ifndef _MQUEUE_H_
@@ -32,8 +33,8 @@
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/mqueue.h>
+#include <sys/signal.h>
 
-struct sigevent;
 struct timespec;
 
 __BEGIN_DECLS
