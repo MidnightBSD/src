@@ -1,11 +1,15 @@
+/* $MidnightBSD$ */
 /* dlg_config.h.  Generated automatically by configure.  */
 /*
  * The configure script expands this as a set of definitions
+ *
+ * $FreeBSD: stable/10/gnu/lib/libdialog/dlg_config.h 255852 2013-09-24 14:52:43Z dteske $
  */
 
 #define CURSES_WACS_ARRAY _nc_wacs
-#define DIALOG_PATCHDATE 20111020
-#define DIALOG_VERSION "1.1"
+#define CURSES_WACS_SYMBOLS 1
+#define DIALOG_PATCHDATE 20130923
+#define DIALOG_VERSION "1.2"
 #define HAVE_ALLOCA 1
 #define HAVE_BTOWC 1
 #define HAVE_COLOR 1
@@ -40,6 +44,7 @@
 #define HAVE_INTTYPES_H 1
 #define HAVE_LANGINFO_CODESET 1
 #define HAVE_LC_MESSAGES 1
+#define HAVE_LIBNCURSESW 1
 #define HAVE_LIMITS_H 1
 #define HAVE_LOCALE_H 1
 #define HAVE_MBLEN 1
@@ -51,7 +56,6 @@
 #define HAVE_MIXEDGAUGE 1
 #define HAVE_MMAP 1
 #define HAVE_MUNMAP 1
-#define HAVE_NCURSES_H 1
 #define HAVE_NL_TYPES_H 1
 #define HAVE_PUTENV 1
 #define HAVE_RC_FILE 1
@@ -85,8 +89,13 @@
 #define HAVE_WCSTOMBS 1
 #define HAVE_WCTOB 1
 #define HAVE_WCTOMB 1
-#define HAVE_WINDOW__PARENT 1
+#define HAVE_WCURSYNCUP 1
+#define HAVE_WGETPARENT 1
+#define HAVE_WHIPTAIL 1
+#define HAVE_WSYNCUP 1
 #define HAVE_XDIALOG 1
+#define HAVE_XDIALOG2 1
+#define HAVE__NC_FREE_AND_EXIT 1
 #define ICONV_CONST const
 #define MIXEDCASE_FILENAMES 1
 #define NCURSES 1
@@ -94,6 +103,7 @@
 #define PACKAGE "dialog"
 #define RETSIGTYPE void
 #define STDC_HEADERS 1
-#define SYSTEM_NAME "midnightbsd0.4"
+#define SYSTEM_NAME "midnightbsd1.0"
 #define TIME_WITH_SYS_TIME 1
 #define TYPE_CHTYPE_IS_SCALAR 1
+#define USE_WIDE_CURSES 1

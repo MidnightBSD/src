@@ -1,24 +1,24 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/gnu/lib/libdialog/Makefile 275040 2014-11-25 13:47:53Z dteske $
 
 DIALOG=		${.CURDIR}/../../../contrib/dialog
 
-.PATH:	${.CURDIR}/../../../contrib/dialog
-
 LIB=		dialog
-SHLIB_MAJOR=	7
-SRCS=		argv.c arrows.c buttons.c calendar.c columns.c \
-		dlg_keys.c editbox.c formbox.c guage.c \
-		inputstr.c mixedform.c mixedgauge.c \
-		mouse.c mousewget.c progressbox.c \
-		tailbox.c timebox.c trace.c ui_getc.c util.c \
-		version.c
-SRCS+=		checklist.c fselect.c help.c inputbox.c menubox.c msgbox.c \
-		pause.c prgbox.c rc.c textbox.c yesno.c
+SHLIB_MAJOR=	8
+SRCS=		argv.c arrows.c buildlist.c buttons.c calendar.c checklist.c \
+		columns.c dlg_keys.c editbox.c fselect.c formbox.c guage.c \
+		help.c inputbox.c inputstr.c menubox.c mixedform.c \
+		mixedgauge.c mouse.c mousewget.c msgbox.c pause.c prgbox.c \
+		progressbox.c rangebox.c rc.c tailbox.c textbox.c timebox.c \
+		trace.c treeview.c ui_getc.c util.c version.c yesno.c
 INCS=		dialog.h dlg_colors.h dlg_config.h dlg_keys.h
 MAN=		dialog.3
 
-CFLAGS+= 	-I${.CURDIR} -I${DIALOG} -D_BSD_TYPES -D__BSD_VISIBLE \
-		-D_XOPEN_SOURCE_EXTENDED
+DPADD=		${LIBNCURSESW} ${LIBM}
+LDADD=		-lncursesw -lm
+
+CFLAGS+= 	-I${.CURDIR} -I${DIALOG} -D_XOPEN_SOURCE_EXTENDED -DGCC_UNUSED=__unused
+.PATH:		${DIALOG}
 WARNS?=		1
 
 .include <bsd.lib.mk>
