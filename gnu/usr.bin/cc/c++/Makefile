@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/cc/c++/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
-NO_MAN=
+MAN=
 .include <bsd.own.mk>
 
 .include "../Makefile.inc"
