@@ -1,5 +1,5 @@
 /*
- *  $Id: dlg_keys.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: dlg_keys.c,v 1.34 2011/10/14 00:41:08 tom Exp $
  *
  *  dlg_keys.c -- runtime binding support for dialog
  *

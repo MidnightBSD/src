@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: infobox5,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: infobox5,v 1.7 2011/01/18 09:19:09 tom Exp $
 # get rid of all flickering by constructing a script unroll the loop, leaving
 # us in curses-mode until we're done counting.
 

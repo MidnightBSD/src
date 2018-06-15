@@ -1,5 +1,5 @@
 /*
- *  $Id: columns.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: columns.c,v 1.10 2011/10/20 20:53:55 tom Exp $
  *
  *  columns.c -- implements column-alignment
  *

@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: form3,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: form3,v 1.6 2010/01/13 10:49:52 tom Exp $
 # form1 with --help-button
 
 . ./setup-vars

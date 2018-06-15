@@ -1,9 +1,9 @@
 /*
- *  $Id: inputbox.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: inputbox.c,v 1.76 2012/12/03 11:46:50 tom Exp $
  *
  *  inputbox.c -- implements the input box
  *
- *  Copyright 2000-2010,2011 Thomas E. Dickey
+ *  Copyright 2000-2011,2012 Thomas E. Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License, version 2.1
@@ -73,6 +73,7 @@ dialog_inputbox(const char *title, const char *cprompt, int height, int width,
     int result = DLG_EXIT_UNKNOWN;
     int state;
     int first;
+    int edited;
     char *input;
     WINDOW *dialog;
     WINDOW *editor;
@@ -85,12 +86,13 @@ dialog_inputbox(const char *title, const char *cprompt, int height, int width,
 
     /* Set up the initial value */
     input = dlg_set_result(init);
+    edited = FALSE;
 
 #ifdef KEY_RESIZE
   retry:
 #endif
     show_buttons = TRUE;
-    state = dialog_vars.defaultno ? dlg_defaultno_button() : sTEXT;
+    state = dialog_vars.default_button >= 0 ? dlg_default_button() : sTEXT;
     first = (state == sTEXT);
     key = fkey = 0;
 
@@ -138,7 +140,12 @@ dialog_inputbox(const char *title, const char *cprompt, int height, int width,
     editor = dlg_sub_window(dialog, 1, box_width, yorg + box_y, xorg + box_x);
     dlg_register_window(editor, "inputbox2", binding2);
 
-    dlg_trace_win(dialog);
+    if (*input != '\0') {
+	dlg_show_string(editor, input, chr_offset, inputbox_attr,
+			0, 0, box_width, password, first);
+	wsyncup(editor);
+	wcursyncup(editor);
+    }
     while (result == DLG_EXIT_UNKNOWN) {
 	int edit = 0;
 
@@ -153,6 +160,13 @@ dialog_inputbox(const char *title, const char *cprompt, int height, int width,
 	}
 
 	if (!first) {
+	    if (*input != '\0' && !edited) {
+		dlg_show_string(editor, input, chr_offset, inputbox_attr,
+				0, 0, box_width, password, first);
+		wmove(editor, 0, chr_offset);
+		wsyncup(editor);
+		wcursyncup(editor);
+	    }
 	    key = dlg_mouse_wgetch((state == sTEXT) ? editor : dialog, &fkey);
 	    if (dlg_result_key(key, fkey, &result))
 		break;
@@ -173,9 +187,12 @@ dialog_inputbox(const char *title, const char *cprompt, int height, int width,
 	    edit = dlg_edit_string(input, &chr_offset, key, fkey, first);
 
 	    if (edit) {
-		dlg_show_string(dialog, input, chr_offset, inputbox_attr,
-				box_y, box_x, box_width, password, first);
+		dlg_show_string(editor, input, chr_offset, inputbox_attr,
+				0, 0, box_width, password, first);
+		wsyncup(editor);
+		wcursyncup(editor);
 		first = FALSE;
+		edited = TRUE;
 		continue;
 	    } else if (first) {
 		first = FALSE;

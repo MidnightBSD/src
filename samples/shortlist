@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: shortlist,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: shortlist,v 1.2 2011/03/02 00:11:50 tom Exp $
 # make a short listing, which writes to both stdout and stderr.
 
 if test $# != 0

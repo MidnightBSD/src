@@ -1,5 +1,5 @@
 /*
- *  $Id: trace.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ *  $Id: trace.c,v 1.20 2011/10/18 10:47:26 tom Exp $
  *
  *  trace.c -- implements screen-dump and keystroke-logging
  *

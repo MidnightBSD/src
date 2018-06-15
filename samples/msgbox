@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: msgbox,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: msgbox,v 1.7 2010/01/13 10:35:13 tom Exp $
 
 . ./setup-vars
 

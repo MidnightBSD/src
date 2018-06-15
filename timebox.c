@@ -1,9 +1,9 @@
 /*
- * $Id: timebox.c,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+ * $Id: timebox.c,v 1.54 2013/03/17 15:03:41 tom Exp $
  *
  *  timebox.c -- implements the timebox dialog
  *
- *  Copyright 2001-2010,2011   Thomas E. Dickey
+ *  Copyright 2001-2012,2013   Thomas E. Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License, version 2.1
@@ -40,8 +40,6 @@ typedef enum {
 } STATES;
 
 struct _box;
-
-typedef int (*BOX_DRAW) (struct _box *, struct tm *);
 
 typedef struct _box {
     WINDOW *parent;
@@ -184,7 +182,7 @@ dialog_timebox(const char *title,
     WINDOW *dialog;
     time_t now_time = time((time_t *) 0);
     struct tm current;
-    int state = dlg_defaultno_button();
+    int state = dlg_default_button();
     const char **buttons = dlg_ok_labels();
     char *prompt = dlg_strclone(subtitle);
     char buffer[MAX_LEN];
@@ -296,12 +294,6 @@ dialog_timebox(const char *title,
 	    /* handle function-keys */
 	    if (fkey) {
 		switch (key) {
-		case DLGK_MOUSE(0):
-		    result = DLG_EXIT_OK;
-		    break;
-		case DLGK_MOUSE(1):
-		    result = DLG_EXIT_CANCEL;
-		    break;
 		case DLGK_MOUSE('H'):
 		    state = sHR;
 		    break;
@@ -312,7 +304,7 @@ dialog_timebox(const char *title,
 		    state = sSC;
 		    break;
 		case DLGK_ENTER:
-		    result = button;
+		    result = dlg_ok_buttoncode(button);
 		    break;
 		case DLGK_FIELD_PREV:
 		    state = dlg_prev_ok_buttonindex(state, sHR);
@@ -362,7 +354,11 @@ dialog_timebox(const char *title,
 		    goto retry;
 #endif
 		default:
-		    if (obj != 0) {
+		    if (is_DLGK_MOUSE(key)) {
+			result = dlg_ok_buttoncode(key - M_EVENT);
+			if (result < 0)
+			    result = DLG_EXIT_OK;
+		    } else if (obj != 0) {
 			int step = next_or_previous(key);
 			if (step != 0) {
 			    obj->value += step;
@@ -416,6 +412,7 @@ dialog_timebox(const char *title,
 
     dlg_add_result(buffer);
     dlg_add_separator();
+    dlg_add_last_key(-1);
 
     return CleanupResult(result, dialog, prompt, &save_vars);
 }

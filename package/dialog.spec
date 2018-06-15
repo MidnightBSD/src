@@ -1,9 +1,9 @@
 Summary: dialog - display dialog boxes from shell scripts
 %define AppProgram dialog
-%define AppVersion 1.1
-%define AppRelease 20111020
+%define AppVersion 1.2
+%define AppRelease 20130923
 %define ActualProg c%{AppProgram}
-# $XTermId: dialog.spec,v 1.33 2011/10/20 20:06:28 tom Exp $
+# $XTermId: dialog.spec,v 1.54 2013/09/23 23:08:24 tom Exp $
 Name: %{ActualProg}
 Version: %{AppVersion}
 Release: %{AppRelease}
@@ -27,6 +27,8 @@ compiled into dialog):
 
 This package installs as "cdialog" to avoid conflict with other packages.
 %prep
+
+%define debug_package %{nil}
 
 %setup -q -n %{AppProgram}-%{AppVersion}-%{AppRelease}
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: editbox4,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: editbox4,v 1.1 2010/01/17 22:29:50 tom Exp $
 
 . ./setup-vars
 

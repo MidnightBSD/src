@@ -6,6 +6,7 @@
 /aclocal.m4 -text
 /argv.c -text
 /arrows.c -text
+/buildlist.c -text
 /buttons.c -text
 /calendar.c -text
 /checklist.c -text
@@ -50,8 +51,13 @@ package/debian/rules -text
 package/debian/source/format -text
 package/debian/watch -text
 package/dialog.spec -text
+package/freebsd/Makefile -text
+package/freebsd/distinfo -text
+package/freebsd/pkg-descr -text
+package/freebsd/pkg-plist -text
 /pause.c -text
 po/POTFILES.in -text
+po/an.po -text
 po/ar.po -text
 po/be@latin.po -text
 po/bg.po -text
@@ -66,6 +72,7 @@ po/eo.po -text
 po/es.po -text
 po/et.po -text
 po/eu.po -text
+po/fa.po -text
 po/fi.po -text
 po/fr.po -text
 po/ga.po -text
@@ -73,6 +80,7 @@ po/gl.po -text
 po/hi.po -text
 po/hr.po -text
 po/hu.po -text
+po/ia.po -text
 po/id.po -text
 po/is.po -text
 po/it.po -text
@@ -108,9 +116,12 @@ po/zh_CN.po -text
 po/zh_TW.po -text
 /prgbox.c -text
 /progressbox.c -text
+/rangebox.c -text
 /rc.c -text
 /rename.sh -text
 samples/README -text
+samples/buildlist -text
+samples/buildlist2 -text
 samples/calendar -text
 samples/calendar-stdout -text
 samples/calendar2 -text
@@ -123,6 +134,7 @@ samples/checklist-utf8 -text
 samples/checklist1 -text
 samples/checklist10 -text
 samples/checklist11 -text
+samples/checklist12 -text
 samples/checklist2 -text
 samples/checklist3 -text
 samples/checklist4 -text
@@ -152,6 +164,10 @@ samples/copifuncs/copi.wheel -text
 samples/copifuncs/ifpatch -text
 samples/copismall -text
 samples/debian.rc -text
+samples/dft-cancel -text
+samples/dft-extra -text
+samples/dft-help -text
+samples/dft-no -text
 samples/dialog.py -text
 samples/editbox -text
 samples/editbox-utf8 -text
@@ -204,7 +220,6 @@ samples/inputmenu1 -text
 samples/inputmenu2 -text
 samples/inputmenu3 -text
 samples/inputmenu4 -text
-samples/install/FDISK.TEST -text
 samples/install/makefile.in -text
 samples/install/setup.c -text
 samples/install/setup.help -text
@@ -215,6 +230,7 @@ samples/menubox-8bit -text
 samples/menubox-utf8 -text
 samples/menubox1 -text
 samples/menubox10 -text
+samples/menubox12 -text
 samples/menubox2 -text
 samples/menubox3 -text
 samples/menubox4 -text
@@ -228,7 +244,7 @@ samples/mixedform2 -text
 samples/mixedgauge -text
 samples/msgbox -text
 samples/msgbox-help -text
-samples/msgbox-utf8 -text
+samples/msgbox-utf8 -text svneol=unset#application/octet-stream
 samples/msgbox1 -text
 samples/msgbox2 -text
 samples/msgbox3 -text
@@ -259,6 +275,10 @@ samples/radiolist10 -text
 samples/radiolist2 -text
 samples/radiolist3 -text
 samples/radiolist4 -text
+samples/rangebox -text
+samples/rangebox2 -text
+samples/rangebox3 -text
+samples/rangebox4 -text
 samples/report-button -text
 samples/report-edit -text
 samples/report-string -text
@@ -288,8 +308,12 @@ samples/timebox -text
 samples/timebox-stdout -text
 samples/timebox2 -text
 samples/timebox2-stdout -text
+samples/treeview -text
+samples/treeview2 -text
 samples/wheel -text
 samples/whiptail.rc -text
+samples/with-dquotes -text
+samples/with-squotes -text
 samples/yesno -text
 samples/yesno-both -text
 samples/yesno-extra -text
@@ -302,6 +326,7 @@ samples/yesno4 -text
 /textbox.c -text
 /timebox.c -text
 /trace.c -text
+/treeview.c -text
 /ui_getc.c -text
 /util.c -text
 /version.c -text

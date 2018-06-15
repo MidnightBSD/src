@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: checklist9,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# $Id: checklist9,v 1.8 2010/01/13 10:20:03 tom Exp $
 # "checklist8" using --file
 
 . ./setup-vars

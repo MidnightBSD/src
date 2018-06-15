@@ -1,4 +1,5 @@
-# $Id: dialog.py,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+#!/usr/bin/python
+# $Id: dialog.py,v 1.4 2012/06/29 09:33:18 tom Exp $
 # Module: dialog.py
 # Copyright (c) 2000 Robb Shecter <robb@acm.org>
 # All rights reserved.
