@@ -1,5 +1,7 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/cc/gcov/Makefile,v 1.5 2007/05/19 04:25:58 kan Exp $
+# $FreeBSD: stable/10/gnu/usr.bin/cc/gcov/Makefile 245539 2013-01-17 05:56:28Z andrew $
+
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.ver"
