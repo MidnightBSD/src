@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Maxime Henrion <mux@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/kenv.h,v 1.2 2005/11/24 07:20:26 ru Exp $
+ * $FreeBSD: stable/10/include/kenv.h 152750 2005-11-24 07:20:26Z ru $
  */
 
 #ifndef _KENV_H_
