@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge ports.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_port.c 310903 2016-12-31 10:34:09Z ngie $
  */
 
 #include <sys/queue.h>
@@ -87,7 +88,7 @@ bridge_port_memif_free(struct bridge_ports *headp,
 /*
  * Insert a port entry in the base port TAILQ starting to search
  * for its place from the position of the first bridge port for the bridge
- * interface. Update the first bridge port if neccessary.
+ * interface. Update the first bridge port if necessary.
  */
 static void
 bridge_port_insert_at(struct bridge_ports *headp,
@@ -119,7 +120,7 @@ bridge_port_insert_at(struct bridge_ports *headp,
 }
 
 /*
- * Find a port entry's possition in the ports list according
+ * Find a port entry's position in the ports list according
  * to it's parent bridge interface name. Returns a NULL if
  * we should be at the TAILQ head, otherwise the entry after
  * which we should be inserted.
@@ -626,7 +627,7 @@ op_dot1d_stp_ext_port(struct snmp_context *ctx, struct snmp_value *val,
 			    return (SNMP_ERR_NOERROR);
 
 			case LEAF_dot1dStpPortAdminPointToPoint:
-			    if (val->v.integer < 0 || val->v.integer > 
+			    if (val->v.integer < 0 || val->v.integer >
 				StpPortAdminPointToPointType_auto)
 				return (SNMP_ERR_WRONG_VALUE);
 
@@ -864,7 +865,7 @@ bridge_port_index_getnext(const struct asn_oid *oid, uint sub, int8_t status)
 		for (i = 0; i < oid->subs[sub]; i++)
 			bif_name[i] = oid->subs[sub + i + 1];
 		bif_name[i] = '\0';
-	
+
 		port_no = oid->subs[sub + i + 1];
 
 		if ((bif = bridge_if_find_ifname(bif_name)) == NULL ||
@@ -937,7 +938,7 @@ bridge_port_set_status(struct snmp_context *ctx,
 		ctx->scratch->int1 = bp->status;
 		bp->status = RowStatus_active;
 		break;
-		
+
 	    case RowStatus_notInService:
 		if (bp == NULL || bp->span_enable == 0 ||
 		    bp->status == RowStatus_active)

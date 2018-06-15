@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge addresses.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_addrs.c 310903 2016-12-31 10:34:09Z ngie $
  */
 
 #include <sys/queue.h>
@@ -108,7 +109,7 @@ bridge_compare_macs(const uint8_t *m1, const uint8_t *m2)
 /*
  * Insert an address entry in the bridge address TAILQ starting to search
  * for its place from the position of the first bridge address for the bridge
- * interface. Update the first bridge address if neccessary.
+ * interface. Update the first bridge address if necessary.
  */
 static void
 bridge_addrs_insert_at(struct tp_entries *headp,
@@ -136,7 +137,7 @@ bridge_addrs_insert_at(struct tp_entries *headp,
 }
 
 /*
- * Find an address entry's possition in the address list
+ * Find an address entry's position in the address list
  * according to bridge interface name.
  */
 static struct tp_entry *
@@ -330,7 +331,7 @@ bridge_addrs_dump(struct bridge_if *bif)
  */
 
 /*
- * Construct the SNMP index from the address DST Mac. 
+ * Construct the SNMP index from the address DST Mac.
  */
 static void
 bridge_addrs_index_append(struct asn_oid *oid, uint sub,
@@ -449,7 +450,7 @@ get:
 
 /*
  * Construct the SNMP index from the bridge interface name
- * and the address DST Mac. 
+ * and the address DST Mac.
  */
 static int
 bridge_addrs_begemot_index_append(struct asn_oid *oid, uint sub,
@@ -477,7 +478,7 @@ bridge_addrs_begemot_index_append(struct asn_oid *oid, uint sub,
 
 /*
  * Find a bridge address entry by the bridge interface name
- * and the address DST Mac. 
+ * and the address DST Mac.
  */
 static struct tp_entry *
 bridge_addrs_begemot_get(const struct asn_oid *oid, uint sub)
@@ -507,7 +508,7 @@ bridge_addrs_begemot_get(const struct asn_oid *oid, uint sub)
 
 /*
  * Find the next bridge address entry by the bridge interface name
- * and the address DST Mac. 
+ * and the address DST Mac.
  */
 static struct tp_entry *
 bridge_addrs_begemot_getnext(const struct asn_oid *oid, uint sub)

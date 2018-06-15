@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge interface objects.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_if.c 310903 2016-12-31 10:34:09Z ngie $
  */
 
 #include <sys/queue.h>
@@ -378,7 +379,7 @@ bridge_get_time_since_tc(struct bridge_if *bif, uint32_t *ticks)
  * Return:
  * 1, if successful
  * 0, if the interface was deleted
- * -1, error occured while fetching the info from the kernel.
+ * -1, error occurred while fetching the info from the kernel.
  */
 static int
 bridge_update_bif(struct bridge_if *bif)
@@ -433,7 +434,7 @@ bridge_update_bif(struct bridge_if *bif)
 }
 
 /*
- * Update all bridge interfaces' ports only - 
+ * Update all bridge interfaces' ports only -
  * make sure each bridge interface exists first.
  */
 void
