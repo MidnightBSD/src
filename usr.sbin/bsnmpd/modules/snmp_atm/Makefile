@@ -1,8 +1,9 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_atm/Makefile,v 1.4 2005/11/10 10:14:56 harti Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_atm/Makefile 312055 2017-01-13 09:07:25Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
-CONTRIB= ${.CURDIR}/../../../../contrib/ngatm
+CONTRIB= ${SRCTOP}/contrib/ngatm
 .PATH: ${CONTRIB}/snmp_atm
 
 MOD=	atm
