@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  *
  *	@(#)dumprestore.h	8.2 (Berkeley) 1/21/94
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/protocols/dumprestore.h 235601 2012-05-18 10:01:31Z gleb $
  */
 
 #ifndef _PROTOCOLS_DUMPRESTORE_H_
@@ -65,6 +66,15 @@
 #endif
 #define CHECKSUM	(int)84446
 
+/*
+ * Since ino_t size is changing to 64-bits, yet we desire this structure to
+ * remain compatible with exiting dump formats, we do NOT use ino_t here,
+ * but rather define a 32-bit type in its place.  At some point, it may be
+ * necessary to use some of the c_spare[] in order to fully support 64-bit
+ * inode numbers.
+ */
+typedef uint32_t dump_ino_t;
+
 union u_spcl {
 	char dummy[TP_BSIZE];
 	struct	s_spcl {
@@ -73,7 +83,7 @@ union u_spcl {
 		int32_t	c_old_ddate;	    /* date of previous dump */
 		int32_t	c_volume;	    /* dump volume number */
 		int32_t	c_old_tapea;	    /* logical block of this record */
-		ino_t	c_inumber;	    /* number of inode */
+		dump_ino_t c_inumber;	    /* number of inode */
 		int32_t	c_magic;	    /* magic number (see above) */
 		int32_t	c_checksum;	    /* record checksum */
 		/*

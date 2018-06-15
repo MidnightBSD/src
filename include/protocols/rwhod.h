@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,11 +29,13 @@
  *
  *	@(#)rwhod.h	8.1 (Berkeley) 6/2/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/protocols/rwhod.h 250889 2013-05-21 21:50:11Z ed $
  */
 
 #ifndef _PROTOCOLS_RWHOD_H_
 #define	_PROTOCOLS_RWHOD_H_
+
+#include <sys/_types.h>
 
 /*
  * rwho protocol packet format.
@@ -40,7 +43,7 @@
 struct	outmp {
 	char	out_line[8];		/* tty name */
 	char	out_name[8];		/* user id */
-	int32_t	out_time;		/* time on */
+	__int32_t out_time;		/* time on */
 };
 
 struct	whod {

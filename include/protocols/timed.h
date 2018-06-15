@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  *
  *	@(#)timed.h	8.1 (Berkeley) 6/2/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/include/protocols/timed.h 249311 2013-04-09 16:16:34Z ed $
  */
 
 #ifndef	_PROTOCOLS_TIMED_H_
@@ -90,11 +91,13 @@ struct tsp {
 #define	TSPTYPENUMBER		25
 
 #ifdef TSPTYPES
-const char *tsptype[TSPTYPENUMBER] =
+static char const * const tsptype[] =
   { "ANY", "ADJTIME", "ACK", "MASTERREQ", "MASTERACK", "SETTIME", "MASTERUP",
   "SLAVEUP", "ELECTION", "ACCEPT", "REFUSE", "CONFLICT", "RESOLVE", "QUIT",
   "DATE", "DATEREQ", "DATEACK", "TRACEON", "TRACEOFF", "MSITE", "MSITEREQ",
   "TEST", "SETDATE", "SETDATEREQ", "LOOP" };
+_Static_assert(sizeof(tsptype) / sizeof(const char *) == TSPTYPENUMBER,
+    "Size of tsptype does not match TSPTYPENUMBER");
 #endif
 
 #endif /* !_TIMED_H_ */

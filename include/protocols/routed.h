@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,8 +29,8 @@
  *
  *	@(#)routed.h	8.1 (Berkeley) 6/2/93
  *
- * $MidnightBSD$
- *	$Revision: 1.2 $
+ * $FreeBSD: stable/10/include/protocols/routed.h 203965 2010-02-16 19:46:46Z imp $
+ *	$Revision: 2.26 $
  */
 
 #ifndef _ROUTED_H_
