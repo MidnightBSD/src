@@ -1,9 +1,9 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/gdb/gdbtui/Makefile,v 1.6 2005/02/14 12:10:14 obrien Exp $
+# $FreeBSD: stable/10/gnu/usr.bin/gdb/gdbtui/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	gdbtui${GDB_SUFFIX}
 SRCS=	tui-main.c
-NO_MAN=
+MAN=
 
 BULIBS= ${OBJ_BU}/libbfd/libbfd.a ${OBJ_BU}/libopcodes/libopcodes.a \
 	${OBJ_BU}/libiberty/libiberty.a
