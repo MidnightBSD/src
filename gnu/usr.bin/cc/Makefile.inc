@@ -1,5 +1,5 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.5 2012/08/25 21:09:39 laffer1 Exp $
-# $FreeBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.66 2007/05/19 04:25:56 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/gnu/usr.bin/cc/Makefile.inc 259563 2013-12-18 19:07:29Z pfg $
 
 .include "../Makefile.inc"
 
@@ -8,7 +8,7 @@
 __CC_MAKEFILE_INC__= ${MFILE}
 
 GCCVER=	4.2
-GCCDIR=	${.CURDIR}/../../../../contrib/gcc4
+GCCDIR=	${.CURDIR}/../../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
 
 .include "Makefile.tgt"
@@ -24,7 +24,48 @@ CFLAGS+=	-DPREFIX=\"${TOOLS_PREFIX}/usr\"
 CSTD?=	gnu89
 
 .if ${TARGET_ARCH} != ${MACHINE_ARCH}
-CFLAGS+=	-DCROSS_COMPILE
+CFLAGS+=	-DCROSS_DIRECTORY_STRUCTURE
+.endif
+
+.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+CFLAGS+=	-DTARGET_ARM_EABI
+.endif
+
+.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb"
+CFLAGS += -DTARGET_ENDIAN_DEFAULT=MASK_BIG_END
+.endif
+.if ${TARGET_ARCH} == "armv6" || ${TARGET_ARCH} == "armv6eb"
+CFLAGS += -DFREEBSD_ARCH_armv6
+.endif
+
+.if ${TARGET_CPUARCH} == "mips"
+.if ${TARGET_ARCH:Mmips*el} != ""
+CFLAGS += -DTARGET_ENDIAN_DEFAULT=0
+.endif
+
+.if ${TARGET_ARCH:Mmips64*} != ""
+MIPS_ABI_DEFAULT=ABI_64
+.elif ${TARGET_ARCH:Mmipsn32*} != ""
+MIPS_ABI_DEFAULT=ABI_N32
+.else
+MIPS_ABI_DEFAULT=ABI_32
+.endif
+CFLAGS += -DMIPS_ABI_DEFAULT=${MIPS_ABI_DEFAULT}
+
+# If we are compiling for the O32 ABI, we need to default to MIPS-III rather
+# than taking the ISA from the ABI requirements, since FreeBSD is built with
+# a number of MIPS-III features/instructions and that is the minimum ISA we
+# support, not the O32 default MIPS-I.
+.if ${MIPS_ABI_DEFAULT} == "ABI_32"
+TARGET_CPUTYPE?=mips3
+.endif
+
+# GCC by default takes the ISA from the ABI's requirements.  If world is built
+# with a superior ISA, since we lack multilib, we have to set the right
+# default ISA to be able to link against what's in /usr/lib.  Terrible stuff.
+.if defined(TARGET_CPUTYPE)
+CFLAGS += -DMIPS_CPU_STRING_DEFAULT=\"${TARGET_CPUTYPE}\"
+.endif
 .endif
 
 .if defined(WANT_FORCE_OPTIMIZATION_DOWNGRADE)
