@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/lib/libroken/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/lib/libroken/Makefile 319291 2017-05-31 06:26:37Z delphij $
 
 LIB=	roken
 LDADD=	-lcrypt
@@ -53,7 +54,6 @@ SRCS=	base64.c \
 	parse_bytes.c \
 	parse_time.c \
 	parse_units.c \
-	qsort.c \
 	rand.c \
 	realloc.c \
 	resolve.c \
@@ -70,13 +70,13 @@ SRCS=	base64.c \
 	strpool.c \
 	timeval.c \
 	tm2time.c \
+	unvis.c \
 	verify.c \
 	vis.c \
 	warnerr.c \
 	write_pid.c \
 	xfree.c
 
-CPPFLAGS+=	-DBUILD_ROKEN_LIB
 CFLAGS+=-I${KRB5DIR}/lib/roken -I.
 
 CLEANFILES= roken.h
