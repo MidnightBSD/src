@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/lib/libhx509/Makefile 262254 2014-02-20 20:51:27Z peter $
+# $FreeBSD: stable/10/kerberos5/lib/libhx509/Makefile 284700 2015-06-22 16:24:27Z jkim $
 
 LIB=	hx509
 LDFLAGS=	-Wl,--no-undefined
@@ -270,7 +270,7 @@ CLEANFILES= ${GEN} ${GEN:S/.x$/.c/:S/.hx$/.h/} ocsp_asn1_files \
 
 INCS+=	ocsp_asn1.h pkcs10_asn1.h crmf_asn1.h
 
-.ORDER: ${GEN_OSCP}
+.ORDER: ${GEN_OCSP}
 ${GEN_OCSP}: ocsp.asn1 ocsp.opt
 	${ASN1_COMPILE} --option-file=${.ALLSRC:M*.opt} \
 	 ${.ALLSRC:M*.asn1} ocsp_asn1
