@@ -1,9 +1,10 @@
-# $FreeBSD: stable/10/kerberos5/lib/libhdb/Makefile 262254 2014-02-20 20:51:27Z peter $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/lib/libhdb/Makefile 287428 2015-09-03 11:33:33Z ume $
 
 LIB=	hdb
-LDFLAGS=	-Wl,--no-undefined
+LDFLAGS=	-Wl,--no-undefined ${LDAPLDFLAGS}
 VERSION_MAP=	${KRB5DIR}/lib/hdb/version-script.map
-LDADD=	-lasn1 -lcom_err -lkrb5 -lroken -lheimsqlite
+LDADD=	-lasn1 -lcom_err -lkrb5 -lroken -lheimsqlite ${LDAPLDADD}
 DPADD=	${LIBASN1} ${LIBCOM_ERR} ${LIBKRB5} ${LIBROKEN} ${LIBHEIMSQLITE} ${LDAPDPADD}
 
 MAN=	HDB.3 hdb_entry_ex.3
