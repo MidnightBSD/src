@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/usr.bin/kadmin/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/usr.bin/kadmin/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
 
 PROG=	kadmin
 MAN=	kadmin.8
@@ -29,21 +30,21 @@ CFLAGS+=-I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/roken \
 DPADD=	${LIBKADM5CLNT} ${LIBKADM5SRV} ${LIBHDB} ${LIBKRB5} ${LIBHX509} \
 	${LIBSL} ${LIBROKEN} ${LIBVERS} ${LIBASN1} \
 	${LIBCRYPTO} ${LIBCRYPT} ${LIBCOM_ERR} \
-	${LIBREADLINE} ${LIBNCURSES} ${LDAPDPADD}
+	${LIBEDIT} ${LIBNCURSES} ${LDAPDPADD}
 LDADD=	-lkadm5clnt -lkadm5srv -lhdb -lkrb5 -lhx509 \
 	${LIBSL} -lroken ${LIBVERS} -lasn1 \
 	-lcrypto -lcrypt -lcom_err \
-	-lreadline -lncurses ${LDAPLDADD}
+	-ledit -lncurses ${LDAPLDADD}
 LDFLAGS=${LDAPLDFLAGS}
+
+CLEANFILES=	kadmin-commands.h kadmin-commands.c
 
 .include <bsd.prog.mk>
 
 kadmin-commands.h: ${KRB5DIR}/kadmin/kadmin-commands.in
 	${SLC} ${.ALLSRC:M*.in}
 
-.for ext in o c
-kadmin-commands.${ext}: kadmin-commands.h
-.endfor
+kadmin-commands.c: kadmin-commands.h
 
 .PATH: ${KRB5DIR}/kadmin
 

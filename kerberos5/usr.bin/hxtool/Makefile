@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/usr.bin/hxtool/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/usr.bin/hxtool/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
 
 PROG=	hxtool
 MAN=
@@ -10,12 +11,12 @@ DPADD=	${LIBHX509} ${LIBROKEN} ${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBSL} ${LI
 LDADD=	-lhx509 -lroken -lasn1 -lcrypto -lcrypt ${LIBSL} ${LIBVERS} -ledit
 SRCS=	hxtool.c hxtool-commands.c hxtool-commands.h
 
+CLEANFILES=	hxtool-commands.h hxtool-commands.c
+
 hxtool-commands.h: hxtool-commands.in
 	${SLC} ${.ALLSRC:M*.in}
 
-.for ext in c o
-hxtool-commands.${ext}: hxtool-commands.h
-.endfor
+hxtool-commands.c: hxtool-commands.h
 
 .include <bsd.prog.mk>
 

@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/usr.bin/kcc/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/usr.bin/kcc/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
 
 PROG=	kcc
 MAN=	klist.1 kswitch.1
@@ -19,12 +20,12 @@ SRCS=	kcc.c \
 	kswitch.c \
 	copy_cred_cache.c
 
+CLEANFILES=	kcc-commands.h kcc-commands.c
+
 kcc-commands.h: kcc-commands.in
 	${SLC} ${.ALLSRC:M*.in}
 
-.for ext in c o
-kcc-commands.${ext}: kcc-commands.h
-.endfor
+kcc-commands.c: kcc-commands.h
 
 .include <bsd.prog.mk>
 
