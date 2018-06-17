@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005, PADL Software Pty Ltd.
  * All rights reserved.

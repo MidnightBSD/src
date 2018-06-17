@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * Copyright (c) 1997 - 2007 Kungliga Tekniska Högskolan

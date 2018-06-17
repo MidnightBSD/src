@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /***********************************************************************
  * Copyright (c) 2010, Secure Endpoints Inc.
  * All rights reserved.

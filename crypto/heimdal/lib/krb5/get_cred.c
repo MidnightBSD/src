@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997 - 2008 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
@@ -831,6 +832,7 @@ get_cred_kdc_capath_worker(krb5_context context,
 	if(strcmp(tgt_inst, server_realm) == 0)
 	    break;
 	krb5_free_principal(context, tmp_creds.server);
+	tmp_creds.server = NULL;
 	ret = krb5_make_principal(context, &tmp_creds.server,
 				  tgt_inst, KRB5_TGS_NAME, server_realm, NULL);
 	if(ret) {

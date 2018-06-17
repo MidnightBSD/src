@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* This is a generated file */
 #ifndef __krb5_private_h__
 #define __krb5_private_h__

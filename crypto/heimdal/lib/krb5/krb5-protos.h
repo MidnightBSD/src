@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* This is a generated file */
 #ifndef __krb5_protos_h__
 #define __krb5_protos_h__
