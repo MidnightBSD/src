@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: stable/10/kerberos5/usr.sbin/kstash/Makefile 233294 2012-03-22 08:48:42Z stas $
 
 PROG=	kstash

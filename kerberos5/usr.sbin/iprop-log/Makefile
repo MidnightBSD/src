@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/usr.sbin/iprop-log/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/usr.sbin/iprop-log/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
 
 PROG=	iprop-log
 MAN=	iprop-log.8
@@ -12,13 +13,14 @@ DPADD=	${LIBKADM5SRV} ${LIBHDB} ${LIBKRB5} ${LIBASN1} ${LIBCRYPTO} \
 	${LIBCRYPT} ${LIBSL} ${LIBROKEN} ${LIBVERS} ${LIBEDIT}
 LDADD=	-lkadm5srv -lhdb -lkrb5 -lasn1 -lcrypto -lcrypt ${LIBSL} -lroken \
 	${LIBVERS} -ledit
+LDFLAGS=${LDAPLDFLAGS}
+
+CLEANFILES=	iprop-commands.h iprop-commands.c
 
 iprop-commands.h: iprop-commands.in
 	${SLC} ${.ALLSRC:M*.in}
 
-.for ext in c o
-iprop-commands.${ext}: iprop-commands.h
-.endfor
+iprop-commands.c: iprop-commands.h
 
 .include <bsd.prog.mk>
 

@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/usr.sbin/ktutil/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/usr.sbin/ktutil/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
 
 PROG=	ktutil
 MAN=	ktutil.8
@@ -22,13 +23,13 @@ DPADD=	${LIBKADM5CLNT} ${LIBKRB5} ${LIBSL} ${LIBROKEN} ${LIBVERS} \
 LDADD=	-lkadm5clnt -lkrb5 ${LIBSL} -lroken ${LIBVERS} \
 	-lasn1 -lcrypto -lcrypt -ledit
 
+CLEANFILES=	ktutil-commands.h ktutil-commands.c
+
 .include <bsd.prog.mk>
 
 ktutil-commands.h: ${KRB5DIR}/admin/ktutil-commands.in
 	${SLC} ${.ALLSRC:M*.in}
 
-.for ext in c o
-ktutil-commands.${ext}: ktutil-commands.h
-.endfor
+ktutil-commands.c: ktutil-commands.h
 
 .PATH: ${KRB5DIR}/admin
