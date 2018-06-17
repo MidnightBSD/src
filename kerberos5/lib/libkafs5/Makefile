@@ -24,7 +24,6 @@ MLINKS=	kafs5.3 k_afs_cell_of_file.3 \
 	kafs5.3 krb_afslog.3 \
 	kafs5.3 krb_afslog_uid.3
 
-SRCS=	afssys.c afskrb5.c common.c
 SRCS=	afssys.c \
 	afskrb5.c \
 	common.c
