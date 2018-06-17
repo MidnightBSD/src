@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/kerberos5/lib/libkafs5/Makefile 236337 2012-05-30 22:21:25Z obrien $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/lib/libkafs5/Makefile 323693 2017-09-18 00:13:48Z cy $
 
 LIB=	kafs5
 LDADD=	-lasn1 -lroken -lkrb5
@@ -23,7 +24,7 @@ MLINKS=	kafs5.3 k_afs_cell_of_file.3 \
 	kafs5.3 krb_afslog.3 \
 	kafs5.3 krb_afslog_uid.3
 
-SRCS=	afssys.c afskrb5.c common.c krb5_err.h
+SRCS=	afssys.c afskrb5.c common.c
 SRCS=	afssys.c \
 	afskrb5.c \
 	common.c
