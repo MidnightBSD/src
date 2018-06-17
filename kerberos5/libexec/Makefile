@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/libexec/Makefile 311730 2017-01-09 01:31:12Z ngie $
 
 .include <bsd.own.mk>
 
