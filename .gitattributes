@@ -73487,6 +73487,7 @@ usr.sbin/bsdinstall/scripts/services -text
 usr.sbin/bsdinstall/scripts/time -text
 usr.sbin/bsdinstall/scripts/umount -text
 usr.sbin/bsdinstall/scripts/wlanconfig -text
+usr.sbin/bsdinstall/scripts/zfsboot -text
 usr.sbin/bsnmpd/Makefile -text
 usr.sbin/bsnmpd/Makefile.inc -text
 usr.sbin/bsnmpd/bsnmpd/Makefile -text
