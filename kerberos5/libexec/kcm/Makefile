@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: stable/10/kerberos5/libexec/kcm/Makefile 255455 2013-09-10 18:40:43Z des $
 
 PROG=	kcm
