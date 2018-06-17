@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/Makefile.inc 311729 2017-01-09 01:29:20Z ngie $
 
 .include <bsd.own.mk>
 
@@ -13,7 +14,7 @@ OPENLDAPBASE?=	/usr/local
 LDAPLDADD=	-lldap -llber
 LDAPDPADD=	${LDAPLDADD:C;^-l(.*)$;${OPENLDAPBASE}/lib/lib\1.a;}
 LDAPCFLAGS=	-I${OPENLDAPBASE}/include -DOPENLDAP=1 -DLDAP_DEPRECATED=1
-LDAPLDFLAGS=	-L${OPENLDAPBASE}/lib -Wl,-rpath,${OPENLDAPBASE}/lib
+LDAPLDFLAGS=	-L${OPENLDAPBASE}/lib -rpath ${OPENLDAPBASE}/lib
 .endif
 
 LIBVERS=	${.OBJDIR}/../../lib/libvers/libvers.a
@@ -29,10 +30,13 @@ ETSRCS=	\
 	${KRB5DIR}/lib/krb5/k524_err.et \
 	${KRB5DIR}/lib/krb5/krb5_err.et \
 	${KRB5DIR}/lib/krb5/krb_err.et \
-	${KRB5DIR}/lib/gssapi/krb5/gkrb5_err.et \
 	${KRB5DIR}/lib/hx509/hx509_err.et \
 	${KRB5DIR}/lib/wind/wind_err.et \
 	${KRB5DIR}/lib/ntlm/ntlm_err.et
+
+.if ${MK_GSSAPI} != "no"
+ETSRCS+=	${KRB5DIR}/lib/gssapi/krb5/gkrb5_err.et
+.endif
 
 .for ET in ${ETSRCS}
 .for _ET in ${ET:T:R}
