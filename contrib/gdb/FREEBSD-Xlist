@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/10/contrib/gdb/FREEBSD-Xlist 190827 2009-04-07 20:15:51Z emaste $
 gdb-*/bfd/*
 gdb-*/config/*
 gdb-*/etc/*

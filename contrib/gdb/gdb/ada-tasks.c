@@ -4,7 +4,7 @@
 .
    This file is part of GDB.
 
-   [$Id: ada-tasks.c,v 1.1.1.2 2006-02-25 02:33:01 laffer1 Exp $]
+   [$Id: ada-tasks.c,v 1.7 2003/06/17 20:58:32 ciceron Exp $]
    Authors: Roch-Alexandre Nomine Beguin, Arnaud Charlet <charlet@gnat.com>
 
    This program is free software; you can redistribute it and/or modify

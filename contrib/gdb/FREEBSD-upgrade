@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/10/contrib/gdb/FREEBSD-upgrade 131081 2004-06-25 05:04:09Z marcel $
 
 To strip down a new version of gdb for import, extract the files like this:
 
