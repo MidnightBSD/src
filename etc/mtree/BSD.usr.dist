@@ -317,7 +317,11 @@
             ..
             bc
             ..
+            bhyve
+            ..
             bootforth
+            ..
+            bsdconfig
             ..
             csh
             ..
@@ -377,6 +381,8 @@
             ..
             libdispatch
             ..
+            libusb20
+            ..
             libvgl
             ..
             mdoc
@@ -384,8 +390,6 @@
             netgraph
                 bluetooth
                 ..
-            ..
-            nwclient
             ..
             pc-sysinstall
             ..
