@@ -24,10 +24,12 @@
         remote          uname=auditdistd gname=wheel mode=0700
         ..
     ..
+    authpf              uname=root gname=authpf mode=0770
+    ..
 /set gname=wheel
     backups
     ..
-    cache
+    cache               mode=0755
     ..
     crash
     ..
@@ -38,6 +40,8 @@
 /set mode=0755
     db
         entropy         uname=operator gname=operator mode=0700
+        ..
+        hyperv          mode=0700
         ..
         ipf             mode=0700
         ..
@@ -66,13 +70,9 @@
     ..
     msgs            uname=daemon
     ..
-    named
-    ..
     preserve
     ..
     run
-        named           uname=bind gname=bind
-        ..
         ppp             gname=network mode=0770
         ..
         wpa_supplicant
@@ -98,6 +98,10 @@
     ..
     tmp             mode=01777
         vi.recover      mode=01777
+        ..
+    ..
+    unbound         uname=unbound gname=unbound mode=0755
+        conf.d          uname=unbound gname=unbound mode=0755
         ..
     ..
     yp
