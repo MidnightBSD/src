@@ -85,12 +85,6 @@
             ..
             atm
             ..
-            bind9
-                arm
-                ..
-                misc
-                ..
-            ..
             legal
                 intel_ipw
                 ..
@@ -149,8 +143,6 @@
                 26.rpcrfc
                 ..
                 27.nfsrfc
-                ..
-                28.cvs
                 ..
             ..
             smm
@@ -216,12 +208,6 @@
             bootforth
             ..
             csh
-            ..
-            cvs
-                contrib
-                ..
-            ..
-            cvsup
             ..
             dialog
             ..
