@@ -38849,6 +38849,7 @@ contrib/tzdata/asia -text
 contrib/tzdata/australasia -text
 contrib/tzdata/backward -text
 contrib/tzdata/backzone -text
+contrib/tzdata/calendars -text
 contrib/tzdata/checklinks.awk -text
 contrib/tzdata/checktab.awk -text
 contrib/tzdata/etcetera -text
@@ -38860,12 +38861,13 @@ contrib/tzdata/leapseconds -text
 contrib/tzdata/leapseconds.awk -text
 contrib/tzdata/northamerica -text
 contrib/tzdata/pacificnew -text
-contrib/tzdata/solar87 -text
-contrib/tzdata/solar88 -text
-contrib/tzdata/solar89 -text
 contrib/tzdata/southamerica -text
 contrib/tzdata/systemv -text
+contrib/tzdata/theory.html -text
+contrib/tzdata/version -text
 contrib/tzdata/yearistype.sh -text
+contrib/tzdata/ziguard.awk -text
+contrib/tzdata/zishrink.awk -text
 contrib/tzdata/zone.tab -text
 contrib/tzdata/zone1970.tab -text
 contrib/tzdata/zoneinfo2tdf.pl -text
