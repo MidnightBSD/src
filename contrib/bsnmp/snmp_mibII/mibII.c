@@ -4,7 +4,7 @@
  *	All rights reserved.
  *
  * Author: Harti Brandt <harti@freebsd.org>
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -204,7 +204,7 @@ mib_if_set_dyn(const char *name)
 			return;
 	if ((d = malloc(sizeof(*d))) == NULL)
 		err(1, NULL);
-	strcpy(d->name, name);
+	strlcpy(d->name, name, sizeof(d->name));
 	SLIST_INSERT_HEAD(&mibdynif_list, d, link);
 }
 
@@ -265,7 +265,7 @@ mib_if_admin(struct mibif *ifp, int up)
 {
 	struct ifreq ifr;
 
-	strncpy(ifr.ifr_name, ifp->name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifp->name, sizeof(ifr.ifr_name));
 	if (ioctl(mib_netsock, SIOCGIFFLAGS, &ifr) == -1) {
 		syslog(LOG_ERR, "SIOCGIFFLAGS(%s): %m", ifp->name);
 		return (-1);
@@ -319,7 +319,7 @@ fetch_generic_mib(struct mibif *ifp, const struct ifmibdata *old)
 	name[5] = IFDATA_GENERAL;
 
 	len = sizeof(ifp->mib);
-	if (sysctl(name, 6, &ifp->mib, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), &ifp->mib, &len, NULL, 0) == -1) {
 		if (errno != ENOENT)
 			syslog(LOG_WARNING, "sysctl(ifmib, %s) failed %m",
 			    ifp->name);
@@ -443,6 +443,7 @@ mib_fetch_ifmib(struct mibif *ifp)
 	size_t len;
 	void *newmib;
 	struct ifmibdata oldmib = ifp->mib;
+	struct ifreq irr;
 
 	if (fetch_generic_mib(ifp, &oldmib) == -1)
 		return (-1);
@@ -479,7 +480,7 @@ mib_fetch_ifmib(struct mibif *ifp)
 	name[3] = IFMIB_IFDATA;
 	name[4] = ifp->sysindex;
 	name[5] = IFDATA_LINKSPECIFIC;
-	if (sysctl(name, 6, NULL, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), NULL, &len, NULL, 0) == -1) {
 		syslog(LOG_WARNING, "sysctl linkmib estimate (%s): %m",
 		    ifp->name);
 		if (ifp->specmib != NULL) {
@@ -505,7 +506,7 @@ mib_fetch_ifmib(struct mibif *ifp)
 		ifp->specmib = newmib;
 		ifp->specmiblen = len;
 	}
-	if (sysctl(name, 6, ifp->specmib, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), ifp->specmib, &len, NULL, 0) == -1) {
 		syslog(LOG_WARNING, "sysctl linkmib (%s): %m", ifp->name);
 		if (ifp->specmib != NULL) {
 			ifp->specmib = NULL;
@@ -514,6 +515,18 @@ mib_fetch_ifmib(struct mibif *ifp)
 	}
 
   out:
+	strlcpy(irr.ifr_name, ifp->name, sizeof(irr.ifr_name));
+	irr.ifr_buffer.buffer = MIBIF_PRIV(ifp)->alias;
+	irr.ifr_buffer.length = sizeof(MIBIF_PRIV(ifp)->alias);
+	if (ioctl(mib_netsock, SIOCGIFDESCR, &irr) == -1) {
+		MIBIF_PRIV(ifp)->alias[0] = 0;
+		if (errno != ENOMSG)
+			syslog(LOG_WARNING, "SIOCGIFDESCR (%s): %m", ifp->name);
+	} else if (irr.ifr_buffer.buffer == NULL) {
+		MIBIF_PRIV(ifp)->alias[0] = 0;
+		syslog(LOG_WARNING, "SIOCGIFDESCR (%s): too long (%zu)",
+		    ifp->name, irr.ifr_buffer.length);
+	}
 	ifp->mibtick = get_ticks();
 	return (0);
 }
@@ -694,10 +707,11 @@ mibif_free(struct mibif *ifp)
 	}
 
 	free(ifp->private);
-	if (ifp->physaddr != NULL)
-		free(ifp->physaddr);
-	if (ifp->specmib != NULL)
-		free(ifp->specmib);
+	ifp->private = NULL;
+	free(ifp->physaddr);
+	ifp->physaddr = NULL;
+	free(ifp->specmib);
+	ifp->specmib = NULL;
 
 	STAILQ_FOREACH(map, &mibindexmap_list, link)
 		if (map->mibif == ifp) {
@@ -732,8 +746,8 @@ mibif_free(struct mibif *ifp)
 		at = at1;
 	}
 
-
 	free(ifp);
+	ifp = NULL;
 	mib_if_number--;
 	mib_iftable_last_change = this_tick;
 }
@@ -760,8 +774,8 @@ mibif_create(u_int sysindex, const char *name)
 	memset(ifp->private, 0, sizeof(struct mibif_private));
 
 	ifp->sysindex = sysindex;
-	strcpy(ifp->name, name);
-	strcpy(ifp->descr, name);
+	strlcpy(ifp->name, name, sizeof(ifp->name));
+	strlcpy(ifp->descr, name, sizeof(ifp->descr));
 	ifp->spec_oid = oid_zeroDotZero;
 
 	map = NULL;
@@ -888,7 +902,7 @@ mib_refresh_iflist(void)
 	for (idx = 1; idx <= count; idx++) {
 		name[4] = idx;
 		len = sizeof(mib);
-		if (sysctl(name, 6, &mib, &len, NULL, 0) == -1) {
+		if (sysctl(name, nitems(name), &mib, &len, NULL, 0) == -1) {
 			if (errno == ENOENT)
 				continue;
 			syslog(LOG_ERR, "ifmib(%u): %m", idx);
@@ -934,6 +948,34 @@ mib_find_ifa(struct in_addr addr)
 }
 
 /*
+ * Process a new ARP entry
+ */
+static void
+process_arp(const struct rt_msghdr *rtm, const struct sockaddr_dl *sdl,
+    const struct sockaddr_in *sa)
+{
+	struct mibif *ifp;
+	struct mibarp *at;
+
+	/* IP arp table entry */
+	if (sdl->sdl_alen == 0)
+		return;
+	if ((ifp = mib_find_if_sys(sdl->sdl_index)) == NULL)
+		return;
+	/* have a valid entry */
+	if ((at = mib_find_arp(ifp, sa->sin_addr)) == NULL &&
+	    (at = mib_arp_create(ifp, sa->sin_addr,
+	    sdl->sdl_data + sdl->sdl_nlen, sdl->sdl_alen)) == NULL)
+		return;
+
+	if (rtm->rtm_rmx.rmx_expire == 0)
+		at->flags |= MIBARP_PERM;
+	else
+		at->flags &= ~MIBARP_PERM;
+	at->flags |= MIBARP_FOUND;
+}
+
+/*
  * Handle a routing socket message.
  */
 static void
@@ -941,7 +983,7 @@ handle_rtmsg(struct rt_msghdr *rtm)
 {
 	struct sockaddr *addrs[RTAX_MAX];
 	struct if_msghdr *ifm;
-	struct ifa_msghdr *ifam;
+	struct ifa_msghdr ifam, *ifamp;
 	struct ifma_msghdr *ifmam;
 #ifdef RTM_IFANNOUNCE
 	struct if_announcemsghdr *ifan;
@@ -961,17 +1003,18 @@ handle_rtmsg(struct rt_msghdr *rtm)
 	switch (rtm->rtm_type) {
 
 	  case RTM_NEWADDR:
-		ifam = (struct ifa_msghdr *)rtm;
-		mib_extract_addrs(ifam->ifam_addrs, (u_char *)(ifam + 1), addrs);
+		ifamp = (struct ifa_msghdr *)rtm;
+		memcpy(&ifam, ifamp, sizeof(ifam));
+		mib_extract_addrs(ifam.ifam_addrs, (u_char *)(ifamp + 1), addrs);
 		if (addrs[RTAX_IFA] == NULL || addrs[RTAX_NETMASK] == NULL)
 			break;
 
 		sa = (struct sockaddr_in *)(void *)addrs[RTAX_IFA];
 		if ((ifa = mib_find_ifa(sa->sin_addr)) == NULL) {
 			/* unknown address */
-		    	if ((ifp = mib_find_if_sys(ifam->ifam_index)) == NULL) {
+		    	if ((ifp = mib_find_if_sys(ifam.ifam_index)) == NULL) {
 				syslog(LOG_WARNING, "RTM_NEWADDR for unknown "
-				    "interface %u", ifam->ifam_index);
+				    "interface %u", ifam.ifam_index);
 				break;
 			}
 		     	if ((ifa = alloc_ifa(ifp->index, sa->sin_addr)) == NULL)
@@ -988,8 +1031,9 @@ handle_rtmsg(struct rt_msghdr *rtm)
 		break;
 
 	  case RTM_DELADDR:
-		ifam = (struct ifa_msghdr *)rtm;
-		mib_extract_addrs(ifam->ifam_addrs, (u_char *)(ifam + 1), addrs);
+		ifamp = (struct ifa_msghdr *)rtm;
+		memcpy(&ifam, ifamp, sizeof(ifam));
+		mib_extract_addrs(ifam.ifam_addrs, (u_char *)(ifamp + 1), addrs);
 		if (addrs[RTAX_IFA] == NULL)
 			break;
 
@@ -1075,6 +1119,23 @@ handle_rtmsg(struct rt_msghdr *rtm)
 #endif
 	  case RTM_GET:
 	  case RTM_ADD:
+		mib_extract_addrs(rtm->rtm_addrs, (u_char *)(rtm + 1), addrs);
+		if (rtm->rtm_flags & RTF_LLINFO) {
+			if (addrs[RTAX_DST] == NULL ||
+			    addrs[RTAX_GATEWAY] == NULL ||
+			    addrs[RTAX_DST]->sa_family != AF_INET ||
+			    addrs[RTAX_GATEWAY]->sa_family != AF_LINK)
+				break;
+			process_arp(rtm,
+			    (struct sockaddr_dl *)(void *)addrs[RTAX_GATEWAY],
+			    (struct sockaddr_in *)(void *)addrs[RTAX_DST]);
+		} else {
+			if (rtm->rtm_errno == 0 && (rtm->rtm_flags & RTF_UP))
+				mib_sroute_process(rtm, addrs[RTAX_GATEWAY],
+				    addrs[RTAX_DST], addrs[RTAX_NETMASK]);
+		}
+		break;
+
 	  case RTM_DELETE:
 		mib_extract_addrs(rtm->rtm_addrs, (u_char *)(rtm + 1), addrs);
 
@@ -1152,7 +1213,7 @@ mib_fetch_rtab(int af, int info, int arg, size_t *lenp)
 	*lenp = 0;
 
 	/* initial estimate */
-	if (sysctl(name, 6, NULL, lenp, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), NULL, lenp, NULL, 0) == -1) {
 		syslog(LOG_ERR, "sysctl estimate (%d,%d,%d,%d,%d,%d): %m",
 		    name[0], name[1], name[2], name[3], name[4], name[5]);
 		return (NULL);
@@ -1168,8 +1229,8 @@ mib_fetch_rtab(int af, int info, int arg, size_t *lenp)
 			return (NULL);
 		}
 		buf = newbuf;
-			
-		if (sysctl(name, 6, buf, lenp, NULL, 0) == 0)
+
+		if (sysctl(name, nitems(name), buf, lenp, NULL, 0) == 0)
 			break;
 
 		if (errno != ENOMEM) {
@@ -1248,8 +1309,7 @@ update_ifa_info(void)
 
 /*
  * Update arp table
- *
-*/
+ */
 void
 mib_arp_update(void)
 {
@@ -1269,7 +1329,7 @@ mib_arp_update(void)
 		in_update_arp = 0;
 		return;
 	}
-	
+
 	next = buf;
 	while (next < buf + needed) {
 		rtm = (struct rt_msghdr *)(void *)next;
@@ -1291,7 +1351,7 @@ mib_arp_update(void)
 
 
 /*
- * Intput on the routing socket.
+ * Input on the routing socket.
  */
 static void
 route_input(int fd, void *udata __unused)
@@ -1324,7 +1384,7 @@ siocaifaddr(char *ifname, struct in_addr addr, struct in_addr mask,
 	struct sockaddr_in *sa;
 
 	memset(&addreq, 0, sizeof(addreq));
-	strncpy(addreq.ifra_name, ifname, sizeof(addreq.ifra_name));
+	strlcpy(addreq.ifra_name, ifname, sizeof(addreq.ifra_name));
 
 	sa = (struct sockaddr_in *)(void *)&addreq.ifra_addr;
 	sa->sin_family = AF_INET;
@@ -1354,7 +1414,7 @@ siocdifaddr(const char *ifname, struct in_addr addr)
 	struct sockaddr_in *sa;
 
 	memset(&delreq, 0, sizeof(delreq));
-	strncpy(delreq.ifr_name, ifname, sizeof(delreq.ifr_name));
+	strlcpy(delreq.ifr_name, ifname, sizeof(delreq.ifr_name));
 	sa = (struct sockaddr_in *)(void *)&delreq.ifr_addr;
 	sa->sin_family = AF_INET;
 	sa->sin_len = sizeof(*sa);
@@ -1373,7 +1433,7 @@ verify_ifa(const char *name, struct mibifa *ifa)
 	struct sockaddr_in *sa;
 
 	memset(&req, 0, sizeof(req));
-	strncpy(req.ifr_name, name, sizeof(req.ifr_name));
+	strlcpy(req.ifr_name, name, sizeof(req.ifr_name));
 	sa = (struct sockaddr_in *)(void *)&req.ifr_addr;
 	sa->sin_family = AF_INET;
 	sa->sin_len = sizeof(*sa);
@@ -1461,7 +1521,7 @@ mib_unmodify_ifa(struct mibifa *ifa)
 }
 
 /*
- * Modify an IFA. 
+ * Modify an IFA.
  */
 int
 mib_modify_ifa(struct mibifa *ifa)

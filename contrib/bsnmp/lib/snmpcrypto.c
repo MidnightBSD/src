@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/contrib/bsnmp/lib/snmpcrypto.c 310903 2016-12-31 10:34:09Z ngie $
  */
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -322,7 +322,7 @@ snmp_calc_keychange(struct snmp_user *user, uint8_t *keychange)
 
 	for (i = 0; i < keylen / 4; i++)
 		rvalue[i] = random();
-	
+
 	memcpy(keychange, user->auth_key, keylen);
 	memcpy(keychange + keylen, rvalue, keylen);
 
@@ -366,7 +366,7 @@ snmp_pdu_decrypt(const struct snmp_pdu *pdu)
 	return (SNMP_CODE_OK);
 }
 
-int
+enum snmp_code
 snmp_passwd_to_keys(struct snmp_user *user, char *passwd __unused)
 {
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
@@ -378,7 +378,7 @@ snmp_passwd_to_keys(struct snmp_user *user, char *passwd __unused)
 	return (SNMP_CODE_FAILED);
 }
 
-int
+enum snmp_code
 snmp_get_local_keys(struct snmp_user *user, uint8_t *eid __unused,
     uint32_t elen __unused)
 {
