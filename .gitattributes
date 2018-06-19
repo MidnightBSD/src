@@ -52531,6 +52531,13 @@ sbin/mount_udf/mount_udf.c -text
 sbin/mount_unionfs/Makefile -text
 sbin/mount_unionfs/mount_unionfs.8 -text
 sbin/mount_unionfs/mount_unionfs.c -text
+sbin/nandfs/Makefile svneol=native#text/plain
+sbin/nandfs/lssnap.c svneol=native#text/plain
+sbin/nandfs/mksnap.c svneol=native#text/plain
+sbin/nandfs/nandfs.8 svneol=native#text/plain
+sbin/nandfs/nandfs.c svneol=native#text/plain
+sbin/nandfs/nandfs.h svneol=native#text/plain
+sbin/nandfs/rmsnap.c svneol=native#text/plain
 sbin/natd/HISTORY -text
 sbin/natd/Makefile -text
 sbin/natd/README -text
