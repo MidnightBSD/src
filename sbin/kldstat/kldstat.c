@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Doug Rabson
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/kldstat/kldstat.c 302800 2016-07-14 04:30:42Z julian $");
 
 #include <err.h>
 #include <stdio.h>
@@ -35,19 +36,28 @@ __MBSDID("$MidnightBSD$");
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/linker.h>
+#include <strings.h>
 
 #define	POINTER_WIDTH	((int)(sizeof(void *) * 2 + 2))
+
+static int showdata = 0;
 
 static void
 printmod(int modid)
 {
     struct module_stat stat;
 
+    bzero(&stat, sizeof(stat));
     stat.version = sizeof(struct module_stat);
     if (modstat(modid, &stat) < 0)
 	warn("can't stat module id %d", modid);
     else
-	printf("\t\t%2d %s\n", stat.id, stat.name);
+	if (showdata) {
+	    printf("\t\t%2d %s (%d, %u, 0x%lx)\n", stat.id, stat.name, 
+	        stat.data.intval, stat.data.uintval, stat.data.ulongval);
+	} else {
+		printf("\t\t%2d %s\n", stat.id, stat.name);
+	}
 }
 
 static void
@@ -78,8 +88,8 @@ printfile(int fileid, int verbose)
 static void
 usage(void)
 {
-    fprintf(stderr, "usage: kldstat [-v] [-i id] [-n filename]\n");
-    fprintf(stderr, "       kldstat [-q] [-m modname]\n");
+    fprintf(stderr, "usage: kldstat [-d] [-q] [-v] [-i id] [-n filename]\n");
+    fprintf(stderr, "       kldstat [-d] [-q] [-m modname]\n");
     exit(1);
 }
 
@@ -94,8 +104,11 @@ main(int argc, char** argv)
     char* modname = NULL;
     char* p;
 
-    while ((c = getopt(argc, argv, "i:m:n:qv")) != -1)
+    while ((c = getopt(argc, argv, "di:m:n:qv")) != -1)
 	switch (c) {
+	case 'd':
+	    showdata = 1;
+	    break;
 	case 'i':
 	    fileid = (int)strtoul(optarg, &p, 10);
 	    if (*p != '\0')
@@ -138,16 +151,27 @@ main(int argc, char** argv)
 	if (modstat(modid, &stat) < 0)
 	    warn("can't stat module id %d", modid);
 	else {
-	    printf("Id  Refs Name\n");
-	    printf("%3d %4d %s\n", stat.id, stat.refs, stat.name);
+		if (showdata) {
+		    printf("Id  Refs Name data..(int, uint, ulong)\n");
+		    printf("%3d %4d %s (%d, %u, 0x%lx)\n", stat.id, stat.refs, stat.name, 
+		        stat.data.intval, stat.data.uintval, stat.data.ulongval);
+		} else {
+		    printf("Id  Refs Name\n");
+		    printf("%3d %4d %s\n", stat.id, stat.refs, stat.name);
+		}
 	}
 
 	return 0;
     }
 
     if (filename != NULL) {
-	if ((fileid = kldfind(filename)) < 0)
-	    err(1, "can't find file %s", filename);
+	if ((fileid = kldfind(filename)) < 0) {
+	    if (!quiet)
+		warn("can't find file %s", filename);
+	    return 1;
+	} else if (quiet) {
+	    return 0;
+	}
     }
 
     printf("Id Refs Address%*c Size     Name\n", POINTER_WIDTH - 7, ' ');
