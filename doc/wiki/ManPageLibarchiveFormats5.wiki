@@ -163,8 +163,6 @@ and device numbers.
 </dd><dt>Solaris extensions</dt><dd> 
 Libarchive recognizes ACL and extended attribute records written 
 by Solaris tar. 
-Currently, libarchive only has support for old-style ACLs; the 
-newer NFSv4 ACLs are recognized but discarded. 
 </dd></dl> 
 
 The first tar program appeared in Seventh Edition Unix in 1979. 

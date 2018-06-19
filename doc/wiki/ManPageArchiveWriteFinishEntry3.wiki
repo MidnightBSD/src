@@ -19,6 +19,9 @@ is called automatically by
 and 
 '''archive_write_close'''() 
 as needed. 
+For 
+'''archive_write_disk''' 
+handles, this flushes pending file attribute changes like modification time. 
 == RETURN VALUES == 
 This function returns 
 '''ARCHIVE_OK''' 

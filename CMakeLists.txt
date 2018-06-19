@@ -15,7 +15,7 @@ endif()
 #   RelWithDebInfo : Release build with Debug Info
 #   MinSizeRel     : Release Min Size build
 IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build Type" FORCE)
+  SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 # Set a value type to properly display CMAKE_BUILD_TYPE on GUI if the
 # value type is "UNINITIALIZED".
@@ -44,13 +44,13 @@ SET(CMAKE_MACOSX_RPATH ON)
 #
 FILE(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/build/version _version)
 STRING(REGEX REPLACE
- "^([0-9])[0-9][0-9][0-9][0-9][0-9][0-9][a-z]?$" "\\1" _major ${_version})
+ "^([0-9])[0-9][0-9][0-9][0-9][0-9][0-9][a-z]*$" "\\1" _major ${_version})
 STRING(REGEX REPLACE
- "^[0-9]([0-9][0-9][0-9])[0-9][0-9][0-9][a-z]?$" "\\1" _minor ${_version})
+ "^[0-9]([0-9][0-9][0-9])[0-9][0-9][0-9][a-z]*$" "\\1" _minor ${_version})
 STRING(REGEX REPLACE
- "^[0-9][0-9][0-9][0-9]([0-9][0-9][0-9])[a-z]?$" "\\1" _revision ${_version})
+ "^[0-9][0-9][0-9][0-9]([0-9][0-9][0-9])[a-z]*$" "\\1" _revision ${_version})
 STRING(REGEX REPLACE
- "^[0-9][0-9][0-9][0-9][0-9][0-9][0-9]([a-z]?)$" "\\1" _quality ${_version})
+ "^[0-9][0-9][0-9][0-9][0-9][0-9][0-9]([a-z]*)$" "\\1" _quality ${_version})
 SET(_version_number ${_major}${_minor}${_revision})
 STRING(REGEX REPLACE "[0]*([^0]*[0-9])$" "\\1" _trimmed_minor ${_minor})
 STRING(REGEX REPLACE "[0]*([^0]*[0-9])$" "\\1" _trimmed_revision ${_revision})
@@ -179,13 +179,15 @@ include(CTest)
 
 OPTION(ENABLE_NETTLE "Enable use of Nettle" ON)
 OPTION(ENABLE_OPENSSL "Enable use of OpenSSL" ON)
-OPTION(ENABLE_LZMA "Enable the use of the system found LZMA library if found" ON)
-OPTION(ENABLE_ZLIB "Enable the use of the system found ZLIB library if found" ON)
-OPTION(ENABLE_BZip2 "Enable the use of the system found BZip2 library if found" ON)
-OPTION(ENABLE_LIBXML2 "Enable the use of the system found libxml2 library if found" ON)
-OPTION(ENABLE_EXPAT "Enable the use of the system found EXPAT library if found" ON)
-OPTION(ENABLE_PCREPOSIX "Enable the use of the system found PCREPOSIX library if found" ON)
-OPTION(ENABLE_LibGCC "Enable the use of the system found LibGCC library if found" ON)
+OPTION(ENABLE_LZO "Enable the use of the system LZO library if found" OFF)
+OPTION(ENABLE_LZMA "Enable the use of the system LZMA library if found" ON)
+
+OPTION(ENABLE_ZLIB "Enable the use of the system ZLIB library if found" ON)
+OPTION(ENABLE_BZip2 "Enable the use of the system BZip2 library if found" ON)
+OPTION(ENABLE_LIBXML2 "Enable the use of the system libxml2 library if found" ON)
+OPTION(ENABLE_EXPAT "Enable the use of the system EXPAT library if found" ON)
+OPTION(ENABLE_PCREPOSIX "Enable the use of the system PCREPOSIX library if found" ON)
+OPTION(ENABLE_LibGCC "Enable the use of the system LibGCC library if found" ON)
 # CNG is used for encrypt/decrypt Zip archives on Windows.
 OPTION(ENABLE_CNG "Enable the use of CNG(Crypto Next Generation)" ON)
 
@@ -274,7 +276,7 @@ INCLUDE(CheckHeaderDirent)
 INCLUDE(CheckIncludeFile)
 INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckLibraryExists)
-INCLUDE(CheckStructMember)
+INCLUDE(CheckStructHasMember)
 INCLUDE(CheckSymbolExists)
 INCLUDE(CheckTypeExists)
 INCLUDE(CheckTypeSize)
@@ -452,46 +454,46 @@ MARK_AS_ADVANCED(CLEAR BZIP2_LIBRARIES)
 # Find LZMA
 #
 IF(ENABLE_LZMA)
-  FIND_PACKAGE(LZMA)
+  FIND_PACKAGE(LibLZMA)
 ELSE()
-  SET(LZMA_FOUND FALSE) # Override cached value
-  SET(LZMADEC_FOUND FALSE) # Override cached value
+  SET(LIBZMA_FOUND FALSE) # Override cached value
 ENDIF()
 
-IF(LZMA_FOUND)
+IF(LIBLZMA_FOUND)
   SET(HAVE_LIBLZMA 1)
   SET(HAVE_LZMA_H 1)
-  INCLUDE_DIRECTORIES(${LZMA_INCLUDE_DIR})
-  LIST(APPEND ADDITIONAL_LIBS ${LZMA_LIBRARIES})
+  SET(CMAKE_REQUIRED_INCLUDES ${LIBLZMA_INCLUDE_DIR})
+  SET(CMAKE_REQUIRED_LIBRARIES ${LIBLZMA_LIBRARIES})
+  INCLUDE_DIRECTORIES(${LIBLZMA_INCLUDE_DIRS})
+  LIST(APPEND ADDITIONAL_LIBS ${LIBLZMA_LIBRARIES})
   # Test if a macro is needed for the library.
   TRY_MACRO_FOR_LIBRARY(
-    "${LZMA_INCLUDE_DIR}" "${LZMA_LIBRARIES}"
+    "${LIBLZMA_INCLUDE_DIRS}" "${LIBLZMA_LIBRARIES}"
     COMPILES
     "#include <lzma.h>\nint main() {return (int)lzma_version_number(); }"
     "WITHOUT_LZMA_API_STATIC;LZMA_API_STATIC")
   IF(NOT WITHOUT_LZMA_API_STATIC AND LZMA_API_STATIC)
     ADD_DEFINITIONS(-DLZMA_API_STATIC)
   ENDIF(NOT WITHOUT_LZMA_API_STATIC AND LZMA_API_STATIC)
-ELSEIF(LZMADEC_FOUND)
-  SET(HAVE_LIBLZMADEC 1)
-  SET(HAVE_LZMADEC_H 1)
-  INCLUDE_DIRECTORIES(${LZMADEC_INCLUDE_DIR})
-  LIST(APPEND ADDITIONAL_LIBS ${LZMADEC_LIBRARIES})
-ELSE(LZMA_FOUND)
+ELSE(LIBLZMA_FOUND)
 # LZMA not found and will not be used.
-ENDIF(LZMA_FOUND)
+ENDIF(LIBLZMA_FOUND)
 #
 # Find LZO2
 #
-IF (LZO2_INCLUDE_DIR)
-  # Already in cache, be silent
-  SET(LZO2_FIND_QUIETLY TRUE)
-ENDIF (LZO2_INCLUDE_DIR)
+IF(ENABLE_LZO)
+  IF (LZO2_INCLUDE_DIR)
+    # Already in cache, be silent
+    SET(LZO2_FIND_QUIETLY TRUE)
+  ENDIF (LZO2_INCLUDE_DIR)
 
-FIND_PATH(LZO2_INCLUDE_DIR lzo/lzoconf.h)
-FIND_LIBRARY(LZO2_LIBRARY NAMES lzo2 liblzo2)
-INCLUDE(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LZO2 DEFAULT_MSG LZO2_LIBRARY LZO2_INCLUDE_DIR)
+  FIND_PATH(LZO2_INCLUDE_DIR lzo/lzoconf.h)
+  FIND_LIBRARY(LZO2_LIBRARY NAMES lzo2 liblzo2)
+  INCLUDE(FindPackageHandleStandardArgs)
+  FIND_PACKAGE_HANDLE_STANDARD_ARGS(LZO2 DEFAULT_MSG LZO2_LIBRARY LZO2_INCLUDE_DIR)
+ELSE(ENABLE_LZO)
+  SET(LIBZMA_FOUND FALSE) # Override cached value
+ENDIF(ENABLE_LZO)
 IF(LZO2_FOUND)
   SET(HAVE_LIBLZO2 1)
   SET(HAVE_LZO_LZOCONF_H 1)
@@ -550,6 +552,7 @@ LA_CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
 
 # Alphabetize the rest unless there's a compelling reason
 LA_CHECK_INCLUDE_FILE("acl/libacl.h" HAVE_ACL_LIBACL_H)
+LA_CHECK_INCLUDE_FILE("attr/xattr.h" HAVE_ATTR_XATTR_H)
 LA_CHECK_INCLUDE_FILE("ctype.h" HAVE_CTYPE_H)
 LA_CHECK_INCLUDE_FILE("copyfile.h" HAVE_COPYFILE_H)
 LA_CHECK_INCLUDE_FILE("direct.h" HAVE_DIRECT_H)
@@ -570,8 +573,14 @@ LA_CHECK_INCLUDE_FILE("limits.h" HAVE_LIMITS_H)
 LA_CHECK_INCLUDE_FILE("linux/types.h" HAVE_LINUX_TYPES_H)
 LA_CHECK_INCLUDE_FILE("linux/fiemap.h" HAVE_LINUX_FIEMAP_H)
 LA_CHECK_INCLUDE_FILE("linux/fs.h" HAVE_LINUX_FS_H)
+
+CHECK_C_SOURCE_COMPILES("#include <sys/ioctl.h>
+#include <linux/fs.h>
+int main(void) { return FS_IOC_GETFLAGS; }" HAVE_WORKING_FS_IOC_GETFLAGS)
+
 LA_CHECK_INCLUDE_FILE("linux/magic.h" HAVE_LINUX_MAGIC_H)
 LA_CHECK_INCLUDE_FILE("locale.h" HAVE_LOCALE_H)
+LA_CHECK_INCLUDE_FILE("membership.h" HAVE_MEMBERSHIP_H)
 LA_CHECK_INCLUDE_FILE("memory.h" HAVE_MEMORY_H)
 LA_CHECK_INCLUDE_FILE("paths.h" HAVE_PATHS_H)
 LA_CHECK_INCLUDE_FILE("poll.h" HAVE_POLL_H)
@@ -589,11 +598,13 @@ LA_CHECK_INCLUDE_FILE("string.h" HAVE_STRING_H)
 LA_CHECK_INCLUDE_FILE("strings.h" HAVE_STRINGS_H)
 LA_CHECK_INCLUDE_FILE("sys/acl.h" HAVE_SYS_ACL_H)
 LA_CHECK_INCLUDE_FILE("sys/cdefs.h" HAVE_SYS_CDEFS_H)
+LA_CHECK_INCLUDE_FILE("sys/extattr.h" HAVE_SYS_EXTATTR_H)
 LA_CHECK_INCLUDE_FILE("sys/ioctl.h" HAVE_SYS_IOCTL_H)
 LA_CHECK_INCLUDE_FILE("sys/mkdev.h" HAVE_SYS_MKDEV_H)
 LA_CHECK_INCLUDE_FILE("sys/mount.h" HAVE_SYS_MOUNT_H)
 LA_CHECK_INCLUDE_FILE("sys/param.h" HAVE_SYS_PARAM_H)
 LA_CHECK_INCLUDE_FILE("sys/poll.h" HAVE_SYS_POLL_H)
+LA_CHECK_INCLUDE_FILE("sys/richacl.h" HAVE_SYS_RICHACL_H)
 LA_CHECK_INCLUDE_FILE("sys/select.h" HAVE_SYS_SELECT_H)
 LA_CHECK_INCLUDE_FILE("sys/stat.h" HAVE_SYS_STAT_H)
 LA_CHECK_INCLUDE_FILE("sys/statfs.h" HAVE_SYS_STATFS_H)
@@ -603,6 +614,7 @@ LA_CHECK_INCLUDE_FILE("sys/utime.h" HAVE_SYS_UTIME_H)
 LA_CHECK_INCLUDE_FILE("sys/utsname.h" HAVE_SYS_UTSNAME_H)
 LA_CHECK_INCLUDE_FILE("sys/vfs.h" HAVE_SYS_VFS_H)
 LA_CHECK_INCLUDE_FILE("sys/wait.h" HAVE_SYS_WAIT_H)
+LA_CHECK_INCLUDE_FILE("sys/xattr.h" HAVE_SYS_XATTR_H)
 LA_CHECK_INCLUDE_FILE("time.h" HAVE_TIME_H)
 LA_CHECK_INCLUDE_FILE("unistd.h" HAVE_UNISTD_H)
 LA_CHECK_INCLUDE_FILE("utime.h" HAVE_UTIME_H)
@@ -611,10 +623,13 @@ LA_CHECK_INCLUDE_FILE("wctype.h" HAVE_WCTYPE_H)
 LA_CHECK_INCLUDE_FILE("windows.h" HAVE_WINDOWS_H)
 IF(ENABLE_CNG)
   LA_CHECK_INCLUDE_FILE("Bcrypt.h" HAVE_BCRYPT_H)
+  IF(HAVE_BCRYPT_H)
+    LIST(APPEND ADDITIONAL_LIBS "Bcrypt")
+  ENDIF(HAVE_BCRYPT_H)
 ELSE(ENABLE_CNG)
   UNSET(HAVE_BCRYPT_H CACHE)
 ENDIF(ENABLE_CNG)
-# Following files need windwos.h, so we should test it after windows.h test.
+# Following files need windows.h, so we should test it after windows.h test.
 LA_CHECK_INCLUDE_FILE("wincrypt.h" HAVE_WINCRYPT_H)
 LA_CHECK_INCLUDE_FILE("winioctl.h" HAVE_WINIOCTL_H)
 
@@ -1188,7 +1203,6 @@ CHECK_FUNCTION_EXISTS_GLIBC(chflags HAVE_CHFLAGS)
 CHECK_FUNCTION_EXISTS_GLIBC(chown HAVE_CHOWN)
 CHECK_FUNCTION_EXISTS_GLIBC(chroot HAVE_CHROOT)
 CHECK_FUNCTION_EXISTS_GLIBC(ctime_r HAVE_CTIME_R)
-CHECK_FUNCTION_EXISTS_GLIBC(dirfd HAVE_DIRFD)
 CHECK_FUNCTION_EXISTS_GLIBC(fchdir HAVE_FCHDIR)
 CHECK_FUNCTION_EXISTS_GLIBC(fchflags HAVE_FCHFLAGS)
 CHECK_FUNCTION_EXISTS_GLIBC(fchmod HAVE_FCHMOD)
@@ -1274,12 +1288,24 @@ CHECK_FUNCTION_EXISTS(wmemmove HAVE_WMEMMOVE)
 
 CMAKE_POP_CHECK_STATE()	# Restore the state of the variables
 
+CHECK_C_SOURCE_COMPILES(
+  "#include <sys/types.h>\n#include <sys/mount.h>\nint main(void) { struct vfsconf v; return sizeof(v);}"
+  HAVE_STRUCT_VFSCONF)
+
+CHECK_C_SOURCE_COMPILES(
+  "#include <sys/types.h>\n#include <sys/mount.h>\nint main(void) { struct xvfsconf v; return sizeof(v);}"
+  HAVE_STRUCT_XVFSCONF)
+
 # Make sure we have the POSIX version of readdir_r, not the
 # older 2-argument version.
 CHECK_C_SOURCE_COMPILES(
   "#include <dirent.h>\nint main() {DIR *d = opendir(\".\"); struct dirent e,*r; return readdir_r(d,&e,&r);}"
   HAVE_READDIR_R)
 
+# dirfd can be either a function or a macro.
+CHECK_C_SOURCE_COMPILES(
+  "#include <dirent.h>\nint main() {DIR *d = opendir(\".\"); return dirfd(d);}"
+  HAVE_DIRFD)
 
 # Only detect readlinkat() if we also have AT_FDCWD in unistd.h.
 # NOTE: linux requires fcntl.h for AT_FDCWD.
@@ -1298,6 +1324,10 @@ CHECK_C_SOURCE_COMPILES(
 CHECK_C_SOURCE_COMPILES(
   "#include <sys/sysmacros.h>\nint main() { return major(256); }"
   MAJOR_IN_SYSMACROS)
+
+CHECK_C_SOURCE_COMPILES(
+  "#include <lzma.h>\n#if LZMA_VERSION < 50020000\n#error unsupported\n#endif\nint main(void){lzma_stream_encoder_mt(0, 0); return 0;}"
+  HAVE_LZMA_STREAM_ENCODER_MT)
 
 IF(HAVE_STRERROR_R)
   SET(HAVE_DECL_STRERROR_R 1)
@@ -1332,47 +1362,47 @@ CHECK_SYMBOL_EXISTS(SSIZE_MAX        "limits.h"   HAVE_DECL_SSIZE_MAX)
 # Check struct members
 #
 # Check for tm_gmtoff in struct tm
-CHECK_STRUCT_MEMBER("struct tm" tm_gmtoff
+CHECK_STRUCT_HAS_MEMBER("struct tm" tm_gmtoff
     "time.h" HAVE_STRUCT_TM_TM_GMTOFF)
-CHECK_STRUCT_MEMBER("struct tm" __tm_gmtoff
+CHECK_STRUCT_HAS_MEMBER("struct tm" __tm_gmtoff
     "time.h" HAVE_STRUCT_TM___TM_GMTOFF)
 
 # Check for f_namemax in struct statfs
-CHECK_STRUCT_MEMBER("struct statfs" f_namemax
+CHECK_STRUCT_HAS_MEMBER("struct statfs" f_namemax
     "sys/param.h;sys/mount.h" HAVE_STRUCT_STATFS_F_NAMEMAX)
 
 # Check for birthtime in struct stat
-CHECK_STRUCT_MEMBER("struct stat" st_birthtime
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_birthtime
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_BIRTHTIME)
 
 # Check for high-resolution timestamps in struct stat
-CHECK_STRUCT_MEMBER("struct stat" st_birthtimespec.tv_nsec
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_birthtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_BIRTHTIMESPEC_TV_NSEC)
-CHECK_STRUCT_MEMBER("struct stat" st_mtimespec.tv_nsec
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
-CHECK_STRUCT_MEMBER("struct stat" st_mtim.tv_nsec
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
-CHECK_STRUCT_MEMBER("struct stat" st_mtime_n
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtime_n
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIME_N)
-CHECK_STRUCT_MEMBER("struct stat" st_umtime
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_umtime
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_UMTIME)
-CHECK_STRUCT_MEMBER("struct stat" st_mtime_usec
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtime_usec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIME_USEC)
 # Check for block size support in struct stat
-CHECK_STRUCT_MEMBER("struct stat" st_blksize
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_blksize
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_BLKSIZE)
 # Check for st_flags in struct stat (BSD fflags)
-CHECK_STRUCT_MEMBER("struct stat" st_flags
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_flags
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_FLAGS)
 
 IF(HAVE_SYS_STATVFS_H)
-  CHECK_STRUCT_MEMBER("struct statvfs" f_iosize
+  CHECK_STRUCT_HAS_MEMBER("struct statvfs" f_iosize
     "sys/types.h;sys/statvfs.h" HAVE_STRUCT_STATVFS_F_IOSIZE)
 ENDIF()
 
 #
 #
-CHECK_STRUCT_MEMBER("struct tm" tm_sec
+CHECK_STRUCT_HAS_MEMBER("struct tm" tm_sec
     "sys/types.h;sys/time.h;time.h" TIME_WITH_SYS_TIME)
 
 #
@@ -1508,60 +1538,105 @@ CHECK_FILE_OFFSET_BITS()
 # Check for Extended Attribute libraries, headers, and functions
 #
 IF(ENABLE_XATTR)
-  LA_CHECK_INCLUDE_FILE(attr/xattr.h     HAVE_ATTR_XATTR_H)
-  LA_CHECK_INCLUDE_FILE(sys/xattr.h      HAVE_SYS_XATTR_H)
-  LA_CHECK_INCLUDE_FILE(sys/extattr.h      HAVE_SYS_EXTATTR_H)
   CHECK_LIBRARY_EXISTS(attr "setxattr" "" HAVE_LIBATTR)
   IF(HAVE_LIBATTR)
     SET(CMAKE_REQUIRED_LIBRARIES "attr")
   ENDIF(HAVE_LIBATTR)
   CHECK_SYMBOL_EXISTS(EXTATTR_NAMESPACE_USER "sys/types.h;sys/extattr.h" HAVE_DECL_EXTATTR_NAMESPACE_USER)
-  CHECK_FUNCTION_EXISTS_GLIBC(extattr_get_file HAVE_EXTATTR_GET_FILE)
-  CHECK_FUNCTION_EXISTS_GLIBC(extattr_list_file HAVE_EXTATTR_LIST_FILE)
-  CHECK_FUNCTION_EXISTS_GLIBC(extattr_set_fd HAVE_EXTATTR_SET_FD)
-  CHECK_FUNCTION_EXISTS_GLIBC(extattr_set_file HAVE_EXTATTR_SET_FILE)
-  CHECK_FUNCTION_EXISTS_GLIBC(fgetxattr HAVE_FGETXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(flistxattr HAVE_FLISTXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(fsetxattr HAVE_FSETXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(getxattr HAVE_GETXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(lgetxattr HAVE_LGETXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(listxattr HAVE_LISTXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(llistxattr HAVE_LLISTXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(lsetxattr HAVE_LSETXATTR)
-  CHECK_FUNCTION_EXISTS_GLIBC(fgetea HAVE_FGETEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(flistea HAVE_FLISTEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(fsetea HAVE_FSETEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(getea HAVE_GETEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(lgetea HAVE_LGETEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(listea HAVE_LISTEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(llistea HAVE_LLISTEA)
-  CHECK_FUNCTION_EXISTS_GLIBC(lsetea HAVE_LSETEA)
+  CHECK_SYMBOL_EXISTS(XATTR_NOFOLLOW "sys/xattr.h" HAVE_DECL_XATTR_NOFOLLOW)
+  IF(HAVE_SYS_XATTR_H AND HAVE_DECL_XATTR_NOFOLLOW)
+    CHECK_FUNCTION_EXISTS(fgetxattr HAVE_FGETXATTR)
+    CHECK_FUNCTION_EXISTS(flistxattr HAVE_FLISTXATTR)
+    CHECK_FUNCTION_EXISTS(fsetxattr HAVE_FSETXATTR)
+    CHECK_FUNCTION_EXISTS(getxattr HAVE_GETXATTR)
+    CHECK_FUNCTION_EXISTS(listxattr HAVE_LISTXATTR)
+    CHECK_FUNCTION_EXISTS(setxattr HAVE_SETXATTR)
+    IF(HAVE_FGETXATTR AND
+       HAVE_FLISTXATTR AND
+       HAVE_FSETXATTR AND
+       HAVE_GETXATTR AND
+       HAVE_LISTXATTR AND
+       HAVE_SETXATTR)
+      SET(ARCHIVE_XATTR_DARWIN TRUE)
+    ENDIF()
+  ELSEIF(HAVE_SYS_EXTATTR_H AND HAVE_DECL_EXTATTR_NAMESPACE_USER)
+    # FreeBSD xattr support
+    CHECK_FUNCTION_EXISTS(extattr_get_fd HAVE_EXTATTR_GET_FD)
+    CHECK_FUNCTION_EXISTS(extattr_get_file HAVE_EXTATTR_GET_FILE)
+    CHECK_FUNCTION_EXISTS(extattr_get_link HAVE_EXTATTR_GET_LINK)
+    CHECK_FUNCTION_EXISTS(extattr_list_fd HAVE_EXTATTR_LIST_FD)
+    CHECK_FUNCTION_EXISTS(extattr_list_file HAVE_EXTATTR_LIST_FILE)
+    CHECK_FUNCTION_EXISTS(extattr_list_link HAVE_EXTATTR_LIST_LINK)
+    CHECK_FUNCTION_EXISTS(extattr_set_fd HAVE_EXTATTR_SET_FD)
+    CHECK_FUNCTION_EXISTS(extattr_set_link HAVE_EXTATTR_SET_LINK)
+    IF(HAVE_EXTATTR_GET_FD AND
+       HAVE_EXTATTR_GET_FILE AND
+       HAVE_EXTATTR_GET_LINK AND
+       HAVE_EXTATTR_LIST_FD AND
+       HAVE_EXTATTR_LIST_FILE AND
+       HAVE_EXTATTR_LIST_LINK AND
+       HAVE_EXTATTR_SET_FD AND
+       HAVE_EXTATTR_SET_LINK)
+      SET(ARCHIVE_XATTR_FREEBSD TRUE)
+    ENDIF()
+  ELSEIF(HAVE_SYS_XATTR_H OR HAVE_ATTR_XATTR_H)
+    # Linux xattr support
+    CHECK_FUNCTION_EXISTS_GLIBC(fgetxattr HAVE_FGETXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(flistxattr HAVE_FLISTXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(fsetxattr HAVE_FSETXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(getxattr HAVE_GETXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(lgetxattr HAVE_LGETXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(listxattr HAVE_LISTXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(llistxattr HAVE_LLISTXATTR)
+    CHECK_FUNCTION_EXISTS_GLIBC(lsetxattr HAVE_LSETXATTR)
+    IF(HAVE_FGETXATTR AND
+       HAVE_FLISTXATTR AND
+       HAVE_FSETXATTR AND
+       HAVE_GETXATTR AND
+       HAVE_LGETXATTR AND
+       HAVE_LISTXATTR AND
+       HAVE_LLISTXATTR AND
+       HAVE_LSETXATTR)
+      SET(ARCHIVE_XATTR_LINUX TRUE)
+    ENDIF()
+  ELSEIF(HAVE_SYS_EA_H)
+    # AIX xattr support
+    CHECK_FUNCTION_EXISTS(fgetea HAVE_FGETEA)
+    CHECK_FUNCTION_EXISTS(flistea HAVE_FLISTEA)
+    CHECK_FUNCTION_EXISTS(fsetea HAVE_FSETEA)
+    CHECK_FUNCTION_EXISTS(getea HAVE_GETEA)
+    CHECK_FUNCTION_EXISTS(lgetea HAVE_LGETEA)
+    CHECK_FUNCTION_EXISTS(listea HAVE_LISTEA)
+    CHECK_FUNCTION_EXISTS(llistea HAVE_LLISTEA)
+    CHECK_FUNCTION_EXISTS(lsetea HAVE_LSETEA)
+    IF(HAVE_FGETEA AND
+       HAVE_FLISTEA AND
+       HAVE_FSETEA AND
+       HAVE_GETEA AND
+       HAVE_LGETEA AND
+       HAVE_LISTEA AND
+       HAVE_LLISTEA AND
+       HAVE_LSETEA)
+      SET(ARCHIVE_XATTR_AIX TRUE)
+    ENDIF()
+  ENDIF()
+
+  IF(ARCHIVE_XATTR_DARWIN)
+    MESSAGE(STATUS "Extended attributes support: Darwin")
+  ELSEIF(ARCHIVE_XATTR_FREEBSD)
+    MESSAGE(STATUS "Extended attributes support: FreeBSD")
+  ELSEIF(ARCHIVE_XATTR_LINUX)
+    MESSAGE(STATUS "Extended attributes support: Linux")
+  ELSEIF(ARCHIVE_XATTR_AIX)
+    MESSAGE(STATUS "Extended attributes support: AIX")
+  ELSE()
+    MESSAGE(STATUS "Extended attributes support: none")
+  ENDIF()
 ELSE(ENABLE_XATTR)
-  SET(HAVE_ATTR_LIB FALSE)
-  SET(HAVE_ATTR_XATTR_H FALSE)
-  SET(HAVE_DECL_EXTATTR_NAMESPACE_USER FALSE)
-  SET(HAVE_EXTATTR_GET_FILE FALSE)
-  SET(HAVE_EXTATTR_LIST_FILE FALSE)
-  SET(HAVE_EXTATTR_SET_FD FALSE)
-  SET(HAVE_EXTATTR_SET_FILE FALSE)
-  SET(HAVE_FGETEA FALSE)
-  SET(HAVE_FGETXATTR FALSE)
-  SET(HAVE_FLISTEA FALSE)
-  SET(HAVE_FLISTXATTR FALSE)
-  SET(HAVE_FSETEA FALSE)
-  SET(HAVE_FSETXATTR FALSE)
-  SET(HAVE_GETEA FALSE)
-  SET(HAVE_GETXATTR FALSE)
-  SET(HAVE_LGETEA FALSE)
-  SET(HAVE_LGETXATTR FALSE)
-  SET(HAVE_LISTEA FALSE)
-  SET(HAVE_LISTXATTR FALSE)
-  SET(HAVE_LLISTEA FALSE)
-  SET(HAVE_LLISTXATTR FALSE)
-  SET(HAVE_LSETEA FALSE)
-  SET(HAVE_LSETXATTR FALSE)
-  SET(HAVE_SYS_EXTATTR_H FALSE)
-  SET(HAVE_SYS_XATTR_H FALSE)
+  SET(ARCHIVE_XATTR_DARWIN FALSE)
+  SET(ARCHIVE_XATTR_FREEBSD FALSE)
+  SET(ARCHIVE_XATTR_LINUX FALSE)
+  SET(ARCHIVE_XATTR_AIX FALSE)
 ENDIF(ENABLE_XATTR)
 
 #
@@ -1573,50 +1648,212 @@ ENDIF(ENABLE_XATTR)
 # which makes the following checks rather more complex than I would like.
 #
 IF(ENABLE_ACL)
+  # Solaris and derivates ACLs
+  CHECK_FUNCTION_EXISTS(acl HAVE_ACL)
+  CHECK_FUNCTION_EXISTS(facl HAVE_FACL)
+
+  # Libacl
   CHECK_LIBRARY_EXISTS(acl "acl_get_file" "" HAVE_LIBACL)
   IF(HAVE_LIBACL)
     SET(CMAKE_REQUIRED_LIBRARIES "acl")
     FIND_LIBRARY(ACL_LIBRARY NAMES acl)
     LIST(APPEND ADDITIONAL_LIBS ${ACL_LIBRARY})
   ENDIF(HAVE_LIBACL)
-  #
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_create_entry HAVE_ACL_CREATE_ENTRY)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_init HAVE_ACL_INIT)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_set_fd HAVE_ACL_SET_FD)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_set_fd_np HAVE_ACL_SET_FD_NP)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_set_file HAVE_ACL_SET_FILE)
-  CHECK_TYPE_EXISTS(acl_permset_t "${INCLUDES}"    HAVE_ACL_PERMSET_T)
 
-  # The "acl_get_perm()" function was omitted from the POSIX draft.
-  # (It's a pretty obvious oversight; otherwise, there's no way to
-  # test for specific permissions in a permset.)  Linux uses the obvious
-  # name, FreeBSD adds _np to mark it as "non-Posix extension."
-  # Test for both as a double-check that we really have POSIX-style ACL support.
-  CHECK_FUNCTION_EXISTS(acl_get_perm HAVE_ACL_GET_PERM)
-  CHECK_FUNCTION_EXISTS(acl_get_perm_np HAVE_ACL_GET_PERM_NP)
-  CHECK_FUNCTION_EXISTS(acl_get_link HAVE_ACL_GET_LINK)
-  CHECK_FUNCTION_EXISTS(acl_get_link_np HAVE_ACL_GET_LINK_NP)
-  CHECK_FUNCTION_EXISTS(acl_is_trivial_np HAVE_ACL_IS_TRIVIAL_NP)
-  CHECK_FUNCTION_EXISTS(acl_set_link_np HAVE_ACL_SET_LINK_NP)
+  CHECK_TYPE_EXISTS(acl_t "sys/types.h;sys/acl.h" HAVE_ACL_T)
+  CHECK_TYPE_EXISTS(acl_entry_t "sys/types.h;sys/acl.h" HAVE_ACL_ENTRY_T)
+  CHECK_TYPE_EXISTS(acl_permset_t "sys/types.h;sys/acl.h" HAVE_ACL_PERMSET_T)
+  CHECK_TYPE_EXISTS(acl_tag_t "sys/types.h;sys/acl.h" HAVE_ACL_TAG_T)
 
-  # MacOS has an acl.h that isn't POSIX.  It can be detected by
-  # checking for ACL_USER
-  CHECK_SYMBOL_EXISTS(ACL_USER "${INCLUDES}" HAVE_ACL_USER)
+  IF(HAVE_ACL AND HAVE_FACL)
+    CHECK_TYPE_EXISTS(aclent_t "sys/acl.h" HAVE_ACLENT_T)
+    IF(HAVE_ACLENT_T)
+      CHECK_SYMBOL_EXISTS(GETACL "sys/acl.h" HAVE_DECL_GETACL)
+      CHECK_SYMBOL_EXISTS(GETACLCNT "sys/acl.h" HAVE_DECL_GETACLCNT)
+      CHECK_SYMBOL_EXISTS(SETACL "sys/acl.h" HAVE_DECL_SETACL)
+      IF(HAVE_DECL_GETACL AND
+         HAVE_DECL_GETACLCNT AND
+         HAVE_DECL_SETACL)
+        SET(ARCHIVE_ACL_SUNOS TRUE)
+      ENDIF()
+      CHECK_TYPE_EXISTS(ace_t "sys/acl.h" HAVE_ACE_T)
+      IF(HAVE_ACE_T)
+        CHECK_SYMBOL_EXISTS(ACE_GETACL "sys/acl.h" HAVE_DECL_ACE_GETACL)
+        CHECK_SYMBOL_EXISTS(ACE_GETACLCNT "sys/acl.h" HAVE_DECL_ACE_GETACLCNT)
+        CHECK_SYMBOL_EXISTS(ACE_SETACL "sys/acl.h" HAVE_DECL_ACE_SETACL)
+        IF(HAVE_DECL_ACE_GETACL AND
+           HAVE_DECL_ACE_GETACLCNT AND
+           HAVE_DECL_ACE_SETACL)
+          SET(ARCHIVE_ACL_SUNOS_NFS4 TRUE)
+        ENDIF()
+      ENDIF(HAVE_ACE_T)
+    ENDIF(HAVE_ACLENT_T)
+  ENDIF(HAVE_ACL AND HAVE_FACL)
+
+  IF(HAVE_ACL_T AND HAVE_ACL_ENTRY_T AND HAVE_ACL_PERMSET_T AND HAVE_ACL_TAG_T)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_add_perm HAVE_ACL_ADD_PERM)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_clear_perms HAVE_ACL_CLEAR_PERMS)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_create_entry HAVE_ACL_CREATE_ENTRY)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_delete_def_file HAVE_ACL_DELETE_DEF_FILE)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_free HAVE_ACL_FREE)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_entry HAVE_ACL_GET_ENTRY)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_fd HAVE_ACL_GET_FD)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_file HAVE_ACL_GET_FILE)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_permset HAVE_ACL_GET_PERMSET)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_qualifier HAVE_ACL_GET_QUALIFIER)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_tag_type HAVE_ACL_GET_TAG_TYPE)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_init HAVE_ACL_INIT)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_set_fd HAVE_ACL_SET_FD)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_set_file HAVE_ACL_SET_FILE)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_set_qualifier HAVE_ACL_SET_QUALIFIER)
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_set_tag_type HAVE_ACL_SET_TAG_TYPE)
+    IF(HAVE_ACL_ADD_PERM AND
+       HAVE_ACL_CLEAR_PERMS AND
+       HAVE_ACL_CREATE_ENTRY AND
+       HAVE_ACL_DELETE_DEF_FILE AND
+       HAVE_ACL_FREE AND
+       HAVE_ACL_GET_ENTRY AND
+       HAVE_ACL_GET_FD AND
+       HAVE_ACL_GET_FILE AND
+       HAVE_ACL_GET_PERMSET AND
+       HAVE_ACL_GET_QUALIFIER AND
+       HAVE_ACL_GET_TAG_TYPE AND
+       HAVE_ACL_INIT AND
+       HAVE_ACL_SET_FD AND
+       HAVE_ACL_SET_FILE AND
+       HAVE_ACL_SET_QUALIFIER AND
+       HAVE_ACL_SET_TAG_TYPE)
+         SET(HAVE_POSIX_ACL_FUNCS 1)
+    ENDIF()
+
+    CHECK_FUNCTION_EXISTS_GLIBC(acl_get_perm HAVE_ACL_GET_PERM)
+
+    IF(HAVE_POSIX_ACL_FUNCS AND HAVE_ACL_LIBACL_H AND HAVE_LIBACL AND
+       HAVE_ACL_GET_PERM)
+      SET(ARCHIVE_ACL_LIBACL TRUE)
+    ELSE()
+      CHECK_FUNCTION_EXISTS(acl_add_flag_np HAVE_ACL_ADD_FLAG_NP)
+      CHECK_FUNCTION_EXISTS(acl_clear_flags_np HAVE_ACL_CLEAR_FLAGS_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_brand_np HAVE_ACL_GET_BRAND_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_entry_type_np HAVE_ACL_GET_ENTRY_TYPE_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_flag_np HAVE_ACL_GET_FLAG_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_flagset_np HAVE_ACL_GET_FLAGSET_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_fd_np HAVE_ACL_GET_FD_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_link_np HAVE_ACL_GET_LINK_NP)
+      CHECK_FUNCTION_EXISTS(acl_get_perm_np HAVE_ACL_GET_PERM_NP)
+      CHECK_FUNCTION_EXISTS(acl_is_trivial_np HAVE_ACL_IS_TRIVIAL_NP)
+      CHECK_FUNCTION_EXISTS(acl_set_entry_type_np HAVE_ACL_SET_ENTRY_TYPE_NP)
+      CHECK_FUNCTION_EXISTS(acl_set_fd_np HAVE_ACL_SET_FD_NP)
+      CHECK_FUNCTION_EXISTS(acl_set_link_np HAVE_ACL_SET_LINK_NP)
+      CHECK_FUNCTION_EXISTS(mbr_gid_to_uuid HAVE_MBR_GID_TO_UUID)
+      CHECK_FUNCTION_EXISTS(mbr_uid_to_uuid HAVE_MBR_UID_TO_UUID)
+      CHECK_FUNCTION_EXISTS(mbr_uuid_to_id HAVE_MBR_UUID_TO_ID)
+
+      CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
+#include <sys/acl.h>
+int main(void) { return ACL_TYPE_EXTENDED; }" HAVE_DECL_ACL_TYPE_EXTENDED)
+      CHECK_C_SOURCE_COMPILES("#include <sys/types.h>
+#include <sys/acl.h>
+int main(void) { return ACL_SYNCHRONIZE; }" HAVE_DECL_ACL_SYNCHRONIZE)
+      CHECK_SYMBOL_EXISTS(ACL_TYPE_NFS4 "sys/acl.h" HAVE_DECL_ACL_TYPE_NFS4)
+      CHECK_SYMBOL_EXISTS(ACL_USER "sys/acl.h" HAVE_DECL_ACL_USER)
+
+      IF(HAVE_POSIX_ACL_FUNCS AND
+         HAVE_ACL_GET_FD_NP AND
+         HAVE_ACL_GET_PERM_NP AND
+         NOT HAVE_ACL_GET_PERM AND
+         HAVE_ACL_SET_FD_NP)
+        IF(HAVE_DECL_ACL_USER)
+          SET(ARCHIVE_ACL_FREEBSD TRUE)
+          IF(HAVE_DECL_ACL_TYPE_NFS4 AND
+             HAVE_ACL_ADD_FLAG_NP AND
+             HAVE_ACL_CLEAR_FLAGS_NP AND
+             HAVE_ACL_GET_BRAND_NP AND
+             HAVE_ACL_GET_ENTRY_TYPE_NP AND
+             HAVE_ACL_GET_FLAGSET_NP AND
+             HAVE_ACL_SET_ENTRY_TYPE_NP)
+            SET(ARCHIVE_ACL_FREEBSD_NFS4 TRUE)
+          ENDIF()
+        ELSEIF(HAVE_DECL_ACL_TYPE_EXTENDED AND
+               HAVE_MEMBERSHIP_H AND
+               HAVE_ACL_ADD_FLAG_NP AND
+               HAVE_ACL_CLEAR_FLAGS_NP AND
+               HAVE_ACL_GET_FLAGSET_NP AND
+               HAVE_ACL_GET_LINK_NP AND
+               HAVE_ACL_SET_LINK_NP AND
+               HAVE_MBR_UID_TO_UUID AND
+               HAVE_MBR_GID_TO_UUID AND
+               HAVE_MBR_UUID_TO_ID)
+          SET(ARCHIVE_ACL_DARWIN TRUE)
+        ENDIF()
+      ENDIF()
+    ENDIF()
+  ENDIF(HAVE_ACL_T AND HAVE_ACL_ENTRY_T AND HAVE_ACL_PERMSET_T AND
+        HAVE_ACL_TAG_T)
+
+  # Richacl
+  CHECK_LIBRARY_EXISTS(richacl "richacl_get_file" "" HAVE_LIBRICHACL)
+  IF(HAVE_LIBRICHACL)
+    SET(CMAKE_REQUIRED_LIBRARIES "richacl")
+    FIND_LIBRARY(RICHACL_LIBRARY NAMES richacl)
+    LIST(APPEND ADDITIONAL_LIBS ${RICHACL_LIBRARY})
+  ENDIF(HAVE_LIBRICHACL)
+
+  CHECK_STRUCT_HAS_MEMBER("struct richace" e_type "sys/richacl.h"
+    HAVE_STRUCT_RICHACE)
+  CHECK_STRUCT_HAS_MEMBER("struct richacl" a_flags "sys/richacl.h"
+    HAVE_STRUCT_RICHACL)
+
+  IF(HAVE_LIBRICHACL AND HAVE_STRUCT_RICHACL AND HAVE_STRUCT_RICHACE)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_alloc HAVE_RICHACL_ALLOC)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_equiv_mode HAVE_RICHACL_EQUIV_MODE)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_free HAVE_RICHACL_FREE)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_get_fd HAVE_RICHACL_GET_FD)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_get_file HAVE_RICHACL_GET_FILE)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_set_fd HAVE_RICHACL_SET_FD)
+    CHECK_FUNCTION_EXISTS_GLIBC(richacl_set_file HAVE_RICHACL_SET_FILE)
+    IF(HAVE_RICHACL_ALLOC AND
+       HAVE_RICHACL_EQUIV_MODE AND
+       HAVE_RICHACL_FREE AND
+       HAVE_RICHACL_GET_FD AND
+       HAVE_RICHACL_GET_FILE AND
+       HAVE_RICHACL_SET_FD AND
+       HAVE_RICHACL_SET_FILE)
+      SET(ARCHIVE_ACL_LIBRICHACL TRUE)
+    ENDIF()
+  ENDIF(HAVE_LIBRICHACL AND HAVE_STRUCT_RICHACL AND HAVE_STRUCT_RICHACE)
+
+  IF(ARCHIVE_ACL_DARWIN)
+    MESSAGE(STATUS "ACL support: Darwin (limited NFSv4)")
+  ELSEIF(ARCHIVE_ACL_FREEBSD_NFS4)
+    MESSAGE(STATUS "ACL support: FreeBSD (POSIX.1e and NFSv4)")
+  ELSEIF(ARCHIVE_ACL_FREEBSD)
+    MESSAGE(STATUS "ACL support: FreeBSD (POSIX.1e)")
+  ELSEIF(ARCHIVE_ACL_LIBACL OR ARCHIVE_ACL_LIBRICHACL)
+    IF(ARCHIVE_ACL_LIBACL AND ARCHIVE_ACL_LIBRICHACL)
+      MESSAGE(STATUS "ACL support: libacl (POSIX.1e) + librichacl (NFSv4)")
+    ELSEIF(ARCHIVE_ACL_LIBRICHACL)
+      MESSAGE(STATUS "ACL support: librichacl (NFSv4)")
+    ELSE()
+      MESSAGE(STATUS "ACL support: libacl (POSIX.1e)")
+    ENDIF()
+  ELSEIF(ARCHIVE_ACL_SUNOS_NFS4)
+    MESSAGE(STATUS "ACL support: Solaris (POSIX.1e and NFSv4)")
+  ELSEIF(ARCHIVE_ACL_SUNOS)
+    MESSAGE(STATUS "ACL support: Solaris (POSIX.1e)")
+  ELSE()
+    MESSAGE(STATUS "ACL support: none")
+  ENDIF()
+
 ELSE(ENABLE_ACL)
   # If someone runs cmake, then disables ACL support, we need
   # to forcibly override the cached values for these.
-  SET(HAVE_ACL_CREATE_ENTRY FALSE)
-  SET(HAVE_ACL_GET_LINK FALSE)
-  SET(HAVE_ACL_GET_LINK_NP FALSE)
-  SET(HAVE_ACL_GET_PERM FALSE)
-  SET(HAVE_ACL_GET_PERM_NP FALSE)
-  SET(HAVE_ACL_INIT FALSE)
-  SET(HAVE_ACL_LIB FALSE)
-  SET(HAVE_ACL_PERMSET_T FALSE)
-  SET(HAVE_ACL_SET_FD FALSE)
-  SET(HAVE_ACL_SET_FD_NP FALSE)
-  SET(HAVE_ACL_SET_FILE FALSE)
-  SET(HAVE_ACL_USER FALSE)
+  SET(ARCHIVE_ACL_DARWIN FALSE)
+  SET(ARCHIVE_ACL_FREEBSD FALSE)
+  SET(ARCHIVE_ACL_FREEBSD_NFS4 FALSE)
+  SET(ARCHIVE_ACL_LIBACL FALSE)
+  SET(ARCHIVE_ACL_SUNOS FALSE)
+  SET(ARCHIVE_ACL_SUNOS_NFS4 FALSE)
 ENDIF(ENABLE_ACL)
 
 #

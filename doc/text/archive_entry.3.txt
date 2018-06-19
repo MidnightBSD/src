@@ -89,4 +89,4 @@ HISTORY
 AUTHORS
      The libarchive library was written by Tim Kientzle <kientzle@acm.org>.
 
-BSD			       Feburary 2, 2012 			   BSD
+BSD			       February 2, 2012 			   BSD

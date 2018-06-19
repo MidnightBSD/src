@@ -35,7 +35,7 @@ DESCRIPTION
 	     entries.  This is the most generic form of this function, which
 	     accepts pointers to three callback functions which will be
 	     invoked by the compression layer to write the constructed ar‐
-	     chive.
+	     chive.  This does not alter the default archive padding.
 
      archive_write_open_fd()
 	     A convenience form of archive_write_open() that accepts a file
@@ -71,9 +71,14 @@ DESCRIPTION
 	     size_t * argument points to a variable that will be updated after
 	     each write to reflect how much of the buffer is currently in use.
 	     You should be careful to ensure that this variable remains allo‐
-	     cated until after the archive is closed.
+	     cated until after the archive is closed.  This function will dis‐
+	     able padding unless you have specifically set the block size.
      More information about the struct archive object and the overall design
      of the library can be found in the libarchive(3) overview.
+
+     Note that the convenience forms above vary in how they block the output.
+     See archive_write_blocksize(3) if you need to control the block size used
+     for writes or the end-of-file padding behavior.
 
 CLIENT CALLBACKS
      To use this library, you will need to define and register callback func‐
@@ -123,8 +128,8 @@ ERRORS
      archive_errno() and archive_error_string() functions.
 
 SEE ALSO
-     tar(1), libarchive(3), archive_write(3), archive_write_filter(3),
-     archive_write_format(3), archive_write_new(3),
+     tar(1), libarchive(3), archive_write(3), archive_write_blocksize(3),
+     archive_write_filter(3), archive_write_format(3), archive_write_new(3),
      archive_write_set_options(3), cpio(5), mtree(5), tar(5)
 
 BSD			       February 2, 2012 			   BSD

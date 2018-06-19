@@ -13,7 +13,7 @@ DESCRIPTION
      about a single filesystem object.	Leading whitespace is always ignored.
 
      When encoding file or pathnames, any backslash character or character
-     outside of the 95 printable ASCII characters must be encoded as a a back‐
+     outside of the 95 printable ASCII characters must be encoded as a back‐
      slash followed by three octal digits.  When reading mtree files, any
      appearance of a backslash followed by three octal digits should be con‐
      verted into the corresponding character.

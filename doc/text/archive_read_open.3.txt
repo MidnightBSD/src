@@ -3,7 +3,7 @@ ARCHIVE_READ_OPEN(3)	 BSD Library Functions Manual	  ARCHIVE_READ_OPEN(3)
 NAME
      archive_read_open, archive_read_open2, archive_read_open_fd,
      archive_read_open_FILE, archive_read_open_filename,
-     archive_read_open_memory, — functions for reading streaming archives
+     archive_read_open_memory — functions for reading streaming archives
 
 LIBRARY
      Streaming Archive Library (libarchive, -larchive)
@@ -32,7 +32,8 @@ SYNOPSIS
 	 size_t block_size);
 
      int
-     archive_read_open_memory(struct archive *, void *buff, size_t size);
+     archive_read_open_memory(struct archive *, const void *buff,
+	 size_t size);
 
 DESCRIPTION
      archive_read_open()

@@ -5,7 +5,7 @@
 /Makefile.am -text
 /Makefile.in -text
 /NEWS -text
-/README -text
+/README.md -text
 /aclocal.m4 -text
 build/autoconf/ax_append_compile_flags.m4 -text
 build/autoconf/ax_append_flag.m4 -text
@@ -34,10 +34,8 @@ build/cmake/CheckFileOffsetBits.cmake -text
 build/cmake/CheckFuncs.cmake -text
 build/cmake/CheckFuncs_stub.c.in -text
 build/cmake/CheckHeaderDirent.cmake -text
-build/cmake/CheckStructMember.cmake -text
 build/cmake/CheckTypeExists.cmake -text
 build/cmake/CreatePkgConfigFile.cmake -text
-build/cmake/FindLZMA.cmake -text
 build/cmake/FindLibGCC.cmake -text
 build/cmake/FindNettle.cmake -text
 build/cmake/FindPCREPOSIX.cmake -text
@@ -53,7 +51,6 @@ cat/bsdcat_platform.h -text
 cat/cmdline.c -text
 cat/test/CMakeLists.txt -text
 cat/test/list.h -text
-cat/test/main.c -text
 cat/test/test.h -text
 cat/test/test_0.c -text
 cat/test/test_empty.gz.uu -text
@@ -83,6 +80,13 @@ cat/test/test_version.c -text
 /configure -text
 /configure.ac -text
 contrib/README -text
+contrib/android/Android.mk -text
+contrib/android/config/android.h -text
+contrib/android/config/linux_host.h -text
+contrib/android/config/windows_host.h -text
+contrib/android/include/Bcrypt.h -text
+contrib/android/include/Windows.h -text
+contrib/android/include/android_lf.h -text
 contrib/libarchive.1aix53.spec -text
 contrib/libarchive.spec -text
 contrib/libarchive_autodetect-st_lib_archive.m4 -text
@@ -105,7 +109,6 @@ cpio/cpio_windows.c -text
 cpio/cpio_windows.h -text
 cpio/test/CMakeLists.txt -text
 cpio/test/list.h -text
-cpio/test/main.c -text
 cpio/test/test.h -text
 cpio/test/test_0.c -text
 cpio/test/test_basic.c -text
@@ -416,6 +419,10 @@ libarchive/archive_cryptor.c -text
 libarchive/archive_cryptor_private.h -text
 libarchive/archive_digest.c -text
 libarchive/archive_digest_private.h -text
+libarchive/archive_disk_acl_darwin.c -text
+libarchive/archive_disk_acl_freebsd.c -text
+libarchive/archive_disk_acl_linux.c -text
+libarchive/archive_disk_acl_sunos.c -text
 libarchive/archive_endian.h -text
 libarchive/archive_entry.3 -text
 libarchive/archive_entry.c -text
@@ -440,6 +447,8 @@ libarchive/archive_getdate.h -text
 libarchive/archive_hmac.c -text
 libarchive/archive_hmac_private.h -text
 libarchive/archive_match.c -text
+libarchive/archive_openssl_evp_private.h -text
+libarchive/archive_openssl_hmac_private.h -text
 libarchive/archive_options.c -text
 libarchive/archive_options_private.h -text
 libarchive/archive_pack_dev.c -text
@@ -447,6 +456,8 @@ libarchive/archive_pack_dev.h -text
 libarchive/archive_pathmatch.c -text
 libarchive/archive_pathmatch.h -text
 libarchive/archive_platform.h -text
+libarchive/archive_platform_acl.h -text
+libarchive/archive_platform_xattr.h -text
 libarchive/archive_ppmd7.c -text
 libarchive/archive_ppmd7_private.h -text
 libarchive/archive_ppmd_private.h -text
@@ -520,6 +531,7 @@ libarchive/archive_string_composition.h -text
 libarchive/archive_string_sprintf.c -text
 libarchive/archive_util.3 -text
 libarchive/archive_util.c -text
+libarchive/archive_version_details.c -text
 libarchive/archive_virtual.c -text
 libarchive/archive_windows.c -text
 libarchive/archive_windows.h -text
@@ -542,7 +554,6 @@ libarchive/archive_write_add_filter_xz.c -text
 libarchive/archive_write_blocksize.3 -text
 libarchive/archive_write_data.3 -text
 libarchive/archive_write_disk.3 -text
-libarchive/archive_write_disk_acl.c -text
 libarchive/archive_write_disk_posix.c -text
 libarchive/archive_write_disk_private.h -text
 libarchive/archive_write_disk_set_standard_lookup.c -text
@@ -596,15 +607,16 @@ libarchive/tar.5 -text
 libarchive/test/CMakeLists.txt -text
 libarchive/test/README -text
 libarchive/test/list.h -text
-libarchive/test/main.c -text
 libarchive/test/read_open_memory.c -text
 libarchive/test/test.h -text
-libarchive/test/test_acl_freebsd_nfs4.c -text
-libarchive/test/test_acl_freebsd_posix1e.c -text
 libarchive/test/test_acl_nfs4.c -text
 libarchive/test/test_acl_pax.c -text
-libarchive/test/test_acl_pax.tar.uu -text
+libarchive/test/test_acl_pax_nfs4.tar.uu -text
+libarchive/test/test_acl_pax_posix1e.tar.uu -text
+libarchive/test/test_acl_platform_nfs4.c -text
+libarchive/test/test_acl_platform_posix1e.c -text
 libarchive/test/test_acl_posix1e.c -text
+libarchive/test/test_acl_text.c -text
 libarchive/test/test_archive_api_feature.c -text
 libarchive/test/test_archive_clear_error.c -text
 libarchive/test/test_archive_cmdline.c -text
@@ -647,6 +659,7 @@ libarchive/test/test_compat_cpio.c -text
 libarchive/test/test_compat_cpio_1.cpio.uu -text
 libarchive/test/test_compat_gtar.c -text
 libarchive/test/test_compat_gtar_1.tar.uu -text
+libarchive/test/test_compat_gtar_2.tar.uu -text
 libarchive/test/test_compat_gzip.c -text
 libarchive/test/test_compat_gzip_1.tgz.uu -text
 libarchive/test/test_compat_gzip_2.tgz.uu -text
@@ -679,11 +692,18 @@ libarchive/test/test_compat_mac-2.tar.Z.uu -text
 libarchive/test/test_compat_mac.c -text
 libarchive/test/test_compat_pax_libarchive_2x.c -text
 libarchive/test/test_compat_pax_libarchive_2x.tar.Z.uu -text
+libarchive/test/test_compat_perl_archive_tar.c -text
+libarchive/test/test_compat_perl_archive_tar.tar.uu -text
+libarchive/test/test_compat_plexus_archiver_tar.c -text
+libarchive/test/test_compat_plexus_archiver_tar.tar.uu -text
 libarchive/test/test_compat_solaris_pax_sparse.c -text
 libarchive/test/test_compat_solaris_pax_sparse_1.pax.Z.uu -text
 libarchive/test/test_compat_solaris_pax_sparse_2.pax.Z.uu -text
 libarchive/test/test_compat_solaris_tar_acl.c -text
 libarchive/test/test_compat_solaris_tar_acl.tar.uu -text
+libarchive/test/test_compat_star_acl.c -text
+libarchive/test/test_compat_star_acl_nfs4.tar.uu -text
+libarchive/test/test_compat_star_acl_posix1e.tar.uu -text
 libarchive/test/test_compat_tar_hardlink.c -text
 libarchive/test/test_compat_tar_hardlink_1.tar.uu -text
 libarchive/test/test_compat_uudecode.c -text
@@ -880,6 +900,8 @@ libarchive/test/test_read_format_lha_lh7.lzh.uu -text
 libarchive/test/test_read_format_lha_withjunk.lzh.uu -text
 libarchive/test/test_read_format_mtree.c -text
 libarchive/test/test_read_format_mtree.mtree.uu -text
+libarchive/test/test_read_format_mtree_crash747.c -text
+libarchive/test/test_read_format_mtree_crash747.mtree.bz2.uu -text
 libarchive/test/test_read_format_mtree_nomagic.mtree.uu -text
 libarchive/test/test_read_format_mtree_nomagic2.mtree.uu -text
 libarchive/test/test_read_format_mtree_nomagic3.mtree.uu -text
@@ -908,6 +930,7 @@ libarchive/test/test_read_format_rar_sfx.exe.uu -text
 libarchive/test/test_read_format_rar_subblock.rar.uu -text
 libarchive/test/test_read_format_rar_unicode.rar.uu -text
 libarchive/test/test_read_format_rar_windows.rar.uu -text
+libarchive/test/test_read_format_raw.bufr.uu -text
 libarchive/test/test_read_format_raw.c -text
 libarchive/test/test_read_format_raw.data.Z.uu -text
 libarchive/test/test_read_format_raw.data.uu -text
@@ -950,6 +973,10 @@ libarchive/test/test_read_format_zip_filename_koi8r.zip.uu -text
 libarchive/test/test_read_format_zip_filename_utf8_jp.zip.uu -text
 libarchive/test/test_read_format_zip_filename_utf8_ru.zip.uu -text
 libarchive/test/test_read_format_zip_filename_utf8_ru2.zip.uu -text
+libarchive/test/test_read_format_zip_high_compression.c -text
+libarchive/test/test_read_format_zip_high_compression.zip.uu -text
+libarchive/test/test_read_format_zip_jar.c -text
+libarchive/test/test_read_format_zip_jar.jar.uu -text
 libarchive/test/test_read_format_zip_length_at_end.zip.uu -text
 libarchive/test/test_read_format_zip_mac_metadata.c -text
 libarchive/test/test_read_format_zip_mac_metadata.zip.uu -text
@@ -977,6 +1004,8 @@ libarchive/test/test_read_format_zip_winzip_aes256.zip.uu -text
 libarchive/test/test_read_format_zip_winzip_aes256_large.zip.uu -text
 libarchive/test/test_read_format_zip_winzip_aes256_stored.zip.uu -text
 libarchive/test/test_read_format_zip_winzip_aes_large.c -text
+libarchive/test/test_read_format_zip_with_invalid_traditional_eocd.c -text
+libarchive/test/test_read_format_zip_with_invalid_traditional_eocd.zip.uu -text
 libarchive/test/test_read_format_zip_zip64.c -text
 libarchive/test/test_read_format_zip_zip64a.zip.uu -text
 libarchive/test/test_read_format_zip_zip64b.zip.uu -text
@@ -986,6 +1015,8 @@ libarchive/test/test_read_large_splitted_rar_ab.uu -text
 libarchive/test/test_read_large_splitted_rar_ac.uu -text
 libarchive/test/test_read_large_splitted_rar_ad.uu -text
 libarchive/test/test_read_large_splitted_rar_ae.uu -text
+libarchive/test/test_read_pax_schily_xattr.c -text
+libarchive/test/test_read_pax_schily_xattr.tar.uu -text
 libarchive/test/test_read_pax_truncated.c -text
 libarchive/test/test_read_position.c -text
 libarchive/test/test_read_set_format.c -text
@@ -1020,6 +1051,9 @@ libarchive/test/test_write_disk_no_hfs_compression.c -text
 libarchive/test/test_write_disk_no_hfs_compression.tgz.uu -text
 libarchive/test/test_write_disk_perms.c -text
 libarchive/test/test_write_disk_secure.c -text
+libarchive/test/test_write_disk_secure744.c -text
+libarchive/test/test_write_disk_secure745.c -text
+libarchive/test/test_write_disk_secure746.c -text
 libarchive/test/test_write_disk_sparse.c -text
 libarchive/test/test_write_disk_symlink.c -text
 libarchive/test/test_write_disk_times.c -text
@@ -1081,6 +1115,7 @@ libarchive/test/test_write_format_zip_large.c -text
 libarchive/test/test_write_format_zip_zip64.c -text
 libarchive/test/test_write_open_memory.c -text
 libarchive/test/test_write_read_format_zip.c -text
+libarchive/test/test_xattr_platform.c -text
 libarchive/test/test_zip_filename_encoding.c -text
 libarchive/xxhash.c -text
 libarchive_fe/err.c -text
@@ -1104,7 +1139,6 @@ tar/read.c -text
 tar/subst.c -text
 tar/test/CMakeLists.txt -text
 tar/test/list.h -text
-tar/test/main.c -text
 tar/test/test.h -text
 tar/test/test_0.c -text
 tar/test/test_basic.c -text
@@ -1143,9 +1177,11 @@ tar/test/test_option_T_upper.c -text
 tar/test/test_option_U_upper.c -text
 tar/test/test_option_X_upper.c -text
 tar/test/test_option_a.c -text
+tar/test/test_option_acls.c -text
 tar/test/test_option_b.c -text
 tar/test/test_option_b64encode.c -text
 tar/test/test_option_exclude.c -text
+tar/test/test_option_fflags.c -text
 tar/test/test_option_gid_gname.c -text
 tar/test/test_option_grzip.c -text
 tar/test/test_option_j.c -text
@@ -1168,6 +1204,7 @@ tar/test/test_option_s.c -text
 tar/test/test_option_s.tar.Z.uu -text
 tar/test/test_option_uid_uname.c -text
 tar/test/test_option_uuencode.c -text
+tar/test/test_option_xattrs.c -text
 tar/test/test_option_xz.c -text
 tar/test/test_option_z.c -text
 tar/test/test_patterns.c -text
@@ -1183,5 +1220,7 @@ tar/test/test_version.c -text
 tar/test/test_windows.c -text
 tar/util.c -text
 tar/write.c -text
+test_utils/test_common.h -text
+test_utils/test_main.c -text
 test_utils/test_utils.c -text
 test_utils/test_utils.h -text

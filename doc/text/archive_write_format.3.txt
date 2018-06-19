@@ -98,7 +98,6 @@ DESCRIPTION
 
      The library can write a variety of common archive formats.
 
-
      archive_write_set_format()
 	     Sets the format based on the format code (see archive.h for the
 	     full list of format codes).  In particular, this can be used in
