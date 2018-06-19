@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)quotacheck.c	8.3 (Berkeley) 1/29/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/quotacheck/quotacheck.c 241013 2012-09-27 23:31:06Z mdf $");
 
 /*
  * Fix up / report on disk quotas & usage
@@ -63,6 +64,7 @@ __MBSDID("$MidnightBSD$");
 #include <grp.h>
 #include <libutil.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -383,9 +385,9 @@ chkquota(char *specname, struct quotafile *qfu, struct quotafile *qfg)
 				if (vflag) {
 					if (aflag)
 						(void)printf("%s: ", mntpt);
-			(void)printf("out of range UID/GID (%u/%u) ino=%u\n",
+			(void)printf("out of range UID/GID (%u/%u) ino=%ju\n",
 					    DIP(dp, di_uid), DIP(dp,di_gid),
-					    ino);
+					    (uintmax_t)ino);
 				}
 				continue;
 			}
@@ -601,7 +603,8 @@ getnextinode(ino_t inumber)
 	static caddr_t nextinop;
 
 	if (inumber != nextino++ || inumber > lastvalidinum)
-		errx(1, "bad inode number %d to nextinode", inumber);
+		errx(1, "bad inode number %ju to nextinode",
+		    (uintmax_t)inumber);
 	if (inumber >= lastinum) {
 		readcnt++;
 		dblk = fsbtodb(&sblock, ino_to_fsba(&sblock, lastinum));
@@ -635,7 +638,7 @@ setinodebuf(ino_t inum)
 {
 
 	if (inum % sblock.fs_ipg != 0)
-		errx(1, "bad inode number %d to setinodebuf", inum);
+		errx(1, "bad inode number %ju to setinodebuf", (uintmax_t)inum);
 	lastvalidinum = inum + sblock.fs_ipg - 1;
 	nextino = inum;
 	lastinum = inum;
