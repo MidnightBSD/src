@@ -1,5 +1,6 @@
-#	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 6/5/93
+# $FreeBSD: stable/10/sbin/ping/Makefile 161526 2006-08-22 08:03:01Z ru $
 
 PROG=	ping
 MAN=	ping.8

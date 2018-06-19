@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)ping.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/ping/ping.c 241852 2012-10-22 03:31:22Z eadler $");
 
 /*
  *			P I N G . C
@@ -255,7 +256,8 @@ main(int argc, char *const *argv)
 	s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	sockerrno = errno;
 
-	setuid(getuid());
+	if (setuid(getuid()) != 0)
+		err(EX_NOPERM, "setuid() failed");
 	uid = getuid();
 
 	alarmtimeout = df = preload = tos = 0;
@@ -832,7 +834,7 @@ main(int argc, char *const *argv)
 			timeout.tv_sec++;
 		}
 		if (timeout.tv_sec < 0)
-			timeout.tv_sec = timeout.tv_usec = 0;
+			timerclear(&timeout);
 		n = select(s + 1, &rfds, NULL, NULL, &timeout);
 		if (n < 0)
 			continue;	/* Must be EINTR. */
