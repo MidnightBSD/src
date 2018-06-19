@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)tape.c	8.9 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/restore/tape.c 299954 2016-05-16 16:29:56Z pfg $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -104,7 +105,7 @@ static int	 checksum(int *);
 static void	 findinode(struct s_spcl *);
 static void	 findtapeblksize(void);
 static char	*setupextattr(int);
-static void	 xtrattr(char *, long);
+static void	 xtrattr(char *, size_t);
 static void	 set_extattr_link(char *, void *, int);
 static void	 set_extattr_fd(int, char *, void *, int);
 static int	 gethead(struct s_spcl *);
@@ -114,12 +115,12 @@ static u_long	 swabl(u_long);
 static u_char	*swablong(u_char *, int);
 static u_char	*swabshort(u_char *, int);
 static void	 terminateinput(void);
-static void	 xtrfile(char *, long);
-static void	 xtrlnkfile(char *, long);
-static void	 xtrlnkskip(char *, long);
-static void	 xtrmap(char *, long);
-static void	 xtrmapskip(char *, long);
-static void	 xtrskip(char *, long);
+static void	 xtrfile(char *, size_t);
+static void	 xtrlnkfile(char *, size_t);
+static void	 xtrlnkskip(char *, size_t);
+static void	 xtrmap(char *, size_t);
+static void	 xtrmapskip(char *, size_t);
+static void	 xtrskip(char *, size_t);
 
 /*
  * Set up an input source
@@ -260,9 +261,11 @@ setup(void)
 		fssize = TP_BSIZE;
 	if (stbuf.st_blksize >= TP_BSIZE && stbuf.st_blksize <= MAXBSIZE)
 		fssize = stbuf.st_blksize;
-	if (((fssize - 1) & fssize) != 0) {
-		fprintf(stderr, "bad block size %ld\n", fssize);
-		done(1);
+	if (((TP_BSIZE - 1) & stbuf.st_blksize) != 0) {
+		fprintf(stderr, "Warning: filesystem with non-multiple-of-%d "
+		    "blocksize (%d);\n", TP_BSIZE, stbuf.st_blksize);
+		fssize = roundup(fssize, TP_BSIZE);
+		fprintf(stderr, "\twriting using blocksize %ld\n", fssize);
 	}
 	if (spcl.c_volume != 1) {
 		fprintf(stderr, "Tape is not volume 1 of the dump\n");
@@ -278,7 +281,7 @@ setup(void)
 		done(1);
 	}
 	maxino = (spcl.c_count * TP_BSIZE * NBBY) + 1;
-	dprintf(stdout, "maxino = %d\n", maxino);
+	dprintf(stdout, "maxino = %ju\n", (uintmax_t)maxino);
 	map = calloc((unsigned)1, (unsigned)howmany(maxino, NBBY));
 	if (map == NULL)
 		panic("no memory for active inode map\n");
@@ -562,7 +565,7 @@ printdumpinfo(void)
 int
 extractfile(char *name)
 {
-	int flags;
+	u_int flags;
 	uid_t uid;
 	gid_t gid;
 	mode_t mode;
@@ -929,13 +932,13 @@ skipfile(void)
  * to the skip function.
  */
 void
-getfile(void (*datafill)(char *, long), void (*attrfill)(char *, long),
-	void (*skip)(char *, long))
+getfile(void (*datafill)(char *, size_t), void (*attrfill)(char *, size_t),
+	void (*skip)(char *, size_t))
 {
 	int i;
-	off_t size;
+	volatile off_t size;
 	int curblk, attrsize;
-	void (*fillit)(char *, long);
+	void (*fillit)(char *, size_t);
 	static char clearedbuf[MAXBSIZE];
 	char buf[MAXBSIZE / TP_BSIZE][TP_BSIZE];
 	char junk[TP_BSIZE];
@@ -1054,8 +1057,9 @@ setupextattr(int extsize)
 	}
 	extbufsize = 0;
 	extbuf = NULL;
-	fprintf(stderr, "Cannot extract %d bytes %s for inode %d, name %s\n",
-	    extsize, "of extended attributes", curfile.ino, curfile.name);
+	fprintf(stderr, "Cannot extract %d bytes %s for inode %ju, name %s\n",
+	    extsize, "of extended attributes", (uintmax_t)curfile.ino,
+	    curfile.name);
 	return (NULL);
 }
 
@@ -1063,7 +1067,7 @@ setupextattr(int extsize)
  * Extract the next block of extended attributes.
  */
 static void
-xtrattr(char *buf, long size)
+xtrattr(char *buf, size_t size)
 {
 
 	if (extloc + size > extbufsize)
@@ -1076,15 +1080,15 @@ xtrattr(char *buf, long size)
  * Write out the next block of a file.
  */
 static void
-xtrfile(char *buf, long	size)
+xtrfile(char *buf, size_t size)
 {
 
 	if (Nflag)
 		return;
 	if (write(ofile, buf, (int) size) == -1) {
 		fprintf(stderr,
-		    "write error extracting inode %d, name %s\nwrite: %s\n",
-			curfile.ino, curfile.name, strerror(errno));
+		    "write error extracting inode %ju, name %s\nwrite: %s\n",
+		    (uintmax_t)curfile.ino, curfile.name, strerror(errno));
 	}
 }
 
@@ -1093,13 +1097,13 @@ xtrfile(char *buf, long	size)
  */
 /* ARGSUSED */
 static void
-xtrskip(char *buf, long size)
+xtrskip(char *buf, size_t size)
 {
 
 	if (lseek(ofile, size, SEEK_CUR) == -1) {
 		fprintf(stderr,
-		    "seek error extracting inode %d, name %s\nlseek: %s\n",
-			curfile.ino, curfile.name, strerror(errno));
+		    "seek error extracting inode %ju, name %s\nlseek: %s\n",
+		    (uintmax_t)curfile.ino, curfile.name, strerror(errno));
 		done(1);
 	}
 }
@@ -1108,7 +1112,7 @@ xtrskip(char *buf, long size)
  * Collect the next block of a symbolic link.
  */
 static void
-xtrlnkfile(char *buf, long size)
+xtrlnkfile(char *buf, size_t size)
 {
 
 	pathlen += size;
@@ -1125,7 +1129,7 @@ xtrlnkfile(char *buf, long size)
  */
 /* ARGSUSED */
 static void
-xtrlnkskip(char *buf, long size)
+xtrlnkskip(char *buf, size_t size)
 {
 
 	fprintf(stderr, "unallocated block in symbolic link %s\n",
@@ -1137,7 +1141,7 @@ xtrlnkskip(char *buf, long size)
  * Collect the next block of a bit map.
  */
 static void
-xtrmap(char *buf, long size)
+xtrmap(char *buf, size_t size)
 {
 
 	memmove(map, buf, size);
@@ -1149,7 +1153,7 @@ xtrmap(char *buf, long size)
  */
 /* ARGSUSED */
 static void
-xtrmapskip(char *buf, long size)
+xtrmapskip(char *buf, size_t size)
 {
 
 	panic("hole in map\n");
@@ -1161,7 +1165,7 @@ xtrmapskip(char *buf, long size)
  */
 /* ARGSUSED */
 void
-xtrnull(char *buf, long size)
+xtrnull(char *buf, size_t size)
 {
 
 	return;
@@ -1247,8 +1251,8 @@ getmore:
 			fprintf(stderr, "restoring %s\n", curfile.name);
 			break;
 		case SKIP:
-			fprintf(stderr, "skipping over inode %d\n",
-				curfile.ino);
+			fprintf(stderr, "skipping over inode %ju\n",
+			    (uintmax_t)curfile.ino);
 			break;
 		}
 		if (!yflag && !reply("continue"))
@@ -1481,10 +1485,11 @@ accthdr(struct s_spcl *header)
 		fprintf(stderr, "Used inodes map header");
 		break;
 	case TS_INODE:
-		fprintf(stderr, "File header, ino %d", previno);
+		fprintf(stderr, "File header, ino %ju", (uintmax_t)previno);
 		break;
 	case TS_ADDR:
-		fprintf(stderr, "File continuation header, ino %d", previno);
+		fprintf(stderr, "File continuation header, ino %ju",
+		    (uintmax_t)previno);
 		break;
 	case TS_END:
 		fprintf(stderr, "End of tape header");
@@ -1635,8 +1640,8 @@ checksum(int *buf)
 	}
 
 	if (i != CHECKSUM) {
-		fprintf(stderr, "Checksum error %o, inode %d file %s\n", i,
-			curfile.ino, curfile.name);
+		fprintf(stderr, "Checksum error %o, inode %ju file %s\n", i,
+		    (uintmax_t)curfile.ino, curfile.name);
 		return(FAIL);
 	}
 	return(GOOD);

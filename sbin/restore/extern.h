@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 1/7/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/restore/extern.h 299954 2016-05-16 16:29:56Z pfg $
  */
 
 struct entry	*addentry(char *, ino_t, int);
@@ -54,8 +55,8 @@ void		 freeentry(struct entry *);
 void		 freename(char *);
 int	 	 genliteraldir(char *, ino_t);
 char		*gentempname(struct entry *);
-void		 getfile(void (*)(char *, long), void (*)(char *, long),
-			void (*)(char *, long));
+void		 getfile(void (*)(char *, size_t), void (*)(char *, size_t),
+			void (*)(char *, size_t));
 void		 getvol(long);
 void		 initsymtable(char *);
 int	 	 inodetype(ino_t);
@@ -98,7 +99,7 @@ void		 swabst(u_char *, u_char *);
 void	 	 treescan(char *, ino_t, long (*)(char *, ino_t, int));
 ino_t		 upperbnd(ino_t);
 long		 verifyfile(char *, ino_t, int);
-void		 xtrnull(char *, long);
+void		 xtrnull(char *, size_t);
 
 /* From ../dump/dumprmt.c */
 void		rmtclose(void);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,11 +35,12 @@ static char sccsid[] = "@(#)restore.c	8.3 (Berkeley) 9/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/restore/restore.c 241013 2012-09-27 23:31:06Z mdf $");
 
 #include <sys/types.h>
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -61,7 +63,7 @@ listfile(char *name, ino_t ino, int type)
 	if (TSTINO(ino, dumpmap) == 0)
 		return (descend);
 	vprintf(stdout, "%s", type == LEAF ? "leaf" : "dir ");
-	fprintf(stdout, "%10d\t%s\n", ino, name);
+	fprintf(stdout, "%10ju\t%s\n", (uintmax_t)ino, name);
 	return (descend);
 }
 
@@ -83,7 +85,7 @@ addfile(char *name, ino_t ino, int type)
 	if (ino == WINO && command == 'i' && !vflag)
 		return (descend);
 	if (!mflag) {
-		(void) sprintf(buf, "./%u", ino);
+		(void) sprintf(buf, "./%ju", (uintmax_t)ino);
 		name = buf;
 		if (type == NODE) {
 			(void) genliteraldir(name, ino);
@@ -457,8 +459,8 @@ nodeupdates(char *name, ino_t ino, int type)
 	 * next incremental tape.
 	 */
 	case 0:
-		fprintf(stderr, "%s: (inode %d) not found on tape\n",
-			name, ino);
+		fprintf(stderr, "%s: (inode %ju) not found on tape\n",
+		    name, (uintmax_t)ino);
 		break;
 
 	/*
@@ -612,7 +614,7 @@ createleaves(char *symtabfile)
 		while (first < curfile.ino) {
 			ep = lookupino(first);
 			if (ep == NULL)
-				panic("%d: bad first\n", first);
+				panic("%ju: bad first\n", (uintmax_t)first);
 			fprintf(stderr, "%s: not found on tape\n", myname(ep));
 			ep->e_flags &= ~(NEW|EXTRACT);
 			first = lowerbnd(first);
@@ -625,8 +627,8 @@ createleaves(char *symtabfile)
 		 * on the next incremental tape.
 		 */
 		if (first != curfile.ino) {
-			fprintf(stderr, "expected next file %d, got %d\n",
-				first, curfile.ino);
+			fprintf(stderr, "expected next file %ju, got %ju\n",
+			    (uintmax_t)first, (uintmax_t)curfile.ino);
 			skipfile();
 			goto next;
 		}
@@ -852,7 +854,7 @@ verifyfile(char *name, ino_t ino, int type)
 		if (np == ep)
 			break;
 	if (np == NULL)
-		panic("missing inumber %d\n", ino);
+		panic("missing inumber %ju\n", (uintmax_t)ino);
 	if (ep->e_type == LEAF && type != LEAF)
 		badentry(ep, "type should be LEAF");
 	return (descend);

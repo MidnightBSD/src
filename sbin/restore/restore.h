@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)restore.h	8.3 (Berkeley) 9/13/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/restore/restore.h 204111 2010-02-20 10:19:19Z uqs $
  */
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)interactive.c	8.5 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/restore/interactive.c 241013 2012-09-27 23:31:06Z mdf $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -47,6 +48,7 @@ __MBSDID("$MidnightBSD$");
 #include <glob.h>
 #include <limits.h>
 #include <setjmp.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -675,7 +677,8 @@ formatf(struct afile *list, int nentry)
 		for (j = 0; j < columns; j++) {
 			fp = &list[j * lines + i];
 			if (vflag) {
-				fprintf(stderr, "%*d ", precision, fp->fnum);
+				fprintf(stderr, "%*ju ",
+				    precision, (uintmax_t)fp->fnum);
 				fp->len += precision + 1;
 			}
 			if (haveprefix) {

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/restore/main.c 299148 2016-05-06 01:37:06Z pfg $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -366,7 +367,8 @@ obsolete(int *argcp, char **argvp[])
 	if (flags) {
 		*p = '\0';
 		*nargv++ = flagsp;
-	}
+	} else
+		free(flagsp);
 
 	/* Copy remaining arguments. */
 	while ((*nargv++ = *argv++));

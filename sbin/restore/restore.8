@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1985, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)restore.8	8.4 (Berkeley) 5/1/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/restore/restore.8 235837 2012-05-23 15:06:13Z joel $
 .\"
 .Dd October 12, 2006
 .Dt RESTORE 8
@@ -68,16 +69,6 @@
 .Op Fl f Ar file | Fl P Ar pipecommand
 .Op Fl s Ar fileno
 .Op Ar
-.Pp
-.Nm rrestore
-is an alternate name for
-.Nm .
-.Pp
-.in \" XXX
-(The
-.Bx 4.3
-option syntax is implemented for backward compatibility, but
-is not documented here.)
 .Sh DESCRIPTION
 The
 .Nm
@@ -103,6 +94,14 @@ Unless the
 flag is specified (see below),
 the appearance of a directory name refers to
 the files and (recursively) subdirectories of that directory.
+.Pp
+.Nm
+may also be invoked as
+.Nm rrestore .
+The
+.Bx 4.3
+option syntax is implemented for backward compatibility, but
+is not documented here.
 .Pp
 Exactly one of the following flags is required:
 .Bl -tag -width Ds

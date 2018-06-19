@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +38,7 @@
 static char sccsid[] = "@(#)dirs.c	8.7 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/restore/dirs.c 299954 2016-05-16 16:29:56Z pfg $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -85,7 +86,7 @@ struct modeinfo {
 	mode_t mode;
 	uid_t uid;
 	gid_t gid;
-	int flags;
+	u_int flags;
 	int extsize;
 };
 
@@ -115,8 +116,8 @@ static struct inotab	*allocinotab(struct context *, long);
 static void		 flushent(void);
 static struct inotab	*inotablookup(ino_t);
 static RST_DIR		*opendirfile(const char *);
-static void		 putdir(char *, long);
-static void		 putdirattrs(char *, long);
+static void		 putdir(char *, size_t);
+static void		 putdirattrs(char *, size_t);
 static void		 putent(struct direct *);
 static void		 rst_seekdir(RST_DIR *, long, long);
 static long		 rst_telldir(RST_DIR *);
@@ -323,10 +324,10 @@ searchdir(ino_t	inum, char *name)
  * Put the directory entries in the directory file
  */
 static void
-putdir(char *buf, long size)
+putdir(char *buf, size_t size)
 {
 	struct direct *dp;
-	long loc, i;
+	size_t loc, i;
 
 	for (loc = 0; loc < size; ) {
 		dp = (struct direct *)(buf + loc);
@@ -356,12 +357,12 @@ putdir(char *buf, long size)
 				   "reclen not multiple of 4 ");
 			if (dp->d_reclen < DIRSIZ(0, dp))
 				vprintf(stdout,
-				   "reclen less than DIRSIZ (%d < %zu) ",
+				   "reclen less than DIRSIZ (%u < %zu) ",
 				   dp->d_reclen, DIRSIZ(0, dp));
 #if NAME_MAX < 255
 			if (dp->d_namlen > NAME_MAX)
 				vprintf(stdout,
-				   "reclen name too big (%d > %d) ",
+				   "reclen name too big (%u > %u) ",
 				   dp->d_namlen, NAME_MAX);
 #endif
 			vprintf(stdout, "\n");
@@ -418,7 +419,7 @@ flushent(void)
  * Save extended attributes for a directory entry to a file.
  */
 static void
-putdirattrs(char *buf, long size)
+putdirattrs(char *buf, size_t size)
 {
 
 	if (mf != NULL && fwrite(buf, size, 1, mf) != 1)
@@ -637,7 +638,8 @@ setdirmodes(int flags)
 				continue;
 		}
 		if (ep == NULL) {
-			panic("cannot find directory inode %d\n", node.ino);
+			panic("cannot find directory inode %ju\n",
+			    (uintmax_t)node.ino);
 			continue;
 		}
 		cp = myname(ep);
@@ -678,7 +680,8 @@ genliteraldir(char *name, ino_t ino)
 
 	itp = inotablookup(ino);
 	if (itp == NULL)
-		panic("Cannot find directory inode %d named %s\n", ino, name);
+		panic("Cannot find directory inode %ju named %s\n",
+		    (uintmax_t)ino, name);
 	if ((ofile = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0666)) < 0) {
 		fprintf(stderr, "%s: ", name);
 		(void) fflush(stderr);
@@ -691,15 +694,15 @@ genliteraldir(char *name, ino_t ino)
 		size = i < BUFSIZ ? i : BUFSIZ;
 		if (read(dp, buf, (int) size) == -1) {
 			fprintf(stderr,
-				"write error extracting inode %d, name %s\n",
-				curfile.ino, curfile.name);
+			    "write error extracting inode %ju, name %s\n",
+			    (uintmax_t)curfile.ino, curfile.name);
 			fprintf(stderr, "read: %s\n", strerror(errno));
 			done(1);
 		}
 		if (!Nflag && write(ofile, buf, (int) size) == -1) {
 			fprintf(stderr,
-				"write error extracting inode %d, name %s\n",
-				curfile.ino, curfile.name);
+			    "write error extracting inode %ju, name %s\n",
+			    (uintmax_t)curfile.ino, curfile.name);
 			fprintf(stderr, "write: %s\n", strerror(errno));
 			done(1);
 		}

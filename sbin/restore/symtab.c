@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 static char sccsid[] = "@(#)symtab.c	8.3 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/restore/symtab.c 299148 2016-05-06 01:37:06Z pfg $";
 #endif /* not lint */
 
 /*
@@ -52,6 +53,7 @@ static const char rcsid[] =
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,7 +102,7 @@ addino(ino_t inum, struct entry *np)
 	struct entry **epp;
 
 	if (inum < WINO || inum >= maxino)
-		panic("addino: out of range %d\n", inum);
+		panic("addino: out of range %ju\n", (uintmax_t)inum);
 	epp = &entry[inum % entrytblsize];
 	np->e_ino = inum;
 	np->e_next = *epp;
@@ -121,7 +123,7 @@ deleteino(ino_t inum)
 	struct entry **prev;
 
 	if (inum < WINO || inum >= maxino)
-		panic("deleteino: out of range %d\n", inum);
+		panic("deleteino: out of range %ju\n", (uintmax_t)inum);
 	prev = &entry[inum % entrytblsize];
 	for (next = *prev; next != NULL; next = next->e_next) {
 		if (next->e_ino == inum) {
@@ -131,7 +133,7 @@ deleteino(ino_t inum)
 		}
 		prev = &next->e_next;
 	}
-	panic("deleteino: %d not found\n", inum);
+	panic("deleteino: %ju not found\n", (uintmax_t)inum);
 }
 
 /*
@@ -559,6 +561,7 @@ initsymtable(char *filename)
 		fprintf(stderr, "read: %s\n", strerror(errno));
 		panic("cannot read symbol table file %s\n", filename);
 	}
+	(void)close(fd);
 	switch (command) {
 	case 'r':
 		/*
