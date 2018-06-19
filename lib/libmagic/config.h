@@ -1,11 +1,13 @@
 /* $MidnightBSD$ */
 /* $FreeBSD: stable/10/lib/libmagic/config.h 328875 2018-02-05 08:50:34Z eadler $ */
 
-/* Get __FreeBSD_version. */
+/* Get __MidnightBSD_version. */
 #include <osreldate.h>
 
-/* Only specific versions of FreeBSD support xlocale */
+/* Only specific versions of MidnightBSD support xlocale */
+#if __MidnightBSD_version >= 10000
 #define FREEBSD_XLOCALE_SUPPORT 1
+#endif
 
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
