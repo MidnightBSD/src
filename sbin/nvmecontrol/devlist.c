@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/sbin/nvmecontrol/devlist.c 265558 2014-05-07 16:40:44Z jimharris $");
+__FBSDID("$FreeBSD: stable/10/sbin/nvmecontrol/devlist.c 265568 2014-05-07 16:53:42Z jimharris $");
 
 #include <sys/param.h>
 
