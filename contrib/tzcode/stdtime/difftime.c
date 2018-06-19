@@ -9,7 +9,7 @@
 static char	elsieid[] __unused = "@(#)difftime.c	8.1";
 #endif /* !defined NOID */
 #endif /* !defined lint */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/tzcode/stdtime/difftime.c 192625 2009-05-23 06:31:50Z edwin $");
 
 /*LINTLIBRARY*/
 
@@ -18,7 +18,9 @@ __MBSDID("$MidnightBSD$");
 #include "un-namespace.h"
 
 double
-difftime(const time_t time1, const time_t time0)
+difftime(time1, time0)
+const time_t	time1;
+const time_t	time0;
 {
 	/*
 	** If (sizeof (double) > sizeof (time_t)) simply convert and subtract
