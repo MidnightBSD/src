@@ -1,5 +1,5 @@
 /* float.c -- float environment functions.
-   $Id: float.c,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: float.c,v 1.8 2004/07/05 22:23:22 karl Exp $
 
    Copyright (C) 2003, 2004 Free Software Foundation, Inc.
 

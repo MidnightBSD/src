@@ -1,5 +1,5 @@
 /* html.c -- html-related utilities.
-   $Id: html.c,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: html.c,v 1.28 2004/12/06 01:13:06 karl Exp $
 
    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Free Software
    Foundation, Inc.

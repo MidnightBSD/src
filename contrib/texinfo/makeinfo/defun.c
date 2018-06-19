@@ -1,5 +1,5 @@
 /* defun.c -- @defun and friends.
-   $Id: defun.c,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: defun.c,v 1.11 2004/04/11 17:56:46 karl Exp $
 
    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004 Free Software
    Foundation, Inc.

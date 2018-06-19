@@ -1,5 +1,5 @@
 /* substring.c -- extract substring.
-   $Id: substring.c,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: substring.c,v 1.2 2004/04/11 17:56:46 karl Exp $
 
    Copyright (C) 1999, 2004 Free Software Foundation, Inc.
 

@@ -1,5 +1,5 @@
 /* variables.h -- Description of user visible variables in Info.
-   $Id: variables.h,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: variables.h,v 1.3 2004/04/11 17:56:46 karl Exp $
 
    This file is part of GNU Info, a program for reading online documentation
    stored in Info format.

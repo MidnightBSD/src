@@ -1,5 +1,5 @@
 /* nodes.h -- How we represent nodes internally.
-   $Id: nodes.h,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: nodes.h,v 1.3 2004/04/11 17:56:46 karl Exp $
 
    Copyright (C) 1993, 1997, 1998, 2002, 2004 Free Software Foundation, Inc.
 

@@ -1,5 +1,5 @@
 /* tilde.h: Externally available variables and function in libtilde.a.
-   $Id: tilde.h,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: tilde.h,v 1.3 2004/04/11 17:56:46 karl Exp $
 
    This file has appeared in prior works by the Free Software Foundation;
    thus it carries copyright dates from 1988 through 1993.

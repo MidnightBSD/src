@@ -1,5 +1,5 @@
 /* xref.c -- cross references for Texinfo.
-   $Id: xref.c,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: xref.c,v 1.4 2004/12/21 17:28:35 karl Exp $
 
    Copyright (C) 2004 Free Software Foundation, Inc.
 

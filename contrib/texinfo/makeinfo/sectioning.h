@@ -1,5 +1,5 @@
 /* sectioning.h -- all related stuff @chapter, @section... @contents
-   $Id: sectioning.h,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
+   $Id: sectioning.h,v 1.5 2004/04/11 17:56:47 karl Exp $
 
    Copyright (C) 1999, 2003 Free Software Foundation, Inc.
 

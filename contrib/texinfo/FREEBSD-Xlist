@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/10/contrib/texinfo/FREEBSD-Xlist 146523 2005-05-23 10:55:29Z ru $
 */ABOUT-NLS
 */INSTALL.generic
 */Makefile.am

@@ -1,5 +1,5 @@
 /* infokey.c -- compile ~/.infokey to ~/.info.
-   $Id: infokey.c,v 1.1.1.2 2006-02-25 02:34:10 laffer1 Exp $
+   $Id: infokey.c,v 1.9 2004/12/14 00:15:36 karl Exp $
 
    Copyright (C) 1999, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
 
