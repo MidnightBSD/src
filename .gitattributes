@@ -52558,6 +52558,9 @@ sbin/newfs/runtest01.sh -text
 sbin/newfs_msdos/Makefile -text
 sbin/newfs_msdos/newfs_msdos.8 -text
 sbin/newfs_msdos/newfs_msdos.c -text
+sbin/newfs_nandfs/Makefile svneol=native#text/plain
+sbin/newfs_nandfs/newfs_nandfs.8 svneol=native#text/plain
+sbin/newfs_nandfs/newfs_nandfs.c svneol=native#text/plain
 sbin/nfsiod/Makefile -text
 sbin/nfsiod/nfsiod.8 -text
 sbin/nfsiod/nfsiod.c -text
