@@ -127,8 +127,7 @@ DESCRIPTION
 
      Solaris extensions
 	     Libarchive recognizes ACL and extended attribute records written
-	     by Solaris tar.  Currently, libarchive only has support for old-
-	     style ACLs; the newer NFSv4 ACLs are recognized but discarded.
+	     by Solaris tar.
 
      The first tar program appeared in Seventh Edition Unix in 1979.  The
      first official standard for the tar file format was the “ustar” (Unix
@@ -330,4 +329,4 @@ SEE ALSO
      ar(1), cpio(1), mkisofs(1), shar(1), tar(1), zip(1), zlib(3), cpio(5),
      mtree(5), tar(5)
 
-BSD				March 18, 2012				   BSD
+BSD			       December 27, 2016			   BSD

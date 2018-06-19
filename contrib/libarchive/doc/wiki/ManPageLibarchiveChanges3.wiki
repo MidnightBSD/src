@@ -1,5 +1,6 @@
 LIBARCHIVE_CHANGES(3) manual page 
 == NAME == 
+'''libarchive_changes''' 
 - changes in libarchive interface 
 == CHANGES IN LIBARCHIVE 3 == 
 This page describes user-visible changes in libarchive3, and lists 

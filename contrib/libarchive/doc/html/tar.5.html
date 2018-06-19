@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.3 -->
-<!-- CreationDate: Sun Jun 19 19:54:09 2016 -->
+<!-- CreationDate: Mon Jul 10 02:32:58 2017 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -692,16 +692,17 @@ the historic 8GB limit.</p>
 by Joerg Schilling&rsquo;s <b>star</b> implementation.</p>
 
 <p style="margin-top: 1em"><b>SCHILY.acl.access</b>,
-<b>SCHILY.acl.default</b></p>
+<b>SCHILY.acl.default, SCHILY.acl.ace</b></p>
 
-<p style="margin-left:17%;">Stores the access and default
-ACLs as textual strings in a format that is an extension of
-the format specified by POSIX.1e draft 17. In particular,
-each user or group access specification can include a fourth
-colon-separated field with the numeric UID or GID. This
-allows ACLs to be restored on systems that may not have
-complete user or group information available (such as when
-NIS/YP or LDAP services are temporarily unavailable).</p>
+<p style="margin-left:17%;">Stores the access, default and
+NFSv4 ACLs as textual strings in a format that is an
+extension of the format specified by POSIX.1e draft 17. In
+particular, each user or group access specification can
+include an additional colon-separated field with the numeric
+UID or GID. This allows ACLs to be restored on systems that
+may not have complete user or group information available
+(such as when NIS/YP or LDAP services are temporarily
+unavailable).</p>
 
 <p style="margin-top: 1em"><b>SCHILY.devminor</b>,
 <b>SCHILY.devmajor</b></p>
@@ -1283,12 +1284,11 @@ total size of the file.</p>
 archives</b> <br>
 GNU tar 1.14 (XXX check this XXX) and later will write pax
 interchange format archives when you specify the
-<b>&minus;-posix</b> flag. This format follows the pax
-interchange format closely, using some <b>SCHILY</b> tags
-and introducing new keywords to store sparse file
-information. There have been three iterations of the sparse
-file support, referred to as
-&rsquo;&rsquo;0.0&rsquo;&rsquo;,
+<b>--posix</b> flag. This format follows the pax interchange
+format closely, using some <b>SCHILY</b> tags and
+introducing new keywords to store sparse file information.
+There have been three iterations of the sparse file support,
+referred to as &rsquo;&rsquo;0.0&rsquo;&rsquo;,
 &rsquo;&rsquo;0.1&rsquo;&rsquo;, and
 &rsquo;&rsquo;1.0&rsquo;&rsquo;.</p>
 
@@ -1552,7 +1552,7 @@ and <b>bsdtar</b> project by Tim Kientzle
 &lt;kientzle@FreeBSD.org&gt;.</p>
 
 <p style="margin-left:6%; margin-top: 1em">BSD
-December&nbsp;23, 2011 BSD</p>
+December&nbsp;27, 2016 BSD</p>
 <hr>
 </body>
 </html>

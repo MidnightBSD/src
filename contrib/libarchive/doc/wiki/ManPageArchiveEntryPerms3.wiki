@@ -7,8 +7,8 @@ ARCHIVE_ENTRY_PERMS(3) manual page
 '''archive_entry_perm''', 
 '''archive_entry_set_perm''', 
 '''archive_entry_strmode''', 
-'''archive_entry_uname''' 
-'''archive_entry_uname_w''' 
+'''archive_entry_uname''', 
+'''archive_entry_uname_w''', 
 '''archive_entry_set_uname''', 
 '''archive_entry_copy_uname''', 
 '''archive_entry_copy_uname_w''', 

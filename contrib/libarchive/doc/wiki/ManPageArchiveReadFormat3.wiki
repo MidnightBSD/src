@@ -9,9 +9,9 @@ ARCHIVE_READ_FORMAT(3) manual page
 '''archive_read_support_format_empty''', 
 '''archive_read_support_format_iso9660''', 
 '''archive_read_support_format_lha''', 
-'''archive_read_support_format_mtree,''' 
-'''archive_read_support_format_rar,''' 
-'''archive_read_support_format_raw,''' 
+'''archive_read_support_format_mtree''', 
+'''archive_read_support_format_rar''', 
+'''archive_read_support_format_raw''', 
 '''archive_read_support_format_tar''', 
 '''archive_read_support_format_xar''', 
 '''archive_read_support_format_zip''' 
