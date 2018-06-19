@@ -20408,6 +20408,181 @@ contrib/libstdc++/src/tree.cc -text
 contrib/libstdc++/src/valarray-inst.cc -text
 contrib/libstdc++/src/wlocale-inst.cc -text
 contrib/libstdc++/src/wstring-inst.cc -text
+contrib/libyaml/LICENSE -text
+contrib/libyaml/Makefile.am -text
+contrib/libyaml/Makefile.in -text
+contrib/libyaml/README -text
+contrib/libyaml/aclocal.m4 -text
+contrib/libyaml/config.h.in -text
+contrib/libyaml/config/config.guess -text
+contrib/libyaml/config/config.sub -text
+contrib/libyaml/config/depcomp -text
+contrib/libyaml/config/install-sh -text
+contrib/libyaml/config/ltmain.sh -text
+contrib/libyaml/config/missing -text
+contrib/libyaml/configure -text
+contrib/libyaml/configure.ac -text
+contrib/libyaml/doc/doxygen.cfg -text
+contrib/libyaml/doc/html/annotated.html -text
+contrib/libyaml/doc/html/bc_s.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/classes.html -text
+contrib/libyaml/doc/html/closed.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/doxygen.css -text
+contrib/libyaml/doc/html/doxygen.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/files.html -text
+contrib/libyaml/doc/html/functions.html -text
+contrib/libyaml/doc/html/functions_0x62.html -text
+contrib/libyaml/doc/html/functions_0x63.html -text
+contrib/libyaml/doc/html/functions_0x64.html -text
+contrib/libyaml/doc/html/functions_0x65.html -text
+contrib/libyaml/doc/html/functions_0x66.html -text
+contrib/libyaml/doc/html/functions_0x68.html -text
+contrib/libyaml/doc/html/functions_0x69.html -text
+contrib/libyaml/doc/html/functions_0x6b.html -text
+contrib/libyaml/doc/html/functions_0x6c.html -text
+contrib/libyaml/doc/html/functions_0x6d.html -text
+contrib/libyaml/doc/html/functions_0x6e.html -text
+contrib/libyaml/doc/html/functions_0x6f.html -text
+contrib/libyaml/doc/html/functions_0x70.html -text
+contrib/libyaml/doc/html/functions_0x71.html -text
+contrib/libyaml/doc/html/functions_0x72.html -text
+contrib/libyaml/doc/html/functions_0x73.html -text
+contrib/libyaml/doc/html/functions_0x74.html -text
+contrib/libyaml/doc/html/functions_0x75.html -text
+contrib/libyaml/doc/html/functions_0x76.html -text
+contrib/libyaml/doc/html/functions_0x77.html -text
+contrib/libyaml/doc/html/functions_vars.html -text
+contrib/libyaml/doc/html/functions_vars_0x62.html -text
+contrib/libyaml/doc/html/functions_vars_0x63.html -text
+contrib/libyaml/doc/html/functions_vars_0x64.html -text
+contrib/libyaml/doc/html/functions_vars_0x65.html -text
+contrib/libyaml/doc/html/functions_vars_0x66.html -text
+contrib/libyaml/doc/html/functions_vars_0x68.html -text
+contrib/libyaml/doc/html/functions_vars_0x69.html -text
+contrib/libyaml/doc/html/functions_vars_0x6b.html -text
+contrib/libyaml/doc/html/functions_vars_0x6c.html -text
+contrib/libyaml/doc/html/functions_vars_0x6d.html -text
+contrib/libyaml/doc/html/functions_vars_0x6e.html -text
+contrib/libyaml/doc/html/functions_vars_0x6f.html -text
+contrib/libyaml/doc/html/functions_vars_0x70.html -text
+contrib/libyaml/doc/html/functions_vars_0x71.html -text
+contrib/libyaml/doc/html/functions_vars_0x72.html -text
+contrib/libyaml/doc/html/functions_vars_0x73.html -text
+contrib/libyaml/doc/html/functions_vars_0x74.html -text
+contrib/libyaml/doc/html/functions_vars_0x75.html -text
+contrib/libyaml/doc/html/functions_vars_0x76.html -text
+contrib/libyaml/doc/html/functions_vars_0x77.html -text
+contrib/libyaml/doc/html/globals.html -text
+contrib/libyaml/doc/html/globals_defs.html -text
+contrib/libyaml/doc/html/globals_enum.html -text
+contrib/libyaml/doc/html/globals_eval.html -text
+contrib/libyaml/doc/html/globals_func.html -text
+contrib/libyaml/doc/html/globals_type.html -text
+contrib/libyaml/doc/html/group__basic.html -text
+contrib/libyaml/doc/html/group__emitter.html -text
+contrib/libyaml/doc/html/group__events.html -text
+contrib/libyaml/doc/html/group__export.html -text
+contrib/libyaml/doc/html/group__nodes.html -text
+contrib/libyaml/doc/html/group__parser.html -text
+contrib/libyaml/doc/html/group__styles.html -text
+contrib/libyaml/doc/html/group__tokens.html -text
+contrib/libyaml/doc/html/group__version.html -text
+contrib/libyaml/doc/html/index.html -text
+contrib/libyaml/doc/html/modules.html -text
+contrib/libyaml/doc/html/nav_f.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/nav_h.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/open.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/structyaml__alias__data__s.html -text
+contrib/libyaml/doc/html/structyaml__document__s.html -text
+contrib/libyaml/doc/html/structyaml__emitter__s.html -text
+contrib/libyaml/doc/html/structyaml__event__s.html -text
+contrib/libyaml/doc/html/structyaml__mark__s.html -text
+contrib/libyaml/doc/html/structyaml__node__pair__s.html -text
+contrib/libyaml/doc/html/structyaml__node__s.html -text
+contrib/libyaml/doc/html/structyaml__parser__s.html -text
+contrib/libyaml/doc/html/structyaml__simple__key__s.html -text
+contrib/libyaml/doc/html/structyaml__tag__directive__s.html -text
+contrib/libyaml/doc/html/structyaml__token__s.html -text
+contrib/libyaml/doc/html/structyaml__version__directive__s.html -text
+contrib/libyaml/doc/html/tab_a.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/tab_b.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/tab_h.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/tab_s.png -text svneol=unset#image/png
+contrib/libyaml/doc/html/tabs.css -text
+contrib/libyaml/doc/html/yaml_8h.html -text
+contrib/libyaml/include/Makefile.am -text
+contrib/libyaml/include/Makefile.in -text
+contrib/libyaml/include/yaml.h -text
+contrib/libyaml/src/Makefile.am -text
+contrib/libyaml/src/Makefile.in -text
+contrib/libyaml/src/api.c -text
+contrib/libyaml/src/dumper.c -text
+contrib/libyaml/src/emitter.c -text
+contrib/libyaml/src/loader.c -text
+contrib/libyaml/src/parser.c -text
+contrib/libyaml/src/reader.c -text
+contrib/libyaml/src/scanner.c -text
+contrib/libyaml/src/writer.c -text
+contrib/libyaml/src/yaml_private.h -text
+contrib/libyaml/tests/Makefile.am -text
+contrib/libyaml/tests/Makefile.in -text
+contrib/libyaml/tests/example-deconstructor-alt.c -text
+contrib/libyaml/tests/example-deconstructor.c -text
+contrib/libyaml/tests/example-reformatter-alt.c -text
+contrib/libyaml/tests/example-reformatter.c -text
+contrib/libyaml/tests/run-dumper.c -text
+contrib/libyaml/tests/run-emitter.c -text
+contrib/libyaml/tests/run-loader.c -text
+contrib/libyaml/tests/run-parser.c -text
+contrib/libyaml/tests/run-scanner.c -text
+contrib/libyaml/tests/test-reader.c -text
+contrib/libyaml/tests/test-version.c -text
+contrib/libyaml/win32/Makefile.am -text
+contrib/libyaml/win32/Makefile.in -text
+contrib/libyaml/win32/config.h -text
+contrib/libyaml/win32/vc6/example_deconstructor.dsp -text
+contrib/libyaml/win32/vc6/example_deconstructor_alt.dsp -text
+contrib/libyaml/win32/vc6/example_reformatter.dsp -text
+contrib/libyaml/win32/vc6/example_reformatter_alt.dsp -text
+contrib/libyaml/win32/vc6/libyaml.dsw -text
+contrib/libyaml/win32/vc6/run_dumper.dsp -text
+contrib/libyaml/win32/vc6/run_emitter.dsp -text
+contrib/libyaml/win32/vc6/run_loader.dsp -text
+contrib/libyaml/win32/vc6/run_parser.dsp -text
+contrib/libyaml/win32/vc6/run_scanner.dsp -text
+contrib/libyaml/win32/vc6/test_reader.dsp -text
+contrib/libyaml/win32/vc6/test_version.dsp -text
+contrib/libyaml/win32/vc6/yaml.dsp -text
+contrib/libyaml/win32/vc6/yamldll.dsp -text
+contrib/libyaml/win32/vs2003/example_deconstructor.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/example_deconstructor_alt.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/example_reformatter.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/example_reformatter_alt.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/libyaml.sln -text
+contrib/libyaml/win32/vs2003/run_dumper.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/run_emitter.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/run_loader.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/run_parser.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/run_scanner.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/test_reader.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/test_version.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/yaml.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2003/yamldll.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/example_deconstructor.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/example_deconstructor_alt.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/example_reformatter.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/example_reformatter_alt.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/libyaml.sln -text
+contrib/libyaml/win32/vs2008/run_dumper.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/run_emitter.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/run_loader.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/run_parser.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/run_scanner.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/test_reader.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/test_version.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/yaml.vcproj -text svneol=unset#application/xml
+contrib/libyaml/win32/vs2008/yamldll.vcproj -text svneol=unset#application/xml
+contrib/libyaml/yaml-0.1.pc.in -text
 contrib/llvm/LICENSE.TXT -text
 contrib/llvm/include/llvm-c/Analysis.h -text
 contrib/llvm/include/llvm-c/BitReader.h -text
