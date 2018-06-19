@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: releng/9.2/contrib/top/username.c 200979 2009-12-25 09:02:41Z ed $
+ * $FreeBSD: stable/10/contrib/top/username.c 301836 2016-06-12 05:57:42Z ngie $
  */
 
 /*
@@ -32,11 +32,15 @@
 
 #include <sys/param.h>
 #include <sys/types.h>
-#include <stdio.h>
+
 #include <pwd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "top.local.h"
 #include "utils.h"
+#include "username.h"
 
 struct hash_el {
     int  uid;
@@ -55,6 +59,8 @@ struct hash_el {
 /* We depend on that for hash_table and YOUR compiler had BETTER do it! */
 struct hash_el hash_table[Table_size];
 
+
+void
 init_hash()
 
 {
@@ -67,7 +73,7 @@ init_hash()
 
 char *username(uid)
 
-register int uid;
+int uid;
 
 {
     register int hashindex;
@@ -106,8 +112,8 @@ char *username;
 
 int enter_user(uid, name, wecare)
 
-register int  uid;
-register char *name;
+int  uid;
+char *name;
 int wecare;		/* 1 = enter it always, 0 = nice to have */
 
 {
@@ -142,7 +148,7 @@ int wecare;		/* 1 = enter it always, 0 = nice to have */
 
 int get_user(uid)
 
-register int uid;
+int uid;
 
 {
     struct passwd *pwd;

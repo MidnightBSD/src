@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: releng/9.2/contrib/top/machine.h 239750 2012-08-27 19:55:19Z jhb $
+ * $FreeBSD: stable/10/contrib/top/machine.h 301836 2016-06-12 05:57:42Z ngie $
  */
 
 /*
@@ -7,6 +7,10 @@
  *  module.  It is NOT machine dependent and should not need to be changed
  *  for any specific machine.
  */
+#ifndef MACHINE_H
+#define MACHINE_H
+
+#include "top.h"
 
 /*
  * the statics struct is filled in by machine_init
@@ -66,6 +70,7 @@ struct process_select
     int thread;		/* show threads */
     int uid;		/* only this uid (unless uid == -1) */
     int wcpu;		/* show weighted cpu */
+    int jid;		/* only this jid (unless jid == -1) */
     int jail;		/* show jail ID */
     int kidle;		/* show per-CPU idle threads */
     char *command;	/* only this command (unless == NULL) */
@@ -73,8 +78,14 @@ struct process_select
 
 /* routines defined by the machine dependent module */
 
-char *format_header();
-char *format_next_process();
+char	*format_header();
+char	*format_next_process();
+void	 toggle_pcpustats(void);
+void	 get_system_info(struct system_info *si);
+int		 machine_init(struct statics *statics, char do_unames);
+int		 proc_owner(int pid);
 
 /* non-int routines typically used by the machine dependent module */
-char *printable();
+char	*printable();
+
+#endif /* MACHINE_H */

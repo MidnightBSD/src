@@ -38746,6 +38746,7 @@ contrib/top/Configure -text
 contrib/top/DISCLAIMER -text
 contrib/top/FAQ -text
 contrib/top/INSTALL -text
+contrib/top/MIDNIGHTBSD-upgrade -text
 contrib/top/Make.desc.X -text
 contrib/top/Makefile.X -text
 contrib/top/Porting -text
@@ -38753,6 +38754,7 @@ contrib/top/README -text
 contrib/top/Y2K -text
 contrib/top/boolean.h -text
 contrib/top/commands.c -text
+contrib/top/commands.h svneol=native#text/plain
 contrib/top/display.c -text
 contrib/top/display.h -text
 contrib/top/getans -text
@@ -38774,7 +38776,10 @@ contrib/top/top.X -text
 contrib/top/top.c -text
 contrib/top/top.h -text
 contrib/top/top.local.H -text
+contrib/top/top.local.hs -text
+contrib/top/top.xs -text
 contrib/top/username.c -text
+contrib/top/username.h svneol=native#text/plain
 contrib/top/utils.c -text
 contrib/top/utils.h -text
 contrib/top/version.c -text

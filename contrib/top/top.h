@@ -1,11 +1,14 @@
 /*
- * $FreeBSD: releng/9.2/contrib/top/top.h 223342 2011-06-20 16:48:00Z delphij $
+ * $FreeBSD: stable/10/contrib/top/top.h 301836 2016-06-12 05:57:42Z ngie $
  */
 /*
  *  Top - a top users display for Berkeley Unix
  *
  *  General (global) definitions
  */
+
+#ifndef TOP_H
+#define TOP_H
 
 /* Current major version number */
 #define VERSION		3
@@ -14,7 +17,7 @@
 extern int Header_lines;	/* 7 */
 
 /* Maximum number of columns allowed for display */
-#define MAX_COLS	128
+#define MAX_COLS	512
 
 /* Log base 2 of 1024 is 10 (2^10 == 1024) */
 #define LOG1024		10
@@ -47,3 +50,5 @@ enum displaymodes { DISP_CPU = 0, DISP_IO, DISP_MAX };
 extern enum displaymodes displaymode;
 
 extern int pcpu_stats;
+
+#endif /* TOP_H */
