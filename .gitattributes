@@ -52498,6 +52498,7 @@ sbin/mount/getmntopts.c -text
 sbin/mount/mntopts.h -text
 sbin/mount/mount.8 -text
 sbin/mount/mount.c -text
+sbin/mount/mount.conf.8 svneol=native#text/plain
 sbin/mount/mount_fs.c -text
 sbin/mount/pathnames.h -text
 sbin/mount/vfslist.c -text

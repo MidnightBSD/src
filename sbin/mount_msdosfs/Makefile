@@ -1,5 +1,6 @@
-#
 # $MidnightBSD$
+#
+# $FreeBSD: stable/10/sbin/mount_msdosfs/Makefile 198236 2009-10-19 16:00:24Z ru $
 #
 
 PROG=	mount_msdosfs

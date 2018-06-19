@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.2 (Berkeley) 3/27/94
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/sbin/mount/pathnames.h 128073 2004-04-09 19:58:40Z markm $
  */
 
 #define	_PATH_MOUNTDPID	"/var/run/mountd.pid"

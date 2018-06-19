@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/mount/mount.c 319261 2017-05-30 22:36:24Z asomers $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -66,7 +67,7 @@ __MBSDID("$MidnightBSD$");
 #define MOUNT_META_OPTION_FSTAB		"fstab"
 #define MOUNT_META_OPTION_CURRENT	"current"
 
-int debug, fstab_style, verbose;
+static int debug, fstab_style, verbose;
 
 struct cpa {
 	char	**a;
@@ -114,6 +115,7 @@ static struct opt {
 	{ MNT_ACLS,		"acls" },
 	{ MNT_NFS4ACLS,		"nfsv4acls" },
 	{ MNT_GJOURNAL,		"gjournal" },
+	{ MNT_AUTOMOUNTED,	"automounted" },
 	{ 0, NULL }
 };
 
@@ -142,8 +144,8 @@ use_mountprog(const char *vfstype)
 	 */
 	unsigned int i;
 	const char *fs[] = {
-	"cd9660", "mfs", "msdosfs", "nfs", "ntfs",
-	"nwfs", "nullfs", "oldnfs", "portalfs", "smbfs", "udf", "unionfs",
+	"cd9660", "mfs", "msdosfs", "nfs",
+	"nullfs", "oldnfs", "smbfs", "udf", "unionfs",
 	NULL
 	};
 
@@ -245,14 +247,15 @@ main(int argc, char *argv[])
 	struct fstab *fs;
 	struct statfs *mntbuf;
 	int all, ch, i, init_flags, late, failok, mntsize, rval, have_fstab, ro;
+	int onlylate;
 	char *cp, *ep, *options;
 
-	all = init_flags = late = 0;
+	all = init_flags = late = onlylate = 0;
 	ro = 0;
 	options = NULL;
 	vfslist = NULL;
 	vfstype = "ufs";
-	while ((ch = getopt(argc, argv, "adF:flo:prt:uvw")) != -1)
+	while ((ch = getopt(argc, argv, "adF:fLlno:prt:uvw")) != -1)
 		switch (ch) {
 		case 'a':
 			all = 1;
@@ -266,8 +269,15 @@ main(int argc, char *argv[])
 		case 'f':
 			init_flags |= MNT_FORCE;
 			break;
+		case 'L':
+			onlylate = 1;
+			late = 1;
+			break;
 		case 'l':
 			late = 1;
+			break;
+		case 'n':
+			/* For compatibility with the Linux version of mount. */
 			break;
 		case 'o':
 			if (*optarg) {
@@ -326,6 +336,8 @@ main(int argc, char *argv[])
 				if (checkvfsname(fs->fs_vfstype, vfslist))
 					continue;
 				if (hasopt(fs->fs_mntops, "noauto"))
+					continue;
+				if (!hasopt(fs->fs_mntops, "late") && onlylate)
 					continue;
 				if (hasopt(fs->fs_mntops, "late") && !late)
 					continue;
@@ -474,10 +486,18 @@ ismounted(struct fstab *fs, struct statfs *mntbuf, int mntsize)
 		strlcpy(realfsfile, fs->fs_file, sizeof(realfsfile));
 	}
 
+	/* 
+	 * Consider the filesystem to be mounted if:
+	 * It has the same mountpoint as a mounted filesytem, and
+	 * It has the same type as that same mounted filesystem, and
+	 * It has the same device name as that same mounted filesystem, OR
+	 *     It is a nonremountable filesystem
+	 */
 	for (i = mntsize - 1; i >= 0; --i)
 		if (strcmp(realfsfile, mntbuf[i].f_mntonname) == 0 &&
+		    strcmp(fs->fs_vfstype, mntbuf[i].f_fstypename) == 0 && 
 		    (!isremountable(fs->fs_vfstype) ||
-		     strcmp(fs->fs_spec, mntbuf[i].f_mntfromname) == 0))
+		     (strcmp(fs->fs_spec, mntbuf[i].f_mntfromname) == 0)))
 			return (1);
 	return (0);
 }
@@ -539,7 +559,10 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	static struct cpa mnt_argv;
 
 	/* resolve the mountpoint with realpath(3) */
-	(void)checkpath(name, mntpath);
+	if (checkpath(name, mntpath) != 0) {
+		warn("%s", mntpath);
+		return (1);
+	}
 	name = mntpath;
 
 	if (mntopts == NULL)
@@ -575,7 +598,7 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	append_arg(&mnt_argv, execname);
 	mangle(optbuf, &mnt_argv);
 	if (mountprog != NULL)
-		strcpy(execname, mountprog);
+		strlcpy(execname, mountprog, sizeof(execname));
 
 	append_arg(&mnt_argv, strdup(spec));
 	append_arg(&mnt_argv, strdup(name));
@@ -883,8 +906,9 @@ putfsent(struct statfs *ent)
 
 	if (strncmp(ent->f_mntfromname, "<below>", 7) == 0 ||
 	    strncmp(ent->f_mntfromname, "<above>", 7) == 0) {
-		strcpy(ent->f_mntfromname, (strnstr(ent->f_mntfromname, ":", 8)
-		    +1));
+		strlcpy(ent->f_mntfromname,
+		    (strnstr(ent->f_mntfromname, ":", 8) +1),
+		    sizeof(ent->f_mntfromname));
 	}
 
 	l = strlen(ent->f_mntfromname);

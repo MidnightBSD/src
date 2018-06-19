@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)getmntopts.c	8.3 (Berkeley) 3/29/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/mount/getmntopts.c 310378 2016-12-21 23:16:58Z brooks $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -46,7 +47,6 @@ __MBSDID("$MidnightBSD$");
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sysexits.h>
 
 #include "mntopts.h"
 
@@ -124,16 +124,18 @@ rmslashes(char *rrpin, char *rrpout)
 		*rrpout = '\0';
 }
 
-void
+int
 checkpath(const char *path, char *resolved)
 {
 	struct stat sb;
 
-	if (realpath(path, resolved) != NULL && stat(resolved, &sb) == 0) {
-		if (!S_ISDIR(sb.st_mode))
-			errx(EX_USAGE, "%s: not a directory", resolved);
-	} else
-		errx(EX_USAGE, "%s: %s", resolved, strerror(errno));
+	if (realpath(path, resolved) == NULL || stat(resolved, &sb) != 0)
+		return (1);
+	if (!S_ISDIR(sb.st_mode)) {
+		errno = ENOTDIR;
+		return (1);
+	}
+	return (0);
 }
 
 void
@@ -179,4 +181,18 @@ build_iovec_argf(struct iovec **iov, int *iovlen, const char *name,
 	vsnprintf(val, sizeof(val), fmt, ap);
 	va_end(ap);
 	build_iovec(iov, iovlen, name, strdup(val), (size_t)-1);
+}
+
+/*
+ * Free the iovec and reset to NULL with zero length.  Useful for calling
+ * nmount in a loop.
+ */
+void
+free_iovec(struct iovec **iov, int *iovlen)
+{
+	int i;
+
+	for (i = 0; i < *iovlen; i++)
+		free((*iov)[i].iov_base);
+	free(*iov);
 }
