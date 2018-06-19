@@ -684,13 +684,9 @@ Rule	Russia	1981	1984	-	Apr	 1	 0:00	1:00	S
 Rule	Russia	1981	1983	-	Oct	 1	 0:00	0	-
 # Act No. 967 of the Council of Ministers of the USSR (1984-09-13), repeated in
 # Act No. 227 of the Council of Ministers of the USSR (1989-03-14):
-Rule	Russia	1984	1991	-	Sep	lastSun	 2:00s	0	-
-Rule	Russia	1985	1991	-	Mar	lastSun	 2:00s	1:00	S
+Rule	Russia	1984	1995	-	Sep	lastSun	 2:00s	0	-
+Rule	Russia	1985	2010	-	Mar	lastSun	 2:00s	1:00	S
 #
-Rule	Russia	1992	only	-	Mar	lastSat	 23:00	1:00	S
-Rule	Russia	1992	only	-	Sep	lastSat	 23:00	0	-
-Rule	Russia	1993	2010	-	Mar	lastSun	 2:00s	1:00	S
-Rule	Russia	1993	1995	-	Sep	lastSun	 2:00s	0	-
 Rule	Russia	1996	2010	-	Oct	lastSun	 2:00s	0	-
 # As described below, Russia's 2014 change affects Zone data, not Rule data.
 
@@ -843,6 +839,14 @@ Zone	Europe/Vienna	1:05:21 -	LMT	1893 Apr
 			1:00	EU	CE%sT
 
 # Belarus
+#
+# From Stepan Golosunov (2016-07-02):
+# http://www.lawbelarus.com/repub/sub30/texf9611.htm
+# (Act of the Cabinet of Ministers of the Republic of Belarus from
+# 1992-03-25 No. 157) ... says clocks were to be moved forward at 2:00
+# on last Sunday of March and backward at 3:00 on last Sunday of September
+# (the same as previous USSR and contemporary Russian regulations).
+#
 # From Yauhen Kharuzhy (2011-09-16):
 # By latest Belarus government act Europe/Minsk timezone was changed to
 # GMT+3 without DST (was GMT+2 with DST).
@@ -864,9 +868,6 @@ Zone	Europe/Minsk	1:50:16 -	LMT	1880
 			1:00	C-Eur	CE%sT	1944 Jul  3
 			3:00	Russia	MSK/MSD	1990
 			3:00	-	MSK	1991 Mar 31  2:00s
-			2:00	1:00	EEST	1991 Sep 29  2:00s
-			2:00	-	EET	1992 Mar 29  0:00s
-			2:00	1:00	EEST	1992 Sep 27  0:00s
 			2:00	Russia	EE%sT	2011 Mar 27  2:00s
 			3:00	-	+03
 
@@ -1127,6 +1128,12 @@ Zone Atlantic/Faroe	-0:27:04 -	LMT	1908 Jan 11 # Tórshavn
 # startkart.no says Thule does not observe DST, but this is clearly an error,
 # so go with Shanks & Pottenger for Thule transitions until this year.
 # For 2007 on assume Thule will stay in sync with US DST rules.
+
+# From J William Piggott (2016-02-20):
+# "Greenland north of the community of Scoresbysund" is officially named
+# "National Park" by Executive Order:
+# http://naalakkersuisut.gl/~/media/Nanoq/Files/Attached%20Files/Engelske-tekster/Legislation/Executive%20Order%20National%20Park.rtf
+# It is their only National Park.
 #
 # Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
 Rule	Thule	1991	1992	-	Mar	lastSun	2:00	1:00	D
@@ -1152,6 +1159,10 @@ Zone America/Thule	-4:35:08 -	LMT	1916 Jul 28 # Pituffik air base
 			-4:00	Thule	A%sT
 
 # Estonia
+#
+# From Paul Eggert (2016-03-18):
+# The 1989 transition is from USSR act No. 227 (1989-03-14).
+#
 # From Peter Ilieve (1994-10-15):
 # A relative in Tallinn confirms the accuracy of the data for 1989 onwards
 # [through 1994] and gives the legal authority for it,
@@ -1756,6 +1767,9 @@ Link Europe/Zurich Europe/Vaduz
 
 # Lithuania
 
+# From Paul Eggert (2016-03-18):
+# The 1989 transition is from USSR act No. 227 (1989-03-14).
+
 # From Paul Eggert (1996-11-22):
 # IATA SSIM (1992/1996) says Lithuania uses W-Eur rules, but since it is
 # known to be wrong about Estonia and Latvia, assume it's wrong here too.
@@ -1795,8 +1809,8 @@ Zone	Europe/Vilnius	1:41:16	-	LMT	1880
 			1:00	-	CET	1940 Aug  3
 			3:00	-	MSK	1941 Jun 24
 			1:00	C-Eur	CE%sT	1944 Aug
-			3:00	Russia	MSK/MSD	1991 Mar 31  2:00s
-			2:00	1:00	EEST	1991 Sep 29  2:00s
+			3:00	Russia	MSK/MSD	1989 Mar 26  2:00s
+			2:00	Russia	EE%sT	1991 Sep 29  2:00s
 			2:00	C-Eur	EE%sT	1998
 			2:00	-	EET	1998 Mar 29  1:00u
 			1:00	EU	CE%sT	1999 Oct 31  1:00u
@@ -1863,6 +1877,16 @@ Zone	Europe/Malta	0:58:04 -	LMT	1893 Nov  2  0:00s # Valletta
 
 # Moldova
 
+# From Stepan Golosunov (2016-03-07):
+# the act of the government of the Republic of Moldova Nr. 132 from 1990-05-04
+# http://lex.justice.md/viewdoc.php?action=view&view=doc&id=298782&lang=2
+# ... says that since 1990-05-06 on the territory of the Moldavian SSR
+# time would be calculated as the standard time of the second time belt
+# plus one hour of the "summer" time. To implement that clocks would be
+# adjusted one hour backwards at 1990-05-06 2:00. After that "summer"
+# time would be cancelled last Sunday of September at 3:00 and
+# reintroduced last Sunday of March at 2:00.
+
 # From Paul Eggert (2006-03-22):
 # A previous version of this database followed Shanks & Pottenger, who write
 # that Tiraspol switched to Moscow time on 1992-01-19 at 02:00.
@@ -1921,9 +1945,7 @@ Zone	Europe/Chisinau	1:55:20 -	LMT	1880
 			2:00	Romania	EE%sT	1940 Aug 15
 			2:00	1:00	EEST	1941 Jul 17
 			1:00	C-Eur	CE%sT	1944 Aug 24
-			3:00	Russia	MSK/MSD	1990
-			3:00	-	MSK	1990 May 6
-			2:00	-	EET	1991
+			3:00	Russia	MSK/MSD	1990 May  6  2:00
 			2:00	Russia	EE%sT	1992
 			2:00	E-Eur	EE%sT	1997
 # See Romania commentary for the guessed 1997 transition to EU rules.
@@ -2422,16 +2444,32 @@ Zone Europe/Bucharest	1:44:24 -	LMT	1891 Oct
 # Europe/Kaliningrad covers...
 # 39	RU-KGD	Kaliningrad Oblast
 
+# From Paul Eggert (2016-03-18):
+# The 1989 transition is from USSR act No. 227 (1989-03-14).
+
+# From Stepan Golosunov (2016-03-07):
+# http://www.rgo.ru/ru/kaliningradskoe-oblastnoe-otdelenie/ob-otdelenii/publikacii/kak-nam-zhilos-bez-letnego-vremeni
+# confirms that the 1989 change to Moscow-1 was implemented.
+# (The article, though, is misattributed to 1990 while saying that
+# summer->winter transition would be done on the 24 of September. But
+# 1990-09-24 was Monday, while 1989-09-24 was Sunday as expected.)
+# ...
+# http://www.kaliningradka.ru/site_pc/cherez/index.php?ELEMENT_ID=40091
+# says that Kaliningrad switched to Moscow-1 on 1989-03-26, avoided
+# at the last moment switch to Moscow-1 on 1991-03-31, switched to
+# Moscow on 1991-11-03, switched to Moscow-1 on 1992-01-19.
+
 Zone Europe/Kaliningrad	 1:22:00 -	LMT	1893 Apr
 			 1:00	C-Eur	CE%sT	1945
 			 2:00	Poland	CE%sT	1946
-			 3:00	Russia	MSK/MSD	1991 Mar 31  2:00s
+			 3:00	Russia	MSK/MSD	1989 Mar 26  2:00s
 			 2:00	Russia	EE%sT	2011 Mar 27  2:00s
 			 3:00	-	+03	2014 Oct 26  2:00s
 			 2:00	-	EET
 
 
-# From Tim Parenti (2014-07-03), per Oscar van Vlijmen (2001-08-25):
+# From Paul Eggert (2016-02-21), per Tim Parenti (2014-07-03) and
+# Oscar van Vlijmen (2001-08-25):
 # Europe/Moscow covers...
 # 01	RU-AD	Adygea, Republic of
 # 05	RU-DA	Dagestan, Republic of
@@ -2474,7 +2512,6 @@ Zone Europe/Kaliningrad	 1:22:00 -	LMT	1893 Apr
 # 68	RU-TAM	Tambov Oblast
 # 69	RU-TVE	Tver Oblast
 # 71	RU-TUL	Tula Oblast
-# 73	RU-ULY	Ulyanovsk Oblast
 # 76	RU-YAR	Yaroslavl Oblast
 # 77	RU-MOW	Moscow
 # 78	RU-SPE	Saint Petersburg
@@ -2642,8 +2679,8 @@ Zone Europe/Simferopol	 2:16:24 -	LMT	1880
 			 3:00	-	MSK
 
 
-# From Tim Parenti (2014-07-03):
-# Europe/Volgograd covers...
+# From Paul Eggert (2016-03-18):
+# Europe/Astrakhan covers:
 # 30	RU-AST	Astrakhan Oblast
 #
 # The 1989 transition is from USSR act No. 227 (1989-03-14).
@@ -2668,10 +2705,7 @@ Zone Europe/Astrakhan	 3:12:12 -	LMT	1924 May
 # From Paul Eggert (2016-11-11):
 # Europe/Volgograd covers:
 # 34	RU-VGG	Volgograd Oblast
-
-# From Paul Eggert (2006-05-09):
-# Shanks & Pottenger say Kirov is still at +0400 but Wikipedia says +0300.
-# Perhaps it switched after the others?  But we have no data.
+# The 1988 transition is from USSR act No. 5 (1988-01-04).
 
 Zone Europe/Volgograd	 2:57:40 -	LMT	1920 Jan  3
 			 3:00	-	+03	1930 Jun 21
@@ -2723,7 +2757,9 @@ Zone Europe/Kirov	 3:18:48 -	LMT	1919 Jul  1  0:00u
 # 18	RU-UD	Udmurt Republic
 # 63	RU-SAM	Samara Oblast
 
+# From Paul Eggert (2016-03-18):
 # Byalokoz 1919 says Samara was 3:20:20.
+# The 1989 transition is from USSR act No. 227 (1989-03-14).
 
 Zone Europe/Samara	 3:20:20 -	LMT	1919 Jul  1  0:00u
 			 3:00	-	+03	1930 Jun 21
@@ -2736,6 +2772,9 @@ Zone Europe/Samara	 3:20:20 -	LMT	1919 Jul  1  0:00u
 			 3:00	Russia	+03/+04	2011 Mar 27  2:00s
 			 4:00	-	+04
 
+# From Paul Eggert (2016-03-18):
+# Europe/Ulyanovsk covers:
+# 73	RU-ULY	Ulyanovsk Oblast
 
 # The 1989 transition is from USSR act No. 227 (1989-03-14).
 
@@ -2788,8 +2827,6 @@ Zone Asia/Yekaterinburg	 4:02:33 -	LMT	1916 Jul  3
 
 # From Tim Parenti (2014-07-03), per Oscar van Vlijmen (2001-08-25):
 # Asia/Omsk covers...
-# 04	RU-AL	Altai Republic
-# 22	RU-ALT	Altai Krai
 # 55	RU-OMS	Omsk Oblast
 
 # Byalokoz 1919 says Omsk was 4:53:30.
@@ -2802,6 +2839,10 @@ Zone Asia/Omsk		 4:53:30 -	LMT	1919 Nov 14
 			 7:00	-	+07	2014 Oct 26  2:00s
 			 6:00	-	+06
 
+# From Paul Eggert (2016-02-22):
+# Asia/Barnaul covers:
+# 04	RU-AL	Altai Republic
+# 22	RU-ALT	Altai Krai
 
 # Data before 1991 are from Shanks & Pottenger.
 
@@ -2841,20 +2882,27 @@ Zone Asia/Barnaul	 5:35:00 -	LMT	1919 Dec 10
 # From Paul Eggert (2016-03-18):
 # Asia/Novosibirsk covers:
 # 54	RU-NVS	Novosibirsk Oblast
-# 70	RU-TOM	Tomsk Oblast
 
-# From Paul Eggert (2006-08-19): I'm guessing about Tomsk here; it's
-# not clear when it switched from +7 to +6.
+# From Stepan Golosunov (2016-05-30):
+# http://asozd2.duma.gov.ru/main.nsf/(Spravka)?OpenAgent&RN=1085784-6
+# moves Novosibirsk oblast from UTC+6 to UTC+7.
+# From Stepan Golosunov (2016-07-04):
+# The law was signed yesterday and published today on
+# http://publication.pravo.gov.ru/Document/View/0001201607040064
 
 Zone Asia/Novosibirsk	 5:31:40 -	LMT	1919 Dec 14  6:00
-			 6:00	-	NOVT	1930 Jun 21 # Novosibirsk Time
-			 7:00	Russia	NOV%sT	1991 Mar 31  2:00s
-			 6:00	Russia	NOV%sT	1992 Jan 19  2:00s
-			 7:00	Russia	NOV%sT	1993 May 23 # say Shanks & P.
-			 6:00	Russia	NOV%sT	2011 Mar 27  2:00s
-			 7:00	-	NOVT	2014 Oct 26  2:00s
-			 6:00	-	NOVT
+			 6:00	-	+06	1930 Jun 21
+			 7:00	Russia	+07/+08	1991 Mar 31  2:00s
+			 6:00	Russia	+06/+07	1992 Jan 19  2:00s
+			 7:00	Russia	+07/+08	1993 May 23 # say Shanks & P.
+			 6:00	Russia	+06/+07	2011 Mar 27  2:00s
+			 7:00	-	+07	2014 Oct 26  2:00s
+			 6:00	-	+06	2016 Jul 24  2:00s
+			 7:00	-	+07
 
+# From Paul Eggert (2016-03-18):
+# Asia/Tomsk covers:
+# 70	RU-TOM	Tomsk Oblast
 
 # From Stepan Golosunov (2016-03-24):
 # Byalokoz listed Tomsk at 5:39:51.
@@ -2927,23 +2975,18 @@ Zone	Asia/Tomsk	 5:39:51 -	LMT	1919 Dec 22
 #
 # Thus, when Russia will switch to DST on the night of March 28, 2010
 # Kemerovo region (Kemerovo oblast') will not change the clock.
-#
-# As a result, Kemerovo oblast' will be in the same time zone as
-# Novosibirsk, Omsk, Tomsk, Barnaul and Altai Republic.
 
 # From Tim Parenti (2014-07-02), per Alexander Krivenyshev (2014-07-02):
 # The Kemerovo region will remain at UTC+7 through the 2014-10-26 change, thus
 # realigning itself with KRAT.
 
 Zone Asia/Novokuznetsk	 5:48:48 -	LMT	1924 May  1
-			 6:00	-	KRAT	1930 Jun 21 # Krasnoyarsk Time
-			 7:00	Russia	KRA%sT	1991 Mar 31  2:00s
-			 6:00	Russia	KRA%sT	1992 Jan 19  2:00s
-			 7:00	Russia	KRA%sT	2010 Mar 28  2:00s
-			 6:00	Russia	NOV%sT	2011 Mar 27  2:00s # Novosibirsk
-			 7:00	-	NOVT	2014 Oct 26  2:00s
-			 7:00	-	KRAT	# Krasnoyarsk Time
-
+			 6:00	-	+06	1930 Jun 21
+			 7:00	Russia	+07/+08	1991 Mar 31  2:00s
+			 6:00	Russia	+06/+07	1992 Jan 19  2:00s
+			 7:00	Russia	+07/+08	2010 Mar 28  2:00s
+			 6:00	Russia	+06/+07	2011 Mar 27  2:00s
+			 7:00	-	+07
 
 # From Tim Parenti (2014-07-03), per Oscar van Vlijmen (2001-08-25):
 # Asia/Krasnoyarsk covers...
@@ -2998,7 +3041,7 @@ Zone Asia/Irkutsk	 6:57:05 -	LMT	1880
 # [The] time zone in the Trans-Baikal Territory (Zabaykalsky Krai) -
 # Asia/Chita [is changing] from UTC+8 to UTC+9.  Effective date will
 # be March 27, 2016 at 2:00am....
-# http://publication.pravo.gov.ru/Document/View/000120151230010
+# http://publication.pravo.gov.ru/Document/View/0001201512300107
 
 Zone Asia/Chita	 7:33:52 -	LMT	1919 Dec 15
 			 8:00	-	+08	1930 Jun 21
@@ -3109,6 +3152,11 @@ Zone Asia/Khandyga	 9:02:13 -	LMT	1919 Dec 15
 # ...with the exception of:
 # 65-11	****	Severo-Kurilsky District (North Kuril Islands)
 
+# From Matt Johnson (2016-02-22):
+# Asia/Sakhalin is moving (in entirety) from UTC+10 to UTC+11 ...
+# (2016-03-09):
+# http://publication.pravo.gov.ru/Document/View/0001201603090044
+
 # The Zone name should be Asia/Yuzhno-Sakhalinsk, but that's too long.
 Zone Asia/Sakhalin	 9:30:48 -	LMT	1905 Aug 23
 			 9:00	-	+09	1945 Aug 25
@@ -3131,6 +3179,14 @@ Zone Asia/Sakhalin	 9:30:48 -	LMT	1905 Aug 23
 # the Sakhalin Oblast (also known as the North Kuril Islands), represented
 # until now by Asia/Magadan, will instead move to UTC+11.  These regions will
 # need their own zone.
+
+# From Alexander Krivenyshev (2016-03-27):
+# ... draft bill 948300-6 to change its time zone from UTC+10 to UTC+11 ...
+# will take ... effect ... on April 24, 2016 at 2 o'clock
+#
+# From Matt Johnson (2016-04-05):
+# ... signed by the President today ...
+# http://publication.pravo.gov.ru/Document/View/0001201604050038
 
 Zone Asia/Magadan	10:03:12 -	LMT	1924 May  2
 			10:00	-	+10	1930 Jun 21 # Magadan Time

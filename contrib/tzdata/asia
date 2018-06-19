@@ -122,6 +122,7 @@ Zone	Asia/Yerevan	2:58:00 -	LMT	1924 May  2
 			4:00	Armenia	+04/+05
 
 # Azerbaijan
+
 # From Rustam Aliyev of the Azerbaijan Internet Forum (2005-10-23):
 # According to the resolution of Cabinet of Ministers, 1997
 # From Paul Eggert (2015-09-17): It was Resolution No. 21 (1997-03-17).
@@ -1615,23 +1616,6 @@ Zone	Asia/Amman	2:23:44 -	LMT	1931
 
 # Kazakhstan
 
-# From Paul Eggert (1996-11-22):
-# Andrew Evtichov (1996-04-13) writes that Kazakhstan
-# stayed in sync with Moscow after 1990, and that Aqtobe (formerly Aktyubinsk)
-# and Aqtau (formerly Shevchenko) are the largest cities in their zones.
-# Guess that Aqtau and Aqtobe diverged in 1995, since that's the first time
-# IATA SSIM mentions a third time zone in Kazakhstan.
-
-# From Paul Eggert (2006-03-22):
-# German Iofis, ELSI, Almaty (2001-10-09) reports that Kazakhstan uses
-# RussiaAsia rules, instead of switching at 00:00 as the IATA has it.
-# Go with Shanks & Pottenger, who have them always using RussiaAsia rules.
-# Also go with the following claims of Shanks & Pottenger:
-#
-# - Kazakhstan did not observe DST in 1991.
-# - Qyzylorda switched from +5:00 to +6:00 on 1992-01-19 02:00.
-# - Oral switched from +5:00 to +4:00 in spring 1989.
-
 # From Kazakhstan Embassy's News Bulletin No. 11
 # <http://www.kazsociety.org.uk/news/2005/03/30.htm> (2005-03-21):
 # The Government of Kazakhstan passed a resolution March 15 abolishing
@@ -1823,13 +1807,15 @@ Zone	Asia/Amman	2:23:44 -	LMT	1931
 # Zone	NAME		GMTOFF	RULES	FORMAT	[UNTIL]
 #
 # Almaty (formerly Alma-Ata), representing most locations in Kazakhstan
+# This includes KZ-AKM, KZ-ALA, KZ-ALM, KZ-AST, KZ-BAY, KZ-VOS, KZ-ZHA,
+# KZ-KAR, KZ-SEV, KZ-PAV, and KZ-YUZ.
 Zone	Asia/Almaty	5:07:48 -	LMT	1924 May  2 # or Alma-Ata
-			5:00	-	ALMT	1930 Jun 21 # Alma-Ata Time
-			6:00 RussiaAsia ALM%sT	1991
-			6:00	-	ALMT	1992
-			6:00 RussiaAsia	ALM%sT	2005 Mar 15
-			6:00	-	ALMT
-# Qyzylorda (aka Kyzylorda, Kizilorda, Kzyl-Orda, etc.)
+			5:00	-	+05	1930 Jun 21
+			6:00 RussiaAsia +06/+07	1991 Mar 31  2:00s
+			5:00 RussiaAsia	+05/+06	1992 Jan 19  2:00s
+			6:00 RussiaAsia	+06/+07	2004 Oct 31  2:00s
+			6:00	-	+06
+# Qyzylorda (aka Kyzylorda, Kizilorda, Kzyl-Orda, etc.) (KZ-KZY)
 # This currently includes Qostanay (aka Kostanay, Kustanay) (KZ-KUS);
 # see comments below.
 Zone	Asia/Qyzylorda	4:21:52 -	LMT	1924 May  2
