@@ -1,11 +1,13 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/pfctl/Makefile 270047 2014-08-16 13:20:44Z bz $
 
-.PATH:	${.CURDIR}/../../contrib/pf/pfctl
-.PATH:	${.CURDIR}/../../sys/contrib/pf/net
-.PATH:	${.CURDIR}/../../contrib/pf/man
+.include <bsd.own.mk>
+
+# pf_ruleset.c is shared between kernel and pfctl
+.PATH: ${.CURDIR}/../../sys/netpfil/pf
 
 PROG=	pfctl
-MAN=	pfctl.8 pf.4 pflog.4 pfsync.4 pf.conf.5 pf.os.5
+MAN=	pfctl.8
 
 SRCS = pfctl.c parse.y pfctl_parser.c pf_print_state.c pfctl_altq.c
 SRCS+= pfctl_osfp.c pfctl_radix.c pfctl_table.c pfctl_qstats.c
@@ -14,11 +16,16 @@ SRCS+= pf_ruleset.c
 
 WARNS?=	2
 CFLAGS+= -Wall -Wmissing-prototypes -Wno-uninitialized
-CFLAGS+= -Wstrict-prototypes -I${.CURDIR}/../../contrib/pf/pfctl
+CFLAGS+= -Wstrict-prototypes
+CFLAGS+= -DENABLE_ALTQ -I${.CURDIR}
 
-# XXX ALTQ
-CFLAGS+= -DENABLE_ALTQ
-#CFLAGS+= -I${.CURDIR}/missing
+# Need to use "WITH_" prefix to not conflict with the l/y INET/INET6 keywords
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DWITH_INET6
+.endif
+.if ${MK_INET_SUPPORT} != "no"
+CFLAGS+= -DWITH_INET
+.endif
 
 YFLAGS=
 
