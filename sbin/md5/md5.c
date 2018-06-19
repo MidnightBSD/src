@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Derived from:
  *
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/md5/md5.c 314332 2017-02-27 10:40:39Z avg $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -28,7 +29,9 @@ __MBSDID("$MidnightBSD$");
 #include <ripemd.h>
 #include <sha.h>
 #include <sha256.h>
+#include <sha384.h>
 #include <sha512.h>
+#include <sha512t.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,11 +45,11 @@ __MBSDID("$MidnightBSD$");
 #define TEST_BLOCK_COUNT 100000
 #define MDTESTCOUNT 8
 
-int qflag;
-int rflag;
-int sflag;
-unsigned char* checkAgainst;
-int	checksFailed;
+static int qflag;
+static int rflag;
+static int sflag;
+static char* checkAgainst;
+static int checksFailed;
 
 typedef void (DIGEST_Init)(void *);
 typedef void (DIGEST_Update)(void *, const unsigned char *, size_t);
@@ -55,7 +58,9 @@ typedef char *(DIGEST_End)(void *, char *);
 extern const char *MD5TestOutput[MDTESTCOUNT];
 extern const char *SHA1_TestOutput[MDTESTCOUNT];
 extern const char *SHA256_TestOutput[MDTESTCOUNT];
+extern const char *SHA384_TestOutput[MDTESTCOUNT];
 extern const char *SHA512_TestOutput[MDTESTCOUNT];
+extern const char *SHA512t256_TestOutput[MDTESTCOUNT];
 extern const char *RIPEMD160_TestOutput[MDTESTCOUNT];
 
 typedef struct Algorithm_t {
@@ -70,16 +75,17 @@ typedef struct Algorithm_t {
 } Algorithm_t;
 
 static void MD5_Update(MD5_CTX *, const unsigned char *, size_t);
-static void MDString(Algorithm_t *, const char *);
-static void MDTimeTrial(Algorithm_t *);
-static void MDTestSuite(Algorithm_t *);
-static void MDFilter(Algorithm_t *, int);
-static void usage(Algorithm_t *);
+static void MDString(const Algorithm_t *, const char *);
+static void MDTimeTrial(const Algorithm_t *);
+static void MDTestSuite(const Algorithm_t *);
+static void MDFilter(const Algorithm_t *, int);
+static void usage(const Algorithm_t *);
 
 typedef union {
 	MD5_CTX md5;
 	SHA1_CTX sha1;
 	SHA256_CTX sha256;
+	SHA384_CTX sha384;
 	SHA512_CTX sha512;
 	RIPEMD160_CTX ripemd160;
 } DIGEST_CTX;
@@ -91,7 +97,7 @@ typedef union {
 
 /* algorithm function table */
 
-struct Algorithm_t Algorithm[] = {
+static const struct Algorithm_t Algorithm[] = {
 	{ "md5", "MD5", &MD5TestOutput, (DIGEST_Init*)&MD5Init,
 		(DIGEST_Update*)&MD5_Update, (DIGEST_End*)&MD5End,
 		&MD5Data, &MD5File },
@@ -101,9 +107,15 @@ struct Algorithm_t Algorithm[] = {
 	{ "sha256", "SHA256", &SHA256_TestOutput, (DIGEST_Init*)&SHA256_Init,
 		(DIGEST_Update*)&SHA256_Update, (DIGEST_End*)&SHA256_End,
 		&SHA256_Data, &SHA256_File },
+	{ "sha384", "SHA384", &SHA384_TestOutput, (DIGEST_Init*)&SHA384_Init,
+		(DIGEST_Update*)&SHA384_Update, (DIGEST_End*)&SHA384_End,
+		&SHA384_Data, &SHA384_File },
 	{ "sha512", "SHA512", &SHA512_TestOutput, (DIGEST_Init*)&SHA512_Init,
 		(DIGEST_Update*)&SHA512_Update, (DIGEST_End*)&SHA512_End,
 		&SHA512_Data, &SHA512_File },
+	{ "sha512t256", "SHA512t256", &SHA512t256_TestOutput, (DIGEST_Init*)&SHA512_256_Init,
+		(DIGEST_Update*)&SHA512_256_Update, (DIGEST_End*)&SHA512_256_End,
+		&SHA512_256_Data, &SHA512_256_File },
 	{ "rmd160", "RMD160", &RIPEMD160_TestOutput,
 		(DIGEST_Init*)&RIPEMD160_Init, (DIGEST_Update*)&RIPEMD160_Update,
 		(DIGEST_End*)&RIPEMD160_End, &RIPEMD160_Data, &RIPEMD160_File }
@@ -216,7 +228,7 @@ main(int argc, char *argv[])
  * Digests a string and prints the result.
  */
 static void
-MDString(Algorithm_t *alg, const char *string)
+MDString(const Algorithm_t *alg, const char *string)
 {
 	size_t len = strlen(string);
 	char buf[HEX_DIGEST_LENGTH];
@@ -240,7 +252,7 @@ MDString(Algorithm_t *alg, const char *string)
  * Measures the time to digest TEST_BLOCK_COUNT TEST_BLOCK_LEN-byte blocks.
  */
 static void
-MDTimeTrial(Algorithm_t *alg)
+MDTimeTrial(const Algorithm_t *alg)
 {
 	DIGEST_CTX context;
 	struct rusage before, after;
@@ -282,7 +294,7 @@ MDTimeTrial(Algorithm_t *alg)
  * Digests a reference suite of strings and prints the results.
  */
 
-const char *MDTestInput[MDTESTCOUNT] = {
+static const char *MDTestInput[MDTESTCOUNT] = {
 	"",
 	"a",
 	"abc",
@@ -327,6 +339,17 @@ const char *SHA256_TestOutput[MDTESTCOUNT] = {
 	"e6eae09f10ad4122a0e2a4075761d185a272ebd9f5aa489e998ff2f09cbfdd9f"
 };
 
+const char *SHA384_TestOutput[MDTESTCOUNT] = {
+	"38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b",
+	"54a59b9f22b0b80880d8427e548b7c23abd873486e1f035dce9cd697e85175033caa88e6d57bc35efae0b5afd3145f31",
+	"cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7",
+	"473ed35167ec1f5d8e550368a3db39be54639f828868e9454c239fc8b52e3c61dbd0d8b4de1390c256dcbb5d5fd99cd5",
+	"feb67349df3db6f5924815d6c3dc133f091809213731fe5c7b5f4999e463479ff2877f5f2936fa63bb43784b12f3ebb4",
+	"1761336e3f7cbfe51deb137f026f89e01a448e3b1fafa64039c1464ee8732f11a5341a6f41e0c202294736ed64db1a84",
+	"b12932b0627d1c060942f5447764155655bd4da0c9afa6dd9b9ef53129af1b8fb0195996d2de9ca0df9d821ffee67026",
+	"99428d401bf4abcd4ee0695248c9858b7503853acfae21a9cffa7855f46d1395ef38596fcd06d5a8c32d41a839cc5dfb"
+};
+
 const char *SHA512_TestOutput[MDTESTCOUNT] = {
 	"cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
 	"1f40fc92da241694750979ee6cf582f2d5d7d28e18335de05abc54d0560e0f5302860c652bf08d560252aa5e74210546f369fbbbce8c12cfc7957b2652fe9a75",
@@ -336,6 +359,17 @@ const char *SHA512_TestOutput[MDTESTCOUNT] = {
 	"1e07be23c26a86ea37ea810c8ec7809352515a970e9253c26f536cfc7a9996c45c8370583e0a78fa4a90041d71a4ceab7423f19c71b9d5a3e01249f0bebd5894",
 	"72ec1ef1124a45b047e8b7c75a932195135bb61de24ec0d1914042246e0aec3a2354e093d76f3048b456764346900cb130d2a4fd5dd16abb5e30bcb850dee843",
 	"e8a835195e039708b13d9131e025f4441dbdc521ce625f245a436dcd762f54bf5cb298d96235e6c6a304e087ec8189b9512cbdf6427737ea82793460c367b9c3"
+};
+
+const char *SHA512t256_TestOutput[MDTESTCOUNT] = {
+	"c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a",
+	"455e518824bc0601f9fb858ff5c37d417d67c2f8e0df2babe4808858aea830f8",
+	"53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23",
+	"0cf471fd17ed69d990daf3433c89b16d63dec1bb9cb42a6094604ee5d7b4e9fb",
+	"fc3189443f9c268f626aea08a756abe7b726b05f701cb08222312ccfd6710a26",
+	"cdf1cc0effe26ecc0c13758f7b4a48e000615df241284185c39eb05d355bb9c8",
+	"2c9fdbc0c90bdd87612ee8455474f9044850241dc105b1e8b94b8ddf5fac9148",
+	"dd095fc859b336c30a52548b3dc59fcc0d1be8616ebcf3368fad23107db2d736"
 };
 
 const char *RIPEMD160_TestOutput[MDTESTCOUNT] = {
@@ -350,7 +384,7 @@ const char *RIPEMD160_TestOutput[MDTESTCOUNT] = {
 };
 
 static void
-MDTestSuite(Algorithm_t *alg)
+MDTestSuite(const Algorithm_t *alg)
 {
 	int i;
 	char buffer[HEX_DIGEST_LENGTH];
@@ -370,7 +404,7 @@ MDTestSuite(Algorithm_t *alg)
  * Digests the standard input and prints the result.
  */
 static void
-MDFilter(Algorithm_t *alg, int tee)
+MDFilter(const Algorithm_t *alg, int tee)
 {
 	DIGEST_CTX context;
 	unsigned int len;
@@ -387,7 +421,7 @@ MDFilter(Algorithm_t *alg, int tee)
 }
 
 static void
-usage(Algorithm_t *alg)
+usage(const Algorithm_t *alg)
 {
 
 	fprintf(stderr, "usage: %s [-pqrtx] [-c string] [-s string] [files ...]\n", alg->progname);
