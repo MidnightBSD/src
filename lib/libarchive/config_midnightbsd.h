@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
@@ -22,32 +23,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
  */
 
-#include <osreldate.h>
-
-#define HAVE_ACL_CREATE_ENTRY 1
-#define HAVE_ACL_GET_FD_NP 1
-#define HAVE_ACL_GET_LINK_NP 1
+#define ARCHIVE_ACL_FREEBSD 1
+#define ARCHIVE_XATTR_FREEBSD 1
 #define HAVE_ACL_GET_PERM_NP 1
-#define HAVE_ACL_INIT 1
-#define HAVE_ACL_IS_TRIVIAL_NP 1
-#define HAVE_ACL_PERMSET_T 1
-#define HAVE_ACL_SET_FD 1
-#define HAVE_ACL_SET_FD_NP 1
-#define HAVE_ACL_SET_FILE 1
-#define HAVE_ACL_SET_LINK_NP 1
-#define HAVE_ACL_USER 1
 #define HAVE_ARC4RANDOM_BUF 1
-#define HAVE_EXTATTR_GET_FILE 1
-#define HAVE_EXTATTR_LIST_FILE 1
-#define HAVE_EXTATTR_SET_FD 1
-#define HAVE_EXTATTR_SET_FILE 1
-#define HAVE_LZMA_STREAM_ENCODER_MT 1
 #define HAVE_STRUCT_XVFSCONF 1
 #define HAVE_SYS_ACL_H 1
 #define HAVE_SYS_EXTATTR_H 1
+#define ARCHIVE_ACL_FREEBSD_NFS4 1
+#define HAVE_ACL_GET_LINK_NP 1
+#define HAVE_ACL_IS_TRIVIAL_NP 1
+#define HAVE_ACL_SET_LINK_NP 1
 
 #ifdef WITH_OPENSSL
 #define HAVE_LIBCRYPTO 1
@@ -233,7 +221,7 @@
 #define HAVE_ZLIB_H 1
 #define TIME_WITH_SYS_TIME 1
 
-/* BSD defines for archive_hash.h */
+/* MidnightBSD defines for archive_hash.h */
 #ifdef WITH_OPENSSL
 #define ARCHIVE_CRYPTO_MD5_OPENSSL 1
 #define ARCHIVE_CRYPTO_RMD160_OPENSSL 1
@@ -247,4 +235,3 @@
 #define ARCHIVE_CRYPTO_SHA256_LIBMD 1
 #define ARCHIVE_CRYPTO_SHA512_LIBMD 1
 #endif
-

@@ -1,29 +1,18 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/lib/libarchive/Makefile 324418 2017-10-08 20:55:45Z mm $
 .include <bsd.own.mk>
 
-LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
+LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
 LIB=	archive
-DPADD=	${LIBZ}
-LDADD=	-lz
-
-DPADD+= ${LIBBZ2}
-LDADD+= -lbz2
-CFLAGS+= -DHAVE_BZLIB_H=1
-
-DPADD+= ${LIBLZMA}
-LDADD+= -llzma
-CFLAGS+=-DHAVE_BZLIB_H=1 -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
-
-DPADD+= ${LIBBSDXML}
-LDADD+= -lbsdxml
+DPADD=	${LIBZ} ${LIBBZ2} ${LIBLZMA} ${LIBPTHREAD} ${LIBBSDXML}
+LDADD=	-lz -lbz2 -llzma -lpthread -lbsdxml
+CFLAGS+= -DHAVE_BZLIB_H=1 -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
 
 # It has no real relation to the libarchive version number.
 SHLIB_MAJOR= 6
 
-WARNS?=	0
-
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config.h\"
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config_midnightbsd.h\"
 CFLAGS+=	-I${.OBJDIR}
 
 .if ${MK_OPENSSL} != "no"
@@ -41,6 +30,13 @@ LDADD+=	-lmd
 SHARED_CFLAGS+=	-DHAVE_ICONV=1 -DHAVE_ICONV_H=1 -DICONV_CONST=
 .endif
 
+.if ${MACHINE_ARCH:Marm*} != "" || ${MACHINE_ARCH:Mmips*} != "" || \
+	${MACHINE_ARCH:Msparc64*} != "" || ${MACHINE_ARCH:Mia64*} != ""
+NO_WCAST_ALIGN=	yes
+.if ${MACHINE_ARCH:M*64*} == ""
+CFLAGS+=	-DPPMD_32BIT
+.endif
+.endif
 NO_WCAST_ALIGN.clang=
 
 .PATH: ${LIBARCHIVEDIR}/libarchive
@@ -53,6 +49,7 @@ SRCS=	archive_acl.c					\
 	archive_check_magic.c				\
 	archive_cmdline.c				\
 	archive_cryptor.c				\
+	archive_disk_acl_freebsd.c			\
 	archive_digest.c				\
 	archive_entry.c					\
 	archive_entry_copy_stat.c			\
@@ -98,6 +95,7 @@ SRCS=	archive_acl.c					\
 	archive_read_support_filter_rpm.c		\
 	archive_read_support_filter_uu.c		\
 	archive_read_support_filter_xz.c		\
+	archive_read_support_filter_zstd.c		\
 	archive_read_support_format_7zip.c		\
 	archive_read_support_format_all.c		\
 	archive_read_support_format_ar.c		\
@@ -117,10 +115,10 @@ SRCS=	archive_acl.c					\
 	archive_string.c				\
 	archive_string_sprintf.c			\
 	archive_util.c					\
+	archive_version_details.c			\
 	archive_virtual.c				\
 	archive_write.c					\
 	archive_write_add_filter.c			\
-	archive_write_disk_acl.c			\
 	archive_write_disk_set_standard_lookup.c	\
 	archive_write_disk_posix.c			\
 	archive_write_open_fd.c				\
@@ -140,6 +138,7 @@ SRCS=	archive_acl.c					\
 	archive_write_add_filter_program.c		\
 	archive_write_add_filter_uuencode.c		\
 	archive_write_add_filter_xz.c			\
+	archive_write_add_filter_zstd.c			\
 	archive_write_set_format.c			\
 	archive_write_set_format_7zip.c			\
 	archive_write_set_format_ar.c			\
@@ -417,11 +416,8 @@ MLINKS+=	archive_write_set_options.3 archive_write_set_format_option.3
 MLINKS+=	archive_write_set_options.3 archive_write_set_option.3
 MLINKS+=	libarchive.3 archive.3
 
-.PHONY: check test clean-test
-check test:
-	cd ${.CURDIR}/test && make obj && make test
-
-clean-test:
-	cd ${.CURDIR}/test && make clean
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.lib.mk>

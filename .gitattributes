@@ -47305,7 +47305,9 @@ lib/libalias/modules/pptp/Makefile -text
 lib/libalias/modules/skinny/Makefile -text
 lib/libalias/modules/smedia/Makefile -text
 lib/libarchive/Makefile -text
-lib/libarchive/config.h -text
+lib/libarchive/config_midnightbsd.h svneol=native#text/plain
+lib/libarchive/tests/Makefile svneol=native#text/plain
+lib/libarchive/tests/functional_test.sh svneol=native#text/plain
 lib/libauditd/Makefile -text
 lib/libbegemot/Makefile -text
 lib/libblocksruntime/Makefile -text
