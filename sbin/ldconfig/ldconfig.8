@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1993 Paul Kranenburg
 .\" All rights reserved.
@@ -27,9 +28,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/ldconfig/ldconfig.8,v 1.36 2005/12/09 03:12:25 obrien Exp $
+.\" $FreeBSD: stable/10/sbin/ldconfig/ldconfig.8 248496 2013-03-19 12:35:33Z joel $
 .\"
-.Dd November 11, 2005
+.Dd March 19, 2013
 .Dt LDCONFIG 8
 .Os
 .Sh NAME
@@ -162,21 +163,6 @@ In
 addition to building a set of hints for quick lookup, it also serves to
 specify the trusted collection of directories from which shared objects can
 be safely loaded.
-.Sh ENVIRONMENT
-.Bl -tag -width OBJFORMATxxx -compact
-.It Ev OBJFORMAT
-Overrides
-.Pa /etc/objformat
-(see below) to determine whether
-.Fl aout
-or
-.Fl elf
-is the default.
-If set, its value should be either
-.Ql aout
-or
-.Ql elf .
-.El
 .Sh FILES
 .Bl -tag -width /var/run/ld-elf.so.hintsxxx -compact
 .It Pa /var/run/ld.so.hints
@@ -196,17 +182,6 @@ invocations with
 Conventional configuration files containing directory names for
 invocations with
 .Fl 32 .
-.It Pa /etc/objformat
-Determines whether
-.Fl aout
-or
-.Fl elf
-is the default.
-If present, it must consist of a single line
-containing either
-.Ql OBJFORMAT=aout
-or
-.Ql OBJFORMAT=elf .
 .El
 .Sh SEE ALSO
 .Xr ld 1 ,

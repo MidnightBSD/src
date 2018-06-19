@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993,1995 Paul Kranenburg
  * All rights reserved.
@@ -30,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ldconfig/ldconfig.c,v 1.45.2.1 2005/11/18 19:47:41 jhb Exp $";
+  "$FreeBSD: stable/10/sbin/ldconfig/ldconfig.c 248525 2013-03-19 16:57:04Z imp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -96,6 +97,13 @@ static void		enter(char *, char *, char *, int *, int);
 static void		listhints(void);
 static int		readhints(void);
 static void		usage(void);
+
+/*
+ * Note on aout/a.out support.
+ * To properly support shared libraries for compat2x, which are a.out, we need
+ * to support a.out here.  As of 2013, bug reports are still coming in for this
+ * feature (on amd64 no less), so we know it is still in use.
+ */
 
 int
 main(int argc, char **argv)
@@ -444,7 +452,7 @@ buildhints(void)
 			}
 			if (j == hdr.hh_nbucket) {
 				warnx("bummer!");
-				goto out;
+				return -1;
 			}
 			while (bp->hi_next != -1)
 				bp = &blist[bp->hi_next];
@@ -479,48 +487,41 @@ buildhints(void)
 	umask(0);	/* Create with exact permissions */
 	if ((fd = mkstemp(tmpfilename)) == -1) {
 		warn("%s", tmpfilename);
-		goto out;
+		return -1;
 	}
 	fchmod(fd, 0444);
 
 	if (write(fd, &hdr, sizeof(struct hints_header)) !=
 						sizeof(struct hints_header)) {
 		warn("%s", hints_file);
-		goto out;
+		return -1;
 	}
 	if (write(fd, blist, hdr.hh_nbucket * sizeof(*blist)) !=
 				(ssize_t)(hdr.hh_nbucket * sizeof(*blist))) {
 		warn("%s", hints_file);
-		goto out;
+		return -1;
 	}
 	if (write(fd, strtab, strtab_sz) != strtab_sz) {
 		warn("%s", hints_file);
-		goto out;
+		return -1;
 	}
 	if (close(fd) != 0) {
 		warn("%s", hints_file);
-		goto out;
+		return -1;
 	}
 
 	/* Install it */
 	if (unlink(hints_file) != 0 && errno != ENOENT) {
 		warn("%s", hints_file);
-		goto out;
+		return -1;
 	}
 
 	if (rename(tmpfilename, hints_file) != 0) {
 		warn("%s", hints_file);
-		goto out;
+		return -1;
 	}
 
-	free(blist);
-	free(strtab);
 	return 0;
-
-out:
-	free(blist);
-	free(strtab);
-	return -1;
 }
 
 static int
