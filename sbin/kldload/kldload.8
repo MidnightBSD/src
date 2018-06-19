@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1997 Doug Rabson
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/kldload/kldload.8 307403 2016-10-16 22:02:50Z sevan $
 .\"
 .Dd March 18, 2012
 .Dt KLDLOAD 8
@@ -63,14 +64,13 @@ in the current directory.
 The following options are available:
 .Bl -tag -width indent
 .It Fl n
-Don't try to load module if already loaded.
+Do not try to load module if already loaded.
 .It Fl v
 Be more verbose.
 .It Fl q
 Silence any extraneous warnings.
 .El
 .Sh NOTES
-.Pp
 The kernel security level settings may prevent a module from being
 loaded or unloaded by giving
 .Em "Operation not permitted" .
@@ -127,4 +127,4 @@ replacing the
 .Nm lkm
 interface.
 .Sh AUTHORS
-.An Doug Rabson Aq dfr@FreeBSD.org
+.An Doug Rabson Aq Mt dfr@FreeBSD.org
