@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_compat_star_acl.c 315433 2017-03-16 23:08:18Z mm $");
 
 /*
  * Verify reading entries with POSIX.1e and NFSv4 ACLs from archives created

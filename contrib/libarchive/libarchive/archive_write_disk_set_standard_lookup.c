@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_disk_set_standard_lookup.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_disk_set_standard_lookup.c 311042 2017-01-02 01:43:11Z mm $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

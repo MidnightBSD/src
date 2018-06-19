@@ -127,7 +127,7 @@ archive_read_disk_entry_setup_acls(struct archive_read_disk *a,
 /*
  * Enter working directory and return working pathname of archive_entry.
  * If a pointer to an integer is provided and its value is below zero
- * open a file descriptor on this pahtname.
+ * open a file descriptor on this pathname.
  */
 const char *
 archive_read_disk_entry_setup_path(struct archive_read_disk *a,
@@ -613,21 +613,9 @@ setup_xattrs(struct archive_read_disk *a,
 	}
 
 	for (p = list; (p - list) < list_size; p += strlen(p) + 1) {
-#if ARCHIVE_XATTR_LINUX
-		/* Linux: skip POSIX.1e ACL extended attributes */
-		if (strncmp(p, "system.", 7) == 0 &&
-		   (strcmp(p + 7, "posix_acl_access") == 0 ||
-		    strcmp(p + 7, "posix_acl_default") == 0))
+		if (strncmp(p, "system.", 7) == 0 ||
+				strncmp(p, "xfsroot.", 8) == 0)
 			continue;
-		if (strncmp(p, "trusted.SGI_", 12) == 0 &&
-		   (strcmp(p + 12, "ACL_DEFAULT") == 0 ||
-		    strcmp(p + 12, "ACL_FILE") == 0))
-			continue;
-
-		/* Linux: xfsroot namespace is obsolete and unsupported */
-		if (strncmp(p, "xfsroot.", 8) == 0)
-			continue;
-#endif
 		setup_xattr(a, entry, p, *fd, path);
 	}
 

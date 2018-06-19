@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/contrib/libarchive/test_utils/test_common.h 324418 2017-10-08 20:55:45Z mm $
  */
 
 #ifndef	TEST_COMMON_H
@@ -329,6 +329,9 @@ int canLrzip(void);
 /* Return true if this platform can run the "lz4" program. */
 int canLz4(void);
 
+/* Return true if this platform can run the "zstd" program. */
+int canZstd(void);
+
 /* Return true if this platform can run the "lzip" program. */
 int canLzip(void);
 
@@ -348,7 +351,7 @@ int canNodump(void);
 int setTestAcl(const char *path);
 
 /* Get extended attribute */
-void *getXattr(const char *, const char *, size_t *);
+const void *getXattr(const char *, const char *, size_t *);
 
 /* Set extended attribute */
 int setXattr(const char *, const char *, const void *, size_t);

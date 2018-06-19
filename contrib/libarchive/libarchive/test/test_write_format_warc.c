@@ -24,7 +24,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_format_warc.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_write_format_warc.c 302001 2016-06-17 22:40:10Z mm $");
 
 DEFINE_TEST(test_write_format_warc)
 {

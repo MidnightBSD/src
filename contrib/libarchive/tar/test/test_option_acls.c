@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/test/test_option_acls.c 328828 2018-02-03 02:17:25Z mm $");
 
 #if ARCHIVE_ACL_FREEBSD || ARCHIVE_ACL_DARWIN || ARCHIVE_ACL_LIBACL
 static const acl_perm_t acl_perms[] = {
@@ -85,7 +85,9 @@ static const acl_flag_t acl_flags[] = {
     ACL_ENTRY_INHERIT_ONLY,
     ACL_ENTRY_SUCCESSFUL_ACCESS,
     ACL_ENTRY_FAILED_ACCESS,
+#ifdef ACL_ENTRY_INHERITED
     ACL_ENTRY_INHERITED
+#endif
 #endif	/* ARCHIVE_ACL_FREEBSD_NFS4 */
 };
 #endif /* ARCHIVE_ACL_DARWIN || ARCHIVE_ACL_FREEBSD_NFS4 */
@@ -360,10 +362,8 @@ compare_acls(const char *path_a, const char *path_b)
 	if (richacl_a != NULL) {
 		richacl_b = richacl_get_file(path_b);
 		if (richacl_b == NULL &&
-		    (errno == ENODATA || errno == ENOTSUP || errno == ENOSYS)) {
-			richacl_free(richacl_a);
+		    (errno == ENODATA || errno == ENOTSUP || errno == ENOSYS))
 			return (0);
-		}
 		failure("richacl_get_file() error: %s (%s)", path_b,
 		    strerror(errno));
 		if (assert(richacl_b != NULL) == 0) {
@@ -483,7 +483,7 @@ DEFINE_TEST(test_option_acls)
 	r = compare_acls("f", "acls_acls/f");
 	assertEqualInt(r, 1);
 
-	/* Extractl acls without acls */
+	/* Extract acls without acls */
 	assertMakeDir("acls_noacls", 0755);
 	clear_inheritance_flags("acls_noacls", acltype);
 	r = systemf("%s -x -C acls_noacls -p --no-acls -f acls.tar >acls_noacls.out 2>acls_noacls.err", testprog);

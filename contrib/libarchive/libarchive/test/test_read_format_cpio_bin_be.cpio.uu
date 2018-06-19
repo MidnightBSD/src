@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_cpio_bin_be.cpio.uu 228763 2011-12-21 11:13:29Z mm $
+$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_format_cpio_bin_be.cpio.uu 228763 2011-12-21 11:13:29Z mm $
 begin 644 test_read_format_cpio_bin_be.cpio
 M<<<`"#P\@:0#Z`````$``$GS"&\`%0````5F:6QE,3$Q,3(R,C(S,S,S-#0T
 M-```86)C9&4`<<<```````````````$`````````"P````!44D%)3$52(2$A

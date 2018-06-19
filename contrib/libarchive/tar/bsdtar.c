@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/bsdtar.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/bsdtar.c 324418 2017-10-08 20:55:45Z mm $");
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -419,6 +419,7 @@ main(int argc, char **argv)
 		case OPTION_LZIP: /* GNU tar beginning with 1.23 */
 		case OPTION_LZMA: /* GNU tar beginning with 1.20 */
 		case OPTION_LZOP: /* GNU tar beginning with 1.21 */
+		case OPTION_ZSTD:
 			if (compression != '\0')
 				lafe_errc(1, 0,
 				    "Can't specify both -%c and -%c", opt,
@@ -427,9 +428,10 @@ main(int argc, char **argv)
 			switch (opt) {
 			case OPTION_LRZIP: compression_name = "lrzip"; break;
 			case OPTION_LZ4:  compression_name = "lz4"; break;
-			case OPTION_LZIP: compression_name = "lzip"; break; 
-			case OPTION_LZMA: compression_name = "lzma"; break; 
-			case OPTION_LZOP: compression_name = "lzop"; break; 
+			case OPTION_LZIP: compression_name = "lzip"; break;
+			case OPTION_LZMA: compression_name = "lzma"; break;
+			case OPTION_LZOP: compression_name = "lzop"; break;
+			case OPTION_ZSTD: compression_name = "zstd"; break;
 			}
 			break;
 		case 'm': /* SUSv2 */

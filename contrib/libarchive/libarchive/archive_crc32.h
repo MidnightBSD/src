@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_crc32.h 232153 2012-02-25 10:58:02Z mm $
+ * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_crc32.h 232153 2012-02-25 10:58:02Z mm $
  */
 
 #ifndef __LIBARCHIVE_BUILD

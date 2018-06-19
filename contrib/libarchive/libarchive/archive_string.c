@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_string.c 302294 2016-06-30 08:51:50Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_string.c 324418 2017-10-08 20:55:45Z mm $");
 
 /*
  * Basic resizable string support, to simplify manipulating arbitrary-sized
@@ -214,7 +214,8 @@ archive_wstring_append(struct archive_wstring *as, const wchar_t *p, size_t s)
 {
 	if (archive_wstring_ensure(as, as->length + s + 1) == NULL)
 		return (NULL);
-	wmemmove(as->s + as->length, p, s);
+	if (s)
+		wmemmove(as->s + as->length, p, s);
 	as->length += s;
 	as->s[as->length] = 0;
 	return (as);

@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write.c 328828 2018-02-03 02:17:25Z mm $");
 
 /*
  * This file contains the "essential" portions of the write API, that
@@ -190,7 +190,7 @@ archive_write_get_bytes_in_last_block(struct archive *_a)
  * an archive to itself recursively.
  */
 int
-archive_write_set_skip_file(struct archive *_a, int64_t d, int64_t i)
+archive_write_set_skip_file(struct archive *_a, la_int64_t d, la_int64_t i)
 {
 	struct archive_write *a = (struct archive_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,

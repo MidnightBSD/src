@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_pax.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_set_format_pax.c 324418 2017-10-08 20:55:45Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -1654,7 +1654,7 @@ build_pax_attribute_name(char *dest, const char *src)
  * GNU PAX Format 1.0 requires the special name, which pattern is:
  * <dir>/GNUSparseFile.<pid>/<original file name>
  *
- * Since reproducable archives are more important, use 0 as pid.
+ * Since reproducible archives are more important, use 0 as pid.
  *
  * This function is used for only Sparse file, a file type of which
  * is regular file.

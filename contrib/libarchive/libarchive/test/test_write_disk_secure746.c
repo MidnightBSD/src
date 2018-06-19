@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_disk_secure746.c 306321 2016-09-25 22:02:27Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_write_disk_secure746.c 313571 2017-02-11 00:56:18Z mm $");
 
 #define UMASK 022
 
@@ -72,6 +72,9 @@ DEFINE_TEST(test_write_disk_secure746a)
 
 	/* Verify that target file contents are unchanged. */
 	assertTextFileContents("unmodified", "../target/foo");
+
+	assertEqualIntA(a, ARCHIVE_FATAL, archive_write_close(a));
+	archive_write_free(a);
 #endif
 }
 

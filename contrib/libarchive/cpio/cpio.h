@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/cpio/cpio.h 299529 2016-05-12 10:16:16Z mm $
+ * $FreeBSD: stable/10/contrib/libarchive/cpio/cpio.h 324418 2017-10-08 20:55:45Z mm $
  */
 
 #ifndef CPIO_H_INCLUDED
@@ -111,7 +111,8 @@ enum {
 	OPTION_PRESERVE_OWNER,
 	OPTION_QUIET,
 	OPTION_UUENCODE,
-	OPTION_VERSION
+	OPTION_VERSION,
+	OPTION_ZSTD,
 };
 
 int	cpio_getopt(struct cpio *cpio);

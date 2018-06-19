@@ -26,7 +26,7 @@
 
 
 #include "cpio_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/cmdline.c 305188 2016-09-01 07:53:59Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cpio/cmdline.c 324418 2017-10-08 20:55:45Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -92,6 +92,7 @@ static const struct option {
 	{ "verbose",			0, 'v' },
 	{ "version",			0, OPTION_VERSION },
 	{ "xz",				0, 'J' },
+	{ "zstd",			0, OPTION_ZSTD },
 	{ NULL, 0, 0 }
 };
 

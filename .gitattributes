@@ -17521,9 +17521,11 @@ contrib/libarchive/cat/test/test_0.c -text
 contrib/libarchive/cat/test/test_empty.gz.uu -text
 contrib/libarchive/cat/test/test_empty.lz4.uu -text
 contrib/libarchive/cat/test/test_empty.xz.uu -text
+contrib/libarchive/cat/test/test_empty.zst.uu -text
 contrib/libarchive/cat/test/test_empty_gz.c -text
 contrib/libarchive/cat/test/test_empty_lz4.c -text
 contrib/libarchive/cat/test/test_empty_xz.c -text
+contrib/libarchive/cat/test/test_empty_zstd.c svneol=native#text/plain
 contrib/libarchive/cat/test/test_error.c -text
 contrib/libarchive/cat/test/test_error_mixed.c -text
 contrib/libarchive/cat/test/test_expand.Z.uu -text
@@ -17532,6 +17534,7 @@ contrib/libarchive/cat/test/test_expand.gz.uu -text
 contrib/libarchive/cat/test/test_expand.lz4.uu -text
 contrib/libarchive/cat/test/test_expand.plain.uu -text
 contrib/libarchive/cat/test/test_expand.xz.uu -text
+contrib/libarchive/cat/test/test_expand.zst.uu -text
 contrib/libarchive/cat/test/test_expand_Z.c -text
 contrib/libarchive/cat/test/test_expand_bz2.c -text
 contrib/libarchive/cat/test/test_expand_gz.c -text
@@ -17539,7 +17542,9 @@ contrib/libarchive/cat/test/test_expand_lz4.c -text
 contrib/libarchive/cat/test/test_expand_mixed.c -text
 contrib/libarchive/cat/test/test_expand_plain.c -text
 contrib/libarchive/cat/test/test_expand_xz.c -text
+contrib/libarchive/cat/test/test_expand_zstd.c svneol=native#text/plain
 contrib/libarchive/cat/test/test_help.c -text
+contrib/libarchive/cat/test/test_stdin.c svneol=native#text/plain
 contrib/libarchive/cat/test/test_version.c -text
 contrib/libarchive/config.h.in -text
 contrib/libarchive/configure -text
@@ -17589,6 +17594,7 @@ contrib/libarchive/cpio/test/test_extract.cpio.lz4.uu -text
 contrib/libarchive/cpio/test/test_extract.cpio.lzma.uu -text
 contrib/libarchive/cpio/test/test_extract.cpio.lzo.uu -text
 contrib/libarchive/cpio/test/test_extract.cpio.xz.uu -text
+contrib/libarchive/cpio/test/test_extract.cpio.zst.uu -text
 contrib/libarchive/cpio/test/test_extract_cpio_Z.c -text
 contrib/libarchive/cpio/test/test_extract_cpio_bz2.c -text
 contrib/libarchive/cpio/test/test_extract_cpio_grz.c -text
@@ -17599,6 +17605,7 @@ contrib/libarchive/cpio/test/test_extract_cpio_lz4.c -text
 contrib/libarchive/cpio/test/test_extract_cpio_lzma.c -text
 contrib/libarchive/cpio/test/test_extract_cpio_lzo.c -text
 contrib/libarchive/cpio/test/test_extract_cpio_xz.c -text
+contrib/libarchive/cpio/test/test_extract_cpio_zstd.c svneol=native#text/plain
 contrib/libarchive/cpio/test/test_format_newc.c -text
 contrib/libarchive/cpio/test/test_gcpio_compat.c -text
 contrib/libarchive/cpio/test/test_gcpio_compat_ref.bin.uu -text
@@ -17643,6 +17650,7 @@ contrib/libarchive/cpio/test/test_option_version.c -text
 contrib/libarchive/cpio/test/test_option_xz.c -text
 contrib/libarchive/cpio/test/test_option_y.c -text
 contrib/libarchive/cpio/test/test_option_z.c -text
+contrib/libarchive/cpio/test/test_option_zstd.c svneol=native#text/plain
 contrib/libarchive/cpio/test/test_owner_parse.c -text
 contrib/libarchive/cpio/test/test_passthrough_dotdot.c -text
 contrib/libarchive/cpio/test/test_passthrough_reverse.c -text
@@ -17970,6 +17978,7 @@ contrib/libarchive/libarchive/archive_read_support_filter_program.c -text
 contrib/libarchive/libarchive/archive_read_support_filter_rpm.c -text
 contrib/libarchive/libarchive/archive_read_support_filter_uu.c -text
 contrib/libarchive/libarchive/archive_read_support_filter_xz.c -text
+contrib/libarchive/libarchive/archive_read_support_filter_zstd.c svneol=native#text/plain
 contrib/libarchive/libarchive/archive_read_support_format_7zip.c -text
 contrib/libarchive/libarchive/archive_read_support_format_all.c -text
 contrib/libarchive/libarchive/archive_read_support_format_ar.c -text
@@ -18012,6 +18021,7 @@ contrib/libarchive/libarchive/archive_write_add_filter_none.c -text
 contrib/libarchive/libarchive/archive_write_add_filter_program.c -text
 contrib/libarchive/libarchive/archive_write_add_filter_uuencode.c -text
 contrib/libarchive/libarchive/archive_write_add_filter_xz.c -text
+contrib/libarchive/libarchive/archive_write_add_filter_zstd.c svneol=native#text/plain
 contrib/libarchive/libarchive/archive_write_blocksize.3 -text
 contrib/libarchive/libarchive/archive_write_data.3 -text
 contrib/libarchive/libarchive/archive_write_disk.3 -text
@@ -18195,6 +18205,9 @@ contrib/libarchive/libarchive/test/test_compat_zip_4.zip.uu -text
 contrib/libarchive/libarchive/test/test_compat_zip_5.zip.uu -text
 contrib/libarchive/libarchive/test/test_compat_zip_6.zip.uu -text
 contrib/libarchive/libarchive/test/test_compat_zip_7.xps.uu -text
+contrib/libarchive/libarchive/test/test_compat_zip_8.zip.uu -text
+contrib/libarchive/libarchive/test/test_compat_zstd.c svneol=native#text/plain
+contrib/libarchive/libarchive/test/test_compat_zstd_1.tar.zst.uu -text
 contrib/libarchive/libarchive/test/test_empty_write.c -text
 contrib/libarchive/libarchive/test/test_entry.c -text
 contrib/libarchive/libarchive/test/test_entry_strmode.c -text
@@ -18555,6 +18568,7 @@ contrib/libarchive/libarchive/test/test_write_filter_lzop.c -text
 contrib/libarchive/libarchive/test/test_write_filter_program.c -text
 contrib/libarchive/libarchive/test/test_write_filter_uuencode.c -text
 contrib/libarchive/libarchive/test/test_write_filter_xz.c -text
+contrib/libarchive/libarchive/test/test_write_filter_zstd.c svneol=native#text/plain
 contrib/libarchive/libarchive/test/test_write_format_7zip.c -text
 contrib/libarchive/libarchive/test/test_write_format_7zip_empty.c -text
 contrib/libarchive/libarchive/test/test_write_format_7zip_large.c -text
@@ -18641,6 +18655,7 @@ contrib/libarchive/tar/test/test_extract.tar.lz4.uu -text
 contrib/libarchive/tar/test/test_extract.tar.lzma.uu -text
 contrib/libarchive/tar/test/test_extract.tar.lzo.uu -text
 contrib/libarchive/tar/test/test_extract.tar.xz.uu -text
+contrib/libarchive/tar/test/test_extract.tar.zst.uu -text
 contrib/libarchive/tar/test/test_extract_tar_Z.c -text
 contrib/libarchive/tar/test/test_extract_tar_bz2.c -text
 contrib/libarchive/tar/test/test_extract_tar_grz.c -text
@@ -18651,6 +18666,7 @@ contrib/libarchive/tar/test/test_extract_tar_lz4.c -text
 contrib/libarchive/tar/test/test_extract_tar_lzma.c -text
 contrib/libarchive/tar/test/test_extract_tar_lzo.c -text
 contrib/libarchive/tar/test/test_extract_tar_xz.c -text
+contrib/libarchive/tar/test/test_extract_tar_zstd.c svneol=native#text/plain
 contrib/libarchive/tar/test/test_format_newc.c -text
 contrib/libarchive/tar/test/test_getdate.c -text
 contrib/libarchive/tar/test/test_help.c -text
@@ -18695,6 +18711,7 @@ contrib/libarchive/tar/test/test_option_uuencode.c -text
 contrib/libarchive/tar/test/test_option_xattrs.c -text
 contrib/libarchive/tar/test/test_option_xz.c -text
 contrib/libarchive/tar/test/test_option_z.c -text
+contrib/libarchive/tar/test/test_option_zstd.c svneol=native#text/plain
 contrib/libarchive/tar/test/test_patterns.c -text
 contrib/libarchive/tar/test/test_patterns_2.tar.uu -text
 contrib/libarchive/tar/test/test_patterns_3.tar.uu -text

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_platform.h 306321 2016-09-25 22:02:27Z mm $
+ * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_platform.h 328828 2018-02-03 02:17:25Z mm $
  */
 
 /* !!ONLY FOR USE INTERNALLY TO LIBARCHIVE!! */
@@ -50,6 +50,17 @@
 #else
 /* Warn if the library hasn't been (automatically or manually) configured. */
 #error Oops: No config.h and no pre-built configuration in archive_platform.h.
+#endif
+
+/* On macOS check for some symbols based on the deployment target version.  */
+#if defined(__APPLE__)
+# undef HAVE_FUTIMENS
+# undef HAVE_UTIMENSAT
+# include <AvailabilityMacros.h>
+# if MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+#  define HAVE_FUTIMENS 1
+#  define HAVE_UTIMENSAT 1
+# endif
 #endif
 
 /* It should be possible to get rid of this by extending the feature-test
@@ -178,6 +189,12 @@
 
 #ifndef ARCHIVE_ERRNO_MISC
 #define	ARCHIVE_ERRNO_MISC (-1)
+#endif
+
+#if defined(__GNUC__) && (__GNUC__ >= 7)
+#define	__LA_FALLTHROUGH	__attribute__((fallthrough))
+#else
+#define	__LA_FALLTHROUGH
 #endif
 
 #endif /* !ARCHIVE_PLATFORM_H_INCLUDED */

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_compat_zip.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_compat_zip.c 328828 2018-02-03 02:17:25Z mm $");
 
 /* Copy this function for each test file and adjust it accordingly. */
 DEFINE_TEST(test_compat_zip_1)
@@ -420,5 +420,31 @@ DEFINE_TEST(test_compat_zip_7)
 
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
 	}
+	free(p);
+}
+
+/**
+ * A file with backslash path separators instead of slashes.
+ * PowerShell's Compress-Archive cmdlet produces such archives.
+ */
+DEFINE_TEST(test_compat_zip_8)
+{
+	const char *refname = "test_compat_zip_8.zip";
+	struct archive *a;
+	struct archive_entry *ae;
+	void *p;
+	size_t s;
+
+	extract_reference_file(refname);
+	p = slurpfile(&s, refname);
+
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip(a));
+	assertEqualIntA(a, ARCHIVE_OK, read_open_memory_minimal(a, p, s, 7));
+
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	/* This file is in the archive as arc\test */
+	assertEqualString("arc/test", archive_entry_pathname(ae));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
 	free(p);
 }

@@ -24,7 +24,7 @@
  */
 
 #include "bsdcat_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cat/bsdcat.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cat/bsdcat.c 328828 2018-02-03 02:17:25Z mm $");
 
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
@@ -70,6 +70,12 @@ version(void)
 void
 bsdcat_next(void)
 {
+	if (a != NULL) {
+		if (archive_read_close(a) != ARCHIVE_OK)
+			bsdcat_print_error();
+		archive_read_free(a);
+	}
+
 	a = archive_read_new();
 	archive_read_support_filter_all(a);
 	archive_read_support_format_empty(a);
@@ -100,8 +106,10 @@ bsdcat_read_to_stdout(const char* filename)
 		;
 	else if (archive_read_data_into_fd(a, 1) != ARCHIVE_OK)
 		bsdcat_print_error();
-	if (archive_read_free(a) != ARCHIVE_OK)
+	if (archive_read_close(a) != ARCHIVE_OK)
 		bsdcat_print_error();
+	archive_read_free(a);
+	a = NULL;
 }
 
 int
@@ -135,15 +143,14 @@ main(int argc, char **argv)
 	if (*bsdcat->argv == NULL) {
 		bsdcat_current_path = "<stdin>";
 		bsdcat_read_to_stdout(NULL);
-	} else
+	} else {
 		while (*bsdcat->argv) {
 			bsdcat_current_path = *bsdcat->argv++;
 			bsdcat_read_to_stdout(bsdcat_current_path);
 			bsdcat_next();
 		}
-
-	if (a != NULL)
-		archive_read_free(a);
+		archive_read_free(a); /* Help valgrind & friends */
+	}
 
 	exit(exit_status);
 }

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/test/test_option_xattrs.c 316338 2017-03-31 20:17:30Z mm $");
 
 DEFINE_TEST(test_option_xattrs)
 {
@@ -33,7 +33,7 @@ DEFINE_TEST(test_option_xattrs)
 
 	const char *testattr = "user.libarchive.test";
 	const char *testval = "testval";
-	void *readval;
+	const void *readval;
 	size_t size;
 	int r;
 
@@ -62,7 +62,6 @@ DEFINE_TEST(test_option_xattrs)
 	readval = getXattr("xattrs_xattrs/f", testattr, &size);
 	if(assertEqualInt(size, strlen(testval) + 1) != 0)
 		assertEqualMem(readval, testval, size);
-	free(readval);
 
 	/* Extract xattrs without xattrs */
 	assertMakeDir("xattrs_noxattrs", 0755);

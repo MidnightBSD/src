@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_entry.h 302075 2016-06-22 07:49:59Z mm $
+ * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_entry.h 321304 2017-07-20 20:16:18Z mm $
  */
 
 #ifndef ARCHIVE_ENTRY_H_INCLUDED

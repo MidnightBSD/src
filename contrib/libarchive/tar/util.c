@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/util.c 305188 2016-09-01 07:53:59Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/util.c 315433 2017-03-16 23:08:18Z mm $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

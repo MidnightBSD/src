@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/contrib/libarchive/libarchive/test/README 299529 2016-05-12 10:16:16Z mm $
+$FreeBSD: stable/10/contrib/libarchive/libarchive/test/README 302001 2016-06-17 22:40:10Z mm $
 
 This is the test harness for libarchive.
 

@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_ar.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_set_format_ar.c 322072 2017-08-04 23:34:39Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -374,13 +374,14 @@ archive_write_ar_data(struct archive_write *a, const void *buff, size_t s)
 			return (ARCHIVE_WARN);
 		}
 
-		ar->strtab = (char *)malloc(s);
+		ar->strtab = (char *)malloc(s + 1);
 		if (ar->strtab == NULL) {
 			archive_set_error(&a->archive, ENOMEM,
 			    "Can't allocate strtab buffer");
 			return (ARCHIVE_FATAL);
 		}
-		strncpy(ar->strtab, buff, s);
+		memcpy(ar->strtab, buff, s);
+		ar->strtab[s] = '\0';
 		ar->has_strtab = 1;
 	}
 

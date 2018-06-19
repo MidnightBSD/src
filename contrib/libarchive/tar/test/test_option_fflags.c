@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/test/test_option_fflags.c 315433 2017-03-16 23:08:18Z mm $");
 
 static void
 clear_fflags(const char *pathname)

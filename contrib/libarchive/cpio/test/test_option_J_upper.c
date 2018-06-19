@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/test/test_option_J_upper.c 228763 2011-12-21 11:13:29Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cpio/test/test_option_J_upper.c 310570 2016-12-26 06:25:39Z ngie $");
 
 DEFINE_TEST(test_option_J_upper)
 {

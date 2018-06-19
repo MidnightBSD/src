@@ -28,7 +28,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/cmdline.c 305188 2016-09-01 07:53:59Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/cmdline.c 324418 2017-10-08 20:55:45Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -160,6 +160,7 @@ static const struct bsdtar_option {
 	{ "version",              0, OPTION_VERSION },
 	{ "xattrs",               0, OPTION_XATTRS },
 	{ "xz",                   0, 'J' },
+	{ "zstd",                 0, OPTION_ZSTD },
 	{ NULL, 0, 0 }
 };
 

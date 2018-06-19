@@ -2319,6 +2319,21 @@ canLz4(void)
 }
 
 /*
+ * Can this platform run the zstd program?
+ */
+int
+canZstd(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("zstd -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
  * Can this platform run the lzip program?
  */
 int
@@ -2453,8 +2468,8 @@ canNodump(void)
 	return (0);
 }
 
-/* Get extended attribute value from a path */
-void *
+/* Get extended attribute from a path */
+const void *
 getXattr(const char *path, const char *name, size_t *sizep)
 { 
 	void *value = NULL;

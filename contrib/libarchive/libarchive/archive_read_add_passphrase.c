@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_add_passphrase.c 305188 2016-09-01 07:53:59Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_add_passphrase.c 305192 2016-09-01 12:01:23Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>

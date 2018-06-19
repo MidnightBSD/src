@@ -26,7 +26,7 @@
 
 
 #include "cpio_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/cpio.c 302075 2016-06-22 07:49:59Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cpio/cpio.c 324418 2017-10-08 20:55:45Z mm $");
 
 #include <sys/types.h>
 #include <archive.h>
@@ -269,6 +269,7 @@ main(int argc, char *argv[])
 		case OPTION_LZ4:
 		case OPTION_LZMA: /* GNU tar, others */
 		case OPTION_LZOP: /* GNU tar, others */
+		case OPTION_ZSTD:
 			cpio->compress = opt;
 			break;
 		case 'm': /* POSIX 1997 */
@@ -545,6 +546,9 @@ mode_out(struct cpio *cpio)
 		break;
 	case OPTION_LZOP:
 		r = archive_write_add_filter_lzop(cpio->archive);
+		break;
+	case OPTION_ZSTD:
+		r = archive_write_add_filter_zstd(cpio->archive);
 		break;
 	case 'j': case 'y':
 		r = archive_write_add_filter_bzip2(cpio->archive);

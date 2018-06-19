@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_util.c 305188 2016-09-01 07:53:59Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_util.c 328828 2018-02-03 02:17:25Z mm $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -140,7 +140,7 @@ archive_compression_name(struct archive *a)
 /*
  * Return a count of the number of compressed bytes processed.
  */
-int64_t
+la_int64_t
 archive_position_compressed(struct archive *a)
 {
 	return archive_filter_bytes(a, -1);
@@ -149,7 +149,7 @@ archive_position_compressed(struct archive *a)
 /*
  * Return a count of the number of uncompressed bytes processed.
  */
-int64_t
+la_int64_t
 archive_position_uncompressed(struct archive *a)
 {
 	return archive_filter_bytes(a, 0);

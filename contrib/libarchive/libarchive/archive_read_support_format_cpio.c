@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_cpio.c 299896 2016-05-16 05:01:44Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_support_format_cpio.c 324418 2017-10-08 20:55:45Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -632,6 +632,13 @@ header_newc(struct archive_read *a, struct cpio *cpio,
 	*namelength = (size_t)atol16(header + newc_namesize_offset, newc_namesize_size);
 	/* Pad name to 2 more than a multiple of 4. */
 	*name_pad = (2 - *namelength) & 3;
+
+	/* Make sure that the padded name length fits into size_t. */
+	if (*name_pad > SIZE_MAX - *namelength) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "cpio archive has invalid namelength");
+		return (ARCHIVE_FATAL);
+	}
 
 	/*
 	 * Note: entry_bytes_remaining is at least 64 bits and

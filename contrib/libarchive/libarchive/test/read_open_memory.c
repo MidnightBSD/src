@@ -24,7 +24,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/read_open_memory.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/read_open_memory.c 328828 2018-02-03 02:17:25Z mm $");
 
 #include <errno.h>
 #include <stdlib.h>
@@ -91,9 +91,11 @@ read_open_memory_internal(struct archive *a, const void *buff,
 	switch (level) {
 	case 3:
 		archive_read_set_seek_callback(a, memory_read_seek);
+		__LA_FALLTHROUGH;
 	case 2:
 		archive_read_set_open_callback(a, memory_read_open);
 		archive_read_set_skip_callback(a, memory_read_skip);
+		__LA_FALLTHROUGH;
 	case 1:
 		mine = malloc(sizeof(*mine));
 		if (mine == NULL) {

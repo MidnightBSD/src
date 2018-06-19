@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_endian.h 299529 2016-05-12 10:16:16Z mm $
+ * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_endian.h 302001 2016-06-17 22:40:10Z mm $
  *
  * Borrowed from FreeBSD's <sys/endian.h>
  */

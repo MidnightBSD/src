@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/tar/bsdtar.h 299529 2016-05-12 10:16:16Z mm $
+ * $FreeBSD: stable/10/contrib/libarchive/tar/bsdtar.h 324418 2017-10-08 20:55:45Z mm $
  */
 
 #include "bsdtar_platform.h"
@@ -181,7 +181,8 @@ enum {
 	OPTION_USE_COMPRESS_PROGRAM,
 	OPTION_UUENCODE,
 	OPTION_VERSION,
-	OPTION_XATTRS
+	OPTION_XATTRS,
+	OPTION_ZSTD,
 };
 
 int	bsdtar_getopt(struct bsdtar *);
