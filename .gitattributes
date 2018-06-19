@@ -52237,6 +52237,8 @@ sbin/md5/md5.c -text
 sbin/mdconfig/Makefile -text
 sbin/mdconfig/mdconfig.8 -text
 sbin/mdconfig/mdconfig.c -text
+sbin/mdconfig/tests/Makefile svneol=native#text/plain
+sbin/mdconfig/tests/mdconfig_test.sh svneol=native#text/plain
 sbin/mdmfs/Makefile -text
 sbin/mdmfs/mdmfs.8 -text
 sbin/mdmfs/mdmfs.c -text
