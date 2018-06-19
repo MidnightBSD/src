@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)accton.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/accton/accton.c,v 1.8 2004/08/07 04:19:37 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/accton/accton.c 201387 2010-01-02 11:05:34Z ed $");
 
 #include <sys/types.h>
 #include <err.h>
@@ -80,7 +81,7 @@ main(int argc, char *argv[])
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: accton [file]\n");
 	exit(1);
