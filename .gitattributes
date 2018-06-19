@@ -52228,6 +52228,9 @@ sbin/ldconfig/elfhints.c -text
 sbin/ldconfig/ldconfig.8 -text
 sbin/ldconfig/ldconfig.c -text
 sbin/ldconfig/ldconfig.h -text
+sbin/mca/Makefile svneol=native#text/plain
+sbin/mca/mca.8 svneol=native#text/plain
+sbin/mca/mca.c svneol=native#text/plain
 sbin/md5/Makefile -text
 sbin/md5/md5.1 -text
 sbin/md5/md5.c -text
