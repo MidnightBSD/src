@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2003 Networks Associates Technology, Inc.
 .\" All rights reserved.
@@ -32,9 +33,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/mksnap_ffs/mksnap_ffs.8 306995 2016-10-10 16:36:14Z sevan $
 .\"
-.Dd February 14, 2011
+.Dd October 3, 2016
 .Dt MKSNAP_FFS 8
 .Os
 .Sh NAME
@@ -75,7 +76,7 @@ mount -o ro /dev/md0 /mnt/
 The
 .Nm
 utility first appeared in
-.Fx 5.0 .
+.Fx 5.1 .
 .Sh CAVEATS
 The disk full situation is not handled gracefully and may
 lead to a system panic when no free blocks are found.
