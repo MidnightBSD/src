@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/mount_udf/Makefile 247861 2013-03-06 00:36:33Z jkim $
 
 PROG=	mount_udf
 SRCS=	mount_udf.c getmntopts.c
@@ -9,7 +10,6 @@ LDADD=	-lkiconv
 MOUNT=	${.CURDIR}/../mount
 CFLAGS+= -I${MOUNT} -I${.CURDIR}/../../sys
 .PATH:	${MOUNT}
-WARNS?= 1
 
 # Needs to be dynamically linked for optional dlopen() access to
 # userland libiconv
