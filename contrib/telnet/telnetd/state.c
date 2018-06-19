@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)state.c	8.5 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/telnet/telnetd/state.c 241021 2012-09-28 07:51:30Z kevlo $");
 
 #include <stdarg.h>
 #include "telnetd.h"
@@ -1600,8 +1600,10 @@ output_data(const char *format, ...)
 	char *buf;
 
 	va_start(args, format);
-	if ((len = vasprintf(&buf, format, args)) == -1)
+	if ((len = vasprintf(&buf, format, args)) == -1) {
+		va_end(args);
 		return -1;
+	}
 	output_datalen(buf, len);
 	va_end(args);
 	free(buf);

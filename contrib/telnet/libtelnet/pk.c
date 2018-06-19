@@ -30,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/contrib/telnet/libtelnet/pk.c 189092 2009-02-26 21:43:15Z ed $");
+__FBSDID("$FreeBSD: stable/10/contrib/telnet/libtelnet/pk.c 305552 2016-09-07 18:22:08Z dim $");
 
 /* public key routines */
 /* functions:
@@ -164,7 +164,7 @@ genkeys(char *public, char *secret)
         MINT *pk = mp_itom(0);
         MINT *sk = mp_itom(0);
         MINT *tmp;
-        MINT *base = mp_itom(BASE);
+        MINT *base = mp_itom((short)BASE);
         MINT *root = mp_itom(PROOT);
         MINT *modulus = mp_xtom(HEXMODULUS);
         short r;

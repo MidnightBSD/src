@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ext.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD$
+ * $FreeBSD: stable/10/contrib/telnet/telnetd/ext.h 184935 2008-11-13 19:05:27Z ed $
  */
 
 /*
