@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -35,7 +36,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/newfs/newfs.h 248623 2013-03-22 21:45:28Z mckusick $
  */
 
 #include <libufs.h>
@@ -81,6 +82,7 @@ extern int	Nflag;		/* run mkfs without writing file system */
 extern int	Oflag;		/* build UFS1 format file system */
 extern int	Rflag;		/* regression test */
 extern int	Uflag;		/* enable soft updates for file system */
+extern int	jflag;		/* enable soft updates journaling for filesys */
 extern int	Xflag;		/* exit in middle of newfs for testing */
 extern int	Jflag;		/* enable gjournal for file system */
 extern int	lflag;		/* enable multilabel MAC for file system */

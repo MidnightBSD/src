@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/newfs/mkfs.c 322860 2017-08-24 21:44:23Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -121,6 +122,7 @@ mkfs(struct partition *pp, char *fsys)
 	ino_t maxinum;
 	int minfragsperinode;	/* minimum ratio of frags to inodes */
 	char tmpbuf[100];	/* XXX this will break in about 2,500 years */
+	struct fsrecovery fsr;
 	union {
 		struct fs fdummy;
 		char cdummy[SBLOCKSIZE];
@@ -619,6 +621,25 @@ restart:
 			sblock.fs_cssize - i : sblock.fs_bsize,
 			((char *)fscs) + i);
 	/*
+	 * Read the last sector of the boot block, replace the last
+	 * 20 bytes with the recovery information, then write it back.
+	 * The recovery information only works for UFS2 filesystems.
+	 */
+	if (sblock.fs_magic == FS_UFS2_MAGIC) {
+		i = bread(&disk,
+		    part_ofs + (SBLOCK_UFS2 - sizeof(fsr)) / disk.d_bsize,
+		    (char *)&fsr, sizeof(fsr));
+		if (i == -1)
+			err(1, "can't read recovery area: %s", disk.d_error);
+		fsr.fsr_magic = sblock.fs_magic;
+		fsr.fsr_fpg = sblock.fs_fpg;
+		fsr.fsr_fsbtodb = sblock.fs_fsbtodb;
+		fsr.fsr_sblkno = sblock.fs_sblkno;
+		fsr.fsr_ncg = sblock.fs_ncg;
+		wtfs((SBLOCK_UFS2 - sizeof(fsr)) / disk.d_bsize, sizeof(fsr),
+		    (char *)&fsr);
+	}
+	/*
 	 * Update information about this partition in pack
 	 * label, to that it may be updated on disk.
 	 */
@@ -811,7 +832,7 @@ initcg(int cylno, time_t utime)
  */
 #define ROOTLINKCNT 3
 
-struct direct root_dir[] = {
+static struct direct root_dir[] = {
 	{ ROOTINO, sizeof(struct direct), DT_DIR, 1, "." },
 	{ ROOTINO, sizeof(struct direct), DT_DIR, 2, ".." },
 	{ ROOTINO + 1, sizeof(struct direct), DT_DIR, 5, ".snap" },
@@ -819,7 +840,7 @@ struct direct root_dir[] = {
 
 #define SNAPLINKCNT 2
 
-struct direct snap_dir[] = {
+static struct direct snap_dir[] = {
 	{ ROOTINO + 1, sizeof(struct direct), DT_DIR, 1, "." },
 	{ ROOTINO, sizeof(struct direct), DT_DIR, 2, ".." },
 };
@@ -1010,7 +1031,8 @@ iput(union dinode *ip, ino_t ino)
 	sblock.fs_cstotal.cs_nifree--;
 	fscs[0].cs_nifree--;
 	if (ino >= (unsigned long)sblock.fs_ipg * sblock.fs_ncg) {
-		printf("fsinit: inode value out of range (%d).\n", ino);
+		printf("fsinit: inode value out of range (%ju).\n",
+		    (uintmax_t)ino);
 		exit(32);
 	}
 	d = fsbtodb(&sblock, ino_to_fsba(&sblock, ino));
