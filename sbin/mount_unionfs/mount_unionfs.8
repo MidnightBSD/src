@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1994
 .\" The Regents of the University of California.  All rights reserved.
 .\"
@@ -29,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mount_union.8	8.6 (Berkeley) 3/27/94
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/mount_unionfs/mount_unionfs.8 307408 2016-10-16 22:31:51Z sevan $
 .\"
-.Dd November 30, 2006
+.Dd October 3, 2016
 .Dt MOUNT_UNIONFS 8
 .Os
 .Sh NAME
@@ -83,7 +84,7 @@ becomes the upper layer.
 However,
 .Ar uniondir
 remains the mount point.
-.It Sm Cm copymode No = Cm traditional | transparent | masquerade Sm
+.It Cm copymode No = Cm traditional | transparent | masquerade
 Specifies the way to create a file or a directory in the upper layer
 automatically when needed.
 The
@@ -98,7 +99,7 @@ For behavior of the
 mode, see
 .Sx MASQUERADE MODE
 below.
-.It Sm Cm whiteout No = Cm always | whenneeded Sm
+.It Cm whiteout No = Cm always | whenneeded
 Specifies whether whiteouts should always be made in the upper layer
 when removing a file or directory or only when it already exists in the
 lower layer.
@@ -328,9 +329,13 @@ accessible via
 .Xr mount_nullfs 8
 .Sh HISTORY
 The
-.Nm
+.Nm mount_null
 utility first appeared in
 .Bx 4.4 .
+It was renamed to
+.Nm
+in
+.Fx 5.0 .
 .Pp
 The
 .Fl r
@@ -342,9 +347,9 @@ because this is identical to using
 .An -nosplit
 In
 .Fx 7.0 ,
-.An Masanori OZAWA Aq ozawa@ongs.co.jp
+.An Masanori OZAWA Aq Mt ozawa@ongs.co.jp
 reimplemented handling of locking, whiteout, and file mode bits, and
-.An Hiroki Sato Aq hrs@FreeBSD.org
+.An Hiroki Sato Aq Mt hrs@FreeBSD.org
 wrote about the changes in this manual page.
 .Sh BUGS
 THIS FILE SYSTEM TYPE IS NOT YET FULLY SUPPORTED (READ: IT DOESN'T WORK)
@@ -357,7 +362,7 @@ BATTERIES NOT INCLUDED.
 .Pp
 This code also needs an owner in order to be less dangerous - serious
 hackers can apply by sending mail to
-.Aq freebsd-fs@FreeBSD.org
+.Aq Mt freebsd-fs@FreeBSD.org
 and announcing
 their intent to take it over.
 .Pp
