@@ -15099,12 +15099,15 @@ contrib/gcclibs/include/xregex.h -text
 contrib/gcclibs/include/xregex2.h -text
 contrib/gcclibs/include/xtensa-config.h -text
 contrib/gcclibs/libcpp/ChangeLog -text
+contrib/gcclibs/libcpp/ChangeLog.apple -text
+contrib/gcclibs/libcpp/ChangeLog.gcc43 -text
 contrib/gcclibs/libcpp/Makefile.in -text
 contrib/gcclibs/libcpp/aclocal.m4 -text
 contrib/gcclibs/libcpp/charset.c -text
 contrib/gcclibs/libcpp/config.in -text
 contrib/gcclibs/libcpp/configure -text
 contrib/gcclibs/libcpp/configure.ac -text
+contrib/gcclibs/libcpp/directives-only.c svneol=native#text/plain
 contrib/gcclibs/libcpp/directives.c -text
 contrib/gcclibs/libcpp/errors.c -text
 contrib/gcclibs/libcpp/expr.c -text
@@ -15152,6 +15155,7 @@ contrib/gcclibs/libdecnumber/decimal32.h -text
 contrib/gcclibs/libdecnumber/decimal64.c -text
 contrib/gcclibs/libdecnumber/decimal64.h -text
 contrib/gcclibs/libgomp/ChangeLog -text
+contrib/gcclibs/libgomp/ChangeLog.gcc44 -text
 contrib/gcclibs/libgomp/Makefile.am -text
 contrib/gcclibs/libgomp/Makefile.in -text
 contrib/gcclibs/libgomp/acinclude.m4 -text
@@ -15159,6 +15163,8 @@ contrib/gcclibs/libgomp/aclocal.m4 -text
 contrib/gcclibs/libgomp/alloc.c -text
 contrib/gcclibs/libgomp/barrier.c -text
 contrib/gcclibs/libgomp/config.h.in -text
+contrib/gcclibs/libgomp/config/bsd/proc.c svneol=native#text/plain
+contrib/gcclibs/libgomp/config/linux/affinity.c svneol=native#text/plain
 contrib/gcclibs/libgomp/config/linux/alpha/futex.h -text
 contrib/gcclibs/libgomp/config/linux/bar.c -text
 contrib/gcclibs/libgomp/config/linux/bar.h -text
@@ -15168,12 +15174,15 @@ contrib/gcclibs/libgomp/config/linux/mutex.c -text
 contrib/gcclibs/libgomp/config/linux/mutex.h -text
 contrib/gcclibs/libgomp/config/linux/omp-lock.h -text
 contrib/gcclibs/libgomp/config/linux/powerpc/futex.h -text
+contrib/gcclibs/libgomp/config/linux/proc.c svneol=native#text/plain
 contrib/gcclibs/libgomp/config/linux/s390/futex.h -text
 contrib/gcclibs/libgomp/config/linux/sem.c -text
 contrib/gcclibs/libgomp/config/linux/sem.h -text
 contrib/gcclibs/libgomp/config/linux/sparc/futex.h -text
 contrib/gcclibs/libgomp/config/linux/x86/futex.h -text
+contrib/gcclibs/libgomp/config/mingw32/proc.c svneol=native#text/plain
 contrib/gcclibs/libgomp/config/mingw32/time.c -text
+contrib/gcclibs/libgomp/config/posix/affinity.c svneol=native#text/plain
 contrib/gcclibs/libgomp/config/posix/bar.c -text
 contrib/gcclibs/libgomp/config/posix/bar.h -text
 contrib/gcclibs/libgomp/config/posix/lock.c -text
@@ -15212,6 +15221,7 @@ contrib/gcclibs/libgomp/team.c -text
 contrib/gcclibs/libgomp/work.c -text
 contrib/gcclibs/libiberty/COPYING.LIB -text
 contrib/gcclibs/libiberty/ChangeLog -text
+contrib/gcclibs/libiberty/ChangeLog.gcc43 -text
 contrib/gcclibs/libiberty/Makefile.in -text
 contrib/gcclibs/libiberty/README -text
 contrib/gcclibs/libiberty/_doprnt.c -text
