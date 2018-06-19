@@ -30,14 +30,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/contrib/traceroute/findsaddr-socket.c,v 1.3 2004/07/28 14:21:25 mux Exp $
+ * $FreeBSD: stable/10/contrib/traceroute/findsaddr-socket.c 132796 2004-07-28 14:21:25Z mux $
  */
 
 /* XXX Yes this is WAY too complicated */
 
 #ifndef lint
 static const char rcsid[] =
-    "@(#) $Id: findsaddr-socket.c,v 1.1.1.2 2006-02-25 02:34:12 laffer1 Exp $ (LBL)";
+    "@(#) $Id: findsaddr-socket.c,v 1.1 2000/11/23 20:17:12 leres Exp $ (LBL)";
 #endif
 
 #include <sys/param.h>
