@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1992, 1993, 1994
 .\"	The Regents of the University of California.  All rights reserved.
@@ -31,9 +32,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount_null.8	8.6 (Berkeley) 5/1/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/mount_nullfs/mount_nullfs.8 307406 2016-10-16 22:27:16Z sevan $
 .\"
-.Dd May 1, 1995
+.Dd October 3, 2016
 .Dt MOUNT_NULLFS 8
 .Os
 .Sh NAME
@@ -240,6 +241,10 @@ UCLA Technical Report CSD-910056,
 .Em "Stackable Layers: an Architecture for File System Development" .
 .Sh HISTORY
 The
-.Nm
+.Nm mount_null
 utility first appeared in
 .Bx 4.4 .
+It was renamed to
+.Nm
+in
+.Fx 5.0 .
