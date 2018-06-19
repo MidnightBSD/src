@@ -52507,6 +52507,9 @@ sbin/mount_cd9660/mount_cd9660.c -text
 sbin/mount_ext2fs/Makefile -text
 sbin/mount_ext2fs/mount_ext2fs.8 -text
 sbin/mount_ext2fs/mount_ext2fs.c -text
+sbin/mount_fusefs/Makefile svneol=native#text/plain
+sbin/mount_fusefs/mount_fusefs.8 svneol=native#text/plain
+sbin/mount_fusefs/mount_fusefs.c svneol=native#text/plain
 sbin/mount_msdosfs/Makefile -text
 sbin/mount_msdosfs/mount_msdosfs.8 -text
 sbin/mount_msdosfs/mount_msdosfs.c -text
