@@ -642,11 +642,6 @@ x!= { ${_build_all_dirs:@x@${target($x):?:echo '$x: _DIRDEP_USE';}@} echo; } >&3
 x!= { echo; ${DEP_EXPORT_VARS:@v@echo '$v=${$v}';@} echo '.export ${DEP_EXPORT_VARS}'; echo; } >&3; echo
 .endif
 .else
-.if ${BUILD_DIRDEPS_CACHE} == "yes"
-x!= { echo; echo '\# ${DEP_RELDIR}.${DEP_TARGET_SPEC}'; \
-	echo 'dirdeps: ${_build_dirs:${M_oneperline}}'; echo; } >&3; echo
-x!= { ${_build_dirs:@x@${target($x):?:echo '$x: _DIRDEP_USE';}@} echo; } >&3; echo
-.else
 # this makes it all happen
 dirdeps: ${_build_all_dirs}
 .endif

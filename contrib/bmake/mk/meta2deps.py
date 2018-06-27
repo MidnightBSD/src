@@ -399,18 +399,18 @@ class MetaFile:
         V 3
         C "pid" "cwd"
         E "pid" "path"
-	F "pid" "child"
+        F "pid" "child"
         R "pid" "path"
         W "pid" "path"
         X "pid" "status"
-	D "pid" "path"
-	L "pid" "src" "target"
-	M "pid" "old" "new"
-	S "pid" "path"
-	# Bye bye
+        D "pid" "path"
+        L "pid" "src" "target"
+        M "pid" "old" "new"
+        S "pid" "path"
+        # Bye bye
 
-	We go to some effort to avoid processing a dependency more than once.
-	Of the above record types only C,E,F,L,R,V and W are of interest.
+        We go to some effort to avoid processing a dependency more than once.
+        Of the above record types only C,E,F,L,R,V and W are of interest.
         """
 
         version = 0                     # unknown

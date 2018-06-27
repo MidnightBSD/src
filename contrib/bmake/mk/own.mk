@@ -134,7 +134,6 @@ $xOWN=  ${USER}
 $xGRP=  ${USERGRP}
 $x_INSTALL_OWN=
 .endfor
-PROG_INSTALL_OWN=
 .endif
 .endif
 

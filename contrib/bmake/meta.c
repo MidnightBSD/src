@@ -38,7 +38,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #ifdef HAVE_LIBGEN_H
-#ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 #elif !defined(HAVE_DIRNAME)
 char * dirname(char *);

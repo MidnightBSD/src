@@ -147,7 +147,6 @@ stage_incs: ${STAGE_INCS}
 STAGE_TARGETS += stage_incs
 STAGE_INCS ?= ${.ALLSRC:N.dirdep:Nstage_*}
 stage_includes: stage_incs
-stage_includes: stage_incs
 stage_incs:	.dirdep
 	@${STAGE_FILE_SCRIPT}; StageFiles ${STAGE_INCSDIR:${STAGE_DIR_FILTER}} ${STAGE_INCS}
 	@touch $@

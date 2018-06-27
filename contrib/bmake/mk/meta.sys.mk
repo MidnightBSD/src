@@ -102,9 +102,6 @@ _metaError: .NOMETA .NOTMAIN
 
 .endif
 
-META_COOKIE_TOUCH=
-# some targets need to be .PHONY in non-meta mode
-META_NOPHONY= .PHONY
 # Are we, after all, in meta mode?
 .if ${.MAKE.MODE:Uno:Mmeta*} != ""
 MKDEP_MK = meta.autodep.mk
