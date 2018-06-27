@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/9.2.0/contrib/openbsm/bin/auditdistd/auditdistd.8 243730 2012-11-30 23:50:07Z rwatson $
+.\" $FreeBSD: stable/10/contrib/openbsm/bin/auditdistd/auditdistd.8 293161 2016-01-04 16:32:21Z brueffer $
 .\"
 .Dd March 5, 2012
 .Dt AUDITDISTD 8
@@ -41,7 +41,7 @@
 .Sh DESCRIPTION
 The
 .Nm
-daemon is responsible for distributing audit trail files over TCP/IP network in
+daemon is responsible for distributing audit trail files over a TCP/IP network in
 a secure and reliable way.
 .Pp
 The
@@ -49,7 +49,7 @@ The
 daemon can be started with the following command line arguments:
 .Bl -tag -width ".Fl P Ar pidfile"
 .It Fl c Ar config
-Specify alternative location of the configuration file.
+Specify an alternative location of the configuration file.
 The default location is
 .Pa /etc/security/auditdistd.conf .
 Note: the configuration file may contain passwords.
@@ -74,7 +74,7 @@ usage message.
 Start in a launchd-friendly mode, ie. do not use
 .Xr daemon 3 .
 .It Fl P Ar pidfile
-Specify alternative location of a file where main process PID will be
+Specify an alternative location of a file where main process PID will be
 stored.
 The default location is
 .Pa /var/run/auditdistd.pid .

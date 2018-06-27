@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $P4: //depot/projects/trustedbsd/openbsm/bin/auditdistd/parse.y#5 $
  */
 
 #include <config/config.h>
@@ -56,7 +54,6 @@ extern int lineno;
 
 extern FILE *yyin;
 extern char *yytext;
-extern int yyparse(void);
 
 static struct adist_config *lconfig;
 static struct adist_host *curhost;

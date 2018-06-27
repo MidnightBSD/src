@@ -536,7 +536,6 @@ install-exec-hook:
           $(LN_S) -f getaudit.2 getaudit_addr.2 && \
           $(LN_S) -f setaudit.2 setaudit_addr.2
 
-
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
