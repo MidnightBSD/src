@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.dir.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/sh.dir.h,v 3.6 2002/03/08 17:36:46 christos Exp $ */
 /*
  * sh.dir.h: Directory data structures and globals
  */

@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.sig.h,v 1.1.1.5 2012-07-08 16:12:19 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.sig.h,v 3.34 2010/11/29 15:28:58 christos Exp $ */
 /*
  * tc.sig.h: Signal handling
  *

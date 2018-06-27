@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.disc.c,v 1.1.1.4 2012-07-08 16:12:18 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.disc.c,v 3.18 2011/01/09 16:25:29 christos Exp $ */
 /*
  * tc.disc.c: Functions to set/clear line disciplines
  *

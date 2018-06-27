@@ -37952,6 +37952,8 @@ contrib/tcsh/cygwin/csh.cshrc -text
 contrib/tcsh/cygwin/csh.login -text
 contrib/tcsh/cygwin/postinstall.sh -text
 contrib/tcsh/cygwin/preremove.sh -text
+contrib/tcsh/dotlock.c -text
+contrib/tcsh/dotlock.h -text
 contrib/tcsh/ed.chared.c -text
 contrib/tcsh/ed.decls.h -text
 contrib/tcsh/ed.defns.c -text
@@ -38006,6 +38008,7 @@ contrib/tcsh/nls/C/set6 -text
 contrib/tcsh/nls/C/set7 -text
 contrib/tcsh/nls/C/set8 -text
 contrib/tcsh/nls/C/set9 -text
+contrib/tcsh/nls/Makefile -text
 contrib/tcsh/nls/Makefile.in -text
 contrib/tcsh/nls/catgen -text
 contrib/tcsh/nls/et/charset -text
@@ -38133,7 +38136,7 @@ contrib/tcsh/nls/german/set7 -text
 contrib/tcsh/nls/german/set8 -text
 contrib/tcsh/nls/german/set9 -text
 contrib/tcsh/nls/greek/charset -text
-contrib/tcsh/nls/greek/set1 -text
+contrib/tcsh/nls/greek/set1 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/greek/set10 -text
 contrib/tcsh/nls/greek/set11 -text
 contrib/tcsh/nls/greek/set12 -text
@@ -38145,7 +38148,7 @@ contrib/tcsh/nls/greek/set17 -text
 contrib/tcsh/nls/greek/set18 -text
 contrib/tcsh/nls/greek/set19 -text
 contrib/tcsh/nls/greek/set2 -text
-contrib/tcsh/nls/greek/set20 -text
+contrib/tcsh/nls/greek/set20 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/greek/set21 -text
 contrib/tcsh/nls/greek/set22 -text
 contrib/tcsh/nls/greek/set23 -text
@@ -38162,7 +38165,7 @@ contrib/tcsh/nls/greek/set5 -text
 contrib/tcsh/nls/greek/set6 -text
 contrib/tcsh/nls/greek/set7 -text
 contrib/tcsh/nls/greek/set8 -text
-contrib/tcsh/nls/greek/set9 -text
+contrib/tcsh/nls/greek/set9 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/italian/charset -text
 contrib/tcsh/nls/italian/set1 -text
 contrib/tcsh/nls/italian/set10 -text
@@ -38195,7 +38198,7 @@ contrib/tcsh/nls/italian/set7 -text
 contrib/tcsh/nls/italian/set8 -text
 contrib/tcsh/nls/italian/set9 -text
 contrib/tcsh/nls/ja/charset -text
-contrib/tcsh/nls/ja/set1 -text
+contrib/tcsh/nls/ja/set1 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/ja/set10 -text
 contrib/tcsh/nls/ja/set11 -text
 contrib/tcsh/nls/ja/set12 -text
@@ -38216,7 +38219,7 @@ contrib/tcsh/nls/ja/set6 -text
 contrib/tcsh/nls/ja/set7 -text
 contrib/tcsh/nls/ja/set8 -text
 contrib/tcsh/nls/russian/charset -text
-contrib/tcsh/nls/russian/set1 -text
+contrib/tcsh/nls/russian/set1 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/russian/set10 -text
 contrib/tcsh/nls/russian/set11 -text
 contrib/tcsh/nls/russian/set12 -text
@@ -38228,7 +38231,7 @@ contrib/tcsh/nls/russian/set17 -text
 contrib/tcsh/nls/russian/set18 -text
 contrib/tcsh/nls/russian/set19 -text
 contrib/tcsh/nls/russian/set2 -text
-contrib/tcsh/nls/russian/set20 -text
+contrib/tcsh/nls/russian/set20 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/russian/set21 -text
 contrib/tcsh/nls/russian/set22 -text
 contrib/tcsh/nls/russian/set23 -text
@@ -38278,7 +38281,7 @@ contrib/tcsh/nls/spanish/set7 -text
 contrib/tcsh/nls/spanish/set8 -text
 contrib/tcsh/nls/spanish/set9 -text
 contrib/tcsh/nls/ukrainian/charset -text
-contrib/tcsh/nls/ukrainian/set1 -text
+contrib/tcsh/nls/ukrainian/set1 -text svneol=unset#application/octet-stream
 contrib/tcsh/nls/ukrainian/set10 -text
 contrib/tcsh/nls/ukrainian/set11 -text
 contrib/tcsh/nls/ukrainian/set12 -text
@@ -38360,6 +38363,7 @@ contrib/tcsh/tc.vers.c -text
 contrib/tcsh/tc.wait.h -text
 contrib/tcsh/tc.who.c -text
 contrib/tcsh/tcsh.man -text
+contrib/tcsh/tcsh.man.new -text
 contrib/tcsh/tcsh.man2html -text
 contrib/tcsh/termcap.vms -text
 contrib/tcsh/tw.color.c -text
