@@ -29,7 +29,7 @@
  *
  *	from: @(#)rpc_msg.h 1.7 86/07/16 SMI
  *	from: @(#)rpc_msg.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: release/9.2.0/contrib/tcpdump/rpc_msg.h 190207 2009-03-21 18:30:25Z rpaulo $
+ * $FreeBSD: stable/10/contrib/tcpdump/rpc_msg.h 190207 2009-03-21 18:30:25Z rpaulo $
  * FreeBSD: src/include/rpc/rpc_msg.h,v 1.11.2.1 1999/08/29 14:39:07 peter Exp 
  */
 

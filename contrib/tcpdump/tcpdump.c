@@ -33,7 +33,7 @@ static const char rcsid[] _U_ =
     "@(#) $Header: /tcpdump/master/tcpdump/tcpdump.c,v 1.283 2008-09-25 21:45:50 guy Exp $ (LBL)";
 #endif
 
-/* $FreeBSD: release/9.2.0/contrib/tcpdump/tcpdump.c 252283 2013-06-27 00:37:59Z delphij $ */
+/* $FreeBSD: stable/10/contrib/tcpdump/tcpdump.c 314560 2017-03-02 17:17:06Z emaste $ */
 
 /*
  * tcpdump - monitor tcp/ip traffic on an ethernet.
@@ -68,6 +68,15 @@ extern int SIZE_BUF;
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#ifdef __FreeBSD__
+#include <sys/capsicum.h>
+#include <sys/ioccom.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <net/bpf.h>
+#include <fcntl.h>
+#include <libgen.h>
+#endif	/* __FreeBSD__ */
 #ifndef WIN32
 #include <sys/wait.h>
 #include <sys/resource.h>
@@ -384,6 +393,9 @@ struct dump_info {
 	char	*CurrentFileName;
 	pcap_t	*pd;
 	pcap_dumper_t *p;
+#ifdef __FreeBSD__
+	int	dirfd;
+#endif
 };
 
 #ifdef HAVE_PCAP_SET_TSTAMP_TYPE
@@ -672,6 +684,76 @@ get_next_file(FILE *VFile, char *ptr)
 	return ret;
 }
 
+#ifdef __FreeBSD__
+/*
+ * Ensure that, on a dump file's descriptor, we have all the rights
+ * necessary to make the standard I/O library work with an fdopen()ed
+ * FILE * from that descriptor.
+ *
+ * A long time ago, in a galaxy far far away, AT&T decided that, instead
+ * of providing separate APIs for getting and setting the FD_ flags on a
+ * descriptor, getting and setting the O_ flags on a descriptor, and
+ * locking files, they'd throw them all into a kitchen-sink fcntl() call
+ * along the lines of ioctl(), the fact that ioctl() operations are
+ * largely specific to particular character devices but fcntl() operations
+ * are either generic to all descriptors or generic to all descriptors for
+ * regular files nonwithstanding.
+ *
+ * The Capsicum people decided that fine-grained control of descriptor
+ * operations was required, so that you need to grant permission for
+ * reading, writing, seeking, and fcntl-ing.  The latter, courtesy of
+ * AT&T's decision, means that "fcntl-ing" isn't a thing, but a motley
+ * collection of things, so there are *individual* fcntls for which
+ * permission needs to be granted.
+ *
+ * The FreeBSD standard I/O people implemented some optimizations that
+ * requires that the standard I/O routines be able to determine whether
+ * the descriptor for the FILE * is open append-only or not; as that
+ * descriptor could have come from an open() rather than an fopen(),
+ * that requires that it be able to do an F_GETFL fcntl() to read
+ * the O_ flags.
+ *
+ * Tcpdump uses ftell() to determine how much data has been written
+ * to a file in order to, when used with -C, determine when it's time
+ * to rotate capture files.  ftell() therefore needs to do an lseek()
+ * to find out the file offset and must, thanks to the aforementioned
+ * optimization, also know whether the descriptor is open append-only
+ * or not.
+ *
+ * The net result of all the above is that we need to grant CAP_SEEK,
+ * CAP_WRITE, and CAP_FCNTL with the CAP_FCNTL_GETFL subcapability.
+ *
+ * Perhaps this is the universe's way of saying that either
+ *
+ *	1) there needs to be an fopenat() call and a pcap_dump_openat() call
+ *	   using it, so that Capsicum-capable tcpdump wouldn't need to do
+ *	   an fdopen()
+ *
+ * or
+ *
+ *	2) there needs to be a cap_fdopen() call in the FreeBSD standard
+ *	   I/O library that knows what rights are needed by the standard
+ *	   I/O library, based on the open mode, and assigns them, perhaps
+ *	   with an additional argument indicating, for example, whether
+ *	   seeking should be allowed, so that tcpdump doesn't need to know
+ *	   what the standard I/O library happens to require this week.
+ */
+static void
+set_dumper_capsicum_rights(pcap_dumper_t *p)
+{
+	int fd = fileno(pcap_dump_file(p));
+	cap_rights_t rights;
+
+	cap_rights_init(&rights, CAP_SEEK, CAP_WRITE, CAP_FCNTL);
+	if (cap_rights_limit(fd, &rights) < 0 && errno != ENOSYS) {
+		error("unable to limit dump descriptor");
+	}
+	if (cap_fcntls_limit(fd, CAP_FCNTL_GETFL) < 0 && errno != ENOSYS) {
+		error("unable to limit dump descriptor fcntls");
+	}
+}
+#endif
+
 int
 main(int argc, char **argv)
 {
@@ -702,6 +784,11 @@ main(int argc, char **argv)
 #endif
 	int status;
 	FILE *VFile;
+#ifdef __FreeBSD__
+	cap_rights_t rights;
+	int cansandbox;
+#endif	/* __FreeBSD__ */
+
 #ifdef WIN32
 	if(wsockinit() != 0) return 1;
 #endif /* WIN32 */
@@ -1189,6 +1276,13 @@ main(int argc, char **argv)
 		pd = pcap_open_offline(RFileName, ebuf);
 		if (pd == NULL)
 			error("%s", ebuf);
+#ifdef __FreeBSD__
+		cap_rights_init(&rights, CAP_READ);
+		if (cap_rights_limit(fileno(pcap_file(pd)), &rights) < 0 &&
+		    errno != ENOSYS) {
+			error("unable to limit pcap descriptor");
+		}
+#endif
 		dlt = pcap_datalink(pd);
 		dlt_name = pcap_datalink_val_to_name(dlt);
 		if (dlt_name == NULL) {
@@ -1287,6 +1381,27 @@ main(int argc, char **argv)
 			         *cp != '\0')
 				error("%s: %s\n(%s)", device,
 				    pcap_statustostr(status), cp);
+#ifdef __FreeBSD__
+			else if (status == PCAP_ERROR_RFMON_NOTSUP &&
+			    strncmp(device, "wlan", 4) == 0) {
+				char parent[8], newdev[8];
+				char sysctl[32];
+				size_t s = sizeof(parent);
+
+				snprintf(sysctl, sizeof(sysctl),
+				    "net.wlan.%d.%%parent", atoi(device + 4));
+				sysctlbyname(sysctl, parent, &s, NULL, 0);
+				strlcpy(newdev, device, sizeof(newdev));
+				/* Suggest a new wlan device. */
+				newdev[strlen(newdev)-1]++;
+				error("%s is not a monitor mode VAP\n"
+				    "To create a new monitor mode VAP use:\n"
+				    "  ifconfig %s create wlandev %s wlanmode "
+				    "monitor\nand use %s as the tcpdump "
+				    "interface", device, newdev, parent,
+				    newdev);
+			}
+#endif
 			else
 				error("%s: %s", device,
 				    pcap_statustostr(status));
@@ -1437,6 +1552,26 @@ main(int argc, char **argv)
 
 	if (pcap_setfilter(pd, &fcode) < 0)
 		error("%s", pcap_geterr(pd));
+#ifdef __FreeBSD__
+	if (RFileName == NULL && VFileName == NULL) {
+		static const unsigned long cmds[] = { BIOCGSTATS, BIOCROTZBUF };
+
+		/*
+		 * The various libpcap devices use a combination of
+		 * read (bpf), ioctl (bpf, netmap), poll (netmap).
+		 * Grant the relevant access rights, sorted by name.
+		 */
+		cap_rights_init(&rights, CAP_EVENT, CAP_IOCTL, CAP_READ);
+		if (cap_rights_limit(pcap_fileno(pd), &rights) < 0 &&
+		    errno != ENOSYS) {
+			error("unable to limit pcap descriptor");
+		}
+		if (cap_ioctls_limit(pcap_fileno(pd), cmds,
+		    sizeof(cmds) / sizeof(cmds[0])) < 0 && errno != ENOSYS) {
+			error("unable to limit ioctls on pcap descriptor");
+		}
+	}
+#endif
 	if (WFileName) {
 		pcap_dumper_t *p;
 		/* Do not exceed the default PATH_MAX for files. */
@@ -1458,9 +1593,32 @@ main(int argc, char **argv)
 #endif
 		if (p == NULL)
 			error("%s", pcap_geterr(pd));
+#ifdef __FreeBSD__
+		set_dumper_capsicum_rights(p);
+#endif
 		if (Cflag != 0 || Gflag != 0) {
-			callback = dump_packet_and_trunc;
+#ifdef __FreeBSD__
+			dumpinfo.WFileName = strdup(basename(WFileName));
+			dumpinfo.dirfd = open(dirname(WFileName),
+			    O_DIRECTORY | O_RDONLY);
+			if (dumpinfo.dirfd < 0) {
+				error("unable to open directory %s",
+				    dirname(WFileName));
+			}
+			cap_rights_init(&rights, CAP_CREATE, CAP_FCNTL,
+			    CAP_FTRUNCATE, CAP_LOOKUP, CAP_SEEK, CAP_WRITE);
+			if (cap_rights_limit(dumpinfo.dirfd, &rights) < 0 &&
+			    errno != ENOSYS) {
+				error("unable to limit directory rights");
+			}
+			if (cap_fcntls_limit(fileno(pcap_dump_file(p)), CAP_FCNTL_GETFL) < 0 &&
+			    errno != ENOSYS) {
+				error("unable to limit dump descriptor fcntls");
+			}
+#else	/* !__FreeBSD__ */
 			dumpinfo.WFileName = WFileName;
+#endif
+			callback = dump_packet_and_trunc;
 			dumpinfo.pd = pd;
 			dumpinfo.p = p;
 			pcap_userdata = (u_char *)&dumpinfo;
@@ -1530,6 +1688,13 @@ main(int argc, char **argv)
 		(void)fflush(stderr);
 	}
 #endif /* WIN32 */
+
+#ifdef __FreeBSD__
+	cansandbox = (nflag && VFileName == NULL && zflag == NULL);
+	if (cansandbox && cap_enter() < 0 && errno != ENOSYS)
+		error("unable to enter the capability mode");
+#endif	/* __FreeBSD__ */
+
 	do {
 		status = pcap_loop(pd, cnt, callback, pcap_userdata);
 		if (WFileName == NULL) {
@@ -1569,6 +1734,13 @@ main(int argc, char **argv)
 				pd = pcap_open_offline(RFileName, ebuf);
 				if (pd == NULL)
 					error("%s", ebuf);
+#ifdef __FreeBSD__
+				cap_rights_init(&rights, CAP_READ);
+				if (cap_rights_limit(fileno(pcap_file(pd)),
+				    &rights) < 0 && errno != ENOSYS) {
+					error("unable to limit pcap descriptor");
+				}
+#endif
 				new_dlt = pcap_datalink(pd);
 				if (WFileName && new_dlt != dlt)
 					error("%s: new dlt does not match original", RFileName);
@@ -1765,6 +1937,11 @@ dump_packet_and_trunc(u_char *user, const struct pcap_pkthdr *h, const u_char *s
 
 		/* If the time is greater than the specified window, rotate */
 		if (t - Gflag_time >= Gflag) {
+#ifdef __FreeBSD__
+			FILE *fp;
+			int fd;
+#endif
+
 			/* Update the Gflag_time */
 			Gflag_time = t;
 			/* Update Gflag_count */
@@ -1811,13 +1988,32 @@ dump_packet_and_trunc(u_char *user, const struct pcap_pkthdr *h, const u_char *s
 			capng_update(CAPNG_ADD, CAPNG_EFFECTIVE, CAP_DAC_OVERRIDE);
 			capng_apply(CAPNG_EFFECTIVE);
 #endif /* HAVE_CAP_NG_H */
+#ifdef __FreeBSD__
+			fd = openat(dump_info->dirfd,
+			    dump_info->CurrentFileName,
+			    O_CREAT | O_WRONLY | O_TRUNC, 0644);
+			if (fd < 0) {
+				error("unable to open file %s",
+				    dump_info->CurrentFileName);
+			}
+			fp = fdopen(fd, "w");
+			if (fp == NULL) {
+				error("unable to fdopen file %s",
+				    dump_info->CurrentFileName);
+			}
+			dump_info->p = pcap_dump_fopen(dump_info->pd, fp);
+#else	/* !__FreeBSD__ */
 			dump_info->p = pcap_dump_open(dump_info->pd, dump_info->CurrentFileName);
+#endif
 #ifdef HAVE_CAP_NG_H
 			capng_update(CAPNG_DROP, CAPNG_EFFECTIVE, CAP_DAC_OVERRIDE);
 			capng_apply(CAPNG_EFFECTIVE);
 #endif /* HAVE_CAP_NG_H */
 			if (dump_info->p == NULL)
 				error("%s", pcap_geterr(pd));
+#ifdef __FreeBSD__
+			set_dumper_capsicum_rights(dump_info->p);
+#endif
 		}
 	}
 
@@ -1827,6 +2023,11 @@ dump_packet_and_trunc(u_char *user, const struct pcap_pkthdr *h, const u_char *s
 	 * file could put it over Cflag.
 	 */
 	if (Cflag != 0 && pcap_dump_ftell(dump_info->p) > Cflag) {
+#ifdef __FreeBSD__
+		FILE *fp;
+		int fd;
+#endif
+
 		/*
 		 * Close the current file and open a new one.
 		 */
@@ -1849,9 +2050,27 @@ dump_packet_and_trunc(u_char *user, const struct pcap_pkthdr *h, const u_char *s
 		if (dump_info->CurrentFileName == NULL)
 			error("dump_packet_and_trunc: malloc");
 		MakeFilename(dump_info->CurrentFileName, dump_info->WFileName, Cflag_count, WflagChars);
+#ifdef __FreeBSD__
+		fd = openat(dump_info->dirfd, dump_info->CurrentFileName,
+		    O_CREAT | O_WRONLY | O_TRUNC, 0644);
+		if (fd < 0) {
+			error("unable to open file %s",
+			    dump_info->CurrentFileName);
+		}
+		fp = fdopen(fd, "w");
+		if (fp == NULL) {
+			error("unable to fdopen file %s",
+			    dump_info->CurrentFileName);
+		}
+		dump_info->p = pcap_dump_fopen(dump_info->pd, fp);
+#else	/* !__FreeBSD__ */
 		dump_info->p = pcap_dump_open(dump_info->pd, dump_info->CurrentFileName);
+#endif
 		if (dump_info->p == NULL)
 			error("%s", pcap_geterr(pd));
+#ifdef __FreeBSD__
+		set_dumper_capsicum_rights(dump_info->p);
+#endif
 	}
 
 	pcap_dump((u_char *)dump_info->p, h, sp);

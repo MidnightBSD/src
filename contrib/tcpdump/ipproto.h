@@ -34,7 +34,7 @@
  *
  * From:
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: release/9.2.0/contrib/tcpdump/ipproto.h 236192 2012-05-28 19:13:21Z delphij $
+ * $FreeBSD: stable/10/contrib/tcpdump/ipproto.h 235530 2012-05-17 05:11:57Z delphij $
  * FreeBSD: src/sys/netinet/in.h,v 1.38.2.3 1999/08/29 16:29:34 peter Exp
  */
 
