@@ -1,7 +1,7 @@
-#	$Id: Makefile,v 1.27 2014/06/20 14:51:54 sjg Exp $
+#	$Id: Makefile,v 1.95 2017/07/20 19:36:13 sjg Exp $
 
 # Base version on src date
-MAKE_VERSION= 20140620
+_MAKE_VERSION= 20170720
 
 PROG=	bmake
 
@@ -18,6 +18,7 @@ SRCS= \
 	make.c \
 	make_malloc.c \
 	meta.c \
+	metachar.c \
 	parse.c \
 	str.c \
 	strlist.c \
@@ -75,7 +76,7 @@ CFLAGS+= ${CPPFLAGS}
 CFLAGS+= -D_PATH_DEFSYSPATH=\"${DEFAULT_SYS_PATH}\"
 CFLAGS+= -I. -I${srcdir} ${XDEFS} -DMAKE_NATIVE
 CFLAGS+= ${COPTS.${.ALLSRC:M*.c:T:u}}
-COPTS.main.c+= "-DMAKE_VERSION=\"${MAKE_VERSION}\""
+COPTS.main.c+= "-DMAKE_VERSION=\"${_MAKE_VERSION}\""
 
 # meta mode can be useful even without filemon 
 FILEMON_H ?= /usr/include/dev/filemon/filemon.h
@@ -94,7 +95,7 @@ SUBDIR+= unit-tests
 # we skip a lot of this when building as part of FreeBSD etc.
 
 # list of OS's which are derrived from BSD4.4
-BSD44_LIST= NetBSD FreeBSD OpenBSD DragonFly
+BSD44_LIST= NetBSD FreeBSD OpenBSD DragonFly MirBSD Bitrig
 # we are...
 OS!= uname -s
 # are we 4.4BSD ?
@@ -130,9 +131,9 @@ OPTIONS_DEFAULT_NO+= \
 .include <own.mk>
 
 .if ${MK_PROG_VERSION} == "yes"
-PROG_NAME= ${PROG}-${MAKE_VERSION}
+PROG_NAME= ${PROG}-${_MAKE_VERSION}
 .if ${MK_PROG_LINK} == "yes"
-SYMLINKS+= ${PROG}-${MAKE_VERSION} ${BINDIR}/${PROG}
+SYMLINKS+= ${PROG_NAME} ${BINDIR}/${PROG}
 .endif
 .endif
 
@@ -155,7 +156,10 @@ my.history: ${MAKEFILE}
 .NOPATH: ${MAN}
 ${MAN}:	make.1 my.history
 	@echo making $@
-	@sed -e 's/^.Nx/NetBSD/' -e '/^.Nm/s/make/${PROG}/' \
+	@sed \
+	-e '/^.Dt/s/MAKE/${PROG:tu}/' \
+	-e 's/^.Nx/NetBSD/' \
+	-e '/^.Nm/s/make/${PROG}/' \
 	-e '/^.Sh HISTORY/rmy.history' \
 	-e '/^.Sh HISTORY/,$$s,^.Nm,make,' ${srcdir}/make.1 > $@
 
@@ -180,9 +184,9 @@ COPTS.parse.c += -Wno-format-nonliteral
 COPTS.var.c += -Wno-format-nonliteral
 
 # Force these
-SHAREDIR= ${prefix}/share
-BINDIR= ${prefix}/bin
-MANDIR= ${SHAREDIR}/man
+SHAREDIR= ${SHAREDIR.bmake:U${prefix}/share}
+BINDIR= ${BINDIR.bmake:U${prefix}/bin}
+MANDIR= ${MANDIR.bmake:U${SHAREDIR}/man}
 
 .if !exists(.depend)
 ${OBJS}: config.h
