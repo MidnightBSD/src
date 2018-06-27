@@ -20,7 +20,7 @@
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/pcap-snoop.c,v 1.1.1.3 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/libpcap/pcap-snoop.c,v 1.59 2008-12-02 16:25:14 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -100,7 +100,7 @@ again:
 
 	/*
 	 * XXX - Sigh, snoop_packetlen is a 16 bit quantity.  If we
-	 * got a short length, but read a full sized snoop pakcet,
+	 * got a short length, but read a full sized snoop packet,
 	 * assume we overflowed and add back the 64K...
 	 */
 	if (cc == (p->snapshot + sizeof(struct snoopheader)) &&
@@ -394,7 +394,7 @@ pcap_activate_snoop(pcap_t *p)
 }
 
 pcap_t *
-pcap_create(const char *device, char *ebuf)
+pcap_create_interface(const char *device, char *ebuf)
 {
 	pcap_t *p;
 

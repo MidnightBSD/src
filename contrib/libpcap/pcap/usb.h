@@ -30,7 +30,7 @@
  * Basic USB data struct
  * By Paolo Abeni <paolo.abeni@email.it>
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap/usb.h,v 1.1.1.1 2012-07-21 15:03:27 laffer1 Exp $
+ * @(#) $Header: /tcpdump/master/libpcap/pcap/usb.h,v 1.9 2008-12-23 20:13:29 guy Exp $
  */
  
 #ifndef _PCAP_USB_STRUCTS_H__

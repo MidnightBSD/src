@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/llc.h,v 1.1.1.3 2012-07-21 15:03:26 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/llc.h,v 1.2 2001-01-28 09:44:50 guy Exp $ (LBL)
  */
 
 /*

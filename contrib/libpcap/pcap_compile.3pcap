@@ -1,4 +1,4 @@
-.\" @(#) $Header: /home/cvs/src/contrib/libpcap/pcap_compile.3pcap,v 1.1.1.1 2012-07-21 15:03:26 laffer1 Exp $
+.\" @(#) $Header: /tcpdump/master/libpcap/pcap_compile.3pcap.in,v 1.1 2008-10-21 07:33:02 guy Exp $
 .\"
 .\" Copyright (c) 1994, 1996, 1997
 .\"	The Regents of the University of California.  All rights reserved.

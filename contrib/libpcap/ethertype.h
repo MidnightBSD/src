@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/ethertype.h,v 1.1.1.4 2012-07-21 15:03:27 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/ethertype.h,v 1.14 2005-09-05 09:06:58 guy Exp $ (LBL)
  */
 
 /*

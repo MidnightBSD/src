@@ -1,4 +1,4 @@
-.\" @(#) $Header: /home/cvs/src/contrib/libpcap/pcap_loop.3pcap,v 1.1.1.1 2012-07-21 15:03:27 laffer1 Exp $
+.\" @(#) $Header: /tcpdump/master/libpcap/pcap_loop.3pcap,v 1.4 2008-12-25 02:01:32 guy Exp $
 .\"
 .\" Copyright (c) 1994, 1996, 1997
 .\"	The Regents of the University of California.  All rights reserved.
@@ -84,7 +84,7 @@ processed when reading a ``savefile''.
 \fIcnt\fP
 was 0 was undefined; different platforms and devices behaved
 differently, so code that must work with older versions of libpcap
-should use \-1, nor 0, as the value of
+should use \-1, not 0, as the value of
 \fIcnt\fP.)
 .ft R
 .PP
@@ -119,8 +119,9 @@ them.
 .B pcap_loop()
 returns 0 if
 .I cnt
-is exhausted, \-1 if an error occurs, or \-2 if the loop terminated due
-to a call to
+is exhausted or if, when reading from a ``savefile'', no more packets
+are available.  It returns \-1 if an error occurs or \-2 if the loop
+terminated due to a call to
 .B pcap_breakloop()
 before any packets were processed.
 It does

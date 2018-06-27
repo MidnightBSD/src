@@ -29,7 +29,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/sunatmpos.h,v 1.1.1.3 2012-07-21 15:03:27 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/sunatmpos.h,v 1.1 2002-07-11 09:06:47 guy Exp $ (LBL)
  */
 
 /* SunATM header for ATM packet */

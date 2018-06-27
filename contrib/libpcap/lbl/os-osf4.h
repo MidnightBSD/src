@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/lbl/os-osf4.h,v 1.1.1.3 2012-07-21 15:03:27 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/lbl/os-osf4.h,v 1.2 2000-12-22 11:51:33 guy Exp $ (LBL)
  */
 
 /* Prototypes missing in Digital UNIX 4.x */

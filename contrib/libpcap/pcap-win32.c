@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/pcap-win32.c,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/libpcap/pcap-win32.c,v 1.42 2008-05-21 22:15:25 gianluca Exp $ (LBL)";
 #endif
 
 #include <pcap-int.h>
@@ -715,7 +715,7 @@ bad:
 }
 
 pcap_t *
-pcap_create(const char *device, char *ebuf)
+pcap_create_interface(const char *device, char *ebuf)
 {
 	pcap_t *p;
 
@@ -836,7 +836,7 @@ pcap_setnonblock_win32(pcap_t *p, int nonblock, char *errbuf)
 		newtimeout = p->md.timeout;
 	}
 	if (!PacketSetReadTimeout(p->adapter, newtimeout)) {
-		snprintf(p->errbuf, PCAP_ERRBUF_SIZE,
+		snprintf(errbuf, PCAP_ERRBUF_SIZE,
 		    "PacketSetReadTimeout: %s", pcap_win32strerror());
 		return (-1);
 	}

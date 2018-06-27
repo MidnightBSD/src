@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-bpf.h,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/pcap-bpf.h,v 1.50 2007-04-01 21:43:55 guy Exp $ (LBL)
  */
 
 /*

@@ -19,11 +19,11 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/contrib/libpcap/grammar.y 263086 2014-03-12 10:45:58Z glebius $
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/grammar.y,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/libpcap/grammar.y,v 1.101 2007-11-18 02:03:52 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -56,7 +56,7 @@ struct rtentry;
 #include "gencode.h"
 #ifdef HAVE_NET_PFVAR_H
 #include <net/if.h>
-#include <net/pfvar.h>
+#include <netpfil/pf/pf.h>
 #include <net/if_pflog.h>
 #endif
 #include "ieee80211.h"
@@ -168,7 +168,7 @@ yyerror(const char *msg)
 	/* NOTREACHED */
 }
 
-#ifndef YYBISON
+#ifdef NEED_YYPARSE_WRAPPER
 int yyparse(void);
 
 int

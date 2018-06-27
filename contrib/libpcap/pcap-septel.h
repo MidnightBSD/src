@@ -8,8 +8,8 @@
  * Authors: Gilbert HOYEK (gil_hoyek@hotmail.com), Elias M. KHOURY
  * (+961 3 485343);
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-septel.h,v 1.1.1.3 2012-07-21 15:03:27 laffer1 Exp $
+ * @(#) $Header: /tcpdump/master/libpcap/pcap-septel.h,v 1.2 2008-04-04 19:37:45 guy Exp $
  */
 
-pcap_t *septel_create(const char *device, char *ebuf);
-
+pcap_t *septel_create(const char *device, char *ebuf, int *is_ours);
+int septel_findalldevs(pcap_if_t **devlistp, char *errbuf);

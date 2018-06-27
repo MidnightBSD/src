@@ -19041,7 +19041,6 @@ contrib/libgnuregex/regexec.c svneol=native#text/plain
 contrib/libpcap/.cvsignore -text
 contrib/libpcap/CHANGES -text
 contrib/libpcap/CREDITS -text
-contrib/libpcap/FREEBSD-upgrade -text
 contrib/libpcap/INSTALL.txt -text
 contrib/libpcap/LICENSE -text
 contrib/libpcap/Makefile.in -text
@@ -19218,12 +19217,12 @@ contrib/libpcap/sf-pcap-ng.h -text
 contrib/libpcap/sf-pcap.c -text
 contrib/libpcap/sf-pcap.h -text
 contrib/libpcap/sunatmpos.h -text
-contrib/libpcap/test/filtertest.c -text
-contrib/libpcap/test/findalldevstest.c -text
-contrib/libpcap/test/nonblocktest.c -text
-contrib/libpcap/test/opentest.c -text
-contrib/libpcap/test/reactivatetest.c -text
-contrib/libpcap/test/selpolltest.c -text
+contrib/libpcap/tests/filtertest.c svneol=native#text/plain
+contrib/libpcap/tests/findalldevstest.c svneol=native#text/plain
+contrib/libpcap/tests/nonblocktest.c svneol=native#text/plain
+contrib/libpcap/tests/opentest.c svneol=native#text/plain
+contrib/libpcap/tests/reactivatetest.c svneol=native#text/plain
+contrib/libpcap/tests/selpolltest.c svneol=native#text/plain
 contrib/libreadline/CHANGELOG -text
 contrib/libreadline/CHANGES -text
 contrib/libreadline/COPYING -text

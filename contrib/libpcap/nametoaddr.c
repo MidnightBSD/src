@@ -21,12 +21,12 @@
  * Name to id translation routines used by the scanner.
  * These functions are not time critical.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/contrib/libpcap/nametoaddr.c 251129 2013-05-30 08:02:00Z delphij $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/nametoaddr.c,v 1.1.1.4 2012-07-21 15:03:27 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/libpcap/nametoaddr.c,v 1.83 2008-02-06 10:21:30 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -249,6 +249,7 @@ pcap_nametoportrange(const char *name, int *port1, int *port2, int *proto)
 			free(cpy);
 			return 0;
 		}
+		free(cpy);
 
 		if (*proto != save_proto)
 			*proto = PROTO_UNDEF;

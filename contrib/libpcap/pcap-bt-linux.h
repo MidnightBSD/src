@@ -30,11 +30,11 @@
  * Bluetooth sniffing API implementation for Linux platform
  * By Paolo Abeni <paolo.abeni@email.it>
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-bt-linux.h,v 1.1.1.1 2012-07-21 15:03:26 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/pcap-bt-linux.h,v 1.5 2008-04-04 19:37:45 guy Exp $ (LBL)
  */
 
 /*
  * Prototypes for Bluetooth-related functions
  */
-int bt_platform_finddevs(pcap_if_t **alldevsp, char *err_str);
-pcap_t *bt_create(const char *device, char *ebuf);
+int bt_findalldevs(pcap_if_t **alldevsp, char *err_str);
+pcap_t *bt_create(const char *device, char *ebuf, int *is_ours);

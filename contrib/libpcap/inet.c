@@ -34,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/inet.c,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/libpcap/inet.c,v 1.79 2008-04-20 18:19:02 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -736,6 +736,10 @@ pcap_lookupnet(device, netp, maskp, errbuf)
 #endif
 #ifdef PCAP_SUPPORT_USB
 	    || strstr(device, "usbmon") != NULL
+#endif
+#ifdef PCAP_SUPPORT_NETMAP
+	    || !strncmp(device, "netmap:", 7)
+	    || !strncmp(device, "vale", 4)
 #endif
 #ifdef HAVE_SNF_API
 	    || strstr(device, "snf") != NULL
