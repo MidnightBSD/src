@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2004 Apple Computer, Inc.
+/*-
+ * Copyright (c) 2004-2009 Apple Inc.
  * Copyright (c) 2005 SPARTA, Inc.
  * Copyright (c) 2006 Robert N. M. Watson
  * Copyright (c) 2006 Martin Voros
@@ -16,7 +16,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,27 +31,28 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $P4: //depot/projects/trustedbsd/openbsm/libbsm/bsm_io.c#50 $
  */
 
 #include <sys/types.h>
 
 #include <config/config.h>
-#ifdef HAVE_SYS_ENDIAN_H
-#include <sys/endian.h>
-#else /* !HAVE_SYS_ENDIAN_H */
-#ifdef HAVE_MACHINE_ENDIAN_H
-#include <machine/endian.h>
-#else /* !HAVE_MACHINE_ENDIAN_H */
-#ifdef HAVE_ENDIAN_H
+
+#ifdef USE_ENDIAN_H
 #include <endian.h>
-#else /* !HAVE_ENDIAN_H */
-#error "No supported endian.h"
-#endif /* !HAVE_ENDIAN_H */
-#endif /* !HAVE_MACHINE_ENDIAN_H */
+#endif
+#ifdef USE_SYS_ENDIAN_H
+#include <sys/endian.h>
+#endif
+#ifdef USE_MACHINE_ENDIAN_H
+#include <machine/endian.h>
+#endif
+#ifdef USE_COMPAT_ENDIAN_H
 #include <compat/endian.h>
-#endif /* !HAVE_SYS_ENDIAN_H */
+#endif
+#ifdef USE_COMPAT_ENDIAN_ENC_H
+#include <compat/endian_enc.h>
+#endif
+
 #ifdef HAVE_FULL_QUEUE_H
 #include <sys/queue.h>
 #else /* !HAVE_FULL_QUEUE_H */
@@ -74,51 +75,57 @@
 #include <pwd.h>
 #include <grp.h>
 
+#ifdef HAVE_VIS
+#include <vis.h>
+#else
+#include <compat/vis.h>
+#endif
+
 #include <bsm/audit_internal.h>
 
 #define	READ_TOKEN_BYTES(buf, len, dest, size, bytesread, err) do {	\
-	if (bytesread + size > len) {					\
-		err = 1;						\
+	if ((bytesread) + (size) > (u_int32_t)(len)) {			\
+		(err) = 1;						\
 	} else {							\
-		memcpy(dest, buf + bytesread, size);			\
+		memcpy((dest), (buf) + (bytesread), (size));		\
 		bytesread += size;					\
 	}								\
 } while (0)
 
 #define	READ_TOKEN_U_CHAR(buf, len, dest, bytesread, err) do {		\
-	if (bytesread + sizeof(u_char) <= len) {			\
-		dest = buf[bytesread];					\
-		bytesread += sizeof(u_char);				\
+	if ((bytesread) + sizeof(u_char) <= (u_int32_t)(len)) {		\
+		(dest) = buf[(bytesread)];				\
+		(bytesread) += sizeof(u_char);				\
 	} else								\
-		err = 1;						\
+		(err) = 1;						\
 } while (0)
 
 #define	READ_TOKEN_U_INT16(buf, len, dest, bytesread, err) do {		\
-	if (bytesread + sizeof(u_int16_t) <= len) {			\
-		dest = be16dec(buf + bytesread);			\
-		bytesread += sizeof(u_int16_t);				\
+	if ((bytesread) + sizeof(u_int16_t) <= (u_int32_t)(len)) {	\
+		(dest) = be16dec((buf) + (bytesread));			\
+		(bytesread) += sizeof(u_int16_t);			\
 	} else								\
-		err = 1;						\
+		(err) = 1;						\
 } while (0)
 
 #define	READ_TOKEN_U_INT32(buf, len, dest, bytesread, err) do {		\
-	if (bytesread + sizeof(u_int32_t) <= len) {			\
-		dest = be32dec(buf + bytesread);			\
-		bytesread += sizeof(u_int32_t);				\
+	if ((bytesread) + sizeof(u_int32_t) <= (u_int32_t)(len)) {	\
+		(dest) = be32dec((buf) + (bytesread));			\
+		(bytesread) += sizeof(u_int32_t);			\
 	} else								\
-		err = 1; 						\
+		(err) = 1;						\
 } while (0)
 
 #define	READ_TOKEN_U_INT64(buf, len, dest, bytesread, err) do {		\
-	if (bytesread + sizeof(u_int64_t) <= len) {			\
-		dest = be64dec(buf + bytesread);			\
-		bytesread += sizeof(u_int64_t);				\
+	if ((bytesread) + sizeof(u_int64_t) <= (u_int32_t)(len)) {	\
+		dest = be64dec((buf) + (bytesread));			\
+		(bytesread) += sizeof(u_int64_t);			\
 	} else								\
-		err = 1; 						\
+		(err) = 1;						\
 } while (0)
 
 #define	SET_PTR(buf, len, ptr, size, bytesread, err) do {		\
-	if ((bytesread) + (size) > (len))				\
+	if ((bytesread) + (size) > (u_int32_t)(len))			\
 		(err) = 1;						\
 	else {								\
 		(ptr) = (buf) + (bytesread);				\
@@ -188,12 +195,12 @@ print_8_bytes(FILE *fp, u_int64_t val, const char *format)
 static void
 print_mem(FILE *fp, u_char *data, size_t len)
 {
-	int i;
+	u_int32_t i;
 
 	if (len > 0) {
 		fprintf(fp, "0x");
 		for (i = 0; i < len; i++)
-			fprintf(fp, "%x", data[i]);
+			fprintf(fp, "%02x", data[i]);
 	}
 }
 
@@ -203,7 +210,7 @@ print_mem(FILE *fp, u_char *data, size_t len)
 static void
 print_string(FILE *fp, const char *str, size_t len)
 {
-	int i;
+	u_int32_t i;
 
 	if (len > 0) {
 		for (i = 0; i < len; i++) {
@@ -214,7 +221,52 @@ print_string(FILE *fp, const char *str, size_t len)
 }
 
 /*
- * Prints the beggining of attribute.
+ * Prints the given data bytes as an XML-sanitized string.
+ */
+static void
+print_xml_string(FILE *fp, const char *str, size_t len)
+{
+	u_int32_t i;
+	char visbuf[5];
+
+	if (len == 0)
+		return;
+
+	for (i = 0; i < len; i++) {
+		switch (str[i]) {
+		case '\0':
+			return;
+
+		case '&':
+			(void) fprintf(fp, "&amp;");
+			break;
+
+		case '<':
+			(void) fprintf(fp, "&lt;");
+			break;
+
+		case '>':
+			(void) fprintf(fp, "&gt;");
+			break;
+
+		case '\"':
+			(void) fprintf(fp, "&quot;");
+			break;
+
+		case '\'':
+			(void) fprintf(fp, "&apos;");
+			break;
+
+		default:
+			(void) vis(visbuf, str[i], VIS_CSTYLE, 0);
+			(void) fprintf(fp, "%s", visbuf);
+			break;
+		}
+	}
+}
+
+/*
+ * Prints the beginning of an attribute.
  */
 static void
 open_attr(FILE *fp, const char *str)
@@ -224,7 +276,7 @@ open_attr(FILE *fp, const char *str)
 }
 
 /*
- * Prints the end of attribute.
+ * Prints the end of an attribute.
  */
 static void
 close_attr(FILE *fp)
@@ -234,7 +286,7 @@ close_attr(FILE *fp)
 }
 
 /*
- * Prints the end of tag.
+ * Prints the end of a tag.
  */
 static void
 close_tag(FILE *fp, u_char type)
@@ -365,6 +417,10 @@ close_tag(FILE *fp, u_char type)
 		fprintf(fp, "/>");
 		break;
 
+	case AUT_SOCKINET128:
+		fprintf(fp, "/>");
+		break;
+
 	case AUT_SUBJECT32:
 		fprintf(fp, "/>");
 		break;
@@ -403,10 +459,10 @@ close_tag(FILE *fp, u_char type)
  * Prints the token type in either the raw or the default form.
  */
 static void
-print_tok_type(FILE *fp, u_char type, const char *tokname, char raw, int xml)
+print_tok_type(FILE *fp, u_char type, const char *tokname, int oflags)
 {
 
-	if (xml) {
+	if (oflags & AU_OFLAG_XML) {
 		switch(type) {
 		case AUT_HEADER32:
 			fprintf(fp, "<record ");
@@ -529,11 +585,15 @@ print_tok_type(FILE *fp, u_char type, const char *tokname, char raw, int xml)
 			break;
 
 		case AUT_SOCKINET32:
-			fprintf(fp, "<old_socket");
+			fprintf(fp, "<socket-inet ");
 			break;
 
 		case AUT_SOCKUNIX:
-			fprintf(fp, "<old_socket");
+			fprintf(fp, "<socket-unix ");
+			break;
+
+		case AUT_SOCKINET128:
+			fprintf(fp, "<socket-inet6 ");
 			break;
 
 		case AUT_SUBJECT32:
@@ -569,7 +629,7 @@ print_tok_type(FILE *fp, u_char type, const char *tokname, char raw, int xml)
 			break;
 		}
 	} else {
-		if (raw)
+		if (oflags & AU_OFLAG_RAW)
 			fprintf(fp, "%u", type);
 		else
 			fprintf(fp, "%s", tokname);
@@ -580,11 +640,11 @@ print_tok_type(FILE *fp, u_char type, const char *tokname, char raw, int xml)
  * Prints a user value.
  */
 static void
-print_user(FILE *fp, u_int32_t usr, char raw)
+print_user(FILE *fp, u_int32_t usr, int oflags)
 {
 	struct passwd *pwent;
 
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%d", usr);
 	else {
 		pwent = getpwuid(usr);
@@ -599,11 +659,11 @@ print_user(FILE *fp, u_int32_t usr, char raw)
  * Prints a group value.
  */
 static void
-print_group(FILE *fp, u_int32_t grp, char raw)
+print_group(FILE *fp, u_int32_t grp, int oflags)
 {
 	struct group *grpent;
 
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%d", grp);
 	else {
 		grpent = getgrgid(grp);
@@ -619,7 +679,7 @@ print_group(FILE *fp, u_int32_t grp, char raw)
  * form.
  */
 static void
-print_event(FILE *fp, u_int16_t ev, char raw, char sfrm)
+print_event(FILE *fp, u_int16_t ev, int oflags)
 {
 	char event_ent_name[AU_EVENT_NAME_MAX];
 	char event_ent_desc[AU_EVENT_DESC_MAX];
@@ -637,9 +697,9 @@ print_event(FILE *fp, u_int16_t ev, char raw, char sfrm)
 		return;
 	}
 
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", ev);
-	else if (sfrm)
+	else if (oflags & AU_OFLAG_SHORT)
 		fprintf(fp, "%s", e.ae_name);
 	else
 		fprintf(fp, "%s", e.ae_desc);
@@ -651,9 +711,9 @@ print_event(FILE *fp, u_int16_t ev, char raw, char sfrm)
  * raw form.
  */
 static void
-print_evmod(FILE *fp, u_int16_t evmod, char raw)
+print_evmod(FILE *fp, u_int16_t evmod, int oflags)
 {
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", evmod);
 	else
 		fprintf(fp, "%u", evmod);
@@ -663,12 +723,12 @@ print_evmod(FILE *fp, u_int16_t evmod, char raw)
  * Prints seconds in the ctime format.
  */
 static void
-print_sec32(FILE *fp, u_int32_t sec, char raw)
+print_sec32(FILE *fp, u_int32_t sec, int oflags)
 {
 	time_t timestamp;
 	char timestr[26];
 
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", sec);
 	else {
 		timestamp = (time_t)sec;
@@ -683,12 +743,12 @@ print_sec32(FILE *fp, u_int32_t sec, char raw)
  * assume a 32-bit time_t, we simply truncate for now.
  */
 static void
-print_sec64(FILE *fp, u_int64_t sec, char raw)
+print_sec64(FILE *fp, u_int64_t sec, int oflags)
 {
 	time_t timestamp;
 	char timestr[26];
 
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", (u_int32_t)sec);
 	else {
 		timestamp = (time_t)sec;
@@ -702,9 +762,9 @@ print_sec64(FILE *fp, u_int64_t sec, char raw)
  * Prints the excess milliseconds.
  */
 static void
-print_msec32(FILE *fp, u_int32_t msec, char raw)
+print_msec32(FILE *fp, u_int32_t msec, int oflags)
 {
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", msec);
 	else
 		fprintf(fp, " + %u msec", msec);
@@ -715,11 +775,11 @@ print_msec32(FILE *fp, u_int32_t msec, char raw)
  * a 32-bit msec, we simply truncate for now.
  */
 static void
-print_msec64(FILE *fp, u_int64_t msec, char raw)
+print_msec64(FILE *fp, u_int64_t msec, int oflags)
 {
 
 	msec &= 0xffffffff;
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", (u_int32_t)msec);
 	else
 		fprintf(fp, " + %u msec", (u_int32_t)msec);
@@ -769,15 +829,26 @@ print_ip_ex_address(FILE *fp, u_int32_t type, u_int32_t *ipaddr)
  * Prints return value as success or failure.
  */
 static void
-print_retval(FILE *fp, u_char status, char raw)
+print_retval(FILE *fp, u_char status, int oflags)
 {
-	if (raw)
+	int error;
+
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", status);
 	else {
-		if (status == 0)
-			fprintf(fp, "success");
-		else
-			fprintf(fp, "failure : %s", strerror(status));
+		/*
+		 * Convert to a local error number and print the OS's version
+		 * of the error string if possible.  We may want to provide
+		 * an au_strerror(3) in the future so that we can print
+		 * strings for non-local errors.
+		 */
+		if (au_bsm_to_errno(status, &error) == 0) {
+			if (error == 0)
+				fprintf(fp, "success");
+			else
+				fprintf(fp, "failure : %s", strerror(error));
+		} else
+			fprintf(fp, "failure: Unknown error: %d", status);
 	}
 }
 
@@ -795,9 +866,9 @@ print_errval(FILE *fp, u_int32_t val)
  * Prints IPC type.
  */
 static void
-print_ipctype(FILE *fp, u_char type, char raw)
+print_ipctype(FILE *fp, u_char type, int oflags)
 {
-	if (raw)
+	if (oflags & AU_OFLAG_RAW)
 		fprintf(fp, "%u", type);
 	else {
 		if (type == AT_IPC_MSG)
@@ -817,7 +888,7 @@ print_ipctype(FILE *fp, u_char type, char raw)
 void
 au_print_xml_header(FILE *outfp)
 {
-	
+
 	fprintf(outfp, "<?xml version='1.0' ?>\n");
 	fprintf(outfp, "<audit>\n");
 }
@@ -828,7 +899,7 @@ au_print_xml_header(FILE *outfp)
 void
 au_print_xml_footer(FILE *outfp)
 {
-	
+
 	fprintf(outfp, "</audit>\n");
 }
 
@@ -873,26 +944,25 @@ fetch_header32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_header32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw, char sfrm,
-    int xml)
+print_header32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "header", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "header", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "version");
 		print_1_byte(fp, tok->tt.hdr32.version, "%u");
 		close_attr(fp);
 		open_attr(fp, "event");
-		print_event(fp, tok->tt.hdr32.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr32.e_type, oflags);
 		close_attr(fp);
 		open_attr(fp, "modifier");
-		print_evmod(fp, tok->tt.hdr32.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr32.e_mod, oflags);
 		close_attr(fp);
 		open_attr(fp, "time");
-		print_sec32(fp, tok->tt.hdr32.s, raw);
+		print_sec32(fp, tok->tt.hdr32.s, oflags);
 		close_attr(fp);
 		open_attr(fp, "msec");
-		print_msec32(fp, tok->tt.hdr32.ms, 1);
+		print_msec32(fp, tok->tt.hdr32.ms, oflags);
 		close_attr(fp);
 		close_tag(fp, tok->id);
 	} else {
@@ -901,13 +971,13 @@ print_header32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw, char sfrm,
 		print_delim(fp, del);
 		print_1_byte(fp, tok->tt.hdr32.version, "%u");
 		print_delim(fp, del);
-		print_event(fp, tok->tt.hdr32.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr32.e_type, oflags);
 		print_delim(fp, del);
-		print_evmod(fp, tok->tt.hdr32.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr32.e_mod, oflags);
 		print_delim(fp, del);
-		print_sec32(fp, tok->tt.hdr32.s, raw);
+		print_sec32(fp, tok->tt.hdr32.s, oflags);
 		print_delim(fp, del);
-		print_msec32(fp, tok->tt.hdr32.ms, raw);
+		print_msec32(fp, tok->tt.hdr32.ms, oflags);
 	}
 }
 
@@ -981,32 +1051,29 @@ fetch_header32_ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_header32_ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    char sfrm, int xml)
+print_header32_ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "header_ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "header_ex", oflags);
+	if (oflags & AU_OFLAG_RAW) {
 		open_attr(fp, "version");
 		print_1_byte(fp, tok->tt.hdr32_ex.version, "%u");
 		close_attr(fp);
 		open_attr(fp, "event");
-		print_event(fp, tok->tt.hdr32_ex.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr32_ex.e_type, oflags);
 		close_attr(fp);
 		open_attr(fp, "modifier");
-		print_evmod(fp, tok->tt.hdr32_ex.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr32_ex.e_mod, oflags);
 		close_attr(fp);
-		/*
-		 * No attribute for additional types.
-		 *
+		open_attr(fp, "host");
 		print_ip_ex_address(fp, tok->tt.hdr32_ex.ad_type,
 		    tok->tt.hdr32_ex.addr);
-		 */
+		close_attr(fp);
 		open_attr(fp, "time");
-		print_sec32(fp, tok->tt.hdr32_ex.s, raw);
+		print_sec32(fp, tok->tt.hdr32_ex.s, oflags);
 		close_attr(fp);
 		open_attr(fp, "msec");
-		print_msec32(fp, tok->tt.hdr32_ex.ms, raw);
+		print_msec32(fp, tok->tt.hdr32_ex.ms, oflags);
 		close_attr(fp);
 		close_tag(fp, tok->id);
 	} else {
@@ -1015,16 +1082,16 @@ print_header32_ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		print_delim(fp, del);
 		print_1_byte(fp, tok->tt.hdr32_ex.version, "%u");
 		print_delim(fp, del);
-		print_event(fp, tok->tt.hdr32_ex.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr32_ex.e_type, oflags);
 		print_delim(fp, del);
-		print_evmod(fp, tok->tt.hdr32_ex.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr32_ex.e_mod, oflags);
 		print_delim(fp, del);
 		print_ip_ex_address(fp, tok->tt.hdr32_ex.ad_type,
 		    tok->tt.hdr32_ex.addr);
 		print_delim(fp, del);
-		print_sec32(fp, tok->tt.hdr32_ex.s, raw);
+		print_sec32(fp, tok->tt.hdr32_ex.s, oflags);
 		print_delim(fp, del);
-		print_msec32(fp, tok->tt.hdr32_ex.ms, raw);
+		print_msec32(fp, tok->tt.hdr32_ex.ms, oflags);
 	}
 }
 
@@ -1069,26 +1136,25 @@ fetch_header64_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_header64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw, char sfrm,
-    int xml)
+print_header64_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
-	
-	print_tok_type(fp, tok->id, "header", raw, xml);
-	if (xml) {
+
+	print_tok_type(fp, tok->id, "header", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "version");
 		print_1_byte(fp, tok->tt.hdr64.version, "%u");
 		close_attr(fp);
 		open_attr(fp, "event");
-		print_event(fp, tok->tt.hdr64.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr64.e_type, oflags);
 		close_attr(fp);
 		open_attr(fp, "modifier");
-		print_evmod(fp, tok->tt.hdr64.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr64.e_mod, oflags);
 		close_attr(fp);
 		open_attr(fp, "time");
-		print_sec64(fp, tok->tt.hdr64.s, raw);
+		print_sec64(fp, tok->tt.hdr64.s, oflags);
 		close_attr(fp);
 		open_attr(fp, "msec");
-		print_msec64(fp, tok->tt.hdr64.ms, raw);
+		print_msec64(fp, tok->tt.hdr64.ms, oflags);
 		close_attr(fp);
 		close_tag(fp, tok->id);
 	} else {
@@ -1097,13 +1163,13 @@ print_header64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw, char sfrm,
 		print_delim(fp, del);
 		print_1_byte(fp, tok->tt.hdr64.version, "%u");
 		print_delim(fp, del);
-		print_event(fp, tok->tt.hdr64.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr64.e_type, oflags);
 		print_delim(fp, del);
-		print_evmod(fp, tok->tt.hdr64.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr64.e_mod, oflags);
 		print_delim(fp, del);
-		print_sec64(fp, tok->tt.hdr64.s, raw);
+		print_sec64(fp, tok->tt.hdr64.s, oflags);
 		print_delim(fp, del);
-		print_msec64(fp, tok->tt.hdr64.ms, raw);
+		print_msec64(fp, tok->tt.hdr64.ms, oflags);
 	}
 }
 
@@ -1173,32 +1239,29 @@ fetch_header64_ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_header64_ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    char sfrm, int xml)
+print_header64_ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "header_ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "header_ex", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "version");
 		print_1_byte(fp, tok->tt.hdr64_ex.version, "%u");
 		close_attr(fp);
 		open_attr(fp, "event");
-		print_event(fp, tok->tt.hdr64_ex.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr64_ex.e_type, oflags);
 		close_attr(fp);
 		open_attr(fp, "modifier");
-		print_evmod(fp, tok->tt.hdr64_ex.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr64_ex.e_mod, oflags);
 		close_attr(fp);
-		/*
-		 * No attribute for additional types.
-		 *
+		open_attr(fp, "host");
 		print_ip_ex_address(fp, tok->tt.hdr64_ex.ad_type,
 		    tok->tt.hdr64_ex.addr);
-		 */
+		close_attr(fp);
 		open_attr(fp, "time");
-		print_sec64(fp, tok->tt.hdr64_ex.s, raw);
+		print_sec64(fp, tok->tt.hdr64_ex.s, oflags);
 		close_attr(fp);
 		open_attr(fp, "msec");
-		print_msec64(fp, tok->tt.hdr64_ex.ms, raw);
+		print_msec64(fp, tok->tt.hdr64_ex.ms, oflags);
 		close_attr(fp);
 		close_tag(fp, tok->id);
 	} else {
@@ -1207,16 +1270,16 @@ print_header64_ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		print_delim(fp, del);
 		print_1_byte(fp, tok->tt.hdr64_ex.version, "%u");
 		print_delim(fp, del);
-		print_event(fp, tok->tt.hdr64_ex.e_type, raw, sfrm);
+		print_event(fp, tok->tt.hdr64_ex.e_type, oflags);
 		print_delim(fp, del);
-		print_evmod(fp, tok->tt.hdr64_ex.e_mod, raw);
+		print_evmod(fp, tok->tt.hdr64_ex.e_mod, oflags);
 		print_delim(fp, del);
 		print_ip_ex_address(fp, tok->tt.hdr64_ex.ad_type,
 		    tok->tt.hdr64_ex.addr);
 		print_delim(fp, del);
-		print_sec64(fp, tok->tt.hdr64_ex.s, raw);
+		print_sec64(fp, tok->tt.hdr64_ex.s, oflags);
 		print_delim(fp, del);
-		print_msec64(fp, tok->tt.hdr64_ex.ms, raw);
+		print_msec64(fp, tok->tt.hdr64_ex.ms, oflags);
 	}
 }
 
@@ -1241,12 +1304,11 @@ fetch_trailer_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_trailer_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_trailer_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "trailer", raw, xml);
-	if (!xml) {
+	print_tok_type(fp, tok->id, "trailer", oflags);
+	if (!(oflags & AU_OFLAG_XML)) {
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.trail.count, "%u");
 	}
@@ -1284,12 +1346,11 @@ fetch_arg32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_arg32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_arg32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "argument", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "argument", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "arg-num");
 		print_1_byte(fp, tok->tt.arg32.no, "%u");
 		close_attr(fp);
@@ -1336,12 +1397,11 @@ fetch_arg64_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_arg64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_arg64_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "argument", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "argument", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "arg-num");
 		print_1_byte(fp, tok->tt.arg64.no, "%u");
 		close_attr(fp);
@@ -1421,16 +1481,15 @@ fetch_arb_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 	char *str;
 	char *format;
 	size_t size;
 	int i;
 
-	print_tok_type(fp, tok->id, "arbitrary", raw, xml);
-	if (!xml)
+	print_tok_type(fp, tok->id, "arbitrary", oflags);
+	if (!(oflags & AU_OFLAG_XML))
 		print_delim(fp, del);
 
 	switch(tok->tt.arb.howtopr) {
@@ -1463,7 +1522,7 @@ print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		return;
 	}
 
-	if (xml) {
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "print");
 		fprintf(fp, "%s",str);
 		close_attr(fp);
@@ -1476,9 +1535,9 @@ print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 	/* case AUR_CHAR: */
 		str = "byte";
 		size = AUR_BYTE_SIZE;
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			open_attr(fp, "type");
-			fprintf(fp, "%u", size);
+			fprintf(fp, "%zu", size);
 			close_attr(fp);
 			open_attr(fp, "count");
 			print_1_byte(fp, tok->tt.arb.uc, "%u");
@@ -1502,9 +1561,9 @@ print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 	case AUR_SHORT:
 		str = "short";
 		size = AUR_SHORT_SIZE;
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			open_attr(fp, "type");
-			fprintf(fp, "%u", size);
+			fprintf(fp, "%zu", size);
 			close_attr(fp);
 			open_attr(fp, "count");
 			print_1_byte(fp, tok->tt.arb.uc, "%u");
@@ -1531,9 +1590,9 @@ print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 	/* case AUR_INT: */
 		str = "int";
 		size = AUR_INT32_SIZE;
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			open_attr(fp, "type");
-			fprintf(fp, "%u", size);
+			fprintf(fp, "%zu", size);
 			close_attr(fp);
 			open_attr(fp, "count");
 			print_1_byte(fp, tok->tt.arb.uc, "%u");
@@ -1559,9 +1618,9 @@ print_arb_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 	case AUR_INT64:
 		str = "int64";
 		size = AUR_INT64_SIZE;
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			open_attr(fp, "type");
-			fprintf(fp, "%u", size);
+			fprintf(fp, "%zu", size);
 			close_attr(fp);
 			open_attr(fp, "count");
 			print_1_byte(fp, tok->tt.arb.uc, "%u");
@@ -1630,20 +1689,19 @@ fetch_attr32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_attr32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_attr32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "attribute", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "attribute", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "mode");
 		print_4_bytes(fp, tok->tt.attr32.mode, "%o");
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.attr32.uid, raw);
+		print_user(fp, tok->tt.attr32.uid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.attr32.gid, raw);
+		print_group(fp, tok->tt.attr32.gid, oflags);
 		close_attr(fp);
 		open_attr(fp, "fsid");
 		print_4_bytes(fp, tok->tt.attr32.fsid, "%u");
@@ -1659,9 +1717,9 @@ print_attr32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.attr32.mode, "%o");
 		print_delim(fp, del);
-		print_user(fp, tok->tt.attr32.uid, raw);
+		print_user(fp, tok->tt.attr32.uid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.attr32.gid, raw);
+		print_group(fp, tok->tt.attr32.gid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.attr32.fsid, "%u");
 		print_delim(fp, del);
@@ -1712,20 +1770,19 @@ fetch_attr64_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_attr64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_attr64_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "attribute", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "attribute", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "mode");
 		print_4_bytes(fp, tok->tt.attr64.mode, "%o");
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.attr64.uid, raw);
+		print_user(fp, tok->tt.attr64.uid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.attr64.gid, raw);
+		print_group(fp, tok->tt.attr64.gid, oflags);
 		close_attr(fp);
 		open_attr(fp, "fsid");
 		print_4_bytes(fp, tok->tt.attr64.fsid, "%u");
@@ -1741,9 +1798,9 @@ print_attr64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.attr64.mode, "%o");
 		print_delim(fp, del);
-		print_user(fp, tok->tt.attr64.uid, raw);
+		print_user(fp, tok->tt.attr64.uid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.attr64.gid, raw);
+		print_group(fp, tok->tt.attr64.gid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.attr64.fsid, "%u");
 		print_delim(fp, del);
@@ -1774,12 +1831,11 @@ fetch_exit_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_exit_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_exit_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "exit", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "exit", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "errval");
 		print_errval(fp, tok->tt.exit.status);
 		close_attr(fp);
@@ -1803,7 +1859,7 @@ static int
 fetch_execarg_tok(tokenstr_t *tok, u_char *buf, int len)
 {
 	int err = 0;
-	int i;
+	u_int32_t i;
 	u_char *bptr;
 
 	READ_TOKEN_U_INT32(buf, len, tok->tt.execarg.count, tok->len, err);
@@ -1817,7 +1873,7 @@ fetch_execarg_tok(tokenstr_t *tok, u_char *buf, int len)
 
 		/* Look for a null terminated string. */
 		while (bptr && (*bptr != '\0')) {
-			if (++tok->len >=len)
+			if (++tok->len >= (u_int32_t)len)
 				return (-1);
 			bptr = buf + tok->len;
 		}
@@ -1832,16 +1888,15 @@ fetch_execarg_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_execarg_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_execarg_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
-	int i;
+	u_int32_t i;
 
-	print_tok_type(fp, tok->id, "exec arg", raw, xml);
+	print_tok_type(fp, tok->id, "exec arg", oflags);
 	for (i = 0; i < tok->tt.execarg.count; i++) {
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			fprintf(fp, "<arg>");
-			print_string(fp, tok->tt.execarg.text[i],
+			print_xml_string(fp, tok->tt.execarg.text[i],
 			    strlen(tok->tt.execarg.text[i]));
 			fprintf(fp, "</arg>");
 		} else {
@@ -1850,7 +1905,7 @@ print_execarg_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 			    strlen(tok->tt.execarg.text[i]));
 		}
 	}
-	if (xml)
+	if (oflags & AU_OFLAG_XML)
 		close_tag(fp, tok->id);
 }
 
@@ -1862,7 +1917,7 @@ static int
 fetch_execenv_tok(tokenstr_t *tok, u_char *buf, int len)
 {
 	int err = 0;
-	int i;
+	u_int32_t i;
 	u_char *bptr;
 
 	READ_TOKEN_U_INT32(buf, len, tok->tt.execenv.count, tok->len, err);
@@ -1876,7 +1931,7 @@ fetch_execenv_tok(tokenstr_t *tok, u_char *buf, int len)
 
 		/* Look for a null terminated string. */
 		while (bptr && (*bptr != '\0')) {
-			if (++tok->len >=len)
+			if (++tok->len >= (u_int32_t)len)
 				return (-1);
 			bptr = buf + tok->len;
 		}
@@ -1891,16 +1946,15 @@ fetch_execenv_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_execenv_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_execenv_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
-	int i;
+	u_int32_t i;
 
-	print_tok_type(fp, tok->id, "exec env", raw, xml);
+	print_tok_type(fp, tok->id, "exec env", oflags);
 	for (i = 0; i< tok->tt.execenv.count; i++) {
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			fprintf(fp, "<env>");
-			print_string(fp, tok->tt.execenv.text[i],
+			print_xml_string(fp, tok->tt.execenv.text[i],
 			    strlen(tok->tt.execenv.text[i]));
 			fprintf(fp, "</env>");
 		} else {
@@ -1909,7 +1963,7 @@ print_execenv_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 			    strlen(tok->tt.execenv.text[i]));
 		}
 	}
-	if (xml)
+	if (oflags & AU_OFLAG_XML)
 		close_tag(fp, tok->id);
 }
 
@@ -1945,26 +1999,25 @@ fetch_file_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_file_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_file_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "file", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "file", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "time");
-		print_sec32(fp, tok->tt.file.s, raw);
+		print_sec32(fp, tok->tt.file.s, oflags);
 		close_attr(fp);
 		open_attr(fp, "msec");
-		print_msec32(fp, tok->tt.file.ms, raw);
+		print_msec32(fp, tok->tt.file.ms, oflags);
 		close_attr(fp);
 		fprintf(fp, ">");
 		print_string(fp, tok->tt.file.name, tok->tt.file.len);
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_sec32(fp, tok->tt.file.s, raw);
+		print_sec32(fp, tok->tt.file.s, oflags);
 		print_delim(fp, del);
-		print_msec32(fp, tok->tt.file.ms, raw);
+		print_msec32(fp, tok->tt.file.ms, oflags);
 		print_delim(fp, del);
 		print_string(fp, tok->tt.file.name, tok->tt.file.len);
 	}
@@ -1987,29 +2040,28 @@ fetch_newgroups_tok(tokenstr_t *tok, u_char *buf, int len)
 	for (i = 0; i<tok->tt.grps.no; i++) {
 		READ_TOKEN_U_INT32(buf, len, tok->tt.grps.list[i], tok->len,
 		    err);
-    		if (err)
-    			return (-1);
+		if (err)
+			return (-1);
 	}
 
 	return (0);
 }
 
 static void
-print_newgroups_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_newgroups_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 	int i;
 
-	print_tok_type(fp, tok->id, "group", raw, xml);
+	print_tok_type(fp, tok->id, "group", oflags);
 	for (i = 0; i < tok->tt.grps.no; i++) {
-		if (xml) {
+		if (oflags & AU_OFLAG_XML) {
 			fprintf(fp, "<gid>");
-			print_group(fp, tok->tt.grps.list[i], raw);
+			print_group(fp, tok->tt.grps.list[i], oflags);
 			fprintf(fp, "</gid>");
 			close_tag(fp, tok->id);
 		} else {
 			print_delim(fp, del);
-			print_group(fp, tok->tt.grps.list[i], raw);
+			print_group(fp, tok->tt.grps.list[i], oflags);
 		}
 	}
 }
@@ -2032,12 +2084,11 @@ fetch_inaddr_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_inaddr_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_inaddr_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "ip addr", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "ip addr", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		print_ip_address(fp, tok->tt.inaddr.addr);
 		close_tag(fp, tok->id);
 	} else {
@@ -2047,7 +2098,7 @@ print_inaddr_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 }
 
 /*
- * type 	4 bytes
+ * type 4 bytes
  * address 16 bytes
  */
 static int
@@ -2076,12 +2127,11 @@ fetch_inaddr_ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_inaddr_ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_inaddr_ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "ip addr ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "ip addr ex", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		print_ip_ex_address(fp, tok->tt.inaddr_ex.type,
 		    tok->tt.inaddr_ex.addr);
 		close_tag(fp, tok->id);
@@ -2150,12 +2200,11 @@ fetch_ip_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_ip_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_ip_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "ip", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "ip", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "version");
 		print_mem(fp, (u_char *)(&tok->tt.ip.version),
 		    sizeof(u_char));
@@ -2234,14 +2283,13 @@ fetch_ipc_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_ipc_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_ipc_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "IPC", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "IPC", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "ipc-type");
-		print_ipctype(fp, tok->tt.ipc.type, raw);
+		print_ipctype(fp, tok->tt.ipc.type, oflags);
 		close_attr(fp);
 		open_attr(fp, "ipc-id");
 		print_4_bytes(fp, tok->tt.ipc.id, "%u");
@@ -2249,7 +2297,7 @@ print_ipc_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_ipctype(fp, tok->tt.ipc.type, raw);
+		print_ipctype(fp, tok->tt.ipc.type, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.ipc.id, "%u");
 	}
@@ -2301,23 +2349,22 @@ fetch_ipcperm_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_ipcperm_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_ipcperm_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "IPC perm", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "IPC perm", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.ipcperm.uid, raw);
+		print_user(fp, tok->tt.ipcperm.uid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.ipcperm.gid, raw);
+		print_group(fp, tok->tt.ipcperm.gid, oflags);
 		close_attr(fp);
 		open_attr(fp, "creator-uid");
-		print_user(fp, tok->tt.ipcperm.puid, raw);
+		print_user(fp, tok->tt.ipcperm.puid, oflags);
 		close_attr(fp);
 		open_attr(fp, "creator-gid");
-		print_group(fp, tok->tt.ipcperm.pgid, raw);
+		print_group(fp, tok->tt.ipcperm.pgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "mode");
 		print_4_bytes(fp, tok->tt.ipcperm.mode, "%o");
@@ -2331,13 +2378,13 @@ print_ipcperm_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.ipcperm.uid, raw);
+		print_user(fp, tok->tt.ipcperm.uid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.ipcperm.gid, raw);
+		print_group(fp, tok->tt.ipcperm.gid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.ipcperm.puid, raw);
+		print_user(fp, tok->tt.ipcperm.puid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.ipcperm.pgid, raw);
+		print_group(fp, tok->tt.ipcperm.pgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.ipcperm.mode, "%o");
 		print_delim(fp, del);
@@ -2364,12 +2411,11 @@ fetch_iport_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_iport_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_iport_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "ip port", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "ip port", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		print_2_bytes(fp, ntohs(tok->tt.iport.port), "%#x");
 		close_tag(fp, tok->id);
 	} else {
@@ -2400,12 +2446,11 @@ fetch_opaque_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_opaque_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_opaque_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "opaque", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "opaque", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		print_mem(fp, (u_char*)tok->tt.opaque.data,
 		    tok->tt.opaque.size);
 		close_tag(fp, tok->id);
@@ -2440,12 +2485,11 @@ fetch_path_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_path_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_path_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "path", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "path", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		print_string(fp, tok->tt.path.path, tok->tt.path.len);
 		close_tag(fp, tok->id);
 	} else {
@@ -2513,26 +2557,25 @@ fetch_process32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_process32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_process32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "process", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "process", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.proc32.auid, raw);
+		print_user(fp, tok->tt.proc32.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.proc32.euid, raw);
+		print_user(fp, tok->tt.proc32.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.proc32.egid, raw);
+		print_group(fp, tok->tt.proc32.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.proc32.ruid, raw);
+		print_user(fp, tok->tt.proc32.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.proc32.rgid, raw);
+		print_group(fp, tok->tt.proc32.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.proc32.pid, "%u");
@@ -2547,15 +2590,15 @@ print_process32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc32.auid, raw);
+		print_user(fp, tok->tt.proc32.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc32.euid, raw);
+		print_user(fp, tok->tt.proc32.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc32.egid, raw);
+		print_group(fp, tok->tt.proc32.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc32.ruid, raw);
+		print_user(fp, tok->tt.proc32.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc32.rgid, raw);
+		print_group(fp, tok->tt.proc32.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.proc32.pid, "%u");
 		print_delim(fp, del);
@@ -2626,25 +2669,24 @@ fetch_process64_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_process64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_process64_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
-	print_tok_type(fp, tok->id, "process", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "process", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.proc64.auid, raw);
+		print_user(fp, tok->tt.proc64.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.proc64.euid, raw);
+		print_user(fp, tok->tt.proc64.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.proc64.egid, raw);
+		print_group(fp, tok->tt.proc64.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.proc64.ruid, raw);
+		print_user(fp, tok->tt.proc64.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.proc64.rgid, raw);
+		print_group(fp, tok->tt.proc64.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.proc64.pid, "%u");
@@ -2659,15 +2701,15 @@ print_process64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc64.auid, raw);
+		print_user(fp, tok->tt.proc64.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc64.euid, raw);
+		print_user(fp, tok->tt.proc64.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc64.egid, raw);
+		print_group(fp, tok->tt.proc64.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc64.ruid, raw);
+		print_user(fp, tok->tt.proc64.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc64.rgid, raw);
+		print_group(fp, tok->tt.proc64.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.proc64.pid, "%u");
 		print_delim(fp, del);
@@ -2753,26 +2795,25 @@ fetch_process32ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_process32ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_process32ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "process_ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "process_ex", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.proc32_ex.auid, raw);
+		print_user(fp, tok->tt.proc32_ex.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.proc32_ex.euid, raw);
+		print_user(fp, tok->tt.proc32_ex.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.proc32_ex.egid, raw);
+		print_group(fp, tok->tt.proc32_ex.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.proc32_ex.ruid, raw);
+		print_user(fp, tok->tt.proc32_ex.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.proc32_ex.rgid, raw);
+		print_group(fp, tok->tt.proc32_ex.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.proc32_ex.pid, "%u");
@@ -2788,15 +2829,15 @@ print_process32ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc32_ex.auid, raw);
+		print_user(fp, tok->tt.proc32_ex.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc32_ex.euid, raw);
+		print_user(fp, tok->tt.proc32_ex.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc32_ex.egid, raw);
+		print_group(fp, tok->tt.proc32_ex.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc32_ex.ruid, raw);
+		print_user(fp, tok->tt.proc32_ex.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc32_ex.rgid, raw);
+		print_group(fp, tok->tt.proc32_ex.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.proc32_ex.pid, "%u");
 		print_delim(fp, del);
@@ -2883,25 +2924,24 @@ fetch_process64ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_process64ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_process64ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
-	print_tok_type(fp, tok->id, "process_ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "process_ex", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.proc64_ex.auid, raw);
+		print_user(fp, tok->tt.proc64_ex.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.proc64_ex.euid, raw);
+		print_user(fp, tok->tt.proc64_ex.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.proc64_ex.egid, raw);
+		print_group(fp, tok->tt.proc64_ex.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.proc64_ex.ruid, raw);
+		print_user(fp, tok->tt.proc64_ex.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.proc64_ex.rgid, raw);
+		print_group(fp, tok->tt.proc64_ex.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.proc64_ex.pid, "%u");
@@ -2917,15 +2957,15 @@ print_process64ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc64_ex.auid, raw);
+		print_user(fp, tok->tt.proc64_ex.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc64_ex.euid, raw);
+		print_user(fp, tok->tt.proc64_ex.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc64_ex.egid, raw);
+		print_group(fp, tok->tt.proc64_ex.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.proc64_ex.ruid, raw);
+		print_user(fp, tok->tt.proc64_ex.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.proc64_ex.rgid, raw);
+		print_group(fp, tok->tt.proc64_ex.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.proc64_ex.pid, "%u");
 		print_delim(fp, del);
@@ -2959,14 +2999,13 @@ fetch_return32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_return32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_return32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "return", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "return", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp ,"errval");
-		print_retval(fp, tok->tt.ret32.status, raw);
+		print_retval(fp, tok->tt.ret32.status, oflags);
 		close_attr(fp);
 		open_attr(fp, "retval");
 		print_4_bytes(fp, tok->tt.ret32.ret, "%u");
@@ -2974,7 +3013,7 @@ print_return32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_retval(fp, tok->tt.ret32.status, raw);
+		print_retval(fp, tok->tt.ret32.status, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.ret32.ret, "%u");
 	}
@@ -2997,14 +3036,13 @@ fetch_return64_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_return64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_return64_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "return", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "return", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "errval");
-		print_retval(fp, tok->tt.ret64.err, raw);
+		print_retval(fp, tok->tt.ret64.err, oflags);
 		close_attr(fp);
 		open_attr(fp, "retval");
 		print_8_bytes(fp, tok->tt.ret64.val, "%lld");
@@ -3012,7 +3050,7 @@ print_return64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_retval(fp, tok->tt.ret64.err, raw);
+		print_retval(fp, tok->tt.ret64.err, oflags);
 		print_delim(fp, del);
 		print_8_bytes(fp, tok->tt.ret64.val, "%lld");
 	}
@@ -3034,12 +3072,11 @@ fetch_seq_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_seq_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_seq_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "sequence", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "sequence", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "seq-num");
 		print_4_bytes(fp, tok->tt.seq.seqno, "%u");
 		close_attr(fp);
@@ -3060,18 +3097,18 @@ fetch_sock_inet32_tok(tokenstr_t *tok, u_char *buf, int len)
 {
 	int err = 0;
 
-	READ_TOKEN_U_INT16(buf, len, tok->tt.sockinet32.family, tok->len,
+	READ_TOKEN_U_INT16(buf, len, tok->tt.sockinet_ex32.family, tok->len,
 	    err);
 	if (err)
 		return (-1);
 
-	READ_TOKEN_BYTES(buf, len, &tok->tt.sockinet32.port,
+	READ_TOKEN_BYTES(buf, len, &tok->tt.sockinet_ex32.port,
 	    sizeof(uint16_t), tok->len, err);
 	if (err)
 		return (-1);
 
-	READ_TOKEN_BYTES(buf, len, &tok->tt.sockinet32.addr,
-	    sizeof(tok->tt.sockinet32.addr), tok->len, err);
+	READ_TOKEN_BYTES(buf, len, &tok->tt.sockinet_ex32.addr,
+	    sizeof(tok->tt.sockinet_ex32.addr[0]), tok->len, err);
 	if (err)
 		return (-1);
 
@@ -3079,47 +3116,106 @@ fetch_sock_inet32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_sock_inet32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_sock_inet32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "socket-inet", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "socket-inet", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "type");
-		print_2_bytes(fp, tok->tt.sockinet32.family, "%u");
+		print_2_bytes(fp, tok->tt.sockinet_ex32.family, "%u");
 		close_attr(fp);
 		open_attr(fp, "port");
-		print_2_bytes(fp, ntohs(tok->tt.sockinet32.port), "%u");
+		print_2_bytes(fp, ntohs(tok->tt.sockinet_ex32.port), "%u");
 		close_attr(fp);
 		open_attr(fp, "addr");
-		print_ip_address(fp, tok->tt.sockinet32.addr);
+		print_ip_address(fp, tok->tt.sockinet_ex32.addr[0]);
 		close_attr(fp);
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_2_bytes(fp, tok->tt.sockinet32.family, "%u");
+		print_2_bytes(fp, tok->tt.sockinet_ex32.family, "%u");
 		print_delim(fp, del);
-		print_2_bytes(fp, ntohs(tok->tt.sockinet32.port), "%u");
+		print_2_bytes(fp, ntohs(tok->tt.sockinet_ex32.port), "%u");
 		print_delim(fp, del);
-		print_ip_address(fp, tok->tt.sockinet32.addr);
+		print_ip_address(fp, tok->tt.sockinet_ex32.addr[0]);
+	}
+}
+
+/*
+ * socket family	 2 bytes
+ * local port		 2 bytes
+ * socket address	16 bytes
+ */
+static int
+fetch_sock_inet128_tok(tokenstr_t *tok, u_char *buf, int len)
+{
+	int err = 0;
+
+	READ_TOKEN_U_INT16(buf, len, tok->tt.sockinet_ex32.family, tok->len,
+	    err);
+	if (err)
+		return (-1);
+
+	READ_TOKEN_BYTES(buf, len, &tok->tt.sockinet_ex32.port,
+	    sizeof(uint16_t), tok->len, err);
+	if (err)
+		return (-1);
+
+	READ_TOKEN_BYTES(buf, len, &tok->tt.sockinet_ex32.addr,
+	    sizeof(tok->tt.sockinet_ex32.addr), tok->len, err);
+	if (err)
+		return (-1);
+
+	return (0);
+}
+
+static void
+print_sock_inet128_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
+{
+
+	print_tok_type(fp, tok->id, "socket-inet6", oflags);
+	if (oflags & AU_OFLAG_XML) {
+		open_attr(fp, "type");
+		print_2_bytes(fp, tok->tt.sockinet_ex32.family, "%u");
+		close_attr(fp);
+		open_attr(fp, "port");
+		print_2_bytes(fp, ntohs(tok->tt.sockinet_ex32.port), "%u");
+		close_attr(fp);
+		open_attr(fp, "addr");
+		print_ip_ex_address(fp, AU_IPv6, tok->tt.sockinet_ex32.addr);
+		close_attr(fp);
+		close_tag(fp, tok->id);
+	} else {
+		print_delim(fp, del);
+		print_2_bytes(fp, tok->tt.sockinet_ex32.family, "%u");
+		print_delim(fp, del);
+		print_2_bytes(fp, ntohs(tok->tt.sockinet_ex32.port), "%u");
+		print_delim(fp, del);
+		print_ip_ex_address(fp, AU_IPv6, tok->tt.sockinet_ex32.addr);
 	}
 }
 
 /*
  * socket family           2 bytes
- * path                    104 bytes
+ * path                    (up to) 104 bytes + NULL (NULL terminated string).
  */
 static int
 fetch_sock_unix_tok(tokenstr_t *tok, u_char *buf, int len)
 {
 	int err = 0;
+	u_char *p;
+	int slen;
+
 
 	READ_TOKEN_U_INT16(buf, len, tok->tt.sockunix.family, tok->len, err);
 	if (err)
 		return (-1);
 
-	READ_TOKEN_BYTES(buf, len, tok->tt.sockunix.path, 104, tok->len,
-	    err);
+	/* slen = strnlen((buf + tok->len), 104) + 1; */
+	p = (u_char *)memchr((const void *)(buf + tok->len), '\0', 104);
+	slen = (p ? (int)(p - (buf + tok->len))  : 104) + 1;
+
+	READ_TOKEN_BYTES(buf, len, tok->tt.sockunix.path, slen, tok->len, err);
 	if (err)
 		return (-1);
 
@@ -3127,12 +3223,11 @@ fetch_sock_unix_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_sock_unix_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_sock_unix_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "socket-unix", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "socket-unix", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "type");
 		print_2_bytes(fp, tok->tt.sockunix.family, "%u");
 		close_attr(fp);
@@ -3192,12 +3287,11 @@ fetch_socket_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_socket_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_socket_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "socket", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "socket", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "sock_type");
 		print_2_bytes(fp, tok->tt.socket.type, "%u");
 		close_attr(fp);
@@ -3286,26 +3380,25 @@ fetch_subject32_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_subject32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_subject32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "subject", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "subject", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.subj32.auid, raw);
+		print_user(fp, tok->tt.subj32.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.subj32.euid, raw);
+		print_user(fp, tok->tt.subj32.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.subj32.egid, raw);
+		print_group(fp, tok->tt.subj32.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.subj32.ruid, raw);
+		print_user(fp, tok->tt.subj32.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.subj32.rgid, raw);
+		print_group(fp, tok->tt.subj32.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp,"pid");
 		print_4_bytes(fp, tok->tt.subj32.pid, "%u");
@@ -3320,15 +3413,15 @@ print_subject32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj32.auid, raw);
+		print_user(fp, tok->tt.subj32.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj32.euid, raw);
+		print_user(fp, tok->tt.subj32.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj32.egid, raw);
+		print_group(fp, tok->tt.subj32.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj32.ruid, raw);
+		print_user(fp, tok->tt.subj32.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj32.rgid, raw);
+		print_group(fp, tok->tt.subj32.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.subj32.pid, "%u");
 		print_delim(fp, del);
@@ -3337,6 +3430,110 @@ print_subject32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		print_4_bytes(fp, tok->tt.subj32.tid.port, "%u");
 		print_delim(fp, del);
 		print_ip_address(fp, tok->tt.subj32.tid.addr);
+	}
+}
+
+static void
+print_upriv_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
+{
+
+	print_tok_type(fp, tok->id, "use of privilege", oflags);
+	if (oflags & AU_OFLAG_XML) {
+		open_attr(fp, "status");
+		if (tok->tt.priv.sorf)
+			(void) fprintf(fp, "successful use of priv");
+		else
+			(void) fprintf(fp, "failed use of priv");
+		close_attr(fp);
+		open_attr(fp, "name");
+		print_string(fp, tok->tt.priv.priv, tok->tt.priv.privstrlen);
+		close_attr(fp);
+		close_tag(fp, tok->id);
+	} else {
+		print_delim(fp, del);
+		if (tok->tt.priv.sorf)
+			(void) fprintf(fp, "successful use of priv");
+		else
+			(void) fprintf(fp, "failed use of priv");
+		print_delim(fp, del);
+		print_string(fp, tok->tt.priv.priv, tok->tt.priv.privstrlen);
+	}
+}
+
+/*
+ * status                       1 byte
+ * privstrlen                   2 bytes
+ * priv                         N bytes + 1 (\0 byte)
+ */
+static int
+fetch_priv_tok(tokenstr_t *tok, u_char *buf, int len)
+{
+	int err = 0;
+
+	READ_TOKEN_U_CHAR(buf, len, tok->tt.priv.sorf, tok->len, err);
+	if (err)
+		return (-1);
+	READ_TOKEN_U_INT16(buf, len, tok->tt.priv.privstrlen, tok->len, err);
+	if (err)
+		return (-1);
+	SET_PTR((char *)buf, len, tok->tt.priv.priv, tok->tt.priv.privstrlen,
+	    tok->len, err);
+	if (err)
+		return (-1);
+	return (0);
+}
+
+/*
+ * privtstrlen		1 byte
+ * privtstr		N bytes + 1
+ * privstrlen		1 byte
+ * privstr		N bytes + 1
+ */
+static int
+fetch_privset_tok(tokenstr_t *tok, u_char *buf, int len)
+{
+	int	err = 0;
+
+	READ_TOKEN_U_INT16(buf, len, tok->tt.privset.privtstrlen,
+	    tok->len, err);
+	if (err)
+		return (-1);
+	SET_PTR((char *)buf, len, tok->tt.privset.privtstr,
+	    tok->tt.privset.privtstrlen, tok->len, err);
+	if (err)
+		return (-1);
+	READ_TOKEN_U_INT16(buf, len, tok->tt.privset.privstrlen,
+	    tok->len, err);
+	if (err)
+		return (-1);
+	SET_PTR((char *)buf, len, tok->tt.privset.privstr,
+	    tok->tt.privset.privstrlen, tok->len, err);
+	if (err)
+		return (-1);
+	return (0);
+}
+
+static void
+print_privset_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
+{
+
+	print_tok_type(fp, tok->id, "privilege", oflags);
+	if (oflags & AU_OFLAG_XML) {
+		open_attr(fp, "type");
+		print_string(fp, tok->tt.privset.privtstr,
+		    tok->tt.privset.privtstrlen);
+		close_attr(fp);
+		open_attr(fp, "priv");
+		print_string(fp, tok->tt.privset.privstr,
+		    tok->tt.privset.privstrlen);
+		close_attr(fp);
+	} else {
+		print_delim(fp, del);
+		print_string(fp, tok->tt.privset.privtstr,
+		    tok->tt.privset.privtstrlen);
+		print_delim(fp, del);
+		print_string(fp, tok->tt.privset.privstr,
+			tok->tt.privset.privstrlen);
 	}
 }
 
@@ -3398,26 +3595,25 @@ fetch_subject64_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_subject64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_subject64_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "subject", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "subject", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.subj64.auid, raw);
+		print_user(fp, tok->tt.subj64.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.subj64.euid, raw);
+		print_user(fp, tok->tt.subj64.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.subj64.egid, raw);
+		print_group(fp, tok->tt.subj64.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.subj64.ruid, raw);
+		print_user(fp, tok->tt.subj64.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.subj64.rgid, raw);
+		print_group(fp, tok->tt.subj64.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.subj64.pid, "%u");
@@ -3432,15 +3628,15 @@ print_subject64_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj64.auid, raw);
+		print_user(fp, tok->tt.subj64.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj64.euid, raw);
+		print_user(fp, tok->tt.subj64.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj64.egid, raw);
+		print_group(fp, tok->tt.subj64.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj64.ruid, raw);
+		print_user(fp, tok->tt.subj64.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj64.rgid, raw);
+		print_group(fp, tok->tt.subj64.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.subj64.pid, "%u");
 		print_delim(fp, del);
@@ -3525,26 +3721,25 @@ fetch_subject32ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_subject32ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_subject32ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "subject_ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "subject_ex", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.subj32_ex.auid, raw);
+		print_user(fp, tok->tt.subj32_ex.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.subj32_ex.euid, raw);
+		print_user(fp, tok->tt.subj32_ex.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.subj32_ex.egid, raw);
+		print_group(fp, tok->tt.subj32_ex.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.subj32_ex.ruid, raw);
+		print_user(fp, tok->tt.subj32_ex.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.subj32_ex.rgid, raw);
+		print_group(fp, tok->tt.subj32_ex.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.subj32_ex.pid, "%u");
@@ -3560,15 +3755,15 @@ print_subject32ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj32_ex.auid, raw);
+		print_user(fp, tok->tt.subj32_ex.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj32_ex.euid, raw);
+		print_user(fp, tok->tt.subj32_ex.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj32_ex.egid, raw);
+		print_group(fp, tok->tt.subj32_ex.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj32_ex.ruid, raw);
+		print_user(fp, tok->tt.subj32_ex.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj32_ex.rgid, raw);
+		print_group(fp, tok->tt.subj32_ex.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.subj32_ex.pid, "%u");
 		print_delim(fp, del);
@@ -3654,25 +3849,24 @@ fetch_subject64ex_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_subject64ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_subject64ex_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
-	print_tok_type(fp, tok->id, "subject_ex", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "subject_ex", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "audit-uid");
-		print_user(fp, tok->tt.subj64_ex.auid, raw);
+		print_user(fp, tok->tt.subj64_ex.auid, oflags);
 		close_attr(fp);
 		open_attr(fp, "uid");
-		print_user(fp, tok->tt.subj64_ex.euid, raw);
+		print_user(fp, tok->tt.subj64_ex.euid, oflags);
 		close_attr(fp);
 		open_attr(fp, "gid");
-		print_group(fp, tok->tt.subj64_ex.egid, raw);
+		print_group(fp, tok->tt.subj64_ex.egid, oflags);
 		close_attr(fp);
 		open_attr(fp, "ruid");
-		print_user(fp, tok->tt.subj64_ex.ruid, raw);
+		print_user(fp, tok->tt.subj64_ex.ruid, oflags);
 		close_attr(fp);
 		open_attr(fp, "rgid");
-		print_group(fp, tok->tt.subj64_ex.rgid, raw);
+		print_group(fp, tok->tt.subj64_ex.rgid, oflags);
 		close_attr(fp);
 		open_attr(fp, "pid");
 		print_4_bytes(fp, tok->tt.subj64_ex.pid, "%u");
@@ -3688,15 +3882,15 @@ print_subject64ex_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		close_tag(fp, tok->id);
 	} else {
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj64_ex.auid, raw);
+		print_user(fp, tok->tt.subj64_ex.auid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj64_ex.euid, raw);
+		print_user(fp, tok->tt.subj64_ex.euid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj64_ex.egid, raw);
+		print_group(fp, tok->tt.subj64_ex.egid, oflags);
 		print_delim(fp, del);
-		print_user(fp, tok->tt.subj64_ex.ruid, raw);
+		print_user(fp, tok->tt.subj64_ex.ruid, oflags);
 		print_delim(fp, del);
-		print_group(fp, tok->tt.subj64_ex.rgid, raw);
+		print_group(fp, tok->tt.subj64_ex.rgid, oflags);
 		print_delim(fp, del);
 		print_4_bytes(fp, tok->tt.subj64_ex.pid, "%u");
 		print_delim(fp, del);
@@ -3731,12 +3925,11 @@ fetch_text_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_text_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_text_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "text", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "text", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		print_string(fp, tok->tt.text.text, tok->tt.text.len);
 		close_tag(fp, tok->id);
 	} else {
@@ -3746,22 +3939,36 @@ print_text_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 }
 
 /*
+ * socket domain           2 bytes
  * socket type             2 bytes
+ * address type            2 bytes
  * local port              2 bytes
- * address type/length     4 bytes
- * local Internet address  4 bytes
- * remote port             4 bytes
- * address type/length     4 bytes
- * remote Internet address 4 bytes
+ * local Internet address  4/16 bytes
+ * remote port             2 bytes
+ * remote Internet address 4/16 bytes
  */
 static int
 fetch_socketex32_tok(tokenstr_t *tok, u_char *buf, int len)
 {
 	int err = 0;
 
+	READ_TOKEN_U_INT16(buf, len, tok->tt.socket_ex32.domain, tok->len,
+	    err);
+	if (err)
+		return (-1);
+
 	READ_TOKEN_U_INT16(buf, len, tok->tt.socket_ex32.type, tok->len,
 	    err);
 	if (err)
+		return (-1);
+
+	READ_TOKEN_U_INT16(buf, len, tok->tt.socket_ex32.atype, tok->len,
+	    err);
+	if (err)
+		return (-1);
+
+	if (tok->tt.socket_ex32.atype != AU_IPv4 &&
+	    tok->tt.socket_ex32.atype != AU_IPv6)
 		return (-1);
 
 	READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.l_port,
@@ -3769,41 +3976,53 @@ fetch_socketex32_tok(tokenstr_t *tok, u_char *buf, int len)
 	if (err)
 		return (-1);
 
-	READ_TOKEN_U_INT32(buf, len, tok->tt.socket_ex32.l_ad_type, tok->len,
-	    err);
-	if (err)
-		return (-1);
-
-	READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.l_addr,
-	    sizeof(tok->tt.socket_ex32.l_addr), tok->len, err);
-	if (err)
-		return (-1);
+	if (tok->tt.socket_ex32.atype == AU_IPv4) {
+		READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.l_addr,
+		    sizeof(tok->tt.socket_ex32.l_addr[0]), tok->len, err);
+		if (err)
+			return (-1);
+	} else {
+		READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.l_addr,
+		    sizeof(tok->tt.socket_ex32.l_addr), tok->len, err);
+		if (err)
+			return (-1);
+	}
 
 	READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.r_port,
 	    sizeof(uint16_t), tok->len, err);
 	if (err)
 		return (-1);
 
-	READ_TOKEN_U_INT32(buf, len, tok->tt.socket_ex32.r_ad_type, tok->len,
-	    err);
-	if (err)
-		return (-1);
-
-	READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.r_addr,
-	    sizeof(tok->tt.socket_ex32.r_addr), tok->len, err);
-	if (err)
-		return (-1);
+	if (tok->tt.socket_ex32.atype == AU_IPv4) {
+		READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.r_addr,
+		    sizeof(tok->tt.socket_ex32.r_addr[0]), tok->len, err);
+		if (err)
+			return (-1);
+	} else {
+		READ_TOKEN_BYTES(buf, len, &tok->tt.socket_ex32.r_addr,
+		    sizeof(tok->tt.socket_ex32.r_addr), tok->len, err);
+		if (err)
+			return (-1);
+	}
 
 	return (0);
 }
 
 static void
-print_socketex32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_socketex32_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "socket", raw, xml);
-	if (xml) {
+	/*
+	 * This print routine prints BSM constant space domains and socket
+	 * types rather than converting them.  If we add string printers for
+	 * these constants in the future, we may want to call conversion
+	 * routines.
+	 */
+	print_tok_type(fp, tok->id, "socket", oflags);
+	if (oflags & AU_OFLAG_XML) {
+		open_attr(fp, "sock_dom");
+		print_2_bytes(fp, tok->tt.socket_ex32.domain, "%#x");
+		close_attr(fp);
 		open_attr(fp, "sock_type");
 		print_2_bytes(fp, tok->tt.socket_ex32.type, "%#x");
 		close_attr(fp);
@@ -3811,26 +4030,32 @@ print_socketex32_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
 		print_2_bytes(fp, ntohs(tok->tt.socket_ex32.l_port), "%#x");
 		close_attr(fp);
 		open_attr(fp, "laddr");
-		print_ip_address(fp, tok->tt.socket_ex32.l_addr);
+		print_ip_ex_address(fp, tok->tt.socket_ex32.atype,
+		    tok->tt.socket_ex32.l_addr);
 		close_attr(fp);
 		open_attr(fp, "faddr");
-		print_ip_address(fp, tok->tt.socket_ex32.r_addr);
+		print_ip_ex_address(fp, tok->tt.socket_ex32.atype,
+		    tok->tt.socket_ex32.r_addr);
 		close_attr(fp);
 		open_attr(fp, "fport");
-		print_2_bytes(fp, tok->tt.socket_ex32.type, "%#x");
+		print_2_bytes(fp, ntohs(tok->tt.socket_ex32.r_port), "%#x");
 		close_attr(fp);
 		close_tag(fp, tok->id);
 	} else {
+		print_delim(fp, del);
+		print_2_bytes(fp, tok->tt.socket_ex32.domain, "%#x");
 		print_delim(fp, del);
 		print_2_bytes(fp, tok->tt.socket_ex32.type, "%#x");
 		print_delim(fp, del);
 		print_2_bytes(fp, ntohs(tok->tt.socket_ex32.l_port), "%#x");
 		print_delim(fp, del);
-		print_ip_address(fp, tok->tt.socket_ex32.l_addr);
+		print_ip_ex_address(fp, tok->tt.socket_ex32.atype,
+		    tok->tt.socket_ex32.l_addr);
 		print_delim(fp, del);
 		print_4_bytes(fp, ntohs(tok->tt.socket_ex32.r_port), "%#x");
 		print_delim(fp, del);
-		print_ip_address(fp, tok->tt.socket_ex32.r_addr);
+		print_ip_ex_address(fp, tok->tt.socket_ex32.atype,
+		    tok->tt.socket_ex32.r_addr);
 	}
 }
 
@@ -3855,12 +4080,11 @@ fetch_invalid_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_invalid_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_invalid_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	if (!xml) {
-		print_tok_type(fp, tok->id, "unknown", raw, 0);
+	if (!(oflags & AU_OFLAG_XML)) {
+		print_tok_type(fp, tok->id, "unknown", oflags);
 		print_delim(fp, del);
 		print_mem(fp, (u_char*)tok->tt.invalid.data,
 		    tok->tt.invalid.length);
@@ -3888,12 +4112,11 @@ fetch_zonename_tok(tokenstr_t *tok, u_char *buf, int len)
 }
 
 static void
-print_zonename_tok(FILE *fp, tokenstr_t *tok, char *del, char raw,
-    __unused char sfrm, int xml)
+print_zonename_tok(FILE *fp, tokenstr_t *tok, char *del, int oflags)
 {
 
-	print_tok_type(fp, tok->id, "zone", raw, xml);
-	if (xml) {
+	print_tok_type(fp, tok->id, "zone", oflags);
+	if (oflags & AU_OFLAG_XML) {
 		open_attr(fp, "name");
 		print_string(fp, tok->tt.zonename.zonename,
 		    tok->tt.zonename.len);
@@ -4017,6 +4240,9 @@ au_fetch_tok(tokenstr_t *tok, u_char *buf, int len)
 	case AUT_SOCKUNIX:
 		return (fetch_sock_unix_tok(tok, buf, len));
 
+	case AUT_SOCKINET128:
+		return (fetch_sock_inet128_tok(tok, buf, len));
+
 	case AUT_SUBJECT32:
 		return (fetch_subject32_tok(tok, buf, len));
 
@@ -4041,8 +4267,196 @@ au_fetch_tok(tokenstr_t *tok, u_char *buf, int len)
 	case AUT_ZONENAME:
 		return (fetch_zonename_tok(tok, buf, len));
 
+	case AUT_UPRIV:
+		return (fetch_priv_tok(tok, buf, len));
+
+	case AUT_PRIV:
+		return (fetch_privset_tok(tok, buf, len));
+
 	default:
 		return (fetch_invalid_tok(tok, buf, len));
+	}
+}
+
+void
+au_print_flags_tok(FILE *outfp, tokenstr_t *tok, char *del, int oflags)
+{
+
+	switch(tok->id) {
+	case AUT_HEADER32:
+		print_header32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_HEADER32_EX:
+		print_header32_ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_HEADER64:
+		print_header64_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_HEADER64_EX:
+		print_header64_ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_TRAILER:
+		print_trailer_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_ARG32:
+		print_arg32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_ARG64:
+		print_arg64_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_DATA:
+		print_arb_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_ATTR32:
+		print_attr32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_ATTR64:
+		print_attr64_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_EXIT:
+		print_exit_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_EXEC_ARGS:
+		print_execarg_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_EXEC_ENV:
+		print_execenv_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_OTHER_FILE32:
+		print_file_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_NEWGROUPS:
+		print_newgroups_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_IN_ADDR:
+		print_inaddr_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_IN_ADDR_EX:
+		print_inaddr_ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_IP:
+		print_ip_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_IPC:
+		print_ipc_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_IPC_PERM:
+		print_ipcperm_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_IPORT:
+		print_iport_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_OPAQUE:
+		print_opaque_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_PATH:
+		print_path_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_PROCESS32:
+		print_process32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_PROCESS32_EX:
+		print_process32ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_PROCESS64:
+		print_process64_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_PROCESS64_EX:
+		print_process64ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_RETURN32:
+		print_return32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_RETURN64:
+		print_return64_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SEQ:
+		print_seq_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SOCKET:
+		print_socket_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SOCKINET32:
+		print_sock_inet32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SOCKUNIX:
+		print_sock_unix_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SOCKINET128:
+		print_sock_inet128_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SUBJECT32:
+		print_subject32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SUBJECT64:
+		print_subject64_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SUBJECT32_EX:
+		print_subject32ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SUBJECT64_EX:
+		print_subject64ex_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_TEXT:
+		print_text_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_SOCKET_EX:
+		print_socketex32_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_ZONENAME:
+		print_zonename_tok(outfp, tok, del, oflags);
+		return;
+
+	case AUT_UPRIV:
+		print_upriv_tok(outfp, tok, del, oflags);
+		return;
+
+	case  AUT_PRIV:
+		print_privset_tok(outfp, tok, del, oflags);
+		return;
+
+	default:
+		print_invalid_tok(outfp, tok, del, oflags);
 	}
 }
 
@@ -4052,171 +4466,14 @@ au_fetch_tok(tokenstr_t *tok, u_char *buf, int len)
 void
 au_print_tok(FILE *outfp, tokenstr_t *tok, char *del, char raw, char sfrm)
 {
+	int oflags = AU_OFLAG_NONE;
 
-	switch(tok->id) {
-	case AUT_HEADER32:
-		print_header32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
+	if (raw)
+		oflags |= AU_OFLAG_RAW;
+	if (sfrm)
+		oflags |= AU_OFLAG_SHORT;
 
-	case AUT_HEADER32_EX:
-		print_header32_ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_HEADER64:
-		print_header64_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_HEADER64_EX:
-		print_header64_ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_TRAILER:
-		print_trailer_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_ARG32:
-		print_arg32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_ARG64:
-		print_arg64_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_DATA:
-		print_arb_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_ATTR32:
-		print_attr32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_ATTR64:
-		print_attr64_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_EXIT:
-		print_exit_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_EXEC_ARGS:
-		print_execarg_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_EXEC_ENV:
-		print_execenv_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_OTHER_FILE32:
-		print_file_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_NEWGROUPS:
-		print_newgroups_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_IN_ADDR:
-		print_inaddr_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_IN_ADDR_EX:
-		print_inaddr_ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_IP:
-		print_ip_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_IPC:
-		print_ipc_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_IPC_PERM:
-		print_ipcperm_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_IPORT:
-		print_iport_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_OPAQUE:
-		print_opaque_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_PATH:
-		print_path_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_PROCESS32:
-		print_process32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_PROCESS32_EX:
-		print_process32ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_PROCESS64:
-		print_process64_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_PROCESS64_EX:
-		print_process64ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_RETURN32:
-		print_return32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_RETURN64:
-		print_return64_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SEQ:
-		print_seq_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SOCKET:
-		print_socket_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SOCKINET32:
-		print_sock_inet32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SOCKUNIX:
-		print_sock_unix_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SUBJECT32:
-		print_subject32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SUBJECT64:
-		print_subject64_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SUBJECT32_EX:
-		print_subject32ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SUBJECT64_EX:
-		print_subject64ex_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_TEXT:
-		print_text_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_SOCKET_EX:
-		print_socketex32_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	case AUT_ZONENAME:
-		print_zonename_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-		return;
-
-	default:
-		print_invalid_tok(outfp, tok, del, raw, sfrm, AU_PLAIN);
-	}
+	au_print_flags_tok(outfp, tok, del, oflags);
 }
 
 /*
@@ -4226,171 +4483,14 @@ void
 au_print_tok_xml(FILE *outfp, tokenstr_t *tok, char *del, char raw,
     char sfrm)
 {
+	int oflags = AU_OFLAG_XML;
 
-	switch(tok->id) {
-	case AUT_HEADER32:
-		print_header32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
+	if (raw)
+		oflags |= AU_OFLAG_RAW;
+	if (sfrm)
+		oflags |= AU_OFLAG_SHORT;
 
-	case AUT_HEADER32_EX:
-		print_header32_ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_HEADER64:
-		print_header64_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_HEADER64_EX:
-		print_header64_ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_TRAILER:
-		print_trailer_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_ARG32:
-		print_arg32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_ARG64:
-		print_arg64_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_DATA:
-		print_arb_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_ATTR32:
-		print_attr32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_ATTR64:
-		print_attr64_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_EXIT:
-		print_exit_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_EXEC_ARGS:
-		print_execarg_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_EXEC_ENV:
-		print_execenv_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_OTHER_FILE32:
-		print_file_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_NEWGROUPS:
-		print_newgroups_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_IN_ADDR:
-		print_inaddr_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_IN_ADDR_EX:
-		print_inaddr_ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_IP:
-		print_ip_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_IPC:
-		print_ipc_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_IPC_PERM:
-		print_ipcperm_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_IPORT:
-		print_iport_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_OPAQUE:
-		print_opaque_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_PATH:
-		print_path_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_PROCESS32:
-		print_process32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_PROCESS32_EX:
-		print_process32ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_PROCESS64:
-		print_process64_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_PROCESS64_EX:
-		print_process64ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_RETURN32:
-		print_return32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_RETURN64:
-		print_return64_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SEQ:
-		print_seq_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SOCKET:
-		print_socket_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SOCKINET32:
-		print_sock_inet32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SOCKUNIX:
-		print_sock_unix_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SUBJECT32:
-		print_subject32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SUBJECT64:
-		print_subject64_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SUBJECT32_EX:
-		print_subject32ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SUBJECT64_EX:
-		print_subject64ex_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_TEXT:
-		print_text_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_SOCKET_EX:
-		print_socketex32_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	case AUT_ZONENAME:
-		print_zonename_tok(outfp, tok, del, raw, sfrm, AU_XML);
-		return;
-
-	default:
-		print_invalid_tok(outfp, tok, del, raw, sfrm, AU_XML);
-	}
+	au_print_flags_tok(outfp, tok, del, oflags);
 }
 
 /*
@@ -4438,11 +4538,10 @@ au_read_rec(FILE *fp, u_char **buf)
 			return (-1);
 		}
 
-		*buf = malloc(recsize * sizeof(u_char));
+		*buf = calloc(recsize, sizeof(u_char));
 		if (*buf == NULL)
 			return (-1);
 		bptr = *buf;
-		memset(bptr, 0, recsize);
 
 		/* store the token contents already read, back to the buffer*/
 		*bptr = type;

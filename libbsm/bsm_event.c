@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2004 Apple Computer, Inc.
+/*-
+ * Copyright (c) 2004 Apple Inc.
  * Copyright (c) 2006 Robert N. M. Watson
  * All rights reserved.
  *
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,16 +26,23 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $P4: //depot/projects/trustedbsd/openbsm/libbsm/bsm_event.c#13 $
  */
+
+#include <config/config.h>
 
 #include <bsm/libbsm.h>
 
 #include <string.h>
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 #include <pthread.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifndef HAVE_STRLCPY
+#include <compat/strlcpy.h>
+#endif
+
 
 /*
  * Parse the contents of the audit_event file to return
@@ -45,7 +52,9 @@ static FILE		*fp = NULL;
 static char		 linestr[AU_LINE_MAX];
 static const char	*eventdelim = ":";
 
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 static pthread_mutex_t	mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 /*
  * Parse one line from the audit_event file into the au_event_ent structure.
@@ -68,13 +77,13 @@ eventfromstr(char *str, struct au_event_ent *e)
 	if (strlen(evname) >= AU_EVENT_NAME_MAX)
 		return (NULL);
 
-	strcpy(e->ae_name, evname);
+	strlcpy(e->ae_name, evname, AU_EVENT_NAME_MAX);
 	if (evdesc != NULL) {
 		if (strlen(evdesc) >= AU_EVENT_DESC_MAX)
 			return (NULL);
-		strcpy(e->ae_desc, evdesc);
+		strlcpy(e->ae_desc, evdesc, AU_EVENT_DESC_MAX);
 	} else
-		strcpy(e->ae_desc, "");
+		strlcpy(e->ae_desc, "", AU_EVENT_DESC_MAX);
 
 	e->ae_number = atoi(evno);
 
@@ -107,9 +116,13 @@ void
 setauevent(void)
 {
 
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_lock(&mutex);
+#endif
 	setauevent_locked();
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_unlock(&mutex);
+#endif
 }
 
 /*
@@ -119,12 +132,16 @@ void
 endauevent(void)
 {
 
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_lock(&mutex);
+#endif
 	if (fp != NULL) {
 		fclose(fp);
 		fp = NULL;
 	}
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_unlock(&mutex);
+#endif
 }
 
 /*
@@ -164,9 +181,13 @@ getauevent_r(struct au_event_ent *e)
 {
 	struct au_event_ent *ep;
 
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_lock(&mutex);
+#endif
 	ep = getauevent_r_locked(e);
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_unlock(&mutex);
+#endif
 	return (ep);
 }
 
@@ -223,9 +244,13 @@ getauevnam_r(struct au_event_ent *e, const char *name)
 {
 	struct au_event_ent *ep;
 
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_lock(&mutex);
+#endif
 	ep = getauevnam_r_locked(e, name);
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_unlock(&mutex);
+#endif
 	return (ep);
 }
 
@@ -277,9 +302,13 @@ getauevnum_r(struct au_event_ent *e, au_event_t event_number)
 {
 	struct au_event_ent *ep;
 
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_lock(&mutex);
+#endif
 	ep = getauevnum_r_locked(e, event_number);
+#ifdef HAVE_PTHREAD_MUTEX_LOCK
 	pthread_mutex_unlock(&mutex);
+#endif
 	return (ep);
 }
 

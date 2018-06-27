@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $P4: //depot/projects/trustedbsd/openbsm/etc/audit_warn#3 $
-# $FreeBSD: src/contrib/openbsm/etc/audit_warn,v 1.2 2006/03/26 01:44:35 rwatson Exp $
+# $FreeBSD: stable/10/contrib/openbsm/etc/audit_warn 293161 2016-01-04 16:32:21Z brueffer $
 #
+
 logger -p security.warning "audit warning: $@"

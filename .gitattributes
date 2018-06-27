@@ -1,8 +1,12 @@
 * text=auto !eol
-/HISTORY -text
+/.travis.yml -text
+/CREDITS -text
+/FREEBSD-upgrade -text
+/INSTALL -text
 /LICENSE -text
 /Makefile.am -text
 /Makefile.in -text
+/NEWS -text
 /README -text
 /TODO -text
 /VERSION -text
@@ -16,10 +20,48 @@ bin/audit/audit.8 -text
 bin/audit/audit.c -text
 bin/auditd/Makefile.am -text
 bin/auditd/Makefile.in -text
+bin/auditd/audit_triggers.defs -text
 bin/auditd/audit_warn.c -text
 bin/auditd/auditd.8 -text
 bin/auditd/auditd.c -text
 bin/auditd/auditd.h -text
+bin/auditd/auditd_control.defs -text
+bin/auditd/auditd_darwin.c -text
+bin/auditd/auditd_fbsd.c -text
+bin/auditdistd/Makefile.am -text
+bin/auditdistd/Makefile.in -text
+bin/auditdistd/auditdistd.8 -text
+bin/auditdistd/auditdistd.c -text
+bin/auditdistd/auditdistd.conf.5 -text
+bin/auditdistd/auditdistd.h -text
+bin/auditdistd/faccessat.h -text
+bin/auditdistd/fstatat.h -text
+bin/auditdistd/openat.h -text
+bin/auditdistd/parse.y -text
+bin/auditdistd/pjdlog.c -text
+bin/auditdistd/pjdlog.h -text
+bin/auditdistd/proto.c -text
+bin/auditdistd/proto.h -text
+bin/auditdistd/proto_common.c -text
+bin/auditdistd/proto_impl.h -text
+bin/auditdistd/proto_socketpair.c -text
+bin/auditdistd/proto_tcp.c -text
+bin/auditdistd/proto_tls.c -text
+bin/auditdistd/proto_uds.c -text
+bin/auditdistd/receiver.c -text
+bin/auditdistd/renameat.h -text
+bin/auditdistd/sandbox.c -text
+bin/auditdistd/sandbox.h -text
+bin/auditdistd/sender.c -text
+bin/auditdistd/sigtimedwait.h -text
+bin/auditdistd/strndup.h -text
+bin/auditdistd/subr.c -text
+bin/auditdistd/subr.h -text
+bin/auditdistd/synch.h -text
+bin/auditdistd/token.l -text
+bin/auditdistd/trail.c -text
+bin/auditdistd/trail.h -text
+bin/auditdistd/unlinkat.h -text
 bin/auditfilterd/Makefile.am -text
 bin/auditfilterd/Makefile.in -text
 bin/auditfilterd/auditfilterd.8 -text
@@ -39,11 +81,19 @@ bsm/Makefile.am -text
 bsm/Makefile.in -text
 bsm/audit_filter.h -text
 bsm/audit_uevents.h -text
+bsm/auditd_lib.h -text
 bsm/libbsm.h -text
 compat/clock_gettime.h -text
+compat/closefrom.h -text
+compat/compat.h -text
 compat/endian.h -text
+compat/endian_enc.h -text
+compat/flopen.h -text
+compat/pidfile.h -text
 compat/queue.h -text
 compat/strlcat.h -text
+compat/strlcpy.h -text
+compat/vis.h -text
 config/config.guess -text
 config/config.h -text
 config/config.h.in -text
@@ -52,6 +102,7 @@ config/depcomp -text
 config/install-sh -text
 config/ltmain.sh -text
 config/missing -text
+config/ylwrap -text
 /configure -text
 /configure.ac -text
 etc/audit_class -text
@@ -60,30 +111,47 @@ etc/audit_event -text
 etc/audit_filter -text
 etc/audit_user -text
 etc/audit_warn -text
+libauditd/Makefile.am -text
+libauditd/Makefile.in -text
+libauditd/auditd_lib.c -text
+libauditd/libauditd.3 -text
 libbsm/Makefile.am -text
 libbsm/Makefile.in -text
 libbsm/au_class.3 -text
 libbsm/au_control.3 -text
+libbsm/au_domain.3 -text
+libbsm/au_errno.3 -text
 libbsm/au_event.3 -text
+libbsm/au_fcntl_cmd.3 -text
 libbsm/au_free_token.3 -text
 libbsm/au_io.3 -text
 libbsm/au_mask.3 -text
+libbsm/au_notify.3 -text
 libbsm/au_open.3 -text
+libbsm/au_socket_type.3 -text
 libbsm/au_token.3 -text
 libbsm/au_user.3 -text
 libbsm/audit_submit.3 -text
 libbsm/bsm_audit.c -text
 libbsm/bsm_class.c -text
 libbsm/bsm_control.c -text
+libbsm/bsm_domain.c -text
+libbsm/bsm_errno.c -text
 libbsm/bsm_event.c -text
+libbsm/bsm_fcntl.c -text
 libbsm/bsm_flags.c -text
 libbsm/bsm_io.c -text
 libbsm/bsm_mask.c -text
 libbsm/bsm_notify.c -text
+libbsm/bsm_socket_type.c -text
 libbsm/bsm_token.c -text
 libbsm/bsm_user.c -text
 libbsm/bsm_wrappers.c -text
 libbsm/libbsm.3 -text
+m4/libtool.m4 -text
+m4/ltoptions.m4 -text
+m4/ltsugar.m4 -text
+m4/ltversion.m4 -text
 man/Makefile.am -text
 man/Makefile.in -text
 man/audit.2 -text
@@ -104,56 +172,102 @@ modules/Makefile.in -text
 modules/auditfilter_noop/Makefile.am -text
 modules/auditfilter_noop/Makefile.in -text
 modules/auditfilter_noop/auditfilter_noop.c -text
+sys/Makefile.am -text
+sys/Makefile.in -text
+sys/bsm/Makefile.am -text
+sys/bsm/Makefile.in -text
+sys/bsm/audit.h -text
+sys/bsm/audit_domain.h -text
+sys/bsm/audit_errno.h -text
+sys/bsm/audit_fcntl.h -text
+sys/bsm/audit_internal.h -text
+sys/bsm/audit_kevents.h -text
+sys/bsm/audit_record.h -text
+sys/bsm/audit_socket_type.h -text
 test/Makefile.am -text
 test/Makefile.in -text
 test/bsm/Makefile.am -text
 test/bsm/Makefile.in -text
 test/bsm/generate.c -text
-test/reference/arg32_record -text svneol=unset#unset
-test/reference/arg32_token -text svneol=unset#unset
-test/reference/data_record -text svneol=unset#unset
-test/reference/data_token -text svneol=unset#unset
-test/reference/file_record -text svneol=unset#unset
-test/reference/file_token -text svneol=unset#unset
-test/reference/header32_token -text svneol=unset#unset
-test/reference/in_addr_record -text svneol=unset#unset
-test/reference/in_addr_token -text
-test/reference/ip_record -text svneol=unset#unset
-test/reference/ip_token -text svneol=unset#unset
-test/reference/ipc_record -text svneol=unset#unset
-test/reference/ipc_token -text
-test/reference/iport_record -text svneol=unset#unset
-test/reference/iport_token -text svneol=unset#unset
-test/reference/opaque_record -text svneol=unset#unset
-test/reference/opaque_token -text svneol=unset#unset
-test/reference/path_record -text svneol=unset#unset
-test/reference/path_token -text svneol=unset#unset
-test/reference/process32_record -text svneol=unset#unset
-test/reference/process32_token -text svneol=unset#unset
-test/reference/process32ex_record-IPv4 -text svneol=unset#unset
-test/reference/process32ex_record-IPv6 -text svneol=unset#unset
-test/reference/process32ex_token-IPv4 -text svneol=unset#unset
-test/reference/process32ex_token-IPv6 -text svneol=unset#unset
-test/reference/process64_record -text svneol=unset#unset
-test/reference/process64_token -text svneol=unset#unset
-test/reference/process64ex_record-IPv4 -text svneol=unset#unset
-test/reference/process64ex_record-IPv6 -text svneol=unset#unset
-test/reference/process64ex_token-IPv4 -text svneol=unset#unset
-test/reference/process64ex_token-IPv6 -text svneol=unset#unset
-test/reference/return32_record -text svneol=unset#unset
-test/reference/return32_token -text
-test/reference/seq_record -text svneol=unset#unset
-test/reference/seq_token -text
-test/reference/subject32_record -text svneol=unset#unset
-test/reference/subject32_token -text svneol=unset#unset
-test/reference/subject32ex_record -text svneol=unset#unset
-test/reference/subject32ex_token-IPv4 -text svneol=unset#unset
-test/reference/subject32ex_token-IPv6 -text svneol=unset#unset
-test/reference/text_record -text svneol=unset#unset
-test/reference/text_token -text svneol=unset#unset
-test/reference/trailer_token -text
-test/reference/zonename_record -text svneol=unset#unset
-test/reference/zonename_token -text svneol=unset#unset
+test/reference/E2BIG_record -text
+test/reference/EACCES_record -text
+test/reference/EBADF_record -text
+test/reference/EBUSY_record -text
+test/reference/ECHILD_record -text
+test/reference/EDEADLK_record -text
+test/reference/EEXIST_record -text
+test/reference/EFAULT_record -text
+test/reference/EFBIG_record -text
+test/reference/EINTR_record -text
+test/reference/EINVAL_record -text
+test/reference/EIO_record -text
+test/reference/EISDIR_record -text
+test/reference/EMFILE_record -text
+test/reference/EMLINK_record -text
+test/reference/ENFILE_record -text
+test/reference/ENODEV_record -text
+test/reference/ENOENT_record -text
+test/reference/ENOEXEC_record -text
+test/reference/ENOMEM_record -text
+test/reference/ENOSPC_record -text
+test/reference/ENOTBLK_record -text
+test/reference/ENOTDIR_record -text
+test/reference/ENOTTY_record -text
+test/reference/ENXIO_record -text
+test/reference/EPERM_record -text
+test/reference/EPIPE_record -text
+test/reference/EROFS_record -text
+test/reference/ESPIPE_record -text
+test/reference/ESRCH_record -text
+test/reference/ETXTBSY_record -text
+test/reference/EXDEV_record -text
+test/reference/arg32_record -text
+test/reference/arg32_token -text
+test/reference/data_record -text
+test/reference/data_token -text
+test/reference/file_record -text
+test/reference/file_token -text
+test/reference/header32_token -text
+test/reference/in_addr_record -text
+test/reference/in_addr_token -text svneol=unset#application/octet-stream
+test/reference/ip_record -text
+test/reference/ip_token -text
+test/reference/ipc_record -text
+test/reference/ipc_token -text svneol=unset#application/octet-stream
+test/reference/iport_record -text
+test/reference/iport_token -text
+test/reference/opaque_record -text
+test/reference/opaque_token -text
+test/reference/path_record -text
+test/reference/path_token -text
+test/reference/process32_record -text
+test/reference/process32_token -text
+test/reference/process32ex_record-IPv4 -text
+test/reference/process32ex_record-IPv6 -text
+test/reference/process32ex_token-IPv4 -text
+test/reference/process32ex_token-IPv6 -text
+test/reference/process64_record -text
+test/reference/process64_token -text
+test/reference/process64ex_record-IPv4 -text
+test/reference/process64ex_record-IPv6 -text
+test/reference/process64ex_token-IPv4 -text
+test/reference/process64ex_token-IPv6 -text
+test/reference/return32_record -text
+test/reference/return32_token -text svneol=unset#application/octet-stream
+test/reference/seq_record -text
+test/reference/seq_token -text svneol=unset#application/octet-stream
+test/reference/socketex_record -text
+test/reference/socketex_token -text
+test/reference/subject32_record -text
+test/reference/subject32_token -text
+test/reference/subject32ex_record -text
+test/reference/subject32ex_token-IPv4 -text
+test/reference/subject32ex_token-IPv6 -text
+test/reference/text_record -text
+test/reference/text_token -text
+test/reference/trailer_token -text svneol=unset#application/octet-stream
+test/reference/zonename_record -text
+test/reference/zonename_token -text
 test/samples/execve-long-args.trail -text svneol=unset#unset
 tools/Makefile.am -text
 tools/Makefile.in -text

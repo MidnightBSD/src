@@ -24,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $P4: //depot/projects/trustedbsd/openbsm/bin/auditfilterd/auditfilterd.c#11 $
  */
 
 /*
@@ -54,6 +52,7 @@
 
 #include <bsm/libbsm.h>
 #include <bsm/audit_filter.h>
+#include <bsm/audit_internal.h>
 
 #include <err.h>
 #include <fcntl.h>
@@ -130,7 +129,7 @@ present_rawrecord(struct timespec *ts, u_char *data, u_int len)
 }
 
 /*
- * Parse the BSM into a set of tokens, which will be pased to registered
+ * Parse the BSM into a set of tokens, which will be passed to registered
  * and interested filters.
  */
 #define	MAX_TOKENS	128	/* Maximum tokens we handle per record. */
@@ -216,7 +215,7 @@ mainloop_file(const char *conffile, const char *trailfile, FILE *trail_fp)
  * from a file stream.
  */
 static void
-mainloop_pipe(const char *conffile, const char *pipefile, int pipe_fd)
+mainloop_pipe(const char *conffile, const char *pipefile __unused, int pipe_fd)
 {
 	u_char record[MAX_AUDIT_RECORD_SIZE];
 	struct timespec ts;

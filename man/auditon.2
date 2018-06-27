@@ -1,4 +1,5 @@
 .\"-
+.\" Copyright (c) 2008-2009 Apple Inc.
 .\" Copyright (c) 2005 Robert N. M. Watson
 .\" Copyright (c) 2005 Tom Rhodes
 .\" Copyright (c) 2005 Wayne J. Salamon
@@ -25,9 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $P4: //depot/projects/trustedbsd/openbsm/man/auditon.2#11 $
-.\"
-.Dd April 19, 2005
+.Dd January 29, 2009
 .Dt AUDITON 2
 .Os
 .Sh NAME
@@ -62,28 +61,46 @@ The
 .Fa data
 argument
 must point to a
-.Vt long
-value set to one of the audit
-policy control values defined in
-.In bsm/audit.h .
-Currently, only
-.Dv AUDIT_CNT
+.Vt int
+value set to one or more the following audit
+policy control values bitwise OR'ed together:
+.Dv AUDIT_CNT ,
+.Dv AUDIT_AHLT ,
+.Dv AUDIT_ARGV ,
 and
-.Dv AUDIT_AHLT
-are implemented.
-In the
-.Dv AUDIT_CNT
-case, the action will continue regardless if
-an event will not be audited.
-In the
-.Dv AUDIT_AHLT
-case, a
+.Dv AUDIT_ARGE .
+If
+.Dv AUDIT_CNT is set, the system will continue even if it becomes low
+on space and discontinue logging events until the low space condition is
+remedied.
+If it is not set, audited events will block until the low space
+condition is remedied.
+Unaudited events, however, are unaffected.
+If
+.Dv AUDIT_AHLT is set, a
 .Xr panic 9
-will result if an event will not be written to the
-audit log file.
+if it cannot write an event to the global audit log file.
+If
+.Dv AUDIT_ARGV
+is set, then the argument list passed to the
+.Xr execve 2
+system call will be audited.  If
+.Dv AUDIT_ARGE
+is set, then the environment variables passed to the
+.Xr execve 2
+system call will be audited.  The default policy is none of the audit policy
+control flags set.
 .It Dv A_SETKAUDIT
-Return
-.Er ENOSYS .
+Set the host information.
+The
+.Fa data
+argument
+must point to a
+.Vt auditinfo_addr_t
+structure containing the host IP address information.
+After setting, audit records
+that are created as a result of kernel events will contain
+this information.
 .It Dv A_SETKMASK
 Set the kernel preselection masks (success and failure).
 The
@@ -91,8 +108,19 @@ The
 argument
 must point to a
 .Vt au_mask_t
-structure containing the mask values.
+structure containing the mask values as defined in
+.In bsm/audit.h .
 These masks are used for non-attributable audit event preselection.
+The field
+.Fa am_success
+specifies which classes of successful audit events are to be logged to the
+audit trail. The field
+.Fa am_failure
+specifies which classes of failed audit events are to be logged. The value of
+both fields is the bitwise OR'ing of the audit event classes specified in
+.Fa bsm/audit.h .
+The various audit classes are described more fully in
+.Xr audit_class 5 .
 .It Dv A_SETQCTRL
 Set kernel audit queue parameters.
 The
@@ -100,37 +128,81 @@ The
 argument
 must point to a
 .Vt au_qctrl_t
-structure containing the
-kernel audit queue control settings:
-.Dq "high water" ,
-.Dq "low water" ,
-.Dq "output buffer size" ,
-.Dq "percent min free disk space" ,
+structure (defined in
+.In bsm/audit.h )
+containing the kernel audit queue control settings:
+.Fa aq_hiwater ,
+.Fa aq_lowater ,
+.Fa aq_bufsz ,
+.Fa aq_delay ,
 and
-.Dq delay
-(not currently used).
+.Fa aq_minfree .
+The field
+.Fa aq_hiwater
+defines the maximum number of audit record entries in the queue used to store
+the audit records ready for delivery to disk.
+New records are inserted at the tail of the queue and removed from the head.
+For new records which would exceed the
+high water mark, the calling thread is inserted into the wait queue, waiting
+for the audit queue to have enough space available as defined with the field
+.Fa aq_lowater .
+The field
+.Fa aq_bufsz
+defines the maximum length of the audit record that can be supplied with
+.Xr audit 2 .
+The field
+.Fa aq_delay
+is unused.
+The field
+.Fa aq_minfree
+specifies the minimum amount of free blocks on the disk device used to store
+audit records.
+If the value of free blocks falls below the configured
+minimum amount, the kernel informs the audit daemon about low disk space.
+The value is to be specified in percent of free file system blocks.
+A value of 0 results in a disabling of the check.
+The default and maximum values (default/maximum) for the
+audit queue control parameters are:
+.Pp
+.Bl -column aq_hiwater -offset indent -compact
+.It aq_hiwater Ta 100/10000 (audit records)
+.It aq_lowater Ta 10/aq_hiwater (audit records)
+.It aq_bufsz Ta 32767/1048576 (bytes)
+.It aq_delay Ta (Not currently used.)
+.El
 .It Dv A_SETSTAT
 Return
 .Er ENOSYS .
+(Not implemented.)
 .It Dv A_SETUMASK
 Return
 .Er ENOSYS .
+(Not implemented.)
 .It Dv A_SETSMASK
 Return
 .Er ENOSYS .
+(Not implemented.)
 .It Dv A_SETCOND
 Set the current auditing condition.
 The
 .Fa data
 argument
 must point to a
-.Vt long
+.Vt int
 value containing the new
 audit condition, one of
 .Dv AUC_AUDITING ,
 .Dv AUC_NOAUDIT ,
 or
 .Dv AUC_DISABLED .
+If
+.Dv AUC_NOAUDIT
+is set, then auditing is temporarily suspended. If
+.Dv AUC_AUDITING
+is set, auditing is resumed. If
+.Dv AUC_DISABLED
+is set, the auditing system will
+shutdown, draining all audit records and closing out the audit trail file.
 .It Dv A_SETCLASS
 Set the event class preselection mask for an audit event.
 The
@@ -139,6 +211,13 @@ argument
 must point to a
 .Vt au_evclass_map_t
 structure containing the audit event and mask.
+The field
+.Fa ec_number
+is the audit event and
+.Fa ec_class
+is the audit class mask. See
+.Xr audit_event 5
+for more information on audit event to class mapping.
 .It Dv A_SETPMASK
 Set the preselection masks for a process.
 The
@@ -148,6 +227,16 @@ must point to a
 .Vt auditpinfo_t
 structure that contains the given process's audit
 preselection masks for both success and failure.
+The field
+.Fa ap_pid
+is the process id of the target process.
+The field
+.Fa ap_mask
+must point to a
+.Fa au_mask_t
+structure which holds the preselection masks as described in the
+.Dv A_SETKMASK
+section above.
 .It Dv A_SETFSIZE
 Set the maximum size of the audit log file.
 The
@@ -160,9 +249,6 @@ structure with the
 field set to the maximum audit log file size.
 A value of 0
 indicates no limit to the size.
-.It Dv A_SETKAUDIT
-Return
-.Er ENOSYS .
 .It Dv A_GETCLASS
 Return the event to class mapping for the designated audit event.
 The
@@ -170,10 +256,17 @@ The
 argument
 must point to a
 .Vt au_evclass_map_t
-structure.
+structure. See the
+.Dv A_SETCLASS
+section above for more information.
 .It Dv A_GETKAUDIT
-Return
-.Er ENOSYS .
+Get the current host information.
+The
+.Fa data
+argument
+must point to a
+.Vt auditinfo_addr_t
+structure.
 .It Dv A_GETPINFO
 Return the audit settings for a process.
 The
@@ -182,11 +275,63 @@ argument
 must point to a
 .Vt auditpinfo_t
 structure which will be set to contain
-the audit ID, preselection mask, terminal ID, and audit session
-ID of the given process.
+.Fa ap_auid
+(the audit ID),
+.Fa ap_mask
+(the preselection mask),
+.Fa ap_termid
+(the terminal ID), and
+.Fa ap_asid
+(the audit session ID)
+of the given target process.
+The process ID of the target process is passed
+into the kernel using the
+.Fa ap_pid
+field.
+See the section
+.Dv A_SETPMASK
+above and
+.Xr getaudit 2
+for more information.
 .It Dv A_GETPINFO_ADDR
-Return
-.Er ENOSYS .
+Return the extended audit settings for a process.
+The
+.Fa data
+argument
+must point to a
+.Vt auditpinfo_addr_t
+structure which is similar to the
+.Vt auditpinfo_addr_t
+structure described above.
+The exception is the
+.Fa ap_termid
+(the terminal ID) field which points to a
+.Vt au_tid_addr_t
+structure can hold much a larger terminal address and an address type.
+The process ID of the target process is passed into the kernel using the
+.Fa ap_pid
+field.
+See the section
+.Dv A_SETPMASK
+above and
+.Xr getaudit 2
+for more information.
+.It Dv A_GETSINFO_ADDR
+Return the extended audit settings for a session.
+The
+.Fa data
+argument
+must point to a
+.Vt auditinfo_addr_t
+structure.
+The audit session ID of the target session is passed
+into the kernel using the
+.Fa ai_asid
+field.  See
+.Xr getaudit_addr 2
+for more information about the
+.Vt auditinfo_addr_t
+structure.
 .It Dv A_GETKMASK
 Return the current kernel preselection masks.
 The
@@ -202,14 +347,13 @@ The
 .Fa data
 argument
 must point to a
-.Vt long
+.Vt int
 value which will be set to
 one of the current audit policy flags.
-Currently, only
-.Dv AUDIT_CNT
-and
-.Dv AUDIT_AHLT
-are implemented.
+The audit policy flags are
+described in the
+.Dv A_SETPOLICY
+section above.
 .It Dv A_GETQCTRL
 Return the current kernel audit queue control parameters.
 The
@@ -219,6 +363,9 @@ must point to a
 .Vt au_qctrl_t
 structure which will be set to the current
 kernel audit queue control parameters.
+See the
+.Dv A_SETQCTL
+section above for more information.
 .It Dv A_GETFSIZE
 Returns the maximum size of the audit log file.
 The
@@ -240,36 +387,43 @@ will be set to the current audit log file size.
 .\" Return the current working directory as stored in the audit subsystem.
 Return
 .Er ENOSYS .
+(Not implemented.)
 .It Dv A_GETCAR
 .\" [COMMENTED OUT]: Valid description, not yet implemented.
 .\"Stores and returns the current active root as stored in the audit
 .\"subsystem.
 Return
 .Er ENOSYS .
+(Not implemented.)
 .It Dv A_GETSTAT
 .\" [COMMENTED OUT]: Valid description, not yet implemented.
 .\"Return the statistics stored in the audit system.
 Return
 .Er ENOSYS .
+(Not implemented.)
 .It Dv A_GETCOND
 Return the current auditing condition.
 The
 .Fa data
 argument
 must point to a
-.Vt long
+.Vt int
 value which will be set to
-the current audit condition, either
-.Dv AUC_AUDITING
+the current audit condition, one of
+.Dv AUC_AUDITING ,
+.Dv AUC_NOAUDIT
 or
-.Dv AUC_NOAUDIT .
+.Dv AUC_DISABLED .
+See the
+.Dv A_SETCOND
+section above for more information.
 .It Dv A_SENDTRIGGER
 Send a trigger to the audit daemon.
 The
 .Fa data
 argument
 must point to a
-.Vt long
+.Vt int
 value set to one of the acceptable
 trigger values:
 .Dv AUDIT_TRIGGER_LOW_SPACE
@@ -282,9 +436,15 @@ trigger values:
 file),
 .Dv AUDIT_TRIGGER_CLOSE_AND_DIE
 (close the current log file and exit),
-or
 .Dv AUDIT_TRIGGER_NO_SPACE
 (no disk space left for audit log file).
+.Dv AUDIT_TRIGGER_ROTATE_USER
+(request audit log file rotation).
+.Dv AUDIT_TRIGGER_INITIALIZE
+(initialize audit subsystem for Mac OS X only).
+or
+.Dv AUDIT_TRIGGER_EXPIRE_TRAILS
+(request audit log file expiration).
 .El
 .Sh RETURN VALUES
 .Rv -std

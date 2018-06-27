@@ -1,13 +1,19 @@
-#
-# $P4: //depot/projects/trustedbsd/openbsm/Makefile.am#2 $
-#
-
 SUBDIRS =		\
-	bsm		\
+	bsm
+
+if HAVE_AUDIT_SYSCALLS
+SUBDIRS +=              \
+       	libauditd
+endif
+
+SUBDIRS +=              \
 	libbsm		\
 	bin		\
 	man		\
-	modules
+	modules		\
+	sys
+
+ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST =		\
 	CHANGELOG	\

@@ -1,5 +1,6 @@
 .\"-
 .\" Copyright (c) 2005-2006 Robert N. M. Watson
+.\" Copyright (c) 2008 Apple Inc.
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,8 +23,6 @@
 .\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
-.\"
-.\" $P4: //depot/projects/trustedbsd/openbsm/man/audit.log.5#16 $
 .\"
 .Dd November 5, 2006
 .Dt AUDIT.LOG 5
@@ -82,7 +81,7 @@ token can be created using
 .It "Token ID	1 byte	Token ID"
 .It "Seconds	4 bytes	File time stamp"
 .It "Microseconds	4 bytes	File time stamp"
-.It "File name lengh	2 bytes	File name of audit trail"
+.It "File name length	2 bytes	File name of audit trail"
 .It "File pathname	N bytes + 1 NUL	File name of audit trail"
 .El
 .Ss Header Token
@@ -139,7 +138,7 @@ token can be created using
 The
 .Dq trailer
 terminates a BSM audit record, and contains a magic number,
-.Dv TRAILER_PAD_MAGIC
+.Dv AUT_TRAILER_MAGIC
 and length that can be used to validate that the record was read properly.
 A
 .Dq trailer
@@ -156,7 +155,7 @@ The
 .Dq arbitrary data
 token contains a byte stream of opaque (untyped) data.
 The size of the data is calculated as the size of each unit of data
-multipled by the number of units of data.
+multiplied by the number of units of data.
 A
 .Dq How to print
 field is present to specify how to print the data, but interpretation of
@@ -176,37 +175,35 @@ token can be created using
 .Ss in_addr Token
 The
 .Dq in_addr
-token holds a network byte order IPv4 or IPv6 address.
+token holds a network byte order IPv4 address.
 An
 .Dq in_addr
 token can be created using
 .Xr au_to_in_addr 3
-for an IPv4 address, or
+for an IPv4 address.
+.Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
+.It Sy "Field	Bytes	Description"
+.It "Token ID	1 byte	Token ID"
+.It "IP Address	4 bytes	IPv4 address"
+.El
+.Ss Expanded in_addr Token
+The
+.Dq in_addr_ex
+token holds a network byte order IPv4 or IPv6 address.
+An
+.Dq in_addr_ex
+token can be created using
 .Xr au_to_in_addr_ex 3
 for an IPv6 address.
 .Pp
 See the
 .Sx BUGS
 section for information on the storage of this token.
-.Pp
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
 .It "IP Address Type	1 byte	Type of address"
 .It "IP Address	4/16 bytes	IPv4 or IPv6 address"
-.El
-.Ss Expanded in_addr Token
-The
-.Dq expanded in_addr
-token ...
-.Pp
-See the
-.Sx BUGS
-section for information on the storage of this token.
-.Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
-.It Sy "Field	Bytes	Description"
-.It "Token ID	1 byte	Token ID"
-.It XXXX
 .El
 .Ss ip Token
 The
@@ -229,15 +226,6 @@ token can be created using
 .It "Checksum	2 bytes	IP header checksum, network byte order"
 .It "Source Address	4 bytes	IPv4 source address"
 .It "Destination Address	4 bytes	IPv4 destination address"
-.El
-.Ss Expanded ip Token
-The
-.Dq expanded ip
-token ...
-.Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
-.It Sy "Field	Bytes	Description"
-.It "Token ID	1 byte	Token ID"
-.It XXXX
 .El
 .Ss iport Token
 The
@@ -495,13 +483,13 @@ A System V IPC permission token may be created using
 .It Li "Creator user ID" Ta "4 bytes" Ta "User ID of IPC creator"
 .It Li "Creator group ID" Ta "4 bytes" Ta "Group ID of IPC creator"
 .It Li "Access mode" Ta "4 bytes" Ta "Access mode"
-.It Li "Sequnce number" Ta "4 bytes" Ta "Sequnce number"
+.It Li "Sequence number" Ta "4 bytes" Ta "Sequence number"
 .It Li "Key" Ta "4 bytes" Ta "IPC key"
 .El
 .Ss Arg Token
 The
 .Dq arg
-token contains informations about arguments of the system call.
+token contains information about arguments of the system call.
 Depending on the size of the desired argument value, an Arg token may be
 created using
 .Xr au_to_arg32 3
@@ -518,19 +506,19 @@ or
 .Ss exec_args Token
 The
 .Dq exec_args
-token contains informations about arguements of the exec() system call.
+token contains information about arguments of the exec() system call.
 An exec_args token may be created using
 .Xr au_to_exec_args 3 .
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
 .It Li "Count" Ta "4 bytes" Ta "Number of arguments"
-.It Li "Text" Ta "* bytes" Ta "Count null-terminated strings"
+.It Li "Text" Ta "* bytes" Ta "Count nul-terminated strings"
 .El
 .Ss exec_env Token
 The
 .Dq exec_env
-token contains current eviroment variables to an exec() system call.
+token contains current environment variables to an exec() system call.
 An exec_args token may be created using
 .Xr au_to_exec_env 3 .
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
@@ -556,38 +544,38 @@ token can be created using
 .Ss Socket Token
 The
 .Dq socket
-token contains informations about UNIX domain and Internet sockets.
+token contains information about UNIX domain and Internet sockets.
 Each token has four or eight fields.
-Depend on type of socket a socket token may be created using
+Depending on the type of socket, a socket token may be created using
 .Xr au_to_sock_unix 3 ,
-.Xr au_to_sock_inet32 3 or
+.Xr au_to_sock_inet32 3
+or
 .Xr au_to_sock_inet128 3 .
-.Bl -column -offset ind ".Sy Field Name Width XX" ".Sy XX Bytes XXXX" ".Sy Description"
+.Bl -column -offset 3n ".Sy Field Name Width XX" ".Sy XX Bytes XXXX" ".Sy Description"
 .It Sy "Field" Ta Sy Bytes Ta Sy Description
 .It Li "Token ID" Ta "1 byte" Ta "Token ID"
 .It Li "Socket family" Ta "2 bytes" Ta "Socket family"
 .It Li "Local port" Ta "2 bytes" Ta "Local port"
 .It Li "Socket address" Ta "4 bytes" Ta "Socket address"
 .El
-.Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
-.It Sy "Field	Bytes	Description"
-.It "Token ID	1 byte	Token ID"
-+.It Li "Socket domain" Ta "4 bytes" Ta "Socket domain"
-+.It Li "Socket family" Ta "2 bytes" Ta "Socket family"
-+.It Li "Address type" Ta "1 byte" Ta "Address type (IPv4/IPv6)"
-+.It Li "Local port" Ta "2 bytes" Ta "Local port"
-+.It Li "Local IP address" Ta "4/16 bytes" Ta "Local IP address"
-+.It Li "Remote port" Ta "2 bytes" Ta "Remote port"
-+.It Li "Remote IP address" Ta "4/16 bytes" Ta "Remote IP address"
-.El
 .Ss Expanded Socket Token
 The
 .Dq expanded socket
-token ...
+token contains information about IPv4 and IPv6 sockets.
+A
+.Dq expanded socket
+token can be created using
+.Xr au_to_socket_ex 3 .
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
-.It "Token ID	1 byte	Token ID"
-.It XXXXX
+.It Li "Token ID" Ta "1 byte" Ta "Token ID"
+.It Li "Socket domain" Ta "2 bytes" Ta "Socket domain"
+.It Li "Socket type" Ta "2 bytes" Ta "Socket type"
+.It Li "Address type" Ta "2 byte" Ta "Address type (IPv4/IPv6)"
+.It Li "Local port" Ta "2 bytes" Ta "Local port"
+.It Li "Local IP address" Ta "4/16 bytes" Ta "Local IP address"
+.It Li "Remote port" Ta "2 bytes" Ta "Remote port"
+.It Li "Remote IP address" Ta "4/16 bytes" Ta "Remote IP address"
 .El
 .Ss Seq Token
 The
@@ -607,7 +595,6 @@ token ...
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
-.It XXXXX
 .El
 .Ss Use-of-auth Token
 The
@@ -616,7 +603,6 @@ token ...
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
-.It XXXXX
 .El
 .Ss Command Token
 The
@@ -625,7 +611,6 @@ token ...
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
-.It XXXXX
 .El
 .Ss ACL Token
 The
@@ -634,16 +619,21 @@ token ...
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
-.It XXXXX
 .El
 .Ss Zonename Token
 The
 .Dq zonename
-token ...
+token holds a NUL-terminated string with the name of the zone or jail from
+which the record originated.
+A
+.Dq zonename
+token can be created using
+.Xr au_to_zonename 3 .
 .Bl -column -offset 3n ".No Terminal Address Type/Length" ".No N bytes + 1 NUL"
 .It Sy "Field	Bytes	Description"
 .It "Token ID	1 byte	Token ID"
-.It XXXXX
+.It "Zonename length	2 bytes	Length of zonename string including NUL"
+.It "Zonename	N bytes + 1 NUL	Zonename string including NUL"
 .El
 .Sh SEE ALSO
 .Xr auditreduce 1 ,
@@ -676,7 +666,5 @@ and
 .Dq in_addr_ex
 token layout documented here appears to be in conflict with the
 .Xr libbsm 3
-implementations of
-.Xr au_to_in_addr 3
-and
+implementation of
 .Xr au_to_in_addr_ex 3 .
