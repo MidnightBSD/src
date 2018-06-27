@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: authpf.c,v 1.112 2009/01/10 19:08:53 miod Exp $	*/
 
 /*
