@@ -37945,13 +37945,7 @@ contrib/tcsh/config.sub -text
 contrib/tcsh/config/bsd4.4 -text
 contrib/tcsh/config_f.h -text
 contrib/tcsh/configure -text
-contrib/tcsh/configure.in -text
 contrib/tcsh/csh-mode.el -text
-contrib/tcsh/cygwin/bindkey.tcsh -text
-contrib/tcsh/cygwin/csh.cshrc -text
-contrib/tcsh/cygwin/csh.login -text
-contrib/tcsh/cygwin/postinstall.sh -text
-contrib/tcsh/cygwin/preremove.sh -text
 contrib/tcsh/dotlock.c -text
 contrib/tcsh/dotlock.h -text
 contrib/tcsh/ed.chared.c -text
