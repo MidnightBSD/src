@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.vers.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.vers.c,v 3.54 2006/03/02 18:46:45 christos Exp $ */
 /*
  * tc.vers.c: Version dependent stuff
  */

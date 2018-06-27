@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/ed.init.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/ed.init.c,v 3.60 2006/08/24 20:56:31 christos Exp $ */
 /*
  * ed.init.c: Editor initializations
  */

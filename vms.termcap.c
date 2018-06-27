@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/vms.termcap.c,v 1.1.1.4 2012-07-08 16:12:19 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/vms.termcap.c,v 1.12 2011/01/09 16:25:29 christos Exp $ */
 /*
  *	termcap.c	1.1	20/7/87		agc	Joypace Ltd
  *

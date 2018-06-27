@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tw.help.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tw.help.c,v 3.27 2006/08/24 20:56:31 christos Exp $ */
 /* tw.help.c: actually look up and print documentation on a file.
  *	      Look down the path for an appropriate file, then print it.
  *	      Note that the printing is NOT PAGED.  This is because the

@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/snames.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/snames.h,v 1.4 2008/10/17 20:25:00 christos Exp $ */
 /*
  * snames.h: Short names for old compilers
  */

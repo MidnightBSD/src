@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.sig.c,v 1.1.1.4 2012-07-08 16:12:18 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tc.sig.c,v 3.40 2012/01/25 15:34:41 christos Exp $ */
 /*
  * tc.sig.c: Signal routine emulations
  */

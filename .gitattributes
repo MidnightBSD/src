@@ -29,6 +29,8 @@ cygwin/csh.cshrc -text
 cygwin/csh.login -text
 cygwin/postinstall.sh -text
 cygwin/preremove.sh -text
+/dotlock.c -text
+/dotlock.h -text
 /ed.chared.c -text
 /ed.decls.h -text
 /ed.defns.c -text
@@ -52,6 +54,7 @@ cygwin/preremove.sh -text
 /mi.termios.c -text
 /mi.varargs.h -text
 /mi.wait.h -text
+nls/C/charset -text
 nls/C/set1 -text
 nls/C/set10 -text
 nls/C/set11 -text
@@ -85,6 +88,7 @@ nls/C/set9 -text
 nls/Makefile -text
 nls/Makefile.in -text
 nls/catgen -text
+nls/et/charset -text
 nls/et/set1 -text
 nls/et/set10 -text
 nls/et/set11 -text
@@ -115,6 +119,7 @@ nls/et/set6 -text
 nls/et/set7 -text
 nls/et/set8 -text
 nls/et/set9 -text
+nls/finnish/charset -text
 nls/finnish/set1 -text
 nls/finnish/set10 -text
 nls/finnish/set11 -text
@@ -145,6 +150,7 @@ nls/finnish/set6 -text
 nls/finnish/set7 -text
 nls/finnish/set8 -text
 nls/finnish/set9 -text
+nls/french/charset -text
 nls/french/set1 -text
 nls/french/set10 -text
 nls/french/set11 -text
@@ -175,6 +181,7 @@ nls/french/set6 -text
 nls/french/set7 -text
 nls/french/set8 -text
 nls/french/set9 -text
+nls/german/charset -text
 nls/german/set1 -text
 nls/german/set10 -text
 nls/german/set11 -text
@@ -205,7 +212,8 @@ nls/german/set6 -text
 nls/german/set7 -text
 nls/german/set8 -text
 nls/german/set9 -text
-nls/greek/set1 -text
+nls/greek/charset -text
+nls/greek/set1 -text svneol=unset#application/octet-stream
 nls/greek/set10 -text
 nls/greek/set11 -text
 nls/greek/set12 -text
@@ -217,7 +225,7 @@ nls/greek/set17 -text
 nls/greek/set18 -text
 nls/greek/set19 -text
 nls/greek/set2 -text
-nls/greek/set20 -text
+nls/greek/set20 -text svneol=unset#application/octet-stream
 nls/greek/set21 -text
 nls/greek/set22 -text
 nls/greek/set23 -text
@@ -234,7 +242,8 @@ nls/greek/set5 -text
 nls/greek/set6 -text
 nls/greek/set7 -text
 nls/greek/set8 -text
-nls/greek/set9 -text
+nls/greek/set9 -text svneol=unset#application/octet-stream
+nls/italian/charset -text
 nls/italian/set1 -text
 nls/italian/set10 -text
 nls/italian/set11 -text
@@ -265,7 +274,8 @@ nls/italian/set6 -text
 nls/italian/set7 -text
 nls/italian/set8 -text
 nls/italian/set9 -text
-nls/ja/set1 -text
+nls/ja/charset -text
+nls/ja/set1 -text svneol=unset#application/octet-stream
 nls/ja/set10 -text
 nls/ja/set11 -text
 nls/ja/set12 -text
@@ -316,7 +326,8 @@ nls/pl/set6 -text
 nls/pl/set7 -text
 nls/pl/set8 -text
 nls/pl/set9 -text
-nls/russian/set1 -text
+nls/russian/charset -text
+nls/russian/set1 -text svneol=unset#application/octet-stream
 nls/russian/set10 -text
 nls/russian/set11 -text
 nls/russian/set12 -text
@@ -328,7 +339,7 @@ nls/russian/set17 -text
 nls/russian/set18 -text
 nls/russian/set19 -text
 nls/russian/set2 -text
-nls/russian/set20 -text
+nls/russian/set20 -text svneol=unset#application/octet-stream
 nls/russian/set21 -text
 nls/russian/set22 -text
 nls/russian/set23 -text
@@ -346,6 +357,7 @@ nls/russian/set6 -text
 nls/russian/set7 -text
 nls/russian/set8 -text
 nls/russian/set9 -text
+nls/spanish/charset -text
 nls/spanish/set1 -text
 nls/spanish/set10 -text
 nls/spanish/set11 -text
@@ -376,7 +388,8 @@ nls/spanish/set6 -text
 nls/spanish/set7 -text
 nls/spanish/set8 -text
 nls/spanish/set9 -text
-nls/ukrainian/set1 -text
+nls/ukrainian/charset -text
+nls/ukrainian/set1 -text svneol=unset#application/octet-stream
 nls/ukrainian/set10 -text
 nls/ukrainian/set11 -text
 nls/ukrainian/set12 -text
@@ -458,6 +471,7 @@ nls/ukrainian/set9 -text
 /tc.wait.h -text
 /tc.who.c -text
 /tcsh.man -text
+/tcsh.man.new -text
 /tcsh.man2html -text
 /tcsh.vcproj -text
 /termcap.vms -text

@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.char.c,v 1.1.1.5 2012-07-08 16:12:19 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/sh.char.c,v 3.21 2010/02/09 20:32:34 christos Exp $ */
 /*
  * sh.char.c: Character classification tables
  */

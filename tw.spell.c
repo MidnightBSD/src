@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tw.spell.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /p/tcsh/cvsroot/tcsh/tw.spell.c,v 3.21 2006/03/02 18:46:45 christos Exp $ */
 /*
  * tw.spell.c: Spell check words
  */
