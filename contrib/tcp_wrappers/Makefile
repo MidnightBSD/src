@@ -1,5 +1,5 @@
 # @(#) Makefile 1.23 97/03/21 19:27:20
-# $FreeBSD$
+# $FreeBSD: stable/10/contrib/tcp_wrappers/Makefile 243933 2012-12-06 01:31:25Z eadler $
 
 what:
 	@echo
@@ -139,7 +139,7 @@ epix:
 
 freebsd:
 	@make REAL_DAEMON_DIR=$(REAL_DAEMON_DIR) STYLE=$(STYLE) \
-	RANLIB=ranlib ARFLAGS=rv AUX_OBJ= NETGROUP=-DNETGROUP TLI= \
+	RANLIB=ranlib ARFLAGS=$(ARFLAGS) AUX_OBJ= NETGROUP=-DNETGROUP TLI= \
 	EXTRA_CFLAGS="-DSYS_ERRLIST_DEFINED -DINET6 -DUSE_GETIPNODEBY" \
 	VSYSLOG= all
 
@@ -401,7 +401,7 @@ machten:
 RANLIB	= ranlib	# have ranlib (BSD-ish UNIX)
 #RANLIB	= echo		# no ranlib (SYSV-ish UNIX)
 
-ARFLAGS	= rv		# most systems
+ARFLAGS	?= rv		# most systems
 #ARFLAGS= rvs		# IRIX 4.0.x
 
 AR	= ar
