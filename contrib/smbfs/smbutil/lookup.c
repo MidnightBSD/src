@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: lookup.c,v 1.2 2013-08-24 12:01:07 laffer1 Exp $
+ * $Id: lookup.c,v 1.3 2000/10/15 14:26:49 bp Exp $
  */
 #include <sys/param.h>
 #include <sys/errno.h>

@@ -30,11 +30,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: view.c,v 1.2 2013-08-24 12:01:07 laffer1 Exp $
+ * $Id: view.c,v 1.9 2002/02/20 09:26:42 bp Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/smbfs/smbutil/view.c,v 1.3 2006/08/11 12:35:22 keramida Exp $");
+__FBSDID("$FreeBSD: stable/10/contrib/smbfs/smbutil/view.c 202980 2010-01-25 18:35:58Z yongari $");
 
 #include <sys/endian.h>
 #include <sys/param.h>

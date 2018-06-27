@@ -30,11 +30,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: print.c,v 1.2 2013-08-24 12:01:07 laffer1 Exp $
+ * $Id: print.c,v 1.4 2001/01/28 07:35:01 bp Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/smbfs/smbutil/print.c,v 1.2 2006/08/11 12:35:22 keramida Exp $");
+__FBSDID("$FreeBSD: stable/10/contrib/smbfs/smbutil/print.c 296733 2016-03-12 18:36:13Z ngie $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/contrib/smbfs/smbutil/print.c,v 1.2 2006/08/11 12:35:22 
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 #include <strings.h>
 #include <stdlib.h>
 #include <sysexits.h>

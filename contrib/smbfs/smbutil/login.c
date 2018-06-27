@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: login.c,v 1.2 2013-08-24 12:01:07 laffer1 Exp $
+ * $Id: login.c,v 1.6 2001/08/22 03:33:38 bp Exp $
  */
 #include <sys/param.h>
 #include <sys/errno.h>
