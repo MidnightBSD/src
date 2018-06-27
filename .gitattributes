@@ -28828,12 +28828,15 @@ contrib/openpam/t/t_openpam_ctype.c svneol=native#text/plain
 contrib/openpam/t/t_openpam_readlinev.c svneol=native#text/plain
 contrib/openpam/t/t_openpam_readword.c svneol=native#text/plain
 contrib/openpam/test-driver -text
+contrib/openresolv/GNUmakefile -text
 contrib/openresolv/Makefile -text
 contrib/openresolv/README -text
+contrib/openresolv/config-null.mk svneol=native#text/plain
 contrib/openresolv/configure -text
 contrib/openresolv/dnsmasq.in -text
 contrib/openresolv/libc.in -text
 contrib/openresolv/named.in -text
+contrib/openresolv/pdns_recursor.in svneol=native#text/plain
 contrib/openresolv/pdnsd.in -text
 contrib/openresolv/resolvconf.8.in -text
 contrib/openresolv/resolvconf.conf -text
