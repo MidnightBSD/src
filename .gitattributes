@@ -28202,6 +28202,7 @@ contrib/one-true-awk/proctab.c -text
 contrib/one-true-awk/proto.h -text
 contrib/one-true-awk/run.c -text
 contrib/one-true-awk/tran.c -text
+contrib/openbsm/.travis.yml -text
 contrib/openbsm/CREDITS -text
 contrib/openbsm/FREEBSD-upgrade -text
 contrib/openbsm/INSTALL -text
@@ -28329,6 +28330,7 @@ contrib/openbsm/libbsm/au_fcntl_cmd.3 -text
 contrib/openbsm/libbsm/au_free_token.3 -text
 contrib/openbsm/libbsm/au_io.3 -text
 contrib/openbsm/libbsm/au_mask.3 -text
+contrib/openbsm/libbsm/au_notify.3 -text
 contrib/openbsm/libbsm/au_open.3 -text
 contrib/openbsm/libbsm/au_socket_type.3 -text
 contrib/openbsm/libbsm/au_token.3 -text
@@ -28423,53 +28425,53 @@ contrib/openbsm/test/reference/ESPIPE_record -text svneol=unset#unset
 contrib/openbsm/test/reference/ESRCH_record -text svneol=unset#unset
 contrib/openbsm/test/reference/ETXTBSY_record -text svneol=unset#unset
 contrib/openbsm/test/reference/EXDEV_record -text svneol=unset#unset
-contrib/openbsm/test/reference/arg32_record -text svneol=unset#unset
-contrib/openbsm/test/reference/arg32_token -text svneol=unset#unset
-contrib/openbsm/test/reference/data_record -text svneol=unset#unset
-contrib/openbsm/test/reference/data_token -text svneol=unset#unset
-contrib/openbsm/test/reference/file_record -text svneol=unset#unset
-contrib/openbsm/test/reference/file_token -text svneol=unset#unset
-contrib/openbsm/test/reference/header32_token -text svneol=unset#unset
-contrib/openbsm/test/reference/in_addr_record -text svneol=unset#unset
-contrib/openbsm/test/reference/in_addr_token -text
-contrib/openbsm/test/reference/ip_record -text svneol=unset#unset
-contrib/openbsm/test/reference/ip_token -text svneol=unset#unset
-contrib/openbsm/test/reference/ipc_record -text svneol=unset#unset
-contrib/openbsm/test/reference/ipc_token -text
-contrib/openbsm/test/reference/iport_record -text svneol=unset#unset
-contrib/openbsm/test/reference/iport_token -text svneol=unset#unset
-contrib/openbsm/test/reference/opaque_record -text svneol=unset#unset
-contrib/openbsm/test/reference/opaque_token -text svneol=unset#unset
-contrib/openbsm/test/reference/path_record -text svneol=unset#unset
-contrib/openbsm/test/reference/path_token -text svneol=unset#unset
-contrib/openbsm/test/reference/process32_record -text svneol=unset#unset
-contrib/openbsm/test/reference/process32_token -text svneol=unset#unset
-contrib/openbsm/test/reference/process32ex_record-IPv4 -text svneol=unset#unset
-contrib/openbsm/test/reference/process32ex_record-IPv6 -text svneol=unset#unset
-contrib/openbsm/test/reference/process32ex_token-IPv4 -text svneol=unset#unset
-contrib/openbsm/test/reference/process32ex_token-IPv6 -text svneol=unset#unset
-contrib/openbsm/test/reference/process64_record -text svneol=unset#unset
-contrib/openbsm/test/reference/process64_token -text svneol=unset#unset
-contrib/openbsm/test/reference/process64ex_record-IPv4 -text svneol=unset#unset
-contrib/openbsm/test/reference/process64ex_record-IPv6 -text svneol=unset#unset
-contrib/openbsm/test/reference/process64ex_token-IPv4 -text svneol=unset#unset
-contrib/openbsm/test/reference/process64ex_token-IPv6 -text svneol=unset#unset
-contrib/openbsm/test/reference/return32_record -text svneol=unset#unset
-contrib/openbsm/test/reference/return32_token -text
-contrib/openbsm/test/reference/seq_record -text svneol=unset#unset
-contrib/openbsm/test/reference/seq_token -text
+contrib/openbsm/test/reference/arg32_record -text
+contrib/openbsm/test/reference/arg32_token -text
+contrib/openbsm/test/reference/data_record -text
+contrib/openbsm/test/reference/data_token -text
+contrib/openbsm/test/reference/file_record -text
+contrib/openbsm/test/reference/file_token -text
+contrib/openbsm/test/reference/header32_token -text
+contrib/openbsm/test/reference/in_addr_record -text
+contrib/openbsm/test/reference/in_addr_token -text svneol=unset#application/octet-stream
+contrib/openbsm/test/reference/ip_record -text
+contrib/openbsm/test/reference/ip_token -text
+contrib/openbsm/test/reference/ipc_record -text
+contrib/openbsm/test/reference/ipc_token -text svneol=unset#application/octet-stream
+contrib/openbsm/test/reference/iport_record -text
+contrib/openbsm/test/reference/iport_token -text
+contrib/openbsm/test/reference/opaque_record -text
+contrib/openbsm/test/reference/opaque_token -text
+contrib/openbsm/test/reference/path_record -text
+contrib/openbsm/test/reference/path_token -text
+contrib/openbsm/test/reference/process32_record -text
+contrib/openbsm/test/reference/process32_token -text
+contrib/openbsm/test/reference/process32ex_record-IPv4 -text
+contrib/openbsm/test/reference/process32ex_record-IPv6 -text
+contrib/openbsm/test/reference/process32ex_token-IPv4 -text
+contrib/openbsm/test/reference/process32ex_token-IPv6 -text
+contrib/openbsm/test/reference/process64_record -text
+contrib/openbsm/test/reference/process64_token -text
+contrib/openbsm/test/reference/process64ex_record-IPv4 -text
+contrib/openbsm/test/reference/process64ex_record-IPv6 -text
+contrib/openbsm/test/reference/process64ex_token-IPv4 -text
+contrib/openbsm/test/reference/process64ex_token-IPv6 -text
+contrib/openbsm/test/reference/return32_record -text
+contrib/openbsm/test/reference/return32_token -text svneol=unset#application/octet-stream
+contrib/openbsm/test/reference/seq_record -text
+contrib/openbsm/test/reference/seq_token -text svneol=unset#application/octet-stream
 contrib/openbsm/test/reference/socketex_record -text svneol=unset#unset
 contrib/openbsm/test/reference/socketex_token -text svneol=unset#unset
-contrib/openbsm/test/reference/subject32_record -text svneol=unset#unset
-contrib/openbsm/test/reference/subject32_token -text svneol=unset#unset
-contrib/openbsm/test/reference/subject32ex_record -text svneol=unset#unset
-contrib/openbsm/test/reference/subject32ex_token-IPv4 -text svneol=unset#unset
-contrib/openbsm/test/reference/subject32ex_token-IPv6 -text svneol=unset#unset
-contrib/openbsm/test/reference/text_record -text svneol=unset#unset
-contrib/openbsm/test/reference/text_token -text svneol=unset#unset
-contrib/openbsm/test/reference/trailer_token -text
-contrib/openbsm/test/reference/zonename_record -text svneol=unset#unset
-contrib/openbsm/test/reference/zonename_token -text svneol=unset#unset
+contrib/openbsm/test/reference/subject32_record -text
+contrib/openbsm/test/reference/subject32_token -text
+contrib/openbsm/test/reference/subject32ex_record -text
+contrib/openbsm/test/reference/subject32ex_token-IPv4 -text
+contrib/openbsm/test/reference/subject32ex_token-IPv6 -text
+contrib/openbsm/test/reference/text_record -text
+contrib/openbsm/test/reference/text_token -text
+contrib/openbsm/test/reference/trailer_token -text svneol=unset#application/octet-stream
+contrib/openbsm/test/reference/zonename_record -text
+contrib/openbsm/test/reference/zonename_token -text
 contrib/openbsm/test/samples/execve-long-args.trail -text svneol=unset#unset
 contrib/openbsm/tools/Makefile.am -text
 contrib/openbsm/tools/Makefile.in -text
