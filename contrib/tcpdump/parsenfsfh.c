@@ -150,7 +150,7 @@ int ourself;		/* true if file handle was generated on this host */
 	    fhtype = FHT_DECOSF;
 #endif
 #if	defined(__NetBSD__) || defined(__FreeBSD__) || defined(__DragonFly__) \
-     || defined(__OpenBSD__)
+     || defined(__OpenBSD__) || defined(__MidnightBSD__)
 	    fhtype = FHT_BSD44;
 #endif
 	}
