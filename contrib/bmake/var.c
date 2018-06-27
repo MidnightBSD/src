@@ -3720,7 +3720,6 @@ ApplyModifiers(char *nstr, const char *tstr,
  *	flags		VARF_UNDEFERR	if undefineds are an error
  *			VARF_WANTRES	if we actually want the result
  *			VARF_ASSIGN	if we are in a := assignment
- *	wantit		TRUE if we actually want the result
  *	lengthPtr	OUT: The length of the specification
  *	freePtr		OUT: Non-NULL if caller should free *freePtr
  *
@@ -4079,7 +4078,6 @@ Var_Parse(const char *str, GNode *ctxt, int flags,
  *	flags		VARF_UNDEFERR	if undefineds are an error
  *			VARF_WANTRES	if we actually want the result
  *			VARF_ASSIGN	if we are in a := assignment
- *	wantit		TRUE if we actually want the result
  *
  * Results:
  *	The resulting string.
