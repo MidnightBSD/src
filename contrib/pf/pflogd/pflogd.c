@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: pflogd.c,v 1.46 2008/10/22 08:16:49 henning Exp $	*/
 
 /*
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/pf/pflogd/pflogd.c 293110 2016-01-03 17:23:16Z dim $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -766,7 +767,7 @@ main(int argc, char **argv)
 		np = pcap_dispatch(hpcap, PCAP_NUM_PKTS,
 		    phandler, (u_char *)dpcap);
 		if (np < 0) {
-			if (!if_exists(interface) == -1) {
+			if (!if_exists(interface)) {
 				logmsg(LOG_NOTICE, "interface %s went away",
 				    interface);
 				ret = -1;

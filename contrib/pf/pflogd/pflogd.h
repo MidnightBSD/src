@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: pflogd.h,v 1.3 2006/01/15 16:38:04 canacar Exp $ */
 
 /*

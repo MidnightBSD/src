@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: privsep_fdpass.c,v 1.5 2008/03/24 16:11:08 deraadt Exp $	*/
 
 /*
