@@ -29,11 +29,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nb_name.c,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
+ * $Id: nb_name.c,v 1.2 2001/08/22 03:31:36 bp Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/smbfs/lib/smb/nb_name.c 294364 2016-01-19 23:36:49Z ian $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -143,15 +143,13 @@ nb_encname_len(const char *str)
 	return len;
 }
 
-#define	NBENCODE(c)	(htole16((u_short)(((u_char)(c) >> 4) | \
-			 (((u_char)(c) & 0xf) << 8)) + 0x4141))
-
-static void
-memsetw(char *dst, int n, u_short word)
+static inline void
+nb_char_encode(u_char **ptr, u_char c, int n)
 {
+
 	while (n--) {
-		*(u_short*)dst = word;
-		dst += 2;
+		*(*ptr)++ = 0x41 + (c >> 4);
+		*(*ptr)++ = 0x41 + (c & 0x0f);
 	}
 }
 
@@ -165,19 +163,15 @@ nb_name_encode(struct nb_name *np, u_char *dst)
 	*cp++ = NB_ENCNAMELEN;
 	name = np->nn_name;
 	if (name[0] == '*' && name[1] == 0) {
-		*(u_short*)cp = NBENCODE('*');
-		memsetw(cp + 2, NB_NAMELEN - 1, NBENCODE(' '));
-		cp += NB_ENCNAMELEN;
+		nb_char_encode(&cp, '*', 1);
+		nb_char_encode(&cp, ' ', NB_NAMELEN - 1);
 	} else {
-		for (i = 0; *name && i < NB_NAMELEN - 1; i++, cp += 2, name++)
-			*(u_short*)cp = NBENCODE(toupper(*name));
-		i = NB_NAMELEN - i - 1;
-		if (i > 0) {
-			memsetw(cp, i, NBENCODE(' '));
-			cp += i * 2;
-		}
-		*(u_short*)cp = NBENCODE(np->nn_type);
-		cp += 2;
+		for (i = 0; i < NB_NAMELEN - 1; i++)
+			if (*name != 0)
+				nb_char_encode(&cp, toupper(*name++), 1);
+			else
+				nb_char_encode(&cp, ' ', 1);
+		nb_char_encode(&cp, np->nn_type, 1);
 	}
 	*cp = 0;
 	if (np->nn_scope == NULL)

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: print.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: print.c,v 1.4 2001/04/16 04:33:01 bp Exp $
  */
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -54,7 +54,7 @@
 
 int
 smb_smb_open_print_file(struct smb_ctx *ctx, int setuplen, int mode,
-	const char *ident, smbfh *fhp)
+	char *ident, smbfh *fhp)
 {
 	struct smb_rq *rqp;
 	struct mbdata *mbp;

@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rap.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/rap.c,v 1.5 2005/09/19 08:07:18 imura Exp $
+ * $Id: rap.c,v 1.8 2001/02/24 15:56:05 bp Exp $
+ * $FreeBSD: stable/10/contrib/smbfs/lib/smb/rap.c 150312 2005-09-19 08:07:18Z imura $
  *
  * This is very simple implementation of RAP protocol.
  */

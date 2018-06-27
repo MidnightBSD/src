@@ -1,4 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+# $MidnightBSD$
+# $Id: Makefile,v 1.5 2001/02/24 15:56:04 bp Exp $
 
 .ifmake !clean && !cleandepend
 .include "../config.int"

@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #
 
 CFLAGS+=	 -I${.CURDIR}/../../include

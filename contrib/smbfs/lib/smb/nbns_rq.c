@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nbns_rq.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/nbns_rq.c,v 1.2 2005/10/02 08:32:48 bp Exp $
+ * $Id: nbns_rq.c,v 1.5 2001/02/17 03:07:24 bp Exp $
+ * $FreeBSD: stable/10/contrib/smbfs/lib/smb/nbns_rq.c 150802 2005-10-02 08:32:49Z bp $
  */
 #include <sys/param.h>
 #include <sys/socket.h>

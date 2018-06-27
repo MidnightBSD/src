@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+# $Id: Makefile,v 1.12 2001/04/16 14:27:35 bp Exp $
 
 LIB=		smb
 

@@ -29,9 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: smb_lib.h,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/include/netsmb/smb_lib.h,v 1.3 2005/10/02 08:32:48 bp Exp $
- * $MidnightBSD$
+ * $Id: smb_lib.h,v 1.24 2001/12/20 15:19:43 bp Exp $
+ * $FreeBSD: stable/10/contrib/smbfs/include/netsmb/smb_lib.h 282275 2015-04-30 16:08:47Z tijl $
  */
 #ifndef _NETSMB_SMB_LIB_H_
 #define _NETSMB_SMB_LIB_H_
@@ -192,7 +191,7 @@ int  smb_ctx_readrc(struct smb_ctx *);
 int  smb_ctx_resolve(struct smb_ctx *);
 int  smb_ctx_setflags(struct smb_ctx *, int, int, int);
 
-int  smb_smb_open_print_file(struct smb_ctx *, int, int, const char *, smbfh*);
+int  smb_smb_open_print_file(struct smb_ctx *, int, int, char *, smbfh*);
 int  smb_smb_close_print_file(struct smb_ctx *, smbfh);
 
 int  smb_read(struct smb_ctx *, smbfh, off_t, size_t, char *);
@@ -205,8 +204,8 @@ int  smb_rq_init(struct smb_ctx *, u_char, size_t, struct smb_rq **);
 void smb_rq_done(struct smb_rq *);
 void smb_rq_wend(struct smb_rq *);
 int  smb_rq_simple(struct smb_rq *);
-int  smb_rq_dmem(struct mbdata *, const char *, size_t);
-int  smb_rq_dstring(struct mbdata *, const char *);
+int  smb_rq_dmem(struct mbdata *, char *, size_t);
+int  smb_rq_dstring(struct mbdata *, char *);
 
 int  smb_t2_request(struct smb_ctx *, int, int, const char *,
 	int, void *, int, void *, int *, void *, int *, void *);
@@ -247,10 +246,10 @@ extern u_char nls_lower[256], nls_upper[256];
 
 int   nls_setrecode(const char *, const char *);
 int   nls_setlocale(const char *);
-char* nls_str_toext(char *, const char *);
-char* nls_str_toloc(char *, const char *);
-void* nls_mem_toext(void *, const void *, int);
-void* nls_mem_toloc(void *, const void *, int);
+char* nls_str_toext(char *, char *);
+char* nls_str_toloc(char *, char *);
+void* nls_mem_toext(void *, void *, int);
+void* nls_mem_toloc(void *, void *, int);
 char* nls_str_upper(char *, const char *);
 char* nls_str_lower(char *, const char *);
 

@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nb_net.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/nb_net.c,v 1.4 2005/10/02 08:32:48 bp Exp $
+ * $Id: nb_net.c,v 1.4 2001/02/16 02:46:12 bp Exp $
+ * $FreeBSD: stable/10/contrib/smbfs/lib/smb/nb_net.c 150802 2005-10-02 08:32:49Z bp $
  */
 #include <sys/param.h>
 #include <sys/socket.h>

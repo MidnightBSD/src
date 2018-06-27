@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, Boris Popov
  * All rights reserved.
@@ -29,8 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: cflib.h,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: cflib.h,v 1.3 2000/07/11 01:51:49 bp Exp $
  */
 #ifndef _zzzzzz_RCFILE_H_
 #define _zzzzzz_RCFILE_H_

@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rq.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/rq.c,v 1.3 2004/10/19 17:44:31 obrien Exp $
+ * $Id: rq.c,v 1.7 2001/04/16 04:33:01 bp Exp $
+ * $FreeBSD: stable/10/contrib/smbfs/lib/smb/rq.c 282275 2015-04-30 16:08:47Z tijl $
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -86,7 +86,7 @@ smb_rq_wend(struct smb_rq *rqp)
 }
 
 int
-smb_rq_dmem(struct mbdata *mbp, const char *src, size_t size)
+smb_rq_dmem(struct mbdata *mbp, char *src, size_t size)
 {
 	struct mbuf *m;
 	char * dst;
@@ -118,7 +118,7 @@ smb_rq_dmem(struct mbdata *mbp, const char *src, size_t size)
 }
 
 int
-smb_rq_dstring(struct mbdata *mbp, const char *s)
+smb_rq_dstring(struct mbdata *mbp, char *s)
 {
 	return smb_rq_dmem(mbp, s, strlen(s) + 1);
 }

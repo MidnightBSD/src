@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ctx.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/ctx.c,v 1.7 2005/10/02 08:32:48 bp Exp $
+ * $Id: ctx.c,v 1.24 2002/04/13 14:35:28 bp Exp $
+ * $FreeBSD: stable/10/contrib/smbfs/lib/smb/ctx.c 272119 2014-09-25 17:59:00Z trasz $
  */
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -189,10 +189,6 @@ smb_ctx_parseunc(struct smb_ctx *ctx, const char *unc, int sharetype,
 	if (!error) {
 		if (ctx->ct_maxlevel < SMBL_VC) {
 			smb_error("no user name required", 0);
-			return EINVAL;
-		}
-		if (*p1 == 0) {
-			smb_error("empty user name", 0);
 			return EINVAL;
 		}
 		error = smb_ctx_setuser(ctx, tmp);
@@ -521,11 +517,6 @@ smb_ctx_resolve(struct smb_ctx *ctx)
 		smb_error("no server name specified", 0);
 		return EINVAL;
 	}
-	if (ssn->ioc_user[0] == 0) {
-		smb_error("no user name specified for server %s",
-		    0, ssn->ioc_srvname);
-		return EINVAL;
-	}
 	if (ctx->ct_minlevel >= SMBL_SHARE && sh->ioc_share[0] == 0) {
 		smb_error("no share name specified for %s@%s",
 		    0, ssn->ioc_user, ssn->ioc_srvname);
@@ -602,40 +593,12 @@ smb_ctx_gethandle(struct smb_ctx *ctx)
 	int fd, i;
 	char buf[20];
 
-	/*
-	 * First, try to open as cloned device
-	 */
 	fd = open("/dev/"NSMB_NAME, O_RDWR);
 	if (fd >= 0) {
 		ctx->ct_fd = fd;
 		return 0;
 	}
-	/*
-	 * well, no clone capabilities available - we have to scan
-	 * all devices in order to get free one
-	 */
-	 for (i = 0; i < 1024; i++) {
-	         snprintf(buf, sizeof(buf), "/dev/%s%d", NSMB_NAME, i);
-		 fd = open(buf, O_RDWR);
-		 if (fd >= 0) {
-			ctx->ct_fd = fd;
-			return 0;
-		 }
-	 }
-	 /*
-	  * This is a compatibility with old /dev/net/nsmb device
-	  */
-	 for (i = 0; i < 1024; i++) {
-	         snprintf(buf, sizeof(buf), "/dev/net/%s%d", NSMB_NAME, i);
-		 fd = open(buf, O_RDWR);
-		 if (fd >= 0) {
-			ctx->ct_fd = fd;
-			return 0;
-		 }
-		 if (errno == ENOENT)
-		         return ENOENT;
-	 }
-	 return ENOENT;
+	return ENOENT;
 }
 
 int

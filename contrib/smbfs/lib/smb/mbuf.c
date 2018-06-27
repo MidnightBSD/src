@@ -29,11 +29,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: mbuf.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $Id: mbuf.c,v 1.6 2001/02/24 15:56:04 bp Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/smbfs/lib/smb/mbuf.c,v 1.3 2005/09/19 08:07:18 imura Exp $");
+__FBSDID("$FreeBSD: stable/10/contrib/smbfs/lib/smb/mbuf.c 150312 2005-09-19 08:07:18Z imura $");
 
 #include <sys/types.h>
 #include <sys/endian.h>

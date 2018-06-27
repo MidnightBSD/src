@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: subr.c,v 1.2 2009-10-09 02:43:50 laffer1 Exp $
+ * $Id: subr.c,v 1.12 2001/08/22 03:31:37 bp Exp $
  */
 
 #include <sys/param.h>
@@ -74,7 +74,7 @@ smb_lib_init(void)
 
 	if (smblib_initialized)
 		return 0;
-#if (defined(__MidnightBSD_version) || __FreeBSD_version > 400000)
+#if __FreeBSD_version > 400000
 	error = sysctlbyname("net.smb.version", &kv, &kvlen, NULL, 0);
 	if (error) {
 		warnx("%s: can't find kernel module\n", __FUNCTION__);
@@ -232,6 +232,8 @@ smb_simplecrypt(char *dst, const char *src)
 			  islower(ch) ? ('a' + (ch - 'a' + 13) % 26) : ch);
 		ch ^= pos;
 		pos += 13;
+		if (pos > 256)
+			pos -= 256;
 		sprintf(dst, "%02x", ch);
 		dst += 2;
 	}
@@ -262,6 +264,8 @@ smb_simpledecrypt(char *dst, const char *src)
 			return EINVAL;
 		ch ^= pos;
 		pos += 13;
+		if (pos > 256)
+			pos -= 256;
 		if (isascii(ch))
 		    ch = (isupper(ch) ? ('A' + (ch - 'A' + 13) % 26) :
 			  islower(ch) ? ('a' + (ch - 'a' + 13) % 26) : ch);

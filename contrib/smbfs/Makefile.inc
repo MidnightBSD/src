@@ -1,4 +1,5 @@
-# $Id: Makefile.inc,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+# $MidnightBSD$
+# $Id: Makefile.inc,v 1.11 2002/04/16 02:57:46 bp Exp $
 
 .ifmake !clean && !cleandepend
 .if !defined(PREFIX)

@@ -29,8 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: smb_rap.h,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: smb_rap.h,v 1.3 2001/04/10 05:37:22 bp Exp $
  */
 #ifndef _NETSMB_SMB_RAP_H_
 #define _NETSMB_SMB_RAP_H_
