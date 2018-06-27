@@ -28204,7 +28204,6 @@ contrib/one-true-awk/run.c -text
 contrib/one-true-awk/tran.c -text
 contrib/openbsm/.travis.yml -text
 contrib/openbsm/CREDITS -text
-contrib/openbsm/FREEBSD-upgrade -text
 contrib/openbsm/INSTALL -text
 contrib/openbsm/LICENSE -text
 contrib/openbsm/MIDNIGHTBSD-upgrade -text
