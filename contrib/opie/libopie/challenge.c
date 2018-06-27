@@ -21,7 +21,7 @@ License Agreement applies to this software.
 	Modified by cmetz for OPIE 2.2. Use FUNCTION declaration et al.
         Created at NRL for OPIE 2.2 from opiesubr2.c
 
-$FreeBSD$
+$FreeBSD: stable/10/contrib/opie/libopie/challenge.c 270120 2014-08-18 02:13:45Z ache $
 
 */
 #include "opie_cfg.h"
@@ -68,7 +68,9 @@ int opiechallenge FUNCTION((mp, name, ss), struct opie *mp AND char *name AND ch
   }
 
   if (rval ||
-    (snprintf(ss, OPIE_CHALLENGE_MAX, "otp-%s %d %s ext", algids[MDX], mp->opie_n - 1, mp->opie_seed) >= OPIE_CHALLENGE_MAX)) {
+    (snprintf(ss, OPIE_CHALLENGE_MAX+1, "otp-%s %d %s ext", algids[MDX], mp->opie_n - 1, mp->opie_seed) >= OPIE_CHALLENGE_MAX+1)) {
+    if (!rval)
+      rval = 1;
     opierandomchallenge(ss);
     memset(mp, 0, sizeof(*mp));
   }

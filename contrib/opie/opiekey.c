@@ -37,7 +37,7 @@ License Agreement applies to this software.
 	Written at Bellcore for the S/Key Version 1 software distribution
 		(skey.c).
 
-$FreeBSD$
+$FreeBSD: stable/10/contrib/opie/opiekey.c 270120 2014-08-18 02:13:45Z ache $
 
 */
 #include "opie_cfg.h"
@@ -144,7 +144,7 @@ int main FUNCTION((argc, argv), int argc AND char *argv[])
   int type = RESPONSE_STANDARD;
   int force = 0;
 
-  if (slash = strchr(argv[0], '/'))
+  if (slash = strrchr(argv[0], '/'))
     slash++;
   else
     slash = argv[0];
