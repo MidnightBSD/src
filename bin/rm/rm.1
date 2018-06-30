@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1990, 1993, 1994
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,10 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)rm.1	8.5 (Berkeley) 12/5/94
-.\" $FreeBSD: src/bin/rm/rm.1,v 1.36.2.1 2005/10/08 17:27:37 dougb Exp $
-.\" $MidnightBSD: src/bin/rm/rm.1,v 1.4 2007/07/26 20:13:00 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/rm/rm.1 290634 2015-11-10 07:17:38Z bapt $
 .\"
-.Dd October 31, 2010
+.Dd November 7, 2015
 .Dt RM 1
 .Os
 .Sh NAME
@@ -43,7 +43,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl f | i
-.Op Fl dIPRrvW
+.Op Fl dIPRrvWx
 .Ar
 .Nm unlink
 .Ar file
@@ -133,6 +133,8 @@ Attempt to undelete the named files.
 Currently, this option can only be used to recover
 files covered by whiteouts in a union file system (see
 .Xr undelete 2 ) .
+.It Fl x
+When removing a hierarchy, do not cross mount points.
 .El
 .Pp
 The
@@ -194,6 +196,19 @@ When
 is specified with
 .Fl f
 the file will be overwritten and removed even if it has hard links.
+.Sh EXAMPLES
+Recursively remove all files contained within the
+.Pa foobar
+directory hierarchy:
+.Pp
+.Dl $ rm -rf foobar
+.Pp
+Either of these commands will remove the file
+.Pa -f :
+.Bd -literal -offset indent
+$ rm -- -f
+$ rm ./-f
+.Ed
 .Sh COMPATIBILITY
 The
 .Nm
@@ -221,7 +236,7 @@ not the standard error output.
 The
 .Nm
 command conforms to
-.St -p1003.2 .
+.St -p1003.1-2013 .
 .Pp
 The simplified
 .Nm unlink

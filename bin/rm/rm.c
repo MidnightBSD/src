@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)rm.c	8.5 (Berkeley) 4/18/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/rm/rm.c,v 1.52.2.1 2005/10/08 17:27:37 dougb Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/rm/rm.c 290634 2015-11-10 07:17:38Z bapt $");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -51,17 +51,19 @@ __FBSDID("$FreeBSD: src/bin/rm/rm.c,v 1.52.2.1 2005/10/08 17:27:37 dougb Exp $")
 #include <fcntl.h>
 #include <fts.h>
 #include <grp.h>
+#include <locale.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
 #include <unistd.h>
 
-int dflag, eval, fflag, iflag, Pflag, vflag, Wflag, stdin_ok;
-int rflag, Iflag;
-uid_t uid;
-volatile sig_atomic_t info;
+static int dflag, eval, fflag, iflag, Pflag, vflag, Wflag, stdin_ok;
+static int rflag, Iflag, xflag;
+static uid_t uid;
+static volatile sig_atomic_t info;
 
 static int	check(const char *, const char *, struct stat *);
 static int	check2(char **);
@@ -86,6 +88,8 @@ main(int argc, char *argv[])
 	int ch;
 	char *p;
 
+	(void)setlocale(LC_ALL, "");
+
 	/*
 	 * Test for the special case where the utility is called as
 	 * "unlink", for which the functionality provided is greatly
@@ -106,8 +110,8 @@ main(int argc, char *argv[])
 		exit(eval);
 	}
 
-	Pflag = rflag = 0;
-	while ((ch = getopt(argc, argv, "dfiIPRrvW")) != -1)
+	Pflag = rflag = xflag = 0;
+	while ((ch = getopt(argc, argv, "dfiIPRrvWx")) != -1)
 		switch(ch) {
 		case 'd':
 			dflag = 1;
@@ -136,6 +140,9 @@ main(int argc, char *argv[])
 		case 'W':
 			Wflag = 1;
 			break;
+		case 'x':
+			xflag = 1;
+			break;
 		default:
 			usage();
 		}
@@ -149,8 +156,7 @@ main(int argc, char *argv[])
 	}
 
 	checkdot(argv);
-	if (getenv("POSIXLY_CORRECT") == NULL)
-		checkslash(argv);
+	checkslash(argv);
 	uid = geteuid();
 
 	(void)signal(SIGINFO, siginfo);
@@ -196,6 +202,8 @@ rm_tree(char **argv)
 		flags |= FTS_NOSTAT;
 	if (Wflag)
 		flags |= FTS_WHITEOUT;
+	if (xflag)
+		flags |= FTS_XDEV;
 	if (!(fts = fts_open(argv, flags, NULL))) {
 		if (fflag && errno == ENOENT)
 			return;
@@ -330,12 +338,12 @@ err:
 		warn("%s", p->fts_path);
 		eval = 1;
 	}
-	if (errno)
+	if (!fflag && errno)
 		err(1, "fts_read");
 	fts_close(fts);
 }
 
-void
+static void
 rm_file(char **argv)
 {
 	struct stat sb;
@@ -412,7 +420,7 @@ rm_file(char **argv)
  * System V file system).  In a logging or COW file system, you'll have to
  * have kernel support.
  */
-int
+static int
 rm_overwrite(const char *file, struct stat *sbp)
 {
 	struct stat sb, sb2;
@@ -430,8 +438,8 @@ rm_overwrite(const char *file, struct stat *sbp)
 	if (!S_ISREG(sbp->st_mode))
 		return (1);
 	if (sbp->st_nlink > 1 && !fflag) {
-		warnx("%s (inode %u): not overwritten due to multiple links",
-		    file, sbp->st_ino);
+		warnx("%s (inode %ju): not overwritten due to multiple links",
+		    file, (uintmax_t)sbp->st_ino);
 		return (0);
 	}
 	if ((fd = open(file, O_WRONLY|O_NONBLOCK|O_NOFOLLOW, 0)) == -1)
@@ -624,7 +632,7 @@ usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-	    "usage: rm [-f | -i] [-dIPRrvW] file ...",
+	    "usage: rm [-f | -i] [-dIPRrvWx] file ...",
 	    "       unlink file");
 	exit(EX_USAGE);
 }
