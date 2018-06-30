@@ -100,7 +100,13 @@ LIBMENU?=	${DESTDIR}${LIBDIR}/libmenu.a
 LIBMILTER?=	${DESTDIR}${LIBDIR}/libmilter.a
 .endif
 LIBMP?=		${DESTDIR}${LIBDIR}/libmp.a
+
 LIBMPORT?=	${DESTDIR}${LIBDIR}/libmport.a
+LIBMPORT+= 	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} \
+		${LIBSQLITE3} ${LIBPTHREAD} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
+MINUSLMPORT=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
+		-lpthread -ldispatch -lBlocksRuntime
+
 LIBMSEARCH?=	${DESTDIR}${LIBDIR}/libmsearch.a
 LIBMT?=		${DESTDIR}${LIBDIR}/libmt.a
 LIBNCURSES?=	${DESTDIR}${LIBDIR}/libncurses.a
