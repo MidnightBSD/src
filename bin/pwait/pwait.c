@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2009, Jilles Tjoelker
  * All rights reserved.
@@ -32,6 +33,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/bin/pwait/pwait.c 245506 2013-01-16 18:15:25Z delphij $");
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -140,5 +142,5 @@ main(int argc, char *argv[])
 		nleft -= n;
 	}
 
-	return 0;
+	exit(EX_OK);
 }
