@@ -372,6 +372,8 @@ bin/rmail/Makefile -text
 bin/rmdir/Makefile -text
 bin/rmdir/rmdir.1 -text
 bin/rmdir/rmdir.c -text
+bin/rmdir/tests/Makefile svneol=native#text/plain
+bin/rmdir/tests/rmdir_test.sh svneol=native#text/plain
 bin/setfacl/Makefile -text
 bin/setfacl/file.c -text
 bin/setfacl/mask.c -text

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,10 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)rmdir.1	8.1 (Berkeley) 5/31/93
-.\" $FreeBSD: src/bin/rmdir/rmdir.1,v 1.14 2005/05/31 12:57:44 tjr Exp $
-.\" $MidnightBSD: src/bin/rmdir/rmdir.1,v 1.2 2007/07/26 20:13:00 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/rmdir/rmdir.1 248342 2013-03-15 20:12:54Z joel $
 .\"
-.Dd March 21, 2004
+.Dd March 15, 2013
 .Dt RMDIR 1
 .Os
 .Sh NAME
@@ -87,6 +87,18 @@ successfully.
 .It Li >0
 An error occurred.
 .El
+.Sh EXAMPLES
+Remove the directory
+.Pa foobar ,
+if it is empty:
+.Pp
+.Dl $ rmdir foobar
+.Pp
+Remove all directories up to and including
+.Pa cow ,
+stopping at the first non-empty directory (if any):
+.Pp
+.Dl $ rmdir -p cow/horse/monkey
 .Sh SEE ALSO
 .Xr rm 1
 .Sh STANDARDS
