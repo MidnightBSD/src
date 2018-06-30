@@ -56108,6 +56108,7 @@ secure/usr.bin/ssh/Makefile -text
 secure/usr.sbin/Makefile -text
 secure/usr.sbin/Makefile.inc -text
 secure/usr.sbin/sshd/Makefile -text
+secure/usr.sbin/tests/Makefile svneol=native#text/plain
 share/Makefile -text
 share/Makefile.inc -text
 share/colldef/Makefile -text
