@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/setfacl/merge.c,v 1.8 2005/01/10 08:39:25 imp Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/setfacl/merge.c 240087 2012-09-04 12:19:34Z trasz $");
 
 #include <sys/types.h>
 #include <sys/acl.h>

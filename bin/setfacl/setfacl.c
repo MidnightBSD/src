@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/setfacl/setfacl.c,v 1.11 2005/02/09 17:37:39 ru Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/setfacl/setfacl.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -42,6 +42,35 @@ __FBSDID("$FreeBSD: src/bin/setfacl/setfacl.c,v 1.11 2005/02/09 17:37:39 ru Exp 
 #include <unistd.h>
 
 #include "setfacl.h"
+
+/* file operations */
+#define	OP_MERGE_ACL		0x00	/* merge acl's (-mM) */
+#define	OP_REMOVE_DEF		0x01	/* remove default acl's (-k) */
+#define	OP_REMOVE_EXT		0x02	/* remove extended acl's (-b) */
+#define	OP_REMOVE_ACL		0x03	/* remove acl's (-xX) */
+#define	OP_REMOVE_BY_NUMBER	0x04	/* remove acl's (-xX) by acl entry number */
+#define	OP_ADD_ACL		0x05	/* add acls entries at a given position */
+
+/* TAILQ entry for acl operations */
+struct sf_entry {
+	uint	op;
+	acl_t	acl;
+	uint	entry_number;
+	TAILQ_ENTRY(sf_entry) next;
+};
+static TAILQ_HEAD(, sf_entry) entrylist;
+
+/* TAILQ entry for files */
+struct sf_file {
+	const char *filename;
+	TAILQ_ENTRY(sf_file) next;
+};
+static TAILQ_HEAD(, sf_file) filelist;
+
+uint have_mask;
+uint need_mask;
+uint have_stdin;
+uint n_flag;
 
 static void	add_filename(const char *filename);
 static void	usage(void);
