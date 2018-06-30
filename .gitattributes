@@ -361,6 +361,8 @@ bin/rcp/Makefile -text
 bin/rcp/extern.h -text
 bin/rcp/rcp.1 -text
 bin/rcp/rcp.c -text
+bin/rcp/tests/Makefile svneol=native#text/plain
+bin/rcp/tests/rcp_test.sh svneol=native#text/plain
 bin/rcp/util.c -text
 bin/realpath/Makefile -text
 bin/realpath/realpath.1 -text
