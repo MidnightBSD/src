@@ -57,7 +57,7 @@
 #define HAVE_OPENSSL_ERR_H 1
 
 /* Define to 1 if you have the <openssl/idea.h> header file. */
-/* #define HAVE_OPENSSL_IDEA_H 1 */
+#define HAVE_OPENSSL_IDEA_H 1
 
 /* Define to 1 if you have the <openssl/md5.h> header file. */
 #define HAVE_OPENSSL_MD5_H 1

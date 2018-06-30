@@ -2,7 +2,7 @@
 
 .include <bsd.own.mk>
 
-LIB= netpgp
+LIB=	netpgp
 SHLIB_MAJOR=	1
 
 NO_LINT=
