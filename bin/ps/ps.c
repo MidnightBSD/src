@@ -48,9 +48,10 @@ static char sccsid[] = "@(#)ps.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ps/ps.c,v 1.110 2005/02/09 17:37:38 ru Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ps/ps.c 301148 2016-06-01 17:33:02Z truckman $");
 
 #include <sys/param.h>
+#include <sys/jail.h>
 #include <sys/proc.h>
 #include <sys/user.h>
 #include <sys/stat.h>
@@ -63,6 +64,7 @@ __FBSDID("$FreeBSD: src/bin/ps/ps.c,v 1.110 2005/02/09 17:37:38 ru Exp $");
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <jail.h>
 #include <kvm.h>
 #include <limits.h>
 #include <locale.h>
@@ -110,6 +112,7 @@ static int	 needcomm;	/* -o "command" */
 static int	 needenv;	/* -e */
 static int	 needuser;	/* -o "user" */
 static int	 optfatal;	/* Fatal error parsing some list-option. */
+static int	 pid_max;	/* kern.max_pid */
 
 static enum sort { DEFAULT, SORTMEM, SORTCPU } sortby = DEFAULT;
 
@@ -124,6 +127,7 @@ struct listinfo {
 	const char	*lname;
 	union {
 		gid_t	*gids;
+		int	*jids;
 		pid_t	*pids;
 		dev_t	*ttys;
 		uid_t	*uids;
@@ -132,6 +136,7 @@ struct listinfo {
 };
 
 static int	 addelem_gid(struct listinfo *, const char *);
+static int	 addelem_jid(struct listinfo *, const char *);
 static int	 addelem_pid(struct listinfo *, const char *);
 static int	 addelem_tty(struct listinfo *, const char *);
 static int	 addelem_uid(struct listinfo *, const char *);
@@ -149,6 +154,7 @@ static int	 pscomp(const void *, const void *);
 static void	 saveuser(KINFO *);
 static void	 scanvars(void);
 static void	 sizevars(void);
+static void	 pidmax_init(void);
 static void	 usage(void);
 
 static char dfmt[] = "pid,tt,state,time,command";
@@ -162,12 +168,12 @@ static char vfmt[] = "pid,state,time,sl,re,pagein,vsz,rss,lim,tsiz,"
 			"%cpu,%mem,command";
 static char Zfmt[] = "label";
 
-#define	PS_ARGS	"AaCcde" OPT_LAZY_f "G:gHhjLlM:mN:O:o:p:rSTt:U:uvwXxZ"
+#define	PS_ARGS	"AaCcde" OPT_LAZY_f "G:gHhjJ:LlM:mN:O:o:p:rSTt:U:uvwXxZ"
 
 int
 main(int argc, char *argv[])
 {
-	struct listinfo gidlist, pgrplist, pidlist;
+	struct listinfo gidlist, jidlist, pgrplist, pidlist;
 	struct listinfo ruidlist, sesslist, ttylist, uidlist;
 	struct kinfo_proc *kp;
 	KINFO *kinfo = NULL, *next_KINFO;
@@ -201,10 +207,13 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		argv[1] = kludge_oldps_options(PS_ARGS, argv[1], argv[2]);
 
+	pidmax_init();
+
 	all = descendancy = _fmt = nselectors = optfatal = 0;
 	prtheader = showthreads = wflag = xkeep_implied = 0;
 	xkeep = -1;			/* Neither -x nor -X. */
 	init_list(&gidlist, addelem_gid, sizeof(gid_t), "group");
+	init_list(&jidlist, addelem_jid, sizeof(int), "jail id");
 	init_list(&pgrplist, addelem_pid, sizeof(pid_t), "process group");
 	init_list(&pidlist, addelem_pid, sizeof(pid_t), "process id");
 	init_list(&ruidlist, addelem_uid, sizeof(uid_t), "ruser");
@@ -271,6 +280,11 @@ main(int argc, char *argv[])
 			break;
 		case 'h':
 			prtheader = ws.ws_row > 5 ? ws.ws_row : 22;
+			break;
+		case 'J':
+			add_list(&jidlist, optarg);
+			xkeep_implied = 1;
+			nselectors++;
 			break;
 		case 'j':
 			parsefmt(jfmt, 0);
@@ -535,6 +549,11 @@ main(int argc, char *argv[])
 					if (kp->ki_rgid == gidlist.l.gids[elem])
 						goto keepit;
 			}
+			if (jidlist.count > 0) {
+				for (elem = 0; elem < jidlist.count; elem++)
+					if (kp->ki_jid == jidlist.l.jids[elem])
+						goto keepit;
+			}
 			if (pgrplist.count > 0) {
 				for (elem = 0; elem < pgrplist.count; elem++)
 					if (kp->ki_pgid ==
@@ -626,7 +645,7 @@ main(int argc, char *argv[])
 
 			ks = STAILQ_FIRST(&kinfo[i].ki_ks);
 			STAILQ_REMOVE_HEAD(&kinfo[i].ki_ks, ks_next);
-			/* Truncate rightmost column if neccessary.  */
+			/* Truncate rightmost column if necessary.  */
 			if (STAILQ_NEXT(vent, next_ve) == NULL &&
 			   termwidth != UNLIMITED && ks->ks_str != NULL) {
 				left = termwidth - linelen;
@@ -663,6 +682,7 @@ main(int argc, char *argv[])
 		}
 	}
 	free_list(&gidlist);
+	free_list(&jidlist);
 	free_list(&pidlist);
 	free_list(&pgrplist);
 	free_list(&ruidlist);
@@ -723,7 +743,30 @@ addelem_gid(struct listinfo *inf, const char *elem)
 	return (1);
 }
 
-#define	BSD_PID_MAX	99999		/* Copy of PID_MAX from sys/proc.h. */
+static int
+addelem_jid(struct listinfo *inf, const char *elem)
+{
+	int tempid;
+
+	if (*elem == '\0') {
+		warnx("Invalid (zero-length) jail id");
+		optfatal = 1;
+		return (0);		/* Do not add this value. */
+	}
+
+	tempid = jail_getid(elem);
+	if (tempid < 0) {
+		warnx("Invalid %s: %s", inf->lname, elem);
+		optfatal = 1;
+		return (0);
+	}
+
+	if (inf->count >= inf->maxcount)
+		expand_list(inf);
+	inf->l.jids[(inf->count)++] = tempid;
+	return (1);
+}
+
 static int
 addelem_pid(struct listinfo *inf, const char *elem)
 {
@@ -741,7 +784,7 @@ addelem_pid(struct listinfo *inf, const char *elem)
 	if (*endp != '\0' || tempid < 0 || elem == endp) {
 		warnx("Invalid %s: %s", inf->lname, elem);
 		errno = ERANGE;
-	} else if (errno != 0 || tempid > BSD_PID_MAX) {
+	} else if (errno != 0 || tempid > pid_max) {
 		warnx("%s too large: %s", inf->lname, elem);
 		errno = ERANGE;
 	}
@@ -754,7 +797,6 @@ addelem_pid(struct listinfo *inf, const char *elem)
 	inf->l.pids[(inf->count)++] = tempid;
 	return (1);
 }
-#undef	BSD_PID_MAX
 
 /*-
  * The user can specify a device via one of three formats:
@@ -1176,6 +1218,7 @@ fmt(char **(*fn)(kvm_t *, const struct kinfo_proc *, int), KINFO *ki,
 static void
 saveuser(KINFO *ki)
 {
+	char *argsp;
 
 	if (ki->ki_p->ki_flag & P_INMEM) {
 		/*
@@ -1194,10 +1237,12 @@ saveuser(KINFO *ki)
 		if (ki->ki_p->ki_stat == SZOMB)
 			ki->ki_args = strdup("<defunct>");
 		else if (UREADOK(ki) || (ki->ki_p->ki_args != NULL))
-			ki->ki_args = strdup(fmt(kvm_getargv, ki,
-			    ki->ki_p->ki_comm, ki->ki_p->ki_tdname, MAXCOMLEN));
-		else
-			asprintf(&ki->ki_args, "(%s)", ki->ki_p->ki_comm);
+			ki->ki_args = fmt(kvm_getargv, ki,
+			    ki->ki_p->ki_comm, ki->ki_p->ki_tdname, MAXCOMLEN);
+		else {
+			asprintf(&argsp, "(%s)", ki->ki_p->ki_comm);
+			ki->ki_args = argsp;
+		}
 		if (ki->ki_args == NULL)
 			errx(1, "malloc failed");
 	} else {
@@ -1205,8 +1250,8 @@ saveuser(KINFO *ki)
 	}
 	if (needenv) {
 		if (UREADOK(ki))
-			ki->ki_env = strdup(fmt(kvm_getenvv, ki,
-			    (char *)NULL, (char *)NULL, 0));
+			ki->ki_env = fmt(kvm_getenvv, ki,
+			    (char *)NULL, (char *)NULL, 0);
 		else
 			ki->ki_env = strdup("()");
 		if (ki->ki_env == NULL)
@@ -1354,13 +1399,25 @@ kludge_oldps_options(const char *optlist, char *origval, const char *nextarg)
 }
 
 static void
+pidmax_init(void)
+{
+	size_t intsize;
+
+	intsize = sizeof(pid_max);
+	if (sysctlbyname("kern.pid_max", &pid_max, &intsize, NULL, 0) < 0) {
+		warn("unable to read kern.pid_max");
+		pid_max = 99999;
+	}
+}
+
+static void
 usage(void)
 {
 #define	SINGLE_OPTS	"[-aCcde" OPT_LAZY_f "HhjlmrSTuvwXxZ]"
 
 	(void)fprintf(stderr, "%s\n%s\n%s\n%s\n",
 	    "usage: ps " SINGLE_OPTS " [-O fmt | -o fmt] [-G gid[,gid...]]",
-	    "          [-M core] [-N system]",
+	    "          [-J jid[,jid...]] [-M core] [-N system]",
 	    "          [-p pid[,pid...]] [-t tty[,tty...]] [-U user[,user...]]",
 	    "       ps [-L]");
 	exit(1);

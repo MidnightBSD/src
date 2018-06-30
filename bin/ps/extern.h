@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,8 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
- * $FreeBSD: src/bin/ps/extern.h,v 1.37 2004/06/23 23:48:09 gad Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/ps/extern.h 331471 2018-03-24 00:26:42Z jhb $
  */
 
 struct kinfo;
@@ -54,6 +54,7 @@ char	 *emulname(KINFO *, VARENT *);
 VARENT	*find_varentry(VAR *);
 const	 char *fmt_argv(char **, char *, char *, size_t);
 double	 getpcpu(const KINFO *);
+char	 *jailname(KINFO *, VARENT *);
 char	 *kvar(KINFO *, VARENT *);
 char	 *label(KINFO *, VARENT *);
 char	 *loginclass(KINFO *, VARENT *);

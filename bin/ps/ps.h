@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,8 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ps.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/bin/ps/ps.h,v 1.19 2004/06/23 23:48:09 gad Exp $
- * $MidnightBSD: src/bin/ps/ps.h,v 1.2 2007/07/26 20:13:00 laffer1 Exp $
+ * $FreeBSD: stable/10/bin/ps/ps.h 301148 2016-06-01 17:33:02Z truckman $
  */
 
 #include <sys/queue.h>
@@ -43,8 +43,8 @@ typedef struct kinfo_str {
 
 typedef struct kinfo {
 	struct kinfo_proc *ki_p;	/* kinfo_proc structure */
-	char *ki_args;		/* exec args */
-	char *ki_env;		/* environment */
+	const char *ki_args;	/* exec args */
+	const char *ki_env;	/* environment */
 	int ki_valid;		/* 1 => uarea stuff valid */
 	double	 ki_pcpu;	/* calculated in main() */
 	segsz_t	 ki_memsize;	/* calculated in main() */

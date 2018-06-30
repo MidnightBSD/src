@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)keyword.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/bin/ps/keyword.c,v 1.72.2.3 2006/04/14 02:47:30 gad Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ps/keyword.c 331471 2018-03-24 00:26:42Z jhb $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -88,12 +88,16 @@ static VAR var[] = {
 	{"etimes", "ELAPSED", NULL, USER, elapseds, 0, CHAR, NULL, 0},
 	{"euid", "", "uid", 0, NULL, 0, CHAR, NULL, 0},
 	{"f", "F", NULL, 0, kvar, KOFF(ki_flag), INT, "x", 0},
+	{"f2", "F2", NULL, 0, kvar, KOFF(ki_flag2), INT, "08x", 0},
+	{"fib", "FIB", NULL, 0, kvar, KOFF(ki_fibnum), INT, "d", 0},
 	{"flags", "", "f", 0, NULL, 0, CHAR, NULL, 0},
+	{"flags2", "", "f2", 0, NULL, 0, CHAR, NULL, 0},
 	{"gid", "GID", NULL, 0, kvar, KOFF(ki_groups), UINT, UIDFMT, 0},
 	{"group", "GROUP", NULL, LJUST, egroupname, 0, CHAR, NULL, 0},
 	{"ignored", "", "sigignore", 0, NULL, 0, CHAR, NULL, 0},
 	{"inblk", "INBLK", NULL, USER, rvar, ROFF(ru_inblock), LONG, "ld", 0},
 	{"inblock", "", "inblk", 0, NULL, 0, CHAR, NULL, 0},
+	{"jail", "JAIL", NULL, LJUST, jailname, 0, CHAR, NULL, 0},
 	{"jid", "JID", NULL, 0, kvar, KOFF(ki_jid), INT, "d", 0},
 	{"jobc", "JOBC", NULL, 0, kvar, KOFF(ki_jobc), SHORT, "d", 0},
 	{"ktrace", "KTRACE", NULL, 0, kvar, KOFF(ki_traceflag), INT, "x", 0},
