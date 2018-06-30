@@ -56105,6 +56105,7 @@ secure/usr.bin/ssh-agent/Makefile -text
 secure/usr.bin/ssh-keygen/Makefile -text
 secure/usr.bin/ssh-keyscan/Makefile -text
 secure/usr.bin/ssh/Makefile -text
+secure/usr.bin/tests/Makefile svneol=native#text/plain
 secure/usr.sbin/Makefile -text
 secure/usr.sbin/Makefile.inc -text
 secure/usr.sbin/sshd/Makefile -text
