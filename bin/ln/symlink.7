@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1992, 1993, 1994
 .\"	The Regents of the University of California.  All rights reserved.
@@ -27,10 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)symlink.7	8.3 (Berkeley) 3/31/94
-.\" $FreeBSD: src/bin/ln/symlink.7,v 1.30 2005/02/13 22:25:09 ru Exp $
-.\" $MidnightBSD: src/bin/ln/symlink.7,v 1.2 2006/07/19 13:48:59 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/ln/symlink.7 279866 2015-03-10 22:23:56Z jilles $
 .\"
-.Dd April 25, 2010
+.Dd February 16, 2015
 .Dt SYMLINK 7
 .Os
 .Sh NAME
@@ -147,6 +147,7 @@ The following system calls follow symbolic links
 unless given the
 .Dv AT_SYMLINK_NOFOLLOW
 flag:
+.Xr chflagsat 2 ,
 .Xr fchmodat 2 ,
 .Xr fchownat 2
 and
@@ -220,7 +221,7 @@ would change the ownership of
 .Dq Li slink
 itself.
 .Pp
-There are four exceptions to this rule.
+There are five exceptions to this rule.
 The
 .Xr mv 1
 and
@@ -263,13 +264,12 @@ a file tree.)
 .Pp
 The
 .Xr file 1
-command is also an exception to this rule.
-The
-.Xr file 1
-command does not follow symbolic links named as argument by default.
-The
-.Xr file 1
-command does follow symbolic links named as argument if
+and
+.Xr stat 1
+commands are also exceptions to this rule.
+These
+commands do not follow symbolic links named as argument by default,
+but do follow symbolic links named as argument if the
 .Fl L
 option is specified.
 .Pp

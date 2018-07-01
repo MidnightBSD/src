@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/ln/ln.c,v 1.4 2007/07/26 20:13:00 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)ln.c	8.2 (Berkeley) 3/31/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/bin/ln/ln.c,v 1.33.2.1 2006/03/18 21:49:43 glebius Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ln/ln.c 321094 2017-07-17 21:13:43Z ngie $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -55,19 +55,19 @@ __FBSDID("$FreeBSD: /repoman/r/ncvs/src/bin/ln/ln.c,v 1.33.2.1 2006/03/18 21:49:
 #include <string.h>
 #include <unistd.h>
 
-int	fflag;				/* Unlink existing files. */
-int	Fflag;				/* Remove empty directories also. */
-int	hflag;				/* Check new name for symlink first. */
-int	iflag;				/* Interactive mode. */
-int	Pflag;				/* Create hard links to symlinks. */
-int	sflag;				/* Symbolic, not hard, link. */
-int	vflag;				/* Verbose output. */
-int	wflag;				/* Warn if symlink target does not
+static int	fflag;			/* Unlink existing files. */
+static int	Fflag;			/* Remove empty directories also. */
+static int	hflag;			/* Check new name for symlink first. */
+static int	iflag;			/* Interactive mode. */
+static int	Pflag;			/* Create hard links to symlinks. */
+static int	sflag;			/* Symbolic, not hard, link. */
+static int	vflag;			/* Verbose output. */
+static int	wflag;			/* Warn if symlink target does not
 					 * exist, and -f is not enabled. */
-char	linkch;
+static char	linkch;
 
-int	linkit(const char *, const char *, int);
-void	usage(void);
+static int	linkit(const char *, const char *, int);
+static void	usage(void);
 
 int
 main(int argc, char *argv[])
@@ -220,7 +220,7 @@ samedirent(const char *path1, const char *path2)
 	return sb1.st_dev == sb2.st_dev && sb1.st_ino == sb2.st_ino;
 }
 
-int
+static int
 linkit(const char *source, const char *target, int isdir)
 {
 	struct stat sb;
@@ -246,11 +246,11 @@ linkit(const char *source, const char *target, int isdir)
 
 	/*
 	 * If the target is a directory (and not a symlink if hflag),
-	 * append the source's name.
+	 * append the source's name, unless Fflag is set.
 	 */
-	if (isdir ||
+	if (!Fflag && (isdir ||
 	    (lstat(target, &sb) == 0 && S_ISDIR(sb.st_mode)) ||
-	    (!hflag && stat(target, &sb) == 0 && S_ISDIR(sb.st_mode))) {
+	    (!hflag && stat(target, &sb) == 0 && S_ISDIR(sb.st_mode)))) {
 		if (strlcpy(bbuf, source, sizeof(bbuf)) >= sizeof(bbuf) ||
 		    (p = basename(bbuf)) == NULL ||
 		    snprintf(path, sizeof(path), "%s/%s", target, p) >=
@@ -348,7 +348,7 @@ linkit(const char *source, const char *target, int isdir)
 	return (0);
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr, "%s\n%s\n%s\n",

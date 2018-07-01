@@ -287,6 +287,8 @@ bin/ln/Makefile -text
 bin/ln/ln.1 -text
 bin/ln/ln.c -text
 bin/ln/symlink.7 -text
+bin/ln/tests/Makefile svneol=native#text/plain
+bin/ln/tests/ln_test.sh svneol=native#text/plain
 bin/ls/Makefile -text
 bin/ls/cmp.c -text
 bin/ls/extern.h -text
