@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2008 Marc Alexander Lehmann <schmorp@schmorp.de>
  * 

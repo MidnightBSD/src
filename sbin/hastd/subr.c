@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>
@@ -29,16 +30,17 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/hastd/subr.c 280250 2015-03-19 12:32:48Z rwatson $");
 
-#ifdef HAVE_CAPSICUM
-#include <sys/capability.h>
-#endif
 #include <sys/param.h>
 #include <sys/disk.h>
 #include <sys/ioctl.h>
 #include <sys/jail.h>
 #include <sys/stat.h>
+#ifdef HAVE_CAPSICUM
+#include <sys/capsicum.h>
+#include <geom/gate/g_gate.h>
+#endif
 
 #include <errno.h>
 #include <fcntl.h>
@@ -224,22 +226,56 @@ drop_privs(const struct hast_resource *res)
 		return (-1);
 	}
 
-	/*
-	 * Until capsicum doesn't allow ioctl(2) we cannot use it to sandbox
-	 * primary and secondary worker processes, as primary uses GGATE
-	 * ioctls and secondary uses ioctls to handle BIO_DELETE and BIO_FLUSH.
-	 * For now capsicum is only used to sandbox hastctl.
-	 */
 #ifdef HAVE_CAPSICUM
-	if (res == NULL) {
-		capsicum = (cap_enter() == 0);
-		if (!capsicum) {
-			pjdlog_common(LOG_DEBUG, 1, errno,
-			    "Unable to sandbox using capsicum");
+	capsicum = (cap_enter() == 0);
+	if (!capsicum) {
+		pjdlog_common(LOG_DEBUG, 1, errno,
+		    "Unable to sandbox using capsicum");
+	} else if (res != NULL) {
+		cap_rights_t rights;
+		static const unsigned long geomcmds[] = {
+		    DIOCGDELETE,
+		    DIOCGFLUSH
+		};
+
+		PJDLOG_ASSERT(res->hr_role == HAST_ROLE_PRIMARY ||
+		    res->hr_role == HAST_ROLE_SECONDARY);
+
+		cap_rights_init(&rights, CAP_FLOCK, CAP_IOCTL, CAP_PREAD,
+		    CAP_PWRITE);
+		if (cap_rights_limit(res->hr_localfd, &rights) == -1) {
+			pjdlog_errno(LOG_ERR,
+			    "Unable to limit capability rights on local descriptor");
 		}
-	} else
+		if (cap_ioctls_limit(res->hr_localfd, geomcmds,
+		    sizeof(geomcmds) / sizeof(geomcmds[0])) == -1) {
+			pjdlog_errno(LOG_ERR,
+			    "Unable to limit allowed GEOM ioctls");
+		}
+
+		if (res->hr_role == HAST_ROLE_PRIMARY) {
+			static const unsigned long ggatecmds[] = {
+			    G_GATE_CMD_MODIFY,
+			    G_GATE_CMD_START,
+			    G_GATE_CMD_DONE,
+			    G_GATE_CMD_DESTROY
+			};
+
+			cap_rights_init(&rights, CAP_IOCTL);
+			if (cap_rights_limit(res->hr_ggatefd, &rights) == -1) {
+				pjdlog_errno(LOG_ERR,
+				    "Unable to limit capability rights to CAP_IOCTL on ggate descriptor");
+			}
+			if (cap_ioctls_limit(res->hr_ggatefd, ggatecmds,
+			    sizeof(ggatecmds) / sizeof(ggatecmds[0])) == -1) {
+				pjdlog_errno(LOG_ERR,
+				    "Unable to limit allowed ggate ioctls");
+			}
+		}
+	}
+#else
+	capsicum = false;
 #endif
-		capsicum = false;
 
 	/*
 	 * Better be sure that everything succeeded.

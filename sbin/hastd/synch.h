@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/hastd/synch.h 236919 2012-06-11 20:27:52Z hselasky $
  */
 
 #ifndef	_SYNCH_H_
@@ -168,7 +169,7 @@ cv_timedwait(pthread_cond_t *cv, pthread_mutex_t *lock, int timeout)
 		return (false);
 	}
 
-        error = clock_gettime(CLOCK_MONOTONIC, &ts);
+	error = clock_gettime(CLOCK_MONOTONIC, &ts);
 	PJDLOG_ASSERT(error == 0);
 	ts.tv_sec += timeout;
 	error = pthread_cond_timedwait(cv, lock, &ts);

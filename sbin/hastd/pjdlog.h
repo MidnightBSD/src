@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * Copyright (c) 2011 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/hastd/pjdlog.h 242593 2012-11-05 00:38:14Z pjd $
  */
 
 #ifndef	_PJDLOG_H_
@@ -95,7 +96,7 @@ void pjdlog_abort(const char *func, const char *file, int line,
 #define	PJDLOG_VERIFY(expr)	do {					\
 	if (!(expr)) {							\
 		pjdlog_abort(__func__, __FILE__, __LINE__, #expr,	\
-		    "%s", __func__);					\
+		    __func__);						\
 	}								\
 } while (0)
 #define	PJDLOG_RVERIFY(expr, ...)	do {				\

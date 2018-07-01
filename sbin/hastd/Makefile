@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/hastd/Makefile 270911 2014-09-01 03:22:47Z ngie $
 
 .include <bsd.own.mk>
 
@@ -19,10 +20,9 @@ SRCS+=	token.l
 SRCS+=	y.tab.h
 MAN=	hastd.8 hast.conf.5
 
-WARNS=	0
-
 NO_WFORMAT=
 NO_WCAST_ALIGN=
+NO_WMISSING_VARIABLE_DECLARATIONS=
 CFLAGS+=-I${.CURDIR}
 CFLAGS+=-DHAVE_CAPSICUM
 CFLAGS+=-DPROTO_TCP_DEFAULT_PORT=8457
@@ -31,7 +31,7 @@ CFLAGS+=-DINET
 CFLAGS+=-DINET6
 .endif
 
-DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF} ${LIBL} ${LIBPTHREAD} ${LIBUTIL}
+DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF} ${LIBPTHREAD} ${LIBUTIL}
 LDADD=	-lgeom -lbsdxml -lsbuf -lpthread -lutil
 .if ${MK_OPENSSL} != "no"
 DPADD+=	${LIBCRYPTO}

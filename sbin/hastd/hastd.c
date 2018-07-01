@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * Copyright (c) 2010-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/hastd/hastd.c 260006 2013-12-28 19:21:22Z trociny $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -806,12 +807,6 @@ listen_accept(struct hastd_listen *lst)
 		 */
 		version = 1;
 	}
-	if (version > HAST_PROTO_VERSION) {
-		pjdlog_info("Remote protocol version %hhu is not supported, falling back to version %hhu.",
-		    version, (unsigned char)HAST_PROTO_VERSION);
-		version = HAST_PROTO_VERSION;
-	}
-	pjdlog_debug(1, "Negotiated protocol version %hhu.", version);
 	token = nv_get_uint8_array(nvin, &size, "token");
 	/*
 	 * NULL token means that this is first connection.
@@ -925,6 +920,12 @@ listen_accept(struct hastd_listen *lst)
 	 */
 
 	if (token == NULL) {
+		if (version > HAST_PROTO_VERSION) {
+			pjdlog_info("Remote protocol version %hhu is not supported, falling back to version %hhu.",
+			    version, (unsigned char)HAST_PROTO_VERSION);
+			version = HAST_PROTO_VERSION;
+		}
+		pjdlog_debug(1, "Negotiated protocol version %hhu.", version);
 		res->hr_version = version;
 		arc4random_buf(res->hr_token, sizeof(res->hr_token));
 		nvout = nv_alloc();
