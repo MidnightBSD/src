@@ -55207,6 +55207,9 @@ sbin/fdisk/Makefile -text
 sbin/fdisk/fdisk.8 -text
 sbin/fdisk/fdisk.c -text
 sbin/fdisk/runtest.sh -text
+sbin/fdisk_pc98/Makefile svneol=native#text/plain
+sbin/fdisk_pc98/fdisk.8 svneol=native#text/plain
+sbin/fdisk_pc98/fdisk.c svneol=native#text/plain
 sbin/ffsinfo/Makefile -text
 sbin/ffsinfo/ffsinfo.8 -text
 sbin/ffsinfo/ffsinfo.c -text
