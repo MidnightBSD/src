@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 1995, 1996, 1997 Wolfgang Solfrank
  * Copyright (c) 1995 Martin Husemann
@@ -22,11 +23,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *	$NetBSD: ext.h,v 1.6 2000/04/25 23:02:51 jdolecek Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/fsck_msdosfs/ext.h 268784 2014-07-17 02:33:40Z pfg $
  */
 
 #ifndef EXT_H
-#define EXT_H
+#define	EXT_H
 
 #include <sys/types.h>
 
@@ -71,8 +72,8 @@ int checkfilesys(const char *);
 #define	FSFATMOD	4		/* The FAT was modified */
 #define	FSERROR		8		/* Some unrecovered error remains */
 #define	FSFATAL		16		/* Some unrecoverable error occurred */
-#define FSDIRTY		32		/* File system is dirty */
-#define FSFIXFAT	64		/* Fix file system FAT */
+#define	FSDIRTY		32		/* File system is dirty */
+#define	FSFIXFAT	64		/* Fix file system FAT */
 
 /*
  * read a boot block in a machine independent fashion and translate
@@ -133,7 +134,7 @@ void finishlf(void);
 /*
  * Return the type of a reserved cluster as text
  */
-char *rsrvdcltype(cl_t);
+const char *rsrvdcltype(cl_t);
 
 /*
  * Clear a cluster chain in a FAT

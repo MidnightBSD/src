@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 1995, 1997 Wolfgang Solfrank
  * Copyright (c) 1995 Martin Husemann
@@ -26,9 +27,9 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID("$NetBSD: boot.c,v 1.9 2003/07/24 19:25:46 ws Exp $");
+__RCSID("$NetBSD: boot.c,v 1.11 2006/06/05 16:51:18 christos Exp ");
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/fsck_msdosfs/boot.c 300099 2016-05-18 00:33:08Z pfg $";
 #endif /* not lint */
 
 #include <stdlib.h>
@@ -48,8 +49,8 @@ readboot(int dosfs, struct bootblock *boot)
 	int ret = FSOK;
 	int i;
 	
-	if (read(dosfs, block, sizeof block) != sizeof block) {
-		perror("could not read boot block");
+	if ((size_t)read(dosfs, block, sizeof block) != sizeof block) {
+		perr("could not read boot block");
 		return FSFATAL;
 	}
 
@@ -103,7 +104,7 @@ readboot(int dosfs, struct bootblock *boot)
 		if (lseek(dosfs, boot->bpbFSInfo * boot->bpbBytesPerSec,
 		    SEEK_SET) != boot->bpbFSInfo * boot->bpbBytesPerSec
 		    || read(dosfs, fsinfo, sizeof fsinfo) != sizeof fsinfo) {
-			perror("could not read fsinfo block");
+			perr("could not read fsinfo block");
 			return FSFATAL;
 		}
 		if (memcmp(fsinfo, "RRaA", 4)
@@ -131,7 +132,7 @@ readboot(int dosfs, struct bootblock *boot)
 				    != boot->bpbFSInfo * boot->bpbBytesPerSec
 				    || write(dosfs, fsinfo, sizeof fsinfo)
 				    != sizeof fsinfo) {
-					perror("Unable to write bpbFSInfo");
+					perr("Unable to write bpbFSInfo");
 					return FSFATAL;
 				}
 				ret = FSBOOTMOD;
@@ -151,7 +152,7 @@ readboot(int dosfs, struct bootblock *boot)
 		    SEEK_SET)
 		    != boot->bpbBackup * boot->bpbBytesPerSec
 		    || read(dosfs, backup, sizeof backup) != sizeof  backup) {
-			perror("could not read backup bootblock");
+			perr("could not read backup bootblock");
 			return FSFATAL;
 		}
 		backup[65] = block[65];				/* XXX */
@@ -221,7 +222,7 @@ readboot(int dosfs, struct bootblock *boot)
 		break;
 	}
 
-	if (boot->NumFatEntries < boot->NumClusters) {
+	if (boot->NumFatEntries < boot->NumClusters - CLUST_FIRST) {
 		pfatal("FAT size too small, %u entries won't fit into %u sectors\n",
 		       boot->NumClusters, boot->FATsecs);
 		return FSFATAL;
@@ -242,7 +243,7 @@ writefsinfo(int dosfs, struct bootblock *boot)
 	if (lseek(dosfs, boot->bpbFSInfo * boot->bpbBytesPerSec, SEEK_SET)
 	    != boot->bpbFSInfo * boot->bpbBytesPerSec
 	    || read(dosfs, fsinfo, sizeof fsinfo) != sizeof fsinfo) {
-		perror("could not read fsinfo block");
+		perr("could not read fsinfo block");
 		return FSFATAL;
 	}
 	fsinfo[0x1e8] = (u_char)boot->FSFree;
@@ -257,7 +258,7 @@ writefsinfo(int dosfs, struct bootblock *boot)
 	    != boot->bpbFSInfo * boot->bpbBytesPerSec
 	    || write(dosfs, fsinfo, sizeof fsinfo)
 	    != sizeof fsinfo) {
-		perror("Unable to write bpbFSInfo");
+		perr("Unable to write bpbFSInfo");
 		return FSFATAL;
 	}
 	/*
