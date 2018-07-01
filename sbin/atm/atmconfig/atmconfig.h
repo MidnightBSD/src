@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -26,7 +27,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/atm/atmconfig/atmconfig.h 133565 2004-08-12 12:31:43Z harti $
  */
 #ifndef _ATMCONFIG_H
 #define	_ATMCONFIG_H

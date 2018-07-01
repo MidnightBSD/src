@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +28,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/atm/atmconfig/diag.c 228611 2011-12-17 00:26:45Z dim $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -57,7 +58,7 @@ static void diag_phy_print(int, char *[]);
 static void diag_phy_stats(int, char *[]);
 static void diag_stats(int, char *[]);
 
-const struct cmdtab diag_phy_tab[] = {
+static const struct cmdtab diag_phy_tab[] = {
 	{ "show",	NULL, 		diag_phy_show },
 	{ "set",	NULL, 		diag_phy_set },
 	{ "stats",	NULL,		diag_phy_stats },

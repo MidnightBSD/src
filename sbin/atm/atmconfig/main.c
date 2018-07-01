@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +28,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/atm/atmconfig/main.c 270824 2014-08-29 18:26:55Z ngie $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -38,7 +39,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdint.h>
 #include <fnmatch.h>
 #include <dirent.h>
-#ifndef RESCUE
+#ifdef WITH_BSNMP
 #include <bsnmp/asn1.h>
 #include <bsnmp/snmp.h>
 #include <bsnmp/snmpclient.h>
@@ -48,7 +49,7 @@ __MBSDID("$MidnightBSD$");
 #include "private.h"
 
 /* verbosity level */
-int verbose;
+static int verbose;
 
 /* notitle option */
 static int notitle;
@@ -444,7 +445,7 @@ help_func(int argc, char *argv[])
 	exit(1);
 }
 
-#ifndef RESCUE
+#ifdef WITH_BSNMP
 /*
  * Parse a server specification
  *
@@ -527,16 +528,16 @@ main(int argc, char *argv[])
 	int opt, i;
 	const struct cmdtab *match, *cc, *tab;
 
-#ifndef RESCUE
+#ifdef WITH_BSNMP
 	snmp_client_init(&snmp_client);
 	snmp_client.trans = SNMP_TRANS_LOC_STREAM;
 	snmp_client_set_host(&snmp_client, PATH_ILMI_SOCK);
 #endif
 
-#ifdef RESCUE
-#define OPTSTR	"htv"
-#else
+#ifdef WITH_BSNMP
 #define	OPTSTR	"htvs:"
+#else
+#define OPTSTR	"htv"
 #endif
 
 	while ((opt = getopt(argc, argv, OPTSTR)) != -1)
@@ -545,7 +546,7 @@ main(int argc, char *argv[])
 		  case 'h':
 			help_func(0, argv);
 
-#ifndef RESCUE
+#ifdef WITH_BSNMP
 		  case 's':
 			parse_server(optarg);
 			break;
@@ -570,7 +571,7 @@ main(int argc, char *argv[])
 		err(1, NULL);
 	memcpy(main_tab, static_main_tab, sizeof(static_main_tab));
 
-#ifndef RESCUE
+#ifdef WITH_BSNMP
 	/* XXX while this is compiled in */
 	device_register();
 #endif
