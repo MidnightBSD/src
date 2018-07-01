@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -53,7 +54,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)dumpfs.c	8.5 (Berkeley) 4/29/95";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/dumpfs/dumpfs.c 283899 2015-06-02 01:55:54Z ae $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -77,18 +78,18 @@ static const char rcsid[] =
 #define	afs	disk.d_fs
 #define	acg	disk.d_cg
 
-struct uufsd disk;
+static struct uufsd disk;
 
-int	dumpfs(const char *);
-int	dumpfsid(void);
-int	dumpcg(void);
-int	dumpfreespace(const char *, int);
-void	dumpfreespacecg(int);
-int	marshal(const char *);
-void	pbits(void *, int);
-void	pblklist(void *, int, off_t, int);
-void	ufserr(const char *);
-void	usage(void) __dead2;
+static int	dumpfs(const char *);
+static int	dumpfsid(void);
+static int	dumpcg(void);
+static int	dumpfreespace(const char *, int);
+static void	dumpfreespacecg(int);
+static int	marshal(const char *);
+static void	pbits(void *, int);
+static void	pblklist(void *, int, off_t, int);
+static void	ufserr(const char *);
+static void	usage(void) __dead2;
 
 int
 main(int argc, char *argv[])
@@ -143,7 +144,7 @@ main(int argc, char *argv[])
 	exit(eval);
 }
 
-int
+static int
 dumpfsid(void)
 {
 
@@ -151,7 +152,7 @@ dumpfsid(void)
 	return 0;
 }
 
-int
+static int
 dumpfs(const char *name)
 {
 	time_t fstime;
@@ -165,7 +166,7 @@ dumpfs(const char *name)
 		fstime = afs.fs_time;
 		printf("magic\t%x (UFS2)\ttime\t%s",
 		    afs.fs_magic, ctime(&fstime));
-		printf("superblock location\t%jd\tid\t[ %x %x ]\n",
+		printf("superblock location\t%jd\tid\t[ %08x %08x ]\n",
 		    (intmax_t)afs.fs_sblockloc, afs.fs_id[0], afs.fs_id[1]);
 		printf("ncg\t%d\tsize\t%jd\tblocks\t%jd\n",
 		    afs.fs_ncg, (intmax_t)fssize, (intmax_t)afs.fs_dsize);
@@ -310,7 +311,7 @@ err:	ufserr(name);
 	return (1);
 }
 
-int
+static int
 dumpcg(void)
 {
 	time_t cgtime;
@@ -371,7 +372,7 @@ dumpcg(void)
 	return (0);
 }
 
-int
+static int
 dumpfreespace(const char *name, int fflag)
 {
 	int i;
@@ -387,7 +388,7 @@ err:
 	return (1);
 }
 
-void
+static void
 dumpfreespacecg(int fflag)
 {
 
@@ -395,7 +396,7 @@ dumpfreespacecg(int fflag)
 	    fflag);
 }
 
-int
+static int
 marshal(const char *name)
 {
 	struct fs *fs;
@@ -450,7 +451,7 @@ marshal(const char *name)
 	return 0;
 }
 
-void
+static void
 pbits(void *vp, int max)
 {
 	int i;
@@ -472,7 +473,7 @@ pbits(void *vp, int max)
 	printf("\n");
 }
 
-void
+static void
 pblklist(void *vp, int max, off_t offset, int fflag)
 {
 	int i, j;
@@ -493,7 +494,7 @@ pblklist(void *vp, int max, off_t offset, int fflag)
 	}
 }
 
-void
+static void
 ufserr(const char *name)
 {
 	if (disk.d_error != NULL)
@@ -502,7 +503,7 @@ ufserr(const char *name)
 		warn("%s", name);
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: dumpfs [-flm] filesys | device\n");

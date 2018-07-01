@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)dumpfs.8	8.1 (Berkeley) 6/5/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/dumpfs/dumpfs.8 293693 2016-01-11 20:11:41Z trasz $
 .\"
 .Dd May 16, 2013
 .Dt DUMPFS 8
@@ -98,10 +99,9 @@ The
 flag is needed if the filesystem uses
 .Xr gjournal 8 .
 .Sh SEE ALSO
-.Xr disktab 5 ,
 .Xr fs 5 ,
-.Xr disklabel 8 ,
 .Xr fsck 8 ,
+.Xr gpart 8 ,
 .Xr newfs 8 ,
 .Xr tunefs 8
 .Sh HISTORY
