@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)clri.8	8.2 (Berkeley) 4/19/94
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/clri/clri.8 307430 2016-10-16 23:32:35Z sevan $
 .\"
-.Dd April 19, 1994
+.Dd October 5, 2016
 .Dt CLRI 8
 .Os
 .Sh NAME
@@ -70,6 +71,11 @@ will be able to clean up the resulting mess.
 .Sh SEE ALSO
 .Xr fsck 8 ,
 .Xr fsdb 8
+.Sh HISTORY
+The
+.Nm
+utility first appeared in
+.At v6 .
 .Sh BUGS
 If the file is open, the work of
 .Nm
