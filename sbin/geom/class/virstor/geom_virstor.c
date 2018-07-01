@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Ivan Voras <ivoras@freebsd.org>
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/virstor/geom_virstor.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -183,6 +184,7 @@ my_g_metadata_store(const char *name, u_char *md, size_t size)
 		goto out;
 	}
 	bcopy(md, sector, size);
+	bzero(sector + size, sectorsize - size);
 	if (pwrite(fd, sector, sectorsize, mediasize - sectorsize) !=
 	    (ssize_t)sectorsize) {
 		error = errno;

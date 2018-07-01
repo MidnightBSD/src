@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/journal/geom_journal.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <sys/types.h>
 #include <errno.h>
@@ -142,6 +143,7 @@ journal_label(struct gctl_req *req)
 	intmax_t jsize, msize, ssize;
 	int error, force, i, nargs, checksum, hardcode;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	str = NULL;	/* gcc */
 

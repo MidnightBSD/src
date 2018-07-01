@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/geom/class/shsec/gshsec.8 307403 2016-10-16 22:02:50Z sevan $
 .\"
-.Dd January 8, 2005
+.Dd October 1, 2013
 .Dt GSHSEC 8
 .Os
 .Sh NAME
@@ -108,7 +109,7 @@ Exit status is 0 on success, and 1 if the command fails.
 The following example shows how to create a shared secret device.
 The secret will be split between a slice on a local disk and a USB Pen drive.
 .Bd -literal -offset indent
-gshsec label -v secret /dev/ad0s1 /dev/da0
+gshsec label -v secret /dev/ada0s1 /dev/da0
 newfs /dev/shsec/secret
 .Ed
 .Pp
@@ -127,4 +128,4 @@ The
 utility appeared in
 .Fx 5.4 .
 .Sh AUTHORS
-.An Pawel Jakub Dawidek Aq pjd@FreeBSD.org
+.An Pawel Jakub Dawidek Aq Mt pjd@FreeBSD.org

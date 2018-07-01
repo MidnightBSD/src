@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/geom/class/stripe/gstripe.8 307403 2016-10-16 22:02:50Z sevan $
 .\"
 .Dd May 21, 2004
 .Dt GSTRIPE 8
@@ -213,8 +214,6 @@ The
 interleave is in number of bytes,
 unlike
 .Xr ccdconfig 8
-and
-.Xr atacontrol 8
 which use the number of sectors.
 A
 .Xr ccdconfig 8
@@ -229,18 +228,17 @@ for
 .Sh SEE ALSO
 .Xr geom 4 ,
 .Xr loader.conf 5 ,
-.Xr atacontrol 8 ,
 .Xr ccdconfig 8 ,
 .Xr geom 8 ,
+.Xr gvinum 8 ,
 .Xr mount 8 ,
 .Xr newfs 8 ,
 .Xr sysctl 8 ,
-.Xr umount 8 ,
-.Xr vinum 8
+.Xr umount 8
 .Sh HISTORY
 The
 .Nm
 utility appeared in
 .Fx 5.3 .
 .Sh AUTHORS
-.An Pawel Jakub Dawidek Aq pjd@FreeBSD.org
+.An Pawel Jakub Dawidek Aq Mt pjd@FreeBSD.org

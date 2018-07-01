@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Fabio Checconi
  * Copyright (c) 2010 Luigi Rizzo, Universita` di Pisa
@@ -26,8 +27,8 @@
  */
 
 /*
- * $Id: geom_sched.c,v 1.1 2012-11-04 01:55:18 laffer1 Exp $
- * $MidnightBSD$
+ * $Id$
+ * $FreeBSD: stable/10/sbin/geom/class/sched/geom_sched.c 212554 2010-09-13 13:48:18Z pjd $
  *
  * This file implements the userspace library used by the 'geom'
  * command to load and manipulate disk schedulers.

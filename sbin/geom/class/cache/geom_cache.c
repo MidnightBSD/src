@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Ruslan Ermilov <ru@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/cache/geom_cache.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <errno.h>
 #include <stdio.h>
@@ -135,6 +136,7 @@ cache_label(struct gctl_req *req)
 	int error, nargs;
 	intmax_t val;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 2) {
 		gctl_error(req, "Invalid number of arguments.");

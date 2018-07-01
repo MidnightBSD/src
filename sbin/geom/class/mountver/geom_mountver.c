@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Edward Tomasz Napierala <trasz@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/mountver/geom_mountver.c 212554 2010-09-13 13:48:18Z pjd $");
 
 #include <stdio.h>
 #include <stdint.h>

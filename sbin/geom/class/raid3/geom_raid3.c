@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/raid3/geom_raid3.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -149,6 +150,7 @@ raid3_label(struct gctl_req *req)
 	int hardcode, round_robin, verify;
 	int error, i, nargs;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs < 4) {
 		gctl_error(req, "Too few arguments.");

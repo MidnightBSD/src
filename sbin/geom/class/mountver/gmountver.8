@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2010 Edward Tomasz Napierala
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/geom/class/mountver/gmountver.8 307403 2016-10-16 22:02:50Z sevan $
 .\"
-.Dd January 14, 2010
+.Dd January 27, 2015
 .Dt GMOUNTVER 8
 .Os
 .Sh NAME
@@ -110,7 +111,7 @@ GEOM class.
 This can be set to a number between 0 and 3 inclusive.
 If set to 0 minimal debug information is printed, and if set to 3 the
 maximum amount of debug information is printed.
-.It Va kern.geom.mountver.check.check_ident : No 1
+.It Va kern.geom.mountver.check_ident : No 1
 This can be set to 0 or 1.
 If set to 0,
 .Nm
@@ -127,4 +128,4 @@ The
 utility appeared in
 .Fx 9.0 .
 .Sh AUTHORS
-.An Edward Tomasz Napierala Aq trasz@FreeBSD.org
+.An Edward Tomasz Napierala Aq Mt trasz@FreeBSD.org

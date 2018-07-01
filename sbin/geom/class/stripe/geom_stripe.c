@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/stripe/geom_stripe.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -128,6 +129,7 @@ stripe_label(struct gctl_req *req)
 	const char *name;
 	int error, i, nargs, hardcode;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs < 3) {
 		gctl_error(req, "Too few arguments.");

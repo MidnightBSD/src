@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Mathew Jacob <mjacob@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/class/multipath/geom_multipath.c 292395 2015-12-17 06:31:55Z ngie $");
 #include <sys/param.h>
 #include <errno.h>
 #include <paths.h>
@@ -151,7 +152,8 @@ mp_label(struct gctl_req *req)
 	uint8_t *sector, *rsector;
 	char *ptr;
 	uuid_t uuid;
-	uint32_t secsize = 0, ssize, status;
+	ssize_t secsize = 0, ssize;
+	uint32_t status;
 	const char *name, *name2, *mpname;
 	int error, i, nargs, fd;
 
@@ -179,8 +181,8 @@ mp_label(struct gctl_req *req)
 			disksize = msize;
 		} else {
 			if (secsize != ssize) {
-				gctl_error(req, "%s sector size %u different.",
-				    name, ssize);
+				gctl_error(req, "%s sector size %ju different.",
+				    name, (intmax_t)ssize);
 				return;
 			}
 			if (disksize != msize) {
@@ -220,17 +222,15 @@ mp_label(struct gctl_req *req)
 	/*
 	 * Allocate a sector to write as metadata.
 	 */
-	sector = malloc(secsize);
+	sector = calloc(1, secsize);
 	if (sector == NULL) {
 		gctl_error(req, "unable to allocate metadata buffer");
 		return;
 	}
-	memset(sector, 0, secsize);
 	rsector = malloc(secsize);
 	if (rsector == NULL) {
-		free(sector);
 		gctl_error(req, "unable to allocate metadata buffer");
-		return;
+		goto done;
 	}
 
 	/*
@@ -245,7 +245,7 @@ mp_label(struct gctl_req *req)
 	error = g_metadata_store(name, sector, secsize);
 	if (error != 0) {
 		gctl_error(req, "cannot store metadata on %s: %s.", name, strerror(error));
-		return;
+		goto done;
 	}
 
 	/*
@@ -273,6 +273,9 @@ mp_label(struct gctl_req *req)
 			    name2, name);
 		}
 	}
+done:
+	free(rsector);
+	free(sector);
 }
 
 
