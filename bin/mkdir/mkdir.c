@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -26,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/mkdir/mkdir.c,v 1.32 2005/02/09 17:37:38 ru Exp $ */
 
 #if 0
 #ifndef lint
@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)mkdir.c	8.2 (Berkeley) 1/25/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/mkdir/mkdir.c 249996 2013-04-27 21:59:43Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

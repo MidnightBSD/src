@@ -304,6 +304,8 @@ bin/mined/mined2.c -text
 bin/mkdir/Makefile -text
 bin/mkdir/mkdir.1 -text
 bin/mkdir/mkdir.c -text
+bin/mkdir/tests/Makefile svneol=native#text/plain
+bin/mkdir/tests/mkdir_test.sh svneol=native#text/plain
 bin/mksh/Makefile -text
 bin/mv/Makefile -text
 bin/mv/mv.1 -text

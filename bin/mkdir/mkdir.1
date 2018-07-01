@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1989, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,10 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mkdir.1	8.2 (Berkeley) 1/25/94
-.\" $FreeBSD: src/bin/mkdir/mkdir.1,v 1.21 2005/01/16 16:41:57 ru Exp $
-.\" $MidnightBSD: src/bin/mkdir/mkdir.1,v 1.2 2006/07/19 13:55:36 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/mkdir/mkdir.1 248342 2013-03-15 20:12:54Z joel $
 .\"
-.Dd January 25, 1994
+.Dd March 15, 2013
 .Dt MKDIR 1
 .Os
 .Sh NAME
@@ -88,6 +88,23 @@ Be verbose when creating directories, listing them as they are created.
 The user must have write permission in the parent directory.
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+Create a directory named
+.Pa foobar :
+.Pp
+.Dl $ mkdir foobar
+.Pp
+Create a directory named
+.Pa foobar
+and set its file mode to 700:
+.Pp
+.Dl $ mkdir -m 700 foobar
+.Pp
+Create a directory named
+.Pa cow/horse/monkey ,
+creating any non-existent intermediate directories as necessary:
+.Pp
+.Dl $ mkdir -p cow/horse/monkey
 .Sh COMPATIBILITY
 The
 .Fl v
