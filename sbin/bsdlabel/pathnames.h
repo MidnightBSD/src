@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/bsdlabel/pathnames.h 128073 2004-04-09 19:58:40Z markm $
  */
 
 #include <paths.h>

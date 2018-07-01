@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994, 1995 Gordon W. Ross
  * Copyright (c) 1994 Theo de Raadt
@@ -53,7 +54,7 @@ static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 1/7/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/bsdlabel/bsdlabel.c 234122 2012-04-11 06:35:13Z ae $");
 
 #include <sys/param.h>
 #include <stdint.h>
@@ -130,7 +131,7 @@ static int labelsoffset = LABELSECTOR;
 static int labeloffset = LABELOFFSET;
 static int bbsize = BBSIZE;
 
-enum	{
+static enum {
 	UNSPEC, EDIT, READ, RESTORE, WRITE, WRITEBOOT
 } op = UNSPEC;
 
@@ -189,8 +190,8 @@ main(int argc, char *argv[])
 				break;
 			case 'r':
 				/*
-				 * We accept and ignode -r for compatibility with
-				 * historically disklabel usage.
+				 * We accept and ignore -r for compatibility with
+				 * historical disklabel usage.
 				 */
 				break;
 			case 'w':
@@ -386,7 +387,7 @@ writelabel(void)
 	struct disklabel *lp = &lab;
 
 	if (disable_write) {
-		warnx("write to disk label supressed - label was as follows:");
+		warnx("write to disk label suppressed - label was as follows:");
 		display(stdout, NULL);
 		return (0);
 	}
@@ -400,7 +401,7 @@ writelabel(void)
 	for (i = 0; i < lab.d_npartitions; i++)
 		if (lab.d_partitions[i].p_size)
 			lab.d_partitions[i].p_offset += lba_offset;
-	bsd_disklabel_le_enc(bootarea + labeloffset + labelsoffset * secsize,
+	bsd_disklabel_le_enc(bootarea + labeloffset + labelsoffset * lab.d_secsize,
 	    lp);
 
 	fd = open(specname, O_RDWR);
@@ -434,7 +435,7 @@ writelabel(void)
 		gctl_ro_param(grq, "class", -1, "BSD");
 		gctl_ro_param(grq, "geom", -1, pname);
 		gctl_ro_param(grq, "label", 148+16*8,
-			bootarea + labeloffset + labelsoffset * secsize);
+			bootarea + labeloffset + labelsoffset * lab.d_secsize);
 		errstr = gctl_issue(grq);
 		if (errstr != NULL) {
 			warnx("%s", errstr);
@@ -782,12 +783,12 @@ getasciilabel(FILE *f, struct disklabel *lp)
 	lp->d_sbsize = 0;				/* XXX */
 	while (fgets(line, sizeof(line) - 1, f)) {
 		lineno++;
-		if ((cp = index(line,'\n')) != 0)
+		if ((cp = strchr(line,'\n')) != 0)
 			*cp = '\0';
 		cp = skip(line);
 		if (cp == NULL)
 			continue;
-		tp = index(cp, ':');
+		tp = strchr(cp, ':');
 		if (tp == NULL) {
 			fprintf(stderr, "line %d: syntax error\n", lineno);
 			errors++;
@@ -1513,8 +1514,8 @@ getvirginlabel(void)
 	loclab.d_secperunit = mediasize / secsize;
 
 	/*
-	 * Nobody in these enligthened days uses the CHS geometry for
-	 * anything, but nontheless try to get it right.  If we fail
+	 * Nobody in these enlightened days uses the CHS geometry for
+	 * anything, but nonetheless try to get it right.  If we fail
 	 * to get any good ideas from the device, construct something
 	 * which is IBM-PC friendly.
 	 */
