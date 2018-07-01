@@ -1,4 +1,5 @@
-#	$FreeBSD: src/sbin/ipf/ipnat/Makefile,v 1.3 2006/09/10 08:58:47 obrien Exp $
+# $MidnightBSD$
+#	$FreeBSD: stable/10/sbin/ipf/ipnat/Makefile 291814 2015-12-04 18:50:12Z bdrewery $
 
 PROG=		ipnat
 SRCS=		${GENHDRS} ipnat.c ipnat_y.c ipnat_l.c
@@ -7,8 +8,6 @@ MLINKS=		ipnat.5 ipnat.conf.5
 CFLAGS+=	-I.
 
 GENHDRS=	ipnat_l.h ipnat_y.h
-DPSRCS+=	${GENHDRS}
-
 CLEANFILES+=	${GENHDRS} ipnat_y.c ipnat_l.c
 
 ipnat_y.c: ipnat_y.y

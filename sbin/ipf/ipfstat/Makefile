@@ -1,4 +1,5 @@
-#	$FreeBSD: src/sbin/ipf/ipfstat/Makefile,v 1.1 2005/04/25 18:55:50 darrenr Exp $
+# $MidnightBSD$
+#	$FreeBSD: stable/10/sbin/ipf/ipfstat/Makefile 145524 2005-04-25 18:55:52Z darrenr $
 
 NOGCCERROR=	# defined
 

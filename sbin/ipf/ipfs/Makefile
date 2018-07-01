@@ -1,4 +1,5 @@
-#	$FreeBSD: src/sbin/ipf/ipfs/Makefile,v 1.1 2005/04/25 18:55:50 darrenr Exp $
+# $MidnightBSD$
+#	$FreeBSD: stable/10/sbin/ipf/ipfs/Makefile 145524 2005-04-25 18:55:52Z darrenr $
 
 PROG=	ipfs
 MAN=	ipfs.8
