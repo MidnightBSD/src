@@ -1,5 +1,6 @@
-#	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
 # $MidnightBSD$
+#	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
+# $FreeBSD: stable/10/sbin/ifconfig/Makefile 286810 2015-08-15 17:52:55Z melifaro $
 
 .include <bsd.own.mk>
 
@@ -31,16 +32,23 @@ SRCS+=	ifmac.c			# MAC support
 SRCS+=	ifmedia.c		# SIOC[GS]IFMEDIA support
 SRCS+=	iffib.c			# non-default FIB support
 SRCS+=	ifvlan.c		# SIOC[GS]ETVLAN support
+SRCS+=	ifvxlan.c		# VXLAN support
 SRCS+=	ifgre.c			# GRE keys etc
 SRCS+=	ifgif.c			# GIF reversed header workaround
 
-SRCS+=	ifieee80211.c regdomain.c # SIOC[GS]IEEE80211 support
-DPADD+=	${LIBBSDXML} ${LIBJAIL} ${LIBSBUF}
-LDADD+=	-lbsdxml -ljail -lsbuf
+SRCS+=	sfp.c			# SFP/SFP+ information
+DPADD+=	${LIBM}
+LDADD+=	-lm
 
-SRCS+=	ifcarp.c		# SIOC[GS]VH support
+SRCS+=	ifieee80211.c regdomain.c # SIOC[GS]IEEE80211 support
+DPADD+=	${LIBBSDXML} ${LIBSBUF}
+LDADD+=	-lbsdxml -lsbuf
+
+SRCS+=	carp.c			# SIOC[GS]VH support
 SRCS+=	ifgroup.c		# ...
+.if ${MK_PF} != "no"
 SRCS+=	ifpfsync.c		# pfsync(4) support
+.endif
 
 SRCS+=	ifbridge.c		# bridge support
 SRCS+=	iflagg.c		# lagg support
@@ -55,6 +63,11 @@ CFLAGS+= -DINET
 SRCS+=	af_ipx.c		# IPX support
 DPADD+=	${LIBIPX}
 LDADD+=	-lipx
+.endif
+.if ${MK_JAIL} != "no" && !defined(RELEASE_CRUNCH) && !defined(RESCUE)
+CFLAGS+= -DJAIL
+DPADD+= ${LIBJAIL}
+LDADD+= -ljail
 .endif
 
 MAN=	ifconfig.8

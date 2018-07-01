@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997 Peter Wemm.
  * All rights reserved.
@@ -31,7 +32,7 @@
  *
  * so there!
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ifconfig/ifconfig.h 296425 2016-03-06 08:52:03Z kp $
  */
 
 #define	__constructor	__attribute__((constructor))
@@ -74,6 +75,7 @@ void	callback_register(callback_func *, void *);
 #define	DEF_CMD_ARG2(name, func)	{ name, NEXTARG2, { .c_func2 = func }, 0, NULL }
 #define	DEF_CLONE_CMD(name, param, func) { name, param, { .c_func = func }, 1, NULL }
 #define	DEF_CLONE_CMD_ARG(name, func)	{ name, NEXTARG, { .c_func = func }, 1, NULL }
+#define	DEF_CLONE_CMD_ARG2(name, func)	{ name, NEXTARG2, { .c_func2 = func }, 1, NULL }
 
 struct ifaddrs;
 struct addrinfo;
@@ -132,6 +134,7 @@ extern	int supmedia;
 extern	int printkeys;
 extern	int newaddr;
 extern	int verbose;
+extern	int printifname;
 
 void	setifcap(const char *, int value, int s, const struct afswtch *);
 
@@ -143,8 +146,13 @@ void	ifmaybeload(const char *name);
 typedef void clone_callback_func(int, struct ifreq *);
 void	clone_setdefcallback(const char *, clone_callback_func *);
 
+void	sfp_status(int s, struct ifreq *ifr, int verbose);
+
 /*
  * XXX expose this so modules that neeed to know of any pending
  * operations on ifmedia can avoid cmd line ordering confusion.
  */
 struct ifmediareq *ifmedia_getstate(int s);
+
+void print_vhid(const struct ifaddrs *, const char *);
+

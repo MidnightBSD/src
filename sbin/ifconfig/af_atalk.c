@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,10 +30,10 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/af_atalk.c 289986 2015-10-26 03:43:28Z ngie $";
 #endif /* not lint */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -172,11 +173,9 @@ static struct afswtch af_atalk = {
 static __constructor void
 atalk_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	size_t i;
 
-	for (i = 0; i < N(atalk_cmds);  i++)
+	for (i = 0; i < nitems(atalk_cmds);  i++)
 		cmd_register(&atalk_cmds[i]);
 	af_register(&af_atalk);
-#undef N
 }

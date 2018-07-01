@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,10 +30,10 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/af_inet.c 300285 2016-05-20 07:14:03Z truckman $";
 #endif /* not lint */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -84,8 +85,11 @@ in_status(int s __unused, const struct ifaddrs *ifa)
 	if (ifa->ifa_flags & IFF_BROADCAST) {
 		sin = (struct sockaddr_in *)ifa->ifa_broadaddr;
 		if (sin != NULL && sin->sin_addr.s_addr != 0)
-			printf("broadcast %s", inet_ntoa(sin->sin_addr));
+			printf("broadcast %s ", inet_ntoa(sin->sin_addr));
 	}
+
+	print_vhid(ifa, " ");
+
 	putchar('\n');
 }
 
@@ -98,14 +102,12 @@ static struct sockaddr_in *sintab[] = {
 static void
 in_getaddr(const char *s, int which)
 {
-#define	MIN(a,b)	((a)<(b)?(a):(b))
 	struct sockaddr_in *sin = sintab[which];
 	struct hostent *hp;
 	struct netent *np;
 
 	sin->sin_len = sizeof(*sin);
-	if (which != MASK)
-		sin->sin_family = AF_INET;
+	sin->sin_family = AF_INET;
 
 	if (which == ADDR) {
 		char *p = NULL;
@@ -124,6 +126,7 @@ in_getaddr(const char *s, int which)
 				*p = '/';
 				errx(1, "%s: bad value (width %s)", s, errstr);
 			}
+			min->sin_family = AF_INET;
 			min->sin_len = sizeof(*min);
 			min->sin_addr.s_addr = htonl(~((1LL << (32 - masklen)) - 1) & 
 				              0xffffffff);
@@ -139,7 +142,6 @@ in_getaddr(const char *s, int which)
 		sin->sin_addr = inet_makeaddr(np->n_net, INADDR_ANY);
 	else
 		errx(1, "%s: bad value", s);
-#undef MIN
 }
 
 static void
@@ -151,7 +153,7 @@ in_status_tunnel(int s)
 	const struct sockaddr *sa = (const struct sockaddr *) &ifr.ifr_addr;
 
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, name, IFNAMSIZ);
+	strlcpy(ifr.ifr_name, name, IFNAMSIZ);
 
 	if (ioctl(s, SIOCGIFPSRCADDR, (caddr_t)&ifr) < 0)
 		return;
@@ -176,7 +178,7 @@ in_set_tunnel(int s, struct addrinfo *srcres, struct addrinfo *dstres)
 	struct in_aliasreq addreq;
 
 	memset(&addreq, 0, sizeof(addreq));
-	strncpy(addreq.ifra_name, name, IFNAMSIZ);
+	strlcpy(addreq.ifra_name, name, IFNAMSIZ);
 	memcpy(&addreq.ifra_addr, srcres->ai_addr, srcres->ai_addr->sa_len);
 	memcpy(&addreq.ifra_dstaddr, dstres->ai_addr, dstres->ai_addr->sa_len);
 

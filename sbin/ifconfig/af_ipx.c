@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/af_ipx.c 170679 2007-06-13 18:07:59Z rwatson $";
 #endif /* not lint */
 
 #include <sys/types.h>

@@ -55394,6 +55394,7 @@ sbin/ifconfig/af_inet6.c -text
 sbin/ifconfig/af_ipx.c -text
 sbin/ifconfig/af_link.c -text
 sbin/ifconfig/af_nd6.c -text
+sbin/ifconfig/carp.c svneol=native#text/plain
 sbin/ifconfig/ifbridge.c -text
 sbin/ifconfig/ifcarp.c -text
 sbin/ifconfig/ifclone.c -text
@@ -55410,8 +55411,10 @@ sbin/ifconfig/ifmac.c -text
 sbin/ifconfig/ifmedia.c -text
 sbin/ifconfig/ifpfsync.c -text
 sbin/ifconfig/ifvlan.c -text
+sbin/ifconfig/ifvxlan.c svneol=native#text/plain
 sbin/ifconfig/regdomain.c -text
 sbin/ifconfig/regdomain.h -text
+sbin/ifconfig/sfp.c svneol=native#text/plain
 sbin/init/Makefile -text
 sbin/init/NOTES -text
 sbin/init/init.8 -text

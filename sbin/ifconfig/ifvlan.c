@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -56,7 +57,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/ifvlan.c 289986 2015-10-26 03:43:28Z ngie $";
 #endif
 
 #define	NOTAG	((u_short) -1)
@@ -195,13 +196,11 @@ static struct afswtch af_vlan = {
 static __constructor void
 vlan_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	size_t i;
 
-	for (i = 0; i < N(vlan_cmds);  i++)
+	for (i = 0; i < nitems(vlan_cmds);  i++)
 		cmd_register(&vlan_cmds[i]);
 	af_register(&af_vlan);
 	callback_register(vlan_cb, NULL);
 	clone_setdefcallback("vlan", vlan_create);
-#undef N
 }

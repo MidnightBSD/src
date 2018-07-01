@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Hiroki Sato.  All rights reserved.
  *
@@ -25,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/af_nd6.c 319264 2017-05-30 22:44:05Z asomers $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -58,7 +59,7 @@ static const char rcsid[] =
 #define	MAX_SYSCTL_TRY	5
 #define	ND6BITS	"\020\001PERFORMNUD\002ACCEPT_RTADV\003PREFER_SOURCE" \
 		"\004IFDISABLED\005DONT_SET_IFROUTE\006AUTO_LINKLOCAL" \
-		"\007NO_RADR\010NO_PREFER_IFACE\020DEFAULTIF"
+		"\007NO_RADR\010NO_PREFER_IFACE\011NO_DAD\020DEFAULTIF"
 
 static int isnd6defif(int);
 void setnd6flags(const char *, int, int, const struct afswtch *);
@@ -74,7 +75,7 @@ setnd6flags(const char *dummyaddr __unused,
 	int error;
 
 	memset(&nd, 0, sizeof(nd));
-	strncpy(nd.ifname, ifr.ifr_name, sizeof(nd.ifname));
+	strlcpy(nd.ifname, ifr.ifr_name, sizeof(nd.ifname));
 	error = ioctl(s, SIOCGIFINFO_IN6, &nd);
 	if (error) {
 		warn("ioctl(SIOCGIFINFO_IN6)");
@@ -99,7 +100,7 @@ setnd6defif(const char *dummyaddr __unused,
 	int error;
 
 	memset(&ndifreq, 0, sizeof(ndifreq));
-	strncpy(ndifreq.ifname, ifr.ifr_name, sizeof(ndifreq.ifname));
+	strlcpy(ndifreq.ifname, ifr.ifr_name, sizeof(ndifreq.ifname));
 
 	if (d < 0) {
 		if (isnd6defif(s)) {
@@ -126,7 +127,7 @@ isnd6defif(int s)
 	int error;
 
 	memset(&ndifreq, 0, sizeof(ndifreq));
-	strncpy(ndifreq.ifname, ifr.ifr_name, sizeof(ndifreq.ifname));
+	strlcpy(ndifreq.ifname, ifr.ifr_name, sizeof(ndifreq.ifname));
 
 	ifindex = if_nametoindex(ndifreq.ifname);
 	error = ioctl(s, SIOCGDEFIFACE_IN6, (caddr_t)&ndifreq);
@@ -146,9 +147,9 @@ nd6_status(int s)
 	int isdefif;
 
 	memset(&nd, 0, sizeof(nd));
-	strncpy(nd.ifname, ifr.ifr_name, sizeof(nd.ifname));
+	strlcpy(nd.ifname, ifr.ifr_name, sizeof(nd.ifname));
 	if ((s6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-		if (errno != EPROTONOSUPPORT)
+		if (errno != EAFNOSUPPORT && errno != EPROTONOSUPPORT)
 			warn("socket(AF_INET6, SOCK_DGRAM)");
 		return;
 	}

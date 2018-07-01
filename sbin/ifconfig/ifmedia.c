@@ -1,5 +1,6 @@
-/*	$NetBSD: ifconfig.c,v 1.34 1997/04/21 01:17:58 lukem Exp $	*/
 /* $MidnightBSD$ */
+/*	$NetBSD: ifconfig.c,v 1.34 1997/04/21 01:17:58 lukem Exp $	*/
+/* $FreeBSD: stable/10/sbin/ifconfig/ifmedia.c 300285 2016-05-20 07:14:03Z truckman $ */
 
 /*
  * Copyright (c) 1997 Jason R. Thorpe.
@@ -109,11 +110,17 @@ media_status(int s)
 {
 	struct ifmediareq ifmr;
 	int *media_list, i;
+	int xmedia = 1;
 
 	(void) memset(&ifmr, 0, sizeof(ifmr));
-	(void) strncpy(ifmr.ifm_name, name, sizeof(ifmr.ifm_name));
+	(void) strlcpy(ifmr.ifm_name, name, sizeof(ifmr.ifm_name));
 
-	if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
+	/*
+	 * Check if interface supports extended media types.
+	 */
+	if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)&ifmr) < 0)
+		xmedia = 0;
+	if (xmedia == 0 && ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
 		/*
 		 * Interface doesn't support SIOC{G,S}IFMEDIA.
 		 */
@@ -130,8 +137,13 @@ media_status(int s)
 		err(1, "malloc");
 	ifmr.ifm_ulist = media_list;
 
-	if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0)
-		err(1, "SIOCGIFMEDIA");
+	if (xmedia) {
+		if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)&ifmr) < 0)
+			err(1, "SIOCGIFXMEDIA");
+	} else {
+		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0)
+			err(1, "SIOCGIFMEDIA");
+	}
 
 	printf("\tmedia: ");
 	print_media_word(ifmr.ifm_current, 1);
@@ -194,6 +206,7 @@ ifmedia_getstate(int s)
 {
 	static struct ifmediareq *ifmr = NULL;
 	int *mwords;
+	int xmedia = 1;
 
 	if (ifmr == NULL) {
 		ifmr = (struct ifmediareq *)malloc(sizeof(struct ifmediareq));
@@ -201,7 +214,7 @@ ifmedia_getstate(int s)
 			err(1, "malloc");
 
 		(void) memset(ifmr, 0, sizeof(struct ifmediareq));
-		(void) strncpy(ifmr->ifm_name, name,
+		(void) strlcpy(ifmr->ifm_name, name,
 		    sizeof(ifmr->ifm_name));
 
 		ifmr->ifm_count = 0;
@@ -213,7 +226,10 @@ ifmedia_getstate(int s)
 		 * the current media type and the top-level type.
 		 */
 
-		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0) {
+		if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)ifmr) < 0) {
+			xmedia = 0;
+		}
+		if (xmedia == 0 && ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0) {
 			err(1, "SIOCGIFMEDIA");
 		}
 
@@ -225,8 +241,13 @@ ifmedia_getstate(int s)
 			err(1, "malloc");
   
 		ifmr->ifm_ulist = mwords;
-		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0)
-			err(1, "SIOCGIFMEDIA");
+		if (xmedia) {
+			if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)ifmr) < 0)
+				err(1, "SIOCGIFXMEDIA");
+		} else {
+			if (ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0)
+				err(1, "SIOCGIFMEDIA");
+		}
 	}
 
 	return ifmr;
@@ -267,7 +288,7 @@ setmedia(const char *val, int d, int s, const struct afswtch *afp)
 	 */
 	subtype = get_media_subtype(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = (ifmr->ifm_current & IFM_IMASK) |
 	    IFM_TYPE(ifmr->ifm_ulist[0]) | subtype;
 
@@ -299,7 +320,7 @@ domediaopt(const char *val, int clear, int s)
 
 	options = get_media_options(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = ifmr->ifm_current;
 	if (clear)
 		ifr.ifr_media &= ~options;
@@ -326,7 +347,7 @@ setmediainst(const char *val, int d, int s, const struct afswtch *afp)
 	if (inst < 0 || inst > (int)IFM_INST_MAX)
 		errx(1, "invalid media instance: %s", val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = (ifmr->ifm_current & ~IFM_IMASK) | inst << IFM_ISHIFT;
 
 	ifmr->ifm_current = ifr.ifr_media;
@@ -343,7 +364,7 @@ setmediamode(const char *val, int d, int s, const struct afswtch *afp)
 
 	mode = get_media_mode(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = (ifmr->ifm_current & ~IFM_MMASK) | mode;
 
 	ifmr->ifm_current = ifr.ifr_media;
@@ -825,11 +846,9 @@ static struct afswtch af_media = {
 static __constructor void
 ifmedia_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	size_t i;
 
-	for (i = 0; i < N(media_cmds);  i++)
+	for (i = 0; i < nitems(media_cmds);  i++)
 		cmd_register(&media_cmds[i]);
 	af_register(&af_media);
-#undef N
 }

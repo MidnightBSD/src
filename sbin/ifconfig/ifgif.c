@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Hiroki Sato.  All rights reserved.
  *
@@ -25,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/ifgif.c 288055 2015-09-21 03:03:57Z hrs $";
 #endif
 
 #include <sys/param.h>
@@ -51,7 +52,7 @@ static const char rcsid[] =
 
 #include "ifconfig.h"
 
-#define	GIFBITS	"\020\1ACCEPT_REV_ETHIP_VER\5SEND_REV_ETHIP_VER"
+#define	GIFBITS	"\020\2IGNORE_SOURCE"
 
 static void	gif_status(int);
 
@@ -70,11 +71,12 @@ gif_status(int s)
 }
 
 static void
-setgifopts(const char *val,
-	int d, int s, const struct afswtch *afp)
+setgifopts(const char *val, int d, int s, const struct afswtch *afp)
 {
 	int opts;
 
+	if (d == 0)
+		return;
 	ifr.ifr_data = (caddr_t)&opts;
 	if (ioctl(s, GIFGOPTS, &ifr) == -1) {
 		warn("ioctl(GIFGOPTS)");
@@ -93,10 +95,12 @@ setgifopts(const char *val,
 }
 
 static struct cmd gif_cmds[] = {
-	DEF_CMD("accept_rev_ethip_ver",	GIF_ACCEPT_REVETHIP,	setgifopts),
-	DEF_CMD("-accept_rev_ethip_ver",-GIF_ACCEPT_REVETHIP,	setgifopts),
-	DEF_CMD("send_rev_ethip_ver",	GIF_SEND_REVETHIP,	setgifopts),
-	DEF_CMD("-send_rev_ethip_ver",	-GIF_SEND_REVETHIP,	setgifopts),
+	DEF_CMD("accept_rev_ethip_ver",	0,			setgifopts),
+	DEF_CMD("-accept_rev_ethip_ver",0,			setgifopts),
+	DEF_CMD("ignore_source",	GIF_IGNORE_SOURCE,	setgifopts),
+	DEF_CMD("-ignore_source",	-GIF_IGNORE_SOURCE,	setgifopts),
+	DEF_CMD("send_rev_ethip_ver",	0,			setgifopts),
+	DEF_CMD("-send_rev_ethip_ver",	0,			setgifopts),
 };
 
 static struct afswtch af_gif = {
@@ -108,11 +112,9 @@ static struct afswtch af_gif = {
 static __constructor void
 gif_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	size_t i;
 
-	for (i = 0; i < N(gif_cmds); i++)
+	for (i = 0; i < nitems(gif_cmds); i++)
 		cmd_register(&gif_cmds[i]);
 	af_register(&af_gif);
-#undef N
 }

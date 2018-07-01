@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/ifconfig/af_inet6.c 319265 2017-05-30 22:45:01Z asomers $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -42,6 +43,7 @@ static const char rcsid[] =
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <ifaddrs.h>
 
 #include <arpa/inet.h>
@@ -98,20 +100,21 @@ static void
 setip6lifetime(const char *cmd, const char *val, int s, 
     const struct afswtch *afp)
 {
-	time_t newval, t;
+	struct timespec now;
+	time_t newval;
 	char *ep;
 
-	t = time(NULL);
+	clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 	newval = (time_t)strtoul(val, &ep, 0);
 	if (val == ep)
 		errx(1, "invalid %s", cmd);
 	if (afp->af_af != AF_INET6)
 		errx(1, "%s not allowed for the AF", cmd);
 	if (strcmp(cmd, "vltime") == 0) {
-		in6_addreq.ifra_lifetime.ia6t_expire = t + newval;
+		in6_addreq.ifra_lifetime.ia6t_expire = now.tv_sec + newval;
 		in6_addreq.ifra_lifetime.ia6t_vltime = newval;
 	} else if (strcmp(cmd, "pltime") == 0) {
-		in6_addreq.ifra_lifetime.ia6t_preferred = t + newval;
+		in6_addreq.ifra_lifetime.ia6t_preferred = now.tv_sec + newval;
 		in6_addreq.ifra_lifetime.ia6t_pltime = newval;
 	}
 }
@@ -172,8 +175,10 @@ in6_status(int s __unused, const struct ifaddrs *ifa)
 	int s6;
 	u_int32_t flags6;
 	struct in6_addrlifetime lifetime;
-	time_t t = time(NULL);
+	struct timespec now;
 	int error;
+
+	clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 
 	memset(&null_sin, 0, sizeof(null_sin));
 
@@ -181,7 +186,7 @@ in6_status(int s __unused, const struct ifaddrs *ifa)
 	if (sin == NULL)
 		return;
 
-	strncpy(ifr6.ifr_name, ifr.ifr_name, sizeof(ifr.ifr_name));
+	strlcpy(ifr6.ifr_name, ifr.ifr_name, sizeof(ifr.ifr_name));
 	if ((s6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
 		warn("socket(AF_INET6,SOCK_DGRAM)");
 		return;
@@ -250,25 +255,30 @@ in6_status(int s __unused, const struct ifaddrs *ifa)
 		printf("autoconf ");
 	if ((flags6 & IN6_IFF_TEMPORARY) != 0)
 		printf("temporary ");
+	if ((flags6 & IN6_IFF_PREFER_SOURCE) != 0)
+		printf("prefer_source ");
 
-        if (sin->sin6_scope_id)
-		printf("scopeid 0x%x ", sin->sin6_scope_id);
+	if (((struct sockaddr_in6 *)(ifa->ifa_addr))->sin6_scope_id)
+		printf("scopeid 0x%x ",
+		    ((struct sockaddr_in6 *)(ifa->ifa_addr))->sin6_scope_id);
 
 	if (ip6lifetime && (lifetime.ia6t_preferred || lifetime.ia6t_expire)) {
 		printf("pltime ");
 		if (lifetime.ia6t_preferred) {
-			printf("%s ", lifetime.ia6t_preferred < t
-				? "0" : sec2str(lifetime.ia6t_preferred - t));
+			printf("%s ", lifetime.ia6t_preferred < now.tv_sec
+				? "0" : sec2str(lifetime.ia6t_preferred - now.tv_sec));
 		} else
 			printf("infty ");
 
 		printf("vltime ");
 		if (lifetime.ia6t_expire) {
-			printf("%s ", lifetime.ia6t_expire < t
-				? "0" : sec2str(lifetime.ia6t_expire - t));
+			printf("%s ", lifetime.ia6t_expire < now.tv_sec
+				? "0" : sec2str(lifetime.ia6t_expire - now.tv_sec));
 		} else
 			printf("infty ");
 	}
+
+	print_vhid(ifa, " ");
 
 	putchar('\n');
 }
@@ -327,12 +337,14 @@ in6_getaddr(const char *s, int which)
 		bzero(&hints, sizeof(struct addrinfo));
 		hints.ai_family = AF_INET6;
 		error = getaddrinfo(s, NULL, &hints, &res);
+		if (error != 0) {
+			if (inet_pton(AF_INET6, s, &sin->sin6_addr) != 1)
+				errx(1, "%s: bad value", s);
+		} else {
+			bcopy(res->ai_addr, sin, res->ai_addrlen);
+			freeaddrinfo(res);
+		}
 	}
-	if (error != 0) {
-		if (inet_pton(AF_INET6, s, &sin->sin6_addr) != 1)
-			errx(1, "%s: bad value", s);
-	} else
-		bcopy(res->ai_addr, sin, res->ai_addrlen);
 }
 
 static int
@@ -413,7 +425,7 @@ in6_status_tunnel(int s)
 	const struct sockaddr *sa = (const struct sockaddr *) &in6_ifr.ifr_addr;
 
 	memset(&in6_ifr, 0, sizeof(in6_ifr));
-	strncpy(in6_ifr.ifr_name, name, IFNAMSIZ);
+	strlcpy(in6_ifr.ifr_name, name, sizeof(in6_ifr.ifr_name));
 
 	if (ioctl(s, SIOCGIFPSRCADDR_IN6, (caddr_t)&in6_ifr) < 0)
 		return;
@@ -440,7 +452,7 @@ in6_set_tunnel(int s, struct addrinfo *srcres, struct addrinfo *dstres)
 	struct in6_aliasreq in6_addreq; 
 
 	memset(&in6_addreq, 0, sizeof(in6_addreq));
-	strncpy(in6_addreq.ifra_name, name, IFNAMSIZ);
+	strlcpy(in6_addreq.ifra_name, name, sizeof(in6_addreq.ifra_name));
 	memcpy(&in6_addreq.ifra_addr, srcres->ai_addr, srcres->ai_addr->sa_len);
 	memcpy(&in6_addreq.ifra_dstaddr, dstres->ai_addr,
 	    dstres->ai_addr->sa_len);
@@ -458,6 +470,8 @@ static struct cmd inet6_cmds[] = {
 	DEF_CMD("-deprecated", -IN6_IFF_DEPRECATED,	setip6flags),
 	DEF_CMD("autoconf",	IN6_IFF_AUTOCONF,	setip6flags),
 	DEF_CMD("-autoconf",	-IN6_IFF_AUTOCONF,	setip6flags),
+	DEF_CMD("prefer_source",IN6_IFF_PREFER_SOURCE,	setip6flags),
+	DEF_CMD("-prefer_source",-IN6_IFF_PREFER_SOURCE,setip6flags),
 	DEF_CMD("accept_rtadv",	ND6_IFF_ACCEPT_RTADV,	setnd6flags),
 	DEF_CMD("-accept_rtadv",-ND6_IFF_ACCEPT_RTADV,	setnd6flags),
 	DEF_CMD("no_radr",	ND6_IFF_NO_RADR,	setnd6flags),
@@ -468,12 +482,12 @@ static struct cmd inet6_cmds[] = {
 	DEF_CMD("-ifdisabled",	-ND6_IFF_IFDISABLED,	setnd6flags),
 	DEF_CMD("nud",		ND6_IFF_PERFORMNUD,	setnd6flags),
 	DEF_CMD("-nud",		-ND6_IFF_PERFORMNUD,	setnd6flags),
-	DEF_CMD("prefer_source",ND6_IFF_PREFER_SOURCE,	setnd6flags),
-	DEF_CMD("-prefer_source",-ND6_IFF_PREFER_SOURCE,setnd6flags),
 	DEF_CMD("auto_linklocal",ND6_IFF_AUTO_LINKLOCAL,setnd6flags),
 	DEF_CMD("-auto_linklocal",-ND6_IFF_AUTO_LINKLOCAL,setnd6flags),
 	DEF_CMD("no_prefer_iface",ND6_IFF_NO_PREFER_IFACE,setnd6flags),
 	DEF_CMD("-no_prefer_iface",-ND6_IFF_NO_PREFER_IFACE,setnd6flags),
+	DEF_CMD("no_dad",	ND6_IFF_NO_DAD,		setnd6flags),
+	DEF_CMD("-no_dad",	-ND6_IFF_NO_DAD,	setnd6flags),
 	DEF_CMD_ARG("pltime",        			setip6pltime),
 	DEF_CMD_ARG("vltime",        			setip6vltime),
 	DEF_CMD("eui64",	0,			setip6eui64),
