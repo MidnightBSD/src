@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ggate/ggatel/ggatel.c 285748 2015-07-21 14:25:21Z brueffer $
  */
 
 #include <stdio.h>
@@ -47,7 +48,7 @@
 #include "ggate.h"
 
 
-enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
+static enum { UNSET, CREATE, DESTROY, LIST, RESCUE } action = UNSET;
 
 static const char *path = NULL;
 static int unit = G_GATE_UNIT_AUTO;
@@ -173,6 +174,7 @@ g_gatel_create(void)
 	fd = open(path, g_gate_openflags(flags) | O_DIRECT | O_FSYNC);
 	if (fd == -1)
 		err(EXIT_FAILURE, "Cannot open %s", path);
+	memset(&ggioc, 0, sizeof(ggioc));
 	ggioc.gctl_version = G_GATE_VERSION;
 	ggioc.gctl_unit = unit;
 	ggioc.gctl_mediasize = g_gate_mediasize(fd);

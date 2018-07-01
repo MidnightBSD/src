@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ggate/shared/ggate.c 204075 2010-02-18 23:04:01Z pjd $
  */
 
 #include <stdio.h>
@@ -131,7 +132,7 @@ g_gate_xlog(const char *message, ...)
 off_t
 g_gate_mediasize(int fd)
 {
-	off_t mediasize = 0;
+	off_t mediasize;
 	struct stat sb;
 
 	if (fstat(fd, &sb) == -1)
@@ -152,7 +153,7 @@ g_gate_mediasize(int fd)
 unsigned
 g_gate_sectorsize(int fd)
 {
-	unsigned secsize = 0;
+	unsigned secsize;
 	struct stat sb;
 
 	if (fstat(fd, &sb) == -1)
