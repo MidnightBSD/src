@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1989, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,10 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mv.1	8.1 (Berkeley) 5/31/93
-.\" $FreeBSD: src/bin/mv/mv.1,v 1.28 2005/01/16 16:41:58 ru Exp $
-.\" $MidnightBSD: src/bin/mv/mv.1,v 1.3 2008/06/30 02:36:17 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/mv/mv.1 248342 2013-03-15 20:12:54Z joel $
 .\"
-.Dd August 28, 2012
+.Dd March 15, 2013
 .Dt MV 1
 .Os
 .Sh NAME
@@ -156,6 +156,16 @@ rm -rf source_file
 .Ed
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+Rename file
+.Pa foo
+to
+.Pa bar ,
+overwriting
+.Pa bar
+if it already exists:
+.Pp
+.Dl $ mv -f foo bar
 .Sh COMPATIBILITY
 The
 .Fl h ,
@@ -165,7 +175,6 @@ and
 options are non-standard and their use in scripts is not recommended.
 .Sh SEE ALSO
 .Xr cp 1 ,
-.Xr cpdup 1 ,
 .Xr rm 1 ,
 .Xr symlink 7
 .Sh STANDARDS

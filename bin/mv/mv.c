@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/mv/mv.c,v 1.45.2.1 2005/11/12 21:21:46 csjp Exp $ */
 
 #if 0
 #ifndef lint
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mv.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/mv/mv.c 301147 2016-06-01 17:30:50Z truckman $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -123,7 +123,7 @@ main(int argc, char *argv[])
 	 */
 	if (stat(argv[argc - 1], &sb) || !S_ISDIR(sb.st_mode)) {
 		if (argc > 2)
-			usage();
+			errx(1, "%s is not a directory", argv[argc - 1]);
 		exit(do_move(argv[0], argv[1]));
 	}
 
@@ -141,7 +141,7 @@ main(int argc, char *argv[])
 	/* It's a directory, move each file into it. */
 	if (strlen(argv[argc - 1]) > sizeof(path) - 1)
 		errx(1, "%s: destination pathname too long", *argv);
-	(void)strlcpy(path, argv[argc - 1], sizeof(path));
+	(void)strcpy(path, argv[argc - 1]);
 	baselen = strlen(path);
 	endp = &path[baselen];
 	if (!baselen || *(endp - 1) != '/') {
@@ -274,41 +274,36 @@ do_move(const char *from, const char *to)
 static int
 fastcopy(const char *from, const char *to, struct stat *sbp)
 {
-	struct timeval tval[2];
-	static u_int blen;
-	static char *bp;
+	struct timespec ts[2];
+	static u_int blen = MAXPHYS;
+	static char *bp = NULL;
 	mode_t oldmode;
 	int nread, from_fd, to_fd;
 
 	if ((from_fd = open(from, O_RDONLY, 0)) < 0) {
-		warn("%s", from);
+		warn("fastcopy: open() failed (from): %s", from);
 		return (1);
 	}
-	if (blen < sbp->st_blksize) {
-		if (bp != NULL)
-			free(bp);
-		if ((bp = malloc((size_t)sbp->st_blksize)) == NULL) {
-			blen = 0;
-			warnx("malloc failed");
-			return (1);
-		}
-		blen = sbp->st_blksize;
+	if (bp == NULL && (bp = malloc((size_t)blen)) == NULL) {
+		warnx("malloc(%u) failed", blen);
+		(void)close(from_fd);
+		return (1);
 	}
 	while ((to_fd =
 	    open(to, O_CREAT | O_EXCL | O_TRUNC | O_WRONLY, 0)) < 0) {
 		if (errno == EEXIST && unlink(to) == 0)
 			continue;
-		warn("%s", to);
+		warn("fastcopy: open() failed (to): %s", to);
 		(void)close(from_fd);
 		return (1);
 	}
 	while ((nread = read(from_fd, bp, (size_t)blen)) > 0)
 		if (write(to_fd, bp, (size_t)nread) != nread) {
-			warn("%s", to);
+			warn("fastcopy: write() failed: %s", to);
 			goto err;
 		}
 	if (nread < 0) {
-		warn("%s", from);
+		warn("fastcopy: read() failed: %s", from);
 err:		if (unlink(to))
 			warn("%s: remove", to);
 		(void)close(from_fd);
@@ -344,14 +339,13 @@ err:		if (unlink(to))
 	 * on a file that we copied, i.e., that we didn't create.)
 	 */
 	errno = 0;
-	if (fchflags(to_fd, (u_long)sbp->st_flags))
+	if (fchflags(to_fd, sbp->st_flags))
 		if (errno != EOPNOTSUPP || sbp->st_flags != 0)
 			warn("%s: set flags (was: 0%07o)", to, sbp->st_flags);
 
-	tval[0].tv_sec = sbp->st_atime;
-	tval[1].tv_sec = sbp->st_mtime;
-	tval[0].tv_usec = tval[1].tv_usec = 0;
-	if (utimes(to, tval))
+	ts[0] = sbp->st_atim;
+	ts[1] = sbp->st_mtim;
+	if (utimensat(AT_FDCWD, to, ts, 0))
 		warn("%s: set times", to);
 
 	if (close(to_fd)) {
