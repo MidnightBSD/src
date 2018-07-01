@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Kenneth D. Merry.
  * All rights reserved.
@@ -25,11 +26,26 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/camcontrol/camcontrol.h 314221 2017-02-24 20:51:39Z ken $
  */
 
 #ifndef _CAMCONTROL_H
 #define _CAMCONTROL_H
+
+typedef enum {
+	CC_OR_NOT_FOUND,
+	CC_OR_AMBIGUOUS,
+	CC_OR_FOUND
+} camcontrol_optret;
+
+typedef enum {
+	CC_DT_NONE,
+	CC_DT_SCSI,
+	CC_DT_ATA_BEHIND_SCSI,
+	CC_DT_ATA,
+	CC_DT_UNKNOWN
+} camcontrol_devtype;
+
 /*
  * get_hook: Structure for evaluating args in a callback.
  */
@@ -42,20 +58,46 @@ struct get_hook
 
 extern int verbose;
 
+int ata_do_identify(struct cam_device *device, int retry_count, int timeout,
+		    union ccb *ccb, struct ata_params **ident_bufp);
+int dev_has_vpd_page(struct cam_device *dev, uint8_t page_id, int retry_count,
+		     int timeout, int verbosemode);
+int get_device_type(struct cam_device *dev, int retry_count, int timeout,
+		    int verbosemode, camcontrol_devtype *devtype);
+void build_ata_cmd(union ccb *ccb, uint32_t retry_count, uint32_t flags,
+		   uint8_t tag_action, uint8_t protocol, uint8_t ata_flags,
+		   uint16_t features, uint16_t sector_count, uint64_t lba,
+		   uint8_t command, uint8_t *data_ptr, uint16_t dxfer_len,
+		   uint8_t sense_len, uint32_t timeout, int is48bit,
+		   camcontrol_devtype devtype);
+int camxferrate(struct cam_device *device);
 int fwdownload(struct cam_device *device, int argc, char **argv,
-	       char *combinedopt, int printerrors, int retry_count, int timeout,
-	       const char */*type*/);
-void mode_sense(struct cam_device *device, int mode_page, int page_control,
-		int dbd, int retry_count, int timeout, u_int8_t *data,
-		int datalen);
-void mode_select(struct cam_device *device, int save_pages, int retry_count,
-		 int timeout, u_int8_t *data, int datalen);
-void mode_edit(struct cam_device *device, int page, int page_control, int dbd,
-	       int edit, int binary, int retry_count, int timeout);
-void mode_list(struct cam_device *device, int page_control, int dbd,
+	       char *combinedopt, int printerrors, int task_attr,
 	       int retry_count, int timeout);
+void mode_sense(struct cam_device *device, int dbd, int pc, int page,
+		int subpage, int task_attr, int retry_count, int timeout,
+		uint8_t *data, int datalen);
+void mode_select(struct cam_device *device, int save_pages, int task_attr,
+		 int retry_count, int timeout, u_int8_t *data, int datalen);
+void mode_edit(struct cam_device *device, int dbd, int pc, int page,
+	       int subpage, int edit, int binary, int task_attr,
+	       int retry_count, int timeout);
+void mode_list(struct cam_device *device, int dbd, int pc, int subpages,
+	       int task_attr, int retry_count, int timeout);
 int scsidoinquiry(struct cam_device *device, int argc, char **argv,
-		  char *combinedopt, int retry_count, int timeout);
+		  char *combinedopt, int task_attr, int retry_count,
+		  int timeout);
+int scsigetopcodes(struct cam_device *device, int opcode_set, int opcode,
+		   int show_sa_errors, int sa_set, int service_action,
+		   int timeout_desc, int task_attr, int retry_count,
+		   int timeout, int verbosemode, uint32_t *fill_len,
+		   uint8_t **data_ptr);
+int scsipersist(struct cam_device *device, int argc, char **argv,
+		char *combinedopt, int task_attr, int retry_count,
+		int timeout, int verbose, int err_recover);
+int scsiattrib(struct cam_device *device, int argc, char **argv,
+	       char *combinedopt, int task_attr, int retry_count, int timeout,
+	       int verbose, int err_recover);
 char *cget(void *hook, char *name);
 int iget(void *hook, char *name);
 void arg_put(void *hook, int letter, void *arg, int count, char *name);
