@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ls.h	8.1 (Berkeley) 5/31/93
- * $MidnightBSD: src/bin/ls/ls.h,v 1.3 2013/02/08 02:32:17 laffer1 Exp $
+ * $FreeBSD: stable/10/bin/ls/ls.h 242807 2012-11-08 23:45:19Z grog $
  */
 
 #define NO_PRINT	1
@@ -56,7 +57,7 @@ extern int f_slash;		/* append a '/' if the file is a directory */
 extern int f_sortacross;	/* sort across rows, not down columns */
 extern int f_statustime;	/* use time of last mode change */
 extern int f_thousands;		/* show file sizes with thousands separators */
-extern char *f_timeformat;      /* user-specified time format */
+extern char *f_timeformat;	/* user-specified time format */
 extern int f_notabs;		/* don't use tab-separated multi-col output */
 extern int f_type;		/* add type character for non-regular files */
 #ifdef COLORLS

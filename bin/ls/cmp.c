@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)cmp.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/ls/cmp.c,v 1.3 2013/02/08 02:32:17 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ls/cmp.c 242807 2012-11-08 23:45:19Z grog $");
 
 
 #include <sys/types.h>
@@ -81,7 +82,7 @@ modcmp(const FTSENT *a, const FTSENT *b)
 	if (f_samesort)
 		return (strcoll(b->fts_name, a->fts_name));
 	else
-	return (strcoll(a->fts_name, b->fts_name));
+		return (strcoll(a->fts_name, b->fts_name));
 }
 
 int
@@ -110,7 +111,7 @@ acccmp(const FTSENT *a, const FTSENT *b)
 	if (f_samesort)
 		return (strcoll(b->fts_name, a->fts_name));
 	else
-	return (strcoll(a->fts_name, b->fts_name));
+		return (strcoll(a->fts_name, b->fts_name));
 }
 
 int
@@ -139,7 +140,7 @@ birthcmp(const FTSENT *a, const FTSENT *b)
 	if (f_samesort)
 		return (strcoll(b->fts_name, a->fts_name));
 	else
-	return (strcoll(a->fts_name, b->fts_name));
+		return (strcoll(a->fts_name, b->fts_name));
 }
 
 int
@@ -168,7 +169,7 @@ statcmp(const FTSENT *a, const FTSENT *b)
 	if (f_samesort)
 		return (strcoll(b->fts_name, a->fts_name));
 	else
-	return (strcoll(a->fts_name, b->fts_name));
+		return (strcoll(a->fts_name, b->fts_name));
 }
 
 int

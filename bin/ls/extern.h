@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)extern.h	8.1 (Berkeley) 5/31/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/ls/extern.h 242807 2012-11-08 23:45:19Z grog $
  */
 
 int	 acccmp(const FTSENT *, const FTSENT *);
@@ -55,12 +56,12 @@ int	 prn_octal(const char *);
 int	 prn_printable(const char *);
 #ifdef COLORLS
 void	 parsecolors(const char *cs);
-void     colorquit(int);
+void	 colorquit(int);
 
-extern  char    *ansi_fgcol;
-extern  char    *ansi_bgcol;
-extern  char    *ansi_coloff;
-extern  char    *attrs_off;
-extern  char    *enter_bold;
+extern	char	*ansi_fgcol;
+extern	char	*ansi_bgcol;
+extern	char	*ansi_coloff;
+extern	char	*attrs_off;
+extern	char	*enter_bold;
 #endif
 extern int	termwidth;

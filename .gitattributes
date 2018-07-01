@@ -296,6 +296,8 @@ bin/ls/ls.1 -text
 bin/ls/ls.c -text
 bin/ls/ls.h -text
 bin/ls/print.c -text
+bin/ls/tests/Makefile svneol=native#text/plain
+bin/ls/tests/ls_tests.sh svneol=native#text/plain
 bin/ls/util.c -text
 bin/mined/LICENSE -text
 bin/mined/Makefile -text

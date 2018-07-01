@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)print.c	8.4 (Berkeley) 4/17/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/ls/print.c,v 1.4 2013/02/08 02:32:17 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ls/print.c 242840 2012-11-09 20:19:56Z peter $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
