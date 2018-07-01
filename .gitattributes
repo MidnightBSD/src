@@ -55199,6 +55199,10 @@ sbin/dumpfs/dumpfs.c -text
 sbin/dumpon/Makefile -text
 sbin/dumpon/dumpon.8 -text
 sbin/dumpon/dumpon.c -text
+sbin/etherswitchcfg/Makefile svneol=native#text/plain
+sbin/etherswitchcfg/etherswitchcfg.8 svneol=native#text/plain
+sbin/etherswitchcfg/etherswitchcfg.c svneol=native#text/plain
+sbin/etherswitchcfg/ifmedia.c svneol=native#text/plain
 sbin/fdisk/Makefile -text
 sbin/fdisk/fdisk.8 -text
 sbin/fdisk/fdisk.c -text
