@@ -1,11 +1,13 @@
+# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.1 2002/03/01 11:21:58 ad Exp $
-# $FreeBSD: src/usr.bin/pkill/Makefile,v 1.7 2006/08/20 04:25:20 yar Exp $
-# $MidnightBSD: src/bin/pkill/Makefile,v 1.2 2009/03/27 22:10:43 laffer1 Exp $
+# $FreeBSD: stable/10/bin/pkill/Makefile 287269 2015-08-29 02:41:59Z jamie $
+
+.include <bsd.own.mk>
 
 PROG=	pkill
 
-DPADD=	${LIBKVM}
-LDADD=	-lkvm
+DPADD=	${LIBKVM} ${LIBJAIL}
+LDADD=	-lkvm -ljail
 
 LINKS=	${BINDIR}/pkill ${BINDIR}/pgrep
 MLINKS=	pkill.1 pgrep.1
@@ -17,5 +19,9 @@ MLINKS=	pkill.1 pgrep.1
 #
 SYMLINKS=	${BINDIR}/pkill /usr/bin/pkill
 SYMLINKS+=	${BINDIR}/pgrep /usr/bin/pgrep
+
+.if ${MK_TESTS} != "no"
+SUBDIR+= tests
+.endif
 
 .include <bsd.prog.mk>
