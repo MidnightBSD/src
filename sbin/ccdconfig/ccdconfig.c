@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Poul-Henning Kamp
  * Copyright (c) 1995 Jason R. Thorpe.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/ccdconfig/ccdconfig.c 241848 2012-10-22 03:07:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -59,7 +60,7 @@ static	int lineno = 0;
 static	int verbose = 0;
 static	const char *ccdconf = _PATH_CCDCONF;
 
-struct	flagval {
+static struct flagval {
 	const char	*fv_flag;
 	int		fv_val;
 } flagvaltab[] = {
