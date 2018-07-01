@@ -32,7 +32,7 @@
 /* $FreeBSD: src/bin/getfacl/getfacl.c,v 1.10 2005/02/09 17:37:37 ru Exp $ */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/getfacl/getfacl.c,v 1.4 2008/06/30 03:20:01 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -48,7 +48,7 @@ __MBSDID("$MidnightBSD: src/bin/getfacl/getfacl.c,v 1.4 2008/06/30 03:20:01 laff
 #include <string.h>
 #include <unistd.h>
 
-int	more_than_one = 0;
+static int	more_than_one = 0;
 
 static void
 usage(void)
