@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -25,11 +26,11 @@
  *
  */
 /*
- | $Id: login.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
+ | $Id: login.c,v 1.4 2007/04/27 07:40:40 danny Exp danny $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/iscontrol/login.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -44,7 +45,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <string.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 static char *status_class1[] = {

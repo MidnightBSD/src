@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -26,11 +27,11 @@
  */
 
 /*
- | $Id: misc.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
+ | $Id: misc.c,v 2.1 2006/11/12 08:06:51 danny Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/iscontrol/misc.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -44,7 +45,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdio.h>
 #include <string.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 static inline char

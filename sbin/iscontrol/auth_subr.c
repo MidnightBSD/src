@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -26,11 +27,11 @@
  */
 
 /*
- | $Id: auth_subr.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
+ | $Id: auth_subr.c,v 2.2 2007/06/01 08:09:37 danny Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/iscontrol/auth_subr.c 254657 2013-08-22 14:02:34Z trasz $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -49,7 +50,7 @@ __MBSDID("$MidnightBSD$");
 #include <md5.h>
 #include <sha.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 static int

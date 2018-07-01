@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -23,10 +24,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/iscontrol/iscontrol.h 211095 2010-08-09 12:36:36Z des $
  */
 /*
- | $Id: iscontrol.h,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
+ | $Id: iscontrol.h,v 2.3 2007/04/27 08:36:49 danny Exp danny $
  */
 #ifdef DEBUG
 int vflag;

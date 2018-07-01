@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -26,11 +27,11 @@
  */
 
 /*
- | $Id: fsm.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
+ | $Id: fsm.c,v 2.8 2007/05/19 16:34:21 danny Exp danny $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/iscontrol/fsm.c 302377 2016-07-06 17:45:38Z truckman $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -53,7 +54,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdarg.h>
 #include <camlib.h>
 
-#include <dev/iscsi/initiator/iscsi.h>
+#include <dev/iscsi_initiator/iscsi.h>
 #include "iscontrol.h"
 
 typedef enum {
@@ -371,7 +372,7 @@ doCAM(isess_t *sess)
 	  debug(2, "pathstr=%s", pathstr);
 
 	  ccb = cam_getccb(sess->camdev);
-	  bzero(&(&ccb->ccb_h)[1], sizeof(struct ccb_relsim) - sizeof(struct ccb_hdr));
+	  CCB_CLEAR_ALL_EXCEPT_HDR(&ccb->crs);
 	  ccb->ccb_h.func_code = XPT_REL_SIMQ;
 	  ccb->crs.release_flags = RELSIM_ADJUST_OPENINGS;
 	  ccb->crs.openings = sess->op->tags;
