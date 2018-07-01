@@ -1,5 +1,5 @@
-# $FreeBSD: src/bin/kenv/Makefile,v 1.4 2003/06/13 07:04:02 markm Exp $
 # $MidnightBSD$
+# $FreeBSD: stable/10/bin/kenv/Makefile 116282 2003-06-13 07:04:02Z markm $
 
 PROG=	kenv
 
