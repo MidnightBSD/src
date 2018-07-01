@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -17,7 +18,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ipfw/ipv6.c 318271 2017-05-14 13:59:40Z marius $
  *
  * ipv6 support
  */
@@ -338,6 +339,7 @@ fill_ip6(ipfw_insn_ip6 *cmd, char *av, int cblen)
 {
 	int len = 0;
 	struct in6_addr *d = &(cmd->addr6);
+	char *oav;
 	/*
 	 * Needed for multiple address.
 	 * Note d[1] points to struct in6_add r mask6 of cmd
@@ -375,7 +377,7 @@ fill_ip6(ipfw_insn_ip6 *cmd, char *av, int cblen)
 		return (1);
 	}
 
-	av = strdup(av);
+	oav = av = strdup(av);
 	while (av) {
 		/*
 		 * After the address we can have '/' indicating a mask,
@@ -451,7 +453,7 @@ fill_ip6(ipfw_insn_ip6 *cmd, char *av, int cblen)
 	if (len + 1 > F_LEN_MASK)
 		errx(EX_DATAERR, "address list too long");
 	cmd->o.len |= len+1;
-	free(av);
+	free(oav);
 	return (1);
 }
 

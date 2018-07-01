@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -17,7 +18,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ipfw/ipfw2.h 301772 2016-06-10 00:00:25Z truckman $
  */
 
 /*
@@ -165,8 +166,34 @@ enum tokens {
 	TOK_BURST,
 	TOK_RED,
 	TOK_GRED,
+	TOK_ECN,
 	TOK_DROPTAIL,
 	TOK_PROTO,
+#ifdef NEW_AQM
+	/* AQM tokens*/
+	TOK_NO_ECN,
+	TOK_CODEL, 
+	TOK_FQ_CODEL,
+	TOK_TARGET,
+	TOK_INTERVAL,
+	TOK_FLOWS,
+	TOK_QUANTUM,
+	
+	TOK_PIE,
+	TOK_FQ_PIE,
+	TOK_TUPDATE,
+	TOK_MAX_BURST,
+	TOK_MAX_ECNTH,
+	TOK_ALPHA,
+	TOK_BETA,
+	TOK_CAPDROP,
+	TOK_NO_CAPDROP,
+	TOK_ONOFF,
+	TOK_DRE,
+	TOK_TS,
+	TOK_DERAND,
+	TOK_NO_DERAND,
+#endif
 	/* dummynet tokens */
 	TOK_WEIGHT,
 	TOK_LMAX,
@@ -228,6 +255,8 @@ char const *match_value(struct _s_x *p, int value);
 
 int do_cmd(int optname, void *optval, uintptr_t optlen);
 
+uint32_t ipfw_get_tables_max(void);
+
 struct in6_addr;
 void n2mask(struct in6_addr *mask, int n);
 int contigmask(uint8_t *p, int len);
@@ -266,11 +295,14 @@ void ipfw_flush(int force);
 void ipfw_zero(int ac, char *av[], int optname);
 void ipfw_list(int ac, char *av[], int show_counters);
 
+#ifdef PF
 /* altq.c */
 void altq_set_enabled(int enabled);
 u_int32_t altq_name_to_qid(const char *name);
-
 void print_altq_cmd(struct _ipfw_insn_altq *altqptr);
+#else
+#define NO_ALTQ
+#endif
 
 /* dummynet.c */
 void dummynet_list(int ac, char *av[], int show_counters);

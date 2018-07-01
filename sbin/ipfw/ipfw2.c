@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -17,7 +18,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ipfw/ipfw2.c 296311 2016-03-02 13:38:21Z ae $
  */
 
 #include <sys/types.h>
@@ -59,6 +60,8 @@ struct cmdline_opts co;	/* global options */
 int resvd_set_number = RESVD_SET;
 
 int ipfw_socket = -1;
+
+uint32_t ipfw_tables_max = 0; /* Number of tables supported by kernel */
 
 #ifndef s6_addr32
 #define s6_addr32 __u6_addr.__u6_addr32
@@ -455,7 +458,7 @@ do_cmd(int optname, void *optval, uintptr_t optlen)
  * and calls setsockopt().
  * Function returns 0 on success or -1 otherwise.
  */
-int
+static int
 do_setcmd3(int optname, void *optval, socklen_t optlen)
 {
 	socklen_t len;
@@ -536,8 +539,8 @@ _substrcmp(const char *str1, const char* str2)
  * of the first.  A warning is printed to stderr in the case that the
  * first string does not match the third.
  *
- * This function exists to warn about the bizzare construction
- * strncmp(str, "by", 2) which is used to allow people to use a shotcut
+ * This function exists to warn about the bizarre construction
+ * strncmp(str, "by", 2) which is used to allow people to use a shortcut
  * for "bytes".  The problem is that in addition to accepting "by",
  * "byt", "byte", and "bytes", it also excepts "by_rabid_dogs" and any
  * other string beginning with "by".
@@ -777,7 +780,7 @@ fill_dscp(ipfw_insn *cmd, char *av, int cblen)
 				errx(EX_DATAERR, "Invalid DSCP value");
 		}
 
-		if (code > 32)
+		if (code >= 32)
 			*high |= 1 << (code - 32);
 		else
 			*low |= 1 << code;
@@ -1092,8 +1095,9 @@ print_dscp(ipfw_insn_u32 *cmd)
 #define	HAVE_OPTIONS	0x8000
 
 static void
-show_prerequisites(int *flags, int want, int cmd __unused)
+show_prerequisites(int *flags, int want, int cmd)
 {
+	(void)cmd;	/* UNUSED */
 	if (co.comment_only)
 		return;
 	if ( (*flags & HAVE_IP) == HAVE_IP)
@@ -2202,6 +2206,7 @@ fill_ip(ipfw_insn_ip *cmd, char *av, int cblen)
 {
 	int len = 0;
 	uint32_t *d = ((ipfw_insn_u32 *)cmd)->d;
+	uint32_t tables_max;
 
 	cmd->o.len &= ~F_LEN_MASK;	/* zero len */
 
@@ -2220,6 +2225,10 @@ fill_ip(ipfw_insn_ip *cmd, char *av, int cblen)
 			*p++ = '\0';
 		cmd->o.opcode = O_IP_DST_LOOKUP;
 		cmd->o.arg1 = strtoul(av + 6, NULL, 0);
+		tables_max = ipfw_get_tables_max();
+		if (cmd->o.arg1 > tables_max)
+			errx(EX_USAGE, "The table number exceeds the maximum "
+			    "allowed value (%u)", tables_max - 1);
 		if (p) {
 			cmd->o.len |= F_INSN_SIZE(ipfw_insn_u32);
 			d[0] = strtoul(p, NULL, 0);
@@ -2260,14 +2269,14 @@ fill_ip(ipfw_insn_ip *cmd, char *av, int cblen)
 	case '/':
 		masklen = atoi(p);
 		if (masklen == 0)
-			d[1] = htonl(0);	/* mask */
+			d[1] = htonl(0U);	/* mask */
 		else if (masklen > 32)
 			errx(EX_DATAERR, "bad width ``%s''", p);
 		else
-			d[1] = htonl(~0 << (32 - masklen));
+			d[1] = htonl(~0U << (32 - masklen));
 		break;
 	case '{':	/* no mask, assume /24 and put back the '{' */
-		d[1] = htonl(~0 << (32 - 24));
+		d[1] = htonl(~0U << (32 - 24));
 		*(--p) = md;
 		break;
 
@@ -2276,7 +2285,7 @@ fill_ip(ipfw_insn_ip *cmd, char *av, int cblen)
 		/* FALLTHROUGH */
 	case 0:		/* initialization value */
 	default:
-		d[1] = htonl(~0);	/* force /32 */
+		d[1] = htonl(~0U);	/* force /32 */
 		break;
 	}
 	d[0] &= d[1];		/* mask base address with mask */
@@ -2778,13 +2787,19 @@ static ipfw_insn *
 add_src(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 {
 	struct in6_addr a;
-	char *host, *ch;
+	char *host, *ch, buf[INET6_ADDRSTRLEN];
 	ipfw_insn *ret = NULL;
+	int len;
 
-	if ((host = strdup(av)) == NULL)
-		return NULL;
-	if ((ch = strrchr(host, '/')) != NULL)
-		*ch = '\0';
+	/* Copy first address in set if needed */
+	if ((ch = strpbrk(av, "/,")) != NULL) {
+		len = ch - av;
+		strlcpy(buf, av, sizeof(buf));
+		if (len < sizeof(buf))
+			buf[len] = '\0';
+		host = buf;
+	} else
+		host = av;
 
 	if (proto == IPPROTO_IPV6  || strcmp(av, "me6") == 0 ||
 	    inet_pton(AF_INET6, host, &a) == 1)
@@ -2796,7 +2811,6 @@ add_src(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 	if (ret == NULL && strcmp(av, "any") != 0)
 		ret = cmd;
 
-	free(host);
 	return ret;
 }
 
@@ -2804,13 +2818,19 @@ static ipfw_insn *
 add_dst(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 {
 	struct in6_addr a;
-	char *host, *ch;
+	char *host, *ch, buf[INET6_ADDRSTRLEN];
 	ipfw_insn *ret = NULL;
+	int len;
 
-	if ((host = strdup(av)) == NULL)
-		return NULL;
-	if ((ch = strrchr(host, '/')) != NULL)
-		*ch = '\0';
+	/* Copy first address in set if needed */
+	if ((ch = strpbrk(av, "/,")) != NULL) {
+		len = ch - av;
+		strlcpy(buf, av, sizeof(buf));
+		if (len < sizeof(buf))
+			buf[len] = '\0';
+		host = buf;
+	} else
+		host = av;
 
 	if (proto == IPPROTO_IPV6  || strcmp(av, "me6") == 0 ||
 	    inet_pton(AF_INET6, host, &a) == 1)
@@ -2822,7 +2842,6 @@ add_dst(ipfw_insn *cmd, char *av, u_char proto, int cblen)
 	if (ret == NULL && strcmp(av, "any") != 0)
 		ret = cmd;
 
-	free(host);
 	return ret;
 }
 
@@ -2972,7 +2991,7 @@ ipfw_add(char *av[])
 		action->opcode = O_NAT;
 		action->len = F_INSN_SIZE(ipfw_insn_nat);
 		CHECK_ACTLEN;
-		if (_substrcmp(*av, "global") == 0) {
+		if (*av != NULL && _substrcmp(*av, "global") == 0) {
 			action->arg1 = 0;
 			av++;
 			break;
@@ -3071,9 +3090,9 @@ chkarg:
 			((struct sockaddr_in*)&result)->sin_addr.s_addr =
 			    INADDR_ANY;
 		} else {
-			/* 
+			/*
 			 * Resolve the host name or address to a family and a
-			 * network representation of the addres.
+			 * network representation of the address.
 			 */
 			if (getaddrinfo(*av, NULL, NULL, &res))
 				errx(EX_DATAERR, NULL);
@@ -4108,6 +4127,33 @@ static void table_list(uint16_t num, int need_header);
 static void table_fill_xentry(char *arg, ipfw_table_xentry *xent);
 
 /*
+ * Retrieve maximum number of tables supported by ipfw(4) module.
+ */
+uint32_t
+ipfw_get_tables_max()
+{
+	size_t len;
+	uint32_t tables_max;
+
+	if (ipfw_tables_max != 0)
+		return (ipfw_tables_max);
+
+	len = sizeof(tables_max);
+	if (sysctlbyname("net.inet.ip.fw.tables_max", &tables_max, &len,
+	    NULL, 0) == -1) {
+		if (co.test_only)
+			tables_max = 128; /* Old conservative default */
+		else
+			errx(1, "Can't determine maximum number of ipfw tables."
+			    " Perhaps you forgot to load ipfw module?");
+	}
+
+	ipfw_tables_max = tables_max;
+
+	return (ipfw_tables_max);
+}
+
+/*
  * This one handles all table-related commands
  * 	ipfw table N add addr[/masklen] [value]
  * 	ipfw table N delete addr[/masklen]
@@ -4120,19 +4166,10 @@ ipfw_table_handler(int ac, char *av[])
 	ipfw_table_xentry xent;
 	int do_add;
 	int is_all;
-	size_t len;
 	uint32_t a;
 	uint32_t tables_max;
 
-	len = sizeof(tables_max);
-	if (sysctlbyname("net.inet.ip.fw.tables_max", &tables_max, &len,
-	    NULL, 0) == -1) {
-		if (co.test_only)
-			tables_max = 128; /* Old conservative default */
-		else
-			errx(1, "Can't determine maximum number of ipfw tables."
-			    " Perhaps you forgot to load ipfw module?");
-	}
+	tables_max = ipfw_get_tables_max();
 
 	memset(&xent, 0, sizeof(xent));
 
@@ -4263,13 +4300,24 @@ table_fill_xentry(char *arg, ipfw_table_xentry *xent)
 			addrlen = sizeof(struct in6_addr);
 		} else {
 			/* Port or any other key */
-			key = strtol(arg, &p, 10);
 			/* Skip non-base 10 entries like 'fa1' */
-			if (p != arg) {
+			key = strtol(arg, &p, 10);
+			if (*p == '\0') {
 				pkey = (uint32_t *)paddr;
 				*pkey = htonl(key);
 				type = IPFW_TABLE_CIDR;
+				masklen = 32;
 				addrlen = sizeof(uint32_t);
+			} else if ((p != arg) && (*p == '.')) {
+				/*
+				 * Warn on IPv4 address strings
+				 * which are "valid" for inet_aton() but not
+				 * in inet_pton().
+				 *
+				 * Typical examples: '10.5' or '10.0.0.05'
+				 */
+				errx(EX_DATAERR,
+				    "Invalid IPv4 address: %s", arg);
 			}
 		}
 	}
@@ -4342,7 +4390,7 @@ table_list(uint16_t num, int need_header)
 			addr6 = &xent->k.addr6;
 
 
-			if (IN6_IS_ADDR_V4COMPAT(addr6)) {
+			if ((xent->flags & IPFW_TCF_INET) != 0) {
 				/* IPv4 address */
 				inet_ntop(AF_INET, &addr6->s6_addr32[3], tbuf, sizeof(tbuf));
 			} else {
@@ -4371,7 +4419,7 @@ table_list(uint16_t num, int need_header)
 		if (sz < xent->len)
 			break;
 		sz -= xent->len;
-		xent = (void *)xent + xent->len;
+		xent = (ipfw_table_xentry *)((char *)xent + xent->len);
 	}
 
 	free(tbl);

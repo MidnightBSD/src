@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -17,7 +18,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ipfw/altq.c 220802 2011-04-18 21:18:22Z glebius $
  *
  * altq interface
  */

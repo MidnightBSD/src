@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -17,7 +18,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/ipfw/nat.c 278324 2015-02-06 18:13:29Z jhb $
  *
  * In-kernel nat support
  */
@@ -156,9 +157,9 @@ set_addr_dynamic(const char *ifn, struct cfg_nat *n)
 		}
 	}
 	if (sin == NULL)
-		errx(1, "%s: cannot get interface address", ifn);
-
-	n->ip = sin->sin_addr;
+		n->ip.s_addr = htonl(INADDR_ANY);
+	else
+		n->ip = sin->sin_addr;
 	strncpy(n->if_name, ifn, IF_NAMESIZE);
 
 	free(buf);
@@ -318,6 +319,7 @@ estimate_redir_addr(int *ac, char ***av)
 	char *sep = **av;
 	u_int c = 0;
 
+	(void)ac;	/* UNUSED */
 	while ((sep = strchr(sep, ',')) != NULL) {
 		c++;
 		sep++;
@@ -379,6 +381,7 @@ estimate_redir_port(int *ac, char ***av)
 	char *sep = **av;
 	u_int c = 0;
 
+	(void)ac;	/* UNUSED */
 	while ((sep = strchr(sep, ',')) != NULL) {
 		c++;
 		sep++;
@@ -419,7 +422,7 @@ setup_redir_port(char *buf, int *ac, char ***av)
 	/*
 	 * Extract local address.
 	 */
-	if ((sep = strchr(**av, ',')) != NULL) {
+	if (strchr(**av, ',') != NULL) {
 		r->laddr.s_addr = INADDR_NONE;
 		r->lport = ~0;
 		numLocalPorts = 1;
@@ -452,7 +455,7 @@ setup_redir_port(char *buf, int *ac, char ***av)
 	/*
 	 * Extract public port and optionally address.
 	 */
-	if ((sep = strchr(**av, ':')) != NULL) {
+	if (strchr(**av, ':') != NULL) {
 		if (StrToAddrAndPortRange(**av, &r->paddr, protoName,
 		    &portRange) != 0)
 			errx(EX_DATAERR, "redirect_port: "
@@ -480,7 +483,7 @@ setup_redir_port(char *buf, int *ac, char ***av)
 	 * option for this redirect entry, else stop here processing arg[cv].
 	 */
 	if (*ac != 0 && isdigit(***av)) {
-		if ((sep = strchr(**av, ':')) != NULL) {
+		if (strchr(**av, ':') != NULL) {
 			if (StrToAddrAndPortRange(**av, &r->raddr, protoName,
 			    &portRange) != 0)
 				errx(EX_DATAERR, "redirect_port: "
