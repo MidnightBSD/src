@@ -55077,7 +55077,14 @@ rescue/README -text
 rescue/librescue/Makefile -text
 rescue/rescue/Makefile -text
 sbin/Makefile -text
+sbin/Makefile.amd64 svneol=native#text/plain
+sbin/Makefile.arm svneol=native#text/plain
+sbin/Makefile.i386 svneol=native#text/plain
+sbin/Makefile.ia64 svneol=native#text/plain
 sbin/Makefile.inc -text
+sbin/Makefile.mips svneol=native#text/plain
+sbin/Makefile.pc98 svneol=native#text/plain
+sbin/Makefile.sparc64 svneol=native#text/plain
 sbin/adjkerntz/Makefile -text
 sbin/adjkerntz/adjkerntz.8 -text
 sbin/adjkerntz/adjkerntz.c -text

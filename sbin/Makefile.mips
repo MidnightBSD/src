@@ -1,0 +1,4 @@
+# $MidnightBSD$
+
+SUBDIR += bsdlabel
+SUBDIR += fdisk

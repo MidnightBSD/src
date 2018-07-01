@@ -1,0 +1,5 @@
+# $MidnightBSD$
+
+SUBDIR += bsdlabel
+SUBDIR += fdisk_pc98
+SUBDIR += sconfig

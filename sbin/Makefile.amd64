@@ -1,0 +1,5 @@
+# $MidnightBSD$
+
+SUBDIR += bsdlabel
+SUBDIR += fdisk
+SUBDIR += nvmecontrol
