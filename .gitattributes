@@ -55623,6 +55623,7 @@ sbin/quotacheck/quotacheck.h -text
 sbin/rcorder/Makefile -text
 sbin/rcorder/hash.c -text
 sbin/rcorder/hash.h -text
+sbin/rcorder/rcorder-visualize.sh svneol=native#text/plain
 sbin/rcorder/rcorder.8 -text
 sbin/rcorder/rcorder.c -text
 sbin/reboot/Makefile -text
