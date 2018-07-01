@@ -338,6 +338,8 @@ bin/pax/tables.c -text
 bin/pax/tables.h -text
 bin/pax/tar.c -text
 bin/pax/tar.h -text
+bin/pax/tests/Makefile svneol=native#text/plain
+bin/pax/tests/legacy_test.pl svneol=native#text/plain
 bin/pax/tty_subs.c -text
 bin/pkill/Makefile -text
 bin/pkill/pkill.1 -text
