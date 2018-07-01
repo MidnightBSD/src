@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2010 The FreeBSD Foundation
 .\" All rights reserved.
 .\"
@@ -25,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/hastctl/hastctl.8 307403 2016-10-16 22:02:50Z sevan $
 .\"
-.Dd May 24, 2013
+.Dd March 14, 2013
 .Dt HASTCTL 8
 .Os
 .Sh NAME
@@ -145,18 +146,10 @@ GEOM provider
 will not be created on secondary node.
 .El
 .It Cm list
-.It Cm status
 Present verbose status of the configured resources.
-For now, list and status commands are equivalent.
-In the near future the output of 
-.Nm
-status command will change to more terse format.
-If you use `
-.Nm
-status' for parsing in your scripts, switch to `
-.Nm
-list'.
-
+.It Cm status
+Present terse (and more easy machine-parseable) status of the configured
+resources.
 .It Cm dump
 Dump metadata stored on local component for the configured resources.
 .El
@@ -232,5 +225,5 @@ nodeB# application_start
 The
 .Nm
 was developed by
-.An Pawel Jakub Dawidek Aq pjd@FreeBSD.org
+.An Pawel Jakub Dawidek Aq Mt pjd@FreeBSD.org
 under sponsorship of the FreeBSD Foundation.

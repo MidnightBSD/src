@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/hastctl/Makefile 250503 2013-05-11 09:51:44Z trociny $
 
 .include <bsd.own.mk>
 
@@ -19,10 +20,9 @@ SRCS+=	subr.c
 SRCS+=	y.tab.h
 MAN=	hastctl.8
 
-WARNS=	0
-
 NO_WFORMAT=
 NO_WCAST_ALIGN=
+NO_WMISSING_VARIABLE_DECLARATIONS=
 CFLAGS+=-I${.CURDIR}/../hastd
 CFLAGS+=-DHAVE_CAPSICUM
 CFLAGS+=-DINET
