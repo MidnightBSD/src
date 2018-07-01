@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Keith Muller.
  * Copyright (c) 1992, 1993
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)cache.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/pax/cache.c 284008 2015-06-05 00:39:34Z delphij $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -45,7 +46,6 @@ __MBSDID("$MidnightBSD$");
 #include <stdio.h>
 #include <pwd.h>
 #include <grp.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include "pax.h"
 #include "cache.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Keith Muller.
  * Copyright (c) 1992, 1993
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)ar_subs.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/pax/ar_subs.c 284008 2015-06-05 00:39:34Z delphij $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -48,14 +49,12 @@ __MBSDID("$MidnightBSD$");
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include "pax.h"
 #include "extern.h"
 
 static void wr_archive(ARCHD *, int is_app);
 static int get_arc(void);
 static int next_head(ARCHD *);
-extern sigset_t s_mask;
 
 /*
  * Routines which control the overall operation modes of pax as specified by

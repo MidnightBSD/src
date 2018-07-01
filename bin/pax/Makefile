@@ -1,5 +1,8 @@
-#       @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $MidnightBSD$
+#       @(#)Makefile	8.1 (Berkeley) 5/31/93
+# $FreeBSD: stable/10/bin/pax/Makefile 262951 2014-03-09 17:04:31Z jmmv $
+
+.include <bsd.own.mk>
 
 # To install on versions prior to BSD 4.4 the following may have to be
 # defined with CFLAGS +=
@@ -29,5 +32,9 @@ PROG=   pax
 SRCS=	ar_io.c ar_subs.c buf_subs.c cache.c cpio.c file_subs.c ftree.c \
 	gen_subs.c getoldopt.c options.c pat_rep.c pax.c sel_subs.c \
 	tables.c tar.c tty_subs.c
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=    tests
+.endif
 
 .include <bsd.prog.mk>

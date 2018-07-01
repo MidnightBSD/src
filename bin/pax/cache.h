@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Keith Muller.
  * Copyright (c) 1992, 1993
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)cache.h	8.1 (Berkeley) 5/31/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/pax/cache.h 127958 2004-04-06 20:06:54Z markm $
  */
 
 /*

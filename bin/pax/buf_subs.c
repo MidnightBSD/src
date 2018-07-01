@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Keith Muller.
  * Copyright (c) 1992, 1993
@@ -37,14 +38,13 @@ static char sccsid[] = "@(#)buf_subs.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/pax/buf_subs.c 310606 2016-12-26 16:43:39Z pfg $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "pax.h"
 #include "extern.h"
@@ -853,10 +853,13 @@ buf_fill(void)
 
 		/*
 		 * errors require resync, EOF goes to next archive
+		 * but in case we have not determined yet the format,
+		 * this means that we have a very short file, so we
+		 * are done again.
 		 */
 		if (cnt < 0)
 			break;
-		if (ar_next() < 0) {
+		if (frmt == NULL || ar_next() < 0) {
 			fini = 1;
 			return(0);
 		}

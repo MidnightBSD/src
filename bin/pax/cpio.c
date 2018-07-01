@@ -45,8 +45,6 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include "pax.h"
 #include "cpio.h"
 #include "extern.h"
