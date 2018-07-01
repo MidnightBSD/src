@@ -1,7 +1,7 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/tools/lex_var.h 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */

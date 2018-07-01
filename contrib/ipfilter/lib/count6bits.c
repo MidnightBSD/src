@@ -1,18 +1,18 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/count6bits.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2001 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: count6bits.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id$
  */
 
 #include "ipf.h"
 
 
 int count6bits(msk)
-u_32_t *msk;
+	u_32_t *msk;
 {
 	int i = 0, k;
 	u_32_t j;

@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/sirix.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed.
@@ -60,7 +60,7 @@ int	initdevice(char *device, int tout)
  * output an IP packet
  */
 int	sendip(int fd, char *pkt, int len)
-{			
+{
 	struct sockaddr_raw sr;
 	int srlen = sizeof(sr);
 	struct ifreq ifr;

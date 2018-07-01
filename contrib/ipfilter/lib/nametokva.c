@@ -1,12 +1,12 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/nametokva.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002 by Darren Reed.
- * 
- * See the IPFILTER.LICENCE file for details on licencing.  
- *   
- * $Id: nametokva.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $ 
- */     
+ * Copyright (C) 2012 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ *
+ * $Id$
+ */
 
 #include "ipf.h"
 
@@ -14,8 +14,8 @@
 #include <fcntl.h>
 
 ipfunc_t nametokva(name, iocfunc)
-char *name;
-ioctlfunc_t iocfunc;
+	char *name;
+	ioctlfunc_t iocfunc;
 {
 	ipfunc_resolve_t res;
 	int fd;
@@ -24,7 +24,7 @@ ioctlfunc_t iocfunc;
 	res.ipfu_addr = NULL;
 	fd = -1;
 
-	if ((opts & OPT_DONOTHING) == 0) {
+	if ((opts & OPT_DONTOPEN) == 0) {
 		fd = open(IPL_NAME, O_RDONLY);
 		if (fd == -1)
 			return NULL;

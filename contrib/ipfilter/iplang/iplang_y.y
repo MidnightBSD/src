@@ -1,13 +1,13 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/iplang/iplang_y.y 255332 2013-09-06 23:11:19Z cy $	*/
 
 %{
 /*
- * Copyright (C) 1997-1998 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * Id: iplang_y.y,v 2.9.2.4 2006/03/17 12:11:29 darrenr Exp $
- * $FreeBSD$
+ * $FreeBSD: stable/10/contrib/ipfilter/iplang/iplang_y.y 255332 2013-09-06 23:11:19Z cy $
  */
 
 #include <stdio.h>
@@ -26,17 +26,13 @@
 #include <unistd.h>
 #include <stddef.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #ifndef	linux
 # include <netinet/ip_var.h>
-#endif
-#ifdef __osf__
-# include "radix_ipf_local.h"
-#endif
-#include <net/if.h>
-#ifndef	linux
+# include <net/route.h>
 # include <netinet/if_ether.h>
 #endif
 #include <netdb.h>
@@ -605,7 +601,7 @@ struct	statetoopt	tosecopts[] = {
 #ifdef	bsdi
 struct ether_addr *
 ether_aton(s)
-	char *s;   
+	char *s;
 {
 	static struct ether_addr n;
 	u_int i[6];
@@ -663,7 +659,7 @@ struct ether_addr *buf;
 	if (!e)
 		fprintf(stderr, "Invalid ethernet address: %s\n", arg);
 	else
-# if	defined(__FreeBSD__) || defined(__MidnightBSD__)
+# ifdef	__FreeBSD__
 		bcopy(e->octet, buf->octet, sizeof(e->octet));
 # else
 		bcopy(e->ether_addr_octet, buf->ether_addr_octet,
@@ -1330,7 +1326,7 @@ void packet_done()
 				sprintf((char *)t, "	");
 				t += 8;
 				for (k = 16; k; k--, s++)
-					*t++ = (ISPRINT(*s) ? *s : '.');
+					*t++ = (isprint(*s) ? *s : '.');
 				s--;
 			}
 
@@ -1348,7 +1344,7 @@ void packet_done()
 			t += 7;
 			s -= j & 0xf;
 			for (k = j & 0xf; k; k--, s++)
-				*t++ = (ISPRINT(*s) ? *s : '.');
+				*t++ = (isprint(*s) ? *s : '.');
 			*t++ = '\n';
 			*t = '\0';
 		}
@@ -1840,7 +1836,7 @@ u_long	init;
 {
 	u_long	sum = init;
 	int	nwords = len >> 1;
- 
+
 	for(; nwords > 0; nwords--)
 		sum += *buf++;
 	sum = (sum>>16) + (sum & 0xffff);
@@ -1855,7 +1851,7 @@ u_int	len;
 {
 	u_long	sum = 0;
 	int	nwords = len >> 1;
- 
+
 	for(; nwords > 0; nwords--)
 		sum += *buf++;
 	return sum;

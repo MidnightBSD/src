@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/bpf-ipf.h 145519 2005-04-25 18:20:15Z darrenr $	*/
 
 /*-
  * Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
@@ -39,7 +39,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /home/cvs/src/contrib/ipfilter/bpf-ipf.h,v 1.2 2012-12-21 04:00:01 laffer1 Exp $ (LBL)
+ * @(#) $Header: /devel/CVS/IP-Filter/bpf-ipf.h,v 2.1 2002/10/26 12:14:26 darrenr Exp $ (LBL)
  */
 
 #ifndef BPF_MAJOR_VERSION

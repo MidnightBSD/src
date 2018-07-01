@@ -1,7 +1,7 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/snoop.h 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
@@ -11,7 +11,7 @@
 
 /*
  * written to comply with the RFC (1761) from Sun.
- * $Id: snoop.h,v 1.2 2012-12-21 04:00:01 laffer1 Exp $
+ * $Id$
  */
 struct	snoophdr	{
 	char	s_id[8];

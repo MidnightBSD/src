@@ -1,7 +1,7 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/mlf_rule.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
@@ -13,7 +13,7 @@
 
 #include <sys/param.h>
 
-#if defined(__MidnightBSD__) || defined(__FreeBSD__) && (__FreeBSD__ > 1)
+#if defined(__FreeBSD__) && (__FreeBSD__ > 1)
 # ifdef	IPFILTER_LKM
 #  include <osreldate.h>
 #  define	ACTUALLY_LKM_NOT_KERNEL
@@ -22,7 +22,7 @@
 # endif
 #endif
 #include <sys/systm.h>
-#if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
+#if defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
 # include <sys/conf.h>
 # include <sys/kernel.h>
 # ifdef DEVFS
@@ -31,7 +31,7 @@
 #endif
 #include <sys/conf.h>
 #include <sys/file.h>
-#if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/lock.h>
 #endif
 #include <sys/stat.h>
@@ -46,10 +46,10 @@
 #if	BSD >= 199506
 # include <sys/sysctl.h>
 #endif
-#if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000)
 # include <sys/socket.h>
 #endif
-#if defined(__MidnightBSD__) || (__FreeBSD_version >= 199511)
+#if (__FreeBSD_version >= 199511)
 #include <net/if.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
@@ -59,7 +59,7 @@
 #include <netinet/tcp.h>
 #include <netinet/tcpip.h>
 #endif
-#if defined(__MidnightBSD__) || (__FreeBSD__ > 1)
+#if (__FreeBSD__ > 1)
 # include <sys/sysent.h>
 #endif
 #include <sys/lkm.h>
@@ -70,7 +70,7 @@
 
 int	xxxinit __P((struct lkm_table *, int, int));
 
-#if !defined(__MidnightBSD__) || !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
+#if !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
 MOD_DEV(IPL_VERSION, LM_DT_CHAR, -1, &ipldevsw);
 #endif
 
@@ -79,8 +79,8 @@ static int ipfrule_ioctl __P((struct lkm_table *, int));
 #if defined(__FreeBSD_version) && (__FreeBSD_version < 220000)
 
 int xxxinit(lkmtp, cmd, ver)
-struct lkm_table *lkmtp;
-int cmd, ver;
+	struct lkm_table *lkmtp;
+	int cmd, ver;
 {
 	DISPATCH(lkmtp, cmd, ver, ipfrule_ioctl, ipfrule_ioctl, ipfrule_ioctl);
 }
@@ -88,7 +88,7 @@ int cmd, ver;
 # ifdef	IPFILTER_LKM
 #  include <sys/exec.h>
 
-#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
+#  if (__FreeBSD_version >= 300000)
 MOD_MISC(ipfrule);
 #  else
 MOD_DECL(ipfrule);
@@ -107,10 +107,10 @@ int ipfrule __P((struct lkm_table *, int, int));
 
 
 int ipfrule(lkmtp, cmd, ver)
-struct lkm_table *lkmtp;
-int cmd, ver;
+	struct lkm_table *lkmtp;
+	int cmd, ver;
 {
-#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
+#  if (__FreeBSD_version >= 300000)
 	MOD_DISPATCH(ipfrule, lkmtp, cmd, ver, ipfrule_ioctl, ipfrule_ioctl,
 		     ipfrule_ioctl);
 #  else
@@ -121,24 +121,24 @@ int cmd, ver;
 
 
 int ipfrule_load(lkmtp, cmd)
-struct lkm_table *lkmtp;
-int cmd;
+	struct lkm_table *lkmtp;
+	int cmd;
 {
 	return ipfrule_add();
 }
 
 
 int ipfrule_unload(lkmtp, cmd)
-struct lkm_table *lkmtp;
-int cmd;
+	struct lkm_table *lkmtp;
+	int cmd;
 {
 	return ipfrule_remove();
 }
 
 
 static int ipfrule_ioctl(lkmtp, cmd)
-struct lkm_table *lkmtp;
-int cmd;
+	struct lkm_table *lkmtp;
+	int cmd;
 {
 	int err = 0;
 
@@ -150,12 +150,12 @@ int cmd;
 
 		err = ipfrule_load(lkmtp, cmd);
 		if (!err)
-			fr_refcnt++;
+			ipf_refcnt++;
 		break;
 	case LKM_E_UNLOAD :
 		err = ipfrule_unload(lkmtp, cmd);
 		if (!err)
-			fr_refcnt--;
+			ipf_refcnt--;
 		break;
 	case LKM_E_STAT :
 		break;

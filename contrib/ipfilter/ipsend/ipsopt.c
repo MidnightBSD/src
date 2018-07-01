@@ -1,14 +1,14 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/ipsopt.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 1995-1998 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipsopt.c	1.2 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipsopt.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -62,7 +62,7 @@ struct	ipopt_names secnames[] = {
 
 
 u_short ipseclevel(slevel)
-char *slevel;
+	char *slevel;
 {
 	struct ipopt_names *so;
 
@@ -79,10 +79,10 @@ char *slevel;
 
 
 int addipopt(op, io, len, class)
-char *op;
-struct ipopt_names *io;
-int len;
-char *class;
+	char *op;
+	struct ipopt_names *io;
+	int len;
+	char *class;
 {
 	struct in_addr ipadr;
 	int olen = len, srr = 0;
@@ -150,8 +150,8 @@ char *class;
 
 
 u_32_t buildopts(cp, op, len)
-char *cp, *op;
-int len;
+	char *cp, *op;
+	int len;
 {
 	struct ipopt_names *io;
 	u_32_t msk = 0;

@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsd/ipsd.h 145519 2005-04-25 18:20:15Z darrenr $	*/
 
 /*
  * (C)opyright 1995-1998 Darren Reed.

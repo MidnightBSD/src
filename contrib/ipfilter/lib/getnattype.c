@@ -1,7 +1,7 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/getnattype.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002-2004 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
@@ -11,34 +11,24 @@
 #include "kmem.h"
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: getnattype.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 
 
 /*
  * Get a nat filter type given its kernel address.
  */
-char *getnattype(nat, alive)
-nat_t *nat;
-int alive;
+char *
+getnattype(nat)
+	nat_t *nat;
 {
 	static char unknownbuf[20];
-	ipnat_t *ipn, ipnat;
 	char *which;
-	int type;
 
 	if (!nat)
 		return "???";
-	if (alive) {
-		type = nat->nat_redir;
-	} else {
-		ipn = nat->nat_ptr;
-		if (kmemcpy((char *)&ipnat, (long)ipn, sizeof(ipnat)))
-			return "!!!";
-		type = ipnat.in_redir;
-	}
 
-	switch (type)
+	switch (nat->nat_redir)
 	{
 	case NAT_MAP :
 		which = "MAP";
@@ -49,11 +39,30 @@ int alive;
 	case NAT_REDIRECT :
 		which = "RDR";
 		break;
+	case NAT_MAP|NAT_REWRITE :
+		which = "RWR-MAP";
+		break;
+	case NAT_REDIRECT|NAT_REWRITE :
+		which = "RWR-RDR";
+		break;
 	case NAT_BIMAP :
 		which = "BIMAP";
 		break;
+	case NAT_REDIRECT|NAT_DIVERTUDP :
+		which = "DIV-RDR";
+		break;
+	case NAT_MAP|NAT_DIVERTUDP :
+		which = "DIV-MAP";
+		break;
+	case NAT_REDIRECT|NAT_ENCAP :
+		which = "ENC-RDR";
+		break;
+	case NAT_MAP|NAT_ENCAP :
+		which = "ENC-MAP";
+		break;
 	default :
-		sprintf(unknownbuf, "unknown(%04x)", type & 0xffffffff);
+		sprintf(unknownbuf, "unknown(%04x)",
+			nat->nat_redir & 0xffffffff);
 		which = unknownbuf;
 		break;
 	}

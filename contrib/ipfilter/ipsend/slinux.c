@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/slinux.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed. (from tcplog)
@@ -30,7 +30,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)slinux.c	1.2 8/25/95";
-static const char rcsid[] = "@(#)$Id: slinux.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 
 #define	CHUNKSIZE	8192
@@ -46,8 +46,8 @@ static	char	*eth_dev = NULL;
 
 
 int	initdevice(dev, spare)
-char	*dev;
-int	spare;
+	char	*dev;
+	int	spare;
 {
 	int fd;
 
@@ -66,8 +66,8 @@ int	spare;
  * output an IP packet onto a fd opened for /dev/nit
  */
 int	sendip(fd, pkt, len)
-int	fd, len;
-char	*pkt;
+	int	fd, len;
+	char	*pkt;
 {
 	struct	sockaddr	s;
 	struct	ifreq	ifr;

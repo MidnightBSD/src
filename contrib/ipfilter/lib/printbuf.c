@@ -1,11 +1,11 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/printbuf.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2004 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: printbuf.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id$
  */
 
 #include <ctype.h>
@@ -13,19 +13,21 @@
 #include "ipf.h"
 
 
-void printbuf(buf, len, zend)
-char *buf;
-int len, zend;
+void
+printbuf(buf, len, zend)
+	char *buf;
+	int len, zend;
 {
-	char *s, c;
+	char *s;
+	int c;
 	int i;
 
 	for (s = buf, i = len; i; i--) {
 		c = *s++;
-		if (ISPRINT(c))
+		if (isprint(c))
 			putchar(c);
 		else
-			printf("\\%03o", c);
+			PRINTF("\\%03o", c);
 		if ((c == '\0') && zend)
 			break;
 	}

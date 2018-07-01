@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/ipsend.h 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * ipsend.h (C) 1997-1998 Darren Reed
@@ -29,7 +29,9 @@
 #ifdef	linux
 #include <linux/sockios.h>
 #endif
-#include "tcpip.h"
+/* XXX:	The following is needed by tcpip.h */
+#include <netinet/ip_var.h>
+#include "netinet/tcpip.h"
 #include "ipt.h"
 
 extern	int	resolve __P((char *, char *));

@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/lsock.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * lsock.c (C) 1995-1998 Darren Reed
@@ -8,7 +8,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)lsock.c	1.2 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: lsock.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <stdio.h>
 #include <unistd.h>
@@ -66,9 +66,9 @@ struct	task_struct	*proc;
 #endif
 
 int	kmemcpy(buf, pos, n)
-char	*buf;
-void	*pos;
-int	n;
+	char	*buf;
+	void	*pos;
+	int	n;
 {
 	static	int	kfd = -1;
 
@@ -150,8 +150,8 @@ struct	task_struct	*getproc()
 
 
 struct	sock	*find_tcp(fd, ti)
-int	fd;
-struct	tcpiphdr *ti;
+	int	fd;
+	struct	tcpiphdr *ti;
 {
 	struct	sock	*s;
 	struct	inode	*i;
@@ -189,10 +189,10 @@ struct	tcpiphdr *ti;
 }
 
 int	do_socket(dev, mtu, ti, gwip)
-char	*dev;
-int	mtu;
-struct	tcpiphdr *ti;
-struct	in_addr	gwip;
+	char	*dev;
+	int	mtu;
+	struct	tcpiphdr *ti;
+	struct	in_addr	gwip;
 {
 	struct	sockaddr_in	rsin, lsin;
 	struct	sock	*s, sk;

@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/bpf_filter.c 299749 2016-05-14 19:09:32Z cy $	*/
 
 /*-
  * Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
@@ -42,7 +42,7 @@
 
 #if !(defined(lint) || defined(KERNEL) || defined(_KERNEL))
 static const char rcsid[] =
-    "@(#) $Header: /home/cvs/src/contrib/ipfilter/bpf_filter.c,v 1.2 2012-12-21 04:00:01 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /devel/CVS/IP-Filter/bpf_filter.c,v 2.2.2.3 2006/10/03 11:25:56 darrenr Exp $ (LBL)";
 #endif
 
 #include <sys/param.h>
@@ -132,7 +132,7 @@ m_xword(m, k, err)
 		return EXTRACT_LONG(cp);
 	}
 	m0 = m->m_next;
-	if (m0 == 0 || M_LEN(m0) + len - k < 4)
+	if (m0 == NULL || M_LEN(m0) + len - k < 4)
 		goto bad;
 	*err = 0;
 	np = MTOD(m0, u_char *);
@@ -168,7 +168,7 @@ m_xhalf(m, k, err)
 		return EXTRACT_SHORT(cp);
 	}
 	m0 = m->m_next;
-	if (m0 == 0)
+	if (m0 == NULL)
 		goto bad;
 	*err = 0;
 	return (cp[0] << 8) | MTOD(m0, u_char *)[0];
@@ -205,7 +205,7 @@ bpf_filter(pc, p, wirelen, buflen)
 	} else
 		m = NULL;
 
-	if (pc == 0)
+	if (pc == NULL)
 		/*
 		 * No filter means accept all.
 		 */

@@ -1,29 +1,30 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/printtunable.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2003 by Darren Reed.
- * 
- * See the IPFILTER.LICENCE file for details on licencing.  
- *   
- * $Id: printtunable.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $ 
- */     
+ * Copyright (C) 2012 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ *
+ * $Id$
+ */
 
 #include "ipf.h"
 
-void printtunable(tup)
-ipftune_t *tup;
+void
+printtunable(tup)
+	ipftune_t *tup;
 {
-	printf("%s\tmin %#lx\tmax %#lx\tcurrent ",
+	PRINTF("%s\tmin %lu\tmax %lu\tcurrent ",
 		tup->ipft_name, tup->ipft_min, tup->ipft_max);
 	if (tup->ipft_sz == sizeof(u_long))
-		printf("%lu\n", tup->ipft_vlong);
+		PRINTF("%lu\n", tup->ipft_vlong);
 	else if (tup->ipft_sz == sizeof(u_int))
-		printf("%u\n", tup->ipft_vint);
+		PRINTF("%u\n", tup->ipft_vint);
 	else if (tup->ipft_sz == sizeof(u_short))
-		printf("%hu\n", tup->ipft_vshort);
+		PRINTF("%hu\n", tup->ipft_vshort);
 	else if (tup->ipft_sz == sizeof(u_char))
-		printf("%u\n", (u_int)tup->ipft_vchar);
+		PRINTF("%u\n", (u_int)tup->ipft_vchar);
 	else {
-		printf("sz = %d\n", tup->ipft_sz);
+		PRINTF("sz = %d\n", tup->ipft_sz);
 	}
 }

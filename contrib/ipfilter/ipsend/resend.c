@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/resend.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * resend.c (C) 1995-1998 Darren Reed
@@ -8,15 +8,12 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)resend.c	1.3 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: resend.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
-#ifdef __osf__
-# include "radix_ipf_local.h"
-#endif
 #include <net/if.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -25,7 +22,7 @@ static const char rcsid[] = "@(#)$Id: resend.c,v 1.3 2012-12-21 03:48:04 laffer1
 #ifndef	linux
 # include <netinet/ip_var.h>
 # include <netinet/if_ether.h>
-# if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
+# if __FreeBSD_version >= 300000
 #  include <net/if_var.h>
 # endif
 #endif
@@ -38,12 +35,11 @@ static const char rcsid[] = "@(#)$Id: resend.c,v 1.3 2012-12-21 03:48:04 laffer1
 
 extern	int	opts;
 
-static	u_char	pbuf[65536];	/* 1 big packet */
-void	printpacket __P((ip_t *));
+void	dumppacket __P((ip_t *));
 
 
-void printpacket(ip)
-ip_t	*ip;
+void dumppacket(ip)
+	ip_t	*ip;
 {
 	tcphdr_t *t;
 	int i, j;
@@ -73,16 +69,17 @@ ip_t	*ip;
 
 
 int	ip_resend(dev, mtu, r, gwip, datain)
-char	*dev;
-int	mtu;
-struct	in_addr	gwip;
-struct	ipread	*r;
-char	*datain;
+	char	*dev;
+	int	mtu;
+	struct	in_addr	gwip;
+	struct	ipread	*r;
+	char	*datain;
 {
 	ether_header_t	*eh;
 	char	dhost[6];
 	ip_t	*ip;
 	int	fd, wfd = initdevice(dev, 5), len, i;
+	mb_t	mb;
 
 	if (wfd == -1)
 		return -1;
@@ -95,7 +92,7 @@ char	*datain;
 	if (fd < 0)
 		exit(-1);
 
-	ip = (struct ip *)pbuf;
+	ip = (struct ip *)mb.mb_buf;
 	eh = (ether_header_t *)malloc(sizeof(*eh));
 	if(!eh)
 	    {
@@ -111,7 +108,7 @@ char	*datain;
 		return -2;
 	    }
 
-	while ((i = (*r->r_readip)((char *)pbuf, sizeof(pbuf), NULL, NULL)) > 0)
+	while ((i = (*r->r_readip)(&mb, NULL, NULL)) > 0)
 	    {
 		if (!(opts & OPT_RAW)) {
 			len = ntohs(ip->ip_len);
@@ -131,9 +128,9 @@ char	*datain;
 						    IP_HL(ip) << 2);
 			bcopy(ip, (char *)(eh + 1), len);
 			len += sizeof(*eh);
-			printpacket(ip);
+			dumppacket(ip);
 		} else {
-			eh = (ether_header_t *)pbuf;
+			eh = (ether_header_t *)mb.mb_buf;
 			len = i;
 		}
 

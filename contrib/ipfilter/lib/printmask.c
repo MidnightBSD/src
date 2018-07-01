@@ -1,30 +1,30 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/printmask.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2005 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: printmask.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id$
  */
 
 #include "ipf.h"
 
 
-void	printmask(mask)
-u_32_t	*mask;
+void
+printmask(family, mask)
+	int	family;
+	u_32_t	*mask;
 {
 	struct in_addr ipa;
 	int ones;
 
-#ifdef  USE_INET6
-	if (use_inet6)
-		printf("/%d", count6bits(mask));
-	else
-#endif
-	if ((ones = count4bits(*mask)) == -1) {
+	if (family == AF_INET6) {
+		PRINTF("/%d", count6bits(mask));
+	} else if ((ones = count4bits(*mask)) == -1) {
 		ipa.s_addr = *mask;
-		printf("/%s", inet_ntoa(ipa));
-	} else
-		printf("/%d", ones);
+		PRINTF("/%s", inet_ntoa(ipa));
+	} else {
+		PRINTF("/%d", ones);
+	}
 }

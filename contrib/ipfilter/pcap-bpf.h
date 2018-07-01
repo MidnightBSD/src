@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/pcap-bpf.h 146277 2005-05-16 16:22:55Z darrenr $	*/
 
 /*-
  * Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
@@ -39,7 +39,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /home/cvs/src/contrib/ipfilter/pcap-bpf.h,v 1.4 2012-12-21 04:00:01 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/libpcap/pcap-bpf.h,v 1.37 2005/05/01 19:46:27 guy Exp $ (LBL)
  */
 
 /*
@@ -163,7 +163,7 @@ struct bpf_version {
  * for DLT_SLIP_BSDOS and DLT_PPP_BSDOS, which are 15 and 16, but they
  * didn't.  So it goes.
  */
-#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
+#if defined(__NetBSD__) || defined(__FreeBSD__)
 #ifndef DLT_SLIP_BSDOS
 #define DLT_SLIP_BSDOS	13	/* BSD/OS Serial Line IP */
 #define DLT_PPP_BSDOS	14	/* BSD/OS Point-to-point Protocol */

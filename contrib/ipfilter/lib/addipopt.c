@@ -1,21 +1,21 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/addipopt.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2002 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: addipopt.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id$
  */
 
 #include "ipf.h"
 
 
 int addipopt(op, io, len, class)
-char *op;
-struct ipopt_names *io;
-int len;
-char *class;
+	char *op;
+	struct ipopt_names *io;
+	int len;
+	char *class;
 {
 	int olen = len;
 	struct in_addr ipadr;
@@ -41,6 +41,10 @@ char *class;
 				lvl = seclevel(class);
 				*(op - 1) = lvl;
 				break;
+			case IPOPT_RR :
+			case IPOPT_TS :
+				s[IPOPT_OLEN] = IPOPT_MINOFF - 1 + 4;
+				break;
 			case IPOPT_LSRR :
 			case IPOPT_SSRR :
 				ipadr.s_addr = inet_addr(class);
@@ -52,12 +56,6 @@ char *class;
 				bcopy((char *)&val, op, 2);
 				break;
 			}
-		}
-
-		op += io->on_siz - 3;
-		if (len & 3) {
-			*op++ = IPOPT_NOP;
-			len++;
 		}
 	}
 	if (opts & OPT_DEBUG)

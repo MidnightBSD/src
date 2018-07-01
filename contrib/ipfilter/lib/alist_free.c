@@ -1,15 +1,15 @@
 /*
- * Copyright (C) 2006 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: alist_free.c,v 1.1.1.1 2008-11-22 14:33:09 laffer1 Exp $
+ * $Id: alist_free.c,v 1.3.2.2 2012/07/22 08:04:24 darren_r Exp $
  */
 #include "ipf.h"
 
 void
 alist_free(hosts)
-alist_t *hosts;
+	alist_t *hosts;
 {
 	alist_t *a, *next;
 

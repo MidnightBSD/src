@@ -1,11 +1,11 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/checkrev.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2000-2004 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: checkrev.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id$
  */
 
 #include <sys/ioctl.h>
@@ -15,25 +15,25 @@
 #include "netinet/ipl.h"
 
 int checkrev(ipfname)
-char *ipfname;
+	char *ipfname;
 {
 	static int vfd = -1;
-	struct friostat fio, *fiop = &fio;
-	ipfobj_t ipfo;
+	struct friostat fio;
+	ipfobj_t obj;
 
-	bzero((caddr_t)&ipfo, sizeof(ipfo));
-	ipfo.ipfo_rev = IPFILTER_VERSION;
-	ipfo.ipfo_size = sizeof(*fiop);
-	ipfo.ipfo_ptr = (void *)fiop;
-	ipfo.ipfo_type = IPFOBJ_IPFSTAT;
+	bzero((caddr_t)&obj, sizeof(obj));
+	obj.ipfo_rev = IPFILTER_VERSION;
+	obj.ipfo_size = sizeof(fio);
+	obj.ipfo_ptr = (void *)&fio;
+	obj.ipfo_type = IPFOBJ_IPFSTAT;
 
 	if ((vfd == -1) && ((vfd = open(ipfname, O_RDONLY)) == -1)) {
 		perror("open device");
 		return -1;
 	}
 
-	if (ioctl(vfd, SIOCGETFS, &ipfo)) {
-		perror("ioctl(SIOCGETFS)");
+	if (ioctl(vfd, SIOCGETFS, &obj)) {
+		ipferror(vfd, "ioctl(SIOCGETFS)");
 		close(vfd);
 		vfd = -1;
 		return -1;

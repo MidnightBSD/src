@@ -1,11 +1,11 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/tcp_flags.c 170268 2007-06-04 02:54:36Z darrenr $	*/
 
 /*
  * Copyright (C) 2000-2004 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: tcp_flags.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id: tcp_flags.c,v 1.8.2.1 2006/06/16 17:21:17 darrenr Exp $
  */
 
 #include "ipf.h"

@@ -1,9 +1,9 @@
 #
-# Copyright (C) 1993-1998 by Darren Reed.
+# Copyright (C) 2012 by Darren Reed.
 #
 # See the IPFILTER.LICENCE file for details on licencing.
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/contrib/ipfilter/man/Makefile 255332 2013-09-06 23:11:19Z cy $
 #
 
 all:

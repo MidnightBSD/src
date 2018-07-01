@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/sdlpi.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed. (from tcplog)
@@ -27,7 +27,6 @@
 #endif
 #ifdef __osf__
 # include <sys/dlpihdr.h>
-# include "radix_ipf_local.h"
 #else
 # include <sys/dlpi.h>
 #endif
@@ -49,7 +48,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)sdlpi.c	1.3 10/30/95 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: sdlpi.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 
 #define	CHUNKSIZE	8192
@@ -61,8 +60,8 @@ static const char rcsid[] = "@(#)$Id: sdlpi.c,v 1.1.1.3 2012-07-21 15:01:08 laff
  * interface are included in the header size.
  */
 int	initdevice(device, tout)
-char	*device;
-int	tout;
+	char	*device;
+	int	tout;
 {
 	char	devname[16], *s, buf[256];
 	int	i, fd;
@@ -136,9 +135,9 @@ int	tout;
  * output an IP packet onto a fd opened for /dev/nit
  */
 int	sendip(fd, pkt, len)
-int	fd, len;
-char	*pkt;
-{			
+	int	fd, len;
+	char	*pkt;
+{
 	struct strbuf dbuf, *dp = &dbuf, *cp = NULL;
 	int pri = 0;
 #ifdef DL_HP_RAWDLS

@@ -1,11 +1,11 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipt.h 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: ipt.h,v 1.2 2012-12-21 04:00:01 laffer1 Exp $
+ * $Id$
  */
 
 #ifndef	__IPT_H__
@@ -26,14 +26,11 @@
 struct	ipread	{
 	int	(*r_open) __P((char *));
 	int	(*r_close) __P((void));
-	int	(*r_readip) __P((char *, int, char **, int *));
+	int	(*r_readip) __P((mb_t *, char **, int *));
 	int	r_flags;
 };
 
 #define	R_DO_CKSUM	0x01
-
-extern	void	debug __P((char *, ...));
-extern	void	verbose __P((char *, ...));
 
 #ifdef P_DEF
 # undef	__P

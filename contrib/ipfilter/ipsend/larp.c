@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/larp.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * larp.c (C) 1995-1998 Darren Reed
@@ -8,7 +8,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)larp.c	1.1 8/19/95 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: larp.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -30,7 +30,7 @@ static const char rcsid[] = "@(#)$Id: larp.c,v 1.1.1.3 2012-07-21 15:01:08 laffe
  * (4 bytes)
  */
 int	resolve(host, address)
-char	*host, *address;
+	char	*host, *address;
 {
         struct	hostent	*hp;
         u_long	add;
@@ -56,8 +56,8 @@ char	*host, *address;
  * some BSD program, I cant remember which.
  */
 int	arp(ip, ether)
-char	*ip;
-char	*ether;
+	char	*ip;
+	char	*ether;
 {
 	static	int	s = -1;
 	struct	arpreq	ar;

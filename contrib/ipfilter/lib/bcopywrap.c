@@ -1,18 +1,18 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/bcopywrap.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
- *   
- * $Id: bcopywrap.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
- */  
+ *
+ * $Id$
+ */
 
 #include "ipf.h"
 
 int bcopywrap(from, to, size)
-void *from, *to;
-size_t size;
+	void *from, *to;
+	size_t size;
 {
 	bcopy((caddr_t)from, (caddr_t)to, size);
 	return 0;

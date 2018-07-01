@@ -1,12 +1,12 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/getifname.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002-2004 by Darren Reed.
- * 
- * See the IPFILTER.LICENCE file for details on licencing.  
- *   
- * $Id: getifname.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $ 
- */     
+ * Copyright (C) 2012 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ *
+ * $Id$
+ */
 
 #include "ipf.h"
 
@@ -18,7 +18,7 @@
  */
 #if 0
 char *getifname(ptr)
-struct ifnet *ptr;
+	struct ifnet *ptr;
 {
 #if SOLARIS || defined(__hpux)
 # if SOLARIS
@@ -47,10 +47,10 @@ struct ifnet *ptr;
 	return ifname;
 #else
 # if defined(NetBSD) && (NetBSD >= 199905) && (NetBSD < 1991011) || \
-    defined(__OpenBSD__) || defined(__MidnightBSD__) || \
+    defined(__OpenBSD__) || \
     (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
 #else
-	char buf[32];
+	char buf[LIFNAMSIZ];
 	int len;
 # endif
 	struct ifnet netif;
@@ -63,7 +63,7 @@ struct ifnet *ptr;
 	if (kmemcpy((char *)&netif, (u_long)ptr, sizeof(netif)) == -1)
 		return "X";
 # if defined(NetBSD) && (NetBSD >= 199905) && (NetBSD < 1991011) || \
-    defined(__OpenBSD__) || defined(linux) || defined(__MidnightBSD__) || \
+    defined(__OpenBSD__) || defined(linux) || \
     (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
 	return strdup(netif.if_xname);
 # else
@@ -85,8 +85,11 @@ struct ifnet *ptr;
 }
 #else
 char *getifname(ptr)
-struct ifnet *ptr;
+	struct ifnet *ptr;
 {
+#if 0
+	ptr = ptr;
+#endif
 	return "X";
 }
 #endif

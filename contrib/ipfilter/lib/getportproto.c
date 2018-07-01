@@ -1,19 +1,19 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/getportproto.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002-2005 by Darren Reed.
- * 
- * See the IPFILTER.LICENCE file for details on licencing.  
- *   
- * $Id: getportproto.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $ 
- */     
+ * Copyright (C) 2012 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ *
+ * $Id$
+ */
 
 #include <ctype.h>
 #include "ipf.h"
 
 int getportproto(name, proto)
-char *name;
-int proto;
+	char *name;
+	int proto;
 {
 	struct servent *s;
 	struct protoent *p;

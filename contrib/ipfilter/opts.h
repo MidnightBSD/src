@@ -1,18 +1,22 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/opts.h 305138 2016-08-31 18:00:41Z dim $	*/
 
 /*
- * Copyright (C) 2000 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: opts.h,v 1.2 2012-12-21 04:00:01 laffer1 Exp $
+ * $Id$
  */
 
 #ifndef	__OPTS_H__
 #define	__OPTS_H__
 
 #ifndef	SOLARIS
-#define	SOLARIS	(defined(sun) && (defined(__svr4__) || defined(__SVR4)))
+# if defined(sun) && (defined(__svr4__) || defined(__SVR4))
+#  define	SOLARIS		1
+# else
+#  define	SOLARIS		0
+# endif
 #endif
 #define	OPT_REMOVE	0x000001
 #define	OPT_DEBUG	0x000002
@@ -42,6 +46,8 @@
 #define	OPT_HEX		0x2000000
 #define	OPT_ASCII	0x4000000
 #define	OPT_NORESOLVE	0x8000000
+#define	OPT_DONTOPEN	0x10000000
+#define	OPT_PURGE	0x20000000
 
 #define	OPT_STAT	OPT_FRSTATES
 #define	OPT_LIST	OPT_SHOWLIST

@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/snit.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed. (from tcplog)
@@ -41,7 +41,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)snit.c	1.5 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: snit.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 
 #define	CHUNKSIZE	8192
@@ -58,8 +58,8 @@ static	int	timeout;
 
 
 int	initdevice(device, tout)
-char	*device;
-int	tout;
+	char	*device;
+	int	tout;
 {
 	struct	strioctl si;
 	struct	timeval to;
@@ -115,9 +115,9 @@ int	tout;
  * output an IP packet onto a fd opened for /dev/nit
  */
 int	sendip(fd, pkt, len)
-int	fd, len;
-char	*pkt;
-{			
+	int	fd, len;
+	char	*pkt;
+{
 	struct	sockaddr sk, *sa = &sk;
 	struct	strbuf	cbuf, *cp = &cbuf, dbuf, *dp = &dbuf;
 

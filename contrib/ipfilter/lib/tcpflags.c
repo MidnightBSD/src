@@ -1,11 +1,11 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/tcpflags.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2001-2002 by Darren Reed.
+ * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: tcpflags.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id$
  */
 
 #include "ipf.h"
@@ -26,7 +26,7 @@ extern	u_char	flags[];
 
 
 u_char tcpflags(flgs)
-char *flgs;
+	char *flgs;
 {
 	u_char tcpf = 0;
 	char *s, *t;

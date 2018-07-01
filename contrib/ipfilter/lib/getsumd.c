@@ -1,17 +1,17 @@
-/*	$FreeBSD$	*/
+/*	$FreeBSD: stable/10/contrib/ipfilter/lib/getsumd.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
- * Copyright (C) 2002 by Darren Reed.
- * 
- * See the IPFILTER.LICENCE file for details on licencing.  
- *   
- * $Id: getsumd.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $ 
- */     
+ * Copyright (C) 2012 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ *
+ * $Id$
+ */
 
 #include "ipf.h"
 
 char *getsumd(sum)
-u_32_t sum;
+	u_32_t sum;
 {
 	static char sumdbuf[17];
 

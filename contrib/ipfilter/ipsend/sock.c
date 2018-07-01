@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/10/contrib/ipfilter/ipsend/sock.c 255332 2013-09-06 23:11:19Z cy $ */
 /*
  * sock.c (C) 1995-1998 Darren Reed
  *
@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)sock.c	1.2 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: sock.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -24,15 +24,14 @@ typedef int     boolean_t;
 #ifndef	ultrix
 #include <fcntl.h>
 #endif
-#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
+#if (__FreeBSD_version >= 300000)
 # include <sys/dirent.h>
 #else
 # include <sys/dir.h>
 #endif
 #if !defined(__osf__)
-# ifdef __NetBSD__ 
+# ifdef __NetBSD__
 #  include <machine/lock.h>
-#  include <machine/mutex.h>
 # endif
 # ifdef __FreeBSD__
 #  define _WANT_FILE
@@ -75,9 +74,6 @@ typedef int     boolean_t;
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
-# include "radix_ipf.h"
-#endif
 #ifndef __osf__
 # include <net/route.h>
 #endif
@@ -123,9 +119,9 @@ static	struct	kinfo_proc	*getproc __P((void));
 
 
 int	kmemcpy(buf, pos, n)
-char	*buf;
-void	*pos;
-int	n;
+	char	*buf;
+	void	*pos;
+	int	n;
 {
 	static	int	kfd = -1;
 	off_t	offset = (u_long)pos;
@@ -203,8 +199,8 @@ static struct proc *getproc()
 
 
 struct	tcpcb	*find_tcp(fd, ti)
-int	fd;
-struct	tcpiphdr *ti;
+	int	fd;
+	struct	tcpiphdr *ti;
 {
 	struct	tcpcb	*t;
 	struct	inpcb	*i;
@@ -294,8 +290,8 @@ static struct kinfo_proc *getproc()
 
 
 struct	tcpcb	*find_tcp(tfd, ti)
-int	tfd;
-struct	tcpiphdr *ti;
+	int	tfd;
+	struct	tcpiphdr *ti;
 {
 	struct	tcpcb	*t;
 	struct	inpcb	*i;
@@ -310,8 +306,7 @@ struct	tcpiphdr *ti;
 	fd = (struct filedesc *)malloc(sizeof(*fd));
 	if (fd == NULL)
 		return NULL;
-#if defined(__MidnightBSD__) || \
-    defined( __FreeBSD_version) && __FreeBSD_version >= 500013
+#if defined( __FreeBSD_version) && __FreeBSD_version >= 500013
 	if (KMCPY(fd, p->ki_fd, sizeof(*fd)) == -1)
 	    {
 		fprintf(stderr, "read(%#lx,%#lx) failed\n",
@@ -391,10 +386,10 @@ finderror:
 #endif /* BSD < 199301 */
 
 int	do_socket(dev, mtu, ti, gwip)
-char	*dev;
-int	mtu;
-struct	tcpiphdr *ti;
-struct	in_addr	gwip;
+	char	*dev;
+	int	mtu;
+	struct	tcpiphdr *ti;
+	struct	in_addr	gwip;
 {
 	struct	sockaddr_in	rsin, lsin;
 	struct	tcpcb	*t, tcb;
