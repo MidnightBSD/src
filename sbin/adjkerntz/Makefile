@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sbin/adjkerntz/Makefile,v 1.2 2007/01/02 06:59:59 laffer1 Exp $
-# $FreeBSD: src/sbin/adjkerntz/Makefile,v 1.6 2001/12/04 02:19:43 obrien Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sbin/adjkerntz/Makefile 202532 2010-01-17 21:56:27Z ed $
 
 PROG=   adjkerntz
 MAN=	adjkerntz.8

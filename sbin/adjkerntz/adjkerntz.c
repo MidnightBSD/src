@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 1993-1998 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
@@ -32,8 +33,7 @@ static const char copyright[] =
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/adjkerntz/adjkerntz.c,v 1.32 2006/10/23 10:48:19 ru Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/adjkerntz/adjkerntz.c 253750 2013-07-28 18:44:17Z avg $");
 
 /*
  * Andrey A. Chernov   <ache@astral.msk.su>    Dec 20 1993
@@ -316,10 +316,7 @@ recalculate:
 			 * restoring disrtcset, since we don't clean up
 			 * anything.
 			 */
-			if (gettimeofday(&tv, (struct timezone *)NULL)) {
-				syslog(LOG_ERR, "gettimeofday: %m");
-				return 1;
-			}
+			(void)gettimeofday(&tv, NULL);
 			tv.tv_sec += diff;
 			stv = &tv;
 		}
