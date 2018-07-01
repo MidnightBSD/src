@@ -55142,6 +55142,8 @@ sbin/devd/devd.conf.5 -text
 sbin/devd/devd.h -text
 sbin/devd/devd.hh -text
 sbin/devd/parse.y -text
+sbin/devd/tests/Makefile svneol=native#text/plain
+sbin/devd/tests/client_test.c svneol=native#text/plain
 sbin/devd/token.l -text
 sbin/devfs/Makefile -text
 sbin/devfs/devfs.8 -text
