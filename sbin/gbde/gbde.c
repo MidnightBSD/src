@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/gbde/gbde.c 314327 2017-02-27 08:27:38Z avg $
  *
  * XXX: Future stuff
  *
@@ -84,7 +85,7 @@
 #include <sys/disk.h>
 #include <sys/stat.h>
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 #include <sys/param.h>
 #include <sys/linker.h>
 
@@ -805,6 +806,7 @@ main(int argc, char **argv)
 			break;
 		case 'i':
 			i_opt = !i_opt;
+			break;
 		case 'k':
 			k_opt = optarg;
 			break;
