@@ -55295,9 +55295,6 @@ sbin/geom/class/raid/graid.8 -text
 sbin/geom/class/raid3/Makefile -text
 sbin/geom/class/raid3/geom_raid3.c -text
 sbin/geom/class/raid3/graid3.8 -text
-sbin/geom/class/raid5/Makefile -text
-sbin/geom/class/raid5/geom_raid5.c -text
-sbin/geom/class/raid5/graid5.8 -text
 sbin/geom/class/sched/Makefile -text
 sbin/geom/class/sched/geom_sched.c -text
 sbin/geom/class/sched/gsched.8 -text

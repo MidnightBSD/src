@@ -1,5 +1,5 @@
-# $MidnightBSD: src/sbin/geom/class/Makefile,v 1.3 2012/11/04 01:55:18 laffer1 Exp $
-# $FreeBSD: src/sbin/geom/class/Makefile,v 1.16 2007/09/23 07:34:22 pjd Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/sbin/geom/class/Makefile 219974 2011-03-24 21:31:32Z mav $
 
 .include <bsd.own.mk>
 
@@ -16,8 +16,7 @@ SUBDIR+=multipath
 SUBDIR+=nop
 SUBDIR+=part
 SUBDIR+=raid
-#SUBDIR+=raid3
-#SUBDIR+=raid5
+SUBDIR+=raid3
 SUBDIR+=sched
 SUBDIR+=shsec
 SUBDIR+=stripe
