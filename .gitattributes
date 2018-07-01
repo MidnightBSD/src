@@ -271,6 +271,7 @@ bin/ed/undo.c -text
 bin/expr/Makefile -text
 bin/expr/expr.1 -text
 bin/expr/expr.y -text
+bin/expr/tests/Makefile svneol=native#text/plain
 bin/getfacl/Makefile -text
 bin/getfacl/getfacl.1 -text
 bin/getfacl/getfacl.c -text
