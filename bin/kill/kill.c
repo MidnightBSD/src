@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -26,7 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/kill/kill.c,v 1.20 2005/01/10 08:39:23 imp Exp $ */
+/*
+ * Important: This file is used both as a standalone program /bin/kill and
+ * as a builtin for /bin/sh (#define SHELL).
+ */
+
 #if 0
 #ifndef lint
 static char const copyright[] =
@@ -39,7 +44,7 @@ static char sccsid[] = "@(#)kill.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/kill/kill.c,v 1.2 2006/07/19 13:47:05 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/kill/kill.c 315722 2017-03-22 17:49:56Z bdrewery $");
 
 #include <ctype.h>
 #include <err.h>
@@ -63,7 +68,9 @@ static void usage(void);
 int
 main(int argc, char *argv[])
 {
-	int errors, numsig, pid;
+	long pidl;
+	pid_t pid;
+	int errors, numsig;
 	char *ep;
 
 	if (argc < 2)
@@ -134,8 +141,10 @@ main(int argc, char *argv[])
 		else
 #endif
 		{
-			pid = strtol(*argv, &ep, 10);
-			if (!**argv || *ep)
+			pidl = strtol(*argv, &ep, 10);
+			/* Check for overflow of pid_t. */
+			pid = (pid_t)pidl;
+			if (!**argv || *ep || pid != pidl)
 				errx(2, "illegal process id: %s", *argv);
 		}
 		if (kill(pid, numsig) == -1) {
@@ -152,7 +161,7 @@ signame_to_signum(const char *sig)
 {
 	int n;
 
-	if (!strncasecmp(sig, "SIG", (size_t)3))
+	if (strncasecmp(sig, "SIG", 3) == 0)
 		sig += 3;
 	for (n = 1; n < sys_nsig; n++) {
 		if (!strcasecmp(sys_signame[n], sig))
