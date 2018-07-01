@@ -1,5 +1,6 @@
-#	$OpenBSD: Makefile,v 1.1 1997/01/26 02:23:20 millert Exp $
 # $MidnightBSD$
+#	$OpenBSD: Makefile,v 1.1 1997/01/26 02:23:20 millert Exp $
+# $FreeBSD: stable/10/sbin/fsirand/Makefile 208074 2010-05-14 14:26:49Z uqs $
 
 PROG=	fsirand
 MAN=	fsirand.8

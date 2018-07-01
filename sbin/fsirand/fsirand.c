@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: fsirand.c,v 1.9 1997/02/28 00:46:33 millert Exp $	*/
 
 /*
@@ -32,11 +33,10 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/fsirand/fsirand.c 322860 2017-08-24 21:44:23Z mckusick $";
 #endif /* not lint */
 
 #include <sys/param.h>
-#include <sys/disklabel.h>
 #include <sys/resource.h>
 
 #include <ufs/ufs/dinode.h>
@@ -60,7 +60,7 @@ int fsirand(char *);
  */
 static int sblock_try[] = SBLOCKSEARCH;
 
-int printonly = 0, force = 0, ignorelabel = 0;
+static int printonly = 0, force = 0, ignorelabel = 0;
 
 int
 main(int argc, char *argv[])
@@ -120,20 +120,10 @@ fsirand(char *device)
 	char sbuf[SBLOCKSIZE], sbuftmp[SBLOCKSIZE];
 	int i, devfd, n, cg;
 	u_int32_t bsize = DEV_BSIZE;
-	struct disklabel label;
 
 	if ((devfd = open(device, printonly ? O_RDONLY : O_RDWR)) < 0) {
 		warn("can't open %s", device);
 		return (1);
-	}
-
-	/* Get block size (usually 512) from disklabel if possible */
-	if (!ignorelabel) {
-		if (ioctl(devfd, DIOCGDINFO, &label) < 0)
-			warn("can't read disklabel, using sector size of %d",
-			    bsize);
-		else
-			bsize = label.d_secsize;
 	}
 
 	dp1 = NULL;
@@ -274,8 +264,8 @@ fsirand(char *device)
 				dp2 = &((struct ufs2_dinode *)inodebuf)[n];
 			if (inumber >= ROOTINO) {
 				if (printonly)
-					(void)printf("ino %d gen %08x\n",
-					    inumber,
+					(void)printf("ino %ju gen %08x\n",
+					    (uintmax_t)inumber,
 					    sblock->fs_magic == FS_UFS1_MAGIC ?
 					    dp1->di_gen : dp2->di_gen);
 				else if (sblock->fs_magic == FS_UFS1_MAGIC) 
