@@ -43,9 +43,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <errno.h>
 #ifdef NET2_REGEX
 #include <regexp.h>
 #else
@@ -880,7 +878,7 @@ rep_name(char *name, int *nlen, int prnt)
 	 * (the user already saw that substitution go by)
 	 */
 	pt = rephead;
-	(void)strcpy(buf1, name);
+	(void)strlcpy(buf1, name, sizeof(buf1));
 	inpt = buf1;
 	outpt = nname;
 	endpt = outpt + PAXPATHLEN;
