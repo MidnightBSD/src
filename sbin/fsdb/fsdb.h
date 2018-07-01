@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: fsdb.h,v 1.2 1995/10/08 23:18:11 thorpej Exp $	*/
 
 /*
@@ -27,7 +28,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/fsdb/fsdb.h 163846 2006-10-31 22:07:29Z pjd $
  */
 
 extern int blread(int fd, char *buf, ufs2_daddr_t blk, long size);
