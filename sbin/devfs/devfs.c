@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Dima Dorfman.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/devfs/devfs.c 315355 2017-03-16 01:59:43Z ngie $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -225,6 +226,8 @@ void
 usage(void)
 {
 
-	fprintf(stderr, "usage: devfs rule|ruleset arguments\n");
+	fprintf(stderr, "usage: %s\n%s\n",
+	    "\tdevfs [-m mount-point] [-s ruleset] rule ...",
+	    "\tdevfs [-m mount-point] ruleset ...");
 	exit(1);
 }

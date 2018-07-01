@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Dima Dorfman.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/devfs/rule.c 229778 2012-01-07 16:09:33Z uqs $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -47,7 +48,7 @@ __MBSDID("$MidnightBSD$");
 
 #include "extern.h"
 
-static void rulespec_infp(FILE *fp, unsigned long reqest, devfs_rsnum rsnum);
+static void rulespec_infp(FILE *fp, unsigned long request, devfs_rsnum rsnum);
 static void rulespec_instr(struct devfs_rule *dr, const char *str,
     devfs_rsnum rsnum);
 static void rulespec_intok(struct devfs_rule *dr, int ac, char **av,
@@ -76,7 +77,7 @@ static struct intstr ist_type[] = {
 	{ NULL,			-1 }
 };
 
-devfs_rsnum in_rsnum;
+static devfs_rsnum in_rsnum;
 
 int
 rule_main(int ac, char **av)
