@@ -55108,11 +55108,13 @@ sbin/bsdlabel/bsdlabel.8 -text
 sbin/bsdlabel/bsdlabel.c -text
 sbin/bsdlabel/pathnames.h -text
 sbin/camcontrol/Makefile -text
+sbin/camcontrol/attrib.c svneol=native#text/plain
 sbin/camcontrol/camcontrol.8 -text
 sbin/camcontrol/camcontrol.c -text
 sbin/camcontrol/camcontrol.h -text
 sbin/camcontrol/fwdownload.c -text
 sbin/camcontrol/modeedit.c -text
+sbin/camcontrol/persist.c svneol=native#text/plain
 sbin/camcontrol/progress.c -text
 sbin/camcontrol/progress.h -text
 sbin/camcontrol/util.c -text
