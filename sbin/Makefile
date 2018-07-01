@@ -1,16 +1,14 @@
-#	@(#)Makefile	8.5 (Berkeley) 3/31/94
-# $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
 # $MidnightBSD$
+#	@(#)Makefile	8.5 (Berkeley) 3/31/94
+# $FreeBSD: stable/10/sbin/Makefile 324139 2017-09-30 20:44:25Z ngie $
 
 .include <bsd.own.mk>
 
 # XXX MISSING:		icheck ncheck
 
-SUBDIR=	adjkerntz \
-	atacontrol \
+SUBDIR=adjkerntz \
 	badsect \
 	camcontrol \
-	ccdconfig \
 	clri \
 	comcontrol \
 	conscontrol \
@@ -21,6 +19,7 @@ SUBDIR=	adjkerntz \
 	dump \
 	dumpfs \
 	dumpon \
+	etherswitchcfg \
 	ffsinfo \
 	fsck \
 	fsck_ffs \
@@ -32,11 +31,8 @@ SUBDIR=	adjkerntz \
 	ggate \
 	growfs \
 	gvinum \
-	hastctl \
-	hastd \
 	ifconfig \
 	init \
-	iscontrol \
 	kldconfig \
 	kldload \
 	kldstat \
@@ -49,9 +45,9 @@ SUBDIR=	adjkerntz \
 	mksnap_ffs \
 	mount \
 	mount_cd9660 \
+	mount_fusefs \
 	mount_msdosfs \
 	mount_nfs \
-	mount_ntfs \
 	mount_nullfs \
 	mount_udf \
 	mount_unionfs \
@@ -59,7 +55,6 @@ SUBDIR=	adjkerntz \
 	newfs_msdos \
 	nfsiod \
 	nos-tun \
-	nvmecontrol \
 	ping \
 	rcorder \
 	reboot \
@@ -79,11 +74,27 @@ SUBDIR=	adjkerntz \
 .if ${MK_ATM} != "no"
 SUBDIR+=	atm
 .endif
+SUBDIR.${MK_ZFS}+=	zfsbootcfg
+
+.if ${MK_CCD} != "no"
+SUBDIR+=	ccdconfig
+.endif
 
 .if ${MK_CXX} != "no"
 SUBDIR+=	devd
 .endif
 
+.if ${MK_HAST} != "no"
+SUBDIR+=	hastctl
+SUBDIR+=	hastd
+.endif
+
+.if ${MK_INET6} != "no"
+SUBDIR+=	dhcp6c
+SUBDIR+=	ping6
+SUBDIR+=	rtsol
+.endif
+	
 .if ${MK_IPFILTER} != "no"
 SUBDIR+=	ipf
 .endif
@@ -93,15 +104,18 @@ SUBDIR+=	ipfw
 SUBDIR+=	natd
 .endif
 
+.if ${MK_ISCSI} != "no"
+SUBDIR+=	iscontrol
+.endif
+
+.if ${MK_NAND} != "no"
+SUBDIR+=	nandfs
+SUBDIR+=	newfs_nandfs
+.endif
+
 .if ${MK_PF} != "no"
 SUBDIR+=	pfctl
 SUBDIR+=	pflogd
-.endif
-
-.if ${MK_INET6} != "no"
-SUBDIR+=	dhcp6c
-SUBDIR+=	ping6
-SUBDIR+=	rtsol
 .endif
 
 .if ${MK_QUOTAS} != "no"
@@ -112,8 +126,12 @@ SUBDIR+=	quotacheck
 SUBDIR+=	routed
 .endif
 
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
+
 .include <bsd.arch.inc.mk>
 
-SUBDIR:=	${SUBDIR:O}
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
