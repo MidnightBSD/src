@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)pass1.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/pass1.c 317250 2017-04-21 10:16:34Z kib $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -67,6 +68,8 @@ pass1(void)
 	ufs2_daddr_t i, cgd;
 	u_int8_t *cp;
 	int c, rebuildcg;
+
+	badblk = dupblk = lastino = 0;
 
 	/*
 	 * Set file system reserved blocks in used block map.
@@ -102,10 +105,10 @@ pass1(void)
 		if (!rebuildcg && sblock.fs_magic == FS_UFS2_MAGIC) {
 			inosused = cgp->cg_initediblk;
 			if (inosused > sblock.fs_ipg) {
-				pfatal("%s (%d > %d) %s %d\nReset to %d\n",
-				    "Too many initialized inodes", inosused,
-				    sblock.fs_ipg, "in cylinder group", c,
-				    sblock.fs_ipg);
+				pfatal(
+"Too many initialized inodes (%ju > %d) in cylinder group %d\nReset to %d\n",
+				    (uintmax_t)inosused,
+				    sblock.fs_ipg, c, sblock.fs_ipg);
 				inosused = sblock.fs_ipg;
 			}
 		} else {
@@ -131,9 +134,14 @@ pass1(void)
 		 */
 		if ((preen || inoopt) && usedsoftdep && !rebuildcg) {
 			cp = &cg_inosused(cgp)[(inosused - 1) / CHAR_BIT];
-			for ( ; inosused > 0; inosused -= CHAR_BIT, cp--) {
-				if (*cp == 0)
+			for ( ; inosused != 0; cp--) {
+				if (*cp == 0) {
+					if (inosused > CHAR_BIT)
+						inosused -= CHAR_BIT;
+					else
+						inosused = 0;
 					continue;
+				}
 				for (i = 1 << (CHAR_BIT - 1); i > 0; i >>= 1) {
 					if (*cp & i)
 						break;
@@ -141,8 +149,6 @@ pass1(void)
 				}
 				break;
 			}
-			if (inosused < 0)
-				inosused = 0;
 		}
 		/*
 		 * Allocate inoinfo structures for the allocated inodes.
@@ -463,6 +469,7 @@ pass1check(struct inodesc *idesc)
 				ckfini(0);
 				exit(EEXIT);
 			}
+			rerun = 1;
 			return (STOP);
 		}
 	}
@@ -483,6 +490,7 @@ pass1check(struct inodesc *idesc)
 					ckfini(0);
 					exit(EEXIT);
 				}
+				rerun = 1;
 				return (STOP);
 			}
 			new = (struct dups *)Malloc(sizeof(struct dups));
@@ -492,6 +500,7 @@ pass1check(struct inodesc *idesc)
 					ckfini(0);
 					exit(EEXIT);
 				}
+				rerun = 1;
 				return (STOP);
 			}
 			new->dup = blkno;

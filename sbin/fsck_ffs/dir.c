@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)dir.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/dir.c 260178 2014-01-02 01:44:14Z scottl $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -48,19 +49,13 @@ __MBSDID("$MidnightBSD$");
 
 #include "fsck.h"
 
-const char	*lfname = "lost+found";
-int	lfmode = 0700;
-struct	dirtemplate emptydir = {
+static struct	dirtemplate emptydir = {
 	0, DIRBLKSIZ, DT_UNKNOWN, 0, "",
 	0, 0, DT_UNKNOWN, 0, ""
 };
-struct	dirtemplate dirhead = {
+static struct	dirtemplate dirhead = {
 	0, 12, DT_DIR, 1, ".",
 	0, DIRBLKSIZ - 12, DT_DIR, 2, ".."
-};
-struct	odirtemplate odirhead = {
-	0, 12, 1, ".",
-	0, DIRBLKSIZ - 12, 2, ".."
 };
 
 static int chgino(struct inodesc *);
@@ -133,6 +128,7 @@ dirscan(struct inodesc *idesc)
 			    (size_t)dsize);
 			dirty(bp);
 			sbdirty();
+			rerun = 1;
 		}
 		if (n & STOP)
 			return (n);

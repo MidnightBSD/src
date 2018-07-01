@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/ea.c 259223 2013-12-11 19:25:17Z pfg $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -65,7 +66,7 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 	char dbuf[DIRBLKSIZ];
 
 	printf("Inode %ju extsize %ju\n",
-	   (intmax_t)idesc->id_number, (intmax_t)dp->di_extsize);
+	   (intmax_t)idesc->id_number, (uintmax_t)dp->di_extsize);
 	if (dp->di_extsize == 0)
 		return 0;
 	if (dp->di_extsize <= sblock.fs_fsize)

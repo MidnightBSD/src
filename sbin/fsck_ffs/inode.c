@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)inode.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/inode.c 329883 2018-02-23 23:07:41Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/stdint.h>
@@ -285,7 +286,8 @@ ginode(ino_t inumber)
 	ufs2_daddr_t iblk;
 
 	if (inumber < ROOTINO || inumber > maxino)
-		errx(EEXIT, "bad inode number %d to ginode", inumber);
+		errx(EEXIT, "bad inode number %ju to ginode",
+		    (uintmax_t)inumber);
 	if (startinum == 0 ||
 	    inumber < startinum || inumber >= startinum + INOPB(&sblock)) {
 		iblk = ino_to_fsba(&sblock, inumber);
@@ -319,7 +321,8 @@ getnextinode(ino_t inumber, int rebuildcg)
 	static caddr_t nextinop;
 
 	if (inumber != nextino++ || inumber > lastvalidinum)
-		errx(EEXIT, "bad inode number %d to nextinode", inumber);
+		errx(EEXIT, "bad inode number %ju to nextinode",
+		    (uintmax_t)inumber);
 	if (inumber >= lastinum) {
 		readcount++;
 		blk = ino_to_fsba(&sblock, lastinum);
@@ -398,7 +401,8 @@ setinodebuf(ino_t inum)
 {
 
 	if (inum % sblock.fs_ipg != 0)
-		errx(EEXIT, "bad inode number %d to setinodebuf", inum);
+		errx(EEXIT, "bad inode number %ju to setinodebuf",
+		    (uintmax_t)inum);
 	lastvalidinum = inum + sblock.fs_ipg - 1;
 	startinum = 0;
 	nextino = inum;
@@ -448,8 +452,10 @@ cacheino(union dinode *dp, ino_t inumber)
 
 	if (howmany(DIP(dp, di_size), sblock.fs_bsize) > NDADDR)
 		blks = NDADDR + NIADDR;
-	else
+	else if (DIP(dp, di_size) > 0)
 		blks = howmany(DIP(dp, di_size), sblock.fs_bsize);
+	else
+		blks = 1;
 	inp = (struct inoinfo *)
 		Malloc(sizeof(*inp) + (blks - 1) * sizeof(ufs2_daddr_t));
 	if (inp == NULL)
@@ -490,7 +496,7 @@ getinoinfo(ino_t inumber)
 			continue;
 		return (inp);
 	}
-	errx(EEXIT, "cannot find inode %d", inumber);
+	errx(EEXIT, "cannot find inode %ju", (uintmax_t)inumber);
 	return ((struct inoinfo *)0);
 }
 

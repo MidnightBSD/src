@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/pass5.c 250057 2013-04-29 20:14:11Z des $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -252,7 +253,7 @@ pass5(void)
 			frags = 0;
 			for (j = 0; j < fs->fs_frag; j++) {
 				if (testbmap(d + j)) {
-					if (Eflag && start != -1) {
+					if ((Eflag || Zflag) && start != -1) {
 						clear_blocks(start, d + j - 1);
 						start = -1;
 					}
@@ -274,7 +275,7 @@ pass5(void)
 				ffs_fragacct(fs, blk, newcg->cg_frsum, 1);
 			}
 		}
-		if (Eflag && start != -1)
+		if ((Eflag || Zflag) && start != -1)
 			clear_blocks(start, d - 1);
 		if (fs->fs_contigsumsize > 0) {
 			int32_t *sump = cg_clustersum(newcg);
@@ -581,11 +582,16 @@ check_maps(
 	}
 }
 
-static void clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end)
+static void
+clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end)
 {
 
 	if (debug)
 		printf("Zero frags %jd to %jd\n", start, end);
-	blerase(fswritefd, fsbtodb(&sblock, start),
-	    lfragtosize(&sblock, end - start + 1));
+	if (Zflag)
+		blzero(fswritefd, fsbtodb(&sblock, start),
+		    lfragtosize(&sblock, end - start + 1));
+	if (Eflag)
+		blerase(fswritefd, fsbtodb(&sblock, start),
+		    lfragtosize(&sblock, end - start + 1));
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/utilities.c 260178 2014-01-02 01:44:14Z scottl $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -108,14 +109,3 @@ retry:
 	return (origname);
 }
 
-void
-infohandler(int sig __unused)
-{
-	got_siginfo = 1;
-}
-
-void
-alarmhandler(int sig __unused)
-{
-	got_sigalarm = 1;
-}

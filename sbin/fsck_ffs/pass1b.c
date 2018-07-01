@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)pass1b.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/pass1b.c 260178 2014-01-02 01:44:14Z scottl $");
 
 #include <sys/param.h>
 
@@ -80,8 +81,10 @@ pass1b(void)
 				continue;
 			idesc.id_number = inumber;
 			if (inoinfo(inumber)->ino_state != USTATE &&
-			    (ckinode(dp, &idesc) & STOP))
+			    (ckinode(dp, &idesc) & STOP)) {
+				rerun = 1;
 				return;
+			}
 		}
 	}
 }
@@ -106,8 +109,10 @@ pass1bcheck(struct inodesc *idesc)
 			if (dlp == muldup)
 				break;
 		}
-		if (muldup == 0 || duphead == muldup->next)
+		if (muldup == 0 || duphead == muldup->next) {
+			rerun = 1;
 			return (STOP);
+		}
 	}
 	return (res);
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -52,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/gjournal.c 241012 2012-09-27 23:30:58Z mdf $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -448,7 +449,8 @@ gjournal_check(const char *filesys)
 			if (isclr(inosused, cino))
 				continue;
 			if (getino(disk, &p, ino, &mode) == -1)
-				err(1, "getino(cg=%d ino=%d)", cg, ino);
+				err(1, "getino(cg=%d ino=%ju)",
+				    cg, (uintmax_t)ino);
 			dino = p;
 			/* Not a regular file nor directory? Skip it. */
 			if (!S_ISREG(dino->di_mode) && !S_ISDIR(dino->di_mode))
@@ -480,7 +482,8 @@ gjournal_check(const char *filesys)
 			*dino = ufs2_zino;
 			/* Write the inode back. */
 			if (putino(disk) == -1)
-				err(1, "putino(cg=%d ino=%d)", cg, ino);
+				err(1, "putino(cg=%d ino=%ju)",
+				    cg, (uintmax_t)ino);
 			if (cgp->cg_unrefs == 0) {
 				//printf("No more unreferenced inodes in cg=%d.\n", cg);
 				break;

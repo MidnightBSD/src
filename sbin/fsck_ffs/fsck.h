@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -57,7 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fsck.h	8.4 (Berkeley) 5/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/fsck_ffs/fsck.h 307536 2016-10-17 22:34:41Z mckusick $
  */
 
 #ifndef _FSCK_H_
@@ -74,6 +75,7 @@
 #define	MINBUFS		10	/* minimum number of buffers required */
 #define	MAXBUFS		40	/* maximum space to allocate to buffers */
 #define	INOBUFSIZE	64*1024	/* size of buffer to read inodes in pass1 */
+#define	ZEROBUFSIZE	(dev_bsize * 128) /* size of zero buffer used by -Z */
 
 union dinode {
 	struct ufs1_dinode dp1;
@@ -191,15 +193,15 @@ struct bufarea {
 	"Inode Block",			\
 	"Directory Contents",		\
 	"User Data" }
-long readcnt[BT_NUMBUFTYPES];
-long totalreadcnt[BT_NUMBUFTYPES];
-struct timespec readtime[BT_NUMBUFTYPES];
-struct timespec totalreadtime[BT_NUMBUFTYPES];
-struct timespec startprog;
+extern long readcnt[BT_NUMBUFTYPES];
+extern long totalreadcnt[BT_NUMBUFTYPES];
+extern struct timespec readtime[BT_NUMBUFTYPES];
+extern struct timespec totalreadtime[BT_NUMBUFTYPES];
+extern struct timespec startprog;
 
-struct bufarea sblk;		/* file system superblock */
-struct bufarea *pdirbp;		/* current directory contents */
-struct bufarea *pbp;		/* current inode block */
+extern struct bufarea sblk;		/* file system superblock */
+extern struct bufarea *pdirbp;		/* current directory contents */
+extern struct bufarea *pbp;		/* current inode block */
 
 #define	dirty(bp) do { \
 	if (fswritefd < 0) \
@@ -218,7 +220,7 @@ struct bufarea *pbp;		/* current inode block */
 #define	sblock		(*sblk.b_un.b_fs)
 
 enum fixstate {DONTKNOW, NOFIX, FIX, IGNORE};
-ino_t cursnapshot;
+extern ino_t cursnapshot;
 
 struct inodesc {
 	enum fixstate id_fix;	/* policy on fixing errors */
@@ -252,7 +254,7 @@ struct inodesc {
  * To check if a block has been found as a duplicate it is only
  * necessary to search from duplist through muldup. To find the
  * total number of times that a block has been found as a duplicate
- * the entire list must be searched for occurences of the block
+ * the entire list must be searched for occurrences of the block
  * in question. The following diagram shows a sample list where
  * w (found twice), x (found once), y (found three times), and z
  * (found once) are duplicate block numbers:
@@ -281,61 +283,64 @@ struct inoinfo {
 	u_int	i_numblks;		/* size of block array in bytes */
 	ufs2_daddr_t i_blks[1];		/* actually longer */
 } **inphead, **inpsort;
-long numdirs, dirhash, listmax, inplast;
-long countdirs;			/* number of directories we actually found */
+extern long numdirs, dirhash, listmax, inplast;
+extern long countdirs;		/* number of directories we actually found */
 
 #define MIBSIZE	3		/* size of fsck sysctl MIBs */
-int	adjrefcnt[MIBSIZE];	/* MIB command to adjust inode reference cnt */
-int	adjblkcnt[MIBSIZE];	/* MIB command to adjust inode block count */
-int	adjndir[MIBSIZE];	/* MIB command to adjust number of directories */
-int	adjnbfree[MIBSIZE];	/* MIB command to adjust number of free blocks */
-int	adjnifree[MIBSIZE];	/* MIB command to adjust number of free inodes */
-int	adjnffree[MIBSIZE];	/* MIB command to adjust number of free frags */
-int	adjnumclusters[MIBSIZE];	/* MIB command to adjust number of free clusters */
-int	freefiles[MIBSIZE];	/* MIB command to free a set of files */
-int	freedirs[MIBSIZE];	/* MIB command to free a set of directories */
-int	freeblks[MIBSIZE];	/* MIB command to free a set of data blocks */
-struct	fsck_cmd cmd;		/* sysctl file system update commands */
-char	snapname[BUFSIZ];	/* when doing snapshots, the name of the file */
-char	*cdevname;		/* name of device being checked */
-long	dev_bsize;		/* computed value of DEV_BSIZE */
-long	secsize;		/* actual disk sector size */
-u_int	real_dev_bsize;		/* actual disk sector size, not overriden */
-char	nflag;			/* assume a no response */
-char	yflag;			/* assume a yes response */
-int	bkgrdflag;		/* use a snapshot to run on an active system */
-int	bflag;			/* location of alternate super block */
-int	debug;			/* output debugging info */
-int	Eflag;			/* zero out empty data blocks */
-int	inoopt;			/* trim out unused inodes */
-char	ckclean;		/* only do work if not cleanly unmounted */
-int	cvtlevel;		/* convert to newer file system format */
-int	bkgrdcheck;		/* determine if background check is possible */
-int	bkgrdsumadj;		/* whether the kernel have ability to adjust superblock summary */
-char	usedsoftdep;		/* just fix soft dependency inconsistencies */
-char	preen;			/* just fix normal inconsistencies */
-char	rerun;			/* rerun fsck. Only used in non-preen mode */
-int	returntosingle;		/* 1 => return to single user mode on exit */
-char	resolved;		/* cleared if unresolved changes => not clean */
-char	havesb;			/* superblock has been read */
-char	skipclean;		/* skip clean file systems if preening */
-int	fsmodified;		/* 1 => write done to file system */
-int	fsreadfd;		/* file descriptor for reading file system */
-int	fswritefd;		/* file descriptor for writing file system */
+extern int	adjrefcnt[MIBSIZE];	/* MIB command to adjust inode reference cnt */
+extern int	adjblkcnt[MIBSIZE];	/* MIB command to adjust inode block count */
+extern int	adjndir[MIBSIZE];	/* MIB command to adjust number of directories */
+extern int	adjnbfree[MIBSIZE];	/* MIB command to adjust number of free blocks */
+extern int	adjnifree[MIBSIZE];	/* MIB command to adjust number of free inodes */
+extern int	adjnffree[MIBSIZE];	/* MIB command to adjust number of free frags */
+extern int	adjnumclusters[MIBSIZE];	/* MIB command to adjust number of free clusters */
+extern int	freefiles[MIBSIZE];	/* MIB command to free a set of files */
+extern int	freedirs[MIBSIZE];	/* MIB command to free a set of directories */
+extern int	freeblks[MIBSIZE];	/* MIB command to free a set of data blocks */
+extern struct	fsck_cmd cmd;		/* sysctl file system update commands */
+extern char	snapname[BUFSIZ];	/* when doing snapshots, the name of the file */
+extern char	*cdevname;		/* name of device being checked */
+extern long	dev_bsize;		/* computed value of DEV_BSIZE */
+extern long	secsize;		/* actual disk sector size */
+extern u_int	real_dev_bsize;		/* actual disk sector size, not overridden */
+extern char	nflag;			/* assume a no response */
+extern char	yflag;			/* assume a yes response */
+extern int	bkgrdflag;		/* use a snapshot to run on an active system */
+extern ufs2_daddr_t bflag;		/* location of alternate super block */
+extern int	debug;			/* output debugging info */
+extern int	Eflag;			/* delete empty data blocks */
+extern int	Zflag;			/* zero empty data blocks */
+extern int	inoopt;			/* trim out unused inodes */
+extern char	ckclean;		/* only do work if not cleanly unmounted */
+extern int	cvtlevel;		/* convert to newer file system format */
+extern int	bkgrdcheck;		/* determine if background check is possible */
+extern int	bkgrdsumadj;		/* whether the kernel have ability to adjust superblock summary */
+extern char	usedsoftdep;		/* just fix soft dependency inconsistencies */
+extern char	preen;			/* just fix normal inconsistencies */
+extern char	rerun;			/* rerun fsck. Only used in non-preen mode */
+extern int	returntosingle;		/* 1 => return to single user mode on exit */
+extern char	resolved;		/* cleared if unresolved changes => not clean */
+extern char	havesb;			/* superblock has been read */
+extern char	skipclean;		/* skip clean file systems if preening */
+extern int	fsmodified;		/* 1 => write done to file system */
+extern int	fsreadfd;		/* file descriptor for reading file system */
+extern int	fswritefd;		/* file descriptor for writing file system */
+extern int	surrender;		/* Give up if reads fail */
+extern int	wantrestart;		/* Restart fsck on early termination */
 
-ufs2_daddr_t maxfsblock;	/* number of blocks in the file system */
-char	*blockmap;		/* ptr to primary blk allocation map */
-ino_t	maxino;			/* number of inodes in file system */
+extern ufs2_daddr_t maxfsblock;	/* number of blocks in the file system */
+extern char	*blockmap;		/* ptr to primary blk allocation map */
+extern ino_t	maxino;			/* number of inodes in file system */
 
-ino_t	lfdir;			/* lost & found directory inode number */
-const char *lfname;		/* lost & found directory name */
-int	lfmode;			/* lost & found directory creation mode */
+extern ino_t	lfdir;			/* lost & found directory inode number */
+extern const char *lfname;		/* lost & found directory name */
+extern int	lfmode;			/* lost & found directory creation mode */
 
-ufs2_daddr_t n_blks;		/* number of blocks in use */
-ino_t n_files;			/* number of files in use */
+extern ufs2_daddr_t n_blks;		/* number of blocks in use */
+extern ino_t n_files;			/* number of files in use */
 
-volatile sig_atomic_t	got_siginfo;	/* received a SIGINFO */
-volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
+extern volatile sig_atomic_t	got_siginfo;	/* received a SIGINFO */
+extern volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
 
 #define	clearinode(dp) \
 	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
@@ -343,8 +348,8 @@ volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
 	} else { \
 		(dp)->dp2 = ufs2_zino; \
 	}
-struct	ufs1_dinode ufs1_zino;
-struct	ufs2_dinode ufs2_zino;
+extern struct	ufs1_dinode ufs1_zino;
+extern struct	ufs2_dinode ufs2_zino;
 
 #define	setbmap(blkno)	setbit(blockmap, blkno)
 #define	testbmap(blkno)	isset(blockmap, blkno)
@@ -357,6 +362,7 @@ struct	ufs2_dinode ufs2_zino;
 #define	FOUND	0x10
 
 #define	EEXIT	8		/* Standard error exit. */
+#define	ERESTART -1
 
 int flushentry(void);
 /*
@@ -364,7 +370,7 @@ int flushentry(void);
  * to get space.
  */
 static inline void*
-Malloc(int size)
+Malloc(size_t size)
 {
 	void *retval;
 
@@ -379,7 +385,7 @@ Malloc(int size)
  * to get space.
  */
 static inline void*
-Calloc(int cnt, int size)
+Calloc(size_t cnt, size_t size)
 {
 	void *retval;
 
@@ -400,8 +406,9 @@ void		blkerror(ino_t ino, const char *type, ufs2_daddr_t blk);
 char	       *blockcheck(char *name);
 int		blread(int fd, char *buf, ufs2_daddr_t blk, long size);
 void		bufinit(void);
-void		blwrite(int fd, char *buf, ufs2_daddr_t blk, long size);
+void		blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size);
 void		blerase(int fd, ufs2_daddr_t blk, long size);
+void		blzero(int fd, ufs2_daddr_t blk, long size);
 void		cacheino(union dinode *dp, ino_t inumber);
 void		catch(int);
 void		catchquit(int);
@@ -424,6 +431,7 @@ void		flush(int fd, struct bufarea *bp);
 void		freeblk(ufs2_daddr_t blkno, long frags);
 void		freeino(ino_t ino);
 void		freeinodebuf(void);
+void		fsutilinit(void);
 int		ftypeok(union dinode *dp);
 void		getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
 struct bufarea *cgget(int cg);
@@ -462,5 +470,6 @@ int		setup(char *dev);
 void		gjournal_check(const char *filesys);
 int		suj_check(const char *filesys);
 void		update_maps(struct cg *, struct cg*, int);
+void		fsckinit(void);
 
 #endif	/* !_FSCK_H_ */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/main.c 324675 2017-10-16 21:55:31Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -57,6 +58,7 @@ __MBSDID("$MidnightBSD$");
 #include <errno.h>
 #include <fstab.h>
 #include <grp.h>
+#include <inttypes.h>
 #include <mntopts.h>
 #include <paths.h>
 #include <stdint.h>
@@ -65,8 +67,10 @@ __MBSDID("$MidnightBSD$");
 
 #include "fsck.h"
 
+int	restarts;
+
 static void usage(void) __dead2;
-static int argtoi(int flag, const char *req, const char *str, int base);
+static intmax_t argtoimax(int flag, const char *req, const char *str, int base);
 static int checkfilesys(char *filesys);
 static int chkdoreload(struct statfs *mntp);
 static struct statfs *getmntpt(const char *);
@@ -82,12 +86,12 @@ main(int argc, char *argv[])
 	sync();
 	skipclean = 1;
 	inoopt = 0;
-	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npry")) != -1) {
+	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npRrSyZ")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
-			bflag = argtoi('b', "number", optarg, 10);
-			printf("Alternate super block location: %d\n", bflag);
+			bflag = argtoimax('b', "number", optarg, 10);
+			printf("Alternate super block location: %jd\n", bflag);
 			break;
 
 		case 'B':
@@ -96,7 +100,8 @@ main(int argc, char *argv[])
 
 		case 'c':
 			skipclean = 0;
-			cvtlevel = argtoi('c', "conversion level", optarg, 10);
+			cvtlevel = argtoimax('c', "conversion level", optarg,
+			    10);
 			if (cvtlevel < 3)
 				errx(EEXIT, "cannot do level %d conversion",
 				    cvtlevel);
@@ -119,7 +124,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'm':
-			lfmode = argtoi('m', "mode", optarg, 8);
+			lfmode = argtoimax('m', "mode", optarg, 8);
 			if (lfmode &~ 07777)
 				errx(EEXIT, "bad mode to -m: %o", lfmode);
 			printf("** lost+found creation mode %o\n", lfmode);
@@ -138,13 +143,24 @@ main(int argc, char *argv[])
 			ckclean++;
 			break;
 
+		case 'R':
+			wantrestart = 1;
+			break;
 		case 'r':
 			inoopt++;
+			break;
+
+		case 'S':
+			surrender = 1;
 			break;
 
 		case 'y':
 			yflag++;
 			nflag = 0;
+			break;
+
+		case 'Z':
+			Zflag++;
 			break;
 
 		default:
@@ -178,21 +194,25 @@ main(int argc, char *argv[])
 		rlimit.rlim_cur = rlimit.rlim_max;
 		(void)setrlimit(RLIMIT_DATA, &rlimit);
 	}
-	while (argc-- > 0)
-		(void)checkfilesys(*argv++);
+	while (argc > 0) {
+		if (checkfilesys(*argv) == ERESTART)
+			continue;
+		argc--;
+		argv++;
+	}
 
 	if (returntosingle)
 		ret = 2;
 	exit(ret);
 }
 
-static int
-argtoi(int flag, const char *req, const char *str, int base)
+static intmax_t
+argtoimax(int flag, const char *req, const char *str, int base)
 {
 	char *cp;
-	int ret;
+	intmax_t ret;
 
-	ret = (int)strtol(str, &cp, base);
+	ret = strtoimax(str, &cp, base);
 	if (cp == str || *cp)
 		errx(EEXIT, "-%c flag requires a %s", flag, req);
 	return (ret);
@@ -210,17 +230,19 @@ checkfilesys(char *filesys)
 	struct statfs *mntp;
 	struct stat snapdir;
 	struct group *grp;
-	ufs2_daddr_t blks;
 	struct iovec *iov;
 	char errmsg[255];
+	int ofsmodified;
 	int iovlen;
 	int cylno;
-	ino_t files;
+	intmax_t blks, files;
 	size_t size;
 
 	iov = NULL;
 	iovlen = 0;
 	errmsg[0] = '\0';
+	fsutilinit();
+	fsckinit();
 
 	cdevname = filesys;
 	if (debug && ckclean)
@@ -279,8 +301,8 @@ checkfilesys(char *filesys)
 					exit(0);
 				exit(4);
 			} else {
-				pfatal("UNEXPECTED INCONSISTENCY, %s\n",
-				    "CANNOT RUN FAST FSCK\n");
+				pfatal(
+			    "UNEXPECTED INCONSISTENCY, CANNOT RUN FAST FSCK\n");
 			}
 		}
 	}
@@ -297,8 +319,8 @@ checkfilesys(char *filesys)
 			pfatal("NOT MOUNTED, CANNOT RUN IN BACKGROUND\n");
 		} else if ((mntp->f_flags & MNT_SOFTDEP) == 0) {
 			bkgrdflag = 0;
-			pfatal("NOT USING SOFT UPDATES, %s\n",
-			    "CANNOT RUN IN BACKGROUND");
+			pfatal(
+			  "NOT USING SOFT UPDATES, CANNOT RUN IN BACKGROUND\n");
 		} else if ((mntp->f_flags & MNT_RDONLY) != 0) {
 			bkgrdflag = 0;
 			pfatal("MOUNTED READ-ONLY, CANNOT RUN IN BACKGROUND\n");
@@ -306,8 +328,8 @@ checkfilesys(char *filesys)
 			if (readsb(0) != 0) {
 				if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ)) {
 					bkgrdflag = 0;
-					pfatal("UNEXPECTED INCONSISTENCY, %s\n",
-					    "CANNOT RUN IN BACKGROUND\n");
+					pfatal(
+			"UNEXPECTED INCONSISTENCY, CANNOT RUN IN BACKGROUND\n");
 				}
 				if ((sblock.fs_flags & FS_UNCLEAN) == 0 &&
 				    skipclean && ckclean) {
@@ -315,8 +337,8 @@ checkfilesys(char *filesys)
 					 * file system is clean;
 					 * skip snapshot and report it clean
 					 */
-					pwarn("FILE SYSTEM CLEAN; %s\n",
-					    "SKIPPING CHECKS");
+					pwarn(
+					"FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
 					goto clean;
 				}
 			}
@@ -328,24 +350,23 @@ checkfilesys(char *filesys)
 			if (stat(snapname, &snapdir) < 0) {
 				if (errno != ENOENT) {
 					bkgrdflag = 0;
-					pfatal("CANNOT FIND %s %s: %s, %s\n",
-					    "SNAPSHOT DIRECTORY",
-					    snapname, strerror(errno),
-					    "CANNOT RUN IN BACKGROUND");
+					pfatal(
+	"CANNOT FIND SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
+					    snapname, strerror(errno));
 				} else if ((grp = getgrnam("operator")) == 0 ||
 				    mkdir(snapname, 0770) < 0 ||
 				    chown(snapname, -1, grp->gr_gid) < 0 ||
 				    chmod(snapname, 0770) < 0) {
 					bkgrdflag = 0;
-					pfatal("CANNOT CREATE %s %s: %s, %s\n",
-					    "SNAPSHOT DIRECTORY",
-					    snapname, strerror(errno),
-					    "CANNOT RUN IN BACKGROUND");
+					pfatal(
+	"CANNOT CREATE SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
+					    snapname, strerror(errno));
 				}
 			} else if (!S_ISDIR(snapdir.st_mode)) {
 				bkgrdflag = 0;
-				pfatal("%s IS NOT A DIRECTORY, %s\n", snapname,
-				    "CANNOT RUN IN BACKGROUND");
+				pfatal(
+			"%s IS NOT A DIRECTORY, CANNOT RUN IN BACKGROUND\n",
+				    snapname);
 			}
 		}
 		if (bkgrdflag) {
@@ -383,9 +404,9 @@ checkfilesys(char *filesys)
 	clean:
 		pwarn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
 		    sblock.fs_frag * sblock.fs_cstotal.cs_nbfree));
-		printf("(%lld frags, %lld blocks, %.1f%% fragmentation)\n",
-		    (long long)sblock.fs_cstotal.cs_nffree,
-		    (long long)sblock.fs_cstotal.cs_nbfree,
+		printf("(%jd frags, %jd blocks, %.1f%% fragmentation)\n",
+		    (intmax_t)sblock.fs_cstotal.cs_nffree,
+		    (intmax_t)sblock.fs_cstotal.cs_nbfree,
 		    sblock.fs_cstotal.cs_nffree * 100.0 / sblock.fs_dsize);
 		return (0);
 	}
@@ -406,10 +427,15 @@ checkfilesys(char *filesys)
 		}
 		/*
 		 * Write the superblock so we don't try to recover the
-		 * journal on another pass.
+		 * journal on another pass. If this is the only change
+		 * to the filesystem, we do not want it to be called
+		 * out as modified.
 		 */
 		sblock.fs_mtime = time(NULL);
 		sbdirty();
+		ofsmodified = fsmodified;
+		flush(fswritefd, &sblk);
+		fsmodified = ofsmodified;
 	}
 
 	/*
@@ -489,8 +515,8 @@ checkfilesys(char *filesys)
 	blks = maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
 	if (bkgrdflag && (files > 0 || blks > 0)) {
 		countdirs = sblock.fs_cstotal.cs_ndir - countdirs;
-		pwarn("Reclaimed: %ld directories, %ld files, %lld fragments\n",
-		    countdirs, (long)files - countdirs, (long long)blks);
+		pwarn("Reclaimed: %ld directories, %jd files, %jd fragments\n",
+		    countdirs, files - countdirs, blks);
 	}
 	pwarn("%ld files, %jd used, %ju free ",
 	    (long)n_files, (intmax_t)n_blks,
@@ -500,13 +526,13 @@ checkfilesys(char *filesys)
 	    n_ffree * 100.0 / sblock.fs_dsize);
 	if (debug) {
 		if (files < 0)
-			printf("%d inodes missing\n", -files);
+			printf("%jd inodes missing\n", -files);
 		if (blks < 0)
-			printf("%lld blocks missing\n", -(long long)blks);
+			printf("%jd blocks missing\n", -blks);
 		if (duplist != NULL) {
 			printf("The following duplicate blocks remain:");
 			for (dp = duplist; dp; dp = dp->next)
-				printf(" %lld,", (long long)dp->dup);
+				printf(" %jd,", (intmax_t)dp->dup);
 			printf("\n");
 		}
 	}
@@ -544,8 +570,12 @@ checkfilesys(char *filesys)
 	inostathead = NULL;
 	if (fsmodified && !preen)
 		printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
-	if (rerun)
+	if (rerun) {
+		if (wantrestart && (restarts++ < 10) &&
+		    (preen || reply("RESTART")))
+			return (ERESTART);
 		printf("\n***** PLEASE RERUN FSCK *****\n");
+	}
 	if (chkdoreload(mntp) != 0) {
 		if (!fsmodified)
 			return (0);
@@ -623,6 +653,9 @@ getmntpt(const char *name)
 		statfsp = &mntbuf[i];
 		ddevname = statfsp->f_mntfromname;
 		if (*ddevname != '/') {
+			if (strlen(_PATH_DEV) + strlen(ddevname) + 1 >
+			    sizeof(statfsp->f_mntfromname))
+				continue;
 			strcpy(device, _PATH_DEV);
 			strcat(device, ddevname);
 			strcpy(statfsp->f_mntfromname, device);
@@ -644,8 +677,19 @@ static void
 usage(void)
 {
 	(void) fprintf(stderr,
-	    "usage: %s [-BEFfnpry] [-b block] [-c level] [-m mode] "
-			"filesystem ...\n",
+"usage: %s [-BEFfnpry] [-b block] [-c level] [-m mode] filesystem ...\n",
 	    getprogname());
 	exit(1);
+}
+
+void
+infohandler(int sig __unused)
+{
+	got_siginfo = 1;
+}
+
+void
+alarmhandler(int sig __unused)
+{
+	got_sigalarm = 1;
 }

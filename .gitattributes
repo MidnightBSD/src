@@ -55219,6 +55219,7 @@ sbin/fsck_ffs/fsck.h -text
 sbin/fsck_ffs/fsck_ffs.8 -text
 sbin/fsck_ffs/fsutil.c -text
 sbin/fsck_ffs/gjournal.c -text
+sbin/fsck_ffs/globs.c svneol=native#text/plain
 sbin/fsck_ffs/inode.c -text
 sbin/fsck_ffs/main.c -text
 sbin/fsck_ffs/pass1.c -text

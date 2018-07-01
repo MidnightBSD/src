@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/fsutil.c 263629 2014-03-22 11:43:35Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -74,6 +75,25 @@ static struct bufarea cgblk;	/* backup buffer for cylinder group blocks */
 static TAILQ_HEAD(buflist, bufarea) bufhead;	/* head of buffer cache list */
 static int numbufs;				/* size of buffer cache */
 static char *buftype[BT_NUMBUFTYPES] = BT_NAMES;
+static struct bufarea *cgbufs;	/* header for cylinder group cache */
+static int flushtries;		/* number of tries to reclaim memory */
+
+void
+fsutilinit(void)
+{
+	diskreads = totaldiskreads = totalreads = 0;
+	bzero(&startpass, sizeof(struct timespec));
+	bzero(&finishpass, sizeof(struct timespec));
+	bzero(&slowio_starttime, sizeof(struct timeval));
+	slowio_delay_usec = 10000;
+	slowio_pollcnt = 0;
+	bzero(&cgblk, sizeof(struct bufarea));
+	TAILQ_INIT(&bufhead);
+	numbufs = 0;
+	/* buftype ? */
+	cgbufs = NULL;
+	flushtries = 0;
+}
 
 int
 ftypeok(union dinode *dp)
@@ -144,7 +164,8 @@ inoinfo(ino_t inum)
 	int iloff;
 
 	if (inum > maxino)
-		errx(EEXIT, "inoinfo: inumber %d out of range", inum);
+		errx(EEXIT, "inoinfo: inumber %ju out of range",
+		    (uintmax_t)inum);
 	ilp = &inostathead[inum / sblock.fs_ipg];
 	iloff = inum % sblock.fs_ipg;
 	if (iloff >= ilp->il_numalloced)
@@ -205,7 +226,7 @@ cgget(int cg)
 	struct cg *cgp;
 
 	if (cgbufs == NULL) {
-		cgbufs = Calloc(sblock.fs_ncg, sizeof(struct bufarea));
+		cgbufs = calloc(sblock.fs_ncg, sizeof(struct bufarea));
 		if (cgbufs == NULL)
 			errx(EEXIT, "cannot allocate cylinder group buffers");
 	}
@@ -234,6 +255,8 @@ flushentry(void)
 {
 	struct bufarea *cgbp;
 
+	if (flushtries == sblock.fs_ncg || cgbufs == NULL)
+		return (0);
 	cgbp = &cgbufs[flushtries++];
 	if (cgbp->b_un.b_cg == NULL)
 		return (0);
@@ -337,7 +360,7 @@ flush(int fd, struct bufarea *bp)
 		    (bp->b_errs == bp->b_size / dev_bsize) ? "" : "PARTIALLY ",
 		    (long long)bp->b_bno);
 	bp->b_errs = 0;
-	blwrite(fd, bp->b_un.b_buf, bp->b_bno, (long)bp->b_size);
+	blwrite(fd, bp->b_un.b_buf, bp->b_bno, bp->b_size);
 	if (bp != &sblk)
 		return;
 	for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
@@ -414,13 +437,15 @@ ckfini(int markclean)
 	}
 	if (numbufs != cnt)
 		errx(EEXIT, "panic: lost %d buffers", numbufs - cnt);
-	for (cnt = 0; cnt < sblock.fs_ncg; cnt++) {
-		if (cgbufs[cnt].b_un.b_cg == NULL)
-			continue;
-		flush(fswritefd, &cgbufs[cnt]);
-		free(cgbufs[cnt].b_un.b_cg);
+	if (cgbufs != NULL) {
+		for (cnt = 0; cnt < sblock.fs_ncg; cnt++) {
+			if (cgbufs[cnt].b_un.b_cg == NULL)
+				continue;
+			flush(fswritefd, &cgbufs[cnt]);
+			free(cgbufs[cnt].b_un.b_cg);
+		}
+		free(cgbufs);
 	}
-	free(cgbufs);
 	pbp = pdirbp = (struct bufarea *)0;
 	if (cursnapshot == 0 && sblock.fs_clean != markclean) {
 		if ((sblock.fs_clean = markclean) != 0) {
@@ -548,7 +573,18 @@ blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 			slowio_end();
 		return (0);
 	}
-	rwerror("READ BLK", blk);
+
+	/*
+	 * This is handled specially here instead of in rwerror because
+	 * rwerror is used for all sorts of errors, not just true read/write
+	 * errors.  It should be refactored and fixed.
+	 */
+	if (surrender) {
+		pfatal("CANNOT READ_BLK: %ld", (long)blk);
+		errx(EEXIT, "ABORTING DUE TO READ ERRORS");
+	} else
+		rwerror("READ BLK", blk);
+
 	if (lseek(fd, offset, 0) < 0)
 		rwerror("SEEK BLK", blk);
 	errs = 0;
@@ -573,7 +609,7 @@ blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 }
 
 void
-blwrite(int fd, char *buf, ufs2_daddr_t blk, long size)
+blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size)
 {
 	int i;
 	char *cp;
@@ -585,7 +621,7 @@ blwrite(int fd, char *buf, ufs2_daddr_t blk, long size)
 	offset *= dev_bsize;
 	if (lseek(fd, offset, 0) < 0)
 		rwerror("SEEK BLK", blk);
-	else if (write(fd, buf, (int)size) == size) {
+	else if (write(fd, buf, size) == size) {
 		fsmodified = 1;
 		return;
 	}
@@ -595,7 +631,7 @@ blwrite(int fd, char *buf, ufs2_daddr_t blk, long size)
 		rwerror("SEEK BLK", blk);
 	printf("THE FOLLOWING SECTORS COULD NOT BE WRITTEN:");
 	for (cp = buf, i = 0; i < size; i += dev_bsize, cp += dev_bsize)
-		if (write(fd, cp, (int)dev_bsize) != dev_bsize) {
+		if (write(fd, cp, dev_bsize) != dev_bsize) {
 			(void)lseek(fd, offset + i + dev_bsize, 0);
 			printf(" %jd,", (intmax_t)blk + i / dev_bsize);
 		}
@@ -615,6 +651,35 @@ blerase(int fd, ufs2_daddr_t blk, long size)
 	ioctl(fd, DIOCGDELETE, ioarg);
 	/* we don't really care if we succeed or not */
 	return;
+}
+
+/*
+ * Fill a contiguous region with all-zeroes.  Note ZEROBUFSIZE is by
+ * definition a multiple of dev_bsize.
+ */
+void
+blzero(int fd, ufs2_daddr_t blk, long size)
+{
+	static char *zero;
+	off_t offset, len;
+
+	if (fd < 0)
+		return;
+	if (zero == NULL) {
+		zero = calloc(ZEROBUFSIZE, 1);
+		if (zero == NULL)
+			errx(EEXIT, "cannot allocate buffer pool");
+	}
+	offset = blk * dev_bsize;
+	if (lseek(fd, offset, 0) < 0)
+		rwerror("SEEK BLK", blk);
+	while (size > 0) {
+		len = size > ZEROBUFSIZE ? ZEROBUFSIZE : size;
+		if (write(fd, zero, len) != len)
+			rwerror("WRITE BLK", blk);
+		blk += len / dev_bsize;
+		size -= len;
+	}
 }
 
 /*
@@ -901,7 +966,7 @@ dofix(struct inodesc *idesc, const char *msg)
 #include <stdarg.h>
 
 /*
- * An unexpected inconsistency occured.
+ * An unexpected inconsistency occurred.
  * Die if preening or file system is running with soft dependency protocol,
  * otherwise just print message and continue.
  */

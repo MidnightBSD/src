@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static const char sccsid[] = "@(#)pass2.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/pass2.c 241012 2012-09-27 23:30:58Z mdf $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -223,13 +224,14 @@ pass2(void)
 		 *    inp->i_parent is directory to which ".." should point.
 		 */
 		getpathname(pathbuf, inp->i_parent, inp->i_number);
-		printf("BAD INODE NUMBER FOR '..' in DIR I=%d (%s)\n",
-		    inp->i_number, pathbuf);
+		printf("BAD INODE NUMBER FOR '..' in DIR I=%ju (%s)\n",
+		    (uintmax_t)inp->i_number, pathbuf);
 		getpathname(pathbuf, inp->i_dotdot, inp->i_dotdot);
-		printf("CURRENTLY POINTS TO I=%d (%s), ", inp->i_dotdot,
-		    pathbuf);
+		printf("CURRENTLY POINTS TO I=%ju (%s), ",
+		    (uintmax_t)inp->i_dotdot, pathbuf);
 		getpathname(pathbuf, inp->i_parent, inp->i_parent);
-		printf("SHOULD POINT TO I=%d (%s)", inp->i_parent, pathbuf);
+		printf("SHOULD POINT TO I=%ju (%s)",
+		    (uintmax_t)inp->i_parent, pathbuf);
 		if (cursnapshot != 0) {
 			/*
 			 * We need to:
@@ -443,8 +445,8 @@ again:
 			} else {
 				getpathname(dirname, idesc->id_number,
 				    dirp->d_ino);
-				pwarn("ZERO LENGTH DIRECTORY %s I=%d",
-					dirname, dirp->d_ino);
+				pwarn("ZERO LENGTH DIRECTORY %s I=%ju",
+				    dirname, (uintmax_t)dirp->d_ino);
 				/*
 				 * We need to:
 				 *    setcwd(idesc->id_parent);
@@ -507,8 +509,9 @@ again:
 			break;
 
 		default:
-			errx(EEXIT, "BAD STATE %d FOR INODE I=%d",
-			    inoinfo(dirp->d_ino)->ino_state, dirp->d_ino);
+			errx(EEXIT, "BAD STATE %d FOR INODE I=%ju",
+			    inoinfo(dirp->d_ino)->ino_state,
+			    (uintmax_t)dirp->d_ino);
 		}
 	}
 	if (n == 0)
@@ -613,7 +616,7 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 			printf(" (IGNORED)\n");
 			return (0);
 		}
-		if ((cp = rindex(oldname, '/')) == NULL) {
+		if ((cp = strchr(oldname, '/')) == NULL) {
 			printf(" (IGNORED)\n");
 			return (0);
 		}
