@@ -23,6 +23,7 @@ SUBDIR= cat \
 	kill \
 	ln \
 	ls \
+	midnightbsd-version \
 	mined \
 	mkdir \
 	mksh \
@@ -60,9 +61,11 @@ SUBDIR+=	rmail
 SUBDIR+=	csh
 .endif
 
-.include <bsd.arch.inc.mk>
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
-SUBDIR:=	${SUBDIR:O}
+.include <bsd.arch.inc.mk>
 
 SUBDIR_PARALLEL=
 
