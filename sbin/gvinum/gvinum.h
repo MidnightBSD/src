@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998
  *	Nan Yang Computer Services Limited.  All rights reserved.
@@ -34,6 +35,7 @@
  * advised of the possibility of such damage.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/sbin/gvinum/gvinum.h 265536 2014-05-07 09:55:47Z marius $ */
 
-#define GVINUMMOD	"geom_vinum"
+#define	GVINUMMOD	"g_vinum"
+#define	GVINUMKLD	"geom_vinum"
