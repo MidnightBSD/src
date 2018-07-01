@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: conflex.c,v 1.7 2004/09/15 19:02:38 deraadt Exp $	*/
 
 /* Lexical scanner for dhcpd config file... */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/conflex.c 301506 2016-06-06 13:31:28Z pfg $");
 
 #include <ctype.h>
 
@@ -97,8 +98,8 @@ get_char(FILE *cfile)
 				cur_line = line2;
 				prev_line = line1;
 			} else {
-				cur_line = line2;
-				prev_line = line1;
+				cur_line = line1;
+				prev_line = line2;
 			}
 			line++;
 			lpos = 1;

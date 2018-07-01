@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: dhctoken.h,v 1.2 2004/02/04 12:16:56 henning Exp $	*/
 
 /* Tokens for config file lexer and parser. */

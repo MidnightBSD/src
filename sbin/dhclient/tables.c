@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tables.c,v 1.4 2004/05/04 20:28:40 deraadt Exp $	*/
 
 /* Tables of information... */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/tables.c 228259 2011-12-04 14:44:31Z dumbbell $");
 
 #include "dhcpd.h"
 

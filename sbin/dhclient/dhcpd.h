@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: dhcpd.h,v 1.33 2004/05/06 22:29:15 deraadt Exp $	*/
 
 /*
@@ -38,7 +39,7 @@
  * see ``http://www.vix.com/isc''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/dhclient/dhcpd.h 252626 2013-07-03 22:12:54Z pjd $
  */
 
 #include <sys/param.h>
@@ -121,6 +122,7 @@ struct client_lease {
 	struct client_lease	*next;
 	time_t			 expiry, renewal, rebind;
 	struct iaddr		 address;
+	struct iaddr		 nextserver;
 	char			*server_name;
 	char			*filename;
 	struct string_list	*medium;
@@ -296,11 +298,13 @@ struct hash_table	*new_hash_table(int);
 struct hash_bucket	*new_hash_bucket(void);
 
 /* bpf.c */
-int if_register_bpf(struct interface_info *);
+int if_register_bpf(struct interface_info *, int);
 void if_register_send(struct interface_info *);
 void if_register_receive(struct interface_info *);
-ssize_t send_packet(struct interface_info *, struct dhcp_packet *, size_t,
-    struct in_addr, struct sockaddr_in *, struct hardware *);
+void send_packet_unpriv(int, struct dhcp_packet *, size_t, struct in_addr,
+    struct in_addr);
+struct imsg_hdr;
+void send_packet_priv(struct interface_info *, struct imsg_hdr *, int);
 ssize_t receive_packet(struct interface_info *, unsigned char *, size_t,
     struct sockaddr_in *, struct hardware *);
 
@@ -404,19 +408,12 @@ void bootp(struct packet *);
 void dhcp(struct packet *);
 
 /* packet.c */
-void assemble_hw_header(struct interface_info *, unsigned char *,
-    int *, struct hardware *);
+void assemble_hw_header(struct interface_info *, unsigned char *, int *);
 void assemble_udp_ip_header(unsigned char *, int *, u_int32_t, u_int32_t,
     unsigned int, unsigned char *, int);
 ssize_t decode_hw_header(unsigned char *, int, struct hardware *);
 ssize_t decode_udp_ip_header(unsigned char *, int, struct sockaddr_in *,
     unsigned char *, int);
-
-/* ethernet.c */
-void assemble_ethernet_header(struct interface_info *, unsigned char *,
-    int *, struct hardware *);
-ssize_t decode_ethernet_header(struct interface_info *, unsigned char *,
-    int, struct hardware *);
 
 /* clparse.c */
 int read_client_conf(void);
@@ -441,4 +438,4 @@ struct buf	*buf_open(size_t);
 int		 buf_add(struct buf *, void *, size_t);
 int		 buf_close(int, struct buf *);
 ssize_t		 buf_read(int, void *, size_t);
-void		 dispatch_imsg(int);
+void		 dispatch_imsg(struct interface_info *, int);

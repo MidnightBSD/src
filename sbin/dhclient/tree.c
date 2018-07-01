@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tree.c,v 1.13 2004/05/06 22:29:15 deraadt Exp $	*/
 
 /* Routines for manipulating parse trees... */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/tree.c 149399 2005-08-23 23:59:55Z brooks $");
 
 #include "dhcpd.h"
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: packet.c,v 1.9 2004/05/04 18:58:50 deraadt Exp $	*/
 
 /* Packet assembly code, originally contributed by Archie Cobbs. */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/packet.c 252615 2013-07-03 21:49:10Z pjd $");
 
 #include "dhcpd.h"
 
@@ -54,11 +55,6 @@ __MBSDID("$MidnightBSD$");
 
 u_int32_t	checksum(unsigned char *, unsigned, u_int32_t);
 u_int32_t	wrapsum(u_int32_t);
-
-void	assemble_ethernet_header(struct interface_info *, unsigned char *,
-	    int *, struct hardware *);
-ssize_t	decode_ethernet_header(struct interface_info *, unsigned char *,
-	    int bufix, struct hardware *);
 
 u_int32_t
 checksum(unsigned char *buf, unsigned nbytes, u_int32_t sum)
@@ -95,14 +91,11 @@ wrapsum(u_int32_t sum)
 
 void
 assemble_hw_header(struct interface_info *interface, unsigned char *buf,
-    int *bufix, struct hardware *to)
+    int *bufix)
 {
 	struct ether_header eh;
 
-	if (to != NULL && to->hlen == 6) /* XXX */
-		memcpy(eh.ether_dhost, to->haddr, sizeof(eh.ether_dhost));
-	else
-		memset(eh.ether_dhost, 0xff, sizeof(eh.ether_dhost));
+	memset(eh.ether_dhost, 0xff, sizeof(eh.ether_dhost));
 	if (interface->hw_address.hlen == sizeof(eh.ether_shost))
 		memcpy(eh.ether_shost, interface->hw_address.haddr,
 		    sizeof(eh.ether_shost));
@@ -128,7 +121,7 @@ assemble_udp_ip_header(unsigned char *buf, int *bufix, u_int32_t from,
 	ip.ip_len = htons(sizeof(ip) + sizeof(udp) + len);
 	ip.ip_id = 0;
 	ip.ip_off = 0;
-	ip.ip_ttl = 16;
+	ip.ip_ttl = 128;
 	ip.ip_p = IPPROTO_UDP;
 	ip.ip_sum = 0;
 	ip.ip_src.s_addr = from;

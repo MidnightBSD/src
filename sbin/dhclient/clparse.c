@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: clparse.c,v 1.18 2004/09/15 18:15:18 henning Exp $	*/
 
 /* Parser for dhclient config and lease files... */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/clparse.c 315610 2017-03-20 03:06:41Z ngie $");
 
 #include "dhcpd.h"
 #include "dhctoken.h"
@@ -510,6 +511,7 @@ parse_client_lease_statement(FILE *cfile, int is_static)
 		token = peek_token(&val, cfile);
 		if (token == EOF) {
 			parse_warn("unterminated lease declaration.");
+			free_client_lease(lease);
 			return;
 		}
 		if (token == RBRACE)
@@ -642,6 +644,10 @@ parse_client_lease_declaration(FILE *cfile, struct client_lease *lease,
 	case FILENAME:
 		lease->filename = parse_string(cfile);
 		return;
+	case NEXT_SERVER:
+		if (!parse_ip_addr(cfile, &lease->nextserver))
+			return;
+		break;
 	case SERVER_NAME:
 		lease->server_name = parse_string(cfile);
 		return;
@@ -707,6 +713,7 @@ parse_option_decl(FILE *cfile, struct option_data *options)
 			parse_warn("expecting identifier after '.'");
 			if (token != SEMI)
 				skip_to_semi(cfile);
+			free(vendor);
 			return (NULL);
 		}
 
@@ -719,6 +726,7 @@ parse_option_decl(FILE *cfile, struct option_data *options)
 		if (!universe) {
 			parse_warn("no vendor named %s.", vendor);
 			skip_to_semi(cfile);
+			free(vendor);
 			return (NULL);
 		}
 	} else {
@@ -740,6 +748,7 @@ parse_option_decl(FILE *cfile, struct option_data *options)
 			parse_warn("no option named %s for vendor %s",
 				    val, vendor);
 		skip_to_semi(cfile);
+		free(vendor);
 		return (NULL);
 	}
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: errwarn.c,v 1.7 2004/05/04 22:23:01 mickey Exp $	*/
 
 /* Errors and warnings... */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/errwarn.c 226345 2011-10-13 17:20:45Z des $");
 
 #include <errno.h>
 

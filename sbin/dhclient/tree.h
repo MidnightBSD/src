@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tree.h,v 1.5 2004/05/06 22:29:15 deraadt Exp $	*/
 
 /* Definitions for address trees... */

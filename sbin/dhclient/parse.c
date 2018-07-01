@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: parse.c,v 1.11 2004/05/05 23:07:47 deraadt Exp $	*/
 
 /* Common parser code for dhcpd and dhclient. */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/parse.c 228615 2011-12-17 01:29:46Z dim $");
 
 #include "dhcpd.h"
 #include "dhctoken.h"

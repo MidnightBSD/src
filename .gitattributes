@@ -55175,6 +55175,9 @@ sbin/dhclient/parse.c -text
 sbin/dhclient/privsep.c -text
 sbin/dhclient/privsep.h -text
 sbin/dhclient/tables.c -text
+sbin/dhclient/tests/Makefile svneol=native#text/plain
+sbin/dhclient/tests/fake.c svneol=native#text/plain
+sbin/dhclient/tests/option-domain-search.c svneol=native#text/plain
 sbin/dhclient/tree.c -text
 sbin/dhclient/tree.h -text
 sbin/dhcp6c/Makefile -text

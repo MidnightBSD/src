@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: inet.c,v 1.7 2004/05/04 21:48:16 deraadt Exp $	*/
 
 /*
@@ -43,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/inet.c 149399 2005-08-23 23:59:55Z brooks $");
 
 #include "dhcpd.h"
 

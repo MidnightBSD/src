@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: dispatch.c,v 1.31 2004/09/21 04:07:03 david Exp $	*/
 
 /*
@@ -40,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/dispatch.c 313103 2017-02-02 19:50:28Z asomers $");
 
 #include "dhcpd.h"
 
@@ -105,8 +106,8 @@ discover_interfaces(struct interface_info *iface)
 			if (foo.sin_addr.s_addr == htonl(INADDR_LOOPBACK))
 				continue;
 			if (!iface->ifp) {
-				int len = IFNAMSIZ + ifa->ifa_addr->sa_len;
-				if ((tif = malloc(len)) == NULL)
+				if ((tif = calloc(1, sizeof(struct ifreq)))
+				    == NULL)
 					error("no space to remember ifp");
 				strlcpy(tif->ifr_name, ifa->ifa_name, IFNAMSIZ);
 				memcpy(&tif->ifr_addr, ifa->ifa_addr,
@@ -453,16 +454,12 @@ add_protocol(char *name, int fd, void (*handler)(struct protocol *),
 void
 remove_protocol(struct protocol *proto)
 {
-	struct protocol *p, *next, *prev;
+	struct protocol *p, *next;
 
-	prev = NULL;
 	for (p = protocols; p; p = next) {
 		next = p->next;
 		if (p == proto) {
-			if (prev)
-				prev->next = p->next;
-			else
-				protocols = p->next;
+			protocols = p->next;
 			free(p);
 		}
 	}

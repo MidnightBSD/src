@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: privsep.c,v 1.7 2004/05/10 18:34:42 deraadt Exp $ */
 
 /*
@@ -17,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/privsep.c 252626 2013-07-03 22:12:54Z pjd $");
 
 #include "dhcpd.h"
 #include "privsep.h"
@@ -101,7 +102,7 @@ buf_read(int sock, void *buf, size_t nbytes)
 }
 
 void
-dispatch_imsg(int fd)
+dispatch_imsg(struct interface_info *ifi, int fd)
 {
 	struct imsg_hdr		 hdr;
 	char			*medium, *reason, *filename,
@@ -231,6 +232,9 @@ dispatch_imsg(int fd)
 			error("buf_add: %m");
 		if (buf_close(fd, buf) == -1)
 			error("buf_close: %m");
+		break;
+	case IMSG_SEND_PACKET:
+		send_packet_priv(ifi, &hdr, fd);
 		break;
 	default:
 		error("received unknown message, code %d", hdr.code);

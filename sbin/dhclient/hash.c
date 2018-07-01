@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: hash.c,v 1.9 2004/05/10 15:30:47 deraadt Exp $	*/
 
 /* Routines for manipulating hash tables... */
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/dhclient/hash.c 149399 2005-08-23 23:59:55Z brooks $");
 
 #include "dhcpd.h"
 
