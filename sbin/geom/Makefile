@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/geom/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 .if defined(RESCUE) || defined(RELEASE_CRUNCH)
 
@@ -9,7 +10,7 @@
 
 PROG=	geom
 SRCS=	geom.c geom_label.c geom_part.c subr.c
-NO_MAN=
+MAN=
 
 WARNS?=	2
 CFLAGS+=-I${.CURDIR} -I${.CURDIR}/core -DSTATIC_GEOM_CLASSES

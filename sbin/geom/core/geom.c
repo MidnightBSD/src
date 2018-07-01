@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/core/geom.c 297019 2016-03-18 13:29:43Z mav $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -74,7 +75,7 @@ static void std_status(struct gctl_req *req, unsigned flags);
 static void std_load(struct gctl_req *req, unsigned flags);
 static void std_unload(struct gctl_req *req, unsigned flags);
 
-struct g_command std_commands[] = {
+static struct g_command std_commands[] = {
 	{ "help", 0, std_help, G_NULL_OPTS, NULL },
 	{ "list", 0, std_list,
 	    {
@@ -635,8 +636,7 @@ get_class(int *argc, char ***argv)
 	} else if (!strcasecmp(class_name, "label")) {
 		version = &glabel_version;
 		class_commands = glabel_class_commands;
-	} else
-		errx(EXIT_FAILURE, "Invalid class name.");
+	}
 #endif /* !STATIC_GEOM_CLASSES */
 
 	set_class_name();

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/geom/misc/subr.c 330737 2018-03-10 04:17:01Z asomers $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -271,6 +272,13 @@ out:
 	return (error);
 }
 
+/* 
+ * Actually write the GEOM label to the provider
+ *
+ * @param name	GEOM provider's name (ie "ada0")
+ * @param md	Pointer to the label data to write
+ * @param size	Size of the data pointed to by md
+ */
 int
 g_metadata_store(const char *name, const unsigned char *md, size_t size)
 {
@@ -302,6 +310,7 @@ g_metadata_store(const char *name, const unsigned char *md, size_t size)
 		goto out;
 	}
 	bcopy(md, sector, size);
+	bzero(sector + size, sectorsize - size);
 	if (pwrite(fd, sector, sectorsize, mediasize - sectorsize) !=
 	    sectorsize) {
 		error = errno;
@@ -336,7 +345,7 @@ g_metadata_clear(const char *name, const char *magic)
 		goto out;
 	}
 	sectorsize = g_sectorsize(fd);
-	if (sectorsize == 0) {
+	if (sectorsize <= 0) {
 		error = errno;
 		goto out;
 	}
@@ -365,8 +374,7 @@ g_metadata_clear(const char *name, const char *magic)
 	}
 	(void)g_flush(fd);
 out:
-	if (sector != NULL)
-		free(sector);
+	free(sector);
 	g_close(fd);
 	return (error);
 }
@@ -379,10 +387,15 @@ gctl_error(struct gctl_req *req, const char *error, ...)
 {
 	va_list ap;
 
-	if (req->error != NULL)
+	if (req != NULL && req->error != NULL)
 		return;
 	va_start(ap, error);
-	vasprintf(&req->error, error, ap);
+	if (req != NULL) {
+		vasprintf(&req->error, error, ap);
+	} else {
+		vfprintf(stderr, error, ap);
+		fprintf(stderr, "\n");
+	}
 	va_end(ap);
 }
 

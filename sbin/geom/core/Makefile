@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/geom/core/Makefile 216470 2010-12-15 23:45:12Z obrien $
 
 .PATH: ${.CURDIR}/../misc
 
