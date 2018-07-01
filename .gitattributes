@@ -308,6 +308,8 @@ bin/mksh/Makefile -text
 bin/mv/Makefile -text
 bin/mv/mv.1 -text
 bin/mv/mv.c -text
+bin/mv/tests/Makefile svneol=native#text/plain
+bin/mv/tests/legacy_test.sh svneol=native#text/plain
 bin/notty/Makefile -text
 bin/notty/notty.1 -text
 bin/notty/notty.c -text
