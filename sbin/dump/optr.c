@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 static char sccsid[] = "@(#)optr.c	8.2 (Berkeley) 1/6/94";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/dump/optr.c 217769 2011-01-24 06:17:05Z mckusick $";
 #endif /* not lint */
 
 #include <sys/param.h>

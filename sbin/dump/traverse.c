@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 static char sccsid[] = "@(#)traverse.c	8.7 (Berkeley) 6/15/95";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/sbin/dump/traverse.c 272867 2014-10-09 23:43:13Z hrs $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -197,8 +198,8 @@ mapfiles(ino_t maxino, long *tapesize)
 			    (mode & IFMT) == 0)
 				continue;
 			if (ino >= maxino) {
-				msg("Skipping inode %d >= maxino %d\n",
-				    ino, maxino);
+				msg("Skipping inode %ju >= maxino %ju\n",
+				    (uintmax_t)ino, (uintmax_t)maxino);
 				continue;
 			}
 			/*
@@ -400,15 +401,16 @@ searchdir(
 	for (loc = 0; loc < size; ) {
 		dp = (struct direct *)(dblk + loc);
 		if (dp->d_reclen == 0) {
-			msg("corrupted directory, inumber %d\n", ino);
+			msg("corrupted directory, inumber %ju\n",
+			    (uintmax_t)ino);
 			break;
 		}
 		loc += dp->d_reclen;
 		if (dp->d_ino == 0)
 			continue;
 		if (dp->d_ino >= maxino) {
-			msg("corrupted directory entry, d_ino %d >= %d\n",
-			    dp->d_ino, maxino);
+			msg("corrupted directory entry, d_ino %ju >= %ju\n",
+			    (uintmax_t)dp->d_ino, (uintmax_t)maxino);
 			break;
 		}
 		if (dp->d_name[0] == '.') {
@@ -672,7 +674,12 @@ ufs2_blksout(union dinode *dp, ufs2_daddr_t *blkp, int frags, ino_t ino,
 	 */
 	blks = howmany(frags * sblock->fs_fsize, TP_BSIZE);
 	if (last) {
-		resid = howmany(fragoff(sblock, dp->dp2.di_size), TP_BSIZE);
+		if (writingextdata)
+			resid = howmany(fragoff(sblock, spcl.c_extsize),
+			    TP_BSIZE);
+		else
+			resid = howmany(fragoff(sblock, dp->dp2.di_size),
+			    TP_BSIZE);
 		if (resid > 0)
 			blks -= howmany(sblock->fs_fsize, TP_BSIZE) - resid;
 	}
