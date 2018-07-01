@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * DEVD (Device action daemon)
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/devd/parse.y 235789 2012-05-22 16:33:10Z bapt $
  */
 
 #include <sys/cdefs.h>

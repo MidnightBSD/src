@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002 M. Warner Losh
 .\" All rights reserved.
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/devd/devd.conf.5 307446 2016-10-16 23:54:40Z sevan $
 .\"
 .\" The section on comments was taken from named.conf.5, which has the
 .\" following copyright:
@@ -41,7 +42,7 @@
 .\" ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 .\" SOFTWARE.
 .\"
-.Dd March 4, 2013
+.Dd October 8, 2016
 .Dt DEVD.CONF 5
 .Os
 .Sh NAME
@@ -181,9 +182,8 @@ Valid media types are:
 .Dq Li Tokenring ,
 .Dq Li FDDI ,
 .Dq Li 802.11 ,
-.Dq Li ATM ,
 and
-.Dq Li CARP .
+.Dq Li ATM .
 .It Ic subdevice Qq Ar string ;
 This is shorthand for
 .Dq Ic match Qo Li subdevice Qc Qq Ar string .
@@ -271,6 +271,8 @@ Interface Class (USB)
 Interface Protocol  (USB)
 .It Li intsubclass
 Interface Sub-class (USB)
+.It Li jail
+Jail name for the process triggering the rule (RCTL)
 .It Li manufacturer
 Manufacturer ID (pccard).
 .It Li mode
@@ -281,12 +283,18 @@ Match the value of the
 variable.
 .It Li parent
 Parent device
+.It Li pid
+PID of the process triggering the rule (RCTL)
 .It Li port
 Hub port number (USB)
 .It Li product
 Product ID (pccard/USB).
 .It Li release
 Hardware revision (USB)
+.It Li ruid
+Real UID of the process triggering the rule (RCTL)
+.It Li rule
+Rule (RCTL)
 .It Li sernum
 Serial Number (USB).
 .It Li slot
@@ -325,8 +333,32 @@ Battery events.
 Lid state ($notify=0x00 is closed, 0x01 is open).
 .It Li PROCESSOR
 Processor state/configuration ($notify=0x81 is a change in available Cx states).
+.It Li Resume
+Resume notification.
+.It Li Suspend
+Suspend notification.
 .It Li Thermal
 Thermal zone events.
+.El
+.Pp
+.It Li CARP
+Events related to the
+.Xr carp 8
+protocol.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Ar vhid@interface
+The
+.Dq subsystem
+contains the actual CARP vhid and the name of the network interface
+on which the event took place.
+.Bl -tag -width ".Li MASTER" -compact
+.It Sy Type
+.It Li MASTER
+Node become the master for a virtual host.
+.It Li BACKUP
+Node become the backup for a virtual host.
+.El
 .El
 .Pp
 .It Li IFNET
@@ -350,6 +382,7 @@ The network interface is attached to the system.
 The network interface is detached from the system.
 .El
 .El
+.Pp
 .It Li DEVFS
 Events related to the
 .Xr devfs 5
@@ -369,6 +402,50 @@ The
 node is destroyed.
 .El
 .El
+.Pp
+.It Li GEOM
+Events related to the
+.Xr geom 4
+framework.
+The difference compared to
+.Li DEVFS
+is that
+.Li GEOM
+only includes disk-like devices.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li DEV
+.Bl -tag -width ".Li MEDIACHANGE" -compact
+.It Sy Type
+.It Li CREATE
+A
+.Xr geom 4
+device node is created.
+.It Li DESTROY
+A
+.Xr geom 4
+device node is destroyed.
+.It Li GEOM::physpath
+The physical path of a device has changed.
+.It Li MEDIACHANGE
+Physical media has changed.
+.El
+.El
+.Pp
+.It Li RCTL
+Events related to the
+.Xr rctl 8
+framework.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li rule
+.Bl -tag -width ".Li matched" -compact
+.It Sy Type
+.It Li matched
+A rule with action specified as "devctl" was triggered.
+.El
+.El
+.Pp
 .It Li USB
 Events related to the USB subsystem.
 .Bl -tag -width ".Sy Subsystem" -compact
@@ -390,6 +467,7 @@ USB interface is attached to a device.
 USB interface is detached from a device.
 .El
 .El
+.Pp
 .It Li coretemp
 Events related to the
 .Xr coretemp 4
@@ -404,6 +482,7 @@ Notification that the CPU core has reached critical temperature.
 String containing the temperature of the core that has become too hot.
 .El
 .El
+.Pp
 .It Li kern
 Events related to the kernel.
 .Bl -tag -width ".Sy Subsystem" -compact
@@ -414,6 +493,23 @@ Information about the state of the system.
 .It Sy Type
 .It Li resume
 Notification that the system has woken from the suspended state.
+.El
+.El
+.Pp
+.It Li CAM
+Events related to the
+.Xr cam 4
+system.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li periph
+Events related to peripheral devices.
+.Bl -tag -width ".li timeout" -compact
+.It Sy Type
+.It Li error
+Generic errors.
+.It Li timeout
+Command timeouts.
 .El
 .El
 .El
@@ -542,6 +638,8 @@ The installed
 .Pa /etc/devd.conf
 has many additional examples.
 .Sh SEE ALSO
+.Xr cam 4 ,
 .Xr coretemp 4 ,
 .Xr devfs 5 ,
+.Xr re_format 7 ,
 .Xr devd 8

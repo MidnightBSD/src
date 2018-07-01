@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * DEVD (Device action daemon)
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/sbin/devd/token.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 #include <ctype.h>

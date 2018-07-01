@@ -23,6 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD: stable/10/sbin/devd/devd.hh 247760 2013-03-04 02:21:24Z eadler $
  * $MidnightBSD$
  */
 
@@ -41,8 +42,6 @@ class config;
 class var_list
 {
 public:
-	var_list() {}
-	virtual ~var_list() {}
 	/** Set a variable in this var list.
 	 */
 	void set_variable(const std::string &var, const std::string &val);
@@ -68,7 +67,6 @@ private:
 struct eps
 {
 public:
-	eps() {}
 	virtual ~eps() {}
 	/** Does this eps match the current config?
 	 */
@@ -144,7 +142,7 @@ private:
 class config
 {
 public:
-	config() : _pidfile("") { push_var_table(); }
+	config() { push_var_table(); }
 	virtual ~config() { reset(); }
 	void add_attach(int, event_proc *);
 	void add_detach(int, event_proc *);
@@ -172,7 +170,7 @@ protected:
 	void parse_files_in_dir(const char *dirname);
 	void expand_one(const char *&src, std::string &dst);
 	bool is_id_char(char) const;
-	bool chop_var(char *&buffer, char *&lhs, char *&rhs);
+	bool chop_var(char *&buffer, char *&lhs, char *&rhs) const;
 private:
 	std::vector<std::string> _dir_list;
 	std::string _pidfile;
