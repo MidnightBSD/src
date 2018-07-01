@@ -1,7 +1,7 @@
+.\" $MidnightBSD$
 .\"	$NetBSD: pkill.1,v 1.8 2003/02/14 15:59:18 grant Exp $
 .\"
-.\" $FreeBSD: src/usr.bin/pkill/pkill.1,v 1.22 2006/12/20 11:57:22 ru Exp $
-.\" $MidnightBSD: src/bin/pkill/pkill.1,v 1.1 2009/03/27 22:04:42 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/pkill/pkill.1 307403 2016-10-16 22:02:50Z sevan $
 .\"
 .\" Copyright (c) 2002 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -30,7 +30,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd February 11, 2010
+.Dd August 21, 2015
 .Dt PKILL 1
 .Os
 .Sh NAME
@@ -45,9 +45,10 @@
 .Op Fl N Ar system
 .Op Fl P Ar ppid
 .Op Fl U Ar uid
+.Op Fl c Ar class
 .Op Fl d Ar delim
 .Op Fl g Ar pgrp
-.Op Fl j Ar jid
+.Op Fl j Ar jail
 .Op Fl s Ar sid
 .Op Fl t Ar tty
 .Op Fl u Ar euid
@@ -61,8 +62,9 @@
 .Op Fl N Ar system
 .Op Fl P Ar ppid
 .Op Fl U Ar uid
+.Op Fl c Ar class
 .Op Fl g Ar pgrp
-.Op Fl j Ar jid
+.Op Fl j Ar jail
 .Op Fl s Ar sid
 .Op Fl t Ar tty
 .Op Fl u Ar euid
@@ -131,6 +133,9 @@ or
 process and all of its ancestors are excluded (unless
 .Fl v
 is used).
+.It Fl c Ar class
+Restrict matches to processes running with specified login class
+.Ar class .
 .It Fl f
 Match against full argument lists.
 The default is to match against process names.
@@ -145,16 +150,16 @@ or
 command.
 .It Fl i
 Ignore case distinctions in both the process table and the supplied pattern.
-.It Fl j Ar jid
-Restrict matches to processes inside jails with a jail ID in the comma-separated
-list
-.Ar jid .
-The value
+.It Fl j Ar jail
+Restrict matches to processes inside the specified jails.
+The argument
+.Ar jail
+may be
 .Dq Li any
-matches processes in any jail.
-The value
+to match processes in any jail,
 .Dq Li none
-matches processes not in jail.
+to match processes not in jail,
+or a comma-separated list of jail IDs or names.
 .It Fl l
 Long output.
 For
@@ -287,5 +292,4 @@ Solaris 7.
 They made their first appearance in
 .Fx 5.3 .
 .Sh AUTHORS
-.An Andrew Doran
-.Aq ad@NetBSD.org
+.An Andrew Doran Aq Mt ad@NetBSD.org

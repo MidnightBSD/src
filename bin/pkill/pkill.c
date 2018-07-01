@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pkill.c,v 1.16 2005/10/10 22:13:20 kleink Exp $	*/
-/* $MidnightBSD: src/bin/pkill/pkill.c,v 1.1 2009/03/27 22:04:42 laffer1 Exp $ */
+
 /*-
  * Copyright (c) 2002 The NetBSD Foundation, Inc.
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/pkill/pkill.c,v 1.31 2006/11/23 11:55:17 yar Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/pkill/pkill.c 287269 2015-08-29 02:41:59Z jamie $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -59,6 +60,7 @@ __FBSDID("$FreeBSD: src/usr.bin/pkill/pkill.c,v 1.31 2006/11/23 11:55:17 yar Exp
 #include <grp.h>
 #include <errno.h>
 #include <locale.h>
+#include <jail.h>
 
 #define	STATUS_MATCH	0
 #define	STATUS_NOMATCH	1
@@ -78,13 +80,15 @@ enum listtype {
 	LT_GROUP,
 	LT_TTY,
 	LT_PGRP,
-	LT_JID,
-	LT_SID
+	LT_JAIL,
+	LT_SID,
+	LT_CLASS
 };
 
 struct list {
 	SLIST_ENTRY(list) li_chain;
 	long	li_number;
+	char	*li_name;
 };
 
 SLIST_HEAD(listhead, list);
@@ -116,6 +120,7 @@ static struct listhead ppidlist = SLIST_HEAD_INITIALIZER(ppidlist);
 static struct listhead tdevlist = SLIST_HEAD_INITIALIZER(tdevlist);
 static struct listhead sidlist = SLIST_HEAD_INITIALIZER(sidlist);
 static struct listhead jidlist = SLIST_HEAD_INITIALIZER(jidlist);
+static struct listhead classlist = SLIST_HEAD_INITIALIZER(classlist);
 
 static void	usage(void) __attribute__((__noreturn__));
 static int	killact(const struct kinfo_proc *);
@@ -179,7 +184,7 @@ main(int argc, char **argv)
 	execf = NULL;
 	coref = _PATH_DEVNULL;
 
-	while ((ch = getopt(argc, argv, "DF:G:ILM:N:P:SU:ad:fg:ij:lnoqs:t:u:vx")) != -1)
+	while ((ch = getopt(argc, argv, "DF:G:ILM:N:P:SU:ac:d:fg:ij:lnoqs:t:u:vx")) != -1)
 		switch (ch) {
 		case 'D':
 			debug_opt++;
@@ -222,6 +227,10 @@ main(int argc, char **argv)
 		case 'a':
 			ancestors++;
 			break;
+		case 'c':
+			makelist(&classlist, LT_CLASS, optarg);
+			criteria = 1;
+			break;
 		case 'd':
 			if (!pgrep)
 				usage();
@@ -238,7 +247,7 @@ main(int argc, char **argv)
 			cflags |= REG_ICASE;
 			break;
 		case 'j':
-			makelist(&jidlist, LT_JID, optarg);
+			makelist(&jidlist, LT_JAIL, optarg);
 			criteria = 1;
 			break;
 		case 'l':
@@ -469,6 +478,19 @@ main(int argc, char **argv)
 			continue;
 		}
 
+		SLIST_FOREACH(li, &classlist, li_chain) {
+			/*
+			 * We skip P_SYSTEM processes to match ps(1) output.
+			 */
+			if ((kp->ki_flag & P_SYSTEM) == 0 &&
+			    strcmp(kp->ki_loginclass, li->li_name) == 0)
+				break;
+		}
+		if (SLIST_FIRST(&classlist) != NULL && li == NULL) {
+			selected[i] = 0;
+			continue;
+		}
+
 		if (argc == 0)
 			selected[i] = 1;
 	}
@@ -562,9 +584,9 @@ usage(void)
 
 	fprintf(stderr,
 		"usage: %s %s [-F pidfile] [-G gid] [-M core] [-N system]\n"
-		"             [-P ppid] [-U uid] [-g pgrp] [-j jid] [-s sid]\n"
-		"             [-t tty] [-u euid] pattern ...\n", getprogname(),
-		ustr);
+		"             [-P ppid] [-U uid] [-c class] [-g pgrp] [-j jail]\n"
+		"             [-s sid] [-t tty] [-u euid] pattern ...\n",
+		getprogname(), ustr);
 
 	exit(STATUS_BADUSAGE);
 }
@@ -664,8 +686,10 @@ makelist(struct listhead *head, enum listtype type, char *src)
 		SLIST_INSERT_HEAD(head, li, li_chain);
 		empty = 0;
 
-		li->li_number = (uid_t)strtol(sp, &ep, 0);
-		if (*ep == '\0') {
+		if (type != LT_CLASS)
+			li->li_number = (uid_t)strtol(sp, &ep, 0);
+
+		if (type != LT_CLASS && *ep == '\0') {
 			switch (type) {
 			case LT_PGRP:
 				if (li->li_number == 0)
@@ -675,7 +699,7 @@ makelist(struct listhead *head, enum listtype type, char *src)
 				if (li->li_number == 0)
 					li->li_number = getsid(mypid);
 				break;
-			case LT_JID:
+			case LT_JAIL:
 				if (li->li_number < 0)
 					errx(STATUS_BADUSAGE,
 					     "Negative jail ID `%s'", sp);
@@ -741,14 +765,25 @@ foundtty:		if ((st.st_mode & S_IFCHR) == 0)
 
 			li->li_number = st.st_rdev;
 			break;
-		case LT_JID:
+		case LT_JAIL: {
+			int jid;
+
 			if (strcmp(sp, "none") == 0)
 				li->li_number = 0;
 			else if (strcmp(sp, "any") == 0)
 				li->li_number = -1;
+			else if ((jid = jail_getid(sp)) != -1)
+				li->li_number = jid;
 			else if (*ep != '\0')
 				errx(STATUS_BADUSAGE,
-				     "Invalid jail ID `%s'", sp);
+				     "Invalid jail ID or name `%s'", sp);
+			break;
+		}
+		case LT_CLASS:
+			li->li_number = -1;
+			li->li_name = strdup(sp);
+			if (li->li_name == NULL)
+				err(STATUS_ERROR, "Cannot allocate memory");
 			break;
 		default:
 			usage();
