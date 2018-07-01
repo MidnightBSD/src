@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$NetBSD: fsck.8,v 1.19 1999/03/10 00:08:33 erh Exp $
 .\"
 .\" Copyright (c) 1996 Christos Zoulas.  All rights reserved.
@@ -27,9 +28,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/sbin/fsck/fsck.8 316209 2017-03-30 02:38:38Z sevan $
 .\"
-.Dd January 25, 2009
+.Dd October 5, 2016
 .Dt FSCK 8
 .Os
 .Sh NAME
@@ -41,6 +42,7 @@
 .Op Fl B | F
 .Op Fl T Ar fstype : Ns Ar fsoptions
 .Op Fl t Ar fstype
+.Op Fl c Ar fstab
 .Oo Ar special | node Oc ...
 .Sh DESCRIPTION
 The
@@ -110,6 +112,18 @@ The disk drive containing each file system is inferred from the shortest prefix
 of the device name that ends in a digit; the remaining characters are assumed
 to be the partition and slice designators.
 .Pp
+If the
+.Fl t
+or
+.Fl T
+flags are not specified,
+.Nm
+will attempt to determine the file system type and call the
+appropriated file system check utility.
+Failure to detect the file system type will cause
+.Nm
+to fail with a message that the partition has an unknown file system type.
+.Pp
 The options are as follows:
 .Bl -tag -width indent
 .It Fl C
@@ -117,6 +131,10 @@ Check if the
 .Dq clean
 flag is set in the superblock and skip file system checks if file system was
 properly dismounted and marked clean.
+.It Fl c Ar fstab
+Specify the
+.Pa fstab
+file to use.
 .It Fl d
 Debugging mode.
 Just print the commands without executing them.
@@ -212,3 +230,15 @@ file system table
 .Xr fsck_ffs 8 ,
 .Xr fsck_msdosfs 8 ,
 .Xr mount 8
+.Sh HISTORY
+A
+.Nm
+utility appeared in
+.Bx 4.0 .
+It was reimplemented as a filesystem independent wrapper in
+.Nx 1.3
+and first appeared in
+.Fx 5.0 .
+The original filesystem specific utility became
+.Xr fsck_ffs 8
+at this point.
