@@ -55331,6 +55331,8 @@ sbin/growfs/debug.c -text
 sbin/growfs/debug.h -text
 sbin/growfs/growfs.8 -text
 sbin/growfs/growfs.c -text
+sbin/growfs/tests/Makefile svneol=native#text/plain
+sbin/growfs/tests/legacy_test.pl svneol=native#text/plain
 sbin/gvinum/Makefile -text
 sbin/gvinum/gvinum.8 -text
 sbin/gvinum/gvinum.c -text
