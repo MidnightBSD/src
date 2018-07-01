@@ -299,6 +299,9 @@ bin/ls/print.c -text
 bin/ls/tests/Makefile svneol=native#text/plain
 bin/ls/tests/ls_tests.sh svneol=native#text/plain
 bin/ls/util.c -text
+bin/midnightbsd-version/Makefile svneol=native#text/plain
+bin/midnightbsd-version/midnightbsd-version.1 svneol=native#text/plain
+bin/midnightbsd-version/midnightbsd-version.sh.in svneol=native#text/plain
 bin/mined/LICENSE -text
 bin/mined/Makefile -text
 bin/mined/mined.1 -text
