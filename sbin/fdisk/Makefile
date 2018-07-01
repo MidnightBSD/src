@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/sbin/fdisk/Makefile 183296 2008-09-23 13:12:51Z ru $
 
 PROG=	fdisk
 SRCS=	fdisk.c geom_mbr_enc.c

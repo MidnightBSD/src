@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Mach Operating System
  * Copyright (c) 1992 Carnegie Mellon University
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/sbin/fdisk/fdisk.c 234345 2012-04-16 17:30:19Z marck $");
 
 #include <sys/disk.h>
 #include <sys/disklabel.h>
@@ -47,7 +48,7 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 
-int iotest;
+static int iotest;
 
 #define NO_DISK_SECTORS ((u_int32_t)-1)
 #define NO_TRACK_CYLINDERS 1023
@@ -489,7 +490,7 @@ print_part(const struct dos_partition *partp)
 	    get_type(partp->dp_typ));
 	printf("    start %lu, size %lu (%ju Meg), flag %x%s\n",
 		(u_long)partp->dp_start,
-		(u_long)partp->dp_size, 
+		(u_long)partp->dp_size,
 		(uintmax_t)part_mb,
 		partp->dp_flag,
 		partp->dp_flag == ACTIVE ? " (active)" : "");
@@ -515,6 +516,8 @@ init_boot(void)
 	if ((fdesc = open(fname, O_RDONLY)) == -1 ||
 	    fstat(fdesc, &sb) == -1)
 		err(1, "%s", fname);
+	if (sb.st_size == 0)
+		errx(1, "%s is empty, must not be.", fname);
 	if ((mboot.bootinst_size = sb.st_size) % secsize != 0)
 		errx(1, "%s: length must be a multiple of sector size", fname);
 	if (mboot.bootinst != NULL)
@@ -919,7 +922,7 @@ write_s0()
 		dos_partition_enc(&mboot.bootinst[DOSPARTOFF + i * DOSPARTSIZE],
 		    &mboot.parts[i]);
 	le16enc(&mboot.bootinst[DOSMAGICOFFSET], DOSMAGIC);
-	for(sector = 0; sector < mboot.bootinst_size / secsize; sector++) 
+	for(sector = 0; sector < mboot.bootinst_size / secsize; sector++)
 		if (write_disk(sector,
 			       &mboot.bootinst[sector * secsize]) == -1) {
 			warn("can't write fdisk partition table");
@@ -1140,7 +1143,7 @@ str2sectors(const char *str)
 		return NO_DISK_SECTORS;
 	}
 
-	if (*end == 'K') 
+	if (*end == 'K')
 		val *= 1024UL / secsize;
 	else if (*end == 'M')
 		val *= 1024UL * 1024UL / secsize;
