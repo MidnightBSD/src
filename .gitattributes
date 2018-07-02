@@ -77048,8 +77048,13 @@ usr.sbin/IPXrouted/trace.c -text
 usr.sbin/IPXrouted/trace.h -text
 usr.sbin/Makefile -text
 usr.sbin/Makefile.amd64 -text
+usr.sbin/Makefile.arm svneol=native#text/plain
 usr.sbin/Makefile.i386 -text
+usr.sbin/Makefile.ia64 svneol=native#text/plain
 usr.sbin/Makefile.inc -text
+usr.sbin/Makefile.mips svneol=native#text/plain
+usr.sbin/Makefile.powerpc svneol=native#text/plain
+usr.sbin/Makefile.sparc64 svneol=native#text/plain
 usr.sbin/ac/Makefile -text
 usr.sbin/ac/ac.8 -text
 usr.sbin/ac/ac.c -text
