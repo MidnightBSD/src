@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,32 +42,48 @@ static const char copyright[] =
 static char sccsid[] = "@(#)uniq.c	8.3 (Berkeley) 5/4/95";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.bin/uniq/uniq.c 280250 2015-03-19 12:32:48Z rwatson $";
 #endif /* not lint */
+
+#include <sys/capsicum.h>
 
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <limits.h>
 #include <locale.h>
+#include <nl_types.h>
 #include <stdint.h>
 #define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
 
-int cflag, dflag, uflag, iflag;
-int numchars, numfields, repeats;
+static int cflag, dflag, uflag, iflag;
+static int numchars, numfields, repeats;
 
-FILE	*file(const char *, const char *);
-wchar_t	*convert(const char *);
-int	 inlcmp(const char *, const char *);
-void	 show(FILE *, const char *);
-wchar_t	*skip(wchar_t *);
-void	 obsolete(char *[]);
+static FILE	*file(const char *, const char *);
+static wchar_t	*convert(const char *);
+static int	 inlcmp(const char *, const char *);
+static void	 show(FILE *, const char *);
+static wchar_t	*skip(wchar_t *);
+static void	 obsolete(char *[]);
 static void	 usage(void);
+
+static void
+strerror_init(void)
+{
+
+	/*
+	 * Cache NLS data before entering capability mode.
+	 * XXXPJD: There should be strerror_init() and strsignal_init() in libc.
+	 */
+	(void)catopen("libc", NL_CAT_LOCALE);
+}
 
 int
 main (int argc, char *argv[])
@@ -77,6 +94,7 @@ main (int argc, char *argv[])
 	size_t prevbuflen, thisbuflen, b1;
 	char *prevline, *thisline, *p;
 	const char *ifn;
+	cap_rights_t rights;
 
 	(void) setlocale(LC_ALL, "");
 
@@ -128,8 +146,33 @@ main (int argc, char *argv[])
 	ofp = stdout;
 	if (argc > 0 && strcmp(argv[0], "-") != 0)
 		ifp = file(ifn = argv[0], "r");
+	cap_rights_init(&rights, CAP_FSTAT, CAP_READ);
+	if (cap_rights_limit(fileno(ifp), &rights) < 0 && errno != ENOSYS)
+		err(1, "unable to limit rights for %s", ifn);
+	cap_rights_init(&rights, CAP_FSTAT, CAP_WRITE);
 	if (argc > 1)
 		ofp = file(argv[1], "w");
+	else
+		cap_rights_set(&rights, CAP_IOCTL);
+	if (cap_rights_limit(fileno(ofp), &rights) < 0 && errno != ENOSYS) {
+		err(1, "unable to limit rights for %s",
+		    argc > 1 ? argv[1] : "stdout");
+	}
+	if (cap_rights_is_set(&rights, CAP_IOCTL)) {
+		unsigned long cmd;
+
+		cmd = TIOCGETA; /* required by isatty(3) in printf(3) */
+
+		if (cap_ioctls_limit(fileno(ofp), &cmd, 1) < 0 &&
+		    errno != ENOSYS) {
+			err(1, "unable to limit ioctls for %s",
+			    argc > 1 ? argv[1] : "stdout");
+		}
+	}
+
+	strerror_init();
+	if (cap_enter() < 0 && errno != ENOSYS)
+		err(1, "unable to enter capability mode");
 
 	prevbuflen = thisbuflen = 0;
 	prevline = thisline = NULL;
@@ -184,7 +227,7 @@ main (int argc, char *argv[])
 	exit(0);
 }
 
-wchar_t *
+static wchar_t *
 convert(const char *str)
 {
 	size_t n;
@@ -218,7 +261,7 @@ convert(const char *str)
 	return (ret);
 }
 
-int
+static int
 inlcmp(const char *s1, const char *s2)
 {
 	int c1, c2;
@@ -241,7 +284,7 @@ inlcmp(const char *s1, const char *s2)
  *	Output a line depending on the flags and number of repetitions
  *	of the line.
  */
-void
+static void
 show(FILE *ofp, const char *str)
 {
 
@@ -251,7 +294,7 @@ show(FILE *ofp, const char *str)
 		(void)fprintf(ofp, "%s", str);
 }
 
-wchar_t *
+static wchar_t *
 skip(wchar_t *str)
 {
 	int nchars, nfields;
@@ -267,7 +310,7 @@ skip(wchar_t *str)
 	return(str);
 }
 
-FILE *
+static FILE *
 file(const char *name, const char *mode)
 {
 	FILE *fp;
@@ -277,7 +320,7 @@ file(const char *name, const char *mode)
 	return(fp);
 }
 
-void
+static void
 obsolete(char *argv[])
 {
 	int len;

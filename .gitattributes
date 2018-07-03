@@ -76830,6 +76830,8 @@ usr.bin/unifdef/unifdef.1 -text
 usr.bin/unifdef/unifdef.c -text
 usr.bin/unifdef/unifdefall.sh -text
 usr.bin/uniq/Makefile -text
+usr.bin/uniq/tests/Makefile svneol=native#text/plain
+usr.bin/uniq/tests/Makefile.depend svneol=native#text/plain
 usr.bin/uniq/uniq.1 -text
 usr.bin/uniq/uniq.c -text
 usr.bin/units/Makefile -text
