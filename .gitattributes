@@ -75844,6 +75844,7 @@ usr.bin/fsync/fsync.c -text
 usr.bin/ftp/Makefile -text
 usr.bin/ftp/tnftp_config.h -text
 usr.bin/gcore/Makefile -text
+usr.bin/gcore/elf32core.c svneol=native#text/plain
 usr.bin/gcore/elfcore.c -text
 usr.bin/gcore/extern.h -text
 usr.bin/gcore/gcore.1 -text
