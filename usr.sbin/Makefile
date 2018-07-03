@@ -45,7 +45,6 @@ SUBDIR=	adduser \
 	mixer \
 	mlxcontrol \
 	mountd \
-	mount_portalfs \
 	mount_smbfs \
 	mport \
 	mptutil \
