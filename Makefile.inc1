@@ -1755,6 +1755,7 @@ _lib_libradius=	lib/libradius
 _ofed_lib=	contrib/ofed/usr.lib/
 .endif
 
+lib/libarchive__L: lib/liblzma__L secure/lib/libcrypto__L lib/libbz2__L
 lib/liblzma__L lib/libdispatch__L: lib/libthr__L
 lib/libfetch__L: secure/lib/libssl__L
 
