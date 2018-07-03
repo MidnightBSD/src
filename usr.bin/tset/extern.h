@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,12 +28,15 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/9/93
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/usr.bin/tset/extern.h 241737 2012-10-19 14:49:42Z ed $
  */
+
+#include <termios.h>
 
 extern struct termios mode, oldmode;
 extern int Columns, isreset, Lines;
 extern int erasech, intrchar, killch;
+extern speed_t Ospeed;
 
 void	 add_mapping(const char *, char *);
 void	 cat(char *);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tset/wrterm.c 229403 2012-01-03 18:51:58Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)wrterm.c	8.1 (Berkeley) 6/9/93";
@@ -56,7 +57,7 @@ wrtermcap(char *bp)
 	char *t, *sep;
 
 	/* Find the end of the terminal names. */
-	if ((t = index(bp, ':')) == NULL)
+	if ((t = strchr(bp, ':')) == NULL)
 		errx(1, "termcap names not colon terminated");
 	*t++ = '\0';
 
