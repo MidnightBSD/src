@@ -76828,6 +76828,7 @@ usr.bin/unexpand/unexpand.c -text
 usr.bin/unifdef/Makefile -text
 usr.bin/unifdef/unifdef.1 -text
 usr.bin/unifdef/unifdef.c -text
+usr.bin/unifdef/unifdef.h svneol=native#text/plain
 usr.bin/unifdef/unifdefall.sh -text
 usr.bin/uniq/Makefile -text
 usr.bin/uniq/tests/Makefile svneol=native#text/plain
