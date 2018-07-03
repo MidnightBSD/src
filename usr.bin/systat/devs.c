@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Kenneth D. Merry.
  * All rights reserved.
@@ -56,7 +57,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/devs.c 229403 2012-01-03 18:51:58Z ed $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)disks.c	8.1 (Berkeley) 6/6/93";
@@ -265,7 +266,7 @@ dsselect(const char *args, devstat_select_mode select_mode, int maxshowdevs,
 	specified_devices = (char **)malloc(sizeof(char *));
 
 	tmpstr = tmpstr1 = strdup(args);
-	cp = index(tmpstr1, '\n');
+	cp = strchr(tmpstr1, '\n');
 	if (cp)
 		*cp = '\0';
 	for (;;) {

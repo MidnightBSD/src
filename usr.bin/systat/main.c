@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/main.c 303684 2016-08-02 22:33:29Z mr $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
@@ -84,7 +85,11 @@ main(int argc, char **argv)
 	size_t	size;
 	double t;
 
+#ifdef USE_WIDECHAR
 	(void) setlocale(LC_ALL, "");
+#else
+	(void) setlocale(LC_TIME, "");
+#endif
 
 	argc--, argv++;
 	while (argc > 0) {
@@ -184,6 +189,11 @@ labels(void)
 		    "/0   /1   /2   /3   /4   /5   /6   /7   /8   /9   /10");
 		mvaddstr(1, 5, "Load Average");
 	}
+	if (curcmd->c_flags & CF_ZFSARC) {
+		mvaddstr(0, 20,
+		    "   Total     MFU     MRU    Anon     Hdr   L2Hdr   Other");
+		mvaddstr(1, 5, "ZFS ARC     ");
+	}
 	(*curcmd->c_label)();
 #ifdef notdef
 	mvprintw(21, 25, "CPU usage on %s", hostname);
@@ -192,7 +202,7 @@ labels(void)
 }
 
 void
-display()
+display(void)
 {
 	int i, j;
 
@@ -217,8 +227,33 @@ display()
 		if (j > 50)
 			wprintw(wload, " %4.1f", avenrun[0]);
 	}
+	if (curcmd->c_flags & CF_ZFSARC) {
+	    uint64_t arc[7] = {};
+	    size_t size = sizeof(arc[0]);
+	    if (sysctlbyname("kstat.zfs.misc.arcstats.size",
+		&arc[0], &size, NULL, 0) == 0 ) {
+		    GETSYSCTL("vfs.zfs.mfu_size", arc[1]);
+		    GETSYSCTL("vfs.zfs.mru_size", arc[2]);
+		    GETSYSCTL("vfs.zfs.anon_size", arc[3]);
+		    GETSYSCTL("kstat.zfs.misc.arcstats.hdr_size", arc[4]);
+		    GETSYSCTL("kstat.zfs.misc.arcstats.l2_hdr_size", arc[5]);
+		    GETSYSCTL("kstat.zfs.misc.arcstats.other_size", arc[6]);
+		    wmove(wload, 0, 0); wclrtoeol(wload);
+		    for (i = 0 ; i < sizeof(arc) / sizeof(arc[0]) ; i++) {
+			if (arc[i] > 10llu * 1024 * 1024 * 1024 ) {
+				wprintw(wload, "%7lluG", arc[i] >> 30);
+			}
+			else if (arc[i] > 10 * 1024 * 1024 ) {
+				wprintw(wload, "%7lluM", arc[i] >> 20);
+			}
+			else {
+				wprintw(wload, "%7lluK", arc[i] >> 10);
+			}
+		    }
+	    }
+	}
 	(*curcmd->c_refresh)();
-	if (curcmd->c_flags & CF_LOADAV)
+	if (curcmd->c_flags & (CF_LOADAV |CF_ZFSARC))
 		wrefresh(wload);
 	wrefresh(wnd);
 	move(CMDLINE, col);

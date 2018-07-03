@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)systat.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/systat/systat.h 303684 2016-08-02 22:33:29Z mr $
  */
 
 #include <curses.h>
@@ -54,6 +55,7 @@ extern int use_kvm;
 
 #define	CF_INIT		0x1		/* been initialized */
 #define	CF_LOADAV	0x2		/* display w/ load average */
+#define	CF_ZFSARC	0x4		/* display w/ ZFS cache usage */
 
 #define	TCP	0x1
 #define	UDP	0x2

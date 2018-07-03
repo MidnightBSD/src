@@ -1,12 +1,13 @@
-#	@(#)Makefile	8.1 (Berkeley) 6/6/93
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 6/6/93
+# $FreeBSD: stable/10/usr.bin/systat/Makefile 303684 2016-08-02 22:33:29Z mr $
 
 .include <bsd.own.mk>
 
 PROG=	systat
 SRCS=	cmds.c cmdtab.c devs.c fetch.c iostat.c keyboard.c main.c \
-	mbufs.c netcmds.c netstat.c pigs.c swap.c icmp.c \
-	mode.c ip.c sensors.c tcp.c \
+	netcmds.c netstat.c pigs.c swap.c icmp.c \
+	mode.c ip.c sctp.c tcp.c zarc.c \
 	vmstat.c convtbl.c ifcmds.c ifstat.c
 
 .if ${MK_INET6_SUPPORT} != "no"
@@ -16,7 +17,16 @@ CFLAGS+= -DINET6
 
 WARNS?=	0
 
-DPADD=	${LIBNCURSESW} ${LIBM} ${LIBDEVSTAT} ${LIBKVM}
-LDADD=	-lncursesw -lm -ldevstat -lkvm
+DPADD=	${LIBM} ${LIBDEVSTAT} ${LIBKVM}
+LDADD=	-lm -ldevstat -lkvm
+
+.if ${MK_NCURSESW} == "no"
+DPADD+=		${LIBNCURSES}
+LDADD+=		-lncurses
+.else
+CFLAGS+=	-DUSE_WIDECHAR
+DPADD+=		${LIBNCURSESW}
+LDADD+=		-lncursesw
+.endif
 
 .include <bsd.prog.mk>

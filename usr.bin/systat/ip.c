@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/ip.c 240605 2012-09-17 13:36:47Z melifaro $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -337,4 +338,3 @@ fetchip(void)
 	if (sysctl(name, 4, &curstat.u, &len, 0, 0) < 0)
 		return;
 }
-

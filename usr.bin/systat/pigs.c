@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)pigs.c	8.2 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/pigs.c 288163 2015-09-24 00:50:17Z delphij $");
 
 /*
  * Pigs display from Bill Reeves at Lucasfilm
@@ -81,7 +82,6 @@ closepigs(WINDOW *w)
 	delwin(w);
 }
 
-
 void
 showpigs(void)
 {
@@ -95,8 +95,8 @@ showpigs(void)
 	qsort(pt, nproc, sizeof (struct p_times), compar);
 	y = 1;
 	i = nproc;
-	if (i > wnd->_maxy-1)
-		i = wnd->_maxy-1;
+	if (i > getmaxy(wnd)-2)
+		i = getmaxy(wnd)-2;
 	for (k = 0; i > 0 && pt[k].pt_pctcpu > 0.01; i--, y++, k++) {
 		uname = user_from_uid(pt[k].pt_kp->ki_uid, 0);
 		pname = pt[k].pt_kp->ki_comm;

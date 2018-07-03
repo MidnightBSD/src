@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/fetch.c 226396 2011-10-15 13:20:36Z ed $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)fetch.c	8.1 (Berkeley) 6/6/93";

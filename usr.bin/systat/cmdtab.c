@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/cmdtab.c 303684 2016-08-02 22:33:29Z mr $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)cmdtab.c	8.1 (Berkeley) 6/6/93";
@@ -45,9 +46,6 @@ struct	cmdtab cmdtab[] = {
 	  0,		CF_LOADAV },
 	{ "swap",	showswap,	fetchswap,	labelswap,
 	  initswap,	openswap,	closeswap,	0,
-	  0,		CF_LOADAV },
-	{ "mbufs",	showmbufs,	fetchmbufs,	labelmbufs,
-	  initmbufs,	openmbufs,	closembufs,	0,
 	  0,		CF_LOADAV },
 	{ "iostat",	showiostat,	fetchiostat,	labeliostat,
 	  initiostat,	openiostat,	closeiostat,	cmdiostat,
@@ -72,15 +70,18 @@ struct	cmdtab cmdtab[] = {
 	  initip6,	openip6,	closeip6,	cmdmode,
 	  resetip6,	CF_LOADAV },
 #endif
+	{ "sctp",	showsctp,	fetchsctp,	labelsctp,
+	  initsctp,	opensctp,	closesctp,	cmdmode,
+	  resetsctp,	CF_LOADAV },
 	{ "tcp",	showtcp,	fetchtcp,	labeltcp,
 	  inittcp,	opentcp,	closetcp,	cmdmode,
 	  resettcp,	CF_LOADAV },
 	{ "ifstat",	showifstat,	fetchifstat,	labelifstat,
 	  initifstat,	openifstat,	closeifstat,	cmdifstat,
 	  0,		CF_LOADAV },
-	{ "sensors",	showsensors,	fetchsensors,	labelsensors,
-	  initsensors,	opensensors,	closesensors,	0,
-	  0,		CF_LOADAV },
+	{ "zarc",	showzarc,	fetchzarc,	labelzarc,
+	  initzarc,	openzarc,	closezarc,	0,
+	  resetzarc,	CF_ZFSARC },
 	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0 }
 };
 struct  cmdtab *curcmd = &cmdtab[0];

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/netcmds.c 231011 2012-02-05 09:17:49Z ed $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)netcmds.c	8.1 (Berkeley) 6/6/93";
@@ -121,7 +122,6 @@ netcmd(const char *cmd, const char *args)
 	return (0);
 }
 
-
 static void
 changeitems(const char *args, int onoff)
 {
@@ -131,7 +131,7 @@ changeitems(const char *args, int onoff)
 	struct in_addr in;
 
 	tmpstr = tmpstr1 = strdup(args);
-	cp = index(tmpstr1, '\n');
+	cp = strchr(tmpstr1, '\n');
 	if (cp)
 		*cp = '\0';
 	for (;;tmpstr1 = cp) {

@@ -76668,12 +76668,14 @@ usr.bin/systat/mode.h -text
 usr.bin/systat/netcmds.c -text
 usr.bin/systat/netstat.c -text
 usr.bin/systat/pigs.c -text
+usr.bin/systat/sctp.c svneol=native#text/plain
 usr.bin/systat/sensors.c -text
 usr.bin/systat/swap.c -text
 usr.bin/systat/systat.1 -text
 usr.bin/systat/systat.h -text
 usr.bin/systat/tcp.c -text
 usr.bin/systat/vmstat.c -text
+usr.bin/systat/zarc.c svneol=native#text/plain
 usr.bin/tabs/Makefile -text
 usr.bin/tabs/tabs.1 -text
 usr.bin/tabs/tabs.c -text

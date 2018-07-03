@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/vmstat.c 288163 2015-09-24 00:50:17Z delphij $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)vmstat.c	8.2 (Berkeley) 1/12/94";
@@ -79,6 +80,7 @@ static struct Info {
 	 * Virtual memory activity.
 	 */
 	u_int v_vm_faults;	/* number of address memory faults */
+	u_int v_io_faults;	/* page faults requiring I/O */
 	u_int v_cow_faults;	/* number of copy-on-writes */
 	u_int v_zfod;		/* pages zero filled on demand */
 	u_int v_ozfod;		/* optimized zero fill pages */
@@ -204,12 +206,9 @@ initkre(void)
 		return(0);
 	}
 
-	cur.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
-	last.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
-	run.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
-	bzero(cur.dinfo, sizeof(struct devinfo));
-	bzero(last.dinfo, sizeof(struct devinfo));
-	bzero(run.dinfo, sizeof(struct devinfo));
+	cur.dinfo = calloc(1, sizeof(struct devinfo));
+	last.dinfo = calloc(1, sizeof(struct devinfo));
+	run.dinfo = calloc(1, sizeof(struct devinfo));
 
 	if (dsinit(MAXDRIVES, &cur, &last, &run) != 1)
 		return(0);
@@ -324,24 +323,25 @@ labelkre(void)
 	mvprintw(INTSROW, INTSCOL + 1, "Interrupts");
 	mvprintw(INTSROW + 1, INTSCOL + 6, "total");
 
-	mvprintw(VMSTATROW, VMSTATCOL + 9, "cow");
-	mvprintw(VMSTATROW + 1, VMSTATCOL + 9, "zfod");
-	mvprintw(VMSTATROW + 2, VMSTATCOL + 9, "ozfod");
-	mvprintw(VMSTATROW + 3, VMSTATCOL + 9 - 1, "%%ozfod");
-	mvprintw(VMSTATROW + 4, VMSTATCOL + 9, "daefr");
-	mvprintw(VMSTATROW + 5, VMSTATCOL + 9, "prcfr");
-	mvprintw(VMSTATROW + 6, VMSTATCOL + 9, "totfr");
-	mvprintw(VMSTATROW + 7, VMSTATCOL + 9, "react");
-	mvprintw(VMSTATROW + 8, VMSTATCOL + 9, "pdwak");
-	mvprintw(VMSTATROW + 9, VMSTATCOL + 9, "pdpgs");
-	mvprintw(VMSTATROW + 10, VMSTATCOL + 9, "intrn");
-	mvprintw(VMSTATROW + 11, VMSTATCOL + 9, "wire");
-	mvprintw(VMSTATROW + 12, VMSTATCOL + 9, "act");
-	mvprintw(VMSTATROW + 13, VMSTATCOL + 9, "inact");
-	mvprintw(VMSTATROW + 14, VMSTATCOL + 9, "cache");
-	mvprintw(VMSTATROW + 15, VMSTATCOL + 9, "free");
-	if (LINES - 1 > VMSTATROW + 16)
-		mvprintw(VMSTATROW + 16, VMSTATCOL + 9, "buf");
+	mvprintw(VMSTATROW, VMSTATCOL + 9, "ioflt");
+	mvprintw(VMSTATROW + 1, VMSTATCOL + 9, "cow");
+	mvprintw(VMSTATROW + 2, VMSTATCOL + 9, "zfod");
+	mvprintw(VMSTATROW + 3, VMSTATCOL + 9, "ozfod");
+	mvprintw(VMSTATROW + 4, VMSTATCOL + 9 - 1, "%%ozfod");
+	mvprintw(VMSTATROW + 5, VMSTATCOL + 9, "daefr");
+	mvprintw(VMSTATROW + 6, VMSTATCOL + 9, "prcfr");
+	mvprintw(VMSTATROW + 7, VMSTATCOL + 9, "totfr");
+	mvprintw(VMSTATROW + 8, VMSTATCOL + 9, "react");
+	mvprintw(VMSTATROW + 9, VMSTATCOL + 9, "pdwak");
+	mvprintw(VMSTATROW + 10, VMSTATCOL + 9, "pdpgs");
+	mvprintw(VMSTATROW + 11, VMSTATCOL + 9, "intrn");
+	mvprintw(VMSTATROW + 12, VMSTATCOL + 9, "wire");
+	mvprintw(VMSTATROW + 13, VMSTATCOL + 9, "act");
+	mvprintw(VMSTATROW + 14, VMSTATCOL + 9, "inact");
+	mvprintw(VMSTATROW + 15, VMSTATCOL + 9, "cache");
+	mvprintw(VMSTATROW + 16, VMSTATCOL + 9, "free");
+	if (LINES - 1 > VMSTATROW + 17)
+		mvprintw(VMSTATROW + 17, VMSTATCOL + 9, "buf");
 
 	mvprintw(GENSTATROW, GENSTATCOL, " Csw  Trp  Sys  Int  Sof  Flt");
 
@@ -493,25 +493,26 @@ showkre(void)
 	putint(total.t_dw, PROCSROW + 2, PROCSCOL + 8, 3);
 	putint(total.t_sl, PROCSROW + 2, PROCSCOL + 12, 3);
 	putint(total.t_sw, PROCSROW + 2, PROCSCOL + 16, 3);
-	PUTRATE(v_cow_faults, VMSTATROW, VMSTATCOL + 2, 8 - 2);
-	PUTRATE(v_zfod, VMSTATROW + 1, VMSTATCOL + 2, 8 - 2);
-	PUTRATE(v_ozfod, VMSTATROW + 2, VMSTATCOL, 8);
+	PUTRATE(v_io_faults, VMSTATROW, VMSTATCOL + 2, 8 - 2);
+	PUTRATE(v_cow_faults, VMSTATROW + 1, VMSTATCOL + 2, 8 - 2);
+	PUTRATE(v_zfod, VMSTATROW + 2, VMSTATCOL + 2, 8 - 2);
+	PUTRATE(v_ozfod, VMSTATROW + 3, VMSTATCOL, 8);
 	putint(s.v_zfod != 0 ? (int)(s.v_ozfod * 100.0 / s.v_zfod) : 0,
-	    VMSTATROW + 3, VMSTATCOL + 1, 8 - 1);
-	PUTRATE(v_dfree, VMSTATROW + 4, VMSTATCOL + 2, 8 - 2);
-	PUTRATE(v_pfree, VMSTATROW + 5, VMSTATCOL + 2, 8 - 2);
-	PUTRATE(v_tfree, VMSTATROW + 6, VMSTATCOL, 8);
-	PUTRATE(v_reactivated, VMSTATROW + 7, VMSTATCOL, 8);
-	PUTRATE(v_pdwakeups, VMSTATROW + 8, VMSTATCOL, 8);
-	PUTRATE(v_pdpages, VMSTATROW + 9, VMSTATCOL, 8);
-	PUTRATE(v_intrans, VMSTATROW + 10, VMSTATCOL, 8);
-	putint(pgtokb(s.v_wire_count), VMSTATROW + 11, VMSTATCOL, 8);
-	putint(pgtokb(s.v_active_count), VMSTATROW + 12, VMSTATCOL, 8);
-	putint(pgtokb(s.v_inactive_count), VMSTATROW + 13, VMSTATCOL, 8);
-	putint(pgtokb(s.v_cache_count), VMSTATROW + 14, VMSTATCOL, 8);
-	putint(pgtokb(s.v_free_count), VMSTATROW + 15, VMSTATCOL, 8);
-	if (LINES - 1 > VMSTATROW + 16)
-		putint(s.bufspace / 1024, VMSTATROW + 16, VMSTATCOL, 8);
+	    VMSTATROW + 4, VMSTATCOL + 1, 8 - 1);
+	PUTRATE(v_dfree, VMSTATROW + 5, VMSTATCOL + 2, 8 - 2);
+	PUTRATE(v_pfree, VMSTATROW + 6, VMSTATCOL + 2, 8 - 2);
+	PUTRATE(v_tfree, VMSTATROW + 7, VMSTATCOL, 8);
+	PUTRATE(v_reactivated, VMSTATROW + 8, VMSTATCOL, 8);
+	PUTRATE(v_pdwakeups, VMSTATROW + 9, VMSTATCOL, 8);
+	PUTRATE(v_pdpages, VMSTATROW + 10, VMSTATCOL, 8);
+	PUTRATE(v_intrans, VMSTATROW + 11, VMSTATCOL, 8);
+	putint(pgtokb(s.v_wire_count), VMSTATROW + 12, VMSTATCOL, 8);
+	putint(pgtokb(s.v_active_count), VMSTATROW + 13, VMSTATCOL, 8);
+	putint(pgtokb(s.v_inactive_count), VMSTATROW + 14, VMSTATCOL, 8);
+	putint(pgtokb(s.v_cache_count), VMSTATROW + 15, VMSTATCOL, 8);
+	putint(pgtokb(s.v_free_count), VMSTATROW + 16, VMSTATCOL, 8);
+	if (LINES - 1 > VMSTATROW + 17)
+		putint(s.bufspace / 1024, VMSTATROW + 17, VMSTATCOL, 8);
 	PUTRATE(v_vnodein, PAGEROW + 2, PAGECOL + 6, 5);
 	PUTRATE(v_vnodeout, PAGEROW + 2, PAGECOL + 12, 5);
 	PUTRATE(v_swapin, PAGEROW + 2, PAGECOL + 19, 5);
@@ -700,6 +701,10 @@ putfloat(double f, int l, int lc, int w, int d, int nz)
 	snr = snprintf(b, sizeof(b), "%*.*f", w, d, f);
 	if (snr != w)
 		snr = snprintf(b, sizeof(b), "%*.0f", w, f);
+	if (snr != w)
+		snr = snprintf(b, sizeof(b), "%*.0fk", w - 1, f / 1000);
+	if (snr != w)
+		snr = snprintf(b, sizeof(b), "%*.0fM", w - 1, f / 1000000);
 	if (snr != w) {
 		while (--w >= 0)
 			addch('*');
@@ -728,6 +733,10 @@ putlongdouble(long double f, int l, int lc, int w, int d, int nz)
 	snr = snprintf(b, sizeof(b), "%*.*Lf", w, d, f);
 	if (snr != w)
 		snr = snprintf(b, sizeof(b), "%*.0Lf", w, f);
+	if (snr != w)
+		snr = snprintf(b, sizeof(b), "%*.0Lfk", w - 1, f / 1000);
+	if (snr != w)
+		snr = snprintf(b, sizeof(b), "%*.0LfM", w - 1, f / 1000000);
 	if (snr != w) {
 		while (--w >= 0)
 			addch('*');
@@ -751,6 +760,7 @@ getinfo(struct Info *ls)
 	GETSYSCTL("vm.stats.sys.v_intr", ls->v_intr);
 	GETSYSCTL("vm.stats.sys.v_soft", ls->v_soft);
 	GETSYSCTL("vm.stats.vm.v_vm_faults", ls->v_vm_faults);
+	GETSYSCTL("vm.stats.vm.v_io_faults", ls->v_io_faults);
 	GETSYSCTL("vm.stats.vm.v_cow_faults", ls->v_cow_faults);
 	GETSYSCTL("vm.stats.vm.v_zfod", ls->v_zfod);
 	GETSYSCTL("vm.stats.vm.v_ozfod", ls->v_ozfod);

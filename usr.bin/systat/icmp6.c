@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/systat/icmp6.c 240605 2012-09-17 13:36:47Z melifaro $");
 
 #ifdef lint
 static char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -75,7 +76,7 @@ static struct icmp6stat icmp6stat, initstat, oldstat;
 12999999999 time-to-live exceeded    999999999 time-to-line exceeded
 13999999999 parameter problem        999999999 parameter problem
 14999999999 neighbor solicitation    999999999 neighbor solicitation
-15999999999 neighbor advertisment    999999999 neighbor advertisment
+15999999999 neighbor advertisement   999999999 neighbor advertisement
 16999999999 router advertisement     999999999 router solicitation
 17
 18
@@ -121,7 +122,7 @@ labelicmp6(void)
 	B(12, "time-to-live exceeded");
 	B(13, "parameter problem");
 	B(14, "neighbor solicitation");
-	B(15, "neighbor advertisment");
+	B(15, "neighbor advertisement");
 	L(16, "router advertisement");	R(16, "router solicitation");
 #undef L
 #undef R
