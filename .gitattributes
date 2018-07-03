@@ -76851,6 +76851,12 @@ usr.bin/users/Makefile -text
 usr.bin/users/users.1 -text
 usr.bin/users/users.c -text
 usr.bin/uudecode/Makefile -text
+usr.bin/uudecode/tests/Makefile svneol=native#text/plain
+usr.bin/uudecode/tests/legacy_test.sh svneol=native#text/plain
+usr.bin/uudecode/tests/regress.base64.in svneol=native#text/plain
+usr.bin/uudecode/tests/regress.out -text
+usr.bin/uudecode/tests/regress.sh svneol=native#text/plain
+usr.bin/uudecode/tests/regress.traditional.in svneol=native#text/plain
 usr.bin/uudecode/uudecode.c -text
 usr.bin/uuencode/Makefile -text
 usr.bin/uuencode/uuencode.1 -text
