@@ -1,4 +1,5 @@
-# $MidnightBSD: src/usr.bin/truss/Makefile,v 1.3 2012/11/23 01:13:54 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/truss/Makefile 234060 2012-04-09 15:34:22Z dim $
 
 NO_WERROR=
 PROG=	truss
@@ -23,8 +24,8 @@ syscalls.h:	syscalls.master
 		${.CURDIR}/i386.conf
 
 ioctl.c: ${.CURDIR}/../kdump/mkioctls
-	env CPP="${CPP}" \
-	    sh ${.CURDIR}/../kdump/mkioctls ${DESTDIR}/usr/include > ${.TARGET}
+	env MACHINE=${MACHINE} CPP="${CPP}" \
+		/bin/sh ${.CURDIR}/../kdump/mkioctls return ${DESTDIR}/usr/include > ${.TARGET}
 
 .if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	i386-linux.c linux_syscalls.h
@@ -50,6 +51,18 @@ linux32_syscalls.h:	amd64l32-syscalls.master
 		${.CURDIR}/amd64linux32.conf
 
 SRCS+=	amd64-fbsd32.c freebsd32_syscalls.h
+CLEANFILES+=fbsd32-syscalls.master freebsd32_syscalls.h
+
+fbsd32-syscalls.master: ${.CURDIR}/../../sys/compat/freebsd32/syscalls.master
+	cat ${.ALLSRC} > ${.TARGET}
+
+freebsd32_syscalls.h:	fbsd32-syscalls.master
+	/bin/sh ${.CURDIR}/../../sys/kern/makesyscalls.sh ${.ALLSRC} \
+		${.CURDIR}/fbsd32.conf
+.endif
+
+.if ${MACHINE_ARCH} == "powerpc64"
+SRCS+=	powerpc-fbsd.c freebsd32_syscalls.h
 CLEANFILES+=fbsd32-syscalls.master freebsd32_syscalls.h
 
 fbsd32-syscalls.master: ${.CURDIR}/../../sys/compat/freebsd32/syscalls.master

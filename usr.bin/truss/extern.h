@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1997 Sean Eric Fagan
  *
@@ -28,45 +29,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/truss/extern.h 298427 2016-04-21 18:44:53Z jhb $
  */
 
-extern int setup_and_wait(char **);
-extern int start_tracing(pid_t);
+extern int print_line_prefix(struct trussinfo *);
+extern void setup_and_wait(struct trussinfo *, char **);
+extern void start_tracing(struct trussinfo *, pid_t);
 extern void restore_proc(int);
-extern void waitevent(struct trussinfo *);
-extern const char *ioctlname(register_t val);
+extern void eventloop(struct trussinfo *);
+extern const char *ioctlname(unsigned long val);
 extern char *strsig(int sig);
-#ifdef __amd64__
-extern void amd64_syscall_entry(struct trussinfo *, int);
-extern long amd64_syscall_exit(struct trussinfo *, int);
-extern void amd64_linux32_syscall_entry(struct trussinfo *, int);
-extern long amd64_linux32_syscall_exit(struct trussinfo *, int);
-extern void amd64_fbsd32_syscall_entry(struct trussinfo *, int);
-extern long amd64_fbsd32_syscall_exit(struct trussinfo *, int);
-#endif
-#ifdef __i386__
-extern void i386_syscall_entry(struct trussinfo *, int);
-extern long i386_syscall_exit(struct trussinfo *, int);
-extern void i386_linux_syscall_entry(struct trussinfo *, int);
-extern long i386_linux_syscall_exit(struct trussinfo *, int);
-#endif
-#ifdef __ia64__
-extern void ia64_syscall_entry(struct trussinfo *, int);
-extern long ia64_syscall_exit(struct trussinfo *, int);
-#endif
-#ifdef __powerpc__
-extern void powerpc_syscall_entry(struct trussinfo *, int);
-extern long powerpc_syscall_exit(struct trussinfo *, int);
-extern void powerpc64_syscall_entry(struct trussinfo *, int);
-extern long powerpc64_syscall_exit(struct trussinfo *, int);
-#endif
-#ifdef __sparc64__
-extern void sparc64_syscall_entry(struct trussinfo *, int);
-extern long sparc64_syscall_exit(struct trussinfo *, int);
-#endif
-#ifdef __mips__
-extern void mips_syscall_entry(struct trussinfo *, int);
-extern long mips_syscall_exit(struct trussinfo *, int);
-#endif
-
