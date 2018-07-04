@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tipout.c,v 1.18 2006/05/31 07:03:08 jason Exp $	*/
 /*	$NetBSD: tipout.c,v 1.5 1996/12/29 10:34:12 cgd Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/tipout.c 230654 2012-01-28 20:45:47Z phk $");
 
 #ifndef lint
 #if 0
@@ -148,11 +149,12 @@ tipout(void)
 		scnt = read(FD, buf, BUFSIZ);
 		if (scnt <= 0) {
 			/* lost carrier */
-			if (scnt == 0 || (scnt < 0 && errno == EIO)) {
+			if (scnt == 0 ||
+			    (scnt < 0 && (errno == EIO || errno == ENXIO))) {
 				sigemptyset(&mask);
 				sigaddset(&mask, SIGTERM);
 				sigprocmask(SIG_BLOCK, &mask, NULL);
-				intTERM(0);
+				intTERM(SIGHUP);
 				/*NOTREACHED*/
 			}
 			continue;

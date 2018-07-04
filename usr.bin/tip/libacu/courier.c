@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: courier.c,v 1.15 2006/03/17 19:17:13 moritz Exp $	*/
 /*	$NetBSD: courier.c,v 1.7 1997/02/11 09:24:16 mrg Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/libacu/courier.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 #if 0

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: uucplock.c,v 1.11 2006/03/16 19:32:46 deraadt Exp $	*/
 /*	$NetBSD: uucplock.c,v 1.7 1997/02/11 09:24:08 mrg Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/uucplock.c 178736 2008-05-03 02:29:02Z bms $");
 
 #ifndef lint
 #if 0

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: vars.c,v 1.8 2006/08/18 03:06:18 jason Exp $	*/
 /*	$NetBSD: vars.c,v 1.3 1994/12/08 09:31:19 jtc Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/vars.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 #if 0

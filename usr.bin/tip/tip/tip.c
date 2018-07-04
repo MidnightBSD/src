@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tip.c,v 1.30 2006/08/18 03:06:18 jason Exp $	*/
 /*	$NetBSD: tip.c,v 1.13 1997/04/20 00:03:05 mellon Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/tip.c 230654 2012-01-28 20:45:47Z phk $");
 
 #ifndef lint
 static const char copyright[] =
@@ -584,7 +585,7 @@ parwrite(int fd, char *buf, size_t n)
 			bp++;
 		}
 	if (write(fd, buf, n) < 0) {
-		if (errno == EIO)
+		if (errno == EIO || errno == ENXIO)
 			tipabort("Lost carrier.");
 		/* this is questionable */
 		perror("write");

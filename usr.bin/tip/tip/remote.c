@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: remote.c,v 1.16 2006/06/06 23:24:52 deraadt Exp $	*/
 /*	$NetBSD: remote.c,v 1.5 1997/04/20 00:02:45 mellon Exp $	*/
 
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/remote.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 static const char copyright[] =

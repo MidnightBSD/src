@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: acutab.c,v 1.5 2006/03/17 19:17:13 moritz Exp $	*/
 /*	$NetBSD: acutab.c,v 1.3 1994/12/08 09:30:41 jtc Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/acutab.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 #if 0

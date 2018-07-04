@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: df.c,v 1.9 2006/03/17 19:17:13 moritz Exp $	*/
 /*	$NetBSD: df.c,v 1.4 1995/10/29 00:49:51 pk Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tip/libacu/df.c 161754 2006-08-31 14:14:30Z ru $");
 
 #ifndef lint
 #if 0
