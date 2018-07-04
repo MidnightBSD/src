@@ -1,11 +1,22 @@
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/distfetch/Makefile,v 1.1 2011/02/18 14:54:34 nwhitehorn Exp $
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/distfetch/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
 
-BINDIR= /usr/libexec/bsdinstall
+BINDIR= ${LIBEXECDIR}/bsdinstall
 PROG=	distfetch
-LDADD=	-lfetch -lncursesw -ldialog -lm
+DPADD=	${LIBFETCH} ${LIBDIALOG} ${LIBM}
+LDADD=	-lfetch -ldialog -lm
 
 WARNS?=	6
-NO_MAN=	true
+MAN=
+
+.include <bsd.own.mk>
+
+.if ${MK_NCURSESW} == "no"
+DPADD+=	${LIBNCURSES}
+LDADD+=	-lncurses
+.else
+DPADD+=	${LIBNCURSESW}
+LDADD+=	-lncursesw
+.endif
 
 .include <bsd.prog.mk>
