@@ -75713,6 +75713,8 @@ usr.bin/compress/zopen.c -text
 usr.bin/compress/zopen.h -text
 usr.bin/cpio/Makefile -text
 usr.bin/cpio/config_midnightbsd.h -text
+usr.bin/cpio/tests/Makefile svneol=native#text/plain
+usr.bin/cpio/tests/functional_test.sh svneol=native#text/plain
 usr.bin/cpufreq/Makefile -text
 usr.bin/cpufreq/cpufreq.1 -text
 usr.bin/cpufreq/cpufreq.c -text
