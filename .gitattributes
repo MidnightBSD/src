@@ -75122,6 +75122,13 @@ usr.bin/alias/generic.sh -text
 usr.bin/apply/Makefile -text
 usr.bin/apply/apply.1 -text
 usr.bin/apply/apply.c -text
+usr.bin/apply/tests/Makefile svneol=native#text/plain
+usr.bin/apply/tests/legacy_test.sh svneol=native#text/plain
+usr.bin/apply/tests/regress.00.in svneol=native#text/plain
+usr.bin/apply/tests/regress.00.out -text
+usr.bin/apply/tests/regress.01.out -text
+usr.bin/apply/tests/regress.01.sh svneol=native#text/plain
+usr.bin/apply/tests/regress.sh svneol=native#text/plain
 usr.bin/ar/Makefile -text
 usr.bin/ar/acplex.l -text
 usr.bin/ar/acpyacc.y -text
