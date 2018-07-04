@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * sdpcontrol.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdpcontrol.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: sdpcontrol.c,v 1.1 2003/09/08 02:27:27 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.c 133178 2004-08-05 16:32:41Z emax $
  */
 
 #include <assert.h>
