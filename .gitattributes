@@ -76785,6 +76785,7 @@ usr.bin/truss/amd64-fbsd.c -text
 usr.bin/truss/amd64-fbsd32.c -text
 usr.bin/truss/amd64-linux32.c -text
 usr.bin/truss/amd64linux32.conf -text
+usr.bin/truss/arm-fbsd.c svneol=native#text/plain
 usr.bin/truss/extern.h -text
 usr.bin/truss/fbsd32.conf -text
 usr.bin/truss/i386-fbsd.c -text
