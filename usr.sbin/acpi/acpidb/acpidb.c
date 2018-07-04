@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2002 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/usr.sbin/acpi/acpidb/acpidb.c 306536 2016-09-30 22:40:58Z jkim $
  */
 
 #include <sys/param.h>
@@ -43,13 +44,16 @@
 #include <unistd.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
-#include <contrib/dev/acpica/tools/acpiexec/aecommon.h>
+#include <contrib/dev/acpica/include/accommon.h>
+#include <contrib/dev/acpica/include/acapps.h>
+#include <contrib/dev/acpica/include/acdebug.h>
+#include <contrib/dev/acpica/include/amlresrc.h>
 
 /*
  * Dummy DSDT Table Header
  */
 
-ACPI_TABLE_HEADER	dummy_dsdt_table = {
+static ACPI_TABLE_HEADER dummy_dsdt_table = {
 	"DSDT", 123, 1, 123, "OEMID", "OEMTBLID", 1, "CRID", 1
 };
 
@@ -57,7 +61,7 @@ ACPI_TABLE_HEADER	dummy_dsdt_table = {
  * Region space I/O routines on virtual machine
  */
 
-int	aml_debug_prompt = 1;
+static int	aml_debug_prompt = 1;
 
 struct ACPIRegionContent {
 	TAILQ_ENTRY(ACPIRegionContent) links;
@@ -67,9 +71,13 @@ struct ACPIRegionContent {
 };
 
 TAILQ_HEAD(ACPIRegionContentList, ACPIRegionContent);
-struct	ACPIRegionContentList RegionContentList;
+static struct	ACPIRegionContentList RegionContentList;
 
 static int		 aml_simulation_initialized = 0;
+
+ACPI_PHYSICAL_ADDRESS	 AeLocalGetRootPointer(void);
+void			 AeDoObjectOverrides(void);
+void			 AeTableOverride(ACPI_TABLE_HEADER *, ACPI_TABLE_HEADER **);
 
 static void		 aml_simulation_init(void);
 static int		 aml_simulate_regcontent_add(int regtype,
@@ -85,16 +93,33 @@ static UINT64		 aml_simulate_prompt(char *msg, UINT64 def_val);
 static void		 aml_simulation_regload(const char *dumpfile);
 static void		 aml_simulation_regdump(const char *dumpfile);
 
-/* Stubs to simplify linkage to the ACPI CA core subsystem. */
-ACPI_STATUS
-AeLocalGetRootPointer(void)
+/* Stubs to simplify linkage to the ACPICA core subsystem. */
+ACPI_PHYSICAL_ADDRESS
+AcpiOsGetRootPointer(void)
 {
 
-	return (AE_ERROR);
+	return (0);
+}
+
+void
+AeDoObjectOverrides(void)
+{
 }
 
 void
 AeTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable)
+{
+}
+
+void
+MpSaveGpioInfo(ACPI_PARSE_OBJECT *Op, AML_RESOURCE *Resource,
+    UINT32 PinCount, UINT16 *PinList, char *DeviceName)
+{
+}
+
+void
+MpSaveSerialInfo(ACPI_PARSE_OBJECT *Op, AML_RESOURCE *Resource,
+    char *DeviceName)
 {
 }
 
@@ -172,8 +197,8 @@ aml_simulate_prompt(char *msg, UINT64 def_val)
 	if (msg != NULL) {
 		printf("%s", msg);
 	}
-	printf("(default: 0x%jx ", val);
-	printf(" / %ju) >>", val);
+	printf("(default: 0x%jx ", (uintmax_t)val);
+	printf(" / %ju) >>", (uintmax_t)val);
 	fflush(stdout);
 
 	bzero(buf, sizeof buf);
@@ -358,10 +383,10 @@ static int
 load_dsdt(const char *dsdtfile)
 {
 	char			filetmp[PATH_MAX];
+	ACPI_NEW_TABLE_DESC	*list;
 	u_int8_t		*code;
 	struct stat		sb;
-	int			fd, fd2;
-	int			error;
+	int			dounlink, error, fd;
 
 	fd = open(dsdtfile, O_RDONLY, 0);
 	if (fd == -1) {
@@ -370,14 +395,17 @@ load_dsdt(const char *dsdtfile)
 	}
 	if (fstat(fd, &sb) == -1) {
 		perror("fstat");
+		close(fd);
 		return (-1);
 	}
 	code = mmap(NULL, (size_t)sb.st_size, PROT_READ, MAP_PRIVATE, fd, (off_t)0);
+	close(fd);
 	if (code == NULL) {
 		perror("mmap");
 		return (-1);
 	}
 	if ((error = AcpiInitializeSubsystem()) != AE_OK) {
+		munmap(code, (size_t)sb.st_size);
 		return (-1);
 	}
 
@@ -385,21 +413,30 @@ load_dsdt(const char *dsdtfile)
 	 * make sure DSDT data contains table header or not.
 	 */
 	if (strncmp((char *)code, "DSDT", 4) == 0) {
-		strncpy(filetmp, dsdtfile, sizeof(filetmp));
+		dounlink = 0;
+		strlcpy(filetmp, dsdtfile, sizeof(filetmp));
 	} else {
+		dounlink = 1;
 		mode_t	mode = (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		dummy_dsdt_table.Length = sizeof(ACPI_TABLE_HEADER) + sb.st_size;
-		snprintf(filetmp, sizeof(filetmp), "%s.tmp", dsdtfile);
-		fd2 = open(filetmp, O_WRONLY | O_CREAT | O_TRUNC, mode);
-		if (fd2 == -1) {
-			perror("open");
+		if ((size_t)snprintf(filetmp, sizeof(filetmp), "%s.tmp",
+		    dsdtfile) > sizeof(filetmp) - 1) {
+			fprintf(stderr, "file name too long\n");
+			munmap(code, (size_t)sb.st_size);
 			return (-1);
 		}
-		write(fd2, &dummy_dsdt_table, sizeof(ACPI_TABLE_HEADER));
+		fd = open(filetmp, O_WRONLY | O_CREAT | O_TRUNC, mode);
+		if (fd == -1) {
+			perror("open");
+			munmap(code, (size_t)sb.st_size);
+			return (-1);
+		}
+		write(fd, &dummy_dsdt_table, sizeof(ACPI_TABLE_HEADER));
 
-		write(fd2, code, sb.st_size);
-		close(fd2);
+		write(fd, code, sb.st_size);
+		close(fd);
 	}
+	munmap(code, (size_t)sb.st_size);
 
 	/*
 	 * Install the virtual machine version of address space handlers.
@@ -454,13 +491,14 @@ load_dsdt(const char *dsdtfile)
 		return (-1);
 	}
 
-	AcpiDbGetTableFromFile(filetmp, NULL);
+	list = NULL;
+	AcGetAllTablesFromFile(filetmp, TRUE, &list);
 
-	AcpiDbInitialize();
+	AcpiInitializeDebugger();
 	AcpiGbl_DebuggerConfiguration = 0;
 	AcpiDbUserCommands(':', NULL);
 
-	if (strcmp(dsdtfile, filetmp) != 0) {
+	if (dounlink) {
 		unlink(filetmp);
 	}
 

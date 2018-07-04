@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/usr.sbin/acpi/acpidump/acpi_user.c 251186 2013-05-31 17:23:38Z jkim $
  */
 
 #include <sys/param.h>
@@ -53,7 +54,7 @@ struct acpi_user_mapping {
 	size_t          size;
 };
 
-LIST_HEAD(acpi_user_mapping_list, acpi_user_mapping) maplist;
+static LIST_HEAD(acpi_user_mapping_list, acpi_user_mapping) maplist;
 
 static void
 acpi_user_init(void)

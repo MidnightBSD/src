@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
@@ -23,8 +24,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: acpiconf.c,v 1.2 2012-12-31 21:54:15 laffer1 Exp $
- *	$MidnightBSD$
+ *	$Id: acpiconf.c,v 1.5 2000/08/08 14:12:19 iwasaki Exp $
+ *	$FreeBSD: stable/10/usr.sbin/acpi/acpiconf/acpiconf.c 281389 2015-04-11 01:17:19Z jkim $
  */
 
 #include <sys/param.h>
@@ -136,16 +137,30 @@ acpi_battinfo(int num)
 	if (ioctl(acpifd, ACPIIO_BATT_GET_BATTINFO, &battio) == -1)
 		err(EX_IOERR, "get battery user info (%d) failed", num);
 	if (battio.battinfo.state != ACPI_BATT_STAT_NOT_PRESENT) {
-		printf("State:\t\t\t");
-		if (battio.battinfo.state == 0)
-			printf("high ");
-		if (battio.battinfo.state & ACPI_BATT_STAT_CRITICAL)
-			printf("critical ");
-		if (battio.battinfo.state & ACPI_BATT_STAT_DISCHARG)
-			printf("discharging ");
-		if (battio.battinfo.state & ACPI_BATT_STAT_CHARGING)
-			printf("charging ");
-		printf("\n");
+		const char *state;
+		switch (battio.battinfo.state & ACPI_BATT_STAT_BST_MASK) {
+		case 0:
+			state = "high";
+			break;
+		case ACPI_BATT_STAT_DISCHARG:
+			state = "discharging";
+			break;
+		case ACPI_BATT_STAT_CHARGING:
+			state = "charging";
+			break;
+		case ACPI_BATT_STAT_CRITICAL:
+			state = "critical";
+			break;
+		case ACPI_BATT_STAT_DISCHARG | ACPI_BATT_STAT_CRITICAL:
+			state = "critical discharging";
+			break;
+		case ACPI_BATT_STAT_CHARGING | ACPI_BATT_STAT_CRITICAL:
+			state = "critical charging";
+			break;
+		default:
+			state = "invalid";
+		}
+		printf("State:\t\t\t%s\n", state);
 		if (battio.battinfo.cap == -1)
 			printf("Remaining capacity:\tunknown\n");
 		else

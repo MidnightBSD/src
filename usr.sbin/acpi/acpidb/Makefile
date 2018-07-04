@@ -1,66 +1,79 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/acpi/acpidb/Makefile 306536 2016-09-30 22:40:58Z jkim $
 
 PROG=	acpidb
 SRCS=	acpidb.c
-SRCS+=	osunixxf.c
 
-# debugger
-SRCS+=	dbcmds.c dbdisply.c dbexec.c dbfileio.c dbhistry.c	\
-	dbinput.c dbmethod.c dbnames.c dbstats.c dbutils.c	\
-	dbxface.c
+# common
+SRCS+=	acfileio.c acgetline.c ahids.c ahuuids.c cmfsize.c
 
-# disassembler
-SRCS+=	dmbuffer.c dmnames.c dmobject.c dmopcode.c dmresrc.c	\
-	dmresrcl.c dmresrcs.c dmutils.c dmwalk.c
+# components/debugger
+SRCS+=	dbcmds.c dbconvert.c dbdisply.c dbexec.c dbfileio.c	\
+	dbhistry.c dbinput.c dbmethod.c dbnames.c dbobject.c	\
+	dbstats.c dbtest.c dbutils.c dbxface.c
 
-# events
+# components/disassembler
+SRCS+=	dmbuffer.c dmcstyle.c dmdeferred.c dmnames.c dmopcode.c	\
+	dmresrc.c dmresrcl.c dmresrcl2.c dmresrcs.c dmutils.c	\
+	dmwalk.c
+
+# components/dispatcher
+SRCS+=	dsargs.c dscontrol.c dsdebug.c dsfield.c dsinit.c	\
+	dsmethod.c dsmthdat.c dsobject.c dsopcode.c dsutils.c	\
+	dswexec.c dswload.c dswload2.c dswscope.c dswstate.c
+
+# components/events
 SRCS+=	evevent.c evglock.c evgpe.c evgpeblk.c evgpeinit.c	\
-	evgpeutil.c evmisc.c evregion.c evrgnini.c evsci.c	\
-	evxface.c evxfevnt.c evxfgpe.c evxfregn.c
+	evgpeutil.c evhandler.c evmisc.c evregion.c evrgnini.c	\
+	evsci.c evxface.c evxfevnt.c evxfregn.c
 
-# hardware
-SRCS+=	hwacpi.c hwgpe.c hwpci.c hwregs.c hwsleep.c hwvalid.c	\
-	hwxface.c
+# components/executer
+SRCS+=	exconcat.c exconfig.c exconvrt.c excreate.c exdebug.c	\
+	exdump.c exfield.c exfldio.c exmisc.c exmutex.c		\
+	exnames.c exoparg1.c exoparg2.c exoparg3.c exoparg6.c	\
+	exprep.c exregion.c exresnte.c exresolv.c exresop.c	\
+	exstore.c exstoren.c exstorob.c exsystem.c extrace.c	\
+	exutils.c
 
-# interpreter/dispatcher
-SRCS+=	dsargs.c dscontrol.c dsfield.c dsinit.c dsmethod.c	\
-	dsmthdat.c dsobject.c dsopcode.c dsutils.c dswexec.c	\
-	dswload.c dswload2.c dswscope.c dswstate.c
+# components/hardware
+SRCS+=	hwacpi.c hwesleep.c hwgpe.c hwpci.c hwregs.c hwsleep.c	\
+	hwvalid.c hwxface.c hwxfsleep.c
 
-# interpreter/executer
-SRCS+=	exconfig.c exconvrt.c excreate.c exdebug.c exdump.c	\
-	exfield.c exfldio.c exmisc.c exmutex.c exnames.c	\
-	exoparg1.c exoparg2.c exoparg3.c exoparg6.c exprep.c	\
-	exregion.c exresnte.c exresolv.c exresop.c exstore.c	\
-	exstoren.c exstorob.c exsystem.c exutils.c
+# components/namespace
+SRCS+=	nsaccess.c nsalloc.c nsarguments.c nsconvert.c nsdump.c	\
+	nseval.c nsinit.c nsload.c nsnames.c nsobject.c		\
+	nsparse.c nspredef.c nsprepkg.c nsrepair.c nsrepair2.c	\
+	nssearch.c nsutils.c nswalk.c nsxfeval.c nsxfname.c	\
+	nsxfobj.c
 
-# interpreter/parser
-SRCS+=	psargs.c psloop.c psopcode.c psparse.c psscope.c	\
-	pstree.c psutils.c pswalk.c psxface.c
+# components/parser
+SRCS+=	psargs.c psloop.c psobject.c psopcode.c psopinfo.c	\
+	psparse.c psscope.c pstree.c psutils.c pswalk.c		\
+	psxface.c
 
-# namespace
-SRCS+=	nsaccess.c nsalloc.c nsdump.c nseval.c nsinit.c		\
-	nsload.c nsnames.c nsobject.c nsparse.c nspredef.c	\
-	nsrepair.c nsrepair2.c nssearch.c nsutils.c nswalk.c	\
-	nsxfeval.c nsxfname.c nsxfobj.c
+# components/resources
+SRCS+=	rsaddr.c rscalc.c rscreate.c rsdump.c rsdumpinfo.c	\
+	rsinfo.c rsio.c rsirq.c rslist.c rsmemory.c rsmisc.c	\
+	rsserial.c rsutils.c rsxface.c
 
-# resources
-SRCS+=	rsaddr.c rscalc.c rscreate.c rsdump.c rsinfo.c		\
-	rsio.c rsirq.c rslist.c rsmemory.c rsmisc.c		\
-	rsutils.c rsxface.c
+# components/tables
+SRCS+=	tbdata.c tbfadt.c tbfind.c tbinstal.c tbprint.c		\
+	tbutils.c tbxface.c tbxfload.c
 
-# tables
-SRCS+=	tbfadt.c tbfind.c tbinstal.c tbutils.c tbxface.c	\
-	tbxfroot.c
+# components/utilities
+SRCS+=	utaddress.c utalloc.c utascii.c utbuffer.c utcache.c	\
+	utcopy.c utdebug.c utdecode.c utdelete.c uterror.c	\
+	uteval.c utexcep.c utglobal.c uthex.c utids.c utinit.c	\
+	utlock.c utmath.c utmisc.c utmutex.c utnonansi.c	\
+	utobject.c utosi.c utownerid.c utpredef.c utprint.c	\
+	utresrc.c utstate.c utstring.c uttrack.c utuuid.c	\
+	utxface.c utxferror.c utxfinit.c
 
-# utilities
-SRCS+=	utalloc.c utcache.c utcopy.c utdebug.c utdecode.c	\
-	utdelete.c uteval.c utglobal.c utids.c utinit.c		\
-	utlock.c utmath.c utmisc.c utmutex.c utobject.c utosi.c	\
-	utresrc.c utstate.c uttrack.c utxface.c utxferror.c
+# os_specific/service_layers
+SRCS+=	oslibcfs.c osunixxf.c
 
 MAN=	acpidb.8
-WARNS?=	2
+WARNS?=	3
 
 CFLAGS+= -DACPI_EXEC_APP -fno-strict-aliasing
 DPADD=	${LIBPTHREAD}

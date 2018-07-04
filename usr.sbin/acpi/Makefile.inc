@@ -1,5 +1,6 @@
-# $Id: Makefile.inc,v 1.3 2012-12-31 21:54:15 laffer1 Exp $
 # $MidnightBSD$
+# $Id: Makefile.inc,v 1.1 2000/07/14 18:16:22 iwasaki Exp $
+# $FreeBSD: stable/10/usr.sbin/acpi/Makefile.inc 231845 2012-02-16 23:05:09Z jkim $
 
 ACPICA_DIR= ${.CURDIR}/../../../sys/contrib/dev/acpica
 CFLAGS+= -I${.CURDIR}/../../../sys
@@ -8,17 +9,18 @@ CFLAGS+= -I${.CURDIR}/../../../sys
 .include "${.CURDIR}/../../Makefile.inc"
 .endif
 
-.PATH:	${ACPICA_DIR}			\
-	${ACPICA_DIR}/common		\
-	${ACPICA_DIR}/compiler		\
-	${ACPICA_DIR}/debugger		\
-	${ACPICA_DIR}/disassembler	\
-	${ACPICA_DIR}/dispatcher	\
-	${ACPICA_DIR}/events		\
-	${ACPICA_DIR}/executer		\
-	${ACPICA_DIR}/hardware		\
-	${ACPICA_DIR}/namespace		\
-	${ACPICA_DIR}/parser		\
-	${ACPICA_DIR}/resources		\
-	${ACPICA_DIR}/tables		\
-	${ACPICA_DIR}/utilities
+.PATH:	${ACPICA_DIR}					\
+	${ACPICA_DIR}/common				\
+	${ACPICA_DIR}/compiler				\
+	${ACPICA_DIR}/components/debugger		\
+	${ACPICA_DIR}/components/disassembler		\
+	${ACPICA_DIR}/components/dispatcher		\
+	${ACPICA_DIR}/components/events			\
+	${ACPICA_DIR}/components/executer		\
+	${ACPICA_DIR}/components/hardware		\
+	${ACPICA_DIR}/components/namespace		\
+	${ACPICA_DIR}/components/parser			\
+	${ACPICA_DIR}/components/resources		\
+	${ACPICA_DIR}/components/tables			\
+	${ACPICA_DIR}/components/utilities		\
+	${ACPICA_DIR}/os_specific/service_layers
