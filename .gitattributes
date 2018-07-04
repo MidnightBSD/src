@@ -76875,6 +76875,9 @@ usr.bin/uudecode/tests/regress.sh svneol=native#text/plain
 usr.bin/uudecode/tests/regress.traditional.in svneol=native#text/plain
 usr.bin/uudecode/uudecode.c -text
 usr.bin/uuencode/Makefile -text
+usr.bin/uuencode/tests/Makefile svneol=native#text/plain
+usr.bin/uuencode/tests/legacy_test.sh svneol=native#text/plain
+usr.bin/uuencode/tests/regress.base64.out -text
 usr.bin/uuencode/uuencode.1 -text
 usr.bin/uuencode/uuencode.c -text
 usr.bin/uuencode/uuencode.format.5 -text
