@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * link_policy.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: link_policy.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: link_policy.c,v 1.3 2003/08/18 19:19:54 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hccontrol/link_policy.c 133178 2004-08-05 16:32:41Z emax $
  */
 
 #include <bluetooth.h>

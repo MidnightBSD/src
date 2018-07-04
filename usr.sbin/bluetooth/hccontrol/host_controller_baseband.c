@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * host_controller_baseband.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: host_controller_baseband.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: host_controller_baseband.c,v 1.4 2003/08/18 19:19:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hccontrol/host_controller_baseband.c 229075 2011-12-31 12:12:41Z stefanf $
  */
 
 #include <bluetooth.h>
@@ -1633,7 +1634,7 @@ struct hci_command	host_controller_baseband_commands[] = {
 "defines the amount of time for the duration of the page scan. \n" \
 "The Page_Scan_Window can only be less than or equal to the Page_Scan_Interval.\n\n" \
 "\t<interval> - Range: 0x0012 -- 0x100, Time = N * 0.625 msec\n" \
-"\t<window>   - Range: 0x0012 -- 0x100, Time = N * 0.625 msen",
+"\t<window>   - Range: 0x0012 -- 0x100, Time = N * 0.625 msec",
 &hci_write_page_scan_activity
 },
 {
@@ -1655,7 +1656,7 @@ struct hci_command	host_controller_baseband_commands[] = {
 "parameter defines the amount of time for the duration of the inquiry scan.\n" \
 "The Inquiry_Scan_Window can only be less than or equal to the Inquiry_Scan_Interval.\n\n" \
 "\t<interval> - Range: 0x0012 -- 0x100, Time = N * 0.625 msec\n" \
-"\t<window>   - Range: 0x0012 -- 0x100, Time = N * 0.625 msen",
+"\t<window>   - Range: 0x0012 -- 0x100, Time = N * 0.625 msec",
 &hci_write_inquiry_scan_activity
 },
 {

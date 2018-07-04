@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * status.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: status.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: status.c,v 1.2 2003/05/21 22:40:30 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hccontrol/status.c 128079 2004-04-09 23:58:53Z emax $
  */
 
 #include <sys/types.h>

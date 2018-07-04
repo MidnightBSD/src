@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * hccontrol.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hccontrol.c,v 1.5 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: hccontrol.c,v 1.5 2003/09/05 00:38:24 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hccontrol/hccontrol.c 159156 2006-06-02 00:29:01Z markus $
  */
 
 #include <bluetooth.h>

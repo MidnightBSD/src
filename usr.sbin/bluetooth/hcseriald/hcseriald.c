@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * hcseriald.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hcseriald.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: hcseriald.c,v 1.3 2003/05/21 22:40:32 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hcseriald/hcseriald.c 244040 2012-12-08 22:16:36Z eadler $
  */
 
 #include <sys/types.h>
@@ -257,7 +258,7 @@ usage(void)
 {
 	fprintf(stderr, "Usage: %s -f device -n node_name [-s speed -d -h]\n" \
 			"Where:\n" \
-			"\t-f device    tty device name, ex. /dev/cuad1\n" \
+			"\t-f device    tty device name, ex. /dev/cuau1\n" \
 			"\t-n node_name set Netgraph node name to node_name\n" \
 			"\t-s speed     set tty speed, ex. 115200\n" \
 			"\t-d           run in foreground\n" \

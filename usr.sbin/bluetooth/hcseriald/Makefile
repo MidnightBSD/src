@@ -1,5 +1,6 @@
-# $Id: Makefile,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
 # $MidnightBSD$
+# $Id: Makefile,v 1.5 2003/08/14 20:06:21 max Exp $
+# $FreeBSD: stable/10/usr.sbin/bluetooth/hcseriald/Makefile 140941 2005-01-28 16:08:11Z ru $
 
 PROG=		hcseriald
 MAN=		hcseriald.8

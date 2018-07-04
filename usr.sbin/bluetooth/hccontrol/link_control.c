@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * link_control.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: link_control.c,v 1.5 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: link_control.c,v 1.4 2003/08/18 19:19:54 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hccontrol/link_control.c 250460 2013-05-10 16:41:26Z eadler $
  */
 
 #include <bluetooth.h>
@@ -357,7 +358,7 @@ again:
 		goto again;
 
 	return (OK);
-} /* hci_diconnect */
+} /* hci_disconnect */
 
 /* Send Add_SCO_Connection command to the unit */
 static int
