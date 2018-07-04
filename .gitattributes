@@ -76778,6 +76778,8 @@ usr.bin/true/Makefile -text
 usr.bin/true/true.1 -text
 usr.bin/true/true.c -text
 usr.bin/truncate/Makefile -text
+usr.bin/truncate/tests/Makefile svneol=native#text/plain
+usr.bin/truncate/tests/truncate_test.sh svneol=native#text/plain
 usr.bin/truncate/truncate.1 -text
 usr.bin/truncate/truncate.c -text
 usr.bin/truss/Makefile -text
