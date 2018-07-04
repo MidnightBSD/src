@@ -24,43 +24,83 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit_sparc64.c 273831 2014-10-29 16:48:18Z nwhitehorn $
+ * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit_powerpc.c 273831 2014-10-29 16:48:18Z nwhitehorn $
  */
 
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #include <string.h>
 
 #include "partedit.h"
 
+static char platform[255] = "";
+
 const char *
 default_scheme(void) {
-	return ("VTOC8");
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
+	if (strcmp(platform, "powermac") == 0)
+		return ("APM");
+	if (strcmp(platform, "chrp") == 0)
+		return ("MBR");
+
+	/* Pick GPT (bootable on PS3) as a generic default */
+	return ("GPT");
 }
 
 int
 is_scheme_bootable(const char *part_type) {
-	if (strcmp(part_type, "VTOC8") == 0)
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
+	if (strcmp(platform, "powermac") == 0 && strcmp(part_type, "APM") == 0)
 		return (1);
+	if (strcmp(platform, "ps3") == 0 && strcmp(part_type, "GPT") == 0)
+		return (1);
+	if (strcmp(platform, "chrp") == 0 &&
+	    (strcmp(part_type, "MBR") == 0 || strcmp(part_type, "BSD") == 0 ||
+	     strcmp(part_type, "GPT") == 0))
+		return (1);
+
 	return (0);
 }
 
 int
 is_fs_bootable(const char *part_type, const char *fs)
 {
-	if (strcmp(fs, "mnbsd-ufs") == 0 || strcmp(fs, "mnbsd-zfs") == 0)
+	if (strcmp(fs, "mnbsd-ufs") == 0)
 		return (1);
+	
 	return (0);
 }
 
-
 size_t
 bootpart_size(const char *part_type) {
-	/* No standalone boot partition */
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
 
+	if (strcmp(part_type, "APM") == 0 || strcmp(part_type, "MBR") == 0)
+		return (800*1024);
+	if (strcmp(platform, "chrp") == 0 && strcmp(part_type, "GPT") == 0)
+		return (800*1024);
 	return (0);
 }
 
 const char *
 bootpart_type(const char *scheme) {
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
+	if (strcmp(platform, "chrp") == 0)
+		return ("prep-boot");
+	if (strcmp(platform, "powermac") == 0)
+		return ("apple-boot");
+
 	return ("mnbsd-boot");
 }
 
@@ -68,16 +108,18 @@ const char *
 bootcode_path(const char *part_type) {
 	return (NULL);
 }
-
+	
 const char *
 partcode_path(const char *part_type, const char *fs_type) {
-	if (strcmp(part_type, "VTOC8") == 0) {
-		if (strcmp(fs_type, "ufs") == 0) {
-			return ("/boot/boot1");
-		} else if (strcmp(fs_type, "zfs") == 0) {
-			return ("/boot/zfsboot");
-		}
-	}
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
+	if (strcmp(part_type, "APM") == 0)
+		return ("/boot/boot1.hfs");
+	if (strcmp(part_type, "MBR") == 0 ||
+	    (strcmp(platform, "chrp") == 0 && strcmp(part_type, "GPT") == 0))
+		return ("/boot/boot1.elf");
 	return (NULL);
 }
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -23,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/usr.sbin/bsdinstall/partedit/partedit.c,v 1.5 2011/10/25 16:30:16 nwhitehorn Exp $
+ * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit.c 285769 2015-07-21 21:12:28Z allanjude $
  */
 
 #include <sys/param.h>
@@ -45,6 +45,7 @@ struct pmetadata_head part_metadata;
 static int sade_mode = 0;
 
 static int apply_changes(struct gmesh *mesh);
+static void apply_workaround(struct gmesh *mesh);
 static struct partedit_item *read_geom_mesh(struct gmesh *mesh, int *nitems);
 static void add_geom_children(struct ggeom *gp, int recurse,
     struct partedit_item **items, int *nitems);
@@ -96,7 +97,12 @@ main(int argc, const char **argv)
 	if (strcmp(basename(argv[0]), "autopart") == 0) { /* Guided */
 		prompt = "Please review the disk setup. When complete, press "
 		    "the Finish button.";
-		part_wizard();
+		/* Experimental ZFS autopartition support */
+		if (argc > 1 && strcmp(argv[1], "zfs") == 0) {
+			part_wizard("zfs");
+		} else {
+			part_wizard("ufs");
+		}
 	} else if (strcmp(basename(argv[0]), "scriptedpart") == 0) {
 		error = scripted_editor(argc, argv);
 		prompt = NULL;
@@ -163,7 +169,7 @@ main(int argc, const char **argv)
 			init_fstab_metadata();
 			break;
 		case 4: /* Auto */
-			part_wizard();
+			part_wizard("ufs");
 			break;
 		}
 
@@ -185,6 +191,8 @@ main(int argc, const char **argv)
 
 			if (op == 0 && validate_setup()) { /* Save */
 				error = apply_changes(&mesh);
+				if (!error)
+					apply_workaround(&mesh);
 				break;
 			} else if (op == 3) { /* Quit */
 				gpart_revert_all(&mesh);
@@ -286,7 +294,7 @@ validate_setup(void)
 		dialog_vars.defaultno = TRUE;
 		cancel = dialog_yesno("Warning", "The chosen root partition "
 		    "has a preexisting filesystem. If it contains an existing "
-		    "BSD system, please update it manually "
+		    "MidnightBSD system, please update it with midnightbsd-update "
 		    "instead of installing a new system on it. The partition "
 		    "can also be erased by pressing \"No\" and then deleting "
 		    "and recreating it. Are you sure you want to proceed?",
@@ -384,6 +392,43 @@ apply_changes(struct gmesh *mesh)
 	fclose(fstab);
 
 	return (0);
+}
+
+static void
+apply_workaround(struct gmesh *mesh)
+{
+	struct gclass *classp;
+	struct ggeom *gp;
+	struct gconfig *gc;
+	const char *scheme = NULL, *modified = NULL;
+
+	LIST_FOREACH(classp, &mesh->lg_class, lg_class) {
+		if (strcmp(classp->lg_name, "PART") == 0)
+			break;
+	}
+
+	if (strcmp(classp->lg_name, "PART") != 0) {
+		dialog_msgbox("Error", "gpart not found!", 0, 0, TRUE);
+		return;
+	}
+
+	LIST_FOREACH(gp, &classp->lg_geom, lg_geom) {
+		LIST_FOREACH(gc, &gp->lg_config, lg_config) {
+			if (strcmp(gc->lg_name, "scheme") == 0) {
+				scheme = gc->lg_val;
+			} else if (strcmp(gc->lg_name, "modified") == 0) {
+				modified = gc->lg_val;
+			}
+		}
+
+		if (scheme && strcmp(scheme, "GPT") == 0 &&
+		    modified && strcmp(modified, "true") == 0) {
+			if (getenv("WORKAROUND_LENOVO"))
+				gpart_set_root(gp->lg_name, "lenovofix");
+			if (getenv("WORKAROUND_GPTACTIVE"))
+				gpart_set_root(gp->lg_name, "active");
+		}
+	}
 }
 
 static struct partedit_item *

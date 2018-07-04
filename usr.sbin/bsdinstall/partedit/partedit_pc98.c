@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit_sparc64.c 273831 2014-10-29 16:48:18Z nwhitehorn $
+ * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit_pc98.c 273831 2014-10-29 16:48:18Z nwhitehorn $
  */
 
 #include <string.h>
@@ -33,29 +33,31 @@
 
 const char *
 default_scheme(void) {
-	return ("VTOC8");
+	return ("PC98");
 }
 
 int
 is_scheme_bootable(const char *part_type) {
-	if (strcmp(part_type, "VTOC8") == 0)
+	if (strcmp(part_type, "BSD") == 0)
 		return (1);
+	if (strcmp(part_type, "PC98") == 0)
+		return (1);
+
 	return (0);
 }
 
 int
 is_fs_bootable(const char *part_type, const char *fs)
 {
-	if (strcmp(fs, "mnbsd-ufs") == 0 || strcmp(fs, "mnbsd-zfs") == 0)
+	if (strcmp(fs, "mnbsd-ufs") == 0)
 		return (1);
+	
 	return (0);
 }
 
-
 size_t
 bootpart_size(const char *part_type) {
-	/* No standalone boot partition */
-
+	/* No boot partition */
 	return (0);
 }
 
@@ -66,18 +68,17 @@ bootpart_type(const char *scheme) {
 
 const char *
 bootcode_path(const char *part_type) {
+	if (strcmp(part_type, "PC98") == 0)
+		return ("/boot/pc98boot");
+	if (strcmp(part_type, "BSD") == 0)
+		return ("/boot/boot");
+
 	return (NULL);
 }
-
+	
 const char *
 partcode_path(const char *part_type, const char *fs_type) {
-	if (strcmp(part_type, "VTOC8") == 0) {
-		if (strcmp(fs_type, "ufs") == 0) {
-			return ("/boot/boot1");
-		} else if (strcmp(fs_type, "zfs") == 0) {
-			return ("/boot/zfsboot");
-		}
-	}
+	/* No partcode */
 	return (NULL);
 }
 
