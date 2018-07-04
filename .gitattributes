@@ -76880,6 +76880,7 @@ usr.bin/uuencode/Makefile -text
 usr.bin/uuencode/tests/Makefile svneol=native#text/plain
 usr.bin/uuencode/tests/legacy_test.sh svneol=native#text/plain
 usr.bin/uuencode/tests/regress.base64.out -text
+usr.bin/uuencode/tests/regress.in -text
 usr.bin/uuencode/tests/regress.sh svneol=native#text/plain
 usr.bin/uuencode/tests/regress.traditional.out -text
 usr.bin/uuencode/uuencode.1 -text
