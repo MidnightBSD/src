@@ -1,11 +1,22 @@
-# $MidngithBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/distextract/Makefile,v 1.1 2011/02/18 14:54:34 nwhitehorn Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/distextract/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
 
-BINDIR= /usr/libexec/bsdinstall
+BINDIR= ${LIBEXECDIR}/bsdinstall
 PROG=	distextract
-LDADD=	-larchive -lncursesw -ldialog -lm
+DPADD=	${LIBARCHIVE} ${LIBDPV} ${LIBFIGPAR} ${LIBDIALOG} ${LIBM}
+LDADD=	-larchive -ldpv -lfigpar -ldialog -lm
 
 WARNS?=	6
-NO_MAN=	true
+MAN=
+
+.include <bsd.own.mk>
+
+.if ${MK_NCURSESW} == "no"
+DPADD+=	${LIBNCURSES}
+LDADD+=	-lncurses
+.else
+DPADD+=	${LIBNCURSESW}
+LDADD+=	-lncursesw
+.endif
 
 .include <bsd.prog.mk>
