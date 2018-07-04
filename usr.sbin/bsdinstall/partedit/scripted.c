@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/scripted.c 273831 2014-10-29 16:48:18Z nwhitehorn $
  */
 
 #include <sys/param.h>
@@ -109,7 +110,7 @@ part_config(char *disk, const char *scheme, char *config)
 
 	/* Create partitions */
 	if (config == NULL) {
-		wizard_makeparts(&mesh, disk, 0);
+		wizard_makeparts(&mesh, disk, "ufs", 0);
 		goto finished;
 	}
 
