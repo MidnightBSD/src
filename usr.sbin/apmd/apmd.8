@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
 .\" Copyright (c) 1999 KOIE Hidetaka <koie@suri.co.jp>
 .\" Copyright (c) 1999 Yoshihiko SARUMARU <mistral@imasy.or.jp>
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)apmd.8	1.1 (FreeBSD) 6/28/99
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.sbin/apmd/apmd.8 237015 2012-06-13 18:57:27Z joel $
 .\"
 .Dd June 28, 1999
 .Dt APMD 8 i386
@@ -66,7 +67,7 @@ built-in functions in the configuration file.
 The
 .Nm
 utility recognizes the following runtime options:
-.Bl -tag -width -f_file
+.Bl -tag -width f_file
 .It Fl d
 Starts in debug mode.
 This causes
@@ -245,13 +246,13 @@ just as with a command line.
 The following built-in functions are currently supported:
 .Bl -item
 .It
-- reject:
-.Bd -ragged -offset indent
+.Bl -tag -width ".It - reject"
+.It - reject
 Reject last request posted by APM BIOS.
 This can be used to reject
 a SUSPEND request when the LCD is closed and put the system in a
 STANDBY state instead.
-.Ed
+.El
 .El
 .Ed
 .El
