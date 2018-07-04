@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bcmfw.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bcmfw.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: bcmfw.c,v 1.4 2003/04/27 19:28:09 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bcmfw/bcmfw.c 188945 2009-02-23 18:36:54Z thompsa $
  *
  * Based on Linux BlueZ BlueFW-0.9 package
  *

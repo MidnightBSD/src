@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bt3cfw.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bt3cfw.c,v 1.2 2013-01-01 17:42:43 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: bt3cfw.c,v 1.2 2003/05/21 22:40:29 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bt3cfw/bt3cfw.c 227876 2011-11-23 10:27:18Z kevlo $
  */
 
 #include <sys/types.h>
@@ -221,6 +222,7 @@ main(int argc, char *argv[])
 
 	free(firmware);
 	firmware = NULL;
+	fclose(firmware_file);
 
 	return (0);
 }
