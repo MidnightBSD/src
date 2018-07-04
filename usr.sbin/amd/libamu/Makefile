@@ -1,9 +1,10 @@
+# $MidnightBSD$
 # ex:ts=8
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/usr.sbin/amd/libamu/Makefile 308346 2016-11-05 17:02:38Z cy $
 
 .PATH: ${.CURDIR}/../../../contrib/amd/libamu \
        ${.CURDIR}/../../../contrib/amd/conf/transp \
@@ -23,7 +24,7 @@ SRCS+=		nfs_prot_x.c xdr_func_%undef.c
 CLEANFILES+=	nfs_prot_x.c xdr_func_%undef.c
 
 CFLAGS+= -I${.CURDIR}/../../../contrib/amd/libamu \
-	 -I${DESTDIR}/usr/include/rpcsvc
+	 -I${.OBJDIR}/../../../include/rpcsvc
 
 nfs_prot_x.c: ${NFS_PROT_X}
 	${RPCCOM} -c -C -DWANT_NFS3 ${NFS_PROT_X} -o ${.TARGET}

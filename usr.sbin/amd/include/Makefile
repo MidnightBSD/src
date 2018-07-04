@@ -1,6 +1,7 @@
+# $MidnightBSD$
 # ex:ts=8
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/amd/include/Makefile 156813 2006-03-17 18:54:44Z ru $
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998.

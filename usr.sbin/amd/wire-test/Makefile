@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # ex:ts=8
 #
 # Makefile for amd
