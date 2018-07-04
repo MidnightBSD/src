@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * APM (Advanced Power Management) Event Dispatcher
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/apmd/apmdlex.l 250227 2013-05-03 23:51:32Z jkim $
  */
 
 #include <string.h>
@@ -36,13 +37,13 @@
 #include "apmd.h"
 #include "y.tab.h"
 
-/* We don't need it, avoid the warning. */
-#define YY_NO_UNPUT
-#define YY_NO_INPUT
-
 int lineno;
 int first_time;
 %}
+
+/* We don't need it, avoid the warning. */
+%option nounput
+%option noinput
 
 %s TOP
 
