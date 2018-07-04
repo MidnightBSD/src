@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1997, 1998, 1999
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -37,7 +38,7 @@ static const char copyright[] = "@(#) Copyright (c) 1997, 1998, 1999\
 #endif
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.sbin/ancontrol/ancontrol.c 305619 2016-09-08 15:27:42Z pfg $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -574,9 +575,9 @@ an_dumpstats(const char *iface)
 	printf("Management frames transmitted:\t\t\t[ %u ]\n",
 	    stats->an_tx_mgmt_pkts);
 	printf("Refresh frames received:\t\t\t[ %u ]\n",
-	    stats->an_rx_refresh_pkts),
+	    stats->an_rx_refresh_pkts);
 	printf("Refresh frames transmitted:\t\t\t[ %u ]\n",
-	    stats->an_tx_refresh_pkts),
+	    stats->an_tx_refresh_pkts);
 	printf("Poll frames received:\t\t\t\t[ %u ]\n",
 	    stats->an_rx_poll_pkts);
 	printf("Poll frames transmitted:\t\t\t[ %u ]\n",
