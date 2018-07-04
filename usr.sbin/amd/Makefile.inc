@@ -1,6 +1,6 @@
 # ex:ts=8
 #
-# $FreeBSD$
+# $MidnightBSD$
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998.
@@ -37,8 +37,8 @@ LIBAMUDIR=	${.CURDIR}/../libamu
 LIBAMU=		${LIBAMUDIR}/libamu.a
 
 RPCCOM=		RPCGEN_CPP=${CPP:Q} rpcgen
-MOUNT_X=	${DESTDIR}/usr/include/rpcsvc/mount.x
-NFS_PROT_X=	${DESTDIR}/usr/include/rpcsvc/nfs_prot.x
+MOUNT_X=	${SRCTOP}/include/rpcsvc/mount.x
+NFS_PROT_X=	${SRCTOP}/include/rpcsvc/nfs_prot.x
 
 WARNS?=	1
 
