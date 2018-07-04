@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -29,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)touch.1	8.3 (Berkeley) 4/28/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/touch/touch.1 236852 2012-06-10 14:26:51Z jilles $
 .\"
 .Dd June 10, 2012
 .Dt TOUCH 1
@@ -40,7 +41,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl A Ar [-][[hh]mm]SS
-.Op Fl acfhm
+.Op Fl achm
 .Op Fl r Ar file
 .Op Fl t Ar [[CC]YY]MMDDhhmm[.SS]
 .Op Fl d Ar YYYY-MM-DDThh:mm:SS[.frac][tz]
@@ -112,9 +113,6 @@ The
 .Nm
 utility does not treat this as an error.
 No error messages are displayed and the exit value is not affected.
-.It Fl f
-Attempt to force the update, even if the file permissions do not
-currently permit it.
 .It Fl d
 Change the access and modification times to the specified time instead
 of the current time of day.
