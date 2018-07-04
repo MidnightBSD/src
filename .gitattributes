@@ -77386,6 +77386,7 @@ usr.sbin/bsdinstall/partedit/partedit.h -text
 usr.sbin/bsdinstall/partedit/partedit_generic.c -text
 usr.sbin/bsdinstall/partedit/partedit_sparc64.c -text
 usr.sbin/bsdinstall/partedit/partedit_x86.c -text
+usr.sbin/bsdinstall/partedit/sade.8 svneol=native#text/plain
 usr.sbin/bsdinstall/partedit/scripted.c svneol=native#text/plain
 usr.sbin/bsdinstall/scripts/Makefile -text
 usr.sbin/bsdinstall/scripts/adduser -text
