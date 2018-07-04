@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tr/str.c 229403 2012-01-03 18:51:58Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)str.c	8.2 (Berkeley) 4/28/95";
@@ -57,8 +58,7 @@ static int      genrange(STR *, int);
 static void	genseq(STR *);
 
 wint_t
-next(s)
-	STR *s;
+next(STR *s)
 {
 	int is_octal;
 	wint_t ch;
@@ -135,8 +135,7 @@ next(s)
 }
 
 static int
-bracket(s)
-	STR *s;
+bracket(STR *s)
 {
 	char *p;
 
@@ -163,7 +162,7 @@ bracket(s)
 	repeat:
 		if ((p = strpbrk(s->str + 2, "*]")) == NULL)
 			return (0);
-		if (p[0] != '*' || index(p, ']') == NULL)
+		if (p[0] != '*' || strchr(p, ']') == NULL)
 			return (0);
 		s->str += 1;
 		genseq(s);
@@ -173,8 +172,7 @@ bracket(s)
 }
 
 static void
-genclass(s)
-	STR *s;
+genclass(STR *s)
 {
 
 	if ((s->cclass = wctype(s->str)) == 0)
@@ -190,8 +188,7 @@ genclass(s)
 }
 
 static void
-genequiv(s)
-	STR *s;
+genequiv(STR *s)
 {
 	int i, p, pri;
 	char src[2], dst[3];
@@ -295,8 +292,7 @@ genrange(STR *s, int was_octal)
 }
 
 static void
-genseq(s)
-	STR *s;
+genseq(STR *s)
 {
 	char *ep;
 	wchar_t wc;

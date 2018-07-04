@@ -76783,6 +76783,25 @@ usr.bin/tr/cset.c -text
 usr.bin/tr/cset.h -text
 usr.bin/tr/extern.h -text
 usr.bin/tr/str.c -text
+usr.bin/tr/tests/Makefile svneol=native#text/plain
+usr.bin/tr/tests/legacy_test.sh svneol=native#text/plain
+usr.bin/tr/tests/regress.00.out -text
+usr.bin/tr/tests/regress.01.out -text
+usr.bin/tr/tests/regress.02.out -text
+usr.bin/tr/tests/regress.03.out -text
+usr.bin/tr/tests/regress.04.out -text
+usr.bin/tr/tests/regress.05.out -text
+usr.bin/tr/tests/regress.06.out -text
+usr.bin/tr/tests/regress.07.out -text
+usr.bin/tr/tests/regress.08.out -text
+usr.bin/tr/tests/regress.09.out -text
+usr.bin/tr/tests/regress.0a.out -text
+usr.bin/tr/tests/regress.0b.out -text
+usr.bin/tr/tests/regress.0c.out -text
+usr.bin/tr/tests/regress.0d.out -text svneol=unset#application/octet-stream
+usr.bin/tr/tests/regress.in svneol=native#text/plain
+usr.bin/tr/tests/regress.sh svneol=native#text/plain
+usr.bin/tr/tests/regress2.in svneol=native#text/plain
 usr.bin/tr/tr.1 -text
 usr.bin/tr/tr.c -text
 usr.bin/true/Makefile -text
