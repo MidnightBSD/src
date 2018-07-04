@@ -76733,6 +76733,11 @@ usr.bin/tftp/tftp.h -text
 usr.bin/time/Makefile -text
 usr.bin/time/time.1 -text
 usr.bin/time/time.c -text
+usr.bin/timeout/Makefile svneol=native#text/plain
+usr.bin/timeout/tests/Makefile svneol=native#text/plain
+usr.bin/timeout/tests/timeout.sh svneol=native#text/plain
+usr.bin/timeout/timeout.1 svneol=native#text/plain
+usr.bin/timeout/timeout.c svneol=native#text/plain
 usr.bin/tip/Makefile -text
 usr.bin/tip/Makefile.inc -text
 usr.bin/tip/README -text
