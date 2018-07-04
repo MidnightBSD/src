@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*
  * lexer.l
@@ -26,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: lexer.l,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: lexer.l,v 1.1 2002/11/24 20:22:39 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hcsecd/lexer.l 215676 2010-11-22 14:16:22Z brucec $
  */
 
 #include <string.h>

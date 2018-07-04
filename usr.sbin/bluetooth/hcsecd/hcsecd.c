@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * hcsecd.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hcsecd.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: hcsecd.c,v 1.6 2003/08/18 19:19:55 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/hcsecd/hcsecd.c 188130 2009-02-04 22:04:06Z emax $
  */
 
 #include <sys/queue.h>
