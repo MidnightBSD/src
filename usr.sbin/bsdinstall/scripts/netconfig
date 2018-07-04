@@ -29,8 +29,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/netconfig 256361 2013-10-11 23:12:05Z dteske $
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/scripts/netconfig,v 1.7 2011/10/25 16:35:48 nwhitehorn Exp $
 
 INTERFACES=""
 DIALOG_TAGS=""
@@ -42,11 +42,19 @@ DIALOG_TAGS=""
 : ${DIALOG_ITEM_HELP=4}
 : ${DIALOG_ESC=255}
 
+# Do a dirty check to see if this a wireless interface -- there should be a
+# better way
+is_wireless_if() {
+	ifconfig $1 | grep -q 'media: IEEE 802.11 Wireless'
+}
+
 for IF in `ifconfig -l`; do
 	test "$IF" = "lo0" && continue
 	(ifconfig -g wlan | egrep -wq $IF) && continue
 	INTERFACES="$INTERFACES $IF"
 	DESC=`sysctl -n dev.$(echo $IF | sed -E 's/([[:alpha:]]*)([[:digit:]]*)/\1.\2/g').%desc`
+	is_wireless_if $IF && echo $DESC |
+		grep -iqv wireless && DESC="Wireless $DESC"
 	DIALOG_TAGS="$DIALOG_TAGS $IF \"$DESC\""
 done
 
@@ -64,10 +72,8 @@ exec 3>&-
 
 : > $BSDINSTALL_TMPETC/._rc.conf.net
 
-# Do a dirty check to see if this a wireless interface -- there should be a
-# better way
 IFCONFIG_PREFIX=""
-if ifconfig $INTERFACE | grep -q 'media: IEEE 802.11 Wireless'; then
+if is_wireless_if $INTERFACE; then
 	NEXT_WLAN_IFACE=wlan0	# XXX
 	echo wlans_$INTERFACE=\"$NEXT_WLAN_IFACE\" >> $BSDINSTALL_TMPETC/._rc.conf.net
 	IFCONFIG_PREFIX="WPA "
