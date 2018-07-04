@@ -76713,6 +76713,8 @@ usr.bin/talk/talk.h -text
 usr.bin/talk/talk_ctl.h -text
 usr.bin/tar/Makefile -text
 usr.bin/tar/config_midnightbsd.h -text
+usr.bin/tar/tests/Makefile svneol=native#text/plain
+usr.bin/tar/tests/functional_test.sh svneol=native#text/plain
 usr.bin/tcopy/Makefile -text
 usr.bin/tcopy/tcopy.1 -text
 usr.bin/tcopy/tcopy.c -text
