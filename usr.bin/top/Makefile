@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/top/Makefile 284484 2015-06-17 02:30:12Z marcel $
 
 TOPDIR=	${.CURDIR}/../../contrib/top
 .PATH: ${TOPDIR}
@@ -21,8 +22,8 @@ WARNS?=	0
 CFLAGS+= -D"Table_size=${TOP_TABLE_SIZE}"
 .endif
 
-DPADD=	${LIBTERMCAP} ${LIBM} ${LIBKVM}
-LDADD=	-ltermcap -lm -lkvm
+DPADD=	${LIBTERMCAP} ${LIBM} ${LIBKVM} ${LIBJAIL}
+LDADD=	-ltermcap -lm -lkvm -ljail
 
 CLEANFILES= sigdesc.h
 SIGCONV_AWK= ${.CURDIR}/../../contrib/top/sigconv.awk
@@ -31,8 +32,8 @@ sigdesc.h: ${SIGCONV_AWK} ${SIGNAL_H}
 	awk -f ${SIGCONV_AWK} < ${SIGNAL_H} > ${.TARGET}
 
 CLEANFILES+= top.local.h top.x
-.SUFFIXES: .X .x .H .h
-.X.x .H.h:
+.SUFFIXES: .xs .x .hs .h
+.xs.x .hs.h:
 	@${ECHO} Making ${.TARGET} from ${.IMPSRC}
 	@sed -e's,%LoadMax%,5.0,g' \
 	-e's,%TableSize%,20011,g' \

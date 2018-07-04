@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * top - a top users display for Unix
  *
@@ -20,8 +21,7 @@
  *          Wolfram Schneider <wosch@FreeBSD.org>
  *          Thomas Moestl <tmoestl@gmx.net>
  *
- * $MidnightBSD$
- * $FreeBSD: releng/9.2/usr.bin/top/machine.c 251311 2013-06-03 17:07:34Z jhb $
+ * $FreeBSD: stable/10/usr.bin/top/machine.c 312021 2017-01-13 08:24:41Z ngie $
  */
 
 #include <sys/param.h>
@@ -68,6 +68,9 @@ static int namelength = TOP_USERNAME_LEN;
 #else
 static int namelength = 8;
 #endif
+/* TOP_JID_LEN based on max of 999999 */
+#define TOP_JID_LEN 7
+static int jidlength;
 static int cmdlengthdelta;
 
 /* Prototypes for top internals */
@@ -102,26 +105,26 @@ struct handle {
  */
 
 static char io_header[] =
-    "  PID%s %-*.*s   VCSW  IVCSW   READ  WRITE  FAULT  TOTAL PERCENT COMMAND";
+    "  PID%*s %-*.*s   VCSW  IVCSW   READ  WRITE  FAULT  TOTAL PERCENT COMMAND";
 
 #define io_Proc_format \
-    "%5d%s %-*.*s %6ld %6ld %6ld %6ld %6ld %6ld %6.2f%% %.*s"
+    "%5d%*s %-*.*s %6ld %6ld %6ld %6ld %6ld %6ld %6.2f%% %.*s"
 
 static char smp_header_thr[] =
-    "  PID%s %-*.*s  THR PRI NICE   SIZE    RES STATE   C   TIME %6s COMMAND";
+    "  PID%*s %-*.*s  THR PRI NICE   SIZE    RES STATE   C   TIME %7s COMMAND";
 static char smp_header[] =
-    "  PID%s %-*.*s "   "PRI NICE   SIZE    RES STATE   C   TIME %6s COMMAND";
+    "  PID%*s %-*.*s "   "PRI NICE   SIZE    RES STATE   C   TIME %7s COMMAND";
 
 #define smp_Proc_format \
-    "%5d%s %-*.*s %s%3d %4s%7s %6s %-6.6s %2d%7s %5.2f%% %.*s"
+    "%5d%*s %-*.*s %s%3d %4s%7s %6s %-6.6s %2d%7s %6.2f%% %.*s"
 
 static char up_header_thr[] =
-    "  PID%s %-*.*s  THR PRI NICE   SIZE    RES STATE    TIME %6s COMMAND";
+    "  PID%*s %-*.*s  THR PRI NICE   SIZE    RES STATE    TIME %7s COMMAND";
 static char up_header[] =
-    "  PID%s %-*.*s "   "PRI NICE   SIZE    RES STATE    TIME %6s COMMAND";
+    "  PID%*s %-*.*s "   "PRI NICE   SIZE    RES STATE    TIME %7s COMMAND";
 
 #define up_Proc_format \
-    "%5d%s %-*.*s %s%3d %4s%7s %6s %-6.6s%.0d%7s %5.2f%% %.*s"
+    "%5d%*s %-*.*s %s%3d %4s%7s %6s %-6.6s%.0d%7s %6.2f%% %.*s"
 
 
 /* process state names for the "STATE" column of the display */
@@ -226,7 +229,7 @@ long percentages();
 char *ordernames[] = {
 	"cpu", "size", "res", "time", "pri", "threads",
 	"total", "read", "write", "fault", "vcsw", "ivcsw",
-	"jid", NULL
+	"jid", "pid", NULL
 };
 #endif
 
@@ -361,7 +364,7 @@ machine_init(struct statics *statics, char do_unames)
 	size = sizeof(long) * maxcpu * CPUSTATES;
 	times = malloc(size);
 	if (times == NULL)
-		err(1, "malloc %zd bytes", size);
+		err(1, "malloc %zu bytes", size);
 	if (sysctlbyname("kern.cp_times", times, &size, NULL, 0) == -1)
 		err(1, "sysctlbyname kern.cp_times");
 	pcpu_cp_time = calloc(1, size);
@@ -395,6 +398,11 @@ format_header(char *uname_field)
 	static char Header[128];
 	const char *prehead;
 
+	if (ps.jail)
+		jidlength = TOP_JID_LEN + 1;	/* +1 for extra left space. */
+	else
+		jidlength = 0;
+
 	switch (displaymode) {
 	case DISP_CPU:
 		/*
@@ -407,14 +415,14 @@ format_header(char *uname_field)
 		    (ps.thread ? smp_header : smp_header_thr) :
 		    (ps.thread ? up_header : up_header_thr);
 		snprintf(Header, sizeof(Header), prehead,
-		    ps.jail ? " JID" : "",
+		    jidlength, ps.jail ? " JID" : "",
 		    namelength, namelength, uname_field,
 		    ps.wcpu ? "WCPU" : "CPU");
 		break;
 	case DISP_IO:
 		prehead = io_header;
 		snprintf(Header, sizeof(Header), prehead,
-		    ps.jail ? " JID" : "",
+		    jidlength, ps.jail ? " JID" : "",
 		    namelength, namelength, uname_field);
 		break;
 	}
@@ -529,7 +537,7 @@ get_system_info(struct system_info *si)
 		arc_stats[5] = arc_stat >> 10;
 		si->arc = arc_stats;
 	}
-		    
+
 	/* set arrays and strings */
 	if (pcpu_stats) {
 		si->cpustates = pcpu_cpu_states;
@@ -555,7 +563,7 @@ get_system_info(struct system_info *si)
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_BOOTTIME;
 	size = sizeof(boottime);
-	if (sysctl(mib, 2, &boottime, &size, NULL, 0) != -1 &&
+	if (sysctl(mib, nitems(mib), &boottime, &size, NULL, 0) != -1 &&
 	    boottime.tv_sec != 0) {
 		si->boottime = boottime;
 	} else {
@@ -669,6 +677,7 @@ get_process_info(struct system_info *si, struct process_select *sel,
 
 	/* these are copied out of sel for speed */
 	int show_idle;
+	int show_jid;
 	int show_self;
 	int show_system;
 	int show_uid;
@@ -711,6 +720,7 @@ get_process_info(struct system_info *si, struct process_select *sel,
 
 	/* set up flags which define what we are going to select */
 	show_idle = sel->idle;
+	show_jid = sel->jid != -1;
 	show_self = sel->self == -1;
 	show_system = sel->system;
 	show_uid = sel->uid != -1;
@@ -765,6 +775,10 @@ get_process_info(struct system_info *si, struct process_select *sel,
 			/* skip processes that aren't doing I/O */
 			continue;
 
+		if (show_jid && pp->ki_jid != sel->jid)
+			/* skip proc. that don't belong to the selected JID */
+			continue;
+
 		if (show_uid && pp->ki_ruid != (uid_t)sel->uid)
 			/* skip proc. that don't belong to the selected UID */
 			continue;
@@ -787,7 +801,7 @@ get_process_info(struct system_info *si, struct process_select *sel,
 	return ((caddr_t)&handle);
 }
 
-static char fmt[128];	/* static area where result is built */
+static char fmt[512];	/* static area where result is built */
 
 char *
 format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
@@ -801,9 +815,10 @@ format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
 	int cpu, state;
 	struct rusage ru, *rup;
 	long p_tot, s_tot;
-	char *proc_fmt, thr_buf[6], jid_buf[6];
+	char *proc_fmt, thr_buf[6], jid_buf[TOP_JID_LEN + 1];
 	char *cmdbuf = NULL;
 	char **args;
+	const int cmdlen = 128;
 
 	/* find and remember the next proc structure */
 	hp = (struct handle *)handle;
@@ -866,31 +881,32 @@ format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
 		break;
 	}
 
-	cmdbuf = (char *)malloc(cmdlengthdelta + 1);
+	cmdbuf = (char *)malloc(cmdlen + 1);
 	if (cmdbuf == NULL) {
-		warn("malloc(%d)", cmdlengthdelta + 1);
+		warn("malloc(%d)", cmdlen + 1);
 		return NULL;
 	}
 
 	if (!(flags & FMT_SHOWARGS)) {
 		if (ps.thread && pp->ki_flag & P_HADTHREADS &&
 		    pp->ki_tdname[0]) {
-			snprintf(cmdbuf, cmdlengthdelta, "%s{%s}", pp->ki_comm,
-			    pp->ki_tdname);
+			snprintf(cmdbuf, cmdlen, "%s{%s%s}", pp->ki_comm,
+			    pp->ki_tdname, pp->ki_moretdname);
 		} else {
-			snprintf(cmdbuf, cmdlengthdelta, "%s", pp->ki_comm);
+			snprintf(cmdbuf, cmdlen, "%s", pp->ki_comm);
 		}
 	} else {
 		if (pp->ki_flag & P_SYSTEM ||
 		    pp->ki_args == NULL ||
-		    (args = kvm_getargv(kd, pp, cmdlengthdelta)) == NULL ||
+		    (args = kvm_getargv(kd, pp, cmdlen)) == NULL ||
 		    !(*args)) {
 			if (ps.thread && pp->ki_flag & P_HADTHREADS &&
 		    	    pp->ki_tdname[0]) {
-				snprintf(cmdbuf, cmdlengthdelta,
-				    "[%s{%s}]", pp->ki_comm, pp->ki_tdname);
+				snprintf(cmdbuf, cmdlen,
+				    "[%s{%s%s}]", pp->ki_comm, pp->ki_tdname,
+				    pp->ki_moretdname);
 			} else {
-				snprintf(cmdbuf, cmdlengthdelta,
+				snprintf(cmdbuf, cmdlen,
 				    "[%s]", pp->ki_comm);
 			}
 		} else {
@@ -899,10 +915,10 @@ format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
 			size_t argbuflen;
 			size_t len;
 
-			argbuflen = cmdlengthdelta * 4;
+			argbuflen = cmdlen * 4;
 			argbuf = (char *)malloc(argbuflen + 1);
 			if (argbuf == NULL) {
-				warn("malloc(%d)", argbuflen + 1);
+				warn("malloc(%zu)", argbuflen + 1);
 				free(cmdbuf);
 				return NULL;
 			}
@@ -932,32 +948,34 @@ format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
 				dst--;
 			*dst = '\0';
 
-			if (strcmp(cmd, pp->ki_comm) != 0 ) {
+			if (strcmp(cmd, pp->ki_comm) != 0) {
 				if (ps.thread && pp->ki_flag & P_HADTHREADS &&
 				    pp->ki_tdname[0])
-					snprintf(cmdbuf, cmdlengthdelta,
-					    "%s (%s){%s}", argbuf, pp->ki_comm,
-					    pp->ki_tdname);
+					snprintf(cmdbuf, cmdlen,
+					    "%s (%s){%s%s}", argbuf,
+					    pp->ki_comm, pp->ki_tdname,
+					    pp->ki_moretdname);
 				else
-					snprintf(cmdbuf, cmdlengthdelta,
+					snprintf(cmdbuf, cmdlen,
 					    "%s (%s)", argbuf, pp->ki_comm);
 			} else {
 				if (ps.thread && pp->ki_flag & P_HADTHREADS &&
 				    pp->ki_tdname[0])
-					snprintf(cmdbuf, cmdlengthdelta,
-					    "%s{%s}", argbuf, pp->ki_tdname);
+					snprintf(cmdbuf, cmdlen,
+					    "%s{%s%s}", argbuf, pp->ki_tdname,
+					    pp->ki_moretdname);
 				else
-					strlcpy(cmdbuf, argbuf, cmdlengthdelta);
+					strlcpy(cmdbuf, argbuf, cmdlen);
 			}
 			free(argbuf);
 		}
 	}
 
-	if (ps.jail == 0) 
+	if (ps.jail == 0)
 		jid_buf[0] = '\0';
 	else
-		snprintf(jid_buf, sizeof(jid_buf), " %*d",
-		    sizeof(jid_buf) - 3, pp->ki_jid);
+		snprintf(jid_buf, sizeof(jid_buf), "%*d",
+		    jidlength - 1, pp->ki_jid);
 
 	if (displaymode == DISP_IO) {
 		oldp = get_old_proc(pp);
@@ -978,7 +996,7 @@ format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
 
 		snprintf(fmt, sizeof(fmt), io_Proc_format,
 		    pp->ki_pid,
-		    jid_buf,
+		    jidlength, jid_buf,
 		    namelength, namelength, (*get_userid)(pp->ki_ruid),
 		    rup->ru_nvcsw,
 		    rup->ru_nivcsw,
@@ -1009,11 +1027,11 @@ format_next_process(caddr_t handle, char *(*get_userid)(int), int flags)
 		thr_buf[0] = '\0';
 	else
 		snprintf(thr_buf, sizeof(thr_buf), "%*d ",
-		    sizeof(thr_buf) - 2, pp->ki_numthreads);
+		    (int)(sizeof(thr_buf) - 2), pp->ki_numthreads);
 
 	snprintf(fmt, sizeof(fmt), proc_fmt,
 	    pp->ki_pid,
-	    jid_buf,
+	    jidlength, jid_buf,
 	    namelength, namelength, (*get_userid)(pp->ki_ruid),
 	    thr_buf,
 	    pp->ki_pri.pri_level - PZERO,
@@ -1454,7 +1472,7 @@ compare_ivcsw(void *arg1, void *arg2)
 /*
  * proc_owner(pid) - returns the uid that owns process "pid", or -1 if
  *		the process does not exist.
- *		It is EXTREMLY IMPORTANT that this function work correctly.
+ *		It is EXTREMELY IMPORTANT that this function work correctly.
  *		If top runs setuid root (as in SVR4), then this function
  *		is the only thing that stands in the way of a serious
  *		security problem.  It validates requests for the "kill"
