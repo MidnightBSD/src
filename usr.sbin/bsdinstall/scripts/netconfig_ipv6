@@ -1,8 +1,8 @@
 #!/bin/sh
 #-
 # Copyright (c) 2011 Nathan Whitehorn
-# All rights reserved.
 # Copyright (c) 2011 The FreeBSD Foundation
+# Copyright (c) 2013-2015 Devin Teske
 # All rights reserved.
 #
 # Portions of this software were developed by Bjoern Zeeb
@@ -29,20 +29,22 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/netconfig_ipv6 290290 2015-11-02 22:06:44Z dteske $
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/scripts/netconfig_ipv6,v 1.6 2011/09/07 00:45:15 bz Exp $
+#
+############################################################ INCLUDES
+
+BSDCFG_SHARE="/usr/share/bsdconfig"
+. $BSDCFG_SHARE/common.subr || exit 1
+f_dprintf "%s: loading includes..." "$0"
+f_include $BSDCFG_SHARE/dialog.subr
+
+############################################################ MAIN
 
 #
 # TODO: 
 # - Add DHCPv6 support once MidnightBSD ships with it.
 # 
-
-: ${DIALOG_OK=0}
-: ${DIALOG_CANCEL=1}
-: ${DIALOG_HELP=2}
-: ${DIALOG_EXTRA=3}
-: ${DIALOG_ITEM_HELP=4}
-: ${DIALOG_ESC=255}
 
 INTERFACE=$1
 case "${INTERFACE}" in
@@ -62,8 +64,9 @@ while : ; do
 			dialog --backtitle 'MidnightBSD Installer' \
 			    --infobox "Sending Router Solicitation ..." 0 0
 			ifconfig ${INTERFACE} inet6 -ifdisabled accept_rtadv up
-			rtsol -F $INTERFACE 2>> $BSDINSTALL_LOG
+			err=$( rtsol -F $INTERFACE 2>&1 )
 			if [ $? -ne 0 ]; then
+				f_dprintf "%s" "$err"
 				dialog --backtitle 'MidnightBSD Installer' --msgbox "SLAAC failed." 0 0
 				AGAIN=" again"
 				continue
@@ -139,13 +142,20 @@ BEGIN {
 	}
 	printf("ifconfig_%s_ipv6=\"inet6 %s\"\n", iface, $1);
 }' >> $BSDINSTALL_TMPETC/._rc.conf.net
+retval=$?
 
-if [ ! -z $BSDINSTALL_CONFIGCURRENT ]; then
+if [ "$BSDINSTALL_CONFIGCURRENT" ]; then
 	. $BSDINSTALL_TMPETC/._rc.conf.net
 	ifconfig ${INTERFACE} `eval echo \\\$ifconfig_${INTERFACE}_ipv6`
-	if [ -n "${ipv6_defaultrouter}" ]; then
+	if [ "$ipv6_defaultrouter" ]; then
 		route delete -inet6 default
 		route add -inet6 default ${ipv6_defaultrouter}
+		retval=$?
 	fi
 fi
 
+exit $retval
+
+################################################################################
+# END
+################################################################################
