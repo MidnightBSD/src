@@ -1,11 +1,13 @@
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/partedit/Makefile,v 1.2 2011/05/14 01:53:38 attilio Exp $
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
 
-BINDIR= /usr/libexec/bsdinstall
+BINDIR= ${LIBEXECDIR}/bsdinstall
 PROG=	partedit
 LINKS= ${BINDIR}/partedit ${BINDIR}/autopart \
        ${BINDIR}/partedit ${BINDIR}/scriptedpart
-LDADD=	-lgeom -lncursesw -lutil -ldialog -lm
+SYMLINKS= ${BINDIR}/partedit /usr/sbin/sade
+DPADD=	${LIBGEOM} ${LIBUTIL} ${LIBDIALOG} ${LIBM}
+LDADD=	-lgeom -lutil -ldialog -lm
 
 PARTEDIT_ARCH= ${MACHINE}
 .if ${MACHINE} == "i386" || ${MACHINE} == "amd64"
@@ -19,6 +21,16 @@ SRCS=	diskeditor.c partedit.c gpart_ops.c partedit_${PARTEDIT_ARCH}.c \
 	part_wizard.c scripted.c
 
 WARNS?=	3
-NO_MAN=	true
+MAN= sade.8
+
+.include <bsd.own.mk>
+
+.if ${MK_NCURSESW} == "no"
+DPADD+=	${LIBNCURSES}
+LDADD+=	-lncurses
+.else
+DPADD+=	${LIBNCURSESW}
+LDADD+=	-lncursesw
+.endif
 
 .include <bsd.prog.mk>
