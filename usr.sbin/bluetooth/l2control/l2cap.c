@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * l2cap.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: l2cap.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: l2cap.c,v 1.5 2003/05/16 19:52:37 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/l2control/l2cap.c 121054 2003-10-12 22:04:24Z emax $
  */
 
 #include <sys/ioctl.h>
