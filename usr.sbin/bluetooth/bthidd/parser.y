@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*
  * parser.y
@@ -30,7 +31,6 @@
  *
  * $Id: parser.y,v 1.7 2006/09/07 21:06:53 max Exp $
  * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/parser.y 235789 2012-05-22 16:33:10Z bapt $
- * $MidnightBSD$
  */
 
 #include <sys/queue.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bthidcontrol.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bthidcontrol.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: bthidcontrol.c,v 1.2 2004/02/13 21:44:41 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidcontrol/bthidcontrol.c 163811 2006-10-31 00:26:58Z markus $
  */
 
 #include <sys/queue.h>

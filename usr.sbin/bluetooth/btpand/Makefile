@@ -1,5 +1,6 @@
-# $NetBSD: Makefile,v 1.2 2008/08/18 08:25:32 plunky Exp $
 # $MidnightBSD$
+# $NetBSD: Makefile,v 1.2 2008/08/18 08:25:32 plunky Exp $
+# $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/Makefile 187938 2009-01-30 22:23:21Z emax $
 
 PROG=	btpand
 MAN=	btpand.8

@@ -1,6 +1,6 @@
+# $MidnightBSD$
 # $Id: Makefile,v 1.6 2006/09/07 21:36:55 max Exp $
 # $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/Makefile 249657 2013-04-19 19:45:00Z ed $
-# $MidnightBSD$
 
 PROG=		bthidd
 MAN=		bthidd.8

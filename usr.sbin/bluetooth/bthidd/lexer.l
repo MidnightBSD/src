@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*
  * lexer.l
@@ -30,7 +31,6 @@
  *
  * $Id: lexer.l,v 1.3 2006/09/07 21:06:53 max Exp $
  * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/lexer.l 250926 2013-05-23 05:42:35Z jkim $
- * $MidnightBSD$
  */
 
 #include <bluetooth.h>

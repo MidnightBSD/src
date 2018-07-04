@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: sdp.c,v 1.2 2008/12/06 20:01:14 plunky Exp $	*/
 
 /*-
@@ -25,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/sdp.c 187938 2009-01-30 22:23:21Z emax $ */
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: sdp.c,v 1.2 2008/12/06 20:01:14 plunky Exp $");

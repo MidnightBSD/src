@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: btpand.h,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
@@ -25,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/btpand.h 305287 2016-09-02 17:24:16Z dim $ */
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -183,7 +184,7 @@ b2eaddr(void *dst, bdaddr_t *src)
 /* bnep.c */
 bool		bnep_send(channel_t *, packet_t *);
 bool		bnep_recv(packet_t *);
-void		bnep_send_control(channel_t *, uint8_t, ...);
+void		bnep_send_control(channel_t *, unsigned, ...);
 
 /* channel.c */
 void		channel_init(void);

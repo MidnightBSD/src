@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * event.h
  */
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  */
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/event.c 191232 2009-04-17 23:33:30Z emax $ */
 
 /*
  * Hack to provide libevent (see devel/libevent port) like API.
