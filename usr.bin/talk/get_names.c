@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/talk/get_names.c 229386 2012-01-03 11:13:07Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)get_names.c	8.1 (Berkeley) 6/6/93";
@@ -80,8 +81,7 @@ get_names(int argc, char *argv[])
 	gethostname(hostname, sizeof (hostname));
 	my_machine_name = hostname;
 	/* check for, and strip out, the machine name of the target */
-	for (cp = argv[1]; *cp && !index("@:!", *cp); cp++)
-		;
+	cp = argv[1] + strcspn(argv[1], "@:!");
 	if (*cp == '\0') {
 		/* this is a local to local talk */
 		his_name = argv[1];

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/talk/invite.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)invite.c	8.1 (Berkeley) 6/6/93";
@@ -60,8 +61,8 @@ static const char sccsid[] = "@(#)invite.c	8.1 (Berkeley) 6/6/93";
  * These are used to delete the
  * invitations.
  */
-int	local_id, remote_id;
-jmp_buf invitebuf;
+static int	local_id, remote_id;
+static jmp_buf invitebuf;
 
 void
 invite_remote(void)
@@ -87,7 +88,7 @@ invite_remote(void)
 	announce_invite();
 	/*
 	 * Shut off the automatic messages for a while,
-	 * so we can use the interupt timer to resend the invitation
+	 * so we can use the interrupt timer to resend the invitation
 	 */
 	end_msgs();
 	setitimer(ITIMER_REAL, &itimer, (struct itimerval *)0);
@@ -117,7 +118,7 @@ invite_remote(void)
 }
 
 /*
- * Routine called on interupt to re-invite the callee
+ * Routine called on interrupt to re-invite the callee
  */
 /* ARGSUSED */
 void

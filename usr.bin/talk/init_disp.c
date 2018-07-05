@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/talk/init_disp.c 227185 2011-11-06 08:17:23Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)init_disp.c	8.2 (Berkeley) 2/16/94";
@@ -49,8 +50,6 @@ static const char sccsid[] = "@(#)init_disp.c	8.2 (Berkeley) 2/16/94";
 #include <termios.h>
 
 #include "talk.h"
-
-extern volatile sig_atomic_t gotwinch;
 
 /*
  * Make sure the callee can write to the screen

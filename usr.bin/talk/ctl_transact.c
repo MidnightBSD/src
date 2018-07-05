@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/talk/ctl_transact.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ctl_transact.c	8.1 (Berkeley) 6/6/93";
@@ -46,7 +47,7 @@ static const char sccsid[] = "@(#)ctl_transact.c	8.1 (Berkeley) 6/6/93";
 
 /*
  * SOCKDGRAM is unreliable, so we must repeat messages if we have
- * not recieved an acknowledgement within a reasonable amount
+ * not received an acknowledgement within a reasonable amount
  * of time
  */
 void

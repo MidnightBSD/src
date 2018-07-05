@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/talk/ctl.c 227185 2011-11-06 08:17:23Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ctl.c	8.1 (Berkeley) 6/6/93";
@@ -47,6 +48,7 @@ static const char sccsid[] = "@(#)ctl.c	8.1 (Berkeley) 6/6/93";
 #include <string.h>
 
 #include "talk.h"
+#include "talk_ctl.h"
 
 struct	sockaddr_in daemon_addr = { .sin_len = sizeof(daemon_addr), .sin_family = AF_INET };
 struct	sockaddr_in ctl_addr = { .sin_len = sizeof(ctl_addr), .sin_family = AF_INET };
