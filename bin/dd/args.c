@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/dd/args.c,v 1.40 2004/08/15 19:10:05 rwatson Exp $ */
-
 
 #ifndef lint
 #if 0
@@ -39,7 +38,7 @@ static char sccsid[] = "@(#)args.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/dd/args.c 321140 2017-07-18 17:36:25Z ngie $");
 
 #include <sys/types.h>
 
@@ -47,6 +46,7 @@ __MBSDID("$MidnightBSD$");
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -67,6 +67,7 @@ static void	f_obs(char *);
 static void	f_of(char *);
 static void	f_seek(char *);
 static void	f_skip(char *);
+static void	f_status(char *);
 static uintmax_t get_num(const char *);
 static off_t	get_off_t(const char *);
 
@@ -89,6 +90,7 @@ static const struct arg {
 	{ "oseek",	f_seek,		C_SEEK,	 C_SEEK },
 	{ "seek",	f_seek,		C_SEEK,	 C_SEEK },
 	{ "skip",	f_skip,		C_SKIP,	 C_SKIP },
+	{ "status",	f_status,	C_STATUS,C_STATUS },
 };
 
 static char *oper;
@@ -164,14 +166,6 @@ jcl(char **argv)
 			errx(1, "cbs meaningless if not doing record operations");
 	} else
 		cfunc = def;
-
-	/*
-	 * Bail out if the calculation of a file offset would overflow.
-	 */
-	if (in.offset > OFF_MAX / (ssize_t)in.dbsz ||
-	    out.offset > OFF_MAX / (ssize_t)out.dbsz)
-		errx(1, "seek offsets cannot be larger than %jd",
-		    (intmax_t)OFF_MAX);
 }
 
 static int
@@ -293,6 +287,18 @@ f_skip(char *arg)
 	in.offset = get_off_t(arg);
 }
 
+static void
+f_status(char *arg)
+{
+
+	if (strcmp(arg, "none") == 0)
+		ddflags |= C_NOINFO;
+	else if (strcmp(arg, "noxfer") == 0)
+		ddflags |= C_NOXFER;
+	else
+		errx(1, "unknown status %s", arg);
+}
+ 
 static const struct conv {
 	const char *name;
 	u_int set, noset;

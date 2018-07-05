@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/dd/conv.c,v 1.19 2004/04/06 20:06:45 markm Exp $ */
-
 
 #ifndef lint
 #if 0
@@ -39,7 +38,7 @@ static char sccsid[] = "@(#)conv.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/dd/conv.c 127958 2004-04-06 20:06:54Z markm $");
 
 #include <sys/param.h>
 

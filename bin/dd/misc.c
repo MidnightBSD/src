@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/dd/misc.c,v 1.27 2004/04/06 20:06:46 markm Exp $ */
 
 #ifndef lint
 #if 0
@@ -38,13 +38,14 @@ static char sccsid[] = "@(#)misc.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/dd/misc.c 264577 2014-04-17 00:31:20Z delphij $");
 
 #include <sys/types.h>
 #include <sys/time.h>
 
 #include <errno.h>
 #include <inttypes.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,41 +59,37 @@ summary(void)
 {
 	struct timeval tv;
 	double secs;
-	char buf[100];
 
-	(void)gettimeofday(&tv, (struct timezone *)NULL);
+	if (ddflags & C_NOINFO)
+		return;
+
+	(void)gettimeofday(&tv, NULL);
 	secs = tv.tv_sec + tv.tv_usec * 1e-6 - st.start;
 	if (secs < 1e-6)
 		secs = 1e-6;
-	/* Use snprintf(3) so that we don't reenter stdio(3). */
-	(void)snprintf(buf, sizeof(buf),
+	(void)fprintf(stderr,
 	    "%ju+%ju records in\n%ju+%ju records out\n",
 	    st.in_full, st.in_part, st.out_full, st.out_part);
-	(void)write(STDERR_FILENO, buf, strlen(buf));
-	if (st.swab) {
-		(void)snprintf(buf, sizeof(buf), "%ju odd length swab %s\n",
+	if (st.swab)
+		(void)fprintf(stderr, "%ju odd length swab %s\n",
 		     st.swab, (st.swab == 1) ? "block" : "blocks");
-		(void)write(STDERR_FILENO, buf, strlen(buf));
-	}
-	if (st.trunc) {
-		(void)snprintf(buf, sizeof(buf), "%ju truncated %s\n",
+	if (st.trunc)
+		(void)fprintf(stderr, "%ju truncated %s\n",
 		     st.trunc, (st.trunc == 1) ? "block" : "blocks");
-		(void)write(STDERR_FILENO, buf, strlen(buf));
+	if (!(ddflags & C_NOXFER)) {
+		(void)fprintf(stderr,
+		    "%ju bytes transferred in %.6f secs (%.0f bytes/sec)\n",
+		    st.bytes, secs, st.bytes / secs);
 	}
-	(void)snprintf(buf, sizeof(buf),
-	    "%ju bytes transferred in %.6f secs (%.0f bytes/sec)\n",
-	    st.bytes, secs, st.bytes / secs);
-	(void)write(STDERR_FILENO, buf, strlen(buf));
+	need_summary = 0;
 }
 
 /* ARGSUSED */
 void
-summaryx(int notused __unused)
+siginfo_handler(int signo __unused)
 {
-	int save_errno = errno;
 
-	summary();
-	errno = save_errno;
+	need_summary = 1;
 }
 
 /* ARGSUSED */

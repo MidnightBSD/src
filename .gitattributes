@@ -74,6 +74,7 @@ bin/dd/ref.ascii -text
 bin/dd/ref.ebcdic -text
 bin/dd/ref.ibm -text
 bin/dd/ref.lcase -text
+bin/dd/ref.obs_zeroes -text
 bin/dd/ref.oldascii -text
 bin/dd/ref.oldebcdic -text
 bin/dd/ref.oldibm -text
@@ -83,6 +84,8 @@ bin/dd/ref.parodd -text
 bin/dd/ref.parset -text
 bin/dd/ref.swab -text
 bin/dd/ref.ucase -text
+bin/dd/tests/Makefile svneol=native#text/plain
+bin/dd/tests/dd2_test.sh svneol=native#text/plain
 bin/df/Makefile -text
 bin/df/df.1 -text
 bin/df/df.c -text

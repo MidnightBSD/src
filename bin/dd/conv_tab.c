@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/dd/conv_tab.c,v 1.12 2004/04/06 20:06:45 markm Exp $ */
 
 #ifndef lint
 #if 0
@@ -38,9 +38,15 @@ static char sccsid[] = "@(#)conv_tab.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/dd/conv_tab.c 250469 2013-05-10 18:43:36Z eadler $");
 
 #include <sys/types.h>
+
+#include <signal.h>
+#include <stdint.h>
+
+#include "dd.h"
+#include "extern.h"
 
 /*
  * There are currently six tables:

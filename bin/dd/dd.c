@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/dd/dd.c,v 1.43 2004/08/15 19:10:05 rwatson Exp $ */
 
 #if 0
 #ifndef lint
@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)dd.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/dd/dd.c 298258 2016-04-19 07:34:31Z thomas $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -53,6 +53,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/filio.h>
 #include <sys/time.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
@@ -82,6 +83,7 @@ size_t	cbsz;			/* conversion block size */
 uintmax_t files_cnt = 1;	/* # of files to copy */
 const	u_char *ctab;		/* conversion table */
 char	fill_char;		/* Character to fill with if defined */
+volatile sig_atomic_t need_summary;
 
 int
 main(int argc __unused, char *argv[])
@@ -90,7 +92,7 @@ main(int argc __unused, char *argv[])
 	jcl(argv);
 	setup();
 
-	(void)signal(SIGINFO, summaryx);
+	(void)signal(SIGINFO, siginfo_handler);
 	(void)signal(SIGINT, terminate);
 
 	atexit(summary);
@@ -99,6 +101,13 @@ main(int argc __unused, char *argv[])
 		dd_in();
 
 	dd_close();
+	/*
+	 * Some devices such as cfi(4) may perform significant amounts
+	 * of work when a write descriptor is closed.  Close the out
+	 * descriptor explicitly so that the summary handler (called
+	 * from an atexit() hook) includes this work.
+	 */
+	close(out.fd);
 	exit(0);
 }
 
@@ -166,6 +175,8 @@ setup(void)
 	} else if ((in.db = malloc(MAX(in.dbsz, cbsz) + cbsz)) == NULL ||
 	    (out.db = malloc(out.dbsz + cbsz)) == NULL)
 		err(1, "output buffer");
+
+	/* dbp is the first free position in each buffer. */
 	in.dbp = in.db;
 	out.dbp = out.db;
 
@@ -233,8 +244,8 @@ setup(void)
 		ctab = casetab;
 	}
 
-	(void)gettimeofday(&tv, (struct timezone *)NULL);
-	st.start = tv.tv_sec + tv.tv_usec * 1e-6; 
+	(void)gettimeofday(&tv, NULL);
+	st.start = tv.tv_sec + tv.tv_usec * 1e-6;
 }
 
 static void
@@ -369,6 +380,9 @@ dd_in(void)
 
 		in.dbp += in.dbrcnt;
 		(*cfunc)();
+		if (need_summary) {
+			summary();
+		}
 	}
 }
 
@@ -396,6 +410,15 @@ dd_close(void)
 	}
 	if (out.dbcnt || pending)
 		dd_out(1);
+
+	/*
+	 * If the file ends with a hole, ftruncate it to extend its size
+	 * up to the end of the hole (without having to write any data).
+	 */
+	if (out.seek_offset > 0 && (out.flags & ISTRUNC)) {
+		if (ftruncate(out.fd, out.seek_offset) == -1)
+			err(1, "truncating %s", out.name);
+	}
 }
 
 void
@@ -424,8 +447,15 @@ dd_out(int force)
 	 * we play games with the buffer size, and it's usually a partial write.
 	 */
 	outp = out.db;
+
+	/*
+	 * If force, first try to write all pending data, else try to write
+	 * just one block. Subsequently always write data one full block at
+	 * a time at most.
+	 */
 	for (n = force ? out.dbcnt : out.dbsz;; n = out.dbsz) {
-		for (cnt = n;; cnt -= nw) {
+		cnt = n;
+		do {
 			sparse = 0;
 			if (ddflags & C_SPARSE) {
 				sparse = 1;	/* Is buffer sparse? */
@@ -440,20 +470,24 @@ dd_out(int force)
 				nw = cnt;
 			} else {
 				if (pending != 0) {
-					if (force)
-						pending--;
-					if (lseek(out.fd, pending, SEEK_CUR) ==
-					    -1)
+					/*
+					 * Seek past hole.  Note that we need to record the
+					 * reached offset, because we might have no more data
+					 * to write, in which case we'll need to call
+					 * ftruncate to extend the file size.
+					 */
+					out.seek_offset = lseek(out.fd, pending, SEEK_CUR);
+					if (out.seek_offset == -1)
 						err(2, "%s: seek error creating sparse file",
 						    out.name);
-					if (force)
-						write(out.fd, outp, 1);
 					pending = 0;
 				}
-				if (cnt)
+				if (cnt) {
 					nw = write(out.fd, outp, cnt);
-				else
+					out.seek_offset = 0;
+				} else {
 					return;
+				}
 			}
 
 			if (nw <= 0) {
@@ -463,27 +497,29 @@ dd_out(int force)
 					err(1, "%s", out.name);
 				nw = 0;
 			}
+
 			outp += nw;
 			st.bytes += nw;
-			if ((size_t)nw == n) {
-				if (n != out.dbsz)
-					++st.out_part;
-				else
-					++st.out_full;
-				break;
+
+			if ((size_t)nw == n && n == out.dbsz)
+				++st.out_full;
+			else
+				++st.out_part;
+
+			if ((size_t) nw != cnt) {
+				if (out.flags & ISTAPE)
+					errx(1, "%s: short write on tape device",
+				    	out.name);
+				if (out.flags & ISCHR && !warned) {
+					warned = 1;
+					warnx("%s: short write on character device",
+				    	out.name);
+				}
 			}
-			++st.out_part;
-			if ((size_t)nw == cnt)
-				break;
-			if (out.flags & ISTAPE)
-				errx(1, "%s: short write on tape device",
-				    out.name);
-			if (out.flags & ISCHR && !warned) {
-				warned = 1;
-				warnx("%s: short write on character device",
-				    out.name);
-			}
-		}
+
+			cnt -= nw;
+		} while (cnt != 0);
+
 		if ((out.dbcnt -= n) < out.dbsz)
 			break;
 	}
