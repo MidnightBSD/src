@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/scripts/adduser,v 1.2 2011/08/21 18:49:28 nwhitehorn Exp $
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/adduser 225065 2011-08-21 18:49:28Z nwhitehorn $
 
 clear
 echo "MidnightBSD Installer"
