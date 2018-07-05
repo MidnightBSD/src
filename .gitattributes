@@ -76697,6 +76697,8 @@ usr.bin/tail/read.c -text
 usr.bin/tail/reverse.c -text
 usr.bin/tail/tail.1 -text
 usr.bin/tail/tail.c -text
+usr.bin/tail/tests/Makefile svneol=native#text/plain
+usr.bin/tail/tests/tail_test.sh svneol=native#text/plain
 usr.bin/talk/Makefile -text
 usr.bin/talk/ctl.c -text
 usr.bin/talk/ctl_transact.c -text

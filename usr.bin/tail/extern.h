@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/tail/extern.h 251565 2013-06-09 08:06:26Z jh $
  */
 
 #define	WR(p, size) do { \
@@ -67,5 +68,6 @@ void ierr(const char *);
 void oerr(void);
 int mapprint(struct mapinfo *, off_t, off_t);
 int maparound(struct mapinfo *, off_t);
+void printfn(const char *, int);
 
 extern int Fflag, fflag, qflag, rflag, rval, no_files;

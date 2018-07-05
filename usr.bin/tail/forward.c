@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tail/forward.c 251565 2013-06-09 08:06:26Z jh $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)forward.c	8.1 (Berkeley) 6/6/93";
@@ -66,9 +67,9 @@ static void set_events(file_info_t *files);
 #define USE_KQUEUE	1
 #define ADD_EVENTS	2
 
-struct kevent *ev;
-int action = USE_SLEEP;
-int kq;
+static struct kevent *ev;
+static int action = USE_SLEEP;
+static int kq;
 
 static const file_info_t *last;
 
@@ -243,7 +244,7 @@ show(file_info_t *file)
 	while ((ch = getc(file->fp)) != EOF) {
 		if (last != file && no_files > 1) {
 			if (!qflag)
-				(void)printf("\n==> %s <==\n", file->file_name);
+				printfn(file->file_name, 1);
 			last = file;
 		}
 		if (putchar(ch) == EOF)
@@ -320,7 +321,7 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 			active = 1;
 			n++;
 			if (no_files > 1 && !qflag)
-				(void)printf("\n==> %s <==\n", file->file_name);
+				printfn(file->file_name, 1);
 			forward(file->fp, file->file_name, style, off, &file->st);
 			if (Fflag && fileno(file->fp) != STDIN_FILENO)
 				n++;

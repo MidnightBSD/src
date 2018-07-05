@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tail/misc.c 251565 2013-06-09 08:06:26Z jh $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)misc.c	8.1 (Berkeley) 6/6/93";
@@ -112,4 +113,18 @@ maparound(struct mapinfo *mip, off_t offset)
 		return (1);
 
 	return (0);
+}
+
+/*
+ * Print the file name without stdio buffering.
+ */
+void
+printfn(const char *fn, int print_nl)
+{
+
+	if (print_nl)
+		WR("\n", 1);
+	WR("==> ", 4);
+	WR(fn, strlen(fn));
+	WR(" <==\n", 5);
 }

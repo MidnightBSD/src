@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/tail/read.c 245184 2013-01-08 22:14:45Z delphij $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/6/93";
@@ -143,9 +144,8 @@ lines(FILE *fp, const char *fn, off_t off)
 	char *p, *sp;
 	int blen, cnt, recno, wrap;
 
-	if ((llines = malloc(off * sizeof(*llines))) == NULL)
-		err(1, "malloc");
-	bzero(llines, off * sizeof(*llines));
+	if ((llines = calloc(off, sizeof(*llines))) == NULL)
+		err(1, "calloc");
 	p = sp = NULL;
 	blen = cnt = recno = wrap = 0;
 	rc = 0;
