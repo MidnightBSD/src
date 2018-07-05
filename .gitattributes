@@ -76724,6 +76724,8 @@ usr.bin/tee/Makefile -text
 usr.bin/tee/tee.1 -text
 usr.bin/tee/tee.c -text
 usr.bin/telnet/Makefile -text
+usr.bin/tests/Makefile svneol=native#text/plain
+usr.bin/tests/regress.m4 -text
 usr.bin/tftp/Makefile -text
 usr.bin/tftp/extern.h -text
 usr.bin/tftp/main.c -text
