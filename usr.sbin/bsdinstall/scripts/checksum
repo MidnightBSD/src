@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/bsdinstall/scripts/checksum,v 1.2 2011/03/23 13:43:56 nwhitehorn Exp $
+# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/checksum 219903 2011-03-23 13:43:56Z nwhitehorn $
 
 test -f $BSDINSTALL_DISTDIR/MANIFEST || exit 0
 
