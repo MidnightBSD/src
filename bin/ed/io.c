@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* io.c: This file contains the i/o routines for the ed line editor */
 /*-
  * Copyright (c) 1993 Andrew Moore, Talke Studio.
@@ -24,14 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ed/io.c,v 1.14 2003/01/01 18:48:39 schweikh Exp $ */
+
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/ed/io.c,v 1.2 2006/07/19 13:39:36 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ed/io.c 301155 2016-06-01 17:47:34Z truckman $");
 
 #include "ed.h"
-
-
-extern int scripted;
 
 /* read_file: read a named file/pipe into the buffer; return line count */
 long
@@ -39,30 +37,31 @@ read_file(char *fn, long n)
 {
 	FILE *fp;
 	long size;
-
+	int cs;
 
 	fp = (*fn == '!') ? popen(fn + 1, "r") : fopen(strip_escapes(fn), "r");
 	if (fp == NULL) {
 		fprintf(stderr, "%s: %s\n", fn, strerror(errno));
 		errmsg = "cannot open input file";
 		return ERR;
-	} else if ((size = read_stream(fp, n)) < 0)
-		return ERR;
-	 else if (((*fn == '!') ?  pclose(fp) : fclose(fp)) < 0) {
+	}
+	if ((size = read_stream(fp, n)) < 0) {
+		fprintf(stderr, "%s: %s\n", fn, strerror(errno));
+		errmsg = "error reading input file";
+	}
+	if ((cs = (*fn == '!') ?  pclose(fp) : fclose(fp)) < 0) {
 		fprintf(stderr, "%s: %s\n", fn, strerror(errno));
 		errmsg = "cannot close input file";
-		return ERR;
 	}
+	if (size < 0 || cs < 0)
+		return ERR;
 	if (!scripted)
 		fprintf(stdout, "%lu\n", size);
 	return current_addr - n;
 }
 
-
-extern int des;
-
-char *sbuf;			/* file i/o buffer */
-int sbufsz;			/* file i/o buffer size */
+static char *sbuf;		/* file i/o buffer */
+static int sbufsz;		/* file i/o buffer size */
 int newline_added;		/* if set, newline appended to input file */
 
 /* read_stream: read a stream into the editor buffer; return status */
@@ -149,19 +148,24 @@ write_file(char *fn, const char *mode, long n, long m)
 {
 	FILE *fp;
 	long size;
+	int cs;
 
 	fp = (*fn == '!') ? popen(fn+1, "w") : fopen(strip_escapes(fn), mode);
 	if (fp == NULL) {
 		fprintf(stderr, "%s: %s\n", fn, strerror(errno));
 		errmsg = "cannot open output file";
 		return ERR;
-	} else if ((size = write_stream(fp, n, m)) < 0)
-		return ERR;
-	 else if (((*fn == '!') ?  pclose(fp) : fclose(fp)) < 0) {
+	}
+	if ((size = write_stream(fp, n, m)) < 0) {
+		fprintf(stderr, "%s: %s\n", fn, strerror(errno));
+		errmsg = "error writing output file";
+	}
+	if ((cs = (*fn == '!') ?  pclose(fp) : fclose(fp)) < 0) {
 		fprintf(stderr, "%s: %s\n", fn, strerror(errno));
 		errmsg = "cannot close output file";
-		return ERR;
 	}
+	if (size < 0 || cs < 0)
+		return ERR;
 	if (!scripted)
 		fprintf(stdout, "%lu\n", size);
 	return n ? m - n + 1 : 0;
@@ -297,9 +301,6 @@ get_tty_line(void)
 
 #define ESCAPES "\a\b\f\n\r\t\v\\"
 #define ESCCHARS "abfnrtv\\"
-
-extern int rows;
-extern int cols;
 
 /* put_tty_line: print text to stdout */
 int

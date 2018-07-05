@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* glob.c: This file contains the global command routines for the ed line
    editor */
 /*-
@@ -25,9 +26,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ed/glbl.c,v 1.13 2002/06/30 05:13:53 obrien Exp $ */
+
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/ed/glbl.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -135,11 +136,11 @@ exec_global(int interact, int gflag)
 }
 
 
-line_t **active_list;		/* list of lines active in a global command */
-long active_last;		/* index of last active line in active_list */
-long active_size;		/* size of active_list */
-long active_ptr;		/* active_list index (non-decreasing) */
-long active_ndx;		/* active_list index (modulo active_last) */
+static line_t **active_list;	/* list of lines active in a global command */
+static long active_last;	/* index of last active line in active_list */
+static long active_size;	/* size of active_list */
+static long active_ptr;		/* active_list index (non-decreasing) */
+static long active_ndx;		/* active_list index (modulo active_last) */
 
 /* set_active_node: add a line node to the global-active list */
 int

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* cbc.c: This file contains the encryption routines for the ed line editor */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
@@ -30,10 +31,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ed/cbc.c,v 1.20 2004/04/06 20:06:47 markm Exp $ */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD");
+__FBSDID("$FreeBSD: stable/10/bin/ed/cbc.c 301233 2016-06-03 03:20:54Z pfg $");
 
 #include <sys/types.h>
 #include <errno.h>
@@ -69,44 +69,35 @@ __MBSDID("$MidnightBSD");
  * global variables and related macros
  */
 
-enum { 					/* encrypt, decrypt, authenticate */
-	MODE_ENCRYPT, MODE_DECRYPT, MODE_AUTHENTICATE
-} mode = MODE_ENCRYPT;
-
 #ifdef DES
-DES_cblock ivec;			/* initialization vector */
-DES_cblock pvec;			/* padding vector */
-#endif
+static DES_cblock ivec;			/* initialization vector */
+static DES_cblock pvec;			/* padding vector */
 
-char bits[] = {				/* used to extract bits from a char */
+static char bits[] = {			/* used to extract bits from a char */
 	'\200', '\100', '\040', '\020', '\010', '\004', '\002', '\001'
 };
 
-int pflag;				/* 1 to preserve parity bits */
+static int pflag;			/* 1 to preserve parity bits */
 
-#ifdef DES
-DES_key_schedule schedule;		/* expanded DES key */
+static DES_key_schedule schedule;	/* expanded DES key */
+
+static unsigned char des_buf[8];/* shared buffer for get_des_char/put_des_char */
+static int des_ct = 0;		/* count for get_des_char/put_des_char */
+static int des_n = 0;		/* index for put_des_char/get_des_char */
 #endif
-
-unsigned char des_buf[8];	/* shared buffer for get_des_char/put_des_char */
-int des_ct = 0;			/* count for get_des_char/put_des_char */
-int des_n = 0;			/* index for put_des_char/get_des_char */
 
 /* init_des_cipher: initialize DES */
 void
 init_des_cipher(void)
 {
 #ifdef DES
-	int i;
-
 	des_ct = des_n = 0;
 
 	/* initialize the initialization vector */
 	MEMZERO(ivec, 8);
 
 	/* initialize the padding vector */
-	for (i = 0; i < 8; i++)
-		pvec[i] = (char) (arc4random() % 256);
+	arc4random_buf(pvec, sizeof(pvec));
 #endif
 }
 
@@ -171,7 +162,7 @@ get_keyword(void)
 	/*
 	 * get the key
 	 */
-	if (*(p = getpass("Enter key: "))) {
+	if ((p = getpass("Enter key: ")) != NULL && *p != '\0') {
 
 		/*
 		 * copy it, nul-padded, into the key area
@@ -244,7 +235,7 @@ expand_des_key(char *obuf, char *kbuf)
 		/*
 		 * now translate it, bombing on any illegal hex digit
 		 */
-		for (i = 0; kbuf[i] && i < 16; i++)
+		for (i = 0; i < 16 && kbuf[i]; i++)
 			if ((nbuf[i] = hex_to_binary((int) kbuf[i], 16)) == -1)
 				des_error("bad hex digit in key");
 		while (i < 16)
@@ -264,7 +255,7 @@ expand_des_key(char *obuf, char *kbuf)
 		/*
 		 * now translate it, bombing on any illegal binary digit
 		 */
-		for (i = 0; kbuf[i] && i < 16; i++)
+		for (i = 0; i < 16 && kbuf[i]; i++)
 			if ((nbuf[i] = hex_to_binary((int) kbuf[i], 2)) == -1)
 				des_error("bad binary digit in key");
 		while (i < 64)

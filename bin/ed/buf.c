@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* buf.c: This file contains the scratch-file buffer routines for the
    ed line editor. */
 /*-
@@ -25,9 +26,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ed/buf.c,v 1.22 2002/06/30 05:13:53 obrien Exp $ */
+
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/ed/buf.c,v 1.2 2006/07/07 15:55:59 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/ed/buf.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -35,10 +36,10 @@ __MBSDID("$MidnightBSD: src/bin/ed/buf.c,v 1.2 2006/07/07 15:55:59 laffer1 Exp $
 #include "ed.h"
 
 
-FILE *sfp;				/* scratch file pointer */
-off_t sfseek;				/* scratch file position */
-int seek_write;				/* seek before writing */
-line_t buffer_head;			/* incore buffer */
+static FILE *sfp;			/* scratch file pointer */
+static off_t sfseek;			/* scratch file position */
+static int seek_write;			/* seek before writing */
+static line_t buffer_head;		/* incore buffer */
 
 /* get_sbuf_line: get a line of text from the scratch file; return pointer
    to the text */
@@ -185,10 +186,7 @@ get_addressed_line_node(long n)
 	return lp;
 }
 
-
-extern int newline_added;
-
-char sfn[15] = "";				/* scratch file name */
+static char sfn[15] = "";			/* scratch file name */
 
 /* open_sbuf: open scratch file */
 int
@@ -244,7 +242,7 @@ quit(int n)
 }
 
 
-unsigned char ctab[256];		/* character translation table */
+static unsigned char ctab[256];		/* character translation table */
 
 /* init_buffers: open scratch buffer; initialize line queue */
 void

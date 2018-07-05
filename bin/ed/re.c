@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* re.c: This file contains the regular expression interface routines for
    the ed line editor. */
 /*-
@@ -25,14 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ed/re.c,v 1.20 2003/07/20 10:24:09 ru Exp $ */
+
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/ed/re.c 252374 2013-06-29 15:49:26Z kientzle $");
 
 #include "ed.h"
-
-
-extern int patlock;
 
 const char *errmsg = "";
 
@@ -92,7 +90,7 @@ extract_pattern(int delimiter)
 		default:
 			break;
 		case '[':
-			if ((nd = parse_char_class(++nd)) == NULL) {
+			if ((nd = parse_char_class(nd + 1)) == NULL) {
 				errmsg = "unbalanced brackets ([])";
 				return NULL;
 			}
