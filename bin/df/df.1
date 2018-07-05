@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1989, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -27,10 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)df.1	8.3 (Berkeley) 5/8/95
-.\" $FreeBSD: src/bin/df/df.1,v 1.42.2.1 2009/08/03 08:13:06 kensmith Exp $
-.\" $MidnightBSD: src/bin/df/df.1,v 1.4 2010/03/27 21:46:55 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/df/df.1 260947 2014-01-20 23:23:29Z wblock $
 .\"
-.Dd January 24, 2013
+.Dd January 16, 2014
 .Dt DF 1
 .Os
 .Sh NAME
@@ -84,13 +84,13 @@ Use 1073741824 byte (1 Gibibyte) blocks rather than the default.
 This overrides any
 .Ev BLOCKSIZE
 specification from the environment.
-.It Fl H
+.It Fl h
 .Dq Human-readable
 output.
 Use unit suffixes: Byte, Kibibyte, Mebibyte, Gibibyte, Tebibyte and
 Pebibyte (based on powers of 1024) in order to reduce the number of
 digits to four or fewer.
-.It Fl h
+.It Fl H
 .Dq Human-readable
 output.
 Use unit suffixes: Byte, Kilobyte, Megabyte,
@@ -188,9 +188,7 @@ If the value is outside, it will be set to the appropriate limit.
 .El
 .Sh SEE ALSO
 .Xr lsvfs 1 ,
-.Xr pstat 1 ,
 .Xr quota 1 ,
-.Xr swapinfo 1 ,
 .Xr fstatfs 2 ,
 .Xr getfsstat 2 ,
 .Xr statfs 2 ,
@@ -199,7 +197,9 @@ If the value is outside, it will be set to the appropriate limit.
 .Xr localeconv 3 ,
 .Xr fstab 5 ,
 .Xr mount 8 ,
-.Xr quot 8 .
+.Xr pstat 8 ,
+.Xr quot 8 ,
+.Xr swapinfo 8
 .Sh STANDARDS
 With the exception of most options,
 the

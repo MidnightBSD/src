@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -44,17 +45,21 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-/* $FreeBSD: src/bin/df/df.c,v 1.74.2.1 2009/08/03 08:13:06 kensmith Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/bin/df/df.c 310380 2016-12-21 23:59:58Z brooks $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/sysctl.h>
+#ifdef MOUNT_CHAR_DEVS
 #include <ufs/ufs/ufsmount.h>
+#endif
 #include <err.h>
 #include <libutil.h>
 #include <locale.h>
+#ifdef MOUNT_CHAR_DEVS
+#include <mntopts.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +103,9 @@ imax(int a, int b)
 
 static int	aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Tflag;
 static int	thousands;
+#ifdef MOUNT_CHAR_DEVS
 static struct	ufs_args mdev;
+#endif
 
 int
 main(int argc, char *argv[])
@@ -107,11 +114,21 @@ main(int argc, char *argv[])
 	struct statfs statfsbuf, totalbuf;
 	struct maxwidths maxwidths;
 	struct statfs *mntbuf;
+#ifdef MOUNT_CHAR_DEVS
+	struct iovec *iov = NULL;
+#endif
 	const char *fstype;
-	char *mntpath, *mntpt;
+#ifdef MOUNT_CHAR_DEVS
+	char *mntpath;
+	char errmsg[255] = {0};
+#endif
+	char *mntpt;
 	const char **vfslist;
 	int i, mntsize;
 	int ch, rv;
+#ifdef MOUNT_CHAR_DEVS
+	int iovlen = 0;
+#endif
 
 	fstype = "ufs";
 	(void)setlocale(LC_ALL, "");
@@ -216,6 +233,7 @@ main(int argc, char *argv[])
 				rv = 1;
 				continue;
 			}
+#ifdef MOUNT_CHAR_DEVS
 		} else if (S_ISCHR(stbuf.st_mode)) {
 			if ((mntpt = getmntpt(*argv)) == NULL) {
 				mdev.fspec = *argv;
@@ -232,9 +250,23 @@ main(int argc, char *argv[])
 					free(mntpath);
 					continue;
 				}
-				if (mount(fstype, mntpt, MNT_RDONLY,
-				    &mdev) != 0) {
-					warn("%s", *argv);
+				if (iov != NULL)
+					free_iovec(&iov, &iovlen);
+				build_iovec_argf(&iov, &iovlen, "fstype", "%s",
+				    fstype);
+				build_iovec_argf(&iov, &iovlen, "fspath", "%s",
+				    mntpath);
+				build_iovec_argf(&iov, &iovlen, "from", "%s",
+				    *argv);
+				build_iovec(&iov, &iovlen, "errmsg", errmsg,
+				    sizeof(errmsg));
+				if (nmount(iov, iovlen,
+				    MNT_RDONLY|MNT_NOEXEC) < 0) {
+					if (errmsg[0])
+						warn("%s: %s", *argv,
+						    errmsg);
+					else
+						warn("%s", *argv);
 					rv = 1;
 					(void)rmdir(mntpt);
 					free(mntpath);
@@ -253,6 +285,7 @@ main(int argc, char *argv[])
 				free(mntpath);
 				continue;
 			}
+#endif
 		} else
 			mntpt = *argv;
 
@@ -297,7 +330,7 @@ main(int argc, char *argv[])
 			prtstat(&mntbuf[i], &maxwidths);
 	if (cflag)
 		prtstat(&totalbuf, &maxwidths);
-	return (rv);
+	exit(rv);
 }
 
 static char *
