@@ -10,6 +10,7 @@ bin/Makefile.inc -text
 bin/cat/Makefile -text
 bin/cat/cat.1 -text
 bin/cat/cat.c -text
+bin/cat/tests/Makefile svneol=native#text/plain
 bin/chflags/Makefile -text
 bin/chflags/chflags.1 -text
 bin/chflags/chflags.c -text

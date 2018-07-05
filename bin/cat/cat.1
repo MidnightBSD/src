@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1989, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -30,8 +31,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)cat.1	8.3 (Berkeley) 5/2/95
-.\" $FreeBSD: src/bin/cat/cat.1,v 1.25 2005/01/16 16:41:55 ru Exp $
-.\" $MidnightBSD: src/bin/cat/cat.1,v 1.4 2006/09/09 13:48:40 laffer1 Exp $
+.\" $FreeBSD: stable/10/bin/cat/cat.1 246090 2013-01-29 20:01:47Z joel $
 .\"
 .Dd January 29, 2013
 .Dt CAT 1
@@ -42,7 +42,6 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl belnstuv
-.Op Fl D Ar date_fmt 
 .Op Ar
 .Sh DESCRIPTION
 The
@@ -96,13 +95,6 @@ Number the output lines, starting at 1.
 .It Fl s
 Squeeze multiple adjacent empty lines, causing the output to be
 single spaced.
-.It Fl D
-Prepends a date and/or time on each line of output, in the format date_fmt at the time the line was read by the
-.Nm
-utility. Follows
-.Xr strftime 3
-formatting rules. If a seperator is desired, it must be included using %t or
-including a space character.  Any text may be included in the format.
 .It Fl t
 Display non-printing characters (see the
 .Fl v
@@ -171,14 +163,6 @@ would have already been read and printed by
 when it encountered the first
 .Sq Fl
 operand.
-.Pp
-The command:
-.Pp
-.Dl "cat -D '%F %T ' file1"
-.Pp
-will print the contents of 
-.Ar file1
-with the current date prepended to each line in the form YYYY-MM-DD HH:MM:SS followed by a space. This is useful for timestamping output.
 .Sh SEE ALSO
 .Xr head 1 ,
 .Xr more 1 ,
@@ -187,8 +171,8 @@ with the current date prepended to each line in the form YYYY-MM-DD HH:MM:SS fol
 .Xr tail 1 ,
 .Xr vis 1 ,
 .Xr zcat 1 ,
-.Xr setbuf 3 ,
-.Xr strftime 3
+.Xr fcntl 2 ,
+.Xr setbuf 3
 .Rs
 .%A Rob Pike
 .%T "UNIX Style, or cat -v Considered Harmful"
@@ -203,7 +187,7 @@ utility is compliant with the
 specification.
 .Pp
 The flags
-.Op Fl belnstvD
+.Op Fl belnstv
 are extensions to the specification.
 .Sh HISTORY
 A

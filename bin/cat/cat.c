@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,9 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
- * $FreeBSD: src/bin/cat/cat.c,v 1.32 2005/01/10 08:39:20 imp Exp $
  */
 
 #if 0
@@ -47,6 +45,7 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/bin/cat/cat.c 306200 2016-09-22 16:46:59Z ache $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -60,26 +59,22 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #include <err.h>
 #include <fcntl.h>
 #include <locale.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stddef.h>
-
-#define	DATEPFX_MAXLEN	1024
+#include <wchar.h>
+#include <wctype.h>
 
 static int bflag, eflag, lflag, nflag, sflag, tflag, vflag;
 static int rval;
-static time_t prev_time;
-static const char *datefmt;
-static char *datepfx;
-const char *filename;
+static const char *filename;
 
-static void usage(void);
+static void usage(void) __dead2;
 static void scanfiles(char *argv[], int cooked);
 static void cook_cat(FILE *);
 static void raw_cat(int);
-static void set_datepfx(void);
 
 #ifndef NO_UDOM_SUPPORT
 static int udom_open(const char *path, int flags);
@@ -108,7 +103,7 @@ main(int argc, char *argv[])
 
 	setlocale(LC_CTYPE, "");
 
-	while ((ch = getopt(argc, argv, "bD:elnstuv")) != -1)
+	while ((ch = getopt(argc, argv, "belnstuv")) != -1)
 		switch (ch) {
 		case 'b':
 			bflag = nflag = 1;	/* -b implies -n */
@@ -121,9 +116,6 @@ main(int argc, char *argv[])
 			break;
 		case 'n':
 			nflag = 1;
-			break;
-		case 'D':
-			datefmt = optarg;
 			break;
 		case 's':
 			sflag = 1;
@@ -151,15 +143,7 @@ main(int argc, char *argv[])
 			err(EXIT_FAILURE, "stdout");
 	}
 
-	/* 
-         * Test date format so the user will get an error sooner
-         * rather than later
-         */
-	if (datefmt != NULL)
-		set_datepfx();
-
-	if (bflag || eflag || nflag || sflag || tflag || vflag || 
- 		datefmt != NULL)
+	if (bflag || eflag || nflag || sflag || tflag || vflag)
 		scanfiles(argv, 1);
 	else
 		scanfiles(argv, 0);
@@ -172,7 +156,8 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: cat [-belnstuv] [-D datefmt] [file ...]\n");
+
+	fprintf(stderr, "usage: cat [-belnstuv] [file ...]\n");
 	exit(1);
 	/* NOTREACHED */
 }
@@ -223,6 +208,7 @@ static void
 cook_cat(FILE *fp)
 {
 	int ch, gobble, line, prev;
+	wint_t wch;
 
 	/* Reset EOF condition on stdin. */
 	if (fp == stdin && feof(stdin))
@@ -244,12 +230,6 @@ cook_cat(FILE *fp)
 				if (ferror(stdout))
 					break;
 			}
-			if (datefmt != NULL) {
-				set_datepfx();
-				(void)fputs(datepfx, stdout);
-				if (ferror(stdout))
-					break;
-			}
 		}
 		if (ch == '\n') {
 			if (eflag && putchar('$') == EOF)
@@ -261,18 +241,40 @@ cook_cat(FILE *fp)
 				continue;
 			}
 		} else if (vflag) {
-			if (!isascii(ch) && !isprint(ch)) {
+			(void)ungetc(ch, fp);
+			/*
+			 * Our getwc(3) doesn't change file position
+			 * on error.
+			 */
+			if ((wch = getwc(fp)) == WEOF) {
+				if (ferror(fp) && errno == EILSEQ) {
+					clearerr(fp);
+					/* Resync attempt. */
+					memset(&fp->_mbstate, 0, sizeof(mbstate_t));
+					if ((ch = getc(fp)) == EOF)
+						break;
+					wch = ch;
+					goto ilseq;
+				} else
+					break;
+			}
+			if (!iswascii(wch) && !iswprint(wch)) {
+ilseq:
 				if (putchar('M') == EOF || putchar('-') == EOF)
 					break;
-				ch = toascii(ch);
+				wch = toascii(wch);
 			}
-			if (iscntrl(ch)) {
-				if (putchar('^') == EOF ||
-				    putchar(ch == '\177' ? '?' :
-				    ch | 0100) == EOF)
+			if (iswcntrl(wch)) {
+				ch = toascii(wch);
+				ch = (ch == '\177') ? '?' : (ch | 0100);
+				if (putchar('^') == EOF || putchar(ch) == EOF)
 					break;
 				continue;
 			}
+			if (putwchar(wch) == WEOF)
+				break;
+			ch = -1;
+			continue;
 		}
 		if (putchar(ch) == EOF)
 			break;
@@ -319,31 +321,6 @@ raw_cat(int rfd)
 		warn("%s", filename);
 		rval = 1;
 	}
-}
-
-static void
-set_datepfx(void)
-{
-	int reslen;
-	time_t now;
-
-	if (datepfx == NULL)
-		datepfx = malloc(DATEPFX_MAXLEN);
-
-	/*
-	 * Avoid the calls to localtime and strftime if
-	 * the current second is the same as the last
-	 * read in value.
-	 */
-	now = time(NULL);
-	if (now == prev_time)
-		return;
-
-	reslen = strftime(datepfx, DATEPFX_MAXLEN, datefmt, 
-		localtime(&now));
-	if (reslen == 0)
-		errx(1, "Format specified by -D results in prefix > %d bytes.",
-			DATEPFX_MAXLEN);
 }
 
 #ifndef NO_UDOM_SUPPORT
