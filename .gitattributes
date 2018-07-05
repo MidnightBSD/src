@@ -16697,6 +16697,15 @@ contrib/gperf/src/search.cc svneol=native#text/plain
 contrib/gperf/src/search.h svneol=native#text/plain
 contrib/gperf/src/version.cc -text
 contrib/gperf/src/version.h -text
+contrib/hyperv/tools/hv_kvp_daemon.8 svneol=native#text/plain
+contrib/hyperv/tools/hv_kvp_daemon.c svneol=native#text/plain
+contrib/hyperv/tools/hv_vss_daemon.8 svneol=native#text/plain
+contrib/hyperv/tools/hv_vss_daemon.c svneol=native#text/plain
+contrib/hyperv/tools/scripts/hv_get_dhcp_info -text
+contrib/hyperv/tools/scripts/hv_get_dns_info -text
+contrib/hyperv/tools/scripts/hv_set_ifconfig -text
+contrib/hyperv/tools/scripts/hyperv_vfattach -text
+contrib/hyperv/tools/scripts/hyperv_vfup -text
 contrib/ipfilter/.cvsignore -text
 contrib/ipfilter/BNF -text
 contrib/ipfilter/BSD/.cvsignore -text
