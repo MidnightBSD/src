@@ -7,6 +7,8 @@ Updating Information for MidnightBSD users.
 
 	tcsh 6.20
 
+	libc-vis 2017/4/30 (netbsd)
+
 20180120:
 	gperf 3.0.3
 
