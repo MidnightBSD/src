@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,9 +28,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/1/94
- * $FreeBSD: src/bin/cp/extern.h,v 1.19.8.1 2005/11/12 21:21:45 csjp Exp $
- * $MidnightBSD: src/bin/cp/extern.h,v 1.2 2006/07/07 13:46:33 laffer1 Exp $ 
-*/
+ * $FreeBSD: stable/10/bin/cp/extern.h 291774 2015-12-04 17:36:35Z bdrewery $
+ */
 
 typedef struct {
 	char	*p_end;			/* pointer to NULL at end of path */
@@ -38,7 +38,7 @@ typedef struct {
 } PATH_T;
 
 extern PATH_T to;
-extern int fflag, iflag, lflag, nflag, pflag, vflag;
+extern int fflag, iflag, lflag, nflag, pflag, sflag, vflag;
 extern volatile sig_atomic_t info;
 
 __BEGIN_DECLS

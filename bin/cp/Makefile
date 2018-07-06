@@ -1,6 +1,6 @@
+# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/cp/Makefile,v 1.11 2002/07/15 12:08:21 sheldonh Exp $
-# $MidnightBSD: src/bin/cp/Makefile,v 1.2 2006/07/07 13:46:33 laffer1 Exp $
+# $FreeBSD: stable/10/bin/cp/Makefile 192586 2009-05-22 15:56:43Z trasz $
 
 PROG=	cp
 SRCS=	cp.c utils.c
