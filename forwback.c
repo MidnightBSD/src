@@ -1,5 +1,6 @@
+/* $FreeBSD: stable/10/contrib/less/forwback.c 330571 2018-03-07 06:39:00Z delphij $ */
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2017  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -20,11 +21,13 @@ public int screen_trashed;
 public int squished;
 public int no_back_scroll = 0;
 public int forw_prompt;
+public int same_pos_bell = 1;
 
 extern int sigs;
 extern int top_scroll;
 extern int quiet;
 extern int sc_width, sc_height;
+extern int less_is_more;
 extern int plusoption;
 extern int forw_scroll;
 extern int back_scroll;
@@ -32,6 +35,11 @@ extern int ignore_eoi;
 extern int clear_bg;
 extern int final_attr;
 extern int oldbot;
+#if HILITE_SEARCH
+extern int size_linebuf;
+extern int hilite_search;
+extern int status_col;
+#endif
 #if TAGS
 extern char *tagoption;
 #endif
@@ -118,13 +126,12 @@ squish_check()
  */
 	public void
 forw(n, pos, force, only_last, nblank)
-	register int n;
+	int n;
 	POSITION pos;
 	int force;
 	int only_last;
 	int nblank;
 {
-	int eof = 0;
 	int nlines = 0;
 	int do_repaint;
 	static int first_time = 1;
@@ -143,6 +150,13 @@ forw(n, pos, force, only_last, nblank)
 	do_repaint = (only_last && n > sc_height-1) || 
 		(forw_scroll >= 0 && n > forw_scroll && n != sc_height-1);
 
+#if HILITE_SEARCH
+	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col) {
+		prep_hilite(pos, pos + 4*size_linebuf, ignore_eoi ? 1 : -1);
+		pos = next_unfiltered(pos);
+	}
+#endif
+
 	if (!do_repaint)
 	{
 		if (top_scroll && n >= sc_height - 1 && pos != ch_length())
@@ -156,8 +170,10 @@ forw(n, pos, force, only_last, nblank)
 			pos_clear();
 			add_forw_pos(pos);
 			force = 1;
-			clear();
-			home();
+			if (less_is_more == 0) {
+				clear();
+				home();
+			}
 		}
 
 		if (pos != position(BOTTOM_PLUS_ONE) || empty_screen())
@@ -202,6 +218,9 @@ forw(n, pos, force, only_last, nblank)
 			 * Get the next line from the file.
 			 */
 			pos = forw_line(pos);
+#if HILITE_SEARCH
+			pos = next_unfiltered(pos);
+#endif
 			if (pos == NULL_POSITION)
 			{
 				/*
@@ -210,7 +229,6 @@ forw(n, pos, force, only_last, nblank)
 				 * Even if force is true, stop when the last
 				 * line in the file reaches the top of screen.
 				 */
-				eof = 1;
 				if (!force && position(TOP) != NULL_POSITION)
 					break;
 				if (!empty_lines(0, 0) && 
@@ -237,7 +255,8 @@ forw(n, pos, force, only_last, nblank)
 		 * start the display after the beginning of the file,
 		 * and it is not appropriate to squish in that case.
 		 */
-		if (first_time && pos == NULL_POSITION && !top_scroll && 
+		if ((first_time || less_is_more) &&
+		    pos == NULL_POSITION && !top_scroll && 
 #if TAGS
 		    tagoption == NULL &&
 #endif
@@ -271,7 +290,7 @@ forw(n, pos, force, only_last, nblank)
 		forw_prompt = 1;
 	}
 
-	if (nlines == 0)
+	if (nlines == 0 && !ignore_eoi && same_pos_bell)
 		eof_bell();
 	else if (do_repaint)
 		repaint();
@@ -284,7 +303,7 @@ forw(n, pos, force, only_last, nblank)
  */
 	public void
 back(n, pos, force, only_last)
-	register int n;
+	int n;
 	POSITION pos;
 	int force;
 	int only_last;
@@ -294,11 +313,20 @@ back(n, pos, force, only_last)
 
 	squish_check();
 	do_repaint = (n > get_back_scroll() || (only_last && n > sc_height-1));
+#if HILITE_SEARCH
+	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col) {
+		prep_hilite((pos < 3*size_linebuf) ?  0 : pos - 3*size_linebuf, pos, -1);
+	}
+#endif
 	while (--n >= 0)
 	{
 		/*
 		 * Get the previous line of input.
 		 */
+#if HILITE_SEARCH
+		pos = prev_unfiltered(pos);
+#endif
+
 		pos = back_line(pos);
 		if (pos == NULL_POSITION)
 		{
@@ -322,7 +350,7 @@ back(n, pos, force, only_last)
 		}
 	}
 
-	if (nlines == 0)
+	if (nlines == 0 && same_pos_bell)
 		eof_bell();
 	else if (do_repaint)
 		repaint();
@@ -420,4 +448,22 @@ get_back_scroll()
 	if (top_scroll)
 		return (sc_height - 2);
 	return (10000); /* infinity */
+}
+
+/*
+ * Return number of displayable lines in the file.
+ * Stop counting at screen height + 1.
+ */
+	public int
+get_line_count()
+{
+	int nlines;
+	POSITION pos = ch_zero();
+
+	for (nlines = 0;  nlines <= sc_height;  nlines++)
+	{
+		pos = forw_line(pos);
+		if (pos == NULL_POSITION) break;
+	}
+	return nlines;
 }
