@@ -1240,7 +1240,7 @@ free_space(char *p)
 
 /* The mapping between input codes and functions. */
 
-void (*key_map[256])(int) = {       /* map ASCII characters to functions */
+static void (*key_map[256])(int) = {       /* map ASCII characters to functions */
    /* 000-017 */ MA, BL, MP, YA, SD, EL, MN, IF, DPC, S, S, DT, RD, S, DNW,LIB,
    /* 020-037 */ DPW, WB, GR, SH, DLN, SU, VI, XWT, XT, PT, ST, ESC, I, GOTO,
 		 HIGH, LOW,
