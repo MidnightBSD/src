@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/ypxfr/ypxfr_main.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/ypxfr/ypxfr_main.c,v 1.20 2004/10/17 19:33:32 stefanf Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/ypxfr/ypxfr_main.c 228600 2011-12-16 22:05:10Z dim $");
 
 #include <errno.h>
 #include <stdio.h>

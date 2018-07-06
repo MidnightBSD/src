@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/ypxfr/ypxfrd_getmap.c,v 1.11 2003/10/26 04:32:53 peter Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/ypxfr/ypxfrd_getmap.c 121538 2003-10-26 04:32:53Z peter $");
 
 #include <errno.h>
 #include <stdlib.h>

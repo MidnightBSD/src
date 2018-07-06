@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/ypxfr/ypxfr_getmap.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/ypxfr/ypxfr_getmap.c,v 1.12 2003/05/04 00:59:13 obrien Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/ypxfr/ypxfr_getmap.c 228600 2011-12-16 22:05:10Z dim $");
 
 #include <stdio.h>
 #include <time.h>

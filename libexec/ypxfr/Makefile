@@ -1,5 +1,5 @@
-# $MidnightBSD: src/libexec/ypxfr/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
-# $FreeBSD: src/libexec/ypxfr/Makefile,v 1.11 2002/02/04 02:33:51 kris Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/libexec/ypxfr/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
 PROG=	ypxfr
 SRCS=	yp_dblookup.c yp_dbwrite.c yp_error.c \
@@ -8,7 +8,7 @@ SRCS=	yp_dblookup.c yp_dbwrite.c yp_error.c \
 	${GENSRCS}
 GENSRCS=yp.h yp_clnt.c ypxfr_clnt.c
 
-.PATH: ${.CURDIR}/../../usr.sbin/ypserv
+.PATH: ${SRCTOP}/usr.sbin/ypserv
 
 MAN=	ypxfr.8
 
@@ -22,7 +22,7 @@ LDADD=	-lrpcsvc
 
 CLEANFILES= ${GENSRCS}
 
-RPCDIR= ${.CURDIR}/../../include/rpcsvc
+RPCDIR= ${SRCTOP}/include/rpcsvc
 RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 
 ypxfr_clnt.c: ${RPCDIR}/yp.x
