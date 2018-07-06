@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$NetBSD: stat.1,v 1.28 2010/04/05 21:25:01 joerg Exp $
 .\"
 .\" Copyright (c) 2002 The NetBSD Foundation, Inc.
@@ -27,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/stat/stat.1 321098 2017-07-17 21:19:29Z ngie $
 .\"
-.Dd April 22, 2012
+.Dd June 22, 2017
 .Dt STAT 1
 .Os
 .Sh NAME
@@ -172,15 +173,15 @@ Display information in
 .Dq shell output
 format,
 suitable for initializing variables.
-.It Fl x
-Display information in a more verbose way as known from some
-.Tn Linux
-distributions.
 .It Fl t Ar timefmt
 Display timestamps using the specified format.
 This format is
 passed directly to
 .Xr strftime 3 .
+.It Fl x
+Display information in a more verbose way as known from some
+.Tn Linux
+distributions.
 .El
 .Ss Formats
 Format strings are similar to

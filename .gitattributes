@@ -76609,6 +76609,9 @@ usr.bin/sqlite3/Makefile -text
 usr.bin/stat/Makefile -text
 usr.bin/stat/stat.1 -text
 usr.bin/stat/stat.c -text
+usr.bin/stat/tests/Makefile svneol=native#text/plain
+usr.bin/stat/tests/readlink_test.sh svneol=native#text/plain
+usr.bin/stat/tests/stat_test.sh svneol=native#text/plain
 usr.bin/stdbuf/Makefile -text
 usr.bin/stdbuf/stdbuf.1 -text
 usr.bin/stdbuf/stdbuf.c -text
