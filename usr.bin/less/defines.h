@@ -1,4 +1,5 @@
-/* $MidnightBSD: src/usr.bin/less/defines.h,v 1.3 2008/04/17 23:42:30 laffer1 Exp $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.bin/less/defines.h 330571 2018-03-07 06:39:00Z delphij $ */
 /* defines.h.  Generated from defines.h.in by configure.  */
 /* defines.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -136,6 +137,11 @@
 #define TGETENT_OK  1
 
 /*
+ * HAVE_ANSI_PROTOS	is 1 if your compiler supports ANSI function prototypes.
+ */
+#define HAVE_ANSI_PROTOS	1
+
+/*
  * HAVE_SYS_TYPES_H is 1 if your system has <sys/types.h>.
  */
 #define HAVE_SYS_TYPES_H 1
@@ -164,7 +170,7 @@
 /*
  * Default shell metacharacters and meta-escape character.
  */
-#define	DEF_METACHARS	"; *?\t\n'\"()<>[]|&^`#\\$%=~"
+#define	DEF_METACHARS	"; *?\t\n'\"()<>[]|&^`#\\$%=~{},"
 #define	DEF_METAESCAPE	"\\"
 
 /* 
@@ -184,6 +190,7 @@
 /*
  * Sizes of various buffers.
  */
+#if 0 /* old sizes for small memory machines */
 #define	CMDBUF_SIZE	512	/* Buffer for multichar commands */
 #define	UNGOT_SIZE	100	/* Max chars to unget() */
 #define	LINEBUF_SIZE	1024	/* Max size of line in input file */
@@ -193,6 +200,17 @@
 #define	TERMSBUF_SIZE	1024	/* Buffer to hold termcap strings */
 #define	TAGLINE_SIZE	512	/* Max size of line in tags file */
 #define	TABSTOP_MAX	32	/* Max number of custom tab stops */
+#else /* more reasonable sizes for modern machines */
+#define	CMDBUF_SIZE	2048	/* Buffer for multichar commands */
+#define	UNGOT_SIZE	200	/* Max chars to unget() */
+#define	LINEBUF_SIZE	1024	/* Initial max size of line in input file */
+#define	OUTBUF_SIZE	1024	/* Output buffer */
+#define	PROMPT_SIZE	2048	/* Max size of prompt string */
+#define	TERMBUF_SIZE	2048	/* Termcap buffer for tgetent */
+#define	TERMSBUF_SIZE	1024	/* Buffer to hold termcap strings */
+#define	TAGLINE_SIZE	1024	/* Max size of line in tags file */
+#define	TABSTOP_MAX	128	/* Max number of custom tab stops */
+#endif
 
 /* Settings automatically determined by configure.  */
 
@@ -227,17 +245,11 @@
 /* Define to 1 if you have the `fsync' function. */
 #define HAVE_FSYNC 1
 
+/* GNU regex library */
+/* #undef HAVE_GNU_REGEX */
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
-
-/* Define to 1 if you have the `gen' library (-lgen). */
-/* #undef HAVE_LIBGEN */
-
-/* Define to 1 if you have the `intl' library (-lintl). */
-/* #undef HAVE_LIBINTL */
-
-/* Define to 1 if you have the `PW' library (-lPW). */
-/* #undef HAVE_LIBPW */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
@@ -411,6 +423,11 @@
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #define TIME_WITH_SYS_TIME 1
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
