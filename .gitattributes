@@ -14,6 +14,8 @@ bin/cat/tests/Makefile svneol=native#text/plain
 bin/chflags/Makefile -text
 bin/chflags/chflags.1 -text
 bin/chflags/chflags.c -text
+bin/chflags/tests/Makefile svneol=native#text/plain
+bin/chflags/tests/chflags_test.sh svneol=native#text/plain
 bin/chio/Makefile -text
 bin/chio/chio.1 -text
 bin/chio/chio.c -text

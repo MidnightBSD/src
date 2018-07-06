@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -25,9 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/bin/chflags/chflags.c,v 1.5 2012/03/09 04:54:42 laffer1 Exp $
- * $FreeBSD: src/bin/chflags/chflags.c,v 1.23 2005/05/14 23:23:10 dd Exp$
  */
 
 #if 0
@@ -43,12 +41,14 @@ static char sccsid[] = "@(#)chflags.c	8.5 (Berkeley) 4/1/94";
 #endif
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/bin/chflags/chflags.c 283875 2015-06-01 09:04:57Z smh $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <fts.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,7 +67,6 @@ main(int argc, char *argv[])
 	int Hflag, Lflag, Rflag, fflag, hflag, vflag;
 	int ch, fts_options, oct, rval;
 	char *flags, *ep;
-	int (*change_flags)(const char *, unsigned long);
 
 	Hflag = Lflag = Rflag = fflag = hflag = vflag = 0;
 	while ((ch = getopt(argc, argv, "HLPRfhv")) != -1)
@@ -106,24 +105,23 @@ main(int argc, char *argv[])
 		usage();
 
 	if (Rflag) {
-		fts_options = FTS_PHYSICAL;
 		if (hflag)
-			errx(1, "the -R and -h options "
-			        "may not be specified together");
-		if (Hflag)
-			fts_options |= FTS_COMFOLLOW;
+			errx(1, "the -R and -h options may not be "
+			    "specified together.");
 		if (Lflag) {
-			fts_options &= ~FTS_PHYSICAL;
-			fts_options |= FTS_LOGICAL;
-		}
-	} else
-		fts_options = hflag ? FTS_PHYSICAL : FTS_LOGICAL;
+			fts_options = FTS_LOGICAL;
+		} else {
+			fts_options = FTS_PHYSICAL;
 
-	/* XXX: Why don't chflags and lchflags have compatible prototypes? */
-	if (hflag)
-		change_flags = (int (*)(const char *, unsigned long))lchflags;
-	else
-		change_flags = chflags;
+			if (Hflag) {
+				fts_options |= FTS_COMFOLLOW;
+			}
+		}
+	} else if (hflag) {
+		fts_options = FTS_PHYSICAL;
+	} else {
+		fts_options = FTS_LOGICAL;
+	}
 
 	flags = *argv;
 	if (*flags >= '0' && *flags <= '7') {
@@ -148,12 +146,21 @@ main(int argc, char *argv[])
 		err(1, NULL);
 
 	for (rval = 0; (p = fts_read(ftsp)) != NULL;) {
+		int atflag;
+
+		if ((fts_options & FTS_LOGICAL) ||
+		    ((fts_options & FTS_COMFOLLOW) &&
+		    p->fts_level == FTS_ROOTLEVEL))
+			atflag = 0;
+		else
+			atflag = AT_SYMLINK_NOFOLLOW;
+
 		switch (p->fts_info) {
 		case FTS_D:	/* Change it at FTS_DP if we're recursive. */
 			if (!Rflag)
 				fts_set(ftsp, p, FTS_SKIP);
 			continue;
-		case FTS_DNR:			/* Warn, chflag, continue. */
+		case FTS_DNR:			/* Warn, chflags. */
 			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			rval = 1;
 			break;
@@ -162,16 +169,6 @@ main(int argc, char *argv[])
 			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			rval = 1;
 			continue;
-		case FTS_SL:			/* Ignore. */
-		case FTS_SLNONE:
-			/*
-			 * The only symlinks that end up here are ones that
-			 * don't point to anything and ones that we found
-			 * doing a physical walk.
-			 */
-			if (!hflag)
-				continue;
-			/* FALLTHROUGH */
 		default:
 			break;
 		}
@@ -181,7 +178,8 @@ main(int argc, char *argv[])
 			newflags = (p->fts_statp->st_flags | set) & clear;
 		if (newflags == p->fts_statp->st_flags)
 			continue;
-		if ((*change_flags)(p->fts_accpath, newflags) && !fflag) {
+		if (chflagsat(AT_FDCWD, p->fts_accpath, newflags,
+		    atflag) == -1 && !fflag) {
 			warn("%s", p->fts_path);
 			rval = 1;
 		} else if (vflag) {
