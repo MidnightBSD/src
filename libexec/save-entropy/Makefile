@@ -1,5 +1,5 @@
-# $FreeBSD: src/libexec/save-entropy/Makefile,v 1.4 2004/12/21 08:46:52 ru Exp $
 # $MidnightBSD$
+# $FreeBSD: stable/10/libexec/save-entropy/Makefile 139103 2004-12-21 08:47:35Z ru $
 
 SCRIPTS=	save-entropy.sh
 NO_OBJ=
