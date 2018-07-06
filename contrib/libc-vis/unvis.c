@@ -1,4 +1,4 @@
-/*	$NetBSD: unvis.c,v 1.41 2012/12/15 04:29:53 matt Exp $	*/
+/*	$NetBSD: unvis.c,v 1.44 2014/09/26 15:43:36 roy Exp $	*/
 
 /*-
  * Copyright (c) 1989, 1993
@@ -34,10 +34,10 @@
 #if 0
 static char sccsid[] = "@(#)unvis.c	8.1 (Berkeley) 6/4/93";
 #else
-__RCSID("$NetBSD: unvis.c,v 1.41 2012/12/15 04:29:53 matt Exp $");
+__RCSID("$NetBSD: unvis.c,v 1.44 2014/09/26 15:43:36 roy Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
-__FBSDID("$FreeBSD: release/9.2.0/contrib/libc-vis/unvis.c 249560 2013-04-16 19:27:09Z brooks $");
+__FBSDID("$FreeBSD: stable/10/contrib/libc-vis/unvis.c 326324 2017-11-28 17:20:53Z brooks $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -322,6 +322,12 @@ unvis(char *cp, int c, int *astate, int flag)
 			 */
 			*astate = SS(0, S_GROUND);
 			return UNVIS_NOCHAR;
+		default:
+			if (isgraph(c)) {
+				*cp = c;
+				*astate = SS(0, S_GROUND);
+				return UNVIS_VALID;
+			}
 		}
 		goto bad;
 
