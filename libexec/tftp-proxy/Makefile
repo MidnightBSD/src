@@ -1,7 +1,7 @@
-# $MidnightBSD: src/libexec/tftp-proxy/Makefile,v 1.1 2008/11/11 20:36:12 laffer1 Exp $
-# $FreeBSD: src/libexec/tftp-proxy/Makefile,v 1.1 2007/07/03 12:46:05 mlaier Exp $
+# $MidnightBSD$
+#	$FreeBSD: stable/10/libexec/tftp-proxy/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
-.PATH:	${.CURDIR}/../../contrib/pf/tftp-proxy
+.PATH:	${SRCTOP}/contrib/pf/tftp-proxy
 
 PROG=	tftp-proxy
 SRCS=	tftp-proxy.c filter.c
