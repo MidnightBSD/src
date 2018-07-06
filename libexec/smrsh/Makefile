@@ -1,8 +1,8 @@
-#	@(#)Makefile	8.1 (Berkeley) 7/2/95
-# $FreeBSD: src/libexec/smrsh/Makefile,v 1.10 2005/06/10 06:12:51 des Exp $
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 7/2/95
+# $FreeBSD: stable/10/libexec/smrsh/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
-SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
+SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/smrsh
 
 PROG=	smrsh
