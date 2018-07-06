@@ -95,6 +95,8 @@ bin/domainname/domainname.c -text
 bin/echo/Makefile -text
 bin/echo/echo.1 -text
 bin/echo/echo.c -text
+bin/echo/tests/Makefile svneol=native#text/plain
+bin/echo/tests/echo_test.sh svneol=native#text/plain
 bin/ed/Makefile -text
 bin/ed/POSIX -text
 bin/ed/README -text
