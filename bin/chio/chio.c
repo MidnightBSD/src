@@ -35,7 +35,6 @@
  * Additional Copyright (c) 1997, by Matthew Jacob, for NASA/Ames Research Ctr.
  * Addidional Copyright (c) 2000, by C. Stephen Gunn, Waterspout Communications
  */
-/* $FreeBSD: src/bin/chio/chio.c,v 1.27 2005/01/10 08:39:20 imp Exp $ */
 
 #if 0
 #ifndef lint
@@ -45,6 +44,7 @@ static const char copyright[] =
 #endif
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/bin/chio/chio.c 249658 2013-04-19 20:03:51Z ken $");
 
 #include <sys/param.h>
 #include <sys/chio.h> 
@@ -91,7 +91,7 @@ static	void print_designator(const char *, u_int8_t, u_int8_t);
 #endif
 
 /* Valid changer element types. */
-const struct element_type elements[] = {
+static	const struct element_type elements[] = {
 	{ "drive",		CHET_DT },
 	{ "picker",		CHET_MT },
 	{ "portal",		CHET_IE },
@@ -101,7 +101,7 @@ const struct element_type elements[] = {
 };
 
 /* Valid commands. */
-const struct changer_command commands[] = {
+static	const struct changer_command commands[] = {
 	{ "exchange",		do_exchange },
 	{ "getpicker",		do_getpicker },
 	{ "ielem", 		do_ielem },
@@ -116,7 +116,7 @@ const struct changer_command commands[] = {
 };
 
 /* Valid special words. */
-const struct special_word specials[] = {
+static	const struct special_word specials[] = {
 	{ "inv",		SW_INVERT },
 	{ "inv1",		SW_INVERT1 },
 	{ "inv2",		SW_INVERT2 },
