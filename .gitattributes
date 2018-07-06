@@ -24,6 +24,8 @@ bin/chio/pathnames.h -text
 bin/chmod/Makefile -text
 bin/chmod/chmod.1 -text
 bin/chmod/chmod.c -text
+bin/chmod/tests/Makefile svneol=native#text/plain
+bin/chmod/tests/chmod_test.sh svneol=native#text/plain
 bin/cp/Makefile -text
 bin/cp/cp.1 -text
 bin/cp/cp.c -text

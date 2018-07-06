@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/chmod/chmod.c,v 1.3 2007/07/26 20:12:59 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/chmod/chmod.c,v 1.33 2005/01/10 08:39:20 imp Exp $ */
+
 #if 0
 #ifndef lint
 static char const copyright[] =
@@ -40,12 +40,14 @@ static char sccsid[] = "@(#)chmod.c	8.8 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/bin/chmod/chmod.c 306976 2016-10-10 16:07:23Z sevan $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <fts.h>
 #include <limits.h>
 #include <stdio.h>
@@ -62,7 +64,7 @@ main(int argc, char *argv[])
 	FTS *ftsp;
 	FTSENT *p;
 	mode_t *set;
-	int Hflag, Lflag, Rflag, ch, error, fflag, fts_options, hflag, rval;
+	int Hflag, Lflag, Rflag, ch, fflag, fts_options, hflag, rval;
 	int vflag;
 	char *mode;
 	mode_t newmode;
@@ -90,12 +92,11 @@ main(int argc, char *argv[])
 			break;
 		case 'h':
 			/*
-			 * In System V (and probably POSIX.2) the -h option
-			 * causes chmod to change the mode of the symbolic
-			 * link.  4.4BSD's symbolic links didn't have modes,
-			 * so it was an undocumented noop.  In FreeBSD 3.0,
-			 * lchmod(2) is introduced and this option does real
-			 * work.
+			 * In System V the -h option causes chmod to change
+			 * the mode of the symbolic link. 4.4BSD's symbolic
+			 * links didn't have modes, so it was an undocumented
+			 * noop.  In FreeBSD 3.0, lchmod(2) is introduced and
+			 * this option does real work.
 			 */
 			hflag = 1;
 			break;
@@ -126,18 +127,23 @@ done:	argv += optind;
 		usage();
 
 	if (Rflag) {
-		fts_options = FTS_PHYSICAL;
 		if (hflag)
-			errx(1,
-		"the -R and -h options may not be specified together.");
-		if (Hflag)
-			fts_options |= FTS_COMFOLLOW;
+			errx(1, "the -R and -h options may not be "
+			    "specified together.");
 		if (Lflag) {
-			fts_options &= ~FTS_PHYSICAL;
-			fts_options |= FTS_LOGICAL;
+			fts_options = FTS_LOGICAL;
+		} else {
+			fts_options = FTS_PHYSICAL;
+
+			if (Hflag) {
+				fts_options |= FTS_COMFOLLOW;
+			}
 		}
-	} else
-		fts_options = hflag ? FTS_PHYSICAL : FTS_LOGICAL;
+	} else if (hflag) {
+		fts_options = FTS_PHYSICAL;
+	} else {
+		fts_options = FTS_LOGICAL;
+	}
 
 	mode = *argv;
 	if ((set = setmode(mode)) == NULL)
@@ -146,12 +152,21 @@ done:	argv += optind;
 	if ((ftsp = fts_open(++argv, fts_options, 0)) == NULL)
 		err(1, "fts_open");
 	for (rval = 0; (p = fts_read(ftsp)) != NULL;) {
+		int atflag;
+
+		if ((fts_options & FTS_LOGICAL) ||
+		    ((fts_options & FTS_COMFOLLOW) &&
+		    p->fts_level == FTS_ROOTLEVEL))
+			atflag = 0;
+		else
+			atflag = AT_SYMLINK_NOFOLLOW;
+
 		switch (p->fts_info) {
 		case FTS_D:			/* Change it at FTS_DP. */
 			if (!Rflag)
 				fts_set(ftsp, p, FTS_SKIP);
 			continue;
-		case FTS_DNR:			/* Warn, chmod, continue. */
+		case FTS_DNR:			/* Warn, chmod. */
 			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			rval = 1;
 			break;
@@ -160,16 +175,6 @@ done:	argv += optind;
 			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			rval = 1;
 			continue;
-		case FTS_SL:			/* Ignore. */
-		case FTS_SLNONE:
-			/*
-			 * The only symlinks that end up here are ones that
-			 * don't point to anything and ones that we found
-			 * doing a physical walk.
-			 */
-			if (!hflag)
-				continue;
-			/* FALLTHROUGH */
 		default:
 			break;
 		}
@@ -182,32 +187,25 @@ done:	argv += optind;
 		if (may_have_nfs4acl(p, hflag) == 0 &&
 		    (newmode & ALLPERMS) == (p->fts_statp->st_mode & ALLPERMS))
 				continue;
-		if (hflag)
-			error = lchmod(p->fts_accpath, newmode);
-		else
-			error = chmod(p->fts_accpath, newmode);
-		if (error) {
-			if (!fflag) {
-				warn("%s", p->fts_path);
-				rval = 1;
-			}
-		} else {
-			if (vflag) {
-				(void)printf("%s", p->fts_path);
+		if (fchmodat(AT_FDCWD, p->fts_accpath, newmode, atflag) == -1
+		    && !fflag) {
+			warn("%s", p->fts_path);
+			rval = 1;
+		} else if (vflag) {
+			(void)printf("%s", p->fts_path);
 
-				if (vflag > 1) {
-					char m1[12], m2[12];
+			if (vflag > 1) {
+				char m1[12], m2[12];
 
-					strmode(p->fts_statp->st_mode, m1);
-					strmode((p->fts_statp->st_mode &
-					    S_IFMT) | newmode, m2);
-					(void)printf(": 0%o [%s] -> 0%o [%s]",
-					    p->fts_statp->st_mode, m1,
-					    (p->fts_statp->st_mode & S_IFMT) |
-					    newmode, m2);
-				}
-				(void)printf("\n");
+				strmode(p->fts_statp->st_mode, m1);
+				strmode((p->fts_statp->st_mode &
+				    S_IFMT) | newmode, m2);
+				(void)printf(": 0%o [%s] -> 0%o [%s]",
+				    p->fts_statp->st_mode, m1,
+				    (p->fts_statp->st_mode & S_IFMT) |
+				    newmode, m2);
 			}
+			(void)printf("\n");
 		}
 	}
 	if (errno)
