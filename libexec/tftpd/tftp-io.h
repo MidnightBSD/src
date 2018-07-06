@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftp-io.h 207614 2010-05-04 13:07:40Z imp $");
 
 #define RP_NONE		0
 #define	RP_RECVFROM	-1

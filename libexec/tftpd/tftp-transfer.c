@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftp-transfer.c 224536 2011-07-31 03:12:20Z rodrigc $");
 
 #include <sys/types.h>
 #include <sys/param.h>

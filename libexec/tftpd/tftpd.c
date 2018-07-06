@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -43,7 +40,7 @@ static char sccsid[] = "@(#)tftpd.c	8.1 (Berkeley) 6/4/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftpd.c 313226 2017-02-04 16:47:35Z ngie $");
 
 /*
  * Trivial file transfer protocol server.
@@ -70,7 +67,6 @@ __FBSDID("$FreeBSD$");
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <tcpd.h>
 #include <unistd.h>
 
 #include "tftp-file.h"
@@ -78,6 +74,10 @@ __FBSDID("$FreeBSD$");
 #include "tftp-utils.h"
 #include "tftp-transfer.h"
 #include "tftp-options.h"
+
+#ifdef	LIBWRAP
+#include <tcpd.h>
+#endif
 
 static void	tftp_wrq(int peer, char *, ssize_t);
 static void	tftp_rrq(int peer, char *, ssize_t);
@@ -285,6 +285,7 @@ main(int argc, char *argv[])
 		}
 	}
 
+#ifdef	LIBWRAP
 	/*
 	 * See if the client is allowed to talk to me.
 	 * (This needs to be done before the chroot())
@@ -333,6 +334,7 @@ main(int argc, char *argv[])
 				    "Full access allowed"
 				    "in /etc/hosts.allow");
 	}
+#endif
 
 	/*
 	 * Since we exit here, we should do that only after the above
