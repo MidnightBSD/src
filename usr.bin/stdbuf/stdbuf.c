@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Jeremie Le Hen <jlh@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/stdbuf/stdbuf.c 321883 2017-08-01 16:48:33Z asomers $
  */
 
 #include <err.h>
@@ -40,7 +41,7 @@ static void
 usage(int s)
 {
 
-	fprintf(stderr, "Usage: %s [-e 0|L|<sz>] [-i 0|L|<sz>] [-o 0|L|<sz>] "
+	fprintf(stderr, "Usage: %s [-e 0|L|B|<sz>] [-i 0|L|B|<sz>] [-o 0|L|B|<sz>] "
 	    "<cmd> [args ...]\n", __progname);
 	exit(s);
 }

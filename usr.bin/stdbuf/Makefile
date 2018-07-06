@@ -1,8 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/stdbuf/Makefile 240372 2012-09-11 21:13:18Z delphij $
 
 PROG=   stdbuf
 SRCS=   stdbuf.c
-
-WARNS?=	6
 
 .include <bsd.prog.mk>
