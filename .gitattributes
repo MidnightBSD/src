@@ -57,6 +57,8 @@ bin/date/date.1 -text
 bin/date/date.c -text
 bin/date/extern.h -text
 bin/date/netdate.c -text
+bin/date/tests/Makefile svneol=native#text/plain
+bin/date/tests/format_string_test.sh svneol=native#text/plain
 bin/date/vary.c -text
 bin/date/vary.h -text
 bin/dd/Makefile -text
