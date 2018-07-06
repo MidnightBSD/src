@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/comsat/comsat.c,v 1.2 2012/04/11 00:46:54 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -43,7 +39,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)comsat.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/comsat/comsat.c,v 1.17 2005/02/14 17:42:56 stefanf Exp $";
+  "$FreeBSD: stable/10/libexec/comsat/comsat.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -69,17 +65,17 @@ static const char rcsid[] =
 #include <unistd.h>
 #include <utmpx.h>
 
-int	debug = 0;
+static int	debug = 0;
 #define	dsyslog	if (debug) syslog
 
 #define MAXIDLE	120
 
-char	hostname[MAXHOSTNAMELEN];
+static char	hostname[MAXHOSTNAMELEN];
 
-void jkfprintf(FILE *, char[], char[], off_t);
-void mailfor(char *);
-void notify(struct utmpx *, char[], off_t, int);
-void reapchildren(int);
+static void	jkfprintf(FILE *, char[], char[], off_t);
+static void	mailfor(char *);
+static void	notify(struct utmpx *, char[], off_t, int);
+static void	reapchildren(int);
 
 int
 main(int argc __unused, char *argv[] __unused)
@@ -116,13 +112,13 @@ main(int argc __unused, char *argv[] __unused)
 	}
 }
 
-void
+static void
 reapchildren(int signo __unused)
 {
 	while (wait3(NULL, WNOHANG, NULL) > 0);
 }
 
-void
+static void
 mailfor(char *name)
 {
 	struct utmpx *utp;
@@ -158,7 +154,7 @@ mailfor(char *name)
 
 static const char *cr;
 
-void
+static void
 notify(struct utmpx *utp, char file[], off_t offset, int folder)
 {
 	FILE *tp;
@@ -220,7 +216,7 @@ notify(struct utmpx *utp, char file[], off_t offset, int folder)
 	_exit(0);
 }
 
-void
+static void
 jkfprintf(FILE *tp, char user[], char file[], off_t offset)
 {
 	unsigned char *cp, ch;
