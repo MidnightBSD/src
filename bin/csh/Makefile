@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/bin/csh/Makefile,v 1.36.2.1 2006/02/26 06:17:59 ume Exp $
+# $FreeBSD: stable/10/bin/csh/Makefile 316958 2017-04-15 11:16:11Z dchagin $
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 #
 # C Shell with process control; VM/UNIX VAX Makefile
@@ -33,6 +33,7 @@ SRCS+=	tc.alloc.c tc.bind.c tc.const.c tc.decls.h tc.disc.c \
 	tc.func.c tc.nls.c tc.os.c tc.os.h tc.printf.c tc.prompt.c \
 	tc.sched.c tc.sig.c tc.sig.h tc.str.c sh.types.h tc.vers.c tc.wait.h \
 	tc.who.c tc.h
+SRCS+=	dotlock.c dotlock.h
 GENHDRS= ed.defns.h sh.err.h tc.const.h tc.defs.c
 SRCS+=	${GENHDRS}
 
