@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/libexec/atrun/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
-MAINSRC=${.CURDIR}/../../usr.bin/at
+MAINSRC=${SRCTOP}/usr.bin/at
 
 .include "${MAINSRC}/Makefile.inc"
 
