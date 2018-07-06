@@ -1,6 +1,6 @@
 /* $FreeBSD: src/contrib/less/screen.c,v 1.4.8.2.2.1 2007/12/04 22:41:44 delphij Exp $ */
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2017  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -127,16 +127,21 @@ static HANDLE con_out_save = INVALID_HANDLE_VALUE; /* previous console */
 static HANDLE con_out_ours = INVALID_HANDLE_VALUE; /* our own */
 HANDLE con_out = INVALID_HANDLE_VALUE;             /* current console */
 
+extern int utf_mode;
 extern int quitting;
 static void win32_init_term();
 static void win32_deinit_term();
+
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 4
+#endif
 
 #define FG_COLORS       (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY)
 #define BG_COLORS       (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_INTENSITY)
 #define	MAKEATTR(fg,bg)		((WORD)((fg)|((bg)<<4)))
 #define	SETCOLORS(fg,bg)	{ curr_attr = MAKEATTR(fg,bg); \
 				if (SetConsoleTextAttribute(con_out, curr_attr) == 0) \
-				error("SETCOLORS failed"); }
+				error("SETCOLORS failed", NULL_PARG); }
 #endif
 
 #if MSDOS_COMPILER
@@ -152,7 +157,10 @@ public int bl_fg_color;		/* Color of blinking text */
 public int bl_bg_color;
 static int sy_fg_color;		/* Color of system text (before less) */
 static int sy_bg_color;
-
+public int sgr_mode;		/* Honor ANSI sequences rather than using above */
+#if MSDOS_COMPILER==WIN32C
+public int have_ul;		/* Is underline available? */
+#endif
 #else
 
 /*
@@ -201,9 +209,11 @@ public int above_mem, below_mem;	/* Memory retained above/below screen */
 public int can_goto_line;		/* Can move cursor to any line */
 public int clear_bg;		/* Clear fills with background color */
 public int missing_cap = 0;	/* Some capability is missing */
+public char *kent = NULL;	/* Keypad ENTER sequence */
 
 static int attrmode = AT_NORMAL;
 extern int binattr;
+extern int line_count;
 
 #if !MSDOS_COMPILER
 static char *cheaper();
@@ -233,6 +243,7 @@ extern int wscroll;
 extern int screen_trashed;
 extern int tty;
 extern int top_scroll;
+extern int quit_if_one_screen;
 extern int oldbot;
 #if HILITE_SEARCH
 extern int hilite_search;
@@ -694,7 +705,7 @@ ltgetstr(capname, pp)
 	public void
 scrsize()
 {
-	register char *s;
+	char *s;
 	int sys_height;
 	int sys_width;
 #if !MSDOS_COMPILER
@@ -1107,6 +1118,7 @@ get_term()
 	so_bg_color = 9;
 	bl_fg_color = 15;
 	bl_bg_color = 0;
+	sgr_mode = 0;
 
 	/*
 	 * Get size of the screen.
@@ -1118,7 +1130,7 @@ get_term()
 #else /* !MSDOS_COMPILER */
 
 	char *sp;
-	register char *t1, *t2;
+	char *t1, *t2;
 	char *term;
 	char termbuf[TERMBUF_SIZE];
 
@@ -1207,7 +1219,8 @@ get_term()
 	sc_e_keypad = ltgetstr("ke", &sp);
 	if (sc_e_keypad == NULL)
 		sc_e_keypad = "";
-		
+	kent = ltgetstr("@8", &sp);
+
 	sc_init = ltgetstr("ti", &sp);
 	if (sc_init == NULL)
 		sc_init = "";
@@ -1449,6 +1462,9 @@ _settextposition(int row, int col)
 	static void
 initcolor()
 {
+#if MSDOS_COMPILER==BORLANDC || MSDOS_COMPILER==DJGPPC
+	intensevideo();
+#endif
 	SETCOLORS(nm_fg_color, nm_bg_color);
 #if 0
 	/*
@@ -1492,6 +1508,8 @@ win32_init_term()
 
 	if (con_out_ours == INVALID_HANDLE_VALUE)
 	{
+		DWORD output_mode;
+
 		/*
 		 * Create our own screen buffer, so that we
 		 * may restore the original when done.
@@ -1502,6 +1520,12 @@ win32_init_term()
 			(LPSECURITY_ATTRIBUTES) NULL,
 			CONSOLE_TEXTMODE_BUFFER,
 			(LPVOID) NULL);
+		/*
+		 * Enable underline, if available.
+		 */
+		GetConsoleMode(con_out_ours, &output_mode);
+		have_ul = SetConsoleMode(con_out_ours,
+			    output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 	}
 
 	size.X = scr.srWindow.Right - scr.srWindow.Left + 1;
@@ -1534,7 +1558,9 @@ win32_deinit_term()
 init()
 {
 #if !MSDOS_COMPILER
-	if (!no_init)
+	if (quit_if_one_screen && line_count >= sc_height)
+		quit_if_one_screen = FALSE;
+	if (!no_init && !quit_if_one_screen)
 		tputs(sc_init, sc_height, putchr);
 	if (!no_keypad)
 		tputs(sc_s_keypad, sc_height, putchr);
@@ -1574,7 +1600,7 @@ deinit()
 #if !MSDOS_COMPILER
 	if (!no_keypad)
 		tputs(sc_e_keypad, sc_height, putchr);
-	if (!no_init)
+	if (!no_init && !quit_if_one_screen)
 		tputs(sc_deinit, sc_height, putchr);
 #else
 	/* Restore system colors. */
@@ -1820,6 +1846,8 @@ win32_scroll_up(n)
 	public void
 lower_left()
 {
+	if (!init_done)
+		return;
 #if !MSDOS_COMPILER
 	tputs(sc_lower_left, 1, putchr);
 #else
@@ -1894,14 +1922,14 @@ check_winch()
  * Goto a specific line on the screen.
  */
 	public void
-goto_line(slinenum)
-	int slinenum;
+goto_line(sindex)
+	int sindex;
 {
 #if !MSDOS_COMPILER
-	tputs(tgoto(sc_move, 0, slinenum), 1, putchr);
+	tputs(tgoto(sc_move, 0, sindex), 1, putchr);
 #else
 	flush();
-	_settextposition(slinenum+1, 1);
+	_settextposition(sindex+1, 1);
 #endif
 }
 
@@ -1942,7 +1970,7 @@ create_flash()
 	}
 #else
 #if MSDOS_COMPILER==BORLANDC
-	register int n;
+	int n;
 
 	whitescreen = (unsigned short *) 
 		malloc(sc_width * sc_height * sizeof(short));
@@ -1952,7 +1980,7 @@ create_flash()
 		whitescreen[n] = 0x7020;
 #else
 #if MSDOS_COMPILER==WIN32C
-	register int n;
+	int n;
 
 	whitescreen = (WORD *)
 		malloc(sc_height * sc_width * sizeof(WORD));
@@ -2433,7 +2461,16 @@ win32_kbhit(tty)
 			currentKey.scan = PCK_CTL_DELETE;
 			break;
 		}
+	} else if (ip.Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED)
+	{
+		switch (currentKey.scan)
+		{
+		case PCK_SHIFT_TAB: /* tab */
+			currentKey.ascii = 0;
+			break;
+		}
 	}
+
 	return (TRUE);
 }
 
@@ -2491,7 +2528,18 @@ WIN32textout(text, len)
 {
 #if MSDOS_COMPILER==WIN32C
 	DWORD written;
-	WriteConsole(con_out, text, len, &written, NULL);
+	if (utf_mode == 2)
+	{
+		/*
+		 * We've got UTF-8 text in a non-UTF-8 console.  Convert it to
+		 * wide and use WriteConsoleW.
+		 */
+		WCHAR wtext[1024];
+		len = MultiByteToWideChar(CP_UTF8, 0, text, len, wtext,
+					  sizeof(wtext)/sizeof(*wtext));
+		WriteConsoleW(con_out, wtext, len, &written, NULL);
+	} else
+		WriteConsole(con_out, text, len, &written, NULL);
 #else
 	char c = text[len];
 	text[len] = '\0';
