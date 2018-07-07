@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +44,7 @@ static char sccsid[] = "@(#)fold.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/fold/fold.c 227165 2011-11-06 08:15:23Z ed $");
 
 #include <err.h>
 #include <limits.h>
@@ -61,8 +62,8 @@ void fold(int);
 static int newpos(int, wint_t);
 static void usage(void);
 
-int bflag;			/* Count bytes, not columns */
-int sflag;			/* Split on word boundaries */
+static int bflag;		/* Count bytes, not columns */
+static int sflag;		/* Split on word boundaries */
 
 int
 main(int argc, char **argv)
