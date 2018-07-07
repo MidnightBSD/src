@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jake Burkholder
  * Copyright (c) 2004 Robert Watson
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ktrdump/ktrdump.c 280255 2015-03-19 13:08:17Z jhb $");
 
 #include <sys/types.h>
 #include <sys/ktr.h>
@@ -46,7 +47,7 @@ __MBSDID("$MidnightBSD$");
 
 #define	SBUFLEN	128
 #define	USAGE \
-	"usage: ktrdump [-cfqrtH] [-e execfile] [-i ktrfile] [-m corefile] [-o outfile]\n"
+	"usage: ktrdump [-cfqrtH] [-i ktrfile] [-M core] [-N system] [-o outfile]\n"
 
 static void usage(void);
 
@@ -59,9 +60,9 @@ static struct nlist nl[] = {
 };
 
 static int cflag;
-static int eflag;
 static int fflag;
-static int mflag;
+static int Mflag;
+static int Nflag;
 static int qflag;
 static int rflag;
 static int tflag;
@@ -86,6 +87,7 @@ main(int ac, char **av)
 	u_long parms[KTR_PARMS];
 	struct ktr_entry *buf;
 	uintmax_t tlast, tnow;
+	unsigned long bufptr;
 	struct stat sb;
 	kvm_t *kd;
 	FILE *out;
@@ -102,16 +104,17 @@ main(int ac, char **av)
 	 * Parse commandline arguments.
 	 */
 	out = stdout;
-	while ((c = getopt(ac, av, "cfqrtHe:i:m:o:")) != -1)
+	while ((c = getopt(ac, av, "cfqrtHe:i:m:M:N:o:")) != -1)
 		switch (c) {
 		case 'c':
 			cflag = 1;
 			break;
+		case 'N':
 		case 'e':
 			if (strlcpy(execfile, optarg, sizeof(execfile))
 			    >= sizeof(execfile))
 				errx(1, "%s: File name too long", optarg);
-			eflag = 1;
+			Nflag = 1;
 			break;
 		case 'f':
 			fflag = 1;
@@ -121,11 +124,12 @@ main(int ac, char **av)
 			if ((in = open(optarg, O_RDONLY)) == -1)
 				err(1, "%s", optarg);
 			break;
+		case 'M':
 		case 'm':
 			if (strlcpy(corefile, optarg, sizeof(corefile))
 			    >= sizeof(corefile))
 				errx(1, "%s: File name too long", optarg);
-			mflag = 1;
+			Mflag = 1;
 			break;
 		case 'o':
 			if ((out = fopen(optarg, "w")) == NULL)
@@ -156,8 +160,8 @@ main(int ac, char **av)
 	 * Open our execfile and corefile, resolve needed symbols and read in
 	 * the trace buffer.
 	 */
-	if ((kd = kvm_openfiles(eflag ? execfile : NULL,
-	    mflag ? corefile : NULL, NULL, O_RDONLY, errbuf)) == NULL)
+	if ((kd = kvm_openfiles(Nflag ? execfile : NULL,
+	    Mflag ? corefile : NULL, NULL, O_RDONLY, errbuf)) == NULL)
 		errx(1, "%s", errbuf);
 	if (kvm_nlist(kd, nl) != 0 ||
 	    kvm_read(kd, nl[0].n_value, &version, sizeof(version)) == -1)
@@ -179,8 +183,9 @@ main(int ac, char **av)
 		if ((buf = malloc(sizeof(*buf) * entries)) == NULL)
 			err(1, NULL);
 		if (kvm_read(kd, nl[2].n_value, &index, sizeof(index)) == -1 ||
-		    kvm_read(kd, nl[3].n_value, buf, sizeof(*buf) * entries)
-		    == -1)
+		    kvm_read(kd, nl[3].n_value, &bufptr,
+		    sizeof(bufptr)) == -1 ||
+		    kvm_read(kd, bufptr, buf, sizeof(*buf) * entries) == -1)
 			errx(1, "%s", kvm_geterr(kd));
 	}
 
