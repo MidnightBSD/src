@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1995-1996 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 .\" All rights reserved.
 .\" Copyright (c) 2002-2004 Michael Telahun Makonnen <mtm@FreeBSD.org>
@@ -24,10 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\" $FreeBSD: src/usr.sbin/adduser/adduser.8,v 1.59.2.1 2007/10/28 21:06:34 mtm Exp $
+.\" $FreeBSD: stable/10/usr.sbin/adduser/adduser.8 240530 2012-09-15 16:24:03Z issyl0 $
 .\"
-.Dd June 7, 2006
+.Dd September 15, 2012
 .Dt ADDUSER 8
 .Os
 .Sh NAME
@@ -38,6 +38,7 @@
 .Op Fl CDENShq
 .Op Fl G Ar groups
 .Op Fl L Ar login_class
+.Op Fl M Ar mode
 .Op Fl d Ar partition
 .Op Fl f Ar file
 .Op Fl g Ar login_group
@@ -239,6 +240,9 @@ Please note that the message
 file can reference the internal variables of the
 .Nm
 script.
+.It Fl M Ar mode
+Create the home directory with permissions set to
+.Ar mode .
 .It Fl N
 Do not read the default configuration file.
 .It Fl q
@@ -392,7 +396,7 @@ and this field is
 empty, its contents will be used
 as a password.
 This field will be ignored if the
-.Fl p
+.Fl w
 option is used with a
 .Cm no
 or
