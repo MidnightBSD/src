@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -53,7 +54,7 @@ static char sccsid[] = "@(#)finger.c	8.5 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/finger/finger.c 241737 2012-10-19 14:49:42Z ed $");
 
 /*
  * Finger prints out information about users.  It is not portable since
@@ -87,7 +88,8 @@ __MBSDID("$MidnightBSD$");
 
 DB *db;
 time_t now;
-int entries, gflag, kflag, lflag, mflag, pplan, sflag, oflag;
+static int kflag, mflag, sflag;
+int entries, gflag, lflag, pplan, oflag;
 sa_family_t family = PF_UNSPEC;
 int d_first = -1;
 char tbuf[1024];
@@ -287,7 +289,7 @@ userlist(int argc, char **argv)
 
 	/* Pull out all network requests. */
 	for (ap = p = argv, np = nargv; *p; ++p)
-		if (index(*p, '@'))
+		if (strchr(*p, '@'))
 			*np++ = *p;
 		else
 			*ap++ = *p;
@@ -299,8 +301,8 @@ userlist(int argc, char **argv)
 		goto net;
 
 	/*
-	 * Mark any arguments beginning with '/' as invalid so that we 
-	 * don't accidently confuse them with expansions from finger.conf
+	 * Mark any arguments beginning with '/' as invalid so that we
+	 * don't accidentally confuse them with expansions from finger.conf
 	 */
 	for (p = argv, ip = used; *p; ++p, ++ip)
 	    if (**p == '/') {

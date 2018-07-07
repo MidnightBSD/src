@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)lprint.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/finger/lprint.c 226358 2011-10-14 07:24:23Z ed $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -306,7 +307,7 @@ show_text(const char *directory, const char *file_name, const char *header)
 		return(0);
 
 	/* If short enough, and no newlines, show it on a single line.*/
-	if (sb.st_size <= LINE_LEN - strlen(header) - 5) {
+	if (sb.st_size <= (off_t)(LINE_LEN - strlen(header) - 5)) {
 		nr = read(fd, tbuf, sizeof(tbuf));
 		if (nr <= 0) {
 			(void)close(fd);
