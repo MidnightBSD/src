@@ -75732,6 +75732,9 @@ usr.bin/col/Makefile -text
 usr.bin/col/README -text
 usr.bin/col/col.1 -text
 usr.bin/col/col.c -text
+usr.bin/colcrt/Makefile svneol=native#text/plain
+usr.bin/colcrt/colcrt.1 svneol=native#text/plain
+usr.bin/colcrt/colcrt.c svneol=native#text/plain
 usr.bin/colldef/Makefile -text
 usr.bin/colldef/colldef.1 -text
 usr.bin/colldef/common.h -text
