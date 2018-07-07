@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +44,7 @@ static char sccsid[] = "@(#)paste.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/paste/paste.c 227242 2011-11-06 18:49:53Z ed $");
 
 #include <sys/types.h>
 
@@ -57,15 +58,15 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include <wchar.h>
 
-wchar_t *delim;
-int delimcnt;
+static wchar_t *delim;
+static int delimcnt;
 
-int parallel(char **);
-int sequential(char **);
-int tr(wchar_t *);
+static int parallel(char **);
+static int sequential(char **);
+static int tr(wchar_t *);
 static void usage(void);
 
-wchar_t tab[] = L"\t";
+static wchar_t tab[] = L"\t";
 
 int
 main(int argc, char *argv[])
@@ -125,7 +126,7 @@ typedef struct _list {
 	char *name;
 } LIST;
 
-int
+static int
 parallel(char **argv)
 {
 	LIST *lp;
@@ -195,7 +196,7 @@ parallel(char **argv)
 	return (0);
 }
 
-int
+static int
 sequential(char **argv)
 {
 	FILE *fp;
@@ -235,7 +236,7 @@ sequential(char **argv)
 	return (failed != 0);
 }
 
-int
+static int
 tr(wchar_t *arg)
 {
 	int cnt;
