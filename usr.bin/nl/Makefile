@@ -1,7 +1,6 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/nl/Makefile 226362 2011-10-14 07:28:39Z ed $
 
 PROG=	nl
-
-WARNS?=	2
 
 .include <bsd.prog.mk>
