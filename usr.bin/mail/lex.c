@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)lex.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/lex.c 228468 2011-12-13 13:32:56Z ed $");
 
 #include "rcv.h"
 #include <errno.h>
@@ -482,7 +483,7 @@ setmsize(int sz)
  * to the passed command "word"
  */
 
-__const struct cmd *
+const struct cmd *
 lex(char word[])
 {
 	const struct cmd *cp;

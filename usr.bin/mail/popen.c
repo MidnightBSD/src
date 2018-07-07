@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)popen.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/popen.c 252679 2013-07-04 03:24:58Z kevlo $");
 
 #include "rcv.h"
 #include <sys/wait.h>
@@ -316,7 +317,7 @@ sigchild(int signo __unused)
 	int status;
 	struct child *cp;
 
-	while ((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0) {
+	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		cp = findchild(pid);
 		if (cp->free)
 			delchild(cp);
