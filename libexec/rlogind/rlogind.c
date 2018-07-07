@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rlogind/rlogind.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1988, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -18,11 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -51,7 +47,7 @@ static const char sccsid[] = "@(#)rlogind.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/rlogind/rlogind.c,v 1.44 2005/05/13 16:31:09 ume Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/rlogind/rlogind.c 262435 2014-02-24 08:21:49Z brueffer $");
 
 /*
  * remote login server:
@@ -544,16 +540,17 @@ extern	char **environ;
 void
 setup_term(int fd)
 {
-	char *cp = index(term+ENVSIZE, '/');
+	char *cp;
 	char *speed;
 	struct termios tt, def;
 
+	cp = strchr(term + ENVSIZE, '/');
 #ifndef notyet
 	tcgetattr(fd, &tt);
 	if (cp) {
 		*cp++ = '\0';
 		speed = cp;
-		cp = index(speed, '/');
+		cp = strchr(speed, '/');
 		if (cp)
 			*cp++ = '\0';
 		cfsetspeed(&tt, atoi(speed));
@@ -568,7 +565,7 @@ setup_term(int fd)
 	if (cp) {
 		*cp++ = '\0';
 		speed = cp;
-		cp = index(speed, '/');
+		cp = strchr(speed, '/');
 		if (cp)
 			*cp++ = '\0';
 		tcgetattr(fd, &tt);

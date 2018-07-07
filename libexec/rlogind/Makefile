@@ -1,6 +1,6 @@
+# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/libexec/rlogind/Makefile,v 1.20 2005/01/28 16:08:05 ru Exp $
-# $MidnightBSD: src/libexec/rlogind/Makefile,v 1.3 2012/10/27 02:51:44 laffer1 Exp $
+# $FreeBSD: stable/10/libexec/rlogind/Makefile 160742 2006-07-27 12:05:05Z yar $
 
 .include <bsd.own.mk>
 
