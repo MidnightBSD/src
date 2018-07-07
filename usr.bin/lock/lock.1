@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1987, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)lock.1	8.1 (Berkeley) 6/6/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/lock/lock.1 271095 2014-09-04 13:45:16Z se $
 .\"
 .Dd July 10, 2002
 .Dt LOCK 1
@@ -69,11 +70,14 @@ option of
 and thus has the same restrictions.
 It is only available if the terminal in question is a
 .Xr syscons 4
+or
+.Xr vt 4
 virtual terminal.
 .El
 .Sh SEE ALSO
 .Xr vidcontrol 1 ,
-.Xr syscons 4
+.Xr syscons 4 ,
+.Xr vt 4
 .Sh HISTORY
 The
 .Nm
