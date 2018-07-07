@@ -75205,6 +75205,7 @@ usr.bin/banner/banner.c -text
 usr.bin/basename/Makefile -text
 usr.bin/basename/basename.1 -text
 usr.bin/basename/basename.c -text
+usr.bin/basename/tests/Makefile svneol=native#text/plain
 usr.bin/batt/Makefile -text
 usr.bin/batt/batt.1 -text
 usr.bin/batt/batt.c -text
