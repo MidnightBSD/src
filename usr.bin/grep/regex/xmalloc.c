@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.bin/grep/regex/xmalloc.c 241737 2012-10-19 14:49:42Z ed $ */
 
 /*
   xmalloc.c - Simple malloc debugging library implementation
@@ -39,9 +40,9 @@ typedef struct {
 } hashTable;
 
 static int xmalloc_peak;
-int xmalloc_current;
+static int xmalloc_current;
 static int xmalloc_peak_blocks;
-int xmalloc_current_blocks;
+static int xmalloc_current_blocks;
 static int xmalloc_fail_after;
 
 #define TABLE_BITS 8

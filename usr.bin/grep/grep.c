@@ -1,5 +1,6 @@
-/*	$NetBSD: grep.c,v 1.4 2011/02/16 01:31:33 joerg Exp $	*/
-/* 	$MidnightBSD$	*/
+/* $MidnightBSD$ */
+/*	$NetBSD: grep.c,v 1.6 2011/04/18 03:48:23 joerg Exp $	*/
+/* 	$FreeBSD: stable/10/usr.bin/grep/grep.c 280408 2015-03-24 01:31:02Z pfg $	*/
 /*	$OpenBSD: grep.c,v 1.42 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/grep/grep.c 280408 2015-03-24 01:31:02Z pfg $");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -44,6 +45,7 @@ __MBSDID("$MidnightBSD$");
 #include <libgen.h>
 #include <locale.h>
 #include <stdbool.h>
+#define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,14 +84,15 @@ int		 eflags = REG_STARTEND;
 bool		 matchall;
 
 /* Searching patterns */
-unsigned int	 patterns, pattern_sz;
+unsigned int	 patterns;
+static unsigned int pattern_sz;
 struct pat	*pattern;
 regex_t		*r_pattern;
 fastmatch_t	*fg_pattern;
 
 /* Filename exclusion/inclusion patterns */
-unsigned int	 fpatterns, fpattern_sz;
-unsigned int	 dpatterns, dpattern_sz;
+unsigned int	fpatterns, dpatterns;
+static unsigned int fpattern_sz, dpattern_sz;
 struct epat	*dpattern, *fpattern;
 
 /* For regex errors  */
@@ -166,7 +169,7 @@ usage(void)
 
 static const char	*optstr = "0123456789A:B:C:D:EFGHIJMLOPSRUVZabcd:e:f:hilm:nopqrsuvwxXy";
 
-struct option long_options[] =
+static const struct option long_options[] =
 {
 	{"binary-files",	required_argument,	NULL, BIN_OPT},
 	{"help",		no_argument,		NULL, HELP_OPT},
@@ -303,6 +306,7 @@ read_patterns(const char *fn)
 	FILE *f;
 	char *line;
 	size_t len;
+	ssize_t rlen;
 
 	if ((f = fopen(fn, "r")) == NULL)
 		err(2, "%s", fn);
@@ -310,8 +314,11 @@ read_patterns(const char *fn)
 		fclose(f);
 		return;
 	}
-        while ((line = fgetln(f, &len)) != NULL)
-		add_pattern(line, line[0] == '\n' ? 0 : len);
+	len = 0;
+	line = NULL;
+	while ((rlen = getline(&line, &len, f)) != -1)
+		add_pattern(line, line[0] == '\n' ? 0 : (size_t)rlen);
+	free(line);
 	if (ferror(f))
 		err(2, "%s", fn);
 	fclose(f);

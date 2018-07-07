@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: util.c,v 1.9 2011/02/27 17:33:37 joerg Exp $	*/
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/10/usr.bin/grep/util.c 303882 2016-08-09 18:49:19Z dim $	*/
 /*	$OpenBSD: util.c,v 1.39 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/grep/util.c 303882 2016-08-09 18:49:19Z dim $");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -302,7 +303,7 @@ procline(struct str *l, int nottext)
 					r = REG_NOMATCH;
 			/* Check for whole word match */
 			if (r == 0 && (wflag || fg_pattern[i].word)) {
-				wint_t wbegin, wend;
+				wchar_t wbegin, wend;
 
 				wbegin = wend = L' ';
 				if (pmatch.rm_so != 0 &&
@@ -336,7 +337,7 @@ procline(struct str *l, int nottext)
 		}
 
 		/* One pass if we are not recording matches */
-		if ((color == NULL && !oflag) || qflag || lflag)
+		if (!wflag && ((color == NULL && !oflag) || qflag || lflag || Lflag))
 			break;
 
 		if (st == (size_t)pmatch.rm_so)

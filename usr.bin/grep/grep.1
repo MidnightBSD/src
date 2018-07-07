@@ -1,5 +1,6 @@
+.\" $MidnightBSD$
 .\"	$NetBSD: grep.1,v 1.2 2011/02/16 01:31:33 joerg Exp $
-.\"	$MidnightBSD$
+.\"	$FreeBSD: stable/10/usr.bin/grep/grep.1 318650 2017-05-22 15:51:17Z gjb $
 .\"	$OpenBSD: grep.1,v 1.38 2010/04/05 06:30:59 jmc Exp $
 .\" Copyright (c) 1980, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -352,6 +353,8 @@ Nonexistent and unreadable files are ignored
 (i.e. their error messages are suppressed).
 .It Fl U , Fl Fl binary
 Search binary files, but do not attempt to print them.
+.It Fl u
+This option has no effect and is provided only for compatibility with GNU grep.
 .It Fl V , Fl Fl version
 Display version information and exit.
 .It Fl v , Fl Fl invert-match

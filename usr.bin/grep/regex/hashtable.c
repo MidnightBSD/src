@@ -1,4 +1,5 @@
-/*      $MidnightBSD$       */
+/* $MidnightBSD$ */
+/*      $FreeBSD: stable/10/usr.bin/grep/regex/hashtable.c 226035 2011-10-05 09:56:43Z gabor $       */
 
 /*-
  * Copyright (C) 2011 Gabor Kovesdan <gabor@FreeBSD.org>
