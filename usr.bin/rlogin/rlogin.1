@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)rlogin.1	8.1 (Berkeley) 6/6/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/rlogin/rlogin.1 320646 2017-07-04 15:53:54Z allanjude $
 .\"
-.Dd September 26, 2003
+.Dd July 3, 2017
 .Dt RLOGIN 1
 .Os
 .Sh NAME
@@ -41,6 +42,15 @@
 .Op Fl i Ar localname
 .Op Fl l Ar username
 .Ar host
+.Sh DEPRECATION NOTICE
+.Nm
+is deprecated and will be removed from future versions of the
+.Fx
+base system.
+If
+.Nm
+is still required, it can be installed from ports or packages
+(net/bsdrcmds).
 .Sh DESCRIPTION
 The
 .Nm
