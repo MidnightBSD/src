@@ -1,4 +1,5 @@
-/*	$OpenBSD: stack.c,v 1.11 2009/10/27 23:59:37 deraadt Exp $	*/
+/* $MidnightBSD$ */
+/*	$OpenBSD: stack.c,v 1.12 2014/11/26 15:05:51 otto Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/dc/stack.c 315135 2017-03-12 05:36:31Z pfg $");
 
 #include <err.h>
 #include <stdlib.h>
@@ -68,10 +69,8 @@ stack_free_value(struct value *v)
 		free(v->u.string);
 		break;
 	}
-	if (v->array != NULL) {
-		array_free(v->array);
-		v->array = NULL;
-	}
+	array_free(v->array);
+	v->array = NULL;
 }
 
 /* Copy number or string content into already allocated target */
@@ -137,14 +136,12 @@ stack_swap(struct stack *stack)
 static void
 stack_grow(struct stack *stack)
 {
-	size_t i, new_size;
+	size_t new_size;
 
 	if (++stack->sp == stack->size) {
 		new_size = stack->size * 2 + 1;
 		stack->stack = brealloc(stack->stack,
 		    new_size * sizeof(*stack->stack));
-		for (i = stack->size; i < new_size; i++)
-			stack->stack[i].array = NULL;
 		stack->size = new_size;
 	}
 }
@@ -156,6 +153,7 @@ stack_pushnumber(struct stack *stack, struct number *b)
 	stack_grow(stack);
 	stack->stack[stack->sp].type = BCODE_NUMBER;
 	stack->stack[stack->sp].u.num = b;
+	stack->stack[stack->sp].array = NULL;
 }
 
 void
@@ -165,6 +163,7 @@ stack_pushstring(struct stack *stack, char *string)
 	stack_grow(stack);
 	stack->stack[stack->sp].type = BCODE_STRING;
 	stack->stack[stack->sp].u.string = string;
+	stack->stack[stack->sp].array = NULL;
 }
 
 void
@@ -225,10 +224,8 @@ stack_popnumber(struct stack *stack)
 
 	if (stack_empty(stack))
 		return (NULL);
-	if (stack->stack[stack->sp].array != NULL) {
-		array_free(stack->stack[stack->sp].array);
-		stack->stack[stack->sp].array = NULL;
-	}
+	array_free(stack->stack[stack->sp].array);
+	stack->stack[stack->sp].array = NULL;
 	if (stack->stack[stack->sp].type != BCODE_NUMBER) {
 		warnx("not a number"); /* XXX remove */
 		return (NULL);
@@ -242,10 +239,8 @@ stack_popstring(struct stack *stack)
 
 	if (stack_empty(stack))
 		return (NULL);
-	if (stack->stack[stack->sp].array != NULL) {
-		array_free(stack->stack[stack->sp].array);
-		stack->stack[stack->sp].array = NULL;
-	}
+	array_free(stack->stack[stack->sp].array);
+	stack->stack[stack->sp].array = NULL;
 	if (stack->stack[stack->sp].type != BCODE_STRING) {
 		warnx("not a string"); /* XXX remove */
 		return (NULL);
@@ -257,9 +252,8 @@ void
 stack_clear(struct stack *stack)
 {
 
-	while (stack->sp >= 0) {
+	while (stack->sp >= 0)
 		stack_free_value(&stack->stack[stack->sp--]);
-	}
 	free(stack->stack);
 	stack_init(stack);
 }

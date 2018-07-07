@@ -1,4 +1,5 @@
-/*	$OpenBSD: inout.c,v 1.15 2009/10/27 23:59:37 deraadt Exp $	*/
+/* $MidnightBSD$ */
+/*	$OpenBSD: inout.c,v 1.17 2012/11/07 11:06:14 otto Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/dc/inout.c 265533 2014-05-07 08:06:54Z delphij $");
 
 #include <openssl/ssl.h>
 #include <ctype.h>
@@ -322,7 +323,7 @@ printnumber(FILE *f, const struct number *b, u_int base)
 		i++;
 	}
 	sz = i;
-	if (BN_cmp(b->number, &zero) < 0)
+	if (BN_is_negative(b->number))
 		putcharwrap(f, '-');
 	for (i = 0; i < sz; i++) {
 		p = stack_popstring(&stack);
@@ -353,7 +354,8 @@ printnumber(FILE *f, const struct number *b, u_int base)
 				putcharwrap(f, ' ');
 			i = 1;
 
-			bmul_number(fract_part, fract_part, num_base);
+			bmul_number(fract_part, fract_part, num_base,
+			    bmachine_scale());
 			split_number(fract_part, int_part->number, NULL);
 			rem = BN_get_word(int_part->number);
 			p = get_digit(rem, digits, base);
@@ -402,8 +404,8 @@ print_ascii(FILE *f, const struct number *n)
 	v = BN_dup(n->number);
 	bn_checkp(v);
 
-	if (BN_cmp(v, &zero) < 0)
-		bn_check(BN_sub(v, &zero, v));
+	if (BN_is_negative(v))
+		BN_set_negative(v, 0);
 
 	numbits = BN_num_bytes(v) * 8;
 	while (numbits > 0) {

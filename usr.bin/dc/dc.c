@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: dc.c,v 1.11 2009/10/27 23:59:37 deraadt Exp $	*/
 
 /*
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/dc/dc.c 315135 2017-03-12 05:36:31Z pfg $");
 
 #include <sys/stat.h>
 
@@ -39,9 +40,9 @@ static void		 usage(void);
 
 extern char		*__progname;
 
-struct source		 src;
+static struct source	 src;
 
-struct option long_options[] =
+static const struct option long_options[] =
 {
 	{"expression",		required_argument,	NULL,	'e'},
 	{"file",		required_argument,	NULL,	'f'},
@@ -120,8 +121,8 @@ main(int argc, char *argv[])
 
 	if (!preproc_done)
 		init_bmachine(extended_regs);
-	setlinebuf(stdout);
-	setlinebuf(stderr);
+	(void)setvbuf(stdout, NULL, _IOLBF, 0);
+	(void)setvbuf(stderr, NULL, _IOLBF, 0);
 
 	if (argc > 1)
 		usage();

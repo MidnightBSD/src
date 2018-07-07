@@ -1,4 +1,5 @@
-/*	$OpenBSD: bcode.c,v 1.40 2009/10/27 23:59:37 deraadt Exp $	*/
+/* $MidnightBSD$ */
+/*	$OpenBSD: bcode.c,v 1.45 2012/11/07 11:06:14 otto Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/dc/bcode.c 315135 2017-03-12 05:36:31Z pfg $");
 
 #include <err.h>
 #include <limits.h>
@@ -29,9 +30,7 @@ __MBSDID("$MidnightBSD$");
 
 #include "extern.h"
 
-BIGNUM		zero;
-
-#define __inline	
+/* #define	DEBUGGING */
 
 #define MAX_ARRAY_INDEX		2048
 #define READSTACK_SIZE		8
@@ -250,8 +249,12 @@ init_bmachine(bool extended_registers)
 	if (bmachine.readstack == NULL)
 		err(1, NULL);
 	bmachine.obase = bmachine.ibase = 10;
-	BN_init(&zero);
-	bn_check(BN_zero(&zero));
+}
+
+u_int
+bmachine_scale(void)
+{
+	return bmachine.scale;
 }
 
 /* Reset the things needed before processing a (new) file */
@@ -407,7 +410,7 @@ split_number(const struct number *n, BIGNUM *i, BIGNUM *f)
 	}
 }
 
-__inline void
+void
 normalize(struct number *n, u_int s)
 {
 
@@ -426,8 +429,7 @@ get_ulong(struct number *n)
 void
 negate(struct number *n)
 {
-
-	bn_check(BN_sub(n->number, &zero, n->number));
+	BN_set_negative(n->number, !BN_is_negative(n->number));
 }
 
 static __inline void
@@ -581,7 +583,7 @@ set_scale(void)
 
 	n = pop_number();
 	if (n != NULL) {
-		if (BN_cmp(n->number, &zero) < 0)
+		if (BN_is_negative(n->number))
 			warnx("scale must be a nonnegative number");
 		else {
 			scale = get_ulong(n);
@@ -693,7 +695,7 @@ count_digits(const struct number *n)
 	u_int i;
 
 	if (BN_is_zero(n->number))
-		return (n->scale ? n->scale : 1);
+		return n->scale ? n->scale : 1;
 
 	int_part = new_number();
 	fract_part = new_number();
@@ -878,7 +880,7 @@ load_array(void)
 		if (inumber == NULL)
 			return;
 		idx = get_ulong(inumber);
-		if (BN_cmp(inumber->number, &zero) < 0)
+		if (BN_is_negative(inumber->number))
 			warnx("negative idx");
 		else if (idx == BN_MASK2 || idx > MAX_ARRAY_INDEX)
 			warnx("idx too big");
@@ -917,7 +919,7 @@ store_array(void)
 			return;
 		}
 		idx = get_ulong(inumber);
-		if (BN_cmp(inumber->number, &zero) < 0) {
+		if (BN_is_negative(inumber->number)) {
 			warnx("negative idx");
 			stack_free_value(value);
 		} else if (idx == BN_MASK2 || idx > MAX_ARRAY_INDEX) {
@@ -959,9 +961,8 @@ badd(void)
 	struct number	*a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -986,9 +987,8 @@ bsub(void)
 	struct number	*a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1009,7 +1009,7 @@ bsub(void)
 }
 
 void
-bmul_number(struct number *r, struct number *a, struct number *b)
+bmul_number(struct number *r, struct number *a, struct number *b, u_int scale)
 {
 	BN_CTX *ctx;
 
@@ -1023,11 +1023,9 @@ bmul_number(struct number *r, struct number *a, struct number *b)
 	bn_check(BN_mul(r->number, a->number, b->number, ctx));
 	BN_CTX_free(ctx);
 
-	if (rscale > bmachine.scale && rscale > ascale && rscale > bscale) {
-		r->scale = rscale;
-		normalize(r, max(bmachine.scale, max(ascale, bscale)));
-	} else
-		r->scale = rscale;
+	r->scale = rscale;
+	if (rscale > bmachine.scale && rscale > ascale && rscale > bscale)
+		normalize(r, max(scale, max(ascale, bscale)));
 }
 
 static void
@@ -1036,9 +1034,8 @@ bmul(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1046,7 +1043,7 @@ bmul(void)
 	}
 
 	r = new_number();
-	bmul_number(r, a, b);
+	bmul_number(r, a, b, bmachine.scale);
 
 	push_number(r);
 	free_number(a);
@@ -1061,9 +1058,8 @@ bdiv(void)
 	u_int scale;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1098,9 +1094,8 @@ bmod(void)
 	u_int scale;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1135,9 +1130,8 @@ bdivmod(void)
 	u_int scale;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1171,29 +1165,40 @@ bdivmod(void)
 static void
 bexp(void)
 {
-	struct number *a, *p, *r;
-	u_int scale;
-	bool neg;
+	struct number	*a, *p;
+	struct number	*r;
+	bool		neg;
+	u_int		rscale;
 
 	p = pop_number();
-	if (p == NULL) {
+	if (p == NULL)
 		return;
-	}
 	a = pop_number();
 	if (a == NULL) {
 		push_number(p);
 		return;
 	}
 
-	if (p->scale != 0)
-		warnx("Runtime warning: non-zero scale in exponent");
+	if (p->scale != 0) {
+		BIGNUM *i, *f;
+		i = BN_new();
+		bn_checkp(i);
+		f = BN_new();
+		bn_checkp(f);
+		split_number(p, i, f);
+		if (!BN_is_zero(f))
+			warnx("Runtime warning: non-zero fractional part in exponent");
+		BN_free(i);
+		BN_free(f);
+	}
+
 	normalize(p, 0);
 
 	neg = false;
-	if (BN_cmp(p->number, &zero) < 0) {
+	if (BN_is_negative(p->number)) {
 		neg = true;
 		negate(p);
-		scale = bmachine.scale;
+		rscale = bmachine.scale;
 	} else {
 		/* Posix bc says min(a.scale * b, max(a.scale, scale) */
 		u_long b;
@@ -1201,30 +1206,37 @@ bexp(void)
 
 		b = BN_get_word(p->number);
 		m = max(a->scale, bmachine.scale);
-		scale = a->scale * (u_int)b;
-		if (scale > m || (a->scale > 0 && (b == BN_MASK2 ||
+		rscale = a->scale * (u_int)b;
+		if (rscale > m || (a->scale > 0 && (b == BN_MASK2 ||
 		    b > UINT_MAX)))
-			scale = m;
+			rscale = m;
 	}
 
 	if (BN_is_zero(p->number)) {
 		r = new_number();
 		bn_check(BN_one(r->number));
-		normalize(r, scale);
+		normalize(r, rscale);
 	} else {
+		u_int ascale, mscale;
+
+		ascale = a->scale;
 		while (!BN_is_bit_set(p->number, 0)) {
-			bmul_number(a, a, a);
+			ascale *= 2;
+			bmul_number(a, a, a, ascale);
 			bn_check(BN_rshift1(p->number, p->number));
 		}
 
 		r = dup_number(a);
-		normalize(r, scale);
 		bn_check(BN_rshift1(p->number, p->number));
 
+		mscale = ascale;
 		while (!BN_is_zero(p->number)) {
-			bmul_number(a, a, a);
-			if (BN_is_bit_set(p->number, 0))
-				bmul_number(r, r, a);
+			ascale *= 2;
+			bmul_number(a, a, a, ascale);
+			if (BN_is_bit_set(p->number, 0)) {
+				mscale += ascale;
+				bmul_number(r, r, a, mscale);
+			}
 			bn_check(BN_rshift1(p->number, p->number));
 		}
 
@@ -1237,13 +1249,18 @@ bexp(void)
 			bn_check(BN_one(one));
 			ctx = BN_CTX_new();
 			bn_checkp(ctx);
-			scale_number(one, r->scale + scale);
-			normalize(r, scale);
-			bn_check(BN_div(r->number, NULL, one, r->number, ctx));
+			scale_number(one, r->scale + rscale);
+
+			if (BN_is_zero(r->number))
+				warnx("divide by zero");
+			else
+				bn_check(BN_div(r->number, NULL, one,
+				    r->number, ctx));
 			BN_free(one);
 			BN_CTX_free(ctx);
+			r->scale = rscale;
 		} else
-			normalize(r, scale);
+			normalize(r, rscale);
 	}
 	push_number(r);
 	free_number(a);
@@ -1276,13 +1293,12 @@ bsqrt(void)
 
 	onecount = 0;
 	n = pop_number();
-	if (n == NULL) {
+	if (n == NULL)
 		return;
-	}
 	if (BN_is_zero(n->number)) {
 		r = new_number();
 		push_number(r);
-	} else if (BN_cmp(n->number, &zero) < 0)
+	} else if (BN_is_negative(n->number))
 		warnx("square root of negative number");
 	else {
 		scale = max(bmachine.scale, n->scale);
@@ -1319,9 +1335,8 @@ not(void)
 	struct number *a;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	a->scale = 0;
 	bn_check(BN_set_word(a->number, BN_get_word(a->number) ? 0 : 1));
 	push_number(a);
@@ -1340,9 +1355,8 @@ equal_numbers(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1360,9 +1374,8 @@ less_numbers(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1380,9 +1393,8 @@ lesseq_numbers(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1713,9 +1725,8 @@ eval_tos(void)
 	char *p;
 
 	p = pop_string();
-	if (p == NULL)
-		return;
-	eval_string(p);
+	if (p != NULL)
+		eval_string(p);
 }
 
 void
