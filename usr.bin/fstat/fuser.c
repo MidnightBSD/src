@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Stanislav Sedov <stas@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/fstat/fuser.c 227239 2011-11-06 18:49:36Z ed $");
 
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -52,7 +53,7 @@ __MBSDID("$MidnightBSD$");
 /*
  * File access mode flags table.
  */
-struct {
+static const struct {
 	int	flag;
 	char	ch;
 } fflags[] = {
@@ -67,7 +68,7 @@ struct {
 /*
  * Usage flags translation table.
  */
-struct {
+static const struct {
 	int	flag;
 	char	ch;
 } uflags[] = {

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 1988, 1993
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/fstat/fstat.c 250223 2013-05-03 21:11:57Z jhb $");
 
 #include <sys/param.h>
 #include <sys/user.h>
@@ -57,13 +58,13 @@ __MBSDID("$MidnightBSD$");
 
 #include "functions.h"
 
-int 	fsflg,	/* show files on same filesystem as file(s) argument */
-	pflg,	/* show files open by a particular pid */
-	uflg;	/* show files open by a particular (effective) user */
-int 	checkfile; /* true if restricting to particular files or filesystems */
-int	nflg;	/* (numerical) display f.s. and rdev as dev_t */
-int	mflg;	/* include memory-mapped files */
-int	vflg;	/* be verbose */
+static int 	fsflg,	/* show files on same filesystem as file(s) argument */
+		pflg,	/* show files open by a particular pid */
+		uflg;	/* show files open by a particular (effective) user */
+static int 	checkfile; /* restrict to particular files or filesystems */
+static int	nflg;	/* (numerical) display f.s. and rdev as dev_t */
+static int	mflg;	/* include memory-mapped files */
+static int	vflg;	/* be verbose */
 
 typedef struct devs {
 	struct devs	*next;
@@ -72,8 +73,8 @@ typedef struct devs {
 	const char	*name;
 } DEVS;
 
-DEVS *devs;
-char *memf, *nlistf;
+static DEVS *devs;
+static char *memf, *nlistf;
 
 static int	getfname(const char *filename);
 static void	dofiles(struct procstat *procstat, struct kinfo_proc *p);
@@ -83,6 +84,8 @@ static void	print_file_info(struct procstat *procstat,
 static void	print_pipe_info(struct procstat *procstat,
     struct filestat *fst);
 static void	print_pts_info(struct procstat *procstat,
+    struct filestat *fst);
+static void	print_sem_info(struct procstat *procstat,
     struct filestat *fst);
 static void	print_shm_info(struct procstat *procstat,
     struct filestat *fst);
@@ -152,7 +155,7 @@ do_fstat(int argc, char **argv)
 			if (getfname(*argv))
 				checkfile = 1;
 		}
-		if (!checkfile)	/* file(s) specified, but none accessable */
+		if (!checkfile)	/* file(s) specified, but none accessible */
 			exit(1);
 	}
 
@@ -244,7 +247,7 @@ print_file_info(struct procstat *procstat, struct filestat *fst,
 		for (d = devs; d != NULL; d = d->next)
 			if (d->fsid == vn.vn_fsid) {
 				fsmatch = 1;
-				if ((unsigned)d->ino == vn.vn_fileid) {
+				if (d->ino == vn.vn_fileid) {
 					filename = d->name;
 					break;
 				}
@@ -293,6 +296,9 @@ print_file_info(struct procstat *procstat, struct filestat *fst,
 		break;
 	case PS_FST_TYPE_SHM:
 		print_shm_info(procstat, fst);
+		break;
+	case PS_FST_TYPE_SEM:
+		print_sem_info(procstat, fst);
 		break;
 	default:	
 		if (vflg)
@@ -416,10 +422,34 @@ print_pts_info(struct procstat *procstat, struct filestat *fst)
 	}
 	printf("* pseudo-terminal master ");
 	if (nflg || !*pts.devname) {
-		printf("%10d,%-2d", major(pts.dev), minor(pts.dev));
+		printf("%#10jx", (uintmax_t)pts.dev);
 	} else {
 		printf("%10s", pts.devname);
 	}
+	print_access_flags(fst->fs_fflags);
+}
+
+static void
+print_sem_info(struct procstat *procstat, struct filestat *fst)
+{
+	struct semstat sem;
+	char errbuf[_POSIX2_LINE_MAX];
+	char mode[15];
+	int error;
+
+	error = procstat_get_sem_info(procstat, fst, &sem, errbuf);
+	if (error != 0) {
+		printf("* error");
+		return;
+	}
+	if (nflg) {
+		printf("             ");
+		(void)snprintf(mode, sizeof(mode), "%o", sem.mode);
+	} else {
+		printf(" %-15s", fst->fs_path != NULL ? fst->fs_path : "-");
+		strmode(sem.mode, mode);
+	}
+	printf(" %10s %6u", mode, sem.value);
 	print_access_flags(fst->fs_fflags);
 }
 
@@ -470,7 +500,7 @@ print_vnode_info(struct procstat *procstat, struct filestat *fst)
 	}
 
 	if (nflg)
-		printf(" %2d,%-2d", major(vn.vn_fsid), minor(vn.vn_fsid));
+		printf(" %#5jx", (uintmax_t)vn.vn_fsid);
 	else if (vn.vn_mntdir != NULL)
 		(void)printf(" %-8s", vn.vn_mntdir);
 
@@ -486,7 +516,7 @@ print_vnode_info(struct procstat *procstat, struct filestat *fst)
 
 	if (vn.vn_type == PS_FST_VTYPE_VBLK || vn.vn_type == PS_FST_VTYPE_VCHR) {
 		if (nflg || !*vn.vn_devname)
-			printf("  %2d,%-2d", major(vn.vn_dev), minor(vn.vn_dev));
+			printf(" %#6jx", (uintmax_t)vn.vn_dev);
 		else {
 			printf(" %6s", vn.vn_devname);
 		}
