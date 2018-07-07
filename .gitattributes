@@ -75988,8 +75988,10 @@ usr.bin/gzip/gzexe -text
 usr.bin/gzip/gzexe.1 -text
 usr.bin/gzip/gzip.1 -text
 usr.bin/gzip/gzip.c -text
+usr.bin/gzip/tests/Makefile svneol=native#text/plain
 usr.bin/gzip/unbzip2.c -text
 usr.bin/gzip/unpack.c -text
+usr.bin/gzip/unxz.c svneol=native#text/plain
 usr.bin/gzip/zdiff -text
 usr.bin/gzip/zdiff.1 -text
 usr.bin/gzip/zforce -text

@@ -1,8 +1,9 @@
 #!/bin/sh -
 #
-# $NetBSD: zmore,v 1.3 2004/03/29 09:59:42 wiz Exp $
-# $OpenBSD: zmore,v 1.4 2003/07/29 07:42:45 otto Exp $
+# $NetBSD: zmore,v 1.5 2013/12/06 13:33:15 pettai Exp $
 #
+# $OpenBSD: zmore,v 1.6 2008/08/20 09:22:02 mpf Exp $
+# $MidnightBSD$
 #-
 # Copyright (c) 2003 Todd C. Miller <Todd.Miller@courtesan.com>
 #
@@ -22,7 +23,7 @@
 # Agency (DARPA) and Air Force Research Laboratory, Air Force
 # Materiel Command, USAF, under agreement number F39502-99-1-0512.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/gzip/zmore 274262 2014-11-08 00:51:31Z delphij $
 
 # Pull out any command line flags so we can pass them to more/less
 flags=
@@ -42,15 +43,21 @@ while test $# -ne 0; do
 	esac
 done
 
+if [ `basename $0` = "zless" ] ; then
+	pager=${PAGER-less}
+else
+	pager=${PAGER-more}
+fi
+
 # No files means read from stdin
 if [ $# -eq 0 ]; then
-	gzip -cdfq 2>&1 | ${PAGER-more} $flags
+	gzip -cdfq 2>&1 | $pager $flags
 	exit 0
 fi
 
 oterm=`stty -g 2>/dev/null`
 while test $# -ne 0; do
-	gzip -cdfq "$1" 2>&1 | ${PAGER-more} $flags
+	gzip -cdfq "$1" 2>&1 | $pager $flags
 	prev="$1"
 	shift
 	if tty -s && test -n "$oterm" -a $# -gt 0; then

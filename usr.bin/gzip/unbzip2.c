@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: unbzip2.c,v 1.13 2009/12/05 03:23:37 mrg Exp $	*/
 
 /*-
@@ -28,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/gzip/unbzip2.c 206387 2010-04-07 22:54:53Z delphij $
  */
 
 /* This file is #included by gzip.c */

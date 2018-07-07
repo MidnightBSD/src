@@ -1,13 +1,14 @@
-#	$NetBSD: Makefile,v 1.13 2009/04/14 22:15:20 lukem Exp $
 # $MidnightBSD$
+#	$NetBSD: Makefile,v 1.18 2013/11/13 11:12:24 pettai Exp $
+# $FreeBSD: stable/10/usr.bin/gzip/Makefile 292588 2015-12-22 08:03:23Z delphij $
 
 .include <bsd.own.mk>
 
 PROG=		gzip
 MAN=		gzip.1 gzexe.1 zdiff.1 zforce.1 zmore.1 znew.1
 
-DPADD=		${LIBZ}
-LDADD=		-lz
+DPADD=		${LIBZ} ${LIBLZMA} ${LIBPTHREAD}
+LDADD=		-lz -llzma -lpthread
 
 .if ${MK_BZIP2_SUPPORT} != "no"
 DPADD+=		${LIBBZ2}
@@ -21,11 +22,16 @@ SCRIPTS=	gzexe zdiff zforce zmore znew
 MLINKS+=	gzip.1 gunzip.1 \
 		gzip.1 gzcat.1 \
 		gzip.1 zcat.1 \
-		zdiff.1 zcmp.1
+		zdiff.1 zcmp.1 \
+		zmore.1 zless.1
 
 LINKS+=		${BINDIR}/gzip ${BINDIR}/gunzip \
 		${BINDIR}/gzip ${BINDIR}/gzcat \
 		${BINDIR}/gzip ${BINDIR}/zcat \
 		${BINDIR}/zdiff ${BINDIR}/zcmp
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

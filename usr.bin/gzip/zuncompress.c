@@ -1,4 +1,5 @@
-/*	$NetBSD: zuncompress.c,v 1.8 2010/11/06 21:42:32 mrg Exp $ */
+/* $MidnightBSD$ */
+/*	$NetBSD: zuncompress.c,v 1.11 2011/08/16 13:55:02 joerg Exp $ */
 
 /*-
  * Copyright (c) 1985, 1986, 1992, 1993
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  * from: NetBSD: zopen.c,v 1.8 2003/08/07 11:13:29 agc Exp
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/gzip/zuncompress.c 327172 2017-12-25 04:34:10Z delphij $
  */
 
 /* This file is #included by gzip.c */
@@ -77,10 +78,9 @@ static char_type magic_header[] =
 static char_type rmask[9] =
 	{0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
 
-/* XXX zuncompress global */
-off_t total_compressed_bytes;
-size_t compressed_prelen;
-char *compressed_pre;
+static off_t total_compressed_bytes;
+static size_t compressed_prelen;
+static char *compressed_pre;
 
 struct s_zstate {
 	FILE *zs_fp;			/* File stream for I/O */
@@ -146,7 +146,7 @@ zuncompress(FILE *in, FILE *out, char *pre, size_t prelen,
 	else
 		compressed_pre = NULL;
 
-	while ((bin = fread(buf, 1, sizeof(buf), in)) != 0) {
+	while ((bin = fread(buf, 1, BUFSIZE, in)) != 0) {
 		if (tflag == 0 && (off_t)fwrite(buf, 1, bin, out) != bin) {
 			free(buf);
 			return -1;
@@ -280,7 +280,7 @@ zread(void *cookie, char *rbp, int num)
 			if (zs->u.r.zs_code > zs->zs_free_ent ||
 			    zs->u.r.zs_oldcode == -1) {
 				/* Bad stream. */
-				errno = EINVAL;
+				errno = EFTYPE;
 				return (-1);
 			}
 			*zs->u.r.zs_stackp++ = zs->u.r.zs_finchar;
