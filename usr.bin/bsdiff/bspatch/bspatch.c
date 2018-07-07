@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2005 Colin Percival
  * All rights reserved
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/bsdiff/bspatch/bspatch.c 306215 2016-09-22 21:16:54Z emaste $");
 
 #if defined(__FreeBSD__)
 #include <sys/param.h>
@@ -83,6 +84,14 @@ static off_t offtin(u_char *buf)
 	return (y);
 }
 
+static void
+usage(void)
+{
+
+	fprintf(stderr, "usage: bspatch oldfile newfile patchfile\n");
+	exit(1);
+}
+
 int main(int argc, char *argv[])
 {
 	FILE *f, *cpf, *dpf, *epf;
@@ -101,7 +110,8 @@ int main(int argc, char *argv[])
 	cap_rights_t rights_dir, rights_ro, rights_wr;
 #endif
 
-	if(argc!=4) errx(1,"usage: %s oldfile newfile patchfile\n",argv[0]);
+	if (argc != 4)
+		usage();
 
 	/* Open patch file */
 	if ((f = fopen(argv[3], "rb")) == NULL)
@@ -228,7 +238,7 @@ int main(int argc, char *argv[])
 			    (cbz2err != BZ_STREAM_END)))
 				errx(1, "Corrupt patch");
 			ctrl[i] = offtin(buf);
-		};
+		}
 
 		/* Sanity-check */
 		if (ctrl[0] < 0 || ctrl[0] > INT_MAX ||
@@ -267,7 +277,7 @@ int main(int argc, char *argv[])
 		/* Adjust pointers */
 		newpos+=ctrl[1];
 		oldpos+=ctrl[2];
-	};
+	}
 
 	/* Clean up the bzip2 reads */
 	BZ2_bzReadClose(&cbz2err, cpfbz2);
