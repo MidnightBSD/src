@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/env/envopts.c,v 1.2.2.1 2005/07/25 18:09:09 gad Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.bin/env/envopts.c 280027 2015-03-15 11:43:51Z jilles $");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -373,9 +373,9 @@ str_done:
 	*nextarg = NULL;
 
 	/* Update optind/argc/argv in the calling routine */
-	*origind = 1;
-	*origc += addcount;
+	*origc += addcount - *origind + 1;
 	*origv = newargv;
+	*origind = 1;
 }
 
 /**
