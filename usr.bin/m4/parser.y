@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /* $OpenBSD: parser.y,v 1.7 2012/04/12 17:00:11 espie Exp $ */
 /*

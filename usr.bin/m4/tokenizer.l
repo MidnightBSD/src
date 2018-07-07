@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %option nounput noinput
 %{
 /* $OpenBSD: tokenizer.l,v 1.8 2012/04/12 17:00:11 espie Exp $ */
