@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)lam.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/lam/lam.c 227240 2011-11-06 18:49:41Z ed $");
 
 /*
  *	lam - laminate files
@@ -55,7 +56,7 @@ __MBSDID("$MidnightBSD$");
 #define	MAXOFILES	20
 #define	BIGBUFSIZ	5 * BUFSIZ
 
-struct	openfile {		/* open file structure */
+static struct openfile {	/* open file structure */
 	FILE	*fp;		/* file pointer */
 	short	eof;		/* eof flag */
 	short	pad;		/* pad flag for missing columns */
@@ -64,10 +65,10 @@ struct	openfile {		/* open file structure */
 	const char *format;	/* printf(3) style string spec. */
 }	input[MAXOFILES];
 
-int	morefiles;		/* set by getargs(), changed by gatherline() */
-int	nofinalnl;		/* normally append \n to each output line */
-char	line[BIGBUFSIZ];
-char	*linep;
+static int	morefiles;	/* set by getargs(), changed by gatherline() */
+static int	nofinalnl;	/* normally append \n to each output line */
+static char	line[BIGBUFSIZ];
+static char	*linep;
 
 static char    *gatherline(struct openfile *);
 static void	getargs(char *[]);
