@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010, 2012  David E. O'Brien
  * Copyright (c) 1980, 1992, 1993
@@ -75,13 +76,12 @@ static int child;
 static const char *fname;
 static char *fmfname;
 static int fflg, qflg, ttyflg;
-static int usesleep, rawout;
+static int usesleep, rawout, showexit;
 
 static struct termios tt;
 
 static void done(int) __dead2;
 static void doshell(char **);
-static void fail(void);
 static void finish(void);
 static void record(FILE *, char *, size_t, int);
 static void consume(FILE *, off_t, char *, int);
@@ -109,6 +109,7 @@ main(int argc, char *argv[])
 	flushtime = 30;
 	fm_fd = -1;	/* Shut up stupid "may be used uninitialized" GCC
 			   warning. (not needed w/clang) */
+	showexit = 0;
 
 	while ((ch = getopt(argc, argv, "adfkpqrt:")) != -1)
 		switch(ch) {
@@ -159,17 +160,14 @@ main(int argc, char *argv[])
 		asprintf(&fmfname, "%s.filemon", fname);
 		if (!fmfname)
 			err(1, "%s.filemon", fname);
-		if ((fm_fd = open("/dev/filemon", O_RDWR)) == -1)
+		if ((fm_fd = open("/dev/filemon", O_RDWR | O_CLOEXEC)) == -1)
 			err(1, "open(\"/dev/filemon\", O_RDWR)");
-		if ((fm_log = open(fmfname, O_WRONLY | O_CREAT | O_TRUNC,
+		if ((fm_log = open(fmfname,
+		    O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
 		    S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1)
 			err(1, "open(%s)", fmfname);
 		if (ioctl(fm_fd, FILEMON_SET_FD, &fm_log) < 0)
 			err(1, "Cannot set filemon log file descriptor");
-
-		/* Set up these two fd's to close on exec. */
-		(void)fcntl(fm_fd, F_SETFD, FD_CLOEXEC);
-		(void)fcntl(fm_log, F_SETFD, FD_CLOEXEC);
 	}
 
 	if (pflg)
@@ -197,7 +195,8 @@ main(int argc, char *argv[])
 			(void)fprintf(fscript, "Script started on %s",
 			    ctime(&tvec));
 			if (argv[0]) {
-				fprintf(fscript, "command: ");
+				showexit = 1;
+				fprintf(fscript, "Command: ");
 				for (k = 0 ; argv[k] ; ++k)
 					fprintf(fscript, "%s%s", k ? " " : "",
 						argv[k]);
@@ -222,12 +221,18 @@ main(int argc, char *argv[])
 		warn("fork");
 		done(1);
 	}
-	if (child == 0)
-		doshell(argv);
-	close(slave);
+	if (child == 0) {
+		if (fflg) {
+			int pid;
 
-	if (fflg && ioctl(fm_fd, FILEMON_SET_PID, &child) < 0)
-		err(1, "Cannot set filemon PID");
+			pid = getpid();
+			if (ioctl(fm_fd, FILEMON_SET_PID, &pid) < 0)
+				err(1, "Cannot set filemon PID");
+		}
+
+		doshell(argv);
+	}
+	close(slave);
 
 	start = tvec = time(0);
 	readstdin = 1;
@@ -236,12 +241,15 @@ main(int argc, char *argv[])
 		FD_SET(master, &rfd);
 		if (readstdin)
 			FD_SET(STDIN_FILENO, &rfd);
-		if ((!readstdin && ttyflg) || flushtime > 0) {
-			tv.tv_sec = !readstdin && ttyflg ? 1 :
-			    flushtime - (tvec - start);
+		if (!readstdin && ttyflg) {
+			tv.tv_sec = 1;
 			tv.tv_usec = 0;
 			tvp = &tv;
 			readstdin = 1;
+		} else if (flushtime > 0) {
+			tv.tv_sec = flushtime - (tvec - start);
+			tv.tv_usec = 0;
+			tvp = &tv;
 		} else {
 			tvp = NULL;
 		}
@@ -334,14 +342,7 @@ doshell(char **av)
 		execl(shell, shell, "-i", (char *)NULL);
 		warn("%s", shell);
 	}
-	fail();
-}
-
-static void
-fail(void)
-{
-	(void)kill(0, SIGTERM);
-	done(1);
+	exit(1);
 }
 
 static void
@@ -355,9 +356,13 @@ done(int eno)
 	if (rawout)
 		record(fscript, NULL, 0, 'e');
 	if (!qflg) {
-		if (!rawout)
+		if (!rawout) {
+			if (showexit)
+				(void)fprintf(fscript, "\nCommand exit status:"
+				    " %d", eno);
 			(void)fprintf(fscript,"\nScript done on %s",
 			    ctime(&tvec));
+		}
 		(void)printf("\nScript done, output file is %s\n", fname);
 		if (fflg) {
 			(void)printf("Filemon done, output file is %s\n",
