@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: stable/10/usr.bin/mkcsmapper/Makefile 250938 2013-05-23 18:07:01Z ed $
 
 .PATH: ${.CURDIR}/../../lib/libc/iconv
