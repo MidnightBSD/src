@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)quit.c	8.2 (Berkeley) 4/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/quit.c 303303 2016-07-25 15:04:15Z pfg $");
 
 #include "rcv.h"
 #include <fcntl.h>
@@ -228,7 +229,8 @@ quit(void)
 			return;
 		}
 		(void)Fclose(obuf);
-		(void)close(open(mbox, O_CREAT | O_TRUNC | O_WRONLY, 0600));
+		if ((fd = open(mbox, O_CREAT | O_TRUNC | O_WRONLY, 0600)) >= 0)
+			(void)close(fd);
 		if ((obuf = Fopen(mbox, "r+")) == NULL) {
 			warn("%s", mbox);
 			(void)Fclose(ibuf);
