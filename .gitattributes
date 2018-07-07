@@ -76061,6 +76061,12 @@ usr.bin/iscsictl/token.l -text
 usr.bin/join/Makefile -text
 usr.bin/join/join.1 -text
 usr.bin/join/join.c -text
+usr.bin/join/tests/Makefile svneol=native#text/plain
+usr.bin/join/tests/legacy_test.sh svneol=native#text/plain
+usr.bin/join/tests/regress.1.in svneol=native#text/plain
+usr.bin/join/tests/regress.2.in svneol=native#text/plain
+usr.bin/join/tests/regress.out -text
+usr.bin/join/tests/regress.sh svneol=native#text/plain
 usr.bin/jot/Makefile -text
 usr.bin/jot/jot.1 -text
 usr.bin/jot/jot.c -text
