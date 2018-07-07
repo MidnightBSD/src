@@ -1,5 +1,6 @@
+.\" $MidnightBSD$
 .\"-
-.\" Copyright (c) 1999 Dag-Erling Coïdan Smørgrav
+.\" Copyright (c) 1999 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -25,9 +26,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/sockstat/sockstat.1 294231 2016-01-17 18:37:36Z tuexen $
 .\"
-.Dd May 16, 2012
+.Dd August 27, 2015
 .Dt SOCKSTAT 1
 .Os
 .Sh NAME
@@ -35,7 +36,7 @@
 .Nd list open sockets
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46cLlu
+.Op Fl 46cLlsu
 .Op Fl j Ar jid
 .Op Fl p Ar ports
 .Op Fl P Ar protocols
@@ -61,7 +62,7 @@ Show connected sockets.
 .It Fl j Ar jid
 Show only sockets belonging to the specified jail ID.
 .It Fl L
-Only show Internet sockets if the local or foreign addresses are not
+Only show Internet sockets if the local and foreign addresses are not
 in the loopback network prefix
 .Li 127.0.0.0/8 ,
 or do not contain the IPv6 loopback address
@@ -69,7 +70,7 @@ or do not contain the IPv6 loopback address
 .It Fl l
 Show listening sockets.
 .It Fl p Ar ports
-Only show Internet sockets if either the local or foreign port number
+Only show Internet sockets if the local or foreign port number
 is on the specified list.
 The
 .Ar ports
@@ -83,6 +84,9 @@ The
 argument is a comma-separated list of protocol names,
 as they are defined in
 .Xr protocols 5 .
+.It Fl s
+Display the protocol state, if applicable.
+This is currently only implemented for SCTP and TCP.
 .It Fl u
 Show
 .Dv AF_LOCAL
@@ -119,7 +123,9 @@ The process ID of the command which holds the socket.
 The file descriptor number of the socket.
 .It Li PROTO
 The transport protocol associated with the socket for Internet
-sockets, or the type of socket (stream or datagram) for
+sockets, or the type of socket
+.Pq stream, datagram, or seqpacket
+for
 .Ux
 sockets.
 .It Li LOCAL ADDRESS
