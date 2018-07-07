@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Paul Kranenburg
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ldd/ldd.c 300458 2016-05-23 05:19:37Z truckman $");
 
 #include <sys/wait.h>
 
@@ -49,12 +50,6 @@ __MBSDID("$MidnightBSD$");
 
 #include "extern.h"
 
-#ifdef COMPAT_32BIT
-#define	LD_	"LD_32_"
-#else
-#define	LD_	"LD_"
-#endif
-
 /*
  * 32-bit ELF data structures can only be used if the system header[s] declare
  * them.  There is no official macro for determining whether they are declared,
@@ -63,6 +58,16 @@ __MBSDID("$MidnightBSD$");
 #ifdef ELF32_R_TYPE
 #define	ELF32_SUPPORTED
 #endif
+
+#define	LDD_SETENV(name, value, overwrite) do {		\
+	setenv("LD_" name, value, overwrite);		\
+	setenv("LD_32_" name, value, overwrite);	\
+} while (0)
+
+#define	LDD_UNSETENV(name) do {		\
+	unsetenv("LD_" name);		\
+	unsetenv("LD_32_" name);	\
+} while (0)
 
 static int	is_executable(const char *fname, int fd, int *is_shlib,
 		    int *type);
@@ -79,10 +84,10 @@ static void	usage(void);
 static int
 execldd32(char *file, char *fmt1, char *fmt2, int aflag, int vflag)
 {
-	char *argv[8];
+	char *argv[9];
 	int i, rval, status;
 
-	unsetenv(LD_ "TRACE_LOADED_OBJECTS");
+	LDD_UNSETENV("TRACE_LOADED_OBJECTS");
 	rval = 0;
 	i = 0;
 	argv[i++] = strdup(_PATH_LDD32);
@@ -121,7 +126,7 @@ execldd32(char *file, char *fmt1, char *fmt2, int aflag, int vflag)
 	}
 	while (i--)
 		free(argv[i]);
-	setenv(LD_ "TRACE_LOADED_OBJECTS", "yes", 1);
+	LDD_SETENV("TRACE_LOADED_OBJECTS", "yes", 1);
 	return (rval);
 }
 #endif
@@ -210,15 +215,15 @@ main(int argc, char *argv[])
 		}
 
 		/* ld.so magic */
-		setenv(LD_ "TRACE_LOADED_OBJECTS", "yes", 1);
+		LDD_SETENV("TRACE_LOADED_OBJECTS", "yes", 1);
 		if (fmt1 != NULL)
-			setenv(LD_ "TRACE_LOADED_OBJECTS_FMT1", fmt1, 1);
+			LDD_SETENV("TRACE_LOADED_OBJECTS_FMT1", fmt1, 1);
 		if (fmt2 != NULL)
-			setenv(LD_ "TRACE_LOADED_OBJECTS_FMT2", fmt2, 1);
+			LDD_SETENV("TRACE_LOADED_OBJECTS_FMT2", fmt2, 1);
 
-		setenv(LD_ "TRACE_LOADED_OBJECTS_PROGNAME", *argv, 1);
+		LDD_SETENV("TRACE_LOADED_OBJECTS_PROGNAME", *argv, 1);
 		if (aflag)
-			setenv(LD_ "TRACE_LOADED_OBJECTS_ALL", "1", 1);
+			LDD_SETENV("TRACE_LOADED_OBJECTS_ALL", "1", 1);
 		else if (fmt1 == NULL && fmt2 == NULL)
 			/* Default formats */
 			printf("%s:\n", *argv);
@@ -373,9 +378,19 @@ is_executable(const char *fname, int fd, int *is_shlib, int *type)
 			return (0);
 		}
 		if (hdr.elf.e_type == ET_DYN) {
-			if (hdr.elf.e_ident[EI_OSABI] == ELFOSABI_FREEBSD) {
+			switch (hdr.elf.e_ident[EI_OSABI]) {
+			case ELFOSABI_FREEBSD:
 				*is_shlib = 1;
 				return (1);
+#ifdef __ARM_EABI__
+			case ELFOSABI_NONE:
+				if (hdr.elf.e_machine != EM_ARM)
+					break;
+				if (((hdr.elf.e_flags & 0xff000000) >> 24) < 4)
+					break;
+				*is_shlib = 1;
+				return (1);
+#endif
 			}
 			warnx("%s: not a FreeBSD ELF shared object", fname);
 			return (0);

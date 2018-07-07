@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 1996-1997 John D. Polstra.  All rights reserved.
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ldd/sods.c 264785 2014-04-22 21:25:03Z brueffer $");
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -204,7 +205,6 @@ dump_file(const char *fname)
 	warnx("%s: this is an ELF program; use objdump to examine", fname);
 	++error_count;
 	munmap(objbase, sb.st_size);
-	close(fd);
 	return;
     }
 
