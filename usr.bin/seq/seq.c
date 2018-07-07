@@ -1,4 +1,5 @@
-/*	$NetBSD: seq.c,v 1.5 2008/07/21 14:19:26 lukem Exp $	*/
+/* $MidnightBSD$ */
+/*	$NetBSD: seq.c,v 1.7 2010/05/27 08:40:19 dholland Exp $	*/
 /*
  * Copyright (c) 2005 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/seq/seq.c 277590 2015-01-23 18:42:05Z delphij $");
 
 #include <ctype.h>
 #include <err.h>
@@ -51,20 +52,19 @@ __MBSDID("$MidnightBSD$");
 
 /* Globals */
 
-const char *decimal_point = ".";	/* default */
-char default_format[] = { "%g" };	/* default */
+static const char *decimal_point = ".";	/* default */
+static char default_format[] = { "%g" };	/* default */
 
 /* Prototypes */
 
-double e_atof(const char *);
+static double e_atof(const char *);
 
-int decimal_places(const char *);
-int main(int, char *[]);
-int numeric(const char *);
-int valid_format(const char *);
+static int decimal_places(const char *);
+static int numeric(const char *);
+static int valid_format(const char *);
 
-char *generate_format(double, double, double, int, char);
-char *unescape(char *);
+static char *generate_format(double, double, double, int, char);
+static char *unescape(char *);
 
 /*
  * The seq command will print out a numeric sequence from 1, the default,
@@ -159,6 +159,8 @@ main(int argc, char *argv[])
 		if (!valid_format(fmt))
 			errx(1, "invalid format string: `%s'", fmt);
 		fmt = unescape(fmt);
+		if (!valid_format(fmt))
+			errx(1, "invalid format string");
 		/*
 	         * XXX to be bug for bug compatible with Plan 9 add a
 		 * newline if none found at the end of the format string.
@@ -186,7 +188,7 @@ main(int argc, char *argv[])
 /*
  * numeric - verify that string is numeric
  */
-int
+static int
 numeric(const char *s)
 {
 	int seen_decimal_pt, decimal_pt_len;
@@ -223,42 +225,59 @@ numeric(const char *s)
 /*
  * valid_format - validate user specified format string
  */
-int
+static int
 valid_format(const char *fmt)
 {
-	int conversions = 0;
+	unsigned conversions = 0;
 
 	while (*fmt != '\0') {
 		/* scan for conversions */
-		if (*fmt != '\0' && *fmt != '%') {
-			do {
-				fmt++;
-			} while (*fmt != '\0' && *fmt != '%');
+		if (*fmt != '%') {
+			fmt++;
+			continue;
 		}
-		/* scan a conversion */
-		if (*fmt != '\0') {
-			do {
+		fmt++;
+
+		/* allow %% but not things like %10% */
+		if (*fmt == '%') {
+			fmt++;
+			continue;
+		}
+
+		/* flags */
+		while (*fmt != '\0' && strchr("#0- +'", *fmt)) {
+			fmt++;
+		}
+
+		/* field width */
+		while (*fmt != '\0' && strchr("0123456789", *fmt)) {
+			fmt++;
+		}
+
+		/* precision */
+		if (*fmt == '.') {
+			fmt++;
+			while (*fmt != '\0' && strchr("0123456789", *fmt)) {
 				fmt++;
+			}
+		}
 
-				/* ok %% */
-				if (*fmt == '%') {
-					fmt++;
-					break;
-				}
-				/* valid conversions */
-				if (strchr("eEfgG", *fmt) &&
-				    conversions++ < 1) {
-					fmt++;
-					break;
-				}
-				/* flags, width and precision */
-				if (isdigit((unsigned char)*fmt) ||
-				    strchr("+- 0#.", *fmt))
-					continue;
-
-				/* oops! bad conversion format! */
-				return (0);
-			} while (*fmt != '\0');
+		/* conversion */
+		switch (*fmt) {
+		    case 'A':
+		    case 'a':
+		    case 'E':
+		    case 'e':
+		    case 'F':
+		    case 'f':
+		    case 'G':
+		    case 'g':
+			/* floating point formats are accepted */
+			conversions++;
+			break;
+		    default:
+			/* anything else is not */
+			return 0;
 		}
 	}
 
@@ -268,7 +287,7 @@ valid_format(const char *fmt)
 /*
  * unescape - handle C escapes in a string
  */
-char *
+static char *
 unescape(char *orig)
 {
 	char c, *cp, *new = orig;
@@ -358,7 +377,7 @@ unescape(char *orig)
  *	exit if string is not a valid double, or if converted value would
  *	cause overflow or underflow
  */
-double
+static double
 e_atof(const char *num)
 {
 	char *endp;
@@ -383,7 +402,7 @@ e_atof(const char *num)
 /*
  * decimal_places - count decimal places in a number (string)
  */
-int
+static int
 decimal_places(const char *number)
 {
 	int places = 0;
@@ -405,7 +424,7 @@ decimal_places(const char *number)
  * XXX to be bug for bug compatible with Plan9 and GNU return "%g"
  * when "%g" prints as "%e" (this way no width adjustments are made)
  */
-char *
+static char *
 generate_format(double first, double incr, double last, int equalize, char pad)
 {
 	static char buf[256];

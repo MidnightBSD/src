@@ -1,4 +1,5 @@
-.\"	$NetBSD: seq.1,v 1.6 2008/11/26 15:03:47 ginsbach Exp $
+.\" $MidnightBSD$
+.\"	$NetBSD: seq.1,v 1.8 2013/04/07 17:37:45 jdf Exp $
 .\"
 .\" Copyright (c) 2005 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -27,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/seq/seq.1 277590 2015-01-23 18:42:05Z delphij $
 .\"
-.Dd February 19, 2010
+.Dd September 10, 2013
 .Dt SEQ 1
 .Os
 .Sh NAME
@@ -59,7 +60,7 @@ as possible, in increments of
 When
 .Ar first
 is larger than
-.Ar last
+.Ar last ,
 the default
 .Ar incr
 is -1.
@@ -79,8 +80,11 @@ style
 .Ar format
 to print each number.
 Only the
+.Cm A ,
+.Cm a ,
 .Cm E ,
 .Cm e ,
+.Cm F ,
 .Cm f ,
 .Cm G ,
 .Cm g ,
