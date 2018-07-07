@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 SigmaSoft, Th. Lockert <tholo@sigmasoft.com>
  * All rights reserved.
@@ -24,10 +25,10 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * The split of ipcs.c into ipcs.c and ipc.c to accomodate the
+ * The split of ipcs.c into ipcs.c and ipc.c to accommodate the
  * changes in ipcrm.c was done by Edwin Groothuis <edwin@FreeBSD.org>
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/ipcs/ipc.h 228992 2011-12-30 11:02:40Z uqs $
  */
 
 /* Part of struct nlist symbols[] */

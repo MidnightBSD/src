@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 SigmaSoft, Th. Lockert <tholo@sigmasoft.com>
  * All rights reserved.
@@ -24,12 +25,12 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * The split of ipcs.c into ipcs.c and ipc.c to accomodate the
+ * The split of ipcs.c into ipcs.c and ipc.c to accommodate the
  * changes in ipcrm.c was done by Edwin Groothuis <edwin@FreeBSD.org>
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ipcs/ipc.c 326818 2017-12-13 06:20:18Z delphij $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -44,7 +45,6 @@ __MBSDID("$MidnightBSD$");
 #include <kvm.h>
 #include <nlist.h>
 #include <stddef.h>
-#include <stdio.h>
 
 #include "ipc.h"
 
