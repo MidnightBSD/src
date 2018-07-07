@@ -77432,6 +77432,9 @@ usr.sbin/bluetooth/sdpd/uuid.c -text
 usr.sbin/boot0cfg/Makefile -text
 usr.sbin/boot0cfg/boot0cfg.8 -text
 usr.sbin/boot0cfg/boot0cfg.c -text
+usr.sbin/boot98cfg/Makefile svneol=native#text/plain
+usr.sbin/boot98cfg/boot98cfg.8 svneol=native#text/plain
+usr.sbin/boot98cfg/boot98cfg.c svneol=native#text/plain
 usr.sbin/bootparamd/Makefile -text
 usr.sbin/bootparamd/Makefile.inc -text
 usr.sbin/bootparamd/bootparamd/Makefile -text
