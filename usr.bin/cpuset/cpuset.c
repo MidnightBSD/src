@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007, 2008 	Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/cpuset/cpuset.c 227160 2011-11-06 08:14:40Z ed $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -46,22 +47,22 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include <string.h>
 
-int Cflag;
-int cflag;
-int gflag;
-int iflag;
-int jflag;
-int lflag;
-int pflag;
-int rflag;
-int sflag;
-int tflag;
-int xflag;
-id_t id;
-cpulevel_t level;
-cpuwhich_t which;
+static int Cflag;
+static int cflag;
+static int gflag;
+static int iflag;
+static int jflag;
+static int lflag;
+static int pflag;
+static int rflag;
+static int sflag;
+static int tflag;
+static int xflag;
+static id_t id;
+static cpulevel_t level;
+static cpuwhich_t which;
 
-void usage(void);
+static void usage(void);
 
 static void printset(cpuset_t *mask);
 
@@ -161,8 +162,8 @@ printset(cpuset_t *mask)
 	printf("\n");
 }
 
-const char *whichnames[] = { NULL, "tid", "pid", "cpuset", "irq", "jail" };
-const char *levelnames[] = { NULL, " root", " cpuset", "" };
+static const char *whichnames[] = { NULL, "tid", "pid", "cpuset", "irq", "jail" };
+static const char *levelnames[] = { NULL, " root", " cpuset", "" };
 
 static void
 printaffinity(void)
@@ -343,7 +344,7 @@ main(int argc, char *argv[])
 	exit(EXIT_SUCCESS);
 }
 
-void
+static void
 usage(void)
 {
 
