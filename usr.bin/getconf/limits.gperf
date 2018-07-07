@@ -3,6 +3,7 @@
  * Copyright is disclaimed as to the contents of this file.
  *
  * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/getconf/limits.gperf 119312 2003-08-22 17:32:07Z markm $
  */
 
 #include <sys/types.h>
