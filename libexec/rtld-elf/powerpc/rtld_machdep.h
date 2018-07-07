@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/amd64/rtld_machdep.h 309061 2016-11-23 17:48:43Z kib $
+ * $FreeBSD: stable/10/libexec/rtld-elf/powerpc/rtld_machdep.h 309061 2016-11-23 17:48:43Z kib $
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -36,22 +36,12 @@
 struct Struct_Obj_Entry;
 
 /* Return the address of the .dynamic section in the dynamic linker. */
-#define rtld_dynamic(obj) \
-    ((const Elf_Dyn *)((obj)->relocbase + (Elf_Addr)&_DYNAMIC))
+#define rtld_dynamic(obj)    (&_DYNAMIC)
 
-/* Fixup the jump slot at "where" to transfer control to "target". */
-static inline Elf_Addr
-reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
-	      const struct Struct_Obj_Entry *obj,
-	      const struct Struct_Obj_Entry *refobj, const Elf_Rel *rel)
-{
-#ifdef dbg
-    dbg("reloc_jmpslot: *%p = %p", (void *)(where),
-	(void *)(target));
-#endif
-    (*(Elf_Addr *)(where) = (Elf_Addr)(target));
-    return target;
-}
+Elf_Addr reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
+		       const struct Struct_Obj_Entry *defobj,
+		       const struct Struct_Obj_Entry *obj,
+		       const Elf_Rel *rel);
 
 #define make_function_pointer(def, defobj) \
 	((defobj)->relocbase + (def)->st_value)
@@ -62,28 +52,44 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 #define call_init_pointer(obj, target) \
 	(((InitArrFunc)(target))(main_argc, main_argv, environ))
 
-extern uint32_t cpu_feature;
-extern uint32_t cpu_feature2;
-extern uint32_t cpu_stdext_feature;
-extern uint32_t cpu_stdext_feature2;
 #define	call_ifunc_resolver(ptr) \
-	(((Elf_Addr (*)(uint32_t, uint32_t, uint32_t, uint32_t))ptr)( \
-	    cpu_feature, cpu_feature2, cpu_stdext_feature, cpu_stdext_feature2))
+	(((Elf_Addr (*)(void))ptr)())
+
+/*
+ * Lazy binding entry point, called via PLT.
+ */
+void _rtld_bind_start(void);
+
+/*
+ * PLT functions. Not really correct prototypes, but the
+ * symbol values are needed.
+ */
+void _rtld_powerpc_pltlongresolve(void);
+void _rtld_powerpc_pltresolve(void);
+void _rtld_powerpc_pltcall(void);
+
+/*
+ * TLS
+ */
+
+#define TLS_TP_OFFSET	0x7000
+#define TLS_DTV_OFFSET	0x8000
+#define TLS_TCB_SIZE	8
 
 #define round(size, align) \
-	(((size) + (align) - 1) & ~((align) - 1))
+    (((size) + (align) - 1) & ~((align) - 1))
 #define calculate_first_tls_offset(size, align) \
-	round(size, align)
+    round(8, align)
 #define calculate_tls_offset(prev_offset, prev_size, size, align) \
-	round((prev_offset) + (size), align)
-#define calculate_tls_end(off, size) 	(off)
-
+    round(prev_offset + prev_size, align)
+#define calculate_tls_end(off, size)    ((off) + (size))
+ 
 typedef struct {
-    unsigned long ti_module;
-    unsigned long ti_offset;
+	unsigned long ti_module;
+	unsigned long ti_offset;
 } tls_index;
 
-void *__tls_get_addr(tls_index *ti) __exported;
+extern void *__tls_get_addr(tls_index* ti);
 
 #define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
 #define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC

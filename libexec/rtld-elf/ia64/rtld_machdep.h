@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/amd64/rtld_machdep.h 309061 2016-11-23 17:48:43Z kib $
+ * $FreeBSD: stable/10/libexec/rtld-elf/ia64/rtld_machdep.h 309061 2016-11-23 17:48:43Z kib $
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -33,59 +33,46 @@
 #include <sys/types.h>
 #include <machine/atomic.h>
 
-struct Struct_Obj_Entry;
+/*
+ * Macros for cracking ia64 function pointers.
+ */
+struct fptr {
+	Elf_Addr	target;
+	Elf_Addr	gp;
+};
+
+#define FPTR_TARGET(f)	(((struct fptr *) (f))->target)
+#define FPTR_GP(f)	(((struct fptr *) (f))->gp)
 
 /* Return the address of the .dynamic section in the dynamic linker. */
-#define rtld_dynamic(obj) \
-    ((const Elf_Dyn *)((obj)->relocbase + (Elf_Addr)&_DYNAMIC))
+#define rtld_dynamic(obj)	(&_DYNAMIC)
 
-/* Fixup the jump slot at "where" to transfer control to "target". */
-static inline Elf_Addr
-reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
-	      const struct Struct_Obj_Entry *obj,
-	      const struct Struct_Obj_Entry *refobj, const Elf_Rel *rel)
-{
-#ifdef dbg
-    dbg("reloc_jmpslot: *%p = %p", (void *)(where),
-	(void *)(target));
-#endif
-    (*(Elf_Addr *)(where) = (Elf_Addr)(target));
-    return target;
-}
+struct Struct_Obj_Entry;
 
-#define make_function_pointer(def, defobj) \
-	((defobj)->relocbase + (def)->st_value)
+Elf_Addr reloc_jmpslot(Elf_Addr *, Elf_Addr, const struct Struct_Obj_Entry *,
+		       const struct Struct_Obj_Entry *, const Elf_Rel *);
+void *make_function_pointer(const Elf_Sym *, const struct Struct_Obj_Entry *);
+void call_initfini_pointer(const struct Struct_Obj_Entry *, Elf_Addr);
+void call_init_pointer(const struct Struct_Obj_Entry *, Elf_Addr);
 
-#define call_initfini_pointer(obj, target) \
-	(((InitFunc)(target))())
+#define        call_ifunc_resolver(ptr) \
+       (((Elf_Addr (*)(void))ptr)())
 
-#define call_init_pointer(obj, target) \
-	(((InitArrFunc)(target))(main_argc, main_argv, environ))
-
-extern uint32_t cpu_feature;
-extern uint32_t cpu_feature2;
-extern uint32_t cpu_stdext_feature;
-extern uint32_t cpu_stdext_feature2;
-#define	call_ifunc_resolver(ptr) \
-	(((Elf_Addr (*)(uint32_t, uint32_t, uint32_t, uint32_t))ptr)( \
-	    cpu_feature, cpu_feature2, cpu_stdext_feature, cpu_stdext_feature2))
+#define	TLS_TCB_SIZE	16
 
 #define round(size, align) \
 	(((size) + (align) - 1) & ~((align) - 1))
 #define calculate_first_tls_offset(size, align) \
-	round(size, align)
+	round(TLS_TCB_SIZE, align)
 #define calculate_tls_offset(prev_offset, prev_size, size, align) \
-	round((prev_offset) + (size), align)
-#define calculate_tls_end(off, size) 	(off)
+	round(prev_offset + prev_size, align)
+#define calculate_tls_end(off, size) 	((off) + (size))
 
-typedef struct {
-    unsigned long ti_module;
-    unsigned long ti_offset;
-} tls_index;
+extern void *__tls_get_addr(unsigned long module, unsigned long offset);
 
-void *__tls_get_addr(tls_index *ti) __exported;
+#define	RTLD_DEFAULT_STACK_PF_EXEC	0
+#define	RTLD_DEFAULT_STACK_EXEC		0
 
-#define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
-#define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC
+#define	RTLD_INIT_PAGESIZES_EARLY	1
 
 #endif

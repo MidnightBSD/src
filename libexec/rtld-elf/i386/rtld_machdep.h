@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/rtld-elf/i386/rtld_machdep.h 309061 2016-11-23 17:48:43Z kib $
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -61,6 +62,14 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 #define call_init_pointer(obj, target) \
 	(((InitArrFunc)(target))(main_argc, main_argv, environ))
 
+extern uint32_t cpu_feature;
+extern uint32_t cpu_feature2;
+extern uint32_t cpu_stdext_feature;
+extern uint32_t cpu_stdext_feature2;
+#define	call_ifunc_resolver(ptr) \
+	(((Elf_Addr (*)(uint32_t, uint32_t, uint32_t, uint32_t))ptr)( \
+	    cpu_feature, cpu_feature2, cpu_stdext_feature, cpu_stdext_feature2))
+
 #define round(size, align) \
 	(((size) + (align) - 1) & ~((align) - 1))
 #define calculate_first_tls_offset(size, align) \
@@ -74,8 +83,8 @@ typedef struct {
     unsigned long ti_offset;
 } tls_index;
 
-extern void *___tls_get_addr(tls_index *ti) __attribute__((__regparm__(1)));
-extern void *__tls_get_addr(tls_index *ti);
+void *___tls_get_addr(tls_index *ti) __attribute__((__regparm__(1))) __exported;
+void *__tls_get_addr(tls_index *ti) __exported;
 
 #define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
 #define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC

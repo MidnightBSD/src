@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/rtld-elf/debug.h 287331 2015-08-31 19:20:18Z emaste $
  */
 
 /*
@@ -31,10 +32,6 @@
 
 #ifndef DEBUG_H
 #define DEBUG_H 1
-
-#ifndef __GNUC__
-#error "This file must be compiled with GCC"
-#endif
 
 #include <sys/cdefs.h>
 

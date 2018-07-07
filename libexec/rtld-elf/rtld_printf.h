@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2011 Konstantin Belousov <kib@FreeBSD.org>.
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/rtld-elf/rtld_printf.h 225152 2011-08-24 20:05:13Z kib $
  */
 
 #ifndef RTLD_PRINTF_H

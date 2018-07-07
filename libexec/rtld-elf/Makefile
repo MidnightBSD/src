@@ -1,4 +1,9 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/libexec/rtld-elf/Makefile 308967 2016-11-22 09:49:15Z kib $
+
+# Use the following command to build local debug version of dynamic
+# linker:
+# make DEBUG_FLAGS=-g DEBUG=-DDEBUG WITHOUT_TESTS=yes all
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -18,12 +23,17 @@ RTLD_ARCH=	${MACHINE_ARCH}
 RTLD_ARCH=	${MACHINE_CPUARCH}
 .endif
 CFLAGS+=	-I${.CURDIR}/${RTLD_ARCH} -I${.CURDIR}
+.if ${MACHINE_ARCH} == "powerpc64"
+CFLAGS+=	-mcall-aixdesc
+LDFLAGS+=	-nostdlib -e _rtld_start
+.else
 LDFLAGS+=	-nostdlib -e .rtld_start
+.endif
 WARNS?=		2
 INSTALLFLAGS=	-C -b
 PRECIOUSPROG=
 BINDIR=		/libexec
-SYMLINKS=	${BINDIR}/${PROG} /usr/libexec/${PROG}
+SYMLINKS=	${BINDIR}/${PROG} ${LIBEXECDIR}/${PROG}
 MLINKS=		rtld.1 ld-elf.so.1.1 \
 		rtld.1 ld.so.1
 
@@ -33,9 +43,22 @@ CFLAGS+=	-fPIC
 CFLAGS+=	-fpic
 .endif
 CFLAGS+=	-DPIC $(DEBUG)
-LDFLAGS+=	-shared -Wl,-Bsymbolic
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+CFLAGS+=	-fvisibility=hidden
+.endif
+LDFLAGS+=	-shared -Wl,-Bsymbolic -Wl,-z,defs
 DPADD=		${LIBC_PIC}
 LDADD=		-lc_pic
+
+.if ${MACHINE_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+# Some of the required math functions (div & mod) are implemented in libgcc
+# on ARM. The library also needs to be placed first to be correctly linked.
+# As some of the functions are used before we have shared libraries.
+DPADD+=		${LIBGCC}
+LDADD+=		-lgcc
+.endif
+
+
 
 .if ${MK_SYMVER} == "yes"
 LIBCDIR=	${TOPSRCDIR}/lib/libc
@@ -57,7 +80,7 @@ SYMBOL_MAPS+=	${.CURDIR}/${RTLD_ARCH}/Symbol.map
 # Fixup the existing binary that's there so we can symlink over it.
 beforeinstall:
 .if exists(${DESTDIR}/usr/libexec/${PROG})
-	-chflags noschg ${DESTDIR}/usr/libexec/${PROG}
+	-chflags -h noschg ${DESTDIR}/usr/libexec/${PROG}
 .endif
 
 .PATH: ${.CURDIR}/${RTLD_ARCH}

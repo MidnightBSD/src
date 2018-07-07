@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rtld_start.S,v 1.5 2001/08/14 22:17:48 eeh Exp $	*/
 
 /*-
@@ -37,7 +38,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/10/libexec/rtld-elf/sparc64/rtld_start.S 130661 2004-06-18 02:01:37Z tmm $
  */
 
 #include <machine/asm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Alexander Kabaev.
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/rtld-elf/rtld_lock.h 281453 2015-04-12 06:45:40Z kib $
  */
 
 #ifndef _RTLD_LOCK_H_
@@ -44,9 +45,9 @@ struct RtldLockInfo
 	void  (*at_fork)(void);
 };
 
-extern void _rtld_thread_init(struct RtldLockInfo *);
-extern void _rtld_atfork_pre(int *);
-extern void _rtld_atfork_post(int *);
+extern void _rtld_thread_init(struct RtldLockInfo *) __exported;
+extern void _rtld_atfork_pre(int *) __exported;
+extern void _rtld_atfork_post(int *) __exported;
 
 #ifdef IN_RTLD
 

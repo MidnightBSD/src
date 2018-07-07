@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/rtld-elf/debug.c 296727 2016-03-12 17:12:00Z kib $
  */
 
 /*
@@ -62,7 +63,8 @@ dump_relocations (Obj_Entry *obj0)
 {
     Obj_Entry *obj;
 
-    for (obj = obj0; obj != NULL; obj = obj->next) {
+    for (obj = globallist_curr(obj0); obj != NULL;
+      obj = globallist_next(obj)) {
         dump_obj_relocations(obj);
     }
 }

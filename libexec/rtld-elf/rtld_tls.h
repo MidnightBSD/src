@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/libexec/rtld-elf/rtld_tls.h 281453 2015-04-12 06:45:40Z kib $
  */
 
 /*
@@ -57,13 +58,14 @@
  * The value returned from this function is suitable for installing
  * directly into the thread pointer register.
  */
-extern void *_rtld_allocate_tls(void* oldtls, size_t tcbsize, size_t tcbalign);
+void *_rtld_allocate_tls(void* oldtls, size_t tcbsize, size_t tcbalign)
+    __exported;
 
 /*
  * Free a TLS block allocated using _rtld_allocate_tls(). The tcbsize
  * and tcbalign parameters must be the same as those used to allocate
  * the block.
  */
-extern void _rtld_free_tls(void *tcb, size_t tcbsize, size_t tcbalign);
+void _rtld_free_tls(void *tcb, size_t tcbsize, size_t tcbalign) __exported;
 
 #endif
