@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)logger.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/logger/logger.c 241736 2012-10-19 14:29:03Z ed $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -57,8 +58,8 @@ __MBSDID("$MidnightBSD$");
 #define	SYSLOG_NAMES
 #include <syslog.h>
 
-int	decode(char *, CODE *);
-int	pencode(char *);
+static int	decode(char *, const CODE *);
+static int	pencode(char *);
 static void	logmessage(int, const char *, const char *, const char *,
 			   const char *);
 static void	usage(void);
@@ -70,11 +71,11 @@ struct socks {
 };
 
 #ifdef INET6
-int	family = PF_UNSPEC;	/* protocol family (IPv4, IPv6 or both) */
+static int family = PF_UNSPEC;	/* protocol family (IPv4, IPv6 or both) */
 #else
-int	family = PF_INET;	/* protocol family (IPv4 only) */
+static int family = PF_INET;	/* protocol family (IPv4 only) */
 #endif
-int	send_to_all = 0;	/* send message to all IPv4/IPv6 addresses */
+static int send_to_all = 0;	/* send message to all IPv4/IPv6 addresses */
 
 /*
  * logger -- read and log utility
@@ -176,7 +177,7 @@ main(int argc, char *argv[])
 /*
  *  Send the message to syslog, either on the local host, or on a remote host
  */
-void
+static void
 logmessage(int pri, const char *tag, const char *host, const char *svcname,
 	   const char *buf)
 {
@@ -246,7 +247,7 @@ logmessage(int pri, const char *tag, const char *host, const char *svcname,
 /*
  *  Decode a symbolic name to a numeric value
  */
-int
+static int
 pencode(char *s)
 {
 	char *save;
@@ -270,10 +271,10 @@ pencode(char *s)
 	return ((lev & LOG_PRIMASK) | (fac & LOG_FACMASK));
 }
 
-int
-decode(char *name, CODE *codetab)
+static int
+decode(char *name, const CODE *codetab)
 {
-	CODE *c;
+	const CODE *c;
 
 	if (isdigit(*name))
 		return (atoi(name));

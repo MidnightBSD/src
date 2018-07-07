@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)logger.1	8.1 (Berkeley) 6/6/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/logger/logger.1 280977 2015-04-02 02:14:58Z wblock $
 .\"
-.Dd August 2, 2006
+.Dd March 21, 2015
 .Dt LOGGER 1
 .Os
 .Sh NAME
@@ -74,7 +75,8 @@ with each line.
 .It Fl s
 Log the message to standard error, as well as the system log.
 .It Fl f Ar file
-Log the specified file.
+Read the contents of the specified file into syslog.
+This option is ignored when a message is also specified.
 .It Fl h Ar host
 Send the message to the remote system
 .Ar host
