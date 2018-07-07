@@ -75728,6 +75728,8 @@ usr.bin/cmp/link.c -text
 usr.bin/cmp/misc.c -text
 usr.bin/cmp/regular.c -text
 usr.bin/cmp/special.c -text
+usr.bin/cmp/tests/Makefile svneol=native#text/plain
+usr.bin/cmp/tests/cmp_test2.sh svneol=native#text/plain
 usr.bin/col/Makefile -text
 usr.bin/col/README -text
 usr.bin/col/col.1 -text
