@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/rpc.rusersd/rusers_proc.c,v 1.13 2003/06/02 02:35:18 obrien Exp $";
+  "$FreeBSD: stable/10/libexec/rpc.rusersd/rusers_proc.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 #ifdef DEBUG
@@ -54,6 +50,8 @@ static const char rcsid[] =
 #endif
 #include <rpcsvc/rnusers.h>
 
+#include "extern.h"
+
 #ifndef _PATH_DEV
 #define _PATH_DEV "/dev"
 #endif
@@ -61,10 +59,6 @@ static const char rcsid[] =
 static utmpidle utmp_idle[MAXUSERS];
 static utmp old_utmp[MAXUSERS];
 static struct utmpx utmp_list[MAXUSERS];
-
-extern int from_inetd;
-
-void rusers_service(struct svc_req *, SVCXPRT *);
 
 #ifdef XIDLE
 static Display *dpy;
@@ -130,7 +124,7 @@ getidle(const char *tty, const char *display __unused)
 	idle = 0;
 	if (*tty == 'X') {
 		u_long kbd_idle, mouse_idle;
-#if	!defined(__FreeBSD__) && !defined(__MidnightBSD__)
+#if	!defined(__FreeBSD__)
 		kbd_idle = getidle("kbd", NULL);
 #else
 		kbd_idle = getidle("vga", NULL);

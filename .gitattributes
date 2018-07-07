@@ -55020,6 +55020,7 @@ libexec/rpc.rstatd/rpc.rstatd.8 -text
 libexec/rpc.rstatd/rstat_proc.c -text
 libexec/rpc.rstatd/rstatd.c -text
 libexec/rpc.rusersd/Makefile -text
+libexec/rpc.rusersd/extern.h svneol=native#text/plain
 libexec/rpc.rusersd/rpc.rusersd.8 -text
 libexec/rpc.rusersd/rusers_proc.c -text
 libexec/rpc.rusersd/rusersd.c -text

@@ -1,8 +1,8 @@
 # $MidnightBSD$
-# $FreeBSD: src/libexec/rpc.rusersd/Makefile,v 1.8 2001/03/26 14:22:07 ru Exp $
+# $FreeBSD: stable/10/libexec/rpc.rusersd/Makefile 241777 2012-10-20 10:33:15Z ed $
 
 PROG =	rpc.rusersd
-SRCS =	rusersd.c rusers_proc.c
+SRCS =	rusersd.c rusers_proc.c extern.h
 MAN =	rpc.rusersd.8
 
 DPADD=	${LIBRPCSVC} ${LIBUTIL}
@@ -12,6 +12,5 @@ LDADD=	-lrpcsvc -lutil
 #CFLAGS+= -DXIDLE
 #LDADD+= -L/usr/X11R6/lib -lXext -lX11
 #.endif
-
 
 .include <bsd.prog.mk>
