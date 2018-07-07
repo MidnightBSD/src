@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)collect.c	8.2 (Berkeley) 4/19/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/collect.c 303280 2016-07-25 00:46:01Z delphij $");
 
 /*
  * Mail -- a mail program
@@ -339,9 +340,9 @@ cont:
 				int nullfd, tempfd, rc;
 				char tempname2[PATHSIZE];
 
-				if ((nullfd = open("/dev/null", O_RDONLY, 0))
+				if ((nullfd = open(_PATH_DEVNULL, O_RDONLY, 0))
 				    == -1) {
-					warn("/dev/null");
+					warn(_PATH_DEVNULL);
 					break;
 				}
 

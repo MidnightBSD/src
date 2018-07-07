@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  *
  *	@(#)def.h	8.4 (Berkeley) 4/20/95
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/mail/def.h 296498 2016-03-08 14:38:06Z pfg $
  */
 
 /*
@@ -270,5 +271,5 @@ struct ignoretab {
  */
 #define trunc(stream) {							\
 	(void)fflush(stream); 						\
-	(void)ftruncate(fileno(stream), (off_t)ftell(stream));		\
+	(void)ftruncate(fileno(stream), ftello(stream));		\
 }

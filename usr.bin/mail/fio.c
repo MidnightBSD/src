@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)fio.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/fio.c 300274 2016-05-20 06:41:26Z truckman $");
 
 #include "rcv.h"
 #include <sys/file.h>
@@ -367,10 +368,10 @@ expand(char *name)
 		name = savestr(xname);
 	}
 	if (!strpbrk(name, "~{[*?$`'\"\\"))
-		return (name);
+		return (savestr(name));
 	if (pipe(pivec) < 0) {
 		warn("pipe");
-		return (name);
+		return (NULL);
 	}
 	(void)snprintf(cmdbuf, sizeof(cmdbuf), "echo %s", name);
 	if ((sh = value("SHELL")) == NULL)

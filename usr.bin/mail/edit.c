@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)edit.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/edit.c 270756 2014-08-28 18:11:05Z pfg $");
 
 #include "rcv.h"
 #include <fcntl.h>
@@ -81,7 +82,7 @@ edit1(int *msgvec, int type)
 	/*
 	 * Deal with each message to be edited . . .
 	 */
-	for (i = 0; msgvec[i] && i < msgCount; i++) {
+	for (i = 0; i < msgCount && msgvec[i]; i++) {
 		sig_t sigint;
 
 		if (i > 0) {
@@ -89,7 +90,7 @@ edit1(int *msgvec, int type)
 			char *p;
 
 			printf("Edit message %d [ynq]? ", msgvec[i]);
-			if (fgets(buf, sizeof(buf), stdin) == 0)
+			if (fgets(buf, sizeof(buf), stdin) == NULL)
 				break;
 			for (p = buf; *p == ' ' || *p == '\t'; p++)
 				;
