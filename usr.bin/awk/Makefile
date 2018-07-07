@@ -1,6 +1,7 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/awk/Makefile 314014 2017-02-21 02:34:59Z ngie $
 
-AWKSRC=	${.CURDIR}/../../contrib/one-true-awk
+AWKSRC=	${SRCTOP}/contrib/one-true-awk
 .PATH: ${AWKSRC}
 
 PROG=	awk
@@ -25,6 +26,6 @@ proctab.c: maketab
 	./maketab > proctab.c
 
 build-tools: maketab
-maketab: ytab.h ${AWKSRC}/maketab.c
+maketab: ytab.h maketab.c
 
 .include <bsd.prog.mk>
