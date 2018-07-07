@@ -75816,6 +75816,8 @@ usr.bin/drill/Makefile svneol=native#text/plain
 usr.bin/du/Makefile -text
 usr.bin/du/du.1 -text
 usr.bin/du/du.c -text
+usr.bin/du/tests/Makefile svneol=native#text/plain
+usr.bin/du/tests/du_test.sh svneol=native#text/plain
 usr.bin/ee/Makefile -text
 usr.bin/ee/nls/de_DE.ISO8859-1/ee.msg -text
 usr.bin/ee/nls/fr_FR.ISO8859-1/ee.msg -text
