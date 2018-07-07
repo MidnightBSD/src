@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +45,7 @@ static char const copyright[] =
 static char const sccsid[] = "@(#)printf.c	8.1 (Berkeley) 7/20/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.bin/printf/printf.c 265160 2014-04-30 20:39:08Z pfg $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -61,12 +62,13 @@ static const char rcsid[] =
 #include <wchar.h>
 
 #ifdef SHELL
-#define main printfcmd
+#define	main printfcmd
 #include "bltin/bltin.h"
 #include "error.h"
+#include "options.h"
 #endif
 
-#define PF(f, func) do {						\
+#define	PF(f, func) do {						\
 	char *b = NULL;							\
 	if (havewidth)							\
 		if (haveprec)						\
@@ -101,15 +103,19 @@ int
 main(int argc, char *argv[])
 {
 	size_t len;
-	int ch, chopped, end, rval;
+	int chopped, end, rval;
 	char *format, *fmt, *start;
-
 #ifndef SHELL
+	int ch;
+
 	(void) setlocale(LC_ALL, "");
 #endif
+
 #ifdef SHELL
-	optreset = 1; optind = 1; opterr = 0; /* initialize getopt */
-#endif
+	nextopt("");
+	argc -= argptr - argv;
+	argv = argptr;
+#else
 	while ((ch = getopt(argc, argv, "")) != -1)
 		switch (ch) {
 		case '?':
@@ -119,6 +125,7 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
+#endif
 
 	if (argc < 1) {
 		usage();
