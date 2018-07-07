@@ -76518,12 +76518,17 @@ usr.bin/procstat/procstat_auxv.c -text
 usr.bin/procstat/procstat_basic.c -text
 usr.bin/procstat/procstat_bin.c -text
 usr.bin/procstat/procstat_cred.c -text
+usr.bin/procstat/procstat_cs.c svneol=native#text/plain
 usr.bin/procstat/procstat_files.c -text
 usr.bin/procstat/procstat_kstack.c -text
 usr.bin/procstat/procstat_rlimit.c -text
+usr.bin/procstat/procstat_rusage.c svneol=native#text/plain
 usr.bin/procstat/procstat_sigs.c -text
 usr.bin/procstat/procstat_threads.c -text
 usr.bin/procstat/procstat_vm.c -text
+usr.bin/procstat/tests/Makefile svneol=native#text/plain
+usr.bin/procstat/tests/procstat_test.sh svneol=native#text/plain
+usr.bin/procstat/tests/while1.c svneol=native#text/plain
 usr.bin/progress/Makefile -text
 usr.bin/progress/progress.1 -text
 usr.bin/progress/progress.c -text

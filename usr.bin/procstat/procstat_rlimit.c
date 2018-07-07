@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Mikolaj Golub
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/procstat/procstat_rlimit.c 249675 2013-04-20 08:01:00Z trociny $
  */
 
 #include <sys/param.h>
@@ -46,7 +47,7 @@
 static struct {
 	const char *name;
 	const char *suffix;
-} rlimit_param[14] = {
+} rlimit_param[13] = {
 	{"cputime",          "sec"},
 	{"filesize",         "B  "},
 	{"datasize",         "B  "},
@@ -60,10 +61,9 @@ static struct {
 	{"vmemoryuse",       "B  "},
 	{"pseudo-terminals", "   "},
 	{"swapuse",          "B  "},
-	{"kqueues",          "   "},
 };
 
-#if RLIM_NLIMITS > 14
+#if RLIM_NLIMITS > 13
 #error "Resource limits have grown. Add new entries to rlimit_param[]."
 #endif
 

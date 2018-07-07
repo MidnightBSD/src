@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2011 Robert N. M. Watson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/procstat/procstat.c 310121 2016-12-15 16:52:17Z vangyzen $
  */
 
 #include <sys/param.h>
@@ -34,23 +35,25 @@
 #include <libprocstat.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sysexits.h>
 #include <unistd.h>
 
 #include "procstat.h"
 
-static int aflag, bflag, cflag, eflag, fflag, iflag, jflag, kflag, lflag, sflag;
-static int tflag, vflag, xflag;
-int	hflag, nflag, Cflag;
+static int aflag, bflag, cflag, eflag, fflag, iflag, jflag, kflag, lflag, rflag;
+static int sflag, tflag, vflag, xflag, Sflag;
+int	hflag, nflag, Cflag, Hflag;
 
 static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: procstat [-h] [-C] [-M core] [-N system] "
+	fprintf(stderr, "usage: procstat [-CHhn] [-M core] [-N system] "
 	    "[-w interval] \n");
 	fprintf(stderr, "                [-b | -c | -e | -f | -i | -j | -k | "
-	    "-l | -s | -t | -v | -x] [-a | pid | core ...]\n");
+	    "-l | -r | -s | -S | -t | -v | -x]\n");
+	fprintf(stderr, "                [-a | pid | core ...]\n");
 	exit(EX_USAGE);
 }
 
@@ -74,6 +77,8 @@ procstat(struct procstat *prstat, struct kinfo_proc *kipp)
 		procstat_kstack(prstat, kipp, kflag);
 	else if (lflag)
 		procstat_rlimit(prstat, kipp);
+	else if (rflag)
+		procstat_rusage(prstat, kipp);
 	else if (sflag)
 		procstat_cred(prstat, kipp);
 	else if (tflag)
@@ -82,6 +87,8 @@ procstat(struct procstat *prstat, struct kinfo_proc *kipp)
 		procstat_vm(prstat, kipp);
 	else if (xflag)
 		procstat_auxv(prstat, kipp);
+	else if (Sflag)
+		procstat_cs(prstat, kipp);
 	else
 		procstat_basic(kipp);
 }
@@ -110,6 +117,21 @@ kinfo_proc_sort(struct kinfo_proc *kipp, int count)
 	qsort(kipp, count, sizeof(*kipp), kinfo_proc_compare);
 }
 
+const char *
+kinfo_proc_thread_name(const struct kinfo_proc *kipp)
+{
+	static char name[MAXCOMLEN+1];
+
+	strlcpy(name, kipp->ki_tdname, sizeof(name));
+	strlcat(name, kipp->ki_moretdname, sizeof(name));
+	if (name[0] == '\0' || strcmp(kipp->ki_comm, name) == 0) {
+		name[0] = '-';
+		name[1] = '\0';
+	}
+
+	return (name);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -125,10 +147,14 @@ main(int argc, char *argv[])
 
 	interval = 0;
 	memf = nlistf = NULL;
-	while ((ch = getopt(argc, argv, "CN:M:abcefijklhstvw:x")) != -1) {
+	while ((ch = getopt(argc, argv, "CHN:M:abcefijklhrsStvw:x")) != -1) {
 		switch (ch) {
 		case 'C':
 			Cflag++;
+			break;
+
+		case 'H':
+			Hflag++;
 			break;
 
 		case 'M':
@@ -136,6 +162,9 @@ main(int argc, char *argv[])
 			break;
 		case 'N':
 			nlistf = optarg;
+			break;
+		case 'S':
+			Sflag++;
 			break;
 		case 'a':
 			aflag++;
@@ -181,6 +210,10 @@ main(int argc, char *argv[])
 			hflag++;
 			break;
 
+		case 'r':
+			rflag++;
+			break;
+
 		case 's':
 			sflag++;
 			break;
@@ -217,7 +250,7 @@ main(int argc, char *argv[])
 
 	/* We require that either 0 or 1 mode flags be set. */
 	tmp = bflag + cflag + eflag + fflag + iflag + jflag + (kflag ? 1 : 0) +
-	    lflag + sflag + tflag + vflag + xflag;
+	    lflag + rflag + sflag + tflag + vflag + xflag + Sflag;
 	if (!(tmp == 0 || tmp == 1))
 		usage();
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/procstat/procstat_vm.c 262228 2014-02-19 19:11:14Z jhb $
  */
 
 #include <sys/param.h>
@@ -99,6 +100,9 @@ procstat_vm(struct procstat *procstat, struct kinfo_proc *kipp)
 			break;
 		case KVME_TYPE_SG:
 			str = "sg";
+			break;
+		case KVME_TYPE_MGTDEVICE:
+			str = "md";
 			break;
 		case KVME_TYPE_UNKNOWN:
 		default:

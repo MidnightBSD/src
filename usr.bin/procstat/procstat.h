@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -23,27 +24,30 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/procstat/procstat.h 310121 2016-12-15 16:52:17Z vangyzen $
  */
 
 #ifndef PROCSTAT_H
 #define	PROCSTAT_H
 
-extern int	hflag, nflag, Cflag;
+extern int	hflag, nflag, Cflag, Hflag;
 
 struct kinfo_proc;
 void	kinfo_proc_sort(struct kinfo_proc *kipp, int count);
+const char *	kinfo_proc_thread_name(const struct kinfo_proc *kipp);
 
 void	procstat_args(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_auxv(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_basic(struct kinfo_proc *kipp);
 void	procstat_bin(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_cred(struct procstat *prstat, struct kinfo_proc *kipp);
+void	procstat_cs(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_env(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_files(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_kstack(struct procstat *prstat, struct kinfo_proc *kipp,
     int kflag);
 void	procstat_rlimit(struct procstat *prstat, struct kinfo_proc *kipp);
+void	procstat_rusage(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_sigs(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_threads(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_threads_sigs(struct procstat *prstat, struct kinfo_proc *kipp);

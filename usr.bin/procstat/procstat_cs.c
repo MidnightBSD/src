@@ -24,10 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/procstat/procstat_threads.c 310121 2016-12-15 16:52:17Z vangyzen $
+ * $FreeBSD: stable/10/usr.bin/procstat/procstat_cs.c 310121 2016-12-15 16:52:17Z vangyzen $
  */
 
 #include <sys/param.h>
+#include <sys/cpuset.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
 
@@ -41,15 +42,17 @@
 #include "procstat.h"
 
 void
-procstat_threads(struct procstat *procstat, struct kinfo_proc *kipp)
+procstat_cs(struct procstat *procstat, struct kinfo_proc *kipp)
 {
+	cpusetid_t cs;
+	cpuset_t mask;
 	struct kinfo_proc *kip;
 	unsigned int count, i;
-	const char *str;
+	int once, twice, lastcpu, cpu;
 
 	if (!hflag)
-		printf("%5s %6s %-19s %-19s %2s %4s %-7s %-9s\n", "PID",
-		    "TID", "COMM", "TDNAME", "CPU", "PRI", "STATE", "WCHAN");
+		printf("%5s %6s %-19s %-19s %2s %4s %-7s\n", "PID",
+		    "TID", "COMM", "TDNAME", "CPU", "CSID", "CPU MASK");
 
 	kip = procstat_getprocs(procstat, KERN_PROC_PID | KERN_PROC_INC_THREAD,
 	    kipp->ki_pid, &count);
@@ -69,47 +72,34 @@ procstat_threads(struct procstat *procstat, struct kinfo_proc *kipp)
 			printf("%3d ", kipp->ki_lastcpu);
 		else
 			printf("%3s ", "-");
-		printf("%4d ", kipp->ki_pri.pri_level);
-		switch (kipp->ki_stat) {
-		case SRUN:
-			str = "run";
-			break;
-
-		case SSTOP:
-			str = "stop";
-			break;
-
-		case SSLEEP:
-			str = "sleep";
-			break;
-
-		case SLOCK:
-			str = "lock";
-			break;
-
-		case SWAIT:
-			str = "wait";
-			break;
-
-		case SZOMB:
-			str = "zomb";
-			break;
-
-		case SIDL:
-			str = "idle";
-			break;
-
-		default:
-			str = "??";
-			break;
+		if (cpuset_getid(CPU_LEVEL_CPUSET, CPU_WHICH_TID,
+		    kipp->ki_tid, &cs) != 0) {
+			cs = CPUSET_INVALID;
 		}
-		printf("%-7s ", str);
-		if (kipp->ki_kiflag & KI_LOCKBLOCK) {
-			printf("*%-8s ", strlen(kipp->ki_lockname) ?
-			    kipp->ki_lockname : "-");
-		} else {
-			printf("%-9s ", strlen(kipp->ki_wmesg) ?
-			    kipp->ki_wmesg : "-");
+		printf("%4d ", cs);
+		if ((cs != CPUSET_INVALID) && 
+		    (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID,
+		    kipp->ki_tid, sizeof(mask), &mask) == 0)) {
+			lastcpu = -1;
+			once = 0;
+			twice = 0;
+			for (cpu = 0; cpu < CPU_SETSIZE; cpu++) {
+				if (CPU_ISSET(cpu, &mask)) {
+					if (once == 0) {
+						printf("%d", cpu);
+						once = 1;
+					} else if (cpu == lastcpu + 1) {
+						twice = 1;
+					} else if (twice == 1) {
+						printf("-%d,%d", lastcpu, cpu);
+						twice = 0;
+					} else
+						printf(",%d", cpu);
+					lastcpu = cpu;
+				}
+			}
+			if (once && twice)
+				printf("-%d", lastcpu);
 		}
 		printf("\n");
 	}
