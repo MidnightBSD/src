@@ -1,5 +1,6 @@
-#	@(#)Makefile	8.1 (Berkeley) 7/19/93
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 7/19/93
+# $FreeBSD: stable/10/usr.bin/rsh/Makefile 201386 2010-01-02 10:27:05Z ed $
 
 PROG=	rsh
 CFLAGS+=-I${.CURDIR}/../../libexec/rlogind
