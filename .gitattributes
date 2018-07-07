@@ -75239,6 +75239,7 @@ usr.bin/bmake/Makefile.config -text
 usr.bin/bmake/Makefile.inc -text
 usr.bin/bmake/config.h -text
 usr.bin/bmake/tests/Makefile svneol=native#text/plain
+usr.bin/bmake/tests/Makefile.inc svneol=native#text/plain
 usr.bin/bmake/tests/README -text
 usr.bin/bmake/tests/archives/Makefile svneol=native#text/plain
 usr.bin/bmake/tests/archives/fmt_44bsd/Makefile svneol=native#text/plain
