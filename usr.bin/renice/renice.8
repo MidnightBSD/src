@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)renice.8	8.1 (Berkeley) 6/9/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/renice/renice.8 248412 2013-03-17 06:36:04Z joel $
 .\"
 .Dd June 9, 1993
 .Dt RENICE 8
@@ -85,13 +86,6 @@ Reset the
 interpretation to be (the default) process ID's.
 .El
 .Pp
-For example,
-.Pp
-.Dl "renice +1 987 -u daemon root -p 32"
-.Pp
-would change the priority of process ID's 987 and 32, and
-all processes owned by users daemon and root.
-.Pp
 Users other than the super-user may only alter the priority of
 processes they own,
 and can only monotonically increase their ``nice value''
@@ -116,6 +110,11 @@ anything negative (to make things go very fast).
 .It Pa /etc/passwd
 to map user names to user ID's
 .El
+.Sh EXAMPLES
+Change the priority of process ID's 987 and 32, and
+all processes owned by users daemon and root.
+.Pp
+.Dl "renice +1 987 -u daemon root -p 32"
 .Sh SEE ALSO
 .Xr nice 1 ,
 .Xr rtprio 1 ,
