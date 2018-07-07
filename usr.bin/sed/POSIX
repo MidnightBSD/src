@@ -1,4 +1,5 @@
 #	@(#)POSIX	8.1 (Berkeley) 6/6/93
+# $FreeBSD: stable/10/usr.bin/sed/POSIX 168417 2007-04-06 08:43:30Z yar $
 # $MidnightBSD$
 
 Comments on the IEEE P1003.2 Draft 12

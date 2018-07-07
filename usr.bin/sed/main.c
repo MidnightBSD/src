@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Johann 'Myrkraverk' Oskarsson.
  * Copyright (c) 1992 Diomidis Spinellis.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/sed/main.c,v 1.2 2012/11/23 01:13:53 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.bin/sed/main.c 316442 2017-04-03 06:14:23Z delphij $");
 
 #ifndef lint
 static const char copyright[] =
@@ -132,7 +133,7 @@ main(int argc, char *argv[])
 	fflag = 0;
 	inplace = NULL;
 
-	while ((c = getopt(argc, argv, "EI:ae:f:i:lnr")) != -1)
+	while ((c = getopt(argc, argv, "EI:ae:f:i:lnru")) != -1)
 		switch (c) {
 		case 'r':		/* Gnu sed compat */
 		case 'E':
@@ -162,11 +163,15 @@ main(int argc, char *argv[])
 			ispan = 0;	/* don't span across input files */
 			break;
 		case 'l':
-			if(setlinebuf(stdout) != 0)
-				warnx("setlinebuf() failed");
+			if(setvbuf(stdout, NULL, _IOLBF, 0) != 0)
+				warnx("setting line buffered output failed");
 			break;
 		case 'n':
 			nflag = 1;
+			break;
+		case 'u':
+			if(setvbuf(stdout, NULL, _IONBF, 0) != 0)
+				warnx("setting unbuffered output failed");
 			break;
 		default:
 		case '?':
@@ -199,9 +204,10 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "%s\n%s\n",
-		"usage: sed script [-Ealn] [-i extension] [file ...]",
-		"       sed [-Ealn] [-i extension] [-e script] ... [-f script_file] ... [file ...]");
+	(void)fprintf(stderr,
+	    "usage: %s script [-Ealnru] [-i extension] [file ...]\n"
+	    "\t%s [-Ealnu] [-i extension] [-e script] ... [-f script_file]"
+	    " ... [file ...]\n", getprogname(), getprogname());
 	exit(1);
 }
 
@@ -386,7 +392,7 @@ mf_fgets(SPACE *sp, enum e_spflag spflag)
 		if (inplace != NULL) {
 			if (lstat(fname, &sb) != 0)
 				err(1, "%s", fname);
-			if (!(sb.st_mode & S_IFREG))
+			if (!S_ISREG(sb.st_mode))
 				errx(1, "%s: %s %s", fname,
 				    "in-place editing only",
 				    "works for regular files");
@@ -404,6 +410,8 @@ mf_fgets(SPACE *sp, enum e_spflag spflag)
 			if (len >= sizeof(tmpfname))
 				errx(1, "%s: name too long", fname);
 			unlink(tmpfname);
+			if (outfile != NULL && outfile != stdout)
+				fclose(outfile);
 			if ((outfile = fopen(tmpfname, "w")) == NULL)
 				err(1, "%s", fname);
 			fchown(fileno(outfile), sb.st_uid, sb.st_gid);

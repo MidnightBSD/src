@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Diomidis Spinellis.
  * Copyright (c) 1992, 1993
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/sed/extern.h 170608 2007-06-12 12:05:24Z yar $
  */
 
 extern struct s_command *prog;

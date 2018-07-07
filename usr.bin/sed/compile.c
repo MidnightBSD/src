@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Diomidis Spinellis.
  * Copyright (c) 1992, 1993
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/sed/compile.c 293290 2016-01-07 00:40:51Z bdrewery $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)compile.c	8.1 (Berkeley) 6/6/93";
@@ -364,7 +365,7 @@ nonsel:		/* Now parse the command */
 }
 
 /*
- * Get a delimited string.  P points to the delimeter of the string; d points
+ * Get a delimited string.  P points to the delimiter of the string; d points
  * to a buffer area.  Newline and delimiter escapes are processed; other
  * escapes are ignored.
  *
@@ -558,7 +559,7 @@ compile_flags(char *p, struct s_subst *s)
 {
 	int gn;			/* True if we have seen g or n */
 	unsigned long nval;
-	char wfile[_POSIX2_LINE_MAX + 1], *q;
+	char wfile[_POSIX2_LINE_MAX + 1], *q, *eq;
 
 	s->n = 1;				/* Default */
 	s->p = 0;
@@ -582,6 +583,7 @@ compile_flags(char *p, struct s_subst *s)
 		case 'p':
 			s->p = 1;
 			break;
+		case 'i':
 		case 'I':
 			s->icase = 1;
 			break;
@@ -610,9 +612,12 @@ compile_flags(char *p, struct s_subst *s)
 #endif
 			EATSPACE();
 			q = wfile;
+			eq = wfile + sizeof(wfile) - 1;
 			while (*p) {
 				if (*p == '\n')
 					break;
+				if (q >= eq)
+					err(1, "wfile too long");
 				*q++ = *p++;
 			}
 			*q = '\0';

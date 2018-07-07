@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1992, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -29,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sed.1	8.2 (Berkeley) 12/30/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/sed/sed.1 300553 2016-05-24 02:57:13Z pfg $
 .\"
-.Dd May 24, 2009
+.Dd May 10, 2016
 .Dt SED 1
 .Os
 .Sh NAME
@@ -39,7 +40,7 @@
 .Nd stream editor
 .Sh SYNOPSIS
 .Nm
-.Op Fl Ealnr
+.Op Fl Ealnru
 .Ar command
 .Op Ar
 .Nm
@@ -148,6 +149,8 @@ option suppresses this behavior.
 Same as
 .Fl E
 for compatibility with GNU sed.
+.It Fl u
+Make output unbuffered.
 .El
 .Pp
 The form of a
@@ -507,7 +510,7 @@ Append the pattern space to
 if a replacement was made.
 If the replacement string is identical to that which it replaces, it
 is still considered to have been a replacement.
-.It I
+.It i or I
 Match the regular expression in a case-insensitive way.
 .El
 .Pp
