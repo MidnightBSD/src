@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -43,7 +39,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)talkd.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/talkd/talkd.c,v 1.17 2004/06/14 22:44:13 bms Exp $";
+  "$FreeBSD: stable/10/libexec/talkd/talkd.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 /*
@@ -70,13 +66,13 @@ static const char rcsid[] =
 
 #include "extern.h"
 
-CTL_MSG		request;
-CTL_RESPONSE	response;
+static CTL_MSG		request;
+static CTL_RESPONSE	response;
 
-int	debug = 0;
-long	lastmsgtime;
+int			debug = 0;
+static long		lastmsgtime;
 
-char	hostname[MAXHOSTNAMELEN];
+char			hostname[MAXHOSTNAMELEN];
 
 #define TIMEOUT 30
 #define MAXIDLE 120

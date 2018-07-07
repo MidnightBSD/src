@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/talkd/process.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@
 static char sccsid[] = "@(#)process.c	8.2 (Berkeley) 11/16/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/talkd/process.c,v 1.11 2005/05/06 15:28:54 delphij Exp $";
+  "$FreeBSD: stable/10/libexec/talkd/process.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 /*
@@ -63,8 +59,6 @@ static const char rcsid[] =
 #include <utmpx.h>
 
 #include "extern.h"
-
-extern int debug;
 
 void
 process_request(CTL_MSG *mp, CTL_RESPONSE *rp)

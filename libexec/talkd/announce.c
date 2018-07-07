@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/talkd/announce.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@
 static char sccsid[] = "@(#)announce.c	8.3 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/talkd/announce.c,v 1.16 2003/04/03 05:13:27 jmallett Exp $";
+  "$FreeBSD: stable/10/libexec/talkd/announce.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -60,8 +56,6 @@ static const char rcsid[] =
 
 #include "ttymsg.h"
 #include "extern.h"
-
-extern char hostname[];
 
 /*
  * Announce an invitation to talk.
