@@ -75987,6 +75987,7 @@ usr.bin/grep/regex/tre-fastmatch.c -text
 usr.bin/grep/regex/tre-fastmatch.h -text
 usr.bin/grep/regex/xmalloc.c -text
 usr.bin/grep/regex/xmalloc.h -text
+usr.bin/grep/tests/Makefile svneol=native#text/plain
 usr.bin/grep/util.c -text
 usr.bin/gzip/Makefile -text
 usr.bin/gzip/gzexe -text
