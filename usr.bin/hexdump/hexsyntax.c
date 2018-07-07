@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)hexsyntax.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/hexdump/hexsyntax.c 229403 2012-01-03 18:51:58Z ed $");
 
 #include <sys/types.h>
 
@@ -54,7 +55,7 @@ newsyntax(int argc, char ***argvp)
 	char *p, **argv;
 
 	argv = *argvp;
-	if ((p = rindex(argv[0], 'h')) != NULL &&
+	if ((p = strrchr(argv[0], 'h')) != NULL &&
 	    strcmp(p, "hd") == 0) {
 		/* "Canonical" format, implies -C. */
 		add("\"%08.8_Ax\n\"");
