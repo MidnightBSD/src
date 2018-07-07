@@ -1,5 +1,6 @@
-.\" @(#)bootparamd.8
 .\" $MidnightBSD$
+.\" @(#)bootparamd.8
+.\" $FreeBSD: stable/10/usr.sbin/bootparamd/bootparamd/bootparamd.8 250582 2013-05-12 22:22:12Z joel $
 .Dd December 14, 2000
 .Dt BOOTPARAMD 8
 .Os
@@ -48,7 +49,7 @@ The file to use as boot parameter file instead of
 .El
 .Sh FILES
 .Bl -tag -width /etc/bootparams -compact
-.It /etc/bootparams
+.It Pa /etc/bootparams
 default boot parameter file
 .El
 .Sh EXAMPLES
@@ -58,7 +59,7 @@ The SunOS kernel hangs until it receives a reply.
 To accommodate this behaviour add an alias address
 that responds to an all-0 broadcast.
 So, add something like
-.Ql "ifconfig xl0 192.168.200.254 netmask 255.255.255.255 broadcast 192.168.200.0 alias
+.Ql "ifconfig xl0 192.168.200.254 netmask 255.255.255.255 broadcast 192.168.200.0 alias"
 on the relevant network interface on your
 .Nm
 server.

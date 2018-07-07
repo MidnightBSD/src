@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
 
 This code is not copyright, and is placed in the public domain. Feel free to
@@ -9,7 +10,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/bootparamd/callbootd/callbootd.c 324142 2017-09-30 20:50:31Z ngie $";
 #endif /* not lint */
 
 #include "bootparam_prot.h"
@@ -32,15 +33,12 @@ int broadcast;
 char cln[MAX_MACHINE_NAME+1];
 char dmn[MAX_MACHINE_NAME+1];
 char path[MAX_PATH_LEN+1];
-extern char *inet_ntoa();
 static void usage(void);
 int printgetfile(bp_getfile_res *);
 int printwhoami(bp_whoami_res *);
 
-bool_t
-eachres_whoami(resultp, raddr)
-bp_whoami_res *resultp;
-struct sockaddr_in *raddr;
+static bool_t
+eachres_whoami(bp_whoami_res *resultp, struct sockaddr_in *raddr)
 {
   struct hostent *he;
 
@@ -51,10 +49,8 @@ struct sockaddr_in *raddr;
   return(0);
 }
 
-bool_t
-eachres_getfile(resultp, raddr)
-bp_getfile_res *resultp;
-struct sockaddr_in *raddr;
+static bool_t
+eachres_getfile(bp_getfile_res *resultp, struct sockaddr_in *raddr)
 {
   struct hostent *he;
 
@@ -67,9 +63,7 @@ struct sockaddr_in *raddr;
 
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
   char *server;
 
@@ -81,7 +75,6 @@ char **argv;
 
   long the_inet_addr;
   CLIENT *clnt;
-  enum clnt_stat clnt_stat;
 
   stat_whoami_res.client_name = cln;
   stat_whoami_res.domain_name = dmn;
@@ -117,7 +110,7 @@ char **argv;
       } else
 	exit(0);
      } else {
-       clnt_stat=clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
+       (void)clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
 			       BOOTPARAMPROC_WHOAMI,
 			       (xdrproc_t)xdr_bp_whoami_arg,
 			       (char *)&whoami_arg,
@@ -140,7 +133,7 @@ char **argv;
       } else
 	exit(0);
     } else {
-      clnt_stat=clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
+      (void)clnt_broadcast(BOOTPARAMPROG, BOOTPARAMVERS,
 			       BOOTPARAMPROC_GETFILE,
 			       (xdrproc_t)xdr_bp_getfile_arg,
 			       (char *)&getfile_arg,

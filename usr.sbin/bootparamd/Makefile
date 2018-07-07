@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/bootparamd/Makefile 176096 2008-02-07 19:00:00Z rink $
 
 SUBDIR=	bootparamd callbootd
 

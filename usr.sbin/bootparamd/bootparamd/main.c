@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
 
 This code is not copyright, and is placed in the public domain. Feel free to
@@ -9,7 +10,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/bootparamd/bootparamd/main.c 291042 2015-11-19 00:14:23Z ngie $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -36,13 +37,10 @@ in_addr_t route_addr = -1;
 struct sockaddr_in my_addr;
 char *bootpfile = "/etc/bootparams";
 
-extern  void bootparamprog_1();
 static void usage(void);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	SVCXPRT *transp;
 	struct hostent *he;
@@ -110,7 +108,7 @@ char **argv;
 }
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr,
 		"usage: bootparamd [-d] [-s] [-r router] [-f bootparmsfile]\n");

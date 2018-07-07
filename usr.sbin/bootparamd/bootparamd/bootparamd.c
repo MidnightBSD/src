@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
 
 This code is not copyright, and is placed in the public domain. Feel free to
@@ -9,7 +10,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/bootparamd/bootparamd/bootparamd.c 320780 2017-07-07 15:09:08Z asomers $";
 #endif /* not lint */
 
 #ifdef YP
@@ -114,7 +115,7 @@ bp_getfile_res *
 bp_getfile_arg *getfile;
 struct svc_req *req;
 {
-  char *where, *index();
+  char *where;
   static bp_getfile_res res;
 
   if (debug)
@@ -133,7 +134,7 @@ struct svc_req *req;
   askname[sizeof(askname)-1] = 0;
 
   if (getthefile(askname, getfile->file_id,buffer,sizeof(buffer))) {
-    if ( (where = index(buffer,':')) ) {
+    if ( (where = strchr(buffer,':')) ) {
       /* buffer is re-written to contain the name of the info of file */
       strncpy(hostname, buffer, where - buffer);
       hostname[where - buffer] = '\0';
@@ -199,7 +200,10 @@ int blen;
 
   int ch, pch, fid_len, res = 0;
   int match = 0;
-  char info[MAX_FILEID + MAX_PATH_LEN+MAX_MACHINE_NAME + 3];
+#define INFOLEN 1343
+  _Static_assert(INFOLEN >= MAX_FILEID + MAX_PATH_LEN+MAX_MACHINE_NAME + 3,
+		  "INFOLEN isn't large enough");
+  char info[INFOLEN + 1];
 
   bpf = fopen(bootpfile, "r");
   if ( ! bpf )
@@ -252,7 +256,9 @@ int blen;
 
   if (match) {
     fid_len = strlen(fileid);
-    while ( ! res && (fscanf(bpf,"%s", info)) > 0) { /* read a string */
+#define AS_FORMAT(d)	"%" #d "s"
+#define REXPAND(d) AS_FORMAT(d)	/* Force another preprocessor expansion */
+    while ( ! res && (fscanf(bpf, REXPAND(INFOLEN), info)) > 0) {
       ch = getc(bpf);                                /* and a character */
       if ( *info != '#' ) {                          /* Comment ? */
 	if (! strncmp(info, fileid, fid_len) && *(info + fid_len) == '=') {
