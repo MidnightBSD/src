@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Copyright (c) 1993
@@ -38,7 +39,7 @@ static char sccsid[] = "@(#)yacc.y	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mklocale/yacc.y 300265 2016-05-20 06:02:44Z truckman $");
 
 #include <arpa/inet.h>
 
@@ -123,7 +124,7 @@ entry	:	ENCODING STRING
 		      strcmp($2, "BIG5") &&
 		      strcmp($2, "MSKanji"))
 			warnx("ENCODING %s is not supported by libc", $2);
-		strncpy(new_locale.encoding, $2,
+		strlcpy(new_locale.encoding, $2,
 		    sizeof(new_locale.encoding)); }
 	|	VARIABLE
 		{ new_locale.variable_len = strlen($1) + 1;
