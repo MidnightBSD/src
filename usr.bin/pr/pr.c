@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Keith Muller.
  * Copyright (c) 1993
@@ -48,7 +49,7 @@ static char sccsid[] = "@(#)pr.c	8.2 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/pr/pr.c 319257 2017-05-30 22:02:55Z asomers $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -80,40 +81,40 @@ __MBSDID("$MidnightBSD$");
 /*
  * parameter variables
  */
-int	pgnm;			/* starting page number */
-int	clcnt;			/* number of columns */
-int	colwd;			/* column data width - multiple columns */
-int	across;			/* mult col flag; write across page */
-int	dspace;			/* double space flag */
-char	inchar;			/* expand input char */
-int	ingap;			/* expand input gap */
-int	pausefst;		/* Pause before first page */
-int	pauseall;		/* Pause before each page */
-int	formfeed;		/* use formfeed as trailer */
-char	*header;		/* header name instead of file name */
-char	ochar;			/* contract output char */
-int	ogap;			/* contract output gap */
-int	lines;			/* number of lines per page */
-int	merge;			/* merge multiple files in output */
-char	nmchar;			/* line numbering append char */
-int	nmwd;			/* width of line number field */
-int	offst;			/* number of page offset spaces */
-int	nodiag;			/* do not report file open errors */
-char	schar;			/* text column separation character */
-int	sflag;			/* -s option for multiple columns */
-int	nohead;			/* do not write head and trailer */
-int	pgwd;			/* page width with multiple col output */
-const char *timefrmt;		/* time conversion string */
+static int	pgnm;		/* starting page number */
+static int	clcnt;		/* number of columns */
+static int	colwd;		/* column data width - multiple columns */
+static int	across;		/* mult col flag; write across page */
+static int	dspace;		/* double space flag */
+static char	inchar;		/* expand input char */
+static int	ingap;		/* expand input gap */
+static int	pausefst;	/* Pause before first page */
+static int	pauseall;	/* Pause before each page */
+static int	formfeed;	/* use formfeed as trailer */
+static char	*header;	/* header name instead of file name */
+static char	ochar;		/* contract output char */
+static int	ogap;		/* contract output gap */
+static int	lines;		/* number of lines per page */
+static int	merge;		/* merge multiple files in output */
+static char	nmchar;		/* line numbering append char */
+static int	nmwd;		/* width of line number field */
+static int	offst;		/* number of page offset spaces */
+static int	nodiag;		/* do not report file open errors */
+static char	schar;		/* text column separation character */
+static int	sflag;		/* -s option for multiple columns */
+static int	nohead;		/* do not write head and trailer */
+static int	pgwd;		/* page width with multiple col output */
+static char	*timefrmt;	/* time conversion string */
 
 /*
  * misc globals
  */
-FILE	*err;			/* error message file pointer */
-int	addone;			/* page length is odd with double space */
-int	errcnt;			/* error count on file processing */
-char	digs[] = "0123456789";	/* page number translation map */
+static FILE	*err;		/* error message file pointer */
+static int	addone;		/* page length is odd with double space */
+static int	errcnt;		/* error count on file processing */
+static char	digs[] = "0123456789"; /* page number translation map */
 
-char	fnamedefault[] = FNAME;
+static char	fnamedefault[] = FNAME;
 
 int
 main(int argc, char *argv[])
@@ -135,6 +136,7 @@ main(int argc, char *argv[])
 			ret_val = horzcol(argc, argv);
 		else
 			ret_val = vertcol(argc, argv);
+		free(timefrmt);
 	} else
 		usage();
 	flsh_errs();
@@ -207,6 +209,7 @@ onecol(int argc, char *argv[])
 	 * allocate header buffer
 	 */
 	if ((hbuf = malloc((unsigned)(HDBUF + offst)*sizeof(char))) == NULL) {
+		free(obuf);
 		mfail();
 		return(1);
 	}
@@ -259,7 +262,7 @@ onecol(int argc, char *argv[])
 					break;
 				if (!linecnt && !nohead &&
 					prhead(hbuf, fname, pagecnt))
-					return(1);
+					goto err;
 
 				/*
 				 * start of new line.
@@ -268,9 +271,9 @@ onecol(int argc, char *argv[])
 					if (num)
 						addnum(nbuf, num, ++lncnt);
 					if (otln(obuf,cnt+off, &ips, &ops, mor))
-						return(1);
+						goto err;
 				} else if (otln(lbuf, cnt, &ips, &ops, mor))
-					return(1);
+					goto err;
 
 				/*
 				 * if line bigger than buffer, get more
@@ -293,7 +296,7 @@ onecol(int argc, char *argv[])
 			 * fill to end of page
 			 */
 			if (linecnt && prtail(lines-linecnt-lrgln, lrgln))
-				return(1);
+				goto err;
 
 			/*
 			 * On EOF go to next file
@@ -306,8 +309,14 @@ onecol(int argc, char *argv[])
 			(void)fclose(inf);
 	}
 	if (eoptind < argc)
-		return(1);
+		goto err;
+	free(hbuf);
+	free(obuf);
 	return(0);
+err:
+	free(hbuf);
+	free(obuf);
+	return(1);
 }
 
 /*
@@ -317,27 +326,27 @@ int
 vertcol(int argc, char *argv[])
 {
 	char *ptbf;
-	char **lstdat;
+	char **lstdat = NULL;
 	int i;
 	int j;
 	int cnt = -1;
 	int pln;
-	int *indy;
+	int *indy = NULL;
 	int cvc;
-	int *lindy;
+	int *lindy = NULL;
 	int lncnt;
 	int stp;
 	int pagecnt;
 	int col = colwd + 1;
 	int mxlen = pgwd + offst + 1;
 	int mclcnt = clcnt - 1;
-	struct vcol *vc;
+	struct vcol *vc = NULL;
 	int mvc;
 	int tvc;
 	int cw = nmwd + 1;
 	int fullcol;
-	char *buf;
-	char *hbuf;
+	char *buf = NULL;
+	char *hbuf = NULL;
 	char *ohbuf;
 	const char *fname;
 	FILE *inf;
@@ -345,6 +354,7 @@ vertcol(int argc, char *argv[])
 	int cps = 0;
 	int ops = 0;
 	int mor = 0;
+	int retval = 1;
 
 	/*
 	 * allocate page buffer
@@ -359,7 +369,7 @@ vertcol(int argc, char *argv[])
 	 */
 	if ((hbuf = malloc((unsigned)(HDBUF + offst)*sizeof(char))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 	ohbuf = hbuf + offst;
 	if (offst)
@@ -372,7 +382,7 @@ vertcol(int argc, char *argv[])
 	if ((vc =
 	    (struct vcol *)malloc((unsigned)mvc*sizeof(struct vcol))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 
 	/*
@@ -380,7 +390,7 @@ vertcol(int argc, char *argv[])
 	 */
 	if ((lstdat = (char **)malloc((unsigned)lines*sizeof(char *))) == NULL){
 		mfail();
-		return(1);
+		goto out;
 	}
 
 	/*
@@ -388,11 +398,11 @@ vertcol(int argc, char *argv[])
 	 */
 	if ((indy = (int *)malloc((unsigned)lines*sizeof(int))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 	if ((lindy = (int *)malloc((unsigned)lines*sizeof(int))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 
 	if (nmwd)
@@ -533,12 +543,13 @@ vertcol(int argc, char *argv[])
 				 * print header
 				 */
 				if (!nohead && prhead(hbuf, fname, pagecnt))
-					return(1);
+					goto out;
 				for (i = 0; i < pln; ++i) {
 					ips = 0;
 					ops = 0;
-					if (offst&& otln(buf,offst,&ips,&ops,1))
-						return(1);
+					if (offst &&
+					    otln(buf,offst,&ips,&ops,1))
+						goto out;
 					tvc = i;
 
 					for (j = 0; j < clcnt; ++j) {
@@ -563,7 +574,7 @@ vertcol(int argc, char *argv[])
 							cnt = fullcol;
 						if (otln(vc[tvc].pt, cnt, &ips,
 								&ops, 1))
-							return(1);
+							goto out;
 						tvc += pln;
 						if (tvc >= cvc)
 							break;
@@ -572,13 +583,13 @@ vertcol(int argc, char *argv[])
 					 * terminate line
 					 */
 					if (otln(buf, 0, &ips, &ops, 0))
-						return(1);
+						goto out;
 				}
 				/*
 				 * pad to end of page
 				 */
 				if (prtail((lines - pln), 0))
-					return(1);
+					goto out;
 				/*
 				 * done with output, go to next file
 				 */
@@ -597,7 +608,7 @@ vertcol(int argc, char *argv[])
 			 * print header
 			 */
 			if (pln && !nohead && prhead(hbuf, fname, pagecnt))
-				return(1);
+				goto out;
 
 			/*
 			 * output each line
@@ -607,14 +618,14 @@ vertcol(int argc, char *argv[])
 				if ((j = lstdat[i] - ptbf) <= offst)
 					break;
 				if (otln(ptbf, j, &ips, &ops, 0))
-					return(1);
+					goto out;
 			}
 
 			/*
 			 * pad to end of page
 			 */
 			if (pln && prtail((lines - pln), 0))
-				return(1);
+				goto out;
 
 			/*
 			 * if EOF go to next file
@@ -627,8 +638,16 @@ vertcol(int argc, char *argv[])
 			(void)fclose(inf);
 	}
 	if (eoptind < argc)
-		return(1);
-	return(0);
+		goto out;
+	retval = 0;
+out:
+	free(lindy);
+	free(indy);
+	free(lstdat);
+	free(vc);
+	free(hbuf);
+	free(buf);
+	return(retval);
 }
 
 /*
@@ -665,6 +684,7 @@ horzcol(int argc, char *argv[])
 	 * page header
 	 */
 	if ((hbuf = malloc((unsigned)(HDBUF + offst)*sizeof(char))) == NULL) {
+		free(buf);
 		mfail();
 		return(1);
 	}
@@ -744,19 +764,19 @@ horzcol(int argc, char *argv[])
 					break;
 				if (!i && !nohead &&
 					prhead(hbuf, fname, pagecnt))
-					return(1);
+					goto err;
 				/*
 				 * output line
 				 */
 				if (otln(buf, j, &ips, &ops, 0))
-					return(1);
+					goto err;
 			}
 
 			/*
 			 * pad to end of page
 			 */
 			if (i && prtail(lines-i, 0))
-				return(1);
+				goto err;
 
 			/*
 			 * if EOF go to next file
@@ -769,8 +789,14 @@ horzcol(int argc, char *argv[])
 			(void)fclose(inf);
 	}
 	if (eoptind < argc)
-		return(1);
+		goto err;
+	free(hbuf);
+	free(buf);
 	return(0);
+err:
+	free(hbuf);
+	free(buf);
+	return(1);
 }
 
 /*
@@ -786,27 +812,28 @@ mulfile(int argc, char *argv[])
 	int cnt;
 	char *lstdat;
 	int i;
-	FILE **fbuf;
+	FILE **fbuf = NULL;
 	int actf;
 	int lncnt;
 	int col;
 	int pagecnt;
 	int fproc;
-	char *buf;
-	char *hbuf;
+	char *buf = NULL;
+	char *hbuf = NULL;
 	char *ohbuf;
 	const char *fname;
 	int ips = 0;
 	int cps = 0;
 	int ops = 0;
 	int mor = 0;
+	int retval = 1;
 
 	/*
 	 * array of FILE *, one for each operand
 	 */
 	if ((fbuf = (FILE **)malloc((unsigned)clcnt*sizeof(FILE *))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 
 	/*
@@ -814,7 +841,7 @@ mulfile(int argc, char *argv[])
 	 */
 	if ((hbuf = malloc((unsigned)(HDBUF + offst)*sizeof(char))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 	ohbuf = hbuf + offst;
 
@@ -822,7 +849,7 @@ mulfile(int argc, char *argv[])
 	 * do not know how many columns yet. The number of operands provide an
 	 * upper bound on the number of columns. We use the number of files
 	 * we can open successfully to set the number of columns. The operation
-	 * of the merge operation (-m) in relation to unsuccesful file opens
+	 * of the merge operation (-m) in relation to unsuccessful file opens
 	 * is unspecified by posix.
 	 */
 	j = 0;
@@ -838,10 +865,10 @@ mulfile(int argc, char *argv[])
 	 * if no files, exit
 	 */
 	if (!j)
-		return(1);
+		goto out;
 
 	/*
-	 * calculate page boundries based on open file count
+	 * calculate page boundaries based on open file count
 	 */
 	clcnt = j;
 	if (nmwd) {
@@ -854,7 +881,7 @@ mulfile(int argc, char *argv[])
 	if (colwd < 1) {
 		(void)fprintf(err,
 		  "pr: page width too small for %d columns\n", clcnt);
-		return(1);
+		goto out;
 	}
 	actf = clcnt;
 	col = colwd + 1;
@@ -864,7 +891,7 @@ mulfile(int argc, char *argv[])
 	 */
 	if ((buf = malloc((unsigned)(pgwd+offst+1)*sizeof(char))) == NULL) {
 		mfail();
-		return(1);
+		goto out;
 	}
 	if (offst) {
 		(void)memset(buf, (int)' ', offst);
@@ -951,13 +978,13 @@ mulfile(int argc, char *argv[])
 				break;
 
 			if (!i && !nohead && prhead(hbuf, fname, pagecnt))
-				return(1);
+				goto out;
 
 			/*
 			 * output line
 			 */
 			if (otln(buf, j, &ips, &ops, 0))
-				return(1);
+				goto out;
 
 			/*
 			 * if no more active files, done
@@ -972,12 +999,17 @@ mulfile(int argc, char *argv[])
 		 * pad to end of page
 		 */
 		if (i && prtail(lines-i, 0))
-			return(1);
+			goto out;
 		++pagecnt;
 	}
 	if (eoptind < argc)
-		return(1);
-	return(0);
+		goto out;
+	retval = 0;
+out:
+	free(buf);
+	free(hbuf);
+	free(fbuf);
+	return(retval);
 }
 
 /*
@@ -987,7 +1019,7 @@ mulfile(int argc, char *argv[])
  *	inf:	file
  *	buf:	buffer
  *	lim:	buffer length
- *	cps:	column positon 1st char in buffer (large line support)
+ *	cps:	column position 1st char in buffer (large line support)
  *	trnc:	throw away data more than lim up to \n
  *	mor:	set if more data in line (not truncated)
  */
@@ -1344,6 +1376,7 @@ nxtfile(int argc, char **argv, const char **fname, char *buf, int dt)
 					(void)fprintf(err,
 					     "pr: cannot get time of day, %s\n",
 					     strerror(errno));
+					fclose(inf);
 					return(NULL);
 				}
 				timeptr = localtime(&tv_sec);
@@ -1725,7 +1758,9 @@ setup(int argc, char *argv[])
 			break;
 		case 'w':
 			++wflag;
-			if (!isdigit((unsigned char)*eoptarg) || ((pgwd = atoi(eoptarg)) < 1)){
+			if ((eoptarg == NULL ) ||
+			    !isdigit((unsigned char)*eoptarg) ||
+			    ((pgwd = atoi(eoptarg)) < 1)){
 				(void)fputs(
 				   "pr: -w width must be 1 or more \n",err);
 				return(1);

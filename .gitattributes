@@ -76503,6 +76503,12 @@ usr.bin/pr/extern.h -text
 usr.bin/pr/pr.1 -text
 usr.bin/pr/pr.c -text
 usr.bin/pr/pr.h -text
+usr.bin/pr/tests/Makefile svneol=native#text/plain
+usr.bin/pr/tests/across.out -text
+usr.bin/pr/tests/basic2_test.sh svneol=native#text/plain
+usr.bin/pr/tests/merge.out -text
+usr.bin/pr/tests/other.in svneol=native#text/plain
+usr.bin/pr/tests/threecol.out -text
 usr.bin/printenv/Makefile -text
 usr.bin/printenv/printenv.1 -text
 usr.bin/printenv/printenv.c -text

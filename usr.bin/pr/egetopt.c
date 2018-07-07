@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Keith Muller.
  * Copyright (c) 1993
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)egetopt.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/pr/egetopt.c 293290 2016-01-07 00:40:51Z bdrewery $");
 
 #include <ctype.h>
 #include <stdio.h>
@@ -76,7 +77,7 @@ egetopt(int nargc, char * const *nargv, const char *ostr)
 {
 	static char *place = emsg;	/* option letter processing */
 	char *oli;			/* option letter list index */
-	static int delim;		/* which option delimeter */
+	static int delim;		/* which option delimiter */
 	char *p;
 	static char savec = '\0';
 

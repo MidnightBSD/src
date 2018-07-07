@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Keith Muller.
  * Copyright (c) 1993
@@ -35,10 +36,12 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/pr/extern.h 227175 2011-11-06 08:16:24Z ed $
  */
 
+extern int eopterr;
 extern int eoptind;
+extern int eoptopt;
 extern char *eoptarg;
 
 void	 addnum(char *, int, int);
