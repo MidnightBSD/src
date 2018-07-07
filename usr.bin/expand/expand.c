@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)expand.c	8.1 (Berkeley) 6/9/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/expand/expand.c 227238 2011-11-06 18:49:30Z ed $");
 
 #include <ctype.h>
 #include <err.h>
@@ -53,8 +54,8 @@ __MBSDID("$MidnightBSD$");
 /*
  * expand - expand tabs to equivalent spaces
  */
-int	nstops;
-int	tabstops[100];
+static int	nstops;
+static int	tabstops[100];
 
 static void getstops(char *);
 static void usage(void);
