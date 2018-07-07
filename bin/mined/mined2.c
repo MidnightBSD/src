@@ -44,7 +44,7 @@
  *  ========================================================================  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD: src/bin/mined/mined2.c,v 1.1 2008/08/17 03:26:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mined.h"
 #include <signal.h>
@@ -780,9 +780,9 @@ delete(LINE *start_line, char *start_textp,
  *				Yank Commands				      *	
  *  ========================================================================  */
 
-LINE *mark_line;			/* For marking position. */
-char *mark_text;
-int lines_saved;			/* Nr of lines in buffer */
+static LINE *mark_line;			/* For marking position. */
+static char *mark_text;
+static int lines_saved;			/* Nr of lines in buffer */
 
 /*
  * PT() inserts the buffer at the current location.
@@ -1171,7 +1171,7 @@ scratch_file(FLAG mode)
  * 	   that expression.
  */
 
-char typed_expression[LINE_LEN];	/* Holds previous expr. */
+static char typed_expression[LINE_LEN];	/* Holds previous expr. */
 
 /*
  * SF searches forward for an expression.
@@ -1458,7 +1458,7 @@ find_y(LINE *match_line)
 #define previous(ptr)		(*((ptr) - 1))
 
 /* Buffer to store outcome of compilation */
-int exp_buffer[BLOCK_SIZE];
+static int exp_buffer[BLOCK_SIZE];
 
 /* Errors often used */
 static const char *too_long = "Regular expression too long";
