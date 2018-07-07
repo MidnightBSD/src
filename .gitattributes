@@ -55081,6 +55081,7 @@ libexec/talkd/talkd.8 -text
 libexec/talkd/talkd.c -text
 libexec/tcpd/Makefile -text
 libexec/telnetd/Makefile -text
+libexec/tests/Makefile svneol=native#text/plain
 libexec/tftp-proxy/Makefile -text
 libexec/tftpd/Makefile -text
 libexec/tftpd/tftp-file.c -text
