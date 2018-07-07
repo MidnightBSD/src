@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -43,13 +44,17 @@ static char sccsid[] = "@(#)col.c	8.5 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/col/col.c 282949 2015-05-15 08:45:55Z bapt $");
+
+#include <sys/capability.h>
 
 #include <err.h>
+#include <errno.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
@@ -63,9 +68,9 @@ __MBSDID("$MidnightBSD$");
 #define	SI	'\017'		/* shift in to normal character set */
 #define	SO	'\016'		/* shift out to alternate character set */
 #define	VT	'\013'		/* vertical tab (aka reverse line feed) */
-#define	RLF	'\007'		/* ESC-07 reverse line feed */
-#define	RHLF	'\010'		/* ESC-010 reverse half-line feed */
-#define	FHLF	'\011'		/* ESC-011 forward half-line feed */
+#define	RLF	'7'		/* ESC-7 reverse line feed */
+#define	RHLF	'8'		/* ESC-8 reverse half-line feed */
+#define	FHLF	'9'		/* ESC-9 forward half-line feed */
 
 /* build up at least this many lines before flushing them out */
 #define	BUFFER_MARGIN		32
@@ -92,22 +97,23 @@ struct line_str {
 	int	l_max_col;		/* max column in the line */
 };
 
-LINE   *alloc_line(void);
-void	dowarn(int);
-void	flush_line(LINE *);
-void	flush_lines(int);
-void	flush_blanks(void);
-void	free_line(LINE *);
-void	usage(void);
+static void	addto_lineno(int *, int);
+static LINE   *alloc_line(void);
+static void	dowarn(int);
+static void	flush_line(LINE *);
+static void	flush_lines(int);
+static void	flush_blanks(void);
+static void	free_line(LINE *);
+static void	usage(void);
 
-CSET	last_set;		/* char_set of last char printed */
-LINE   *lines;
-int	compress_spaces;	/* if doing space -> tab conversion */
-int	fine;			/* if `fine' resolution (half lines) */
-int	max_bufd_lines;		/* max # lines to keep in memory */
-int	nblank_lines;		/* # blanks after last flushed line */
-int	no_backspaces;		/* if not to output any backspaces */
-int	pass_unknown_seqs;	/* pass unknown control sequences */
+static CSET	last_set;		/* char_set of last char printed */
+static LINE    *lines;
+static int	compress_spaces;	/* if doing space -> tab conversion */
+static int	fine;			/* if `fine' resolution (half lines) */
+static int	max_bufd_lines;		/* max # of half lines to keep in memory */
+static int	nblank_lines;		/* # blanks after last flushed line */
+static int	no_backspaces;		/* if not to output any backspaces */
+static int	pass_unknown_seqs;	/* pass unknown control sequences */
 
 #define	PUTC(ch) \
 	do {					\
@@ -129,10 +135,26 @@ main(int argc, char **argv)
 	int this_line;			/* line l points to */
 	int nflushd_lines;		/* number of lines that were flushed */
 	int adjust, opt, warned, width;
+	const char *errstr;
+	cap_rights_t rights;
+	unsigned long cmd;
 
 	(void)setlocale(LC_CTYPE, "");
 
-	max_bufd_lines = 128;
+	cap_rights_init(&rights, CAP_FSTAT, CAP_READ);
+	if (cap_rights_limit(STDIN_FILENO, &rights) < 0 && errno != ENOSYS)
+		err(1, "unable to limit rights for stdin");
+	cap_rights_init(&rights, CAP_FSTAT, CAP_WRITE, CAP_IOCTL);
+	if (cap_rights_limit(STDOUT_FILENO, &rights) < 0 && errno != ENOSYS)
+		err(1, "unable to limit rights for stdout");
+	cmd = TIOCGETA; /* required by isatty(3) in printf(3) */
+	if (cap_ioctls_limit(STDOUT_FILENO, &cmd, 1) < 0 && errno != ENOSYS)
+		err(1, "unable to limit ioctls for stdout");
+
+	if (cap_enter() < 0 && errno != ENOSYS)
+		err(1, "unable to enter capability mode");
+
+	max_bufd_lines = 256;
 	compress_spaces = 1;		/* compress spaces into tabs */
 	while ((opt = getopt(argc, argv, "bfhl:px")) != -1)
 		switch (opt) {
@@ -146,8 +168,11 @@ main(int argc, char **argv)
 			compress_spaces = 1;
 			break;
 		case 'l':		/* buffered line count */
-			if ((max_bufd_lines = atoi(optarg)) <= 0)
-				errx(1, "bad -l argument %s", optarg);
+			max_bufd_lines = strtonum(optarg, 1,
+			    (INT_MAX - BUFFER_MARGIN) / 2, &errstr) * 2;
+			if (errstr != NULL)
+				errx(1, "bad -l argument, %s: %s", errstr, 
+					optarg);
 			break;
 		case 'p':		/* pass unknown control sequences */
 			pass_unknown_seqs = 1;
@@ -162,9 +187,6 @@ main(int argc, char **argv)
 
 	if (optind != argc)
 		usage();
-
-	/* this value is in half lines */
-	max_bufd_lines *= 2;
 
 	adjust = cur_col = extra_lines = warned = 0;
 	cur_line = max_line = nflushd_lines = this_line = 0;
@@ -184,20 +206,31 @@ main(int argc, char **argv)
 				continue;
 			case ESC:		/* just ignore EOF */
 				switch(getwchar()) {
+				/*
+				 * In the input stream, accept both the
+				 * XPG5 sequences ESC-digit and the
+				 * traditional BSD sequences ESC-ctrl.
+				 */
+				case '\007':
+					/* FALLTHROUGH */
 				case RLF:
-					cur_line -= 2;
+					addto_lineno(&cur_line, -2);
 					break;
+				case '\010':
+					/* FALLTHROUGH */
 				case RHLF:
-					cur_line--;
+					addto_lineno(&cur_line, -1);
 					break;
+				case '\011':
+					/* FALLTHROUGH */
 				case FHLF:
-					cur_line++;
+					addto_lineno(&cur_line, 1);
 					if (cur_line > max_line)
 						max_line = cur_line;
 				}
 				continue;
 			case NL:
-				cur_line += 2;
+				addto_lineno(&cur_line, 2);
 				if (cur_line > max_line)
 					max_line = cur_line;
 				cur_col = 0;
@@ -216,7 +249,7 @@ main(int argc, char **argv)
 				++cur_col;
 				continue;
 			case VT:
-				cur_line -= 2;
+				addto_lineno(&cur_line, -2);
 				continue;
 			}
 			if (iswspace(ch)) {
@@ -229,58 +262,61 @@ main(int argc, char **argv)
 		}
 
 		/* Must stuff ch in a line - are we at the right one? */
-		if (cur_line != this_line - adjust) {
+		if (cur_line + adjust != this_line) {
 			LINE *lnew;
-			int nmove;
 
-			adjust = 0;
-			nmove = cur_line - this_line;
-			if (!fine) {
-				/* round up to next line */
-				if (cur_line & 1) {
-					adjust = 1;
-					nmove++;
-				}
-			}
-			if (nmove < 0) {
-				for (; nmove < 0 && l->l_prev; nmove++)
+			/* round up to next line */
+			adjust = !fine && (cur_line & 1);
+
+			if (cur_line + adjust < this_line) {
+				while (cur_line + adjust < this_line &&
+				    l->l_prev != NULL) {
 					l = l->l_prev;
-				if (nmove) {
+					this_line--;
+				}
+				if (cur_line + adjust < this_line) {
 					if (nflushd_lines == 0) {
 						/*
 						 * Allow backup past first
 						 * line if nothing has been
 						 * flushed yet.
 						 */
-						for (; nmove < 0; nmove++) {
+						while (cur_line + adjust
+						    < this_line) {
 							lnew = alloc_line();
 							l->l_prev = lnew;
 							lnew->l_next = l;
 							l = lines = lnew;
 							extra_lines++;
+							this_line--;
 						}
 					} else {
 						if (!warned++)
 							dowarn(cur_line);
-						cur_line -= nmove;
+						cur_line = this_line - adjust;
 					}
 				}
 			} else {
 				/* may need to allocate here */
-				for (; nmove > 0 && l->l_next; nmove--)
+				while (cur_line + adjust > this_line) {
+					if (l->l_next == NULL) {
+						l->l_next = alloc_line();
+						l->l_next->l_prev = l;
+					}
 					l = l->l_next;
-				for (; nmove > 0; nmove--) {
-					lnew = alloc_line();
-					lnew->l_prev = l;
-					l->l_next = lnew;
-					l = lnew;
+					this_line++;
 				}
 			}
-			this_line = cur_line + adjust;
-			nmove = this_line - nflushd_lines;
-			if (nmove >= max_bufd_lines + BUFFER_MARGIN) {
-				nflushd_lines += nmove - max_bufd_lines;
-				flush_lines(nmove - max_bufd_lines);
+			if (this_line > nflushd_lines &&
+			    this_line - nflushd_lines >=
+			    max_bufd_lines + BUFFER_MARGIN) {
+				if (extra_lines) {
+					flush_lines(extra_lines);
+					extra_lines = 0;
+				}
+				flush_lines(this_line - nflushd_lines -
+				    max_bufd_lines);
+				nflushd_lines = this_line - max_bufd_lines;
 			}
 		}
 		/* grow line's buffer? */
@@ -311,30 +347,28 @@ main(int argc, char **argv)
 	}
 	if (ferror(stdin))
 		err(1, NULL);
-	if (max_line == 0)
-		exit(0);	/* no lines, so just exit */
+	if (extra_lines)
+		flush_lines(extra_lines);
 
 	/* goto the last line that had a character on it */
 	for (; l->l_next; l = l->l_next)
 		this_line++;
-	flush_lines(this_line - nflushd_lines + extra_lines + 1);
+	flush_lines(this_line - nflushd_lines + 1);
 
 	/* make sure we leave things in a sane state */
 	if (last_set != CS_NORMAL)
-		PUTC('\017');
+		PUTC(SI);
 
 	/* flush out the last few blank lines */
-	nblank_lines = max_line - this_line;
+	if (max_line > this_line)
+		nblank_lines = max_line - this_line;
 	if (max_line & 1)
 		nblank_lines++;
-	else if (!nblank_lines)
-		/* missing a \n on the last line? */
-		nblank_lines = 2;
 	flush_blanks();
 	exit(0);
 }
 
-void
+static void
 flush_lines(int nflush)
 {
 	LINE *l;
@@ -346,7 +380,8 @@ flush_lines(int nflush)
 			flush_blanks();
 			flush_line(l);
 		}
-		nblank_lines++;
+		if (l->l_line || l->l_next)
+			nblank_lines++;
 		if (l->l_line)
 			(void)free(l->l_line);
 		free_line(l);
@@ -360,7 +395,7 @@ flush_lines(int nflush)
  * is the number of half line feeds, otherwise it is the number of whole line
  * feeds.
  */
-void
+static void
 flush_blanks(void)
 {
 	int half, i, nb;
@@ -377,8 +412,8 @@ flush_blanks(void)
 	for (i = nb; --i >= 0;)
 		PUTC('\n');
 	if (half) {
-		PUTC('\033');
-		PUTC('9');
+		PUTC(ESC);
+		PUTC(FHLF);
 		if (!nb)
 			PUTC('\r');
 	}
@@ -389,7 +424,7 @@ flush_blanks(void)
  * Write a line to stdout taking care of space to tab conversion (-h flag)
  * and character set shifts.
  */
-void
+static void
 flush_line(LINE *l)
 {
 	CHAR *c, *endc;
@@ -480,10 +515,10 @@ flush_line(LINE *l)
 			if (c->c_set != last_set) {
 				switch (c->c_set) {
 				case CS_NORMAL:
-					PUTC('\017');
+					PUTC(SI);
 					break;
 				case CS_ALTERNATE:
-					PUTC('\016');
+					PUTC(SO);
 				}
 				last_set = c->c_set;
 			}
@@ -498,11 +533,28 @@ flush_line(LINE *l)
 	}
 }
 
+/*
+ * Increment or decrement a line number, checking for overflow.
+ * Stop one below INT_MAX such that the adjust variable is safe.
+ */
+void
+addto_lineno(int *lno, int offset)
+{
+	if (offset > 0) {
+		if (*lno >= INT_MAX - offset)
+			errx(1, "too many lines");
+	} else {
+		if (*lno < INT_MIN - offset)
+			errx(1, "too many reverse line feeds");
+	}
+	*lno += offset;
+}
+
 #define	NALLOC 64
 
 static LINE *line_freelist;
 
-LINE *
+static LINE *
 alloc_line(void)
 {
 	LINE *l;
@@ -523,7 +575,7 @@ alloc_line(void)
 	return (l);
 }
 
-void
+static void
 free_line(LINE *l)
 {
 
@@ -531,7 +583,7 @@ free_line(LINE *l)
 	line_freelist = l;
 }
 
-void
+static void
 usage(void)
 {
 
@@ -539,7 +591,7 @@ usage(void)
 	exit(1);
 }
 
-void
+static void
 dowarn(int line)
 {
 
