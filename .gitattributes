@@ -54858,6 +54858,14 @@ lib/ncurses/panelw/Makefile -text
 lib/tests/Makefile svneol=native#text/plain
 libexec/Makefile -text
 libexec/Makefile.inc -text
+libexec/atf/Makefile svneol=native#text/plain
+libexec/atf/Makefile.inc svneol=native#text/plain
+libexec/atf/atf-check/Makefile svneol=native#text/plain
+libexec/atf/atf-check/Makefile.inc svneol=native#text/plain
+libexec/atf/atf-check/tests/Makefile svneol=native#text/plain
+libexec/atf/atf-sh/Makefile svneol=native#text/plain
+libexec/atf/atf-sh/tests/Makefile svneol=native#text/plain
+libexec/atf/tests/Makefile svneol=native#text/plain
 libexec/atrun/LEGAL -text
 libexec/atrun/Makefile -text
 libexec/atrun/atrun.c -text
