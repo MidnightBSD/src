@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985 Sun Microsystems, Inc.
  * Copyright (c) 1980, 1993
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)indent_codes.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/indent/indent_codes.h 69796 2000-12-09 09:52:52Z obrien $
  */
 
 #define newline		1

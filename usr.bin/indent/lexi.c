@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985 Sun Microsystems, Inc.
  * Copyright (c) 1980, 1993
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)lexi.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/indent/lexi.c 301743 2016-06-09 16:29:19Z pfg $");
 
 /*
  * Here we have the token scanner for indent.  It scans off one token and puts
@@ -79,7 +80,7 @@ struct templ specials[1000] =
     {"double", 4},
     {"long", 4},
     {"short", 4},
-    {"typdef", 4},
+    {"typedef", 4},
     {"unsigned", 4},
     {"register", 4},
     {"static", 4},

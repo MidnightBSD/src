@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985 Sun Microsystems, Inc.
  * Copyright (c) 1980, 1993
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)indent_globs.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/indent/indent_globs.h 244578 2012-12-22 04:11:59Z andrew $
  */
 
 #define BACKSLASH '\\'
@@ -213,7 +214,7 @@ struct fstate {
     char        font[4];
     char        size;
     int         allcaps:1;
-};
+} __aligned(sizeof(int));
 char       *chfont(struct fstate *, struct fstate *, char *);
 
 struct fstate
