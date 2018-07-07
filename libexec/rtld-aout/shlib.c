@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rtld-aout/shlib.c,v 1.3 2012/05/25 01:35:54 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Paul Kranenburg
  * All rights reserved.
@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-aout/shlib.c,v 1.26 2005/01/14 12:22:57 delphij Exp $
+ * $FreeBSD: stable/10/libexec/rtld-aout/shlib.c 241737 2012-10-19 14:49:42Z ed $
  */
 
 #include <sys/param.h>
@@ -63,7 +63,7 @@
 char	 **search_dirs;
 int	n_search_dirs;
 
-const char	*standard_search_dirs[] = {
+static const char *standard_search_dirs[] = {
 	STANDARD_SEARCH_DIRS
 };
 
@@ -160,7 +160,7 @@ cmpndewey(int d1[], int n1, int d2[], int n2)
 	if (i == n2)
 		return 1;
 
-	errx(1, "cmpndewey: cant happen");
+	errx(1, "cmpndewey: can't happen");
 	return 0;
 }
 
