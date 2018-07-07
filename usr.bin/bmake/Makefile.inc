@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.bin/bmake/Makefile.inc 288403 2015-09-29 22:00:03Z bdrewery $ 
+# $MidnightBSD$
 
 .include "bsd.own.mk"
 
@@ -30,3 +30,9 @@ SUBDIR+= tests
 
 WARNS=3
 CFLAGS+= -DNO_PWD_OVERRIDE
+
+.if make(after-import)
+# use our preferred value
+DEFAULT_SYS_PATH= .../share/mk:/usr/share/mk
+.export DEFAULT_SYS_PATH
+.endif
