@@ -1,6 +1,5 @@
-# $FreeBSD: stable/10/usr.bin/m4/tests/Makefile 263227 2014-03-16 08:04:06Z jmmv $
-
-TESTSDIR=	${TESTSBASE}/usr.bin/m4
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/m4/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
 
 TAP_TESTS_SH=	legacy_test
 

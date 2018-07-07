@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #	$OpenBSD: Makefile,v 1.10 2002/04/26 13:13:41 espie Exp $
 # $FreeBSD: stable/10/usr.bin/m4/Makefile 264996 2014-04-27 01:15:10Z jmmv $
 
@@ -23,5 +24,9 @@ SRCS+=	ohash_create_entry.c ohash_delete.c ohash_do.c ohash_entries.c \
 tokenizer.o: parser.h
 
 CLEANFILES+=	parser.c parser.h tokenizer.o
+
+.if ${MK_TESTS} != "no"
+SUBDIR+= tests
+.endif
 
 .include <bsd.prog.mk>
