@@ -1,8 +1,9 @@
+# $MidnightBSD$
 # Makefile
-# $FreeBSD: src/libexec/bootpd/bootpgw/Makefile,v 1.6 2004/12/21 08:47:03 ru Exp $
+# $FreeBSD: stable/10/libexec/bootpd/bootpgw/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	bootpgw
-NO_MAN=
+MAN=
 SRCS=	bootpgw.c getif.c hwaddr.c report.c rtmsg.c
 
 SRCDIR=	${.CURDIR}/..

@@ -1,8 +1,9 @@
+/* $MidnightBSD$ */
 /*
  * hwaddr.c - routines that deal with hardware addresses.
  * (i.e. Ethernet)
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/bootpd/hwaddr.c 105041 2002-10-13 11:27:36Z kris $
  */
 
 #include <sys/types.h>

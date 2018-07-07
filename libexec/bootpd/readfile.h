@@ -1,5 +1,6 @@
-/* readfile.h */
 /* $MidnightBSD$ */
+/* readfile.h */
+/* $FreeBSD: stable/10/libexec/bootpd/readfile.h 97416 2002-05-28 18:31:41Z alfred $ */
 
 #include "bptypes.h"
 #include "hash.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /************************************************************************
           Copyright 1988, 1991 by Carnegie Mellon University
 
@@ -19,7 +20,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $MidnightBSD$
+ $FreeBSD: stable/10/libexec/bootpd/readfile.c 102411 2002-08-25 13:10:45Z charnier $
 
 ************************************************************************/
 

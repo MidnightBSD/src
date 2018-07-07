@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bootptest.c - Test out a bootp server.
  *
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/libexec/bootpd/tools/bootptest/bootptest.c 229780 2012-01-07 16:09:54Z uqs $");
 
 char *usage = "bootptest [-h] server-name [vendor-data-template-file]";
 
@@ -186,7 +187,7 @@ main(argc, argv)
 			break;
 		switch (argv[0][1]) {
 
-		case 'f':				/* File name to reqest. */
+		case 'f':				/* File name to request. */
 			if (argc < 2)
 				goto error;
 			argc--; argv++;

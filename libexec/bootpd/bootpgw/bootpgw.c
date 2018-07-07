@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bootpgw.c - BOOTP GateWay
  * This program forwards BOOTP Request packets to a BOOTP server.
@@ -31,7 +32,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/bootpd/bootpgw/bootpgw.c,v 1.6 2003/02/05 13:45:25 charnier Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/bootpd/bootpgw/bootpgw.c 229780 2012-01-07 16:09:54Z uqs $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -452,7 +453,7 @@ main(argc, argv)
 		}
 		if (!(readfds & (1 << s))) {
 			report(LOG_INFO, "exiting after %ld minutes of inactivity",
-				   actualtimeout.tv_sec / 60);
+				   (long)(actualtimeout.tv_sec / 60));
 			exit(0);
 		}
 		ra_len = sizeof(recv_addr);
@@ -534,7 +535,7 @@ handle_request()
 	/* Has this packet hopped too many times? */
 	hops = bp->bp_hops;
 	if (++hops > maxhops) {
-		report(LOG_NOTICE, "reqest from %s reached hop limit",
+		report(LOG_NOTICE, "request from %s reached hop limit",
 			   inet_ntoa(recv_addr.sin_addr));
 		return;
 	}

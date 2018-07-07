@@ -1,4 +1,5 @@
-/* $MidnightBSD$
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/libexec/bootpd/bptypes.h 53105 1999-11-12 10:11:48Z marcel $
  */
 
 #ifndef	BPTYPES_H

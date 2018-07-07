@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /************************************************************************
           Copyright 1988, 1991 by Carnegie Mellon University
 
@@ -23,7 +24,7 @@ SOFTWARE.
 /*
  * Bootstrap Protocol (BOOTP).  RFC951 and RFC1395.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/bootpd/bootp.h 83941 2001-09-25 21:02:10Z iedowse $
  *
  *
  * This file specifies the "implementation-independent" BOOTP protocol

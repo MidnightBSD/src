@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*
  * dumptab.c - handles dumping the database
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/libexec/bootpd/dumptab.c 97417 2002-05-28 18:36:43Z alfred $
  */
 
 #include <sys/types.h>
