@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*	$OpenBSD: bc.y,v 1.44 2013/11/20 21:33:54 deraadt Exp $	*/
 
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/bc/bc.y 292753 2015-12-26 18:26:44Z pfg $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -52,7 +53,7 @@ __MBSDID("$MidnightBSD$");
 #include "extern.h"
 #include "pathnames.h"
 
-#define BC_VER		"1.1-MidnightBSD"
+#define BC_VER		"1.1-FreeBSD"
 #define END_NODE	((ssize_t) -1)
 #define CONST_STRING	((ssize_t) -2)
 #define ALLOC_STRING	((ssize_t) -3)
@@ -1125,7 +1126,7 @@ main(int argc, char *argv[])
 	int ch, i;
 
 	init();
-	setlinebuf(stdout);
+	setvbuf(stdout, NULL, _IOLBF, 0);
 
 	sargv = malloc(argc * sizeof(char *));
 	if (sargv == NULL)

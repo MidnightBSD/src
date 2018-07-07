@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.bin/bc/tty.c 265533 2014-05-07 08:06:54Z delphij $	*/
-/*      $OpenBSD: tty.c,v 1.2 2013/11/12 13:54:51 deraadt Exp $	*/
+/*	$FreeBSD: stable/10/usr.bin/bc/tty.c 292753 2015-12-26 18:26:44Z pfg $	*/
+/*      $OpenBSD: tty.c,v 1.3 2015/09/05 09:49:24 jsg Exp $	*/
 
 /*
  * Copyright (c) 2013, Otto Moerbeek <otto@drijf.net>
@@ -31,7 +31,7 @@ settty(struct termios *t)
 {
 	int ret;
 
-	while ((ret = tcsetattr(0, TCSADRAIN,  t) == -1) && errno == EINTR)
+	while ((ret = tcsetattr(0, TCSADRAIN,  t)) == -1 && errno == EINTR)
 		continue;
 	return ret;
 }
@@ -41,7 +41,7 @@ gettty(struct termios *t)
 {
 	int ret;
 
-	while ((ret = tcgetattr(0, t) == -1) && errno == EINTR)
+	while ((ret = tcgetattr(0, t)) == -1 && errno == EINTR)
 		continue;
 	return ret;
 }

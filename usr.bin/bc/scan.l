@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*      $OpenBSD: scan.l,v 1.28 2013/09/19 16:12:01 otto Exp $	*/
 
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/bc/scan.l 265533 2014-05-07 08:06:54Z delphij $");
 
 #include <err.h>
 #include <errno.h>
