@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rwho.1	8.1 (Berkeley) 6/6/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/rwho/rwho.1 320646 2017-07-04 15:53:54Z allanjude $
 .\"
-.Dd June 6, 1993
+.Dd July 3, 2017
 .Dt RWHO 1
 .Os
 .Sh NAME
@@ -37,6 +38,15 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl a
+.Sh DEPRECATION NOTICE
+.Nm
+is deprecated and will be removed from future versions of the
+.Fx
+base system.
+If
+.Nm
+is still required, it can be installed from ports or packages
+(net/bsdrcmds).
 .Sh DESCRIPTION
 The
 .Nm
