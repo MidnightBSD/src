@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Kai Wang
  * Copyright (c) 2007 Tim Kientzle
@@ -59,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ar/ar.c 303295 2016-07-25 14:35:14Z emaste $");
 
 #include <sys/queue.h>
 #include <sys/types.h>

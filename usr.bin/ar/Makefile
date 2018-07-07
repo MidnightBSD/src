@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/ar/Makefile 302001 2016-06-17 22:40:10Z mm $
 
 .include <bsd.own.mk>
 

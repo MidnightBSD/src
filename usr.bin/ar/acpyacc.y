@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*-
  * Copyright (c) 2008 Kai Wang
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ar/acpyacc.y 248612 2013-03-22 10:17:42Z mm $");
 
 #include <sys/mman.h>
 #include <sys/param.h>
