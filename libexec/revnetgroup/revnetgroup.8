@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1995
 .\"	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
 .\"
@@ -28,8 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/libexec/revnetgroup/revnetgroup.8,v 1.14 2005/02/09 20:36:12 ru Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/libexec/revnetgroup/revnetgroup.8 239364 2012-08-18 09:26:51Z zeising $
 .\"
 .Dd October 24, 1995
 .Dt REVNETGROUP 8
@@ -56,7 +56,7 @@ with a particular member.
 This information is used to generate the
 .Pa netgroup.byuser
 and
-.Pa netgroup.byhosts
+.Pa netgroup.byhost
 .Tn NIS
 maps.
 These reverse netgroup maps are used to help speed up
@@ -73,7 +73,7 @@ netgroup is considered the
 and the member names are the
 .Em data .
 By contrast, the reverse
-.Pa netgroup.byusers
+.Pa netgroup.byuser
 database lists each unique
 member as the key and the netgroups to which the members belong become
 the data.

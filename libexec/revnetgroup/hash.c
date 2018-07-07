@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/revnetgroup/hash.c,v 1.7 2002/02/07 23:57:01 imp Exp $";
+  "$FreeBSD: stable/10/libexec/revnetgroup/hash.c 90377 2002-02-07 23:57:01Z imp $";
 #endif /* not lint */
 
 #include <stdio.h>
