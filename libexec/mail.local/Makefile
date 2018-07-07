@@ -1,8 +1,8 @@
-#	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: src/libexec/mail.local/Makefile,v 1.21 2005/06/10 06:12:51 des Exp $
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 7/19/93
+# $FreeBSD: stable/10/libexec/mail.local/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
-SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
+SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/mail.local
 
 PROG=	mail.local
