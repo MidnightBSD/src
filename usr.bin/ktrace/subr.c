@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)subr.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/ktrace/subr.c 233925 2012-04-05 17:13:14Z jhb $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -61,14 +62,17 @@ getpoints(char *s)
 		case 'c':
 			facs |= KTRFAC_SYSCALL | KTRFAC_SYSRET;
 			break;
+		case 'i':
+			facs |= KTRFAC_GENIO;
+			break;
 		case 'f':
 			facs |= KTRFAC_FAULT | KTRFAC_FAULTEND;
 			break;
 		case 'n':
 			facs |= KTRFAC_NAMEI;
 			break;
-		case 'i':
-			facs |= KTRFAC_GENIO;
+		case 'p':
+			facs |= KTRFAC_CAPFAIL;
 			break;
 		case 's':
 			facs |= KTRFAC_PSIG;
