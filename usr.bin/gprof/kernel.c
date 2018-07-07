@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/kernel.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -16,7 +17,7 @@ __MBSDID("$MidnightBSD$");
 static char	*excludes[] = { ".mcount", "_mcleanup", NULL };
 
 int
-kernel_getnfile(const char *unused, char ***defaultEs)
+kernel_getnfile(const char *unused __unused, char ***defaultEs)
 {
 	char *namelist;
 	size_t len;

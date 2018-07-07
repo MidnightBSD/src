@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)gprof.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/gprof/gprof.h 246783 2013-02-14 08:16:03Z charnier $
  */
 
 #include <sys/types.h>
@@ -258,8 +259,8 @@ bool		addcycle(arctype **, arctype **);
 void		addlist(struct stringlist *, char *);
 void		alignentries(void);
 int		aout_getnfile(const char *, char ***);
-int		arccmp();
-arctype		*arclookup();
+int		arccmp(arctype *, arctype *);
+arctype		*arclookup(nltype *, nltype *);
 void		asgnsamples(void);
 void		compresslist(void);
 bool		cycleanalyze(void);
@@ -267,41 +268,36 @@ void		cyclelink(void);
 void		cycletime(void);
 bool		descend(nltype *, arctype **, arctype **);
 void		dfn(nltype *);
-bool		dfn_busy();
+bool		dfn_busy(nltype *);
 void		dfn_findcycle(nltype *);
 void		dfn_init(void);
-bool		dfn_numbered();
+bool		dfn_numbered(nltype *);
 void		dfn_post_visit(nltype *);
 void		dfn_pre_visit(nltype *);
 void		dfn_self_cycle(nltype *);
-nltype		**doarcs();
+nltype		**doarcs(void);
 void		doflags(void);
 void		dotime(void);
-void		dumpsum(char *);
+void		dumpsum(const char *);
 int		elf_getnfile(const char *, char ***);
 void		flatprofheader(void);
 void		flatprofline(nltype *);
 void		getpfile(char *);
-/*
-		gprofheader();
-		gprofline();
-*/
+void		gprofheader(void);
+void		gprofline(register nltype *);
 int		hertz(void);
 void		inheritflags(nltype *);
 int		kernel_getnfile(const char *, char ***);
 /*
 		main();
 */
-unsigned long	max();
-int		membercmp();
-unsigned long	min();
-nltype		*nllookup();
+unsigned long	max(unsigned long, unsigned long);
+int		membercmp(nltype *, nltype *);
+unsigned long	min(unsigned long, unsigned long);
+nltype		*nllookup(unsigned long);
 bool		onlist(struct stringlist *, const char *);
-FILE		*openpfile();
-long		operandlength();
-operandenum	operandmode();
-char		*operandname();
-void		printblurb(char *);
+FILE		*openpfile(char *);
+void		printblurb(const char *);
 void		printchildren(nltype *);
 void		printcycle(nltype *);
 void		printgprof(nltype **);
@@ -312,13 +308,12 @@ void		printparents(nltype *);
 void		printprof(void);
 void		printsubcycle(cltype *);
 void		readsamples(FILE *);
-unsigned long	reladdr();
 void		sortchildren(nltype *);
 void		sortmembers(nltype *);
 void		sortparents(nltype *);
 void		tally(struct rawarc *);
 void		timepropagate(nltype *);
-int		totalcmp();
+int		totalcmp(const void *, const void *);
 
 #define	LESSTHAN	-1
 #define	EQUALTO		0

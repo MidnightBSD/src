@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  *
  *	@(#)mips.h	8.1 (Berkeley) 6/6/93
  * From: @(#)sparc.h	5.1 (Berkeley) 7/8/92
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/gprof/mips.h 182681 2008-09-02 15:35:47Z obrien $
  */
 
 /*

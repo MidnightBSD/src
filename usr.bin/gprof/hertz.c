@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)hertz.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/hertz.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <sys/time.h>
 
@@ -43,6 +44,8 @@ __MBSDID("$MidnightBSD$");
      *	if something goes wrong, we return 0, an impossible hertz.
      */
 #define	HZ_WRONG	0
+
+int hertz(void);
 
 int
 hertz(void)

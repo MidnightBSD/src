@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)arcs.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/arcs.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <err.h>
 #include "gprof.h"
@@ -46,14 +47,13 @@ int newcycle;
 int oldcycle;
 #endif /* DEBUG */
 
+int topcmp(const void *, const void *);
+
     /*
      *	add (or just increment) an arc
      */
 void
-addarc( parentp , childp , count )
-    nltype	*parentp;
-    nltype	*childp;
-    long	count;
+addarc(nltype *parentp, nltype *childp, long count)
 {
     arctype		*arcp;
 
@@ -106,15 +106,16 @@ addarc( parentp , childp , count )
 nltype	**topsortnlp;
 
 int
-topcmp( npp1 , npp2 )
-    nltype	**npp1;
-    nltype	**npp2;
+topcmp(const void *v1, const void *v2)
 {
+    const nltype **npp1 = (const nltype **)v1;
+    const nltype **npp2 = (const nltype **)v2;
+
     return (*npp1) -> toporder - (*npp2) -> toporder;
 }
 
 nltype **
-doarcs()
+doarcs(void)
 {
     nltype	*parentp, **timesortnlp;
     arctype	*arcp;
@@ -252,7 +253,7 @@ doarcs()
 }
 
 void
-dotime()
+dotime(void)
 {
     int	index;
 
@@ -263,8 +264,7 @@ dotime()
 }
 
 void
-timepropagate( parentp )
-    nltype	*parentp;
+timepropagate(nltype *parentp)
 {
     arctype	*arcp;
     nltype	*childp;
@@ -352,7 +352,7 @@ timepropagate( parentp )
 }
 
 void
-cyclelink()
+cyclelink(void)
 {
     register nltype	*nlp;
     register nltype	*cyclenlp;
@@ -445,7 +445,7 @@ cyclelink()
      *	analyze cycles to determine breakup
      */
 bool
-cycleanalyze()
+cycleanalyze(void)
 {
     arctype	**cyclestack;
     arctype	**stkp;
@@ -521,10 +521,7 @@ cycleanalyze()
 }
 
 bool
-descend( node , stkstart , stkp )
-    nltype	*node;
-    arctype	**stkstart;
-    arctype	**stkp;
+descend(nltype *node, arctype **stkstart, arctype **stkp)
 {
     arctype	*arcp;
     bool	ret;
@@ -556,9 +553,7 @@ descend( node , stkstart , stkp )
 }
 
 bool
-addcycle( stkstart , stkend )
-    arctype	**stkstart;
-    arctype	**stkend;
+addcycle(arctype **stkstart, arctype **stkend)
 {
     arctype	**arcpp;
     arctype	**stkloc;
@@ -632,7 +627,7 @@ addcycle( stkstart , stkend )
 }
 
 void
-compresslist()
+compresslist(void)
 {
     cltype	*clp;
     cltype	**prev;
@@ -748,8 +743,7 @@ compresslist()
 
 #ifdef DEBUG
 void
-printsubcycle( clp )
-    cltype	*clp;
+printsubcycle(cltype *clp)
 {
     arctype	**arcpp;
     arctype	**endlist;
@@ -764,7 +758,7 @@ printsubcycle( clp )
 #endif /* DEBUG */
 
 void
-cycletime()
+cycletime(void)
 {
     int			cycle;
     nltype		*cyclenlp;
@@ -794,7 +788,7 @@ cycletime()
      *	and while we're here, sum time for functions.
      */
 void
-doflags()
+doflags(void)
 {
     int		index;
     nltype	*childp;
@@ -889,8 +883,7 @@ doflags()
      *	similarly, deal with propagation fractions from parents.
      */
 void
-inheritflags( childp )
-    nltype	*childp;
+inheritflags(nltype *childp)
 {
     nltype	*headp;
     arctype	*arcp;

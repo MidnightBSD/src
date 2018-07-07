@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)printlist.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/printlist.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <err.h>
 #include <string.h>
@@ -61,9 +62,7 @@ struct stringlist	Ehead = { 0 , 0 };
 struct stringlist	*Elist = &Ehead;
 
 void
-addlist( listp , funcname )
-    struct stringlist	*listp;
-    char		*funcname;
+addlist(struct stringlist *listp, char *funcname)
 {
     struct stringlist	*slp;
 
@@ -76,9 +75,7 @@ addlist( listp , funcname )
 }
 
 bool
-onlist( listp , funcname )
-    struct stringlist	*listp;
-    const char		*funcname;
+onlist(struct stringlist *listp, const char *funcname)
 {
     struct stringlist	*slp;
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)printgprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/printgprof.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <err.h>
 #include <string.h>
@@ -42,12 +43,15 @@ __MBSDID("$MidnightBSD$");
 #include "gprof.h"
 #include "pathnames.h"
 
+int namecmp(const void *, const void *);
+int timecmp(const void *, const void *);
+
 void
-printprof()
+printprof(void)
 {
     register nltype	*np;
     nltype		**sortednlp;
-    int			index, timecmp();
+    int			idx;
 
     actime = 0.0;
     printf( "\f\n" );
@@ -58,12 +62,12 @@ printprof()
     sortednlp = (nltype **) calloc( nname , sizeof(nltype *) );
     if ( sortednlp == (nltype **) 0 )
 	errx( 1 , "[printprof] ran out of memory for time sorting" );
-    for ( index = 0 ; index < nname ; index += 1 ) {
-	sortednlp[ index ] = &nl[ index ];
+    for ( idx = 0 ; idx < nname ; idx += 1 ) {
+	sortednlp[ idx ] = &nl[ idx ];
     }
     qsort( sortednlp , nname , sizeof(nltype *) , timecmp );
-    for ( index = 0 ; index < nname ; index += 1 ) {
-	np = sortednlp[ index ];
+    for ( idx = 0 ; idx < nname ; idx += 1 ) {
+	np = sortednlp[ idx ];
 	flatprofline( np );
     }
     actime = 0.0;
@@ -71,9 +75,10 @@ printprof()
 }
 
 int
-timecmp( npp1 , npp2 )
-    nltype **npp1, **npp2;
+timecmp(const void *v1, const void *v2)
 {
+    const nltype **npp1 = (const nltype **)v1;
+    const nltype **npp2 = (const nltype **)v2;
     double	timediff;
     long	calldiff;
 
@@ -94,7 +99,7 @@ timecmp( npp1 , npp2 )
      *	header for flatprofline
      */
 void
-flatprofheader()
+flatprofheader(void)
 {
 
     if ( bflag ) {
@@ -122,8 +127,7 @@ flatprofheader()
 }
 
 void
-flatprofline( np )
-    register nltype	*np;
+flatprofline(register nltype *np)
 {
 
     if ( zflag == 0 && np -> ncall == 0 && np -> time == 0 &&
@@ -161,7 +165,7 @@ flatprofline( np )
 }
 
 void
-gprofheader()
+gprofheader(void)
 {
 
     if ( bflag ) {
@@ -190,8 +194,7 @@ gprofheader()
 }
 
 void
-gprofline( np )
-    register nltype	*np;
+gprofline(register nltype *np)
 {
     char	kirkbuffer[ BUFSIZ ];
 
@@ -216,18 +219,17 @@ gprofline( np )
 }
 
 void
-printgprof(timesortnlp)
-    nltype	**timesortnlp;
+printgprof(nltype **timesortnlp)
 {
-    int		index;
+    int		idx;
     nltype	*parentp;
 
 	/*
 	 *	Print out the structured profiling list
 	 */
     gprofheader();
-    for ( index = 0 ; index < nname + ncycle ; index ++ ) {
-	parentp = timesortnlp[ index ];
+    for ( idx = 0 ; idx < nname + ncycle ; idx ++ ) {
+	parentp = timesortnlp[ idx ];
 	if ( zflag == 0 &&
 	     parentp -> ncall == 0 &&
 	     parentp -> selfcalls == 0 &&
@@ -265,12 +267,12 @@ printgprof(timesortnlp)
      *	all else being equal, sort by names.
      */
 int
-totalcmp( npp1 , npp2 )
-    nltype	**npp1;
-    nltype	**npp2;
+totalcmp(const void *v1, const void *v2)
 {
-    register nltype	*np1 = *npp1;
-    register nltype	*np2 = *npp2;
+    const nltype **npp1 = (const nltype **)v1;
+    const nltype **npp2 = (const nltype **)v2;
+    register const nltype *np1 = *npp1;
+    register const nltype *np2 = *npp2;
     double		diff;
 
     diff =    ( np1 -> propself + np1 -> propchild )
@@ -299,8 +301,7 @@ totalcmp( npp1 , npp2 )
 }
 
 void
-printparents( childp )
-    nltype	*childp;
+printparents(nltype *childp)
 {
     nltype	*parentp;
     arctype	*arcp;
@@ -344,8 +345,7 @@ printparents( childp )
 }
 
 void
-printchildren( parentp )
-    nltype	*parentp;
+printchildren(nltype *parentp)
 {
     nltype	*childp;
     arctype	*arcp;
@@ -378,8 +378,7 @@ printchildren( parentp )
 }
 
 void
-printname( selfp )
-    nltype	*selfp;
+printname(nltype *selfp)
 {
 
     if ( selfp -> name != 0 ) {
@@ -406,8 +405,7 @@ printname( selfp )
 }
 
 void
-sortchildren( parentp )
-    nltype	*parentp;
+sortchildren(nltype *parentp)
 {
     arctype	*arcp;
     arctype	*detachedp;
@@ -447,8 +445,7 @@ sortchildren( parentp )
 }
 
 void
-sortparents( childp )
-    nltype	*childp;
+sortparents(nltype *childp)
 {
     arctype	*arcp;
     arctype	*detachedp;
@@ -491,8 +488,7 @@ sortparents( childp )
      *	print a cycle header
      */
 void
-printcycle( cyclep )
-    nltype	*cyclep;
+printcycle(nltype *cyclep)
 {
     char	kirkbuffer[ BUFSIZ ];
 
@@ -516,8 +512,7 @@ printcycle( cyclep )
      *	print the members of a cycle
      */
 void
-printmembers( cyclep )
-    nltype	*cyclep;
+printmembers(nltype *cyclep)
 {
     nltype	*memberp;
 
@@ -541,8 +536,7 @@ printmembers( cyclep )
      *	sort members of a cycle
      */
 void
-sortmembers( cyclep )
-    nltype	*cyclep;
+sortmembers(nltype *cyclep)
 {
     nltype	*todo;
     nltype	*doing;
@@ -572,9 +566,7 @@ sortmembers( cyclep )
      *	next is sort on ncalls + selfcalls.
      */
 int
-membercmp( this , that )
-    nltype	*this;
-    nltype	*that;
+membercmp(nltype *this, nltype *that)
 {
     double	thistime = this -> propself + this -> propchild;
     double	thattime = that -> propself + that -> propchild;
@@ -605,9 +597,7 @@ membercmp( this , that )
      *		arc count as minor key
      */
 int
-arccmp( thisp , thatp )
-    arctype	*thisp;
-    arctype	*thatp;
+arccmp(arctype *thisp, arctype *thatp)
 {
     nltype	*thisparentp = thisp -> arc_parentp;
     nltype	*thischildp = thisp -> arc_childp;
@@ -684,8 +674,7 @@ arccmp( thisp , thatp )
 }
 
 void
-printblurb( blurbname )
-    char	*blurbname;
+printblurb(const char *blurbname)
 {
     FILE	*blurbfile;
     int		input;
@@ -702,18 +691,20 @@ printblurb( blurbname )
 }
 
 int
-namecmp( npp1 , npp2 )
-    nltype **npp1, **npp2;
+namecmp(const void *v1, const void *v2)
 {
+    const nltype **npp1 = (const nltype **)v1;
+    const nltype **npp2 = (const nltype **)v2;
+
     return( strcmp( (*npp1) -> name , (*npp2) -> name ) );
 }
 
 void
-printindex()
+printindex(void)
 {
     nltype		**namesortnlp;
     register nltype	*nlp;
-    int			index, nnames, todo, i, j;
+    int			idx, nnames, todo, i, j;
     char		peterbuffer[ BUFSIZ ];
 
 	/*
@@ -723,19 +714,19 @@ printindex()
     namesortnlp = (nltype **) calloc( nname + ncycle , sizeof(nltype *) );
     if ( namesortnlp == (nltype **) 0 )
 	errx( 1 , "ran out of memory for sorting");
-    for ( index = 0 , nnames = 0 ; index < nname ; index++ ) {
-	if ( zflag == 0 && nl[index].ncall == 0 && nl[index].time == 0 )
+    for ( idx = 0 , nnames = 0 ; idx < nname ; idx++ ) {
+	if ( zflag == 0 && nl[idx].ncall == 0 && nl[idx].time == 0 )
 		continue;
-	namesortnlp[nnames++] = &nl[index];
+	namesortnlp[nnames++] = &nl[idx];
     }
     qsort( namesortnlp , nnames , sizeof(nltype *) , namecmp );
-    for ( index = 1 , todo = nnames ; index <= ncycle ; index++ ) {
-	namesortnlp[todo++] = &cyclenl[index];
+    for ( idx = 1 , todo = nnames ; idx <= ncycle ; idx++ ) {
+	namesortnlp[todo++] = &cyclenl[idx];
     }
     printf( "\f\nIndex by function name\n\n" );
-    index = ( todo + 2 ) / 3;
-    for ( i = 0; i < index ; i++ ) {
-	for ( j = i; j < todo ; j += index ) {
+    idx = ( todo + 2 ) / 3;
+    for ( i = 0; i < idx ; i++ ) {
+	for ( j = i; j < todo ; j += idx ) {
 	    nlp = namesortnlp[ j ];
 	    if ( nlp -> printflag ) {
 		sprintf( peterbuffer , "[%d]" , nlp -> index );
