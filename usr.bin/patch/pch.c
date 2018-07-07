@@ -25,7 +25,7 @@
  * behaviour
  *
  * $OpenBSD: pch.c,v 1.43 2014/11/18 17:03:35 tobias Exp $
- * $FreeBSD: stable/11/usr.bin/patch/pch.c 298530 2016-04-24 04:08:36Z pfg $
+ * $FreeBSD: stable/10/usr.bin/patch/pch.c 320086 2017-06-18 21:48:33Z pfg $
  */
 
 #include <sys/types.h>
@@ -217,8 +217,10 @@ there_is_another_patch(void)
 			filearg[0] = fetchname(buf, &exists, 0);
 		}
 		if (!exists) {
-			ask("No file found--skip this patch? [n] ");
-			if (*buf != 'y')
+			int def_skip = *bestguess == '\0';
+			ask("No file found--skip this patch? [%c] ",
+			    def_skip  ? 'y' : 'n');
+			if (*buf == 'n' || (!def_skip && *buf != 'y'))
 				continue;
 			if (verbose)
 				say("Skipping patch...\n");
@@ -1502,8 +1504,17 @@ posix_name(const struct file_name *names, bool assume_exists)
 	}
 	if (path == NULL && !assume_exists) {
 		/*
-		 * No files found, check to see if the diff could be
-		 * creating a new file.
+		 * No files found, look for something we can checkout from
+		 * RCS/SCCS dirs.  Same order as above.
+		 */
+		for (i = 0; i < MAX_FILE; i++) {
+			if (names[i].path != NULL &&
+			    (path = checked_in(names[i].path)) != NULL)
+				break;
+		}
+		/*
+		 * Still no match?  Check to see if the diff could be creating
+		 * a new file.
 		 */
 		if (path == NULL && ok_to_create_file &&
 		    names[NEW_FILE].path != NULL)
@@ -1514,7 +1525,7 @@ posix_name(const struct file_name *names, bool assume_exists)
 }
 
 static char *
-compare_names(const struct file_name *names, bool assume_exists)
+compare_names(const struct file_name *names, bool assume_exists, int phase)
 {
 	size_t min_components, min_baselen, min_len, tmp;
 	char *best = NULL;
@@ -1531,7 +1542,9 @@ compare_names(const struct file_name *names, bool assume_exists)
 	min_components = min_baselen = min_len = SIZE_MAX;
 	for (i = INDEX_FILE; i >= OLD_FILE; i--) {
 		path = names[i].path;
-		if (path == NULL || (!names[i].exists && !assume_exists))
+		if (path == NULL ||
+		    (phase == 1 && !names[i].exists && !assume_exists) ||
+		    (phase == 2 && checked_in(path) == NULL))
 			continue;
 		if ((tmp = num_components(path)) > min_components)
 			continue;
@@ -1562,11 +1575,17 @@ best_name(const struct file_name *names, bool assume_exists)
 {
 	char *best;
 
-	best = compare_names(names, assume_exists);
-
-	/* No match?  Check to see if the diff could be creating a new file. */
-	if (best == NULL && ok_to_create_file)
-		best = names[NEW_FILE].path;
+	best = compare_names(names, assume_exists, 1);
+	if (best == NULL) {
+		best = compare_names(names, assume_exists, 2);
+		/*
+		 * Still no match?  Check to see if the diff could be creating
+		 * a new file.
+		 */
+		if (best == NULL && ok_to_create_file &&
+		    names[NEW_FILE].path != NULL)
+			best = names[NEW_FILE].path;
+	}
 
 	return best ? xstrdup(best) : NULL;
 }

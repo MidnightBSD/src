@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $OpenBSD: mkpath.c,v 1.2 2005/06/20 07:14:06 otto Exp $
- * $FreeBSD: stable/11/usr.bin/patch/mkpath.c 246091 2013-01-29 20:05:16Z delphij $
+ * $FreeBSD: stable/10/usr.bin/patch/mkpath.c 246091 2013-01-29 20:05:16Z delphij $
  */
 
 #include <sys/types.h>

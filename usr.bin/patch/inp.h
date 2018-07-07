@@ -25,7 +25,7 @@
  * behaviour
  *
  * $OpenBSD: inp.h,v 1.8 2003/08/15 08:00:51 otto Exp $
- * $FreeBSD: stable/11/usr.bin/patch/inp.h 246091 2013-01-29 20:05:16Z delphij $
+ * $FreeBSD: stable/10/usr.bin/patch/inp.h 246091 2013-01-29 20:05:16Z delphij $
  */
 
 void		re_input(void);

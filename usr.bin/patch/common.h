@@ -25,7 +25,7 @@
  * behaviour
  *
  * $OpenBSD: common.h,v 1.26 2006/03/11 19:41:30 otto Exp $
- * $FreeBSD: stable/11/usr.bin/patch/common.h 286795 2015-08-15 00:42:33Z delphij $
+ * $FreeBSD: stable/10/usr.bin/patch/common.h 306914 2016-10-09 20:13:53Z pfg $
  */
 
 #include <sys/types.h>
@@ -43,15 +43,20 @@
 #define	BUFFERSIZE 4096
 #define	LINENUM_MAX LONG_MAX
 
+#define	SCCSPREFIX "s."
+
+#define	RCSSUFFIX ",v"
+#define	CHECKOUT "/usr/bin/co"
+#define	RCSDIFF "/usr/bin/rcsdiff"
+
 #define	ORIGEXT ".orig"
 #define	REJEXT ".rej"
 
 /* handy definitions */
 
-#define	strNE(s1,s2) (strcmp(s1, s2))
-#define	strEQ(s1,s2) (!strcmp(s1, s2))
-#define	strnNE(s1,s2,l) (strncmp(s1, s2, l))
-#define	strnEQ(s1,s2,l) (!strncmp(s1, s2, l))
+#define	strEQ(s1,s2) (strcmp(s1, s2) == 0)
+#define	strnNE(s1,s2,l) (strncmp(s1, s2, l) != 0)
+#define	strnEQ(s1,s2,l) (strncmp(s1, s2, l) == 0)
 
 /* typedefs */
 

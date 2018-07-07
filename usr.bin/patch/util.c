@@ -25,7 +25,7 @@
  * behaviour
  *
  * $OpenBSD: util.c,v 1.35 2010/07/24 01:10:12 ray Exp $
- * $FreeBSD: stable/11/usr.bin/patch/util.c 286795 2015-08-15 00:42:33Z delphij $
+ * $FreeBSD: stable/10/usr.bin/patch/util.c 287223 2015-08-27 21:52:09Z delphij $
  */
 
 #include <sys/stat.h>
@@ -400,10 +400,36 @@ fetchname(const char *at, bool *exists, int strip_leading)
 	return name;
 }
 
+/*
+ * Takes the name returned by fetchname and looks in RCS/SCCS directories
+ * for a checked in version.
+ */
+char *
+checked_in(char *file)
+{
+	char		*filebase, *filedir, tmpbuf[PATH_MAX];
+	struct stat	filestat;
+
+	filebase = basename(file);
+	filedir = dirname(file);
+
+#define try(f, a1, a2, a3) \
+(snprintf(tmpbuf, sizeof tmpbuf, f, a1, a2, a3), stat(tmpbuf, &filestat) == 0)
+
+	if (try("%s/RCS/%s%s", filedir, filebase, RCSSUFFIX) ||
+	    try("%s/RCS/%s%s", filedir, filebase, "") ||
+	    try("%s/%s%s", filedir, filebase, RCSSUFFIX) ||
+	    try("%s/SCCS/%s%s", filedir, SCCSPREFIX, filebase) ||
+	    try("%s/%s%s", filedir, SCCSPREFIX, filebase))
+		return file;
+
+	return NULL;
+}
+
 void
 version(void)
 {
-	printf("patch 2.0-12u11 MidnightBSD\n");
+	printf("patch 2.0-12u10 FreeBSD\n");
 	my_exit(EXIT_SUCCESS);
 }
 

@@ -25,7 +25,7 @@
  * behaviour
  *
  * $OpenBSD: pch.h,v 1.9 2003/10/31 20:20:45 millert Exp $
- * $FreeBSD: stable/11/usr.bin/patch/pch.h 267490 2014-06-15 03:54:23Z pfg $
+ * $FreeBSD: stable/10/usr.bin/patch/pch.h 267746 2014-06-22 20:24:17Z pfg $
  */
 
 #define	OLD_FILE	0
