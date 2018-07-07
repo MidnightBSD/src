@@ -1,4 +1,5 @@
-# $FreeBSD: src/usr.bin/gencat/Makefile,v 1.9 2005/06/30 11:56:31 johan Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/gencat/Makefile 201386 2010-01-02 10:27:05Z ed $
 
 PROG=	gencat
 
