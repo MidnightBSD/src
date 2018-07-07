@@ -75846,7 +75846,7 @@ usr.bin/ee/nls/fr_FR.ISO8859-1/ee.msg -text
 usr.bin/ee/nls/hu_HU.ISO8859-2/ee.msg -text
 usr.bin/ee/nls/pl_PL.ISO8859-2/ee.msg -text
 usr.bin/ee/nls/pt_BR.ISO8859-1/ee.msg -text
-usr.bin/ee/nls/ru_RU.KOI8-R/ee.msg -text
+usr.bin/ee/nls/ru_RU.KOI8-R/ee.msg -text svneol=unset#application/octat-stream
 usr.bin/ee/nls/uk_UA.KOI8-U/ee.msg -text
 usr.bin/elf2aout/Makefile -text
 usr.bin/elf2aout/elf2aout.1 -text
