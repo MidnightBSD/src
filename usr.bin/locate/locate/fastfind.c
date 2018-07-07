@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * Copyright (c) 1989, 1993
@@ -34,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/locate/locate/fastfind.c 229403 2012-01-03 18:51:58Z ed $
  */
 
 
@@ -167,7 +168,7 @@ fastfind
 
 	/* find optimal (last) char for searching */
 	for (p = pathpart; *p != '\0'; p++)
-		if (index(LOCATE_REG, *p) != NULL)
+		if (strchr(LOCATE_REG, *p) != NULL)
 			break;
 
 	if (*p == '\0')

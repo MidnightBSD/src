@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * Copyright (c) 1989, 1993
@@ -47,7 +48,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)locate.c    8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.bin/locate/locate/locate.c 244063 2012-12-10 02:26:01Z eadler $";
 #endif /* not lint */
 
 /*
@@ -188,7 +189,7 @@ main(argc, argv)
 
         /* no (valid) database as argument */
         if (dbv == NULL || *dbv == NULL) {
-                /* try to read database from enviroment */
+                /* try to read database from environment */
                 if ((path_fcodes = getenv("LOCATE_PATH")) == NULL ||
 		     *path_fcodes == '\0')
                         /* use default database */
@@ -292,7 +293,9 @@ search_mmap(db, s)
 		err(1, "`%s'", db);
 	len = sb.st_size;
 	if (len < (2*NBG))
-		errx(1, "database too small: %s", db);
+		errx(1,
+		    "database too small: %s\nRun /usr/libexec/locate.updatedb",
+		    db);
 
 	if ((p = mmap((caddr_t)0, (size_t)len,
 		      PROT_READ, MAP_SHARED,
