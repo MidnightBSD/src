@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -47,7 +44,7 @@ static char sccsid[] = "@(#)ftpcmd.y	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/ftpd/ftpcmd.y,v 1.66.6.2 2008/12/23 01:23:09 cperciva Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/ftpd/ftpcmd.y 262435 2014-02-24 08:21:49Z brueffer $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -1718,7 +1715,7 @@ exptilde(char *s)
  * Avoid expanding to a pathname including '\r' or '\n' in order to
  * not disrupt the FTP protocol.
  * The expansion found must be unique.
- * Return the result as a malloced string, or NULL if an error occured.
+ * Return the result as a malloced string, or NULL if an error occurred.
  *
  * Problem: this production is used for all pathname
  * processing, but only gives a 550 error reply.

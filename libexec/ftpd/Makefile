@@ -1,6 +1,6 @@
-#	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: src/libexec/ftpd/Makefile,v 1.57.6.1 2008/11/25 02:59:29 kensmith Exp $
 # $MidnightBSD$
+#	@(#)Makefile	8.2 (Berkeley) 4/4/94
+# $FreeBSD: stable/10/libexec/ftpd/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
 .include <bsd.own.mk>
 
@@ -21,10 +21,9 @@ LDADD=	-lutil -lcrypt
 DPADD+=	${LIBOPIE} ${LIBMD}
 LDADD+=	-lopie -lmd
 
-LSDIR=	../../bin/ls
-.PATH:	${.CURDIR}/${LSDIR}
+.PATH:	${SRCTOP}/bin/ls
 SRCS+=	ls.c cmp.c print.c util.c
-CFLAGS+=-Dmain=ls_main -I${.CURDIR}/${LSDIR}
+CFLAGS+=-Dmain=ls_main -I${SRCTOP}/bin/ls
 DPADD+=	${LIBM}
 LDADD+=	-lm
 
