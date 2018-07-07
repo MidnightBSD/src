@@ -1,5 +1,5 @@
-# $MidnightBSD: src/libexec/rpc.sprayd/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
-# $FreeBSD: src/libexec/rpc.sprayd/Makefile,v 1.6 2001/03/26 14:22:08 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/libexec/rpc.sprayd/Makefile 201380 2010-01-02 09:50:19Z ed $
 
 PROG =	rpc.sprayd
 SRCS =	sprayd.c
@@ -11,4 +11,3 @@ LDADD=	-lrpcsvc
 WARNS?=	2
 
 .include <bsd.prog.mk>
-
