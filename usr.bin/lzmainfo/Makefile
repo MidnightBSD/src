@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/lzmainfo/Makefile 292588 2015-12-22 08:03:23Z delphij $
 
 PROG=	lzmainfo
 
@@ -12,13 +13,11 @@ SRCS+=	lzmainfo.c
 SRCS+=	tuklib_progname.c \
 	tuklib_exit.c
 
-WARNS?=	3
-
 CFLAGS+=	-DHAVE_CONFIG_H \
 		-I${LZMALIBDIR} \
 		-I${XZDIR}/common
 
-DPADD=	${LIBLZMA}
-LDADD=	-llzma
+DPADD=	${LIBLZMA} ${LIBPTHREAD}
+LDADD=	-llzma -lpthread
 
 .include <bsd.prog.mk>
