@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)aux.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/util.c 246860 2013-02-15 23:59:57Z dim $");
 
 #include <sys/time.h>
 
@@ -324,7 +325,7 @@ alter(char *name)
 
 	if (stat(name, &sb))
 		return;
-	(void)gettimeofday(&tv[0], (struct timezone *)NULL);
+	(void)gettimeofday(&tv[0], NULL);
 	tv[0].tv_sec++;
 	TIMESPEC_TO_TIMEVAL(&tv[1], &sb.st_mtim);
 	(void)utimes(name, tv);
@@ -550,7 +551,7 @@ newname:
 }
 
 /*
- * Count the occurances of c in str
+ * Count the occurrences of c in str
  */
 int
 charcount(char *str, int c)
