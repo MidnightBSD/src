@@ -75800,6 +75800,7 @@ usr.bin/dc/stack.c -text
 usr.bin/dig/Makefile -text
 usr.bin/dirname/Makefile -text
 usr.bin/dirname/dirname.c -text
+usr.bin/dirname/tests/Makefile svneol=native#text/plain
 usr.bin/dns-sd/Makefile -text
 usr.bin/doas/LICENSE -text
 usr.bin/doas/Makefile svneol=native#text/plain
