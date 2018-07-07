@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 by
  * David L. Nugent <davidn@blaze.net.au>
@@ -22,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/limits/limits.c 319256 2017-05-30 21:58:53Z asomers $");
 
 #include <err.h>
 #include <stdio.h>
@@ -89,8 +90,7 @@ static struct {
 	  { "  sbsize%-4s           %8s", " bytes\n", 1    },
 	  { "  vmemoryuse%-4s       %8s", " kB\n",    1024 },
 	  { "  pseudo-terminals%-4s %8s", "\n",       1    },
-	  { "  swapuse%-4s          %8s", " kB\n",    1024 },
-	  { "  kqueues%-4s          %8s", "\n",       1    },
+	  { "  swapuse%-4s          %8s", " kB\n",    1024 }
       }
     },
     { "sh", "unlimited", "", " -H", " -S", "",
@@ -107,8 +107,7 @@ static struct {
 	  { "ulimit%s -b %s", ";\n",  1    },
 	  { "ulimit%s -v %s", ";\n",  1024 },
 	  { "ulimit%s -p %s", ";\n",  1    },
-	  { "ulimit%s -w %s", ";\n",  1024 },
-	  { "ulimit%s -k %s", ";\n",  1    },
+	  { "ulimit%s -w %s", ";\n",  1024 }
       }
     },
     { "csh", "unlimited", "", " -h", "", NULL,
@@ -125,8 +124,7 @@ static struct {
 	  { "limit%s sbsize %s",          ";\n",  1    },
 	  { "limit%s vmemoryuse %s",      ";\n",  1024 },
 	  { "limit%s pseudoterminals %s", ";\n",  1    },
-	  { "limit%s swapuse %s",         ";\n",  1024 },
-	  { "limit%s kqueues %s",         ";\n",  1    },
+	  { "limit%s swapuse %s",         ";\n",  1024 }
       }
     },
     { "bash|bash2", "unlimited", "", " -H", " -S", "",
@@ -160,8 +158,7 @@ static struct {
 	  { "limit%s sbsize %s",          ";\n",  1    },
 	  { "limit%s vmemoryuse %s",      ";\n",  1024 },
 	  { "limit%s pseudoterminals %s", ";\n",  1    },
-	  { "limit%s swapuse %s",         ";\n",  1024 },
-	  { "limit%s kqueues %s",         ";\n",  1    },
+	  { "limit%s swapuse %s",         ";\n",  1024 }
       }
     },
     { "ksh|pdksh", "unlimited", "", " -H", " -S", "",
@@ -236,13 +233,12 @@ static struct {
     { "sbsize",		login_getcapsize },
     { "vmemoryuse",	login_getcapsize },
     { "pseudoterminals",login_getcapnum  },
-    { "swapuse",	login_getcapsize },
-    { "kqueues",	login_getcapnum  },
+    { "swapuse",	login_getcapsize }
 };
 
 /*
  * One letter for each resource levels.
- * NOTE: There is a dependancy on the corresponding
+ * NOTE: There is a dependency on the corresponding
  * letter index being equal to the resource number.
  * If sys/resource.h defines are changed, this needs
  * to be modified accordingly!
@@ -554,7 +550,7 @@ print_limit(rlim_t limit, unsigned divisor, const char * inf, const char * pfx, 
     char numbr[64];
 
     if (limit == RLIM_INFINITY)
-	strcpy(numbr, inf);
+	strlcpy(numbr, inf, sizeof(numbr));
     else
 	sprintf(numbr, "%jd", (intmax_t)((limit + divisor/2) / divisor));
     printf(pfx, which, numbr);
@@ -652,7 +648,6 @@ resource_num(int which, int ch, const char *str)
 	case RLIMIT_NPROC:
 	case RLIMIT_NOFILE:
 	case RLIMIT_NPTS:
-	case RLIMIT_KQUEUES:
 	    res = strtoq(s, &e, 0);
 	    s = e;
 	    break;

@@ -76112,6 +76112,8 @@ usr.bin/lex/version.awk svneol=native#text/plain
 usr.bin/limits/Makefile -text
 usr.bin/limits/limits.1 -text
 usr.bin/limits/limits.c -text
+usr.bin/limits/tests/Makefile svneol=native#text/plain
+usr.bin/limits/tests/limits_test.sh svneol=native#text/plain
 usr.bin/locale/Makefile -text
 usr.bin/locale/locale.1 -text
 usr.bin/locale/locale.c -text
