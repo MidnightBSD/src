@@ -76047,6 +76047,14 @@ usr.bin/ipcs/ipc.c -text
 usr.bin/ipcs/ipc.h -text
 usr.bin/ipcs/ipcs.1 -text
 usr.bin/ipcs/ipcs.c -text
+usr.bin/iscsictl/Makefile svneol=native#text/plain
+usr.bin/iscsictl/iscsi.conf.5 svneol=native#text/plain
+usr.bin/iscsictl/iscsictl.8 svneol=native#text/plain
+usr.bin/iscsictl/iscsictl.c svneol=native#text/plain
+usr.bin/iscsictl/iscsictl.h svneol=native#text/plain
+usr.bin/iscsictl/parse.y -text
+usr.bin/iscsictl/periphs.c svneol=native#text/plain
+usr.bin/iscsictl/token.l -text
 usr.bin/join/Makefile -text
 usr.bin/join/join.1 -text
 usr.bin/join/join.c -text
