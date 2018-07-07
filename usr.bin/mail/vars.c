@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)vars.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/vars.c 302968 2016-07-17 18:32:33Z pfg $");
 
 #include "rcv.h"
 #include "extern.h"
@@ -56,7 +57,8 @@ assign(const char *name, const char *value)
 	h = hash(name);
 	vp = lookup(name);
 	if (vp == NULL) {
-		vp = calloc(sizeof(*vp), 1);
+		if ((vp = calloc(1, sizeof(*vp))) == NULL)
+			err(1, "Out of memory");
 		vp->v_name = vcopy(name);
 		vp->v_link = variables[h];
 		variables[h] = vp;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@ static char sccsid[] = "@(#)v7.local.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/mail/v7.local.c 303303 2016-07-25 15:04:15Z pfg $");
 
 /*
  * Mail -- a mail program
@@ -68,9 +69,12 @@ findmail(char *user, char *buf, int buflen)
 void
 demail(void)
 {
+	int fd;
 
 	if (value("keep") != NULL || rm(mailname) < 0)
-		(void)close(open(mailname, O_CREAT | O_TRUNC | O_WRONLY, 0600));
+		if ((fd = open(mailname, O_CREAT | O_TRUNC | O_WRONLY, 0600)) >=
+		    0)
+			(void)close(fd);
 }
 
 /*
