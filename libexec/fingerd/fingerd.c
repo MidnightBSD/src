@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,18 +34,12 @@ static const char copyright[] =
 	The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 
-
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/fingerd/fingerd.c,v 1.2 2008/11/20 15:23:03 laffer1 Exp $");
-
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)fingerd.c	8.1 (Berkeley) 6/4/93";
 #endif
-#if 0
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/fingerd/fingerd.c,v 1.25 2005/02/14 17:42:57 stefanf Exp $";
-#endif
+  "$FreeBSD: stable/10/libexec/fingerd/fingerd.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 #include <sys/types.h>
