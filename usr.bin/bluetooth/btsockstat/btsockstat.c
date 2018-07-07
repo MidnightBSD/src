@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * btsockstat.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: btsockstat.c,v 1.2 2012-11-23 01:13:49 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: btsockstat.c,v 1.8 2003/05/21 22:40:25 max Exp $
+ * $FreeBSD: stable/10/usr.bin/bluetooth/btsockstat/btsockstat.c 287446 2015-09-04 00:41:29Z delphij $
  */
 
 #include <sys/types.h>
@@ -154,9 +155,9 @@ main(int argc, char *argv[])
 	 * Discard setgid privileges if not the running kernel so that
 	 * bad guys can't print interesting stuff from kernel memory.
 	 */
-
 	if (memf != NULL)
-		setgid(getgid());
+		if (setgid(getgid()) != 0)
+			err(1, "setgid");
 
 	kvmd = kopen(memf);
 	if (kvmd == NULL)
@@ -583,15 +584,9 @@ kopen(char const *memf)
 	kvm_t	*kvmd = NULL;
 	char	 errbuf[_POSIX2_LINE_MAX];
 
-	/*
-	 * Discard setgid privileges if not the running kernel so that 
-	 * bad guys can't print interesting stuff from kernel memory.
-	 */
-
-	if (memf != NULL)
-		setgid(getgid());   
-
 	kvmd = kvm_openfiles(NULL, memf, NULL, O_RDONLY, errbuf);
+	if (setgid(getgid()) != 0)
+		err(1, "setgid");
 	if (kvmd == NULL) {
 		warnx("kvm_openfiles: %s", errbuf);
 		return (NULL);

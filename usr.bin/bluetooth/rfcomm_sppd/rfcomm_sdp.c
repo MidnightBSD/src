@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * rfcomm_sdp.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rfcomm_sdp.c,v 1.2 2012-11-23 01:13:49 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: rfcomm_sdp.c,v 1.1 2003/09/07 18:15:55 max Exp $
+ * $FreeBSD: stable/10/usr.bin/bluetooth/rfcomm_sppd/rfcomm_sdp.c 128077 2004-04-09 23:26:16Z emax $
  */
 
 #include <bluetooth.h>
