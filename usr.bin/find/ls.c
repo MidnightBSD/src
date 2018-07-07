@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)ls.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/find/ls.c 241015 2012-09-27 23:31:19Z mdf $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -63,15 +64,14 @@ printlong(char *name, char *accpath, struct stat *sb)
 {
 	char modep[15];
 
-	(void)printf("%6lu %8"PRId64" ", (u_long) sb->st_ino, sb->st_blocks);
+	(void)printf("%6ju %8"PRId64" ", (uintmax_t)sb->st_ino, sb->st_blocks);
 	(void)strmode(sb->st_mode, modep);
 	(void)printf("%s %3u %-*s %-*s ", modep, sb->st_nlink, MAXLOGNAME - 1,
 	    user_from_uid(sb->st_uid, 0), MAXLOGNAME - 1,
 	    group_from_gid(sb->st_gid, 0));
 
 	if (S_ISCHR(sb->st_mode) || S_ISBLK(sb->st_mode))
-		(void)printf("%3d, %3d ", major(sb->st_rdev),
-		    minor(sb->st_rdev));
+		(void)printf("%#8jx ", (uintmax_t)sb->st_rdev);
 	else
 		(void)printf("%8"PRId64" ", sb->st_size);
 	printtime(sb->st_mtime);

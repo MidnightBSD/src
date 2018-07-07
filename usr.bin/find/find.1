@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -29,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)find.1	8.7 (Berkeley) 5/9/95
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/find/find.1 316197 2017-03-30 02:00:42Z sevan $
 .\"
-.Dd September 9, 2012
+.Dd January 24, 2017
 .Dt FIND 1
 .Os
 .Sh NAME
@@ -156,7 +157,6 @@ This option is equivalent to the deprecated
 primary.
 .El
 .Sh PRIMARIES
-.Pp
 All primaries which take a numeric argument allow the number to be
 preceded by a plus sign
 .Pq Dq Li +
@@ -204,12 +204,19 @@ files with extended ACLs.
 See
 .Xr acl 3
 for more information.
-.It Ic -amin Ar n
+.It Ic -amin Oo Cm - Ns | Ns Cm + Oc Ns Ar n
 True if the difference between the file last access time and the time
 .Nm
 was started, rounded up to the next full minute, is
+more than
 .Ar n
-minutes.
+.Pq + Ns Ar n ,
+less than
+.Ar n
+.Pq - Ns Ar n ,
+or exactly
+.Ar n
+minutes ago.
 .It Ic -anewer Ar file
 Same as
 .Ic -neweram .
@@ -251,13 +258,20 @@ Units are probably only useful when used in conjunction with the
 or
 .Cm -
 modifier.
-.It Ic -cmin Ar n
+.It Ic -cmin Oo Cm - Ns | Ns Cm + Oc Ns Ar n
 True if the difference between the time of last change of file status
 information and the time
 .Nm
 was started, rounded up to the next full minute, is
+more than
 .Ar n
-minutes.
+.Pq + Ns Ar n ,
+less than
+.Ar n
+.Pq - Ns Ar n ,
+or exactly
+.Ar n
+minutes ago.
 .It Ic -cnewer Ar file
 Same as
 .Ic -newercm .
@@ -299,6 +313,9 @@ character in its pathname relative to
 .Dq Pa \&.
 for security reasons.
 Depth-first traversal processing is implied by this option.
+The
+.Ic -delete
+primary will fail to delete a directory if it is not empty.
 Following symlinks is incompatible with this option.
 .It Ic -depth
 Always true;
@@ -468,7 +485,9 @@ is numeric and there is no such group name, then
 .Ar gname
 is treated as a group ID.
 .It Ic -ignore_readdir_race
-This option is for GNU find compatibility and is ignored.
+Ignore errors because a file or a directory is deleted
+after reading the name from a directory.
+This option does not affect errors occurring on starting points.
 .It Ic -ilname Ar pattern
 Like
 .Ic -lname ,
@@ -502,13 +521,15 @@ Like
 .Ic -name ,
 but the contents of the symbolic link are matched instead of the file
 name.
+Note that this only matches broken symbolic links
+if symbolic links are being followed.
 This is a GNU find extension.
 .It Ic -ls
 This primary always evaluates to true.
 The following information for the current file is written to standard output:
 its inode number, size in 512-byte blocks, file permissions, number of hard
 links, owner, group, size in bytes, last modification time, and pathname.
-If the file is a block or character special file, the major and minor numbers
+If the file is a block or character special file, the device number
 will be displayed instead of the size in bytes.
 If the file is a symbolic link, the pathname of the linked-to file will be
 displayed preceded by
@@ -536,12 +557,19 @@ primary is specified, it applies to the entire expression even if it would
 not normally be evaluated.
 .Dq Ic -mindepth Li 1
 processes all but the command line arguments.
-.It Ic -mmin Ar n
+.It Ic -mmin Oo Cm - Ns | Ns Cm + Oc Ns Ar n
 True if the difference between the file last modification time and the time
 .Nm
 was started, rounded up to the next full minute, is
+more than
 .Ar n
-minutes.
+.Pq + Ns Ar n ,
+less than
+.Ar n
+.Pq - Ns Ar n ,
+or exactly
+.Ar n
+minutes ago.
 .It Ic -mnewer Ar file
 Same as
 .Ic -newer .
@@ -616,7 +644,9 @@ is equivalent to
 .It Ic -nogroup
 True if the file belongs to an unknown group.
 .It Ic -noignore_readdir_race
-This option is for GNU find compatibility and is ignored.
+Turn off the effect of
+.Ic -ignore_readdir_race .
+This is default behaviour.
 .It Ic -noleaf
 This option is for GNU find compatibility.
 In GNU find it disables an optimization not relevant to
@@ -738,7 +768,7 @@ option was specified.
 .It Ic -quit
 Causes
 .Nm
-to immediately terminate.
+to immediately terminate successfully.
 .It Ic -regex Ar pattern
 True if the whole path of the file matches
 .Ar pattern
@@ -790,6 +820,10 @@ terabytes (1024 gigabytes)
 .It Cm P
 petabytes (1024 terabytes)
 .El
+.It Ic -sparse
+True if the current file is sparse,
+i.e. has fewer blocks allocated than expected based on its size in bytes.
+This might also match files that have been compressed by the filesystem.
 .It Ic -type Ar t
 True if the file is of the specified type.
 Possible file types are as follows:
@@ -971,7 +1005,7 @@ and
 as well as
 .Ic -amin , -anewer , -cmin , -cnewer , -delete , -empty , -fstype ,
 .Ic -iname , -inum , -iregex , -ls , -maxdepth , -mindepth , -mmin ,
-.Ic -path , -print0 , -regex
+.Ic -path , -print0 , -regex , -sparse
 and all of the
 .Ic -B*
 birthtime related primaries are extensions to

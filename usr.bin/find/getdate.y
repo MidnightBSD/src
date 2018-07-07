@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %{
 /*
 **  Originally written by Steven M. Bellovin <smb@research.att.com> while
@@ -13,7 +14,7 @@
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/find/getdate.y 235789 2012-05-22 16:33:10Z bapt $");
 
 #include <stdio.h>
 #include <ctype.h>
@@ -60,7 +61,6 @@ __MBSDID("$MidnightBSD$");
 
 #include <time.h>
 
-#define yyparse getdate_yyparse
 #define yylex getdate_yylex
 #define yyerror getdate_yyerror
 

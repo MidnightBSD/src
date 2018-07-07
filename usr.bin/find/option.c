@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)option.c	8.2 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/find/option.c 247730 2013-03-03 20:10:56Z dwmalone $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -88,7 +89,7 @@ static OPTION const options[] = {
 	{ "-fstype",	c_fstype,	f_fstype,	0 },
 	{ "-gid",	c_group,	f_group,	0 },
 	{ "-group",	c_group,	f_group,	0 },
-	{ "-ignore_readdir_race",c_simple, f_always_true,0 },
+	{ "-ignore_readdir_race",c_ignore_readdir_race, f_always_true,0 },
 	{ "-ilname",	c_name,		f_name,		F_LINK | F_IGNCASE },
 	{ "-iname",	c_name,		f_name,		F_IGNCASE },
 	{ "-inum",	c_inum,		f_inum,		0 },
@@ -127,7 +128,7 @@ static OPTION const options[] = {
 	{ "-newermm",	c_newer,	f_newer,	0 },
 	{ "-newermt",	c_newer,	f_newer,	F_TIME2_T },
 	{ "-nogroup",	c_nogroup,	f_nogroup,	0 },
-	{ "-noignore_readdir_race",c_simple, f_always_true,0 },
+	{ "-noignore_readdir_race",c_ignore_readdir_race, f_always_true,0 },
 	{ "-noleaf",	c_simple,	f_always_true,	0 },
 	{ "-not",	c_simple,	f_not,		0 },
 	{ "-nouser",	c_nouser,	f_nouser,	0 },
@@ -145,6 +146,7 @@ static OPTION const options[] = {
 	{ "-regex",	c_regex,	f_regex,	0 },
 	{ "-samefile",	c_samefile,	f_inum,		0 },
 	{ "-size",	c_size,		f_size,		0 },
+	{ "-sparse",	c_sparse,	f_sparse,	0 },
 	{ "-true",	c_simple,	f_always_true,	0 },
 	{ "-type",	c_type,		f_type,		0 },
 	{ "-uid",	c_user,		f_user,		0 },

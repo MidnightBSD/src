@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)find.h	8.1 (Berkeley) 6/6/93
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/usr.bin/find/find.h 248446 2013-03-17 22:51:58Z jilles $
  */
 
 #include <regex.h>

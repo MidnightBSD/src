@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -27,12 +28,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/16/94
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/usr.bin/find/extern.h 287266 2015-08-28 20:53:08Z jilles $
  */
 
 #include <sys/cdefs.h>
 
-void	 brace_subst(char *, char **, char *, int);
+void	 brace_subst(char *, char **, char *, size_t);
 PLAN	*find_create(char ***);
 int	 find_execute(PLAN *, char **);
 PLAN	*find_formplan(char **);
@@ -58,6 +59,7 @@ creat_f	c_flags;
 creat_f	c_follow;
 creat_f	c_fstype;
 creat_f	c_group;
+creat_f	c_ignore_readdir_race;
 creat_f	c_inum;
 creat_f	c_links;
 creat_f	c_ls;
@@ -72,6 +74,7 @@ creat_f	c_regex;
 creat_f	c_samefile;
 creat_f	c_simple;
 creat_f	c_size;
+creat_f	c_sparse;
 creat_f	c_type;
 creat_f	c_user;
 creat_f	c_xdev;
@@ -108,10 +111,12 @@ exec_f	f_prune;
 exec_f	f_quit;
 exec_f	f_regex;
 exec_f	f_size;
+exec_f	f_sparse;
 exec_f	f_type;
 exec_f	f_user;
 
-extern int ftsoptions, isdeprecated, isdepth, isoutput, issort, isxargs;
+extern int ftsoptions, ignore_readdir_race, isdeprecated, isdepth, isoutput;
+extern int issort, isxargs;
 extern int mindepth, maxdepth;
 extern int regexp_flags;
 extern time_t now;
