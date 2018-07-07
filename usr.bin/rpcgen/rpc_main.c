@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)rpc_main.c 1.30 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_main.c 309505 2016-12-03 19:15:26Z ngie $");
 
 /*
  * rpc_main.c, Top level of the RPC protocol compiler.
@@ -64,10 +65,6 @@ static void clnt_output(const char *, const char *, int, const char * );
 static char *generate_guard(const char *);
 static void c_initialize(void);
 
-#if !defined(__FreeBSD__) && !defined(__NetBSD__)
-char * rindex();
-#endif
-
 static void usage(void);
 static void options_usage(void);
 static int do_registers(int, const char **);
@@ -86,11 +83,11 @@ static char pathbuf[MAXPATHLEN + 1];
 static const char *allv[] = {
 	"rpcgen", "-s", "udp", "-s", "tcp",
 };
-static int allc = sizeof (allv)/sizeof (allv[0]);
+static int allc = nitems(allv);
 static const char *allnv[] = {
 	"rpcgen", "-s", "netpath",
 };
-static int allnc = sizeof (allnv)/sizeof (allnv[0]);
+static int allnc = nitems(allnv);
 
 /*
  * machinations for handling expanding argument list
@@ -228,7 +225,7 @@ extendfile(const char *path, const char *ext)
 	const char *p;
 	const char *file;
 
-	if ((file = rindex(path, '/')) == NULL)
+	if ((file = strrchr(path, '/')) == NULL)
 		file = path;
 	else
 		file++;
@@ -439,7 +436,7 @@ c_initialize(void)
 
 }
 
-const char rpcgen_table_dcl[] = "struct rpcgen_table {\n\
+static const char rpcgen_table_dcl[] = "struct rpcgen_table {\n\
 	char	*(*proc)(); \n\
 	xdrproc_t	xdr_arg; \n\
 	unsigned	len_arg; \n\
@@ -455,7 +452,7 @@ generate_guard(const char *pathname)
 	char *guard, *tmp, *stopat;
 
 	filename = strrchr(pathname, '/');  /* find last component */
-	filename = ((filename == 0) ? pathname : filename+1);
+	filename = ((filename == NULL) ? pathname : filename+1);
 	guard = xstrdup(filename);
 	stopat = strrchr(guard, '.');
 
@@ -819,7 +816,7 @@ static void mkfile_output(struct commandline *cmd)
 	if (allfiles){
 		mkftemp = xmalloc(strlen("makefile.") +
 		                     strlen(cmd->infile) + 1);
-		temp = (char *)rindex(cmd->infile, '.');
+		temp = strrchr(cmd->infile, '.');
 		strcpy(mkftemp, "makefile.");
 		(void) strncat(mkftemp, cmd->infile,
 			(temp - cmd->infile));
@@ -876,8 +873,8 @@ $(TARGETS_SVC.c) \n\n");
 	f_print(fout, "\t$(CC) -o $(CLIENT) $(OBJECTS_CLNT) \
 $(LDLIBS) \n\n");
 	f_print(fout, "$(SERVER) : $(OBJECTS_SVC) \n");
-	f_print(fout, "\t$(CC) -o $(SERVER) $(OBJECTS_SVC) $(LDLIBS)\n\n ");
-	f_print(fout, "clean:\n\t $(RM) -f core $(TARGETS) $(OBJECTS_CLNT) \
+	f_print(fout, "\t$(CC) -o $(SERVER) $(OBJECTS_SVC) $(LDLIBS)\n\n");
+	f_print(fout, "clean:\n\t rm -f core $(TARGETS) $(OBJECTS_CLNT) \
 $(OBJECTS_SVC) $(CLIENT) $(SERVER)\n\n");
 }
 

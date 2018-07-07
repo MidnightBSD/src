@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -35,7 +36,7 @@ static char sccsid[] = "@(#)rpc_svcout.c 1.29 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_svcout.c 312386 2017-01-18 15:23:40Z pfg $");
 
 /*
  * rpc_svcout.c, Server-skeleton outputter for the RPC protocol compiler
@@ -54,7 +55,7 @@ static char RESULT[] = "result";
 static char ROUTINE[] = "local";
 static char RETVAL[] = "retval";
 
-char _errbuf[256];	/* For all messages */
+static char _errbuf[256];	/* For all messages */
 
 void internal_proctype( proc_list * );
 static void write_real_program( definition * );
@@ -325,7 +326,7 @@ write_programs(const char *storage)
 
 /*
  * write out definition of internal function (e.g. _printmsg_1(...))
- *  which calls server's defintion of actual function (e.g. printmsg_1(...)).
+ *  which calls server's definition of actual function (e.g. printmsg_1(...)).
  *  Unpacks single user argument of printmsg_1 to call-by-value format
  *  expected by printmsg_1.
  */
@@ -728,7 +729,8 @@ write_timeout_func(void)
 	if (tirpcflag) {
 		f_print(fout, "\t\t\tstruct rlimit rl;\n\n");
 		f_print(fout, "\t\t\trl.rlim_max = 0;\n");
-		f_print(fout, "\t\t\tgetrlimit(RLIMIT_NOFILE, &rl);\n");
+		f_print(fout, "\t\t\tif (getrlimit(RLIMIT_NOFILE, &rl) == -1)\n");
+		f_print(fout, "\t\t\t\treturn;\n");
 		f_print(fout, "\t\t\tif ((size = rl.rlim_max) == 0) {\n");
 		
 		if (mtflag)
@@ -902,7 +904,11 @@ write_rpc_svc_fg(const char *infile, const char *sp)
 	/* get number of file descriptors */
 	if (tirpcflag) {
 		f_print(fout, "%srl.rlim_max = 0;\n", sp);
-		f_print(fout, "%sgetrlimit(RLIMIT_NOFILE, &rl);\n", sp);
+		f_print(fout, "%sif (getrlimit(RLIMIT_NOFILE, &rl) == -1) {\n",
+		    sp);
+		f_print(fout, "%s\tperror(\"getrlimit\");\n", sp);
+		f_print(fout, "%s\texit(1);\n", sp);
+		f_print(fout, "%s}\n", sp);
 		f_print(fout, "%sif ((size = rl.rlim_max) == 0)\n", sp);
 		f_print(fout, "%s\texit(1);\n", sp);
 	} else {

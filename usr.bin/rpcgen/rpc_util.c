@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -35,7 +36,7 @@ static char sccsid[] = "@(#)rpc_util.c 1.11 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_util.c 241737 2012-10-19 14:49:42Z ed $");
 
 /*
  * rpc_util.c, Utility routines for the RPC protocol compiler
@@ -59,8 +60,8 @@ int linenum = 0;		/* current line number */
 const char *infilename;		/* input filename */
 
 #define	NFILES   7
-const char *outfiles[NFILES];	/* output file names */
-int nfiles;
+static const char *outfiles[NFILES]; /* output file names */
+static int nfiles;
 
 FILE *fout;			/* file pointer of current output */
 FILE *fin;			/* file pointer of current input */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -35,7 +36,7 @@ static char sccsid[] = "@(#)rpc_cout.c 1.13 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_cout.c 312386 2017-01-18 15:23:40Z pfg $");
 
 /*
  * rpc_cout.c, XDR routine outputter for the RPC protocol compiler
@@ -551,7 +552,8 @@ emit_struct(definition *def)
 	}
 
 	for (dl = def->def.st.decls; dl != NULL; dl = dl->next)
-		if (dl->decl.rel == REL_VECTOR){
+		if (dl->decl.rel == REL_VECTOR &&
+		    strcmp(dl->decl.type, "opaque") != 0){
 			f_print(fout, "\tint i;\n");
 			break;
 		}

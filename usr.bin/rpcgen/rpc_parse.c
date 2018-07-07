@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -35,7 +36,7 @@ static char sccsid[] = "@(#)rpc_parse.c 1.8 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_parse.c 313103 2017-02-02 19:50:28Z asomers $");
 
 /*
  * rpc_parse.c, Parser for the RPC protocol compiler
@@ -290,7 +291,6 @@ def_union(definition *defp)
 	declaration dec;
 	case_list *cases;
 	case_list **tailp;
-	int flag;
 
 	defp->def_kind = DEF_UNION;
 	scan(TOK_IDENT, &tok);
@@ -309,7 +309,6 @@ def_union(definition *defp)
 		cases->case_name = tok.str;
 		scan(TOK_COLON, &tok);
 		/* now peek at next token */
-		flag = 0;
 		if (peekscan(TOK_CASE, &tok)){
 			do {
 				scan2(TOK_IDENT, TOK_CHARCONST, &tok);
@@ -322,14 +321,6 @@ def_union(definition *defp)
 				scan(TOK_COLON, &tok);
 			} while (peekscan(TOK_CASE, &tok));
 		}
-		else
-			if (flag)
-			{
-
-				*tailp = cases;
-				tailp = &cases->next;
-				cases = XALLOC(case_list);
-			};
 
 		get_declaration(&dec, DEF_UNION);
 		cases->case_decl = dec;
