@@ -1,5 +1,5 @@
-# $MidnightBSD: src/libexec/rpc.rwalld/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
-# $FreeBSD: src/libexec/rpc.rwalld/Makefile,v 1.7 2004/02/04 11:59:07 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/libexec/rpc.rwalld/Makefile 201380 2010-01-02 09:50:19Z ed $
 
 PROG =	rpc.rwalld
 SRCS =	rwalld.c

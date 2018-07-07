@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rpc.rwalld/rwalld.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
@@ -28,10 +28,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: src/libexec/rpc.rwalld/rwalld.c,v 1.13 2005/02/14 17:42:58 stefanf Exp $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/libexec/rpc.rwalld/rwalld.c 216560 2010-12-19 13:05:17Z charnier $");
 
 #include <err.h>
 #include <pwd.h>
