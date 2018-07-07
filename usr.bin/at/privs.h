@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  *  privs.h - header for privileged operations 
  *  Copyright (C) 1993  Thomas Koenig
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/at/privs.h 249404 2013-04-12 14:19:44Z gahr $
  */
 
 #ifndef _PRIVS_H
@@ -59,23 +60,21 @@
  * to the real userid before calling any of them.
  */
 
-#ifndef MAIN
-extern
-#endif
-uid_t real_uid, effective_uid;
+extern uid_t real_uid, effective_uid;
+extern gid_t real_gid, effective_gid;
 
-#ifndef MAIN 
-extern
-#endif
+#ifdef MAIN
+uid_t real_uid, effective_uid;
 gid_t real_gid, effective_gid;
+#endif
 
 #define RELINQUISH_PRIVS { \
 	real_uid = getuid(); \
 	effective_uid = geteuid(); \
 	real_gid = getgid(); \
 	effective_gid = getegid(); \
-	seteuid(real_uid); \
-	setegid(real_gid); \
+	if (seteuid(real_uid) != 0) err(1, "seteuid failed"); \
+	if (setegid(real_gid) != 0) err(1, "setegid failed"); \
 }
 
 #define RELINQUISH_PRIVS_ROOT(a, b) { \
@@ -83,26 +82,26 @@ gid_t real_gid, effective_gid;
 	effective_uid = geteuid(); \
 	real_gid = (b); \
 	effective_gid = getegid(); \
-	setegid(real_gid); \
-	seteuid(real_uid); \
+	if (setegid(real_gid) != 0) err(1, "setegid failed"); \
+	if (seteuid(real_uid) != 0) err(1, "seteuid failed"); \
 }
 
 #define PRIV_START { \
-	seteuid(effective_uid); \
-	setegid(effective_gid); \
+	if (seteuid(effective_uid) != 0) err(1, "seteuid failed"); \
+	if (setegid(effective_gid) != 0) err(1, "setegid failed"); \
 }
 
 #define PRIV_END { \
-	setegid(real_gid); \
-	seteuid(real_uid); \
+	if (setegid(real_gid) != 0) err(1, "setegid failed"); \
+	if (seteuid(real_uid) != 0) err(1, "seteuid failed"); \
 }
 
 #define REDUCE_PRIV(a, b) { \
 	PRIV_START \
 	effective_uid = (a); \
 	effective_gid = (b); \
-	setreuid((uid_t)-1, effective_uid); \
-	setregid((gid_t)-1, effective_gid); \
+	if (setregid((gid_t)-1, effective_gid) != 0) err(1, "setregid failed"); \
+	if (setreuid((uid_t)-1, effective_uid) != 0) err(1, "setreuid failed"); \
 	PRIV_END \
 }
 #endif

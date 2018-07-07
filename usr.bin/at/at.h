@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  *  at.h -  header for at(1)
  *  Copyright (C) 1993  Thomas Koenig
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/at/at.h 80294 2001-07-24 14:15:51Z obrien $
  */
 
 extern int fcreated;

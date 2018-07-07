@@ -1,4 +1,5 @@
 .\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/at/at.man 202756 2010-01-21 17:25:12Z ed $
 .Dd January 13, 2002
 .Dt "AT" 1
 .Os

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  *  panic.h -  header for at(1)
  *  Copyright (C) 1993  Thomas Koenig
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/at/panic.h 89315 2002-01-13 20:21:08Z mike $
  */
 
 #include <sys/cdefs.h>

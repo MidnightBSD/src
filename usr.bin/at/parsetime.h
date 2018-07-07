@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  *  at.h -  header for at(1)
  *  Copyright (C) 1993  Thomas Koenig
