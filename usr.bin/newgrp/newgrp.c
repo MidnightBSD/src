@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/newgrp/newgrp.c 246553 2013-02-08 14:14:00Z des $");
 
 #include <sys/types.h>
 
@@ -73,7 +74,8 @@ main(int argc, char *argv[])
 {
 	int ch, login;
 
-	euid = geteuid();
+	if ((euid = geteuid()) != 0)
+		warnx("need root permissions to function properly, check setuid bit");
 	if (seteuid(getuid()) < 0)
 		err(1, "seteuid");
 
@@ -151,7 +153,7 @@ addgroup(const char *grpname)
 	int dbmember, i, ngrps;
 	gid_t egid;
 	struct group *grp;
-	char *ep, *pass;
+	char *ep, *pass, *cryptpw;
 	char **p;
 
 	egid = getegid();
@@ -178,8 +180,10 @@ addgroup(const char *grpname)
 		}
 	if (!dbmember && *grp->gr_passwd != '\0' && getuid() != 0) {
 		pass = getpass("Password:");
-		if (pass == NULL ||
-		    strcmp(grp->gr_passwd, crypt(pass, grp->gr_passwd)) != 0) {
+		if (pass == NULL)
+			return;
+		cryptpw = crypt(pass, grp->gr_passwd);
+		if (cryptpw == NULL || strcmp(grp->gr_passwd, cryptpw) != 0) {
 			fprintf(stderr, "Sorry\n");
 			return;
 		}
@@ -190,7 +194,7 @@ addgroup(const char *grpname)
 		err(1, "malloc");
 	if ((ngrps = getgroups(ngrps_max, (gid_t *)grps)) < 0) {
 		warn("getgroups");
-		return;
+		goto end;
 	}
 
 	/* Remove requested gid from supp. list if it exists. */
@@ -204,7 +208,7 @@ addgroup(const char *grpname)
 		if (setgroups(ngrps, (const gid_t *)grps) < 0) {
 			PRIV_END;
 			warn("setgroups");
-			return;
+			goto end;
 		}
 		PRIV_END;
 	}
@@ -213,7 +217,7 @@ addgroup(const char *grpname)
 	if (setgid(grp->gr_gid)) {
 		PRIV_END;
 		warn("setgid");
-		return;
+		goto end;
 	}
 	PRIV_END;
 	grps[0] = grp->gr_gid;
@@ -228,12 +232,12 @@ addgroup(const char *grpname)
 			if (setgroups(ngrps, (const gid_t *)grps)) {
 				PRIV_END;
 				warn("setgroups");
-				return;
+				goto end;
 			}
 			PRIV_END;
 		}
 	}
-
+end:
 	free(grps);
 }
 
