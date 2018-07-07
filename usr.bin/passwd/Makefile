@@ -1,5 +1,6 @@
-# From:	@(#)Makefile	8.3 (Berkeley) 4/2/94
 # $MidnightBSD$
+# From:	@(#)Makefile	8.3 (Berkeley) 4/2/94
+# $FreeBSD: stable/10/usr.bin/passwd/Makefile 243617 2012-11-27 16:23:12Z pjd $
 
 .include <bsd.own.mk>
 
@@ -19,7 +20,9 @@ beforeinstall:
 		chflags noschg ${DESTDIR}${BINDIR}/$i || true
 .endfor
 
+.if !defined(NO_FSCHG)
 afterinstall:
 	-chflags schg ${DESTDIR}${BINDIR}/passwd
+.endif
 
 .include <bsd.prog.mk>
