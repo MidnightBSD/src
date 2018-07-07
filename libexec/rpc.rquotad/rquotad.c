@@ -1,14 +1,12 @@
-/* $MidnightBSD: src/libexec/rpc.rquotad/rquotad.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * by Manuel Bouyer (bouyer@ensta.fr)
- * 
+ *
  * There is no copyright, you can use it as you want.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: src/libexec/rpc.rquotad/rquotad.c,v 1.9 2005/02/14 17:42:57 stefanf Exp $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/libexec/rpc.rquotad/rquotad.c 207736 2010-05-07 00:41:12Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

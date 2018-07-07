@@ -1,5 +1,5 @@
-# $MidnightBSD: src/libexec/rpc.rquotad/Makefile,v 1.2 2012/04/11 00:46:55 laffer1 Exp $
-# $FreeBSD: src/libexec/rpc.rquotad/Makefile,v 1.6 2001/03/26 14:22:07 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/libexec/rpc.rquotad/Makefile 207736 2010-05-07 00:41:12Z mckusick $
 
 PROG =	rpc.rquotad
 SRCS =	rquotad.c
