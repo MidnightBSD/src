@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/getty/chat.c,v 1.2 2012/04/11 00:46:54 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997
  *	David L Nugent <davidn@blaze.net.au>.
@@ -24,10 +24,8 @@
  * For semi-intelligent modem handling.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: src/libexec/getty/chat.c,v 1.11 2005/04/06 17:42:24 stefanf Exp $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/libexec/getty/chat.c 228582 2011-12-16 15:44:12Z dim $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

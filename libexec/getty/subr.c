@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,15 +33,12 @@
 static char sccsid[] = "@(#)from: subr.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/getty/subr.c,v 1.19 2004/06/25 10:11:28 phk Exp $";
+  "$FreeBSD: stable/10/libexec/getty/subr.c 282523 2015-05-06 09:38:44Z kib $";
 #endif /* not lint */
 
 /*
  * Melbourne getty.
  */
-#ifdef DEBUG
-#include <stdio.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
@@ -165,17 +158,6 @@ gettable(const char *name, char *buf)
 			fp->value = 1 ^ fp->invrt;
 		}
 	}
-
-#ifdef DEBUG
-	printf("name=\"%s\", buf=\"%s\"\r\n", name, buf);
-	for (sp = gettystrs; sp->field; sp++)
-		printf("cgetstr: %s=%s\r\n", sp->field, sp->value);
-	for (np = gettynums; np->field; np++)
-		printf("cgetnum: %s=%d\r\n", np->field, np->value);
-	for (fp = gettyflags; fp->field; fp++)
-		printf("cgetflags: %s='%c' set='%c'\r\n", fp->field, 
-		       fp->value + '0', fp->set + '0');
-#endif /* DEBUG */
 }
 
 void
