@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rshd/rshd.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1989, 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -18,11 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -52,7 +48,7 @@ static const char sccsid[] = "@(#)rshd.c	8.2 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/rshd/rshd.c,v 1.51 2005/05/11 02:41:39 jmallett Exp $");
+__FBSDID("$FreeBSD: stable/10/libexec/rshd/rshd.c 321069 2017-07-17 06:37:46Z delphij $");
 
 /*
  * remote shell server:
@@ -327,8 +323,7 @@ doit(struct sockaddr *fromp)
 	pam_err = pam_authenticate(pamh, 0);
 	if (pam_err == PAM_SUCCESS) {
 		if ((pam_err = pam_get_user(pamh, &cp, NULL)) == PAM_SUCCESS) {
-			strncpy(luser, cp, sizeof(luser));
-			luser[sizeof(luser) - 1] = '\0';
+			strlcpy(luser, cp, sizeof(luser));
 			/* XXX truncation! */
 		}
 		pam_err = pam_acct_mgmt(pamh, 0);
@@ -369,9 +364,7 @@ doit(struct sockaddr *fromp)
 	if (lc != NULL && fromp->sa_family == AF_INET) {	/*XXX*/
 		char	remote_ip[MAXHOSTNAMELEN];
 
-		strncpy(remote_ip, numericname,
-			sizeof(remote_ip) - 1);
-		remote_ip[sizeof(remote_ip) - 1] = 0;
+		strlcpy(remote_ip, numericname, sizeof(remote_ip));
 		/* XXX truncation! */
 		if (!auth_hostok(lc, rhost, remote_ip)) {
 			syslog(LOG_INFO|LOG_AUTH,
