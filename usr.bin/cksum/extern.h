@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,10 +28,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/cksum/extern.h 241777 2012-10-20 10:33:15Z ed $
  */
 
 #include <sys/cdefs.h>
+
+extern uint32_t crc_total;
+extern uint32_t crc32_total;
 
 __BEGIN_DECLS
 int	crc(int, uint32_t *, off_t *);
