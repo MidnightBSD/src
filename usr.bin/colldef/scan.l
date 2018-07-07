@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 %x string name charmap defn nchar subs subs2
 %{
 /*-
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/colldef/scan.l 175038 2008-01-01 10:04:10Z imp $");
 
 #include <sys/types.h>
 #include <ctype.h>
