@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)jot.1	8.1 (Berkeley) 6/6/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/jot/jot.1 281574 2015-04-16 00:34:41Z allanjude $
 .\"
-.Dd June 2, 2010
+.Dd April 7, 2015
 .Dt JOT 1
 .Os
 .Sh NAME
@@ -242,7 +243,6 @@ specifying an integer format:
 .Bd -literal -offset indent
 $ jot -w %d 6 1 10 0.5
 .Ed
-.Pp
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
@@ -325,3 +325,5 @@ The
 .Nm
 utility first appeared in
 .Bx 4.2 .
+.Sh AUTHORS
+.An John A. Kunze
