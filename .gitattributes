@@ -75812,6 +75812,10 @@ usr.bin/doas/execvpe.c svneol=native#text/plain
 usr.bin/doas/parse.y -text
 usr.bin/doas/reallocarray.c svneol=native#text/plain
 usr.bin/doas/tree.h svneol=native#text/plain
+usr.bin/dpv/Makefile svneol=native#text/plain
+usr.bin/dpv/dpv.1 svneol=native#text/plain
+usr.bin/dpv/dpv.c svneol=native#text/plain
+usr.bin/dpv/dpv_util.h svneol=native#text/plain
 usr.bin/drill/Makefile svneol=native#text/plain
 usr.bin/du/Makefile -text
 usr.bin/du/du.1 -text
