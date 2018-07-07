@@ -1,4 +1,7 @@
-# $MidnightBSD: src/rescue/librescue/Makefile,v 1.4 2011/02/06 22:37:44 laffer1 Exp $
+# $MidnightBSD$
+#
+# $FreeBSD: stable/10/rescue/librescue/Makefile 188895 2009-02-21 15:04:31Z ru $
+#
 
 .include <bsd.own.mk>
 MK_SSP=		no
