@@ -76090,11 +76090,17 @@ usr.bin/lastcomm/tests/README -text
 usr.bin/lastcomm/tests/legacy_test.sh svneol=native#text/plain
 usr.bin/lastcomm/tests/v1-amd64-acct.in -text svneol=native#application/octet-stream
 usr.bin/lastcomm/tests/v1-amd64.out -text
+usr.bin/lastcomm/tests/v1-i386-acct.in -text
 usr.bin/lastcomm/tests/v1-i386.out -text
+usr.bin/lastcomm/tests/v1-sparc64-acct.in -text
 usr.bin/lastcomm/tests/v1-sparc64.out -text
+usr.bin/lastcomm/tests/v2-amd64-acct.in -text svneol=native#application/octet-stream
 usr.bin/lastcomm/tests/v2-amd64.out -text
+usr.bin/lastcomm/tests/v2-i386-acct.in -text svneol=native#application/octet-stream
 usr.bin/lastcomm/tests/v2-i386.out -text
+usr.bin/lastcomm/tests/v2-sparc64-acct.in -text svneol=native#application/octet-stream
 usr.bin/lastcomm/tests/v2-sparc64.out -text
+usr.bin/lastcomm/tests/values.sh svneol=native#text/plain
 usr.bin/ldd/Makefile -text
 usr.bin/ldd/extern.h -text
 usr.bin/ldd/ldd.1 -text
