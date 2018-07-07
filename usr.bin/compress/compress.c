@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +41,7 @@ static char sccsid[] = "@(#)compress.c	8.2 (Berkeley) 1/7/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/compress/compress.c 320532 2017-07-01 13:03:02Z jilles $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -56,15 +57,15 @@ __MBSDID("$MidnightBSD$");
 
 #include "zopen.h"
 
-void	compress(const char *, const char *, int);
-void	cwarn(const char *, ...) __printflike(1, 2);
-void	cwarnx(const char *, ...) __printflike(1, 2);
-void	decompress(const char *, const char *, int);
-int	permission(const char *);
-void	setfile(const char *, struct stat *);
-void	usage(int);
+static void	compress(const char *, const char *, int);
+static void	cwarn(const char *, ...) __printflike(1, 2);
+static void	cwarnx(const char *, ...) __printflike(1, 2);
+static void	decompress(const char *, const char *, int);
+static int	permission(const char *);
+static void	setfile(const char *, struct stat *);
+static void	usage(int);
 
-int eval, force, verbose;
+static int eval, force, verbose;
 
 int
 main(int argc, char *argv[])
@@ -75,7 +76,7 @@ main(int argc, char *argv[])
 	char *p, newname[MAXPATHLEN];
 
 	cat = 0;
-	if ((p = rindex(argv[0], '/')) == NULL)
+	if ((p = strrchr(argv[0], '/')) == NULL)
 		p = argv[0];
 	else
 		++p;
@@ -128,7 +129,7 @@ main(int argc, char *argv[])
 		exit (eval);
 	}
 
-	if (cat == 1 && argc > 1)
+	if (cat == 1 && style == COMPRESS && argc > 1)
 		errx(1, "the -c option permits only a single file argument");
 
 	for (; *argv; ++argv)
@@ -141,7 +142,7 @@ main(int argc, char *argv[])
 				compress(*argv, "/dev/stdout", bits);
 				break;
 			}
-			if ((p = rindex(*argv, '.')) != NULL &&
+			if ((p = strrchr(*argv, '.')) != NULL &&
 			    !strcmp(p, ".Z")) {
 				cwarnx("%s: name already has trailing .Z",
 				    *argv);
@@ -164,7 +165,7 @@ main(int argc, char *argv[])
 				break;
 			}
 			len = strlen(*argv);
-			if ((p = rindex(*argv, '.')) == NULL ||
+			if ((p = strrchr(*argv, '.')) == NULL ||
 			    strcmp(p, ".Z")) {
 				if (len > sizeof(newname) - 3) {
 					cwarnx("%s: name too long", *argv);
@@ -191,7 +192,7 @@ main(int argc, char *argv[])
 	exit (eval);
 }
 
-void
+static void
 compress(const char *in, const char *out, int bits)
 {
 	size_t nr;
@@ -281,7 +282,7 @@ err:	if (ofp) {
 		(void)fclose(ifp);
 }
 
-void
+static void
 decompress(const char *in, const char *out, int bits)
 {
 	size_t nr;
@@ -357,7 +358,7 @@ err:	if (ofp) {
 		(void)fclose(ifp);
 }
 
-void
+static void
 setfile(const char *name, struct stat *fs)
 {
 	static struct timeval tv[2];
@@ -387,7 +388,7 @@ setfile(const char *name, struct stat *fs)
 		cwarn("chflags: %s", name);
 }
 
-int
+static int
 permission(const char *fname)
 {
 	int ch, first;
@@ -401,7 +402,7 @@ permission(const char *fname)
 	return (first == 'y');
 }
 
-void
+static void
 usage(int iscompress)
 {
 	if (iscompress)
@@ -413,7 +414,7 @@ usage(int iscompress)
 	exit(1);
 }
 
-void
+static void
 cwarnx(const char *fmt, ...)
 {
 	va_list ap;
@@ -424,7 +425,7 @@ cwarnx(const char *fmt, ...)
 	eval = 1;
 }
 
-void
+static void
 cwarn(const char *fmt, ...)
 {
 	va_list ap;
