@@ -75558,6 +75558,9 @@ usr.bin/brainfuck/brainfuck.1 -text
 usr.bin/brandelf/Makefile -text
 usr.bin/brandelf/brandelf.1 -text
 usr.bin/brandelf/brandelf.c -text
+usr.bin/bsdcat/Makefile svneol=native#text/plain
+usr.bin/bsdcat/tests/Makefile svneol=native#text/plain
+usr.bin/bsdcat/tests/functional_test.sh svneol=native#text/plain
 usr.bin/bsdiff/Makefile -text
 usr.bin/bsdiff/Makefile.inc -text
 usr.bin/bsdiff/bsdiff/Makefile -text
