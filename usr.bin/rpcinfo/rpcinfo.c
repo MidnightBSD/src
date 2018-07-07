@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: rpcinfo.c,v 1.15 2000/10/04 20:09:05 mjl Exp $	*/
 
 /*
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)rpcinfo.c 1.16 89/04/05 Copyr 1986 Sun Micro";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/rpcinfo/rpcinfo.c 319256 2017-05-30 21:58:53Z asomers $");
 
 /*
  * rpcinfo: ping a particular rpc program
@@ -50,7 +51,7 @@ __MBSDID("$MidnightBSD$");
  */
 
 /*
- * We are for now defining PORTMAP here.  It doesnt even compile
+ * We are for now defining PORTMAP here.  It doesn't even compile
  * unless it is defined.
  */
 #ifndef	PORTMAP
@@ -476,7 +477,7 @@ pmapdump(int argc, char **argv)
 	struct rpcent *rpc;
 	enum clnt_stat clnt_st;
 	struct rpc_err err;
-	char *host;
+	char *host = NULL;
 
 	if (argc > 1)
 		usage();
@@ -513,10 +514,16 @@ pmapdump(int argc, char **argv)
 		if ((clnt_st == RPC_PROGVERSMISMATCH) ||
 		    (clnt_st == RPC_PROGUNAVAIL)) {
 			CLNT_GETERR(client, &err);
-			if (err.re_vers.low > PMAPVERS)
-				warnx(
-		"%s does not support portmapper.  Try rpcinfo %s instead",
-					host, host);
+			if (err.re_vers.low > PMAPVERS) {
+				if (host)
+					warnx("%s does not support portmapper."
+					    "Try rpcinfo %s instead", host,
+					    host);
+				else
+					warnx("local host does not support "
+					    "portmapper.  Try 'rpcinfo' "
+					    "instead");
+			}
 			exit(1);
 		}
 		clnt_perror(client, "rpcinfo: can't contact portmapper");
@@ -848,9 +855,9 @@ failed:
 			printf("%-10s", buf);
 			buf[0] = '\0';
 			for (nl = rs->nlist; nl; nl = nl->next) {
-				strcat(buf, nl->netid);
+				strlcat(buf, nl->netid, sizeof(buf));
 				if (nl->next)
-					strcat(buf, ",");
+					strlcat(buf, ",", sizeof(buf));
 			}
 			printf("%-32s", buf);
 			rpc = getrpcbynumber(rs->prog);
