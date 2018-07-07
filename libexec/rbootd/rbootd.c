@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rbootd/rbootd.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
@@ -19,11 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -55,9 +51,9 @@ static const char copyright[] =
 #if 0
 static const char sccsid[] = "@(#)rbootd.c	8.1 (Berkeley) 6/4/93";
 #endif
-static const char rcsid[] =
-  "$FreeBSD: src/libexec/rbootd/rbootd.c,v 1.14 2004/08/21 07:23:41 maxim Exp $";
 #endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/libexec/rbootd/rbootd.c 262435 2014-02-24 08:21:49Z brueffer $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -232,7 +228,7 @@ main(int argc, char *argv[])
 
 		r = rset;
 
-		if (RmpConns == NULL) {		/* timeout isnt necessary */
+		if (RmpConns == NULL) {		/* timeout isn't necessary */
 			nsel = select(maxfds, &r, NULL, NULL, NULL);
 		} else {
 			timeout.tv_sec = RMP_TIMEOUT;
@@ -311,16 +307,15 @@ void
 DoTimeout(void)
 {
 	RMPCONN *rtmp;
-	struct timeval now;
-
-	(void) gettimeofday(&now, (struct timezone *)0);
+	time_t now;
 
 	/*
 	 *  For each active connection, if RMP_TIMEOUT seconds have passed
 	 *  since the last packet was sent, delete the connection.
 	 */
+	now = time(NULL);
 	for (rtmp = RmpConns; rtmp != NULL; rtmp = rtmp->next)
-		if ((rtmp->tstamp.tv_sec + RMP_TIMEOUT) < now.tv_sec) {
+		if ((rtmp->tstamp.tv_sec + RMP_TIMEOUT) < now) {
 			syslog(LOG_WARNING, "%s: connection timed out (%u)",
 			       EnetStr(rtmp), rtmp->rmp.r_type);
 			RemoveConn(rtmp);

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rbootd/utils.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
@@ -19,11 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -50,7 +46,7 @@
 static const char sccsid[] = "@(#)utils.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/rbootd/utils.c,v 1.8 2004/05/24 11:59:16 stefanf Exp $";
+  "$FreeBSD: stable/10/libexec/rbootd/utils.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 #include <sys/param.h>
