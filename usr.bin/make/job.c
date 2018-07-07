@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1989, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,8 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/usr.bin/make/job.c,v 1.130 2008/09/29 16:13:28 ache Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/make/job.c 252679 2013-07-04 03:24:58Z kevlo $");
 
 /*-
  * job.c --
@@ -1903,7 +1903,7 @@ JobOutput(Job *job, char *cp, char *endp, int msg)
  *	this makes up a line, we print it tagged by the job's identifier,
  *	as necessary.
  *	If output has been collected in a temporary file, we open the
- *	file and read it line by line, transfering it to our own
+ *	file and read it line by line, transferring it to our own
  *	output channel until the file is empty. At which point we
  *	remove the temporary file.
  *	In both cases, however, we keep our figurative eye out for the
@@ -2129,7 +2129,7 @@ Job_CatchChildren(Boolean block)
 	}
 
 	for (;;) {
-		pid = waitpid((pid_t)-1, &status,
+		pid = waitpid(-1, &status,
 		    (block ? 0 : WNOHANG) | WUNTRACED);
 		if (pid <= 0)
 			break;
@@ -2629,7 +2629,7 @@ Job_AbortAll(void)
 	/*
 	 * Catch as many children as want to report in at first, then give up
 	 */
-	while (waitpid((pid_t)-1, &foo, WNOHANG) > 0)
+	while (waitpid(-1, &foo, WNOHANG) > 0)
 		;
 }
 
