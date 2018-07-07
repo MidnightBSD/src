@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD: src/usr.sbin/auditreduce/Makefile,v 1.2 2006/09/25 11:56:20 rwatson Exp $
+# $FreeBSD: stable/10/usr.sbin/auditreduce/Makefile 201390 2010-01-02 11:07:44Z ed $
 #
 
 OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
@@ -12,6 +13,7 @@ MAN=	auditreduce.1
 
 DPADD=	${LIBBSM}
 LDADD=	-lbsm
+
 WARNS?=	3
 
 .include <bsd.prog.mk>
