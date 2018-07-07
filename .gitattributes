@@ -75786,6 +75786,8 @@ usr.bin/ctlstat/ctlstat.c -text
 usr.bin/cut/Makefile -text
 usr.bin/cut/cut.1 -text
 usr.bin/cut/cut.c -text
+usr.bin/cut/tests/Makefile svneol=native#text/plain
+usr.bin/cut/tests/cut2_test.sh svneol=native#text/plain
 usr.bin/dc/Makefile -text
 usr.bin/dc/USD.doc/Makefile -text
 usr.bin/dc/USD.doc/dc -text

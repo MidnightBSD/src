@@ -1,0 +1,20 @@
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/cut/tests/Makefile 313629 2017-02-11 07:11:43Z ngie $
+
+.include <bsd.own.mk>
+
+ATF_TESTS_SH+=	cut2_test
+NETBSD_ATF_TESTS_SH=	cut_test
+
+FILESDIR=	${TESTSDIR}
+FILES=		d_basic.out
+FILES+=		d_cut.in
+FILES+=		d_dflag.out
+FILES+=		d_dsflag.out
+FILES+=		d_latin1.in
+FILES+=		d_sflag.out
+FILES+=		d_utf8.in
+
+.include <netbsd-tests.test.mk>
+
+.include <bsd.test.mk>
