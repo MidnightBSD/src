@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Weongyo Jeong. All rights reserved.
  * Copyright (c) 2011, by Michael Tuexen. All rights reserved.
@@ -36,7 +37,7 @@ static char sccsid[] = "@(#)sctp.c	0.1 (Berkeley) 4/18/2007";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/sctp.c 294150 2016-01-16 14:43:27Z tuexen $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -77,7 +78,7 @@ static void sctp_statesprint(uint32_t state);
 #define	NETSTAT_SCTP_STATES_SHUTDOWN_ACK_SENT	0x8
 #define	NETSTAT_SCTP_STATES_SHUTDOWN_PENDING	0x9
 
-char *sctpstates[] = {
+const char *sctpstates[] = {
 	"CLOSED",
 	"BOUND",
 	"LISTEN",
@@ -164,7 +165,7 @@ inet6name(struct in6_addr *in6p)
 	if (first && !numeric_addr) {
 		first = 0;
 		if (gethostname(domain, MAXHOSTNAMELEN) == 0 &&
-		    (cp = index(domain, '.')))
+		    (cp = strchr(domain, '.')))
 			(void) strcpy(domain, cp + 1);
 		else
 			domain[0] = 0;
@@ -173,7 +174,7 @@ inet6name(struct in6_addr *in6p)
 	if (!numeric_addr && !IN6_IS_ADDR_UNSPECIFIED(in6p)) {
 		hp = gethostbyaddr((char *)in6p, sizeof(*in6p), AF_INET6);
 		if (hp) {
-			if ((cp = index(hp->h_name, '.')) &&
+			if ((cp = strchr(hp->h_name, '.')) &&
 			    !strcmp(cp + 1, domain))
 				*cp = 0;
 			cp = hp->h_name;
@@ -213,7 +214,7 @@ sctp_print_address(union sctp_sockstore *address, int port, int num_port)
 		sprintf(line, "%.*s.", Wflag ? 39 : 16, "");
 		break;
 	}
-	cp = index(line, '\0');
+	cp = strchr(line, '\0');
 	if (!num_port && port)
 		sp = getservbyport((int)port, "sctp");
 	if (sp || port == 0)
@@ -393,7 +394,7 @@ sctp_process_inpcb(struct xsctp_inpcb *xinpcb,
 {
 	int indent = 0, xladdr_total = 0, is_listening = 0;
 	static int first = 1;
-	char *tname, *pname;
+	const char *tname, *pname;
 	struct xsctp_tcb *xstcb;
 	struct xsctp_laddr *xladdr;
 	size_t offset_laddr;
@@ -527,7 +528,7 @@ retry:
  */
 void
 sctp_protopr(u_long off __unused,
-    const char *name, int af1, int proto)
+    const char *name __unused, int af1 __unused, int proto)
 {
 	char *buf;
 	const char *mibvar = "net.inet.sctp.assoclist";
@@ -572,25 +573,34 @@ sctp_statesprint(uint32_t state)
 	int idx;
 
 	switch (state) {
-	case SCTP_STATE_COOKIE_WAIT:
+	case SCTP_CLOSED:
+		idx = NETSTAT_SCTP_STATES_CLOSED;
+		break;
+	case SCTP_BOUND:
+		idx = NETSTAT_SCTP_STATES_BOUND;
+		break;
+	case SCTP_LISTEN:
+		idx = NETSTAT_SCTP_STATES_LISTEN;
+		break;
+	case SCTP_COOKIE_WAIT:
 		idx = NETSTAT_SCTP_STATES_COOKIE_WAIT;
 		break;
-	case SCTP_STATE_COOKIE_ECHOED:
+	case SCTP_COOKIE_ECHOED:
 		idx = NETSTAT_SCTP_STATES_COOKIE_ECHOED;
 		break;
-	case SCTP_STATE_OPEN:
+	case SCTP_ESTABLISHED:
 		idx = NETSTAT_SCTP_STATES_ESTABLISHED;
 		break;
-	case SCTP_STATE_SHUTDOWN_SENT:
+	case SCTP_SHUTDOWN_SENT:
 		idx = NETSTAT_SCTP_STATES_SHUTDOWN_SENT;
 		break;
-	case SCTP_STATE_SHUTDOWN_RECEIVED:
+	case SCTP_SHUTDOWN_RECEIVED:
 		idx = NETSTAT_SCTP_STATES_SHUTDOWN_RECEIVED;
 		break;
-	case SCTP_STATE_SHUTDOWN_ACK_SENT:
+	case SCTP_SHUTDOWN_ACK_SENT:
 		idx = NETSTAT_SCTP_STATES_SHUTDOWN_ACK_SENT;
 		break;
-	case SCTP_STATE_SHUTDOWN_PENDING:
+	case SCTP_SHUTDOWN_PENDING:
 		idx = NETSTAT_SCTP_STATES_SHUTDOWN_PENDING;
 		break;
 	default:
@@ -607,20 +617,11 @@ sctp_statesprint(uint32_t state)
 void
 sctp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct sctpstat sctpstat, zerostat;
-	size_t len = sizeof(sctpstat);
+	struct sctpstat sctpstat;
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.sctp.stats", &sctpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet.sctp.stats");
-			return;
-		}
-	} else
-		kread(off, &sctpstat, len);
+	if (fetch_stats("net.inet.sctp.stats", off, &sctpstat,
+	    sizeof(sctpstat), kread) != 0)
+		return;
 
 	printf ("%s:\n", name);
 

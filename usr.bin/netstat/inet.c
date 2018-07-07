@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1988, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/inet.c 293637 2016-01-10 17:39:49Z ngie $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -89,7 +90,7 @@ static int udp_done, tcp_done, sdp_done;
 #endif /* INET6 */
 
 static int
-pcblist_sysctl(int proto, const char *name, char **bufp, int istcp)
+pcblist_sysctl(int proto, const char *name, char **bufp, int istcp __unused)
 {
 	const char *mibvar;
 	char *buf;
@@ -429,7 +430,7 @@ protopr(u_long off, const char *name, int af1, int proto)
 				       "%-5.5s %-6.6s %-6.6s %-22.22s %-22.22s",
 				       "Proto", "Recv-Q", "Send-Q",
 				       "Local Address", "Foreign Address");
-				if (!xflag)
+				if (!xflag && !Rflag)
 					printf(" (state)");
 			}
 			if (xflag) {
@@ -441,6 +442,9 @@ protopr(u_long off, const char *name, int af1, int proto)
 				printf(" %7.7s %7.7s %7.7s %7.7s %7.7s %7.7s",
 				       "rexmt", "persist", "keep",
 				       "2msl", "delack", "rcvtime");
+			} else if (Rflag) {
+				printf ("  %8.8s %5.5s",
+				    "flowid", "ftype");
 			}
 			putchar('\n');
 			first = 0;
@@ -549,7 +553,7 @@ protopr(u_long off, const char *name, int af1, int proto)
 				    timer->tt_delack / 1000, (timer->tt_delack % 1000) / 10,
 				    timer->t_rcvtime / 1000, (timer->t_rcvtime % 1000) / 10);
 		}
-		if (istcp && !Lflag && !xflag && !Tflag) {
+		if (istcp && !Lflag && !xflag && !Tflag && !Rflag) {
 			if (tp->t_state < 0 || tp->t_state >= TCP_NSTATES)
 				printf("%d", tp->t_state);
 			else {
@@ -560,7 +564,12 @@ protopr(u_long off, const char *name, int af1, int proto)
 					putchar('*');
 #endif /* defined(TF_NEEDSYN) && defined(TF_NEEDFIN) */
 			}
-		} 		
+		}
+		if (Rflag) {
+			printf(" %08x %5d",
+			    inp->inp_flowid,
+			    inp->inp_flowtype);
+		}
 		putchar('\n');
 	}
 	if (xig != oxig && xig->xig_gen != oxig->xig_gen) {
@@ -585,8 +594,7 @@ protopr(u_long off, const char *name, int af1, int proto)
 void
 tcp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct tcpstat tcpstat, zerostat;
-	size_t len = sizeof tcpstat;
+	struct tcpstat tcpstat;
 
 #ifdef INET6
 	if (tcp_done != 0)
@@ -595,128 +603,138 @@ tcp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 		tcp_done = 1;
 #endif
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.tcp.stats", &tcpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			warn("sysctl: net.inet.tcp.stats");
-			return;
-		}
-	} else
-		kread(off, &tcpstat, len);
+	if (fetch_stats("net.inet.tcp.stats", off, &tcpstat,
+	    sizeof(tcpstat), kread_counters) != 0)
+		return;
 
 	printf ("%s:\n", name);
 
-#define	p(f, m) if (tcpstat.f || sflag <= 1) \
-    printf(m, tcpstat.f, plural(tcpstat.f))
-#define	p1a(f, m) if (tcpstat.f || sflag <= 1) \
-    printf(m, tcpstat.f)
-#define	p2(f1, f2, m) if (tcpstat.f1 || tcpstat.f2 || sflag <= 1) \
-    printf(m, tcpstat.f1, plural(tcpstat.f1), tcpstat.f2, plural(tcpstat.f2))
-#define	p2a(f1, f2, m) if (tcpstat.f1 || tcpstat.f2 || sflag <= 1) \
-    printf(m, tcpstat.f1, plural(tcpstat.f1), tcpstat.f2)
-#define	p3(f, m) if (tcpstat.f || sflag <= 1) \
-    printf(m, tcpstat.f, pluralies(tcpstat.f))
+#define	p(f, m) if (tcpstat.f || sflag <= 1)				\
+	printf(m, (uintmax_t )tcpstat.f, plural(tcpstat.f))
 
-	p(tcps_sndtotal, "\t%lu packet%s sent\n");
-	p2(tcps_sndpack,tcps_sndbyte, "\t\t%lu data packet%s (%lu byte%s)\n");
+#define	p1a(f, m) if (tcpstat.f || sflag <= 1)				\
+	printf(m, (uintmax_t )tcpstat.f)
+
+#define	p2(f1, f2, m) if (tcpstat.f1 || tcpstat.f2 || sflag <= 1)	\
+	printf(m, (uintmax_t )tcpstat.f1, plural(tcpstat.f1),		\
+	    (uintmax_t )tcpstat.f2, plural(tcpstat.f2))
+
+#define	p2a(f1, f2, m) if (tcpstat.f1 || tcpstat.f2 || sflag <= 1)	\
+	printf(m, (uintmax_t )tcpstat.f1, plural(tcpstat.f1),		\
+	    (uintmax_t )tcpstat.f2)
+
+#define	p3(f, m) if (tcpstat.f || sflag <= 1)				\
+	printf(m, (uintmax_t )tcpstat.f, pluralies(tcpstat.f))
+
+	p(tcps_sndtotal, "\t%ju packet%s sent\n");
+	p2(tcps_sndpack,tcps_sndbyte, "\t\t%ju data packet%s (%ju byte%s)\n");
 	p2(tcps_sndrexmitpack, tcps_sndrexmitbyte,
-	    "\t\t%lu data packet%s (%lu byte%s) retransmitted\n");
+	    "\t\t%ju data packet%s (%ju byte%s) retransmitted\n");
 	p(tcps_sndrexmitbad,
-	    "\t\t%lu data packet%s unnecessarily retransmitted\n");
-	p(tcps_mturesent, "\t\t%lu resend%s initiated by MTU discovery\n");
+	    "\t\t%ju data packet%s unnecessarily retransmitted\n");
+	p(tcps_mturesent, "\t\t%ju resend%s initiated by MTU discovery\n");
 	p2a(tcps_sndacks, tcps_delack,
-	    "\t\t%lu ack-only packet%s (%lu delayed)\n");
-	p(tcps_sndurg, "\t\t%lu URG only packet%s\n");
-	p(tcps_sndprobe, "\t\t%lu window probe packet%s\n");
-	p(tcps_sndwinup, "\t\t%lu window update packet%s\n");
-	p(tcps_sndctrl, "\t\t%lu control packet%s\n");
-	p(tcps_rcvtotal, "\t%lu packet%s received\n");
+	    "\t\t%ju ack-only packet%s (%ju delayed)\n");
+	p(tcps_sndurg, "\t\t%ju URG only packet%s\n");
+	p(tcps_sndprobe, "\t\t%ju window probe packet%s\n");
+	p(tcps_sndwinup, "\t\t%ju window update packet%s\n");
+	p(tcps_sndctrl, "\t\t%ju control packet%s\n");
+	p(tcps_rcvtotal, "\t%ju packet%s received\n");
 	p2(tcps_rcvackpack, tcps_rcvackbyte,
-	    "\t\t%lu ack%s (for %lu byte%s)\n");
-	p(tcps_rcvdupack, "\t\t%lu duplicate ack%s\n");
-	p(tcps_rcvacktoomuch, "\t\t%lu ack%s for unsent data\n");
+	    "\t\t%ju ack%s (for %ju byte%s)\n");
+	p(tcps_rcvdupack, "\t\t%ju duplicate ack%s\n");
+	p(tcps_rcvacktoomuch, "\t\t%ju ack%s for unsent data\n");
 	p2(tcps_rcvpack, tcps_rcvbyte,
-	    "\t\t%lu packet%s (%lu byte%s) received in-sequence\n");
+	    "\t\t%ju packet%s (%ju byte%s) received in-sequence\n");
 	p2(tcps_rcvduppack, tcps_rcvdupbyte,
-	    "\t\t%lu completely duplicate packet%s (%lu byte%s)\n");
-	p(tcps_pawsdrop, "\t\t%lu old duplicate packet%s\n");
+	    "\t\t%ju completely duplicate packet%s (%ju byte%s)\n");
+	p(tcps_pawsdrop, "\t\t%ju old duplicate packet%s\n");
 	p2(tcps_rcvpartduppack, tcps_rcvpartdupbyte,
-	    "\t\t%lu packet%s with some dup. data (%lu byte%s duped)\n");
+	    "\t\t%ju packet%s with some dup. data (%ju byte%s duped)\n");
 	p2(tcps_rcvoopack, tcps_rcvoobyte,
-	    "\t\t%lu out-of-order packet%s (%lu byte%s)\n");
+	    "\t\t%ju out-of-order packet%s (%ju byte%s)\n");
 	p2(tcps_rcvpackafterwin, tcps_rcvbyteafterwin,
-	    "\t\t%lu packet%s (%lu byte%s) of data after window\n");
-	p(tcps_rcvwinprobe, "\t\t%lu window probe%s\n");
-	p(tcps_rcvwinupd, "\t\t%lu window update packet%s\n");
-	p(tcps_rcvafterclose, "\t\t%lu packet%s received after close\n");
-	p(tcps_rcvbadsum, "\t\t%lu discarded for bad checksum%s\n");
-	p(tcps_rcvbadoff, "\t\t%lu discarded for bad header offset field%s\n");
-	p1a(tcps_rcvshort, "\t\t%lu discarded because packet too short\n");
-	p1a(tcps_rcvmemdrop, "\t\t%lu discarded due to memory problems\n");
-	p(tcps_connattempt, "\t%lu connection request%s\n");
-	p(tcps_accepts, "\t%lu connection accept%s\n");
-	p(tcps_badsyn, "\t%lu bad connection attempt%s\n");
-	p(tcps_listendrop, "\t%lu listen queue overflow%s\n");
-	p(tcps_badrst, "\t%lu ignored RSTs in the window%s\n");
-	p(tcps_connects, "\t%lu connection%s established (including accepts)\n");
+	    "\t\t%ju packet%s (%ju byte%s) of data after window\n");
+	p(tcps_rcvwinprobe, "\t\t%ju window probe%s\n");
+	p(tcps_rcvwinupd, "\t\t%ju window update packet%s\n");
+	p(tcps_rcvafterclose, "\t\t%ju packet%s received after close\n");
+	p(tcps_rcvbadsum, "\t\t%ju discarded for bad checksum%s\n");
+	p(tcps_rcvbadoff, "\t\t%ju discarded for bad header offset field%s\n");
+	p1a(tcps_rcvshort, "\t\t%ju discarded because packet too short\n");
+	p1a(tcps_rcvmemdrop, "\t\t%ju discarded due to memory problems\n");
+	p(tcps_connattempt, "\t%ju connection request%s\n");
+	p(tcps_accepts, "\t%ju connection accept%s\n");
+	p(tcps_badsyn, "\t%ju bad connection attempt%s\n");
+	p(tcps_listendrop, "\t%ju listen queue overflow%s\n");
+	p(tcps_badrst, "\t%ju ignored RSTs in the window%s\n");
+	p(tcps_connects, "\t%ju connection%s established (including accepts)\n");
 	p2(tcps_closed, tcps_drops,
-	    "\t%lu connection%s closed (including %lu drop%s)\n");
-	p(tcps_cachedrtt, "\t\t%lu connection%s updated cached RTT on close\n");
+	    "\t%ju connection%s closed (including %ju drop%s)\n");
+	p(tcps_cachedrtt, "\t\t%ju connection%s updated cached RTT on close\n");
 	p(tcps_cachedrttvar,
-	    "\t\t%lu connection%s updated cached RTT variance on close\n");
+	    "\t\t%ju connection%s updated cached RTT variance on close\n");
 	p(tcps_cachedssthresh,
-	    "\t\t%lu connection%s updated cached ssthresh on close\n");
-	p(tcps_conndrops, "\t%lu embryonic connection%s dropped\n");
+	    "\t\t%ju connection%s updated cached ssthresh on close\n");
+	p(tcps_conndrops, "\t%ju embryonic connection%s dropped\n");
 	p2(tcps_rttupdated, tcps_segstimed,
-	    "\t%lu segment%s updated rtt (of %lu attempt%s)\n");
-	p(tcps_rexmttimeo, "\t%lu retransmit timeout%s\n");
-	p(tcps_timeoutdrop, "\t\t%lu connection%s dropped by rexmit timeout\n");
-	p(tcps_persisttimeo, "\t%lu persist timeout%s\n");
-	p(tcps_persistdrop, "\t\t%lu connection%s dropped by persist timeout\n");
+	    "\t%ju segment%s updated rtt (of %ju attempt%s)\n");
+	p(tcps_rexmttimeo, "\t%ju retransmit timeout%s\n");
+	p(tcps_timeoutdrop, "\t\t%ju connection%s dropped by rexmit timeout\n");
+	p(tcps_persisttimeo, "\t%ju persist timeout%s\n");
+	p(tcps_persistdrop, "\t\t%ju connection%s dropped by persist timeout\n");
 	p(tcps_finwait2_drops,
-	    "\t%lu Connection%s (fin_wait_2) dropped because of timeout\n");
-	p(tcps_keeptimeo, "\t%lu keepalive timeout%s\n");
-	p(tcps_keepprobe, "\t\t%lu keepalive probe%s sent\n");
-	p(tcps_keepdrops, "\t\t%lu connection%s dropped by keepalive\n");
-	p(tcps_predack, "\t%lu correct ACK header prediction%s\n");
-	p(tcps_preddat, "\t%lu correct data packet header prediction%s\n");
+	    "\t%ju Connection%s (fin_wait_2) dropped because of timeout\n");
+	p(tcps_keeptimeo, "\t%ju keepalive timeout%s\n");
+	p(tcps_keepprobe, "\t\t%ju keepalive probe%s sent\n");
+	p(tcps_keepdrops, "\t\t%ju connection%s dropped by keepalive\n");
+	p(tcps_predack, "\t%ju correct ACK header prediction%s\n");
+	p(tcps_preddat, "\t%ju correct data packet header prediction%s\n");
 
-	p3(tcps_sc_added, "\t%lu syncache entr%s added\n");
-	p1a(tcps_sc_retransmitted, "\t\t%lu retransmitted\n");
-	p1a(tcps_sc_dupsyn, "\t\t%lu dupsyn\n");
-	p1a(tcps_sc_dropped, "\t\t%lu dropped\n");
-	p1a(tcps_sc_completed, "\t\t%lu completed\n");
-	p1a(tcps_sc_bucketoverflow, "\t\t%lu bucket overflow\n");
-	p1a(tcps_sc_cacheoverflow, "\t\t%lu cache overflow\n");
-	p1a(tcps_sc_reset, "\t\t%lu reset\n");
-	p1a(tcps_sc_stale, "\t\t%lu stale\n");
-	p1a(tcps_sc_aborted, "\t\t%lu aborted\n");
-	p1a(tcps_sc_badack, "\t\t%lu badack\n");
-	p1a(tcps_sc_unreach, "\t\t%lu unreach\n");
-	p(tcps_sc_zonefail, "\t\t%lu zone failure%s\n");
-	p(tcps_sc_sendcookie, "\t%lu cookie%s sent\n");
-	p(tcps_sc_recvcookie, "\t%lu cookie%s received\n");
+	p3(tcps_sc_added, "\t%ju syncache entr%s added\n");
+	p1a(tcps_sc_retransmitted, "\t\t%ju retransmitted\n");
+	p1a(tcps_sc_dupsyn, "\t\t%ju dupsyn\n");
+	p1a(tcps_sc_dropped, "\t\t%ju dropped\n");
+	p1a(tcps_sc_completed, "\t\t%ju completed\n");
+	p1a(tcps_sc_bucketoverflow, "\t\t%ju bucket overflow\n");
+	p1a(tcps_sc_cacheoverflow, "\t\t%ju cache overflow\n");
+	p1a(tcps_sc_reset, "\t\t%ju reset\n");
+	p1a(tcps_sc_stale, "\t\t%ju stale\n");
+	p1a(tcps_sc_aborted, "\t\t%ju aborted\n");
+	p1a(tcps_sc_badack, "\t\t%ju badack\n");
+	p1a(tcps_sc_unreach, "\t\t%ju unreach\n");
+	p(tcps_sc_zonefail, "\t\t%ju zone failure%s\n");
+	p(tcps_sc_sendcookie, "\t%ju cookie%s sent\n");
+	p(tcps_sc_recvcookie, "\t%ju cookie%s received\n");
 
-	p(tcps_hc_added, "\t%lu hostcache entrie%s added\n");
-	p1a(tcps_hc_bucketoverflow, "\t\t%lu bucket overflow\n");
+	p3(tcps_hc_added, "\t%ju hostcache entr%s added\n");
+	p1a(tcps_hc_bucketoverflow, "\t\t%ju bucket overflow\n");
 
-	p(tcps_sack_recovery_episode, "\t%lu SACK recovery episode%s\n");
+	p(tcps_sack_recovery_episode, "\t%ju SACK recovery episode%s\n");
 	p(tcps_sack_rexmits,
-	    "\t%lu segment rexmit%s in SACK recovery episodes\n");
+	    "\t%ju segment rexmit%s in SACK recovery episodes\n");
 	p(tcps_sack_rexmit_bytes,
-	    "\t%lu byte rexmit%s in SACK recovery episodes\n");
+	    "\t%ju byte rexmit%s in SACK recovery episodes\n");
 	p(tcps_sack_rcv_blocks,
-	    "\t%lu SACK option%s (SACK blocks) received\n");
-	p(tcps_sack_send_blocks, "\t%lu SACK option%s (SACK blocks) sent\n");
-	p1a(tcps_sack_sboverflow, "\t%lu SACK scoreboard overflow\n");
+	    "\t%ju SACK option%s (SACK blocks) received\n");
+	p(tcps_sack_send_blocks, "\t%ju SACK option%s (SACK blocks) sent\n");
+	p1a(tcps_sack_sboverflow, "\t%ju SACK scoreboard overflow\n");
 
-	p(tcps_ecn_ce, "\t%lu packet%s with ECN CE bit set\n");
-	p(tcps_ecn_ect0, "\t%lu packet%s with ECN ECT(0) bit set\n");
-	p(tcps_ecn_ect1, "\t%lu packet%s with ECN ECT(1) bit set\n");
-	p(tcps_ecn_shs, "\t%lu successful ECN handshake%s\n");
-	p(tcps_ecn_rcwnd, "\t%lu time%s ECN reduced the congestion window\n");
+	p(tcps_ecn_ce, "\t%ju packet%s with ECN CE bit set\n");
+	p(tcps_ecn_ect0, "\t%ju packet%s with ECN ECT(0) bit set\n");
+	p(tcps_ecn_ect1, "\t%ju packet%s with ECN ECT(1) bit set\n");
+	p(tcps_ecn_shs, "\t%ju successful ECN handshake%s\n");
+	p(tcps_ecn_rcwnd, "\t%ju time%s ECN reduced the congestion window\n");
+
+	p(tcps_sig_rcvgoodsig,
+	     "\t%ju packet%s with valid tcp-md5 signature received\n");
+	p(tcps_sig_rcvbadsig,
+	     "\t%ju packet%s with invalid tcp-md5 signature received\n");
+	p(tcps_sig_err_buildsig,
+	     "\t%ju packet%s with tcp-md5 signature mismatch\n");
+	p(tcps_sig_err_sigopt,
+	     "\t%ju packet%s with unexpected tcp-md5 signature received\n");
+	p(tcps_sig_err_nosigopt,
+	     "\t%ju packet%s without expected tcp-md5 signature received\n");
 #undef p
 #undef p1a
 #undef p2
@@ -730,9 +748,8 @@ tcp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 void
 udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct udpstat udpstat, zerostat;
-	size_t len = sizeof udpstat;
-	u_long delivered;
+	struct udpstat udpstat;
+	uint64_t delivered;
 
 #ifdef INET6
 	if (udp_done != 0)
@@ -741,32 +758,25 @@ udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 		udp_done = 1;
 #endif
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.udp.stats", &udpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			warn("sysctl: net.inet.udp.stats");
-			return;
-		}
-	} else
-		kread(off, &udpstat, len);
+	if (fetch_stats("net.inet.udp.stats", off, &udpstat,
+	    sizeof(udpstat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 #define	p(f, m) if (udpstat.f || sflag <= 1) \
-    printf(m, udpstat.f, plural(udpstat.f))
+    printf("\t%ju " m, (uintmax_t)udpstat.f, plural(udpstat.f))
 #define	p1a(f, m) if (udpstat.f || sflag <= 1) \
-    printf(m, udpstat.f)
-	p(udps_ipackets, "\t%lu datagram%s received\n");
-	p1a(udps_hdrops, "\t%lu with incomplete header\n");
-	p1a(udps_badlen, "\t%lu with bad data length field\n");
-	p1a(udps_badsum, "\t%lu with bad checksum\n");
-	p1a(udps_nosum, "\t%lu with no checksum\n");
-	p1a(udps_noport, "\t%lu dropped due to no socket\n");
+    printf("\t%ju " m, (uintmax_t)udpstat.f)
+	p(udps_ipackets, "datagram%s received\n");
+	p1a(udps_hdrops, "with incomplete header\n");
+	p1a(udps_badlen, "with bad data length field\n");
+	p1a(udps_badsum, "with bad checksum\n");
+	p1a(udps_nosum, "with no checksum\n");
+	p1a(udps_noport, "dropped due to no socket\n");
 	p(udps_noportbcast,
-	    "\t%lu broadcast/multicast datagram%s undelivered\n");
-	p1a(udps_fullsock, "\t%lu dropped due to full socket buffers\n");
-	p1a(udpps_pcbhashmiss, "\t%lu not for hashed pcb\n");
+	    "broadcast/multicast datagram%s undelivered\n");
+	p1a(udps_fullsock, "dropped due to full socket buffers\n");
+	p1a(udpps_pcbhashmiss, "not for hashed pcb\n");
 	delivered = udpstat.udps_ipackets -
 		    udpstat.udps_hdrops -
 		    udpstat.udps_badlen -
@@ -775,11 +785,11 @@ udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 		    udpstat.udps_noportbcast -
 		    udpstat.udps_fullsock;
 	if (delivered || sflag <= 1)
-		printf("\t%lu delivered\n", delivered);
-	p(udps_opackets, "\t%lu datagram%s output\n");
+		printf("\t%ju delivered\n", (uint64_t)delivered);
+	p(udps_opackets, "datagram%s output\n");
 	/* the next statistic is cumulative in udps_noportbcast */
 	p(udps_filtermcast,
-	    "\t%lu time%s multicast source filter matched\n");
+	    "time%s multicast source filter matched\n");
 #undef p
 #undef p1a
 }
@@ -790,23 +800,11 @@ udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 void
 carp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct carpstats carpstat, zerostat;
-	size_t len = sizeof(struct carpstats);
+	struct carpstats carpstat;
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.carp.stats", &carpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet.carp.stats");
-			return;
-		}
-	} else {
-		if (off == 0)
-			return;
-		kread(off, &carpstat, len);
-	}
+	if (fetch_stats("net.inet.carp.stats", off, &carpstat,
+	    sizeof(carpstat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -841,60 +839,52 @@ carp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 void
 ip_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct ipstat ipstat, zerostat;
-	size_t len = sizeof ipstat;
+	struct ipstat ipstat;
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.ip.stats", &ipstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			warn("sysctl: net.inet.ip.stats");
-			return;
-		}
-	} else
-		kread(off, &ipstat, len);
+	if (fetch_stats("net.inet.ip.stats", off, &ipstat,
+	    sizeof(ipstat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
 #define	p(f, m) if (ipstat.f || sflag <= 1) \
-    printf(m, ipstat.f, plural(ipstat.f))
+    printf(m, (uintmax_t )ipstat.f, plural(ipstat.f))
 #define	p1a(f, m) if (ipstat.f || sflag <= 1) \
-    printf(m, ipstat.f)
+    printf(m, (uintmax_t )ipstat.f)
 
-	p(ips_total, "\t%lu total packet%s received\n");
-	p(ips_badsum, "\t%lu bad header checksum%s\n");
-	p1a(ips_toosmall, "\t%lu with size smaller than minimum\n");
-	p1a(ips_tooshort, "\t%lu with data size < data length\n");
-	p1a(ips_toolong, "\t%lu with ip length > max ip packet size\n");
-	p1a(ips_badhlen, "\t%lu with header length < data size\n");
-	p1a(ips_badlen, "\t%lu with data length < header length\n");
-	p1a(ips_badoptions, "\t%lu with bad options\n");
-	p1a(ips_badvers, "\t%lu with incorrect version number\n");
-	p(ips_fragments, "\t%lu fragment%s received\n");
-	p(ips_fragdropped, "\t%lu fragment%s dropped (dup or out of space)\n");
-	p(ips_fragtimeout, "\t%lu fragment%s dropped after timeout\n");
-	p(ips_reassembled, "\t%lu packet%s reassembled ok\n");
-	p(ips_delivered, "\t%lu packet%s for this host\n");
-	p(ips_noproto, "\t%lu packet%s for unknown/unsupported protocol\n");
-	p(ips_forward, "\t%lu packet%s forwarded");
-	p(ips_fastforward, " (%lu packet%s fast forwarded)");
+	p(ips_total, "\t%ju total packet%s received\n");
+	p(ips_badsum, "\t%ju bad header checksum%s\n");
+	p1a(ips_toosmall, "\t%ju with size smaller than minimum\n");
+	p1a(ips_tooshort, "\t%ju with data size < data length\n");
+	p1a(ips_toolong, "\t%ju with ip length > max ip packet size\n");
+	p1a(ips_badhlen, "\t%ju with header length < data size\n");
+	p1a(ips_badlen, "\t%ju with data length < header length\n");
+	p1a(ips_badoptions, "\t%ju with bad options\n");
+	p1a(ips_badvers, "\t%ju with incorrect version number\n");
+	p(ips_fragments, "\t%ju fragment%s received\n");
+	p(ips_fragdropped, "\t%ju fragment%s dropped (dup or out of space)\n");
+	p(ips_fragtimeout, "\t%ju fragment%s dropped after timeout\n");
+	p(ips_reassembled, "\t%ju packet%s reassembled ok\n");
+	p(ips_delivered, "\t%ju packet%s for this host\n");
+	p(ips_noproto, "\t%ju packet%s for unknown/unsupported protocol\n");
+	p(ips_forward, "\t%ju packet%s forwarded");
+	p(ips_fastforward, " (%ju packet%s fast forwarded)");
 	if (ipstat.ips_forward || sflag <= 1)
 		putchar('\n');
-	p(ips_cantforward, "\t%lu packet%s not forwardable\n");
+	p(ips_cantforward, "\t%ju packet%s not forwardable\n");
 	p(ips_notmember,
-	    "\t%lu packet%s received for unknown multicast group\n");
-	p(ips_redirectsent, "\t%lu redirect%s sent\n");
-	p(ips_localout, "\t%lu packet%s sent from this host\n");
-	p(ips_rawout, "\t%lu packet%s sent with fabricated ip header\n");
+	    "\t%ju packet%s received for unknown multicast group\n");
+	p(ips_redirectsent, "\t%ju redirect%s sent\n");
+	p(ips_localout, "\t%ju packet%s sent from this host\n");
+	p(ips_rawout, "\t%ju packet%s sent with fabricated ip header\n");
 	p(ips_odropped,
-	    "\t%lu output packet%s dropped due to no bufs, etc.\n");
-	p(ips_noroute, "\t%lu output packet%s discarded due to no route\n");
-	p(ips_fragmented, "\t%lu output datagram%s fragmented\n");
-	p(ips_ofragments, "\t%lu fragment%s created\n");
-	p(ips_cantfrag, "\t%lu datagram%s that can't be fragmented\n");
-	p(ips_nogif, "\t%lu tunneling packet%s that can't find gif\n");
-	p(ips_badaddr, "\t%lu datagram%s with bad address in header\n");
+	    "\t%ju output packet%s dropped due to no bufs, etc.\n");
+	p(ips_noroute, "\t%ju output packet%s discarded due to no route\n");
+	p(ips_fragmented, "\t%ju output datagram%s fragmented\n");
+	p(ips_ofragments, "\t%ju fragment%s created\n");
+	p(ips_cantfrag, "\t%ju datagram%s that can't be fragmented\n");
+	p(ips_nogif, "\t%ju tunneling packet%s that can't find gif\n");
+	p(ips_badaddr, "\t%ju datagram%s with bad address in header\n");
 #undef p
 #undef p1a
 }
@@ -905,35 +895,27 @@ ip_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 void
 arp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct arpstat arpstat, zerostat;
-	size_t len = sizeof(arpstat);
+	struct arpstat arpstat;
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.link.ether.arp.stats", &arpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			warn("sysctl: net.link.ether.arp.stats");
-			return;
-		}
-	} else
-		kread(off, &arpstat, len);
+	if (fetch_stats("net.link.ether.arp.stats", off, &arpstat,
+	    sizeof(arpstat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
 #define	p(f, m) if (arpstat.f || sflag <= 1) \
-    printf(m, arpstat.f, plural(arpstat.f))
+    printf("\t%ju " m, (uintmax_t)arpstat.f, plural(arpstat.f))
 #define	p2(f, m) if (arpstat.f || sflag <= 1) \
-    printf(m, arpstat.f, pluralies(arpstat.f))
+    printf("\t%ju " m, (uintmax_t)arpstat.f, pluralies(arpstat.f))
 
-	p(txrequests, "\t%lu ARP request%s sent\n");
-	p2(txreplies, "\t%lu ARP repl%s sent\n");
-	p(rxrequests, "\t%lu ARP request%s received\n");
-	p2(rxreplies, "\t%lu ARP repl%s received\n");
-	p(received, "\t%lu ARP packet%s received\n");
-	p(dropped, "\t%lu total packet%s dropped due to no ARP entry\n");
-	p(timeouts, "\t%lu ARP entry%s timed out\n");
-	p(dupips, "\t%lu Duplicate IP%s seen\n");
+	p(txrequests, "ARP request%s sent\n");
+	p2(txreplies, "ARP repl%s sent\n");
+	p(rxrequests, "ARP request%s received\n");
+	p2(rxreplies, "ARP repl%s received\n");
+	p(received, "ARP packet%s received\n");
+	p(dropped, "total packet%s dropped due to no ARP entry\n");
+	p(timeouts, "ARP entry%s timed out\n");
+	p(dupips, "Duplicate IP%s seen\n");
 #undef p
 #undef p2
 }
@@ -990,21 +972,13 @@ static	const char *icmpnames[ICMP_MAXTYPE + 1] = {
 void
 icmp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct icmpstat icmpstat, zerostat;
-	int i, first;
+	struct icmpstat icmpstat;
 	size_t len;
+	int i, first;
 
-	len = sizeof icmpstat;
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.icmp.stats", &icmpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			warn("sysctl: net.inet.icmp.stats");
-			return;
-		}
-	} else
-		kread(off, &icmpstat, len);
+	if (fetch_stats("net.inet.icmp.stats", off, &icmpstat,
+	    sizeof(icmpstat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -1066,90 +1040,17 @@ icmp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	}
 }
 
-#ifndef BURN_BRIDGES
-/*
- * Dump IGMP statistics structure (pre 8.x kernel).
- */
-static void
-igmp_stats_live_old(const char *name)
-{
-	struct oigmpstat oigmpstat, zerostat;
-	size_t len = sizeof(oigmpstat);
-
-	if (zflag)
-		memset(&zerostat, 0, len);
-	if (sysctlbyname("net.inet.igmp.stats", &oigmpstat, &len,
-	    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-		warn("sysctl: net.inet.igmp.stats");
-		return;
-	}
-
-	printf("%s:\n", name);
-
-#define	p(f, m) if (oigmpstat.f || sflag <= 1) \
-    printf(m, oigmpstat.f, plural(oigmpstat.f))
-#define	py(f, m) if (oigmpstat.f || sflag <= 1) \
-    printf(m, oigmpstat.f, oigmpstat.f != 1 ? "ies" : "y")
-	p(igps_rcv_total, "\t%u message%s received\n");
-	p(igps_rcv_tooshort, "\t%u message%s received with too few bytes\n");
-	p(igps_rcv_badsum, "\t%u message%s received with bad checksum\n");
-	py(igps_rcv_queries, "\t%u membership quer%s received\n");
-	py(igps_rcv_badqueries,
-	    "\t%u membership quer%s received with invalid field(s)\n");
-	p(igps_rcv_reports, "\t%u membership report%s received\n");
-	p(igps_rcv_badreports,
-	    "\t%u membership report%s received with invalid field(s)\n");
-	p(igps_rcv_ourreports,
-"\t%u membership report%s received for groups to which we belong\n");
-        p(igps_snd_reports, "\t%u membership report%s sent\n");
-#undef p
-#undef py
-}
-#endif /* !BURN_BRIDGES */
-
 /*
  * Dump IGMP statistics structure.
  */
 void
 igmp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct igmpstat igmpstat, zerostat;
-	size_t len;
+	struct igmpstat igmpstat;
 
-#ifndef BURN_BRIDGES
-	if (live) {
-		/*
-		 * Detect if we are being run against a pre-IGMPv3 kernel.
-		 * We cannot do this for a core file as the legacy
-		 * struct igmpstat has no size field, nor does it
-		 * export it in any readily-available symbols.
-		 */
-		len = 0;
-		if (sysctlbyname("net.inet.igmp.stats", NULL, &len, NULL,
-		    0) < 0) {
-			warn("sysctl: net.inet.igmp.stats");
-			return;
-		}
-		if (len < sizeof(igmpstat)) {
-			igmp_stats_live_old(name);
-			return;
-		}
-	}
-#endif /* !BURN_BRIDGES */
-
-	len = sizeof(igmpstat);
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.igmp.stats", &igmpstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			warn("sysctl: net.inet.igmp.stats");
-			return;
-		}
-	} else {
-		len = sizeof(igmpstat);
-		kread(off, &igmpstat, len);
-	}
+	if (fetch_stats("net.inet.igmp.stats", 0, &igmpstat,
+	    sizeof(igmpstat), kread) != 0)
+		return;
 
 	if (igmpstat.igps_version != IGPS_VERSION_3) {
 		warnx("%s: version mismatch (%d != %d)", __func__,
@@ -1196,23 +1097,11 @@ void
 pim_stats(u_long off __unused, const char *name, int af1 __unused,
     int proto __unused)
 {
-	struct pimstat pimstat, zerostat;
-	size_t len = sizeof pimstat;
+	struct pimstat pimstat;
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet.pim.stats", &pimstat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet.pim.stats");
-			return;
-		}
-	} else {
-		if (off == 0)
-			return;
-		kread(off, &pimstat, len);
-	}
+	if (fetch_stats("net.inet.pim.stats", off, &pimstat,
+	    sizeof(pimstat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -1250,7 +1139,7 @@ inetprint(struct in_addr *in, int port, const char *proto, int num_port)
 	    sprintf(line, "%s.", inetname(in));
 	else
 	    sprintf(line, "%.*s.", (Aflag && !num_port) ? 12 : 16, inetname(in));
-	cp = index(line, '\0');
+	cp = strchr(line, '\0');
 	if (!num_port && port)
 		sp = getservbyport((int)port, proto);
 	if (sp || port == 0)

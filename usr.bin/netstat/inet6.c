@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	BSDI inet.c,v 2.3 1995/10/24 02:19:29 prb Exp	*/
 /*-
  * Copyright (c) 1983, 1988, 1993
@@ -35,7 +36,7 @@ static char sccsid[] = "@(#)inet6.c	8.4 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/inet6.c 319260 2017-05-30 22:35:36Z asomers $");
 
 #ifdef INET6
 #include <sys/param.h>
@@ -44,7 +45,6 @@ __MBSDID("$MidnightBSD$");
 #include <sys/ioctl.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
-#include <sys/sysctl.h>
 
 #include <net/route.h>
 #include <net/if.h>
@@ -335,7 +335,7 @@ static	const char *ip6nh[] = {
 	"#255",
 };
 
-static char *srcrule_str[] = {
+static const char *srcrule_str[] = {
 	"first candidate",
 	"same address",
 	"appropriate scope",
@@ -345,8 +345,8 @@ static char *srcrule_str[] = {
 	"matching label",
 	"public/temporary address",
 	"alive interface",
-	"preferred interface",
-	"rule #10",
+	"better virtual status",
+	"preferred source",
 	"rule #11",
 	"rule #12",
 	"rule #13",
@@ -360,23 +360,12 @@ static char *srcrule_str[] = {
 void
 ip6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct ip6stat ip6stat, zerostat;
+	struct ip6stat ip6stat;
 	int first, i;
-	size_t len;
 
-	len = sizeof ip6stat;
-	if (live) {
-		memset(&ip6stat, 0, len);
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet6.ip6.stats", &ip6stat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet6.ip6.stats");
-			return;
-		}
-	} else
-		kread(off, &ip6stat, len);
+	if (fetch_stats("net.inet6.ip6.stats", off, &ip6stat,
+	    sizeof(ip6stat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -539,14 +528,14 @@ ip6_ifstats(char *ifname)
 		return;
 	}
 
-	strcpy(ifr.ifr_name, ifname);
-	printf("ip6 on %s:\n", ifr.ifr_name);
-
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFSTAT_IN6, (char *)&ifr) < 0) {
-		perror("Warning: ioctl(SIOCGIFSTAT_IN6)");
+		if (errno != EPFNOSUPPORT)
+			perror("Warning: ioctl(SIOCGIFSTAT_IN6)");
 		goto end;
 	}
 
+	printf("ip6 on %s:\n", ifr.ifr_name);
 	p(ifs6_in_receive, "\t%ju total input datagram%s\n");
 	p(ifs6_in_hdrerr, "\t%ju datagram%s with invalid header received\n");
 	p(ifs6_in_toobig, "\t%ju datagram%s exceeded MTU received\n");
@@ -842,23 +831,12 @@ static	const char *icmp6names[] = {
 void
 icmp6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct icmp6stat icmp6stat, zerostat;
+	struct icmp6stat icmp6stat;
 	int i, first;
-	size_t len;
 
-	len = sizeof icmp6stat;
-	if (live) {
-		memset(&icmp6stat, 0, len);
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet6.icmp6.stats", &icmp6stat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet6.icmp6.stats");
-			return;
-		}
-	} else
-		kread(off, &icmp6stat, len);
+	if (fetch_stats("net.inet6.icmp6.stats", off, &icmp6stat,
+	    sizeof(icmp6stat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -944,14 +922,14 @@ icmp6_ifstats(char *ifname)
 		return;
 	}
 
-	strcpy(ifr.ifr_name, ifname);
-	printf("icmp6 on %s:\n", ifr.ifr_name);
-
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFSTAT_ICMP6, (char *)&ifr) < 0) {
-		perror("Warning: ioctl(SIOCGIFSTAT_ICMP6)");
+		if (errno != EPFNOSUPPORT)
+			perror("Warning: ioctl(SIOCGIFSTAT_ICMP6)");
 		goto end;
 	}
 
+	printf("icmp6 on %s:\n", ifr.ifr_name);
 	p(ifs6_in_msg, "\t%ju total input message%s\n");
 	p(ifs6_in_error, "\t%ju total input error message%s\n");
 	p(ifs6_in_dstunreach, "\t%ju input destination unreachable error%s\n");
@@ -999,23 +977,11 @@ icmp6_ifstats(char *ifname)
 void
 pim6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct pim6stat pim6stat, zerostat;
-	size_t len = sizeof pim6stat;
+	struct pim6stat pim6stat;
 
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet6.pim.stats", &pim6stat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet6.pim.stats");
-			return;
-		}
-	} else {
-		if (off == 0)
-			return;
-		kread(off, &pim6stat, len);
-	}
+	if (fetch_stats("net.inet6.pim.stats", off, &pim6stat,
+	    sizeof(pim6stat), kread) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -1037,22 +1003,12 @@ pim6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 void
 rip6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct rip6stat rip6stat, zerostat;
+	struct rip6stat rip6stat;
 	u_quad_t delivered;
-	size_t len;
 
-	len = sizeof(rip6stat);
-	if (live) {
-		if (zflag)
-			memset(&zerostat, 0, len);
-		if (sysctlbyname("net.inet6.ip6.rip6stats", &rip6stat, &len,
-		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-			if (errno != ENOENT)
-				warn("sysctl: net.inet6.ip6.rip6stats");
-			return;
-		}
-	} else
-		kread(off, &rip6stat, len);
+	if (fetch_stats("net.inet6.ip6.rip6stats", off, &rip6stat,
+	    sizeof(rip6stat), kread_counters) != 0)
+		return;
 
 	printf("%s:\n", name);
 
@@ -1100,7 +1056,7 @@ inet6print(struct in6_addr *in6, int port, const char *proto, int numeric)
 
 	sprintf(line, "%.*s.", Wflag ? 39 :
 		(Aflag && !numeric) ? 12 : 16, inet6name(in6));
-	cp = index(line, '\0');
+	cp = strchr(line, '\0');
 	if (!numeric && port)
 		GETSERVBYPORT6(port, proto, sp);
 	if (sp || port == 0)
@@ -1120,38 +1076,45 @@ inet6print(struct in6_addr *in6, int port, const char *proto, int numeric)
 char *
 inet6name(struct in6_addr *in6p)
 {
-	char *cp;
+	struct sockaddr_in6 sin6;
+	char hbuf[NI_MAXHOST], *cp;
 	static char line[50];
-	struct hostent *hp;
 	static char domain[MAXHOSTNAMELEN];
 	static int first = 1;
+	int flags, error;
 
+	if (IN6_IS_ADDR_UNSPECIFIED(in6p)) {
+		strcpy(line, "*");
+		return (line);
+	}
 	if (first && !numeric_addr) {
 		first = 0;
 		if (gethostname(domain, MAXHOSTNAMELEN) == 0 &&
-		    (cp = index(domain, '.')))
+		    (cp = strchr(domain, '.')))
 			(void) strcpy(domain, cp + 1);
 		else
 			domain[0] = 0;
 	}
-	cp = 0;
-	if (!numeric_addr && !IN6_IS_ADDR_UNSPECIFIED(in6p)) {
-		hp = gethostbyaddr((char *)in6p, sizeof(*in6p), AF_INET6);
-		if (hp) {
-			if ((cp = index(hp->h_name, '.')) &&
-			    !strcmp(cp + 1, domain))
-				*cp = 0;
-			cp = hp->h_name;
-		}
-	}
-	if (IN6_IS_ADDR_UNSPECIFIED(in6p))
-		strcpy(line, "*");
-	else if (cp)
-		strcpy(line, cp);
-	else
+	memset(&sin6, 0, sizeof(sin6));
+	memcpy(&sin6.sin6_addr, in6p, sizeof(*in6p));
+	sin6.sin6_family = AF_INET6;
+	/* XXX: in6p.s6_addr[2] can contain scopeid. */ 
+	in6_fillscopeid(&sin6);
+	flags = (numeric_addr) ? NI_NUMERICHOST : 0;
+	error = getnameinfo((struct sockaddr *)&sin6, sizeof(sin6), hbuf,
+	    sizeof(hbuf), NULL, 0, flags);
+	if (error == 0) {
+		if ((flags & NI_NUMERICHOST) == 0 &&
+		    (cp = strchr(hbuf, '.')) &&
+		    !strcmp(cp + 1, domain))
+			*cp = 0;
+		strcpy(line, hbuf);
+	} else {
+		/* XXX: this should not happen. */
 		sprintf(line, "%s",
-			inet_ntop(AF_INET6, (void *)in6p, ntop_buf,
+			inet_ntop(AF_INET6, (void *)&sin6.sin6_addr, ntop_buf,
 				sizeof(ntop_buf)));
+	}
 	return (line);
 }
 #endif /*INET6*/

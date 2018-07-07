@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)netstat.h	8.2 (Berkeley) 1/4/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/netstat/netstat.h 293307 2016-01-07 07:21:37Z markj $
  */
 
 #include <sys/cdefs.h>
@@ -45,6 +46,7 @@ extern int	noutputs;	/* how much outputs before we exit */
 extern int	numeric_addr;	/* show addresses numerically */
 extern int	numeric_port;	/* show ports numerically */
 extern int	rflag;	/* show routing tables (or routing stats) */
+extern int	Rflag;	/* show flowid / RSS information */
 extern int	sflag;	/* show protocol statistics */
 extern int	Tflag;  /* show TCP control block info */
 extern int	Wflag;	/* wide display */
@@ -56,10 +58,15 @@ extern int	interval; /* repeat interval for i/f stats */
 extern char	*interface; /* desired i/f for stats, or NULL for all i/fs */
 extern int	unit;	/* unit number for above */
 
-extern int	af;	/* address family */
 extern int	live;	/* true if we are examining a live system */
 
+struct nlist;
+int	fetch_stats(const char *sysctlname, u_long addr, void *stats,
+	    size_t len, int (*kreadfn)(u_long, void *, size_t));
 int	kread(u_long addr, void *buf, size_t size);
+uint64_t kread_counter(u_long addr);
+int	kread_counters(u_long addr, void *buf, size_t size);
+int	kresolve_list(struct nlist *);
 const char *plural(uintmax_t);
 const char *plurales(uintmax_t);
 const char *pluralies(uintmax_t);
@@ -96,8 +103,8 @@ void	icmp6_stats(u_long, const char *, int, int);
 void	icmp6_ifstats(char *);
 void	pim6_stats(u_long, const char *, int, int);
 void	rip6_stats(u_long, const char *, int, int);
-void	mroute6pr(u_long, u_long);
-void	mrt6_stats(u_long);
+void	mroute6pr(void);
+void	mrt6_stats(void);
 
 struct sockaddr_in6;
 struct in6_addr;
@@ -118,23 +125,24 @@ void	netisr_stats(void *);
 void	hostpr(u_long, u_long);
 void	impstats(u_long, u_long);
 
-void	intpr(int, u_long, void (*)(char *));
+void	intpr(int, void (*)(char *), int);
 
 void	pr_rthdr(int);
 void	pr_family(int);
-void	rt_stats(u_long, u_long);
+void	rt_stats(void);
+void	flowtable_stats(void);
 char	*ipx_pnet(struct sockaddr *);
 char	*ipx_phost(struct sockaddr *);
 char	*ns_phost(struct sockaddr *);
 void	upHex(char *);
 
 char	*routename(in_addr_t);
-char	*netname(in_addr_t, u_long);
+char	*netname(in_addr_t, in_addr_t);
 char	*atalk_print(struct sockaddr *, int);
 char	*atalk_print2(struct sockaddr *, struct sockaddr *, int);
 char	*ipx_print(struct sockaddr *);
 char	*ns_print(struct sockaddr *);
-void	routepr(u_long);
+void	routepr(int, int);
 
 void	ipxprotopr(u_long, const char *, int, int);
 void	spx_stats(u_long, const char *, int, int);
@@ -164,6 +172,6 @@ void	tp_protopr(u_long, const char *, int, int);
 void	tp_inproto(u_long);
 void	tp_stats(caddr_t, caddr_t);
 
-void	mroutepr(u_long, u_long, u_long);
-void	mrt_stats(u_long);
+void	mroutepr(void);
+void	mrt_stats(void);
 void	bpf_stats(char *);

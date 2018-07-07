@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)unix.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/unix.c 246988 2013-02-19 13:17:16Z charnier $");
 
 /*
  * Display protocol blocks in the unix domain.
@@ -199,6 +200,7 @@ unixpr(u_long count_off, u_long gencnt_off, u_long dhead_off, u_long shead_off,
 	struct	xunpcb *xunp;
 	u_long	head_off;
 
+	buf = NULL;
 	for (type = SOCK_STREAM; type <= SOCK_SEQPACKET; type++) {
 		if (live)
 			ret = pcblist_sysctl(type, &buf);

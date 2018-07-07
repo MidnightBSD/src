@@ -76425,6 +76425,7 @@ usr.bin/ncplogin/ncplogout.1 -text
 usr.bin/netstat/Makefile -text
 usr.bin/netstat/atalk.c -text
 usr.bin/netstat/bpf.c -text
+usr.bin/netstat/flowtable.c svneol=native#text/plain
 usr.bin/netstat/if.c -text
 usr.bin/netstat/inet.c -text
 usr.bin/netstat/inet6.c -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/netgraph.c 263335 2014-03-19 09:36:29Z glebius $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -67,59 +68,15 @@ netgraphprotopr(u_long off, const char *name, int af1 __unused,
 {
 	struct ngpcb *this, *next;
 	struct ngpcb ngpcb;
-	struct ngsock info;
 	struct socket sockb;
 	int debug = 1;
 
 	/* If symbol not found, try looking in the KLD module */
 	if (off == 0) {
-		const char *const modname = "ng_socket.ko";
-/* XXX We should get "mpath" from "sysctl kern.module_path" */
-		const char *mpath[] = { "/", "/boot/", "/modules/", NULL };
-		struct nlist sym[] = { { .n_name = "_ngsocklist" },
-				       { .n_name = NULL } };
-		const char **pre;
-		struct kld_file_stat ks;
-		int fileid;
-
-		/* Can't do this for core dumps. */
-		if (!live)
-			return;
-
-		/* See if module is loaded */
-		if ((fileid = kldfind(modname)) < 0) {
-			if (debug)
-				warn("kldfind(%s)", modname);
-			return;
-		}
-
-		/* Get module info */
-		memset(&ks, 0, sizeof(ks));
-		ks.version = sizeof(struct kld_file_stat);
-		if (kldstat(fileid, &ks) < 0) {
-			if (debug)
-				warn("kldstat(%d)", fileid);
-			return;
-		}
-
-		/* Get symbol table from module file */
-		for (pre = mpath; *pre; pre++) {
-			char path[MAXPATHLEN];
-
-			snprintf(path, sizeof(path), "%s%s", *pre, modname);
-			if (nlist(path, sym) == 0)
-				break;
-		}
-
-		/* Did we find it? */
-		if (sym[0].n_value == 0) {
-			if (debug)
-				warnx("%s not found", modname);
-			return;
-		}
-
-		/* Symbol found at load address plus symbol offset */
-		off = (u_long) ks.address + sym[0].n_value;
+		if (debug)
+			fprintf(stderr,
+			    "Error reading symbols from ng_socket.ko");
+		return;
 	}
 
 	/* Get pointer to first socket */
@@ -165,15 +122,10 @@ netgraphprotopr(u_long off, const char *name, int af1 __unused,
 		printf("%-5.5s %6u %6u ",
 		    name, sockb.so_rcv.sb_cc, sockb.so_snd.sb_cc);
 
-		/* Get ngsock structure */
-		if (ngpcb.sockdata == NULL)	/* unconnected data socket */
-			goto finish;
-		kread((u_long)ngpcb.sockdata, (char *)&info, sizeof(info));
-
 		/* Get info on associated node */
-		if (info.node_id == 0 || csock == -1)
+		if (ngpcb.node_id == 0 || csock == -1)
 			goto finish;
-		snprintf(path, sizeof(path), "[%x]:", info.node_id);
+		snprintf(path, sizeof(path), "[%x]:", ngpcb.node_id);
 		if (NgSendMsg(csock, path,
 		    NGM_GENERIC_COOKIE, NGM_NODEINFO, NULL, 0) < 0)
 			goto finish;

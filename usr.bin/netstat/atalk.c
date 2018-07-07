@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +35,7 @@ static char sccsid[] = "@(#)atalk.c	1.1 (Whistle) 6/6/96";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/atalk.c 228668 2011-12-17 22:32:00Z dim $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

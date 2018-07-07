@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: inet.c,v 1.35.2.1 1999/04/29 14:57:08 perry Exp $	*/
 /*	$KAME: ipsec.c,v 1.25 2001/03/12 09:04:39 itojun Exp $	*/
 /*-
@@ -64,7 +65,7 @@ static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/pfkey.c 253088 2013-07-09 10:08:13Z ae $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -119,7 +120,7 @@ pfkey_stats(u_long off, const char *name, int family __unused,
 	if (off == 0)
 		return;
 	printf ("%s:\n", name);
-	kread(off, (char *)&pfkeystat, sizeof(pfkeystat));
+	kread_counters(off, (char *)&pfkeystat, sizeof(pfkeystat));
 
 #define	p(f, m) if (pfkeystat.f || sflag <= 1) \
     printf(m, (uintmax_t)pfkeystat.f, plural(pfkeystat.f))

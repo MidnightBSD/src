@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.
@@ -40,11 +41,12 @@ static char sccsid[] = "@(#)mbuf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/mbuf.c 293307 2016-01-07 07:21:37Z markj $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
+#include <sys/sf_buf.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
@@ -68,20 +70,20 @@ mbpr(void *kvmd, u_long mbaddr)
 	struct memory_type *mtp;
 	uintmax_t mbuf_count, mbuf_bytes, mbuf_free, mbuf_failures, mbuf_size;
 	uintmax_t mbuf_sleeps;
-	uintmax_t cluster_count, cluster_bytes, cluster_limit, cluster_free;
+	uintmax_t cluster_count, cluster_limit, cluster_free;
 	uintmax_t cluster_failures, cluster_size, cluster_sleeps;
 	uintmax_t packet_count, packet_bytes, packet_free, packet_failures;
 	uintmax_t packet_sleeps;
-	uintmax_t tag_count, tag_bytes;
-	uintmax_t jumbop_count, jumbop_bytes, jumbop_limit, jumbop_free;
+	uintmax_t tag_bytes;
+	uintmax_t jumbop_count, jumbop_limit, jumbop_free;
 	uintmax_t jumbop_failures, jumbop_sleeps, jumbop_size;
-	uintmax_t jumbo9_count, jumbo9_bytes, jumbo9_limit, jumbo9_free;
+	uintmax_t jumbo9_count, jumbo9_limit, jumbo9_free;
 	uintmax_t jumbo9_failures, jumbo9_sleeps, jumbo9_size;
-	uintmax_t jumbo16_count, jumbo16_bytes, jumbo16_limit, jumbo16_free;
+	uintmax_t jumbo16_count, jumbo16_limit, jumbo16_free;
 	uintmax_t jumbo16_failures, jumbo16_sleeps, jumbo16_size;
 	uintmax_t bytes_inuse, bytes_incache, bytes_total;
 	int nsfbufs, nsfbufspeak, nsfbufsused;
-	struct mbstat mbstat;
+	struct sfstat sfstat;
 	size_t mlen;
 	int error;
 
@@ -145,7 +147,6 @@ mbpr(void *kvmd, u_long mbaddr)
 		goto out;
 	}
 	cluster_count = memstat_get_count(mtp);
-	cluster_bytes = memstat_get_bytes(mtp);
 	cluster_limit = memstat_get_countlimit(mtp);
 	cluster_free = memstat_get_free(mtp);
 	cluster_failures = memstat_get_failures(mtp);
@@ -158,7 +159,6 @@ mbpr(void *kvmd, u_long mbaddr)
 		    MBUF_TAG_MEM_NAME);
 		goto out;
 	}
-	tag_count = memstat_get_count(mtp);
 	tag_bytes = memstat_get_bytes(mtp);
 
 	mtp = memstat_mtl_find(mtlp, ALLOCATOR_UMA, MBUF_JUMBOP_MEM_NAME);
@@ -168,7 +168,6 @@ mbpr(void *kvmd, u_long mbaddr)
 		goto out;
 	}
 	jumbop_count = memstat_get_count(mtp);
-	jumbop_bytes = memstat_get_bytes(mtp);
 	jumbop_limit = memstat_get_countlimit(mtp);
 	jumbop_free = memstat_get_free(mtp);
 	jumbop_failures = memstat_get_failures(mtp);
@@ -182,7 +181,6 @@ mbpr(void *kvmd, u_long mbaddr)
 		goto out;
 	}
 	jumbo9_count = memstat_get_count(mtp);
-	jumbo9_bytes = memstat_get_bytes(mtp);
 	jumbo9_limit = memstat_get_countlimit(mtp);
 	jumbo9_free = memstat_get_free(mtp);
 	jumbo9_failures = memstat_get_failures(mtp);
@@ -196,7 +194,6 @@ mbpr(void *kvmd, u_long mbaddr)
 		goto out;
 	}
 	jumbo16_count = memstat_get_count(mtp);
-	jumbo16_bytes = memstat_get_bytes(mtp);
 	jumbo16_limit = memstat_get_countlimit(mtp);
 	jumbo16_free = memstat_get_free(mtp);
 	jumbo16_failures = memstat_get_failures(mtp);
@@ -298,30 +295,26 @@ mbpr(void *kvmd, u_long mbaddr)
 	    "(%juk/9k/16k)\n", jumbop_failures, jumbo9_failures,
 	    jumbo16_failures, jumbop_size / 1024);
 
-	if (live) {
-		mlen = sizeof(nsfbufs);
-		if (!sysctlbyname("kern.ipc.nsfbufs", &nsfbufs, &mlen, NULL,
-		    0) &&
-		    !sysctlbyname("kern.ipc.nsfbufsused", &nsfbufsused,
-		    &mlen, NULL, 0) &&
-		    !sysctlbyname("kern.ipc.nsfbufspeak", &nsfbufspeak,
-		    &mlen, NULL, 0))
-			printf("%d/%d/%d sfbufs in use (current/peak/max)\n",
-			    nsfbufsused, nsfbufspeak, nsfbufs);
-		mlen = sizeof(mbstat);
-		if (sysctlbyname("kern.ipc.mbstat", &mbstat, &mlen, NULL, 0)) {
-			warn("kern.ipc.mbstat");
-			goto out;
-		}
-	} else {
-		if (kread(mbaddr, (char *)&mbstat, sizeof mbstat) != 0)
-			goto out;
-	}
-	printf("%lu requests for sfbufs denied\n", mbstat.sf_allocfail);
-	printf("%lu requests for sfbufs delayed\n", mbstat.sf_allocwait);
-	printf("%lu requests for I/O initiated by sendfile\n",
-	    mbstat.sf_iocnt);
-	printf("%lu calls to protocol drain routines\n", mbstat.m_drain);
+	mlen = sizeof(nsfbufs);
+	if (live &&
+	    sysctlbyname("kern.ipc.nsfbufs", &nsfbufs, &mlen, NULL, 0) == 0 &&
+	    sysctlbyname("kern.ipc.nsfbufsused", &nsfbufsused, &mlen,
+	    NULL, 0) == 0 &&
+	    sysctlbyname("kern.ipc.nsfbufspeak", &nsfbufspeak, &mlen,
+	    NULL, 0) == 0)
+		printf("%d/%d/%d sfbufs in use (current/peak/max)\n",
+		    nsfbufsused, nsfbufspeak, nsfbufs);
+
+	if (fetch_stats("kern.ipc.sfstat", mbaddr, &sfstat, sizeof(sfstat),
+	    kread_counters) != 0)
+		goto out;
+
+	printf("%ju requests for sfbufs denied\n",
+	    (uintmax_t)sfstat.sf_allocfail);
+	printf("%ju requests for sfbufs delayed\n",
+	    (uintmax_t)sfstat.sf_allocwait);
+	printf("%ju requests for I/O initiated by sendfile\n",
+	    (uintmax_t)sfstat.sf_iocnt);
 out:
 	memstat_mtl_free(mtlp);
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, Robert N. M. Watson
  * Copyright (c) 1983, 1988, 1993
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)ns.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/ipx.c 228992 2011-12-30 11:02:40Z uqs $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -201,7 +202,7 @@ spx_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	ANYl(spxstat.spxs_sndurg, "packet", " sent with URG only");
 	ANYl(spxstat.spxs_sndwinup, "window update-only packet", " sent");
 	ANYl(spxstat.spxs_sndctrl, "control (SYN|FIN|RST) packet", " sent");
-	ANYl(spxstat.spxs_sndvoid, "request", " to send a non-existant packet");
+	ANYl(spxstat.spxs_sndvoid, "request", " to send a non-existent packet");
 	ANYl(spxstat.spxs_rcvtotal, "total packet", " received");
 	ANYl(spxstat.spxs_rcvpack, "packet", " received in sequence");
 	ANYl(spxstat.spxs_rcvbyte, "byte", " received in sequence");

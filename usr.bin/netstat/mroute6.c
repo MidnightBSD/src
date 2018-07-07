@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1998 WIDE Project.
  * All rights reserved.
@@ -66,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/mroute6.c 293307 2016-01-07 07:21:37Z markj $");
 
 #ifdef INET6
 #include <sys/param.h>
@@ -85,6 +86,7 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/in.h>
 
 #include <err.h>
+#include <nlist.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,17 +97,32 @@ __MBSDID("$MidnightBSD$");
 
 #include "netstat.h"
 
+/*
+ * kvm(3) bindings for every needed symbol
+ */
+static struct nlist mrl[] = {
+#define	N_MF6CTABLE	0
+	{ .n_name = "_mf6ctable" },
+#define	N_MIF6TABLE	1
+	{ .n_name = "_mif6table" },
+#define	N_MRT6STAT	2
+	{ .n_name = "_mrt6stat" },
+	{ .n_name = NULL },
+};
+
+
 #define	WID_ORG	(Wflag ? 39 : (numeric_addr ? 29 : 18)) /* width of origin column */
 #define	WID_GRP	(Wflag ? 18 : (numeric_addr ? 16 : 18)) /* width of group column */
 
 void
-mroute6pr(u_long mfcaddr, u_long mifaddr)
+mroute6pr()
 {
 	struct mf6c *mf6ctable[MF6CTBLSIZ], *mfcp;
 	struct mif6 mif6table[MAXMIFS];
 	struct mf6c mfc;
 	struct rtdetq rte, *rtep;
 	struct mif6 *mifp;
+	u_long mfcaddr, mifaddr;
 	mifi_t mifi;
 	int i;
 	int banner_printed;
@@ -113,6 +130,15 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 	mifi_t maxmif = 0;
 	long int waitings;
 	size_t len;
+
+	kresolve_list(mrl);
+	mfcaddr = mrl[N_MF6CTABLE].n_value;
+	mifaddr = mrl[N_MIF6TABLE].n_value;
+
+	if (mfcaddr == 0 || mifaddr == 0) {
+		fprintf(stderr, "No IPv6 MROUTING kernel support.\n");
+		return;
+	}
 
 	len = sizeof(mif6table);
 	if (live) {
@@ -217,19 +243,21 @@ mroute6pr(u_long mfcaddr, u_long mifaddr)
 }
 
 void
-mrt6_stats(u_long mstaddr)
+mrt6_stats()
 {
 	struct mrt6stat mrtstat;
-	size_t len = sizeof mrtstat;
+	u_long mstaddr;
 
-	if (live) {
-		if (sysctlbyname("net.inet6.ip6.mrt6stat", &mrtstat, &len,
-		    NULL, 0) < 0) {
-			warn("sysctl: net.inet6.ip6.mrt6stat");
-			return;
-		}
-	} else
-		kread(mstaddr, (char *)&mrtstat, sizeof(mrtstat));
+	kresolve_list(mrl);
+	mstaddr = mrl[N_MRT6STAT].n_value;
+
+	if (mstaddr == 0) {
+		fprintf(stderr, "No IPv6 MROUTING kernel support.\n");
+		return;
+	}
+	if (fetch_stats("net.inet6.ip6.mrt6stat", 0, &mrtstat,
+	    sizeof(mrtstat), kread_counters) != 0)
+		return;
 
 	printf("IPv6 multicast forwarding:\n");
 
