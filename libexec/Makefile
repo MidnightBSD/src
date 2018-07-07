@@ -4,12 +4,11 @@
 
 .include <bsd.own.mk>
 
-SUBDIR=	${_atrun} \
-	bootpd \
+SUBDIR=	${_atf} \
+	${_atrun} \
 	${_comsat} \
-	fingerd \
-	ftpd \
 	getty \
+	${_hyperv} \
 	${_mail.local} \
 	${_makewhatis.local} \
 	${_mknetid} \
@@ -29,7 +28,6 @@ SUBDIR=	${_atrun} \
 	mport.version_cmp \
 	msearch.index \
 	${_pppoed} \
-	rbootd \
 	revnetgroup \
 	${_rlogind} \
 	rpc.rquotad \
@@ -41,10 +39,8 @@ SUBDIR=	${_atrun} \
 	${_rtld-elf} \
 	save-entropy \
 	${_smrsh} \
-	talkd \
-	tcpd \
 	${_telnetd} \
-	tftpd \
+	${_tests} \
 	${_tftp-proxy} \
 	ulog-helper \
 	${_ypxfr}
@@ -53,8 +49,28 @@ SUBDIR=	${_atrun} \
 _atrun=		atrun
 .endif
 
+.if ${MK_BOOTPD} != "no"
+SUBDIR+=	bootpd
+.endif
+
+.if ${MK_FINGER} != "no"
+SUBDIR+=	fingerd
+.endif
+
+.if ${MK_FTP} != "no"
+SUBDIR+=	ftpd
+.endif
+
 .if ${MK_MAIL} != "no"
 _comsat=	comsat
+.endif
+
+.if ${MK_HYPERV} != "no"
+_hyperv=	hyperv
+.endif
+
+.if ${MK_MAN_UTILS} != "no"
+_makewhatis.local=	makewhatis.local
 .endif
 
 .if ${MK_NIS} != "no"
@@ -74,6 +90,10 @@ _tftp-proxy=	tftp-proxy
 _rtld-elf=	rtld-elf
 .endif
 
+.if ${MK_RBOOTD} != "no"
+SUBDIR+=	rbootd
+.endif
+
 .if ${MK_RCMDS} != "no"
 _rlogind=	rlogind
 _rshd=		rshd
@@ -84,12 +104,25 @@ _mail.local=	mail.local
 _smrsh=		smrsh
 .endif
 
-.if ${MK_MAN_UTILS} != "no"
-_makewhatis.local=	makewhatis.local
+.if ${MK_TALK} != "no"
+SUBDIR+=	talkd
+.endif
+
+.if ${MK_TCP_WRAPPERS} != "no"
+SUBDIR+=	tcpd
 .endif
 
 .if ${MK_TELNET} != "no"
 _telnetd=	telnetd
+.endif
+
+.if ${MK_TFTP} != "no"
+SUBDIR+=	tftpd
+.endif
+
+.if ${MK_TESTS} != "no"
+_atf=		atf
+_tests=		tests
 .endif
 
 .include <bsd.subdir.mk>
