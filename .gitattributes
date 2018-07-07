@@ -75917,6 +75917,9 @@ usr.bin/getconf/limits.gperf -text
 usr.bin/getconf/pathconf.gperf -text
 usr.bin/getconf/progenv.gperf -text
 usr.bin/getconf/sysconf.gperf -text
+usr.bin/getconf/tests/Makefile svneol=native#text/plain
+usr.bin/getconf/tests/arch_type.c svneol=native#text/plain
+usr.bin/getconf/tests/getconf_test.sh svneol=native#text/plain
 usr.bin/getent/Makefile -text
 usr.bin/getent/getent.1 -text
 usr.bin/getent/getent.c -text
