@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/mknetid/parse_group.c,v 1.2 2012/04/11 00:46:54 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -11,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@
 static const char sccsid[] = "@(#)getgrent.c	8.2 (Berkeley) 3/21/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/mknetid/parse_group.c,v 1.7 2002/02/17 19:09:20 imp Exp $";
+  "$FreeBSD: stable/10/libexec/mknetid/parse_group.c 262435 2014-02-24 08:21:49Z brueffer $";
 #endif /* not lint */
 
 /*
@@ -115,7 +111,7 @@ grscan(int search, int gid)
 			return(0);
 		bp = line;
 		/* skip lines that are too big */
-		if (!index(line, '\n')) {
+		if (!strchr(line, '\n')) {
 			int ch;
 
 			while ((ch = getc(_gr_fp)) != '\n' && ch != EOF)
