@@ -423,7 +423,7 @@ bsd_parttype(uint8_t type)
 
 	switch (type) {
 	case FS_NANDFS:
-		return (PART_MDINIGHTBSD_NANDFS);
+		return (PART_MIDNIGHTBSD_NANDFS);
 	case FS_SWAP:
 		return (PART_MIDNIGHTBSD_SWAP);
 	case FS_BSDFFS:
