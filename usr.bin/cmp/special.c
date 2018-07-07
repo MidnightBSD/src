@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,8 +35,7 @@ static char sccsid[] = "@(#)special.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/usr.bin/cmp/special.c,v 1.14 2011/06/21 20:44:06 delphij Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/cmp/special.c 314425 2017-02-28 22:18:05Z asomers $");
 
 #include <sys/types.h>
 
@@ -100,6 +100,8 @@ eof:	if (ferror(fp1))
 	} else
 		if (feof(fp2))
 			eofmsg(file2);
+	fclose(fp2);
+	fclose(fp1);
 	if (dfound)
 		exit(DIFF_EXIT);
 }
