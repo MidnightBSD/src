@@ -75190,6 +75190,11 @@ usr.bin/at/parsetime.h -text
 usr.bin/at/perm.c -text
 usr.bin/at/perm.h -text
 usr.bin/at/privs.h -text
+usr.bin/atf/Makefile svneol=native#text/plain
+usr.bin/atf/Makefile.inc svneol=native#text/plain
+usr.bin/atf/atf-sh/Makefile svneol=native#text/plain
+usr.bin/atf/atf-sh/tests/Makefile svneol=native#text/plain
+usr.bin/atf/tests/Makefile svneol=native#text/plain
 usr.bin/atm/Makefile -text
 usr.bin/atm/Makefile.inc -text
 usr.bin/atm/sscop/Makefile -text
