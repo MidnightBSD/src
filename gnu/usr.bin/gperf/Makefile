@@ -14,4 +14,6 @@ WARNS=	1
 
 CXXFLAGS+=	-I${GPERFDIR}/lib -I${.CURDIR}
 
+MAN=
+
 .include <bsd.prog.mk>
