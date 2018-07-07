@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Peter Wemm <peter@FreeBSD.org>
  * Copyright (c) 2000 Paul Saab <ps@FreeBSD.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/killall/killall.c 274471 2014-11-13 16:40:15Z smh $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -53,7 +54,7 @@ static void __dead2
 usage(void)
 {
 
-	fprintf(stderr, "usage: killall [-delmsvz] [-help] [-j jail]\n");
+	fprintf(stderr, "usage: killall [-delmsqvz] [-help] [-I] [-j jail]\n");
 	fprintf(stderr,
 	    "               [-u user] [-t tty] [-c cmd] [-SIGNAL] [cmd]...\n");
 	fprintf(stderr, "At least one option or argument to specify processes must be given.\n");
@@ -90,20 +91,24 @@ nosig(char *name)
 int
 main(int ac, char **av)
 {
+	char		**saved_av;
 	struct kinfo_proc *procs, *newprocs;
 	struct stat	sb;
 	struct passwd	*pw;
 	regex_t		rgx;
 	regmatch_t	pmatch;
-	int		i, j;
+	int		i, j, ch;
 	char		buf[256];
+	char		first;
 	char		*user = NULL;
 	char		*tty = NULL;
 	char		*cmd = NULL;
+	int		qflag = 0;
 	int		vflag = 0;
 	int		sflag = 0;
 	int		dflag = 0;
 	int		eflag = 0;
+	int		Iflag = 0;
 	int		jflag = 0;
 	int		mflag = 0;
 	int		zflag = 0;
@@ -186,6 +191,9 @@ main(int ac, char **av)
 				    	errx(1, "must specify procname");
 				cmd = *av;
 				break;
+			case 'q':
+				qflag++;
+				break;
 			case 'v':
 				vflag++;
 				break;
@@ -205,6 +213,7 @@ main(int ac, char **av)
 				zflag++;
 				break;
 			default:
+				saved_av = av;
 				if (isalpha((unsigned char)**av)) {
 					if (strncasecmp(*av, "SIG", 3) == 0)
 						*av += 3;
@@ -214,8 +223,14 @@ main(int ac, char **av)
 							sig = p - sys_signame;
 							break;
 						}
-					if (!sig)
-						nosig(*av);
+					if (!sig) {
+						if (**saved_av == 'I') {
+							av = saved_av;
+							Iflag = 1;
+							break;
+						} else
+							nosig(*av);
+					}
 				} else if (isdigit((unsigned char)**av)) {
 					sig = strtol(*av, &ep, 10);
 					if (!*av || *ep)
@@ -383,6 +398,16 @@ main(int ac, char **av)
 			if (matched)
 				break;
 		}
+		if (matched != 0 && Iflag) {
+			printf("Send signal %d to %s (pid %d uid %d)? ",
+				sig, thiscmd, thispid, thisuid);
+			fflush(stdout);
+			first = ch = getchar();
+			while (ch != '\n' && ch != EOF)
+				ch = getchar();
+			if (first != 'y' && first != 'Y')
+				matched = 0;
+		}
 		if (matched == 0)
 			continue;
 		if (dflag)
@@ -402,8 +427,9 @@ main(int ac, char **av)
 		}
 	}
 	if (killed == 0) {
-		fprintf(stderr, "No matching processes %swere found\n",
-		    getuid() != 0 ? "belonging to you " : "");
+		if (!qflag)
+			fprintf(stderr, "No matching processes %swere found\n",
+			    getuid() != 0 ? "belonging to you " : "");
 		errors = 1;
 	}
 	exit(errors);

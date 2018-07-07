@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (C) 1995 by Joerg Wunsch, Dresden
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/usr.bin/killall/killall.1 252428 2013-06-30 20:27:31Z mjg $
 .\"
-.Dd December 25, 2009
+.Dd June 30, 2013
 .Dt KILLALL 1
 .Os
 .Sh NAME
@@ -34,6 +35,7 @@
 .Nm
 .Op Fl delmsvz
 .Op Fl help
+.Op Fl I
 .Op Fl j Ar jail
 .Op Fl u Ar user
 .Op Fl t Ar tty
@@ -71,6 +73,9 @@ processes specified with the
 option.
 .It Fl help
 Give a help on the command usage and exit.
+.It Fl I
+Request confirmation before attempting to signal each
+process.
 .It Fl l
 List the names of the available signals and exit, like in
 .Xr kill 1 .
@@ -106,6 +111,8 @@ the specified
 Limit potentially matching processes to those matching
 the specified
 .Ar procname .
+.It Fl q
+Suppress error message if no processes are matched.
 .It Fl z
 Do not skip zombies.
 This should not have any effect except to print a few error messages
@@ -118,7 +125,7 @@ is already supported by
 So use
 .Xr kill 1
 for this job (e.g.\&
-.Dq Li "kill -TERM -1
+.Dq Li "kill -TERM -1"
 or as root
 .Dq Li "echo kill -TERM -1 | su -m <user>" ) .
 .Sh IMPLEMENTATION NOTES
