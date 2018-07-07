@@ -75146,8 +75146,12 @@ tools/tools/whereintheworld/Makefile -text
 tools/tools/whereintheworld/whereintheworld.pl -text
 usr.bin/Makefile -text
 usr.bin/Makefile.amd64 -text
+usr.bin/Makefile.arm svneol=native#text/plain
 usr.bin/Makefile.i386 -text
+usr.bin/Makefile.ia64 svneol=native#text/plain
 usr.bin/Makefile.inc -text
+usr.bin/Makefile.powerpc svneol=native#text/plain
+usr.bin/Makefile.sparc64 svneol=native#text/plain
 usr.bin/alias/Makefile -text
 usr.bin/alias/generic.sh -text
 usr.bin/apply/Makefile -text

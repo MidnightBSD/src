@@ -1,0 +1,4 @@
+# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/Makefile.ia64 252356 2013-06-28 21:00:08Z davide $
+
+SUBDIR+=	smbutil
