@@ -1,5 +1,5 @@
-# $MidnightBSD: src/libexec/rpc.rstatd/Makefile,v 1.2 2012/04/11 00:46:15 laffer1 Exp $
-# $FreeBSD: src/libexec/rpc.rstatd/Makefile,v 1.8.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/libexec/rpc.rstatd/Makefile 204352 2010-02-26 09:41:16Z ru $
 
 PROG =	rpc.rstatd
 SRCS =	rstatd.c rstat_proc.c
