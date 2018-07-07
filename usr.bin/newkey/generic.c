@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -39,7 +40,7 @@ static char sccsid[] = "@(#)generic.c 1.2 91/03/11 Copyr 1986 Sun Micro";
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/newkey/generic.c 305552 2016-09-07 18:22:08Z dim $");
 
 #include <sys/file.h>
 
@@ -82,7 +83,7 @@ genkeys(char *public, char *secret, char *pass)
 	MINT *pk = mp_itom(0);
 	MINT *sk = mp_itom(0);
 	MINT *tmp;
-	MINT *base = mp_itom(BASE);
+	MINT *base = mp_itom((short)BASE);
 	MINT *root = mp_itom(PROOT);
 	MINT *modulus = mp_xtom(HEXMODULUS);
 	short r;
