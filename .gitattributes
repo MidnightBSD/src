@@ -76616,6 +76616,8 @@ usr.bin/sort/file.c -text
 usr.bin/sort/file.h -text
 usr.bin/sort/mem.c -text
 usr.bin/sort/mem.h -text
+usr.bin/sort/nls/C.msg -text
+usr.bin/sort/nls/hu_HU.ISO8859-2.msg -text
 usr.bin/sort/radixsort.c -text
 usr.bin/sort/radixsort.h -text
 usr.bin/sort/sort.1.in -text
