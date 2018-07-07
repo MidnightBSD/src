@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -31,7 +32,7 @@
 static char sccsid[] = "@(#)keylogin.c 1.4 91/03/11 Copyr 1986 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/keylogin/keylogin.c 246990 2013-02-19 13:32:26Z charnier $");
 
 /*
  * Copyright (C) 1986, Sun Microsystems, Inc.
@@ -48,8 +49,10 @@ __MBSDID("$MidnightBSD$");
 #include <rpc/rpc.h>
 #include <rpc/key_prot.h>
 
+extern int key_setnet(struct key_netstarg *);
+
 int
-main()
+main(void)
 {
 	char fullname[MAXNETNAMELEN + 1];
 	struct key_netstarg netst;
