@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/pppoed/pppoed.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/pppoed/pppoed.c,v 1.27.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: stable/10/libexec/pppoed/pppoed.c 228586 2011-12-16 16:07:39Z dim $
  */
 
 #include <sys/param.h>

@@ -1,5 +1,5 @@
-# $MidnightBSD: src/libexec/pppoed/Makefile,v 1.2 2012/04/11 00:46:55 laffer1 Exp $
-# $FreeBSD: src/libexec/pppoed/Makefile,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/libexec/pppoed/Makefile 201380 2010-01-02 09:50:19Z ed $
 
 PROG=	pppoed
 DPADD=	${LIBNETGRAPH}
