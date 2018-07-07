@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.bin/sort/coll.h 265160 2014-04-30 20:39:08Z pfg $	*/
+/*	$FreeBSD: stable/10/usr.bin/sort/coll.h 318152 2017-05-10 20:29:01Z marius $	*/
 
 /*-
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
@@ -92,7 +92,7 @@ struct key_value
 {
 	struct bwstring		*k; /* key string */
 	struct key_hint		 hint[0]; /* key sort hint */
-};
+} __packed;
 
 /*
  * Set of keys container object.
@@ -147,6 +147,7 @@ cmpcoll_t get_sort_func(struct sort_mods *sm);
 
 struct keys_array *keys_array_alloc(void);
 size_t keys_array_size(void);
+struct key_value *get_key_from_keys_array(struct keys_array *ka, size_t ind);
 void set_key_on_keys_array(struct keys_array *ka, struct bwstring *s, size_t ind);
 void clean_keys_array(const struct bwstring *s, struct keys_array *ka);
 

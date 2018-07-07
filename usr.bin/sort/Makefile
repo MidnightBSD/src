@@ -21,7 +21,16 @@ LDADD+= -lmd
 MAN_SUB+= -e 's|%%THREADS%%|\.\\"|g'
 .endif
 
+.if !defined(WITHOUT_NLS)
+NLS+=	hu_HU.ISO8859-2
+NLSSRCFILES= ${NLS:S@$@.msg@}
+MAN_SUB+= -e 's|%%NLS%%||g'
+.for lang in ${NLS}
+NLSSRCDIR_${lang}= ${.CURDIR}/nls
+.endfor
+.else
 CFLAGS+= -DWITHOUT_NLS
 MAN_SUB+= -e 's|%%NLS%%|\.\\"|g'
+.endif
 
 .include <bsd.prog.mk>

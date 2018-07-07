@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sort/bwstring.c 281535 2015-04-14 18:57:50Z pfg $");
+__FBSDID("$FreeBSD: stable/10/usr.bin/sort/bwstring.c 309862 2016-12-12 00:47:12Z delphij $");
 
 #include <ctype.h>
 #include <errno.h>
@@ -911,15 +911,12 @@ bws_month_score(const struct bwstring *s0)
 
 	if (MB_CUR_MAX == 1) {
 		const unsigned char *end, *s;
-		size_t len;
 
 		s = s0->data.cstr;
 		end = s + s0->len;
 
 		while (isblank(*s) && s < end)
 			++s;
-
-		len = strlen((const char*)s);
 
 		for (int i = 11; i >= 0; --i) {
 			if (cmonths[i] &&
@@ -929,15 +926,12 @@ bws_month_score(const struct bwstring *s0)
 
 	} else {
 		const wchar_t *end, *s;
-		size_t len;
 
 		s = s0->data.wstr;
 		end = s + s0->len;
 
 		while (iswblank(*s) && s < end)
 			++s;
-
-		len = wcslen(s);
 
 		for (int i = 11; i >= 0; --i) {
 			if (wmonths[i] && (s == wcsstr(s, wmonths[i])))
