@@ -76470,6 +76470,7 @@ usr.bin/opiepasswd/Makefile -text
 usr.bin/pagesize/Makefile -text
 usr.bin/pagesize/pagesize.1 -text
 usr.bin/pagesize/pagesize.sh -text
+usr.bin/pamtest/Makefile svneol=native#text/plain
 usr.bin/passwd/Makefile -text
 usr.bin/passwd/passwd.1 -text
 usr.bin/passwd/passwd.c -text
