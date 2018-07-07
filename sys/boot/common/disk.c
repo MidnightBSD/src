@@ -202,7 +202,7 @@ ptable_print(void *arg, const char *pname, const struct ptable_entry *part)
 		    od->sectorsize));
 	strcat(line, "\n");
 	pager_output(line);
-	if (part->type == PART_FREEBSD) {
+	if (part->type == PART_MIDNIGHTBSD) {
 		/* Open slice with BSD label */
 		pa->dev->d_offset = part->start;
 		table = ptable_open(pa->dev, part->end - part->start + 1,
@@ -325,7 +325,7 @@ opened:
 		 * whole MBR slice.
 		 */
 		if (partition == -1 &&
-		    part.type != PART_FREEBSD)
+		    part.type != PART_MIDNIGHTBSD)
 			goto out;
 		/* Try to read BSD label */
 		table = ptable_open(dev, part.end - part.start + 1,
