@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/i18n/csmapper/GEORGIAN/GEORGIAN-PS@OldCapital%UCS.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: GEORGIAN-PS@OldCapital%UCS.src,v 1.2 2006/11/04 06:17:35 tnozaki Exp $
 
 TYPE		ROWCOL
