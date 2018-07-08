@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: ypupdated
 # REQUIRE: rpcbind ypserv

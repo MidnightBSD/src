@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: ypxfrd
 # REQUIRE: rpcbind ypserv
