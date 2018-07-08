@@ -48404,6 +48404,7 @@ etc/rc.d/kldxref -text
 etc/rc.d/kpasswdd -text
 etc/rc.d/ldconfig -text
 etc/rc.d/local -text
+etc/rc.d/local_unbound -text
 etc/rc.d/localpkg -text
 etc/rc.d/lockd -text
 etc/rc.d/lpd -text
