@@ -1,15 +1,28 @@
-# $MidnightBSD: src/secure/libexec/sftp-server/Makefile,v 1.4 2009/05/02 18:00:56 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/secure/libexec/sftp-server/Makefile 296781 2016-03-12 23:53:20Z des $
+
+.include <bsd.own.mk>
 
 PROG=   sftp-server
-SRCS=   sftp-server.c sftp-common.c sftp-server-main.c roaming_dummy.c
+SRCS=   sftp-server.c sftp-common.c sftp-server-main.c
 MAN=	sftp-server.8
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
+SRCS+=	ssh_namespace.h
 
-DPADD=	${LIBSSH} ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
-LDADD=	-lssh -lcrypt -lcrypto -lz
+DPADD=	${LIBSSH}
+LDADD=  -lssh
+USEPRIVATELIB= ssh
+
+.if ${MK_LDNS} != "no"
+CFLAGS+=	-DHAVE_LDNS=1
+#DPADD+=	${LIBLDNS}
+#LDADD+=	-lldns
+#USEPRIVATELIB+= ldns
+.endif
+
+DPADD+=	${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
+LDADD+=	-lcrypt -lcrypto -lz
 
 .include <bsd.prog.mk>
 
 .PATH:	${SSHDIR}
-
-${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h
