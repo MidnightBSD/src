@@ -3,6 +3,7 @@
 # $MidnightBSD$
 
 # PROVIDE: securelevel
+# REQUIRE: adjkerntz ipfw ipfilter pf
 
 . /etc/rc.subr
 
