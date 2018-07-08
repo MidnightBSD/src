@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * FreeSec: libcrypt for NetBSD
  *

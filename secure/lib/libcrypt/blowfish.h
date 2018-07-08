@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Blowfish - a fast block cipher designed by Bruce Schneier
  *

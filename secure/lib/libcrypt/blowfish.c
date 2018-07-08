@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Blowfish block cipher
  * Copyright 1997 Niels Provos <provos@physnet.uni-hamburg.de>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: bcrypt.c,v 1.29 2014/02/24 19:45:43 tedu Exp $	*/
 
 /*
