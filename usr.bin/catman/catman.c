@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 John Rochester
  * All rights reserved.
@@ -27,16 +28,18 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/catman/catman.c 300269 2016-05-20 06:24:16Z truckman $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/utsname.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <locale.h>
 #include <langinfo.h>
@@ -94,7 +97,7 @@ enum Ziptype {NONE, BZIP, GZIP};
 static uid_t uid;
 static int starting_dir;
 static char tmp_file[MAXPATHLEN];
-struct stat test_st;
+static struct stat test_st;
 
 /*
  * A hashtable is an array of chains composed of this entry structure.
@@ -267,7 +270,8 @@ get_cat_section(char *section)
 	char *cat_section;
 
 	cat_section = strdup(section);
-	strncpy(cat_section, "cat", 3);
+	assert(strlen(section) > 3 && strncmp(section, "man", 3) == 0);
+	memcpy(cat_section, "cat", 3);
 	return cat_section;
 }
 
@@ -419,8 +423,11 @@ process_page(char *mandir, char *src, char *cat, enum Ziptype zipped)
 			fprintf(stderr, "%slink %s -> %s\n",
 			    verbose ? "\t" : "", cat, link_name);
 		}
-		if (!pretend)
-			link(link_name, cat);
+		if (!pretend) {
+			(void) unlink(cat);
+			if (link(link_name, cat) < 0)
+				warn("%s %s: link", link_name, cat);
+		}
 		return;
 	}
 	insert_hashtable(links, src_ino, src_dev, strdup(cat));
@@ -608,7 +615,8 @@ select_sections(const struct dirent *entry)
 static void
 process_mandir(char *dir_name, char *section)
 {
-	fchdir(starting_dir);
+	if (fchdir(starting_dir) < 0)
+		err(1, "fchdir");
 	if (already_visited(NULL, dir_name, section == NULL))
 		return;
 	check_writable(dir_name);
