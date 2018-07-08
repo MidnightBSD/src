@@ -1,17 +1,27 @@
-# $MidnightBSD: src/secure/usr.bin/ssh-add/Makefile,v 1.4 2009/05/02 18:01:22 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/secure/usr.bin/ssh-add/Makefile 296781 2016-03-12 23:53:20Z des $
+
+.include <bsd.own.mk>
 
 PROG=	ssh-add
-SRCS=	ssh-add.c
+SRCS+=	ssh-add.c
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
+SRCS+=	ssh_namespace.h
 
-# required when linking dynamic libssh
-SRCS+=	roaming_dummy.c
+DPADD=	${LIBSSH}
+LDADD=	-lssh
+USEPRIVATELIB= ssh
 
-DPADD=	${LIBSSH} ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
-LDADD=	-lssh -lcrypt -lcrypto -lz
+.if ${MK_LDNS} != "no"
+CFLAGS+=	-DHAVE_LDNS=1
+#DPADD+=	${LIBLDNS}
+#LDADD+=	-lldns
+#USEPRIVATELIB+= ldns
+.endif
+
+DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
+LDADD+= -lcrypt -lcrypto -lz
 
 .include <bsd.prog.mk>
 
 .PATH:	${SSHDIR}
-
-${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h
