@@ -46398,6 +46398,7 @@ crypto/openssl/apps/tsget -text
 crypto/openssl/apps/verify.c -text
 crypto/openssl/apps/version.c -text
 crypto/openssl/apps/x509.c -text
+crypto/openssl/appveyor.yml -text
 crypto/openssl/certs/README.RootCerts -text
 crypto/openssl/certs/RegTP-5R.pem -text
 crypto/openssl/certs/RegTP-6R.pem -text
@@ -47515,6 +47516,7 @@ crypto/openssl/crypto/whrlpool/wp_test.c -text
 crypto/openssl/crypto/x509/Makefile -text
 crypto/openssl/crypto/x509/by_dir.c -text
 crypto/openssl/crypto/x509/by_file.c -text
+crypto/openssl/crypto/x509/verify_extra_test.c svneol=native#text/plain
 crypto/openssl/crypto/x509/x509.h -text
 crypto/openssl/crypto/x509/x509_att.c -text
 crypto/openssl/crypto/x509/x509_cmp.c -text
@@ -47846,7 +47848,9 @@ crypto/openssl/doc/crypto/threads.pod -text
 crypto/openssl/doc/crypto/ui.pod -text
 crypto/openssl/doc/crypto/ui_compat.pod -text
 crypto/openssl/doc/crypto/x509.pod -text
+crypto/openssl/doc/dir-locals.example.el -text
 crypto/openssl/doc/fingerprints.txt -text
+crypto/openssl/doc/openssl-c-indent.el -text
 crypto/openssl/doc/openssl-shared.txt -text
 crypto/openssl/doc/openssl.txt -text
 crypto/openssl/doc/openssl_button.gif -text svneol=unset#unset
@@ -48027,6 +48031,7 @@ crypto/openssl/engines/vendor_defns/sureware.h -text
 crypto/openssl/shlib/README -text
 crypto/openssl/ssl/Makefile -text
 crypto/openssl/ssl/bio_ssl.c -text
+crypto/openssl/ssl/clienthellotest.c svneol=native#text/plain
 crypto/openssl/ssl/d1_both.c -text
 crypto/openssl/ssl/d1_clnt.c -text
 crypto/openssl/ssl/d1_enc.c -text
@@ -48141,6 +48146,7 @@ crypto/openssl/util/src-dep.pl -text
 crypto/openssl/util/ssleay.num -text
 crypto/openssl/util/su-filter.pl -text
 crypto/openssl/util/tab_num.pl -text
+crypto/openssl/util/toutf8.sh svneol=native#text/plain
 crypto/openssl/util/x86asm.sh -text
 etc/Makefile -text
 etc/amd.map -text
