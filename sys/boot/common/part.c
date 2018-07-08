@@ -58,7 +58,7 @@ static const uuid_t gpt_uuid_midnightbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
 static const uuid_t gpt_uuid_midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
 static const uuid_t gpt_uuid_midnightbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDFS;
 static const uuid_t gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
-static const uuid_t gpt_uuid_midnightsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
+static const uuid_t gpt_uuid_midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static const uuid_t gpt_uuid_midnightbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
 #endif
 
