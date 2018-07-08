@@ -48440,6 +48440,7 @@ etc/rc.d/othermta -text
 etc/rc.d/pf -text
 etc/rc.d/pflog -text
 etc/rc.d/pfsync -text
+etc/rc.d/postrandom -text
 etc/rc.d/power_profile -text
 etc/rc.d/powerd -text
 etc/rc.d/ppp -text
