@@ -1,10 +1,9 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: newsyslog
-# REQUIRE: mountcritremote FILESYSTEMS
+# REQUIRE: FILESYSTEMS mountcritremote
 
 . /etc/rc.subr
 
