@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: trunk/crypto/openssl/apps/openssl.cnf 7185 2015-07-28 11:03:45Z laffer1 $
 #
 # OpenSSL example configuration file.
 # This is mostly being used for generation of certificate requests.

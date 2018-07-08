@@ -2091,22 +2091,20 @@ int ssl_check_serverhello_tlsext(SSL *s)
     }
 # endif
 
+    OPENSSL_free(s->tlsext_ocsp_resp);
+    s->tlsext_ocsp_resp = NULL;
+    s->tlsext_ocsp_resplen = -1;
     /*
      * If we've requested certificate status and we wont get one tell the
      * callback
      */
     if ((s->tlsext_status_type != -1) && !(s->tlsext_status_expected)
-        && s->ctx && s->ctx->tlsext_status_cb) {
+        && !(s->hit) && s->ctx && s->ctx->tlsext_status_cb) {
         int r;
         /*
-         * Set resp to NULL, resplen to -1 so callback knows there is no
-         * response.
+         * Call callback with resp == NULL and resplen == -1 so callback
+         * knows there is no response
          */
-        if (s->tlsext_ocsp_resp) {
-            OPENSSL_free(s->tlsext_ocsp_resp);
-            s->tlsext_ocsp_resp = NULL;
-        }
-        s->tlsext_ocsp_resplen = -1;
         r = s->ctx->tlsext_status_cb(s, s->ctx->tlsext_status_arg);
         if (r == 0) {
             al = SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE;
@@ -2338,8 +2336,10 @@ static int tls_decrypt_ticket(SSL *s, const unsigned char *etick,
     p = etick + 16 + EVP_CIPHER_CTX_iv_length(&ctx);
     eticklen -= 16 + EVP_CIPHER_CTX_iv_length(&ctx);
     sdec = OPENSSL_malloc(eticklen);
-    if (!sdec) {
+    if (sdec == NULL
+            || EVP_DecryptUpdate(&ctx, sdec, &slen, p, eticklen) <= 0) {
         EVP_CIPHER_CTX_cleanup(&ctx);
+        OPENSSL_free(sdec);
         return -1;
     }
     EVP_DecryptUpdate(&ctx, sdec, &slen, p, eticklen);
@@ -2593,6 +2593,8 @@ int tls1_process_heartbeat(SSL *s)
          * plus 2 bytes payload length, plus payload, plus padding
          */
         buffer = OPENSSL_malloc(1 + 2 + payload + padding);
+        if (buffer == NULL)
+            return -1;
         bp = buffer;
 
         /* Enter response type, length and copy payload */
@@ -2601,7 +2603,7 @@ int tls1_process_heartbeat(SSL *s)
         memcpy(bp, pl, payload);
         bp += payload;
         /* Random padding */
-        if (RAND_pseudo_bytes(bp, padding) < 0) {
+        if (RAND_bytes(bp, padding) <= 0) {
             OPENSSL_free(buffer);
             return -1;
         }
@@ -2687,13 +2689,13 @@ int tls1_heartbeat(SSL *s)
     /* Sequence number */
     s2n(s->tlsext_hb_seq, p);
     /* 16 random bytes */
-    if (RAND_pseudo_bytes(p, 16) < 0) {
+    if (RAND_bytes(p, 16) <= 0) {
         SSLerr(SSL_F_TLS1_HEARTBEAT, ERR_R_INTERNAL_ERROR);
         goto err;
     }
     p += 16;
     /* Random padding */
-    if (RAND_pseudo_bytes(p, padding) < 0) {
+    if (RAND_bytes(p, padding) <= 0) {
         SSLerr(SSL_F_TLS1_HEARTBEAT, ERR_R_INTERNAL_ERROR);
         goto err;
     }

@@ -47873,6 +47873,7 @@ crypto/openssl/doc/crypto/EVP_BytesToKey.pod -text
 crypto/openssl/doc/crypto/EVP_DigestInit.pod -text
 crypto/openssl/doc/crypto/EVP_DigestSignInit.pod -text
 crypto/openssl/doc/crypto/EVP_DigestVerifyInit.pod -text
+crypto/openssl/doc/crypto/EVP_EncodeInit.pod -text
 crypto/openssl/doc/crypto/EVP_EncryptInit.pod -text
 crypto/openssl/doc/crypto/EVP_OpenInit.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_CTX_ctrl.pod -text
@@ -47955,6 +47956,7 @@ crypto/openssl/doc/crypto/d2i_DHparams.pod -text
 crypto/openssl/doc/crypto/d2i_DSAPublicKey.pod -text
 crypto/openssl/doc/crypto/d2i_ECPrivateKey.pod -text
 crypto/openssl/doc/crypto/d2i_PKCS8PrivateKey.pod -text
+crypto/openssl/doc/crypto/d2i_PrivateKey.pod -text
 crypto/openssl/doc/crypto/d2i_RSAPublicKey.pod -text
 crypto/openssl/doc/crypto/d2i_X509.pod -text
 crypto/openssl/doc/crypto/d2i_X509_ALGOR.pod -text
@@ -48026,6 +48028,7 @@ crypto/openssl/doc/ssl/SSL_CTX_set_session_cache_mode.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_session_id_context.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_ssl_version.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_timeout.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set_tlsext_status_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_tlsext_ticket_key_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_tmp_dh_callback.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_tmp_rsa_callback.pod -text

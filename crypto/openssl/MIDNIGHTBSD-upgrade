@@ -38,4 +38,4 @@ cvs update
 # check for files not added
 cvs ci -m "Upgrade to OpenSSL ${OSSLVER}."
 
-$MidnightBSD$
+$MidnightBSD: trunk/crypto/openssl/MIDNIGHTBSD-upgrade 6870 2014-10-12 20:37:16Z laffer1 $
