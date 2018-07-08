@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,12 +36,12 @@ static const char copyright[] =
 
 #if 0
 #ifndef lint
-static char sccsid[] = "@(#)calendar.c  8.3 (Berkeley) 3/25/94";
+static char sccsid[] = "@(#)calendar.c	8.3 (Berkeley) 3/25/94";
 #endif
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/calendar.c 285291 2015-07-08 21:06:19Z bapt $");
 
 #include <err.h>
 #include <errno.h>
@@ -60,8 +61,8 @@ __MBSDID("$MidnightBSD$");
 struct passwd	*pw;
 int		doall = 0;
 int		debug = 0;
-char		*DEBUG = NULL;
-time_t		f_time = 0;
+static char	*DEBUG = NULL;
+static time_t	f_time = 0;
 double		UTCOffset = UTCOFFSET_NOTSET;
 int		EastLongitude = LONGITUDE_NOTSET;
 
@@ -79,7 +80,7 @@ main(int argc, char *argv[])
 
 	(void)setlocale(LC_ALL, "");
 
-	while ((ch = getopt(argc, argv, "-A:aB:dD:F:f:l:t:U:W:")) != -1)
+	while ((ch = getopt(argc, argv, "-A:aB:D:dF:f:l:t:U:W:?")) != -1)
 		switch (ch) {
 		case '-':		/* backward contemptible */
 		case 'a':
@@ -90,40 +91,48 @@ main(int argc, char *argv[])
 			doall = 1;
 			break;
 
-		case 'f': /* other calendar file */
-			calendarFile = optarg;
-			break;
-
 		case 'W': /* we don't need no steenking Fridays */
 			Friday = -1;
 			/* FALLTHROUGH */
 
 		case 'A': /* days after current date */
 			f_dayAfter = atoi(optarg);
+			if (f_dayAfter < 0)
+				errx(1, "number of days must be positive");
 			break;
 
 		case 'B': /* days before current date */
 			f_dayBefore = atoi(optarg);
+			if (f_dayBefore < 0)
+				errx(1, "number of days must be positive");
+			break;
+
+		case 'D': /* debug output of sun and moon info */
+			DEBUG = optarg;
+			break;
+
+		case 'd': /* debug output of current date */
+			debug = 1;
 			break;
 
 		case 'F': /* Change the time: When does weekend start? */
 			Friday = atoi(optarg);
 			break;
+
+		case 'f': /* other calendar file */
+			calendarFile = optarg;
+			break;
+
 		case 'l': /* Change longitudal position */
 			EastLongitude = strtol(optarg, NULL, 10);
 			break;
-		case 'U': /* Change UTC offset */
-			UTCOffset = strtod(optarg, NULL);
+
+		case 't': /* other date, for tests */
+			f_time = Mktime(optarg);
 			break;
 
-		case 'd':
-			debug = 1;
-			break;
-		case 'D':
-			DEBUG = optarg;
-			break;
-		case 't': /* other date, undocumented, for tests */
-			f_time = Mktime(optarg);
+		case 'U': /* Change UTC offset */
+			UTCOffset = strtod(optarg, NULL);
 			break;
 
 		case '?':
@@ -216,10 +225,9 @@ usage(void)
 {
 
 	fprintf(stderr, "%s\n%s\n%s\n",
-	    "usage: calendar [-a] [-A days] [-B days] [-F friday] "
-	    "[-f calendarfile]",
-	    "                [-d] [-t dd[.mm[.year]]] [-W days]",
-	    "                [-U utcoffset] [-l longitude]"
+	    "usage: calendar [-A days] [-a] [-B days] [-D sun|moon] [-d]",
+	    "		     [-F friday] [-f calendarfile] [-l longitude]",
+	    "		     [-t dd[.mm[.year]]] [-U utcoffset] [-W days]"
 	    );
 	exit(1);
 }

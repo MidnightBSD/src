@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/ostern.c 205821 2010-03-29 06:49:20Z edwin $");
 
 #include <stdio.h>
 #include <stdlib.h>

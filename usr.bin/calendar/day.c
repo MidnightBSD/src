@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/day.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <err.h>
 #include <locale.h>
@@ -39,7 +40,7 @@ __MBSDID("$MidnightBSD$");
 
 #include "calendar.h"
 
-time_t			time1, time2;
+static time_t		time1, time2;
 const struct tm		tm0;
 char			dayname[100];
 int			year1, year2;

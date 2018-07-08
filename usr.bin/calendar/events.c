@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992-2009 Edwin Groothuis <edwin@FreeBSD.org>.
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/events.c 205872 2010-03-30 06:42:01Z edwin $");
 
 #include <sys/time.h>
 #include <err.h>
