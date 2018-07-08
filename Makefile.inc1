@@ -1284,26 +1284,26 @@ _gperf=		gnu/usr.bin/gperf
 _vtfontcvt=	usr.bin/vtfontcvt
 .endif
 
-.if ${BOOTSTRAPPING} < 800022
+.if ${BOOTSTRAPPING} < 8000
 _ar=		usr.bin/ar
 .endif
 
-.if ${BOOTSTRAPPING} < 800013
+.if ${BOOTSTRAPPING} < 8000
 _mklocale=	usr.bin/mklocale
 .endif
 
-.if ${BOOTSTRAPPING} < 900002
+.if ${BOOTSTRAPPING} < 8000
 _sed=		usr.bin/sed
 .endif
 
-.if ${BOOTSTRAPPING} < 1000033
+.if ${BOOTSTRAPPING} < 100002
 _m4=		usr.bin/m4
 _lex=		usr.bin/lex
 
 ${_bt}-usr.bin/lex: ${_bt}-usr.bin/m4
 .endif
 
-.if ${BOOTSTRAPPING} < 1001506
+.if ${BOOTSTRAPPING} < 100002
 _yacc=		lib/liby \
 		usr.bin/yacc
 
@@ -1313,14 +1313,13 @@ ${_bt}-usr.bin/yacc: ${_bt}-lib/liby
 # crunchgen broken on head with STRIP= for a while, even
 # when building stable binaries, so bootstrap there too.
 # r284356 to r285986 is the broken range.
-.if ${BOOTSTRAPPING} < 1000014 || \
-	(${BOOTSTRAPPING} > 1100076 && ${BOOTSTRAPPING} < 1100078)
+.if ${BOOTSTRAPPING} < 100002 
 _crunch=	usr.sbin/crunch
 .endif
 
 # r245440 mtree -N support added
 # r313404 requires sha384.h for libnetbsd, added to libmd in r292782
-.if ${BOOTSTRAPPING} < 1003512
+.if ${BOOTSTRAPPING} < 100002
 _nmtree=	lib/libmd \
 		lib/libnetbsd \
 		usr.sbin/nmtree
@@ -1329,11 +1328,11 @@ ${_bt}-lib/libnetbsd: ${_bt}-lib/libmd
 ${_bt}-usr.sbin/nmtree: ${_bt}-lib/libnetbsd
 .endif
 
-.if ${BOOTSTRAPPING} < 1000027
+.if ${BOOTSTRAPPING} < 100002
 _cat=		bin/cat
 .endif
 
-.if ${BOOTSTRAPPING} >= 900040 && ${BOOTSTRAPPING} < 900041
+.if ${BOOTSTRAPPING} < 8000
 _awk=		usr.bin/awk
 .endif
 
