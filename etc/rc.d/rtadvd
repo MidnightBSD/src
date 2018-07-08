@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: rtadvd
 # REQUIRE: DAEMON
@@ -14,6 +13,8 @@
 name="rtadvd"
 rcvar="rtadvd_enable"
 command="/usr/sbin/${name}"
+extra_commands="reload"
+reload_cmd="rtadvd_reload"
 start_precmd="rtadvd_precmd"
 
 rtadvd_precmd()
@@ -36,20 +37,22 @@ rtadvd_precmd()
 	#
 	case ${rtadvd_interfaces} in
 	[Aa][Uu][Tt][Oo]|'')
+		command_args=
 		for i in `list_net_interfaces`; do
 			case $i in
 			lo0)	continue ;;
 			esac
 			if ipv6if $i; then
-				rtadvd_interfaces="${rtadvd_interfaces} ${i}"
+				command_args="${command_args} ${i}"
 			fi
 		done
 		;;
 	[Nn][Oo][Nn][Ee])
-		rtadvd_interfaces=""
+		;;
+	*)
+		command_args="${rtadvd_interfaces}"
 		;;
 	esac
-	command_args="${rtadvd_interfaces}"
 
 	# Enable Router Renumbering, unicast case
 	# (use correct src/dst addr)
@@ -58,6 +61,10 @@ rtadvd_precmd()
 	# (use correct src addr)
 	# rtadvd -R "in ipsec ah/transport/ff05::2-fec0:0:0:10::1/require" ${ipv6_network_interfaces}
 	return 0
+}
+
+rtadvd_reload() {
+	/usr/sbin/rtadvctl reload
 }
 
 load_rc_config $name
