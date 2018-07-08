@@ -75663,6 +75663,9 @@ usr.bin/cgraph/Makefile -text
 usr.bin/chat/Makefile -text
 usr.bin/chat/chat.8 -text
 usr.bin/chat/chat.c -text
+usr.bin/checknr/Makefile svneol=native#text/plain
+usr.bin/checknr/checknr.1 svneol=native#text/plain
+usr.bin/checknr/checknr.c svneol=native#text/plain
 usr.bin/chkey/Makefile -text
 usr.bin/chkey/chkey.1 -text
 usr.bin/chkey/chkey.c -text
