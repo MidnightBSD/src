@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/i18n/csmapper/ISO-8859/ISO-8859-10%UCS.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: ISO-8859-10%UCS.src,v 1.2 2003/07/12 16:11:08 tshiozak Exp $
 
 TYPE		ROWCOL
