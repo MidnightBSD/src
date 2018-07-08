@@ -48464,7 +48464,6 @@ etc/rc.d/savecore -text
 etc/rc.d/sdpd -text
 etc/rc.d/securelevel -text
 etc/rc.d/sendmail -text
-etc/rc.d/sensorsd -text
 etc/rc.d/serial -text
 etc/rc.d/sppp -text
 etc/rc.d/sshd -text
