@@ -1,0 +1,4 @@
+* text=auto !eol
+/Makefile -text
+/ldns-host.1 -text
+/ldns-host.c -text
