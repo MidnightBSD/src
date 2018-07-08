@@ -74671,6 +74671,9 @@ tools/tools/vop_table/vop_table.pl -text
 tools/tools/vop_table/vop_table.tcl -text
 tools/tools/whereintheworld/Makefile -text
 tools/tools/whereintheworld/whereintheworld.pl -text
+tools/tools/zfsboottest/Makefile svneol=native#text/plain
+tools/tools/zfsboottest/zfsboottest.c svneol=native#text/plain
+tools/tools/zfsboottest/zfsboottest.sh svneol=native#text/plain
 usr.bin/Makefile -text
 usr.bin/Makefile.amd64 -text
 usr.bin/Makefile.arm svneol=native#text/plain
