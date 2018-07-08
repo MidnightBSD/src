@@ -1,9 +1,10 @@
+# $MidnightBSD$
 #
-# $FreeBSD: src/tools/tools/syscall_timing/Makefile,v 1.3 2004/12/21 08:47:29 ru Exp $
+# $FreeBSD: stable/10/tools/tools/syscall_timing/Makefile 276486 2014-12-31 23:25:37Z ngie $
 #
 
 PROG=	syscall_timing
 CFLAGS+=	-static -O
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>
