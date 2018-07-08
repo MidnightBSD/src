@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/secure/usr.sbin/sshd/Makefile 313234 2017-02-04 17:00:47Z ngie $
 
 .include <bsd.own.mk>
 
@@ -23,9 +24,18 @@ SRCS+=	gss-genr.c
 
 MAN=	sshd.8 sshd_config.5
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
+SRCS+=	ssh_namespace.h
 
-DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ} ${LIBWRAP} ${LIBPAM}
-LDADD=	-lssh -lutil -lz -lwrap ${MINUSLPAM}
+DPADD=	${LIBSSH} ${LIBUTIL} ${LIBPAM}
+LDADD=	-lssh -lutil ${MINUSLPAM}
+USEPRIVATELIB= ssh
+
+.if ${MK_LDNS} != "no"
+CFLAGS+=	-DHAVE_LDNS=1
+#DPADD+=	${LIBLDNS}
+#LDADD+=	-lldns
+#USEPRIVATELIB+= ldns
+.endif
 
 .if ${MK_AUDIT} != "no"
 CFLAGS+= -DUSE_BSM_AUDIT -DHAVE_GETAUDIT_ADDR
@@ -33,12 +43,19 @@ DPADD+=  ${LIBBSM}
 LDADD+=  -lbsm
 .endif
 
-.if ${MK_KERBEROS_SUPPORT} != "no"
+.if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -include krb5_config.h
+SRCS+=	krb5_config.h
 DPADD+=	 ${LIBGSSAPI_KRB5} ${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} \
 	${LIBCOM_ERR} ${LIBROKEN} ${LIBWIND} ${LIBHEIMBASE} ${LIBHEIMIPCC}
 LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lhx509 -lasn1 \
 	-lcom_err -lroken -lwind -lheimbase -lheimipcc
+.endif
+
+.if ${MK_TCP_WRAPPERS} != "no"
+CFLAGS+=	-DLIBWRAP
+DPADD+=		${LIBWRAP}
+LDADD+=		-lwrap
 .endif
 
 DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
@@ -61,8 +78,3 @@ CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
 .include <bsd.prog.mk>
 
 .PATH:	${SSHDIR}
-
-${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h
-.if ${MK_KERBEROS_SUPPORT} != "no"
-${OBJS} ${POBJS} ${SOBJS}: krb5_config.h
-.endif
