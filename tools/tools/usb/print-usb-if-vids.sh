@@ -24,8 +24,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/usb/print-usb-if-vids.sh,v 1.1 2004/04/18 05:37:34 obrien Exp $
+# $FreeBSD: stable/10/tools/tools/usb/print-usb-if-vids.sh 187107 2009-01-12 17:26:52Z obrien $
+# $MidnightBSD$
 
 
-fetch -o /tmp/usb.if http://www.usb.org/app/pub/dump/comp_dump/
+fetch -o /tmp/usb.if http://www.usb.org/developers/tools/comp_dump/
 awk -F '|' '{ printf "%#06x\t%s\n", $1, $2 }' < /tmp/usb.if | sort
