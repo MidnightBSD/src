@@ -17498,6 +17498,9 @@ contrib/jemalloc/src/stats.c -text
 contrib/jemalloc/src/tcache.c -text
 contrib/jemalloc/src/tsd.c -text
 contrib/jemalloc/src/util.c -text
+contrib/ldns-host/Makefile -text
+contrib/ldns-host/ldns-host.1 -text
+contrib/ldns-host/ldns-host.c -text
 contrib/ldns/Changelog -text
 contrib/ldns/LICENSE -text
 contrib/ldns/Makefile.in -text
