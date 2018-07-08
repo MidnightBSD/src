@@ -1,4 +1,5 @@
-# $FreeBSD$ 
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/i18n/csmapper/KAZAKH/KZ1048%UCS.src 249588 2013-04-17 11:56:11Z gabor $ 
 # $NetBSD: KZ1048%UCS.src,v 1.1 2007/03/13 16:34:37 tnozaki Exp $
 
 TYPE		ROWCOL
@@ -22,8 +23,8 @@ BEGIN_MAP
 # Suitability for use in MIME text:
 # Yes
 # Published specification(s):
-# The official Standard STRK1048-2002 was created by the Committee of standartization of
-# Ministry of economy and trade of Kazakhstan Republic ans was published in print by the
+# The official Standard STRK1048-2002 was created by the Committee of standardization of
+# Ministry of economy and trade of Kazakhstan Republic and was published in print by the
 # Kazakhstan Standard Committee, Astana, February 7, 2002
 # 
 # Mapping data are available online at http://www.sci.kz/~sairan/kazcode/TableA.html
