@@ -13010,12 +13010,12 @@ contrib/expat/MANIFEST -text
 contrib/expat/MIDNIGHTBSD-upgrade -text
 contrib/expat/Makefile.in -text
 contrib/expat/README -text
-contrib/expat/configure.in -text
-contrib/expat/doc/expat.png -text svneol=unset#unset
+contrib/expat/configure.ac -text
+contrib/expat/doc/expat.png -text svneol=unset#image/png
 contrib/expat/doc/reference.html -text
 contrib/expat/doc/style.css -text
 contrib/expat/doc/xmlwf.1 -text
-contrib/expat/doc/xmlwf.sgml -text
+contrib/expat/doc/xmlwf.xml -text
 contrib/expat/examples/elements.c -text
 contrib/expat/examples/outline.c -text
 contrib/expat/expat_config.h.in -text
