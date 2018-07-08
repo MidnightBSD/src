@@ -48472,7 +48472,8 @@ etc/rc.d/statd -text
 etc/rc.d/static_arp -text
 etc/rc.d/static_ndp -text
 etc/rc.d/stf -text
-etc/rc.d/swap1 -text
+etc/rc.d/swap -text
+etc/rc.d/swaplate -text
 etc/rc.d/syscons -text
 etc/rc.d/sysctl -text
 etc/rc.d/syslogd -text
