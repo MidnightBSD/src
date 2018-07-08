@@ -1,44 +1,47 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/secure/usr.bin/ssh/Makefile 312269 2017-01-16 07:10:45Z ngie $
 
 .include <bsd.own.mk>
 
 PROG=	ssh
-CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 LINKS=	${BINDIR}/ssh ${BINDIR}/slogin
 MAN=	ssh.1 ssh_config.5
 MLINKS=	ssh.1 slogin.1
 
 SRCS=	ssh.c readconf.c clientloop.c sshtty.c \
-	sshconnect.c sshconnect1.c sshconnect2.c mux.c  \
-	gss-genr.c
+	sshconnect.c sshconnect1.c sshconnect2.c mux.c
 
-DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ}
-LDADD=	-lssh -lutil -lz
+# gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
+SRCS+=	gss-genr.c
 
-.if ${MK_KERBEROS_SUPPORT} != "no"
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL -DHAVE_KRB5_GET_ERROR_MESSAGE
+CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
+SRCS+=	ssh_namespace.h
+
+DPADD=	${LIBSSH} ${LIBUTIL}
+LDADD=	-lssh -lutil
+USEPRIVATELIB= ssh
+
+.if ${MK_LDNS} != "no"
+CFLAGS+=	-DHAVE_LDNS=1
+DPADD+=	${LIBLDNS}
+LDADD+=	-lldns
+USEPRIVATELIB+= ldns
+.endif
+
+.if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -include krb5_config.h
+SRCS+=	krb5_config.h
 DPADD+=	 ${LIBGSSAPI}
 LDADD+=	 -lgssapi
 .endif
 
-.if defined(X11BASE) || defined(LOCALBASE)
-# Recommended /etc/make.conf setting is X11BASE=${LOCALBASE} for x.org
-# 7.x upgrade on < 0.2.1, but LOCALBASE has moved out of scope of src/
-# so we need to provide the default for users with old make.conf
-# settings.
-LOCALBASE?=     /usr/local
-  	 
-# Users may override either LOCALBASE or X11BASE to move the location
-# of xauth
+DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
+LDADD+= -lcrypt -lcrypto -lz
+
+.if defined(LOCALBASE)
 CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
 .endif
-
-DPADD+=	${LIBCRYPT} ${LIBCRYPTO}
-LDADD+=	-lcrypt -lcrypto
 
 .include <bsd.prog.mk>
 
 .PATH:	${SSHDIR}
-
-${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h
