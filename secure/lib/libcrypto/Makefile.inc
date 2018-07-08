@@ -1,10 +1,11 @@
-# $FreeBSD: stable/10/secure/lib/libcrypto/Makefile.inc 284330 2015-06-12 17:10:19Z jkim $
+# $MidnightBSD$
+# $FreeBSD: stable/10/secure/lib/libcrypto/Makefile.inc 312851 2017-01-26 23:29:30Z jkim $
 
 .include <bsd.own.mk>
 
 # OpenSSL version used for manual page generation
-OPENSSL_VER=	1.0.1o
-OPENSSL_DATE=	2015-06-12
+OPENSSL_VER=	1.0.1u
+OPENSSL_DATE=	2016-09-22
 
 LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
 LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
@@ -13,16 +14,34 @@ CFLAGS+=	-DTERMIOS -DANSI_SOURCE
 CFLAGS+=	-I${LCRYPTO_SRC} -I${LCRYPTO_SRC}/crypto -I${.OBJDIR}
 CFLAGS+=	-DOPENSSL_THREADS -DDSO_DLFCN -DHAVE_DLFCN_H
 
-.if ${MACHINE_ARCH} == "amd64"
-CFLAGS+=-DL_ENDIAN -DOPENSSL_IA32_SSE2
+.include <bsd.endian.mk>
+
+.if ${TARGET_ENDIANNESS} == 1234
+CFLAGS+=-DL_ENDIAN
+.elif ${TARGET_ENDIANNESS} == 4321
+CFLAGS+=-DB_ENDIAN
+.endif
+
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+_ASM_AVX!=	{ \
+		    echo vzeroall | \
+		    ${CC} -x assembler -o /dev/null -c - 2> /dev/null; \
+		} && echo yes || echo no
+.if ${_ASM_AVX} == yes
+ASM_${MACHINE_CPUARCH}=
+.endif
+.endif
+
+.if defined(ASM_amd64)
+CFLAGS+=-DOPENSSL_IA32_SSE2
 CFLAGS+=-DAES_ASM -DBSAES_ASM -DVPAES_ASM
 CFLAGS+=-DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_MONT5 -DOPENSSL_BN_ASM_GF2m
 CFLAGS+=-DMD5_ASM
 CFLAGS+=-DGHASH_ASM
 CFLAGS+=-DSHA1_ASM -DSHA256_ASM -DSHA512_ASM
 CFLAGS+=-DWHIRLPOOL_ASM
-.elif ${MACHINE_ARCH} == "i386"
-CFLAGS+=-DL_ENDIAN -DOPENSSL_IA32_SSE2
+.elif defined(ASM_i386)
+CFLAGS+=-DOPENSSL_IA32_SSE2
 CFLAGS+=-DAES_ASM -DVPAES_ASM
 CFLAGS+=-DOPENSSL_BN_ASM_PART_WORDS -DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_GF2m
 CFLAGS+=-DMD5_ASM
@@ -58,7 +77,7 @@ man-update:
 
 man-makefile-update:
 	rm -f ${.CURDIR}/Makefile.man
-	echo '# $$'MidnightBSD'$$' >> ${.CURDIR}/Makefile.man
+	echo '# $$'FreeBSD'$$' >> ${.CURDIR}/Makefile.man
 	echo '# DO NOT EDIT: generated from man-makefile-update target' >> \
 	    ${.CURDIR}/Makefile.man
 	for i in ${LCRYPTO_DOC}/${_docs}/*.pod; do \

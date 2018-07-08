@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/vpaes-x86_64.S 264331 2014-04-10 22:39:27Z jkim $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/vpaes-x86_64.S 299966 2016-05-16 19:30:27Z jkim $
+# Do not modify. This file is auto-generated from vpaes-x86_64.pl.
 .text	
 
 

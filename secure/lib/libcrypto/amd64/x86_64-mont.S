@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-mont.S 238405 2012-07-12 19:30:53Z jkim $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-mont.S 299966 2016-05-16 19:30:27Z jkim $
+# Do not modify. This file is auto-generated from x86_64-mont.pl.
 .text	
 
 .globl	bn_mul_mont
@@ -31,6 +33,20 @@ bn_mul_mont:
 
 	movq	%r11,8(%rsp,%r9,8)
 .Lmul_body:
+
+
+
+
+
+
+	subq	%rsp,%r11
+	andq	$-4096,%r11
+.Lmul_page_walk:
+	movq	(%rsp,%r11,1),%r10
+	subq	$4096,%r11
+.byte	0x66,0x2e		
+	jnc	.Lmul_page_walk
+
 	movq	%rdx,%r12
 	movq	(%r8),%r8
 	movq	(%r12),%rbx
@@ -228,6 +244,14 @@ bn_mul4x_mont:
 
 	movq	%r11,8(%rsp,%r9,8)
 .Lmul4x_body:
+	subq	%rsp,%r11
+	andq	$-4096,%r11
+.Lmul4x_page_walk:
+	movq	(%rsp,%r11,1),%r10
+	subq	$4096,%r11
+.byte	0x2e			
+	jnc	.Lmul4x_page_walk
+
 	movq	%rdi,16(%rsp,%r9,8)
 	movq	%rdx,%r12
 	movq	(%r8),%r8
@@ -610,6 +634,7 @@ bn_mul4x_mont:
 .align	16
 bn_sqr4x_mont:
 .Lsqr4x_enter:
+	movq	%rsp,%rax
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
@@ -618,12 +643,23 @@ bn_sqr4x_mont:
 	pushq	%r15
 
 	shll	$3,%r9d
-	xorq	%r10,%r10
 	movq	%rsp,%r11
-	subq	%r9,%r10
+	negq	%r9
 	movq	(%r8),%r8
-	leaq	-72(%rsp,%r10,2),%rsp
+	leaq	-72(%rsp,%r9,2),%rsp
 	andq	$-1024,%rsp
+
+	subq	%rsp,%r11
+	andq	$-4096,%r11
+.Lsqr4x_page_walk:
+	movq	(%rsp,%r11,1),%r10
+	subq	$4096,%r11
+.byte	0x2e			
+	jnc	.Lsqr4x_page_walk
+
+	movq	%r9,%r10
+	negq	%r9
+	leaq	-48(%rax),%r11
 
 
 

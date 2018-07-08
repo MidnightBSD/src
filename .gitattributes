@@ -55498,6 +55498,7 @@ secure/lib/libcrypto/man/EVP_BytesToKey.3 -text
 secure/lib/libcrypto/man/EVP_DigestInit.3 -text
 secure/lib/libcrypto/man/EVP_DigestSignInit.3 svneol=native#text/plain
 secure/lib/libcrypto/man/EVP_DigestVerifyInit.3 svneol=native#text/plain
+secure/lib/libcrypto/man/EVP_EncodeInit.3 svneol=native#text/plain
 secure/lib/libcrypto/man/EVP_EncryptInit.3 -text
 secure/lib/libcrypto/man/EVP_OpenInit.3 -text
 secure/lib/libcrypto/man/EVP_PKEY_CTX_ctrl.3 svneol=native#text/plain
@@ -55580,6 +55581,7 @@ secure/lib/libcrypto/man/d2i_DHparams.3 -text
 secure/lib/libcrypto/man/d2i_DSAPublicKey.3 -text
 secure/lib/libcrypto/man/d2i_ECPrivateKey.3 svneol=native#text/plain
 secure/lib/libcrypto/man/d2i_PKCS8PrivateKey.3 -text
+secure/lib/libcrypto/man/d2i_PrivateKey.3 svneol=native#text/plain
 secure/lib/libcrypto/man/d2i_RSAPublicKey.3 -text
 secure/lib/libcrypto/man/d2i_X509.3 -text
 secure/lib/libcrypto/man/d2i_X509_ALGOR.3 -text
@@ -55612,14 +55614,12 @@ secure/lib/libcrypto/man/threads.3 -text
 secure/lib/libcrypto/man/ui.3 -text
 secure/lib/libcrypto/man/ui_compat.3 -text
 secure/lib/libcrypto/man/x509.3 -text
-secure/lib/libcrypto/opensslconf-amd64.h -text
-secure/lib/libcrypto/opensslconf-arm.h svneol=native#text/plain
-secure/lib/libcrypto/opensslconf-i386.h -text
-secure/lib/libcrypto/opensslconf-ia64.h svneol=native#text/plain
-secure/lib/libcrypto/opensslconf-mips.h svneol=native#text/plain
-secure/lib/libcrypto/opensslconf-powerpc.h svneol=native#text/plain
-secure/lib/libcrypto/opensslconf-sparc64.h svneol=native#text/plain
-secure/lib/libcrypto/opensslconf-x86.h svneol=native#text/plain
+secure/lib/libcrypto/opensslconf-arm.h.in svneol=native#text/plain
+secure/lib/libcrypto/opensslconf-ia64.h.in svneol=native#text/plain
+secure/lib/libcrypto/opensslconf-mips.h.in svneol=native#text/plain
+secure/lib/libcrypto/opensslconf-powerpc.h.in svneol=native#text/plain
+secure/lib/libcrypto/opensslconf-sparc64.h.in svneol=native#text/plain
+secure/lib/libcrypto/opensslconf-x86.h.in svneol=native#text/plain
 secure/lib/libnetpgp/Makefile -text
 secure/lib/libnetpgp/config.h -text
 secure/lib/libssh/Makefile -text

@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/aes-x86_64.S 238405 2012-07-12 19:30:53Z jkim $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/aes-x86_64.S 299966 2016-05-16 19:30:27Z jkim $
+# Do not modify. This file is auto-generated from aes-x86_64.pl.
 .text	
 .type	_x86_64_AES_encrypt,@function
 .align	16

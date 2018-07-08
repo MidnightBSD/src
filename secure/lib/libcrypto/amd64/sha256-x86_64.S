@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/sha256-x86_64.S 238405 2012-07-12 19:30:53Z jkim $
+/* $MidnightBSD$ */
+	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/sha256-x86_64.S 299966 2016-05-16 19:30:27Z jkim $
+	# Do not modify. This file is auto-generated from sha512-x86_64.pl.
 .text	
 
 .globl	sha256_block_data_order

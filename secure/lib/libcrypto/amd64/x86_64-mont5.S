@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-mont5.S 238405 2012-07-12 19:30:53Z jkim $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-mont5.S 299966 2016-05-16 19:30:27Z jkim $
+# Do not modify. This file is auto-generated from x86_64-mont5.pl.
 .text	
 
 .globl	bn_mul_mont_gather5
@@ -32,6 +34,20 @@ bn_mul_mont_gather5:
 
 	movq	%rax,8(%rsp,%r9,8)
 .Lmul_body:
+
+
+
+
+
+
+	subq	%rsp,%rax
+	andq	$-4096,%rax
+.Lmul_page_walk:
+	movq	(%rsp,%rax,1),%r11
+	subq	$4096,%rax
+.byte	0x2e			
+	jnc	.Lmul_page_walk
+
 	leaq	128(%rdx),%r12
 	movdqa	0(%r10),%xmm0
 	movdqa	16(%r10),%xmm1
@@ -420,6 +436,14 @@ bn_mul4x_mont_gather5:
 
 	movq	%rax,8(%rsp,%r9,8)
 .Lmul4x_body:
+	subq	%rsp,%rax
+	andq	$-4096,%rax
+.Lmul4x_page_walk:
+	movq	(%rsp,%rax,1),%r11
+	subq	$4096,%rax
+.byte	0x2e			
+	jnc	.Lmul4x_page_walk
+
 	movq	%rdi,16(%rsp,%r9,8)
 	leaq	128(%rdx),%r12
 	movdqa	0(%r10),%xmm0

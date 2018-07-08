@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-gf2m.S 238405 2012-07-12 19:30:53Z jkim $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-gf2m.S 299966 2016-05-16 19:30:27Z jkim $
+# Do not modify. This file is auto-generated from x86_64-gf2m.pl.
 .text	
 
 .type	_mul_1x1,@function

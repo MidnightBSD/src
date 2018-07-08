@@ -1,4 +1,6 @@
-	# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64cpuid.S 238405 2012-07-12 19:30:53Z jkim $
+/* $MidnightBSD$ */
+# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64cpuid.S 299966 2016-05-16 19:30:27Z jkim $
+# Do not modify. This file is auto-generated from x86_64cpuid.pl.
 
 .hidden	OPENSSL_cpuid_setup
 .section	.init
