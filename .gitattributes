@@ -75762,6 +75762,8 @@ usr.bin/compress/compress.c -text
 usr.bin/compress/doc/NOTES -text
 usr.bin/compress/doc/README -text
 usr.bin/compress/doc/revision.log -text
+usr.bin/compress/tests/Makefile svneol=native#text/plain
+usr.bin/compress/tests/compress_test.sh svneol=native#text/plain
 usr.bin/compress/zopen.3 -text
 usr.bin/compress/zopen.c -text
 usr.bin/compress/zopen.h -text
