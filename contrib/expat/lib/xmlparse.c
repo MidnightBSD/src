@@ -1727,12 +1727,6 @@ XML_GetBuffer(XML_Parser parser, int len)
   }
 
   if (len > bufferLim - bufferEnd) {
-/* BEGIN MOZILLA CHANGE (sanity check neededSize) */
-    if (neededSize < 0) {
-      errorCode = XML_ERROR_NO_MEMORY;
-      return NULL;
-    }
-/* END MOZILLA CHANGE */
 #ifdef XML_CONTEXT_BYTES
     int keep;
 #endif  /* defined XML_CONTEXT_BYTES */

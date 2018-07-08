@@ -13028,7 +13028,6 @@ contrib/expat/lib/internal.h -text
 contrib/expat/lib/latin1tab.h -text
 contrib/expat/lib/nametab.h -text
 contrib/expat/lib/utf8tab.h -text
-contrib/expat/lib/winconfig.h -text
 contrib/expat/lib/xmlparse.c -text
 contrib/expat/lib/xmlrole.c -text
 contrib/expat/lib/xmlrole.h -text
