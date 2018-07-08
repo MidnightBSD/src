@@ -4,12 +4,12 @@
 /MANIFEST -text
 /Makefile.in -text
 /README -text
-/configure.in -text
-doc/expat.png -text svneol=unset#unset
+/configure.ac -text
+doc/expat.png -text svneol=unset#image/png
 doc/reference.html -text
 doc/style.css -text
 doc/xmlwf.1 -text
-doc/xmlwf.sgml -text
+doc/xmlwf.xml -text
 examples/elements.c -text
 examples/outline.c -text
 /expat_config.h.in -text
@@ -31,6 +31,8 @@ lib/xmltok_impl.c -text
 lib/xmltok_impl.h -text
 lib/xmltok_ns.c -text
 tests/README.txt -text
+tests/benchmark/README.txt -text
+tests/benchmark/benchmark.c -text
 tests/chardata.c -text
 tests/chardata.h -text
 tests/minicheck.c -text
