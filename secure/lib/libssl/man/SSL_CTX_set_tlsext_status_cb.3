@@ -133,36 +133,76 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "SSL_CTX_ctrl 3"
-.TH SSL_CTX_ctrl 3 "2016-09-22" "1.0.1u" "OpenSSL"
+.IX Title "SSL_CTX_set_tlsext_status_cb 3"
+.TH SSL_CTX_set_tlsext_status_cb 3 "2016-09-22" "1.0.1u" "OpenSSL"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-SSL_CTX_ctrl, SSL_CTX_callback_ctrl, SSL_ctrl, SSL_callback_ctrl \- internal handling functions for SSL_CTX and SSL objects
+SSL_CTX_set_tlsext_status_cb, SSL_CTX_set_tlsext_status_arg,
+SSL_set_tlsext_status_type, SSL_get_tlsext_status_ocsp_resp,
+SSL_set_tlsext_status_ocsp_resp \- OCSP Certificate Status Request functions
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .Vb 1
-\& #include <openssl/ssl.h>
+\& #include <openssl/tls1.h>
 \&
-\& long SSL_CTX_ctrl(SSL_CTX *ctx, int cmd, long larg, void *parg);
-\& long SSL_CTX_callback_ctrl(SSL_CTX *, int cmd, void (*fp)());
+\& long SSL_CTX_set_tlsext_status_cb(SSL_CTX *ctx,
+\&                                   int (*callback)(SSL *, void *));
+\& long SSL_CTX_set_tlsext_status_arg(SSL_CTX *ctx, void *arg);
 \&
-\& long SSL_ctrl(SSL *ssl, int cmd, long larg, void *parg);
-\& long SSL_callback_ctrl(SSL *, int cmd, void (*fp)());
+\& long SSL_set_tlsext_status_type(SSL *s, int type);
+\&
+\& long SSL_get_tlsext_status_ocsp_resp(ssl, unsigned char **resp);
+\& long SSL_set_tlsext_status_ocsp_resp(ssl, unsigned char *resp, int len);
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-The SSL_*\fI_ctrl()\fR family of functions is used to manipulate settings of
-the \s-1SSL_CTX\s0 and \s-1SSL\s0 objects. Depending on the command \fBcmd\fR the arguments
-\&\fBlarg\fR, \fBparg\fR, or \fBfp\fR are evaluated. These functions should never
-be called directly. All functionalities needed are made available via
-other functions or macros.
+A client application may request that a server send back an \s-1OCSP\s0 status response
+(also known as \s-1OCSP\s0 stapling). To do so the client should call the
+\&\fISSL_set_tlsext_status_type()\fR function prior to the start of the handshake.
+Currently the only supported type is \fBTLSEXT_STATUSTYPE_ocsp\fR. This value
+should be passed in the \fBtype\fR argument. The client should additionally provide
+a callback function to decide what to do with the returned \s-1OCSP\s0 response by
+calling \fISSL_CTX_set_tlsext_status_cb()\fR. The callback function should determine
+whether the returned \s-1OCSP\s0 response is acceptable or not. The callback will be
+passed as an argument the value previously set via a call to
+\&\fISSL_CTX_set_tlsext_status_arg()\fR. Note that the callback will not be called in
+the event of a handshake where session resumption occurs (because there are no
+Certificates exchanged in such a handshake).
+.PP
+The response returned by the server can be obtained via a call to
+\&\fISSL_get_tlsext_status_ocsp_resp()\fR. The value \fB*resp\fR will be updated to point
+to the \s-1OCSP\s0 response data and the return value will be the length of that data.
+Typically a callback would obtain an \s-1OCSP_RESPONSE\s0 object from this data via a
+call to the \fId2i_OCSP_RESPONSE()\fR function. If the server has not provided any
+response data then \fB*resp\fR will be \s-1NULL\s0 and the return value from
+\&\fISSL_get_tlsext_status_ocsp_resp()\fR will be \-1.
+.PP
+A server application must also call the \fISSL_CTX_set_tlsext_status_cb()\fR function
+if it wants to be able to provide clients with \s-1OCSP\s0 Certificate Status
+responses. Typically the server callback would obtain the server certificate
+that is being sent back to the client via a call to \fISSL_get_certificate()\fR;
+obtain the \s-1OCSP\s0 response to be sent back; and then set that response data by
+calling \fISSL_set_tlsext_status_ocsp_resp()\fR. A pointer to the response data should
+be provided in the \fBresp\fR argument, and the length of that data should be in
+the \fBlen\fR argument.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
-The return values of the SSL*\fI_ctrl()\fR functions depend on the command
-supplied via the \fBcmd\fR parameter.
-.SH "SEE ALSO"
-.IX Header "SEE ALSO"
-\&\fIssl\fR\|(3)
+The callback when used on the client side should return a negative value on
+error; 0 if the response is not acceptable (in which case the handshake will
+fail) or a positive value if it is acceptable.
+.PP
+The callback when used on the server side should return with either
+\&\s-1SSL_TLSEXT_ERR_OK \s0(meaning that the \s-1OCSP\s0 response that has been set should be
+returned), \s-1SSL_TLSEXT_ERR_NOACK \s0(meaning that an \s-1OCSP\s0 response should not be
+returned) or \s-1SSL_TLSEXT_ERR_ALERT_FATAL \s0(meaning that a fatal error has
+occurred).
+.PP
+\&\fISSL_CTX_set_tlsext_status_cb()\fR, \fISSL_CTX_set_tlsext_status_arg()\fR,
+\&\fISSL_set_tlsext_status_type()\fR and \fISSL_set_tlsext_status_ocsp_resp()\fR return 0 on
+error or 1 on success.
+.PP
+\&\fISSL_get_tlsext_status_ocsp_resp()\fR returns the length of the \s-1OCSP\s0 response data
+or \-1 if there is no \s-1OCSP\s0 response data.
