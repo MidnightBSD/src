@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD$
 
 BZ2DIR=	${.CURDIR}/../../contrib/bzip2
