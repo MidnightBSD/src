@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -35,7 +36,7 @@ static char sccsid[] = "@(#)chkey.c 1.7 91/03/11 Copyr 1986 Sun Micro";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/chkey/chkey.c 231994 2012-02-22 06:27:20Z kevlo $");
 
 /*
  * Copyright (C) 1986, Sun Microsystems, Inc.
@@ -94,6 +95,9 @@ main(int argc, char **argv)
 #ifdef YP
 	char *master;
 #endif
+#ifdef YPPASSWD
+	char *cryptpw;
+#endif
 
 	while ((ch = getopt(argc, argv, "f")) != -1)
 		switch(ch) {
@@ -149,7 +153,8 @@ main(int argc, char **argv)
 	pass = getpass("Password:");
 #ifdef YPPASSWD
 	if (!force) {
-		if (strcmp(crypt(pass, pw->pw_passwd), pw->pw_passwd) != 0)
+		cryptpw = crypt(pass, pw->pw_passwd);
+		if (cryptpw == NULL || strcmp(cryptpw, pw->pw_passwd) != 0)
 			errx(1, "invalid password");
 	}
 #else
