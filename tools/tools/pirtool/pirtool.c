@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2006 Bruce M. Simpson.
  * All rights reserved

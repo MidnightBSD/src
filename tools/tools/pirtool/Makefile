@@ -1,7 +1,8 @@
-#	$FreeBSD: src/tools/tools/pirtool/Makefile,v 1.5 2005/01/21 18:12:46 bms Exp $
+# $MidnightBSD$
+#	$FreeBSD: stable/10/tools/tools/pirtool/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=   pirtool
 SRCS=   pirtool.c
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>
