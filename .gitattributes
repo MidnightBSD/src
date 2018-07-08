@@ -48151,6 +48151,7 @@ crypto/openssl/util/x86asm.sh -text
 etc/Makefile -text
 etc/amd.map -text
 etc/apmd.conf -text
+etc/auto_master -text
 etc/autofs/Makefile svneol=native#text/plain
 etc/autofs/include_ldap -text
 etc/autofs/special_hosts -text
