@@ -1,4 +1,5 @@
-# $FreeBSD: src/tools/tools/sysdoc/Makefile,v 1.1 2005/03/01 05:48:37 trhodes Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/tools/tools/sysdoc/Makefile 241828 2012-10-22 02:12:11Z eadler $
 
 sysctl.5:
 	sh ${.CURDIR}/sysdoc.sh -k /boot/kernel
