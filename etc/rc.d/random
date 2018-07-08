@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/random,v 1.8 2005/04/11 02:45:05 dougb Exp $
 # $MidnightBSD$
 
 # PROVIDE: random
@@ -13,6 +12,9 @@
 name="random"
 start_cmd="random_start"
 stop_cmd="random_stop"
+
+extra_commands="saveseed"
+saveseed_cmd="${name}_stop"
 
 feed_dev_random()
 {
