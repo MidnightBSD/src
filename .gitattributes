@@ -75589,7 +75589,6 @@ usr.bin/calendar/calendars/calendar.christian -text
 usr.bin/calendar/calendars/calendar.computer -text
 usr.bin/calendar/calendars/calendar.croatian -text
 usr.bin/calendar/calendars/calendar.dutch -text
-usr.bin/calendar/calendars/calendar.freebsd -text
 usr.bin/calendar/calendars/calendar.french -text
 usr.bin/calendar/calendars/calendar.german -text
 usr.bin/calendar/calendars/calendar.history -text
