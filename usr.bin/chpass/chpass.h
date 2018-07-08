@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +39,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)chpass.h	8.4 (Berkeley) 4/2/94
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/chpass/chpass.h 227228 2011-11-06 17:20:44Z ed $
  */
 
 struct passwd;
@@ -48,7 +49,7 @@ typedef struct _entry {
 	int (*func)(char *, struct passwd *, struct _entry *);
 	int restricted;
 	size_t len;
-	char *except, *save;
+	const char *except, *save;
 } ENTRY;
 
 /* Field numbers. */

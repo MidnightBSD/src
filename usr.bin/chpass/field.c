@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -45,7 +46,7 @@ static char sccsid[] = "@(#)field.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/usr.bin/chpass/field.c 124692 2004-01-18 21:46:39Z charnier $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
