@@ -24,7 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.resume,v 1.3 2008/12/04 17:18:03 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # sample run command file for APM Resume Event
 
@@ -50,10 +51,6 @@ fi
 # If a device driver has problems resuming, try unloading it before
 # suspend and reloading it on resume.  Example:
 # kldload usb
-
-# wpa_supplicant(8) doesn't seem to reassociate during resume.  Uncomment
-# the following to signal it to reassociate.
-# /usr/sbin/wpa_cli reassociate
 
 /usr/bin/logger -t $subsystem resumed at `/bin/date +'%Y%m%d %H:%M:%S'`
 /bin/sync && /bin/sync && /bin/sync
