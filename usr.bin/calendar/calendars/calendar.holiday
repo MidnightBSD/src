@@ -1,7 +1,8 @@
 /*
  * Holiday
  *
- * $FreeBSD$
+ * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/calendar/calendars/calendar.holiday 326955 2017-12-19 01:02:58Z grog $
  */
 
 #ifndef _calendar_holiday_
@@ -248,7 +249,7 @@
 06/30	Day of the Army in Guatemala
 06/MonFirst	Jefferson Davis's Birthday in Alabama & Mississippi (1st Monday)
 06/MonFirst	Jefferson Davis's Birthday in Florida, Georgia, & S. Carolina
-07/01	Dominion Day in Canada
+07/01	Canada Day
 07/01	Freedom Day in Suriname
 07/01	Independence Day in Burundi
 07/01	National Day in Rwanda
@@ -356,8 +357,8 @@
 08/30	Victory Day in Turkey
 08/31	Independence Day (Merdeka) in Malaysia
 08/31	Independence Day in Trinidad and Tobago
-08/31	Pashtoonian Day in Afghanistan
-08/FriThird	Admission Day in Hawaii, 1984 (3rd Friday)
+08/31	Pashtunistan Day in Afghanistan
+08/FriThird	Admission Day in Hawaii, 1959 (3rd Friday)
 09/01	Army Day in Chile
 09/03	Independence Day in Qatar
 09/03	Memorial Day in Tunisia
@@ -447,7 +448,7 @@
 10/20	Kenyatta Day in Kenya
 10/21	Armed Forces Day in Honduras
 10/21	Revolution Days (2 days) in Somalia
-10/23	Chulalongkron's Day in Thailand
+10/23	King Chulalongkorn Day in Thailand
 10/24	Independence Day in Zambia
 10/24	United Nations Day
 10/25	Taiwan Restoration Day in Taiwan
