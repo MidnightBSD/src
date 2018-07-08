@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/i18n/csmapper/GB/UCS%GBKEXT.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: UCS%GBKEXT.src,v 1.2 2006/08/29 18:52:29 tnozaki Exp $
 
 # Copyright (c)2006 Citrus Project,
