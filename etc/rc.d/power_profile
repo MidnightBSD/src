@@ -6,7 +6,6 @@
 # Arguments: 0x00 (AC offline, economy) or 0x01 (AC online, performance)
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: power_profile
 # REQUIRE: FILESYSTEMS syslogd
@@ -27,7 +26,7 @@ LOGGER="logger -t power_profile -p daemon.notice"
 # $highest_value: maximum value for this sysctl, when $value is "HIGH"
 # $lowest_value: minimum value for this sysctl, when $value is "LOW"
 #
-sysctl_set ()
+sysctl_set()
 {
 	# Check if the node exists
 	if [ -z "$(sysctl -n ${node} 2> /dev/null)" ]; then
