@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: route6d
 # REQUIRE: netif routing
