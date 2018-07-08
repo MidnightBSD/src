@@ -1,5 +1,4 @@
-# $MidnightBSD: src/secure/usr.bin/Makefile,v 1.5 2009/06/08 01:09:16 laffer1 Exp $
-# $FreeBSD: src/secure/usr.bin/Makefile,v 1.24 2003/07/16 20:59:15 markm Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -10,5 +9,11 @@ SUBDIR+=bdes openssl netpgp
 SUBDIR+=scp sftp ssh ssh-add ssh-agent ssh-keygen ssh-keyscan
 .endif
 .endif
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=tests
+.endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
