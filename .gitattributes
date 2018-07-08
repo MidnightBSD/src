@@ -48481,6 +48481,7 @@ etc/rc.d/timed -text
 etc/rc.d/tmp -text
 etc/rc.d/ubthidhci -text
 etc/rc.d/ugidfw -text
+etc/rc.d/utx -text
 etc/rc.d/var -text
 etc/rc.d/virecover -text
 etc/rc.d/watchdogd -text
