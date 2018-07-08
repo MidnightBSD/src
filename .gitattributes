@@ -48174,9 +48174,12 @@ etc/defaults/periodic.conf -text
 etc/defaults/rc.conf -text
 etc/devd.conf -text
 etc/devd/Makefile -text
+etc/devd/apple.conf svneol=native#text/plain
 etc/devd/asus.conf -text
+etc/devd/hyperv.conf svneol=native#text/plain
 etc/devd/uath.conf -text
 etc/devd/usb.conf -text
+etc/devd/zfs.conf svneol=native#text/plain
 etc/devfs.conf -text
 etc/dhclient.conf -text
 etc/dhcp6c.conf -text
