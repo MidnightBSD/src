@@ -55716,6 +55716,7 @@ secure/libexec/Makefile.inc -text
 secure/libexec/sftp-server/Makefile -text
 secure/libexec/ssh-keysign/Makefile -text
 secure/libexec/ssh-pkcs11-helper/Makefile -text
+secure/libexec/tests/Makefile svneol=native#text/plain
 secure/tests/Makefile svneol=native#text/plain
 secure/usr.bin/Makefile -text
 secure/usr.bin/Makefile.inc -text
