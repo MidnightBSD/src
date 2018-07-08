@@ -3,7 +3,7 @@
 # $MidnightBSD$
 
 # PROVIDE: FILESYSTEMS
-# REQUIRE: root mountcritlocal cleanvar zfs
+# REQUIRE: root mountcritlocal cleanvar
 
 #	This is a dummy dependency, for services which require file systems
 #	to be mounted before starting.  It also serves as the default early /

@@ -48491,6 +48491,7 @@ etc/rc.d/ypset -text
 etc/rc.d/ypupdated -text
 etc/rc.d/ypxfrd -text
 etc/rc.d/zfs -text
+etc/rc.d/zfsbe -text
 etc/rc.d/zvol -text
 etc/rc.firewall -text
 etc/rc.initdiskless -text
