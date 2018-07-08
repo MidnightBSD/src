@@ -46317,12 +46317,6 @@ crypto/openssl/apps/client.pem -text
 crypto/openssl/apps/cms.c -text
 crypto/openssl/apps/crl.c -text
 crypto/openssl/apps/crl2p7.c -text
-crypto/openssl/apps/demoCA/cacert.pem -text
-crypto/openssl/apps/demoCA/index.txt -text
-crypto/openssl/apps/demoCA/private/cakey.pem -text
-crypto/openssl/apps/demoCA/serial -text
-crypto/openssl/apps/demoSRP/srp_verifier.txt -text
-crypto/openssl/apps/demoSRP/srp_verifier.txt.attr -text
 crypto/openssl/apps/dgst.c -text
 crypto/openssl/apps/dh.c -text
 crypto/openssl/apps/dh1024.pem -text
@@ -46346,8 +46340,6 @@ crypto/openssl/apps/gendh.c -text
 crypto/openssl/apps/gendsa.c -text
 crypto/openssl/apps/genpkey.c -text
 crypto/openssl/apps/genrsa.c -text
-crypto/openssl/apps/install-apps.com -text
-crypto/openssl/apps/md4.c -text
 crypto/openssl/apps/nseq.c -text
 crypto/openssl/apps/ocsp.c -text
 crypto/openssl/apps/oid.cnf -text
@@ -46405,8 +46397,6 @@ crypto/openssl/apps/ts.c -text
 crypto/openssl/apps/tsget -text
 crypto/openssl/apps/verify.c -text
 crypto/openssl/apps/version.c -text
-crypto/openssl/apps/vms_decc_init.c -text
-crypto/openssl/apps/winrand.c -text
 crypto/openssl/apps/x509.c -text
 crypto/openssl/certs/README.RootCerts -text
 crypto/openssl/certs/RegTP-5R.pem -text

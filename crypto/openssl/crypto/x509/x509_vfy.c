@@ -186,6 +186,8 @@ int X509_verify_cert(X509_STORE_CTX *ctx)
         ok = -1;
         goto end;
     }
+    CRYPTO_add(&ctx->cert->references, 1, CRYPTO_LOCK_X509);
+    ctx->last_untrusted = 1;
 
     /* We use a temporary STACK so we can chop and hack at it */
     if (ctx->untrusted != NULL
@@ -322,7 +324,7 @@ int X509_verify_cert(X509_STORE_CTX *ctx)
          * if the user hasn't switched off alternate chain checking
          */
         retry = 0;
-        if (j == ctx->last_untrusted &&
+        if (num == ctx->last_untrusted &&
             !(ctx->param->flags & X509_V_FLAG_NO_ALT_CHAINS)) {
             while (j-- > 1) {
                 xtmp2 = sk_X509_value(ctx->chain, j - 1);
@@ -346,8 +348,8 @@ int X509_verify_cert(X509_STORE_CTX *ctx)
                         xtmp = sk_X509_pop(ctx->chain);
                         X509_free(xtmp);
                         num--;
-                        ctx->last_untrusted--;
                     }
+                    ctx->last_untrusted = sk_X509_num(ctx->chain);
                     retry = 1;
                     break;
                 }

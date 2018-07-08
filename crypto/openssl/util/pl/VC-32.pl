@@ -342,7 +342,7 @@ sub do_link_rule
 	local($ret,$_);
 	$file =~ s/\//$o/g if $o ne '/';
 	$n=&bname($target);
-	$ret.="$target: $files $dep_libs\n";
+	$ret.="$target: $files $dep_libs";
 	if ($standalone == 1)
 		{
 		$ret.=" \$(OBJ_D)${o}applink.obj" if $shlib;
@@ -356,6 +356,7 @@ sub do_link_rule
 		}
 	elsif ($standalone == 2)
 		{
+		$ret.="\n";
 		$ret.="\tSET FIPS_LINK=\$(LINK_CMD)\n";
 		$ret.="\tSET FIPS_CC=\$(CC)\n";
 		$ret.="\tSET FIPS_CC_ARGS=/Fo\$(OBJ_D)${o}fips_premain.obj \$(SHLIB_CFLAGS) -c\n";
@@ -368,6 +369,7 @@ sub do_link_rule
 		}
 	else
 		{
+		$ret.="\n";
 		$ret.="\t\$(LINK_CMD) \$(LFLAGS) $efile$target @<<\n";
 		$ret.="\t\$(APP_EX_OBJ) $files $libs\n<<\n";
 		}
