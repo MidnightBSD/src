@@ -75734,6 +75734,10 @@ usr.bin/col/Makefile -text
 usr.bin/col/README -text
 usr.bin/col/col.1 -text
 usr.bin/col/col.c -text
+usr.bin/col/tests/Makefile svneol=native#text/plain
+usr.bin/col/tests/col_test.sh svneol=native#text/plain
+usr.bin/col/tests/rlf.in svneol=native#text/plain
+usr.bin/col/tests/rlf2.in svneol=native#text/plain
 usr.bin/colcrt/Makefile svneol=native#text/plain
 usr.bin/colcrt/colcrt.1 svneol=native#text/plain
 usr.bin/colcrt/colcrt.c svneol=native#text/plain
