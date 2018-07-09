@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Roland Smith <rsmith@xs4all.nl>
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man5/devfs.conf.5 290246 2015-11-01 22:27:40Z ngie $
 .\"
-.Dd May 17, 2005
+.Dd November 1, 2015
 .Dt DEVFS.CONF 5
 .Os
 .Sh NAME
@@ -100,8 +101,6 @@ To create a
 .Pa /dev/cdrom
 link that points to the first
 .Xr SCSI 4
-or
-.Xr atapicam 4
 CD-ROM,
 the following may be added to
 .Nm :
@@ -111,9 +110,9 @@ link	cd0	cdrom
 .Pp
 Similarly, to link
 .Pa /dev/cdrom
-to the first ATAPI CD-ROM device, the following action may be used:
+to the first SCSI CD-ROM device, the following action may be used:
 .Bd -literal -offset indent
-link	acd0	cdrom
+link	cd0	cdrom
 .Ed
 .Pp
 To set the owner of a device, the
