@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1997, Jim Binkley
 .\" All rights reserved.
@@ -28,8 +29,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.Dd September 29, 2006
+.\" $FreeBSD: stable/10/share/man/man4/man4.i386/wl.4 320923 2017-07-12 22:16:54Z jhb $
+.Dd July 8, 2017
 .Dt WL 4 i386
 .Os
 .Sh NAME
@@ -37,6 +38,11 @@
 .Nd T1 speed ISA/radio lan card
 .Sh SYNOPSIS
 .Cd "device wl0 at isa? port 0x300 irq 5"
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver will be removed in
+.Fx 12.0 .
 .Sh DESCRIPTION
 The
 .Nm
