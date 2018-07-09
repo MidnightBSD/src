@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1997
 .\"      Michael Smith
 .\"
@@ -23,7 +24,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ppi.4 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd January 2, 1998
 .Dt PPI 4
@@ -53,7 +54,7 @@ interface is performed using
 .Fn ioctl
 calls.
 Each command takes a single
-.Ft u_int8_t
+.Ft uint8_t
 argument, transferring one byte of data.
 The following commands are available:
 .Bl -tag -width indent
@@ -85,7 +86,7 @@ again, the following code fragment can be used:
 .Bd -literal -compact
 
 	int		fd;
-	u_int8_t	val;
+	uint8_t		val;
 
 	val = 0x5a;
 	ioctl(fd, PPISDATA, &val);
