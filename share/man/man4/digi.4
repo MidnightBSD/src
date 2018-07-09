@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1991 The Regents of the University of California.
 .\" All rights reserved.
 .\"
@@ -35,9 +36,9 @@
 .\"     from: @(#)dca.4	5.2 (Berkeley) 3/27/91
 .\"	from: com.4,v 1.1 1993/08/06 11:19:07 cgd Exp
 .\"	from: sio.4,v 1.15 1994/12/06 20:14:30 bde Exp
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/digi.4 320923 2017-07-12 22:16:54Z jhb $
 .\"
-.Dd December 7, 2003
+.Dd July 8, 2017
 .Dt DIGI 4
 .Os
 .Sh NAME
@@ -84,6 +85,11 @@ Device numbering:
               \fBI\fPnitial
                \fBPPPPP\fPort number
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver will be removed in
+.Fx 12.0 .
 .Sh DESCRIPTION
 The
 .Nm

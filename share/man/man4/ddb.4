@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Mach Operating System
 .\" Copyright (c) 1991,1990 Carnegie Mellon University
@@ -58,9 +59,9 @@
 .\" 	Created.
 .\" 	[90/08/30            dbg]
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ddb.4 305853 2016-09-16 00:14:26Z hiren $
 .\"
-.Dd December 16, 2011
+.Dd July 13, 2016
 .Dt DDB 4
 .Os
 .Sh NAME
@@ -219,6 +220,8 @@ look at by bytes (8 bits)
 look at by half words (16 bits)
 .It Cm l
 look at by long words (32 bits)
+.It Cm g
+look at by quad words (64 bits)
 .It Cm a
 print the location being displayed
 .It Cm A
@@ -545,6 +548,11 @@ modifier will alter the display to show VM map
 addresses for the process and not show other information.
 .\"
 .Pp
+.It Ic show Cm all trace
+.It Ic alltrace
+.Xc
+Show a stack trace for every thread in the system.
+.Pp
 .It Ic show Cm all ttys
 Show all TTY's within the system.
 Output is similar to
@@ -570,8 +578,8 @@ The same as "show pcpu", but for every CPU present in the system.
 .Pp
 .It Ic show Cm allrman
 Show information related with resource management, including
-interrupt request lines, DMA request lines, I/O ports and I/O memory
-addresses.
+interrupt request lines, DMA request lines, I/O ports, I/O memory
+addresses, and Resource IDs.
 .\"
 .Pp
 .It Ic show Cm apic
@@ -582,17 +590,33 @@ Dump data about APIC IDT vector mappings.
 Show breakpoints set with the "break" command.
 .\"
 .Pp
-.It Ic show Cm buffer
-Show buffer structure of
+.It Ic show Cm bio Ar addr
+Show information about the bio structure
+.Vt struct bio
+present at
+.Ar addr .
+See the
+.Pa sys/bio.h
+header file and
+.Xr g_bio 9
+for more details on the exact meaning of the structure fields.
+.\"
+.Pp
+.It Ic show Cm buffer Ar addr
+Show information about the buf structure
 .Vt struct buf
-type.
-Such a structure is used within the
-.Fx
-kernel for the I/O subsystem
-implementation.
-For an exact interpretation of the output, please see the
+present at
+.Ar addr .
+See the
 .Pa sys/buf.h
-header file.
+header file for more details on the exact meaning of the structure fields.
+.\"
+.Pp
+.It Ic show Cm callout Ar addr
+Show information about the callout structure
+.Vt struct callout
+present at
+.Ar addr .
 .\"
 .Pp
 .It Ic show Cm cbstat
@@ -821,6 +845,10 @@ If the
 .Cm f
 option is specified the
 complete object is printed.
+.\"
+.Pp
+.It Ic show Cm panic
+Print the panic message if set.
 .\"
 .Pp
 .It Ic show Cm page
@@ -1173,9 +1201,15 @@ See the
 .Sx SCRIPTING
 section for more information on the scripting facility.
 .Pp
+.It Ic textdump dump
 .It Ic textdump set
 .It Ic textdump status
 .It Ic textdump unset
+Use the
+.Ic textdump dump
+command to immediately perform a textdump.
+More information may be found in
+.Xr textdump 4 .
 The
 .Ic textdump set
 command may be used to force the next kernel core dump to be a textdump
@@ -1184,8 +1218,6 @@ rather than a traditional memory dump or minidump.
 reports whether a textdump has been scheduled.
 .Ic textdump unset
 cancels a request to perform a textdump as the next kernel core dump.
-More information may be found in
-.Xr textdump 4 .
 .El
 .Sh VARIABLES
 The debugger accesses registers and variables as
@@ -1305,7 +1337,7 @@ command may be used to define a script by name.
 Scripts consist of a series of
 .Nm
 commands separated with the
-.Ic ;
+.Ql \&;
 character.
 For example:
 .Bd -literal -offset indent

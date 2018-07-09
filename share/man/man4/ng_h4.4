@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
 .\" All rights reserved.
 .\"
@@ -22,8 +23,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: ng_h4.4,v 1.2 2012-12-29 16:29:12 laffer1 Exp $
-.\" $MidnightBSD$
+.\" $Id: ng_h4.4,v 1.2 2003/05/21 19:37:35 max Exp $
+.\" $FreeBSD: stable/10/share/man/man4/ng_h4.4 242997 2012-11-13 20:41:36Z joel $
 .\"
 .Dd June 14, 2002
 .Dt NG_H4 4
@@ -71,15 +72,15 @@ similar to the
 control message.
 .Sh HOOKS
 This node type supports the following hooks:
-.Bl -tag -width indent
-.It Dv hook
+.Bl -tag -width ".Va hook"
+.It Va hook
 single HCI frame contained in single
 .Vt mbuf
 structure.
 .El
 .Sh CONTROL MESSAGES
 This node type supports the generic control messages, plus the following:
-.Bl -tag -width indent
+.Bl -tag -width foo
 .It Dv NGM_H4_NODE_RESET
 Reset the node.
 .It Dv NGM_H4_NODE_GET_STATE

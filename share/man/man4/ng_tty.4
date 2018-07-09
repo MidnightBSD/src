@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1996-1999 Whistle Communications, Inc.
 .\" All rights reserved.
 .\"
@@ -32,7 +33,7 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ng_tty.4 242997 2012-11-13 20:41:36Z joel $
 .\" $Whistle: ng_tty.8,v 1.5 1999/01/25 23:46:28 archie Exp $
 .\"
 .Dd December 25, 2008
@@ -57,7 +58,7 @@ and frames received on
 .Dv hook
 are transmitted out on the tty device.
 No modification to the data is performed in either direction.
-While the hook is installed on a tty, the normal read and write 
+While the hook is installed on a tty, the normal read and write
 operations are unavailable, returning
 .Er EIO .
 .Pp
@@ -80,8 +81,8 @@ type node.
 The hot character has no effect on the transmission of data.
 .Sh HOOKS
 This node type supports the following hooks:
-.Bl -tag -width foobar
-.It Dv hook
+.Bl -tag -width ".Va hook"
+.It Va hook
 .Xr tty 4
 serial data contained in
 .Dv mbuf

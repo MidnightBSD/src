@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Gleb Smirnoff
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ng_eiface.4 242997 2012-11-13 20:41:36Z joel $
 .\"
 .Dd February 3, 2005
 .Dt NG_EIFACE 4
@@ -63,8 +64,8 @@ Similarly, packets received on the hook go to the protocol stack as
 packets received by any real Ethernet interface.
 .Sh CONTROL MESSAGES
 This node type supports the generic control messages, plus the following:
-.Bl -tag -width indent
-.It Dv NGM_EIFACE_SET Pq Li set
+.Bl -tag -width foo
+.It Dv NGM_EIFACE_SET Pq Ic set
 Set link-level address of the interface.
 Requires
 .Vt "struct ether_addr"
@@ -76,7 +77,7 @@ version, called
 which requires as an argument an
 .Tn ASCII
 string consisting of 6 colon-separated hex digits.
-.It Dv NGM_EIFACE_GET_IFNAME Pq Li getifname
+.It Dv NGM_EIFACE_GET_IFNAME Pq Ic getifname
 Return the name of the associated interface as a
 .Dv NUL Ns -terminated
 .Tn ASCII

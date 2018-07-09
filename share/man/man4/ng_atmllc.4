@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Benno Rice <benno@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ng_atmllc.4 242997 2012-11-13 20:41:36Z joel $
 .\"
 .Dd March 8, 2004
 .Dt NG_ATMLLC 4
@@ -60,7 +61,7 @@ encapsulated into a PDU and transmitted via the
 hook.
 .Sh HOOKS
 This node type supports the following hooks:
-.Bl -tag -width indent
+.Bl -tag -width ".Va ether"
 .It Va atm
 ATM connection.
 Typically, this hook would be connected to a

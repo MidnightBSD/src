@@ -57279,6 +57279,7 @@ share/man/man4/epair.4 -text
 share/man/man4/esp.4 -text
 share/man/man4/est.4 -text
 share/man/man4/et.4 -text
+share/man/man4/etherswitch.4 svneol=native#text/plain
 share/man/man4/eventtimers.4 -text
 share/man/man4/exca.4 -text
 share/man/man4/faith.4 -text
@@ -57287,6 +57288,7 @@ share/man/man4/fd.4 -text
 share/man/man4/fdc.4 -text
 share/man/man4/fdt.4 -text
 share/man/man4/fdtbus.4 -text
+share/man/man4/ffclock.4 svneol=native#text/plain
 share/man/man4/filemon.4 -text
 share/man/man4/firewire.4 -text
 share/man/man4/fla.4 -text
@@ -57472,12 +57474,15 @@ share/man/man4/mwl.4 -text
 share/man/man4/mwlfw.4 -text
 share/man/man4/mxge.4 -text
 share/man/man4/my.4 -text
+share/man/man4/nand.4 svneol=native#text/plain
+share/man/man4/nandsim.4 svneol=native#text/plain
 share/man/man4/natm.4 -text
 share/man/man4/natmip.4 -text
 share/man/man4/ncr.4 -text
 share/man/man4/ncv.4 -text
 share/man/man4/ndis.4 -text
 share/man/man4/net80211.4 -text
+share/man/man4/netfpga10g_nf10bmac.4 svneol=native#text/plain
 share/man/man4/netgraph.4 -text
 share/man/man4/netintro.4 -text
 share/man/man4/netmap.4 -text
@@ -57495,6 +57500,7 @@ share/man/man4/ng_bt3c.4 -text
 share/man/man4/ng_btsocket.4 -text
 share/man/man4/ng_car.4 -text
 share/man/man4/ng_ccatm.4 -text
+share/man/man4/ng_checksum.4 svneol=native#text/plain
 share/man/man4/ng_cisco.4 -text
 share/man/man4/ng_deflate.4 -text
 share/man/man4/ng_device.4 -text
@@ -57546,6 +57552,9 @@ share/man/man4/ngatmbase.4 -text
 share/man/man4/nge.4 -text
 share/man/man4/nmdm.4 -text
 share/man/man4/nsp.4 -text
+share/man/man4/ntb.4 svneol=native#text/plain
+share/man/man4/ntb_hw.4 svneol=native#text/plain
+share/man/man4/ntb_transport.4 svneol=native#text/plain
 share/man/man4/null.4 -text
 share/man/man4/nvd.4 svneol=native#text/plain
 share/man/man4/nve.4 -text

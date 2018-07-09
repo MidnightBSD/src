@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright 2000 The Aerospace Corporation.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
 .\"
 .\" Author: Brooks Davis <brooks@FreeBSD.org>
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ng_gif_demux.4 242997 2012-11-13 20:41:36Z joel $
 .\"
 .Dd September 18, 2001
 .Dt NG_GIF_DEMUX 4
@@ -70,7 +71,7 @@ hook.
 .Sh HOOKS
 This node type supports the following hooks:
 .Bl -tag -width ".Dv inet6"
-.It Dv gif
+.It Va gif
 Connection to the
 .Dv lower
 or
@@ -78,19 +79,19 @@ or
 hook of an
 .Xr ng_gif 4
 node.
-.It Dv inet
+.It Va inet
 Hook for input and output of IP frames.
-.It Dv inet6
+.It Va inet6
 Hook for input and output of IPv6 frames.
-.It Dv atalk
+.It Va atalk
 Hook for input and output of AppleTalk frames.
-.It Dv ipx
+.It Va ipx
 Hook for input and output of IPX frames.
-.It Dv atm
+.It Va atm
 Hook for input and output of ATM frames.
-.It Dv natm
+.It Va natm
 Hook for input and output of NATM frames.
-.It Dv ns
+.It Va ns
 Hook for input and output of NS frames.
 .El
 .Sh CONTROL MESSAGES

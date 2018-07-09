@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2011 Aleksandr Rybalko
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/nvram2env.4 233648 2012-03-29 05:02:12Z eadler $
 .\"
 .Dd April 3, 2011
 .Dt NVRAM2ENV 4
@@ -31,7 +32,7 @@
 .Nm nvram2env
 .Nd "copy nvram-like data into kernel environment"
 .Sh SYNOPSIS
-.Cd "device	nvram2env"
+.Cd "device nvram2env"
 .Sh DESCRIPTION
 .Nm
 implements a simple method of reading the NVRAM-like data and information
@@ -101,7 +102,6 @@ hint.nvram.0.base=0x1fc00400
 .Ed
 .Pp
 Dynamic, editable form CFE, override values from first
-.Pp
 .Bd -literal -offset indent
 hint.nvram.1.flags=0x05 # Broadcom + nocheck
 hint.nvram.1.base=0x1cff8000

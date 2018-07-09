@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1993 Christopher G. Demetriou
 .\" All rights reserved.
 .\"
@@ -23,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/kld.4 260906 2014-01-20 14:37:02Z bapt $
 .\"
-.Dd November 8, 1998
+.Dd January 13, 2014
 .Dt KLD 4
 .Os
 .Sh NAME
@@ -166,8 +167,8 @@ binary, then
 fails to execute the entry point.
 .Pp
 .Xr kldload 8
-returns the cryptic message
-.Sq Li "ENOEXEC (Exec format error)"
+points the user to read
+.Xr dmesg 8
 for any error encountered while loading a module.
 .Pp
 When system internal interfaces change, old modules often cannot

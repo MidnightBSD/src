@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (C) 2013 Emulex
 .\" All rights reserved.
 .\" 
@@ -34,7 +35,7 @@
 .\" 3333 Susan Street
 .\" Costa Mesa, CA 92626
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/oce.4 252869 2013-07-06 08:30:45Z delphij $
 .\"
 .Dd February 19, 2012
 .Dt OCE 4
@@ -90,9 +91,8 @@ Firmware can be updated by following the steps below:
 .Bl -enum
 .It
 Copy the below code to a Makefile:
-.Pp
 .Bd -literal -offset indent
-\&.KMOD=elxflash
+KMOD=elxflash
 FIRMWS=imagename.ufi:elxflash
 \&.include <bsd.kmod.mk>
 .Ed

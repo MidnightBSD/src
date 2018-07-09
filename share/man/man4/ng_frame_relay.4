@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1996-1999 Whistle Communications, Inc.
 .\" All rights reserved.
 .\"
@@ -32,7 +33,7 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ng_frame_relay.4 242997 2012-11-13 20:41:36Z joel $
 .\" $Whistle: ng_frame_relay.8,v 1.4 1999/01/25 23:46:26 archie Exp $
 .\"
 .Dd January 19, 1999
@@ -63,10 +64,10 @@ through
 are available to connect to each of the DLCI channels.
 .Sh HOOKS
 This node type supports the following hooks:
-.Bl -tag -width foobar
-.It Dv downstream
+.Bl -tag -width ".Va downstream"
+.It Va downstream
 The connection to the synchronous line.
-.It Dv dlciX
+.It Va dlciX
 Here X is a decimal number from 0 to 1023.
 This hook corresponds
 to the DLCI X frame relay virtual channel.

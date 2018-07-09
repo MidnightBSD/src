@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/eventtimers.4 247812 2013-03-04 19:10:39Z davide $
 .\"
 .Dd March 13, 2012
 .Dt EVENTTIMERS 4
@@ -143,12 +144,6 @@ By default this options is disabled.
 If chosen timer is per-CPU
 and runs in periodic mode, this option has no effect - all interrupts are
 always generating.
-.It Va kern.eventtimer.activetick
-makes each CPU to receive all kinds of timer interrupts when they are busy.
-Disabling it allows to skip some hardclock() calls in some cases.
-By default this options is enabled.
-If chosen timer is per-CPU, this option has no effect - all interrupts are
-always generating, as timer reprogramming is too expensive for that case.
 .El
 .Sh SEE ALSO
 .Xr apic 4 ,
