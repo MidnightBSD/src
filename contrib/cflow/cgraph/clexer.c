@@ -45,7 +45,6 @@ static int line = 0;
 /* Forward declarations. */
 static int skip_whitespaces (FILE *fp);
 static inline int skip_strings (FILE *fp, int delim);
-static inline int skip_brackets (FILE *fp, int delim);
 static char* get_name (FILE *fp, int ch);
 static int is_reserved (char *name);
 static bool_t is_c_keyword (char *name);
@@ -156,29 +155,6 @@ skip_strings (FILE *fp, int delim)
             line++;
             offset = 0;
         }
-        offset++;
-    }
-    return ch;
-}
-
-/**
- * Skips characters until a matching closing bracket for the passed opening
- * bracket is reached.
- *
- * \param fp The file to read and skip the characters from.
- * \param delim The opening bracket to use as delimiter. Only '(' and
- *        '[' are recognized.
- * \return The next character after the delimiter or EOF.
- */
-static inline int
-skip_brackets (FILE *fp, int delim)
-{
-    int ch = '\0';
-    int close = (delim == '(') ? ')' : ']';
-     
-    while (ch != close && ch != EOF)
-    {
-        ch = fgetc (fp);
         offset++;
     }
     return ch;
