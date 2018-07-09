@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004-2007
 .\"	Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
 .\"	Benjamin Close <Benjamin.Close@clearchain.com>. All rights reserved.
@@ -24,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/wpi.4 315127 2017-03-12 04:57:21Z ngie $
 .\"
 .Dd October 5, 2008
 .Dt WPI 4
@@ -69,7 +70,7 @@ For more information on configuring this device, see
 .Xr ifconfig 8 .
 .Pp
 This driver requires the firmware built with the
-.Nm wpifw
+.Nm wpifw 4
 module to work.
 .Sh FILES
 .Bl -tag -width ".Pa /usr/share/doc/legal/intel_wpi/LICENSE" -compact
@@ -106,14 +107,14 @@ ifconfig wlan0 create wlandev wpi0 wlanmode adhoc ssid my_net \e
 The driver failed to load the firmware image using the
 .Xr firmware 9
 subsystem.
-Verify the 
-.Xr wpifw
+Verify the
+.Xr wpifw 4
 firmware module is installed.
 .It "wpi%d: fatal firmware error"
 An unknown error has occurred in the uploaded firmware, you may have to
 unload/reload the driver to continue.
 .It "wpi%d: Radio transmitter is switched off"
-The hardware switch controlling the radio is currently turned off. 
+The hardware switch controlling the radio is currently turned off.
 Data transmission is not possible in this state.
 .El
 .Sh SEE ALSO
@@ -133,8 +134,8 @@ driver was written for
 .Ox
 by
 .An Damien Bergamini Aq damien.bergamini@free.fr .
-.An Benjamin Close Aq benjsc@FreeBSD.org 
-ported 
+.An Benjamin Close Aq benjsc@FreeBSD.org
+ported
 .Nm
 to
 .Fx .
