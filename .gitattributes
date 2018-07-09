@@ -57775,6 +57775,7 @@ share/man/man5/Makefile -text
 share/man/man5/a.out.5 -text
 share/man/man5/acct.5 -text
 share/man/man5/ar.5 -text
+share/man/man5/autofs.5 svneol=native#text/plain
 share/man/man5/bluetooth.device.conf.5 -text
 share/man/man5/bluetooth.hosts.5 -text
 share/man/man5/bluetooth.protocols.5 -text
