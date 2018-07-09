@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2000
 .\"	Mike W. Meyer
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man5/make.conf.5 296288 2016-03-02 01:24:41Z bdrewery $
 .\"
-.Dd April 26, 2013
+.Dd February 24, 2016
 .Dt MAKE.CONF 5
 .Os
 .Sh NAME
@@ -141,16 +142,6 @@ Optimization levels other than
 and
 .Fl O2
 are not supported.
-.Va BDECFLAGS
-is provided as a set of
-.Xr gcc 1
-settings suggested by
-.An "Bruce Evans" Aq bde@FreeBSD.org
-for developing and testing changes.
-They can be used, if set, by:
-.Bd -literal -offset indent
-CFLAGS+=${BDECFLAGS}
-.Ed
 .It Va CPUTYPE
 .Pq Vt str
 Controls which processor should be targeted for generated
@@ -162,7 +153,7 @@ the value of
 and
 .Va COPTFLAGS
 to contain the appropriate optimization directive to
-.Xr gcc 1 .
+.Xr cc 1 .
 The automatic setting of
 .Va CFLAGS
 and
@@ -177,16 +168,6 @@ Refer to
 for a list of recognized
 .Va CPUTYPE
 options.
-.It Va CVS_UPDATE
-.Pq Vt bool
-Set this to use
-.Xr cvs 1
-to update your
-.Pa src , ports
-and
-.Pa doc
-trees with
-.Dq Li "make update" .
 .It Va CXXFLAGS
 .Pq Vt str
 Controls the compiler settings when compiling C++ code.
@@ -255,73 +236,6 @@ Set this to not update the doc tree during
 .Pq Vt bool
 Set this to not update the ports tree during
 .Dq Li "make update" .
-.It Va NO_WWWUPDATE
-.Pq Vt bool
-Set this to not update the www tree during
-.Dq Li "make update" .
-.It Va PORTSSUPFILE
-.Pq Vt str
-The ports
-.Ar supfile
-to use when doing a
-.Dq Li "make update" .
-For example,
-.Pa /usr/share/examples/cvsup/ports-supfile .
-.It Va SUP
-.Pq Vt str
-The location of the
-.Xr csup 1
-or
-.Xr cvsup 1
-command for
-.Dq Li "make update" .
-.It Va SUPFILE
-.Pq Vt str
-The first
-.Ar supfile
-to use when doing a
-.Dq Li "make update" .
-For example,
-.Pa /usr/share/examples/cvsup/standard-supfile .
-.It Va SUPFILE1
-.Pq Vt str
-The second
-.Ar supfile
-to use when doing a
-.Dq Li "make update" .
-.It Va SUPFILE2
-.Pq Vt str
-The third
-.Ar supfile
-to use when doing a
-.Dq Li "make update" .
-.It Va SUPFLAGS
-.Pq Vt str
-The flag for the
-.Xr sup 1
-command when doing
-.Dq Li "make update" .
-This defaults to
-.Op Fl g L Ar 2 .
-.It Va SUPHOST
-.Pq Vt str
-The hostname of the sup server to use when doing
-.Dq Li "make update" .
-.It Va SUP_UPDATE
-.Pq Vt bool
-Set this to use
-.Xr csup 1
-to update your
-.Pa src ,
-and
-.Pa ports
-trees with
-.Dq Li "make update" .
-This option is deprecated.
-Please use
-.Va SVN_UPDATE
-or
-.Xr freebsd-update 8 .
 .It Va SVN_UPDATE
 .Pq Vt bool
 Set this to use
@@ -701,7 +615,7 @@ The default number is 20011.
 .Pq Vt int
 Causes the system compiler to be built such that it forces high optimization
 levels to a lower one.
-.Xr gcc 1
+.Xr cc 1
 .Fl O2
 and above is known to trigger known optimizer bugs at various
 times.
@@ -732,6 +646,14 @@ for simple printers, or
 for postscript or graphics printers with a ghostscript
 filter, or both.
 .El
+.Ss "BUILDING PORTS"
+Several make variables can be set that affect the building of ports.
+These variables and their effects are documented in
+.Xr ports 7 ,
+.Pa ${PORTSDIR}/Mk/*
+and the
+.Fx
+Porter's Handbook.
 .Sh FILES
 .Bl -tag -width ".Pa /usr/share/examples/etc/make.conf" -compact
 .It Pa /etc/make.conf
@@ -743,7 +665,7 @@ filter, or both.
 .It Pa /usr/src/Makefile.inc1
 .El
 .Sh SEE ALSO
-.Xr gcc 1 ,
+.Xr cc 1 ,
 .Xr install 1 ,
 .Xr make 1 ,
 .Xr src.conf 5 ,
@@ -766,6 +688,8 @@ and
 .Ev MAKEOBJDIR
 are environment variables and should not be set in
 .Nm
+or as command line arguments to
+.Xr make 1 ,
 but in make's environment.
 .Sh BUGS
 This manual page may occasionally be out of date with respect to
