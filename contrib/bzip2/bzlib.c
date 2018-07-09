@@ -28,8 +28,12 @@
      bzBuffToBuffDecompress.  Fixed.
 */
 
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+
 #include "bzlib_private.h"
 
+#ifndef BZ_NO_COMPRESS
 
 /*---------------------------------------------------*/
 /*--- Compression stuff                           ---*/
@@ -85,6 +89,7 @@ void BZ2_bz__AssertH__fail ( int errcode )
 }
 #endif
 
+#endif /* BZ_NO_COMPRESS */
 
 /*---------------------------------------------------*/
 static
@@ -111,6 +116,7 @@ void default_bzfree ( void* opaque, void* addr )
    if (addr != NULL) free ( addr );
 }
 
+#ifndef BZ_NO_COMPRESS
 
 /*---------------------------------------------------*/
 static
@@ -483,6 +489,7 @@ int BZ_API(BZ2_bzCompressEnd)  ( bz_stream *strm )
    return BZ_OK;
 }
 
+#endif /* BZ_NO_COMPRESS */
 
 /*---------------------------------------------------*/
 /*--- Decompression stuff                         ---*/
@@ -877,6 +884,7 @@ int BZ_API(BZ2_bzDecompressEnd)  ( bz_stream *strm )
    return BZ_OK;
 }
 
+#ifndef BZ_NO_COMPRESS
 
 #ifndef BZ_NO_STDIO
 /*---------------------------------------------------*/
@@ -1566,6 +1574,7 @@ const char * BZ_API(BZ2_bzerror) (BZFILE *b, int *errnum)
 }
 #endif
 
+#endif /* BZ_NO_COMPRESS */
 
 /*-------------------------------------------------------------*/
 /*--- end                                           bzlib.c ---*/
