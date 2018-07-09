@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $NetBSD: gem.4,v 1.2 2003/02/14 15:20:18 grant Exp $
 .\"
 .\" Copyright (c) 2002 The NetBSD Foundation, Inc.
@@ -24,7 +25,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/gem.4 233648 2012-03-29 05:02:12Z eadler $
 .\"
 .Dd December 25, 2009
 .Dt GEM 4
@@ -53,15 +54,14 @@ The
 driver provides support for the GMAC Ethernet hardware found mostly in
 the last Apple PowerBooks G3s and most G4-based Apple hardware, as
 well as Sun UltraSPARC machines.
-.Pp                                                                            
-All controllers supported by the                                               
-.Nm                                                                            
-driver have TCP checksum offload capability for both receive and transmit,     
-support for the reception and transmission of extended frames for              
-.Xr vlan 4                                                                     
-and a 512-bit multicast hash filter.                                           
-.Sh HARDWARE
 .Pp
+All controllers supported by the
+.Nm
+driver have TCP checksum offload capability for both receive and transmit,
+support for the reception and transmission of extended frames for
+.Xr vlan 4
+and a 512-bit multicast hash filter.
+.Sh HARDWARE
 Chips supported by the
 .Nm
 driver include:

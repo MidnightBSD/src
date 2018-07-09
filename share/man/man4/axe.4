@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1997, 1998, 1999, 2000-2003
 .\"	Bill Paul <wpaul@windriver.com>. All rights reserved.
 .\"
@@ -28,9 +29,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/axe.4 291844 2015-12-05 07:46:37Z kevlo $
 .\"
-.Dd October 25, 2011
+.Dd November 24, 2015
 .Dt AXE 4
 .Os
 .Sh NAME
@@ -46,6 +47,7 @@ kernel configuration file:
 .Cd "device ohci"
 .Cd "device usb"
 .Cd "device miibus"
+.Cd "device uether"
 .Cd "device axe"
 .Ed
 .Pp
@@ -215,6 +217,8 @@ AX88772B:
 .Bl -bullet -compact
 .It
 ASIX AX88772B
+.It
+Lenovo USB 2.0 Ethernet
 .El
 .Pp
 AX88760:

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2003-2008 Joseph Koshy
 .\" Copyright (c) 2007 The FreeBSD Foundation
 .\" All rights reserved.
@@ -26,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/hwpmc.4 242496 2012-11-02 22:03:39Z jimharris $
 .\"
-.Dd September 22, 2008
+.Dd November 2, 2012
 .Dt HWPMC 4
 .Os
 .Sh NAME
@@ -430,10 +431,10 @@ The default is 32.
 The number of log buffers used by
 .Nm
 for logging.
-The default is 16.
+The default is 64.
 .It Va kern.hwpmc.nsamples Pq integer, read-only
 The number of entries in the per-CPU ring buffer used during sampling.
-The default is 16.
+The default is 512.
 .It Va security.bsd.unprivileged_syspmcs Pq boolean, read-write
 If set to non-zero, allow unprivileged processes to allocate system-wide
 PMCs.

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2003 Greg Lehey
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/gdb.4 244040 2012-12-08 22:16:36Z eadler $
 .\"
 .Dd February 8, 2005
 .Dt GDB 4
@@ -252,7 +253,7 @@ Finally, establish connection:
 GNU gdb 5.2.1 (FreeBSD)
 .Em "(political statements omitted)"
 Ready to go.  Enter 'tr' to connect to the remote target
-with /dev/cuad0, 'tr /dev/cuad1' to connect to a different port
+with /dev/cuau0, 'tr /dev/cuau1' to connect to a different port
 or 'trf portno' to connect to the remote target with the firewire
 interface.  portno defaults to 5556.
 
@@ -370,10 +371,10 @@ instead.
 Debug a remote system via the specified serial or firewire interface.
 .It Ic tr0
 Debug a remote system via serial interface
-.Pa /dev/cuad0 .
+.Pa /dev/cuau0 .
 .It Ic tr1
 Debug a remote system via serial interface
-.Pa /dev/cuad1 .
+.Pa /dev/cuau1 .
 .It Ic trf
 Debug a remote system via firewire interface at default port 5556.
 .El

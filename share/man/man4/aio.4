@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2002 Dag-Erling Coïdan Smørgrav
 .\" All rights reserved.
@@ -25,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/aio.4 321829 2017-07-31 22:36:03Z asomers $
 .\"
-.Dd October 24, 2002
+.Dd June 22, 2017
 .Dt AIO 4
 .Os
 .Sh NAME
@@ -45,6 +46,70 @@ The
 facility provides system calls for asynchronous I/O.
 It is available both as a kernel option for static inclusion and as a
 dynamic kernel module.
+.Pp
+Asynchronous I/O control buffers should be zeroed before initializing
+individual fields.
+This ensures all fields are initialized.
+.Pp
+All asynchronous I/O control buffers contain a
+.Vt sigevent
+structure in the
+.Va aio_sigevent
+field which can be used to request notification when an operation completes.
+.Pp
+For
+.Dv SIGEV_KEVENT
+notifications,
+the
+.Va sigevent
+.Ap
+s
+.Va sigev_notify_kqueue
+field should contain the descriptor of the kqueue that the event should be attached
+to, its
+.Va sigev_notify_kevent_flags
+field may contain
+.Dv EV_ONESHOT ,
+.Dv EV_CLEAR , and/or
+.Dv EV_DISPATCH , and its
+.Va sigev_notify
+field should be set to
+.Dv SIGEV_KEVENT .
+The posted kevent will contain:
+.Bl -column ".Va filter"
+.It Sy Member Ta Sy Value
+.It Va ident Ta asynchronous I/O control buffer pointer
+.It Va filter Ta Dv EVFILT_AIO
+.It Va flags Ta Dv EV_EOF
+.It Va udata Ta
+value stored in
+.Va aio_sigevent.sigev_value
+.El
+.Pp
+For
+.Dv SIGEV_SIGNO
+and
+.Dv SIGEV_THREAD_ID
+notifications,
+the information for the queued signal will include
+.Dv SI_ASYNCIO
+in the
+.Va si_code
+field and the value stored in
+.Va sigevent.sigev_value
+in the
+.Va si_value
+field.
+.Pp
+For
+.Dv SIGEV_THREAD
+notifications,
+the value stored in
+.Va aio_sigevent.sigev_value
+is passed to the
+.Va aio_sigevent.sigev_notify_function
+as described in
+.Xr sigevent 3 .
 .Sh SEE ALSO
 .Xr aio_cancel 2 ,
 .Xr aio_error 2 ,
@@ -54,6 +119,7 @@ dynamic kernel module.
 .Xr aio_waitcomplete 2 ,
 .Xr aio_write 2 ,
 .Xr lio_listio 2 ,
+.Xr sigevent 3 ,
 .Xr config 8 ,
 .Xr kldload 8 ,
 .Xr kldunload 8

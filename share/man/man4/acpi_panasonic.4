@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2004 OGAWA Takaya <t-ogawa@triaez.kaisei.org>
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/acpi_panasonic.4 286262 2015-08-03 23:08:40Z delphij $
 .\"
-.Dd February 25, 2012
+.Dd June 19, 2015
 .Dt ACPI_PANASONIC 4
 .Os
 .Sh NAME
@@ -68,7 +69,7 @@ sound mute state via
 .Ss Hotkeys
 There are 9 hotkeys available on the supported hardware:
 .Pp
-.Bl -tag -compact -offset indent
+.Bl -tag -width 10n -compact -offset indent
 .It Sy Fn+F1
 Make LCD backlight darker.
 .It Sy Fn+F2
@@ -100,12 +101,12 @@ For the other events such as
 mixer control and showing battery status,
 .Xr devd 8
 should take the role as described below.
-.Ss Xr devd 8 Ss Events
+.Ss Xr devd 8 Events
 When notified to
 .Xr devd 8 ,
 the hotkey event provides the following information:
 .Pp
-.Bl -tag -compact -offset indent
+.Bl -tag -width 10n -compact -offset indent
 .It system
 .Qq Li ACPI
 .It subsystem
@@ -119,7 +120,7 @@ Event code (see below).
 .El
 .Pp
 Event codes to be generated are assigned as follows:
-.Bl -tag -offset indent
+.Bl -tag -width 10n -offset indent
 .It 0x81-0x86, 0x89
 .Sy Fn+F<n>
 pressed.

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2006 Wilko Bulte
 .\" All rights reserved.
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/geom_fox.4 293691 2016-01-11 20:03:58Z trasz $
 .\"
-.Dd January 2, 2005
+.Dd September 12, 2015
 .Dt GEOM_FOX 4
 .Os
 .Sh NAME
@@ -46,6 +47,13 @@ module at boot time, place the following line in
 geom_fox_load="YES"
 .Ed
 .Sh DESCRIPTION
+.Bf -symbolic
+This driver is obsolete.
+Users are advised to use
+.Xr gmultipath 8
+instead.
+.Ef
+.Pp
 The intent of the
 .Nm
 framework is to provide basic multipathing support to access direct
@@ -85,7 +93,6 @@ The
 driver will disallow write operations to the underlying devices once the
 fox device has been opened for writing.
 .Sh EXAMPLES
-.Pp
 .Bl -bullet -compact
 .It
 .Nm

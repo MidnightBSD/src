@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$KAME: gif.4,v 1.28 2001/05/18 13:15:56 itojun Exp $
 .\"
 .\" Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -27,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/gif.4 287730 2015-09-13 01:35:40Z hrs $
 .\"
-.Dd August 1, 2011
+.Dd September 10, 2015
 .Dt GIF 4
 .Os
 .Sh NAME
@@ -160,16 +161,6 @@ routed network.
 It can be turned off by
 .Dv IFF_LINK2
 bit.
-.Ss Route caching
-Processing each packet requires two route lookups: first on the
-packet itself, and second on the tunnel destination.
-This second route can be cached, increasing tunnel performance.
-However, in a dynamically routed network, the tunnel will stick
-to the cached route, ignoring routing table updates.
-Route caching can be enabled with the
-.Dv IFF_LINK0
-flag.
-.\"
 .Ss Miscellaneous
 By default,
 .Nm
@@ -256,32 +247,3 @@ had a multi-destination behavior, configurable via
 .Dv IFF_LINK0
 flag.
 The behavior is obsolete and is no longer supported.
-.Pp
-On
-.Fx
-6.1, 6.2, 6.3, 7.0, 7.1, and 7.2
-the
-.Nm
-sends and receives incorrect EtherIP packets with reversed version
-field when
-.Xr if_bridge 4
-is used together.  As a workaround on this interoperability issue, the
-following two
-.Xr ifconfig 8
-flags can be used:
-.Bl -tag -width "accept_rev_ethip_ver" -offset indent
-.It accept_rev_ethip_ver
-accepts both correct EtherIP packets and ones with reversed version
-field, if enabled.  If disabled, the
-.Nm
-accepts the correct packets only.  This flag is enabled by default.
-.It send_rev_ethip_ver
-sends EtherIP packets with reversed version field intentionally, if
-enabled.  If disabled, the
-.Nm
-sends the correct packets only.  This flag is disabled by default.
-.El
-.Pp
-If interoperability with the older
-.Fx
-machines is needed, both of these two flags must be enabled.

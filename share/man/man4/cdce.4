@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Daniel Hartmeier
 .\" All rights reserved.
 .\"
@@ -26,9 +27,9 @@
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $NetBSD: cdce.4,v 1.4 2004/12/08 18:35:56 peter Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/cdce.4 291844 2015-12-05 07:46:37Z kevlo $
 .\"
-.Dd September 17, 2005
+.Dd November 24, 2015
 .Dt CDCE 4
 .Os
 .Sh NAME
@@ -42,6 +43,8 @@ kernel configuration file:
 .Cd "device uhci"
 .Cd "device ohci"
 .Cd "device usb"
+.Cd "device miibus"
+.Cd "device uether"
 .Cd "device cdce"
 .Ed
 .Pp
@@ -114,9 +117,10 @@ is running low on mbufs.
 .Sh SEE ALSO
 .Xr arp 4 ,
 .Xr intro 4 ,
+.Xr ipheth 4 ,
 .Xr netintro 4 ,
+.Xr urndis 4 ,
 .Xr usb 4 ,
-.\" .Xr hostname.if 5 ,
 .Xr ifconfig 8
 .Rs
 .%T "Universal Serial Bus Class Definitions for Communication Devices"

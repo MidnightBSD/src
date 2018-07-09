@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2005 Christian Brueffer
 .\" All rights reserved.
 .\"
@@ -22,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/amdsmb.4 306115 2016-09-21 16:14:02Z avg $
 .\"
 .Dd December 31, 2005
 .Dt AMDSMB 4
@@ -31,14 +32,17 @@
 .Nm amdsmb
 .Nd "AMD-8111 SMBus 2.0 controller driver"
 .Sh SYNOPSIS
+.Cd "device pci"
 .Cd "device smbus"
 .Cd "device smb"
-.Cd "device amdsmb
+.Cd "device amdsmb"
 .Sh DESCRIPTION
 The
 .Nm
 driver provides access to the AMD-8111 SMBus 2.0 controller.
 .Sh SEE ALSO
+.Xr amdpm 4 ,
+.Xr intpm 4 ,
 .Xr smb 4 ,
 .Xr smbus 4
 .Sh HISTORY

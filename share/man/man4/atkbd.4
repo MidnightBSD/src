@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1999
 .\" Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
@@ -24,7 +25,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/atkbd.4 271095 2014-09-04 13:45:16Z se $
 .\"
 .Dd January 29, 2008
 .Dt ATKBD 4
@@ -51,7 +52,9 @@ driver, provides access to the AT 84 keyboard or the AT enhanced keyboard
 which is connected to the AT keyboard controller.
 .Pp
 This driver is required for the console driver
-.Xr syscons 4 .
+.Xr syscons 4
+or
+.Xr vt 4 .
 .Pp
 There can be only one
 .Nm
@@ -144,7 +147,6 @@ command.
 This option will disable this feature and prevent the user from
 changing key assignment.
 .El
-.Pp
 .Ss Driver Flags
 The
 .Nm
@@ -212,6 +214,7 @@ In both cases, you also need to have following lines in
 .Xr atkbdc 4 ,
 .Xr psm 4 ,
 .Xr syscons 4 ,
+.Xr vt 4 ,
 .Xr kbdmap 5 ,
 .Xr loader 8
 .Sh HISTORY
