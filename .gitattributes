@@ -57822,6 +57822,8 @@ share/man/man5/nullfs.5 -text
 share/man/man5/passwd.5 -text
 share/man/man5/pbm.5 -text
 share/man/man5/periodic.conf.5 -text
+share/man/man5/pf.conf.5 svneol=native#text/plain
+share/man/man5/pf.os.5 svneol=native#text/plain
 share/man/man5/phones.5 -text
 share/man/man5/procfs.5 -text
 share/man/man5/protocols.5 -text
