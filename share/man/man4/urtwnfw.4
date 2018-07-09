@@ -1,6 +1,5 @@
 .\" $MidnightBSD$
-.\"
-.\" Copyright (c) 2003 Bob Bishop
+.\" Copyright (c) 2013 Kevin Lo
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -9,7 +8,7 @@
 .\" 1. Redistributions of source code must retain the above copyright
 .\"    notice, this list of conditions and the following disclaimer.
 .\" 2. The name of the author may not be used to endorse or promote products
-.\"    derived from this software without specific prior written permission
+.\"    derived from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 .\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -22,90 +21,58 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/stg.4 159719 2006-06-18 09:53:00Z brueffer $
+.\" $FreeBSD: stable/10/share/man/man4/urtwnfw.4 266578 2014-05-23 06:47:47Z hselasky $
 .\"
-.Dd August 8, 2004
-.Dt STG 4
+.Dd April 25, 2014
+.Dt URTWNFW 4
 .Os
 .Sh NAME
-.Nm stg
-.Nd driver for Future Domain based SCSI controllers
+.Nm urtwnfw
+.Nd "Firmware Module for Realtek Wireless driver"
 .Sh SYNOPSIS
-To compile this driver into the kernel,
-place the following lines in your
+To compile this module into the kernel,
+place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
-.Cd "device scbus"
-.Cd "device stg"
+.Cd "device urtwnfw"
+.Ed
 .Pp
-For one or more ISA cards:
-.Cd "device isa"
-.Pp
-In
-.Pa /boot/device.hints :
-.Cd hint.stg.0.at="isa"
-.Pp
-For one or more PCI cards:
-.Cd "device pci"
+This will include three firmware images inside the kernel.
+If you want to pick only the firmware image for your network adapter choose one
+of the following:
+.Bd -ragged -offset indent
+.Cd "device urtwn-rtl8192cfwT"
+.Cd "device urtwn-rtl8192cfwU"
+.Cd "device urtwn-rtl8188eufw"
 .Ed
 .Pp
 Alternatively, to load the driver as a
 module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
-stg_load="YES"
+urtwn-rtl8192cfwT_load="YES"
+urtwn-rtl8192cfwU_load="YES"
+urtwn-rtl8188eufw_load="YES"
 .Ed
 .Sh DESCRIPTION
-The
-.Nm
-driver provides support for ISA, PCCARD and PCI controllers based on
-Future Domain SCSI controller chips including the TMC-16C30, 16C50 and 32C60.
-.Sh HARDWARE
-Controllers supported by the
-.Nm
-driver include:
+This module provides access to firmware sets for the
+Realtek RTL8188CUS, RTL8188CE-VAU, RTL8188EUS, RTL8188RU and RTL8192CU
+chip based USB WiFi adapters.
+It may be
+statically linked into the kernel, or loaded as a module.
 .Pp
-.Bl -bullet -compact
-.It
-Adaptec 2920/A
-.It
-Future Domain SCSI2GO
-.It
-Future Domain TMC-18XX/3260
-.It
-IBM SCSI PCMCIA Card
-.It
-ICM PSC-2401 SCSI
-.It
-MELCO IFC-SC
-.It
-RATOC REX-5536, REX-5536AM, REX-5536M, REX-9836A
+For the loaded firmware to be enabled for use the license at
+.Pa /usr/share/doc/legal/realtek
+must be agreed to by adding the following line to
+.Xr loader.conf 5 :
+.Pp
+.Dl "legal.realtek.license_ack=1"
+.Sh FILES
+.Bl -tag -width ".Pa /usr/share/doc/legal/realtek" -compact
+.It Pa /usr/share/doc/legal/realtek
+.Nm
+firmware license
 .El
-.Pp
-Note that the Adaptec 2920C is supported by the
-.Xr ahc 4
-driver.
 .Sh SEE ALSO
-.Xr ahc 4 ,
-.Xr cd 4 ,
-.Xr ch 4 ,
-.Xr da 4 ,
-.Xr intro 4 ,
-.Xr sa 4 ,
-.Xr scsi 4
-.Sh HISTORY
-The
-.Nm
-device driver has been developed for
-.Nx Ns / Ns Tn pc98
-and ported for
-.Fx .
-It first appeared in
-.Fx 2.2
-with PAO and merged in
-.Fx 4.2 .
-.Sh AUTHORS
-The
-.Nm
-driver was written by
-.An Naofumi HONDA .
+.Xr urtwn 4 ,
+.Xr firmware 9

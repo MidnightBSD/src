@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2002
 .\"	Nate Lawson.  All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/targ.4 228481 2011-12-13 21:26:33Z ed $
 .\"
-.Dd November 15, 2002
+.Dd December 13, 2011
 .Dt TARG 4
 .Os
 .Sh NAME
@@ -49,16 +50,8 @@ can be found in
 .Pp
 The
 .Nm
-driver supplies control devices,
-.Pa /dev/targ0 ,
-.Pa /dev/targ1 ,
-etc.
-If a device is already in use,
-.Xr open 2
-will fail and
-.Va errno
-will be set to
-.Er EBUSY .
+driver supplies the control device
+.Pa /dev/targ .
 After opening the device, the file descriptor must be bound to a
 specific bus/target/LUN and enabled to process CCBs using the
 .Dv TARGIOCENABLE
@@ -123,8 +116,8 @@ it.
 describes the usermode interface.
 .It Pa /sys/cam/scsi/scsi_target.c
 is the driver source file.
-.It Pa /dev/targ*
-are the control devices.
+.It Pa /dev/targ
+is the control device.
 .El
 .Sh SEE ALSO
 .Pa /usr/share/examples/scsi_target ,

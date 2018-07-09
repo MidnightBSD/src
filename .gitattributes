@@ -57625,6 +57625,7 @@ share/man/man4/sl.4 -text
 share/man/man4/smb.4 -text
 share/man/man4/smbus.4 -text
 share/man/man4/smp.4 -text
+share/man/man4/smsc.4 svneol=native#text/plain
 share/man/man4/sn.4 -text
 share/man/man4/snd_ad1816.4 -text
 share/man/man4/snd_als4000.4 -text
@@ -57674,6 +57675,7 @@ share/man/man4/tap.4 -text
 share/man/man4/targ.4 -text
 share/man/man4/tcp.4 -text
 share/man/man4/tdfx.4 -text
+share/man/man4/terasic_mtl.4 svneol=native#text/plain
 share/man/man4/termios.4 -text
 share/man/man4/textdump.4 -text
 share/man/man4/ti.4 -text
@@ -57714,6 +57716,7 @@ share/man/man4/uhid.4 -text
 share/man/man4/uhso.4 -text
 share/man/man4/uipaq.4 -text
 share/man/man4/ukbd.4 -text
+share/man/man4/uled.4 svneol=native#text/plain
 share/man/man4/ulpt.4 -text
 share/man/man4/umass.4 -text
 share/man/man4/umcs.4 -text
@@ -57725,10 +57728,14 @@ share/man/man4/upgt.4 -text
 share/man/man4/uplcom.4 -text
 share/man/man4/ural.4 -text
 share/man/man4/urio.4 -text
+share/man/man4/urndis.4 svneol=native#text/plain
 share/man/man4/urtw.4 -text
+share/man/man4/urtwn.4 svneol=native#text/plain
+share/man/man4/urtwnfw.4 svneol=native#text/plain
 share/man/man4/usb.4 -text
 share/man/man4/usb2_template.4 -text
 share/man/man4/usb_quirk.4 -text
+share/man/man4/usb_template.4 svneol=native#text/plain
 share/man/man4/uscanner.4 -text
 share/man/man4/uslcom.4 -text
 share/man/man4/utopia.4 -text

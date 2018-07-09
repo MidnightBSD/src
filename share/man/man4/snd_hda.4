@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2006-2008 Joel Dahl <joel@FreeBSD.org>
 .\" Copyright (c) 2008 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/snd_hda.4 236443 2012-06-02 11:03:14Z joel $
 .\"
 .Dd January 25, 2012
 .Dt SND_HDA 4
@@ -184,7 +185,7 @@ or as a set of space-separated
 pairs.
 .It Va hint.pcm.%d.rec.autosrc
 Controls automatic recording source feature:
-.Bl -tag -compact
+.Bl -tag -width 2n -compact
 .It 0
 disabled,
 .It 1
@@ -480,7 +481,6 @@ Recording on
 will go from two external microphones and line-in jacks.
 .Li pcm1
 playback will go to the internal speaker.
-.Pp
 .Ss Example 2
 Setting the
 .Xr device.hints 5
@@ -503,7 +503,6 @@ The
 .Li pcm1
 device will be completely dedicated to a headset (headphones and mic)
 connected to the front connectors.
-.Pp
 .Ss Example 3
 Setting the
 .Xr device.hints 5
@@ -527,7 +526,6 @@ will give 4 independent devices:
 and
 .Li pcm3
 .Pq internal speaker .
-.Pp
 .Ss Example 4
 Setting the
 .Xr device.hints 5

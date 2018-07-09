@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1996
 .\"	Julian Elischer <julian@FreeBSD.org>.  All rights reserved.
 .\"
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/scsi.4 262017 2014-02-17 09:35:30Z mav $
 .Dd June 7, 2012
 .Dt CAM 4
 .Os
@@ -195,7 +196,7 @@ hint.scbus.0.bus="1"
 This assigns
 .Nm
 bus 0 to the bus 1 instance on
-.Em ahc0 .
+.Em ahc1 .
 Peripheral drivers can be wired to a specific bus, target, and lun as so:
 .Bd -literal -offset indent
 hint.da.0.at="scbus0"

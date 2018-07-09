@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"     $KAME: stf.4,v 1.35 2001/05/02 06:24:49 itojun Exp $
 .\"
 .\" Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -27,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/stf.4 245323 2013-01-12 08:44:54Z joel $
 .\"
 .Dd December 28, 2012
 .Dt STF 4
@@ -190,8 +191,8 @@ The default value is shown next to each variable.
 .It Va net.link.stf.permit_rfc1918 : No 0
 The RFC3056 requires the use of globally unique 32-bit IPv4
 addresses. This sysctl variable controls the behaviour of this
-requirement. When it set to not 0, 
-.Nm stf 
+requirement. When it set to not 0,
+.Nm stf
 allows the use of private IPv4 addresses described in the RFC1918.
 This may be useful for an Intranet environment or when some mechanisms
 of network address translation (NAT) are used.

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2010 Ana Kukec
 .\" All rights reserved.
@@ -23,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/send.4 235450 2012-05-14 16:25:17Z joel $
 .\"
 .Dd September 19, 2010
 .Dt SEND 4
@@ -38,10 +39,7 @@
 .Ft int
 .Fn socket PF_INET6 SOCK_RAW IPPROTO_SEND
 .Pp
-To enable
-.Ns Nm
-support, load the kernel side SeND as a module.
-To load it at boot time, add the following line to
+To load the driver as a module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 send_load="YES"

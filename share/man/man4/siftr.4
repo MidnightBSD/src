@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2010 The FreeBSD Foundation
 .\" All rights reserved.
@@ -28,9 +29,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/siftr.4 281174 2015-04-06 22:41:13Z hiren $
 .\"
-.Dd November 12, 2010
+.Dd March 18, 2015
 .Dt SIFTR 4
 .Os
 .Sh NAME
@@ -38,14 +39,14 @@
 .Nd Statistical Information For TCP Research
 .Sh SYNOPSIS
 To load
-.Ns Nm
+the driver
 as a module at run-time, run the following command as root:
 .Bd -literal -offset indent
 kldload siftr
 .Ed
 .Pp
 Alternatively, to load
-.Ns Nm
+the driver
 as a module at boot time, add the following line into the
 .Xr loader.conf 5
 file:
@@ -53,13 +54,16 @@ file:
 siftr_load="YES"
 .Ed
 .Sh DESCRIPTION
+The
 .Nm
-.Ns ( Em S Ns tatistical
+.Po
+.Em S Ns tatistical
 .Em I Ns nformation
 .Em F Ns or
 .Em T Ns CP
-.Em R Ns esearch )
-is a kernel module that logs a range of statistics on active TCP connections to
+.Em R Ns esearch
+.Pc
+kernel module logs a range of statistics on active TCP connections to
 a log file.
 It provides the ability to make highly granular measurements of TCP connection
 state, aimed at system administrators, developers and researchers.
@@ -332,6 +336,22 @@ Bytes acknowledged via SACK are not excluded from this count.
 .It Va 26
 The current number of segments in the reassembly queue.
 .El
+.Bl -tag -offset indent -width Va
+.It Va 27
+Flowid for the connection.
+A caveat: Zero '0' either represents a valid flowid or a default value when it's
+not being set. There is no easy way to differentiate without looking at actual
+network interface card and drivers being used.
+.El
+.Bl -tag -offset indent -width Va
+.It Va 28
+Flow type for the connection.
+Flowtype defines which protocol fields are hashed to produce the flowid. 
+A complete listing is available in
+.Pa sys/mbuf.h
+under
+.Dv M_HASHTYPE_* .
+.El
 .Pp
 The third type of log message is written to the file when the module is disabled
 and ceases collecting data from the running kernel.
@@ -598,11 +618,11 @@ To change the log file location to /tmp/siftr.log, run the following
 command as root:
 sysctl net.inet.siftr.logfile=/tmp/siftr.log
 .Sh SEE ALSO
+.Xr tcpdump 1 ,
+.Xr tcp 4 ,
+.Xr sysctl 8 ,
 .Xr alq 9 ,
 .Xr pfil 9
-.Xr sysctl 8 ,
-.Xr tcp 4 ,
-.Xr tcpdump 1 ,
 .Sh ACKNOWLEDGEMENTS
 Development of this software was made possible in part by grants from the
 Cisco University Research Program Fund at Community Foundation Silicon Valley,

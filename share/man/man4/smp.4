@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1997
 .\"	Steve Passe <fsmp@FreeBSD.org>.  All rights reserved.
 .\"
@@ -21,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/smp.4 233648 2012-03-29 05:02:12Z eadler $
 .\"
 .Dd May 7, 2008
 .Dt SMP 4
@@ -123,7 +124,7 @@ supports hyperthreading on Intel CPU's on the i386 and AMD64 platforms.
 Because using logical CPUs can cause performance penalties under certain loads,
 the logical CPUs can be disabled by setting the
 .Va machdep.hyperthreading_allowed
-tunable to zero. 
+tunable to zero.
 .Sh SEE ALSO
 .Xr cpuset 1 ,
 .Xr mptable 1 ,

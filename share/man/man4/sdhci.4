@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2008 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/sdhci.4 249373 2013-04-11 18:46:41Z joel $
 .\"
-.Dd January 14, 2009
+.Dd February 9, 2012
 .Dt SDHCI 4
 .Os
 .Sh NAME
@@ -69,6 +70,8 @@ ENE CB714
 .It
 RICOH R5C822
 .It
+RICOH R5CE823
+.It
 TI PCIXX21/XX11
 .El
 .Sh SEE ALSO
@@ -83,4 +86,4 @@ TI PCIXX21/XX11
 Many of existing SD controller chips have some nonstandard requirements,
 proprietary registers and hardware bugs, requiring additional handling.
 ENE chips are handled to work fine, while some revisions of RICOH and TI
-controllers still don't see cards without some additional initialization.
+controllers still do not see cards without some additional initialization.

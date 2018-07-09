@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.
 .\" Copyright (c) 2010-2011 The FreeBSD Foundation
@@ -36,9 +37,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)tcp.4	8.1 (Berkeley) 6/5/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/tcp.4 286706 2015-08-12 22:51:08Z sbruno $
 .\"
-.Dd November 19, 2012
+.Dd October 13, 2014
 .Dt TCP 4
 .Os
 .Sh NAME
@@ -48,6 +49,7 @@
 .In sys/types.h
 .In sys/socket.h
 .In netinet/in.h
+.In netinet/tcp.h
 .Ft int
 .Fn socket AF_INET SOCK_STREAM 0
 .Sh DESCRIPTION
@@ -147,7 +149,7 @@ See
 .Xr mod_cc 4
 for details.
 .It Dv TCP_KEEPINIT
-This write-only 
+This
 .Xr setsockopt 2
 option accepts a per-socket timeout argument of
 .Vt "u_int"
@@ -160,7 +162,7 @@ in the
 .Sx MIB Variables
 section further down.
 .It Dv TCP_KEEPIDLE
-This write-only 
+This
 .Xr setsockopt 2
 option accepts an argument of
 .Vt "u_int"
@@ -176,7 +178,7 @@ in the
 .Sx MIB Variables
 section further down.
 .It Dv TCP_KEEPINTVL
-This write-only 
+This
 .Xr setsockopt 2
 option accepts an argument of
 .Vt "u_int"
@@ -191,7 +193,7 @@ in the
 .Sx MIB Variables
 section further down.
 .It Dv TCP_KEEPCNT
-This write-only 
+This
 .Xr setsockopt 2
 option accepts an argument of
 .Vt "u_int"
@@ -351,14 +353,6 @@ That of 2 results in any
 packets to closed ports being logged.
 Any value unlisted above disables the logging
 (default is 0, i.e., the logging is disabled).
-.It Va slowstart_flightsize
-The number of packets allowed to be in-flight during the
-.Tn TCP
-slow-start phase on a non-local network.
-.It Va local_slowstart_flightsize
-The number of packets allowed to be in-flight during the
-.Tn TCP
-slow-start phase to local machines in the same subnet.
 .It Va msl
 The Maximum Segment Lifetime, in milliseconds, for a packet.
 .It Va keepinit
@@ -476,15 +470,6 @@ maximum segment size.
 This helps throughput in general, but
 particularly affects short transfers and high-bandwidth large
 propagation-delay connections.
-.Pp
-When this feature is enabled, the
-.Va slowstart_flightsize
-and
-.Va local_slowstart_flightsize
-settings are not observed for new
-connection slow starts, but they are still used for slow starts
-that occur when the connection has been idle and starts sending
-again.
 .It Va sack.enable
 Enable support for RFC 2018, TCP Selective Acknowledgment option,
 which allows the receiver to inform the sender about all successfully
@@ -536,8 +521,31 @@ ECN allows a TCP sender to reduce the transmission rate in order to
 avoid packet drops.
 .It Va ecn.maxretries
 Number of retries (SYN or SYN/ACK retransmits) before disabling ECN on a
-specific connection. This is needed to help with connection establishment
+specific connection.
+This is needed to help with connection establishment
 when a broken firewall is in the network path.
+.It Va pmtud_blackhole_detection
+Turn on automatic path MTU blackhole detection.
+In case of retransmits OS will
+lower the MSS to check if it's MTU problem.
+If current MSS is greater than
+configured value to try, it will be set to configured value, otherwise,
+MSS will be set to default values
+.Po Va net.inet.tcp.mssdflt
+and
+.Va net.inet.tcp.v6mssdflt
+.Pc .
+.It Va pmtud_blackhole_mss
+MSS to try for IPv4 if PMTU blackhole detection is turned on.
+.It Va v6pmtud_blackhole_mss
+MSS to try for IPv6 if PMTU blackhole detection is turned on.
+.It Va pmtud_blackhole_activated
+Number of times configured values were used in an attempt to downshift.
+.It Va pmtud_blackhole_activated_min_mss
+Number of times default MSS was used in an attempt to downshift.
+.It Va pmtud_blackhole_failed
+Number of connections for which retransmits continued even after MSS
+downshift.
 .El
 .Sh ERRORS
 A socket operation may fail with one of the following errors returned:
@@ -579,6 +587,7 @@ address.
 .Xr intro 4 ,
 .Xr ip 4 ,
 .Xr mod_cc 4 ,
+.Xr siftr 4 ,
 .Xr syncache 4 ,
 .Xr setkey 8
 .Rs

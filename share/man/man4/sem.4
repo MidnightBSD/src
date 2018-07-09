@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2002 Tim J. Robbins
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/sem.4 261879 2014-02-14 08:29:00Z brueffer $
 .\"
-.Dd May 3, 2011
+.Dd February 7, 2014
 .Dt SEM 4
 .Os
 .Sh NAME
@@ -32,7 +33,7 @@
 .Nd POSIX semaphores
 .Sh SYNOPSIS
 To compile this driver into the kernel,
-place the following lines in your
+place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "options P1003_1B_SEMAPHORES"
@@ -45,7 +46,11 @@ module at boot time, place the following line in
 sem_load="YES"
 .Ed
 .Pp
-.Dl "kldload sem"
+To load the driver as a module at run-time, run the following
+command as root:
+.Bd -ragged -offset indent
+kldload sem
+.Ed
 .Sh DESCRIPTION
 The
 .Nm

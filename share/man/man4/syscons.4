@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1999
 .\" Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
@@ -24,9 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/syscons.4 268946 2014-07-21 16:21:17Z emaste $
 .\"
-.Dd September 11, 2009
+.Dd July 21, 2014
 .Dt SYSCONS 4
 .Os
 .Sh NAME
@@ -62,6 +63,10 @@ In
 .Pa /boot/device.hints :
 .Cd hint.sc.0.at="isa"
 .Cd hint.sc.0.vesa_mode=0x103
+.Pp
+In
+.Pa /boot/loader.conf :
+.Cd kern.vty=sc
 .Sh DESCRIPTION
 The
 .Nm
@@ -403,7 +408,9 @@ option too.
 The following driver flags can be used to control the
 .Nm
 driver.
-They can be set either in
+Driver flags can be set with the
+.Cd hint.sc.0.flags
+tunable, either in
 .Pa /boot/device.hints ,
 or else at the loader prompt (see
 .Xr loader 8 ) .
@@ -446,6 +453,26 @@ This option instructs the syscons driver to periodically scan
 for a keyboard device if it is not currently attached to one.
 Otherwise, the driver only probes for a keyboard once during bootup.
 .El
+.Ss Loader Tunables
+These settings can be entered at the
+.Xr loader 8
+prompt or in
+.Xr loader.conf 5 .
+.Bl -tag -width indent
+.It Va kern.vty
+When both
+.Nm
+and
+.Xr vt 4
+have been compiled into the kernel, the one to use for the system console can
+be selected by setting this variable to
+.Ql sc
+or
+.Ql vt .
+If not set,
+.Nm
+provides the default system console.
+.El
 .Sh FILES
 .Bl -tag -width /usr/share/syscons/xxxxyyyyzzz -compact
 .It Pa /dev/console
@@ -471,9 +498,9 @@ device atkbdc
 device atkbd
 device vga
 device sc
-
 device splash
 .Ed
+.Pp
 You also need the following lines in
 .Pa /boot/device.hints
 for these drivers.
@@ -501,15 +528,15 @@ Note that you cannot put any white space inside the quoted string,
 because of the current implementation of
 .Xr config 8 .
 .Pp
-.Dl "options SC_NORM_ATTR=(FG_GREEN|BG_BLACK)
-.Dl "options SC_NORM_REV_ATTR=(FG_YELLOW|BG_GREEN)
+.Dl "options SC_NORM_ATTR=(FG_GREEN|BG_BLACK)"
+.Dl "options SC_NORM_REV_ATTR=(FG_YELLOW|BG_GREEN)"
 .Pp
 The following lines will set the default colors of the kernel message.
 The kernel message will be printed bright red on black background.
 The reversed message will be black on red background.
 .Pp
-.Dl "options SC_KERNEL_CONS_ATTR=(FG_LIGHTRED|BG_BLACK)
-.Dl "options SC_KERNEL_CONS_REV_ATTR=(FG_BLACK|BG_RED)
+.Dl "options SC_KERNEL_CONS_ATTR=(FG_LIGHTRED|BG_BLACK)"
+.Dl "options SC_KERNEL_CONS_REV_ATTR=(FG_BLACK|BG_RED)"
 .Pp
 The following example adds the font files
 .Pa cp850-8x16.fnt ,
@@ -519,7 +546,7 @@ and
 to the kernel.
 .Pp
 .Dl "options SC_DFLT_FONT"
-.Dl "makeoptions SC_DFLT_FONT=cp850
+.Dl "makeoptions SC_DFLT_FONT=cp850"
 .Dl "device sc"
 .\".Sh DIAGNOSTICS
 .Sh SEE ALSO
@@ -533,6 +560,7 @@ to the kernel.
 .Xr splash 4 ,
 .Xr ukbd 4 ,
 .Xr vga 4 ,
+.Xr vt 4 ,
 .Xr kbdmap 5 ,
 .Xr rc.conf 5 ,
 .Xr ttys 5 ,

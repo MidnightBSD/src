@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2005 Robert N. M. Watson
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/sched_ule.4 239185 2012-08-10 19:02:49Z mav $
 .\"
-.Dd January 21, 2008
+.Dd August 10, 2012
 .Dt SCHED_ULE 4
 .Os
 .Sh NAME
@@ -59,6 +60,9 @@ The following sysctls are relevant to the operation of
 .Bl -tag -width indent
 .It Va kern.sched.name
 This read-only sysctl reports the name of the active scheduler.
+.It Va kern.sched.quantum
+This read-write sysctl reports or sets the length of the quantum (in
+micro-seconds) granted to a thread.
 .El
 .Sh SEE ALSO
 .Xr sched_4bsd 4 ,

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2008 AnyWi Technologies
 .\" All rights reserved.
@@ -16,9 +17,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/u3g.4 259601 2013-12-19 07:12:34Z truckman $
 .\"
-.Dd February 8, 2012
+.Dd November 26, 2013
 .Dt U3G 4
 .Os
 .Sh NAME
@@ -29,6 +30,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device u3g"
 .Ed
 .Pp
@@ -38,6 +41,9 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 u3g_load="YES"
 .Ed
+.Pp
+If neither of the above is done, the driver will automatically be loaded
+by devd(8) when the device is connected.
 .Sh DESCRIPTION
 The
 .Nm
@@ -60,6 +66,8 @@ Option GT 3G Fusion, GT Fusion Quad, etc. (only 3G part, not WLAN)
 Option GT 3G, GT 3G Quad, etc.
 .It
 Vodafone Mobile Connect Card 3G
+.It
+Vodafone Mobile Broadband K3772-Z
 .It
 Qualcomm Inc. CDMA MSM
 .It
@@ -89,12 +97,12 @@ switching automatically, please try to add quirks. See
 .Xr usbconfig 8
 and
 .Xr usb_quirk 4 .
-.Pp
 .Sh SEE ALSO
 .Xr tty 4 ,
 .Xr ucom 4 ,
 .Xr usb 4 ,
 .Xr usb_quirk 4 ,
+.Xr devd 8 ,
 .Xr usbconfig 8
 .Sh HISTORY
 The
@@ -114,3 +122,7 @@ driver was written by
 and
 .An Nick Hibma Aq n_hibma@FreeBSD.org .
 Hardware for testing was provided by AnyWi Technologies, Leiden, NL.
+.Sh BUGS
+The automatic mode switch from disk mode to modem mode does not work unless
+the driver is either built into the kernel or loaded before the device is
+connected.
