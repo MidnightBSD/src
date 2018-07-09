@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -30,9 +31,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)group.5	8.3 (Berkeley) 4/19/94
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man5/group.5 246949 2013-02-18 20:21:26Z joel $
 .\"
-.Dd September 29, 1994
+.Dd February 8, 2013
 .Dt GROUP 5
 .Os
 .Sh NAME
@@ -116,6 +117,17 @@ file.
 .\"	char    **gr_mem;        /* group members */
 .\" };
 .\" .Ed
+.Sh IMPLEMENTATION NOTES
+The
+.Xr passwd 1
+command does not change the
+.Nm
+passwords.
+The
+.Xr pw 8
+utility's
+.Cm groupmod
+command should be used instead.
 .Sh LIMITS
 There are various limitations which are explained in
 the function where they occur; see section
@@ -139,6 +151,7 @@ may still have this limit.
 .It Pa /etc/group
 .El
 .Sh SEE ALSO
+.Xr newgrp 1 ,
 .Xr passwd 1 ,
 .Xr setgroups 2 ,
 .Xr crypt 3 ,
@@ -156,9 +169,3 @@ file format appeared in
 .At v6 .
 Support for comments first appeared in
 .Fx 3.0 .
-.Sh BUGS
-The
-.Xr passwd 1
-command does not change the
-.Nm
-passwords.
