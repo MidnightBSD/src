@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1991 The Regents of the University of California.
 .\" All rights reserved.
 .\"
@@ -30,7 +31,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mem.4	5.3 (Berkeley) 5/2/91
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/mem.4 231564 2012-02-12 18:29:56Z ed $
 .\"
 .Dd October 3, 2004
 .Dt MEM 4
@@ -101,8 +102,8 @@ The region cannot be written to.
 Memory ranges are described by
 .Vt struct mem_range_desc :
 .Bd -literal -offset indent
-u_int64_t	mr_base;	/\(** physical base address \(**/
-u_int64_t	mr_len;		/\(** physical length of region \(**/
+uint64_t	mr_base;	/\(** physical base address \(**/
+uint64_t	mr_len;		/\(** physical length of region \(**/
 int		mr_flags;	/\(** attributes of region \(**/
 char		mr_owner[8];
 .Ed

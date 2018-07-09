@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1994 Keith E. Walker
 .\" All rights reserved.
@@ -24,9 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/mcd.4 322860 2017-08-24 21:44:23Z mckusick $
 .\"
-.Dd December 8, 1994
+.Dd July 8, 2017
 .Dt MCD 4
 .Os
 .Sh NAME
@@ -40,6 +41,11 @@ In
 .Cd hint.mcd.0.at="isa"
 .Cd hint.mcd.0.port="0x300"
 .Cd hint.mcd.0.irq="10"
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver will be removed in
+.Fx 12.0 .
 .Sh DESCRIPTION
 The
 .Nm
@@ -56,12 +62,8 @@ The
 driver responds to disk-specific
 .Fn ioctl
 commands, namely the
-.Dv DIOCGDINFO ,
-.Dv DIOCGPART ,
-.Dv DIOCWDINFO ,
-and
-.Dv DIOCSDINFO ,
-commands.
+.Dv DIOCGPART
+command.
 Other disk-specific
 .Fn ioctl
 commands will return an error.

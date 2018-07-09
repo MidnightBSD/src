@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.
 .\" Copyright (c) 2009 Robert N. M. Watson
@@ -28,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)lo.4	8.1 (Berkeley) 6/5/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/lo.4 230609 2012-01-27 08:46:32Z glebius $
 .\"
-.Dd March 15, 2009
+.Dd January 25, 2012
 .Dt LO 4
 .Os
 .Sh NAME
@@ -47,9 +48,9 @@ communication.
 As with other network interfaces, the loopback interface must have
 network addresses assigned for each address family with which it is to be used.
 These addresses
-may be set or changed with the
-.Dv SIOCSIFADDR
-.Xr ioctl 2 .
+may be set with the appropriate
+.Xr ioctl 2
+commands for corresponding address families.
 The loopback interface should be the last interface configured,
 as protocols may use the order of configuration as an indication of priority.
 The loopback should

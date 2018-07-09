@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/mvs.4 287016 2015-08-22 07:32:47Z mav $
 .\"
-.Dd March 3, 2013
+.Dd March 23, 2015
 .Dt MVS 4
 .Os
 .Sh NAME
@@ -67,7 +68,8 @@ controls SATA interface Power Management for the specified channel,
 allowing some power to be saved at the cost of additional command
 latency.
 Possible values:
-.Bl -tag -compact
+.Pp
+.Bl -tag -width 4n -offset indent -compact
 .It 0
 interface Power Management is disabled (default);
 .It 1
@@ -108,13 +110,6 @@ Port Multipliers (including FIS-based switching, when supported),
 hardware command queues (up to 31 command per port),
 Native Command Queuing, SATA interface Power Management, device hot-plug
 and Message Signaled Interrupts.
-.Pp
-The same hardware is also supported by the atamarvell and ataadaptec
-drivers from the
-.Xr ata 4
-subsystem.
-If both drivers are loaded at the same time, this one will be
-given precedence as the more functional of the two.
 .Sh HARDWARE
 The
 .Nm

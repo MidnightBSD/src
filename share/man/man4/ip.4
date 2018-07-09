@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -30,7 +31,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ip.4	8.2 (Berkeley) 11/30/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ip.4 241491 2012-10-12 19:53:13Z glebius $
 .\"
 .Dd October 12, 2012
 .Dt IP 4
@@ -239,7 +240,7 @@ configured with the broadcast address 192.168.2.255:
 .Bd -literal
 char msg[512];
 struct sockaddr_in sin;
-u_char onesbcast = 1;	/* 0 = disable (default), 1 = enable */
+int onesbcast = 1;	/* 0 = disable (default), 1 = enable */
 
 setsockopt(s, IPPROTO_IP, IP_ONESBCAST, &onesbcast, sizeof(onesbcast));
 sin.sin_addr.s_addr = inet_addr("192.168.2.255");
@@ -430,7 +431,6 @@ and
 .Va net.inet.ip.portrange.randomtime
 are 10 port allocations per second and 45 seconds correspondingly.
 .Ss "Multicast Options"
-.Pp
 .Tn IP
 multicasting is supported only on
 .Dv AF_INET
@@ -720,7 +720,6 @@ are used to specify an upper limit on the number of per-socket and per-group
 source filter entries which the kernel may allocate.
 .\"-----------------------
 .Ss "Raw IP Sockets"
-.Pp
 Raw
 .Tn IP
 sockets are connectionless,
@@ -889,3 +888,11 @@ The
 .Vt ip_mreqn
 structure appeared in
 .Tn Linux 2.4 .
+.Sh BUGS
+Before
+.Fx 10.0
+packets received on raw IP sockets had the
+.Va ip_hl
+subtracted from the
+.Va ip_len
+field.

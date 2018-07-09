@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2009 Sam Leffler, Errno Consulting
 .\" All rights reserved.
@@ -26,7 +27,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGES.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/mwl.4 235319 2012-05-12 03:46:43Z gjb $
 .\"/
 .Dd July 8, 2009
 .Dt MWL 4
@@ -93,14 +94,14 @@ virtual interfaces may be configured for simultaneous use.
 When multiple interfaces are configured each may have a separate
 mac address that is formed by setting the U/L bits in the mac
 address assigned to the underlying device.
-Any number of 
+Any number of
 .Cm wds
 virtual interfaces may be configured together with
 .Cm hostap
 interfaces.
 Multiple
 .Cm station
-interfaces may be operated together with 
+interfaces may be operated together with
 .Cm hostap
 interfaces to construct a wireless repeater device.
 For more information on configuring this device, see
@@ -150,7 +151,7 @@ the fxp0 (wired) device:
 .Bd -literal -offset indent
 ifconfig wlan0 create wlandev mwl0 wlanmode hostap \e
 	ssid paying-customers wepmode on wepkey 0x1234567890 \e
-	mode 11a up 
+	mode 11a up
 ifconfig wlan1 create wlandev mwl0 wlanmode hostap bssid \e
 	ssid freeloaders up
 ifconfig bridge0 create addm wlan0 addm wlan1 addm fxp0 up

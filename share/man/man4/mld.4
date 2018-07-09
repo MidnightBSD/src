@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2009 Bruce Simpson.
 .\"
@@ -25,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/mld.4 249253 2013-04-08 10:53:22Z joel $
 .\"
-.Dd May 27, 2009
+.Dd April 8, 2013
 .Dt MLD 4
 .Os
 .Sh NAME
@@ -52,7 +53,7 @@ itself, in response to multicast membership requests by user
 applications.
 Multicast routing protocol daemons may open a raw socket to directly
 interact with
-.Nm 
+.Nm
 and receive membership reports.
 .Pp
 As of
@@ -67,11 +68,6 @@ to the protocol.
 .\"
 .Sh SYSCTL VARIABLES
 .Bl -tag -width indent
-.\"
-.It net.inet6.mld.stats
-This opaque read-only variable exposes the stack-wide MLDv2
-protocol statistics to
-.Xr netstat 1 .
 .\"
 .It net.inet6.mld.ifinfo
 This opaque read-only variable exposes the per-link MLDv2 status to
@@ -94,11 +90,12 @@ This sysctl is normally enabled by default.
 .\"
 .El
 .Sh SEE ALSO
-.Xr ifmcstat 8 ,
+.Xr netstat 1 ,
+.Xr sourcefilter 3 ,
+.Xr icmp6 4 ,
 .Xr inet 4 ,
 .Xr multicast 4 ,
-.Xr netstat 1 ,
-.Xr sourcefilter 3
+.Xr ifmcstat 8
 .Sh HISTORY
 The
 .Nm

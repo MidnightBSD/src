@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$KAME: icmp6.4,v 1.6 2004/12/27 05:30:56 itojun Exp $
 .\"	$OpenBSD: icmp6.4,v 1.19 2004/12/23 20:33:03 jaredy Exp $
 .\"
@@ -28,7 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/icmp6.4 242728 2012-11-08 00:54:43Z delphij $
 .\"
 .Dd November 7, 2012
 .Dt ICMP6 4
@@ -140,13 +141,13 @@ This header corresponds to the
 structure and has the following definition:
 .Bd -literal -offset indent
 struct icmp6_hdr {
-	u_int8_t	icmp6_type;	/* type field */
-	u_int8_t	icmp6_code;	/* code field */
-	u_int16_t	icmp6_cksum;	/* checksum field */
+	uint8_t  icmp6_type;	/* type field */
+	uint8_t  icmp6_code;	/* code field */
+	uint16_t icmp6_cksum;	/* checksum field */
 	union {
-		u_int32_t icmp6_un_data32[1]; /* type-specific */
-		u_int16_t icmp6_un_data16[2]; /* type-specific */
-		u_int8_t  icmp6_un_data8[4];  /* type-specific */
+		uint32_t icmp6_un_data32[1]; /* type-specific */
+		uint16_t icmp6_un_data16[2]; /* type-specific */
+		uint8_t  icmp6_un_data8[4];  /* type-specific */
 	} icmp6_dataun;
 } __packed;
 

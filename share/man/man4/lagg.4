@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"	$OpenBSD: trunk.4,v 1.18 2006/06/09 13:53:34 jmc Exp $
 .\"
 .\" Copyright (c) 2005, 2006 Reyk Floeter <reyk@openbsd.org>
@@ -14,9 +15,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/lagg.4 290736 2015-11-13 01:03:59Z smh $
 .\"
-.Dd February 23, 2012
+.Dd November 6, 2015
 .Dt LAGG 4
 .Os
 .Sh NAME
@@ -92,8 +93,8 @@ This is an alias for
 .Ic loadbalance
 mode.
 .It Ic lacp
-Supports the IEEE 802.3ad Link Aggregation Control Protocol (LACP) and the
-Marker Protocol.
+Supports the IEEE 802.1AX (formerly 802.3ad) Link Aggregation Control Protocol
+(LACP) and the Marker Protocol.
 LACP will negotiate a set of aggregable links with the peer in to one or more
 Link Aggregated Groups.
 Each LAG is composed of ports of the same speed, set to full-duplex operation.
@@ -143,19 +144,20 @@ modes will use the RSS hash from the network card if available to avoid
 computing one, this may give poor traffic distribution if the hash is invalid
 or uses less of the protocol header information.
 Local hash computation can be forced per interface by setting the
-.Va net.link.lagg.X.use_flowid
-.Xr sysctl 8
-variable to zero where X is the interface number.
+.Cm use_flowid
+.Xr ifconfig 8
+flag.
 The default for new interfaces is set via the
 .Va net.link.lagg.default_use_flowid
 .Xr sysctl 8 .
 .Sh EXAMPLES
-Create a 802.3ad link aggregation using LACP with two
+Create a link aggregation using LACP with two
 .Xr bge 4
 Gigabit Ethernet interfaces:
 .Bd -literal -offset indent
 # ifconfig bge0 up
 # ifconfig bge1 up
+# ifconfig lagg0 create
 # ifconfig lagg0 laggproto lacp laggport bge0 laggport bge1 \e
 	192.168.1.1 netmask 255.255.255.0
 .Ed
@@ -168,6 +170,7 @@ device will be used:
 # ifconfig em0 up
 # ifconfig ath0 ether 00:11:22:33:44:55
 # ifconfig create wlan0 wlandev ath0 ssid my_net up
+# ifconfig lagg0 create
 # ifconfig lagg0 laggproto failover laggport em0 laggport wlan0 \e
 	192.168.1.1 netmask 255.255.255.0
 .Ed
