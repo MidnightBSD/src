@@ -57391,6 +57391,12 @@ share/man/man4/mac_seeotheruids.4 -text
 share/man/man4/mac_stub.4 -text
 share/man/man4/mac_test.4 -text
 share/man/man4/malo.4 -text
+share/man/man4/man4.arm/Makefile svneol=native#text/plain
+share/man/man4/man4.arm/cgem.4 svneol=native#text/plain
+share/man/man4/man4.arm/devcfg.4 svneol=native#text/plain
+share/man/man4/man4.arm/mge.4 svneol=native#text/plain
+share/man/man4/man4.arm/npe.4 svneol=native#text/plain
+share/man/man4/man4.arm/ti_adc.4 svneol=native#text/plain
 share/man/man4/man4.i386/CPU_ELAN.4 -text
 share/man/man4/man4.i386/Makefile -text
 share/man/man4/man4.i386/acpi_aiboost.4 -text
