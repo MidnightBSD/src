@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"     $OpenBSD: txp.4,v 1.8 2001/06/26 02:09:11 pjanzen Exp $
 .\"
 .\" Copyright (c) 2001 Jason L. Wright (jason@thought.net)
@@ -24,9 +25,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/txp.4 230579 2012-01-26 10:51:41Z glebius $
 .\"
-.Dd March 12, 2009
+.Dd January 26, 2012
 .Dt TXP 4
 .Os
 .Sh NAME
@@ -76,17 +77,6 @@ checksum offloading,
 segmentation, nor
 .Xr ipsec 4
 acceleration.
-.Pp
-Each of the host's network addresses
-is specified at boot time with an
-.Dv SIOCSIFADDR
-.Xr ioctl 2 .
-The
-.Nm
-interface employs the address resolution protocol described in
-.Xr arp 4
-to dynamically map between Internet and Ethernet addresses on the local
-network.
 .Pp
 When a
 .Nm

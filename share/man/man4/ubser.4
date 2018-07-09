@@ -1,8 +1,9 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 2004 Bernd Walter <ticso@FreeBSD.org>
 .\"
 .\" $URL: https://devel.bwct.de/svn/projects/ubser/ubser.4 $
-.\" $Date: 2012-12-29 16:29:12 $
-.\" $Author: laffer1 $
+.\" $Date: 2004-02-29 21:54:17 +0100 (Sun, 29 Feb 2004) $
+.\" $Author: ticso $
 .\" $Rev: 1130 $
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -26,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ubser.4 227750 2011-11-20 12:18:21Z miwi $
 .\"
-.Dd November 22, 2006
+.Dd November 20, 2011
 .Dt UBSER 4
 .Os
 .Sh NAME
@@ -39,6 +40,8 @@ To compile this driver into the kernel,
 place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device ubser"
 .Ed
 .Pp

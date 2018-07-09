@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2001 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -26,9 +27,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/ubsa.4 227750 2011-11-20 12:18:21Z miwi $
 .\"
-.Dd March 28, 2008
+.Dd November 20, 2011
 .Dt UBSA 4
 .Os
 .Sh NAME
@@ -39,6 +40,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device ubsa"
 .Ed
 .Pp

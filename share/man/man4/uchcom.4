@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $NetBSD: uchcom.4,v 1.2 2008/04/30 13:10:54 martin Exp $
 .\"
 .\" Copyright (c) 2007 The NetBSD Foundation, Inc.
@@ -27,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/share/man/man4/uchcom.4 227750 2011-11-20 12:18:21Z miwi $
 .\"
-.Dd May 18, 2009
+.Dd November 20, 2011
 .Dt UCHCOM 4
 .Os
 .Sh NAME
@@ -40,6 +41,8 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device usb"
+.Cd "device ucom"
 .Cd "device uchcom"
 .Ed
 .Pp
