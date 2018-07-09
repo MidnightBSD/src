@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-#	$FreeBSD: src/share/man/man5/Makefile,v 1.58.2.2 2005/12/05 18:54:45 emax Exp $
+#	$FreeBSD: stable/10/share/man/man5/Makefile 318623 2017-05-22 06:20:58Z ngie $
 # $MidnightBSD$
 
 .include <bsd.own.mk>
@@ -10,6 +10,7 @@ MAN=	acct.5 \
 	a.out.5 \
 	${_boot.config.5} \
 	bsd.mport.mk.5 \
+	cd9660.5 \
 	core.5 \
 	devfs.5 \
 	devfs.conf.5 \
@@ -75,8 +76,27 @@ MLINKS+=quota.user.5 quota.group.5
 MLINKS+=rc.conf.5 rc.conf.local.5
 MLINKS+=resolver.5 resolv.conf.5
 
+.if ${MK_AUTOFS} != "no"
+MAN+=	autofs.5
+.endif
+
+.if ${MK_BLUETOOTH} != "no"
+MAN+=	bluetooth.device.conf.5 \
+	bluetooth.hosts.5 \
+	bluetooth.protocols.5
+.endif
+
 .if ${MK_HESIOD} != "no"
 MAN+=	hesiod.conf.5 
+.endif
+
+.if ${MK_NAND} != "no"
+MAN+=	nandfs.5
+.endif
+
+.if ${MK_PF} != "no"
+MAN+=	pf.conf.5 \
+	pf.os.5
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
