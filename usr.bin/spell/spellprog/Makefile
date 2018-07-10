@@ -1,9 +1,9 @@
-# $MidnightBSD: src/usr.bin/spell/spellprog/Makefile,v 1.1 2006/12/31 07:08:37 laffer1 Exp $
+# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.3 2006/08/26 18:17:43 christos Exp $
 
 PROG=	spellprog
-WARNS?=	6
-NO_MAN=	1
+WARNS?=	0
+MAN=	
 SRCS=	spellprog.c look.c
 BINDIR=	/usr/libexec
 
