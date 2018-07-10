@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: doas.c,v 1.57 2016/06/19 19:29:43 martijn Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>

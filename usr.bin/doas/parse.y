@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: parse.y,v 1.18 2016/06/07 16:49:23 tedu Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
@@ -185,7 +186,7 @@ yyerror(const char *fmt, ...)
 	parse_errors++;
 }
 
-struct keyword {
+static struct keyword {
 	const char *word;
 	int token;
 } keywords[] = {

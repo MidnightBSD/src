@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: doas.h,v 1.8 2016/06/19 19:29:43 martijn Exp $ */
 struct rule {
 	int action;

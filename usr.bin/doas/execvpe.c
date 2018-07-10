@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2015 NONAKA Kimihiro <nonakap@gmail.com>
  * All rights reserved.

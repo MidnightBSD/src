@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: env.c,v 1.2 2016/06/19 19:29:43 martijn Exp $ */
 /*
  * Copyright (c) 2016 Ted Unangst <tedu@openbsd.org>
