@@ -48282,6 +48282,7 @@ etc/periodic/daily/300.calendar -text
 etc/periodic/daily/310.accounting -text
 etc/periodic/daily/330.news -text
 etc/periodic/daily/400.status-disks -text
+etc/periodic/daily/401.status-graid -text
 etc/periodic/daily/404.status-zfs -text
 etc/periodic/daily/406.status-gmirror -text
 etc/periodic/daily/407.status-graid3 -text
