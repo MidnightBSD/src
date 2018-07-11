@@ -48200,6 +48200,7 @@ etc/hosts.lpd -text
 etc/inetd.conf -text
 etc/libalias.conf -text
 etc/libmap.conf -text
+etc/libmap32.conf svneol=native#text/plain
 etc/login.access -text
 etc/login.conf -text
 etc/mac.conf -text
