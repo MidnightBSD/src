@@ -48349,6 +48349,7 @@ etc/rc.d/atm3 -text
 etc/rc.d/auditd -text
 etc/rc.d/auditdistd -text
 etc/rc.d/automount -text
+etc/rc.d/automountd -text
 etc/rc.d/autounmountd -text
 etc/rc.d/bgfsck -text
 etc/rc.d/bluetooth -text
@@ -48369,7 +48370,6 @@ etc/rc.d/dhclient -text
 etc/rc.d/dhcp6c -text
 etc/rc.d/dmesg -text
 etc/rc.d/dumpon -text
-etc/rc.d/encswap -text
 etc/rc.d/faith -text
 etc/rc.d/firstboot -text
 etc/rc.d/fsck -text
@@ -48429,7 +48429,6 @@ etc/rc.d/moused -text
 etc/rc.d/mroute6d -text
 etc/rc.d/mrouted -text
 etc/rc.d/msgs -text
-etc/rc.d/named -text
 etc/rc.d/natd -text
 etc/rc.d/netif -text
 etc/rc.d/netoptions -text

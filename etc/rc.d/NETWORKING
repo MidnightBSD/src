@@ -1,11 +1,10 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-#
 
 # PROVIDE: NETWORKING NETWORK
-# REQUIRE: netif netoptions routing ppp ipfw stf faith
-# REQUIRE: defaultroute routed mrouted route6d mroute6d resolv bridge
+# REQUIRE: netif netwait netoptions routing ppp ipfw stf faith
+# REQUIRE: defaultroute mrouted route6d mroute6d resolv bridge
 # REQUIRE: static_arp static_ndp
 
 #	This is a dummy dependency, for services which require networking
