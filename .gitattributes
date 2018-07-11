@@ -48283,7 +48283,6 @@ etc/periodic/daily/310.accounting -text
 etc/periodic/daily/330.news -text
 etc/periodic/daily/400.status-disks -text
 etc/periodic/daily/404.status-zfs -text
-etc/periodic/daily/405.status-ata-raid -text
 etc/periodic/daily/406.status-gmirror -text
 etc/periodic/daily/407.status-graid3 -text
 etc/periodic/daily/408.status-gstripe -text
@@ -48293,7 +48292,6 @@ etc/periodic/daily/430.status-rwho -text
 etc/periodic/daily/440.status-mailq -text
 etc/periodic/daily/450.status-security -text
 etc/periodic/daily/460.status-mail-rejects -text
-etc/periodic/daily/470.status-named -text
 etc/periodic/daily/500.queuerun -text
 etc/periodic/daily/800.scrub-zfs -text
 etc/periodic/daily/999.local -text
