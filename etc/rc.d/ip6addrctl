@@ -75,6 +75,8 @@ ip6addrctl_start()
 		else
 			if checkyesno ipv6_activate_all_interfaces; then
 				ip6addrctl_prefer_ipv6
+			elif [ -n "$(list_vars ifconfig_\*_ipv6)" ]; then
+				ip6addrctl_prefer_ipv6
 			else
 				ip6addrctl_prefer_ipv4
 			fi
@@ -96,9 +98,6 @@ ip6addrctl_start()
 	;;
 	[Nn][Oo][Nn][Ee])
 		${IP6ADDRCTL_CMD} flush >/dev/null 2>&1
-	;;
-	[Nn][Oo][Nn][Ee])
-		ip6addrctl flush >/dev/null 2>&1
 	;;
 	*)
 		warn "\$ip6addrctl_policy is invalid: ${ip6addrctl_policy}. " \
