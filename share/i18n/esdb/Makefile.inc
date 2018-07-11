@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/i18n/esdb/Makefile.inc 219019 2011-02-25 00:04:39Z gabor $
 
 .PATH: ${.CURDIR}
 
