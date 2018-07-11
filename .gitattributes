@@ -48299,6 +48299,7 @@ etc/periodic/daily/800.scrub-zfs -text
 etc/periodic/daily/999.local -text
 etc/periodic/daily/Makefile -text
 etc/periodic/monthly/200.accounting -text
+etc/periodic/monthly/450.status-security -text
 etc/periodic/monthly/999.local -text
 etc/periodic/monthly/Makefile -text
 etc/periodic/security/100.chksetuid -text
