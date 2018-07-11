@@ -48321,6 +48321,7 @@ etc/periodic/weekly/310.locate -text
 etc/periodic/weekly/320.whatis -text
 etc/periodic/weekly/340.noid -text
 etc/periodic/weekly/350.msearch -text
+etc/periodic/weekly/450.status-security -text
 etc/periodic/weekly/999.local -text
 etc/periodic/weekly/Makefile -text
 etc/pf.conf -text
