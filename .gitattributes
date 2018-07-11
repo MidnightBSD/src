@@ -48293,6 +48293,7 @@ etc/periodic/daily/440.status-mailq -text
 etc/periodic/daily/450.status-security -text
 etc/periodic/daily/460.status-mail-rejects -text
 etc/periodic/daily/500.queuerun -text
+etc/periodic/daily/510.status-world-kernel -text
 etc/periodic/daily/800.scrub-zfs -text
 etc/periodic/daily/999.local -text
 etc/periodic/daily/Makefile -text

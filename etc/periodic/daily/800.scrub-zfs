@@ -43,6 +43,10 @@ case "$daily_scrub_zfs_enable" in
 			rc=3
 			echo "Skipping faulted pool: ${pool}"
 			continue ;;
+		*UNAVAIL*)
+			rc=4
+			echo "Skipping unavailable pool: ${pool}"
+			continue ;;
 		esac
 
 		# determine how many days shall be between scrubs
@@ -58,6 +62,11 @@ case "$daily_scrub_zfs_enable" in
 			# creation time of the pool if no scrub was done
 			_last_scrub=$(zpool history ${pool} | \
 			    sed -ne '2s/ .*$//p')
+		fi
+		if [ -z "${_last_scrub}" ]; then
+			echo "   skipping scrubbing of pool '${pool}':"
+			echo "      can't get last scrubbing date"
+			continue
 		fi
 
 		# Now minus last scrub (both in seconds) converted to days.
