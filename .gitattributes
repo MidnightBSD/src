@@ -62932,8 +62932,6 @@ sys/dev/altera/sdcard/altera_sdcard_disk.c svneol=native#text/plain
 sys/dev/altera/sdcard/altera_sdcard_fdt.c svneol=native#text/plain
 sys/dev/altera/sdcard/altera_sdcard_io.c svneol=native#text/plain
 sys/dev/altera/sdcard/altera_sdcard_nexus.c svneol=native#text/plain
-sys/dev/amd/amd.c -text
-sys/dev/amd/amd.h -text
 sys/dev/amdsbwd/amd_chipset.h svneol=native#text/plain
 sys/dev/amdsbwd/amdsbwd.c -text
 sys/dev/amdtemp/amdtemp.c -text
