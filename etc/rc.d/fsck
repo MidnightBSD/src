@@ -4,7 +4,7 @@
 #
 
 # PROVIDE: fsck
-# REQUIRE: localswap
+# REQUIRE: swap
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -20,7 +20,7 @@ fsck_start()
 	elif [ ! -r /etc/fstab ]; then
 		echo "Warning! No /etc/fstab: skipping disk checks."
 	elif [ "$autoboot" = yes ]; then
-					# During fsck ignore SIGQUIT
+		# During fsck ignore SIGQUIT
 		trap : 3
 
 		check_startmsgs && echo "Starting file system checks:"
@@ -42,7 +42,7 @@ fsck_start()
 			echo "Reboot failed; help!"
 			stop_boot
 			;;
-		8)
+		8|16)
 			if checkyesno fsck_y_enable; then
 				echo "File system preen failed, trying fsck -y ${fsck_y_flags}"
 				fsck -y ${fsck_y_flags}
