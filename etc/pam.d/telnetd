@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/pam.d/telnetd,v 1.3 2008/12/09 22:11:19 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/etc/pam.d/telnetd,v 1.7 2003/04/30 21:57:54 markm Exp $
 #
 # PAM configuration for the "telnetd" service

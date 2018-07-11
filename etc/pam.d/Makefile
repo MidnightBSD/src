@@ -1,11 +1,11 @@
-# $MidnightBSD: src/etc/pam.d/Makefile,v 1.4 2008/12/04 20:00:37 laffer1 Exp $
-# $FreeBSD: src/etc/pam.d/Makefile,v 1.13 2005/06/10 20:52:36 nectar Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
 
 NO_OBJ=
+
 FILES=	README \
-	atrun \
 	cron \
-	ftpd \
 	gdm \
 	imap \
 	kde \
@@ -14,12 +14,23 @@ FILES=	README \
 	passwd pop3 \
 	rsh \
 	sshd su system \
-	telnetd \
 	xdm
+
+.if ${MK_AT} != "no"
+FILES+=	atrun
+.endif
+
+.if ${MK_FTP} != "no"
+FILES+=	ftpd
+LINKS=	${FILESDIR}/ftpd ${FILESDIR}/ftp
+.endif
+
+.if ${MK_TELNET} != "no"
+FILES+=	telnetd
+.endif
 
 FILESDIR=	/etc/pam.d
 FILESMODE=	644
 FILESMODE_README=	444
-LINKS=	${FILESDIR}/ftpd ${FILESDIR}/ftp
 
 .include <bsd.prog.mk>

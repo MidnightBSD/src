@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/pam.d/atrun,v 1.2 2008/12/09 22:13:10 laffer1 Exp $
+# $MidnightBSD$
 #
 # PAM configuration for the "atrun" service
 #
