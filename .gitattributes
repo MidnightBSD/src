@@ -48240,6 +48240,8 @@ etc/netstart -text
 etc/network.subr -text
 etc/networks -text
 etc/newsyslog.conf -text
+etc/newsyslog.conf.d/Makefile svneol=native#text/plain
+etc/newsyslog.conf.d/opensm.conf svneol=native#text/plain
 etc/nls.alias -text
 etc/nscd.conf -text
 etc/nsmb.conf -text
