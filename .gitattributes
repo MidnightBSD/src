@@ -48399,6 +48399,7 @@ etc/rc.d/jail -text
 etc/rc.d/kadmind -text
 etc/rc.d/kdc -text
 etc/rc.d/keyserv -text
+etc/rc.d/kfd -text
 etc/rc.d/kld -text
 etc/rc.d/kldxref -text
 etc/rc.d/kpasswdd -text
