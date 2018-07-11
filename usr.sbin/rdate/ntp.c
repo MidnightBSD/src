@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: ntp.c,v 1.31 2011/12/28 21:39:30 sthen Exp $	*/
 
 /*
@@ -131,7 +132,7 @@ void	create_timeval(double, struct timeval *, struct timeval *);
 void	print_packet(const struct ntp_data *);
 #endif
 
-int	corrleaps;
+static int	corrleaps;
 
 void
 ntp_client(const char *hostname, int family, struct timeval *new,
