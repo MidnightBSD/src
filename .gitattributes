@@ -48348,6 +48348,8 @@ etc/rc.d/atm2 -text
 etc/rc.d/atm3 -text
 etc/rc.d/auditd -text
 etc/rc.d/auditdistd -text
+etc/rc.d/automount -text
+etc/rc.d/autounmountd -text
 etc/rc.d/bgfsck -text
 etc/rc.d/bluetooth -text
 etc/rc.d/bootparams -text
@@ -48358,6 +48360,7 @@ etc/rc.d/ccd -text
 etc/rc.d/cleanvar -text
 etc/rc.d/cleartmp -text
 etc/rc.d/cron -text
+etc/rc.d/ctld -text
 etc/rc.d/ddb -text
 etc/rc.d/defaultroute -text
 etc/rc.d/devd -text

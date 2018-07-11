@@ -54,12 +54,10 @@ cleanvar_prestart()
 	rm -f /var/run/clean_var /var/spool/lock/clean_var
 }
 
-cleanvar_start ()
+cleanvar_start()
 {
 	if [ -d /var/run -a ! -f /var/run/clean_var ]; then
 		purgedir /var/run
-		# And an initial utmpx active session file
-		(cd /var/run && cp /dev/null utx.active && chmod 644 utx.active)
 		>/var/run/clean_var
 	fi
 	if [ -d /var/spool/lock -a ! -f /var/spool/lock/clean_var ]; then
