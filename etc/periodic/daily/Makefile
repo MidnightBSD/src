@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: stable/10/etc/periodic/daily/Makefile 295461 2016-02-10 07:16:17Z cy $
 
 .include <bsd.own.mk>
 
@@ -9,13 +10,14 @@ FILES=	100.clean-disks \
 	210.backup-aliases \
 	330.news \
 	400.status-disks \
-	405.status-ata-raid \
+	401.status-graid \
 	406.status-gmirror \
 	407.status-graid3 \
 	408.status-gstripe \
 	409.status-gconcat \
 	420.status-network \
 	450.status-security \
+	510.status-world-kernel \
 	999.local
 
 # NB: keep these sorted by MK_* knobs
@@ -31,6 +33,9 @@ FILES+=	300.calendar
 .if ${MK_MAIL} != "no"
 FILES+=	130.clean-msgs
 .endif
+
+FILES+=	220.backup-pkgdb \
+	490.status-pkg-changes
 
 .if ${MK_RCMDS} != "no"
 FILES+=	140.clean-rwho \
