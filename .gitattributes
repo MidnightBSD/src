@@ -48278,6 +48278,7 @@ etc/periodic/daily/140.clean-rwho -text
 etc/periodic/daily/150.clean-hoststat -text
 etc/periodic/daily/200.backup-passwd -text
 etc/periodic/daily/210.backup-aliases -text
+etc/periodic/daily/220.backup-pkgdb -text
 etc/periodic/daily/300.calendar -text
 etc/periodic/daily/310.accounting -text
 etc/periodic/daily/330.news -text
