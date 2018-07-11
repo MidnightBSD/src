@@ -48395,6 +48395,8 @@ etc/rc.d/ipropd_master -text
 etc/rc.d/ipropd_slave -text
 etc/rc.d/ipsec -text
 etc/rc.d/ipxrouted -text
+etc/rc.d/iscsictl -text
+etc/rc.d/iscsid -text
 etc/rc.d/jail -text
 etc/rc.d/kadmind -text
 etc/rc.d/kdc -text
