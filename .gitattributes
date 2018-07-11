@@ -64019,8 +64019,6 @@ sys/dev/ed/if_edreg.h -text
 sys/dev/ed/if_edvar.h -text
 sys/dev/ed/rtl80x9reg.h -text
 sys/dev/ed/tc5299jreg.h -text
-sys/dev/eeemon/eeemon.c -text
-sys/dev/eeemon/eeemonreg.h -text
 sys/dev/eisa/eisa_if.m -text
 sys/dev/eisa/eisaconf.c -text
 sys/dev/eisa/eisaconf.h -text
@@ -64799,8 +64797,6 @@ sys/dev/ispfw/asm_2322.h -text
 sys/dev/ispfw/asm_2400.h -text
 sys/dev/ispfw/asm_2500.h -text
 sys/dev/ispfw/ispfw.c -text
-sys/dev/it/it.c -text
-sys/dev/it/itvar.h -text
 sys/dev/iwi/if_iwi.c -text
 sys/dev/iwi/if_iwireg.h -text
 sys/dev/iwi/if_iwivar.h -text
@@ -64943,9 +64939,6 @@ sys/dev/lge/if_lgereg.h -text
 sys/dev/lindev/full.c svneol=native#text/plain
 sys/dev/lindev/lindev.c svneol=native#text/plain
 sys/dev/lindev/lindev.h svneol=native#text/plain
-sys/dev/lm/lm78.c -text
-sys/dev/lm/lm78_isa.c -text
-sys/dev/lm/lm78var.h -text
 sys/dev/lmc/if_lmc.c -text
 sys/dev/lmc/if_lmc.h -text
 sys/dev/malo/if_malo.c -text
