@@ -1,7 +1,13 @@
-# $MidnightBSD: src/etc/defaults/Makefile,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
+# $MidnightBSD$
 
-FILES=	bluetooth.device.conf devfs.rules periodic.conf rc.conf
+.include <bsd.own.mk>
+
+FILES=	devfs.rules periodic.conf rc.conf
 NO_OBJ=
 FILESDIR= /etc/defaults
+
+.if ${MK_BLUETOOTH} != "no"
+FILES+=	bluetooth.device.conf
+.endif
 
 .include <bsd.prog.mk>
