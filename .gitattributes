@@ -62112,7 +62112,6 @@ sys/contrib/dev/ath/public/xscale-le-elf.hal.o.uu -text
 sys/contrib/dev/ath/public/xscale-le-elf.inc -text
 sys/contrib/dev/ath/public/xscale-le-elf.opt_ah.h -text
 sys/contrib/dev/ath/version.h -text
-sys/contrib/dev/bwi/README -text
 sys/contrib/dev/drm2/radeonkmsfw/ARUBA_me.bin.uu -text
 sys/contrib/dev/drm2/radeonkmsfw/ARUBA_pfp.bin.uu -text
 sys/contrib/dev/drm2/radeonkmsfw/ARUBA_rlc.bin.uu -text
