@@ -72920,7 +72920,6 @@ sys/xdr/xdr_reference.c -text
 sys/xdr/xdr_sizeof.c -text
 sys/xen/blkif.h -text
 sys/xen/evtchn.h -text
-sys/xen/evtchn/evtchn.c -text
 sys/xen/evtchn/evtchn_dev.c -text
 sys/xen/evtchn/evtchnvar.h svneol=native#text/plain
 sys/xen/features.c -text
