@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/etc/periodic/Makefile.inc,v 1.7 2004/12/21 08:46:50 ru Exp $
+# $FreeBSD: stable/10/etc/periodic/Makefile.inc 139103 2004-12-21 08:47:35Z ru $
 
 BINDIR=	/etc/periodic/${.CURDIR:T}
 NO_OBJ=
