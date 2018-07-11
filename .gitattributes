@@ -62167,16 +62167,6 @@ sys/contrib/dev/nve/i386/nvenetlib.o.bz2.uu -text
 sys/contrib/dev/nve/nvenet_version.h -text
 sys/contrib/dev/nve/os.h -text
 sys/contrib/dev/nve/phy.h -text
-sys/contrib/dev/oltr/COPYRIGHT -text
-sys/contrib/dev/oltr/i386-elf.trlld.o.uu -text
-sys/contrib/dev/oltr/if_oltr.c -text
-sys/contrib/dev/oltr/if_oltr_isa.c -text
-sys/contrib/dev/oltr/if_oltr_pci.c -text
-sys/contrib/dev/oltr/if_oltrvar.h -text
-sys/contrib/dev/oltr/trlld.h -text
-sys/contrib/dev/oltr/trlldbm.c -text
-sys/contrib/dev/oltr/trlldhm.c -text
-sys/contrib/dev/oltr/trlldmac.c -text
 sys/contrib/dev/ral/LICENSE -text
 sys/contrib/dev/ral/Makefile -text
 sys/contrib/dev/ral/microcode.h -text
@@ -62194,7 +62184,6 @@ sys/contrib/dev/urtwn/urtwn-rtl8192cfwT.fw.uu -text
 sys/contrib/dev/urtwn/urtwn-rtl8192cfwU.fw.uu -text
 sys/contrib/dev/wpi/LICENSE -text
 sys/contrib/dev/wpi/iwlwifi-3945-15.32.2.9.fw.uu -text
-sys/contrib/dev/wpi/iwlwifi-3945-2.14.4.fw.uu -text
 sys/contrib/ia64/libuwx/src/Makefile svneol=native#text/plain
 sys/contrib/ia64/libuwx/src/uwx.h svneol=native#text/plain
 sys/contrib/ia64/libuwx/src/uwx_bstream.c svneol=native#text/plain
