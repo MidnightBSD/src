@@ -8,6 +8,7 @@
 SUBDIR=	${_colldef} \
 	${_dict} \
 	${_doc} \
+	${_dtrace} \
 	${_examples} \
 	${_i18n} \
 	${_man} \
@@ -23,13 +24,19 @@ SUBDIR=	${_colldef} \
 	${_syscons} \
 	tabset \
 	termcap \
+	${_tests} \
 	${_timedef} \
+	${_vt} \
 	${_zoneinfo}
 
 # NB: keep these sorted by MK_* knobs
 
 .if ${MK_BSNMP} != "no"
 _snmp=		snmp
+.endif
+
+.if ${MK_CDDL} != "no"
+_dtrace=	dtrace
 .endif
 
 .if ${MK_DICT} != "no"
@@ -73,8 +80,18 @@ _doc=		doc
 _syscons=	syscons
 .endif
 
+.if ${MK_TESTS} != "no"
+_tests=		tests
+.endif
+
+.if ${MK_VT} != "no"
+_vt=		vt
+.endif
+
 .if ${MK_ZONEINFO} != "no"
 _zoneinfo=	zoneinfo
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
