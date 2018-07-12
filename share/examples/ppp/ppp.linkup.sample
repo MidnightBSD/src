@@ -12,8 +12,8 @@
 #  3) If no label has been found, use MYADDR if it exists.
 #
 #
-# $FreeBSD: src/share/examples/ppp/ppp.linkup.sample,v 1.2 1999/08/28 00:19:31 peter Exp $
-#
+# $FreeBSD: stable/10/share/examples/ppp/ppp.linkup.sample 192799 2009-05-26 07:40:32Z brian $
+# $MidnightBSD$
 #########################################################################
 
 # It is no longer necessary to re-add the default route here as our
@@ -30,10 +30,15 @@ MYADDR:
 192.244.176.32:
  add 192.244.176.0 0 HISADDR
 
-#You may want to execute a script after connecting.  This script can do
+# You may want to execute a script after connecting.  This script can do
 # nice things such as kick off "sendmail -q", "popclient my.isp" and
 # "slurp -d news".  It can be passed MYADDR, HISADDR and INTERFACE
 # as arguments too - useful for informing a DNS of your assigned IP.
+#
+# NOTE: It's vital that you use ``!bg'' rather than ``!'' if the program
+#       you're running will take some time or will require network
+#       connectivity.  Using ``!'' will delay ppp 'till the completion
+#       of the program being run!
 #
 # You may also want some sound effects....
 #
