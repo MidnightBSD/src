@@ -1,7 +1,8 @@
-# $FreeBSD: src/share/examples/smbfs/Makefile,v 1.5 2004/12/21 08:46:53 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/examples/smbfs/Makefile 291794 2015-12-04 18:21:05Z bdrewery $
 
 NO_OBJ=
-BINDIR=	/usr/share/examples/smbfs
+FILESDIR= ${SHAREDIR}/examples/smbfs
 FILES=	dot.nsmbrc
 
 .PATH: ${.CURDIR}/../../../contrib/smbfs/examples
