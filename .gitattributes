@@ -56278,6 +56278,15 @@ share/doc/usd/contents/Makefile -text
 share/doc/usd/contents/contents.ms -text
 share/doc/usd/title/Makefile -text
 share/doc/usd/title/Title -text
+share/dtrace/Makefile svneol=native#text/plain
+share/dtrace/README -text
+share/dtrace/hotopen -text
+share/dtrace/nfsattrstats -text
+share/dtrace/nfsclienttime -text
+share/dtrace/toolkit/Makefile svneol=native#text/plain
+share/dtrace/watch_execve -text
+share/dtrace/watch_kill -text
+share/dtrace/watch_vop_remove -text
 share/examples/IPv6/USAGE -text
 share/examples/Makefile -text
 share/examples/MidnightBSD_version/Makefile -text
