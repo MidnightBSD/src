@@ -48186,6 +48186,7 @@ etc/disktab -text
 etc/doas.conf svneol=native#text/plain
 etc/etc.amd64/ttys -text
 etc/etc.i386/ttys -text
+etc/etc.ia64/ttys -text
 etc/etc.sparc64/ttys -text
 etc/fbtab -text
 etc/ftpusers -text
