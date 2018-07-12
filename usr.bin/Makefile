@@ -9,7 +9,10 @@
 # Moved to secure: bdes
 #
 
-SUBDIR=	alias \
+SUBDIR= perl \
+	.WAIT
+
+SUBDIR+=alias \
 	apply \
 	asa \
 	asmgraph \
@@ -130,7 +133,6 @@ SUBDIR=	alias \
 	paste \
 	patch \
 	pathchk \
-	perl \
 	perror \
 	pr \
 	printenv \
