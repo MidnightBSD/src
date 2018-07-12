@@ -1,7 +1,8 @@
-# $FreeBSD: src/share/examples/perfmon/Makefile,v 1.5 2004/12/21 08:47:10 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/share/examples/perfmon/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	perfmon
-NO_MAN=
+MAN=
 
 install:
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1996 Massachusetts Institute of Technology
  *
@@ -26,7 +27,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/share/examples/perfmon/perfmon.c,v 1.5 1999/08/28 00:19:26 peter Exp $
+ * $FreeBSD: stable/10/share/examples/perfmon/perfmon.c 253750 2013-07-28 18:44:17Z avg $
  */
 
 #include <sys/types.h>
@@ -173,15 +174,13 @@ getnum(const char *buf, int min, int max)
 	l = strtol(buf, &ep, 0);
 	if (*buf && !*ep && !errno) {
 		if (l < min || l > max) {
-			errx(1, "`%s': must be between %d and %d", 
+			errx(1, "%s: must be between %d and %d", 
 			     buf, min, max);
 		}
 		return (int)l;
-	} else if(errno) {
-		errx(1, "`%s': must be between %ld and %ld", 
-		     LONG_MIN, LONG_MAX);
-	}
-	errx(1, "`%s': parameter must be an integer");
+	} 
+
+	errx(1, "%s: parameter must be an integer", buf);
 }
 
 static void
