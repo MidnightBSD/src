@@ -56478,6 +56478,7 @@ share/examples/sunrpc/sort/Makefile -text
 share/examples/sunrpc/sort/rsort.c -text
 share/examples/sunrpc/sort/sort.x -text
 share/examples/sunrpc/sort/sort_proc.c -text
+share/examples/uefisign/uefikeys -text
 share/examples/witness/lockgraphs.sh -text
 share/i18n/Makefile -text
 share/i18n/csmapper/APPLE/ARABIC%UCS.src -text
