@@ -1,8 +1,9 @@
+/* $MidnightBSD$ */
 /*
  * Control LCD module hung off parallel port using the
  * ppi 'geek port' interface.
  *
- * $FreeBSD: src/share/examples/ppi/ppilcd.c,v 1.6 2005/04/17 21:55:00 iedowse Exp $
+ * $FreeBSD: stable/10/share/examples/ppi/ppilcd.c 250460 2013-05-10 16:41:26Z eadler $
  */
 
 #include <stdio.h>
@@ -269,7 +270,7 @@ do_char(struct lcd_driver *driver, char ch)
  * one of the ground pins (eg. pin 25).
  *
  * Note that the pinning on some LCD modules has the odd and even pins
- * arranged as though reversed; check carefully before conecting a module
+ * arranged as though reversed; check carefully before connecting a module
  * as it is possible to toast the HD44780 if the power is reversed.
  */
 

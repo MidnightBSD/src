@@ -1,8 +1,9 @@
+# $MidnightBSD$
 # Makefile to build LCD control software for ppi(4) interface.
 #
-# $FreeBSD: src/share/examples/ppi/Makefile,v 1.6 2004/12/21 08:47:11 ru Exp $
+# $FreeBSD: stable/10/share/examples/ppi/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	ppilcd
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>
