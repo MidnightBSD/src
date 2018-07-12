@@ -34,9 +34,6 @@
 # the network by hand, this script will do it for you).
 #
 
-. /etc/rc.subr
-
-load_rc_config 'XXX'
 _start=quietstart
 
 /etc/rc.d/devd ${_start}
@@ -59,6 +56,7 @@ _start=quietstart
 /etc/rc.d/route6d ${_start}
 /etc/rc.d/mrouted ${_start}
 /etc/rc.d/routed ${_start}
+/etc/rc.d/rtsold ${_start}
 /etc/rc.d/nisdomain ${_start}
 
 exit 0
