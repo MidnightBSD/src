@@ -54719,6 +54719,8 @@ release/picobsd/tinyware/view/fbsd.png -text svneol=unset#unset
 release/picobsd/tinyware/view/picobsd.vu -text
 release/picobsd/tinyware/view/view.c -text
 release/rc.local -text
+release/release.conf.sample -text
+release/release.sh svneol=native#text/plain
 release/scripts/atlas-upload.sh svneol=native#text/plain
 release/scripts/box.ovf -text svneol=unset#application/xml
 release/scripts/make-manifest.sh -text
