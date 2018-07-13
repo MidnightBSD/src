@@ -54711,6 +54711,13 @@ release/amd64/make-memstick.sh -text
 release/amd64/make-uefi-memstick.sh svneol=native#text/plain
 release/amd64/mkisoimages-uefi.sh svneol=native#text/plain
 release/amd64/mkisoimages.sh -text
+release/arm/BEAGLEBONE.conf svneol=native#text/plain
+release/arm/CUBOX-HUMMINGBOARD.conf svneol=native#text/plain
+release/arm/GUMSTIX.conf svneol=native#text/plain
+release/arm/PANDABOARD.conf svneol=native#text/plain
+release/arm/RPI-B.conf svneol=native#text/plain
+release/arm/RPI2.conf svneol=native#text/plain
+release/arm/WANDBOARD.conf svneol=native#text/plain
 release/fstab -text
 release/generate-release.sh -text
 release/i386/i386.conf svneol=native#text/plain
