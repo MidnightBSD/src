@@ -48812,6 +48812,7 @@ games/snake/snake/snake.6 -text
 games/snake/snake/snake.c -text
 games/snake/snscore/Makefile -text
 games/snake/snscore/snscore.c -text
+games/tests/Makefile svneol=native#text/plain
 games/trek/DOC/read_me.nr -text
 games/trek/DOC/things -text
 games/trek/DOC/trekmanual.nr -text
