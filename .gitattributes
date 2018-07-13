@@ -56446,8 +56446,6 @@ share/examples/pf/queue2 -text
 share/examples/pf/queue3 -text
 share/examples/pf/queue4 -text
 share/examples/pf/spamd -text
-share/examples/portal/README -text
-share/examples/portal/portal.conf -text
 share/examples/ppi/Makefile -text
 share/examples/ppi/ppilcd.c -text
 share/examples/ppp/chap-auth -text

@@ -12,7 +12,6 @@ LDIRS=	IPv6 \
 	drivers \
 	etc \
 	find_interface \
-	hast \
 	ibcs2 \
 	indent \
 	ipfw \
@@ -23,13 +22,13 @@ LDIRS=	IPv6 \
 	mdoc \
 	netgraph \
 	perfmon \
-	portal \
 	ppi \
 	ppp \
 	printing \
 	ses \
 	scsi_target \
-	sunrpc
+	sunrpc \
+	uefisign
 
 XFILES=	IPv6/USAGE \
 	MidnightBSD_version/MidnightBSD_version.c \
@@ -56,11 +55,6 @@ XFILES=	IPv6/USAGE \
 	find_interface/Makefile \
 	find_interface/README \
 	find_interface/find_interface.c \
-	hast/ucarp.sh \
-	hast/ucarp_down.sh \
-	hast/ucarp_up.sh \
-	hast/vip-down.sh \
-	hast/vip-up.sh \
 	ibcs2/README \
 	ibcs2/hello.uu \
 	indent/indent.pro \
@@ -111,8 +105,6 @@ XFILES=	IPv6/USAGE \
 	perfmon/Makefile \
 	perfmon/README \
 	perfmon/perfmon.c \
-	portal/README \
-	portal/portal.conf \
 	ppi/Makefile \
 	ppi/ppilcd.c \
 	ppp/chap-auth \
@@ -185,11 +177,38 @@ XFILES=	IPv6/USAGE \
 	sunrpc/sort/Makefile \
 	sunrpc/sort/rsort.c \
 	sunrpc/sort/sort.x \
-	sunrpc/sort/sort_proc.c
+	sunrpc/sort/sort_proc.c \
+	uefisign/uefikeys
 
 BINDIR= ${SHAREDIR}/examples
 
 NO_OBJ=
+
+.if ${MK_HAST} != "no"
+LDIRS+=		hast
+XFILES+=	hast/ucarp.sh \
+		hast/ucarp_down.sh \
+		hast/ucarp_up.sh \
+		hast/vip-down.sh \
+		hast/vip-up.sh
+.endif
+
+.if ${MK_USB} != "no"
+LDIRS+=		libusb20
+XFILES+=	libusb20/Makefile \
+		libusb20/README \
+		libusb20/util.c \
+		libusb20/util.h \
+		libusb20/bulk.c \
+		libusb20/control.c
+.endif
+
+.if ${MACHINE_CPUARCH} == "amd64"
+.if ${MK_BHYVE} != "no"
+LDIRS+=		bhyve
+XFILES+=	bhyve/vmrun.sh
+.endif
+.endif
 
 # Define SHARED to indicate whether you want symbolic links to the system
 # source (``symlinks''), or a separate copy (``copies''); (latter useful
@@ -231,6 +250,10 @@ SUBDIR+=ipfilter
 .if ${MK_PF} != "no"
 SUBDIR+=pf
 .endif
+.endif
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=tests
 .endif
 
 SUBDIR_PARALLEL=
