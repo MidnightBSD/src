@@ -4,8 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $MidnightBSD: src/release/i386/mkisoimages.sh,v 1.5 2009/10/24 04:24:37 laffer1 Exp $
-# $FreeBSD: src/release/i386/mkisoimages.sh,v 1.13 2005/01/30 21:10:51 kensmith Exp $
+# $MidnightBSD$
 #
 # This script is used by release/Makefile to build the (optional) ISO images
 # for a MidnightBSD release.  It is considered architecture dependent since each
@@ -33,11 +32,14 @@ else
 fi
 
 if [ $# -lt 3 ]; then
-	echo Usage: $0 '[-b] image-label image-name base-bits-dir [extra-bits-dir]'
+	echo "Usage: $0 [-b] image-label image-name base-bits-dir [extra-bits-dir]"
 	exit 1
 fi
 
-LABEL=$1; shift
-NAME=$1; shift
+LABEL=`echo "$1" | tr '[:lower:]' '[:upper:]'`; shift
+NAME="$1"; shift
 
-makefs -t cd9660 $bootable -o rockridge -o label=$LABEL $NAME $*
+publisher="The MidnightBSD Project.  http://www.MidnightBSD.org/"
+echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > "$1/etc/fstab"
+makefs -t cd9660 $bootable -o rockridge -o label="$LABEL" -o publisher="$publisher" "$NAME" "$@"
+rm "$1/etc/fstab"
