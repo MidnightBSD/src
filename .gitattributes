@@ -54705,8 +54705,6 @@ release/amd64/make-memstick.sh -text
 release/amd64/mkisoimages.sh -text
 release/fstab -text
 release/generate-release.sh -text
-release/i386/boot_crunch.conf -text
-release/i386/fixit_crunch.conf -text
 release/i386/i386.conf svneol=native#text/plain
 release/i386/make-memstick.sh -text
 release/i386/mkisoimages.sh -text
