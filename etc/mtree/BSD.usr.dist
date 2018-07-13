@@ -435,6 +435,8 @@
             ..
         ..
         games
+            atc
+            ..
             fortune
             ..
             larn
