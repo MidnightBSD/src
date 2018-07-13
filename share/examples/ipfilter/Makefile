@@ -1,11 +1,11 @@
-# $FreeBSD: src/share/examples/ipfilter/Makefile,v 1.5 2004/12/21 08:46:53 ru Exp $
-
-NO_OBJ=
+# $MidnightBSD$
 
 FILES=	README
 
 # dist sample files
-.PATH: ${.CURDIR}/../../../contrib/ipfilter/rules
+.PATH: ${.CURDIR}/../../../contrib/ipfilter/rules \
+       ${.CURDIR}/../../../contrib/ipfilter \
+       ${.CURDIR}/../../../contrib/ipfilter/man
 FILES+=	BASIC.NAT BASIC_1.FW BASIC_2.FW \
 	example.1 example.2 example.3 example.4 example.5 \
 	example.6 example.7 example.8 example.9 example.10 \
@@ -23,6 +23,11 @@ FILES+=	ipf-howto.txt
 # http://coombs.anu.edu.au/~avalon/ sample files
 FILES+=	examples.txt rules.txt
 
+BINMODE=0755
+SCRIPTS=	mkfilters
+MAN=		mkfilters.1
+
+SCRIPTSDIR=	${SHAREDIR}/examples/ipfilter
 FILESDIR=	${SHAREDIR}/examples/ipfilter
 
 .include <bsd.prog.mk>
