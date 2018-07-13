@@ -54726,6 +54726,8 @@ release/scripts/box.ovf -text svneol=unset#application/xml
 release/scripts/make-manifest.sh -text
 release/scripts/mk-vmimage.sh svneol=native#text/plain
 release/scripts/mm-mtree.sh -text
+release/sparc64/mkisoimages.sh svneol=native#text/plain
+release/sparc64/sparc64.conf svneol=native#text/plain
 rescue/Makefile -text
 rescue/README -text
 rescue/librescue/Makefile -text
