@@ -56368,6 +56368,12 @@ share/examples/kld/syscall/test/Makefile -text
 share/examples/kld/syscall/test/call.c -text
 share/examples/libdispatch/README -text
 share/examples/libdispatch/deferred_noblocks.c -text
+share/examples/libusb20/Makefile svneol=native#text/plain
+share/examples/libusb20/README -text
+share/examples/libusb20/bulk.c svneol=native#text/plain
+share/examples/libusb20/control.c svneol=native#text/plain
+share/examples/libusb20/util.c svneol=native#text/plain
+share/examples/libusb20/util.h svneol=native#text/plain
 share/examples/libvgl/Makefile -text
 share/examples/libvgl/demo.c -text
 share/examples/mdoc/POSIX-copyright -text
