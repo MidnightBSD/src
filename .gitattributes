@@ -54700,8 +54700,10 @@ nrelease/root/etc/resolv.conf -text
 nrelease/root/index.html -text
 nrelease/root/mbsd.ico -text
 release/Makefile -text
-release/amd64/boot_crunch.conf -text
+release/amd64/amd64.conf svneol=native#text/plain
 release/amd64/make-memstick.sh -text
+release/amd64/make-uefi-memstick.sh svneol=native#text/plain
+release/amd64/mkisoimages-uefi.sh svneol=native#text/plain
 release/amd64/mkisoimages.sh -text
 release/fstab -text
 release/generate-release.sh -text
