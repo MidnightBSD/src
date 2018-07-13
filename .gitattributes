@@ -56432,8 +56432,6 @@ share/examples/netgraph/raw -text
 share/examples/netgraph/udp.tunnel -text
 share/examples/netgraph/virtual.chain -text
 share/examples/netgraph/virtual.lan -text
-share/examples/nwclient/dot.nwfsrc -text
-share/examples/nwclient/nwfs.sh.sample -text
 share/examples/perfmon/Makefile -text
 share/examples/perfmon/README -text
 share/examples/perfmon/perfmon.c -text

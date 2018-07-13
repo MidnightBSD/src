@@ -22,7 +22,6 @@ LDIRS=	IPv6 \
 	libvgl \
 	mdoc \
 	netgraph \
-	nwclient \
 	perfmon \
 	portal \
 	ppi \
@@ -109,8 +108,6 @@ XFILES=	IPv6/USAGE \
 	netgraph/udp.tunnel \
 	netgraph/virtual.chain \
 	netgraph/virtual.lan \
-	nwclient/dot.nwfsrc \
-	nwclient/nwfs.sh.sample \
 	perfmon/Makefile \
 	perfmon/README \
 	perfmon/perfmon.c \
@@ -235,5 +232,7 @@ SUBDIR+=ipfilter
 SUBDIR+=pf
 .endif
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
