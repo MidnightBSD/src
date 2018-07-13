@@ -74577,6 +74577,13 @@ tools/tools/netrate/netreceive/Makefile -text
 tools/tools/netrate/netreceive/netreceive.c -text
 tools/tools/netrate/netsend/Makefile -text
 tools/tools/netrate/netsend/netsend.c -text
+tools/tools/npe/Makefile svneol=native#text/plain
+tools/tools/npe/npestats/Makefile svneol=native#text/plain
+tools/tools/npe/npestats/main.c svneol=native#text/plain
+tools/tools/npe/npestats/npestats.c svneol=native#text/plain
+tools/tools/npe/npestats/npestats.h svneol=native#text/plain
+tools/tools/npe/npestats/statfoo.c svneol=native#text/plain
+tools/tools/npe/npestats/statfoo.h svneol=native#text/plain
 tools/tools/pirtool/Makefile -text
 tools/tools/pirtool/pirtable.h -text
 tools/tools/pirtool/pirtool.c -text
