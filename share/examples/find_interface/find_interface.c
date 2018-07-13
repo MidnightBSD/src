@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 1994, 1995 Massachusetts Institute of Technology
  *
@@ -26,7 +27,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/share/examples/find_interface/find_interface.c,v 1.5 1999/08/28 00:19:18 peter Exp $
+ * $FreeBSD: stable/10/share/examples/find_interface/find_interface.c 50476 1999-08-28 00:22:10Z peter $
  */
 
 /*
