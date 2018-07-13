@@ -54752,6 +54752,15 @@ release/scripts/mk-vmimage.sh svneol=native#text/plain
 release/scripts/mm-mtree.sh -text
 release/sparc64/mkisoimages.sh svneol=native#text/plain
 release/sparc64/sparc64.conf svneol=native#text/plain
+release/tools/arm.subr -text
+release/tools/azure.conf svneol=native#text/plain
+release/tools/ec2.conf svneol=native#text/plain
+release/tools/gce.conf svneol=native#text/plain
+release/tools/openstack.conf svneol=native#text/plain
+release/tools/vagrant-virtualbox.conf svneol=native#text/plain
+release/tools/vagrant-vmware.conf svneol=native#text/plain
+release/tools/vagrant.conf svneol=native#text/plain
+release/tools/vmimage.subr -text
 rescue/Makefile -text
 rescue/README -text
 rescue/librescue/Makefile -text
