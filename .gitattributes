@@ -54719,6 +54719,7 @@ release/i386/mkisoimages.sh -text
 release/ia64/ia64.conf svneol=native#text/plain
 release/ia64/make-memstick.sh svneol=native#text/plain
 release/ia64/mkisoimages.sh svneol=native#text/plain
+release/pc98/mkisoimages.sh svneol=native#text/plain
 release/picobsd/tinyware/simple_httpd/Makefile -text
 release/picobsd/tinyware/simple_httpd/README -text
 release/picobsd/tinyware/simple_httpd/simple_httpd.c -text
