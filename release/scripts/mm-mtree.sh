@@ -12,7 +12,6 @@
 # dougb@FreeBSD.org
 
 # $MidnightBSD$
-# $FreeBSD: src/release/scripts/mm-mtree.sh,v 1.1.4.2 2009/08/26 21:05:17 dougb Exp $
 
 PATH=/bin:/usr/bin:/usr/sbin
 
@@ -82,6 +81,11 @@ if [ ! -f ${SOURCEDIR}/Makefile.inc1 -a \
 fi
 
 # Setup make to use system files from SOURCEDIR
+objp=${MAKEOBJDIRPREFIX}
+[ -z "${objp}" ] && objp=/usr/obj
+legacydir=${objp}${SOURCEDIR}/tmp/legacy
+legacypath=${legacydir}/usr/sbin:${legacydir}/usr/bin:${legacydir}/bin
+MM_MAKE_ARGS="${MM_MAKE_ARGS} PATH=${legacypath}:${PATH}"
 MM_MAKE="make ${ARCHSTRING} ${MM_MAKE_ARGS} -m ${SOURCEDIR}/share/mk"
 
 delete_temproot () {
@@ -132,7 +136,7 @@ echo ''
 #
 rm -f ${TEMPROOT}/etc/*.db ${TEMPROOT}/etc/passwd
 
-# We only need to compare things like freebsd.cf once
+# We only need to compare things like midnightbsd.cf once
 find ${TEMPROOT}/usr/obj -type f -delete 2>/dev/null
 
 # Delete stuff we do not need to keep the mtree database small,
@@ -143,7 +147,7 @@ find -d ${TEMPROOT} -type d -empty -delete 2>/dev/null
 
 # Build the mtree database in a temporary location.
 MTREENEW=`mktemp -t mergemaster.mtree`
-mtree -ci -p ${TEMPROOT} -k size,md5digest > ${MTREENEW} 2>/dev/null
+mtree -nci -p ${TEMPROOT} -k size,md5digest > ${MTREENEW} 2>/dev/null
 
 if [ -s "${MTREENEW}" ]; then
   echo "*** Saving mtree database for future upgrades"
