@@ -56292,6 +56292,7 @@ share/examples/Makefile -text
 share/examples/MidnightBSD_version/Makefile -text
 share/examples/MidnightBSD_version/MidnightBSD_version.c -text
 share/examples/MidnightBSD_version/README -text
+share/examples/bhyve/vmrun.sh svneol=native#text/plain
 share/examples/bootforth/README -text
 share/examples/bootforth/boot.4th -text
 share/examples/bootforth/frames.4th -text
