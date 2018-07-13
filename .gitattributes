@@ -54727,6 +54727,13 @@ release/picobsd/tinyware/view/README -text
 release/picobsd/tinyware/view/fbsd.png -text svneol=unset#unset
 release/picobsd/tinyware/view/picobsd.vu -text
 release/picobsd/tinyware/view/view.c -text
+release/powerpc/boot.tbxi -text
+release/powerpc/generate-hfs.sh svneol=native#text/plain
+release/powerpc/hfs-boot.bz2.uu -text
+release/powerpc/make-memstick.sh svneol=native#text/plain
+release/powerpc/mkisoimages.sh svneol=native#text/plain
+release/powerpc/powerpc.conf svneol=native#text/plain
+release/powerpc/powerpc64.conf svneol=native#text/plain
 release/rc.local -text
 release/release.conf.sample -text
 release/release.sh svneol=native#text/plain
