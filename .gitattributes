@@ -56404,6 +56404,8 @@ share/examples/kld/firmware/fwimage/firmware.img.uu -text
 share/examples/kld/khelp/Makefile -text
 share/examples/kld/khelp/README -text
 share/examples/kld/khelp/h_example.c -text
+share/examples/kld/random_adaptor/Makefile svneol=native#text/plain
+share/examples/kld/random_adaptor/random_adaptor_example.c svneol=native#text/plain
 share/examples/kld/syscall/Makefile -text
 share/examples/kld/syscall/module/Makefile -text
 share/examples/kld/syscall/module/syscall.c -text
