@@ -691,6 +691,7 @@ ipf_dstlist_node_del(softc, arg, op, uid)
 	err = COPYIN(op->iplo_struct, temp, size);
 	if (err != 0) {
 		IPFERROR(120027);
+		KFREES(temp, size);
 		return EFAULT;
 	}
 
