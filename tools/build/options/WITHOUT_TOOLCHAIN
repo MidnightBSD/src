@@ -1,5 +1,8 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_TOOLCHAIN,v 1.2 2007/07/19 08:14:28 bz Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_TOOLCHAIN 174550 2007-12-12 16:43:17Z ru $
 Set to not install
 programs used for program development,
 compilers, debuggers etc.
-.Sy "The option does not work for build targets."
+.Bf -symbolic
+The option does not work for build targets.
+.Ef

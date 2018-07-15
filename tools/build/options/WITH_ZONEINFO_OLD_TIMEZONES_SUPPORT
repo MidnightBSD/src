@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_ZONEINFO_OLD_TIMEZONES_SUPPORT 322100 2017-08-05 16:55:07Z ngie $
+Set to build backward compatibility timezone aliases in to the timezone
+database.

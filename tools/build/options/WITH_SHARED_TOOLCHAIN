@@ -1,4 +1,5 @@
 .\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_SHARED_TOOLCHAIN 235342 2012-05-12 16:12:36Z gjb $
 Set to build the toolchain binaries shared.
 The set includes
 .Xr cc 1 ,

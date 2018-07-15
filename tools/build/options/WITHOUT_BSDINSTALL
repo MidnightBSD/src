@@ -1,0 +1,6 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_BSDINSTALL 278713 2015-02-13 21:24:32Z ngie $
+Set to not build
+.Xr bsdinstall 8 ,
+.Xr sade 8 ,
+and related programs.

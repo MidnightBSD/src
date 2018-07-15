@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_NDIS 183242 2008-09-21 22:02:26Z sam $
+Set to not build programs and libraries
+related to NDIS emulation support.

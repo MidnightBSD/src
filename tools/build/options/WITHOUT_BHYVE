@@ -1,0 +1,7 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_BHYVE 278557 2015-02-11 07:21:16Z ngie $
+Set to not build or install
+.Xr bhyve 8 ,
+associated utilities, and examples.
+.Pp
+This option only affects amd64/amd64.

@@ -1,2 +1,3 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_KERBEROS,v 1.1 2006/03/21 07:50:50 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_KERBEROS 174549 2007-12-12 16:42:03Z ru $
 Set this if you do not want to build Kerberos 5 (KTH Heimdal).

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $FreeBSD: src/tools/build/options/WITHOUT_BIND_NAMED,v 1.1 2006/03/21 07:50:49 ru Exp $
 Set to avoid building or installing
 .Xr named 8 ,

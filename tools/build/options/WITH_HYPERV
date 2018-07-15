@@ -1,0 +1,3 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_HYPERV 272322 2014-09-30 17:54:57Z delphij $
+Set to build and install HyperV utilities.

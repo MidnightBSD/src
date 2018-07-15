@@ -1,2 +1,3 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_CDDL,v 1.1 2006/11/01 09:02:11 jb Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_CDDL 163861 2006-11-01 09:02:11Z jb $
 Set to not build code licensed under Sun's CDDL.

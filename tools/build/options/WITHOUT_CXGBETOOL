@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_CXGBETOOL 319390 2017-06-01 07:08:26Z ngie $
+Set to not build
+.Xr cxgbetool 8

@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" $FreeBSD$
 Set to install
 .Xr nmtree 8

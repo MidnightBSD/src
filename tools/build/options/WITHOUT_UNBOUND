@@ -1,0 +1,5 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_UNBOUND 255597 2013-09-15 14:51:23Z des $
+Set to not build
+.Xr unbound 8
+and related programs.

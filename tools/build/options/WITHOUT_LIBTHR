@@ -1,4 +1,5 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_LIBTHR,v 1.1 2006/03/21 07:50:50 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_LIBTHR 156932 2006-03-21 07:50:50Z ru $
 Set to not build the
 .Nm libthr
 (1:1 threading)

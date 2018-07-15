@@ -1,3 +1,4 @@
-.\" $FreeBSD$
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_CLANG_FULL 246259 2013-02-02 22:28:29Z dim $
 Set to avoid building the ARCMigrate, Rewriter and StaticAnalyzer components of
 the Clang C/C++ compiler.

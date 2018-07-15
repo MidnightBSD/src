@@ -1,0 +1,5 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_FILE 279506 2015-03-01 22:07:54Z ngie $
+Set to not build
+.Xr file 1
+and related programs.

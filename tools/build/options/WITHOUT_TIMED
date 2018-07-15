@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_TIMED 279505 2015-03-01 22:03:52Z ngie $
+Set to not build or install
+.Xr timed 8 .

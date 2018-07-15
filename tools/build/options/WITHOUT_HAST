@@ -1,0 +1,5 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_HAST 278556 2015-02-11 07:12:00Z ngie $
+Set to not build
+.Xr hastd 8
+and related utilities.

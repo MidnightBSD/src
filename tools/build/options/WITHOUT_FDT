@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_FDT 221539 2011-05-06 19:10:27Z ru $
+Set to not build Flattened Device Tree support as part of the base system.
+This includes the device tree compiler (dtc) and libfdt support library.

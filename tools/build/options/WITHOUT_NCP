@@ -1,3 +1,4 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_NCP,v 1.1 2006/03/21 07:50:50 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_NCP 156932 2006-03-21 07:50:50Z ru $
 Set to not build programs, libraries, and kernel modules
 related to NetWare Core protocol.

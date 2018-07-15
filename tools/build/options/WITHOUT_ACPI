@@ -1,4 +1,5 @@
 .\" $MidnightBSD$
+.\" $MidnightBSD$
 Set to not build
 .Xr acpiconf 8 ,
 .Xr acpidump 8

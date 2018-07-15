@@ -1,0 +1,6 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_LEGACY_CONSOLE 249966 2013-04-27 04:09:09Z eadler $
+Set to not build programs that support a legacy PC console; e.g.,
+.Xr kbdcontrol 8
+and
+.Xr vidcontrol 8 .

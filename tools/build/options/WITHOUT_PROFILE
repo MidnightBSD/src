@@ -1,2 +1,4 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_PROFILE,v 1.1 2006/03/21 07:50:50 ru Exp $
-Set to avoid compiling profiled libraries.
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_PROFILE 320717 2017-07-06 05:51:20Z ngie $
+Set to not build profiled libraries for use with
+.Xr gprof 8 .

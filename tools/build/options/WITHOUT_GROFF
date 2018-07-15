@@ -1,0 +1,8 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_GROFF 218941 2011-02-22 08:13:49Z uqs $
+Set to not build
+.Xr groff 1
+and
+.Xr vgrind 1 .
+You should consider installing the textproc/groff port to not break
+.Xr man 1 .

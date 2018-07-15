@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_PROFILE 320717 2017-07-06 05:51:20Z ngie $
+Set to build profiled libraries for use with
+.Xr gprof 8 .

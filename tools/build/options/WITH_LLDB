@@ -1,0 +1,3 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_LLDB 255722 2013-09-20 01:52:02Z emaste $
+Set to build the LLDB debugger.

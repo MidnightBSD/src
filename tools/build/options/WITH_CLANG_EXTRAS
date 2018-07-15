@@ -1,2 +1,3 @@
 .\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_CLANG_EXTRAS 231057 2012-02-05 23:56:22Z dim $
 Set to build additional clang and llvm tools, such as bugpoint.

@@ -1,4 +1,5 @@
 .\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_WIRELESS 183242 2008-09-21 22:02:26Z sam $
 Set to not build programs used for 802.11 wireless networks; especially
 .Xr wpa_supplicant 8
 and

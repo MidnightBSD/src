@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_FLOPPY 221540 2011-05-06 19:13:03Z ru $
+Set to not build or install programs
+for operating floppy disk driver.

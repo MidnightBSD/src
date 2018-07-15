@@ -1,0 +1,5 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_MAKE 183242 2008-09-21 22:02:26Z sam $
+Set to not install
+.Xr make 1
+and related support files.

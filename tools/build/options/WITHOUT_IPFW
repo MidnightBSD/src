@@ -1,0 +1,3 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_IPFW 183242 2008-09-21 22:02:26Z sam $
+Set to not build IPFW tools.

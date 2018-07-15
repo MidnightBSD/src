@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_JAIL 249966 2013-04-27 04:09:09Z eadler $
+Set to not build tools for the support of jails; e.g.,
+.Xr jail 8 .

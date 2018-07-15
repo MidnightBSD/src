@@ -1,0 +1,6 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_EE 278554 2015-02-11 06:57:20Z ngie $
+Set to not build and install
+.Xr edit 1 ,
+.Xr ee 1 ,
+and related programs.

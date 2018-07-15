@@ -1,0 +1,4 @@
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITH_CXGBETOOL 319390 2017-06-01 07:08:26Z ngie $
+Set to build
+.Xr cxgbetool 8

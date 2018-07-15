@@ -1,4 +1,7 @@
-.\" $FreeBSD: src/tools/build/options/WITHOUT_RCS,v 1.1 2006/03/21 07:50:50 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_RCS 292280 2015-12-15 18:01:05Z ngie $
 Set to not build
 .Xr rcs 1
-and related utilities.
+,
+.Xr etcupdate 8
+, and related utilities.

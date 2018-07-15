@@ -1,4 +1,5 @@
 .\" $MidnightBSD$
+.\" $MidnightBSD$
 Set to not build process accounting tools such as
 .Xr accton 8
 and
