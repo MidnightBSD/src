@@ -15,6 +15,9 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20180715: file old magic files
+OLD_FILES+=usr/share/misc/magic.mime
+OLD_FILES+=usr/share/misc/magic.mime.mgc
 # 20180123: mandoc old file removal
 OLD_FILES+=usr/share/man/man1/makewhatis.1.gz
 # 20171220: new clang import which bumps version from 3.4 to 3.4.1.
