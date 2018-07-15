@@ -5,7 +5,9 @@ Updating Information for MidnightBSD users.
 
 	Fix some man page issues
 
-	Loosely eqiuvalent to FreeBSD 10 stable 334440
+	Fix some compatibility and locking issues with NFS client/srver
+
+	Loosely eqiuvalent to FreeBSD 10 stable 334699 (june 6)
 
 20180708:
 	Expat 2.2.0
