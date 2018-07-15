@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/build/mk/bsd.prog.mk,v 1.1 2003/04/12 15:07:46 ru Exp $
+# $MidnightBSD$
 
 .include "../../../share/mk/bsd.prog.mk"
 .include "Makefile.boot"
