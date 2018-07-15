@@ -13308,7 +13308,6 @@ contrib/file/magic/Magdir/python -text
 contrib/file/magic/Magdir/qt -text
 contrib/file/magic/Magdir/revision -text
 contrib/file/magic/Magdir/riff -text
-contrib/file/magic/Magdir/rinex -text
 contrib/file/magic/Magdir/rpm -text
 contrib/file/magic/Magdir/rtf -text
 contrib/file/magic/Magdir/ruby -text
