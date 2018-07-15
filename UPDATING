@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20180715:
+	Support wake on lan for Intel gigabit nics in Ice Lake and Cannon Lake devices.
+
+	Fix some man page issues
+
 20180708:
 	Expat 2.2.0
 
