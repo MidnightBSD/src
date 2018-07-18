@@ -63943,7 +63943,6 @@ sys/dev/hpt27xx/hptintf.h -text
 sys/dev/hpt27xx/i386-elf.hpt27xx_lib.o.uu -text
 sys/dev/hpt27xx/ldm.h -text
 sys/dev/hpt27xx/list.h -text
-sys/dev/hpt27xx/os_bsd.c -text
 sys/dev/hpt27xx/os_bsd.h -text
 sys/dev/hpt27xx/osm.h -text
 sys/dev/hpt27xx/wj.h -text
