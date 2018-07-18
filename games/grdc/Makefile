@@ -1,10 +1,9 @@
-# $FreeBSD: src/games/grdc/Makefile,v 1.8 2001/09/25 13:45:46 ru Exp $
 # $MidnightBSD$
+# $FreeBSD: stable/10/games/grdc/Makefile 203923 2010-02-15 14:32:00Z uqs $
 
-PROG=   grdc
-WARNS?=	2
-MAN=   grdc.6
-DPADD=  ${LIBNCURSES}
-LDADD=  -lncurses
+PROG=	grdc
+MAN=	grdc.6
+DPADD=	${LIBNCURSES}
+LDADD=	-lncurses
 
 .include <bsd.prog.mk>
