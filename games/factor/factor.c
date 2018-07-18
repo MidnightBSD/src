@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,8 +43,8 @@ __SCCSID("@(#)factor.c	8.4 (Berkeley) 5/4/95");
 #ifdef __RCSID
 __RCSID("$NetBSD: factor.c,v 1.19 2009/08/12 05:54:31 dholland Exp $");
 #endif
-#ifdef __MBSDID
-__MBSDID("$MidnightBSD$");
+#ifdef __FBSDID
+__FBSDID("$FreeBSD: stable/10/games/factor/factor.c 228596 2011-12-16 21:24:11Z dim $");
 #endif
 #endif /* not lint */
 
@@ -322,7 +323,7 @@ BN_print_dec_fp(FILE *fp, const BIGNUM *num)
 	buf = BN_bn2dec(num);
 	if (buf == NULL)
 		return;	/* XXX do anything here? */
-	fprintf(fp, buf);
+	fprintf(fp, "%s", buf);
 	free(buf);
 }
 

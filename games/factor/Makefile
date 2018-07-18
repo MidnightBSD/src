@@ -1,5 +1,6 @@
-#	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 5/31/93
+# $FreeBSD: stable/10/games/factor/Makefile 156813 2006-03-17 18:54:44Z ru $
 
 .include <bsd.own.mk>
 
