@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Scott Long
  *
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/tools/aac/aac_checkq.c,v 1.3 2005/11/06 15:47:06 maxim Exp $");
+__FBSDID("$FreeBSD: stable/10/tools/tools/aac/aac_checkq.c 219522 2011-03-11 18:51:42Z brucec $");
 
 #include <sys/types.h>
 #include <sys/fcntl.h>
@@ -33,6 +34,12 @@ __FBSDID("$FreeBSD: src/tools/tools/aac/aac_checkq.c,v 1.3 2005/11/06 15:47:06 m
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+
+void usage(void);
 
 /*
  * Simple program to print out the queue stats on the given queue index.
