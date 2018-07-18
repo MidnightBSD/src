@@ -74328,6 +74328,17 @@ tools/tools/vimage/vimage.c svneol=native#text/plain
 tools/tools/vop_table/README -text
 tools/tools/vop_table/vop_table.pl -text
 tools/tools/vop_table/vop_table.tcl -text
+tools/tools/vt/fontcvt/terminus.sh svneol=native#text/plain
+tools/tools/vt/keymaps/KBDFILES.map -text
+tools/tools/vt/keymaps/LANG.map -text
+tools/tools/vt/keymaps/convert-INDEX.pl svneol=native#text/plain
+tools/tools/vt/keymaps/convert-keymap.pl svneol=native#text/plain
+tools/tools/vt/keymaps/convert-keymaps.pl svneol=native#text/plain
+tools/tools/vt/mkkfont/Makefile svneol=native#text/plain
+tools/tools/vt/mkkfont/mkkfont.c svneol=native#text/plain
+tools/tools/vt/mkkfont/terminus.sh svneol=native#text/plain
+tools/tools/vt/setfont/Makefile svneol=native#text/plain
+tools/tools/vt/setfont/setfont.c svneol=native#text/plain
 tools/tools/vxge/Makefile svneol=native#text/plain
 tools/tools/vxge/vxge_cmn.h svneol=native#text/plain
 tools/tools/vxge/vxge_info.c svneol=native#text/plain
