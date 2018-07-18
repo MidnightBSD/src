@@ -29,7 +29,7 @@
 #define	_BSD_KERNEL_H_
 
 #define	_KERNEL
-#define	__FreeBSD_version 1000000
+#define	__MidnightBSD_version 100000
 
 #include <sys/cdefs.h>
 #include <sys/queue.h>
