@@ -1,12 +1,10 @@
-#	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/games/pom/Makefile,v 1.7 2005/05/01 19:34:22 stefanf Exp $
 # $MidnightBSD$
+#	@(#)Makefile	8.1 (Berkeley) 5/31/93
+# $FreeBSD: stable/10/games/pom/Makefile 203923 2010-02-15 14:32:00Z uqs $
 
 PROG=	pom
 MAN=	pom.6
 DPADD=	${LIBM}
 LDADD=	-lm
-
-WARNS?=	6
 
 .include <bsd.prog.mk>
