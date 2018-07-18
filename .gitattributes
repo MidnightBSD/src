@@ -63946,7 +63946,6 @@ sys/dev/hpt27xx/list.h -text
 sys/dev/hpt27xx/os_bsd.c -text
 sys/dev/hpt27xx/os_bsd.h -text
 sys/dev/hpt27xx/osm.h -text
-sys/dev/hpt27xx/osm_bsd.c -text
 sys/dev/hpt27xx/wj.h -text
 sys/dev/hptiop/hptiop.c -text
 sys/dev/hptiop/hptiop.h -text
