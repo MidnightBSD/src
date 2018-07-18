@@ -1,3 +1,4 @@
+.\" $MidnightBSD$
 .\" Copyright (c) 1994
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -9,11 +10,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgment:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,10 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)random.6	8.2 (Berkeley) 3/31/94
-.\" $FreeBSD: src/games/random/random.6,v 1.8 2005/01/18 08:57:18 ru Exp $
-.\" $MidnightBSD: src/games/random/random.6,v 1.3 2007/08/08 02:20:32 laffer1 Exp $
+.\" $FreeBSD: stable/10/games/random/random.6 307403 2016-10-16 22:02:50Z sevan $
 .\"
-.Dd November 27, 2006
+.Dd February 8, 2003
 .Dt RANDOM 6
 .Os
 .Sh NAME
@@ -122,8 +118,9 @@ instead of newlines.
 .Sh HISTORY
 The
 functionality to randomizing lines and words was added in 2003 by
-.An "Sean Chittenden" Aq seanc@FreeBSD.org .
-
-The patch which solved the problem of slowliness when working with
-files larger than 10MB+ was added in 2006 by
-.An "Victor Loureiro Lima"  
+.An Sean Chittenden Aq Mt seanc@FreeBSD.org .
+.Sh BUGS
+No index is used when printing out tokens from the list which
+makes it rather slow for large files (10MB+).
+For smaller
+files, however, it should still be quite fast and efficient.

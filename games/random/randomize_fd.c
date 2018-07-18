@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2003 Sean Chittenden <seanc@FreeBSD.org>
  * All rights reserved.
@@ -22,18 +23,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
- * $FreeBSD: src/games/random/randomize_fd.c,v 1.2 2003/02/15 10:26:10 seanc Exp $
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/10/games/random/randomize_fd.c 301917 2016-06-15 06:27:43Z truckman $");
 
 #include <sys/types.h>
 #include <sys/param.h>
 
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -43,7 +43,6 @@
 
 static struct rand_node *rand_root;
 static struct rand_node *rand_tail;
-static struct rand_node **rand_node_table;
 
 static struct rand_node *
 rand_node_allocate(void)
@@ -96,16 +95,17 @@ rand_node_append(struct rand_node *n)
 int
 randomize_fd(int fd, int type, int unique, double denom)
 {
-	u_char *buf, *p;
-	u_int numnode, selected, slen;
-	struct rand_node *n;
+	u_char *buf;
+	u_int slen;
+	u_long i, j, numnode, selected;
+	struct rand_node *n, *prev;
 	int bufleft, eof, fndstr, ret;
-	size_t bufc, buflen, i;
+	size_t bufc, buflen;
 	ssize_t len;
 
 	rand_root = rand_tail = NULL;
 	bufc = i = 0;
-	bufleft = eof = fndstr = numnode = ret = 0;
+	bufleft = eof = fndstr = numnode = 0;
 
 	if (type == RANDOM_TYPE_UNSET)
 		type = RANDOM_TYPE_LINES;
@@ -151,32 +151,36 @@ randomize_fd(int fd, int type, int unique, double denom)
 						fndstr = 0;
 					}
 				} else {
-					p = (u_char *)realloc(buf, buflen * 2);
-					if (p == NULL)
+					buflen *= 2;
+					buf = (u_char *)realloc(buf, buflen);
+					if (buf == NULL)
 						err(1, "realloc");
 
-					buf = p;
 					if (!eof) {
-						len = read(fd, &buf[i], buflen);
+						len = read(fd, &buf[i], buflen - i);
 						if (len == -1)
 							err(1, "read");
 						else if (len == 0) {
 							eof++;
 							break;
 						} else if (len < (ssize_t)(buflen - i))
-							buflen = (size_t)len;
+							buflen = i + (size_t)len;
 
 						bufleft = (int)len;
 					}
 
-					buflen *= 2;
 				}
 			}
 
 			if ((type == RANDOM_TYPE_LINES && buf[i] == '\n') ||
-			    (type == RANDOM_TYPE_WORDS && isspace((int)buf[i])) ||
+			    (type == RANDOM_TYPE_WORDS && isspace(buf[i])) ||
 			    (eof && i == buflen - 1)) {
-			make_token:
+make_token:
+				if (numnode == RANDOM_MAX_PLUS1) {
+					errno = EFBIG;
+					err(1, "too many delimiters");
+				}
+				numnode++;
 				n = rand_node_allocate();
 				if (-1 != (int)i) {
 					slen = i - (u_long)bufc;
@@ -192,12 +196,9 @@ randomize_fd(int fd, int type, int unique, double denom)
 				}
 				rand_node_append(n);
 				fndstr = 1;
-				numnode++;
 			}
 		}
 	}
-
-	(void)close(fd);
 
 	/* Necessary evil to compensate for files that don't end with a newline */
 	if (bufc != i) {
@@ -205,35 +206,44 @@ randomize_fd(int fd, int type, int unique, double denom)
 		goto make_token;
 	}
 
-	rand_node_table = ( struct rand_node ** ) malloc( numnode * sizeof( struct rand_node * ));
-	if( rand_node_table == NULL ) {
-		perror("malloc");
-		exit( EXIT_FAILURE );
-	}
-
-	for( i = 0, n = rand_root; n != NULL; n = n->next, i++ ) 
-		rand_node_table[i] = n;
+	(void)close(fd);
 
 	free(buf);
 
 	for (i = numnode; i > 0; i--) {
-again:
-		selected = ((int)denom * random())/(((double)RAND_MAX + 1) / numnode);
-		n = rand_node_table[selected];
-		if( unique ) 
-			rand_node_table[selected] = NULL;
+		selected = random() % numnode;
 
-		if( n == NULL )
-			goto again;
+		for (j = 0, prev = n = rand_root; n != NULL; j++, prev = n, n = n->next) {
+			if (j == selected) {
+				if (n->cp == NULL)
+					break;
 
-		ret = printf("%.*s", ( int ) n->len - 1, n->cp );
-		if( ret < 0 )
-			err(1, "printf");
+				if ((int)(denom * random() /
+					RANDOM_MAX_PLUS1) == 0) {
+					ret = printf("%.*s",
+						(int)n->len - 1, n->cp);
+					if (ret < 0)
+						err(1, "printf");
+				}
+				if (unique) {
+					if (n == rand_root)
+						rand_root = n->next;
+					if (n == rand_tail)
+						rand_tail = prev;
+
+					prev->next = n->next;
+					rand_node_free(n);
+					numnode--;
+				}
+				break;
+			}
+		}
 	}
 
 	fflush(stdout);
-	rand_node_free_rec(rand_root);
-        free(rand_node_table);
+
+	if (!unique)
+		rand_node_free_rec(rand_root);
 
 	return(0);
 }
