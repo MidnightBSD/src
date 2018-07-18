@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,8 +29,8 @@
  */
 
 /*
- * Taught to send *real* morse by Lyndon Nerenberg (VE7TCP/VE6BBM)
- * <lyndon@orthanc.com>
+ * Taught to send *real* morse by Lyndon Nerenberg (VE6BBM)
+ * <lyndon@orthanc.ca>
  */
 
 #ifndef lint
@@ -47,7 +44,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)morse.c	8.1 (Berkeley) 5/31/93";
 #endif
 static const char rcsid[] =
- "$FreeBSD: src/games/morse/morse.c,v 1.20.2.1 2005/11/16 10:50:10 ru Exp $";
+ "$FreeBSD: stable/10/games/morse/morse.c 230131 2012-01-15 13:23:01Z uqs $";
 #endif /* not lint */
 
 #include <sys/time.h>
@@ -63,13 +60,16 @@ static const char rcsid[] =
 #include <termios.h>
 #include <unistd.h>
 
+/* Always use the speaker, let the open fail if -p is selected */
+#define SPEAKER "/dev/speaker"
+
 #ifdef SPEAKER
 #include <dev/speaker/speaker.h>
 #endif
 
 struct morsetab {
-	char            inchar;
-	char           *morse;
+	const char      inchar;
+	const char     *morse;
 };
 
 static const struct morsetab mtab[] = {
@@ -144,120 +144,125 @@ static const struct morsetab mtab[] = {
 	{'\0', ""}
 };
 
-
+/*
+ * Code-points for some Latin1 chars in ISO-8859-1 encoding.
+ * UTF-8 encoded chars in the comments.
+ */
 static const struct morsetab iso8859_1tab[] = {
-	{'·', ".--.-"},
-	{'‡', ".--.-"},
-	{'‚', ".--.-"},
-	{'‰', ".-.-"},
-	{'Á', "-.-.."},
-	{'È', "..-.."},
-	{'Ë', "..-.."},
-	{'Í', "-..-."},
-	{'ˆ', "---."},
-	{'¸', "..--"},
+	{'\340', ".--.-"},	/* √† */
+	{'\341', ".--.-"},	/* √° */
+	{'\342', ".--.-"},	/* √¢ */
+	{'\344', ".-.-"},	/* √§ */
+	{'\347', "-.-.."},	/* √ß */
+	{'\350', "..-.."},	/* √® */
+	{'\351', "..-.."},	/* √© */
+	{'\352', "-..-."},	/* √™ */
+	{'\366', "---."},	/* √∂ */
+	{'\374', "..--"},	/* √º */
 
 	{'\0', ""}
 };
 
+/*
+ * Code-points for some Greek chars in ISO-8859-7 encoding.
+ * UTF-8 encoded chars in the comments.
+ */
 static const struct morsetab iso8859_7tab[] = {
 	/*
-	 * The greek alphabet; you'll need an 8859-7 font in order
-	 * to see the actual characters.
 	 * This table does not implement:
 	 * - the special sequences for the seven diphthongs,
 	 * - the punctuation differences.
 	 * Implementing these features would introduce too many
 	 * special-cases in the program's main loop.
-	 * The diphtong sequences are:
+	 * The diphthong sequences are:
 	 * alpha iota		.-.-
 	 * alpha upsilon	..--
 	 * epsilon upsilon	---.
 	 * eta upsilon		...-
-	 * omikron iota		---..
-	 * omikron upsilon	..-
+	 * omicron iota		---..
+	 * omicron upsilon	..-
 	 * upsilon iota		.---
 	 * The different punctuation symbols are:
 	 * ;	..-.-
 	 * !	--..--
 	 */
-	{'·', ".-"},	/* alpha */
-	{'‹', ".-"},	/* alpha with acute */
-	{'‚', "-..."},	/* beta */
-	{'„', "--."},	/* gamma */
-	{'‰', "-.."},	/* delta */
-	{'Â', "."},	/* epsilon */
-	{'›', "."},	/* epsilon with acute */
-	{'Ê', "--.."},	/* zeta */
-	{'Á', "...."},	/* eta */
-	{'ﬁ', "...."},	/* eta with acute */
-	{'Ë', "-.-."},	/* theta */
-	{'È', ".."},	/* iota */
-	{'ﬂ', ".."},	/* iota with acute */
-	{'˙', ".."},	/* iota with diairesis */
-	{'¿', ".."},	/* iota with acute and diairesis */
-	{'Í', "-.-"},	/* kappa */
-	{'Î', ".-.."},	/* lamda */
-	{'Ï', "--"},	/* mu */
-	{'Ì', "-."},	/* nu */
-	{'Ó', "-..-"},	/* xi */
-	{'Ô', "---"},	/* omicron */
-	{'¸', "---"},	/* omicron with acute */
-	{'', ".--."},	/* pi */
-	{'Ò', ".-."},	/* rho */
-	{'Û', "..."},	/* sigma */
-	{'Ú', "..."},	/* final sigma */
-	{'Ù', "-"},	/* tau */
-	{'ı', "-.--"},	/* upsilon */
-	{'˝', "-.--"},	/* upsilon with acute */
-	{'˚', "-.--"},	/* upsilon and diairesis */
-	{'‡', "-.--"},	/* upsilon with acute and diairesis */
-	{'ˆ', "..-."},	/* phi */
-	{'˜', "----"},	/* chi */
-	{'¯', "--.-"},	/* psi */
-	{'˘', ".--"},	/* omega */
-	{'˛', ".--"},	/* omega with acute */
+	{'\341', ".-"},		/* Œ±, alpha */
+	{'\334', ".-"},		/* Œ¨, alpha with acute */
+	{'\342', "-..."},	/* Œ≤, beta */
+	{'\343', "--."},	/* Œ≥, gamma */
+	{'\344', "-.."},	/* Œ¥, delta */
+	{'\345', "."},		/* Œµ, epsilon */
+	{'\335', "."},		/* Œ≠, epsilon with acute */
+	{'\346', "--.."},	/* Œ∂, zeta */
+	{'\347', "...."},	/* Œ∑, eta */
+	{'\336', "...."},	/* ŒÆ, eta with acute */
+	{'\350', "-.-."},	/* Œ∏, theta */
+	{'\351', ".."},		/* Œπ, iota */
+	{'\337', ".."},		/* ŒØ, iota with acute */
+	{'\372', ".."},		/* œä, iota with diaeresis */
+	{'\300', ".."},		/* Œê, iota with acute and diaeresis */
+	{'\352', "-.-"},	/* Œ∫, kappa */
+	{'\353', ".-.."},	/* Œª, lambda */
+	{'\354', "--"},		/* Œº, mu */
+	{'\355', "-."},		/* ŒΩ, nu */
+	{'\356', "-..-"},	/* Œæ, xi */
+	{'\357', "---"},	/* Œø, omicron */
+	{'\374', "---"},	/* œå, omicron with acute */
+	{'\360', ".--."},	/* œÄ, pi */
+	{'\361', ".-."},	/* œÅ, rho */
+	{'\363', "..."},	/* œÉ, sigma */
+	{'\362', "..."},	/* œÇ, final sigma */
+	{'\364', "-"},		/* œÑ, tau */
+	{'\365', "-.--"},	/* œÖ, upsilon */
+	{'\375', "-.--"},	/* œç, upsilon with acute */
+	{'\373', "-.--"},	/* œã, upsilon and diaeresis */
+	{'\340', "-.--"},	/* Œ∞, upsilon with acute and diaeresis */
+	{'\366', "..-."},	/* œÜ, phi */
+	{'\367', "----"},	/* œá, chi */
+	{'\370', "--.-"},	/* œà, psi */
+	{'\371', ".--"},	/* œâ, omega */
+	{'\376', ".--"},	/* œé, omega with acute */
 
 	{'\0', ""}
 };
 
+/*
+ * Code-points for the Cyrillic alphabet in KOI8-R encoding.
+ * UTF-8 encoded chars in the comments.
+ */
 static const struct morsetab koi8rtab[] = {
-	/*
-	 * the cyrillic alphabet; you'll need a KOI8R font in order
-	 * to see the actual characters
-	 */
-	{'¡', ".-"},		/* a */
-	{'¬', "-..."},	/* be */
-	{'◊', ".--"},	/* ve */
-	{'«', "--."},	/* ge */
-	{'ƒ', "-.."},	/* de */
-	{'≈', "."},		/* ye */
-	{'£', "."},         	/* yo, the same as ye */
-	{'÷', "...-"},	/* she */
-	{'⁄', "--.."},	/* ze */
-	{'…', ".."},		/* i */
-	{' ', ".---"},	/* i kratkoye */
-	{'À', "-.-"},	/* ka */
-	{'Ã', ".-.."},	/* el */
-	{'Õ', "--"},		/* em */
-	{'Œ', "-."},		/* en */
-	{'œ', "---"},	/* o */
-	{'–', ".--."},	/* pe */
-	{'“', ".-."},	/* er */
-	{'”', "..."},	/* es */
-	{'‘', "-"},		/* te */
-	{'’', "..-"},	/* u */
-	{'∆', "..-."},	/* ef */
-	{'»', "...."},	/* kha */
-	{'√', "-.-."},	/* ce */
-	{'ﬁ', "---."},	/* che */
-	{'€', "----"},	/* sha */
-	{'›', "--.-"},	/* shcha */
-	{'Ÿ', "-.--"},	/* yi */
-	{'ÿ', "-..-"},	/* myakhkij znak */
-	{'‹', "..-.."},	/* ae */
-	{'¿', "..--"},	/* yu */
-	{'—', ".-.-"},	/* ya */
+	{'\301', ".-"},		/* –∞, a */
+	{'\302', "-..."},	/* –±, be */
+	{'\327', ".--"},	/* –≤, ve */
+	{'\307', "--."},	/* –≥, ge */
+	{'\304', "-.."},	/* –¥, de */
+	{'\305', "."},		/* –µ, ye */
+	{'\243', "."},		/* —ë, yo, the same as ye */
+	{'\326', "...-"},	/* –∂, she */
+	{'\332', "--.."},	/* –∑, ze */
+	{'\311', ".."},		/* –∏, i */
+	{'\312', ".---"},	/* –π, i kratkoye */
+	{'\313', "-.-"},	/* –∫, ka */
+	{'\314', ".-.."},	/* –ª, el */
+	{'\315', "--"},		/* –º, em */
+	{'\316', "-."},		/* –Ω, en */
+	{'\317', "---"},	/* –æ, o */
+	{'\320', ".--."},	/* –ø, pe */
+	{'\322', ".-."},	/* —Ä, er */
+	{'\323', "..."},	/* —Å, es */
+	{'\324', "-"},		/* —Ç, te */
+	{'\325', "..-"},	/* —É, u */
+	{'\306', "..-."},	/* —Ñ, ef */
+	{'\310', "...."},	/* —Ö, kha */
+	{'\303', "-.-."},	/* —Ü, ce */
+	{'\336', "---."},	/* —á, che */
+	{'\333', "----"},	/* —à, sha */
+	{'\335', "--.-"},	/* —â, shcha */
+	{'\331', "-.--"},	/* —ã, yi */
+	{'\330', "-..-"},	/* —å, myakhkij znak */
+	{'\334', "..-.."},	/* —ç, ae */
+	{'\300', "..--"},	/* —é, yu */
+	{'\321', ".-.-"},	/* —è, ya */
 
 	{'\0', ""}
 };
@@ -306,9 +311,9 @@ main(int argc, char **argv)
 
 	while ((ch = getopt(argc, argv, GETOPTOPTS)) != -1)
 		switch ((char) ch) {
- 		case 'c':
- 			cpm = atoi(optarg);
- 			break;
+		case 'c':
+			cpm = atoi(optarg);
+			break;
 		case 'd':
 			device = optarg;
 			break;
@@ -483,7 +488,8 @@ show(const char *s)
 		printf(" %s\n", s);
 	} else {
 		for (; *s; ++s)
-			printf(" %s", *s == '.' ? "dit" : "dah");
+			printf(" %s", *s == '.' ? *(s + 1) == '\0' ? "dit" :
+			    "di" : "dah");
 		printf("\n");
 	}
 }
