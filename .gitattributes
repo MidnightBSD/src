@@ -74328,6 +74328,13 @@ tools/tools/tinderbox/www/Makefile -text
 tools/tools/tinderbox/www/index.cgi -text
 tools/tools/tinderbox/www/tb.css -text
 tools/tools/usb/print-usb-if-vids.sh -text
+tools/tools/usbtest/Makefile svneol=native#text/plain
+tools/tools/usbtest/usb_control_ep_test.c svneol=native#text/plain
+tools/tools/usbtest/usb_modem_test.c svneol=native#text/plain
+tools/tools/usbtest/usb_msc_test.c svneol=native#text/plain
+tools/tools/usbtest/usb_msc_test.h svneol=native#text/plain
+tools/tools/usbtest/usbtest.c svneol=native#text/plain
+tools/tools/usbtest/usbtest.h svneol=native#text/plain
 tools/tools/vimage/Makefile svneol=native#text/plain
 tools/tools/vimage/vimage.8 svneol=native#text/plain
 tools/tools/vimage/vimage.c svneol=native#text/plain
