@@ -74191,6 +74191,8 @@ tools/test/upsdl/upsdl.c svneol=native#text/plain
 tools/tools/README -text
 tools/tools/aac/Makefile -text
 tools/tools/aac/aac_checkq.c -text
+tools/tools/ansify/Makefile svneol=native#text/plain
+tools/tools/ansify/ansify.pl svneol=native#text/plain
 tools/tools/ath/80211debug.c -text
 tools/tools/ath/80211stats.c -text
 tools/tools/ath/80211watch.c -text
