@@ -55551,6 +55551,7 @@ share/dict/web2a -text
 share/doc/IPv6/IMPLEMENTATION -text
 share/doc/IPv6/Makefile -text
 share/doc/Makefile -text
+share/doc/atf/Makefile svneol=native#text/plain
 share/doc/legal/Makefile -text
 share/doc/legal/intel_ipw/Makefile -text
 share/doc/legal/intel_iwi/Makefile -text
