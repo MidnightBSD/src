@@ -55557,6 +55557,7 @@ share/doc/legal/intel_ipw/Makefile -text
 share/doc/legal/intel_iwi/Makefile -text
 share/doc/legal/intel_iwn/Makefile -text
 share/doc/legal/intel_wpi/Makefile -text
+share/doc/legal/realtek/Makefile svneol=native#text/plain
 share/doc/llvm/Makefile -text
 share/doc/llvm/clang/Makefile -text
 share/doc/papers/Makefile -text
