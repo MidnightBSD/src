@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20180719:
+	Add the AMD B350 Ryzen (300 series) AHCI and XHCI controllers
+
 20180715:
 	Support wake on lan for Intel gigabit nics in Ice Lake and Cannon Lake devices.
 
