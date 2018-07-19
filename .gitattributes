@@ -55647,6 +55647,8 @@ share/doc/papers/timecounter/gps.ps -text
 share/doc/papers/timecounter/intr.ps -text
 share/doc/papers/timecounter/timecounter.ms -text
 share/doc/papers/timecounter/tmac.usenix -text
+share/doc/pjdfstest/Makefile svneol=native#text/plain
+share/doc/pjdfstest/README -text
 share/doc/psd/01.cacm/Makefile -text
 share/doc/psd/01.cacm/p.mac -text
 share/doc/psd/01.cacm/p1 -text

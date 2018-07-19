@@ -8,8 +8,7 @@ SUBDIR=	${_IPv6} \
 	${_atf} \
 	legal \
 	${_llvm} \
-	${_pjdfstest} \
-	${_roffdocs}
+	${_pjdfstest}
 
 .if ${MK_TESTS} != "no"
 _atf= atf
