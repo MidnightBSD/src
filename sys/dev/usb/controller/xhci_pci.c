@@ -98,6 +98,8 @@ xhci_pci_match(device_t self)
 	switch (device_id) {
 	case 0x145c1022:
 		return ("AMD KERNCZ USB 3.0 controller");
+	case 0x43ba1022:
+		return ("AMD X399 USB 3.0 controller");
 	case 0x43bb1022:
 		return ("AMD 300 Series USB 3.0 controller");
 	case 0x78141022:
@@ -110,6 +112,8 @@ xhci_pci_match(device_t self)
 
 	case 0x10001b73:
 		return ("Fresco Logic FL1000G USB 3.0 controller");
+	case 0x11001b73:
+		return ("Fresco Logic FL1100 USB 3.0 controller");
 
 	case 0x10421b21:
 		return ("ASMedia ASM1042 USB 3.0 controller");
