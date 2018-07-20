@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2008 Christian Brueffer
 .\" Copyright (c) 2008 Jeffrey Roberson
 .\" All rights reserved.
@@ -24,9 +23,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.bin/cpuset/cpuset.1 217416 2011-01-14 19:57:28Z jhb $
+.\" $FreeBSD: stable/10/usr.bin/cpuset/cpuset.1 336039 2018-07-06 19:10:07Z jamie $
+.\" $MidnightBSD$
 .\"
-.Dd January 14, 2011
+.Dd July 3, 2018
 .Dt CPUSET 1
 .Os
 .Sh NAME
@@ -49,10 +49,10 @@
 .Nm
 .Op Fl cr
 .Op Fl l Ar cpu-list
-.Op Fl j Ar jailid | Fl p Ar pid | Fl t Ar tid | Fl s Ar setid | Fl x Ar irq
+.Op Fl j Ar jail | Fl p Ar pid | Fl t Ar tid | Fl s Ar setid | Fl x Ar irq
 .Nm
 .Op Fl cgir
-.Op Fl j Ar jailid | Fl p Ar pid | Fl t Ar tid | Fl s Ar setid | Fl x Ar irq
+.Op Fl j Ar jail | Fl p Ar pid | Fl t Ar tid | Fl s Ar setid | Fl x Ar irq
 .Sh DESCRIPTION
 The
 .Nm
@@ -63,7 +63,7 @@ about processor binding, sets, and available processors in the system.
 .Nm
 requires a target to modify or query.
 The target may be specified as a command, process id, thread id, a
-cpuset id, an irq or a jail id.
+cpuset id, an irq or a jail.
 Using
 .Fl g
 the target's set id or mask may be queried.
@@ -119,8 +119,8 @@ the id of the target.
 When used with the
 .Fl g
 option print the id rather than the valid mask of the target.
-.It Fl j Ar jailid
-Specifies a jail id as the target of the operation.
+.It Fl j Ar jail
+Specifies a jail id or name as the target of the operation.
 .It Fl l Ar cpu-list
 Specifies a list of CPUs to apply to a target.
 Specification may include

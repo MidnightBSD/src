@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/cpuset/cpuset.c 227160 2011-11-06 08:14:40Z ed $");
+__FBSDID("$FreeBSD: stable/10/usr.bin/cpuset/cpuset.c 336039 2018-07-06 19:10:07Z jamie $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/cpuset/cpuset.c 227160 2011-11-06 08:14:40
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <jail.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -227,7 +228,9 @@ main(int argc, char *argv[])
 		case 'j':
 			jflag = 1;
 			which = CPU_WHICH_JAIL;
-			id = atoi(optarg);
+			id = jail_getid(optarg);
+			if (id < 0)
+				errx(EXIT_FAILURE, "%s", jail_errmsg);
 			break;
 		case 'l':
 			lflag = 1;
