@@ -1,5 +1,27 @@
 Updating Information for MidnightBSD users.
 
+20180720:
+	Pull in r211155 from upstream llvm trunk (by Tim Northover):
+
+	DAG: move sret demotion into most basic LowerCallTo implementation.
+
+	It looks like there are two versions of LowerCallTo here: the
+	SelectionDAGBuilder one is designed to operate on LLVM IR, and the
+	TargetLowering one in the case where everything is at DAG level.
+
+	Previously, only the SelectionDAGBuilder variant could handle
+	demoting an impossible return to sret semantics (before delegating to
+	the TargetLowering version), but this functionality is also useful
+	for certain libcalls (e.g. 128-bit operations on 32-bit x86).  So
+	this commit moves the sret handling down a level.
+
+	This should fix "Call result #3 has unhandled type i32" errors when
+	building devel/libslang2 for i386.
+
+	Add support for AMD X370 and X399 chipsets.
+
+	Add support for Intel 8th gen chipsets.
+
 20180719:
 	Add the AMD B350 Ryzen (300 series) AHCI and XHCI controllers
 
