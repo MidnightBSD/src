@@ -74304,6 +74304,15 @@ tools/tools/netrate/netsend/Makefile -text
 tools/tools/netrate/netsend/netsend.c -text
 tools/tools/netrate/tcpconnect/Makefile svneol=native#text/plain
 tools/tools/netrate/tcpconnect/tcpconnect.c svneol=native#text/plain
+tools/tools/netrate/tcpp/Makefile svneol=native#text/plain
+tools/tools/netrate/tcpp/README -text
+tools/tools/netrate/tcpp/parallelism.csh -text
+tools/tools/netrate/tcpp/runit.pl svneol=native#text/plain
+tools/tools/netrate/tcpp/tcpp.c svneol=native#text/plain
+tools/tools/netrate/tcpp/tcpp.h svneol=native#text/plain
+tools/tools/netrate/tcpp/tcpp_client.c svneol=native#text/plain
+tools/tools/netrate/tcpp/tcpp_server.c svneol=native#text/plain
+tools/tools/netrate/tcpp/tcpp_util.c svneol=native#text/plain
 tools/tools/netrate/tcpreceive/Makefile svneol=native#text/plain
 tools/tools/netrate/tcpreceive/tcpreceive.c svneol=native#text/plain
 tools/tools/npe/Makefile svneol=native#text/plain
