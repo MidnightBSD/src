@@ -1,9 +1,10 @@
+# $MidnightBSD$
 #
-# $FreeBSD: src/tools/tools/netrate/netsend/Makefile,v 1.4 2004/12/21 08:47:28 ru Exp $
+# $FreeBSD: stable/10/tools/tools/netrate/netsend/Makefile 276486 2014-12-31 23:25:37Z ngie $
 #
 
 CFLAGS+=	-Wall
 PROG=	netsend
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>
