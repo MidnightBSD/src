@@ -74300,6 +74300,8 @@ tools/tools/netrate/netreceive/Makefile -text
 tools/tools/netrate/netreceive/netreceive.c -text
 tools/tools/netrate/netsend/Makefile -text
 tools/tools/netrate/netsend/netsend.c -text
+tools/tools/netrate/tcpconnect/Makefile svneol=native#text/plain
+tools/tools/netrate/tcpconnect/tcpconnect.c svneol=native#text/plain
 tools/tools/netrate/tcpreceive/Makefile svneol=native#text/plain
 tools/tools/netrate/tcpreceive/tcpreceive.c svneol=native#text/plain
 tools/tools/npe/Makefile svneol=native#text/plain
