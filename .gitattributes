@@ -72736,6 +72736,8 @@ tests/etc/rc.d/Makefile svneol=native#text/plain
 tests/etc/rc.d/rc.d.new -text
 tests/etc/rc.d/routing_test.sh svneol=native#text/plain
 tests/freebsd_test_suite/macros.h svneol=native#text/plain
+tests/sys/vfs/Makefile svneol=native#text/plain
+tests/sys/vfs/trailing_slash.sh svneol=native#text/plain
 tests/sys/vm/Makefile svneol=native#text/plain
 tests/sys/vm/mmap_test.c svneol=native#text/plain
 tools/KSE/ksetest/Makefile -text
