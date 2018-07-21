@@ -74294,6 +74294,8 @@ tools/tools/netrate/http/Makefile svneol=native#text/plain
 tools/tools/netrate/http/http.c svneol=native#text/plain
 tools/tools/netrate/httpd/Makefile svneol=native#text/plain
 tools/tools/netrate/httpd/httpd.c svneol=native#text/plain
+tools/tools/netrate/juggle/Makefile svneol=native#text/plain
+tools/tools/netrate/juggle/juggle.c svneol=native#text/plain
 tools/tools/netrate/netblast/Makefile -text
 tools/tools/netrate/netblast/netblast.c -text
 tools/tools/netrate/netreceive/Makefile -text
