@@ -46,7 +46,7 @@
  * Emulation of kernel services in userland.
  */
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 int aok;
 #endif
 uint64_t physmem;
@@ -1149,7 +1149,7 @@ zfs_onexit_cb_data(minor_t minor, uint64_t action_handle, void **data)
 	return (0);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 /* ARGSUSED */
 int
 zvol_create_minors(const char *name)
