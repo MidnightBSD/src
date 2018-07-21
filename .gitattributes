@@ -72752,6 +72752,10 @@ tests/sys/acl/tools-nfs4-psarc.test -text
 tests/sys/acl/tools-nfs4-trivial.test -text
 tests/sys/acl/tools-nfs4.test -text
 tests/sys/acl/tools-posix.test -text
+tests/sys/aio/Makefile svneol=native#text/plain
+tests/sys/aio/aio_kqueue_test.c svneol=native#text/plain
+tests/sys/aio/aio_test.c svneol=native#text/plain
+tests/sys/aio/lio_kqueue_test.c svneol=native#text/plain
 tests/sys/mac/Makefile svneol=native#text/plain
 tests/sys/mac/bsdextended/Makefile svneol=native#text/plain
 tests/sys/mac/bsdextended/matches_test.sh svneol=native#text/plain
