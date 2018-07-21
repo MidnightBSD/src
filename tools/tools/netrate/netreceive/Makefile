@@ -1,8 +1,12 @@
+# $MidnightBSD$
 #
-# $FreeBSD: src/tools/tools/netrate/netreceive/Makefile,v 1.3 2004/12/21 08:47:28 ru Exp $
+# $FreeBSD: stable/10/tools/tools/netrate/netreceive/Makefile 276486 2014-12-31 23:25:37Z ngie $
 #
 
 PROG=	netreceive
-NO_MAN=
+MAN=
+LDFLAGS += -lpthread
+
+WARNS?=	3
 
 .include <bsd.prog.mk>
