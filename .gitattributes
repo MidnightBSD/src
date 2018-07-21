@@ -72728,6 +72728,10 @@ sys/xen/xenstore/xenstore.c -text
 sys/xen/xenstore/xenstore_dev.c -text
 sys/xen/xenstore/xenstore_internal.h -text
 sys/xen/xenstore/xenstorevar.h -text
+tests/Kyuafile -text
+tests/Makefile svneol=native#text/plain
+tests/README -text
+tests/freebsd_test_suite/macros.h svneol=native#text/plain
 tools/KSE/ksetest/Makefile -text
 tools/KSE/ksetest/kse_asm.S -text
 tools/KSE/ksetest/kse_threads_test.c -text
