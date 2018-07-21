@@ -72731,6 +72731,10 @@ sys/xen/xenstore/xenstorevar.h -text
 tests/Kyuafile -text
 tests/Makefile svneol=native#text/plain
 tests/README -text
+tests/etc/Makefile svneol=native#text/plain
+tests/etc/rc.d/Makefile svneol=native#text/plain
+tests/etc/rc.d/rc.d.new -text
+tests/etc/rc.d/routing_test.sh svneol=native#text/plain
 tests/freebsd_test_suite/macros.h svneol=native#text/plain
 tools/KSE/ksetest/Makefile -text
 tools/KSE/ksetest/kse_asm.S -text
