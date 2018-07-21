@@ -1,8 +1,9 @@
+# $MidnightBSD$
 #
-# $FreeBSD: src/tools/tools/netrate/netblast/Makefile,v 1.3 2004/12/21 08:47:27 ru Exp $
+# $FreeBSD: stable/10/tools/tools/netrate/netblast/Makefile 276486 2014-12-31 23:25:37Z ngie $
 #
 
 PROG=	netblast
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>
