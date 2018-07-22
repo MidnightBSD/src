@@ -41,7 +41,7 @@
 #include "citrus_none.h"
 #include "citrus_stdenc.h"
 
-struct _citrus_stdenc _citrus_stdenc_default = {
+static struct _citrus_stdenc _citrus_stdenc_default = {
 	&_citrus_NONE_stdenc_ops,	/* ce_ops */
 	NULL,				/* ce_closure */
 	NULL,				/* ce_module */
