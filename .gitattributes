@@ -74260,6 +74260,7 @@ tools/tools/ath/athstats/statfoo.h -text
 tools/tools/bootparttest/Makefile svneol=native#text/plain
 tools/tools/bootparttest/bootparttest.c svneol=native#text/plain
 tools/tools/bootparttest/malloc.c svneol=native#text/plain
+tools/tools/cd2dvd/cd2dvd.sh svneol=native#text/plain
 tools/tools/commitsdb/make_commit_db -text
 tools/tools/commitsdb/query_commit_db -text
 tools/tools/crypto/Makefile -text
