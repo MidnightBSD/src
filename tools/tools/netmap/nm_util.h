@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2012 Luigi Rizzo. All rights reserved.
  *
