@@ -74276,6 +74276,14 @@ tools/tools/cxgbetool/cxgbetool.c svneol=native#text/plain
 tools/tools/cxgbetool/reg_defs_t4.c svneol=native#text/plain
 tools/tools/cxgbetool/reg_defs_t4vf.c svneol=native#text/plain
 tools/tools/cxgbetool/reg_defs_t5.c svneol=native#text/plain
+tools/tools/drm/README -text
+tools/tools/drm/gen-drm_pciids -text
+tools/tools/drm/radeon/README -text
+tools/tools/drm/radeon/firmwares/README -text
+tools/tools/drm/radeon/firmwares/encode-firmwares -text
+tools/tools/drm/radeon/mkregtable/Makefile svneol=native#text/plain
+tools/tools/drm/radeon/mkregtable/README -text
+tools/tools/drm/radeon/mkregtable/mkregtable.c svneol=native#text/plain
 tools/tools/editing/freebsd.el -text
 tools/tools/epfe/epfe.pl -text
 tools/tools/find-sb/Makefile -text
