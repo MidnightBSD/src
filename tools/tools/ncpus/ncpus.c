@@ -1,4 +1,5 @@
-/* $FreeBSD: src/tools/tools/ncpus/ncpus.c,v 1.1.2.2 2006/03/10 22:04:07 sam Exp $ */
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/tools/tools/ncpus/ncpus.c 156362 2006-03-06 21:51:27Z sam $ */
 
 #include <stdio.h>
 

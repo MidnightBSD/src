@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Sandvine Incorporated.  All righs reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Author: Ed Maste <emaste@phaedrus.sandvine.ca>
+ * Author: Ed Maste <emaste@FreeBSD.org>
  */
 
 /*
@@ -31,10 +32,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/tools/ncpus/biosmptable.c,v 1.1.2.2 2006/03/10 22:04:07 sam Exp $");
+__FBSDID("$FreeBSD: stable/10/tools/tools/ncpus/biosmptable.c 219519 2011-03-11 18:44:16Z brucec $");
 
 #include <sys/types.h>
-#include <machine/mptable.h>
+#include <x86/mptable.h>
 
 #include <err.h>
 #include <fcntl.h>

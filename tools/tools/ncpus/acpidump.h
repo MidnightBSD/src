@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/tools/tools/ncpus/acpidump.h,v 1.1.2.1 2006/03/01 06:03:55 sam Exp $
+ *	$FreeBSD: stable/10/tools/tools/ncpus/acpidump.h 155928 2006-02-22 21:51:09Z sam $
  */
 
 #ifndef _ACPIDUMP_H_
