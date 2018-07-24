@@ -4324,9 +4324,6 @@ OLD_FILES+=usr/lib/libss.a
 OLD_FILES+=usr/lib/libss_p.a
 OLD_FILES+=usr/lib/libtelnet.a
 OLD_FILES+=usr/lib/libtelnet_p.a
-OLD_FILES+=usr/lib/libusb.a
-OLD_FILES+=usr/lib/libusb.so
-OLD_FILES+=usr/lib/libusb_p.a
 OLD_FILES+=usr/sbin/diskpart
 # 200202XX
 OLD_FILES+=usr/bin/gprof4
