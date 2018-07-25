@@ -28,9 +28,9 @@
 46 logoX ! 7 logoY ! \ Initialize logo placement defaults
 
 : logo+ ( x y c-addr/u -- x y' )
-	2swap sswap \ position the cursor
+	2swap 2dup at-xy 2swap \ position the cursor
 	type \ print to the screen
-	logo+ \ increase y for next time we're called
+	1+ \ increase y for next time we're called
 ;
 
 : logo ( x y -- ) \ B/W Orb mascot (15 rows x 32 columns)
