@@ -1,0 +1,20 @@
+# $MidnightBSD$
+# $FreeBSD: stable/10/tests/sys/pjdfstest/tests/truncate/Makefile 274016 2014-11-03 07:18:42Z ngie $
+
+TAP_TESTS_SH=	00
+TAP_TESTS_SH+=	01
+TAP_TESTS_SH+=	02
+TAP_TESTS_SH+=	03
+TAP_TESTS_SH+=	04
+TAP_TESTS_SH+=	05
+TAP_TESTS_SH+=	06
+TAP_TESTS_SH+=	07
+TAP_TESTS_SH+=	08
+TAP_TESTS_SH+=	09
+TAP_TESTS_SH+=	10
+TAP_TESTS_SH+=	11
+TAP_TESTS_SH+=	12
+TAP_TESTS_SH+=	13
+TAP_TESTS_SH+=	14
+
+.include "../pjdfstest.test.mk"
