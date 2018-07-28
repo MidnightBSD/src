@@ -1,0 +1,4 @@
+#! /dev/null
+# $MidnightBSD$
+
+echo succeeded

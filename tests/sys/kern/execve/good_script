@@ -1,0 +1,4 @@
+#!/bin/sh
+# $MidnightBSD$
+
+echo succeeded
