@@ -631,7 +631,7 @@ cpu_mp_announce(void)
 	const char *hyperthread;
 	int i;
 
-	printf("FreeBSD/SMP: %d package(s) x %d core(s)",
+	printf("MidnightBSD/SMP: %d package(s) x %d core(s)",
 	    mp_ncpus / (cpu_cores * cpu_logical), cpu_cores);
 	if (hyperthreading_cpus > 1)
 	    printf(" x %d HTT threads", cpu_logical);
