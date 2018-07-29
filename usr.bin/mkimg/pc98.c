@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/pc98.c 272776 2014-10-08 22:13:18Z m
 #define	PC98_BOOTCODESZ		8192
 
 static struct mkimg_alias pc98_aliases[] = {
-    {	ALIAS_FREEBSD, ALIAS_INT2TYPE(PC98_PTYP_386BSD) },
+    {	ALIAS_MIDNIGHTBSD, ALIAS_INT2TYPE(PC98_PTYP_386BSD) },
     {	ALIAS_NONE, 0 }
 };
 
