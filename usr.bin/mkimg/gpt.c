@@ -50,13 +50,13 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/gpt.c 287122 2015-08-25 04:03:51Z ma
 #endif
 
 static uuid_t gpt_uuid_efi = GPT_ENT_TYPE_EFI;
-static uuid_t gpt_uuid_mnbsd = GPT_ENT_TYPE_FREEBSD;
-static uuid_t gpt_uuid_mnbsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
-static uuid_t gpt_uuid_mnbsd_nandfs = GPT_ENT_TYPE_FREEBSD_NANDFS;
-static uuid_t gpt_uuid_mnbsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
-static uuid_t gpt_uuid_mnbsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
-static uuid_t gpt_uuid_mnbsd_vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
-static uuid_t gpt_uuid_mnbsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+static uuid_t gpt_uuid_mnbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
+static uuid_t gpt_uuid_mnbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static uuid_t gpt_uuid_mnbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDFS;
+static uuid_t gpt_uuid_mnbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+static uuid_t gpt_uuid_mnbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static uuid_t gpt_uuid_mnbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
+static uuid_t gpt_uuid_mnbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static uuid_t gpt_uuid_mbr = GPT_ENT_TYPE_MBR;
 static uuid_t gpt_uuid_ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
 
