@@ -8,6 +8,7 @@ SUBDIR=	adduser \
 	arp \
 	bootparamd \
 	burncd \
+	${_bsdconfig} \
 	bsdinstall \
 	cdcontrol \
 	chkgrp \
@@ -131,6 +132,10 @@ SUBDIR+=	bluetooth
 
 .if ${MK_BSNMP} != "no"
 SUBDIR+=	bsnmpd
+.endif
+
+.if ${MK_DIALOG} != "no"
+_bsdconfig=	bsdconfig
 .endif
 
 .if ${MK_CTM} != "no"
