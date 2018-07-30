@@ -6,10 +6,8 @@
 # XXX MISSING:		mkproto, mptutil
 SUBDIR=	adduser \
 	arp \
-	bootparamd \
 	burncd \
 	${_bsdconfig} \
-	bsdinstall \
 	cdcontrol \
 	chkgrp \
 	chown \
@@ -21,11 +19,11 @@ SUBDIR=	adduser \
 	ctladm \
 	daemon \
 	dconschat \
+	devctl \
 	devinfo \
 	digictl \
 	diskinfo \
 	dumpcis \
-	etcupdate \
 	extattr \
 	extattrctl \
 	fifolog \
@@ -35,7 +33,6 @@ SUBDIR=	adduser \
 	gstat \
 	i2c \
 	ifmcstat \
-	inetd \
 	iostat \
 	kldxref \
 	mailwrapper \
@@ -86,15 +83,14 @@ SUBDIR=	adduser \
 	spray \
 	syslogd \
 	sysrc \
-	tcpdchk \
-	tcpdmatch \
 	tcpdrop \
 	tcpdump \
-	timed \
 	traceroute \
 	trpt \
 	tzsetup \
+	uefisign \
 	ugidfw \
+	vigr \
 	vipw \
 	wake \
 	watch \
@@ -126,12 +122,24 @@ SUBDIR+=	praudit
 SUBDIR+=	authpf
 .endif
 
+.if ${MK_AUTOFS} != "no"
+SUBDIR+=	autofs
+.endif
+
 .if ${MK_BLUETOOTH} != "no"
 SUBDIR+=	bluetooth
 .endif
 
+.if ${MK_BOOTPARAMD} != "no"
+SUBDIR+=      bootparamd
+.endif
+
 .if ${MK_BSNMP} != "no"
 SUBDIR+=	bsnmpd
+.endif
+
+.if ${MK_BSDINSTALL} != "no"
+SUBDIR+=	bsdinstall
 .endif
 
 .if ${MK_DIALOG} != "no"
@@ -173,6 +181,10 @@ SUBDIR+=	traceroute6
 
 .if ${MK_IPFW} != "no"
 SUBDIR+=	ipfwpcap
+.endif
+
+.if ${MK_INETD} != "no"
+SUBDIR+=	inetd
 .endif
 
 .if ${MK_IPX} != "no"
@@ -263,12 +275,29 @@ SUBDIR+=	repquota
 SUBDIR+=	rwhod
 .endif
 
+.if ${MK_RCS} != "no"
+SUBDIR+=	etcupdate
+.endif
+
 .if ${MK_SENDMAIL} != "no"
 SUBDIR+=	editmap
 SUBDIR+=	mailstats
 SUBDIR+=	makemap
 SUBDIR+=	praliases
 SUBDIR+=	sendmail
+.endif
+
+.if ${MK_TCP_WRAPPERS} != "no"
+SUBDIR+=	tcpdchk
+SUBDIR+=	tcpdmatch
+.endif
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
+
+.if ${MK_TIMED} != "no"
+SUBDIR+=	timed
 .endif
 
 .if ${MK_TOOLCHAIN} != "no"
