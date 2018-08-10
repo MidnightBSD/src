@@ -701,7 +701,7 @@ f_device_probe_geom_part()
 			f_media_shutdown_dos "" "$__capacity"
 		return $?
 		;;
-	freebsd|!0) # Commonly used inappropriately, taste for FreeBSD
+	freebsd|midnightbsd|!0) # Commonly used inappropriately, taste for MidnightBSD
 		[ -r "/dev/$__devname" -a ! "$__magic" ] &&
 			__magic=$( file -bs "/dev/$__devname" 2> /dev/null )
 		case "$__magic" in
@@ -716,7 +716,7 @@ f_device_probe_geom_part()
 		esac
 		return $FAILURE
 		;;
-	freebsd-ufs)
+	mnbsd-ufs|freebsd-ufs)
 		f_dprintf "Found UFS partition named %s" "$__devname"
 		debug= f_device_register "$__var_to_set" \
 			"$__devname" "UFS file system" \
@@ -728,10 +728,10 @@ f_device_probe_geom_part()
 	apple-*|linux-*|ms-*|netbsd-*|ntfs|vmware-*)
 		return $FAILURE # No device types for these
 		;;
-	bios-*|ebr|efi|mbr|freebsd-boot|freebsd-swap)
+	bios-*|ebr|efi|mbr|freebsd-boot|freebsd-swap|midnightbsd-boot|midnightbsd-swap)
 		return $FAILURE # Not a source for media
 		;;
-	freebsd-nandfs|freebsd-vinum|freebsd-zfs)
+	freebsd-nandfs|freebsd-vinum|freebsd-zfs|mnbsd-nandfs|mnbsd-vinum|mnbsd-zfs)
 		return $FAILURE # Unsupported as media source
 		;;
 	esac
