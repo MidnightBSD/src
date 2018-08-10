@@ -23,6 +23,7 @@ SUBDIR=	adduser \
 	devinfo \
 	digictl \
 	diskinfo \
+	dnsextd \
 	dumpcis \
 	extattr \
 	extattrctl \
@@ -37,6 +38,7 @@ SUBDIR=	adduser \
 	kldxref \
 	mailwrapper \
 	makefs \
+	mdnsd \
 	memcontrol \
 	mergemaster \
 	mfiutil \
