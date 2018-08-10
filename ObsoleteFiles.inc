@@ -15,7 +15,20 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20180809: uuidgen moved to /bin/
+OLD_FILES+=usr/bin/nslookup
+OLD_FILES+=usr/bin/otp-sha
+OLD_FILES+=usr/bin/perl5.18.1
+OLD_FILES+=usr/bin/perl5.18.2
+OLD_FILES+=usr/bin/uuidgen
+OLD_FILES+=usr/sbin/mount_nwfs
+OLD_FILES+=usr/sbin/mount_portalfs
+OLD_FILES+=usr/sbin/pccardc
+OLD_FILES+=usr/sbin/sensorsd
+OLD_FILES+=usr/sbin/sysinstall
 # 20180715: file old magic files
+OLD_FILES+=usr/bin/yyfix
+OLD_FILES+=usr/share/man/man1/yyfix.1.gz
 OLD_FILES+=usr/share/misc/magic.mime
 OLD_FILES+=usr/share/misc/magic.mime.mgc
 # 20180123: mandoc old file removal
@@ -97,6 +110,8 @@ OLD_DIRS+=usr/include/clang/3.3
 # 20170326:
 OLD_FILES+=etc/sudoers
 OLD_FILES+=usr/bin/sudo
+OLD_FILES+=usr/bin/sudoedit
+OLD_FILES+=usr/bin/visudo
 # 20160929: removed long unused directories for .1aout section manpages
 OLD_FILES+=usr/share/man/en.ISO8859-1/man1aout
 OLD_FILES+=usr/share/man/en.UTF-8/man1aout
