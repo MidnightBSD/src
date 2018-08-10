@@ -16,6 +16,8 @@
 #
 
 # 20180809: uuidgen moved to /bin/
+OLD_FILES+=usr/bin/vgrind
+OLD_FILES+=usr/lib/libsudo.a
 OLD_FILES+=usr/bin/nslookup
 OLD_FILES+=usr/bin/otp-sha
 OLD_FILES+=usr/bin/perl5.18.1
