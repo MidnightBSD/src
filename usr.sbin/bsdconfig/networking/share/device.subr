@@ -90,7 +90,7 @@ f_dialog_menu_netdev()
 
 	#
 	# Optionally kick interfaces in the head to get them to accurately
-	# track the carrier status in realtime (required on FreeBSD).
+	# track the carrier status in realtime (required on MidnightBSD).
 	#
 	if [ "$DIALOG_MENU_NETDEV_KICK_INTERFACES" ]; then
 		DIALOG_MENU_NETDEV_KICK_INTERFACES=
@@ -354,7 +354,7 @@ f_dialog_menu_netdev_edit()
 			# Make a backup of resolv.conf(5) before using
 			# ifconfig(8) and then restore it afterward. This
 			# allows preservation of nameservers acquired via
-			# DHCP on FreeBSD-8.x (normally lost as ifconfig(8)
+			# DHCP on MidnightBSD-0.7.x (normally lost as ifconfig(8)
 			# usage causes dhclient(8) to exit which scrubs
 			# resolv.conf(5) by-default upon termination).
 			#

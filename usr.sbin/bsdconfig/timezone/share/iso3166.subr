@@ -54,10 +54,10 @@ export msg_invalid_format
 # f_read_iso3166_table
 #
 # Read the ISO 3166 country code database in _PATH_ISO3166:
-# 	/usr/share/misc/iso3166 on FreeBSD
+# 	/usr/share/misc/iso3166 on MidnightBSD
 # 	/usr/share/zoneinfo/iso3166.tab on Linux, Mac OS X, and Cygwin
 #
-# The format of this file on FreeBSD is:
+# The format of this file on MidnightBSD is:
 # 	two	three	number	name
 #
 # The format of this file on Linux, Mac OS X, and Cygwin is:

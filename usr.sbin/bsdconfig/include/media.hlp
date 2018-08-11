@@ -7,12 +7,12 @@ You can install from the following types of media:
             a supported controller (see Hardware Guide).
 
 
-   DOS      A DOS primary partition with the required FreeBSD
-            distribution files copied onto it (e.g. C:\FREEBSD\)
+   DOS      A DOS primary partition with the required MidnightBSD
+            distribution files copied onto it (e.g. C:\MIDNIGHTBSD\)
 
 
    UFS      Assuming a disk or partition with an existing
-            FreeBSD file system and distribution set on it,
+            MidnightBSD file system and distribution set on it,
             get the distribution files from there.
 
 

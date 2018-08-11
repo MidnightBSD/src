@@ -14,7 +14,7 @@ preference to SLIP whenever possible).  When you choose the SLIP
 option, you'll be given the option of later editing the slattach
 command before it's run on the serial line.  It is expected that
 you'll run slattach (or some equivalent command) on the other end of
-the link at that time and bring up the line.  FreeBSD will then
+the link at that time and bring up the line.  MidnightBSD will then
 install itself at serial speeds of up to 115.2K/baud (the recommended
 speed for a hardwired cable).
 
@@ -31,16 +31,16 @@ the PPP dialer provides only a very simple terminal emulator and has no
 can simply enter `dial' (without the quotes) at the ppp prompt if your
 modem uses the Hayes compatible AT command set.
 
-If a hard-wired connection to another FreeBSD (2.0R or later) machine
+If a hard-wired connection to another MidnightBSD machine
 is available, you might also consider installing over a "laplink"
 parallel port cable.  The data rate over the parallel port is much
 higher than what is typically possible over a serial line, and speeds
 of over 50KB/sec are not uncommon.
 
 Finally, for the fastest possible network installation, an Ethernet
-adaptor is always a good choice!  FreeBSD supports most common PC
-Ethernet cards, a table of which is provided in the FreeBSD Hardware
-Guide (see the `Documentation' entry in the main menu).  If you are
+adaptor is always a good choice!  MidnightBSD supports most common PC
+Ethernet cards, a table of which is provided in the MidnightBSD Hardware
+Guide.  If you are
 using one of the supported PCMCIA Ethernet cards, also be sure that
 it's plugged in BEFORE the laptop is powered on!  Sysinstall does not,
 unfortunately, currently support "hot insertion" of PCMCIA cards.

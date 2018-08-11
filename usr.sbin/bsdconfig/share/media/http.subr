@@ -55,10 +55,10 @@ HTTP_DIRS="
 	.
 	releases/$UNAME_P
 	snapshots/$UNAME_P
-	pub/FreeBSD
-	pub/FreeBSD/releases/$UNAME_P
-	pub/FreeBSD/snapshots/$UNAME_P
-	pub/FreeBSD-Archive/old-releases/$UNAME_P
+	pub/MidnightBSD
+	pub/MidnightBSD/releases/$UNAME_P
+	pub/MidnightBSD/snapshots/$UNAME_P
+	pub/MidnightBSD-Archive/old-releases/$UNAME_P
 " # END-QUOTE
 
 ############################################################ FUNCTIONS
@@ -447,7 +447,7 @@ f_http_check_access()
 #
 # 	VAR_HTTP_PATH
 # 		The [possibly] adjusted VAR_HTTP_PATH that was found to contain
-# 		a valid FreeBSD repository.
+# 		a valid MidnightBSD repository.
 #
 f_media_init_http()
 {

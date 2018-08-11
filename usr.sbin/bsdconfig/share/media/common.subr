@@ -111,7 +111,7 @@ f_media_generic_get()
 	f_getvar $VAR_RELNAME rel
 	for path in \
 		"$base/$file" \
-		"$base/FreeBSD/$file" \
+		"$base/MidnightBSD/$file" \
 		"$base/releases/$file" \
 		"$base/$rel/$file" \
 	; do

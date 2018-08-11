@@ -168,11 +168,11 @@ case "$mtag" in
 	saver_to_set="fire" ;;
 "8 $msg_green") # "Green" power saving mode (if supported by monitor)
 	saver_to_set="green" ;;
-"9 $msg_logo") # FreeBSD "logo" animated screen saver (graphics)
+"9 $msg_logo") # BSD "logo" animated screen saver (graphics)
 	saver_to_set="logo" ;;
 "a $msg_rain") # Rain drops screen saver
 	saver_to_set="rain" ;;
-"b $msg_snake") # Draw a FreeBSD "snake" on your screen
+"b $msg_snake") # Draw a BSD "snake" on your screen
 	saver_to_set="snake" ;;
 "c $msg_star") # A "twinkling stars" effect
 	saver_to_set="star" ;;

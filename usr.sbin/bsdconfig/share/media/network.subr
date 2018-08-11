@@ -47,7 +47,7 @@ NETWORK_INITIALIZED=
 #
 # Initialize a network device (such as `fxp0', `em0', etc.). Returns success if
 # able to successfully initialize the device. If not running as init (basically
-# from the FreeBSD install media) then assume that the network has already been
+# from the MidnightBSD install media) then assume that the network has already been
 # initialized and returns success.
 #
 # The variables (from variable.subr) used to initialize the network are as
@@ -142,7 +142,7 @@ f_media_init_network()
 # Shuts down the configured network device (e.g., `fxp0', `em0', etc.) and
 # deletes the default route (if configured). Returns failure if the device
 # passed has not been configured. If not running as init (basically from the
-# FreeBSD install media) then does nothing and returns success.
+# MidnightBSD install media) then does nothing and returns success.
 #
 f_media_shutdown_network()
 {

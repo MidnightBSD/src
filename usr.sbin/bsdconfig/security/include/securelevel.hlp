@@ -1,4 +1,4 @@
-This menu allows you to configure the Securelevel mechanism in FreeBSD.
+This menu allows you to configure the Securelevel mechanism in MidnightBSD.
 
 Securelevels may be used to limit the privileges assigned to the
 root user in multi-user mode, which in turn may limit the effects of

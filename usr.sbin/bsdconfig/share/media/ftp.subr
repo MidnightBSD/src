@@ -52,10 +52,10 @@ FTP_DIRS="
 	.
 	releases/$UNAME_P
 	snapshots/$UNAME_P
-	pub/FreeBSD
-	pub/FreeBSD/releases/$UNAME_P
-	pub/FreeBSD/snapshots/$UNAME_P
-	pub/FreeBSD-Archive/old-releases/$UNAME_P
+	pub/MidnightBSD
+	pub/MidnightBSD/releases/$UNAME_P
+	pub/MidnightBSD/snapshots/$UNAME_P
+	pub/MidnightBSD-Archive/old-releases/$UNAME_P
 " # END-QUOTE
 
 ############################################################ FUNCTIONS

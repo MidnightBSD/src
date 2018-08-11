@@ -13,7 +13,7 @@ is the place to do it.
 If you're running SLIP or PLIP, you also need to use it for specifying
 the remote end of the link (simply type the foreign IP address in).
 In the specific case where you're running PLIP with a Linux host peer
-rather than a FreeBSD one, you also must add the "-link0" flag after the
+rather than a MidnightBSD one, you also must add the "-link0" flag after the
 foreign address.
 
 If you're dealing with an ethernet adaptor with multiple media

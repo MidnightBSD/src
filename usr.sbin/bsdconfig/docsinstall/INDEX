@@ -34,7 +34,7 @@ menu_title="Documentation installation"
 # A short descriptive line shown at the bottom of the bsdconfig menu. keep it
 # short because any line longer than the terminal width will be truncated.
 #
-menu_help="Install FreeBSD Documentation set"
+menu_help="Install MidnightBSD Documentation set"
 
 #
 # Two-part variable that defines an action to take when `keyword' is passed on

@@ -54,7 +54,7 @@ DIRECTORY_CHECKED=
 # Variables from variable.subr that can be used to script user input:
 #
 # 	VAR_DIRECTORY_PATH
-# 		Path to an existing directory containing the FreeBSD
+# 		Path to an existing directory containing the MidnightBSD
 # 		distribution files.
 #
 f_media_set_directory()
