@@ -991,7 +991,7 @@ f_count()
 #
 # Example 2:
 #
-# 	IFS=. f_count_ifs count www.freebsd.org # count=[3]
+# 	IFS=. f_count_ifs count www.midnightbsd.org # count=[3]
 #
 # NB: Make sure to use double-quotes if you are using a custom value for IFS
 # and you don't want the current value to effect the result. See example 3.

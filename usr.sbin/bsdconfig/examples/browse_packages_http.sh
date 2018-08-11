@@ -19,7 +19,7 @@ PKGDIR=$TMPDIR/packages/$PKG_ABI
 for file in digests.txz packagesite.txz; do
 	[ -s "$PKGDIR/$file" ] && continue
 	if [ ! "$HTTP_INITIALIZED" ]; then
-		_httpPath=http://pkg.freebsd.org
+		_httpPath=http://pkg.midnightbsd.org
 		mediaSetHTTP
 		mediaOpen
 	fi
