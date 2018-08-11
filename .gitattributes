@@ -77489,12 +77489,6 @@ usr.sbin/bsdconfig/diskmgmt/USAGE -text
 usr.sbin/bsdconfig/diskmgmt/diskmgmt -text
 usr.sbin/bsdconfig/diskmgmt/include/Makefile svneol=native#text/plain
 usr.sbin/bsdconfig/diskmgmt/include/messages.subr -text
-usr.sbin/bsdconfig/docsinstall/INDEX -text
-usr.sbin/bsdconfig/docsinstall/Makefile svneol=native#text/plain
-usr.sbin/bsdconfig/docsinstall/USAGE -text
-usr.sbin/bsdconfig/docsinstall/docsinstall -text
-usr.sbin/bsdconfig/docsinstall/include/Makefile svneol=native#text/plain
-usr.sbin/bsdconfig/docsinstall/include/messages.subr -text
 usr.sbin/bsdconfig/dot/INDEX -text
 usr.sbin/bsdconfig/dot/Makefile svneol=native#text/plain
 usr.sbin/bsdconfig/dot/USAGE -text

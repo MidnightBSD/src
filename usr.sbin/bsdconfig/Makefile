@@ -3,7 +3,6 @@
 
 SUBDIR=	console \
 	diskmgmt \
-	docsinstall \
 	dot \
 	examples \
 	include \
