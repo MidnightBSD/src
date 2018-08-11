@@ -189,14 +189,14 @@ The
 .Ar type
 option chooses the
 .Xr gpart 8
-filesystem type, e.g., freebsd-ufs, freebsd-zfs, or freebsd-swap.
+filesystem type, e.g., mnbsd-ufs, mnbsd-zfs, or mnbsd-swap.
 The optional
 .Ar mount point
 argument sets where the created partition is to be mounted in the installed
 system.
 As an example, a typical invocation looks like:
 .Pp
-bsdinstall scriptedpart ada0 { 20G freebsd-ufs /, 4G freebsd-swap, 20G freebsd-ufs /var, auto freebsd-ufs /usr }
+bsdinstall scriptedpart ada0 { 20G mnbsd-ufs /, 4G mnbsd-swap, 20G mnbsd-ufs /var, auto mnbsd-ufs /usr }
 .Pp
 A shorter invocation to use the default partitioning (as
 .Cm autopart
@@ -267,7 +267,7 @@ Default: none
 The directory in which the distribution files can be found (or to which they
 should be downloaded).
 Default:
-.Pa /usr/freebsd-dist
+.Pa /usr/midnightbsd-dist
 .It Ev BSDINSTALL_DISTSITE
 URL from which the distribution files should be downloaded if they are not
 already present in the directory defined by

@@ -99,7 +99,7 @@ part_config(char *disk, const char *scheme, char *config)
 		struct gmesh submesh;
 		geom_gettree(&submesh);
 		gpart_create(provider_for_name(&submesh, disk),
-		    "freebsd", NULL, NULL, &disk, 0);
+		    "midnightbsd", NULL, NULL, &disk, 0);
 		geom_deletetree(&submesh);
 	} else {
 		disk= strdup(disk);

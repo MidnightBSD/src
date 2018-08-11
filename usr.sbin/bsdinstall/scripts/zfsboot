@@ -812,7 +812,7 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 2. Add small freebsd-boot or efi partition
+		# 2. Add small mnbsd-boot or efi partition
 		#
 		if [ "$ZFSBOOT_BOOT_TYPE" = "UEFI" ]; then
 			f_eval_catch $funcname gpart \
@@ -825,7 +825,7 @@ zfs_create_diskpart()
 		else
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
-			             "$align_small" gptboot$index freebsd-boot \
+			             "$align_small" gptboot$index mnbsd-boot \
 			             512k $disk || return $FAILURE
 			f_eval_catch $funcname gpart "$GPART_BOOTCODE_PART" \
 			             /boot/pmbr /boot/gptzfsboot 1 $disk ||
@@ -844,7 +844,7 @@ zfs_create_diskpart()
 			[ ${swapsize:-0} -gt 0 ] && targetpart=p4
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
-			             "$align_big" boot$index freebsd-zfs \
+			             "$align_big" boot$index mnbsd-zfs \
 			             ${bootsize}b $disk ||
 			             return $FAILURE
 			# Pedantically nuke any old labels
@@ -859,12 +859,12 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 3. Add freebsd-swap partition labeled `swap#'
+		# 3. Add mnbsd-swap partition labeled `swap#'
 		#
 		if [ ${swapsize:-0} -gt 0 ]; then
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
-			             "$align_big" swap$index freebsd-swap \
+			             "$align_big" swap$index mnbsd-swap \
 			             ${swapsize}b $disk ||
 			             return $FAILURE
 			# Pedantically nuke any old labels on the swap
@@ -873,10 +873,10 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 4. Add freebsd-zfs partition labeled `zfs#' for zroot
+		# 4. Add mnbsd-zfs partition labeled `zfs#' for zroot
 		#
 		f_eval_catch $funcname gpart "$GPART_ADD_ALIGN_LABEL" \
-		             "$align_big" zfs$index freebsd-zfs $disk ||
+		             "$align_big" zfs$index mnbsd-zfs $disk ||
 		             return $FAILURE
 		f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
 		                /dev/$disk$targetpart
@@ -892,10 +892,10 @@ zfs_create_diskpart()
 		             $disk || return $FAILURE
 
 		#
-		# 2. Add freebsd slice with all available space
+		# 2. Add midnightbsd slice with all available space
 		#
 		f_eval_catch $funcname gpart "$GPART_ADD_ALIGN" "$align_small" \
-		             freebsd $disk ||
+		             midnightbsd $disk ||
 		             return $FAILURE
 		f_eval_catch $funcname gpart "$GPART_SET_ACTIVE" 1 $disk ||
 		             return $FAILURE
@@ -906,7 +906,7 @@ zfs_create_diskpart()
 		f_eval_catch -d $funcname gpart "$GPART_DESTROY_F" ${disk}s1
 
 		#
-		# 3. Write BSD scheme to the freebsd slice
+		# 3. Write BSD scheme to the midnightbsd slice
 		#
 		f_eval_catch $funcname gpart "$GPART_CREATE" BSD ${disk}s1 ||
 		             return $FAILURE
@@ -921,7 +921,7 @@ zfs_create_diskpart()
 		ZFSBOOT_BOOT_POOL=1
 		f_eval_catch $funcname gpart \
 		             "$GPART_ADD_ALIGN_INDEX_WITH_SIZE" \
-		             "" 1 freebsd-zfs ${bootsize}b ${disk}s1 ||
+		             "" 1 mnbsd-zfs ${bootsize}b ${disk}s1 ||
 		             return $FAILURE
 		# Pedantically nuke any old labels
 		f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
@@ -934,12 +934,12 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 4. Add freebsd-swap partition
+		# 4. Add mnbsd-swap partition
 		#
 		if [ ${swapsize:-0} -gt 0 ]; then
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_INDEX_WITH_SIZE" \
-			             "$align_small" 2 freebsd-swap ${swapsize}b ${disk}s1 ||
+			             "$align_small" 2 mnbsd-swap ${swapsize}b ${disk}s1 ||
 			             return $FAILURE
 			# Pedantically nuke any old labels on the swap
 			f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
@@ -947,10 +947,10 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 5. Add freebsd-zfs partition for zroot
+		# 5. Add mnbsd-zfs partition for zroot
 		#
 		f_eval_catch $funcname gpart "$GPART_ADD_ALIGN_INDEX" \
-		             "$align_small" $mbrindex freebsd-zfs ${disk}s1 || return $FAILURE
+		             "$align_small" $mbrindex mnbsd-zfs ${disk}s1 || return $FAILURE
 		f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
 		                /dev/$disk$targetpart # Pedantic
 		f_eval_catch $funcname dd "$DD_WITH_OPTIONS" \

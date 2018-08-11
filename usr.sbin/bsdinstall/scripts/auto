@@ -302,7 +302,7 @@ if [ ! -z "$FETCH_DISTRIBUTIONS" ]; then
 	ALL_DISTRIBUTIONS="$DISTRIBUTIONS"
 
 	# Download to a directory in the new system as scratch space
-	BSDINSTALL_FETCHDEST="$BSDINSTALL_CHROOT/usr/freebsd-dist"
+	BSDINSTALL_FETCHDEST="$BSDINSTALL_CHROOT/usr/midnightbsd-dist"
 	mkdir -p "$BSDINSTALL_FETCHDEST" || error "Could not create directory $BSDINSTALL_FETCHDEST"
 
 	export DISTRIBUTIONS="$FETCH_DISTRIBUTIONS"
