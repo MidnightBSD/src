@@ -732,8 +732,8 @@ set_default_part_metadata(const char *name, const char *scheme,
 		}
 		md->fstab->fs_file = strdup(mountpoint);
 		/* Get VFS from text after mnbsd-, if possible */
-		if (strncmp("mnbsd-", type, 8) == 0)
-			md->fstab->fs_vfstype = strdup(&type[8]);
+		if (strncmp("mnbsd-", type, 6) == 0)
+			md->fstab->fs_vfstype = strdup(&type[6]);
 		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0)
 			md->fstab->fs_vfstype = strdup("msdosfs");
 		else
