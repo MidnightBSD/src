@@ -104,6 +104,7 @@ SUBDIR+=alias \
 	lsvfs \
 	lzmainfo \
 	m4 \
+	mDNSResponderPosix \
 	${_man} \
 	mesg \
 	minigzip \

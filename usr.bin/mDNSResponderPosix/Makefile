@@ -4,24 +4,26 @@ NO_MAN=
 
 .include <bsd.own.mk>
 
-.PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
 
 PROG=   mDNSResponderPosix
 
+WARNS=	1
+
 SRCS=	Responder.c mDNSPosix.c mDNSUNP.c 
-.PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 SRCS+=	mDNS.c DNSDigest.c uDNS.c DNSCommon.c
-.PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 SRCS+=	mDNSDebug.c dnssd_ipc.c GenLinkedList.c \
 	PlatformCommon.c CryptoAlg.c anonymous.c
 
-SRCDIRS= ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared \
-	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
-	${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
+SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
+	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
+	${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 
-CFLAGS+= -I. -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
-CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
-CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
+CFLAGS+= -I. -I${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
+CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
+CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 CFLAGS+= -DIDLESLEEPCONTROL_DISABLED
 CFLAGS+= -D_REENTRANT
