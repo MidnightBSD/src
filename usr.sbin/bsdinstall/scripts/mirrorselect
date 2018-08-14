@@ -37,11 +37,10 @@
 exec 3>&1
 MIRROR=`dialog --backtitle "MidnightBSD Installer" \
     --title "Mirror Selection" --extra-button --extra-label "Other" \
-    --menu "Please select the site closest to you or \"other\" if you'd like to specify a different choice.  Also note that not every site listed here carries more than the base distribution kits. Only Primary sites are guaranteed to carry the full range of possible distributions. Select a site that's close!" \
+    --menu "Please select the site closest to you or \"other\" if you'd like to specify a different choice.  Also note that not every site listed here carries more than the base distribution kits. Only Primary sites are guaranteed to carry the full range of possible distributions." \
     0 0 0 \
-	ftp://ftp1.midnightbsd.org 	"Primary"\
-	ftp://ftp2.midnightbsd.org 	"Primary #2"\
-	ftp://ftp3.midnightbsd.org 	"Primary #3"\
+	ftp://ftp1.midnightbsd.org 	"Primary (MI, USA)"\
+	ftp://ftp3.midnightbsd.org 	"Primary #2 (Japan)"\
     2>&1 1>&3`
 MIRROR_BUTTON=$?
 exec 3>&-
