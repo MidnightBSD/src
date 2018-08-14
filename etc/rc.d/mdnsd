@@ -11,7 +11,22 @@
 name="mdnsd"
 rcvar=mdnsd_enable
 command="/usr/sbin/${name}"
+start_precmd="mdnsd_precmd"
 pidfile="/var/run/mDNSResponder.pid"
+
+mdnsd_precmd() 
+{
+	if grep -q mdns "/etc/nsswitch.conf"; then
+		return
+	else
+		if [ ! -w /etc/nswitch.conf ]; then
+			echo ' /etc/nswitch.conf is not writable, update failed.'
+			return
+		fi
+		sed 's|^\(hosts.*\)files dns|\1files mdns dns|g' /etc/nsswitch.conf
+	fi
+}
+
 
 load_rc_config $name
 run_rc_command $*
