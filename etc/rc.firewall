@@ -224,6 +224,12 @@ case ${firewall_type} in
         	${fwcmd} add pass udp from me to any 123 keep-state
 		;;
 	esac
+	case ${ntp_enable} in
+	[Yy][[Ee][Ss])
+		# Allow NTP queries out in the world
+        	${fwcmd} add pass udp from me to any 123 keep-state
+		;;
+	esac
 	${fwcmd} add 65000 deny tcp from any to any
 	${fwcmd} add 65100 deny icmp from any to me in icmptypes 8
 	${fwcmd} add 65200 allow all from any to any
