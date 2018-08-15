@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20180815:
+	When using WPA2, EAPOL-Key frames with the Encrypted flag and without the MIC
+	flag set, the data field was decrypted first without verifying the MIC.  When
+	the dta field was encrypted using RC4, for example, when negotiating TKIP as
+	a pairwise cipher, the unauthenticated but decrypted data was subsequently
+	processed.  This opened wpa_supplicant(8) to abuse by decryption and recovery
+	of sensitive information contained in EAPOL-Key messages.
+
+	See https://w1.fi/security/2018-1/unauthenticated-eapol-key-decryption.txt
+	for a detailed description of the bug.
+
 20180720:
 	Pull in r211155 from upstream llvm trunk (by Tim Northover):
 
