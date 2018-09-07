@@ -258,8 +258,8 @@ containing a root file system that was previously created using
 and also containing a swap partition, run the
 .Nm
 utility as follows:
-.Dl % mkimg -s gpt -b /boot/pmbr -p freebsd-boot:=/boot/gptboot \
--p freebsd-ufs:=root-file-system.ufs -p freebsd-swap::1G \
+.Dl % mkimg -s gpt -b /boot/pmbr -p mnbsd-boot:=/boot/gptboot \
+-p mnbsd-ufs:=root-file-system.ufs -p mnbsd-swap::1G \
 -o gpt.img
 .Pp
 The command line given above results in a raw image file.
@@ -276,9 +276,9 @@ utility twice.
 The output of the first will be fed as the contents of a partition to the
 second.
 This can be done using a temporary file, like so:
-.Dl % mkimg -s bsd -b /boot/boot -p freebsd-ufs:=root-file-system.ufs \
--p freebsd-swap::1G -o /tmp/bsd.img
-.Dl % mkimg -s mbr -b /boot/mbr -p freebsd:=/tmp/bsd.img -o mbr-bsd.img
+.Dl % mkimg -s bsd -b /boot/boot -p mnbsd-ufs:=root-file-system.ufs \
+-p mnbsd-swap::1G -o /tmp/bsd.img
+.Dl % mkimg -s mbr -b /boot/mbr -p mnbsd:=/tmp/bsd.img -o mbr-bsd.img
 .Pp
 Alternatively, the
 .Nm
