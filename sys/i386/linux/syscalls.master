@@ -1,5 +1,4 @@
  $MidnightBSD$
- $FreeBSD: stable/10/sys/i386/linux/syscalls.master 302962 2016-07-17 15:07:33Z dchagin $
 
 ;	@(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ; System call name/number master file (or rather, slave, from LINUX).
