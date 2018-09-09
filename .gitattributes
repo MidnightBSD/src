@@ -51704,7 +51704,6 @@ lib/libc/sys/brk.2 -text
 lib/libc/sys/cap_enter.2 -text
 lib/libc/sys/cap_fcntls_limit.2 svneol=native#text/plain
 lib/libc/sys/cap_ioctls_limit.2 svneol=native#text/plain
-lib/libc/sys/cap_new.2 -text
 lib/libc/sys/cap_rights_limit.2 svneol=native#text/plain
 lib/libc/sys/chdir.2 -text
 lib/libc/sys/chflags.2 -text
