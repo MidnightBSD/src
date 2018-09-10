@@ -1241,7 +1241,7 @@ siftr_manage_ops(uint8_t action)
 		    "siftrver=%s\thz=%u\ttcp_rtt_scale=%u\tsysname=%s\t"
 		    "sysver=%u\tipmode=%u\n",
 		    (intmax_t)tval.tv_sec, tval.tv_usec, MODVERSION_STR, hz,
-		    TCP_RTT_SCALE, SYS_NAME, __FreeBSD_version, SIFTR_IPMODE);
+		    TCP_RTT_SCALE, SYS_NAME, __MidnightBSD_version, SIFTR_IPMODE);
 
 		sbuf_finish(s);
 		alq_writen(siftr_alq, sbuf_data(s), sbuf_len(s), ALQ_WAITOK);
