@@ -352,7 +352,7 @@ man_display_page() {
 		else
 			echo "This manpage needs groff(1) to be rendered" >&2
 			echo "First install groff(1): " >&2
-			echo "pkg install groff " >&2
+			echo "mport install groff " >&2
 			ret=1
 		fi
 		return
