@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20180912:
+	ELF header security issue
+
+	Insufficient validation was performed in the ELF header parser, and malformed
+	or otherwise invalid ELF binaries were not rejected as they should be.
+
 20180911:
 	Add support for Corsair K70 LUX keyboard.
 
