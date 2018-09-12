@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
 %{
 /*	$NetBSD: nsparser.y,v 1.3 1999/01/25 00:16:18 lukem Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1997, 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/nsparser.y 251091 2013-05-29 01:54:10Z emaste $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #define _NS_PRIVATE
@@ -146,8 +147,7 @@ Action
 %%
 
 static void
-_nsaddsrctomap(elem)
-	const char *elem;
+_nsaddsrctomap(const char *elem)
 {
 	int		i, lineno;
 	extern int	_nsyylineno;
