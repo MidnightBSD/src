@@ -50233,7 +50233,6 @@ lib/libc/gen/alarm.c -text
 lib/libc/gen/arc4random.3 -text
 lib/libc/gen/arc4random.c -text
 lib/libc/gen/assert.c -text
-lib/libc/gen/aux.c -text
 lib/libc/gen/auxv.c svneol=native#text/plain
 lib/libc/gen/basename.3 -text
 lib/libc/gen/basename.c -text
@@ -50444,7 +50443,6 @@ lib/libc/gen/stringlist.3 -text
 lib/libc/gen/stringlist.c -text
 lib/libc/gen/strtofflags.3 -text
 lib/libc/gen/strtofflags.c -text
-lib/libc/gen/swapcontext.c -text
 lib/libc/gen/sysconf.3 -text
 lib/libc/gen/sysconf.c -text
 lib/libc/gen/sysctl.3 -text
