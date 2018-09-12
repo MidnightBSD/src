@@ -1,6 +1,6 @@
 /* config.h.  Generated from conf.in by configure.  */
 /* conf.in.  Generated from configure.in by autoheader.  */
-/* $FreeBSD: stable/10/usr.bin/lex/config.h 250881 2013-05-21 19:32:35Z jkim $ */
+/* $MidnightBSD$ */
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.
@@ -160,7 +160,7 @@
 #define PACKAGE_NAME "the fast lexical analyser generator"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "the fast lexical analyser generator 2.5.37"
+#define PACKAGE_STRING "the fast lexical analyser generator 2.5.39"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "flex"
@@ -169,7 +169,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.5.37"
+#define PACKAGE_VERSION "2.5.39"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -183,7 +183,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "2.5.37"
+#define VERSION "2.5.39"
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */
