@@ -364,7 +364,7 @@ void check_options ()
     output_chain = filter_create_int(NULL, filter_tee_header, headerfilename);
     if ( !(m4 = getenv("M4")))
         m4 = M4;
-    filter_create_ext(output_chain, m4, "-P", 0);
+    filter_create_ext(output_chain, m4, "-gP", 0);
     filter_create_int(output_chain, filter_fix_linedirs, NULL);
 
     /* For debugging, only run the requested number of filters. */
@@ -451,7 +451,7 @@ void check_options ()
              char *str, *fmt = "#define %s %d\n";
              size_t strsz;
 
-             str = (char*)flex_alloc(strsz = strlen(fmt) + strlen(scname[i]) + (int)(1 + log10(i)) + 2);
+             str = (char*)flex_alloc(strsz = strlen(fmt) + strlen(scname[i]) + NUMCHARLINES + 2);
              if (!str)
                flexfatal(_("allocation of macro definition failed"));
              snprintf(str, strsz, fmt,      scname[i], i - 1);

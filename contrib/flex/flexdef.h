@@ -171,6 +171,8 @@ char *alloca ();
  */
 #define NUMDATALINES 10
 
+#define NUMCHARLINES 10
+
 /* transition_struct_out() definitions. */
 #define TRANS_STRUCT_PRINT_LENGTH 14
 

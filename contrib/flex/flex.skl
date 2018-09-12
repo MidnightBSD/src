@@ -194,6 +194,15 @@ m4_ifdef( [[M4_YY_TABLES_EXTERNAL]],
 ]])
 
 /* First, we deal with  platform-specific or compiler-specific issues. */
+#if defined(__MidnightBSD__)
+#ifndef __STDC_LIMIT_MACROS
+#define       __STDC_LIMIT_MACROS
+#endif
+#include <sys/cdefs.h>
+#include <stdint.h>
+#else
+#define       __dead2
+#endif
 
 /* begin standard C headers. */
 %if-c-only
@@ -1029,7 +1038,9 @@ extern int yywrap M4_YY_PARAMS( M4_YY_PROTO_ONLY_ARG );
 %not-for-header
     m4_ifdef( [[M4_YY_NO_UNPUT]],,
     [[
+#ifndef YY_NO_UNPUT
     static void yyunput M4_YY_PARAMS( int c, char *buf_ptr  M4_YY_PROTO_LAST_ARG);
+#endif
     ]])
 %ok-for-header
 %endif
@@ -1807,9 +1818,11 @@ m4_ifdef( [[M4_YY_USES_REJECT]],
 %if-c-only
 m4_ifdef( [[M4_YY_NO_UNPUT]],,
 [[
+#ifndef YY_NO_UNPUT
     static void yyunput YYFARGS2( int,c, register char *,yy_bp)
 %endif
 %if-c++-only
+#ifndef YY_NO_UNPUT
     void yyFlexLexer::yyunput( int c, register char* yy_bp)
 %endif
 {
@@ -1851,11 +1864,11 @@ m4_ifdef( [[M4_YY_USE_LINENO]],
         --yylineno;
     }
 ]])
-
 	YY_G(yytext_ptr) = yy_bp;
 	YY_G(yy_hold_char) = *yy_cp;
 	YY_G(yy_c_buf_p) = yy_cp;
 }
+#endif		/* ifndef YY_NO_UNPUT */
 %if-c-only
 ]])
 %endif
