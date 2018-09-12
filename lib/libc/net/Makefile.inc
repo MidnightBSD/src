@@ -13,7 +13,7 @@ SRCS+=	base64.c ether_addr.c eui64.c \
 	getproto.c getprotoent.c getprotoname.c getservent.c \
 	if_indextoname.c if_nameindex.c if_nametoindex.c \
 	ip6opt.c linkaddr.c map_v4v6.c name6.c ntoh.c \
-	nsdispatch.c nslexer.l nsparser.y nss_compat.c \
+	nsdispatch.c nsparser.y nslexer.l nss_compat.c \
 	rcmd.c rcmdsh.c recv.c rthdr.c sctp_sys_calls.c send.c \
         sockatmark.c sourcefilter.c vars.c
 
