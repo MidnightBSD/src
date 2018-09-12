@@ -296,8 +296,7 @@ Indices
 @cindex reporting bugs
 
 If you find a bug in @code{flex}, please report it using
-the SourceForge Bug Tracking facilities which can be found on
-@url{http://sourceforge.net/projects/flex,flex's SourceForge Page}.
+GitHub's issue tracking facility at @url{https://github.com/westes/flex/issues/}
 
 @node Introduction, Simple Examples, Reporting Bugs, Top
 @chapter Introduction
@@ -409,7 +408,7 @@ A somewhat more complicated example:
 
     "+"|"-"|"*"|"/"   printf( "An operator: %s\n", yytext );
 
-    "{"[\^{}}\n]*"}"     /* eat up one-line comments */
+    "{"[^{}\n]*"}"     /* eat up one-line comments */
 
     [ \t\n]+          /* eat up whitespace */
 
@@ -895,7 +894,7 @@ And to match a sequence of zero or more repetitions of @samp{foo} and
 @cindex character classes in patterns
 In addition to characters and ranges of characters, character classes
 can also contain @dfn{character class expressions}.  These are
-expressions enclosed inside @samp{[}: and @samp{:]} delimiters (which
+expressions enclosed inside @samp{[:} and @samp{:]} delimiters (which
 themselves must appear between the @samp{[} and @samp{]} of the
 character class. Other elements may occur inside the character class,
 too).  The valid expressions are:
@@ -1404,7 +1403,7 @@ example, the following is one way to eat up C comments:
 @verbatim
     %%
     "/*"        {
-                register int c;
+                int c;
 
                 for ( ; ; )
                     {
@@ -1492,15 +1491,14 @@ the scanning routine using a K&R-style/non-prototyped function
 declaration, you must terminate the definition with a semi-colon (;).
 
 @code{flex} generates @samp{C99} function definitions by
-default. However flex does have the ability to generate obsolete, er,
-@samp{traditional}, function definitions. This is to support
+default. Flex used to have the ability to generate obsolete, er,
+@samp{traditional}, function definitions. This was to support
 bootstrapping gcc on old systems.  Unfortunately, traditional
 definitions prevent us from using any standard data types smaller than
-int (such as short, char, or bool) as function arguments.  For this
-reason, future versions of @code{flex} may generate standard C99 code
-only, leaving K&R-style functions to the historians.  Currently, if you
-do @strong{not} want @samp{C99} definitions, then you must use 
-@code{%option noansi-definitions}.
+int (such as short, char, or bool) as function arguments.  Furthermore,
+traditional definitions support added extra complexity in the skeleton file.
+For this reason, current versions of @code{flex} generate standard C99 code
+only, leaving K&R-style functions to the historians.
 
 @cindex stdin, default for yyin
 @cindex yyin
@@ -1601,7 +1599,6 @@ Any rule whose pattern is prefixed with @samp{<sc>} will only be active
 when the scanner is in the @dfn{start condition} named @code{sc}.  For
 example,
 
-@c proofread edit stopped here
 @example
 @verbatim
     <STRING>[^"]*        { /* eat up the string body ... */
@@ -1934,9 +1931,9 @@ condition @dfn{scope}.  A start condition scope is begun with:
 @end verbatim
 @end example
 
-where @code{SCs} is a list of one or more start conditions.  Inside the
+where @code{<SCs>} is a list of one or more start conditions.  Inside the
 start condition scope, every rule automatically has the prefix
-@code{SCs>} applied to it, until a @samp{@}} which matches the initial
+@code{<SCs>} applied to it, until a @samp{@}} which matches the initial
 @samp{@{}.  So, for example,
 
 @cindex extended scope of start conditions
@@ -2185,7 +2182,7 @@ manages its own input buffer stack manually (instead of letting flex do it).
             }
 
     <<EOF>> {
-            if ( --include_stack_ptr  0 )
+            if ( --include_stack_ptr == 0 )
                 {
                 yyterminate();
                 }
@@ -2862,19 +2859,13 @@ calls @code{yylex()} again).
 @opindex ---option-ansi-definitions
 @opindex ansi-definitions
 @item --ansi-definitions, @code{%option ansi-definitions}
-instruct flex to generate ANSI C99 definitions for functions.
-This option is enabled by default.
-If @code{%option noansi-definitions} is specified, then the obsolete style
-is generated.
+Deprecated, ignored
 
 @anchor{option-ansi-prototypes}
 @opindex ---option-ansi-prototypes
 @opindex ansi-prototypes
 @item --ansi-prototypes, @code{%option ansi-prototypes}
-instructs flex to generate ANSI C99 prototypes for functions. 
-This option is enabled by default.
-If @code{noansi-prototypes} is specified, then
-prototypes will have empty parameter lists.
+Deprecated, ignored
 
 @anchor{option-bison-bridge}
 @opindex ---bison-bridge
@@ -3765,8 +3756,7 @@ defaults to generating the scanner to the file @file{lex.yy.cc} instead
 of @file{lex.yy.c}.  The generated scanner includes the header file
 @file{FlexLexer.h}, which defines the interface to two C++ classes.
 
-The first class,
-@code{FlexLexer},
+The first class in @file{FlexLexer.h}, @code{FlexLexer},
 provides an abstract base class defining the general scanner class
 interface.  It provides the following member functions:
 
@@ -3800,10 +3790,10 @@ returns the current setting of the debugging flag.
 
 Also provided are member functions equivalent to
 @code{yy_switch_to_buffer()}, @code{yy_create_buffer()} (though the
-first argument is an @code{istream*} object pointer and not a
+first argument is an @code{istream&} object reference and not a
 @code{FILE*)}, @code{yy_flush_buffer()}, @code{yy_delete_buffer()}, and
-@code{yyrestart()} (again, the first argument is a @code{istream*}
-object pointer).
+@code{yyrestart()} (again, the first argument is a @code{istream&}
+object reference).
 
 @tindex yyFlexLexer (C++ only)
 @tindex FlexLexer (C++ only)
@@ -3814,9 +3804,12 @@ additional member functions:
 @table @code
 @findex yyFlexLexer constructor (C++ only)
 @item yyFlexLexer( istream* arg_yyin = 0, ostream* arg_yyout = 0 )
+@item yyFlexLexer( istream& arg_yyin, ostream& arg_yyout )
 constructs a @code{yyFlexLexer} object using the given streams for input
 and output.  If not specified, the streams default to @code{cin} and
-@code{cout}, respectively.
+@code{cout}, respectively.  @code{yyFlexLexer} does not take ownership of
+its stream arguments.  It's up to the user to ensure the streams pointed
+to remain alive at least as long as the @code{yyFlexLexer} instance.
 
 @findex yylex (C++ version)
 @item virtual int yylex()
@@ -3833,11 +3826,13 @@ instead of @code{yyFlexLexer}.  In this case, rather than generating
 
 @findex switch_streams (C++ only)
 @item virtual void switch_streams(istream* new_in = 0, ostream* new_out = 0)
+@item virtual void switch_streams(istream& new_in, ostream& new_out)
 reassigns @code{yyin} to @code{new_in} (if non-null) and @code{yyout} to
 @code{new_out} (if non-null), deleting the previous input buffer if
 @code{yyin} is reassigned.
 
 @item int yylex( istream* new_in, ostream* new_out = 0 )
+@item int yylex( istream& new_in, ostream& new_out )
 first switches the input streams via @code{switch_streams( new_in,
 new_out )} and then returns the value of @code{yylex()}.
 @end table
@@ -3894,7 +3889,7 @@ Here is an example of a simple C++ scanner:
     int mylineno = 0;
     %}
 
-    %option noyywrap
+    %option noyywrap c++
 
     string  \"[^\n"]+\"
 
@@ -3938,6 +3933,9 @@ Here is an example of a simple C++ scanner:
     {string}  cout << "string " << YYText() << '\n';
 
     %%
+
+	// This include is required if main() is an another source file.
+	//#include <FlexLexer.h>
 
     int main( int /* argc */, char** /* argv */ )
     {
@@ -4911,8 +4909,10 @@ custom allocator through @code{yyextra}.
 %option reentrant
 
 /* Initialize the allocator. */
+%{
 #define YY_EXTRA_TYPE  struct allocator*
 #define YY_USER_INIT  yyextra = allocator_create();
+%}
 
 %%
 .|\n   ;
