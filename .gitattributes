@@ -51096,15 +51096,7 @@ lib/libc/resolv/res_send.c -text
 lib/libc/resolv/res_state.c -text
 lib/libc/resolv/res_update.c -text
 lib/libc/rpc/DISCLAIMER -text
-lib/libc/rpc/LICENSE -text
 lib/libc/rpc/Makefile.inc -text
-lib/libc/rpc/PSD.doc/nfs.rfc.ms -text
-lib/libc/rpc/PSD.doc/rpc.prog.ms -text
-lib/libc/rpc/PSD.doc/rpc.rfc.ms -text
-lib/libc/rpc/PSD.doc/rpcgen.ms -text
-lib/libc/rpc/PSD.doc/stubs -text
-lib/libc/rpc/PSD.doc/xdr.nts.ms -text
-lib/libc/rpc/PSD.doc/xdr.rfc.ms -text
 lib/libc/rpc/README -text
 lib/libc/rpc/Symbol.map -text
 lib/libc/rpc/auth_des.c -text
