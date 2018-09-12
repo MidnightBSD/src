@@ -13453,7 +13453,6 @@ contrib/flex/README.md -text
 contrib/flex/THANKS -text
 contrib/flex/aclocal.m4 -text
 contrib/flex/autogen.sh -text
-contrib/flex/buf.c -text
 contrib/flex/build-aux/compile -text
 contrib/flex/build-aux/config.guess -text
 contrib/flex/build-aux/config.rpath -text
@@ -13526,12 +13525,8 @@ contrib/flex/examples/manual/yymore.lex -text
 contrib/flex/examples/manual/yymore2.lex -text
 contrib/flex/examples/manual/yymoretest.dat -text
 contrib/flex/examples/testxxLexer.l -text
-contrib/flex/flex.skl -text
-contrib/flex/flexdef.h -text
-contrib/flex/flexint.h -text
 contrib/flex/lib/malloc.c -text
 contrib/flex/lib/realloc.c -text
-contrib/flex/libyywrap.c -text
 contrib/flex/m4/ax_prog_cc_for_build.m4 -text
 contrib/flex/m4/gettext.m4 -text
 contrib/flex/m4/iconv.m4 -text
@@ -13547,7 +13542,6 @@ contrib/flex/m4/lt~obsolete.m4 -text
 contrib/flex/m4/nls.m4 -text
 contrib/flex/m4/po.m4 -text
 contrib/flex/m4/progtest.m4 -text
-contrib/flex/main.c -text
 contrib/flex/po/LINGUAS -text
 contrib/flex/po/Makefile.in.in -text
 contrib/flex/po/Makevars -text
@@ -13607,7 +13601,6 @@ contrib/flex/po/zh_CN.gmo -text
 contrib/flex/po/zh_CN.po -text
 contrib/flex/po/zh_TW.gmo -text
 contrib/flex/po/zh_TW.po -text
-contrib/flex/scanflags.c -text
 contrib/flex/src/FlexLexer.h -text
 contrib/flex/src/Makefile.am -text
 contrib/flex/src/Makefile.in -text
