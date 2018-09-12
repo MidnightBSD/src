@@ -13,8 +13,9 @@ SYM_MAPS+=	${.CURDIR}/yp/Symbol.map
 RPCSRC=	${DESTDIR}/usr/include/rpcsvc/yp.x
 RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -C
 
-yp_xdr.c: ${RPCSRC}
+yp_xdr.c: ${RPCSRC} yp.h
 	${RPCGEN} -c -o ${.TARGET} ${RPCSRC}
 
 yp.h: ${RPCSRC}
 	${RPCGEN} -h -o ${.TARGET} ${RPCSRC}
+
