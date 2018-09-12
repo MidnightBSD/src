@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20180911:
+	Add support for Corsair K70 LUX keyboard.
+
 20180815:
 	When using WPA2, EAPOL-Key frames with the Encrypted flag and without the MIC
 	flag set, the data field was decrypted first without verifying the MIC.  When
