@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
         break;
       case 'e':
 	pack->cpe = optarg;
+	break;
       case 'l':
         pack->lang = optarg;
         break;
