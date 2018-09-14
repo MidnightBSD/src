@@ -339,6 +339,8 @@ mport_upgrade_master_schema_6to7(sqlite3 *db) {
 	RUN_SQL(db, "update packages set expiration_date = 0");
 	RUN_SQL(db, "update packages set deprecated = ''");
 	RUN_SQL(db, "update packages set flavor = ''");
+
+	return (MPORT_OK);
 }
 
 int
