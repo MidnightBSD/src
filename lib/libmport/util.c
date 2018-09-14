@@ -351,7 +351,7 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
  * mport_parselist(input, string_array_pointer)
  *
  * hacks input into sub strings by whitespace.  Allocates a chunk or memory
- * for a array of those strings, and sets the pointer you pass to refernce
+ * for a array of those strings, and sets the pointer you pass to reference
  * that memory
  *
  * char input[] = "foo bar baz"
