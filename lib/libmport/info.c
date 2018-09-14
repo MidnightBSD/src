@@ -84,18 +84,18 @@ mport_info(mportInstance *mport, const char *packageName)
 		locked = (*packs)->locked;
 		no_shlib_provided = (*packs)->no_provide_shlib;
 		flavor = (*packs)->flavor;
-		if (flavor == NULL || flavor[0] == '\0') {
-			flavor = strdup("N/A");
+		if (flavor == NULL) {
+			flavor = strdup("");
 		}
 		deprecated  = (*packs)->deprecated;
 		if (deprecated == NULL || deprecated[0] == '\0') {
-			deprecated = strdup("N/A");
+			deprecated = strdup("no");
 		}
 		expirationDate = (*packs)->expiration_date;
 	}
 
 	asprintf(&info_text,
-		 "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nflavor: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\nno_shlib_provided: %s\ndeprecated:%s\nexpirationDate:%s\n",
+		 "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nflavor: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\nno_shlib_provided: %s\ndeprecated: %s\nexpirationDate: %s\n",
 		 (*indexEntry)->pkgname,
 		 (*indexEntry)->version,
 		 status,
@@ -108,7 +108,7 @@ mport_info(mportInstance *mport, const char *packageName)
 		 locked ? "yes" : "no",
 		 no_shlib_provided ? "yes" : "no",
 		 deprecated,
-		 expirationDate == 0 ? "N/A" : ctime(&expirationDate));
+		 expirationDate == 0 ? "" : ctime(&expirationDate));
 
 	if (packs == NULL) {
 		free(status);
