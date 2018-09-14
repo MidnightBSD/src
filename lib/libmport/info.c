@@ -73,7 +73,7 @@ mport_info(mportInstance *mport, const char *packageName)
 		origin = strdup("");
 		os_release = strdup("");
 		cpe = strdup("");
-		flavor = strdup("");
+		flavor = strdup("N/A");
 		deprecated = strdup("N/A");
 		expirationDate = 0;
 	} else {
@@ -84,8 +84,11 @@ mport_info(mportInstance *mport, const char *packageName)
 		locked = (*packs)->locked;
 		no_shlib_provided = (*packs)->no_provide_shlib;
 		flavor = (*packs)->flavor;
+		if (flavor == NULL || flavor[0] == '\0') {
+			flavor = strdup("N/A");
+		}
 		deprecated  = (*packs)->deprecated;
-		if (deprecated[0] == '\0') {
+		if (deprecated == NULL || deprecated[0] == '\0') {
 			deprecated = strdup("N/A");
 		}
 		expirationDate = (*packs)->expiration_date;
