@@ -102,10 +102,10 @@ mport_info(mportInstance *mport, const char *packageName)
 		 os_release,
 		 (*indexEntry)->comment,
 		 cpe,
-		 locked ? "yes" : "no"),
-		no_shlib_provided ? "yes" : "no",
-		deprecated,
-		expirationDate == 0 ? "N/A" : ctime(&expirationDate);
+		 locked ? "yes" : "no",
+		 no_shlib_provided ? "yes" : "no",
+		 deprecated,
+		 expirationDate == 0 ? "N/A" : ctime(&expirationDate));
 
 	if (packs == NULL) {
 		free(status);
