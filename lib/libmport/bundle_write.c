@@ -49,7 +49,7 @@ __MBSDID("$MidnightBSD$");
 
 
 #define	LINK_TABLE_SIZE 1024
-#define BUFF_SIZE       BUFSIZ * 16
+#define BUFF_SIZE       (BUFSIZ * 16)
 
 struct links_table {
   size_t nbuckets;
@@ -163,7 +163,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
   
   if (S_ISLNK(st.st_mode)) {
     /* we have us a symlink */
-    int linklen;
+    ssize_t linklen;
     char linkdata[PATH_MAX + 1];
     
     linklen = readlink(filename, linkdata, PATH_MAX);
