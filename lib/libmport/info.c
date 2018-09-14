@@ -98,7 +98,7 @@ mport_info(mportInstance *mport, const char *packageName)
 		 "%s-%s\n"
 			 "Name            : %s\nVersion         : %s\nLatest          : %s\nLicense         : %s\nOrigin          : %s\n"
 			 "Flavor          : %s\nOS              : %s\n"
-	                 "CPE             : %s\nLocked          : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date: %s\n"
+	                 "CPE             : %s\nLocked          : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\n"
 			 "\n%s\n",
 		 (*indexEntry)->pkgname, (*indexEntry)->version,
 		 (*indexEntry)->pkgname,
