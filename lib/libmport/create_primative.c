@@ -427,7 +427,7 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 			port++;
 
 			if (*port == 0) {
-				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Maformed depend: %s", *depend);
+				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Malformed depend: %s", *depend);
 				return;
 			}
 
