@@ -109,20 +109,23 @@ void mport_assetlist_free(mportAssetList *);
 int mport_parse_plistfile(FILE *, mportAssetList *);
 
 /* Package Meta-data structure */
-
 typedef struct {
-  char *name;
-  char *version;
-  char *lang;
-  char *options;
-  char *comment;
-  char *desc;
-  char *prefix;
-  char *origin;
-  char **categories;
-  char *os_release;
-  char *cpe;
-  int locked;
+    char *name;
+    char *version;
+    char *lang;
+    char *options;
+    char *comment;
+    char *desc;
+    char *prefix;
+    char *origin;
+    char **categories;
+    char *os_release;
+    char *cpe;
+    int locked;
+    char *deprecated;
+    time_t expiration_date;
+    int no_provide_shlib;
+    char *flavor;
 } mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);

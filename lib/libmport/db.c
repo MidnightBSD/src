@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013, 2014 Lucas Holt
+ * Copyright (c) 2013, 2014, 2018 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -38,6 +38,7 @@ static int mport_upgrade_master_schema_0to2(sqlite3 *);
 static int mport_upgrade_master_schema_2to3(sqlite3 *);
 static int mport_upgrade_master_schema_3to4(sqlite3 *);
 static int mport_upgrade_master_schema_4to6(sqlite3 *);
+static int mport_upgrade_master_schema_6to7(sqlite3 *);
 
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
@@ -242,7 +243,7 @@ mport_generate_stub_schema(sqlite3 *db)
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
 	RUN_SQL(db, sql);
 	RUN_SQL(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
-	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL, cpe text NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL, cpe text NOT NULL, deprecated text, expiration_date int64, no_provide_shlib int NOT NULL, flavor text)");
 	RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");
@@ -262,22 +263,25 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 			mport_upgrade_master_schema_0to2(db);
 			mport_upgrade_master_schema_2to3(db);
 			mport_upgrade_master_schema_4to6(db);
+			mport_upgrade_master_schema_6to7(db);
 			mport_set_database_version(db);
 			break;
 		case 2:
 			mport_upgrade_master_schema_2to3(db);
+			/* falls through */
 		case 3:
 			mport_upgrade_master_schema_3to4(db);
-			mport_upgrade_master_schema_4to6(db);
-			mport_set_database_version(db);
-			break;
+			/* falls through */
 		case 4:
 			/* falls through */
 		case 5:
 			mport_upgrade_master_schema_4to6(db);
+			/* falls through */
+		case 6:
+			mport_upgrade_master_schema_6to7(db);
 			mport_set_database_version(db);
 			break;
-		case 6:
+		case 7:
 			break;
 		default:
 			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -324,11 +328,24 @@ mport_upgrade_master_schema_4to6(sqlite3 *db)
 	return (MPORT_OK);
 }
 
+static int
+mport_upgrade_master_schema_6to7(sqlite3 *db) {
+	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN deprecated text");
+	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN expiration_date int64");
+	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN no_provide_shlib int");
+	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN flavor text");
+
+	RUN_SQL(db, "update packages set no_provide_shlib = 0");
+	RUN_SQL(db, "update packages set expiration_date = 0");
+	RUN_SQL(db, "update packages set deprecated = ''");
+	RUN_SQL(db, "update packages set flavor = ''");
+}
+
 int
 mport_generate_master_schema(sqlite3 *db) 
 {
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text, locked int NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text, locked int NOT NULL, deprecated text, expiration_date int64, no_provide_shlib int NOT NULL, flavor text)");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 

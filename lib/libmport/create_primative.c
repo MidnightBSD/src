@@ -121,101 +121,102 @@ create_stub_db(sqlite3 **db, const char *tmpdir)
 static int
 insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
 {
-  mportAssetListEntry *e = NULL;
-  sqlite3_stmt *stmnt = NULL;
-  char sql[]  = "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES (?,?,?,?,?,?,?)";
-  char md5[33];
-  char file[FILENAME_MAX];
-  char cwd[FILENAME_MAX];
-  struct stat st;
+	mportAssetListEntry *e = NULL;
+	sqlite3_stmt *stmnt = NULL;
+	char sql[] = "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES (?,?,?,?,?,?,?)";
+	char md5[33];
+	char file[FILENAME_MAX];
+	char cwd[FILENAME_MAX];
+	struct stat st;
 
-  strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
-  strlcat(cwd, pack->prefix, FILENAME_MAX);
-  
-  if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK) 
-    RETURN_CURRENT_ERROR;
-  
-  STAILQ_FOREACH(e, assetlist, next) {
-    if (e->type == ASSET_COMMENT)
-      continue;
-  
-    if (e->type == ASSET_CWD) {
-      strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
-      if (e->data == NULL) {
-        strlcat(cwd, pack->prefix, FILENAME_MAX);
-      } else {
-        strlcat(cwd, e->data, FILENAME_MAX);
-      }
-    }
-    
-    if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
-      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
-    if (sqlite3_bind_int(stmnt, 2, e->type) != SQLITE_OK) {
-      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
-    if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
-      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
-    // 4 is computed below 
-    if (sqlite3_bind_text(stmnt, 5, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) { 
-      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
-    if (sqlite3_bind_text(stmnt, 6, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
-       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
-    if (sqlite3_bind_text(stmnt, 7, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
-       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
+	strlcat(cwd, pack->prefix, FILENAME_MAX);
 
-    if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL || e->type == ASSET_FILE_OWNER_MODE) {
-      /* Don't prepend cwd onto absolute file paths (this is useful for update) */
-      if (e->data[0] == '/') {
-        (void)strlcpy(file, e->data, FILENAME_MAX);
-      } else {
-        (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
-      }
+	if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-      if (e->type == ASSET_SAMPLE) {
-          for (int ch = 0; ch < FILENAME_MAX; ch++) {
-		if (file[ch] == '\0')
-			break;
-		if (file[ch] == ' ' || file[ch] == '\t')
-			file[ch] = '\0';
-	  } 
-      }
+	STAILQ_FOREACH(e, assetlist, next) {
+		if (e->type == ASSET_COMMENT)
+			continue;
 
-      if (lstat(file, &st) != 0) {
-        sqlite3_finalize(stmnt);
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s", file, strerror(errno));
-      }
+		if (e->type == ASSET_CWD) {
+			strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
+			if (e->data == NULL) {
+				strlcat(cwd, pack->prefix, FILENAME_MAX);
+			} else {
+				strlcat(cwd, e->data, FILENAME_MAX);
+			}
+		}
 
-      if (S_ISREG(st.st_mode)) {
-        if (MD5File(file, md5) == NULL) 
-          RETURN_ERRORX(MPORT_ERR_FATAL, "File not found: %s", file);
-      
-        if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) 
-          RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-      } else {
-        sqlite3_bind_null(stmnt, 4);
-      }
-    } else {
-      if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-      }
-    }
-    
-    if (sqlite3_step(stmnt) != SQLITE_DONE) {
-      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
-        
-    sqlite3_reset(stmnt);
-  } 
-  
-  sqlite3_finalize(stmnt);
-  
-  return MPORT_OK;
-}     
+		if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+		if (sqlite3_bind_int(stmnt, 2, e->type) != SQLITE_OK) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+		if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+		// 4 is computed below
+		if (sqlite3_bind_text(stmnt, 5, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+		if (sqlite3_bind_text(stmnt, 6, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+		if (sqlite3_bind_text(stmnt, 7, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+
+		if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
+		    e->type == ASSET_FILE_OWNER_MODE) {
+			/* Don't prepend cwd onto absolute file paths (this is useful for update) */
+			if (e->data[0] == '/') {
+				(void) strlcpy(file, e->data, FILENAME_MAX);
+			} else {
+				(void) snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+			}
+
+			if (e->type == ASSET_SAMPLE) {
+				for (int ch = 0; ch < FILENAME_MAX; ch++) {
+					if (file[ch] == '\0')
+						break;
+					if (file[ch] == ' ' || file[ch] == '\t')
+						file[ch] = '\0';
+				}
+			}
+
+			if (lstat(file, &st) != 0) {
+				sqlite3_finalize(stmnt);
+				RETURN_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s", file, strerror(errno));
+			}
+
+			if (S_ISREG(st.st_mode)) {
+				if (MD5File(file, md5) == NULL)
+					RETURN_ERRORX(MPORT_ERR_FATAL, "File not found: %s", file);
+
+				if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK)
+					RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			} else {
+				sqlite3_bind_null(stmnt, 4);
+			}
+		} else {
+			if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
+				RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			}
+		}
+
+		if (sqlite3_step(stmnt) != SQLITE_DONE) {
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		}
+
+		sqlite3_reset(stmnt);
+	}
+
+	sqlite3_finalize(stmnt);
+
+	return MPORT_OK;
+}
 
 static int
 insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
@@ -224,13 +225,21 @@ insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 
 	dispatch_sync(mportSQLSerial, ^{
 		sqlite3_stmt *stmnt = NULL;
-		const char *rest  = 0;
-		char sql[] = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe) VALUES (?,?,?,?,?,?,?,?)";
+		const char *rest = 0;
+		char sql[] = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
 
 		char *os_release = mport_get_osrelease();
 		if (pack->cpe == NULL) {
 			pack->cpe = alloca(1);
 			pack->cpe[0] = '\0';
+		}
+		if (pack->deprecated == NULL) {
+			pack->deprecated = alloca(1);
+			pack->deprecated[0] = '\0';
+		}
+		if (pack->flavor == NULL) {
+			pack->flavor = alloca(1);
+			pack->flavor[0] = '\0';
 		}
 
 		if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
@@ -261,13 +270,28 @@ insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 			return;
 		}
-
 		if (sqlite3_bind_text(stmnt, 7, os_release, -1, SQLITE_STATIC) != SQLITE_OK) {
 			free(os_release);
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 			return;
 		}
 		if (sqlite3_bind_text(stmnt, 8, pack->cpe, -1, SQLITE_STATIC) != SQLITE_OK) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			return;
+		}
+		if (sqlite3_bind_text(stmnt, 9, pack->deprecated, -1, SQLITE_STATIC) != SQLITE_OK) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			return;
+		}
+		if (sqlite3_bind_int64(stmnt, 10, pack->expiration_date) != SQLITE_OK) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			return;
+		}
+		if (sqlite3_bind_int(stmnt, 11, pack->no_provide_shlib) != SQLITE_OK) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			return;
+		}
+		if (sqlite3_bind_text(stmnt, 12, pack->flavor, -1, SQLITE_STATIC) != SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 			return;
 		}
@@ -283,14 +307,14 @@ insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 	if (error_code != MPORT_OK)
 		return error_code;
 
-  if (insert_depends(db, pack, extra) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  if (insert_conflicts(db, pack, extra) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  if (insert_categories(db, pack) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+	if (insert_depends(db, pack, extra) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+	if (insert_conflicts(db, pack, extra) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+	if (insert_categories(db, pack) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-  return error_code;
+	return error_code;
 }
 
 
@@ -481,30 +505,30 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 static int
 archive_files(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra, const char *tmpdir)
 {
-  mportBundleWrite *bundle;
-  char filename[FILENAME_MAX];
-  
-  bundle = mport_bundle_write_new();
-  
-  if (mport_bundle_write_init(bundle, extra->pkg_filename) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+	mportBundleWrite *bundle;
+	char filename[FILENAME_MAX];
 
-  /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
-  (void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
-  if (mport_bundle_write_add_file(bundle, filename, MPORT_STUB_DB_FILE)) 
-    RETURN_CURRENT_ERROR;
-    
-  /* second step - the meta files */
-  if (archive_metafiles(bundle, pack, extra) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+	bundle = mport_bundle_write_new();
 
-  /* last step - the real files from the assetlist */
-  if (archive_assetlistfiles(bundle, pack, extra, assetlist) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-    
-  mport_bundle_write_finish(bundle);
-  
-  return MPORT_OK;    
+	if (mport_bundle_write_init(bundle, extra->pkg_filename) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	/* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */
+	(void) snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
+	if (mport_bundle_write_add_file(bundle, filename, MPORT_STUB_DB_FILE))
+		RETURN_CURRENT_ERROR;
+
+	/* second step - the meta files */
+	if (archive_metafiles(bundle, pack, extra) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	/* last step - the real files from the assetlist */
+	if (archive_assetlistfiles(bundle, pack, extra, assetlist) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	mport_bundle_write_finish(bundle);
+
+	return MPORT_OK;
 }
 
 
