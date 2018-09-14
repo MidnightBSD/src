@@ -95,20 +95,25 @@ mport_info(mportInstance *mport, const char *packageName)
 	}
 
 	asprintf(&info_text,
-		 "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nflavor: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\nno_shlib_provided: %s\ndeprecated: %s\nexpirationDate: %s\n",
+		 "%s-%s\n"
+			 "Name            : %s\nVersion         : %s\nLatest          : %s\nLicense         : %s\nOrigin         : %s\n"
+			 "Flavor          : %s\nOS              : %s\n"
+			"\n%s\n"
+	                "CPE              : %s\nLocked          : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date: %s\n",
+		 (*indexEntry)->pkgname, (*indexEntry)->version,
 		 (*indexEntry)->pkgname,
-		 (*indexEntry)->version,
 		 status,
+		 (*indexEntry)->version,
 		 (*indexEntry)->license,
 		 origin,
 		 flavor,
 		 os_release,
-		 (*indexEntry)->comment,
 		 cpe,
 		 locked ? "yes" : "no",
-		 no_shlib_provided ? "yes" : "no",
+		 no_shlib_provided ? "no" : "yes",
 		 deprecated,
-		 expirationDate == 0 ? "" : ctime(&expirationDate));
+		 expirationDate == 0 ? "" : ctime(&expirationDate),
+		 (*indexEntry)->comment);
 
 	if (packs == NULL) {
 		free(status);
