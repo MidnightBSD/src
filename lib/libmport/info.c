@@ -110,7 +110,7 @@ mport_info(mportInstance *mport, const char *packageName)
 		 os_release,
 		 cpe,
 		 locked ? "yes" : "no",
-		 no_shlib_provided ? "no" : "yes",
+		 no_shlib_provided ? "yes" : "no",
 		 deprecated,
 		 expirationDate == 0 ? "" : ctime(&expirationDate),
 		 (*indexEntry)->comment);
