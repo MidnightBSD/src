@@ -51,38 +51,42 @@ mport_pkgmeta_new(void)
 MPORT_PUBLIC_API void
 mport_pkgmeta_free(mportPackageMeta *pack)
 {
-    int i;
+	int i;
 
-    free(pack->name);
-    pack->name = NULL;
-    free(pack->version);
-    pack->version = NULL;
-    free(pack->lang);
-    pack->lang = NULL;
-    free(pack->comment);
-    pack->comment = NULL;
-    free(pack->desc);
-    pack->desc = NULL;
-    free(pack->prefix);
-    pack->prefix = NULL;
-    free(pack->origin);
-    pack->origin = NULL;
-    free(pack->os_release);
-    pack->os_release = NULL;
-    free(pack->cpe);
-    pack->cpe = NULL;
+	free(pack->name);
+	pack->name = NULL;
+	free(pack->version);
+	pack->version = NULL;
+	free(pack->lang);
+	pack->lang = NULL;
+	free(pack->comment);
+	pack->comment = NULL;
+	free(pack->desc);
+	pack->desc = NULL;
+	free(pack->prefix);
+	pack->prefix = NULL;
+	free(pack->origin);
+	pack->origin = NULL;
+	free(pack->os_release);
+	pack->os_release = NULL;
+	free(pack->cpe);
+	pack->cpe = NULL;
+	free(pack->deprecated);
+	pack->deprecated = NULL;
+	free(pack->flavor);
+	pack->flavor = NULL;
 
-    i = 0;
-    if (pack->categories != NULL) {
-        while (pack->categories[i] != NULL) {
-            free(pack->categories[i]);
-            pack->categories[i] = NULL;
-            i++;
-        }
-    }
+	i = 0;
+	if (pack->categories != NULL) {
+		while (pack->categories[i] != NULL) {
+			free(pack->categories[i]);
+			pack->categories[i] = NULL;
+			i++;
+		}
+	}
 
-    free(pack->categories);
-    free(pack);
+	free(pack->categories);
+	free(pack);
 }
 
 /* free a vector of mportPackageMeta pointers */

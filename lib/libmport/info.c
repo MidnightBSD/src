@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015, 2016 Lucas Holt
+ * Copyright (c) 2015, 2016, 2018 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <err.h>
 #include <unistd.h>
 
@@ -40,11 +41,13 @@ mport_info(mportInstance *mport, const char *packageName)
 {
 	mportIndexEntry **indexEntry;
 	mportPackageMeta **packs;
-	char *status, *origin;
+	char *status, *origin, *flavor, *deprecated;
 	char *os_release;
 	char *cpe;
 	int locked = 0;
+	int no_shlib_provided = 0;
 	char *info_text = NULL;
+	time_t expirationDate;
 
 	if (packageName == NULL) {
 		SET_ERROR(MPORT_ERR_FATAL, "Package name not found.");
@@ -70,31 +73,47 @@ mport_info(mportInstance *mport, const char *packageName)
 		origin = strdup("");
 		os_release = strdup("");
 		cpe = strdup("");
+		flavor = strdup("");
+		deprecated = strdup("N/A");
+		expirationDate = 0;
 	} else {
 		status = (*packs)->version;
 		origin = (*packs)->origin;
 		os_release = (*packs)->os_release;
 		cpe = (*packs)->cpe;
 		locked = (*packs)->locked;
+		no_shlib_provided = (*packs)->no_provide_shlib;
+		flavor = (*packs)->flavor;
+		deprecated  = (*packs)->deprecated;
+		if (deprecated[0] == '\0') {
+			deprecated = strdup("N/A");
+		}
+		expirationDate = (*packs)->expiration_date;
 	}
 
 	asprintf(&info_text,
-	         "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\n",
-	         (*indexEntry)->pkgname,
-	         (*indexEntry)->version,
-	         status,
-	         (*indexEntry)->license,
-	         origin,
-	         os_release,
-	         (*indexEntry)->comment,
-	         cpe,
-	         locked ? "yes" : "no");
+		 "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nflavor: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\nno_shlib_provided: %s\ndeprecated:%s\nexpirationDate:%s\n",
+		 (*indexEntry)->pkgname,
+		 (*indexEntry)->version,
+		 status,
+		 (*indexEntry)->license,
+		 origin,
+		 flavor,
+		 os_release,
+		 (*indexEntry)->comment,
+		 cpe,
+		 locked ? "yes" : "no"),
+		no_shlib_provided ? "yes" : "no",
+		deprecated,
+		expirationDate == 0 ? "N/A" : ctime(&expirationDate);
 
 	if (packs == NULL) {
 		free(status);
 		free(origin);
 		free(os_release);
 		free(cpe);
+		free(flavor);
+		free(deprecated);
 	} else
 		mport_pkgmeta_vec_free(packs);
 
