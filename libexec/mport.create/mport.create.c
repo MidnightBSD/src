@@ -37,9 +37,10 @@ __MBSDID("$MidnightBSD$");
 #include <stdio.h>
 #include <err.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
-#include <mport.h>
 
+#include <mport.h>
 
 static void usage(void);
 static void check_for_required_args(const mportPackageMeta *, const mportCreateExtras *);
@@ -55,8 +56,9 @@ int main(int argc, char *argv[])
   mportCreateExtras *extra  = mport_createextras_new();
   mportAssetList *assetlist = mport_assetlist_new();
   FILE *fp;
+  struct tm expDate;
     
-  while ((ch = getopt(argc, argv, "o:n:v:c:e:l:s:d:p:P:D:M:O:C:i:j:m:r:t:")) != -1) {
+  while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
     switch (ch) {
       case 'o':
         extra->pkg_filename = optarg;
@@ -69,6 +71,9 @@ int main(int argc, char *argv[])
         break;
       case 'c':
         pack->comment = optarg;
+        break;
+      case 'f':
+	pack->flavor = optarg;
         break;
       case 'e':
 	pack->cpe = optarg;
@@ -111,6 +116,16 @@ int main(int argc, char *argv[])
       case 'C':
         mport_parselist(optarg, &(extra->conflicts));
         break;
+      case 'E':
+        strptime(optarg, "%Y-%m-%d", &expDate);
+        pack->expiration_date = mktime(&expDate);
+        break;
+      case 'S':
+        if (optarg[0] == '1' || optarg[0] == 'Y' || optarg[0] == 'y')
+            pack->no_provide_shlib = 1;
+        else
+            pack->no_provide_shlib = 0;
+        break;
       case 'i':
         extra->pkginstall = optarg;
         break;
@@ -122,6 +137,9 @@ int main(int argc, char *argv[])
         break;
       case 't':
         mport_parselist(optarg, &(pack->categories));
+        break;
+      case 'x':
+        pack->deprecated = optarg;
         break;
       case '?':
       default:
