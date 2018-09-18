@@ -464,27 +464,33 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 	}
 
 	/* os_release */
-	if ((tmp = sqlite3_column_text(stmt, 6)) == NULL)
-		return MPORT_OK;
-
-	if ((pack->os_release = strdup(tmp)) == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	if ((tmp = sqlite3_column_text(stmt, 6)) == NULL) {
+		if ((pack->os_release = strdup(MPORT_OSVERSION)) == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	} else {
+	        if ((pack->os_release = strdup(tmp)) == NULL)
+        		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	}
 
 	pack->locked = sqlite3_column_int(stmt, 8);
 
 	/* CPE */
 	if ((tmp = sqlite3_column_text(stmt, 7)) == NULL) {
-		return MPORT_OK;
+		if ((pack->cpe = strdup("")) == NULL)
+                        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	} else {
+		if ((pack->cpe = strdup(tmp)) == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	}
-	if ((pack->cpe = strdup(tmp)) == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
 	/* deprecated */
 	if ((tmp = sqlite3_column_text(stmt, 9)) == NULL) {
-		return MPORT_OK;
+		if ((pack->deprecated = strdup("")) == NULL)
+                        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	} else {
+		if ((pack->deprecated = strdup(tmp)) == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	}
-	if ((pack->deprecated = strdup(tmp)) == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
 	pack->expiration_date = sqlite3_column_int64(stmt, 10);
 
@@ -492,7 +498,7 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 
 	/* flavor */
 	if ((tmp = sqlite3_column_text(stmt, 12)) == NULL) {
-		return MPORT_OK;
+		return MPORT_OK; /* last field so we can exit here */
 	}
 	if ((pack->flavor = strdup(tmp)) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
