@@ -347,7 +347,7 @@ int
 mport_generate_master_schema(sqlite3 *db) 
 {
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text, locked int NOT NULL, deprecated text, expiration_date int64, no_provide_shlib int NOT NULL, flavor text)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text, locked int NOT NULL, deprecated text, expiration_date int64, no_provide_shlib int, flavor text)");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 

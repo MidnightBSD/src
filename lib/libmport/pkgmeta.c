@@ -132,7 +132,7 @@ mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
     }
 
     if (mport_db_prepare(db, &stmt,
-                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor FROM stub.packages") !=
+                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor FROM stub.packages") !=
         MPORT_OK) {
         sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
