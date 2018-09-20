@@ -77182,6 +77182,17 @@ usr.bin/uuencode/uuencode.1 -text
 usr.bin/uuencode/uuencode.c -text
 usr.bin/uuencode/uuencode.format.5 -text
 usr.bin/vacation/Makefile -text
+usr.bin/vgrind/Makefile svneol=native#text/plain
+usr.bin/vgrind/Makefile.depend svneol=native#text/plain
+usr.bin/vgrind/extern.h svneol=native#text/plain
+usr.bin/vgrind/pathnames.h svneol=native#text/plain
+usr.bin/vgrind/regexp.c svneol=native#text/plain
+usr.bin/vgrind/tmac.vgrind -text
+usr.bin/vgrind/vfontedpr.c svneol=native#text/plain
+usr.bin/vgrind/vgrind.1 svneol=native#text/plain
+usr.bin/vgrind/vgrind.sh svneol=native#text/plain
+usr.bin/vgrind/vgrindefs.5 svneol=native#text/plain
+usr.bin/vgrind/vgrindefs.src -text
 usr.bin/vi/Makefile -text
 usr.bin/vi/catalog/Makefile svneol=native#text/plain
 usr.bin/vi/catalog/dutch.UTF-8.base -text

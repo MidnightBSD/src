@@ -192,6 +192,7 @@ SUBDIR+=alias \
 	unvis \
 	uudecode \
 	uuencode \
+	vgrind \
 	vi \
 	vis \
 	vmstat \
