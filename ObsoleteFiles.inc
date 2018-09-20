@@ -45,7 +45,6 @@ OLD_FILES+=usr/bin/refer
 OLD_FILES+=usr/bin/tbl
 OLD_FILES+=usr/bin/tfmtodit
 OLD_FILES+=usr/bin/troff
-OLD_FILES+=usr/bin/vgrind
 OLD_FILES+=usr/libexec/vfontedpr
 OLD_FILES+=usr/share/dict/eign
 OLD_FILES+=usr/share/groff_font/devX100-12/CB
