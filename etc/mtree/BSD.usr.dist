@@ -1434,6 +1434,8 @@
         ..
         tabset
         ..
+        tmac
+        ..
         vi
             catalog
             ..
