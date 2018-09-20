@@ -195,6 +195,7 @@ SUBDIR+=alias \
 	vgrind \
 	vi \
 	vis \
+	vgrind \
 	vmstat \
 	w \
 	wall \
