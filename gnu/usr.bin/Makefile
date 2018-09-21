@@ -11,6 +11,7 @@ SUBDIR= ${_binutils} \
 	${_gdb} \
 	${_gperf} \
 	grep \
+	${_groff} \
 	${_rcs} \
 	${_tests} \
 	${_tests} \
@@ -20,6 +21,10 @@ SUBDIR_DEPEND_gdb=	${_binutils}
 
 .if ${MK_CXX} != "no"
 _gperf=		gperf
+.endif
+
+.if ${MK_GROFF} != "no"
+_groff=		groff
 .endif
 
 .if ${MK_DIALOG} != "no"
