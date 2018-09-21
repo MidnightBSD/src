@@ -388,6 +388,70 @@
 ..
 .
 .
+.\" NS Mx user macro
+.\" NS   print MidnightBSD
+.\" NS
+.\" NS modifies:
+.\" NS   doc-arg-ptr
+.\" NS   doc-curr-font
+.\" NS   doc-curr-size
+.\" NS   doc-macro-name
+.\" NS
+.\" NS local variable:
+.\" NS   doc-str-Mx
+.\" NS   doc-str-Mx1
+.\" NS
+.\" NS width register `Mx' defined in doc-common
+.
+.\" we use the doc-operating-system-MidnightBSD-* strings defined in doc-common
+.
+.de Mx
+.  nr doc-curr-font \n[.f]
+.  nr doc-curr-size \n[.ps]
+.  ds doc-str-Mx \f[\n[doc-curr-font]]\s[\n[doc-curr-size]u]
+.
+.  \" default value if no argument
+.  ds doc-str-Mx1 \*[doc-Tn-font-size]\%MidnightBSD\*[doc-str-Mx]
+.
+.  if !\n[doc-arg-limit] \
+.    if \n[.$] \{\
+.      ds doc-macro-name Mx
+.      doc-parse-args \$@
+.    \}
+.
+.  if (\n[doc-arg-limit] > \n[doc-arg-ptr]) \{\
+.    nr doc-arg-ptr +1
+.    ie (\n[doc-type\n[doc-arg-ptr]] == 2) \{\
+.      ie \A\*[doc-arg\n[doc-arg-ptr]] \{\
+.        ie d doc-operating-system-MidnightBSD-\*[doc-arg\n[doc-arg-ptr]] \
+.          as doc-str-Mx1 \~\*[doc-operating-system-MidnightBSD-\*[doc-arg\n[doc-arg-ptr]]]
+.        el \{\
+.          tmc mdoc warning: .Mx: Unknown MidnightBSD version
+.          tm1 " `\*[doc-arg\n[doc-arg-ptr]]' (#\n[.c])
+.          as doc-str-Mx1 \~\*[doc-arg\n[doc-arg-ptr]]
+.      \}\}
+.      el \
+.        as doc-str-Mx1 \~\*[doc-arg\n[doc-arg-ptr]]
+.    \}
+.    el \
+.      nr doc-arg-ptr -1
+.  \}
+.
+.  \" replace current argument with result
+.  ds doc-arg\n[doc-arg-ptr] "\*[doc-str-Mx1]
+.  nr doc-type\n[doc-arg-ptr] 2
+.  ds doc-space\n[doc-arg-ptr] "\*[doc-space]
+.
+.  \" recompute space vector for remaining arguments
+.  nr doc-num-args (\n[doc-arg-limit] - \n[doc-arg-ptr])
+.  nr doc-arg-limit \n[doc-arg-ptr]
+.  if \n[doc-num-args] \
+.    doc-parse-space-vector
+.
+.  doc-print-recursive
+..
+.
+.
 .\" NS Nx user macro
 .\" NS   print NetBSD
 .\" NS
@@ -812,7 +876,6 @@
 .ds doc-str-Lb-librpcsec_gss RPC GSS-API Authentication Library (librpcsec_gss, \-lrpcsec_gss)
 .ds doc-str-Lb-librpcsvc   RPC Service Library (librpcsvc, \-lrpcsvc)
 .ds doc-str-Lb-librt       \*[Px] \*[doc-str-Lb]Real-time Library (librt, \-lrt)
-.ds doc-str-Lb-libsbuf     Safe String Composition Library (libsbuf, \-lsbuf)
 .ds doc-str-Lb-libsdp      Bluetooth Service Discovery Protocol User Library (libsdp, \-lsdp)
 .ds doc-str-Lb-libssp      Buffer Overflow Protection Library (libssp, \-lssp)
 .ds doc-str-Lb-libSystem   System Library (libSystem, \-lSystem)
