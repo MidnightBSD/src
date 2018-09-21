@@ -76429,7 +76429,6 @@ usr.bin/dc/extern.h -text
 usr.bin/dc/inout.c -text
 usr.bin/dc/mem.c -text
 usr.bin/dc/stack.c -text
-usr.bin/dig/Makefile -text
 usr.bin/dirname/Makefile -text
 usr.bin/dirname/dirname.c -text
 usr.bin/dirname/tests/Makefile svneol=native#text/plain
@@ -77321,13 +77320,6 @@ usr.bin/ncal/tests/regress.s-r-gmgy-nhl.out -text
 usr.bin/ncal/tests/regress.s-r-m-nhl.out -text
 usr.bin/ncal/tests/regress.s-r-mgy-nhl.out -text
 usr.bin/ncal/tests/regress.sh svneol=native#text/plain
-usr.bin/ncplist/Makefile -text
-usr.bin/ncplist/ncplist.1 -text
-usr.bin/ncplist/ncplist.c -text
-usr.bin/ncplogin/Makefile -text
-usr.bin/ncplogin/ncplogin.1 -text
-usr.bin/ncplogin/ncplogin.c -text
-usr.bin/ncplogin/ncplogout.1 -text
 usr.bin/netstat/Makefile -text
 usr.bin/netstat/atalk.c -text
 usr.bin/netstat/bpf.c -text
@@ -77370,7 +77362,6 @@ usr.bin/nl/nl.c -text
 usr.bin/nohup/Makefile -text
 usr.bin/nohup/nohup.1 -text
 usr.bin/nohup/nohup.c -text
-usr.bin/nslookup/Makefile -text
 usr.bin/opieinfo/Makefile -text
 usr.bin/opiekey/Makefile -text
 usr.bin/opiepasswd/Makefile -text
@@ -78130,9 +78121,6 @@ usr.bin/whois/whois.c -text
 usr.bin/write/Makefile -text
 usr.bin/write/write.1 -text
 usr.bin/write/write.c -text
-usr.bin/wtmpcvt/Makefile -text
-usr.bin/wtmpcvt/wtmpcvt.1 -text
-usr.bin/wtmpcvt/wtmpcvt.c -text
 usr.bin/xargs/Makefile -text
 usr.bin/xargs/pathnames.h -text
 usr.bin/xargs/strnsubst.c -text

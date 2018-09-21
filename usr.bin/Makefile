@@ -22,6 +22,7 @@ SUBDIR+=alias \
 	batt \
 	brainfuck \
 	brandelf \
+	bsdcat \
 	bsdiff \
 	bzip2 \
 	bzip2recover \
@@ -46,8 +47,8 @@ SUBDIR+=alias \
 	cut \
 	dirname \
 	doas \
+	${_dpv} \
 	du \
-	ee \
 	elf2aout \
 	elfdump \
 	enigma \
@@ -55,14 +56,11 @@ SUBDIR+=alias \
 	expand \
 	false \
 	fetch \
-	file \
 	find \
-	finger \
 	fmt \
 	fold \
 	fstat \
 	fsync \
-	ftp \
 	gcore \
 	gencat \
 	getconf \
@@ -78,7 +76,7 @@ SUBDIR+=alias \
 	ipcs \
 	join \
 	jot \
-	kdump \
+	${_kdump} \
 	keylogin \
 	keylogout \
 	killall \
@@ -105,11 +103,13 @@ SUBDIR+=alias \
 	lzmainfo \
 	m4 \
 	mDNSResponderPosix \
+	${_makewhatis} \
 	${_man} \
+	mandoc \
 	mesg \
 	minigzip \
- 	ministat \
- 	${_mkcsmapper} \
+	ministat \
+	${_mkcsmapper} \
 	mkdep \
 	${_mkesdb} \
 	mkfifo \
@@ -141,6 +141,7 @@ SUBDIR+=alias \
 	printf \
 	procstat \
 	progress \
+	protect \
 	rctl \
 	renice \
 	rev \
@@ -167,12 +168,12 @@ SUBDIR+=alias \
 	systat \
 	tabs \
 	tail \
-	talk \
 	tar \
 	tcopy \
 	tee \
-	tftp \
+	${_tests} \
 	time \
+	timeout \
 	tip \
 	top \
 	touch \
@@ -180,7 +181,7 @@ SUBDIR+=alias \
 	tr \
 	true \
 	truncate \
-	truss \
+	${_truss} \
 	tset \
 	tsort \
 	tty \
@@ -192,10 +193,8 @@ SUBDIR+=alias \
 	unvis \
 	uudecode \
 	uuencode \
-	vgrind \
 	vi \
 	vis \
-	vgrind \
 	vmstat \
 	w \
 	wall \
@@ -217,16 +216,14 @@ SUBDIR+=alias \
 	${_ypmatch} \
 	${_ypwhich}
 
+# NB: keep these sorted by MK_* knobs
+
 .if ${MK_AT} != "no"
 SUBDIR+=	at
 .endif
 
 .if ${MK_ATM} != "no"
 SUBDIR+=	atm
-.endif
-
-.if ${MK_MAN_UTILS} != "no"
-SUBDIR+=	catman
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
@@ -245,6 +242,34 @@ SUBDIR+=	calendar
 _clang=		clang
 .endif
 
+.if ${MK_DIALOG} != "no"
+_dpv=		dpv
+.endif
+
+.if ${MK_EE} != "no"
+SUBDIR+=	ee
+.endif
+
+.if ${MK_FILE} != "no"
+SUBDIR+=	file
+.endif
+
+.if ${MK_FINGER} != "no"
+SUBDIR+=	finger
+.endif
+
+.if ${MK_FTP} != "no"
+SUBDIR+=	ftp
+.endif
+
+.if ${MK_GPL_DTC} != "yes"
+SUBDIR+=	dtc
+.endif
+
+.if ${MK_GROFF} != "no"
+SUBDIR+=	vgrind
+.endif
+
 .if ${MK_HESIOD} != "no"
 SUBDIR+=	hesinfo
 .endif
@@ -255,17 +280,33 @@ _mkcsmapper=	mkcsmapper
 _mkesdb=	mkesdb
 .endif
 
-.if ${MK_OPENSSL} != "no"
-SUBDIR+=	bc
-SUBDIR+=	chkey
-SUBDIR+=	dc
-SUBDIR+=	newkey
+.if ${MK_ISCSI} != "no"
+SUBDIR+=	iscsictl
+.endif
+
+.if ${MK_KDUMP} != "no"
+SUBDIR+=        kdump
+SUBDIR+=        truss
+.endif
+
+.if ${MK_KERBEROS_SUPPORT} != "no"
+SUBDIR+=	compile_et
+.endif
+
+.if ${MK_LDNS_UTILS} != "no"
+SUBDIR+=	drill
+SUBDIR+=	host
+.endif
+
+.if ${MK_LIBTHR} != "no"
+SUBDIR+=	csup
 .endif
 
 .if ${MK_LOCATE} != "no"
 SUBDIR+=	locate
 .endif
 
+# XXX msgs?
 .if ${MK_MAIL} != "no"
 SUBDIR+=	biff
 SUBDIR+=	from
@@ -282,6 +323,8 @@ SUBDIR+=	make
 .endif
 
 .if ${MK_MAN_UTILS} != "no"
+SUBDIR+=	catman
+_makewhatis=	makewhatis
 _man=		man
 .endif
 
@@ -293,6 +336,17 @@ SUBDIR+=	nc
 SUBDIR+=	ypcat
 SUBDIR+=	ypmatch
 SUBDIR+=	ypwhich
+.endif
+
+.if ${MK_OPENSSH} != "no"
+SUBDIR+=	ssh-copy-id
+.endif
+
+.if ${MK_OPENSSL} != "no"
+SUBDIR+=	bc
+SUBDIR+=	chkey
+SUBDIR+=	dc
+SUBDIR+=	newkey
 .endif
 
 .if ${MK_QUOTAS} != "no"
@@ -310,19 +364,32 @@ SUBDIR+=	rwho
 SUBDIR+=	vacation
 .endif
 
+.if ${MK_TALK} != "no"
+SUBDIR+=	talk
+.endif
+
 .if ${MK_TELNET} != "no"
 SUBDIR+=	telnet
 .endif
 
+.if ${MK_TESTS} != "no"
+_tests=		tests
+.endif
+
 .if ${MK_TEXTPROC} != "no"
+SUBDIR+=	checknr
+SUBDIR+=	colcrt
 SUBDIR+=	ul
+.endif
+
+.if ${MK_TFTP} != "no"
+SUBDIR+=	tftp
 .endif
 
 .if ${MK_TOOLCHAIN} != "no"
 SUBDIR+=	ar
 SUBDIR+=	c89
 SUBDIR+=	c99
-SUBDIR+=	compile_et
 SUBDIR+=	ctags
 SUBDIR+=	file2c
 SUBDIR+=	gprof
@@ -336,6 +403,10 @@ SUBDIR+=	xstr
 SUBDIR+=	yacc
 .endif
 
+.if ${MK_VT} != "no"
+SUBDIR+=	vtfontcvt
+.endif
+
 .if ${MK_USB} != "no"
 SUBDIR+=	usbhidaction
 SUBDIR+=	usbhidctl
@@ -345,7 +416,6 @@ SUBDIR+=	usbhidctl
 SUBDIR+=	last
 SUBDIR+=	users
 SUBDIR+=	who
-SUBDIR+=	wtmpcvt
 .endif
 
 .if ${MK_SVN} == "yes" || ${MK_SVNLITE} == "yes"
