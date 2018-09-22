@@ -17,6 +17,9 @@ FILES=	${_BSD.debug.dist} \
 .if ${MK_DEBUG_FILES} != "no"
 _BSD.debug.dist=	BSD.debug.dist
 .endif
+.if ${MK_GROFF} != "no"
+_BSD.groff.dist=        BSD.groff.dist
+.endif
 .if ${MK_SENDMAIL} != "no"
 _BSD.sendmail.dist=	BSD.sendmail.dist
 .endif
