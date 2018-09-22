@@ -4,7 +4,7 @@
 .include <bsd.own.mk>
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
-_LIBARCHIVECONFDIR=	${SRCTOP}/lib/libarchive
+LIBARCHIVECONFDIR=      ${.CURDIR}/../../lib/libarchive
 
 PROG=	bsdcat
 BSDCAT_VERSION_STRING=	3.3.2
@@ -16,7 +16,7 @@ SRCS=	bsdcat.c cmdline.c
 SRCS+=	err.c
 
 CFLAGS+= -DBSDCAT_VERSION_STRING=\"${BSDCAT_VERSION_STRING}\"
-CFLAGS+= -DPLATFORM_CONFIG_H=\"${_LIBARCHIVECONFDIR}/config_freebsd.h\"
+CFLAGS+= -DPLATFORM_CONFIG_H=\"${LIBARCHIVECONFDIR}/config_midnightbsd.h\"
 CFLAGS+= -I${_LIBARCHIVEDIR}/cat -I${_LIBARCHIVEDIR}/libarchive_fe
 
 DPADD=  ${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBLZMA} ${LIBPTHREAD} ${LIBBSDXML}
