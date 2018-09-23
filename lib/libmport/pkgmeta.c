@@ -492,9 +492,19 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	}
 
-	pack->expiration_date = sqlite3_column_int64(stmt, 10);
+	if (sqlite3_column_type(stmt, 10) == SQLITE_INTEGER) {
+		pack->expiration_date = sqlite3_column_int64(stmt, 10);
+	} else {
+		pack->expiration_date = 0;
+		RETURN_ERROR(MPORT_ERR_FATAL, "expiration_date is null?");
+	}
 
-	pack->no_provide_shlib =  sqlite3_column_int(stmt, 11);
+	if (sqlite3_column_type(stmt, 10) == SQLITE_INTEGER) {
+		pack->no_provide_shlib =  sqlite3_column_int(stmt, 11);
+	} else {
+		pack->no_provide_shlib = 0;
+		RETURN_ERROR(MPORT_ERR_FATAL, "no_provide_shlib is null?");
+	}
 
 	/* flavor */
 	if ((tmp = sqlite3_column_text(stmt, 12)) == NULL) {
