@@ -278,14 +278,14 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 
 	e = (mportIndexEntry **) calloc((size_t) count + 1, sizeof(mportIndexEntry *));
 	if (e == NULL) {
-		ret = MPORT_ERR_FATAL;
-		goto DONE;
+		free(lookup);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory for index entries");
 	}
 	*entry_vec = e;
 
 	if (count == 0) {
-		ret = MPORT_OK;
-		goto DONE;
+		free(lookup);
+		return MPORT_OK;
 	}
 
 	if (mport_db_prepare(mport->db, &stmt,
@@ -364,8 +364,8 @@ mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const cha
 
 	e = (mportIndexEntry **)calloc((size_t) len + 1, sizeof(mportIndexEntry *));
 	if (e == NULL) {
-		ret = MPORT_ERR_FATAL;
-		goto DONE;
+		sqlite3_free(where);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory");
 	}
 	*entry_vec = e;
 
