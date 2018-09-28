@@ -266,7 +266,7 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 	int i = 0, step;
 	sqlite3_stmt *stmt;
 	int ret = MPORT_OK;
-	mportIndexEntry **e;
+	mportIndexEntry **e = NULL;
 
 	MPORT_CHECK_FOR_INDEX(mport, "mport_index_lookup_pkgname()")
 
@@ -277,10 +277,16 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 		RETURN_CURRENT_ERROR;
 
 	e = (mportIndexEntry **) calloc((size_t) count + 1, sizeof(mportIndexEntry *));
+	if (e == NULL) {
+		ret = MPORT_ERR_FATAL;
+		goto DONE;
+	}
 	*entry_vec = e;
 
-	if (count == 0)
-		return MPORT_OK;
+	if (count == 0) {
+		ret = MPORT_OK;
+		goto DONE;
+	}
 
 	if (mport_db_prepare(mport->db, &stmt,
 	                     "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE pkg GLOB %Q",
@@ -317,7 +323,7 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 	}
       
   DONE:
-    free(lookup);
+	free(lookup);
 	sqlite3_finalize(stmt);
 	return ret;
 }
@@ -337,53 +343,58 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 MPORT_PUBLIC_API int 
 mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const char *fmt, ...)
 {
-  va_list args;
-  sqlite3_stmt *stmt;
-  int ret = MPORT_OK;
+	va_list args;
+	sqlite3_stmt *stmt;
+	int ret = MPORT_OK;
 	int len;
-  int i = 0, step;
-  char *where;
-  sqlite3 *db = mport->db;
-  mportIndexEntry **e;
+	int i = 0, step;
+	char *where;
+	sqlite3 *db = mport->db;
+	mportIndexEntry **e;
 
-  va_start(args, fmt);
-  where = sqlite3_vmprintf(fmt, args);
-  va_end(args);
+	va_start(args, fmt);
+	where = sqlite3_vmprintf(fmt, args);
+	va_end(args);
 
-  if (where == NULL)
-    RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
+	if (where == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
 
 	if (mport_db_count(mport->db, &len,"SELECT count(*) FROM idx.packages  WHERE %s", where) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-  e = (mportIndexEntry **)calloc((size_t) len + 1, sizeof(mportIndexEntry *));
-  *entry_vec = e;
+	e = (mportIndexEntry **)calloc((size_t) len + 1, sizeof(mportIndexEntry *));
+	if (e == NULL) {
+		ret = MPORT_ERR_FATAL;
+		goto DONE;
+	}
+	*entry_vec = e;
 
-  if (len == 0) {
-    sqlite3_free(where);
-    return MPORT_OK;
-  }
+	if (len == 0) {
+		sqlite3_free(where);
+		return MPORT_OK;
+	}
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE %s", where) != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
+	if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE %s", where) != MPORT_OK) {
+		sqlite3_free(where);
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-  while (1) {
-    step = sqlite3_step(stmt);
+	while (1) {
+		step = sqlite3_step(stmt);
 
-    if (step == SQLITE_ROW) {
-      if ((e[i] = (mportIndexEntry *)calloc(1, sizeof(mportIndexEntry))) == NULL) {
-        ret = MPORT_ERR_FATAL;
-        break;
-      }
+		if (step == SQLITE_ROW) {
+			if ((e[i] = (mportIndexEntry *)calloc(1, sizeof(mportIndexEntry))) == NULL) {
+				ret = MPORT_ERR_FATAL;
+			break;
+		}
 
-	    populate_row(stmt, e[i]);
+		populate_row(stmt, e[i]);
 
-      if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
-        ret = MPORT_ERR_FATAL;
-        break;
-      }
+		if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
+			ret = MPORT_ERR_FATAL;
+			break;
+		}
 
       i++;
     } else if (step == SQLITE_DONE) {
@@ -463,12 +474,12 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 static void
 populate_row(sqlite3_stmt *stmt, mportIndexEntry *e) {
 
-		e->pkgname = strdup((const char *) sqlite3_column_text(stmt, 0));
-		e->version = strdup((const char *) sqlite3_column_text(stmt, 1));
-		e->comment = strdup((const char *) sqlite3_column_text(stmt, 2));
-		e->bundlefile = strdup((const char *) sqlite3_column_text(stmt, 3));
-		e->license = strdup((const char *) sqlite3_column_text(stmt, 4));
-		e->hash = strdup((const char *) sqlite3_column_text(stmt, 5));
+	e->pkgname = strdup((const char *) sqlite3_column_text(stmt, 0));
+	e->version = strdup((const char *) sqlite3_column_text(stmt, 1));
+	e->comment = strdup((const char *) sqlite3_column_text(stmt, 2));
+	e->bundlefile = strdup((const char *) sqlite3_column_text(stmt, 3));
+	e->license = strdup((const char *) sqlite3_column_text(stmt, 4));
+	e->hash = strdup((const char *) sqlite3_column_text(stmt, 5));
 }
 
 
