@@ -522,8 +522,6 @@ mport_index_entry_free_vec(mportIndexEntry **e)
 
 	for (int i = 0; e[i] != NULL; i++)
 		mport_index_entry_free(e[i]);
-
-	free(e);
 }
 
 
@@ -531,7 +529,6 @@ mport_index_entry_free_vec(mportIndexEntry **e)
 MPORT_PUBLIC_API void
 mport_index_entry_free(mportIndexEntry *e)
 {
-
 	if (e == NULL)
 		return;
 
