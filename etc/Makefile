@@ -143,6 +143,9 @@ BIN2=	netstart pccard_ether rc.suspend rc.resume
 
 MTREE=	BSD.debug.dist BSD.include.dist BSD.local.dist BSD.root.dist BSD.usr.dist \
 	BSD.var.dist BSD.x11.dist BSD.x11-4.dist
+.if ${MK_GROFF} != "no"
+MTREE+=	BSD.groff.dist
+.endif
 .if ${MK_TESTS} != "no"
 MTREE+=	BSD.tests.dist
 .endif
@@ -159,8 +162,8 @@ ETCMAIL=Makefile README mailer.conf access.sample virtusertable.sample \
 	mailertable.sample aliases
 .endif
 
-# Special top level files for FreeBSD
-FREEBSD=COPYRIGHT
+# Special top level files for MidnightBSD
+MIDNIGHTBSD=COPYRIGHT
 
 # Sanitize DESTDIR
 DESTDIR:=	${DESTDIR:C://*:/:g}
@@ -304,7 +307,7 @@ distribution:
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 ${.CURDIR}/minfree \
 	    ${DESTDIR}/var/crash
 	cd ${.CURDIR}/..; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
-		${FREEBSD} ${DESTDIR}/
+		${MIDNIGHTBSD} ${DESTDIR}/
 .if ${MK_BOOT} != "no"
 .if exists(${.CURDIR}/../sys/${MACHINE}/conf/GENERIC.hints)
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
@@ -324,6 +327,9 @@ MTREES=		mtree/BSD.root.dist		/		\
 		mtree/BSD.usr.dist		/usr		\
 		mtree/BSD.include.dist		/usr/include	\
 		mtree/BSD.debug.dist		/usr/lib
+.if ${MK_GROFF} != "no"
+MTREES+=	mtree/BSD.groff.dist		/usr
+.endif
 .if ${MK_TESTS} != "no"
 MTREES+=	mtree/BSD.tests.dist		${TESTSBASE}
 .endif
