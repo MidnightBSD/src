@@ -50031,7 +50031,7 @@ gnu/usr.bin/groff/src/utils/lookbib/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/utils/pfbtops/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/utils/tfmtodit/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/tmac/Makefile svneol=native#text/plain
-gnu/usr.bin/groff/tmac/fr.ISO8859-1 -text
+gnu/usr.bin/groff/tmac/fr.ISO8859-1.in svneol=native#text/plain
 gnu/usr.bin/groff/tmac/hyphen.ru -text svneol=unset#application/octet-stream
 gnu/usr.bin/groff/tmac/koi8-r.tmac -text
 gnu/usr.bin/groff/tmac/mdoc.local.in -text
