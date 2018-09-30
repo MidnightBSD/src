@@ -50033,8 +50033,8 @@ gnu/usr.bin/groff/tmac/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/tmac/fr.ISO8859-1 -text
 gnu/usr.bin/groff/tmac/hyphen.ru -text svneol=unset#application/octet-stream
 gnu/usr.bin/groff/tmac/koi8-r.tmac -text
-gnu/usr.bin/groff/tmac/mdoc.local -text
-gnu/usr.bin/groff/tmac/ru.KOI8-R -text
+gnu/usr.bin/groff/tmac/mdoc.local.in -text
+gnu/usr.bin/groff/tmac/ru.KOI8-R.in -text
 gnu/usr.bin/rcs/CREDITS -text
 gnu/usr.bin/rcs/Makefile -text
 gnu/usr.bin/rcs/Makefile.inc -text
