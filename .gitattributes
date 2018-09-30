@@ -49984,6 +49984,7 @@ gnu/usr.bin/groff/font/devlj4/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/font/devps/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/font/devutf8/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/man/Makefile svneol=native#text/plain
+gnu/usr.bin/groff/mdate.sh svneol=native#text/plain
 gnu/usr.bin/groff/src/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/devices/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/devices/Makefile.inc svneol=native#text/plain
