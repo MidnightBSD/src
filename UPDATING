@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20181002:
+	Stable 1.0 branch created. Continuing development on 1.1
+
+	Reintroduce groff and reconnect to build. Removal causes issue with perl ports
+	and we don't quite have things aligned to get rid of this yet.
+
 20180912:
 	ELF header security issue
 
