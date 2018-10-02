@@ -49984,6 +49984,7 @@ gnu/usr.bin/groff/font/devlj4/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/font/devps/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/font/devutf8/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/man/Makefile svneol=native#text/plain
+gnu/usr.bin/groff/mdate.sh svneol=native#text/plain
 gnu/usr.bin/groff/src/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/devices/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/devices/Makefile.inc svneol=native#text/plain
@@ -50030,11 +50031,11 @@ gnu/usr.bin/groff/src/utils/lookbib/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/utils/pfbtops/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/src/utils/tfmtodit/Makefile svneol=native#text/plain
 gnu/usr.bin/groff/tmac/Makefile svneol=native#text/plain
-gnu/usr.bin/groff/tmac/fr.ISO8859-1 -text
+gnu/usr.bin/groff/tmac/fr.ISO8859-1.in svneol=native#text/plain
 gnu/usr.bin/groff/tmac/hyphen.ru -text svneol=unset#application/octet-stream
 gnu/usr.bin/groff/tmac/koi8-r.tmac -text
-gnu/usr.bin/groff/tmac/mdoc.local -text
-gnu/usr.bin/groff/tmac/ru.KOI8-R -text
+gnu/usr.bin/groff/tmac/mdoc.local.in svneol=native#text/plain
+gnu/usr.bin/groff/tmac/ru.KOI8-R.in svneol=native#text/plain
 gnu/usr.bin/rcs/CREDITS -text
 gnu/usr.bin/rcs/Makefile -text
 gnu/usr.bin/rcs/Makefile.inc -text
