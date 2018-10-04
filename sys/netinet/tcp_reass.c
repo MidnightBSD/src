@@ -97,7 +97,7 @@ SYSCTL_INT(_net_inet_tcp_reass, OID_AUTO, overflows,
 
 static uma_zone_t tcp_reass_zone;
 
-static u_int tcp_reass_maxqueuelen = 100;
+static u_int tcp_reass_maxqueuelen = 200;
 SYSCTL_UINT(_net_inet_tcp_reass, OID_AUTO, maxqueuelen, CTLFLAG_RWTUN,
     &tcp_reass_maxqueuelen, 0,
     "Maximum number of TCP Segments per Reassembly Queue");
