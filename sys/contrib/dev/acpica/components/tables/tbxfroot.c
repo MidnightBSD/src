@@ -157,7 +157,7 @@ AcpiTbValidateRsdp (
  *
  ******************************************************************************/
 
-ACPI_STATUS
+ACPI_STATUS ACPI_INIT_FUNCTION
 AcpiFindRootPointer (
     ACPI_PHYSICAL_ADDRESS   *TableAddress)
 {
@@ -263,7 +263,7 @@ AcpiFindRootPointer (
     return_ACPI_STATUS (AE_NOT_FOUND);
 }
 
-ACPI_EXPORT_SYMBOL (AcpiFindRootPointer)
+ACPI_EXPORT_SYMBOL_INIT (AcpiFindRootPointer)
 
 
 /*******************************************************************************

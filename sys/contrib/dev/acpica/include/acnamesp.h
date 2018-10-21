@@ -145,6 +145,11 @@ AcpiNsParseTable (
     ACPI_NAMESPACE_NODE     *StartNode);
 
 ACPI_STATUS
+AcpiNsExecuteTable (
+    UINT32                  TableIndex,
+    ACPI_NAMESPACE_NODE     *StartNode);
+
+ACPI_STATUS
 AcpiNsOneCompleteParse (
     UINT32                  PassNumber,
     UINT32                  TableIndex,
@@ -390,6 +395,13 @@ BOOLEAN
 AcpiNsPatternMatch (
     ACPI_NAMESPACE_NODE     *ObjNode,
     char                    *SearchFor);
+
+ACPI_STATUS
+AcpiNsGetNodeUnlocked (
+    ACPI_NAMESPACE_NODE     *PrefixNode,
+    const char              *ExternalPathname,
+    UINT32                  Flags,
+    ACPI_NAMESPACE_NODE     **OutNode);
 
 ACPI_STATUS
 AcpiNsGetNode (

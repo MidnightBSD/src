@@ -104,7 +104,7 @@ AcpiAllocateRootTable (
  *
  ******************************************************************************/
 
-ACPI_STATUS
+ACPI_STATUS ACPI_INIT_FUNCTION
 AcpiInitializeTables (
     ACPI_TABLE_DESC         *InitialTableArray,
     UINT32                  InitialTableCount,
@@ -180,7 +180,7 @@ ACPI_EXPORT_SYMBOL_INIT (AcpiInitializeTables)
  *
  ******************************************************************************/
 
-ACPI_STATUS
+ACPI_STATUS ACPI_INIT_FUNCTION
 AcpiReallocateRootTable (
     void)
 {

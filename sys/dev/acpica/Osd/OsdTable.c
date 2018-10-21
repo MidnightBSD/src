@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdTable.c 281075 2015-04-04 10
 #include <sys/linker.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/aclocal.h>
 #include <contrib/dev/acpica/include/actables.h>
 
 #undef _COMPONENT

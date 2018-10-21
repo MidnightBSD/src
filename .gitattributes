@@ -62469,7 +62469,10 @@ sys/contrib/dev/acpica/compiler/aslfileio.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslfiles.c -text
 sys/contrib/dev/acpica/compiler/aslfold.c -text
 sys/contrib/dev/acpica/compiler/aslglobal.h -text
+sys/contrib/dev/acpica/compiler/aslhelp.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/aslhelpers.y -text
 sys/contrib/dev/acpica/compiler/aslhex.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/aslkeywords.y -text
 sys/contrib/dev/acpica/compiler/asllength.c -text
 sys/contrib/dev/acpica/compiler/asllisting.c -text
 sys/contrib/dev/acpica/compiler/asllistsup.c svneol=native#text/plain
@@ -62493,6 +62496,7 @@ sys/contrib/dev/acpica/compiler/aslparser.y -text
 sys/contrib/dev/acpica/compiler/aslpld.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslpredef.c -text
 sys/contrib/dev/acpica/compiler/aslprepkg.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/aslprimaries.y -text
 sys/contrib/dev/acpica/compiler/aslprintf.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslprune.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslresource.c -text
@@ -62717,6 +62721,7 @@ sys/contrib/dev/acpica/components/utilities/utprint.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utresrc.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utstate.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utstring.c svneol=native#text/plain
+sys/contrib/dev/acpica/components/utilities/utstrtoul64.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/uttrack.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utuuid.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utxface.c svneol=native#text/plain
@@ -62765,6 +62770,7 @@ sys/contrib/dev/acpica/include/platform/acenv.h -text
 sys/contrib/dev/acpica/include/platform/acenvex.h svneol=native#text/plain
 sys/contrib/dev/acpica/include/platform/acfreebsd.h -text
 sys/contrib/dev/acpica/include/platform/acgcc.h -text
+sys/contrib/dev/acpica/include/platform/acgccex.h svneol=native#text/plain
 sys/contrib/dev/acpica/os_specific/service_layers/oslibcfs.c svneol=native#text/plain
 sys/contrib/dev/acpica/os_specific/service_layers/osunixxf.c svneol=native#text/plain
 sys/contrib/dev/ath/ath_hal/ar9300/ar9300.h svneol=native#text/plain

@@ -227,7 +227,6 @@ AcpiExStartTraceMethod (
     ACPI_OPERAND_OBJECT     *ObjDesc,
     ACPI_WALK_STATE         *WalkState)
 {
-    ACPI_STATUS             Status;
     char                    *Pathname = NULL;
     BOOLEAN                 Enabled = FALSE;
 
@@ -238,12 +237,6 @@ AcpiExStartTraceMethod (
     if (MethodNode)
     {
         Pathname = AcpiNsGetNormalizedPathname (MethodNode, TRUE);
-    }
-
-    Status = AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
-    if (ACPI_FAILURE (Status))
-    {
-        goto Exit;
     }
 
     Enabled = AcpiExInterpreterTraceEnabled (Pathname);
@@ -266,9 +259,6 @@ AcpiExStartTraceMethod (
         }
     }
 
-    (void) AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
-
-Exit:
     if (Enabled)
     {
         ACPI_TRACE_POINT (ACPI_TRACE_AML_METHOD, TRUE,
@@ -303,7 +293,6 @@ AcpiExStopTraceMethod (
     ACPI_OPERAND_OBJECT     *ObjDesc,
     ACPI_WALK_STATE         *WalkState)
 {
-    ACPI_STATUS             Status;
     char                    *Pathname = NULL;
     BOOLEAN                 Enabled;
 
@@ -316,26 +305,12 @@ AcpiExStopTraceMethod (
         Pathname = AcpiNsGetNormalizedPathname (MethodNode, TRUE);
     }
 
-    Status = AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
-    if (ACPI_FAILURE (Status))
-    {
-        goto ExitPath;
-    }
-
     Enabled = AcpiExInterpreterTraceEnabled (NULL);
-
-    (void) AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
 
     if (Enabled)
     {
         ACPI_TRACE_POINT (ACPI_TRACE_AML_METHOD, FALSE,
             ObjDesc ? ObjDesc->Method.AmlStart : NULL, Pathname);
-    }
-
-    Status = AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
-    if (ACPI_FAILURE (Status))
-    {
-        goto ExitPath;
     }
 
     /* Check whether the tracer should be stopped */
@@ -354,9 +329,6 @@ AcpiExStopTraceMethod (
         AcpiGbl_TraceMethodObject = NULL;
     }
 
-    (void) AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
-
-ExitPath:
     if (Pathname)
     {
         ACPI_FREE (Pathname);

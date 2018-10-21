@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/acpica/madt.c 288461 2015-10-01 20:54:19Z 
 #include <machine/apicvar.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/aclocal.h>
 #include <contrib/dev/acpica/include/actables.h>
 
 #include <dev/acpica/acpivar.h>
