@@ -46,6 +46,7 @@ SUBDIR+=alias \
 	ctlstat \
 	cut \
 	dirname \
+	dns-sd \
 	doas \
 	${_dpv} \
 	du \
