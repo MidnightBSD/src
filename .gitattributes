@@ -62493,6 +62493,7 @@ sys/contrib/dev/acpica/compiler/aslopcodes.c -text
 sys/contrib/dev/acpica/compiler/asloperands.c -text
 sys/contrib/dev/acpica/compiler/aslopt.c -text
 sys/contrib/dev/acpica/compiler/asloptions.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/aslparseop.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslparser.y -text
 sys/contrib/dev/acpica/compiler/aslpld.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslpredef.c -text
@@ -62583,6 +62584,7 @@ sys/contrib/dev/acpica/components/dispatcher/dsmethod.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/dispatcher/dsmthdat.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/dispatcher/dsobject.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/dispatcher/dsopcode.c svneol=native#text/plain
+sys/contrib/dev/acpica/components/dispatcher/dspkginit.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/dispatcher/dsutils.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/dispatcher/dswexec.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/dispatcher/dswload.c svneol=native#text/plain

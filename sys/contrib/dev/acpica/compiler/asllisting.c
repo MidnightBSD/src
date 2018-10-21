@@ -314,7 +314,7 @@ LsAmlListingWalk (
 
     LsWriteNodeToListing (Op, FileId);
 
-    if (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DATA)
+    if (Op->Asl.CompileFlags & OP_IS_RESOURCE_DATA)
     {
         /* Buffer is a resource template, don't dump the data all at once */
 
@@ -446,7 +446,7 @@ LsTreeWriteWalk (
         Op->Asl.LineNumber, Op->Asl.EndLine,
         Op->Asl.LogicalLineNumber, Op->Asl.EndLogicalLine);
 
-    TrPrintNodeCompileFlags (Op->Asl.CompileFlags);
+    TrPrintOpFlags (Op->Asl.CompileFlags, ASL_TREE_OUTPUT);
     DbgPrint (ASL_TREE_OUTPUT, "\n");
     return (AE_OK);
 }
@@ -617,7 +617,7 @@ LsWriteNodeToListing (
 
     case PARSEOP_DEFAULT_ARG:
 
-        if (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DESC)
+        if (Op->Asl.CompileFlags & OP_IS_RESOURCE_DESC)
         {
             LsWriteSourceLines (Op->Asl.LineNumber, Op->Asl.EndLogicalLine,
                 FileId);
@@ -661,7 +661,7 @@ LsWriteNodeToListing (
 
         case AML_NAME_OP:
 
-            if (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DESC)
+            if (Op->Asl.CompileFlags & OP_IS_RESOURCE_DESC)
             {
                 LsWriteSourceLines (Op->Asl.LineNumber, Op->Asl.LogicalLineNumber,
                     FileId);
@@ -780,7 +780,7 @@ LsWriteNodeToListing (
     default:
 
         if ((Op->Asl.ParseOpcode == PARSEOP_BUFFER) &&
-            (Op->Asl.CompileFlags & NODE_IS_RESOURCE_DESC))
+            (Op->Asl.CompileFlags & OP_IS_RESOURCE_DESC))
         {
             return;
         }

@@ -638,3 +638,4 @@ NoEcho('
 %token <i> PARSEOP___FILE__
 %token <i> PARSEOP___LINE__
 %token <i> PARSEOP___PATH__
+%token <i> PARSEOP___METHOD__
