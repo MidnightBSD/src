@@ -195,7 +195,7 @@ FlIsFileAsciiSource (
     BOOLEAN                 DisplayErrors)
 {
     UINT8                   Byte;
-    ACPI_SIZE               BadBytes = 0;
+    UINT32                  BadBytes = 0;
     BOOLEAN                 OpeningComment = FALSE;
     ASL_FILE_STATUS         Status;
     FILE                    *Handle;
@@ -286,6 +286,9 @@ FlIsFileAsciiSource (
 
     if (BadBytes)
     {
+        fprintf (stderr,
+            "File appears to be binary: found %u non-ASCII characters, disassembling\n",
+            BadBytes);
         if (DisplayErrors)
         {
             AcpiOsPrintf (

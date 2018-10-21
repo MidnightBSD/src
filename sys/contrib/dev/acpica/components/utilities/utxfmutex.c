@@ -278,6 +278,8 @@ AcpiAcquireMutex (
     return (Status);
 }
 
+ACPI_EXPORT_SYMBOL (AcpiAcquireMutex)
+
 
 /*******************************************************************************
  *
@@ -318,3 +320,5 @@ AcpiReleaseMutex (
     AcpiOsReleaseMutex (MutexObj->Mutex.OsMutex);
     return (AE_OK);
 }
+
+ACPI_EXPORT_SYMBOL (AcpiReleaseMutex)

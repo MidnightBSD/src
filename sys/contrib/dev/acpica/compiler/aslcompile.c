@@ -569,7 +569,7 @@ AslCompilerSignon (
 
     /* Running compiler or disassembler? */
 
-    if (Gbl_DisasmFlag)
+    if (AcpiGbl_DisasmFlag)
     {
         UtilityName = AML_DISASSEMBLER_NAME;
     }

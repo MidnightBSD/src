@@ -307,6 +307,13 @@ AcpiEnableEvent (
     ACPI_FUNCTION_TRACE (AcpiEnableEvent);
 
 
+    /* If Hardware Reduced flag is set, there are no fixed events */
+
+    if (AcpiGbl_ReducedHardware)
+    {
+        return_ACPI_STATUS (AE_OK);
+    }
+
     /* Decode the Fixed Event */
 
     if (Event > ACPI_EVENT_MAX)
@@ -373,6 +380,13 @@ AcpiDisableEvent (
     ACPI_FUNCTION_TRACE (AcpiDisableEvent);
 
 
+    /* If Hardware Reduced flag is set, there are no fixed events */
+
+    if (AcpiGbl_ReducedHardware)
+    {
+        return_ACPI_STATUS (AE_OK);
+    }
+
     /* Decode the Fixed Event */
 
     if (Event > ACPI_EVENT_MAX)
@@ -433,6 +447,13 @@ AcpiClearEvent (
 
     ACPI_FUNCTION_TRACE (AcpiClearEvent);
 
+
+    /* If Hardware Reduced flag is set, there are no fixed events */
+
+    if (AcpiGbl_ReducedHardware)
+    {
+        return_ACPI_STATUS (AE_OK);
+    }
 
     /* Decode the Fixed Event */
 

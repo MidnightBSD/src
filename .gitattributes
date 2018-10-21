@@ -62447,6 +62447,7 @@ sys/contrib/dev/acpica/common/ahuuids.c svneol=native#text/plain
 sys/contrib/dev/acpica/common/cmfsize.c svneol=native#text/plain
 sys/contrib/dev/acpica/common/dmextern.c -text
 sys/contrib/dev/acpica/common/dmrestag.c -text
+sys/contrib/dev/acpica/common/dmswitch.c svneol=native#text/plain
 sys/contrib/dev/acpica/common/dmtable.c -text
 sys/contrib/dev/acpica/common/dmtables.c svneol=native#text/plain
 sys/contrib/dev/acpica/common/dmtbdump.c -text
@@ -62721,6 +62722,7 @@ sys/contrib/dev/acpica/components/utilities/utosi.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utownerid.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utpredef.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utprint.c svneol=native#text/plain
+sys/contrib/dev/acpica/components/utilities/utresdecode.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utresrc.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utstate.c svneol=native#text/plain
 sys/contrib/dev/acpica/components/utilities/utstring.c svneol=native#text/plain

@@ -622,7 +622,8 @@ XfNamespaceLocateBegin (
         (!(OpInfo->Flags & AML_CREATE)) &&
         (Op->Asl.ParseOpcode != PARSEOP_NAMESTRING) &&
         (Op->Asl.ParseOpcode != PARSEOP_NAMESEG)    &&
-        (Op->Asl.ParseOpcode != PARSEOP_METHODCALL))
+        (Op->Asl.ParseOpcode != PARSEOP_METHODCALL) &&
+        (Op->Asl.ParseOpcode != PARSEOP_EXTERNAL))
     {
         return_ACPI_STATUS (AE_OK);
     }
@@ -645,7 +646,8 @@ XfNamespaceLocateBegin (
     Flags = ACPI_NS_SEARCH_PARENT;
     if ((Op->Asl.ParseOpcode == PARSEOP_NAMESTRING) ||
         (Op->Asl.ParseOpcode == PARSEOP_NAMESEG)    ||
-        (Op->Asl.ParseOpcode == PARSEOP_METHODCALL))
+        (Op->Asl.ParseOpcode == PARSEOP_METHODCALL) ||
+        (Op->Asl.ParseOpcode == PARSEOP_EXTERNAL))
     {
         /*
          * These are name references, do not push the scope stack
@@ -1184,7 +1186,8 @@ XfNamespaceLocateEnd (
 
     if ((Op->Asl.ParseOpcode == PARSEOP_NAMESTRING) ||
         (Op->Asl.ParseOpcode == PARSEOP_NAMESEG)    ||
-        (Op->Asl.ParseOpcode == PARSEOP_METHODCALL))
+        (Op->Asl.ParseOpcode == PARSEOP_METHODCALL) ||
+        (Op->Asl.ParseOpcode == PARSEOP_EXTERNAL))
     {
         return_ACPI_STATUS (AE_OK);
     }

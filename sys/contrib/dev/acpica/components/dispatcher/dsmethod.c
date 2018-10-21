@@ -334,6 +334,7 @@ AcpiDsMethodError (
     ACPI_WALK_STATE         *WalkState)
 {
     UINT32                  AmlOffset;
+    ACPI_NAME               Name = 0;
 
 
     ACPI_FUNCTION_ENTRY ();
@@ -362,9 +363,16 @@ AcpiDsMethodError (
         AmlOffset = (UINT32) ACPI_PTR_DIFF (WalkState->Aml,
             WalkState->ParserState.AmlStart);
 
-        Status = AcpiGbl_ExceptionHandler (Status,
-            WalkState->MethodNode ?
-                WalkState->MethodNode->Name.Integer : 0,
+        if (WalkState->MethodNode)
+        {
+            Name = WalkState->MethodNode->Name.Integer;
+        }
+        else if (WalkState->DeferredNode)
+        {
+            Name = WalkState->DeferredNode->Name.Integer;
+        }
+
+        Status = AcpiGbl_ExceptionHandler (Status, Name,
             WalkState->Opcode, AmlOffset, NULL);
         AcpiExEnterInterpreter ();
     }
