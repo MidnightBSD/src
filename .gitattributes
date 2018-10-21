@@ -62771,6 +62771,7 @@ sys/contrib/dev/acpica/include/platform/acenvex.h svneol=native#text/plain
 sys/contrib/dev/acpica/include/platform/acfreebsd.h -text
 sys/contrib/dev/acpica/include/platform/acgcc.h -text
 sys/contrib/dev/acpica/include/platform/acgccex.h svneol=native#text/plain
+sys/contrib/dev/acpica/os_specific/service_layers/osgendbg.c svneol=native#text/plain
 sys/contrib/dev/acpica/os_specific/service_layers/oslibcfs.c svneol=native#text/plain
 sys/contrib/dev/acpica/os_specific/service_layers/osunixxf.c svneol=native#text/plain
 sys/contrib/dev/ath/ath_hal/ar9300/ar9300.h svneol=native#text/plain

@@ -38,6 +38,13 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdHardware.c 213787 2010-10-13
 #include <machine/iodev.h>
 #include <machine/pci_cfgreg.h>
 
+ACPI_STATUS
+AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValue)
+{
+
+	return (AE_OK);
+}
+
 /*
  * ACPICA's rather gung-ho approach to hardware resource ownership is a little
  * troublesome insofar as there is no easy way for us to know in advance

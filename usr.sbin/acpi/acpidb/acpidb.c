@@ -496,7 +496,7 @@ load_dsdt(const char *dsdtfile)
 
 	AcpiInitializeDebugger();
 	AcpiGbl_DebuggerConfiguration = 0;
-	AcpiDbUserCommands(':', NULL);
+	AcpiDbUserCommands();
 
 	if (dounlink) {
 		unlink(filetmp);
