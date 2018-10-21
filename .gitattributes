@@ -62524,6 +62524,9 @@ sys/contrib/dev/acpica/compiler/asluuid.c -text
 sys/contrib/dev/acpica/compiler/aslwalks.c -text
 sys/contrib/dev/acpica/compiler/aslxref.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/aslxrefout.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/cvcompiler.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/cvdisasm.c svneol=native#text/plain
+sys/contrib/dev/acpica/compiler/cvparser.c svneol=native#text/plain
 sys/contrib/dev/acpica/compiler/dtcompile.c -text
 sys/contrib/dev/acpica/compiler/dtcompiler.h -text
 sys/contrib/dev/acpica/compiler/dtexpress.c -text
@@ -62733,6 +62736,7 @@ sys/contrib/dev/acpica/include/acbuffer.h svneol=native#text/plain
 sys/contrib/dev/acpica/include/acclib.h svneol=native#text/plain
 sys/contrib/dev/acpica/include/accommon.h -text
 sys/contrib/dev/acpica/include/acconfig.h -text
+sys/contrib/dev/acpica/include/acconvert.h svneol=native#text/plain
 sys/contrib/dev/acpica/include/acdebug.h -text
 sys/contrib/dev/acpica/include/acdisasm.h -text
 sys/contrib/dev/acpica/include/acdispat.h -text
