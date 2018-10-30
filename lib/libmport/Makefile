@@ -11,7 +11,7 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
    		stats.c verify.c lock.c mkdir.c
 INCS=	mport.h mport_dispatch.h
 
-CFLAGS+=	-I${.CURDIR} -fblocks -g
+CFLAGS+=	-I${.CURDIR} -fblocks -g 
 SHLIB_MAJOR=	2
 MAN=	mport.3
 

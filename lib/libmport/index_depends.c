@@ -141,8 +141,6 @@ mport_index_depends_free_vec(mportDependsEntry **e)
   
 	for (i=0; e[i] != NULL; i++) 
 		mport_index_depends_free(e[i]);
-  
-	free(e);
 }
 
 
