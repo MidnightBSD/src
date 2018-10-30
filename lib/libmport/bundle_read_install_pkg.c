@@ -530,7 +530,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						if (e->owner != NULL && e->group != NULL && e->owner[0] != '\0' &&
 						    e->group[0] != '\0') {
 #ifdef DEBUG
-							fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
+							fprintf(stderr, "owner %s and group %s\n", e->owner, e->group);
 #endif
 							if (chown(file, mport_get_uid(e->owner),
 							          mport_get_gid(e->group)) == -1) {
