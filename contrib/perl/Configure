@@ -23915,11 +23915,6 @@ for xxx in $xs_extensions ; do
 		$define) avail_ext="$avail_ext $xxx" ;;
 		esac
 		;;
-	GDBM_File|gdbm_fil)
-		case "$i_gdbm" in
-		$define) avail_ext="$avail_ext $xxx" ;;
-		esac
-		;;
 	I18N/Langinfo|i18n_lan)
 		case "$i_langinfo$d_nl_langinfo" in
 		$define$define) avail_ext="$avail_ext $xxx" ;;
