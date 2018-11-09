@@ -76,24 +76,35 @@ typedef enum {
 } ada_state;
 
 typedef enum {
-	ADA_FLAG_CAN_48BIT	= 0x0002,
-	ADA_FLAG_CAN_FLUSHCACHE	= 0x0004,
-	ADA_FLAG_CAN_NCQ	= 0x0008,
-	ADA_FLAG_CAN_DMA	= 0x0010,
-	ADA_FLAG_NEED_OTAG	= 0x0020,
-	ADA_FLAG_WAS_OTAG	= 0x0040,
-	ADA_FLAG_CAN_TRIM	= 0x0080,
-	ADA_FLAG_OPEN		= 0x0100,
-	ADA_FLAG_SCTX_INIT	= 0x0200,
-	ADA_FLAG_CAN_CFA        = 0x0400,
-	ADA_FLAG_CAN_POWERMGT   = 0x0800,
-	ADA_FLAG_CAN_DMA48	= 0x1000,
-	ADA_FLAG_DIRTY		= 0x2000
+	ADA_FLAG_CAN_48BIT	= 0x00000002,
+	ADA_FLAG_CAN_FLUSHCACHE	= 0x00000004,
+	ADA_FLAG_CAN_NCQ	= 0x00000008,
+	ADA_FLAG_CAN_DMA	= 0x00000010,
+	ADA_FLAG_NEED_OTAG	= 0x00000020,
+	ADA_FLAG_WAS_OTAG	= 0x00000040,
+	ADA_FLAG_CAN_TRIM	= 0x00000080,
+	ADA_FLAG_OPEN		= 0x00000100,
+	ADA_FLAG_SCTX_INIT	= 0x00000200,
+	ADA_FLAG_CAN_CFA        = 0x00000400,
+	ADA_FLAG_CAN_POWERMGT   = 0x00000800,
+	ADA_FLAG_CAN_DMA48	= 0x00001000,
+	ADA_FLAG_CAN_LOG	= 0x00002000,
+	ADA_FLAG_CAN_IDLOG	= 0x00004000,
+	ADA_FLAG_CAN_SUPCAP	= 0x00008000,
+	ADA_FLAG_CAN_ZONE	= 0x00010000,
+	ADA_FLAG_CAN_WCACHE	= 0x00020000,
+	ADA_FLAG_CAN_RAHEAD	= 0x00040000,
+	ADA_FLAG_PROBED		= 0x00080000,
+	ADA_FLAG_ANNOUNCED	= 0x00100000,
+	ADA_FLAG_DIRTY		= 0x00200000,
+	ADA_FLAG_CAN_NCQ_TRIM	= 0x00400000,	/* CAN_TRIM also set */
+	ADA_FLAG_PIM_ATA_EXT	= 0x00800000
 } ada_flags;
 
 typedef enum {
 	ADA_Q_NONE		= 0x00,
 	ADA_Q_4K		= 0x01,
+	ADA_Q_NCQ_TRIM_BROKEN	= 0x02,
 } ada_quirks;
 
 #define ADA_Q_BIT_STRING	\
@@ -1192,18 +1203,30 @@ adaregister(struct cam_periph *periph, void *arg)
 	if ((cgd->ident_data.capabilities1 & ATA_SUPPORT_DMA) &&
 	    (cgd->inq_flags & SID_DMA))
 		softc->flags |= ADA_FLAG_CAN_DMA;
+	else
+		softc->flags &= ~ADA_FLAG_CAN_DMA;
+
 	if (cgd->ident_data.support.command2 & ATA_SUPPORT_ADDRESS48) {
 		softc->flags |= ADA_FLAG_CAN_48BIT;
 		if (cgd->inq_flags & SID_DMA48)
 			softc->flags |= ADA_FLAG_CAN_DMA48;
-	}
+		else
+			softc->flags &= ~ADA_FLAG_CAN_DMA48;
+	} else 
+		softc->flags &= ~(ADA_FLAG_CAN_48BIT | ADA_FLAG_CAN_DMA48);
 	if (cgd->ident_data.support.command2 & ATA_SUPPORT_FLUSHCACHE)
 		softc->flags |= ADA_FLAG_CAN_FLUSHCACHE;
+	else
+		softc->flags &= ~ADA_FLAG_CAN_FLUSHCACHE;
 	if (cgd->ident_data.support.command1 & ATA_SUPPORT_POWERMGT)
 		softc->flags |= ADA_FLAG_CAN_POWERMGT;
+	else
+		softc->flags &= ~ADA_FLAG_CAN_POWERMGT;
 	if ((cgd->ident_data.satacapabilities & ATA_SUPPORT_NCQ) &&
 	    (cgd->inq_flags & SID_DMA) && (cgd->inq_flags & SID_CmdQue))
 		softc->flags |= ADA_FLAG_CAN_NCQ;
+	else
+		softc->flags &= ~ADA_FLAG_CAN_NCQ;
 	if ((cgd->ident_data.support_dsm & ATA_SUPPORT_DSM_TRIM) &&
 	    (cgd->inq_flags & SID_DMA)) {
 		softc->flags |= ADA_FLAG_CAN_TRIM;
@@ -1213,9 +1236,27 @@ adaregister(struct cam_periph *periph, void *arg)
 			    min(cgd->ident_data.max_dsm_blocks *
 				ATA_DSM_BLK_RANGES, softc->trim_max_ranges);
 		}
-	}
+/*
+		 * If we can do RCVSND_FPDMA_QUEUED commands, we may be able
+		 * to do NCQ trims, if we support trims at all. We also need
+		 * support from the SIM to do things properly. Perhaps we
+		 * should look at log 13 dword 0 bit 0 and dword 1 bit 0 are
+		 * set too...
+		 */
+		if ((softc->quirks & ADA_Q_NCQ_TRIM_BROKEN) == 0 &&
+		    (softc->flags & ADA_FLAG_PIM_ATA_EXT) != 0 &&
+		    (cgd->ident_data.satacapabilities2 &
+		     ATA_SUPPORT_RCVSND_FPDMA_QUEUED) != 0 &&
+		    (softc->flags & ADA_FLAG_CAN_TRIM) != 0)
+			softc->flags |= ADA_FLAG_CAN_NCQ_TRIM;
+		else
+			softc->flags &= ~ADA_FLAG_CAN_NCQ_TRIM;
+	} else
+		softc->flags &= ~(ADA_FLAG_CAN_TRIM | ADA_FLAG_CAN_NCQ_TRIM);
 	if (cgd->ident_data.support.command2 & ATA_SUPPORT_CFA)
 		softc->flags |= ADA_FLAG_CAN_CFA;
+	else
+		softc->flags &= ~ADA_FLAG_CAN_CFA;
 
 	periph->softc = softc;
 
@@ -1305,6 +1346,8 @@ adaregister(struct cam_periph *periph, void *arg)
 		softc->disk->d_delmaxsize = maxio;
 	if ((cpi.hba_misc & PIM_UNMAPPED) != 0)
 		softc->disk->d_flags |= DISKFLAG_UNMAPPED_BIO;
+	if (cpi.hba_misc & PIM_ATA_EXT)
+		softc->flags |= ADA_FLAG_PIM_ATA_EXT;
 	strlcpy(softc->disk->d_descr, cgd->ident_data.model,
 	    MIN(sizeof(softc->disk->d_descr), sizeof(cgd->ident_data.model)));
 	strlcpy(softc->disk->d_ident, cgd->ident_data.serial,
