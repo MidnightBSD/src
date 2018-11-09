@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20181109:
+	Add the ability to disable TRIM on specific controllers or drives
+	that have bugs.
+
 20181021:
 	Update ACPICA to 20161117
 
