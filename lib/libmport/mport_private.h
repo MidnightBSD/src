@@ -47,6 +47,8 @@
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
 
+#define MPORT_SETTING_MIRROR_REGION = "mirror_region";
+
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 void mport_call_progress_init_cb(mportInstance *, const char *, ...);
