@@ -46,6 +46,8 @@ static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
 static int install_depends(mportInstance *, const char *, const char *);
 static int install(mportInstance *, const char *);
 static int cpeList(mportInstance *);
+static int configGet(mportInstance *, const char *);
+static int configSet(mportInstance *, const char *, const char *);
 static int delete(const char *);
 static int deleteAll(mportInstance *);
 static int download(mportInstance *, const char *);
@@ -202,13 +204,29 @@ main(int argc, char *argv[]) {
 		});
         } else if (!strcmp(argv[1], "stats")) {
 		dispatch_group_async(grp, q, ^{
-		loadIndex(mport);
-                resultCode = stats(mport);
+			loadIndex(mport);
+                	resultCode = stats(mport);
 		});
 	} else if (!strcmp(argv[1], "clean")) {
 		dispatch_group_async(grp, q, ^{
-		resultCode = clean(mport);
+			resultCode = clean(mport);
 		});
+        } else if (!strcmp(argv[1], "config")) {
+		if (argc < 3) {
+			mport_instance_free(mport);
+			usage();
+		}
+
+		if (!strcmp(argv[2], "get")) {
+			dispatch_group_async(grp, q, ^{
+				resultCode = configGet(mport, argv[3]);
+			});
+		} else if (!strcmp(argv[2], "set")) {
+			dispatch_group_async(grp, q, ^{                         
+				resultCode = configSet(mport, 
+					argv[3], argv[4]);
+			});
+		}
 	} else if (!strcmp(argv[1], "cpe")) {
 		dispatch_group_async(grp, q, ^{
 			resultCode = cpeList(mport);
@@ -270,6 +288,8 @@ usage(void) {
 	fprintf(stderr, 
 		"usage: mport <command> args:\n"
 		"       mport clean\n"
+		"       mport config get [setting name]\n"
+		"       mport config set [setting name] [setting val]\n"
 		"       mport cpe\n"
 		"       mport delete [package name]\n"
 		"       mport deleteall\n"
@@ -660,6 +680,31 @@ upgrade(mportInstance *mport) {
 	mport_pkgmeta_vec_free(packs);
 	printf("Packages updated: %d\nTotal: %d\n", updated, total);
 	return (0);
+}
+
+int configGet(mportInstance *mport, const char *settingName) {
+	char *val;
+
+	val = mport_setting_get(mport, settingName);
+
+	if (val != NULL) {
+		printf("Setting %s value is %s\n", settingName, val);
+	} else {
+		printf("Setting %s is undefined.\n", settingName);
+	}
+
+	return 0;
+}
+
+int configSet(mportInstance *mport, const char *settingName, const char *val) {
+	int result = mport_setting_set(mport, settingName, val);
+
+	if (result != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return mport_err_code();
+	}
+
+	return 0;
 }
 
 int
