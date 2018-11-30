@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20181130:
+	ICMP Buffer underwrite fix
+
 20181109:
 	Add the ability to disable TRIM on specific controllers or drives
 	that have bugs.
