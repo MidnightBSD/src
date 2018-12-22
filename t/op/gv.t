@@ -12,7 +12,7 @@ BEGIN {
 
 use warnings;
 
-plan(tests => 280);
+plan(tests => 284);
 
 # type coercion on assignment
 $foo = 'foo';
@@ -497,7 +497,7 @@ $::{borage} = \&ok;
 eval 'borage("sub ref in stash")' or fail "sub ref in stash";
 
 {
-    use vars qw($glook $smek $foof);
+    our ($glook, $smek, $foof);
     # Check reference assignment isn't affected by the SV type (bug #38439)
     $glook = 3;
     $smek = 4;
@@ -1170,6 +1170,14 @@ SKIP: {
     is ($? & 127, 0,"[perl #128597] No crash when gp_free calls ckWARN_d");
 }
 
+{
+    # [perl #131263]
+    *sym = "\N{U+0080}";
+    ok(*sym eq "*main::\N{U+0080}", "utf8 flag properly set");
+    *sym = "\xC3\x80";
+    ok(*sym eq "*main::\xC3\x80", "utf8 flag properly cleared");
+}
+
 # test gv_try_downgrade()
 # If a GV can be stored in a stash in a compact, non-GV form, then
 # whenever ops are freed which reference the GV, an attempt is made to
@@ -1186,6 +1194,36 @@ package GV_DOWNGRADE {
     # after the eval's ops are freed, the GV should get downgraded again
     ::like "$GV_DOWNGRADE::{FOO}", qr/SCALAR/, "gv_downgrade: post";
 }
+
+# [perl #131085] This used to crash; no ok() necessary.
+{ no warnings;
+$::{"A131085"} = sub {}; \&{"A131085"};
+}
+
+
+#
+# Deprecated before 5.28, fatal since then
+#
+undef $@;
+eval << '--';
+    sub Other::AUTOLOAD {1}
+    sub Other::fred {}
+    @ISA = qw [Other];
+    fred ();
+    my $x = \&barney;
+    (bless []) -> barney;
+--
+like $@, qr /^Use of inherited AUTOLOAD for non-method main::fred\(\) is no longer allowed/, "Cannot inherit AUTOLOAD";
+
+undef $@;
+eval << '--';
+    use utf8;
+    use open qw [:utf8 :std];
+    sub Oᕞʀ::AUTOLOAD { 1 } sub Oᕞʀ::fᕃƌ {}
+    @ISA = qw(Oᕞʀ) ;
+    fᕃƌ() ;
+--
+like $@, qr /^Use of inherited AUTOLOAD for non-method main::f\x{1543}\x{18c}\(\) is no longer allowed/, "Cannot inherit AUTOLOAD";
 
 __END__
 Perl

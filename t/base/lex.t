@@ -1,6 +1,6 @@
 #!./perl
 
-print "1..109\n";
+print "1..120\n";
 
 $x = 'x';
 
@@ -154,6 +154,35 @@ my $test = 31;
   print "not " unless index ($@, 'Can\'t use global $^XYZ in "my"') > -1;
   print "ok $test\n"; $test++;
 #  print "($@)\n" if $@;
+#
+  ${^TEST}= "splat";
+  @{^TEST}= ("foo", "bar");
+  %{^TEST}= ("foo" => "FOO", "bar" => "BAR" );
+  
+  print "not " if "${^TEST}" ne "splat";
+  print "ok $test\n"; $test++;
+  
+  print "not " if "${ ^TEST }" ne "splat";
+  print "ok $test\n"; $test++;
+
+  print "not " if "${^TEST}[0]" ne "splat[0]";
+  print "ok $test\n"; $test++;
+
+  print "not " if "${^TEST[0]}" ne "foo";
+  print "ok $test\n"; $test++;
+
+  print "not " if "${ ^TEST [1] }" ne "bar";
+  print "ok $test\n"; $test++;
+
+  print "not " if "${^TEST}{foo}" ne "splat{foo}";
+  print "ok $test\n"; $test++;
+
+  print "not " if "${^TEST{foo}}" ne "FOO";
+  print "ok $test\n"; $test++;
+
+  print "not " if "${ ^TEST {bar} }" ne "BAR";
+  print "ok $test\n"; $test++;
+
 
 # Now let's make sure that caret variables are all forced into the main package.
   package Someother;
@@ -527,6 +556,15 @@ eval q|s##[}#e|;
  # Used to crash [perl #128171]
  eval ('/@0{0*->@*/*]');
  print "ok $test - 128171\n"; $test++;
+}
+{
+  # various sub-parse recovery issues that crashed perl
+  eval 's//${sub{b{]]]{}#$/ sub{}';
+  print "ok $test - 132640\n"; $test++;
+  eval 'qq{@{sub{]]}}}};shift';
+  print "ok $test - 125351\n"; $test++;
+  eval 'qq{@{sub{]]}}}}-shift';
+  print "ok $test - 126192\n"; $test++;
 }
 
 $foo = "WRONG"; $foo:: = "bar"; $bar = "baz";

@@ -1,4 +1,6 @@
 #!/usr/bin/perl -w
+# HARNESS-NO-STREAM
+# HARNESS-NO-PRELOAD
 
 BEGIN {
     if( $ENV{PERL_CORE} ) {
@@ -15,6 +17,7 @@ BEGIN {
     # All together so Test::More sees the open discipline
     $have_perlio = eval q[
         require PerlIO;
+        PerlIO->VERSION(1.02); # required for PerlIO::get_layers
         binmode *STDOUT, ":encoding(utf8)";
         binmode *STDERR, ":encoding(utf8)";
         require Test::More;
@@ -23,9 +26,12 @@ BEGIN {
 }
 
 use Test::More;
+unless (Test::Builder->new->{Stack}->top->format->isa('Test::Builder::Formatter')) {
+    plan skip_all => 'Test cannot be run using this formatter';
+}
 
 if( !$have_perlio ) {
-    plan skip_all => "Don't have PerlIO";
+    plan skip_all => "Don't have PerlIO 1.02";
 }
 else {
     plan tests => 5;

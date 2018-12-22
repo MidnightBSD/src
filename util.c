@@ -214,9 +214,6 @@ Perl_safesysrealloc(Malloc_t where,MEM_SIZE size)
 	? ((struct perl_memory_debug_header *)((char *)where - PERL_MEMORY_DEBUG_HEADER_SIZE))->size
 	: 0;
 #endif
-#if !defined(STANDARD_C) && !defined(HAS_REALLOC_PROTOTYPE) && !defined(PERL_MICRO)
-    Malloc_t PerlMem_realloc();
-#endif /* !defined(STANDARD_C) && !defined(HAS_REALLOC_PROTOTYPE) */
 
     if (!size) {
 	safesysfree(where);
@@ -693,7 +690,7 @@ Perl_rninstr(const char *big, const char *bigend, const char *little, const char
 
 =for apidoc fbm_compile
 
-Analyses the string in order to make fast searches on it using C<fbm_instr()>
+Analyzes the string in order to make fast searches on it using C<fbm_instr()>
 -- the Boyer-Moore algorithm.
 
 =cut
@@ -815,6 +812,8 @@ Perl_fbm_instr(pTHX_ unsigned char *big, unsigned char *bigend, SV *littlestr, U
     bool tail = valid ? cBOOL(SvTAIL(littlestr)) : FALSE;
 
     PERL_ARGS_ASSERT_FBM_INSTR;
+
+    assert(bigend >= big);
 
     if ((STRLEN)(bigend - big) < littlelen) {
 	if (     tail
@@ -2146,8 +2145,7 @@ Perl_my_setenv(pTHX_ const char *nam, const char *val)
 #       else /* ! HAS_UNSETENV */
         (void)setenv(nam, val, 1);
 #       endif /* HAS_UNSETENV */
-#   else
-#       if defined(HAS_UNSETENV)
+#   elif defined(HAS_UNSETENV)
         if (val == NULL) {
             if (environ) /* old glibc can crash with null environ */
                 (void)unsetenv(nam);
@@ -2159,7 +2157,7 @@ Perl_my_setenv(pTHX_ const char *nam, const char *val)
             my_setenv_format(new_env, nam, nlen, val, vlen);
             (void)putenv(new_env);
         }
-#       else /* ! HAS_UNSETENV */
+#   else /* ! HAS_UNSETENV */
         char *new_env;
 	const int nlen = strlen(nam);
 	int vlen;
@@ -2171,7 +2169,6 @@ Perl_my_setenv(pTHX_ const char *nam, const char *val)
         /* all that work just for this */
         my_setenv_format(new_env, nam, nlen, val, vlen);
         (void)putenv(new_env);
-#       endif /* HAS_UNSETENV */
 #   endif /* __CYGWIN__ */
 #ifndef PERL_USE_SAFE_PUTENV
     }
@@ -2221,140 +2218,6 @@ Perl_unlnk(pTHX_ const char *f)	/* unlink all versions of a file */
 }
 #endif
 
-/* this is a drop-in replacement for bcopy(), except for the return
- * value, which we need to be able to emulate memcpy()  */
-#if !defined(HAS_MEMCPY) || (!defined(HAS_MEMMOVE) && !defined(HAS_SAFE_MEMCPY))
-void *
-Perl_my_bcopy(const void *vfrom, void *vto, size_t len)
-{
-#if defined(HAS_BCOPY) && defined(HAS_SAFE_BCOPY)
-    bcopy(vfrom, vto, len);
-#else
-    const unsigned char *from = (const unsigned char *)vfrom;
-    unsigned char *to = (unsigned char *)vto;
-
-    PERL_ARGS_ASSERT_MY_BCOPY;
-
-    if (from - to >= 0) {
-	while (len--)
-	    *to++ = *from++;
-    }
-    else {
-	to += len;
-	from += len;
-	while (len--)
-	    *(--to) = *(--from);
-    }
-#endif
-
-    return vto;
-}
-#endif
-
-/* this is a drop-in replacement for memset() */
-#ifndef HAS_MEMSET
-void *
-Perl_my_memset(void *vloc, int ch, size_t len)
-{
-    unsigned char *loc = (unsigned char *)vloc;
-
-    PERL_ARGS_ASSERT_MY_MEMSET;
-
-    while (len--)
-	*loc++ = ch;
-    return vloc;
-}
-#endif
-
-/* this is a drop-in replacement for bzero() */
-#if !defined(HAS_BZERO) && !defined(HAS_MEMSET)
-void *
-Perl_my_bzero(void *vloc, size_t len)
-{
-    unsigned char *loc = (unsigned char *)vloc;
-
-    PERL_ARGS_ASSERT_MY_BZERO;
-
-    while (len--)
-	*loc++ = 0;
-    return vloc;
-}
-#endif
-
-/* this is a drop-in replacement for memcmp() */
-#if !defined(HAS_MEMCMP) || !defined(HAS_SANE_MEMCMP)
-int
-Perl_my_memcmp(const void *vs1, const void *vs2, size_t len)
-{
-    const U8 *a = (const U8 *)vs1;
-    const U8 *b = (const U8 *)vs2;
-    int tmp;
-
-    PERL_ARGS_ASSERT_MY_MEMCMP;
-
-    while (len--) {
-        if ((tmp = *a++ - *b++))
-	    return tmp;
-    }
-    return 0;
-}
-#endif /* !HAS_MEMCMP || !HAS_SANE_MEMCMP */
-
-#ifndef HAS_VPRINTF
-/* This vsprintf replacement should generally never get used, since
-   vsprintf was available in both System V and BSD 2.11.  (There may
-   be some cross-compilation or embedded set-ups where it is needed,
-   however.)
-
-   If you encounter a problem in this function, it's probably a symptom
-   that Configure failed to detect your system's vprintf() function.
-   See the section on "item vsprintf" in the INSTALL file.
-
-   This version may compile on systems with BSD-ish <stdio.h>,
-   but probably won't on others.
-*/
-
-#ifdef USE_CHAR_VSPRINTF
-char *
-#else
-int
-#endif
-vsprintf(char *dest, const char *pat, void *args)
-{
-    FILE fakebuf;
-
-#if defined(STDIO_PTR_LVALUE) && defined(STDIO_CNT_LVALUE)
-    FILE_ptr(&fakebuf) = (STDCHAR *) dest;
-    FILE_cnt(&fakebuf) = 32767;
-#else
-    /* These probably won't compile -- If you really need
-       this, you'll have to figure out some other method. */
-    fakebuf._ptr = dest;
-    fakebuf._cnt = 32767;
-#endif
-#ifndef _IOSTRG
-#define _IOSTRG 0
-#endif
-    fakebuf._flag = _IOWRT|_IOSTRG;
-    _doprnt(pat, args, &fakebuf);	/* what a kludge */
-#if defined(STDIO_PTR_LVALUE)
-    *(FILE_ptr(&fakebuf)++) = '\0';
-#else
-    /* PerlIO has probably #defined away fputc, but we want it here. */
-#  ifdef fputc
-#    undef fputc  /* XXX Should really restore it later */
-#  endif
-    (void)fputc('\0', &fakebuf);
-#endif
-#ifdef USE_CHAR_VSPRINTF
-    return(dest);
-#else
-    return 0;		/* perl doesn't use return value */
-#endif
-}
-
-#endif /* HAS_VPRINTF */
-
 PerlIO *
 Perl_my_popen_list(pTHX_ const char *mode, int n, SV **args)
 {
@@ -2375,10 +2238,10 @@ Perl_my_popen_list(pTHX_ const char *mode, int n, SV **args)
 	taint_env();
 	taint_proper("Insecure %s%s", "EXEC");
     }
-    if (PerlProc_pipe(p) < 0)
+    if (PerlProc_pipe_cloexec(p) < 0)
 	return NULL;
     /* Try for another pipe pair for error return */
-    if (PerlProc_pipe(pp) >= 0)
+    if (PerlProc_pipe_cloexec(pp) >= 0)
 	did_pipes = 1;
     while ((pid = PerlProc_fork()) < 0) {
 	if (errno != EAGAIN) {
@@ -2400,14 +2263,8 @@ Perl_my_popen_list(pTHX_ const char *mode, int n, SV **args)
 #define THIS that
 #define THAT This
 	/* Close parent's end of error status pipe (if any) */
-	if (did_pipes) {
+	if (did_pipes)
 	    PerlLIO_close(pp[0]);
-#if defined(HAS_FCNTL) && defined(F_SETFD) && defined(FD_CLOEXEC)
-	    /* Close error pipe automatically if exec works */
-	    if (fcntl(pp[1], F_SETFD, FD_CLOEXEC) < 0)
-                return NULL;
-#endif
-	}
 	/* Now dup our end of _the_ pipe to right position */
 	if (p[THIS] != (*mode == 'r')) {
 	    PerlLIO_dup2(p[THIS], *mode == 'r');
@@ -2437,12 +2294,11 @@ Perl_my_popen_list(pTHX_ const char *mode, int n, SV **args)
 #undef THAT
     }
     /* Parent */
-    do_execfree();	/* free any memory malloced by child on fork */
     if (did_pipes)
 	PerlLIO_close(pp[1]);
     /* Keep the lower of the two fd numbers */
     if (p[that] < p[This]) {
-	PerlLIO_dup2(p[This], p[that]);
+	PerlLIO_dup2_cloexec(p[This], p[that]);
 	PerlLIO_close(p[This]);
 	p[This] = p[that];
     }
@@ -2522,9 +2378,9 @@ Perl_my_popen(pTHX_ const char *cmd, const char *mode)
 	taint_env();
 	taint_proper("Insecure %s%s", "EXEC");
     }
-    if (PerlProc_pipe(p) < 0)
+    if (PerlProc_pipe_cloexec(p) < 0)
 	return NULL;
-    if (doexec && PerlProc_pipe(pp) >= 0)
+    if (doexec && PerlProc_pipe_cloexec(pp) >= 0)
 	did_pipes = 1;
     while ((pid = PerlProc_fork()) < 0) {
 	if (errno != EAGAIN) {
@@ -2547,13 +2403,8 @@ Perl_my_popen(pTHX_ const char *cmd, const char *mode)
 #undef THAT
 #define THIS that
 #define THAT This
-	if (did_pipes) {
+	if (did_pipes)
 	    PerlLIO_close(pp[0]);
-#if defined(HAS_FCNTL) && defined(F_SETFD)
-            if (fcntl(pp[1], F_SETFD, FD_CLOEXEC) < 0)
-                return NULL;
-#endif
-	}
 	if (p[THIS] != (*mode == 'r')) {
 	    PerlLIO_dup2(p[THIS], *mode == 'r');
 	    PerlLIO_close(p[THIS]);
@@ -2596,11 +2447,10 @@ Perl_my_popen(pTHX_ const char *cmd, const char *mode)
 #undef THIS
 #undef THAT
     }
-    do_execfree();	/* free any memory malloced by child on vfork */
     if (did_pipes)
 	PerlLIO_close(pp[1]);
     if (p[that] < p[This]) {
-	PerlLIO_dup2(p[This], p[that]);
+	PerlLIO_dup2_cloexec(p[This], p[that]);
 	PerlLIO_close(p[This]);
 	p[This] = p[that];
     }
@@ -2641,8 +2491,7 @@ Perl_my_popen(pTHX_ const char *cmd, const char *mode)
 	 PerlLIO_close(pp[0]);
     return PerlIO_fdopen(p[This], mode);
 }
-#else
-#if defined(DJGPP)
+#elif defined(DJGPP)
 FILE *djgpp_popen();
 PerlIO *
 Perl_my_popen(pTHX_ const char *cmd, const char *mode)
@@ -2654,15 +2503,12 @@ Perl_my_popen(pTHX_ const char *cmd, const char *mode)
     */
     return PerlIO_importFILE(djgpp_popen(cmd, mode), 0);
 }
-#else
-#if defined(__LIBCATAMOUNT__)
+#elif defined(__LIBCATAMOUNT__)
 PerlIO *
 Perl_my_popen(pTHX_ const char *cmd, const char *mode)
 {
     return NULL;
 }
-#endif
-#endif
 
 #endif /* !DOSISH */
 
@@ -2980,14 +2826,12 @@ Perl_my_pclose(pTHX_ PerlIO *ptr)
        : 0
     );
 }
-#else
-#if defined(__LIBCATAMOUNT__)
+#elif defined(__LIBCATAMOUNT__)
 I32
 Perl_my_pclose(pTHX_ PerlIO *ptr)
 {
     return -1;
 }
-#endif
 #endif /* !DOSISH */
 
 #if  (!defined(DOSISH) || defined(OS2) || defined(WIN32) || defined(NETWARE)) && !defined(__LIBCATAMOUNT__)
@@ -3352,9 +3196,8 @@ Perl_find_script(pTHX_ const char *scriptname, bool dosearch,
 	    if (len < sizeof tmpbuf)
 		tmpbuf[len] = '\0';
 #  else
-	    s = delimcpy(tmpbuf, tmpbuf + sizeof tmpbuf, s, bufend,
-			':',
-			&len);
+	    s = delimcpy_no_escape(tmpbuf, tmpbuf + sizeof tmpbuf, s, bufend,
+                                   ':', &len);
 #  endif
 	    if (s < bufend)
 		s++;
@@ -3445,12 +3288,10 @@ Perl_get_context(void)
     if (error)
 	Perl_croak_nocontext("panic: pthread_getspecific, error=%d", error);
     return (void*)t;
-#  else
-#    ifdef I_MACH_CTHREADS
+#  elif defined(I_MACH_CTHREADS)
     return (void*)cthread_data(cthread_self());
-#    else
+#  else
     return (void*)PTHREAD_GETSPECIFIC(PL_thr_key);
-#    endif
 #  endif
 #else
     return (void*)NULL;
@@ -3566,23 +3407,15 @@ Perl_my_fflush_all(pTHX)
     long open_max = -1;
 #   ifdef PERL_FFLUSH_ALL_FOPEN_MAX
     open_max = PERL_FFLUSH_ALL_FOPEN_MAX;
-#   else
-#    if defined(HAS_SYSCONF) && defined(_SC_OPEN_MAX)
+#   elif defined(HAS_SYSCONF) && defined(_SC_OPEN_MAX)
     open_max = sysconf(_SC_OPEN_MAX);
-#     else
-#      ifdef FOPEN_MAX
+#   elif defined(FOPEN_MAX)
     open_max = FOPEN_MAX;
-#      else
-#       ifdef OPEN_MAX
+#   elif defined(OPEN_MAX)
     open_max = OPEN_MAX;
-#       else
-#        ifdef _NFILE
+#   elif defined(_NFILE)
     open_max = _NFILE;
-#        endif
-#       endif
-#      endif
-#     endif
-#    endif
+#   endif
     if (open_max > 0) {
       long i;
       for (i = 0; i < open_max; i++)
@@ -3794,6 +3627,8 @@ Perl_mini_mktime(struct tm *ptm)
  * This algorithm also fails to handle years before A.D. 1 gracefully, but
  * that's still outside the scope for POSIX time manipulation, so I don't
  * care.
+ *
+ * - lwall
  */
 
     year = 1900 + ptm->tm_year;
@@ -3902,7 +3737,13 @@ Perl_my_strftime(pTHX_ const char *fmt, int sec, int min, int hour, int mday, in
 {
 #ifdef HAS_STRFTIME
 
-  /* Note that yday and wday effectively are ignored by this function, as mini_mktime() overwrites them */
+  /* strftime(), but with a different API so that the return value is a pointer
+   * to the formatted result (which MUST be arranged to be FREED BY THE
+   * CALLER).  This allows this function to increase the buffer size as needed,
+   * so that the caller doesn't have to worry about that.
+   *
+   * Note that yday and wday effectively are ignored by this function, as
+   * mini_mktime() overwrites them */
 
   char *buf;
   int buflen;
@@ -3939,9 +3780,9 @@ Perl_my_strftime(pTHX_ const char *fmt, int sec, int min, int hour, int mday, in
   buflen = 64;
   Newx(buf, buflen, char);
 
-  GCC_DIAG_IGNORE(-Wformat-nonliteral); /* fmt checked by caller */
+  GCC_DIAG_IGNORE_STMT(-Wformat-nonliteral); /* fmt checked by caller */
   len = strftime(buf, buflen, fmt, &mytm);
-  GCC_DIAG_RESTORE;
+  GCC_DIAG_RESTORE_STMT;
 
   /*
   ** The following is needed to handle to the situation where
@@ -3967,9 +3808,9 @@ Perl_my_strftime(pTHX_ const char *fmt, int sec, int min, int hour, int mday, in
     Renew(buf, bufsize, char);
     while (buf) {
 
-      GCC_DIAG_IGNORE(-Wformat-nonliteral); /* fmt checked by caller */
+      GCC_DIAG_IGNORE_STMT(-Wformat-nonliteral); /* fmt checked by caller */
       buflen = strftime(buf, bufsize, fmt, &mytm);
-      GCC_DIAG_RESTORE;
+      GCC_DIAG_RESTORE_STMT;
 
       if (buflen > 0 && buflen < bufsize)
 	break;
@@ -4335,6 +4176,10 @@ Perl_my_socketpair (int family, int type, int protocol, int fd[2]) {
 	return -1;
     }
 
+#ifdef SOCK_CLOEXEC
+    type &= ~SOCK_CLOEXEC;
+#endif
+
 #ifdef EMULATE_SOCKETPAIR_UDP
     if (type == SOCK_DGRAM)
 	return S_socketpair_udp(fd);
@@ -4394,12 +4239,10 @@ Perl_my_socketpair (int family, int type, int protocol, int fd[2]) {
   abort_tidy_up_and_fail:
 #ifdef ECONNABORTED
   errno = ECONNABORTED;	/* This would be the standard thing to do. */
-#else
-#  ifdef ECONNREFUSED
+#elif defined(ECONNREFUSED)
   errno = ECONNREFUSED;	/* E.g. Symbian does not have ECONNABORTED. */
-#  else
+#else
   errno = ETIMEDOUT;	/* Desperation time. */
-#  endif
 #endif
   tidy_up_and_fail:
     {
@@ -4593,7 +4436,7 @@ Perl_seed(pTHX)
 #    define PERL_RANDOM_DEVICE "/dev/urandom"
 #  endif
 #endif
-    fd = PerlLIO_open(PERL_RANDOM_DEVICE, 0);
+    fd = PerlLIO_open_cloexec(PERL_RANDOM_DEVICE, 0);
     if (fd != -1) {
     	if (PerlLIO_read(fd, (void*)&u, sizeof u) != sizeof u)
 	    u = 0;
@@ -4632,7 +4475,6 @@ Perl_get_hash_seed(pTHX_ unsigned char * const seed_buffer)
     env_pv= PerlEnv_getenv("PERL_HASH_SEED");
 
     if ( env_pv )
-#  ifndef USE_HASH_SEED_EXPLICIT
     {
         /* ignore leading spaces */
         while (isSPACE(*env_pv))
@@ -4667,13 +4509,10 @@ Perl_get_hash_seed(pTHX_ unsigned char * const seed_buffer)
         /* should we warn about insufficient hex? */
     }
     else
-#  endif
-#endif
+#endif /* NO_PERL_HASH_ENV */
     {
-        (void)seedDrand01((Rand_seed_t)seed());
-
         for( i = 0; i < PERL_HASH_SEED_BYTES; i++ ) {
-            seed_buffer[i] = (unsigned char)(Drand01() * (U8_MAX+1));
+            seed_buffer[i] = (unsigned char)(Perl_internal_drand48() * (U8_MAX+1));
         }
     }
 #ifdef USE_PERL_PERTURB_KEYS
@@ -4997,28 +4836,6 @@ Perl_mem_log_del_sv(const SV *sv,
 #endif /* PERL_MEM_LOG */
 
 /*
-=for apidoc my_sprintf
-
-The C library C<sprintf>, wrapped if necessary, to ensure that it will return
-the length of the string written to the buffer.  Only rare pre-ANSI systems
-need the wrapper function - usually this is a direct call to C<sprintf>.
-
-=cut
-*/
-#ifndef SPRINTF_RETURNS_STRLEN
-int
-Perl_my_sprintf(char *buffer, const char* pat, ...)
-{
-    va_list args;
-    PERL_ARGS_ASSERT_MY_SPRINTF;
-    va_start(args, pat);
-    vsprintf(buffer, pat, args);
-    va_end(args);
-    return strlen(buffer);
-}
-#endif
-
-/*
 =for apidoc quadmath_format_single
 
 C<quadmath_snprintf()> is very strict about its C<format> string and will
@@ -5204,7 +5021,7 @@ Perl_my_snprintf(char *buffer, const Size_t len, const char *format, ...)
 #ifdef HAS_VSNPRINTF
     /* vsnprintf() shows failure with >= len */
         ||
-        (len > 0 && (Size_t)retval >= len) 
+        (len > 0 && (Size_t)retval >= len)
 #endif
     )
 	Perl_croak_nocontext("panic: my_snprintf buffer overflow");
@@ -5260,7 +5077,7 @@ Perl_my_vsnprintf(char *buffer, const Size_t len, const char *format, va_list ap
 #ifdef HAS_VSNPRINTF
     /* vsnprintf() shows failure with >= len */
         ||
-        (len > 0 && (Size_t)retval >= len) 
+        (len > 0 && (Size_t)retval >= len)
 #endif
     )
 	Perl_croak_nocontext("panic: my_vsnprintf buffer overflow");
@@ -5340,13 +5157,9 @@ Perl_my_cxt_init(pTHX_ int *index, size_t size)
     PERL_ARGS_ASSERT_MY_CXT_INIT;
     if (*index == -1) {
 	/* this module hasn't been allocated an index yet */
-#if defined(USE_ITHREADS)
 	MUTEX_LOCK(&PL_my_ctx_mutex);
-#endif
 	*index = PL_my_cxt_index++;
-#if defined(USE_ITHREADS)
 	MUTEX_UNLOCK(&PL_my_ctx_mutex);
-#endif
     }
     
     /* make sure the array is big enough */
@@ -5403,13 +5216,9 @@ Perl_my_cxt_init(pTHX_ const char *my_cxt_key, size_t size)
     index = Perl_my_cxt_index(aTHX_ my_cxt_key);
     if (index == -1) {
 	/* this module hasn't been allocated an index yet */
-#if defined(USE_ITHREADS)
 	MUTEX_LOCK(&PL_my_ctx_mutex);
-#endif
 	index = PL_my_cxt_index++;
-#if defined(USE_ITHREADS)
 	MUTEX_UNLOCK(&PL_my_ctx_mutex);
-#endif
     }
 
     /* make sure the array is big enough */
@@ -5699,6 +5508,36 @@ Perl_my_strlcpy(char *dst, const char *src, Size_t size)
 }
 #endif
 
+/*
+=for apidoc my_strnlen
+
+The C library C<strnlen> if available, or a Perl implementation of it.
+
+C<my_strnlen()> computes the length of the string, up to C<maxlen>
+characters.  It will will never attempt to address more than C<maxlen>
+characters, making it suitable for use with strings that are not
+guaranteed to be NUL-terminated.
+
+=cut
+
+Description stolen from http://man.openbsd.org/strnlen.3,
+implementation stolen from PostgreSQL.
+*/
+#ifndef HAS_STRNLEN
+Size_t
+Perl_my_strnlen(const char *str, Size_t maxlen)
+{
+    const char *p = str;
+
+    PERL_ARGS_ASSERT_MY_STRNLEN;
+
+    while(maxlen-- && *p)
+        p++;
+
+    return p - str;
+}
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1300) && (_MSC_VER < 1400) && (WINVER < 0x0500)
 /* VC7 or 7.1, building with pre-VC7 runtime libraries. */
 long _ftol( double ); /* Defined by VC6 C libs. */
@@ -5792,6 +5631,56 @@ Perl_my_dirfd(DIR * dir) {
 #endif 
 }
 
+#if !defined(HAS_MKOSTEMP) || !defined(HAS_MKSTEMP)
+
+#define TEMP_FILE_CH "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvxyz0123456789"
+#define TEMP_FILE_CH_COUNT (sizeof(TEMP_FILE_CH)-1)
+
+static int
+S_my_mkostemp(char *templte, int flags) {
+    dTHX;
+    STRLEN len = strlen(templte);
+    int fd;
+    int attempts = 0;
+
+    if (len < 6 ||
+        templte[len-1] != 'X' || templte[len-2] != 'X' || templte[len-3] != 'X' ||
+        templte[len-4] != 'X' || templte[len-5] != 'X' || templte[len-6] != 'X') {
+        SETERRNO(EINVAL, LIB_INVARG);
+        return -1;
+    }
+
+    do {
+        int i;
+        for (i = 1; i <= 6; ++i) {
+            templte[len-i] = TEMP_FILE_CH[(int)(Perl_internal_drand48() * TEMP_FILE_CH_COUNT)];
+        }
+        fd = PerlLIO_open3(templte, O_RDWR | O_CREAT | O_EXCL | flags, 0600);
+    } while (fd == -1 && errno == EEXIST && ++attempts <= 100);
+
+    return fd;
+}
+
+#endif
+
+#ifndef HAS_MKOSTEMP
+int
+Perl_my_mkostemp(char *templte, int flags)
+{
+    PERL_ARGS_ASSERT_MY_MKOSTEMP;
+    return S_my_mkostemp(templte, flags);
+}
+#endif
+
+#ifndef HAS_MKSTEMP
+int
+Perl_my_mkstemp(char *templte)
+{
+    PERL_ARGS_ASSERT_MY_MKSTEMP;
+    return S_my_mkostemp(templte, 0);
+}
+#endif
+
 REGEXP *
 Perl_get_re_arg(pTHX_ SV *sv) {
 
@@ -5832,9 +5721,9 @@ Perl_get_re_arg(pTHX_ SV *sv) {
 
 #ifdef PERL_DRAND48_QUAD
 
-#define DRAND48_MULT U64_CONST(0x5deece66d)
+#define DRAND48_MULT UINT64_C(0x5deece66d)
 #define DRAND48_ADD  0xb
-#define DRAND48_MASK U64_CONST(0xffffffffffff)
+#define DRAND48_MASK UINT64_C(0xffffffffffff)
 
 #else
 
@@ -6105,17 +5994,17 @@ static const char* atos_parse(const char* p,
     UV uv;
 
     /* Skip trailing whitespace. */
-    while (p > start && isspace(*p)) p--;
+    while (p > start && isSPACE(*p)) p--;
     /* Now we should be at the close paren. */
     if (p == start || *p != ')')
         return NULL;
     close_paren = p;
     p--;
     /* Now we should be in the line number. */
-    if (p == start || !isdigit(*p))
+    if (p == start || !isDIGIT(*p))
         return NULL;
     /* Skip over the digits. */
-    while (p > start && isdigit(*p))
+    while (p > start && isDIGIT(*p))
         p--;
     /* Now we should be at the colon. */
     if (p == start || *p != ':')
@@ -6160,7 +6049,7 @@ static void atos_symbolize(atos_context* ctx,
      * the object name (used as "-o '%s'" ), leave since at least
      * partially the user controls it. */
     for (p = ctx->fname; *p; p++) {
-        if (*p == '\'' || iscntrl(*p)) {
+        if (*p == '\'' || isCNTRL(*p)) {
             ctx->unavail = TRUE;
             return;
         }

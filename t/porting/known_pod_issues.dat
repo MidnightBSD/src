@@ -147,6 +147,7 @@ ioctl(2)
 IPC::Run
 IPC::Shareable
 IPC::Signal
+ispunct(2)
 kill(3)
 langinfo(3)
 LaTeX::Encode
@@ -159,6 +160,7 @@ Lingua::ZH::Romanize::Pinyin
 List::Gather
 listen(2)
 local::lib
+localeconv(3)
 lockf(3)
 Log::Message
 Log::Message::Config
@@ -239,6 +241,7 @@ provide
 ptar(1)
 ptargrep(1)
 pwd_mkdb(8)
+querylocale(3)
 RDF::Trine
 read(2)
 Readonly
@@ -276,6 +279,7 @@ SOM
 splain
 sprintf(3)
 stat(2)
+strftime(3)
 strictures
 String::Base
 String::Scanf
@@ -328,6 +332,10 @@ YAML::Syck
 YAML::Tiny
 dist/data-dumper/changes	Verbatim line length including indents exceeds 79 by	1
 dist/data-dumper/dumper.pm	? Should you be using L<...> instead of	1
+dist/devel-ppport/parts/inc/ppphdoc	Unknown directive: =dontwarn	1
+dist/devel-ppport/parts/inc/ppphdoc	Unknown directive: =implementation	1
+dist/devel-ppport/parts/inc/ppphdoc	Unknown directive: =provides	1
+dist/exporter/lib/exporter.pm	Verbatim line length including indents exceeds 79 by	2
 dist/net-ping/lib/net/ping.pm	Apparent broken link	1
 ext/amiga-exec/exec.pm	Verbatim line length including indents exceeds 79 by	1
 ext/dynaloader/dynaloader.pm	Verbatim line length including indents exceeds 79 by	1
@@ -348,6 +356,7 @@ pod/perlgit.pod	? Should you be using F<...> or maybe L<...> instead of	1
 pod/perlgit.pod	Verbatim line length including indents exceeds 79 by	1
 pod/perlguts.pod	? Should you be using L<...> instead of	1
 pod/perlhack.pod	? Should you be using L<...> instead of	1
+pod/perlhack.pod	Verbatim line length including indents exceeds 79 by	2
 pod/perlhist.pod	Verbatim line length including indents exceeds 79 by	1
 pod/perlhpux.pod	Verbatim line length including indents exceeds 79 by	1
 pod/perlinterp.pod	? Should you be using L<...> instead of	1

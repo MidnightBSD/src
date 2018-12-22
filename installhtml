@@ -4,10 +4,11 @@
 
 use strict;
 use Config;		# for config options in the makefile
+use File::Path qw(remove_tree);
 use File::Spec::Functions qw(rel2abs no_upwards);
 use Getopt::Long;	# for command-line parsing
 use Cwd;
-use Pod::Html 'anchorify';
+use Pod::Html 1.23 qw(anchorify relativize_url);
 
 =head1 NAME
 
@@ -164,7 +165,7 @@ usage("") unless @ARGV;
 # See vms/descrip_mms.template -> descrip.mms for invocation.
 if ( $^O eq 'VMS' ) { @ARGV = split(/\s+/,$ARGV[0]); }
 
-use vars qw( %Options );
+our %Options;
 
 # parse the command-line
 my $result = GetOptions( \%Options, qw(
@@ -240,10 +241,10 @@ foreach my $dir (@splithead) {
     $/ = "";
     my @data = ();
     while (<H>) {
-	last if /name="name"/i;
+	last if m!<h1 id="NAME">NAME</h1>!;
 	$_ =~ s{href="#(.*)">}{
-	    my $url = "$pod/$1.html" ;
-	    $url = Pod::Html::relativize_url( $url, "$file.html" )
+	    my $url = "$file/@{[anchorify(qq($1))]}.html" ;
+	    $url = relativize_url( $url, "$file.html" )
 	    if ( ! defined $Options{htmlroot} || $Options{htmlroot} eq '' );
 	    "href=\"$url\">" ;
 	}egi;
@@ -254,9 +255,11 @@ foreach my $dir (@splithead) {
     # now rewrite the file
     open(H, '>', "$file.html") ||
 	die "$0: error opening $file.html for output: $!\n";
-    print H "@data", "\n";
+    print H @data, "</body>\n\n</html>\n\n\n";
     close(H);
 }
+
+remove_tree(@splitdirs, {safe=>1});
 
 ##############################################################################
 
@@ -321,9 +324,9 @@ sub create_index {
 		m#<h1 id="NAME">NAME</h1>\s*<p>\s*(\S+)\s+-\s+(\S.*?\S)</p>#);
 	defined $lcp1 or die "$0: can't find NAME section in $dir/$file\n";
 
-	my $url= "$pod/$file" ;
+	my $url= "$dir/$file" ;
 	if ( ! defined $Options{htmlroot} || $Options{htmlroot} eq '' ) {
-	    $url = Pod::Html::relativize_url( "$pod/$file", $html ) ;
+	    $url = relativize_url( $url, $html ) ;
 	}
 
 	print HTML qq(<DT><A HREF="$url">);
@@ -378,10 +381,9 @@ sub split_on_item {
 
 	# split the pod
 	push(@$splitdirs, "$podroot/$dirname");
-	if (! -d "$podroot/$dirname") {
-	    mkdir("$podroot/$dirname", 0755) ||
+	-d "$podroot/$dirname" and remove_tree("$podroot/$dirname", {safe=>1});
+	mkdir("$podroot/$dirname", 0755) ||
 		    die "$0: error creating directory $podroot/$dirname: $!\n";
-	}
 	chdir("$podroot/$dirname") ||
 	    die "$0: error changing to directory $podroot/$dirname: $!\n";
 	die "$splitter not found. Use '-splitpod dir' option.\n"
@@ -437,9 +439,9 @@ sub splitpod {
     my $dir = $pod;
     $dir =~ s/\.pod//g;
     push(@$splitdirs, "$poddir/$dir");
+    -d "$poddir/$dir" and remove_tree("$poddir/$dir", {safe=>1});
     mkdir("$poddir/$dir", 0755) ||
-	die "$0: could not create directory $poddir/$dir: $!\n"
-	unless -d "$poddir/$dir";
+	die "$0: could not create directory $poddir/$dir: $!\n";
 
     $poddata[0] =~ /^\s*=head[1-6]\s+(.*)/;
     $section    = "";

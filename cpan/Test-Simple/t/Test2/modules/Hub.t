@@ -33,7 +33,7 @@ tests basic => sub {
 
     my $send_event = sub {
         my ($msg) = @_;
-        my $e = My::Event->new(msg => $msg, trace => 'fake');
+        my $e = My::Event->new(msg => $msg, trace => Test2::EventFacet::Trace->new(frame => ['fake', 'fake.t', 1]));
         $hub->send($e);
     };
 
@@ -55,7 +55,7 @@ tests follow_ups => sub {
     my $hub = Test2::Hub->new;
     $hub->set_count(1);
 
-    my $trace = Test2::Util::Trace->new(
+    my $trace = Test2::EventFacet::Trace->new(
         frame => [__PACKAGE__, __FILE__, __LINE__],
     );
 
@@ -102,7 +102,7 @@ tests IPC => sub {
 
     my $build_event = sub {
         my ($msg) = @_;
-        return My::Event->new(msg => $msg, trace => 'fake');
+        return My::Event->new(msg => $msg, trace => Test2::EventFacet::Trace->new(frame => ['fake', 'fake.t', 1]));
     };
 
     my $e1 = $build_event->('foo');
@@ -121,11 +121,8 @@ tests IPC => sub {
         my $old = $hub->format(My::Formatter->new);
 
         ok($old->isa('My::Formatter'), "old formatter");
-        is_deeply(
-            $old,
-            [$e1, $e2, $e3],
-            "Formatter got all events ($name)"
-        );
+        is(@$old, 3, "Formatter got all events ($name)");
+        ok($_->{hubs}, "Set the hubs") for @$old;
     };
 
     if (CAN_REALLY_FORK) {
@@ -175,7 +172,7 @@ tests listen => sub {
     my $ok1 = Test2::Event::Ok->new(
         pass => 1,
         name => 'foo',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -183,7 +180,7 @@ tests listen => sub {
     my $ok2 = Test2::Event::Ok->new(
         pass => 0,
         name => 'bar',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -191,7 +188,7 @@ tests listen => sub {
     my $ok3 = Test2::Event::Ok->new(
         pass => 1,
         name => 'baz',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -272,7 +269,7 @@ tests filter => sub {
     my $ok1 = Test2::Event::Ok->new(
         pass => 1,
         name => 'foo',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -280,7 +277,7 @@ tests filter => sub {
     my $ok2 = Test2::Event::Ok->new(
         pass => 0,
         name => 'bar',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -288,7 +285,7 @@ tests filter => sub {
     my $ok3 = Test2::Event::Ok->new(
         pass => 1,
         name => 'baz',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -342,7 +339,7 @@ tests pre_filter => sub {
     my $ok1 = Test2::Event::Ok->new(
         pass => 1,
         name => 'foo',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -350,7 +347,7 @@ tests pre_filter => sub {
     my $ok2 = Test2::Event::Ok->new(
         pass => 0,
         name => 'bar',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -358,7 +355,7 @@ tests pre_filter => sub {
     my $ok3 = Test2::Event::Ok->new(
         pass => 1,
         name => 'baz',
-        trace => Test2::Util::Trace->new(
+        trace => Test2::EventFacet::Trace->new(
             frame => [ __PACKAGE__, __FILE__, __LINE__ ],
         ),
     );
@@ -449,7 +446,7 @@ tests state => sub {
     ok(!eval { $hub->plan(5); 1 }, "Cannot change plan");
     like($@, qr/You cannot change the plan/, "Got error");
 
-    my $trace = Test2::Util::Trace->new(frame => ['Foo::Bar', 'foo.t', 42, 'blah']);
+    my $trace = Test2::EventFacet::Trace->new(frame => ['Foo::Bar', 'foo.t', 42, 'blah']);
     $hub->finalize($trace);
     my $ok = eval { $hub->finalize($trace) };
     my $err = $@;

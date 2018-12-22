@@ -348,8 +348,8 @@ get_emd_part(SV **prev_pathp, STRLEN *const len, char *trailing_path, ...)
 	if (!ptr || stricmp(ptr+1, strip) != 0) {
 	    /* ... but not if component matches m|5\.$patchlevel.*| */
 	    if (!ptr || !(*strip == '5' && *(ptr+1) == '5'
-			  && strncmp(strip, base, baselen) == 0
-			  && strncmp(ptr+1, base, baselen) == 0))
+			  && strnEQ(strip, base, baselen)
+			  && strnEQ(ptr+1, base, baselen)))
 	    {
 		*optr = '/';
 		ptr = optr;
@@ -619,6 +619,7 @@ Perl_do_aspawn(pTHX_ SV *really, SV **mark, SV **sp)
     int status;
     int flag = P_WAIT;
     int index = 0;
+    int eno;
 
     PERL_ARGS_ASSERT_DO_ASPAWN;
 
@@ -645,7 +646,7 @@ Perl_do_aspawn(pTHX_ SV *really, SV **mark, SV **sp)
 			   (const char*)(really ? SvPV_nolen(really) : argv[0]),
 			   (const char* const*)argv);
 
-    if (status < 0 && (errno == ENOEXEC || errno == ENOENT)) {
+    if (status < 0 && (eno = errno, (eno == ENOEXEC || eno == ENOENT))) {
 	/* possible shell-builtin, invoke with shell */
 	int sh_items;
 	sh_items = w32_perlshell_items;
@@ -1832,7 +1833,7 @@ win32_getenv(const char *name)
 		char *end = strchr(cur,'=');
 		if (end && end != cur) {
 		    *end = '\0';
-		    if (!strcmp(cur,name)) {
+		    if (strEQ(cur,name)) {
 			curitem = sv_2mortal(newSVpv(end+1,0));
 			*end = '=';
 			break;
@@ -1849,7 +1850,7 @@ win32_getenv(const char *name)
 	else {
 	    /* last ditch: allow any environment variables that begin with 'PERL'
 	       to be obtained from the registry, if found there */
-	    if (strncmp(name, "PERL", 4) == 0)
+	    if (strBEGINs(name, "PERL"))
 		(void)get_regstr(name, &curitem);
 	}
 #endif
