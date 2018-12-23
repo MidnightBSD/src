@@ -518,33 +518,44 @@ Scan and skip for a numeric decimal separator (radix).
 bool
 Perl_grok_numeric_radix(pTHX_ const char **sp, const char *send)
 {
-#ifdef USE_LOCALE_NUMERIC
     PERL_ARGS_ASSERT_GROK_NUMERIC_RADIX;
+
+#ifdef USE_LOCALE_NUMERIC
 
     if (IN_LC(LC_NUMERIC)) {
+        STRLEN len;
+        char * radix;
+        bool matches_radix = FALSE;
         DECLARATION_FOR_LC_NUMERIC_MANIPULATION;
-        STORE_LC_NUMERIC_SET_TO_NEEDED();
-        if (PL_numeric_radix_sv) {
-            STRLEN len;
-            const char * const radix = SvPV(PL_numeric_radix_sv, len);
-            if (*sp + len <= send && memEQ(*sp, radix, len)) {
-                *sp += len;
-                RESTORE_LC_NUMERIC();
-                return TRUE;
-            }
-        }
+
+        STORE_LC_NUMERIC_FORCE_TO_UNDERLYING();
+
+        radix = SvPV(PL_numeric_radix_sv, len);
+        radix = savepvn(radix, len);
+
         RESTORE_LC_NUMERIC();
+
+        if (*sp + len <= send) {
+            matches_radix = memEQ(*sp, radix, len);
+        }
+
+        Safefree(radix);
+
+        if (matches_radix) {
+            *sp += len;
+            return TRUE;
+        }
     }
-    /* always try "." if numeric radix didn't match because
-     * we may have data from different locales mixed */
+
 #endif
 
-    PERL_ARGS_ASSERT_GROK_NUMERIC_RADIX;
-
+    /* always try "." if numeric radix didn't match because
+     * we may have data from different locales mixed */
     if (*sp < send && **sp == '.') {
         ++*sp;
         return TRUE;
     }
+
     return FALSE;
 }
 
@@ -1013,7 +1024,7 @@ Perl_grok_number_flags(pTHX_ const char *pv, STRLEN len, UV *valuep, U32 flags)
     s++;
   if (s >= send)
     return numtype;
-  if (len == 10 && _memEQs(pv, "0 but true")) {
+  if (memEQs(pv, len, "0 but true")) {
     if (valuep)
       *valuep = 0;
     return IS_NUMBER_IN_UV;
@@ -1209,13 +1220,21 @@ S_mulexp10(NV value, I32 exponent)
 NV
 Perl_my_atof(pTHX_ const char* s)
 {
+    /* 's' must be NUL terminated */
+
     NV x = 0.0;
-#ifdef USE_QUADMATH
-    Perl_my_atof2(aTHX_ s, &x);
-    return x;
-#else
-#  ifdef USE_LOCALE_NUMERIC
+
     PERL_ARGS_ASSERT_MY_ATOF;
+
+#ifdef USE_QUADMATH
+
+    Perl_my_atof2(aTHX_ s, &x);
+
+#elif ! defined(USE_LOCALE_NUMERIC)
+
+    Perl_atof2(s, x);
+
+#else
 
     {
         DECLARATION_FOR_LC_NUMERIC_MANIPULATION;
@@ -1228,26 +1247,31 @@ Perl_my_atof(pTHX_ const char* s)
              * that we have to determine this beforehand because on some
              * systems, Perl_atof2 is just a wrapper around the system's atof.
              * */
-            const char * const standard = strchr(s, '.');
-            const char * const local = strstr(s, SvPV_nolen(PL_numeric_radix_sv));
-            const bool use_standard_radix = standard && (!local || standard < local);
+            const char * const standard_pos = strchr(s, '.');
+            const char * const local_pos
+                                  = strstr(s, SvPV_nolen(PL_numeric_radix_sv));
+            const bool use_standard_radix
+                    = standard_pos && (!local_pos || standard_pos < local_pos);
 
-            if (use_standard_radix)
+            if (use_standard_radix) {
                 SET_NUMERIC_STANDARD();
+                LOCK_LC_NUMERIC_STANDARD();
+            }
 
             Perl_atof2(s, x);
 
-            if (use_standard_radix)
+            if (use_standard_radix) {
+                UNLOCK_LC_NUMERIC_STANDARD();
                 SET_NUMERIC_UNDERLYING();
+            }
         }
         else
             Perl_atof2(s, x);
         RESTORE_LC_NUMERIC();
     }
-#  else
-    Perl_atof2(s, x);
-#  endif
+
 #endif
+
     return x;
 }
 
@@ -1485,9 +1509,9 @@ Perl_my_atof2(pTHX_ const char* orig, NV* value)
 	else if (!seen_dp && GROK_NUMERIC_RADIX(&s, send)) {
 	    seen_dp = 1;
 	    if (sig_digits > MAX_SIG_DIGITS) {
-		do {
+		while (isDIGIT(*s)) {
 		    ++s;
-		} while (isDIGIT(*s));
+		}
 		break;
 	    }
 	}

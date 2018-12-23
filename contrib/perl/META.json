@@ -21,6 +21,7 @@
          "dist/Carp",
          "dist/constant",
          "dist/Data-Dumper",
+         "dist/Devel-PPPort",
          "dist/Devel-SelfStubber",
          "dist/Dumpvalue",
          "dist/encoding-warnings",
@@ -126,6 +127,6 @@
          "url" : "http://perl5.git.perl.org/"
       }
    },
-   "version" : "5.026000",
-   "x_serialization_backend" : "JSON::PP version 2.27400_02"
+   "version" : "5.028000",
+   "x_serialization_backend" : "JSON::PP version 2.97001"
 }

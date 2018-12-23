@@ -5,7 +5,7 @@ use warnings;
 no warnings 'surrogate';    # surrogates can be inputs to this
 use charnames ();
 
-our $VERSION = '0.68';
+our $VERSION = '0.70';
 
 require Exporter;
 
@@ -140,28 +140,18 @@ Note that the largest code point in Unicode is U+10FFFF.
 
 =cut
 
-my $BLOCKSFH;
-my $VERSIONFH;
-my $CASEFOLDFH;
-my $CASESPECFH;
-my $NAMEDSEQFH;
 my $v_unicode_version;  # v-string.
 
 sub openunicode {
-    my ($rfh, @path) = @_;
-    my $f;
-    unless (defined $$rfh) {
-	for my $d (@INC) {
-	    use File::Spec;
-	    $f = File::Spec->catfile($d, "unicore", @path);
-	    last if open($$rfh, '<', $f);
-	    undef $f;
-	}
-	croak __PACKAGE__, ": failed to find ",
-              File::Spec->catfile(@path), " in @INC"
-	    unless defined $f;
+    my (@path) = @_;
+    my $rfh;
+    for my $d (@INC) {
+        use File::Spec;
+        my $f = File::Spec->catfile($d, "unicore", @path);
+        return $rfh if open($rfh, '<', $f);
     }
-    return $f;
+    croak __PACKAGE__, ": failed to find ",
+        File::Spec->catfile("unicore", @path), " in @INC";
 }
 
 sub _dclone ($) {   # Use Storable::dclone if available; otherwise emulate it.
@@ -699,14 +689,14 @@ that are internal-only.
 
 =cut
 
-sub charprop ($$) {
-    my ($input_cp, $prop) = @_;
+sub charprop ($$;$) {
+    my ($input_cp, $prop, $internal_ok) = @_;
 
     my $cp = _getcode($input_cp);
     croak __PACKAGE__, "::charprop: unknown code point '$input_cp'" unless defined $cp;
 
     my ($list_ref, $map_ref, $format, $default)
-                                      = prop_invmap($prop);
+                                      = prop_invmap($prop, $internal_ok);
     return undef unless defined $list_ref;
 
     my $i = search_invlist($list_ref, $cp);
@@ -880,10 +870,11 @@ sub _charblocks {
             push @BLOCKS, $subrange;
             push @{$BLOCKS{'No_Block'}}, $subrange;
         }
-        elsif (openunicode(\$BLOCKSFH, "Blocks.txt")) {
+        else {
+            my $blocksfh = openunicode("Blocks.txt");
 	    local $_;
 	    local $/ = "\n";
-	    while (<$BLOCKSFH>) {
+	    while (<$blocksfh>) {
 
                 # Old versions used a different syntax to mark the range.
                 $_ =~ s/;\s+/../ if $v_unicode_version lt v3.1.0;
@@ -895,7 +886,6 @@ sub _charblocks {
 		    push @{$BLOCKS{$3}}, $subrange;
 		}
 	    }
-	    close($BLOCKSFH);
             if (! IS_ASCII_PLATFORM) {
                 # The first two blocks, through 0xFF, are wrong on EBCDIC
                 # platforms.
@@ -1648,13 +1638,11 @@ my %CASESPEC;
 sub _casespec {
     unless (%CASESPEC) {
         UnicodeVersion() unless defined $v_unicode_version;
-        if ($v_unicode_version lt v2.1.8) {
-            %CASESPEC = {};
-        }
-	elsif (openunicode(\$CASESPECFH, "SpecialCasing.txt")) {
+        if ($v_unicode_version ge v2.1.8) {
+            my $casespecfh = openunicode("SpecialCasing.txt");
 	    local $_;
 	    local $/ = "\n";
-	    while (<$CASESPECFH>) {
+	    while (<$casespecfh>) {
 		if (/^([0-9A-F]+); ([0-9A-F]+(?: [0-9A-F]+)*)?; ([0-9A-F]+(?: [0-9A-F]+)*)?; ([0-9A-F]+(?: [0-9A-F]+)*)?; (\w+(?: \w+)*)?/) {
 
 		    my ($hexcode, $lower, $title, $upper, $condition) =
@@ -1719,7 +1707,6 @@ sub _casespec {
 		    }
 		}
 	    }
-	    close($CASESPECFH);
 	}
     }
 }
@@ -1769,19 +1756,17 @@ my %NAMEDSEQ;
 
 sub _namedseq {
     unless (%NAMEDSEQ) {
-	if (openunicode(\$NAMEDSEQFH, "Name.pl")) {
-	    local $_;
-	    local $/ = "\n";
-	    while (<$NAMEDSEQFH>) {
-		if (/^ [0-9A-F]+ \  /x) {
-                    chomp;
-                    my ($sequence, $name) = split /\t/;
-		    my @s = map { chr(hex($_)) } split(' ', $sequence);
-		    $NAMEDSEQ{$name} = join("", @s);
-		}
-	    }
-	    close($NAMEDSEQFH);
-	}
+        my $namedseqfh = openunicode("Name.pl");
+        local $_;
+        local $/ = "\n";
+        while (<$namedseqfh>) {
+            if (/^ [0-9A-F]+ \  /x) {
+                chomp;
+                my ($sequence, $name) = split /\t/;
+                my @s = map { chr(hex($_)) } split(' ', $sequence);
+                $NAMEDSEQ{$name} = join("", @s);
+            }
+        }
     }
 }
 
@@ -1865,14 +1850,18 @@ sub _numeric {
 
     my $val = num("123");
     my $one_quarter = num("\N{VULGAR FRACTION 1/4}");
+    my $val = num("12a", \$valid_length);  # $valid_length contains 2
 
 C<num()> returns the numeric value of the input Unicode string; or C<undef> if it
 doesn't think the entire string has a completely valid, safe numeric value.
+If called with an optional second parameter, a reference to a scalar, C<num()>
+will set the scalar to the length of any valid initial substring; or to 0 if none.
 
 If the string is just one character in length, the Unicode numeric value
-is returned if it has one, or C<undef> otherwise.  Note that this need
-not be a whole number.  C<num("\N{TIBETAN DIGIT HALF ZERO}")>, for
-example returns -0.5.
+is returned if it has one, or C<undef> otherwise.  If the optional scalar ref
+is passed, it would be set to 1 if the return is valid; or 0 if the return is
+C<undef>.  Note that the numeric value returned need not be a whole number.
+C<num("\N{TIBETAN DIGIT HALF ZERO}")>, for example returns -0.5.
 
 =cut
 
@@ -1894,7 +1883,9 @@ is returned.  A further restriction is that the digits all have to be of
 the same form.  A half-width digit mixed with a full-width one will
 return C<undef>.  The Arabic script has two sets of digits;  C<num> will
 return C<undef> unless all the digits in the string come from the same
-set.
+set.  In all cases, the optional scalar ref parameter is set to how
+long any valid initial substring of digits is; hence it will be set to the
+entire string length if the main return value is not C<undef>.
 
 C<num> errs on the side of safety, and there may be valid strings of
 decimal digits that it doesn't recognize.  Note that Unicode defines
@@ -1918,16 +1909,30 @@ change these into digits, and then call C<num> on the result.
 # consider those, and return the <decomposition> type in the second
 # array element.
 
-sub num {
-    my $string = $_[0];
+sub num ($;$) {
+    my ($string, $retlen_ref) = @_;
+
+    use feature 'unicode_strings';
 
     _numeric unless %NUMERIC;
+    $$retlen_ref = 0 if $retlen_ref;    # Assume will fail
 
-    my $length = length($string);
-    return $NUMERIC{ord($string)} if $length == 1;
-    return if $string =~ /\D/;
+    my $length = length $string;
+    return if $length == 0;
+
     my $first_ord = ord(substr($string, 0, 1));
+    return if ! exists  $NUMERIC{$first_ord}
+           || ! defined $NUMERIC{$first_ord};
+
+    # Here, we know the first character is numeric
     my $value = $NUMERIC{$first_ord};
+    $$retlen_ref = 1 if $retlen_ref;    # Assume only this one is numeric
+
+    return $value if $length == 1;
+
+    # Here, the input is longer than a single character.  To be valid, it must
+    # be entirely decimal digits, which means it must start with one.
+    return if $string =~ / ^ \D /x;
 
     # To be a valid decimal number, it should be in a block of 10 consecutive
     # characters, whose values are 0, 1, 2, ... 9.  Therefore this digit's
@@ -1939,7 +1944,8 @@ sub num {
     # release, we verify that this first character is a member of such a
     # block.  That is, that the block of characters surrounding this one
     # consists of all \d characters whose numeric values are the expected
-    # ones.
+    # ones.  If not, then this single character is numeric, but the string as
+    # a whole is not considered to be.
     UnicodeVersion() unless defined $v_unicode_version;
     if ($v_unicode_version lt v6.0.0) {
         for my $i (0 .. 9) {
@@ -1961,10 +1967,14 @@ sub num {
         # function.
         my $ord = ord(substr($string, $i, 1));
         my $digit = $ord - $zero_ord;
-        return unless $digit >= 0 && $digit <= 9;
+        if ($digit < 0 || $digit > 9) {
+            $$retlen_ref = $i if $retlen_ref;
+            return;
+        }
         $value = $value * 10 + $digit;
     }
 
+    $$retlen_ref = $length if $retlen_ref;
     return $value;
 }
 
@@ -2444,8 +2454,8 @@ sub prop_value_aliases ($$) {
     return ( $list_ref->[0], $list_ref->[0] );
 }
 
-# All 1 bits is the largest possible UV.
-$Unicode::UCD::MAX_CP = ~0;
+# All 1 bits but the top one is the largest possible IV.
+$Unicode::UCD::MAX_CP = (~0) >> 1;
 
 =pod
 
@@ -2537,11 +2547,7 @@ code points that have the property-value:
  for (my $i = 0; $i < @invlist; $i += 2) {
     my $upper = ($i + 1) < @invlist
                 ? $invlist[$i+1] - 1      # In range
-                : $Unicode::UCD::MAX_CP;  # To infinity.  You may want
-                                          # to stop much much earlier;
-                                          # going this high may expose
-                                          # perl deficiencies with very
-                                          # large numbers.
+                : $Unicode::UCD::MAX_CP;  # To infinity.
     for my $j ($invlist[$i] .. $upper) {
         push @full_list, $j;
     }
@@ -4100,10 +4106,9 @@ my $UNICODEVERSION;
 
 sub UnicodeVersion {
     unless (defined $UNICODEVERSION) {
-	openunicode(\$VERSIONFH, "version");
+	my $versionfh = openunicode("version");
 	local $/ = "\n";
-	chomp($UNICODEVERSION = <$VERSIONFH>);
-	close($VERSIONFH);
+	chomp($UNICODEVERSION = <$versionfh>);
 	croak __PACKAGE__, "::VERSION: strange version '$UNICODEVERSION'"
 	    unless $UNICODEVERSION =~ /^\d+(?:\.\d+)+$/;
     }

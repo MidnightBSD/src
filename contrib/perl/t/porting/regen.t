@@ -26,7 +26,7 @@ if ( $Config{usecrosscompile} ) {
   skip_all( "Not all files are available during cross-compilation" );
 }
 
-my $tests = 26; # I can't see a clean way to calculate this automatically.
+my $tests = 27; # I can't see a clean way to calculate this automatically.
 
 my %skip = ("regen_perly.pl"    => [qw(perly.act perly.h perly.tab)],
             "regen/keywords.pl" => [qw(keywords.c keywords.h)],
@@ -62,6 +62,7 @@ die "Can't find __END__ in regen.pl"
 foreach (qw(embed_lib.pl regen_lib.pl uconfig_h.pl
             regcharclass_multi_char_folds.pl
             charset_translations.pl
+            mph.pl
             ),
          map {chomp $_; $_} <$fh>) {
     ++$skip{"regen/$_"};
