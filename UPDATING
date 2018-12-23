@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20181223:
+	Import Perl 5.28.0
+
 20181130:
 	ICMP Buffer underwrite fix
 
