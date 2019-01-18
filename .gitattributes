@@ -643,7 +643,6 @@ R50e/tree.c -text
 R50e/var.c -text
 R50e/var_spec.h -text
 dist/Build.sh -text
-dist/Makefile -text
 dist/check.pl -text
 dist/check.t -text
 dist/dot.mkshrc -text
@@ -652,8 +651,10 @@ dist/emacsfn.h -text
 dist/eval.c -text
 dist/exec.c -text
 dist/expr.c -text
+dist/exprtok.h -text
 dist/funcs.c -text
 dist/histrap.c -text
+dist/jehanne.c -text
 dist/jobs.c -text
 dist/lalloc.c -text
 dist/lex.c -text
@@ -662,6 +663,8 @@ dist/main.c -text
 dist/mirhash.h -text
 dist/misc.c -text
 dist/mksh.1 -text
+dist/mksh.ico -text svneol=unset#image/x-icon
+dist/os2.c -text
 dist/rlimits.opt -text
 dist/sh.h -text
 dist/sh_flags.opt -text

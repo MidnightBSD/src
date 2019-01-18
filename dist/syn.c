@@ -1,9 +1,10 @@
-/*	$OpenBSD: syn.c,v 1.29 2013/06/03 18:40:05 jca Exp $	*/
+/*	$OpenBSD: syn.c,v 1.30 2015/09/01 13:12:31 tedu Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009,
- *		 2011, 2012, 2013, 2014
- *	Thorsten Glaser <tg@mirbsd.org>
+ *		 2011, 2012, 2013, 2014, 2015, 2016, 2017,
+ *		 2018
+ *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
  * are retained or reproduced in an accompanying document, permission
@@ -23,7 +24,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.94.2.1 2015/01/25 15:35:54 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.127 2018/01/14 00:22:30 tg Exp $");
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -31,34 +32,33 @@ struct nesting_state {
 };
 
 struct yyrecursive_state {
+	struct ioword *old_heres[HERES];
 	struct yyrecursive_state *next;
 	struct ioword **old_herep;
 	int old_symbol;
-	int old_salias;
-	int old_nesting_type;
+	unsigned int old_nesting_type;
 	bool old_reject;
 };
 
-static void yyparse(void);
-static struct op *pipeline(int);
-static struct op *andor(void);
-static struct op *c_list(bool);
+static void yyparse(bool);
+static struct op *pipeline(int, int);
+static struct op *andor(int);
+static struct op *c_list(int, bool);
 static struct ioword *synio(int);
-static struct op *nested(int, int, int);
-static struct op *get_command(int);
-static struct op *dogroup(void);
-static struct op *thenpart(void);
-static struct op *elsepart(void);
-static struct op *caselist(void);
-static struct op *casepart(int);
-static struct op *function_body(char *, bool);
-static char **wordlist(void);
+static struct op *nested(int, int, int, int);
+static struct op *get_command(int, int);
+static struct op *dogroup(int);
+static struct op *thenpart(int);
+static struct op *elsepart(int);
+static struct op *caselist(int);
+static struct op *casepart(int, int);
+static struct op *function_body(char *, int, bool);
+static char **wordlist(int);
 static struct op *block(int, struct op *, struct op *);
 static struct op *newtp(int);
 static void syntaxerr(const char *) MKSH_A_NORETURN;
 static void nesting_push(struct nesting_state *, int);
 static void nesting_pop(struct nesting_state *);
-static int assign_command(const char *);
 static int inalias(struct source *) MKSH_A_PURE;
 static Test_op dbtestp_isa(Test_env *, Test_meta);
 static const char *dbtestp_getopnd(Test_env *, Test_op, bool);
@@ -71,41 +71,43 @@ static struct nesting_state nesting;	/* \n changed to ; */
 
 static bool reject;			/* token(cf) gets symbol again */
 static int symbol;			/* yylex value */
-static int sALIAS = ALIAS;		/* 0 in yyrecursive */
 
 #define REJECT		(reject = true)
 #define ACCEPT		(reject = false)
 #define token(cf)	((reject) ? (ACCEPT, symbol) : (symbol = yylex(cf)))
 #define tpeek(cf)	((reject) ? (symbol) : (REJECT, symbol = yylex(cf)))
-#define musthave(c,cf)	do { if (token(cf) != (c)) syntaxerr(NULL); } while (/* CONSTCOND */ 0)
+#define musthave(c,cf)	do { 					\
+	if ((unsigned int)token(cf) != (unsigned int)(c))	\
+		syntaxerr(NULL);				\
+} while (/* CONSTCOND */ 0)
 
 static const char Tcbrace[] = "}";
 static const char Tesac[] = "esac";
 
 static void
-yyparse(void)
+yyparse(bool doalias)
 {
 	int c;
 
 	ACCEPT;
 
-	outtree = c_list(source->type == SSTRING);
+	outtree = c_list(doalias ? ALIAS : 0, source->type == SSTRING);
 	c = tpeek(0);
 	if (c == 0 && !outtree)
 		outtree = newtp(TEOF);
-	else if (c != '\n' && c != 0)
+	else if (!cinttype(c, C_LF | C_NUL))
 		syntaxerr(NULL);
 }
 
 static struct op *
-pipeline(int cf)
+pipeline(int cf, int sALIAS)
 {
 	struct op *t, *p, *tl = NULL;
 
-	t = get_command(cf);
+	t = get_command(cf, sALIAS);
 	if (t != NULL) {
 		while (token(0) == '|') {
-			if ((p = get_command(CONTIN)) == NULL)
+			if ((p = get_command(CONTIN, sALIAS)) == NULL)
 				syntaxerr(NULL);
 			if (tl == NULL)
 				t = tl = block(TPIPE, t, p);
@@ -118,15 +120,15 @@ pipeline(int cf)
 }
 
 static struct op *
-andor(void)
+andor(int sALIAS)
 {
 	struct op *t, *p;
 	int c;
 
-	t = pipeline(0);
+	t = pipeline(0, sALIAS);
 	if (t != NULL) {
 		while ((c = token(0)) == LOGAND || c == LOGOR) {
-			if ((p = pipeline(CONTIN)) == NULL)
+			if ((p = pipeline(CONTIN, sALIAS)) == NULL)
 				syntaxerr(NULL);
 			t = block(c == LOGAND? TAND: TOR, t, p);
 		}
@@ -136,14 +138,14 @@ andor(void)
 }
 
 static struct op *
-c_list(bool multi)
+c_list(int sALIAS, bool multi)
 {
 	struct op *t = NULL, *p, *tl = NULL;
 	int c;
 	bool have_sep;
 
 	while (/* CONSTCOND */ 1) {
-		p = andor();
+		p = andor(sALIAS);
 		/*
 		 * Token has always been read/rejected at this point, so
 		 * we don't worry about what flags to pass token()
@@ -173,6 +175,8 @@ c_list(bool multi)
 	return (t);
 }
 
+static const char IONDELIM_delim[] = { CHAR, '<', CHAR, '<', EOS };
+
 static struct ioword *
 synio(int cf)
 {
@@ -190,40 +194,39 @@ synio(int cf)
 		return (NULL);
 	ACCEPT;
 	iop = yylval.iop;
-	if (iop->flag & IONDELIM)
-		goto gotnulldelim;
-	ishere = (iop->flag & IOTYPE) == IOHERE;
-	musthave(LWORD, ishere ? HEREDELIM : 0);
+	ishere = (iop->ioflag & IOTYPE) == IOHERE;
+	if (iop->ioflag & IOHERESTR) {
+		musthave(LWORD, 0);
+	} else if (ishere && tpeek(HEREDELIM) == '\n') {
+		ACCEPT;
+		yylval.cp = wdcopy(IONDELIM_delim, ATEMP);
+		iop->ioflag |= IOEVAL | IONDELIM;
+	} else
+		musthave(LWORD, ishere ? HEREDELIM : 0);
 	if (ishere) {
 		iop->delim = yylval.cp;
-		if (*ident != 0) {
+		if (*ident != 0 && !(iop->ioflag & IOHERESTR)) {
 			/* unquoted */
- gotnulldelim:
-			iop->flag |= IOEVAL;
+			iop->ioflag |= IOEVAL;
 		}
 		if (herep > &heres[HERES - 1])
-			yyerror("too many %ss\n", "<<");
+			yyerror(Tf_toomany, "<<");
 		*herep++ = iop;
 	} else
-		iop->name = yylval.cp;
+		iop->ioname = yylval.cp;
 
-	if (iop->flag & IOBASH) {
+	if (iop->ioflag & IOBASH) {
 		char *cp;
 
 		nextiop = alloc(sizeof(*iop), ATEMP);
-		nextiop->name = cp = alloc(5, ATEMP);
-
-		if (iop->unit > 9) {
-			*cp++ = CHAR;
-			*cp++ = '0' + (iop->unit / 10);
-		}
+		nextiop->ioname = cp = alloc(3, ATEMP);
 		*cp++ = CHAR;
-		*cp++ = '0' + (iop->unit % 10);
+		*cp++ = digits_lc[iop->unit % 10];
 		*cp = EOS;
 
-		iop->flag &= ~IOBASH;
+		iop->ioflag &= ~IOBASH;
 		nextiop->unit = 2;
-		nextiop->flag = IODUP;
+		nextiop->ioflag = IODUP;
 		nextiop->delim = NULL;
 		nextiop->heredoc = NULL;
 	}
@@ -231,20 +234,24 @@ synio(int cf)
 }
 
 static struct op *
-nested(int type, int smark, int emark)
+nested(int type, int smark, int emark, int sALIAS)
 {
 	struct op *t;
 	struct nesting_state old_nesting;
 
 	nesting_push(&old_nesting, smark);
-	t = c_list(true);
+	t = c_list(sALIAS, true);
 	musthave(emark, KEYWORD|sALIAS);
 	nesting_pop(&old_nesting);
 	return (block(type, t, NULL));
 }
 
+static const char builtin_cmd[] = {
+	QCHAR, '\\', CHAR, 'b', CHAR, 'u', CHAR, 'i',
+	CHAR, 'l', CHAR, 't', CHAR, 'i', CHAR, 'n', EOS
+};
 static const char let_cmd[] = {
-	CHAR, 'l', CHAR, 'e', CHAR, 't', CHAR, ']', EOS
+	CHAR, 'l', CHAR, 'e', CHAR, 't', EOS
 };
 static const char setA_cmd0[] = {
 	CHAR, 's', CHAR, 'e', CHAR, 't', EOS
@@ -257,13 +264,12 @@ static const char setA_cmd2[] = {
 };
 
 static struct op *
-get_command(int cf)
+get_command(int cf, int sALIAS)
 {
 	struct op *t;
 	int c, iopn = 0, syniocf, lno;
 	struct ioword *iop, **iops;
 	XPtrV args, vars;
-	char *tcp;
 	struct nesting_state old_nesting;
 
 	/* NUFILE is small enough to leave this addition unchecked */
@@ -272,7 +278,7 @@ get_command(int cf)
 	XPinit(vars, 16);
 
 	syniocf = KEYWORD|sALIAS;
-	switch (c = token(cf|KEYWORD|sALIAS|VARASN)) {
+	switch (c = token(cf|KEYWORD|sALIAS|CMDASN)) {
 	default:
 		REJECT;
 		afree(iops, ATEMP);
@@ -287,29 +293,40 @@ get_command(int cf)
 		syniocf &= ~(KEYWORD|sALIAS);
 		t = newtp(TCOM);
 		t->lineno = source->line;
+		goto get_command_start;
 		while (/* CONSTCOND */ 1) {
-			cf = (t->u.evalflags ? ARRAYVAR : 0) |
-			    (XPsize(args) == 0 ? sALIAS|VARASN : CMDWORD);
+			bool check_decl_utility;
+
+			if (XPsize(args) == 0) {
+ get_command_start:
+				check_decl_utility = true;
+				cf = sALIAS | CMDASN;
+			} else if (t->u.evalflags)
+				cf = CMDWORD | CMDASN;
+			else
+				cf = CMDWORD;
 			switch (tpeek(cf)) {
 			case REDIR:
 				while ((iop = synio(cf)) != NULL) {
 					if (iopn >= NUFILE)
-						yyerror("too many %ss\n",
-						    "redirection");
+						yyerror(Tf_toomany,
+						    Tredirection);
 					iops[iopn++] = iop;
 				}
 				break;
 
 			case LWORD:
 				ACCEPT;
-				/*
-				 * the iopn == 0 and XPsize(vars) == 0 are
-				 * dubious but AT&T ksh acts this way
-				 */
-				if (iopn == 0 && XPsize(vars) == 0 &&
-				    XPsize(args) == 0 &&
-				    assign_command(ident))
-					t->u.evalflags = DOVACHECK;
+				if (check_decl_utility) {
+					struct tbl *tt = get_builtin(ident);
+					uint32_t flag;
+
+					flag = tt ? tt->flag : 0;
+					if (flag & DECL_UTIL)
+						t->u.evalflags = DOVACHECK;
+					if (!(flag & DECL_FWDR))
+						check_decl_utility = false;
+				}
 				if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
 				    is_wdvarassign(yylval.cp))
 					XPput(vars, yylval.cp);
@@ -317,9 +334,11 @@ get_command(int cf)
 					XPput(args, yylval.cp);
 				break;
 
-			case '(' /*)*/:
+			case ORD('(' /*)*/):
 				if (XPsize(args) == 0 && XPsize(vars) == 1 &&
 				    is_wdvarassign(yylval.cp)) {
+					char *tcp;
+
 					/* wdarrassign: foo=(bar) */
 					ACCEPT;
 
@@ -329,6 +348,7 @@ get_command(int cf)
 					tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
 
 					/* construct new args strings */
+					XPput(args, wdcopy(builtin_cmd, ATEMP));
 					XPput(args, wdcopy(setA_cmd0, ATEMP));
 					XPput(args, wdcopy(setA_cmd1, ATEMP));
 					XPput(args, tcp);
@@ -357,8 +377,9 @@ get_command(int cf)
 					    XPsize(vars) != 0)
 						syntaxerr(NULL);
 					ACCEPT;
-					musthave(/*(*/')', 0);
-					t = function_body(XPptrv(args)[0], false);
+					musthave(/*(*/ ')', 0);
+					t = function_body(XPptrv(args)[0],
+					    sALIAS, false);
 				}
 				goto Leave;
 
@@ -369,18 +390,18 @@ get_command(int cf)
  Leave:
 		break;
 
-	case '(': /*)*/ {
-		int subshell_nesting_type_saved;
+	case ORD('(' /*)*/): {
+		unsigned int subshell_nesting_type_saved;
  Subshell:
 		subshell_nesting_type_saved = subshell_nesting_type;
-		subshell_nesting_type = ')';
-		t = nested(TPAREN, '(', ')');
+		subshell_nesting_type = ORD(')');
+		t = nested(TPAREN, ORD('('), ORD(')'), sALIAS);
 		subshell_nesting_type = subshell_nesting_type_saved;
 		break;
 	    }
 
-	case '{': /*}*/
-		t = nested(TBRACE, '{', '}');
+	case ORD('{' /*}*/):
+		t = nested(TBRACE, ORD('{'), ORD('}'), sALIAS);
 		break;
 
 	case MDPAREN:
@@ -390,13 +411,15 @@ get_command(int cf)
 		switch (token(LETEXPR)) {
 		case LWORD:
 			break;
-		case '(': /*)*/
+		case ORD('(' /*)*/):
+			c = ORD('(');
 			goto Subshell;
 		default:
 			syntaxerr(NULL);
 		}
 		t = newtp(TCOM);
 		t->lineno = lno;
+		XPput(args, wdcopy(builtin_cmd, ATEMP));
 		XPput(args, wdcopy(let_cmd, ATEMP));
 		XPput(args, yylval.cp);
 		break;
@@ -422,14 +445,14 @@ get_command(int cf)
 	case FOR:
 	case SELECT:
 		t = newtp((c == FOR) ? TFOR : TSELECT);
-		musthave(LWORD, ARRAYVAR);
+		musthave(LWORD, CMDASN);
 		if (!is_wdvarname(yylval.cp, true))
-			yyerror("%s: %s\n", c == FOR ? "for" : Tselect,
-			    "bad identifier");
+			yyerror("%s: bad identifier",
+			    c == FOR ? "for" : Tselect);
 		strdupx(t->str, ident, ATEMP);
 		nesting_push(&old_nesting, c);
-		t->vars = wordlist();
-		t->left = dogroup();
+		t->vars = wordlist(sALIAS);
+		t->left = dogroup(sALIAS);
 		nesting_pop(&old_nesting);
 		break;
 
@@ -437,8 +460,8 @@ get_command(int cf)
 	case UNTIL:
 		nesting_push(&old_nesting, c);
 		t = newtp((c == WHILE) ? TWHILE : TUNTIL);
-		t->left = c_list(true);
-		t->right = dogroup();
+		t->left = c_list(sALIAS, true);
+		t->right = dogroup(sALIAS);
 		nesting_pop(&old_nesting);
 		break;
 
@@ -447,22 +470,22 @@ get_command(int cf)
 		musthave(LWORD, 0);
 		t->str = yylval.cp;
 		nesting_push(&old_nesting, c);
-		t->left = caselist();
+		t->left = caselist(sALIAS);
 		nesting_pop(&old_nesting);
 		break;
 
 	case IF:
 		nesting_push(&old_nesting, c);
 		t = newtp(TIF);
-		t->left = c_list(true);
-		t->right = thenpart();
+		t->left = c_list(sALIAS, true);
+		t->right = thenpart(sALIAS);
 		musthave(FI, KEYWORD|sALIAS);
 		nesting_pop(&old_nesting);
 		break;
 
 	case BANG:
 		syniocf &= ~(KEYWORD|sALIAS);
-		t = pipeline(0);
+		t = pipeline(0, sALIAS);
 		if (t == NULL)
 			syntaxerr(NULL);
 		t = block(TBANG, NULL, t);
@@ -470,7 +493,7 @@ get_command(int cf)
 
 	case TIME:
 		syniocf &= ~(KEYWORD|sALIAS);
-		t = pipeline(0);
+		t = pipeline(0, sALIAS);
 		if (t && t->type == TCOM) {
 			t->str = alloc(2, ATEMP);
 			/* TF_* flags */
@@ -482,13 +505,13 @@ get_command(int cf)
 
 	case FUNCTION:
 		musthave(LWORD, 0);
-		t = function_body(yylval.cp, true);
+		t = function_body(yylval.cp, sALIAS, true);
 		break;
 	}
 
 	while ((iop = synio(syniocf)) != NULL) {
 		if (iopn >= NUFILE)
-			yyerror("too many %ss\n", "redirection");
+			yyerror(Tf_toomany, Tredirection);
 		iops[iopn++] = iop;
 	}
 
@@ -511,11 +534,17 @@ get_command(int cf)
 		XPfree(vars);
 	}
 
+	if (c == MDPAREN) {
+		t = block(TBRACE, t, NULL);
+		t->ioact = t->left->ioact;
+		t->left->ioact = NULL;
+	}
+
 	return (t);
 }
 
 static struct op *
-dogroup(void)
+dogroup(int sALIAS)
 {
 	int c;
 	struct op *list;
@@ -529,44 +558,44 @@ dogroup(void)
 	 */
 	if (c == DO)
 		c = DONE;
-	else if (c == '{')
-		c = '}';
+	else if ((unsigned int)c == ORD('{'))
+		c = ORD('}');
 	else
 		syntaxerr(NULL);
-	list = c_list(true);
+	list = c_list(sALIAS, true);
 	musthave(c, KEYWORD|sALIAS);
 	return (list);
 }
 
 static struct op *
-thenpart(void)
+thenpart(int sALIAS)
 {
 	struct op *t;
 
 	musthave(THEN, KEYWORD|sALIAS);
 	t = newtp(0);
-	t->left = c_list(true);
+	t->left = c_list(sALIAS, true);
 	if (t->left == NULL)
 		syntaxerr(NULL);
-	t->right = elsepart();
+	t->right = elsepart(sALIAS);
 	return (t);
 }
 
 static struct op *
-elsepart(void)
+elsepart(int sALIAS)
 {
 	struct op *t;
 
-	switch (token(KEYWORD|sALIAS|VARASN)) {
+	switch (token(KEYWORD|sALIAS|CMDASN)) {
 	case ELSE:
-		if ((t = c_list(true)) == NULL)
+		if ((t = c_list(sALIAS, true)) == NULL)
 			syntaxerr(NULL);
 		return (t);
 
 	case ELIF:
 		t = newtp(TELIF);
-		t->left = c_list(true);
-		t->right = thenpart();
+		t->left = c_list(sALIAS, true);
+		t->right = thenpart(sALIAS);
 		return (t);
 
 	default:
@@ -576,7 +605,7 @@ elsepart(void)
 }
 
 static struct op *
-caselist(void)
+caselist(int sALIAS)
 {
 	struct op *t, *tl;
 	int c;
@@ -585,14 +614,14 @@ caselist(void)
 	/* A {...} can be used instead of in...esac for case statements */
 	if (c == IN)
 		c = ESAC;
-	else if (c == '{')
-		c = '}';
+	else if ((unsigned int)c == ORD('{'))
+		c = ORD('}');
 	else
 		syntaxerr(NULL);
 	t = tl = NULL;
 	/* no ALIAS here */
 	while ((tpeek(CONTIN|KEYWORD|ESACONLY)) != c) {
-		struct op *tc = casepart(c);
+		struct op *tc = casepart(c, sALIAS);
 		if (tl == NULL)
 			t = tl = tc, tl->right = NULL;
 		else
@@ -603,7 +632,7 @@ caselist(void)
 }
 
 static struct op *
-casepart(int endtok)
+casepart(int endtok, int sALIAS)
 {
 	struct op *t;
 	XPtrV ptns;
@@ -611,17 +640,17 @@ casepart(int endtok)
 	XPinit(ptns, 16);
 	t = newtp(TPAT);
 	/* no ALIAS here */
-	if (token(CONTIN | KEYWORD) != '(')
+	if ((unsigned int)token(CONTIN | KEYWORD) != ORD('('))
 		REJECT;
 	do {
 		switch (token(0)) {
 		case LWORD:
 			break;
-		case '}':
+		case ORD('}'):
 		case ESAC:
 			if (symbol != endtok) {
-				strdupx(yylval.cp,
-				    symbol == '}' ? Tcbrace : Tesac, ATEMP);
+				strdupx(yylval.cp, (unsigned int)symbol ==
+				    ORD('}') ? Tcbrace : Tesac, ATEMP);
 				break;
 			}
 			/* FALLTHROUGH */
@@ -633,23 +662,23 @@ casepart(int endtok)
 	REJECT;
 	XPput(ptns, NULL);
 	t->vars = (char **)XPclose(ptns);
-	musthave(')', 0);
+	musthave(ORD(')'), 0);
 
-	t->left = c_list(true);
+	t->left = c_list(sALIAS, true);
 
 	/* initialise to default for ;; or omitted */
-	t->u.charflag = ';';
+	t->u.charflag = ORD(';');
 	/* SUSv4 requires the ;; except in the last casepart */
 	if ((tpeek(CONTIN|KEYWORD|sALIAS)) != endtok)
 		switch (symbol) {
 		default:
 			syntaxerr(NULL);
 		case BRKEV:
-			t->u.charflag = '|';
+			t->u.charflag = ORD('|');
 			if (0)
 				/* FALLTHROUGH */
 		case BRKFT:
-			t->u.charflag = '&';
+			  t->u.charflag = ORD('&');
 			/* FALLTHROUGH */
 		case BREAK:
 			/* initialised above, but we need to eat the token */
@@ -659,7 +688,7 @@ casepart(int endtok)
 }
 
 static struct op *
-function_body(char *name,
+function_body(char *name, int sALIAS,
     /* function foo { ... } vs foo() { .. } */
     bool ksh_func)
 {
@@ -672,11 +701,11 @@ function_body(char *name,
 	 * only allow [a-zA-Z_0-9] but this allows more as old pdkshs
 	 * have allowed more; the following were never allowed:
 	 *	NUL TAB NL SP " $ & ' ( ) ; < = > \ ` |
-	 * C_QUOTE covers all but adds # * ? [ ]
+	 * C_QUOTE|C_SPC covers all but adds # * ? [ ]
 	 */
 	for (p = sname; *p; p++)
-		if (ctype(*p, C_QUOTE))
-			yyerror("%s: %s\n", sname, "invalid function name");
+		if (ctype(*p, C_QUOTE | C_SPC))
+			yyerror(Tinvname, sname, Tfunction);
 
 	/*
 	 * Note that POSIX allows only compound statements after foo(),
@@ -685,14 +714,14 @@ function_body(char *name,
 	 * only accepts an open-brace.
 	 */
 	if (ksh_func) {
-		if (tpeek(CONTIN|KEYWORD|sALIAS) == '(' /*)*/) {
+		if ((unsigned int)tpeek(CONTIN|KEYWORD|sALIAS) == ORD('(' /*)*/)) {
 			/* function foo () { //}*/
 			ACCEPT;
-			musthave(')', 0);
+			musthave(ORD(/*(*/ ')'), 0);
 			/* degrade to POSIX function */
 			ksh_func = false;
 		}
-		musthave('{' /*}*/, CONTIN|KEYWORD|sALIAS);
+		musthave(ORD('{' /*}*/), CONTIN|KEYWORD|sALIAS);
 		REJECT;
 	}
 
@@ -701,7 +730,7 @@ function_body(char *name,
 	t->u.ksh_func = tobool(ksh_func);
 	t->lineno = source->line;
 
-	if ((t->left = get_command(CONTIN)) == NULL) {
+	if ((t->left = get_command(CONTIN, sALIAS)) == NULL) {
 		char *tv;
 		/*
 		 * Probably something like foo() followed by EOF or ';'.
@@ -713,7 +742,7 @@ function_body(char *name,
 		/* (2 * sizeof(char *)) is small enough */
 		t->left->args = alloc(2 * sizeof(char *), ATEMP);
 		t->left->args[0] = tv = alloc(3, ATEMP);
-		tv[0] = CHAR;
+		tv[0] = QCHAR;
 		tv[1] = ':';
 		tv[2] = EOS;
 		t->left->args[1] = NULL;
@@ -726,7 +755,7 @@ function_body(char *name,
 }
 
 static char **
-wordlist(void)
+wordlist(int sALIAS)
 {
 	int c;
 	XPtrV args;
@@ -783,9 +812,9 @@ static const struct tokeninfo {
 	{ "done",	DONE,	true },
 	{ "in",		IN,	true },
 	{ Tfunction,	FUNCTION, true },
-	{ "time",	TIME,	true },
-	{ "{",		'{',	true },
-	{ Tcbrace,	'}',	true },
+	{ Ttime,	TIME,	true },
+	{ "{",		ORD('{'), true },
+	{ Tcbrace,	ORD('}'), true },
 	{ "!",		BANG,	true },
 	{ "[[",		DBRACKET, true },
 	/* Lexical tokens (0[EOF], LWORD and REDIR handled specially) */
@@ -797,7 +826,7 @@ static const struct tokeninfo {
 	{ "((",		MDPAREN, false },
 	{ "|&",		COPROC,	false },
 	/* and some special cases... */
-	{ "newline",	'\n',	false },
+	{ "newline",	ORD('\n'), false },
 	{ NULL,		0,	false }
 };
 
@@ -823,14 +852,14 @@ initkeywords(void)
 static void
 syntaxerr(const char *what)
 {
-	/* 2<<- is the longest redirection, I think */
-	char redir[6];
+	/* 23<<- is the longest redirection, I think */
+	char redir[8];
 	const char *s;
 	struct tokeninfo const *tt;
 	int c;
 
 	if (!what)
-		what = "unexpected";
+		what = Tunexpected;
 	REJECT;
 	c = token(0);
  Again:
@@ -843,15 +872,15 @@ syntaxerr(const char *what)
 			goto Again;
 		}
 		/* don't quote the EOF */
-		yyerror("%s: %s %s\n", Tsynerr, "unexpected", "EOF");
+		yyerror("%s: unexpected EOF", Tsynerr);
 		/* NOTREACHED */
 
 	case LWORD:
-		s = snptreef(NULL, 32, "%S", yylval.cp);
+		s = snptreef(NULL, 32, Tf_S, yylval.cp);
 		break;
 
 	case REDIR:
-		s = snptreef(redir, sizeof(redir), "%R", yylval.iop);
+		s = snptreef(redir, sizeof(redir), Tft_R, yylval.iop);
 		break;
 
 	default:
@@ -870,7 +899,7 @@ syntaxerr(const char *what)
 			s = redir;
 		}
 	}
-	yyerror("%s: '%s' %s\n", Tsynerr, s, what);
+	yyerror(Tf_sD_s_qs, Tsynerr, what, s);
 }
 
 static void
@@ -904,7 +933,7 @@ newtp(int type)
 }
 
 struct op *
-compile(Source *s, bool skiputf8bom)
+compile(Source *s, bool skiputf8bom, bool doalias)
 {
 	nesting.start_token = 0;
 	nesting.start_line = 0;
@@ -912,39 +941,19 @@ compile(Source *s, bool skiputf8bom)
 	source = s;
 	if (skiputf8bom)
 		yyskiputf8bom();
-	yyparse();
+	yyparse(doalias);
 	return (outtree);
-}
-
-/*-
- * This kludge exists to take care of sh/AT&T ksh oddity in which
- * the arguments of alias/export/readonly/typeset have no field
- * splitting, file globbing, or (normal) tilde expansion done.
- * AT&T ksh seems to do something similar to this since
- *	$ touch a=a; typeset a=[ab]; echo "$a"
- *	a=[ab]
- *	$ x=typeset; $x a=[ab]; echo "$a"
- *	a=a
- *	$
- */
-static int
-assign_command(const char *s)
-{
-	if (!*s)
-		return (0);
-	return ((strcmp(s, Talias) == 0) ||
-	    (strcmp(s, Texport) == 0) ||
-	    (strcmp(s, Treadonly) == 0) ||
-	    (strcmp(s, Ttypeset) == 0));
 }
 
 /* Check if we are in the middle of reading an alias */
 static int
 inalias(struct source *s)
 {
-	for (; s && s->type == SALIAS; s = s->next)
+	while (s && s->type == SALIAS) {
 		if (!(s->flags & SF_ALIASEND))
 			return (1);
+		s = s->next;
+	}
 	return (0);
 }
 
@@ -976,7 +985,7 @@ static const char db_gthan[] = { CHAR, '>', EOS };
 static Test_op
 dbtestp_isa(Test_env *te, Test_meta meta)
 {
-	int c = tpeek(ARRAYVAR | (meta == TM_BINOP ? 0 : CONTIN));
+	int c = tpeek(CMDASN | (meta == TM_BINOP ? 0 : CONTIN));
 	bool uqword;
 	char *save = NULL;
 	Test_op ret = TO_NONOP;
@@ -992,14 +1001,15 @@ dbtestp_isa(Test_env *te, Test_meta meta)
 		ret = (uqword && !strcmp(yylval.cp,
 		    dbtest_tokens[(int)TM_NOT])) ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_OPAREN)
-		ret = c == '(' /*)*/ ? TO_NONNULL : TO_NONOP;
+		ret = (unsigned int)c == ORD('(') /*)*/ ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_CPAREN)
-		ret = c == /*(*/ ')' ? TO_NONNULL : TO_NONOP;
+		ret = (unsigned int)c == /*(*/ ORD(')') ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_UNOP || meta == TM_BINOP) {
 		if (meta == TM_BINOP && c == REDIR &&
-		    (yylval.iop->flag == IOREAD || yylval.iop->flag == IOWRITE)) {
+		    (yylval.iop->ioflag == IOREAD ||
+		    yylval.iop->ioflag == IOWRITE)) {
 			ret = TO_NONNULL;
-			save = wdcopy(yylval.iop->flag == IOREAD ?
+			save = wdcopy(yylval.iop->ioflag == IOREAD ?
 			    db_lthan : db_gthan, ATEMP);
 		} else if (uqword && (ret = test_isop(meta, ident)))
 			save = yylval.cp;
@@ -1021,7 +1031,7 @@ static const char *
 dbtestp_getopnd(Test_env *te, Test_op op MKSH_A_UNUSED,
     bool do_eval MKSH_A_UNUSED)
 {
-	int c = tpeek(ARRAYVAR);
+	int c = tpeek(CMDASN);
 
 	if (c != LWORD)
 		return (NULL);
@@ -1073,8 +1083,9 @@ parse_usec(const char *s, struct timeval *tv)
 
 	tv->tv_sec = 0;
 	/* parse integral part */
-	while (ksh_isdigit(*s)) {
-		tt.tv_sec = tv->tv_sec * 10 + (*s++ - '0');
+	while (ctype(*s, C_DIGIT)) {
+		tt.tv_sec = tv->tv_sec * 10 + ksh_numdig(*s++);
+		/*XXX this overflow check maybe UB */
 		if (tt.tv_sec / 10 != tv->tv_sec) {
 			errno = EOVERFLOW;
 			return (true);
@@ -1094,14 +1105,14 @@ parse_usec(const char *s, struct timeval *tv)
 
 	/* parse decimal fraction */
 	i = 100000;
-	while (ksh_isdigit(*s)) {
-		tv->tv_usec += i * (*s++ - '0');
+	while (ctype(*s, C_DIGIT)) {
+		tv->tv_usec += i * ksh_numdig(*s++);
 		if (i == 1)
 			break;
 		i /= 10;
 	}
 	/* check for junk after fractional part */
-	while (ksh_isdigit(*s))
+	while (ctype(*s, C_DIGIT))
 		++s;
 	if (*s) {
 		errno = EINVAL;
@@ -1118,19 +1129,19 @@ parse_usec(const char *s, struct timeval *tv)
  * a COMSUB recursively using the main shell parser and lexer
  */
 char *
-yyrecursive(int subtype MKSH_A_UNUSED)
+yyrecursive(int subtype)
 {
 	struct op *t;
 	char *cp;
 	struct yyrecursive_state *ys;
-	int stok, etok;
+	unsigned int stok, etok;
 
 	if (subtype != COMSUB) {
-		stok = '{';
-		etok = '}';
+		stok = ORD('{');
+		etok = ORD('}');
 	} else {
-		stok = '(';
-		etok = ')';
+		stok = ORD('(');
+		etok = ORD(')');
 	}
 
 	ys = alloc(sizeof(struct yyrecursive_state), ATEMP);
@@ -1143,17 +1154,17 @@ yyrecursive(int subtype MKSH_A_UNUSED)
 	ys->old_reject = reject;
 	ys->old_symbol = symbol;
 	ACCEPT;
+	memcpy(ys->old_heres, heres, sizeof(heres));
 	ys->old_herep = herep;
-	ys->old_salias = sALIAS;
-	sALIAS = 0;
+	herep = heres;
 	ys->next = e->yyrecursive_statep;
 	e->yyrecursive_statep = ys;
 	/* we use TPAREN as a helper container here */
-	t = nested(TPAREN, stok, etok);
+	t = nested(TPAREN, stok, etok, ALIAS);
 	yyrecursive_pop(false);
 
 	/* t->left because nested(TPAREN, ...) hides our goodies there */
-	cp = snptreef(NULL, 0, "%T", t->left);
+	cp = snptreef(NULL, 0, Tf_T, t->left);
 	tfree(t, ATEMP);
 
 	return (cp);
@@ -1169,7 +1180,7 @@ yyrecursive_pop(bool popall)
 		return;
 	e->yyrecursive_statep = ys->next;
 
-	sALIAS = ys->old_salias;
+	memcpy(heres, ys->old_heres, sizeof(heres));
 	herep = ys->old_herep;
 	reject = ys->old_reject;
 	symbol = ys->old_symbol;

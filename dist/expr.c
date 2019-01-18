@@ -2,8 +2,8 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013, 2014
- *	Thorsten Glaser <tg@mirbsd.org>
+ *		 2011, 2012, 2013, 2014, 2016, 2017, 2018
+ *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
  * are retained or reproduced in an accompanying document, permission
@@ -23,50 +23,16 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.76.2.1 2015/01/25 15:44:05 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.103 2018/01/14 01:29:47 tg Exp $");
 
-/* the order of these enums is constrained by the order of opinfo[] */
-enum token {
-	/* some (long) unary operators */
-	O_PLUSPLUS = 0, O_MINUSMINUS,
-	/* binary operators */
-	O_EQ, O_NE,
-	/* assignments are assumed to be in range O_ASN .. O_BORASN */
-	O_ASN, O_TIMESASN, O_DIVASN, O_MODASN, O_PLUSASN, O_MINUSASN,
-#ifndef MKSH_LEGACY_MODE
-	O_ROLASN, O_RORASN,
-#endif
-	O_LSHIFTASN, O_RSHIFTASN, O_BANDASN, O_BXORASN, O_BORASN,
-	/* binary non-assignment operators */
-#ifndef MKSH_LEGACY_MODE
-	O_ROL, O_ROR,
-#endif
-	O_LSHIFT, O_RSHIFT,
-	O_LE, O_GE, O_LT, O_GT,
-	O_LAND,
-	O_LOR,
-	O_TIMES, O_DIV, O_MOD,
-	O_PLUS, O_MINUS,
-	O_BAND,
-	O_BXOR,
-	O_BOR,
-	O_TERN,
-	O_COMMA,
-	/* things after this aren't used as binary operators */
-	/* unary that are not also binaries */
-	O_BNOT, O_LNOT,
-	/* misc */
-	OPEN_PAREN, CLOSE_PAREN, CTERN,
-	/* things that don't appear in the opinfo[] table */
-	VAR, LIT, END, BAD
-};
-#define IS_ASSIGNOP(op)	((int)(op) >= (int)O_ASN && (int)(op) <= (int)O_BORASN)
+#define EXPRTOK_DEFNS
+#include "exprtok.h"
 
 /* precisions; used to be enum prec but we do arithmetics on it */
 #define P_PRIMARY	0	/* VAR, LIT, (), ! ~ ++ -- */
 #define P_MULT		1	/* * / % */
 #define P_ADD		2	/* + - */
-#define P_SHIFT		3	/* <<< >>> << >> */
+#define P_SHIFT		3	/* ^< ^> << >> */
 #define P_RELATION	4	/* < <= > >= */
 #define P_EQUALITY	5	/* == != */
 #define P_BAND		6	/* & */
@@ -75,72 +41,29 @@ enum token {
 #define P_LAND		9	/* && */
 #define P_LOR		10	/* || */
 #define P_TERN		11	/* ?: */
-	/* = += -= *= /= %= <<<= >>>= <<= >>= &= ^= |= */
+	/* = += -= *= /= %= ^<= ^>= <<= >>= &= ^= |= */
 #define P_ASSIGN	12
 #define P_COMMA		13	/* , */
 #define MAX_PREC	P_COMMA
 
-struct opinfo {
-	char name[5];
-	/* name length */
-	uint8_t len;
-	/* precedence: lower is higher */
-	uint8_t prec;
+enum token {
+#define EXPRTOK_ENUM
+#include "exprtok.h"
 };
 
-/*
- * Tokens in this table must be ordered so the longest are first
- * (eg, += before +). If you change something, change the order
- * of enum token too.
- */
-static const struct opinfo opinfo[] = {
-	{ "++",   2, P_PRIMARY },	/* before + */
-	{ "--",   2, P_PRIMARY },	/* before - */
-	{ "==",   2, P_EQUALITY },	/* before = */
-	{ "!=",   2, P_EQUALITY },	/* before ! */
-	{ "=",    1, P_ASSIGN },	/* keep assigns in a block */
-	{ "*=",   2, P_ASSIGN },
-	{ "/=",   2, P_ASSIGN },
-	{ "%=",   2, P_ASSIGN },
-	{ "+=",   2, P_ASSIGN },
-	{ "-=",   2, P_ASSIGN },
-#ifndef MKSH_LEGACY_MODE
-	{ "<<<=", 4, P_ASSIGN },	/* before <<< */
-	{ ">>>=", 4, P_ASSIGN },	/* before >>> */
-#endif
-	{ "<<=",  3, P_ASSIGN },
-	{ ">>=",  3, P_ASSIGN },
-	{ "&=",   2, P_ASSIGN },
-	{ "^=",   2, P_ASSIGN },
-	{ "|=",   2, P_ASSIGN },
-#ifndef MKSH_LEGACY_MODE
-	{ "<<<",  3, P_SHIFT },		/* before << */
-	{ ">>>",  3, P_SHIFT },		/* before >> */
-#endif
-	{ "<<",   2, P_SHIFT },
-	{ ">>",   2, P_SHIFT },
-	{ "<=",   2, P_RELATION },
-	{ ">=",   2, P_RELATION },
-	{ "<",    1, P_RELATION },
-	{ ">",    1, P_RELATION },
-	{ "&&",   2, P_LAND },
-	{ "||",   2, P_LOR },
-	{ "*",    1, P_MULT },
-	{ "/",    1, P_MULT },
-	{ "%",    1, P_MULT },
-	{ "+",    1, P_ADD },
-	{ "-",    1, P_ADD },
-	{ "&",    1, P_BAND },
-	{ "^",    1, P_BXOR },
-	{ "|",    1, P_BOR },
-	{ "?",    1, P_TERN },
-	{ ",",    1, P_COMMA },
-	{ "~",    1, P_PRIMARY },
-	{ "!",    1, P_PRIMARY },
-	{ "(",    1, P_PRIMARY },
-	{ ")",    1, P_PRIMARY },
-	{ ":",    1, P_PRIMARY },
-	{ "",     0, P_PRIMARY }
+static const char opname[][4] = {
+#define EXPRTOK_NAME
+#include "exprtok.h"
+};
+
+static const uint8_t oplen[] = {
+#define EXPRTOK_LEN
+#include "exprtok.h"
+};
+
+static const uint8_t opprec[] = {
+#define EXPRTOK_PREC
+#include "exprtok.h"
 };
 
 typedef struct expr_state {
@@ -227,7 +150,7 @@ v_evaluate(struct tbl *vp, const char *expr, volatile int error_ok,
 	exprtoken(es);
 	if (es->tok == END) {
 		es->tok = LIT;
-		es->val = tempvar();
+		es->val = tempvar("");
 	}
 	v = intvar(es, evalexpr(es, MAX_PREC));
 
@@ -272,35 +195,35 @@ evalerr(Expr_state *es, enum error_type type, const char *str)
 			s = tbuf;
 			break;
 		default:
-			s = opinfo[(int)es->tok].name;
+			s = opname[(int)es->tok];
 		}
-		warningf(true, "%s: %s '%s'", es->expression,
-		    "unexpected", s);
+		warningf(true, Tf_sD_s_qs, es->expression,
+		    Tunexpected, s);
 		break;
 
 	case ET_BADLIT:
-		warningf(true, "%s: %s '%s'", es->expression,
-		    "bad number", str);
+		warningf(true, Tf_sD_s_qs, es->expression,
+		    Tbadnum, str);
 		break;
 
 	case ET_RECURSIVE:
-		warningf(true, "%s: %s '%s'", es->expression,
+		warningf(true, Tf_sD_s_qs, es->expression,
 		    "expression recurses on parameter", str);
 		break;
 
 	case ET_LVALUE:
-		warningf(true, "%s: %s %s",
+		warningf(true, Tf_sD_s_s,
 		    es->expression, str, "requires lvalue");
 		break;
 
 	case ET_RDONLY:
-		warningf(true, "%s: %s %s",
+		warningf(true, Tf_sD_s_s,
 		    es->expression, str, "applied to read-only variable");
 		break;
 
 	default: /* keep gcc happy */
 	case ET_STR:
-		warningf(true, "%s: %s", es->expression, str);
+		warningf(true, Tf_sD_s, es->expression, str);
 		break;
 	}
 	unwind(LAEXPR);
@@ -402,8 +325,16 @@ evalexpr(Expr_state *es, unsigned int prec)
 
 	vl = evalexpr(es, prec - 1);
 	while ((int)(op = es->tok) >= (int)O_EQ && (int)op <= (int)O_COMMA &&
-	    opinfo[(int)op].prec == prec) {
-		exprtoken(es);
+	    opprec[(int)op] == prec) {
+		switch ((int)op) {
+		case O_TERN:
+		case O_LAND:
+		case O_LOR:
+			break;
+		default:
+			exprtoken(es);
+		}
+
 		vasn = vl;
 		if (op != O_ASN)
 			/* vl may not have a value yet */
@@ -417,14 +348,15 @@ evalexpr(Expr_state *es, unsigned int prec)
 
 			if (!ev)
 				es->noassign++;
+			exprtoken(es);
 			vl = evalexpr(es, MAX_PREC);
 			if (!ev)
 				es->noassign--;
 			if (es->tok != CTERN)
 				evalerr(es, ET_STR, "missing :");
-			exprtoken(es);
 			if (ev)
 				es->noassign++;
+			exprtoken(es);
 			vr = evalexpr(es, P_TERN);
 			if (ev)
 				es->noassign--;
@@ -579,6 +511,7 @@ evalexpr(Expr_state *es, unsigned int prec)
 		case O_LAND:
 			if (!t1)
 				es->noassign++;
+			exprtoken(es);
 			vr = intvar(es, evalexpr(es, prec - 1));
 			res = t1 && vr->val.u;
 			if (!t1)
@@ -587,6 +520,7 @@ evalexpr(Expr_state *es, unsigned int prec)
 		case O_LOR:
 			if (t1)
 				es->noassign++;
+			exprtoken(es);
 			vr = intvar(es, evalexpr(es, prec - 1));
 			res = t1 || vr->val.u;
 			if (t1)
@@ -624,9 +558,11 @@ exprtoken(Expr_state *es)
 
 	/* skip whitespace */
  skip_spaces:
-	while ((c = *cp), ksh_isspace(c))
-		++cp;
-	if (es->tokp == es->expression && c == '#') {
+	--cp;
+	do {
+		c = ord(*++cp);
+	} while (ctype(c, C_SPACE));
+	if (es->tokp == es->expression && (unsigned int)c == ORD('#')) {
 		/* expression begins with # */
 		/* switch to unsigned */
 		es->natural = true;
@@ -637,10 +573,11 @@ exprtoken(Expr_state *es)
 
 	if (c == '\0')
 		es->tok = END;
-	else if (ksh_isalphx(c)) {
-		for (; ksh_isalnux(c); c = *cp)
-			cp++;
-		if (c == '[') {
+	else if (ctype(c, C_ALPHX)) {
+		do {
+			c = ord(*++cp);
+		} while (ctype(c, C_ALNUX));
+		if ((unsigned int)c == ORD('[')) {
 			size_t len;
 
 			len = array_ref_len(cp);
@@ -649,7 +586,7 @@ exprtoken(Expr_state *es)
 			cp += len;
 		}
 		if (es->noassign) {
-			es->val = tempvar();
+			es->val = tempvar("");
 			es->val->flag |= EXPRLVALUE;
 		} else {
 			strndupx(tvar, es->tokp, cp - es->tokp, ATEMP);
@@ -659,12 +596,16 @@ exprtoken(Expr_state *es)
 		es->tok = VAR;
 	} else if (c == '1' && cp[1] == '#') {
 		cp += 2;
-		cp += utf_ptradj(cp);
+		if (*cp)
+			cp += utf_ptradj(cp);
 		strndupx(tvar, es->tokp, cp - es->tokp, ATEMP);
 		goto process_tvar;
 #ifndef MKSH_SMALL
 	} else if (c == '\'') {
-		++cp;
+		if (*++cp == '\0') {
+			es->tok = END;
+			evalerr(es, ET_UNEXPECTED, NULL);
+		}
 		cp += utf_ptradj(cp);
 		if (*cp++ != '\'')
 			evalerr(es, ET_STR,
@@ -678,12 +619,12 @@ exprtoken(Expr_state *es)
 		tvar[c] = '\0';
 		goto process_tvar;
 #endif
-	} else if (ksh_isdigit(c)) {
-		while (c != '_' && (ksh_isalnux(c) || c == '#'))
-			c = *cp++;
+	} else if (ctype(c, C_DIGIT)) {
+		while (ctype(c, C_ALNUM | C_HASH))
+			c = ord(*cp++);
 		strndupx(tvar, es->tokp, --cp - es->tokp, ATEMP);
  process_tvar:
-		es->val = tempvar();
+		es->val = tempvar("");
 		es->val->flag &= ~INTEGER;
 		es->val->type = 0;
 		es->val->val.s = tvar;
@@ -694,11 +635,11 @@ exprtoken(Expr_state *es)
 	} else {
 		int i, n0;
 
-		for (i = 0; (n0 = opinfo[i].name[0]); i++)
-			if (c == n0 && strncmp(cp, opinfo[i].name,
-			    (size_t)opinfo[i].len) == 0) {
+		for (i = 0; (n0 = ord(opname[i][0])); i++)
+			if (c == n0 && strncmp(cp, opname[i],
+			    (size_t)oplen[i]) == 0) {
 				es->tok = (enum token)i;
-				cp += opinfo[i].len;
+				cp += oplen[i];
 				break;
 			}
 		if (!n0)
@@ -712,23 +653,25 @@ assign_check(Expr_state *es, enum token op, struct tbl *vasn)
 {
 	if (es->tok == END || !vasn ||
 	    (vasn->name[0] == '\0' && !(vasn->flag & EXPRLVALUE)))
-		evalerr(es, ET_LVALUE, opinfo[(int)op].name);
+		evalerr(es, ET_LVALUE, opname[(int)op]);
 	else if (vasn->flag & RDONLY)
-		evalerr(es, ET_RDONLY, opinfo[(int)op].name);
+		evalerr(es, ET_RDONLY, opname[(int)op]);
 }
 
 struct tbl *
-tempvar(void)
+tempvar(const char *vname)
 {
 	struct tbl *vp;
+	size_t vsize;
 
-	vp = alloc(sizeof(struct tbl), ATEMP);
+	vsize = strlen(vname) + 1;
+	vp = alloc(offsetof(struct tbl, name[0]) + vsize, ATEMP);
+	memcpy(vp->name, vname, vsize);
 	vp->flag = ISSET|INTEGER;
 	vp->type = 0;
 	vp->areap = ATEMP;
 	vp->ua.hval = 0;
 	vp->val.i = 0;
-	vp->name[0] = '\0';
 	return (vp);
 }
 
@@ -743,7 +686,7 @@ intvar(Expr_state *es, struct tbl *vp)
 	    (vp->flag & (ISSET|INTEGER|EXPRLVALUE)) == (ISSET|INTEGER))
 		return (vp);
 
-	vq = tempvar();
+	vq = tempvar("");
 	if (setint_v(vq, vp, es->arith) == NULL) {
 		if (vp->flag & EXPRINEVAL)
 			evalerr(es, ET_RECURSIVE, vp->name);
@@ -803,15 +746,26 @@ utf_mbswidth(const char *s)
 }
 
 const char *
-utf_skipcols(const char *p, int cols)
+utf_skipcols(const char *p, int cols, int *colp)
 {
 	int c = 0;
+	const char *q;
 
 	while (c < cols) {
-		if (!*p)
-			return (p + cols - c);
+		if (!*p) {
+			/* end of input; special handling for edit.c */
+			if (!colp)
+				return (p + cols - c);
+			*colp = c;
+			return (p);
+		}
 		c += utf_widthadj(p, &p);
 	}
+	if (UTFMODE)
+		while (utf_widthadj(p, &q) == 0)
+			p = q;
+	if (colp)
+		*colp = c;
 	return (p);
 }
 
@@ -820,8 +774,7 @@ utf_ptradj(const char *src)
 {
 	register size_t n;
 
-	if (!UTFMODE ||
-	    *(const unsigned char *)(src) < 0xC2 ||
+	if (!UTFMODE || rtt2asc(*src) < 0xC2 ||
 	    (n = utf_mbtowc(NULL, src)) == (size_t)-1)
 		n = 1;
 	return (n);
@@ -839,7 +792,7 @@ utf_mbtowc(unsigned int *dst, const char *src)
 	const unsigned char *s = (const unsigned char *)src;
 	unsigned int c, wc;
 
-	if ((wc = *s++) < 0x80) {
+	if ((wc = ord(rtt2asc(*s++))) < 0x80) {
  out:
 		if (dst != NULL)
 			*dst = wc;
@@ -853,7 +806,7 @@ utf_mbtowc(unsigned int *dst, const char *src)
 
 	if (wc < 0xE0) {
 		wc = (wc & 0x1F) << 6;
-		if (((c = *s++) & 0xC0) != 0x80)
+		if (((c = ord(rtt2asc(*s++))) & 0xC0) != 0x80)
 			goto ilseq;
 		wc |= c & 0x3F;
 		goto out;
@@ -861,11 +814,11 @@ utf_mbtowc(unsigned int *dst, const char *src)
 
 	wc = (wc & 0x0F) << 12;
 
-	if (((c = *s++) & 0xC0) != 0x80)
+	if (((c = ord(rtt2asc(*s++))) & 0xC0) != 0x80)
 		goto ilseq;
 	wc |= (c & 0x3F) << 6;
 
-	if (((c = *s++) & 0xC0) != 0x80)
+	if (((c = ord(rtt2asc(*s++))) & 0xC0) != 0x80)
 		goto ilseq;
 	wc |= c & 0x3F;
 
@@ -882,18 +835,18 @@ utf_wctomb(char *dst, unsigned int wc)
 	unsigned char *d;
 
 	if (wc < 0x80) {
-		*dst = wc;
+		*dst = asc2rtt(wc);
 		return (1);
 	}
 
 	d = (unsigned char *)dst;
 	if (wc < 0x0800)
-		*d++ = (wc >> 6) | 0xC0;
+		*d++ = asc2rtt((wc >> 6) | 0xC0);
 	else {
-		*d++ = ((wc = wc > 0xFFFD ? 0xFFFD : wc) >> 12) | 0xE0;
-		*d++ = ((wc >> 6) & 0x3F) | 0x80;
+		*d++ = asc2rtt(((wc = wc > 0xFFFD ? 0xFFFD : wc) >> 12) | 0xE0);
+		*d++ = asc2rtt(((wc >> 6) & 0x3F) | 0x80);
 	}
-	*d++ = (wc & 0x3F) | 0x80;
+	*d++ = asc2rtt((wc & 0x3F) | 0x80);
 	return ((char *)d - dst);
 }
 
@@ -905,6 +858,9 @@ utf_wctomb(char *dst, unsigned int wc)
 int
 ksh_access(const char *fn, int mode)
 {
+#ifdef __OS2__
+	return (access_ex(access, fn, mode));
+#else
 	int rv;
 	struct stat sb;
 
@@ -914,9 +870,11 @@ ksh_access(const char *fn, int mode)
 		rv = -1;
 
 	return (rv);
+#endif
 }
 
-/* From: X11/xc/programs/xterm/wcwidth.c,v 1.8 2014/06/24 19:53:53 tg Exp $ */
+#ifndef MIRBSD_BOOTFLOPPY
+/* From: X11/xc/programs/xterm/wcwidth.c,v 1.10 */
 
 struct mb_ucsrange {
 	unsigned short beg;
@@ -927,8 +885,8 @@ static int mb_ucsbsearch(const struct mb_ucsrange arr[], size_t elems,
     unsigned int val) MKSH_A_PURE;
 
 /*
- * Generated by MirOS: contrib/code/Snippets/eawparse,v 1.2 2013/11/30 13:45:17 tg Exp $
- * from the Unicode Character Database, Version 7.0.0
+ * Generated from the Unicode Character Database, Version 10.0.0, by
+ * MirOS: contrib/code/Snippets/eawparse,v 1.12 2017/09/06 16:05:45 tg Exp $
  */
 
 static const struct mb_ucsrange mb_ucs_combining[] = {
@@ -939,16 +897,14 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x05C1, 0x05C2 },
 	{ 0x05C4, 0x05C5 },
 	{ 0x05C7, 0x05C7 },
-	{ 0x0600, 0x0605 },
 	{ 0x0610, 0x061A },
 	{ 0x061C, 0x061C },
 	{ 0x064B, 0x065F },
 	{ 0x0670, 0x0670 },
-	{ 0x06D6, 0x06DD },
+	{ 0x06D6, 0x06DC },
 	{ 0x06DF, 0x06E4 },
 	{ 0x06E7, 0x06E8 },
 	{ 0x06EA, 0x06ED },
-	{ 0x070F, 0x070F },
 	{ 0x0711, 0x0711 },
 	{ 0x0730, 0x074A },
 	{ 0x07A6, 0x07B0 },
@@ -958,7 +914,8 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0825, 0x0827 },
 	{ 0x0829, 0x082D },
 	{ 0x0859, 0x085B },
-	{ 0x08E4, 0x0902 },
+	{ 0x08D4, 0x08E1 },
+	{ 0x08E3, 0x0902 },
 	{ 0x093A, 0x093A },
 	{ 0x093C, 0x093C },
 	{ 0x0941, 0x0948 },
@@ -984,6 +941,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0AC7, 0x0AC8 },
 	{ 0x0ACD, 0x0ACD },
 	{ 0x0AE2, 0x0AE3 },
+	{ 0x0AFA, 0x0AFF },
 	{ 0x0B01, 0x0B01 },
 	{ 0x0B3C, 0x0B3C },
 	{ 0x0B3F, 0x0B3F },
@@ -1006,7 +964,8 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0CC6, 0x0CC6 },
 	{ 0x0CCC, 0x0CCD },
 	{ 0x0CE2, 0x0CE3 },
-	{ 0x0D01, 0x0D01 },
+	{ 0x0D00, 0x0D01 },
+	{ 0x0D3B, 0x0D3C },
 	{ 0x0D41, 0x0D44 },
 	{ 0x0D4D, 0x0D4D },
 	{ 0x0D62, 0x0D63 },
@@ -1053,6 +1012,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x17C9, 0x17D3 },
 	{ 0x17DD, 0x17DD },
 	{ 0x180B, 0x180E },
+	{ 0x1885, 0x1886 },
 	{ 0x18A9, 0x18A9 },
 	{ 0x1920, 0x1922 },
 	{ 0x1927, 0x1928 },
@@ -1090,8 +1050,8 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x1CED, 0x1CED },
 	{ 0x1CF4, 0x1CF4 },
 	{ 0x1CF8, 0x1CF9 },
-	{ 0x1DC0, 0x1DF5 },
-	{ 0x1DFC, 0x1DFF },
+	{ 0x1DC0, 0x1DF9 },
+	{ 0x1DFB, 0x1DFF },
 	{ 0x200B, 0x200F },
 	{ 0x202A, 0x202E },
 	{ 0x2060, 0x2064 },
@@ -1104,13 +1064,13 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x3099, 0x309A },
 	{ 0xA66F, 0xA672 },
 	{ 0xA674, 0xA67D },
-	{ 0xA69F, 0xA69F },
+	{ 0xA69E, 0xA69F },
 	{ 0xA6F0, 0xA6F1 },
 	{ 0xA802, 0xA802 },
 	{ 0xA806, 0xA806 },
 	{ 0xA80B, 0xA80B },
 	{ 0xA825, 0xA826 },
-	{ 0xA8C4, 0xA8C4 },
+	{ 0xA8C4, 0xA8C5 },
 	{ 0xA8E0, 0xA8F1 },
 	{ 0xA926, 0xA92D },
 	{ 0xA947, 0xA951 },
@@ -1137,22 +1097,57 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0xABED, 0xABED },
 	{ 0xFB1E, 0xFB1E },
 	{ 0xFE00, 0xFE0F },
-	{ 0xFE20, 0xFE2D },
+	{ 0xFE20, 0xFE2F },
 	{ 0xFEFF, 0xFEFF },
 	{ 0xFFF9, 0xFFFB }
 };
 
 static const struct mb_ucsrange mb_ucs_fullwidth[] = {
 	{ 0x1100, 0x115F },
+	{ 0x231A, 0x231B },
 	{ 0x2329, 0x232A },
-	{ 0x2E80, 0x303E },
-	{ 0x3040, 0xA4CF },
+	{ 0x23E9, 0x23EC },
+	{ 0x23F0, 0x23F0 },
+	{ 0x23F3, 0x23F3 },
+	{ 0x25FD, 0x25FE },
+	{ 0x2614, 0x2615 },
+	{ 0x2648, 0x2653 },
+	{ 0x267F, 0x267F },
+	{ 0x2693, 0x2693 },
+	{ 0x26A1, 0x26A1 },
+	{ 0x26AA, 0x26AB },
+	{ 0x26BD, 0x26BE },
+	{ 0x26C4, 0x26C5 },
+	{ 0x26CE, 0x26CE },
+	{ 0x26D4, 0x26D4 },
+	{ 0x26EA, 0x26EA },
+	{ 0x26F2, 0x26F3 },
+	{ 0x26F5, 0x26F5 },
+	{ 0x26FA, 0x26FA },
+	{ 0x26FD, 0x26FD },
+	{ 0x2705, 0x2705 },
+	{ 0x270A, 0x270B },
+	{ 0x2728, 0x2728 },
+	{ 0x274C, 0x274C },
+	{ 0x274E, 0x274E },
+	{ 0x2753, 0x2755 },
+	{ 0x2757, 0x2757 },
+	{ 0x2795, 0x2797 },
+	{ 0x27B0, 0x27B0 },
+	{ 0x27BF, 0x27BF },
+	{ 0x2B1B, 0x2B1C },
+	{ 0x2B50, 0x2B50 },
+	{ 0x2B55, 0x2B55 },
+	{ 0x2E80, 0x3029 },
+	{ 0x302E, 0x303E },
+	{ 0x3040, 0x3098 },
+	{ 0x309B, 0xA4CF },
 	{ 0xA960, 0xA97F },
 	{ 0xAC00, 0xD7A3 },
 	{ 0xF900, 0xFAFF },
 	{ 0xFE10, 0xFE19 },
 	{ 0xFE30, 0xFE6F },
-	{ 0xFF00, 0xFF60 },
+	{ 0xFF01, 0xFF60 },
 	{ 0xFFE0, 0xFFE6 }
 };
 
@@ -1195,3 +1190,4 @@ utf_wcwidth(unsigned int wc)
 		return (2);
 	return (1);
 }
+#endif

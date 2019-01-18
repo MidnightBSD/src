@@ -1,9 +1,9 @@
-# $MirOS: src/bin/mksh/check.pl,v 1.37 2014/08/19 07:43:32 tg Exp $
+# $MirOS: src/bin/mksh/check.pl,v 1.49 2017/05/05 21:17:31 tg Exp $
 # $OpenBSD: th,v 1.1 2013/12/02 20:39:44 millert Exp $
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
-#		2012, 2013, 2014
-#	Thorsten Glaser <tg@mirbsd.org>
+#		2012, 2013, 2014, 2015, 2017
+#	mirabilos <m@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
 # are retained or reproduced in an accompanying document, permission
@@ -73,13 +73,14 @@
 #					the following minimal environment:
 #					    HOME, LD_LIBRARY_PATH, LOCPATH,
 #					    LOGNAME, PATH, SHELL, UNIXMODE,
-#					    USER
+#					    UNIXROOT, USER
 #					(values taken from the environment of
 #					the test harness).
 #					CYGWIN is set to nodosfilewarning.
 #					ENV is set to /nonexistant.
 #					__progname is set to the -p argument.
 #					__perlname is set to $^X (perlexe).
+#					@utflocale@ is substituted from -U.
 #	file-setup		mps	Used to create files, directories
 #					and symlinks. First word is either
 #					file, dir or symlink; second word is
@@ -152,9 +153,15 @@
 #	p	tag takes parameters (used with m).
 #	s	tag can be used several times.
 
+# require Config only if it exists
 # pull EINTR from POSIX.pm or Errno.pm if they exist
 # otherwise just skip it
 BEGIN {
+	eval {
+		require Config;
+		import Config;
+		1;
+	};
 	$EINTR = 0;
 	eval {
 		require POSIX;
@@ -171,7 +178,6 @@ BEGIN {
 };
 
 use Getopt::Std;
-use Config;
 
 $os = defined $^O ? $^O : 'unknown';
 
@@ -179,7 +185,7 @@ $os = defined $^O ? $^O : 'unknown';
 
 $Usage = <<EOF ;
 Usage: $prog [-Pv] [-C cat] [-e e=v] [-p prog] [-s fn] [-T dir] \
-       [-t tmo] name ...
+       [-t tmo] [-U lcl] name ...
 	-C c	Specify the comma separated list of categories the program
 		belongs to (see category field).
 	-e e=v	Set the environment variable e to v for all tests
@@ -192,6 +198,7 @@ Usage: $prog [-Pv] [-C cat] [-e e=v] [-p prog] [-s fn] [-T dir] \
 		scaned for test files (which end in .t).
 	-T dir	Use dir instead of /tmp to hold temporary files
 	-t t	Use t as default time limit for tests (default is unlimited)
+	-U lcl	Use lcl as UTF-8 locale (e.g. C.UTF-8) instead of the default
 	-v	Verbose mode: print reason test failed.
 	name	specifies the name of the test(s) to run; if none are
 		specified, all tests are run.
@@ -240,7 +247,7 @@ $nxpassed = 0;
 
 %known_tests = ();
 
-if (!getopts('C:e:Pp:s:T:t:v')) {
+if (!getopts('C:Ee:Pp:s:T:t:U:v')) {
     print STDERR $Usage;
     exit 1;
 }
@@ -249,14 +256,24 @@ die "$prog: no program specified (use -p)\n" if !defined $opt_p;
 die "$prog: no test set specified (use -s)\n" if !defined $opt_s;
 $test_prog = $opt_p;
 $verbose = defined $opt_v && $opt_v;
+$is_ebcdic = defined $opt_E && $opt_E;
 $test_set = $opt_s;
 $temp_base = $opt_T || "/tmp";
+$utflocale = $opt_U || (($os eq "hpux") ? "en_US.utf8" : "en_US.UTF-8");
 if (defined $opt_t) {
     die "$prog: bad -t argument (should be number > 0): $opt_t\n"
 	if $opt_t !~ /^\d+$/ || $opt_t <= 0;
     $default_time_limit = $opt_t;
 }
 $program_kludge = defined $opt_P ? $opt_P : 0;
+
+if ($is_ebcdic) {
+	$categories{'shell:ebcdic-yes'} = 1;
+	$categories{'shell:ascii-no'} = 1;
+} else {
+	$categories{'shell:ebcdic-no'} = 1;
+	$categories{'shell:ascii-yes'} = 1;
+}
 
 if (defined $opt_C) {
     foreach $c (split(',', $opt_C)) {
@@ -275,16 +292,29 @@ $all_tests = @ARGV == 0;
 # Set up a very minimal environment
 %new_env = ();
 foreach $env (('HOME', 'LD_LIBRARY_PATH', 'LOCPATH', 'LOGNAME',
-  'PATH', 'SHELL', 'UNIXMODE', 'USER')) {
+  'PATH', 'SHELL', 'UNIXMODE', 'UNIXROOT', 'USER')) {
     $new_env{$env} = $ENV{$env} if defined $ENV{$env};
 }
 $new_env{'CYGWIN'} = 'nodosfilewarning';
 $new_env{'ENV'} = '/nonexistant';
+
 if (($os eq 'VMS') || ($Config{perlpath} =~ m/$Config{_exe}$/i)) {
 	$new_env{'__perlname'} = $Config{perlpath};
 } else {
 	$new_env{'__perlname'} = $Config{perlpath} . $Config{_exe};
 }
+$new_env{'__perlname'} = $^X if ($new_env{'__perlname'} eq '') and -f $^X and -x $^X;
+if ($new_env{'__perlname'} eq '') {
+	foreach $pathelt (split /:/,$ENV{'PATH'}) {
+		chomp($pathelt = `pwd`) if $pathelt eq '';
+		my $x = $pathelt . '/' . $^X;
+		next unless -f $x and -x $x;
+		$new_env{'__perlname'} = $x;
+		last;
+	}
+}
+$new_env{'__perlname'} = $^X if ($new_env{'__perlname'} eq '');
+
 if (defined $opt_e) {
     # XXX need a way to allow many -e arguments...
     if ($opt_e =~ /^([a-zA-Z_]\w*)(|=(.*))$/) {
@@ -312,9 +342,10 @@ die "$prog: couldn't get temporary directory\n" if $temp_dir eq '';
 die "$prog: couldn't cd to $pwd - $!\n" if !chdir($pwd);
 
 if (!$program_kludge) {
-    $test_prog = "$pwd/$test_prog" if substr($test_prog, 0, 1) ne '/';
+    $test_prog = "$pwd/$test_prog" if (substr($test_prog, 0, 1) ne '/') &&
+      ($os ne 'os2' || substr($test_prog, 1, 1) ne ':');
     die "$prog: $test_prog is not executable - bye\n"
-	if (! -x $test_prog && $os ne 'os2');
+      if (! -x $test_prog && $os ne 'os2');
 }
 
 @trap_sigs = ('TERM', 'QUIT', 'INT', 'PIPE', 'HUP');
@@ -568,7 +599,7 @@ run_test
 	}
 	push(@argv, $temps) if defined $test{'script'};
 
-	#XXX realpathise, use which/whence -p, or sth. like that
+	#XXX realpathise, use command -v/whence -p/which, or sth. like that
 	#XXX if !$program_kludge, we get by with not doing it for now tho
 	$new_env{'__progname'} = $argv[0];
 
@@ -863,38 +894,50 @@ first_diff
 	    $char = 1;
 	}
     }
-    return "first difference: line $lineno, char $char (wanted '"
-	. &format_char($ce) . "', got '"
-	. &format_char($cg) . "'";
+    return "first difference: line $lineno, char $char (wanted " .
+	&format_char($ce) . ", got " . &format_char($cg);
 }
 
 sub
 format_char
 {
-    local($ch, $s);
+    local($ch, $s, $q);
 
     $ch = ord($_[0]);
+    $q = "'";
+
+    if ($is_ebcdic) {
+	if ($ch == 0x15) {
+		return $q . '\n' . $q;
+	} elsif ($ch == 0x16) {
+		return $q . '\b' . $q;
+	} elsif ($ch == 0x05) {
+		return $q . '\t' . $q;
+	} elsif ($ch < 64 || $ch == 255) {
+		return sprintf("X'%02X'", $ch);
+	}
+	return sprintf("'%c' (X'%02X')", $ch, $ch);
+    }
+
+    $s = sprintf("0x%02X (", $ch);
     if ($ch == 10) {
-	return '\n';
+	return $s . $q . '\n' . $q . ')';
     } elsif ($ch == 13) {
-	return '\r';
+	return $s . $q . '\r' . $q . ')';
     } elsif ($ch == 8) {
-	return '\b';
+	return $s . $q . '\b' . $q . ')';
     } elsif ($ch == 9) {
-	return '\t';
+	return $s . $q . '\t' . $q . ')';
     } elsif ($ch > 127) {
-	$ch -= 127;
-	$s = "M-";
-    } else {
-	$s = '';
+	$ch -= 128;
+	$s .= "M-";
     }
     if ($ch < 32) {
-	$s .= '^';
-	$ch += ord('@');
+	return sprintf("%s^%c)", $s, $ch + ord('@'));
     } elsif ($ch == 127) {
-	return $s . "^?";
+	return $s . "^?)";
     }
-    return $s . sprintf("%c", $ch);
+    return sprintf("%s'%c')", $s, $ch);
 }
 
 sub
@@ -1156,6 +1199,8 @@ read_test
 	    print STDERR "$prog:$test{':long-name'}: env-setup field doesn't start and end with the same character\n";
 	    return undef;
 	}
+
+	$test{'env-setup'} =~ s/\@utflocale\@/$utflocale/g;
     }
     if (defined $test{'expected-exit'}) {
 	local($val) = $test{'expected-exit'};
@@ -1165,7 +1210,7 @@ read_test
 		print STDERR "$prog:$test{':long-name'}: expected-exit value $val not in 0..255\n";
 		return undef;
 	    }
-	} elsif ($val !~ /^([\s<>+-=*%\/&|!()]|\b[wse]\b|\bSIG[A-Z][A-Z0-9]*\b)+$/) {
+	} elsif ($val !~ /^([\s\d<>+=*%\/&|!()-]|\b[wse]\b|\bSIG[A-Z][A-Z0-9]*\b)+$/) {
 	    print STDERR "$prog:$test{':long-name'}: bad expected-exit expression: $val\n";
 	    return undef;
 	}
