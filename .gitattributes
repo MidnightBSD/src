@@ -27941,7 +27941,6 @@ contrib/mknod/pack_dev.c -text
 contrib/mknod/pack_dev.h -text
 contrib/mksh/Build.sh -text
 contrib/mksh/MIDNIGHTBSD-upgrade -text
-contrib/mksh/Makefile -text
 contrib/mksh/check.pl -text
 contrib/mksh/check.t -text
 contrib/mksh/dot.mkshrc -text
@@ -27950,8 +27949,10 @@ contrib/mksh/emacsfn.h -text
 contrib/mksh/eval.c -text
 contrib/mksh/exec.c -text
 contrib/mksh/expr.c -text
+contrib/mksh/exprtok.h -text
 contrib/mksh/funcs.c -text
 contrib/mksh/histrap.c -text
+contrib/mksh/jehanne.c -text
 contrib/mksh/jobs.c -text
 contrib/mksh/lalloc.c -text
 contrib/mksh/lex.c -text
@@ -27960,6 +27961,8 @@ contrib/mksh/main.c -text
 contrib/mksh/mirhash.h -text
 contrib/mksh/misc.c -text
 contrib/mksh/mksh.1 -text
+contrib/mksh/mksh.ico -text svneol=unset#image/x-icon
+contrib/mksh/os2.c -text
 contrib/mksh/rlimits.gen -text
 contrib/mksh/rlimits.opt -text
 contrib/mksh/sh.h -text
@@ -27969,6 +27972,7 @@ contrib/mksh/sh_flags.opt -text
 contrib/mksh/shf.c -text
 contrib/mksh/strlcpy.c -text
 contrib/mksh/syn.c -text
+contrib/mksh/test.sh svneol=native#text/plain
 contrib/mksh/tree.c -text
 contrib/mksh/var.c -text
 contrib/mksh/var_spec.h -text

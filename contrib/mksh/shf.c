@@ -2,8 +2,10 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
- *		 2012, 2013, 2015
- *	Thorsten Glaser <tg@mirbsd.org>
+ *		 2012, 2013, 2015, 2016, 2017, 2018
+ *	mirabilos <m@mirbsd.org>
+ * Copyright (c) 2015
+ *	Daniel Richard G. <skunk@iSKUNK.ORG>
  *
  * Provided that these terms and disclaimer and all copyright notices
  * are retained or reproduced in an accompanying document, permission
@@ -25,7 +27,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.62.2.2 2015/03/01 15:43:07 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.97 2018/01/14 01:28:16 tg Exp $");
 
 /* flags to shf_emptybuf() */
 #define EB_READSW	0x01	/* about to switch to reading */
@@ -62,7 +64,7 @@ shf_open(const char *name, int oflags, int mode, int sflags)
 	shf->flags = SHF_ALLOCS;
 	/* Rest filled in by reopen. */
 
-	fd = open(name, oflags | O_BINARY, mode);
+	fd = binopen3(name, oflags, mode);
 	if (fd < 0) {
 		eno = errno;
 		afree(shf, shf->areap);
@@ -119,7 +121,7 @@ shf_open_hlp(int fd, int *sflagsp, const char *where)
 	}
 
 	if (!(sflags & (SHF_RD | SHF_WR)))
-		internal_errorf("%s: %s", where, "missing read/write");
+		internal_errorf(Tf_sD_s, where, "missing read/write");
 }
 
 /* Set up the shf structure for a file descriptor. Doesn't fail. */
@@ -167,7 +169,7 @@ shf_reopen(int fd, int sflags, struct shf *shf)
 
 	shf_open_hlp(fd, &sflags, "shf_reopen");
 	if (!shf || !shf->buf || shf->bsize < bsize)
-		internal_errorf("%s: %s", "shf_reopen", "bad shf/buf/bsize");
+		internal_errorf(Tf_sD_s, "shf_reopen", Tbad_bsize);
 
 	/* assumes shf->buf and shf->bsize already set up */
 	shf->fd = fd;
@@ -197,7 +199,8 @@ shf_sopen(char *buf, ssize_t bsize, int sflags, struct shf *shf)
 {
 	/* can't have a read+write string */
 	if (!(!(sflags & SHF_RD) ^ !(sflags & SHF_WR)))
-		internal_errorf("%s: flags 0x%X", "shf_sopen", sflags);
+		internal_errorf(Tf_flags, "shf_sopen",
+		    (unsigned int)sflags);
 
 	if (!shf) {
 		shf = alloc(sizeof(struct shf), ATEMP);
@@ -288,29 +291,31 @@ shf_sclose(struct shf *shf)
 int
 shf_flush(struct shf *shf)
 {
+	int rv = 0;
+
 	if (shf->flags & SHF_STRING)
-		return ((shf->flags & SHF_WR) ? -1 : 0);
-
-	if (shf->fd < 0)
-		internal_errorf("%s: %s", "shf_flush", "no fd");
-
-	if (shf->flags & SHF_ERROR) {
+		rv = (shf->flags & SHF_WR) ? -1 : 0;
+	else if (shf->fd < 0)
+		internal_errorf(Tf_sD_s, "shf_flush", "no fd");
+	else if (shf->flags & SHF_ERROR) {
 		errno = shf->errnosv;
-		return (-1);
-	}
-
-	if (shf->flags & SHF_READING) {
+		rv = -1;
+	} else if (shf->flags & SHF_READING) {
 		shf->flags &= ~(SHF_EOF | SHF_READING);
 		if (shf->rnleft > 0) {
-			lseek(shf->fd, (off_t)-shf->rnleft, SEEK_CUR);
+			if (lseek(shf->fd, (off_t)-shf->rnleft,
+			    SEEK_CUR) == -1) {
+				shf->flags |= SHF_ERROR;
+				shf->errnosv = errno;
+				rv = -1;
+			}
 			shf->rnleft = 0;
 			shf->rp = shf->buf;
 		}
-		return (0);
 	} else if (shf->flags & SHF_WRITING)
-		return (shf_emptybuf(shf, 0));
+		rv = shf_emptybuf(shf, 0);
 
-	return (0);
+	return (rv);
 }
 
 /*
@@ -323,7 +328,7 @@ shf_emptybuf(struct shf *shf, int flags)
 	int ret = 0;
 
 	if (!(shf->flags & SHF_STRING) && shf->fd < 0)
-		internal_errorf("%s: %s", "shf_emptybuf", "no fd");
+		internal_errorf(Tf_sD_s, "shf_emptybuf", "no fd");
 
 	if (shf->flags & SHF_ERROR) {
 		errno = shf->errnosv;
@@ -409,7 +414,7 @@ shf_fillbuf(struct shf *shf)
 		return (0);
 
 	if (shf->fd < 0)
-		internal_errorf("%s: %s", "shf_fillbuf", "no fd");
+		internal_errorf(Tf_sD_s, "shf_fillbuf", "no fd");
 
 	if (shf->flags & (SHF_EOF | SHF_ERROR)) {
 		if (shf->flags & SHF_ERROR)
@@ -452,10 +457,11 @@ shf_read(char *buf, ssize_t bsize, struct shf *shf)
 	ssize_t ncopy, orig_bsize = bsize;
 
 	if (!(shf->flags & SHF_RD))
-		internal_errorf("%s: flags 0x%X", "shf_read", shf->flags);
+		internal_errorf(Tf_flags, Tshf_read,
+		    (unsigned int)shf->flags);
 
 	if (bsize <= 0)
-		internal_errorf("%s: %s %zd", "shf_write", "bsize", bsize);
+		internal_errorf(Tf_szs, Tshf_read, bsize, Tbsize);
 
 	while (bsize > 0) {
 		if (shf->rnleft == 0 &&
@@ -489,7 +495,8 @@ shf_getse(char *buf, ssize_t bsize, struct shf *shf)
 	char *orig_buf = buf;
 
 	if (!(shf->flags & SHF_RD))
-		internal_errorf("%s: flags 0x%X", "shf_getse", shf->flags);
+		internal_errorf(Tf_flags, "shf_getse",
+		    (unsigned int)shf->flags);
 
 	if (bsize <= 0)
 		return (NULL);
@@ -515,7 +522,23 @@ shf_getse(char *buf, ssize_t bsize, struct shf *shf)
 		shf->rnleft -= ncopy;
 		buf += ncopy;
 		bsize -= ncopy;
+#ifdef MKSH_WITH_TEXTMODE
+		if (end && buf > orig_buf + 1 && buf[-2] == '\r') {
+			buf--;
+			bsize++;
+			buf[-1] = '\n';
+		}
+#endif
 	} while (!end && bsize);
+#ifdef MKSH_WITH_TEXTMODE
+	if (!bsize && buf[-1] == '\r') {
+		int c = shf_getc(shf);
+		if (c == '\n')
+			buf[-1] = '\n';
+		else if (c != -1)
+			shf_ungetc(c, shf);
+	}
+#endif
 	*buf = '\0';
 	return (buf);
 }
@@ -525,12 +548,13 @@ int
 shf_getchar(struct shf *shf)
 {
 	if (!(shf->flags & SHF_RD))
-		internal_errorf("%s: flags 0x%X", "shf_getchar", shf->flags);
+		internal_errorf(Tf_flags, "shf_getchar",
+		    (unsigned int)shf->flags);
 
 	if (shf->rnleft == 0 && (shf_fillbuf(shf) == -1 || shf->rnleft == 0))
 		return (-1);
 	--shf->rnleft;
-	return (*shf->rp++);
+	return (ord(*shf->rp++));
 }
 
 /*
@@ -541,7 +565,8 @@ int
 shf_ungetc(int c, struct shf *shf)
 {
 	if (!(shf->flags & SHF_RD))
-		internal_errorf("%s: flags 0x%X", "shf_ungetc", shf->flags);
+		internal_errorf(Tf_flags, "shf_ungetc",
+		    (unsigned int)shf->flags);
 
 	if ((shf->flags & SHF_ERROR) || c == -1 ||
 	    (shf->rp == shf->buf && shf->rnleft))
@@ -578,7 +603,8 @@ int
 shf_putchar(int c, struct shf *shf)
 {
 	if (!(shf->flags & SHF_WR))
-		internal_errorf("%s: flags 0x%X", "shf_putchar", shf->flags);
+		internal_errorf(Tf_flags, "shf_putchar",
+		    (unsigned int)shf->flags);
 
 	if (c == -1)
 		return (-1);
@@ -588,7 +614,7 @@ shf_putchar(int c, struct shf *shf)
 		ssize_t n;
 
 		if (shf->fd < 0)
-			internal_errorf("%s: %s", "shf_putchar", "no fd");
+			internal_errorf(Tf_sD_s, "shf_putchar", "no fd");
 		if (shf->flags & SHF_ERROR) {
 			errno = shf->errnosv;
 			return (-1);
@@ -633,10 +659,11 @@ shf_write(const char *buf, ssize_t nbytes, struct shf *shf)
 	ssize_t n, ncopy, orig_nbytes = nbytes;
 
 	if (!(shf->flags & SHF_WR))
-		internal_errorf("%s: flags 0x%X", "shf_write", shf->flags);
+		internal_errorf(Tf_flags, Tshf_write,
+		    (unsigned int)shf->flags);
 
 	if (nbytes < 0)
-		internal_errorf("%s: %s %zd", "shf_write", "nbytes", nbytes);
+		internal_errorf(Tf_szs, Tshf_write, nbytes, Tbytes);
 
 	/* Don't buffer if buffer is empty and we're writting a large amount. */
 	if ((ncopy = shf->wnleft) &&
@@ -764,10 +791,10 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 	const char *s;
 	char c, *cp;
 	int tmp = 0, flags;
-	ssize_t field, precision, len;
+	size_t field, precision, len;
 	unsigned long lnum;
 	/* %#o produces the longest output */
-	char numbuf[(8 * sizeof(long) + 2) / 3 + 1];
+	char numbuf[(8 * sizeof(long) + 2) / 3 + 1 + /* NUL */ 1];
 	/* this stuff for dealing with the buffer */
 	ssize_t nwritten = 0;
 
@@ -791,7 +818,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 		 */
 		flags = 0;
 		field = precision = 0;
-		for ( ; (c = *fmt++) ; ) {
+		while ((c = *fmt++)) {
 			switch (c) {
 			case '#':
 				flags |= FL_HASH;
@@ -821,12 +848,17 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 
 			case '*':
 				tmp = VA(int);
-				if (flags & FL_DOT)
-					precision = tmp;
-				else if ((field = tmp) < 0) {
-					field = -field;
-					flags |= FL_RIGHT;
-				}
+				if (tmp < 0) {
+					if (flags & FL_DOT)
+						precision = 0;
+					else {
+						field = (unsigned int)-tmp;
+						flags |= FL_RIGHT;
+					}
+				} else if (flags & FL_DOT)
+					precision = (unsigned int)tmp;
+				else
+					field = (unsigned int)tmp;
 				continue;
 
 			case 'l':
@@ -844,35 +876,32 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 				flags |= FL_SIZET;
 				continue;
 			}
-			if (ksh_isdigit(c)) {
+			if (ctype(c, C_DIGIT)) {
 				bool overflowed = false;
 
-				tmp = c - '0';
-				while (c = *fmt++, ksh_isdigit(c)) {
+				tmp = ksh_numdig(c);
+				while (ctype((c = *fmt++), C_DIGIT))
 					if (notok2mul(2147483647, tmp, 10))
 						overflowed = true;
-					tmp = tmp * 10 + c - '0';
-				}
+					else
+						tmp = tmp * 10 + ksh_numdig(c);
 				--fmt;
 				if (overflowed)
 					tmp = 0;
 				if (flags & FL_DOT)
-					precision = tmp;
+					precision = (unsigned int)tmp;
 				else
-					field = tmp;
+					field = (unsigned int)tmp;
 				continue;
 			}
 			break;
 		}
 
-		if (precision < 0)
-			precision = 0;
-
 		if (!c)
 			/* nasty format */
 			break;
 
-		if (c >= 'A' && c <= 'Z') {
+		if (ctype(c, C_UPPER)) {
 			flags |= FL_UPPER;
 			c = ksh_tolower(c);
 		}
@@ -905,6 +934,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
  integral:
 			flags |= FL_NUMBER;
 			cp = numbuf + sizeof(numbuf);
+			*--cp = '\0';
 
 			switch (c) {
 			case 'd':
@@ -917,7 +947,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 				/* FALLTHROUGH */
 			case 'u':
 				do {
-					*--cp = lnum % 10 + '0';
+					*--cp = digits_lc[lnum % 10];
 					lnum /= 10;
 				} while (lnum);
 
@@ -933,7 +963,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 
 			case 'o':
 				do {
-					*--cp = (lnum & 0x7) + '0';
+					*--cp = digits_lc[lnum & 0x7];
 					lnum >>= 3;
 				} while (lnum);
 
@@ -945,7 +975,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 				const char *digits = (flags & FL_UPPER) ?
 				    digits_uc : digits_lc;
 				do {
-					*--cp = digits[lnum & 0xf];
+					*--cp = digits[lnum & 0xF];
 					lnum >>= 4;
 				} while (lnum);
 
@@ -953,9 +983,9 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 					*--cp = (flags & FL_UPPER) ? 'X' : 'x';
 					*--cp = '0';
 				}
+			    }
 			}
-			}
-			len = numbuf + sizeof(numbuf) - (s = cp);
+			len = numbuf + sizeof(numbuf) - 1 - (s = cp);
 			if (flags & FL_DOT) {
 				if (precision > len) {
 					field = precision;
@@ -999,11 +1029,9 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 		if (field > precision) {
 			field -= precision;
 			if (!(flags & FL_RIGHT)) {
-				field = -field;
 				/* skip past sign or 0x when padding with 0 */
 				if ((flags & FL_ZERO) && (flags & FL_NUMBER)) {
-					if (*s == '+' || *s == '-' ||
-					    *s == ' ') {
+					if (ctype(*s, C_SPC | C_PLUS | C_MINUS)) {
 						shf_putc(*s, shf);
 						s++;
 						precision--;
@@ -1012,8 +1040,8 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 						shf_putc(*s, shf);
 						s++;
 						nwritten++;
-						if (--precision > 0 &&
-						    (*s | 0x20) == 'x') {
+						if (--precision &&
+						    ksh_eq(*s, 'X', 'x')) {
 							shf_putc(*s, shf);
 							s++;
 							precision--;
@@ -1023,30 +1051,23 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 					c = '0';
 				} else
 					c = flags & FL_ZERO ? '0' : ' ';
-				if (field < 0) {
-					nwritten += -field;
-					for ( ; field < 0 ; field++)
-						shf_putc(c, shf);
-				}
+				nwritten += field;
+				while (field--)
+					shf_putc(c, shf);
+				field = 0;
 			} else
 				c = ' ';
 		} else
 			field = 0;
 
-		if (precision > 0) {
-			const char *q;
+		nwritten += precision;
+		precision = utf_skipcols(s, precision, &tmp) - s;
+		while (precision--)
+			shf_putc(*s++, shf);
 
-			nwritten += precision;
-			q = utf_skipcols(s, precision);
-			do {
-				shf_putc(*s, shf);
-			} while (++s < q);
-		}
-		if (field > 0) {
-			nwritten += field;
-			for ( ; field > 0 ; --field)
-				shf_putc(c, shf);
-		}
+		nwritten += field;
+		while (field--)
+			shf_putc(c, shf);
 	}
 
 	return (shf_error(shf) ? -1 : nwritten);
@@ -1097,14 +1118,10 @@ cstrerror(int errnum)
 	switch (errnum) {
 	case 0:
 		return ("Undefined error: 0");
-#ifdef EPERM
 	case EPERM:
 		return ("Operation not permitted");
-#endif
-#ifdef ENOENT
 	case ENOENT:
 		return ("No such file or directory");
-#endif
 #ifdef ESRCH
 	case ESRCH:
 		return ("No such process");
@@ -1113,22 +1130,20 @@ cstrerror(int errnum)
 	case E2BIG:
 		return ("Argument list too long");
 #endif
-#ifdef ENOEXEC
 	case ENOEXEC:
 		return ("Exec format error");
-#endif
+	case EBADF:
+		return ("Bad file descriptor");
 #ifdef ENOMEM
 	case ENOMEM:
 		return ("Cannot allocate memory");
 #endif
-#ifdef EACCES
 	case EACCES:
 		return ("Permission denied");
-#endif
-#ifdef ENOTDIR
+	case EEXIST:
+		return ("File exists");
 	case ENOTDIR:
 		return ("Not a directory");
-#endif
 #ifdef EINVAL
 	case EINVAL:
 		return ("Invalid argument");
@@ -1141,6 +1156,166 @@ cstrerror(int errnum)
 		shf_snprintf(errbuf, sizeof(errbuf),
 		    "Unknown error: %d", errnum);
 		return (errbuf);
+	}
+}
+#endif
+
+/* fast character classes */
+const uint32_t tpl_ctypes[128] = {
+	/* 0x00 */
+	CiNUL,		CiCNTRL,	CiCNTRL,	CiCNTRL,
+	CiCNTRL,	CiCNTRL,	CiCNTRL,	CiCNTRL,
+	CiCNTRL,	CiTAB,		CiNL,		CiSPX,
+	CiSPX,		CiCR,		CiCNTRL,	CiCNTRL,
+	/* 0x10 */
+	CiCNTRL,	CiCNTRL,	CiCNTRL,	CiCNTRL,
+	CiCNTRL,	CiCNTRL,	CiCNTRL,	CiCNTRL,
+	CiCNTRL,	CiCNTRL,	CiCNTRL,	CiCNTRL,
+	CiCNTRL,	CiCNTRL,	CiCNTRL,	CiCNTRL,
+	/* 0x20 */
+	CiSP,		CiALIAS | CiVAR1,	CiQC,	CiHASH,
+	CiSS,		CiPERCT,	CiQCL,		CiQC,
+	CiQCL,		CiQCL,		CiQCX | CiVAR1,	CiPLUS,
+	CiALIAS,	CiMINUS,	CiALIAS,	CiQCM,
+	/* 0x30 */
+	CiOCTAL,	CiOCTAL,	CiOCTAL,	CiOCTAL,
+	CiOCTAL,	CiOCTAL,	CiOCTAL,	CiOCTAL,
+	CiDIGIT,	CiDIGIT,	CiCOLON,	CiQCL,
+	CiANGLE,	CiEQUAL,	CiANGLE,	CiQUEST,
+	/* 0x40 */
+	CiALIAS | CiVAR1,	CiUPPER | CiHEXLT,
+	CiUPPER | CiHEXLT,	CiUPPER | CiHEXLT,
+	CiUPPER | CiHEXLT,	CiUPPER | CiHEXLT,
+	CiUPPER | CiHEXLT,	CiUPPER,
+	CiUPPER,	CiUPPER,	CiUPPER,	CiUPPER,
+	CiUPPER,	CiUPPER,	CiUPPER,	CiUPPER,
+	/* 0x50 */
+	CiUPPER,	CiUPPER,	CiUPPER,	CiUPPER,
+	CiUPPER,	CiUPPER,	CiUPPER,	CiUPPER,
+	CiUPPER,	CiUPPER,	CiUPPER,	CiQCX | CiBRACK,
+	CiQCX,		CiBRACK,	CiQCM,		CiUNDER,
+	/* 0x60 */
+	CiGRAVE,		CiLOWER | CiHEXLT,
+	CiLOWER | CiHEXLT,	CiLOWER | CiHEXLT,
+	CiLOWER | CiHEXLT,	CiLOWER | CiHEXLT,
+	CiLOWER | CiHEXLT,	CiLOWER,
+	CiLOWER,	CiLOWER,	CiLOWER,	CiLOWER,
+	CiLOWER,	CiLOWER,	CiLOWER,	CiLOWER,
+	/* 0x70 */
+	CiLOWER,	CiLOWER,	CiLOWER,	CiLOWER,
+	CiLOWER,	CiLOWER,	CiLOWER,	CiLOWER,
+	CiLOWER,	CiLOWER,	CiLOWER,	CiCURLY,
+	CiQCL,		CiCURLY,	CiQCM,		CiCNTRL
+};
+
+void
+set_ifs(const char *s)
+{
+#if defined(MKSH_EBCDIC) || defined(MKSH_FAUX_EBCDIC)
+	int i = 256;
+
+	memset(ksh_ctypes, 0, sizeof(ksh_ctypes));
+	while (i--)
+		if (ebcdic_map[i] < 0x80U)
+			ksh_ctypes[i] = tpl_ctypes[ebcdic_map[i]];
+#else
+	memcpy(ksh_ctypes, tpl_ctypes, sizeof(tpl_ctypes));
+	memset((char *)ksh_ctypes + sizeof(tpl_ctypes), '\0',
+	    sizeof(ksh_ctypes) - sizeof(tpl_ctypes));
+#endif
+	ifs0 = *s;
+	while (*s)
+		ksh_ctypes[ord(*s++)] |= CiIFS;
+}
+
+#if defined(MKSH_EBCDIC) || defined(MKSH_FAUX_EBCDIC)
+#include <locale.h>
+
+/*
+ * Many headaches with EBCDIC:
+ * 1. There are numerous EBCDIC variants, and it is not feasible for us
+ *    to support them all. But we can support the EBCDIC code pages that
+ *    contain all (most?) of the characters in ASCII, and these
+ *    usually tend to agree on the code points assigned to the ASCII
+ *    subset. If you need a representative example, look at EBCDIC 1047,
+ *    which is first among equals in the IBM MVS development
+ *    environment: https://en.wikipedia.org/wiki/EBCDIC_1047
+ *    Unfortunately, the square brackets are not consistently mapped,
+ *    and for certain reasons, we need an unambiguous bijective
+ *    mapping between EBCDIC and "extended ASCII".
+ * 2. Character ranges that are contiguous in ASCII, like the letters
+ *    in [A-Z], are broken up into segments (i.e. [A-IJ-RS-Z]), so we
+ *    can't implement e.g. islower() as { return c >= 'a' && c <= 'z'; }
+ *    because it will also return true for a handful of extraneous
+ *    characters (like the plus-minus sign at 0x8F in EBCDIC 1047, a
+ *    little after 'i'). But at least '_' is not one of these.
+ * 3. The normal [0-9A-Za-z] characters are at codepoints beyond 0x80.
+ *    Not only do they require all 8 bits instead of 7, if chars are
+ *    signed, they will have negative integer values! Something like
+ *    (c - 'A') could actually become (c + 63)! Use the ord() macro to
+ *    ensure you're getting a value in [0, 255] (ORD for constants).
+ * 4. '\n' is actually NL (0x15, U+0085) instead of LF (0x25, U+000A).
+ *    EBCDIC has a proper newline character instead of "emulating" one
+ *    with line feeds, although this is mapped to LF for our purposes.
+ * 5. Note that it is possible to compile programs in ASCII mode on IBM
+ *    mainframe systems, using the -qascii option to the XL C compiler.
+ *    We can determine the build mode by looking at __CHARSET_LIB:
+ *    0 == EBCDIC, 1 == ASCII
+ */
+
+void
+ebcdic_init(void)
+{
+	int i = 256;
+	unsigned char t;
+	bool mapcache[256];
+
+	while (i--)
+		ebcdic_rtt_toascii[i] = i;
+	memset(ebcdic_rtt_fromascii, 0xFF, sizeof(ebcdic_rtt_fromascii));
+	setlocale(LC_ALL, "");
+#ifdef MKSH_EBCDIC
+	if (__etoa_l(ebcdic_rtt_toascii, 256) != 256) {
+		write(2, "mksh: could not map EBCDIC to ASCII\n", 36);
+		exit(255);
+	}
+#endif
+
+	memset(mapcache, 0, sizeof(mapcache));
+	i = 256;
+	while (i--) {
+		t = ebcdic_rtt_toascii[i];
+		/* ensure unique round-trip capable mapping */
+		if (mapcache[t]) {
+			write(2, "mksh: duplicate EBCDIC to ASCII mapping\n", 40);
+			exit(255);
+		}
+		/*
+		 * since there are 256 input octets, this also ensures
+		 * the other mapping direction is completely filled
+		 */
+		mapcache[t] = true;
+		/* fill the complete round-trip map */
+		ebcdic_rtt_fromascii[t] = i;
+		/*
+		 * Only use the converted value if it's in the range
+		 * [0x00; 0x7F], which I checked; the "extended ASCII"
+		 * characters can be any encoding, not just Latin1,
+		 * and the C1 control characters other than NEL are
+		 * hopeless, but we map EBCDIC NEL to ASCII LF so we
+		 * cannot even use C1 NEL.
+		 * If ever we map to Unicode, bump the table width to
+		 * an unsigned int, and or the raw unconverted EBCDIC
+		 * values with 0x01000000 instead.
+		 */
+		if (t < 0x80U)
+			ebcdic_map[i] = (unsigned short)ord(t);
+		else
+			ebcdic_map[i] = (unsigned short)(0x100U | ord(i));
+	}
+	if (ebcdic_rtt_toascii[0] || ebcdic_rtt_fromascii[0] || ebcdic_map[0]) {
+		write(2, "mksh: NUL not at position 0\n", 28);
+		exit(255);
 	}
 }
 #endif

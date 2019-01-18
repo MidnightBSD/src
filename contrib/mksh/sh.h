@@ -1,8 +1,8 @@
-/*	$OpenBSD: sh.h,v 1.33 2013/12/18 13:53:12 millert Exp $	*/
+/*	$OpenBSD: sh.h,v 1.35 2015/09/10 22:48:58 nicm Exp $	*/
 /*	$OpenBSD: shf.h,v 1.6 2005/12/11 18:53:51 deraadt Exp $	*/
 /*	$OpenBSD: table.h,v 1.8 2012/02/19 07:52:30 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
-/*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
+/*	$OpenBSD: expand.h,v 1.7 2015/09/01 13:12:31 tedu Exp $	*/
 /*	$OpenBSD: lex.h,v 1.13 2013/03/03 19:11:34 guenther Exp $	*/
 /*	$OpenBSD: proto.h,v 1.35 2013/09/04 15:49:19 millert Exp $	*/
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
@@ -10,8 +10,8 @@
 
 /*-
  * Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *	       2011, 2012, 2013, 2014, 2015
- *	Thorsten Glaser <tg@mirbsd.org>
+ *	       2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+ *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
  * are retained or reproduced in an accompanying document, permission
@@ -64,6 +64,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#if HAVE_IO_H
+#include <io.h>
+#endif
 #if HAVE_LIBGEN_H
 #include <libgen.h>
 #endif
@@ -104,6 +107,16 @@
 #include <unistd.h>
 #if HAVE_VALUES_H
 #include <values.h>
+#endif
+#ifdef MIRBSD_BOOTFLOPPY
+#include <wchar.h>
+#endif
+
+/* monkey-patch known-bad offsetof versions to quell a warning */
+#if (defined(__KLIBC__) || defined(__dietlibc__)) && \
+    ((defined(__GNUC__) && (__GNUC__ > 3)) || defined(__NWCC__))
+#undef offsetof
+#define offsetof(s, e)		__builtin_offsetof(s, e)
 #endif
 
 #undef __attribute__
@@ -169,9 +182,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.701.2.4 2015/03/01 15:43:05 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.858 2018/01/14 01:47:36 tg Exp $");
 #endif
-#define MKSH_VERSION "R50 2015/03/01"
+#define MKSH_VERSION "R56 2018/01/14"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -251,9 +264,27 @@ typedef MKSH_TYPEDEF_SSIZE_T ssize_t;
 
 #ifndef MKSH_INCLUDES_ONLY
 
+/* EBCDIC fun */
+
+/* see the large comment in shf.c for an EBCDIC primer */
+
+#if defined(MKSH_FOR_Z_OS) && defined(__MVS__) && defined(__IBMC__) && defined(__CHARSET_LIB)
+# if !__CHARSET_LIB && !defined(MKSH_EBCDIC)
+#  error "Please compile with Build.sh -E for EBCDIC!"
+# endif
+# if __CHARSET_LIB && defined(MKSH_EBCDIC)
+#  error "Please compile without -E argument to Build.sh for ASCII!"
+# endif
+# if __CHARSET_LIB && !defined(_ENHANCED_ASCII_EXT)
+   /* go all-out on ASCII */
+#  define _ENHANCED_ASCII_EXT 0xFFFFFFFF
+# endif
+#endif
+
 /* extra types */
 
-#if !HAVE_GETRUSAGE
+/* getrusage does not exist on OS/2 kLIBC */
+#if !HAVE_GETRUSAGE && !defined(__OS2__)
 #undef rusage
 #undef RUSAGE_SELF
 #undef RUSAGE_CHILDREN
@@ -298,16 +329,6 @@ struct rusage {
 	} while (/* CONSTCOND */ 0)
 #endif
 
-#define ksh_isdigit(c)	(((c) >= '0') && ((c) <= '9'))
-#define ksh_islower(c)	(((c) >= 'a') && ((c) <= 'z'))
-#define ksh_isupper(c)	(((c) >= 'A') && ((c) <= 'Z'))
-#define ksh_tolower(c)	(((c) >= 'A') && ((c) <= 'Z') ? (c) - 'A' + 'a' : (c))
-#define ksh_toupper(c)	(((c) >= 'a') && ((c) <= 'z') ? (c) - 'a' + 'A' : (c))
-#define ksh_isdash(s)	(((s)[0] == '-') && ((s)[1] == '\0'))
-#define ksh_isspace(c)	((((c) >= 0x09) && ((c) <= 0x0D)) || ((c) == 0x20))
-#define ksh_min(x,y)	((x) < (y) ? (x) : (y))
-#define ksh_max(x,y)	((x) > (y) ? (x) : (y))
-
 #ifdef MKSH__NO_PATH_MAX
 #undef PATH_MAX
 #else
@@ -339,28 +360,79 @@ struct rusage {
 #define DEFFILEMODE	(S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
 #endif
 
-#ifndef NSIG
-#if defined(_NSIG)
-#define NSIG		_NSIG
+
+/* determine ksh_NSIG: first, use the traditional definitions */
+#undef ksh_NSIG
+#if defined(NSIG)
+#define ksh_NSIG (NSIG)
+#elif defined(_NSIG)
+#define ksh_NSIG (_NSIG)
 #elif defined(SIGMAX)
-#define NSIG		(SIGMAX+1)
+#define ksh_NSIG (SIGMAX + 1)
 #elif defined(_SIGMAX)
-#define NSIG		(_SIGMAX+1)
+#define ksh_NSIG (_SIGMAX + 1)
+#elif defined(NSIG_MAX)
+#define ksh_NSIG (NSIG_MAX)
+#elif defined(MKSH_FOR_Z_OS)
+#define ksh_NSIG 40
 #else
 # error Please have your platform define NSIG.
-#define NSIG		64
 #endif
+/* range-check them */
+#if (ksh_NSIG < 1)
+# error Your NSIG value is not positive.
+#undef ksh_NSIG
+#endif
+/* second, see if the new POSIX definition is available */
+#ifdef NSIG_MAX
+#if (NSIG_MAX < 2)
+/* and usable */
+# error Your NSIG_MAX value is too small.
+#undef NSIG_MAX
+#elif (ksh_NSIG > NSIG_MAX)
+/* and realistic */
+# error Your NSIG value is larger than your NSIG_MAX value.
+#undef NSIG_MAX
+#else
+/* since it’s usable, prefer it */
+#undef ksh_NSIG
+#define ksh_NSIG (NSIG_MAX)
+#endif
+/* if NSIG_MAX is now still defined, use sysconf(_SC_NSIG) at runtime */
+#endif
+/* third, for cpp without the error directive, default */
+#ifndef ksh_NSIG
+#define ksh_NSIG 64
 #endif
 
-/* get rid of this (and awk/printf(1) in Build.sh) later */
-#if (NSIG < 1)
-# error Your NSIG value is not positive.
-#unset NSIG
-#define NSIG		64
-#endif
+#define ksh_sigmask(sig) (((sig) < 1 || (sig) > 127) ? 255 : 128 + (sig))
 
 
 /* OS-dependent additions (functions, variables, by OS) */
+
+#ifdef MKSH_EXE_EXT
+#undef MKSH_EXE_EXT
+#define MKSH_EXE_EXT	".exe"
+#else
+#define MKSH_EXE_EXT	""
+#endif
+
+#ifdef __OS2__
+#define MKSH_UNIXROOT	"/@unixroot"
+#else
+#define MKSH_UNIXROOT	""
+#endif
+
+#ifdef MKSH_DOSPATH
+#ifndef __GNUC__
+# error GCC extensions needed later on
+#endif
+#define MKSH_PATHSEPS	";"
+#define MKSH_PATHSEPC	';'
+#else
+#define MKSH_PATHSEPS	":"
+#define MKSH_PATHSEPC	':'
+#endif
 
 #if !HAVE_FLOCK_DECL
 extern int flock(int, int);
@@ -441,6 +513,23 @@ extern int __cdecl setegid(gid_t);
 #define ISTRIP		0
 #endif
 
+#ifdef MKSH_EBCDIC
+#define KSH_BEL		'\a'
+#define KSH_ESC		047
+#define KSH_ESC_STRING	"\047"
+#define KSH_VTAB	'\v'
+#else
+/*
+ * According to the comments in pdksh, \007 seems to be more portable
+ * than \a (HP-UX cc, Ultrix cc, old pcc, etc.) so we avoid the escape
+ * sequence if ASCII can be assumed.
+ */
+#define KSH_BEL		7
+#define KSH_ESC		033
+#define KSH_ESC_STRING	"\033"
+#define KSH_VTAB	11
+#endif
+
 
 /* some useful #defines */
 #ifdef EXTERN
@@ -452,26 +541,46 @@ extern int __cdecl setegid(gid_t);
 #endif
 
 /* define bit in flag */
-#define BIT(i)		(1 << (i))
+#define BIT(i)		(1U << (i))
 #define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
 
 /*
  * Make MAGIC a char that might be printed to make bugs more obvious, but
  * not a char that is used often. Also, can't use the high bit as it causes
  * portability problems (calling strchr(x, 0x80 | 'x') is error prone).
+ *
+ * MAGIC can be followed by MAGIC (to escape the octet itself) or one of:
+ * ' !)*,-?[]{|}' 0x80|' !*+?@' (probably… hysteric raisins abound)
+ *
+ * The |0x80 is likely unsafe on EBCDIC :( though the listed chars are
+ * low-bit7 at least on cp1047 so YMMV
  */
-#define MAGIC		(7)	/* prefix for *?[!{,} during expand */
-#define ISMAGIC(c)	((unsigned char)(c) == MAGIC)
+#define MAGIC		KSH_BEL	/* prefix for *?[!{,} during expand */
+#define ISMAGIC(c)	(ord(c) == ORD(MAGIC))
 
 EXTERN const char *safe_prompt; /* safe prompt if PS1 substitution fails */
 
 #ifdef MKSH_LEGACY_MODE
-#define KSH_VERSIONNAME	"LEGACY"
+#define KSH_VERSIONNAME_ISLEGACY	"LEGACY"
 #else
-#define KSH_VERSIONNAME	"MIRBSD"
+#define KSH_VERSIONNAME_ISLEGACY	"MIRBSD"
 #endif
-EXTERN const char initvsn[] E_INIT("KSH_VERSION=@(#)" KSH_VERSIONNAME \
-    " KSH " MKSH_VERSION);
+#ifdef MKSH_WITH_TEXTMODE
+#define KSH_VERSIONNAME_TEXTMODE	" +TEXTMODE"
+#else
+#define KSH_VERSIONNAME_TEXTMODE	""
+#endif
+#ifdef MKSH_EBCDIC
+#define KSH_VERSIONNAME_EBCDIC		" +EBCDIC"
+#else
+#define KSH_VERSIONNAME_EBCDIC		""
+#endif
+#ifndef KSH_VERSIONNAME_VENDOR_EXT
+#define KSH_VERSIONNAME_VENDOR_EXT	""
+#endif
+EXTERN const char initvsn[] E_INIT("KSH_VERSION=@(#)" KSH_VERSIONNAME_ISLEGACY \
+    " KSH " MKSH_VERSION KSH_VERSIONNAME_EBCDIC KSH_VERSIONNAME_TEXTMODE \
+    KSH_VERSIONNAME_VENDOR_EXT);
 #define KSH_VERSION	(initvsn + /* "KSH_VERSION=@(#)" */ 16)
 
 EXTERN const char digits_uc[] E_INIT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -529,15 +638,12 @@ char *ucstrstr(char *, const char *);
 #endif
 
 #if defined(DEBUG) || defined(__COVERITY__)
-#define mkssert(e)	do { if (!(e)) exit(255); } while (/* CONSTCOND */ 0)
 #ifndef DEBUG_LEAKS
 #define DEBUG_LEAKS
 #endif
-#else
-#define mkssert(e)	do { } while (/* CONSTCOND */ 0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 505)
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 563)
 #error Must run Build.sh to compile this.
 extern void thiswillneverbedefinedIhope(void);
 int
@@ -549,7 +655,7 @@ im_sorry_dave(void)
 #endif
 
 /* use this ipv strchr(s, 0) but no side effects in s! */
-#define strnul(s)	((s) + strlen(s))
+#define strnul(s)	((s) + strlen((const void *)s))
 
 #define utf_ptradjx(src, dst) do {					\
 	(dst) = (src) + utf_ptradj(src);				\
@@ -565,7 +671,7 @@ im_sorry_dave(void)
 #else
 /* be careful to evaluate arguments only once! */
 #define strdupx(d, s, ap) do {						\
-	const char *strdup_src = (s);					\
+	const char *strdup_src = (const void *)(s);			\
 	char *strdup_dst = NULL;					\
 									\
 	if (strdup_src != NULL) {					\
@@ -576,7 +682,7 @@ im_sorry_dave(void)
 	(d) = strdup_dst;						\
 } while (/* CONSTCOND */ 0)
 #define strndupx(d, s, n, ap) do {					\
-	const char *strdup_src = (s);					\
+	const char *strdup_src = (const void *)(s);			\
 	char *strdup_dst = NULL;					\
 									\
 	if (strdup_src != NULL) {					\
@@ -589,21 +695,7 @@ im_sorry_dave(void)
 } while (/* CONSTCOND */ 0)
 #endif
 
-#ifdef MKSH_LEGACY_MODE
-#ifndef MKSH_NO_CMDLINE_EDITING
-#define MKSH_NO_CMDLINE_EDITING	/* defined */
-#endif
-#ifndef MKSH_CONSERVATIVE_FDS
-#define MKSH_CONSERVATIVE_FDS	/* defined */
-#endif
-#undef MKSH_S_NOVI
-#define MKSH_S_NOVI		1
-#endif
-
 #ifdef MKSH_SMALL
-#ifndef MKSH_CONSERVATIVE_FDS
-#define MKSH_CONSERVATIVE_FDS	/* defined */
-#endif
 #ifndef MKSH_NOPWNAM
 #define MKSH_NOPWNAM		/* defined */
 #endif
@@ -620,14 +712,8 @@ im_sorry_dave(void)
 #define MKSH_UNEMPLOYED		1
 #endif
 
-/* these shall be smaller than 100 */
-#ifdef MKSH_CONSERVATIVE_FDS
 #define NUFILE		32	/* Number of user-accessible files */
 #define FDBASE		10	/* First file usable by Shell */
-#else
-#define NUFILE		56	/* Number of user-accessible files */
-#define FDBASE		24	/* First file usable by Shell */
-#endif
 
 /*
  * simple grouping allocator
@@ -658,16 +744,29 @@ im_sorry_dave(void)
 
 
 /* 1. internal structure */
-struct lalloc {
-	struct lalloc *next;
+struct lalloc_common {
+	struct lalloc_common *next;
 };
 
-/* 2. sizes */
-#define ALLOC_ITEM	struct lalloc
-#define ALLOC_SIZE	(sizeof(ALLOC_ITEM))
+#ifdef MKSH_ALLOC_CATCH_UNDERRUNS
+struct lalloc_item {
+	struct lalloc_common *next;
+	size_t len;
+	char dummy[8192 - sizeof(struct lalloc_common *) - sizeof(size_t)];
+};
+#endif
 
-/* 3. group structure (only the same for lalloc.c) */
-typedef struct lalloc Area;
+/* 2. sizes */
+#ifdef MKSH_ALLOC_CATCH_UNDERRUNS
+#define ALLOC_ITEM	struct lalloc_item
+#define ALLOC_OVERHEAD	0
+#else
+#define ALLOC_ITEM	struct lalloc_common
+#define ALLOC_OVERHEAD	(sizeof(ALLOC_ITEM))
+#endif
+
+/* 3. group structure */
+typedef struct lalloc_common Area;
 
 
 EXTERN Area aperm;		/* permanent object space */
@@ -704,8 +803,8 @@ enum sh_flag {
 struct sretrace_info;
 struct yyrecursive_state;
 
-EXTERN struct sretrace_info *retrace_info E_INIT(NULL);
-EXTERN int subshell_nesting_type E_INIT(0);
+EXTERN struct sretrace_info *retrace_info;
+EXTERN unsigned int subshell_nesting_type;
 
 extern struct env {
 	ALLOC_ITEM alloc_INT;	/* internal, do not touch */
@@ -730,6 +829,7 @@ extern struct env {
 #define E_LOOP	5	/* executing for/while # */
 #define E_ERRH	6	/* general error handler # */
 #define E_GONE	7	/* hidden in child */
+#define E_EVAL	8	/* running eval # */
 /* # indicates env has valid jbuf (see unwind()) */
 
 /* struct env.flag values */
@@ -792,38 +892,348 @@ EXTERN struct {
 
 /* null value for variable; comparison pointer for unset */
 EXTERN char null[] E_INIT("");
-/* helpers for string pooling */
-EXTERN const char Tintovfl[] E_INIT("integer overflow %zu %c %zu prevented");
-EXTERN const char Toomem[] E_INIT("can't allocate %zu data bytes");
-#if defined(__GNUC__)
-/* trust this to have string pooling; -Wformat bitches otherwise */
-#define Tsynerr		"syntax error"
-#else
-EXTERN const char Tsynerr[] E_INIT("syntax error");
+
+/* string pooling: do we rely on the compiler? */
+#ifndef HAVE_STRING_POOLING
+/* no, we use our own, saves quite some space */
+#elif HAVE_STRING_POOLING == 2
+/* “on demand” */
+#ifdef __GNUC__
+/* only for GCC 4 or later, older ones can get by without */
+#if __GNUC__ < 4
+#undef HAVE_STRING_POOLING
 #endif
-EXTERN const char Tselect[] E_INIT("select");
-EXTERN const char Tr_fc_e_dash[] E_INIT("r=fc -e -");
-#define Tfc_e_dash	(Tr_fc_e_dash + 2)	/* "fc -e -" */
-#define Zfc_e_dash	7			/* strlen(Tfc_e_dash) */
-EXTERN const char Tlocal_typeset[] E_INIT("local=typeset");
-#define T_typeset	(Tlocal_typeset + 5)	/* "=typeset" */
-#define Ttypeset	(Tlocal_typeset + 6)	/* "typeset" */
-EXTERN const char Talias[] E_INIT("alias");
-EXTERN const char Tunalias[] E_INIT("unalias");
-EXTERN const char Tsgset[] E_INIT("*=set");
-#define Tset		(Tsgset + 2)		/* "set" */
-EXTERN const char Tsgunset[] E_INIT("*=unset");
-#define Tunset		(Tsgunset + 2)		/* "unset" */
-EXTERN const char Tsgexport[] E_INIT("*=export");
-#define Texport		(Tsgexport + 2)		/* "export" */
-EXTERN const char Tsgreadonly[] E_INIT("*=readonly");
-#define Treadonly	(Tsgreadonly + 2)	/* "readonly" */
-EXTERN const char Tgbuiltin[] E_INIT("=builtin");
-#define Tbuiltin	(Tgbuiltin + 1)		/* "builtin" */
+#else
+/* not GCC, default to on */
+#endif
+#elif HAVE_STRING_POOLING == 0
+/* default to on, unless explicitly set to 0 */
+#undef HAVE_STRING_POOLING
+#endif
+
+#ifndef HAVE_STRING_POOLING /* helpers for pooled strings */
+EXTERN const char T4spaces[] E_INIT("    ");
+#define T1space (Treal_sp2 + 5)
+#define Tcolsp (Tf_sD_ + 2)
+#define TC_IFSWS (TinitIFS + 4)
+EXTERN const char TinitIFS[] E_INIT("IFS= \t\n");
+EXTERN const char TFCEDIT_dollaru[] E_INIT("${FCEDIT:-/bin/ed} $_");
+#define Tspdollaru (TFCEDIT_dollaru + 18)
+EXTERN const char Tsgdot[] E_INIT("*=.");
+EXTERN const char Taugo[] E_INIT("augo");
+EXTERN const char Tbracket[] E_INIT("[");
+#define Tdot (Tsgdot + 2)
+#define Talias (Tunalias + 2)
+EXTERN const char Tbadnum[] E_INIT("bad number");
+#define Tbadsubst (Tfg_badsubst + 10)
+EXTERN const char Tbg[] E_INIT("bg");
+EXTERN const char Tbad_bsize[] E_INIT("bad shf/buf/bsize");
+#define Tbsize (Tbad_bsize + 12)
+EXTERN const char Tbad_sig_ss[] E_INIT("%s: bad signal '%s'");
+#define Tbad_sig_s (Tbad_sig_ss + 4)
+EXTERN const char Tsgbreak[] E_INIT("*=break");
+#define Tbreak (Tsgbreak + 2)
+EXTERN const char T__builtin[] E_INIT("-\\builtin");
+#define T_builtin (T__builtin + 1)
+#define Tbuiltin (T__builtin + 2)
+EXTERN const char Toomem[] E_INIT("can't allocate %zu data bytes");
+EXTERN const char Tcant_cd[] E_INIT("restricted shell - can't cd");
+EXTERN const char Tcant_find[] E_INIT("can't find");
+EXTERN const char Tcant_open[] E_INIT("can't open");
+#define Tbytes (Toomem + 24)
+EXTERN const char Tbcat[] E_INIT("!cat");
+#define Tcat (Tbcat + 1)
+#define Tcd (Tcant_cd + 25)
+#define T_command (T_funny_command + 9)
+#define Tcommand (T_funny_command + 10)
+EXTERN const char Tsgcontinue[] E_INIT("*=continue");
+#define Tcontinue (Tsgcontinue + 2)
+EXTERN const char Tcreate[] E_INIT("create");
+EXTERN const char TELIF_unexpected[] E_INIT("TELIF unexpected");
+EXTERN const char TEXECSHELL[] E_INIT("EXECSHELL");
+EXTERN const char Tdsgexport[] E_INIT("^*=export");
+#define Texport (Tdsgexport + 3)
+#ifdef __OS2__
+EXTERN const char Textproc[] E_INIT("extproc");
+#endif
+EXTERN const char Tfalse[] E_INIT("false");
+EXTERN const char Tfg[] E_INIT("fg");
+EXTERN const char Tfg_badsubst[] E_INIT("fileglob: bad substitution");
+#define Tfile (Tfile_fd + 20)
+EXTERN const char Tfile_fd[] E_INIT("function definition file");
+EXTERN const char TFPATH[] E_INIT("FPATH");
 EXTERN const char T_function[] E_INIT(" function");
-#define Tfunction	(T_function + 1)	/* "function" */
-EXTERN const char TC_LEX1[] E_INIT("|&;<>() \t\n");
-#define TC_IFSWS	(TC_LEX1 + 7)		/* space tab newline */
+#define Tfunction (T_function + 1)
+EXTERN const char T_funny_command[] E_INIT("funny $()-command");
+EXTERN const char Tgetopts[] E_INIT("getopts");
+#define Thistory (Tnot_in_history + 7)
+EXTERN const char Tintovfl[] E_INIT("integer overflow %zu %c %zu prevented");
+EXTERN const char Tinvname[] E_INIT("%s: invalid %s name");
+EXTERN const char Tjobs[] E_INIT("jobs");
+EXTERN const char Tjob_not_started[] E_INIT("job not started");
+EXTERN const char Tmksh[] E_INIT("mksh");
+#define Tname (Tinvname + 15)
+EXTERN const char Tno_args[] E_INIT("missing argument");
+EXTERN const char Tno_OLDPWD[] E_INIT("no OLDPWD");
+EXTERN const char Tnot_ident[] E_INIT("is not an identifier");
+EXTERN const char Tnot_in_history[] E_INIT("not in history");
+EXTERN const char Tnot_found_s[] E_INIT("%s not found");
+#define Tnot_found (Tnot_found_s + 3)
+#define Tnot_started (Tjob_not_started + 4)
+#define TOLDPWD (Tno_OLDPWD + 3)
+#define Topen (Tcant_open + 6)
+#define TPATH (TFPATH + 1)
+#define Tpv (TpVv + 1)
+EXTERN const char TpVv[] E_INIT("Vpv");
+#define TPWD (Tno_OLDPWD + 6)
+#define Tread (Tshf_read + 4)
+EXTERN const char Tdsgreadonly[] E_INIT("^*=readonly");
+#define Treadonly (Tdsgreadonly + 3)
+EXTERN const char Tredirection_dup[] E_INIT("can't finish (dup) redirection");
+#define Tredirection (Tredirection_dup + 19)
+#define Treal_sp1 (Treal_sp2 + 1)
+EXTERN const char Treal_sp2[] E_INIT(" real ");
+EXTERN const char Treq_arg[] E_INIT("requires an argument");
+EXTERN const char Tselect[] E_INIT("select");
+EXTERN const char Tsgset[] E_INIT("*=set");
+#define Tset (Tf_parm + 18)
+#define Tsh (Tmksh + 2)
+#define TSHELL (TEXECSHELL + 4)
+#define Tshell (Ttoo_many_files + 23)
+EXTERN const char Tshf_read[] E_INIT("shf_read");
+EXTERN const char Tshf_write[] E_INIT("shf_write");
+EXTERN const char Tgsource[] E_INIT("=source");
+#define Tsource (Tgsource + 1)
+EXTERN const char Tj_suspend[] E_INIT("j_suspend");
+#define Tsuspend (Tj_suspend + 2)
+EXTERN const char Tsynerr[] E_INIT("syntax error");
+EXTERN const char Ttime[] E_INIT("time");
+EXTERN const char Ttoo_many_args[] E_INIT("too many arguments");
+EXTERN const char Ttoo_many_files[] E_INIT("too many open files in shell");
+EXTERN const char Ttrue[] E_INIT("true");
+EXTERN const char Ttty_fd_dupof[] E_INIT("dup of tty fd");
+#define Ttty_fd (Ttty_fd_dupof + 7)
+EXTERN const char Tdgtypeset[] E_INIT("^=typeset");
+#define Ttypeset (Tdgtypeset + 2)
+#define Tugo (Taugo + 1)
+EXTERN const char Tunalias[] E_INIT("unalias");
+#define Tunexpected (TELIF_unexpected + 6)
+EXTERN const char Tunexpected_type[] E_INIT("%s: unexpected %s type %d");
+EXTERN const char Tunknown_option[] E_INIT("unknown option");
+EXTERN const char Tunwind[] E_INIT("unwind");
+#define Tuser_sp1 (Tuser_sp2 + 1)
+EXTERN const char Tuser_sp2[] E_INIT(" user ");
+#define Twrite (Tshf_write + 4)
+EXTERN const char Tf__S[] E_INIT(" %S");
+#define Tf__d (Tunexpected_type + 22)
+EXTERN const char Tf__ss[] E_INIT(" %s%s");
+#define Tf__sN (Tf_s_s_sN + 5)
+EXTERN const char Tf_sSs[] E_INIT("%s/%s");
+#define Tf_T (Tf_s_T + 3)
+EXTERN const char Tf_dN[] E_INIT("%d\n");
+EXTERN const char Tf_s_[] E_INIT("%s ");
+EXTERN const char Tf_s_T[] E_INIT("%s %T");
+EXTERN const char Tf_s_s_sN[] E_INIT("%s %s %s\n");
+#define Tf_s_s (Tf_sD_s_s + 4)
+#define Tf_s_sD_s (Tf_cant_ss_s + 6)
+EXTERN const char Tf_optfoo[] E_INIT("%s%s-%c: %s");
+EXTERN const char Tf_sD_[] E_INIT("%s: ");
+EXTERN const char Tf_szs[] E_INIT("%s: %zd %s");
+EXTERN const char Tf_parm[] E_INIT("%s: parameter not set");
+EXTERN const char Tf_coproc[] E_INIT("-p: %s");
+EXTERN const char Tf_cant_s[] E_INIT("%s: can't %s");
+EXTERN const char Tf_cant_ss_s[] E_INIT("can't %s %s: %s");
+EXTERN const char Tf_heredoc[] E_INIT("here document '%s' unclosed");
+#if HAVE_MKNOD
+EXTERN const char Tf_nonnum[] E_INIT("non-numeric %s %s '%s'");
+#endif
+EXTERN const char Tf_S_[] E_INIT("%S ");
+#define Tf_S (Tf__S + 1)
+#define Tf_lu (Tf_toolarge + 17)
+EXTERN const char Tf_toolarge[] E_INIT("%s %s too large: %lu");
+EXTERN const char Tf_ldfailed[] E_INIT("%s %s(%d, %ld) failed: %s");
+#define Tf_ss (Tf_sss + 2)
+EXTERN const char Tf_sss[] E_INIT("%s%s%s");
+EXTERN const char Tf_sD_s_sD_s[] E_INIT("%s: %s %s: %s");
+EXTERN const char Tf_toomany[] E_INIT("too many %ss");
+EXTERN const char Tf_sd[] E_INIT("%s %d");
+#define Tf_s (Tf_temp + 28)
+EXTERN const char Tft_end[] E_INIT("%;");
+EXTERN const char Tft_R[] E_INIT("%R");
+#define Tf_d (Tunexpected_type + 23)
+EXTERN const char Tf_sD_s_qs[] E_INIT("%s: %s '%s'");
+EXTERN const char Tf_ro[] E_INIT("read-only: %s");
+EXTERN const char Tf_flags[] E_INIT("%s: flags 0x%X");
+EXTERN const char Tf_temp[] E_INIT("can't %s temporary file %s: %s");
+EXTERN const char Tf_ssfaileds[] E_INIT("%s: %s failed: %s");
+EXTERN const char Tf_sD_sD_s[] E_INIT("%s: %s: %s");
+EXTERN const char Tf__c_[] E_INIT("-%c ");
+EXTERN const char Tf_sD_s_s[] E_INIT("%s: %s %s");
+#define Tf_sN (Tf_s_s_sN + 6)
+#define Tf_sD_s (Tf_temp + 24)
+EXTERN const char T_devtty[] E_INIT("/dev/tty");
+#else /* helpers for string pooling */
+#define T4spaces "    "
+#define T1space " "
+#define Tcolsp ": "
+#define TC_IFSWS " \t\n"
+#define TinitIFS "IFS= \t\n"
+#define TFCEDIT_dollaru "${FCEDIT:-/bin/ed} $_"
+#define Tspdollaru " $_"
+#define Tsgdot "*=."
+#define Taugo "augo"
+#define Tbracket "["
+#define Tdot "."
+#define Talias "alias"
+#define Tbadnum "bad number"
+#define Tbadsubst "bad substitution"
+#define Tbg "bg"
+#define Tbad_bsize "bad shf/buf/bsize"
+#define Tbsize "bsize"
+#define Tbad_sig_ss "%s: bad signal '%s'"
+#define Tbad_sig_s "bad signal '%s'"
+#define Tsgbreak "*=break"
+#define Tbreak "break"
+#define T__builtin "-\\builtin"
+#define T_builtin "\\builtin"
+#define Tbuiltin "builtin"
+#define Toomem "can't allocate %zu data bytes"
+#define Tcant_cd "restricted shell - can't cd"
+#define Tcant_find "can't find"
+#define Tcant_open "can't open"
+#define Tbytes "bytes"
+#define Tbcat "!cat"
+#define Tcat "cat"
+#define Tcd "cd"
+#define T_command "-command"
+#define Tcommand "command"
+#define Tsgcontinue "*=continue"
+#define Tcontinue "continue"
+#define Tcreate "create"
+#define TELIF_unexpected "TELIF unexpected"
+#define TEXECSHELL "EXECSHELL"
+#define Tdsgexport "^*=export"
+#define Texport "export"
+#ifdef __OS2__
+#define Textproc "extproc"
+#endif
+#define Tfalse "false"
+#define Tfg "fg"
+#define Tfg_badsubst "fileglob: bad substitution"
+#define Tfile "file"
+#define Tfile_fd "function definition file"
+#define TFPATH "FPATH"
+#define T_function " function"
+#define Tfunction "function"
+#define T_funny_command "funny $()-command"
+#define Tgetopts "getopts"
+#define Thistory "history"
+#define Tintovfl "integer overflow %zu %c %zu prevented"
+#define Tinvname "%s: invalid %s name"
+#define Tjobs "jobs"
+#define Tjob_not_started "job not started"
+#define Tmksh "mksh"
+#define Tname "name"
+#define Tno_args "missing argument"
+#define Tno_OLDPWD "no OLDPWD"
+#define Tnot_ident "is not an identifier"
+#define Tnot_in_history "not in history"
+#define Tnot_found_s "%s not found"
+#define Tnot_found "not found"
+#define Tnot_started "not started"
+#define TOLDPWD "OLDPWD"
+#define Topen "open"
+#define TPATH "PATH"
+#define Tpv "pv"
+#define TpVv "Vpv"
+#define TPWD "PWD"
+#define Tread "read"
+#define Tdsgreadonly "^*=readonly"
+#define Treadonly "readonly"
+#define Tredirection_dup "can't finish (dup) redirection"
+#define Tredirection "redirection"
+#define Treal_sp1 "real "
+#define Treal_sp2 " real "
+#define Treq_arg "requires an argument"
+#define Tselect "select"
+#define Tsgset "*=set"
+#define Tset "set"
+#define Tsh "sh"
+#define TSHELL "SHELL"
+#define Tshell "shell"
+#define Tshf_read "shf_read"
+#define Tshf_write "shf_write"
+#define Tgsource "=source"
+#define Tsource "source"
+#define Tj_suspend "j_suspend"
+#define Tsuspend "suspend"
+#define Tsynerr "syntax error"
+#define Ttime "time"
+#define Ttoo_many_args "too many arguments"
+#define Ttoo_many_files "too many open files in shell"
+#define Ttrue "true"
+#define Ttty_fd_dupof "dup of tty fd"
+#define Ttty_fd "tty fd"
+#define Tdgtypeset "^=typeset"
+#define Ttypeset "typeset"
+#define Tugo "ugo"
+#define Tunalias "unalias"
+#define Tunexpected "unexpected"
+#define Tunexpected_type "%s: unexpected %s type %d"
+#define Tunknown_option "unknown option"
+#define Tunwind "unwind"
+#define Tuser_sp1 "user "
+#define Tuser_sp2 " user "
+#define Twrite "write"
+#define Tf__S " %S"
+#define Tf__d " %d"
+#define Tf__ss " %s%s"
+#define Tf__sN " %s\n"
+#define Tf_sSs "%s/%s"
+#define Tf_T "%T"
+#define Tf_dN "%d\n"
+#define Tf_s_ "%s "
+#define Tf_s_T "%s %T"
+#define Tf_s_s_sN "%s %s %s\n"
+#define Tf_s_s "%s %s"
+#define Tf_s_sD_s "%s %s: %s"
+#define Tf_optfoo "%s%s-%c: %s"
+#define Tf_sD_ "%s: "
+#define Tf_szs "%s: %zd %s"
+#define Tf_parm "%s: parameter not set"
+#define Tf_coproc "-p: %s"
+#define Tf_cant_s "%s: can't %s"
+#define Tf_cant_ss_s "can't %s %s: %s"
+#define Tf_heredoc "here document '%s' unclosed"
+#if HAVE_MKNOD
+#define Tf_nonnum "non-numeric %s %s '%s'"
+#endif
+#define Tf_S_ "%S "
+#define Tf_S "%S"
+#define Tf_lu "%lu"
+#define Tf_toolarge "%s %s too large: %lu"
+#define Tf_ldfailed "%s %s(%d, %ld) failed: %s"
+#define Tf_ss "%s%s"
+#define Tf_sss "%s%s%s"
+#define Tf_sD_s_sD_s "%s: %s %s: %s"
+#define Tf_toomany "too many %ss"
+#define Tf_sd "%s %d"
+#define Tf_s "%s"
+#define Tft_end "%;"
+#define Tft_R "%R"
+#define Tf_d "%d"
+#define Tf_sD_s_qs "%s: %s '%s'"
+#define Tf_ro "read-only: %s"
+#define Tf_flags "%s: flags 0x%X"
+#define Tf_temp "can't %s temporary file %s: %s"
+#define Tf_ssfaileds "%s: %s failed: %s"
+#define Tf_sD_sD_s "%s: %s: %s"
+#define Tf__c_ "-%c "
+#define Tf_sD_s_s "%s: %s %s"
+#define Tf_sN "%s\n"
+#define Tf_sD_s "%s: %s"
+#define T_devtty "/dev/tty"
+#endif /* end of string pooling */
 
 typedef uint8_t Temp_type;
 /* expanded heredoc */
@@ -892,13 +1302,13 @@ typedef struct trap {
 #define SS_USER		BIT(4)	/* user is doing the set (ie, trap command) */
 #define SS_SHTRAP	BIT(5)	/* trap for internal use (ALRM, CHLD, WINCH) */
 
-#define ksh_SIGEXIT	0	/* for trap EXIT */
-#define ksh_SIGERR	NSIG	/* for trap ERR */
+#define ksh_SIGEXIT 0		/* for trap EXIT */
+#define ksh_SIGERR  ksh_NSIG	/* for trap ERR */
 
 EXTERN volatile sig_atomic_t trap;	/* traps pending? */
 EXTERN volatile sig_atomic_t intrsig;	/* pending trap interrupts command */
 EXTERN volatile sig_atomic_t fatal_trap; /* received a fatal signal */
-extern	Trap	sigtraps[NSIG+1];
+extern Trap sigtraps[ksh_NSIG + 1];
 
 /* got_winch = 1 when we need to re-adjust the window size */
 #ifdef SIGWINCH
@@ -917,7 +1327,7 @@ enum tmout_enum {
 	TMOUT_LEAVING		/* have timed out */
 };
 EXTERN unsigned int ksh_tmout;
-EXTERN enum tmout_enum ksh_tmout_state E_INIT(TMOUT_EXECUTING);
+EXTERN enum tmout_enum ksh_tmout_state;
 
 /* For "You have stopped jobs" message */
 EXTERN bool really_exit;
@@ -925,25 +1335,199 @@ EXTERN bool really_exit;
 /*
  * fast character classes
  */
-#define C_ALPHA	 BIT(0)		/* a-z_A-Z */
-#define C_DIGIT	 BIT(1)		/* 0-9 */
-#define C_LEX1	 BIT(2)		/* \t \n\0|&;<>() */
-#define C_VAR1	 BIT(3)		/* *@#!$-? */
-#define C_IFSWS	 BIT(4)		/* \t \n (IFS white space) */
-#define C_SUBOP1 BIT(5)		/* "=-+?" */
-#define C_QUOTE	 BIT(6)		/* \t\n "#$&'()*;<=>?[\]`| (needing quoting) */
-#define C_IFS	 BIT(7)		/* $IFS */
-#define C_SUBOP2 BIT(8)		/* "#%" (magic, see below) */
 
-extern unsigned char chtypes[];
+/* internal types, do not reference */
 
-#define ctype(c, t)	tobool( ((t) == C_SUBOP2) ?			\
-			    (((c) == '#' || (c) == '%') ? 1 : 0) :	\
-			    (chtypes[(unsigned char)(c)] & (t)) )
-#define ksh_isalphx(c)	ctype((c), C_ALPHA)
-#define ksh_isalnux(c)	ctype((c), C_ALPHA | C_DIGIT)
+/* initially empty — filled at runtime from $IFS */
+#define CiIFS	BIT(0)
+#define CiCNTRL	BIT(1)	/* \x01‥\x08\x0E‥\x1F\x7F	*/
+#define CiUPPER	BIT(2)	/* A‥Z				*/
+#define CiLOWER	BIT(3)	/* a‥z				*/
+#define CiHEXLT	BIT(4)	/* A‥Fa‥f			*/
+#define CiOCTAL	BIT(5)	/* 0‥7				*/
+#define CiQCL	BIT(6)	/* &();|			*/
+#define CiALIAS	BIT(7)	/* !,.@				*/
+#define CiQCX	BIT(8)	/* *[\\				*/
+#define CiVAR1	BIT(9)	/* !*@				*/
+#define CiQCM	BIT(10)	/* /^~				*/
+#define CiDIGIT	BIT(11)	/* 89				*/
+#define CiQC	BIT(12)	/* "'				*/
+#define CiSPX	BIT(13)	/* \x0B\x0C			*/
+#define CiCURLY	BIT(14)	/* {}				*/
+#define CiANGLE	BIT(15)	/* <>				*/
+#define CiNUL	BIT(16)	/* \x00				*/
+#define CiTAB	BIT(17)	/* \x09				*/
+#define CiNL	BIT(18)	/* \x0A				*/
+#define CiCR	BIT(19)	/* \x0D				*/
+#define CiSP	BIT(20)	/* \x20				*/
+#define CiHASH	BIT(21)	/* #				*/
+#define CiSS	BIT(22)	/* $				*/
+#define CiPERCT	BIT(23)	/* %				*/
+#define CiPLUS	BIT(24)	/* +				*/
+#define CiMINUS	BIT(25)	/* -				*/
+#define CiCOLON	BIT(26)	/* :				*/
+#define CiEQUAL	BIT(27)	/* =				*/
+#define CiQUEST	BIT(28)	/* ?				*/
+#define CiBRACK	BIT(29)	/* ]				*/
+#define CiUNDER	BIT(30)	/* _				*/
+#define CiGRAVE	BIT(31)	/* `				*/
+/* out of space, but one for *@ would make sense, possibly others */
 
-EXTERN int ifs0 E_INIT(' ');	/* for "$*" */
+/* compile-time initialised, ASCII only */
+extern const uint32_t tpl_ctypes[128];
+/* run-time, contains C_IFS as well, full 2⁸ octet range */
+EXTERN uint32_t ksh_ctypes[256];
+/* first octet of $IFS, for concatenating "$*" */
+EXTERN char ifs0;
+
+/* external types */
+
+/* !%,-.0‥9:@A‥Z[]_a‥z	valid characters in alias names */
+#define C_ALIAS	(CiALIAS | CiBRACK | CiCOLON | CiDIGIT | CiLOWER | CiMINUS | CiOCTAL | CiPERCT | CiUNDER | CiUPPER)
+/* 0‥9A‥Za‥z		alphanumerical */
+#define C_ALNUM	(CiDIGIT | CiLOWER | CiOCTAL | CiUPPER)
+/* 0‥9A‥Z_a‥z		alphanumerical plus underscore (“word character”) */
+#define C_ALNUX	(CiDIGIT | CiLOWER | CiOCTAL | CiUNDER | CiUPPER)
+/* A‥Za‥z		alphabetical (upper plus lower) */
+#define C_ALPHA	(CiLOWER | CiUPPER)
+/* A‥Z_a‥z		alphabetical plus underscore (identifier lead) */
+#define C_ALPHX	(CiLOWER | CiUNDER | CiUPPER)
+/* \x01‥\x7F		7-bit ASCII except NUL */
+#define C_ASCII (CiALIAS | CiANGLE | CiBRACK | CiCNTRL | CiCOLON | CiCR | CiCURLY | CiDIGIT | CiEQUAL | CiGRAVE | CiHASH | CiLOWER | CiMINUS | CiNL | CiOCTAL | CiPERCT | CiPLUS | CiQC | CiQCL | CiQCM | CiQCX | CiQUEST | CiSP | CiSPX | CiSS | CiTAB | CiUNDER | CiUPPER)
+/* \x09\x20		tab and space */
+#define C_BLANK	(CiSP | CiTAB)
+/* \x09\x20"'		separator for completion */
+#define C_CFS	(CiQC | CiSP | CiTAB)
+/* \x00‥\x1F\x7F	POSIX control characters */
+#define C_CNTRL	(CiCNTRL | CiCR | CiNL | CiNUL | CiSPX | CiTAB)
+/* 0‥9			decimal digits */
+#define C_DIGIT	(CiDIGIT | CiOCTAL)
+/* &();`|			editor x_locate_word() command */
+#define C_EDCMD	(CiGRAVE | CiQCL)
+/* \x09\x0A\x20"&'():;<=>`|	editor non-word characters */
+#define C_EDNWC	(CiANGLE | CiCOLON | CiEQUAL | CiGRAVE | CiNL | CiQC | CiQCL | CiSP | CiTAB)
+/* "#$&'()*:;<=>?[\\`{|}	editor quotes for tab completion */
+#define C_EDQ	(CiANGLE | CiCOLON | CiCURLY | CiEQUAL | CiGRAVE | CiHASH | CiQC | CiQCL | CiQCX | CiQUEST | CiSS)
+/* !‥~			POSIX graphical (alphanumerical plus punctuation) */
+#define C_GRAPH	(C_PUNCT | CiDIGIT | CiLOWER | CiOCTAL | CiUPPER)
+/* A‥Fa‥f		hex letter */
+#define C_HEXLT	CiHEXLT
+/* \x00 + $IFS		IFS whitespace, IFS non-whitespace, NUL */
+#define C_IFS	(CiIFS | CiNUL)
+/* \x09\x0A\x20		IFS whitespace */
+#define C_IFSWS	(CiNL | CiSP | CiTAB)
+/* \x09\x0A\x20&();<>|	(for the lexer) */
+#define C_LEX1	(CiANGLE | CiNL | CiQCL | CiSP | CiTAB)
+/* a‥z			lowercase letters */
+#define C_LOWER	CiLOWER
+/* not alnux or dollar	separator for motion */
+#define C_MFS	(CiALIAS | CiANGLE | CiBRACK | CiCNTRL | CiCOLON | CiCR | CiCURLY | CiEQUAL | CiGRAVE | CiHASH | CiMINUS | CiNL | CiNUL | CiPERCT | CiPLUS | CiQC | CiQCL | CiQCM | CiQCX | CiQUEST | CiSP | CiSPX | CiTAB)
+/* 0‥7			octal digit */
+#define C_OCTAL	CiOCTAL
+/* !*+?@		pattern magical operator, except space */
+#define C_PATMO	(CiPLUS | CiQUEST | CiVAR1)
+/* \x20‥~		POSIX printable characters (graph plus space) */
+#define C_PRINT	(C_GRAPH | CiSP)
+/* !"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~	POSIX punctuation */
+#define C_PUNCT	(CiALIAS | CiANGLE | CiBRACK | CiCOLON | CiCURLY | CiEQUAL | CiGRAVE | CiHASH | CiMINUS | CiPERCT | CiPLUS | CiQC | CiQCL | CiQCM | CiQCX | CiQUEST | CiSS | CiUNDER)
+/* \x09\x0A"#$&'()*;<=>?[\\]`|	characters requiring quoting, minus space */
+#define C_QUOTE	(CiANGLE | CiBRACK | CiEQUAL | CiGRAVE | CiHASH | CiNL | CiQC | CiQCL | CiQCX | CiQUEST | CiSS | CiTAB)
+/* 0‥9A‥Fa‥f		hexadecimal digit */
+#define C_SEDEC	(CiDIGIT | CiHEXLT | CiOCTAL)
+/* \x09‥\x0D\x20	POSIX space class */
+#define C_SPACE	(CiCR | CiNL | CiSP | CiSPX | CiTAB)
+/* +-=?			substitution operations with word */
+#define C_SUB1	(CiEQUAL | CiMINUS | CiPLUS | CiQUEST)
+/* #%			substitution operations with pattern */
+#define C_SUB2	(CiHASH | CiPERCT)
+/* A‥Z			uppercase letters */
+#define C_UPPER	CiUPPER
+/* !#$*-?@		substitution parameters, other than positional */
+#define C_VAR1	(CiHASH | CiMINUS | CiQUEST | CiSS | CiVAR1)
+
+/* individual chars you might like */
+#define C_ANGLE	CiANGLE		/* <>	angle brackets */
+#define C_COLON	CiCOLON		/* :	colon */
+#define C_CR	CiCR		/* \x0D	ASCII carriage return */
+#define C_DOLAR	CiSS		/* $	dollar sign */
+#define C_EQUAL	CiEQUAL		/* =	equals sign */
+#define C_GRAVE	CiGRAVE		/* `	accent gravis */
+#define C_HASH	CiHASH		/* #	hash sign */
+#define C_LF	CiNL		/* \x0A	ASCII line feed */
+#define C_MINUS	CiMINUS		/* -	hyphen-minus */
+#ifdef MKSH_WITH_TEXTMODE
+#define C_NL	(CiNL | CiCR)	/* 	CR or LF under OS/2 TEXTMODE */
+#else
+#define C_NL	CiNL		/* 	LF only like under Unix */
+#endif
+#define C_NUL	CiNUL		/* \x00	ASCII NUL */
+#define C_PLUS	CiPLUS		/* +	plus sign */
+#define C_QC	CiQC		/* "'	quote characters */
+#define C_QUEST	CiQUEST		/* ?	question mark */
+#define C_SPC	CiSP		/* \x20	ASCII space */
+#define C_TAB	CiTAB		/* \x09	ASCII horizontal tabulator */
+#define C_UNDER	CiUNDER		/* _	underscore */
+
+/* identity transform of octet */
+#if defined(DEBUG) && defined(__GNUC__) && !defined(__ICC) && \
+    !defined(__INTEL_COMPILER) && !defined(__SUNPRO_C)
+extern unsigned int eek_ord;
+#define ORD(c)	((size_t)(c) > 0xFF ? eek_ord : \
+		    ((unsigned int)(unsigned char)(c)))
+#define ord(c)	__builtin_choose_expr(				\
+    __builtin_types_compatible_p(__typeof__(c), char) ||	\
+    __builtin_types_compatible_p(__typeof__(c), unsigned char),	\
+    ((unsigned int)(unsigned char)(c)), ({			\
+	size_t ord_c = (c);					\
+								\
+	if (ord_c > (size_t)0xFFU)				\
+		internal_errorf("%s:%d:ord(%zX)",		\
+		    __FILE__, __LINE__, ord_c);			\
+	((unsigned int)(unsigned char)(ord_c));			\
+}))
+#else
+#define ord(c)	((unsigned int)(unsigned char)(c))
+#define ORD(c)	ord(c) /* may evaluate arguments twice */
+#endif
+#if defined(MKSH_EBCDIC) || defined(MKSH_FAUX_EBCDIC)
+EXTERN unsigned short ebcdic_map[256];
+EXTERN unsigned char ebcdic_rtt_toascii[256];
+EXTERN unsigned char ebcdic_rtt_fromascii[256];
+extern void ebcdic_init(void);
+/* one-way to-ascii-or-high conversion, for POSIX locale ordering */
+#define asciibetical(c)	((unsigned int)ebcdic_map[(unsigned char)(c)])
+/* two-way round-trip conversion, for general use */
+#define rtt2asc(c)	ebcdic_rtt_toascii[(unsigned char)(c)]
+#define asc2rtt(c)	ebcdic_rtt_fromascii[(unsigned char)(c)]
+/* case-independent char comparison */
+#define ksh_eq(c,u,l)	(ord(c) == ord(u) || ord(c) == ord(l))
+#else
+#define asciibetical(c)	ord(c)
+#define rtt2asc(c)	((unsigned char)(c))
+#define asc2rtt(c)	((unsigned char)(c))
+#define ksh_eq(c,u,l)	((ord(c) | 0x20) == ord(l))
+#endif
+/* control character foo */
+#ifdef MKSH_EBCDIC
+#define ksh_isctrl(c)	(ord(c) < 0x40 || ord(c) == 0xFF)
+#else
+#define ksh_isctrl(c)	((ord(c) & 0x7F) < 0x20 || ord(c) == 0x7F)
+#endif
+/* new fast character classes */
+#define ctype(c,t)	tobool(ksh_ctypes[ord(c)] & (t))
+#define cinttype(c,t)	((c) >= 0 && (c) <= 0xFF ? \
+			tobool(ksh_ctypes[(unsigned char)(c)] & (t)) : false)
+/* helper functions */
+#define ksh_isdash(s)	tobool(ord((s)[0]) == '-' && ord((s)[1]) == '\0')
+/* invariant distance even in EBCDIC */
+#define ksh_tolower(c)	(ctype(c, C_UPPER) ? (c) - 'A' + 'a' : (c))
+#define ksh_toupper(c)	(ctype(c, C_LOWER) ? (c) - 'a' + 'A' : (c))
+/* strictly speaking rtt2asc() here, but this works even in EBCDIC */
+#define ksh_numdig(c)	(ord(c) - ORD('0'))
+#define ksh_numuc(c)	(rtt2asc(c) - rtt2asc('A'))
+#define ksh_numlc(c)	(rtt2asc(c) - rtt2asc('a'))
+#define ksh_toctrl(c)	asc2rtt(ord(c) == ORD('?') ? 0x7F : rtt2asc(c) & 0x9F)
+#define ksh_unctrl(c)	asc2rtt(rtt2asc(c) ^ 0x40U)
 
 /* Argument parsing for built-in commands and getopts command */
 
@@ -977,7 +1561,7 @@ EXTERN Getopt user_opt;		/* parsing state for getopts builtin command */
 /* This for co-processes */
 
 /* something that won't (realisticly) wrap */
-typedef int32_t Coproc_id;
+typedef int Coproc_id;
 
 struct coproc {
 	void *job;	/* 0 or job of co-process using input pipe */
@@ -996,36 +1580,27 @@ EXTERN sigset_t		sm_default, sm_sigchld;
 
 /* name of called builtin function (used by error functions) */
 EXTERN const char *builtin_argv0;
-/* is called builtin SPEC_BI? */
+/* is called builtin a POSIX special builtin? (error functions only) */
 EXTERN bool builtin_spec;
 
 /* current working directory */
 EXTERN char	*current_wd;
 
 /* input line size */
-#define LINE		(4096 - ALLOC_SIZE)
-/*
- * Minimum required space to work with on a line - if the prompt leaves
- * less space than this on a line, the prompt is truncated.
- */
-#define MIN_EDIT_SPACE	7
-/*
- * Minimum allowed value for x_cols: 2 for prompt, 3 for " < " at end of line
- */
-#define MIN_COLS	(2 + MIN_EDIT_SPACE + 3)
-#define MIN_LINS	3
-EXTERN mksh_ari_t x_cols E_INIT(80);	/* tty columns */
-EXTERN mksh_ari_t x_lins E_INIT(24);	/* tty lines */
+#ifdef MKSH_SMALL
+#define LINE		(4096 - ALLOC_OVERHEAD)
+#else
+#define LINE		(16384 - ALLOC_OVERHEAD)
+#endif
+/* columns and lines of the tty */
+EXTERN mksh_ari_t x_cols E_INIT(80);
+EXTERN mksh_ari_t x_lins E_INIT(24);
 
 
 /* Determine the location of the system (common) profile */
 
 #ifndef MKSH_DEFAULT_PROFILEDIR
-#if defined(ANDROID)
-#define MKSH_DEFAULT_PROFILEDIR	"/system/etc"
-#else
-#define MKSH_DEFAULT_PROFILEDIR	"/etc"
-#endif
+#define MKSH_DEFAULT_PROFILEDIR	MKSH_UNIXROOT "/etc"
 #endif
 
 #define MKSH_SYSTEM_PROFILE	MKSH_DEFAULT_PROFILEDIR "/profile"
@@ -1045,10 +1620,10 @@ EXTERN mksh_ari_t x_lins E_INIT(24);	/* tty lines */
 #define shf_fileno(shf)		((shf)->fd)
 #define shf_setfileno(shf,nfd)	((shf)->fd = (nfd))
 #define shf_getc_i(shf)		((shf)->rnleft > 0 ? \
-				    (shf)->rnleft--, *(shf)->rp++ : \
+				    (shf)->rnleft--, (int)ord(*(shf)->rp++) : \
 				    shf_getchar(shf))
 #define shf_putc_i(c, shf)	((shf)->wnleft == 0 ? \
-				    shf_putchar((c), (shf)) : \
+				    shf_putchar((uint8_t)(c), (shf)) : \
 				    ((shf)->wnleft--, *(shf)->wp++ = (c)))
 #define shf_eof(shf)		((shf)->flags & SHF_EOF)
 #define shf_error(shf)		((shf)->flags & SHF_ERROR)
@@ -1137,7 +1712,9 @@ struct tbl {
 	char name[4];
 };
 
-EXTERN struct tbl vtemp;
+EXTERN struct tbl *vtemp;
+/* set by isglobal(), global() and local() */
+EXTERN bool last_lookup_was_array;
 
 /* common flag bits */
 #define ALLOC		BIT(0)	/* val.s has been allocated */
@@ -1171,6 +1748,11 @@ EXTERN struct tbl vtemp;
 #define FDELETE		BIT(10)	/* function deleted while it was executing */
 #define FKSH		BIT(11)	/* function defined with function x (vs x()) */
 #define SPEC_BI		BIT(12)	/* a POSIX special builtin */
+#define LOWER_BI	BIT(13)	/* (with LOW_BI) override even w/o flags */
+#define LOW_BI		BIT(14)	/* external utility overrides built-in one */
+#define DECL_UTIL	BIT(15)	/* is declaration utility */
+#define DECL_FWDR	BIT(16) /* is declaration utility forwarder */
+
 /*
  * Attributes that can be set by the user (used to decide if an unset
  * param should be repoted by set/typeset). Does not include ARRAY or
@@ -1204,7 +1786,7 @@ enum namerefflag {
 #define FC_BI		(FC_SPECBI | FC_NORMBI)
 #define FC_PATH		BIT(3)	/* do path search */
 #define FC_DEFPATH	BIT(4)	/* use default path in path search */
-
+#define FC_WHENCE	BIT(5)	/* for use by command and whence */
 
 #define AF_ARGV_ALLOC	0x1	/* argv[] array allocated */
 #define AF_ARGS_ALLOCED	0x2	/* argument strings allocated */
@@ -1270,7 +1852,7 @@ EXTERN char *path;		/* copy of either PATH or def_path */
 EXTERN const char *def_path;	/* path to use if PATH not set */
 EXTERN char *tmpdir;		/* TMPDIR value */
 EXTERN const char *prompt;
-EXTERN int cur_prompt;		/* PS1 or PS2 */
+EXTERN uint8_t cur_prompt;	/* PS1 or PS2 */
 EXTERN int current_lineno;	/* LINENO value */
 
 /*
@@ -1342,16 +1924,18 @@ struct op {
 #define ADELIM	12	/* arbitrary delimiter: ${foo:2:3} ${foo/bar/baz} */
 #define FUNSUB	14	/* ${ foo;} substitution (NUL terminated) */
 #define VALSUB	15	/* ${|foo;} substitution (NUL terminated) */
+#define COMASUB	16	/* `…` substitution (COMSUB but expand aliases) */
+#define FUNASUB	17	/* function substitution but expand aliases */
 
 /*
  * IO redirection
  */
 struct ioword {
-	int	unit;		/* unit affected */
-	int	flag;		/* action (below) */
-	char	*name;		/* file name (unused if heredoc) */
-	char	*delim;		/* delimiter for <<,<<- */
-	char	*heredoc;	/* content of heredoc */
+	char *ioname;		/* filename (unused if heredoc) */
+	char *delim;		/* delimiter for <<, <<- */
+	char *heredoc;		/* content of heredoc */
+	unsigned short ioflag;	/* action (below) */
+	short unit;		/* unit (fd) affected */
 };
 
 /* ioword.flag - type of redirection */
@@ -1403,16 +1987,20 @@ struct ioword {
 #define DOTCOMEXEC BIT(11)	/* not an eval flag, used by sh -c hack */
 #define DOSCALAR BIT(12)	/* change field handling to non-list context */
 #define DOHEREDOC BIT(13)	/* change scalar handling to heredoc body */
+#define DOHERESTR BIT(14)	/* append a newline char */
 
 #define X_EXTRA	20	/* this many extra bytes in X string */
 
 typedef struct XString {
-	char *end, *beg;	/* end, begin of string */
-	size_t len;		/* length */
-	Area *areap;		/* area to allocate/free from */
+	/* beginning of string */
+	char *beg;
+	/* length of allocated area, minus safety margin */
+	size_t len;
+	/* end of string */
+	char *end;
+	/* memory area used */
+	Area *areap;
 } XString;
-
-typedef char *XStringP;
 
 /* initialise expandable string */
 #define XinitN(xs, length, area) do {				\
@@ -1445,7 +2033,7 @@ typedef char *XStringP;
 /* close, return string */
 #define Xclose(xs, xp)	aresize((xs).beg, (xp) - (xs).beg, (xs).areap)
 
-/* begin of string */
+/* beginning of string */
 #define Xstring(xs, xp)	((xs).beg)
 
 #define Xnleft(xs, xp)	((xs).end - (xp))	/* may be less than 0 */
@@ -1461,7 +2049,7 @@ char *Xcheck_grow(XString *, const char *, size_t);
  */
 
 typedef struct {
-	/* begin of allocated area */
+	/* beginning of allocated area */
 	void **beg;
 	/* currently used number of entries */
 	size_t len;
@@ -1489,30 +2077,54 @@ typedef struct {
 #define XPclose(x)	aresize2((x).beg, XPsize(x), sizeof(void *), ATEMP)
 #define XPfree(x)	afree((x).beg, ATEMP)
 
+/* for print_columns */
+
+struct columnise_opts {
+	struct shf *shf;
+	char linesep;
+	bool do_last;
+	bool prefcol;
+};
+
 /*
  * Lexer internals
  */
 
 typedef struct source Source;
 struct source {
-	const char *str;	/* input pointer */
-	const char *start;	/* start of current buffer */
+	/* input buffer */
+	XString xs;
+	/* memory area, also checked in reclaim() */
+	Area *areap;
+	/* stacked source */
+	Source *next;
+	/* input pointer */
+	const char *str;
+	/* start of current buffer */
+	const char *start;
+	/* input file name */
+	const char *file;
+	/* extra data */
 	union {
-		const char **strv;	/* string [] */
-		struct shf *shf;	/* shell file */
-		struct tbl *tblp;	/* alias (SF_HASALIAS) */
-		char *freeme;		/* also for SREREAD */
+		/* string[] */
+		const char **strv;
+		/* shell file */
+		struct shf *shf;
+		/* alias (SF_HASALIAS) */
+		struct tbl *tblp;
+		/* (also for SREREAD) */
+		char *freeme;
 	} u;
-	const char *file;	/* input file name */
-	int	type;		/* input type */
-	int	line;		/* line number */
-	int	errline;	/* line the error occurred on (0 if not set) */
-	int	flags;		/* SF_* */
-	Area	*areap;
-	Source *next;		/* stacked source */
-	XString	xs;		/* input buffer */
-	char	ugbuf[2];	/* buffer for ungetsc() (SREREAD) and
-				 * alias (SALIAS) */
+	/* flags */
+	int flags;
+	/* input type */
+	int type;
+	/* line number */
+	int line;
+	/* line the error occurred on (0 if not set) */
+	int errline;
+	/* buffer for ungetsc() (SREREAD) and alias (SALIAS) */
+	char ugbuf[2];
 };
 
 /* Source.type values */
@@ -1579,22 +2191,86 @@ typedef union {
 #define ALIAS		BIT(2)	/* recognise alias */
 #define KEYWORD		BIT(3)	/* recognise keywords */
 #define LETEXPR		BIT(4)	/* get expression inside (( )) */
-#define VARASN		BIT(5)	/* check for var=word */
-#define ARRAYVAR	BIT(6)	/* parse x[1 & 2] as one word */
+#define CMDASN		BIT(5)	/* parse x[1 & 2] as one word, for typeset */
+#define HEREDOC 	BIT(6)	/* parsing a here document body */
 #define ESACONLY	BIT(7)	/* only accept esac keyword */
 #define CMDWORD		BIT(8)	/* parsing simple command (alias related) */
 #define HEREDELIM	BIT(9)	/* parsing <<,<<- delimiter */
 #define LQCHAR		BIT(10)	/* source string contains QCHAR */
-#define HEREDOC 	BIT(11)	/* parsing a here document body */
 
 #define HERES		10	/* max number of << in line */
 
-#undef CTRL
-#define	CTRL(x)		((x) == '?' ? 0x7F : (x) & 0x1F)	/* ASCII */
-#define	UNCTRL(x)	((x) ^ 0x40)				/* ASCII */
-#define	ISCTRL(x)	(((signed char)((uint8_t)(x) + 1)) < 33)
+#ifdef MKSH_EBCDIC
+#define CTRL_AT	(0x00U)
+#define CTRL_A	(0x01U)
+#define CTRL_B	(0x02U)
+#define CTRL_C	(0x03U)
+#define CTRL_D	(0x37U)
+#define CTRL_E	(0x2DU)
+#define CTRL_F	(0x2EU)
+#define CTRL_G	(0x2FU)
+#define CTRL_H	(0x16U)
+#define CTRL_I	(0x05U)
+#define CTRL_J	(0x15U)
+#define CTRL_K	(0x0BU)
+#define CTRL_L	(0x0CU)
+#define CTRL_M	(0x0DU)
+#define CTRL_N	(0x0EU)
+#define CTRL_O	(0x0FU)
+#define CTRL_P	(0x10U)
+#define CTRL_Q	(0x11U)
+#define CTRL_R	(0x12U)
+#define CTRL_S	(0x13U)
+#define CTRL_T	(0x3CU)
+#define CTRL_U	(0x3DU)
+#define CTRL_V	(0x32U)
+#define CTRL_W	(0x26U)
+#define CTRL_X	(0x18U)
+#define CTRL_Y	(0x19U)
+#define CTRL_Z	(0x3FU)
+#define CTRL_BO	(0x27U)
+#define CTRL_BK	(0x1CU)
+#define CTRL_BC	(0x1DU)
+#define CTRL_CA	(0x1EU)
+#define CTRL_US	(0x1FU)
+#define CTRL_QM	(0x07U)
+#else
+#define CTRL_AT	(0x00U)
+#define CTRL_A	(0x01U)
+#define CTRL_B	(0x02U)
+#define CTRL_C	(0x03U)
+#define CTRL_D	(0x04U)
+#define CTRL_E	(0x05U)
+#define CTRL_F	(0x06U)
+#define CTRL_G	(0x07U)
+#define CTRL_H	(0x08U)
+#define CTRL_I	(0x09U)
+#define CTRL_J	(0x0AU)
+#define CTRL_K	(0x0BU)
+#define CTRL_L	(0x0CU)
+#define CTRL_M	(0x0DU)
+#define CTRL_N	(0x0EU)
+#define CTRL_O	(0x0FU)
+#define CTRL_P	(0x10U)
+#define CTRL_Q	(0x11U)
+#define CTRL_R	(0x12U)
+#define CTRL_S	(0x13U)
+#define CTRL_T	(0x14U)
+#define CTRL_U	(0x15U)
+#define CTRL_V	(0x16U)
+#define CTRL_W	(0x17U)
+#define CTRL_X	(0x18U)
+#define CTRL_Y	(0x19U)
+#define CTRL_Z	(0x1AU)
+#define CTRL_BO	(0x1BU)
+#define CTRL_BK	(0x1CU)
+#define CTRL_BC	(0x1DU)
+#define CTRL_CA	(0x1EU)
+#define CTRL_US	(0x1FU)
+#define CTRL_QM	(0x7FU)
+#endif
 
-#define IDENT		64
+#define IDENT	64
 
 EXTERN Source *source;		/* yyparse/yylex source */
 EXTERN YYSTYPE yylval;		/* result from yylex */
@@ -1604,6 +2280,13 @@ EXTERN char ident[IDENT + 1];
 EXTERN char **history;		/* saved commands */
 EXTERN char **histptr;		/* last history item */
 EXTERN mksh_ari_t histsize;	/* history size */
+
+/* flags to histsave */
+#define HIST_FLUSH	0
+#define HIST_QUEUE	1
+#define HIST_APPEND	2
+#define HIST_STORE	3
+#define HIST_NOTE	4
 
 /* user and system time of last j_waitjed job */
 EXTERN struct timeval j_usrtime, j_systime;
@@ -1643,6 +2326,7 @@ void x_done(void);
 int x_read(char *);
 #endif
 void x_mkraw(int, mksh_ttyst *, bool);
+void x_initterm(const char *);
 /* eval.c */
 char *substitute(const char *, int);
 char **eval(const char **, int);
@@ -1654,15 +2338,18 @@ int glob_str(char *, XPtrV *, bool);
 char *do_tilde(char *);
 /* exec.c */
 int execute(struct op * volatile, volatile int, volatile int * volatile);
-int shcomexec(const char **);
+int c_builtin(const char **);
+struct tbl *get_builtin(const char *);
 struct tbl *findfunc(const char *, uint32_t, bool);
 int define(const char *, struct op *);
 const char *builtin(const char *, int (*)(const char **));
 struct tbl *findcom(const char *, int);
 void flushcom(bool);
+int search_access(const char *, int);
 const char *search_path(const char *, const char *, int, int *);
 void pr_menu(const char * const *);
-void pr_list(char * const *);
+void pr_list(struct columnise_opts *, char * const *);
+int herein(struct ioword *, char **);
 /* expr.c */
 int evaluate(const char *, mksh_ari_t *, int, bool);
 int v_evaluate(struct tbl *, const char *, volatile int, bool);
@@ -1671,11 +2358,15 @@ size_t utf_mbtowc(unsigned int *, const char *);
 size_t utf_wctomb(char *, unsigned int);
 int utf_widthadj(const char *, const char **);
 size_t utf_mbswidth(const char *) MKSH_A_PURE;
-const char *utf_skipcols(const char *, int) MKSH_A_PURE;
+const char *utf_skipcols(const char *, int, int *);
 size_t utf_ptradj(const char *) MKSH_A_PURE;
+#ifdef MIRBSD_BOOTFLOPPY
+#define utf_wcwidth(i) wcwidth((wchar_t)(i))
+#else
 int utf_wcwidth(unsigned int) MKSH_A_PURE;
+#endif
 int ksh_access(const char *, int);
-struct tbl *tempvar(void);
+struct tbl *tempvar(const char *);
 /* funcs.c */
 int c_hash(const char **);
 int c_pwd(const char **);
@@ -1686,6 +2377,7 @@ int c_printf(const char **);
 int c_whence(const char **);
 int c_command(const char **);
 int c_typeset(const char **);
+bool valid_alias_name(const char *);
 int c_alias(const char **);
 int c_unalias(const char **);
 int c_let(const char **);
@@ -1715,8 +2407,6 @@ int c_times(const char **);
 int timex(struct op *, int, volatile int *);
 void timex_hook(struct op *, char ** volatile *);
 int c_exec(const char **);
-/* dummy function (just need pointer value), special case in comexec() */
-#define c_builtin shcomexec
 int c_test(const char **);
 #if HAVE_MKNOD
 int c_mknod(const char **);
@@ -1731,7 +2421,7 @@ void hist_init(Source *);
 #if HAVE_PERSISTENT_HISTORY
 void hist_finish(void);
 #endif
-void histsave(int *, const char *, bool, bool);
+void histsave(int *, const char *, int, bool);
 #if !defined(MKSH_SMALL) && HAVE_PERSISTENT_HISTORY
 bool histsync(void);
 #endif
@@ -1748,7 +2438,7 @@ int findhist(int, int, const char *, bool) MKSH_A_PURE;
 char **hist_get_newest(bool);
 void inittraps(void);
 void alarm_init(void);
-Trap *gettrap(const char *, bool);
+Trap *gettrap(const char *, bool, bool);
 void trapsig(int);
 void intrcheck(void);
 int fatal_trap_check(void);
@@ -1758,8 +2448,8 @@ void runtrap(Trap *, bool);
 void cleartraps(void);
 void restoresigs(void);
 void settrap(Trap *, const char *);
-int block_pipe(void);
-void restore_pipe(int);
+bool block_pipe(void);
+void restore_pipe(void);
 int setsig(Trap *, sig_t, int);
 void setexecsig(Trap *, int);
 #if HAVE_FLOCK || HAVE_LOCK_FCNTL
@@ -1799,7 +2489,7 @@ int pprompt(const char *, int);
 /* main.c */
 int include(const char *, int, const char **, bool);
 int command(const char *, int);
-int shell(Source * volatile, volatile bool);
+int shell(Source * volatile, volatile int);
 /* argument MUST NOT be 0 */
 void unwind(int) MKSH_A_NORETURN;
 void newenv(int);
@@ -1831,6 +2521,7 @@ void shprintf(const char *, ...)
     MKSH_A_FORMAT(__printf__, 1, 2);
 int can_seek(int);
 void initio(void);
+void recheck_ctype(void);
 int ksh_dup2(int, int, bool);
 short savefd(int);
 void restfd(int, int);
@@ -1858,8 +2549,6 @@ void DF(const char *, ...)
     MKSH_A_FORMAT(__printf__, 1, 2);
 #endif
 /* misc.c */
-void setctypes(const char *, int);
-void initctypes(void);
 size_t option(const char *) MKSH_A_PURE;
 char *getoptions(void);
 void change_flag(enum sh_flag, int, bool);
@@ -1867,16 +2556,18 @@ void change_xtrace(unsigned char, bool);
 int parse_args(const char **, int, bool *);
 int getn(const char *, int *);
 int gmatchx(const char *, const char *, bool);
-int has_globbing(const char *, const char *) MKSH_A_PURE;
-int xstrcmp(const void *, const void *) MKSH_A_PURE;
+bool has_globbing(const char *) MKSH_A_PURE;
+int ascstrcmp(const void *, const void *) MKSH_A_PURE;
+int ascpstrcmp(const void *, const void *) MKSH_A_PURE;
 void ksh_getopt_reset(Getopt *, int);
 int ksh_getopt(const char **, Getopt *, const char *);
 void print_value_quoted(struct shf *, const char *);
 char *quote_value(const char *);
-void print_columns(struct shf *, unsigned int,
-    char *(*)(char *, size_t, unsigned int, const void *),
-    const void *, size_t, size_t, bool);
-void strip_nuls(char *, int);
+void print_columns(struct columnise_opts *, unsigned int,
+    void (*)(char *, size_t, unsigned int, const void *),
+    const void *, size_t, size_t);
+void strip_nuls(char *, size_t)
+    MKSH_A_BOUNDED(__string__, 1, 2);
 ssize_t blocking_read(int, char *, size_t)
     MKSH_A_BOUNDED(__buffer__, 2, 3);
 int reset_nonblock(int);
@@ -1890,6 +2581,14 @@ char *strdup_i(const char *, Area *);
 char *strndup_i(const char *, size_t, Area *);
 #endif
 int unbksl(bool, int (*)(void), void (*)(int));
+#ifdef __OS2__
+/* os2.c */
+void os2_init(int *, const char ***);
+void setextlibpath(const char *, const char *);
+int access_ex(int (*)(const char *, int), const char *, int);
+int stat_ex(const char *, struct stat *);
+const char *real_exec_name(const char *);
+#endif
 /* shf.c */
 struct shf *shf_open(const char *, int, int, int);
 struct shf *shf_fdopen(int, int, struct shf *);
@@ -1922,9 +2621,10 @@ char *shf_smprintf(const char *, ...)
     MKSH_A_FORMAT(__printf__, 1, 2);
 ssize_t shf_vfprintf(struct shf *, const char *, va_list)
     MKSH_A_FORMAT(__printf__, 2, 0);
+void set_ifs(const char *);
 /* syn.c */
 void initkeywords(void);
-struct op *compile(Source *, bool);
+struct op *compile(Source *, bool, bool);
 bool parse_usec(const char *, struct timeval *);
 char *yyrecursive(int);
 void yyrecursive_pop(bool);
@@ -1935,8 +2635,6 @@ struct op *tcopy(struct op *, Area *);
 char *wdcopy(const char *, Area *);
 const char *wdscan(const char *, int);
 #define WDS_TPUTS	BIT(0)		/* tputS (dumpwdvar) mode */
-#define WDS_KEEPQ	BIT(1)		/* keep quote characters */
-#define WDS_MAGIC	BIT(2)		/* make MAGIC */
 char *wdstrip(const char *, int);
 void tfree(struct op *, Area *);
 void dumpchar(struct shf *, int);
@@ -1952,6 +2650,7 @@ void popblock(void);
 void initvar(void);
 struct block *varsearch(struct block *, struct tbl **, const char *, uint32_t);
 struct tbl *global(const char *);
+struct tbl *isglobal(const char *, bool);
 struct tbl *local(const char *, bool);
 char *str_val(struct tbl *);
 int setstr(struct tbl *, const char *, int);
@@ -1975,12 +2674,13 @@ uint32_t chvt_rndsetup(const void *, size_t) MKSH_A_PURE;
 mksh_ari_t rndget(void);
 void rndset(unsigned long);
 void rndpush(const void *);
+void record_match(const char *);
 
 enum Test_op {
 	/* non-operator */
 	TO_NONOP = 0,
 	/* unary operators */
-	TO_STNZE, TO_STZER, TO_OPTION,
+	TO_STNZE, TO_STZER, TO_ISSET, TO_OPTION,
 	TO_FILAXST,
 	TO_FILEXST,
 	TO_FILREG, TO_FILBDEV, TO_FILCDEV, TO_FILSYM, TO_FILFIFO, TO_FILSOCK,
@@ -2036,6 +2736,55 @@ EXTERN mksh_ttyst tty_state;	/* saved tty state */
 EXTERN bool tty_hasstate;	/* true if tty_state is valid */
 
 extern int tty_init_fd(void);	/* initialise tty_fd, tty_devtty */
+
+#ifdef __OS2__
+#define binopen2(path,flags)		__extension__({			\
+	int binopen2_fd = open((path), (flags) | O_BINARY);		\
+	if (binopen2_fd >= 0)						\
+		setmode(binopen2_fd, O_BINARY);				\
+	(binopen2_fd);							\
+})
+#define binopen3(path,flags,mode)	__extension__({			\
+	int binopen3_fd = open((path), (flags) | O_BINARY, (mode));	\
+	if (binopen3_fd >= 0)						\
+		setmode(binopen3_fd, O_BINARY);				\
+	(binopen3_fd);							\
+})
+#else
+#define binopen2(path,flags)		open((path), (flags) | O_BINARY)
+#define binopen3(path,flags,mode)	open((path), (flags) | O_BINARY, (mode))
+#endif
+
+#ifdef MKSH_DOSPATH
+#define mksh_drvltr(s)			__extension__({			\
+	const char *mksh_drvltr_s = (s);				\
+	(ctype(mksh_drvltr_s[0], C_ALPHA) && mksh_drvltr_s[1] == ':');	\
+})
+#define mksh_abspath(s)			__extension__({			\
+	const char *mksh_abspath_s = (s);				\
+	(mksh_cdirsep(mksh_abspath_s[0]) ||				\
+	    (mksh_drvltr(mksh_abspath_s) &&				\
+	    mksh_cdirsep(mksh_abspath_s[2])));				\
+})
+#define mksh_cdirsep(c)			__extension__({			\
+	char mksh_cdirsep_c = (c);					\
+	(mksh_cdirsep_c == '/' || mksh_cdirsep_c == '\\');		\
+})
+#define mksh_sdirsep(s)			strpbrk((s), "/\\")
+#define mksh_vdirsep(s)			__extension__({			\
+	const char *mksh_vdirsep_s = (s);				\
+	(((mksh_drvltr(mksh_vdirsep_s) &&				\
+	    !mksh_cdirsep(mksh_vdirsep_s[2])) ? (!0) :			\
+	    (mksh_sdirsep(mksh_vdirsep_s) != NULL)) &&			\
+	    (strcmp(mksh_vdirsep_s, T_builtin) != 0));			\
+})
+int getdrvwd(char **, unsigned int);
+#else
+#define mksh_abspath(s)			(ord((s)[0]) == ORD('/'))
+#define mksh_cdirsep(c)			(ord(c) == ORD('/'))
+#define mksh_sdirsep(s)			strchr((s), '/')
+#define mksh_vdirsep(s)			vstrchr((s), '/')
+#endif
 
 /* be sure not to interfere with anyone else's idea about EXTERN */
 #ifdef EXTERN_DEFINED

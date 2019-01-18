@@ -2,8 +2,8 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013, 2014, 2015
- *	Thorsten Glaser <tg@mirbsd.org>
+ *		 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+ *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
  * are retained or reproduced in an accompanying document, permission
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.158.2.4 2015/03/01 15:42:58 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.219 2018/01/14 01:29:47 tg Exp $");
 
 /*
  * string expansion
@@ -62,8 +62,14 @@ typedef struct {
 #define IFS_WORD	0	/* word has chars (or quotes except "$@") */
 #define IFS_WS		1	/* have seen IFS white-space */
 #define IFS_NWS		2	/* have seen IFS non-white-space */
-#define IFS_IWS		3	/* begin of word, ignore IFS WS */
+#define IFS_IWS		3	/* beginning of word, ignore IFS WS */
 #define IFS_QUOTE	4	/* beg.w/quote, become IFS_WORD unless "$@" */
+
+#define STYPE_CHAR	0xFF
+#define STYPE_DBL	0x100
+#define STYPE_AT	0x200
+#define STYPE_SINGLE	0x2FF
+#define STYPE_MASK	0x300
 
 static int varsub(Expand *, const char *, const char *, int *, int *);
 static int comsub(Expand *, const char *, int);
@@ -120,7 +126,7 @@ substitute(const char *cp, int f)
 	s->start = s->str = cp;
 	source = s;
 	if (yylex(ONEWORD) != LWORD)
-		internal_errorf("bad substitution");
+		internal_errorf(Tbadsubst);
 	source = sold;
 	afree(s, ATEMP);
 	return (evalstr(yylval.cp, f));
@@ -186,7 +192,7 @@ evalonestr(const char *cp, int f)
 		rv = (char *) *XPptrv(w);
 		break;
 	default:
-		rv = evalstr(cp, f&~DOGLOB);
+		rv = evalstr(cp, f & ~DOGLOB);
 		break;
 	}
 	XPfree(w);
@@ -198,7 +204,7 @@ typedef struct SubType {
 	struct tbl *var;	/* variable for ${var..} */
 	struct SubType *prev;	/* old type */
 	struct SubType *next;	/* poped type (to avoid re-allocating) */
-	size_t	base;		/* begin position of expanded word */
+	size_t	base;		/* start position of expanded word */
 	short	stype;		/* [=+-?%#] action after expanded word */
 	short	f;		/* saved value of f (DOPAT, etc) */
 	uint8_t	quotep;		/* saved value of quote (for ${..[%#]..}) */
@@ -277,56 +283,60 @@ expand(
 		switch (type) {
 		case XBASE:
 			/* original prefixed string */
-			c = *sp++;
+			c = ord(*sp++);
 			switch (c) {
 			case EOS:
 				c = 0;
 				break;
 			case CHAR:
-				c = *sp++;
+				c = ord(*sp++);
 				break;
 			case QCHAR:
 				/* temporary quote */
 				quote |= 2;
-				c = *sp++;
+				c = ord(*sp++);
 				break;
 			case OQUOTE:
-				switch (word) {
-				case IFS_QUOTE:
-					/* """something */
-					word = IFS_WORD;
-					break;
-				case IFS_WORD:
-					break;
-				default:
+				if (word != IFS_WORD)
 					word = IFS_QUOTE;
-					break;
-				}
 				tilde_ok = 0;
 				quote = 1;
 				continue;
 			case CQUOTE:
+				if (word == IFS_QUOTE)
+					word = IFS_WORD;
 				quote = st->quotew;
 				continue;
+			case COMASUB:
 			case COMSUB:
+			case FUNASUB:
 			case FUNSUB:
 			case VALSUB:
 				tilde_ok = 0;
 				if (f & DONTRUNCOMMAND) {
 					word = IFS_WORD;
 					*dp++ = '$';
-					*dp++ = c == COMSUB ? '(' : '{';
-					if (c != COMSUB)
-						*dp++ = c == FUNSUB ? ' ' : '|';
+					switch (c) {
+					case COMASUB:
+					case COMSUB:
+						*dp++ = '(';
+						c = ORD(')');
+						break;
+					case FUNASUB:
+					case FUNSUB:
+					case VALSUB:
+						*dp++ = '{';
+						*dp++ = c == VALSUB ? '|' : ' ';
+						c = ORD('}');
+						break;
+					}
 					while (*sp != '\0') {
 						Xcheck(ds, dp);
 						*dp++ = *sp++;
 					}
-					if (c != COMSUB) {
+					if ((unsigned int)c == ORD('}'))
 						*dp++ = ';';
-						*dp++ = '}';
-					} else
-						*dp++ = ')';
+					*dp++ = c;
 				} else {
 					type = comsub(&x, sp, c);
 					if (type != XBASE && (f & DOBLANK))
@@ -382,14 +392,15 @@ expand(
  unwind_substsyn:
 					/* restore sp */
 					sp = varname - 2;
-					end = (beg = wdcopy(sp, ATEMP)) +
-					    (wdscan(sp, CSUBST) - sp);
+					beg = wdcopy(sp, ATEMP);
+					end = (wdscan(cstrchr(sp, '\0') + 1,
+					    CSUBST) - sp) + beg;
 					/* ({) the } or x is already skipped */
 					if (end < wdscan(beg, EOS))
 						*end = EOS;
-					str = snptreef(NULL, 64, "%S", beg);
+					str = snptreef(NULL, 64, Tf_S, beg);
 					afree(beg, ATEMP);
-					errorf("%s: %s", str, "bad substitution");
+					errorf(Tf_sD_s, str, Tbadsubst);
 				}
 				if (f & DOBLANK)
 					doblank++;
@@ -410,8 +421,8 @@ expand(
 					st->stype = stype;
 					st->base = Xsavepos(ds, dp);
 					st->f = f;
-					if (x.var == &vtemp) {
-						st->var = tempvar();
+					if (x.var == vtemp) {
+						st->var = tempvar(vtemp->name);
 						st->var->flag &= ~INTEGER;
 						/* can't fail here */
 						setstr(st->var,
@@ -424,12 +435,12 @@ expand(
 					/* skip qualifier(s) */
 					if (stype)
 						sp += slen;
-					switch (stype & 0x17F) {
-					case 0x100 | '#':
+					switch (stype & STYPE_SINGLE) {
+					case ORD('#') | STYPE_AT:
 						x.str = shf_smprintf("%08X",
 						    (unsigned int)hash(str_val(st->var)));
 						break;
-					case 0x100 | 'Q': {
+					case ORD('Q') | STYPE_AT: {
 						struct shf shf;
 
 						shf_sopen(NULL, 0, SHF_WR|SHF_DYNAMIC, &shf);
@@ -437,25 +448,22 @@ expand(
 						x.str = shf_sclose(&shf);
 						break;
 					    }
-					case '0': {
+					case ORD('0'): {
 						char *beg, *mid, *end, *stg;
 						mksh_ari_t from = 0, num = -1, flen, finc = 0;
 
 						beg = wdcopy(sp, ATEMP);
 						mid = beg + (wdscan(sp, ADELIM) - sp);
 						stg = beg + (wdscan(sp, CSUBST) - sp);
-						if (mid >= stg)
-							goto unwind_substsyn;
 						mid[-2] = EOS;
-						if (mid[-1] == /*{*/'}') {
+						if (ord(mid[-1]) == ORD(/*{*/ '}')) {
 							sp += mid - beg - 1;
 							end = NULL;
 						} else {
 							end = mid +
 							    (wdscan(mid, ADELIM) - mid);
-							if (end >= stg ||
-							    /* more than max delimiters */
-							    end[-1] != /*{*/ '}')
+							if (ord(end[-1]) != ORD(/*{*/ '}'))
+								/* more than max delimiters */
 								goto unwind_substsyn;
 							end[-2] = EOS;
 							sp += end - beg - 1;
@@ -487,96 +495,66 @@ expand(
 						strndupx(x.str, beg, num, ATEMP);
 						goto do_CSUBST;
 					    }
-					case '/': {
+					case ORD('/') | STYPE_AT:
+					case ORD('/'): {
 						char *s, *p, *d, *sbeg, *end;
-						char *pat, *rrep;
-						char *tpat0, *tpat1, *tpat2;
+						char *pat = NULL, *rrep = null;
+						char fpat = 0, *tpat1, *tpat2;
+						char *ws, *wpat, *wrep;
 
-						s = wdcopy(sp, ATEMP);
+						s = ws = wdcopy(sp, ATEMP);
 						p = s + (wdscan(sp, ADELIM) - sp);
 						d = s + (wdscan(sp, CSUBST) - sp);
-						if (p >= d)
-							goto unwind_substsyn;
 						p[-2] = EOS;
-						if (p[-1] == /*{*/'}')
+						if (ord(p[-1]) == ORD(/*{*/ '}'))
 							d = NULL;
 						else
 							d[-2] = EOS;
 						sp += (d ? d : p) - s - 1;
-						tpat0 = wdstrip(s,
-						    WDS_KEEPQ | WDS_MAGIC);
-						pat = substitute(tpat0, 0);
-						if (d) {
-							d = wdstrip(p, WDS_KEEPQ);
-							rrep = substitute(d, 0);
-							afree(d, ATEMP);
-						} else
-							rrep = null;
-						afree(s, ATEMP);
-						s = d = pat;
-						while (*s)
-							if (*s != '\\' ||
-							    s[1] == '%' ||
-							    s[1] == '#' ||
-							    s[1] == '\0' ||
-				/* XXX really? */	    s[1] == '\\' ||
-							    s[1] == '/')
-								*d++ = *s++;
-							else
-								s++;
-						*d = '\0';
-						afree(tpat0, ATEMP);
-
-						/* check for special cases */
-						d = str_val(st->var);
-						switch (*pat) {
-						case '#':
-							/* anchor at begin */
-							tpat0 = pat + 1;
-							tpat1 = rrep;
-							tpat2 = d;
-							break;
-						case '%':
-							/* anchor at end */
-							tpat0 = pat + 1;
-							tpat1 = d;
-							tpat2 = rrep;
-							break;
-						case '\0':
-							/* empty pattern */
-							goto no_repl;
-						default:
-							tpat0 = pat;
-							/* silence gcc */
-							tpat1 = tpat2 = NULL;
-						}
-						if (gmatchx(null, tpat0, false)) {
-							/*
-							 * pattern matches
-							 * the empty string
-							 */
-							if (tpat0 == pat)
-								goto no_repl;
-							/* but is anchored */
-							s = shf_smprintf("%s%s",
-							    tpat1, tpat2);
-							goto do_repl;
+						if (!(stype & STYPE_MASK) &&
+						    s[0] == CHAR &&
+						    ctype(s[1], C_SUB2))
+							fpat = s[1];
+						wpat = s + (fpat ? 2 : 0);
+						wrep = d ? p : NULL;
+						if (!(stype & STYPE_AT)) {
+							rrep = wrep ? evalstr(wrep,
+							    DOTILDE | DOSCALAR) :
+							    null;
 						}
 
 						/* prepare string on which to work */
-						strdupx(s, d, ATEMP);
+						strdupx(s, str_val(st->var), ATEMP);
 						sbeg = s;
+ again_search:
+						pat = evalstr(wpat,
+						    DOTILDE | DOSCALAR | DOPAT);
+						/* check for special cases */
+						if (!*pat && !fpat) {
+							/*
+							 * empty unanchored
+							 * pattern => reject
+							 */
+							goto no_repl;
+						}
+						if ((stype & STYPE_MASK) &&
+						    gmatchx(null, pat, false)) {
+							/*
+							 * pattern matches empty
+							 * string => don't loop
+							 */
+							stype &= ~STYPE_MASK;
+						}
 
 						/* first see if we have any match at all */
-						tpat0 = pat;
-						if (*pat == '#') {
+						if (ord(fpat) == ORD('#')) {
 							/* anchor at the beginning */
-							tpat1 = shf_smprintf("%s%c*", ++tpat0, MAGIC);
+							tpat1 = shf_smprintf("%s%c*", pat, MAGIC);
 							tpat2 = tpat1;
-						} else if (*pat == '%') {
+						} else if (ord(fpat) == ORD('%')) {
 							/* anchor at the end */
-							tpat1 = shf_smprintf("%c*%s", MAGIC, ++tpat0);
-							tpat2 = tpat0;
+							tpat1 = shf_smprintf("%c*%s", MAGIC, pat);
+							tpat2 = pat;
 						} else {
 							/* float */
 							tpat1 = shf_smprintf("%c*%s%c*", MAGIC, pat, MAGIC);
@@ -591,7 +569,7 @@ expand(
 							goto end_repl;
 						end = strnul(s);
 						/* now anchor the beginning of the match */
-						if (*pat != '#')
+						if (ord(fpat) != ORD('#'))
 							while (sbeg <= end) {
 								if (gmatchx(sbeg, tpat2, false))
 									break;
@@ -600,41 +578,57 @@ expand(
 							}
 						/* now anchor the end of the match */
 						p = end;
-						if (*pat != '%')
+						if (ord(fpat) != ORD('%'))
 							while (p >= sbeg) {
 								bool gotmatch;
 
-								c = *p;
+								c = ord(*p);
 								*p = '\0';
-								gotmatch = tobool(gmatchx(sbeg, tpat0, false));
+								gotmatch = tobool(gmatchx(sbeg, pat, false));
 								*p = c;
 								if (gotmatch)
 									break;
 								p--;
 							}
+						strndupx(end, sbeg, p - sbeg, ATEMP);
+						record_match(end);
+						afree(end, ATEMP);
+						if (stype & STYPE_AT) {
+							if (rrep != null)
+								afree(rrep, ATEMP);
+							rrep = wrep ? evalstr(wrep,
+							    DOTILDE | DOSCALAR) :
+							    null;
+						}
 						strndupx(end, s, sbeg - s, ATEMP);
-						d = shf_smprintf("%s%s%s", end, rrep, p);
+						d = shf_smprintf(Tf_sss, end, rrep, p);
 						afree(end, ATEMP);
 						sbeg = d + (sbeg - s) + strlen(rrep);
 						afree(s, ATEMP);
 						s = d;
-						if (stype & 0x80)
+						if (stype & STYPE_AT) {
+							afree(tpat1, ATEMP);
+							afree(pat, ATEMP);
+							goto again_search;
+						} else if (stype & STYPE_DBL)
 							goto again_repl;
  end_repl:
 						afree(tpat1, ATEMP);
- do_repl:
 						x.str = s;
  no_repl:
 						afree(pat, ATEMP);
 						if (rrep != null)
 							afree(rrep, ATEMP);
+						afree(ws, ATEMP);
 						goto do_CSUBST;
 					    }
-					case '#':
-					case '%':
-						/* ! DOBLANK,DOBRACE,DOTILDE */
+					case ORD('#'):
+					case ORD('%'):
+						/* ! DOBLANK,DOBRACE */
 						f = (f & DONTRUNCOMMAND) |
-						    DOPAT | DOTEMP | DOSCALAR;
+						    DOPAT | DOTILDE |
+						    DOTEMP | DOSCALAR;
+						tilde_ok = 1;
 						st->quotew = quote = 0;
 						/*
 						 * Prepend open pattern (so |
@@ -643,18 +637,17 @@ expand(
 						 */
 						if (!Flag(FSH)) {
 							*dp++ = MAGIC;
-							*dp++ = 0x80 | '@';
+							*dp++ = ORD(0x80 | '@');
 						}
 						break;
-					case '=':
+					case ORD('='):
 						/*
-						 * Enabling tilde expansion
-						 * after :s here is
-						 * non-standard ksh, but is
-						 * consistent with rules for
-						 * other assignments. Not
-						 * sure what POSIX thinks of
-						 * this.
+						 * Tilde expansion for string
+						 * variables in POSIX mode is
+						 * governed by Austinbug 351.
+						 * In non-POSIX mode historic
+						 * ksh behaviour (enable it!)
+						 * us followed.
 						 * Not doing tilde expansion
 						 * for integer variables is a
 						 * non-POSIX thing - makes
@@ -663,7 +656,7 @@ expand(
 						 */
 						if (!(x.var->flag & INTEGER))
 							f |= DOASNTILDE | DOTILDE;
-						f |= DOTEMP;
+						f |= DOTEMP | DOSCALAR;
 						/*
 						 * These will be done after the
 						 * value has been assigned.
@@ -671,7 +664,10 @@ expand(
 						f &= ~(DOBLANK|DOGLOB|DOBRACE);
 						tilde_ok = 1;
 						break;
-					case '?':
+					case ORD('?'):
+						if (*sp == CSUBST)
+							errorf("%s: parameter null or not set",
+							    st->var->name);
 						f &= ~DOBLANK;
 						f |= DOTEMP;
 						/* FALLTHROUGH */
@@ -702,9 +698,9 @@ expand(
 				f = st->f;
 				if (f & DOBLANK)
 					doblank--;
-				switch (st->stype & 0x17F) {
-				case '#':
-				case '%':
+				switch (st->stype & STYPE_SINGLE) {
+				case ORD('#'):
+				case ORD('%'):
 					if (!Flag(FSH)) {
 						/* Append end-pattern */
 						*dp++ = MAGIC;
@@ -734,7 +730,7 @@ expand(
 						doblank++;
 					st = st->prev;
 					continue;
-				case '=':
+				case ORD('='):
 					/*
 					 * Restore our position and substitute
 					 * the value of st->var (may not be
@@ -767,18 +763,17 @@ expand(
 					st = st->prev;
 					word = quote || (!*x.str && (f & DOSCALAR)) ? IFS_WORD : IFS_IWS;
 					continue;
-				case '?': {
-					char *s = Xrestpos(ds, dp, st->base);
+				case ORD('?'):
+					dp = Xrestpos(ds, dp, st->base);
 
-					errorf("%s: %s", st->var->name,
-					    dp == s ?
-					    "parameter null or not set" :
-					    (debunk(s, s, strlen(s) + 1), s));
-				    }
-				case '0':
-				case '/':
-				case 0x100 | '#':
-				case 0x100 | 'Q':
+					errorf(Tf_sD_s, st->var->name,
+					    debunk(dp, dp, strlen(dp) + 1));
+					break;
+				case ORD('0'):
+				case ORD('/') | STYPE_AT:
+				case ORD('/'):
+				case ORD('#') | STYPE_AT:
+				case ORD('Q') | STYPE_AT:
 					dp = Xrestpos(ds, dp, st->base);
 					type = XSUB;
 					word = quote || (!*x.str && (f & DOSCALAR)) ? IFS_WORD : IFS_IWS;
@@ -796,19 +791,19 @@ expand(
 				/* open pattern: *(foo|bar) */
 				/* Next char is the type of pattern */
 				make_magic = true;
-				c = *sp++ | 0x80;
+				c = ord(*sp++) | 0x80U;
 				break;
 
 			case SPAT:
 				/* pattern separator (|) */
 				make_magic = true;
-				c = '|';
+				c = ORD('|');
 				break;
 
 			case CPAT:
 				/* close pattern */
 				make_magic = true;
-				c = /*(*/ ')';
+				c = ORD(/*(*/ ')');
 				break;
 			}
 			break;
@@ -829,7 +824,7 @@ expand(
 
 		case XSUB:
 		case XSUBMID:
-			if ((c = *x.str++) == 0) {
+			if ((c = ord(*x.str++)) == 0) {
 				type = XBASE;
 				if (f & DOBLANK)
 					doblank--;
@@ -842,7 +837,7 @@ expand(
 			quote = 1;
 			/* FALLTHROUGH */
 		case XARG:
-			if ((c = *x.str++) == '\0') {
+			if ((c = ord(*x.str++)) == '\0') {
 				/*
 				 * force null words to be created so
 				 * set -- "" 2 ""; echo "$@" will do
@@ -856,17 +851,17 @@ expand(
 						doblank--;
 					continue;
 				}
-				c = ifs0;
+				c = ord(ifs0);
 				if ((f & DOHEREDOC)) {
 					/* pseudo-field-split reliably */
 					if (c == 0)
-						c = ' ';
+						c = ORD(' ');
 					break;
 				}
 				if ((f & DOSCALAR)) {
 					/* do not field-split */
 					if (x.split) {
-						c = ' ';
+						c = ORD(' ');
 						break;
 					}
 					if (c == 0)
@@ -878,7 +873,7 @@ expand(
 					if (!quote && word == IFS_WS)
 						continue;
 					/* this is so we don't terminate */
-					c = ' ';
+					c = ORD(' ');
 					/* now force-emit a word */
 					goto emit_word;
 				}
@@ -898,16 +893,33 @@ expand(
 				c = -1;
 			} else if (newlines) {
 				/* spit out saved NLs */
-				c = '\n';
+				c = ORD('\n');
 				--newlines;
 			} else {
-				while ((c = shf_getc(x.u.shf)) == 0 || c == '\n')
-					if (c == '\n')
+				while ((c = shf_getc(x.u.shf)) == 0 ||
+				    cinttype(c, C_NL)) {
+#ifdef MKSH_WITH_TEXTMODE
+					if (c == ORD('\r')) {
+						c = shf_getc(x.u.shf);
+						switch (c) {
+						case ORD('\n'):
+							break;
+						default:
+							shf_ungetc(c, x.u.shf);
+							/* FALLTHROUGH */
+						case -1:
+							c = ORD('\r');
+							break;
+						}
+					}
+#endif
+					if (c == ORD('\n'))
 						/* save newlines */
 						newlines++;
+				}
 				if (newlines && c != -1) {
 					shf_ungetc(c, x.u.shf);
-					c = '\n';
+					c = ORD('\n');
 					--newlines;
 				}
 			}
@@ -943,6 +955,8 @@ expand(
 			    (word == IFS_IWS || word == IFS_NWS) &&
 			    !ctype(c, C_IFSWS))) {
  emit_word:
+				if (f & DOHERESTR)
+					*dp++ = '\n';
 				*dp++ = '\0';
 				cp = Xclose(ds, dp);
 				if (fdo & DOBRACE)
@@ -988,11 +1002,11 @@ expand(
 			tilde_ok <<= 1;
 			/* mark any special second pass chars */
 			if (!quote)
-				switch (c) {
-				case '[':
-				case '!':
-				case '-':
-				case ']':
+				switch (ord(c)) {
+				case ORD('['):
+				case ORD('!'):
+				case ORD('-'):
+				case ORD(']'):
 					/*
 					 * For character classes - doesn't hurt
 					 * to have magic !,-,]s outside of
@@ -1000,43 +1014,43 @@ expand(
 					 */
 					if (f & (DOPAT | DOGLOB)) {
 						fdo |= DOMAGIC;
-						if (c == '[')
+						if ((unsigned int)c == ORD('['))
 							fdo |= f & DOGLOB;
 						*dp++ = MAGIC;
 					}
 					break;
-				case '*':
-				case '?':
+				case ORD('*'):
+				case ORD('?'):
 					if (f & (DOPAT | DOGLOB)) {
 						fdo |= DOMAGIC | (f & DOGLOB);
 						*dp++ = MAGIC;
 					}
 					break;
-				case '{':
-				case '}':
-				case ',':
-					if ((f & DOBRACE) && (c == '{' /*}*/ ||
+				case ORD('{'):
+				case ORD('}'):
+				case ORD(','):
+					if ((f & DOBRACE) &&
+					    (ord(c) == ORD('{' /*}*/) ||
 					    (fdo & DOBRACE))) {
 						fdo |= DOBRACE|DOMAGIC;
 						*dp++ = MAGIC;
 					}
 					break;
-				case '=':
+				case ORD('='):
 					/* Note first unquoted = for ~ */
-					if (!(f & DOTEMP) && !saw_eq &&
-					    (Flag(FBRACEEXPAND) ||
-					    (f & DOASNTILDE))) {
+					if (!(f & DOTEMP) && (!Flag(FPOSIX) ||
+					    (f & DOASNTILDE)) && !saw_eq) {
 						saw_eq = true;
 						tilde_ok = 1;
 					}
 					break;
-				case ':':
+				case ORD(':'):
 					/* : */
 					/* Note unquoted : for ~ */
 					if (!(f & DOTEMP) && (f & DOASNTILDE))
 						tilde_ok = 1;
 					break;
-				case '~':
+				case ORD('~'):
 					/*
 					 * tilde_ok is reset whenever
 					 * any of ' " $( $(( ${ } are seen.
@@ -1081,6 +1095,17 @@ expand(
 	}
 }
 
+static bool
+hasnonempty(const char **strv)
+{
+	size_t i = 0;
+
+	while (strv[i])
+		if (*strv[i++])
+			return (true);
+	return (false);
+}
+
 /*
  * Prepare to generate the string returned by ${} substitution.
  */
@@ -1092,12 +1117,12 @@ varsub(Expand *xp, const char *sp, const char *word,
 	int c;
 	int state;	/* next state: XBASE, XARG, XSUB, XNULLSUB */
 	int stype;	/* substitution type */
-	int slen;
+	int slen = 0;
 	const char *p;
 	struct tbl *vp;
 	bool zero_ok = false;
 
-	if ((stype = sp[0]) == '\0')
+	if ((stype = ord(sp[0])) == '\0')
 		/* Bad variable name */
 		return (-1);
 
@@ -1107,20 +1132,20 @@ varsub(Expand *xp, const char *sp, const char *word,
 	 * ${#var}, string length (-U: characters, +U: octets) or array size
 	 * ${%var}, string width (-U: screen columns, +U: octets)
 	 */
-	c = sp[1];
-	if (stype == '%' && c == '\0')
+	c = ord(sp[1]);
+	if ((unsigned int)stype == ORD('%') && c == '\0')
 		return (-1);
-	if ((stype == '#' || stype == '%') && c != '\0') {
+	if (ctype(stype, C_SUB2) && c != '\0') {
 		/* Can't have any modifiers for ${#...} or ${%...} */
 		if (*word != CSUBST)
 			return (-1);
 		sp++;
 		/* Check for size of array */
-		if ((p = cstrchr(sp, '[')) && (p[1] == '*' || p[1] == '@') &&
-		    p[2] == ']') {
+		if ((p = cstrchr(sp, '[')) && (ord(p[1]) == ORD('*') ||
+		    ord(p[1]) == ORD('@')) && ord(p[2]) == ORD(']')) {
 			int n = 0;
 
-			if (stype != '#')
+			if ((unsigned int)stype != ORD('#'))
 				return (-1);
 			vp = global(arrayname(sp));
 			if (vp->flag & (ISSET|ARRAY))
@@ -1129,14 +1154,15 @@ varsub(Expand *xp, const char *sp, const char *word,
 				if (vp->flag & ISSET)
 					n++;
 			c = n;
-		} else if (c == '*' || c == '@') {
-			if (stype != '#')
+		} else if ((unsigned int)c == ORD('*') ||
+		    (unsigned int)c == ORD('@')) {
+			if ((unsigned int)stype != ORD('#'))
 				return (-1);
 			c = e->loc->argc;
 		} else {
 			p = str_val(global(sp));
 			zero_ok = p != null;
-			if (stype == '#')
+			if ((unsigned int)stype == ORD('#'))
 				c = utflen(p);
 			else {
 				/* partial utf_mbswidth reimplementation */
@@ -1150,7 +1176,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 					if (!UTFMODE || (len = utf_mbtowc(&wc,
 					    s)) == (size_t)-1)
 						/* not UTFMODE or not UTF-8 */
-						wc = (unsigned char)(*s++);
+						wc = rtt2asc(*s++);
 					else
 						/* UTFMODE and UTF-8 */
 						s += len;
@@ -1165,159 +1191,175 @@ varsub(Expand *xp, const char *sp, const char *word,
 			}
 		}
 		if (Flag(FNOUNSET) && c == 0 && !zero_ok)
-			errorf("%s: %s", sp, "parameter not set");
+			errorf(Tf_parm, sp);
 		/* unqualified variable/string substitution */
 		*stypep = 0;
-		xp->str = shf_smprintf("%d", c);
+		xp->str = shf_smprintf(Tf_d, c);
+		return (XSUB);
+	}
+	if ((unsigned int)stype == ORD('!') && c != '\0' && *word == CSUBST) {
+		sp++;
+		if ((p = cstrchr(sp, '[')) && (ord(p[1]) == ORD('*') ||
+		    ord(p[1]) == ORD('@')) && ord(p[2]) == ORD(']')) {
+			c = ORD('!');
+			stype = 0;
+			goto arraynames;
+		}
+		xp->var = global(sp);
+		xp->str = p ? shf_smprintf("%s[%lu]",
+		    xp->var->name, arrayindex(xp->var)) : xp->var->name;
+		*stypep = 0;
 		return (XSUB);
 	}
 
 	/* Check for qualifiers in word part */
 	stype = 0;
-	c = word[slen = 0] == CHAR ? word[1] : 0;
-	if (c == ':') {
+	c = word[slen + 0] == CHAR ? ord(word[slen + 1]) : 0;
+	if ((unsigned int)c == ORD(':')) {
 		slen += 2;
-		stype = 0x80;
-		c = word[slen + 0] == CHAR ? word[slen + 1] : 0;
+		stype = STYPE_DBL;
+		c = word[slen + 0] == CHAR ? ord(word[slen + 1]) : 0;
 	}
-	if (!stype && c == '/') {
+	if (!stype && (unsigned int)c == ORD('/')) {
 		slen += 2;
 		stype = c;
-		if (word[slen] == ADELIM) {
+		if (word[slen] == ADELIM &&
+		    ord(word[slen + 1]) == (unsigned int)c) {
 			slen += 2;
-			stype |= 0x80;
+			stype |= STYPE_DBL;
 		}
-	} else if (stype == 0x80 && (c == ' ' || c == '0')) {
-		stype |= '0';
-	} else if (ctype(c, C_SUBOP1)) {
+	} else if (stype == STYPE_DBL && ((unsigned int)c == ORD(' ') ||
+	    (unsigned int)c == ORD('0'))) {
+		stype |= ORD('0');
+	} else if (ctype(c, C_SUB1)) {
 		slen += 2;
 		stype |= c;
-	} else if (ctype(c, C_SUBOP2)) {
+	} else if (ctype(c, C_SUB2)) {
 		/* Note: ksh88 allows :%, :%%, etc */
 		slen += 2;
 		stype = c;
-		if (word[slen + 0] == CHAR && c == word[slen + 1]) {
-			stype |= 0x80;
+		if (word[slen + 0] == CHAR &&
+		    ord(word[slen + 1]) == (unsigned int)c) {
+			stype |= STYPE_DBL;
 			slen += 2;
 		}
-	} else if (c == '@') {
+	} else if ((unsigned int)c == ORD('@')) {
 		/* @x where x is command char */
-		slen += 2;
-		stype |= 0x100;
-		if (word[slen] == CHAR) {
-			stype |= word[slen + 1];
-			slen += 2;
+		switch (c = ord(word[slen + 2]) == CHAR ?
+		    ord(word[slen + 3]) : 0) {
+		case ORD('#'):
+		case ORD('/'):
+		case ORD('Q'):
+			break;
+		default:
+			return (-1);
 		}
+		stype |= STYPE_AT | c;
+		slen += 4;
 	} else if (stype)
 		/* : is not ok */
 		return (-1);
 	if (!stype && *word != CSUBST)
 		return (-1);
-	*stypep = stype;
-	*slenp = slen;
 
-	c = sp[0];
-	if (c == '*' || c == '@') {
-		switch (stype & 0x17F) {
+	c = ord(sp[0]);
+	if ((unsigned int)c == ORD('*') || (unsigned int)c == ORD('@')) {
+		switch (stype & STYPE_SINGLE) {
 		/* can't assign to a vector */
-		case '=':
+		case ORD('='):
 		/* can't trim a vector (yet) */
-		case '%':
-		case '#':
-		case '0':
-		case '/':
-		case 0x100 | '#':
-		case 0x100 | 'Q':
+		case ORD('%'):
+		case ORD('#'):
+		case ORD('?'):
+		case ORD('0'):
+		case ORD('/') | STYPE_AT:
+		case ORD('/'):
+		case ORD('#') | STYPE_AT:
+		case ORD('Q') | STYPE_AT:
 			return (-1);
 		}
 		if (e->loc->argc == 0) {
 			xp->str = null;
 			xp->var = global(sp);
-			state = c == '@' ? XNULLSUB : XSUB;
+			state = (unsigned int)c == ORD('@') ? XNULLSUB : XSUB;
 		} else {
 			xp->u.strv = (const char **)e->loc->argv + 1;
 			xp->str = *xp->u.strv++;
 			/* $@ */
-			xp->split = tobool(c == '@');
+			xp->split = tobool((unsigned int)c == ORD('@'));
 			state = XARG;
 		}
 		/* POSIX 2009? */
 		zero_ok = true;
-	} else {
-		if ((p = cstrchr(sp, '[')) && (p[1] == '*' || p[1] == '@') &&
-		    p[2] == ']') {
-			XPtrV wv;
+	} else if ((p = cstrchr(sp, '[')) && (ord(p[1]) == ORD('*') ||
+	    ord(p[1]) == ORD('@')) && ord(p[2]) == ORD(']')) {
+		XPtrV wv;
 
-			switch (stype & 0x17F) {
-			/* can't assign to a vector */
-			case '=':
-			/* can't trim a vector (yet) */
-			case '%':
-			case '#':
-			case '?':
-			case '0':
-			case '/':
-			case 0x100 | '#':
-			case 0x100 | 'Q':
-				return (-1);
-			}
-			XPinit(wv, 32);
-			if ((c = sp[0]) == '!')
-				++sp;
-			vp = global(arrayname(sp));
-			for (; vp; vp = vp->u.array) {
-				if (!(vp->flag&ISSET))
-					continue;
-				XPput(wv, c == '!' ? shf_smprintf("%lu",
-				    arrayindex(vp)) :
-				    str_val(vp));
-			}
-			if (XPsize(wv) == 0) {
-				xp->str = null;
-				state = p[1] == '@' ? XNULLSUB : XSUB;
-				XPfree(wv);
-			} else {
-				XPput(wv, 0);
-				xp->u.strv = (const char **)XPptrv(wv);
-				xp->str = *xp->u.strv++;
-				/* ${foo[@]} */
-				xp->split = tobool(p[1] == '@');
-				state = XARG;
-			}
-		} else {
-			/* Can't assign things like $! or $1 */
-			if ((stype & 0x17F) == '=' &&
-			    ctype(*sp, C_VAR1 | C_DIGIT))
-				return (-1);
-			if (*sp == '!' && sp[1]) {
-				++sp;
-				xp->var = global(sp);
-				if (vstrchr(sp, '['))
-					xp->str = shf_smprintf("%s[%lu]",
-					    xp->var->name,
-					    arrayindex(xp->var));
-				else
-					xp->str = xp->var->name;
-			} else {
-				xp->var = global(sp);
-				xp->str = str_val(xp->var);
-			}
-			state = XSUB;
+		switch (stype & STYPE_SINGLE) {
+		/* can't assign to a vector */
+		case ORD('='):
+		/* can't trim a vector (yet) */
+		case ORD('%'):
+		case ORD('#'):
+		case ORD('?'):
+		case ORD('0'):
+		case ORD('/') | STYPE_AT:
+		case ORD('/'):
+		case ORD('#') | STYPE_AT:
+		case ORD('Q') | STYPE_AT:
+			return (-1);
 		}
+		c = 0;
+ arraynames:
+		XPinit(wv, 32);
+		vp = global(arrayname(sp));
+		for (; vp; vp = vp->u.array) {
+			if (!(vp->flag&ISSET))
+				continue;
+			XPput(wv, (unsigned int)c == ORD('!') ?
+			    shf_smprintf(Tf_lu, arrayindex(vp)) :
+			    str_val(vp));
+		}
+		if (XPsize(wv) == 0) {
+			xp->str = null;
+			state = ord(p[1]) == ORD('@') ? XNULLSUB : XSUB;
+			XPfree(wv);
+		} else {
+			XPput(wv, 0);
+			xp->u.strv = (const char **)XPptrv(wv);
+			xp->str = *xp->u.strv++;
+			/* ${foo[@]} */
+			xp->split = tobool(ord(p[1]) == ORD('@'));
+			state = XARG;
+		}
+	} else {
+		xp->var = global(sp);
+		xp->str = str_val(xp->var);
+		/* can't assign things like $! or $1 */
+		if ((unsigned int)(stype & STYPE_SINGLE) == ORD('=') &&
+		    !*xp->str && ctype(*sp, C_VAR1 | C_DIGIT))
+			return (-1);
+		state = XSUB;
 	}
 
-	c = stype & 0x7F;
+	c = stype & STYPE_CHAR;
 	/* test the compiler's code generator */
-	if (((stype < 0x100) && (ctype(c, C_SUBOP2) || c == '/' ||
-	    (((stype&0x80) ? *xp->str=='\0' : xp->str==null) ? /* undef? */
-	    c == '=' || c == '-' || c == '?' : c == '+'))) ||
-	    stype == (0x80 | '0') || stype == (0x100 | '#') ||
-	    stype == (0x100 | 'Q'))
+	if ((!(stype & STYPE_AT) && (ctype(c, C_SUB2) ||
+	    (((stype & STYPE_DBL) ? *xp->str == '\0' : xp->str == null) &&
+	    (state != XARG || (ifs0 || xp->split ?
+	    (xp->u.strv[0] == NULL) : !hasnonempty(xp->u.strv))) ?
+	    ctype(c, C_EQUAL | C_MINUS | C_QUEST) : (unsigned int)c == ORD('+')))) ||
+	    (unsigned int)stype == (ORD('0') | STYPE_DBL) ||
+	    (unsigned int)stype == (ORD('#') | STYPE_AT) ||
+	    (unsigned int)stype == (ORD('Q') | STYPE_AT) ||
+	    (unsigned int)(stype & STYPE_CHAR) == ORD('/'))
 		/* expand word instead of variable value */
 		state = XBASE;
 	if (Flag(FNOUNSET) && xp->str == null && !zero_ok &&
-	    (ctype(c, C_SUBOP2) || (state != XBASE && c != '+')))
-		errorf("%s: %s", sp, "parameter not set");
+	    (ctype(c, C_SUB2) || (state != XBASE && (unsigned int)c != ORD('+'))))
+		errorf(Tf_parm, sp);
+	*stypep = stype;
+	*slenp = slen;
 	return (state);
 }
 
@@ -1325,17 +1367,28 @@ varsub(Expand *xp, const char *sp, const char *word,
  * Run the command in $(...) and read its output.
  */
 static int
-comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
+comsub(Expand *xp, const char *cp, int fn)
 {
 	Source *s, *sold;
 	struct op *t;
 	struct shf *shf;
+	bool doalias = false;
 	uint8_t old_utfmode = UTFMODE;
+
+	switch (fn) {
+	case COMASUB:
+		fn = COMSUB;
+		if (0)
+			/* FALLTHROUGH */
+	case FUNASUB:
+		  fn = FUNSUB;
+		doalias = true;
+	}
 
 	s = pushs(SSTRING, ATEMP);
 	s->start = s->str = cp;
 	sold = source;
-	t = compile(s, true);
+	t = compile(s, true, doalias);
 	afree(s, ATEMP);
 	source = sold;
 
@@ -1353,14 +1406,31 @@ comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
 		struct ioword *io = *t->ioact;
 		char *name;
 
-		if ((io->flag & IOTYPE) != IOREAD)
-			errorf("%s: %s", "funny $() command",
-			    snptreef(NULL, 32, "%R", io));
-		shf = shf_open(name = evalstr(io->name, DOTILDE), O_RDONLY, 0,
-			SHF_MAPHI|SHF_CLEXEC);
-		if (shf == NULL)
-			warningf(!Flag(FTALKING), "%s: %s %s: %s", name,
-			    "can't open", "$(<...) input", cstrerror(errno));
+		switch (io->ioflag & IOTYPE) {
+		case IOREAD:
+			shf = shf_open(name = evalstr(io->ioname, DOTILDE),
+				O_RDONLY, 0, SHF_MAPHI | SHF_CLEXEC);
+			if (shf == NULL)
+				warningf(!Flag(FTALKING), Tf_sD_s_sD_s,
+				    name, Tcant_open, "$(<...) input",
+				    cstrerror(errno));
+			break;
+		case IOHERE:
+			if (!herein(io, &name)) {
+				xp->str = name;
+				/* as $(…) requires, trim trailing newlines */
+				name = strnul(name);
+				while (name > xp->str && name[-1] == '\n')
+					--name;
+				*name = '\0';
+				return (XSUB);
+			}
+			shf = NULL;
+			break;
+		default:
+			errorf(Tf_sD_s, T_funny_command,
+			    snptreef(NULL, 32, Tft_R, io));
+		}
 	} else if (fn == FUNSUB) {
 		int ofd1;
 		struct temp *tf = NULL;
@@ -1371,8 +1441,8 @@ comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
 		 */
 		maketemp(ATEMP, TT_FUNSUB, &tf);
 		if (!tf->shf) {
-			errorf("can't %s temporary file %s: %s",
-			    "create", tf->tffn, cstrerror(errno));
+			errorf(Tf_temp,
+			    Tcreate, tf->tffn, cstrerror(errno));
 		}
 		/* extract shf from temporary file, unlink and free it */
 		shf = tf->shf;
@@ -1424,30 +1494,32 @@ trimsub(char *str, char *pat, int how)
 	char *end = strnul(str);
 	char *p, c;
 
-	switch (how & 0xFF) {
-	case '#':
+	switch (how & (STYPE_CHAR | STYPE_DBL)) {
+	case ORD('#'):
 		/* shortest match at beginning */
 		for (p = str; p <= end; p += utf_ptradj(p)) {
 			c = *p; *p = '\0';
 			if (gmatchx(str, pat, false)) {
+				record_match(str);
 				*p = c;
 				return (p);
 			}
 			*p = c;
 		}
 		break;
-	case '#'|0x80:
+	case ORD('#') | STYPE_DBL:
 		/* longest match at beginning */
 		for (p = end; p >= str; p--) {
 			c = *p; *p = '\0';
 			if (gmatchx(str, pat, false)) {
+				record_match(str);
 				*p = c;
 				return (p);
 			}
 			*p = c;
 		}
 		break;
-	case '%':
+	case ORD('%'):
 		/* shortest match at end */
 		p = end;
 		while (p >= str) {
@@ -1455,7 +1527,7 @@ trimsub(char *str, char *pat, int how)
 				goto trimsub_match;
 			if (UTFMODE) {
 				char *op = p;
-				while ((p-- > str) && ((*p & 0xC0) == 0x80))
+				while ((p-- > str) && ((rtt2asc(*p) & 0xC0) == 0x80))
 					;
 				if ((p < str) || (p + utf_ptradj(p) != op))
 					p = op - 1;
@@ -1463,11 +1535,12 @@ trimsub(char *str, char *pat, int how)
 				--p;
 		}
 		break;
-	case '%'|0x80:
+	case ORD('%') | STYPE_DBL:
 		/* longest match at end */
 		for (p = str; p <= end; p++)
 			if (gmatchx(p, pat, false)) {
  trimsub_match:
+				record_match(p);
 				strndupx(end, str, p - str, ATEMP);
 				return (end);
 			}
@@ -1493,7 +1566,7 @@ glob(char *cp, XPtrV *wp, bool markdirs)
 		XPput(*wp, debunk(cp, cp, strlen(cp) + 1));
 	else
 		qsort(XPptrv(*wp) + oldsize, XPsize(*wp) - oldsize,
-		    sizeof(void *), xstrcmp);
+		    sizeof(void *), ascpstrcmp);
 }
 
 #define GF_NONE		0
@@ -1559,7 +1632,7 @@ globit(XString *xs,	/* dest string */
 			 * SunOS 4.1.3 does this...
 			 */
 			if ((check & GF_EXCHECK) && xp > Xstring(*xs, xp) &&
-			    xp[-1] == '/' && !S_ISDIR(lstatb.st_mode) &&
+			    mksh_cdirsep(xp[-1]) && !S_ISDIR(lstatb.st_mode) &&
 			    (!S_ISLNK(lstatb.st_mode) ||
 			    stat_check() < 0 || !S_ISDIR(statb.st_mode)))
 				return;
@@ -1569,7 +1642,7 @@ globit(XString *xs,	/* dest string */
 			 * directory
 			 */
 			if (((check & GF_MARKDIR) && (check & GF_GLOBBED)) &&
-			    xp > Xstring(*xs, xp) && xp[-1] != '/' &&
+			    xp > Xstring(*xs, xp) && !mksh_cdirsep(xp[-1]) &&
 			    (S_ISDIR(lstatb.st_mode) ||
 			    (S_ISLNK(lstatb.st_mode) && stat_check() > 0 &&
 			    S_ISDIR(statb.st_mode)))) {
@@ -1584,11 +1657,11 @@ globit(XString *xs,	/* dest string */
 
 	if (xp > Xstring(*xs, xp))
 		*xp++ = '/';
-	while (*sp == '/') {
+	while (mksh_cdirsep(*sp)) {
 		Xcheck(*xs, xp);
 		*xp++ = *sp++;
 	}
-	np = strchr(sp, '/');
+	np = mksh_sdirsep(sp);
 	if (np != NULL) {
 		se = np;
 		/* don't assume '/', can be multiple kinds */
@@ -1596,7 +1669,7 @@ globit(XString *xs,	/* dest string */
 		*np++ = '\0';
 	} else {
 		odirsep = '\0'; /* keep gcc quiet */
-		se = sp + strlen(sp);
+		se = strnul(sp);
 	}
 
 
@@ -1607,10 +1680,10 @@ globit(XString *xs,	/* dest string */
 	 * directory isn't readable - if no globbing is needed, only execute
 	 * permission should be required (as per POSIX)).
 	 */
-	if (!has_globbing(sp, se)) {
+	if (!has_globbing(sp)) {
 		XcheckN(*xs, xp, se - sp + 1);
 		debunk(xp, sp, Xnleft(*xs, xp));
-		xp += strlen(xp);
+		xp = strnul(xp);
 		*xpp = xp;
 		globit(xs, xpp, np, wp, check);
 	} else {
@@ -1622,7 +1695,7 @@ globit(XString *xs,	/* dest string */
 		/* xp = *xpp;	copy_non_glob() may have re-alloc'd xs */
 		*xp = '\0';
 		prefix_len = Xlength(*xs, xp);
-		dirp = opendir(prefix_len ? Xstring(*xs, xp) : ".");
+		dirp = opendir(prefix_len ? Xstring(*xs, xp) : Tdot);
 		if (dirp == NULL)
 			goto Nodir;
 		while ((d = readdir(dirp)) != NULL) {
@@ -1639,9 +1712,8 @@ globit(XString *xs,	/* dest string */
 			XcheckN(*xs, xp, len);
 			memcpy(xp, name, len);
 			*xpp = xp + len - 1;
-			globit(xs, xpp, np, wp,
-				(check & GF_MARKDIR) | GF_GLOBBED
-				| (np ? GF_EXCHECK : GF_NONE));
+			globit(xs, xpp, np, wp, (check & GF_MARKDIR) |
+			    GF_GLOBBED | (np ? GF_EXCHECK : GF_NONE));
 			xp = Xstring(*xs, xp) + prefix_len;
 		}
 		closedir(dirp);
@@ -1666,7 +1738,7 @@ debunk(char *dp, const char *sp, size_t dlen)
 		memmove(dp, sp, s - sp);
 		for (d = dp + (s - sp); *s && (d - dp < (ssize_t)dlen); s++)
 			if (!ISMAGIC(*s) || !(*++s & 0x80) ||
-			    !vstrchr("*+?@! ", *s & 0x7f))
+			    !ctype(*s & 0x7F, C_PATMO | C_SPC))
 				*d++ = *s;
 			else {
 				/* extended pattern operators: *+?@! */
@@ -1696,8 +1768,8 @@ maybe_expand_tilde(const char *p, XString *dsp, char **dpp, bool isassign)
 
 	Xinit(ts, tp, 16, ATEMP);
 	/* : only for DOASNTILDE form */
-	while (p[0] == CHAR && p[1] != '/' && (!isassign || p[1] != ':'))
-	{
+	while (p[0] == CHAR && /* not cdirsep */ p[1] != '/' &&
+	    (!isassign || p[1] != ':')) {
 		Xcheck(ts, tp);
 		*tp++ = p[1];
 		p += 2;
@@ -1724,24 +1796,40 @@ maybe_expand_tilde(const char *p, XString *dsp, char **dpp, bool isassign)
  *
  * based on a version by Arnold Robbins
  */
-
 char *
 do_tilde(char *cp)
 {
 	char *dp = null;
+#ifndef MKSH_NOPWNAM
+	bool do_simplify = true;
+#endif
 
 	if (cp[0] == '\0')
 		dp = str_val(global("HOME"));
 	else if (cp[0] == '+' && cp[1] == '\0')
-		dp = str_val(global("PWD"));
-	else if (cp[0] == '-' && cp[1] == '\0')
-		dp = str_val(global("OLDPWD"));
+		dp = str_val(global(TPWD));
+	else if (ksh_isdash(cp))
+		dp = str_val(global(TOLDPWD));
 #ifndef MKSH_NOPWNAM
-	else
+	else {
 		dp = homedir(cp);
+		do_simplify = false;
+	}
 #endif
-	/* If HOME, PWD or OLDPWD are not set, don't expand ~ */
-	return (dp == null ? NULL : dp);
+
+	/* if parameters aren't set, don't expand ~ */
+	if (dp == NULL || dp == null)
+		return (NULL);
+
+	/* simplify parameters as if cwd upon entry */
+#ifndef MKSH_NOPWNAM
+	if (do_simplify)
+#endif
+	  {
+		strdupx(dp, dp, ATEMP);
+		simplify_path(dp);
+	}
+	return (dp);
 }
 
 #ifndef MKSH_NOPWNAM
@@ -1779,7 +1867,7 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 	char *p = exp_start;
 
 	/* search for open brace */
-	while ((p = strchr(p, MAGIC)) && p[1] != '{' /*}*/)
+	while ((p = strchr(p, MAGIC)) && ord(p[1]) != ORD('{' /*}*/))
 		p += 2;
 	brace_start = p;
 
@@ -1790,9 +1878,9 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 		p += 2;
 		while (*p && count) {
 			if (ISMAGIC(*p++)) {
-				if (*p == '{' /*}*/)
+				if (ord(*p) == ORD('{' /*}*/))
 					++count;
-				else if (*p == /*{*/ '}')
+				else if (ord(*p) == ORD(/*{*/ '}'))
 					--count;
 				else if (*p == ',' && count == 1)
 					comma = p;
@@ -1824,9 +1912,9 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 	count = 1;
 	for (p = brace_start + 2; p != brace_end; p++) {
 		if (ISMAGIC(*p)) {
-			if (*++p == '{' /*}*/)
+			if (ord(*++p) == ORD('{' /*}*/))
 				++count;
-			else if ((*p == /*{*/ '}' && --count == 0) ||
+			else if ((ord(*p) == ORD(/*{*/ '}') && --count == 0) ||
 			    (*p == ',' && count == 1)) {
 				char *news;
 				int l1, l2, l3;
