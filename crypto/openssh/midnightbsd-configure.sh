@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: trunk/crypto/openssh/midnightbsd-configure.sh 7174 2015-07-26 23:59:10Z laffer1 $
 #
 
 configure_args="

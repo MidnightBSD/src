@@ -46755,6 +46755,7 @@ crypto/openssh/openbsd-compat/sha2.c -text
 crypto/openssh/openbsd-compat/sha2.h -text
 crypto/openssh/openbsd-compat/sigact.c -text
 crypto/openssh/openbsd-compat/sigact.h -text
+crypto/openssh/openbsd-compat/strcasestr.c -text
 crypto/openssh/openbsd-compat/strlcat.c -text
 crypto/openssh/openbsd-compat/strlcpy.c -text
 crypto/openssh/openbsd-compat/strmode.c -text
@@ -46790,6 +46791,7 @@ crypto/openssh/readconf.c -text
 crypto/openssh/readconf.h -text
 crypto/openssh/readpass.c -text
 crypto/openssh/regress/agent-pkcs11.sh -text
+crypto/openssh/regress/allow-deny-users.sh -text
 crypto/openssh/regress/cert-file.sh -text
 crypto/openssh/regress/cert-hostkey.sh -text
 crypto/openssh/regress/cert-userkey.sh -text
@@ -46803,12 +46805,14 @@ crypto/openssh/regress/hostkey-rotate.sh -text
 crypto/openssh/regress/kextype.sh -text
 crypto/openssh/regress/keygen-convert.sh -text
 crypto/openssh/regress/keygen-knownhosts.sh -text
+crypto/openssh/regress/keygen-moduli.sh -text
 crypto/openssh/regress/keytype.sh -text
 crypto/openssh/regress/limit-keytype.sh -text
 crypto/openssh/regress/misc/Makefile -text
 crypto/openssh/regress/misc/kexfuzz/Makefile -text
 crypto/openssh/regress/misc/kexfuzz/README -text
 crypto/openssh/regress/misc/kexfuzz/kexfuzz.c -text
+crypto/openssh/regress/moduli.in -text
 crypto/openssh/regress/multipubkey.sh -text
 crypto/openssh/regress/netcat.c -text
 crypto/openssh/regress/portnum.sh -text
@@ -46821,6 +46825,8 @@ crypto/openssh/regress/unittests/Makefile -text
 crypto/openssh/regress/unittests/Makefile.inc -text
 crypto/openssh/regress/unittests/bitmap/Makefile -text
 crypto/openssh/regress/unittests/bitmap/tests.c -text
+crypto/openssh/regress/unittests/conversion/Makefile -text
+crypto/openssh/regress/unittests/conversion/tests.c -text
 crypto/openssh/regress/unittests/hostkeys/Makefile -text
 crypto/openssh/regress/unittests/hostkeys/mktestdata.sh -text
 crypto/openssh/regress/unittests/hostkeys/test_iterate.c -text
@@ -46859,6 +46865,8 @@ crypto/openssh/regress/unittests/hostkeys/tests.c -text
 crypto/openssh/regress/unittests/kex/Makefile -text
 crypto/openssh/regress/unittests/kex/test_kex.c -text
 crypto/openssh/regress/unittests/kex/tests.c -text
+crypto/openssh/regress/unittests/match/Makefile -text
+crypto/openssh/regress/unittests/match/tests.c -text
 crypto/openssh/regress/unittests/sshbuf/Makefile -text
 crypto/openssh/regress/unittests/sshbuf/test_sshbuf.c -text
 crypto/openssh/regress/unittests/sshbuf/test_sshbuf_fixed.c -text

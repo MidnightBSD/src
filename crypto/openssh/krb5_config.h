@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: trunk/crypto/openssh/krb5_config.h 7174 2015-07-26 23:59:10Z laffer1 $ */
 #define GSSAPI 1
 #define HAVE_DECL_GSS_C_NT_HOSTBASED_SERVICE 1
 #define HAVE_GSSAPI_GSSAPI_H 1

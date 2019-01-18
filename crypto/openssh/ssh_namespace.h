@@ -12,7 +12,7 @@
          printf("#define %-39s Fssh_%s\n", $3, $3)
      }' | unexpand -a | LC_ALL=C sort -u
  *
- * $MidnightBSD$
+ * $MidnightBSD: trunk/crypto/openssh/ssh_namespace.h 9237 2016-11-11 11:40:38Z laffer1 $
  */
 
 #define Blowfish_decipher			Fssh_Blowfish_decipher
