@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/rc4-x86_64.S 299966 2016-05-16 19:30:27Z jkim $
-# Do not modify. This file is auto-generated from rc4-x86_64.pl.
+/* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/rc4-x86_64.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* Do not modify. This file is auto-generated from rc4-x86_64.pl. */
 .text	
 
 
@@ -50,7 +50,7 @@ RC4:	orq	%rsi,%rsi
 	movl	(%rdi,%rax,4),%edx
 	movl	(%rdi,%r10,4),%eax
 	xorb	(%r12),%dl
-	movb	%dl,(%r13,%r12,1)
+	movb	%dl,(%r12,%r13,1)
 	leaq	1(%r12),%r12
 	decq	%rbx
 	jnz	.Loop8_warmup
@@ -129,7 +129,7 @@ RC4:	orq	%rsi,%rsi
 	subq	$8,%r11
 
 	xorq	(%r12),%r8
-	movq	%r8,(%r13,%r12,1)
+	movq	%r8,(%r12,%r13,1)
 	leaq	8(%r12),%r12
 
 	testq	$-8,%r11
@@ -155,7 +155,7 @@ RC4:	orq	%rsi,%rsi
 	movl	(%rdi,%rax,4),%edx
 	movl	(%rdi,%r10,4),%eax
 	xorb	(%r12),%dl
-	movb	%dl,(%r13,%r12,1)
+	movb	%dl,(%r12,%r13,1)
 	leaq	1(%r12),%r12
 	decq	%rbx
 	jnz	.Loop16_warmup
@@ -192,7 +192,7 @@ RC4:	orq	%rsi,%rsi
 	pxor	%xmm1,%xmm2
 	addb	%bl,%cl
 	pinsrw	$0,(%rdi,%rax,4),%xmm0
-	movdqu	%xmm2,(%r13,%r12,1)
+	movdqu	%xmm2,(%r12,%r13,1)
 	leaq	16(%r12),%r12
 .Loop16_enter:
 	movl	(%rdi,%rcx,4),%edx
@@ -328,7 +328,7 @@ RC4:	orq	%rsi,%rsi
 	psllq	$8,%xmm1
 	pxor	%xmm0,%xmm2
 	pxor	%xmm1,%xmm2
-	movdqu	%xmm2,(%r13,%r12,1)
+	movdqu	%xmm2,(%r12,%r13,1)
 	leaq	16(%r12),%r12
 
 	cmpq	$0,%r11
@@ -346,7 +346,7 @@ RC4:	orq	%rsi,%rsi
 	movl	(%rdi,%rax,4),%edx
 	movl	(%rdi,%r10,4),%eax
 	xorb	(%r12),%dl
-	movb	%dl,(%r13,%r12,1)
+	movb	%dl,(%r12,%r13,1)
 	leaq	1(%r12),%r12
 	decq	%r11
 	jnz	.Lloop1
@@ -371,7 +371,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%al,(%rdi,%rcx,1)
 	cmpq	%rsi,%rcx
 	movb	%dl,(%rdi,%r10,1)
-	jne	.Lcmov0			
+	jne	.Lcmov0
 	movq	%rax,%rbx
 .Lcmov0:
 	addb	%al,%dl
@@ -385,7 +385,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%bl,(%rdi,%rcx,1)
 	cmpq	%r10,%rcx
 	movb	%dl,(%rdi,%rsi,1)
-	jne	.Lcmov1			
+	jne	.Lcmov1
 	movq	%rbx,%rax
 .Lcmov1:
 	addb	%bl,%dl
@@ -399,7 +399,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%al,(%rdi,%rcx,1)
 	cmpq	%rsi,%rcx
 	movb	%dl,(%rdi,%r10,1)
-	jne	.Lcmov2			
+	jne	.Lcmov2
 	movq	%rax,%rbx
 .Lcmov2:
 	addb	%al,%dl
@@ -413,7 +413,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%bl,(%rdi,%rcx,1)
 	cmpq	%r10,%rcx
 	movb	%dl,(%rdi,%rsi,1)
-	jne	.Lcmov3			
+	jne	.Lcmov3
 	movq	%rbx,%rax
 .Lcmov3:
 	addb	%bl,%dl
@@ -427,7 +427,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%al,(%rdi,%rcx,1)
 	cmpq	%rsi,%rcx
 	movb	%dl,(%rdi,%r10,1)
-	jne	.Lcmov4			
+	jne	.Lcmov4
 	movq	%rax,%rbx
 .Lcmov4:
 	addb	%al,%dl
@@ -441,7 +441,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%bl,(%rdi,%rcx,1)
 	cmpq	%r10,%rcx
 	movb	%dl,(%rdi,%rsi,1)
-	jne	.Lcmov5			
+	jne	.Lcmov5
 	movq	%rbx,%rax
 .Lcmov5:
 	addb	%bl,%dl
@@ -455,7 +455,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%al,(%rdi,%rcx,1)
 	cmpq	%rsi,%rcx
 	movb	%dl,(%rdi,%r10,1)
-	jne	.Lcmov6			
+	jne	.Lcmov6
 	movq	%rax,%rbx
 .Lcmov6:
 	addb	%al,%dl
@@ -469,7 +469,7 @@ RC4:	orq	%rsi,%rsi
 	movb	%bl,(%rdi,%rcx,1)
 	cmpq	%r10,%rcx
 	movb	%dl,(%rdi,%rsi,1)
-	jne	.Lcmov7			
+	jne	.Lcmov7
 	movq	%rbx,%rax
 .Lcmov7:
 	addb	%bl,%dl

@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-# $FreeBSD: stable/10/secure/lib/libcrypto/amd64/x86_64-gf2m.S 299966 2016-05-16 19:30:27Z jkim $
-# Do not modify. This file is auto-generated from x86_64-gf2m.pl.
+/* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/x86_64-gf2m.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* Do not modify. This file is auto-generated from x86_64-gf2m.pl. */
 .text	
 
 .type	_mul_1x1,@function
@@ -245,16 +245,16 @@ bn_GF2m_mul_2x2:
 	movq	%rcx,56(%rsp)
 	movq	%r8,64(%rsp)
 
-	movq	$15,%r8
+	movq	$0xf,%r8
 	movq	%rsi,%rax
 	movq	%rcx,%rbp
-	call	_mul_1x1		
+	call	_mul_1x1
 	movq	%rax,16(%rsp)
 	movq	%rdx,24(%rsp)
 
 	movq	48(%rsp),%rax
 	movq	64(%rsp),%rbp
-	call	_mul_1x1		
+	call	_mul_1x1
 	movq	%rax,0(%rsp)
 	movq	%rdx,8(%rsp)
 
@@ -262,7 +262,7 @@ bn_GF2m_mul_2x2:
 	movq	56(%rsp),%rbp
 	xorq	48(%rsp),%rax
 	xorq	64(%rsp),%rbp
-	call	_mul_1x1		
+	call	_mul_1x1
 	movq	0(%rsp),%rbx
 	movq	8(%rsp),%rcx
 	movq	16(%rsp),%rdi
