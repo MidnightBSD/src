@@ -1,4 +1,5 @@
-# $FreeBSD: stable/10/secure/lib/libcrypto/engines/libatalla/Makefile 160819 2006-07-29 19:41:41Z simon $
+# $MidnightBSD$
+# $FreeBSD: stable/11/secure/lib/libcrypto/engines/libatalla/Makefile 160819 2006-07-29 19:41:41Z simon $
 
 SHLIB_NAME?= libatalla.so
 SRCS=	e_atalla.c
