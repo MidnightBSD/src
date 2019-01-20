@@ -47100,6 +47100,8 @@ crypto/openssl/CHANGES -text
 crypto/openssl/CHANGES.SSLeay -text
 crypto/openssl/Configure -text
 crypto/openssl/FAQ -text
+crypto/openssl/GitConfigure -text
+crypto/openssl/GitMake -text
 crypto/openssl/INSTALL -text
 crypto/openssl/LICENSE -text
 crypto/openssl/MIDNIGHTBSD-Xlist -text
@@ -47234,6 +47236,8 @@ crypto/openssl/apps/ts.c -text
 crypto/openssl/apps/tsget -text
 crypto/openssl/apps/verify.c -text
 crypto/openssl/apps/version.c -text
+crypto/openssl/apps/vms_term_sock.c -text
+crypto/openssl/apps/vms_term_sock.h -text
 crypto/openssl/apps/x509.c -text
 crypto/openssl/appveyor.yml -text
 crypto/openssl/certs/README.RootCerts -text
@@ -47305,13 +47309,21 @@ crypto/openssl/crypto/aes/asm/aes-ppc.pl -text
 crypto/openssl/crypto/aes/asm/aes-s390x.pl -text
 crypto/openssl/crypto/aes/asm/aes-sparcv9.pl -text
 crypto/openssl/crypto/aes/asm/aes-x86_64.pl -text
+crypto/openssl/crypto/aes/asm/aesni-mb-x86_64.pl -text
 crypto/openssl/crypto/aes/asm/aesni-sha1-x86_64.pl -text
+crypto/openssl/crypto/aes/asm/aesni-sha256-x86_64.pl -text
 crypto/openssl/crypto/aes/asm/aesni-x86.pl -text
 crypto/openssl/crypto/aes/asm/aesni-x86_64.pl -text
+crypto/openssl/crypto/aes/asm/aesp8-ppc.pl -text
+crypto/openssl/crypto/aes/asm/aest4-sparcv9.pl -text
+crypto/openssl/crypto/aes/asm/aesv8-armx.pl -text
+crypto/openssl/crypto/aes/asm/bsaes-armv7.pl -text
 crypto/openssl/crypto/aes/asm/bsaes-x86_64.pl -text
+crypto/openssl/crypto/aes/asm/vpaes-ppc.pl -text
 crypto/openssl/crypto/aes/asm/vpaes-x86.pl -text
 crypto/openssl/crypto/aes/asm/vpaes-x86_64.pl -text
 crypto/openssl/crypto/alphacpuid.pl -text
+crypto/openssl/crypto/arm64cpuid.S -text
 crypto/openssl/crypto/arm_arch.h -text
 crypto/openssl/crypto/armcap.c -text
 crypto/openssl/crypto/armv4cpuid.S -text
@@ -47345,6 +47357,7 @@ crypto/openssl/crypto/asn1/ameth_lib.c -text
 crypto/openssl/crypto/asn1/asn1.h -text
 crypto/openssl/crypto/asn1/asn1_err.c -text
 crypto/openssl/crypto/asn1/asn1_gen.c -text
+crypto/openssl/crypto/asn1/asn1_int.h -text
 crypto/openssl/crypto/asn1/asn1_lib.c -text
 crypto/openssl/crypto/asn1/asn1_locl.h -text
 crypto/openssl/crypto/asn1/asn1_mac.h -text
@@ -47459,6 +47472,7 @@ crypto/openssl/crypto/bn/asm/ia64.S -text
 crypto/openssl/crypto/bn/asm/mips-mont.pl -text
 crypto/openssl/crypto/bn/asm/mips.pl -text
 crypto/openssl/crypto/bn/asm/mips3-mont.pl -text
+crypto/openssl/crypto/bn/asm/mips3.s -text
 crypto/openssl/crypto/bn/asm/mo-586.pl -text
 crypto/openssl/crypto/bn/asm/modexp512-x86_64.pl -text
 crypto/openssl/crypto/bn/asm/pa-risc2.s -text
@@ -47467,14 +47481,19 @@ crypto/openssl/crypto/bn/asm/parisc-mont.pl -text
 crypto/openssl/crypto/bn/asm/ppc-mont.pl -text
 crypto/openssl/crypto/bn/asm/ppc.pl -text
 crypto/openssl/crypto/bn/asm/ppc64-mont.pl -text
+crypto/openssl/crypto/bn/asm/rsaz-avx2.pl -text
+crypto/openssl/crypto/bn/asm/rsaz-x86_64.pl -text
 crypto/openssl/crypto/bn/asm/s390x-gf2m.pl -text
 crypto/openssl/crypto/bn/asm/s390x-mont.pl -text
 crypto/openssl/crypto/bn/asm/s390x.S -text
+crypto/openssl/crypto/bn/asm/sparct4-mont.pl -text
 crypto/openssl/crypto/bn/asm/sparcv8.S -text
 crypto/openssl/crypto/bn/asm/sparcv8plus.S -text
+crypto/openssl/crypto/bn/asm/sparcv9-gf2m.pl -text
 crypto/openssl/crypto/bn/asm/sparcv9-mont.pl -text
 crypto/openssl/crypto/bn/asm/sparcv9a-mont.pl -text
 crypto/openssl/crypto/bn/asm/via-mont.pl -text
+crypto/openssl/crypto/bn/asm/vis3-mont.pl -text
 crypto/openssl/crypto/bn/asm/vms.mar -text
 crypto/openssl/crypto/bn/asm/x86-gf2m.pl -text
 crypto/openssl/crypto/bn/asm/x86-mont.pl -text
@@ -47531,8 +47550,11 @@ crypto/openssl/crypto/bn/divtest.c -text
 crypto/openssl/crypto/bn/exp.c -text
 crypto/openssl/crypto/bn/expspeed.c -text
 crypto/openssl/crypto/bn/exptest.c -text
+crypto/openssl/crypto/bn/rsaz_exp.c -text
+crypto/openssl/crypto/bn/rsaz_exp.h -text
 crypto/openssl/crypto/bn/todo -text
 crypto/openssl/crypto/bn/vms-helper.c -text
+crypto/openssl/crypto/bn_int.h -text
 crypto/openssl/crypto/buffer/Makefile -text
 crypto/openssl/crypto/buffer/buf_err.c -text
 crypto/openssl/crypto/buffer/buf_str.c -text
@@ -47541,6 +47563,7 @@ crypto/openssl/crypto/buffer/buffer.h -text
 crypto/openssl/crypto/camellia/Makefile -text
 crypto/openssl/crypto/camellia/asm/cmll-x86.pl -text
 crypto/openssl/crypto/camellia/asm/cmll-x86_64.pl -text
+crypto/openssl/crypto/camellia/asm/cmllt4-sparcv9.pl -text
 crypto/openssl/crypto/camellia/camellia.c -text
 crypto/openssl/crypto/camellia/camellia.h -text
 crypto/openssl/crypto/camellia/cmll_cbc.c -text
@@ -47582,6 +47605,7 @@ crypto/openssl/crypto/cms/cms_env.c -text
 crypto/openssl/crypto/cms/cms_err.c -text
 crypto/openssl/crypto/cms/cms_ess.c -text
 crypto/openssl/crypto/cms/cms_io.c -text
+crypto/openssl/crypto/cms/cms_kari.c -text
 crypto/openssl/crypto/cms/cms_lcl.h -text
 crypto/openssl/crypto/cms/cms_lib.c -text
 crypto/openssl/crypto/cms/cms_pwri.c -text
@@ -47632,6 +47656,7 @@ crypto/openssl/crypto/des/asm/des-586.pl -text
 crypto/openssl/crypto/des/asm/des686.pl -text
 crypto/openssl/crypto/des/asm/des_enc.m4 -text
 crypto/openssl/crypto/des/asm/desboth.pl -text
+crypto/openssl/crypto/des/asm/dest4-sparcv9.pl -text
 crypto/openssl/crypto/des/asm/readme -text
 crypto/openssl/crypto/des/cbc3_enc.c -text
 crypto/openssl/crypto/des/cbc_cksm.c -text
@@ -47703,10 +47728,12 @@ crypto/openssl/crypto/dh/dh_check.c -text
 crypto/openssl/crypto/dh/dh_depr.c -text
 crypto/openssl/crypto/dh/dh_err.c -text
 crypto/openssl/crypto/dh/dh_gen.c -text
+crypto/openssl/crypto/dh/dh_kdf.c -text
 crypto/openssl/crypto/dh/dh_key.c -text
 crypto/openssl/crypto/dh/dh_lib.c -text
 crypto/openssl/crypto/dh/dh_pmeth.c -text
 crypto/openssl/crypto/dh/dh_prn.c -text
+crypto/openssl/crypto/dh/dh_rfc5114.c -text
 crypto/openssl/crypto/dh/dhtest.c -text
 crypto/openssl/crypto/dh/example -text
 crypto/openssl/crypto/dh/generate -text
@@ -47748,6 +47775,8 @@ crypto/openssl/crypto/dyn_lck.c -text
 crypto/openssl/crypto/ebcdic.c -text
 crypto/openssl/crypto/ebcdic.h -text
 crypto/openssl/crypto/ec/Makefile -text
+crypto/openssl/crypto/ec/asm/ecp_nistz256-avx2.pl -text
+crypto/openssl/crypto/ec/asm/ecp_nistz256-x86_64.pl -text
 crypto/openssl/crypto/ec/ec.h -text
 crypto/openssl/crypto/ec/ec2_mult.c -text
 crypto/openssl/crypto/ec/ec2_oct.c -text
@@ -47773,6 +47802,8 @@ crypto/openssl/crypto/ec/ecp_nistp224.c -text
 crypto/openssl/crypto/ec/ecp_nistp256.c -text
 crypto/openssl/crypto/ec/ecp_nistp521.c -text
 crypto/openssl/crypto/ec/ecp_nistputil.c -text
+crypto/openssl/crypto/ec/ecp_nistz256.c -text
+crypto/openssl/crypto/ec/ecp_nistz256_table.c -text
 crypto/openssl/crypto/ec/ecp_oct.c -text
 crypto/openssl/crypto/ec/ecp_smpl.c -text
 crypto/openssl/crypto/ec/ectest.c -text
@@ -47780,6 +47811,7 @@ crypto/openssl/crypto/ecdh/Makefile -text
 crypto/openssl/crypto/ecdh/ecdh.h -text
 crypto/openssl/crypto/ecdh/ecdhtest.c -text
 crypto/openssl/crypto/ecdh/ech_err.c -text
+crypto/openssl/crypto/ecdh/ech_kdf.c -text
 crypto/openssl/crypto/ecdh/ech_key.c -text
 crypto/openssl/crypto/ecdh/ech_lib.c -text
 crypto/openssl/crypto/ecdh/ech_locl.h -text
@@ -47847,6 +47879,7 @@ crypto/openssl/crypto/evp/dig_eng.c -text
 crypto/openssl/crypto/evp/digest.c -text
 crypto/openssl/crypto/evp/e_aes.c -text
 crypto/openssl/crypto/evp/e_aes_cbc_hmac_sha1.c -text
+crypto/openssl/crypto/evp/e_aes_cbc_hmac_sha256.c -text
 crypto/openssl/crypto/evp/e_bf.c -text
 crypto/openssl/crypto/evp/e_camellia.c -text
 crypto/openssl/crypto/evp/e_cast.c -text
@@ -47909,6 +47942,7 @@ crypto/openssl/crypto/ex_data.c -text
 crypto/openssl/crypto/fips_err.c -text
 crypto/openssl/crypto/fips_err.h -text
 crypto/openssl/crypto/fips_ers.c -text
+crypto/openssl/crypto/getenv.c svneol=native#text/plain
 crypto/openssl/crypto/hmac/Makefile -text
 crypto/openssl/crypto/hmac/hm_ameth.c -text
 crypto/openssl/crypto/hmac/hm_pmeth.c -text
@@ -47961,6 +47995,7 @@ crypto/openssl/crypto/md5/Makefile -text
 crypto/openssl/crypto/md5/asm/md5-586.pl -text
 crypto/openssl/crypto/md5/asm/md5-ia64.S -text
 crypto/openssl/crypto/md5/asm/md5-sparcv9.S -text
+crypto/openssl/crypto/md5/asm/md5-sparcv9.pl -text
 crypto/openssl/crypto/md5/asm/md5-x86_64.pl -text
 crypto/openssl/crypto/md5/md5.c -text
 crypto/openssl/crypto/md5/md5.h -text
@@ -47978,6 +48013,7 @@ crypto/openssl/crypto/mem.c -text
 crypto/openssl/crypto/mem_clr.c -text
 crypto/openssl/crypto/mem_dbg.c -text
 crypto/openssl/crypto/modes/Makefile -text
+crypto/openssl/crypto/modes/asm/aesni-gcm-x86_64.pl -text
 crypto/openssl/crypto/modes/asm/ghash-alpha.pl -text
 crypto/openssl/crypto/modes/asm/ghash-armv4.pl -text
 crypto/openssl/crypto/modes/asm/ghash-ia64.pl -text
@@ -47986,6 +48022,8 @@ crypto/openssl/crypto/modes/asm/ghash-s390x.pl -text
 crypto/openssl/crypto/modes/asm/ghash-sparcv9.pl -text
 crypto/openssl/crypto/modes/asm/ghash-x86.pl -text
 crypto/openssl/crypto/modes/asm/ghash-x86_64.pl -text
+crypto/openssl/crypto/modes/asm/ghashp8-ppc.pl -text
+crypto/openssl/crypto/modes/asm/ghashv8-armx.pl -text
 crypto/openssl/crypto/modes/cbc128.c -text
 crypto/openssl/crypto/modes/ccm128.c -text
 crypto/openssl/crypto/modes/cfb128.c -text
@@ -47995,6 +48033,7 @@ crypto/openssl/crypto/modes/gcm128.c -text
 crypto/openssl/crypto/modes/modes.h -text
 crypto/openssl/crypto/modes/modes_lcl.h -text
 crypto/openssl/crypto/modes/ofb128.c -text
+crypto/openssl/crypto/modes/wrap128.c -text
 crypto/openssl/crypto/modes/xts128.c -text
 crypto/openssl/crypto/o_dir.c -text
 crypto/openssl/crypto/o_dir.h -text
@@ -48058,6 +48097,7 @@ crypto/openssl/crypto/pem/pvkfmt.c -text
 crypto/openssl/crypto/perlasm/cbc.pl -text
 crypto/openssl/crypto/perlasm/ppc-xlate.pl -text
 crypto/openssl/crypto/perlasm/readme -text
+crypto/openssl/crypto/perlasm/sparcv9_modes.pl -text
 crypto/openssl/crypto/perlasm/x86_64-xlate.pl -text
 crypto/openssl/crypto/perlasm/x86asm.pl -text
 crypto/openssl/crypto/perlasm/x86gas.pl -text
@@ -48127,6 +48167,7 @@ crypto/openssl/crypto/pkcs7/t/nav-smime -text
 crypto/openssl/crypto/pkcs7/t/s.pem -text
 crypto/openssl/crypto/pkcs7/t/server.pem -text
 crypto/openssl/crypto/pkcs7/verify.c -text
+crypto/openssl/crypto/ppc_arch.h -text
 crypto/openssl/crypto/ppccap.c -text
 crypto/openssl/crypto/ppccpuid.pl -text
 crypto/openssl/crypto/pqueue/Makefile -text
@@ -48244,7 +48285,9 @@ crypto/openssl/crypto/sha/asm/README -text
 crypto/openssl/crypto/sha/asm/sha1-586.pl -text
 crypto/openssl/crypto/sha/asm/sha1-alpha.pl -text
 crypto/openssl/crypto/sha/asm/sha1-armv4-large.pl -text
+crypto/openssl/crypto/sha/asm/sha1-armv8.pl -text
 crypto/openssl/crypto/sha/asm/sha1-ia64.pl -text
+crypto/openssl/crypto/sha/asm/sha1-mb-x86_64.pl -text
 crypto/openssl/crypto/sha/asm/sha1-mips.pl -text
 crypto/openssl/crypto/sha/asm/sha1-parisc.pl -text
 crypto/openssl/crypto/sha/asm/sha1-ppc.pl -text
@@ -48255,8 +48298,10 @@ crypto/openssl/crypto/sha/asm/sha1-thumb.pl -text
 crypto/openssl/crypto/sha/asm/sha1-x86_64.pl -text
 crypto/openssl/crypto/sha/asm/sha256-586.pl -text
 crypto/openssl/crypto/sha/asm/sha256-armv4.pl -text
+crypto/openssl/crypto/sha/asm/sha256-mb-x86_64.pl -text
 crypto/openssl/crypto/sha/asm/sha512-586.pl -text
 crypto/openssl/crypto/sha/asm/sha512-armv4.pl -text
+crypto/openssl/crypto/sha/asm/sha512-armv8.pl -text
 crypto/openssl/crypto/sha/asm/sha512-ia64.pl -text
 crypto/openssl/crypto/sha/asm/sha512-mips.pl -text
 crypto/openssl/crypto/sha/asm/sha512-parisc.pl -text
@@ -48265,6 +48310,7 @@ crypto/openssl/crypto/sha/asm/sha512-s390x.pl -text
 crypto/openssl/crypto/sha/asm/sha512-sparcv9.pl -text
 crypto/openssl/crypto/sha/asm/sha512-sse2.pl -text
 crypto/openssl/crypto/sha/asm/sha512-x86_64.pl -text
+crypto/openssl/crypto/sha/asm/sha512p8-ppc.pl -text
 crypto/openssl/crypto/sha/sha.c -text
 crypto/openssl/crypto/sha/sha.h -text
 crypto/openssl/crypto/sha/sha1.c -text
@@ -48279,6 +48325,7 @@ crypto/openssl/crypto/sha/sha_dgst.c -text
 crypto/openssl/crypto/sha/sha_locl.h -text
 crypto/openssl/crypto/sha/sha_one.c -text
 crypto/openssl/crypto/sha/shatest.c -text
+crypto/openssl/crypto/sparc_arch.h -text
 crypto/openssl/crypto/sparccpuid.S -text
 crypto/openssl/crypto/sparcv9cap.c -text
 crypto/openssl/crypto/srp/Makefile -text
@@ -48354,6 +48401,7 @@ crypto/openssl/crypto/x509/Makefile -text
 crypto/openssl/crypto/x509/by_dir.c -text
 crypto/openssl/crypto/x509/by_file.c -text
 crypto/openssl/crypto/x509/verify_extra_test.c svneol=native#text/plain
+crypto/openssl/crypto/x509/vpm_int.h -text
 crypto/openssl/crypto/x509/x509.h -text
 crypto/openssl/crypto/x509/x509_att.c -text
 crypto/openssl/crypto/x509/x509_cmp.c -text
@@ -48414,11 +48462,13 @@ crypto/openssl/crypto/x509v3/v3_pku.c -text
 crypto/openssl/crypto/x509v3/v3_pmaps.c -text
 crypto/openssl/crypto/x509v3/v3_prn.c -text
 crypto/openssl/crypto/x509v3/v3_purp.c -text
+crypto/openssl/crypto/x509v3/v3_scts.c -text
 crypto/openssl/crypto/x509v3/v3_skey.c -text
 crypto/openssl/crypto/x509v3/v3_sxnet.c -text
 crypto/openssl/crypto/x509v3/v3_utl.c -text
 crypto/openssl/crypto/x509v3/v3conf.c -text
 crypto/openssl/crypto/x509v3/v3err.c -text
+crypto/openssl/crypto/x509v3/v3nametest.c -text
 crypto/openssl/crypto/x509v3/v3prin.c -text
 crypto/openssl/crypto/x509v3/x509v3.h -text
 crypto/openssl/crypto/x86_64cpuid.pl -text
@@ -48479,6 +48529,7 @@ crypto/openssl/doc/crypto/ASN1_OBJECT_new.pod -text
 crypto/openssl/doc/crypto/ASN1_STRING_length.pod -text
 crypto/openssl/doc/crypto/ASN1_STRING_new.pod -text
 crypto/openssl/doc/crypto/ASN1_STRING_print_ex.pod -text
+crypto/openssl/doc/crypto/ASN1_TIME_set.pod -text
 crypto/openssl/doc/crypto/ASN1_generate_nconf.pod -text
 crypto/openssl/doc/crypto/BIO_ctrl.pod -text
 crypto/openssl/doc/crypto/BIO_f_base64.pod -text
@@ -48555,6 +48606,12 @@ crypto/openssl/doc/crypto/DSA_new.pod -text
 crypto/openssl/doc/crypto/DSA_set_method.pod -text
 crypto/openssl/doc/crypto/DSA_sign.pod -text
 crypto/openssl/doc/crypto/DSA_size.pod -text
+crypto/openssl/doc/crypto/EC_GFp_simple_method.pod -text
+crypto/openssl/doc/crypto/EC_GROUP_copy.pod -text
+crypto/openssl/doc/crypto/EC_GROUP_new.pod -text
+crypto/openssl/doc/crypto/EC_KEY_new.pod -text
+crypto/openssl/doc/crypto/EC_POINT_add.pod -text
+crypto/openssl/doc/crypto/EC_POINT_new.pod -text
 crypto/openssl/doc/crypto/ERR_GET_LIB.pod -text
 crypto/openssl/doc/crypto/ERR_clear_error.pod -text
 crypto/openssl/doc/crypto/ERR_error_string.pod -text
@@ -48580,6 +48637,7 @@ crypto/openssl/doc/crypto/EVP_PKEY_derive.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_encrypt.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_get_default_digest.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_keygen.pod -text
+crypto/openssl/doc/crypto/EVP_PKEY_meth_new.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_new.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_print_private.pod -text
 crypto/openssl/doc/crypto/EVP_PKEY_set1_RSA.pod -text
@@ -48594,6 +48652,7 @@ crypto/openssl/doc/crypto/OPENSSL_Applink.pod -text
 crypto/openssl/doc/crypto/OPENSSL_VERSION_NUMBER.pod -text
 crypto/openssl/doc/crypto/OPENSSL_config.pod -text
 crypto/openssl/doc/crypto/OPENSSL_ia32cap.pod -text
+crypto/openssl/doc/crypto/OPENSSL_instrument_bus.pod -text
 crypto/openssl/doc/crypto/OPENSSL_load_builtin_modules.pod -text
 crypto/openssl/doc/crypto/OpenSSL_add_all_algorithms.pod -text
 crypto/openssl/doc/crypto/PEM_write_bio_CMS_stream.pod -text
@@ -48628,6 +48687,7 @@ crypto/openssl/doc/crypto/SMIME_read_CMS.pod -text
 crypto/openssl/doc/crypto/SMIME_read_PKCS7.pod -text
 crypto/openssl/doc/crypto/SMIME_write_CMS.pod -text
 crypto/openssl/doc/crypto/SMIME_write_PKCS7.pod -text
+crypto/openssl/doc/crypto/SSLeay_version.pod -text
 crypto/openssl/doc/crypto/X509_NAME_ENTRY_get_object.pod -text
 crypto/openssl/doc/crypto/X509_NAME_add_entry_by_txt.pod -text
 crypto/openssl/doc/crypto/X509_NAME_get_index_by_NID.pod -text
@@ -48638,6 +48698,8 @@ crypto/openssl/doc/crypto/X509_STORE_CTX_new.pod -text
 crypto/openssl/doc/crypto/X509_STORE_CTX_set_verify_cb.pod -text
 crypto/openssl/doc/crypto/X509_STORE_set_verify_cb_func.pod -text
 crypto/openssl/doc/crypto/X509_VERIFY_PARAM_set_flags.pod -text
+crypto/openssl/doc/crypto/X509_check_host.pod -text
+crypto/openssl/doc/crypto/X509_check_private_key.pod -text
 crypto/openssl/doc/crypto/X509_new.pod -text
 crypto/openssl/doc/crypto/X509_verify_cert.pod -text
 crypto/openssl/doc/crypto/bio.pod -text
@@ -48650,6 +48712,7 @@ crypto/openssl/doc/crypto/d2i_ASN1_OBJECT.pod -text
 crypto/openssl/doc/crypto/d2i_CMS_ContentInfo.pod -text
 crypto/openssl/doc/crypto/d2i_DHparams.pod -text
 crypto/openssl/doc/crypto/d2i_DSAPublicKey.pod -text
+crypto/openssl/doc/crypto/d2i_ECPKParameters.pod -text
 crypto/openssl/doc/crypto/d2i_ECPrivateKey.pod -text
 crypto/openssl/doc/crypto/d2i_PKCS8PrivateKey.pod -text
 crypto/openssl/doc/crypto/d2i_PrivateKey.pod -text
@@ -48664,6 +48727,7 @@ crypto/openssl/doc/crypto/des.pod -text
 crypto/openssl/doc/crypto/des_modes.pod -text
 crypto/openssl/doc/crypto/dh.pod -text
 crypto/openssl/doc/crypto/dsa.pod -text
+crypto/openssl/doc/crypto/ec.pod -text
 crypto/openssl/doc/crypto/ecdsa.pod -text
 crypto/openssl/doc/crypto/engine.pod -text
 crypto/openssl/doc/crypto/err.pod -text
@@ -48687,6 +48751,7 @@ crypto/openssl/doc/crypto/ui_compat.pod -text
 crypto/openssl/doc/crypto/x509.pod -text
 crypto/openssl/doc/dir-locals.example.el -text
 crypto/openssl/doc/fingerprints.txt -text
+crypto/openssl/doc/man3/X509_cmp_time.pod -text
 crypto/openssl/doc/openssl-c-indent.el -text
 crypto/openssl/doc/openssl-shared.txt -text
 crypto/openssl/doc/openssl.txt -text
@@ -48694,11 +48759,19 @@ crypto/openssl/doc/openssl_button.gif -text svneol=unset#unset
 crypto/openssl/doc/openssl_button.html -text
 crypto/openssl/doc/ssl/SSL_CIPHER_get_name.pod -text
 crypto/openssl/doc/ssl/SSL_COMP_add_compression_method.pod -text
+crypto/openssl/doc/ssl/SSL_CONF_CTX_new.pod -text
+crypto/openssl/doc/ssl/SSL_CONF_CTX_set1_prefix.pod -text
+crypto/openssl/doc/ssl/SSL_CONF_CTX_set_flags.pod -text
+crypto/openssl/doc/ssl/SSL_CONF_CTX_set_ssl_ctx.pod -text
+crypto/openssl/doc/ssl/SSL_CONF_cmd.pod -text
+crypto/openssl/doc/ssl/SSL_CONF_cmd_argv.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_add1_chain_cert.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_add_extra_chain_cert.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_add_session.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_ctrl.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_flush_sessions.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_free.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_get0_param.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_get_ex_new_index.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_get_verify_mode.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_load_verify_locations.pod -text
@@ -48707,11 +48780,16 @@ crypto/openssl/doc/ssl/SSL_CTX_sess_number.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_sess_set_cache_size.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_sess_set_get_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_sessions.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set1_curves.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set1_verify_cert_store.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set_alpn_select_cb.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set_cert_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_cert_store.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_cert_verify_callback.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_cipher_list.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_client_CA_list.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_client_cert_cb.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set_custom_cli_ext.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_default_passwd_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_generate_session_id.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_info_callback.pod -text
@@ -48726,6 +48804,7 @@ crypto/openssl/doc/ssl/SSL_CTX_set_session_cache_mode.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_session_id_context.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_ssl_version.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_timeout.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_set_tlsext_servername_callback.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_tlsext_status_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_tlsext_ticket_key_cb.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_tmp_dh_callback.pod -text
@@ -48733,14 +48812,17 @@ crypto/openssl/doc/ssl/SSL_CTX_set_tmp_rsa_callback.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_set_verify.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_use_certificate.pod -text
 crypto/openssl/doc/ssl/SSL_CTX_use_psk_identity_hint.pod -text
+crypto/openssl/doc/ssl/SSL_CTX_use_serverinfo.pod -text
 crypto/openssl/doc/ssl/SSL_SESSION_free.pod -text
 crypto/openssl/doc/ssl/SSL_SESSION_get_ex_new_index.pod -text
 crypto/openssl/doc/ssl/SSL_SESSION_get_time.pod -text
 crypto/openssl/doc/ssl/SSL_accept.pod -text
 crypto/openssl/doc/ssl/SSL_alert_type_string.pod -text
+crypto/openssl/doc/ssl/SSL_check_chain.pod -text
 crypto/openssl/doc/ssl/SSL_clear.pod -text
 crypto/openssl/doc/ssl/SSL_connect.pod -text
 crypto/openssl/doc/ssl/SSL_do_handshake.pod -text
+crypto/openssl/doc/ssl/SSL_export_keying_material.pod -text
 crypto/openssl/doc/ssl/SSL_free.pod -text
 crypto/openssl/doc/ssl/SSL_get_SSL_CTX.pod -text
 crypto/openssl/doc/ssl/SSL_get_ciphers.pod -text
@@ -48867,6 +48949,7 @@ crypto/openssl/engines/vendor_defns/hwcryptohook.h -text
 crypto/openssl/engines/vendor_defns/sureware.h -text
 crypto/openssl/shlib/README -text
 crypto/openssl/ssl/Makefile -text
+crypto/openssl/ssl/bad_dtls_test.c -text
 crypto/openssl/ssl/bio_ssl.c -text
 crypto/openssl/ssl/clienthellotest.c svneol=native#text/plain
 crypto/openssl/ssl/d1_both.c -text
@@ -48878,6 +48961,8 @@ crypto/openssl/ssl/d1_pkt.c -text
 crypto/openssl/ssl/d1_srtp.c -text
 crypto/openssl/ssl/d1_srvr.c -text
 crypto/openssl/ssl/dtls1.h -text
+crypto/openssl/ssl/dtlstest.c -text
+crypto/openssl/ssl/fatalerrtest.c -text
 crypto/openssl/ssl/heartbeat_test.c -text
 crypto/openssl/ssl/install-ssl.com -text
 crypto/openssl/ssl/kssl.c -text
@@ -48912,6 +48997,7 @@ crypto/openssl/ssl/ssl_algs.c -text
 crypto/openssl/ssl/ssl_asn1.c -text
 crypto/openssl/ssl/ssl_cert.c -text
 crypto/openssl/ssl/ssl_ciph.c -text
+crypto/openssl/ssl/ssl_conf.c -text
 crypto/openssl/ssl/ssl_err.c -text
 crypto/openssl/ssl/ssl_err2.c -text
 crypto/openssl/ssl/ssl_lib.c -text
@@ -48923,12 +49009,15 @@ crypto/openssl/ssl/ssl_task.c -text
 crypto/openssl/ssl/ssl_txt.c -text
 crypto/openssl/ssl/ssl_utst.c -text
 crypto/openssl/ssl/ssltest.c -text
+crypto/openssl/ssl/sslv2conftest.c -text
 crypto/openssl/ssl/t1_clnt.c -text
 crypto/openssl/ssl/t1_enc.c -text
+crypto/openssl/ssl/t1_ext.c -text
 crypto/openssl/ssl/t1_lib.c -text
 crypto/openssl/ssl/t1_meth.c -text
 crypto/openssl/ssl/t1_reneg.c -text
 crypto/openssl/ssl/t1_srvr.c -text
+crypto/openssl/ssl/t1_trce.c -text
 crypto/openssl/ssl/tls1.h -text
 crypto/openssl/ssl/tls_srp.c -text
 crypto/openssl/util/FreeBSD.sh -text
@@ -48936,6 +49025,7 @@ crypto/openssl/util/add_cr.pl -text
 crypto/openssl/util/bat.sh -text
 crypto/openssl/util/ck_errf.pl -text
 crypto/openssl/util/clean-depend.pl -text
+crypto/openssl/util/copy-if-different.pl -text
 crypto/openssl/util/copy.pl -text
 crypto/openssl/util/cygwin.sh -text
 crypto/openssl/util/deleof.pl -text

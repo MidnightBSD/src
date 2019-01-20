@@ -254,7 +254,7 @@ OPENSSL_GLOBAL const SSL_CIPHER ssl2_ciphers[] = {
      SSL_3DES,
      SSL_MD5,
      SSL_SSLV2,
-     SSL_NOT_DEFAULT | SSL_NOT_EXP | SSL_HIGH,
+     SSL_NOT_DEFAULT | SSL_NOT_EXP | SSL_MEDIUM,
      0,
      112,
      168,
@@ -326,9 +326,9 @@ int ssl2_new(SSL *s)
 {
     SSL2_STATE *s2;
 
-    if ((s2 = OPENSSL_malloc(sizeof *s2)) == NULL)
+    if ((s2 = OPENSSL_malloc(sizeof(*s2))) == NULL)
         goto err;
-    memset(s2, 0, sizeof *s2);
+    memset(s2, 0, sizeof(*s2));
 
 # if SSL2_MAX_RECORD_LENGTH_3_BYTE_HEADER + 3 > SSL2_MAX_RECORD_LENGTH_2_BYTE_HEADER + 2
 #  error "assertion failed"
@@ -371,7 +371,7 @@ void ssl2_free(SSL *s)
         OPENSSL_free(s2->rbuf);
     if (s2->wbuf != NULL)
         OPENSSL_free(s2->wbuf);
-    OPENSSL_cleanse(s2, sizeof *s2);
+    OPENSSL_cleanse(s2, sizeof(*s2));
     OPENSSL_free(s2);
     s->s2 = NULL;
 }
@@ -386,7 +386,7 @@ void ssl2_clear(SSL *s)
     rbuf = s2->rbuf;
     wbuf = s2->wbuf;
 
-    memset(s2, 0, sizeof *s2);
+    memset(s2, 0, sizeof(*s2));
 
     s2->rbuf = rbuf;
     s2->wbuf = wbuf;
@@ -441,10 +441,7 @@ const SSL_CIPHER *ssl2_get_cipher_by_char(const unsigned char *p)
         ((unsigned long)p[1] << 8L) | (unsigned long)p[2];
     c.id = id;
     cp = OBJ_bsearch_ssl_cipher_id(&c, ssl2_ciphers, SSL2_NUM_CIPHERS);
-    if ((cp == NULL) || (cp->valid == 0))
-        return NULL;
-    else
-        return cp;
+    return cp;
 }
 
 int ssl2_put_cipher_by_char(const SSL_CIPHER *c, unsigned char *p)

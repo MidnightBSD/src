@@ -124,14 +124,11 @@ int app_RAND_load_file(const char *file, BIO *bio_e, int dont_warn)
     char buffer[200];
 
 #ifdef OPENSSL_SYS_WINDOWS
-    BIO_printf(bio_e, "Loading 'screen' into random state -");
-    BIO_flush(bio_e);
     RAND_screen();
-    BIO_printf(bio_e, " done\n");
 #endif
 
     if (file == NULL)
-        file = RAND_file_name(buffer, sizeof buffer);
+        file = RAND_file_name(buffer, sizeof(buffer));
     else if (RAND_egd(file) > 0) {
         /*
          * we try if the given filename is an EGD socket. if it is, we don't
@@ -206,7 +203,7 @@ int app_RAND_write_file(const char *file, BIO *bio_e)
         return 0;
 
     if (file == NULL)
-        file = RAND_file_name(buffer, sizeof buffer);
+        file = RAND_file_name(buffer, sizeof(buffer));
     if (file == NULL || !RAND_write_file(file)) {
         BIO_printf(bio_e, "unable to write 'random state'\n");
         return 0;

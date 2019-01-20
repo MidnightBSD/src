@@ -3,7 +3,7 @@
  * 2006.
  */
 /* ====================================================================
- * Copyright (c) 2006 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 2006-2018 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -180,7 +180,7 @@ static int pkey_dsa_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)
             DSAerr(DSA_F_PKEY_DSA_CTRL, DSA_R_INVALID_DIGEST_TYPE);
             return 0;
         }
-        dctx->md = p2;
+        dctx->pmd = p2;
         return 1;
 
     case EVP_PKEY_CTRL_MD:
@@ -195,6 +195,10 @@ static int pkey_dsa_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)
             return 0;
         }
         dctx->md = p2;
+        return 1;
+
+    case EVP_PKEY_CTRL_GET_MD:
+        *(const EVP_MD **)p2 = dctx->md;
         return 1;
 
     case EVP_PKEY_CTRL_DIGESTINIT:
@@ -226,10 +230,16 @@ static int pkey_dsa_ctrl_str(EVP_PKEY_CTX *ctx,
                                  EVP_PKEY_CTRL_DSA_PARAMGEN_Q_BITS, qbits,
                                  NULL);
     }
-    if (!strcmp(type, "dsa_paramgen_md")) {
+    if (strcmp(type, "dsa_paramgen_md") == 0) {
+        const EVP_MD *md = EVP_get_digestbyname(value);
+
+        if (md == NULL) {
+            DSAerr(DSA_F_PKEY_DSA_CTRL_STR, DSA_R_INVALID_DIGEST_TYPE);
+            return 0;
+        }
         return EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_DSA, EVP_PKEY_OP_PARAMGEN,
                                  EVP_PKEY_CTRL_DSA_PARAMGEN_MD, 0,
-                                 (void *)EVP_get_digestbyname(value));
+                                 (void *)md);
     }
     return -2;
 }

@@ -221,7 +221,7 @@ static int module_run(const CONF *cnf, char *name, char *value,
         if (!(flags & CONF_MFLAGS_SILENT)) {
             char rcode[DECIMAL_SIZE(ret) + 1];
             CONFerr(CONF_F_MODULE_RUN, CONF_R_MODULE_INITIALIZATION_ERROR);
-            BIO_snprintf(rcode, sizeof rcode, "%-8d", ret);
+            BIO_snprintf(rcode, sizeof(rcode), "%-8d", ret);
             ERR_add_error_data(6, "module=", name, ", value=", value,
                                ", retcode=", rcode);
         }
@@ -288,6 +288,10 @@ static CONF_MODULE *module_add(DSO *dso, const char *name,
 
     tmod->dso = dso;
     tmod->name = BUF_strdup(name);
+    if (tmod->name == NULL) {
+        OPENSSL_free(tmod);
+        return NULL;
+    }
     tmod->init = ifunc;
     tmod->finish = ffunc;
     tmod->links = 0;

@@ -87,9 +87,7 @@ int MAIN(int argc, char **argv)
     char pass[50], *passin = NULL, *passout = NULL, *p8pass = NULL;
     int badarg = 0;
     int ret = 1;
-#ifndef OPENSSL_NO_ENGINE
     char *engine = NULL;
-#endif
 
     if (bio_err == NULL)
         bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
@@ -120,6 +118,16 @@ int MAIN(int argc, char **argv)
                 pbe_nid = OBJ_txt2nid(*args);
                 if (pbe_nid == NID_undef) {
                     BIO_printf(bio_err, "Unknown PBE algorithm %s\n", *args);
+                    badarg = 1;
+                }
+            } else
+                badarg = 1;
+        } else if (!strcmp(*args, "-v2prf")) {
+            if (args[1]) {
+                args++;
+                pbe_nid = OBJ_txt2nid(*args);
+                if (!EVP_PBE_find(EVP_PBE_TYPE_PRF, pbe_nid, NULL, NULL, 0)) {
+                    BIO_printf(bio_err, "Unknown PRF algorithm %s\n", *args);
                     badarg = 1;
                 }
             } else
@@ -213,9 +221,7 @@ int MAIN(int argc, char **argv)
 #endif
         goto end;
     }
-#ifndef OPENSSL_NO_ENGINE
     e = setup_engine(bio_err, engine, 0);
-#endif
 
     if (!app_passwd(bio_err, passargin, passargout, &passin, &passout)) {
         BIO_printf(bio_err, "Error getting passwords\n");
@@ -271,7 +277,7 @@ int MAIN(int argc, char **argv)
             else {
                 p8pass = pass;
                 if (EVP_read_pw_string
-                    (pass, sizeof pass, "Enter Encryption Password:", 1))
+                    (pass, sizeof(pass), "Enter Encryption Password:", 1))
                     goto end;
             }
             app_RAND_load_file(NULL, bio_err, 0);
@@ -325,7 +331,7 @@ int MAIN(int argc, char **argv)
             p8pass = passin;
         else {
             p8pass = pass;
-            EVP_read_pw_string(pass, sizeof pass, "Enter Password:", 0);
+            EVP_read_pw_string(pass, sizeof(pass), "Enter Password:", 0);
         }
         p8inf = PKCS8_decrypt(p8, p8pass, strlen(p8pass));
     }
@@ -381,6 +387,7 @@ int MAIN(int argc, char **argv)
     X509_SIG_free(p8);
     PKCS8_PRIV_KEY_INFO_free(p8inf);
     EVP_PKEY_free(pkey);
+    release_engine(e);
     BIO_free_all(out);
     BIO_free(in);
     if (passin)

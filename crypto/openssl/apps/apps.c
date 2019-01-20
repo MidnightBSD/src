@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2018 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -148,6 +148,10 @@
 #ifdef _WIN32
 static int WIN32_rename(const char *from, const char *to);
 # define rename(from,to) WIN32_rename((from),(to))
+# ifdef fileno
+#  undef fileno
+# endif
+# define fileno(a) (int)_fileno(a)
 #endif
 
 typedef struct {
@@ -215,7 +219,8 @@ int args_from_file(char *file, int *argc, char **argv[])
     if (arg != NULL)
         OPENSSL_free(arg);
     arg = (char **)OPENSSL_malloc(sizeof(char *) * (i * 2));
-
+    if (arg == NULL)
+        return 0;
     *argv = arg;
     num = 0;
     p = buf;
@@ -282,6 +287,8 @@ int str2fmt(char *s)
         return (FORMAT_PKCS12);
     else if ((*s == 'E') || (*s == 'e'))
         return (FORMAT_ENGINE);
+    else if ((*s == 'H') || (*s == 'h'))
+        return FORMAT_HTTP;
     else if ((*s == 'P') || (*s == 'p')) {
         if (s[1] == 'V' || s[1] == 'v')
             return FORMAT_PVK;
@@ -784,11 +791,71 @@ static int load_pkcs12(BIO *err, BIO *in, const char *desc,
     return ret;
 }
 
+int load_cert_crl_http(const char *url, BIO *err,
+                       X509 **pcert, X509_CRL **pcrl)
+{
+    char *host = NULL, *port = NULL, *path = NULL;
+    BIO *bio = NULL;
+    OCSP_REQ_CTX *rctx = NULL;
+    int use_ssl, rv = 0;
+    if (!OCSP_parse_url(url, &host, &port, &path, &use_ssl))
+        goto err;
+    if (use_ssl) {
+        if (err)
+            BIO_puts(err, "https not supported\n");
+        goto err;
+    }
+    bio = BIO_new_connect(host);
+    if (!bio || !BIO_set_conn_port(bio, port))
+        goto err;
+    rctx = OCSP_REQ_CTX_new(bio, 1024);
+    if (!rctx)
+        goto err;
+    if (!OCSP_REQ_CTX_http(rctx, "GET", path))
+        goto err;
+    if (!OCSP_REQ_CTX_add1_header(rctx, "Host", host))
+        goto err;
+    if (pcert) {
+        do {
+            rv = X509_http_nbio(rctx, pcert);
+        }
+        while (rv == -1);
+    } else {
+        do {
+            rv = X509_CRL_http_nbio(rctx, pcrl);
+        } while (rv == -1);
+    }
+
+ err:
+    if (host)
+        OPENSSL_free(host);
+    if (path)
+        OPENSSL_free(path);
+    if (port)
+        OPENSSL_free(port);
+    if (bio)
+        BIO_free_all(bio);
+    if (rctx)
+        OCSP_REQ_CTX_free(rctx);
+    if (rv != 1) {
+        if (bio && err)
+            BIO_printf(bio_err, "Error loading %s from %s\n",
+                       pcert ? "certificate" : "CRL", url);
+        ERR_print_errors(bio_err);
+    }
+    return rv;
+}
+
 X509 *load_cert(BIO *err, const char *file, int format,
                 const char *pass, ENGINE *e, const char *cert_descrip)
 {
     X509 *x = NULL;
     BIO *cert;
+
+    if (format == FORMAT_HTTP) {
+        load_cert_crl_http(file, err, &x, NULL);
+        return x;
+    }
 
     if ((cert = BIO_new(BIO_s_file())) == NULL) {
         ERR_print_errors(err);
@@ -847,6 +914,49 @@ X509 *load_cert(BIO *err, const char *file, int format,
     return (x);
 }
 
+X509_CRL *load_crl(const char *infile, int format)
+{
+    X509_CRL *x = NULL;
+    BIO *in = NULL;
+
+    if (format == FORMAT_HTTP) {
+        load_cert_crl_http(infile, bio_err, NULL, &x);
+        return x;
+    }
+
+    in = BIO_new(BIO_s_file());
+    if (in == NULL) {
+        ERR_print_errors(bio_err);
+        goto end;
+    }
+
+    if (infile == NULL)
+        BIO_set_fp(in, stdin, BIO_NOCLOSE);
+    else {
+        if (BIO_read_filename(in, infile) <= 0) {
+            perror(infile);
+            goto end;
+        }
+    }
+    if (format == FORMAT_ASN1)
+        x = d2i_X509_CRL_bio(in, NULL);
+    else if (format == FORMAT_PEM)
+        x = PEM_read_bio_X509_CRL(in, NULL, NULL, NULL);
+    else {
+        BIO_printf(bio_err, "bad input format specified for input crl\n");
+        goto end;
+    }
+    if (x == NULL) {
+        BIO_printf(bio_err, "unable to load CRL\n");
+        ERR_print_errors(bio_err);
+        goto end;
+    }
+
+ end:
+    BIO_free(in);
+    return (x);
+}
+
 EVP_PKEY *load_key(BIO *err, const char *file, int format, int maybe_stdin,
                    const char *pass, ENGINE *e, const char *key_descrip)
 {
@@ -866,7 +976,10 @@ EVP_PKEY *load_key(BIO *err, const char *file, int format, int maybe_stdin,
         if (!e)
             BIO_printf(err, "no engine specified\n");
         else {
-            pkey = ENGINE_load_private_key(e, file, ui_method, &cb_data);
+            if (ENGINE_init(e)) {
+                pkey = ENGINE_load_private_key(e, file, ui_method, &cb_data);
+                ENGINE_finish(e);
+            }
             if (!pkey) {
                 BIO_printf(err, "cannot load %s from engine\n", key_descrip);
                 ERR_print_errors(err);
@@ -1246,7 +1359,8 @@ int set_name_ex(unsigned long *flags, const char *arg)
     };
     if (set_multi_opts(flags, arg, ex_tbl) == 0)
         return 0;
-    if ((*flags & XN_FLAG_SEP_MASK) == 0)
+    if (*flags != XN_FLAG_COMPAT
+        && (*flags & XN_FLAG_SEP_MASK) == 0)
         *flags |= XN_FLAG_SEP_CPLUS_SPC;
     return 1;
 }
@@ -1426,11 +1540,13 @@ static ENGINE *try_load_engine(BIO *err, const char *engine, int debug)
     }
     return e;
 }
+#endif
 
 ENGINE *setup_engine(BIO *err, const char *engine, int debug)
 {
     ENGINE *e = NULL;
 
+#ifndef OPENSSL_NO_ENGINE
     if (engine) {
         if (strcmp(engine, "auto") == 0) {
             BIO_printf(err, "enabling auto ENGINE support\n");
@@ -1455,13 +1571,19 @@ ENGINE *setup_engine(BIO *err, const char *engine, int debug)
         }
 
         BIO_printf(err, "engine \"%s\" set.\n", ENGINE_get_id(e));
-
-        /* Free our "structural" reference. */
-        ENGINE_free(e);
     }
+#endif
     return e;
 }
+
+void release_engine(ENGINE *e)
+{
+#ifndef OPENSSL_NO_ENGINE
+    if (e != NULL)
+        /* Free our "structural" reference. */
+        ENGINE_free(e);
 #endif
+}
 
 int load_config(BIO *err, CONF *cnf)
 {
@@ -1617,9 +1739,9 @@ int save_serial(char *serialfile, char *suffix, BIGNUM *serial,
         BUF_strlcpy(buf[0], serialfile, BSIZE);
     else {
 #ifndef OPENSSL_SYS_VMS
-        j = BIO_snprintf(buf[0], sizeof buf[0], "%s.%s", serialfile, suffix);
+        j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s.%s", serialfile, suffix);
 #else
-        j = BIO_snprintf(buf[0], sizeof buf[0], "%s-%s", serialfile, suffix);
+        j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s-%s", serialfile, suffix);
 #endif
     }
 #ifdef RL_DEBUG
@@ -1668,14 +1790,14 @@ int rotate_serial(char *serialfile, char *new_suffix, char *old_suffix)
         goto err;
     }
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[0], sizeof buf[0], "%s.%s", serialfile, new_suffix);
+    j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s.%s", serialfile, new_suffix);
 #else
-    j = BIO_snprintf(buf[0], sizeof buf[0], "%s-%s", serialfile, new_suffix);
+    j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s-%s", serialfile, new_suffix);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[1], sizeof buf[1], "%s.%s", serialfile, old_suffix);
+    j = BIO_snprintf(buf[1], sizeof(buf[1]), "%s.%s", serialfile, old_suffix);
 #else
-    j = BIO_snprintf(buf[1], sizeof buf[1], "%s-%s", serialfile, old_suffix);
+    j = BIO_snprintf(buf[1], sizeof(buf[1]), "%s-%s", serialfile, old_suffix);
 #endif
 #ifdef RL_DEBUG
     BIO_printf(bio_err, "DEBUG: renaming \"%s\" to \"%s\"\n",
@@ -1756,9 +1878,9 @@ CA_DB *load_index(char *dbfile, DB_ATTR *db_attr)
         goto err;
 
 #ifndef OPENSSL_SYS_VMS
-    BIO_snprintf(buf[0], sizeof buf[0], "%s.attr", dbfile);
+    BIO_snprintf(buf[0], sizeof(buf[0]), "%s.attr", dbfile);
 #else
-    BIO_snprintf(buf[0], sizeof buf[0], "%s-attr", dbfile);
+    BIO_snprintf(buf[0], sizeof(buf[0]), "%s-attr", dbfile);
 #endif
     dbattr_conf = NCONF_new(NULL);
     if (NCONF_load(dbattr_conf, buf[0], &errorline) <= 0) {
@@ -1846,19 +1968,19 @@ int save_index(const char *dbfile, const char *suffix, CA_DB *db)
         goto err;
     }
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[2], sizeof buf[2], "%s.attr", dbfile);
+    j = BIO_snprintf(buf[2], sizeof(buf[2]), "%s.attr", dbfile);
 #else
-    j = BIO_snprintf(buf[2], sizeof buf[2], "%s-attr", dbfile);
+    j = BIO_snprintf(buf[2], sizeof(buf[2]), "%s-attr", dbfile);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[1], sizeof buf[1], "%s.attr.%s", dbfile, suffix);
+    j = BIO_snprintf(buf[1], sizeof(buf[1]), "%s.attr.%s", dbfile, suffix);
 #else
-    j = BIO_snprintf(buf[1], sizeof buf[1], "%s-attr-%s", dbfile, suffix);
+    j = BIO_snprintf(buf[1], sizeof(buf[1]), "%s-attr-%s", dbfile, suffix);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[0], sizeof buf[0], "%s.%s", dbfile, suffix);
+    j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s.%s", dbfile, suffix);
 #else
-    j = BIO_snprintf(buf[0], sizeof buf[0], "%s-%s", dbfile, suffix);
+    j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s-%s", dbfile, suffix);
 #endif
 #ifdef RL_DEBUG
     BIO_printf(bio_err, "DEBUG: writing \"%s\"\n", buf[0]);
@@ -1907,29 +2029,29 @@ int rotate_index(const char *dbfile, const char *new_suffix,
         goto err;
     }
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[4], sizeof buf[4], "%s.attr", dbfile);
+    j = BIO_snprintf(buf[4], sizeof(buf[4]), "%s.attr", dbfile);
 #else
-    j = BIO_snprintf(buf[4], sizeof buf[4], "%s-attr", dbfile);
+    j = BIO_snprintf(buf[4], sizeof(buf[4]), "%s-attr", dbfile);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[2], sizeof buf[2], "%s.attr.%s", dbfile, new_suffix);
+    j = BIO_snprintf(buf[2], sizeof(buf[2]), "%s.attr.%s", dbfile, new_suffix);
 #else
-    j = BIO_snprintf(buf[2], sizeof buf[2], "%s-attr-%s", dbfile, new_suffix);
+    j = BIO_snprintf(buf[2], sizeof(buf[2]), "%s-attr-%s", dbfile, new_suffix);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[0], sizeof buf[0], "%s.%s", dbfile, new_suffix);
+    j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s.%s", dbfile, new_suffix);
 #else
-    j = BIO_snprintf(buf[0], sizeof buf[0], "%s-%s", dbfile, new_suffix);
+    j = BIO_snprintf(buf[0], sizeof(buf[0]), "%s-%s", dbfile, new_suffix);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[1], sizeof buf[1], "%s.%s", dbfile, old_suffix);
+    j = BIO_snprintf(buf[1], sizeof(buf[1]), "%s.%s", dbfile, old_suffix);
 #else
-    j = BIO_snprintf(buf[1], sizeof buf[1], "%s-%s", dbfile, old_suffix);
+    j = BIO_snprintf(buf[1], sizeof(buf[1]), "%s-%s", dbfile, old_suffix);
 #endif
 #ifndef OPENSSL_SYS_VMS
-    j = BIO_snprintf(buf[3], sizeof buf[3], "%s.attr.%s", dbfile, old_suffix);
+    j = BIO_snprintf(buf[3], sizeof(buf[3]), "%s.attr.%s", dbfile, old_suffix);
 #else
-    j = BIO_snprintf(buf[3], sizeof buf[3], "%s-attr-%s", dbfile, old_suffix);
+    j = BIO_snprintf(buf[3], sizeof(buf[3]), "%s-attr-%s", dbfile, old_suffix);
 #endif
 #ifdef RL_DEBUG
     BIO_printf(bio_err, "DEBUG: renaming \"%s\" to \"%s\"\n", dbfile, buf[1]);
@@ -2160,6 +2282,9 @@ int args_verify(char ***pargs, int *pargc,
     char **oldargs = *pargs;
     char *arg = **pargs, *argn = (*pargs)[1];
     time_t at_time = 0;
+    char *hostname = NULL;
+    char *email = NULL;
+    char *ipasc = NULL;
     if (!strcmp(arg, "-policy")) {
         if (!argn)
             *badarg = 1;
@@ -2213,6 +2338,21 @@ int args_verify(char ***pargs, int *pargc,
             at_time = (time_t)timestamp;
         }
         (*pargs)++;
+    } else if (strcmp(arg, "-verify_hostname") == 0) {
+        if (!argn)
+            *badarg = 1;
+        hostname = argn;
+        (*pargs)++;
+    } else if (strcmp(arg, "-verify_email") == 0) {
+        if (!argn)
+            *badarg = 1;
+        email = argn;
+        (*pargs)++;
+    } else if (strcmp(arg, "-verify_ip") == 0) {
+        if (!argn)
+            *badarg = 1;
+        ipasc = argn;
+        (*pargs)++;
     } else if (!strcmp(arg, "-ignore_critical"))
         flags |= X509_V_FLAG_IGNORE_CRITICAL;
     else if (!strcmp(arg, "-issuer_checks"))
@@ -2239,6 +2379,16 @@ int args_verify(char ***pargs, int *pargc,
         flags |= X509_V_FLAG_NOTIFY_POLICY;
     else if (!strcmp(arg, "-check_ss_sig"))
         flags |= X509_V_FLAG_CHECK_SS_SIGNATURE;
+    else if (!strcmp(arg, "-trusted_first"))
+        flags |= X509_V_FLAG_TRUSTED_FIRST;
+    else if (!strcmp(arg, "-suiteB_128_only"))
+        flags |= X509_V_FLAG_SUITEB_128_LOS_ONLY;
+    else if (!strcmp(arg, "-suiteB_128"))
+        flags |= X509_V_FLAG_SUITEB_128_LOS;
+    else if (!strcmp(arg, "-suiteB_192"))
+        flags |= X509_V_FLAG_SUITEB_192_LOS;
+    else if (!strcmp(arg, "-partial_chain"))
+        flags |= X509_V_FLAG_PARTIAL_CHAIN;
     else if (!strcmp(arg, "-no_alt_chains"))
         flags |= X509_V_FLAG_NO_ALT_CHAINS;
     else if (!strcmp(arg, "-allow_proxy_certs"))
@@ -2272,6 +2422,15 @@ int args_verify(char ***pargs, int *pargc,
     if (at_time)
         X509_VERIFY_PARAM_set_time(*pm, at_time);
 
+    if (hostname && !X509_VERIFY_PARAM_set1_host(*pm, hostname, 0))
+        *badarg = 1;
+
+    if (email && !X509_VERIFY_PARAM_set1_email(*pm, email, 0))
+        *badarg = 1;
+
+    if (ipasc && !X509_VERIFY_PARAM_set1_ip_asc(*pm, ipasc))
+        *badarg = 1;
+
  end:
 
     (*pargs)++;
@@ -2302,7 +2461,11 @@ int bio_to_mem(unsigned char **out, int maxlen, BIO *in)
         else
             len = 1024;
         len = BIO_read(in, tbuf, len);
-        if (len <= 0)
+        if (len < 0) {
+            BIO_free(mem);
+            return -1;
+        }
+        if (len == 0)
             break;
         if (BIO_write(mem, tbuf, len) != len) {
             BIO_free(mem);
@@ -2319,7 +2482,7 @@ int bio_to_mem(unsigned char **out, int maxlen, BIO *in)
     return ret;
 }
 
-int pkey_ctrl_string(EVP_PKEY_CTX *ctx, char *value)
+int pkey_ctrl_string(EVP_PKEY_CTX *ctx, const char *value)
 {
     int rv;
     char *stmp, *vtmp = NULL;
@@ -2442,7 +2605,7 @@ static void jpake_send_step3a(BIO *bconn, JPAKE_CTX *ctx)
 
     JPAKE_STEP3A_init(&s3a);
     JPAKE_STEP3A_generate(&s3a, ctx);
-    BIO_write(bconn, s3a.hhk, sizeof s3a.hhk);
+    BIO_write(bconn, s3a.hhk, sizeof(s3a.hhk));
     (void)BIO_flush(bconn);
     JPAKE_STEP3A_release(&s3a);
 }
@@ -2453,7 +2616,7 @@ static void jpake_send_step3b(BIO *bconn, JPAKE_CTX *ctx)
 
     JPAKE_STEP3B_init(&s3b);
     JPAKE_STEP3B_generate(&s3b, ctx);
-    BIO_write(bconn, s3b.hk, sizeof s3b.hk);
+    BIO_write(bconn, s3b.hk, sizeof(s3b.hk));
     (void)BIO_flush(bconn);
     JPAKE_STEP3B_release(&s3b);
 }
@@ -2463,7 +2626,7 @@ static void readbn(BIGNUM **bn, BIO *bconn)
     char buf[10240];
     int l;
 
-    l = BIO_gets(bconn, buf, sizeof buf);
+    l = BIO_gets(bconn, buf, sizeof(buf));
     assert(l > 0);
     assert(buf[l - 1] == '\n');
     buf[l - 1] = '\0';
@@ -2510,8 +2673,8 @@ static void jpake_receive_step3a(JPAKE_CTX *ctx, BIO *bconn)
     int l;
 
     JPAKE_STEP3A_init(&s3a);
-    l = BIO_read(bconn, s3a.hhk, sizeof s3a.hhk);
-    assert(l == sizeof s3a.hhk);
+    l = BIO_read(bconn, s3a.hhk, sizeof(s3a.hhk));
+    assert(l == sizeof(s3a.hhk));
     if (!JPAKE_STEP3A_process(ctx, &s3a)) {
         ERR_print_errors(bio_err);
         exit(1);
@@ -2525,8 +2688,8 @@ static void jpake_receive_step3b(JPAKE_CTX *ctx, BIO *bconn)
     int l;
 
     JPAKE_STEP3B_init(&s3b);
-    l = BIO_read(bconn, s3b.hk, sizeof s3b.hk);
-    assert(l == sizeof s3b.hk);
+    l = BIO_read(bconn, s3b.hk, sizeof(s3b.hk));
+    assert(l == sizeof(s3b.hk));
     if (!JPAKE_STEP3B_process(ctx, &s3b)) {
         ERR_print_errors(bio_err);
         exit(1);
@@ -2554,6 +2717,9 @@ void jpake_client_auth(BIO *out, BIO *conn, const char *secret)
     jpake_receive_step3b(ctx, bconn);
 
     BIO_puts(out, "JPAKE authentication succeeded, setting PSK\n");
+
+    if (psk_key)
+        OPENSSL_free(psk_key);
 
     psk_key = BN_bn2hex(JPAKE_get_shared_key(ctx));
 
@@ -2584,6 +2750,9 @@ void jpake_server_auth(BIO *out, BIO *conn, const char *secret)
 
     BIO_puts(out, "JPAKE authentication succeeded, setting PSK\n");
 
+    if (psk_key)
+        OPENSSL_free(psk_key);
+
     psk_key = BN_bn2hex(JPAKE_get_shared_key(ctx));
 
     BIO_pop(bconn);
@@ -2594,7 +2763,7 @@ void jpake_server_auth(BIO *out, BIO *conn, const char *secret)
 
 #endif
 
-#if !defined(OPENSSL_NO_TLSEXT) && !defined(OPENSSL_NO_NEXTPROTONEG)
+#ifndef OPENSSL_NO_TLSEXT
 /*-
  * next_protos_parse parses a comma separated list of strings into a string
  * in a format suitable for passing to SSL_CTX_set_next_protos_advertised.
@@ -2624,17 +2793,115 @@ unsigned char *next_protos_parse(unsigned short *outlen, const char *in)
                 OPENSSL_free(out);
                 return NULL;
             }
-            out[start] = i - start;
+            out[start] = (unsigned char)(i - start);
             start = i + 1;
         } else
             out[i + 1] = in[i];
     }
 
-    *outlen = len + 1;
+    *outlen = (unsigned char)(len + 1);
     return out;
 }
-#endif                          /* !OPENSSL_NO_TLSEXT &&
-                                 * !OPENSSL_NO_NEXTPROTONEG */
+#endif                          /* ndef OPENSSL_NO_TLSEXT */
+
+void print_cert_checks(BIO *bio, X509 *x,
+                       const char *checkhost,
+                       const char *checkemail, const char *checkip)
+{
+    if (x == NULL)
+        return;
+    if (checkhost) {
+        BIO_printf(bio, "Hostname %s does%s match certificate\n",
+                   checkhost, X509_check_host(x, checkhost, 0, 0, NULL) == 1
+                   ? "" : " NOT");
+    }
+
+    if (checkemail) {
+        BIO_printf(bio, "Email %s does%s match certificate\n",
+                   checkemail, X509_check_email(x, checkemail, 0,
+                                                0) ? "" : " NOT");
+    }
+
+    if (checkip) {
+        BIO_printf(bio, "IP %s does%s match certificate\n",
+                   checkip, X509_check_ip_asc(x, checkip, 0) ? "" : " NOT");
+    }
+}
+
+/* Get first http URL from a DIST_POINT structure */
+
+static const char *get_dp_url(DIST_POINT *dp)
+{
+    GENERAL_NAMES *gens;
+    GENERAL_NAME *gen;
+    int i, gtype;
+    ASN1_STRING *uri;
+    if (!dp->distpoint || dp->distpoint->type != 0)
+        return NULL;
+    gens = dp->distpoint->name.fullname;
+    for (i = 0; i < sk_GENERAL_NAME_num(gens); i++) {
+        gen = sk_GENERAL_NAME_value(gens, i);
+        uri = GENERAL_NAME_get0_value(gen, &gtype);
+        if (gtype == GEN_URI && ASN1_STRING_length(uri) > 6) {
+            char *uptr = (char *)ASN1_STRING_data(uri);
+            if (!strncmp(uptr, "http://", 7))
+                return uptr;
+        }
+    }
+    return NULL;
+}
+
+/*
+ * Look through a CRLDP structure and attempt to find an http URL to
+ * downloads a CRL from.
+ */
+
+static X509_CRL *load_crl_crldp(STACK_OF(DIST_POINT) *crldp)
+{
+    int i;
+    const char *urlptr = NULL;
+    for (i = 0; i < sk_DIST_POINT_num(crldp); i++) {
+        DIST_POINT *dp = sk_DIST_POINT_value(crldp, i);
+        urlptr = get_dp_url(dp);
+        if (urlptr)
+            return load_crl(urlptr, FORMAT_HTTP);
+    }
+    return NULL;
+}
+
+/*
+ * Example of downloading CRLs from CRLDP: not usable for real world as it
+ * always downloads, doesn't support non-blocking I/O and doesn't cache
+ * anything.
+ */
+
+static STACK_OF(X509_CRL) *crls_http_cb(X509_STORE_CTX *ctx, X509_NAME *nm)
+{
+    X509 *x;
+    STACK_OF(X509_CRL) *crls = NULL;
+    X509_CRL *crl;
+    STACK_OF(DIST_POINT) *crldp;
+    x = X509_STORE_CTX_get_current_cert(ctx);
+    crldp = X509_get_ext_d2i(x, NID_crl_distribution_points, NULL, NULL);
+    crl = load_crl_crldp(crldp);
+    sk_DIST_POINT_pop_free(crldp, DIST_POINT_free);
+    if (!crl)
+        return NULL;
+    crls = sk_X509_CRL_new_null();
+    sk_X509_CRL_push(crls, crl);
+    /* Try to download delta CRL */
+    crldp = X509_get_ext_d2i(x, NID_freshest_crl, NULL, NULL);
+    crl = load_crl_crldp(crldp);
+    sk_DIST_POINT_pop_free(crldp, DIST_POINT_free);
+    if (crl)
+        sk_X509_CRL_push(crls, crl);
+    return crls;
+}
+
+void store_setup_crl_download(X509_STORE *st)
+{
+    X509_STORE_set_lookup_crls_cb(st, crls_http_cb);
+}
 
 /*
  * Platform-specific sections
@@ -2947,6 +3214,36 @@ int app_isdir(const char *name)
 #endif
 
 /* raw_read|write section */
+#if defined(__VMS)
+# include "vms_term_sock.h"
+static int stdin_sock = -1;
+
+static void close_stdin_sock(void)
+{
+    TerminalSocket (TERM_SOCK_DELETE, &stdin_sock);
+}
+
+int fileno_stdin(void)
+{
+    if (stdin_sock == -1) {
+        TerminalSocket(TERM_SOCK_CREATE, &stdin_sock);
+        atexit(close_stdin_sock);
+    }
+
+    return stdin_sock;
+}
+#else
+int fileno_stdin(void)
+{
+    return fileno(stdin);
+}
+#endif
+
+int fileno_stdout(void)
+{
+    return fileno(stdout);
+}
+
 #if defined(_WIN32) && defined(STD_INPUT_HANDLE)
 int raw_read_stdin(void *buf, int siz)
 {
@@ -2956,10 +3253,17 @@ int raw_read_stdin(void *buf, int siz)
     else
         return (-1);
 }
+#elif defined(__VMS)
+#include <sys/socket.h>
+
+int raw_read_stdin(void *buf, int siz)
+{
+    return recv(fileno_stdin(), buf, siz, 0);
+}
 #else
 int raw_read_stdin(void *buf, int siz)
 {
-    return read(fileno(stdin), buf, siz);
+    return read(fileno_stdin(), buf, siz);
 }
 #endif
 
@@ -2975,6 +3279,6 @@ int raw_write_stdout(const void *buf, int siz)
 #else
 int raw_write_stdout(const void *buf, int siz)
 {
-    return write(fileno(stdout), buf, siz);
+    return write(fileno_stdout(), buf, siz);
 }
 #endif

@@ -94,6 +94,20 @@ int DH_compute_key(unsigned char *key, const BIGNUM *pub_key, DH *dh)
     return dh->meth->compute_key(key, pub_key, dh);
 }
 
+int DH_compute_key_padded(unsigned char *key, const BIGNUM *pub_key, DH *dh)
+{
+    int rv, pad;
+    rv = dh->meth->compute_key(key, pub_key, dh);
+    if (rv <= 0)
+        return rv;
+    pad = BN_num_bytes(dh->p) - rv;
+    if (pad > 0) {
+        memmove(key + pad, key, rv);
+        memset(key, 0, pad);
+    }
+    return rv + pad;
+}
+
 static DH_METHOD dh_ossl = {
     "OpenSSL DH Method",
     generate_key,
@@ -116,9 +130,14 @@ static int generate_key(DH *dh)
     int ok = 0;
     int generate_new_key = 0;
     unsigned l;
-    BN_CTX *ctx;
+    BN_CTX *ctx = NULL;
     BN_MONT_CTX *mont = NULL;
     BIGNUM *pub_key = NULL, *priv_key = NULL;
+
+    if (BN_num_bits(dh->p) > OPENSSL_DH_MAX_MODULUS_BITS) {
+        DHerr(DH_F_GENERATE_KEY, DH_R_MODULUS_TOO_LARGE);
+        return 0;
+    }
 
     ctx = BN_CTX_new();
     if (ctx == NULL)
@@ -209,6 +228,8 @@ static int compute_key(unsigned char *key, const BIGNUM *pub_key, DH *dh)
         goto err;
     BN_CTX_start(ctx);
     tmp = BN_CTX_get(ctx);
+    if (tmp == NULL)
+        goto err;
 
     if (dh->priv_key == NULL) {
         DHerr(DH_F_COMPUTE_KEY, DH_R_NO_PRIVATE_VALUE);

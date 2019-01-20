@@ -4,7 +4,7 @@
  * 1999.
  */
 /* ====================================================================
- * Copyright (c) 1999-2002 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1999-2018 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -135,11 +135,13 @@ static X509_EXTENSION *do_ext_nconf(CONF *conf, X509V3_CTX *ctx, int ext_nid,
             nval = NCONF_get_section(conf, value + 1);
         else
             nval = X509V3_parse_list(value);
-        if (sk_CONF_VALUE_num(nval) <= 0) {
+        if (nval == NULL || sk_CONF_VALUE_num(nval) <= 0) {
             X509V3err(X509V3_F_DO_EXT_NCONF,
                       X509V3_R_INVALID_EXTENSION_STRING);
             ERR_add_error_data(4, "name=", OBJ_nid2sn(ext_nid), ",section=",
                                value);
+            if (*value != '@')
+                sk_CONF_VALUE_free(nval);
             return NULL;
         }
         ext_struc = method->v2i(method, ctx, nval);
@@ -338,8 +340,12 @@ int X509V3_EXT_add_nconf_sk(CONF *conf, X509V3_CTX *ctx, char *section,
         val = sk_CONF_VALUE_value(nval, i);
         if (!(ext = X509V3_EXT_nconf(conf, ctx, val->name, val->value)))
             return 0;
-        if (sk)
-            X509v3_add_ext(sk, ext, -1);
+        if (sk != NULL) {
+            if (X509v3_add_ext(sk, ext, -1) == NULL) {
+                X509_EXTENSION_free(ext);
+                return 0;
+            }
+        }
         X509_EXTENSION_free(ext);
     }
     return 1;

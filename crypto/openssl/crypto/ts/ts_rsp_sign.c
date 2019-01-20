@@ -4,7 +4,7 @@
  * 2002.
  */
 /* ====================================================================
- * Copyright (c) 2006 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 2006-2018 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +58,7 @@
  */
 
 #include "cryptlib.h"
+#include "o_time.h"
 
 #if defined(OPENSSL_SYS_UNIX)
 # include <sys/time.h>
@@ -238,7 +239,6 @@ int TS_RESP_CTX_set_def_policy(TS_RESP_CTX *ctx, ASN1_OBJECT *def_policy)
 
 int TS_RESP_CTX_set_certs(TS_RESP_CTX *ctx, STACK_OF(X509) *certs)
 {
-    int i;
 
     if (ctx->certs) {
         sk_X509_pop_free(ctx->certs, X509_free);
@@ -246,13 +246,9 @@ int TS_RESP_CTX_set_certs(TS_RESP_CTX *ctx, STACK_OF(X509) *certs)
     }
     if (!certs)
         return 1;
-    if (!(ctx->certs = sk_X509_dup(certs))) {
+    if (!(ctx->certs = X509_chain_up_ref(certs))) {
         TSerr(TS_F_TS_RESP_CTX_SET_CERTS, ERR_R_MALLOC_FAILURE);
         return 0;
-    }
-    for (i = 0; i < sk_X509_num(ctx->certs); ++i) {
-        X509 *cert = sk_X509_value(ctx->certs, i);
-        CRYPTO_add(&cert->references, +1, CRYPTO_LOCK_X509);
     }
 
     return 1;
@@ -953,6 +949,7 @@ static ASN1_GENERALIZEDTIME
 {
     time_t time_sec = (time_t)sec;
     struct tm *tm = NULL;
+    struct tm result = {0};
     char genTime_str[17 + TS_MAX_CLOCK_PRECISION_DIGITS];
     char *p = genTime_str;
     char *p_end = genTime_str + sizeof(genTime_str);
@@ -960,7 +957,7 @@ static ASN1_GENERALIZEDTIME
     if (precision > TS_MAX_CLOCK_PRECISION_DIGITS)
         goto err;
 
-    if (!(tm = gmtime(&time_sec)))
+    if (!(tm = OPENSSL_gmtime(&time_sec, &result)))
         goto err;
 
     /*

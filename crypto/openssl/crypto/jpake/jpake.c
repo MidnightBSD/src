@@ -4,6 +4,7 @@
 #include <openssl/sha.h>
 #include <openssl/err.h>
 #include <memory.h>
+#include <string.h>
 
 /*
  * In the definition, (xa, xb, xc, xd) are Alice's (x1, x2, x3, x4) or
@@ -107,14 +108,16 @@ static void JPAKE_CTX_release(JPAKE_CTX *ctx)
     OPENSSL_free(ctx->p.peer_name);
     OPENSSL_free(ctx->p.name);
 
-    memset(ctx, '\0', sizeof *ctx);
+    memset(ctx, '\0', sizeof(*ctx));
 }
 
 JPAKE_CTX *JPAKE_CTX_new(const char *name, const char *peer_name,
                          const BIGNUM *p, const BIGNUM *g, const BIGNUM *q,
                          const BIGNUM *secret)
 {
-    JPAKE_CTX *ctx = OPENSSL_malloc(sizeof *ctx);
+    JPAKE_CTX *ctx = OPENSSL_malloc(sizeof(*ctx));
+    if (ctx == NULL)
+        return NULL;
 
     JPAKE_CTX_init(ctx, name, peer_name, p, g, q, secret);
 
@@ -150,6 +153,8 @@ static void hashbn(SHA_CTX *sha, const BIGNUM *bn)
     size_t l = BN_num_bytes(bn);
     unsigned char *bin = OPENSSL_malloc(l);
 
+    if (bin == NULL)
+        return;
     hashlength(sha, l);
     BN_bn2bin(bn, bin);
     SHA1_Update(sha, bin, l);
@@ -455,7 +460,7 @@ void JPAKE_STEP3A_init(JPAKE_STEP3A *s3a)
 int JPAKE_STEP3A_generate(JPAKE_STEP3A *send, JPAKE_CTX *ctx)
 {
     quickhashbn(send->hhk, ctx->key);
-    SHA1(send->hhk, sizeof send->hhk, send->hhk);
+    SHA1(send->hhk, sizeof(send->hhk), send->hhk);
 
     return 1;
 }
@@ -465,8 +470,8 @@ int JPAKE_STEP3A_process(JPAKE_CTX *ctx, const JPAKE_STEP3A *received)
     unsigned char hhk[SHA_DIGEST_LENGTH];
 
     quickhashbn(hhk, ctx->key);
-    SHA1(hhk, sizeof hhk, hhk);
-    if (memcmp(hhk, received->hhk, sizeof hhk)) {
+    SHA1(hhk, sizeof(hhk), hhk);
+    if (memcmp(hhk, received->hhk, sizeof(hhk))) {
         JPAKEerr(JPAKE_F_JPAKE_STEP3A_PROCESS,
                  JPAKE_R_HASH_OF_HASH_OF_KEY_MISMATCH);
         return 0;
@@ -494,7 +499,7 @@ int JPAKE_STEP3B_process(JPAKE_CTX *ctx, const JPAKE_STEP3B *received)
     unsigned char hk[SHA_DIGEST_LENGTH];
 
     quickhashbn(hk, ctx->key);
-    if (memcmp(hk, received->hk, sizeof hk)) {
+    if (memcmp(hk, received->hk, sizeof(hk))) {
         JPAKEerr(JPAKE_F_JPAKE_STEP3B_PROCESS, JPAKE_R_HASH_OF_KEY_MISMATCH);
         return 0;
     }

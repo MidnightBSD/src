@@ -46,7 +46,7 @@ SRC= $(LIBSRC)
 EXHEADER= crypto.h opensslv.h opensslconf.h ebcdic.h symhacks.h \
 	ossl_typ.h
 HEADER=	cryptlib.h buildinf.h md32_common.h o_time.h o_str.h o_dir.h \
-	constant_time_locl.h $(EXHEADER)
+	constant_time_locl.h bn_int.h $(EXHEADER)
 
 ALL=    $(GENERAL) $(SRC) $(HEADER)
 
@@ -75,9 +75,9 @@ ia64cpuid.s: ia64cpuid.S;	$(CC) $(CFLAGS) -E ia64cpuid.S > $@
 ppccpuid.s:	ppccpuid.pl;	$(PERL) ppccpuid.pl $(PERLASM_SCHEME) $@
 pariscid.s:	pariscid.pl;	$(PERL) pariscid.pl $(PERLASM_SCHEME) $@
 alphacpuid.s:	alphacpuid.pl
-	(preproc=/tmp/$$$$.$@; trap "rm $$preproc" INT; \
+	(preproc=$$$$.$@.S; trap "rm $$preproc" INT; \
 	$(PERL) alphacpuid.pl > $$preproc && \
-	$(CC) -E $$preproc > $@ && rm $$preproc)
+	$(CC) -E -P $$preproc > $@ && rm $$preproc)
 
 testapps:
 	[ -z "$(THIS)" ] || (	if echo $(SDIRS) | fgrep ' des '; \
@@ -89,7 +89,7 @@ subdirs:
 	@target=all; $(RECURSIVE_MAKE)
 
 files:
-	$(PERL) $(TOP)/util/files.pl Makefile >> $(TOP)/MINFO
+	$(PERL) $(TOP)/util/files.pl "CPUID_OBJ=$(CPUID_OBJ)" Makefile >> $(TOP)/MINFO
 	@target=files; $(RECURSIVE_MAKE)
 
 links:
@@ -103,7 +103,7 @@ lib:	$(LIB)
 	@touch lib
 $(LIB):	$(LIBOBJ)
 	$(AR) $(LIB) $(LIBOBJ)
-	[ -z "$(FIPSLIBDIR)" ] || $(AR) $(LIB) $(FIPSLIBDIR)fipscanister.o
+	test -z "$(FIPSLIBDIR)" || $(AR) $(LIB) $(FIPSLIBDIR)fipscanister.o
 	$(RANLIB) $(LIB) || echo Never mind.
 
 shared: buildinf.h lib subdirs

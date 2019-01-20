@@ -133,6 +133,7 @@ static int dsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
     unsigned char *penc = NULL;
     int penclen;
     ASN1_STRING *str = NULL;
+    ASN1_OBJECT *aobj;
 
     dsa = pkey->pkey.dsa;
     if (pkey->save_parameters && dsa->p && dsa->q && dsa->g) {
@@ -159,8 +160,11 @@ static int dsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
         goto err;
     }
 
-    if (X509_PUBKEY_set0_param(pk, OBJ_nid2obj(EVP_PKEY_DSA),
-                               ptype, str, penc, penclen))
+    aobj = OBJ_nid2obj(EVP_PKEY_DSA);
+    if (aobj == NULL)
+        goto err;
+
+    if (X509_PUBKEY_set0_param(pk, aobj, ptype, str, penc, penclen))
         return 1;
 
  err:
@@ -258,6 +262,7 @@ static int dsa_priv_decode(EVP_PKEY *pkey, PKCS8_PRIV_KEY_INFO *p8)
         goto dsaerr;
     }
 
+    BN_set_flags(dsa->priv_key, BN_FLG_CONSTTIME);
     if (!BN_mod_exp(dsa->pub_key, dsa->g, dsa->priv_key, dsa->p, ctx)) {
         DSAerr(DSA_F_DSA_PRIV_DECODE, DSA_R_BN_ERROR);
         goto dsaerr;
@@ -269,7 +274,7 @@ static int dsa_priv_decode(EVP_PKEY *pkey, PKCS8_PRIV_KEY_INFO *p8)
     goto done;
 
  decerr:
-    DSAerr(DSA_F_DSA_PRIV_DECODE, EVP_R_DECODE_ERROR);
+    DSAerr(DSA_F_DSA_PRIV_DECODE, DSA_R_DECODE_ERROR);
  dsaerr:
     DSA_free(dsa);
  done:
@@ -350,7 +355,7 @@ static int dsa_missing_parameters(const EVP_PKEY *pkey)
 {
     DSA *dsa;
     dsa = pkey->pkey.dsa;
-    if ((dsa->p == NULL) || (dsa->q == NULL) || (dsa->g == NULL))
+    if (dsa == NULL || dsa->p == NULL || dsa->q == NULL || dsa->g == NULL)
         return 1;
     return 0;
 }
@@ -602,10 +607,14 @@ static int dsa_pkey_ctrl(EVP_PKEY *pkey, int op, long arg1, void *arg2)
             X509_ALGOR_set0(alg2, OBJ_nid2obj(snid), V_ASN1_UNDEF, 0);
         }
         return 1;
+
+    case ASN1_PKEY_CTRL_CMS_RI_TYPE:
+        *(int *)arg2 = CMS_RECIPINFO_NONE;
+        return 1;
 #endif
 
     case ASN1_PKEY_CTRL_DEFAULT_MD_NID:
-        *(int *)arg2 = NID_sha1;
+        *(int *)arg2 = NID_sha256;
         return 2;
 
     default:

@@ -91,7 +91,8 @@ BIO_METHOD *BIO_s_mem(void)
     return (&mem_method);
 }
 
-BIO *BIO_new_mem_buf(void *buf, int len)
+
+BIO *BIO_new_mem_buf(const void *buf, int len)
 {
     BIO *ret;
     BUF_MEM *b;
@@ -105,7 +106,8 @@ BIO *BIO_new_mem_buf(void *buf, int len)
     if (!(ret = BIO_new(BIO_s_mem())))
         return NULL;
     b = (BUF_MEM *)ret->ptr;
-    b->data = buf;
+    /* Cast away const and trust in the MEM_RDONLY flag. */
+    b->data = (void *)buf;
     b->length = sz;
     b->max = sz;
     ret->flags |= BIO_FLAGS_MEM_RDONLY;
@@ -186,6 +188,8 @@ static int mem_write(BIO *b, const char *in, int inl)
     }
 
     BIO_clear_retry_flags(b);
+    if (inl == 0)
+        return 0;
     blen = bm->length;
     if (BUF_MEM_grow_clean(bm, blen + inl) != (blen + inl))
         goto end;

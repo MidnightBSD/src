@@ -72,12 +72,9 @@ char *BN_bn2hex(const BIGNUM *a)
     char *buf;
     char *p;
 
-    if (a->neg && BN_is_zero(a)) {
-        /* "-0" == 3 bytes including NULL terminator */
-        buf = OPENSSL_malloc(3);
-    } else {
-        buf = OPENSSL_malloc(a->top * BN_BYTES * 2 + 2);
-    }
+    if (BN_is_zero(a))
+        return OPENSSL_strdup("0");
+    buf = OPENSSL_malloc(a->top * BN_BYTES * 2 + 2);
     if (buf == NULL) {
         BNerr(BN_F_BN_BN2HEX, ERR_R_MALLOC_FAILURE);
         goto err;
@@ -85,8 +82,6 @@ char *BN_bn2hex(const BIGNUM *a)
     p = buf;
     if (a->neg)
         *(p++) = '-';
-    if (BN_is_zero(a))
-        *(p++) = '0';
     for (i = a->top - 1; i >= 0; i--) {
         for (j = BN_BITS2 - 8; j >= 0; j -= 8) {
             /* strip leading zeros */
@@ -244,10 +239,12 @@ int BN_hex2bn(BIGNUM **bn, const char *a)
     }
     ret->top = h;
     bn_correct_top(ret);
-    ret->neg = neg;
 
     *bn = ret;
     bn_check_top(ret);
+    /* Don't set the negative flag if it's zero. */
+    if (ret->top != 0)
+        ret->neg = neg;
     return (num);
  err:
     if (*bn == NULL)
@@ -299,7 +296,7 @@ int BN_dec2bn(BIGNUM **bn, const char *a)
     if (j == BN_DEC_NUM)
         j = 0;
     l = 0;
-    while (*a) {
+    while (--i >= 0) {
         l *= 10;
         l += *a - '0';
         a++;
@@ -310,11 +307,13 @@ int BN_dec2bn(BIGNUM **bn, const char *a)
             j = 0;
         }
     }
-    ret->neg = neg;
 
     bn_correct_top(ret);
     *bn = ret;
     bn_check_top(ret);
+    /* Don't set the negative flag if it's zero. */
+    if (ret->top != 0)
+        ret->neg = neg;
     return (num);
  err:
     if (*bn == NULL)
@@ -325,6 +324,7 @@ int BN_dec2bn(BIGNUM **bn, const char *a)
 int BN_asc2bn(BIGNUM **bn, const char *a)
 {
     const char *p = a;
+
     if (*p == '-')
         p++;
 
@@ -335,7 +335,8 @@ int BN_asc2bn(BIGNUM **bn, const char *a)
         if (!BN_dec2bn(bn, p))
             return 0;
     }
-    if (*a == '-')
+    /* Don't set the negative flag if it's zero. */
+    if (*a == '-' && (*bn)->top != 0)
         (*bn)->neg = 1;
     return 1;
 }
@@ -390,10 +391,10 @@ char *BN_options(void)
     if (!init) {
         init++;
 #ifdef BN_LLONG
-        BIO_snprintf(data, sizeof data, "bn(%d,%d)",
+        BIO_snprintf(data, sizeof(data), "bn(%d,%d)",
                      (int)sizeof(BN_ULLONG) * 8, (int)sizeof(BN_ULONG) * 8);
 #else
-        BIO_snprintf(data, sizeof data, "bn(%d,%d)",
+        BIO_snprintf(data, sizeof(data), "bn(%d,%d)",
                      (int)sizeof(BN_ULONG) * 8, (int)sizeof(BN_ULONG) * 8);
 #endif
     }

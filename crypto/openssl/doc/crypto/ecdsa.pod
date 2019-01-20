@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-ecdsa - Elliptic Curve Digital Signature Algorithm
+ECDSA_SIG_new, ECDSA_SIG_free, i2d_ECDSA_SIG, d2i_ECDSA_SIG, ECDSA_size, ECDSA_sign_setup, ECDSA_sign, ECDSA_sign_ex, ECDSA_verify, ECDSA_do_sign, ECDSA_do_sign_ex, ECDSA_do_verify - Elliptic Curve Digital Signature Algorithm
 
 =head1 SYNOPSIS
 
@@ -111,6 +111,8 @@ ECDSA signature of the hash value B<dgst> of size B<dgst_len>
 using the public key B<eckey>.
 
 =head1 RETURN VALUES
+
+ECDSA_SIG_new() returns NULL if the allocation fails.
 
 ECDSA_size() returns the maximum length signature or 0 on error.
 

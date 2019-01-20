@@ -155,7 +155,7 @@ int BN_div(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m, const BIGNUM *d,
         ({  asm volatile (                      \
                 "divl   %4"                     \
                 : "=a"(q), "=d"(rem)            \
-                : "a"(n1), "d"(n0), "g"(d0)     \
+                : "a"(n1), "d"(n0), "r"(d0)     \
                 : "cc");                        \
             q;                                  \
         })
@@ -170,7 +170,7 @@ int BN_div(BIGNUM *dv, BIGNUM *rem, const BIGNUM *m, const BIGNUM *d,
         ({  asm volatile (                      \
                 "divq   %4"                     \
                 : "=a"(q), "=d"(rem)            \
-                : "a"(n1), "d"(n0), "g"(d0)     \
+                : "a"(n1), "d"(n0), "r"(d0)     \
                 : "cc");                        \
             q;                                  \
         })
@@ -290,6 +290,7 @@ int BN_div(BIGNUM *dv, BIGNUM *rm, const BIGNUM *num, const BIGNUM *divisor,
     wnum.neg = 0;
     wnum.d = &(snum->d[loop]);
     wnum.top = div_n;
+    wnum.flags = BN_FLG_STATIC_DATA;
     /*
      * only needed when BN_ucmp messes up the values between top and max
      */

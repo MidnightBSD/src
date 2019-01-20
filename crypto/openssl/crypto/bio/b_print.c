@@ -385,7 +385,7 @@ _dopr(char **sbuffer,
                 if (cflags == DP_C_SHORT) {
                     short int *num;
                     num = va_arg(args, short int *);
-                    *num = currlen;
+                    *num = (short int)currlen;
                 } else if (cflags == DP_C_LONG) { /* XXX */
                     long int *num;
                     num = va_arg(args, long int *);
@@ -423,9 +423,15 @@ _dopr(char **sbuffer,
             break;
         }
     }
-    *truncated = (currlen > *maxlen - 1);
-    if (*truncated)
-        currlen = *maxlen - 1;
+    /*
+     * We have to truncate if there is no dynamic buffer and we have filled the
+     * static buffer.
+     */
+    if (buffer == NULL) {
+        *truncated = (currlen > *maxlen - 1);
+        if (*truncated)
+            currlen = *maxlen - 1;
+    }
     if(!doapr_outch(sbuffer, buffer, &currlen, maxlen, '\0'))
         return 0;
     *retlen = currlen - 1;
@@ -496,7 +502,7 @@ fmtint(char **sbuffer,
     if (!(flags & DP_F_UNSIGNED)) {
         if (value < 0) {
             signvalue = '-';
-            uvalue = -value;
+            uvalue = 0 - (unsigned LLONG)value;
         } else if (flags & DP_F_PLUS)
             signvalue = '+';
         else if (flags & DP_F_SPACE)
@@ -657,7 +663,7 @@ fmtfp(char **sbuffer,
         iconvert[iplace++] = "0123456789"[intpart % 10];
         intpart = (intpart / 10);
     } while (intpart && (iplace < (int)sizeof(iconvert)));
-    if (iplace == sizeof iconvert)
+    if (iplace == sizeof(iconvert))
         iplace--;
     iconvert[iplace] = 0;
 
@@ -666,7 +672,7 @@ fmtfp(char **sbuffer,
         fconvert[fplace++] = "0123456789"[fracpart % 10];
         fracpart = (fracpart / 10);
     } while (fplace < max);
-    if (fplace == sizeof fconvert)
+    if (fplace == sizeof(fconvert))
         fplace--;
     fconvert[fplace] = 0;
 

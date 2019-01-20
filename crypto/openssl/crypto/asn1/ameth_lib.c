@@ -3,7 +3,7 @@
  * 2006.
  */
 /* ====================================================================
- * Copyright (c) 2006 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 2006-2018 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,6 +68,7 @@
 extern const EVP_PKEY_ASN1_METHOD rsa_asn1_meths[];
 extern const EVP_PKEY_ASN1_METHOD dsa_asn1_meths[];
 extern const EVP_PKEY_ASN1_METHOD dh_asn1_meth;
+extern const EVP_PKEY_ASN1_METHOD dhx_asn1_meth;
 extern const EVP_PKEY_ASN1_METHOD eckey_asn1_meth;
 extern const EVP_PKEY_ASN1_METHOD hmac_asn1_meth;
 extern const EVP_PKEY_ASN1_METHOD cmac_asn1_meth;
@@ -92,7 +93,12 @@ static const EVP_PKEY_ASN1_METHOD *standard_methods[] = {
     &eckey_asn1_meth,
 #endif
     &hmac_asn1_meth,
-    &cmac_asn1_meth
+#ifndef OPENSSL_NO_CMAC
+    &cmac_asn1_meth,
+#endif
+#ifndef OPENSSL_NO_DH
+    &dhx_asn1_meth
+#endif
 };
 
 typedef int sk_cmp_fn_type(const char *const *a, const char *const *b);
@@ -299,6 +305,18 @@ EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_new(int id, int flags,
     } else
         ameth->info = NULL;
 
+    /*
+     * One of the following must be true:
+     *
+     * pem_str == NULL AND ASN1_PKEY_ALIAS is set
+     * pem_str != NULL AND ASN1_PKEY_ALIAS is clear
+     *
+     * Anything else is an error and may lead to a corrupt ASN1 method table
+     */
+    if (!((pem_str == NULL && (flags & ASN1_PKEY_ALIAS) != 0)
+          || (pem_str != NULL && (flags & ASN1_PKEY_ALIAS) == 0)))
+        goto err;
+
     if (pem_str) {
         ameth->pem_str = BUF_strdup(pem_str);
         if (!ameth->pem_str)
@@ -459,4 +477,22 @@ void EVP_PKEY_asn1_set_ctrl(EVP_PKEY_ASN1_METHOD *ameth,
                                               long arg1, void *arg2))
 {
     ameth->pkey_ctrl = pkey_ctrl;
+}
+
+void EVP_PKEY_asn1_set_item(EVP_PKEY_ASN1_METHOD *ameth,
+                            int (*item_verify) (EVP_MD_CTX *ctx,
+                                                const ASN1_ITEM *it,
+                                                void *asn,
+                                                X509_ALGOR *a,
+                                                ASN1_BIT_STRING *sig,
+                                                EVP_PKEY *pkey),
+                            int (*item_sign) (EVP_MD_CTX *ctx,
+                                              const ASN1_ITEM *it,
+                                              void *asn,
+                                              X509_ALGOR *alg1,
+                                              X509_ALGOR *alg2,
+                                              ASN1_BIT_STRING *sig))
+{
+    ameth->item_sign = item_sign;
+    ameth->item_verify = item_verify;
 }

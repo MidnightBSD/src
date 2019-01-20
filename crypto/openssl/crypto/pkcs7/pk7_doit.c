@@ -375,16 +375,18 @@ BIO *PKCS7_dataInit(PKCS7 *p7, BIO *bio)
     }
 
     if (bio == NULL) {
-        if (PKCS7_is_detached(p7))
+        if (PKCS7_is_detached(p7)) {
             bio = BIO_new(BIO_s_null());
-        else if (os && os->length > 0)
+        } else if (os && os->length > 0) {
             bio = BIO_new_mem_buf(os->data, os->length);
-        if (bio == NULL) {
+        } else {
             bio = BIO_new(BIO_s_mem());
             if (bio == NULL)
                 goto err;
             BIO_set_mem_eof_return(bio, 0);
         }
+        if (bio == NULL)
+            goto err;
     }
     if (out)
         BIO_push(out, bio);
@@ -642,6 +644,8 @@ BIO *PKCS7_dataDecode(PKCS7 *p7, EVP_PKEY *pkey, BIO *in_bio, X509 *pcert)
     } else {
 # if 0
         bio = BIO_new(BIO_s_mem());
+        if (bio == NULL)
+            goto err;
         /*
          * We need to set this so that when we have read all the data, the
          * encrypt BIO, if present, will read EOF and encode the last few
