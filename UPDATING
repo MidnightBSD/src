@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users.
 
 	mksh R56c
 
+	OpenSSL 1.0.2p
+
 20181223:
 	Import Perl 5.28.0
 
