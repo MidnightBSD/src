@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-# $FreeBSD: stable/10/secure/lib/libcrypto/i386/bn-586.S 299966 2016-05-16 19:30:27Z jkim $
-# Do not modify. This file is auto-generated from bn-586.pl.
+/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/bn-586.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* Do not modify. This file is auto-generated from bn-586.pl. */
 #ifdef PIC
 .file	"bn-586.S"
 .text
@@ -12,8 +12,7 @@ bn_mul_add_words:
 	call	.L000PIC_me_up
 .L000PIC_me_up:
 	popl	%eax
-	leal	_GLOBAL_OFFSET_TABLE_+[.-.L000PIC_me_up](%eax),%eax
-	movl	OPENSSL_ia32cap_P@GOT(%eax),%eax
+	leal	OPENSSL_ia32cap_P-.L000PIC_me_up(%eax),%eax
 	btl	$26,(%eax)
 	jnc	.L001maw_non_sse2
 	movl	4(%esp),%eax
@@ -296,8 +295,7 @@ bn_mul_words:
 	call	.L010PIC_me_up
 .L010PIC_me_up:
 	popl	%eax
-	leal	_GLOBAL_OFFSET_TABLE_+[.-.L010PIC_me_up](%eax),%eax
-	movl	OPENSSL_ia32cap_P@GOT(%eax),%eax
+	leal	OPENSSL_ia32cap_P-.L010PIC_me_up(%eax),%eax
 	btl	$26,(%eax)
 	jnc	.L011mw_non_sse2
 	movl	4(%esp),%eax
@@ -479,8 +477,7 @@ bn_sqr_words:
 	call	.L017PIC_me_up
 .L017PIC_me_up:
 	popl	%eax
-	leal	_GLOBAL_OFFSET_TABLE_+[.-.L017PIC_me_up](%eax),%eax
-	movl	OPENSSL_ia32cap_P@GOT(%eax),%eax
+	leal	OPENSSL_ia32cap_P-.L017PIC_me_up(%eax),%eax
 	btl	$26,(%eax)
 	jnc	.L018sqr_non_sse2
 	movl	4(%esp),%eax
@@ -1534,7 +1531,7 @@ bn_sub_part_words:
 	popl	%ebp
 	ret
 .size	bn_sub_part_words,.-.L_bn_sub_part_words_begin
-.comm	OPENSSL_ia32cap_P,8,4
+.comm	OPENSSL_ia32cap_P,16,4
 #else
 .file	"bn-586.S"
 .text
@@ -3056,5 +3053,5 @@ bn_sub_part_words:
 	popl	%ebp
 	ret
 .size	bn_sub_part_words,.-.L_bn_sub_part_words_begin
-.comm	OPENSSL_ia32cap_P,8,4
+.comm	OPENSSL_ia32cap_P,16,4
 #endif

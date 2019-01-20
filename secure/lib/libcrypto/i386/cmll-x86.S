@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-# $FreeBSD: stable/10/secure/lib/libcrypto/i386/cmll-x86.S 299966 2016-05-16 19:30:27Z jkim $
-# Do not modify. This file is auto-generated from cmll-x86.pl.
+/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/cmll-x86.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* Do not modify. This file is auto-generated from cmll-x86.pl. */
 #ifdef PIC
 .file	"cmll-x86.S"
 .text

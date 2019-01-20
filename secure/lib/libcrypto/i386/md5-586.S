@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-# $FreeBSD: stable/10/secure/lib/libcrypto/i386/md5-586.S 299966 2016-05-16 19:30:27Z jkim $
-# Do not modify. This file is auto-generated from md5-586.pl.
+/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/md5-586.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* Do not modify. This file is auto-generated from md5-586.pl. */
 #ifdef PIC
 .file	"md5-586.S"
 .text
