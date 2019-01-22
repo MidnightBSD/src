@@ -342,6 +342,14 @@ static struct ada_quirk_entry ada_quirk_table[] =
 	},
 	{
 		/*
+		 * Crucial M500 SSDs MU07 firmware
+		 * NCQ Trim works
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "*", "Crucial CT*M500*", "MU07" },
+		/*quirks*/0
+	},
+	{
+		/*
 		 * Crucial RealSSD C300 SSDs
 		 * 4k optimised
 		 */
