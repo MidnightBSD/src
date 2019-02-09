@@ -122,6 +122,10 @@ SSL=	${.CURDIR}/../crypto/openssl/apps/openssl.cnf
 BIN1+= nscd.conf
 .endif
 
+.if ${MK_PORTSNAP} != "no"
+BIN1+= portsnap.conf
+.endif
+
 .if ${MK_PF} != "no"
 BIN1+= pf.os
 .endif
