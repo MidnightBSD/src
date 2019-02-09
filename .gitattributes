@@ -80060,6 +80060,16 @@ usr.sbin/pmcstudy/eval_expr.h svneol=native#text/plain
 usr.sbin/pmcstudy/pmcstudy.8 svneol=native#text/plain
 usr.sbin/pmcstudy/pmcstudy.c svneol=native#text/plain
 usr.sbin/pnpinfo/Makefile -text
+usr.sbin/portsnap/Makefile svneol=native#text/plain
+usr.sbin/portsnap/Makefile.inc svneol=native#text/plain
+usr.sbin/portsnap/make_index/Makefile svneol=native#text/plain
+usr.sbin/portsnap/make_index/make_index.c svneol=native#text/plain
+usr.sbin/portsnap/phttpget/Makefile svneol=native#text/plain
+usr.sbin/portsnap/phttpget/phttpget.8 svneol=native#text/plain
+usr.sbin/portsnap/phttpget/phttpget.c svneol=native#text/plain
+usr.sbin/portsnap/portsnap/Makefile svneol=native#text/plain
+usr.sbin/portsnap/portsnap/portsnap.8 svneol=native#text/plain
+usr.sbin/portsnap/portsnap/portsnap.sh svneol=native#text/plain
 usr.sbin/powerd/Makefile -text
 usr.sbin/powerd/powerd.8 -text
 usr.sbin/powerd/powerd.c -text

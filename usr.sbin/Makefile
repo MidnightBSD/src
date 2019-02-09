@@ -263,6 +263,10 @@ SUBDIR+=	pmccontrol
 SUBDIR+=	pmcstat
 .endif
 
+.if ${MK_PORTSNAP} != "no"
+SUBDIR+= portsnap
+.endif
+
 .if ${MK_PPP} != "no"
 SUBDIR+=	ppp
 .endif
