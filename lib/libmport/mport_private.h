@@ -176,7 +176,7 @@ int mport_set_errx(int , const char *, ...);
 
 #if __MidnightBSD_version >= 102000
 #define MPORT_OSVERSION "1.2"
-#if __MidnightBSD_version >= 101000
+#elif __MidnightBSD_version >= 101000
 #define MPORT_OSVERSION "1.1"
 #elif __MidnightBSD_version >= 100000
 #define MPORT_OSVERSION "1.0"
