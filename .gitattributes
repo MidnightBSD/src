@@ -62589,8 +62589,6 @@ sys/compat/linux/linux_util.c -text
 sys/compat/linux/linux_util.h -text
 sys/compat/linux/linux_vdso.c svneol=native#text/plain
 sys/compat/linux/linux_vdso.h svneol=native#text/plain
-sys/compat/linux/linux_videodev.h -text
-sys/compat/linux/linux_videodev2.h -text
 sys/compat/linux/linux_videodev2_compat.h -text
 sys/compat/linux/linux_videodev_compat.h -text
 sys/compat/linux/stats_timing.d svneol=native#text/plain
