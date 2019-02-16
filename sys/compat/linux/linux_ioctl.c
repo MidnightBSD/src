@@ -1709,7 +1709,7 @@ linux_ioctl_vfat(struct thread *td, struct linux_ioctl_args *args)
 
 struct linux_old_mixer_info {
 	char	id[16];
-	char	name[32];
+	char	name[64];
 };
 
 static u_int32_t dirbits[4] = { IOC_VOID, IOC_IN, IOC_OUT, IOC_INOUT };
@@ -1801,7 +1801,7 @@ linux_ioctl_sound(struct thread *td, struct linux_ioctl_args *args)
 			struct linux_old_mixer_info info;
 			bzero(&info, sizeof(info));
 			strncpy(info.id, "OSS", sizeof(info.id) - 1);
-			strncpy(info.name, "FreeBSD OSS Mixer", sizeof(info.name) - 1);
+			strncpy(info.name, "MidnightBSD OSS Mixer", sizeof(info.name) - 1);
 			copyout(&info, (void *)args->arg, sizeof(info));
 			return (0);
 		}
