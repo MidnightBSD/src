@@ -69919,7 +69919,6 @@ sys/kern/capabilities.conf -text
 sys/kern/clock_if.m -text
 sys/kern/cpufreq_if.m -text
 sys/kern/device_if.m -text
-sys/kern/dtio_kdtrace.c svneol=native#text/plain
 sys/kern/genassym.sh -text
 sys/kern/imgact_aout.c -text
 sys/kern/imgact_binmisc.c svneol=native#text/plain
@@ -69992,7 +69991,6 @@ sys/kern/kern_sema.c -text
 sys/kern/kern_sharedpage.c svneol=native#text/plain
 sys/kern/kern_shutdown.c -text
 sys/kern/kern_sig.c -text
-sys/kern/kern_subr.c -text
 sys/kern/kern_switch.c -text
 sys/kern/kern_sx.c -text
 sys/kern/kern_synch.c -text
@@ -70094,7 +70092,6 @@ sys/kern/tty_pts.c -text
 sys/kern/tty_tty.c -text
 sys/kern/tty_ttydisc.c -text
 sys/kern/uipc_accf.c -text
-sys/kern/uipc_cow.c -text
 sys/kern/uipc_debug.c -text
 sys/kern/uipc_domain.c -text
 sys/kern/uipc_mbuf.c -text
