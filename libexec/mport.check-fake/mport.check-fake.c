@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.7 2011/05/20 13:18:50 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -158,8 +158,11 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 		
 		if (e->type != ASSET_FILE)
 			continue;
-		
-		(void)snprintf(file, FILENAME_MAX, "%s%s/%s", destdir, cwd, e->data);
+
+		if (e->data[0] == '/')
+			(void)snprintf(file, FILENAME_MAX, "%s%s", destdir, e->data);
+		else		
+			(void)snprintf(file, FILENAME_MAX, "%s%s/%s", destdir, cwd, e->data);
 
 		DIAG("checking %s", file)
 			
