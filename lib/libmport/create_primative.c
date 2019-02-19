@@ -172,7 +172,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 		    e->type == ASSET_FILE_OWNER_MODE) {
 			/* Don't prepend cwd onto absolute file paths (this is useful for update) */
 			if (e->data[0] == '/') {
-				(void) strlcpy(file, e->data, FILENAME_MAX);
+				(void) snprintf(file, FILENAME_MAX, "%s%s", extra->sourcedir, e->data);
 			} else {
 				(void) snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
 			}
