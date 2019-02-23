@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.5 2011/06/14 02:22:33 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.5 2011/06/14 02:22:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 
 #include <stdlib.h>
@@ -51,12 +51,16 @@ int main(int argc, char *argv[])
   mportPackageMeta **packs;
   char *where;
   int quiet = 0;
+  int origin = 0;
 
   if (argc == 1)
     usage();
     
-  while ((ch = getopt(argc, argv, "q")) != -1) {
+  while ((ch = getopt(argc, argv, "oq")) != -1) {
     switch (ch) {
+      case 'o':
+        origin = 1;
+        break;
       case 'q':
         quiet = 1;
         break;
@@ -93,8 +97,16 @@ int main(int argc, char *argv[])
   }
   
   while (*packs != NULL) {
-    if (!quiet)
-      (void)printf("%s-%s\n", (*packs)->name, (*packs)->version);
+    if (quiet && origin) {
+      printf("%s\n", (*packs)->origin);
+    } else if (!quiet) {
+      if (origin) {
+          printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version, 
+             (*packs)->origin);
+      } else {
+          printf("%s-%s\n", (*packs)->name, (*packs)->version);
+      }
+    }
     packs++;
   }
 
@@ -107,7 +119,7 @@ int main(int argc, char *argv[])
 static void
 usage(void) 
 {
-	fprintf(stderr, "Usage: mport.query [-q] <query statement>\n");
+	fprintf(stderr, "Usage: mport.query [-oq] <query statement>\n");
 	exit(2);
 }
 

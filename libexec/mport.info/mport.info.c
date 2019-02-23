@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.3 2011/03/06 19:58:25 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,9 +46,13 @@ main(int argc, char *argv[])
   mportPackageMeta **packs;
   bool quiet = false;
   bool verbose = false;
+  bool origin = false;
 
-  while ((ch = getopt(argc, argv, "qv")) != -1) {
+  while ((ch = getopt(argc, argv, "oqv")) != -1) {
     switch (ch) {
+      case 'o': 
+        origin = true;
+        break;
       case 'q':
         quiet = true;
         break;
@@ -94,8 +98,14 @@ main(int argc, char *argv[])
     printf("The following installed package(s) has %s origin:\n", argv[0]);
  
   while (*packs != NULL) {
-    if (strcmp(argv[0], (*packs)->origin) == 0)
-	printf("%s-%s\n", (*packs)->name, (*packs)->version);
+    if (strcmp(argv[0], (*packs)->origin) == 0) {
+        if (origin) {
+		printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
+                (*packs)->origin);
+        } else {
+		printf("%s-%s\n", (*packs)->name, (*packs)->version);
+	}
+    }
    
     packs++;
   }
@@ -109,6 +119,6 @@ main(int argc, char *argv[])
 static void 
 usage(void) 
 {
-  fprintf(stderr, "Usage: mport.info [-q | -v] <origin>\n");
+  fprintf(stderr, "Usage: mport.info [-o | -q | -v] <origin>\n");
   exit(2);
 }
