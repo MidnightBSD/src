@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20190223:
+	Update mport package tool with version from CURRENT. Supports
+	origin lookups with /usr/libexec/mport.query now, required for latest
+	ports changes.
+
 20190218:
 	Fix a bug with mport when creating packages with absolute paths. 
 
