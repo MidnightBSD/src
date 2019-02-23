@@ -36,6 +36,7 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stddef.h>
 
 static int index_is_recentish(void);
 static int index_last_checked_recentish(mportInstance *); 
@@ -209,9 +210,15 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
 	int ret, i;
 	int len;
 	sqlite3_stmt *stmt;
+	char *mirror_region;
+
+	mirror_region = mport_setting_get(mport, MPORT_SETTING_MIRROR_REGION);
+	if (mirror_region == NULL) {
+		mirror_region = "us";
+	}
 
 	/* XXX the country is hard coded until a configuration system is created */
-	if (mport_db_count(mport->db, &len, "SELECT COUNT(*) FROM idx.mirrors WHERE country='us'") != MPORT_OK)
+	if (mport_db_count(mport->db, &len, "SELECT COUNT(*) FROM idx.mirrors WHERE country=%Q", mirror_region) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	*list_size = len;
@@ -219,7 +226,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
 	*list_p = list;
 	i = 0;
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country='us'") != MPORT_OK) {
+	if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country=%Q", mirror_region) != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}

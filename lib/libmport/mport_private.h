@@ -47,6 +47,8 @@
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
 
+#define MPORT_SETTING_MIRROR_REGION "mirror_region"
+
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 void mport_call_progress_init_cb(mportInstance *, const char *, ...);
@@ -172,7 +174,11 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-#if __MidnightBSD_version >= 100000
+#if __MidnightBSD_version >= 102000
+#define MPORT_OSVERSION "1.2"
+#elif __MidnightBSD_version >= 101000
+#define MPORT_OSVERSION "1.1"
+#elif __MidnightBSD_version >= 100000
 #define MPORT_OSVERSION "1.0"
 #elif __MidnightBSD_version >= 9000
 #define MPORT_OSVERSION "0.9"
