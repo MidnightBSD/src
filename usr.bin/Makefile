@@ -45,6 +45,7 @@ SUBDIR+=alias \
 	csplit \
 	ctlstat \
 	cut \
+	deroff \
 	dirname \
 	dns-sd \
 	doas \
