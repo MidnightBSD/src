@@ -76760,6 +76760,10 @@ usr.bin/dc/extern.h -text
 usr.bin/dc/inout.c -text
 usr.bin/dc/mem.c -text
 usr.bin/dc/stack.c -text
+usr.bin/deroff/Makefile svneol=native#text/plain
+usr.bin/deroff/TODO -text
+usr.bin/deroff/deroff.1 svneol=native#text/plain
+usr.bin/deroff/deroff.c svneol=native#text/plain
 usr.bin/dirname/Makefile -text
 usr.bin/dirname/dirname.c -text
 usr.bin/dirname/tests/Makefile svneol=native#text/plain
