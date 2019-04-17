@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20190417:
+	bring back deroff(1) to fix spell(1)
+
 20190209:
 	MidnightBSD 1.2-CURRENT development starts.
 
