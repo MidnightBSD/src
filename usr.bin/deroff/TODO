@@ -1,0 +1,7 @@
+	$MidnightBSD: src/usr.bin/deroff/TODO,v 1.1 2006/12/31 05:23:39 laffer1 Exp $ 
+	$NetBSD: TODO,v 1.2 2005/09/01 18:27:24 rpaulo Exp $
+
+Things this needs:
+
+a) code cleanup
+b) support for mdoc macros
