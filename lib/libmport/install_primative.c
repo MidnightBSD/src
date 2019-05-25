@@ -59,17 +59,22 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 		if (prefix != NULL) {
 			/* override the default prefix with the given prefix */
 			free(pkg->prefix);
-			if ((pkg->prefix = strdup(prefix)) == NULL) /* all hope is lost! bail */
+			if ((pkg->prefix = strdup(prefix)) == NULL) {
+				/* all hope is lost! bail */
 				RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			}
 		}
 
 		if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED | MPORT_PRECHECK_DEPENDS |
 		                                           MPORT_PRECHECK_CONFLICTS) != MPORT_OK)
 		    ||
 		    (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) {
-			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
-			                  mport_err_string());
-			/* TODO: WHY WAS THIS HERE mport_set_err(MPORT_OK, NULL); */
+			if (pkg->name != NULL && pkg->version != NULL)
+				mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
+						  mport_err_string());
+			else
+				mport_call_msg_cb(mport, "Unknown error. State is invalid.");
+
 			error = true;
 			break; /* do not keep going if we have a package failure! */
 		}
