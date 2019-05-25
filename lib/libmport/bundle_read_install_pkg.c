@@ -136,7 +136,8 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 	return MPORT_OK;
 
 	ERROR:
-	// TODO: asset list free
+	if (alist != NULL)
+		mport_assetlist_free(alist);
 	RETURN_CURRENT_ERROR;
 }
 
@@ -946,6 +947,9 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 		/* if we couldn't stat the file, we assume there isn't a pkg-msg */
 		return MPORT_OK;
 
+	if (st.st_size < 1)
+		return MPORT_OK;
+
 	if ((file = fopen(filename, "r")) == NULL)
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
@@ -957,9 +961,10 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
 	}
 
-	buf[st.st_size] = 0;
+	buf[st.st_size] = '\0';
 
-	mport_call_msg_cb(mport, buf);
+	if (buf[0] != '\0')
+		mport_call_msg_cb(mport, buf);
 
 	free(buf);
 
