@@ -36,6 +36,7 @@
 #include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "mport_dispatch.h"
 
@@ -165,6 +166,9 @@ typedef struct {
   char *version;
   char *d_pkgname;
   char *d_version;
+  int level;
+  bool already_installed;
+  bool needs_upgrade;
 } mportDependsEntry;
 
 int mport_index_depends_list(mportInstance *, const char *, const char *, mportDependsEntry ***);
