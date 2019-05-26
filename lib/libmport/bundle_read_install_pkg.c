@@ -956,7 +956,7 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	if ((buf = (char *) calloc((size_t) (st.st_size + 1), sizeof(char))) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-	if (fread(buf, 1, (size_t) st.st_size, file) != (size_t) st.st_size) {
+	if (fread(buf, sizeof(char), (size_t) st.st_size, file) != (size_t) st.st_size) {
 		free(buf);
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
 	}
@@ -964,7 +964,7 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	buf[st.st_size] = '\0';
 
 	if (buf[0] != '\0')
-		mport_call_msg_cb(mport, buf);
+		mport_call_msg_cb(mport, "%s", buf);
 
 	free(buf);
 
