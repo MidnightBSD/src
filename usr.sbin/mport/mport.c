@@ -504,7 +504,7 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		while (*depends != NULL) {
-			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, false);
+			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, first);
 			depends++;
 		}
 
