@@ -36,7 +36,6 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <dispatch/dispatch.h>
 #include <mport.h>
-#include "../libmport/mport.h"
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
@@ -44,7 +43,7 @@ __MBSDID("$MidnightBSD$");
 static void usage(void);
 static void loadIndex(mportInstance *);
 static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
-static int install_depends(mportInstance *, const char *, const char *, bool first);
+static int install_depends(mportInstance *, const char *, const char *);
 static int install(mportInstance *, const char *);
 static int cpeList(mportInstance *);
 static int configGet(mportInstance *, const char *);
@@ -245,28 +244,26 @@ main(int argc, char *argv[]) {
 		__block int local_argc = argc;
 		__block char *const * local_argv = argv;
 		local_argv++;
-			if (local_argc > 2) {
-				int ch, qflag, oflag;
-				qflag = oflag = 0;
-				while ((ch = getopt(local_argc, local_argv, "qo")) != -1) {
-					switch (ch) {
-						case 'q':
-							qflag = 1;
-							break;
-						case 'o':
-							oflag = 1;
-							break;
-						default:
-							break;
-					}
+                if (local_argc > 2) {
+			int ch, qflag, oflag;
+			qflag = oflag = 0;
+		        while ((ch = getopt(local_argc, local_argv, "qo")) != -1) {
+				switch (ch) {
+			 		case 'q':
+					qflag = 1;
+					break;
+					case 'o':
+	                                oflag = 1;
+        	                        break;
 				}
-				local_argc -= optind;
-				local_argv += optind;
-
-				which(mport, *local_argv, qflag, oflag);
-			} else {
-				usage();
 			}
+			local_argc -= optind;
+			local_argv += optind;
+
+			which(mport, *local_argv, qflag, oflag);
+                } else {
+                        usage();
+                }
                 });
 	} else {
 		mport_instance_free(mport);
@@ -481,7 +478,7 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
 
 /* recursive function */ 
 int
-install_depends(mportInstance *mport, const char *packageName, const char *version, bool first) {
+install_depends(mportInstance *mport, const char *packageName, const char *version) {
 	mportPackageMeta **packs;
 	mportDependsEntry **depends;
 
@@ -504,15 +501,13 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		while (*depends != NULL) {
-			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, first);
+			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
 			depends++;
-		}
-
+        	}
 		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
 			warnx("%s", mport_err_string());
 			return mport_err_code();
 		}
-
 		mport_index_depends_free_vec(depends);
 	} else {
 		/* already installed */
@@ -557,7 +552,7 @@ install(mportInstance *mport, const char *packageName) {
 		}
 	}
 
-	resultCode = install_depends(mport, (*indexEntry)->pkgname, (*indexEntry)->version, true);
+	resultCode = install_depends(mport, (*indexEntry)->pkgname, (*indexEntry)->version);
 
 	mport_index_entry_free_vec(indexEntry);
 
