@@ -37,7 +37,7 @@ static int mport_err;
 static char err_msg[256];
 
 /* This goes with the error codes in mport.h */
-static char default_error_msg[] = "An error occurred.";
+static char default_error_msg[] = "An error occured.";
 
 
 /* mport_err_code()
@@ -45,9 +45,8 @@ static char default_error_msg[] = "An error occurred.";
  * Return the current numeric error code. 
  */
 MPORT_PUBLIC_API int
-mport_err_code(void)
-{
-	return mport_err;
+mport_err_code(void) {
+    return mport_err;
 }
 
 /* mport_err_string()
@@ -55,9 +54,8 @@ mport_err_code(void)
  * Return the current error string (if any).  Do not free this memory, it is static. 
  */
 MPORT_PUBLIC_API const char *
-mport_err_string(void)
-{
-	return err_msg;
+mport_err_string(void) {
+    return err_msg;
 }
 
 
@@ -69,20 +67,19 @@ mport_err_string(void)
  * be used if msg is NULL
  */
 int
-mport_set_err(int code, const char *msg)
-{
-	mport_err = code;
+mport_set_err(int code, const char *msg) {
+    mport_err = code;
 
-	if (code == MPORT_OK) {
-		bzero(err_msg, sizeof(err_msg));
-	} else {
-		if (msg != NULL) {
-			strlcpy(err_msg, msg, sizeof(err_msg));
-		} else {
-			strlcpy(err_msg, default_error_msg, sizeof(err_msg));
-		}
-	}
-	return code;
+    if (code == MPORT_OK) {
+        bzero(err_msg, sizeof(err_msg));
+    } else {
+        if (msg != NULL) {
+            strlcpy(err_msg, msg, sizeof(err_msg));
+        } else {
+            strlcpy(err_msg, default_error_msg, sizeof(err_msg));
+        }
+    }
+    return code;
 }
 
 
@@ -94,19 +91,19 @@ mport_set_err(int code, const char *msg)
  */
 int
 mport_set_errx(int code, const char *fmt, ...) {
-	va_list args;
-	char *err;
-	int ret;
+    va_list args;
+    char *err;
+    int ret;
 
-	va_start(args, fmt);
-	if (vasprintf(&err, fmt, args) == -1) {
-		fprintf(stderr, "fatal error: mport_set_errx can't format the string.\n");
-		exit(255);
-	}
-	ret = mport_set_err(code, err);
-	free(err);
+    va_start(args, fmt);
+    if (vasprintf(&err, fmt, args) == -1) {
+        fprintf(stderr, "fatal error: mport_set_errx can't format the string.\n");
+        exit(255);
+    }
+    ret = mport_set_err(code, err);
+    free(err);
 
-	va_end(args);
+    va_end(args);
 
-	return ret;
+    return ret;
 }

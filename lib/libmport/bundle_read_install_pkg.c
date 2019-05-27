@@ -136,8 +136,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 	return MPORT_OK;
 
 	ERROR:
-	if (alist != NULL)
-		mport_assetlist_free(alist);
+	// TODO: asset list free
 	RETURN_CURRENT_ERROR;
 }
 
@@ -945,9 +944,6 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 
 	if (stat(filename, &st) == -1)
 		/* if we couldn't stat the file, we assume there isn't a pkg-msg */
-		return MPORT_OK;
-
-	if (st.st_size < 1)
 		return MPORT_OK;
 
 	if ((file = fopen(filename, "r")) == NULL)

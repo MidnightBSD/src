@@ -110,19 +110,14 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
 
 	dispatch_sync(mportSQLSerial, ^{
-		int tries = 0;
 		int sqlcode = sqlite3_prepare_v2(db, sql, -1, stmt, NULL);
-
-		while(sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
-			usleep(200000); // 0.2 second
-			sqlcode = sqlite3_prepare_v2(db, sql, -1, stmt, NULL);
-			if (tries > 10) {
+		if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+			sleep(1);
+			if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
 				err = (char *) sqlite3_errmsg(db);
 				result = MPORT_ERR_FATAL;
 			}
-		}
-
-		if (sqlcode != SQLITE_OK) {
+		} else if (sqlcode != SQLITE_OK) {
 			err = (char *) sqlite3_errmsg(db);
 			result = MPORT_ERR_FATAL;
 		}

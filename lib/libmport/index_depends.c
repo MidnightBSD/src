@@ -55,20 +55,38 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
   
 	MPORT_CHECK_FOR_INDEX(mport, "mport_index_depends_list()")
 
-	if (mport_db_count(mport->db, &count,
-		"with RECURSIVE under_dep (parent, parent_ver, pkg, version, level) as ( values('?', '?',  %Q, %Q, 0) union all select depends.pkg as parent, depends.version as parent_ver, depends.d_pkg as pkg, depends.d_version as version, under_dep.level + 1 from depends JOIN under_dep on depends.pkg = under_dep.pkg) select count(*) FROM under_dep where level > 0;",
-			   pkgname, version) != MPORT_OK)
+	if (mport_db_prepare(mport->db, &stmt,
+	    "SELECT COUNT(*) FROM idx.depends WHERE pkg = %Q and version = %Q",
+	    pkgname, version) != MPORT_OK) {
+		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
-
-	if (count == 0)
-		return MPORT_OK;
+	}
+ 
+	switch (sqlite3_step(stmt)) {
+	case SQLITE_ROW:
+		count = sqlite3_column_int(stmt, 0);
+		break;
+	case SQLITE_DONE:
+		ret = SET_ERROR(MPORT_ERR_FATAL,
+		    "No rows returned from a 'SELECT COUNT(*)' query.");
+		goto DONE;
+		break;
+	default:
+		ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		goto DONE;
+		break;
+	}
+  
+	sqlite3_finalize(stmt);
   
 	e = (mportDependsEntry **)calloc(count + 1, sizeof(mportDependsEntry *));
 	*entry_vec = e;
   
+	if (count == 0) 
+		return MPORT_OK;
+  
 	if (mport_db_prepare(mport->db, &stmt,
-		 "with RECURSIVE under_dep (parent, parent_ver, pkg, version, level) as ( values('?', '?',  %Q, %Q, 0) union all select depends.pkg as parent, depends.version as parent_ver, depends.d_pkg as pkg, depends.d_version as version, under_dep.level + 1 from depends JOIN under_dep on depends.pkg = under_dep.pkg) select parent, parent_ver, pkg, version, level FROM under_dep where level > 0;"
-		, pkgname, version) != MPORT_OK) {
+	    "SELECT pkg, version, d_pkg, d_version FROM idx.depends WHERE pkg= %Q and version=%Q", pkgname, version) != MPORT_OK) {
 		ret = mport_err_code();
 		goto DONE;
 	}
@@ -81,16 +99,11 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 				ret = MPORT_ERR_FATAL;
 				goto DONE;
 			}
-
-			/* parent, parent_ver, pkg, version, level */
+      
 			e[i]->pkgname    = strdup(sqlite3_column_text(stmt, 0));
 			e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
 			e[i]->d_pkgname  = strdup(sqlite3_column_text(stmt, 2));
 			e[i]->d_version  = strdup(sqlite3_column_text(stmt, 3));
-			e[i]->level = sqlite3_column_int(stmt, 4);
-			/* default these to false */
-			e[i]->already_installed = false;
-			e[i]->needs_upgrade = false;
       
 			if (e[i]->pkgname == NULL ||
 			    e[i]->version == NULL ||

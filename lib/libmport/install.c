@@ -36,82 +36,82 @@ __MBSDID("$MidnightBSD$");
 MPORT_PUBLIC_API int
 mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix)
 {
-	mportIndexEntry **e;
-	char *filename;
-	int ret = MPORT_OK;
-	int e_loc = 0;
+  mportIndexEntry **e;
+  char *filename;
+  int ret = MPORT_OK;
+  int e_loc = 0;
 
-	MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
+  MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
+  
+  if (mport_index_lookup_pkgname(mport, pkgname, &e) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
-	if (mport_index_lookup_pkgname(mport, pkgname, &e) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+  /* we don't support installing more than one top-level package at a time.
+   * Consider a situation like this:
+   *
+   * mport_install(mport, "p5-Class-DBI*");
+   *
+   * Say this matches p5-Class-DBI and p5-Class-DBI-AbstractSearch
+   * and say the order from the index puts p5-Class-DBI-AbstractSearch 
+   * first.
+   * 
+   * p5-Class-DBI-AbstractSearch is installed, and its depends installed.  
+   * However, p5-Class-DBI is a depend of p5-Class-DBI-AbstractSearch, so 
+   * when it comes time to install p5-Class-DBI, we can't - because it is
+   * already installed.
+   *
+   * If a user facing application wants this functionality, it would be
+   * easy to piece together with mport_index_lookup_pkgname(), a
+   * check for already installed packages, and mport_install().
+   */
 
-	/* we don't support installing more than one top-level package at a time.
-	 * Consider a situation like this:
-	 *
-	 * mport_install(mport, "p5-Class-DBI*");
-	 *
-	 * Say this matches p5-Class-DBI and p5-Class-DBI-AbstractSearch
-	 * and say the order from the index puts p5-Class-DBI-AbstractSearch
-	 * first.
-	 *
-	 * p5-Class-DBI-AbstractSearch is installed, and its depends installed.
-	 * However, p5-Class-DBI is a depend of p5-Class-DBI-AbstractSearch, so
-	 * when it comes time to install p5-Class-DBI, we can't - because it is
-	 * already installed.
-	 *
-	 * If a user facing application wants this functionality, it would be
-	 * easy to piece together with mport_index_lookup_pkgname(), a
-	 * check for already installed packages, and mport_install().
-	 */
+  if (e[1] != NULL) {
+    if (version != NULL) {
+        while (e[e_loc] != NULL) {
+          if (strcmp(e[e_loc]->version, version) == 0) {
+            break;
+          }
+          e_loc++;
+        }
+        if (e[e_loc] == NULL) {
+          mport_index_entry_free_vec(e);
+          RETURN_ERRORX(MPORT_ERR_FATAL, "Cound not resolve '%s-%s'.",
+            pkgname, version);
+        }
+    } else {
+      mport_index_entry_free_vec(e);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
+    }
+  }
+ 
+  asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile);
+  if (filename == NULL) {
+    mport_index_entry_free_vec(e);
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+  }
 
-	if (e[1] != NULL) {
-		if (version != NULL) {
-			while (e[e_loc] != NULL) {
-				if (strcmp(e[e_loc]->version, version) == 0) {
-					break;
-				}
-				e_loc++;
-			}
-			if (e[e_loc] == NULL) {
-				mport_index_entry_free_vec(e);
-				RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s-%s'.",
-					      pkgname, version);
-			}
-		} else {
-			mport_index_entry_free_vec(e);
-			RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
-		}
-	}
+  if (!mport_file_exists(filename)) {
+    if (mport_fetch_bundle(mport, e[e_loc]->bundlefile) != MPORT_OK) {
+      free(filename);
+      mport_index_entry_free_vec(e);
+      RETURN_CURRENT_ERROR;
+    }
+  }
 
-	asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile);
-	if (filename == NULL) {
-		mport_index_entry_free_vec(e);
-		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-	}
+  if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
+    free(filename);
+    mport_index_entry_free_vec(e);
 
-	if (!mport_file_exists(filename)) {
-		if (mport_fetch_bundle(mport, e[e_loc]->bundlefile) != MPORT_OK) {
-			free(filename);
-			mport_index_entry_free_vec(e);
-			RETURN_CURRENT_ERROR;
-		}
-	}
+    if (unlink(filename) == 0)
+      RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
+    else
+      RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
+  }
+ 
+  ret = mport_install_primative(mport, filename, prefix);
 
-	if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
-		free(filename);
-		mport_index_entry_free_vec(e);
-
-		if (unlink(filename) == 0)
-			RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
-		else
-			RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
-	}
-
-	ret = mport_install_primative(mport, filename, prefix);
-
-	free(filename);
-	mport_index_entry_free_vec(e);
-
-	return ret;
+  free(filename);
+  mport_index_entry_free_vec(e);
+  
+  return ret;
 }
