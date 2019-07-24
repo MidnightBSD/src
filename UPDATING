@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users.
 20190724:
 	Fix some buffer overflows in telnet client.
 
+	The code which handles a close(2) of a descriptor created by
+	posix_openpt(2) fails to undo the configuration which causes SIGIO to be
+	raised.  This bug can lead to a write-after-free of kernel memory.
+
 20190223:
 	Update mport package tool with version from CURRENT. Supports
 	origin lookups with /usr/libexec/mport.query now, required for latest
