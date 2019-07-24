@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20190724:
+	Fix some buffer overflows in telnet client.
+
 20190223:
 	Update mport package tool with version from CURRENT. Supports
 	origin lookups with /usr/libexec/mport.query now, required for latest
