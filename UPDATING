@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users.
 20190724:
 	Fix some buffer overflows in telnet client
 
+	The code which handles a close(2) of a descriptor created by
+	posix_openpt(2) fails to undo the configuration which causes SIGIO to be
+	raised.  This bug can lead to a write-after-free of kernel memory.
+
 20190417:
 	bring back deroff(1) to fix spell(1)
 
