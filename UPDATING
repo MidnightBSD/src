@@ -7,6 +7,10 @@ Updating Information for MidnightBSD users.
 	posix_openpt(2) fails to undo the configuration which causes SIGIO to be
 	raised.  This bug can lead to a write-after-free of kernel memory.
 
+	Due to insufficient initialization of memory copied to userland in the
+	components listed above small amounts of kernel memory may be disclosed
+	to userland processes.
+
 20190223:
 	Update mport package tool with version from CURRENT. Supports
 	origin lookups with /usr/libexec/mport.query now, required for latest
