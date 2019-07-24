@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20190724:
+	Fix some buffer overflows in telnet client
+
 20190417:
 	bring back deroff(1) to fix spell(1)
 
