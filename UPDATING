@@ -11,6 +11,12 @@ Updating Information for MidnightBSD users.
 	components listed above small amounts of kernel memory may be disclosed
 	to userland processes.
 
+	mqueuefs(5)
+	System calls operating on file descriptors obtain a reference to
+	relevant struct file which due to a programming error was not always put
+	back, which in turn could be used to overflow the counter of affected
+	struct file.
+
 20190223:
 	Update mport package tool with version from CURRENT. Supports
 	origin lookups with /usr/libexec/mport.query now, required for latest
