@@ -11257,35 +11257,58 @@ contrib/bzip2/Makefile -text
 contrib/bzip2/Makefile-libbz2_so -text
 contrib/bzip2/README -text
 contrib/bzip2/README.COMPILATION.PROBLEMS -text
+contrib/bzip2/README.XML.STUFF -text
 contrib/bzip2/Y2K_INFO -text
 contrib/bzip2/blocksort.c -text
+contrib/bzip2/bz-common.xsl -text
+contrib/bzip2/bz-fo.xsl -text
+contrib/bzip2/bz-html.xsl -text
+contrib/bzip2/bzdiff -text
+contrib/bzip2/bzdiff.1 -text
+contrib/bzip2/bzgrep -text
+contrib/bzip2/bzgrep.1 -text
+contrib/bzip2/bzip.css -text
 contrib/bzip2/bzip2.1 -text
+contrib/bzip2/bzip2.1.preformatted -text
 contrib/bzip2/bzip2.c -text
+contrib/bzip2/bzip2.txt -text
 contrib/bzip2/bzip2recover.c -text
 contrib/bzip2/bzlib.c -text
 contrib/bzip2/bzlib.h -text
 contrib/bzip2/bzlib_private.h -text
+contrib/bzip2/bzmore -text
+contrib/bzip2/bzmore.1 -text
 contrib/bzip2/compress.c -text
 contrib/bzip2/crctable.c -text
 contrib/bzip2/decompress.c -text
 contrib/bzip2/dlltest.c -text
+contrib/bzip2/dlltest.dsp -text
+contrib/bzip2/entities.xml -text
+contrib/bzip2/format.pl -text
 contrib/bzip2/huffman.c -text
 contrib/bzip2/libbz2.def -text
+contrib/bzip2/libbz2.dsp -text
 contrib/bzip2/makefile.msc -text
+contrib/bzip2/manual.html -text
+contrib/bzip2/manual.pdf -text svneol=unset#application/pdf
+contrib/bzip2/manual.ps -text svneol=unset#application/postscript
 contrib/bzip2/manual.texi -text
+contrib/bzip2/manual.xml -text
+contrib/bzip2/mk251.c -text
 contrib/bzip2/randtable.c -text
-contrib/bzip2/sample1.bz2.uu -text
-contrib/bzip2/sample1.ref.gz.uu -text
-contrib/bzip2/sample2.bz2.uu -text
-contrib/bzip2/sample2.ref.gz.uu -text
-contrib/bzip2/sample3.bz2.uu -text
-contrib/bzip2/sample3.ref.gz.uu -text
+contrib/bzip2/sample1.bz2 -text svneol=unset#application/x-bzip2
+contrib/bzip2/sample1.ref -text svneol=unset#application/x-dvi
+contrib/bzip2/sample2.bz2 -text svneol=unset#application/x-bzip2
+contrib/bzip2/sample2.ref -text svneol=unset#application/x-dvi
+contrib/bzip2/sample3.bz2 -text svneol=unset#application/x-bzip2
+contrib/bzip2/sample3.ref -text
 contrib/bzip2/spewG.c -text
 contrib/bzip2/unzcrash.c -text
 contrib/bzip2/words0 -text
 contrib/bzip2/words1 -text
 contrib/bzip2/words2 -text
 contrib/bzip2/words3 -text
+contrib/bzip2/xmlproc.sh -text
 contrib/cflow/AUTHORS -text
 contrib/cflow/MIDNIGHTBSD-upgrade -text
 contrib/cflow/Makefile -text
