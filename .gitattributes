@@ -5,30 +5,53 @@
 /Makefile-libbz2_so -text
 /README -text
 /README.COMPILATION.PROBLEMS -text
+/README.XML.STUFF -text
 /blocksort.c -text
+/bz-common.xsl -text
+/bz-fo.xsl -text
+/bz-html.xsl -text
+/bzdiff -text
+/bzdiff.1 -text
+/bzgrep -text
+/bzgrep.1 -text
+/bzip.css -text
 /bzip2.1 -text
+/bzip2.1.preformatted -text
 /bzip2.c -text
+/bzip2.txt -text
 /bzip2recover.c -text
 /bzlib.c -text
 /bzlib.h -text
 /bzlib_private.h -text
+/bzmore -text
+/bzmore.1 -text
 /compress.c -text
 /crctable.c -text
 /decompress.c -text
 /dlltest.c -text
+/dlltest.dsp -text
+/entities.xml -text
+/format.pl -text
 /huffman.c -text
 /libbz2.def -text
+/libbz2.dsp -text
 /makefile.msc -text
+/manual.html -text
+/manual.pdf -text svneol=unset#application/pdf
+/manual.ps -text svneol=unset#application/postscript
+/manual.xml -text
+/mk251.c -text
 /randtable.c -text
-/sample1.bz2.uu -text
-/sample1.ref.gz.uu -text
-/sample2.bz2.uu -text
-/sample2.ref.gz.uu -text
-/sample3.bz2.uu -text
-/sample3.ref.gz.uu -text
+/sample1.bz2 -text svneol=unset#application/x-bzip2
+/sample1.ref -text svneol=unset#application/x-dvi
+/sample2.bz2 -text svneol=unset#application/x-bzip2
+/sample2.ref -text svneol=unset#application/x-dvi
+/sample3.bz2 -text svneol=unset#application/x-bzip2
+/sample3.ref -text
 /spewG.c -text
 /unzcrash.c -text
 /words0 -text
 /words1 -text
 /words2 -text
 /words3 -text
+/xmlproc.sh -text
