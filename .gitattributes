@@ -11297,11 +11297,17 @@ contrib/bzip2/manual.xml -text
 contrib/bzip2/mk251.c -text
 contrib/bzip2/randtable.c -text
 contrib/bzip2/sample1.bz2 -text svneol=unset#application/x-bzip2
+contrib/bzip2/sample1.bz2.uu -text
 contrib/bzip2/sample1.ref -text svneol=unset#application/x-dvi
+contrib/bzip2/sample1.ref.gz.uu -text
 contrib/bzip2/sample2.bz2 -text svneol=unset#application/x-bzip2
+contrib/bzip2/sample2.bz2.uu -text
 contrib/bzip2/sample2.ref -text svneol=unset#application/x-dvi
+contrib/bzip2/sample2.ref.gz.uu -text
 contrib/bzip2/sample3.bz2 -text svneol=unset#application/x-bzip2
+contrib/bzip2/sample3.bz2.uu -text
 contrib/bzip2/sample3.ref -text
+contrib/bzip2/sample3.ref.gz.uu -text
 contrib/bzip2/spewG.c -text
 contrib/bzip2/unzcrash.c -text
 contrib/bzip2/words0 -text
