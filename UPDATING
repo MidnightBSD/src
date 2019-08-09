@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20190808:
+	OpenSSH 7.9p1
+
+	bzip2 1.0.7
+
 20190724:
 	Fix some buffer overflows in telnet client
 
