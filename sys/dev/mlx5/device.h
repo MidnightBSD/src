@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/device.h 322151 2017-08-07 12:49:30Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/device.h 339713 2018-10-25 14:12:48Z slavash $
  */
 
 #ifndef MLX5_DEVICE_H
@@ -476,6 +476,7 @@ enum {
 	MLX5_MODULE_EVENT_ERROR_UNKNOWN_IDENTIFIER                    = 0x5,
 	MLX5_MODULE_EVENT_ERROR_HIGH_TEMPERATURE                      = 0x6,
 	MLX5_MODULE_EVENT_ERROR_CABLE_IS_SHORTED                      = 0x7,
+	MLX5_MODULE_EVENT_ERROR_PCIE_SYSTEM_POWER_SLOT_EXCEEDED       = 0xc,
 };
 
 struct mlx5_eqe_port_module_event {
@@ -1310,6 +1311,13 @@ enum {
 	MLX5_CMD_HCA_CAP_MIN_WQE_INLINE_MODE_L2           = 0x0,
 	MLX5_CMD_HCA_CAP_MIN_WQE_INLINE_MODE_VPORT_CONFIG = 0x1,
 	MLX5_CMD_HCA_CAP_MIN_WQE_INLINE_MODE_NOT_REQUIRED = 0x2
+};
+
+enum mlx5_inline_modes {
+	MLX5_INLINE_MODE_NONE,
+	MLX5_INLINE_MODE_L2,
+	MLX5_INLINE_MODE_IP,
+	MLX5_INLINE_MODE_TCP_UDP,
 };
 
 enum {

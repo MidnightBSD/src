@@ -23,13 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/vport.h 306244 2016-09-23 08:28:44Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/vport.h 337742 2018-08-14 11:19:04Z hselasky $
  */
 
 #ifndef __MLX5_VPORT_H__
 #define __MLX5_VPORT_H__
 
 #include <dev/mlx5/driver.h>
+
+enum {
+	MLX5_CAP_INLINE_MODE_L2,
+	MLX5_CAP_INLINE_MODE_VPORT_CONTEXT,
+	MLX5_CAP_INLINE_MODE_NOT_REQUIRED,
+};
+
 int mlx5_vport_alloc_q_counter(struct mlx5_core_dev *mdev, int client_id,
 			       u16 *counter_set_id);
 int mlx5_vport_dealloc_q_counter(struct mlx5_core_dev *mdev, int client_id,
@@ -70,6 +77,11 @@ int mlx5_modify_nic_vport_mac_address(struct mlx5_core_dev *dev,
 				      u16 vport, u8 mac[ETH_ALEN]);
 int mlx5_set_nic_vport_current_mac(struct mlx5_core_dev *mdev, int vport,
 				   bool other_vport, u8 *addr);
+int mlx5_query_nic_vport_min_inline(struct mlx5_core_dev *mdev,
+				    u16 vport, u8 *min_inline);
+void mlx5_query_min_inline(struct mlx5_core_dev *mdev, u8 *min_inline);
+int mlx5_modify_nic_vport_min_inline(struct mlx5_core_dev *mdev,
+				     u16 vport, u8 min_inline);
 int mlx5_modify_nic_vport_port_guid(struct mlx5_core_dev *mdev,
 				    u32 vport, u64 port_guid);
 int mlx5_modify_nic_vport_node_guid(struct mlx5_core_dev *mdev,

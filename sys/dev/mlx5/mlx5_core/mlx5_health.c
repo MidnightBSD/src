@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_health.c 322149 2017-08-07 12:45:26Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_health.c 337743 2018-08-14 11:24:14Z hselasky $
  */
 
 #include <linux/kernel.h>
@@ -57,10 +57,13 @@ static void health_care(struct work_struct *work)
 		priv = container_of(health, struct mlx5_priv, health);
 		dev = container_of(priv, struct mlx5_core_dev, priv);
 		mlx5_core_warn(dev, "handling bad device here\n");
-		/* nothing yet */
+
 		spin_lock_irq(&health_lock);
 		list_del_init(&health->list);
 		spin_unlock_irq(&health_lock);
+
+		/* enter error state */
+		mlx5_enter_error_state(dev);
 	}
 }
 

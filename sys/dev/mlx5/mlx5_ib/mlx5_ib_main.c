@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_ib/mlx5_ib_main.c 325611 2017-11-09 19:00:11Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_ib/mlx5_ib_main.c 337748 2018-08-14 11:52:05Z hselasky $
  */
 
 #include <linux/errno.h>
@@ -51,8 +51,8 @@
 #include <sys/unistd.h>
 
 #define DRIVER_NAME "mlx5_ib"
-#define DRIVER_VERSION "3.2-rc1"
-#define DRIVER_RELDATE	"May 2016"
+#define DRIVER_VERSION "3.2.1"
+#define DRIVER_RELDATE	"August 2018"
 
 #undef MODULE_VERSION
 #include <sys/module.h>

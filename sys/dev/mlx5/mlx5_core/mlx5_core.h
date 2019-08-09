@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_core.h 306244 2016-09-23 08:28:44Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_core.h 337748 2018-08-14 11:52:05Z hselasky $
  */
 
 #ifndef __MLX5_CORE_H__
@@ -34,8 +34,8 @@
 #include <linux/sched.h>
 
 #define DRIVER_NAME "mlx5_core"
-#define DRIVER_VERSION "1.23.0 (03 Mar 2015)"
-#define DRIVER_RELDATE "03 Mar 2015"
+#define DRIVER_VERSION "3.2.1"
+#define DRIVER_RELDATE "August 2018"
 
 extern int mlx5_core_debug_mask;
 

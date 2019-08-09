@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_en/mlx5_en_ethtool.c 322007 2017-08-03 14:14:13Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_en/mlx5_en_ethtool.c 341984 2018-12-12 13:14:41Z hselasky $
  */
 
 #include "en.h"
@@ -247,6 +247,24 @@ mlx5e_ethtool_handler(SYSCTL_HANDLER_ARGS)
 			mlx5e_open_locked(priv->ifp);
 		break;
 
+	case MLX5_PARAM_OFFSET(channels_rsss):
+		/* network interface must be down */
+		if (was_opened)
+			mlx5e_close_locked(priv->ifp);
+
+		/* import number of channels */
+		if (priv->params_ethtool.channels_rsss < 1)
+			priv->params_ethtool.channels_rsss = 1;
+		else if (priv->params_ethtool.channels_rsss > 128)
+			priv->params_ethtool.channels_rsss = 128;
+
+		priv->params.channels_rsss = priv->params_ethtool.channels_rsss;
+
+		/* restart network interface, if any */
+		if (was_opened)
+			mlx5e_open_locked(priv->ifp);
+		break;
+
 	case MLX5_PARAM_OFFSET(channels):
 		/* network interface must be down */
 		if (was_opened)
@@ -313,21 +331,24 @@ mlx5e_ethtool_handler(SYSCTL_HANDLER_ARGS)
 			mlx5e_close_locked(priv->ifp);
 
 		/* import HW LRO mode */
-		if (priv->params_ethtool.hw_lro != 0) {
-			if ((priv->ifp->if_capenable & IFCAP_LRO) &&
-			    MLX5_CAP_ETH(priv->mdev, lro_cap)) {
-				priv->params.hw_lro_en = 1;
-				priv->params_ethtool.hw_lro = 1;
+		if (priv->params_ethtool.hw_lro != 0 &&
+		    MLX5_CAP_ETH(priv->mdev, lro_cap)) {
+			priv->params_ethtool.hw_lro = 1;
+			/* check if feature should actually be enabled */
+			if (priv->ifp->if_capenable & IFCAP_LRO) {
+				priv->params.hw_lro_en = true;
 			} else {
-				priv->params.hw_lro_en = 0;
-				priv->params_ethtool.hw_lro = 0;
-				error = EINVAL;
+				priv->params.hw_lro_en = false;
 
-				if_printf(priv->ifp, "Can't enable HW LRO: "
-				    "The HW or SW LRO feature is disabled\n");
+				if_printf(priv->ifp, "To enable HW LRO "
+				    "please also enable LRO via ifconfig(8).\n");
 			}
 		} else {
-			priv->params.hw_lro_en = 0;
+			/* return an error if HW does not support this feature */
+			if (priv->params_ethtool.hw_lro != 0)
+				error = EINVAL;
+			priv->params.hw_lro_en = false;
+			priv->params_ethtool.hw_lro = 0;
 		}
 		/* restart network interface, if any */
 		if (was_opened)
@@ -695,6 +716,7 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 	priv->params_ethtool.tx_queue_size = 1 << priv->params.log_sq_size;
 	priv->params_ethtool.rx_queue_size = 1 << priv->params.log_rq_size;
 	priv->params_ethtool.channels = priv->params.num_channels;
+	priv->params_ethtool.channels_rsss = priv->params.channels_rsss;
 	priv->params_ethtool.coalesce_pkts_max = MLX5E_FLD_MAX(cqc, cq_max_count);
 	priv->params_ethtool.coalesce_usecs_max = MLX5E_FLD_MAX(cqc, cq_period);
 	priv->params_ethtool.rx_coalesce_mode = priv->params.rx_cq_moderation_mode;
@@ -715,7 +737,8 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 		return;
 	for (x = 0; x != MLX5E_PARAMS_NUM; x++) {
 		/* check for read-only parameter */
-		if (strstr(mlx5e_params_desc[2 * x], "_max") != NULL) {
+		if (strstr(mlx5e_params_desc[2 * x], "_max") != NULL ||
+		    strstr(mlx5e_params_desc[2 * x], "_mtu") != NULL) {
 			SYSCTL_ADD_PROC(&priv->sysctl_ctx, SYSCTL_CHILDREN(node), OID_AUTO,
 			    mlx5e_params_desc[2 * x], CTLTYPE_U64 | CTLFLAG_RD |
 			    CTLFLAG_MPSAFE, priv, x, &mlx5e_ethtool_handler, "QU",

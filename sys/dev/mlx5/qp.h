@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/qp.h 308684 2016-11-15 08:58:51Z hselasky $
+ * $FreeBSD: stable/10/sys/dev/mlx5/qp.h 337742 2018-08-14 11:19:04Z hselasky $
  */
 
 #ifndef MLX5_QP_H
@@ -237,8 +237,16 @@ struct mlx5_wqe_eth_seg {
 	u8		swp_flags;
 	__be16		mss;
 	__be32		rsvd2;
-	__be16		inline_hdr_sz;
-	u8		inline_hdr_start[2];
+	union {
+		struct {
+			__be16		inline_hdr_sz;
+			u8		inline_hdr_start[2];
+		};
+		struct {
+			__be16		vlan_cmd;
+			__be16		vlan_hdr;
+		};
+	};
 };
 
 struct mlx5_wqe_xrc_seg {
