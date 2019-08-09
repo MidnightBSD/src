@@ -5,6 +5,13 @@ Updating Information for MidnightBSD users.
 
 	bzip2 1.0.7
 
+	bsnmp
+	A function extracting the length from type-length-value encoding is not
+`	properly validating the submitted length.
+
+	jedec_dimm - some modules falsely report supporting temp sensors. Handle this
+	better.
+
 20190724:
 	Fix some buffer overflows in telnet client
 
