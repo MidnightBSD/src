@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*	$NetBSD: uaudioreg.h,v 1.12 2004/11/05 19:08:29 kent Exp $	*/
-/* $FreeBSD: stable/10/sys/dev/sound/usb/uaudioreg.h 272423 2014-10-02 16:57:44Z hselasky $ */
+/* $FreeBSD: stable/10/sys/dev/sound/usb/uaudioreg.h 345546 2019-03-26 13:53:33Z hselasky $ */
 
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
@@ -35,7 +35,7 @@
 #ifndef _UAUDIOREG_H_
 #define	_UAUDIOREG_H_
 
-#define	UAUDIO_VERSION		0x0100
+#define	UAUDIO_VERSION_10	0x0100
 #define	UAUDIO_VERSION_20	0x0200
 #define	UAUDIO_VERSION_30	0x0300
 
