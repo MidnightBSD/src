@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20190808:
+	bsnmp
+        A function extracting the length from type-length-value encoding is not
+`       properly validating the submitted length.
+	
+	bzip2 1.0.7 - fix a security issue
+
 20190724:
 	Fix some buffer overflows in telnet client.
 
