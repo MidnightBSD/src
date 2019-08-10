@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_hub.c 324798 2017-10-20 10:01:21Z hselasky $ */
+/* $FreeBSD: stable/10/sys/dev/usb/usb_hub.c 343136 2019-01-18 08:49:10Z hselasky $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -131,6 +131,8 @@ struct uhub_softc {
 	int sc_disable_enumeration;
 	int sc_disable_port_power;
 #endif
+	uint8_t sc_usb_port_errors;	/* error counter */
+#define	UHUB_USB_PORT_ERRORS_MAX 4
 	uint8_t	sc_flags;
 #define	UHUB_FLAG_DID_EXPLORE 0x01
 };
@@ -589,13 +591,25 @@ uhub_read_port_status(struct uhub_softc *sc, uint8_t portno)
 	struct usb_port_status ps;
 	usb_error_t err;
 
+	if (sc->sc_usb_port_errors >= UHUB_USB_PORT_ERRORS_MAX) {
+		DPRINTFN(4, "port %d, HUB looks dead, too many errors\n", portno);
+		sc->sc_st.port_status = 0;
+		sc->sc_st.port_change = 0;
+		return (USB_ERR_TIMEOUT);
+	}
+
 	err = usbd_req_get_port_status(
 	    sc->sc_udev, NULL, &ps, portno);
 
-	/* update status regardless of error */
-
-	sc->sc_st.port_status = UGETW(ps.wPortStatus);
-	sc->sc_st.port_change = UGETW(ps.wPortChange);
+	if (err == 0) {
+		sc->sc_st.port_status = UGETW(ps.wPortStatus);
+		sc->sc_st.port_change = UGETW(ps.wPortChange);
+		sc->sc_usb_port_errors = 0;
+	} else {
+		sc->sc_st.port_status = 0;
+		sc->sc_st.port_change = 0;
+		sc->sc_usb_port_errors++;
+	}
 
 	/* debugging print */
 
