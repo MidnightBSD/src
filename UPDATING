@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20190821:
+        Security patch for CVE-2019-5611. 
+
+        Due do a missing check in the code of m_pulldown(9) data returned may not be
+        contiguous as requested by the caller.
+
 20190808:
 	OpenSSH 7.9p1
 
