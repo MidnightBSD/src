@@ -7,6 +7,8 @@ Updating Information for MidnightBSD users.
 	contiguous as requested by the caller.
 
 20190808:
+	1.0.2-RELEASE
+
 	bsnmp
         A function extracting the length from type-length-value encoding is not
 `       properly validating the submitted length.
@@ -14,6 +16,8 @@ Updating Information for MidnightBSD users.
 	bzip2 1.0.7 - fix a security issue
 
 20190724:
+	1.0.1-RELEASE
+
 	Fix some buffer overflows in telnet client.
 
 	The code which handles a close(2) of a descriptor created by
