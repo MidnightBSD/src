@@ -6,6 +6,11 @@ Updating Information for MidnightBSD users.
         exploit races in the handler to cause it to copy out kernel memory
         outside the boundaries of midistat's data buffer.
 
+	System calls operating on file descriptors obtain a reference to
+	relevant struct file which due to a programming error was not always put
+	back, which in turn could be used to overflow the counter of affected
+	struct file.
+
 20190821:
 	Security patch for CVE-2019-5611.
 
