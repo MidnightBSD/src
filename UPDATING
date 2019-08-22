@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20190822:
+	The kernel driver for /dev/midistat implements a handler for read(2).
+	This handler is not thread-safe, and a multi-threaded program can
+	exploit races in the handler to cause it to copy out kernel memory
+	outside the boundaries of midistat's data buffer.
+
 20190821:
         Security patch for CVE-2019-5611. 
 
