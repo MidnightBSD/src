@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_ibm.c 273847 2014-10-30 08:04:48Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_ibm.c 300421 2016-05-22 13:58:32Z loos $");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_ibm.c 273847 2014-10-30 
 
 #include "opt_acpi.h"
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <machine/cpufunc.h>
@@ -262,6 +263,37 @@ static struct {
 	{ NULL, 0, NULL, 0 }
 };
 
+/*
+ * Per-model default list of event mask.
+ */
+#define	ACPI_IBM_HKEY_RFKILL_MASK		(1 << 4)
+#define	ACPI_IBM_HKEY_DSWITCH_MASK		(1 << 6)
+#define	ACPI_IBM_HKEY_BRIGHTNESS_UP_MASK	(1 << 15)
+#define	ACPI_IBM_HKEY_BRIGHTNESS_DOWN_MASK	(1 << 16)
+#define	ACPI_IBM_HKEY_SEARCH_MASK		(1 << 18)
+#define	ACPI_IBM_HKEY_MICMUTE_MASK		(1 << 26)
+#define	ACPI_IBM_HKEY_SETTINGS_MASK		(1 << 28)
+#define	ACPI_IBM_HKEY_VIEWOPEN_MASK		(1 << 30)
+#define	ACPI_IBM_HKEY_VIEWALL_MASK		(1 << 31)
+
+struct acpi_ibm_models {
+	const char *maker;
+	const char *product;
+	uint32_t eventmask;
+} acpi_ibm_models[] = {
+	{ "LENOVO", "20BSCTO1WW",
+	  ACPI_IBM_HKEY_RFKILL_MASK |
+	  ACPI_IBM_HKEY_DSWITCH_MASK |
+	  ACPI_IBM_HKEY_BRIGHTNESS_UP_MASK |
+	  ACPI_IBM_HKEY_BRIGHTNESS_DOWN_MASK |
+	  ACPI_IBM_HKEY_SEARCH_MASK |
+	  ACPI_IBM_HKEY_MICMUTE_MASK |
+	  ACPI_IBM_HKEY_SETTINGS_MASK |
+	  ACPI_IBM_HKEY_VIEWOPEN_MASK |
+	  ACPI_IBM_HKEY_VIEWALL_MASK
+	}
+};
+
 ACPI_SERIAL_DECL(ibm, "ACPI IBM extras");
 
 static int	acpi_ibm_probe(device_t dev);
@@ -355,7 +387,9 @@ acpi_ibm_probe(device_t dev)
 static int
 acpi_ibm_attach(device_t dev)
 {
+	int i;
 	struct acpi_ibm_softc	*sc;
+	char *maker, *product;
 	devclass_t		ec_devclass;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
@@ -446,7 +480,34 @@ acpi_ibm_attach(device_t dev)
 
 	/* Hook up light to led(4) */
 	if (sc->light_set_supported)
-		sc->led_dev = led_create_state(ibm_led, sc, "thinklight", sc->light_val);
+		sc->led_dev = led_create_state(ibm_led, sc, "thinklight",
+		    (sc->light_val ? 1 : 0));
+
+	/* Enable per-model events. */
+	maker = getenv("smbios.system.maker");
+	product = getenv("smbios.system.product");
+	if (maker == NULL || product == NULL)
+		goto nosmbios;
+
+	for (i = 0; i < nitems(acpi_ibm_models); i++) {
+		if (strcmp(maker, acpi_ibm_models[i].maker) == 0 &&
+		    strcmp(product, acpi_ibm_models[i].product) == 0) {
+			ACPI_SERIAL_BEGIN(ibm);
+			acpi_ibm_sysctl_set(sc, ACPI_IBM_METHOD_EVENTMASK,
+			    acpi_ibm_models[i].eventmask);
+			ACPI_SERIAL_END(ibm);
+		}
+	}
+
+nosmbios:
+	freeenv(maker);
+	freeenv(product);
+
+	/* Enable events by default. */
+	ACPI_SERIAL_BEGIN(ibm);
+	acpi_ibm_sysctl_set(sc, ACPI_IBM_METHOD_EVENTS, 1);
+	ACPI_SERIAL_END(ibm);
+
 
 	return (0);
 }
@@ -531,7 +592,7 @@ acpi_ibm_sysctl(SYSCTL_HANDLER_ARGS)
 	int			error = 0;
 	int			function;
 	int			method;
-	
+
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
 	sc = (struct acpi_ibm_softc *)oidp->oid_arg1;
@@ -770,7 +831,6 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 
 	switch (method) {
 	case ACPI_IBM_METHOD_EVENTS:
-		/* Events are disabled by default */
 		return (TRUE);
 
 	case ACPI_IBM_METHOD_EVENTMASK:
@@ -780,7 +840,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 	case ACPI_IBM_METHOD_BRIGHTNESS:
 	case ACPI_IBM_METHOD_VOLUME:
 	case ACPI_IBM_METHOD_MUTE:
-		/* EC is required here, which was aready checked before */
+		/* EC is required here, which was already checked before */
 		return (TRUE);
 
 	case ACPI_IBM_METHOD_THINKLIGHT:
@@ -824,7 +884,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 		return (FALSE);
 
 	case ACPI_IBM_METHOD_FANSPEED:
-		/* 
+		/*
 		 * Some models report the fan speed in levels from 0-7
 		 * Newer models report it contiguously
 		 */
@@ -835,7 +895,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 
 	case ACPI_IBM_METHOD_FANLEVEL:
 	case ACPI_IBM_METHOD_FANSTATUS:
-		/* 
+		/*
 		 * Fan status is only supported on those models,
 		 * which report fan RPM contiguously, not in levels
 		 */
@@ -872,17 +932,17 @@ acpi_ibm_thermal_sysctl(SYSCTL_HANDLER_ARGS)
 
 	for (int i = 0; i < 8; ++i) {
 		temp_cmd[3] = '0' + i;
-		
-		/* 
+
+		/*
 		 * The TMPx methods seem to return +/- 128 or 0
-		 * when the respecting sensor is not available 
+		 * when the respecting sensor is not available
 		 */
 		if (ACPI_FAILURE(acpi_GetInteger(sc->ec_handle, temp_cmd,
 		    &temp[i])) || ABS(temp[i]) == 128 || temp[i] == 0)
 			temp[i] = -1;
 		else if (sc->thermal_updt_supported)
 			/* Temperature is reported in tenth of Kelvin */
-			temp[i] = (temp[i] - 2732 + 5) / 10;
+			temp[i] = (temp[i] - 2731 + 5) / 10;
 	}
 
 	error = sysctl_handle_opaque(oidp, &temp, 8*sizeof(int), req);
@@ -1229,7 +1289,6 @@ acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 
 	for (;;) {
 		acpi_GetInteger(acpi_get_handle(dev), IBM_NAME_EVENTS_GET, &event);
-
 		if (event == 0)
 			break;
 
