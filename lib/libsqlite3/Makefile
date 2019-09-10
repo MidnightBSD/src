@@ -20,8 +20,8 @@ NO_MAN=
 
 INCS=		${SQLITEDIR}/sqlite3.h ${SQLITEDIR}/sqlite3ext.h
 
-DPADD=	${LIBPTHREAD}
-LDADD=	-lpthread
+DPADD=	${LIBPTHREAD} ${LIBM}
+LDADD=	-lpthread -lm
 
 .if !defined(COMPAT_32BIT)
 afterinstall: 
