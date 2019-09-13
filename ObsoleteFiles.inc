@@ -211,7 +211,6 @@ OLD_FILES+=usr/sbin/slstat
 OLD_FILES+=usr/sbin/usbdevs
 #20130120 0.4-CURRENT bump
 OLD_FILES+=etc/auth.conf
-OLD_FILES+=usr/bin/deroff
 OLD_FILES+=usr/bin/objformat
 OLD_FILES+=usr/bin/ssh-vulnkey
 OLD_FILES+=usr/share/examples/etc/auth.conf
@@ -3822,12 +3821,6 @@ OLD_FILES+=usr/share/examples/BSD_daemon/beastie.fig
 OLD_FILES+=usr/share/examples/BSD_daemon/beastie.eps
 OLD_FILES+=usr/share/examples/BSD_daemon/eps.patch
 OLD_FILES+=usr/share/examples/BSD_daemon/poster.sh
-# 20061231: Remove portsnap
-OLD_FILES+=etc/portsnap.conf
-OLD_FILES+=usr/sbin/portsnap
-OLD_FILES+=usr/share/man/cat8/portsnap.8.gz
-OLD_FILES+=usr/share/man/man5/portsnap.conf.5.gz
-OLD_FILES+=usr/share/man/man8/portsnap.8.gz
 # 20061226: Remove FreeBSD CVSup files
 OLD_FILES+=usr/share/examples/cvsup/cvs-supfile
 OLD_FILES+=usr/share/examples/cvsup/doc-supfile
