@@ -19,11 +19,11 @@ mdnsd_precmd()
 	if grep -q mdns "/etc/nsswitch.conf"; then
 		return
 	else
-		if [ ! -w /etc/nswitch.conf ]; then
+		if [ -w /etc/nswitch.conf ]; then
 			echo ' /etc/nswitch.conf is not writable, update failed.'
 			return
 		fi
-		sed 's|^\(hosts.*\)files dns|\1files mdns dns|g' /etc/nsswitch.conf
+		sed -i.bak  -e 's|^\(hosts.*\)files dns|\1files mdns dns|g' /etc/nsswitch.conf
 	fi
 }
 
