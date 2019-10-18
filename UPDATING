@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20191018:
+	Update acpi ibm module to support some newer thinkpads. 
+
+	Fix a write error when running mdnsd on startup.  We now
+	backup the nsswitch.conf file as nsswitch.conf.bak after modifying as well
+	in case there is an issue on the users system with it enabled.
+
 20190822:
         The kernel driver for /dev/midistat implements a handler for read(2).
         This handler is not thread-safe, and a multi-threaded program can
