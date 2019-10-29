@@ -174,7 +174,7 @@ mports.txz:
 	ln -fs ${PORTSDIR} ${DISTDIR}/usr/mports
 	cd ${DISTDIR} && tar cLvf - \
 	    --exclude .git --exclude .svn \
-	    --exclude usr/mports/Distfiles --exclude usr/mports/packages \
+	    --exclude usr/mports/Distfiles --exclude usr/mports/Packages \
 	    --exclude 'usr/mports/INDEX*' --exclude work usr/mports | \
 	    ${XZ_CMD} > ${.OBJDIR}/mports.txz
 
