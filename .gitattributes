@@ -54250,6 +54250,8 @@ lib/libmport/delete_primative.c -text
 lib/libmport/dispatch.c -text
 lib/libmport/error.c -text
 lib/libmport/fetch.c -text
+lib/libmport/hashmap.c svneol=native#text/plain
+lib/libmport/hashmap.h svneol=native#text/plain
 lib/libmport/index.c -text
 lib/libmport/index_depends.c -text
 lib/libmport/info.c -text
