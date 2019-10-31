@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20191031:
+	1.2 release
+
 20190822:
 	The kernel driver for /dev/midistat implements a handler for read(2).
 	This handler is not thread-safe, and a multi-threaded program can
