@@ -36,6 +36,7 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <dispatch/dispatch.h>
 #include <mport.h>
+#include <mport_private.h>
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
@@ -779,7 +780,9 @@ indexCheck(mportInstance *mport, mportPackageMeta *pack) {
 
 	if (indexEntries != NULL) {
 		while (*indexEntries != NULL) {
-			if ((*indexEntries)->version != NULL && mport_version_cmp(pack->version, (*indexEntries)->version) < 0) {
+			int osflag = mport_check_preconditions(mport, pack, MPORT_PRECHECK_OS); 
+			if ((*indexEntries)->version != NULL && (mport_version_cmp(pack->version, (*indexEntries)->version) < 0 || 
+			    (mport_version_cmp(pack->version, (*indexEntries)->version) == 0 && osflag == MPORT_OK))) {
 				ret = 1;
 				break;
 			}
@@ -795,8 +798,6 @@ int
 updateDown(mportInstance *mport, mportPackageMeta *pack) {
 	mportPackageMeta **depends;
 	int ret = 0;
-
-	fprintf(stderr, "Entering %s\n", pack->name);
 
 	if (mport_pkgmeta_get_downdepends(mport, pack, &depends) == MPORT_OK) {
 		if (depends == NULL) {
@@ -822,7 +823,6 @@ updateDown(mportInstance *mport, mportPackageMeta *pack) {
 				depends++;
 			}
 			if (indexCheck(mport, pack)) {
-				fprintf(stderr, "Updating port called %s\n", pack->name);
 				if (update(mport, pack->name) != 0) {
 					fprintf(stderr, "Error updating %s\n", pack->name);
 				} else
