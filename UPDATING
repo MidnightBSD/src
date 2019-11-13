@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+
+20191112:
+	Fixed a bug where packages wouldn't get removed on mport clean.  While there
+	added ability to detect files that don't match the checksum of the packages.
+	This will cleanup failed downloads as well as packages from older releases.
+
 20191031:
 	MidnightBSD 1.2 release, continuing development on 1.3
 
