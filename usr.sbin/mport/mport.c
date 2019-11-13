@@ -209,6 +209,7 @@ main(int argc, char *argv[]) {
 		});
 	} else if (!strcmp(argv[1], "clean")) {
 		dispatch_group_async(grp, q, ^{
+			loadIndex(mport);
 			resultCode = clean(mport);
 		});
         } else if (!strcmp(argv[1], "config")) {
