@@ -236,8 +236,10 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 	char nonSample[FILENAME_MAX * 2];
 	char secondFile[FILENAME_MAX];
 
- 	strlcpy(nonSample, file, FILENAME_MAX * 2);
-	(void) snprintf(nonSample, FILENAME_MAX, "%s%s/%s", mport->root, cwd, file);
+	if (file[0] != '/')
+		(void) snprintf(nonSample, FILENAME_MAX, "%s%s/%s", mport->root, cwd, file);
+	else
+		strlcpy(nonSample, file, FILENAME_MAX * 2);
 	char** fileargv = parse_sample(nonSample);
 
 	if (fileargv[1] != '\0') {
@@ -497,7 +499,11 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 				if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
 					goto ERROR;
 
-				(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, e->data);
+				if (e->data[0] == '/') {
+					(void) snprintf(file, FILENAME_MAX, "%s", e->data);
+				} else {
+					(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, e->data);
+				}
 
 				if (e->type == ASSET_SAMPLE)
 					for (int ch = 0; ch < FILENAME_MAX; ch++) {
