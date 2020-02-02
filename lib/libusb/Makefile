@@ -1,6 +1,6 @@
 # $MidnightBSD$
 #
-# $FreeBSD: stable/10/lib/libusb/Makefile 302275 2016-06-29 10:58:36Z hselasky $
+# $FreeBSD: stable/10/lib/libusb/Makefile 356399 2020-01-06 09:22:33Z hselasky $
 #
 # Makefile for the FreeBSD specific LibUSB 2.0
 #
@@ -223,6 +223,7 @@ MLINKS += libusb20.3 libusb20_dev_get_backend_name.3
 MLINKS += libusb20.3 libusb20_dev_get_info.3
 MLINKS += libusb20.3 libusb20_dev_get_iface_desc.3
 MLINKS += libusb20.3 libusb20_dev_get_desc.3
+MLINKS += libusb20.3 libusb20_dev_get_stats.3
 MLINKS += libusb20.3 libusb20_dev_close.3
 MLINKS += libusb20.3 libusb20_dev_detach_kernel_driver.3
 MLINKS += libusb20.3 libusb20_dev_set_config_index.3

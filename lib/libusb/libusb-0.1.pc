@@ -1,5 +1,4 @@
 # $MidnightBSD$
-# $FreeBSD: stable/10/lib/libusb/libusb-0.1.pc 253637 2013-07-25 03:54:08Z rpaulo $
 prefix=/usr
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib

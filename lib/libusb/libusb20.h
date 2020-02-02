@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb20.h 250201 2013-05-03 07:44:58Z hselasky $ */
+/* $FreeBSD: stable/10/lib/libusb/libusb20.h 356399 2020-01-06 09:22:33Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2007-2008 Daniel Drake.  All rights reserved.
@@ -194,6 +194,12 @@ struct libusb20_quirk {
 	char	quirkname[64 - 12];
 };
 
+struct libusb20_device_stats {
+	uint64_t xfer_ok[4];		/* sorted by USB transfer type, UE_XXX */
+	uint64_t xfer_fail[4];		/* sorted by USB transfer type, UE_XXX */
+	uint64_t xfer_reserved[24];	/* reserved */
+};
+
 #define	LIBUSB20_MAX_FRAME_PRE_SCALE	(1U << 31)
 
 /* USB transfer operations */
@@ -242,6 +248,7 @@ int	libusb20_dev_detach_kernel_driver(struct libusb20_device *pdev, uint8_t ifac
 int	libusb20_dev_set_config_index(struct libusb20_device *pdev, uint8_t configIndex);
 int	libusb20_dev_get_debug(struct libusb20_device *pdev);
 int	libusb20_dev_get_fd(struct libusb20_device *pdev);
+int	libusb20_dev_get_stats(struct libusb20_device *pdev, struct libusb20_device_stats *pstat);
 int	libusb20_dev_kernel_driver_active(struct libusb20_device *pdev, uint8_t iface_index);
 int	libusb20_dev_open(struct libusb20_device *pdev, uint16_t transfer_max);
 int	libusb20_dev_process(struct libusb20_device *pdev);
