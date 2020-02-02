@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.c 262436 2014-02-24 08:50:06Z rodrigc $ */
+/* $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.c 334758 2018-06-07 07:33:46Z hselasky $ */
 /*-
  * Copyright (c) 2009 Andrew Thompson (thompsa@FreeBSD.org)
  *
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.c 262436 2014-02-24 08:50:06Z rodrigc $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.c 334758 2018-06-07 07:33:46Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -186,6 +186,17 @@ uether_ifattach(struct usb_ether *ue)
 
 error:
 	return (error);
+}
+
+void
+uether_ifattach_wait(struct usb_ether *ue)
+{
+
+	UE_LOCK(ue);
+	usb_proc_mwait(&ue->ue_tq,
+	    &ue->ue_sync_task[0].hdr,
+	    &ue->ue_sync_task[1].hdr);
+	UE_UNLOCK(ue);
 }
 
 static void

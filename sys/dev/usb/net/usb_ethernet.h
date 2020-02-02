@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.h 226709 2011-10-24 23:38:11Z yongari $ */
+/* $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.h 334758 2018-06-07 07:33:46Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.h 226709 2011-10-24 23:38:11Z yongari $
+ * $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.h 334758 2018-06-07 07:33:46Z hselasky $
  */
 
 #ifndef _USB_ETHERNET_H_
@@ -112,6 +112,7 @@ struct ifnet	*uether_getifp(struct usb_ether *);
 struct mii_data *uether_getmii(struct usb_ether *);
 void		*uether_getsc(struct usb_ether *);
 int		uether_ifattach(struct usb_ether *);
+void		uether_ifattach_wait(struct usb_ether *);
 void		uether_ifdetach(struct usb_ether *);
 int		uether_ifmedia_upd(struct ifnet *);
 void		uether_init(void *);
