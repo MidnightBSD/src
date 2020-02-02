@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_run.c 292183 2015-12-14 09:24:40Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_run.c 343821 2019-02-06 02:18:11Z avos $");
 
 /*-
  * Ralink Technology RT2700U/RT2800U/RT3000U/RT3900E chipset driver.
@@ -42,10 +42,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_run.c 292183 2015-12-14 09:24:
 #include <sys/linker.h>
 #include <sys/firmware.h>
 #include <sys/kdb.h>
-
-#include <machine/bus.h>
-#include <machine/resource.h>
-#include <sys/rman.h>
 
 #include <net/bpf.h>
 #include <net/if.h>
@@ -1992,7 +1988,8 @@ run_read_eeprom(struct run_softc *sc)
 static struct ieee80211_node *
 run_node_alloc(struct ieee80211vap *vap, const uint8_t mac[IEEE80211_ADDR_LEN])
 {
-	return malloc(sizeof (struct run_node), M_DEVBUF, M_NOWAIT | M_ZERO);
+	return malloc(sizeof (struct run_node), M_80211_NODE,
+	    M_NOWAIT | M_ZERO);
 }
 
 static int

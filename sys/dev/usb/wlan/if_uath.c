@@ -50,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_uath.c 262007 2014-02-17 01:36:53Z kevlo $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_uath.c 343760 2019-02-05 03:01:10Z avos $");
 
 /*-
  * Driver for Atheros AR5523 USB parts.
@@ -80,10 +80,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_uath.c 262007 2014-02-17 01:36
 #include <sys/bus.h>
 #include <sys/endian.h>
 #include <sys/kdb.h>
-
-#include <machine/bus.h>
-#include <machine/resource.h>
-#include <sys/rman.h>
 
 #include <net/bpf.h>
 #include <net/if.h>

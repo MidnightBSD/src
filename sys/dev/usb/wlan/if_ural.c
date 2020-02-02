@@ -1,5 +1,5 @@
 /* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 269266 2014-07-29 21:59:24Z hselasky $	*/
+/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 343760 2019-02-05 03:01:10Z avos $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 269266 2014-07-29 21:59:24Z hselasky $");
+__FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 343760 2019-02-05 03:01:10Z avos $");
 
 /*-
  * Ralink Technology RT2500USB chipset driver
@@ -43,10 +43,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/wlan/if_ural.c 269266 2014-07-29 21:59
 #include <sys/bus.h>
 #include <sys/endian.h>
 #include <sys/kdb.h>
-
-#include <machine/bus.h>
-#include <machine/resource.h>
-#include <sys/rman.h>
 
 #include <net/bpf.h>
 #include <net/if.h>
