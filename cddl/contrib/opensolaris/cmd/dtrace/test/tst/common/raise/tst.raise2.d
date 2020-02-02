@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -47,7 +48,7 @@ syscall::getpid:return
 /pid == $1/
 {
 	trace("raised");
-	raise(SIGINT);
+	raise(SIGUSR1);
 	/*
 	 * Wait no more than half a second for the process to die.
 	 */
@@ -55,6 +56,7 @@ syscall::getpid:return
 }
 
 syscall::exit:entry
+/pid == $1/
 {
 	exit(0);
 }
