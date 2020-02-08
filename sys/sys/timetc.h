@@ -7,7 +7,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/10/sys/sys/timetc.h 280973 2015-04-02 01:02:42Z jhb $
+ * $FreeBSD: stable/11/sys/sys/timetc.h 305866 2016-09-16 10:04:28Z kib $
  */
 
 #ifndef _SYS_TIMETC_H_
@@ -29,8 +29,14 @@
  */
 
 struct timecounter;
+struct vdso_timehands;
+struct vdso_timehands32;
 typedef u_int timecounter_get_t(struct timecounter *);
 typedef void timecounter_pps_t(struct timecounter *);
+typedef uint32_t timecounter_fill_vdso_timehands_t(struct vdso_timehands *,
+    struct timecounter *);
+typedef uint32_t timecounter_fill_vdso_timehands32_t(struct vdso_timehands32 *,
+    struct timecounter *);
 
 struct timecounter {
 	timecounter_get_t	*tc_get_timecount;
@@ -50,7 +56,7 @@ struct timecounter {
 		/* This mask should mask off any unimplemented bits. */
 	uint64_t		tc_frequency;
 		/* Frequency of the counter in Hz. */
-	char			*tc_name;
+	const char		*tc_name;
 		/* Name of the timecounter. */
 	int			tc_quality;
 		/*
@@ -69,6 +75,8 @@ struct timecounter {
 		/* Pointer to the timecounter's private parts. */
 	struct timecounter	*tc_next;
 		/* Pointer to the next timecounter. */
+	timecounter_fill_vdso_timehands_t *tc_fill_vdso_timehands;
+	timecounter_fill_vdso_timehands32_t *tc_fill_vdso_timehands32;
 };
 
 extern struct timecounter *timecounter;
