@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)reg.h	5.5 (Berkeley) 1/18/91
- * $FreeBSD: stable/10/sys/x86/include/reg.h 283910 2015-06-02 14:54:53Z jhb $
+ * $FreeBSD: stable/11/sys/x86/include/reg.h 338691 2018-09-14 23:21:52Z jhb $
  */
 
 #ifndef _MACHINE_REG_H_
@@ -205,6 +205,14 @@ struct __dbreg64 {
 				/* Index 8-15: reserved */
 };
 
+#define	DBREG_DR6_RESERVED1	0xffff0ff0
+#define	DBREG_DR6_BMASK		0x000f
+#define	DBREG_DR6_B(i)		(1 << (i))
+#define	DBREG_DR6_BD		0x2000
+#define	DBREG_DR6_BS		0x4000
+#define	DBREG_DR6_BT		0x8000
+
+#define	DBREG_DR7_RESERVED1	0x0400
 #define	DBREG_DR7_LOCAL_ENABLE	0x01
 #define	DBREG_DR7_GLOBAL_ENABLE	0x02
 #define	DBREG_DR7_LEN_1		0x00	/* 1 byte length          */
@@ -235,6 +243,8 @@ struct __dbreg64 {
 #undef __dbreg64
 
 #ifdef _KERNEL
+struct thread;
+
 /*
  * XXX these interfaces are MI, so they should be declared in a MI place.
  */

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)psl.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD: stable/10/sys/x86/include/psl.h 258559 2013-11-25 15:58:48Z emaste $
+ * $FreeBSD: stable/11/sys/x86/include/psl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PSL_H_

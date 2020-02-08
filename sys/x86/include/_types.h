@@ -34,7 +34,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: stable/10/sys/x86/include/_types.h 287139 2015-08-25 19:18:38Z jkim $
+ * $FreeBSD: stable/11/sys/x86/include/_types.h 332135 2018-04-06 19:17:59Z kevans $
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -43,6 +43,8 @@
 #ifndef _SYS_CDEFS_H_
 #error this file needs sys/cdefs.h as a prerequisite
 #endif
+
+#include <machine/_limits.h>
 
 #define __NO_STRICT_ALIGNMENT
 
@@ -77,15 +79,19 @@ typedef	unsigned long long	__uint64_t;
 #ifdef	__LP64__
 typedef	__int32_t	__clock_t;		/* clock()... */
 typedef	__int64_t	__critical_t;
+#ifndef _STANDALONE
 typedef	double		__double_t;
 typedef	float		__float_t;
+#endif
 typedef	__int64_t	__intfptr_t;
 typedef	__int64_t	__intptr_t;
 #else
 typedef	unsigned long	__clock_t;
 typedef	__int32_t	__critical_t;
+#ifndef _STANDALONE
 typedef	long double	__double_t;
 typedef	long double	__float_t;
+#endif
 typedef	__int32_t	__intfptr_t;
 typedef	__int32_t	__intptr_t;
 #endif
@@ -141,8 +147,6 @@ typedef	__uint32_t	__vm_paddr_t;
 #endif
 typedef	__uint32_t	__vm_size_t;
 #endif
-typedef	__int64_t	__vm_ooffset_t;
-typedef	__uint64_t	__vm_pindex_t;
 typedef	int		___wchar_t;
 
 #define	__WCHAR_MIN	__INT_MIN	/* min value for a wchar_t */

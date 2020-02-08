@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/x86/include/legacyvar.h 280970 2015-04-01 21:48:54Z jhb $
+ * $FreeBSD: stable/11/sys/x86/include/legacyvar.h 294883 2016-01-27 02:23:54Z jhibbits $
  */
 
 #ifndef _X86_LEGACYVAR_H_
@@ -57,9 +57,10 @@ void	legacy_pcib_write_config(device_t dev, u_int bus, u_int slot,
 int	legacy_pcib_write_ivar(device_t dev, device_t child, int which,
     uintptr_t value);
 struct resource *legacy_pcib_alloc_resource(device_t dev, device_t child,
-    int type, int *rid, u_long start, u_long end, u_long count, u_int flags);
+    int type, int *rid, rman_res_t start, rman_res_t end, rman_res_t count,
+    u_int flags);
 int	legacy_pcib_adjust_resource(device_t dev, device_t child, int type,
-    struct resource *r, u_long start, u_long end);
+    struct resource *r, rman_res_t start, rman_res_t end);
 int	legacy_pcib_release_resource(device_t dev, device_t child, int type,
     int rid, struct resource *r);
 int	legacy_pcib_alloc_msi(device_t pcib, device_t dev, int count,

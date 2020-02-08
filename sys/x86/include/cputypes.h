@@ -1,11 +1,7 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright 2012 Konstantin Belousov <kib@FreeBSD.ORG>.
- * Copyright 2016 The FreeBSD Foundation.
+ * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
- *
- * Portions of this software were developed by Konstantin Belousov
- * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,6 +11,8 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -27,26 +25,26 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/vdso.h 311376 2017-01-05 07:42:08Z sephe $
+ * $FreeBSD: stable/11/sys/x86/include/cputypes.h 308433 2016-11-08 06:13:22Z jhb $
  */
 
-#ifndef _X86_VDSO_H
-#define	_X86_VDSO_H
+#ifndef _X86_CPUTYPES_H_
+#define	_X86_CPUTYPES_H_
 
-#define	VDSO_TIMEHANDS_MD			\
-	uint32_t	th_x86_shift;		\
-	uint32_t	th_x86_hpet_idx;	\
-	uint32_t	th_res[6];
+/*
+ * Vendors of processor.
+ */
+#define	CPU_VENDOR_NSC		0x100b		/* NSC */
+#define	CPU_VENDOR_IBM		0x1014		/* IBM */
+#define	CPU_VENDOR_AMD		0x1022		/* AMD */
+#define	CPU_VENDOR_SIS		0x1039		/* SiS */
+#define	CPU_VENDOR_UMC		0x1060		/* UMC */
+#define	CPU_VENDOR_NEXGEN	0x1074		/* Nexgen */
+#define	CPU_VENDOR_CYRIX	0x1078		/* Cyrix */
+#define	CPU_VENDOR_IDT		0x111d		/* Centaur/IDT/VIA */
+#define	CPU_VENDOR_TRANSMETA	0x1279		/* Transmeta */
+#define	CPU_VENDOR_INTEL	0x8086		/* Intel */
+#define	CPU_VENDOR_RISE		0xdead2bad	/* Rise */
+#define	CPU_VENDOR_CENTAUR	CPU_VENDOR_IDT
 
-#define	VDSO_TH_ALGO_X86_TSC	VDSO_TH_ALGO_1
-#define	VDSO_TH_ALGO_X86_HPET	VDSO_TH_ALGO_2
-#define	VDSO_TH_ALGO_X86_HVTSC	VDSO_TH_ALGO_3	/* Hyper-V ref. TSC */
-
-#ifdef _KERNEL
-#ifdef COMPAT_FREEBSD32
-
-#define	VDSO_TIMEHANDS_MD32	VDSO_TIMEHANDS_MD
-
-#endif
-#endif
-#endif
+#endif /* !_X86_CPUTYPES_H_ */

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/x86/include/sysarch.h 233209 2012-03-19 21:57:31Z tijl $
+ * $FreeBSD: stable/11/sys/x86/include/sysarch.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

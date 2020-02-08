@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013 Juniper Networks, Inc.
+ * Copyright (c) 2013 Roger Pau Monné <roger.pau@citrix.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
@@ -24,14 +24,36 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/fdt.h 260327 2014-01-05 18:46:58Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/x86/include/init.h 272310 2014-09-30 16:46:45Z royger $
  */
 
-#ifndef _MACHINE_FDT_H_
-#define _MACHINE_FDT_H_
+#ifndef __X86_INIT_H__
+#define __X86_INIT_H__
+/*
+ * Struct containing pointers to init functions whose
+ * implementation is run time selectable.  Selection can be made,
+ * for example, based on detection of a BIOS variant or
+ * hypervisor environment.
+ */
+struct init_ops {
+	caddr_t	(*parse_preload_data)(u_int64_t);
+	void	(*early_clock_source_init)(void);
+	void	(*early_delay)(int);
+	void	(*parse_memmap)(caddr_t, vm_paddr_t *, int *);
+	u_int	(*mp_bootaddress)(u_int);
+	int	(*start_all_aps)(void);
+	void	(*msi_init)(void);
+};
 
-__BEGIN_DECLS
-int x86_init_fdt(void);
-__END_DECLS
+extern struct init_ops init_ops;
 
-#endif /* _MACHINE_FDT_H_ */
+/* Knob to disable acpi_cpu devices */
+extern bool acpi_cpu_disabled;
+
+/* Knob to disable acpi_hpet device */
+extern bool acpi_hpet_disabled;
+
+/* Knob to disable acpi_timer device */
+extern bool acpi_timer_disabled;
+
+#endif /* __X86_INIT_H__ */

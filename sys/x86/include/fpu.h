@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)npx.h	5.3 (Berkeley) 1/18/91
- * $FreeBSD: stable/10/sys/x86/include/fpu.h 279211 2015-02-23 18:38:41Z jhb $
+ * $FreeBSD: stable/11/sys/x86/include/fpu.h 274817 2014-11-21 20:53:17Z jhb $
  */
 
 /*

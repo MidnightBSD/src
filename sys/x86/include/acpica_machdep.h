@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/x86/include/acpica_machdep.h 259073 2013-12-07 18:23:29Z peter $
+ * $FreeBSD: stable/11/sys/x86/include/acpica_machdep.h 298094 2016-04-16 03:44:50Z gjb $
  */
 
 /******************************************************************************
@@ -70,11 +70,19 @@ int	acpi_release_global_lock(volatile uint32_t *);
 	(Acq) = acpi_release_global_lock(&((GLptr)->GlobalLock));	\
 } while (0)
  
+enum intr_trigger;
+enum intr_polarity;
+
 void	acpi_SetDefaultIntrModel(int model);
 void	acpi_cpu_c1(void);
+void	acpi_cpu_idle_mwait(uint32_t mwait_hint);
 void	*acpi_map_table(vm_paddr_t pa, const char *sig);
 void	acpi_unmap_table(void *table);
 vm_paddr_t acpi_find_table(const char *sig);
+void	madt_parse_interrupt_values(void *entry,
+	    enum intr_trigger *trig, enum intr_polarity *pol);
+
+extern int madt_found_sci_override;
 
 #endif /* _KERNEL */
 

@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013 Juniper Networks, Inc.
+ * Copyright (c) 2014, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,14 +24,37 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/fdt.h 260327 2014-01-05 18:46:58Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/x86/include/pvclock.h 278184 2015-02-04 08:33:04Z bryanv $
  */
 
-#ifndef _MACHINE_FDT_H_
-#define _MACHINE_FDT_H_
+#ifndef X86_PVCLOCK
+#define X86_PVCLOCK
 
-__BEGIN_DECLS
-int x86_init_fdt(void);
-__END_DECLS
+struct pvclock_vcpu_time_info {
+	uint32_t	version;
+	uint32_t	pad0;
+	uint64_t	tsc_timestamp;
+	uint64_t	system_time;
+	uint32_t	tsc_to_system_mul;
+	int8_t		tsc_shift;
+	uint8_t		flags;
+	uint8_t		pad[2];
+};
 
-#endif /* _MACHINE_FDT_H_ */
+#define PVCLOCK_FLAG_TSC_STABLE		0x01
+#define PVCLOCK_FLAG_GUEST_PASUED	0x02
+
+struct pvclock_wall_clock {
+	uint32_t	version;
+	uint32_t	sec;
+	uint32_t	nsec;
+};
+
+void		pvclock_resume(void);
+uint64_t	pvclock_get_last_cycles(void);
+uint64_t	pvclock_tsc_freq(struct pvclock_vcpu_time_info *ti);
+uint64_t	pvclock_get_timecount(struct pvclock_vcpu_time_info *ti);
+void		pvclock_get_wallclock(struct pvclock_wall_clock *wc,
+		    struct timespec *ts);
+
+#endif

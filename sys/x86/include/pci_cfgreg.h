@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/x86/include/pci_cfgreg.h 223440 2011-06-22 21:04:13Z jhb $
+ * $FreeBSD: stable/11/sys/x86/include/pci_cfgreg.h 294883 2016-01-27 02:23:54Z jhibbits $
  *
  */
 
@@ -47,7 +47,7 @@
 #define CONF2_ENABLE_CHK   0x0e
 #define CONF2_ENABLE_RES   0x0e
 
-u_long		hostb_alloc_start(int type, u_long start, u_long end, u_long count);
+rman_res_t	hostb_alloc_start(int type, rman_res_t start, rman_res_t end, rman_res_t count);
 int		pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus);
 int		pci_cfgregopen(void);
 u_int32_t	pci_cfgregread(int bus, int slot, int func, int reg, int bytes);

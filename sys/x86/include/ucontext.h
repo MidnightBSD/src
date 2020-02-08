@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/x86/include/ucontext.h 247047 2013-02-20 17:39:52Z kib $
+ * $FreeBSD: stable/11/sys/x86/include/ucontext.h 295561 2016-02-12 07:38:19Z kib $
  */
 
 #ifndef _X86_UCONTEXT_H_
@@ -162,5 +162,10 @@ typedef struct __mcontext {
 	long	mc_spare[4];
 } mcontext_t;
 #endif /* __amd64__ */
+
+#ifdef __LINT__
+typedef struct __mcontext {
+} mcontext_t;
+#endif /* __LINT__ */
 
 #endif /* !_X86_UCONTEXT_H_ */
