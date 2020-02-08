@@ -73890,6 +73890,10 @@ sys/teken/teken_scs.h -text
 sys/teken/teken_subr.h -text
 sys/teken/teken_subr_compat.h -text
 sys/teken/teken_wcwidth.h -text
+sys/tests/callout_test.h svneol=native#text/plain
+sys/tests/callout_test/callout_test.c svneol=native#text/plain
+sys/tests/framework/kern_testfrwk.c svneol=native#text/plain
+sys/tests/kern_testfrwk.h svneol=native#text/plain
 sys/tools/acpi_quirks2h.awk -text
 sys/tools/bus_macro.sh -text
 sys/tools/embed_mfs.sh -text
