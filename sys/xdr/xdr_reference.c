@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: xdr_reference.c,v 1.13 2000/01/22 22:19:18 mycroft Exp	$ */
 
 /*
@@ -34,7 +35,7 @@ static char *sccsid2 = "@(#)xdr_reference.c 1.11 87/08/11 SMI";
 static char *sccsid = "@(#)xdr_reference.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/xdr/xdr_reference.c 177633 2008-03-26 15:23:12Z dfr $");
 
 /*
  * xdr_reference.c, Generic XDR routines impelmentation.

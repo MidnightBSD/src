@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: xdr_array.c,v 1.12 2000/01/22 22:19:18 mycroft Exp $	*/
 
 /*
@@ -34,7 +35,7 @@ static char *sccsid2 = "@(#)xdr_array.c 1.10 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)xdr_array.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/xdr/xdr_array.c 177633 2008-03-26 15:23:12Z dfr $");
 
 /*
  * xdr_array.c, Generic XDR routines impelmentation.

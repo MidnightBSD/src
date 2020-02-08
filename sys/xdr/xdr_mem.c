@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: xdr_mem.c,v 1.15 2000/01/22 22:19:18 mycroft Exp $	*/
 
 /*
@@ -34,7 +35,7 @@ static char *sccsid2 = "@(#)xdr_mem.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)xdr_mem.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/xdr/xdr_mem.c 297975 2016-04-14 17:06:37Z pfg $");
 
 /*
  * xdr_mem.h, XDR implementation using memory buffers.
