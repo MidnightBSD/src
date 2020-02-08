@@ -74132,8 +74132,10 @@ sys/xen/interface/grant_table.h -text
 sys/xen/interface/hvm/e820.h -text
 sys/xen/interface/hvm/hvm_info_table.h -text
 sys/xen/interface/hvm/hvm_op.h -text
+sys/xen/interface/hvm/hvm_xs_strings.h svneol=native#text/plain
 sys/xen/interface/hvm/ioreq.h -text
 sys/xen/interface/hvm/params.h -text
+sys/xen/interface/hvm/pvdrivers.h svneol=native#text/plain
 sys/xen/interface/hvm/save.h -text
 sys/xen/interface/hvm/vmx_assist.h -text
 sys/xen/interface/io/blkif.h -text
