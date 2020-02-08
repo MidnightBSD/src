@@ -74088,6 +74088,7 @@ sys/xdr/xdr_mem.c -text
 sys/xdr/xdr_reference.c -text
 sys/xdr/xdr_sizeof.c -text
 sys/xen/blkif.h -text
+sys/xen/error.h svneol=native#text/plain
 sys/xen/evtchn.h -text
 sys/xen/evtchn/evtchn_dev.c -text
 sys/xen/evtchn/evtchnvar.h svneol=native#text/plain
@@ -74176,8 +74177,12 @@ sys/xen/interface/xen.h -text
 sys/xen/interface/xencomm.h -text
 sys/xen/interface/xenoprof.h -text
 sys/xen/interface/xsm/flask_op.h svneol=native#text/plain
+sys/xen/privcmd.h svneol=native#text/plain
 sys/xen/xen-os.h svneol=native#text/plain
 sys/xen/xen_intr.h -text
+sys/xen/xen_msi.h svneol=native#text/plain
+sys/xen/xen_pci.h svneol=native#text/plain
+sys/xen/xen_pv.h svneol=native#text/plain
 sys/xen/xenbus/xenbus.c -text
 sys/xen/xenbus/xenbus_if.m -text
 sys/xen/xenbus/xenbusb.c -text

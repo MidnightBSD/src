@@ -30,11 +30,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/xen/xenstore/xenstore_internal.h 214077 2010-10-19 20:53:30Z gibbs $
+ * $FreeBSD: stable/11/sys/xen/xenstore/xenstore_internal.h 272318 2014-09-30 17:31:04Z royger $
  */
-
-/* Initialize support for userspace access to the XenStore. */
-void xs_dev_init(void);
 
 /* Used by the XenStore character device to borrow kernel's store connection. */
 int xs_dev_request_and_reply(struct xsd_sockmsg *msg, void **result);

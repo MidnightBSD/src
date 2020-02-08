@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #-
 # Copyright (c) 2008 Doug Rabson
 # All rights reserved.
@@ -23,8 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/xen/xenbus/xenbus_if.m 255040 2013-08-29 19:52:18Z gibbs $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/xen/xenbus/xenbus_if.m 255040 2013-08-29 19:52:18Z gibbs $
+#
 
 #include <sys/bus.h>
 

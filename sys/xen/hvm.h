@@ -18,7 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/xen/hvm.h 255744 2013-09-20 22:59:22Z gibbs $
+ * $FreeBSD: stable/11/sys/xen/hvm.h 255744 2013-09-20 22:59:22Z gibbs $
  */
 
 #ifndef	__XEN_HVM_H__

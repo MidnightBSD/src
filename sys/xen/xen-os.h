@@ -25,7 +25,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
  * DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/xen/xen-os.h 315676 2017-03-21 09:38:59Z royger $
+ * $FreeBSD: stable/11/sys/xen/xen-os.h 315668 2017-03-21 08:38:12Z royger $
  */
 
 #ifndef _XEN_XEN_OS_H_
@@ -48,15 +48,14 @@
 /* Everything below this point is not included by assembler (.S) files. */
 #ifndef __ASSEMBLY__
 
-/* Force a proper event-channel callback from Xen. */
-void force_evtchn_callback(void);
-
 extern shared_info_t *HYPERVISOR_shared_info;
+extern start_info_t *HYPERVISOR_start_info;
 
-#ifdef XENHVM
+/* XXX: we need to get rid of this and use HYPERVISOR_start_info directly */
+extern char *console_page;
+
 extern int xen_disable_pv_disks;
 extern int xen_disable_pv_nics;
-#endif
 
 extern bool xen_suspend_cancelled;
 
@@ -85,6 +84,54 @@ xen_hvm_domain(void)
 {
 	return (xen_domain_type == XEN_HVM_DOMAIN);
 }
+
+static inline bool
+xen_initial_domain(void)
+{
+	return (xen_domain() && HYPERVISOR_start_info != NULL &&
+	    (HYPERVISOR_start_info->flags & SIF_INITDOMAIN) != 0);
+}
+
+/*
+ * Based on ofed/include/linux/bitops.h
+ *
+ * Those helpers are prefixed by xen_ because xen-os.h is widely included
+ * and we don't want the other drivers using them.
+ *
+ */
+#define NBPL (NBBY * sizeof(long))
+
+static inline bool
+xen_test_bit(int bit, volatile long *addr)
+{
+	unsigned long mask = 1UL << (bit % NBPL);
+
+	return !!(atomic_load_acq_long(&addr[bit / NBPL]) & mask);
+}
+
+static inline void
+xen_set_bit(int bit, volatile long *addr)
+{
+	atomic_set_long(&addr[bit / NBPL], 1UL << (bit % NBPL));
+}
+
+static inline void
+xen_clear_bit(int bit, volatile long *addr)
+{
+	atomic_clear_long(&addr[bit / NBPL], 1UL << (bit % NBPL));
+}
+
+#undef NBPL
+
+/*
+ * Functions to allocate/free unused memory in order
+ * to map memory from other domains.
+ */
+struct resource *xenmem_alloc(device_t dev, int *res_id, size_t size);
+int xenmem_free(device_t dev, int res_id, struct resource *res);
+
+/* Debug/emergency function, prints directly to hypervisor console */
+void xc_printf(const char *, ...) __printflike(1, 2);
 
 #ifndef xen_mb
 #define xen_mb() mb()

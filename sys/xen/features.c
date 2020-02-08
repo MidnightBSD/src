@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/xen/features.c 255040 2013-08-29 19:52:18Z gibbs $");
+__FBSDID("$FreeBSD: stable/11/sys/xen/features.c 255040 2013-08-29 19:52:18Z gibbs $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -29,7 +29,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/xen/xenstore/xenstorevar.h 315675 2017-03-21 09:27:24Z royger $
+ * $FreeBSD: stable/11/sys/xen/xenstore/xenstorevar.h 315667 2017-03-21 08:36:25Z royger $
  */
 
 #ifndef _XEN_XENSTORE_XENSTOREVAR_H
