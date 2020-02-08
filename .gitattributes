@@ -74186,6 +74186,7 @@ sys/xen/xenbus/xenbusb_back.c -text
 sys/xen/xenbus/xenbusb_front.c -text
 sys/xen/xenbus/xenbusb_if.m -text
 sys/xen/xenbus/xenbusvar.h -text
+sys/xen/xenmem/xenmem_if.m -text
 sys/xen/xenstore/xenstore.c -text
 sys/xen/xenstore/xenstore_dev.c -text
 sys/xen/xenstore/xenstore_internal.h -text
