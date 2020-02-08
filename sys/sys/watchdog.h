@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/watchdog.h 247405 2013-02-27 19:03:31Z alfred $
+ * $FreeBSD: stable/11/sys/sys/watchdog.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SYS_WATCHDOG_H
 #define	_SYS_WATCHDOG_H
@@ -111,6 +111,14 @@ EVENTHANDLER_DECLARE(watchdog_list, watchdog_fn);
 
 u_int	wdog_kern_last_timeout(void);
 int	wdog_kern_pat(u_int utim);
+
+/*
+ * The following function pointer is used to attach a software watchdog
+ * if no hardware watchdog has been attached, and if the software module
+ * has initialized the function pointer.
+ */
+
+extern void (*wdog_software_attach)(void);
 #endif
 
 #endif /* _SYS_WATCHDOG_H */
