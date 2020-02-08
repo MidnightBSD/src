@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_extattr.c 302233 2016-06-27 21:44:27Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ufs/ufs_extattr.c 298463 2016-04-22 08:09:27Z ngie $");
 
 #include "opt_ufs.h"
 

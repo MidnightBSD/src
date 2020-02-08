@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/ufs/ufs/dirhash.h 262779 2014-03-05 04:23:19Z pfg $
+ * $FreeBSD: stable/11/sys/ufs/ufs/dirhash.h 298804 2016-04-29 20:43:51Z pfg $
  */
 
 #ifndef _UFS_UFS_DIRHASH_H_
@@ -61,7 +61,7 @@
  * together on a TAILQ list, and hashes with higher scores filter
  * towards the tail (most recently used) end of the list.
  *
- * New hash entries are given an inital score of DH_SCOREINIT and are
+ * New hash entries are given an initial score of DH_SCOREINIT and are
  * placed at the most-recently-used end of the list. This helps a lot
  * in the worst-case case scenario where every directory access is
  * to a directory that is not hashed (i.e. the working set of hash

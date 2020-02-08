@@ -27,14 +27,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/ufs/ffs/ffs_suspend.c 306175 2016-09-22 10:42:40Z kib $
+ * $FreeBSD: stable/11/sys/ufs/ffs/ffs_suspend.c 337483 2018-08-08 18:51:39Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_suspend.c 306175 2016-09-22 10:42:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ffs/ffs_suspend.c 337483 2018-08-08 18:51:39Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/buf.h>
 #include <sys/ioccom.h>
 #include <sys/mount.h>
 #include <sys/vnode.h>
@@ -214,6 +215,31 @@ ffs_susp_suspend(struct mount *mp)
 }
 
 static void
+ffs_susp_unsuspend(struct mount *mp)
+{
+	struct ufsmount *ump;
+
+	sx_assert(&ffs_susp_lock, SA_XLOCKED);
+
+	/*
+	 * XXX: The status is kept per-process; the vfs_write_resume() routine
+	 * 	asserts that the resuming thread is the same one that called
+	 * 	vfs_write_suspend().  The cdevpriv data, however, is attached
+	 * 	to the file descriptor, e.g. is inherited during fork.  Thus,
+	 * 	it's possible that the resuming process will be different from
+	 * 	the one that started the suspension.
+	 *
+	 * 	Work around by fooling the check in vfs_write_resume().
+	 */
+	mp->mnt_susp_owner = curthread;
+
+	vfs_write_resume(mp, 0);
+	ump = VFSTOUFS(mp);
+	ump->um_writesuspended = 0;
+	vfs_unbusy(mp);
+}
+
+static void
 ffs_susp_dtor(void *data)
 {
 	struct fs *fs;
@@ -239,22 +265,7 @@ ffs_susp_dtor(void *data)
 	if (error != 0)
 		panic("failed to unsuspend writes on %s", fs->fs_fsmnt);
 
-	/*
-	 * XXX: The status is kept per-process; the vfs_write_resume() routine
-	 * 	asserts that the resuming thread is the same one that called
-	 * 	vfs_write_suspend().  The cdevpriv data, however, is attached
-	 * 	to the file descriptor, e.g. is inherited during fork.  Thus,
-	 * 	it's possible that the resuming process will be different from
-	 * 	the one that started the suspension.
-	 *
-	 * 	Work around by fooling the check in vfs_write_resume().
-	 */
-	mp->mnt_susp_owner = curthread;
-
-	vfs_write_resume(mp, 0);
-	vfs_unbusy(mp);
-	ump->um_writesuspended = 0;
-
+	ffs_susp_unsuspend(mp);
 	sx_xunlock(&ffs_susp_lock);
 }
 
@@ -294,7 +305,8 @@ ffs_susp_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 			break;
 		}
 		error = devfs_set_cdevpriv(mp, ffs_susp_dtor);
-		KASSERT(error == 0, ("devfs_set_cdevpriv failed"));
+		if (error != 0)
+			ffs_susp_unsuspend(mp);
 		break;
 	case UFSRESUME:
 		error = devfs_get_cdevpriv((void **)&mp);

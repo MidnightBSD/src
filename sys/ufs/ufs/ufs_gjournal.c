@@ -26,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_gjournal.c 306630 2016-10-03 10:15:16Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ufs/ufs_gjournal.c 306627 2016-10-03 09:37:56Z kib $");
 
 #include "opt_ufs.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/buf.h>
 #include <sys/kernel.h>
 #include <sys/vnode.h>
 #include <sys/lock.h>
@@ -65,15 +66,15 @@ ufs_gjournal_modref(struct vnode *vp, int count)
 	ino_t ino;
 
 	ip = VTOI(vp);
-	ump = ip->i_ump;
-	fs = ip->i_fs;
-	devvp = ip->i_devvp;
+	ump = VFSTOUFS(vp->v_mount);
+	fs = ump->um_fs;
+	devvp = ump->um_devvp;
 	ino = ip->i_number;
 
 	cg = ino_to_cg(fs, ino);
 	if (devvp->v_type == VREG) {
 		/* devvp is a snapshot */
-		dev = VTOI(devvp)->i_devvp->v_rdev;
+		dev = VFSTOUFS(devvp->v_mount)->um_devvp->v_rdev;
 		cgbno = fragstoblks(fs, cgtod(fs, cg));
 	} else if (devvp->v_type == VCHR) {
 		/* devvp is a normal disk device */

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: stable/10/sys/ufs/ffs/ffs_extern.h 306175 2016-09-22 10:42:40Z kib $
+ * $FreeBSD: stable/11/sys/ufs/ffs/ffs_extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _UFS_FFS_EXTERN_H
@@ -78,7 +78,6 @@ void	ffs_fserr(struct fs *, ino_t, char *);
 int	ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
 int	ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
 void	ffs_load_inode(struct buf *, struct inode *, struct fs *, ino_t);
-int	ffs_mountroot(void);
 void	ffs_oldfscompat_write(struct fs *, struct ufsmount *);
 int	ffs_own_mount(const struct mount *mp);
 int	ffs_reallocblks(struct vop_reallocblks_args *);
@@ -179,6 +178,11 @@ void	softdep_freework(struct workhead *);
  * deadlock when flushing snapshot inodes while holding snaplk.
  */
 #define	NO_INO_UPDT		0x00000001
+/*
+ * Request data sync only from ffs_syncvnode(), not touching even more
+ * metadata than NO_INO_UPDT.
+ */
+#define	DATA_ONLY		0x00000002
 
 int	ffs_rdonly(struct inode *);
 

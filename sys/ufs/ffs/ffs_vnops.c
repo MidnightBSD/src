@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_vnops.c 284201 2015-06-10 02:14:33Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ffs/ffs_vnops.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -78,6 +78,7 @@ __FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_vnops.c 284201 2015-06-10 02:14:33
 #include <sys/priv.h>
 #include <sys/rwlock.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
 
@@ -103,9 +104,10 @@ __FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_vnops.c 284201 2015-06-10 02:14:33
 #ifdef DIRECTIO
 extern int	ffs_rawread(struct vnode *vp, struct uio *uio, int *workdone);
 #endif
+static vop_fdatasync_t	ffs_fdatasync;
 static vop_fsync_t	ffs_fsync;
-static vop_lock1_t	ffs_lock;
 static vop_getpages_t	ffs_getpages;
+static vop_lock1_t	ffs_lock;
 static vop_read_t	ffs_read;
 static vop_write_t	ffs_write;
 static int	ffs_extread(struct vnode *vp, struct uio *uio, int ioflag);
@@ -120,12 +122,13 @@ static vop_openextattr_t	ffs_openextattr;
 static vop_setextattr_t	ffs_setextattr;
 static vop_vptofh_t	ffs_vptofh;
 
-
 /* Global vfs data structures for ufs. */
 struct vop_vector ffs_vnodeops1 = {
 	.vop_default =		&ufs_vnodeops,
 	.vop_fsync =		ffs_fsync,
+	.vop_fdatasync =	ffs_fdatasync,
 	.vop_getpages =		ffs_getpages,
+	.vop_getpages_async =	vnode_pager_local_getpages_async,
 	.vop_lock1 =		ffs_lock,
 	.vop_read =		ffs_read,
 	.vop_reallocblks =	ffs_reallocblks,
@@ -136,6 +139,7 @@ struct vop_vector ffs_vnodeops1 = {
 struct vop_vector ffs_fifoops1 = {
 	.vop_default =		&ufs_fifoops,
 	.vop_fsync =		ffs_fsync,
+	.vop_fdatasync =	ffs_fdatasync,
 	.vop_reallocblks =	ffs_reallocblks, /* XXX: really ??? */
 	.vop_vptofh =		ffs_vptofh,
 };
@@ -144,7 +148,9 @@ struct vop_vector ffs_fifoops1 = {
 struct vop_vector ffs_vnodeops2 = {
 	.vop_default =		&ufs_vnodeops,
 	.vop_fsync =		ffs_fsync,
+	.vop_fdatasync =	ffs_fdatasync,
 	.vop_getpages =		ffs_getpages,
+	.vop_getpages_async =	vnode_pager_local_getpages_async,
 	.vop_lock1 =		ffs_lock,
 	.vop_read =		ffs_read,
 	.vop_reallocblks =	ffs_reallocblks,
@@ -161,6 +167,7 @@ struct vop_vector ffs_vnodeops2 = {
 struct vop_vector ffs_fifoops2 = {
 	.vop_default =		&ufs_fifoops,
 	.vop_fsync =		ffs_fsync,
+	.vop_fdatasync =	ffs_fdatasync,
 	.vop_lock1 =		ffs_lock,
 	.vop_reallocblks =	ffs_reallocblks,
 	.vop_strategy =		ffsext_strategy,
@@ -216,10 +223,10 @@ ffs_syncvnode(struct vnode *vp, int waitfor, int flags)
 {
 	struct inode *ip;
 	struct bufobj *bo;
-	struct buf *bp;
-	struct buf *nbp;
+	struct buf *bp, *nbp;
 	ufs_lbn_t lbn;
-	int error, wait, passes;
+	int error, passes;
+	bool still_dirty, wait;
 
 	ip = VTOI(vp);
 	ip->i_flag &= ~IN_NEEDSYNC;
@@ -238,8 +245,8 @@ ffs_syncvnode(struct vnode *vp, int waitfor, int flags)
 	 */
 	error = 0;
 	passes = 0;
-	wait = 0;	/* Always do an async pass first. */
-	lbn = lblkno(ip->i_fs, (ip->i_size + ip->i_fs->fs_bsize - 1));
+	wait = false;	/* Always do an async pass first. */
+	lbn = lblkno(ITOFS(ip), (ip->i_size + ITOFS(ip)->fs_bsize - 1));
 	BO_LOCK(bo);
 loop:
 	TAILQ_FOREACH(bp, &bo->bo_dirty.bv_hd, b_bobufs)
@@ -254,15 +261,23 @@ loop:
 		if ((bp->b_vflags & BV_SCANNED) != 0)
 			continue;
 		bp->b_vflags |= BV_SCANNED;
-		/* Flush indirects in order. */
+		/*
+		 * Flush indirects in order, if requested.
+		 *
+		 * Note that if only datasync is requested, we can
+		 * skip indirect blocks when softupdates are not
+		 * active.  Otherwise we must flush them with data,
+		 * since dependencies prevent data block writes.
+		 */
 		if (waitfor == MNT_WAIT && bp->b_lblkno <= -NDADDR &&
-		    lbn_level(bp->b_lblkno) >= passes)
+		    (lbn_level(bp->b_lblkno) >= passes ||
+		    ((flags & DATA_ONLY) != 0 && !DOINGSOFTDEP(vp))))
 			continue;
 		if (bp->b_lblkno > lbn)
 			panic("ffs_syncvnode: syncing truncated data.");
 		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL) == 0) {
 			BO_UNLOCK(bo);
-		} else if (wait != 0) {
+		} else if (wait) {
 			if (BUF_LOCK(bp,
 			    LK_EXCLUSIVE | LK_SLEEPFAIL | LK_INTERLOCK,
 			    BO_LOCKPTR(bo)) != 0) {
@@ -330,28 +345,56 @@ next:
 	 * these will be done with one sync and one async pass.
 	 */
 	if (bo->bo_dirty.bv_cnt > 0) {
-		/* Write the inode after sync passes to flush deps. */
-		if (wait && DOINGSOFTDEP(vp) && (flags & NO_INO_UPDT) == 0) {
-			BO_UNLOCK(bo);
-			ffs_update(vp, 1);
-			BO_LOCK(bo);
+		if ((flags & DATA_ONLY) == 0) {
+			still_dirty = true;
+		} else {
+			/*
+			 * For data-only sync, dirty indirect buffers
+			 * are ignored.
+			 */
+			still_dirty = false;
+			TAILQ_FOREACH(bp, &bo->bo_dirty.bv_hd, b_bobufs) {
+				if (bp->b_lblkno > -NDADDR) {
+					still_dirty = true;
+					break;
+				}
+			}
 		}
-		/* switch between sync/async. */
-		wait = !wait;
-		if (wait == 1 || ++passes < NIADDR + 2)
-			goto loop;
+
+		if (still_dirty) {
+			/* Write the inode after sync passes to flush deps. */
+			if (wait && DOINGSOFTDEP(vp) &&
+			    (flags & NO_INO_UPDT) == 0) {
+				BO_UNLOCK(bo);
+				ffs_update(vp, 1);
+				BO_LOCK(bo);
+			}
+			/* switch between sync/async. */
+			wait = !wait;
+			if (wait || ++passes < NIADDR + 2)
+				goto loop;
 #ifdef INVARIANTS
-		if (!vn_isdisk(vp, NULL))
-			vprint("ffs_fsync: dirty", vp);
+			if (!vn_isdisk(vp, NULL))
+				vn_printf(vp, "ffs_fsync: dirty ");
 #endif
+		}
 	}
 	BO_UNLOCK(bo);
 	error = 0;
-	if ((flags & NO_INO_UPDT) == 0)
-		error = ffs_update(vp, 1);
-	if (DOINGSUJ(vp))
-		softdep_journal_fsync(VTOI(vp));
+	if ((flags & DATA_ONLY) == 0) {
+		if ((flags & NO_INO_UPDT) == 0)
+			error = ffs_update(vp, 1);
+		if (DOINGSUJ(vp))
+			softdep_journal_fsync(VTOI(vp));
+	}
 	return (error);
+}
+
+static int
+ffs_fdatasync(struct vop_fdatasync_args *ap)
+{
+
+	return (ffs_syncvnode(ap->a_vp, MNT_WAIT, DATA_ONLY));
 }
 
 static int
@@ -477,7 +520,7 @@ ffs_read(ap)
 	if (orig_resid == 0)
 		return (0);
 	KASSERT(uio->uio_offset >= 0, ("ffs_read: uio->uio_offset < 0"));
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 	if (uio->uio_offset < ip->i_size &&
 	    uio->uio_offset >= fs->fs_maxfilesize)
 		return (EOVERFLOW);
@@ -559,15 +602,6 @@ ffs_read(ap)
 		}
 
 		/*
-		 * If IO_DIRECT then set B_DIRECT for the buffer.  This
-		 * will cause us to attempt to release the buffer later on
-		 * and will cause the buffer cache to attempt to free the
-		 * underlying pages.
-		 */
-		if (ioflag & IO_DIRECT)
-			bp->b_flags |= B_DIRECT;
-
-		/*
 		 * We should only get non-zero b_resid when an I/O error
 		 * has occurred, which should cause us to break above.
 		 * However, if the short read did not cause an error,
@@ -581,7 +615,7 @@ ffs_read(ap)
 			xfersize = size;
 		}
 
-		if ((bp->b_flags & B_UNMAPPED) == 0) {
+		if (buf_mapped(bp)) {
 			error = vn_io_fault_uiomove((char *)bp->b_data +
 			    blkoffset, (int)xfersize, uio);
 		} else {
@@ -591,25 +625,7 @@ ffs_read(ap)
 		if (error)
 			break;
 
-		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_EMPTY(&bp->b_dep))) {
-			/*
-			 * If there are no dependencies, and it's VMIO,
-			 * then we don't need the buf, mark it available
-			 * for freeing.  For non-direct VMIO reads, the VM
-			 * has the data.
-			 */
-			bp->b_flags |= B_RELBUF;
-			brelse(bp);
-		} else {
-			/*
-			 * Otherwise let whoever
-			 * made the request take care of
-			 * freeing it. We just queue
-			 * it onto another list.
-			 */
-			bqrelse(bp);
-		}
+		vfs_bio_brelse(bp, ioflag);
 	}
 
 	/*
@@ -618,15 +634,8 @@ ffs_read(ap)
 	 * and on normal completion has not set a new value into it.
 	 * so it must have come from a 'break' statement
 	 */
-	if (bp != NULL) {
-		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_EMPTY(&bp->b_dep))) {
-			bp->b_flags |= B_RELBUF;
-			brelse(bp);
-		} else {
-			bqrelse(bp);
-		}
-	}
+	if (bp != NULL)
+		vfs_bio_brelse(bp, ioflag);
 
 	if ((error == 0 || uio->uio_resid != orig_resid) &&
 	    (vp->v_mount->mnt_flag & (MNT_NOATIME | MNT_RDONLY)) == 0 &&
@@ -700,7 +709,7 @@ ffs_write(ap)
 
 	KASSERT(uio->uio_resid >= 0, ("ffs_write: uio->uio_resid < 0"));
 	KASSERT(uio->uio_offset >= 0, ("ffs_write: uio->uio_offset < 0"));
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 	if ((uoff_t)uio->uio_offset + uio->uio_resid > fs->fs_maxfilesize)
 		return (EFBIG);
 	/*
@@ -744,8 +753,6 @@ ffs_write(ap)
 			vnode_pager_setsize(vp, ip->i_size);
 			break;
 		}
-		if (ioflag & IO_DIRECT)
-			bp->b_flags |= B_DIRECT;
 		if ((ioflag & (IO_SYNC|IO_INVAL)) == (IO_SYNC|IO_INVAL))
 			bp->b_flags |= B_NOCACHE;
 
@@ -758,7 +765,7 @@ ffs_write(ap)
 		if (size < xfersize)
 			xfersize = size;
 
-		if ((bp->b_flags & B_UNMAPPED) == 0) {
+		if (buf_mapped(bp)) {
 			error = vn_io_fault_uiomove((char *)bp->b_data +
 			    blkoffset, (int)xfersize, uio);
 		} else {
@@ -785,10 +792,8 @@ ffs_write(ap)
 		if (error != 0 && (bp->b_flags & B_CACHE) == 0 &&
 		    fs->fs_bsize == xfersize)
 			vfs_bio_clrbuf(bp);
-		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_EMPTY(&bp->b_dep))) {
-			bp->b_flags |= B_RELBUF;
-		}
+
+		vfs_bio_set_flags(bp, ioflag);
 
 		/*
 		 * If IO_SYNC each buffer is written synchronously.  Otherwise
@@ -848,48 +853,6 @@ ffs_write(ap)
 }
 
 /*
- * get page routine
- */
-static int
-ffs_getpages(ap)
-	struct vop_getpages_args *ap;
-{
-	int i;
-	vm_page_t mreq;
-	int pcount;
-
-	pcount = round_page(ap->a_count) / PAGE_SIZE;
-	mreq = ap->a_m[ap->a_reqpage];
-
-	/*
-	 * if ANY DEV_BSIZE blocks are valid on a large filesystem block,
-	 * then the entire page is valid.  Since the page may be mapped,
-	 * user programs might reference data beyond the actual end of file
-	 * occuring within the page.  We have to zero that data.
-	 */
-	VM_OBJECT_WLOCK(mreq->object);
-	if (mreq->valid) {
-		if (mreq->valid != VM_PAGE_BITS_ALL)
-			vm_page_zero_invalid(mreq, TRUE);
-		for (i = 0; i < pcount; i++) {
-			if (i != ap->a_reqpage) {
-				vm_page_lock(ap->a_m[i]);
-				vm_page_free(ap->a_m[i]);
-				vm_page_unlock(ap->a_m[i]);
-			}
-		}
-		VM_OBJECT_WUNLOCK(mreq->object);
-		return VM_PAGER_OK;
-	}
-	VM_OBJECT_WUNLOCK(mreq->object);
-
-	return vnode_pager_generic_getpages(ap->a_vp, ap->a_m,
-					    ap->a_count,
-					    ap->a_reqpage);
-}
-
-
-/*
  * Extended attribute area reading.
  */
 static int
@@ -906,7 +869,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 	int error;
 
 	ip = VTOI(vp);
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 	dp = ip->i_din2;
 
 #ifdef INVARIANTS
@@ -978,15 +941,6 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 		}
 
 		/*
-		 * If IO_DIRECT then set B_DIRECT for the buffer.  This
-		 * will cause us to attempt to release the buffer later on
-		 * and will cause the buffer cache to attempt to free the
-		 * underlying pages.
-		 */
-		if (ioflag & IO_DIRECT)
-			bp->b_flags |= B_DIRECT;
-
-		/*
 		 * We should only get non-zero b_resid when an I/O error
 		 * has occurred, which should cause us to break above.
 		 * However, if the short read did not cause an error,
@@ -1004,26 +958,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 					(int)xfersize, uio);
 		if (error)
 			break;
-
-		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_EMPTY(&bp->b_dep))) {
-			/*
-			 * If there are no dependencies, and it's VMIO,
-			 * then we don't need the buf, mark it available
-			 * for freeing.  For non-direct VMIO reads, the VM
-			 * has the data.
-			 */
-			bp->b_flags |= B_RELBUF;
-			brelse(bp);
-		} else {
-			/*
-			 * Otherwise let whoever
-			 * made the request take care of
-			 * freeing it. We just queue
-			 * it onto another list.
-			 */
-			bqrelse(bp);
-		}
+		vfs_bio_brelse(bp, ioflag);
 	}
 
 	/*
@@ -1032,15 +967,8 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 	 * and on normal completion has not set a new value into it.
 	 * so it must have come from a 'break' statement
 	 */
-	if (bp != NULL) {
-		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_EMPTY(&bp->b_dep))) {
-			bp->b_flags |= B_RELBUF;
-			brelse(bp);
-		} else {
-			bqrelse(bp);
-		}
-	}
+	if (bp != NULL)
+		vfs_bio_brelse(bp, ioflag);
 	return (error);
 }
 
@@ -1060,7 +988,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	int blkoffset, error, flags, size, xfersize;
 
 	ip = VTOI(vp);
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 	dp = ip->i_din2;
 
 #ifdef INVARIANTS
@@ -1109,8 +1037,6 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 		 */
 		if ((bp->b_flags & B_CACHE) == 0 && fs->fs_bsize <= xfersize)
 			vfs_bio_clrbuf(bp);
-		if (ioflag & IO_DIRECT)
-			bp->b_flags |= B_DIRECT;
 
 		if (uio->uio_offset + xfersize > dp->di_extsize)
 			dp->di_extsize = uio->uio_offset + xfersize;
@@ -1121,10 +1047,8 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 
 		error =
 		    uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
-		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_EMPTY(&bp->b_dep))) {
-			bp->b_flags |= B_RELBUF;
-		}
+
+		vfs_bio_set_flags(bp, ioflag);
 
 		/*
 		 * If IO_SYNC each buffer is written synchronously.  Otherwise
@@ -1232,7 +1156,7 @@ ffs_rdextattr(u_char **p, struct vnode *vp, struct thread *td, int extra)
 	u_char *eae;
 
 	ip = VTOI(vp);
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 	dp = ip->i_din2;
 	easize = dp->di_extsize;
 	if ((uoff_t)easize + extra > NXADDR * fs->fs_bsize)
@@ -1386,8 +1310,7 @@ struct vop_strategy_args {
 
 	vp = ap->a_vp;
 	lbn = ap->a_bp->b_lblkno;
-	if (VTOI(vp)->i_fs->fs_magic == FS_UFS2_MAGIC &&
-	    lbn < 0 && lbn >= -NXADDR)
+	if (I_IS_UFS2(VTOI(vp)) && lbn < 0 && lbn >= -NXADDR)
 		return (VOP_STRATEGY_APV(&ufs_vnodeops, ap));
 	if (vp->v_type == VFIFO)
 		return (VOP_STRATEGY_APV(&ufs_fifoops, ap));
@@ -1463,7 +1386,7 @@ vop_deleteextattr {
 	u_char *eae, *p;
 
 	ip = VTOI(ap->a_vp);
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 
 	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
@@ -1666,7 +1589,7 @@ vop_setextattr {
 	u_char *eae, *p;
 
 	ip = VTOI(ap->a_vp);
-	fs = ip->i_fs;
+	fs = ITOFS(ip);
 
 	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
@@ -1785,4 +1708,39 @@ vop_vptofh {
 	ufhp->ufid_ino = ip->i_number;
 	ufhp->ufid_gen = ip->i_gen;
 	return (0);
+}
+
+SYSCTL_DECL(_vfs_ffs);
+static int use_buf_pager = 0;
+SYSCTL_INT(_vfs_ffs, OID_AUTO, use_buf_pager, CTLFLAG_RWTUN, &use_buf_pager, 0,
+    "Always use buffer pager instead of bmap");
+
+static daddr_t
+ffs_gbp_getblkno(struct vnode *vp, vm_ooffset_t off)
+{
+
+	return (lblkno(VFSTOUFS(vp->v_mount)->um_fs, off));
+}
+
+static int
+ffs_gbp_getblksz(struct vnode *vp, daddr_t lbn)
+{
+
+	return (blksize(VFSTOUFS(vp->v_mount)->um_fs, VTOI(vp), lbn));
+}
+
+static int
+ffs_getpages(struct vop_getpages_args *ap)
+{
+	struct vnode *vp;
+	struct ufsmount *um;
+
+	vp = ap->a_vp;
+	um = VFSTOUFS(vp->v_mount);
+
+	if (!use_buf_pager && um->um_devvp->v_bufobj.bo_bsize <= PAGE_SIZE)
+		return (vnode_pager_generic_getpages(vp, ap->a_m, ap->a_count,
+		    ap->a_rbehind, ap->a_rahead, NULL, NULL));
+	return (vfs_bio_getpages(vp, ap->a_m, ap->a_count, ap->a_rbehind,
+	    ap->a_rahead, ffs_gbp_getblkno, ffs_gbp_getblksz));
 }

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_vnops.c 332750 2018-04-19 02:50:15Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ufs/ufs_vnops.c 346032 2019-04-08 15:52:13Z sjg $");
 
 #include "opt_quota.h"
 #include "opt_suiddir.h"
@@ -123,7 +123,6 @@ static vop_symlink_t	ufs_symlink;
 static vop_whiteout_t	ufs_whiteout;
 static vop_close_t	ufsfifo_close;
 static vop_kqfilter_t	ufsfifo_kqfilter;
-static vop_pathconf_t	ufsfifo_pathconf;
 
 SYSCTL_NODE(_vfs, OID_AUTO, ufs, CTLFLAG_RD, 0, "UFS filesystem");
 
@@ -325,9 +324,6 @@ ufs_accessx(ap)
 	struct inode *ip = VTOI(vp);
 	accmode_t accmode = ap->a_accmode;
 	int error;
-#ifdef QUOTA
-	int relocked;
-#endif
 #ifdef UFS_ACL
 	struct acl *acl;
 	acl_type_t type;
@@ -350,32 +346,14 @@ ufs_accessx(ap)
 			 * Inode is accounted in the quotas only if struct
 			 * dquot is attached to it. VOP_ACCESS() is called
 			 * from vn_open_cred() and provides a convenient
-			 * point to call getinoquota().
+			 * point to call getinoquota().  The lock mode is
+			 * exclusive when the file is opening for write.
 			 */
-			if (VOP_ISLOCKED(vp) != LK_EXCLUSIVE) {
-
-				/*
-				 * Upgrade vnode lock, since getinoquota()
-				 * requires exclusive lock to modify inode.
-				 */
-				relocked = 1;
-				vhold(vp);
-				vn_lock(vp, LK_UPGRADE | LK_RETRY);
-				VI_LOCK(vp);
-				if (vp->v_iflag & VI_DOOMED) {
-					vdropl(vp);
-					error = ENOENT;
-					goto relock;
-				}
-				vdropl(vp);
-			} else
-				relocked = 0;
-			error = getinoquota(ip);
-relock:
-			if (relocked)
-				vn_lock(vp, LK_DOWNGRADE | LK_RETRY);
-			if (error != 0)
-				return (error);
+			if (VOP_ISLOCKED(vp) == LK_EXCLUSIVE) {
+				error = getinoquota(ip);
+				if (error != 0)
+					return (error);
+			}
 #endif
 			break;
 		default:
@@ -385,8 +363,7 @@ relock:
 
 	/*
 	 * If immutable bit set, nobody gets to write it.  "& ~VADMIN_PERMS"
-	 * is here, because without it, * it would be impossible for the owner
-	 * to remove the IMMUTABLE flag.
+	 * permits the owner of the file to remove the IMMUTABLE flag.
 	 */
 	if ((accmode & (VMODIFY_PERMS & ~VADMIN_PERMS)) &&
 	    (ip->i_flags & (IMMUTABLE | SF_SNAPSHOT)))
@@ -458,7 +435,7 @@ ufs_getattr(ap)
 
 	VI_LOCK(vp);
 	ufs_itimes_locked(vp);
-	if (ip->i_ump->um_fstype == UFS1) {
+	if (I_IS_UFS1(ip)) {
 		vap->va_atime.tv_sec = ip->i_din1->di_atime;
 		vap->va_atime.tv_nsec = ip->i_din1->di_atimensec;
 	} else {
@@ -469,13 +446,13 @@ ufs_getattr(ap)
 	/*
 	 * Copy from inode table
 	 */
-	vap->va_fsid = dev2udev(ip->i_dev);
+	vap->va_fsid = dev2udev(ITOUMP(ip)->um_dev);
 	vap->va_fileid = ip->i_number;
 	vap->va_mode = ip->i_mode & ~IFMT;
 	vap->va_nlink = ip->i_effnlink;
 	vap->va_uid = ip->i_uid;
 	vap->va_gid = ip->i_gid;
-	if (ip->i_ump->um_fstype == UFS1) {
+	if (I_IS_UFS1(ip)) {
 		vap->va_rdev = ip->i_din1->di_rdev;
 		vap->va_size = ip->i_din1->di_size;
 		vap->va_mtime.tv_sec = ip->i_din1->di_mtime;
@@ -653,8 +630,7 @@ ufs_setattr(ap)
 			DIP_SET(ip, i_mtime, vap->va_mtime.tv_sec);
 			DIP_SET(ip, i_mtimensec, vap->va_mtime.tv_nsec);
 		}
-		if (vap->va_birthtime.tv_sec != VNOVAL &&
-		    ip->i_ump->um_fstype == UFS2) {
+		if (vap->va_birthtime.tv_sec != VNOVAL && I_IS_UFS2(ip)) {
 			ip->i_din2->di_birthtime = vap->va_birthtime.tv_sec;
 			ip->i_din2->di_birthnsec = vap->va_birthtime.tv_nsec;
 		}
@@ -951,8 +927,8 @@ print_bad_link_count(const char *funcname, struct vnode *dvp)
 	struct inode *dip;
 
 	dip = VTOI(dvp);
-	uprintf("%s: Bad link count %d on parent inode %d in file system %s\n",
-	    funcname, dip->i_effnlink, dip->i_number,
+	uprintf("%s: Bad link count %d on parent inode %jd in file system %s\n",
+	    funcname, dip->i_effnlink, (intmax_t)dip->i_number,
 	    dvp->v_mount->mnt_stat.f_mntonname);
 }
 
@@ -1362,7 +1338,7 @@ relock:
 	 *    expunge the original entry's existence.
 	 */
 	if (tip == NULL) {
-		if (tdp->i_dev != fip->i_dev)
+		if (ITODEV(tdp) != ITODEV(fip))
 			panic("ufs_rename: EXDEV");
 		if (doingdirectory && newparent) {
 			/*
@@ -1386,7 +1362,7 @@ relock:
 		    tdp->i_endoff < tdp->i_size)
 			endoff = tdp->i_endoff;
 	} else {
-		if (tip->i_dev != tdp->i_dev || tip->i_dev != fip->i_dev)
+		if (ITODEV(tip) != ITODEV(tdp) || ITODEV(tip) != ITODEV(fip))
 			panic("ufs_rename: EXDEV");
 		/*
 		 * Short circuit rename(foo, foo).
@@ -1547,8 +1523,9 @@ unlockout:
 		error = UFS_TRUNCATE(tdvp, endoff, IO_NORMAL | IO_SYNC,
 		    tcnp->cn_cred);
 		if (error != 0)
-			vn_printf(tdvp, "ufs_rename: failed to truncate "
-			    "err %d", error);
+			vn_printf(tdvp,
+			    "ufs_rename: failed to truncate, error %d\n",
+			    error);
 #ifdef UFS_DIRHASH
 		else if (tdp->i_dirhash != NULL)
 			ufsdirhash_dirtrunc(tdp, endoff);
@@ -2240,7 +2217,7 @@ ufs_readdir(ap)
 			dstdp.d_fileno = dp->d_ino;
 			dstdp.d_reclen = GENERIC_DIRSIZ(&dstdp);
 			bcopy(dp->d_name, dstdp.d_name, dstdp.d_namlen);
-			dstdp.d_name[dstdp.d_namlen] = '\0';
+			dirent_terminate(&dstdp);
 			if (dstdp.d_reclen > uio->uio_resid) {
 				if (uio->uio_resid == startresid)
 					error = EINVAL;
@@ -2323,12 +2300,9 @@ ufs_strategy(ap)
 {
 	struct buf *bp = ap->a_bp;
 	struct vnode *vp = ap->a_vp;
-	struct bufobj *bo;
-	struct inode *ip;
 	ufs2_daddr_t blkno;
 	int error;
 
-	ip = VTOI(vp);
 	if (bp->b_blkno == bp->b_lblkno) {
 		error = ufs_bmaparray(vp, bp->b_lblkno, &blkno, bp, NULL, NULL);
 		bp->b_blkno = blkno;
@@ -2346,8 +2320,7 @@ ufs_strategy(ap)
 		return (0);
 	}
 	bp->b_iooffset = dbtob(bp->b_blkno);
-	bo = ip->i_umbufobj;
-	BO_STRATEGY(bo, bp);
+	BO_STRATEGY(VFSTOUFS(vp->v_mount)->um_bo, bp);
 	return (0);
 }
 
@@ -2364,7 +2337,7 @@ ufs_print(ap)
 	struct inode *ip = VTOI(vp);
 
 	printf("\tino %lu, on dev %s", (u_long)ip->i_number,
-	    devtoname(ip->i_dev));
+	    devtoname(ITODEV(ip)));
 	if (vp->v_type == VFIFO)
 		fifo_printinfo(vp);
 	printf("\n");
@@ -2414,30 +2387,6 @@ ufsfifo_kqfilter(ap)
 }
 
 /*
- * Return POSIX pathconf information applicable to fifos.
- */
-static int
-ufsfifo_pathconf(ap)
-	struct vop_pathconf_args /* {
-		struct vnode *a_vp;
-		int a_name;
-		int *a_retval;
-	} */ *ap;
-{
-
-	switch (ap->a_name) {
-	case _PC_ACL_EXTENDED:
-	case _PC_ACL_NFS4:
-	case _PC_ACL_PATH_MAX:
-	case _PC_MAC_PRESENT:
-		return (ufs_pathconf(ap));
-	default:
-		return (fifo_specops.vop_pathconf(ap));
-	}
-	/* NOTREACHED */
-}
-
-/*
  * Return POSIX pathconf information applicable to ufs filesystems.
  */
 static int
@@ -2452,17 +2401,14 @@ ufs_pathconf(ap)
 
 	error = 0;
 	switch (ap->a_name) {
-	case _PC_LINK_MAX:
-		*ap->a_retval = LINK_MAX;
-		break;
 	case _PC_NAME_MAX:
 		*ap->a_retval = NAME_MAX;
 		break;
-	case _PC_PATH_MAX:
-		*ap->a_retval = PATH_MAX;
-		break;
 	case _PC_PIPE_BUF:
-		*ap->a_retval = PIPE_BUF;
+		if (ap->a_vp->v_type == VDIR || ap->a_vp->v_type == VFIFO)
+			*ap->a_retval = PIPE_BUF;
+		else
+			error = EINVAL;
 		break;
 	case _PC_CHOWN_RESTRICTED:
 		*ap->a_retval = 1;
@@ -2470,28 +2416,20 @@ ufs_pathconf(ap)
 	case _PC_NO_TRUNC:
 		*ap->a_retval = 1;
 		break;
-	case _PC_ACL_EXTENDED:
 #ifdef UFS_ACL
+	case _PC_ACL_EXTENDED:
 		if (ap->a_vp->v_mount->mnt_flag & MNT_ACLS)
 			*ap->a_retval = 1;
 		else
 			*ap->a_retval = 0;
-#else
-		*ap->a_retval = 0;
-#endif
 		break;
-
 	case _PC_ACL_NFS4:
-#ifdef UFS_ACL
 		if (ap->a_vp->v_mount->mnt_flag & MNT_NFS4ACLS)
 			*ap->a_retval = 1;
 		else
 			*ap->a_retval = 0;
-#else
-		*ap->a_retval = 0;
-#endif
 		break;
-
+#endif
 	case _PC_ACL_PATH_MAX:
 #ifdef UFS_ACL
 		if (ap->a_vp->v_mount->mnt_flag & (MNT_ACLS | MNT_NFS4ACLS))
@@ -2502,23 +2440,16 @@ ufs_pathconf(ap)
 		*ap->a_retval = 3;
 #endif
 		break;
-	case _PC_MAC_PRESENT:
 #ifdef MAC
+	case _PC_MAC_PRESENT:
 		if (ap->a_vp->v_mount->mnt_flag & MNT_MULTILABEL)
 			*ap->a_retval = 1;
 		else
 			*ap->a_retval = 0;
-#else
-		*ap->a_retval = 0;
-#endif
 		break;
+#endif
 	case _PC_MIN_HOLE_SIZE:
 		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_iosize;
-		break;
-	case _PC_ASYNC_IO:
-		/* _PC_ASYNC_IO should have been handled by upper layers. */
-		KASSERT(0, ("_PC_ASYNC_IO should not get here"));
-		error = EINVAL;
 		break;
 	case _PC_PRIO_IO:
 		*ap->a_retval = 0;
@@ -2549,7 +2480,7 @@ ufs_pathconf(ap)
 		break;
 
 	default:
-		error = EINVAL;
+		error = vop_stdpathconf(ap);
 		break;
 	}
 	return (error);
@@ -2571,6 +2502,11 @@ ufs_vinit(mntp, fifoops, vpp)
 	vp = *vpp;
 	ip = VTOI(vp);
 	vp->v_type = IFTOVT(ip->i_mode);
+	/*
+	 * Only unallocated inodes should be of type VNON.
+	 */
+	if (ip->i_mode != 0 && vp->v_type == VNON)
+		return (EINVAL);
 	if (vp->v_type == VFIFO)
 		vp->v_op = fifoops;
 	ASSERT_VOP_LOCKED(vp, "ufs_vinit");
@@ -2822,7 +2758,7 @@ struct vop_vector ufs_fifoops = {
 	.vop_inactive =		ufs_inactive,
 	.vop_kqfilter =		ufsfifo_kqfilter,
 	.vop_markatime =	ufs_markatime,
-	.vop_pathconf = 	ufsfifo_pathconf,
+	.vop_pathconf = 	ufs_pathconf,
 	.vop_print =		ufs_print,
 	.vop_read =		VOP_PANIC,
 	.vop_reclaim =		ufs_reclaim,

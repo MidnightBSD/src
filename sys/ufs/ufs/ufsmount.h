@@ -28,13 +28,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: stable/10/sys/ufs/ufs/ufsmount.h 297787 2016-04-10 16:32:21Z kib $
+ * $FreeBSD: stable/11/sys/ufs/ufs/ufsmount.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _UFS_UFS_UFSMOUNT_H_
 #define	_UFS_UFS_UFSMOUNT_H_
-
-#include <sys/buf.h>	/* XXX For struct workhead. */
 
 /*
  * Arguments to mount UFS-based filesystems
@@ -111,8 +109,8 @@ struct ufsmount {
 #define	UFS_VALLOC(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_valloc(aa, bb, cc, dd)
 #define	UFS_VFREE(aa, bb, cc) VFSTOUFS((aa)->v_mount)->um_vfree(aa, bb, cc)
 #define	UFS_IFREE(aa, bb) ((aa)->um_ifree(aa, bb))
-#define	UFS_RDONLY(aa) ((aa)->i_ump->um_rdonly(aa))
-#define	UFS_SNAPGONE(aa) ((aa)->i_ump->um_snapgone(aa))
+#define	UFS_RDONLY(aa) (ITOUMP(aa)->um_rdonly(aa))
+#define	UFS_SNAPGONE(aa) (ITOUMP(aa)->um_snapgone(aa))
 
 #define	UFS_LOCK(aa)	mtx_lock(&(aa)->um_lock)
 #define	UFS_UNLOCK(aa)	mtx_unlock(&(aa)->um_lock)

@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)softdep.h	9.7 (McKusick) 6/21/00
- * $FreeBSD: stable/10/sys/ufs/ffs/softdep.h 307534 2016-10-17 21:49:54Z mckusick $
+ * $FreeBSD: stable/11/sys/ufs/ffs/softdep.h 320057 2017-06-17 17:10:50Z kib $
  */
 
 #include <sys/queue.h>
@@ -133,7 +133,7 @@
 #define	INPROGRESS	0x001000 /* dirrem, freeblks, freefrag, freefile only */
 #define	UFS1FMT		0x002000 /* indirdep only */
 #define	EXTDATA		0x004000 /* allocdirect only */
-#define ONWORKLIST	0x008000
+#define	ONWORKLIST	0x008000
 #define	IOWAITING	0x010000 /* Thread is waiting for IO to complete. */
 #define	ONDEPLIST	0x020000 /* Structure is on a dependency list. */
 #define	UNLINKED	0x040000 /* inodedep has been unlinked. */
@@ -1066,6 +1066,7 @@ struct mount_softdeps {
 #define FLUSH_EXIT	0x0001	/* time to exit */
 #define FLUSH_CLEANUP	0x0002	/* need to clear out softdep structures */
 #define	FLUSH_STARTING	0x0004	/* flush thread not yet started */
+#define	FLUSH_RC_ACTIVE	0x0008	/* a thread is flushing the mount point */
 
 /*
  * Keep the old names from when these were in the ufsmount structure.

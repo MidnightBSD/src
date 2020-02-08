@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_vfsops.c 278150 2015-02-03 11:54:33Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ufs/ufs_vfsops.c 338943 2018-09-26 14:26:29Z kib $");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -93,7 +93,8 @@ ufs_quotactl(mp, cmds, id, arg)
 	void *arg;
 {
 #ifndef QUOTA
-	if ((cmds >> SUBCMDSHIFT) == Q_QUOTAON)
+	if ((cmds >> SUBCMDSHIFT) == Q_QUOTAON ||
+	    (cmds >> SUBCMDSHIFT) == Q_QUOTAOFF)
 		vfs_unbusy(mp);
 
 	return (EOPNOTSUPP);
@@ -116,13 +117,13 @@ ufs_quotactl(mp, cmds, id, arg)
 			break;
 
 		default:
-			if (cmd == Q_QUOTAON)
+			if (cmd == Q_QUOTAON || cmd == Q_QUOTAOFF)
 				vfs_unbusy(mp);
 			return (EINVAL);
 		}
 	}
 	if ((u_int)type >= MAXQUOTAS) {
-		if (cmd == Q_QUOTAON)
+		if (cmd == Q_QUOTAON || cmd == Q_QUOTAOFF)
 			vfs_unbusy(mp);
 		return (EINVAL);
 	}
@@ -133,7 +134,11 @@ ufs_quotactl(mp, cmds, id, arg)
 		break;
 
 	case Q_QUOTAOFF:
+		vfs_ref(mp);
+		vfs_unbusy(mp);
+		vn_start_write(NULL, &mp, V_WAIT | V_MNTREF);
 		error = quotaoff(td, mp, type);
+		vn_finished_write(mp);
 		break;
 
 	case Q_SETQUOTA32:

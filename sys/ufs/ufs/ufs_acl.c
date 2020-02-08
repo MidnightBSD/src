@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_acl.c 241011 2012-09-27 23:30:49Z mdf $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ufs/ufs_acl.c 306553 2016-10-01 09:19:43Z kib $");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/ufs/ufs/ufs_acl.c 241011 2012-09-27 23:30:49Z 
 #include <sys/acl.h>
 #include <sys/event.h>
 #include <sys/extattr.h>
+#include <sys/proc.h>
 
 #include <ufs/ufs/quota.h>
 #include <ufs/ufs/inode.h>
@@ -184,7 +185,7 @@ ufs_getacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td)
 		 */
 		printf("ufs_getacl_nfs4(): Loaded invalid ACL ("
 		    "%d bytes), inumber %ju on %s\n", len,
-		    (uintmax_t)ip->i_number, ip->i_fs->fs_fsmnt);
+		    (uintmax_t)ip->i_number, ITOFS(ip)->fs_fsmnt);
 
 		return (EPERM);
 	}
@@ -193,7 +194,7 @@ ufs_getacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td)
 	if (error) {
 		printf("ufs_getacl_nfs4(): Loaded invalid ACL "
 		    "(failed acl_nfs4_check), inumber %ju on %s\n",
-		    (uintmax_t)ip->i_number, ip->i_fs->fs_fsmnt);
+		    (uintmax_t)ip->i_number, ITOFS(ip)->fs_fsmnt);
 
 		return (EPERM);
 	}
@@ -220,7 +221,7 @@ ufs_getacl_nfs4(struct vop_getacl_args *ap)
 
 /*
  * Read POSIX.1e ACL from an EA.  Return error if its not found
- * or if any other error has occured.
+ * or if any other error has occurred.
  */
 static int
 ufs_get_oldacl(acl_type_t type, struct oldacl *old, struct vnode *vp,
@@ -261,7 +262,7 @@ ufs_get_oldacl(acl_type_t type, struct oldacl *old, struct vnode *vp,
 		 */
 		printf("ufs_get_oldacl(): Loaded invalid ACL "
 		    "(len = %d), inumber %ju on %s\n", len,
-		    (uintmax_t)ip->i_number, ip->i_fs->fs_fsmnt);
+		    (uintmax_t)ip->i_number, ITOFS(ip)->fs_fsmnt);
 		return (EPERM);
 	}
 

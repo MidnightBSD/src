@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_balloc.c 304672 2016-08-23 07:55:32Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/ufs/ffs/ffs_balloc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -70,6 +70,7 @@ __FBSDID("$FreeBSD: stable/10/sys/ufs/ffs/ffs_balloc.c 304672 2016-08-23 07:55:3
 #include <sys/lock.h>
 #include <sys/mount.h>
 #include <sys/vnode.h>
+#include <sys/vmmeter.h>
 
 #include <ufs/ufs/quota.h>
 #include <ufs/ufs/inode.h>
@@ -112,8 +113,8 @@ ffs_balloc_ufs1(struct vnode *vp, off_t startoffset, int size,
 
 	ip = VTOI(vp);
 	dp = ip->i_din1;
-	fs = ip->i_fs;
-	ump = ip->i_ump;
+	fs = ITOFS(ip);
+	ump = ITOUMP(ip);
 	lbn = lblkno(fs, startoffset);
 	size = blkoff(fs, startoffset) + size;
 	reclaimed = 0;
@@ -549,7 +550,7 @@ fail:
 		}
 		lbns_remfree++;
 #endif
-		ffs_blkfree(ump, fs, ip->i_devvp, *blkp, fs->fs_bsize,
+		ffs_blkfree(ump, fs, ump->um_devvp, *blkp, fs->fs_bsize,
 		    ip->i_number, vp->v_type, NULL);
 	}
 	return (error);
@@ -585,8 +586,8 @@ ffs_balloc_ufs2(struct vnode *vp, off_t startoffset, int size,
 
 	ip = VTOI(vp);
 	dp = ip->i_din2;
-	fs = ip->i_fs;
-	ump = ip->i_ump;
+	fs = ITOFS(ip);
+	ump = ITOUMP(ip);
 	lbn = lblkno(fs, startoffset);
 	size = blkoff(fs, startoffset) + size;
 	reclaimed = 0;
@@ -1144,7 +1145,7 @@ fail:
 		}
 		lbns_remfree++;
 #endif
-		ffs_blkfree(ump, fs, ip->i_devvp, *blkp, fs->fs_bsize,
+		ffs_blkfree(ump, fs, ump->um_devvp, *blkp, fs->fs_bsize,
 		    ip->i_number, vp->v_type, NULL);
 	}
 	return (error);

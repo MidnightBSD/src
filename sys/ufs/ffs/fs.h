@@ -11,7 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fs.h	8.13 (Berkeley) 3/21/95
- * $FreeBSD: stable/10/sys/ufs/ffs/fs.h 322860 2017-08-24 21:44:23Z mckusick $
+ * $FreeBSD: stable/11/sys/ufs/ffs/fs.h 356905 2020-01-20 08:28:54Z eugen $
  */
 
 #ifndef _UFS_FFS_FS_H_
@@ -220,7 +220,8 @@
 #define	FFS_UNLINK		14	/* remove a name in the filesystem */
 #define	FFS_SET_INODE		15	/* update an on-disk inode */
 #define	FFS_SET_BUFOUTPUT	16	/* set buffered writing on descriptor */
-#define	FFS_MAXID		16	/* number of valid ffs ids */
+#define	FFS_SET_SIZE		17	/* set inode size */
+#define	FFS_MAXID		17	/* number of valid ffs ids */
 
 /*
  * Command structure passed in to the filesystem to adjust filesystem values.
@@ -238,9 +239,7 @@ struct fsck_cmd {
  * A recovery structure placed at the end of the boot block area by newfs
  * that can be used by fsck to search for alternate superblocks.
  */
-#define RESID	(4096 - 20)	/* disk sector size minus recovery area size */
 struct fsrecovery {
-	char	block[RESID];	/* unused part of sector */
 	int32_t	fsr_magic;	/* magic number */
 	int32_t	fsr_fsbtodb;	/* fsbtodb and dbtofsb shift constant */
 	int32_t	fsr_sblkno;	/* offset of super-block in filesys */
@@ -416,8 +415,8 @@ CTASSERT(sizeof(struct fs) == 1376);
  * flag to enforce that inconsistent filesystems be mounted read-only.
  * The FS_INDEXDIRS flag when set indicates that the kernel maintains
  * on-disk auxiliary indexes (such as B-trees) for speeding directory
- * accesses. Kernels that do not support auxiliary indicies clear the
- * flag to indicate that the indicies need to be rebuilt (by fsck) before
+ * accesses. Kernels that do not support auxiliary indices clear the
+ * flag to indicate that the indices need to be rebuilt (by fsck) before
  * they can be used.
  *
  * FS_ACLS indicates that POSIX.1e ACLs are administratively enabled
