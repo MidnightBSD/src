@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/timeet.h 266347 2014-05-17 20:10:12Z ian $
+ * $FreeBSD: stable/11/sys/sys/timeet.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_TIMEEC_H_
@@ -54,7 +54,7 @@ typedef int et_deregister_cb_t(struct eventtimer *et, void *arg);
 struct eventtimer {
 	SLIST_ENTRY(eventtimer)	et_all;
 		/* Pointer to the next event timer. */
-	char			*et_name;
+	const char		*et_name;
 		/* Name of the event timer. */
 	int			et_flags;
 		/* Set of capabilities flags: */
