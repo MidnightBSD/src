@@ -37,7 +37,7 @@
  * @extra_args == Operation-specific extra arguments (NULL if none).
  */
 
-/* ia64, x86: Callback for event delivery. */
+/* x86: Callback for event delivery. */
 #define CALLBACKTYPE_event                 0
 
 /* x86: Failsafe callback when guest state cannot be restored by Xen. */
@@ -114,7 +114,7 @@ DEFINE_XEN_GUEST_HANDLE(callback_unregister_t);
 /*
  * Local variables:
  * mode: C
- * c-set-style: "BSD"
+ * c-file-style: "BSD"
  * c-basic-offset: 4
  * tab-width: 4
  * indent-tabs-mode: nil

@@ -74122,6 +74122,7 @@ sys/xen/interface/dom0_ops.h -text
 sys/xen/interface/domctl.h -text
 sys/xen/interface/elfnote.h -text
 sys/xen/interface/elfstructs.h -text
+sys/xen/interface/errno.h svneol=native#text/plain
 sys/xen/interface/event_channel.h -text
 sys/xen/interface/features.h -text
 sys/xen/interface/foreign/Makefile -text
@@ -74129,6 +74130,7 @@ sys/xen/interface/foreign/mkchecker.py -text
 sys/xen/interface/foreign/mkheader.py -text
 sys/xen/interface/foreign/reference.size -text
 sys/xen/interface/foreign/structs.py -text
+sys/xen/interface/gcov.h svneol=native#text/plain
 sys/xen/interface/grant_table.h -text
 sys/xen/interface/hvm/e820.h -text
 sys/xen/interface/hvm/hvm_info_table.h -text
@@ -74161,12 +74163,14 @@ sys/xen/interface/memory.h -text
 sys/xen/interface/nmi.h -text
 sys/xen/interface/physdev.h -text
 sys/xen/interface/platform.h -text
+sys/xen/interface/pmu.h svneol=native#text/plain
 sys/xen/interface/sched.h -text
 sys/xen/interface/sysctl.h -text
 sys/xen/interface/tmem.h svneol=native#text/plain
 sys/xen/interface/trace.h -text
 sys/xen/interface/vcpu.h -text
 sys/xen/interface/version.h -text
+sys/xen/interface/vm_event.h svneol=native#text/plain
 sys/xen/interface/xen-compat.h -text
 sys/xen/interface/xen.h -text
 sys/xen/interface/xencomm.h -text
