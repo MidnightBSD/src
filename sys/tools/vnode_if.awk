@@ -30,7 +30,7 @@
 
 #
 #	@(#)vnode_if.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: stable/10/sys/tools/vnode_if.awk 289798 2015-10-23 07:40:43Z avg $
+# $FreeBSD: stable/11/sys/tools/vnode_if.awk 331722 2018-03-29 02:50:57Z eadler $
 # $MidnightBSD$
 #
 # Script to produce VFS front-end sugar.
@@ -166,8 +166,6 @@ if (hfile) {
 
 if (cfile) {
 	printc(common_head \
-	    "#include \"opt_kdtrace.h\"\n" \
-	    "\n" \
 	    "#include <sys/param.h>\n" \
 	    "#include <sys/event.h>\n" \
 	    "#include <sys/kernel.h>\n" \
