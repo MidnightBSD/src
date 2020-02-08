@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/vm/redzone.h 155086 2006-01-31 11:09:21Z pjd $
+ * $FreeBSD: stable/11/sys/vm/redzone.h 155086 2006-01-31 11:09:21Z pjd $
  */
 
 #ifndef	_VM_REDZONE_H_

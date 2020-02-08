@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/vm/phys_pager.c 310110 2016-12-15 10:47:35Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/vm/phys_pager.c 327785 2018-01-10 20:39:26Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/vm/phys_pager.c 310110 2016-12-15 10:47:35Z ki
 #include <vm/vm_param.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
+#include <vm/vm_pageout.h>
 #include <vm/vm_pager.h>
 
 /* list of phys pager objects */
@@ -99,6 +100,7 @@ phys_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 				object = object1;
 				object1 = NULL;
 				object->handle = handle;
+				vm_object_set_flag(object, OBJ_POPULATE);
 				TAILQ_INSERT_TAIL(&phys_pager_object_list,
 				    object, pager_object_list);
 			}
@@ -110,6 +112,7 @@ phys_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 		vm_object_deallocate(object1);
 	} else {
 		object = vm_object_allocate(OBJT_PHYS, pindex);
+		vm_object_set_flag(object, OBJ_POPULATE);
 	}
 
 	return (object);
@@ -134,7 +137,8 @@ phys_pager_dealloc(vm_object_t object)
  * Fill as many pages as vm_fault has allocated for us.
  */
 static int
-phys_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
+phys_pager_getpages(vm_object_t object, vm_page_t *m, int count, int *rbehind,
+    int *rahead)
 {
 	int i;
 
@@ -149,13 +153,86 @@ phys_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 		    ("phys_pager_getpages: partially valid page %p", m[i]));
 		KASSERT(m[i]->dirty == 0,
 		    ("phys_pager_getpages: dirty page %p", m[i]));
-		/* The requested page must remain busy, the others not. */
-		if (i == reqpage) {
-			vm_page_lock(m[i]);
-			vm_page_flash(m[i]);
-			vm_page_unlock(m[i]);
-		} else
-			vm_page_xunbusy(m[i]);
+	}
+	if (rbehind)
+		*rbehind = 0;
+	if (rahead)
+		*rahead = 0;
+	return (VM_PAGER_OK);
+}
+
+/*
+ * Implement a pretty aggressive clustered getpages strategy.  Hint that
+ * everything in an entire 4MB window should be prefaulted at once.
+ *
+ * 4MB (1024 slots per page table page) is convenient for x86,
+ * but may not be for other arches.
+ */
+#ifndef PHYSCLUSTER
+#define PHYSCLUSTER 1024
+#endif
+static int phys_pager_cluster = PHYSCLUSTER;
+SYSCTL_INT(_vm, OID_AUTO, phys_pager_cluster, CTLFLAG_RWTUN,
+    &phys_pager_cluster, 0,
+    "prefault window size for phys pager");
+
+/*
+ * Max hint to vm_page_alloc() about the further allocation needs
+ * inside the phys_pager_populate() loop.  The number of bits used to
+ * implement VM_ALLOC_COUNT() determines the hard limit on this value.
+ * That limit is currently 65535.
+ */
+#define	PHYSALLOC	16
+
+static int
+phys_pager_populate(vm_object_t object, vm_pindex_t pidx,
+    int fault_type __unused, vm_prot_t max_prot __unused, vm_pindex_t *first,
+    vm_pindex_t *last)
+{
+	vm_page_t m;
+	vm_pindex_t base, end, i;
+	int ahead;
+
+	base = rounddown(pidx, phys_pager_cluster);
+	end = base + phys_pager_cluster - 1;
+	if (end >= object->size)
+		end = object->size - 1;
+	if (*first > base)
+		base = *first;
+	if (end > *last)
+		end = *last;
+	*first = base;
+	*last = end;
+
+	for (i = base; i <= end; i++) {
+retry:
+		m = vm_page_lookup(object, i);
+		if (m == NULL) {
+			ahead = MIN(end - i, PHYSALLOC);
+			m = vm_page_alloc(object, i, VM_ALLOC_NORMAL |
+			    VM_ALLOC_ZERO | VM_ALLOC_WAITFAIL |
+			    VM_ALLOC_COUNT(ahead));
+			if (m == NULL)
+				goto retry;
+			if ((m->flags & PG_ZERO) == 0)
+				pmap_zero_page(m);
+			m->valid = VM_PAGE_BITS_ALL;
+		} else if (vm_page_xbusied(m)) {
+			vm_page_lock(m);
+			VM_OBJECT_WUNLOCK(object);
+			vm_page_busy_sleep(m, "physb", true);
+			VM_OBJECT_WLOCK(object);
+			goto retry;
+		} else {
+			vm_page_xbusy(m);
+			if (m->valid != VM_PAGE_BITS_ALL)
+				vm_page_zero_invalid(m, TRUE);
+		}
+
+		KASSERT(m->valid == VM_PAGE_BITS_ALL,
+		    ("phys_pager_populate: partially valid page %p", m));
+		KASSERT(m->dirty == 0,
+		    ("phys_pager_populate: dirty page %p", m));
 	}
 	return (VM_PAGER_OK);
 }
@@ -168,24 +245,14 @@ phys_pager_putpages(vm_object_t object, vm_page_t *m, int count, boolean_t sync,
 	panic("phys_pager_putpage called");
 }
 
-/*
- * Implement a pretty aggressive clustered getpages strategy.  Hint that
- * everything in an entire 4MB window should be prefaulted at once.
- *
- * XXX 4MB (1024 slots per page table page) is convenient for x86,
- * but may not be for other arches.
- */
-#ifndef PHYSCLUSTER
-#define PHYSCLUSTER 1024
-#endif
 static boolean_t
 phys_pager_haspage(vm_object_t object, vm_pindex_t pindex, int *before,
     int *after)
 {
 	vm_pindex_t base, end;
 
-	base = pindex & (~(PHYSCLUSTER - 1));
-	end = base + (PHYSCLUSTER - 1);
+	base = rounddown(pindex, phys_pager_cluster);
+	end = base + phys_pager_cluster - 1;
 	if (before != NULL)
 		*before = pindex - base;
 	if (after != NULL)
@@ -200,4 +267,5 @@ struct pagerops physpagerops = {
 	.pgo_getpages =	phys_pager_getpages,
 	.pgo_putpages =	phys_pager_putpages,
 	.pgo_haspage =	phys_pager_haspage,
+	.pgo_populate =	phys_pager_populate,
 };

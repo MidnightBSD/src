@@ -58,11 +58,11 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/vm/vm_kern.h 254307 2013-08-13 22:40:43Z jeff $
+ * $FreeBSD: stable/11/sys/vm/vm_kern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VM_VM_KERN_H_
-#define _VM_VM_KERN_H_ 1
+#define	_VM_VM_KERN_H_
 
 /* Kernel memory management definitions. */
 extern vm_map_t kernel_map;
@@ -75,5 +75,7 @@ extern struct vmem *transient_arena;
 extern struct vmem *memguard_arena;
 extern vm_offset_t swapbkva;
 extern u_long vm_kmem_size;
+extern u_int exec_map_entries;
+extern u_int exec_map_entry_size;
 
-#endif				/* _VM_VM_KERN_H_ */
+#endif /* _VM_VM_KERN_H_ */

@@ -58,11 +58,13 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/vm/vm_pageout.h 314664 2017-03-04 12:05:50Z avg $
+ * $FreeBSD: stable/11/sys/vm/vm_pageout.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VM_VM_PAGEOUT_H_
 #define _VM_VM_PAGEOUT_H_
+
+#ifdef _KERNEL
 
 /*
  *	Header file for pageout daemon.
@@ -73,16 +75,10 @@
  */
 
 extern int vm_page_max_wired;
-extern int vm_pages_needed;	/* should be some "event" structure */
-extern int vm_pageout_pages_needed;
 extern int vm_pageout_deficit;
 extern int vm_pageout_page_count;
-
-/*
- * Swap out requests
- */
-#define VM_SWAP_NORMAL 1
-#define VM_SWAP_IDLE 2
+extern bool vm_pageout_wanted;
+extern bool vm_pages_needed;
 
 #define	VM_OOM_MEM	1
 #define	VM_OOM_SWAPZ	2
@@ -101,15 +97,17 @@ extern int vm_pageout_page_count;
  *	Signal pageout-daemon and wait for it.
  */
 
-extern void pagedaemon_wakeup(void);
+void pagedaemon_wait(int pri, const char *wmesg);
+void pagedaemon_wakeup(void);
 #define VM_WAIT vm_wait()
 #define VM_WAITPFAULT vm_waitpfault()
-extern void vm_wait(void);
-extern void vm_waitpfault(void);
+void vm_wait(void);
+void vm_waitpfault(void);
 
-#ifdef _KERNEL
 int vm_pageout_flush(vm_page_t *, int, int, int, int *, boolean_t *);
-void vm_pageout_grow_cache(int, vm_paddr_t, vm_paddr_t);
 void vm_pageout_oom(int shortage);
-#endif
+
+void vm_swapout_run(void);
+void vm_swapout_run_idle(void);
+#endif /* _KERNEL */
 #endif	/* _VM_VM_PAGEOUT_H_ */

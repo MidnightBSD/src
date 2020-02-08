@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/vm/uma_dbg.h 148078 2005-07-16 09:51:52Z rwatson $
+ * $FreeBSD: stable/11/sys/vm/uma_dbg.h 295221 2016-02-03 22:02:36Z glebius $
  *
  */
 
@@ -49,8 +49,5 @@ int mtrash_ctor(void *mem, int size, void *arg, int flags);
 void mtrash_dtor(void *mem, int size, void *arg);
 int mtrash_init(void *mem, int size, int flags);
 void mtrash_fini(void *mem, int size);
-
-void uma_dbg_free(uma_zone_t zone, uma_slab_t slab, void *item);
-void uma_dbg_alloc(uma_zone_t zone, uma_slab_t slab, void *item);
 
 #endif /* VM_UMA_DBG_H */

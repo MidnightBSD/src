@@ -29,7 +29,7 @@
  * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/vm/vm_phys.h 285634 2015-07-16 14:41:58Z kib $
+ * $FreeBSD: stable/11/sys/vm/vm_phys.h 329381 2018-02-16 16:16:33Z mjg $
  */
 
 /*
@@ -62,6 +62,7 @@ struct vm_phys_seg {
 };
 
 extern struct mem_affinity *mem_affinity;
+extern int *mem_locality;
 extern int vm_ndomains;
 extern struct vm_phys_seg vm_phys_segs[];
 extern int vm_phys_nsegs;
@@ -69,7 +70,6 @@ extern int vm_phys_nsegs;
 /*
  * The following functions are only to be used by the virtual memory system.
  */
-void vm_phys_add_page(vm_paddr_t pa);
 void vm_phys_add_seg(vm_paddr_t start, vm_paddr_t end);
 vm_page_t vm_phys_alloc_contig(u_long npages, vm_paddr_t low, vm_paddr_t high,
     u_long alignment, vm_paddr_t boundary);
@@ -84,9 +84,12 @@ void vm_phys_free_contig(vm_page_t m, u_long npages);
 void vm_phys_free_pages(vm_page_t m, int order);
 void vm_phys_init(void);
 vm_page_t vm_phys_paddr_to_vm_page(vm_paddr_t pa);
+vm_page_t vm_phys_scan_contig(u_long npages, vm_paddr_t low, vm_paddr_t high,
+    u_long alignment, vm_paddr_t boundary, int options);
 void vm_phys_set_pool(int pool, vm_page_t m, int order);
 boolean_t vm_phys_unfree_page(vm_page_t m);
 boolean_t vm_phys_zero_pages_idle(void);
+int vm_phys_mem_affinity(int f, int t);
 
 /*
  *	vm_phys_domain:
@@ -96,7 +99,7 @@ boolean_t vm_phys_zero_pages_idle(void);
 static inline struct vm_domain *
 vm_phys_domain(vm_page_t m)
 {
-#if MAXMEMDOM > 1
+#ifdef VM_NUMA_ALLOC
 	int domn, segind;
 
 	/* XXXKIB try to assert that the page is managed */
@@ -110,13 +113,13 @@ vm_phys_domain(vm_page_t m)
 #endif
 }
 
-static inline void
+static inline u_int
 vm_phys_freecnt_adj(vm_page_t m, int adj)
 {
 
 	mtx_assert(&vm_page_queue_free_mtx, MA_OWNED);
-	cnt.v_free_count += adj;
 	vm_phys_domain(m)->vmd_free_count += adj;
+	return (vm_cnt.v_free_count += adj);
 }
 
 #endif	/* _KERNEL */

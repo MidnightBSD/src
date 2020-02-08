@@ -1,7 +1,13 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 1991, 1993
- *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 1991 Regents of the University of California.
+ * All rights reserved.
+ * Copyright (c) 1994 John S. Dyson
+ * All rights reserved.
+ * Copyright (c) 1994 David Greenman
+ * All rights reserved.
+ * Copyright (c) 2005 Yahoo! Technologies Norway AS
+ * All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * The Mach Operating System project at Carnegie-Mellon University.
@@ -14,6 +20,10 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -30,7 +40,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: @(#)vm_param.h	8.1 (Berkeley) 6/11/93
+ *	from: @(#)vm_pageout.c	7.4 (Berkeley) 5/7/91
  *
  *
  * Copyright (c) 1987, 1990 Carnegie-Mellon University.
@@ -57,80 +67,57 @@
  *
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
- *
- * $FreeBSD: stable/11/sys/vm/vm_param.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
-/*
- *	Machine independent virtual memory parameters.
- */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/sys/vm/vm_swapout_dummy.c 325647 2017-11-10 13:17:40Z kib $");
 
-#ifndef	_VM_PARAM_
-#define	_VM_PARAM_
+#include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/proc.h>
+#include <sys/sysctl.h>
+#include <sys/vmmeter.h>
 
-#include <machine/vmparam.h>
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/vm_pageout.h>
 
-/*
- * CTL_VM identifiers
- */
-#define	VM_TOTAL		1	/* struct vmtotal */
-#define	VM_METER                VM_TOTAL/* deprecated, use VM_TOTAL */
-#define	VM_LOADAVG	 	2	/* struct loadavg */
-#define VM_V_FREE_MIN		3	/* vm_cnt.v_free_min */
-#define VM_V_FREE_TARGET	4	/* vm_cnt.v_free_target */
-#define VM_V_FREE_RESERVED	5	/* vm_cnt.v_free_reserved */
-#define VM_V_INACTIVE_TARGET	6	/* vm_cnt.v_inactive_target */
-#define	VM_OBSOLETE_7		7	/* unused, formerly v_cache_min */
-#define	VM_OBSOLETE_8		8	/* unused, formerly v_cache_max */
-#define VM_V_PAGEOUT_FREE_MIN	9	/* vm_cnt.v_pageout_free_min */
-#define	VM_OBSOLETE_10		10	/* pageout algorithm */
-#define VM_SWAPPING_ENABLED	11	/* swapping enabled */
-#define VM_OVERCOMMIT		12	/* vm.overcommit */
-#define	VM_MAXID		13	/* number of valid vm ids */
+static int vm_swap_enabled = 0;
+SYSCTL_INT(_vm, VM_SWAPPING_ENABLED, swap_enabled, CTLFLAG_RD,
+    &vm_swap_enabled, 0,
+    "Enable entire process swapout");
 
-/*
- * Structure for swap device statistics
- */
-#define XSWDEV_VERSION	1
-struct xswdev {
-	u_int	xsw_version;
-	dev_t	xsw_dev;
-	int	xsw_flags;
-	int	xsw_nblks;
-	int     xsw_used;
-};
+static int vm_swap_idle_enabled = 0;
+SYSCTL_INT(_vm, OID_AUTO, swap_idle_enabled, CTLFLAG_RD,
+    &vm_swap_idle_enabled, 0,
+    "Allow swapout on idle criteria");
 
-/*
- *	Return values from the VM routines.
- */
-#define	KERN_SUCCESS		0
-#define	KERN_INVALID_ADDRESS	1
-#define	KERN_PROTECTION_FAILURE	2
-#define	KERN_NO_SPACE		3
-#define	KERN_INVALID_ARGUMENT	4
-#define	KERN_FAILURE		5
-#define	KERN_RESOURCE_SHORTAGE	6
-#define	KERN_NOT_RECEIVER	7
-#define	KERN_NO_ACCESS		8
+void
+vm_swapout_run(void)
+{
+}
 
-#ifndef PA_LOCK_COUNT
-#ifdef SMP
-#define	PA_LOCK_COUNT	32
-#else
-#define PA_LOCK_COUNT	1
-#endif	/* !SMP */
-#endif	/* !PA_LOCK_COUNT */
+void
+vm_swapout_run_idle(void)
+{
+}
 
-#ifndef ASSEMBLER
-#ifdef _KERNEL
-#define num_pages(x) \
-	((vm_offset_t)((((vm_offset_t)(x)) + PAGE_MASK) >> PAGE_SHIFT))
-extern	unsigned long maxtsiz;
-extern	unsigned long dfldsiz;
-extern	unsigned long maxdsiz;
-extern	unsigned long dflssiz;
-extern	unsigned long maxssiz;
-extern	unsigned long sgrowsiz;
-#endif				/* _KERNEL */
-#endif				/* ASSEMBLER */
-#endif				/* _VM_PARAM_ */
+void
+faultin(struct proc *p)
+{
+
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+	if ((p->p_flag & P_INMEM) == 0)
+		panic("faultin: proc %p swapped out with NO_SWAPPING", p);
+}
+
+void
+swapper(void)
+{
+
+	for (;;)
+		tsleep(&proc0, PVM, "swapin", MAXSLP * hz);
+}

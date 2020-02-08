@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/vm/redzone.c 227309 2011-11-07 15:43:11Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/vm/redzone.c 267992 2014-06-28 03:56:17Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,8 +42,7 @@ static u_long redzone_extra_mem = 0;
 SYSCTL_ULONG(_vm_redzone, OID_AUTO, extra_mem, CTLFLAG_RD, &redzone_extra_mem,
     0, "Extra memory allocated by redzone");     
 static int redzone_panic = 0;
-TUNABLE_INT("vm.redzone.panic", &redzone_panic);
-SYSCTL_INT(_vm_redzone, OID_AUTO, panic, CTLFLAG_RW, &redzone_panic, 0,
+SYSCTL_INT(_vm_redzone, OID_AUTO, panic, CTLFLAG_RWTUN, &redzone_panic, 0,
     "Panic when buffer corruption is detected");     
 
 #define	REDZONE_CHSIZE	(16)

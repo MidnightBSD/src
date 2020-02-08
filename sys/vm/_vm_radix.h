@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/vm/_vm_radix.h 254141 2013-08-09 11:28:55Z attilio $
+ * $FreeBSD: stable/11/sys/vm/_vm_radix.h 321513 2017-07-26 06:52:45Z kib $
  */
 
 #ifndef __VM_RADIX_H_
@@ -37,20 +37,6 @@
  */
 struct vm_radix {
 	uintptr_t	rt_root;
-	uint8_t		rt_flags;
 };
 
-#define	RT_INSERT_INPROG	0x01
-#define	RT_TRIE_MODIFIED	0x02
-
-#ifdef _KERNEL
-
-static __inline boolean_t
-vm_radix_is_empty(struct vm_radix *rtree)
-{
-
-	return (rtree->rt_root == 0);
-}
-
-#endif /* _KERNEL */
 #endif /* !__VM_RADIX_H_ */

@@ -58,7 +58,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/vm/vm_object.h 313384 2017-02-07 08:33:46Z kib $
+ * $FreeBSD: stable/11/sys/vm/vm_object.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -71,6 +71,7 @@
 #include <sys/queue.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <sys/_pctrie.h>
 #include <sys/_rwlock.h>
 
 #include <vm/_vm_radix.h>
@@ -80,17 +81,6 @@
  *
  *	vm_object_t		Virtual memory object.
  *
- *	The root of cached pages pool is protected by both the per-object lock
- *	and the free pages queue mutex.
- *	On insert in the cache radix trie, the per-object lock is expected
- *	to be already held and the free pages queue mutex will be
- *	acquired during the operation too.
- *	On remove and lookup from the cache radix trie, only the free
- *	pages queue mutex is expected to be locked.
- *	These rules allow for reliably checking for the presence of cached
- *	pages with only the per-object lock held, thereby reducing contention
- *	for the free pages queue mutex.
- *
  * List of locks
  *	(c)	const until freed
  *	(o)	per-object lock 
@@ -98,12 +88,17 @@
  *
  */
 
+#ifndef VM_PAGE_HAVE_PGLIST
+TAILQ_HEAD(pglist, vm_page);
+#define VM_PAGE_HAVE_PGLIST
+#endif
+
 struct vm_object {
 	struct rwlock lock;
 	TAILQ_ENTRY(vm_object) object_list; /* list of all objects */
 	LIST_HEAD(, vm_object) shadow_head; /* objects that this is a shadow for */
 	LIST_ENTRY(vm_object) shadow_list; /* chain of shadow objects */
-	TAILQ_HEAD(respgs, vm_page) memq; /* list of resident pages */
+	struct pglist memq;		/* list of resident pages */
 	struct vm_radix rtree;		/* root of the resident page radix trie*/
 	vm_pindex_t size;		/* Object size */
 	int generation;			/* generation ID */
@@ -119,7 +114,6 @@ struct vm_object {
 	vm_ooffset_t backing_object_offset;/* Offset in backing object */
 	TAILQ_ENTRY(vm_object) pager_object_list; /* list of all objects of this pager type */
 	LIST_HEAD(, vm_reserv) rvq;	/* list of reservations */
-	struct vm_radix cache;		/* (o + f) root of the cache page radix trie */
 	void *handle;
 	union {
 		/*
@@ -164,17 +158,17 @@ struct vm_object {
 		 *		     the handle changed and hash-chain
 		 *		     invalid.
 		 *
-		 *	swp_bcount - number of swap 'swblock' metablocks, each
-		 *		     contains up to 16 swapblk assignments.
-		 *		     see vm/swap_pager.h
+		 *	swp_blks -   pc-trie of the allocated swap blocks.
+		 *
 		 */
 		struct {
 			void *swp_tmpfs;
-			int swp_bcount;
+			struct pctrie swp_blks;
 		} swp;
 	} un_pager;
 	struct ucred *cred;
 	vm_ooffset_t charge;
+	void *umtx_data;
 };
 
 /*
@@ -182,10 +176,13 @@ struct vm_object {
  */
 #define	OBJ_FICTITIOUS	0x0001		/* (c) contains fictitious pages */
 #define	OBJ_UNMANAGED	0x0002		/* (c) contains unmanaged pages */
-#define OBJ_DEAD	0x0008		/* dead objects (during rundown) */
+#define	OBJ_POPULATE	0x0004		/* pager implements populate() */
+#define	OBJ_DEAD	0x0008		/* dead objects (during rundown) */
 #define	OBJ_NOSPLIT	0x0010		/* dont split this object */
-#define OBJ_PIPWNT	0x0040		/* paging in progress wanted */
-#define OBJ_MIGHTBEDIRTY 0x0100		/* object might be dirty, only for vnode */
+#define	OBJ_UMTXDEAD	0x0020		/* umtx pshared was terminated */
+#define	OBJ_PIPWNT	0x0040		/* paging in progress wanted */
+#define	OBJ_PG_DTOR	0x0080		/* dont reset object, leave that for dtor */
+#define	OBJ_MIGHTBEDIRTY 0x0100		/* object might be dirty, only for vnode */
 #define	OBJ_TMPFS_NODE	0x0200		/* object belongs to tmpfs VREG node */
 #define	OBJ_TMPFS_DIRTY	0x0400		/* dirty tmpfs obj */
 #define	OBJ_COLORED	0x1000		/* pg_color is defined */
@@ -193,14 +190,29 @@ struct vm_object {
 #define	OBJ_DISCONNECTWNT 0x4000	/* disconnect from vnode wanted */
 #define	OBJ_TMPFS	0x8000		/* has tmpfs vnode allocated */
 
+/*
+ * Helpers to perform conversion between vm_object page indexes and offsets.
+ * IDX_TO_OFF() converts an index into an offset.
+ * OFF_TO_IDX() converts an offset into an index.  Since offsets are signed
+ *   by default, the sign propagation in OFF_TO_IDX(), when applied to
+ *   negative offsets, is intentional and returns a vm_object page index
+ *   that cannot be created by a userspace mapping.
+ * UOFF_TO_IDX() treats the offset as an unsigned value and converts it
+ *   into an index accordingly.  Use it only when the full range of offset
+ *   values are allowed.  Currently, this only applies to device mappings.
+ * OBJ_MAX_SIZE specifies the maximum page index corresponding to the
+ *   maximum unsigned offset.
+ */
 #define	IDX_TO_OFF(idx) (((vm_ooffset_t)(idx)) << PAGE_SHIFT)
 #define	OFF_TO_IDX(off) ((vm_pindex_t)(((vm_ooffset_t)(off)) >> PAGE_SHIFT))
+#define	UOFF_TO_IDX(off) (((vm_pindex_t)(off)) >> PAGE_SHIFT)
+#define	OBJ_MAX_SIZE	(UOFF_TO_IDX(UINT64_MAX) + 1)
 
 #ifdef	_KERNEL
 
 #define OBJPC_SYNC	0x1			/* sync I/O */
 #define OBJPC_INVAL	0x2			/* invalidate */
-#define OBJPC_NOSYNC	0x4			/* skip if PG_NOSYNC */
+#define OBJPC_NOSYNC	0x4			/* skip if VPO_NOSYNC */
 
 /*
  * The following options are supported by vm_object_page_remove().
@@ -243,6 +255,8 @@ extern struct vm_object kmem_object_store;
 	rw_try_upgrade(&(object)->lock)
 #define	VM_OBJECT_WLOCK(object)						\
 	rw_wlock(&(object)->lock)
+#define	VM_OBJECT_WOWNED(object)					\
+	rw_wowned(&(object)->lock)
 #define	VM_OBJECT_WUNLOCK(object)					\
 	rw_wunlock(&(object)->lock)
 
@@ -256,6 +270,30 @@ vm_object_set_flag(vm_object_t object, u_short bits)
 	object->flags |= bits;
 }
 
+/*
+ *	Conditionally set the object's color, which (1) enables the allocation
+ *	of physical memory reservations for anonymous objects and larger-than-
+ *	superpage-sized named objects and (2) determines the first page offset
+ *	within the object at which a reservation may be allocated.  In other
+ *	words, the color determines the alignment of the object with respect
+ *	to the largest superpage boundary.  When mapping named objects, like
+ *	files or POSIX shared memory objects, the color should be set to zero
+ *	before a virtual address is selected for the mapping.  In contrast,
+ *	for anonymous objects, the color may be set after the virtual address
+ *	is selected.
+ *
+ *	The object must be locked.
+ */
+static __inline void
+vm_object_color(vm_object_t object, u_short color)
+{
+
+	if ((object->flags & OBJ_COLORED) == 0) {
+		object->pg_color = color;
+		object->flags |= OBJ_COLORED;
+	}
+}
+
 void vm_object_clear_flag(vm_object_t object, u_short bits);
 void vm_object_pip_add(vm_object_t object, short i);
 void vm_object_pip_subtract(vm_object_t object, short i);
@@ -263,12 +301,9 @@ void vm_object_pip_wakeup(vm_object_t object);
 void vm_object_pip_wakeupn(vm_object_t object, short i);
 void vm_object_pip_wait(vm_object_t object, char *waitid);
 
-static __inline boolean_t
-vm_object_cache_is_empty(vm_object_t object)
-{
-
-	return (vm_radix_is_empty(&object->cache));
-}
+void umtx_shm_object_init(vm_object_t object);
+void umtx_shm_object_terminated(vm_object_t object);
+extern int umtx_shm_vnobj_persistent;
 
 vm_object_t vm_object_allocate (objtype_t, vm_pindex_t);
 boolean_t vm_object_coalesce(vm_object_t, vm_ooffset_t, vm_size_t, vm_size_t,
@@ -280,10 +315,10 @@ void vm_object_terminate (vm_object_t);
 void vm_object_set_writeable_dirty (vm_object_t);
 void vm_object_init (void);
 void vm_object_madvise(vm_object_t, vm_pindex_t, vm_pindex_t, int);
-void vm_object_page_cache(vm_object_t object, vm_pindex_t start,
-    vm_pindex_t end);
 boolean_t vm_object_page_clean(vm_object_t object, vm_ooffset_t start,
     vm_ooffset_t end, int flags);
+void vm_object_page_noreuse(vm_object_t object, vm_pindex_t start,
+    vm_pindex_t end);
 void vm_object_page_remove(vm_object_t object, vm_pindex_t start,
     vm_pindex_t end, int options);
 boolean_t vm_object_populate(vm_object_t, vm_pindex_t, vm_pindex_t);

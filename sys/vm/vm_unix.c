@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/vm/vm_unix.c 284665 2015-06-21 06:28:26Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sys/vm/vm_unix.c 341467 2018-12-04 15:04:48Z emaste $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -72,9 +72,7 @@ struct obreak_args {
  */
 /* ARGSUSED */
 int
-sys_obreak(td, uap)
-	struct thread *td;
-	struct obreak_args *uap;
+sys_obreak(struct thread *td, struct obreak_args *uap)
 {
 	struct vmspace *vm = td->td_proc->p_vmspace;
 	vm_map_t map = &vm->vm_map;
@@ -84,11 +82,9 @@ sys_obreak(td, uap)
 	int error = 0;
 	boolean_t do_map_wirefuture;
 
-	PROC_LOCK(td->td_proc);
-	datalim = lim_cur(td->td_proc, RLIMIT_DATA);
-	lmemlim = lim_cur(td->td_proc, RLIMIT_MEMLOCK);
-	vmemlim = lim_cur(td->td_proc, RLIMIT_VMEM);
-	PROC_UNLOCK(td->td_proc);
+	datalim = lim_cur(td, RLIMIT_DATA);
+	lmemlim = lim_cur(td, RLIMIT_MEMLOCK);
+	vmemlim = lim_cur(td, RLIMIT_VMEM);
 
 	do_map_wirefuture = FALSE;
 	new = round_page((vm_offset_t)uap->nsize);
@@ -167,7 +163,7 @@ sys_obreak(td, uap)
 #endif
 		prot = VM_PROT_RW;
 #ifdef COMPAT_FREEBSD32
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 		if (i386_read_exec && SV_PROC_FLAG(td->td_proc, SV_ILP32))
 			prot |= VM_PROT_EXECUTE;
 #endif
@@ -248,9 +244,7 @@ struct ovadvise_args {
  */
 /* ARGSUSED */
 int
-sys_ovadvise(td, uap)
-	struct thread *td;
-	struct ovadvise_args *uap;
+sys_ovadvise(struct thread *td, struct ovadvise_args *uap)
 {
 	/* START_GIANT_OPTIONAL */
 	/* END_GIANT_OPTIONAL */

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vm_extern.h	8.2 (Berkeley) 1/12/94
- * $FreeBSD: stable/10/sys/vm/vm_extern.h 270920 2014-09-01 07:58:15Z kib $
+ * $FreeBSD: stable/11/sys/vm/vm_extern.h 337262 2018-08-03 15:42:39Z markj $
  */
 
 #ifndef _VM_EXTERN_H_
@@ -41,6 +41,8 @@ struct vnode;
 struct vmem;
 
 #ifdef _KERNEL
+struct cdev;
+struct cdevsw;
 
 /* These operate on kernel virtual addresses only. */
 vm_offset_t kva_alloc(vm_size_t);
@@ -64,13 +66,13 @@ int kmem_back(vm_object_t, vm_offset_t, vm_size_t, int);
 void kmem_unback(vm_object_t, vm_offset_t, vm_size_t);
 
 /* Bootstrapping. */
+void kmem_bootstrap_free(vm_offset_t, vm_size_t);
 vm_map_t kmem_suballoc(vm_map_t, vm_offset_t *, vm_offset_t *, vm_size_t,
     boolean_t);
 void kmem_init(vm_offset_t, vm_offset_t);
 void kmem_init_zero_region(void);
 void kmeminit(void);
 
-void swapout_procs(int);
 int kernacc(void *, int, int);
 int useracc(void *, int, int);
 int vm_fault(vm_map_t, vm_offset_t, vm_prot_t, int);
@@ -82,10 +84,18 @@ int vm_fault_hold(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
     int fault_flags, vm_page_t *m_hold);
 int vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
     vm_prot_t prot, vm_page_t *ma, int max_count);
-int vm_forkproc(struct thread *, struct proc *, struct thread *, struct vmspace *, int);
+int vm_forkproc(struct thread *, struct proc *, struct thread *,
+    struct vmspace *, int);
 void vm_waitproc(struct proc *);
-int vm_mmap(vm_map_t, vm_offset_t *, vm_size_t, vm_prot_t, vm_prot_t, int, objtype_t, void *, vm_ooffset_t);
+int vm_mmap(vm_map_t, vm_offset_t *, vm_size_t, vm_prot_t, vm_prot_t, int,
+    objtype_t, void *, vm_ooffset_t);
+int vm_mmap_object(vm_map_t, vm_offset_t *, vm_size_t, vm_prot_t,
+    vm_prot_t, int, vm_object_t, vm_ooffset_t, boolean_t, struct thread *);
 int vm_mmap_to_errno(int rv);
+int vm_mmap_cdev(struct thread *, vm_size_t, vm_prot_t, vm_prot_t *,
+    int *, struct cdev *, struct cdevsw *, vm_ooffset_t *, vm_object_t *);
+int vm_mmap_vnode(struct thread *, vm_size_t, vm_prot_t, vm_prot_t *, int *,
+    struct vnode *, vm_ooffset_t *, vm_object_t *, boolean_t *);
 void vm_set_page_size(void);
 void vm_sync_icache(vm_map_t, vm_offset_t, vm_size_t);
 typedef int (*pmap_pinit_t)(struct pmap *pmap);
@@ -97,6 +107,7 @@ void vmspace_exit(struct thread *);
 struct vmspace *vmspace_acquire_ref(struct proc *);
 void vmspace_free(struct vmspace *);
 void vmspace_exitfree(struct proc *);
+void vmspace_switch_aio(struct vmspace *);
 void vnode_pager_setsize(struct vnode *, vm_ooffset_t);
 int vslock(void *, size_t);
 void vsunlock(void *, size_t);
@@ -104,6 +115,5 @@ struct sf_buf *vm_imgact_map_page(vm_object_t object, vm_ooffset_t offset);
 void vm_imgact_unmap_page(struct sf_buf *sf);
 void vm_thread_dispose(struct thread *td);
 int vm_thread_new(struct thread *td, int pages);
-int vm_mlock(struct proc *, struct ucred *, const void *, size_t);
 #endif				/* _KERNEL */
 #endif				/* !_VM_EXTERN_H_ */

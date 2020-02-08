@@ -56,7 +56,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/vm/vm.h 321717 2017-07-30 10:36:20Z kib $
+ * $FreeBSD: stable/11/sys/vm/vm.h 331921 2018-04-03 09:38:53Z kib $
  */
 
 #ifndef VM_H
@@ -79,7 +79,9 @@ typedef u_char vm_prot_t;	/* protection codes */
 #define	VM_PROT_WRITE		((vm_prot_t) 0x02)
 #define	VM_PROT_EXECUTE		((vm_prot_t) 0x04)
 #define	VM_PROT_COPY		((vm_prot_t) 0x08)	/* copy-on-read */
-#define	VM_PROT_FAULT_LOOKUP	((vm_prot_t) 0x010)
+#define	VM_PROT_PRIV_FLAG	((vm_prot_t) 0x10)
+#define	VM_PROT_FAULT_LOOKUP	VM_PROT_PRIV_FLAG
+#define	VM_PROT_QUICK_NOFAULT	VM_PROT_PRIV_FLAG	/* same to save bits */
 
 #define	VM_PROT_ALL		(VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE)
 #define VM_PROT_RW		(VM_PROT_READ|VM_PROT_WRITE)
@@ -112,8 +114,9 @@ typedef struct vm_object *vm_object_t;
 typedef int boolean_t;
 
 /*
- * The exact set of memory attributes is machine dependent.  However, every
- * machine is required to define VM_MEMATTR_DEFAULT.
+ * The exact set of memory attributes is machine dependent.  However,
+ * every machine is required to define VM_MEMATTR_DEFAULT and
+ * VM_MEMATTR_UNCACHEABLE.
  */
 typedef	char vm_memattr_t;	/* memory attribute codes */
 

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/vm/sg_pager.c 284100 2015-06-06 20:37:40Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/vm/sg_pager.c 331017 2018-03-15 19:08:33Z kevans $");
 
 /*
  * This pager manages OBJT_SG objects.  These objects are backed by
@@ -39,6 +39,8 @@ __FBSDID("$FreeBSD: stable/10/sys/vm/sg_pager.c 284100 2015-06-06 20:37:40Z jhb 
 #include <sys/mutex.h>
 #include <sys/rwlock.h>
 #include <sys/sglist.h>
+#include <sys/vmmeter.h>
+
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_object.h>
@@ -50,7 +52,7 @@ __FBSDID("$FreeBSD: stable/10/sys/vm/sg_pager.c 284100 2015-06-06 20:37:40Z jhb 
 static vm_object_t sg_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
     vm_ooffset_t, struct ucred *);
 static void sg_pager_dealloc(vm_object_t);
-static int sg_pager_getpages(vm_object_t, vm_page_t *, int, int);
+static int sg_pager_getpages(vm_object_t, vm_page_t *, int, int *, int *);
 static void sg_pager_putpages(vm_object_t, vm_page_t *, int, 
 		boolean_t, int *);
 static boolean_t sg_pager_haspage(vm_object_t, vm_pindex_t, int *,
@@ -97,8 +99,9 @@ sg_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 	 * to map beyond that.
 	 */
 	size = round_page(size);
-	pindex = OFF_TO_IDX(foff + size);
-	if (pindex > npages)
+	pindex = UOFF_TO_IDX(foff) + UOFF_TO_IDX(size);
+	if (pindex > npages || pindex < UOFF_TO_IDX(foff) ||
+	    pindex < UOFF_TO_IDX(size))
 		return (NULL);
 
 	/*
@@ -136,7 +139,8 @@ sg_pager_dealloc(vm_object_t object)
 }
 
 static int
-sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
+sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int *rbehind,
+    int *rahead)
 {
 	struct sglist *sg;
 	vm_page_t m_paddr, page;
@@ -146,11 +150,13 @@ sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 	size_t space;
 	int i;
 
+	/* Since our haspage reports zero after/before, the count is 1. */
+	KASSERT(count == 1, ("%s: count %d", __func__, count));
 	VM_OBJECT_ASSERT_WLOCKED(object);
 	sg = object->handle;
 	memattr = object->memattr;
 	VM_OBJECT_WUNLOCK(object);
-	offset = m[reqpage]->pindex;
+	offset = m[0]->pindex;
 
 	/*
 	 * Lookup the physical address of the requested page.  An initial
@@ -179,25 +185,24 @@ sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 	}
 
 	/* Return a fake page for the requested page. */
-	KASSERT(!(m[reqpage]->flags & PG_FICTITIOUS),
+	KASSERT(!(m[0]->flags & PG_FICTITIOUS),
 	    ("backing page for SG is fake"));
 
 	/* Construct a new fake page. */
 	page = vm_page_getfake(paddr, memattr);
 	VM_OBJECT_WLOCK(object);
 	TAILQ_INSERT_TAIL(&object->un_pager.sgp.sgp_pglist, page, plinks.q);
-
-	/* Free the original pages and insert this fake page into the object. */
-	for (i = 0; i < count; i++) {
-		if (i == reqpage &&
-		    vm_page_replace(page, object, offset) != m[i])
-			panic("sg_pager_getpages: invalid place replacement");
-		vm_page_lock(m[i]);
-		vm_page_free(m[i]);
-		vm_page_unlock(m[i]);
-	}
-	m[reqpage] = page;
+	vm_page_replace_checked(page, object, offset, m[0]);
+	vm_page_lock(m[0]);
+	vm_page_free(m[0]);
+	vm_page_unlock(m[0]);
+	m[0] = page;
 	page->valid = VM_PAGE_BITS_ALL;
+
+	if (rbehind)
+		*rbehind = 0;
+	if (rahead)
+		*rahead = 0;
 
 	return (VM_PAGER_OK);
 }

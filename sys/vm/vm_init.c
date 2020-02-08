@@ -64,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/vm/vm_init.c 255426 2013-09-09 18:11:59Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/vm/vm_init.c 338484 2018-09-05 21:28:33Z kib $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD: stable/10/sys/vm/vm_init.c 255426 2013-09-09 18:11:59Z jhb $
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/selinfo.h>
+#include <sys/smp.h>
 #include <sys/pipe.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
@@ -90,11 +91,6 @@ __FBSDID("$FreeBSD: stable/10/sys/vm/vm_init.c 255426 2013-09-09 18:11:59Z jhb $
 #include <vm/vm_extern.h>
 
 long physmem;
-
-static int exec_map_entries = 16;
-TUNABLE_INT("vm.exec_map_entries", &exec_map_entries);
-SYSCTL_INT(_vm, OID_AUTO, exec_map_entries, CTLFLAG_RD, &exec_map_entries, 0,
-    "Maximum number of simultaneous execs");
 
 /*
  * System initialization
@@ -197,8 +193,8 @@ again:
 	 * Discount the physical memory larger than the size of kernel_map
 	 * to avoid eating up all of KVA space.
 	 */
-	physmem_est = lmin(physmem, btoc(kernel_map->max_offset -
-	    kernel_map->min_offset));
+	physmem_est = lmin(physmem, btoc(vm_map_max(kernel_map) -
+	    vm_map_min(kernel_map)));
 
 	v = kern_vfs_bio_buffer_alloc(v, physmem_est);
 
@@ -231,12 +227,15 @@ again:
 
 	/*
 	 * Allocate the buffer arena.
+	 *
+	 * Enable the quantum cache if we have more than 4 cpus.  This
+	 * avoids lock contention at the expense of some fragmentation.
 	 */
 	size = (long)nbuf * BKVASIZE;
 	kmi->buffer_sva = firstaddr;
 	kmi->buffer_eva = kmi->buffer_sva + size;
 	vmem_init(buffer_arena, "buffer arena", kmi->buffer_sva, size,
-	    PAGE_SIZE, 0, 0);
+	    PAGE_SIZE, (mp_ncpus > 4) ? BKVASIZE * 8 : 0, 0);
 	firstaddr += size;
 
 	/*
@@ -259,10 +258,19 @@ again:
 		panic("Clean map calculation incorrect");
 
 	/*
- 	 * Allocate the pageable submaps.
+	 * Allocate the pageable submaps.  We may cache an exec map entry per
+	 * CPU, so we therefore need to reserve space for at least ncpu+1
+	 * entries to avoid deadlock.  The exec map is also used by some image
+	 * activators, so we leave a fixed number of pages for their use.
 	 */
+#ifdef __LP64__
+	exec_map_entries = 8 * mp_ncpus;
+#else
+	exec_map_entries = 2 * mp_ncpus + 4;
+#endif
+	exec_map_entry_size = round_page(PATH_MAX + ARG_MAX);
 	exec_map = kmem_suballoc(kernel_map, &minaddr, &maxaddr,
-	    exec_map_entries * round_page(PATH_MAX + ARG_MAX), FALSE);
+	    exec_map_entries * exec_map_entry_size + 64 * PAGE_SIZE, FALSE);
 	pipe_map = kmem_suballoc(kernel_map, &minaddr, &maxaddr, maxpipekva,
 	    FALSE);
 }

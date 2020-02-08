@@ -73962,6 +73962,8 @@ sys/vm/uma_dbg.h -text
 sys/vm/uma_int.h -text
 sys/vm/vm.h -text
 sys/vm/vm_contig.c -text
+sys/vm/vm_domain.c svneol=native#text/plain
+sys/vm/vm_domain.h svneol=native#text/plain
 sys/vm/vm_extern.h -text
 sys/vm/vm_fault.c -text
 sys/vm/vm_glue.c -text
@@ -73987,6 +73989,8 @@ sys/vm/vm_radix.c svneol=native#text/plain
 sys/vm/vm_radix.h svneol=native#text/plain
 sys/vm/vm_reserv.c -text
 sys/vm/vm_reserv.h -text
+sys/vm/vm_swapout.c svneol=native#text/plain
+sys/vm/vm_swapout_dummy.c svneol=native#text/plain
 sys/vm/vm_unix.c -text
 sys/vm/vm_zeroidle.c -text
 sys/vm/vnode_pager.c -text

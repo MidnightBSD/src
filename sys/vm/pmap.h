@@ -58,7 +58,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/vm/pmap.h 270920 2014-09-01 07:58:15Z kib $
+ * $FreeBSD: stable/11/sys/vm/pmap.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -101,9 +101,21 @@ extern vm_offset_t kernel_vm_end;
 /*
  * Flags for pmap_enter().  The bits in the low-order byte are reserved
  * for the protection code (vm_prot_t) that describes the fault type.
+ * Bits 24 through 31 are reserved for the pmap's internal use.
  */
-#define	PMAP_ENTER_NOSLEEP	0x0100
-#define	PMAP_ENTER_WIRED	0x0200
+#define	PMAP_ENTER_NOSLEEP	0x00000100
+#define	PMAP_ENTER_WIRED	0x00000200
+#define	PMAP_ENTER_RESERVED	0xFF000000
+
+/*
+ * Define the maximum number of machine-dependent reference bits that are
+ * cleared by a call to pmap_ts_referenced().  This limit serves two purposes.
+ * First, it bounds the cost of reference bit maintenance on widely shared
+ * pages.  Second, it prevents numeric overflow during maintenance of a
+ * widely shared page's "act_count" field.  An overflow could result in the
+ * premature deactivation of the page.
+ */
+#define	PMAP_TS_REFERENCED_MAX	5
 
 void		 pmap_activate(struct thread *td);
 void		 pmap_advise(pmap_t pmap, vm_offset_t sva, vm_offset_t eva,
@@ -142,6 +154,8 @@ void		 pmap_pinit0(pmap_t);
 void		 pmap_protect(pmap_t, vm_offset_t, vm_offset_t, vm_prot_t);
 void		 pmap_qenter(vm_offset_t, vm_page_t *, int);
 void		 pmap_qremove(vm_offset_t, int);
+vm_offset_t	 pmap_quick_enter_page(vm_page_t);
+void		 pmap_quick_remove_page(vm_offset_t);
 void		 pmap_release(pmap_t);
 void		 pmap_remove(pmap_t, vm_offset_t, vm_offset_t);
 void		 pmap_remove_all(vm_page_t m);
