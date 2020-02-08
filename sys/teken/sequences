@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/teken/sequences 214817 2010-11-05 00:56:21Z ed $
+# $FreeBSD: stable/11/sys/teken/sequences 214817 2010-11-05 00:56:21Z ed $
 # $MidnightBSD$
 
 # File format is as follows:

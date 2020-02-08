@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/teken/teken_subr_compat.h 214817 2010-11-05 00:56:21Z ed $
+ * $FreeBSD: stable/11/sys/teken/teken_subr_compat.h 330916 2018-03-14 07:47:26Z eadler $
  */
 
 static void
@@ -41,23 +41,16 @@ static void
 teken_subr_cons25_set_adapter_background(teken_t *t, unsigned int c)
 {
 
-	t->t_defattr.ta_bgcolor = cons25_colors[c % 8];
-	t->t_curattr.ta_bgcolor = cons25_colors[c % 8];
+	t->t_defattr.ta_bgcolor = cons25_colors[c % 8] | (c & 8);
+	t->t_curattr.ta_bgcolor = cons25_colors[c % 8] | (c & 8);
 }
 
 static void
 teken_subr_cons25_set_adapter_foreground(teken_t *t, unsigned int c)
 {
 
-	t->t_defattr.ta_fgcolor = cons25_colors[c % 8];
-	t->t_curattr.ta_fgcolor = cons25_colors[c % 8];
-	if (c >= 8) {
-		t->t_defattr.ta_format |= TF_BOLD;
-		t->t_curattr.ta_format |= TF_BOLD;
-	} else {
-		t->t_defattr.ta_format &= ~TF_BOLD;
-		t->t_curattr.ta_format &= ~TF_BOLD;
-	}
+	t->t_defattr.ta_fgcolor = cons25_colors[c % 8] | (c & 8);
+	t->t_curattr.ta_fgcolor = cons25_colors[c % 8] | (c & 8);
 }
 
 static const teken_color_t cons25_revcolors[8] = { 0, 4, 2, 6, 1, 5, 3, 7 };

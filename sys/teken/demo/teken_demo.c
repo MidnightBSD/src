@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/teken/demo/teken_demo.c 262861 2014-03-06 18:30:56Z jhb $
+ * $FreeBSD: stable/11/sys/teken/demo/teken_demo.c 286797 2015-08-15 08:29:13Z ed $
  */
 
 #include <sys/ioctl.h>
@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 #include <ncurses.h>
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <libutil.h>
 #elif defined(__linux__)
 #include <pty.h>
@@ -73,7 +73,7 @@ struct pixel {
 
 #define NCOLS	80
 #define NROWS	24
-struct pixel buffer[NCOLS][NROWS];
+static struct pixel buffer[NCOLS][NROWS];
 
 static int ptfd;
 
