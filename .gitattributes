@@ -73875,6 +73875,8 @@ sys/sys/vnode.h -text
 sys/sys/vtoc.h -text
 sys/sys/wait.h -text
 sys/sys/watchdog.h -text
+sys/sys/zlib.h svneol=native#text/plain
+sys/sys/zutil.h svneol=native#text/plain
 sys/teken/demo/Makefile -text
 sys/teken/demo/teken_demo.c -text
 sys/teken/gensequences -text
