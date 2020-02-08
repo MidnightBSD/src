@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/cpufreq/smist.c 187597 2009-01-22 20:29:07Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/cpufreq/smist.c 297793 2016-04-10 23:07:00Z pfg $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -224,7 +224,7 @@ set_ownership(device_t dev)
 		bus_dma_tag_destroy(tag);
 		device_printf(dev, "can't load mem\n");
 		return (ENXIO);
-	};
+	}
 	DPRINT(dev, "taking ownership over BIOS return %d\n", cb_data.result);
 	bus_dmamap_unload(tag, map);
 	bus_dmamem_free(tag, cb_data.buf, map);

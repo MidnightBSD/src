@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/cpufreq/powernow.c 305615 2016-09-08 15:06:28Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/cpufreq/powernow.c 305614 2016-09-08 15:05:25Z pfg $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

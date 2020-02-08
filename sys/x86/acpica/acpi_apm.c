@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/acpica/acpi_apm.c 228283 2011-12-05 16:08:18Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/acpica/acpi_apm.c 228283 2011-12-05 16:08:18Z ed $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

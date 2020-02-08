@@ -26,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/acpica/madt.c 288461 2015-10-01 20:54:19Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/acpica/madt.c 340016 2018-11-01 18:34:26Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/malloc.h>
 #include <sys/smp.h>
 #include <vm/vm.h>
@@ -39,7 +40,9 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/acpica/madt.c 288461 2015-10-01 20:54:19Z 
 
 #include <x86/apicreg.h>
 #include <machine/intr_machdep.h>
-#include <machine/apicvar.h>
+#include <x86/apicvar.h>
+#include <machine/md_var.h>
+#include <x86/vmware.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/aclocal.h>
@@ -59,7 +62,7 @@ static struct lapic_info {
 	u_int la_acpi_id;
 } lapics[MAX_APIC_ID + 1];
 
-static int madt_found_sci_override;
+int madt_found_sci_override;
 static ACPI_TABLE_MADT *madt;
 static vm_paddr_t madt_physaddr;
 static vm_offset_t madt_length;
@@ -104,7 +107,7 @@ madt_probe(void)
 	madt_physaddr = acpi_find_table(ACPI_SIG_MADT);
 	if (madt_physaddr == 0)
 		return (ENXIO);
-	return (0);
+	return (-50);
 }
 
 /*
@@ -129,8 +132,86 @@ madt_probe_cpus(void)
 static int
 madt_setup_local(void)
 {
+	ACPI_TABLE_DMAR *dmartbl;
+	vm_paddr_t dmartbl_physaddr;
+	const char *reason;
+	char *hw_vendor;
+	u_int p[4];
+	int user_x2apic;
+	bool bios_x2apic;
 
 	madt = pmap_mapbios(madt_physaddr, madt_length);
+	if ((cpu_feature2 & CPUID2_X2APIC) != 0) {
+		reason = NULL;
+
+		/*
+		 * Automatically detect several configurations where
+		 * x2APIC mode is known to cause troubles.  User can
+		 * override the setting with hw.x2apic_enable tunable.
+		 */
+		dmartbl_physaddr = acpi_find_table(ACPI_SIG_DMAR);
+		if (dmartbl_physaddr != 0) {
+			dmartbl = acpi_map_table(dmartbl_physaddr,
+			    ACPI_SIG_DMAR);
+			if ((dmartbl->Flags & ACPI_DMAR_X2APIC_OPT_OUT) != 0)
+				reason = "by DMAR table";
+			acpi_unmap_table(dmartbl);
+		}
+		if (vm_guest == VM_GUEST_VMWARE) {
+			vmware_hvcall(VMW_HVCMD_GETVCPU_INFO, p);
+			if ((p[0] & VMW_VCPUINFO_VCPU_RESERVED) != 0 ||
+			    (p[0] & VMW_VCPUINFO_LEGACY_X2APIC) == 0)
+				reason =
+				    "inside VMWare without intr redirection";
+		} else if (vm_guest == VM_GUEST_XEN) {
+			reason = "due to running under XEN";
+		} else if (vm_guest == VM_GUEST_NO &&
+		    CPUID_TO_FAMILY(cpu_id) == 0x6 &&
+		    CPUID_TO_MODEL(cpu_id) == 0x2a) {
+			hw_vendor = kern_getenv("smbios.planar.maker");
+			/*
+			 * It seems that some Lenovo and ASUS
+			 * SandyBridge-based notebook BIOSes have a
+			 * bug which prevents booting AP in x2APIC
+			 * mode.  Since the only way to detect mobile
+			 * CPU is to check northbridge pci id, which
+			 * cannot be done that early, disable x2APIC
+			 * for all Lenovo and ASUS SandyBridge
+			 * machines.
+			 */
+			if (hw_vendor != NULL) {
+				if (!strcmp(hw_vendor, "LENOVO") ||
+				    !strcmp(hw_vendor,
+				    "ASUSTeK Computer Inc.")) {
+					reason =
+				    "for a suspected SandyBridge BIOS bug";
+				}
+				freeenv(hw_vendor);
+			}
+		}
+		bios_x2apic = lapic_is_x2apic();
+		if (reason != NULL && bios_x2apic) {
+			if (bootverbose)
+				printf("x2APIC should be disabled %s but "
+				    "already enabled by BIOS; enabling.\n",
+				     reason);
+			reason = NULL;
+		}
+		if (reason == NULL)
+			x2apic_mode = 1;
+		else if (bootverbose)
+			printf("x2APIC available but disabled %s\n", reason);
+		user_x2apic = x2apic_mode;
+		TUNABLE_INT_FETCH("hw.x2apic_enable", &user_x2apic);
+		if (user_x2apic != x2apic_mode) {
+			if (bios_x2apic && !user_x2apic)
+				printf("x2APIC disabled by tunable and "
+				    "enabled by BIOS; ignoring tunable.");
+			else
+				x2apic_mode = user_x2apic;
+		}
+	}
+
 	lapic_init(madt->Address);
 	printf("ACPI APIC Table: <%.*s %.*s>\n",
 	    (int)sizeof(madt->Header.OemId), madt->Header.OemId,
@@ -290,10 +371,6 @@ madt_parse_apics(ACPI_SUBTABLE_HEADER *entry, void *arg __unused)
 			    apic->Id);
 		if (ioapics[apic->Id].io_apic != NULL)
 			panic("%s: Double APIC ID %u", __func__, apic->Id);
-		if (apic->GlobalIrqBase >= FIRST_MSI_INT) {
-			printf("MADT: Ignoring bogus I/O APIC ID %u", apic->Id);
-			break;
-		}
 		ioapics[apic->Id].io_apic = ioapic_create(apic->Address,
 		    apic->Id, apic->GlobalIrqBase);
 		ioapics[apic->Id].io_vector = apic->GlobalIrqBase;
@@ -396,6 +473,61 @@ madt_find_interrupt(int intr, void **apic, u_int *pin)
 	return (0);
 }
 
+void
+madt_parse_interrupt_values(void *entry,
+    enum intr_trigger *trig, enum intr_polarity *pol)
+{
+	ACPI_MADT_INTERRUPT_OVERRIDE *intr;
+	char buf[64];
+
+	intr = entry;
+
+	if (bootverbose)
+		printf("MADT: Interrupt override: source %u, irq %u\n",
+		    intr->SourceIrq, intr->GlobalIrq);
+	KASSERT(intr->Bus == 0, ("bus for interrupt overrides must be zero"));
+
+	/*
+	 * Lookup the appropriate trigger and polarity modes for this
+	 * entry.
+	 */
+	*trig = interrupt_trigger(intr->IntiFlags, intr->SourceIrq);
+	*pol = interrupt_polarity(intr->IntiFlags, intr->SourceIrq);
+
+	/*
+	 * If the SCI is identity mapped but has edge trigger and
+	 * active-hi polarity or the force_sci_lo tunable is set,
+	 * force it to use level/lo.
+	 */
+	if (intr->SourceIrq == AcpiGbl_FADT.SciInterrupt) {
+		madt_found_sci_override = 1;
+		if (getenv_string("hw.acpi.sci.trigger", buf, sizeof(buf))) {
+			if (tolower(buf[0]) == 'e')
+				*trig = INTR_TRIGGER_EDGE;
+			else if (tolower(buf[0]) == 'l')
+				*trig = INTR_TRIGGER_LEVEL;
+			else
+				panic(
+				"Invalid trigger %s: must be 'edge' or 'level'",
+				    buf);
+			printf("MADT: Forcing SCI to %s trigger\n",
+			    *trig == INTR_TRIGGER_EDGE ? "edge" : "level");
+		}
+		if (getenv_string("hw.acpi.sci.polarity", buf, sizeof(buf))) {
+			if (tolower(buf[0]) == 'h')
+				*pol = INTR_POLARITY_HIGH;
+			else if (tolower(buf[0]) == 'l')
+				*pol = INTR_POLARITY_LOW;
+			else
+				panic(
+				"Invalid polarity %s: must be 'high' or 'low'",
+				    buf);
+			printf("MADT: Forcing SCI to active %s polarity\n",
+			    *pol == INTR_POLARITY_HIGH ? "high" : "low");
+		}
+	}
+}
+
 /*
  * Parse an interrupt source override for an ISA interrupt.
  */
@@ -406,7 +538,6 @@ madt_parse_interrupt_override(ACPI_MADT_INTERRUPT_OVERRIDE *intr)
 	u_int new_pin, old_pin;
 	enum intr_trigger trig;
 	enum intr_polarity pol;
-	char buf[64];
 
 	if (acpi_quirks & ACPI_Q_MADT_IRQ0 && intr->SourceIrq == 0 &&
 	    intr->GlobalIrq == 2) {
@@ -414,55 +545,14 @@ madt_parse_interrupt_override(ACPI_MADT_INTERRUPT_OVERRIDE *intr)
 			printf("MADT: Skipping timer override\n");
 		return;
 	}
-	if (bootverbose)
-		printf("MADT: Interrupt override: source %u, irq %u\n",
-		    intr->SourceIrq, intr->GlobalIrq);
-	KASSERT(intr->Bus == 0, ("bus for interrupt overrides must be zero"));
+
 	if (madt_find_interrupt(intr->GlobalIrq, &new_ioapic, &new_pin) != 0) {
 		printf("MADT: Could not find APIC for vector %u (IRQ %u)\n",
 		    intr->GlobalIrq, intr->SourceIrq);
 		return;
 	}
 
-	/*
-	 * Lookup the appropriate trigger and polarity modes for this
-	 * entry.
-	 */
-	trig = interrupt_trigger(intr->IntiFlags, intr->SourceIrq);
-	pol = interrupt_polarity(intr->IntiFlags, intr->SourceIrq);
-	
-	/*
-	 * If the SCI is identity mapped but has edge trigger and
-	 * active-hi polarity or the force_sci_lo tunable is set,
-	 * force it to use level/lo.
-	 */
-	if (intr->SourceIrq == AcpiGbl_FADT.SciInterrupt) {
-		madt_found_sci_override = 1;
-		if (getenv_string("hw.acpi.sci.trigger", buf, sizeof(buf))) {
-			if (tolower(buf[0]) == 'e')
-				trig = INTR_TRIGGER_EDGE;
-			else if (tolower(buf[0]) == 'l')
-				trig = INTR_TRIGGER_LEVEL;
-			else
-				panic(
-				"Invalid trigger %s: must be 'edge' or 'level'",
-				    buf);
-			printf("MADT: Forcing SCI to %s trigger\n",
-			    trig == INTR_TRIGGER_EDGE ? "edge" : "level");
-		}
-		if (getenv_string("hw.acpi.sci.polarity", buf, sizeof(buf))) {
-			if (tolower(buf[0]) == 'h')
-				pol = INTR_POLARITY_HIGH;
-			else if (tolower(buf[0]) == 'l')
-				pol = INTR_POLARITY_LOW;
-			else
-				panic(
-				"Invalid polarity %s: must be 'high' or 'low'",
-				    buf);
-			printf("MADT: Forcing SCI to active %s polarity\n",
-			    pol == INTR_POLARITY_HIGH ? "high" : "low");
-		}
-	}
+	madt_parse_interrupt_values(intr, &trig, &pol);
 
 	/* Remap the IRQ if it is mapped to a different interrupt vector. */
 	if (intr->SourceIrq != intr->GlobalIrq) {
@@ -510,7 +600,7 @@ madt_parse_nmi(ACPI_MADT_NMI_SOURCE *nmi)
 	if (!(nmi->IntiFlags & ACPI_MADT_TRIGGER_CONFORMS))
 		ioapic_set_triggermode(ioapic, pin,
 		    interrupt_trigger(nmi->IntiFlags, 0));
-	if (!(nmi->IntiFlags & ACPI_MADT_TRIGGER_CONFORMS))
+	if (!(nmi->IntiFlags & ACPI_MADT_POLARITY_CONFORMS))
 		ioapic_set_polarity(ioapic, pin,
 		    interrupt_polarity(nmi->IntiFlags, 0));
 }
