@@ -25,8 +25,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/tools/fw_stub.awk,v 1.6.2.1 2009/11/02 09:47:41 fjoe Exp $
-# $MidnightBSD: src/sys/tools/fw_stub.awk,v 1.3 2012/01/11 04:11:27 laffer1 Exp $
+# $FreeBSD: stable/11/sys/tools/fw_stub.awk 289399 2015-10-16 00:38:05Z bdrewery $
+# $MidnightBSD$
 
 #
 # Script to generate module .c file from a list of firmware images
@@ -157,7 +157,7 @@ if (opt_l) {
 		printc("\
 		TUNABLE_LONG_FETCH(\"legal." opt_l ".license_ack\", &" opt_l "_license_ack);\
 		if (!" opt_l "_license_ack) {\
-			printf(\"" opt_m ": You need to read the LICENSE file in /usr/share/doc/legal/" opt_l "/.\\n\");\
+			printf(\"" opt_m ": You need to read the LICENSE file in /usr/share/doc/legal/" opt_l ".LICENSE.\\n\");\
 			printf(\"" opt_m ": If you agree with the license, set legal." opt_l ".license_ack=1 in /boot/loader.conf.\\n\");\
 			return(EPERM);\
 		}\n");
