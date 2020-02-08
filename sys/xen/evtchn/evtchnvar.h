@@ -29,7 +29,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/xen/evtchn/evtchnvar.h 255040 2013-08-29 19:52:18Z gibbs $
+ * $FreeBSD: stable/11/sys/xen/evtchn/evtchnvar.h 255040 2013-08-29 19:52:18Z gibbs $
  */
 
 #ifndef __XEN_EVTCHN_EVTCHNVAR_H__
