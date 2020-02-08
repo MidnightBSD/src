@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode.h	8.7 (Berkeley) 2/4/94
- * $FreeBSD: stable/10/sys/sys/vnode.h 301100 2016-06-01 04:07:33Z kib $
+ * $FreeBSD: stable/11/sys/sys/vnode.h 355443 2019-12-06 11:48:22Z kib $
  */
 
 #ifndef _SYS_VNODE_H_
@@ -78,6 +78,7 @@ struct vpollinfo {
  *	c - namecache mutex
  *	f - freelist mutex
  *	i - interlock
+ *	I - updated with atomics, 0->1 and 1->0 transitions with interlock held
  *	m - mount point interlock
  *	p - pollinfo lock
  *	u - Only a reference to the vnode is needed to read.
@@ -163,8 +164,8 @@ struct vnode {
 	daddr_t	v_lastw;			/* v last write  */
 	int	v_clen;				/* v length of cur. cluster */
 
-	int	v_holdcnt;			/* i prevents recycling. */
-	int	v_usecount;			/* i ref count of users */
+	u_int	v_holdcnt;			/* I prevents recycling. */
+	u_int	v_usecount;			/* I ref count of users */
 	u_int	v_iflag;			/* i vnode flags (see below) */
 	u_int	v_vflag;			/* v vnode flags */
 	int	v_writecount;			/* v ref count of writers */
@@ -234,7 +235,6 @@ struct xvnode {
  *	are required for writing but the status may be checked with either.
  */
 #define	VI_MOUNT	0x0020	/* Mount in progress */
-#define	VI_AGE		0x0040	/* Insert vnode at head of free list */
 #define	VI_DOOMED	0x0080	/* This vnode is being recycled */
 #define	VI_FREE		0x0100	/* This vnode is on the freelist */
 #define	VI_ACTIVE	0x0200	/* This vnode is on the active list */
@@ -254,6 +254,7 @@ struct xvnode {
 #define	VV_DELETED	0x0400	/* should be removed */
 #define	VV_MD		0x0800	/* vnode backs the md device */
 #define	VV_FORCEINSMQ	0x1000	/* force the insmntque to succeed */
+#define	VV_READLINK	0x2000	/* fdescfs linux vnode */
 
 /*
  * Vnode attributes.  A field value of VNOVAL represents a field whose value
@@ -303,6 +304,7 @@ struct vattr {
 #define	IO_INVAL	0x0040		/* invalidate after I/O */
 #define	IO_SYNC		0x0080		/* do I/O synchronously */
 #define	IO_DIRECT	0x0100		/* attempt to bypass buffer cache */
+#define	IO_NOREUSE	0x0200		/* VMIO data won't be reused */
 #define	IO_EXT		0x0400		/* operate on external attributes */
 #define	IO_NORMAL	0x0800		/* operate on regular data */
 #define	IO_NOMACCHECK	0x1000		/* MAC checks unnecessary */
@@ -338,6 +340,8 @@ struct vattr {
 #define	VWRITE_ACL	 	000040000000 /* change ACL and/or file mode */
 #define	VWRITE_OWNER	 	000100000000 /* change file owner */
 #define	VSYNCHRONIZE	 	000200000000 /* not used */
+#define	VCREAT			000400000000 /* creating new file */
+#define	VVERIFY			001000000000 /* verification required */
 
 /*
  * Permissions that were traditionally granted only to the file owner.
@@ -372,6 +376,8 @@ struct vattr {
 MALLOC_DECLARE(M_VNODE);
 #endif
 
+extern u_int ncsizefactor;
+
 /*
  * Convert between vnode types and inode formats (since POSIX.1
  * defines mode word of stat structure in terms of inode formats).
@@ -393,6 +399,8 @@ extern int		vttoif_tab[];
 #define	V_ALT		0x0002	/* vinvalbuf: invalidate only alternate bufs */
 #define	V_NORMAL	0x0004	/* vinvalbuf: invalidate only regular bufs */
 #define	V_CLEANONLY	0x0008	/* vinvalbuf: invalidate only clean bufs */
+#define	V_VMIO		0x0010	/* vinvalbuf: called during pageout */
+#define	V_ALLOWCLEAN	0x0020	/* vinvalbuf: allow clean buffers after flush */
 #define	REVOKEALL	0x0001	/* vop_revoke: revoke all aliases */
 #define	V_WAIT		0x0001	/* vn_start_write: sleep for suspend */
 #define	V_NOWAIT	0x0002	/* vn_start_write: don't sleep for suspend */
@@ -420,7 +428,6 @@ extern int		vttoif_tab[];
  */
 extern	struct vnode *rootvnode;	/* root (i.e. "/") vnode */
 extern	struct mount *rootdevmp;	/* "/dev" mount */
-extern	int async_io_version;		/* 0 or POSIX version of AIO i'face */
 extern	int desiredvnodes;		/* number of vnodes desired */
 extern	struct uma_zone *namei_zone;
 extern	struct vattr va_null;		/* predefined null vattr structure */
@@ -508,7 +515,9 @@ extern struct vnodeop_desc *vnodeop_descs[];
  * reliable since if the thread sleeps between changing the lock
  * state and checking it with the assert, some other thread could
  * change the state.  They are good enough for debugging a single
- * filesystem using a single-threaded test.
+ * filesystem using a single-threaded test.  Note that the unreliability is
+ * limited to false negatives; efforts were made to ensure that false
+ * positives cannot occur.
  */
 void	assert_vi_locked(struct vnode *vp, const char *str);
 void	assert_vi_unlocked(struct vnode *vp, const char *str);
@@ -576,12 +585,14 @@ vn_canvmio(struct vnode *vp)
 /*
  * Finally, include the default set of vnode operations.
  */
+typedef void vop_getpages_iodone_t(void *, vm_page_t *, int, int);
 #include "vnode_if.h"
 
 /* vn_open_flags */
 #define	VN_OPEN_NOAUDIT		0x00000001
 #define	VN_OPEN_NOCAPCHECK	0x00000002
 #define	VN_OPEN_NAMECACHE	0x00000004
+#define	VN_OPEN_INVFS		0x00000008
 
 /*
  * Public vnode manipulation functions.
@@ -598,10 +609,13 @@ struct nstat;
 struct ucred;
 struct uio;
 struct vattr;
+struct vfsops;
 struct vnode;
 
 typedef int (*vn_get_ino_t)(struct mount *, void *, int, struct vnode **);
 
+int	bnoreuselist(struct bufv *bufv, struct bufobj *bo, daddr_t startn,
+	    daddr_t endn);
 /* cache_* may belong in namei.h. */
 void	cache_changesize(int newhashsize);
 #define	cache_enter(dvp, vp, cnp)					\
@@ -613,9 +627,8 @@ int	cache_lookup(struct vnode *dvp, struct vnode **vpp,
 	    struct componentname *cnp, struct timespec *tsp, int *ticksp);
 void	cache_purge(struct vnode *vp);
 void	cache_purge_negative(struct vnode *vp);
-void	cache_purgevfs(struct mount *mp);
+void	cache_purgevfs(struct mount *mp, bool force);
 int	change_dir(struct vnode *vp, struct thread *td);
-int	change_root(struct vnode *vp, struct thread *td);
 void	cvtstat(struct stat *st, struct ostat *ost);
 void	cvtnstat(struct stat *sb, struct nstat *nsb);
 int	getnewvnode(const char *tag, struct mount *mp, struct vop_vector *vops,
@@ -651,20 +664,20 @@ int	vaccess_acl_posix1e(enum vtype type, uid_t file_uid,
 	    struct ucred *cred, int *privused);
 void	vattr_null(struct vattr *vap);
 int	vcount(struct vnode *vp);
-void	vdrop(struct vnode *);
-void	vdropl(struct vnode *);
+#define	vdrop(vp)	_vdrop((vp), 0)
+#define	vdropl(vp)	_vdrop((vp), 1)
+void	_vdrop(struct vnode *, bool);
 int	vflush(struct mount *mp, int rootrefs, int flags, struct thread *td);
 int	vget(struct vnode *vp, int lockflag, struct thread *td);
 void	vgone(struct vnode *vp);
-void	vhold(struct vnode *);
-void	vholdl(struct vnode *);
+#define	vhold(vp)	_vhold((vp), 0)
+#define	vholdl(vp)	_vhold((vp), 1)
+void	_vhold(struct vnode *, bool);
 void	vinactive(struct vnode *, struct thread *);
 int	vinvalbuf(struct vnode *vp, int save, int slpflag, int slptimeo);
-int	vtruncbuf(struct vnode *vp, struct ucred *cred, off_t length,
-	    int blksize);
+int	vtruncbuf(struct vnode *vp, off_t length, int blksize);
 void	vunref(struct vnode *);
 void	vn_printf(struct vnode *vp, const char *fmt, ...) __printflike(2,3);
-#define vprint(label, vp) vn_printf((vp), "%s\n", (label))
 int	vrecycle(struct vnode *vp);
 int	vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off,
 	    struct ucred *cred);
@@ -691,7 +704,7 @@ int	vn_rdwr_inchunks(enum uio_rw rw, struct vnode *vp, void *base,
 	    struct ucred *active_cred, struct ucred *file_cred, size_t *aresid,
 	    struct thread *td);
 int	vn_rlimit_fsize(const struct vnode *vn, const struct uio *uio,
-	    const struct thread *td);
+	    struct thread *td);
 int	vn_stat(struct vnode *vp, struct stat *sb, struct ucred *active_cred,
 	    struct ucred *file_cred, struct thread *td);
 int	vn_start_write(struct vnode *vp, struct mount **mpp, int flags);
@@ -730,7 +743,9 @@ void	vfs_timestamp(struct timespec *);
 void	vfs_write_resume(struct mount *mp, int flags);
 int	vfs_write_suspend(struct mount *mp, int flags);
 int	vfs_write_suspend_umnt(struct mount *mp);
+void	vnlru_free(int, struct vfsops *);
 int	vop_stdbmap(struct vop_bmap_args *);
+int	vop_stdfdatasync_buf(struct vop_fdatasync_args *);
 int	vop_stdfsync(struct vop_fsync_args *);
 int	vop_stdgetwritemount(struct vop_getwritemount_args *);
 int	vop_stdgetpages(struct vop_getpages_args *);
@@ -771,8 +786,6 @@ void	vop_close_post(void *a, int rc);
 void	vop_create_post(void *a, int rc);
 void	vop_deleteextattr_post(void *a, int rc);
 void	vop_link_post(void *a, int rc);
-void	vop_lock_pre(void *a);
-void	vop_lock_post(void *a, int rc);
 void	vop_lookup_post(void *a, int rc);
 void	vop_lookup_pre(void *a);
 void	vop_mkdir_post(void *a, int rc);
@@ -787,10 +800,21 @@ void	vop_rename_pre(void *a);
 void	vop_rmdir_post(void *a, int rc);
 void	vop_setattr_post(void *a, int rc);
 void	vop_setextattr_post(void *a, int rc);
-void	vop_strategy_pre(void *a);
 void	vop_symlink_post(void *a, int rc);
+
+#ifdef DEBUG_VFS_LOCKS
+void	vop_strategy_pre(void *a);
+void	vop_lock_pre(void *a);
+void	vop_lock_post(void *a, int rc);
 void	vop_unlock_post(void *a, int rc);
 void	vop_unlock_pre(void *a);
+#else
+#define	vop_strategy_pre(x)	do { } while (0)
+#define	vop_lock_pre(x)		do { } while (0)
+#define	vop_lock_post(x, y)	do { } while (0)
+#define	vop_unlock_post(x, y)	do { } while (0)
+#define	vop_unlock_pre(x)	do { } while (0)
+#endif
 
 void	vop_rename_fail(struct vop_rename_args *ap);
 
@@ -821,6 +845,8 @@ void	vop_rename_fail(struct vop_rename_args *ap);
 void	vput(struct vnode *vp);
 void	vrele(struct vnode *vp);
 void	vref(struct vnode *vp);
+void	vrefl(struct vnode *vp);
+void	vrefact(struct vnode *vp);
 int	vrefcnt(struct vnode *vp);
 void 	v_addpollinfo(struct vnode *vp);
 
