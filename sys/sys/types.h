@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)types.h	8.6 (Berkeley) 2/19/95
- * $FreeBSD: stable/10/sys/sys/types.h 289107 2015-10-10 05:50:42Z kib $
+ * $FreeBSD: stable/11/sys/sys/types.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_TYPES_H_
@@ -175,6 +175,11 @@ typedef	__off_t		off_t;		/* file offset */
 #define	_OFF_T_DECLARED
 #endif
 
+#ifndef _OFF64_T_DECLARED
+typedef	__off64_t	off64_t;	/* file offset (alias) */
+#define	_OFF64_T_DECLARED
+#endif
+
 #ifndef _PID_T_DECLARED
 typedef	__pid_t		pid_t;		/* process id */
 #define	_PID_T_DECLARED
@@ -233,6 +238,11 @@ typedef	__useconds_t	useconds_t;	/* microseconds (unsigned) */
 #define	_USECONDS_T_DECLARED
 #endif
 
+#ifndef _CAP_IOCTL_T_DECLARED
+#define	_CAP_IOCTL_T_DECLARED
+typedef	unsigned long	cap_ioctl_t;
+#endif
+
 #ifndef _CAP_RIGHTS_T_DECLARED
 #define	_CAP_RIGHTS_T_DECLARED
 struct cap_rights;
@@ -241,10 +251,12 @@ typedef	struct cap_rights	cap_rights_t;
 #endif
 
 typedef	__vm_offset_t	vm_offset_t;
-typedef	__vm_ooffset_t	vm_ooffset_t;
+typedef	__int64_t	vm_ooffset_t;
 typedef	__vm_paddr_t	vm_paddr_t;
-typedef	__vm_pindex_t	vm_pindex_t;
+typedef	__uint64_t	vm_pindex_t;
 typedef	__vm_size_t	vm_size_t;
+
+typedef __rman_res_t    rman_res_t;
 
 #ifdef _KERNEL
 typedef	int		boolean_t;

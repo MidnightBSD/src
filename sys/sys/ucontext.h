@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/ucontext.h 278347 2015-02-07 08:47:15Z kib $
+ * $FreeBSD: stable/11/sys/sys/ucontext.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_UCONTEXT_H_
@@ -34,25 +34,9 @@
 
 #include <sys/signal.h>
 #include <machine/ucontext.h>
+#include <sys/_ucontext.h>
 
-typedef struct __ucontext {
-	/*
-	 * Keep the order of the first two fields. Also,
-	 * keep them the first two fields in the structure.
-	 * This way we can have a union with struct
-	 * sigcontext and ucontext_t. This allows us to
-	 * support them both at the same time.
-	 * note: the union is not defined, though.
-	 */
-	sigset_t	uc_sigmask;
-	mcontext_t	uc_mcontext;
-
-	struct __ucontext *uc_link;
-	stack_t		uc_stack;
-	int		uc_flags;
 #define	UCF_SWAPPED	0x00000001	/* Used by swapcontext(3). */
-	int		__spare__[4];
-} ucontext_t;
 
 #if defined(_KERNEL) && defined(COMPAT_FREEBSD4)
 #if defined(__i386__)

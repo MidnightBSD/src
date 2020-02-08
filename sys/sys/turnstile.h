@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/turnstile.h 262192 2014-02-18 20:27:17Z jhb $
+ * $FreeBSD: stable/11/sys/sys/turnstile.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_TURNSTILE_H_
@@ -34,7 +34,7 @@
  * Turnstile interface.  Non-sleepable locks use a turnstile for the
  * queue of threads blocked on them when they are contested.  Each
  * turnstile contains two sub-queues: one for threads waiting for a
- * shared, or eread, lock, and one for threads waiting for an
+ * shared, or read, lock, and one for threads waiting for an
  * exclusive, or write, lock.
  *
  * A thread calls turnstile_chain_lock() to lock the turnstile chain
