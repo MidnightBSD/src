@@ -74110,6 +74110,7 @@ sys/xen/interface/arch-ia64/sioemu.h svneol=native#text/plain
 sys/xen/interface/arch-powerpc.h -text
 sys/xen/interface/arch-x86/cpuid.h -text
 sys/xen/interface/arch-x86/hvm/save.h -text
+sys/xen/interface/arch-x86/pmu.h svneol=native#text/plain
 sys/xen/interface/arch-x86/xen-mca.h -text
 sys/xen/interface/arch-x86/xen-x86_32.h -text
 sys/xen/interface/arch-x86/xen-x86_64.h -text
