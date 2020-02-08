@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/isa/clock.c 254373 2013-08-15 17:21:06Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/isa/clock.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Routines to handle clock hardware.
@@ -66,6 +66,7 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/isa/clock.c 254373 2013-08-15 17:21:06Z br
 #include <machine/intr_machdep.h>
 #include <machine/ppireg.h>
 #include <machine/timerreg.h>
+#include <x86/init.h>
 
 #ifdef PC98
 #include <pc98/pc98/pc98_machdep.h>
@@ -98,7 +99,7 @@ TUNABLE_INT("hw.i8254.freq", &i8254_freq);
 int	i8254_max_count;
 static int i8254_timecounter = 1;
 
-struct mtx clock_lock;
+static	struct mtx clock_lock;
 static	struct intsrc *i8254_intsrc;
 static	uint16_t i8254_lastcount;
 static	uint16_t i8254_offset;
@@ -140,6 +141,15 @@ static	u_char	timer2_state;
 static	unsigned i8254_get_timecount(struct timecounter *tc);
 static	void	set_i8254_freq(int mode, uint32_t period);
 
+void
+clock_init(void)
+{
+	/* Init the clock lock */
+	mtx_init(&clock_lock, "clk", NULL, MTX_SPIN | MTX_NOPROFILE);
+	/* Init the clock in order to use DELAY */
+	init_ops.early_clock_source_init();
+}
+
 static int
 clkintr(void *arg)
 {
@@ -157,7 +167,7 @@ clkintr(void *arg)
 		mtx_unlock_spin(&clock_lock);
 	}
 
-	if (sc && sc->et.et_active && sc->mode != MODE_STOP)
+	if (sc->et.et_active && sc->mode != MODE_STOP)
 		sc->et.et_event_cb(&sc->et, sc->et.et_arg);
 
 #ifdef DEV_MCA
@@ -248,61 +258,13 @@ getit(void)
 	return ((high << 8) | low);
 }
 
-#ifndef DELAYDEBUG
-static u_int
-get_tsc(__unused struct timecounter *tc)
-{
-
-	return (rdtsc32());
-}
-
-static __inline int
-delay_tc(int n)
-{
-	struct timecounter *tc;
-	timecounter_get_t *func;
-	uint64_t end, freq, now;
-	u_int last, mask, u;
-
-	tc = timecounter;
-	freq = atomic_load_acq_64(&tsc_freq);
-	if (tsc_is_invariant && freq != 0) {
-		func = get_tsc;
-		mask = ~0u;
-	} else {
-		if (tc->tc_quality <= 0)
-			return (0);
-		func = tc->tc_get_timecount;
-		mask = tc->tc_counter_mask;
-		freq = tc->tc_frequency;
-	}
-	now = 0;
-	end = freq * n / 1000000;
-	if (func == get_tsc)
-		sched_pin();
-	last = func(tc) & mask;
-	do {
-		cpu_spinwait();
-		u = func(tc) & mask;
-		if (u < last)
-			now += mask - last + u + 1;
-		else
-			now += u - last;
-		last = u;
-	} while (now < end);
-	if (func == get_tsc)
-		sched_unpin();
-	return (1);
-}
-#endif
-
 /*
  * Wait "n" microseconds.
  * Relies on timer 1 counting down from (i8254_freq / hz)
  * Note: timer had better have been programmed before this is first used!
  */
 void
-DELAY(int n)
+i8254_delay(int n)
 {
 	int delta, prev_tick, tick, ticks_left;
 #ifdef DELAYDEBUG
@@ -318,9 +280,6 @@ DELAY(int n)
 	}
 	if (state == 1)
 		printf("DELAY(%d)...", n);
-#else
-	if (delay_tc(n))
-		return;
 #endif
 	/*
 	 * Read the counter first, so that the rest of the setup overhead is
@@ -500,7 +459,6 @@ void
 i8254_init(void)
 {
 
-	mtx_init(&clock_lock, "clk", NULL, MTX_SPIN | MTX_NOPROFILE);
 #ifdef PC98
 	if (pc98_machine_type & M_8M)
 		i8254_freq = 1996800L; /* 1.9968 MHz */
@@ -518,8 +476,27 @@ startrtclock()
 void
 cpu_initclocks(void)
 {
+#ifdef EARLY_AP_STARTUP
+	struct thread *td;
+	int i;
 
+	td = curthread;
 	cpu_initclocks_bsp();
+	CPU_FOREACH(i) {
+		if (i == 0)
+			continue;
+		thread_lock(td);
+		sched_bind(td, i);
+		thread_unlock(td);
+		cpu_initclocks_ap();
+	}
+	thread_lock(td);
+	if (sched_is_bound(td))
+		sched_unbind(td);
+	thread_unlock(td);
+#else
+	cpu_initclocks_bsp();
+#endif
 }
 
 static int
@@ -699,7 +676,7 @@ static int
 attimer_attach(device_t dev)
 {
 	struct attimer_softc *sc;
-	u_long s;
+	rman_res_t s;
 	int i;
 
 	attimer_sc = sc = device_get_softc(dev);

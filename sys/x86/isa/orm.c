@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/isa/orm.c 204309 2010-02-25 14:13:39Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/isa/orm.c 299392 2016-05-10 22:28:06Z bz $");
 
 /*
  * Driver to take care of holes in ISA I/O memory occupied
@@ -59,7 +59,7 @@ static struct isa_pnp_id orm_ids[] = {
 	{ 0,		NULL },
 };
 
-#define MAX_ROMS	16
+#define MAX_ROMS	32
 
 struct orm_softc {
 	int		rnum;
@@ -92,13 +92,16 @@ orm_identify(driver_t* driver, device_t parent)
 	struct orm_softc	*sc;
 	u_int8_t		buf[3];
 
+	if (resource_disabled("orm", 0))
+		return;
+
 	child = BUS_ADD_CHILD(parent, ISA_ORDER_SENSITIVE, "orm", -1);
 	device_set_driver(child, driver);
 	isa_set_logicalid(child, ORM_ID);
 	isa_set_vendorid(child, ORM_ID);
 	sc = device_get_softc(child);
 	sc->rnum = 0;
-	while (chunk < IOMEM_END) {
+	while (sc->rnum < MAX_ROMS && chunk < IOMEM_END) {
 		bus_set_resource(child, SYS_RES_MEMORY, sc->rnum, chunk,
 		    IOMEM_STEP);
 		rid = sc->rnum;

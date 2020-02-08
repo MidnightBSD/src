@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/iommu/intel_utils.c 279470 2015-03-01 04:22:06Z rstone $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_utils.c 327785 2018-01-10 20:39:26Z markj $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -47,7 +47,9 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/iommu/intel_utils.c 279470 2015-03-01 04:2
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/taskqueue.h>
+#include <sys/time.h>
 #include <sys/tree.h>
+#include <sys/vmem.h>
 #include <dev/pci/pcivar.h>
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -58,6 +60,8 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/iommu/intel_utils.c 279470 2015-03-01 04:2
 #include <vm/vm_pageout.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
+#include <machine/intr_machdep.h>
+#include <x86/include/apicvar.h>
 #include <x86/include/busdma_impl.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/busdma_dmar.h>
@@ -98,14 +102,13 @@ static const struct sagaw_bits_tag {
 	{.agaw = 64, .cap = DMAR_CAP_SAGAW_6LVL, .awlvl = DMAR_CTX2_AW_6LVL,
 	    .pglvl = 6}
 };
-#define SIZEOF_SAGAW_BITS (sizeof(sagaw_bits) / sizeof(sagaw_bits[0]))
 
 bool
 dmar_pglvl_supported(struct dmar_unit *unit, int pglvl)
 {
 	int i;
 
-	for (i = 0; i < SIZEOF_SAGAW_BITS; i++) {
+	for (i = 0; i < nitems(sagaw_bits); i++) {
 		if (sagaw_bits[i].pglvl != pglvl)
 			continue;
 		if ((DMAR_CAP_SAGAW(unit->hw_cap) & sagaw_bits[i].cap) != 0)
@@ -115,26 +118,23 @@ dmar_pglvl_supported(struct dmar_unit *unit, int pglvl)
 }
 
 int
-ctx_set_agaw(struct dmar_ctx *ctx, int mgaw)
+domain_set_agaw(struct dmar_domain *domain, int mgaw)
 {
 	int sagaw, i;
 
-	ctx->mgaw = mgaw;
-	sagaw = DMAR_CAP_SAGAW(ctx->dmar->hw_cap);
-	for (i = 0; i < SIZEOF_SAGAW_BITS; i++) {
+	domain->mgaw = mgaw;
+	sagaw = DMAR_CAP_SAGAW(domain->dmar->hw_cap);
+	for (i = 0; i < nitems(sagaw_bits); i++) {
 		if (sagaw_bits[i].agaw >= mgaw) {
-			ctx->agaw = sagaw_bits[i].agaw;
-			ctx->pglvl = sagaw_bits[i].pglvl;
-			ctx->awlvl = sagaw_bits[i].awlvl;
+			domain->agaw = sagaw_bits[i].agaw;
+			domain->pglvl = sagaw_bits[i].pglvl;
+			domain->awlvl = sagaw_bits[i].awlvl;
 			return (0);
 		}
 	}
-	device_printf(ctx->dmar->dev,
-	    "context request mgaw %d for pci%d:%d:%d:%d, "
-	    "no agaw found, sagaw %x\n", mgaw, ctx->dmar->segment, 
-	    pci_get_bus(ctx->ctx_tag.owner),
-	    pci_get_slot(ctx->ctx_tag.owner),
-	    pci_get_function(ctx->ctx_tag.owner), sagaw);
+	device_printf(domain->dmar->dev,
+	    "context request mgaw %d: no agaw found, sagaw %x\n",
+	    mgaw, sagaw);
 	return (EINVAL);
 }
 
@@ -150,18 +150,18 @@ dmar_maxaddr2mgaw(struct dmar_unit *unit, dmar_gaddr_t maxaddr, bool allow_less)
 {
 	int i;
 
-	for (i = 0; i < SIZEOF_SAGAW_BITS; i++) {
+	for (i = 0; i < nitems(sagaw_bits); i++) {
 		if ((1ULL << sagaw_bits[i].agaw) >= maxaddr &&
 		    (DMAR_CAP_SAGAW(unit->hw_cap) & sagaw_bits[i].cap) != 0)
 			break;
 	}
-	if (allow_less && i == SIZEOF_SAGAW_BITS) {
+	if (allow_less && i == nitems(sagaw_bits)) {
 		do {
 			i--;
 		} while ((DMAR_CAP_SAGAW(unit->hw_cap) & sagaw_bits[i].cap)
 		    == 0);
 	}
-	if (i < SIZEOF_SAGAW_BITS)
+	if (i < nitems(sagaw_bits))
 		return (sagaw_bits[i].agaw);
 	KASSERT(0, ("no mgaw for maxaddr %jx allow_less %d",
 	    (uintmax_t) maxaddr, allow_less));
@@ -190,7 +190,7 @@ pglvl_max_pages(int pglvl)
  * the context ctx.
  */
 int
-ctx_is_sp_lvl(struct dmar_ctx *ctx, int lvl)
+domain_is_sp_lvl(struct dmar_domain *domain, int lvl)
 {
 	int alvl, cap_sps;
 	static const int sagaw_sp[] = {
@@ -200,10 +200,9 @@ ctx_is_sp_lvl(struct dmar_ctx *ctx, int lvl)
 		DMAR_CAP_SPS_1T
 	};
 
-	alvl = ctx->pglvl - lvl - 1;
-	cap_sps = DMAR_CAP_SPS(ctx->dmar->hw_cap);
-	return (alvl < sizeof(sagaw_sp) / sizeof(sagaw_sp[0]) &&
-	    (sagaw_sp[alvl] & cap_sps) != 0);
+	alvl = domain->pglvl - lvl - 1;
+	cap_sps = DMAR_CAP_SPS(domain->dmar->hw_cap);
+	return (alvl < nitems(sagaw_sp) && (sagaw_sp[alvl] & cap_sps) != 0);
 }
 
 dmar_gaddr_t
@@ -222,16 +221,15 @@ pglvl_page_size(int total_pglvl, int lvl)
 	KASSERT(lvl >= 0 && lvl < total_pglvl,
 	    ("total %d lvl %d", total_pglvl, lvl));
 	rlvl = total_pglvl - lvl - 1;
-	KASSERT(rlvl < sizeof(pg_sz) / sizeof(pg_sz[0]),
-	    ("sizeof pg_sz lvl %d", lvl));
+	KASSERT(rlvl < nitems(pg_sz), ("sizeof pg_sz lvl %d", lvl));
 	return (pg_sz[rlvl]);
 }
 
 dmar_gaddr_t
-ctx_page_size(struct dmar_ctx *ctx, int lvl)
+domain_page_size(struct dmar_domain *domain, int lvl)
 {
 
-	return (pglvl_page_size(ctx->pglvl, lvl));
+	return (pglvl_page_size(domain->pglvl, lvl));
 }
 
 int
@@ -260,9 +258,12 @@ vm_page_t
 dmar_pgalloc(vm_object_t obj, vm_pindex_t idx, int flags)
 {
 	vm_page_t m;
-	int zeroed;
+	int zeroed, aflags;
 
 	zeroed = (flags & DMAR_PGF_ZERO) != 0 ? VM_ALLOC_ZERO : 0;
+	aflags = zeroed | VM_ALLOC_NOBUSY | VM_ALLOC_SYSTEM | VM_ALLOC_NODUMP |
+	    ((flags & DMAR_PGF_WAITOK) != 0 ? VM_ALLOC_WAITFAIL :
+	    VM_ALLOC_NOWAIT);
 	for (;;) {
 		if ((flags & DMAR_PGF_OBJL) == 0)
 			VM_OBJECT_WLOCK(obj);
@@ -272,8 +273,7 @@ dmar_pgalloc(vm_object_t obj, vm_pindex_t idx, int flags)
 				VM_OBJECT_WUNLOCK(obj);
 			break;
 		}
-		m = vm_page_alloc_contig(obj, idx, VM_ALLOC_NOBUSY |
-		    VM_ALLOC_SYSTEM | VM_ALLOC_NODUMP | zeroed, 1, 0,
+		m = vm_page_alloc_contig(obj, idx, aflags, 1, 0,
 		    dmar_high, PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
 		if ((flags & DMAR_PGF_OBJL) == 0)
 			VM_OBJECT_WUNLOCK(obj);
@@ -285,11 +285,6 @@ dmar_pgalloc(vm_object_t obj, vm_pindex_t idx, int flags)
 		}
 		if ((flags & DMAR_PGF_WAITOK) == 0)
 			break;
-		if ((flags & DMAR_PGF_OBJL) != 0)
-			VM_OBJECT_WUNLOCK(obj);
-		VM_WAIT;
-		if ((flags & DMAR_PGF_OBJL) != 0)
-			VM_OBJECT_WLOCK(obj);
 	}
 	return (m);
 }
@@ -405,6 +400,7 @@ int
 dmar_load_root_entry_ptr(struct dmar_unit *unit)
 {
 	vm_page_t root_entry;
+	int error;
 
 	/*
 	 * Access to the GCMD register must be serialized while the
@@ -417,10 +413,9 @@ dmar_load_root_entry_ptr(struct dmar_unit *unit)
 	VM_OBJECT_RUNLOCK(unit->ctx_obj);
 	dmar_write8(unit, DMAR_RTADDR_REG, VM_PAGE_TO_PHYS(root_entry));
 	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd | DMAR_GCMD_SRTP);
-	/* XXXKIB should have a timeout */
-	while ((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_RTPS) == 0)
-		cpu_spinwait();
-	return (0);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_RTPS)
+	    != 0));
+	return (error);
 }
 
 /*
@@ -430,6 +425,7 @@ dmar_load_root_entry_ptr(struct dmar_unit *unit)
 int
 dmar_inv_ctx_glob(struct dmar_unit *unit)
 {
+	int error;
 
 	/*
 	 * Access to the CCMD register must be serialized while the
@@ -445,10 +441,9 @@ dmar_inv_ctx_glob(struct dmar_unit *unit)
 	 * writes the upper dword last.
 	 */
 	dmar_write8(unit, DMAR_CCMD_REG, DMAR_CCMD_ICC | DMAR_CCMD_CIRG_GLOB);
-	/* XXXKIB should have a timeout */
-	while ((dmar_read4(unit, DMAR_CCMD_REG + 4) & DMAR_CCMD_ICC32) != 0)
-		cpu_spinwait();
-	return (0);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_CCMD_REG + 4) & DMAR_CCMD_ICC32)
+	    == 0));
+	return (error);
 }
 
 /*
@@ -457,7 +452,7 @@ dmar_inv_ctx_glob(struct dmar_unit *unit)
 int
 dmar_inv_iotlb_glob(struct dmar_unit *unit)
 {
-	int reg;
+	int error, reg;
 
 	DMAR_ASSERT_LOCKED(unit);
 	KASSERT(!unit->qi_enabled, ("QI enabled"));
@@ -466,11 +461,9 @@ dmar_inv_iotlb_glob(struct dmar_unit *unit)
 	/* See a comment about DMAR_CCMD_ICC in dmar_inv_ctx_glob. */
 	dmar_write8(unit, reg + DMAR_IOTLB_REG_OFF, DMAR_IOTLB_IVT |
 	    DMAR_IOTLB_IIRG_GLB | DMAR_IOTLB_DR | DMAR_IOTLB_DW);
-	/* XXXKIB should have a timeout */
-	while ((dmar_read4(unit, reg + DMAR_IOTLB_REG_OFF + 4) &
-	    DMAR_IOTLB_IVT32) != 0)
-		cpu_spinwait();
-	return (0);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, reg + DMAR_IOTLB_REG_OFF + 4) &
+	    DMAR_IOTLB_IVT32) == 0));
+	return (error);
 }
 
 /*
@@ -480,6 +473,7 @@ dmar_inv_iotlb_glob(struct dmar_unit *unit)
 int
 dmar_flush_write_bufs(struct dmar_unit *unit)
 {
+	int error;
 
 	DMAR_ASSERT_LOCKED(unit);
 
@@ -490,36 +484,84 @@ dmar_flush_write_bufs(struct dmar_unit *unit)
 	    ("dmar%d: no RWBF", unit->unit));
 
 	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd | DMAR_GCMD_WBF);
-	/* XXXKIB should have a timeout */
-	while ((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_WBFS) == 0)
-		cpu_spinwait();
-	return (0);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_WBFS)
+	    != 0));
+	return (error);
 }
 
 int
 dmar_enable_translation(struct dmar_unit *unit)
 {
+	int error;
 
 	DMAR_ASSERT_LOCKED(unit);
 	unit->hw_gcmd |= DMAR_GCMD_TE;
 	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd);
-	/* XXXKIB should have a timeout */
-	while ((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_TES) == 0)
-		cpu_spinwait();
-	return (0);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_TES)
+	    != 0));
+	return (error);
 }
 
 int
 dmar_disable_translation(struct dmar_unit *unit)
 {
+	int error;
 
 	DMAR_ASSERT_LOCKED(unit);
 	unit->hw_gcmd &= ~DMAR_GCMD_TE;
 	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd);
-	/* XXXKIB should have a timeout */
-	while ((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_TES) != 0)
-		cpu_spinwait();
-	return (0);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_TES)
+	    == 0));
+	return (error);
+}
+
+int
+dmar_load_irt_ptr(struct dmar_unit *unit)
+{
+	uint64_t irta, s;
+	int error;
+
+	DMAR_ASSERT_LOCKED(unit);
+	irta = unit->irt_phys;
+	if (DMAR_X2APIC(unit))
+		irta |= DMAR_IRTA_EIME;
+	s = fls(unit->irte_cnt) - 2;
+	KASSERT(unit->irte_cnt >= 2 && s <= DMAR_IRTA_S_MASK &&
+	    powerof2(unit->irte_cnt),
+	    ("IRTA_REG_S overflow %x", unit->irte_cnt));
+	irta |= s;
+	dmar_write8(unit, DMAR_IRTA_REG, irta);
+	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd | DMAR_GCMD_SIRTP);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_IRTPS)
+	    != 0));
+	return (error);
+}
+
+int
+dmar_enable_ir(struct dmar_unit *unit)
+{
+	int error;
+
+	DMAR_ASSERT_LOCKED(unit);
+	unit->hw_gcmd |= DMAR_GCMD_IRE;
+	unit->hw_gcmd &= ~DMAR_GCMD_CFI;
+	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_IRES)
+	    != 0));
+	return (error);
+}
+
+int
+dmar_disable_ir(struct dmar_unit *unit)
+{
+	int error;
+
+	DMAR_ASSERT_LOCKED(unit);
+	unit->hw_gcmd &= ~DMAR_GCMD_IRE;
+	dmar_write4(unit, DMAR_GCMD_REG, unit->hw_gcmd);
+	DMAR_WAIT_UNTIL(((dmar_read4(unit, DMAR_GSTS_REG) & DMAR_GSTS_IRES)
+	    == 0));
+	return (error);
 }
 
 #define BARRIER_F				\
@@ -573,18 +615,62 @@ dmar_barrier_exit(struct dmar_unit *dmar, u_int barrier_id)
 }
 
 int dmar_match_verbose;
+int dmar_batch_coalesce = 100;
+struct timespec dmar_hw_timeout = {
+	.tv_sec = 0,
+	.tv_nsec = 1000000
+};
 
-static SYSCTL_NODE(_hw, OID_AUTO, dmar, CTLFLAG_RD, NULL,
-    "");
-SYSCTL_INT(_hw_dmar, OID_AUTO, tbl_pagecnt, CTLFLAG_RD | CTLFLAG_TUN,
+static const uint64_t d = 1000000000;
+
+void
+dmar_update_timeout(uint64_t newval)
+{
+
+	/* XXXKIB not atomic */
+	dmar_hw_timeout.tv_sec = newval / d;
+	dmar_hw_timeout.tv_nsec = newval % d;
+}
+
+uint64_t
+dmar_get_timeout(void)
+{
+
+	return ((uint64_t)dmar_hw_timeout.tv_sec * d +
+	    dmar_hw_timeout.tv_nsec);
+}
+
+static int
+dmar_timeout_sysctl(SYSCTL_HANDLER_ARGS)
+{
+	uint64_t val;
+	int error;
+
+	val = dmar_get_timeout();
+	error = sysctl_handle_long(oidp, &val, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	dmar_update_timeout(val);
+	return (error);
+}
+
+static SYSCTL_NODE(_hw, OID_AUTO, dmar, CTLFLAG_RD, NULL, "");
+SYSCTL_INT(_hw_dmar, OID_AUTO, tbl_pagecnt, CTLFLAG_RD,
     &dmar_tbl_pagecnt, 0,
     "Count of pages used for DMAR pagetables");
-SYSCTL_INT(_hw_dmar, OID_AUTO, match_verbose, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_dmar, OID_AUTO, match_verbose, CTLFLAG_RWTUN,
     &dmar_match_verbose, 0,
     "Verbose matching of the PCI devices to DMAR paths");
+SYSCTL_INT(_hw_dmar, OID_AUTO, batch_coalesce, CTLFLAG_RWTUN,
+    &dmar_batch_coalesce, 0,
+    "Number of qi batches between interrupt");
+SYSCTL_PROC(_hw_dmar, OID_AUTO, timeout,
+    CTLTYPE_U64 | CTLFLAG_RW | CTLFLAG_MPSAFE, 0, 0,
+    dmar_timeout_sysctl, "QU",
+    "Timeout for command wait, in nanoseconds");
 #ifdef INVARIANTS
 int dmar_check_free;
-SYSCTL_INT(_hw_dmar, OID_AUTO, check_free, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_dmar, OID_AUTO, check_free, CTLFLAG_RWTUN,
     &dmar_check_free, 0,
     "Check the GPA RBtree for free_down and free_after validity");
 #endif

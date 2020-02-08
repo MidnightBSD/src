@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/x86/identcpu.c 332743 2018-04-19 00:11:02Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/x86/identcpu.c 354658 2019-11-12 19:35:46Z scottl $");
 
 #include "opt_cpu.h"
 
@@ -84,8 +84,45 @@ static void print_svm_info(void);
 static void print_via_padlock_info(void);
 static void print_vmx_info(void);
 
+#ifdef __i386__
+int	cpu;			/* Are we 386, 386sx, 486, etc? */
 int	cpu_class;
+#endif
+u_int	cpu_feature;		/* Feature flags */
+u_int	cpu_feature2;		/* Feature flags */
+u_int	amd_feature;		/* AMD feature flags */
+u_int	amd_feature2;		/* AMD feature flags */
+u_int	amd_pminfo;		/* AMD advanced power management info */
+u_int	amd_extended_feature_extensions;
+u_int	via_feature_rng;	/* VIA RNG features */
+u_int	via_feature_xcrypt;	/* VIA ACE features */
+u_int	cpu_high;		/* Highest arg to CPUID */
+u_int	cpu_exthigh;		/* Highest arg to extended CPUID */
+u_int	cpu_id;			/* Stepping ID */
+u_int	cpu_procinfo;		/* HyperThreading Info / Brand Index / CLFUSH */
+u_int	cpu_procinfo2;		/* Multicore info */
+char	cpu_vendor[20];		/* CPU Origin code */
+u_int	cpu_vendor_id;		/* CPU vendor ID */
+u_int	cpu_fxsr;		/* SSE enabled */
+u_int	cpu_mxcsr_mask;		/* Valid bits in mxcsr */
+u_int	cpu_clflush_line_size = 32;
+u_int	cpu_stdext_feature;	/* %ebx */
+u_int	cpu_stdext_feature2;	/* %ecx */
+u_int	cpu_stdext_feature3;	/* %edx */
+uint64_t cpu_ia32_arch_caps;
+u_int	cpu_max_ext_state_size;
+u_int	cpu_mon_mwait_flags;	/* MONITOR/MWAIT flags (CPUID.05H.ECX) */
+u_int	cpu_mon_min_size;	/* MONITOR minimum range size, bytes */
+u_int	cpu_mon_max_size;	/* MONITOR minimum range size, bytes */
+u_int	cpu_maxphyaddr;		/* Max phys addr width in bits */
 char machine[] = MACHINE;
+
+SYSCTL_UINT(_hw, OID_AUTO, via_feature_rng, CTLFLAG_RD,
+    &via_feature_rng, 0,
+    "VIA RNG feature available in CPU");
+SYSCTL_UINT(_hw, OID_AUTO, via_feature_xcrypt, CTLFLAG_RD,
+    &via_feature_xcrypt, 0,
+    "VIA xcrypt feature available in CPU");
 
 #ifdef __amd64__
 #ifdef SCTL_MASK32
@@ -109,15 +146,15 @@ sysctl_hw_machine(SYSCTL_HANDLER_ARGS)
 	return (error);
 
 }
-SYSCTL_PROC(_hw, HW_MACHINE, machine, CTLTYPE_STRING | CTLFLAG_RD,
-    NULL, 0, sysctl_hw_machine, "A", "Machine class");
+SYSCTL_PROC(_hw, HW_MACHINE, machine, CTLTYPE_STRING | CTLFLAG_RD |
+    CTLFLAG_MPSAFE, NULL, 0, sysctl_hw_machine, "A", "Machine class");
 #else
 SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD,
     machine, 0, "Machine class");
 #endif
 
 static char cpu_model[128];
-SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD,
+SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD | CTLFLAG_MPSAFE,
     cpu_model, 0, "Machine model");
 
 static int hw_clockrate;
@@ -126,8 +163,8 @@ SYSCTL_INT(_hw, OID_AUTO, clockrate, CTLFLAG_RD,
 
 u_int hv_high;
 char hv_vendor[16];
-SYSCTL_STRING(_hw, OID_AUTO, hv_vendor, CTLFLAG_RD, hv_vendor, 0,
-    "Hypervisor vendor");
+SYSCTL_STRING(_hw, OID_AUTO, hv_vendor, CTLFLAG_RD | CTLFLAG_MPSAFE, hv_vendor,
+    0, "Hypervisor vendor");
 
 static eventhandler_tag tsc_post_tag;
 
@@ -147,13 +184,11 @@ static const char *cpu_brandtable[MAX_BRAND_INDEX + 1] = {
 	NULL,
 	"Intel Pentium 4"
 };
-#endif
 
 static struct {
 	char	*cpu_name;
 	int	cpu_class;
 } cpus[] = {
-#ifdef __i386__
 	{ "Intel 80286",	CPUCLASS_286 },		/* CPU_286   */
 	{ "i386SX",		CPUCLASS_386 },		/* CPU_386SX */
 	{ "i386DX",		CPUCLASS_386 },		/* CPU_386   */
@@ -171,11 +206,8 @@ static struct {
 	{ "Pentium II",		CPUCLASS_686 },		/* CPU_PII */
 	{ "Pentium III",	CPUCLASS_686 },		/* CPU_PIII */
 	{ "Pentium 4",		CPUCLASS_686 },		/* CPU_P4 */
-#else
-	{ "Clawhammer",		CPUCLASS_K8 },		/* CPU_CLAWHAMMER */
-	{ "Sledgehammer",	CPUCLASS_K8 },		/* CPU_SLEDGEHAMMER */
-#endif
 };
+#endif
 
 static struct {
 	char	*vendor;
@@ -205,9 +237,13 @@ printcpuinfo(void)
 	u_int regs[4], i;
 	char *brand;
 
-	cpu_class = cpus[cpu].cpu_class;
 	printf("CPU: ");
+#ifdef __i386__
+	cpu_class = cpus[cpu].cpu_class;
 	strncpy(cpu_model, cpus[cpu].cpu_name, sizeof (cpu_model));
+#else
+	strncpy(cpu_model, "Hammer", sizeof (cpu_model));
+#endif
 
 	/* Check for extended CPUID information and a processor name. */
 	if (cpu_exthigh >= 0x80000004) {
@@ -660,8 +696,8 @@ printcpuinfo(void)
 		    (intmax_t)(tsc_freq + 4999) / 1000000,
 		    (u_int)((tsc_freq + 4999) / 10000) % 100);
 	}
-	switch(cpu_class) {
 #ifdef __i386__
+	switch(cpu_class) {
 	case CPUCLASS_286:
 		printf("286");
 		break;
@@ -683,14 +719,12 @@ printcpuinfo(void)
 		printf("686");
 		break;
 #endif
-#else
-	case CPUCLASS_K8:
-		printf("K8");
-		break;
-#endif
 	default:
 		printf("Unknown");	/* will panic below... */
 	}
+#else
+	printf("K8");
+#endif
 	printf("-class CPU)\n");
 	if (*cpu_vendor)
 		printf("  Origin=\"%s\"", cpu_vendor);
@@ -914,18 +948,24 @@ printcpuinfo(void)
 				       "\020PQE"
 				       /* AVX512 Foundation */
 				       "\021AVX512F"
+				       "\022AVX512DQ"
 				       /* Enhanced NRBG */
 				       "\023RDSEED"
 				       /* ADCX + ADOX */
 				       "\024ADX"
 				       /* Supervisor Mode Access Prevention */
 				       "\025SMAP"
+				       "\026AVX512IFMA"
+				       "\027PCOMMIT"
 				       "\030CLFLUSHOPT"
+				       "\031CLWB"
 				       "\032PROCTRACE"
 				       "\033AVX512PF"
 				       "\034AVX512ER"
 				       "\035AVX512CD"
 				       "\036SHA"
+				       "\037AVX512BW"
+				       "\040AVX512VL"
 				       );
 			}
 
@@ -934,11 +974,32 @@ printcpuinfo(void)
 				    cpu_stdext_feature2,
 				       "\020"
 				       "\001PREFETCHWT1"
+				       "\002AVX512VBMI"
 				       "\003UMIP"
 				       "\004PKU"
 				       "\005OSPKE"
+				       "\006WAITPKG"
+				       "\011GFNI"
 				       "\027RDPID"
+				       "\032CLDEMOTE"
+				       "\034MOVDIRI"
+				       "\035MOVDIRI64B"
 				       "\037SGXLC"
+				       );
+			}
+
+			if (cpu_stdext_feature3 != 0) {
+				printf("\n  Structured Extended Features3=0x%b",
+				    cpu_stdext_feature3,
+				       "\020"
+				       "\013MD_CLEAR"
+				       "\016TSXFA"
+				       "\033IBPB"
+				       "\034STIBP"
+				       "\035L1DFL"
+				       "\036ARCH_CAP"
+				       "\037CORE_CAP"
+				       "\040SSBD"
 				       );
 			}
 
@@ -953,6 +1014,31 @@ printcpuinfo(void)
 					    "\003XINUSE"
 					    "\004XSAVES");
 				}
+			}
+
+			if (cpu_ia32_arch_caps != 0) {
+				printf("\n  IA32_ARCH_CAPS=0x%b",
+				    (u_int)cpu_ia32_arch_caps,
+				       "\020"
+				       "\001RDCL_NO"
+				       "\002IBRS_ALL"
+				       "\003RSBA"
+				       "\004SKIP_L1DFL_VME"
+				       "\005SSB_NO"
+				       "\006MDS_NO"
+				       "\010TSX_CTRL"
+				       "\011TAA_NO"
+				       );
+			}
+
+			if (amd_extended_feature_extensions != 0) {
+				printf("\n  "
+				    "AMD Extended Feature Extensions ID EBX="
+				    "0x%b", amd_extended_feature_extensions,
+				    "\020"
+				    "\001CLZERO"
+				    "\002IRPerf"
+				    "\003XSaveErPtr");
 			}
 
 			if (via_feature_rng != 0 || via_feature_xcrypt != 0)
@@ -1008,28 +1094,22 @@ printcpuinfo(void)
 	print_hypervisor_info();
 }
 
+#ifdef __i386__
 void
 panicifcpuunsupported(void)
 {
 
-#ifdef __i386__
 #if !defined(lint)
 #if !defined(I486_CPU) && !defined(I586_CPU) && !defined(I686_CPU)
 #error This kernel is not configured for one of the supported CPUs
 #endif
 #else /* lint */
 #endif /* lint */
-#else /* __amd64__ */
-#ifndef HAMMER
-#error "You need to specify a cpu type"
-#endif
-#endif
 	/*
 	 * Now that we have told the user what they have,
 	 * let them know if that machine type isn't configured.
 	 */
 	switch (cpu_class) {
-#ifdef __i386__
 	case CPUCLASS_286:	/* a 286 should not make it this far, anyway */
 	case CPUCLASS_386:
 #if !defined(I486_CPU)
@@ -1041,19 +1121,12 @@ panicifcpuunsupported(void)
 #if !defined(I686_CPU)
 	case CPUCLASS_686:
 #endif
-#else /* __amd64__ */
-	case CPUCLASS_X86:
-#ifndef HAMMER
-	case CPUCLASS_K8:
-#endif
-#endif
 		panic("CPU class not configured");
 	default:
 		break;
 	}
 }
 
-#ifdef __i386__
 static	volatile u_int trap_by_rdmsr;
 
 /*
@@ -1210,7 +1283,6 @@ hook_tsc_freq(void *arg __unused)
 
 SYSINIT(hook_tsc_freq, SI_SUB_CONFIGURE, SI_ORDER_ANY, hook_tsc_freq, NULL);
 
-#ifndef XEN
 static const char *const vm_bnames[] = {
 	"QEMU",				/* QEMU */
 	"Plex86",			/* Plex86 */
@@ -1270,6 +1342,10 @@ identify_hypervisor(void)
 				vm_guest = VM_GUEST_VMWARE;
 			else if (strcmp(hv_vendor, "Microsoft Hv") == 0)
 				vm_guest = VM_GUEST_HV;
+			else if (strcmp(hv_vendor, "KVMKVMKVM") == 0)
+				vm_guest = VM_GUEST_KVM;
+			else if (strcmp(hv_vendor, "bhyve bhyve") == 0)
+				vm_guest = VM_GUEST_BHYVE;
 		}
 		return;
 	}
@@ -1277,7 +1353,7 @@ identify_hypervisor(void)
 	/*
 	 * Examine SMBIOS strings for older hypervisors.
 	 */
-	p = getenv("smbios.system.serial");
+	p = kern_getenv("smbios.system.serial");
 	if (p != NULL) {
 		if (strncmp(p, "VMware-", 7) == 0 || strncmp(p, "VMW", 3) == 0) {
 			vmware_hvcall(VMW_HVCMD_GETVERSION, regs);
@@ -1294,7 +1370,7 @@ identify_hypervisor(void)
 	 * XXX: Some of these entries may not be needed since they were
 	 * added to FreeBSD before the checks above.
 	 */
-	p = getenv("smbios.bios.vendor");
+	p = kern_getenv("smbios.bios.vendor");
 	if (p != NULL) {
 		for (i = 0; vm_bnames[i] != NULL; i++)
 			if (strcmp(p, vm_bnames[i]) == 0) {
@@ -1304,7 +1380,7 @@ identify_hypervisor(void)
 			}
 		freeenv(p);
 	}
-	p = getenv("smbios.system.product");
+	p = kern_getenv("smbios.system.product");
 	if (p != NULL) {
 		for (i = 0; vm_pnames[i] != NULL; i++)
 			if (strcmp(p, vm_pnames[i]) == 0) {
@@ -1315,7 +1391,6 @@ identify_hypervisor(void)
 		freeenv(p);
 	}
 }
-#endif
 
 bool
 fix_cpuid(void)
@@ -1360,9 +1435,8 @@ fix_cpuid(void)
 	return (false);
 }
 
-#ifdef __amd64__
 void
-identify_cpu(void)
+identify_cpu1(void)
 {
 	u_int regs[4];
 
@@ -1379,7 +1453,33 @@ identify_cpu(void)
 	cpu_feature = regs[3];
 	cpu_feature2 = regs[2];
 }
-#endif
+
+void
+identify_cpu2(void)
+{
+	u_int regs[4], cpu_stdext_disable;
+
+	if (cpu_high >= 7) {
+		cpuid_count(7, 0, regs);
+		cpu_stdext_feature = regs[1];
+
+		/*
+		 * Some hypervisors failed to filter out unsupported
+		 * extended features.  Allow to disable the
+		 * extensions, activation of which requires setting a
+		 * bit in CR4, and which VM monitors do not support.
+		 */
+		cpu_stdext_disable = 0;
+		TUNABLE_INT_FETCH("hw.cpu_stdext_disable", &cpu_stdext_disable);
+		cpu_stdext_feature &= ~cpu_stdext_disable;
+
+		cpu_stdext_feature2 = regs[2];
+		cpu_stdext_feature3 = regs[3];
+
+		if ((cpu_stdext_feature3 & CPUID_STDEXT3_ARCH_CAP) != 0)
+			cpu_ia32_arch_caps = rdmsr(MSR_IA32_ARCH_CAP);
+	}
+}
 
 /*
  * Final stage of CPU identification.
@@ -1387,7 +1487,7 @@ identify_cpu(void)
 void
 finishidentcpu(void)
 {
-	u_int regs[4], cpu_stdext_disable;
+	u_int regs[4];
 #ifdef __i386__
 	u_char ccr3;
 #endif
@@ -1406,25 +1506,7 @@ finishidentcpu(void)
 		cpu_mon_max_size = regs[1] &  CPUID5_MON_MAX_SIZE;
 	}
 
-	if (cpu_high >= 7) {
-		cpuid_count(7, 0, regs);
-		cpu_stdext_feature = regs[1];
-
-		/*
-		 * Some hypervisors fail to filter out unsupported
-		 * extended features.  For now, disable the
-		 * extensions, activation of which requires setting a
-		 * bit in CR4, and which VM monitors do not support.
-		 */
-		if (cpu_feature2 & CPUID2_HV) {
-			cpu_stdext_disable = CPUID_STDEXT_FSGSBASE |
-			    CPUID_STDEXT_SMEP;
-		} else
-			cpu_stdext_disable = 0;
-		TUNABLE_INT_FETCH("hw.cpu_stdext_disable", &cpu_stdext_disable);
-		cpu_stdext_feature &= ~cpu_stdext_disable;
-		cpu_stdext_feature2 = regs[2];
-	}
+	identify_cpu2();
 
 #ifdef __i386__
 	if (cpu_high > 0 &&
@@ -1457,6 +1539,7 @@ finishidentcpu(void)
 	if (cpu_exthigh >= 0x80000008) {
 		do_cpuid(0x80000008, regs);
 		cpu_maxphyaddr = regs[0] & 0xff;
+		amd_extended_feature_extensions = regs[1];
 		cpu_procinfo2 = regs[2];
 	} else {
 		cpu_maxphyaddr = (cpu_feature & CPUID_PAE) != 0 ? 36 : 32;
@@ -1550,10 +1633,18 @@ finishidentcpu(void)
 			return;
 		}
 	}
-#else
-	/* XXX */
-	cpu = CPU_CLAWHAMMER;
 #endif
+}
+
+int
+pti_get_default(void)
+{
+
+	if (strcmp(cpu_vendor, AMD_VENDOR_ID) == 0)
+		return (0);
+	if ((cpu_ia32_arch_caps & IA32_ARCH_CAP_RDCL_NO) != 0)
+		return (0);
+	return (1);
 }
 
 static u_int
@@ -1561,7 +1652,7 @@ find_cpu_vendor_id(void)
 {
 	int	i;
 
-	for (i = 0; i < sizeof(cpu_vendors) / sizeof(cpu_vendors[0]); i++)
+	for (i = 0; i < nitems(cpu_vendors); i++)
 		if (strcmp(cpu_vendor, cpu_vendors[i].vendor) == 0)
 			return (cpu_vendors[i].vendor_id);
 	return (0);

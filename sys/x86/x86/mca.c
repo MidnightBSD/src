@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/x86/mca.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/x86/mca.c 333159 2018-05-02 07:38:38Z kib $");
 
 #ifdef __amd64__
 #define	DEV_APIC
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/x86/mca.c 314667 2017-03-04 13:03:31Z avg 
 #include <sys/systm.h>
 #include <sys/taskqueue.h>
 #include <machine/intr_machdep.h>
-#include <machine/apicvar.h>
+#include <x86/apicvar.h>
 #include <machine/cpu.h>
 #include <machine/cputypes.h>
 #include <x86/mca.h>
@@ -76,6 +76,11 @@ struct cmc_state {
 	int	max_threshold;
 	time_t	last_intr;
 };
+
+struct amd_et_state {
+	int	cur_threshold;
+	time_t	last_intr;
+};
 #endif
 
 struct mca_internal {
@@ -93,22 +98,20 @@ static SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RD, NULL,
     "Machine Check Architecture");
 
 static int mca_enabled = 1;
-TUNABLE_INT("hw.mca.enabled", &mca_enabled);
 SYSCTL_INT(_hw_mca, OID_AUTO, enabled, CTLFLAG_RDTUN, &mca_enabled, 0,
     "Administrative toggle for machine check support");
 
 static int amd10h_L1TP = 1;
-TUNABLE_INT("hw.mca.amd10h_L1TP", &amd10h_L1TP);
 SYSCTL_INT(_hw_mca, OID_AUTO, amd10h_L1TP, CTLFLAG_RDTUN, &amd10h_L1TP, 0,
     "Administrative toggle for logging of level one TLB parity (L1TP) errors");
 
 static int intel6h_HSD131;
-TUNABLE_INT("hw.mca.intel6h_hsd131", &intel6h_HSD131);
 SYSCTL_INT(_hw_mca, OID_AUTO, intel6h_HSD131, CTLFLAG_RDTUN, &intel6h_HSD131, 0,
     "Administrative toggle for logging of spurious corrected errors");
 
 int workaround_erratum383;
-SYSCTL_INT(_hw_mca, OID_AUTO, erratum383, CTLFLAG_RD, &workaround_erratum383, 0,
+SYSCTL_INT(_hw_mca, OID_AUTO, erratum383, CTLFLAG_RDTUN,
+    &workaround_erratum383, 0,
     "Is the workaround for Erratum 383 on AMD Family 10h processors enabled?");
 
 static STAILQ_HEAD(, mca_internal) mca_freelist;
@@ -121,8 +124,18 @@ static struct task mca_refill_task, mca_scan_task;
 static struct mtx mca_lock;
 
 #ifdef DEV_APIC
-static struct cmc_state **cmc_state;	/* Indexed by cpuid, bank */
+static struct cmc_state **cmc_state;		/* Indexed by cpuid, bank. */
+static struct amd_et_state *amd_et_state;	/* Indexed by cpuid. */
 static int cmc_throttle = 60;	/* Time in seconds to throttle CMCI. */
+
+static int amd_elvt = -1;
+
+static inline bool
+amd_thresholding_supported(void)
+{
+	return (cpu_vendor_id == CPU_VENDOR_AMD &&
+	    CPUID_TO_FAMILY(cpu_id) >= 0x10 && CPUID_TO_FAMILY(cpu_id) <= 0x16);
+}
 #endif
 
 static int
@@ -511,8 +524,8 @@ mca_record_entry(enum scan_mode mode, const struct mca_record *record)
 	STAILQ_INSERT_TAIL(&mca_records, rec, link);
 	mca_count++;
 	mtx_unlock_spin(&mca_lock);
-	if (mode == CMCI)
-		taskqueue_enqueue_fast(mca_tq, &mca_refill_task);
+	if (mode == CMCI && !cold)
+		taskqueue_enqueue(mca_tq, &mca_refill_task);
 }
 
 #ifdef DEV_APIC
@@ -524,19 +537,15 @@ mca_record_entry(enum scan_mode mode, const struct mca_record *record)
  * cmc_throttle seconds or the periodic scan.  If a periodic scan
  * finds that the threshold is too high, it is lowered.
  */
-static void
-cmci_update(enum scan_mode mode, int bank, int valid, struct mca_record *rec)
+static int
+update_threshold(enum scan_mode mode, int valid, int last_intr, int count,
+    int cur_threshold, int max_threshold)
 {
-	struct cmc_state *cc;
-	uint64_t ctl;
 	u_int delta;
-	int count, limit;
+	int limit;
 
-	/* Fetch the current limit for this bank. */
-	cc = &cmc_state[PCPU_GET(cpuid)][bank];
-	ctl = rdmsr(MSR_MC_CTL2(bank));
-	count = (rec->mr_status & MC_STATUS_COR_COUNT) >> 38;
-	delta = (u_int)(time_uptime - cc->last_intr);
+	delta = (u_int)(time_uptime - last_intr);
+	limit = cur_threshold;
 
 	/*
 	 * If an interrupt was received less than cmc_throttle seconds
@@ -545,16 +554,11 @@ cmci_update(enum scan_mode mode, int bank, int valid, struct mca_record *rec)
 	 * double the threshold up to the max.
 	 */
 	if (mode == CMCI && valid) {
-		limit = ctl & MC_CTL2_THRESHOLD;
 		if (delta < cmc_throttle && count >= limit &&
-		    limit < cc->max_threshold) {
-			limit = min(limit << 1, cc->max_threshold);
-			ctl &= ~MC_CTL2_THRESHOLD;
-			ctl |= limit;
-			wrmsr(MSR_MC_CTL2(bank), ctl);
+		    limit < max_threshold) {
+			limit = min(limit << 1, max_threshold);
 		}
-		cc->last_intr = time_uptime;
-		return;
+		return (limit);
 	}
 
 	/*
@@ -562,30 +566,80 @@ cmci_update(enum scan_mode mode, int bank, int valid, struct mca_record *rec)
 	 * should be lowered.
 	 */
 	if (mode != POLLED)
-		return;
+		return (limit);
 
 	/* If a CMCI occured recently, do nothing for now. */
 	if (delta < cmc_throttle)
-		return;
+		return (limit);
 
 	/*
 	 * Compute a new limit based on the average rate of events per
 	 * cmc_throttle seconds since the last interrupt.
 	 */
 	if (valid) {
-		count = (rec->mr_status & MC_STATUS_COR_COUNT) >> 38;
 		limit = count * cmc_throttle / delta;
 		if (limit <= 0)
 			limit = 1;
-		else if (limit > cc->max_threshold)
-			limit = cc->max_threshold;
-	} else
+		else if (limit > max_threshold)
+			limit = max_threshold;
+	} else {
 		limit = 1;
-	if ((ctl & MC_CTL2_THRESHOLD) != limit) {
+	}
+	return (limit);
+}
+
+static void
+cmci_update(enum scan_mode mode, int bank, int valid, struct mca_record *rec)
+{
+	struct cmc_state *cc;
+	uint64_t ctl;
+	int cur_threshold, new_threshold;
+	int count;
+
+	/* Fetch the current limit for this bank. */
+	cc = &cmc_state[PCPU_GET(cpuid)][bank];
+	ctl = rdmsr(MSR_MC_CTL2(bank));
+	count = (rec->mr_status & MC_STATUS_COR_COUNT) >> 38;
+	cur_threshold = ctl & MC_CTL2_THRESHOLD;
+
+	new_threshold = update_threshold(mode, valid, cc->last_intr, count,
+	    cur_threshold, cc->max_threshold);
+
+	if (mode == CMCI && valid)
+		cc->last_intr = time_uptime;
+	if (new_threshold != cur_threshold) {
 		ctl &= ~MC_CTL2_THRESHOLD;
-		ctl |= limit;
+		ctl |= new_threshold;
 		wrmsr(MSR_MC_CTL2(bank), ctl);
 	}
+}
+
+static void
+amd_thresholding_update(enum scan_mode mode, int bank, int valid)
+{
+	struct amd_et_state *cc;
+	uint64_t misc;
+	int new_threshold;
+	int count;
+
+	KASSERT(bank == MC_AMDNB_BANK,
+	    ("%s: unexpected bank %d", __func__, bank));
+	cc = &amd_et_state[PCPU_GET(cpuid)];
+	misc = rdmsr(MSR_MC_MISC(bank));
+	count = (misc & MC_MISC_AMDNB_CNT_MASK) >> MC_MISC_AMDNB_CNT_SHIFT;
+	count = count - (MC_MISC_AMDNB_CNT_MAX - cc->cur_threshold);
+
+	new_threshold = update_threshold(mode, valid, cc->last_intr, count,
+	    cc->cur_threshold, MC_MISC_AMDNB_CNT_MAX);
+
+	cc->cur_threshold = new_threshold;
+	misc &= ~MC_MISC_AMDNB_CNT_MASK;
+	misc |= (uint64_t)(MC_MISC_AMDNB_CNT_MAX - cc->cur_threshold)
+	    << MC_MISC_AMDNB_CNT_SHIFT;
+	misc &= ~MC_MISC_AMDNB_OVERFLOW;
+	wrmsr(MSR_MC_MISC(bank), misc);
+	if (mode == CMCI && valid)
+		cc->last_intr = time_uptime;
 }
 #endif
 
@@ -600,7 +654,7 @@ cmci_update(enum scan_mode mode, int bank, int valid, struct mca_record *rec)
  * count of the number of valid MC records found.
  */
 static int
-mca_scan(enum scan_mode mode)
+mca_scan(enum scan_mode mode, int *recoverablep)
 {
 	struct mca_record rec;
 	uint64_t mcg_cap, ucmask;
@@ -641,13 +695,19 @@ mca_scan(enum scan_mode mode)
 		 * If this is a bank this CPU monitors via CMCI,
 		 * update the threshold.
 		 */
-		if (PCPU_GET(cmci_mask) & 1 << i)
-			cmci_update(mode, i, valid, &rec);
+		if (PCPU_GET(cmci_mask) & 1 << i) {
+			if (cmc_state != NULL)
+				cmci_update(mode, i, valid, &rec);
+			else
+				amd_thresholding_update(mode, i, valid);
+		}
 #endif
 	}
 	if (mode == POLLED)
 		mca_fill_freelist();
-	return (mode == MCE ? recoverable : count);
+	if (recoverablep != NULL)
+		*recoverablep = recoverable;
+	return (count);
 }
 
 /*
@@ -669,7 +729,7 @@ mca_scan_cpus(void *context, int pending)
 	CPU_FOREACH(cpu) {
 		sched_bind(td, cpu);
 		thread_unlock(td);
-		count += mca_scan(POLLED);
+		count += mca_scan(POLLED, NULL);
 		thread_lock(td);
 		sched_unbind(td);
 	}
@@ -690,7 +750,7 @@ static void
 mca_periodic_scan(void *arg)
 {
 
-	taskqueue_enqueue_fast(mca_tq, &mca_scan_task);
+	taskqueue_enqueue(mca_tq, &mca_scan_task);
 	callout_reset(&mca_timer, mca_ticks * hz, mca_periodic_scan, NULL);
 }
 
@@ -704,7 +764,7 @@ sysctl_mca_scan(SYSCTL_HANDLER_ARGS)
 	if (error)
 		return (error);
 	if (i)
-		taskqueue_enqueue_fast(mca_tq, &mca_scan_task);
+		taskqueue_enqueue(mca_tq, &mca_scan_task);
 	return (0);
 }
 
@@ -717,6 +777,9 @@ mca_createtq(void *dummy)
 	mca_tq = taskqueue_create_fast("mca", M_WAITOK,
 	    taskqueue_thread_enqueue, &mca_tq);
 	taskqueue_start_threads(&mca_tq, 1, PI_SWI(SWI_TQ), "mca taskq");
+
+	/* CMCIs during boot may have claimed items from the freelist. */
+	mca_fill_freelist();
 }
 SYSINIT(mca_createtq, SI_SUB_CONFIGURE, SI_ORDER_ANY, mca_createtq, NULL);
 
@@ -729,7 +792,11 @@ mca_startup(void *dummy)
 
 	callout_reset(&mca_timer, mca_ticks * hz, mca_periodic_scan, NULL);
 }
+#ifdef EARLY_AP_STARTUP
+SYSINIT(mca_startup, SI_SUB_KICK_SCHEDULER, SI_ORDER_ANY, mca_startup, NULL);
+#else
 SYSINIT(mca_startup, SI_SUB_SMP, SI_ORDER_ANY, mca_startup, NULL);
+#endif
 
 #ifdef DEV_APIC
 static void
@@ -742,6 +809,18 @@ cmci_setup(void)
 	for (i = 0; i <= mp_maxid; i++)
 		cmc_state[i] = malloc(sizeof(struct cmc_state) * mca_banks,
 		    M_MCA, M_WAITOK | M_ZERO);
+	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
+	    "cmc_throttle", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    &cmc_throttle, 0, sysctl_positive_int, "I",
+	    "Interval in seconds to throttle corrected MC interrupts");
+}
+
+static void
+amd_thresholding_setup(void)
+{
+
+	amd_et_state = malloc((mp_maxid + 1) * sizeof(struct amd_et_state),
+	    M_MCA, M_WAITOK | M_ZERO);
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
 	    "cmc_throttle", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
 	    &cmc_throttle, 0, sysctl_positive_int, "I",
@@ -785,6 +864,8 @@ mca_setup(uint64_t mcg_cap)
 #ifdef DEV_APIC
 	if (mcg_cap & MCG_CAP_CMCI_P)
 		cmci_setup();
+	else if (amd_thresholding_supported())
+		amd_thresholding_setup();
 #endif
 }
 
@@ -859,6 +940,82 @@ cmci_resume(int i)
 	ctl |= MC_CTL2_CMCI_EN | 1;
 	wrmsr(MSR_MC_CTL2(i), ctl);
 }
+
+static void
+amd_thresholding_start(struct amd_et_state *cc)
+{
+	uint64_t misc;
+
+	KASSERT(amd_elvt >= 0, ("ELVT offset is not set"));
+	misc = rdmsr(MSR_MC_MISC(MC_AMDNB_BANK));
+	misc &= ~MC_MISC_AMDNB_INT_MASK;
+	misc |= MC_MISC_AMDNB_INT_LVT;
+	misc &= ~MC_MISC_AMDNB_LVT_MASK;
+	misc |= (uint64_t)amd_elvt << MC_MISC_AMDNB_LVT_SHIFT;
+	misc &= ~MC_MISC_AMDNB_CNT_MASK;
+	misc |= (uint64_t)(MC_MISC_AMDNB_CNT_MAX - cc->cur_threshold)
+	    << MC_MISC_AMDNB_CNT_SHIFT;
+	misc &= ~MC_MISC_AMDNB_OVERFLOW;
+	misc |= MC_MISC_AMDNB_CNTEN;
+
+	wrmsr(MSR_MC_MISC(MC_AMDNB_BANK), misc);
+}
+
+static void
+amd_thresholding_init(void)
+{
+	struct amd_et_state *cc;
+	uint64_t misc;
+
+	/* The counter must be valid and present. */
+	misc = rdmsr(MSR_MC_MISC(MC_AMDNB_BANK));
+	if ((misc & (MC_MISC_AMDNB_VAL | MC_MISC_AMDNB_CNTP)) !=
+	    (MC_MISC_AMDNB_VAL | MC_MISC_AMDNB_CNTP))
+		return;
+
+	/* The register should not be locked. */
+	if ((misc & MC_MISC_AMDNB_LOCK) != 0)
+		return;
+
+	/*
+	 * If counter is enabled then either the firmware or another CPU
+	 * has already claimed it.
+	 */
+	if ((misc & MC_MISC_AMDNB_CNTEN) != 0)
+		return;
+
+	/*
+	 * Configure an Extended Interrupt LVT register for reporting
+	 * counter overflows if that feature is supported and the first
+	 * extended register is available.
+	 */
+	amd_elvt = lapic_enable_mca_elvt();
+	if (amd_elvt < 0)
+		return;
+
+	/* Re-use Intel CMC support infrastructure. */
+	cc = &amd_et_state[PCPU_GET(cpuid)];
+	cc->cur_threshold = 1;
+	amd_thresholding_start(cc);
+
+	/* Mark the NB bank as monitored. */
+	PCPU_SET(cmci_mask, PCPU_GET(cmci_mask) | 1 << MC_AMDNB_BANK);
+}
+
+static void
+amd_thresholding_resume(void)
+{
+	struct amd_et_state *cc;
+
+	/* Nothing to do if this CPU doesn't monitor the NB bank. */
+	if ((PCPU_GET(cmci_mask) & 1 << MC_AMDNB_BANK) == 0)
+		return;
+
+	cc = &amd_et_state[PCPU_GET(cpuid)];
+	cc->last_intr = 0;
+	cc->cur_threshold = 1;
+	amd_thresholding_start(cc);
+}
 #endif
 
 /*
@@ -884,7 +1041,7 @@ _mca_init(int boot)
 		if (mcg_cap & MCG_CAP_CTL_P)
 			/* Enable MCA features. */
 			wrmsr(MSR_MCG_CTL, MCG_CTL_ENABLE);
-		if (PCPU_GET(cpuid) == 0 && boot)
+		if (IS_BSP() && boot)
 			mca_setup(mcg_cap);
 
 		/*
@@ -900,6 +1057,14 @@ _mca_init(int boot)
 			if ((mask & (1UL << 5)) == 0)
 				wrmsr(MSR_MC0_CTL_MASK, mask | (1UL << 5));
 		}
+
+		/*
+		 * The cmci_monitor() must not be executed
+		 * simultaneously by several CPUs.
+		 */
+		if (boot)
+			mtx_lock_spin(&mca_lock);
+
 		for (i = 0; i < (mcg_cap & MCG_CAP_COUNT); i++) {
 			/* By default enable logging of all errors. */
 			ctl = 0xffffffffffffffffUL;
@@ -934,10 +1099,30 @@ _mca_init(int boot)
 			/* Clear all errors. */
 			wrmsr(MSR_MC_STATUS(i), 0);
 		}
+		if (boot)
+			mtx_unlock_spin(&mca_lock);
 
 #ifdef DEV_APIC
-		if (PCPU_GET(cmci_mask) != 0 && boot)
+		/*
+		 * AMD Processors from families 10h - 16h provide support
+		 * for Machine Check Error Thresholding.
+		 * The processors support counters of MC errors and they
+		 * can be configured to generate an interrupt when a counter
+		 * overflows.
+		 * The counters are all associated with Bank 4 and each
+		 * of them covers a group of errors reported via that bank.
+		 * At the moment only the DRAM Error Threshold Group is
+		 * supported.
+		 */
+		if (amd_thresholding_supported() &&
+		    (mcg_cap & MCG_CAP_COUNT) >= 4) {
+			if (boot)
+				amd_thresholding_init();
+			else
+				amd_thresholding_resume();
+		} else if (PCPU_GET(cmci_mask) != 0 && boot) {
 			lapic_enable_cmc();
+		}
 #endif
 	}
 
@@ -978,7 +1163,7 @@ void
 mca_intr(void)
 {
 	uint64_t mcg_status;
-	int old_count, recoverable;
+	int recoverable, count;
 
 	if (!(cpu_feature & CPUID_MCA)) {
 		/*
@@ -992,20 +1177,18 @@ mca_intr(void)
 	}
 
 	/* Scan the banks and check for any non-recoverable errors. */
-	old_count = mca_count;
-	recoverable = mca_scan(MCE);
+	count = mca_scan(MCE, &recoverable);
 	mcg_status = rdmsr(MSR_MCG_STATUS);
 	if (!(mcg_status & MCG_STATUS_RIPV))
 		recoverable = 0;
 
 	if (!recoverable) {
 		/*
-		 * Wait for at least one error to be logged before
-		 * panic'ing.  Some errors will assert a machine check
-		 * on all CPUs, but only certain CPUs will find a valid
-		 * bank to log.
+		 * Only panic if the error was detected local to this CPU.
+		 * Some errors will assert a machine check on all CPUs, but
+		 * only certain CPUs will find a valid bank to log.
 		 */
-		while (mca_count == old_count)
+		while (count == 0)
 			cpu_spinwait();
 
 		panic("Unrecoverable machine check exception");
@@ -1027,7 +1210,7 @@ cmc_intr(void)
 	 * Serialize MCA bank scanning to prevent collisions from
 	 * sibling threads.
 	 */
-	count = mca_scan(CMCI);
+	count = mca_scan(CMCI, NULL);
 
 	/* If we found anything, log them to the console. */
 	if (count != 0) {

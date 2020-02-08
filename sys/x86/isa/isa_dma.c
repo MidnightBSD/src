@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/isa/isa_dma.c 233675 2012-03-29 18:58:02Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/isa/isa_dma.c 332304 2018-04-08 20:52:09Z emaste $");
 
 /*
  * code to manage AT bus
@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/isa/isa_dma.c 233675 2012-03-29 18:58:02Z 
 #include <isa/isavar.h>
 #include <isa/isa_dmareg.h>
 
-#define	ISARAM_END	RAM_END
+#define	ISARAM_END	0x1000000
 
 static int isa_dmarangecheck(caddr_t va, u_int length, int chan);
 
@@ -145,8 +145,7 @@ isa_dma_init(int chan, u_int bouncebufsize, int flag)
  * in open() or during its initialization.
  */
 int
-isa_dma_acquire(chan)
-	int chan;
+isa_dma_acquire(int chan)
 {
 #ifdef DIAGNOSTIC
 	if (chan & ~VALID_DMA_MASK)
@@ -171,8 +170,7 @@ isa_dma_acquire(chan)
  * during close() or during its shutdown.
  */
 void
-isa_dma_release(chan)
-	int chan;
+isa_dma_release(int chan)
 {
 #ifdef DIAGNOSTIC
 	if (chan & ~VALID_DMA_MASK)
@@ -206,8 +204,7 @@ isa_dma_release(chan)
  * external dma control by a board.
  */
 void
-isa_dmacascade(chan)
-	int chan;
+isa_dmacascade(int chan)
 {
 #ifdef DIAGNOSTIC
 	if (chan & ~VALID_DMA_MASK)

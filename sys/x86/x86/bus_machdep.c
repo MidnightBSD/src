@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/x86/bus_machdep.c 287126 2015-08-25 14:39:40Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/x86/bus_machdep.c 286667 2015-08-12 15:26:32Z marcel $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/iommu/intel_fault.c 279485 2015-03-01 10:35:54Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_fault.c 309882 2016-12-12 09:43:48Z kib $");
 
 #include "opt_acpi.h"
 
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/iommu/intel_fault.c 279485 2015-03-01 10:3
 #include <sys/rman.h>
 #include <sys/taskqueue.h>
 #include <sys/tree.h>
+#include <sys/vmem.h>
 #include <machine/bus.h>
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
@@ -179,7 +180,7 @@ done:
 	}
 
 	if (enqueue) {
-		taskqueue_enqueue_fast(unit->fault_taskqueue,
+		taskqueue_enqueue(unit->fault_taskqueue,
 		    &unit->fault_task);
 	}
 	return (FILTER_HANDLED);
@@ -271,7 +272,7 @@ dmar_init_fault_log(struct dmar_unit *unit)
 	    M_DEVBUF, M_WAITOK | M_ZERO);
 
 	TASK_INIT(&unit->fault_task, 0, dmar_fault_task, unit);
-	unit->fault_taskqueue = taskqueue_create_fast("dmar", M_WAITOK,
+	unit->fault_taskqueue = taskqueue_create_fast("dmarff", M_WAITOK,
 	    taskqueue_thread_enqueue, &unit->fault_taskqueue);
 	taskqueue_start_threads(&unit->fault_taskqueue, 1, PI_AV,
 	    "dmar%d fault taskq", unit->unit);

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/x86/mptable.c 262141 2014-02-18 01:15:32Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/x86/mptable.c 261087 2014-01-23 20:10:22Z jhb $");
 
 #include "opt_mptable_force_htt.h"
 #include <sys/param.h>
@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/x86/mptable.c 262141 2014-02-18 01:15:32Z 
 #include <x86/mptable.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
-#include <machine/apicvar.h>
+#include <x86/apicvar.h>
 #include <machine/md_var.h>
 #ifdef NEW_PCIB
 #include <machine/resource.h>
@@ -78,6 +78,13 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/x86/mptable.c 262141 2014-02-18 01:15:32Z 
 
 typedef	void mptable_entry_handler(u_char *entry, void *arg);
 typedef	void mptable_extended_entry_handler(ext_entry_ptr entry, void *arg);
+
+/* descriptions of MP table entries */
+typedef struct BASETABLE_ENTRY {
+	uint8_t	type;
+	uint8_t	length;
+	uint8_t	name[16];
+}       basetable_entry;
 
 static basetable_entry basetable_entry_types[] =
 {

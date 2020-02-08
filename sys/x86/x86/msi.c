@@ -36,11 +36,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/x86/msi.c 333126 2018-04-30 20:29:28Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/x86/msi.c 344912 2019-03-08 01:04:19Z jhb $");
+
+#include "opt_acpi.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
@@ -52,7 +55,8 @@ __FBSDID("$FreeBSD: stable/10/sys/x86/x86/msi.c 333126 2018-04-30 20:29:28Z jhb 
 #include <machine/md_var.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
-#include <machine/apicvar.h>
+#include <x86/apicvar.h>
+#include <x86/iommu/iommu_intrmap.h>
 #include <machine/specialreg.h>
 #include <dev/pci/pcivar.h>
 
@@ -113,10 +117,11 @@ struct msi_intsrc {
 	u_int msi_irq;			/* IRQ cookie. */
 	u_int msi_msix;			/* MSI-X message. */
 	u_int msi_vector:8;		/* IDT vector. */
-	u_int msi_cpu:8;		/* Local APIC ID. (g) */
+	u_int msi_cpu;			/* Local APIC ID. (g) */
 	u_int msi_count:8;		/* Messages in this group. (g) */
 	u_int msi_maxcount:8;		/* Alignment for this group. (g) */
-	int *msi_irqs;			/* Group's IRQ list. (g) */
+	u_int *msi_irqs;		/* Group's IRQ list. (g) */
+	u_int msi_remap_cookie;
 };
 
 static void	msi_create_source(void);
@@ -131,10 +136,26 @@ static int	msi_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 		    enum intr_polarity pol);
 static int	msi_assign_cpu(struct intsrc *isrc, u_int apic_id);
 
-struct pic msi_pic = { msi_enable_source, msi_disable_source, msi_eoi_source,
-		       msi_enable_intr, msi_disable_intr, msi_vector,
-		       msi_source_pending, NULL, NULL, msi_config_intr,
-		       msi_assign_cpu };
+struct pic msi_pic = {
+	.pic_enable_source = msi_enable_source,
+	.pic_disable_source = msi_disable_source,
+	.pic_eoi_source = msi_eoi_source,
+	.pic_enable_intr = msi_enable_intr,
+	.pic_disable_intr = msi_disable_intr,
+	.pic_vector = msi_vector,
+	.pic_source_pending = msi_source_pending,
+	.pic_suspend = NULL,
+	.pic_resume = NULL,
+	.pic_config_intr = msi_config_intr,
+	.pic_assign_cpu = msi_assign_cpu,
+	.pic_reprogram_pin = NULL,
+};
+
+u_int first_msi_irq;
+
+u_int num_msi_irqs = 512;
+SYSCTL_UINT(_machdep, OID_AUTO, num_msi_irqs, CTLFLAG_RDTUN, &num_msi_irqs, 0,
+    "Number of IRQs reserved for MSI and MSI-X interrupts");
 
 #ifdef SMP
 /**
@@ -153,7 +174,7 @@ SYSCTL_INT(_machdep, OID_AUTO, disable_msix_migration, CTLFLAG_RDTUN,
 #endif
 
 static int msi_enabled;
-static int msi_last_irq;
+static u_int msi_last_irq;
 static struct mtx msi_lock;
 
 static void
@@ -314,6 +335,14 @@ msi_init(void)
 	}
 #endif
 
+	if (num_msi_irqs == 0)
+		return;
+
+	first_msi_irq = max(MINIMUM_MSI_INT, num_io_irqs);
+	if (num_msi_irqs > UINT_MAX - first_msi_irq)
+		panic("num_msi_irqs too high");
+	num_io_irqs = first_msi_irq + num_msi_irqs;
+
 	msi_enabled = 1;
 	intr_register_pic(&msi_pic);
 	mtx_init(&msi_lock, "msi", NULL, MTX_DEF);
@@ -326,11 +355,11 @@ msi_create_source(void)
 	u_int irq;
 
 	mtx_lock(&msi_lock);
-	if (msi_last_irq >= NUM_MSI_INTS) {
+	if (msi_last_irq >= num_msi_irqs) {
 		mtx_unlock(&msi_lock);
 		return;
 	}
-	irq = msi_last_irq + FIRST_MSI_INT;
+	irq = msi_last_irq + first_msi_irq;
 	msi_last_irq++;
 	mtx_unlock(&msi_lock);
 
@@ -348,8 +377,12 @@ int
 msi_alloc(device_t dev, int count, int maxcount, int *irqs)
 {
 	struct msi_intsrc *msi, *fsrc;
-	u_int cpu;
-	int cnt, i, *mirqs, vector;
+	u_int cpu, *mirqs;
+	int cnt, i, vector;
+#ifdef ACPI_DMAR
+	u_int cookies[count];
+	int error;
+#endif
 
 	if (!msi_enabled)
 		return (ENXIO);
@@ -363,7 +396,7 @@ again:
 
 	/* Try to find 'count' free IRQs. */
 	cnt = 0;
-	for (i = FIRST_MSI_INT; i < FIRST_MSI_INT + NUM_MSI_INTS; i++) {
+	for (i = first_msi_irq; i < first_msi_irq + num_msi_irqs; i++) {
 		msi = (struct msi_intsrc *)intr_lookup_source(i);
 
 		/* End of allocated sources, so break. */
@@ -382,7 +415,7 @@ again:
 	/* Do we need to create some new sources? */
 	if (cnt < count) {
 		/* If we would exceed the max, give up. */
-		if (i + (count - cnt) > FIRST_MSI_INT + NUM_MSI_INTS) {
+		if (i + (count - cnt) > first_msi_irq + num_msi_irqs) {
 			mtx_unlock(&msi_lock);
 			free(mirqs, M_MSI);
 			return (ENXIO);
@@ -409,6 +442,24 @@ again:
 		return (ENOSPC);
 	}
 
+#ifdef ACPI_DMAR
+	mtx_unlock(&msi_lock);
+	error = iommu_alloc_msi_intr(dev, cookies, count);
+	mtx_lock(&msi_lock);
+	if (error == EOPNOTSUPP)
+		error = 0;
+	if (error != 0) {
+		for (i = 0; i < count; i++)
+			apic_free_vector(cpu, vector + i, irqs[i]);
+		free(mirqs, M_MSI);
+		return (error);
+	}
+	for (i = 0; i < count; i++) {
+		msi = (struct msi_intsrc *)intr_lookup_source(irqs[i]);
+		msi->msi_remap_cookie = cookies[i];
+	}
+#endif
+
 	/* Assign IDT vectors and make these messages owned by 'dev'. */
 	fsrc = (struct msi_intsrc *)intr_lookup_source(irqs[0]);
 	for (i = 0; i < count; i++) {
@@ -430,7 +481,6 @@ again:
 		bcopy(irqs, mirqs, count * sizeof(*mirqs));
 	fsrc->msi_irqs = mirqs;
 	mtx_unlock(&msi_lock);
-
 	return (0);
 }
 
@@ -474,6 +524,9 @@ msi_release(int *irqs, int count)
 		msi = (struct msi_intsrc *)intr_lookup_source(irqs[i]);
 		KASSERT(msi->msi_first == first, ("message not in group"));
 		KASSERT(msi->msi_dev == first->msi_dev, ("owner mismatch"));
+#ifdef ACPI_DMAR
+		iommu_unmap_msi_intr(first->msi_dev, msi->msi_remap_cookie);
+#endif
 		msi->msi_first = NULL;
 		msi->msi_dev = NULL;
 		apic_free_vector(msi->msi_cpu, msi->msi_vector, msi->msi_irq);
@@ -481,6 +534,11 @@ msi_release(int *irqs, int count)
 	}
 
 	/* Clear out the first message. */
+#ifdef ACPI_DMAR
+	mtx_unlock(&msi_lock);
+	iommu_unmap_msi_intr(first->msi_dev, first->msi_remap_cookie);
+	mtx_lock(&msi_lock);
+#endif
 	first->msi_first = NULL;
 	first->msi_dev = NULL;
 	apic_free_vector(first->msi_cpu, first->msi_vector, first->msi_irq);
@@ -498,6 +556,11 @@ int
 msi_map(int irq, uint64_t *addr, uint32_t *data)
 {
 	struct msi_intsrc *msi;
+	int error;
+#ifdef ACPI_DMAR
+	struct msi_intsrc *msi1;
+	int i, k;
+#endif
 
 	mtx_lock(&msi_lock);
 	msi = (struct msi_intsrc *)intr_lookup_source(irq);
@@ -525,10 +588,36 @@ msi_map(int irq, uint64_t *addr, uint32_t *data)
 		msi = msi->msi_first;
 	}
 
-	*addr = INTEL_ADDR(msi);
-	*data = INTEL_DATA(msi);
+#ifdef ACPI_DMAR
+	if (!msi->msi_msix) {
+		for (k = msi->msi_count - 1, i = first_msi_irq; k > 0 &&
+		    i < first_msi_irq + num_msi_irqs; i++) {
+			if (i == msi->msi_irq)
+				continue;
+			msi1 = (struct msi_intsrc *)intr_lookup_source(i);
+			if (!msi1->msi_msix && msi1->msi_first == msi) {
+				mtx_unlock(&msi_lock);
+				iommu_map_msi_intr(msi1->msi_dev,
+				    msi1->msi_cpu, msi1->msi_vector,
+				    msi1->msi_remap_cookie, NULL, NULL);
+				k--;
+				mtx_lock(&msi_lock);
+			}
+		}
+	}
 	mtx_unlock(&msi_lock);
-	return (0);
+	error = iommu_map_msi_intr(msi->msi_dev, msi->msi_cpu,
+	    msi->msi_vector, msi->msi_remap_cookie, addr, data);
+#else
+	mtx_unlock(&msi_lock);
+	error = EOPNOTSUPP;
+#endif
+	if (error == EOPNOTSUPP) {
+		*addr = INTEL_ADDR(msi);
+		*data = INTEL_DATA(msi);
+		error = 0;
+	}
+	return (error);
 }
 
 int
@@ -537,6 +626,10 @@ msix_alloc(device_t dev, int *irq)
 	struct msi_intsrc *msi;
 	u_int cpu;
 	int i, vector;
+#ifdef ACPI_DMAR
+	u_int cookie;
+	int error;
+#endif
 
 	if (!msi_enabled)
 		return (ENXIO);
@@ -545,7 +638,7 @@ again:
 	mtx_lock(&msi_lock);
 
 	/* Find a free IRQ. */
-	for (i = FIRST_MSI_INT; i < FIRST_MSI_INT + NUM_MSI_INTS; i++) {
+	for (i = first_msi_irq; i < first_msi_irq + num_msi_irqs; i++) {
 		msi = (struct msi_intsrc *)intr_lookup_source(i);
 
 		/* End of allocated sources, so break. */
@@ -558,7 +651,7 @@ again:
 	}
 
 	/* Are all IRQs in use? */
-	if (i == FIRST_MSI_INT + NUM_MSI_INTS) {
+	if (i == first_msi_irq + num_msi_irqs) {
 		mtx_unlock(&msi_lock);
 		return (ENXIO);
 	}
@@ -579,13 +672,28 @@ again:
 		mtx_unlock(&msi_lock);
 		return (ENOSPC);
 	}
+
+	msi->msi_dev = dev;
+#ifdef ACPI_DMAR
+	mtx_unlock(&msi_lock);
+	error = iommu_alloc_msi_intr(dev, &cookie, 1);
+	mtx_lock(&msi_lock);
+	if (error == EOPNOTSUPP)
+		error = 0;
+	if (error != 0) {
+		msi->msi_dev = NULL;
+		apic_free_vector(cpu, vector, i);
+		return (error);
+	}
+	msi->msi_remap_cookie = cookie;
+#endif
+
 	if (bootverbose)
 		printf("msi: routing MSI-X IRQ %d to local APIC %u vector %u\n",
 		    msi->msi_irq, cpu, vector);
 
 	/* Setup source. */
 	msi->msi_cpu = cpu;
-	msi->msi_dev = dev;
 	msi->msi_first = msi;
 	msi->msi_vector = vector;
 	msi->msi_msix = 1;
@@ -621,6 +729,11 @@ msix_release(int irq)
 	KASSERT(msi->msi_dev != NULL, ("unowned message"));
 
 	/* Clear out the message. */
+#ifdef ACPI_DMAR
+	mtx_unlock(&msi_lock);
+	iommu_unmap_msi_intr(msi->msi_dev, msi->msi_remap_cookie);
+	mtx_lock(&msi_lock);
+#endif
 	msi->msi_first = NULL;
 	msi->msi_dev = NULL;
 	apic_free_vector(msi->msi_cpu, msi->msi_vector, msi->msi_irq);

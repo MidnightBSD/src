@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/x86/iommu/intel_reg.h 306466 2016-09-30 00:31:17Z jhb $
+ * $FreeBSD: stable/11/sys/x86/iommu/intel_reg.h 306466 2016-09-30 00:31:17Z jhb $
  */
 
 #ifndef __X86_IOMMU_INTEL_REG_H

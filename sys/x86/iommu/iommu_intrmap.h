@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013 The FreeBSD Foundation
+ * Copyright (c) 2015 The FreeBSD Foundation
  * All rights reserved.
  *
  * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
@@ -27,40 +27,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/iommu/busdma_dmar.h 257251 2013-10-28 13:33:29Z kib $
+ * $FreeBSD: stable/11/sys/x86/iommu/iommu_intrmap.h 280260 2015-03-19 13:57:47Z kib $
  */
 
-#ifndef __X86_IOMMU_BUSDMA_DMAR_H
-#define __X86_IOMMU_BUSDMA_DMAR_H
+#ifndef __X86_IOMMU_IOMMU_INTRMAP_H
+#define	__X86_IOMMU_IOMMU_INTRMAP_H
 
-struct dmar_map_entry;
-TAILQ_HEAD(dmar_map_entries_tailq, dmar_map_entry);
-
-struct bus_dma_tag_dmar {
-	struct bus_dma_tag_common common;
-	struct dmar_ctx *ctx;
-	device_t owner;
-	int map_count;
-	bus_dma_segment_t *segments;
-};
-
-struct bus_dmamap_dmar {
-	struct bus_dma_tag_dmar *tag;
-	struct memdesc mem;
-	bus_dmamap_callback_t *callback;
-	void *callback_arg;
-	struct dmar_map_entries_tailq map_entries;
-	TAILQ_ENTRY(bus_dmamap_dmar) delay_link;
-	bool locked;
-	bool cansleep;
-	int flags;
-};
-
-#define	BUS_DMAMAP_DMAR_MALLOC	0x0001
-#define	BUS_DMAMAP_DMAR_KMEM_ALLOC 0x0002
-
-extern struct bus_dma_impl bus_dma_dmar_impl;
-
-bus_dma_tag_t dmar_get_dma_tag(device_t dev, device_t child);
+int iommu_alloc_msi_intr(device_t src, u_int *cookies, u_int count);
+int iommu_map_msi_intr(device_t src, u_int cpu, u_int vector, u_int cookie,
+    uint64_t *addr, uint32_t *data);
+int iommu_unmap_msi_intr(device_t src, u_int cookie);
+int iommu_map_ioapic_intr(u_int ioapic_id, u_int cpu, u_int vector, bool edge,
+    bool activehi, int irq, u_int *cookie, uint32_t *hi, uint32_t *lo);
+int iommu_unmap_ioapic_intr(u_int ioapic_id, u_int *cookie);
 
 #endif

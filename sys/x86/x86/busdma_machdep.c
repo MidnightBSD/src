@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/x86/x86/busdma_machdep.c 259511 2013-12-17 13:39:50Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/x86/x86/busdma_machdep.c 257230 2013-10-27 22:05:10Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
