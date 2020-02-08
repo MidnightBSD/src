@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/taskqueue.h 315268 2017-03-14 16:00:33Z hselasky $
+ * $FreeBSD: stable/11/sys/sys/taskqueue.h 341154 2018-11-28 17:00:18Z markj $
  */
 
 #ifndef _SYS_TASKQUEUE_H_
@@ -37,8 +37,10 @@
 #include <sys/queue.h>
 #include <sys/_task.h>
 #include <sys/_callout.h>
+#include <sys/_cpuset.h>
 
 struct taskqueue;
+struct taskqgroup;
 struct thread;
 
 struct timeout_task {
@@ -55,6 +57,7 @@ enum taskqueue_callback_type {
 #define	TASKQUEUE_CALLBACK_TYPE_MIN	TASKQUEUE_CALLBACK_TYPE_INIT
 #define	TASKQUEUE_CALLBACK_TYPE_MAX	TASKQUEUE_CALLBACK_TYPE_SHUTDOWN
 #define	TASKQUEUE_NUM_CALLBACKS		TASKQUEUE_CALLBACK_TYPE_MAX + 1
+#define	TASKQUEUE_NAMELEN		32
 
 typedef void (*taskqueue_callback_fn)(void *context);
 
@@ -72,9 +75,14 @@ struct taskqueue *taskqueue_create(const char *name, int mflags,
 				    void *context);
 int	taskqueue_start_threads(struct taskqueue **tqp, int count, int pri,
 				const char *name, ...) __printflike(4, 5);
+int	taskqueue_start_threads_cpuset(struct taskqueue **tqp, int count,
+	    int pri, cpuset_t *mask, const char *name, ...) __printflike(5, 6);
 int	taskqueue_enqueue(struct taskqueue *queue, struct task *task);
 int	taskqueue_enqueue_timeout(struct taskqueue *queue,
 	    struct timeout_task *timeout_task, int ticks);
+int	taskqueue_enqueue_timeout_sbt(struct taskqueue *queue,
+	    struct timeout_task *timeout_task, sbintime_t sbt, sbintime_t pr,
+	    int flags);
 int	taskqueue_poll_is_busy(struct taskqueue *queue, struct task *task);
 int	taskqueue_cancel(struct taskqueue *queue, struct task *task,
 	    u_int *pendp);
@@ -84,6 +92,7 @@ void	taskqueue_drain(struct taskqueue *queue, struct task *task);
 void	taskqueue_drain_timeout(struct taskqueue *queue,
 	    struct timeout_task *timeout_task);
 void	taskqueue_drain_all(struct taskqueue *queue);
+void	taskqueue_quiesce(struct taskqueue *queue);
 void	taskqueue_free(struct taskqueue *queue);
 void	taskqueue_run(struct taskqueue *queue);
 void	taskqueue_block(struct taskqueue *queue);
@@ -142,7 +151,7 @@ taskqueue_define_##name(void *arg)					\
 	init;								\
 }									\
 									\
-SYSINIT(taskqueue_##name, SI_SUB_CONFIGURE, SI_ORDER_SECOND,		\
+SYSINIT(taskqueue_##name, SI_SUB_TASKQ, SI_ORDER_SECOND,		\
 	taskqueue_define_##name, NULL);					\
 									\
 struct __hack
@@ -167,7 +176,7 @@ taskqueue_define_##name(void *arg)					\
 	init;								\
 }									\
 									\
-SYSINIT(taskqueue_##name, SI_SUB_CONFIGURE, SI_ORDER_SECOND,		\
+SYSINIT(taskqueue_##name, SI_SUB_TASKQ, SI_ORDER_SECOND,		\
 	taskqueue_define_##name, NULL);					\
 									\
 struct __hack
@@ -197,7 +206,6 @@ TASKQUEUE_DECLARE(thread);
  * from a fast interrupt handler context.
  */
 TASKQUEUE_DECLARE(fast);
-int	taskqueue_enqueue_fast(struct taskqueue *queue, struct task *task);
 struct taskqueue *taskqueue_create_fast(const char *name, int mflags,
 				    taskqueue_enqueue_fn enqueue,
 				    void *context);
