@@ -55,7 +55,7 @@
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 1004501	/* Master, propagated to newvers */
+#define __FreeBSD_version 1103507	/* Master, propagated to newvers */
 
 /*
  * It is tempting to use this macro in userland code when we want to enable
@@ -70,12 +70,17 @@
 #define __MidnightBSD_kernel__
 
 #if defined(_KERNEL) || defined(IN_RTLD)
-#define	P_OSREL_SIGWAIT		700000
-#define	P_OSREL_SIGSEGV		700004
-#define	P_OSREL_MAP_ANON	800104
+#define	P_OSREL_SIGWAIT			700000
+#define	P_OSREL_SIGSEGV			700004
+#define	P_OSREL_MAP_ANON		800104
+#define	P_OSREL_MAP_FSTRICT		1100036
+#define	P_OSREL_SHUTDOWN_ENOTCONN	1100077
 #define	P_OSREL_MAP_GUARD		1200035
+#define	P_OSREL_MAP_GUARD_11		1101501
+#define	P_OSREL_WRFSBASE		1200041
+#define	P_OSREL_WRFSBASE_11		1101503
 
-#define	P_OSREL_MAJOR(x)	((x) / 100000)
+#define	P_OSREL_MAJOR(x)		((x) / 100000)
 #endif
 
 #ifndef LOCORE
