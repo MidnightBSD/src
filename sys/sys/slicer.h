@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/slicer.h 318159 2017-05-10 21:42:16Z marius $
+ * $FreeBSD: stable/11/sys/sys/slicer.h 346557 2019-04-22 15:04:11Z ian $
  */
 
 #ifndef _FLASH_SLICER_H_
@@ -57,7 +57,7 @@ typedef int (*flash_slicer_t)(device_t dev, const char *provider,
 #define	FLASH_SLICES_TYPE_SPI		2
 #define	FLASH_SLICES_TYPE_MMC		3
 
-/* Use NULL for deregistering a slicer */
+/* Use NULL and set force to true for deregistering a slicer */
 void flash_register_slicer(flash_slicer_t slicer, u_int type, bool force);
 
 #endif /* _KERNEL */

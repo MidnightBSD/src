@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/sleepqueue.h 274139 2014-11-05 16:24:57Z lwhsu $
+ * $FreeBSD: stable/11/sys/sys/sleepqueue.h 354405 2019-11-06 18:02:18Z mav $
  */
 
 #ifndef _SYS_SLEEPQUEUE_H_
@@ -84,6 +84,7 @@ struct thread;
 #define	SLEEPQ_SX		0x03		/* Used by an sx lock. */
 #define	SLEEPQ_LK		0x04		/* Used by a lockmgr. */
 #define	SLEEPQ_INTERRUPTIBLE	0x100		/* Sleep is interruptible. */
+#define	SLEEPQ_UNFAIR		0x200		/* Unfair wakeup order. */
 
 void	init_sleepqueues(void);
 int	sleepq_abort(struct thread *td, int intrval);
@@ -91,11 +92,14 @@ void	sleepq_add(void *wchan, struct lock_object *lock, const char *wmesg,
 	    int flags, int queue);
 struct sleepqueue *sleepq_alloc(void);
 int	sleepq_broadcast(void *wchan, int flags, int pri, int queue);
+void	sleepq_chains_remove_matching(bool (*matches)(struct thread *));
 void	sleepq_free(struct sleepqueue *sq);
 void	sleepq_lock(void *wchan);
 struct sleepqueue *sleepq_lookup(void *wchan);
 void	sleepq_release(void *wchan);
 void	sleepq_remove(struct thread *td, void *wchan);
+int	sleepq_remove_matching(struct sleepqueue *sq, int queue,
+	    bool (*matches)(struct thread *), int pri);
 int	sleepq_signal(void *wchan, int flags, int pri, int queue);
 void	sleepq_set_timeout_sbt(void *wchan, sbintime_t sbt,
 	    sbintime_t pr, int flags);
@@ -107,6 +111,12 @@ int	sleepq_timedwait_sig(void *wchan, int pri);
 int	sleepq_type(void *wchan);
 void	sleepq_wait(void *wchan, int pri);
 int	sleepq_wait_sig(void *wchan, int pri);
+
+#ifdef STACK
+struct sbuf;
+int sleepq_sbuf_print_stacks(struct sbuf *sb, void *wchan, int queue,
+    int *count_stacks_printed);
+#endif
 
 #endif	/* _KERNEL */
 #endif	/* !_SYS_SLEEPQUEUE_H_ */
