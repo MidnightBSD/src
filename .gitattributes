@@ -73816,6 +73816,7 @@ sys/sys/sockio.h -text
 sys/sys/sockopt.h -text
 sys/sys/sockstate.h -text
 sys/sys/soundcard.h -text
+sys/sys/spigenio.h svneol=native#text/plain
 sys/sys/stack.h -text
 sys/sys/stat.h -text
 sys/sys/statvfs.h -text
