@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/stdint.h 291134 2015-11-21 16:21:27Z kib $
+ * $FreeBSD: stable/11/sys/sys/stdint.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_STDINT_H_
@@ -66,5 +66,12 @@ typedef	__uint_fast64_t		uint_fast64_t;
 /* Limits of wchar_t. */
 #define	WCHAR_MIN	__WCHAR_MIN
 #define	WCHAR_MAX	__WCHAR_MAX
+
+#if __EXT1_VISIBLE
+/* ISO/IEC 9899:2011 K.3.4.4 */
+#ifndef RSIZE_MAX
+#define RSIZE_MAX (SIZE_MAX >> 1)
+#endif
+#endif /* __EXT1_VISIBLE */
 
 #endif /* !_SYS_STDINT_H_ */
