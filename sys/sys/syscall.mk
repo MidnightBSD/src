@@ -18,7 +18,6 @@ MIASM =  \
 	chmod.o \
 	chown.o \
 	break.o \
-	freebsd4_getfsstat.o \
 	getpid.o \
 	mount.o \
 	unmount.o \
@@ -39,7 +38,7 @@ MIASM =  \
 	kill.o \
 	getppid.o \
 	dup.o \
-	pipe.o \
+	freebsd10_pipe.o \
 	getegid.o \
 	profil.o \
 	ktrace.o \
@@ -108,20 +107,13 @@ MIASM =  \
 	quotactl.o \
 	nlm_syscall.o \
 	nfssvc.o \
-	freebsd4_statfs.o \
-	freebsd4_fstatfs.o \
 	lgetfh.o \
 	getfh.o \
-	freebsd4_getdomainname.o \
-	freebsd4_setdomainname.o \
-	freebsd4_uname.o \
 	sysarch.o \
 	rtprio.o \
 	semsys.o \
 	msgsys.o \
 	shmsys.o \
-	freebsd6_pread.o \
-	freebsd6_pwrite.o \
 	setfib.o \
 	ntp_adjtime.o \
 	setgid.o \
@@ -135,11 +127,7 @@ MIASM =  \
 	getrlimit.o \
 	setrlimit.o \
 	getdirentries.o \
-	freebsd6_mmap.o \
 	__syscall.o \
-	freebsd6_lseek.o \
-	freebsd6_truncate.o \
-	freebsd6_ftruncate.o \
 	__sysctl.o \
 	mlock.o \
 	munlock.o \
@@ -170,6 +158,7 @@ MIASM =  \
 	ffclock_getcounter.o \
 	ffclock_setestimate.o \
 	ffclock_getestimate.o \
+	clock_nanosleep.o \
 	clock_getcpuclockid2.o \
 	ntp_gettime.o \
 	minherit.o \
@@ -190,7 +179,6 @@ MIASM =  \
 	nlstat.o \
 	preadv.o \
 	pwritev.o \
-	freebsd4_fhstatfs.o \
 	fhopen.o \
 	fhstat.o \
 	modnext.o \
@@ -210,9 +198,6 @@ MIASM =  \
 	aio_suspend.o \
 	aio_cancel.o \
 	aio_error.o \
-	oaio_read.o \
-	oaio_write.o \
-	olio_listio.o \
 	yield.o \
 	mlockall.o \
 	munlockall.o \
@@ -226,15 +211,12 @@ MIASM =  \
 	sched_get_priority_min.o \
 	sched_rr_get_interval.o \
 	utrace.o \
-	freebsd4_sendfile.o \
 	kldsym.o \
 	jail.o \
 	nnpfs_syscall.o \
 	sigprocmask.o \
 	sigsuspend.o \
-	freebsd4_sigaction.o \
 	sigpending.o \
-	freebsd4_sigreturn.o \
 	sigtimedwait.o \
 	sigwaitinfo.o \
 	__acl_get_file.o \
@@ -307,8 +289,6 @@ MIASM =  \
 	thr_exit.o \
 	thr_self.o \
 	thr_kill.o \
-	_umtx_lock.o \
-	_umtx_unlock.o \
 	jail_attach.o \
 	extattr_list_fd.o \
 	extattr_list_file.o \
@@ -413,4 +393,7 @@ MIASM =  \
 	procctl.o \
 	ppoll.o \
 	futimens.o \
-	utimensat.o
+	utimensat.o \
+	numa_getaffinity.o \
+	numa_setaffinity.o \
+	fdatasync.o
