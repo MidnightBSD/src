@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $OpenBSD: hash.h,v 1.4 2004/05/25 18:37:23 jmc Exp $
- * $FreeBSD: stable/10/sys/sys/hash.h 274486 2014-11-13 21:58:42Z gnn $
+ * $FreeBSD: stable/11/sys/sys/hash.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_HASH_H_
@@ -127,7 +127,8 @@ hash32_strne(const void *buf, size_t len, int end, const char **ep,
 uint32_t jenkins_hash(const void *, size_t, uint32_t);
 uint32_t jenkins_hash32(const uint32_t *, size_t, uint32_t);
 
-uint32_t murmur3_aligned_32(const void *data, size_t len, uint32_t seed);
+uint32_t murmur3_32_hash(const void *, size_t, uint32_t);
+uint32_t murmur3_32_hash32(const uint32_t *, size_t, uint32_t);
 
 #endif /* _KERNEL */
 
