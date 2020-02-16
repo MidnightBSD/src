@@ -73698,6 +73698,7 @@ sys/sys/interrupt.h -text
 sys/sys/ioccom.h -text
 sys/sys/ioctl.h -text
 sys/sys/ioctl_compat.h -text
+sys/sys/iov.h svneol=native#text/plain
 sys/sys/ipc.h -text
 sys/sys/ipmi.h -text
 sys/sys/jail.h -text
