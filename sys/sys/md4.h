@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /* MD4.H - header file for MD4C.C
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/sys/md4.h 309023 2016-11-22 20:28:17Z asomers $
  */
 
 /*-
@@ -39,10 +40,12 @@ __BEGIN_DECLS
 void   MD4Init(MD4_CTX *);
 void   MD4Update(MD4_CTX *, const unsigned char *, unsigned int);
 void   MD4Pad(MD4_CTX *);
-void   MD4Final(unsigned char [16], MD4_CTX *);
+void   MD4Final(unsigned char [__min_size(16)], MD4_CTX *);
+#ifndef _KERNEL
 char * MD4End(MD4_CTX *, char *);
 char * MD4File(const char *, char *);
 char * MD4Data(const unsigned char *, unsigned int, char *);
+#endif
 __END_DECLS
 
 #endif /* _MD4_H_ */
