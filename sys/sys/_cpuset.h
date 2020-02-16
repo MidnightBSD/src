@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/_cpuset.h 271172 2014-09-05 15:45:20Z jhb $
+ * $FreeBSD: stable/11/sys/sys/_cpuset.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS__CPUSET_H_
@@ -45,13 +45,7 @@
 #define	CPU_SETSIZE	CPU_MAXSIZE
 #endif
 
-#define	_NCPUBITS	_BITSET_BITS
-#define	_NCPUWORDS	__bitset_words(CPU_SETSIZE)
-
 BITSET_DEFINE(_cpuset, CPU_SETSIZE);
 typedef struct _cpuset cpuset_t;
-
-#define	CPUSET_FSET		BITSET_FSET(_NCPUWORDS)
-#define	CPUSET_T_INITIALIZER	BITSET_T_INITIALIZER
 
 #endif /* !_SYS__CPUSET_H_ */

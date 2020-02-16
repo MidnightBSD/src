@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Konstantin Belousov <kib@FreeBSD.org>
  *
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/11/sys/sys/_kstack_cache.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS__KSTACK_CACHE_H
@@ -37,6 +38,10 @@ struct kstack_cache_entry {
 };
 
 extern struct kstack_cache_entry *kstack_cache;
+
+#ifndef KSTACK_MAX_PAGES
+#define KSTACK_MAX_PAGES 32
+#endif
 
 #endif
 
