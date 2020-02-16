@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/posix4.h 287507 2015-09-06 17:32:33Z kib $
+ * $FreeBSD: stable/11/sys/sys/posix4.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

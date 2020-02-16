@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ptrace.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: stable/10/sys/sys/ptrace.h 304499 2016-08-19 20:17:57Z jhb $
+ * $FreeBSD: stable/11/sys/sys/ptrace.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_SYS_PTRACE_H_
@@ -69,6 +69,8 @@
 
 #define	PT_GET_EVENT_MASK 25	/* get mask of optional events */
 #define	PT_SET_EVENT_MASK 26	/* set mask of optional events */
+
+#define	PT_GET_SC_ARGS	27	/* fetch syscall args */
 
 #define PT_GETREGS      33	/* get general-purpose registers */
 #define PT_SETREGS      34	/* set general-purpose registers */
@@ -137,6 +139,21 @@ struct ptrace_lwpinfo {
 	u_int		pl_syscall_narg;
 };
 
+#if defined(_WANT_LWPINFO32) || (defined(_KERNEL) && defined(__LP64__))
+struct ptrace_lwpinfo32 {
+	lwpid_t	pl_lwpid;	/* LWP described. */
+	int	pl_event;	/* Event that stopped the LWP. */
+	int	pl_flags;	/* LWP flags. */
+	sigset_t	pl_sigmask;	/* LWP signal mask */
+	sigset_t	pl_siglist;	/* LWP pending signal */
+	struct siginfo32 pl_siginfo;	/* siginfo for signal */
+	char		pl_tdname[MAXCOMLEN + 1]; /* LWP name. */
+	pid_t		pl_child_pid;	/* New child pid */
+	u_int		pl_syscall_code;
+	u_int		pl_syscall_narg;
+};
+#endif
+
 /* Argument structure for PT_VM_ENTRY. */
 struct ptrace_vm_entry {
 	int		pve_entry;	/* Entry number used for iteration. */
@@ -179,6 +196,10 @@ int	proc_read_dbregs(struct thread *_td, struct dbreg *_dbreg);
 int	proc_write_dbregs(struct thread *_td, struct dbreg *_dbreg);
 int	proc_sstep(struct thread *_td);
 int	proc_rwmem(struct proc *_p, struct uio *_uio);
+ssize_t	proc_readmem(struct thread *_td, struct proc *_p, vm_offset_t _va,
+	    void *_buf, size_t _len);
+ssize_t	proc_writemem(struct thread *_td, struct proc *_p, vm_offset_t _va,
+	    void *_buf, size_t _len);
 #ifdef COMPAT_FREEBSD32
 struct reg32;
 struct fpreg32;

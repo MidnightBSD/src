@@ -27,13 +27,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/procdesc.h 269619 2014-08-06 00:35:32Z emaste $
+ * $FreeBSD: stable/11/sys/sys/procdesc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_PROCDESC_H_
 #define	_SYS_PROCDESC_H_
 
 #ifdef _KERNEL
+
 #include <sys/selinfo.h>	/* struct selinfo */
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
@@ -68,6 +69,7 @@ struct procdesc {
 	 * In-flight data and notification of events.
 	 */
 	int		 pd_flags;		/* (p) PD_ flags. */
+	u_short		 pd_xstat;		/* (p) Exit status. */
 	struct selinfo	 pd_selinfo;		/* (p) Event notification. */
 	struct mtx	 pd_lock;		/* Protect data + events. */
 };
@@ -100,15 +102,28 @@ void	 procdesc_finit(struct procdesc *, struct file *);
 pid_t	 procdesc_pid(struct file *);
 void	 procdesc_reap(struct proc *);
 
+int	 procdesc_falloc(struct thread *, struct file **, int *, int,
+	    struct filecaps *);
+
 #else /* !_KERNEL */
+
+#include <sys/_types.h>
+
+#ifndef _PID_T_DECLARED
+typedef	__pid_t		pid_t;
+#define	_PID_T_DECLARED
+#endif
+
+struct rusage;
 
 /*
  * Process descriptor system calls.
  */
-struct rusage;
-int	 pdfork(int *, int);
+__BEGIN_DECLS
+pid_t	 pdfork(int *, int);
 int	 pdkill(int, int);
 int	 pdgetpid(int, pid_t *);
+__END_DECLS
 
 #endif /* _KERNEL */
 
@@ -116,5 +131,8 @@ int	 pdgetpid(int, pid_t *);
  * Flags which can be passed to pdfork(2).
  */
 #define	PD_DAEMON	0x00000001	/* Don't exit when procdesc closes. */
+#define	PD_CLOEXEC	0x00000002	/* Close file descriptor on exec. */
+
+#define	PD_ALLOWED_AT_FORK	(PD_DAEMON | PD_CLOEXEC)
 
 #endif /* !_SYS_PROCDESC_H_ */

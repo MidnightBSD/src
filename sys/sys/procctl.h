@@ -1,8 +1,12 @@
 /* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Hudson River Trading LLC
+ * Copyright (c) 2014, 2016 The FreeBSD Foundation
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
+ *
+ * Portions of this software were developed by Konstantin Belousov
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/procctl.h 326397 2017-11-30 14:38:07Z kib $
+ * $FreeBSD: stable/11/sys/sys/procctl.h 352125 2019-09-10 07:29:21Z kib $
  */
 
 #ifndef	_SYS_PROCCTL_H_
@@ -44,6 +48,12 @@
 #define	PROC_REAP_KILL		6	/* kill descendants */
 #define	PROC_TRACE_CTL		7	/* en/dis ptrace and coredumps */
 #define	PROC_TRACE_STATUS	8	/* query tracing status */
+#define	PROC_TRAPCAP_CTL	9	/* trap capability errors */
+#define	PROC_TRAPCAP_STATUS	10	/* query trap capability status */
+#define	PROC_PDEATHSIG_CTL	11	/* set parent death signal */
+#define	PROC_PDEATHSIG_STATUS	12	/* get parent death signal */
+#define	PROC_STACKGAP_CTL	17	/* en/dis stack gap on MAP_STACK */
+#define	PROC_STACKGAP_STATUS	18	/* query stack gap */
 
 /* Operations for PROC_SPROTECT (passed in integer arg). */
 #define	PPROT_OP(x)	((x) & 0xf)
@@ -103,6 +113,14 @@ struct procctl_reaper_kill {
 #define	PROC_TRACE_CTL_ENABLE		1
 #define	PROC_TRACE_CTL_DISABLE		2
 #define	PROC_TRACE_CTL_DISABLE_EXEC	3
+
+#define	PROC_TRAPCAP_CTL_ENABLE		1
+#define	PROC_TRAPCAP_CTL_DISABLE	2
+
+#define	PROC_STACKGAP_ENABLE		0x0001
+#define	PROC_STACKGAP_DISABLE		0x0002
+#define	PROC_STACKGAP_ENABLE_EXEC	0x0004
+#define	PROC_STACKGAP_DISABLE_EXEC	0x0008
 
 #ifndef _KERNEL
 __BEGIN_DECLS
