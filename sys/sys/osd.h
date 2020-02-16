@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/osd.h 298834 2016-04-30 04:01:22Z jamie $
+ * $FreeBSD: stable/11/sys/sys/osd.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_OSD_H_
@@ -60,10 +60,10 @@ int osd_register(u_int type, osd_destructor_t destructor,
 void osd_deregister(u_int type, u_int slot);
 
 int osd_set(u_int type, struct osd *osd, u_int slot, void *value);
-void *osd_reserve(u_int slot);
-int osd_set_reserved(u_int type, struct osd *osd, u_int slot, void *rsv,
+void **osd_reserve(u_int slot);
+int osd_set_reserved(u_int type, struct osd *osd, u_int slot, void **rsv,
     void *value);
-void osd_free_reserved(void *rsv);
+void osd_free_reserved(void **rsv);
 void *osd_get(u_int type, struct osd *osd, u_int slot);
 void osd_del(u_int type, struct osd *osd, u_int slot);
 int osd_call(u_int type, u_int method, void *obj, void *data);

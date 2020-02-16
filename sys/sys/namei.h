@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)namei.h	8.5 (Berkeley) 1/9/95
- * $FreeBSD: stable/10/sys/sys/namei.h 255219 2013-09-05 00:09:56Z pjd $
+ * $FreeBSD: stable/11/sys/sys/namei.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_NAMEI_H_
@@ -54,8 +54,10 @@ struct componentname {
 	char	*cn_pnbuf;	/* pathname buffer */
 	char	*cn_nameptr;	/* pointer to looked up name */
 	long	cn_namelen;	/* length of looked up component */
-	long	cn_consume;	/* chars to consume in lookup() */
 };
+
+struct nameicap_tracker;
+TAILQ_HEAD(nameicap_tracker_head, nameicap_tracker);
 
 /*
  * Encapsulation of namei parameters.
@@ -74,7 +76,7 @@ struct nameidata {
 	struct	vnode *ni_rootdir;	/* logical root directory */
 	struct	vnode *ni_topdir;	/* logical top directory */
 	int	ni_dirfd;		/* starting directory for *at functions */
-	int	ni_strictrelative;	/* relative lookup only; no '..' */
+	int	ni_lcf;			/* local call flags */
 	/*
 	 * Results: returned from namei
 	 */
@@ -96,6 +98,7 @@ struct nameidata {
 	 * through the VOP interface.
 	 */
 	struct componentname ni_cnd;
+	struct nameicap_tracker_head ni_cap_tracker;
 };
 
 #ifdef _KERNEL
@@ -152,6 +155,12 @@ struct nameidata {
 #define	TRAILINGSLASH	0x10000000 /* path ended in a slash */
 #define	NOCAPCHECK	0x20000000 /* do not perform capability checks */
 #define	PARAMASK	0x3ffffe00 /* mask of parameter descriptors */
+
+/*
+ * Flags in ni_lcf, valid for the duration of the namei call.
+ */
+#define	NI_LCF_STRICTRELATIVE	0x0001	/* relative lookup only */
+#define	NI_LCF_CAP_DOTDOT	0x0002	/* ".." in strictrelative case */
 
 /*
  * Initialization of a nameidata structure.

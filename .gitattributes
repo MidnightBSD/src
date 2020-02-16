@@ -73749,6 +73749,7 @@ sys/sys/mtio.h -text
 sys/sys/mutex.h -text
 sys/sys/namei.h -text
 sys/sys/nlist_aout.h -text
+sys/sys/numa.h svneol=native#text/plain
 sys/sys/nv.h svneol=native#text/plain
 sys/sys/nv_impl.h svneol=native#text/plain
 sys/sys/nvlist_impl.h svneol=native#text/plain
