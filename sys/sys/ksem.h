@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/ksem.h 250223 2013-05-03 21:11:57Z jhb $
+ * $FreeBSD: stable/11/sys/sys/ksem.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _POSIX4_KSEM_H_
@@ -63,10 +63,5 @@ struct ksem {
 
 #define	KS_ANONYMOUS	0x0001		/* Anonymous (unnamed) semaphore. */
 #define	KS_DEAD		0x0002		/* No new waiters allowed. */
-
-#ifdef _KERNEL
-extern void	(*ksem_info)(struct ksem *ks, char *path, size_t size,
-		    uint32_t *value);
-#endif
 
 #endif /* !_POSIX4_KSEM_H_ */
