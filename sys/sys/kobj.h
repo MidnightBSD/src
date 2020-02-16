@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/sys/kobj.h 318275 2017-05-14 14:21:11Z marius $
+ *	$FreeBSD: stable/11/sys/sys/kobj.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_KOBJ_H_
@@ -147,13 +147,13 @@ struct kobj_class classvar = {				\
  * DEFINE_CLASS_2(foo, foo_class, foo_methods, sizeof(foo_softc),
  *			  bar, baz);
  */
-#define DEFINE_CLASS_2(name, methods, size,		\
+#define DEFINE_CLASS_2(name, classvar, methods, size,	\
 	               base1, base2)			\
 							\
 static kobj_class_t name ## _baseclasses[] =		\
 	{ &base1,					\
 	  &base2, NULL };				\
-struct kobj_class name ## _class = {			\
+struct kobj_class classvar = {				\
 	#name, methods, size, name ## _baseclasses	\
 }
 
@@ -163,14 +163,14 @@ struct kobj_class name ## _class = {			\
  * DEFINE_CLASS_3(foo, foo_class, foo_methods, sizeof(foo_softc),
  *			  bar, baz, foobar);
  */
-#define DEFINE_CLASS_3(name, methods, size,		\
+#define DEFINE_CLASS_3(name, classvar, methods, size,	\
 		       base1, base2, base3)		\
 							\
 static kobj_class_t name ## _baseclasses[] =		\
 	{ &base1,					\
 	  &base2,					\
 	  &base3, NULL };				\
-struct kobj_class name ## _class = {			\
+struct kobj_class classvar = {				\
 	#name, methods, size, name ## _baseclasses	\
 }
 
