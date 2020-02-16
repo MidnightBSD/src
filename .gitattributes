@@ -73695,6 +73695,7 @@ sys/sys/imgact_binmisc.h svneol=native#text/plain
 sys/sys/imgact_elf.h -text
 sys/sys/inflate.h -text
 sys/sys/interrupt.h -text
+sys/sys/intr.h svneol=native#text/plain
 sys/sys/ioccom.h -text
 sys/sys/ioctl.h -text
 sys/sys/ioctl_compat.h -text
