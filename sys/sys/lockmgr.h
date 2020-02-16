@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/lockmgr.h 274606 2014-11-16 23:02:32Z kib $
+ * $FreeBSD: stable/11/sys/sys/lockmgr.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_SYS_LOCKMGR_H_
@@ -69,6 +69,10 @@ struct thread;
  */
 int	 __lockmgr_args(struct lock *lk, u_int flags, struct lock_object *ilk,
 	    const char *wmesg, int prio, int timo, const char *file, int line);
+int	 lockmgr_lock_fast_path(struct lock *lk, u_int flags,
+	    struct lock_object *ilk, const char *file, int line);
+int	 lockmgr_unlock_fast_path(struct lock *lk, u_int flags,
+	    struct lock_object *ilk);
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
 void	 _lockmgr_assert(const struct lock *lk, int what, const char *file, int line);
 #endif
@@ -160,6 +164,7 @@ _lockmgr_args_rw(struct lock *lk, u_int flags, struct rwlock *ilk,
 #define	LK_SLEEPFAIL	0x000800
 #define	LK_TIMELOCK	0x001000
 #define	LK_NODDLKTREAT	0x002000
+#define	LK_VNHELD	0x004000
 
 /*
  * Operations for lockmgr().
