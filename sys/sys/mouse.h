@@ -21,7 +21,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/mouse.h 281708 2015-04-18 21:24:46Z rpaulo $
+ * $FreeBSD: stable/11/sys/sys/mouse.h 344165 2019-02-15 20:46:03Z wulf $
  */
 
 #ifndef _SYS_MOUSE_H_
@@ -109,6 +109,9 @@ typedef struct synapticshw {
 	int capPalmDetect;
 	int capPassthrough;
 	int capMiddle;
+	int capLowPower;
+	int capMultiFingerReport;
+	int capBallistics;
 	int nExtendedButtons;
 	int nExtendedQueries;
 	int capClickPad;
@@ -126,6 +129,15 @@ typedef struct synapticshw {
 	int verticalScroll;
 	int horizontalScroll;
 	int verticalWheel;
+	int capEWmode;
+	int minimumXCoord;
+	int minimumYCoord;
+	int maximumXCoord;
+	int maximumYCoord;
+	int infoXupmm;
+	int infoYupmm;
+	int forcePad;
+	int topButtonPad;
 } synapticshw_t;
 
 /* iftype */
@@ -161,6 +173,7 @@ typedef struct synapticshw {
 #define MOUSE_MODEL_4DPLUS		12
 #define MOUSE_MODEL_SYNAPTICS		13
 #define	MOUSE_MODEL_TRACKPOINT		14
+#define	MOUSE_MODEL_ELANTECH		15
 
 typedef struct mousemode {
 	int protocol;		/* MOUSE_PROTO_XXX */
@@ -230,6 +243,9 @@ typedef struct mousevar {
 
 /* Synaptics Touchpad */
 #define MOUSE_SYNAPTICS_PACKETSIZE	6	/* '3' works better */
+
+/* Elantech Touchpad */
+#define MOUSE_ELANTECH_PACKETSIZE	6
 
 /* Microsoft Serial mouse data packet */
 #define MOUSE_MSS_PACKETSIZE	3

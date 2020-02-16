@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/11/sys/sys/msg.h 347995 2019-05-20 16:31:45Z kib $ */
 /*	$NetBSD: msg.h,v 1.4 1994/06/29 06:44:43 cgd Exp $	*/
 
 /*-
@@ -25,6 +26,9 @@
 
 #include <sys/cdefs.h>
 #include <sys/_types.h>
+#ifdef _WANT_SYSVMSG_INTERNALS
+#define	_WANT_SYSVIPC_INTERNALS
+#endif
 #include <sys/ipc.h>
 
 /*
@@ -116,7 +120,6 @@ struct mymsg {
 #endif
 
 #ifdef _KERNEL
-
 struct msg {
 	struct	msg *msg_next;  /* next msg in the chain */
 	long	msg_type; 	/* type of this message */
@@ -126,7 +129,9 @@ struct msg {
 	short	msg_spot;	/* location of start of msg in buffer */
 	struct	label *label;	/* MAC Framework label */
 };
+#endif
 
+#if defined(_KERNEL) || defined(_WANT_SYSVMSG_INTERNALS)
 /*
  * Based on the configuration parameters described in an SVR2 (yes, two)
  * config(1m) man page.
@@ -145,7 +150,6 @@ struct msginfo {
 		msgssz,		/* size of a message segment (see notes above) */
 		msgseg;		/* number of message segments */
 };
-extern struct msginfo	msginfo;
 
 /*
  * Kernel wrapper for the user-level structure.
@@ -162,8 +166,12 @@ struct msqid_kernel {
 	struct	label *label;	/* MAC label */
 	struct	ucred *cred;	/* creator's credentials */
 };
+#endif
 
-#else /* !_KERNEL */
+#ifdef _KERNEL
+extern struct msginfo	msginfo;
+
+#else /* _KERNEL */
 
 __BEGIN_DECLS
 int msgctl(int, int, struct msqid_ds *);
@@ -175,7 +183,6 @@ int msgsnd(int, const void *, size_t, int);
 int msgsys(int, ...);
 #endif
 __END_DECLS
-
-#endif /* _KERNEL */
+#endif /* !_KERNEL */
 
 #endif /* !_SYS_MSG_H_ */
