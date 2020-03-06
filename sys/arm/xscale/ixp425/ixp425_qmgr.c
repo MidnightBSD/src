@@ -58,7 +58,7 @@
  * SUCH DAMAGE.
 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_qmgr.c 236987 2012-06-13 04:38:09Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_qmgr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Intel XScale Queue Manager support.
@@ -85,8 +85,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_qmgr.c 236987 2012-06
 #include <sys/sysctl.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 #include <arm/xscale/ixp425/ixp425reg.h>
@@ -160,10 +158,9 @@ struct ixpqmgr_softc {
 	uint32_t		aqmFreeSramAddress;	/* SRAM free space */
 };
 
-static int qmgr_debug = 0;
-SYSCTL_INT(_debug, OID_AUTO, qmgr, CTLFLAG_RW, &qmgr_debug,
+static int qmgr_debug;
+SYSCTL_INT(_debug, OID_AUTO, qmgr, CTLFLAG_RWTUN, &qmgr_debug,
 	   0, "IXP4XX Q-Manager debug msgs");
-TUNABLE_INT("debug.qmgr", &qmgr_debug);
 #define	DPRINTF(dev, fmt, ...) do {					\
 	if (qmgr_debug) printf(fmt, __VA_ARGS__);			\
 } while (0)
@@ -357,7 +354,7 @@ ixpqmgr_qconfig(int qId, int qEntries, int ne, int nf, int srcSel,
 	if (cb == NULL) {
 	    /* Reset to dummy callback */
 	    qi->cb = dummyCallback;
-	    qi->cbarg = 0;
+	    qi->cbarg = NULL;
 	} else {
 	    qi->cb = cb;
 	    qi->cbarg = cbarg;
@@ -423,7 +420,7 @@ ixpqmgr_qwrite(int qId, uint32_t entry)
 		    return ENOSPC;
 		}
 		/*
-		 * No overflow occured : someone is draining the queue
+		 * No overflow occurred : someone is draining the queue
 		 * and the current counter needs to be
 		 * updated from the current number of entries in the queue
 		 */

@@ -61245,6 +61245,10 @@ sys/arm/xscale/i80321/uart_cpu_i80321.c svneol=native#text/plain
 sys/arm/xscale/i8134x/crb_machdep.c svneol=native#text/plain
 sys/arm/xscale/i8134x/files.crb -text
 sys/arm/xscale/i8134x/files.i81342 -text
+sys/arm/xscale/i8134x/i80321_timer.c svneol=native#text/plain
+sys/arm/xscale/i8134x/i80321_wdog.c svneol=native#text/plain
+sys/arm/xscale/i8134x/i80321reg.h svneol=native#text/plain
+sys/arm/xscale/i8134x/i80321var.h svneol=native#text/plain
 sys/arm/xscale/i8134x/i81342.c svneol=native#text/plain
 sys/arm/xscale/i8134x/i81342_mcu.c svneol=native#text/plain
 sys/arm/xscale/i8134x/i81342_pci.c svneol=native#text/plain

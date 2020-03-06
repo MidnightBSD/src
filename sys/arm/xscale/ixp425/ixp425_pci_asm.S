@@ -35,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_pci_asm.S 275767 2014-12-14 16:28:53Z andrew $
+ * $FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_pci_asm.S 275519 2014-12-05 19:04:08Z andrew $
  *
  */
 

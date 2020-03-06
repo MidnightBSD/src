@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/i8134x/i81342_space.c 278727 2015-02-13 22:32:02Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/i8134x/i81342_space.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -179,13 +179,13 @@ i81342_mem_bs_map(bus_space_tag_t tag, bus_addr_t bpa, bus_size_t size, int flag
 		tmp = tmp->next;
 	}
 	addr = allocable;
-	endaddr = ((addr + size) &~ (0x1000000 - 1)) + 0x1000000;
+	endaddr = rounddown2(addr + size, 0x1000000) + 0x1000000;
 	if (endaddr >= IOP34X_VADDR)
 		panic("PCI virtual memory exhausted");
 	allocable = endaddr;
 	tmp = malloc(sizeof(*tmp), M_DEVBUF, M_WAITOK);
 	tmp->next = NULL;
-	paddr = bpa &~ (0x100000 - 1);
+	paddr = rounddown2(bpa, 0x100000);
 	tmp->paddr = paddr;
 	tmp->vaddr = addr;
 	tmp->size = 0;

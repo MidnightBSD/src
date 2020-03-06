@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/pxa/pxa_timer.c 278613 2015-02-12 03:50:33Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/pxa/pxa_timer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -236,7 +236,7 @@ pxa_timer_set_osmr(int which, uint32_t val)
 }
 
 uint32_t
-pxa_timer_get_oscr()
+pxa_timer_get_oscr(void)
 {
 
 	return (bus_space_read_4(timer_softc->pt_bst,
@@ -252,7 +252,7 @@ pxa_timer_set_oscr(uint32_t val)
 }
 
 uint32_t
-pxa_timer_get_ossr()
+pxa_timer_get_ossr(void)
 {
 
 	return (bus_space_read_4(timer_softc->pt_bst,
@@ -268,7 +268,7 @@ pxa_timer_clear_ossr(uint32_t val)
 }
 
 void
-pxa_timer_watchdog_enable()
+pxa_timer_watchdog_enable(void)
 {
 
 	bus_space_write_4(timer_softc->pt_bst,
@@ -276,7 +276,7 @@ pxa_timer_watchdog_enable()
 }
 
 void
-pxa_timer_watchdog_disable()	
+pxa_timer_watchdog_disable(void)
 {
 
 	bus_space_write_4(timer_softc->pt_bst,

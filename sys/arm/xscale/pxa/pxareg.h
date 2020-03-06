@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xscale/pxa/pxareg.h 266311 2014-05-17 13:53:38Z ian $
+ * $FreeBSD: stable/11/sys/arm/xscale/pxa/pxareg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_pci.c 278613 2015-02-12 03:50:33Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -136,14 +136,6 @@ ixppcib_attach(device_t dev)
 	    BUS_SPACE_MAXADDR, NULL, NULL,  0xffffffff, 0xff, 0xffffffff, 0,
 	    NULL, NULL, &sc->sc_dmat))
 		panic("couldn't create the PCI dma tag !");
-	/*
-	 * The PCI bus can only address 64MB. However, due to the way our
-	 * implementation of busdma works, busdma can't tell if a device
-	 * is a PCI device or not. So defaults to the PCI dma tag, which
-	 * restrict the DMA'able memory to the first 64MB, and explicitely
-	 * create less restrictive tags for non-PCI devices.
-	 */
-	arm_root_dma_tag = sc->sc_dmat;
 	/*
 	 * Initialize the bus space tags.
 	 */
@@ -278,7 +270,7 @@ ixppcib_teardown_intr(device_t dev, device_t child, struct resource *vec,
 
 static struct resource *
 ixppcib_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct ixppcib_softc *sc = device_get_softc(bus);
 	struct rman *rmanp;
@@ -321,9 +313,12 @@ static int
 ixppcib_activate_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r)
 {
-
 	struct ixppcib_softc *sc = device_get_softc(bus);
+	int error;
 
+	error = rman_activate_resource(r);
+	if (error)
+		return (error);
 	switch (type) {
 	case SYS_RES_IOPORT:
 		rman_set_bustag(r, &sc->sc_pci_iot);
@@ -336,7 +331,7 @@ ixppcib_activate_resource(device_t bus, device_t child, int type, int rid,
 		break;
 	}
 		
-	return (rman_activate_resource(r));
+	return (0);
 }
 
 static int
@@ -357,6 +352,14 @@ ixppcib_release_resource(device_t bus, device_t child, int type, int rid,
 	device_printf(bus, "%s called release_resource (unexpected)\n",
 	    device_get_nameunit(child));
 	return (ENXIO);
+}
+
+static bus_dma_tag_t
+ixppcib_get_dma_tag(device_t bus, device_t child)
+{
+	struct ixppcib_softc *sc = device_get_softc(bus);
+
+	return (sc->sc_dmat);
 }
 
 static void
@@ -457,7 +460,7 @@ static device_method_t ixppcib_methods[] = {
 	DEVMETHOD(bus_activate_resource,	ixppcib_activate_resource),
 	DEVMETHOD(bus_deactivate_resource,	ixppcib_deactivate_resource),
 	DEVMETHOD(bus_release_resource,		ixppcib_release_resource),
-	/* DEVMETHOD(bus_get_dma_tag,		ixppcib_get_dma_tag), */
+	DEVMETHOD(bus_get_dma_tag,		ixppcib_get_dma_tag),
 
 	/* pcib interface */
 	DEVMETHOD(pcib_maxslots,		ixppcib_maxslots),

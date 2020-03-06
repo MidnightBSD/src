@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/pxa/pxa_gpio.c 179595 2008-06-06 05:08:09Z benno $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/pxa/pxa_gpio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -332,7 +332,7 @@ pxa_gpio_unmask_irq(int irq)
 }
 
 int
-pxa_gpio_get_next_irq()
+pxa_gpio_get_next_irq(void)
 {
 	struct  pxa_gpio_softc *sc;
 	int     gpio;

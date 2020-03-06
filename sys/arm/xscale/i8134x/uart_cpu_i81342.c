@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/i8134x/uart_cpu_i81342.c 278727 2015-02-13 22:32:02Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/i8134x/uart_cpu_i81342.c 331890 2018-04-02 22:02:49Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,14 +55,14 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 
 	di->ops = uart_getops(&uart_ns8250_class);
 	di->bas.chan = 0;
-	di->bas.bst = obio_bs_tag;
+	di->bas.bst = arm_base_bs_tag;
 	di->bas.regshft = 2;
 	di->bas.rclk = 33334000;
 	di->baudrate = 115200;
 	di->databits = 8;
 	di->stopbits = 1;
 	di->parity = UART_PARITY_NONE;
-	uart_bus_space_io = obio_bs_tag;
+	uart_bus_space_io = arm_base_bs_tag;
 	uart_bus_space_mem = NULL;
 	di->bas.bsh = IOP34X_UART0_VADDR;
 	return (0);

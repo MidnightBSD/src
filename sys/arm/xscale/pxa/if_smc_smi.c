@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/pxa/if_smc_smi.c 259342 2013-12-13 22:08:31Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/pxa/if_smc_smi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

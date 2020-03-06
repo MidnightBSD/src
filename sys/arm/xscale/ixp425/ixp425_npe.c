@@ -58,7 +58,7 @@
  * SUCH DAMAGE.
 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_npe.c 249582 2013-04-17 11:40:10Z gabor $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_npe.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Intel XScale Network Processing Engine (NPE) support.
@@ -93,8 +93,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_npe.c 249582 2013-04-
 #include <sys/firmware.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 #include <arm/xscale/ixp425/ixp425reg.h>
@@ -182,9 +180,8 @@ typedef struct {
 } IxNpeDlNpeMgrStateInfoBlock;
 
 static int npe_debug = 0;
-SYSCTL_INT(_debug, OID_AUTO, ixp425npe, CTLFLAG_RW, &npe_debug,
+SYSCTL_INT(_debug, OID_AUTO, ixp425npe, CTLFLAG_RWTUN, &npe_debug,
 	   0, "IXP4XX NPE debug msgs");
-TUNABLE_INT("debug.ixp425npe", &npe_debug);
 #define	DPRINTF(dev, fmt, ...) do {					\
 	if (npe_debug) device_printf(dev, fmt, __VA_ARGS__);		\
 } while (0)
@@ -509,7 +506,7 @@ ixpnpe_load_firmware(struct ixpnpe_softc *sc, const char *imageName,
 
 	/*
 	 * If download was successful, store image Id in list of
-	 * currently loaded images. If a critical error occured
+	 * currently loaded images. If a critical error occurred
 	 * during download, record that the NPE has an invalid image
 	 */
 	mtx_lock(&sc->sc_mtx);
@@ -866,7 +863,7 @@ npe_cpu_reset(struct ixpnpe_softc *sc)
 	while (npe_checkbits(sc,
 	      IX_NPEDL_REG_OFFSET_STAT, IX_NPEDL_MASK_STAT_IFNE)) {
 		/*
-		 * Step execution of the NPE intruction to read inFIFO using
+		 * Step execution of the NPE instruction to read inFIFO using
 		 * the Debug Executing Context stack.
 		 */
 		error = npe_cpu_step(sc, IX_NPEDL_INSTR_RD_FIFO, 0, 0);
@@ -1309,7 +1306,7 @@ npe_logical_reg_write(struct ixpnpe_softc *sc, uint32_t regAddr, uint32_t regVal
 		    ((regVal & IX_NPEDL_MASK_IMMED_INSTR_COPROC_DATA) <<
 		     IX_NPEDL_DISPLACE_IMMED_INSTR_COPROC_DATA);
 
-		/* step execution of NPE intruction using Debug ECS */
+		/* step execution of NPE instruction using Debug ECS */
 		error = npe_cpu_step(sc, npeInstruction,
 		    ctxtNum, IX_NPEDL_WR_INSTR_LDUR);
 	}

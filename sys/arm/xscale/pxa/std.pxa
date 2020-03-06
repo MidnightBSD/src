@@ -1,5 +1,5 @@
 # XScale PXA generic configuration
-# $FreeBSD: stable/10/sys/arm/xscale/pxa/std.pxa 266175 2014-05-15 19:09:31Z ian $
+# $FreeBSD: stable/11/sys/arm/xscale/pxa/std.pxa 261642 2014-02-08 22:21:38Z ian $
 files		"../xscale/pxa/files.pxa"
 include		"../xscale/std.xscale"
 makeoptions	KERNPHYSADDR=0xa0200000

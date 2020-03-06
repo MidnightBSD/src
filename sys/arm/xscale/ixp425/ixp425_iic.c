@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_iic.c 236987 2012-06-13 04:38:09Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_iic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

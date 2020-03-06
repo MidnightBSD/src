@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/uart_bus_ixp425.c 194668 2009-06-22 22:46:37Z sam $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/uart_bus_ixp425.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,5 +79,5 @@ uart_ixp425_probe(device_t dev)
 	if (bootverbose)
 		device_printf(dev, "rclk %u\n", rclk);
 
-	return uart_bus_probe(dev, 0, rclk, 0, 0);
+	return uart_bus_probe(dev, 0, 0, rclk, 0, 0, 0);
 }

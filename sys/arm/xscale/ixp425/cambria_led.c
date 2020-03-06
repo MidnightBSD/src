@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/cambria_led.c 194015 2009-06-11 17:05:13Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/cambria_led.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Gateworks Cambria Octal LED Latch driver.

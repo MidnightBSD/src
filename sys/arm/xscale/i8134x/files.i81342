@@ -1,10 +1,7 @@
-# $FreeBSD: stable/10/sys/arm/xscale/i8134x/files.i81342 278727 2015-02-13 22:32:02Z ian $
+# $FreeBSD: stable/11/sys/arm/xscale/i8134x/files.i81342 295199 2016-02-03 08:59:12Z mmel $
 arm/arm/bus_space_base.c		standard
-arm/arm/bus_space_generic.c		standard
-arm/arm/cpufunc_asm_xscale.S		standard
-arm/arm/cpufunc_asm_xscale_c3.S		standard
-arm/xscale/i80321/i80321_timer.c	standard
-arm/xscale/i80321/i80321_wdog.c		optional	iopwdog
+arm/xscale/i8134x/i80321_timer.c	standard
+arm/xscale/i8134x/i80321_wdog.c		optional	iopwdog
 arm/xscale/i8134x/i81342.c		standard
 arm/xscale/i8134x/i81342_mcu.c		standard
 arm/xscale/i8134x/i81342_pci.c		optional	pci

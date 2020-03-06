@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/i8134x/i81342_pci.c 259329 2013-12-13 20:43:11Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/i8134x/i81342_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -122,8 +122,8 @@ i81342_pci_attach(device_t dev)
 	    memstart | PCI_MAPREG_MEM_PREFETCHABLE_MASK |
 	    PCI_MAPREG_MEM_TYPE_64BIT);
 	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_IAUBAR1, 0);
-	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_IALR1, ~(memsize - 1)
-	     &~(0xfff));
+	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_IALR1,
+	    rounddown2(~(0xfff), memsize));
 	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_IATVR1, memstart);
 	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_IAUTVR1, 0);
 
@@ -210,7 +210,7 @@ i81342_pci_attach(device_t dev)
 	}
 	bus_space_write_4(sc->sc_st, sc->sc_atu_sh, ATU_ISR,
 	    bus_space_read_4(sc->sc_st, sc->sc_atu_sh, ATU_ISR) & ATUX_ISR_ERRMSK);
-	device_add_child(dev, "pci", busno);
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }
 
@@ -329,7 +329,7 @@ i81342_pci_write_config(device_t dev, u_int bus, u_int slot, u_int func,
 
 static struct resource *
 i81342_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-   u_long start, u_long end, u_long count, u_int flags)
+   rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct i81342_pci_softc *sc = device_get_softc(bus);	
 	struct resource *rv;
@@ -384,7 +384,7 @@ static int
 i81342_pci_activate_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r)
 {
-	u_long p;
+	bus_space_handle_t p;
 	int error;
 	
 	if (type == SYS_RES_MEMORY) {

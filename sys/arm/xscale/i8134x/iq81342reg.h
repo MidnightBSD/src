@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/xscale/i8134x/iq81342reg.h 172297 2007-09-22 16:25:43Z cognet $ */
+/* $FreeBSD: stable/11/sys/arm/xscale/i8134x/iq81342reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _IQ81342REG_H_
 #define _IQ81342REG_H_

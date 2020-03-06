@@ -1,5 +1,5 @@
 #XScale IXP435 generic configuration
-#$FreeBSD: stable/10/sys/arm/xscale/ixp425/std.ixp435 239362 2012-08-18 05:48:19Z andrew $
+#$FreeBSD: stable/11/sys/arm/xscale/ixp425/std.ixp435 239362 2012-08-18 05:48:19Z andrew $
 
 files		"../xscale/ixp425/files.ixp425"
 include		"../xscale/std.xscale-be"

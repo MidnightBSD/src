@@ -1,4 +1,4 @@
-#$FreeBSD: stable/10/sys/arm/xscale/ixp425/files.avila 215142 2010-11-11 20:18:33Z thompsa $
+#$FreeBSD: stable/11/sys/arm/xscale/ixp425/files.avila 215142 2010-11-11 20:18:33Z thompsa $
 arm/xscale/ixp425/avila_machdep.c	standard
 arm/xscale/ixp425/avila_ata.c		optional avila_ata
 arm/xscale/ixp425/avila_led.c		optional avila_led

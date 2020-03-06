@@ -35,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xscale/i8134x/obiovar.h 278727 2015-02-13 22:32:02Z ian $
+ * $FreeBSD: stable/11/sys/arm/xscale/i8134x/obiovar.h 331890 2018-04-02 22:02:49Z gonzo $
  *
  */
 
@@ -51,6 +51,5 @@ struct obio_softc {
 	struct rman oba_irq_rman;
 	
 };
-extern bus_space_tag_t obio_bs_tag;
 
 #endif /* _IQ80321_OBIOVAR_H_ */

@@ -33,14 +33,14 @@
  * The Cambria PLD does not set the i2c ack bit after each write, if we used the
  * regular iicbus interface it would abort the xfer after the address byte
  * times out and not write our latch. To get around this we grab the iicbus and
- * then do our own bit banging. This is a comprimise to changing all the iicbb
+ * then do our own bit banging. This is a compromise to changing all the iicbb
  * device methods to allow a flag to be passed down and is similir to how Linux
  * does it.
  *
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/cambria_gpio.c 278786 2015-02-14 21:16:19Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/cambria_gpio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/cambria_gpio.c 278786 2015-0
 #include <arm/xscale/ixp425/ixp425var.h>
 #include <arm/xscale/ixp425/ixdp425reg.h>
 
+#include <dev/gpio/gpiobusvar.h>
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
 
@@ -80,6 +81,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/cambria_gpio.c 278786 2015-0
 #define	GPIO_PINS		5
 struct cambria_gpio_softc {
 	device_t		sc_dev;
+	device_t		sc_busdev;
 	bus_space_tag_t		sc_iot;
 	bus_space_handle_t	sc_gpio_ioh;
         struct mtx		sc_mtx;
@@ -120,6 +122,7 @@ static int cambria_gpio_detach(device_t dev);
 /*
  * GPIO interface
  */
+static device_t cambria_gpio_get_bus(device_t);
 static int cambria_gpio_pin_max(device_t dev, int *maxpin);
 static int cambria_gpio_pin_getcaps(device_t dev, uint32_t pin, uint32_t *caps);
 static int cambria_gpio_pin_getflags(device_t dev, uint32_t pin, uint32_t
@@ -260,6 +263,16 @@ cambria_gpio_write(struct cambria_gpio_softc *sc)
 	iicbus_release_bus(device_get_parent(dev), dev);
 
 	return (0);
+}
+
+static device_t
+cambria_gpio_get_bus(device_t dev)
+{
+	struct cambria_gpio_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	return (sc->sc_busdev);
 }
 
 static int
@@ -439,10 +452,13 @@ cambria_gpio_attach(device_t dev)
 		cambria_gpio_pin_setflags(dev, pin, p->flags);
 	}
 
-	device_add_child(dev, "gpioc", -1);
-	device_add_child(dev, "gpiobus", -1);
+	sc->sc_busdev = gpiobus_attach_bus(dev);
+	if (sc->sc_busdev == NULL) {
+		mtx_destroy(&sc->sc_mtx);
+		return (ENXIO);
+	}
 
-	return (bus_generic_attach(dev));
+	return (0);
 }
 
 static int
@@ -452,8 +468,7 @@ cambria_gpio_detach(device_t dev)
 
 	KASSERT(mtx_initialized(&sc->sc_mtx), ("gpio mutex not initialized"));
 
-	bus_generic_detach(dev);
-
+	gpiobus_detach_bus(dev);
 	mtx_destroy(&sc->sc_mtx);
 
 	return(0);
@@ -465,6 +480,7 @@ static device_method_t cambria_gpio_methods[] = {
 	DEVMETHOD(device_detach, cambria_gpio_detach),
 
 	/* GPIO protocol */
+	DEVMETHOD(gpio_get_bus, cambria_gpio_get_bus),
 	DEVMETHOD(gpio_pin_max, cambria_gpio_pin_max),
 	DEVMETHOD(gpio_pin_getname, cambria_gpio_pin_getname),
 	DEVMETHOD(gpio_pin_getflags, cambria_gpio_pin_getflags),
@@ -477,16 +493,12 @@ static device_method_t cambria_gpio_methods[] = {
 };
 
 static driver_t cambria_gpio_driver = {
-	"gpio_cambria",
+	"gpio",
 	cambria_gpio_methods,
 	sizeof(struct cambria_gpio_softc),
 };
 static devclass_t cambria_gpio_devclass;
-extern devclass_t gpiobus_devclass, gpioc_devclass;
-extern driver_t gpiobus_driver, gpioc_driver;
 
 DRIVER_MODULE(gpio_cambria, iicbus, cambria_gpio_driver, cambria_gpio_devclass, 0, 0);
-DRIVER_MODULE(gpiobus, gpio_cambria, gpiobus_driver, gpiobus_devclass, 0, 0);
-DRIVER_MODULE(gpioc, gpio_cambria, gpioc_driver, gpioc_devclass, 0, 0);
 MODULE_VERSION(gpio_cambria, 1);
 MODULE_DEPEND(gpio_cambria, iicbus, 1, 1, 1);

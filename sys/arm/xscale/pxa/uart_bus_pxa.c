@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/pxa/uart_bus_pxa.c 234004 2012-04-07 23:47:08Z stas $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/pxa/uart_bus_pxa.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,7 +98,7 @@ uart_pxa_probe(device_t dev)
 	sc = device_get_softc(dev);
 	sc->sc_class = &uart_ns8250_class;
 
-	return(uart_bus_probe(dev, 2, PXA2X0_COM_FREQ, 0, 0));
+	return(uart_bus_probe(dev, 2, 0, PXA2X0_COM_FREQ, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, pxa, uart_pxa_driver, uart_devclass, 0, 0);

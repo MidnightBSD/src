@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/avila_ata.c 305615 2016-09-08 15:06:28Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/ixp425/avila_ata.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Compact Flash Support for the Avila Gateworks XScale boards.
@@ -54,8 +54,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xscale/ixp425/avila_ata.c 305615 2016-09-0
 #include <sys/endian.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 #include <arm/xscale/ixp425/ixp425reg.h>
@@ -283,12 +281,12 @@ ata_avila_intr(void *xsc)
 
 static struct resource *
 ata_avila_alloc_resource(device_t dev, device_t child, int type, int *rid,
-		       u_long start, u_long end, u_long count, u_int flags)
+		   rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct ata_avila_softc *sc = device_get_softc(dev);
 
 	KASSERT(type == SYS_RES_IRQ && *rid == ATA_IRQ_RID,
-	    ("type %u rid %u start %lu end %lu count %lu flags %u",
+	    ("type %u rid %u start %ju end %ju count %ju flags %u",
 	     type, *rid, start, end, count, flags));
 
 	/* doesn't matter what we return so reuse the real thing */

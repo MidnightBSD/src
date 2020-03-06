@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_qmgr.h 236987 2012-06-13 04:38:09Z imp $
+ * $FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_qmgr.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*-

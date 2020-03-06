@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xscale/i8134x/iq81342_7seg.c 236987 2012-06-13 04:38:09Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xscale/i8134x/iq81342_7seg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xscale/ixp425/ixp425_npevar.h 186420 2008-12-23 04:51:46Z sam $
+ * $FreeBSD: stable/11/sys/arm/xscale/ixp425/ixp425_npevar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _IXP425_NPEVAR_H_
