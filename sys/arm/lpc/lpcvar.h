@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/lpc/lpcvar.h 239278 2012-08-15 05:37:10Z gonzo $
+ * $FreeBSD: stable/11/sys/arm/lpc/lpcvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_ARM_LPC_LPCVAR_H
@@ -39,7 +39,7 @@ uint32_t lpc_pwr_read(device_t, int);
 void lpc_pwr_write(device_t, int, uint32_t);
 
 /* GPIO */
-void platform_gpio_init(void);
+void lpc_gpio_init(void);
 int lpc_gpio_set_flags(device_t, int, int);
 int lpc_gpio_set_state(device_t, int, int);
 int lpc_gpio_get_state(device_t, int, int *);

@@ -26,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_mmc.c 318198 2017-05-11 21:01:02Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/lpc/lpc_mmc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,8 +40,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_mmc.c 318198 2017-05-11 21:01:02Z 
 #include <sys/rman.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 

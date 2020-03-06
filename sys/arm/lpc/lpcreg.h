@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/lpc/lpcreg.h 266084 2014-05-14 19:18:58Z ian $
+ * $FreeBSD: stable/11/sys/arm/lpc/lpcreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_ARM_LPC_LPCREG_H

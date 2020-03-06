@@ -26,4 +26,4 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_pll.c 239278 2012-08-15 05:37:10Z gonzo $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/lpc/lpc_pll.c 331722 2018-03-29 02:50:57Z eadler $");

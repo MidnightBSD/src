@@ -26,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_timer.c 266207 2014-05-16 02:21:51Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/lpc/lpc_timer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_timer.c 266207 2014-05-16 02:21:51
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -159,15 +158,13 @@ lpc_timer_attach(device_t dev)
 
 	/* Get PERIPH_CLK encoded in parent bus 'bus-frequency' property */
 	node = ofw_bus_get_node(dev);
-	if (OF_getprop(OF_parent(node), "bus-frequency", &freq,
+	if (OF_getencprop(OF_parent(node), "bus-frequency", &freq,
 	    sizeof(pcell_t)) <= 0) {
 		bus_release_resources(dev, lpc_timer_spec, sc->lt_res);
 		bus_teardown_intr(dev, sc->lt_res[2], intrcookie);
 		device_printf(dev, "could not obtain base clock frequency\n");
 		return (ENXIO);
 	}
-
-	freq = fdt32_to_cpu(freq);
 
 	/* Set desired frequency in event timer and timecounter */
 	sc->lt_et.et_frequency = (uint64_t)freq;

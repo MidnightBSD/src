@@ -51,7 +51,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_gpio.c 278782 2015-02-14 20:37:33Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/lpc/lpc_gpio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,12 +74,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_gpio.c 278782 2015-02-14 20:37:33Z
 #include <sys/gpio.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 #include <machine/fdt.h>
 
+#include <dev/gpio/gpiobusvar.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -91,6 +90,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_gpio.c 278782 2015-02-14 20:37:33Z
 struct lpc_gpio_softc
 {
 	device_t		lg_dev;
+	device_t		lg_busdev;
 	struct resource *	lg_res;
 	bus_space_tag_t		lg_bst;
 	bus_space_handle_t	lg_bsh;
@@ -136,6 +136,7 @@ static int lpc_gpio_probe(device_t);
 static int lpc_gpio_attach(device_t);
 static int lpc_gpio_detach(device_t);
 
+static device_t lpc_gpio_get_bus(device_t);
 static int lpc_gpio_pin_max(device_t, int *);
 static int lpc_gpio_pin_getcaps(device_t, uint32_t, uint32_t *);
 static int lpc_gpio_pin_getflags(device_t, uint32_t, uint32_t *);
@@ -193,16 +194,29 @@ lpc_gpio_attach(device_t dev)
 
 	lpc_gpio_sc = sc;
 
-	device_add_child(dev, "gpioc", -1);
-	device_add_child(dev, "gpiobus", -1);
+	sc->lg_busdev = gpiobus_attach_bus(dev);
+	if (sc->lg_busdev == NULL) {
+		bus_release_resource(dev, SYS_RES_MEMORY, rid, sc->lg_res);
+		return (ENXIO);
+	}
 
-	return (bus_generic_attach(dev));
+	return (0);
 }
 
 static int
 lpc_gpio_detach(device_t dev)
 {
 	return (EBUSY);
+}
+
+static device_t
+lpc_gpio_get_bus(device_t dev)
+{
+	struct lpc_gpio_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	return (sc->lg_busdev);
 }
 
 static int
@@ -505,7 +519,7 @@ lpc_gpio_get_state(device_t dev, int pin, int *state)
 }
 
 void
-platform_gpio_init()
+lpc_gpio_init(void)
 {
 	bus_space_tag_t bst;
 	bus_space_handle_t bsh;
@@ -528,6 +542,7 @@ static device_method_t lpc_gpio_methods[] = {
 	DEVMETHOD(device_detach,	lpc_gpio_detach),
 
 	/* GPIO interface */
+	DEVMETHOD(gpio_get_bus,		lpc_gpio_get_bus),
 	DEVMETHOD(gpio_pin_max,		lpc_gpio_pin_max),
 	DEVMETHOD(gpio_pin_getcaps,	lpc_gpio_pin_getcaps),
 	DEVMETHOD(gpio_pin_getflags,	lpc_gpio_pin_getflags),

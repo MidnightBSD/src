@@ -1,8 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/lpc/files.lpc 278727 2015-02-13 22:32:02Z ian $
-arm/arm/bus_space_base.c		standard
-arm/arm/bus_space_generic.c		standard
-arm/arm/cpufunc_asm_arm9.S		standard
-arm/arm/cpufunc_asm_armv5.S		standard
+# $MidnightBSD$
 arm/lpc/lpc_machdep.c			standard
 arm/lpc/lpc_pwr.c			standard
 arm/lpc/lpc_intc.c			standard

@@ -26,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/lpc/lpc_ohci.c 278278 2015-02-05 20:03:02Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/lpc/lpc_ohci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
