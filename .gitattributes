@@ -60519,6 +60519,9 @@ sys/amd64/vmm/vmm_util.c svneol=native#text/plain
 sys/amd64/vmm/vmm_util.h svneol=native#text/plain
 sys/amd64/vmm/x86.c svneol=native#text/plain
 sys/amd64/vmm/x86.h svneol=native#text/plain
+sys/arm/allwinner/a10/a10_intc.c svneol=native#text/plain
+sys/arm/allwinner/a10/a10_padconf.c svneol=native#text/plain
+sys/arm/allwinner/a10/files.a10 -text
 sys/arm/allwinner/a10_clk.c svneol=native#text/plain
 sys/arm/allwinner/a10_clk.h svneol=native#text/plain
 sys/arm/allwinner/a10_common.c svneol=native#text/plain
