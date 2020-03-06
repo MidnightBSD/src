@@ -24,13 +24,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/samsung/exynos/chrome_ec.h 266341 2014-05-17 19:37:04Z ian $
+ * $FreeBSD: stable/11/sys/arm/samsung/exynos/chrome_ec.h 269369 2014-08-01 06:20:25Z br $
  */
 
 #define	EC_CMD_HELLO		0x01
 #define	EC_CMD_GET_VERSION	0x02
 #define	EC_CMD_MKBP_STATE	0x60
 #define	EC_CMD_VERSION0		0xdc
+#define	EC_CMD_RESEND_RESPONSE	0xdb
+#define	EC_CMD_GET_COMMS_STATUS	0x09
 
 int ec_command(uint8_t cmd, uint8_t *dout, uint8_t dout_len,
     uint8_t *dinp, uint8_t dinp_len);

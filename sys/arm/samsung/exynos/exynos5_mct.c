@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/exynos/exynos5_mct.c 266332 2014-05-17 17:54:38Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_mct.c 269703 2014-08-08 06:30:17Z nwhitehorn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,13 +46,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/samsung/exynos/exynos5_mct.c 266332 2014-0
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #define	MCT_CTRL_START		(1 << 8)
 #define	MCT_CTRL		(0x240)

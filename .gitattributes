@@ -61075,6 +61075,7 @@ sys/arm/rockchip/rk30xx_wdog.h svneol=native#text/plain
 sys/arm/rockchip/std.rk30xx -text
 sys/arm/samsung/exynos/chrome_ec.c svneol=native#text/plain
 sys/arm/samsung/exynos/chrome_ec.h svneol=native#text/plain
+sys/arm/samsung/exynos/chrome_ec_spi.c svneol=native#text/plain
 sys/arm/samsung/exynos/chrome_kb.c svneol=native#text/plain
 sys/arm/samsung/exynos/chrome_kb.h svneol=native#text/plain
 sys/arm/samsung/exynos/exynos5_combiner.c svneol=native#text/plain
@@ -61089,6 +61090,11 @@ sys/arm/samsung/exynos/exynos5_mct.c svneol=native#text/plain
 sys/arm/samsung/exynos/exynos5_mp.c svneol=native#text/plain
 sys/arm/samsung/exynos/exynos5_pad.c svneol=native#text/plain
 sys/arm/samsung/exynos/exynos5_pad.h svneol=native#text/plain
+sys/arm/samsung/exynos/exynos5_pmu.c svneol=native#text/plain
+sys/arm/samsung/exynos/exynos5_pmu.h svneol=native#text/plain
+sys/arm/samsung/exynos/exynos5_spi.c svneol=native#text/plain
+sys/arm/samsung/exynos/exynos5_usb_phy.c svneol=native#text/plain
+sys/arm/samsung/exynos/exynos5_xhci.c svneol=native#text/plain
 sys/arm/samsung/exynos/exynos_uart.c svneol=native#text/plain
 sys/arm/samsung/exynos/exynos_uart.h svneol=native#text/plain
 sys/arm/samsung/exynos/files.exynos5 -text

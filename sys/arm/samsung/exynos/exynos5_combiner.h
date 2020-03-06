@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/samsung/exynos/exynos5_combiner.h 266341 2014-05-17 19:37:04Z ian $
+ * $FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_combiner.h 263936 2014-03-30 15:22:36Z br $
  */
 
 void combiner_setup_intr(char *source_name, void (*ih)(void *), void *ih_user);

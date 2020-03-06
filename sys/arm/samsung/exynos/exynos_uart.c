@@ -28,14 +28,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/exynos/exynos_uart.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/exynos_uart.c 356020 2019-12-22 19:06:45Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
-#include <sys/tty.h>
 #include <sys/rman.h>
 #include <machine/bus.h>
 #include <machine/intr.h>
@@ -381,6 +380,7 @@ static struct uart_class uart_exynos4210_class = {
 	.uc_ops = &uart_exynos4210_ops,
 	.uc_range = 8,
 	.uc_rclk = 0,
+	.uc_rshift = 0
 };
 
 static struct ofw_compat_data compat_data[] = {

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/exynos/exynos5_common.c 266277 2014-05-17 00:53:12Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_common.c 314506 2017-03-01 19:55:04Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,10 +50,7 @@ cpu_reset(void)
 	while (1);
 }
 
-struct fdt_fixup_entry fdt_fixup_table[] = {
-	{ NULL, NULL }
-};
-
+#ifndef INTRNG
 static int
 fdt_pic_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
     int *pol)
@@ -72,3 +69,4 @@ fdt_pic_decode_t fdt_pic_table[] = {
 	&fdt_pic_decode_ic,
 	NULL
 };
+#endif
