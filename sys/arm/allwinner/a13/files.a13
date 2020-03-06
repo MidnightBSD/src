@@ -1,0 +1,3 @@
+# $MidnightBSD$
+
+arm/allwinner/a13/a13_padconf.c		standard
