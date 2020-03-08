@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/allwinner/a10_common.c 266337 2014-05-17 18:53:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a10_common.c 314506 2017-03-01 19:55:04Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,12 +37,9 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/allwinner/a10_common.c 266337 2014-05-17 1
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/vmparam.h>
 
-struct fdt_fixup_entry fdt_fixup_table[] = {
-	{ NULL, NULL }
-};
+#ifndef INTRNG
 
 static int
 fdt_aintc_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
@@ -50,7 +47,7 @@ fdt_aintc_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
 {
 	int offset;
 
-	if (fdt_is_compatible(node, "allwinner,sun4i-ic"))
+	if (fdt_is_compatible(node, "allwinner,sun4i-a10-ic"))
 		offset = 0;
 	else if (fdt_is_compatible(node, "arm,gic"))
 		offset = 32;
@@ -68,3 +65,5 @@ fdt_pic_decode_t fdt_pic_table[] = {
 	&fdt_aintc_decode_ic,
 	NULL
 };
+
+#endif /* INTRNG */

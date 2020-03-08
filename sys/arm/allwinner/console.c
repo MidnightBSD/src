@@ -28,7 +28,7 @@
 /* Simple UART console driver for Allwinner A10 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/allwinner/console.c 266337 2014-05-17 18:53:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/console.c 263711 2014-03-25 08:31:47Z ganbold $");
 
 #include <sys/types.h>
 #include <sys/param.h>

@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
+ * Copyright (c) 2013 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -18,19 +18,19 @@
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ARISING IN ANY WAY
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/allwinner/a10_sramc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD: stable/11/sys/arm/allwinner/aw_wdog.h 296041 2016-02-25 16:50:36Z andrew $
+ *
  */
+#ifndef __AW_WDOG_H__
+#define	__AW_WDOG_H__
 
-#ifndef	_A10_SRAMC_H_
-#define	_A10_SRAMC_H_
+void aw_wdog_watchdog_reset(void);
 
-int	a10_map_to_emac(void);
-int	a10_map_to_otg(void);
+#endif /*__AW_WDOG_H__*/
 
-#endif

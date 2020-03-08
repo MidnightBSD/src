@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
+ * Copyright (c) 2016 Emmanuel Vadot <manu@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -18,19 +18,30 @@
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ARISING IN ANY WAY
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/allwinner/a10_sramc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD: stable/11/sys/arm/allwinner/allwinner_pinctrl.h 331182 2018-03-19 06:40:11Z eadler $
  */
 
-#ifndef	_A10_SRAMC_H_
-#define	_A10_SRAMC_H_
+#ifndef _ALLWINNER_PINCTRL_H_
+#define	_ALLWINNER_PINCTRL_H_
 
-int	a10_map_to_emac(void);
-int	a10_map_to_otg(void);
+#define AW_MAX_FUNC_BY_PIN	8
 
-#endif
+struct allwinner_pins {
+	const char *name;
+	uint8_t port;
+	uint8_t pin;
+	const char *functions[8];
+};
+
+struct allwinner_padconf {
+	uint32_t			npins;
+	const struct allwinner_pins *	pins;
+};
+
+#endif /* _ALLWINNER_PINCTRL_H_ */

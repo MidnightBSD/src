@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/allwinner/if_emacreg.h 266337 2014-05-17 18:53:36Z ian $
+ * $FreeBSD: stable/11/sys/arm/allwinner/if_emacreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	__IF_EMACREG_H__
@@ -52,6 +52,8 @@
 #define	EMAC_TX_TSVH0		0x30
 #define	EMAC_TX_TSVL1		0x34
 #define	EMAC_TX_TSVH1		0x38
+#define	EMAC_TX_FIFO0		(1 << 0)
+#define	EMAC_TX_FIFO1		(1 << 1)
 
 #define	EMAC_RX_CTL		0x3C
 #define	EMAC_RX_HASH0		0x40
@@ -62,7 +64,7 @@
 
 #define	EMAC_INT_CTL		0x54
 #define	EMAC_INT_STA		0x58
-#define	EMAC_INT_STA_TX		(0x01 | 0x02)
+#define	EMAC_INT_STA_TX		(EMAC_TX_FIFO0 | EMAC_TX_FIFO1)
 #define	EMAC_INT_STA_RX		0x100
 #define	EMAC_INT_EN		(0xf << 0) | (1 << 8)
 
@@ -224,6 +226,7 @@
 /* Receive status */
 #define	EMAC_CRCERR		(1 << 4)
 #define	EMAC_LENERR		(3 << 5)
+#define	EMAC_PKT_OK		(1 << 7)
 
 #define	EMAC_RX_FLUSH_FIFO	(1 << 3)
 #define	EMAC_PHY_RESET		(1 << 15)

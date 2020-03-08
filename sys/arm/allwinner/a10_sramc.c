@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/allwinner/a10_sramc.c 266337 2014-05-17 18:53:36Z ian $
+ * $FreeBSD: stable/11/sys/arm/allwinner/a10_sramc.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/allwinner/a10_sramc.c 266337 2014-05-17 18:53:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a10_sramc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/allwinner/a10_sramc.c 266337 2014-05-17 18
 #include <machine/cpu.h>
 #include <machine/frame.h>
 #include <machine/intr.h>
-#include <machine/fdt.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
@@ -54,6 +53,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/allwinner/a10_sramc.c 266337 2014-05-17 18
 #include "a10_sramc.h"
 
 #define	SRAM_CTL1_CFG		0x04
+#define	CTL1_CFG_SRAMD_MAP_USB0	(1 << 0)
 
 struct a10_sramc_softc {
 	struct resource		*res;
@@ -73,7 +73,7 @@ static int
 a10_sramc_probe(device_t dev)
 {
 
-	if (ofw_bus_is_compatible(dev, "allwinner,sun4i-sramc")) {
+	if (ofw_bus_is_compatible(dev, "allwinner,sun4i-a10-sram-controller")) {
 		device_set_desc(dev, "Allwinner sramc module");
 		return (BUS_PROBE_DEFAULT);
 	}
@@ -115,7 +115,8 @@ static driver_t a10_sramc_driver = {
 
 static devclass_t a10_sramc_devclass;
 
-DRIVER_MODULE(a10_sramc, simplebus, a10_sramc_driver, a10_sramc_devclass, 0, 0);
+EARLY_DRIVER_MODULE(a10_sramc, simplebus, a10_sramc_driver, a10_sramc_devclass,
+    0, 0, BUS_PASS_RESOURCE + BUS_PASS_ORDER_EARLY);
 
 int
 a10_map_to_emac(void)
@@ -129,6 +130,23 @@ a10_map_to_emac(void)
 	/* Map SRAM to EMAC, set bit 2 and 4. */
 	reg_value = sramc_read_4(sc, SRAM_CTL1_CFG);
 	reg_value |= 0x5 << 2;
+	sramc_write_4(sc, SRAM_CTL1_CFG, reg_value);
+
+	return (0);
+}
+
+int
+a10_map_to_otg(void)
+{
+	struct a10_sramc_softc *sc = a10_sramc_sc;
+	uint32_t reg_value;
+
+	if (sc == NULL)
+		return (ENXIO);
+
+	/* Map SRAM to OTG */
+	reg_value = sramc_read_4(sc, SRAM_CTL1_CFG);
+	reg_value |= CTL1_CFG_SRAMD_MAP_USB0;
 	sramc_write_4(sc, SRAM_CTL1_CFG, reg_value);
 
 	return (0);
