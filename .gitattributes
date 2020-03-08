@@ -60538,6 +60538,7 @@ sys/arm/allwinner/a13/files.a13 -text
 sys/arm/allwinner/a20/a20_cpu_cfg.c svneol=native#text/plain
 sys/arm/allwinner/a20/a20_cpu_cfg.h svneol=native#text/plain
 sys/arm/allwinner/a20/a20_mp.c svneol=native#text/plain
+sys/arm/allwinner/a20/a20_padconf.c svneol=native#text/plain
 sys/arm/allwinner/a20/files.a20 -text
 sys/arm/allwinner/a20/std.a20 -text
 sys/arm/allwinner/aintc.c svneol=native#text/plain

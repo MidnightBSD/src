@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/allwinner/a20/a20_cpu_cfg.h 266337 2014-05-17 18:53:36Z ian $
+ * $FreeBSD: stable/11/sys/arm/allwinner/a20/a20_cpu_cfg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _A20_CPU_CFG_H_
