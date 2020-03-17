@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_node.c 254627 2013-08-21 23:04:48Z ken $
+ * $FreeBSD: stable/11/sys/fs/smbfs/smbfs_node.c 304983 2016-08-29 05:51:27Z kib $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -133,7 +132,7 @@ smbfs_node_alloc(struct mount *mp, struct vnode *dvp, const char *dirnm,
 	}
 	dnp = dvp ? VTOSMB(dvp) : NULL;
 	if (dnp == NULL && dvp != NULL) {
-		vprint("smbfs_node_alloc: dead parent vnode", dvp);
+		vn_printf(dvp, "smbfs_node_alloc: dead parent vnode ");
 		return EINVAL;
 	}
 	error = vfs_hash_get(mp, smbfs_hash(name, nmlen), LK_EXCLUSIVE, td,

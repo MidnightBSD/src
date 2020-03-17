@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Berkeley Software Design, Inc. All rights reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfsclient/nlminfo.h 191783 2009-05-04 15:23:58Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfsclient/nlminfo.h 191783 2009-05-04 15:23:58Z rmacklem $
  */
 
 /*

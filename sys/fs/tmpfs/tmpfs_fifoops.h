@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_fifoops.h,v 1.4 2005/12/03 17:34:44 christos Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/tmpfs/tmpfs_fifoops.h 269164 2014-07-28 00:43:42Z kib $
+ * $FreeBSD: stable/11/sys/fs/tmpfs/tmpfs_fifoops.h 268605 2014-07-14 08:17:11Z kib $
  */
 
 #ifndef _FS_TMPFS_TMPFS_FIFOOPS_H_

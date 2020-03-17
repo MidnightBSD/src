@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Scott Long <scottl@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/udf/udf_vfsops.c 242833 2012-11-09 18:02:25Z attilio $
+ * $FreeBSD: stable/11/sys/fs/udf/udf_vfsops.c 300427 2016-05-22 18:16:25Z kib $
  */
 
 /* udf_vfsops.c */
@@ -326,11 +325,9 @@ udf_mountfs(struct vnode *devvp, struct mount *mp)
 
 	dev = devvp->v_rdev;
 	dev_ref(dev);
-	DROP_GIANT();
 	g_topology_lock();
 	error = g_vfs_open(devvp, &cp, "udf", 0);
 	g_topology_unlock();
-	PICKUP_GIANT();
 	VOP_UNLOCK(devvp, 0);
 	if (error)
 		goto bail;
@@ -501,11 +498,9 @@ bail:
 	if (bp != NULL)
 		brelse(bp);
 	if (cp != NULL) {
-		DROP_GIANT();
 		g_topology_lock();
 		g_vfs_close(cp);
 		g_topology_unlock();
-		PICKUP_GIANT();
 	}
 	dev_rel(dev);
 	return error;
@@ -534,11 +529,9 @@ udf_unmount(struct mount *mp, int mntflags)
 #endif
 	}
 
-	DROP_GIANT();
 	g_topology_lock();
 	g_vfs_close(udfmp->im_cp);
 	g_topology_unlock();
-	PICKUP_GIANT();
 	vrele(udfmp->im_devvp);
 	dev_rel(udfmp->im_dev);
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsserver/nfs_nfsdsocket.c 306663 2016-10-03 23:17:57Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_nfsdsocket.c 340852 2018-11-23 20:38:50Z emaste $");
 
 /*
  * Socket operations for use by the nfs server.
@@ -42,7 +41,7 @@ __FBSDID("$FreeBSD: stable/10/sys/fs/nfsserver/nfs_nfsdsocket.c 306663 2016-10-0
 #ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>
 
-extern struct nfsstats newnfsstats;
+extern struct nfsstatsv1 nfsstatsv1;
 extern struct nfsrvfh nfs_pubfh, nfs_rootfh;
 extern int nfs_pubfhset, nfs_rootfhset;
 extern struct nfsv4lock nfsv4rootfs_lock;
@@ -177,7 +176,7 @@ int (*nfsrv4_ops0[NFSV41_NOPS])(struct nfsrv_descript *,
 	nfsrvd_write,
 	nfsrvd_releaselckown,
 	nfsrvd_notsupp,
-	nfsrvd_notsupp,
+	nfsrvd_bindconnsess,
 	nfsrvd_exchangeid,
 	nfsrvd_createsession,
 	nfsrvd_destroysession,
@@ -191,7 +190,7 @@ int (*nfsrv4_ops0[NFSV41_NOPS])(struct nfsrv_descript *,
 	nfsrvd_notsupp,
 	nfsrvd_sequence,
 	nfsrvd_notsupp,
-	nfsrvd_notsupp,
+	nfsrvd_teststateid,
 	nfsrvd_notsupp,
 	nfsrvd_destroyclientid,
 	nfsrvd_reclaimcomplete,
@@ -401,6 +400,68 @@ static int nfsv3to4op[NFS_V3NPROCS] = {
 	NFSV4OP_COMMIT,
 };
 
+static struct mtx nfsrvd_statmtx;
+MTX_SYSINIT(nfsst, &nfsrvd_statmtx, "NFSstat", MTX_DEF);
+
+static void
+nfsrvd_statstart(int op, struct bintime *now)
+{
+	if (op > (NFSV42_NOPS + NFSV4OP_FAKENOPS)) {
+		printf("%s: op %d invalid\n", __func__, op);
+		return;
+	}
+
+	mtx_lock(&nfsrvd_statmtx);
+	if (nfsstatsv1.srvstartcnt == nfsstatsv1.srvdonecnt) {
+		if (now != NULL)
+			nfsstatsv1.busyfrom = *now;
+		else
+			binuptime(&nfsstatsv1.busyfrom);
+		
+	}
+	nfsstatsv1.srvrpccnt[op]++;
+	nfsstatsv1.srvstartcnt++;
+	mtx_unlock(&nfsrvd_statmtx);
+
+}
+
+static void
+nfsrvd_statend(int op, uint64_t bytes, struct bintime *now,
+    struct bintime *then)
+{
+	struct bintime dt, lnow;
+
+	if (op > (NFSV42_NOPS + NFSV4OP_FAKENOPS)) {
+		printf("%s: op %d invalid\n", __func__, op);
+		return;
+	}
+
+	if (now == NULL) {
+		now = &lnow;
+		binuptime(now);
+	}
+
+	mtx_lock(&nfsrvd_statmtx);
+
+	nfsstatsv1.srvbytes[op] += bytes;
+	nfsstatsv1.srvops[op]++;
+
+	if (then != NULL) {
+		dt = *now;
+		bintime_sub(&dt, then);
+		bintime_add(&nfsstatsv1.srvduration[op], &dt);
+	}
+
+	dt = *now;
+	bintime_sub(&dt, &nfsstatsv1.busyfrom);
+	bintime_add(&nfsstatsv1.busytime, &dt);
+	nfsstatsv1.busyfrom = *now;
+
+	nfsstatsv1.srvdonecnt++;
+
+	mtx_unlock(&nfsrvd_statmtx);
+}
+
 /*
  * Do an RPC. Basically, get the file handles translated to vnode pointers
  * and then call the appropriate server routine. The server routines are
@@ -477,7 +538,9 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
 	 */
 	if (nd->nd_repstat && (nd->nd_flag & ND_NFSV2)) {
 		*nd->nd_errp = nfsd_errmap(nd);
-		NFSINCRGLOBAL(newnfsstats.srvrpccnt[nfsv3to4op[nd->nd_procnum]]);
+		nfsrvd_statstart(nfsv3to4op[nd->nd_procnum], /*now*/ NULL);
+		nfsrvd_statend(nfsv3to4op[nd->nd_procnum], /*bytes*/ 0,
+		   /*now*/ NULL, /*then*/ NULL);
 		if (mp != NULL && nfs_writerpc[nd->nd_procnum] != 0)
 			vn_finished_write(mp);
 		goto out;
@@ -492,6 +555,11 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
 	if (nd->nd_flag & ND_NFSV4) {
 		nfsrvd_compound(nd, isdgram, tag, taglen, minorvers, p);
 	} else {
+		struct bintime start_time;
+
+		binuptime(&start_time);
+		nfsrvd_statstart(nfsv3to4op[nd->nd_procnum], &start_time);
+
 		if (nfs_retfh[nd->nd_procnum] == 1) {
 			if (vp)
 				NFSVOPUNLOCK(vp, 0);
@@ -506,7 +574,9 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
 		}
 		if (mp != NULL && nfs_writerpc[nd->nd_procnum] != 0)
 			vn_finished_write(mp);
-		NFSINCRGLOBAL(newnfsstats.srvrpccnt[nfsv3to4op[nd->nd_procnum]]);
+
+		nfsrvd_statend(nfsv3to4op[nd->nd_procnum], /*bytes*/ 0,
+		    /*now*/ NULL, /*then*/ &start_time);
 	}
 	if (error) {
 		if (error != EBADRPC)
@@ -548,7 +618,7 @@ static void
 nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
     int taglen, u_int32_t minorvers, NFSPROC_T *p)
 {
-	int i, lktype, op, op0 = 0;
+	int i, lktype, op, op0 = 0, statsinprog = 0;
 	u_int32_t *tl;
 	struct nfsclient *clp, *nclp;
 	int numops, error = 0, igotlock;
@@ -560,6 +630,7 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 	struct nfsexstuff nes, vpnes, savevpnes;
 	fsid_t cur_fsid, save_fsid;
 	static u_int64_t compref = 0;
+	struct bintime start_time;
 
 	NFSVNO_EXINIT(&vpnes);
 	NFSVNO_EXINIT(&savevpnes);
@@ -698,6 +769,11 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 		} else {
 			repp++;
 		}
+
+		binuptime(&start_time);
+		nfsrvd_statstart(op, &start_time);
+		statsinprog = 1;
+
 		if (i == 0)
 			op0 = op;
 		if (i == numops - 1)
@@ -772,12 +848,6 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 		}
 		if (nfsv4_opflag[op].savereply)
 			nd->nd_flag |= ND_SAVEREPLY;
-		/*
-		 * For now, newnfsstats.srvrpccnt[] doesn't have entries
-		 * for the NFSv4.1 operations.
-		 */
-		if (nd->nd_procnum < NFSV4OP_NOPS)
-			NFSINCRGLOBAL(newnfsstats.srvrpccnt[nd->nd_procnum]);
 		switch (op) {
 		case NFSV4OP_PUTFH:
 			error = nfsrv_mtofh(nd, &fh);
@@ -998,7 +1068,7 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 				    NULL, p, &vpnes);
 			}
 		    }
-		};
+		}
 		if (error) {
 			if (error == EBADRPC || error == NFSERR_BADXDR) {
 				nd->nd_repstat = NFSERR_BADXDR;
@@ -1008,6 +1078,13 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 			}
 			error = 0;
 		}
+
+		if (statsinprog != 0) {
+			nfsrvd_statend(op, /*bytes*/ 0, /*now*/ NULL,
+			    /*then*/ &start_time);
+			statsinprog = 0;
+		}
+
 		retops++;
 		if (nd->nd_repstat) {
 			*repp = nfsd_errmap(nd);
@@ -1017,6 +1094,11 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 		}
 	}
 nfsmout:
+	if (statsinprog != 0) {
+		nfsrvd_statend(op, /*bytes*/ 0, /*now*/ NULL,
+		    /*then*/ &start_time);
+		statsinprog = 0;
+	}
 	if (error) {
 		if (error == EBADRPC || error == NFSERR_BADXDR)
 			nd->nd_repstat = NFSERR_BADXDR;

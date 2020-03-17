@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *      $FreeBSD: stable/10/sys/fs/pseudofs/pseudofs.h 303907 2016-08-10 12:36:54Z kib $
+ *      $FreeBSD: stable/11/sys/fs/pseudofs/pseudofs.h 325104 2017-10-29 14:57:58Z markj $
  */
 
 #ifndef _PSEUDOFS_H_INCLUDED
@@ -82,7 +81,6 @@ typedef enum {
  */
 struct pfs_info;
 struct pfs_node;
-struct pfs_bitmap;
 
 /*
  * Init / uninit callback
@@ -121,8 +119,6 @@ struct vattr;
 #define PFS_ATTR_PROTO(name) \
 	int name(PFS_ATTR_ARGS);
 typedef int (*pfs_attr_t)(PFS_ATTR_ARGS);
-
-struct pfs_bitmap;		/* opaque */
 
 /*
  * Visibility callback

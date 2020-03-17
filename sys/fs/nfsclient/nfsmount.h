@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfsclient/nfsmount.h 317404 2017-04-25 11:36:25Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfsclient/nfsmount.h 336898 2018-07-30 12:10:23Z rmacklem $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -45,6 +44,7 @@
  */
 struct	nfsmount {
 	struct	nfsmount_common nm_com;	/* Common fields for nlm */
+	uint32_t nm_privflag;		/* Private flags */
 	int	nm_numgrps;		/* Max. size of groupslist */
 	u_char	nm_fh[NFSX_FHMAX];	/* File handle of root dir */
 	int	nm_fhsize;		/* Size of root file handle */
@@ -100,6 +100,10 @@ struct	nfsmount {
 #define	nm_getinfo	nm_com.nmcom_getinfo
 #define	nm_vinvalbuf	nm_com.nmcom_vinvalbuf
 
+/* Private flags. */
+#define	NFSMNTP_FORCEDISM	0x00000001
+#define	NFSMNTP_CANCELRPCS	0x00000002
+
 #define	NFSMNT_DIRPATH(m)	(&((m)->nm_name[(m)->nm_krbnamelen + 1]))
 #define	NFSMNT_SRVKRBNAME(m)						\
 	(&((m)->nm_name[(m)->nm_krbnamelen + (m)->nm_dirpathlen + 2]))
@@ -123,8 +127,10 @@ nfsmnt_mdssession(struct nfsmount *nmp)
 {
 	struct nfsclsession *tsep;
 
+	tsep = NULL;
 	mtx_lock(&nmp->nm_mtx);
-	tsep = NFSMNT_MDSSESSION(nmp);
+	if (TAILQ_FIRST(&nmp->nm_sess) != NULL)
+		tsep = NFSMNT_MDSSESSION(nmp);
 	mtx_unlock(&nmp->nm_mtx);
 	return (tsep);
 }

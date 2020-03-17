@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_subr.h 294263 2016-01-18 11:47:03Z ae $
+ * $FreeBSD: stable/11/sys/fs/smbfs/smbfs_subr.h 298806 2016-04-29 20:51:24Z pfg $
  */
 #ifndef _FS_SMBFS_SMBFS_SUBR_H_
 #define _FS_SMBFS_SMBFS_SUBR_H_
@@ -108,7 +107,7 @@ struct smbfs_fctx {
 		struct smb_t2rq * uf_t2;
 	} f_urq;
 	int		f_left;		/* entries left */
-	int		f_ecnt;		/* entries left in the current reponse */
+	int		f_ecnt;		/* entries left in the current response */
 	int		f_eofs;		/* entry offset in the parameter block */
 	u_char 		f_skey[SMB_SKEYLEN]; /* server side search context */
 	u_char		f_fname[8 + 1 + 3 + 1]; /* common case for 8.3 filenames */

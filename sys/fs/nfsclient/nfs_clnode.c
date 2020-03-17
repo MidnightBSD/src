@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,9 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clnode.c 321031 2017-07-15 19:24:54Z rmacklem $");
-
-#include "opt_kdtrace.h"
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clnode.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,7 +64,7 @@ MALLOC_DECLARE(M_NEWNFSREQ);
 
 uma_zone_t newnfsnode_zone;
 
-const char nfs_vnode_tag[] = "newnfs";
+const char nfs_vnode_tag[] = "nfs";
 
 static void	nfs_freesillyrename(void *arg, __unused int pending);
 
@@ -144,6 +141,9 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 	 * happened to return an error no special casing is needed).
 	 */
 	mtx_init(&np->n_mtx, "NEWNFSnode lock", NULL, MTX_DEF | MTX_DUPOK);
+	lockinit(&np->n_excl, PVFS, "nfsupg", VLKTIMEOUT, LK_NOSHARE |
+	    LK_CANRECURSE);
+
 	/*
 	 * NFS supports recursive and shared locking.
 	 */
@@ -170,6 +170,7 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 		*npp = NULL;
 		FREE((caddr_t)np->n_fhp, M_NFSFH);
 		mtx_destroy(&np->n_mtx);
+		lockdestroy(&np->n_excl);
 		uma_zfree(newnfsnode_zone, np);
 		return (error);
 	}
@@ -335,6 +336,7 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 	if (np->n_v4 != NULL)
 		FREE((caddr_t)np->n_v4, M_NFSV4NODE);
 	mtx_destroy(&np->n_mtx);
+	lockdestroy(&np->n_excl);
 	uma_zfree(newnfsnode_zone, vp->v_data);
 	vp->v_data = NULL;
 	return (0);

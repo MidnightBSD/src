@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,10 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsserver/nfs_nfsdkrpc.c 314034 2017-02-21 09:29:46Z avg $");
-
-#include <sys/param.h>
-#include <sys/systm.h>
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_nfsdkrpc.c 342562 2018-12-28 00:26:19Z rmacklem $");
 
 #include "opt_inet6.h"
 #include "opt_kgssapi.h"
@@ -91,7 +87,7 @@ SVCPOOL		*nfsrvd_pool;
 static int	nfs_privport = 0;
 SYSCTL_INT(_vfs_nfsd, OID_AUTO, nfs_privport, CTLFLAG_RWTUN,
     &nfs_privport, 0,
-    "Only allow clients using a privileged port for NFSv2 and 3");
+    "Only allow clients using a privileged port for NFSv2, 3 and 4");
 
 static int	nfs_minvers = NFS_VER2;
 SYSCTL_INT(_vfs_nfsd, OID_AUTO, server_min_nfsvers, CTLFLAG_RWTUN,
@@ -163,7 +159,7 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 	nd.nd_mreq = NULL;
 	nd.nd_cred = NULL;
 
-	if (nfs_privport && (nd.nd_flag & ND_NFSV4) == 0) {
+	if (nfs_privport != 0) {
 		/* Check if source port is privileged */
 		u_short port;
 		struct sockaddr *nam = nd.nd_nam;
@@ -178,7 +174,11 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 		if (port >= IPPORT_RESERVED &&
 		    nd.nd_procnum != NFSPROC_NULL) {
 #ifdef INET6
-			char b6[INET6_ADDRSTRLEN];
+			char buf[INET6_ADDRSTRLEN];
+#else
+			char buf[INET_ADDRSTRLEN];
+#endif
+#ifdef INET6
 #if defined(KLD_MODULE)
 			/* Do not use ip6_sprintf: the nfs module should work without INET6. */
 #define	ip6_sprintf(buf, a)						\
@@ -193,12 +193,12 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 			printf("NFS request from unprivileged port (%s:%d)\n",
 #ifdef INET6
 			    sin->sin_family == AF_INET6 ?
-			    ip6_sprintf(b6, &satosin6(sin)->sin6_addr) :
+			    ip6_sprintf(buf, &satosin6(sin)->sin6_addr) :
 #if defined(KLD_MODULE)
 #undef ip6_sprintf
 #endif
 #endif
-			    inet_ntoa(sin->sin_addr), port);
+			    inet_ntoa_r(sin->sin_addr, buf), port);
 			svcerr_weakauth(rqst);
 			svc_freereq(rqst);
 			m_freem(nd.nd_mrep);
@@ -235,7 +235,7 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 		 * Get a refcnt (shared lock) on nfsd_suspend_lock.
 		 * NFSSVC_SUSPENDNFSD will take an exclusive lock on
 		 * nfsd_suspend_lock to suspend these threads.
-		 * The call to nfsv4_lock() that preceeds nfsv4_getref()
+		 * The call to nfsv4_lock() that precedes nfsv4_getref()
 		 * ensures that the acquisition of the exclusive lock
 		 * takes priority over acquisition of the shared lock by
 		 * waiting for any exclusive lock request to complete.
@@ -304,8 +304,7 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 	svc_freereq(rqst);
 
 out:
-	if (softdep_ast_cleanup != NULL)
-		softdep_ast_cleanup();
+	td_softdep_cleanup(curthread);
 	NFSEXITCODE(0);
 }
 

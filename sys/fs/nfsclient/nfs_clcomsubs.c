@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clcomsubs.c 318685 2017-05-22 22:10:02Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clcomsubs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -43,7 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clcomsubs.c 318685 2017-05-22
 #ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>
 
-extern struct nfsstats newnfsstats;
+extern struct nfsstatsv1 nfsstatsv1;
 extern struct nfsv4_opflag nfsv4_opflag[NFSV41_NOPS];
 extern int ncl_mbuf_mlen;
 extern enum vtype newnv2tov_type[8];
@@ -113,6 +112,8 @@ static struct {
 	{ NFSV4OP_WRITE, 1, "WriteDS", 7, },
 	{ NFSV4OP_READ, 1, "ReadDS", 6, },
 	{ NFSV4OP_COMMIT, 1, "CommitDS", 8, },
+	{ NFSV4OP_OPEN, 3, "OpenLayoutGet", 13, },
+	{ NFSV4OP_OPEN, 8, "CreateLayGet", 12, },
 };
 
 /*
@@ -121,7 +122,7 @@ static struct {
 static int nfs_bigrequest[NFSV41_NPROCS] = {
 	0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 1, 0, 0
+	0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0
 };
 
 /*
@@ -245,8 +246,8 @@ nfscl_reqstart(struct nfsrv_descript *nd, int procnum, struct nfsmount *nmp,
 	} else {
 		(void) nfsm_fhtom(nd, nfhp, fhlen, 0);
 	}
-	if (procnum < NFSV4_NPROCS)
-		NFSINCRGLOBAL(newnfsstats.rpccnt[procnum]);
+	if (procnum < NFSV41_NPROCS)
+		NFSINCRGLOBAL(nfsstatsv1.rpccnt[procnum]);
 }
 
 #ifndef APPLE

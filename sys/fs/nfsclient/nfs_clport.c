@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,10 +32,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clport.c 321057 2017-07-16 19:36:44Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clport.c 333061 2018-04-27 12:57:39Z rmacklem $");
 
+#include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_kdtrace.h"
 
 #include <sys/capsicum.h>
 
@@ -44,9 +43,13 @@ __FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clport.c 321057 2017-07-16 19
  * generally, I don't like #includes inside .h files, but it seems to
  * be the easiest way to handle the port.
  */
+#include <sys/fail.h>
 #include <sys/hash.h>
+#include <sys/sysctl.h>
 #include <fs/nfs/nfsport.h>
+#include <netinet/in_fib.h>
 #include <netinet/if_ether.h>
+#include <netinet6/ip6_var.h>
 #include <net/if_types.h>
 
 #include <fs/nfsclient/nfs_kdtrace.h>
@@ -83,6 +86,16 @@ struct mtx ncl_iod_mutex;
 NFSDLOCKMUTEX;
 
 extern void (*ncl_call_invalcaches)(struct vnode *);
+
+SYSCTL_DECL(_vfs_nfs);
+static int ncl_fileid_maxwarnings = 10;
+SYSCTL_INT(_vfs_nfs, OID_AUTO, fileid_maxwarnings, CTLFLAG_RWTUN,
+    &ncl_fileid_maxwarnings, 0,
+    "Limit fileid corruption warnings; 0 is off; -1 is unlimited");
+static volatile int ncl_fileid_nwarnings;
+
+static void nfscl_warn_fileid(struct nfsmount *, struct nfsvattr *,
+    struct nfsvattr *);
 
 /*
  * Comparison function for vfs_hash functions.
@@ -217,6 +230,8 @@ nfscl_nget(struct mount *mntp, struct vnode *dvp, struct nfsfh *nfhp,
 	 * happened to return an error no special casing is needed).
 	 */
 	mtx_init(&np->n_mtx, "NEWNFSnode lock", NULL, MTX_DEF | MTX_DUPOK);
+	lockinit(&np->n_excl, PVFS, "nfsupg", VLKTIMEOUT, LK_NOSHARE |
+	    LK_CANRECURSE);
 
 	/* 
 	 * Are we getting the root? If so, make sure the vnode flags
@@ -258,6 +273,7 @@ nfscl_nget(struct mount *mntp, struct vnode *dvp, struct nfsfh *nfhp,
 	if (error != 0) {
 		*npp = NULL;
 		mtx_destroy(&np->n_mtx);
+		lockdestroy(&np->n_excl);
 		FREE((caddr_t)nfhp, M_NFSFH);
 		if (np->n_v4 != NULL)
 			FREE((caddr_t)np->n_v4, M_NFSV4NODE);
@@ -300,7 +316,7 @@ nfscl_ngetreopen(struct mount *mntp, u_int8_t *fhp, int fhsize,
 
 	*npp = NULL;
 	/* For forced dismounts, just return error. */
-	if ((mntp->mnt_kern_flag & MNTK_UNMOUNTF))
+	if (NFSCL_FORCEDISM(mntp))
 		return (EINTR);
 	MALLOC(nfhp, struct nfsfh *, sizeof (struct nfsfh) + fhsize,
 	    M_NFSFH, M_WAITOK);
@@ -323,7 +339,7 @@ nfscl_ngetreopen(struct mount *mntp, u_int8_t *fhp, int fhsize,
 		 * stopped and the MNTK_UNMOUNTF flag is set before doing
 		 * a vflush() with FORCECLOSE, we should be ok here.
 		 */
-		if ((mntp->mnt_kern_flag & MNTK_UNMOUNTF))
+		if (NFSCL_FORCEDISM(mntp))
 			error = EINTR;
 		else {
 			vfs_hash_ref(mntp, hash, td, &nvp, newnfs_vncmpf, nfhp);
@@ -347,6 +363,37 @@ nfscl_ngetreopen(struct mount *mntp, u_int8_t *fhp, int fhsize,
 	return (EINVAL);
 }
 
+static void
+nfscl_warn_fileid(struct nfsmount *nmp, struct nfsvattr *oldnap,
+    struct nfsvattr *newnap)
+{
+	int off;
+
+	if (ncl_fileid_maxwarnings >= 0 &&
+	    ncl_fileid_nwarnings >= ncl_fileid_maxwarnings)
+		return;
+	off = 0;
+	if (ncl_fileid_maxwarnings >= 0) {
+		if (++ncl_fileid_nwarnings >= ncl_fileid_maxwarnings)
+			off = 1;
+	}
+
+	printf("newnfs: server '%s' error: fileid changed. "
+	    "fsid %jx:%jx: expected fileid %#jx, got %#jx. "
+	    "(BROKEN NFS SERVER OR MIDDLEWARE)\n",
+	    nmp->nm_com.nmcom_hostname,
+	    (uintmax_t)nmp->nm_fsid[0],
+	    (uintmax_t)nmp->nm_fsid[1],
+	    (uintmax_t)oldnap->na_fileid,
+	    (uintmax_t)newnap->na_fileid);
+
+	if (off)
+		printf("newnfs: Logged %d times about fileid corruption; "
+		    "going quiet to avoid spamming logs excessively. (Limit "
+		    "is: %d).\n", ncl_fileid_nwarnings,
+		    ncl_fileid_maxwarnings);
+}
+
 /*
  * Load the attribute cache (that lives in the nfsnode entry) with
  * the attributes of the second argument and
@@ -365,7 +412,11 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 	struct nfsmount *nmp;
 	struct timespec mtime_save;
 	u_quad_t nsize;
-	int setnsize;
+	int setnsize, error, force_fid_err;
+
+	error = 0;
+	setnsize = 0;
+	nsize = 0;
 
 	/*
 	 * If v_type == VNON it is a new node, so fill in the v_type,
@@ -393,6 +444,34 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 		np->n_vattr.na_fsid = nap->na_fsid;
 		np->n_vattr.na_mode = nap->na_mode;
 	} else {
+		force_fid_err = 0;
+		KFAIL_POINT_ERROR(DEBUG_FP, nfscl_force_fileid_warning,
+		    force_fid_err);
+		/*
+		 * BROKEN NFS SERVER OR MIDDLEWARE
+		 *
+		 * Certain NFS servers (certain old proprietary filers ca.
+		 * 2006) or broken middleboxes (e.g. WAN accelerator products)
+		 * will respond to GETATTR requests with results for a
+		 * different fileid.
+		 *
+		 * The WAN accelerator we've observed not only serves stale
+		 * cache results for a given file, it also occasionally serves
+		 * results for wholly different files.  This causes surprising
+		 * problems; for example the cached size attribute of a file
+		 * may truncate down and then back up, resulting in zero
+		 * regions in file contents read by applications.  We observed
+		 * this reliably with Clang and .c files during parallel build.
+		 * A pcap revealed packet fragmentation and GETATTR RPC
+		 * responses with wholly wrong fileids.
+		 */
+		if ((np->n_vattr.na_fileid != 0 &&
+		     np->n_vattr.na_fileid != nap->na_fileid) ||
+		    force_fid_err) {
+			nfscl_warn_fileid(nmp, &np->n_vattr, nap);
+			error = EIDRM;
+			goto out;
+		}
 		NFSBCOPY((caddr_t)nap, (caddr_t)&np->n_vattr,
 		    sizeof (struct nfsvattr));
 	}
@@ -423,8 +502,6 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 	} else
 		vap->va_fsid = vp->v_mount->mnt_stat.f_fsid.val[0];
 	np->n_attrstamp = time_second;
-	setnsize = 0;
-	nsize = 0;
 	if (vap->va_size != np->n_size) {
 		if (vap->va_type == VREG) {
 			if (dontshrink && vap->va_size < np->n_size) {
@@ -494,14 +571,16 @@ nfscl_loadattrcache(struct vnode **vpp, struct nfsvattr *nap, void *nvaper,
 				vaper->va_mtime = np->n_mtim;
 		}
 	}
+
+out:
 #ifdef KDTRACE_HOOKS
 	if (np->n_attrstamp != 0)
-		KDTRACE_NFS_ATTRCACHE_LOAD_DONE(vp, vap, 0);
+		KDTRACE_NFS_ATTRCACHE_LOAD_DONE(vp, vap, error);
 #endif
 	NFSUNLOCKNODE(np);
 	if (setnsize)
 		vnode_pager_setsize(vp, nsize);
-	return (0);
+	return (error);
 }
 
 /*
@@ -853,7 +932,7 @@ nfscl_fillsattr(struct nfsrv_descript *nd, struct vattr *vap,
 		(void) nfsv4_fillattr(nd, vp->v_mount, vp, NULL, vap, NULL, 0,
 		    &attrbits, NULL, NULL, 0, 0, 0, 0, (uint64_t)0);
 		break;
-	};
+	}
 }
 
 /*
@@ -969,73 +1048,67 @@ nfscl_loadfsinfo(struct nfsmount *nmp, struct nfsfsinfo *fsp)
 }
 
 /*
- * Get a pointer to my IP addrress and return it.
- * Return NULL if you can't find one.
+ * Lookups source address which should be used to communicate with
+ * @nmp and stores it inside @pdst.
+ *
+ * Returns 0 on success.
  */
 u_int8_t *
-nfscl_getmyip(struct nfsmount *nmp, int *isinet6p)
+nfscl_getmyip(struct nfsmount *nmp, struct in6_addr *paddr, int *isinet6p)
 {
-	struct sockaddr_in sad, *sin;
-	struct rtentry *rt;
-	u_int8_t *retp = NULL;
-	static struct in_addr laddr;
+#if defined(INET6) || defined(INET)
+	int error, fibnum;
 
-	*isinet6p = 0;
-	/*
-	 * Loop up a route for the destination address.
-	 */
-	if (nmp->nm_nam->sa_family == AF_INET) {
-		bzero(&sad, sizeof (sad));
-		sin = (struct sockaddr_in *)nmp->nm_nam;
-		sad.sin_family = AF_INET;
-		sad.sin_len = sizeof (struct sockaddr_in);
-		sad.sin_addr.s_addr = sin->sin_addr.s_addr;
-		CURVNET_SET(CRED_TO_VNET(nmp->nm_sockreq.nr_cred));
-		rt = rtalloc1_fib((struct sockaddr *)&sad, 0, 0UL,
-		     curthread->td_proc->p_fibnum);
-		if (rt != NULL) {
-			if (rt->rt_ifp != NULL &&
-			    rt->rt_ifa != NULL &&
-			    ((rt->rt_ifp->if_flags & IFF_LOOPBACK) == 0) &&
-			    rt->rt_ifa->ifa_addr->sa_family == AF_INET) {
-				sin = (struct sockaddr_in *)
-				    rt->rt_ifa->ifa_addr;
-				laddr.s_addr = sin->sin_addr.s_addr;
-				retp = (u_int8_t *)&laddr;
-			}
-			RTFREE_LOCKED(rt);
-		}
-		CURVNET_RESTORE();
-#ifdef INET6
-	} else if (nmp->nm_nam->sa_family == AF_INET6) {
-		struct sockaddr_in6 sad6, *sin6;
-		static struct in6_addr laddr6;
-
-		bzero(&sad6, sizeof (sad6));
-		sin6 = (struct sockaddr_in6 *)nmp->nm_nam;
-		sad6.sin6_family = AF_INET6;
-		sad6.sin6_len = sizeof (struct sockaddr_in6);
-		sad6.sin6_addr = sin6->sin6_addr;
-		CURVNET_SET(CRED_TO_VNET(nmp->nm_sockreq.nr_cred));
-		rt = rtalloc1_fib((struct sockaddr *)&sad6, 0, 0UL,
-		     curthread->td_proc->p_fibnum);
-		if (rt != NULL) {
-			if (rt->rt_ifp != NULL &&
-			    rt->rt_ifa != NULL &&
-			    ((rt->rt_ifp->if_flags & IFF_LOOPBACK) == 0) &&
-			    rt->rt_ifa->ifa_addr->sa_family == AF_INET6) {
-				sin6 = (struct sockaddr_in6 *)
-				    rt->rt_ifa->ifa_addr;
-				laddr6 = sin6->sin6_addr;
-				retp = (u_int8_t *)&laddr6;
-				*isinet6p = 1;
-			}
-			RTFREE_LOCKED(rt);
-		}
-		CURVNET_RESTORE();
+	fibnum = curthread->td_proc->p_fibnum;
 #endif
+#ifdef INET
+	if (nmp->nm_nam->sa_family == AF_INET) {
+		struct sockaddr_in *sin;
+		struct nhop4_extended nh_ext;
+
+		sin = (struct sockaddr_in *)nmp->nm_nam;
+		CURVNET_SET(CRED_TO_VNET(nmp->nm_sockreq.nr_cred));
+		error = fib4_lookup_nh_ext(fibnum, sin->sin_addr, 0, 0,
+		    &nh_ext);
+		CURVNET_RESTORE();
+		if (error != 0)
+			return (NULL);
+
+		if ((ntohl(nh_ext.nh_src.s_addr) >> IN_CLASSA_NSHIFT) ==
+		    IN_LOOPBACKNET) {
+			/* Ignore loopback addresses */
+			return (NULL);
+		}
+
+		*isinet6p = 0;
+		*((struct in_addr *)paddr) = nh_ext.nh_src;
+
+		return (u_int8_t *)paddr;
 	}
-	return (retp);
+#endif
+#ifdef INET6
+	if (nmp->nm_nam->sa_family == AF_INET6) {
+		struct sockaddr_in6 *sin6;
+
+		sin6 = (struct sockaddr_in6 *)nmp->nm_nam;
+
+		CURVNET_SET(CRED_TO_VNET(nmp->nm_sockreq.nr_cred));
+		error = in6_selectsrc_addr(fibnum, &sin6->sin6_addr,
+		    sin6->sin6_scope_id, NULL, paddr, NULL);
+		CURVNET_RESTORE();
+		if (error != 0)
+			return (NULL);
+
+		if (IN6_IS_ADDR_LOOPBACK(paddr))
+			return (NULL);
+
+		/* Scope is embedded in */
+		*isinet6p = 1;
+
+		return (u_int8_t *)paddr;
+	}
+#endif
+	return (NULL);
 }
 
 /*
@@ -1243,6 +1316,8 @@ nfssvc_nfscl(struct thread *td, struct nfssvc_args *uap)
 	cap_rights_t rights;
 	char *buf;
 	int error;
+	struct mount *mp;
+	struct nfsmount *nmp;
 
 	if (uap->flag & NFSSVC_CBADDSOCK) {
 		error = copyin(uap->argp, (caddr_t)&nfscbdarg, sizeof(nfscbdarg));
@@ -1297,6 +1372,56 @@ nfssvc_nfscl(struct thread *td, struct nfssvc_args *uap)
 			    dumpmntopts.ndmnt_blen);
 			free(buf, M_TEMP);
 		}
+	} else if (uap->flag & NFSSVC_FORCEDISM) {
+		buf = malloc(MNAMELEN + 1, M_TEMP, M_WAITOK);
+		error = copyinstr(uap->argp, buf, MNAMELEN + 1, NULL);
+		if (error == 0) {
+			nmp = NULL;
+			mtx_lock(&mountlist_mtx);
+			TAILQ_FOREACH(mp, &mountlist, mnt_list) {
+				if (strcmp(mp->mnt_stat.f_mntonname, buf) ==
+				    0 && strcmp(mp->mnt_stat.f_fstypename,
+				    "nfs") == 0 && mp->mnt_data != NULL) {
+					nmp = VFSTONFS(mp);
+					mtx_lock(&nmp->nm_mtx);
+					if ((nmp->nm_privflag &
+					    NFSMNTP_FORCEDISM) == 0) {
+						nmp->nm_privflag |= 
+						   (NFSMNTP_FORCEDISM |
+						    NFSMNTP_CANCELRPCS);
+						mtx_unlock(&nmp->nm_mtx);
+					} else {
+						mtx_unlock(&nmp->nm_mtx);
+						nmp = NULL;
+					}
+					break;
+				}
+			}
+			mtx_unlock(&mountlist_mtx);
+
+			if (nmp != NULL) {
+				/*
+				 * Call newnfs_nmcancelreqs() to cause
+				 * any RPCs in progress on the mount point to
+				 * fail.
+				 * This will cause any process waiting for an
+				 * RPC to complete while holding a vnode lock
+				 * on the mounted-on vnode (such as "df" or
+				 * a non-forced "umount") to fail.
+				 * This will unlock the mounted-on vnode so
+				 * a forced dismount can succeed.
+				 * Then clear NFSMNTP_CANCELRPCS and wakeup(),
+				 * so that nfs_unmount() can complete.
+				 */
+				newnfs_nmcancelreqs(nmp);
+				mtx_lock(&nmp->nm_mtx);
+				nmp->nm_privflag &= ~NFSMNTP_CANCELRPCS;
+				wakeup(nmp);
+				mtx_unlock(&nmp->nm_mtx);
+			} else
+				error = EINVAL;
+		}
+		free(buf, M_TEMP);
 	} else {
 		error = EINVAL;
 	}

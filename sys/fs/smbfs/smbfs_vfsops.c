@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_vfsops.c 276002 2014-12-21 11:33:18Z trasz $
+ * $FreeBSD: stable/11/sys/fs/smbfs/smbfs_vfsops.c 274784 2014-11-21 06:21:39Z trasz $
  */
 
 #include <sys/param.h>

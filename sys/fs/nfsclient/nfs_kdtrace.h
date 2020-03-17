@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -27,14 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfsclient/nfs_kdtrace.h 223280 2011-06-18 23:02:53Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfsclient/nfs_kdtrace.h 258667 2013-11-26 22:41:40Z pluknet $
  */
 
 #ifndef _NFSCL_NFS_KDTRACE_H_
 #define	_NFSCL_NFS_KDTRACE_H_
-
-#ifdef KDTRACE_HOOKS
-#include <sys/dtrace_bsd.h>
 
 /*
  * Definitions for NFS access cache probes.
@@ -43,6 +39,17 @@ extern uint32_t	nfscl_accesscache_flush_done_id;
 extern uint32_t	nfscl_accesscache_get_hit_id;
 extern uint32_t	nfscl_accesscache_get_miss_id;
 extern uint32_t	nfscl_accesscache_load_done_id;
+
+/*
+ * Definitions for NFS attribute cache probes.
+ */
+extern uint32_t	nfscl_attrcache_flush_done_id;
+extern uint32_t	nfscl_attrcache_get_hit_id;
+extern uint32_t	nfscl_attrcache_get_miss_id;
+extern uint32_t	nfscl_attrcache_load_done_id;
+
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
 
 #define	KDTRACE_NFS_ACCESSCACHE_FLUSH_DONE(vp)	do {			\
 	if (dtrace_nfscl_accesscache_flush_done_probe != NULL)		\
@@ -70,14 +77,6 @@ extern uint32_t	nfscl_accesscache_load_done_id;
 		    nfscl_accesscache_load_done_id, (vp), (uid),	\
 		    (rmode), (error));					\
 } while (0)
-
-/*
- * Definitions for NFS attribute cache probes.
- */
-extern uint32_t	nfscl_attrcache_flush_done_id;
-extern uint32_t	nfscl_attrcache_get_hit_id;
-extern uint32_t	nfscl_attrcache_get_miss_id;
-extern uint32_t	nfscl_attrcache_load_done_id;
 
 #define	KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp)	do {			\
 	if (dtrace_nfscl_attrcache_flush_done_probe != NULL)		\

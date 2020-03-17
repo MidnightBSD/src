@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Copyright (c) 2013 Spectra Logic Corporation
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsserver/nfs_fha_new.c 322138 2017-08-07 07:40:00Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_fha_new.c 322137 2017-08-07 07:02:51Z mav $");
 
 #include <fs/nfs/nfsport.h>
 

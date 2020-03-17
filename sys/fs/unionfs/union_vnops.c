@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994, 1995 Jan-Simon Pendry.
  * Copyright (c) 1992, 1993, 1994, 1995
@@ -35,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_vnops.c	8.32 (Berkeley) 6/23/95
- * $FreeBSD: stable/10/sys/fs/unionfs/union_vnops.c 276500 2015-01-01 10:44:20Z kib $
+ * $FreeBSD: stable/11/sys/fs/unionfs/union_vnops.c 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -1754,9 +1753,9 @@ unionfs_print(struct vop_print_args *ap)
 	*/
 
 	if (unp->un_uppervp != NULLVP)
-		vprint("unionfs: upper", unp->un_uppervp);
+		vn_printf(unp->un_uppervp, "unionfs: upper ");
 	if (unp->un_lowervp != NULLVP)
-		vprint("unionfs: lower", unp->un_lowervp);
+		vn_printf(unp->un_lowervp, "unionfs: lower ");
 
 	return (0);
 }

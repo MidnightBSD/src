@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_vnops.c 294263 2016-01-18 11:47:03Z ae $
+ * $FreeBSD: stable/11/sys/fs/smbfs/smbfs_vnops.c 328298 2018-01-23 20:08:25Z jhb $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -342,7 +341,7 @@ smbfs_setattr(ap)
  		    default:
 			error = EINVAL;
 			goto out;
-  		};
+  		}
 		if (isreadonly) {
 			error = EROFS;
 			goto out;
@@ -898,8 +897,12 @@ smbfs_pathconf (ap)
 	int error = 0;
 	
 	switch (ap->a_name) {
-	    case _PC_LINK_MAX:
-		*retval = 0;
+	    case _PC_FILESIZEBITS:
+		if (vcp->vc_sopt.sv_caps & (SMB_CAP_LARGE_READX |
+		    SMB_CAP_LARGE_WRITEX))
+		    *retval = 64;
+		else
+		    *retval = 32;
 		break;
 	    case _PC_NAME_MAX:
 		*retval = (vcp->vc_hflags2 & SMB_FLAGS2_KNOWS_LONG_NAMES) ? 255 : 12;
@@ -907,8 +910,11 @@ smbfs_pathconf (ap)
 	    case _PC_PATH_MAX:
 		*retval = 800;	/* XXX: a correct one ? */
 		break;
+	    case _PC_NO_TRUNC:
+		*retval = 1;
+		break;
 	    default:
-		error = EINVAL;
+		error = vop_stdpathconf(ap);
 	}
 	return error;
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/tmpfs/tmpfs.h 313095 2017-02-02 13:39:11Z kib $
+ * $FreeBSD: stable/11/sys/fs/tmpfs/tmpfs.h 356131 2019-12-27 17:55:56Z dougm $
  */
 
 #ifndef _FS_TMPFS_TMPFS_H_
@@ -331,6 +330,11 @@ LIST_HEAD(tmpfs_node_list, tmpfs_node);
  */
 struct tmpfs_mount {
 	/*
+	 * Original value of the "size" parameter, for reference purposes,
+	 * mostly.
+	 */
+	off_t			tm_size_max;
+	/*
 	 * Maximum number of memory pages available for use by the file
 	 * system, set during mount time.  This variable must never be
 	 * used directly as it may be bigger than the current amount of
@@ -438,8 +442,8 @@ void	tmpfs_dir_destroy(struct tmpfs_mount *, struct tmpfs_node *);
 struct tmpfs_dirent *	tmpfs_dir_lookup(struct tmpfs_node *node,
 			    struct tmpfs_node *f,
 			    struct componentname *cnp);
-int	tmpfs_dir_getdents(struct tmpfs_node *, struct uio *, int,
-	    u_long *, int *);
+int	tmpfs_dir_getdents(struct tmpfs_mount *, struct tmpfs_node *,
+	    struct uio *, int, u_long *, int *);
 int	tmpfs_dir_whiteout_add(struct vnode *, struct componentname *);
 void	tmpfs_dir_whiteout_remove(struct vnode *, struct componentname *);
 int	tmpfs_reg_resize(struct vnode *, off_t, boolean_t);
@@ -453,7 +457,8 @@ int	tmpfs_chtimes(struct vnode *, struct vattr *, struct ucred *cred,
 void	tmpfs_itimes(struct vnode *, const struct timespec *,
 	    const struct timespec *);
 
-void	tmpfs_set_status(struct tmpfs_node *node, int status);
+void	tmpfs_set_status(struct tmpfs_mount *tm, struct tmpfs_node *node,
+	    int status);
 void	tmpfs_update(struct vnode *);
 int	tmpfs_truncate(struct vnode *, off_t);
 struct tmpfs_dirent *tmpfs_dir_first(struct tmpfs_node *dnode,
@@ -493,8 +498,6 @@ struct tmpfs_dirent *tmpfs_dir_next(struct tmpfs_node *dnode,
 size_t tmpfs_mem_avail(void);
 
 size_t tmpfs_pages_used(struct tmpfs_mount *tmp);
-
-#endif
 
 /*
  * Macros/functions to convert from generic data structures to tmpfs
@@ -537,5 +540,6 @@ tmpfs_use_nc(struct vnode *vp)
 
 	return (!(VFS_TO_TMPFS(vp->v_mount)->tm_nonc));
 }
+#endif /* _KERNEL */
 
 #endif /* _FS_TMPFS_TMPFS_H_ */

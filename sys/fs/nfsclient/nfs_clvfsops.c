@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clvfsops.c 317975 2017-05-08 19:57:43Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clvfsops.c 356239 2019-12-31 18:28:25Z rmacklem $");
 
 
 #include "opt_bootp.h"
@@ -79,7 +78,6 @@ FEATURE(nfscl, "NFSv4 client");
 
 extern int nfscl_ticks;
 extern struct timeval nfsboottime;
-extern struct nfsstats	newnfsstats;
 extern int nfsrv_useacl;
 extern int nfscl_debuglevel;
 extern enum nfsiod_state ncl_iodwant[NFS_MAXASYNCDAEMON];
@@ -87,8 +85,8 @@ extern struct nfsmount *ncl_iodmount[NFS_MAXASYNCDAEMON];
 extern struct mtx ncl_iod_mutex;
 NFSCLSTATEMUTEX;
 
-MALLOC_DEFINE(M_NEWNFSREQ, "newnfsclient_req", "New NFS request header");
-MALLOC_DEFINE(M_NEWNFSMNT, "newnfsmnt", "New NFS mount struct");
+MALLOC_DEFINE(M_NEWNFSREQ, "newnfsclient_req", "NFS request header");
+MALLOC_DEFINE(M_NEWNFSMNT, "newnfsmnt", "NFS mount struct");
 
 SYSCTL_DECL(_vfs_nfs);
 static int nfs_ip_paranoia = 1;
@@ -101,6 +99,11 @@ SYSCTL_INT(_vfs_nfs, NFS_TPRINTF_INITIAL_DELAY,
 static int nfs_tprintf_delay = NFS_TPRINTF_DELAY;
 SYSCTL_INT(_vfs_nfs, NFS_TPRINTF_DELAY,
         downdelayinterval, CTLFLAG_RW, &nfs_tprintf_delay, 0, "");
+#ifdef NFS_DEBUG
+int nfs_debug;
+SYSCTL_INT(_vfs_nfs, OID_AUTO, debug, CTLFLAG_RW, &nfs_debug, 0,
+    "Toggle debug flag");
+#endif
 
 static int	nfs_mountroot(struct mount *);
 static void	nfs_sec_name(char *, int *);
@@ -153,7 +156,7 @@ MODULE_DEPEND(nfs, nfslock, 1, 1, 1);
  * will be defined for kernels built without NFS_ROOT, although it
  * isn't used in that case.
  */
-#if !defined(NFS_ROOT) && !defined(NFSCLIENT)
+#if !defined(NFS_ROOT)
 struct nfs_diskless	nfs_diskless = { { { 0 } } };
 struct nfsv3_diskless	nfsv3_diskless = { { { 0 } } };
 int			nfs_diskless_valid = 0;
@@ -412,11 +415,6 @@ nfs_mountroot(struct mount *mp)
 		nfs_convert_diskless();
 
 	/*
-	 * XXX splnet, so networks will receive...
-	 */
-	splnet();
-
-	/*
 	 * Do enough of ifconfig(8) so that the critical net interface can
 	 * talk to the server.
 	 */
@@ -445,7 +443,7 @@ nfs_mountroot(struct mount *mp)
 	error = ifioctl(so, SIOCAIFADDR, (caddr_t)&nd->myif, td);
 	if (error)
 		panic("nfs_mountroot: SIOCAIFADDR: %d", error);
-	if ((cp = getenv("boot.netif.mtu")) != NULL) {
+	if ((cp = kern_getenv("boot.netif.mtu")) != NULL) {
 		ir.ifr_mtu = strtol(cp, NULL, 10);
 		bcopy(nd->myif.ifra_name, ir.ifr_name, IFNAMSIZ);
 		freeenv(cp);
@@ -555,11 +553,8 @@ static void
 nfs_decode_args(struct mount *mp, struct nfsmount *nmp, struct nfs_args *argp,
     const char *hostname, struct ucred *cred, struct thread *td)
 {
-	int s;
 	int adjsock;
 	char *p;
-
-	s = splnet();
 
 	/*
 	 * Set read-only flag if requested; otherwise, clear it if this is
@@ -612,7 +607,6 @@ nfs_decode_args(struct mount *mp, struct nfsmount *nmp, struct nfs_args *argp,
 
 	/* Update flags atomically.  Don't change the lock bits. */
 	nmp->nm_flag = argp->flags | nmp->nm_flag;
-	splx(s);
 
 	if ((argp->flags & NFSMNT_TIMEO) && argp->timeo > 0) {
 		nmp->nm_timeo = (argp->timeo * NFS_HZ + 5) / 10;
@@ -713,7 +707,7 @@ nfs_decode_args(struct mount *mp, struct nfsmount *nmp, struct nfs_args *argp,
 			while (newnfs_connect(nmp, &nmp->nm_sockreq,
 			    cred, td, 0)) {
 				printf("newnfs_args: retrying connect\n");
-				(void) nfs_catnap(PSOCK, 0, "newnfscon");
+				(void) nfs_catnap(PSOCK, 0, "nfscon");
 			}
 		}
 	} else {
@@ -743,12 +737,112 @@ static const char *nfs_opts[] = { "from", "nfs_args",
     NULL };
 
 /*
+ * Parse the "from" mountarg, passed by the generic mount(8) program
+ * or the mountroot code.  This is used when rerooting into NFS.
+ *
+ * Note that the "hostname" is actually a "hostname:/share/path" string.
+ */
+static int
+nfs_mount_parse_from(struct vfsoptlist *opts, char **hostnamep,
+    struct sockaddr_in **sinp, char *dirpath, size_t dirpathsize, int *dirlenp)
+{
+	char *nam, *delimp, *hostp, *spec;
+	int error, have_bracket = 0, offset, rv, speclen;
+	struct sockaddr_in *sin;
+	size_t len;
+
+	error = vfs_getopt(opts, "from", (void **)&spec, &speclen);
+	if (error != 0)
+		return (error);
+	nam = malloc(MNAMELEN + 1, M_TEMP, M_WAITOK);
+
+	/*
+	 * This part comes from sbin/mount_nfs/mount_nfs.c:getnfsargs().
+	 */
+	if (*spec == '[' && (delimp = strchr(spec + 1, ']')) != NULL &&
+	    *(delimp + 1) == ':') {
+		hostp = spec + 1;
+		spec = delimp + 2;
+		have_bracket = 1;
+	} else if ((delimp = strrchr(spec, ':')) != NULL) {
+		hostp = spec;
+		spec = delimp + 1;
+	} else if ((delimp = strrchr(spec, '@')) != NULL) {
+		printf("%s: path@server syntax is deprecated, "
+		    "use server:path\n", __func__);
+		hostp = delimp + 1;
+	} else {
+		printf("%s: no <host>:<dirpath> nfs-name\n", __func__);
+		free(nam, M_TEMP);
+		return (EINVAL);
+	}
+	*delimp = '\0';
+
+	/*
+	 * If there has been a trailing slash at mounttime it seems
+	 * that some mountd implementations fail to remove the mount
+	 * entries from their mountlist while unmounting.
+	 */
+	for (speclen = strlen(spec);
+	    speclen > 1 && spec[speclen - 1] == '/';
+	    speclen--)
+		spec[speclen - 1] = '\0';
+	if (strlen(hostp) + strlen(spec) + 1 > MNAMELEN) {
+		printf("%s: %s:%s: name too long", __func__, hostp, spec);
+		free(nam, M_TEMP);
+		return (EINVAL);
+	}
+	/* Make both '@' and ':' notations equal */
+	if (*hostp != '\0') {
+		len = strlen(hostp);
+		offset = 0;
+		if (have_bracket)
+			nam[offset++] = '[';
+		memmove(nam + offset, hostp, len);
+		if (have_bracket)
+			nam[len + offset++] = ']';
+		nam[len + offset++] = ':';
+		memmove(nam + len + offset, spec, speclen);
+		nam[len + speclen + offset] = '\0';
+	} else
+		nam[0] = '\0';
+
+	/*
+	 * XXX: IPv6
+	 */
+	sin = malloc(sizeof(*sin), M_SONAME, M_WAITOK);
+	rv = inet_pton(AF_INET, hostp, &sin->sin_addr);
+	if (rv != 1) {
+		printf("%s: cannot parse '%s', inet_pton() returned %d\n",
+		    __func__, hostp, rv);
+		free(nam, M_TEMP);
+		free(sin, M_SONAME);
+		return (EINVAL);
+	}
+
+	sin->sin_len = sizeof(*sin);
+	sin->sin_family = AF_INET;
+	/*
+	 * XXX: hardcoded port number.
+	 */
+	sin->sin_port = htons(2049);
+
+	*hostnamep = strdup(nam, M_NEWNFSMNT);
+	*sinp = sin;
+	strlcpy(dirpath, spec, dirpathsize);
+	*dirlenp = strlen(dirpath);
+
+	free(nam, M_TEMP);
+	return (0);
+}
+
+/*
  * VFS Operations.
  *
  * mount system call
  * It seems a bit dumb to copyinstr() the host and path here and then
  * bcopy() them in mountnfs(), but I wanted to detect errors before
- * doing the sockargs() call because sockargs() allocates an mbuf and
+ * doing the getsockaddr() call because getsockaddr() allocates an mbuf and
  * an error after that means that I have to release the mbuf.
  */
 /* ARGSUSED */
@@ -781,23 +875,27 @@ nfs_mount(struct mount *mp)
 	struct sockaddr *nam = NULL;
 	struct vnode *vp;
 	struct thread *td;
-	char hst[MNAMELEN];
+	char *hst;
 	u_char nfh[NFSX_FHMAX], krbname[100], dirpath[100], srvkrbname[100];
 	char *cp, *opt, *name, *secname;
 	int nametimeo = NFS_DEFAULT_NAMETIMEO;
 	int negnametimeo = NFS_DEFAULT_NEGNAMETIMEO;
 	int minvers = 0;
-	int dirlen, has_nfs_args_opt, krbnamelen, srvkrbnamelen;
+	int dirlen, has_nfs_args_opt, has_nfs_from_opt,
+	    krbnamelen, srvkrbnamelen;
 	size_t hstlen;
 
 	has_nfs_args_opt = 0;
+	has_nfs_from_opt = 0;
+	hst = malloc(MNAMELEN, M_TEMP, M_WAITOK);
 	if (vfs_filteropt(mp->mnt_optnew, nfs_opts)) {
 		error = EINVAL;
 		goto out;
 	}
 
 	td = curthread;
-	if ((mp->mnt_flag & (MNT_ROOTFS | MNT_UPDATE)) == MNT_ROOTFS) {
+	if ((mp->mnt_flag & (MNT_ROOTFS | MNT_UPDATE)) == MNT_ROOTFS &&
+	    nfs_diskless_valid != 0) {
 		error = nfs_mountroot(mp);
 		goto out;
 	}
@@ -1070,11 +1168,11 @@ nfs_mount(struct mount *mp)
 
 		/*
 		 * If a change from TCP->UDP is done and there are thread(s)
-		 * that have I/O RPC(s) in progress with a tranfer size
+		 * that have I/O RPC(s) in progress with a transfer size
 		 * greater than NFS_MAXDGRAMDATA, those thread(s) will be
 		 * hung, retrying the RPC(s) forever. Usually these threads
 		 * will be seen doing an uninterruptible sleep on wait channel
-		 * "newnfsreq" (truncated to "newnfsre" by procstat).
+		 * "nfsreq".
 		 */
 		if (args.sotype == SOCK_DGRAM && nmp->nm_sotype == SOCK_STREAM)
 			tprintf(td->td_proc, LOG_WARNING,
@@ -1136,11 +1234,24 @@ nfs_mount(struct mount *mp)
 			goto out;
 		bzero(&hst[hstlen], MNAMELEN - hstlen);
 		args.hostname = hst;
-		/* sockargs() call must be after above copyin() calls */
+		/* getsockaddr() call must be after above copyin() calls */
 		error = getsockaddr(&nam, (caddr_t)args.addr,
 		    args.addrlen);
 		if (error != 0)
 			goto out;
+	} else if (nfs_mount_parse_from(mp->mnt_optnew,
+	    &args.hostname, (struct sockaddr_in **)&nam, dirpath,
+	    sizeof(dirpath), &dirlen) == 0) {
+		has_nfs_from_opt = 1;
+		bcopy(args.hostname, hst, MNAMELEN);
+		hst[MNAMELEN - 1] = '\0';
+
+		/*
+		 * This only works with NFSv4 for now.
+		 */
+		args.fhsize = 0;
+		args.flags |= NFSMNT_NFSV4;
+		args.sotype = SOCK_STREAM;
 	} else {
 		if (vfs_getopt(mp->mnt_optnew, "fh", (void **)&args.fh,
 		    &args.fhsize) == 0) {
@@ -1185,13 +1296,16 @@ nfs_mount(struct mount *mp)
 		krbname[0] = '\0';
 	krbnamelen = strlen(krbname);
 
-	if (vfs_getopt(mp->mnt_optnew, "dirpath", (void **)&name, NULL) == 0)
-		strlcpy(dirpath, name, sizeof (dirpath));
-	else
-		dirpath[0] = '\0';
-	dirlen = strlen(dirpath);
+	if (has_nfs_from_opt == 0) {
+		if (vfs_getopt(mp->mnt_optnew,
+		    "dirpath", (void **)&name, NULL) == 0)
+			strlcpy(dirpath, name, sizeof (dirpath));
+		else
+			dirpath[0] = '\0';
+		dirlen = strlen(dirpath);
+	}
 
-	if (has_nfs_args_opt == 0) {
+	if (has_nfs_args_opt == 0 && has_nfs_from_opt == 0) {
 		if (vfs_getopt(mp->mnt_optnew, "addr",
 		    (void **)&args.addr, &args.addrlen) == 0) {
 			if (args.addrlen > SOCK_MAXADDRLEN) {
@@ -1221,6 +1335,7 @@ out:
 			mp->mnt_kern_flag |= MNTK_NULL_NOCACHE;
 		MNT_IUNLOCK(mp);
 	}
+	free(hst, M_TEMP);
 	return (error);
 }
 
@@ -1231,7 +1346,7 @@ out:
  * mount system call
  * It seems a bit dumb to copyinstr() the host and path here and then
  * bcopy() them in mountnfs(), but I wanted to detect errors before
- * doing the sockargs() call because sockargs() allocates an mbuf and
+ * doing the getsockaddr() call because getsockaddr() allocates an mbuf and
  * an error after that means that I have to release the mbuf.
  */
 /* ARGSUSED */
@@ -1426,10 +1541,8 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 			if (error)
 				(void) nfs_catnap(PZERO, error, "nfsgetdirp");
 		} while (error && --trycnt > 0);
-		if (error) {
-			error = nfscl_maperr(td, error, (uid_t)0, (gid_t)0);
+		if (error)
 			goto bad;
-		}
 	}
 
 	/*
@@ -1583,6 +1696,11 @@ nfs_unmount(struct mount *mp, int mntflags)
 	 */
 	if ((mntflags & MNT_FORCE) == 0)
 		nfscl_umount(nmp, td);
+	else {
+		mtx_lock(&nmp->nm_mtx);
+		nmp->nm_privflag |= NFSMNTP_FORCEDISM;
+		mtx_unlock(&nmp->nm_mtx);
+	}
 	/* Make sure no nfsiods are assigned to this mount. */
 	mtx_lock(&ncl_iod_mutex);
 	for (i = 0; i < NFS_MAXASYNCDAEMON; i++)
@@ -1591,6 +1709,19 @@ nfs_unmount(struct mount *mp, int mntflags)
 			ncl_iodmount[i] = NULL;
 		}
 	mtx_unlock(&ncl_iod_mutex);
+
+	/*
+	 * We can now set mnt_data to NULL and wait for
+	 * nfssvc(NFSSVC_FORCEDISM) to complete.
+	 */
+	mtx_lock(&mountlist_mtx);
+	mtx_lock(&nmp->nm_mtx);
+	mp->mnt_data = NULL;
+	mtx_unlock(&mountlist_mtx);
+	while ((nmp->nm_privflag & NFSMNTP_CANCELRPCS) != 0)
+		msleep(nmp, &nmp->nm_mtx, PVFS, "nfsfdism", 0);
+	mtx_unlock(&nmp->nm_mtx);
+
 	newnfs_disconnect(&nmp->nm_sockreq);
 	crfree(nmp->nm_sockreq.nr_cred);
 	FREE(nmp->nm_nam, M_SONAME);
@@ -1660,7 +1791,7 @@ nfs_sync(struct mount *mp, int waitfor)
 	 * the umount(2) syscall doesn't get stuck in VFS_SYNC() before
 	 * calling VFS_UNMOUNT().
 	 */
-	if ((mp->mnt_kern_flag & MNTK_UNMOUNTF) != 0) {
+	if (NFSCL_FORCEDISM(mp)) {
 		MNT_IUNLOCK(mp);
 		return (EBADF);
 	}

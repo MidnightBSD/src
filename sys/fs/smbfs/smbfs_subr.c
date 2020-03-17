@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/smbfs/smbfs_subr.c 278435 2015-02-09 07:45:46Z dim $
+ * $FreeBSD: stable/11/sys/fs/smbfs/smbfs_subr.c 297793 2016-04-10 23:07:00Z pfg $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -60,7 +59,6 @@ void
 smb_time_server2local(u_long seconds, int tzoff, struct timespec *tsp)
 {
 	tsp->tv_sec = seconds + tzoff * 60;
-	    /*+ tz_minuteswest * 60 + (wall_cmos_clock ? adjkerntz : 0)*/;
 }
 
 /*

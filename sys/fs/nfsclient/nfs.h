@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfsclient/nfs.h 221040 2011-04-25 23:12:18Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfsclient/nfs.h 349308 2019-06-23 14:49:30Z asomers $
  */
 
 #ifndef _NFSCLIENT_NFS_H_
@@ -56,6 +55,24 @@
 #define	NFS_ISV34(v) \
 	(VFSTONFS((v)->v_mount)->nm_flag & (NFSMNT_NFSV3 | NFSMNT_NFSV4))
 
+#ifdef NFS_DEBUG
+
+extern int nfs_debug;
+#define	NFS_DEBUG_ASYNCIO	1 /* asynchronous i/o */
+#define	NFS_DEBUG_WG		2 /* server write gathering */
+#define	NFS_DEBUG_RC		4 /* server request caching */
+
+#define	NFS_DPF(cat, args)					\
+	do {							\
+		if (nfs_debug & NFS_DEBUG_##cat) printf args;	\
+	} while (0)
+
+#else
+
+#define	NFS_DPF(cat, args)
+
+#endif
+
 /*
  * NFS iod threads can be in one of these three states once spawned.
  * NFSIOD_NOT_AVAILABLE - Cannot be assigned an I/O operation at this time.
@@ -72,8 +89,7 @@ enum nfsiod_state {
 /*
  * Function prototypes.
  */
-int ncl_meta_setsize(struct vnode *, struct ucred *, struct thread *,
-    u_quad_t);
+int ncl_meta_setsize(struct vnode *, struct thread *, u_quad_t);
 void ncl_doio_directwrite(struct buf *);
 int ncl_bioread(struct vnode *, struct uio *, int, struct ucred *);
 int ncl_biowrite(struct vnode *, struct uio *, int, struct ucred *);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,9 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfsclient/nfs_clsubs.c 306663 2016-10-03 23:17:57Z rmacklem $");
-
-#include "opt_kdtrace.h"
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clsubs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -86,7 +83,7 @@ extern enum nfsiod_state ncl_iodwant[NFS_MAXASYNCDAEMON];
 extern struct nfsmount *ncl_iodmount[NFS_MAXASYNCDAEMON];
 extern int ncl_numasync;
 extern unsigned int ncl_iodmax;
-extern struct nfsstats newnfsstats;
+extern struct nfsstatsv1 nfsstatsv1;
 
 struct task	ncl_nfsiodnew_task;
 
@@ -138,30 +135,33 @@ ncl_dircookie_unlock(struct nfsnode *np)
 	mtx_unlock(&np->n_mtx);
 }
 
-int
-ncl_upgrade_vnlock(struct vnode *vp)
+bool
+ncl_excl_start(struct vnode *vp)
 {
-	int old_lock;
+	struct nfsnode *np;
+	int vn_lk;
 
-	ASSERT_VOP_LOCKED(vp, "ncl_upgrade_vnlock");
-	old_lock = NFSVOPISLOCKED(vp);
-	if (old_lock != LK_EXCLUSIVE) {
-		KASSERT(old_lock == LK_SHARED,
-		    ("ncl_upgrade_vnlock: wrong old_lock %d", old_lock));
-		/* Upgrade to exclusive lock, this might block */
-		NFSVOPLOCK(vp, LK_UPGRADE | LK_RETRY);
-  	}
-	return (old_lock);
+	ASSERT_VOP_LOCKED(vp, "ncl_excl_start");
+	vn_lk = NFSVOPISLOCKED(vp);
+	if (vn_lk == LK_EXCLUSIVE)
+		return (false);
+	KASSERT(vn_lk == LK_SHARED,
+	    ("ncl_excl_start: wrong vnode lock %d", vn_lk));
+	/* Ensure exclusive access, this might block */
+	np = VTONFS(vp);
+	lockmgr(&np->n_excl, LK_EXCLUSIVE, NULL);
+	return (true);
 }
 
 void
-ncl_downgrade_vnlock(struct vnode *vp, int old_lock)
+ncl_excl_finish(struct vnode *vp, bool old_lock)
 {
-	if (old_lock != LK_EXCLUSIVE) {
-		KASSERT(old_lock == LK_SHARED, ("wrong old_lock %d", old_lock));
-		/* Downgrade from exclusive lock. */
-		NFSVOPLOCK(vp, LK_DOWNGRADE | LK_RETRY);
-  	}
+	struct nfsnode *np;
+
+	if (!old_lock)
+		return;
+	np = VTONFS(vp);
+	lockmgr(&np->n_excl, LK_RELEASE, NULL);
 }
 
 #ifdef NFS_ACDEBUG
@@ -222,12 +222,12 @@ ncl_getattrcache(struct vnode *vp, struct vattr *vaper)
 
 	if ((time_second - np->n_attrstamp) >= timeo &&
 	    (mustflush != 0 || np->n_attrstamp == 0)) {
-		newnfsstats.attrcache_misses++;
+		nfsstatsv1.attrcache_misses++;
 		mtx_unlock(&np->n_mtx);
 		KDTRACE_NFS_ATTRCACHE_GET_MISS(vp);
 		return( ENOENT);
 	}
-	newnfsstats.attrcache_hits++;
+	nfsstatsv1.attrcache_hits++;
 	if (vap->va_size != np->n_size) {
 		if (vap->va_type == VREG) {
 			if (np->n_flag & NMODIFIED) {

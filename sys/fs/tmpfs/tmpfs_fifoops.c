@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_fifoops.c,v 1.5 2005/12/11 12:24:29 christos Exp $	*/
 
 /*-
@@ -35,7 +34,7 @@
  * tmpfs vnode interface for named pipes.
  */
 #include <sys/cdefs.h>
- __FBSDID("$FreeBSD: stable/10/sys/fs/tmpfs/tmpfs_fifoops.c 312069 2017-01-13 12:47:44Z kib $");
+ __FBSDID("$FreeBSD: stable/11/sys/fs/tmpfs/tmpfs_fifoops.c 346286 2019-04-16 17:43:14Z kib $");
 
 #include <sys/param.h>
 #include <sys/filedesc.h>
@@ -55,7 +54,8 @@ tmpfs_fifo_close(struct vop_close_args *v)
 	struct tmpfs_node *node;
 
 	node = VP_TO_TMPFS_NODE(v->a_vp);
-	tmpfs_set_status(node, TMPFS_NODE_ACCESSED);
+	tmpfs_set_status(VFS_TO_TMPFS(v->a_vp->v_mount), node,
+	    TMPFS_NODE_ACCESSED);
 	tmpfs_update(v->a_vp);
 	return (fifo_specops.vop_close(v));
 }
@@ -70,5 +70,6 @@ struct vop_vector tmpfs_fifoop_entries = {
 	.vop_access =			tmpfs_access,
 	.vop_getattr =			tmpfs_getattr,
 	.vop_setattr =			tmpfs_setattr,
+	.vop_pathconf =                 tmpfs_pathconf,
+	.vop_print =			tmpfs_print,
 };
-
