@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * lifted from fs/ncpfs/getopt.c
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/contrib/rdma/krping/getopt.c 256829 2013-10-21 06:31:56Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/contrib/rdma/krping/getopt.c 256470 2013-10-14 23:02:05Z np $");
 
 #include <sys/types.h>
 #include <linux/kernel.h>

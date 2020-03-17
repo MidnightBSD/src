@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * LZMA2 definitions
  *

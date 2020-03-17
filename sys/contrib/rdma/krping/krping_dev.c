@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This code lifted from:
  * 	Simple `echo' pseudo-device KLD
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/contrib/rdma/krping/krping_dev.c 256829 2013-10-21 06:31:56Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/contrib/rdma/krping/krping_dev.c 353181 2019-10-07 08:28:55Z hselasky $");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -41,6 +40,7 @@ static d_open_t      krping_open;
 static d_close_t     krping_close;
 static d_read_t      krping_read;
 static d_write_t     krping_write;
+static d_purge_t     krping_purge;
 
 /* Character device entry points */
 static struct cdevsw krping_cdevsw = {
@@ -49,6 +49,7 @@ static struct cdevsw krping_cdevsw = {
 	.d_close = krping_close,
 	.d_read = krping_read,
 	.d_write = krping_write,
+	.d_purge = krping_purge,
 	.d_name = "krping",
 };
 
@@ -73,7 +74,6 @@ krping_loader(struct module *m, int what, void *arg)
 
 	switch (what) {
 	case MOD_LOAD:                /* kldload */
-		krping_init();
 		krping_dev = make_dev(&krping_cdevsw, 0, UID_ROOT, GID_WHEEL,
 					0600, "krping");
 		printf("Krping device loaded.\n");
@@ -189,7 +189,7 @@ krping_write(struct cdev *dev, struct uio *uio, int ioflag)
 		err = uiomove(cp, amt, uio);
 		if (err) {
 			uprintf("Write failed: bad address!\n");
-			return err;
+			goto done;
 		}
 		cp += amt;
 		remain -= amt;
@@ -197,7 +197,8 @@ krping_write(struct cdev *dev, struct uio *uio, int ioflag)
 
 	if (uio->uio_resid != 0) {
 		uprintf("Message too big. max size is %d!\n", BUFFERSIZE);
-		return EMSGSIZE;
+		err = EMSGSIZE;
+		goto done;
 	}
 
 	/* null terminate and remove the \n */
@@ -205,19 +206,17 @@ krping_write(struct cdev *dev, struct uio *uio, int ioflag)
 	*cp = 0;
 	krpingmsg->len = (unsigned long)(cp - krpingmsg->msg);
 	uprintf("krping: write string = |%s|\n", krpingmsg->msg);
-	err = krping_doit(krpingmsg->msg, curproc);
+	err = krping_doit(krpingmsg->msg);
+done:
 	free(krpingmsg, M_DEVBUF);
 	return(err);
 }
 
-void
-krping_printf(void *cookie, const char *fmt, ...)
+static void
+krping_purge(struct cdev *dev __unused)
 {
-	va_list ap;
 
-	va_start(ap, fmt);
-	vtprintf(cookie, -1, fmt, ap);
-	va_end(ap);
+	krping_cancel_all();
 }
 
 int

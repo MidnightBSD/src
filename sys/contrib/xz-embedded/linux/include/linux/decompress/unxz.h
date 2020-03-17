@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Wrapper for decompressing XZ-compressed kernel, initramfs, and initrd
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CRC32 using the polynomial from IEEE-802.3
  *

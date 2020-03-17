@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Private includes and definitions
  *

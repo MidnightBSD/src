@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * $FreeBSD: stable/10/sys/contrib/rdma/krping/krping.h 256829 2013-10-21 06:31:56Z np $
+ * $FreeBSD: stable/11/sys/contrib/rdma/krping/krping.h 353181 2019-10-07 08:28:55Z hselasky $
  */
 
 struct krping_stats {
@@ -15,8 +14,7 @@ struct krping_stats {
 	char name[16];
 };
 
-int krping_doit(char *, void *);
+int krping_doit(char *);
 void krping_walk_cb_list(void (*)(struct krping_stats *, void *), void *);
-void krping_init(void);
-void krping_printf(void *, const char *, ...);
 int krping_sigpending(void);
+void krping_cancel_all(void);
