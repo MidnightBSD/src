@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-
@@ -35,13 +34,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_futex.c 301426 2016-06-05 06:06:55Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_futex.c 317936 2017-05-08 10:51:30Z dchagin $");
 #if 0
 __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $");
 #endif
 
 #include "opt_compat.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -296,9 +294,6 @@ futex_copyin_timeout(int op, struct l_timespec *luts, int clockrt,
 	error = linux_to_native_timespec(ts, &lts);
 	if (error)
 		return (error);
-	if (ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000)
-		return (EINVAL);
-
 	if (clockrt) {
 		nanotime(&kts);
 		timespecsub(ts, &kts);
@@ -957,6 +952,11 @@ retry1:
 		    args->uaddr, args->val, args->uaddr2, args->val3,
 		    args->timeout);
 
+		if (args->uaddr == args->uaddr2) {
+			LIN_SDT_PROBE1(futex, linux_sys_futex, return, EINVAL);
+			return (EINVAL);
+		}
+
 retry2:
 		error = futex_get(args->uaddr, NULL, &f, flags | FUTEX_DONTLOCK);
 		if (error) {
@@ -964,9 +964,7 @@ retry2:
 			return (error);
 		}
 
-		if (args->uaddr != args->uaddr2)
-			error = futex_get(args->uaddr2, NULL, &f2,
-			    flags | FUTEX_DONTLOCK);
+		error = futex_get(args->uaddr2, NULL, &f2, flags | FUTEX_DONTLOCK);
 		if (error) {
 			futex_put(f, NULL);
 

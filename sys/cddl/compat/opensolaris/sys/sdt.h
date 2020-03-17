@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,15 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sdt.h 272877 2014-10-10 00:26:00Z smh $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/sdt.h 271802 2014-09-18 20:00:36Z smh $
  */
 
 #ifndef _OPENSOLARIS_SYS_SDT_H_
 #define	_OPENSOLARIS_SYS_SDT_H_
 
-#ifdef _KERNEL
-#include <opt_kdtrace.h>
-#endif
 #include_next <sys/sdt.h>
 
 #ifdef KDTRACE_HOOKS

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Bjoern A. Zeeb
  * All rights reserved.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux_timer.h 293566 2016-01-09 17:12:45Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_timer.h 317637 2017-05-01 06:42:39Z dchagin $
  */
 
 #ifndef	_LINUX_TIMER_H
@@ -73,6 +72,7 @@
 #define	LINUX_CPUCLOCK_PERTHREAD(clock)		\
 	(((clock) & (clockid_t) LINUX_CPUCLOCK_PERTHREAD_MASK) != 0)
 
+#define	LINUX_TIMER_ABSTIME			0x01
 
 #define	L_SIGEV_SIGNAL				0
 #define	L_SIGEV_NONE				1
@@ -112,10 +112,15 @@ struct l_itimerspec {
 	struct l_timespec it_value;
 };
 
-void native_to_linux_timespec(struct l_timespec *,
+int native_to_linux_timespec(struct l_timespec *,
 				     struct timespec *);
 int linux_to_native_timespec(struct timespec *,
 				     struct l_timespec *);
 int linux_to_native_clockid(clockid_t *, clockid_t);
+int native_to_linux_itimerspec(struct l_itimerspec *,
+				     struct itimerspec *);
+int linux_to_native_itimerspec(struct itimerspec *,
+				     struct l_itimerspec *);
+int linux_to_native_timerflags(int *, int);
 
 #endif	/* _LINUX_TIMER_H */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2013 Robert N. M. Watson
  * Copyright (c) 2013 SRI International
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/mips/beripad-de4.dts 275426 2014-12-02 20:28:05Z brooks $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/mips/beripad-de4.dts 275860 2014-12-17 11:05:44Z br $
  */
 
 /dts-v1/;
@@ -81,6 +80,11 @@
 */
 	};
 
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x40000000>;		// 1G at 0x0
+	};
+
 	soc {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -92,11 +96,6 @@
 		 */
 		compatible = "simple-bus", "mips,mips4k";
 		ranges = <>;
-
-		memory {
-			device_type = "memory";
-			reg = <0x0 0x40000000>;		// 1G at 0x0
-		};
 
 		beripic0: beripic@7f804000 {
 			compatible = "sri-cambridge,beri-pic";
@@ -217,13 +216,14 @@
 
 		touchscreen@70400000 {
 			compatible = "sri-cambridge,mtl";
+			panel-size = < 800 480 >;
 			reg = <0x70400000 0x1000
 			       0x70000000 0x177000
 			       0x70177000 0x2000>;
 		};
 
 		usb@0x7f100000 {
-			compatible = "philips,isp1761";
+			compatible = "nxp,usb-isp1761";
 			reg = <0x7f100000 0x40000
 			       0x7f140000 0x4>;
 			// IRQ 4 is DC, IRQ 5 is HC.
@@ -254,14 +254,5 @@
 			sri-cambridge,fileio = "rw";
 			sri-cambridge,devname = "de4tempfan";
 		};
-
-		avgen@0x7f100000 {
-			compatible = "sri-cambridge,avgen";
-			reg = <0x7f100000 0x40000>;
-			sri-cambridge,width = <4>;
-			sri-cambridge,fileio = "r";
-			sri-cambridge,devname = "usbmem";
-		};
-
 	};
 };

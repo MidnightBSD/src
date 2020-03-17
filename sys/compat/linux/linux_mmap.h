@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Tim J. Robbins
  * Copyright (c) 2002 Doug Rabson
@@ -29,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux_mmap.h 302964 2016-07-17 15:23:32Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_mmap.h 350279 2019-07-24 12:48:51Z tijl $
  */
 
 #ifndef _LINUX_MMAP_H_
@@ -42,6 +41,8 @@
 #define	LINUX_MAP_ANON		0x0020
 #define	LINUX_MAP_GROWSDOWN	0x0100
 
+#define	LINUX_PROT_GROWSDOWN	0x01000000
+#define	LINUX_PROT_GROWSUP	0x02000000
 
 int linux_mmap_common(struct thread *, uintptr_t, size_t, int, int,
 			int, off_t);

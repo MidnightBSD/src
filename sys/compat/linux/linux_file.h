@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Roman Divacky
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux_file.h 293542 2016-01-09 16:32:35Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_file.h 346812 2019-04-28 09:53:08Z dchagin $
  */
 
 #ifndef _LINUX_FILE_H_
@@ -41,10 +40,10 @@
  */
 #define	LINUX_POSIX_FADV_NORMAL		0
 #define	LINUX_POSIX_FADV_RANDOM		1
-#define	LINUX_POSIX_FADV_SEQUENTIAL    	2
-#define	LINUX_POSIX_FADV_WILLNEED      	3
-#define	LINUX_POSIX_FADV_DONTNEED      	4
-#define	LINUX_POSIX_FADV_NOREUSE       	5
+#define	LINUX_POSIX_FADV_SEQUENTIAL	2
+#define	LINUX_POSIX_FADV_WILLNEED	3
+#define	LINUX_POSIX_FADV_DONTNEED	4
+#define	LINUX_POSIX_FADV_NOREUSE	5
 
 /*
  * mount flags

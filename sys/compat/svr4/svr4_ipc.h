@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1995 Christos Zoulas.  All rights reserved.
@@ -28,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/compat/svr4/svr4_ipc.h 139743 2005-01-05 22:34:37Z imp $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4_ipc.h 139743 2005-01-05 22:34:37Z imp $
  */
 
 #ifndef _SVR4_IPC_H_

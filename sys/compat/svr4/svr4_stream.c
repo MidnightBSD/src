@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton.  All rights reserved.
  * Copyright (c) 1994, 1996 Christos Zoulas.  All rights reserved.
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_stream.c 321020 2017-07-15 17:25:40Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_stream.c 281436 2015-04-11 15:40:28Z mjg $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
@@ -283,7 +282,8 @@ clean_pipe(td, path)
 	struct stat st;
 	int error;
 
-	error = kern_lstat(td, path, UIO_SYSSPACE, &st);
+	error = kern_statat(td, AT_SYMLINK_NOFOLLOW, AT_FDCWD, path,
+	    UIO_SYSSPACE, &st, NULL);
 
 	/*
 	 * Make sure we are dealing with a mode 0 named pipe.
@@ -294,7 +294,7 @@ clean_pipe(td, path)
 	if ((st.st_mode & ALLPERMS) != 0)
 		return (0);
 
-	error = kern_unlink(td, path, UIO_SYSSPACE);
+	error = kern_unlinkat(td, AT_FDCWD, path, UIO_SYSSPACE, 0);
 	if (error)
 		DPRINTF(("clean_pipe: unlink failed %d\n", error));
 	return (error);
@@ -813,7 +813,7 @@ ti_bind(fp, fd, ioc, td)
 
 	DPRINTF(("TI_BIND: fileno %d\n", fd));
 
-	if ((error = kern_bind(td, fd, skp)) != 0) {
+	if ((error = kern_bindat(td, AT_FDCWD, fd, skp)) != 0) {
 		DPRINTF(("TI_BIND: bind failed %d\n", error));
 		return error;
 	}
@@ -1587,7 +1587,7 @@ svr4_do_putmsg(td, uap, fp)
 	case SVR4_TI_CONNECT_REQUEST:	/* connect 	*/
 		{
 
-			return (kern_connect(td, uap->fd, sa));
+			return (kern_connectat(td, AT_FDCWD, uap->fd, sa));
 		}
 
 	case SVR4_TI_SENDTO_REQUEST:	/* sendto 	*/

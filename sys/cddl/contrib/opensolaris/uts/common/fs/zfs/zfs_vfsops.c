@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -25,6 +24,7 @@
  * All rights reserved.
  * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
+ * Copyright 2016 Nexenta Systems, Inc. All rights reserved.
  */
 
 /* Portions Copyright 2010 Robert Milkowski */
@@ -64,6 +64,8 @@
 #include <sys/dmu_objset.h>
 #include <sys/spa_boot.h>
 #include <sys/jail.h>
+#include <ufs/ufs/quota.h>
+
 #include "zfs_comutil.h"
 
 struct mtx zfs_debug_mtx;
@@ -76,8 +78,7 @@ SYSCTL_INT(_vfs_zfs, OID_AUTO, super_owner, CTLFLAG_RW, &zfs_super_owner, 0,
     "File system owner can perform privileged operation on his file systems");
 
 int zfs_debug_level;
-TUNABLE_INT("vfs.zfs.debug", &zfs_debug_level);
-SYSCTL_INT(_vfs_zfs, OID_AUTO, debug, CTLFLAG_RW, &zfs_debug_level, 0,
+SYSCTL_INT(_vfs_zfs, OID_AUTO, debug, CTLFLAG_RWTUN, &zfs_debug_level, 0,
     "Debug level");
 
 SYSCTL_NODE(_vfs_zfs, OID_AUTO, version, CTLFLAG_RD, 0, "ZFS versions");
@@ -91,6 +92,7 @@ static int zfs_version_zpl = ZPL_VERSION;
 SYSCTL_INT(_vfs_zfs_version, OID_AUTO, zpl, CTLFLAG_RD, &zfs_version_zpl, 0,
     "ZPL_VERSION");
 
+static int zfs_quotactl(vfs_t *vfsp, int cmds, uid_t id, void *arg);
 static int zfs_mount(vfs_t *vfsp);
 static int zfs_umount(vfs_t *vfsp, int fflag);
 static int zfs_root(vfs_t *vfsp, int flags, vnode_t **vpp);
@@ -103,7 +105,7 @@ static int zfs_fhtovp(vfs_t *vfsp, fid_t *fidp, int flags, vnode_t **vpp);
 static void zfs_objset_close(zfsvfs_t *zfsvfs);
 static void zfs_freevfs(vfs_t *vfsp);
 
-static struct vfsops zfs_vfsops = {
+struct vfsops zfs_vfsops = {
 	.vfs_mount =		zfs_mount,
 	.vfs_unmount =		zfs_umount,
 	.vfs_root =		zfs_root,
@@ -112,6 +114,7 @@ static struct vfsops zfs_vfsops = {
 	.vfs_sync =		zfs_sync,
 	.vfs_checkexp =		zfs_checkexp,
 	.vfs_fhtovp =		zfs_fhtovp,
+	.vfs_quotactl =		zfs_quotactl,
 };
 
 VFS_SET(zfs_vfsops, zfs, VFCF_JAIL | VFCF_DELEGADMIN);
@@ -122,6 +125,163 @@ VFS_SET(zfs_vfsops, zfs, VFCF_JAIL | VFCF_DELEGADMIN);
  * from being unloaded after a umount -f
  */
 static uint32_t	zfs_active_fs_count = 0;
+
+static int
+zfs_getquota(zfsvfs_t *zfsvfs, uid_t id, int isgroup, struct dqblk64 *dqp)
+{
+	int error = 0;
+	char buf[32];
+	int err;
+	uint64_t usedobj, quotaobj;
+	uint64_t quota, used = 0;
+	timespec_t now;
+	
+	usedobj = isgroup ? DMU_GROUPUSED_OBJECT : DMU_USERUSED_OBJECT;
+	quotaobj = isgroup ? zfsvfs->z_groupquota_obj : zfsvfs->z_userquota_obj;
+
+	if (quotaobj == 0 || zfsvfs->z_replay) {
+		error = EINVAL;
+		goto done;
+	}
+	(void)sprintf(buf, "%llx", (longlong_t)id);
+	if ((error = zap_lookup(zfsvfs->z_os, quotaobj,
+				buf, sizeof(quota), 1, &quota)) != 0) {
+		dprintf("%s(%d): quotaobj lookup failed\n", __FUNCTION__, __LINE__);
+		goto done;
+	}
+	/*
+	 * quota(8) uses bsoftlimit as "quoota", and hardlimit as "limit".
+	 * So we set them to be the same.
+	 */
+	dqp->dqb_bsoftlimit = dqp->dqb_bhardlimit = btodb(quota);
+	error = zap_lookup(zfsvfs->z_os, usedobj, buf, sizeof(used), 1, &used);
+	if (error && error != ENOENT) {
+		dprintf("%s(%d):  usedobj failed; %d\n", __FUNCTION__, __LINE__, error);
+		goto done;
+	}
+	dqp->dqb_curblocks = btodb(used);
+	dqp->dqb_ihardlimit = dqp->dqb_isoftlimit = 0;
+	vfs_timestamp(&now);
+	/*
+	 * Setting this to 0 causes FreeBSD quota(8) to print
+	 * the number of days since the epoch, which isn't
+	 * particularly useful.
+	 */
+	dqp->dqb_btime = dqp->dqb_itime = now.tv_sec;
+done:
+	return (error);
+}
+
+static int
+zfs_quotactl(vfs_t *vfsp, int cmds, uid_t id, void *arg)
+{
+	zfsvfs_t *zfsvfs = vfsp->vfs_data;
+	struct thread *td;
+	int cmd, type, error = 0;
+	int bitsize;
+	uint64_t fuid;
+	zfs_userquota_prop_t quota_type;
+	struct dqblk64 dqblk = { 0 };
+	
+	td = curthread;
+	cmd = cmds >> SUBCMDSHIFT;
+	type = cmds & SUBCMDMASK;
+
+	ZFS_ENTER(zfsvfs);
+	if (id == -1) {
+		switch (type) {
+		case USRQUOTA:
+			id = td->td_ucred->cr_ruid;
+			break;
+		case GRPQUOTA:
+			id = td->td_ucred->cr_rgid;
+			break;
+		default:
+			error = EINVAL;
+			if (cmd == Q_QUOTAON || cmd == Q_QUOTAOFF)
+				vfs_unbusy(vfsp);
+			goto done;
+		}
+	}
+	/*
+	 * Map BSD type to:
+	 * ZFS_PROP_USERUSED,
+	 * ZFS_PROP_USERQUOTA,
+	 * ZFS_PROP_GROUPUSED,
+	 * ZFS_PROP_GROUPQUOTA
+	 */
+	switch (cmd) {
+	case Q_SETQUOTA:
+	case Q_SETQUOTA32:
+		if (type == USRQUOTA)
+			quota_type = ZFS_PROP_USERQUOTA;
+		else if (type == GRPQUOTA)
+			quota_type = ZFS_PROP_GROUPQUOTA;
+		else
+			error = EINVAL;
+		break;
+	case Q_GETQUOTA:
+	case Q_GETQUOTA32:
+		if (type == USRQUOTA)
+			quota_type = ZFS_PROP_USERUSED;
+		else if (type == GRPQUOTA)
+			quota_type = ZFS_PROP_GROUPUSED;
+		else
+			error = EINVAL;
+		break;
+	}
+
+	/*
+	 * Depending on the cmd, we may need to get
+	 * the ruid and domain (see fuidstr_to_sid?),
+	 * the fuid (how?), or other information.
+	 * Create fuid using zfs_fuid_create(zfsvfs, id,
+	 * ZFS_OWNER or ZFS_GROUP, cr, &fuidp)?
+	 * I think I can use just the id?
+	 *
+	 * Look at zfs_fuid_overquota() to look up a quota.
+	 * zap_lookup(something, quotaobj, fuidstring, sizeof(long long), 1, &quota)
+	 *
+	 * See zfs_set_userquota() to set a quota.
+	 */
+	if ((u_int)type >= MAXQUOTAS) {
+		error = EINVAL;
+		goto done;
+	}
+
+	switch (cmd) {
+	case Q_GETQUOTASIZE:
+		bitsize = 64;
+		error = copyout(&bitsize, arg, sizeof(int));
+		break;
+	case Q_QUOTAON:
+		// As far as I can tell, you can't turn quotas on or off on zfs
+		error = 0;
+		vfs_unbusy(vfsp);
+		break;
+	case Q_QUOTAOFF:
+		error = ENOTSUP;
+		vfs_unbusy(vfsp);
+		break;
+	case Q_SETQUOTA:
+		error = copyin(&dqblk, arg, sizeof(dqblk));
+		if (error == 0)
+			error = zfs_set_userquota(zfsvfs, quota_type,
+						  "", id, dbtob(dqblk.dqb_bhardlimit));
+		break;
+	case Q_GETQUOTA:
+		error = zfs_getquota(zfsvfs, id, type == GRPQUOTA, &dqblk);
+		if (error == 0)
+			error = copyout(&dqblk, arg, sizeof(dqblk));
+		break;
+	default:
+		error = EINVAL;
+		break;
+	}
+done:
+	ZFS_EXIT(zfsvfs);
+	return (error);
+}
 
 /*ARGSUSED*/
 static int
@@ -182,7 +342,7 @@ zfs_sync(vfs_t *vfsp, int waitfor)
 	return (0);
 }
 
-#ifndef __MidnightBSD_kernel__
+#ifndef __FreeBSD_kernel__
 static int
 zfs_create_unique_device(dev_t *dev)
 {
@@ -234,7 +394,7 @@ zfs_create_unique_device(dev_t *dev)
 
 	return (0);
 }
-#endif	/* !__MidnightBSD_kernel__ */
+#endif	/* !__FreeBSD_kernel__ */
 
 static void
 atime_changed_cb(void *arg, uint64_t newval)
@@ -479,7 +639,7 @@ zfs_register_callbacks(vfs_t *vfsp)
 	 * dsl_prop_get_int_ds() to handle the special nbmand property below.
 	 * dsl_prop_get_integer() can not be used, because it has to acquire
 	 * spa_namespace_lock and we can not do that because we already hold
-	 * z_teardown_lock.  The problem is that spa_config_sync() is called
+	 * z_teardown_lock.  The problem is that spa_write_cachefile() is called
 	 * with spa_namespace_lock held and the function calls ZFS vnode
 	 * operations to write the cache file and thus z_teardown_lock is
 	 * acquired after spa_namespace_lock.
@@ -632,7 +792,7 @@ fuidstr_to_sid(zfsvfs_t *zfsvfs, const char *fuidstr,
 	uint64_t fuid;
 	const char *domain;
 
-	fuid = strtonum(fuidstr, NULL);
+	fuid = zfs_strtonum(fuidstr, NULL);
 
 	domain = zfs_fuid_find_by_idx(zfsvfs, FUID_INDEX(fuid));
 	if (domain)
@@ -973,6 +1133,17 @@ zfsvfs_init(zfsvfs_t *zfsvfs, objset_t *os)
 	return (0);
 }
 
+#if defined(__FreeBSD__)
+taskq_t *zfsvfs_taskq;
+
+static void
+zfsvfs_task_unlinked_drain(void *context, int pending __unused)
+{
+
+	zfs_unlinked_drain((zfsvfs_t *)context);
+}
+#endif
+
 int
 zfsvfs_create(const char *osname, zfsvfs_t **zfvp)
 {
@@ -997,11 +1168,25 @@ zfsvfs_create(const char *osname, zfsvfs_t **zfvp)
 	 * We claim to always be readonly so we can open snapshots;
 	 * other ZPL code will prevent us from writing to snapshots.
 	 */
+
 	error = dmu_objset_own(osname, DMU_OST_ZFS, B_TRUE, zfsvfs, &os);
-	if (error) {
+	if (error != 0) {
 		kmem_free(zfsvfs, sizeof (zfsvfs_t));
 		return (error);
 	}
+
+	error = zfsvfs_create_impl(zfvp, zfsvfs, os);
+	if (error != 0) {
+		dmu_objset_disown(os, zfsvfs);
+	}
+	return (error);
+}
+
+
+int
+zfsvfs_create_impl(zfsvfs_t **zfvp, zfsvfs_t *zfsvfs, objset_t *os)
+{
+	int error;
 
 	zfsvfs->z_vfs = NULL;
 	zfsvfs->z_parent = zfsvfs;
@@ -1010,6 +1195,10 @@ zfsvfs_create(const char *osname, zfsvfs_t **zfvp)
 	mutex_init(&zfsvfs->z_lock, NULL, MUTEX_DEFAULT, NULL);
 	list_create(&zfsvfs->z_all_znodes, sizeof (znode_t),
 	    offsetof(znode_t, z_link_node));
+#if defined(__FreeBSD__)
+	TASK_INIT(&zfsvfs->z_unlinked_drain_task, 0,
+	    zfsvfs_task_unlinked_drain, zfsvfs);
+#endif
 #ifdef DIAGNOSTIC
 	rrm_init(&zfsvfs->z_teardown_lock, B_TRUE);
 #else
@@ -1022,7 +1211,6 @@ zfsvfs_create(const char *osname, zfsvfs_t **zfvp)
 
 	error = zfsvfs_init(zfsvfs, os);
 	if (error != 0) {
-		dmu_objset_disown(os, zfsvfs);
 		*zfvp = NULL;
 		kmem_free(zfsvfs, sizeof (zfsvfs_t));
 		return (error);
@@ -1835,7 +2023,7 @@ zfs_root(vfs_t *vfsp, int flags, vnode_t **vpp)
 /*
  * Teardown the zfsvfs::z_os.
  *
- * Note, if 'unmounting' if FALSE, we return with the 'z_teardown_lock'
+ * Note, if 'unmounting' is FALSE, we return with the 'z_teardown_lock'
  * and 'z_teardown_inactive_lock' held.
  */
 static int
@@ -1854,7 +2042,7 @@ zfsvfs_teardown(zfsvfs_t *zfsvfs, boolean_t unmounting)
 		 */
 		(void) dnlc_purge_vfsp(zfsvfs->z_parent->z_vfs, 0);
 #ifdef FREEBSD_NAMECACHE
-		cache_purgevfs(zfsvfs->z_parent->z_vfs);
+		cache_purgevfs(zfsvfs->z_parent->z_vfs, true);
 #endif
 	}
 
@@ -1903,8 +2091,8 @@ zfsvfs_teardown(zfsvfs_t *zfsvfs, boolean_t unmounting)
 	 */
 	if (unmounting) {
 		zfsvfs->z_unmounted = B_TRUE;
-		rrm_exit(&zfsvfs->z_teardown_lock, FTAG);
 		rw_exit(&zfsvfs->z_teardown_inactive_lock);
+		rrm_exit(&zfsvfs->z_teardown_lock, FTAG);
 	}
 
 	/*
@@ -2006,6 +2194,11 @@ zfs_umount(vfs_t *vfsp, int fflag)
 	}
 #endif
 
+	while (taskqueue_cancel(zfsvfs_taskq->tq_queue,
+	    &zfsvfs->z_unlinked_drain_task, NULL) != 0)
+		taskqueue_drain(zfsvfs_taskq->tq_queue,
+		    &zfsvfs->z_unlinked_drain_task);
+
 	VERIFY(zfsvfs_teardown(zfsvfs, B_TRUE) == 0);
 	os = zfsvfs->z_os;
 
@@ -2062,8 +2255,11 @@ zfs_vget(vfs_t *vfsp, ino_t ino, int flags, vnode_t **vpp)
 	if (err == 0)
 		*vpp = ZTOV(zp);
 	ZFS_EXIT(zfsvfs);
-	if (err == 0)
+	if (err == 0) {
 		err = vn_lock(*vpp, flags);
+		if (err != 0)
+			vrele(*vpp);
+	}
 	if (err != 0)
 		*vpp = NULL;
 	return (err);
@@ -2329,7 +2525,7 @@ zfs_vnodes_adjust(void)
 	 * vntblinit(). If it is equal to desiredvnodes, it means that
 	 * it wasn't tuned by the administrator and we can tune it down.
 	 */
-	newdesiredvnodes = min(maxproc + cnt.v_page_count / 4, 2 *
+	newdesiredvnodes = min(maxproc + vm_cnt.v_page_count / 4, 2 *
 	    vm_kmem_size / (5 * (sizeof(struct vm_object) +
 	    sizeof(struct vnode))));
 	if (newdesiredvnodes == desiredvnodes)
@@ -2370,11 +2566,17 @@ zfs_init(void)
 	zfs_vnodes_adjust();
 
 	dmu_objset_register_type(DMU_OST_ZFS, zfs_space_delta_cb);
+#if defined(__FreeBSD__)
+	zfsvfs_taskq = taskq_create("zfsvfs", 1, minclsyspri, 0, 0, 0);
+#endif
 }
 
 void
 zfs_fini(void)
 {
+#if defined(__FreeBSD__)
+	taskq_destroy(zfsvfs_taskq);
+#endif
 	zfsctl_fini();
 	zfs_znode_fini();
 	zfs_vnodes_adjust_back();
@@ -2446,6 +2648,7 @@ zfs_set_version(zfsvfs_t *zfsvfs, uint64_t newvers)
 	dmu_tx_commit(tx);
 
 	zfsvfs->z_version = newvers;
+	os->os_version = newvers;
 
 	zfs_set_fuid_feature(zfsvfs);
 
@@ -2458,20 +2661,52 @@ zfs_set_version(zfsvfs_t *zfsvfs, uint64_t newvers)
 int
 zfs_get_zplprop(objset_t *os, zfs_prop_t prop, uint64_t *value)
 {
-	const char *pname;
-	int error = ENOENT;
+	uint64_t *cached_copy = NULL;
 
 	/*
-	 * Look up the file system's value for the property.  For the
-	 * version property, we look up a slightly different string.
+	 * Figure out where in the objset_t the cached copy would live, if it
+	 * is available for the requested property.
 	 */
-	if (prop == ZFS_PROP_VERSION)
-		pname = ZPL_VERSION_STR;
-	else
-		pname = zfs_prop_to_name(prop);
+	if (os != NULL) {
+		switch (prop) {
+		case ZFS_PROP_VERSION:
+			cached_copy = &os->os_version;
+			break;
+		case ZFS_PROP_NORMALIZE:
+			cached_copy = &os->os_normalization;
+			break;
+		case ZFS_PROP_UTF8ONLY:
+			cached_copy = &os->os_utf8only;
+			break;
+		case ZFS_PROP_CASE:
+			cached_copy = &os->os_casesensitivity;
+			break;
+		default:
+			break;
+		}
+	}
+	if (cached_copy != NULL && *cached_copy != OBJSET_PROP_UNINITIALIZED) {
+		*value = *cached_copy;
+		return (0);
+	}
 
-	if (os != NULL)
+	/*
+	 * If the property wasn't cached, look up the file system's value for
+	 * the property. For the version property, we look up a slightly
+	 * different string.
+	 */
+	const char *pname;
+	int error = ENOENT;
+	if (prop == ZFS_PROP_VERSION) {
+		pname = ZPL_VERSION_STR;
+	} else {
+		pname = zfs_prop_to_name(prop);
+	}
+
+	if (os != NULL) {
+		ASSERT3U(os->os_phys->os_type, ==, DMU_OST_ZFS);
 		error = zap_lookup(os, MASTER_NODE_OBJ, pname, 8, 1, value);
+	}
 
 	if (error == ENOENT) {
 		/* No value set, use the default value */
@@ -2491,7 +2726,39 @@ zfs_get_zplprop(objset_t *os, zfs_prop_t prop, uint64_t *value)
 		}
 		error = 0;
 	}
+
+	/*
+	 * If one of the methods for getting the property value above worked,
+	 * copy it into the objset_t's cache.
+	 */
+	if (error == 0 && cached_copy != NULL) {
+		*cached_copy = *value;
+	}
+
 	return (error);
+}
+
+/*
+ * Return true if the coresponding vfs's unmounted flag is set.
+ * Otherwise return false.
+ * If this function returns true we know VFS unmount has been initiated.
+ */
+boolean_t
+zfs_get_vfs_flag_unmounted(objset_t *os)
+{
+	zfsvfs_t *zfvp;
+	boolean_t unmounted = B_FALSE;
+
+	ASSERT(dmu_objset_type(os) == DMU_OST_ZFS);
+
+	mutex_enter(&os->os_user_ptr_lock);
+	zfvp = dmu_objset_get_user(os);
+	if (zfvp != NULL && zfvp->z_vfs != NULL &&
+	    (zfvp->z_vfs->mnt_kern_flag & MNTK_UNMOUNT))
+		unmounted = B_TRUE;
+	mutex_exit(&os->os_user_ptr_lock);
+
+	return (unmounted);
 }
 
 #ifdef _KERNEL

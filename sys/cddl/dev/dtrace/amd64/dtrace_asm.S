@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  *
  * Portions Copyright 2008 John Birrell <jb@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/amd64/dtrace_asm.S 283676 2015-05-29 04:01:39Z markj $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/amd64/dtrace_asm.S 298171 2016-04-17 23:08:47Z markj $
  *
  */
 /*
@@ -61,8 +60,6 @@
 1:	addq	$TF_RIP,%rsp;
 
 
-	.globl	calltrap
-	.type	calltrap,@function
 	ENTRY(dtrace_invop_start)
 
 	/*
@@ -72,13 +69,10 @@
 	 */
 	movq	TF_RIP(%rsp), %rdi
 	decq	%rdi
-	movq	TF_RSP(%rsp), %rsi
-	movq	TF_RAX(%rsp), %rdx
-	pushq	(%rsi)
 	movq	%rsp, %rsi
+	movq	TF_RAX(%rsp), %rdx
 	call	dtrace_invop
 	ALTENTRY(dtrace_invop_callsite)
-	addq	$8, %rsp
 	cmpl	$DTRACE_INVOP_PUSHL_EBP, %eax
 	je	bp_push
 	cmpl	$DTRACE_INVOP_LEAVE, %eax

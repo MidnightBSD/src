@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sig.h 248470 2013-03-18 17:23:58Z jhb $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/sig.h 248470 2013-03-18 17:23:58Z jhb $
  */
 
 #ifndef _OPENSOLARIS_SYS_SIG_H_

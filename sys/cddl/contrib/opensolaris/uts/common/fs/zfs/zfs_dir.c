@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,9 +18,11 @@
  *
  * CDDL HEADER END
  */
+
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2013, 2016 by Delphix. All rights reserved.
+ * Copyright 2017 Nexenta Systems, Inc.
  */
 
 #include <sys/types.h>
@@ -64,12 +65,11 @@
  */
 static int
 zfs_match_find(zfsvfs_t *zfsvfs, znode_t *dzp, const char *name,
-    boolean_t exact, uint64_t *zoid)
+    matchtype_t mt, uint64_t *zoid)
 {
 	int error;
 
 	if (zfsvfs->z_norm) {
-		matchtype_t mt = exact? MT_EXACT : MT_FIRST;
 
 		/*
 		 * In the non-mixed case we only expect there would ever
@@ -109,7 +109,7 @@ int
 zfs_dirent_lookup(znode_t *dzp, const char *name, znode_t **zpp, int flag)
 {
 	zfsvfs_t	*zfsvfs = dzp->z_zfsvfs;
-	boolean_t	exact;
+	matchtype_t	mt = 0;
 	uint64_t	zoid;
 	vnode_t		*vp = NULL;
 	int		error = 0;
@@ -132,15 +132,39 @@ zfs_dirent_lookup(znode_t *dzp, const char *name, znode_t **zpp, int flag)
 	 * zfsvfs->z_case and zfsvfs->z_norm fields.  These choices
 	 * affect how we perform zap lookups.
 	 *
-	 * Decide if exact matches should be requested when performing
-	 * a zap lookup on file systems supporting case-insensitive
-	 * access.
+	 * When matching we may need to normalize & change case according to
+	 * FS settings.
+	 *
+	 * Note that a normalized match is necessary for a case insensitive
+	 * filesystem when the lookup request is not exact because normalization
+	 * can fold case independent of normalizing code point sequences.
+	 *
+	 * See the table above zfs_dropname().
+	 */
+	if (zfsvfs->z_norm != 0) {
+		mt = MT_NORMALIZE;
+
+		/*
+		 * Determine if the match needs to honor the case specified in
+		 * lookup, and if so keep track of that so that during
+		 * normalization we don't fold case.
+		 */
+		if (zfsvfs->z_case == ZFS_CASE_MIXED) {
+			mt |= MT_MATCH_CASE;
+		}
+	}
+
+	/*
+	 * Only look in or update the DNLC if we are looking for the
+	 * name on a file system that does not require normalization
+	 * or case folding.  We can also look there if we happen to be
+	 * on a non-normalizing, mixed sensitivity file system IF we
+	 * are looking for the exact name.
 	 *
 	 * NB: we do not need to worry about this flag for ZFS_CASE_SENSITIVE
 	 * because in that case MT_EXACT and MT_FIRST should produce exactly
 	 * the same result.
 	 */
-	exact = zfsvfs->z_case == ZFS_CASE_MIXED;
 
 	if (dzp->z_unlinked && !(flag & ZXATTR))
 		return (ENOENT);
@@ -150,7 +174,7 @@ zfs_dirent_lookup(znode_t *dzp, const char *name, znode_t **zpp, int flag)
 		if (error == 0)
 			error = (zoid == 0 ? ENOENT : 0);
 	} else {
-		error = zfs_match_find(zfsvfs, dzp, name, exact, &zoid);
+		error = zfs_match_find(zfsvfs, dzp, name, mt, &zoid);
 	}
 	if (error) {
 		if (error != ENOENT || (flag & ZEXISTS)) {
@@ -257,6 +281,7 @@ zfs_unlinked_drain(zfsvfs_t *zfsvfs)
 	zap_attribute_t zap;
 	dmu_object_info_t doi;
 	znode_t		*zp;
+	dmu_tx_t	*tx;
 	int		error;
 
 	/*
@@ -293,6 +318,26 @@ zfs_unlinked_drain(zfsvfs_t *zfsvfs)
 			continue;
 
 		vn_lock(ZTOV(zp), LK_EXCLUSIVE | LK_RETRY);
+#if defined(__FreeBSD__)
+		/*
+		 * Due to changes in zfs_rmnode we need to make sure the
+		 * link count is set to zero here.
+		 */
+		if (zp->z_links != 0) {
+			tx = dmu_tx_create(zfsvfs->z_os);
+			dmu_tx_hold_sa(tx, zp->z_sa_hdl, B_FALSE);
+			error = dmu_tx_assign(tx, TXG_WAIT);
+			if (error != 0) {
+				dmu_tx_abort(tx);
+				vput(ZTOV(zp));
+				continue;
+			}
+			zp->z_links = 0;
+			VERIFY0(sa_update(zp->z_sa_hdl, SA_ZPL_LINKS(zfsvfs),
+			    &zp->z_links, sizeof (zp->z_links), tx));
+			dmu_tx_commit(tx);
+		}
+#endif
 		zp->z_unlinked = B_TRUE;
 		vput(ZTOV(zp));
 	}
@@ -364,12 +409,15 @@ zfs_purgedir(znode_t *dzp)
 	return (skipped);
 }
 
+#if defined(__FreeBSD__)
+extern taskq_t *zfsvfs_taskq;
+#endif
+
 void
 zfs_rmnode(znode_t *zp)
 {
 	zfsvfs_t	*zfsvfs = zp->z_zfsvfs;
 	objset_t	*os = zfsvfs->z_os;
-	znode_t		*xzp = NULL;
 	dmu_tx_t	*tx;
 	uint64_t	acl_obj;
 	uint64_t	xattr_obj;
@@ -392,19 +440,25 @@ zfs_rmnode(znode_t *zp)
 			zfs_znode_free(zp);
 			return;
 		}
-	}
-
-	/*
-	 * Free up all the data in the file.
-	 */
-	error = dmu_free_long_range(os, zp->z_id, 0, DMU_OBJECT_END);
-	if (error) {
+	} else {
 		/*
-		 * Not enough space.  Leave the file in the unlinked set.
+		 * Free up all the data in the file.  We don't do this for
+		 * XATTR directories because we need truncate and remove to be
+		 * in the same tx, like in zfs_znode_delete(). Otherwise, if
+		 * we crash here we'll end up with an inconsistent truncated
+		 * zap object in the delete queue.  Note a truncated file is
+		 * harmless since it only contains user data.
 		 */
-		zfs_znode_dmu_fini(zp);
-		zfs_znode_free(zp);
-		return;
+		error = dmu_free_long_range(os, zp->z_id, 0, DMU_OBJECT_END);
+		if (error) {
+			/*
+			 * Not enough space or we were interrupted by unmount.
+			 * Leave the file in the unlinked set.
+			 */
+			zfs_znode_dmu_fini(zp);
+			zfs_znode_free(zp);
+			return;
+		}
 	}
 
 	/*
@@ -413,11 +467,8 @@ zfs_rmnode(znode_t *zp)
 	 */
 	error = sa_lookup(zp->z_sa_hdl, SA_ZPL_XATTR(zfsvfs),
 	    &xattr_obj, sizeof (xattr_obj));
-	if (error == 0 && xattr_obj) {
-		error = zfs_zget(zfsvfs, xattr_obj, &xzp);
-		ASSERT3S(error, ==, 0);
-		vn_lock(ZTOV(xzp), LK_EXCLUSIVE | LK_RETRY);
-	}
+	if (error)
+		xattr_obj = 0;
 
 	acl_obj = zfs_external_acl(zp);
 
@@ -427,10 +478,8 @@ zfs_rmnode(znode_t *zp)
 	tx = dmu_tx_create(os);
 	dmu_tx_hold_free(tx, zp->z_id, 0, DMU_OBJECT_END);
 	dmu_tx_hold_zap(tx, zfsvfs->z_unlinkedobj, FALSE, NULL);
-	if (xzp) {
+	if (xattr_obj)
 		dmu_tx_hold_zap(tx, zfsvfs->z_unlinkedobj, TRUE, NULL);
-		dmu_tx_hold_sa(tx, xzp->z_sa_hdl, B_FALSE);
-	}
 	if (acl_obj)
 		dmu_tx_hold_free(tx, acl_obj, 0, DMU_OBJECT_END);
 
@@ -445,9 +494,25 @@ zfs_rmnode(znode_t *zp)
 		dmu_tx_abort(tx);
 		zfs_znode_dmu_fini(zp);
 		zfs_znode_free(zp);
-		goto out;
+		return;
 	}
 
+#if defined(__FreeBSD__)
+	/*
+	 * FreeBSD's implemention of zfs_zget requires a vnode to back it.
+	 * This means that we could end up calling into getnewvnode while
+	 * calling zfs_rmnode as a result of a prior call to getnewvnode
+	 * trying to clear vnodes out of the cache. If this repeats we can
+	 * recurse enough that we overflow our stack. To avoid this, we
+	 * avoid calling zfs_zget on the xattr znode and instead simply add
+	 * it to the unlinked set and schedule a call to zfs_unlinked_drain.
+	 */
+	if (xattr_obj) {
+		/* Add extended attribute directory to the unlinked set. */
+		VERIFY3U(0, ==,
+		    zap_add_int(os, zfsvfs->z_unlinkedobj, xattr_obj, tx));
+	}
+#else
 	if (xzp) {
 		ASSERT(error == 0);
 		xzp->z_unlinked = B_TRUE;	/* mark xzp for deletion */
@@ -456,6 +521,7 @@ zfs_rmnode(znode_t *zp)
 		    &xzp->z_links, sizeof (xzp->z_links), tx));
 		zfs_unlinked_add(xzp, tx);
 	}
+#endif
 
 	/* Remove this znode from the unlinked set */
 	VERIFY3U(0, ==,
@@ -464,9 +530,18 @@ zfs_rmnode(znode_t *zp)
 	zfs_znode_delete(zp, tx);
 
 	dmu_tx_commit(tx);
-out:
-	if (xzp)
-		vput(ZTOV(xzp));
+
+#if defined(__FreeBSD__)
+	if (xattr_obj) {
+		/*
+		 * We're using the FreeBSD taskqueue API here instead of
+		 * the Solaris taskq API since the FreeBSD API allows for a
+		 * task to be enqueued multiple times but executed once.
+		 */
+		taskqueue_enqueue(zfsvfs_taskq->tq_queue,
+		    &zfsvfs->z_unlinked_drain_task);
+	}
+#endif
 }
 
 static uint64_t
@@ -561,6 +636,28 @@ zfs_link_create(znode_t *dzp, const char *name, znode_t *zp, dmu_tx_t *tx,
 	return (0);
 }
 
+/*
+ * The match type in the code for this function should conform to:
+ *
+ * ------------------------------------------------------------------------
+ * fs type  | z_norm      | lookup type | match type
+ * ---------|-------------|-------------|----------------------------------
+ * CS !norm | 0           |           0 | 0 (exact)
+ * CS  norm | formX       |           0 | MT_NORMALIZE
+ * CI !norm | upper       |   !ZCIEXACT | MT_NORMALIZE
+ * CI !norm | upper       |    ZCIEXACT | MT_NORMALIZE | MT_MATCH_CASE
+ * CI  norm | upper|formX |   !ZCIEXACT | MT_NORMALIZE
+ * CI  norm | upper|formX |    ZCIEXACT | MT_NORMALIZE | MT_MATCH_CASE
+ * CM !norm | upper       |    !ZCILOOK | MT_NORMALIZE | MT_MATCH_CASE
+ * CM !norm | upper       |     ZCILOOK | MT_NORMALIZE
+ * CM  norm | upper|formX |    !ZCILOOK | MT_NORMALIZE | MT_MATCH_CASE
+ * CM  norm | upper|formX |     ZCILOOK | MT_NORMALIZE
+ *
+ * Abbreviations:
+ *    CS = Case Sensitive, CI = Case Insensitive, CM = Case Mixed
+ *    upper = case folding set by fs type on creation (U8_TEXTPREP_TOUPPER)
+ *    formX = unicode normalization form set on fs creation
+ */
 static int
 zfs_dropname(znode_t *dzp, const char *name, znode_t *zp, dmu_tx_t *tx,
     int flag)
@@ -568,15 +665,16 @@ zfs_dropname(znode_t *dzp, const char *name, znode_t *zp, dmu_tx_t *tx,
 	int error;
 
 	if (zp->z_zfsvfs->z_norm) {
-		if (zp->z_zfsvfs->z_case == ZFS_CASE_MIXED)
-			error = zap_remove_norm(zp->z_zfsvfs->z_os,
-			    dzp->z_id, name, MT_EXACT, tx);
-		else
-			error = zap_remove_norm(zp->z_zfsvfs->z_os,
-			    dzp->z_id, name, MT_FIRST, tx);
+		matchtype_t mt = MT_NORMALIZE;
+
+		if (zp->z_zfsvfs->z_case == ZFS_CASE_MIXED) {
+			mt |= MT_MATCH_CASE;
+		}
+
+		error = zap_remove_norm(zp->z_zfsvfs->z_os, dzp->z_id,
+		    name, mt, tx);
 	} else {
-		error = zap_remove(zp->z_zfsvfs->z_os,
-		    dzp->z_id, name, tx);
+		error = zap_remove(zp->z_zfsvfs->z_os, dzp->z_id, name, tx);
 	}
 
 	return (error);
@@ -703,10 +801,10 @@ zfs_make_xattrdir(znode_t *zp, vattr_t *vap, vnode_t **xvpp, cred_t *cr)
 	*xvpp = NULL;
 
 	/*
-	 * In MidnightBSD, access checking for creating an EA is being done
+	 * In FreeBSD, access checking for creating an EA is being done
 	 * in zfs_setextattr(),
 	 */
-#ifndef __MidnightBSD_kernel__
+#ifndef __FreeBSD_kernel__
 	if (error = zfs_zaccess(zp, ACE_WRITE_NAMED_ATTRS, 0, B_FALSE, cr))
 		return (error);
 #endif

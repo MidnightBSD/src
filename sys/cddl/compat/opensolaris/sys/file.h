@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/file.h 280258 2015-03-19 13:37:36Z rwatson $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/file.h 285172 2015-07-05 19:05:16Z mjg $
  */
 
 #ifndef _OPENSOLARIS_SYS_FILE_H_
@@ -53,9 +52,10 @@ static __inline void
 releasef(int fd)
 {
 	struct file *fp;
+	cap_rights_t rights;
 
 	/* No CAP_ rights required, as we're only releasing. */
-	if (fget(curthread, fd, NULL, &fp) == 0) {
+	if (fget(curthread, fd, cap_rights_init(&rights), &fp) == 0) {
 		fdrop(fp, curthread);
 		fdrop(fp, curthread);
 	}

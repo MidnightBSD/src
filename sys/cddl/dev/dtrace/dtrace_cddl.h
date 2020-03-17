@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_cddl.h 269342 2014-07-31 17:10:03Z markj $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_cddl.h 332939 2018-04-24 15:04:07Z markj $
  *
  */
 
@@ -47,6 +46,7 @@ typedef struct kdtrace_proc {
 typedef struct kdtrace_thread {
 	u_int8_t	td_dtrace_stop;	/* Indicates a DTrace-desired stop */
 	u_int8_t	td_dtrace_sig;	/* Signal sent via DTrace's raise() */
+	u_int8_t	td_dtrace_inprobe; /* Are we in a probe? */
 	u_int		td_predcache;	/* DTrace predicate cache */
 	u_int64_t	td_dtrace_vtime; /* DTrace virtual time */
 	u_int64_t	td_dtrace_start; /* DTrace slice start time */
@@ -84,8 +84,8 @@ typedef struct kdtrace_thread {
 	uintptr_t	td_dtrace_regv;
 #endif
 	u_int64_t	td_hrtime;	/* Last time on cpu. */
-	int		td_errno;	/* Syscall return value. */
 	void		*td_dtrace_sscr; /* Saved scratch space location. */
+	void		*td_systrace_args; /* syscall probe arguments. */
 } kdtrace_thread_t;
 
 /*
@@ -98,6 +98,7 @@ typedef struct kdtrace_thread {
 #define	t_dtrace_start	td_dtrace->td_dtrace_start
 #define	t_dtrace_stop	td_dtrace->td_dtrace_stop
 #define	t_dtrace_sig	td_dtrace->td_dtrace_sig
+#define	t_dtrace_inprobe	td_dtrace->td_dtrace_inprobe
 #define	t_predcache	td_dtrace->td_predcache
 #define	t_dtrace_ft	td_dtrace->td_dtrace_ft
 #define	t_dtrace_on	td_dtrace->td_dtrace_on
@@ -111,6 +112,7 @@ typedef struct kdtrace_thread {
 #define	t_dtrace_astpc	td_dtrace->td_dtrace_astpc
 #define	t_dtrace_regv	td_dtrace->td_dtrace_regv
 #define	t_dtrace_sscr	td_dtrace->td_dtrace_sscr
+#define	t_dtrace_systrace_args	td_dtrace->td_systrace_args
 #define	p_dtrace_helpers	p_dtrace->p_dtrace_helpers
 #define	p_dtrace_count	p_dtrace->p_dtrace_count
 #define	p_dtrace_probes	p_dtrace->p_dtrace_probes

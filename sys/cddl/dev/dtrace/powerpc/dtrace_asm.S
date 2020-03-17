@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -22,7 +21,7 @@
  *
  * Portions Copyright 2012,2013 Justin Hibbits <jhibbits@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/powerpc/dtrace_asm.S 283676 2015-05-29 04:01:39Z markj $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/powerpc/dtrace_asm.S 310438 2016-12-23 02:57:19Z jhibbits $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -68,7 +67,13 @@ dtrace_icookie_t dtrace_interrupt_disable(void)
 */
 ASENTRY_NOPROF(dtrace_interrupt_disable)
 	mfmsr	%r3
-	andi.	%r0,%r3,~PSL_EE@l
+#ifdef __powerpc64__
+	/* Two-instruction sequence to clear EE flag */
+	rldicl	%r0,%r3,48,1
+	rotldi	%r0,%r0,16
+#else
+	rlwinm	%r0,%r3,0,~PSL_EE /* Clear EE flag */
+#endif
 	mtmsr	%r0
 	blr
 END(dtrace_interrupt_disable)

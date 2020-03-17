@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Martin Matuska <mm@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/assfail.h 274623 2014-11-17 13:26:50Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/assfail.h 272701 2014-10-07 14:15:50Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_ASSFAIL_H_

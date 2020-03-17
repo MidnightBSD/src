@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * Marvell DB-78100 Device Tree Source.
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/db78100.dts 262614 2014-02-28 18:29:09Z imp $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/arm/db78100.dts 301222 2016-06-02 18:35:35Z zbb $
  */
 
 /dts-v1/;
@@ -284,7 +283,8 @@
 
 		crypto@90000 {
 			compatible = "mrvl,cesa";
-			reg = <0x90000 0x10000>;
+			reg = <0x90000 0x1000	/* tdma base reg chan 0 */
+			       0x9D000 0x1000>;	/* cesa base reg chan 0 */
 			interrupts = <19>;
 			interrupt-parent = <&PIC>;
 		};

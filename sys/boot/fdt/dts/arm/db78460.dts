@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation
  * Copyright (c) 2010-2011 Semihalf
@@ -27,7 +26,7 @@
  *
  * Marvell DB-78460 Device Tree Source.
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/db78460.dts 262614 2014-02-28 18:29:09Z imp $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/arm/db78460.dts 296825 2016-03-14 07:05:41Z wma $
  */
 
 /dts-v1/;
@@ -76,7 +75,7 @@
 			interrupt-controller;
 			#address-cells = <0>;
 			#interrupt-cells = <1>;
-			reg = <0x20a00 0x500 0x21000 0x800 0x20400 0x100>;
+			reg = <0x20a00 0x500 0x21870 0x58 0x20400 0x100>;
 			compatible = "mrvl,mpic";
 		};
 
@@ -112,45 +111,41 @@
 		};
 
 		serial0: serial@12000 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x12000 0x20>;
 			reg-shift = <2>;
 			current-speed = <115200>;
 			clock-frequency = <0>;
-			busy-detect = <1>;
 			interrupts = <41>;
 			interrupt-parent = <&MPIC>;
 		};
 
 		serial1: serial@12100 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x12100 0x20>;
 			reg-shift = <2>;
 			current-speed = <115200>;
 			clock-frequency = <0>;
-			busy-detect = <1>;
 			interrupts = <42>;
 			interrupt-parent = <&MPIC>;
 		};
 
 		serial2: serial@12200 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x12200 0x20>;
 			reg-shift = <2>;
 			current-speed = <115200>;
 			clock-frequency = <0>;
-			busy-detect = <1>;
 			interrupts = <43>;
 			interrupt-parent = <&MPIC>;
 		};
 		
 		serial3: serial@12300 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x12300 0x20>;
 			reg-shift = <2>;
 			current-speed = <115200>;
 			clock-frequency = <0>;
-			busy-detect = <1>;
 			interrupts = <44>;
 			interrupt-parent = <&MPIC>;
 		};

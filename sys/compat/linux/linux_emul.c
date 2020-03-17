@@ -1,5 +1,7 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 1994-1996 Søren Schmidt
  * Copyright (c) 2006 Roman Divacky
  * Copyright (c) 2013 Dmitry Chagin
  * All rights reserved.
@@ -8,31 +10,30 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_emul.c 302962 2016-07-17 15:07:33Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_emul.c 347521 2019-05-13 11:17:31Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fcntl.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
@@ -49,6 +50,11 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_emul.c 302962 2016-07-17 15
 #include <compat/linux/linux_persona.h>
 #include <compat/linux/linux_util.h>
 
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define SHELLMAGIC	0x2123 /* #! */
+#else
+#define SHELLMAGIC	0x2321
+#endif
 
 /*
  * This returns reference to the thread emuldata entry (if found)
@@ -121,7 +127,6 @@ linux_proc_init(struct thread *td, struct thread *newtd, int flags)
 
 		em->em_tid = p->p_pid;
 		em->flags = 0;
-		em->pdeath_signal = 0;
 		em->robust_futexes = NULL;
 		em->child_clear_tid = NULL;
 		em->child_set_tid = NULL;
@@ -139,7 +144,7 @@ linux_proc_init(struct thread *td, struct thread *newtd, int flags)
 
 }
 
-void 
+void
 linux_proc_exit(void *arg __unused, struct proc *p)
 {
 	struct linux_pemuldata *pem;
@@ -154,7 +159,7 @@ linux_proc_exit(void *arg __unused, struct proc *p)
 
 	pem = pem_find(p);
 	if (pem == NULL)
-		return;	
+		return;
 	(p->p_sysent->sv_thread_detach)(td);
 
 	p->p_emuldata = NULL;
@@ -169,7 +174,43 @@ linux_proc_exit(void *arg __unused, struct proc *p)
 	free(pem, M_LINUX);
 }
 
-int 
+/*
+ * If a Linux binary is exec'ing something, try this image activator
+ * first.  We override standard shell script execution in order to
+ * be able to modify the interpreter path.  We only do this if a Linux
+ * binary is doing the exec, so we do not create an EXEC module for it.
+ */
+int
+linux_exec_imgact_try(struct image_params *imgp)
+{
+	const char *head = (const char *)imgp->image_header;
+	char *rpath;
+	int error = -1;
+
+	/*
+	 * The interpreter for shell scripts run from a Linux binary needs
+	 * to be located in /compat/linux if possible in order to recursively
+	 * maintain Linux path emulation.
+	 */
+	if (((const short *)head)[0] == SHELLMAGIC) {
+		/*
+		 * Run our normal shell image activator.  If it succeeds attempt
+		 * to use the alternate path for the interpreter.  If an
+		 * alternate path is found, use our stringspace to store it.
+		 */
+		if ((error = exec_shell_imgact(imgp)) == 0) {
+			linux_emul_convpath(FIRST_THREAD_IN_PROC(imgp->proc),
+			    imgp->interpreter_name, UIO_SYSSPACE, &rpath, 0,
+			    AT_FDCWD);
+			if (rpath != NULL)
+				imgp->args->fname_buf =
+				    imgp->interpreter_name = rpath;
+		}
+	}
+	return (error);
+}
+
+int
 linux_common_execve(struct thread *td, struct image_args *eargs)
 {
 	struct linux_pemuldata *pem;
@@ -192,7 +233,7 @@ linux_common_execve(struct thread *td, struct image_args *eargs)
 
 	/*
 	 * In a case of transition from Linux binary execing to
-	 * FreeBSD binary we destroy linux emuldata thread & proc entries.
+	 * FreeBSD binary we destroy Linux emuldata thread & proc entries.
 	 */
 	if (SV_CURPROC_ABI() != SV_ABI_LINUX) {
 		PROC_LOCK(p);
@@ -217,7 +258,7 @@ linux_common_execve(struct thread *td, struct image_args *eargs)
 	return (0);
 }
 
-void 
+void
 linux_proc_exec(void *arg __unused, struct proc *p, struct image_params *imgp)
 {
 	struct thread *td = curthread;
@@ -227,7 +268,7 @@ linux_proc_exec(void *arg __unused, struct proc *p, struct image_params *imgp)
 #endif
 
 	/*
-	 * In a case of execing from linux binary properly detach
+	 * In a case of execing from Linux binary properly detach
 	 * other threads from the user space.
 	 */
 	if (__predict_false(SV_PROC_ABI(p) == SV_ABI_LINUX)) {
@@ -238,7 +279,7 @@ linux_proc_exec(void *arg __unused, struct proc *p, struct image_params *imgp)
 	}
 
 	/*
-	 * In a case of execing to linux binary we create linux
+	 * In a case of execing to Linux binary we create Linux
 	 * emuldata thread entry.
 	 */
 	if (__predict_false((imgp->sysent->sv_flags & SV_ABI_MASK) ==

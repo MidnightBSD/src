@@ -25,8 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/sys/compat/linux/check_error.d 293493 2016-01-09 15:16:13Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/check_error.d 283383 2015-05-24 14:53:16Z dchagin $
  */
 
 /*

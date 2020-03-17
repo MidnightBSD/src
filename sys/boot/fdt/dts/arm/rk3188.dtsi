@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/rk3188.dtsi 266397 2014-05-18 13:05:07Z ian $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/arm/rk3188.dtsi 294424 2016-01-20 13:51:14Z zbb $
  */
 
 / {
@@ -180,74 +179,74 @@
 		};
 
 		uart0: serial@10124000 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x10124000 0x400>;
 			reg-shift = <2>;
 			interrupts = <66>;
 			interrupt-parent = <&GIC>;
 			current-speed = <115200>;
 			clock-frequency = < 24000000 >;
-			busy-detect = <1>;
 			broken-txfifo = <1>;
 			status = "disabled";
 		};
 
 		uart1: serial@10126000 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x10126000 0x400>;
 			reg-shift = <2>;
 			interrupts = <67>;
 			interrupt-parent = <&GIC>;
 			current-speed = <115200>;
 			clock-frequency = < 24000000 >;
-			busy-detect = <1>;
 			broken-txfifo = <1>;
 			status = "disabled";
 		};
 
 		uart2: serial@20064000 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x20064000 0x400>;
 			reg-shift = <2>;
 			interrupts = <68>;
 			interrupt-parent = <&GIC>;
 			current-speed = <115200>;
 			clock-frequency = < 24000000 >;
-			busy-detect = <1>;
 			broken-txfifo = <1>;
 			status = "disabled";
 		};
 
 		uart3: serial@20068000 {
-			compatible = "ns16550";
+			compatible = "snps,dw-apb-uart";
 			reg = <0x20068000 0x400>;
 			reg-shift = <2>;
 			interrupts = <69>;
 			interrupt-parent = <&GIC>;
 			current-speed = <115200>;
 			clock-frequency = < 24000000 >;
-			busy-detect = <1>;
 			broken-txfifo = <1>;
 			status = "disabled";
 		};
 
 		mmc@10214000 {
-			compatible = "rockchip,rk30xx-mmc";
+			compatible = "rockchip,rk2928-dw-mshc";
 			reg = <0x10214000 0x1000>;
 			interrupts = <55>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			clock-frequency = <24000000>;	/* TODO: verify freq */
+			bus-frequency = <48000000>;	/* TODO: verify freq */
+			fifo-depth = <0x40>;
+			num-slots = <1>;
 			status = "disabled";
 		};
 
 		mmc@10218000 {
-			compatible = "rockchip,rk30xx-mmc";
+			compatible = "rockchip,rk2928-dw-mshc";
 			reg = <0x10218000 0x1000>;
 			interrupts = <56>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			clock-frequency = <24000000>;	/* TODO: verify freq */
+			bus-frequency = <48000000>;	/* TODO: verify freq */
+			fifo-depth = <0x40>;
+			num-slots = <1>;
 			status = "disabled";
 		};
 	};

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kobj.c 241896 2012-10-22 17:50:54Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_kobj.c 285391 2015-07-11 16:22:48Z mjg $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -68,21 +67,10 @@ static void *
 kobj_open_file_vnode(const char *file)
 {
 	struct thread *td = curthread;
-	struct filedesc *fd;
 	struct nameidata nd;
 	int error, flags;
 
-	fd = td->td_proc->p_fd;
-	FILEDESC_XLOCK(fd);
-	if (fd->fd_rdir == NULL) {
-		fd->fd_rdir = rootvnode;
-		vref(fd->fd_rdir);
-	}
-	if (fd->fd_cdir == NULL) {
-		fd->fd_cdir = rootvnode;
-		vref(fd->fd_cdir);
-	}
-	FILEDESC_XUNLOCK(fd);
+	pwd_ensure_dirs();
 
 	flags = FREAD | O_NOFOLLOW;
 	NDINIT(&nd, LOOKUP, 0, UIO_SYSSPACE, file, td);

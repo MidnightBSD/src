@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/exynos5250.dtsi 278599 2015-02-11 22:35:32Z ian $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/arm/exynos5250.dtsi 269369 2014-08-01 06:20:25Z br $
  */
 
 /include/ "exynos5.dtsi"
@@ -33,6 +32,21 @@
 	compatible = "samsung,exynos5250", "samsung,exynos5";
 
 	SOC: Exynos5@0 {
+
+		pmu_system_controller: system-controller@10040000 {
+			compatible = "samsung,exynos5250-pmu";
+			status = "okay";
+		};
+
+		pad0: pad@11400000 {
+			compatible = "samsung,exynos5250-padctrl";
+			reg = <0x11400000 0x1000>,
+			      <0x13400000 0x1000>,
+			      <0x10D10000 0x1000>,
+			      <0x03860000 0x1000>;
+			interrupts = < 78 77 82 79 >;
+			interrupt-parent = <&GIC>;
+		};
 
 		serial0: serial@12C00000 {
 			clock-frequency = < 100000000 >;
@@ -48,6 +62,18 @@
 
 		serial3: serial@12C30000 {
 			clock-frequency = < 100000000 >;
+		};
+
+		usb@12110000 {
+			status = "okay";
+		};
+
+		usbdrd_phy0: phy@12100000 {
+			status = "okay";
+		};
+
+		xhci@12000000 {
+			status = "okay";
 		};
 	};
 };

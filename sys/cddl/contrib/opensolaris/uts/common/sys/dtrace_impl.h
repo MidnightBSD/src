@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/contrib/opensolaris/uts/common/sys/dtrace_impl.h 313486 2017-02-09 22:04:56Z ngie $
+ * $FreeBSD: stable/11/sys/cddl/contrib/opensolaris/uts/common/sys/dtrace_impl.h 316210 2017-03-30 02:50:21Z gnn $
  */
 
 /*
@@ -51,6 +50,7 @@ extern "C" {
  */
 
 #include <sys/dtrace.h>
+
 #ifndef illumos
 #ifdef __sparcv9
 typedef uint32_t		pc_t;
@@ -65,6 +65,10 @@ typedef	u_long			greg_t;
  */
 #define	DTRACE_MAXPROPLEN		128
 #define	DTRACE_DYNVAR_CHUNKSIZE		256
+
+#ifdef __FreeBSD__
+#define	NCPU		MAXCPU
+#endif /* __FreeBSD__ */
 
 struct dtrace_probe;
 struct dtrace_ecb;
@@ -1169,6 +1173,7 @@ struct dtrace_state {
 	dtrace_cred_t dts_cred;			/* credentials */
 	size_t dts_nretained;			/* number of retained enabs */
 	int dts_getf;				/* number of getf() calls */
+	uint64_t dts_rstate[NCPU][2];		/* per-CPU random state */
 };
 
 struct dtrace_provider {

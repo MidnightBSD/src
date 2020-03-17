@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2007 John Birrell <jb@FreeBSD.org>
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris.c 222670 2011-06-04 07:02:06Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris.c 222670 2011-06-04 07:02:06Z avg $
  *
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * MPC8555 CDS Device Tree Source
  *
@@ -58,7 +57,7 @@
  * You may select the license of your choice.
  *------------------------------------------------------------------
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/powerpc/mpc8555cds.dts 262614 2014-02-28 18:29:09Z imp $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/powerpc/mpc8555cds.dts 262614 2014-02-28 18:29:09Z imp $
  */
 
 /dts-v1/;

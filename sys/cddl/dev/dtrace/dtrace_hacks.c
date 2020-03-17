@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_hacks.c 283676 2015-05-29 04:01:39Z markj $ */
+/* $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_hacks.c 281916 2015-04-24 03:19:30Z markj $ */
 /* XXX Hacks.... */
 
 dtrace_cacheid_t dtrace_predcache_id;

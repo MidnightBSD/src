@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * All rights reserved.
@@ -25,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/svr4/svr4.h 147965 2005-07-13 15:14:33Z jhb $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4.h 147965 2005-07-13 15:14:33Z jhb $
  */
 
 #include "opt_svr4.h"

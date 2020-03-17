@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/byteorder.h 246586 2013-02-09 06:39:28Z delphij $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/byteorder.h 246586 2013-02-09 06:39:28Z delphij $
  */
 
 /*

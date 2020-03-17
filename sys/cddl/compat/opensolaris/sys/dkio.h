@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/dkio.h 270312 2014-08-21 22:44:08Z smh $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/dkio.h 265152 2014-04-30 17:46:29Z smh $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

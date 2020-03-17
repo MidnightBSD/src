@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2014 The FreeBSD Project.
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_dtrace.c 272877 2014-10-10 00:26:00Z smh $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_dtrace.c 271819 2014-09-18 20:38:18Z smh $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

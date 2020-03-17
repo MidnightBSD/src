@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/mntent.h 326328 2017-11-28 17:33:10Z asomers $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/mntent.h 324062 2017-09-27 15:07:41Z asomers $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Dmitry Chagin
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux.c 293575 2016-01-09 17:29:08Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux.c 315541 2017-03-19 10:37:03Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -129,7 +128,7 @@ int
 linux_to_bsd_signal(int sig)
 {
 
-	KASSERT(sig > 0 && sig <= LINUX_SIGRTMAX, ("Invalid Linux signal\n"));
+	KASSERT(sig > 0 && sig <= LINUX_SIGRTMAX, ("invalid Linux signal %d\n", sig));
 
 	if (sig < LINUX_SIGRTMIN)
 		return (linux_to_bsd_sigtbl[_SIG_IDX(sig)]);

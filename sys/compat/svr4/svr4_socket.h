@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1996 Christos Zoulas. 
@@ -29,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/compat/svr4/svr4_socket.h 160558 2006-07-21 20:40:13Z jhb $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4_socket.h 160558 2006-07-21 20:40:13Z jhb $
  */
 
 #ifndef _SVR4_SOCKET_H_

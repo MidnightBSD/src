@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/cpuvar.h 282748 2015-05-11 07:54:39Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/cpuvar.h 275576 2014-12-07 11:21:41Z avg $
  */
 
 /*

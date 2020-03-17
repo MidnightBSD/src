@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/kidmap.h 185029 2008-11-17 20:49:29Z pjd $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/kidmap.h 185029 2008-11-17 20:49:29Z pjd $
  */
 
 #ifndef _OPENSOLARIS_SYS_KIDMAP_H_

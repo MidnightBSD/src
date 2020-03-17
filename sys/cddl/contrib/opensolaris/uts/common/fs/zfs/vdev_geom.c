@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -64,14 +63,12 @@ DECLARE_GEOM_CLASS(zfs_vdev_class, zfs_vdev);
 
 SYSCTL_DECL(_vfs_zfs_vdev);
 /* Don't send BIO_FLUSH. */
-static int vdev_geom_bio_flush_disable = 0;
-TUNABLE_INT("vfs.zfs.vdev.bio_flush_disable", &vdev_geom_bio_flush_disable);
-SYSCTL_INT(_vfs_zfs_vdev, OID_AUTO, bio_flush_disable, CTLFLAG_RW,
+static int vdev_geom_bio_flush_disable;
+SYSCTL_INT(_vfs_zfs_vdev, OID_AUTO, bio_flush_disable, CTLFLAG_RWTUN,
     &vdev_geom_bio_flush_disable, 0, "Disable BIO_FLUSH");
 /* Don't send BIO_DELETE. */
-static int vdev_geom_bio_delete_disable = 0;
-TUNABLE_INT("vfs.zfs.vdev.bio_delete_disable", &vdev_geom_bio_delete_disable);
-SYSCTL_INT(_vfs_zfs_vdev, OID_AUTO, bio_delete_disable, CTLFLAG_RW,
+static int vdev_geom_bio_delete_disable;
+SYSCTL_INT(_vfs_zfs_vdev, OID_AUTO, bio_delete_disable, CTLFLAG_RWTUN,
     &vdev_geom_bio_delete_disable, 0, "Disable BIO_DELETE");
 
 /* Declare local functions */
@@ -91,10 +88,10 @@ vdev_geom_set_rotation_rate(vdev_t *vd, struct g_consumer *cp)
 	uint16_t rate;
 
 	error = g_getattr("GEOM::rotation_rate", cp, &rate);
-	if (error == 0)
-		vd->vdev_rotation_rate = rate;
+	if (error == 0 && rate == 1)
+		vd->vdev_nonrot = B_TRUE;
 	else
-		vd->vdev_rotation_rate = VDEV_RATE_UNKNOWN;
+		vd->vdev_nonrot = B_FALSE;
 }
 
 static void
@@ -242,7 +239,7 @@ vdev_geom_attach(struct g_provider *pp, vdev_t *vd, boolean_t sanity)
 		}
 		error = g_access(cp, 1, 0, 1);
 		if (error != 0) {
-			ZFS_LOG(1, "%s(%d): g_access failed: %d", __func__,
+			ZFS_LOG(1, "%s(%d): g_access failed: %d\n", __func__,
 			       __LINE__, error);
 			vdev_geom_detach(cp, B_FALSE);
 			return (NULL);
@@ -418,9 +415,10 @@ vdev_geom_io(struct g_consumer *cp, int *cmds, void **datas, off_t *offsets,
  * least one valid label was found.
  */
 static int
-vdev_geom_read_config(struct g_consumer *cp, nvlist_t **config)
+vdev_geom_read_config(struct g_consumer *cp, nvlist_t **configp)
 {
 	struct g_provider *pp;
+	nvlist_t *config;
 	vdev_phys_t *vdev_lists[VDEV_LABELS];
 	char *buf;
 	size_t buflen;
@@ -445,7 +443,6 @@ vdev_geom_read_config(struct g_consumer *cp, nvlist_t **config)
 
 	buflen = sizeof(vdev_lists[0]->vp_nvlist);
 
-	*config = NULL;
 	/* Create all of the IO requests */
 	for (l = 0; l < VDEV_LABELS; l++) {
 		cmds[l] = BIO_READ;
@@ -461,6 +458,7 @@ vdev_geom_read_config(struct g_consumer *cp, nvlist_t **config)
 	    VDEV_LABELS);
 
 	/* Parse the labels */
+	config = *configp = NULL;
 	nlabels = 0;
 	for (l = 0; l < VDEV_LABELS; l++) {
 		if (errors[l] != 0)
@@ -468,24 +466,26 @@ vdev_geom_read_config(struct g_consumer *cp, nvlist_t **config)
 
 		buf = vdev_lists[l]->vp_nvlist;
 
-		if (nvlist_unpack(buf, buflen, config, 0) != 0)
+		if (nvlist_unpack(buf, buflen, &config, 0) != 0)
 			continue;
 
-		if (nvlist_lookup_uint64(*config, ZPOOL_CONFIG_POOL_STATE,
+		if (nvlist_lookup_uint64(config, ZPOOL_CONFIG_POOL_STATE,
 		    &state) != 0 || state > POOL_STATE_L2CACHE) {
-			nvlist_free(*config);
-			*config = NULL;
+			nvlist_free(config);
 			continue;
 		}
 
 		if (state != POOL_STATE_SPARE &&
 		    state != POOL_STATE_L2CACHE &&
-		    (nvlist_lookup_uint64(*config, ZPOOL_CONFIG_POOL_TXG,
+		    (nvlist_lookup_uint64(config, ZPOOL_CONFIG_POOL_TXG,
 		    &txg) != 0 || txg == 0)) {
-			nvlist_free(*config);
-			*config = NULL;
+			nvlist_free(config);
 			continue;
 		}
+
+		if (*configp != NULL)
+			nvlist_free(*configp);
+		*configp = config;
 
 		nlabels++;
 	}
@@ -908,6 +908,8 @@ vdev_geom_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	PICKUP_GIANT();
 	if (cp == NULL) {
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
+		vdev_dbgmsg(vd, "vdev_geom_open: failed to open [error=%d]",
+		    error);
 		return (error);
 	}
 skip_open:
@@ -1001,7 +1003,16 @@ vdev_geom_io_intr(struct bio *bp)
 		}
 		break;
 	}
-	g_destroy_bio(bp);
+
+	/*
+	 * We have to split bio freeing into two parts, because the ABD code
+	 * cannot be called in this context and vdev_op_io_done is not called
+	 * for ZIO_TYPE_IOCTL zio-s.
+	 */
+	if (zio->io_type != ZIO_TYPE_READ && zio->io_type != ZIO_TYPE_WRITE) {
+		g_destroy_bio(bp);
+		zio->io_bio = NULL;
+	}
 	zio_delay_interrupt(zio);
 }
 
@@ -1066,10 +1077,17 @@ sendreq:
 	case ZIO_TYPE_READ:
 	case ZIO_TYPE_WRITE:
 		zio->io_target_timestamp = zio_handle_io_delay(zio);
-		bp->bio_cmd = zio->io_type == ZIO_TYPE_READ ? BIO_READ : BIO_WRITE;
-		bp->bio_data = zio->io_data;
 		bp->bio_offset = zio->io_offset;
 		bp->bio_length = zio->io_size;
+		if (zio->io_type == ZIO_TYPE_READ) {
+			bp->bio_cmd = BIO_READ;
+			bp->bio_data =
+			    abd_borrow_buf(zio->io_abd, zio->io_size);
+		} else {
+			bp->bio_cmd = BIO_WRITE;
+			bp->bio_data =
+			    abd_borrow_buf_copy(zio->io_abd, zio->io_size);
+		}
 		break;
 	case ZIO_TYPE_FREE:
 		bp->bio_cmd = BIO_DELETE;
@@ -1079,13 +1097,13 @@ sendreq:
 		break;
 	case ZIO_TYPE_IOCTL:
 		bp->bio_cmd = BIO_FLUSH;
-		bp->bio_flags |= BIO_ORDERED;
 		bp->bio_data = NULL;
 		bp->bio_offset = cp->provider->mediasize;
 		bp->bio_length = 0;
 		break;
 	}
 	bp->bio_done = vdev_geom_io_intr;
+	zio->io_bio = bp;
 
 	g_io_request(bp, cp);
 }
@@ -1093,6 +1111,25 @@ sendreq:
 static void
 vdev_geom_io_done(zio_t *zio)
 {
+	struct bio *bp = zio->io_bio;
+
+	if (zio->io_type != ZIO_TYPE_READ && zio->io_type != ZIO_TYPE_WRITE) {
+		ASSERT(bp == NULL);
+		return;
+	}
+
+	if (bp == NULL) {
+		ASSERT3S(zio->io_error, ==, ENXIO);
+		return;
+	}
+
+	if (zio->io_type == ZIO_TYPE_READ)
+		abd_return_buf_copy(zio->io_abd, bp->bio_data, zio->io_size);
+	else
+		abd_return_buf(zio->io_abd, bp->bio_data, zio->io_size);
+
+	g_destroy_bio(bp);
+	zio->io_bio = NULL;
 }
 
 static void
@@ -1112,8 +1149,11 @@ vdev_ops_t vdev_geom_ops = {
 	vdev_geom_io_start,
 	vdev_geom_io_done,
 	NULL,
+	NULL,
 	vdev_geom_hold,
 	vdev_geom_rele,
+	NULL,
+	vdev_default_xlate,
 	VDEV_TYPE_DISK,		/* name of this vdev type */
 	B_TRUE			/* leaf vdev */
 };

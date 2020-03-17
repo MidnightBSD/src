@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_sunddi.c 324745 2017-10-19 07:21:45Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_sunddi.c 325534 2017-11-08 08:53:44Z avg $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -63,6 +62,14 @@ ddi_strtoull(const char *str, char **nptr, int base, unsigned long long *result)
 {
 
 	*result = (unsigned long long)strtouq(str, nptr, base);
+	return (0);
+}
+
+int
+ddi_strtoll(const char *str, char **nptr, int base, long long *result)
+{
+
+	*result = (long long)strtoq(str, nptr, base);
 	return (0);
 }
 

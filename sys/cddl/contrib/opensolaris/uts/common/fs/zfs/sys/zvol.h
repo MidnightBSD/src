@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -72,7 +71,7 @@ extern void zvol_log_write_minor(void *minor_hdl, dmu_tx_t *tx, offset_t off,
     ssize_t resid, boolean_t sync);
 #endif	/* illumos */
 
-#if defined(__MidnightBSD__) || defined(__MidnightBSD_kernel__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 extern int zvol_create_minors(const char *name);
 extern void zvol_rename_minors(const char *oldname, const char *newname);
 #endif

@@ -1,14 +1,22 @@
-# $MidnightBSD$
 # Makefile for syscall tables
 #
-# $FreeBSD: stable/10/sys/compat/svr4/Makefile 315063 2017-03-11 08:40:59Z dchagin $
+# $FreeBSD: stable/11/sys/compat/svr4/Makefile 357108 2020-01-25 05:47:56Z kevans $
+
+# Don't use an OBJDIR
+.OBJDIR: ${.CURDIR}
+
+MAKESYSCALLS=	../../kern/makesyscalls.sh
+GENERATED=	svr4_sysent.c		\
+		svr4_syscall.h		\
+		svr4_syscallnames.c	\
+		svr4_proto.h
 
 all:
 	@echo "make sysent only"
 
-sysent:  svr4_sysent.c svr4_syscall.h svr4_proto.h
+.ORDER: ${GENERATED}
+sysent:  ${GENERATED}
 
-svr4_syscallnames.c svr4_sysent.c svr4_syscall.h svr4_proto.h: \
-		../../kern/makesyscalls.sh syscalls.master syscalls.conf
-	sh ../../kern/makesyscalls.sh syscalls.master syscalls.conf
+${GENERATED}: ${MAKESYSCALLS} syscalls.master syscalls.conf
+	sh ${MAKESYSCALLS} syscalls.master syscalls.conf
 

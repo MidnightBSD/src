@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_cmn_err.c 252392 2013-06-29 23:39:38Z smh $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_cmn_err.c 252392 2013-06-29 23:39:38Z smh $
  */
 /*
  * Copyright 2007 John Birrell <jb@FreeBSD.org>. All rights reserved.

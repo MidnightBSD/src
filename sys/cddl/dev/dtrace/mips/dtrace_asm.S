@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/mips/dtrace_asm.S 283676 2015-05-29 04:01:39Z markj $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/mips/dtrace_asm.S 332566 2018-04-16 14:39:04Z lidl $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -29,7 +28,6 @@
 
 #define _ASM
 #define _LOCORE
-#define LOCORE
 
 #include <sys/cpuvar_defs.h>
 #include <sys/dtrace.h>
@@ -38,8 +36,6 @@
 #include <machine/cpu.h>
 #include <machine/cpuregs.h>
 #include <machine/regnum.h>
-
-#include "assym.s"
 
         .set    noreorder               # Noreorder is default style!
 
@@ -226,28 +222,6 @@ LEAF(dtrace_copystr)
 	j	ra
 	nop
 END(dtrace_copystr)
-
-/*
-void dtrace_invop_init(void)
-*/
-LEAF(dtrace_invop_init)
-	/* XXX: impement it properly */
-	PTR_LA	t0, dtrace_invop_jump_addr
-	/* dla	t1, dtrace_invop_start */
-	PTR_S	zero, 0(t0)
-	j	ra
-	nop
-END(dtrace_invop_init)
-
-/*
-void dtrace_invop_uninit(void)
-*/
-LEAF(dtrace_invop_uninit)
-	PTR_LA	t0, dtrace_invop_jump_addr
-	PTR_S	zero, 0(t0)
-	j	ra
-	nop
-END(dtrace_invop_uninit)
 
 /*
 uintptr_t

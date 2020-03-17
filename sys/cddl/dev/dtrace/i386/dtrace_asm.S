@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/i386/dtrace_asm.S 283676 2015-05-29 04:01:39Z markj $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/i386/dtrace_asm.S 298171 2016-04-17 23:08:47Z markj $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -35,13 +34,11 @@
 
 #include "assym.s"
 
-	.globl	calltrap
-	.type	calltrap,@function
 	ENTRY(dtrace_invop_start)
 
 	pushl	%eax			/* push %eax -- may be return value */
 	pushl	%esp			/* push stack pointer */
-	addl	$48, (%esp)		/* adjust to incoming args */
+	subl	$8, (%esp)		/* skip first arg and segment regs */
 	pushl	40(%esp)		/* push calling EIP */
 
 	/*

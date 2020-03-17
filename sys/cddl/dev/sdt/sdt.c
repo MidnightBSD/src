@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/10/sys/cddl/dev/sdt/sdt.c 299001 2016-05-03 19:42:58Z markj $
+ * $FreeBSD: stable/11/sys/cddl/dev/sdt/sdt.c 327480 2018-01-02 00:11:56Z mjg $
  *
  */
 
@@ -40,8 +39,6 @@
  * unloaded; in particular, probes may not span multiple kernel modules.
  */
 
-#include "opt_kdtrace.h"
-
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,6 +50,7 @@
 #include <sys/linker.h>
 #include <sys/linker_set.h>
 #include <sys/lock.h>
+#include <sys/lockstat.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
@@ -78,6 +76,8 @@ static void	sdt_kld_unload_try(void *, struct linker_file *, int *);
 
 static MALLOC_DEFINE(M_SDT, "SDT", "DTrace SDT providers");
 
+static int sdt_probes_enabled_count;
+
 static dtrace_pattr_t sdt_attr = {
 { DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_COMMON },
 { DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
@@ -87,16 +87,16 @@ static dtrace_pattr_t sdt_attr = {
 };
 
 static dtrace_pops_t sdt_pops = {
-	sdt_provide_probes,
-	NULL,
-	sdt_enable,
-	sdt_disable,
-	NULL,
-	NULL,
-	sdt_getargdesc,
-	NULL,
-	NULL,
-	sdt_destroy,
+	.dtps_provide =		sdt_provide_probes,
+	.dtps_provide_module =	NULL,
+	.dtps_enable =		sdt_enable,
+	.dtps_disable =		sdt_disable,
+	.dtps_suspend =		NULL,
+	.dtps_resume =		NULL,
+	.dtps_getargdesc =	sdt_getargdesc,
+	.dtps_getargval =	NULL,
+	.dtps_usermode =	NULL,
+	.dtps_destroy =		sdt_destroy,
 };
 
 static TAILQ_HEAD(, sdt_provider) sdt_prov_list;
@@ -208,6 +208,11 @@ sdt_enable(void *arg __unused, dtrace_id_t id, void *parg)
 
 	probe->id = id;
 	probe->sdtp_lf->nenabled++;
+	if (strcmp(probe->prov->name, "lockstat") == 0)
+		lockstat_enabled++;
+	sdt_probes_enabled_count++;
+	if (sdt_probes_enabled_count == 1)
+		sdt_probes_enabled = true;
 }
 
 static void
@@ -217,6 +222,11 @@ sdt_disable(void *arg __unused, dtrace_id_t id, void *parg)
 
 	KASSERT(probe->sdtp_lf->nenabled > 0, ("no probes enabled"));
 
+	sdt_probes_enabled_count--;
+	if (sdt_probes_enabled_count == 0)
+		sdt_probes_enabled = false;
+	if (strcmp(probe->prov->name, "lockstat") == 0)
+		lockstat_enabled--;
 	probe->id = 0;
 	probe->sdtp_lf->nenabled--;
 }

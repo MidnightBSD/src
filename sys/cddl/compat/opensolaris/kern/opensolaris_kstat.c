@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kstat.c 244155 2012-12-12 16:14:14Z smh $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_kstat.c 321529 2017-07-26 16:14:05Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -37,7 +36,7 @@ __FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kstat
 
 static MALLOC_DEFINE(M_KSTAT, "kstat_data", "Kernel statistics");
 
-SYSCTL_NODE(, OID_AUTO, kstat, CTLFLAG_RW, 0, "Kernel statistics");
+SYSCTL_ROOT_NODE(OID_AUTO, kstat, CTLFLAG_RW, 0, "Kernel statistics");
 
 kstat_t *
 kstat_create(char *module, int instance, char *name, char *class, uchar_t type,
@@ -129,4 +128,20 @@ kstat_delete(kstat_t *ksp)
 
 	sysctl_ctx_free(&ksp->ks_sysctl_ctx);
 	free(ksp, M_KSTAT);
+}
+
+void
+kstat_set_string(char *dst, const char *src)
+{
+
+	bzero(dst, KSTAT_STRLEN);
+	(void) strncpy(dst, src, KSTAT_STRLEN - 1);
+}
+
+void
+kstat_named_init(kstat_named_t *knp, const char *name, uchar_t data_type)
+{
+
+	kstat_set_string(knp->name, name);
+	knp->data_type = data_type;
 }

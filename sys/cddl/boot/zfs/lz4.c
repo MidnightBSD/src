@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * LZ4 - Fast LZ compression algorithm
  * Header File
@@ -32,10 +31,10 @@
  * - LZ4 homepage : http://fastcompression.blogspot.com/p/lz4.html
  * - LZ4 source repository : http://code.google.com/p/lz4/
  *
- * $FreeBSD: stable/10/sys/cddl/boot/zfs/lz4.c 301608 2016-06-08 13:21:17Z ngie $
+ * $FreeBSD: stable/11/sys/cddl/boot/zfs/lz4.c 300800 2016-05-26 23:20:17Z bdrewery $
  */
 
-#include <arpa/inet.h>
+#include <netinet/in.h>
 
 static int LZ4_uncompress_unknownOutputSize(const char *source, char *dest,
 					    int isize, int maxOutputSize);

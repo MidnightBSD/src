@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/proc.h 286843 2015-08-17 12:51:46Z ed $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/proc.h 306572 2016-10-02 01:14:26Z markj $
  */
 
 #ifndef _OPENSOLARIS_SYS_PROC_H_
@@ -46,8 +45,8 @@
 #define	CPU		curcpu
 #define	minclsyspri	PRIBIO
 #define	maxclsyspri	PVM
-#define	max_ncpus	mp_ncpus
-#define	boot_max_ncpus	mp_ncpus
+#define	max_ncpus	(mp_maxid + 1)
+#define	boot_max_ncpus	(mp_maxid + 1)
 
 #define	TS_RUN	0
 
@@ -92,6 +91,9 @@ do_thread_create(caddr_t stk, size_t stksize, void (*proc)(void *), void *arg,
 #define	thread_create(stk, stksize, proc, arg, len, pp, state, pri) \
 	do_thread_create(stk, stksize, proc, arg, len, pp, state, pri)
 #define	thread_exit()	kthread_exit()
+
+int	uread(proc_t *, void *, size_t, uintptr_t);
+int	uwrite(proc_t *, void *, size_t, uintptr_t);
 
 #endif	/* _KERNEL */
 

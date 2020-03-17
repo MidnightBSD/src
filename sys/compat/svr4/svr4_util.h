@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/compat/svr4/svr4_util.h 160249 2006-07-10 21:38:17Z jhb $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4_util.h 295882 2016-02-22 09:08:04Z skra $
  */
 
 #ifndef	_SVR4_UTIL_H_
@@ -36,7 +35,6 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
-#include <machine/vmparam.h>
 #include <sys/exec.h>
 #include <sys/sysent.h>
 #include <sys/cdefs.h>

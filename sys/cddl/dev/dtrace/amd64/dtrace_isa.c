@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 289786 2015-10-23 07:31:04Z avg $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 298171 2016-04-17 23:08:47Z markj $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -383,11 +382,10 @@ dtrace_getarg(int arg, int aframes)
 			 * we'll pull the true stack pointer out of the saved
 			 * registers and decrement our argument by the number
 			 * of arguments passed in registers; if the argument
-			 * we're seeking is passed in regsiters, we can just
+			 * we're seeking is passed in registers, we can just
 			 * load it directly.
 			 */
-			struct trapframe *tf =
-			    (struct trapframe *)((uintptr_t)&fp[1]);
+			struct trapframe *tf = (struct trapframe *)&fp[1];
 
 			if (arg <= inreg) {
 				switch (arg) {
@@ -441,7 +439,7 @@ dtrace_getarg(int arg, int aframes)
 	}
 
 	arg -= (inreg + 1);
-	stack = (uintptr_t *)fp + 2;
+	stack = (uintptr_t *)&fp[1];
 
 load:
 	DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,10 +18,11 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_load.c 284136 2015-06-07 20:45:13Z pfg $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_load.c 310328 2016-12-20 16:37:45Z gnn $
  *
  */
 
+#ifndef EARLY_AP_STARTUP
 static void
 dtrace_ap_start(void *dummy)
 {
@@ -42,11 +42,26 @@ dtrace_ap_start(void *dummy)
 }
 
 SYSINIT(dtrace_ap_start, SI_SUB_SMP, SI_ORDER_ANY, dtrace_ap_start, NULL);
+#endif
 
 static void
 dtrace_load(void *dummy)
 {
 	dtrace_provider_id_t id;
+#ifdef EARLY_AP_STARTUP
+	int i;
+#endif
+
+#ifndef illumos
+	/*
+	 * DTrace uses negative logic for the destructive mode switch, so it
+	 * is required to translate from the sysctl which uses positive logic.
+	 */ 
+	if (dtrace_allow_destructive)
+		dtrace_destructive_disallow = 0;
+	else
+		dtrace_destructive_disallow = 1;
+#endif
 
 	/* Hook into the trap handler. */
 	dtrace_trap_func = dtrace_trap;
@@ -143,8 +158,14 @@ dtrace_load(void *dummy)
 
 	mutex_enter(&cpu_lock);
 
+#ifdef EARLY_AP_STARTUP
+	CPU_FOREACH(i) {
+		(void) dtrace_cpu_setup(CPU_CONFIG, i);
+	}
+#else
 	/* Setup the boot CPU */
 	(void) dtrace_cpu_setup(CPU_CONFIG, 0);
+#endif
 
 	mutex_exit(&cpu_lock);
 

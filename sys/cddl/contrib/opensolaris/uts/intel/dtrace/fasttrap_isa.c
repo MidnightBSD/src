@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -60,46 +59,8 @@
 #include <sys/archsystm.h>
 #else
 #include <sys/ptrace.h>
-
-static int
-proc_ops(int op, proc_t *p, void *kaddr, off_t uaddr, size_t len)
-{
-	struct iovec iov;
-	struct uio uio;
-
-	iov.iov_base = kaddr;
-	iov.iov_len = len;
-	uio.uio_offset = uaddr;
-	uio.uio_iov = &iov;
-	uio.uio_resid = len;
-	uio.uio_iovcnt = 1;
-	uio.uio_segflg = UIO_SYSSPACE;
-	uio.uio_td = curthread;
-	uio.uio_rw = op;
-	PHOLD(p);
-	if (proc_rwmem(p, &uio) != 0) {
-		PRELE(p);
-		return (-1);
-	}
-	PRELE(p);
-
-	return (0);
-}
-
-static int
-uread(proc_t *p, void *kaddr, size_t len, uintptr_t uaddr)
-{
-
-	return (proc_ops(UIO_READ, p, kaddr, uaddr, len));
-}
-
-static int
-uwrite(proc_t *p, void *kaddr, size_t len, uintptr_t uaddr)
-{
-
-	return (proc_ops(UIO_WRITE, p, kaddr, uaddr, len));
-}
 #endif /* illumos */
+
 #ifdef __i386__
 #define	r_rax	r_eax
 #define	r_rbx	r_ebx
@@ -1006,14 +967,12 @@ fasttrap_do_seg(fasttrap_tracepoint_t *tp, struct reg *rp, uintptr_t *addr)
 }
 
 int
-fasttrap_pid_probe(struct reg *rp)
+fasttrap_pid_probe(struct trapframe *tf)
 {
-	proc_t *p = curproc;
-#ifndef illumos
+	struct reg reg, *rp;
+	proc_t *p = curproc, *pp;
 	struct rm_priotracker tracker;
-	proc_t *pp;
-#endif
-	uintptr_t pc = rp->r_rip - 1;
+	uintptr_t pc;
 	uintptr_t new_pc = 0;
 	fasttrap_bucket_t *bucket;
 #ifdef illumos
@@ -1023,6 +982,11 @@ fasttrap_pid_probe(struct reg *rp)
 	pid_t pid;
 	dtrace_icookie_t cookie;
 	uint_t is_enabled = 0;
+
+	fill_frame_regs(tf, &reg);
+	rp = &reg;
+
+	pc = rp->r_rip - 1;
 
 	/*
 	 * It's possible that a user (in a veritable orgy of bad planning)
@@ -1666,7 +1630,7 @@ fasttrap_pid_probe(struct reg *rp)
 		 * a signal we can reset the value of the scratch register.
 		 */
 
-		ASSERT(tp->ftt_size < FASTTRAP_MAX_INSTR_SIZE);
+		ASSERT(tp->ftt_size <= FASTTRAP_MAX_INSTR_SIZE);
 
 		curthread->t_dtrace_scrpc = addr;
 		bcopy(tp->ftt_instr, &scratch[i], tp->ftt_size);
@@ -1767,11 +1731,7 @@ fasttrap_pid_probe(struct reg *rp)
 
 		ASSERT(i <= sizeof (scratch));
 
-#ifdef illumos
 		if (fasttrap_copyout(scratch, (char *)addr, i)) {
-#else
-		if (uwrite(p, scratch, i, addr)) {
-#endif
 			fasttrap_sigtrap(p, curthread, pc);
 			new_pc = pc;
 			break;
@@ -1839,11 +1799,15 @@ done:
 }
 
 int
-fasttrap_return_probe(struct reg *rp)
+fasttrap_return_probe(struct trapframe *tf)
 {
+	struct reg reg, *rp;
 	proc_t *p = curproc;
 	uintptr_t pc = curthread->t_dtrace_pc;
 	uintptr_t npc = curthread->t_dtrace_npc;
+
+	fill_frame_regs(tf, &reg);
+	rp = &reg;
 
 	curthread->t_dtrace_pc = 0;
 	curthread->t_dtrace_npc = 0;
@@ -1864,9 +1828,7 @@ fasttrap_return_probe(struct reg *rp)
 	/*
 	 * We set rp->r_rip to the address of the traced instruction so
 	 * that it appears to dtrace_probe() that we're on the original
-	 * instruction, and so that the user can't easily detect our
-	 * complex web of lies. dtrace_return_probe() (our caller)
-	 * will correctly set %pc after we return.
+	 * instruction.
 	 */
 	rp->r_rip = pc;
 

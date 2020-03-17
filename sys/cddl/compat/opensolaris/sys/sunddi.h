@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/sunddi.h 220447 2011-04-08 11:08:26Z mm $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/sunddi.h 325534 2017-11-08 08:53:44Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_SUNDDI_H_
@@ -36,7 +35,6 @@
 #include <sys/libkern.h>
 #include <sys/sysevent.h>
 
-#define	strdup(ptr)				strdup((ptr), M_SOLARIS)
 #define	ddi_driver_major(zfs_dip)		(0)
 #define	ddi_copyin(from, to, size, flag)				\
 	(copyin((from), (to), (size)), 0)
@@ -44,6 +42,7 @@
 	(copyout((from), (to), (size)), 0)
 int ddi_strtol(const char *str, char **nptr, int base, long *result);
 int ddi_strtoul(const char *str, char **nptr, int base, unsigned long *result);
+int ddi_strtoll(const char *str, char **nptr, int base, long long *result);
 int ddi_strtoull(const char *str, char **nptr, int base,
     unsigned long long *result);
 

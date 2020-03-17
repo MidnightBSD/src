@@ -1,4 +1,4 @@
-$FreeBSD: stable/10/sys/cddl/boot/zfs/README 268649 2014-07-15 04:53:34Z delphij $
+$FreeBSD: stable/11/sys/cddl/boot/zfs/README 268075 2014-07-01 06:43:15Z delphij $
 
 This directory contains various files derived from CDDL sources that
 are used by the ZFS bootstrap:

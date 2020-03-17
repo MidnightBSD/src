@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/compat/svr4/svr4_ioctl.h 191919 2009-05-08 20:06:37Z ed $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4_ioctl.h 191919 2009-05-08 20:06:37Z ed $
  */
 
 #ifndef	_SVR4_IOCTL_H_

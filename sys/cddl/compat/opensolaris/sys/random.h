@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/random.h 305765 2016-09-13 09:25:38Z mav $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/random.h 305764 2016-09-13 07:15:39Z mav $
  */
 
 #ifndef _OPENSOLARIS_SYS_RANDOM_H_

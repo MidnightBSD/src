@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_ioctl.c 280258 2015-03-19 13:37:36Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_ioctl.c 263233 2014-03-16 10:55:57Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

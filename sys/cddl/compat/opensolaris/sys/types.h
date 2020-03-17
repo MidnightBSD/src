@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/types.h 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/types.h 299459 2016-05-11 16:05:32Z cem $
  */
 
 #ifndef _OPENSOLARIS_SYS_TYPES_H_
@@ -53,7 +52,10 @@ typedef u_short		ushort_t;
 typedef u_long		ulong_t;
 typedef long long	longlong_t;  
 typedef unsigned long long u_longlong_t;
+#ifndef	_OFF64_T_DECLARED
+#define	_OFF64_T_DECLARED
 typedef off_t		off64_t;
+#endif
 typedef id_t		taskid_t;
 typedef id_t		projid_t;
 typedef id_t		poolid_t;

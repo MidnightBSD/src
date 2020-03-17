@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -59,16 +58,14 @@ SYSCTL_DECL(_vfs_zfs);
 SYSCTL_INT(_vfs_zfs, OID_AUTO, prefetch_disable, CTLFLAG_RW,
     &zfs_prefetch_disable, 0, "Disable prefetch");
 SYSCTL_NODE(_vfs_zfs, OID_AUTO, zfetch, CTLFLAG_RW, 0, "ZFS ZFETCH");
-TUNABLE_INT("vfs.zfs.zfetch.max_streams", &zfetch_max_streams);
-SYSCTL_UINT(_vfs_zfs_zfetch, OID_AUTO, max_streams, CTLFLAG_RW,
+SYSCTL_UINT(_vfs_zfs_zfetch, OID_AUTO, max_streams, CTLFLAG_RWTUN,
     &zfetch_max_streams, 0, "Max # of streams per zfetch");
-TUNABLE_INT("vfs.zfs.zfetch.min_sec_reap", &zfetch_min_sec_reap);
 SYSCTL_UINT(_vfs_zfs_zfetch, OID_AUTO, min_sec_reap, CTLFLAG_RWTUN,
     &zfetch_min_sec_reap, 0, "Min time before stream reclaim");
-TUNABLE_INT("vfs.zfs.zfetch.max_distance", &zfetch_max_distance);
 SYSCTL_UINT(_vfs_zfs_zfetch, OID_AUTO, max_distance, CTLFLAG_RWTUN,
     &zfetch_max_distance, 0, "Max bytes to prefetch per stream");
-TUNABLE_QUAD("vfs.zfs.zfetch.array_rd_sz", &zfetch_array_rd_sz);
+SYSCTL_UINT(_vfs_zfs_zfetch, OID_AUTO, max_idistance, CTLFLAG_RWTUN,
+    &zfetch_max_idistance, 0, "Max bytes to prefetch indirects for per stream");
 SYSCTL_UQUAD(_vfs_zfs_zfetch, OID_AUTO, array_rd_sz, CTLFLAG_RWTUN,
     &zfetch_array_rd_sz, 0,
     "Number of bytes in a array_read at which we stop prefetching");
@@ -230,8 +227,19 @@ dmu_zfetch(zfetch_t *zf, uint64_t blkid, uint64_t nblks, boolean_t fetch_data)
 	int64_t pf_ahead_blks, max_blks;
 	int epbs, max_dist_blks, pf_nblks, ipf_nblks;
 	uint64_t end_of_access_blkid = blkid + nblks;
+	spa_t *spa = zf->zf_dnode->dn_objset->os_spa;
 
 	if (zfs_prefetch_disable)
+		return;
+
+	/*
+	 * If we haven't yet loaded the indirect vdevs' mappings, we
+	 * can only read from blocks that we carefully ensure are on
+	 * concrete vdevs (or previously-loaded indirect vdevs).  So we
+	 * can't allow the predictive prefetcher to attempt reads of other
+	 * blocks (e.g. of the MOS's dnode obejct).
+	 */
+	if (!spa_indirect_vdevs_loaded(spa))
 		return;
 
 	/*
@@ -243,19 +251,33 @@ dmu_zfetch(zfetch_t *zf, uint64_t blkid, uint64_t nblks, boolean_t fetch_data)
 
 	rw_enter(&zf->zf_rwlock, RW_READER);
 
+	/*
+	 * Find matching prefetch stream.  Depending on whether the accesses
+	 * are block-aligned, first block of the new access may either follow
+	 * the last block of the previous access, or be equal to it.
+	 */
 	for (zs = list_head(&zf->zf_stream); zs != NULL;
 	    zs = list_next(&zf->zf_stream, zs)) {
-		if (blkid == zs->zs_blkid) {
+		if (blkid == zs->zs_blkid || blkid + 1 == zs->zs_blkid) {
 			mutex_enter(&zs->zs_lock);
 			/*
 			 * zs_blkid could have changed before we
 			 * acquired zs_lock; re-check them here.
 			 */
-			if (blkid != zs->zs_blkid) {
-				mutex_exit(&zs->zs_lock);
-				continue;
+			if (blkid == zs->zs_blkid) {
+				break;
+			} else if (blkid + 1 == zs->zs_blkid) {
+				blkid++;
+				nblks--;
+				if (nblks == 0) {
+					/* Already prefetched this before. */
+					mutex_exit(&zs->zs_lock);
+					rw_exit(&zf->zf_rwlock);
+					return;
+				}
+				break;
 			}
-			break;
+			mutex_exit(&zs->zs_lock);
 		}
 	}
 

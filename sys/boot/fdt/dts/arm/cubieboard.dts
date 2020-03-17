@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -24,49 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/cubieboard.dts 266376 2014-05-17 23:16:18Z ian $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/arm/cubieboard.dts 300777 2016-05-26 21:09:07Z manu $
  */
 
-/dts-v1/;
-
-/include/ "sun4i-a10.dtsi"
-
-/ {
-	model = "Cubietech Cubieboard";
-
-	memory {
-		device_type = "memory";
-		reg = < 0x40000000 0x40000000 >;	/* 1GB RAM */
-	};
-
-	aliases {
-		soc = &SOC;
-		UART0 = &UART0;
-	};
-
-	SOC: a10 {
-
-		usb1: usb@01c14000 {
-			status = "okay";
-		};
-
-		usb2: usb@01c1c000 {
-			status = "okay";
-		};
-
-		UART0: serial@01c28000 {
-			status = "okay";
-		};
-
-		emac@01c0b000 {
-			status = "okay";
-		};
-	};
-
-	chosen {
-		bootargs = "-v";
-		stdin = "UART0";
-		stdout = "UART0";
-	};
-};
-
+#include "sun4i-a10-cubieboard.dts"
+#include "xpowers-axp209.dtsi"

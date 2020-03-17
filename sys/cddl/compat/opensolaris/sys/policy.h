@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- $ $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/policy.h 219089 2011-02-27 19:41:40Z pjd $
+ $ $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/policy.h 219089 2011-02-27 19:41:40Z pjd $
  */
 
 #ifndef _OPENSOLARIS_SYS_POLICY_H_

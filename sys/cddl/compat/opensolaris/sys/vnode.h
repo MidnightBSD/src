@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/vnode.h 304671 2016-08-23 07:55:05Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/vnode.h 318716 2017-05-23 07:27:30Z markj $
  */
 
 #ifndef _OPENSOLARIS_SYS_VNODE_H_
@@ -76,8 +75,7 @@ vn_is_readonly(vnode_t *vp)
 #define	vn_mountedvfs(vp)	((vp)->v_mountedhere)
 #define	vn_has_cached_data(vp)	\
 	((vp)->v_object != NULL && \
-	 ((vp)->v_object->resident_page_count > 0 || \
-	  !vm_object_cache_is_empty((vp)->v_object)))
+	 (vp)->v_object->resident_page_count > 0)
 #define	vn_exists(vp)		do { } while (0)
 #define	vn_invalid(vp)		do { } while (0)
 #define	vn_renamepath(tdvp, svp, tnm, lentnm)	do { } while (0)
@@ -161,7 +159,6 @@ vn_openat(char *pnamep, enum uio_seg seg, int filemode, int createmode,
     int fd)
 {
 	struct thread *td = curthread;
-	struct filedesc *fdc;
 	struct nameidata nd;
 	int error, operation;
 
@@ -178,17 +175,7 @@ vn_openat(char *pnamep, enum uio_seg seg, int filemode, int createmode,
 	}
 	ASSERT(umask == 0);
 
-	fdc = td->td_proc->p_fd;
-	FILEDESC_XLOCK(fdc);
-	if (fdc->fd_rdir == NULL) {
-		fdc->fd_rdir = rootvnode;
-		vref(fdc->fd_rdir);
-	}
-	if (fdc->fd_cdir == NULL) {
-		fdc->fd_cdir = rootvnode;
-		vref(fdc->fd_rdir);
-	}
-	FILEDESC_XUNLOCK(fdc);
+	pwd_ensure_dirs();
 
 	if (startvp != NULL)
 		vref(startvp);
@@ -281,7 +268,7 @@ vn_rename(char *from, char *to, enum uio_seg seg)
 
 	ASSERT(seg == UIO_SYSSPACE);
 
-	return (kern_rename(curthread, from, to, seg));
+	return (kern_renameat(curthread, AT_FDCWD, from, AT_FDCWD, to, seg));
 }
 
 static __inline int
@@ -291,7 +278,7 @@ vn_remove(char *fnamep, enum uio_seg seg, enum rm dirflag)
 	ASSERT(seg == UIO_SYSSPACE);
 	ASSERT(dirflag == RMFILE);
 
-	return (kern_unlink(curthread, fnamep, seg));
+	return (kern_unlinkat(curthread, AT_FDCWD, fnamep, seg, 0));
 }
 
 #endif	/* _KERNEL */

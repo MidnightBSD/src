@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/vfs.h 298533 2016-04-24 08:39:55Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/vfs.h 297513 2016-04-02 16:25:46Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_VFS_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2017 by Delphix. All rights reserved.
  * Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
@@ -53,11 +52,15 @@ typedef enum spa_feature {
 	SPA_FEATURE_BOOKMARKS,
 	SPA_FEATURE_FS_SS_LIMIT,
 	SPA_FEATURE_LARGE_BLOCKS,
-#ifdef illumos
 	SPA_FEATURE_SHA512,
 	SPA_FEATURE_SKEIN,
+#ifdef illumos
 	SPA_FEATURE_EDONR,
 #endif
+	SPA_FEATURE_DEVICE_REMOVAL,
+	SPA_FEATURE_OBSOLETE_COUNTS,
+	SPA_FEATURE_POOL_CHECKPOINT,
+	SPA_FEATURE_SPACEMAP_V2,
 	SPA_FEATURES
 } spa_feature_t;
 

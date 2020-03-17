@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c 272875 2014-10-10 00:12:16Z smh $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c 332528 2018-04-16 03:38:37Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -35,6 +34,7 @@ __FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.
 #include <sys/kmem.h>
 #include <sys/debug.h>
 #include <sys/mutex.h>
+#include <sys/vmmeter.h>
 
 #include <vm/vm_page.h>
 #include <vm/vm_object.h>
@@ -121,7 +121,7 @@ static void
 kmem_size_init(void *unused __unused)
 {
 
-	kmem_size_val = (uint64_t)cnt.v_page_count * PAGE_SIZE;
+	kmem_size_val = (uint64_t)vm_cnt.v_page_count * PAGE_SIZE;
 	if (kmem_size_val > vm_kmem_size)
 		kmem_size_val = vm_kmem_size;
 }
@@ -212,9 +212,30 @@ kmem_cache_free(kmem_cache_t *cache, void *buf)
 #endif
 }
 
+/*
+ * Allow our caller to determine if there are running reaps.
+ *
+ * This call is very conservative and may return B_TRUE even when
+ * reaping activity isn't active. If it returns B_FALSE, then reaping
+ * activity is definitely inactive.
+ */
+boolean_t
+kmem_cache_reap_active(void)
+{
+
+	return (B_FALSE);
+}
+
+/*
+ * Reap (almost) everything soon.
+ *
+ * Note: this does not wait for the reap-tasks to complete. Caller
+ * should use kmem_cache_reap_active() (above) and/or moderation to
+ * avoid scheduling too many reap-tasks.
+ */
 #ifdef _KERNEL
 void
-kmem_cache_reap_now(kmem_cache_t *cache)
+kmem_cache_reap_soon(kmem_cache_t *cache)
 {
 #ifndef KMEM_DEBUG
 	zone_drain(cache->kc_zone);
@@ -228,7 +249,7 @@ kmem_reap(void)
 }
 #else
 void
-kmem_cache_reap_now(kmem_cache_t *cache __unused)
+kmem_cache_reap_soon(kmem_cache_t *cache __unused)
 {
 }
 

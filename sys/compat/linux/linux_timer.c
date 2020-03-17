@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Bjoern A. Zeeb
  * All rights reserved.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_timer.c 321012 2017-07-15 15:08:18Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_timer.c 292744 2015-12-26 09:09:49Z dchagin $");
 
 #include "opt_compat.h"
 

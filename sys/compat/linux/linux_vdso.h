@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Dmitry Chagin
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux_vdso.h 293523 2016-01-09 15:57:28Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_vdso.h 346807 2019-04-28 09:35:39Z dchagin $
  */
 
 #ifndef _LINUX_VDSO_H_
@@ -42,7 +41,7 @@ struct linux_vdso_sym {
 vm_object_t __elfN(linux_shared_page_init)(char **);
 void	__elfN(linux_shared_page_fini)(vm_object_t);
 void	__elfN(linux_vdso_fixup)(struct sysentvec *);
-void	__elfN(linux_vdso_reloc)(struct sysentvec *, long);
+void	__elfN(linux_vdso_reloc)(struct sysentvec *);
 void	__elfN(linux_vdso_sym_init)(struct linux_vdso_sym *);
 
 #define	LINUX_VDSO_SYM_INTPTR(name)				\

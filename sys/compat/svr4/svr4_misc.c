@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_misc.c 331749 2018-03-29 22:31:14Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_misc.c 331330 2018-03-21 23:45:48Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -85,11 +84,10 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_misc.c 331749 2018-03-29 22:3
 
 #include <security/mac/mac_framework.h>
 
-#include <machine/vmparam.h>
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_map.h>
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <vm/uma.h>
 #include <vm/vm_extern.h>
 #endif
@@ -264,8 +262,7 @@ svr4_sys_getdents64(td, uap)
 	memset(&svr4_dirent, 0, sizeof(svr4_dirent));
 	DPRINTF(("svr4_sys_getdents64(%d, *, %d)\n",
 		uap->fd, uap->nbytes));
-	error = getvnode(td->td_proc->p_fd, uap->fd,
-	    cap_rights_init(&rights, CAP_READ), &fp);
+	error = getvnode(td, uap->fd, cap_rights_init(&rights, CAP_READ), &fp);
 	if (error != 0)
 		return (error);
 
@@ -444,8 +441,7 @@ svr4_sys_getdents(td, uap)
 	if (uap->nbytes < 0)
 		return (EINVAL);
 
-	error = getvnode(td->td_proc->p_fd, uap->fd,
-	    cap_rights_init(&rights, CAP_READ), &fp);
+	error = getvnode(td, uap->fd, cap_rights_init(&rights, CAP_READ), &fp);
 	if (error != 0)
 		return (error);
 
@@ -624,7 +620,7 @@ svr4_sys_fchroot(td, uap)
 	struct thread *td;
 	struct svr4_sys_fchroot_args *uap;
 {
-	struct filedesc	*fdp = td->td_proc->p_fd;
+	cap_rights_t rights;
 	struct vnode	*vp;
 	struct file	*fp;
 	int		 error;
@@ -632,7 +628,7 @@ svr4_sys_fchroot(td, uap)
 	if ((error = priv_check(td, PRIV_VFS_FCHROOT)) != 0)
 		return error;
 	/* XXX: we have the chroot priv... what cap might we need? all? */
-	if ((error = getvnode(fdp, uap->fd, 0, &fp)) != 0)
+	if ((error = getvnode(td, uap->fd, cap_rights_init(&rights), &fp)) != 0)
 		return error;
 	vp = fp->f_vnode;
 	VREF(vp);
@@ -647,7 +643,7 @@ svr4_sys_fchroot(td, uap)
 		goto fail;
 #endif
 	VOP_UNLOCK(vp, 0);
-	error = change_root(vp, td);
+	error = pwd_chroot(td, vp);
 	vrele(vp);
 	return (error);
 fail:
@@ -669,10 +665,13 @@ svr4_mknod(td, retval, path, mode, dev)
 
 	CHECKALTEXIST(td, path, &newpath);
 
-	if (S_ISFIFO(mode))
-		error = kern_mkfifo(td, newpath, UIO_SYSSPACE, mode);
-	else
-		error = kern_mknod(td, newpath, UIO_SYSSPACE, mode, dev);
+	if (S_ISFIFO(mode)) {
+		error = kern_mkfifoat(td, AT_FDCWD, newpath, UIO_SYSSPACE,
+		    mode);
+	} else {
+		error = kern_mknodat(td, AT_FDCWD, newpath, UIO_SYSSPACE,
+		    mode, dev);
+	}
 	free(newpath, M_TEMP);
 	return (error);
 }
@@ -789,14 +788,14 @@ svr4_sys_sysconfig(td, uap)
 #if defined(UVM)
 		*retval = uvmexp.free;	/* XXX: free instead of total */
 #else
-		*retval = cnt.v_free_count;	/* XXX: free instead of total */
+		*retval = vm_cnt.v_free_count;	/* XXX: free instead of total */
 #endif
 		break;
 	case SVR4_CONFIG_AVPHYS_PAGES:
 #if defined(UVM)
 		*retval = uvmexp.active;	/* XXX: active instead of avg */
 #else
-		*retval = cnt.v_active_count;	/* XXX: active instead of avg */
+		*retval = vm_cnt.v_active_count;/* XXX: active instead of avg */
 #endif
 		break;
 #endif /* NOTYET */
@@ -909,9 +908,7 @@ svr4_sys_ulimit(td, uap)
 
 	switch (uap->cmd) {
 	case SVR4_GFILLIM:
-		PROC_LOCK(td->td_proc);
-		*retval = lim_cur(td->td_proc, RLIMIT_FSIZE) / 512;
-		PROC_UNLOCK(td->td_proc);
+		*retval = lim_cur(td, RLIMIT_FSIZE) / 512;
 		if (*retval == -1)
 			*retval = 0x7fffffff;
 		return 0;
@@ -921,17 +918,13 @@ svr4_sys_ulimit(td, uap)
 			struct rlimit krl;
 
 			krl.rlim_cur = uap->newlimit * 512;
-			PROC_LOCK(td->td_proc);
-			krl.rlim_max = lim_max(td->td_proc, RLIMIT_FSIZE);
-			PROC_UNLOCK(td->td_proc);
+			krl.rlim_max = lim_max(td, RLIMIT_FSIZE);
 
 			error = kern_setrlimit(td, RLIMIT_FSIZE, &krl);
 			if (error)
 				return error;
 
-			PROC_LOCK(td->td_proc);
-			*retval = lim_cur(td->td_proc, RLIMIT_FSIZE);
-			PROC_UNLOCK(td->td_proc);
+			*retval = lim_cur(td, RLIMIT_FSIZE);
 			if (*retval == -1)
 				*retval = 0x7fffffff;
 			return 0;
@@ -942,9 +935,7 @@ svr4_sys_ulimit(td, uap)
 			struct vmspace *vm = td->td_proc->p_vmspace;
 			register_t r;
 
-			PROC_LOCK(td->td_proc);
-			r = lim_cur(td->td_proc, RLIMIT_DATA);
-			PROC_UNLOCK(td->td_proc);
+			r = lim_cur(td, RLIMIT_DATA);
 
 			if (r == -1)
 				r = 0x7fffffff;
@@ -956,9 +947,7 @@ svr4_sys_ulimit(td, uap)
 		}
 
 	case SVR4_GDESLIM:
-		PROC_LOCK(td->td_proc);
-		*retval = lim_cur(td->td_proc, RLIMIT_NOFILE);
-		PROC_UNLOCK(td->td_proc);
+		*retval = lim_cur(td, RLIMIT_NOFILE);
 		if (*retval == -1)
 			*retval = 0x7fffffff;
 		return 0;
@@ -1288,7 +1277,7 @@ loop:
 
 			/* Found a zombie, so cache info in local variables. */
 			pid = p->p_pid;
-			status = p->p_xstat;
+			status = KW_EXITCODE(p->p_xexit, p->p_xsig);
 			ru = p->p_ru;
 			PROC_STATLOCK(p);
 			calcru(p, &ru.ru_utime, &ru.ru_stime);
@@ -1315,7 +1304,7 @@ loop:
 				p->p_flag |= P_WAITED;
 			sx_sunlock(&proctree_lock);
 			pid = p->p_pid;
-			status = W_STOPCODE(p->p_xstat);
+			status = W_STOPCODE(p->p_xsig);
 			ru = p->p_ru;
 			PROC_STATLOCK(p);
 			calcru(p, &ru.ru_utime, &ru.ru_stime);
@@ -1442,17 +1431,20 @@ svr4_sys_statvfs(td, uap)
 	struct svr4_sys_statvfs_args *uap;
 {
 	struct svr4_statvfs sfs;
-	struct statfs bfs;
+	struct statfs *bfs;
 	char *path;
 	int error;
 
 	CHECKALTEXIST(td, uap->path, &path);
 
-	error = kern_statfs(td, path, UIO_SYSSPACE, &bfs);
+	bfs = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = kern_statfs(td, path, UIO_SYSSPACE, bfs);
 	free(path, M_TEMP);
-	if (error)
+	if (error == 0)
+		bsd_statfs_to_svr4_statvfs(bfs, &sfs);
+	free(bfs, M_STATFS);
+	if (error != 0)
 		return (error);
-	bsd_statfs_to_svr4_statvfs(&bfs, &sfs);
 	return copyout(&sfs, uap->fs, sizeof(sfs));
 }
 
@@ -1463,13 +1455,16 @@ svr4_sys_fstatvfs(td, uap)
 	struct svr4_sys_fstatvfs_args *uap;
 {
 	struct svr4_statvfs sfs;
-	struct statfs bfs;
+	struct statfs *bfs;
 	int error;
 
-	error = kern_fstatfs(td, uap->fd, &bfs);
-	if (error)
+	bfs = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = kern_fstatfs(td, uap->fd, bfs);
+	if (error == 0)
+		bsd_statfs_to_svr4_statvfs(bfs, &sfs);
+	free(bfs, M_STATFS);
+	if (error != 0)
 		return (error);
-	bsd_statfs_to_svr4_statvfs(&bfs, &sfs);
 	return copyout(&sfs, uap->fs, sizeof(sfs));
 }
 
@@ -1480,17 +1475,20 @@ svr4_sys_statvfs64(td, uap)
 	struct svr4_sys_statvfs64_args *uap;
 {
 	struct svr4_statvfs64 sfs;
-	struct statfs bfs;
+	struct statfs *bfs;
 	char *path;
 	int error;
 
 	CHECKALTEXIST(td, uap->path, &path);
 
-	error = kern_statfs(td, path, UIO_SYSSPACE, &bfs);
+	bfs = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = kern_statfs(td, path, UIO_SYSSPACE, bfs);
 	free(path, M_TEMP);
-	if (error)
+	if (error == 0)
+		bsd_statfs_to_svr4_statvfs64(bfs, &sfs);
+	free(bfs, M_STATFS);
+	if (error != 0)
 		return (error);
-	bsd_statfs_to_svr4_statvfs64(&bfs, &sfs);
 	return copyout(&sfs, uap->fs, sizeof(sfs));
 }
 
@@ -1501,13 +1499,16 @@ svr4_sys_fstatvfs64(td, uap)
 	struct svr4_sys_fstatvfs64_args *uap;
 {
 	struct svr4_statvfs64 sfs;
-	struct statfs bfs;
+	struct statfs *bfs;
 	int error;
 
-	error = kern_fstatfs(td, uap->fd, &bfs);
-	if (error)
+	bfs = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = kern_fstatfs(td, uap->fd, bfs);
+	if (error == 0)
+		bsd_statfs_to_svr4_statvfs64(bfs, &sfs);
+	free(bfs, M_STATFS);
+	if (error != 0)
 		return (error);
-	bsd_statfs_to_svr4_statvfs64(&bfs, &sfs);
 	return copyout(&sfs, uap->fs, sizeof(sfs));
 }
 

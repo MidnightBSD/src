@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -38,7 +37,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_uio.c 326426 2017-12-01 11:11:25Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_uio.c 326425 2017-12-01 11:06:51Z avg $
  */
 
 #include <sys/types.h>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
  *
@@ -7,28 +8,26 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer 
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_mib.c 293527 2016-01-09 16:08:22Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_mib.c 346835 2019-04-28 14:08:05Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -150,11 +149,12 @@ linux_map_osrel(char *osrelease, int *osrel)
 	if (osrelease == sep || sep != eosrelease)
 		return (EINVAL);
 
-	v = v0 * 1000000 + v1 * 1000 + v2;
-	if (v < 1000000)
+	v = LINUX_KERNVER(v0, v1, v2);
+	if (v < LINUX_KERNVER(1, 0, 0))
 		return (EINVAL);
 
-	*osrel = v;
+	if (osrel != NULL)
+		*osrel = v;
 
 	return (0);
 }
@@ -169,9 +169,6 @@ linux_find_prison(struct prison *spr, struct prison **prp)
 	struct prison *pr;
 	struct linux_prison *lpr;
 
-	if (!linux_osd_jail_slot)
-		/* In case osd_register failed. */
-		spr = &prison0;
 	for (pr = spr;; pr = pr->pr_parent) {
 		mtx_lock(&pr->pr_mtx);
 		lpr = (pr == &prison0)
@@ -190,15 +187,14 @@ linux_find_prison(struct prison *spr, struct prison **prp)
  * Ensure a prison has its own Linux info.  If lprp is non-null, point it to
  * the Linux info and lock the prison.
  */
-static int
+static void
 linux_alloc_prison(struct prison *pr, struct linux_prison **lprp)
 {
 	struct prison *ppr;
 	struct linux_prison *lpr, *nlpr;
-	int error;
+	void **rsv;
 
 	/* If this prison already has Linux info, return that. */
-	error = 0;
 	lpr = linux_find_prison(pr, &ppr);
 	if (ppr == pr)
 		goto done;
@@ -208,29 +204,24 @@ linux_alloc_prison(struct prison *pr, struct linux_prison **lprp)
 	 */
 	mtx_unlock(&ppr->pr_mtx);
 	nlpr = malloc(sizeof(struct linux_prison), M_PRISON, M_WAITOK);
+	rsv = osd_reserve(linux_osd_jail_slot);
 	lpr = linux_find_prison(pr, &ppr);
 	if (ppr == pr) {
 		free(nlpr, M_PRISON);
+		osd_free_reserved(rsv);
 		goto done;
 	}
 	/* Inherit the initial values from the ancestor. */
 	mtx_lock(&pr->pr_mtx);
-	error = osd_jail_set(pr, linux_osd_jail_slot, nlpr);
-	if (error == 0) {
-		bcopy(lpr, nlpr, sizeof(*lpr));
-		lpr = nlpr;
-	} else {
-		free(nlpr, M_PRISON);
-		lpr = NULL;
-	}
+	(void)osd_jail_set_reserved(pr, linux_osd_jail_slot, rsv, nlpr);
+	bcopy(lpr, nlpr, sizeof(*lpr));
+	lpr = nlpr;
 	mtx_unlock(&ppr->pr_mtx);
  done:
 	if (lprp != NULL)
 		*lprp = lpr;
 	else
 		mtx_unlock(&pr->pr_mtx);
-
-	return (error);
 }
 
 /*
@@ -250,7 +241,8 @@ linux_prison_create(void *obj, void *data)
 	 * Inherit a prison's initial values from its parent
 	 * (different from JAIL_SYS_INHERIT which also inherits changes).
 	 */
-	return (linux_alloc_prison(pr, NULL));
+	linux_alloc_prison(pr, NULL);
+	return (0);
 }
 
 static int
@@ -258,7 +250,7 @@ linux_prison_check(void *obj __unused, void *data)
 {
 	struct vfsoptlist *opts = data;
 	char *osname, *osrelease;
-	int error, jsys, len, osrel, oss_version;
+	int error, jsys, len, oss_version;
 
 	/* Check that the parameters are correct. */
 	error = vfs_copyopt(opts, "linux", &jsys, sizeof(jsys));
@@ -289,7 +281,7 @@ linux_prison_check(void *obj __unused, void *data)
 			vfs_opterror(opts, "linux.osrelease too long");
 			return (ENAMETOOLONG);
 		}
-		error = linux_map_osrel(osrelease, &osrel);
+		error = linux_map_osrel(osrelease, NULL);
 		if (error != 0) {
 			vfs_opterror(opts, "linux.osrelease format error");
 			return (error);
@@ -346,17 +338,9 @@ linux_prison_set(void *obj, void *data)
 		 * "linux=new" or "linux.*":
 		 * the prison gets its own Linux info.
 		 */
-		error = linux_alloc_prison(pr, &lpr);
-		if (error) {
-			mtx_unlock(&pr->pr_mtx);
-			return (error);
-		}
+		linux_alloc_prison(pr, &lpr);
 		if (osrelease) {
-			error = linux_map_osrel(osrelease, &lpr->pr_osrel);
-			if (error) {
-				mtx_unlock(&pr->pr_mtx);
-				return (error);
-			}
+			(void)linux_map_osrel(osrelease, &lpr->pr_osrel);
 			strlcpy(lpr->pr_osrelease, osrelease,
 			    LINUX_MAX_UTSNAME);
 		}
@@ -450,21 +434,18 @@ linux_osd_jail_register(void)
 
 	linux_osd_jail_slot =
 	    osd_jail_register(linux_prison_destructor, methods);
-	if (linux_osd_jail_slot > 0) {
-		/* Copy the system linux info to any current prisons. */
-		sx_xlock(&allprison_lock);
-		TAILQ_FOREACH(pr, &allprison, pr_list)
-			(void)linux_alloc_prison(pr, NULL);
-		sx_xunlock(&allprison_lock);
-	}
+	/* Copy the system Linux info to any current prisons. */
+	sx_slock(&allprison_lock);
+	TAILQ_FOREACH(pr, &allprison, pr_list)
+		linux_alloc_prison(pr, NULL);
+	sx_sunlock(&allprison_lock);
 }
 
 void
 linux_osd_jail_deregister(void)
 {
 
-	if (linux_osd_jail_slot)
-		osd_jail_deregister(linux_osd_jail_slot);
+	osd_jail_deregister(linux_osd_jail_slot);
 }
 
 void

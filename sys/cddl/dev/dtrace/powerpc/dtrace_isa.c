@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -22,7 +21,7 @@
  *
  * Portions Copyright 2012,2013 Justin Hibbits <jhibbits@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/powerpc/dtrace_isa.c 289786 2015-10-23 07:31:04Z avg $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/powerpc/dtrace_isa.c 318572 2017-05-20 05:12:32Z jhibbits $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -39,6 +38,7 @@
 
 #include <machine/frame.h>
 #include <machine/md_var.h>
+#include <machine/psl.h>
 #include <machine/reg.h>
 #include <machine/stack.h>
 
@@ -50,10 +50,101 @@
 
 /* Offset to the LR Save word (ppc32) */
 #define RETURN_OFFSET	4
-#define RETURN_OFFSET64	8
+/* Offset to LR Save word (ppc64).  CR Save area sits between back chain and LR */
+#define RETURN_OFFSET64	16
+
+#ifdef __powerpc64__
+#define OFFSET 4 /* Account for the TOC reload slot */
+#define	FRAME_OFFSET	48
+#else
+#define OFFSET 0
+#define	FRAME_OFFSET	8
+#endif
 
 #define INKERNEL(x)	((x) <= VM_MAX_KERNEL_ADDRESS && \
 		(x) >= VM_MIN_KERNEL_ADDRESS)
+
+static __inline int
+dtrace_sp_inkernel(uintptr_t sp)
+{
+	struct trapframe *frame;
+	vm_offset_t callpc;
+
+#ifdef __powerpc64__
+	callpc = *(vm_offset_t *)(sp + RETURN_OFFSET64);
+#else
+	callpc = *(vm_offset_t *)(sp + RETURN_OFFSET);
+#endif
+	if ((callpc & 3) || (callpc < 0x100))
+		return (0);
+
+	/*
+	 * trapexit() and asttrapexit() are sentinels
+	 * for kernel stack tracing.
+	 */
+	if (callpc + OFFSET == (vm_offset_t) &trapexit ||
+	    callpc + OFFSET == (vm_offset_t) &asttrapexit) {
+		if (sp == 0)
+			return (0);
+		frame = (struct trapframe *)(sp + FRAME_OFFSET);
+
+		return ((frame->srr1 & PSL_PR) == 0);
+	}
+
+	return (1);
+}
+
+static __inline uintptr_t
+dtrace_next_sp(uintptr_t sp)
+{
+	vm_offset_t callpc;
+	struct trapframe *frame;
+
+#ifdef __powerpc64__
+	callpc = *(vm_offset_t *)(sp + RETURN_OFFSET64);
+#else
+	callpc = *(vm_offset_t *)(sp + RETURN_OFFSET);
+#endif
+
+	/*
+	 * trapexit() and asttrapexit() are sentinels
+	 * for kernel stack tracing.
+	 */
+	if ((callpc + OFFSET == (vm_offset_t) &trapexit ||
+	    callpc + OFFSET == (vm_offset_t) &asttrapexit)) {
+		/* Access the trap frame */
+		frame = (struct trapframe *)(sp + FRAME_OFFSET);
+		return (*(uintptr_t *)(frame->fixreg[1]));
+	}
+
+	return (*(uintptr_t*)sp);
+}
+
+static __inline uintptr_t
+dtrace_get_pc(uintptr_t sp)
+{
+	struct trapframe *frame;
+	vm_offset_t callpc;
+
+#ifdef __powerpc64__
+	callpc = *(vm_offset_t *)(sp + RETURN_OFFSET64);
+#else
+	callpc = *(vm_offset_t *)(sp + RETURN_OFFSET);
+#endif
+
+	/*
+	 * trapexit() and asttrapexit() are sentinels
+	 * for kernel stack tracing.
+	 */
+	if ((callpc + OFFSET == (vm_offset_t) &trapexit ||
+	    callpc + OFFSET == (vm_offset_t) &asttrapexit)) {
+		/* Access the trap frame */
+		frame = (struct trapframe *)(sp + FRAME_OFFSET);
+		return (frame->srr0);
+	}
+
+	return (callpc);
+}
 
 greg_t
 dtrace_getfp(void)
@@ -66,10 +157,11 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
     uint32_t *intrpc)
 {
 	int depth = 0;
-	register_t sp;
+	uintptr_t osp, sp;
 	vm_offset_t callpc;
 	pc_t caller = (pc_t) solaris_cpu[curcpu].cpu_dtrace_caller;
 
+	osp = PAGE_SIZE;
 	if (intrpc != 0)
 		pcstack[depth++] = (pc_t) intrpc;
 
@@ -78,17 +170,12 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 	sp = dtrace_getfp();
 
 	while (depth < pcstack_limit) {
-		if (!INKERNEL((long) sp))
+		if (sp <= osp)
 			break;
 
-#ifdef __powerpc64__
-		callpc = *(uintptr_t *)(sp + RETURN_OFFSET64);
-#else
-		callpc = *(uintptr_t *)(sp + RETURN_OFFSET);
-#endif
-
-		if (!INKERNEL(callpc))
+		if (!dtrace_sp_inkernel(sp))
 			break;
+		callpc = dtrace_get_pc(sp);
 
 		if (aframes > 0) {
 			aframes--;
@@ -100,7 +187,8 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 			pcstack[depth++] = callpc;
 		}
 
-		sp = *(uintptr_t*)sp;
+		osp = sp;
+		sp = dtrace_next_sp(sp);
 	}
 
 	for (; depth < pcstack_limit; depth++) {
@@ -368,8 +456,11 @@ dtrace_getarg(int arg, int aframes)
 		 * On ppc32 AIM, and booke, trapexit() is the immediately following
 		 * label.  On ppc64 AIM trapexit() follows a nop.
 		 */
-		if (((long)(fp[1]) == (long)trapexit) ||
-				(((long)(fp[1]) + 4 == (long)trapexit))) {
+#ifdef __powerpc64__
+		if ((long)(fp[2]) + 4 == (long)trapexit) {
+#else
+		if ((long)(fp[1]) == (long)trapexit) {
+#endif
 			/*
 			 * In the case of powerpc, we will use the pointer to the regs
 			 * structure that was pushed when we took the trap.  To get this
@@ -432,23 +523,31 @@ int
 dtrace_getstackdepth(int aframes)
 {
 	int depth = 0;
-	register_t sp;
+	uintptr_t osp, sp;
+	vm_offset_t callpc;
 
+	osp = PAGE_SIZE;
 	aframes++;
 	sp = dtrace_getfp();
 	depth++;
 	for(;;) {
-		if (!INKERNEL((long) sp))
+		if (sp <= osp)
 			break;
-		if (!INKERNEL((long) *(void **)sp))
+
+		if (!dtrace_sp_inkernel(sp))
 			break;
-		depth++;
-		sp = *(uintptr_t *)sp;
+
+		if (aframes == 0)
+			depth++;
+		else
+			aframes--;
+		osp = sp;
+		sp = dtrace_next_sp(sp);
 	}
 	if (depth < aframes)
-		return 0;
-	else
-		return depth - aframes;
+		return (0);
+
+	return (depth);
 }
 
 ulong_t

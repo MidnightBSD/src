@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001  The FreeBSD Project
  * All rights reserved.
@@ -26,10 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_uid16.c 302229 2016-06-27 21:25:01Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_uid16.c 283427 2015-05-24 16:14:41Z dchagin $");
 
 #include "opt_compat.h"
-#include "opt_kdtrace.h"
 
 #include <sys/fcntl.h>
 #include <sys/param.h>
@@ -123,8 +121,8 @@ linux_chown16(struct thread *td, struct linux_chown16_args *args)
 	    args->gid);
 	LIN_SDT_PROBE1(uid16, linux_chown16, conv_path, path);
 
-	error = kern_chown(td, path, UIO_SYSSPACE, CAST_NOCHG(args->uid),
-	    CAST_NOCHG(args->gid));
+	error = kern_fchownat(td, AT_FDCWD, path, UIO_SYSSPACE,
+	    CAST_NOCHG(args->uid), CAST_NOCHG(args->gid), 0);
 	LFREEPATH(path);
 
 	LIN_SDT_PROBE1(uid16, linux_chown16, return, error);
@@ -148,8 +146,8 @@ linux_lchown16(struct thread *td, struct linux_lchown16_args *args)
 	    args->gid);
 	LIN_SDT_PROBE1(uid16, linux_lchown16, conv_path, path);
 
-	error = kern_lchown(td, path, UIO_SYSSPACE, CAST_NOCHG(args->uid),
-	    CAST_NOCHG(args->gid));
+	error = kern_fchownat(td, AT_FDCWD, path, UIO_SYSSPACE,
+	    CAST_NOCHG(args->uid), CAST_NOCHG(args->gid), AT_SYMLINK_NOFOLLOW);
 	LFREEPATH(path);
 
 	LIN_SDT_PROBE1(uid16, linux_lchown16, return, error);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Tim J. Robbins
  * Copyright (c) 2002 Doug Rabson
@@ -28,10 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_fork.c 299705 2016-05-14 00:35:49Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_fork.c 346840 2019-04-28 14:20:29Z dchagin $");
 
 #include "opt_compat.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,10 +38,12 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_fork.c 299705 2016-05-14 00
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/ptrace.h>
 #include <sys/racct.h>
 #include <sys/sched.h>
 #include <sys/syscallsubr.h>
 #include <sys/sx.h>
+#include <sys/umtx.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
 
@@ -63,9 +63,11 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_fork.c 299705 2016-05-14 00
 #include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_util.h>
 
+#ifdef LINUX_LEGACY_SYSCALLS
 int
 linux_fork(struct thread *td, struct linux_fork_args *args)
 {
+	struct fork_req fr;
 	int error;
 	struct proc *p2;
 	struct thread *td2;
@@ -75,8 +77,10 @@ linux_fork(struct thread *td, struct linux_fork_args *args)
 		printf(ARGS(fork, ""));
 #endif
 
-	if ((error = fork1(td, RFFDG | RFPROC | RFSTOPPED, 0, &p2, NULL, 0))
-	    != 0)
+	bzero(&fr, sizeof(fr));
+	fr.fr_flags = RFFDG | RFPROC | RFSTOPPED;
+	fr.fr_procp = &p2;
+	if ((error = fork1(td, &fr)) != 0)
 		return (error);
 
 	td2 = FIRST_THREAD_IN_PROC(p2);
@@ -99,6 +103,7 @@ linux_fork(struct thread *td, struct linux_fork_args *args)
 int
 linux_vfork(struct thread *td, struct linux_vfork_args *args)
 {
+	struct fork_req fr;
 	int error;
 	struct proc *p2;
 	struct thread *td2;
@@ -108,15 +113,17 @@ linux_vfork(struct thread *td, struct linux_vfork_args *args)
 		printf(ARGS(vfork, ""));
 #endif
 
-	if ((error = fork1(td, RFFDG | RFPROC | RFMEM | RFPPWAIT | RFSTOPPED,
-	    0, &p2, NULL, 0)) != 0)
+	bzero(&fr, sizeof(fr));
+	fr.fr_flags = RFFDG | RFPROC | RFMEM | RFPPWAIT | RFSTOPPED;
+	fr.fr_procp = &p2;
+	if ((error = fork1(td, &fr)) != 0)
 		return (error);
 
 	td2 = FIRST_THREAD_IN_PROC(p2);
 
 	linux_proc_init(td, td2, 0);
 
-   	td->td_retval[0] = p2->p_pid;
+	td->td_retval[0] = p2->p_pid;
 
 	/*
 	 * Make this runnable after we are finished with it.
@@ -128,10 +135,12 @@ linux_vfork(struct thread *td, struct linux_vfork_args *args)
 
 	return (0);
 }
+#endif
 
 static int
 linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 {
+	struct fork_req fr;
 	int error, ff = RFPROC | RFSTOPPED;
 	struct proc *p2;
 	struct thread *td2;
@@ -172,7 +181,10 @@ linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 	if (args->flags & LINUX_CLONE_VFORK)
 		ff |= RFPPWAIT;
 
-	error = fork1(td, ff, 0, &p2, NULL, 0);
+	bzero(&fr, sizeof(fr));
+	fr.fr_flags = ff;
+	fr.fr_procp = &p2;
+	error = fork1(td, &fr);
 	if (error)
 		return (error);
 
@@ -187,12 +199,12 @@ linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 	if (args->flags & LINUX_CLONE_CHILD_SETTID)
 		em->child_set_tid = args->child_tidptr;
 	else
-	   	em->child_set_tid = NULL;
+		em->child_set_tid = NULL;
 
 	if (args->flags & LINUX_CLONE_CHILD_CLEARTID)
 		em->child_clear_tid = args->child_tidptr;
 	else
-	   	em->child_clear_tid = NULL;
+		em->child_clear_tid = NULL;
 
 	if (args->flags & LINUX_CLONE_PARENT_SETTID) {
 		error = copyout(&p2->p_pid, args->parent_tidptr,
@@ -215,7 +227,7 @@ linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 		linux_set_cloned_tls(td2, args->tls);
 
 	/*
-	 * If CLONE_PARENT is set, then the parent of the new process will be 
+	 * If CLONE_PARENT is set, then the parent of the new process will be
 	 * the same as that of the calling process.
 	 */
 	if (args->flags & LINUX_CLONE_PARENT) {
@@ -290,16 +302,17 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 	error = kern_thr_alloc(p, 0, &newtd);
 	if (error)
 		goto fail;
-														
-	cpu_set_upcall(newtd, td);
+
+	cpu_copy_thread(newtd, td);
 
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
 	bcopy(&td->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
+	newtd->td_sa = td->td_sa;
 
 	newtd->td_proc = p;
-	newtd->td_ucred = crhold(td->td_ucred);
+	thread_cow_get(newtd, td);
 
 	/* create the emuldata */
 	linux_proc_init(td, newtd, args->flags);
@@ -313,15 +326,15 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 	if (args->flags & LINUX_CLONE_CHILD_SETTID)
 		em->child_set_tid = args->child_tidptr;
 	else
-	   	em->child_set_tid = NULL;
+		em->child_set_tid = NULL;
 
 	if (args->flags & LINUX_CLONE_CHILD_CLEARTID)
 		em->child_clear_tid = args->child_tidptr;
 	else
-	   	em->child_clear_tid = NULL;
+		em->child_clear_tid = NULL;
 
 	cpu_thread_clean(newtd);
-	
+
 	linux_set_upcall_kse(newtd, PTROUT(args->stack));
 
 	PROC_LOCK(p);
@@ -339,6 +352,9 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 	thread_unlock(td);
 	if (P_SHOULDSTOP(p))
 		newtd->td_flags |= TDF_ASTPENDING | TDF_NEEDSUSPCHK;
+
+	if (p->p_ptevents & PTRACE_LWP)
+		newtd->td_dbgflags |= TDB_BORN;
 	PROC_UNLOCK(p);
 
 	tidhash_add(newtd);
@@ -402,6 +418,8 @@ linux_exit(struct thread *td, struct linux_exit_args *args)
 
 	LINUX_CTR2(exit, "thread(%d) (%d)", em->em_tid, args->rval);
 
+	umtx_thread_exit(td);
+
 	linux_thread_detach(td);
 
 	/*
@@ -409,7 +427,7 @@ linux_exit(struct thread *td, struct linux_exit_args *args)
 	 * exit via pthread_exit() try thr_exit() first.
 	 */
 	kern_thr_exit(td);
-	exit1(td, W_EXITCODE(args->rval, 0));
+	exit1(td, args->rval, 0);
 		/* NOTREACHED */
 }
 
@@ -452,7 +470,7 @@ linux_thread_detach(struct thread *td)
 
 		LINUX_CTR2(thread_detach, "thread(%d) %p",
 		    em->em_tid, child_clear_tid);
-	
+
 		error = suword32(child_clear_tid, 0);
 		if (error != 0)
 			return;

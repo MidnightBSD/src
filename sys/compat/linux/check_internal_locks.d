@@ -25,8 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/sys/compat/linux/check_internal_locks.d 299705 2016-05-14 00:35:49Z pfg $
+ * $FreeBSD: stable/11/sys/compat/linux/check_internal_locks.d 346812 2019-04-28 09:53:08Z dchagin $
  */
 
 /**
@@ -93,6 +92,6 @@ tick-10s
 
 END
 {
-        printf("Number of locks per type:");
+	printf("Number of locks per type:");
 	printa(@stats);
 }

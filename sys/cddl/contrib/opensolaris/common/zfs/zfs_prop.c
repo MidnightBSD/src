@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2011, 2014 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2016 by Delphix. All rights reserved.
  * Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
@@ -73,9 +72,9 @@ zfs_prop_init(void)
 		{ "fletcher4",	ZIO_CHECKSUM_FLETCHER_4 },
 		{ "sha256",	ZIO_CHECKSUM_SHA256 },
 		{ "noparity",	ZIO_CHECKSUM_NOPARITY },
-#ifdef illumos
 		{ "sha512",	ZIO_CHECKSUM_SHA512 },
 		{ "skein",	ZIO_CHECKSUM_SKEIN },
+#ifdef illumos
 		{ "edonr",	ZIO_CHECKSUM_EDONR },
 #endif
 		{ NULL }
@@ -88,13 +87,13 @@ zfs_prop_init(void)
 		{ "sha256",	ZIO_CHECKSUM_SHA256 },
 		{ "sha256,verify",
 				ZIO_CHECKSUM_SHA256 | ZIO_CHECKSUM_VERIFY },
-#ifdef illumos
 		{ "sha512",	ZIO_CHECKSUM_SHA512 },
 		{ "sha512,verify",
 				ZIO_CHECKSUM_SHA512 | ZIO_CHECKSUM_VERIFY },
 		{ "skein",	ZIO_CHECKSUM_SKEIN },
 		{ "skein,verify",
 				ZIO_CHECKSUM_SKEIN | ZIO_CHECKSUM_VERIFY },
+#ifdef illumos
 		{ "edonr,verify",
 				ZIO_CHECKSUM_EDONR | ZIO_CHECKSUM_VERIFY },
 #endif
@@ -242,12 +241,12 @@ zfs_prop_init(void)
 	zprop_register_index(ZFS_PROP_CHECKSUM, "checksum",
 	    ZIO_CHECKSUM_DEFAULT, PROP_INHERIT, ZFS_TYPE_FILESYSTEM |
 	    ZFS_TYPE_VOLUME,
-	    "on | off | fletcher2 | fletcher4 | sha256",
-	    "CHECKSUM", checksum_table);
+	    "on | off | fletcher2 | fletcher4 | sha256 | sha512 | "
+	    "skein", "CHECKSUM", checksum_table);
 	zprop_register_index(ZFS_PROP_DEDUP, "dedup", ZIO_CHECKSUM_OFF,
 	    PROP_INHERIT, ZFS_TYPE_FILESYSTEM | ZFS_TYPE_VOLUME,
-	    "on | off | verify | sha256[,verify]",
-	    "DEDUP", dedup_table);
+	    "on | off | verify | sha256[,verify], sha512[,verify], "
+	    "skein[,verify]", "DEDUP", dedup_table);
 	zprop_register_index(ZFS_PROP_COMPRESSION, "compression",
 	    ZIO_COMPRESS_DEFAULT, PROP_INHERIT,
 	    ZFS_TYPE_FILESYSTEM | ZFS_TYPE_VOLUME,
@@ -398,7 +397,8 @@ zfs_prop_init(void)
 	zprop_register_number(ZFS_PROP_WRITTEN, "written", 0, PROP_READONLY,
 	    ZFS_TYPE_DATASET, "<size>", "WRITTEN");
 	zprop_register_number(ZFS_PROP_LOGICALUSED, "logicalused", 0,
-	    PROP_READONLY, ZFS_TYPE_DATASET, "<size>", "LUSED");
+	    PROP_READONLY, ZFS_TYPE_FILESYSTEM | ZFS_TYPE_VOLUME, "<size>",
+	    "LUSED");
 	zprop_register_number(ZFS_PROP_LOGICALREFERENCED, "logicalreferenced",
 	    0, PROP_READONLY, ZFS_TYPE_DATASET, "<size>", "LREFER");
 
@@ -427,6 +427,10 @@ zfs_prop_init(void)
 	zprop_register_number(ZFS_PROP_SNAPSHOT_COUNT, "snapshot_count",
 	    UINT64_MAX, PROP_DEFAULT, ZFS_TYPE_FILESYSTEM | ZFS_TYPE_VOLUME,
 	    "<count>", "SSCOUNT");
+	zprop_register_number(ZFS_PROP_GUID, "guid", 0, PROP_READONLY,
+	    ZFS_TYPE_DATASET | ZFS_TYPE_BOOKMARK, "<uint64>", "GUID");
+	zprop_register_number(ZFS_PROP_CREATETXG, "createtxg", 0, PROP_READONLY,
+	    ZFS_TYPE_DATASET | ZFS_TYPE_BOOKMARK, "<uint64>", "CREATETXG");
 
 	/* inherit number properties */
 	zprop_register_number(ZFS_PROP_RECORDSIZE, "recordsize",
@@ -434,8 +438,8 @@ zfs_prop_init(void)
 	    ZFS_TYPE_FILESYSTEM, "512 to 1M, power of 2", "RECSIZE");
 
 	/* hidden properties */
-	zprop_register_hidden(ZFS_PROP_CREATETXG, "createtxg", PROP_TYPE_NUMBER,
-	    PROP_READONLY, ZFS_TYPE_DATASET | ZFS_TYPE_BOOKMARK, "CREATETXG");
+	zprop_register_hidden(ZFS_PROP_REMAPTXG, "remaptxg", PROP_TYPE_NUMBER,
+	    PROP_READONLY, ZFS_TYPE_DATASET, "REMAPTXG");
 	zprop_register_hidden(ZFS_PROP_NUMCLONES, "numclones", PROP_TYPE_NUMBER,
 	    PROP_READONLY, ZFS_TYPE_SNAPSHOT, "NUMCLONES");
 	zprop_register_hidden(ZFS_PROP_NAME, "name", PROP_TYPE_STRING,
@@ -445,8 +449,6 @@ zfs_prop_init(void)
 	zprop_register_hidden(ZFS_PROP_STMF_SHAREINFO, "stmf_sbd_lu",
 	    PROP_TYPE_STRING, PROP_INHERIT, ZFS_TYPE_VOLUME,
 	    "STMF_SBD_LU");
-	zprop_register_hidden(ZFS_PROP_GUID, "guid", PROP_TYPE_NUMBER,
-	    PROP_READONLY, ZFS_TYPE_DATASET | ZFS_TYPE_BOOKMARK, "GUID");
 	zprop_register_hidden(ZFS_PROP_USERACCOUNTING, "useraccounting",
 	    PROP_TYPE_NUMBER, PROP_READONLY, ZFS_TYPE_DATASET,
 	    "USERACCOUNTING");
@@ -599,6 +601,15 @@ zfs_prop_readonly(zfs_prop_t prop)
 {
 	return (zfs_prop_table[prop].pd_attr == PROP_READONLY ||
 	    zfs_prop_table[prop].pd_attr == PROP_ONETIME);
+}
+
+/*
+ * Returns TRUE if the property is visible (not hidden).
+ */
+boolean_t
+zfs_prop_visible(zfs_prop_t prop)
+{
+	return (zfs_prop_table[prop].pd_visible);
 }
 
 /*

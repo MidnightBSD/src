@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_unload.c 284136 2015-06-07 20:45:13Z pfg $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_unload.c 278166 2015-02-03 19:39:53Z pfg $
  *
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Christos Zoulas
  * Copyright (c) 1995 Frank van der Linden
@@ -29,7 +28,7 @@
  *
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
- * $FreeBSD: stable/10/sys/compat/linux/linux_util.h 293546 2016-01-09 16:44:17Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_util.h 346812 2019-04-28 09:53:08Z dchagin $
  */
 
 #ifndef	_LINUX_UTIL_H_
@@ -38,7 +37,6 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
-#include <machine/vmparam.h>
 #include <sys/exec.h>
 #include <sys/sysent.h>
 #include <sys/syslog.h>
@@ -64,7 +62,7 @@ int linux_emul_convpath(struct thread *, const char *, enum uio_seg, char **, in
 			return (_error);				\
 	} while (0)
 
-#define LCONVPATH(td, upath, pathp, i) 	\
+#define LCONVPATH(td, upath, pathp, i)	\
    LCONVPATH_AT(td, upath, pathp, i, AT_FDCWD)
 
 #define LCONVPATHEXIST(td, upath, pathp) LCONVPATH(td, upath, pathp, 0)
@@ -94,6 +92,14 @@ linux_ ## s(struct thread *td, struct linux_ ## s ## _args *args)	\
 	return (ENOSYS);						\
 }									\
 struct __hack
+
+/*
+ * This is for the syscalls that are not even yet implemented in Linux.
+ *
+ * They're marked as UNIMPL in syscall.master so it will
+ * have nosys record in linux_sysent[].
+ */
+#define UNIMPLEMENTED(s)
 
 void linux_msg(const struct thread *td, const char *fmt, ...)
 	__printflike(2, 3);

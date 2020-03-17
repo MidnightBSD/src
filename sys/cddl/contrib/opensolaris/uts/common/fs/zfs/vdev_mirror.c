@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -25,7 +24,7 @@
  */
 
 /*
- * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2018 by Delphix. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -35,6 +34,7 @@
 #include <sys/dsl_scan.h>
 #include <sys/vdev_impl.h>
 #include <sys/zio.h>
+#include <sys/abd.h>
 #include <sys/fs/zfs.h>
 
 /*
@@ -81,22 +81,19 @@ static SYSCTL_NODE(_vfs_zfs_vdev, OID_AUTO, mirror, CTLFLAG_RD, 0,
 /* Rotating media load calculation configuration. */
 static int rotating_inc = 0;
 #ifdef _KERNEL
-TUNABLE_INT("vfs.zfs.vdev.mirror.rotating_inc", &rotating_inc);
-SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_inc, CTLFLAG_RW,
+SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_inc, CTLFLAG_RWTUN,
     &rotating_inc, 0, "Rotating media load increment for non-seeking I/O's");
 #endif
 
 static int rotating_seek_inc = 5;
 #ifdef _KERNEL
-TUNABLE_INT("vfs.zfs.vdev.mirror.rotating_seek_inc", &rotating_seek_inc);
-SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_seek_inc, CTLFLAG_RW,
+SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_seek_inc, CTLFLAG_RWTUN,
     &rotating_seek_inc, 0, "Rotating media load increment for seeking I/O's");
 #endif
 
 static int rotating_seek_offset = 1 * 1024 * 1024;
 #ifdef _KERNEL
-TUNABLE_INT("vfs.zfs.vdev.mirror.rotating_seek_offset", &rotating_seek_offset);
-SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_seek_offset, CTLFLAG_RW,
+SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_seek_offset, CTLFLAG_RWTUN,
     &rotating_seek_offset, 0, "Offset in bytes from the last I/O which "
     "triggers a reduced rotating media seek increment");
 #endif
@@ -104,17 +101,14 @@ SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, rotating_seek_offset, CTLFLAG_RW,
 /* Non-rotating media load calculation configuration. */
 static int non_rotating_inc = 0;
 #ifdef _KERNEL
-TUNABLE_INT("vfs.zfs.vdev.mirror.non_rotating_inc", &non_rotating_inc);
-SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, non_rotating_inc, CTLFLAG_RW,
+SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, non_rotating_inc, CTLFLAG_RWTUN,
     &non_rotating_inc, 0,
     "Non-rotating media load increment for non-seeking I/O's");
 #endif
 
 static int non_rotating_seek_inc = 1;
 #ifdef _KERNEL
-TUNABLE_INT("vfs.zfs.vdev.mirror.non_rotating_seek_inc",
-     &non_rotating_seek_inc);
-SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, non_rotating_seek_inc, CTLFLAG_RW,
+SYSCTL_INT(_vfs_zfs_vdev_mirror, OID_AUTO, non_rotating_seek_inc, CTLFLAG_RWTUN,
     &non_rotating_seek_inc, 0,
     "Non-rotating media load increment for seeking I/O's");
 #endif
@@ -175,7 +169,7 @@ vdev_mirror_load(mirror_map_t *mm, vdev_t *vd, uint64_t zio_offset)
 	load = vdev_queue_length(vd);
 	lastoffset = vdev_queue_lastoffset(vd);
 
-	if (vd->vdev_rotation_rate == VDEV_RATE_NON_ROTATING) {
+	if (vd->vdev_nonrot) {
 		/* Non-rotating media. */
 		if (lastoffset == zio_offset)
 			return (load + non_rotating_inc);
@@ -217,9 +211,34 @@ vdev_mirror_map_init(zio_t *zio)
 	if (vd == NULL) {
 		dva_t *dva = zio->io_bp->blk_dva;
 		spa_t *spa = zio->io_spa;
+		dva_t dva_copy[SPA_DVAS_PER_BP];
 
-		mm = vdev_mirror_map_alloc(BP_GET_NDVAS(zio->io_bp), B_FALSE,
-		    B_TRUE);
+		c = BP_GET_NDVAS(zio->io_bp);
+
+		/*
+		 * If we do not trust the pool config, some DVAs might be
+		 * invalid or point to vdevs that do not exist. We skip them.
+		 */
+		if (!spa_trust_config(spa)) {
+			ASSERT3U(zio->io_type, ==, ZIO_TYPE_READ);
+			int j = 0;
+			for (int i = 0; i < c; i++) {
+				if (zfs_dva_valid(spa, &dva[i], zio->io_bp))
+					dva_copy[j++] = dva[i];
+			}
+			if (j == 0) {
+				zio->io_vsd = NULL;
+				zio->io_error = ENXIO;
+				return (NULL);
+			}
+			if (j < c) {
+				dva = dva_copy;
+				c = j;
+			}
+		}
+
+		mm = vdev_mirror_map_alloc(c, B_FALSE, B_TRUE);
+
 		for (c = 0; c < mm->mm_children; c++) {
 			mc = &mm->mm_child[c];
 			mc->mc_vd = vdev_lookup_top(spa, DVA_GET_VDEV(&dva[c]));
@@ -302,7 +321,10 @@ vdev_mirror_open(vdev_t *vd, uint64_t *asize, uint64_t *max_asize,
 	}
 
 	if (numerrors == vd->vdev_children) {
-		vd->vdev_stat.vs_aux = VDEV_AUX_NO_REPLICAS;
+		if (vdev_children_are_offline(vd))
+			vd->vdev_stat.vs_aux = VDEV_AUX_CHILDREN_OFFLINE;
+		else
+			vd->vdev_stat.vs_aux = VDEV_AUX_NO_REPLICAS;
 		return (lasterror);
 	}
 
@@ -339,13 +361,12 @@ vdev_mirror_scrub_done(zio_t *zio)
 		while ((pio = zio_walk_parents(zio, &zl)) != NULL) {
 			mutex_enter(&pio->io_lock);
 			ASSERT3U(zio->io_size, >=, pio->io_size);
-			bcopy(zio->io_data, pio->io_data, pio->io_size);
+			abd_copy(pio->io_abd, zio->io_abd, pio->io_size);
 			mutex_exit(&pio->io_lock);
 		}
 		mutex_exit(&zio->io_lock);
 	}
-
-	zio_buf_free(zio->io_data, zio->io_size);
+	abd_free(zio->io_abd);
 
 	mc->mc_error = zio->io_error;
 	mc->mc_tried = 1;
@@ -487,20 +508,31 @@ vdev_mirror_io_start(zio_t *zio)
 
 	mm = vdev_mirror_map_init(zio);
 
+	if (mm == NULL) {
+		ASSERT(!spa_trust_config(zio->io_spa));
+		ASSERT(zio->io_type == ZIO_TYPE_READ);
+		zio_execute(zio);
+		return;
+	}
+
 	if (zio->io_type == ZIO_TYPE_READ) {
-		if ((zio->io_flags & ZIO_FLAG_SCRUB) && !mm->mm_resilvering &&
+		if (zio->io_bp != NULL &&
+		    (zio->io_flags & ZIO_FLAG_SCRUB) && !mm->mm_resilvering &&
 		    mm->mm_children > 1) {
 			/*
-			 * For scrubbing reads we need to allocate a read
-			 * buffer for each child and issue reads to all
-			 * children.  If any child succeeds, it will copy its
-			 * data into zio->io_data in vdev_mirror_scrub_done.
+			 * For scrubbing reads (if we can verify the
+			 * checksum here, as indicated by io_bp being
+			 * non-NULL) we need to allocate a read buffer for
+			 * each child and issue reads to all children.  If
+			 * any child succeeds, it will copy its data into
+			 * zio->io_data in vdev_mirror_scrub_done.
 			 */
 			for (c = 0; c < mm->mm_children; c++) {
 				mc = &mm->mm_child[c];
 				zio_nowait(zio_vdev_child_io(zio, zio->io_bp,
 				    mc->mc_vd, mc->mc_offset,
-				    zio_buf_alloc(zio->io_size), zio->io_size,
+				    abd_alloc_sametype(zio->io_abd,
+				    zio->io_size), zio->io_size,
 				    zio->io_type, zio->io_priority, 0,
 				    vdev_mirror_scrub_done, mc));
 			}
@@ -526,7 +558,7 @@ vdev_mirror_io_start(zio_t *zio)
 	while (children--) {
 		mc = &mm->mm_child[c];
 		zio_nowait(zio_vdev_child_io(zio, zio->io_bp,
-		    mc->mc_vd, mc->mc_offset, zio->io_data, zio->io_size,
+		    mc->mc_vd, mc->mc_offset, zio->io_abd, zio->io_size,
 		    zio->io_type, zio->io_priority, 0,
 		    vdev_mirror_child_done, mc));
 		c++;
@@ -557,6 +589,9 @@ vdev_mirror_io_done(zio_t *zio)
 	int c;
 	int good_copies = 0;
 	int unexpected_errors = 0;
+
+	if (mm == NULL)
+		return;
 
 	for (c = 0; c < mm->mm_children; c++) {
 		mc = &mm->mm_child[c];
@@ -613,7 +648,7 @@ vdev_mirror_io_done(zio_t *zio)
 		mc = &mm->mm_child[c];
 		zio_vdev_io_redone(zio);
 		zio_nowait(zio_vdev_child_io(zio, zio->io_bp,
-		    mc->mc_vd, mc->mc_offset, zio->io_data, zio->io_size,
+		    mc->mc_vd, mc->mc_offset, zio->io_abd, zio->io_size,
 		    ZIO_TYPE_READ, zio->io_priority, 0,
 		    vdev_mirror_child_done, mc));
 		return;
@@ -645,7 +680,21 @@ vdev_mirror_io_done(zio_t *zio)
 			if (mc->mc_error == 0) {
 				if (mc->mc_tried)
 					continue;
+				/*
+				 * We didn't try this child.  We need to
+				 * repair it if:
+				 * 1. it's a scrub (in which case we have
+				 * tried everything that was healthy)
+				 *  - or -
+				 * 2. it's an indirect vdev (in which case
+				 * it could point to any other vdev, which
+				 * might have a bad DTL)
+				 *  - or -
+				 * 3. the DTL indicates that this data is
+				 * missing from this vdev
+				 */
 				if (!(zio->io_flags & ZIO_FLAG_SCRUB) &&
+				    mc->mc_vd->vdev_ops != &vdev_indirect_ops &&
 				    !vdev_dtl_contains(mc->mc_vd, DTL_PARTIAL,
 				    zio->io_txg, 1))
 					continue;
@@ -654,7 +703,7 @@ vdev_mirror_io_done(zio_t *zio)
 
 			zio_nowait(zio_vdev_child_io(zio, zio->io_bp,
 			    mc->mc_vd, mc->mc_offset,
-			    zio->io_data, zio->io_size,
+			    zio->io_abd, zio->io_size,
 			    ZIO_TYPE_WRITE, ZIO_PRIORITY_ASYNC_WRITE,
 			    ZIO_FLAG_IO_REPAIR | (unexpected_errors ?
 			    ZIO_FLAG_SELF_HEAL : 0), NULL, NULL));
@@ -665,13 +714,19 @@ vdev_mirror_io_done(zio_t *zio)
 static void
 vdev_mirror_state_change(vdev_t *vd, int faulted, int degraded)
 {
-	if (faulted == vd->vdev_children)
-		vdev_set_state(vd, B_FALSE, VDEV_STATE_CANT_OPEN,
-		    VDEV_AUX_NO_REPLICAS);
-	else if (degraded + faulted != 0)
+	if (faulted == vd->vdev_children) {
+		if (vdev_children_are_offline(vd)) {
+			vdev_set_state(vd, B_FALSE, VDEV_STATE_OFFLINE,
+			    VDEV_AUX_CHILDREN_OFFLINE);
+		} else {
+			vdev_set_state(vd, B_FALSE, VDEV_STATE_CANT_OPEN,
+			    VDEV_AUX_NO_REPLICAS);
+		}
+	} else if (degraded + faulted != 0) {
 		vdev_set_state(vd, B_FALSE, VDEV_STATE_DEGRADED, VDEV_AUX_NONE);
-	else
+	} else {
 		vdev_set_state(vd, B_FALSE, VDEV_STATE_HEALTHY, VDEV_AUX_NONE);
+	}
 }
 
 vdev_ops_t vdev_mirror_ops = {
@@ -683,6 +738,9 @@ vdev_ops_t vdev_mirror_ops = {
 	vdev_mirror_state_change,
 	NULL,
 	NULL,
+	NULL,
+	NULL,
+	vdev_default_xlate,
 	VDEV_TYPE_MIRROR,	/* name of this vdev type */
 	B_FALSE			/* not a leaf vdev */
 };
@@ -696,6 +754,9 @@ vdev_ops_t vdev_replacing_ops = {
 	vdev_mirror_state_change,
 	NULL,
 	NULL,
+	NULL,
+	NULL,
+	vdev_default_xlate,
 	VDEV_TYPE_REPLACING,	/* name of this vdev type */
 	B_FALSE			/* not a leaf vdev */
 };
@@ -709,6 +770,9 @@ vdev_ops_t vdev_spare_ops = {
 	vdev_mirror_state_change,
 	NULL,
 	NULL,
+	NULL,
+	NULL,
+	vdev_default_xlate,
 	VDEV_TYPE_SPARE,	/* name of this vdev type */
 	B_FALSE			/* not a leaf vdev */
 };

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2016 by Delphix. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -31,6 +30,7 @@
 #include <sys/zio.h>
 #include <sys/fs/zfs.h>
 #include <sys/fm/fs/zfs.h>
+#include <sys/abd.h>
 
 /*
  * Virtual device vector for files.
@@ -71,6 +71,9 @@ vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	vnode_t *vp;
 	vattr_t vattr;
 	int error;
+
+	/* Rotational optimizations only make sense on block devices */
+	vd->vdev_nonrot = B_TRUE;
 
 	/*
 	 * We must have a pathname, and it must be absolute.
@@ -117,11 +120,11 @@ vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	 * Make sure it's a regular file.
 	 */
 	if (vp->v_type != VREG) {
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		(void) VOP_CLOSE(vp, spa_mode(vd->vdev_spa), 1, 0, kcred, NULL);
 #endif
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		kmem_free(vd->vdev_tsd, sizeof (vdev_file_t));
 		vd->vdev_tsd = NULL;
 #endif
@@ -191,15 +194,28 @@ vdev_file_io_strategy(void *arg)
 	vdev_t *vd = zio->io_vd;
 	vdev_file_t *vf;
 	vnode_t *vp;
+	void *addr;
 	ssize_t resid;
 
 	vf = vd->vdev_tsd;
 	vp = vf->vf_vnode;
 
 	ASSERT(zio->io_type == ZIO_TYPE_READ || zio->io_type == ZIO_TYPE_WRITE);
+	if (zio->io_type == ZIO_TYPE_READ) {
+		addr = abd_borrow_buf(zio->io_abd, zio->io_size);
+	} else {
+		addr = abd_borrow_buf_copy(zio->io_abd, zio->io_size);
+	}
+
 	zio->io_error = vn_rdwr(zio->io_type == ZIO_TYPE_READ ?
-	    UIO_READ : UIO_WRITE, vp, zio->io_data, zio->io_size,
+	    UIO_READ : UIO_WRITE, vp, addr, zio->io_size,
 	    zio->io_offset, UIO_SYSSPACE, 0, RLIM64_INFINITY, kcred, &resid);
+
+	if (zio->io_type == ZIO_TYPE_READ) {
+		abd_return_buf_copy(zio->io_abd, addr, zio->io_size);
+	} else {
+		abd_return_buf(zio->io_abd, addr, zio->io_size);
+	}
 
 	if (resid != 0 && zio->io_error == 0)
 		zio->io_error = ENOSPC;
@@ -254,8 +270,11 @@ vdev_ops_t vdev_file_ops = {
 	vdev_file_io_start,
 	vdev_file_io_done,
 	NULL,
+	NULL,
 	vdev_file_hold,
 	vdev_file_rele,
+	NULL,
+	vdev_default_xlate,
 	VDEV_TYPE_FILE,		/* name of this vdev type */
 	B_TRUE			/* leaf vdev */
 };
@@ -272,8 +291,11 @@ vdev_ops_t vdev_disk_ops = {
 	vdev_file_io_start,
 	vdev_file_io_done,
 	NULL,
+	NULL,
 	vdev_file_hold,
 	vdev_file_rele,
+	NULL,
+	vdev_default_xlate,
 	VDEV_TYPE_DISK,		/* name of this vdev type */
 	B_TRUE			/* leaf vdev */
 };

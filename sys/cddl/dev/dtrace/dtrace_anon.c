@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_anon.c 179237 2008-05-23 05:59:42Z jb $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_anon.c 179237 2008-05-23 05:59:42Z jb $
  */
 
 /*

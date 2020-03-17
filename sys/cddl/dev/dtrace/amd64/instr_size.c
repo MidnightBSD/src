@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/amd64/instr_size.c 297077 2016-03-20 20:00:25Z mav $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/amd64/instr_size.c 277300 2015-01-17 14:44:59Z smh $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.

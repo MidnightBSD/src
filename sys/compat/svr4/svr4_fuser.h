@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * $FreeBSD: stable/10/sys/compat/svr4/svr4_fuser.h 263687 2014-03-24 13:48:04Z emaste $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4_fuser.h 263289 2014-03-18 01:40:25Z emaste $
  *	Derived from:
  *	$NetBSD: svr4_fuser.h,v 1.4 1998/09/04 19:54:38 christos Exp $	 */
 

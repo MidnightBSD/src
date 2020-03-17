@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 EMC Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/vm.h 260786 2014-01-16 18:15:59Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/vm.h 258746 2013-11-29 15:39:39Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_VM_H_

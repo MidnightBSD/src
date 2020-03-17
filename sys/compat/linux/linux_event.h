@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Roman Divacky
  * Copyright (c) 2014 Dmitry Chagin
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux_event.h 293606 2016-01-09 18:23:34Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_event.h 316294 2017-03-30 20:03:20Z dchagin $
  */
 
 #ifndef _LINUX_EVENT_H_
@@ -57,5 +56,16 @@
 #define	LINUX_EPOLL_CTL_MOD	3
 
 #define	LINUX_EFD_SEMAPHORE	(1 << 0)
+
+#define	LINUX_TFD_TIMER_ABSTIME	(1 << 0)
+#define	LINUX_TFD_TIMER_CANCEL_ON_SET	(1 << 1)
+#define	LINUX_TFD_CLOEXEC	LINUX_O_CLOEXEC
+#define	LINUX_TFD_NONBLOCK	LINUX_O_NONBLOCK
+
+#define	LINUX_TFD_SHARED_FCNTL_FLAGS	(LINUX_TFD_CLOEXEC		\
+		|LINUX_TFD_NONBLOCK)
+#define	LINUX_TFD_CREATE_FLAGS	LINUX_TFD_SHARED_FCNTL_FLAGS
+#define	LINUX_TFD_SETTIME_FLAGS	(LINUX_TFD_TIMER_ABSTIME		\
+		|LINUX_TFD_TIMER_CANCEL_ON_SET)
 
 #endif	/* !_LINUX_EVENT_H_ */

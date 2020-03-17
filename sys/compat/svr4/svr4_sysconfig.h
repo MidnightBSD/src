@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1995 Christos Zoulas
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/compat/svr4/svr4_sysconfig.h 193012 2009-05-29 05:37:27Z delphij $
+ * $FreeBSD: stable/11/sys/compat/svr4/svr4_sysconfig.h 193012 2009-05-29 05:37:27Z delphij $
  */
 
 #ifndef	_SVR4_SYSCONFIG_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -65,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/svr4/svr4_ipc.c 299215 2016-05-07 08:30:21Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_ipc.c 298520 2016-04-23 20:31:18Z dchagin $");
 
 #include "opt_sysvipc.h"
 

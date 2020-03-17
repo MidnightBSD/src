@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_taskq.c 262070 2014-02-17 15:38:10Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_taskq.c 346699 2019-04-25 18:49:29Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -171,6 +170,12 @@ taskq_dispatch_ent(taskq_t *tq, task_func_t func, void *arg, u_int flags,
 
 void
 taskq_wait(taskq_t *tq)
+{
+	taskqueue_quiesce(tq->tq_queue);
+}
+
+void
+taskq_wait_id(taskq_t *tq, taskqid_t id)
 {
 	taskqueue_drain_all(tq->tq_queue);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/contrib/opensolaris/common/atomic/powerpc64/opensolaris_atomic.S 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD: stable/11/sys/cddl/contrib/opensolaris/common/atomic/powerpc64/opensolaris_atomic.S 219089 2011-02-27 19:41:40Z pjd $
  */
 
 #include <machine/asm.h>

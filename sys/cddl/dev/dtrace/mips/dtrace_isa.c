@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/mips/dtrace_isa.c 233525 2012-03-26 21:47:06Z gonzo $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/mips/dtrace_isa.c 295882 2016-02-22 09:08:04Z skra $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -45,7 +44,6 @@
 #include <machine/db_machdep.h>
 #include <machine/md_var.h>
 #include <machine/mips_opcode.h>
-#include <machine/vmparam.h>
 #include <ddb/db_sym.h>
 #include <ddb/ddb.h>
 #include <sys/kdb.h>

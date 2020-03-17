@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/mutex.h 253996 2013-08-06 15:51:56Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/mutex.h 325155 2017-10-30 10:41:01Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_MUTEX_H_
@@ -48,9 +47,9 @@ typedef enum {
 typedef struct sx	kmutex_t;
 
 #ifndef OPENSOLARIS_WITNESS
-#define	MUTEX_FLAGS	(SX_DUPOK | SX_NOWITNESS)
+#define	MUTEX_FLAGS	(SX_DUPOK | SX_NEW | SX_NOWITNESS)
 #else
-#define	MUTEX_FLAGS	(SX_DUPOK)
+#define	MUTEX_FLAGS	(SX_DUPOK | SX_NEW)
 #endif
 
 #define	mutex_init(lock, desc, type, arg)	do {			\
@@ -58,7 +57,6 @@ typedef struct sx	kmutex_t;
 	ASSERT((type) == 0 || (type) == MUTEX_DEFAULT);			\
 	KASSERT(((lock)->lock_object.lo_flags & LO_ALLMASK) !=		\
 	    LO_EXPECTED, ("lock %s already initialized", #lock));	\
-	bzero((lock), sizeof(struct sx));				\
 	for (_name = #lock; *_name != '\0'; _name++) {			\
 		if (*_name >= 'a' && *_name <= 'z')			\
 			break;						\

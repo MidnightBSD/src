@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /*
  * CDDL HEADER START

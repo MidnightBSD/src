@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/i386/dtrace_isa.c 286396 2015-08-07 04:31:02Z kib $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/i386/dtrace_isa.c 298171 2016-04-17 23:08:47Z markj $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -424,9 +423,9 @@ zero:
 uint64_t
 dtrace_getarg(int arg, int aframes)
 {
-	uintptr_t val;
+	struct trapframe *frame;
 	struct i386_frame *fp = (struct i386_frame *)dtrace_getfp();
-	uintptr_t *stack;
+	uintptr_t *stack, val;
 	int i;
 
 	for (i = 1; i <= aframes; i++) {
@@ -436,13 +435,18 @@ dtrace_getarg(int arg, int aframes)
 		    (long)dtrace_invop_callsite) {
 			/*
 			 * If we pass through the invalid op handler, we will
-			 * use the pointer that it passed to the stack as the
-			 * second argument to dtrace_invop() as the pointer to
-			 * the stack.  When using this stack, we must step
-			 * beyond the EIP/RIP that was pushed when the trap was
-			 * taken -- hence the "+ 1" below.
+			 * use the trap frame pointer that it pushed on the
+			 * stack as the second argument to dtrace_invop() as
+			 * the pointer to the stack.  When using this stack, we
+			 * must skip the third argument to dtrace_invop(),
+			 * which is included in the i386_frame.
 			 */
-			stack = ((uintptr_t **)&fp[1])[0] + 1;
+			frame = (struct trapframe *)(((uintptr_t **)&fp[1])[0]);
+			/*
+			 * Skip the three hardware-saved registers and the
+			 * return address.
+			 */
+			stack = (uintptr_t *)frame->tf_isp + 4;
 			goto load;
 		}
 

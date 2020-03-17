@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/10/sys/cddl/dev/profile/profile.c 314667 2017-03-04 13:03:31Z avg $
+ * $FreeBSD: stable/11/sys/cddl/dev/profile/profile.c 324282 2017-10-04 15:47:16Z markj $
  *
  */
 
@@ -51,6 +50,7 @@
 #include <sys/proc.h>
 #include <sys/selinfo.h>
 #include <sys/smp.h>
+#include <sys/sysctl.h>
 #include <sys/uio.h>
 #include <sys/unistd.h>
 #include <machine/cpu.h>
@@ -129,6 +129,25 @@
 
 struct profile_probe_percpu;
 
+#ifdef __mips
+/* bogus */
+#define	PROF_ARTIFICIAL_FRAMES	3
+#endif
+
+#ifdef __arm__
+#define	PROF_ARTIFICIAL_FRAMES	3
+#endif
+
+#ifdef __aarch64__
+/* TODO: verify */
+#define	PROF_ARTIFICIAL_FRAMES	10
+#endif
+
+#ifdef __riscv__
+/* TODO: verify */
+#define	PROF_ARTIFICIAL_FRAMES	10
+#endif
+
 typedef struct profile_probe {
 	char		prof_name[PROF_NAMELEN];
 	dtrace_id_t	prof_id;
@@ -148,7 +167,7 @@ typedef struct profile_probe_percpu {
 	hrtime_t	profc_expected;
 	hrtime_t	profc_interval;
 	profile_probe_t	*profc_probe;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	struct callout	profc_cyclic;
 #endif
 } profile_probe_percpu_t;
@@ -202,22 +221,27 @@ static dtrace_pattr_t profile_attr = {
 };
 
 static dtrace_pops_t profile_pops = {
-	profile_provide,
-	NULL,
-	profile_enable,
-	profile_disable,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	profile_destroy
+	.dtps_provide =		profile_provide,
+	.dtps_provide_module =	NULL,
+	.dtps_enable =		profile_enable,
+	.dtps_disable =		profile_disable,
+	.dtps_suspend =		NULL,
+	.dtps_resume =		NULL,
+	.dtps_getargdesc =	NULL,
+	.dtps_getargval =	NULL,
+	.dtps_usermode =	NULL,
+	.dtps_destroy =		profile_destroy
 };
 
 static struct cdev		*profile_cdev;
 static dtrace_provider_id_t	profile_id;
 static hrtime_t			profile_interval_min = NANOSEC / 5000;	/* 5000 hz */
-static int			profile_aframes = 0;			/* override */
+static int			profile_aframes = PROF_ARTIFICIAL_FRAMES;
+
+SYSCTL_DECL(_kern_dtrace);
+SYSCTL_NODE(_kern_dtrace, OID_AUTO, profile, CTLFLAG_RD, 0, "DTrace profile parameters");
+SYSCTL_INT(_kern_dtrace_profile, OID_AUTO, aframes, CTLFLAG_RW, &profile_aframes,
+    0, "Skipped frames for profile provider");
 
 static sbintime_t
 nsec_to_sbt(hrtime_t nsec)
@@ -336,7 +360,7 @@ profile_create(hrtime_t interval, char *name, int kind)
 	prof->prof_kind = kind;
 	prof->prof_id = dtrace_probe_create(profile_id,
 	    NULL, NULL, name,
-	    profile_aframes ? profile_aframes : PROF_ARTIFICIAL_FRAMES, prof);
+	    profile_aframes, prof);
 }
 
 /*ARGSUSED*/

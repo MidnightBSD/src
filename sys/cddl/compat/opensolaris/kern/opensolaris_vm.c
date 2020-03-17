@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 EMC Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cddl/compat/opensolaris/kern/opensolaris_vm.c 260786 2014-01-16 18:15:59Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_vm.c 258746 2013-11-29 15:39:39Z avg $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

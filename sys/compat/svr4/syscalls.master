@@ -1,4 +1,4 @@
- $MidnightBSD$
+ $FreeBSD: stable/11/sys/compat/svr4/syscalls.master 302096 2016-06-23 00:29:03Z brooks $
 ;	from: @(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ;
 ; System call name/number master file (or rather, slave, from SVR4).
@@ -87,7 +87,7 @@
 				    int pgid); }
 40	AUE_NULL	UNIMPL	xenix
 41	AUE_NULL	NOPROTO	{ int dup(u_int fd); }
-42	AUE_NULL	NOPROTO	{ int pipe(void); }
+42	AUE_NULL	STD	{ int svr4_pipe(void); }
 43	AUE_NULL	STD	{ int svr4_sys_times(struct tms *tp); }
 44	AUE_NULL	UNIMPL	profil
 45	AUE_NULL	UNIMPL	plock

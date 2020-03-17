@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Andriy Gapon
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/disp.h 260763 2014-01-16 15:57:39Z avg $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/disp.h 258632 2013-11-26 09:57:14Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_DISP_H_

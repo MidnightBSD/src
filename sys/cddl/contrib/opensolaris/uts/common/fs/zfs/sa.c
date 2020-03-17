@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -23,7 +22,7 @@
 /*
  * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  * Portions Copyright 2011 iXsystems, Inc
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2013, 2017 by Delphix. All rights reserved.
  * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
  */
@@ -132,8 +131,8 @@ typedef void (sa_iterfunc_t)(void *hdr, void *addr, sa_attr_type_t,
 
 static int sa_build_index(sa_handle_t *hdl, sa_buf_type_t buftype);
 static void sa_idx_tab_hold(objset_t *os, sa_idx_tab_t *idx_tab);
-static void *sa_find_idx_tab(objset_t *os, dmu_object_type_t bonustype,
-    void *data);
+static sa_idx_tab_t *sa_find_idx_tab(objset_t *os, dmu_object_type_t bonustype,
+    sa_hdr_phys_t *hdr);
 static void sa_idx_tab_rele(objset_t *os, void *arg);
 static void sa_copy_data(sa_data_locator_t *func, void *start, void *target,
     int buflen);
@@ -243,31 +242,23 @@ sa_cache_fini(void)
 static int
 layout_num_compare(const void *arg1, const void *arg2)
 {
-	const sa_lot_t *node1 = arg1;
-	const sa_lot_t *node2 = arg2;
+	const sa_lot_t *node1 = (const sa_lot_t *)arg1;
+	const sa_lot_t *node2 = (const sa_lot_t *)arg2;
 
-	if (node1->lot_num > node2->lot_num)
-		return (1);
-	else if (node1->lot_num < node2->lot_num)
-		return (-1);
-	return (0);
+	return (AVL_CMP(node1->lot_num, node2->lot_num));
 }
 
 static int
 layout_hash_compare(const void *arg1, const void *arg2)
 {
-	const sa_lot_t *node1 = arg1;
-	const sa_lot_t *node2 = arg2;
+	const sa_lot_t *node1 = (const sa_lot_t *)arg1;
+	const sa_lot_t *node2 = (const sa_lot_t *)arg2;
 
-	if (node1->lot_hash > node2->lot_hash)
-		return (1);
-	if (node1->lot_hash < node2->lot_hash)
-		return (-1);
-	if (node1->lot_instance > node2->lot_instance)
-		return (1);
-	if (node1->lot_instance < node2->lot_instance)
-		return (-1);
-	return (0);
+	int cmp = AVL_CMP(node1->lot_hash, node2->lot_hash);
+	if (likely(cmp))
+		return (cmp);
+
+	return (AVL_CMP(node1->lot_instance, node2->lot_instance));
 }
 
 boolean_t
@@ -1300,7 +1291,7 @@ sa_build_index(sa_handle_t *hdl, sa_buf_type_t buftype)
 
 /*ARGSUSED*/
 static void
-sa_evict(void *dbu)
+sa_evict_sync(void *dbu)
 {
 	panic("evicting sa dbuf\n");
 }
@@ -1384,7 +1375,8 @@ sa_handle_get_from_db(objset_t *os, dmu_buf_t *db, void *userp,
 		sa_handle_t *winner = NULL;
 
 		handle = kmem_cache_alloc(sa_cache, KM_SLEEP);
-		handle->sa_dbu.dbu_evict_func = NULL;
+		handle->sa_dbu.dbu_evict_func_sync = NULL;
+		handle->sa_dbu.dbu_evict_func_async = NULL;
 		handle->sa_userp = userp;
 		handle->sa_bonus = db;
 		handle->sa_os = os;
@@ -1395,7 +1387,8 @@ sa_handle_get_from_db(objset_t *os, dmu_buf_t *db, void *userp,
 		error = sa_build_index(handle, SA_BONUS);
 
 		if (hdl_type == SA_HDL_SHARED) {
-			dmu_buf_init_user(&handle->sa_dbu, sa_evict, NULL);
+			dmu_buf_init_user(&handle->sa_dbu, sa_evict_sync, NULL,
+			    NULL);
 			winner = dmu_buf_set_user_ie(db, &handle->sa_dbu);
 		}
 
@@ -1485,11 +1478,10 @@ sa_lookup_uio(sa_handle_t *hdl, sa_attr_type_t attr, uio_t *uio)
 }
 #endif
 
-void *
-sa_find_idx_tab(objset_t *os, dmu_object_type_t bonustype, void *data)
+static sa_idx_tab_t *
+sa_find_idx_tab(objset_t *os, dmu_object_type_t bonustype, sa_hdr_phys_t *hdr)
 {
 	sa_idx_tab_t *idx_tab;
-	sa_hdr_phys_t *hdr = (sa_hdr_phys_t *)data;
 	sa_os_t *sa = os->os_sa;
 	sa_lot_t *tb, search;
 	avl_index_t loc;

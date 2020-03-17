@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * $FreeBSD: stable/10/sys/compat/linux/linux_persona.h 302962 2016-07-17 15:07:33Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux_persona.h 346812 2019-04-28 09:53:08Z dchagin $
  */
 
 #ifndef LINUX_PERSONALITY_H
@@ -13,7 +12,7 @@
  */
 enum {
 	LINUX_UNAME26 =			0x0020000,
-	LINUX_ADDR_NO_RANDOMIZE = 	0x0040000,	/* disable randomization
+	LINUX_ADDR_NO_RANDOMIZE =	0x0040000,	/* disable randomization
 							 * of VA space
 							 */
 	LINUX_FDPIC_FUNCPTRS =		0x0080000,	/* userspace function

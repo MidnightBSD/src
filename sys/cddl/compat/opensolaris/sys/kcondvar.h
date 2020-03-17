@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2013 iXsystems, Inc.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/kcondvar.h 255437 2013-09-10 01:46:47Z delphij $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/kcondvar.h 324756 2017-10-19 16:16:26Z ian $
  */
 
 #ifndef _OPENSOLARIS_SYS_CONDVAR_H_
@@ -64,13 +63,8 @@ static clock_t
 cv_timedwait_hires(kcondvar_t *cvp, kmutex_t *mp, hrtime_t tim, hrtime_t res,
     int flag)
 {
-	sbintime_t sbt;
-	sbintime_t pr;
 
-	sbt = tim * SBT_1NS;
-	pr = res * SBT_1NS;
-
-	return (cv_timedwait_sbt(cvp, mp, sbt, pr, 0));
+	return (cv_timedwait_sbt(cvp, mp, nstosbt(tim), nstosbt(res), 0));
 }
 
 #endif	/* _KERNEL */

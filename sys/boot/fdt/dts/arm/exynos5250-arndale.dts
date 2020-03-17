@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/boot/fdt/dts/arm/exynos5250-arndale.dts 278599 2015-02-11 22:35:32Z ian $
+ * $FreeBSD: stable/11/sys/boot/fdt/dts/arm/exynos5250-arndale.dts 266943 2014-06-01 08:15:34Z br $
  */
 
 /dts-v1/;

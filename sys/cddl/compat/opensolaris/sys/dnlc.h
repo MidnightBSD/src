@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/dnlc.h 207937 2010-05-11 22:46:36Z pjd $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/dnlc.h 301997 2016-06-17 17:34:28Z kib $
  */
 
 #ifndef _OPENSOLARIS_SYS_DNLC_H_
@@ -36,6 +35,6 @@
 #define	dnlc_update(dvp, name, vp)	do { } while (0)
 #define	dnlc_remove(dvp, name)		do { } while (0)
 #define	dnlc_purge_vfsp(vfsp, count)	(0)
-#define	dnlc_reduce_cache(percent)	do { } while (0)
+void dnlc_reduce_cache(void *arg);
 
 #endif	/* !_OPENSOLARIS_SYS_DNLC_H_ */

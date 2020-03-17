@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -263,9 +262,9 @@ sfs_readdir_common(uint64_t parent_id, uint64_t id, struct vop_readdir_args *ap,
 		entry.d_fileno = id;
 		entry.d_type = DT_DIR;
 		entry.d_name[0] = '.';
-		entry.d_name[1] = '\0';
 		entry.d_namlen = 1;
 		entry.d_reclen = sizeof(entry);
+		dirent_terminate(&entry);
 		error = vfs_read_dirent(ap, &entry, uio->uio_offset);
 		if (error != 0)
 			return (SET_ERROR(error));
@@ -278,9 +277,9 @@ sfs_readdir_common(uint64_t parent_id, uint64_t id, struct vop_readdir_args *ap,
 		entry.d_type = DT_DIR;
 		entry.d_name[0] = '.';
 		entry.d_name[1] = '.';
-		entry.d_name[2] = '\0';
 		entry.d_namlen = 2;
 		entry.d_reclen = sizeof(entry);
+		dirent_terminate(&entry);
 		error = vfs_read_dirent(ap, &entry, uio->uio_offset);
 		if (error != 0)
 			return (SET_ERROR(error));
@@ -695,6 +694,7 @@ zfsctl_root_readdir(ap)
 	strcpy(entry.d_name, node->snapdir->sn_name);
 	entry.d_namlen = strlen(entry.d_name);
 	entry.d_reclen = sizeof(entry);
+	dirent_terminate(&entry);
 	error = vfs_read_dirent(ap, &entry, uio->uio_offset);
 	if (error != 0) {
 		if (error == ENAMETOOLONG)
@@ -753,10 +753,6 @@ zfsctl_common_pathconf(ap)
 
 	case _PC_MIN_HOLE_SIZE:
 		*ap->a_retval = (int)SPA_MINBLOCKSIZE;
-		return (0);
-
-	case _PC_ACL_EXTENDED:
-		*ap->a_retval = 0;
 		return (0);
 
 	case _PC_ACL_NFS4:
@@ -1098,6 +1094,7 @@ zfsctl_snapdir_readdir(ap)
 		strcpy(entry.d_name, snapname);
 		entry.d_namlen = strlen(entry.d_name);
 		entry.d_reclen = sizeof(entry);
+		dirent_terminate(&entry);
 		error = vfs_read_dirent(ap, &entry, uio->uio_offset);
 		if (error != 0) {
 			if (error == ENAMETOOLONG)
@@ -1237,8 +1234,7 @@ zfsctl_snapshot_vptocnp(struct vop_vptocnp_args *ap)
 		bcopy(node->sn_name, ap->a_buf + *ap->a_buflen, len);
 	}
 	vfs_unbusy(mp);
-	vget(vp, locked | LK_RETRY, curthread);
-	vdrop(vp);
+	vget(vp, locked | LK_VNHELD | LK_RETRY, curthread);
 	return (error);
 }
 

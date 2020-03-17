@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -33,7 +32,7 @@
 
 #include <sys/param.h>
 #include <sys/isa_defs.h>
-#if defined(__MidnightBSD__) && defined(_KERNEL)
+#if defined(__FreeBSD__) && defined(_KERNEL)
 #include <sys/libkern.h>
 #endif
 
@@ -386,7 +385,7 @@ extern unsigned char bcd_to_byte[256];
 static __inline int
 highbit(ulong_t i)
 {
-#if defined(__MidnightBSD__) && defined(_KERNEL) && defined(HAVE_INLINE_FLSL)
+#if defined(__FreeBSD__) && defined(_KERNEL) && defined(HAVE_INLINE_FLSL)
 	return (flsl(i));
 #else
 	int h = 1;
@@ -424,7 +423,7 @@ highbit(ulong_t i)
 static __inline int
 highbit64(uint64_t i)
 {
-#if defined(__MidnightBSD__) && defined(_KERNEL) && defined(HAVE_INLINE_FLSLL)
+#if defined(__FreeBSD__) && defined(_KERNEL) && defined(HAVE_INLINE_FLSLL)
 	return (flsll(i));
 #else
 	int h = 1;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Vassilis Laganakos
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_common.c 293529 2016-01-09 16:12:37Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_common.c 350889 2019-08-12 08:37:59Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,9 +35,11 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/linux/linux_common.c 293529 2016-01-09 
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/eventhandler.h>
+#include <sys/sx.h>
 #include <sys/sysctl.h>
 
 #include <compat/linux/linux_emul.h>
+#include <compat/linux/linux_ioctl.h>
 #include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_util.h>
 
@@ -48,6 +49,11 @@ FEATURE(linuxulator_v4l2, "V4L2 ioctl wrapper support in the linuxulator");
 MODULE_VERSION(linux_common, 1);
 
 SET_DECLARE(linux_device_handler_set, struct linux_device_handler);
+
+TAILQ_HEAD(, linux_ioctl_handler_element) linux_ioctl_handlers =
+    TAILQ_HEAD_INITIALIZER(linux_ioctl_handlers);
+struct sx linux_ioctl_sx;
+SX_SYSINIT(linux_ioctl, &linux_ioctl_sx, "Linux ioctl handlers");
 
 static eventhandler_tag linux_exec_tag;
 static eventhandler_tag linux_thread_dtor_tag;
@@ -92,3 +98,4 @@ static moduledata_t linux_common_mod = {
 };
 
 DECLARE_MODULE(linuxcommon, linux_common_mod, SI_SUB_EXEC, SI_ORDER_ANY);
+MODULE_VERSION(linuxcommon, 1);

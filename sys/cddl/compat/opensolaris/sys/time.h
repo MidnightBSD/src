@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/compat/opensolaris/sys/time.h 297116 2016-03-21 00:22:55Z mav $
+ * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/time.h 325132 2017-10-30 08:53:15Z avg $
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_
@@ -41,6 +40,9 @@
 #define	MSEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / MILLISEC))
 #define	NSEC2MSEC(n)	((n) / (NANOSEC / MILLISEC))
 
+#define	USEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / MICROSEC))
+#define	NSEC2USEC(n)	((n) / (NANOSEC / MICROSEC))
+
 #define	NSEC2SEC(n)	((n) / (NANOSEC / SEC))
 #define	SEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / SEC))
 
@@ -55,7 +57,7 @@ typedef longlong_t	hrtime_t;
 #endif
 
 #define	SEC_TO_TICK(sec)	((sec) * hz)
-#define	NSEC_TO_TICK(usec)	((usec) / (NANOSEC / hz))
+#define	NSEC_TO_TICK(nsec)	((nsec) / (NANOSEC / hz))
 
 #ifdef _KERNEL
 static __inline hrtime_t

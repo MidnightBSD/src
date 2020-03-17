@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Dmitry Chagin
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/linux/linux.h 293575 2016-01-09 17:29:08Z dchagin $
+ * $FreeBSD: stable/11/sys/compat/linux/linux.h 283474 2015-05-24 17:47:20Z dchagin $
  */
 
 #ifndef _LINUX_MI_H_

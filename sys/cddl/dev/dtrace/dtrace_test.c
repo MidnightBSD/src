@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2008 John Birrell <jb@FreeBSD.org>
  *
@@ -23,11 +22,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cddl/dev/dtrace/dtrace_test.c 260817 2014-01-17 10:58:59Z avg $
+ * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_test.c 258622 2013-11-26 08:46:27Z avg $
  *
  */
-#include "opt_kdtrace.h"
-
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/param.h>
