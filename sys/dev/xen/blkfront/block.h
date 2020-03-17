@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * XenBSD block device driver
  *
@@ -28,7 +27,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/xen/blkfront/block.h 298960 2016-05-03 07:52:06Z mav $
+ * $FreeBSD: stable/11/sys/dev/xen/blkfront/block.h 298955 2016-05-03 03:41:25Z pfg $
  */
 
 #ifndef __XEN_BLKFRONT_BLOCK_H__
@@ -161,7 +160,7 @@ typedef enum {
 	XBDF_CM_SHORTAGE  = 1 << 4, /* Free cm resource shortage active. */
 	XBDF_GNT_SHORTAGE = 1 << 5, /* Grant ref resource shortage active */
 	XBDF_WAIT_IDLE	  = 1 << 6,  /*
-				     * No new work until oustanding work
+				     * No new work until outstanding work
 				     * completes.
 				     */
 	XBDF_DISCARD	  = 1 << 7, /* backend supports discard */

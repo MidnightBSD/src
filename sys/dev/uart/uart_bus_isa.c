@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 TAKAHASHI Yoshihiro
  * Copyright (c) 2008 Marcel Moolenaar
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_isa.c 315417 2017-03-16 15:43:32Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_isa.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -186,7 +185,7 @@ uart_isa_probe(device_t dev)
 #else
 	sc->sc_class = &uart_ns8250_class;
 #endif
-	return (uart_bus_probe(dev, 0, 0, 0, 0));
+	return (uart_bus_probe(dev, 0, 0, 0, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, isa, uart_isa_driver, uart_devclass, 0, 0);

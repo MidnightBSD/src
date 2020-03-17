@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2004 Marcel Moolenaar
  * Copyright (c) 2004 - 2006 Marius Strobl <marius@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_sparc64.c 229272 2012-01-02 12:12:10Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_cpu_sparc64.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

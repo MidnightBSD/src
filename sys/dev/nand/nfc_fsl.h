@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2012 Juniper Networks, Inc.
  * Copyright (C) 2009-2012 Semihalf
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/nand/nfc_fsl.h 238046 2012-07-03 01:00:29Z marcel $
+ * $FreeBSD: stable/11/sys/dev/nand/nfc_fsl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NAND_NFC_FSL_H_

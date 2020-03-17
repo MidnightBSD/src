@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*
  * Automatically generated from sun.us.unix.kbd.
  * DO NOT EDIT!
  *
- * $FreeBSD: stable/10/sys/dev/uart/uart_kbd_sun_tables.h 122470 2003-11-11 07:33:24Z jake $
+ * $FreeBSD: stable/11/sys/dev/uart/uart_kbd_sun_tables.h 122470 2003-11-11 07:33:24Z jake $
  */
 static keymap_t keymap_sun_us_unix_kbd = { 0x80, {
 /*                                                         alt

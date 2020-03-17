@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright © 2009 Keith Packard
  *
@@ -22,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_dp_iic_helper.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_dp_iic_helper.c 298951 2016-05-03 01:17:40Z jhb $");
 
 #include <sys/types.h>
 #include <sys/kobj.h>
@@ -150,7 +149,7 @@ iic_dp_aux_xfer(device_t idev, struct iic_msg *msgs, uint32_t num)
 		buf = msgs[m].buf;
 		reading = (msgs[m].flags & IIC_M_RD) != 0;
 		ret = iic_dp_aux_address(idev, msgs[m].slave >> 1, reading);
-		if (ret != 0)
+		if (ret < 0)
 			break;
 		if (reading) {
 			for (b = 0; b < len; b++) {
@@ -161,7 +160,7 @@ iic_dp_aux_xfer(device_t idev, struct iic_msg *msgs, uint32_t num)
 		} else {
 			for (b = 0; b < len; b++) {
 				ret = iic_dp_aux_put_byte(idev, buf[b]);
-				if (ret != 0)
+				if (ret < 0)
 					break;
 			}
 		}

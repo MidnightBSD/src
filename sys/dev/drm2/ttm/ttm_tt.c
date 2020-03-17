@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_tt.c 254875 2013-08-25 15:12:26Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_tt.c 292373 2015-12-16 21:30:45Z glebius $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_module.h>
@@ -292,7 +291,8 @@ int ttm_tt_swapin(struct ttm_tt *ttm)
 		from_page = vm_page_grab(obj, i, VM_ALLOC_NORMAL);
 		if (from_page->valid != VM_PAGE_BITS_ALL) {
 			if (vm_pager_has_page(obj, i, NULL, NULL)) {
-				rv = vm_pager_get_pages(obj, &from_page, 1, 0);
+				rv = vm_pager_get_pages(obj, &from_page, 1,
+				    NULL, NULL);
 				if (rv != VM_PAGER_OK) {
 					vm_page_lock(from_page);
 					vm_page_free(from_page);

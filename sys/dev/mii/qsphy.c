@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	OpenBSD: qsphy.c,v 1.6 2000/08/26 20:04:18 nate Exp */
 /*	NetBSD: qsphy.c,v 1.19 2000/02/02 23:34:57 thorpej Exp 	*/
 
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/qsphy.c 227908 2011-11-23 20:27:26Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/qsphy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * driver for Quality Semiconductor's QS6612 ethernet 10/100 PHY
@@ -144,22 +143,10 @@ qsphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		mii_phy_setmedia(sc);
 		break;
 
 	case MII_TICK:
-		/*
-		 * Is the interface even up?
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			return (0);
-
 		/*
 		 * This PHY's autonegotiation doesn't need to be kicked.
 		 */

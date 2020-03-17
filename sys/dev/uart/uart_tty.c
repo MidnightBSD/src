@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_tty.c 294959 2016-01-27 22:48:04Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_tty.c 335659 2018-06-26 09:04:24Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_tty.c 294959 2016-01-27 22:48:04
 
 static cn_probe_t uart_cnprobe;
 static cn_init_t uart_cninit;
+static cn_init_t uart_cnresume;
 static cn_term_t uart_cnterm;
 static cn_getc_t uart_cngetc;
 static cn_putc_t uart_cnputc;
@@ -68,7 +68,10 @@ static tsw_modem_t uart_tty_modem;
 static tsw_free_t uart_tty_free;
 static tsw_busy_t uart_tty_busy;
 
-CONSOLE_DRIVER(uart);
+CONSOLE_DRIVER(
+	uart,
+	.cn_resume = uart_cnresume,
+);
 
 static struct uart_devinfo uart_console;
 
@@ -111,6 +114,13 @@ uart_cninit(struct consdev *cp)
 	di->type = UART_DEV_CONSOLE;
 	uart_add_sysdev(di);
 	uart_init(di);
+}
+
+static void
+uart_cnresume(struct consdev *cp)
+{
+
+	uart_init(cp->cn_arg);
 }
 
 static void
@@ -255,12 +265,6 @@ uart_tty_param(struct tty *tp, struct termios *t)
 		return (ENODEV);
 	if (t->c_ispeed != t->c_ospeed && t->c_ospeed != 0)
 		return (EINVAL);
-	/* Fixate certain parameters for system devices. */
-	if (sc->sc_sysdev != NULL) {
-		t->c_ispeed = t->c_ospeed = sc->sc_sysdev->baudrate;
-		t->c_cflag |= CLOCAL;
-		t->c_cflag &= ~HUPCL;
-	}
 	if (t->c_ospeed == 0) {
 		UART_SETSIG(sc, SER_DDTR | SER_DRTS);
 		return (0);
@@ -410,7 +414,7 @@ uart_tty_attach(struct uart_softc *sc)
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
 		sprintf(((struct consdev *)sc->sc_sysdev->cookie)->cn_name,
 		    "ttyu%r", unit);
-		tty_init_console(tp, 0);
+		tty_init_console(tp, sc->sc_sysdev->baudrate);
 	}
 
 	swi_add(&tty_intr_event, uart_driver_name, uart_tty_intr, sc, SWI_TTY,

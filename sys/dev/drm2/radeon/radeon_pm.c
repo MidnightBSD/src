@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_pm.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_pm.c 280183 2015-03-17 18:50:33Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 #include "radeon.h"

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-# $FreeBSD: stable/10/sys/dev/etherswitch/etherswitch_if.m 250381 2013-05-08 20:46:54Z adrian $
+# $FreeBSD: stable/11/sys/dev/etherswitch/etherswitch_if.m 250381 2013-05-08 20:46:54Z adrian $
 
 #include <sys/bus.h>
 

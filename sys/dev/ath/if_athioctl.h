@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_athioctl.h 250665 2013-05-15 18:33:05Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/if_athioctl.h 345636 2019-03-28 09:50:25Z avos $
  */
 
 /*
@@ -167,7 +166,9 @@ struct ath_stats {
 	u_int32_t	ast_tx_node_psq_overflow;
 	u_int32_t	ast_rx_stbc;		/* RX STBC frame */
 	u_int32_t	ast_tx_nodeq_overflow;	/* node sw queue overflow */
-	u_int32_t	ast_pad[12];
+	u_int32_t	ast_tx_ldpc;		/* TX LDPC frame */
+	u_int32_t	ast_tx_stbc;		/* TX STBC frame */
+	u_int32_t	ast_pad[10];
 };
 
 #define	SIOCGATHSTATS	_IOWR('i', 137, struct ifreq)
@@ -370,10 +371,9 @@ struct ath_rx_radiotap_header {
 	 */
 	struct ath_radiotap_vendor_hdr wr_v;
 #endif	/* ATH_ENABLE_RADIOTAP_VENDOR_EXT */
-} __packed;
+} __packed __aligned(8);
 
 #define ATH_TX_RADIOTAP_PRESENT (		\
-	(1 << IEEE80211_RADIOTAP_TSFT)		| \
 	(1 << IEEE80211_RADIOTAP_FLAGS)		| \
 	(1 << IEEE80211_RADIOTAP_RATE)		| \
 	(1 << IEEE80211_RADIOTAP_DBM_TX_POWER)	| \
@@ -383,7 +383,6 @@ struct ath_rx_radiotap_header {
 
 struct ath_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
-	u_int64_t	wt_tsf;
 	u_int8_t	wt_flags;
 	u_int8_t	wt_rate;
 	u_int8_t	wt_txpower;

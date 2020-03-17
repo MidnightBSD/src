@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,14 +26,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_ath_rx.h 249085 2013-04-04 08:21:56Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/if_ath_rx.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__IF_ATH_RX_H__
 #define	__IF_ATH_RX_H__
 
 extern	u_int32_t ath_calcrxfilter(struct ath_softc *sc);
 extern	void ath_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m,
-	    int subtype, int rssi, int nf);
+	    int subtype, const struct ieee80211_rx_stats *rxs,
+	    int rssi, int nf);
 
 #define	ath_stoprecv(_sc, _dodelay)		\
 	    (_sc)->sc_rx.recv_stop((_sc), (_dodelay))

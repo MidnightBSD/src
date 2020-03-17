@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996 Naoki Hamada <nao@tom-yam.or.jp>
  * All rights reserved.
@@ -30,11 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx_eisa.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vx/if_vx_eisa.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 #include <sys/module.h>
 #include <sys/bus.h>
@@ -45,7 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx_eisa.c 246128 2013-01-30 18:01:20
 
 #include <net/ethernet.h>
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_var.h>
 
 #include <dev/eisa/eisaconf.h>
 
@@ -148,7 +149,7 @@ vx_eisa_attach(device_t dev)
 	}
 	sc->vx_irq = irq;
 
-	/* Now the registers are availible through the lower ioport */
+	/* Now the registers are available through the lower ioport */
 
 	if (vx_attach(dev) == 0)
 		goto bad;

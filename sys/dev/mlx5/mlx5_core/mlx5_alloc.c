@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_alloc.c 322151 2017-08-07 12:49:30Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_alloc.c 322150 2017-08-07 12:48:13Z hselasky $
  */
 
 #include <linux/errno.h>

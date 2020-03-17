@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/t4_mp_ring.h 284052 2015-06-06 09:28:40Z np $
+ * $FreeBSD: stable/11/sys/dev/cxgbe/t4_mp_ring.h 276485 2014-12-31 23:19:16Z np $
  *
  */
 

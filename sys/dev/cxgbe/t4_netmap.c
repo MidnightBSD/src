@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Chelsio Communications, Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/t4_netmap.c 318826 2017-05-24 21:54:04Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/t4_netmap.c 355250 2019-11-30 20:42:18Z np $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -58,8 +57,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/t4_netmap.c 318826 2017-05-24 21:54:
 
 extern int fl_pad;	/* XXXNM */
 
-SYSCTL_NODE(_hw, OID_AUTO, cxgbe, CTLFLAG_RD, 0, "cxgbe netmap parameters");
-
 /*
  * 0 = normal netmap rx
  * 1 = black hole
@@ -84,7 +81,9 @@ SYSCTL_INT(_hw_cxgbe, OID_AUTO, nm_holdoff_tmr_idx, CTLFLAG_RWTUN,
  *  1: no backpressure, drop packets for the congested queue immediately.
  */
 static int nm_cong_drop = 1;
-TUNABLE_INT("hw.cxgbe.nm_cong_drop", &nm_cong_drop);
+SYSCTL_INT(_hw_cxgbe, OID_AUTO, nm_cong_drop, CTLFLAG_RDTUN,
+    &nm_cong_drop, 0,
+    "Congestion control for netmap rx queues (0 = backpressure, 1 = drop");
 
 static int
 alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int cong)
@@ -109,16 +108,10 @@ alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int cong)
 	    V_FW_IQ_CMD_VFN(0));
 	c.alloc_to_len16 = htobe32(F_FW_IQ_CMD_ALLOC | F_FW_IQ_CMD_IQSTART |
 	    FW_LEN16(c));
-	if (vi->flags & INTR_RXQ) {
-		KASSERT(nm_rxq->intr_idx < sc->intr_count,
-		    ("%s: invalid direct intr_idx %d", __func__,
-		    nm_rxq->intr_idx));
-		v = V_FW_IQ_CMD_IQANDSTINDEX(nm_rxq->intr_idx);
-	} else {
-		CXGBE_UNIMPLEMENTED(__func__);	/* XXXNM: needs review */
-		v = V_FW_IQ_CMD_IQANDSTINDEX(nm_rxq->intr_idx) |
-		    F_FW_IQ_CMD_IQANDST;
-	}
+	MPASS(!forwarding_intr_to_fwq(sc));
+	KASSERT(nm_rxq->intr_idx < sc->intr_count,
+	    ("%s: invalid direct intr_idx %d", __func__, nm_rxq->intr_idx));
+	v = V_FW_IQ_CMD_IQANDSTINDEX(nm_rxq->intr_idx);
 	c.type_to_iqandstindex = htobe32(v |
 	    V_FW_IQ_CMD_TYPE(FW_IQ_TYPE_FL_INT_CAP) |
 	    V_FW_IQ_CMD_VIID(vi->viid) |
@@ -141,7 +134,7 @@ alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int cong)
 		(black_hole == 2 ? F_FW_IQ_CMD_FL0PACKEN : 0));
 	c.fl0dcaen_to_fl0cidxfthresh =
 	    htobe16(V_FW_IQ_CMD_FL0FBMIN(chip_id(sc) <= CHELSIO_T5 ?
-		X_FETCHBURSTMIN_128B : X_FETCHBURSTMIN_64B) |
+		X_FETCHBURSTMIN_128B : X_FETCHBURSTMIN_64B_T6) |
 		V_FW_IQ_CMD_FL0FBMAX(chip_id(sc) <= CHELSIO_T5 ?
 		X_FETCHBURSTMAX_512B : X_FETCHBURSTMAX_256B));
 	c.fl0size = htobe16(na->num_rx_desc / 8 + sp->spg_len / EQ_ESIZE);
@@ -255,9 +248,11 @@ alloc_nm_txq_hwq(struct vi_info *vi, struct sge_nm_txq *nm_txq)
 	    htobe32(V_FW_EQ_ETH_CMD_HOSTFCMODE(X_HOSTFCMODE_NONE) |
 		V_FW_EQ_ETH_CMD_PCIECHN(vi->pi->tx_chan) | F_FW_EQ_ETH_CMD_FETCHRO |
 		V_FW_EQ_ETH_CMD_IQID(sc->sge.nm_rxq[nm_txq->iqidx].iq_cntxt_id));
-	c.dcaen_to_eqsize = htobe32(V_FW_EQ_ETH_CMD_FBMIN(X_FETCHBURSTMIN_64B) |
-		      V_FW_EQ_ETH_CMD_FBMAX(X_FETCHBURSTMAX_512B) |
-		      V_FW_EQ_ETH_CMD_EQSIZE(len / EQ_ESIZE));
+	c.dcaen_to_eqsize =
+	    htobe32(V_FW_EQ_ETH_CMD_FBMIN(chip_id(sc) <= CHELSIO_T5 ?
+		X_FETCHBURSTMIN_64B : X_FETCHBURSTMIN_64B_T6) |
+		V_FW_EQ_ETH_CMD_FBMAX(X_FETCHBURSTMAX_512B) |
+		V_FW_EQ_ETH_CMD_EQSIZE(len / EQ_ESIZE));
 	c.eqaddr = htobe64(nm_txq->ba);
 
 	rc = -t4_wr_mbox(sc, sc->mbox, &c, sizeof(c), &c);
@@ -346,8 +341,6 @@ cxgbe_netmap_on(struct adapter *sc, struct vi_info *vi, struct ifnet *ifp,
 	nm_set_native_flags(na);
 
 	for_each_nm_rxq(vi, i, nm_rxq) {
-		struct irq *irq = &sc->irq[vi->first_intr + i];
-
 		alloc_nm_rxq_hwq(vi, nm_rxq, tnl_cong(vi->pi, nm_cong_drop));
 		nm_rxq->fl_hwidx = hwidx;
 		slot = netmap_reset(na, NR_RX, i, 0);
@@ -370,7 +363,7 @@ cxgbe_netmap_on(struct adapter *sc, struct vi_info *vi, struct ifnet *ifp,
 		t4_write_reg(sc, sc->sge_kdoorbell_reg,
 		    nm_rxq->fl_db_val | V_PIDX(j));
 
-		atomic_cmpset_int(&irq->nm_state, NM_OFF, NM_ON);
+		(void) atomic_cmpset_int(&nm_rxq->nm_state, NM_OFF, NM_ON);
 	}
 
 	for_each_nm_txq(vi, i, nm_txq) {
@@ -431,9 +424,7 @@ cxgbe_netmap_off(struct adapter *sc, struct vi_info *vi, struct ifnet *ifp,
 		free_nm_txq_hwq(vi, nm_txq);
 	}
 	for_each_nm_rxq(vi, i, nm_rxq) {
-		struct irq *irq = &sc->irq[vi->first_intr + i];
-
-		while (!atomic_cmpset_int(&irq->nm_state, NM_ON, NM_OFF))
+		while (!atomic_cmpset_int(&nm_rxq->nm_state, NM_ON, NM_OFF))
 			pause("nmst", 1);
 
 		free_nm_rxq_hwq(vi, nm_rxq);
@@ -761,8 +752,6 @@ cxgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 			kring->nr_hwtail -= kring->nkr_num_slots;
 	}
 
-	nm_txsync_finalize(kring);
-
 	return (0);
 }
 
@@ -775,7 +764,7 @@ cxgbe_netmap_rxsync(struct netmap_kring *kring, int flags)
 	struct vi_info *vi = ifp->if_softc;
 	struct adapter *sc = vi->pi->adapter;
 	struct sge_nm_rxq *nm_rxq = &sc->sge.nm_rxq[vi->first_nm_rxq + kring->ring_id];
-	u_int const head = nm_rxsync_prologue(kring);
+	u_int const head = kring->rhead;
 	u_int n;
 	int force_update = (flags & NAF_FORCE_READ) || kring->nr_kflags & NKR_PENDINTR;
 
@@ -837,8 +826,6 @@ cxgbe_netmap_rxsync(struct netmap_kring *kring, int flags)
 		}
 	}
 
-	nm_rxsync_finalize(kring);
-
 	return (0);
 }
 
@@ -869,13 +856,13 @@ cxgbe_nm_attach(struct vi_info *vi)
 	 * freelist, and not the number of entries in the iq.  (These two are
 	 * not exactly the same due to the space taken up by the status page).
 	 */
-	na.num_rx_desc = (vi->qsize_rxq / 8) * 8;
+	na.num_rx_desc = rounddown(vi->qsize_rxq, 8);
 	na.nm_txsync = cxgbe_netmap_txsync;
 	na.nm_rxsync = cxgbe_netmap_rxsync;
 	na.nm_register = cxgbe_netmap_reg;
 	na.num_tx_rings = vi->nnmtxq;
 	na.num_rx_rings = vi->nnmrxq;
-	netmap_attach(&na);
+	netmap_attach(&na);	/* This adds IFCAP_NETMAP to if_capabilities */
 }
 
 void
@@ -913,14 +900,13 @@ handle_nm_sge_egr_update(struct adapter *sc, struct ifnet *ifp,
 }
 
 void
-t4_nm_intr(void *arg)
+service_nm_rxq(struct sge_nm_rxq *nm_rxq)
 {
-	struct sge_nm_rxq *nm_rxq = arg;
 	struct vi_info *vi = nm_rxq->vi;
 	struct adapter *sc = vi->pi->adapter;
 	struct ifnet *ifp = vi->ifp;
 	struct netmap_adapter *na = NA(ifp);
-	struct netmap_kring *kring = &na->rx_rings[nm_rxq->nid];
+	struct netmap_kring *kring = na->rx_rings[nm_rxq->nid];
 	struct netmap_ring *ring = kring->ring;
 	struct iq_desc *d = &nm_rxq->iq_desc[nm_rxq->iq_cidx];
 	const void *cpl;
@@ -961,7 +947,7 @@ t4_nm_intr(void *arg)
 			case CPL_RX_PKT:
 				ring->slot[fl_cidx].len = G_RSPD_LEN(lq) -
 				    sc->params.sge.fl_pktshift;
-				ring->slot[fl_cidx].flags = kring->nkr_slot_flags;
+				ring->slot[fl_cidx].flags = 0;
 				fl_cidx += (lq & F_RSPD_NEWBUF) ? 1 : 0;
 				fl_credits += (lq & F_RSPD_NEWBUF) ? 1 : 0;
 				if (__predict_false(fl_cidx == nm_rxq->fl_sidx))

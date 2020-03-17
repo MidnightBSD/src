@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_ooo.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_ooo.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -80,11 +79,26 @@ struct ecore_ooo_info {
 	u16		cid_base;
 };
 
+#if defined(CONFIG_ECORE_ISCSI) || defined(CONFIG_ECORE_IWARP)
 enum _ecore_status_t ecore_ooo_alloc(struct ecore_hwfn *p_hwfn);
 
 void ecore_ooo_setup(struct ecore_hwfn *p_hwfn);
 
 void ecore_ooo_free(struct ecore_hwfn *p_hwfn);
+#else
+static inline enum _ecore_status_t
+ecore_ooo_alloc(struct ecore_hwfn OSAL_UNUSED *p_hwfn)
+{
+	return ECORE_INVAL;
+}
+
+static inline void
+ecore_ooo_setup(struct ecore_hwfn OSAL_UNUSED *p_hwfn) {}
+
+static inline void
+ecore_ooo_free(struct ecore_hwfn OSAL_UNUSED *p_hwfn) {}
+#endif
+
 
 void ecore_ooo_save_history_entry(struct ecore_ooo_info *p_ooo_info,
 				  struct ooo_opaque *p_cqe);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2005 Atheros Communications, Inc.
@@ -16,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5416/ar5416_btcoex.c 251483 2013-06-07 05:17:58Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_btcoex.c 301304 2016-06-04 07:28:36Z adrian $
  */
 
 #include "opt_ah.h"
@@ -96,8 +95,10 @@ ar5416BTCoexSetWeights(struct ath_hal *ah, u_int32_t stompType)
 	struct ath_hal_5416 *ahp = AH5416(ah);
 
 	if (AR_SREV_KIWI_10_OR_LATER(ah)) {
-		/* TODO: TX RX seperate is not enabled. */
+		/* TODO: TX RX separate is not enabled. */
 		switch (stompType) {
+		case HAL_BT_COEX_STOMP_AUDIO:
+			/* XXX TODO */
 		case HAL_BT_COEX_STOMP_ALL:
 			ahp->ah_btCoexBTWeight = AR5416_BT_WGHT;
 			ahp->ah_btCoexWLANWeight = AR5416_STOMP_ALL_WLAN_WGHT;
@@ -129,6 +130,8 @@ ar5416BTCoexSetWeights(struct ath_hal *ah, u_int32_t stompType)
 		}
 	} else {
 		switch (stompType) {
+		case HAL_BT_COEX_STOMP_AUDIO:
+			/* XXX TODO */
 		case HAL_BT_COEX_STOMP_ALL:
 			ahp->ah_btCoexBTWeight = AR5416_BT_WGHT;
 			ahp->ah_btCoexWLANWeight = AR5416_STOMP_ALL_WLAN_WGHT;

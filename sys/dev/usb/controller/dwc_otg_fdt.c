@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Hans Petter Selasky. All rights reserved.
  *
@@ -25,29 +24,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/dwc_otg_fdt.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/dwc_otg_fdt.c 356648 2020-01-12 04:05:18Z kevans $");
 
-#include <sys/stdint.h>
-#include <sys/stddef.h>
 #include <sys/param.h>
-#include <sys/queue.h>
-#include <sys/types.h>
 #include <sys/systm.h>
-#include <sys/kernel.h>
 #include <sys/bus.h>
-#include <sys/module.h>
-#include <sys/lock.h>
-#include <sys/mutex.h>
 #include <sys/condvar.h>
-#include <sys/sysctl.h>
-#include <sys/sx.h>
-#include <sys/unistd.h>
-#include <sys/callout.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
-#include <sys/priv.h>
+#include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
@@ -84,10 +73,25 @@ dwc_otg_probe(device_t dev)
 	return (BUS_PROBE_DEFAULT);
 }
 
+static int
+dwc_otg_irq_index(device_t dev, int *rid)
+{
+	int idx, rv;
+	phandle_t node;
+
+	node = ofw_bus_get_node(dev);
+	rv = ofw_bus_find_string_index(node, "interrupt-names", "usb", &idx);
+	if (rv != 0)
+		return (rv);
+	*rid = idx;
+	return (0);
+}
+
 int
 dwc_otg_attach(device_t dev)
 {
 	struct dwc_otg_fdt_softc *sc = device_get_softc(dev);
+	char usb_mode[24];
 	int err;
 	int rid;
 
@@ -96,6 +100,23 @@ dwc_otg_attach(device_t dev)
 	sc->sc_otg.sc_bus.devices = sc->sc_otg.sc_devices;
 	sc->sc_otg.sc_bus.devices_max = DWC_OTG_MAX_DEVICES;
 	sc->sc_otg.sc_bus.dma_bits = 32;
+
+	/* get USB mode, if any */
+	if (OF_getprop(ofw_bus_get_node(dev), "dr_mode",
+	    &usb_mode, sizeof(usb_mode)) > 0) {
+
+		/* ensure proper zero termination */
+		usb_mode[sizeof(usb_mode) - 1] = 0;
+
+		if (strcasecmp(usb_mode, "host") == 0)
+			sc->sc_otg.sc_mode = DWC_MODE_HOST;
+		else if (strcasecmp(usb_mode, "peripheral") == 0)
+			sc->sc_otg.sc_mode = DWC_MODE_DEVICE;
+		else if (strcasecmp(usb_mode, "otg") != 0) {
+			device_printf(dev, "Invalid FDT dr_mode: %s\n",
+			    usb_mode);
+		}
+	}
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_otg.sc_bus,
@@ -116,10 +137,16 @@ dwc_otg_attach(device_t dev)
 
 
 	/*
-	 * brcm,bcm2708-usb FDT provides two interrupts,
-	 * we need only second one (VC_USB)
+	 * brcm,bcm2708-usb FDT provides two interrupts, we need only the USB
+	 * interrupt (VC_USB).  The latest FDT for it provides an
+	 * interrupt-names property and swapped them around, while older ones
+	 * did not have interrupt-names and put the usb interrupt in the second
+	 * position.  We'll attempt to use interrupt-names first with a fallback
+	 * to the old method of assuming the index based on the compatible
+	 * string.
 	 */
-	rid = ofw_bus_is_compatible(dev, "brcm,bcm2708-usb") ? 1 : 0;
+	if (dwc_otg_irq_index(dev, &rid) != 0)
+		rid = ofw_bus_is_compatible(dev, "brcm,bcm2708-usb") ? 1 : 0;
 	sc->sc_otg.sc_irq_res =
 	    bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (sc->sc_otg.sc_irq_res == NULL)

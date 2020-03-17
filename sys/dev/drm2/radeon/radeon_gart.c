@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Advanced Micro Devices, Inc.
  * Copyright 2008 Red Hat Inc.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_gart.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_gart.c 300050 2016-05-17 12:52:31Z eadler $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/radeon/radeon_drm.h>
@@ -414,7 +413,7 @@ void radeon_gart_fini(struct radeon_device *rdev)
  * (uncached system pages).
  * Each VM has an ID associated with it and there is a page table
  * associated with each VMID.  When execting a command buffer,
- * the kernel tells the the ring what VMID to use for that command
+ * the kernel tells the ring what VMID to use for that command
  * buffer.  VMIDs are allocated dynamically as commands are submitted.
  * The userspace drivers maintain their own address space and the kernel
  * sets up their pages tables accordingly when they submit their
@@ -699,7 +698,7 @@ struct radeon_fence *radeon_vm_grab_id(struct radeon_device *rdev,
 	if (vm->fence && vm->fence == rdev->vm_manager.active[vm->id])
 		return NULL;
 
-	/* we definately need to flush */
+	/* we definitely need to flush */
 	radeon_fence_unref(&vm->last_flush);
 
 	/* skip over VMID 0, since it is the system VM */

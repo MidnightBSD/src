@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Michael Smith
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/mlx/mlxio.h 59136 2000-04-11 02:52:46Z msmith $
+ *	$FreeBSD: stable/11/sys/dev/mlx/mlxio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/ioccom.h>

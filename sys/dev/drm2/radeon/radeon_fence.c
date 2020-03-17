@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2009 Jerome Glisse.
  * All Rights Reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_fence.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_fence.c 300050 2016-05-17 12:52:31Z eadler $");
 
 #include <dev/drm2/drmP.h>
 #include "radeon_reg.h"
@@ -46,7 +45,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_fence.c 282199 2015-04-
  * for GPU/CPU synchronization.  When the fence is written,
  * it is expected that all buffers associated with that fence
  * are no longer in use by the associated ring on the GPU and
- * that the the relevant GPU caches have been flushed.  Whether
+ * that the relevant GPU caches have been flushed.  Whether
  * we use a scratch register or memory location depends on the asic
  * and whether writeback is enabled.
  */
@@ -344,7 +343,7 @@ static int radeon_fence_wait_seq(struct radeon_device *rdev, u64 target_seq,
 		    ring, seq);
 
 		if (unlikely(!signaled)) {
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 			/* we were interrupted for some reason and fence
 			 * isn't signaled yet, resume waiting */
 			if (r) {
@@ -543,7 +542,7 @@ static int radeon_fence_wait_any_seq(struct radeon_device *rdev,
 		    ring, target_seq[ring]);
 
 		if (unlikely(!signaled)) {
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 			/* we were interrupted for some reason and fence
 			 * isn't signaled yet, resume waiting */
 			if (r) {
@@ -614,7 +613,7 @@ int radeon_fence_wait_any(struct radeon_device *rdev,
 		}
 
 		if (fences[i]->seq == RADEON_FENCE_SIGNALED_SEQ) {
-			/* something was allready signaled */
+			/* something was already signaled */
 			return 0;
 		}
 
@@ -645,7 +644,7 @@ int radeon_fence_wait_next_locked(struct radeon_device *rdev, int ring)
 	seq = atomic64_read(&rdev->fence_drv[ring].last_seq) + 1ULL;
 	if (seq >= rdev->fence_drv[ring].sync_seq[ring]) {
 		/* nothing to wait for, last_seq is
-		   already the last emited fence */
+		   already the last emitted fence */
 		return -ENOENT;
 	}
 	return radeon_fence_wait_seq(rdev, seq, ring, false, false);

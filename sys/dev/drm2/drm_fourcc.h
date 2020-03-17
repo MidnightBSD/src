@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2011 Intel Corporation
  *
@@ -21,7 +20,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/drm2/drm_fourcc.h 282199 2015-04-28 19:35:05Z dumbbell $
+ * $FreeBSD: stable/11/sys/dev/drm2/drm_fourcc.h 280183 2015-03-17 18:50:33Z dumbbell $
  */
 
 #ifndef DRM_FOURCC_H

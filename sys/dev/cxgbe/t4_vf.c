@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -27,16 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/t4_vf.c 318851 2017-05-25 01:43:28Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/t4_vf.c 355253 2019-11-30 21:11:17Z np $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
-#include <sys/counter.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/priv.h>
@@ -65,12 +62,8 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/t4_vf.c 318851 2017-05-25 01:43:28Z 
 struct intrs_and_queues {
 	uint16_t intr_type;	/* MSI, or MSI-X */
 	uint16_t nirq;		/* Total # of vectors */
-	uint16_t intr_flags_10g;/* Interrupt flags for each 10G port */
-	uint16_t intr_flags_1g;	/* Interrupt flags for each 1G port */
-	uint16_t ntxq10g;	/* # of NIC txq's for each 10G port */
-	uint16_t nrxq10g;	/* # of NIC rxq's for each 10G port */
-	uint16_t ntxq1g;	/* # of NIC txq's for each 1G port */
-	uint16_t nrxq1g;	/* # of NIC rxq's for each 1G port */
+	uint16_t ntxq;		/* # of NIC txq's for each port */
+	uint16_t nrxq;		/* # of NIC rxq's for each port */
 };
 
 struct {
@@ -104,16 +97,10 @@ struct {
 	{0x5812,  "Chelsio T560-CR VF"},	/* 1 x 40G, 2 x 10G */
 	{0x5814,  "Chelsio T580-LP-SO-CR VF"},	/* 2 x 40G, nomem */
 	{0x5815,  "Chelsio T502-BT VF"},	/* 2 x 1G */
-#ifdef notyet
-	{0x5804,  "Chelsio T520-BCH VF"},
-	{0x5805,  "Chelsio T540-BCH VF"},
-	{0x5806,  "Chelsio T540-CH VF"},
-	{0x5808,  "Chelsio T520-CX VF"},
-	{0x580b,  "Chelsio B520-SR VF"},
-	{0x580c,  "Chelsio B504-BT VF"},
-	{0x580f,  "Chelsio Amsterdam VF"},
-	{0x5813,  "Chelsio T580-CHR VF"},
-#endif
+	{0x5818,  "Chelsio T540-BT VF"},	/* 4 x 10GBaseT */
+	{0x5819,  "Chelsio T540-LP-BT VF"},	/* 4 x 10GBaseT */
+	{0x581a,  "Chelsio T540-SO-BT VF"},	/* 4 x 10GBaseT, nomem */
+	{0x581b,  "Chelsio T540-SO-CR VF"},	/* 4 x 10G, nomem */
 }, t6vf_pciids[] = {
 	{0x6800, "Chelsio T6-DBG-25 VF"},	/* 2 x 10/25G, debug */
 	{0x6801, "Chelsio T6225-CR VF"},	/* 2 x 10/25G */
@@ -134,6 +121,12 @@ struct {
 	/* Custom */
 	{0x6880, "Chelsio T6225 80 VF"},
 	{0x6881, "Chelsio T62100 81 VF"},
+	{0x6882, "Chelsio T6225-CR 82 VF"},
+	{0x6883, "Chelsio T62100-CR 83 VF"},
+	{0x6884, "Chelsio T64100-CR 84 VF"},
+	{0x6885, "Chelsio T6240-SO 85 VF"},
+	{0x6886, "Chelsio T6225-SO-CR 86 VF"},
+	{0x6887, "Chelsio T6225-CR 87 VF"},
 };
 
 static d_ioctl_t t4vf_ioctl;
@@ -302,6 +295,12 @@ set_params__post_init(struct adapter *sc)
 	val = 1;
 	(void)t4vf_set_params(sc, 1, &param, &val);
 
+	/* Enable 32b port caps if the firmware supports it. */
+	param = FW_PARAM_PFVF(PORT_CAPS32);
+	val = 1;
+	if (t4vf_set_params(sc, 1, &param, &val) == 0)
+		sc->params.port_caps32 = 1;
+
 	return (0);
 }
 
@@ -309,12 +308,10 @@ set_params__post_init(struct adapter *sc)
 #undef FW_PARAM_DEV
 
 static int
-cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
-    struct intrs_and_queues *iaq)
+cfg_itype_and_nqueues(struct adapter *sc, struct intrs_and_queues *iaq)
 {
 	struct vf_resources *vfres;
-	int nrxq10g, nrxq1g, nrxq;
-	int ntxq10g, ntxq1g, ntxq;
+	int nrxq, ntxq, nports;
 	int itype, iq_avail, navail, rc;
 
 	/*
@@ -322,6 +319,7 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 	 * we can allocate enough interrupts for our layout.
 	 */
 	vfres = &sc->params.vfres;
+	nports = sc->params.nports;
 	bzero(iaq, sizeof(*iaq));
 
 	for (itype = INTR_MSIX; itype != 0; itype >>= 1) {
@@ -337,8 +335,6 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 			continue;
 
 		iaq->intr_type = itype;
-		iaq->intr_flags_10g = 0;
-		iaq->intr_flags_1g = 0;
 
 		/*
 		 * XXX: The Linux driver reserves an Ingress Queue for
@@ -361,10 +357,10 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 		 * limit on ingress queues.
 		 */
 		iq_avail = vfres->niqflint - iaq->nirq;
-		if (iq_avail < n10g + n1g) {
+		if (iq_avail < nports) {
 			device_printf(sc->dev,
 			    "Not enough ingress queues (%d) for %d ports\n",
-			    vfres->niqflint, n10g + n1g);
+			    vfres->niqflint, nports);
 			return (ENXIO);
 		}
 
@@ -374,26 +370,17 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 		 * port, then don't bother, we will just forward all
 		 * interrupts to one interrupt in that case.
 		 */
-		if (iaq->nirq + n10g + n1g <= navail) {
+		if (iaq->nirq + nports <= navail) {
 			if (iq_avail > navail - iaq->nirq)
 				iq_avail = navail - iaq->nirq;
 		}
 
-		nrxq10g = t4_nrxq10g;
-		nrxq1g = t4_nrxq1g;
-		nrxq = n10g * nrxq10g + n1g * nrxq1g;
-		if (nrxq > iq_avail && nrxq1g > 1) {
-			/* Too many ingress queues.  Try just 1 for 1G. */
-			nrxq1g = 1;
-			nrxq = n10g * nrxq10g + n1g * nrxq1g;
-		}
+		nrxq = nports * t4_nrxq;
 		if (nrxq > iq_avail) {
 			/*
-			 * Still too many ingress queues.  Use what we
-			 * can for each 10G port.
+			 * Too many ingress queues.  Use what we can.
 			 */
-			nrxq10g = (iq_avail - n1g) / n10g;
-			nrxq = n10g * nrxq10g + n1g * nrxq1g;
+			nrxq = (iq_avail / nports) * nports;
 		}
 		KASSERT(nrxq <= iq_avail, ("too many ingress queues"));
 
@@ -401,45 +388,34 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 		 * Next, determine the upper bound on txqs from the limit
 		 * on ETH queues.
 		 */
-		if (vfres->nethctrl < n10g + n1g) {
+		if (vfres->nethctrl < nports) {
 			device_printf(sc->dev,
 			    "Not enough ETH queues (%d) for %d ports\n",
-			    vfres->nethctrl, n10g + n1g);
+			    vfres->nethctrl, nports);
 			return (ENXIO);
 		}
 
-		ntxq10g = t4_ntxq10g;
-		ntxq1g = t4_ntxq1g;
-		ntxq = n10g * ntxq10g + n1g * ntxq1g;
-		if (ntxq > vfres->nethctrl) {
-			/* Too many ETH queues.  Try just 1 for 1G. */
-			ntxq1g = 1;
-			ntxq = n10g * ntxq10g + n1g * ntxq1g;
-		}
+		ntxq = nports * t4_ntxq;
 		if (ntxq > vfres->nethctrl) {
 			/*
-			 * Still too many ETH queues.  Use what we
-			 * can for each 10G port.
+			 * Too many ETH queues.  Use what we can.
 			 */
-			ntxq10g = (vfres->nethctrl - n1g) / n10g;
-			ntxq = n10g * ntxq10g + n1g * ntxq1g;
+			ntxq = (vfres->nethctrl / nports) * nports;
 		}
 		KASSERT(ntxq <= vfres->nethctrl, ("too many ETH queues"));
 
 		/*
 		 * Finally, ensure we have enough egress queues.
 		 */
-		if (vfres->neq < (n10g + n1g) * 2) {
+		if (vfres->neq < nports * 2) {
 			device_printf(sc->dev,
 			    "Not enough egress queues (%d) for %d ports\n",
-			    vfres->neq, n10g + n1g);
+			    vfres->neq, nports);
 			return (ENXIO);
 		}
 		if (nrxq + ntxq > vfres->neq) {
 			/* Just punt and use 1 for everything. */
-			nrxq1g = ntxq1g = nrxq10g = ntxq10g = 1;
-			nrxq = n10g * nrxq10g + n1g * nrxq1g;
-			ntxq = n10g * ntxq10g + n1g * ntxq1g;
+			nrxq = ntxq = nports;
 		}
 		KASSERT(nrxq <= iq_avail, ("too many ingress queues"));
 		KASSERT(ntxq <= vfres->nethctrl, ("too many ETH queues"));
@@ -450,10 +426,8 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 		 * have to be a power of 2 as well.
 		 */
 		iaq->nirq += nrxq;
-		iaq->ntxq10g = ntxq10g;
-		iaq->ntxq1g = ntxq1g;
-		iaq->nrxq10g = nrxq10g;
-		iaq->nrxq1g = nrxq1g;
+		iaq->ntxq = ntxq;
+		iaq->nrxq = nrxq;
 		if (iaq->nirq <= navail &&
 		    (itype != INTR_MSI || powerof2(iaq->nirq))) {
 			navail = iaq->nirq;
@@ -468,8 +442,6 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 				return (rc);
 			}
 			if (navail == iaq->nirq) {
-				iaq->intr_flags_10g = INTR_RXQ;
-				iaq->intr_flags_1g = INTR_RXQ;
 				return (0);
 			}
 			pci_release_msi(sc->dev);
@@ -486,8 +458,6 @@ cfg_itype_and_nqueues(struct adapter *sc, int n10g, int n1g,
 			device_printf(sc->dev,
 		    "failed to allocate vectors:%d, type=%d, req=%d, rcvd=%d\n",
 			    itype, rc, iaq->nirq, navail);
-		iaq->intr_flags_10g = 0;
-		iaq->intr_flags_1g = 0;
 		return (rc);
 	}
 
@@ -503,7 +473,7 @@ static int
 t4vf_attach(device_t dev)
 {
 	struct adapter *sc;
-	int rc = 0, i, j, n10g, n1g, rqidx, tqidx;
+	int rc = 0, i, j, rqidx, tqidx;
 	struct make_dev_args mda;
 	struct intrs_and_queues iaq;
 	struct sge *s;
@@ -515,6 +485,7 @@ t4vf_attach(device_t dev)
 	sc->params.pci.mps = pci_get_max_payload(dev);
 
 	sc->flags |= IS_VF;
+	TUNABLE_INT_FETCH("hw.cxgbe.dflags", &sc->debug_flags);
 
 	sc->sge_gts_reg = VF_SGE_REG(A_SGE_VF_GTS);
 	sc->sge_kdoorbell_reg = VF_SGE_REG(A_SGE_VF_KDOORBELL);
@@ -637,11 +608,8 @@ t4vf_attach(device_t dev)
 
 	/*
 	 * First pass over all the ports - allocate VIs and initialize some
-	 * basic parameters like mac address, port type, etc.  We also figure
-	 * out whether a port is 10G or 1G and use that information when
-	 * calculating how many interrupts to attempt to allocate.
+	 * basic parameters like mac address, port type, etc.
 	 */
-	n10g = n1g = 0;
 	for_each_port(sc, i) {
 		struct port_info *pi;
 
@@ -676,11 +644,9 @@ t4vf_attach(device_t dev)
 		mtx_init(&pi->pi_lock, pi->lockname, 0, MTX_DEF);
 		sc->chan_map[pi->tx_chan] = i;
 
-		if (port_top_speed(pi) >= 10) {
-			n10g++;
-		} else {
-			n1g++;
-		}
+		/* All VIs on this port share this media. */
+		ifmedia_init(&pi->media, IFM_IMASK, cxgbe_media_change,
+		    cxgbe_media_status);
 
 		pi->dev = device_add_child(dev, sc->names->vf_ifnet_name, -1);
 		if (pi->dev == NULL) {
@@ -696,7 +662,7 @@ t4vf_attach(device_t dev)
 	/*
 	 * Interrupt type, # of interrupts, # of rx/tx queues, etc.
 	 */
-	rc = cfg_itype_and_nqueues(sc, n10g, n1g, &iaq);
+	rc = cfg_itype_and_nqueues(sc, &iaq);
 	if (rc != 0)
 		goto done; /* error message displayed already */
 
@@ -704,10 +670,10 @@ t4vf_attach(device_t dev)
 	sc->intr_count = iaq.nirq;
 
 	s = &sc->sge;
-	s->nrxq = n10g * iaq.nrxq10g + n1g * iaq.nrxq1g;
-	s->ntxq = n10g * iaq.ntxq10g + n1g * iaq.ntxq1g;
+	s->nrxq = sc->params.nports * iaq.nrxq;
+	s->ntxq = sc->params.nports * iaq.ntxq;
 	s->neq = s->ntxq + s->nrxq;	/* the free list in an rxq is an eq */
-	s->neq += sc->params.nports + 1;/* ctrl queues: 1 per port + 1 mgmt */
+	s->neq += sc->params.nports;	/* ctrl queues: 1 per port */
 	s->niq = s->nrxq + 1;		/* 1 extra for firmware event queue */
 
 	s->rxq = malloc(s->nrxq * sizeof(struct sge_rxq), M_CXGBE,
@@ -741,19 +707,11 @@ t4vf_attach(device_t dev)
 
 			vi->first_rxq = rqidx;
 			vi->first_txq = tqidx;
-			if (port_top_speed(pi) >= 10) {
-				vi->tmr_idx = t4_tmr_idx_10g;
-				vi->pktc_idx = t4_pktc_idx_10g;
-				vi->flags |= iaq.intr_flags_10g & INTR_RXQ;
-				vi->nrxq = j == 0 ? iaq.nrxq10g : 1;
-				vi->ntxq = j == 0 ? iaq.ntxq10g : 1;
-			} else {
-				vi->tmr_idx = t4_tmr_idx_1g;
-				vi->pktc_idx = t4_pktc_idx_1g;
-				vi->flags |= iaq.intr_flags_1g & INTR_RXQ;
-				vi->nrxq = j == 0 ? iaq.nrxq1g : 1;
-				vi->ntxq = j == 0 ? iaq.ntxq1g : 1;
-			}
+			vi->tmr_idx = t4_tmr_idx;
+			vi->pktc_idx = t4_pktc_idx;
+			vi->nrxq = j == 0 ? iaq.nrxq: 1;
+			vi->ntxq = j == 0 ? iaq.ntxq: 1;
+
 			rqidx += vi->nrxq;
 			tqidx += vi->ntxq;
 

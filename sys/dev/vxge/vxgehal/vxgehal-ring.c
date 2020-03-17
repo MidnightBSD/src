@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright(c) 2002-2011 Exar Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxgehal-ring.c 260286 2014-01-04 21:23:49Z dim $*/
+/*$FreeBSD: stable/11/sys/dev/vxge/vxgehal/vxgehal-ring.c 331722 2018-03-29 02:50:57Z eadler $*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 

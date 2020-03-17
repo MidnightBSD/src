@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_fops.c
  * File operations for DRM
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_fops.c 295623 2016-02-15 07:35:40Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_fops.c 288653 2015-10-04 07:45:36Z adrian $");
 
 #include <dev/drm2/drmP.h>
 

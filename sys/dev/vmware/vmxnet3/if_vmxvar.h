@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Tsubai Masanari
  * Copyright (c) 2013 Bryan Venteicher <bryanv@FreeBSD.org>
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/vmware/vmxnet3/if_vmxvar.h 274043 2014-11-03 12:38:29Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/vmware/vmxnet3/if_vmxvar.h 337856 2018-08-15 16:16:59Z loos $
  */
 
 #ifndef _IF_VMXVAR_H
@@ -132,7 +131,7 @@ struct vmxnet3_txq_stats {
 struct vmxnet3_txqueue {
 	struct mtx			 vxtxq_mtx;
 	struct vmxnet3_softc		*vxtxq_sc;
-#ifndef VMXNET3_TX_LEGACY
+#ifndef VMXNET3_LEGACY_TX
 	struct buf_ring			*vxtxq_br;
 #endif
 	int				 vxtxq_id;
@@ -143,7 +142,7 @@ struct vmxnet3_txqueue {
 	struct vmxnet3_txq_stats	 vxtxq_stats;
 	struct vmxnet3_txq_shared	*vxtxq_ts;
 	struct sysctl_oid_list		*vxtxq_sysctl;
-#ifndef VMXNET3_TX_LEGACY
+#ifndef VMXNET3_LEGACY_TX
 	struct task			 vxtxq_defrtask;
 #endif
 	char				 vxtxq_name[16];

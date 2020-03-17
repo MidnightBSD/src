@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Justin Hibbits
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_powerpc.h 263122 2014-03-14 00:12:53Z jhibbits $
+ * $FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_powerpc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_HWPMC_POWERPC_H_
@@ -52,6 +51,7 @@ struct powerpc_cpu {
 
 extern struct powerpc_cpu **powerpc_pcpu;
 
+extern int pmc_e500_initialize(struct pmc_mdep *pmc_mdep);
 extern int pmc_mpc7xxx_initialize(struct pmc_mdep *pmc_mdep);
 extern int pmc_ppc970_initialize(struct pmc_mdep *pmc_mdep);
 

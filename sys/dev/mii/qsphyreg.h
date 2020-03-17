@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*	OpenBSD: qsphyreg.h,v 1.2 1999/03/09 00:02:45 jason Exp 	*/
 /*	NetBSD: qsphyreg.h,v 1.1 1998/08/11 00:01:03 thorpej Exp 	*/
-/*	$FreeBSD: stable/10/sys/dev/mii/qsphyreg.h 204646 2010-03-03 17:55:51Z joel $	*/
+/*	$FreeBSD: stable/11/sys/dev/mii/qsphyreg.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

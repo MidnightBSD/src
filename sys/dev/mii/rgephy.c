@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/rgephy.c 292780 2015-12-27 17:12:54Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/rgephy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for the RealTek 8169S/8110S/8211B/8211C internal 10/100/1000 PHY.
@@ -43,9 +42,11 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/mii/rgephy.c 292780 2015-12-27 17:12:54Z m
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/socket.h>
+#include <sys/taskqueue.h>
 #include <sys/bus.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_media.h>
 
@@ -89,6 +90,7 @@ static void	rgephy_reset(struct mii_softc *);
 static int	rgephy_linkup(struct mii_softc *);
 static void	rgephy_loop(struct mii_softc *);
 static void	rgephy_load_dspcode(struct mii_softc *);
+static void	rgephy_disable_eee(struct mii_softc *);
 
 static const struct mii_phydesc rgephys[] = {
 	MII_PHY_DESC(REALTEK, RTL8169S),
@@ -113,13 +115,11 @@ static int
 rgephy_attach(device_t dev)
 {
 	struct mii_softc *sc;
-	struct mii_attach_args *ma;
 	u_int flags;
 
 	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
 	flags = 0;
-	if (strcmp(ma->mii_data->mii_ifp->if_dname, "re") == 0)
+	if (mii_dev_mac_match(dev, "re"))
 		flags |= MIIF_PHYPRIV0;
 	mii_phy_dev_attach(dev, flags, &rgephy_funcs, 0);
 
@@ -156,12 +156,6 @@ rgephy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		PHY_RESET(sc);	/* XXX hardware bug work-around */
 
 		anar = PHY_READ(sc, RGEPHY_MII_ANAR);
@@ -233,12 +227,6 @@ setit:
 		break;
 
 	case MII_TICK:
-		/*
-		 * Is the interface even up?
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			return (0);
-
 		/*
 		 * Only used for autonegotiation.
 		 */
@@ -530,10 +518,9 @@ rgephy_reset(struct mii_softc *sc)
 	switch (sc->mii_mpd_rev) {
 	case RGEPHY_8211F:
 		pcr = PHY_READ(sc, RGEPHY_F_MII_PCR1);
-		if ((pcr & RGEPHY_F_PCR1_MDI_MM) != 0) {
-			pcr &= ~RGEPHY_F_PCR1_MDI_MM;
-			PHY_WRITE(sc, RGEPHY_F_MII_PCR1, pcr);
-		}
+		pcr &= ~(RGEPHY_F_PCR1_MDI_MM | RGEPHY_F_PCR1_ALDPS_EN);
+		PHY_WRITE(sc, RGEPHY_F_MII_PCR1, pcr);
+		rgephy_disable_eee(sc);
 		break;
 	case RGEPHY_8211C:
 		if ((sc->mii_flags & MIIF_PHYPRIV0) == 0) {
@@ -560,4 +547,30 @@ rgephy_reset(struct mii_softc *sc)
 	mii_phy_reset(sc);
 	DELAY(1000);
 	rgephy_load_dspcode(sc);
+}
+
+static void
+rgephy_disable_eee(struct mii_softc *sc)
+{
+	uint16_t anar;
+
+	PHY_WRITE(sc, RGEPHY_F_EPAGSR, 0x0000);
+	PHY_WRITE(sc, MII_MMDACR, MMDACR_FN_ADDRESS |
+	    (MMDACR_DADDRMASK & RGEPHY_F_MMD_DEV_7));
+	PHY_WRITE(sc, MII_MMDAADR, RGEPHY_F_MMD_EEEAR);
+	PHY_WRITE(sc, MII_MMDACR, MMDACR_FN_DATANPI |
+	    (MMDACR_DADDRMASK & RGEPHY_F_MMD_DEV_7));
+	PHY_WRITE(sc, MII_MMDAADR, 0x0000);
+	PHY_WRITE(sc, MII_MMDACR, 0x0000);
+	/*
+	 * XXX
+	 * Restart auto-negotiation to take changes effect.
+	 * This may result in link establishment.
+	 */
+	anar = BMSR_MEDIA_TO_ANAR(sc->mii_capabilities) | ANAR_CSMA;
+	PHY_WRITE(sc, RGEPHY_MII_ANAR, anar);
+	PHY_WRITE(sc, RGEPHY_MII_1000CTL, RGEPHY_1000CTL_AHD |
+	    RGEPHY_1000CTL_AFD);
+	PHY_WRITE(sc, RGEPHY_MII_BMCR, RGEPHY_BMCR_RESET |
+	    RGEPHY_BMCR_AUTOEN | RGEPHY_BMCR_STARTNEG);
 }

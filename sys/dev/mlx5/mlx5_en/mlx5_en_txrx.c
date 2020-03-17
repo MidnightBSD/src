@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Mellanox Technologies. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_en/mlx5_en_txrx.c 306245 2016-09-23 08:29:27Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/mlx5_en_txrx.c 353226 2019-10-07 09:28:53Z hselasky $
  */
 
 #include "en.h"
@@ -39,7 +38,7 @@ mlx5e_get_cqe(struct mlx5e_cq *cq)
 		return (NULL);
 
 	/* ensure cqe content is read after cqe ownership bit */
-	rmb();
+	atomic_thread_fence_acq();
 
 	return (cqe);
 }
@@ -49,6 +48,6 @@ mlx5e_cq_error_event(struct mlx5_core_cq *mcq, int event)
 {
 	struct mlx5e_cq *cq = container_of(mcq, struct mlx5e_cq, mcq);
 
-	if_printf(cq->priv->ifp, "%s: cqn=0x%.6x event=0x%.2x\n",
-	    __func__, mcq->cqn, event);
+	mlx5_en_err(cq->priv->ifp, "cqn=0x%.6x event=0x%.2x\n",
+	    mcq->cqn, event);
 }

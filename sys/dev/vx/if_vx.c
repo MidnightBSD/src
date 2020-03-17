@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Herb Peyerl <hpeyerl@novatel.ca>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vx/if_vx.c 347962 2019-05-18 20:43:13Z brooks $");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support
@@ -67,6 +66,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx.c 243857 2012-12-04 09:32:43Z gle
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include <net/ethernet.h>
 #include <net/if_dl.h>
@@ -204,6 +204,8 @@ vx_attach(device_t dev)
 	vx_stop(sc);
 	VX_UNLOCK(sc);
 
+	gone_by_fcp101_dev(dev);
+
 	return 1;
 }
 
@@ -251,7 +253,7 @@ vx_init_locked(struct vx_softc *sc)
 	    S_RX_COMPLETE | S_TX_COMPLETE | S_TX_AVAIL);
 
 	/*
-         * Attempt to get rid of any stray interrupts that occured during
+         * Attempt to get rid of any stray interrupts that occurred during
          * configuration.  On the i386 this isn't possible because one may
          * already be queued.  However, a single stray interrupt is
          * unimportant.
@@ -350,7 +352,7 @@ vx_setlink(struct vx_softc *sc)
          */
 	i = sc->vx_connector;	/* default in EEPROM */
 	reason = "default";
-	warning = 0;
+	warning = NULL;
 
 	if (ifp->if_flags & IFF_LINK0) {
 		if (sc->vx_connectors & conn_tab[CONNECTOR_AUI].bit) {
@@ -463,7 +465,7 @@ startagain:
          */
 	if (len + pad > ETHER_MAX_LEN) {
 		/* packet is obviously too large: toss it */
-		++ifp->if_oerrors;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 		IF_DEQUEUE(&ifp->if_snd, m);
 		m_freem(m);
 		goto readcheck;
@@ -513,7 +515,7 @@ startagain:
 	while (pad--)
 		CSR_WRITE_1(sc, VX_W1_TX_PIO_WR_1, 0);	/* Padding */
 
-	++ifp->if_opackets;
+	if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 	sc->vx_timer = 1;
 
 readcheck:
@@ -610,12 +612,12 @@ vx_txstat(struct vx_softc *sc)
 		CSR_WRITE_1(sc, VX_W1_TX_STATUS, 0x0);
 
 		if (i & TXS_JABBER) {
-			++ifp->if_oerrors;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			if (ifp->if_flags & IFF_DEBUG)
 				if_printf(ifp, "jabber (%x)\n", i);
 			vx_reset(sc);
 		} else if (i & TXS_UNDERRUN) {
-			++ifp->if_oerrors;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			if (ifp->if_flags & IFF_DEBUG)
 				if_printf(ifp, "fifo underrun (%x) @%d\n", i,
 				    sc->vx_tx_start_thresh);
@@ -626,7 +628,7 @@ vx_txstat(struct vx_softc *sc)
 			sc->vx_tx_succ_ok = 0;
 			vx_reset(sc);
 		} else if (i & TXS_MAX_COLLISION) {
-			++ifp->if_collisions;
+			if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 			CSR_WRITE_2(sc, VX_COMMAND, TX_ENABLE);
 			ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 		} else
@@ -722,18 +724,18 @@ again:
 		return;
 
 	if (len & ERR_RX) {
-		++ifp->if_ierrors;
+		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 		goto abort;
 	}
 	len &= RX_BYTES_MASK;	/* Lower 11 bits = RX bytes. */
 
 	/* Pull packet off interface. */
 	m = vx_get(sc, len);
-	if (m == 0) {
-		ifp->if_ierrors++;
+	if (m == NULL) {
+		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 		goto abort;
 	}
-	++ifp->if_ipackets;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 	{
 		struct mbuf *m0;
@@ -741,7 +743,7 @@ again:
 		m0 = m_devget(mtod(m, char *), m->m_pkthdr.len, ETHER_ALIGN,
 		    ifp, NULL);
 		if (m0 == NULL) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			goto abort;
 		}
 		m_freem(m);
@@ -752,7 +754,7 @@ again:
 	eh = mtod(m, struct ether_header *);
 
 	/*
-         * XXX: Some cards seem to be in promiscous mode all the time.
+         * XXX: Some cards seem to be in promiscuous mode all the time.
          * we need to make sure we only get our own stuff always.
          * bleah!
          */
@@ -865,8 +867,7 @@ vx_get(struct vx_softc *sc, u_int totlen)
 			len = MLEN;
 		}
 		if (totlen >= MINCLSIZE) {
-			MCLGET(m, M_NOWAIT);
-			if (m->m_flags & M_EXT)
+			if (MCLGET(m, M_NOWAIT))
 				len = MCLBYTES;
 		}
 		len = min(totlen, len);

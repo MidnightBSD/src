@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2012 Broadcom Corporation
  * All Rights Reserved
@@ -26,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/iicbus/iicoc.h 233539 2012-03-27 10:44:32Z jchandra $
+ * $FreeBSD: stable/11/sys/dev/iicbus/iicoc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __OPENCORE_I2C_H__

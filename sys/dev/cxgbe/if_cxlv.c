@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Chelsio Communications, Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/if_cxlv.c 309447 2016-12-02 22:53:33Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/if_cxlv.c 306664 2016-10-03 23:49:05Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

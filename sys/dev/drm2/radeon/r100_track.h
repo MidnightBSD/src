@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/r100_track.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/r100_track.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 #define R100_TRACK_MAX_TEXTURE 3
 #define R200_TRACK_MAX_TEXTURE 6

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: openfirmio.h,v 1.4 2002/09/06 13:23:19 gehenna Exp $ */
 
 /*-
@@ -35,7 +34,7 @@
  *
  *	@(#)openpromio.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD: stable/10/sys/dev/ofw/openfirmio.h 146400 2005-05-19 15:22:16Z marius $
+ * $FreeBSD: stable/11/sys/dev/ofw/openfirmio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_OFW_OPENFIRMIO_H_

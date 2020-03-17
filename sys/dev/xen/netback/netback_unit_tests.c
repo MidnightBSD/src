@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2011 Spectra Logic Corporation
  * All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/xen/netback/netback_unit_tests.c 319222 2017-05-30 16:15:52Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/xen/netback/netback_unit_tests.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * \file netback_unit_tests.c
@@ -99,7 +98,7 @@ struct test_fixture {
 	/** Will be run if setup succeeds */
 	testcase_t *test;
 
-	/** Cleans up test data whether or not the setup suceeded*/
+	/** Cleans up test data whether or not the setup succeeded */
 	teardown_t *teardown;
 };
 

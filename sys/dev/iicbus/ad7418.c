@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Sam Leffler.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/ad7418.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/ad7418.c 331722 2018-03-29 02:50:57Z eadler $");
 /*
  * Analog Devices AD7418 chip sitting on the I2C bus.
  */
@@ -121,6 +120,8 @@ ad7418_attach(device_t dev)
 	int conf;
 
 	sc->sc_dev = dev;
+	sc->sc_lastupdate = ticks - hz;
+
 	sx_init(&sc->sc_lock, "ad7418");
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,

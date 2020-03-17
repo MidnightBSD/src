@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
@@ -30,12 +29,12 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/iw_cxgbe/user.h 309378 2016-12-01 23:38:52Z jhb $
+ * $FreeBSD: stable/11/sys/dev/cxgbe/iw_cxgbe/user.h 331769 2018-03-30 18:06:29Z hselasky $
  */
 #ifndef __C4IW_USER_H__
 #define __C4IW_USER_H__
 
-#define C4IW_UVERBS_ABI_VERSION	2
+#define C4IW_UVERBS_ABI_VERSION	3
 
 /*
  * Make sure that all structs defined in this file remain laid out so
@@ -68,5 +67,11 @@ struct c4iw_create_qp_resp {
 	__u32 rq_size;
 	__u32 qid_mask;
 	__u32 flags;
+};
+
+struct c4iw_alloc_ucontext_resp {
+	__u64 status_page_key;
+	__u32 status_page_size;
+	__u32 reserved; /* explicit padding (optional for i386) */
 };
 #endif

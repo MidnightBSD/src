@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/wtap/plugins/wtap_plugin.h 229970 2012-01-11 17:41:14Z adrian $
+ * $FreeBSD: stable/11/sys/dev/wtap/plugins/wtap_plugin.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _WTAP_PLUGIN_H_
 #define _WTAP_PLUGIN_H_

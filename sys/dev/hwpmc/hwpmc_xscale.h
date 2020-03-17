@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_xscale.h 200928 2009-12-23 23:16:54Z rpaulo $
+ * $FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_xscale.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_HWPMC_XSCALE_H_

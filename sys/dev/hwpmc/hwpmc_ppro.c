@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005,2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_ppro.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_ppro.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -42,7 +41,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_ppro.c 283884 2015-06-01 17:57
 #include <sys/systm.h>
 
 #include <machine/intr_machdep.h>
-#include <machine/apicvar.h>
+#include <x86/apicvar.h>
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
 #include <machine/cputypes.h>

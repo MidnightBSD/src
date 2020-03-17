@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2013 Emulex
  * All rights reserved.
@@ -37,7 +36,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: stable/10/sys/dev/oce/oce_hw.c 268046 2014-06-30 16:23:31Z delphij $ */
+/* $FreeBSD: stable/11/sys/dev/oce/oce_hw.c 338938 2018-09-25 23:48:43Z jpaetzel $ */
 
 
 #include "oce_if.h"
@@ -269,9 +268,8 @@ oce_hw_pci_alloc(POCE_SOFTC sc)
 				SYS_RES_MEMORY, &rr,
 				RF_ACTIVE|RF_SHAREABLE);
 	else
-		sc->devcfg_res = bus_alloc_resource(sc->dev,
-				SYS_RES_MEMORY, &rr,
-				0ul, ~0ul, 32768,
+		sc->devcfg_res = bus_alloc_resource_anywhere(sc->dev,
+				SYS_RES_MEMORY, &rr, 32768,
 				RF_ACTIVE|RF_SHAREABLE);
 
 	if (!sc->devcfg_res)
@@ -394,6 +392,11 @@ oce_create_nw_interface(POCE_SOFTC sc)
 
 	if (IS_SH(sc) || IS_XE201(sc))
 		capab_flags |= MBX_RX_IFACE_FLAGS_MULTICAST;
+
+        if (sc->enable_hwlro) {
+                capab_flags |= MBX_RX_IFACE_FLAGS_LRO;
+                capab_en_flags |= MBX_RX_IFACE_FLAGS_LRO;
+        }
 
 	/* enable capabilities controlled via driver startup parameters */
 	if (is_rss_enabled(sc))

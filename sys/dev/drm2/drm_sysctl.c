@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Eric Anholt
  * All Rights Reserved.
@@ -23,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_sysctl.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_sysctl.c 280183 2015-03-17 18:50:33Z dumbbell $");
 
 /** @file drm_sysctl.c
  * Implementation of various sysctls for controlling DRM behavior and reporting
@@ -69,7 +68,7 @@ int drm_sysctl_init(struct drm_device *dev)
 	dev->sysctl = info;
 
 	/* Add the sysctl node for DRI if it doesn't already exist */
-	drioid = SYSCTL_ADD_NODE(&info->ctx, &sysctl__hw_children, OID_AUTO,
+	drioid = SYSCTL_ADD_NODE(&info->ctx, SYSCTL_CHILDREN(&sysctl___hw), OID_AUTO,
 	    "dri", CTLFLAG_RW, NULL, "DRI Graphics");
 	if (!drioid) {
 		free(dev->sysctl, DRM_MEM_DRIVER);
@@ -172,8 +171,9 @@ static int drm_name_info DRM_SYSCTL_HANDLER_ARGS
 
 	/* FIXME: This still uses primary minor. */
 	minor = dev->primary;
-	DRM_SYSCTL_PRINT("%s 0x%x", dev->driver->name, dev2udev(minor->device));
-	
+	DRM_SYSCTL_PRINT("%s 0x%jx", dev->driver->name,
+	    (uintmax_t)dev2udev(minor->device));
+
 	DRM_LOCK(dev);
 	master = minor->master;
 	if (master != NULL && master->unique) {

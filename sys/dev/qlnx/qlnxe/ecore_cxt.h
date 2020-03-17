@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_cxt.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_cxt.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -44,7 +43,18 @@
 enum ecore_cxt_elem_type {
 	ECORE_ELEM_CXT,
 	ECORE_ELEM_SRQ,
-	ECORE_ELEM_TASK
+	ECORE_ELEM_TASK,
+	ECORE_ELEM_XRC_SRQ,
+};
+
+enum ilt_clients {
+	ILT_CLI_CDUC,
+	ILT_CLI_CDUT,
+	ILT_CLI_QM,
+	ILT_CLI_TM,
+	ILT_CLI_SRC,
+	ILT_CLI_TSDM,
+	ILT_CLI_MAX
 };
 
 u32 ecore_cxt_get_proto_cid_count(struct ecore_hwfn *p_hwfn,
@@ -56,7 +66,10 @@ u32 ecore_cxt_get_proto_tid_count(struct ecore_hwfn *p_hwfn,
 
 u32 ecore_cxt_get_proto_cid_start(struct ecore_hwfn *p_hwfn,
 				  enum protocol_type type);
+
 u32 ecore_cxt_get_srq_count(struct ecore_hwfn *p_hwfn);
+
+u32 ecore_cxt_get_xrc_srq_count(struct ecore_hwfn *p_hwfn);
 
 /**
  * @brief ecore_cxt_set_pf_params - Set the PF params for cxt init
@@ -139,8 +152,10 @@ void ecore_cxt_hw_init_pf(struct ecore_hwfn *p_hwfn, struct ecore_ptt *p_ptt);
  *
  * @param p_hwfn
  * @param p_ptt
+ * @param is_pf_loading
  */
-void ecore_qm_init_pf(struct ecore_hwfn *p_hwfn, struct ecore_ptt *p_ptt);
+void ecore_qm_init_pf(struct ecore_hwfn *p_hwfn, struct ecore_ptt *p_ptt,
+		      bool is_pf_loading);
 
  /**
  * @brief Reconfigures QM pf on the fly
@@ -237,5 +252,10 @@ enum _ecore_status_t ecore_cxt_get_task_ctx(struct ecore_hwfn *p_hwfn,
 					    u32 tid,
 					    u8 ctx_type,
 					    void **task_ctx);
+
+u32 ecore_cxt_get_ilt_page_size(struct ecore_hwfn *p_hwfn,
+				enum ilt_clients ilt_client);
+
+u32 ecore_cxt_get_total_srq_count(struct ecore_hwfn *p_hwfn);
 
 #endif /* _ECORE_CID_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nvme/nvme_ctrlr_cmd.c 267620 2014-06-18 19:32:38Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_ctrlr_cmd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "nvme_private.h"
 
@@ -53,7 +52,7 @@ nvme_ctrlr_cmd_identify_controller(struct nvme_controller *ctrlr, void *payload,
 }
 
 void
-nvme_ctrlr_cmd_identify_namespace(struct nvme_controller *ctrlr, uint16_t nsid,
+nvme_ctrlr_cmd_identify_namespace(struct nvme_controller *ctrlr, uint32_t nsid,
 	void *payload, nvme_cb_fn_t cb_fn, void *cb_arg)
 {
 	struct nvme_request *req;

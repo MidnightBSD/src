@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -27,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_ath_spectral.c 332320 2018-04-09 12:53:15Z emaste $
+ * $FreeBSD: stable/11/sys/dev/ath/if_ath_spectral.c 332303 2018-04-08 20:50:16Z emaste $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_spectral.c 332320 2018-04-09 12:53:15Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_spectral.c 332303 2018-04-08 20:50:16Z emaste $");
 
 /*
  * Implement some basic spectral scan control logic.
@@ -44,6 +43,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_spectral.c 332320 2018-04-09 12
 #include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_spectral.c 332320 2018-04-09 12
 #include <sys/socket.h>
  
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>		/* XXX for ether_sprintf */

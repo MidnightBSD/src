@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5416/ar5416_attach.c 305615 2016-09-08 15:06:28Z pfg $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_attach.c 305614 2016-09-08 15:05:25Z pfg $
  */
 #include "opt_ah.h"
 
@@ -298,7 +297,7 @@ ar5416GetRadioRev(struct ath_hal *ah)
 static struct ath_hal *
 ar5416Attach(uint16_t devid, HAL_SOFTC sc,
 	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, uint16_t *eepromdata,
-	HAL_STATUS *status)
+	HAL_OPS_CONFIG *ah_config, HAL_STATUS *status)
 {
 	struct ath_hal_5416 *ahp5416;
 	struct ath_hal_5212 *ahp;
@@ -938,13 +937,7 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 
 	pCap->halCompressSupport = AH_FALSE;
 	pCap->halBurstSupport = AH_TRUE;
-	/*
-	 * This is disabled for now; the net80211 layer needs to be
-	 * taught when it is and isn't appropriate to enable FF processing
-	 * with 802.11n NICs (it tries to enable both A-MPDU and
-	 * fast frames, with very tragic crash-y results.)
-	 */
-	pCap->halFastFramesSupport = AH_FALSE;
+	pCap->halFastFramesSupport = AH_TRUE;
 	pCap->halChapTuningSupport = AH_TRUE;
 	pCap->halTurboPrimeSupport = AH_TRUE;
 
@@ -1059,6 +1052,11 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 	 */
 	if (! AH_PRIVATE(ah)->ah_ispcie)
 		pCap->halSerialiseRegWar = 1;
+
+	/*
+	 * AR5416 and later NICs support MYBEACON filtering.
+	 */
+	pCap->halRxDoMyBeacon = AH_TRUE;
 
 	return AH_TRUE;
 }

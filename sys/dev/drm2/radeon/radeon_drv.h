@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* radeon_drv.h -- Private header for radeon driver -*- linux-c -*-
  *
  * Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_drv.h 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_drv.h 342969 2019-01-12 16:58:32Z markj $");
 
 #ifndef __RADEON_DRV_H__
 #define __RADEON_DRV_H__
@@ -329,10 +328,6 @@ typedef struct drm_radeon_kcmd_buffer {
 extern int radeon_no_wb;
 extern struct drm_ioctl_desc radeon_ioctls[];
 extern int radeon_max_ioctl;
-#ifdef COMPAT_FREEBSD32
-extern struct drm_ioctl_desc radeon_compat_ioctls[];
-extern int radeon_num_compat_ioctls;
-#endif
 
 extern u32 radeon_get_ring_head(drm_radeon_private_t *dev_priv);
 extern void radeon_set_ring_head(drm_radeon_private_t *dev_priv, u32 val);

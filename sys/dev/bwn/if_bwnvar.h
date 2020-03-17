@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Weongyo Jeong <weongyo@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/bwn/if_bwnvar.h 228399 2011-12-10 21:05:06Z eadler $
+ * $FreeBSD: stable/11/sys/dev/bwn/if_bwnvar.h 355454 2019-12-06 18:15:27Z brooks $
  */
 
 #ifndef _IF_BWNVAR_H
@@ -59,9 +58,9 @@ struct bwn_mac;
 #define	BWN_ISOLDFMT(mac)		((mac)->mac_fw.rev <= 351)
 #define	BWN_TSSI2DBM(num, den)						\
 	((int32_t)((num < 0) ? num / den : (num + den / 2) / den))
-#define	BWN_HDRSIZE(mac)						\
-	((BWN_ISOLDFMT(mac)) ? (100 + sizeof(struct bwn_plcp6)) :	\
-	    (104 + sizeof(struct bwn_plcp6)))
+#define	BWN_HDRSIZE(mac)	bwn_tx_hdrsize(mac)
+#define	BWN_MAXTXHDRSIZE	(112 + (sizeof(struct bwn_plcp6)))
+
 #define	BWN_PIO_COOKIE(tq, tp)						\
 	((uint16_t)((((uint16_t)tq->tq_index + 1) << 12) | tp->tp_index))
 #define	BWN_DMA_COOKIE(dr, slot)					\
@@ -70,8 +69,16 @@ struct bwn_mac;
 #define	BWN_READ_4(mac, o)		(siba_read_4(mac->mac_sc->sc_dev, o))
 #define	BWN_WRITE_2(mac, o, v)						\
 	(siba_write_2(mac->mac_sc->sc_dev, o, v))
+#define	BWN_WRITE_2_F(mac, o, v) do { \
+	(BWN_WRITE_2(mac, o, v)); \
+	BWN_READ_2(mac, o); \
+} while(0)
+#define	BWN_WRITE_SETMASK2(mac, offset, mask, set)			\
+	BWN_WRITE_2(mac, offset, (BWN_READ_2(mac, offset) & mask) | set)
 #define	BWN_WRITE_4(mac, o, v)						\
 	(siba_write_4(mac->mac_sc->sc_dev, o, v))
+#define	BWN_WRITE_SETMASK4(mac, offset, mask, set)			\
+	BWN_WRITE_4(mac, offset, (BWN_READ_4(mac, offset) & mask) | set)
 #define	BWN_PIO_TXQOFFSET(mac)						\
 	((siba_get_revid(mac->mac_sc->sc_dev) >= 11) ? 0x18 : 0)
 #define	BWN_PIO_RXQOFFSET(mac)						\
@@ -118,7 +125,7 @@ struct bwn_mac;
 		mac->mac_phy.phy_maskset(mac, offset, mask, 0);		\
 	} else								\
 		BWN_PHY_WRITE(mac, offset,				\
-		    BWN_PHY_READ(mac, offset) & mask);			\
+		    BWN_PHY_READ(mac, offset) & (mask));		\
 } while (0)
 #define	BWN_PHY_COPY(mac, dst, src)	do {				\
 	KASSERT(mac->mac_status < BWN_MAC_STATUS_INITED ||		\
@@ -149,6 +156,26 @@ struct bwn_mac;
 	(BWN_READ_4(dr->dr_mac, dr->dr_base + offset))
 #define	BWN_DMA_WRITE(dr, offset, value)			\
 	(BWN_WRITE_4(dr->dr_mac, dr->dr_base + offset, value))
+
+
+typedef enum {
+	BWN_PHY_BAND_2G = 0,
+	BWN_PHY_BAND_5G_LO = 1,
+	BWN_PHY_BAND_5G_MI = 2,
+	BWN_PHY_BAND_5G_HI = 3
+} bwn_phy_band_t;
+
+typedef enum {
+	BWN_BAND_2G,
+	BWN_BAND_5G,
+} bwn_band_t;
+
+typedef enum {
+	BWN_CHAN_TYPE_20,
+	BWN_CHAN_TYPE_20_HT,
+	BWN_CHAN_TYPE_40_HT_U,
+	BWN_CHAN_TYPE_40_HT_D,
+} bwn_chan_type_t;
 
 struct bwn_rate {
 	uint16_t			rateid;
@@ -206,6 +233,11 @@ struct bwn_loctl {
 	int8_t				q;
 };
 
+typedef enum {
+	BWN_TXPWR_RES_NEED_ADJUST,
+	BWN_TXPWR_RES_DONE,
+} bwn_txpwr_result_t;
+
 struct bwn_lo_calib {
 	struct bwn_bbatt		bbatt;
 	struct bwn_rfatt		rfatt;
@@ -228,11 +260,40 @@ struct bwn_rxhdr4 {
 			int8_t		power1;
 		} __packed n;
 	} __packed phy;
-	uint16_t			phy_status2;
-	uint16_t			phy_status3;
-	uint32_t			mac_status;
-	uint16_t			mac_time;
-	uint16_t			channel;
+	union {
+		struct {
+			int8_t		power2;
+			uint8_t		pad;
+		} __packed n;
+		struct {
+			uint8_t		pad;
+			int8_t		ht_power0;
+		} __packed ht;
+		uint16_t		phy_status2;
+	} __packed ps2;
+	union {
+		struct {
+			uint16_t	phy_status3;
+		} __packed lp;
+		struct {
+			int8_t		phy_ht_power1;
+			int8_t		phy_ht_power2;
+		} __packed ht;
+	} __packed ps3;
+	union {
+		struct {
+			uint32_t	mac_status;
+			uint16_t	mac_time;
+			uint16_t	channel;
+		} __packed r351;
+		struct {
+			uint16_t	phy_status4;
+			uint16_t	phy_status5;
+			uint32_t	mac_status;
+			uint16_t	mac_time;
+			uint16_t	channel;
+		} __packed r598;
+	} __packed ps4;
 } __packed;
 
 struct bwn_txstatus {
@@ -315,8 +376,6 @@ struct bwn_phy_g {
 #define	BWN_IMMODE_NONWLAN		1
 #define	BWN_IMMODE_MANUAL		2
 #define	BWN_IMMODE_AUTO			3
-#define	BWN_TXPWR_RES_NEED_ADJUST	0
-#define	BWN_TXPWR_RES_DONE		1
 
 #define	BWN_PHYLP_TXPCTL_UNKNOWN	0
 #define	BWN_PHYLP_TXPCTL_OFF		1
@@ -397,6 +456,8 @@ struct bwn_b206x_rfinit_entry {
 	uint8_t				br_flags;
 };
 
+struct bwn_phy_n;
+
 struct bwn_phy {
 	uint8_t				type;
 	uint8_t				rev;
@@ -409,10 +470,17 @@ struct bwn_phy {
 	struct bwn_phy_g		phy_g;
 	struct bwn_phy_lp		phy_lp;
 
+	/*
+	 * I'd like the newer PHY code to not hide in the top-level
+	 * structs..
+	 */
+	struct bwn_phy_n		*phy_n;
+
 	uint16_t			rf_manuf;
 	uint16_t			rf_ver;
 	uint8_t				rf_rev;
 	int				rf_on;
+	int				phy_do_full_init;
 
 	int				txpower;
 	int				hwpctl;
@@ -442,7 +510,7 @@ struct bwn_phy {
 	uint32_t			(*get_default_chan)(struct bwn_mac *);
 	void				(*set_antenna)(struct bwn_mac *, int);
 	int				(*set_im)(struct bwn_mac *, int);
-	int				(*recalc_txpwr)(struct bwn_mac *, int);
+	bwn_txpwr_result_t		(*recalc_txpwr)(struct bwn_mac *, int);
 	void				(*set_txpwr)(struct bwn_mac *);
 	void				(*task_15s)(struct bwn_mac *);
 	void				(*task_60s)(struct bwn_mac *);
@@ -497,7 +565,7 @@ struct bwn_rx_radiotap_header {
 	int8_t				wr_antsignal;
 	int8_t				wr_antnoise;
 	u_int8_t			wr_antenna;
-};
+} __packed __aligned(8);
 
 #define	BWN_TX_RADIOTAP_PRESENT (		\
 	(1 << IEEE80211_RADIOTAP_FLAGS)		| \
@@ -515,7 +583,7 @@ struct bwn_tx_radiotap_header {
 	u_int16_t			wt_chan_flags;
 	u_int8_t			wt_txpower;
 	u_int8_t			wt_antenna;
-};
+} __packed;
 
 struct bwn_stats {
 	int32_t				rtsfail;
@@ -657,7 +725,6 @@ struct bwn_pio_txqueue {
 	uint16_t			tq_size;
 	uint16_t			tq_used;
 	uint16_t			tq_free;
-	uint8_t				tq_stop;
 	uint8_t				tq_index;
 	struct bwn_pio_txpkt		tq_pkts[BWN_PIO_MAX_TXPACKETS];
 	TAILQ_HEAD(, bwn_pio_txpkt)	tq_pktlist;
@@ -717,8 +784,8 @@ struct bwn_txhdr {
 			uint8_t		rts_frame[16];
 			uint8_t		pad1[2];
 			struct bwn_plcp6	plcp;
-		} __packed old;
-		/* format > r410 */
+		} __packed r351;
+		/* format > r410 < r598 */
 		struct {
 			uint16_t	mimo_antenna;
 			uint16_t	preload_size;
@@ -729,7 +796,22 @@ struct bwn_txhdr {
 			uint8_t		rts_frame[16];
 			uint8_t		pad1[2];
 			struct bwn_plcp6	plcp;
-		} __packed new;
+		} __packed r410;
+		struct {
+			uint16_t	mimo_antenna;
+			uint16_t	preload_size;
+			uint8_t		pad0[2];
+			uint16_t	cookie;
+			uint16_t	tx_status;
+			uint16_t	max_n_mpdus;
+			uint16_t	max_a_bytes_mrt;
+			uint16_t	max_a_bytes_fbr;
+			uint16_t	min_m_bytes;
+			struct bwn_plcp6	rts_plcp;
+			uint8_t		rts_frame[16];
+			uint8_t		pad1[2];
+			struct bwn_plcp6	plcp;
+		} __packed r598;
 	} __packed body;
 } __packed;
 
@@ -753,6 +835,12 @@ struct bwn_fwinitvals {
 	} __packed data;
 } __packed;
 
+enum bwn_fw_hdr_format {
+	BWN_FW_HDR_598,
+	BWN_FW_HDR_410,
+	BWN_FW_HDR_351,
+};
+
 enum bwn_fwtype {
 	BWN_FWTYPE_DEFAULT,
 	BWN_FWTYPE_OPENSOURCE,
@@ -775,6 +863,7 @@ struct bwn_fw {
 	struct bwn_fwfile		pcm;
 	struct bwn_fwfile		initvals;
 	struct bwn_fwfile		initvals_band;
+	enum bwn_fw_hdr_format		fw_hdr_format;
 
 	uint16_t			rev;
 	uint16_t			patch;
@@ -884,6 +973,23 @@ struct bwn_mac {
 	TAILQ_ENTRY(bwn_mac)	mac_list;
 };
 
+static inline int
+bwn_tx_hdrsize(struct bwn_mac *mac)
+{
+	switch (mac->mac_fw.fw_hdr_format) {
+	case BWN_FW_HDR_598:
+		return (112 + (sizeof(struct bwn_plcp6)));
+	case BWN_FW_HDR_410:
+		return (104 + (sizeof(struct bwn_plcp6)));
+	case BWN_FW_HDR_351:
+		return (100 + (sizeof(struct bwn_plcp6)));
+	default:
+		printf("%s: unknown header format (%d)\n", __func__,
+		    mac->mac_fw.fw_hdr_format);
+		return (112 + (sizeof(struct bwn_plcp6)));
+	}
+}
+
 /*
  * Driver-specific vap state.
  */
@@ -898,17 +1004,18 @@ struct bwn_vap {
 struct bwn_softc {
 	device_t			sc_dev;
 	struct mtx			sc_mtx;
-	struct ifnet			*sc_ifp;
+	struct ieee80211com		sc_ic;
+	struct mbufq			sc_snd;
 	unsigned			sc_flags;
 #define	BWN_FLAG_ATTACHED		(1 << 0)
 #define	BWN_FLAG_INVALID		(1 << 1)
 #define	BWN_FLAG_NEED_BEACON_TP		(1 << 2)
+#define	BWN_FLAG_RUNNING		(1 << 3)
 	unsigned			sc_debug;
 
 	struct bwn_mac		*sc_curmac;
 	TAILQ_HEAD(, bwn_mac)	sc_maclist;
 
-	uint8_t				sc_macaddr[IEEE80211_ADDR_LEN];
 	uint8_t				sc_bssid[IEEE80211_ADDR_LEN];
 	unsigned int			sc_filters;
 	uint8_t				sc_beacons[2];
@@ -950,4 +1057,107 @@ struct bwn_softc {
 #define	BWN_UNLOCK(sc)		mtx_unlock(&(sc)->sc_mtx)
 #define	BWN_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->sc_mtx, MA_OWNED)
 
+static inline bwn_band_t
+bwn_channel_band(struct bwn_mac *mac, struct ieee80211_channel *c)
+{
+	if (IEEE80211_IS_CHAN_5GHZ(c))
+		return BWN_BAND_5G;
+	/* XXX check 2g, log error if not 2g or 5g? */
+	return BWN_BAND_2G;
+}
+
+static inline bwn_band_t
+bwn_current_band(struct bwn_mac *mac)
+{
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+	if (IEEE80211_IS_CHAN_5GHZ(ic->ic_curchan))
+		return BWN_BAND_5G;
+	/* XXX check 2g, log error if not 2g or 5g? */
+	return BWN_BAND_2G;
+}
+
+static inline bool
+bwn_is_40mhz(struct bwn_mac *mac)
+{
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+
+	return !! (IEEE80211_IS_CHAN_HT40(ic->ic_curchan));
+}
+
+static inline int
+bwn_get_centre_freq(struct bwn_mac *mac)
+{
+
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+	/* XXX TODO: calculate correctly for HT40 mode */
+	return ic->ic_curchan->ic_freq;
+}
+
+static inline int
+bwn_get_chan_centre_freq(struct bwn_mac *mac, struct ieee80211_channel *chan)
+{
+
+	/* XXX TODO: calculate correctly for HT40 mode */
+	return chan->ic_freq;
+}
+
+static inline int
+bwn_get_chan(struct bwn_mac *mac)
+{
+
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+	/* XXX TODO: calculate correctly for HT40 mode */
+	return ic->ic_curchan->ic_ieee;
+}
+
+static inline struct ieee80211_channel *
+bwn_get_channel(struct bwn_mac *mac)
+{
+
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+	return ic->ic_curchan;
+}
+
+static inline bool
+bwn_is_chan_passive(struct bwn_mac *mac)
+{
+
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+	return !! IEEE80211_IS_CHAN_PASSIVE(ic->ic_curchan);
+}
+
+static inline bwn_chan_type_t
+bwn_get_chan_type(struct bwn_mac *mac, struct ieee80211_channel *c)
+{
+	struct ieee80211com *ic = &mac->mac_sc->sc_ic;
+	if (c == NULL)
+		c = ic->ic_curchan;
+	if (IEEE80211_IS_CHAN_HT40U(c))
+		return BWN_CHAN_TYPE_40_HT_U;
+	else if (IEEE80211_IS_CHAN_HT40D(c))
+		return BWN_CHAN_TYPE_40_HT_D;
+	else if (IEEE80211_IS_CHAN_HT20(c))
+		return BWN_CHAN_TYPE_20_HT;
+	else
+		return BWN_CHAN_TYPE_20;
+}
+
+static inline int
+bwn_get_chan_power(struct bwn_mac *mac, struct ieee80211_channel *c)
+{
+
+	/* return in dbm */
+	return c->ic_maxpower / 2;
+}
+
+/*
+ * For now there's no bhnd bus support.  Places where it matters
+ * should call this routine so we can start logging things.
+ */
+static inline int
+bwn_is_bus_siba(struct bwn_mac *mac)
+{
+
+	return 1;
+}
 #endif	/* !_IF_BWNVAR_H */

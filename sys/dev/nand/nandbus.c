@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nand/nandbus.c 266065 2014-05-14 18:16:32Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nandbus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

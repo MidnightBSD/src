@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_lock.c
  * IOCTLs for locking
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_lock.c 314593 2017-03-03 12:03:50Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_lock.c 288112 2015-09-22 15:32:27Z bz $");
 
 #include <dev/drm2/drmP.h>
 

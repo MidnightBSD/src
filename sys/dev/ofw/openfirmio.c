@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: openfirmio.c,v 1.4 2002/09/06 13:23:19 gehenna Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/openfirmio.c 194138 2009-06-14 00:05:38Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ofw/openfirmio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*-
  * Copyright (c) 1992, 1993

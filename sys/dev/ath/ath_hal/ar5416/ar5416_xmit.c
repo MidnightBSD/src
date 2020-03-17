@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5416/ar5416_xmit.c 249580 2013-04-17 07:31:53Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_xmit.c 301042 2016-05-31 16:07:15Z adrian $
  */
 #include "opt_ah.h"
 
@@ -353,6 +352,7 @@ ar5416SetupTxDesc(struct ath_hal *ah, struct ath_desc *ds,
 
 	/*
 	 * XXX For now, just assume that this isn't a HT40 frame.
+	 * It'll get over-ridden by the multi-rate TX power setup.
 	 */
 	if (AH5212(ah)->ah_tpcEnabled) {
 		txPower = ar5416GetTxRatePower(ah, txRate0,
@@ -369,6 +369,7 @@ ar5416SetupTxDesc(struct ath_hal *ah, struct ath_desc *ds,
 		     ;
 	ads->ds_ctl1 = (type << AR_FrameType_S)
 		     | (flags & HAL_TXDESC_NOACK ? AR_NoAck : 0)
+		     | (flags & HAL_TXDESC_HWTS ? AR_InsertTS : 0)
                      ;
 	ads->ds_ctl2 = SM(txTries0, AR_XmitDataTries0)
 		     | (flags & HAL_TXDESC_DURENA ? AR_DurUpdateEn : 0)
@@ -451,6 +452,10 @@ ar5416SetupXTxDesc(struct ath_hal *ah, struct ath_desc *ds,
 	return AH_TRUE;
 }
 
+/*
+ * XXX TODO: Figure out if AR_InsertTS is required on all sub-frames
+ * of a TX descriptor.
+ */
 HAL_BOOL
 ar5416FillTxDesc(struct ath_hal *ah, struct ath_desc *ds,
 	HAL_DMA_ADDR *bufAddrList, uint32_t *segLenList, u_int descId,
@@ -808,7 +813,7 @@ ar5416ProcTxDesc(struct ath_hal *ah,
 	}
 
 	/*
-	 * These fields are not used. Zero these to preserve compatability
+	 * These fields are not used. Zero these to preserve compatibility
 	 * with existing drivers.
 	 */
 	ts->ts_virtcol = MS(ads->ds_ctl1, AR_VirtRetryCnt);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_core.c 294229 2016-01-17 18:18:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_core.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -65,7 +64,12 @@ static MALLOC_DEFINE(M_UART, "UART", "UART driver");
 #define	UART_POLL_FREQ		50
 #endif
 static int uart_poll_freq = UART_POLL_FREQ;
-TUNABLE_INT("debug.uart_poll_freq", &uart_poll_freq);
+SYSCTL_INT(_debug, OID_AUTO, uart_poll_freq, CTLFLAG_RDTUN, &uart_poll_freq,
+    0, "UART poll frequency");
+
+static int uart_force_poll;
+SYSCTL_INT(_debug, OID_AUTO, uart_force_poll, CTLFLAG_RDTUN, &uart_force_poll,
+    0, "Force UART polling");
 
 static inline int
 uart_pps_mode_valid(int pps_mode)
@@ -240,6 +244,18 @@ int
 uart_getrange(struct uart_class *uc)
 {
 	return ((uc != NULL) ? uc->uc_range : 0);
+}
+
+u_int
+uart_getregshift(struct uart_class *uc)
+{
+	return ((uc != NULL) ? uc->uc_rshift : 0);
+}
+
+u_int
+uart_getregiowidth(struct uart_class *uc)
+{
+	return ((uc != NULL) ? uc->uc_riowidth : 0);
 }
 
 /*
@@ -471,7 +487,7 @@ uart_bus_sysdev(device_t dev)
 }
 
 int
-uart_bus_probe(device_t dev, int regshft, int rclk, int rid, int chan)
+uart_bus_probe(device_t dev, int regshft, int regiowidth, int rclk, int rid, int chan, int quirks)
 {
 	struct uart_softc *sc;
 	struct uart_devinfo *sysdev;
@@ -507,14 +523,13 @@ uart_bus_probe(device_t dev, int regshft, int rclk, int rid, int chan)
 	 */
 	sc->sc_rrid = rid;
 	sc->sc_rtype = SYS_RES_IOPORT;
-	sc->sc_rres = bus_alloc_resource(dev, sc->sc_rtype, &sc->sc_rrid,
-	    0, ~0, uart_getrange(sc->sc_class), RF_ACTIVE);
+	sc->sc_rres = bus_alloc_resource_any(dev, sc->sc_rtype, &sc->sc_rrid,
+	    RF_ACTIVE);
 	if (sc->sc_rres == NULL) {
 		sc->sc_rrid = rid;
 		sc->sc_rtype = SYS_RES_MEMORY;
-		sc->sc_rres = bus_alloc_resource(dev, sc->sc_rtype,
-		    &sc->sc_rrid, 0, ~0, uart_getrange(sc->sc_class),
-		    RF_ACTIVE);
+		sc->sc_rres = bus_alloc_resource_any(dev, sc->sc_rtype,
+		    &sc->sc_rrid, RF_ACTIVE);
 		if (sc->sc_rres == NULL)
 			return (ENXIO);
 	}
@@ -530,7 +545,9 @@ uart_bus_probe(device_t dev, int regshft, int rclk, int rid, int chan)
 	sc->sc_bas.bst = rman_get_bustag(sc->sc_rres);
 	sc->sc_bas.chan = chan;
 	sc->sc_bas.regshft = regshft;
+	sc->sc_bas.regiowidth = regiowidth;
 	sc->sc_bas.rclk = (rclk == 0) ? sc->sc_class->uc_rclk : rclk;
+	sc->sc_bas.busy_detect = !!(quirks & UART_F_BUSY_DETECT);
 
 	SLIST_FOREACH(sysdev, &uart_sysdevs, next) {
 		if (chan == sysdev->bas.chan &&
@@ -589,8 +606,8 @@ uart_bus_attach(device_t dev)
 	 * Re-allocate. We expect that the softc contains the information
 	 * collected by uart_bus_probe() intact.
 	 */
-	sc->sc_rres = bus_alloc_resource(dev, sc->sc_rtype, &sc->sc_rrid,
-	    0, ~0, uart_getrange(sc->sc_class), RF_ACTIVE);
+	sc->sc_rres = bus_alloc_resource_any(dev, sc->sc_rtype, &sc->sc_rrid,
+	    RF_ACTIVE);
 	if (sc->sc_rres == NULL) {
 		mtx_destroy(&sc->sc_hwmtx_s);
 		return (ENXIO);
@@ -663,7 +680,7 @@ uart_bus_attach(device_t dev)
 	 * conditions. We may have broken H/W and polling is probably the
 	 * safest thing to do.
 	 */
-	if (filt != FILTER_SCHEDULE_THREAD) {
+	if (filt != FILTER_SCHEDULE_THREAD && !uart_force_poll) {
 		sc->sc_irid = 0;
 		sc->sc_ires = bus_alloc_resource_any(dev, SYS_RES_IRQ,
 		    &sc->sc_irid, RF_ACTIVE | RF_SHAREABLE);
@@ -689,6 +706,8 @@ uart_bus_attach(device_t dev)
 		/* No interrupt resource. Force polled mode. */
 		sc->sc_polled = 1;
 		callout_init(&sc->sc_timer, 1);
+		callout_reset(&sc->sc_timer, hz / uart_poll_freq,
+		    (timeout_t *)uart_intr, sc);
 	}
 
 	if (bootverbose && (sc->sc_fastintr || sc->sc_polled)) {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Michael Smith
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/mlx/mlx.c 281826 2015-04-21 11:27:50Z mav $
+ *	$FreeBSD: stable/11/sys/dev/mlx/mlx.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -192,6 +191,8 @@ mlx_free(struct mlx_softc *sc)
 	bus_dma_tag_destroy(sc->mlx_buffer_dmat);
 
     /* free and destroy DMA memory and tag for s/g lists */
+    if (sc->mlx_sgbusaddr)
+	bus_dmamap_unload(sc->mlx_sg_dmat, sc->mlx_sg_dmamap);
     if (sc->mlx_sgtable)
 	bus_dmamem_free(sc->mlx_sg_dmat, sc->mlx_sgtable, sc->mlx_sg_dmamap);
     if (sc->mlx_sg_dmat)
@@ -240,10 +241,15 @@ mlx_sglist_map(struct mlx_softc *sc)
     debug_called(1);
 
     /* destroy any existing mappings */
+    if (sc->mlx_sgbusaddr)
+	bus_dmamap_unload(sc->mlx_sg_dmat, sc->mlx_sg_dmamap);
     if (sc->mlx_sgtable)
 	bus_dmamem_free(sc->mlx_sg_dmat, sc->mlx_sgtable, sc->mlx_sg_dmamap);
     if (sc->mlx_sg_dmat)
 	bus_dma_tag_destroy(sc->mlx_sg_dmat);
+    sc->mlx_sgbusaddr = 0;
+    sc->mlx_sgtable = NULL;
+    sc->mlx_sg_dmat = NULL;
 
     /*
      * Create a single tag describing a region large enough to hold all of
@@ -1358,7 +1364,7 @@ mlx_periodic_eventlog_respond(struct mlx_command *mc)
 	    /* Mylex vendor-specific message indicating a drive was killed? */
 	    if ((el->el_sensekey == 9) &&
 		(el->el_asc == 0x80)) {
-		if (el->el_asq < (sizeof(mlx_sense_messages) / sizeof(mlx_sense_messages[0]))) {
+		if (el->el_asq < nitems(mlx_sense_messages)) {
 		    reason = mlx_sense_messages[el->el_asq];
 		} else {
 		    reason = "for unknown reason";
@@ -1862,7 +1868,7 @@ mlx_startio_cb(void *arg, bus_dma_segment_t *segs, int nsegments, int error)
     /* build a suitable I/O command (assumes 512-byte rounded transfers) */
     mlxd = bp->bio_disk->d_drv1;
     driveno = mlxd->mlxd_drive - sc->mlx_sysdrive;
-    blkcount = (bp->bio_bcount + MLX_BLKSIZE - 1) / MLX_BLKSIZE;
+    blkcount = howmany(bp->bio_bcount, MLX_BLKSIZE);
 
     if ((bp->bio_pblkno + blkcount) > sc->mlx_sysdrive[driveno].ms_size)
 	device_printf(sc->mlx_dev,

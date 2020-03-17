@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ah_debug.h 249131 2013-04-05 07:41:47Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_debug.h 249131 2013-04-05 07:41:47Z adrian $
  */
 #ifndef _ATH_AH_DEBUG_H_
 #define _ATH_AH_DEBUG_H_

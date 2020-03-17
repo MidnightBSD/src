@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 John Bicket
  * All rights reserved.
@@ -34,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_rate/sample/sample.h 239284 2012-08-15 07:10:10Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_rate/sample/sample.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -114,7 +113,7 @@ struct sample_node {
 #ifdef	_KERNEL
 
 #define	ATH_NODE_SAMPLE(an)	((struct sample_node *)&(an)[1])
-#define	IS_RATE_DEFINED(sn, rix)	(((sn)->ratemask & (1<<(rix))) != 0)
+#define	IS_RATE_DEFINED(sn, rix)	(((uint64_t) (sn)->ratemask & (1ULL<<((uint64_t) rix))) != 0)
 
 #ifndef MIN
 #define	MIN(a,b)	((a) < (b) ? (a) : (b))
@@ -135,8 +134,7 @@ static unsigned calc_usecs_unicast_packet(struct ath_softc *sc,
 				int long_retries, int is_ht40)
 {
 	const HAL_RATE_TABLE *rt = sc->sc_currates;
-	struct ifnet *ifp = sc->sc_ifp;
-	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211com *ic = &sc->sc_ic;
 	int rts, cts;
 	
 	unsigned t_slot = 20;

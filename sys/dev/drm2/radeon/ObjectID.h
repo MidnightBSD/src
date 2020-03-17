@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 * Copyright 2006-2007 Advanced Micro Devices, Inc.  
 *
@@ -26,7 +25,7 @@
 #define _OBJECTID_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/ObjectID.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/ObjectID.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 #if defined(_X86_)
 #pragma pack(1)

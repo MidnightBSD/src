@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2006 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5211/ar5211_xmit.c 239051 2012-08-05 10:12:27Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5211/ar5211_xmit.c 239051 2012-08-05 10:12:27Z adrian $
  */
 #include "opt_ah.h"
 

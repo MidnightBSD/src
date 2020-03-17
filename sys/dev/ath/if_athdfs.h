@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_athdfs.h 244946 2013-01-02 01:36:10Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/if_athdfs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__IF_ATHDFS_H__
 #define	__IF_ATHDFS_H__

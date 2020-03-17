@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/wb/if_wb.c 254842 2013-08-25 10:57:09Z andre $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/wb/if_wb.c 347962 2019-05-18 20:43:13Z brooks $");
 
 /*
  * Winbond fast ethernet PCI NIC driver
@@ -95,6 +94,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/wb/if_wb.c 254842 2013-08-25 10:57:09Z and
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>
@@ -143,7 +143,7 @@ static int wb_probe(device_t);
 static int wb_attach(device_t);
 static int wb_detach(device_t);
 
-static int wb_bfree(struct mbuf *, void *addr, void *args);
+static void wb_bfree(struct mbuf *, void *addr, void *args);
 static int wb_newbuf(struct wb_softc *, struct wb_chain_onefrag *,
 		struct mbuf *);
 static int wb_encap(struct wb_softc *, struct wb_chain *, struct mbuf *);
@@ -256,7 +256,7 @@ wb_eeprom_putbyte(sc, addr)
 	struct wb_softc		*sc;
 	int			addr;
 {
-	register int		d, i;
+	int			d, i;
 
 	d = addr | WB_EECMD_READ;
 
@@ -286,7 +286,7 @@ wb_eeprom_getword(sc, addr, dest)
 	int			addr;
 	u_int16_t		*dest;
 {
-	register int		i;
+	int			i;
 	u_int16_t		word = 0;
 
 	/* Enter EEPROM access mode. */
@@ -507,7 +507,7 @@ static void
 wb_reset(sc)
 	struct wb_softc		*sc;
 {
-	register int		i;
+	int			i;
 	struct mii_data		*mii;
 	struct mii_softc	*miisc;
 
@@ -692,6 +692,8 @@ wb_attach(dev)
 		goto fail;
 	}
 
+	gone_by_fcp101_dev(dev);
+
 fail:
 	if (error)
 		wb_detach(dev);
@@ -823,11 +825,9 @@ wb_list_rx_init(sc)
 	return(0);
 }
 
-static int
+static void
 wb_bfree(struct mbuf *m, void *buf, void *args)
 {
-
-	return (EXT_FREE_OK);
 }
 
 /*
@@ -897,7 +897,7 @@ wb_rxeof(sc)
 		    (WB_RXBYTES(cur_rx->wb_ptr->wb_status) > 1536) ||
 		    !(rxstat & WB_RXSTAT_LASTFRAG) ||
 		    !(rxstat & WB_RXSTAT_RXCMP)) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			wb_newbuf(sc, cur_rx, m);
 			device_printf(sc->wb_dev,
 			    "receiver babbling: possible chip bug,"
@@ -909,7 +909,7 @@ wb_rxeof(sc)
 		}
 
 		if (rxstat & WB_RXSTAT_RXERR) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			wb_newbuf(sc, cur_rx, m);
 			break;
 		}
@@ -930,12 +930,12 @@ wb_rxeof(sc)
 		    NULL);
 		wb_newbuf(sc, cur_rx, m);
 		if (m0 == NULL) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			break;
 		}
 		m = m0;
 
-		ifp->if_ipackets++;
+		if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 		WB_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);
 		WB_LOCK(sc);
@@ -988,16 +988,16 @@ wb_txeof(sc)
 			break;
 
 		if (txstat & WB_TXSTAT_TXERR) {
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			if (txstat & WB_TXSTAT_ABORT)
-				ifp->if_collisions++;
+				if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 			if (txstat & WB_TXSTAT_LATECOLL)
-				ifp->if_collisions++;
+				if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 		}
 
-		ifp->if_collisions += (txstat & WB_TXSTAT_COLLCNT) >> 3;
+		if_inc_counter(ifp, IFCOUNTER_COLLISIONS, (txstat & WB_TXSTAT_COLLCNT) >> 3);
 
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		m_freem(cur_tx->wb_mbuf);
 		cur_tx->wb_mbuf = NULL;
 
@@ -1066,7 +1066,7 @@ wb_intr(arg)
 			break;
 
 		if ((status & WB_ISR_RX_NOBUF) || (status & WB_ISR_RX_ERR)) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			wb_reset(sc);
 			if (status & WB_ISR_RX_ERR)
 				wb_fixmedia(sc);
@@ -1095,7 +1095,7 @@ wb_intr(arg)
 		}
 
 		if (status & WB_ISR_TX_UNDERRUN) {
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			wb_txeof(sc);
 			WB_CLRBIT(sc, WB_NETCFG, WB_NETCFG_TX_ON);
 			/* Jack up TX threshold */
@@ -1196,8 +1196,7 @@ wb_encap(sc, c, m_head)
 		if (m_new == NULL)
 			return(1);
 		if (m_head->m_pkthdr.len > MHLEN) {
-			MCLGET(m_new, M_NOWAIT);
-			if (!(m_new->m_flags & M_EXT)) {
+			if (!(MCLGET(m_new, M_NOWAIT))) {
 				m_freem(m_new);
 				return(1);
 			}
@@ -1555,7 +1554,7 @@ wb_watchdog(sc)
 
 	WB_LOCK_ASSERT(sc);
 	ifp = sc->wb_ifp;
-	ifp->if_oerrors++;
+	if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	if_printf(ifp, "watchdog timeout\n");
 #ifdef foo
 	if (!(wb_phy_readreg(sc, PHY_BMSR) & PHY_BMSR_LINKSTAT))
@@ -1577,7 +1576,7 @@ static void
 wb_stop(sc)
 	struct wb_softc		*sc;
 {
-	register int		i;
+	int			i;
 	struct ifnet		*ifp;
 
 	WB_LOCK_ASSERT(sc);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/iicbb.c 294490 2016-01-21 08:32:11Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iicbb.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Generic I2C bit-banging code

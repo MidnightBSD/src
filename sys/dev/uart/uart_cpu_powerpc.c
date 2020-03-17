@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_powerpc.c 266020 2014-05-14 14:17:51Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_cpu_powerpc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +35,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_powerpc.c 266020 2014-05-14 
 #include <machine/bus.h>
 #include <machine/ofw_machdep.h>
 
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
@@ -114,10 +114,6 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	phandle_t input, opts, chosen;
 	int error;
 
-	class = &uart_z8530_class;
-	if (class == NULL)
-		return (ENXIO);
-
 	opts = OF_finddevice("/options");
 	chosen = OF_finddevice("/chosen");
 	switch (devtype) {
@@ -168,21 +164,23 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 		return (ENXIO);
 	if (strcmp(buf, "serial") != 0)
 		return (ENXIO);
-	if (OF_getprop(input, "compatible", buf, sizeof(buf)) == -1)
-		return (ENXIO);
 
-	if (strncmp(buf, "chrp,es", 7) == 0) {
+	if (ofw_bus_node_is_compatible(input, "chrp,es")) {
 		class = &uart_z8530_class;
 		di->bas.regshft = 4;
 		di->bas.chan = 1;
-	} else if (strcmp(buf,"ns16550") == 0 || strcmp(buf,"ns8250") == 0) {
+	} else if (ofw_bus_node_is_compatible(input,"ns16550") ||
+	    ofw_bus_node_is_compatible(input,"ns8250")) {
 		class = &uart_ns8250_class;
 		di->bas.regshft = 0;
 		di->bas.chan = 0;
 	} else
 		return (ENXIO);
 
-	error = OF_decode_addr(input, 0, &di->bas.bst, &di->bas.bsh);
+	if (class == NULL)
+		return (ENXIO);
+
+	error = OF_decode_addr(input, 0, &di->bas.bst, &di->bas.bsh, NULL);
 	if (error)
 		return (error);
 

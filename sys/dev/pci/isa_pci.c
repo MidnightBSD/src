@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994,1995 Stefan Esser, Wolfgang StanglMeier
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pci/isa_pci.c 228496 2011-12-14 12:34:02Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pci/isa_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PCI:ISA bridge support
@@ -53,8 +52,8 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/pci/isa_pci.c 228496 2011-12-14 12:34:02Z 
 static int	isab_pci_probe(device_t dev);
 static int	isab_pci_attach(device_t dev);
 static struct resource *	isab_pci_alloc_resource(device_t dev,
-    device_t child, int type, int *rid, u_long start, u_long end, u_long count,
-    u_int flags);
+    device_t child, int type, int *rid, rman_res_t start, rman_res_t end,
+    rman_res_t count, u_int flags);
 static int	isab_pci_release_resource(device_t dev, device_t child,
     int type, int rid, struct resource *r);
 
@@ -170,7 +169,7 @@ isab_pci_attach(device_t dev)
 
 static struct resource *
 isab_pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct isab_pci_softc *sc;
 	int bar;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mmc/mmc_subr.c 322120 2017-08-06 16:07:34Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mmc/mmc_subr.c 322119 2017-08-06 16:07:25Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

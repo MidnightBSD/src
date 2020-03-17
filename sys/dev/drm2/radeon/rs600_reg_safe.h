@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/rs600_reg_safe.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/rs600_reg_safe.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 static const unsigned rs600_reg_safe_bm[219] = {
 	0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,

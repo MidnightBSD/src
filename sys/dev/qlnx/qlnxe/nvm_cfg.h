@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/nvm_cfg.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/nvm_cfg.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -37,20 +36,21 @@
  * Description: NVM config file - Generated file from nvm cfg excel.
  *              DO NOT MODIFY !!!
  *
- * Created:     3/15/2017
+ * Created:     12/4/2017
  *
  ****************************************************************************/
 
 #ifndef NVM_CFG_H
 #define NVM_CFG_H
 
-#define NVM_CFG_version 0x83000
 
-#define NVM_CFG_new_option_seq 22
+#define NVM_CFG_version 0x83306
 
-#define NVM_CFG_removed_option_seq 1
+#define NVM_CFG_new_option_seq 26
 
-#define NVM_CFG_updated_value_seq 4
+#define NVM_CFG_removed_option_seq 2
+
+#define NVM_CFG_updated_value_seq 5
 
 struct nvm_cfg_mac_address
 {
@@ -371,8 +371,8 @@ struct nvm_cfg1_glob
 		#define NVM_CFG1_GLOB_VENDOR_ID_MASK                            0x0000FFFF
 		#define NVM_CFG1_GLOB_VENDOR_ID_OFFSET                          0
 	/*  Set caution temperature */
-		#define NVM_CFG1_GLOB_CAUTION_THRESHOLD_TEMPERATURE_MASK        0x00FF0000
-		#define NVM_CFG1_GLOB_CAUTION_THRESHOLD_TEMPERATURE_OFFSET      16
+		#define NVM_CFG1_GLOB_DEAD_TEMP_TH_TEMPERATURE_MASK             0x00FF0000
+		#define NVM_CFG1_GLOB_DEAD_TEMP_TH_TEMPERATURE_OFFSET           16
 	/*  Set external thermal sensor I2C address */
 		#define NVM_CFG1_GLOB_EXTERNAL_THERMAL_SENSOR_ADDRESS_MASK      0xFF000000
 		#define NVM_CFG1_GLOB_EXTERNAL_THERMAL_SENSOR_ADDRESS_OFFSET    24
@@ -540,6 +540,11 @@ struct nvm_cfg1_glob
 		#define NVM_CFG1_GLOB_VOLTAGE_REGULATOR_TYPE_OFFSET             28
 		#define NVM_CFG1_GLOB_VOLTAGE_REGULATOR_TYPE_DISABLED           0x0
 		#define NVM_CFG1_GLOB_VOLTAGE_REGULATOR_TYPE_TI                 0x1
+	/*  Enable/Disable PCIE Relaxed Ordering */
+		#define NVM_CFG1_GLOB_PCIE_RELAXED_ORDERING_MASK                0x40000000
+		#define NVM_CFG1_GLOB_PCIE_RELAXED_ORDERING_OFFSET              30
+		#define NVM_CFG1_GLOB_PCIE_RELAXED_ORDERING_DISABLED            0x0
+		#define NVM_CFG1_GLOB_PCIE_RELAXED_ORDERING_ENABLED             0x1
 	u32 led_global_settings;                                           /* 0x74 */
 		#define NVM_CFG1_GLOB_LED_SWAP_0_MASK                           0x0000000F
 		#define NVM_CFG1_GLOB_LED_SWAP_0_OFFSET                         0
@@ -1069,7 +1074,35 @@ struct nvm_cfg1_glob
 		#define NVM_CFG1_GLOB_THERMAL_ALARM_GPIO_GPIO31                 0x20
 	u32 preboot_debug_mode_std;                                       /* 0x140 */
 	u32 preboot_debug_mode_ext;                                       /* 0x144 */
-	u32 reserved[56];                                                 /* 0x148 */
+	u32 ext_phy_cfg1;                                                 /* 0x148 */
+	/*  Ext PHY MDI pair swap value */
+		#define NVM_CFG1_GLOB_RESERVED_244_MASK                         0x0000FFFF
+		#define NVM_CFG1_GLOB_RESERVED_244_OFFSET                       0
+	u32 clocks;                                                       /* 0x14C */
+	/*  Sets core clock frequency */
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MASK                 0x000000FF
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_OFFSET               0
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MAIN_CLK_DEFAULT     0x0
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MAIN_CLK_375         0x1
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MAIN_CLK_350         0x2
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MAIN_CLK_325         0x3
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MAIN_CLK_300         0x4
+		#define NVM_CFG1_GLOB_MAIN_CLOCK_FREQUENCY_MAIN_CLK_280         0x5
+	/*  Sets MAC clock frequency */
+		#define NVM_CFG1_GLOB_MAC_CLOCK_FREQUENCY_MASK                  0x0000FF00
+		#define NVM_CFG1_GLOB_MAC_CLOCK_FREQUENCY_OFFSET                8
+		#define NVM_CFG1_GLOB_MAC_CLOCK_FREQUENCY_MAC_CLK_DEFAULT       0x0
+		#define NVM_CFG1_GLOB_MAC_CLOCK_FREQUENCY_MAC_CLK_782           0x1
+		#define NVM_CFG1_GLOB_MAC_CLOCK_FREQUENCY_MAC_CLK_516           0x2
+	/*  Sets storm clock frequency */
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_MASK                0x00FF0000
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_OFFSET              16
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_STORM_CLK_DEFAULT   0x0
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_STORM_CLK_1200      0x1
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_STORM_CLK_1000      0x2
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_STORM_CLK_900       0x3
+		#define NVM_CFG1_GLOB_STORM_CLOCK_FREQUENCY_STORM_CLK_1100      0x4
+	u32 reserved[54];                                                 /* 0x150 */
 };
 
 struct nvm_cfg1_path
@@ -1168,6 +1201,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_OFFSET          0
 		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_1G              0x1
 		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_10G             0x2
+		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_20G             0x4
 		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_25G             0x8
 		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_40G             0x10
 		#define NVM_CFG1_PORT_DRV_SPEED_CAPABILITY_MASK_50G             0x20
@@ -1176,6 +1210,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_OFFSET          16
 		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_1G              0x1
 		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_10G             0x2
+		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_20G             0x4
 		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_25G             0x8
 		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_40G             0x10
 		#define NVM_CFG1_PORT_MFW_SPEED_CAPABILITY_MASK_50G             0x20
@@ -1186,6 +1221,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_DRV_LINK_SPEED_AUTONEG                    0x0
 		#define NVM_CFG1_PORT_DRV_LINK_SPEED_1G                         0x1
 		#define NVM_CFG1_PORT_DRV_LINK_SPEED_10G                        0x2
+		#define NVM_CFG1_PORT_DRV_LINK_SPEED_20G                        0x3
 		#define NVM_CFG1_PORT_DRV_LINK_SPEED_25G                        0x4
 		#define NVM_CFG1_PORT_DRV_LINK_SPEED_40G                        0x5
 		#define NVM_CFG1_PORT_DRV_LINK_SPEED_50G                        0x6
@@ -1200,6 +1236,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MFW_LINK_SPEED_AUTONEG                    0x0
 		#define NVM_CFG1_PORT_MFW_LINK_SPEED_1G                         0x1
 		#define NVM_CFG1_PORT_MFW_LINK_SPEED_10G                        0x2
+		#define NVM_CFG1_PORT_MFW_LINK_SPEED_20G                        0x3
 		#define NVM_CFG1_PORT_MFW_LINK_SPEED_25G                        0x4
 		#define NVM_CFG1_PORT_MFW_LINK_SPEED_40G                        0x5
 		#define NVM_CFG1_PORT_MFW_LINK_SPEED_50G                        0x6
@@ -1280,6 +1317,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_EXTERNAL_PHY_TYPE_OFFSET                  0
 		#define NVM_CFG1_PORT_EXTERNAL_PHY_TYPE_NONE                    0x0
 		#define NVM_CFG1_PORT_EXTERNAL_PHY_TYPE_BCM8485X                0x1
+		#define NVM_CFG1_PORT_EXTERNAL_PHY_TYPE_BCM5422X                0x2
 		#define NVM_CFG1_PORT_EXTERNAL_PHY_ADDRESS_MASK                 0x0000FF00
 		#define NVM_CFG1_PORT_EXTERNAL_PHY_ADDRESS_OFFSET               8
 	/*  EEE power saving mode */
@@ -1313,6 +1351,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_AUTONEG                0x0
 		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_1G                     0x1
 		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_10G                    0x2
+		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_20G                    0x3
 		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_25G                    0x4
 		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_40G                    0x5
 		#define NVM_CFG1_PORT_PREBOOT_LINK_SPEED_50G                    0x6
@@ -1352,6 +1391,13 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_LANE_LED_SPD__SEL_AH_50G                  0x10
 		#define NVM_CFG1_PORT_LANE_LED_SPD__SEL_BB_50G                  0x20
 		#define NVM_CFG1_PORT_LANE_LED_SPD__SEL_BB_100G                 0x40
+	/*  UID LED Blink Mode Settings */
+		#define NVM_CFG1_PORT_UID_LED_MODE_MASK_MASK                    0x0F000000
+		#define NVM_CFG1_PORT_UID_LED_MODE_MASK_OFFSET                  24
+		#define NVM_CFG1_PORT_UID_LED_MODE_MASK_ACTIVITY_LED            0x1
+		#define NVM_CFG1_PORT_UID_LED_MODE_MASK_LINK_LED0               0x2
+		#define NVM_CFG1_PORT_UID_LED_MODE_MASK_LINK_LED1               0x4
+		#define NVM_CFG1_PORT_UID_LED_MODE_MASK_LINK_LED2               0x8
 	u32 transceiver_00;                                                /* 0x40 */
 	/*  Define for mapping of transceiver signal module absent */
 		#define NVM_CFG1_PORT_TRANS_MODULE_ABS_MASK                     0x000000FF
@@ -1454,6 +1500,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_OFFSET  0
 		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_10G_DRV_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1462,6 +1509,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_OFFSET  16
 		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_10G_MFW_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1472,6 +1520,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_10G_DRV_LINK_SPEED_50G                0x6
@@ -1481,6 +1530,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_10G_MFW_LINK_SPEED_50G                0x6
@@ -1523,6 +1573,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_OFFSET  0
 		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_25G_DRV_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1531,6 +1582,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_OFFSET  16
 		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_25G_MFW_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1541,6 +1593,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_25G_DRV_LINK_SPEED_50G                0x6
@@ -1550,6 +1603,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_25G_MFW_LINK_SPEED_50G                0x6
@@ -1592,6 +1646,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_OFFSET  0
 		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_40G_DRV_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1600,6 +1655,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_OFFSET  16
 		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_40G_MFW_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1610,6 +1666,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_40G_DRV_LINK_SPEED_50G                0x6
@@ -1619,6 +1676,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_40G_MFW_LINK_SPEED_50G                0x6
@@ -1661,6 +1719,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_OFFSET  0
 		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_50G_DRV_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1669,6 +1728,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_OFFSET  16
 		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_1G      0x1
 		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_10G     0x2
+		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_20G     0x4
 		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_25G     0x8
 		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_40G     0x10
 		#define NVM_CFG1_PORT_MNM_50G_MFW_SPEED_CAPABILITY_MASK_50G     0x20
@@ -1679,6 +1739,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_50G_DRV_LINK_SPEED_50G                0x6
@@ -1688,6 +1749,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_AUTONEG            0x0
 		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_1G                 0x1
 		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_10G                0x2
+		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_20G                0x3
 		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_25G                0x4
 		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_40G                0x5
 		#define NVM_CFG1_PORT_MNM_50G_MFW_LINK_SPEED_50G                0x6
@@ -1730,6 +1792,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_OFFSET        0
 		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_1G            0x1
 		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_10G           0x2
+		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_20G           0x4
 		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_25G           0x8
 		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_40G           0x10
 		#define NVM_CFG1_PORT_MNM_100G_DRV_SPEED_CAP_MASK_50G           0x20
@@ -1738,6 +1801,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_OFFSET        16
 		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_1G            0x1
 		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_10G           0x2
+		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_20G           0x4
 		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_25G           0x8
 		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_40G           0x10
 		#define NVM_CFG1_PORT_MNM_100G_MFW_SPEED_CAP_MASK_50G           0x20
@@ -1748,6 +1812,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_AUTONEG           0x0
 		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_1G                0x1
 		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_10G               0x2
+		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_20G               0x3
 		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_25G               0x4
 		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_40G               0x5
 		#define NVM_CFG1_PORT_MNM_100G_DRV_LINK_SPEED_50G               0x6
@@ -1757,6 +1822,7 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_AUTONEG           0x0
 		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_1G                0x1
 		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_10G               0x2
+		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_20G               0x3
 		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_25G               0x4
 		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_40G               0x5
 		#define NVM_CFG1_PORT_MNM_100G_MFW_LINK_SPEED_50G               0x6
@@ -1799,7 +1865,11 @@ struct nvm_cfg1_port
 		#define NVM_CFG1_PORT_PHY_MODULE_DEAD_TEMP_TH_OFFSET            0
 		#define NVM_CFG1_PORT_PHY_MODULE_ALOM_FAN_ON_TEMP_TH_MASK       0x0000FF00
 		#define NVM_CFG1_PORT_PHY_MODULE_ALOM_FAN_ON_TEMP_TH_OFFSET     8
-	u32 reserved[115];                                                 /* 0x8C */
+	u32 ext_phy_cfg1;                                                  /* 0x8C */
+	/*  Ext PHY MDI pair swap value */
+		#define NVM_CFG1_PORT_EXT_PHY_MDI_PAIR_SWAP_MASK                0x0000FFFF
+		#define NVM_CFG1_PORT_EXT_PHY_MDI_PAIR_SWAP_OFFSET              0
+	u32 reserved[114];                                                 /* 0x90 */
 };
 
 struct nvm_cfg1_func
@@ -1938,6 +2008,17 @@ struct nvm_cfg1
 /******************************************
  * nvm_cfg structs
  ******************************************/
+
+struct board_info
+{
+  u16 vendor_id;
+  u16 eth_did_suffix;
+  u16 sub_vendor_id;
+  u16 sub_device_id;
+  char *board_name;
+  char *friendly_name;
+};
+
 enum nvm_cfg_sections
 {
 	NVM_CFG_SECTION_NVM_CFG1,
@@ -1952,4 +2033,3 @@ struct nvm_cfg
 };
 
 #endif /* NVM_CFG_H */
-

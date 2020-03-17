@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/gpio/gpio_if.m 278786 2015-02-14 21:16:19Z loos $
+# $FreeBSD: stable/11/sys/dev/gpio/gpio_if.m 324755 2017-10-19 16:07:57Z ian $
 #
 
 #include <sys/bus.h>
@@ -33,6 +32,20 @@
 INTERFACE gpio;
 
 CODE {
+	static device_t
+	gpio_default_get_bus(void)
+	{
+
+		return (NULL);
+	}
+
+	static int
+	gpio_default_nosupport(void)
+	{
+
+		return (EOPNOTSUPP);
+	}
+
 	static int
 	gpio_default_map_gpios(device_t bus, phandle_t dev,
 	    phandle_t gparent, int gcells, pcell_t *gpios, uint32_t *pin,
@@ -55,6 +68,13 @@ CODE {
 HEADER {
 	#include <dev/ofw/openfirm.h>
 };
+
+#
+# Return the gpiobus device reference
+#
+METHOD device_t get_bus {
+	device_t dev;
+} DEFAULT gpio_default_get_bus;
 
 #
 # Get maximum pin number
@@ -138,3 +158,31 @@ METHOD int map_gpios {
         uint32_t *pin;
         uint32_t *flags;
 } DEFAULT gpio_default_map_gpios;
+
+#
+# Simultaneously read and/or change up to 32 adjacent pins.
+# If the device cannot change the pins simultaneously, returns EOPNOTSUPP.
+#
+# More details about using this interface can be found in sys/gpio.h
+#
+METHOD int pin_access_32 {
+	device_t dev;
+	uint32_t first_pin;
+	uint32_t clear_pins;
+	uint32_t change_pins;
+	uint32_t *orig_pins;
+} DEFAULT gpio_default_nosupport;
+
+#
+# Simultaneously configure up to 32 adjacent pins.
+# This is intended to change the configuration of all the pins simultaneously,
+# but unlike pin_access_32, this will not fail if the hardware can't do so.
+#
+# More details about using this interface can be found in sys/gpio.h
+#
+METHOD int pin_config_32 {
+	device_t dev;
+	uint32_t first_pin;
+	uint32_t num_pins;
+	uint32_t *pin_flags;
+} DEFAULT gpio_default_nosupport;

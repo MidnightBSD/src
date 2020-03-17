@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006-2009 Red Hat Inc.
  * Copyright (c) 2006-2008 Intel Corporation
@@ -28,7 +27,7 @@
  *      Dave Airlie <airlied@linux.ie>
  *      Jesse Barnes <jesse.barnes@intel.com>
  *
- * $FreeBSD: stable/10/sys/dev/drm2/drm_fb_helper.h 282199 2015-04-28 19:35:05Z dumbbell $
+ * $FreeBSD: stable/11/sys/dev/drm2/drm_fb_helper.h 280183 2015-03-17 18:50:33Z dumbbell $
  */
 #ifndef DRM_FB_HELPER_H
 #define DRM_FB_HELPER_H

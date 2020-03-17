@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/wi/if_wireg.h 192468 2009-05-20 20:00:40Z sam $
+ * $FreeBSD: stable/11/sys/dev/wi/if_wireg.h 345636 2019-03-28 09:50:25Z avos $
  */
 
 #define WI_DELAY	5
@@ -85,11 +84,11 @@
 #ifdef __NetBSD__
 #define OS_STRING_NAME	"NetBSD"
 #endif
+#ifdef __FreeBSD__
+#define OS_STRING_NAME	"FreeBSD"
+#endif
 #ifdef __OpenBSD__
 #define OS_STRING_NAME	"OpenBSD"
-#endif
-#ifdef __MidnightBSD__
-#define OS_STRING_NAME "MidnightBSD"
 #endif
 
 #define WI_DEFAULT_NODENAME	OS_STRING_NAME " WaveLAN/IEEE node"
@@ -158,7 +157,7 @@
  * - Lucent has created a library called HCF (Hardware Control Functions)
  *   though which it wants developers to interact with the card. The HCF
  *   is needlessly complex, ill conceived and badly documented. Actually,
- *   the comments in the HCP code itself aren't bad, but the publically
+ *   the comments in the HCP code itself aren't bad, but the publicly
  *   available manual that comes with it is awful, probably due largely to
  *   the fact that it has been emasculated in order to hide information
  *   that Lucent wants to keep proprietary. The purpose of the HCF seems
@@ -296,7 +295,7 @@
 #define WI_EV_CMD		0x0010	/* command completed */
 #define WI_EV_ALLOC		0x0008	/* async alloc/reclaim completed */
 #define WI_EV_TX_EXC		0x0004	/* async xmit completed with failure */
-#define WI_EV_TX		0x0002	/* async xmit completed succesfully */
+#define	WI_EV_TX		0x0002	/* async xmit completed successfully */
 #define WI_EV_RX		0x0001	/* async rx completed */
 
 /* Host software registers */
@@ -708,7 +707,7 @@ struct wi_rx_radiotap_header {
 	u_int16_t	wr_chan_flags;
 	u_int8_t	wr_antsignal;
 	u_int8_t	wr_antnoise;
-};
+} __packed __aligned(8);
 
 #define WI_TX_RADIOTAP_PRESENT \
 	((1 << IEEE80211_RADIOTAP_FLAGS) | \
@@ -721,5 +720,5 @@ struct wi_tx_radiotap_header {
 	u_int8_t	wt_rate;
 	u_int16_t	wt_chan_freq;
 	u_int16_t	wt_chan_flags;
-};
+} __packed;
 #endif /* IEEE80211_RADIOTAP_F_CFP */

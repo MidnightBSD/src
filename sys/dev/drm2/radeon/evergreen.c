@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2010 Advanced Micro Devices, Inc.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/evergreen.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/evergreen.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include <dev/drm2/drmP.h>
 #include "radeon.h"
@@ -106,7 +105,7 @@ void evergreen_fix_pci_max_read_req_size(struct radeon_device *rdev)
 	v = (ctl & PCIEM_CTL_MAX_READ_REQUEST) >> 12;
 
 	/* if bios or OS sets MAX_READ_REQUEST_SIZE to an invalid value, fix it
-	 * to avoid hangs or perfomance issues
+	 * to avoid hangs or performance issues
 	 */
 	if ((v == 0) || (v == 6) || (v == 7)) {
 		ctl &= ~PCIEM_CTL_MAX_READ_REQUEST;

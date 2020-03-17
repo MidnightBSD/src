@@ -23,8 +23,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/ofw/ofw_bus_if.m 266135 2014-05-15 15:15:23Z loos $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/ofw/ofw_bus_if.m 265310 2014-05-04 04:01:26Z loos $
 
 # Interface for retrieving the package handle and a subset, namely
 # 'compatible', 'device_type', 'model' and 'name', of the standard

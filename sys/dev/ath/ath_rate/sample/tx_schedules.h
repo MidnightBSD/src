@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 John Bicket
  * All rights reserved.
@@ -39,7 +38,7 @@
 #define	__ATH_RATE_SAMPLE_TXSCHEDULES_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ath/ath_rate/sample/tx_schedules.h 239286 2012-08-15 07:50:42Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ath/ath_rate/sample/tx_schedules.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #define A(_r) \
     (((_r) == 6)   ? 0 : (((_r) == 9)   ? 1 : (((_r) == 12)  ? 2 : \

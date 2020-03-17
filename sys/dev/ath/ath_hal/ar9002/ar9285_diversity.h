@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008-2010 Atheros Communications Inc.
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9285_diversity.h 251655 2013-06-12 14:52:57Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9285_diversity.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__AR9285_DIVERSITY_H__
 #define	__AR9285_DIVERSITY_H__

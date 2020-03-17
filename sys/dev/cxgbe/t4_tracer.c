@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Chelsio Communications, Inc.
  * All rights reserved.
@@ -27,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/t4_tracer.c 309560 2016-12-05 20:43:25Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/t4_tracer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/lock.h>
 #include <sys/types.h>
 #include <sys/mbuf.h>

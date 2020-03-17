@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ntb/ntb_transport.h 304405 2016-08-18 11:00:48Z mav $
+ * $FreeBSD: stable/11/sys/dev/ntb/ntb_transport.h 317892 2017-05-07 00:26:57Z mav $
  */
 
 struct ntb_transport_qp;
@@ -59,4 +58,5 @@ void *ntb_transport_rx_remove(struct ntb_transport_qp *qp, unsigned int *len);
 void ntb_transport_link_up(struct ntb_transport_qp *qp);
 void ntb_transport_link_down(struct ntb_transport_qp *qp);
 bool ntb_transport_link_query(struct ntb_transport_qp *qp);
+uint64_t ntb_transport_link_speed(struct ntb_transport_qp *qp);
 unsigned int ntb_transport_tx_free_entry(struct ntb_transport_qp *qp);

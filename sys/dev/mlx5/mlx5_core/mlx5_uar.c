@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013-2015, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_uar.c 306244 2016-09-23 08:28:44Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_uar.c 337115 2018-08-02 08:56:27Z hselasky $
  */
 
 #include <linux/kernel.h>
@@ -34,16 +33,13 @@
 
 int mlx5_cmd_alloc_uar(struct mlx5_core_dev *dev, u32 *uarn)
 {
-	u32 in[MLX5_ST_SZ_DW(alloc_uar_in)];
-	u32 out[MLX5_ST_SZ_DW(alloc_uar_out)];
+	u32 in[MLX5_ST_SZ_DW(alloc_uar_in)] = {0};
+	u32 out[MLX5_ST_SZ_DW(alloc_uar_out)] = {0};
 	int err;
-
-	memset(in, 0, sizeof(in));
 
 	MLX5_SET(alloc_uar_in, in, opcode, MLX5_CMD_OP_ALLOC_UAR);
 
-	memset(out, 0, sizeof(out));
-	err = mlx5_cmd_exec_check_status(dev, in, sizeof(in), out, sizeof(out));
+	err = mlx5_cmd_exec(dev, in, sizeof(in), out, sizeof(out));
 	if (err)
 		return err;
 
@@ -55,17 +51,13 @@ EXPORT_SYMBOL(mlx5_cmd_alloc_uar);
 
 int mlx5_cmd_free_uar(struct mlx5_core_dev *dev, u32 uarn)
 {
-	u32 in[MLX5_ST_SZ_DW(dealloc_uar_in)];
-	u32 out[MLX5_ST_SZ_DW(dealloc_uar_out)];
-
-	memset(in, 0, sizeof(in));
+	u32 in[MLX5_ST_SZ_DW(dealloc_uar_in)] = {0};
+	u32 out[MLX5_ST_SZ_DW(dealloc_uar_out)] = {0};
 
 	MLX5_SET(dealloc_uar_in, in, opcode, MLX5_CMD_OP_DEALLOC_UAR);
 	MLX5_SET(dealloc_uar_in, in, uar, uarn);
 
-	memset(out, 0, sizeof(out));
-	return mlx5_cmd_exec_check_status(dev, in,  sizeof(in),
-					       out, sizeof(out));
+	return mlx5_cmd_exec(dev, in, sizeof(in), out, sizeof(out));
 }
 EXPORT_SYMBOL(mlx5_cmd_free_uar);
 
@@ -190,7 +182,8 @@ int mlx5_alloc_map_uar(struct mlx5_core_dev *mdev, struct mlx5_uar *uar)
 
 	if (mdev->priv.bf_mapping)
 		uar->bf_map = io_mapping_map_wc(mdev->priv.bf_mapping,
-						uar->index << PAGE_SHIFT);
+						uar->index << PAGE_SHIFT,
+						PAGE_SIZE);
 
 	return 0;
 

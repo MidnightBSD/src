@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2013-2015, Intel Corporation 
+  Copyright (c) 2013-2019, Intel Corporation
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixl/i40e_lan_hmc.c 292100 2015-12-11 13:08:38Z smh $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/i40e_lan_hmc.c 349163 2019-06-18 00:08:02Z erj $*/
 
 #include "i40e_osdep.h"
 #include "i40e_register.h"
@@ -145,7 +144,7 @@ enum i40e_status_code i40e_init_lan_hmc(struct i40e_hw *hw, u32 txq_num,
 		ret_code = I40E_ERR_INVALID_HMC_OBJ_COUNT;
 		DEBUGOUT3("i40e_init_lan_hmc: Tx context: asks for 0x%x but max allowed is 0x%x, returns error %d\n",
 			  txq_num, obj->max_cnt, ret_code);
-		goto init_lan_hmc_out;
+		goto free_hmc_out;
 	}
 
 	/* aggregate values into the full LAN object for later */
@@ -168,7 +167,7 @@ enum i40e_status_code i40e_init_lan_hmc(struct i40e_hw *hw, u32 txq_num,
 		ret_code = I40E_ERR_INVALID_HMC_OBJ_COUNT;
 		DEBUGOUT3("i40e_init_lan_hmc: Rx context: asks for 0x%x but max allowed is 0x%x, returns error %d\n",
 			  rxq_num, obj->max_cnt, ret_code);
-		goto init_lan_hmc_out;
+		goto free_hmc_out;
 	}
 
 	/* aggregate values into the full LAN object for later */
@@ -191,7 +190,7 @@ enum i40e_status_code i40e_init_lan_hmc(struct i40e_hw *hw, u32 txq_num,
 		ret_code = I40E_ERR_INVALID_HMC_OBJ_COUNT;
 		DEBUGOUT3("i40e_init_lan_hmc: FCoE context: asks for 0x%x but max allowed is 0x%x, returns error %d\n",
 			  fcoe_cntx_num, obj->max_cnt, ret_code);
-		goto init_lan_hmc_out;
+		goto free_hmc_out;
 	}
 
 	/* aggregate values into the full LAN object for later */
@@ -214,7 +213,7 @@ enum i40e_status_code i40e_init_lan_hmc(struct i40e_hw *hw, u32 txq_num,
 		ret_code = I40E_ERR_INVALID_HMC_OBJ_COUNT;
 		DEBUGOUT3("i40e_init_lan_hmc: FCoE filter: asks for 0x%x but max allowed is 0x%x, returns error %d\n",
 			  fcoe_filt_num, obj->max_cnt, ret_code);
-		goto init_lan_hmc_out;
+		goto free_hmc_out;
 	}
 
 	/* aggregate values into the full LAN object for later */
@@ -235,7 +234,7 @@ enum i40e_status_code i40e_init_lan_hmc(struct i40e_hw *hw, u32 txq_num,
 					  (sizeof(struct i40e_hmc_sd_entry) *
 					  hw->hmc.sd_table.sd_cnt));
 		if (ret_code)
-			goto init_lan_hmc_out;
+			goto free_hmc_out;
 		hw->hmc.sd_table.sd_entry =
 			(struct i40e_hmc_sd_entry *)hw->hmc.sd_table.addr.va;
 	}
@@ -243,6 +242,11 @@ enum i40e_status_code i40e_init_lan_hmc(struct i40e_hw *hw, u32 txq_num,
 	full_obj->size = l2fpm_size;
 
 init_lan_hmc_out:
+	return ret_code;
+free_hmc_out:
+	if (hw->hmc.hmc_obj_virt_mem.va)
+		i40e_free_virt_mem(hw, &hw->hmc.hmc_obj_virt_mem);
+
 	return ret_code;
 }
 
@@ -771,7 +775,7 @@ static void i40e_write_byte(u8 *hmc_bits,
 
 	/* prepare the bits and mask */
 	shift_width = ce_info->lsb % 8;
-	mask = BIT(ce_info->width) - 1;
+	mask = (u8)(BIT(ce_info->width) - 1);
 
 	src_byte = *from;
 	src_byte &= mask;
@@ -956,7 +960,7 @@ static void i40e_read_byte(u8 *hmc_bits,
 
 	/* prepare the bits and mask */
 	shift_width = ce_info->lsb % 8;
-	mask = BIT(ce_info->width) - 1;
+	mask = (u8)(BIT(ce_info->width) - 1);
 
 	/* shift to correct alignment */
 	mask <<= shift_width;
@@ -1241,11 +1245,6 @@ enum i40e_status_code i40e_hmc_get_object_va(struct i40e_hw *hw,
 	u64 obj_offset_in_fpm;
 	u32 sd_idx, sd_lmt;
 
-	if (NULL == hmc_info) {
-		ret_code = I40E_ERR_BAD_PTR;
-		DEBUGOUT("i40e_hmc_get_object_va: bad hmc_info ptr\n");
-		goto exit;
-	}
 	if (NULL == hmc_info->hmc_obj) {
 		ret_code = I40E_ERR_BAD_PTR;
 		DEBUGOUT("i40e_hmc_get_object_va: bad hmc_info->hmc_obj ptr\n");

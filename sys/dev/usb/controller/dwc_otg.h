@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/dwc_otg.h 291064 2015-11-19 09:57:41Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/dwc_otg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2012 Hans Petter Selasky. All rights reserved.
  *

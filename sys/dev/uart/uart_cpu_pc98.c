@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 TAKAHASHI Yoshihiro
  * Copyright (c) 2003 M. Warner Losh, Marcel Moolenaar
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_cpu_pc98.c 216592 2010-12-20 16:39:43Z tijl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_cpu_pc98.c 216592 2010-12-20 16:39:43Z tijl $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

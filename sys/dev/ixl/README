@@ -1,8 +1,7 @@
 	ixl FreeBSD* Base Driver and ixlv VF Driver for the
 	     Intel XL710 Ethernet Controller Family
 
-$MidnightBSD$
-/*$FreeBSD: stable/10/sys/dev/ixl/README 270919 2014-09-01 07:54:30Z jfv $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/README 270772 2014-08-28 21:45:07Z jfv $*/
 ================================================================
 
 August 26, 2014

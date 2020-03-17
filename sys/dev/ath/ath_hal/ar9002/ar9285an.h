@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9285an.h 221806 2011-05-12 10:11:24Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9285an.h 221806 2011-05-12 10:11:24Z adrian $
  */
 
 #ifndef	__AR9285_AN_H__

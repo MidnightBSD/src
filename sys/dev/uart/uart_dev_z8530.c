@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_z8530.c 262649 2014-03-01 04:16:54Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_dev_z8530.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -308,7 +307,8 @@ struct uart_class uart_z8530_class = {
 	sizeof(struct z8530_softc),
 	.uc_ops = &uart_z8530_ops,
 	.uc_range = 2,
-	.uc_rclk = DEFAULT_RCLK
+	.uc_rclk = DEFAULT_RCLK,
+	.uc_rshift = 0
 };
 
 #define	SIGCHG(c, i, s, d)				\

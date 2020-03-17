@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
@@ -50,7 +49,7 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * $FreeBSD: stable/10/sys/dev/mmc/mmc_subr.h 322120 2017-08-06 16:07:34Z marius $
+ * $FreeBSD: stable/11/sys/dev/mmc/mmc_subr.h 322119 2017-08-06 16:07:25Z marius $
  */
 
 #ifndef DEV_MMC_SUBR_H

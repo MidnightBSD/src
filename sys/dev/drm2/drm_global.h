@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright 2008-2009 VMware, Inc., Palo Alto, CA., USA
@@ -28,7 +27,7 @@
 /*
  * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
  */
-/* $FreeBSD: stable/10/sys/dev/drm2/drm_global.h 247834 2013-03-05 09:27:21Z kib $ */
+/* $FreeBSD: stable/11/sys/dev/drm2/drm_global.h 247834 2013-03-05 09:27:21Z kib $ */
 
 #ifndef _DRM_GLOBAL_H_
 #define _DRM_GLOBAL_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Tsubai Masanari
  *
@@ -16,7 +15,7 @@
  *
  * $OpenBSD: src/sys/dev/pci/if_vmxreg.h,v 1.2 2013/06/12 01:07:33 uebayasi Exp $
  *
- * $FreeBSD: stable/10/sys/dev/vmware/vmxnet3/if_vmxreg.h 264866 2014-04-24 04:43:50Z bryanv $
+ * $FreeBSD: stable/11/sys/dev/vmware/vmxnet3/if_vmxreg.h 263259 2014-03-17 05:45:29Z bryanv $
  */
 
 #ifndef _IF_VMXREG_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -25,10 +24,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "opt_acpi.h"
 #include "opt_platform.h"
+#include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_ns8250.c 294229 2016-01-17 18:18:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_dev_ns8250.c 356923 2020-01-20 18:54:19Z loos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,17 +53,28 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_ns8250.c 294229 2016-01-17 1
 #include <dev/uart/uart_bus.h>
 #include <dev/uart/uart_dev_ns8250.h>
 #include <dev/uart/uart_ppstypes.h>
-
+#ifdef DEV_ACPI
+#include <dev/uart/uart_cpu_acpi.h>
+#endif
 #include <dev/ic/ns16550.h>
 
 #include "uart_if.h"
 
 #define	DEFAULT_RCLK	1843200
 
+/*
+ * Set the default baudrate tolerance to 3.0%.
+ *
+ * Some embedded boards have odd reference clocks (eg 25MHz)
+ * and we need to handle higher variances in the target baud rate.
+ */
+#ifndef	UART_DEV_TOLERANCE_PCT
+#define	UART_DEV_TOLERANCE_PCT	30
+#endif	/* UART_DEV_TOLERANCE_PCT */
+
 static int broken_txfifo = 0;
-SYSCTL_INT(_hw, OID_AUTO, broken_txfifo, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw, OID_AUTO, broken_txfifo, CTLFLAG_RWTUN,
 	&broken_txfifo, 0, "UART FIFO has QEMU emulation bug");
-TUNABLE_INT("hw.broken_txfifo", &broken_txfifo);
 
 /*
  * Clear pending interrupts. THRE is cleared by reading IIR. Data
@@ -126,8 +138,8 @@ ns8250_divisor(int rclk, int baudrate)
 	/* 10 times error in percent: */
 	error = ((actual_baud - baudrate) * 2000 / baudrate + 1) >> 1;
 
-	/* 3.0% maximum error tolerance: */
-	if (error < -30 || error > 30)
+	/* enforce maximum error tolerance: */
+	if (error < -UART_DEV_TOLERANCE_PCT || error > UART_DEV_TOLERANCE_PCT)
 		return (0);
 
 	return (divisor);
@@ -326,9 +338,6 @@ ns8250_putc(struct uart_bas *bas, int c)
 		DELAY(4);
 	uart_setreg(bas, REG_DATA, c);
 	uart_barrier(bas);
-	limit = 250000;
-	while ((uart_getreg(bas, REG_LSR) & LSR_TEMT) == 0 && --limit)
-		DELAY(4);
 }
 
 static int
@@ -381,12 +390,34 @@ struct uart_class uart_ns8250_class = {
 	sizeof(struct ns8250_softc),
 	.uc_ops = &uart_ns8250_ops,
 	.uc_range = 8,
-	.uc_rclk = DEFAULT_RCLK
+	.uc_rclk = DEFAULT_RCLK,
+	.uc_rshift = 0
 };
+
+/*
+ * XXX -- refactor out ACPI and FDT ifdefs
+ */
+#ifdef DEV_ACPI
+static struct acpi_uart_compat_data acpi_compat_data[] = {
+	{"AMD0020",	&uart_ns8250_class, 0, 2, 0, 48000000, UART_F_BUSY_DETECT, "AMD / Synopsys Designware UART"},
+	{"AMDI0020", &uart_ns8250_class, 0, 2, 0, 48000000, UART_F_BUSY_DETECT, "AMD / Synopsys Designware UART"},
+	{"PNP0500", &uart_ns8250_class, 0, 0, 0, 0, 0, "Standard PC COM port"},
+	{"PNP0501", &uart_ns8250_class, 0, 0, 0, 0, 0, "16550A-compatible COM port"},
+	{"PNP0502", &uart_ns8250_class, 0, 0, 0, 0, 0, "Multiport serial device (non-intelligent 16550)"},
+	{"PNP0510", &uart_ns8250_class, 0, 0, 0, 0, 0, "Generic IRDA-compatible device"},
+	{"PNP0511", &uart_ns8250_class, 0, 0, 0, 0, 0, "Generic IRDA-compatible device"},
+	{"WACF004", &uart_ns8250_class, 0, 0, 0, 0, 0, "Wacom Tablet PC Screen"},
+	{"WACF00E", &uart_ns8250_class, 0, 0, 0, 0, 0, "Wacom Tablet PC Screen 00e"},
+	{"FUJ02E5", &uart_ns8250_class, 0, 0, 0, 0, 0, "Wacom Tablet at FuS Lifebook T"},
+	{NULL, 			NULL, 0, 0 , 0, 0, 0, NULL},
+};
+UART_ACPI_CLASS_AND_DEVICE(acpi_compat_data);
+#endif
 
 #ifdef FDT
 static struct ofw_compat_data compat_data[] = {
 	{"ns16550",		(uintptr_t)&uart_ns8250_class},
+	{"ns16550a",		(uintptr_t)&uart_ns8250_class},
 	{NULL,			(uintptr_t)NULL},
 };
 UART_FDT_CLASS_AND_DEVICE(compat_data);
@@ -439,22 +470,16 @@ ns8250_bus_attach(struct uart_softc *sc)
 	pcell_t cell;
 #endif
 
-	ns8250->busy_detect = 0;
-
 #ifdef FDT
-	/* 
-	 * Check whether uart requires to read USR reg when IIR_BUSY and 
-	 * has broken txfifo. 
-	 */
+	/* Check whether uart has a broken txfifo. */
 	node = ofw_bus_get_node(sc->sc_dev);
-	if ((OF_getprop(node, "busy-detect", &cell, sizeof(cell))) > 0)
-		ns8250->busy_detect = 1;
-	if ((OF_getprop(node, "broken-txfifo", &cell, sizeof(cell))) > 0)
-		broken_txfifo = 1;
+	if ((OF_getencprop(node, "broken-txfifo", &cell, sizeof(cell))) > 0)
+		broken_txfifo =  cell ? 1 : 0;
 #endif
 
 	bas = &sc->sc_bas;
 
+	ns8250->busy_detect = bas->busy_detect;
 	ns8250->mcr = uart_getreg(bas, REG_MCR);
 	ns8250->fcr = FCR_ENABLE;
 	if (!resource_int_value("uart", device_get_unit(sc->sc_dev), "flags",
@@ -561,7 +586,7 @@ ns8250_bus_getsig(struct uart_softc *sc)
 	 * when capturing PPS pulses which are too narrow for software detection
 	 * to see the edges.  Hardware delta for RI doesn't work like the
 	 * others, so always use software for it.  Other threads may be changing
-	 * other (non-MSR) bits in sc_hwsig, so loop until it can succesfully
+	 * other (non-MSR) bits in sc_hwsig, so loop until it can successfully
 	 * update without other changes happening.  Note that the SIGCHGxx()
 	 * macros carefully preserve the delta bits when we have to loop several
 	 * times and a signal transitions between iterations.
@@ -694,6 +719,7 @@ ns8250_bus_ipend(struct uart_softc *sc)
 		if (iir & IIR_TXRDY) {
 			ipend |= SER_INT_TXIDLE;
 			uart_setreg(bas, REG_IER, ns8250->ier);
+			uart_barrier(bas);
 		} else
 			ipend |= SER_INT_SIGCHG;
 	}
@@ -877,7 +903,7 @@ ns8250_bus_probe(struct uart_softc *sc)
 #if 0
 	/*
 	 * XXX there are some issues related to hardware flow control and
-	 * it's likely that uart(4) is the cause. This basicly needs more
+	 * it's likely that uart(4) is the cause. This basically needs more
 	 * investigation, but we avoid using for hardware flow control
 	 * until then.
 	 */
@@ -964,13 +990,13 @@ ns8250_bus_transmit(struct uart_softc *sc)
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
 	while ((uart_getreg(bas, REG_LSR) & LSR_THRE) == 0)
-		;
-	uart_setreg(bas, REG_IER, ns8250->ier | IER_ETXRDY);
-	uart_barrier(bas);
+		DELAY(4);
 	for (i = 0; i < sc->sc_txdatasz; i++) {
 		uart_setreg(bas, REG_DATA, sc->sc_txbuf[i]);
 		uart_barrier(bas);
 	}
+	uart_setreg(bas, REG_IER, ns8250->ier | IER_ETXRDY);
+	uart_barrier(bas);
 	if (broken_txfifo)
 		ns8250_drain(bas, UART_DRAIN_TRANSMITTER);
 	else
@@ -985,14 +1011,17 @@ void
 ns8250_bus_grab(struct uart_softc *sc)
 {
 	struct uart_bas *bas = &sc->sc_bas;
+	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
+	u_char ier;
 
 	/*
 	 * turn off all interrupts to enter polling mode. Leave the
 	 * saved mask alone. We'll restore whatever it was in ungrab.
-	 * All pending interupt signals are reset when IER is set to 0.
+	 * All pending interrupt signals are reset when IER is set to 0.
 	 */
 	uart_lock(sc->sc_hwmtx);
-	uart_setreg(bas, REG_IER, 0);
+	ier = uart_getreg(bas, REG_IER);
+	uart_setreg(bas, REG_IER, ier & ns8250->ier_mask);
 	uart_barrier(bas);
 	uart_unlock(sc->sc_hwmtx);
 }

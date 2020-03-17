@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
 /* Qualcomm MSM7K/8K uart driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_msm.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_dev_msm.c 297793 2016-04-10 23:07:00Z pfg $");
 
 #include "opt_ddb.h"
 
@@ -124,7 +123,7 @@ msm_uart_param(struct uart_bas *bas, int baudrate, int databits,
 	}
 	uart_setreg(bas, UART_DM_MR2, ulcon);
 
-	/* Set 115200 for both TX and RX. */;
+	/* Set 115200 for both TX and RX. */
 	uart_setreg(bas, UART_DM_CSR, UART_DM_CSR_115200);
 	uart_barrier(bas);
 
@@ -567,6 +566,7 @@ static struct uart_class uart_msm_class = {
 	.uc_ops = &uart_msm_ops,
 	.uc_range = 8,
 	.uc_rclk = DEF_CLK,
+	.uc_rshift = 0
 };
 
 static struct ofw_compat_data compat_data[] = {

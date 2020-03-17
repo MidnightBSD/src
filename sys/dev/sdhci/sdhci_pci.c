@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sdhci/sdhci_pci.c 331033 2018-03-15 22:51:13Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sdhci/sdhci_pci.c 343504 2019-01-27 19:04:28Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -105,18 +104,18 @@ static const struct sdhci_device {
 	{ 0x16bc14e4,	0xffff,	"Broadcom BCM577xx SDXC/MMC Card Reader",
 	    SDHCI_QUIRK_BCM577XX_400KHZ_CLKSRC },
 	{ 0x0f148086,	0xffff,	"Intel Bay Trail eMMC 4.5 Controller",
+	    /* DDR52 is supported but affected by the VLI54 erratum */
 	    SDHCI_QUIRK_INTEL_POWER_UP_RESET |
 	    SDHCI_QUIRK_WAIT_WHILE_BUSY |
-	    SDHCI_QUIRK_MMC_DDR52 |
 	    SDHCI_QUIRK_CAPS_BIT63_FOR_MMC_HS400 |
 	    SDHCI_QUIRK_PRESET_VALUE_BROKEN},
 	{ 0x0f158086,	0xffff,	"Intel Bay Trail SDXC Controller",
 	    SDHCI_QUIRK_WAIT_WHILE_BUSY |
 	    SDHCI_QUIRK_PRESET_VALUE_BROKEN },
 	{ 0x0f508086,	0xffff,	"Intel Bay Trail eMMC 4.5 Controller",
+	    /* DDR52 is supported but affected by the VLI54 erratum */
 	    SDHCI_QUIRK_INTEL_POWER_UP_RESET |
 	    SDHCI_QUIRK_WAIT_WHILE_BUSY |
-	    SDHCI_QUIRK_MMC_DDR52 |
 	    SDHCI_QUIRK_CAPS_BIT63_FOR_MMC_HS400 |
 	    SDHCI_QUIRK_PRESET_VALUE_BROKEN },
 	{ 0x19db8086,	0xffff,	"Intel Denverton eMMC 5.0 Controller",
@@ -163,7 +162,6 @@ struct sdhci_pci_softc {
 };
 
 static int sdhci_enable_msi = 1;
-TUNABLE_INT("hw.sdhci.enable_msi", &sdhci_enable_msi);
 SYSCTL_INT(_hw_sdhci, OID_AUTO, enable_msi, CTLFLAG_RDTUN, &sdhci_enable_msi,
     0, "Enable MSI interrupts");
 
@@ -523,5 +521,5 @@ static devclass_t sdhci_pci_devclass;
 
 DRIVER_MODULE(sdhci_pci, pci, sdhci_pci_driver, sdhci_pci_devclass, NULL,
     NULL);
-MODULE_DEPEND(sdhci_pci, sdhci, 1, 1, 1);
+SDHCI_DEPEND(sdhci_pci);
 MMC_DECLARE_BRIDGE(sdhci_pci);

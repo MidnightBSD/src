@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_ebus.c 200926 2009-12-23 22:31:43Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_ebus.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,7 +97,7 @@ uart_ebus_probe(device_t dev)
 				return (ENXIO);
 		}
 		sc->sc_class = &uart_ns8250_class;
-		return (uart_bus_probe(dev, 0, 0, 0, 0));
+		return (uart_bus_probe(dev, 0, 0, 0, 0, 0, 0));
 	}
 
 	return (ENXIO);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_irq.c
  * IRQ support
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_irq.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_irq.c 283291 2015-05-22 17:05:21Z jkim $");
 
 #include <dev/drm2/drmP.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fdt/fdt_clock.h 273657 2014-10-26 02:19:03Z ian $
+ * $FreeBSD: stable/11/sys/dev/fdt/fdt_clock.h 270957 2014-09-02 03:23:05Z ian $
  */
 
 #ifndef DEV_FDT_CLOCK_H

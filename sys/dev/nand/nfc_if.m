@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (C) 2009-2012 Semihalf
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/nand/nfc_if.m 235537 2012-05-17 10:11:18Z gber $
+# $FreeBSD: stable/11/sys/dev/nand/nfc_if.m 235537 2012-05-17 10:11:18Z gber $
 
 # NAND controller interface description
 #

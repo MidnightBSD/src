@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_bo_vm.c 307672 2016-10-20 13:12:19Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_bo_vm.c 318847 2017-05-25 01:15:53Z markj $");
 
 #include "opt_vm.h"
 
@@ -107,21 +106,18 @@ ttm_bo_vm_fault(vm_object_t vm_obj, vm_ooffset_t offset,
 	struct ttm_buffer_object *bo = vm_obj->handle;
 	struct ttm_bo_device *bdev = bo->bdev;
 	struct ttm_tt *ttm = NULL;
-	vm_page_t m, m1, oldm;
+	vm_page_t m, m1;
 	int ret;
 	int retval = VM_PAGER_OK;
 	struct ttm_mem_type_manager *man =
 		&bdev->man[bo->mem.mem_type];
 
 	vm_object_pip_add(vm_obj, 1);
-	oldm = *mres;
-	if (oldm != NULL) {
-		vm_page_lock(oldm);
-		vm_page_remove(oldm);
-		vm_page_unlock(oldm);
-		*mres = NULL;
-	} else
-		oldm = NULL;
+	if (*mres != NULL) {
+		vm_page_lock(*mres);
+		vm_page_remove(*mres);
+		vm_page_unlock(*mres);
+	}
 retry:
 	VM_OBJECT_WUNLOCK(vm_obj);
 	m = NULL;
@@ -130,7 +126,7 @@ reserve:
 	ret = ttm_bo_reserve(bo, false, false, false, 0);
 	if (unlikely(ret != 0)) {
 		if (ret == -EBUSY) {
-			kern_yield(0);
+			kern_yield(PRI_USER);
 			goto reserve;
 		}
 	}
@@ -143,7 +139,7 @@ reserve:
 		case -EBUSY:
 		case -ERESTARTSYS:
 		case -EINTR:
-			kern_yield(0);
+			kern_yield(PRI_USER);
 			goto reserve;
 		default:
 			retval = VM_PAGER_ERROR;
@@ -262,14 +258,14 @@ reserve:
 		    bo, m, m1, (uintmax_t)offset));
 	}
 	m->valid = VM_PAGE_BITS_ALL;
-	*mres = m;
 	vm_page_xbusy(m);
-
-	if (oldm != NULL) {
-		vm_page_lock(oldm);
-		vm_page_free(oldm);
-		vm_page_unlock(oldm);
+	if (*mres != NULL) {
+		KASSERT(*mres != m, ("losing %p %p", *mres, m));
+		vm_page_lock(*mres);
+		vm_page_free(*mres);
+		vm_page_unlock(*mres);
 	}
+	*mres = m;
 
 out_io_unlock1:
 	ttm_mem_io_unlock(man);

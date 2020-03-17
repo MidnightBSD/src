@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Semihalf.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_pl011.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_dev_pl011.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -274,7 +273,8 @@ static struct uart_class uart_pl011_class = {
 	sizeof(struct uart_pl011_softc),
 	.uc_ops = &uart_pl011_ops,
 	.uc_range = 0x48,
-	.uc_rclk = 0
+	.uc_rclk = 0,
+	.uc_rshift = 2
 };
 
 static struct ofw_compat_data compat_data[] = {
@@ -282,6 +282,15 @@ static struct ofw_compat_data compat_data[] = {
 	{NULL,			(uintptr_t)NULL},
 };
 UART_FDT_CLASS_AND_DEVICE(compat_data);
+
+#ifdef DEV_ACPI
+static struct acpi_uart_compat_data acpi_compat_data[] = {
+	{"ARMH0011", &uart_pl011_class, ACPI_DBG2_ARM_PL011, 2, 0, 0, 0, "uart plo11"},
+	{"ARMH0011", &uart_pl011_class, ACPI_DBG2_ARM_SBSA_GENERIC, 2, 0, 0, 0, "uart plo11"},
+	{NULL, NULL, 0, 0, 0, 0, 0, NULL},
+};
+UART_ACPI_CLASS_AND_DEVICE(acpi_compat_data);
+#endif
 
 static int
 uart_pl011_bus_attach(struct uart_softc *sc)
@@ -460,14 +469,22 @@ uart_pl011_bus_transmit(struct uart_softc *sc)
 		__uart_setreg(bas, UART_DR, sc->sc_txbuf[i]);
 		uart_barrier(bas);
 	}
-	sc->sc_txbusy = 1;
 
-	/* Enable TX interrupt */
-	reg = __uart_getreg(bas, UART_IMSC);
-	reg |= (UART_TXEMPTY);
-	__uart_setreg(bas, UART_IMSC, reg);
+	/* If not empty wait until it is */
+	if ((__uart_getreg(bas, UART_FR) & FR_TXFE) != FR_TXFE) {
+		sc->sc_txbusy = 1;
+
+		/* Enable TX interrupt */
+		reg = __uart_getreg(bas, UART_IMSC);
+		reg |= (UART_TXEMPTY);
+		__uart_setreg(bas, UART_IMSC, reg);
+	}
 
 	uart_unlock(sc->sc_hwmtx);
+
+	/* No interrupt expected, schedule the next fifo write */
+	if (!sc->sc_txbusy)
+		uart_sched_softih(sc, SER_INT_TXIDLE);
 
 	return (0);
 }

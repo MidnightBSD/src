@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013, 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/common/t4_regs.h 308304 2016-11-04 18:45:06Z jhb $
+ * $FreeBSD: stable/11/sys/dev/cxgbe/common/t4_regs.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -1250,9 +1249,9 @@
 #define A_SGE_FL_BUFFER_SIZE0 0x1044
 
 #define S_SIZE    4
-#define M_SIZE    0xfffffffU
+#define CXGBE_M_SIZE    0xfffffffU
 #define V_SIZE(x) ((x) << S_SIZE)
-#define G_SIZE(x) (((x) >> S_SIZE) & M_SIZE)
+#define G_SIZE(x) (((x) >> S_SIZE) & CXGBE_M_SIZE)
 
 #define S_T6_SIZE    4
 #define M_T6_SIZE    0xfffffU
@@ -57250,9 +57249,9 @@
 #define F_INIT_ENABLE    V_INIT_ENABLE(1U)
 
 #define S_WAIT    16
-#define CXGBE_M_WAIT    0xfffU
+#define M_WAIT    0xfffU
 #define CXGBE_V_WAIT(x) ((x) << S_WAIT)
-#define G_WAIT(x) (((x) >> S_WAIT) & CXGBE_M_WAIT)
+#define G_WAIT(x) (((x) >> S_WAIT) & M_WAIT)
 
 #define S_EN_MULTI_RANK_SEL    4
 #define V_EN_MULTI_RANK_SEL(x) ((x) << S_EN_MULTI_RANK_SEL)

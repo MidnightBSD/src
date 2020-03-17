@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Advanced Micro Devices, Inc.
  *
@@ -27,7 +26,7 @@
 #define ATOM_BITS_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/atom-bits.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/atom-bits.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 static inline uint8_t get_u8(void *bios, int ptr)
 {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2012 Stefan Bethke.
  * All rights reserved.
@@ -24,12 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/etherswitch/arswitch/arswitch_reg.h 253572 2013-07-23 14:24:22Z loos $
+ * $FreeBSD: stable/11/sys/dev/etherswitch/arswitch/arswitch_reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__ARSWITCH_REG_H__
 #define	__ARSWITCH_REG_H__
 
 extern	void arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
+	    uint16_t dbg_data);
+extern	void arswitch_writemmd(device_t dev, int phy, uint16_t dbg_addr,
 	    uint16_t dbg_data);
 
 extern	int arswitch_readreg(device_t dev, int addr);

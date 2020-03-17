@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Robert N. M. Watson
  * All rights reserved.
@@ -28,19 +27,23 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/terasic/mtl/terasic_mtl.h 245380 2013-01-13 16:57:11Z rwatson $
+ * $FreeBSD: stable/11/sys/dev/terasic/mtl/terasic_mtl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_TERASIC_MTL_H_
 #define	_DEV_TERASIC_MTL_H_
 
+#include "opt_syscons.h"
+
 struct terasic_mtl_softc {
+#if defined(DEV_SC)
 	/*
 	 * syscons requires that its video_adapter_t be at the front of the
 	 * softc, so place syscons fields first, which we otherwise would
 	 * probably not do.
 	 */
 	video_adapter_t	 mtl_va;
+#endif
 
 	/*
 	 * Bus-related fields.
@@ -63,7 +66,8 @@ struct terasic_mtl_softc {
 	int		 mtl_reg_rid;
 
 	/*
-	 * Graphics frame buffer device -- mappable form userspace.
+	 * Graphics frame buffer device -- mappable from userspace, and used
+	 * by the vt framebuffer interface.
 	 */
 	struct cdev	*mtl_pixel_cdev;
 	struct resource	*mtl_pixel_res;
@@ -77,6 +81,11 @@ struct terasic_mtl_softc {
 	struct resource	*mtl_text_res;
 	int		 mtl_text_rid;
 	uint16_t	*mtl_text_soft;
+
+	/*
+	 * Framebuffer hookup for vt(4).
+	 */
+	struct fb_info	 mtl_fb_info;
 };
 
 #define	TERASIC_MTL_LOCK(sc)		mtx_lock(&(sc)->mtl_lock)
@@ -107,6 +116,7 @@ struct terasic_mtl_softc {
 /*
  * Constants to help interpret various control registers.
  */
+#define	TERASIC_MTL_BLEND_PIXEL_ENDIAN_SWAP	0x10000000
 #define	TERASIC_MTL_BLEND_DEFAULT_MASK		0x0f000000
 #define	TERASIC_MTL_BLEND_DEFAULT_SHIFT		24
 #define	TERASIC_MTL_BLEND_PIXEL_MASK		0x00ff0000
@@ -149,6 +159,12 @@ struct terasic_mtl_softc {
 #define	TERASIC_MTL_TEXTFRAMEBUF_ATTR_SHIFT	8
 
 /*
+ * Framebuffer constants.
+ */
+#define	TERASIC_MTL_FB_WIDTH		800
+#define	TERASIC_MTL_FB_HEIGHT		640
+
+/*
  * Alpha-blending constants.
  */
 #define	TERASIC_MTL_ALPHA_TRANSPARENT	0
@@ -165,6 +181,8 @@ extern devclass_t	terasic_mtl_devclass;
 /*
  * Sub-driver setup routines.
  */
+int	terasic_mtl_fbd_attach(struct terasic_mtl_softc *sc);
+void	terasic_mtl_fbd_detach(struct terasic_mtl_softc *sc);
 int	terasic_mtl_pixel_attach(struct terasic_mtl_softc *sc);
 void	terasic_mtl_pixel_detach(struct terasic_mtl_softc *sc);
 int	terasic_mtl_reg_attach(struct terasic_mtl_softc *sc);
@@ -203,6 +221,8 @@ void	terasic_mtl_blend_textfg_set(struct terasic_mtl_softc *sc,
 	    uint8_t alpha);
 void	terasic_mtl_blend_textbg_set(struct terasic_mtl_softc *sc,
 	    uint8_t alpha);
+void	terasic_mtl_reg_pixel_endian_set(struct terasic_mtl_softc *sc,
+	    int endian_swap);
 
 /*
  * Text frame buffer I/O routines.

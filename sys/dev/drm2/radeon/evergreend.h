@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2010 Advanced Micro Devices, Inc.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/evergreend.h 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/evergreend.h 258780 2013-11-30 22:17:27Z eadler $");
 
 #ifndef EVERGREEND_H
 #define EVERGREEND_H

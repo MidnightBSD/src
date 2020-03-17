@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_octeon.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_octeon.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -104,8 +103,7 @@ const struct mips_event_code_map mips_event_codes[] =
     { PMC_EV_OCTEON_SYNCW, MIPS_CTR_ALL, CVMX_CORE_PERF_SYNCW },
 };
 
-const int mips_event_codes_size =
-	sizeof(mips_event_codes) / sizeof(mips_event_codes[0]);
+const int mips_event_codes_size = nitems(mips_event_codes);
 
 struct mips_pmc_spec mips_pmc_spec = {
 	.ps_cpuclass = PMC_CLASS_OCTEON,

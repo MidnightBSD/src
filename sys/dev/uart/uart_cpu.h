@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/uart/uart_cpu.h 262649 2014-03-01 04:16:54Z imp $
+ * $FreeBSD: stable/11/sys/dev/uart/uart_cpu.h 340145 2018-11-04 23:28:56Z mmacy $
  */
 
 #ifndef _DEV_UART_CPU_H_
@@ -80,6 +79,8 @@ int uart_getenv(int, struct uart_devinfo *, struct uart_class *);
 const char *uart_getname(struct uart_class *);
 struct uart_ops *uart_getops(struct uart_class *);
 int uart_getrange(struct uart_class *);
+u_int uart_getregshift(struct uart_class *);
+u_int uart_getregiowidth(struct uart_class *);
 
 void uart_add_sysdev(struct uart_devinfo *);
 

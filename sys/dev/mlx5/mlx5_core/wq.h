@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013-2015, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/wq.h 290650 2015-11-10 12:20:22Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/wq.h 341958 2018-12-12 12:46:12Z hselasky $
  */
 
 #ifndef __MLX5_WQ_H__
@@ -43,11 +42,22 @@ struct mlx5_wq_ctrl {
 	struct mlx5_db		db;
 };
 
+struct mlx5_frag_wq_ctrl {
+	struct mlx5_core_dev	*mdev;
+	struct mlx5_frag_buf	frag_buf;
+	struct mlx5_db		db;
+};
+
 struct mlx5_wq_cyc {
 	void			*buf;
 	__be32			*db;
 	u16			sz_m1;
 	u8			log_stride;
+};
+
+struct mlx5_wq_qp {
+	struct mlx5_wq_cyc	rq;
+	struct mlx5_wq_cyc	sq;
 };
 
 struct mlx5_cqwq {

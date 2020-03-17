@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/uart/uart_dev_imx.h 266372 2014-05-17 22:31:40Z ian $
+ * $FreeBSD: stable/11/sys/dev/uart/uart_dev_imx.h 291859 2015-12-05 15:09:19Z kevlo $
  */
 
 #ifndef	_UART_DEV_IMX5XX_H
@@ -124,7 +123,6 @@
 #define		IMXUART_UFCR_TXTL_MASK		(0x3f << 10)
 #define		IMXUART_UFCR_TXTL_SHIFT		10
 #define		IMXUART_UFCR_RFDIV_MASK		(0x07 << 7)
-#define		IMXUART_UFCR_RFDIV_SHIFT	7
 #define		IMXUART_UFCR_RFDIV_SHIFT	7
 #define		IMXUART_UFCR_RFDIV_DIV6		(0 << 7)
 #define		IMXUART_UFCR_RFDIV_DIV5		(1 << 7)

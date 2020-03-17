@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006, Pyun YongHyeon
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mii/ip1000phyreg.h 189567 2009-03-09 08:17:46Z yongari $
+ * $FreeBSD: stable/11/sys/dev/mii/ip1000phyreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_DEV_MII_IP1000PHYREG_H_

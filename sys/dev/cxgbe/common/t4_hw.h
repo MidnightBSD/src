@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/common/t4_hw.h 308304 2016-11-04 18:45:06Z jhb $
+ * $FreeBSD: stable/11/sys/dev/cxgbe/common/t4_hw.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -277,8 +276,17 @@ enum {
 	FLASH_MIN_SIZE = FLASH_CFG_START + FLASH_CFG_MAX_SIZE,
 
 	/*
-	 * Sectors 32-63 are reserved for FLASH failover.
+	 * Sectors 32-63 for CUDBG.
 	 */
+	FLASH_CUDBG_START_SEC = 32,
+	FLASH_CUDBG_NSECS = 32,
+	FLASH_CUDBG_START = FLASH_START(FLASH_CUDBG_START_SEC),
+	FLASH_CUDBG_MAX_SIZE = FLASH_MAX_SIZE(FLASH_CUDBG_NSECS),
+
+	/*
+	 * Size of defined FLASH regions.
+	 */
+	FLASH_END_SEC = 64,
 };
 
 #undef FLASH_START

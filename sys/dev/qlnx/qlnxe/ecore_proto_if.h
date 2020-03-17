@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_proto_if.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_proto_if.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -124,11 +123,12 @@ struct ecore_iscsi_pf_params {
 	u8		gl_cmd_pi;
 	u8		debug_mode;
 	u8		ll2_ooo_queue_id;
-	u8		ooo_enable;
 
 	u8		is_target;
-	u8		is_tmwo_en;
+	u8		is_soc_en;
+	u8		soc_num_of_blocks_log;
 	u8		bdq_pbl_num_entries[3];
+	u8		disable_stats_collection;
 };
 
 enum ecore_rdma_protocol {
@@ -144,7 +144,8 @@ struct ecore_rdma_pf_params {
 	 */
 	u32		min_dpis;	/* number of requested DPIs */
 	u32		num_qps;	/* number of requested Queue Pairs */
-	u32		num_srqs;	/* number of requested SRQ */
+	u32		num_srqs;	/* number of requested SRQs */
+	u32		num_xrc_srqs;	/* number of requested XRC SRQs */
 	u8		roce_edpm_mode; /* see QED_ROCE_EDPM_MODE_ENABLE */
 	u8		gl_pi;		/* protocol index */
 

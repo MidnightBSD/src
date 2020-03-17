@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Fabien Thomas
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_soft.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_soft.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>

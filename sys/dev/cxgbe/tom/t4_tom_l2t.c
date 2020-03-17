@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/tom/t4_tom_l2t.c 309442 2016-12-02 21:29:52Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/tom/t4_tom_l2t.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -234,7 +233,7 @@ resolve_entry(struct adapter *sc, struct l2t_entry *e)
 	struct sockaddr_in sin = {0};
 	struct sockaddr_in6 sin6 = {0};
 	struct sockaddr *sa;
-	uint8_t dmac[ETHER_ADDR_LEN];
+	uint8_t dmac[ETHER_HDR_LEN];
 	uint16_t vtag = VLAN_NONE;
 	int rc;
 

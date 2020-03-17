@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	from NetBSD: bmtphyreg.h,v 1.1 2001/06/02 21:42:10 thorpej Exp
  *
- * $FreeBSD: stable/10/sys/dev/mii/bmtphyreg.h 204646 2010-03-03 17:55:51Z joel $
+ * $FreeBSD: stable/11/sys/dev/mii/bmtphyreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_MII_BMTPHYREG_H_

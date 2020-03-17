@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Nathan Whitehorn
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fdt/simplebus.h 283477 2015-05-24 17:51:57Z ian $
+ * $FreeBSD: stable/11/sys/dev/fdt/simplebus.h 280772 2015-03-27 23:10:15Z ian $
  */
 
 #ifndef	_FDT_SIMPLEBUS_H

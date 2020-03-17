@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -27,10 +26,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_ath_btcoex.h 251487 2013-06-07 09:02:02Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/if_ath_btcoex.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__IF_ATH_BTCOEX_H__
 #define	__IF_ATH_BTCOEX_H__
+
+typedef enum {
+	ATH_COEX_EVENT_BT_NOOP,
+} ATH_BT_COEX_EVENT;
 
 extern	int ath_btcoex_attach(struct ath_softc *sc);
 extern	int ath_btcoex_detach(struct ath_softc *sc);

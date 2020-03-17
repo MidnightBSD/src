@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006-2009 Red Hat Inc.
  * Copyright (c) 2006-2008 Intel Corporation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_fb_helper.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_fb_helper.c 346817 2019-04-28 13:21:01Z dchagin $");
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
@@ -76,7 +75,7 @@ vt_kms_postswitch(void *arg)
 	sc = (struct vt_kms_softc *)arg;
 
 	if (!kdb_active && panicstr == NULL)
-		taskqueue_enqueue_fast(taskqueue_thread, &sc->fb_mode_task);
+		taskqueue_enqueue(taskqueue_thread, &sc->fb_mode_task);
 	else
 		drm_fb_helper_restore_fbdev_mode(sc->fb_helper);
 
@@ -131,9 +130,9 @@ fb_get_options(const char *connector_name, char **option)
 	DRM_INFO("Connector %s: get mode from tunables:\n", connector_name);
 	DRM_INFO("  - %s\n", tunable);
 	DRM_INFO("  - kern.vt.fb.default_mode\n");
-	*option = getenv(tunable);
+	*option = kern_getenv(tunable);
 	if (*option == NULL)
-		*option = getenv("kern.vt.fb.default_mode");
+		*option = kern_getenv("kern.vt.fb.default_mode");
 
 	return (*option != NULL ? 0 : -ENOENT);
 }
@@ -340,6 +339,7 @@ bool drm_fb_helper_restore_fbdev_mode(struct drm_fb_helper *fb_helper)
 {
 	bool error = false;
 	int i, ret;
+
 	for (i = 0; i < fb_helper->crtc_count; i++) {
 		struct drm_mode_set *mode_set = &fb_helper->crtc_info[i].mode_set;
 		ret = mode_set->crtc->funcs->set_config(mode_set);
@@ -580,7 +580,7 @@ static int setcolreg(struct drm_crtc *crtc, u16 red, u16 green,
 	if (info->fix.visual == FB_VISUAL_TRUECOLOR) {
 		u32 *palette;
 		u32 value;
-		/* place color in psuedopalette */
+		/* place color in pseudopalette */
 		if (regno > 16)
 			return -EINVAL;
 		palette = (u32 *)info->pseudo_palette;
@@ -841,7 +841,10 @@ int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	struct fb_info *info;
 	struct drm_fb_helper_surface_size sizes;
 	int gamma_size = 0;
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
+	struct drm_crtc *crtc;
+	struct drm_device *dev;
+	int ret;
 	device_t kdev;
 #endif
 
@@ -922,25 +925,45 @@ int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 
 	info = fb_helper->fbdev;
 
+	kdev = fb_helper->dev->dev;
+	info->fb_video_dev = device_get_parent(kdev);
+
 	/* set the fb pointer */
 	for (i = 0; i < fb_helper->crtc_count; i++)
 		fb_helper->crtc_info[i].mode_set.fb = fb_helper->fb;
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	if (new_fb) {
-		device_t fbd;
 		int ret;
 
-		kdev = fb_helper->dev->dev;
-		fbd = device_add_child(kdev, "fbd", device_get_unit(kdev));
-		if (fbd != NULL) 
-			ret = device_probe_and_attach(fbd);
+		info->fb_fbd_dev = device_add_child(kdev, "fbd",
+		    device_get_unit(kdev));
+		if (info->fb_fbd_dev != NULL)
+			ret = device_probe_and_attach(info->fb_fbd_dev);
 		else
 			ret = ENODEV;
 #ifdef DEV_VT
 		if (ret != 0)
 			DRM_ERROR("Failed to attach fbd device: %d\n", ret);
 #endif
+	} else {
+		/* Modified version of drm_fb_helper_set_par() */
+		dev = fb_helper->dev;
+		sx_xlock(&dev->mode_config.mutex);
+		for (i = 0; i < fb_helper->crtc_count; i++) {
+			crtc = fb_helper->crtc_info[i].mode_set.crtc;
+			ret = crtc->funcs->set_config(&fb_helper->crtc_info[i].mode_set);
+			if (ret) {
+				sx_xunlock(&dev->mode_config.mutex);
+				return ret;
+			}
+		}
+		sx_xunlock(&dev->mode_config.mutex);
+
+		if (fb_helper->delayed_hotplug) {
+			fb_helper->delayed_hotplug = false;
+			drm_fb_helper_hotplug_event(fb_helper);
+		}
 	}
 #else
 	if (new_fb) {

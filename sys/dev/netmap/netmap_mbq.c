@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
 /*
- * Copyright (C) 2013-2014 Vincenzo Maffione. All rights reserved.
+ * Copyright (C) 2013-2014 Vincenzo Maffione
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,21 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/dev/netmap/netmap_mbq.c 267282 2014-06-09 15:24:45Z luigi $
+ * $FreeBSD: stable/11/sys/dev/netmap/netmap_mbq.c 341477 2018-12-04 17:40:56Z vmaffione $
  */
 
 
 #ifdef linux
 #include "bsd_glue.h"
-#else   /* __MidnightBSD__ */
+#elif defined (_WIN32)
+#include "win_glue.h"
+#else   /* __FreeBSD__ */
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
-#endif  /* __MidnightBSD__ */
+#endif  /* __FreeBSD__ */
 
 #include "netmap_mbq.h"
 
@@ -153,12 +155,12 @@ void mbq_safe_purge(struct mbq *q)
 }
 
 
-void mbq_safe_destroy(struct mbq *q)
+void mbq_safe_fini(struct mbq *q)
 {
     mtx_destroy(&q->lock);
 }
 
 
-void mbq_destroy(struct mbq *q)
+void mbq_fini(struct mbq *q)
 {
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Red Hat Inc.
  *
@@ -27,7 +26,7 @@
 #define ATOM_TYPES_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/atom-types.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/atom-types.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 /* sync atom types to kernel types */
 

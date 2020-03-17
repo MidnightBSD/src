@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: gentbi.c,v 1.15 2006/03/29 07:05:24 thorpej Exp $	*/
 
 /*-
@@ -63,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/gentbi.c 227908 2011-11-23 20:27:26Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/gentbi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for generic unknown ten-bit interfaces(1000BASE-{LX,SX}
@@ -192,12 +191,6 @@ gentbi_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		mii_phy_setmedia(sc);
 		break;
 

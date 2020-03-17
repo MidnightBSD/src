@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008-2010 Atheros Communications Inc.
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9287_cal.c 222301 2011-05-26 09:15:33Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9287_cal.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include "opt_ah.h"
 #include "ah.h"

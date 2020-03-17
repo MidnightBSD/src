@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/gpio/gpiobus_if.m 278783 2015-02-14 20:50:38Z loos $
+# $FreeBSD: stable/11/sys/dev/gpio/gpiobus_if.m 279761 2015-03-08 00:47:50Z loos $
 #
 
 #include <sys/bus.h>
@@ -106,4 +105,22 @@ METHOD int pin_setflags {
 	device_t child;
 	uint32_t pin_num;
 	uint32_t flags;
+};
+
+#
+# Get the pin name
+#
+METHOD int pin_getname {
+	device_t dev;
+	uint32_t pin_num;
+	char *name;
+};
+
+#
+# Set the pin name
+#
+METHOD int pin_setname {
+	device_t dev;
+	uint32_t pin_num;
+	const char *name;
 };

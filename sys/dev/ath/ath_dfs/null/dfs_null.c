@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd
  * All rights reserved.
@@ -27,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 2013-01-02 01:36:10Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_dfs/null/dfs_null.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 2013-01-02 01:36:10Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ath/ath_dfs/null/dfs_null.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This implements an empty DFS module.
@@ -44,6 +43,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 2013-01
 #include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 2013-01
 #include <sys/socket.h>
  
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>		/* XXX for ether_sprintf */
@@ -180,7 +181,7 @@ ath_dfs_process_phy_err(struct ath_softc *sc, struct mbuf *m,
 }
 
 /*
- * Process the radar events and determine whether a DFS event has occured.
+ * Process the radar events and determine whether a DFS event has occurred.
  *
  * This is designed to run outside of the RX processing path.
  * The RX path will call ath_dfs_tasklet_needed() to see whether

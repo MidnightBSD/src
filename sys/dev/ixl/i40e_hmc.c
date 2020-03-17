@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2013-2015, Intel Corporation 
+  Copyright (c) 2013-2019, Intel Corporation
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -31,16 +30,14 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixl/i40e_hmc.c 292100 2015-12-11 13:08:38Z smh $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/i40e_hmc.c 349163 2019-06-18 00:08:02Z erj $*/
 
 #include "i40e_osdep.h"
 #include "i40e_register.h"
 #include "i40e_status.h"
 #include "i40e_alloc.h"
 #include "i40e_hmc.h"
-#ifndef I40E_NO_TYPE_HEADER
 #include "i40e_type.h"
-#endif
 
 /**
  * i40e_add_sd_table_entry - Adds a segment descriptor to the table
@@ -214,7 +211,6 @@ exit:
  * @hw: pointer to our HW structure
  * @hmc_info: pointer to the HMC configuration information structure
  * @idx: the page index
- * @is_pf: distinguishes a VF from a PF
  *
  * This function:
  *	1. Marks the entry in pd tabe (for paged address mode) or in sd table

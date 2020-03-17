@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Chelsio Communications, Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/t4_mp_ring.c 284052 2015-06-06 09:28:40Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/t4_mp_ring.c 339400 2018-10-17 01:30:51Z np $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -123,11 +122,12 @@ drain_ring(struct mp_ring *r, union ring_state os, uint16_t prev, int budget)
 		n = r->drain(r, cidx, pidx);
 		if (n == 0) {
 			critical_enter();
+			os.state = r->state;
 			do {
-				os.state = ns.state = r->state;
+				ns.state = os.state;
 				ns.cidx = cidx;
 				ns.flags = STALLED;
-			} while (atomic_cmpset_64(&r->state, os.state,
+			} while (atomic_fcmpset_64(&r->state, &os.state,
 			    ns.state) == 0);
 			critical_exit();
 			if (prev != STALLED)
@@ -150,11 +150,12 @@ drain_ring(struct mp_ring *r, union ring_state os, uint16_t prev, int budget)
 		if (cidx != pidx && pending < 64 && total < budget)
 			continue;
 		critical_enter();
+		os.state = r->state;
 		do {
-			os.state = ns.state = r->state;
+			ns.state = os.state;
 			ns.cidx = cidx;
 			ns.flags = state_to_flags(ns, total >= budget);
-		} while (atomic_cmpset_acq_64(&r->state, os.state, ns.state) == 0);
+		} while (atomic_fcmpset_acq_64(&r->state, &os.state, ns.state) == 0);
 		critical_exit();
 
 		if (ns.flags == ABDICATED)
@@ -260,8 +261,8 @@ mp_ring_enqueue(struct mp_ring *r, void **items, int n, int budget)
 	 * Reserve room for the new items.  Our reservation, if successful, is
 	 * from 'pidx_start' to 'pidx_stop'.
 	 */
+	os.state = r->state;
 	for (;;) {
-		os.state = r->state;
 		if (n >= space_available(r, os)) {
 			counter_u64_add(r->drops, n);
 			MPASS(os.flags != IDLE);
@@ -272,7 +273,7 @@ mp_ring_enqueue(struct mp_ring *r, void **items, int n, int budget)
 		ns.state = os.state;
 		ns.pidx_head = increment_idx(r, os.pidx_head, n);
 		critical_enter();
-		if (atomic_cmpset_64(&r->state, os.state, ns.state))
+		if (atomic_fcmpset_64(&r->state, &os.state, ns.state))
 			break;
 		critical_exit();
 		cpu_spinwait();
@@ -283,7 +284,7 @@ mp_ring_enqueue(struct mp_ring *r, void **items, int n, int budget)
 	/*
 	 * Wait for other producers who got in ahead of us to enqueue their
 	 * items, one producer at a time.  It is our turn when the ring's
-	 * pidx_tail reaches the begining of our reservation (pidx_start).
+	 * pidx_tail reaches the beginning of our reservation (pidx_start).
 	 */
 	while (ns.pidx_tail != pidx_start) {
 		cpu_spinwait();
@@ -302,11 +303,12 @@ mp_ring_enqueue(struct mp_ring *r, void **items, int n, int budget)
 	 * Update the ring's pidx_tail.  The release style atomic guarantees
 	 * that the items are visible to any thread that sees the updated pidx.
 	 */
+	os.state = r->state;
 	do {
-		os.state = ns.state = r->state;
+		ns.state = os.state;
 		ns.pidx_tail = pidx_stop;
 		ns.flags = BUSY;
-	} while (atomic_cmpset_rel_64(&r->state, os.state, ns.state) == 0);
+	} while (atomic_fcmpset_rel_64(&r->state, &os.state, ns.state) == 0);
 	critical_exit();
 	counter_u64_add(r->enqueues, n);
 

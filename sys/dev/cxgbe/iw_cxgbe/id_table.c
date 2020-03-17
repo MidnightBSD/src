@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011-2013 Chelsio Communications.  All rights reserved.
  *
@@ -31,7 +30,7 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/iw_cxgbe/id_table.c 256694 2013-10-17 18:37:25Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/iw_cxgbe/id_table.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 

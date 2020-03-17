@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_agp_backend.c 275408 2014-12-02 14:09:54Z tijl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_agp_backend.c 273862 2014-10-30 14:26:36Z tijl $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_module.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5212/ar5212_interrupts.c 201758 2010-01-07 21:01:37Z mbr $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212_interrupts.c 201758 2010-01-07 21:01:37Z mbr $
  */
 #include "opt_ah.h"
 

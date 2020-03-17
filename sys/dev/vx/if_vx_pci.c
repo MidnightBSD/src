@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996 Naoki Hamada <nao@tom-yam.or.jp>
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx_pci.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vx/if_vx_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,6 +38,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/vx/if_vx_pci.c 246128 2013-01-30 18:01:20Z
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 
 #include <machine/bus.h>

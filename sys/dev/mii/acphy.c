@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -54,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/acphy.c 227908 2011-11-23 20:27:26Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/acphy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for Altima AC101 10/100 PHY
@@ -140,14 +139,12 @@ acphy_attach(device_t dev)
 	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & sc->mii_capmask;
 	device_printf(dev, " ");
 
-#define	ADD(m, c)	ifmedia_add(&sc->mii_pdata->mii_media, (m), (c), NULL)
+#define	ADD(m)	ifmedia_add(&sc->mii_pdata->mii_media, (m), 0, NULL)
 	if ((PHY_READ(sc, MII_ACPHY_MCTL) & AC_MCTL_FX_SEL) != 0) {
 		sc->mii_flags |= MIIF_HAVEFIBER;
-		ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_FX, 0, sc->mii_inst),
-		    MII_MEDIA_100_TX);
+		ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_FX, 0, sc->mii_inst));
 		printf("100baseFX, ");
-		ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_FX, IFM_FDX, sc->mii_inst),
-		    MII_MEDIA_100_TX_FDX);
+		ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_FX, IFM_FDX, sc->mii_inst));
 		printf("100baseFX-FDX, ");
 	}
 #undef ADD
@@ -169,12 +166,6 @@ acphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		/* Wake & deisolate up if necessary */
 		reg = PHY_READ(sc, MII_BMCR);
 		if (reg & (BMCR_ISO | BMCR_PDOWN))
@@ -184,12 +175,6 @@ acphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_TICK:
-		/*
-		 * Is the interface even up?
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			return (0);
-
 		/*
 		 * This PHY's autonegotiation doesn't need to be kicked.
 		 */

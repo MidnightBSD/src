@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mii/rgephyreg.h 280667 2015-03-26 05:44:21Z yongari $
+ * $FreeBSD: stable/11/sys/dev/mii/rgephyreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_MII_RGEPHYREG_H_
@@ -183,5 +182,21 @@
 #define	RGEPHY_F_SSR_LINK	0x0004	/* link up */
 #define	RGEPHY_F_SSR_MDI	0x0002	/* MDI/MDIX */
 #define	RGEPHY_F_SSR_JABBER	0x0001	/* Jabber */
+
+/* RTL8211F */
+#define	RGEPHY_F_EPAGSR		0x1F	/* Extension page select register */
+
+/* RTL8211F */
+#define	RGEPHY_F_MMD_DEV_7	0x07
+
+/* RTL8211F MMD device 7 */
+#define	RGEPHY_F_MMD_EEEAR	0x3C	/* EEE advertisement */
+#define	EEEAR_1000T		0x0004	/* adv. 1000baseT EEE */
+#define	EEEAR_100TX		0x0002	/* adv. 100baseTX EEE */
+
+/* RTL8211F MMD device 7 */
+#define	RGEPHY_F_MMD_EEELPAR	0x3D	/* EEE link partner abilities */
+#define	EEELPAR_1000T		0x0004	/* link partner 1000baseT EEE capable */
+#define	EEELPAR_100TX		0x0002	/* link partner 100baseTX EEE capable */
 
 #endif /* _DEV_RGEPHY_MIIREG_H_ */

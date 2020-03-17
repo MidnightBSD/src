@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file radeon_drv.c
  * ATI Radeon driver
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_drv.c 317903 2017-05-07 11:11:51Z nyan $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_drv.c 342969 2019-01-12 16:58:32Z markj $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/radeon/radeon_drm.h>
@@ -330,10 +329,6 @@ radeon_attach(device_t kdev)
 	if (radeon_modeset == 1) {
 		kms_driver.driver_features |= DRIVER_MODESET;
 		kms_driver.num_ioctls = radeon_max_kms_ioctl;
-#ifdef COMPAT_FREEBSD32
-		kms_driver.compat_ioctls = radeon_compat_ioctls;
-		kms_driver.num_compat_ioctls = &radeon_num_compat_ioctls;
-#endif
 		radeon_register_atpx_handler();
 	}
 	return (-drm_attach_helper(kdev, pciidlist, &kms_driver));

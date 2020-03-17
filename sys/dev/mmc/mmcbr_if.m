@@ -50,8 +50,8 @@
 # or the SD Card Association to disclose or distribute any technical
 # information, know-how or other confidential information to any third party.
 #
-# $FreeBSD: stable/10/sys/dev/mmc/mmcbr_if.m 322120 2017-08-06 16:07:34Z marius $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/mmc/mmcbr_if.m 322119 2017-08-06 16:07:25Z marius $
+#
 
 #include <sys/types.h>
 #include <dev/mmc/mmcreg.h>

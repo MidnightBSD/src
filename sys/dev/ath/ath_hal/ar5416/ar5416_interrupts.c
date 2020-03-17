@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5416/ar5416_interrupts.c 247030 2013-02-20 11:24:11Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_interrupts.c 265029 2014-04-27 23:31:42Z adrian $
  */
 #include "opt_ah.h"
 
@@ -338,6 +337,9 @@ ar5416SetInterrupts(struct ath_hal *ah, HAL_INT ints)
 	/* Write the new IMR and store off our SW copy. */
 	HALDEBUG(ah, HAL_DEBUG_INTERRUPT, "%s: new IMR 0x%x\n", __func__, mask);
 	OS_REG_WRITE(ah, AR_IMR, mask);
+	/* Flush write */
+	(void) OS_REG_READ(ah, AR_IMR);
+
 	mask = OS_REG_READ(ah, AR_IMR_S2) & ~(AR_IMR_S2_TIM |
 					AR_IMR_S2_DTIM |
 					AR_IMR_S2_DTIMSYNC |

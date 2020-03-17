@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nand/nandsim_chip.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nandsim_chip.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -310,7 +309,7 @@ nandsim_loop(void *arg)
 				    links);
 				destroy_event(ev);
 				wakeup(ev);
-			};
+			}
 			NANDSIM_CHIP_UNLOCK(chip);
 			nandsim_log(chip, NANDSIM_LOG_SM, "destroyed\n");
 			mtx_destroy(&chip->ns_lock);

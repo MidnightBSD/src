@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
 /*
- * Copyright (C) 2013-2014 Vincenzo Maffione. All rights reserved.
+ * Copyright (C) 2013-2014 Vincenzo Maffione
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,12 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/dev/netmap/netmap_mbq.h 270252 2014-08-20 23:34:36Z luigi $
+ * $FreeBSD: stable/11/sys/dev/netmap/netmap_mbq.h 341477 2018-12-04 17:40:56Z vmaffione $
  */
 
 
-#ifndef __NETMAP_MBQ_H__
-#define __NETMAP_MBQ_H__
+#ifndef _NET_NETMAP_MBQ_H__
+#define _NET_NETMAP_MBQ_H__
 
 /*
  * These function implement an mbuf tailq with an optional lock.
@@ -41,6 +41,8 @@
 /* XXX probably rely on a previous definition of SPINLOCK_T */
 #ifdef linux
 #define SPINLOCK_T  safe_spinlock_t
+#elif defined (_WIN32)
+#define SPINLOCK_T 	win_spinlock_t
 #else
 #define SPINLOCK_T  struct mtx
 #endif
@@ -53,15 +55,20 @@ struct mbq {
     SPINLOCK_T lock;
 };
 
-/* XXX "destroy" does not match "init" as a name.
- * We should also clarify whether init can be used while
+/* We should clarify whether init can be used while
  * holding a lock, and whether mbq_safe_destroy() is a NOP.
  */
 void mbq_init(struct mbq *q);
-void mbq_destroy(struct mbq *q);
+void mbq_fini(struct mbq *q);
 void mbq_enqueue(struct mbq *q, struct mbuf *m);
 struct mbuf *mbq_dequeue(struct mbq *q);
 void mbq_purge(struct mbq *q);
+
+static inline struct mbuf *
+mbq_peek(struct mbq *q)
+{
+	return q->head;
+}
 
 static inline void
 mbq_lock(struct mbq *q)
@@ -77,7 +84,7 @@ mbq_unlock(struct mbq *q)
 
 
 void mbq_safe_init(struct mbq *q);
-void mbq_safe_destroy(struct mbq *q);
+void mbq_safe_fini(struct mbq *q);
 void mbq_safe_enqueue(struct mbq *q, struct mbuf *m);
 struct mbuf *mbq_safe_dequeue(struct mbq *q);
 void mbq_safe_purge(struct mbq *q);
@@ -87,4 +94,4 @@ static inline unsigned int mbq_len(struct mbq *q)
     return q->count;
 }
 
-#endif /* __NETMAP_MBQ_H_ */
+#endif /* _NET_NETMAP_MBQ_H_ */

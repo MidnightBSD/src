@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2011-2014 Luigi Rizzo. All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/dev/netmap/if_re_netmap.h 278779 2015-02-14 19:41:26Z luigi $
+ * $FreeBSD: stable/11/sys/dev/netmap/if_re_netmap.h 341477 2018-12-04 17:40:56Z vmaffione $
  *
  * netmap support for: re
  *
@@ -160,8 +159,6 @@ re_netmap_txsync(struct netmap_kring *kring, int flags)
 		}
 	}
 
-	nm_txsync_finalize(kring);
-
 	return 0;
 }
 
@@ -179,7 +176,7 @@ re_netmap_rxsync(struct netmap_kring *kring, int flags)
 	u_int nic_i;	/* index into the NIC ring */
 	u_int n;
 	u_int const lim = kring->nkr_num_slots - 1;
-	u_int const head = nm_rxsync_prologue(kring);
+	u_int const head = kring->rhead;
 	int force_update = (flags & NAF_FORCE_READ) || kring->nr_kflags & NKR_PENDINTR;
 
 	/* device-specific */
@@ -202,7 +199,6 @@ re_netmap_rxsync(struct netmap_kring *kring, int flags)
 	 * is to stop right before nm_hwcur.
 	 */
 	if (netmap_no_pendintr || force_update) {
-		uint16_t slot_flags = kring->nkr_slot_flags;
 		uint32_t stop_i = nm_prev(kring->nr_hwcur, lim);
 
 		nic_i = sc->rl_ldata.rl_rx_prodidx; /* next pkt to check */
@@ -219,7 +215,7 @@ re_netmap_rxsync(struct netmap_kring *kring, int flags)
 			/* XXX subtract crc */
 			total_len = (total_len < 4) ? 0 : total_len - 4;
 			ring->slot[nm_i].len = total_len;
-			ring->slot[nm_i].flags = slot_flags;
+			ring->slot[nm_i].flags = 0;
 			/*  sync was in re_newbuf() */
 			bus_dmamap_sync(sc->rl_ldata.rl_rx_mtag,
 			    rxd[nic_i].rx_dmamap, BUS_DMASYNC_POSTREAD);
@@ -274,9 +270,6 @@ re_netmap_rxsync(struct netmap_kring *kring, int flags)
 		    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 	}
 
-	/* tell userspace that there might be new packets */
-	nm_rxsync_finalize(kring);
-
 	return 0;
 
 ring_reset:
@@ -309,7 +302,7 @@ re_netmap_tx_init(struct rl_softc *sc)
 	/* l points in the netmap ring, i points in the NIC ring */
 	for (i = 0; i < n; i++) {
 		uint64_t paddr;
-		int l = netmap_idx_n2k(&na->tx_rings[0], i);
+		int l = netmap_idx_n2k(na->tx_rings[0], i);
 		void *addr = PNMB(na, slot + l, &paddr);
 
 		desc[i].rl_bufaddr_lo = htole32(RL_ADDR_LO(paddr));
@@ -335,11 +328,11 @@ re_netmap_rx_init(struct rl_softc *sc)
 	 * Do not release the slots owned by userspace,
 	 * and also keep one empty.
 	 */
-	max_avail = n - 1 - nm_kr_rxspace(&na->rx_rings[0]);
+	max_avail = n - 1 - nm_kr_rxspace(na->rx_rings[0]);
 	for (nic_i = 0; nic_i < n; nic_i++) {
 		void *addr;
 		uint64_t paddr;
-		uint32_t nm_i = netmap_idx_n2k(&na->rx_rings[0], nic_i);
+		uint32_t nm_i = netmap_idx_n2k(na->rx_rings[0], nic_i);
 
 		addr = PNMB(na, slot + nm_i, &paddr);
 

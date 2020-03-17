@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2007-2009 VMware, Inc., Palo Alto, CA., USA
@@ -28,7 +27,7 @@
 /*
  * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
  */
-/* $FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_lock.h 247848 2013-03-05 16:14:55Z kib $ */
+/* $FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_lock.h 247848 2013-03-05 16:14:55Z kib $ */
 
 /** @file ttm_lock.h
  * This file implements a simple replacement for the buffer manager use

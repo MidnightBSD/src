@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2006 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5211/ar5211.h 247286 2013-02-25 22:42:43Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5211/ar5211.h 290612 2015-11-09 15:59:42Z adrian $
  */
 #ifndef _ATH_AR5211_H_
 #define _ATH_AR5211_H_
@@ -120,7 +119,6 @@ struct ath_hal_5211 {
 	uint32_t	ah_txEolInterruptMask;
 	uint32_t	ah_txUrnInterruptMask;
 	HAL_TX_QUEUE_INFO ah_txq[HAL_NUM_TX_QUEUES];
-	HAL_POWER_MODE	ah_powerMode;
 	HAL_ANT_SETTING ah_diversityControl;	/* antenna setting */
 	uint32_t	ah_calibrationTime;
 	HAL_BOOL	ah_bIQCalibration;
@@ -149,6 +147,7 @@ extern	void ar5211Detach(struct ath_hal *);
 
 extern	HAL_BOOL ar5211Reset(struct ath_hal *, HAL_OPMODE,
 		struct ieee80211_channel *, HAL_BOOL bChannelChange,
+		HAL_RESET_TYPE,
 		HAL_STATUS *);
 extern	HAL_BOOL ar5211PhyDisable(struct ath_hal *);
 extern	HAL_BOOL ar5211Disable(struct ath_hal *);

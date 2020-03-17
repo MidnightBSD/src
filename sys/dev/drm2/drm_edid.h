@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright © 2007-2008 Intel Corporation
  *   Jesse Barnes <jesse.barnes@intel.com>
@@ -21,7 +20,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/drm2/drm_edid.h 282199 2015-04-28 19:35:05Z dumbbell $
+ * $FreeBSD: stable/11/sys/dev/drm2/drm_edid.h 280183 2015-03-17 18:50:33Z dumbbell $
  */
 #ifndef __DRM_EDID_H__
 #define __DRM_EDID_H__

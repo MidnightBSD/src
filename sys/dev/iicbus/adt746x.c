@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Andreas Tobler
  * Copyright (c) 2014 Justin Hibbits
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/adt746x.c 263197 2014-03-15 00:23:35Z jhibbits $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/adt746x.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -362,8 +361,8 @@ adt746x_fill_fan_prop(device_t dev)
 	location_len = OF_getprop_alloc(child, "hwctrl-location", 1, (void **)&location);
 	id_len = OF_getprop_alloc(child, "hwctrl-id", sizeof(cell_t), (void **)&id);
 	if (location_len == -1 || id_len == -1) {
-		free(location, M_OFWPROP);
-		free(id, M_OFWPROP);
+		OF_prop_free(location);
+		OF_prop_free(id);
 		return 0;
 	}
 
@@ -391,8 +390,8 @@ adt746x_fill_fan_prop(device_t dev)
 			(int (*)(struct pmac_fan *, int))(adt746x_fan_set_pwm);
 		sc->sc_fans[i].fan.default_rpm = sc->sc_fans[i].fan.max_rpm;
 	}
-	free(location, M_OFWPROP);
-	free(id, M_OFWPROP);
+	OF_prop_free(location);
+	OF_prop_free(id);
 
 	return (i);
 }
@@ -540,9 +539,10 @@ static int
 adt746x_sensor_read(struct adt746x_sensor *sens)
 {
 	struct adt746x_softc *sc;
-	uint16_t tmp = 0;
+	int tmp = 0;
 	uint16_t val;
-	uint8_t temp, data[1], data1[1];
+	uint8_t data[1], data1[1];
+	int8_t temp;
 
 	sc = device_get_softc(sens->dev);
 	if (sens->type != ADT746X_SENSOR_SPEED) {

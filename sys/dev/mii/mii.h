@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mii.h,v 1.18 2014/06/16 14:43:22 msaitoh Exp $	*/
 
 /*-
@@ -27,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mii/mii.h 286053 2015-07-30 00:28:27Z marius $
+ * $FreeBSD: stable/11/sys/dev/mii/mii.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_MII_MII_H_

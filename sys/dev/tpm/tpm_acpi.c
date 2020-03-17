@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008, 2009 Michael Shalayeff
  * Copyright (c) 2009, 2010 Hans-Joerg Hoexer
@@ -17,7 +16,7 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm_acpi.c 211201 2010-08-12 00:16:18Z takawata $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm_acpi.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -63,7 +62,7 @@ tpm_acpi_probe(device_t dev)
 
 static device_method_t tpm_acpi_methods[] = {
 #if 0
-	/*In some case, TPM existance is found only in TPCA header*/
+	/*In some case, TPM existence is found only in TPCA header*/
 	DEVMETHOD(device_identify,	tpm_acpi_identify),
 #endif
 

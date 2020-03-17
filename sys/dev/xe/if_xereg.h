@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/xe/if_xereg.h,v 1.2 2008/12/02 22:43:18 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998, 1999 Scott Mitchell
  * All rights reserved.
@@ -24,8 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: if_xereg.h,v 1.3 2012-08-06 01:22:10 laffer1 Exp $
- * $FreeBSD$
+ *	$Id: if_xereg.h,v 1.5 1999/05/20 21:53:58 scott Exp $
+ * $FreeBSD: stable/11/sys/dev/xe/if_xereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef DEV_XE_IF_XEREG_H
 #define DEV_XE_IF_XEREG_H
@@ -634,7 +633,7 @@
 #define PHY_BMSR		0x01	/* Basic Mode Status Register */
 #define	PHY_ID1			0x02	/* PHY ID 1 */
 #define	PHY_ID2			0x03	/* PHY ID 2 */
-#define PHY_ANAR		0x04	/* Auto-Negotiation Advertisment Register */
+#define	PHY_ANAR		0x04	/* Auto-Negotiation Advertisement Register */
 #define PHY_LPAR		0x05	/* Auto-Negotiation Link Partner Ability Register */
 #define PHY_ANER		0x06	/* Auto-Negotiation Expansion Register */
 

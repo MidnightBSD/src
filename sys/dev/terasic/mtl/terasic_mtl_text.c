@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/terasic/mtl/terasic_mtl_text.c 239691 2012-08-25 22:35:29Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/terasic/mtl/terasic_mtl_text.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -159,6 +158,7 @@ int
 terasic_mtl_text_attach(struct terasic_mtl_softc *sc)
 {
 	uint32_t v;
+	u_int offset;
 
 	terasic_mtl_reg_textframebufaddr_get(sc, &v);
 	if (v != TERASIC_MTL_TEXTFRAMEBUF_EXPECTED_ADDR) {
@@ -166,6 +166,9 @@ terasic_mtl_text_attach(struct terasic_mtl_softc *sc)
 		    "address (%08x); cannot attach\n", __func__, v);
 		return (ENXIO);
 	}
+	for (offset = 0; offset < rman_get_size(sc->mtl_text_res);
+	    offset += sizeof(uint16_t))
+		bus_write_2(sc->mtl_text_res, offset, 0);
 
 	sc->mtl_text_cdev = make_dev(&terasic_mtl_text_cdevsw, sc->mtl_unit,
 	    UID_ROOT, GID_WHEEL, 0400, "mtl_text%d", sc->mtl_unit);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Andreas Tobler
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/ds1775.c 260673 2014-01-15 05:52:06Z jhibbits $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/ds1775.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

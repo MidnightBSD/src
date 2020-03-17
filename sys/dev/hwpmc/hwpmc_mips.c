@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010, George V. Neville-Neil <gnn@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_mips.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_mips.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_hwpmc_hooks.h"
 
@@ -544,7 +543,7 @@ pmc_next_frame(register_t *pc, register_t *sp)
 			case OP_SYSCALL:
 			case OP_BREAK:
 				more = 1;	/* stop now */
-			};
+			}
 			break;
 
 		case OP_BCOND:
@@ -565,7 +564,7 @@ pmc_next_frame(register_t *pc, register_t *sp)
 			case OP_BCx:
 			case OP_BCy:
 				more = 2;	/* stop after next instruction */
-			};
+			}
 			break;
 
 		case OP_SW:

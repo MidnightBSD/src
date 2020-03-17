@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_memory.c
  * Memory management wrappers for DRM
@@ -35,9 +34,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_memory.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_memory.c 317008 2017-04-16 07:58:41Z mmel $");
 
 #include <dev/drm2/drmP.h>
+
+#define	vunmap(handle)
 
 #if __OS_HAS_AGP
 static void *agp_remap(unsigned long offset, unsigned long size,
@@ -50,8 +51,6 @@ static void *agp_remap(unsigned long offset, unsigned long size,
 	 */
 	return NULL;
 }
-
-#define	vunmap(handle)
 
 /** Wrapper around agp_free_memory() */
 void drm_free_agp(DRM_AGP_MEM * handle, int pages)

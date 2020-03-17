@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2007-2009 VMware, Inc., Palo Alto, CA., USA
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_lock.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_lock.c 280183 2015-03-17 18:50:33Z dumbbell $");
 
 #include <dev/drm2/ttm/ttm_lock.h>
 #include <dev/drm2/ttm/ttm_module.h>

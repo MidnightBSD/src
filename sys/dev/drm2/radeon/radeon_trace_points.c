@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /* Copyright Red Hat Inc 2010.
  * Author : Dave Airlie <airlied@redhat.com>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_trace_points.c 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_trace_points.c 254885 2013-08-25 19:37:15Z dumbbell $");
 
 #include <drm/drmP.h>
 #include <drm/radeon_drm.h>

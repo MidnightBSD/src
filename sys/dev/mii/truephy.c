@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/mii_layer/truephy.c,v 1.3 2008/02/10 07:29:27 sephe Exp $
- * $FreeBSD: stable/10/sys/dev/mii/truephy.c 227908 2011-11-23 20:27:26Z marius $
+ * $FreeBSD: stable/11/sys/dev/mii/truephy.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -45,6 +44,7 @@
 #include <sys/bus.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
@@ -181,12 +181,6 @@ truephy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO) {
 			bmcr = PHY_READ(sc, MII_BMCR) & ~BMCR_AUTOEN;
 			PHY_WRITE(sc, MII_BMCR, bmcr);
@@ -250,9 +244,7 @@ truephy_reset(struct mii_softc *sc)
 	PHY_WRITE(sc, TRUEPHY_CTRL,
 		  TRUEPHY_CTRL_DIAG | TRUEPHY_CTRL_RSV1 | TRUEPHY_CTRL_RSV0);
 
-#define N(arr)	(int)(sizeof(arr) / sizeof(arr[0]))
-
-	for (i = 0; i < N(truephy_dspcode); ++i) {
+	for (i = 0; i < nitems(truephy_dspcode); ++i) {
 		const struct truephy_dsp *dsp = &truephy_dspcode[i];
 
 		PHY_WRITE(sc, TRUEPHY_INDEX, dsp->index);
@@ -262,8 +254,6 @@ truephy_reset(struct mii_softc *sc)
 		PHY_READ(sc, TRUEPHY_DATA);
 	}
 
-#undef N
-
 	PHY_READ(sc, MII_BMCR);
 	PHY_READ(sc, TRUEPHY_CTRL);
 	PHY_WRITE(sc, MII_BMCR, BMCR_AUTOEN |  BMCR_S1000);
@@ -271,7 +261,7 @@ truephy_reset(struct mii_softc *sc)
 
 	mii_phy_reset(sc);
 
-	if (TRUEPHY_FRAMELEN(sc->mii_pdata->mii_ifp->if_mtu) > 2048) {
+	if (TRUEPHY_FRAMELEN((if_getmtu(sc->mii_pdata->mii_ifp)) > 2048)) {
 		int conf;
 
 		conf = PHY_READ(sc, TRUEPHY_CONF);

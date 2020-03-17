@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Luiz Otavio O Souza.
  * Copyright (c) 2011-2012 Stefan Bethke.
@@ -26,30 +25,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/etherswitch/ukswitch/ukswitch.c 250384 2013-05-08 20:56:43Z adrian $
+ * $FreeBSD: stable/11/sys/dev/etherswitch/ukswitch/ukswitch.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_var.h>
 #include <net/ethernet.h>
-#include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 
 #include <machine/bus.h>
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
-#include <dev/etherswitch/mdio.h>
+#include <dev/mdio/mdio.h>
 
 #include <dev/etherswitch/etherswitch.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013	Justin Hibbits
  * All rights reserved.
@@ -43,12 +42,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/wi/if_wi_macio.c 253825 2013-07-31 01:13:29Z jhibbits $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/wi/if_wi_macio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
+#include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/bus.h>
 
@@ -73,6 +73,8 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/wi/if_wi_macio.c 253825 2013-07-31 01:13:2
 #include <dev/wi/if_wavelan_ieee.h>
 #include <dev/wi/if_wireg.h>
 #include <dev/wi/if_wivar.h>
+
+#include <powerpc/powermac/maciovar.h>
 
 static int wi_macio_probe(device_t);
 static int wi_macio_attach(device_t);
@@ -130,6 +132,7 @@ wi_macio_attach(device_t dev)
 
 	error = wi_alloc(dev, 0);
 	if (error == 0) {
+		macio_enable_wireless(device_get_parent(dev), 1);
 		/* Make sure interrupts are disabled. */
 		CSR_WRITE_2(sc, WI_INT_EN, 0);
 		CSR_WRITE_2(sc, WI_EVENT_ACK, 0xFFFF);

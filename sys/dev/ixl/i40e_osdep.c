@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2013-2014, Intel Corporation 
+  Copyright (c) 2013-2019, Intel Corporation
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -31,9 +30,10 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixl/i40e_osdep.c 292099 2015-12-11 13:05:18Z smh $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/i40e_osdep.c 349163 2019-06-18 00:08:02Z erj $*/
 
-#include <machine/stdarg.h>
+#include <sys/limits.h>
+#include <sys/time.h>
 
 #include "ixl.h"
 
@@ -60,6 +60,8 @@ i40e_status
 i40e_free_virt_mem(struct i40e_hw *hw, struct i40e_virt_mem *mem)
 {
 	free(mem->va, M_DEVBUF);
+	mem->va = NULL;
+
 	return(0);
 }
 
@@ -138,7 +140,7 @@ void
 i40e_init_spinlock(struct i40e_spinlock *lock)
 {
 	mtx_init(&lock->mutex, "mutex",
-	    MTX_NETWORK_LOCK, MTX_DEF | MTX_DUPOK);
+	    "ixl spinlock", MTX_DEF | MTX_DUPOK);
 }
 
 void
@@ -156,26 +158,91 @@ i40e_release_spinlock(struct i40e_spinlock *lock)
 void
 i40e_destroy_spinlock(struct i40e_spinlock *lock)
 {
-	mtx_destroy(&lock->mutex);
+	if (mtx_initialized(&lock->mutex))
+		mtx_destroy(&lock->mutex);
+}
+
+#ifndef MSEC_2_TICKS
+#define MSEC_2_TICKS(m) max(1, (uint32_t)((hz == 1000) ? \
+	  (m) : ((uint64_t)(m) * (uint64_t)hz)/(uint64_t)1000))
+#endif
+
+void
+i40e_msec_pause(int msecs)
+{
+	pause("i40e_msec_pause", MSEC_2_TICKS(msecs));
 }
 
 /*
-** i40e_debug_d - OS dependent version of shared code debug printing
-*/
-void i40e_debug_d(void *hw, u32 mask, char *fmt, ...)
+ * Helper function for debug statement printing
+ */
+void
+i40e_debug_shared(struct i40e_hw *hw, enum i40e_debug_mask mask, char *fmt, ...)
 {
-        char buf[512];
-        va_list args;
+	va_list args;
+	device_t dev;
 
-        if (!(mask & ((struct i40e_hw *)hw)->debug_mask))
-                return;
+	if (!(mask & ((struct i40e_hw *)hw)->debug_mask))
+		return;
 
+	dev = ((struct i40e_osdep *)hw->back)->dev;
+
+	/* Re-implement device_printf() */
+	device_print_prettyname(dev);
 	va_start(args, fmt);
-        vsnprintf(buf, sizeof(buf), fmt, args);
+	vprintf(fmt, args);
 	va_end(args);
+}
 
-        /* the debug string is already formatted with a newline */
-        printf("%s", buf);
+const char *
+ixl_vc_opcode_str(uint16_t op)
+{
+	switch (op) {
+	case VIRTCHNL_OP_VERSION:
+		return ("VERSION");
+	case VIRTCHNL_OP_RESET_VF:
+		return ("RESET_VF");
+	case VIRTCHNL_OP_GET_VF_RESOURCES:
+		return ("GET_VF_RESOURCES");
+	case VIRTCHNL_OP_CONFIG_TX_QUEUE:
+		return ("CONFIG_TX_QUEUE");
+	case VIRTCHNL_OP_CONFIG_RX_QUEUE:
+		return ("CONFIG_RX_QUEUE");
+	case VIRTCHNL_OP_CONFIG_VSI_QUEUES:
+		return ("CONFIG_VSI_QUEUES");
+	case VIRTCHNL_OP_CONFIG_IRQ_MAP:
+		return ("CONFIG_IRQ_MAP");
+	case VIRTCHNL_OP_ENABLE_QUEUES:
+		return ("ENABLE_QUEUES");
+	case VIRTCHNL_OP_DISABLE_QUEUES:
+		return ("DISABLE_QUEUES");
+	case VIRTCHNL_OP_ADD_ETH_ADDR:
+		return ("ADD_ETH_ADDR");
+	case VIRTCHNL_OP_DEL_ETH_ADDR:
+		return ("DEL_ETH_ADDR");
+	case VIRTCHNL_OP_ADD_VLAN:
+		return ("ADD_VLAN");
+	case VIRTCHNL_OP_DEL_VLAN:
+		return ("DEL_VLAN");
+	case VIRTCHNL_OP_CONFIG_PROMISCUOUS_MODE:
+		return ("CONFIG_PROMISCUOUS_MODE");
+	case VIRTCHNL_OP_GET_STATS:
+		return ("GET_STATS");
+	case VIRTCHNL_OP_RSVD:
+		return ("RSVD");
+	case VIRTCHNL_OP_EVENT:
+		return ("EVENT");
+	case VIRTCHNL_OP_CONFIG_RSS_KEY:
+		return ("CONFIG_RSS_KEY");
+	case VIRTCHNL_OP_CONFIG_RSS_LUT:
+		return ("CONFIG_RSS_LUT");
+	case VIRTCHNL_OP_GET_RSS_HENA_CAPS:
+		return ("GET_RSS_HENA_CAPS");
+	case VIRTCHNL_OP_SET_RSS_HENA:
+		return ("SET_RSS_HENA");
+	default:
+		return ("UNKNOWN");
+	}
 }
 
 u16

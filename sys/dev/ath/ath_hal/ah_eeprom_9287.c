@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2010 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ah_eeprom_9287.c 239704 2012-08-26 04:26:49Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_eeprom_9287.c 239704 2012-08-26 04:26:49Z adrian $
  */
 #include "opt_ah.h"
 

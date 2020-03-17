@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/uart/uart_dev_msm.h 283321 2015-05-23 19:27:04Z ian $
+ * $FreeBSD: stable/11/sys/dev/uart/uart_dev_msm.h 272399 2014-10-02 08:12:42Z ganbold $
  */
 
 #ifndef	_UART_DM_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/wtap/wtap_hal/hal.c 229970 2012-01-11 17:41:14Z adrian $
+ * $FreeBSD: stable/11/sys/dev/wtap/wtap_hal/hal.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include "hal.h"
 #include "../if_medium.h"
@@ -183,6 +182,8 @@ new_wtap(struct wtap_hal *hal, int32_t id)
 	bzero(hal->hal_devs[id], sizeof(struct wtap_softc));
 	hal->hal_devs[id]->sc_md = hal->hal_md;
 	hal->hal_devs[id]->id = id;
+	snprintf(hal->hal_devs[id]->name, sizeof(hal->hal_devs[id]->name),
+	    "wlan%d", id);
 	mtx_init(&hal->hal_devs[id]->sc_mtx, "wtap_softc mtx", NULL,
 	    MTX_DEF | MTX_RECURSE);
 

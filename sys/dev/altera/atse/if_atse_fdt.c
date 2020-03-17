@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Bjoern A. Zeeb
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/altera/atse/if_atse_fdt.c 266152 2014-05-15 16:11:06Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/altera/atse/if_atse_fdt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -46,6 +45,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/altera/atse/if_atse_fdt.c 266152 2014-05-1
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_media.h>
+#include <net/if_var.h>
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>

@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * Copyright (c) 2017-2018 Cavium, Inc. 
+ * Copyright (c) 2017-2018 Cavium, Inc.
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/roce_common.h 316485 2017-04-04 06:16:59Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/roce_common.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -65,6 +64,9 @@ enum roce_async_events_type
 	ROCE_ASYNC_EVENT_CQ_OVERFLOW_ERR,
 	ROCE_ASYNC_EVENT_SRQ_EMPTY,
 	ROCE_ASYNC_EVENT_DESTROY_QP_DONE,
+	ROCE_ASYNC_EVENT_XRC_DOMAIN_ERR,
+	ROCE_ASYNC_EVENT_INVALID_XRCETH_ERR,
+	ROCE_ASYNC_EVENT_XRC_SRQ_CATASTROPHIC_ERR,
 	MAX_ROCE_ASYNC_EVENTS_TYPE
 };
 

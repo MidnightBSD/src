@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2011 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iscsi_initiator/iscsi.c 299621 2016-05-13 08:36:33Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iscsi_initiator/iscsi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_iscsi_initiator.h"
 
@@ -78,11 +77,11 @@ struct mtx iscsi_dbg_mtx;
 #endif
 
 static int max_sessions = MAX_SESSIONS;
-SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_sessions, CTLFLAG_RDTUN, &max_sessions, MAX_SESSIONS,
-	   "Max sessions allowed");
+SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_sessions, CTLFLAG_RDTUN,
+    &max_sessions, 0, "Max sessions allowed");
 static int max_pdus = MAX_PDUS;
-SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_pdus, CTLFLAG_RDTUN, &max_pdus, MAX_PDUS,
-	   "Max pdu pool");
+SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_pdus, CTLFLAG_RDTUN,
+    &max_pdus, 0, "Max PDU pool");
 
 static char isid[6+1] = {
      0x80,
@@ -151,7 +150,7 @@ iscsi_close(struct cdev *dev, int flag, int otyp, struct thread *td)
 	  sdebug(3, "sp->flags=%x", sp->flags );
 	  /*
 	   | if still in full phase, this probably means
-	   | that something went realy bad.
+	   | that something went really bad.
 	   | it could be a result from 'shutdown', in which case
 	   | we will ignore it (so buffers can be flushed).
 	   | the problem is that there is no way of differentiating
@@ -389,20 +388,14 @@ i_setsoc(isc_session_t *sp, int fd, struct thread *td)
      if(sp->soc != NULL)
 	  isc_stop_receiver(sp);
 
-     error = fget(td, fd, cap_rights_init(&rights, CAP_SOCK_CLIENT), &sp->fp);
+     error = getsock_cap(td, fd, cap_rights_init(&rights, CAP_SOCK_CLIENT),
+	     &sp->fp, NULL, NULL);
      if(error)
 	  return error;
 
-     error = fgetsock(td, fd, cap_rights_init(&rights, CAP_SOCK_CLIENT),
-        &sp->soc, 0);
-     if(error == 0) {
-	  sp->td = td;
-	  isc_start_receiver(sp);
-     }
-     else {
-	  fdrop(sp->fp, td);
-	  sp->fp = NULL;
-     }
+     sp->soc = sp->fp->f_data;
+     sp->td = td;
+     isc_start_receiver(sp);
 
      return error;
 }
@@ -711,9 +704,6 @@ static int
 iscsi_start(void)
 {
      debug_called(8);
-
-     TUNABLE_INT_FETCH("net.iscsi_initiator.max_sessions", &max_sessions);
-     TUNABLE_INT_FETCH("net.iscsi_initiator.max_pdus", &max_pdus);
 
      isc =  malloc(sizeof(struct isc_softc), M_ISCSI, M_ZERO|M_WAITOK);
      mtx_init(&isc->isc_mtx, "iscsi-isc", NULL, MTX_DEF);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2015 Michal Meloun
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/uart/uart_cpu_fdt.h 283481 2015-05-24 17:57:29Z ian $
+ * $FreeBSD: stable/11/sys/dev/uart/uart_cpu_fdt.h 340145 2018-11-04 23:28:56Z mmacy $
  */
 
 #ifndef _DEV_UART_CPU_FDT_H_
@@ -51,7 +50,10 @@ SET_DECLARE(uart_fdt_class_set, struct ofw_compat_data );
 #define UART_FDT_CLASS(data)				\
 	DATA_SET(uart_fdt_class_set, data)
 
+int uart_cpu_fdt_probe(struct uart_class **, bus_space_tag_t *,
+    bus_space_handle_t *, int *, u_int *, u_int *);
 int uart_fdt_get_clock(phandle_t node, pcell_t *cell);
 int uart_fdt_get_shift(phandle_t node, pcell_t *cell);
+int uart_fdt_get_io_width(phandle_t node, pcell_t *cell);
 
 #endif /* _DEV_UART_CPU_FDT_H_ */

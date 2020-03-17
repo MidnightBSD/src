@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013-2015, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_wq.c 290650 2015-11-10 12:20:22Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_wq.c 337115 2018-08-02 08:56:27Z hselasky $
  */
 
 #include <dev/mlx5/driver.h>

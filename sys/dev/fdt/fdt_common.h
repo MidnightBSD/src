@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fdt/fdt_common.h 273675 2014-10-26 04:01:57Z ian $
+ * $FreeBSD: stable/11/sys/dev/fdt/fdt_common.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FDT_COMMON_H_
@@ -46,15 +45,19 @@ struct fdt_sense_level {
 	enum intr_polarity	pol;
 };
 
+#if defined(__arm__) && !defined(INTRNG)
 typedef int (*fdt_pic_decode_t)(phandle_t, pcell_t *, int *, int *, int *);
 extern fdt_pic_decode_t fdt_pic_table[];
+#endif
 
+#if defined(__arm__) || defined(__powerpc__)
 typedef void (*fdt_fixup_t)(phandle_t);
 struct fdt_fixup_entry {
 	char		*model;
 	fdt_fixup_t	handler;
 };
 extern struct fdt_fixup_entry fdt_fixup_table[];
+#endif
 
 extern SLIST_HEAD(fdt_ic_list, fdt_ic) fdt_ic_list_head;
 struct fdt_ic {
@@ -80,10 +83,9 @@ extern u_char fdt_static_dtb;
 int fdt_addrsize_cells(phandle_t, int *, int *);
 u_long fdt_data_get(void *, int);
 int fdt_data_to_res(pcell_t *, int, int, u_long *, u_long *);
-int fdt_data_verify(void *, int);
 phandle_t fdt_find_compatible(phandle_t, const char *, int);
 phandle_t fdt_depth_search_compatible(phandle_t, const char *, int);
-int fdt_get_mem_regions(struct mem_region *, int *, uint32_t *);
+int fdt_get_mem_regions(struct mem_region *, int *, uint64_t *);
 int fdt_get_reserved_regions(struct mem_region *, int *);
 int fdt_get_phyaddr(phandle_t, device_t, int *, void **);
 int fdt_get_range(phandle_t, int, u_long *, u_long *);
@@ -95,9 +97,9 @@ int fdt_is_enabled(phandle_t);
 int fdt_pm_is_enabled(phandle_t);
 int fdt_is_type(phandle_t, const char *);
 int fdt_parent_addr_cells(phandle_t);
-int fdt_ranges_verify(pcell_t *, int, int, int, int);
 int fdt_reg_to_rl(phandle_t, struct resource_list *);
 int fdt_pm(phandle_t);
 int fdt_get_unit(device_t);
+int fdt_get_chosen_bootargs(char *bootargs, size_t max_size);
 
 #endif /* _FDT_COMMON_H_ */

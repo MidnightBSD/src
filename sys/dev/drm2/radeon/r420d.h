@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Advanced Micro Devices, Inc.
  * Copyright 2008 Red Hat Inc.
@@ -30,7 +29,7 @@
 #define R420D_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/r420d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/r420d.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 #define R_0001F8_MC_IND_INDEX                        0x0001F8
 #define   S_0001F8_MC_IND_ADDR(x)                      (((x) & 0x7F) << 0)

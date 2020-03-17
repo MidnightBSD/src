@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: nsphy.c,v 1.18 1999/07/14 23:57:36 thorpej Exp $	*/
 
 /*-
@@ -56,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/nsphy.c 227908 2011-11-23 20:27:26Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/nsphy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * driver for National Semiconductor's DP83840A ethernet 10/100 PHY
@@ -72,6 +71,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/mii/nsphy.c 227908 2011-11-23 20:27:26Z ma
 #include <sys/bus.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 
 #include <dev/mii/mii.h>
@@ -129,15 +129,13 @@ nsphy_probe(device_t dev)
 static int
 nsphy_attach(device_t dev)
 {
-	const char *nic;
 	u_int flags;
 
-	nic = device_get_name(device_get_parent(device_get_parent(dev)));
 	flags = MIIF_NOMANPAUSE;
 	/*
 	 * Am79C971 wedge when isolating all of their external PHYs.
 	 */
-	if (strcmp(nic, "pcn") == 0)
+	if (mii_dev_mac_match(dev,"pcn"))
 		flags |= MIIF_NOISOLATE;
 	mii_phy_dev_attach(dev, flags, &nsphy_funcs, 1);
 	return (0);
@@ -153,12 +151,6 @@ nsphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		reg = PHY_READ(sc, MII_NSPHY_PCR);
 
 		/*
@@ -192,7 +184,7 @@ nsphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		 */
 		reg |= 0x0100 | 0x0400;
 
-		if (strcmp(mii->mii_ifp->if_dname, "fxp") == 0)
+		if (mii_phy_mac_match(sc, "fxp"))
 			PHY_WRITE(sc, MII_NSPHY_PCR, reg);
 
 		mii_phy_setmedia(sc);

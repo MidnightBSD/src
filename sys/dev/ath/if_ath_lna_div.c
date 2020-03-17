@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -27,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_ath_lna_div.c 332320 2018-04-09 12:53:15Z emaste $
+ * $FreeBSD: stable/11/sys/dev/ath/if_ath_lna_div.c 332303 2018-04-08 20:50:16Z emaste $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_lna_div.c 332320 2018-04-09 12:53:15Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_lna_div.c 332303 2018-04-08 20:50:16Z emaste $");
 
 /*
  * This module handles LNA diversity for those chips which implement LNA
@@ -45,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_lna_div.c 332320 2018-04-09 12:
 #include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_lna_div.c 332320 2018-04-09 12:
 #include <sys/socket.h>
  
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>		/* XXX for ether_sprintf */
@@ -72,7 +73,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_lna_div.c 332320 2018-04-09 12:
 #include <dev/ath/if_ath_debug.h>
 #include <dev/ath/if_ath_lna_div.h>
 
-/* Linux compability macros */
+/* Linux compatibility macros */
 /*
  * XXX these don't handle rounding, underflow, overflow, wrapping!
  */
@@ -209,6 +210,10 @@ bad:
 	return (error);
 }
 
+/*
+ * XXX need to low_rssi_thresh config from ath9k, to support CUS198
+ * antenna diversity correctly.
+ */
 static HAL_BOOL
 ath_is_alt_ant_ratio_better(int alt_ratio, int maxdelta, int mindelta,
     int main_rssi_avg, int alt_rssi_avg, int pkt_count)
@@ -762,7 +767,7 @@ ath_lna_rx_comb_scan(struct ath_softc *sc, struct ath_rx_status *rs,
 
 	/* Short scan check */
 	if (antcomb->scan && antcomb->alt_good) {
-		if (time_after(ticks, antcomb->scan_start_time +
+		if (ieee80211_time_after(ticks, antcomb->scan_start_time +
 		    msecs_to_jiffies(ATH_ANT_DIV_COMB_SHORT_SCAN_INTR)))
 			short_scan = AH_TRUE;
 		else

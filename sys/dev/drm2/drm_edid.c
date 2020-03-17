@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006 Luc Verhaegen (quirks list)
  * Copyright (c) 2007-2008 Intel Corporation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_edid.c 299622 2016-05-13 08:39:33Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_edid.c 298334 2016-04-20 03:45:45Z cem $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_edid.h>

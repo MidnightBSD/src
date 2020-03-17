@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012,2013 Bjoern A. Zeeb
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/altera/atse/if_atse_nexus.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/altera/atse/if_atse_nexus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_device_polling.h"
 
@@ -48,6 +47,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/altera/atse/if_atse_nexus.c 265999 2014-05
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_media.h>
+#include <net/if_var.h>
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>

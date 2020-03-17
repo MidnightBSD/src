@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2013-2014, Intel Corporation 
+  Copyright (c) 2013-2019, Intel Corporation
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixl/i40e_alloc.h 292099 2015-12-11 13:05:18Z smh $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/i40e_alloc.h 349163 2019-06-18 00:08:02Z erj $*/
 
 #ifndef _I40E_ALLOC_H_
 #define _I40E_ALLOC_H_

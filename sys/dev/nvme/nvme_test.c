@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nvme/nvme_test.c 256152 2013-10-08 15:47:22Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_test.c 346243 2019-04-15 16:27:53Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -93,9 +92,7 @@ nvme_ns_bio_test(void *arg)
 	struct timeval			t;
 	uint64_t			io_completed = 0, offset;
 	uint32_t			idx;
-#if __FreeBSD_version >= 900017
 	int				ref;
-#endif
 
 	buf = malloc(io_test->size, M_NVME, M_WAITOK);
 	idx = atomic_fetchadd_int(&io_test->td_idx, 1);
@@ -117,11 +114,7 @@ nvme_ns_bio_test(void *arg)
 		bio->bio_bcount = io_test->size;
 
 		if (io_test->flags & NVME_TEST_FLAG_REFTHREAD) {
-#if __FreeBSD_version >= 900017
 			csw = dev_refthread(dev, &ref);
-#else
-			csw = dev_refthread(dev);
-#endif
 		} else
 			csw = dev->si_devsw;
 
@@ -132,11 +125,7 @@ nvme_ns_bio_test(void *arg)
 		mtx_unlock(mtx);
 
 		if (io_test->flags & NVME_TEST_FLAG_REFTHREAD) {
-#if __FreeBSD_version >= 900017
 			dev_relthread(dev, ref);
-#else
-			dev_relthread(dev);
-#endif
 		}
 
 		if ((bio->bio_flags & BIO_ERROR) || (bio->bio_resid > 0))
@@ -165,11 +154,7 @@ nvme_ns_bio_test(void *arg)
 	atomic_subtract_int(&io_test->td_active, 1);
 	mb();
 
-#if __FreeBSD_version >= 800000
 	kthread_exit();
-#else
-	kthread_exit(0);
-#endif
 }
 
 static void
@@ -245,11 +230,7 @@ nvme_ns_io_test(void *arg)
 	atomic_subtract_int(&io_test->td_active, 1);
 	mb();
 
-#if __FreeBSD_version >= 800004
 	kthread_exit();
-#else
-	kthread_exit(0);
-#endif
 }
 
 void
@@ -286,13 +267,8 @@ nvme_ns_test(struct nvme_namespace *ns, u_long cmd, caddr_t arg)
 	getmicrouptime(&io_test_internal->start);
 
 	for (i = 0; i < io_test->num_threads; i++)
-#if __FreeBSD_version >= 800004
 		kthread_add(fn, io_test_internal,
 		    NULL, NULL, 0, 0, "nvme_io_test[%d]", i);
-#else
-		kthread_create(fn, io_test_internal,
-		    NULL, 0, 0, "nvme_io_test[%d]", i);
-#endif
 
 	tsleep(io_test_internal, 0, "nvme_test", io_test->time * 2 * hz);
 

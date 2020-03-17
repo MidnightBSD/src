@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2015, Mellanox Technologies, Ltd.  All rights reserved.
  *
@@ -23,10 +22,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_ib/mlx5_ib_doorbell.c 323223 2017-09-06 15:33:23Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_ib/mlx5_ib_doorbell.c 331769 2018-03-30 18:06:29Z hselasky $
  */
 
-#include <linux/compiler.h>
 #include <linux/kref.h>
 #include <linux/slab.h>
 #include <rdma/ib_umem.h>
@@ -36,15 +34,14 @@
 struct mlx5_ib_user_db_page {
 	struct list_head	list;
 	struct ib_umem	       *umem;
-	uintptr_t		user_virt;
+	unsigned long		user_virt;
 	int			refcnt;
 };
 
-int mlx5_ib_db_map_user(struct mlx5_ib_ucontext *context, uintptr_t virt,
+int mlx5_ib_db_map_user(struct mlx5_ib_ucontext *context, unsigned long virt,
 			struct mlx5_db *db)
 {
 	struct mlx5_ib_user_db_page *page;
-	struct ib_umem_chunk *chunk;
 	int err = 0;
 
 	mutex_lock(&context->db_page_mutex);
@@ -72,9 +69,7 @@ int mlx5_ib_db_map_user(struct mlx5_ib_ucontext *context, uintptr_t virt,
 	list_add(&page->list, &context->db_page_list);
 
 found:
-	chunk = list_entry(page->umem->chunk_list.next,
-	    struct ib_umem_chunk, list);
-	db->dma = sg_dma_address(chunk->page_list) + (virt & ~PAGE_MASK);
+	db->dma = sg_dma_address(page->umem->sg_head.sgl) + (virt & ~PAGE_MASK);
 	db->u.user_page = page;
 	++page->refcnt;
 

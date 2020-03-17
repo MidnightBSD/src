@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Luiz Otavio O Souza.
  * Copyright (c) 2011-2012 Stefan Bethke.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/etherswitch/ip17x/ip17x_phy.c 262848 2014-03-06 13:15:53Z brueffer $
+ * $FreeBSD: stable/11/sys/dev/etherswitch/ip17x/ip17x_phy.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

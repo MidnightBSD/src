@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: Locore.c,v 1.7 2000/08/20 07:04:59 tsubai Exp $	*/
 
 /*-
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ofw/ofw_standard.c 212477 2010-09-11 18:55:00Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ofw/ofw_standard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -231,7 +230,7 @@ ofw_std_peer(ofw_t ofw, phandle_t node)
 
 	args.node = node;
 	if (openfirmware(&args) == -1)
-		return (-1);
+		return (0);
 	return (args.next);
 }
 
@@ -253,7 +252,7 @@ ofw_std_child(ofw_t ofw, phandle_t node)
 
 	args.node = node;
 	if (openfirmware(&args) == -1)
-		return (-1);
+		return (0);
 	return (args.child);
 }
 
@@ -275,7 +274,7 @@ ofw_std_parent(ofw_t ofw, phandle_t node)
 
 	args.node = node;
 	if (openfirmware(&args) == -1)
-		return (-1);
+		return (0);
 	return (args.parent);
 }
 

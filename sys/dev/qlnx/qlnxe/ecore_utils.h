@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_utils.h 316485 2017-04-04 06:16:59Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_utils.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -56,5 +55,9 @@
 #define HILO_64(hi, lo)		HILO_GEN(hi, lo, u64)
 #define HILO_DMA_REGPAIR(regpair)	(HILO_DMA(regpair.hi, regpair.lo))
 #define HILO_64_REGPAIR(regpair)	(HILO_64(regpair.hi, regpair.lo))
+
+#ifndef USHRT_MAX
+#define USHRT_MAX       ((u16)(~0U))
+#endif
 
 #endif

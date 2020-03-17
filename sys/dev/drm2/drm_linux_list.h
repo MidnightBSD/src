@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* drm_linux_list.h -- linux list functions for the BSDs.
  * Created: Mon Apr 7 14:30:16 1999 by anholt@FreeBSD.org
  */
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_linux_list.h 254841 2013-08-25 10:28:02Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_linux_list.h 296548 2016-03-08 20:33:02Z dumbbell $");
 
 #ifndef _DRM_LINUX_LIST_H_
 #define _DRM_LINUX_LIST_H_
@@ -41,7 +40,6 @@ struct list_head {
 };
 
 #define list_entry(ptr, type, member) container_of(ptr,type,member)
-#define hlist_entry(ptr, type, member) container_of(ptr,type,member)
 
 static __inline__ void
 INIT_LIST_HEAD(struct list_head *head) {
@@ -179,5 +177,124 @@ list_splice(const struct list_head *list, struct list_head *head)
 
 void drm_list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
     struct list_head *a, struct list_head *b));
+
+/* hlist, copied from sys/dev/ofed/linux/list.h */
+
+struct hlist_head {
+	struct hlist_node *first;
+};
+
+struct hlist_node {
+	struct hlist_node *next, **pprev;
+};
+
+#define	HLIST_HEAD_INIT { }
+#define	HLIST_HEAD(name) struct hlist_head name = HLIST_HEAD_INIT
+#define	INIT_HLIST_HEAD(head) (head)->first = NULL
+#define	INIT_HLIST_NODE(node)						\
+do {									\
+	(node)->next = NULL;						\
+	(node)->pprev = NULL;						\
+} while (0)
+
+static inline int
+hlist_unhashed(const struct hlist_node *h)
+{
+
+	return !h->pprev;
+}
+
+static inline int
+hlist_empty(const struct hlist_head *h)
+{
+
+	return !h->first;
+}
+
+static inline void
+hlist_del(struct hlist_node *n)
+{
+
+        if (n->next)
+                n->next->pprev = n->pprev;
+        *n->pprev = n->next;
+}
+
+static inline void
+hlist_del_init(struct hlist_node *n)
+{
+
+	if (hlist_unhashed(n))
+		return;
+	hlist_del(n);
+	INIT_HLIST_NODE(n);
+}
+
+static inline void
+hlist_add_head(struct hlist_node *n, struct hlist_head *h)
+{
+
+	n->next = h->first;
+	if (h->first)
+		h->first->pprev = &n->next;
+	h->first = n;
+	n->pprev = &h->first;
+}
+
+static inline void
+hlist_add_before(struct hlist_node *n, struct hlist_node *next)
+{
+
+	n->pprev = next->pprev;
+	n->next = next;
+	next->pprev = &n->next;
+	*(n->pprev) = n;
+}
+
+static inline void
+hlist_add_after(struct hlist_node *n, struct hlist_node *next)
+{
+
+	next->next = n->next;
+	n->next = next;
+	next->pprev = &n->next;
+	if (next->next)
+		next->next->pprev = &next->next;
+}
+
+static inline void
+hlist_move_list(struct hlist_head *old, struct hlist_head *new)
+{
+
+	new->first = old->first;
+	if (new->first)
+		new->first->pprev = &new->first;
+	old->first = NULL;
+}
+
+#define	hlist_entry(ptr, type, field)	container_of(ptr, type, field)
+
+#define	hlist_for_each(p, head)						\
+	for (p = (head)->first; p; p = p->next)
+
+#define	hlist_for_each_safe(p, n, head)					\
+	for (p = (head)->first; p && ({ n = p->next; 1; }); p = n)
+
+#define	hlist_for_each_entry(tp, p, head, field)			\
+	for (p = (head)->first;						\
+	    p ? (tp = hlist_entry(p, typeof(*tp), field)): NULL; p = p->next)
+
+#define hlist_for_each_entry_continue(tp, p, field)			\
+	for (p = (p)->next;						\
+	    p ? (tp = hlist_entry(p, typeof(*tp), field)): NULL; p = p->next)
+
+#define	hlist_for_each_entry_from(tp, p, field)				\
+	for (; p ? (tp = hlist_entry(p, typeof(*tp), field)): NULL; p = p->next)
+
+#define hlist_for_each_entry_safe(tpos, pos, n, head, member) 		 \
+	for (pos = (head)->first;					 \
+	     (pos) != 0 && ({ n = (pos)->next; \
+		 tpos = hlist_entry((pos), typeof(*(tpos)), member); 1;}); \
+	     pos = (n))
 
 #endif /* _DRM_LINUX_LIST_H_ */

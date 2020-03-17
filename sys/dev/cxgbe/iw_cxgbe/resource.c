@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
@@ -32,7 +31,7 @@
  */
 /* Crude resource management */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/iw_cxgbe/resource.c 309378 2016-12-01 23:38:52Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/iw_cxgbe/resource.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 

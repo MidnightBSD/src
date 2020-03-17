@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <dev/drm2/drmP.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_linux_list_sort.c 258707 2013-11-28 10:04:53Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_linux_list_sort.c 331722 2018-03-29 02:50:57Z eadler $");
 
 struct drm_list_sort_thunk {
 	int (*cmp)(void *, struct list_head *, struct list_head *);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright(c) 2002-2011 Exar Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxgehal-mrpcim.c 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD: stable/11/sys/dev/vxge/vxgehal/vxgehal-mrpcim.c 331722 2018-03-29 02:50:57Z eadler $*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 
@@ -5614,7 +5613,7 @@ __hal_mrpcim_get_vpd_data(__hal_device_t *hldev)
 	}
 	vpd_data = (u8 *) vxge_os_malloc(hldev->header.pdev,
 	    VXGE_HAL_VPD_BUFFER_SIZE + 16);
-	if (vpd_data == 0)
+	if (vpd_data == NULL)
 		return;
 
 	for (i = 0; i < VXGE_HAL_VPD_BUFFER_SIZE; i += 4) {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_gtt_values.h 316485 2017-04-04 06:16:59Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_gtt_values.h 316485 2017-04-04 06:16:59Z davidcs $
  *
  */
 

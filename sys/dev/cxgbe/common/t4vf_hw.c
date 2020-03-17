@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgbe/common/t4vf_hw.c 309560 2016-12-05 20:43:25Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/common/t4vf_hw.c 309560 2016-12-05 20:43:25Z jhb $");
 
 #include "common.h"
 #include "t4_regs.h"

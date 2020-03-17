@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright 2010 Pauli Nieminen.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_buffer.h 254794 2013-08-24 16:14:20Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_buffer.h 254794 2013-08-24 16:14:20Z dumbbell $");
 
 #ifndef _DRM_BUFFER_H_
 #define _DRM_BUFFER_H_

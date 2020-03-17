@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/wb/if_wbreg.h 226995 2011-11-01 16:13:59Z marius $
+ * $FreeBSD: stable/11/sys/dev/wb/if_wbreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

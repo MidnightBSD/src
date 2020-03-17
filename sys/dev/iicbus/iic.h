@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/iicbus/iic.h 300948 2016-05-29 07:14:51Z jah $
+ * $FreeBSD: stable/11/sys/dev/iicbus/iic.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef __IIC_H

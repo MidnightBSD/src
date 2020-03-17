@@ -50,8 +50,8 @@
 # or the SD Card Association to disclose or distribute any technical
 # information, know-how or other confidential information to any third party.
 #
-# $FreeBSD: stable/10/sys/dev/sdhci/sdhci_if.m 322120 2017-08-06 16:07:34Z marius $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/sdhci/sdhci_if.m 322119 2017-08-06 16:07:25Z marius $
+#
 
 #
 # This is the set of callbacks that mmc bridges call into the bus, or

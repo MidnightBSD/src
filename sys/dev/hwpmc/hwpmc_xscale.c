@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_xscale.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_xscale.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,9 +87,6 @@ const struct xscale_event_code_map xscale_event_codes[] = {
 	{ PMC_EV_XSCALE_SELF_ADDRESS_BUS_TRANS,	0x41 },
 	{ PMC_EV_XSCALE_DATA_BUS_TRANS,		0x48 },
 };
-
-const int xscale_event_codes_size =
-	sizeof(xscale_event_codes) / sizeof(xscale_event_codes[0]);
 
 /*
  * Per-processor information.
@@ -265,13 +261,13 @@ xscale_allocate_pmc(int cpu, int ri, struct pmc *pm,
 	if (a->pm_class != PMC_CLASS_XSCALE)
 		return (EINVAL);
 	pe = a->pm_ev;
-	for (i = 0; i < xscale_event_codes_size; i++) {
+	for (i = 0; i < nitems(xscale_event_codes); i++) {
 		if (xscale_event_codes[i].pe_ev == pe) {
 			config = xscale_event_codes[i].pe_code;
 			break;
 		}
 	}
-	if (i == xscale_event_codes_size)
+	if (i == nitems(xscale_event_codes))
 		return EINVAL;
 	/* Generation 1 has fewer events */
 	if (xscale_gen == 1 && i > PMC_EV_XSCALE_PC_CHANGE)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/vr/if_vrreg.h 235334 2012-05-12 14:37:25Z rpaulo $
+ * $FreeBSD: stable/11/sys/dev/vr/if_vrreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

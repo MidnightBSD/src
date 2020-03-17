@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright © 2007 David Airlie
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_fb.c 300060 2016-05-17 15:18:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_fb.c 298931 2016-05-02 16:47:28Z pfg $");
 
 #include <machine/_inttypes.h>
 
@@ -299,6 +298,8 @@ static int radeon_fbdev_destroy(struct drm_device *dev, struct radeon_fbdev *rfb
 
 	if (rfbdev->helper.fbdev) {
 		info = rfbdev->helper.fbdev;
+		if (info->fb_fbd_dev != NULL)
+			device_delete_child(dev->dev, info->fb_fbd_dev);
 		framebuffer_release(info);
 	}
 

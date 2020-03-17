@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -19,7 +18,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/dev/wl/if_wl.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/wl/if_wl.h 274758 2014-11-20 20:09:18Z jhb $
  */
 /* Definitions for WaveLAN driver */
 
@@ -58,15 +57,15 @@ typedef struct {
 	
 /* WaveLAN host interface definitions */
 
-#define HACR(base)	(base)		/* Host Adapter Command Register */
-#define HASR(base)	(base)		/* Host Adapter Status Register */
-#define MMCR(base)	(base+0x2)	/* Modem Management Ctrl Register */
-#define PIOR0(base)	(base+0x4)	/* Program I/O Address Register 0 */
-#define PIOP0(base)	(base+0x6)	/* Program I/O Port 0 */
-#define PIOR1(base)	(base+0x8)	/* Program I/O Address Register 1 */
-#define PIOP1(base)	(base+0xa)	/* Program I/O Port 1 */
-#define PIOR2(base)	(base+0xc)	/* Program I/O Address Register 2 */
-#define PIOP2(base)	(base+0xe)	/* Program I/O Port 2 */
+#define HACR			0x0	/* Host Adapter Command Register */
+#define HASR			0x0	/* Host Adapter Status Register */
+#define MMCR			0x2	/* Modem Management Ctrl Register */
+#define PIOR0			0x4	/* Program I/O Address Register 0 */
+#define PIOP0			0x6	/* Program I/O Port 0 */
+#define PIOR1			0x8	/* Program I/O Address Register 1 */
+#define PIOP1			0xa	/* Program I/O Port 1 */
+#define PIOR2			0xc	/* Program I/O Address Register 2 */
+#define PIOP2			0xe	/* Program I/O Port 2 */
 
 /* Program I/O Mode Register values */
 
@@ -97,9 +96,21 @@ typedef struct {
 
 #define HACR_DEFAULT	(HACR_OUT1 | HACR_OUT2 | HACR_16BITS | PIOM(STATIC_PIO, 0) | PIOM(AUTOINCR_PIO, 1) | PIOM(PARAM_ACCESS_PIO, 2))
 #define HACR_INTRON	(HACR_MASK_82586 | HACR_MASK_MMC | HACR_INTR_CLEN)
-#define CMD(sc)	\
+
+#define	WL_READ_1(sc, reg)	bus_read_1((sc)->res_ioport, (reg))
+#define	WL_READ_2(sc, reg)	bus_read_2((sc)->res_ioport, (reg))
+#define	WL_READ_MULTI_2(sc, reg, buf, len)				\
+	bus_read_multi_2((sc)->res_ioport, (reg), (uint16_t *)(buf), (len))
+#define	WL_WRITE_1(sc, reg, val)					\
+	bus_write_1((sc)->res_ioport, (reg), (val))
+#define	WL_WRITE_2(sc, reg, val)					\
+	bus_write_2((sc)->res_ioport, (reg), (val))
+#define	WL_WRITE_MULTI_2(sc, reg, buf, len)				\
+	bus_write_multi_2((sc)->res_ioport, (reg), (uint16_t *)(buf), (len))
+
+#define CMD(sc)	  \
 		{ \
-		   outw(HACR(sc->base),sc->hacr); \
+		   WL_WRITE_2(sc, HACR, sc->hacr);		\
 		   /* delay for 50 us, might only be needed sometimes */ \
 		   DELAY(DELAYCONST); \
 	        }
@@ -109,13 +120,13 @@ typedef struct {
  */
 #define SET_CHAN_ATTN(sc)   \
       { \
-         outw(HACR(sc->base),sc->hacr | HACR_CA); \
+         WL_WRITE_2(sc, HACR, sc->hacr | HACR_CA); \
       }
 
 
 #define MMC_WRITE(cmd,val)	\
-	while(inw(HASR(sc->base)) & HASR_MMC_BUSY) ; \
-	outw(MMCR(sc->base), \
+	while (WL_READ_2(sc, HASR) & HASR_MMC_BUSY) ;	\
+	WL_WRITE_2(sc, MMCR,				\
 	     (u_short)(((u_short)(val) << 8) | ((cmd) << 1) | 1))
 
 #endif	/* _IF_WL_H */

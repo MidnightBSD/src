@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_mod.c 325757 2017-11-13 09:10:17Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_mod.c 343350 2019-01-23 17:36:58Z markj $");
 
 #include <sys/param.h>
 #include <sys/eventhandler.h>
@@ -236,8 +235,7 @@ static void pmc_generic_cpu_finalize(struct pmc_mdep *md);
 SYSCTL_DECL(_kern_hwpmc);
 
 static int pmc_callchaindepth = PMC_CALLCHAIN_DEPTH;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "callchaindepth", &pmc_callchaindepth);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, callchaindepth, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, callchaindepth, CTLFLAG_RDTUN,
     &pmc_callchaindepth, 0, "depth of call chain records");
 
 #ifdef	HWPMC_DEBUG
@@ -246,7 +244,7 @@ char	pmc_debugstr[PMC_DEBUG_STRSIZE];
 TUNABLE_STR(PMC_SYSCTL_NAME_PREFIX "debugflags", pmc_debugstr,
     sizeof(pmc_debugstr));
 SYSCTL_PROC(_kern_hwpmc, OID_AUTO, debugflags,
-    CTLTYPE_STRING|CTLFLAG_RW|CTLFLAG_TUN,
+    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
     0, 0, pmc_debugflags_sysctl_handler, "A", "debug flags");
 #endif
 
@@ -256,8 +254,7 @@ SYSCTL_PROC(_kern_hwpmc, OID_AUTO, debugflags,
  */
 
 static int pmc_hashsize = PMC_HASH_SIZE;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "hashsize", &pmc_hashsize);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, hashsize, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, hashsize, CTLFLAG_RDTUN,
     &pmc_hashsize, 0, "rows in hash tables");
 
 /*
@@ -265,8 +262,7 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, hashsize, CTLFLAG_TUN|CTLFLAG_RD,
  */
 
 static int pmc_nsamples = PMC_NSAMPLES;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "nsamples", &pmc_nsamples);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, nsamples, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, nsamples, CTLFLAG_RDTUN,
     &pmc_nsamples, 0, "number of PC samples per CPU");
 
 
@@ -275,8 +271,7 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, nsamples, CTLFLAG_TUN|CTLFLAG_RD,
  */
 
 static int pmc_mtxpool_size = PMC_MTXPOOL_SIZE;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "mtxpoolsize", &pmc_mtxpool_size);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_RDTUN,
     &pmc_mtxpool_size, 0, "size of spin mutex pool");
 
 
@@ -290,8 +285,7 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_TUN|CTLFLAG_RD,
  */
 
 static int pmc_unprivileged_syspmcs = 0;
-TUNABLE_INT("security.bsd.unprivileged_syspmcs", &pmc_unprivileged_syspmcs);
-SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_syspmcs, CTLFLAG_RW,
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_syspmcs, CTLFLAG_RWTUN,
     &pmc_unprivileged_syspmcs, 0,
     "allow unprivileged process to allocate system PMCs");
 
@@ -317,30 +311,30 @@ SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_syspmcs, CTLFLAG_RW,
 
 /* The `sysent' for the new syscall */
 static struct sysent pmc_sysent = {
-	2,			/* sy_narg */
-	pmc_syscall_handler	/* sy_call */
+	.sy_narg =	2,
+	.sy_call =	pmc_syscall_handler,
 };
 
 static struct syscall_module_data pmc_syscall_mod = {
-	load,
-	NULL,
-	&pmc_syscall_num,
-	&pmc_sysent,
-#if (__FreeBSD_version >= 1100000)
-	{ 0, NULL },
-	SY_THR_STATIC_KLD,
-#else
-	{ 0, NULL }
-#endif
+	.chainevh =	load,
+	.chainarg =	NULL,
+	.offset =	&pmc_syscall_num,
+	.new_sysent =	&pmc_sysent,
+	.old_sysent =	{ .sy_narg = 0, .sy_call = NULL },
+	.flags =	SY_THR_STATIC_KLD,
 };
 
 static moduledata_t pmc_mod = {
-	PMC_MODULE_NAME,
-	syscall_module_handler,
-	&pmc_syscall_mod
+	.name =		PMC_MODULE_NAME,
+	.evhand =	syscall_module_handler,
+	.priv =		&pmc_syscall_mod,
 };
 
+#ifdef EARLY_AP_STARTUP
+DECLARE_MODULE(pmc, pmc_mod, SI_SUB_SYSCALLS, SI_ORDER_ANY);
+#else
 DECLARE_MODULE(pmc, pmc_mod, SI_SUB_SMP, SI_ORDER_ANY);
+#endif
 MODULE_VERSION(pmc, PMC_VERSION);
 
 #ifdef	HWPMC_DEBUG
@@ -1015,7 +1009,7 @@ pmc_attach_one_process(struct proc *p, struct pmc *pm)
 
 	/* issue an attach event to a configured log file */
 	if (pm->pm_owner->po_flags & PMC_PO_OWNS_LOGFILE) {
-		if (p->p_flag & P_KTHREAD) {
+		if (p->p_flag & P_KPROC) {
 			fullpath = kernelname;
 			freepath = NULL;
 		} else {
@@ -1489,7 +1483,7 @@ pmc_process_csw_out(struct thread *td)
 				 * increasing monotonically, modulo a 64
 				 * bit wraparound.
 				 */
-				KASSERT((int64_t) tmp >= 0,
+				KASSERT(tmp >= 0,
 				    ("[pmc,%d] negative increment cpu=%d "
 				     "ri=%d newvalue=%jx saved=%jx "
 				     "incr=%jx", __LINE__, cpu, ri,
@@ -2580,15 +2574,34 @@ static int
 pmc_find_pmc(pmc_id_t pmcid, struct pmc **pmc)
 {
 
-	struct pmc *pm;
+	struct pmc *pm, *opm;
 	struct pmc_owner *po;
+	struct pmc_process *pp;
 
 	PMCDBG1(PMC,FND,1, "find-pmc id=%d", pmcid);
 	if (PMC_ID_TO_ROWINDEX(pmcid) >= md->pmd_npmc)
 		return (EINVAL);
 
-	if ((po = pmc_find_owner_descriptor(curthread->td_proc)) == NULL)
-		return ESRCH;
+	if ((po = pmc_find_owner_descriptor(curthread->td_proc)) == NULL) {
+		/*
+		 * In case of PMC_F_DESCENDANTS child processes we will not find
+		 * the current process in the owners hash list.  Find the owner
+		 * process first and from there lookup the po.
+		 */
+		if ((pp = pmc_find_process_descriptor(curthread->td_proc,
+		    PMC_FLAG_NONE)) == NULL) {
+			return ESRCH;
+		} else {
+			opm = pp->pp_pmcs[PMC_ID_TO_ROWINDEX(pmcid)].pp_pmc;
+			if (opm == NULL)
+				return ESRCH;
+			if ((opm->pm_flags & (PMC_F_ATTACHED_TO_OWNER|
+			    PMC_F_DESCENDANTS)) != (PMC_F_ATTACHED_TO_OWNER|
+			    PMC_F_DESCENDANTS))
+				return ESRCH;
+			po = opm->pm_owner;
+		}
+	}
 
 	if ((pm = pmc_find_pmc_descriptor_in_process(po, pmcid)) == NULL)
 		return EINVAL;
@@ -2840,21 +2853,30 @@ static const char *pmc_op_to_name[] = {
 static int
 pmc_syscall_handler(struct thread *td, void *syscall_args)
 {
-	int error, is_sx_downgraded, is_sx_locked, op;
+	int error, is_sx_downgraded, op;
 	struct pmc_syscall_args *c;
+	void *pmclog_proc_handle;
 	void *arg;
 
-	PMC_GET_SX_XLOCK(ENOSYS);
-
-	DROP_GIANT();
-
-	is_sx_downgraded = 0;
-	is_sx_locked = 1;
-
-	c = (struct pmc_syscall_args *) syscall_args;
-
+	c = (struct pmc_syscall_args *)syscall_args;
 	op = c->pmop_code;
 	arg = c->pmop_data;
+	if (op == PMC_OP_CONFIGURELOG) {
+		/*
+		 * We cannot create the logging process inside
+		 * pmclog_configure_log() because there is a LOR
+		 * between pmc_sx and process structure locks.
+		 * Instead, pre-create the process and ignite the loop
+		 * if everything is fine, otherwise direct the process
+		 * to exit.
+		 */
+		error = pmclog_proc_create(td, &pmclog_proc_handle);
+		if (error != 0)
+			goto done_syscall;
+	}
+
+	PMC_GET_SX_XLOCK(ENOSYS);
+	is_sx_downgraded = 0;
 
 	PMCDBG3(MOD,PMS,1, "syscall op=%d \"%s\" arg=%p", op,
 	    pmc_op_to_name[op], arg);
@@ -2862,8 +2884,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 	error = 0;
 	atomic_add_int(&pmc_stats.pm_syscalls, 1);
 
-	switch(op)
-	{
+	switch (op) {
 
 
 	/*
@@ -2879,15 +2900,16 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		struct pmc_owner *po;
 		struct pmc_op_configurelog cl;
 
-		sx_assert(&pmc_sx, SX_XLOCKED);
-
-		if ((error = copyin(arg, &cl, sizeof(cl))) != 0)
+		if ((error = copyin(arg, &cl, sizeof(cl))) != 0) {
+			pmclog_proc_ignite(pmclog_proc_handle, NULL);
 			break;
+		}
 
 		/* mark this process as owning a log file */
 		p = td->td_proc;
 		if ((po = pmc_find_owner_descriptor(p)) == NULL)
 			if ((po = pmc_allocate_owner_descriptor(p)) == NULL) {
+				pmclog_proc_ignite(pmclog_proc_handle, NULL);
 				error = ENOMEM;
 				break;
 			}
@@ -2899,11 +2921,11 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		 * de-configure it.
 		 */
 		if (cl.pm_logfd >= 0) {
-			sx_xunlock(&pmc_sx);
-			is_sx_locked = 0;
 			error = pmclog_configure_log(md, po, cl.pm_logfd);
+			pmclog_proc_ignite(pmclog_proc_handle, error == 0 ?
+			    po : NULL);
 		} else if (po->po_flags & PMC_PO_OWNS_LOGFILE) {
-			pmclog_process_closelog(po);
+			pmclog_proc_ignite(pmclog_proc_handle, NULL);
 			error = pmclog_close(po);
 			if (error == 0) {
 				LIST_FOREACH(pm, &po->po_pmcs, pm_next)
@@ -2912,11 +2934,10 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 					    pmc_stop(pm);
 				error = pmclog_deconfigure_log(po);
 			}
-		} else
+		} else {
+			pmclog_proc_ignite(pmclog_proc_handle, NULL);
 			error = EINVAL;
-
-		if (error)
-			break;
+		}
 	}
 	break;
 
@@ -2969,6 +2990,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		struct pmc_classdep *pcd;
 		int cl;
 
+		memset(&gci, 0, sizeof(gci));
 		gci.pm_cputype = md->pmd_cputype;
 		gci.pm_ncpu    = pmc_cpu_max();
 		gci.pm_npmc    = md->pmd_npmc;
@@ -3110,7 +3132,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		npmc = md->pmd_npmc;
 
 		pmcinfo_size = npmc * sizeof(struct pmc_info);
-		pmcinfo = malloc(pmcinfo_size, M_PMC, M_WAITOK);
+		pmcinfo = malloc(pmcinfo_size, M_PMC, M_WAITOK | M_ZERO);
 
 		p = pmcinfo;
 
@@ -4011,19 +4033,15 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		break;
 	}
 
-	if (is_sx_locked != 0) {
-		if (is_sx_downgraded)
-			sx_sunlock(&pmc_sx);
-		else
-			sx_xunlock(&pmc_sx);
-	}
-
+	if (is_sx_downgraded)
+		sx_sunlock(&pmc_sx);
+	else
+		sx_xunlock(&pmc_sx);
+done_syscall:
 	if (error)
 		atomic_add_int(&pmc_stats.pm_syscall_errors, 1);
 
-	PICKUP_GIANT();
-
-	return error;
+	return (error);
 }
 
 /*
@@ -4181,6 +4199,7 @@ pmc_capture_user_callchain(int cpu, int ring, struct trapframe *tf)
 	struct pmc_samplebuffer *psb;
 #ifdef	INVARIANTS
 	int ncallchains;
+	int nfree;
 #endif
 
 	psb = pmc_pcpu[cpu]->pc_sb[ring];
@@ -4192,6 +4211,7 @@ pmc_capture_user_callchain(int cpu, int ring, struct trapframe *tf)
 
 #ifdef	INVARIANTS
 	ncallchains = 0;
+	nfree = 0;
 #endif
 
 	/*
@@ -4203,6 +4223,10 @@ pmc_capture_user_callchain(int cpu, int ring, struct trapframe *tf)
 	ps = psb->ps_read;
 	ps_end = psb->ps_write;
 	do {
+#ifdef	INVARIANTS
+		if (ps->ps_pmc->pm_state != PMC_STATE_RUNNING)
+			nfree++;
+#endif
 		if (ps->ps_nsamples != PMC_SAMPLE_INUSE)
 			goto next;
 		if (ps->ps_td != td)
@@ -4238,7 +4262,7 @@ next:
 			ps = psb->ps_samples;
 	} while (ps != ps_end);
 
-	KASSERT(ncallchains > 0,
+	KASSERT(ncallchains > 0 || nfree > 0,
 	    ("[pmc,%d] cpu %d didn't find a sample to collect", __LINE__,
 		cpu));
 
@@ -4697,12 +4721,20 @@ pmc_kld_unload(void *arg __unused, const char *filename __unused,
 /*
  * initialization
  */
+static const char *
+pmc_name_of_pmcclass(enum pmc_class class)
+{
 
-static const char *pmc_name_of_pmcclass[] = {
+	switch (class) {
 #undef	__PMC_CLASS
-#define	__PMC_CLASS(N) #N ,
-	__PMC_CLASSES()
-};
+#define	__PMC_CLASS(S,V,D)						\
+	case PMC_CLASS_##S:						\
+		return #S;
+	__PMC_CLASSES();
+	default:
+		return ("<unknown>");
+	}
+}
 
 /*
  * Base class initializer: allocate structure and set default classes.
@@ -4981,7 +5013,7 @@ pmc_initialize(void)
 		for (n = 0; n < (int) md->pmd_nclass; n++) {
 			pcd = &md->pmd_classdep[n];
 			printf(" %s/%d/%d/0x%b",
-			    pmc_name_of_pmcclass[pcd->pcd_class],
+			    pmc_name_of_pmcclass(pcd->pcd_class),
 			    pcd->pcd_num,
 			    pcd->pcd_width,
 			    pcd->pcd_caps,

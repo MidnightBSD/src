@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Sam Leffler.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/ds1672.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/ds1672.c 331722 2018-03-29 02:50:57Z eadler $");
 /*
  * Dallas Semiconductor DS1672 RTC sitting on the I2C bus.
  */
@@ -52,8 +51,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/ds1672.c 246128 2013-01-30 18:01:20
 #define	DS1672_TRICKLE	5	/* trickle charger (1 byte) */
 
 #define	DS1672_CTRL_EOSC	(1 << 7)	/* Stop/start flag. */
-
-#define NANOSEC		1000000000
 
 #define	MAX_IIC_DATA_SIZE	4
 
@@ -119,6 +116,14 @@ ds1672_init(device_t dev)
 }
 
 static int
+ds1672_detach(device_t dev)
+{
+
+    clock_unregister(dev);
+    return (0);
+}
+
+static int
 ds1672_attach(device_t dev)
 {
 	struct ds1672_softc *sc = device_get_softc(dev);
@@ -143,8 +148,9 @@ ds1672_gettime(device_t dev, struct timespec *ts)
 		/* counter has seconds since epoch */
 		ts->tv_sec = (secs[3] << 24) | (secs[2] << 16)
 			   | (secs[1] <<  8) | (secs[0] <<  0);
-		ts->tv_nsec = NANOSEC / 2;
+		ts->tv_nsec = 0;
 	}
+	clock_dbgprint_ts(dev, CLOCK_DBG_READ, ts); 
 	return (error);
 }
 
@@ -158,12 +164,15 @@ ds1672_settime(device_t dev, struct timespec *ts)
 	data[2] = (ts->tv_sec >> 16) & 0xff;
 	data[3] = (ts->tv_sec >> 24) & 0xff;
 
+	ts->tv_nsec = 0;
+	clock_dbgprint_ts(dev, CLOCK_DBG_WRITE, ts);
 	return (ds1672_write(dev, DS1672_COUNTER, data, 4));
 }
 
 static device_method_t ds1672_methods[] = {
 	DEVMETHOD(device_probe,		ds1672_probe),
 	DEVMETHOD(device_attach,	ds1672_attach),
+	DEVMETHOD(device_detach,	ds1672_detach),
 
 	DEVMETHOD(clock_gettime,	ds1672_gettime),
 	DEVMETHOD(clock_settime,	ds1672_settime),

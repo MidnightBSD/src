@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright(c) 2002-2011 Exar Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/10/sys/dev/vxge/vxgehal/vxge-queue.c 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD: stable/11/sys/dev/vxge/vxgehal/vxge-queue.c 331722 2018-03-29 02:50:57Z eadler $*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 
@@ -393,7 +392,7 @@ vxge_queue_destroy(vxge_queue_h queueh)
  * @queueh: Queue handle.
  *
  * This function is called in the case of no slot avaialble in the queue
- * to accomodate the newly received event.
+ * to accommodate the newly received event.
  * Note that queue cannot grow beyond the max size specified for the
  * queue.
  *
@@ -489,7 +488,7 @@ vxge_io_queue_grow(vxge_queue_h queueh)
  * Returns: VXGE_QUEUE_OK - success.
  * VXGE_QUEUE_IS_EMPTY - Queue is empty.
  * VXGE_QUEUE_NOT_ENOUGH_SPACE - Requested item size(@data_max_size)
- * is too small to accomodate an item from the queue.
+ * is too small to accommodate an item from the queue.
  *
  * See also: vxge_queue_item_t {}, vxge_queue_produce().
  */

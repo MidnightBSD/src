@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/wtap/plugins/visibility.c 300060 2016-05-17 15:18:01Z pfg $
+ * $FreeBSD: stable/11/sys/dev/wtap/plugins/visibility.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/param.h>
 #include <sys/module.h>
@@ -42,7 +41,6 @@
 #include <sys/ucred.h>
 #include <sys/jail.h>
 
-#include <sys/types.h>
 #include <sys/sockio.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>

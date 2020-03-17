@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2007-2009 VMware, Inc., Palo Alto, CA., USA
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_bo_util.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_bo_util.c 317008 2017-04-16 07:58:41Z mmel $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_bo_driver.h>
@@ -440,7 +439,8 @@ ttm_buffer_object_transfer(struct ttm_buffer_object *bo,
 vm_memattr_t
 ttm_io_prot(uint32_t caching_flags)
 {
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__)
+#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || 	\
+ defined(__arm__)
 	if (caching_flags & TTM_PL_FLAG_WC)
 		return (VM_MEMATTR_WRITE_COMBINING);
 	else

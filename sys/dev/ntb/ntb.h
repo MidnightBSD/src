@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ntb/ntb.h 304404 2016-08-18 10:59:12Z mav $
+ * $FreeBSD: stable/11/sys/dev/ntb/ntb.h 355152 2019-11-28 00:41:42Z mav $
  */
 
 #ifndef _NTB_H_
@@ -37,6 +36,10 @@ SYSCTL_DECL(_hw_ntb);
 
 int ntb_register_device(device_t ntb);
 int ntb_unregister_device(device_t ntb);
+int ntb_child_location_str(device_t dev, device_t child, char *buf,
+    size_t buflen);
+int ntb_print_child(device_t dev, device_t child);
+bus_dma_tag_t ntb_get_dma_tag(device_t bus, device_t child);
 
 /*
  * ntb_link_event() - notify driver context of a change in link status

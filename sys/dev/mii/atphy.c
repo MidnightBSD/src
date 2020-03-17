@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/atphy.c 266000 2014-05-14 01:53:20Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/atphy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for the Attansic/Atheros F1 10/100/1000 PHY.
@@ -118,12 +117,6 @@ atphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		if (IFM_SUBTYPE(ife->ifm_media) == IFM_AUTO ||
 		    IFM_SUBTYPE(ife->ifm_media) == IFM_1000_T) {
 			atphy_setmedia(sc, ife->ifm_media);
@@ -176,12 +169,6 @@ done:
 		break;
 
 	case MII_TICK:
-		/*
-		 * Is the interface even up?
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			return (0);
-
 		/*
 		 * Only used for autonegotiation.
 		 */

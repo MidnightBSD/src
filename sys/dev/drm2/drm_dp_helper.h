@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright © 2008 Keith Packard
  *
@@ -20,7 +19,7 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
  * OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/drm2/drm_dp_helper.h 254817 2013-08-24 23:38:57Z dumbbell $
+ * $FreeBSD: stable/11/sys/dev/drm2/drm_dp_helper.h 254817 2013-08-24 23:38:57Z dumbbell $
  */
 
 #ifndef _DRM_DP_HELPER_H_

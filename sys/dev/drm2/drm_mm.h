@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright 2006-2008 Tungsten Graphics, Inc., Cedar Park, TX. USA.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_mm.h 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_mm.h 280183 2015-03-17 18:50:33Z dumbbell $");
 
 #ifndef _DRM_MM_H_
 #define _DRM_MM_H_

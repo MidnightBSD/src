@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2009 Advanced Micro Devices, Inc.
  * Copyright 2009 Red Hat Inc.
@@ -29,7 +28,7 @@
 #define R600D_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/r600d.h 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/r600d.h 280183 2015-03-17 18:50:33Z dumbbell $");
 
 #define CP_PACKET2			0x80000000
 #define		PACKET2_PAD_SHIFT		0

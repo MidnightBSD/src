@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Advanced Micro Devices, Inc.
  * Copyright 2008 Red Hat Inc.
@@ -30,7 +29,7 @@
 #define __RV250D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/rv250d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/rv250d.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 #define R_00000D_SCLK_CNTL_M6                        0x00000D
 #define   S_00000D_SCLK_SRC_SEL(x)                     (((x) & 0x7) << 0)

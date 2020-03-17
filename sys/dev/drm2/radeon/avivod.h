@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2009 Advanced Micro Devices, Inc.
  * Copyright 2009 Red Hat Inc.
@@ -29,7 +28,7 @@
 #define AVIVOD_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/avivod.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/avivod.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 
 #define	D1CRTC_CONTROL					0x6080

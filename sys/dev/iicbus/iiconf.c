@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/iiconf.c 294673 2016-01-24 18:54:11Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iiconf.c 350031 2019-07-16 15:02:28Z avg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,7 +82,7 @@ iicbus_poll(struct iicbus_softc *sc, int how)
 	int error;
 
 	IICBUS_ASSERT_LOCKED(sc);
-	switch (how) {
+	switch (how & IIC_INTRWAIT) {
 	case IIC_WAIT | IIC_INTR:
 		error = mtx_sleep(sc, &sc->lock, IICPRI|PCATCH, "iicreq", 0);
 		break;
@@ -114,29 +113,38 @@ iicbus_request_bus(device_t bus, device_t dev, int how)
 
 	IICBUS_LOCK(sc);
 
-	while ((error == 0) && (sc->owner != NULL))
-		error = iicbus_poll(sc, how);
-
-	if (error == 0) {
-		sc->owner = dev;
-		/* 
-		 * Drop the lock around the call to the bus driver. 
-		 * This call should be allowed to sleep in the IIC_WAIT case.
-		 * Drivers might also need to grab locks that would cause LOR
-		 * if our lock is held.
-		 */
-		IICBUS_UNLOCK(sc);
-		/* Ask the underlying layers if the request is ok */
-		error = IICBUS_CALLBACK(device_get_parent(bus),
-		    IIC_REQUEST_BUS, (caddr_t)&how);
-		IICBUS_LOCK(sc);
-
-		if (error != 0) {
-			sc->owner = NULL;
-			wakeup_one(sc);
-		}
+	for (;;) {
+		if (sc->owner == NULL)
+			break;
+		if ((how & IIC_RECURSIVE) && sc->owner == dev)
+			break;
+		if ((error = iicbus_poll(sc, how)) != 0)
+			break;
 	}
 
+	if (error == 0) {
+		++sc->owncount;
+		if (sc->owner == NULL) {
+			sc->owner = dev;
+			/* 
+			 * Drop the lock around the call to the bus driver, it
+			 * should be allowed to sleep in the IIC_WAIT case.
+			 * Drivers might also need to grab locks that would
+			 * cause a LOR if our lock is held.
+			 */
+			IICBUS_UNLOCK(sc);
+			/* Ask the underlying layers if the request is ok */
+			error = IICBUS_CALLBACK(device_get_parent(bus),
+			    IIC_REQUEST_BUS, (caddr_t)&how);
+			IICBUS_LOCK(sc);
+	
+			if (error != 0) {
+				sc->owner = NULL;
+				sc->owncount = 0;
+				wakeup_one(sc);
+			}
+		}
+	}
 
 	IICBUS_UNLOCK(sc);
 
@@ -152,7 +160,6 @@ int
 iicbus_release_bus(device_t bus, device_t dev)
 {
 	struct iicbus_softc *sc = (struct iicbus_softc *)device_get_softc(bus);
-	int error;
 
 	IICBUS_LOCK(sc);
 
@@ -161,26 +168,16 @@ iicbus_release_bus(device_t bus, device_t dev)
 		return (IIC_EBUSBSY);
 	}
 
-	/* 
-	 * Drop the lock around the call to the bus driver. 
-	 * This call should be allowed to sleep in the IIC_WAIT case.
-	 * Drivers might also need to grab locks that would cause LOR
-	 * if our lock is held.
-	 */
-	IICBUS_UNLOCK(sc);
-	/* Ask the underlying layers if the release is ok */
-	error = IICBUS_CALLBACK(device_get_parent(bus), IIC_RELEASE_BUS, NULL);
-
-	if (error == 0) {
+	if (--sc->owncount == 0) {
+		/* Drop the lock while informing the low-level driver. */
+		IICBUS_UNLOCK(sc);
+		IICBUS_CALLBACK(device_get_parent(bus), IIC_RELEASE_BUS, NULL);
 		IICBUS_LOCK(sc);
 		sc->owner = NULL;
-
-		/* wakeup a waiting thread */
 		wakeup_one(sc);
-		IICBUS_UNLOCK(sc);
 	}
-
-	return (error);
+	IICBUS_UNLOCK(sc);
+	return (0);
 }
 
 /*
@@ -421,7 +418,7 @@ iicbus_transfer_gen(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 {
 	int i, error, lenread, lenwrote, nkid, rpstart, addr;
 	device_t *children, bus;
-	bool nostop;
+	bool started;
 
 	if ((error = device_get_children(dev, &children, &nkid)) != 0)
 		return (IIC_ERESOURCE);
@@ -432,7 +429,7 @@ iicbus_transfer_gen(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 	bus = children[0];
 	rpstart = 0;
 	free(children, M_TEMP);
-	nostop = iicbus_get_nostop(dev);
+	started = false;
 	for (i = 0, error = 0; i < nmsgs && error == 0; i++) {
 		addr = msgs[i].slave;
 		if (msgs[i].flags & IIC_M_RD)
@@ -445,9 +442,10 @@ iicbus_transfer_gen(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 				error = iicbus_repeated_start(bus, addr, 0);
 			else
 				error = iicbus_start(bus, addr, 0);
+			if (error != 0)
+				break;
+			started = true;
 		}
-		if (error != 0)
-			break;
 
 		if (msgs[i].flags & IIC_M_RD)
 			error = iicbus_read(bus, msgs[i].buf, msgs[i].len,
@@ -458,15 +456,66 @@ iicbus_transfer_gen(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 		if (error != 0)
 			break;
 
-		if ((msgs[i].flags & IIC_M_NOSTOP) != 0 ||
-		    (nostop && i + 1 < nmsgs)) {
-			rpstart = 1;	/* Next message gets repeated start */
-		} else {
+		if (!(msgs[i].flags & IIC_M_NOSTOP)) {
 			rpstart = 0;
 			iicbus_stop(bus);
+		} else {
+			rpstart = 1;	/* Next message gets repeated start */
 		}
 	}
-	if (error != 0 && !nostop)
+	if (error != 0 && started)
 		iicbus_stop(bus);
 	return (error);
+}
+
+int
+iicdev_readfrom(device_t slavedev, uint8_t regaddr, void *buffer,
+    uint16_t buflen, int waithow)
+{
+	struct iic_msg msgs[2];
+	uint8_t slaveaddr;
+
+	/*
+	 * Two transfers back to back with a repeat-start between them; first we
+	 * write the address-within-device, then we read from the device.
+	 */
+	slaveaddr = iicbus_get_addr(slavedev);
+
+	msgs[0].slave = slaveaddr;
+	msgs[0].flags = IIC_M_WR | IIC_M_NOSTOP;
+	msgs[0].len   = 1;
+	msgs[0].buf   = &regaddr;
+
+	msgs[1].slave = slaveaddr;
+	msgs[1].flags = IIC_M_RD;
+	msgs[1].len   = buflen;
+	msgs[1].buf   = buffer;
+
+	return (iicbus_transfer_excl(slavedev, msgs, nitems(msgs), waithow));
+}
+
+int iicdev_writeto(device_t slavedev, uint8_t regaddr, void *buffer,
+    uint16_t buflen, int waithow)
+{
+	struct iic_msg msgs[2];
+	uint8_t slaveaddr;
+
+	/*
+	 * Two transfers back to back with no stop or start between them; first
+	 * we write the address then we write the data to that address, all in a
+	 * single transfer from two scattered buffers.
+	 */
+	slaveaddr = iicbus_get_addr(slavedev);
+
+	msgs[0].slave = slaveaddr;
+	msgs[0].flags = IIC_M_WR | IIC_M_NOSTOP;
+	msgs[0].len   = 1;
+	msgs[0].buf   = &regaddr;
+
+	msgs[1].slave = slaveaddr;
+	msgs[1].flags = IIC_M_WR | IIC_M_NOSTART;
+	msgs[1].len   = buflen;
+	msgs[1].buf   = buffer;
+
+	return (iicbus_transfer_excl(slavedev, msgs, nitems(msgs), waithow));
 }

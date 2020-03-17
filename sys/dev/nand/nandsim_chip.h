@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/nand/nandsim_chip.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/sys/dev/nand/nandsim_chip.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NANDSIM_CHIP_H

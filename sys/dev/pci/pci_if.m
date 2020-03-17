@@ -23,10 +23,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/pci/pci_if.m 294340 2016-01-19 21:08:31Z jhb $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/pci/pci_if.m 331111 2018-03-17 20:20:29Z bryanv $
+#
 
 #include <sys/bus.h>
+#include <dev/pci/pcivar.h>
 
 INTERFACE pci;
 
@@ -42,7 +43,32 @@ CODE {
 	{
 		return (-1);
 	}
+
+	static device_t
+	null_create_iov_child(device_t bus, device_t pf, uint16_t rid,
+	    uint16_t vid, uint16_t did)
+	{
+		device_printf(bus, "PCI_IOV not implemented on this bus.\n");
+		return (NULL);
+	}
+
+	static int
+	compat_iov_attach(device_t bus, device_t dev, struct nvlist *pf_schema,
+	    struct nvlist *vf_schema)
+	{
+		return (PCI_IOV_ATTACH_NAME(bus, dev, pf_schema, vf_schema,
+		    device_get_nameunit(dev)));
+	}
 };
+
+HEADER {
+	struct nvlist;
+
+	enum pci_id_type {
+	    PCI_ID_RID,
+	    PCI_ID_MSI,
+	};
+}
 
 
 METHOD u_int32_t read_config {
@@ -118,6 +144,14 @@ METHOD int find_cap {
 	int		*capreg;
 };
 
+METHOD int find_next_cap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		start;
+	int		*capreg;
+};
+
 METHOD int find_extcap {
 	device_t	dev;
 	device_t	child;
@@ -125,10 +159,26 @@ METHOD int find_extcap {
 	int		*capreg;
 };
 
+METHOD int find_next_extcap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		start;
+	int		*capreg;
+};
+
 METHOD int find_htcap {
 	device_t	dev;
 	device_t	child;
 	int		capability;
+	int		*capreg;
+};
+
+METHOD int find_next_htcap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		start;
 	int		*capreg;
 };
 
@@ -196,12 +246,46 @@ METHOD int msix_table_bar {
 	device_t	child;
 } DEFAULT null_msix_bar;
 
-METHOD uint16_t get_rid {
+METHOD int get_id {
 	device_t	dev;
 	device_t	child;
+	enum pci_id_type type;
+	uintptr_t	*id;
+};
+
+METHOD struct pci_devinfo * alloc_devinfo {
+	device_t	dev;
 };
 
 METHOD void child_added {
 	device_t	dev;
 	device_t	child;
 };
+
+METHOD int iov_attach {
+	device_t	dev;
+	device_t	child;
+	struct nvlist	*pf_schema;
+	struct nvlist	*vf_schema;
+} DEFAULT compat_iov_attach;
+
+METHOD int iov_attach_name {
+	device_t	dev;
+	device_t	child;
+	struct nvlist	*pf_schema;
+	struct nvlist	*vf_schema;
+	const char	*name;
+};
+
+METHOD int iov_detach {
+	device_t	dev;
+	device_t	child;
+};
+
+METHOD device_t create_iov_child {
+	device_t bus;
+	device_t pf;
+	uint16_t rid;
+	uint16_t vid;
+	uint16_t did;
+} DEFAULT null_create_iov_child;

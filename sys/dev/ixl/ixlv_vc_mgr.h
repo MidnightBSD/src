@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2013-2014, Intel Corporation 
+  Copyright (c) 2013-2019, Intel Corporation
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixl/ixlv_vc_mgr.h 274360 2014-11-10 23:56:06Z jfv $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/ixlv_vc_mgr.h 349163 2019-06-18 00:08:02Z erj $*/
 
 #ifndef _IXLV_VC_MGR_H_
 #define _IXLV_VC_MGR_H_

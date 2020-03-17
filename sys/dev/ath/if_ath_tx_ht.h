@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_ath_tx_ht.h 250665 2013-05-15 18:33:05Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/if_ath_tx_ht.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__IF_ATH_TX_HT_H__
 #define	__IF_ATH_TX_HT_H__

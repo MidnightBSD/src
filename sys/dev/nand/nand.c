@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nand/nand.c 259371 2013-12-14 00:54:05Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nand.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,17 +65,8 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/nand/nand.c 259371 2013-12-14 00:54:05Z ia
 #define	SOFTECC_BYTES		3
 
 int nand_debug_flag = 0;
-SYSCTL_INT(_debug, OID_AUTO, nand_debug, CTLFLAG_RW, &nand_debug_flag, 0,
+SYSCTL_INT(_debug, OID_AUTO, nand_debug, CTLFLAG_RWTUN, &nand_debug_flag, 0,
     "NAND subsystem debug flag");
-
-static void
-nand_tunable_init(void *arg)
-{
-
-	TUNABLE_INT_FETCH("debug.nand", &nand_debug_flag);
-}
-
-SYSINIT(nand_tunables, SI_SUB_VFS, SI_ORDER_ANY, nand_tunable_init, NULL);
 
 MALLOC_DEFINE(M_NAND, "NAND", "NAND dynamic data");
 
@@ -821,7 +811,7 @@ nand_erase_blocks(struct nand_chip *chip, off_t offset, size_t len)
 			err = ENXIO;
 
 		block++;
-	};
+	}
 
 	NANDBUS_UNLOCK(nandbus);
 

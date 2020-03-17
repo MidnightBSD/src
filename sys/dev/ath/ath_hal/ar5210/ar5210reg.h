@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2004 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5210/ar5210reg.h 243317 2012-11-19 23:42:46Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5210/ar5210reg.h 243317 2012-11-19 23:42:46Z adrian $
  */
 #ifndef _DEV_ATH_AR5210REG_H
 #define _DEV_ATH_AR5210REG_H

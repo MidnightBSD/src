@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mii/jmphyreg.h 216551 2010-12-18 23:52:50Z yongari $
+ * $FreeBSD: stable/11/sys/dev/mii/jmphyreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_DEV_MII_JMPHYREG_H_

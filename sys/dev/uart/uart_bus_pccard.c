@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  * Copyright (c) 2003 Norikatsu Shigemura, Takenori Watanabe All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_pccard.c 151791 2005-10-28 06:27:53Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_pccard.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,6 +55,8 @@ static device_method_t uart_pccard_methods[] = {
 	{ 0, 0 }
 };
 
+static uint32_t uart_pccard_function = PCCARD_FUNCTION_SERIAL;
+
 static driver_t uart_pccard_driver = {
 	uart_driver_name,
 	uart_pccard_methods,
@@ -77,7 +78,7 @@ uart_pccard_probe(device_t dev)
 	 * some serial cards are better serviced by other drivers, so
 	 * allow other drivers to claim it, if they want.
 	 */
-	if (fcn == PCCARD_FUNCTION_SERIAL)
+	if (fcn == uart_pccard_function)
 		return (BUS_PROBE_GENERIC);
 
 	return (ENXIO);
@@ -92,10 +93,12 @@ uart_pccard_attach(device_t dev)
 	sc = device_get_softc(dev);
 	sc->sc_class = &uart_ns8250_class;
 
-	error = uart_bus_probe(dev, 0, 0, 0, 0);
+	error = uart_bus_probe(dev, 0, 0, 0, 0, 0, 0);
 	if (error > 0)
 		return (error);
 	return (uart_bus_attach(dev));
 }
 
 DRIVER_MODULE(uart, pccard, uart_pccard_driver, uart_devclass, 0, 0);
+MODULE_PNP_INFO("U32:function_type;", pccard, uart, &uart_pccard_function,
+    sizeof(uart_pccard_function), 1);

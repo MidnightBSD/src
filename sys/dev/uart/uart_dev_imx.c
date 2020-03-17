@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_dev_imx.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_dev_imx.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -299,7 +298,8 @@ static struct uart_class uart_imx_class = {
 	sizeof(struct imx_uart_softc),
 	.uc_ops = &uart_imx_uart_ops,
 	.uc_range = 0x100,
-	.uc_rclk = 24000000 /* TODO: get value from CCM */
+	.uc_rclk = 24000000, /* TODO: get value from CCM */
+	.uc_rshift = 0
 };
 
 static struct ofw_compat_data compat_data[] = {

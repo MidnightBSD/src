@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -29,7 +28,7 @@
  | $Id: isc_cam.c 998 2009-12-20 10:32:45Z danny $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iscsi_initiator/isc_cam.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iscsi_initiator/isc_cam.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_iscsi_initiator.h"
 
@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/iscsi_initiator/isc_cam.c 315813 2017-03-2
 #include <sys/uio.h>
 #include <sys/sysctl.h>
 #include <sys/sx.h>
+#include <vm/uma.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -64,7 +64,7 @@ _inq(struct cam_sim *sim, union ccb *ccb)
      isc_session_t *sp = cam_sim_softc(sim);
 
      debug_called(8);
-     debug(3, "sid=%d target=%d lun=%d", sp->sid, ccb->ccb_h.target_id, ccb->ccb_h.target_lun);
+     debug(3, "sid=%d target=%d lun=%jx", sp->sid, ccb->ccb_h.target_id, (uintmax_t)ccb->ccb_h.target_lun);
 
      cpi->version_num = 1; /* XXX??? */
      cpi->hba_inquiry = PI_SDTR_ABLE | PI_TAG_ABLE | PI_WIDE_32;
@@ -174,9 +174,9 @@ ic_action(struct cam_sim *sim, union ccb *ccb)
      debug_called(8);
 
      ccb_h->spriv_ptr0 = sp;
-     sdebug(4, "func_code=0x%x flags=0x%x status=0x%x target=%d lun=%d retry_count=%d timeout=%d",
+     sdebug(4, "func_code=0x%x flags=0x%x status=0x%x target=%d lun=%jx retry_count=%d timeout=%d",
 	   ccb_h->func_code, ccb->ccb_h.flags, ccb->ccb_h.status,
-	   ccb->ccb_h.target_id, ccb->ccb_h.target_lun, 
+	   ccb->ccb_h.target_id, (uintmax_t)ccb->ccb_h.target_lun, 
 	   ccb->ccb_h.retry_count, ccb_h->timeout);
      if(sp == NULL) {
 	  xdebug("sp == NULL! cannot happen");
@@ -221,13 +221,13 @@ ic_action(struct cam_sim *sim, union ccb *ccb)
 	  struct	ccb_calc_geometry *ccg;
 
 	  ccg = &ccb->ccg;
-	  debug(4, "sid=%d target=%d lun=%d XPT_CALC_GEOMETRY vsize=%jd bsize=%d",
-		sp->sid, ccb->ccb_h.target_id, ccb->ccb_h.target_lun,
+	  debug(4, "sid=%d target=%d lun=%jx XPT_CALC_GEOMETRY vsize=%jd bsize=%d",
+		sp->sid, ccb->ccb_h.target_id, (uintmax_t)ccb->ccb_h.target_lun,
 		ccg->volume_size, ccg->block_size);
 	  if(ccg->block_size == 0 ||
 	     (ccg->volume_size < ccg->block_size)) {
 	       // print error message  ...
-	       /* XXX: what error is appropiate? */
+	       /* XXX: what error is appropriate? */
 	       break;
 	  } 
 	  else {

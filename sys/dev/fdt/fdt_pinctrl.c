@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fdt/fdt_pinctrl.c 283485 2015-05-24 18:00:29Z ian $
+ * $FreeBSD: stable/11/sys/dev/fdt/fdt_pinctrl.c 299477 2016-05-11 18:20:02Z gonzo $
  */
 
 #include <sys/cdefs.h>
@@ -57,7 +56,7 @@ fdt_pinctrl_configure(device_t client, u_int index)
 		if ((pinctrl = OF_device_from_xref(configs[i])) != NULL)
 			FDT_PINCTRL_CONFIGURE(pinctrl, configs[i]);
 	}
-	free(configs, M_OFWPROP);
+	OF_prop_free(configs);
 	return (0);
 }
 
@@ -76,7 +75,7 @@ fdt_pinctrl_configure_by_name(device_t client, const char * name)
 			break;
 		offset += strlen(&names[offset]) + 1;
 	}
-	free(names, M_OFWPROP);
+	OF_prop_free(names);
 	if (offset < nameslen)
 		return (fdt_pinctrl_configure(client, i));
 	else
@@ -137,7 +136,7 @@ pinctrl_configure_children(device_t pinctrl, phandle_t parent)
 			if (OF_device_from_xref(configs[i]) == pinctrl)
 				FDT_PINCTRL_CONFIGURE(pinctrl, configs[i]);
 		}
-		free(configs, M_OFWPROP);
+		OF_prop_free(configs);
 	}
 	return (0);
 }

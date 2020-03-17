@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Luiz Otavio O Souza.
  * Copyright (c) 2011-2012 Stefan Bethke.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/etherswitch/ip17x/ip175d.c 253569 2013-07-23 13:56:38Z loos $
+ * $FreeBSD: stable/11/sys/dev/etherswitch/ip17x/ip175d.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -63,7 +62,7 @@ ip175d_reset(struct ip17x_softc *sc)
 
 	/* Reset all the switch settings. */
 	ip17x_writephy(sc->sc_dev, IP175D_RESET_PHY, IP175D_RESET_REG, 0x175d);
-	DELAY(2);
+	DELAY(2000);
 
 	/* Disable the special tagging mode. */
 	ip17x_updatephy(sc->sc_dev, 21, 22, 0x3, 0x0);
@@ -168,7 +167,7 @@ ip175d_set_vlan_mode(struct ip17x_softc *sc, uint32_t mode)
 		ip17x_updatephy(sc->sc_dev, 22, 0, 0xbfff, 0x8000);
 		sc->vlan_mode = 0;
 		break;
-	};
+	}
 
 	if (sc->vlan_mode != 0) {
 		/*

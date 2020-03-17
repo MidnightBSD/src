@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006, Cisco Systems, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/xen/pcifront/pcifront.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/xen/pcifront/pcifront.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -79,7 +78,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/xen/pcifront/pcifront.c 265999 2014-05-14 
 
 #define INVALID_GRANT_REF (0)
 #define INVALID_EVTCHN    (-1)
-#define virt_to_mfn(x) (vtomach(x) >> PAGE_SHIFT)
+#define virt_to_mfn(x) (vtophys(x) >> PAGE_SHIFT)
 
 struct pcifront_device {
 	STAILQ_ENTRY(pcifront_device) next;
@@ -560,7 +559,7 @@ xpcib_attach(device_t dev)
 
 	DPRINTF("xpcib attach (bus=%d)\n", sc->bus);
 
-	device_add_child(dev, "pci", sc->bus);
+	device_add_child(dev, "pci", -1);
 	return bus_generic_attach(dev);
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Sandvine Incorporated ULC.
  * Copyright (c) 2012 iXsystems, Inc.
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/wbwd/wbwd.c 300060 2016-05-17 15:18:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/wbwd/wbwd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -96,7 +95,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/wbwd/wbwd.c 300060 2016-05-17 15:18:01Z pf
 enum chips { w83627hf, w83627s, w83697hf, w83697ug, w83637hf, w83627thf,
 	     w83687thf, w83627ehf, w83627dhg, w83627uhg, w83667hg,
 	     w83627dhg_p, w83667hg_b, nct6775, nct6776, nct6779, nct6791,
-	     nct6792, nct6102 };
+	     nct6792, nct6793, nct6795, nct6102 };
 
 struct wb_softc {
 	device_t		dev;
@@ -250,6 +249,16 @@ struct winbond_vendor_device_id {
 		.device_id	= 0xc9,
 		.chip		= nct6792,
 		.descr		= "Nuvoton NCT6792",
+	},
+	{
+		.device_id	= 0xd1,
+		.chip		= nct6793,
+		.descr		= "Nuvoton NCT6793",
+	},
+	{
+		.device_id	= 0xd3,
+		.chip		= nct6795,
+		.descr		= "Nuvoton NCT6795",
 	},
 };
 
@@ -620,7 +629,7 @@ wb_probe_enable(device_t dev, int probe)
 
 	error = ENXIO;
 	found = 0;
-	for (i = 0; i < sizeof(probe_addrs) / sizeof(*probe_addrs); i++) {
+	for (i = 0; i < nitems(probe_addrs); i++) {
 
 		if (sc != NULL) {
 			/* Allocate bus resources for IO index/data register access. */
@@ -658,7 +667,7 @@ wb_probe_enable(device_t dev, int probe)
 			goto cleanup;
 		}
 
-		for (j = 0; j < sizeof(wb_devs) / sizeof(*wb_devs); j++) {
+		for (j = 0; j < nitems(wb_devs); j++) {
 			if (wb_devs[j].device_id == dev_id) {
 				found = 1;
 				break;
@@ -809,6 +818,8 @@ wb_attach(device_t dev)
 	case nct6779:
 	case nct6791:
 	case nct6792:
+	case nct6793:
+	case nct6795:
 	case nct6102:
 		/*
 		 * These chips have a fixed WDTO# output pin (W83627UHG),

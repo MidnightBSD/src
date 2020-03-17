@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
@@ -28,7 +27,7 @@
 /*
  * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
  */
-/* $FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_object.h 247835 2013-03-05 09:49:34Z kib $ */
+/* $FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_object.h 247835 2013-03-05 09:49:34Z kib $ */
 /** @file ttm_object.h
  *
  * Base- and reference object implementation for the various

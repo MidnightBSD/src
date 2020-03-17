@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2011 Advanced Micro Devices, Inc.
  *
@@ -27,7 +26,7 @@
 #define SI_BLIT_SHADERS_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/si_blit_shaders.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/si_blit_shaders.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 extern const u32 si_default_state[];
 

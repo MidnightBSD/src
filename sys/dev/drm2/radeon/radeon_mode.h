@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2000 ATI Technologies Inc., Markham, Ontario, and
  *                VA Linux Systems Inc., Fremont, California.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_mode.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_mode.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 #ifndef RADEON_MODE_H
 #define RADEON_MODE_H

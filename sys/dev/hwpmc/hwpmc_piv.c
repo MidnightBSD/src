@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2007 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_piv.c 322543 2017-08-15 14:21:44Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_piv.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -605,9 +604,6 @@ p4_pcpu_init(struct pmc_mdep *md, int cpu)
 	}
 
 	p4c = malloc(sizeof(struct p4_cpu), M_PMC, M_WAITOK|M_ZERO);
-
-	if (p4c == NULL)
-		return (ENOMEM);
 
 	pc = pmc_pcpu[cpu];
 

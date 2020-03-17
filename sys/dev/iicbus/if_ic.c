@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/if_ic.c 255471 2013-09-11 09:19:44Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/if_ic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * I2C bus IP driver
@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/iicbus/if_ic.c 255471 2013-09-11 09:19:44Z
 #include <sys/malloc.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
 #include <net/netisr.h>
 
@@ -251,7 +251,7 @@ icioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
-		if (ifr == 0)
+		if (ifr == NULL)
 			return (EAFNOSUPPORT);		/* XXX */
 		switch (ifr->ifr_addr.sa_family) {
 		case AF_INET:
@@ -289,7 +289,7 @@ icintr(device_t dev, int event, char *ptr)
 
 	case INTR_STOP:
 
-		/* if any error occured during transfert,
+		/* if any error occurred during transfert,
 		 * drop the packet */
 		sc->ic_flags &= ~IC_IFBUF_BUSY;
 		if ((sc->ic_flags & (IC_BUFFERS_BUSY | IC_BUFFER_WAITER)) ==
@@ -302,8 +302,8 @@ icintr(device_t dev, int event, char *ptr)
 		if (len <= ICHDRLEN)
 			goto err;
 		len -= ICHDRLEN;
-		sc->ic_ifp->if_ipackets++;
-		sc->ic_ifp->if_ibytes += len;
+		if_inc_counter(sc->ic_ifp, IFCOUNTER_IPACKETS, 1);
+		if_inc_counter(sc->ic_ifp, IFCOUNTER_IBYTES, len);
 		BPF_TAP(sc->ic_ifp, sc->ic_ifbuf, len + ICHDRLEN);
 		top = m_devget(sc->ic_ifbuf + ICHDRLEN, len, 0, sc->ic_ifp, 0);
 		if (top) {
@@ -316,7 +316,7 @@ icintr(device_t dev, int event, char *ptr)
 	err:
 		if_printf(sc->ic_ifp, "errors (%d)!\n", sc->ic_iferrs);
 		sc->ic_iferrs = 0;			/* reset error count */
-		sc->ic_ifp->if_ierrors++;
+		if_inc_counter(sc->ic_ifp, IFCOUNTER_IERRORS, 1);
 		break;
 
 	case INTR_RECEIVE:
@@ -373,7 +373,7 @@ icoutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 
 	/* already sending? */
 	if (sc->ic_flags & IC_SENDING) {
-		ifp->if_oerrors++;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 		goto error;
 	}
 		
@@ -386,7 +386,7 @@ icoutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	do {
 		if (len + mm->m_len > sc->ic_ifp->if_mtu) {
 			/* packet too large */
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			goto error;
 		}
 			
@@ -407,10 +407,10 @@ icoutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if (iicbus_block_write(parent, sc->ic_addr, sc->ic_obuf,
 				len + ICHDRLEN, &sent))
 
-		ifp->if_oerrors++;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	else {
-		ifp->if_opackets++;
-		ifp->if_obytes += len;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
+		if_inc_counter(ifp, IFCOUNTER_OBYTES, len);
 	}	
 
 	mtx_lock(&sc->ic_lock);

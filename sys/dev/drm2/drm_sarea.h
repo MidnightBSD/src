@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_sarea.h
  * \brief SAREA definitions
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_sarea.h 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_sarea.h 280183 2015-03-17 18:50:33Z dumbbell $");
 
 #ifndef _DRM_SAREA_H_
 #define _DRM_SAREA_H_
@@ -43,8 +42,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_sarea.h 282199 2015-04-28 19:35:0
 #define SAREA_MAX                       0x2000U
 #elif defined(__mips__)
 #define SAREA_MAX                       0x4000U
-#elif defined(__ia64__)
-#define SAREA_MAX                       0x10000	/* 64kB */
 #else
 /* Intel 830M driver needs at least 8k SAREA */
 #define SAREA_MAX                       0x2000U

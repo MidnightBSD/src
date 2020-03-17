@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_dcbx.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_dcbx.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -39,6 +38,8 @@
 #include "ecore_hw.h"
 #include "ecore_hsi_common.h"
 #include "ecore_dcbx_api.h"
+
+#define ECORE_DCBX_DSCP_DISABLED 0XFF
 
 struct ecore_dcbx_info {
 	struct lldp_status_params_s lldp_remote[LLDP_MAX_LLDP_AGENTS];
@@ -58,6 +59,7 @@ struct ecore_dcbx_info {
 struct ecore_dcbx_mib_meta_data {
 	struct lldp_config_params_s *lldp_local;
 	struct lldp_status_params_s *lldp_remote;
+	struct lldp_received_tlvs_s *lldp_tlvs;
 	struct dcbx_local_params *local_admin;
 	struct dcb_dscp_map *dscp_map;
 	struct dcbx_mib *mib;
@@ -67,14 +69,18 @@ struct ecore_dcbx_mib_meta_data {
 
 /* ECORE local interface routines */
 enum _ecore_status_t
-ecore_dcbx_mib_update_event(struct ecore_hwfn *, struct ecore_ptt *,
-			    enum ecore_mib_read_type);
+ecore_dcbx_mib_update_event(struct ecore_hwfn *p_hwfn, struct ecore_ptt *p_ptt,
+			    enum ecore_mib_read_type type);
 
-enum _ecore_status_t ecore_dcbx_read_lldp_params(struct ecore_hwfn *,
-						 struct ecore_ptt *);
 enum _ecore_status_t ecore_dcbx_info_alloc(struct ecore_hwfn *p_hwfn);
-void ecore_dcbx_info_free(struct ecore_hwfn *);
+void ecore_dcbx_info_free(struct ecore_hwfn *p_hwfn);
 void ecore_dcbx_set_pf_update_params(struct ecore_dcbx_results *p_src,
 				     struct pf_update_ramrod_data *p_dest);
+
+/* Returns TOS value for a given priority */
+u8 ecore_dcbx_get_dscp_value(struct ecore_hwfn *p_hwfn, u8 pri);
+
+enum _ecore_status_t
+ecore_lldp_mib_update_event(struct ecore_hwfn *p_hwfn, struct ecore_ptt *p_ptt);
 
 #endif /* __ECORE_DCBX_H__ */

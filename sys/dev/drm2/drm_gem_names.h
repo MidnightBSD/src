@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/drm2/drm_gem_names.h 271816 2014-09-18 20:32:40Z dumbbell $
+ * $FreeBSD: stable/11/sys/dev/drm2/drm_gem_names.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 

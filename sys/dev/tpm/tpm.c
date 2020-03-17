@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008, 2009 Michael Shalayeff
  * Copyright (c) 2009, 2010 Hans-Joerg Hoexer
@@ -20,7 +19,7 @@
 /* #define	TPM_DEBUG */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm.c 260279 2014-01-04 19:13:25Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -28,7 +27,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm.c 260279 2014-01-04 19:13:25Z dim 
 #include <sys/malloc.h>
 #include <sys/proc.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/uio.h>
@@ -55,7 +54,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm.c 260279 2014-01-04 19:13:25Z dim 
 #endif
 #include <dev/tpm/tpmvar.h>
 
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 /* XXX horrible hack for tcsd (-lpthread) workaround on OpenBSD */
 #undef PCATCH
 #define PCATCH	0
@@ -67,11 +66,11 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm.c 260279 2014-01-04 19:13:25Z dim 
 
 #define TPM_PARAM_SIZE	0x0001
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #define IRQUNK	-1
 #endif
 
-#define	TPM_ACCESS			0x0000	/* acess register */
+#define	TPM_ACCESS			0x0000	/* access register */
 #define	TPM_ACCESS_ESTABLISHMENT	0x01	/* establishment */
 #define	TPM_ACCESS_REQUEST_USE		0x02	/* request using locality */
 #define	TPM_ACCESS_REQUEST_PENDING	0x04	/* pending request */
@@ -148,7 +147,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm.c 260279 2014-01-04 19:13:25Z dim 
 int tpm_enabled;
 
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #define	TPMSOFTC(dev) \
 	((struct tpm_softc *)dev->si_drv1)
 
@@ -208,7 +207,7 @@ int tpm_tis12_read(struct tpm_softc *, void *, int, size_t *, int);
 int tpm_tis12_write(struct tpm_softc *, void *, int);
 int tpm_tis12_end(struct tpm_softc *, int, int);
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 void tpm_intr(void *);
 #else
 int tpm_intr(void *);
@@ -232,7 +231,7 @@ int tpm_legacy_read(struct tpm_softc *, void *, int, size_t *, int);
 int tpm_legacy_write(struct tpm_softc *, void *, int);
 int tpm_legacy_end(struct tpm_softc *, int, int);
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 /*
  * FreeBSD specific code for probing and attaching TPM to device tree.
@@ -423,7 +422,7 @@ tpm_attach(struct device *parent, struct device *self, void *aux)
 		return;
 	}
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	sc->sc_suspend = 0;
 #else
 	sc->sc_suspend = PWR_RESUME;
@@ -642,13 +641,13 @@ tpm_tmotohz(int tmo)
 
 /* Save TPM state on suspend. */
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpm_suspend(device_t dev)
 #else
 tpm_suspend(struct tpm_softc *sc, int why)
 #endif
 {
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	struct tpm_softc *sc = device_get_softc(dev);
 	int why = 1;
 #endif
@@ -676,13 +675,13 @@ tpm_suspend(struct tpm_softc *sc, int why)
  * to restore the previously saved state.
  */
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpm_resume(device_t dev)
 #else
 tpm_resume(struct tpm_softc *sc, int why)
 #endif
 {
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	struct tpm_softc *sc = device_get_softc(dev);
 	int why = 0;
 #endif
@@ -695,7 +694,7 @@ tpm_resume(struct tpm_softc *sc, int why)
 }
 
 /* Dispatch suspend and resume events. */
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 void
 tpm_powerhook(int why, void *self)
 {
@@ -706,7 +705,7 @@ tpm_powerhook(int why, void *self)
 	else
 		tpm_resume(sc, why);
 }
-#endif	/* !__MidnightBSD__ */
+#endif	/* !__FreeBSD__ */
 
 /* Wait for given status bits using polling. */
 int
@@ -821,7 +820,7 @@ tpm_waitfor(struct tpm_softc *sc, u_int8_t b0, int tmo, void *c)
 		b = b0;
 
 		/*
-		 * Wait for data ready.  This interrupt only occures
+		 * Wait for data ready.  This interrupt only occurs
 		 * when both TPM_STS_VALID and TPM_STS_DATA_AVAIL are asserted.
 		 * Thus we don't have to bother with TPM_STS_VALID
 		 * separately and can just return.
@@ -1082,7 +1081,7 @@ tpm_tis12_end(struct tpm_softc *sc, int flag, int err)
 	return rv;
 }
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 void
 #else
 int
@@ -1105,7 +1104,7 @@ tpm_intr(void *v)
 #endif
 	if (!(r & (TPM_CMD_READY_INT | TPM_LOCALITY_CHANGE_INT |
 	    TPM_STS_VALID_INT | TPM_DATA_AVAIL_INT)))
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		return;
 #else
 		return 0;
@@ -1124,7 +1123,7 @@ tpm_intr(void *v)
 
 	bus_space_write_4(sc->sc_bt, sc->sc_bh, TPM_INT_STATUS, r);
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	return;
 #else
 	return 1;
@@ -1239,7 +1238,7 @@ tpm_legacy_start(struct tpm_softc *sc, int flag)
 			return rv;
 	}
 
-#if defined(TPM_DEBUG) && !defined(__MidnightBSD__)
+#if defined(TPM_DEBUG) && !defined(__FreeBSD__)
 	printf("%s: bits %b\n", sc->sc_dev.dv_xname, r, TPM_LEGACY_BITS);
 #endif
 	if ((r & (TPM_LEGACY_BUSY|bits)) != bits)
@@ -1313,7 +1312,7 @@ tpm_legacy_end(struct tpm_softc *sc, int flag, int rv)
 				return rv;
 		}
 
-#if defined(TPM_DEBUG) && !defined(__MidnightBSD__)
+#if defined(TPM_DEBUG) && !defined(__FreeBSD__)
 		printf("%s: bits %b\n", sc->sc_dev.dv_xname, r, TPM_LEGACY_BITS);
 #endif
 		if (r & TPM_LEGACY_BUSY)
@@ -1327,7 +1326,7 @@ tpm_legacy_end(struct tpm_softc *sc, int flag, int rv)
 }
 
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpmopen(struct cdev *dev, int flag, int mode, struct thread *td)
 #else
 tpmopen(dev_t dev, int flag, int mode, struct proc *p)
@@ -1347,7 +1346,7 @@ tpmopen(dev_t dev, int flag, int mode, struct proc *p)
 }
 
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpmclose(struct cdev *dev, int flag, int mode, struct thread *td)
 #else
 tpmclose(dev_t dev, int flag, int mode, struct proc *p)
@@ -1367,7 +1366,7 @@ tpmclose(dev_t dev, int flag, int mode, struct proc *p)
 }
 
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpmread(struct cdev *dev, struct uio *uio, int flags)
 #else
 tpmread(dev_t dev, struct uio *uio, int flags)
@@ -1443,7 +1442,7 @@ tpmread(dev_t dev, struct uio *uio, int flags)
 }
 
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpmwrite(struct cdev *dev, struct uio *uio, int flags)
 #else
 tpmwrite(dev_t dev, struct uio *uio, int flags)
@@ -1484,7 +1483,7 @@ tpmwrite(dev_t dev, struct uio *uio, int flags)
 }
 
 int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 tpmioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
     struct thread *td)
 #else

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/terasic/mtl/terasic_mtl_reg.c 239691 2012-08-25 22:35:29Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/terasic/mtl/terasic_mtl_reg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -206,6 +205,21 @@ terasic_mtl_blend_textbg_set(struct terasic_mtl_softc *sc, uint8_t alpha)
 }
 
 void
+terasic_mtl_reg_pixel_endian_set(struct terasic_mtl_softc *sc, int endian_swap)
+{
+	uint32_t v;
+
+	TERASIC_MTL_LOCK(sc);
+	terasic_mtl_reg_blend_get(sc, &v);
+	if (endian_swap)
+		v |= TERASIC_MTL_BLEND_PIXEL_ENDIAN_SWAP;
+	else
+		v &= ~TERASIC_MTL_BLEND_PIXEL_ENDIAN_SWAP;
+	terasic_mtl_reg_blend_set(sc, v);
+	TERASIC_MTL_UNLOCK(sc);
+}
+
+void
 terasic_mtl_reg_textcursor_get(struct terasic_mtl_softc *sc, uint8_t *colp,
     uint8_t *rowp)
 {
@@ -233,7 +247,7 @@ void
 terasic_mtl_reg_blank(struct terasic_mtl_softc *sc)
 {
 
-	device_printf(sc->mtl_dev, "%s: not yet", __func__);
+	device_printf(sc->mtl_dev, "%s: not yet\n", __func__);
 }
 
 void

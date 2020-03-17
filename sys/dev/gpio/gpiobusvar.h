@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/gpio/gpiobusvar.h 278786 2015-02-14 21:16:19Z loos $
+ * $FreeBSD: stable/11/sys/dev/gpio/gpiobusvar.h 350045 2019-07-16 15:58:19Z avg $
  *
  */
 
@@ -39,6 +38,7 @@
 
 #ifdef FDT
 #include <dev/ofw/ofw_bus_subr.h>
+#include <gnu/dts/include/dt-bindings/gpio/gpio.h>
 #endif
 
 #include "gpio_if.h"
@@ -61,6 +61,24 @@
 #define	GPIOBUS_WAIT		1
 #define	GPIOBUS_DONTWAIT	2
 
+/* Use default interrupt mode -  for gpio_alloc_intr_resource */
+#define GPIO_INTR_CONFORM	GPIO_INTR_NONE
+
+struct gpiobus_pin_data
+{
+	int		mapped;		/* pin is mapped/reserved. */
+	char		*name;		/* pin name. */
+};
+
+#ifdef INTRNG
+struct intr_map_data_gpio {
+	struct intr_map_data	hdr;
+	u_int			gpio_pin_num;
+	u_int			gpio_pin_flags;
+	u_int		 	gpio_intr_mode;
+};
+#endif
+
 struct gpiobus_softc
 {
 	struct mtx	sc_mtx;		/* bus mutex */
@@ -69,16 +87,36 @@ struct gpiobus_softc
 	device_t	sc_owner;	/* bus owner */
 	device_t	sc_dev;		/* driver device */
 	int		sc_npins;	/* total pins on bus */
-	int		*sc_pins_mapped; /* mark mapped pins */
+	struct gpiobus_pin_data	*sc_pins; /* pin data */
 };
+
+struct gpiobus_pin
+{
+	device_t	dev;	/* gpio device */
+	uint32_t	flags;	/* pin flags */
+	uint32_t	pin;	/* pin number */
+};
+typedef struct gpiobus_pin *gpio_pin_t;
 
 struct gpiobus_ivar
 {
 	struct resource_list	rl;	/* isr resource list */
 	uint32_t	npins;	/* pins total */
-	uint32_t	*flags;	/* pins flags */
 	uint32_t	*pins;	/* pins map */
 };
+
+enum gpiobus_ivars {
+	GPIOBUS_IVAR_NPINS	= 10500,
+	GPIOBUS_IVAR_PINS,
+};
+
+#define GPIOBUS_ACCESSOR(var, ivar, type)                                 \
+        __BUS_ACCESSOR(gpiobus, var, GPIOBUS, ivar, type)
+
+GPIOBUS_ACCESSOR(npins,		NPINS,		uint32_t)
+GPIOBUS_ACCESSOR(pins,		PINS,		const uint32_t *)
+
+#undef GPIOBUS_ACCESSOR
 
 #ifdef FDT
 struct ofw_gpiobus_devinfo {
@@ -93,10 +131,36 @@ gpio_map_gpios(device_t bus, phandle_t dev, phandle_t gparent, int gcells,
 	return (GPIO_MAP_GPIOS(bus, dev, gparent, gcells, gpios, pin, flags));
 }
 
-device_t ofw_gpiobus_add_fdt_child(device_t, phandle_t);
+device_t ofw_gpiobus_add_fdt_child(device_t, const char *, phandle_t);
+int ofw_gpiobus_parse_gpios(device_t, char *, struct gpiobus_pin **);
+void ofw_gpiobus_register_provider(device_t);
+void ofw_gpiobus_unregister_provider(device_t);
+
+/* Consumers interface. */
+int gpio_pin_get_by_ofw_name(device_t consumer, phandle_t node,
+    char *name, gpio_pin_t *gpio);
+int gpio_pin_get_by_ofw_idx(device_t consumer, phandle_t node,
+    int idx, gpio_pin_t *gpio);
+int gpio_pin_get_by_ofw_property(device_t consumer, phandle_t node,
+    char *name, gpio_pin_t *gpio);
+int gpio_pin_get_by_ofw_propidx(device_t consumer, phandle_t node,
+    char *name, int idx, gpio_pin_t *gpio);
+void gpio_pin_release(gpio_pin_t gpio);
+int gpio_pin_getcaps(gpio_pin_t pin, uint32_t *caps);
+int gpio_pin_is_active(gpio_pin_t pin, bool *active);
+int gpio_pin_set_active(gpio_pin_t pin, bool active);
+int gpio_pin_setflags(gpio_pin_t pin, uint32_t flags);
 #endif
+struct resource *gpio_alloc_intr_resource(device_t consumer_dev, int *rid,
+    u_int alloc_flags, gpio_pin_t pin, uint32_t intr_mode);
 int gpio_check_flags(uint32_t, uint32_t);
+device_t gpiobus_attach_bus(device_t);
+int gpiobus_detach_bus(device_t);
 int gpiobus_init_softc(device_t);
+int gpiobus_alloc_ivars(struct gpiobus_ivar *);
+void gpiobus_free_ivars(struct gpiobus_ivar *);
+int gpiobus_acquire_pin(device_t, uint32_t);
+int gpiobus_release_pin(device_t, uint32_t);
 
 extern driver_t gpiobus_driver;
 

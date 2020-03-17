@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd
  * Copyright (c) 2010 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9001/ar9130_phy.c 242412 2012-10-31 21:14:25Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9001/ar9130_phy.c 242412 2012-10-31 21:14:25Z adrian $
  */
 #include "opt_ah.h"
 

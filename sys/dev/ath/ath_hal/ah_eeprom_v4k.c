@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Rui Paulo <rpaulo@FreeBSD.org>
  * Copyright (c) 2008 Sam Leffler, Errno Consulting
@@ -16,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ah_eeprom_v4k.c 234508 2012-04-20 21:56:13Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_eeprom_v4k.c 234508 2012-04-20 21:56:13Z adrian $
  */
 #include "opt_ah.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/wi/if_wi_pci.c 254263 2013-08-12 23:30:01Z scottl $
+ * $FreeBSD: stable/11/sys/dev/wi/if_wi_pci.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -43,6 +42,7 @@
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -56,6 +56,7 @@
 #include <dev/pci/pcivar.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_media.h>
@@ -238,7 +239,9 @@ wi_pci_suspend(device_t dev)
 {
 	struct wi_softc	*sc = device_get_softc(dev);
 
+	WI_LOCK(sc);
 	wi_stop(sc, 1);
+	WI_UNLOCK(sc);
 	
 	return (0);
 }
@@ -247,16 +250,15 @@ static int
 wi_pci_resume(device_t dev)
 {
 	struct wi_softc	*sc = device_get_softc(dev);
-	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = &sc->sc_ic;
 
-	if (sc->wi_bus_type != WI_BUS_PCI_NATIVE)
+	WI_LOCK(sc);
+	if (sc->wi_bus_type != WI_BUS_PCI_NATIVE) {
+		WI_UNLOCK(sc);
 		return (0);
-
-	if (ifp->if_flags & IFF_UP) {
-		ifp->if_init(ifp->if_softc);
-		if (ifp->if_drv_flags & IFF_DRV_RUNNING)
-			ifp->if_start(ifp);
 	}
-
+	if (ic->ic_nrunning > 0)
+		wi_init(sc);
+	WI_UNLOCK(sc);
 	return (0);
 }

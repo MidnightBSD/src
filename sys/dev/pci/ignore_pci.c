@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 2000 BSDi
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pci/ignore_pci.c 129876 2004-05-30 17:57:46Z phk $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pci/ignore_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * 'Ignore' driver - eats devices that show up errnoeously on PCI

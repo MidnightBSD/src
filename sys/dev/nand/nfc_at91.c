@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2013 Ian Lepore.
  * All rights reserved.
@@ -36,7 +35,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nand/nfc_at91.c 266217 2014-05-16 12:43:45Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nfc_at91.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

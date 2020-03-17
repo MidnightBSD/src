@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.2 2008/12/02 22:43:18 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Takeshi Shibagaki
  * All rights reserved.
@@ -26,14 +25,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/xe/if_xe_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* xe pccard interface driver */
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
 
@@ -139,7 +140,7 @@ xe_cemfix(device_t dev)
 
 	DEVPRINTF(2, (dev, "cemfix\n"));
 
-	DEVPRINTF(1, (dev, "CEM I/O port 0x%0lx, size 0x%0lx\n",
+	DEVPRINTF(1, (dev, "CEM I/O port 0x%0jx, size 0x%0jx\n",
 		bus_get_resource_start(dev, SYS_RES_IOPORT, sc->port_rid),
 		bus_get_resource_count(dev, SYS_RES_IOPORT, sc->port_rid)));
 
@@ -385,3 +386,4 @@ static driver_t xe_pccard_driver = {
 devclass_t xe_devclass;
 
 DRIVER_MODULE(xe, pccard, xe_pccard_driver, xe_devclass, 0, 0);
+PCCARD_PNP_INFO(xe_pccard_products);

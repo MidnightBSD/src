@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/iscsi/iscsi.h 311401 2017-01-05 11:17:09Z mav $
+ * $FreeBSD: stable/11/sys/dev/iscsi/iscsi.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef ISCSI_H
@@ -46,6 +45,7 @@ struct iscsi_outstanding {
 	size_t				io_received;
 	uint32_t			io_initiator_task_tag;
 	uint32_t			io_datasn;
+	void				*io_icl_prv;
 };
 
 struct iscsi_session {

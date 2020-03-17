@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* drm_pci.h -- PCI DMA memory management wrappers for DRM -*- linux-c -*- */
 /**
  * \file drm_pci.c
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_pci.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_pci.c 293851 2016-01-13 20:35:02Z dumbbell $");
 
 #include <dev/drm2/drmP.h>
 
@@ -133,6 +132,7 @@ void __drm_pci_free(struct drm_device * dev, drm_dma_handle_t * dmah)
 	if (dmah == NULL)
 		return;
 
+	bus_dmamap_unload(dmah->tag, dmah->map);
 	bus_dmamem_free(dmah->tag, dmah->vaddr, dmah->map);
 	bus_dma_tag_destroy(dmah->tag);
 }

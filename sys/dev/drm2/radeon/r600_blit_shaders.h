@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2009 Advanced Micro Devices, Inc.
  * Copyright 2009 Red Hat Inc.
@@ -28,7 +27,7 @@
 #define R600_BLIT_SHADERS_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/r600_blit_shaders.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/r600_blit_shaders.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 extern const u32 r6xx_ps[];
 extern const u32 r6xx_vs[];

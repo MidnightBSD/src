@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/t4_l2t.h 309442 2016-12-02 21:29:52Z jhb $
+ * $FreeBSD: stable/11/sys/dev/cxgbe/t4_l2t.h 346915 2019-04-29 19:23:27Z np $
  *
  */
 
@@ -90,7 +89,8 @@ struct l2t_data {
 int t4_init_l2t(struct adapter *, int);
 int t4_free_l2t(struct l2t_data *);
 struct l2t_entry *t4_alloc_l2e(struct l2t_data *);
-struct l2t_entry *t4_l2t_alloc_switching(struct l2t_data *);
+struct l2t_entry *t4_l2t_alloc_switching(struct adapter *, uint16_t, uint8_t,
+    uint8_t *);
 int t4_l2t_set_switching(struct adapter *, struct l2t_entry *, uint16_t,
     uint8_t, uint8_t *);
 int t4_write_l2e(struct l2t_entry *, int);
@@ -105,9 +105,6 @@ t4_l2t_release(struct l2t_entry *e)
 		atomic_add_int(&d->nfree, 1);
 }
 
-
-#ifdef SBUF_DRAIN
 int sysctl_l2t(SYSCTL_HANDLER_ARGS);
-#endif
 
 #endif  /* __T4_L2T_H */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Hans Petter Selasky. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/controller/dwc_otg_fdt.h 322724 2017-08-20 16:52:27Z marius $
+ * $FreeBSD: stable/11/sys/dev/usb/controller/dwc_otg_fdt.h 279778 2015-03-08 13:52:07Z andrew $
  */
 
 #ifndef _DWC_OTG_FDT_H_

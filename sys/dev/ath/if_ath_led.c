@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_led.c 237611 2012-06-26 22:16:53Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_led.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -123,6 +122,11 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ath/if_ath_led.c 237611 2012-06-26 22:16:5
 void
 ath_led_config(struct ath_softc *sc)
 {
+
+	ATH_LOCK(sc);
+	ath_power_set_power_state(sc, HAL_PM_AWAKE);
+	ATH_UNLOCK(sc);
+
 	/* Software LED blinking - GPIO controlled LED */
 	if (sc->sc_softled) {
 		ath_hal_gpioCfgOutput(sc->sc_ah, sc->sc_ledpin,
@@ -145,6 +149,10 @@ ath_led_config(struct ath_softc *sc)
 			ath_hal_gpioCfgOutput(sc->sc_ah, sc->sc_led_net_pin,
 			    HAL_GPIO_OUTPUT_MUX_MAC_NETWORK_LED);
 	}
+
+	ATH_LOCK(sc);
+	ath_power_restore_power_state(sc);
+	ATH_UNLOCK(sc);
 }
 
 static void

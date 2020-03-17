@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 INRIA
  * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ath/ath_rate/amrr/amrr.c 238633 2012-07-20 01:36:02Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ath/ath_rate/amrr/amrr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * AMRR rate control. See:

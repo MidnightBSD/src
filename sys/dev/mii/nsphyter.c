@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: nsphyter.c,v 1.28 2008/01/20 07:58:19 msaitoh Exp $	*/
 
 /*-
@@ -56,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mii/nsphyter.c 231914 2012-02-19 12:25:58Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mii/nsphyter.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for the National Semiconductor's DP83843, DP83847 and DP83849
@@ -150,12 +149,6 @@ nsphyter_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		mii_phy_setmedia(sc);
 		break;
 

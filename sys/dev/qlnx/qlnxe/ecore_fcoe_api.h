@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_fcoe_api.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_fcoe_api.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -34,6 +33,7 @@
 
 #include "ecore_sp_api.h"
 
+#ifndef __EXTRACT__LINUX__C__
 struct ecore_fcoe_conn {
 	osal_list_entry_t	list_entry;
 	bool			free_on_delete;
@@ -76,8 +76,10 @@ struct ecore_fcoe_conn {
 	struct fc_addr_nw	d_id;
 	u8			flags;
 	u8			def_q_idx;
-}; 
+};
+#endif
 
+#ifndef __EXTRACT__LINUX__IF__
 struct ecore_fcoe_stats {
 	u64	fcoe_rx_byte_cnt;
 	u64	fcoe_rx_data_pkt_cnt;
@@ -94,6 +96,7 @@ struct ecore_fcoe_stats {
 	u64	fcoe_tx_xfer_pkt_cnt;
 	u64	fcoe_tx_other_pkt_cnt;
 };
+#endif
 
 enum _ecore_status_t
 ecore_fcoe_acquire_connection(struct ecore_hwfn *p_hwfn,

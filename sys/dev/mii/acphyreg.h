@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Semen Ustimenko (semenu@FreeBSD.org)
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mii/acphyreg.h 165986 2007-01-12 22:58:04Z marius $
+ * $FreeBSD: stable/11/sys/dev/mii/acphyreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_MII_ACPHYREG_H_

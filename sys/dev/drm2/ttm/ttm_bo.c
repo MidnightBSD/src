@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_bo.c 285002 2015-07-01 11:28:42Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_bo.c 292469 2015-12-19 18:42:50Z alc $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_module.h>
@@ -790,8 +789,7 @@ int ttm_bo_lock_delayed_workqueue(struct ttm_bo_device *bdev)
 {
 	int pending;
 
-	taskqueue_cancel_timeout(taskqueue_thread, &bdev->wq, &pending);
-	if (pending)
+	if (taskqueue_cancel_timeout(taskqueue_thread, &bdev->wq, &pending))
 		taskqueue_drain_timeout(taskqueue_thread, &bdev->wq);
 	return (pending);
 }
@@ -1490,21 +1488,21 @@ int ttm_bo_global_init(struct drm_global_reference *ref)
 	struct ttm_bo_global_ref *bo_ref =
 		container_of(ref, struct ttm_bo_global_ref, ref);
 	struct ttm_bo_global *glob = ref->object;
-	int ret;
+	int req, ret;
 	int tries;
 
 	sx_init(&glob->device_list_mutex, "ttmdlm");
 	mtx_init(&glob->lru_lock, "ttmlru", NULL, MTX_DEF);
 	glob->mem_glob = bo_ref->mem_glob;
+	req = VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ;
 	tries = 0;
 retry:
-	glob->dummy_read_page = vm_page_alloc_contig(NULL, 0,
-	    VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ,
+	glob->dummy_read_page = vm_page_alloc_contig(NULL, 0, req,
 	    1, 0, VM_MAX_ADDRESS, PAGE_SIZE, 0, VM_MEMATTR_UNCACHEABLE);
 
 	if (unlikely(glob->dummy_read_page == NULL)) {
-		if (tries < 1) {
-			vm_pageout_grow_cache(tries, 0, VM_MAX_ADDRESS);
+		if (tries < 1 && vm_page_reclaim_contig(req, 1,
+		    0, VM_MAX_ADDRESS, PAGE_SIZE, 0)) {
 			tries++;
 			goto retry;
 		}

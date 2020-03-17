@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/uart/uart.h 283327 2015-05-23 20:54:25Z ian $
+ * $FreeBSD: stable/11/sys/dev/uart/uart.h 340145 2018-11-04 23:28:56Z mmacy $
  */
 
 #ifndef _DEV_UART_H_
@@ -42,9 +41,12 @@ struct uart_bas {
 	u_int	chan;
 	u_int	rclk;
 	u_int	regshft;
+	u_int	regiowidth;
+	u_int	busy_detect;
 };
 
 #define	uart_regofs(bas, reg)		((reg) << (bas)->regshft)
+#define	uart_regiowidth(bas)		((bas)->regiowidth)
 
 #define	uart_getreg(bas, reg)		\
 	bus_space_read_1((bas)->bst, (bas)->bsh, uart_regofs(bas, reg))

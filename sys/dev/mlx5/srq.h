@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013-2015, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,13 +22,38 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/srq.h 290650 2015-11-10 12:20:22Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/srq.h 337115 2018-08-02 08:56:27Z hselasky $
  */
 
 #ifndef MLX5_SRQ_H
 #define MLX5_SRQ_H
 
 #include <dev/mlx5/driver.h>
+
+enum {
+	MLX5_SRQ_FLAG_ERR    = (1 << 0),
+	MLX5_SRQ_FLAG_WQ_SIG = (1 << 1),
+};
+
+struct mlx5_srq_attr {
+	u32 type;
+	u32 flags;
+	u32 log_size;
+	u32 wqe_shift;
+	u32 log_page_size;
+	u32 wqe_cnt;
+	u32 srqn;
+	u32 xrcd;
+	u32 page_offset;
+	u32 cqn;
+	u32 pd;
+	u32 lwm;
+	u32 user_index;
+	u64 db_record;
+	u64 *pas;
+};
+
+struct mlx5_core_dev;
 
 void mlx5_init_srq_table(struct mlx5_core_dev *dev);
 void mlx5_cleanup_srq_table(struct mlx5_core_dev *dev);

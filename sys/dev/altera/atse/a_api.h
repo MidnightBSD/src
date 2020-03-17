@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Bjoern A. Zeeb
  * All rights reserved.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/altera/atse/a_api.h 271969 2014-09-22 15:32:31Z bz $
+ * $FreeBSD: stable/11/sys/dev/altera/atse/a_api.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * Altera, Embedded Peripherals IP, User Guide, v. 11.0, June 2011.

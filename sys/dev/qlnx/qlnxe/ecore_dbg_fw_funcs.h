@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_dbg_fw_funcs.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_dbg_fw_funcs.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -68,6 +67,21 @@ u32 ecore_dbg_get_fw_func_ver(void);
 * @return the chip ID.
 */
 enum chip_ids ecore_dbg_get_chip_id(struct ecore_hwfn *p_hwfn);
+
+/**
+* @brief ecore_read_regs - Reads registers into a buffer (using GRC).
+*
+* @param p_hwfn -	HW device data
+* @param p_ptt -	Ptt window used for writing the registers.
+* @param buf -	Destination buffer.
+* @param addr -	Source GRC address in dwords.
+* @param len -	Number of registers to read.
+*/
+void ecore_read_regs(struct ecore_hwfn *p_hwfn,
+					 struct ecore_ptt *p_ptt,
+					 u32 *buf,
+					 u32 addr,
+					 u32 len);
 
 /**
  * @brief ecore_dbg_bus_reset - Resets the Debug block.
@@ -199,12 +213,12 @@ enum dbg_status ecore_dbg_bus_set_nw_output(struct ecore_hwfn *p_hwfn,
  * Otherwise, returns ok.
  */
 enum dbg_status ecore_dbg_bus_enable_block(struct ecore_hwfn *p_hwfn,
-					   enum block_id block,
-					   u8 line_num,
-					   u8 cycle_en,
-					   u8 right_shift,
-					   u8 force_valid,
-					   u8 force_frame);
+										   enum block_id block,
+										   u8 line_num,
+										   u8 cycle_en,
+										   u8 right_shift,
+										   u8 force_valid,
+										   u8 force_frame);
 
 /**
  * @brief ecore_dbg_bus_enable_storm - Enables recording of the specified Storm

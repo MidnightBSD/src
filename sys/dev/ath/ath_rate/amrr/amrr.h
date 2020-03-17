@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 INRIA
  * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
@@ -35,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_rate/amrr/amrr.h 178354 2008-04-20 20:35:46Z sam $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_rate/amrr/amrr.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_ATH_RATE_AMRR_H

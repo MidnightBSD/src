@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/dwc_otgreg.h 287271 2015-08-29 06:07:55Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/dwc_otgreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2010,2011 Aleksandr Rybalko. All rights reserved.

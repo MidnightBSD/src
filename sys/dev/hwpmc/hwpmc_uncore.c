@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Fabien Thomas
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_uncore.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_uncore.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -791,8 +790,6 @@ static struct ucp_event_descr ucp_events[] = {
     UCPDESCR(86H_01H, 0x86, 0x01, UCP_F_FM | UCP_F_WM)
 };
 
-static const int nucp_events = sizeof(ucp_events) / sizeof(ucp_events[0]);
-
 static pmc_value_t
 ucp_perfctr_value_to_reload_count(pmc_value_t v)
 {
@@ -884,11 +881,11 @@ ucp_allocate_pmc(int cpu, int ri, struct pmc *pm,
 		return (EINVAL);
 	}
 
-	for (n = 0, ie = ucp_events; n < nucp_events; n++, ie++)
+	for (n = 0, ie = ucp_events; n < nitems(ucp_events); n++, ie++)
 		if (ie->ucp_ev == ev && ie->ucp_flags & cpuflag)
 			break;
 
-	if (n == nucp_events)
+	if (n == nitems(ucp_events))
 		return (EINVAL);
 
 	/*
@@ -1217,7 +1214,7 @@ pmc_uncore_initialize(struct pmc_mdep *md, int maxcpu)
 	PMCDBG2(MDP,INI,1,"uncore-init pmcmask=0x%jx ucfri=%d", uncore_pmcmask,
 	    uncore_ucf_ri);
 
-	uncore_pcpu = malloc(sizeof(struct uncore_cpu **) * maxcpu, M_PMC,
+	uncore_pcpu = malloc(sizeof(*uncore_pcpu) * maxcpu, M_PMC,
 	    M_ZERO | M_WAITOK);
 
 	return (0);

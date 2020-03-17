@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_vf_api.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_vf_api.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -91,6 +90,14 @@ void ecore_vf_get_num_rxqs(struct ecore_hwfn *p_hwfn,
  */
 void ecore_vf_get_num_txqs(struct ecore_hwfn *p_hwfn,
 			   u8 *num_txqs);
+
+/**
+ * @brief Get number of available connections [both Rx and Tx] for VF
+ *
+ * @param p_hwfn
+ * @param num_cids - allocated number of connections
+ */
+void ecore_vf_get_num_cids(struct ecore_hwfn *p_hwfn, u8 *num_cids);
 
 /**
  * @brief Get port mac address for VF
@@ -182,6 +189,19 @@ void ecore_vf_get_fw_version(struct ecore_hwfn *p_hwfn,
 			     u16 *fw_eng);
 void ecore_vf_bulletin_get_udp_ports(struct ecore_hwfn *p_hwfn,
 				     u16 *p_vxlan_port, u16 *p_geneve_port);
+
+#ifdef CONFIG_ECORE_SW_CHANNEL
+/**
+ * @brief set the VF to use a SW/HW channel when communicating with PF.
+ *        NOTICE: today the likely first place to call this from VF
+ *        would be OSAL_VF_FILL_ACQUIRE_RESC_REQ(); Might want to consider
+ *        something a bit more appropriate.
+ *
+ * @param p_hwfn
+ * @param b_is_hw - true iff VF is to use a HW-channel
+ */
+void ecore_vf_set_hw_channel(struct ecore_hwfn *p_hwfn, bool b_is_hw);
+#endif
 #else
 static OSAL_INLINE enum _ecore_status_t ecore_vf_read_bulletin(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u8 OSAL_UNUSED *p_change) {return ECORE_INVAL;}
 static OSAL_INLINE void ecore_vf_get_link_params(struct ecore_hwfn OSAL_UNUSED *p_hwfn, struct ecore_mcp_link_params OSAL_UNUSED *params) {}
@@ -189,6 +209,13 @@ static OSAL_INLINE void ecore_vf_get_link_state(struct ecore_hwfn OSAL_UNUSED *p
 static OSAL_INLINE void ecore_vf_get_link_caps(struct ecore_hwfn OSAL_UNUSED *p_hwfn, struct ecore_mcp_link_capabilities OSAL_UNUSED *p_link_caps) {}
 static OSAL_INLINE void ecore_vf_get_num_rxqs(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u8 OSAL_UNUSED *num_rxqs) {}
 static OSAL_INLINE void ecore_vf_get_num_txqs(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u8 OSAL_UNUSED *num_txqs) {}
+
+static OSAL_INLINE void
+ecore_vf_get_num_cids(struct ecore_hwfn OSAL_UNUSED *p_hwfn,
+		      u8 OSAL_UNUSED *num_cids)
+{
+}
+
 static OSAL_INLINE void ecore_vf_get_port_mac(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u8 OSAL_UNUSED *port_mac) {}
 static OSAL_INLINE void ecore_vf_get_num_vlan_filters(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u8 OSAL_UNUSED *num_vlan_filters) {}
 static OSAL_INLINE void ecore_vf_get_num_mac_filters(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u8 OSAL_UNUSED *num_mac_filters) {}
@@ -199,5 +226,11 @@ static OSAL_INLINE bool ecore_vf_get_pre_fp_hsi(struct ecore_hwfn OSAL_UNUSED *p
 #endif
 static OSAL_INLINE void ecore_vf_get_fw_version(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u16 OSAL_UNUSED *fw_major, u16 OSAL_UNUSED *fw_minor, u16 OSAL_UNUSED *fw_rev, u16 OSAL_UNUSED *fw_eng) {}
 static OSAL_INLINE void ecore_vf_bulletin_get_udp_ports(struct ecore_hwfn OSAL_UNUSED *p_hwfn, u16 OSAL_UNUSED *p_vxlan_port, u16 OSAL_UNUSED *p_geneve_port) { return; }
+
+#ifdef CONFIG_ECORE_SW_CHANNEL
+static OSAL_INLINE void
+ecore_vf_set_hw_channel(struct ecore_hwfn OSAL_UNUSED *p_hwfn,
+			bool OSAL_UNUSED b_is_hw) {}
+#endif
 #endif
 #endif

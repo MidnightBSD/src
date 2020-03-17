@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012, Qualcomm Atheros, Inc.  All rights reserved.
  *
@@ -33,7 +32,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9003/ar9300_devid.h 250166 2013-05-02 00:59:39Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9003/ar9300_devid.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef	__AR9300_DEVID_H__
@@ -55,6 +54,7 @@
 #define	AR_SREV_VERSION_AR9340		0x300
 #define	AR_SREV_VERSION_QCA9550		0x400
 #define	AR_SREV_VERSION_AR9485		0x240
+#define	AR_SREV_VERSION_QCA9530		0x500
 
 #define	AR_SREV_REVISION_AR9380_10	0	/* AR9380 1.0 */
 #define	AR_SREV_REVISION_AR9380_20	2	/* AR9380 2.0/2.1 */

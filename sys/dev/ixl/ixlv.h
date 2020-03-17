@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2013-2015, Intel Corporation 
+  Copyright (c) 2013-2019, Intel Corporation
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixl/ixlv.h 292100 2015-12-11 13:08:38Z smh $*/
+/*$FreeBSD: stable/11/sys/dev/ixl/ixlv.h 349163 2019-06-18 00:08:02Z erj $*/
 
 
 #ifndef _IXLV_H_
@@ -39,13 +38,14 @@
 
 #include "ixlv_vc_mgr.h"
 
-#define IXLV_AQ_MAX_ERR		1000
+#define IXLV_AQ_MAX_ERR		30
+#define IXLV_MAX_INIT_WAIT	120
 #define IXLV_MAX_FILTERS	128
 #define IXLV_MAX_QUEUES		16
 #define IXLV_AQ_TIMEOUT		(1 * hz)
 #define IXLV_CALLOUT_TIMO	(hz / 50)	/* 20 msec */
 
-#define IXLV_FLAG_AQ_ENABLE_QUEUES            (u32)(1)
+#define IXLV_FLAG_AQ_ENABLE_QUEUES            (u32)(1 << 0)
 #define IXLV_FLAG_AQ_DISABLE_QUEUES           (u32)(1 << 1)
 #define IXLV_FLAG_AQ_ADD_MAC_FILTER           (u32)(1 << 2)
 #define IXLV_FLAG_AQ_ADD_VLAN_FILTER          (u32)(1 << 3)
@@ -56,6 +56,10 @@
 #define IXLV_FLAG_AQ_HANDLE_RESET             (u32)(1 << 8)
 #define IXLV_FLAG_AQ_CONFIGURE_PROMISC        (u32)(1 << 9)
 #define IXLV_FLAG_AQ_GET_STATS                (u32)(1 << 10)
+#define IXLV_FLAG_AQ_CONFIG_RSS_KEY           (u32)(1 << 11)
+#define IXLV_FLAG_AQ_SET_RSS_HENA             (u32)(1 << 12)
+#define IXLV_FLAG_AQ_GET_RSS_HENA_CAPS        (u32)(1 << 13)
+#define IXLV_FLAG_AQ_CONFIG_RSS_LUT          (u32)(1 << 14)
 
 /* printf %b arg */
 #define IXLV_FLAGS \
@@ -63,9 +67,17 @@
     "\4ADD_VLAN_FILTER\5DEL_MAC_FILTER\6DEL_VLAN_FILTER" \
     "\7CONFIGURE_QUEUES\10MAP_VECTORS\11HANDLE_RESET" \
     "\12CONFIGURE_PROMISC\13GET_STATS"
-
-/* Hack for compatibility with 1.0.x linux pf driver */
-#define I40E_VIRTCHNL_OP_EVENT 17
+#define IXLV_PRINTF_VF_OFFLOAD_FLAGS \
+    "\20\1I40E_VIRTCHNL_VF_OFFLOAD_L2" \
+    "\2I40E_VIRTCHNL_VF_OFFLOAD_IWARP" \
+    "\3I40E_VIRTCHNL_VF_OFFLOAD_FCOE" \
+    "\4I40E_VIRTCHNL_VF_OFFLOAD_RSS_AQ" \
+    "\5I40E_VIRTCHNL_VF_OFFLOAD_RSS_REG" \
+    "\6I40E_VIRTCHNL_VF_OFFLOAD_WB_ON_ITR" \
+    "\21I40E_VIRTCHNL_VF_OFFLOAD_VLAN" \
+    "\22I40E_VIRTCHNL_VF_OFFLOAD_RX_POLLING" \
+    "\23I40E_VIRTCHNL_VF_OFFLOAD_RSS_PCTYPE_V2" \
+    "\24I40E_VIRTCHNL_VF_OFFLOAD_RSS_PF"
 
 /* Driver state */
 enum ixlv_state_t {
@@ -81,8 +93,10 @@ enum ixlv_state_t {
 	IXLV_INIT_MAPPING,
 	IXLV_INIT_ENABLE,
 	IXLV_INIT_COMPLETE,
-	IXLV_RUNNING,	
+	IXLV_RUNNING,
 };
+
+/* Structs */
 
 struct ixlv_mac_filter {
 	SLIST_ENTRY(ixlv_mac_filter)  next;
@@ -108,6 +122,7 @@ struct ixlv_sc {
 	struct resource		*msix_mem;
 
 	enum ixlv_state_t	init_state;
+	int			init_in_progress;
 
 	/*
 	 * Interrupt resources
@@ -121,12 +136,11 @@ struct ixlv_sc {
 	int			pf_version;
 	int			if_flags;
 
-	bool			link_up;
-	u32			link_speed;
+	bool				link_up;
+	enum virtchnl_link_speed	link_speed;
 
 	struct mtx		mtx;
 
-	u32			qbase;
 	u32 			admvec;
 	struct timeout_task	timeout;
 	struct task     	aq_irq;
@@ -155,10 +169,14 @@ struct ixlv_sc {
 	struct ixl_vc_cmd	del_vlan_cmd;
 	struct ixl_vc_cmd	add_multi_cmd;
 	struct ixl_vc_cmd	del_multi_cmd;
+	struct ixl_vc_cmd	config_rss_key_cmd;
+	struct ixl_vc_cmd	get_rss_hena_caps_cmd;
+	struct ixl_vc_cmd	set_rss_hena_cmd;
+	struct ixl_vc_cmd	config_rss_lut_cmd;
 
 	/* Virtual comm channel */
-	struct i40e_virtchnl_vf_resource *vf_res;
-	struct i40e_virtchnl_vsi_resource *vsi_res;
+	struct virtchnl_vf_resource *vf_res;
+	struct virtchnl_vsi_resource *vsi_res;
 
 	/* Misc stats maintained by the driver */
 	u64			watchdog_events;
@@ -203,12 +221,17 @@ void	ixlv_del_ether_filters(struct ixlv_sc *);
 void	ixlv_request_stats(struct ixlv_sc *);
 void	ixlv_request_reset(struct ixlv_sc *);
 void	ixlv_vc_completion(struct ixlv_sc *,
-	enum i40e_virtchnl_ops, i40e_status, u8 *, u16);
+	enum virtchnl_ops, enum virtchnl_status_code,
+	u8 *, u16);
 void	ixlv_add_ether_filter(struct ixlv_sc *);
 void	ixlv_add_vlans(struct ixlv_sc *);
 void	ixlv_del_vlans(struct ixlv_sc *);
 void	ixlv_update_stats_counters(struct ixlv_sc *,
 		    struct i40e_eth_stats *);
 void	ixlv_update_link_status(struct ixlv_sc *);
+void	ixlv_get_default_rss_key(u32 *, bool);
+void	ixlv_config_rss_key(struct ixlv_sc *);
+void	ixlv_set_rss_hena(struct ixlv_sc *);
+void	ixlv_config_rss_lut(struct ixlv_sc *);
 
 #endif /* _IXLV_H_ */

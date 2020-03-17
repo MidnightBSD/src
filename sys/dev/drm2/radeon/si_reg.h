@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2010 Advanced Micro Devices, Inc.
  *
@@ -26,7 +25,7 @@
 #define __SI_REG_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/si_reg.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/si_reg.h 254885 2013-08-25 19:37:15Z dumbbell $");
 
 /* SI */
 #define SI_DC_GPIO_HPD_MASK                      0x65b0

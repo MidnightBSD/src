@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Joseph Koshy
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_intel.c 320113 2017-06-19 15:34:07Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_intel.c 350353 2019-07-26 10:21:55Z kib $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -185,6 +184,10 @@ pmc_intel_initialize(void)
 			cputype = PMC_CPU_INTEL_SKYLAKE;
 			nclasses = 3;
 			break;
+		case 0x55:	/* SDM rev 63 */
+			cputype = PMC_CPU_INTEL_SKYLAKE_XEON;
+			nclasses = 3;
+			break;
 		case 0x3D:
 		case 0x47:
 			cputype = PMC_CPU_INTEL_BROADWELL;
@@ -206,7 +209,11 @@ pmc_intel_initialize(void)
 			cputype = PMC_CPU_INTEL_HASWELL;
 			nclasses = 5;
 			break;
+		case 0x37:
+		case 0x4A:
 		case 0x4D:      /* Per Intel document 330061-001 01/2014. */
+		case 0x5A:
+		case 0x5D:
 			cputype = PMC_CPU_INTEL_ATOM_SILVERMONT;
 			nclasses = 3;
 			break;
@@ -245,6 +252,7 @@ pmc_intel_initialize(void)
 	case PMC_CPU_INTEL_ATOM_SILVERMONT:
 	case PMC_CPU_INTEL_BROADWELL:
 	case PMC_CPU_INTEL_BROADWELL_XEON:
+	case PMC_CPU_INTEL_SKYLAKE_XEON:
 	case PMC_CPU_INTEL_SKYLAKE:
 	case PMC_CPU_INTEL_CORE:
 	case PMC_CPU_INTEL_CORE2:
@@ -341,6 +349,7 @@ pmc_intel_finalize(struct pmc_mdep *md)
 	case PMC_CPU_INTEL_ATOM_SILVERMONT:
 	case PMC_CPU_INTEL_BROADWELL:
 	case PMC_CPU_INTEL_BROADWELL_XEON:
+	case PMC_CPU_INTEL_SKYLAKE_XEON:
 	case PMC_CPU_INTEL_SKYLAKE:
 	case PMC_CPU_INTEL_CORE:
 	case PMC_CPU_INTEL_CORE2:

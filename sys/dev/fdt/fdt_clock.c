@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fdt/fdt_clock.c 278734 2015-02-13 23:37:11Z ian $
+ * $FreeBSD: stable/11/sys/dev/fdt/fdt_clock.c 299477 2016-05-11 18:20:02Z gonzo $
  */
 
 #include <sys/cdefs.h>
@@ -90,7 +89,7 @@ enable_disable_all(device_t consumer, boolean_t enable)
 			anyerrors = true;
 		}
 	}
-	free(clks, M_OFWPROP);
+	OF_prop_free(clks);
 	return (anyerrors ? ENXIO : 0);
 }
 
@@ -128,7 +127,7 @@ fdt_clock_get_info(device_t consumer, int n, struct fdt_clock_info *info)
 			err = FDT_CLOCK_GET_INFO(clockdev, clocknum, info);
 		}
 	}
-	free(clks, M_OFWPROP);
+	OF_prop_free(clks);
 	return (err);
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/ath/if_ath_beacon.h 248671 2013-03-24 00:03:12Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/if_ath_beacon.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__IF_ATH_BEACON_H__
 #define	__IF_ATH_BEACON_H__
@@ -49,5 +48,7 @@ extern	int ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni);
 extern	void ath_beacon_return(struct ath_softc *sc, struct ath_buf *bf);
 extern	void ath_beacon_free(struct ath_softc *sc);
 extern	void ath_beacon_proc(void *arg, int pending);
+extern	void ath_beacon_miss(struct ath_softc *sc);
 
 #endif
+

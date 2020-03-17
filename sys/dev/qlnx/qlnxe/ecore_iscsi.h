@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/ecore_iscsi.h 320162 2017-06-20 18:52:35Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/ecore_iscsi.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -40,6 +39,7 @@
 #include "ecore_sp_commands.h"
 #include "ecore_iscsi_api.h"
 
+#ifndef __EXTRACT__LINUX__H__
 struct ecore_iscsi_info {
 	osal_spinlock_t	 lock;
 	osal_list_t	 free_list;
@@ -48,11 +48,26 @@ struct ecore_iscsi_info {
 	iscsi_event_cb_t event_cb;
 };
 
+#ifdef CONFIG_ECORE_ISCSI
 enum _ecore_status_t ecore_iscsi_alloc(struct ecore_hwfn *p_hwfn);
 
 void ecore_iscsi_setup(struct ecore_hwfn *p_hwfn);
 
 void ecore_iscsi_free(struct ecore_hwfn *p_hwfn);
+#else
+static inline enum _ecore_status_t
+ecore_iscsi_alloc(struct ecore_hwfn OSAL_UNUSED *p_hwfn)
+{
+	return ECORE_INVAL;
+}
+
+static inline void
+ecore_iscsi_setup(struct ecore_hwfn OSAL_UNUSED *p_hwfn) {}
+
+static inline void
+ecore_iscsi_free(struct ecore_hwfn OSAL_UNUSED *p_hwfn) {}
+#endif
+#endif
 
 void ecore_iscsi_free_connection(struct ecore_hwfn *p_hwfn,
 				 struct ecore_iscsi_conn *p_conn);
@@ -110,6 +125,26 @@ ecore_sp_iscsi_mac_update(struct ecore_hwfn *p_hwfn,
 			  struct ecore_iscsi_conn *p_conn,
 			  enum spq_mode comp_mode,
 			  struct ecore_spq_comp_cb *p_comp_addr);
+
+  /**
+ * @brief ecore_sp_iscsi_mac_update - iSCSI connection's MAC update
+ *
+ * This ramrod updates remote MAC for iSCSI offloaded connection in FW
+ *
+ * @param p_path
+ * @param p_conn
+ * @param reset
+ * @param comp_mode
+ * @param comp_addr
+ *
+ * @return enum _ecore_status_t
+ */
+enum _ecore_status_t
+ecore_sp_iscsi_stats_tcp_update(struct ecore_hwfn *p_hwfn,
+				struct ecore_iscsi_conn *p_conn,
+				bool reset,
+				enum spq_mode comp_mode,
+				struct ecore_spq_comp_cb *p_comp_addr);
 
 /**
  * @brief ecore_sp_iscsi_conn_terminate - iSCSI connection

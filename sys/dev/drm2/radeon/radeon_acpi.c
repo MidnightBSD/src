@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2012 Advanced Micro Devices, Inc.
  *
@@ -23,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_acpi.c 314593 2017-03-03 12:03:50Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_acpi.c 303689 2016-08-03 00:03:03Z ngie $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_crtc_helper.h>

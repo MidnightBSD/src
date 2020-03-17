@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: openfirm.h,v 1.1 1998/05/15 10:16:00 tsubai Exp $	*/
 
 /*-
@@ -55,13 +54,14 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ofw/openfirm.h 273655 2014-10-26 01:58:18Z ian $
+ * $FreeBSD: stable/11/sys/dev/ofw/openfirm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_OPENFIRM_H_
 #define _DEV_OPENFIRM_H_
 
 #include <sys/types.h>
+#include <machine/_bus.h>
 
 /*
  * Prototypes for Open Firmware Interface Routines
@@ -117,6 +117,7 @@ ssize_t		OF_getprop_alloc(phandle_t node, const char *propname,
 		    int elsz, void **buf);
 ssize_t		OF_getencprop_alloc(phandle_t node, const char *propname,
 		    int elsz, void **buf);
+void		OF_prop_free(void *buf);
 int		OF_nextprop(phandle_t node, const char *propname, char *buf,
 		    size_t len);
 int		OF_setprop(phandle_t node, const char *name, const void *buf,
@@ -167,6 +168,17 @@ void		OF_exit(void) __attribute__((noreturn));
 
 /* User interface functions */
 int		OF_interpret(const char *cmd, int nreturns, ...);
+
+/*
+ * Decode the Nth register property of the given device node and create a bus
+ * space tag and handle for accessing it.  This is for use in setting up things
+ * like early console output before newbus is available.  The implementation is
+ * machine-dependent, and sparc uses a different function signature as well.
+ */
+#ifndef __sparc64__
+int		OF_decode_addr(phandle_t dev, int regno, bus_space_tag_t *ptag,
+		    bus_space_handle_t *phandle, bus_size_t *sz);
+#endif
 
 #endif /* _KERNEL */
 #endif /* _DEV_OPENFIRM_H_ */

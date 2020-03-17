@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
@@ -25,7 +24,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  **************************************************************************/
-/* $FreeBSD: stable/10/sys/dev/drm2/ttm/ttm_memory.h 247835 2013-03-05 09:49:34Z kib $ */
+/* $FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_memory.h 247835 2013-03-05 09:49:34Z kib $ */
 
 #ifndef TTM_MEMORY_H
 #define TTM_MEMORY_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008, 2009 Michael Shalayeff
  * Copyright (c) 2009, 2010 Hans-Joerg Hoexer
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm_isa.c 211201 2010-08-12 00:16:18Z takawata $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm_isa.c 211201 2010-08-12 00:16:18Z takawata $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -26,7 +25,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/tpm/tpm_isa.c 211201 2010-08-12 00:16:18Z 
 #include <sys/malloc.h>
 #include <sys/proc.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/uio.h>

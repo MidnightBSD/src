@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2011-2014 Matteo Landi, Luigi Rizzo. All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/dev/netmap/if_em_netmap.h 308136 2016-10-31 16:48:16Z sbruno $
+ * $FreeBSD: stable/11/sys/dev/netmap/if_em_netmap.h 343771 2019-02-05 10:33:22Z vmaffione $
  *
  * netmap support for: em.
  *
@@ -189,8 +188,8 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 	if (flags & NAF_FORCE_RECLAIM || nm_kr_txempty(kring)) {
 		/* record completed transmissions using TDH */
 		nic_i = E1000_READ_REG(&adapter->hw, E1000_TDH(kring->ring_id));
-		if (nic_i >= kring->nkr_num_slots) { /* XXX can it happen ? */
-			D("TDH wrap %d", nic_i);
+		if (unlikely(nic_i >= kring->nkr_num_slots)) {
+			nm_prerr("TDH wrap at idx %d", nic_i);
 			nic_i -= kring->nkr_num_slots;
 		}
 		if (nic_i != txr->next_to_clean) {
@@ -198,8 +197,6 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 			kring->nr_hwtail = nm_prev(netmap_idx_n2k(kring, nic_i), lim);
 		}
 	}
-
-	nm_txsync_finalize(kring);
 
 	return 0;
 }
@@ -218,7 +215,7 @@ em_netmap_rxsync(struct netmap_kring *kring, int flags)
 	u_int nic_i;	/* index into the NIC ring */
 	u_int n;
 	u_int const lim = kring->nkr_num_slots - 1;
-	u_int const head = nm_rxsync_prologue(kring);
+	u_int const head = kring->rhead;
 	int force_update = (flags & NAF_FORCE_READ) || kring->nr_kflags & NKR_PENDINTR;
 
 	/* device-specific */
@@ -236,8 +233,6 @@ em_netmap_rxsync(struct netmap_kring *kring, int flags)
 	 * First part: import newly received packets.
 	 */
 	if (netmap_no_pendintr || force_update) {
-		uint16_t slot_flags = kring->nkr_slot_flags;
-
 		nic_i = rxr->next_to_check;
 		nm_i = netmap_idx_n2k(kring, nic_i);
 
@@ -248,7 +243,7 @@ em_netmap_rxsync(struct netmap_kring *kring, int flags)
 			if ((staterr & E1000_RXD_STAT_DD) == 0)
 				break;
 			ring->slot[nm_i].len = le16toh(curr->wb.upper.length);
-			ring->slot[nm_i].flags = slot_flags;
+			ring->slot[nm_i].flags = 0;
 			bus_dmamap_sync(rxr->rxtag, rxr->rx_buffers[nic_i].map,
 				BUS_DMASYNC_POSTREAD);
 			nm_i = nm_next(nm_i, lim);
@@ -303,9 +298,6 @@ em_netmap_rxsync(struct netmap_kring *kring, int flags)
 		nic_i = nm_prev(nic_i, lim);
 		E1000_WRITE_REG(&adapter->hw, E1000_RDT(rxr->me), nic_i);
 	}
-
-	/* tell userspace that there might be new packets */
-	nm_rxsync_finalize(kring);
 
 	return 0;
 

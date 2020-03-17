@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5416/ar5416_cal.c 227411 2011-11-09 23:28:47Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_cal.c 298939 2016-05-02 19:56:48Z pfg $
  */
 #include "opt_ah.h"
 
@@ -664,7 +663,7 @@ ar5416LoadNF(struct ath_hal *ah, const struct ieee80211_channel *chan)
 	 * by the median we just loaded.  This will be initial (and max) value
 	 * of next noise floor calibration the baseband does.  
 	 */
-	for (i = 0; i < AR5416_NUM_NF_READINGS; i ++)
+	for (i = 0; i < AR5416_NUM_NF_READINGS; i ++) {
 
 		/* Don't write to EXT radio CCA registers unless in HT/40 mode */
 		/* XXX this check should really be cleaner! */
@@ -677,6 +676,7 @@ ar5416LoadNF(struct ath_hal *ah, const struct ieee80211_channel *chan)
 			val |= (((uint32_t)(-50) << 1) & 0x1ff);
 			OS_REG_WRITE(ah, ar5416_cca_regs[i], val);
 		}
+	}
 }
 
 /*
@@ -772,7 +772,7 @@ ar5416SanitizeNF(struct ath_hal *ah, int16_t *nf)
 
 
 /*
- * Read the NF and check it against the noise floor threshhold
+ * Read the NF and check it against the noise floor threshold
  *
  * Return 0 if the NF calibration hadn't finished, 0 if it was
  * invalid, or > 0 for a valid NF reading.

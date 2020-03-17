@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Andriy Gapon <avg@FreeBSD.org>
  * All rights reserved.
@@ -46,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/amdsbwd/amdsbwd.c 335543 2018-06-22 09:26:05Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/amdsbwd/amdsbwd.c 335542 2018-06-22 09:25:24Z avg $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

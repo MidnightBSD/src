@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2012 Stefan Bethke.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/etherswitch/miiproxy.h 234861 2012-05-01 06:11:38Z adrian $
+ * $FreeBSD: stable/11/sys/dev/etherswitch/miiproxy.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	__DEV_ETHERSWITCH_MIIPROXY_H__

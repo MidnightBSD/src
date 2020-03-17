@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/uart/uart_bus_scc.c 176772 2008-03-03 18:20:17Z raj $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_scc.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -113,7 +112,7 @@ uart_scc_probe(device_t dev)
 	    BUS_READ_IVAR(parent, dev, SCC_IVAR_REGSHFT, &rs))
 		return (ENXIO);
 
-	return (uart_bus_probe(dev, rs, cl, 0, ch));
+	return (uart_bus_probe(dev, rs, 0, cl, 0, ch, 0));
 }
 
 DRIVER_MODULE(uart, scc, uart_scc_driver, uart_devclass, 0, 0);

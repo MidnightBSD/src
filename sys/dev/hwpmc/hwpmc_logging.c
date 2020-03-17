@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_logging.c 283884 2015-06-01 17:57:05Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_logging.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #if (__FreeBSD_version >= 1100000)
@@ -54,6 +53,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_logging.c 283884 2015-06-01 17
 #include <sys/pmclog.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
+#include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/uio.h>
@@ -71,6 +71,9 @@ SYSCTL_DECL(_kern_hwpmc);
  */
 
 static int pmclog_buffer_size = PMC_LOG_BUFFER_SIZE;
+#if (__FreeBSD_version < 1100000)
+TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "logbuffersize", &pmclog_buffer_size);
+#endif
 SYSCTL_INT(_kern_hwpmc, OID_AUTO, logbuffersize, CTLFLAG_RDTUN,
     &pmclog_buffer_size, 0, "size of log buffers in kilobytes");
 
@@ -79,6 +82,9 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, logbuffersize, CTLFLAG_RDTUN,
  */
 
 static int pmc_nlogbuffers = PMC_NLOGBUFFERS;
+#if (__FreeBSD_version < 1100000)
+TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "nbuffers", &pmc_nlogbuffers);
+#endif
 SYSCTL_INT(_kern_hwpmc, OID_AUTO, nbuffers, CTLFLAG_RDTUN,
     &pmc_nlogbuffers, 0, "number of global log buffers");
 
@@ -233,6 +239,54 @@ pmclog_get_buffer(struct pmc_owner *po)
 	return (plb ? 0 : ENOMEM);
 }
 
+struct pmclog_proc_init_args {
+	struct proc *kthr;
+	struct pmc_owner *po;
+	bool exit;
+	bool acted;
+};
+
+int
+pmclog_proc_create(struct thread *td, void **handlep)
+{
+	struct pmclog_proc_init_args *ia;
+	int error;
+
+	ia = malloc(sizeof(*ia), M_TEMP, M_WAITOK | M_ZERO);
+	error = kproc_create(pmclog_loop, ia, &ia->kthr,
+	    RFHIGHPID, 0, "hwpmc: proc(%d)", td->td_proc->p_pid);
+	if (error == 0)
+		*handlep = ia;
+	return (error);
+}
+
+void
+pmclog_proc_ignite(void *handle, struct pmc_owner *po)
+{
+	struct pmclog_proc_init_args *ia;
+
+	ia = handle;
+	mtx_lock(&pmc_kthread_mtx);
+	MPASS(!ia->acted);
+	MPASS(ia->po == NULL);
+	MPASS(!ia->exit);
+	MPASS(ia->kthr != NULL);
+	if (po == NULL) {
+		ia->exit = true;
+	} else {
+		ia->po = po;
+		KASSERT(po->po_kthread == NULL,
+		    ("[pmclog,%d] po=%p kthread (%p) already present",
+		    __LINE__, po, po->po_kthread));
+		po->po_kthread = ia->kthr;
+	}
+	wakeup(ia);
+	while (!ia->acted)
+		msleep(ia, &pmc_kthread_mtx, PWAIT, "pmclogw", 0);
+	mtx_unlock(&pmc_kthread_mtx);
+	free(ia, M_TEMP);
+}
+
 /*
  * Log handler loop.
  *
@@ -242,20 +296,45 @@ pmclog_get_buffer(struct pmc_owner *po)
 static void
 pmclog_loop(void *arg)
 {
-	int error;
+	struct pmclog_proc_init_args *ia;
 	struct pmc_owner *po;
 	struct pmclog_buffer *lb;
 	struct proc *p;
 	struct ucred *ownercred;
 	struct ucred *mycred;
 	struct thread *td;
+	sigset_t unb;
 	struct uio auio;
 	struct iovec aiov;
 	size_t nbytes;
+	int error;
 
-	po = (struct pmc_owner *) arg;
-	p = po->po_owner;
 	td = curthread;
+
+	SIGEMPTYSET(unb);
+	SIGADDSET(unb, SIGHUP);
+	(void)kern_sigprocmask(td, SIG_UNBLOCK, &unb, NULL, 0);
+
+	ia = arg;
+	MPASS(ia->kthr == curproc);
+	MPASS(!ia->acted);
+	mtx_lock(&pmc_kthread_mtx);
+	while (ia->po == NULL && !ia->exit)
+		msleep(ia, &pmc_kthread_mtx, PWAIT, "pmclogi", 0);
+	if (ia->exit) {
+		ia->acted = true;
+		wakeup(ia);
+		mtx_unlock(&pmc_kthread_mtx);
+		kproc_exit(0);
+	}
+	MPASS(ia->po != NULL);
+	po = ia->po;
+	ia->acted = true;
+	wakeup(ia);
+	mtx_unlock(&pmc_kthread_mtx);
+	ia = NULL;
+
+	p = po->po_owner;
 	mycred = td->td_ucred;
 
 	PROC_LOCK(p);
@@ -290,16 +369,8 @@ pmclog_loop(void *arg)
 				mtx_unlock_spin(&po->po_mtx);
 
 				/* No more buffers and shutdown required. */
-				if (po->po_flags & PMC_PO_SHUTDOWN) {
-					mtx_unlock(&pmc_kthread_mtx);
-					/*
-			 		 * Close the file to get PMCLOG_EOF
-					 * error in pmclog(3).
-					 */
-					fo_close(po->po_file, curthread);
-					mtx_lock(&pmc_kthread_mtx);
+				if (po->po_flags & PMC_PO_SHUTDOWN)
 					break;
-				}
 
 				(void) msleep(po, &pmc_kthread_mtx, PWAIT,
 				    "pmcloop", 0);
@@ -540,19 +611,16 @@ pmclog_schedule_io(struct pmc_owner *po)
 static void
 pmclog_stop_kthread(struct pmc_owner *po)
 {
-	/*
-	 * Close the file to force the thread out of fo_write,
-	 * unset flag, wakeup the helper thread,
-	 * wait for it to exit
-	 */
-
-	if (po->po_file != NULL)
-		fo_close(po->po_file, curthread);
 
 	mtx_lock(&pmc_kthread_mtx);
 	po->po_flags &= ~PMC_PO_OWNS_LOGFILE;
+	if (po->po_kthread != NULL) {
+		PROC_LOCK(po->po_kthread);
+		kern_psignal(po->po_kthread, SIGHUP);
+		PROC_UNLOCK(po->po_kthread);
+	}
 	wakeup_one(po);
-	if (po->po_kthread)
+	while (po->po_kthread)
 		msleep(po->po_kthread, &pmc_kthread_mtx, PPAUSE, "pmckstp", 0);
 	mtx_unlock(&pmc_kthread_mtx);
 }
@@ -571,15 +639,11 @@ pmclog_stop_kthread(struct pmc_owner *po)
 int
 pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 {
-	int error;
 	struct proc *p;
 	cap_rights_t rights;
-	/*
-	 * As long as it is possible to get a LOR between pmc_sx lock and
-	 * proctree/allproc sx locks used for adding a new process, assure
-	 * the former is not held here.
-	 */
-	sx_assert(&pmc_sx, SA_UNLOCKED);
+	int error;
+
+	sx_assert(&pmc_sx, SA_XLOCKED);
 	PMCDBG2(LOG,CFG,1, "config po=%p logfd=%d", po, logfd);
 
 	p = po->po_owner;
@@ -588,9 +652,6 @@ pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 	if (po->po_flags & PMC_PO_OWNS_LOGFILE)
 		return (EBUSY);
 
-	KASSERT(po->po_kthread == NULL,
-	    ("[pmclog,%d] po=%p kthread (%p) already present", __LINE__, po,
-		po->po_kthread));
 	KASSERT(po->po_file == NULL,
 	    ("[pmclog,%d] po=%p file (%p) already present", __LINE__, po,
 		po->po_file));
@@ -603,10 +664,6 @@ pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 
 	/* mark process as owning a log file */
 	po->po_flags |= PMC_PO_OWNS_LOGFILE;
-	error = kproc_create(pmclog_loop, po, &po->po_kthread,
-	    RFHIGHPID, 0, "hwpmc: proc(%d)", p->p_pid);
-	if (error)
-		goto error;
 
 	/* mark process as using HWPMCs */
 	PROC_LOCK(p);
@@ -623,10 +680,6 @@ pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 	return (0);
 
  error:
-	/* shutdown the thread */
-	if (po->po_kthread)
-		pmclog_stop_kthread(po);
-
 	KASSERT(po->po_kthread == NULL, ("[pmclog,%d] po=%p kthread not "
 	    "stopped", __LINE__, po));
 
@@ -634,6 +687,7 @@ pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 		(void) fdrop(po->po_file, curthread);
 	po->po_file  = NULL;	/* clear file and error state */
 	po->po_error = 0;
+	po->po_flags &= ~PMC_PO_OWNS_LOGFILE;
 
 	return (error);
 }
@@ -684,8 +738,11 @@ pmclog_deconfigure_log(struct pmc_owner *po)
 	}
 
 	/* drop a reference to the fd */
-	error = fdrop(po->po_file, curthread);
-	po->po_file  = NULL;
+	if (po->po_file != NULL) {
+		error = fdrop(po->po_file, curthread);
+		po->po_file = NULL;
+	} else
+		error = 0;
 	po->po_error = 0;
 
 	return (error);
@@ -743,6 +800,8 @@ pmclog_close(struct pmc_owner *po)
 {
 
 	PMCDBG1(LOG,CLO,1, "po=%p", po);
+
+	pmclog_process_closelog(po);
 
 	mtx_lock(&pmc_kthread_mtx);
 

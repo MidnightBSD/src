@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fdt/simplebus.c 283477 2015-05-24 17:51:57Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fdt/simplebus.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -47,7 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/fdt/simplebus.c 283477 2015-05-24 17:51:57
 static int		simplebus_probe(device_t dev);
 static int		simplebus_attach(device_t dev);
 static struct resource *simplebus_alloc_resource(device_t, device_t, int,
-    int *, u_long, u_long, u_long, u_int);
+    int *, rman_res_t, rman_res_t, rman_res_t, u_int);
 static void		simplebus_probe_nomatch(device_t bus, device_t child);
 static int		simplebus_print_child(device_t bus, device_t child);
 static device_t		simplebus_add_child(device_t dev, u_int order,
@@ -252,7 +251,7 @@ simplebus_setup_dinfo(device_t dev, phandle_t node,
 
 	resource_list_init(&ndi->rl);
 	ofw_bus_reg_to_rl(dev, node, sc->acells, sc->scells, &ndi->rl);
-	ofw_bus_intr_to_rl(dev, node, &ndi->rl);
+	ofw_bus_intr_to_rl(dev, node, &ndi->rl, NULL);
 
 	return (ndi);
 }
@@ -305,6 +304,8 @@ simplebus_get_devinfo(device_t bus __unused, device_t child)
         struct simplebus_devinfo *ndi;
         
         ndi = device_get_ivars(child);
+	if (ndi == NULL)
+		return (NULL);
         return (&ndi->obdinfo);
 }
 
@@ -314,12 +315,14 @@ simplebus_get_resource_list(device_t bus __unused, device_t child)
 	struct simplebus_devinfo *ndi;
 
 	ndi = device_get_ivars(child);
+	if (ndi == NULL)
+		return (NULL);
 	return (&ndi->rl);
 }
 
 static struct resource *
 simplebus_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct simplebus_softc *sc;
 	struct simplebus_devinfo *di;
@@ -332,7 +335,7 @@ simplebus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	 * Request for the default allocation with a given rid: use resource
 	 * list stored in the local device info.
 	 */
-	if ((start == 0UL) && (end == ~0UL)) {
+	if (RMAN_IS_DEFAULT_RANGE(start, end)) {
 		if ((di = device_get_ivars(child)) == NULL)
 			return (NULL);
 
@@ -366,7 +369,7 @@ simplebus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		if (j == sc->nranges && sc->nranges != 0) {
 			if (bootverbose)
 				device_printf(bus, "Could not map resource "
-				    "%#lx-%#lx\n", start, end);
+				    "%#jx-%#jx\n", start, end);
 
 			return (NULL);
 		}
@@ -381,9 +384,11 @@ simplebus_print_res(struct simplebus_devinfo *di)
 {
 	int rv;
 
+	if (di == NULL)
+		return (0);
 	rv = 0;
-	rv += resource_list_print_type(&di->rl, "mem", SYS_RES_MEMORY, "%#lx");
-	rv += resource_list_print_type(&di->rl, "irq", SYS_RES_IRQ, "%ld");
+	rv += resource_list_print_type(&di->rl, "mem", SYS_RES_MEMORY, "%#jx");
+	rv += resource_list_print_type(&di->rl, "irq", SYS_RES_IRQ, "%jd");
 	return (rv);
 }
 

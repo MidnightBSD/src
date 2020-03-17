@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Advanced Micro Devices, Inc.
  * Copyright 2008 Red Hat Inc.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_gem.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_gem.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/radeon/radeon_drm.h>
@@ -463,7 +462,7 @@ int radeon_gem_va_ioctl(struct drm_device *dev, void *data,
 	/* !! DONT REMOVE !!
 	 * We don't support vm_id yet, to be sure we don't have have broken
 	 * userspace, reject anyone trying to use non 0 value thus moving
-	 * forward we can use those fields without breaking existant userspace
+	 * forward we can use those fields without breaking existent userspace
 	 */
 	if (args->vm_id) {
 		args->operation = RADEON_VA_RESULT_ERROR;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/diagnostics.h 322011 2017-08-03 14:20:19Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/diagnostics.h 353240 2019-10-07 09:46:33Z hselasky $
  */
 
 #ifndef MLX5_CORE_DIAGNOSTICS_H
@@ -32,6 +31,8 @@
 #define	MLX5_CORE_DIAGNOSTICS_NUM(n, s, t) n
 #define	MLX5_CORE_DIAGNOSTICS_STRUCT(n, s, t) s,
 #define	MLX5_CORE_DIAGNOSTICS_ENTRY(n, s, t) { #s, (t) },
+
+static MALLOC_DEFINE(M_MLX5_EEPROM, "MLX5EEPROM", "MLX5 EEPROM information");
 
 struct mlx5_core_diagnostics_entry {
 	const char *desc;
@@ -128,6 +129,18 @@ union mlx5_core_general_diagnostics {
 extern const struct mlx5_core_diagnostics_entry
 	mlx5_core_general_diagnostics_table[MLX5_CORE_GENERAL_DIAGNOSTICS_NUM];
 
+struct mlx5_eeprom {
+	int	lock_bit;
+	int	i2c_addr;
+	int	page_num;
+	int	device_addr;
+	int	module_num;
+	int	len;
+	int	type;
+	int	page_valid;
+	u32	*data;
+};
+
 /* function prototypes */
 int mlx5_core_set_diagnostics_full(struct mlx5_core_dev *mdev,
 				   u8 enable_pci, u8 enable_general);
@@ -135,5 +148,8 @@ int mlx5_core_get_diagnostics_full(struct mlx5_core_dev *mdev,
 				   union mlx5_core_pci_diagnostics *ppci,
 				   union mlx5_core_general_diagnostics *pgen);
 int mlx5_core_supports_diagnostics(struct mlx5_core_dev *mdev, u16 counter_id);
+int mlx5_read_eeprom(struct mlx5_core_dev *dev, struct mlx5_eeprom *eeprom);
+int mlx5_get_eeprom_info(struct mlx5_core_dev *dev, struct mlx5_eeprom *eeprom);
+int mlx5_get_eeprom(struct mlx5_core_dev *dev, struct mlx5_eeprom *ee);
 
 #endif					/* MLX5_CORE_DIAGNOSTICS_H */

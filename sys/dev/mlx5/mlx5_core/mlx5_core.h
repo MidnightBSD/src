@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2013-2015, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2013-2017, Mellanox Technologies, Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_core/mlx5_core.h 337748 2018-08-14 11:52:05Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_core.h 353268 2019-10-07 10:33:32Z hselasky $
  */
 
 #ifndef __MLX5_CORE_H__
@@ -33,9 +32,13 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 
+#include <dev/mlxfw/mlxfw.h>
+
 #define DRIVER_NAME "mlx5_core"
-#define DRIVER_VERSION "3.2.1"
-#define DRIVER_RELDATE "August 2018"
+#ifndef DRIVER_VERSION
+#define DRIVER_VERSION "3.5.2"
+#endif
+#define DRIVER_RELDATE "September 2019"
 
 extern int mlx5_core_debug_mask;
 
@@ -50,14 +53,19 @@ do {									\
 		mlx5_core_dbg(dev, format, ##__VA_ARGS__);		\
 } while (0)
 
-#define mlx5_core_err(dev, format, ...)					\
-	printf("mlx5_core: ERR: ""%s:%s:%d:(pid %d): " format, \
-	       (dev)->priv.name, __func__, __LINE__, curthread->td_proc->p_pid, \
-	       ##__VA_ARGS__)
+#define	mlx5_core_err(_dev, format, ...)					\
+	device_printf((_dev)->pdev->dev.bsddev, "ERR: ""%s:%d:(pid %d): " format, \
+		__func__, __LINE__, curthread->td_proc->p_pid, \
+		##__VA_ARGS__)
 
-#define mlx5_core_warn(dev, format, ...)				\
-	printf("mlx5_core: WARN: ""%s:%s:%d:(pid %d): " format, \
-		(dev)->priv.name, __func__, __LINE__, curthread->td_proc->p_pid, \
+#define	mlx5_core_warn(_dev, format, ...)				\
+	device_printf((_dev)->pdev->dev.bsddev, "WARN: ""%s:%d:(pid %d): " format, \
+		__func__, __LINE__, curthread->td_proc->p_pid, \
+		##__VA_ARGS__)
+
+#define	mlx5_core_info(_dev, format, ...)					\
+	device_printf((_dev)->pdev->dev.bsddev, "INFO: ""%s:%d:(pid %d): " format, \
+		__func__, __LINE__, curthread->td_proc->p_pid, \
 		##__VA_ARGS__)
 
 enum {
@@ -65,31 +73,64 @@ enum {
 	MLX5_CMD_TIME, /* print command execution time */
 };
 
+enum mlx5_semaphore_space_address {
+	MLX5_SEMAPHORE_SW_RESET		= 0x20,
+};
+
 struct mlx5_core_dev;
 
 int mlx5_query_hca_caps(struct mlx5_core_dev *dev);
 int mlx5_query_board_id(struct mlx5_core_dev *dev);
+int mlx5_query_qcam_reg(struct mlx5_core_dev *mdev, u32 *qcam,
+			u8 feature_group, u8 access_reg_group);
+int mlx5_query_pcam_reg(struct mlx5_core_dev *dev, u32 *pcam,
+			u8 feature_group, u8 access_reg_group);
+int mlx5_query_mcam_reg(struct mlx5_core_dev *dev, u32 *mcap,
+			u8 feature_group, u8 access_reg_group);
+int mlx5_query_mfrl_reg(struct mlx5_core_dev *mdev, u8 *reset_level);
+int mlx5_set_mfrl_reg(struct mlx5_core_dev *mdev, u8 reset_level);
 int mlx5_cmd_init_hca(struct mlx5_core_dev *dev);
 int mlx5_cmd_teardown_hca(struct mlx5_core_dev *dev);
+int mlx5_cmd_force_teardown_hca(struct mlx5_core_dev *dev);
+int mlx5_cmd_fast_teardown_hca(struct mlx5_core_dev *dev);
+void mlx5_core_event(struct mlx5_core_dev *dev, enum mlx5_dev_event event,
+		     unsigned long param);
+void mlx5_enter_error_state(struct mlx5_core_dev *dev, bool force);
+void mlx5_disable_device(struct mlx5_core_dev *dev);
+void mlx5_recover_device(struct mlx5_core_dev *dev);
+
+int mlx5_register_device(struct mlx5_core_dev *dev);
+void mlx5_unregister_device(struct mlx5_core_dev *dev);
+
+int mlx5_firmware_flash(struct mlx5_core_dev *dev, const struct firmware *fw);
 
 void mlx5e_init(void);
 void mlx5e_cleanup(void);
 
-static inline int mlx5_cmd_exec_check_status(struct mlx5_core_dev *dev, u32 *in,
-						int in_size, u32 *out,
-						int out_size)
-{
-	int err;
-	err = mlx5_cmd_exec(dev, in, in_size, out, out_size);
+int mlx5_ctl_init(void);
+void mlx5_ctl_fini(void);
+void mlx5_fwdump_prep(struct mlx5_core_dev *mdev);
+int mlx5_fwdump(struct mlx5_core_dev *mdev);
+void mlx5_fwdump_clean(struct mlx5_core_dev *mdev);
 
-	if (err) {
-		return err;
-	}
+struct mlx5_crspace_regmap {
+	uint32_t addr;
+	unsigned cnt;
+};
 
-	err =  mlx5_cmd_status_to_err((struct mlx5_outbox_hdr *)out);
-	return err;
-}
+extern struct pci_driver mlx5_core_driver;
 
-int mlx5_rename_eq(struct mlx5_core_dev *dev, int eq_ix, char *name);
+SYSCTL_DECL(_hw_mlx5);
+
+enum {
+	MLX5_NIC_IFC_FULL		= 0,
+	MLX5_NIC_IFC_DISABLED		= 1,
+	MLX5_NIC_IFC_NO_DRAM_NIC	= 2,
+	MLX5_NIC_IFC_INVALID		= 3,
+	MLX5_NIC_IFC_SW_RESET		= 7,
+};
+
+u8 mlx5_get_nic_state(struct mlx5_core_dev *dev);
+void mlx5_set_nic_state(struct mlx5_core_dev *dev, u8 state);
 
 #endif /* __MLX5_CORE_H__ */

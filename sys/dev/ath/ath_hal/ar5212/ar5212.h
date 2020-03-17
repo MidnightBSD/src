@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar5212/ar5212.h 256139 2013-10-08 11:28:59Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212.h 290612 2015-11-09 15:59:42Z adrian $
  */
 #ifndef _ATH_AR5212_H_
 #define _ATH_AR5212_H_
@@ -201,6 +200,7 @@ struct ar5212AniState {
 #define	HAL_ANI_ENA		0x00000001	/* ANI operation enabled */
 #define	HAL_RSSI_ANI_ENA	0x00000002	/* rssi-based processing ena'd*/
 
+#if 0
 struct ar5212Stats {
 	uint32_t	ast_ani_niup;	/* ANI increased noise immunity */
 	uint32_t	ast_ani_nidown;	/* ANI decreased noise immunity */
@@ -220,6 +220,7 @@ struct ar5212Stats {
 	HAL_MIB_STATS	ast_mibstats;	/* MIB counter stats */
 	HAL_NODE_STATS	ast_nodestats;	/* Latest rssi stats from driver */
 };
+#endif
 
 /*
  * NF Cal history buffer
@@ -259,7 +260,7 @@ struct ath_hal_5212 {
 	 * Runtime state.
 	 */
 	uint32_t	ah_maskReg;		/* copy of AR_IMR */
-	struct ar5212Stats ah_stats;		/* various statistics */
+	HAL_ANI_STATS	ah_stats;		/* various statistics */
 	RF_HAL_FUNCS	*ah_rfHal;
 	uint32_t	ah_txDescMask;		/* mask for TXDESC */
 	uint32_t	ah_txOkInterruptMask;
@@ -271,7 +272,6 @@ struct ath_hal_5212 {
 	uint32_t	ah_intrTxqs;		/* tx q interrupt state */
 						/* decomp mask array */
 	uint8_t		ah_decompMask[HAL_DECOMP_MASK_SIZE];
-	HAL_POWER_MODE	ah_powerMode;
 	HAL_ANT_SETTING ah_antControl;		/* antenna setting */
 	HAL_BOOL	ah_diversity;		/* fast diversity setting */
 	enum {
@@ -321,7 +321,6 @@ struct ath_hal_5212 {
 	struct ar5212AniParams ah_aniParams5;	/* 5GHz parameters */
 	struct ar5212AniState	*ah_curani;	/* cached last reference */
 	struct ar5212AniState	ah_ani[AH_MAXCHAN]; /* per-channel state */
-	HAL_CHANNEL_SURVEY	ah_chansurvey; /* channel survey */
 
 	/* AR5416 uses some of the AR5212 ANI code; these are the ANI methods */
 	HAL_BOOL	(*ah_aniControl) (struct ath_hal *, HAL_ANI_CMD cmd, int param);
@@ -346,6 +345,9 @@ struct ath_hal_5212 {
 	uint32_t	ah_txBusy;
 	uint32_t	ah_rx_chainmask;
 	uint32_t	ah_tx_chainmask;
+
+	/* Used to return ANI statistics to the diagnostic API */
+	HAL_ANI_STATS	ext_ani_stats;
 };
 #define	AH5212(_ah)	((struct ath_hal_5212 *)(_ah))
 
@@ -551,7 +553,7 @@ extern	HAL_STATUS ar5212ProcRxDesc(struct ath_hal *ah, struct ath_desc *,
 
 extern	HAL_BOOL ar5212Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 		struct ieee80211_channel *chan, HAL_BOOL bChannelChange,
-		HAL_STATUS *status);
+		HAL_RESET_TYPE, HAL_STATUS *status);
 extern	HAL_BOOL ar5212SetChannel(struct ath_hal *,
 		const struct ieee80211_channel *);
 extern	void ar5212SetOperatingMode(struct ath_hal *ah, int opmode);
@@ -628,7 +630,7 @@ extern	void ar5212AniAttach(struct ath_hal *, const struct ar5212AniParams *,
 		const struct ar5212AniParams *, HAL_BOOL ena);
 extern	void ar5212AniDetach(struct ath_hal *);
 extern	struct ar5212AniState *ar5212AniGetCurrentState(struct ath_hal *);
-extern	struct ar5212Stats *ar5212AniGetCurrentStats(struct ath_hal *);
+extern	HAL_ANI_STATS *ar5212AniGetCurrentStats(struct ath_hal *);
 extern	HAL_BOOL ar5212AniControl(struct ath_hal *, HAL_ANI_CMD cmd, int param);
 extern	HAL_BOOL ar5212AniSetParams(struct ath_hal *,
 		const struct ar5212AniParams *, const struct ar5212AniParams *);

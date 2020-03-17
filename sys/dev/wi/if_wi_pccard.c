@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -40,12 +39,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/wi/if_wi_pccard.c 182250 2008-08-27 05:39:44Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/wi/if_wi_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
+#include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/bus.h>
 
@@ -63,7 +64,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/wi/if_wi_pccard.c 182250 2008-08-27 05:39:
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_radiotap.h>
 
-#define PCCARD_API_LEVEL 6
 #include <dev/pccard/pccardvar.h>
 #include <dev/pccard/pccard_cis.h>
 
@@ -153,6 +153,7 @@ static const struct pccard_product wi_pccard_products[] = {
 	PCMCIA_CARD(TDK, LAK_CD011WL),
 	{ NULL }
 };
+PCCARD_PNP_INFO(wi_pccard_products);
 
 static int
 wi_pccard_probe(device_t dev)

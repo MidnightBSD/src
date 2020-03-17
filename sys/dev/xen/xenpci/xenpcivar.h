@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008 Citrix Systems, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/xen/xenpci/xenpcivar.h 255040 2013-08-29 19:52:18Z gibbs $
+ * $FreeBSD: stable/11/sys/dev/xen/xenpci/xenpcivar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -32,13 +31,7 @@
  */
 struct xenpci_softc {
 	int rid_ioport;
-	int rid_memory;
 	int rid_irq;
-	struct resource* res_memory;	/* Resource for mem range. */
 	struct resource* res_irq;	/* Resource for irq range. */
 	void	*intr_cookie;
-
-	vm_paddr_t phys_next;		/* next page from mem range */
 };
-
-extern int xenpci_alloc_space(size_t sz, vm_paddr_t *pa);

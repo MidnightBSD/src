@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2000 ATI Technologies Inc., Markham, Ontario, and
  *                VA Linux Systems Inc., Fremont, California.
@@ -51,7 +50,7 @@
  * ON THE RADEON.  A FULL AUDIT OF THIS CODE IS NEEDED!  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/radeon_reg.h 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_reg.h 258780 2013-11-30 22:17:27Z eadler $");
 
 #ifndef _RADEON_REG_H_
 #define _RADEON_REG_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  * Copyright (c) 2017 Marius Strobl <marius@FreeBSD.org>
@@ -50,7 +49,7 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * $FreeBSD: stable/10/sys/dev/mmc/mmcreg.h 322389 2017-08-11 00:41:43Z marius $
+ * $FreeBSD: stable/11/sys/dev/mmc/mmcreg.h 338637 2018-09-13 10:18:47Z marius $
  */
 
 #ifndef DEV_MMC_MMCREG_H
@@ -301,6 +300,8 @@ struct mmc_request {
 /*
  * EXT_CSD fields
  */
+#define	EXT_CSD_FLUSH_CACHE	32	/* W/E */
+#define	EXT_CSD_CACHE_CTRL	33	/* R/W/E */
 #define	EXT_CSD_EXT_PART_ATTR	52	/* R/W, 2 bytes */
 #define	EXT_CSD_ENH_START_ADDR	136	/* R/W, 4 bytes */
 #define	EXT_CSD_ENH_SIZE_MULT	140	/* R/W, 3 bytes */
@@ -334,12 +335,19 @@ struct mmc_request {
 #define	EXT_CSD_PWR_CL_200_360	237	/* RO */
 #define	EXT_CSD_PWR_CL_52_195_DDR 238	/* RO */
 #define	EXT_CSD_PWR_CL_52_360_DDR 239	/* RO */
+#define	EXT_CSD_CACHE_FLUSH_POLICY 249	/* RO */
 #define	EXT_CSD_GEN_CMD6_TIME	248	/* RO */
+#define	EXT_CSD_CACHE_SIZE	249	/* RO, 4 bytes */
 #define	EXT_CSD_PWR_CL_200_360_DDR 253	/* RO */
 
 /*
  * EXT_CSD field definitions
  */
+#define	EXT_CSD_FLUSH_CACHE_FLUSH	0x01
+#define	EXT_CSD_FLUSH_CACHE_BARRIER	0x02
+
+#define	EXT_CSD_CACHE_CTRL_CACHE_EN	0x01
+
 #define	EXT_CSD_EXT_PART_ATTR_DEFAULT		0x0
 #define	EXT_CSD_EXT_PART_ATTR_SYSTEMCODE	0x1
 #define	EXT_CSD_EXT_PART_ATTR_NPERSISTENT	0x2
@@ -418,6 +426,8 @@ struct mmc_request {
 #define	EXT_CSD_SEC_FEATURE_SUPPORT_BD_BLK_EN	0x04
 #define	EXT_CSD_SEC_FEATURE_SUPPORT_GB_CL_EN	0x10
 #define	EXT_CSD_SEC_FEATURE_SUPPORT_SANITIZE	0x40
+
+#define	EXT_CSD_CACHE_FLUSH_POLICY_FIFO	0x01
 
 /*
  * Vendor specific EXT_CSD fields
@@ -600,7 +610,7 @@ struct mmc_quirk {
  * Older versions of the MMC standard had a variable sector size.  However,
  * I've been able to find no old MMC or SD cards that have a non 512
  * byte sector size anywhere, so we assume that such cards are very rare
- * and only note their existance in passing here...
+ * and only note their existence in passing here...
  */
 #define	MMC_SECTOR_SIZE	512
 

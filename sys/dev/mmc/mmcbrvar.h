@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
@@ -50,7 +49,7 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * $FreeBSD: stable/10/sys/dev/mmc/mmcbrvar.h 322120 2017-08-06 16:07:34Z marius $
+ * $FreeBSD: stable/11/sys/dev/mmc/mmcbrvar.h 338476 2018-09-05 20:43:46Z marius $
  */
 
 #ifndef DEV_MMC_MMCBRVAR_H
@@ -96,7 +95,6 @@ MMCBR_ACCESSOR(host_ocr, HOST_OCR, int)
 MMCBR_ACCESSOR(mode, MODE, int)
 MMCBR_ACCESSOR(ocr, OCR, int)
 MMCBR_ACCESSOR(power_mode, POWER_MODE, int)
-MMCBR_ACCESSOR(retune_req, RETUNE_REQ, int)
 MMCBR_ACCESSOR(vdd, VDD, int)
 MMCBR_ACCESSOR(vccq, VCCQ, int)
 MMCBR_ACCESSOR(caps, CAPS, int)
@@ -104,6 +102,20 @@ MMCBR_ACCESSOR(timing, TIMING, int)
 MMCBR_ACCESSOR(max_data, MAX_DATA, int)
 MMCBR_ACCESSOR(max_busy_timeout, MAX_BUSY_TIMEOUT, u_int)
 
+static int __inline
+mmcbr_get_retune_req(device_t dev)
+{
+	uintptr_t v;
+
+	if (__predict_false(BUS_READ_IVAR(device_get_parent(dev), dev,
+	    MMCBR_IVAR_RETUNE_REQ, &v) != 0))
+		return (retune_req_none);
+	return ((int)v);
+}
+
+/*
+ * Convenience wrappers for the mmcbr interface
+ */
 static int __inline
 mmcbr_update_ios(device_t dev)
 {

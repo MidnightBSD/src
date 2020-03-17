@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/altera/sdcard/altera_sdcard.c 257445 2013-10-31 13:47:39Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/altera/sdcard/altera_sdcard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_altera_sdcard.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ah_eeprom_v3.h 204644 2010-03-03 17:32:32Z rpaulo $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_eeprom_v3.h 204644 2010-03-03 17:32:32Z rpaulo $
  */
 #ifndef _ATH_AH_EEPROM_V3_H_
 #define _ATH_AH_EEPROM_V3_H_

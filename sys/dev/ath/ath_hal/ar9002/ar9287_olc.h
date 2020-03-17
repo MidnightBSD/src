@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Atheros Communications, Inc.
  *
@@ -14,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9002/ar9287_olc.h 222308 2011-05-26 14:29:05Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9287_olc.h 222308 2011-05-26 14:29:05Z adrian $
  */
 
 #ifndef	__AR9287_OLC_H__

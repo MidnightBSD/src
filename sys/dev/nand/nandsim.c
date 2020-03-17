@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
@@ -28,7 +27,7 @@
 /* Simulated NAND controller driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nand/nandsim.c 328267 2018-01-23 02:16:06Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nandsim.c 349658 2019-07-03 17:35:23Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -294,7 +293,7 @@ nandsim_chip_status(struct sim_chip *chip)
 	nand_debug(NDBG_SIM,"status for chip num:%d at ctrl:%d", chip->num,
 	    chip->ctrl_num);
 
-	if (chip->ctrl_num >= MAX_SIM_DEV &&
+	if (chip->ctrl_num >= MAX_SIM_DEV ||
 	    chip->num >= MAX_CTRL_CS)
 		return (EINVAL);
 

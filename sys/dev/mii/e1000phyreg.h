@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/mii/e1000phyreg.h 220938 2011-04-22 09:22:27Z marius $ */
+/* $FreeBSD: stable/11/sys/dev/mii/e1000phyreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Principal Author: Parag Patel
  * Copyright (c) 2001

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_atomic.h
  * Atomic operations used in the DRM which may or may not be provided by the OS.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_atomic.h 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_atomic.h 296548 2016-03-08 20:33:02Z dumbbell $");
 
 typedef u_int		atomic_t;
 typedef uint64_t	atomic64_t;
@@ -40,8 +39,8 @@ typedef uint64_t	atomic64_t;
 #define	NB_BITS_PER_LONG		(sizeof(long) * NBBY)
 #define	BITS_TO_LONGS(x)		howmany(x, NB_BITS_PER_LONG)
 
-#define	atomic_read(p)			(*(volatile u_int *)(p))
-#define	atomic_set(p, v)		do { *(u_int *)(p) = (v); } while (0)
+#define	atomic_read(p)			atomic_load_acq_int(p)
+#define	atomic_set(p, v)		atomic_store_rel_int(p, v)
 
 #define	atomic64_read(p)		atomic_load_acq_64(p)
 #define	atomic64_set(p, v)		atomic_store_rel_64(p, v)
@@ -78,6 +77,9 @@ typedef uint64_t	atomic64_t;
     (atomic_xchg((p), 1) != b)
 #define	cmpxchg(ptr, old, new) \
     (atomic_cmpset_int((volatile u_int *)(ptr),(old),(new)) ? (old) : (0))
+
+#define	atomic_inc_not_zero(p)		atomic_inc(p)
+#define	atomic_clear_mask(b, p)		atomic_clear_int((p), (b))
 
 static __inline u_long
 find_first_zero_bit(const u_long *p, u_long max)

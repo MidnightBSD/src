@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2006 M. Warner Losh
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/spibus/spibus_if.m 160370 2006-07-14 22:47:07Z imp $
+# $FreeBSD: stable/11/sys/dev/spibus/spibus_if.m 298274 2016-04-19 15:39:46Z br $
 #
 
 #include <sys/bus.h>

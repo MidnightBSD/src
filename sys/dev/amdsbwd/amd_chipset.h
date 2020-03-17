@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Andriy Gapon <avg@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/amdsbwd/amd_chipset.h 335543 2018-06-22 09:26:05Z avg $
+ * $FreeBSD: stable/11/sys/dev/amdsbwd/amd_chipset.h 335542 2018-06-22 09:25:24Z avg $
  */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017-2018 Cavium, Inc. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlnx/qlnxe/qlnx_os.h 318661 2017-05-22 19:36:26Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/qlnx_os.h 337517 2018-08-09 01:17:35Z davidcs $
  *
  */
 
@@ -94,6 +93,12 @@
 #include <sys/libkern.h>
 #include <sys/smp.h>
 #include <sys/sched.h>
+
+#ifdef CONFIG_ECORE_SRIOV
+#include <sys/nv.h>
+#include <sys/iov_schema.h>
+#include <dev/pci/pci_iov.h>
+#endif /* #ifdef CONFIG_ECORE_SRIOV */
 
 static __inline int qlnx_ms_to_hz(int ms)
 {

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/usb/net/if_urndisreg.h 307175 2016-10-13 03:23:43Z sephe $ */
+/*	$FreeBSD: stable/11/sys/dev/usb/net/if_urndisreg.h 307481 2016-10-17 06:56:58Z sephe $ */
 /*	$OpenBSD: if_urndisreg.h,v 1.19 2013/11/21 14:08:05 mpi Exp $ */
 
 /*

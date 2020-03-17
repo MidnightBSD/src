@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iscsi_initiator/iscsi_subr.c 254657 2013-08-22 14:02:34Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iscsi_initiator/iscsi_subr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_iscsi_initiator.h"
 
@@ -45,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/iscsi_initiator/iscsi_subr.c 254657 2013-0
 #include <sys/uio.h>
 #include <sys/sysctl.h>
 #include <sys/sx.h>
+#include <vm/uma.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>

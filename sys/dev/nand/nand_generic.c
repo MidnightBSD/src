@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
@@ -28,7 +27,7 @@
 /* Generic NAND driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/nand/nand_generic.c 285599 2015-07-15 11:58:30Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nand_generic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pci/pci_user.c 306469 2016-09-30 01:13:57Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pci/pci_user.c 339932 2018-10-30 21:31:32Z jhb $");
 
 #include "opt_bus.h"	/* XXX trim includes */
 #include "opt_compat.h"
@@ -407,6 +406,14 @@ pci_conf_match_old32(struct pci_match_conf_old32 *matches, int num_matches,
 #endif	/* COMPAT_FREEBSD32 */
 #endif	/* PRE7_COMPAT */
 
+/*
+ * Like PVE_NEXT but takes an explicit length since 'pve' is a user
+ * pointer that cannot be dereferenced.
+ */
+#define	PVE_NEXT_LEN(pve, datalen)					\
+	((struct pci_vpd_element *)((char *)(pve) +			\
+	    sizeof(struct pci_vpd_element) + (datalen)))
+
 static int
 pci_list_vpd(device_t dev, struct pci_list_vpd_io *lvio)
 {
@@ -455,7 +462,7 @@ pci_list_vpd(device_t dev, struct pci_list_vpd_io *lvio)
 	    strlen(vpd->vpd_ident));
 	if (error)
 		return (error);
-	vpd_user = PVE_NEXT(vpd_user);
+	vpd_user = PVE_NEXT_LEN(vpd_user, vpd_element.pve_datalen);
 	vpd_element.pve_flags = 0;
 	for (i = 0; i < vpd->vpd_rocnt; i++) {
 		vpd_element.pve_keyword[0] = vpd->vpd_ros[i].keyword[0];
@@ -468,7 +475,7 @@ pci_list_vpd(device_t dev, struct pci_list_vpd_io *lvio)
 		    vpd->vpd_ros[i].len);
 		if (error)
 			return (error);
-		vpd_user = PVE_NEXT(vpd_user);
+		vpd_user = PVE_NEXT_LEN(vpd_user, vpd_element.pve_datalen);
 	}
 	vpd_element.pve_flags = PVE_FLAG_RW;
 	for (i = 0; i < vpd->vpd_wcnt; i++) {
@@ -482,7 +489,7 @@ pci_list_vpd(device_t dev, struct pci_list_vpd_io *lvio)
 		    vpd->vpd_w[i].len);
 		if (error)
 			return (error);
-		vpd_user = PVE_NEXT(vpd_user);
+		vpd_user = PVE_NEXT_LEN(vpd_user, vpd_element.pve_datalen);
 	}
 	KASSERT((char *)vpd_user - (char *)lvio->plvi_data == len,
 	    ("length mismatch"));
@@ -493,7 +500,7 @@ pci_list_vpd(device_t dev, struct pci_list_vpd_io *lvio)
 static int
 pci_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 {
-	device_t pcidev, brdev;
+	device_t pcidev;
 	void *confdata;
 	const char *name;
 	struct devlist *devlist_head;
@@ -767,6 +774,8 @@ pci_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *t
 #ifdef PRE7_COMPAT
 #ifdef COMPAT_FREEBSD32
 				if (cmd == PCIOCGETCONF_OLD32) {
+					memset(&conf_old32, 0,
+					    sizeof(conf_old32));
 					conf_old32.pc_sel.pc_bus =
 					    dinfo->conf.pc_sel.pc_bus;
 					conf_old32.pc_sel.pc_dev =
@@ -800,6 +809,7 @@ pci_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *t
 				} else
 #endif /* COMPAT_FREEBSD32 */
 				if (cmd == PCIOCGETCONF_OLD) {
+					memset(&conf_old, 0, sizeof(conf_old));
 					conf_old.pc_sel.pc_bus =
 					    dinfo->conf.pc_sel.pc_bus;
 					conf_old.pc_sel.pc_dev =
@@ -923,37 +933,25 @@ getconfexit:
 			    io->pi_sel.pc_bus, io->pi_sel.pc_dev,
 			    io->pi_sel.pc_func);
 			if (pcidev) {
-				brdev = device_get_parent(
-				    device_get_parent(pcidev));
-
 #ifdef PRE7_COMPAT
 				if (cmd == PCIOCWRITE || cmd == PCIOCWRITE_OLD)
 #else
 				if (cmd == PCIOCWRITE)
 #endif
-					PCIB_WRITE_CONFIG(brdev,
-							  io->pi_sel.pc_bus,
-							  io->pi_sel.pc_dev,
-							  io->pi_sel.pc_func,
+					pci_write_config(pcidev,
 							  io->pi_reg,
 							  io->pi_data,
 							  io->pi_width);
 #ifdef PRE7_COMPAT
 				else if (cmd == PCIOCREAD_OLD)
 					io_old->pi_data =
-						PCIB_READ_CONFIG(brdev,
-							  io->pi_sel.pc_bus,
-							  io->pi_sel.pc_dev,
-							  io->pi_sel.pc_func,
+						pci_read_config(pcidev,
 							  io->pi_reg,
 							  io->pi_width);
 #endif
 				else
 					io->pi_data =
-						PCIB_READ_CONFIG(brdev,
-							  io->pi_sel.pc_bus,
-							  io->pi_sel.pc_dev,
-							  io->pi_sel.pc_func,
+						pci_read_config(pcidev,
 							  io->pi_reg,
 							  io->pi_width);
 				error = 0;

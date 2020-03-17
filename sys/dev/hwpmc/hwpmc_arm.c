@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, Joseph Koshy
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_arm.c 240475 2012-09-13 22:26:22Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_arm.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -37,6 +36,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_arm.c 240475 2012-09-13 22:26:
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 #include <machine/pmc_mdep.h>
+#include <machine/stack.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -48,9 +48,12 @@ pmc_md_initialize()
 #ifdef CPU_XSCALE_IXP425
 	if (cpu_class == CPU_CLASS_XSCALE)
 		return pmc_xscale_initialize();
-	else
 #endif
-		return NULL;
+#ifdef CPU_CORTEXA
+	if (cpu_class == CPU_CLASS_CORTEXA)
+		return pmc_armv7_initialize();
+#endif
+	return NULL;
 }
 
 void
@@ -62,6 +65,10 @@ pmc_md_finalize(struct pmc_mdep *md)
 	else
 		KASSERT(0, ("[arm,%d] Unknown CPU Class 0x%x", __LINE__,
 		    cpu_class));
+#endif
+#ifdef CPU_CORTEXA
+	if (cpu_class == CPU_CLASS_CORTEXA)
+		pmc_armv7_finalize(md);
 #endif
 }
 

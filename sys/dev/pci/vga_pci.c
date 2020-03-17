@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pci/vga_pci.c 284503 2015-06-17 07:41:53Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pci/vga_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Simple driver for PCI VGA display devices.  Drivers such as agp(4) and
@@ -44,13 +43,15 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/pci/vga_pci.c 284503 2015-06-17 07:41:53Z 
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
-#if defined(__amd64__) || defined(__i386__) || defined(__ia64__)
+#if defined(__amd64__) || defined(__i386__)
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #endif
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
+
+#include <compat/x86bios/x86bios.h> /* To re-POST the card. */
 
 struct vga_resource {
 	struct resource	*vr_res;
@@ -67,12 +68,12 @@ SYSCTL_DECL(_hw_pci);
 
 static struct vga_resource *lookup_res(struct vga_pci_softc *sc, int rid);
 static struct resource *vga_pci_alloc_resource(device_t dev, device_t child,
-    int type, int *rid, u_long start, u_long end, u_long count, u_int flags);
+    int type, int *rid, rman_res_t start, rman_res_t end, rman_res_t count,
+    u_int flags);
 static int	vga_pci_release_resource(device_t dev, device_t child, int type,
     int rid, struct resource *r);
 
 int vga_pci_default_unit = -1;
-TUNABLE_INT("hw.pci.default_vgapci_unit", &vga_pci_default_unit);
 SYSCTL_INT(_hw_pci, OID_AUTO, default_vgapci_unit, CTLFLAG_RDTUN,
     &vga_pci_default_unit, -1, "Default VGA-compatible display");
 
@@ -146,7 +147,7 @@ vga_pci_map_bios(device_t dev, size_t *size)
 	int rid;
 	struct resource *res;
 
-#if defined(__amd64__) || defined(__i386__) || defined(__ia64__)
+#if defined(__amd64__) || defined(__i386__)
 	if (vga_pci_is_boot_display(dev)) {
 		/*
 		 * On x86, the System BIOS copy the default display
@@ -163,8 +164,8 @@ vga_pci_map_bios(device_t dev, size_t *size)
 #endif
 
 	rid = PCIR_BIOS;
-	res = vga_pci_alloc_resource(dev, NULL, SYS_RES_MEMORY, &rid, 0ul,
-	    ~0ul, 1, RF_ACTIVE);
+	res = vga_pci_alloc_resource(dev, NULL, SYS_RES_MEMORY, &rid, 0,
+	    ~0, 1, RF_ACTIVE);
 	if (res == NULL) {
 		return (NULL);
 	}
@@ -182,7 +183,7 @@ vga_pci_unmap_bios(device_t dev, void *bios)
 		return;
 	}
 
-#if defined(__amd64__) || defined(__i386__) || defined(__ia64__)
+#if defined(__amd64__) || defined(__i386__)
 	if (vga_pci_is_boot_display(dev)) {
 		/* We mapped the BIOS shadow copy located at 0xC0000. */
 		pmap_unmapdev((vm_offset_t)bios, VGA_PCI_BIOS_SHADOW_SIZE);
@@ -201,6 +202,36 @@ vga_pci_unmap_bios(device_t dev, void *bios)
 	    ("vga_pci_unmap_bios: mismatch"));
 	vga_pci_release_resource(dev, NULL, SYS_RES_MEMORY, PCIR_BIOS,
 	    vr->vr_res);
+}
+
+int
+vga_pci_repost(device_t dev)
+{
+#if defined(__amd64__) || (defined(__i386__) && !defined(PC98))
+	x86regs_t regs;
+
+	if (!vga_pci_is_boot_display(dev))
+		return (EINVAL);
+
+	if (x86bios_get_orm(VGA_PCI_BIOS_SHADOW_ADDR) == NULL)
+		return (ENOTSUP);
+
+	x86bios_init_regs(&regs);
+
+	regs.R_AH = pci_get_bus(dev);
+	regs.R_AL = (pci_get_slot(dev) << 3) | (pci_get_function(dev) & 0x07);
+	regs.R_DL = 0x80;
+
+	device_printf(dev, "REPOSTing\n");
+	x86bios_call(&regs, X86BIOS_PHYSTOSEG(VGA_PCI_BIOS_SHADOW_ADDR + 3),
+	    X86BIOS_PHYSTOOFF(VGA_PCI_BIOS_SHADOW_ADDR + 3));
+
+	x86bios_get_intr(0x10);
+
+	return (0);
+#else
+	return (ENOTSUP);
+#endif
 }
 
 static int
@@ -303,7 +334,7 @@ lookup_res(struct vga_pci_softc *sc, int rid)
 
 static struct resource *
 vga_pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct vga_resource *vr;
 
@@ -464,6 +495,14 @@ vga_pci_find_cap(device_t dev, device_t child, int capability,
 }
 
 static int
+vga_pci_find_next_cap(device_t dev, device_t child, int capability,
+    int start, int *capreg)
+{
+
+	return (pci_find_next_cap(dev, capability, start, capreg));
+}
+
+static int
 vga_pci_find_extcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
@@ -472,11 +511,27 @@ vga_pci_find_extcap(device_t dev, device_t child, int capability,
 }
 
 static int
+vga_pci_find_next_extcap(device_t dev, device_t child, int capability,
+    int start, int *capreg)
+{
+
+	return (pci_find_next_extcap(dev, capability, start, capreg));
+}
+
+static int
 vga_pci_find_htcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
 
 	return (pci_find_htcap(dev, capability, capreg));
+}
+
+static int
+vga_pci_find_next_htcap(device_t dev, device_t child, int capability,
+    int start, int *capreg)
+{
+
+	return (pci_find_next_htcap(dev, capability, start, capreg));
 }
 
 static int
@@ -589,8 +644,11 @@ static device_method_t vga_pci_methods[] = {
 	DEVMETHOD(pci_set_powerstate,	vga_pci_set_powerstate),
 	DEVMETHOD(pci_assign_interrupt,	vga_pci_assign_interrupt),
 	DEVMETHOD(pci_find_cap,		vga_pci_find_cap),
+	DEVMETHOD(pci_find_next_cap,	vga_pci_find_next_cap),
 	DEVMETHOD(pci_find_extcap,	vga_pci_find_extcap),
+	DEVMETHOD(pci_find_next_extcap,	vga_pci_find_next_extcap),
 	DEVMETHOD(pci_find_htcap,	vga_pci_find_htcap),
+	DEVMETHOD(pci_find_next_htcap,	vga_pci_find_next_htcap),
 	DEVMETHOD(pci_alloc_msi,	vga_pci_alloc_msi),
 	DEVMETHOD(pci_alloc_msix,	vga_pci_alloc_msix),
 	DEVMETHOD(pci_remap_msix,	vga_pci_remap_msix),
@@ -610,3 +668,4 @@ static driver_t vga_pci_driver = {
 static devclass_t vga_devclass;
 
 DRIVER_MODULE(vgapci, pci, vga_pci_driver, vga_devclass, 0, 0);
+MODULE_DEPEND(vgapci, x86bios, 1, 1, 1);

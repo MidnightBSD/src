@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2010 Luiz Otavio O Souza
@@ -27,35 +26,32 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/gpio/gpioiic.c 278783 2015-02-14 20:50:38Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/gpio/gpioiic.c 354064 2019-10-25 09:24:41Z avg $");
 
 #include "opt_platform.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
-#include <sys/conf.h>
+#include <sys/gpio.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 
-#include <sys/gpio.h>
-#include "gpiobus_if.h"
-
 #ifdef FDT
-#include <dev/ofw/ofw_bus.h>
-#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
 #endif
 
 #include <dev/gpio/gpiobusvar.h>
-
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
 
+#include "gpiobus_if.h"
 #include "iicbb_if.h"
 
-#define	SCL_PIN_DEFAULT	0	/* default index of SCL pin on gpiobus */
-#define	SDA_PIN_DEFAULT	1
+#define	GPIOIIC_SCL_DFLT	0
+#define	GPIOIIC_SDA_DFLT	1
+#define	GPIOIIC_MIN_PINS	2
 
 struct gpioiic_softc 
 {
@@ -70,7 +66,6 @@ static int gpioiic_attach(device_t);
 
 /* iicbb interface */
 static void gpioiic_reset_bus(device_t);
-static int gpioiic_callback(device_t, int, caddr_t);
 static void gpioiic_setsda(device_t, int);
 static void gpioiic_setscl(device_t, int);
 static int gpioiic_getsda(device_t);
@@ -80,14 +75,24 @@ static int gpioiic_reset(device_t, u_char, u_char, u_char *);
 static int
 gpioiic_probe(device_t dev)
 {
+	struct gpiobus_ivar *devi;
 
 #ifdef FDT
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 	if (!ofw_bus_is_compatible(dev, "gpioiic"))
 		return (ENXIO);
 #endif
+	devi = GPIOBUS_IVAR(dev);
+	if (devi->npins < GPIOIIC_MIN_PINS) {
+		device_printf(dev,
+		    "gpioiic needs at least %d GPIO pins (only %d given).\n",
+		    GPIOIIC_MIN_PINS, devi->npins);
+		return (ENXIO);
+	}
 	device_set_desc(dev, "GPIO I2C bit-banging driver");
 
-	return (0);
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
@@ -106,10 +111,10 @@ gpioiic_attach(device_t dev)
 	sc->sc_busdev = device_get_parent(dev);
 	if (resource_int_value(device_get_name(dev),
 		device_get_unit(dev), "scl", &sc->scl_pin))
-		sc->scl_pin = SCL_PIN_DEFAULT;
+		sc->scl_pin = GPIOIIC_SCL_DFLT;
 	if (resource_int_value(device_get_name(dev),
 		device_get_unit(dev), "sda", &sc->sda_pin))
-		sc->sda_pin = SDA_PIN_DEFAULT;
+		sc->sda_pin = GPIOIIC_SDA_DFLT;
 
 #ifdef FDT
 	if ((node = ofw_bus_get_node(dev)) == -1)
@@ -121,9 +126,9 @@ gpioiic_attach(device_t dev)
 #endif
 
 	if (sc->scl_pin < 0 || sc->scl_pin > 1)
-		sc->scl_pin = SCL_PIN_DEFAULT;
+		sc->scl_pin = GPIOIIC_SCL_DFLT;
 	if (sc->sda_pin < 0 || sc->sda_pin > 1)
-		sc->sda_pin = SDA_PIN_DEFAULT;
+		sc->sda_pin = GPIOIIC_SDA_DFLT;
 
 	devi = GPIOBUS_IVAR(dev);
 	device_printf(dev, "SCL pin: %d, SDA pin: %d\n",
@@ -133,6 +138,15 @@ gpioiic_attach(device_t dev)
 	bitbang = device_add_child(dev, "iicbb", -1);
 	device_probe_and_attach(bitbang);
 
+	return (0);
+}
+
+static int
+gpioiic_detach(device_t dev)
+{
+
+	bus_generic_detach(dev);
+	device_delete_children(dev);
 	return (0);
 }
 
@@ -149,30 +163,6 @@ gpioiic_reset_bus(device_t dev)
 	    GPIO_PIN_INPUT);
 	GPIOBUS_PIN_SETFLAGS(sc->sc_busdev, sc->sc_dev, sc->scl_pin,
 	    GPIO_PIN_INPUT);
-}
-
-static int
-gpioiic_callback(device_t dev, int index, caddr_t data)
-{
-	struct gpioiic_softc	*sc = device_get_softc(dev);
-	int error, how;
-
-	how = GPIOBUS_DONTWAIT;
-	if (data != NULL && (int)*data == IIC_WAIT)
-		how = GPIOBUS_WAIT;
-	error = 0;
-	switch (index) {
-	case IIC_REQUEST_BUS:
-		error = GPIOBUS_ACQUIRE_BUS(sc->sc_busdev, sc->sc_dev, how);
-		break;
-	case IIC_RELEASE_BUS:
-		GPIOBUS_RELEASE_BUS(sc->sc_busdev, sc->sc_dev);
-		break;
-	default:
-		error = EINVAL;
-	}
-
-	return (error);
 }
 
 static void
@@ -258,10 +248,9 @@ static device_method_t gpioiic_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		gpioiic_probe),
 	DEVMETHOD(device_attach,	gpioiic_attach),
-	DEVMETHOD(device_detach,	bus_generic_detach),
+	DEVMETHOD(device_detach,	gpioiic_detach),
 
 	/* iicbb interface */
-	DEVMETHOD(iicbb_callback,	gpioiic_callback),
 	DEVMETHOD(iicbb_setsda,		gpioiic_setsda),
 	DEVMETHOD(iicbb_setscl,		gpioiic_setscl),
 	DEVMETHOD(iicbb_getsda,		gpioiic_getsda),
@@ -273,7 +262,7 @@ static device_method_t gpioiic_methods[] = {
 	DEVMETHOD(ofw_bus_get_node,	gpioiic_get_node),
 #endif
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t gpioiic_driver = {

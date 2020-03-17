@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 Atheros Communications, Inc.
  *
@@ -14,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/ath/ath_hal/ar9003/ar9300_btcoex.h 237611 2012-06-26 22:16:53Z adrian $
+ * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9003/ar9300_btcoex.h 237611 2012-06-26 22:16:53Z adrian $
  */
 
 #ifndef	__ATH_AR9300_BTCOEX_H__

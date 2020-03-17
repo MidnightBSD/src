@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cxgbe/osdep.h 308304 2016-11-04 18:45:06Z jhb $
+ * $FreeBSD: stable/11/sys/dev/cxgbe/osdep.h 346962 2019-04-30 16:30:16Z np $
  *
  */
 
@@ -41,10 +40,14 @@
 #include <sys/syslog.h>
 #include <dev/pci/pcireg.h>
 
-#define CH_ERR(adap, fmt, ...) log(LOG_ERR, fmt, ##__VA_ARGS__)
-#define CH_WARN(adap, fmt, ...) log(LOG_WARNING, fmt, ##__VA_ARGS__)
-#define CH_ALERT(adap, fmt, ...) log(LOG_ALERT, fmt, ##__VA_ARGS__)
-#define CH_WARN_RATELIMIT(adap, fmt, ...) log(LOG_WARNING, fmt, ##__VA_ARGS__)
+#define CH_ERR(adap, fmt, ...) log(LOG_ERR, "%s: " fmt, \
+    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+#define CH_WARN(adap, fmt, ...) log(LOG_WARNING, "%s: " fmt, \
+    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+#define CH_ALERT(adap, fmt, ...) log(LOG_ALERT, "%s: " fmt, \
+    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+#define CH_WARN_RATELIMIT(adap, fmt, ...) log(LOG_WARNING, "%s: " fmt, \
+    device_get_nameunit(adap->dev), ##__VA_ARGS__)
 
 #ifndef LINUX_TYPES_DEFINED
 typedef int8_t  s8;
@@ -66,11 +69,8 @@ typedef uint64_t __be64;
 
 #if BYTE_ORDER == BIG_ENDIAN
 #define __BIG_ENDIAN_BITFIELD
-#define htobe32_const(x) (x)
 #elif BYTE_ORDER == LITTLE_ENDIAN
 #define __LITTLE_ENDIAN_BITFIELD
-#define htobe32_const(x) (((x) >> 24) | (((x) >> 8) & 0xff00) |	\
-    ((((x) & 0xffffff) << 8) & 0xff0000) | ((((x) & 0xff) << 24) & 0xff000000))
 #else
 #error "Must set BYTE_ORDER"
 #endif
@@ -110,6 +110,7 @@ typedef boolean_t bool;
 
 #define DUPLEX_HALF	0
 #define DUPLEX_FULL	1
+#define AUTONEG_AUTO	(-1)
 #define AUTONEG_DISABLE	0
 #define AUTONEG_ENABLE	1
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert C. Noland III <rnoland@FreeBSD.org>
  * All Rights Reserved.
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_scatter.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_scatter.c 316073 2017-03-28 06:07:59Z kib $");
 
 /** @file drm_scatter.c
  * Allocation of memory for scatter-gather mappings by the graphics chip.
@@ -75,7 +74,7 @@ int drm_sg_alloc(struct drm_device *dev, struct drm_scatter_gather * request)
 	DRM_DEBUG("request size=%ld\n", request->size);
 
 	size = round_page(request->size);
-	entry->pages = OFF_TO_IDX(size);
+	entry->pages = atop(size);
 	entry->busaddr = malloc(entry->pages * sizeof(*entry->busaddr),
 	    DRM_MEM_SGLISTS, M_NOWAIT | M_ZERO);
 	if (!entry->busaddr) {

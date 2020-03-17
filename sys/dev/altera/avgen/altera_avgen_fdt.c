@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2013 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/altera/avgen/altera_avgen_fdt.c 266152 2014-05-15 16:11:06Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/altera/avgen/altera_avgen_fdt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -48,7 +47,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/altera/avgen/altera_avgen_fdt.c 266152 201
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/vm.h>
 
 #include <vm/vm.h>
 
@@ -122,11 +120,11 @@ altera_avgen_fdt_attach(device_t dev)
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->avg_rid,
 		    sc->avg_res);
 	if (str_fileio != NULL)
-		free(str_fileio, M_OFWPROP);
+		OF_prop_free(str_fileio);
 	if (str_mmapio != NULL)
-		free(str_mmapio, M_OFWPROP);
+		OF_prop_free(str_mmapio);
 	if (str_devname != NULL)
-		free(str_devname, M_OFWPROP);
+		OF_prop_free(str_devname);
 	return (error);
 }
 

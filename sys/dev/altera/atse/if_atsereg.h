@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Bjoern A. Zeeb
  * All rights reserved.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/altera/atse/if_atsereg.h 256752 2013-10-18 20:44:19Z brooks $
+ * $FreeBSD: stable/11/sys/dev/altera/atse/if_atsereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_IF_ATSEREG_H

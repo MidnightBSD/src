@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_bufs.c
  * Generic buffer template
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_bufs.c 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_bufs.c 283998 2015-06-04 19:41:15Z jhb $");
 
 #include <sys/param.h>
 #include <sys/shm.h>
@@ -1636,12 +1635,12 @@ int drm_mapbufs(struct drm_device *dev, void *data,
 				goto done;
 			}
 			retcode = vm_mmap(&vms->vm_map, &virtual, map->size,
-			    PROT_READ | PROT_WRITE, VM_PROT_ALL,
+			    VM_PROT_READ | VM_PROT_WRITE, VM_PROT_ALL,
 			    MAP_SHARED | MAP_NOSYNC, OBJT_DEVICE,
 			    file_priv->minor->device, token);
 		} else {
 			retcode = vm_mmap(&vms->vm_map, &virtual, dma->byte_count,
-			    PROT_READ | PROT_WRITE, VM_PROT_ALL,
+			    VM_PROT_READ | VM_PROT_WRITE, VM_PROT_ALL,
 			    MAP_SHARED | MAP_NOSYNC, OBJT_DEVICE,
 			    file_priv->minor->device, 0);
 		}

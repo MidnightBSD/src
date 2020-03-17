@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2009 Red Hat Inc.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/drm_fixed.h 254853 2013-08-25 12:27:15Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_fixed.h 254853 2013-08-25 12:27:15Z dumbbell $");
 
 #ifndef DRM_FIXED_H
 #define DRM_FIXED_H

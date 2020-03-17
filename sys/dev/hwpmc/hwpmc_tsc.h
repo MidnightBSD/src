@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Joseph Koshy
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hwpmc/hwpmc_tsc.h 184802 2008-11-09 17:37:54Z jkoshy $
+ * $FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_tsc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_HWPMC_TSC_H_

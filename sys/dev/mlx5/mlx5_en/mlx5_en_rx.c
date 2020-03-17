@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Mellanox Technologies. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mlx5/mlx5_en/mlx5_en_rx.c 337741 2018-08-14 11:15:05Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/mlx5_en_rx.c 347873 2019-05-16 18:23:28Z hselasky $
  */
 
 #include "en.h"
@@ -33,24 +32,16 @@ static inline int
 mlx5e_alloc_rx_wqe(struct mlx5e_rq *rq,
     struct mlx5e_rx_wqe *wqe, u16 ix)
 {
-	bus_dma_segment_t segs[rq->nsegs];
+	bus_dma_segment_t segs[MLX5E_MAX_BUSDMA_RX_SEGS];
 	struct mbuf *mb;
 	int nsegs;
 	int err;
-#if (MLX5E_MAX_RX_SEGS != 1)
 	struct mbuf *mb_head;
 	int i;
-#endif
+
 	if (rq->mbuf[ix].mbuf != NULL)
 		return (0);
 
-#if (MLX5E_MAX_RX_SEGS == 1)
-	mb = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, rq->wqe_sz);
-	if (unlikely(!mb))
-		return (-ENOMEM);
-
-	mb->m_pkthdr.len = mb->m_len = rq->wqe_sz;
-#else
 	mb_head = mb = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
 	    MLX5E_MAX_RX_BYTES);
 	if (unlikely(mb == NULL))
@@ -73,7 +64,7 @@ mlx5e_alloc_rx_wqe(struct mlx5e_rq *rq,
 	}
 	/* rewind to first mbuf in chain */
 	mb = mb_head;
-#endif
+
 	/* get IP header aligned */
 	m_adj(mb, MLX5E_NET_IP_ALIGN);
 
@@ -86,9 +77,6 @@ mlx5e_alloc_rx_wqe(struct mlx5e_rq *rq,
 		err = -ENOMEM;
 		goto err_free_mbuf;
 	}
-#if (MLX5E_MAX_RX_SEGS == 1)
-	wqe->data[0].addr = cpu_to_be64(segs[0].ds_addr);
-#else
 	wqe->data[0].addr = cpu_to_be64(segs[0].ds_addr);
 	wqe->data[0].byte_count = cpu_to_be32(segs[0].ds_len |
 	    MLX5_HW_START_PADDING);
@@ -100,7 +88,6 @@ mlx5e_alloc_rx_wqe(struct mlx5e_rq *rq,
 		wqe->data[i].addr = 0;
 		wqe->data[i].byte_count = 0;
 	}
-#endif
 
 	rq->mbuf[ix].mbuf = mb;
 	rq->mbuf[ix].data = mb->m_data;
@@ -131,7 +118,7 @@ mlx5e_post_rx_wqes(struct mlx5e_rq *rq)
 	}
 
 	/* ensure wqes are visible to device before updating doorbell record */
-	wmb();
+	atomic_thread_fence_rel();
 
 	mlx5_wq_ll_update_db_record(&rq->wq);
 }
@@ -226,9 +213,7 @@ mlx5e_build_rx_mbuf(struct mlx5_cqe64 *cqe,
     u32 cqe_bcnt)
 {
 	struct ifnet *ifp = rq->ifp;
-#if (MLX5E_MAX_RX_SEGS != 1)
 	struct mbuf *mb_head;
-#endif
 	int lro_num_seg;	/* HW LRO session aggregated packets counter */
 
 	lro_num_seg = be32_to_cpu(cqe->srqn) >> 24;
@@ -238,9 +223,6 @@ mlx5e_build_rx_mbuf(struct mlx5_cqe64 *cqe,
 		rq->stats.lro_bytes += cqe_bcnt;
 	}
 
-#if (MLX5E_MAX_RX_SEGS == 1)
-	mb->m_pkthdr.len = mb->m_len = cqe_bcnt;
-#else
 	mb->m_pkthdr.len = cqe_bcnt;
 	for (mb_head = mb; mb != NULL; mb = mb->m_next) {
 		if (mb->m_len > cqe_bcnt)
@@ -257,7 +239,7 @@ mlx5e_build_rx_mbuf(struct mlx5_cqe64 *cqe,
 	}
 	/* rewind to first mbuf in chain */
 	mb = mb_head;
-#endif
+
 	/* check if a Toeplitz hash was computed */
 	if (cqe->rss_hash_type != 0) {
 		mb->m_pkthdr.flowid = be32_to_cpu(cqe->rss_hash_result);
@@ -286,11 +268,11 @@ mlx5e_build_rx_mbuf(struct mlx5_cqe64 *cqe,
 			M_HASHTYPE_SET(mb, M_HASHTYPE_RSS_IPV6);
 			break;
 		default:	/* Other */
-			M_HASHTYPE_SET(mb, M_HASHTYPE_OPAQUE);
+			M_HASHTYPE_SET(mb, M_HASHTYPE_OPAQUE_HASH);
 			break;
 		}
 #else
-		M_HASHTYPE_SET(mb, M_HASHTYPE_OPAQUE);
+		M_HASHTYPE_SET(mb, M_HASHTYPE_OPAQUE_HASH);
 #endif
 	} else {
 		mb->m_pkthdr.flowid = rq->ix;
@@ -341,7 +323,12 @@ mlx5e_decompress_cqe(struct mlx5e_cq *cq, struct mlx5_cqe64 *title,
 	 */
 	title->byte_cnt = mini->byte_cnt;
 	title->wqe_counter = cpu_to_be16((wqe_counter + i) & cq->wq.sz_m1);
-	title->check_sum = mini->checksum;
+	title->rss_hash_result = mini->rx_hash_result;
+	/*
+	 * Since we use MLX5_CQE_FORMAT_HASH when creating the RX CQ,
+	 * the value of the checksum should be ignored.
+	 */
+	title->check_sum = 0;
 	title->op_own = (title->op_own & 0xf0) |
 	    (((cq->wq.cc + i) >> cq->wq.log_sz) & 1);
 }
@@ -386,9 +373,6 @@ mlx5e_decompress_cqes(struct mlx5e_cq *cq)
 static int
 mlx5e_poll_rx_cq(struct mlx5e_rq *rq, int budget)
 {
-#ifndef HAVE_TURBO_LRO
-	struct lro_entry *queued;
-#endif
 	int i;
 
 	for (i = 0; i < budget; i++) {
@@ -423,10 +407,8 @@ mlx5e_poll_rx_cq(struct mlx5e_rq *rq, int budget)
 		}
 		if ((MHLEN - MLX5E_NET_IP_ALIGN) >= byte_cnt &&
 		    (mb = m_gethdr(M_NOWAIT, MT_DATA)) != NULL) {
-#if (MLX5E_MAX_RX_SEGS != 1)
 			/* set maximum mbuf length */
 			mb->m_len = MHLEN - MLX5E_NET_IP_ALIGN;
-#endif
 			/* get IP header aligned */
 			mb->m_data += MLX5E_NET_IP_ALIGN;
 
@@ -441,16 +423,11 @@ mlx5e_poll_rx_cq(struct mlx5e_rq *rq, int budget)
 		}
 
 		mlx5e_build_rx_mbuf(cqe, rq, mb, byte_cnt);
+		rq->stats.bytes += byte_cnt;
 		rq->stats.packets++;
-#ifdef HAVE_TURBO_LRO
-		if (mb->m_pkthdr.csum_flags == 0 ||
-		    (rq->ifp->if_capenable & IFCAP_LRO) == 0 ||
-		    rq->lro.mbuf == NULL) {
-			/* normal input */
-			rq->ifp->if_input(rq->ifp, mb);
-		} else {
-			tcp_tlro_rx(&rq->lro, mb);
-		}
+
+#if !defined(HAVE_TCP_LRO_RX)
+		tcp_lro_queue_mbuf(&rq->lro, mb);
 #else
 		if (mb->m_pkthdr.csum_flags == 0 ||
 		    (rq->ifp->if_capenable & IFCAP_LRO) == 0 ||
@@ -467,13 +444,7 @@ wq_ll_pop:
 	mlx5_cqwq_update_db_record(&rq->cq.wq);
 
 	/* ensure cq space is freed before enabling more cqes */
-	wmb();
-#ifndef HAVE_TURBO_LRO
-	while ((queued = SLIST_FIRST(&rq->lro.lro_active)) != NULL) {
-		SLIST_REMOVE_HEAD(&rq->lro.lro_active, next);
-		tcp_lro_flush(&rq->lro, queued);
-	}
-#endif
+	atomic_thread_fence_rel();
 	return (i);
 }
 
@@ -484,7 +455,10 @@ mlx5e_rx_cq_comp(struct mlx5_core_cq *mcq)
 	int i = 0;
 
 #ifdef HAVE_PER_CQ_EVENT_PACKET
-	struct mbuf *mb = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, rq->wqe_sz);
+#if (MHLEN < 15)
+#error "MHLEN is too small"
+#endif
+	struct mbuf *mb = m_gethdr(M_NOWAIT, MT_DATA);
 
 	if (mb != NULL) {
 		/* this code is used for debugging purpose only */
@@ -512,9 +486,10 @@ mlx5e_rx_cq_comp(struct mlx5_core_cq *mcq)
 		mlx5e_post_rx_wqes(rq);
 	}
 	mlx5e_post_rx_wqes(rq);
+	/* check for dynamic interrupt moderation callback */
+	if (rq->dim.mode != NET_DIM_CQ_PERIOD_MODE_DISABLED)
+		net_dim(&rq->dim, rq->stats.packets, rq->stats.bytes);
 	mlx5e_cq_arm(&rq->cq, MLX5_GET_DOORBELL_LOCK(&rq->channel->priv->doorbell_lock));
-#ifdef HAVE_TURBO_LRO
-	tcp_tlro_flush(&rq->lro, 1);
-#endif
+	tcp_lro_flush_all(&rq->lro);
 	mtx_unlock(&rq->mtx);
 }

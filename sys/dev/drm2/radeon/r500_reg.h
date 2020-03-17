@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2008 Advanced Micro Devices, Inc.
  * Copyright 2008 Red Hat Inc.
@@ -30,7 +29,7 @@
 #define __R500_REG_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm2/radeon/r500_reg.h 282199 2015-04-28 19:35:05Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/r500_reg.h 280183 2015-03-17 18:50:33Z dumbbell $");
 
 /* pipe config regs */
 #define R300_GA_POLY_MODE				0x4288
