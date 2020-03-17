@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/dwc_otg/Makefile 232540 2012-03-05 06:46:35Z hselasky $
+# $FreeBSD: stable/11/sys/modules/usb/dwc_otg/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2012 Hans Petter Selasky. All rights reserved.
 #
@@ -26,18 +25,14 @@
 # SUCH DAMAGE.
 #
 
-S=	${.CURDIR}/../../..
+S=	${SRCTOP}/sys
 
 .PATH: $S/dev/usb/controller
 
 KMOD=	dwc_otg
 SRCS=	bus_if.h device_if.h usb_if.h \
-	opt_bus.h opt_usb.h \
-	dwc_otg.c \
+	opt_bus.h opt_usb.h ofw_bus_if.h \
+	dwc_otg.c dwc_otg_fdt.c \
 	pci_if.h
-
-.if defined(HAS_ATMELARM)
-SRCS+=	dwc_otg_atmelarm.c
-.endif
 
 .include <bsd.kmod.mk>

@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #/*
 # * Copyright (c) 2013-2014 Qlogic Corporation
 # * All rights reserved.
@@ -30,10 +29,10 @@
 # * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
 # */
 #
-# $FreeBSD: stable/10/sys/modules/qlxge/Makefile 252206 2013-06-25 17:50:22Z davidcs $
+# $FreeBSD: stable/11/sys/modules/qlxge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH: ${.CURDIR}/../../dev/qlxge
+.PATH: ${SRCTOP}/sys/dev/qlxge
 
 KMOD=if_qlxge
 SRCS=qls_os.c qls_dbg.c qls_hw.c qls_isr.c qls_dump.c
@@ -41,11 +40,6 @@ SRCS+=qls_ioctl.c
 SRCS+= device_if.h bus_if.h pci_if.h
 
 CFLAGS += -DQL_DBG
-
-clean:
-	rm -f opt_bdg.h device_if.h bus_if.h pci_if.h export_syms
-	rm -f *.o *.kld *.ko
-	rm -f @ machine x86
 
 .include <bsd.kmod.mk>
 

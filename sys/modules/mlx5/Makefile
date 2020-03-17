@@ -1,6 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mlx5/Makefile 322007 2017-08-03 14:14:13Z hselasky $
-.PATH:	${.CURDIR}/../../dev/mlx5/mlx5_core ${.CURDIR}/../../ofed/include/linux
+# $FreeBSD: stable/11/sys/modules/mlx5/Makefile 353218 2019-10-07 09:15:47Z hselasky $
+.PATH:	${SRCTOP}/sys/dev/mlx5/mlx5_core \
+	${SRCTOP}/sys/dev/mlx5/mlx5_lib \
+	${SRCTOP}/sys/dev/mlx5/mlx5_fpga
 
 KMOD=mlx5
 SRCS= \
@@ -9,13 +10,15 @@ mlx5_cmd.c \
 mlx5_cq.c \
 mlx5_diagnostics.c \
 mlx5_eq.c \
-mlx5_eswitch_vacl.c \
-mlx5_flow_table.c \
+mlx5_fs_cmd.c \
+mlx5_fs_tree.c \
 mlx5_fw.c \
+mlx5_fwdump.c \
 mlx5_health.c \
 mlx5_mad.c \
 mlx5_main.c \
 mlx5_mcg.c \
+mlx5_mpfs.c \
 mlx5_mr.c \
 mlx5_pagealloc.c \
 mlx5_pd.c \
@@ -25,13 +28,24 @@ mlx5_srq.c \
 mlx5_transobj.c \
 mlx5_uar.c \
 mlx5_vport.c \
+mlx5_vsc.c \
 mlx5_wq.c \
+mlx5_gid.c \
 device_if.h bus_if.h vnode_if.h pci_if.h \
-        opt_inet.h opt_inet6.h opt_random.h
+        opt_inet.h opt_inet6.h opt_rss.h
 
-SRCS+= linux_compat.c linux_radix.c linux_idr.c
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 
-CFLAGS+= -I${.CURDIR}/../../ofed/include
+.if defined(CONFIG_BUILD_FPGA)
+SRCS+= \
+	mlx5fpga_cmd.c \
+	mlx5fpga_core.c \
+	mlx5fpga_sdk.c \
+	mlx5fpga_trans.c \
+	mlx5fpga_xfer.c \
+	mlx5fpga_ipsec.c
+.endif
 
 .include <bsd.kmod.mk>
 

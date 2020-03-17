@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/pccard/Makefile 150363 2005-09-20 06:48:55Z imp $
+# $FreeBSD: stable/11/sys/modules/pccard/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/pccard
+.PATH: ${SRCTOP}/sys/dev/pccard
 
 KMOD=	pccard
 SRCS=	pccard.c pccard_cis.c pccard_cis_quirks.c pccard_device.c \

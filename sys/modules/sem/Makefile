@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sem/Makefile 211339 2010-08-15 15:33:01Z kib $
+# $FreeBSD: stable/11/sys/modules/sem/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../kern
+.PATH: ${SRCTOP}/sys/kern
 
 KMOD=	sem
 SRCS=	uipc_sem.c opt_compat.h opt_posix.h vnode_if.h

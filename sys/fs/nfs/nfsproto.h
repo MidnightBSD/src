@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfs/nfsproto.h 320617 2017-07-03 20:12:31Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfs/nfsproto.h 347045 2019-05-03 03:05:22Z rmacklem $
  */
 
 #ifndef _NFS_NFSPROTO_H_
@@ -343,11 +342,13 @@
 #define	NFSPROC_WRITEDS		51
 #define	NFSPROC_READDS		52
 #define	NFSPROC_COMMITDS	53
+#define	NFSPROC_OPENLAYGET	54
+#define	NFSPROC_CREATELAYGET	55
 
 /*
  * Must be defined as one higher than the last NFSv4.1 Proc# above.
  */
-#define	NFSV41_NPROCS		54
+#define	NFSV41_NPROCS		56
 
 #endif	/* NFS_V3NPROCS */
 
@@ -360,10 +361,10 @@
 
 /*
  * NFSPROC_NOOP is a fake op# that can't be the same as any V2/3/4 Procedure
- * or Operation#. Since the NFS V4 Op #s go higher, use NFSV41_NOPS, which
+ * or Operation#. Since the NFS V4 Op #s go higher, use NFSV42_NOPS, which
  * is one greater than the highest Op#.
  */
-#define	NFSPROC_NOOP		NFSV41_NOPS
+#define	NFSPROC_NOOP		NFSV42_NOPS
 
 /* Actual Version 2 procedure numbers */
 #define	NFSV2PROC_NULL		0
@@ -553,6 +554,7 @@
 #define	NFSV4OPEN_WDRESOURCE		0x00080000
 #define	NFSV4OPEN_WDCONTENTION		0x00100000
 #define	NFSV4OPEN_WDNOTWANTED		0x00200000
+#define	NFSV4OPEN_WDSUPPFTYPE		0x00400000
 
 /*
  * NFS V4 File Handle types
@@ -648,6 +650,15 @@
 /* Flags for File Layout. */
 #define	NFSFLAYUTIL_DENSE		0x1
 #define	NFSFLAYUTIL_COMMIT_THRU_MDS	0x2
+
+/* Enum values for Bind Connection to Session. */
+#define	NFSCDFC4_FORE		0x1
+#define	NFSCDFC4_BACK		0x2
+#define	NFSCDFC4_FORE_OR_BOTH	0x3
+#define	NFSCDFC4_BACK_OR_BOTH	0x7
+#define	NFSCDFS4_FORE		0x1
+#define	NFSCDFS4_BACK		0x2
+#define	NFSCDFS4_BOTH		0x3
 
 /* Conversion macros */
 #define	vtonfsv2_mode(t,m) 						\
@@ -1022,7 +1033,11 @@ struct nfsv3_sattr {
  	NFSATTRBM_TIMEDELTA |						\
  	NFSATTRBM_TIMEMETADATA |					\
  	NFSATTRBM_TIMEMODIFY |						\
- 	NFSATTRBM_MOUNTEDONFILEID)
+ 	NFSATTRBM_MOUNTEDONFILEID |					\
+	NFSATTRBM_QUOTAHARD |                        			\
+    	NFSATTRBM_QUOTASOFT |                        			\
+    	NFSATTRBM_QUOTAUSED)
+
 
 #ifdef QUOTA
 /*
@@ -1040,11 +1055,11 @@ struct nfsv3_sattr {
 #define	NFSATTRBIT_SUPP2	NFSATTRBM_SUPPATTREXCLCREAT
 
 /*
- * NFSATTRBIT_SUPPSETONLY is the OR of NFSATTRBIT_TIMEACCESSSET and
- * NFSATTRBIT_TIMEMODIFYSET.
+ * These are the set only attributes.
  */
-#define	NFSATTRBIT_SUPPSETONLY	 (NFSATTRBM_TIMEACCESSSET |		\
+#define	NFSATTRBIT_SUPPSETONLY1	 (NFSATTRBM_TIMEACCESSSET |		\
 				 NFSATTRBM_TIMEMODIFYSET)
+#define	NFSATTRBIT_SUPPSETONLY2	(NFSATTRBM_MODESETMASKED)
 
 /*
  * NFSATTRBIT_SETABLE - SETABLE0 - bits 0<->31
@@ -1060,7 +1075,20 @@ struct nfsv3_sattr {
  	NFSATTRBM_OWNERGROUP |						\
  	NFSATTRBM_TIMEACCESSSET |					\
  	NFSATTRBM_TIMEMODIFYSET)
-#define	NFSATTRBIT_SETABLE2		0
+#define	NFSATTRBIT_SETABLE2						\
+	(NFSATTRBM_MODESETMASKED)
+
+/*
+ * NFSATTRBIT_NFSV41 - Attributes only supported by NFSv4.1.
+ */
+#define	NFSATTRBIT_NFSV41_1						\
+	(NFSATTRBM_FSLAYOUTTYPE)
+#define	NFSATTRBIT_NFSV41_2						\
+	(NFSATTRBM_LAYOUTTYPE |						\
+	NFSATTRBM_LAYOUTBLKSIZE |					\
+	NFSATTRBM_LAYOUTALIGNMENT |					\
+	NFSATTRBM_MODESETMASKED |					\
+	NFSATTRBM_SUPPATTREXCLCREAT)
 
 /*
  * Set of attributes that the getattr vnode op needs.

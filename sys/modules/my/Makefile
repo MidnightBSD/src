@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/my/Makefile 167453 2007-03-11 15:20:04Z brueffer $
+# $FreeBSD: stable/11/sys/modules/my/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/my
+.PATH: ${SRCTOP}/sys/dev/my
 
 KMOD=	if_my
 SRCS=	if_my.c device_if.h bus_if.h pci_if.h

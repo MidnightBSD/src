@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/glxsb/Makefile 181467 2008-08-09 14:52:31Z philip $
+# $FreeBSD: stable/11/sys/modules/glxsb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/glxsb
+.PATH:	${SRCTOP}/sys/dev/glxsb
 KMOD	= glxsb
 SRCS	= glxsb.c glxsb_hash.c glxsb.h 
 SRCS   += device_if.h pci_if.h bus_if.h

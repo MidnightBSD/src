@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # $Cronyx: sys.modules.cp.Makefile,v 1.1.2.3 2004/04/28 16:17:57 rik Exp $
-# $FreeBSD: stable/10/sys/modules/cp/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: stable/11/sys/modules/cp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../dev/cp
+.PATH:  ${SRCTOP}/sys/dev/cp
 KMOD	= if_cp
 SRCS	= if_cp.c cpddk.c
 SRCS   += opt_netgraph.h opt_ng_cronyx.h device_if.h bus_if.h \

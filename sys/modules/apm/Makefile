@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/apm/Makefile 145326 2005-04-20 12:28:20Z nyan $
+# $FreeBSD: stable/11/sys/modules/apm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../i386/bios
+.PATH: ${SRCTOP}/sys/i386/bios
 .if ${MACHINE} == "pc98"
 .PATH: ${.CURDIR}/../../pc98/apm
 .endif

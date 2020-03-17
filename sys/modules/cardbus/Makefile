@@ -1,10 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cardbus/Makefile 153811 2005-12-29 01:43:47Z imp $
+# $FreeBSD: stable/11/sys/modules/cardbus/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/cardbus
+.PATH: ${SRCTOP}/sys/dev/cardbus
 
 KMOD=	cardbus
 SRCS=	cardbus.c cardbus_cis.c cardbus_device.c \
 	device_if.h bus_if.h card_if.h power_if.h pci_if.h pcib_if.h
+
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+CFLAGS += -DNEW_PCIB
+.endif
 
 .include <bsd.kmod.mk>

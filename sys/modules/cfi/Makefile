@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cfi/Makefile 229032 2011-12-30 21:22:10Z marius $
+# $FreeBSD: stable/11/sys/modules/cfi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/cfi
+.PATH: ${SRCTOP}/sys/dev/cfi
 
 KMOD=   cfi
 SRCS=   ${_cfi_bus} cfi_core.c cfi_dev.c

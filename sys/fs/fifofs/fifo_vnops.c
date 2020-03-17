@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1995
  *	The Regents of the University of California.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fifo_vnops.c	8.10 (Berkeley) 5/27/95
- * $FreeBSD: stable/10/sys/fs/fifofs/fifo_vnops.c 288282 2015-09-27 01:06:45Z kib $
+ * $FreeBSD: stable/11/sys/fs/fifofs/fifo_vnops.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -72,7 +71,6 @@ struct fifoinfo {
 static vop_print_t	fifo_print;
 static vop_open_t	fifo_open;
 static vop_close_t	fifo_close;
-static vop_pathconf_t	fifo_pathconf;
 static vop_advlock_t	fifo_advlock;
 
 struct vop_vector fifo_specops = {
@@ -88,7 +86,7 @@ struct vop_vector fifo_specops = {
 	.vop_mkdir =		VOP_PANIC,
 	.vop_mknod =		VOP_PANIC,
 	.vop_open =		fifo_open,
-	.vop_pathconf =		fifo_pathconf,
+	.vop_pathconf =		VOP_PANIC,
 	.vop_print =		fifo_print,
 	.vop_read =		VOP_PANIC,
 	.vop_readdir =		VOP_PANIC,
@@ -195,11 +193,10 @@ fifo_open(ap)
 		if ((ap->a_mode & FREAD) && fip->fi_writers == 0) {
 			gen = fip->fi_wgen;
 			VOP_UNLOCK(vp, 0);
-			stops_deferred = sigallowstop();
+			stops_deferred = sigdeferstop(SIGDEFERSTOP_OFF);
 			error = msleep(&fip->fi_readers, PIPE_MTX(fpipe),
 			    PDROP | PCATCH | PSOCK, "fifoor", 0);
-			if (stops_deferred)
-				sigdeferstop();
+			sigallowstop(stops_deferred);
 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 			if (error != 0 && gen == fip->fi_wgen) {
 				fip->fi_readers--;
@@ -223,11 +220,10 @@ fifo_open(ap)
 		if ((ap->a_mode & FWRITE) && fip->fi_readers == 0) {
 			gen = fip->fi_rgen;
 			VOP_UNLOCK(vp, 0);
-			stops_deferred = sigallowstop();
+			stops_deferred = sigdeferstop(SIGDEFERSTOP_OFF);
 			error = msleep(&fip->fi_writers, PIPE_MTX(fpipe),
 			    PDROP | PCATCH | PSOCK, "fifoow", 0);
-			if (stops_deferred)
-				sigdeferstop();
+			sigallowstop(stops_deferred);
 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 			if (error != 0 && gen == fip->fi_rgen) {
 				fip->fi_writers--;
@@ -316,7 +312,7 @@ int
 fifo_printinfo(vp)
 	struct vnode *vp;
 {
-	register struct fifoinfo *fip = vp->v_fifoinfo;
+	struct fifoinfo *fip = vp->v_fifoinfo;
 
 	if (fip == NULL){
 		printf(", NULL v_fifoinfo");
@@ -340,34 +336,6 @@ fifo_print(ap)
 	fifo_printinfo(ap->a_vp);
 	printf("\n");
 	return (0);
-}
-
-/*
- * Return POSIX pathconf information applicable to fifo's.
- */
-static int
-fifo_pathconf(ap)
-	struct vop_pathconf_args /* {
-		struct vnode *a_vp;
-		int a_name;
-		int *a_retval;
-	} */ *ap;
-{
-
-	switch (ap->a_name) {
-	case _PC_LINK_MAX:
-		*ap->a_retval = LINK_MAX;
-		return (0);
-	case _PC_PIPE_BUF:
-		*ap->a_retval = PIPE_BUF;
-		return (0);
-	case _PC_CHOWN_RESTRICTED:
-		*ap->a_retval = 1;
-		return (0);
-	default:
-		return (EINVAL);
-	}
-	/* NOTREACHED */
 }
 
 /*

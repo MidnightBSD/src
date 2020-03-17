@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_journal/Makefile 163850 2006-10-31 22:21:47Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_journal/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/journal
+.PATH: ${SRCTOP}/sys/geom/journal
 
 KMOD=	geom_journal
 SRCS=	g_journal.c

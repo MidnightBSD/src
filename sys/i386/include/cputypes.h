@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
@@ -25,11 +24,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/cputypes.h 185341 2008-11-26 19:25:13Z jkim $
+ * $FreeBSD: stable/11/sys/i386/include/cputypes.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_CPUTYPES_H_
 #define	_MACHINE_CPUTYPES_H_
+
+#include <x86/cputypes.h>
 
 /*
  * Classes of processor.
@@ -61,22 +62,6 @@
 #define	CPU_PIII		15	/* Intel Pentium III */
 #define	CPU_P4			16	/* Intel Pentium 4 */
 #define	CPU_GEODE1100		17	/* NS Geode SC1100 */
-
-/*
- * Vendors of processor.
- */
-#define	CPU_VENDOR_NSC		0x100b		/* NSC */
-#define	CPU_VENDOR_IBM		0x1014		/* IBM */
-#define	CPU_VENDOR_AMD		0x1022		/* AMD */
-#define	CPU_VENDOR_SIS		0x1039		/* SiS */
-#define	CPU_VENDOR_UMC		0x1060		/* UMC */
-#define	CPU_VENDOR_NEXGEN	0x1074		/* Nexgen */
-#define	CPU_VENDOR_CYRIX	0x1078		/* Cyrix */
-#define	CPU_VENDOR_IDT		0x111d		/* Centaur/IDT/VIA */
-#define	CPU_VENDOR_TRANSMETA	0x1279		/* Transmeta */
-#define	CPU_VENDOR_INTEL	0x8086		/* Intel */
-#define	CPU_VENDOR_RISE		0xdead2bad	/* Rise */
-#define	CPU_VENDOR_CENTAUR	CPU_VENDOR_IDT
 
 #ifndef LOCORE
 extern int	cpu;

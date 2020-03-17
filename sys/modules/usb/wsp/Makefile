@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/wsp/Makefile 261260 2014-01-29 10:42:01Z hselasky $
+# $FreeBSD: stable/11/sys/modules/usb/wsp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2012 Huang Wen Hui. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/input
 

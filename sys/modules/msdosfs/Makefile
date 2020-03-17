@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/msdosfs/Makefile 166383 2007-02-01 04:21:03Z avatar $
+# $FreeBSD: stable/11/sys/modules/msdosfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/msdosfs
+.PATH: ${SRCTOP}/sys/fs/msdosfs
 
 KMOD=	msdosfs
 SRCS=	vnode_if.h \

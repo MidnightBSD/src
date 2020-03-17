@@ -1,9 +1,8 @@
-# $MidnightBSD$
 # Makefile for mrsas driver
-# $FreeBSD: stable/10/sys/modules/mrsas/Makefile 275976 2014-12-21 02:35:22Z smh $
+# $FreeBSD: stable/11/sys/modules/mrsas/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 KMOD=mrsas
-.PATH: ${.CURDIR}/../../dev/${KMOD}
+.PATH: ${SRCTOP}/sys/dev/${KMOD}
 
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 SUBDIR+= mrsas_linux
@@ -28,4 +27,3 @@ cscope:	clean_cscope
 	/usr/local/bin/cscope -b *.[ch]
 
 cleanall:	clean clean_cscope
-	rm -f '@' machine

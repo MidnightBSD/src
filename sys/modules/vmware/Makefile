@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/vmware/Makefile 254738 2013-08-23 20:47:16Z bryanv $
+# $FreeBSD: stable/11/sys/modules/vmware/Makefile 254738 2013-08-23 20:47:16Z bryanv $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

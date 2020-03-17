@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/syscons/rain/Makefile 106759 2002-11-11 10:07:18Z mux $
+# $FreeBSD: stable/11/sys/modules/syscons/rain/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/syscons/rain
+.PATH:	${SRCTOP}/sys/dev/syscons/rain
 
 KMOD=	rain_saver
 SRCS=	rain_saver.c

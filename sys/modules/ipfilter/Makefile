@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ipfilter/Makefile 260274 2014-01-04 18:33:28Z dim $ 
+# $FreeBSD: stable/11/sys/modules/ipfilter/Makefile 348825 2019-06-09 02:32:52Z cy $
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../contrib/ipfilter/netinet
+.PATH: ${SRCTOP}/sys/contrib/ipfilter/netinet
 
 KMOD=	ipl
 SRCS=	mlfk_ipl.c ip_nat.c ip_frag.c ip_state.c ip_proxy.c ip_auth.c \
@@ -12,16 +9,7 @@ SRCS=	mlfk_ipl.c ip_nat.c ip_frag.c ip_state.c ip_proxy.c ip_auth.c \
 	ip_nat6.c ip_rules.c ip_scan.c ip_dstlist.c radix_ipf.c
 SRCS+=	opt_bpf.h opt_inet6.h
 
-.if !defined(KERNBUILDDIR)
-opt_bpf.h:
-	echo "#define DEV_BPF 1" > ${.TARGET}
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
-CFLAGS+=  -I${.CURDIR}/../../contrib/ipfilter
+CFLAGS+= -I${SRCTOP}/sys/contrib/ipfilter
 CFLAGS+= -DIPFILTER=1 -DIPFILTER_LKM -DIPFILTER_LOG -DIPFILTER_LOOKUP
 #
 # If you don't want log functionality remove -DIPFILTER_LOG
@@ -43,4 +31,3 @@ CWARNFLAGS.ip_proxy.c=		${NO_WSELF_ASSIGN} -Wno-unused
 CWARNFLAGS.ip_scan.c=		-Wno-unused
 CWARNFLAGS.ip_state.c=		-Wno-unused
 CWARNFLAGS.ip_sync.c=		-Wno-unused
-CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

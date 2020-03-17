@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996,1999 by Internet Software Consortium.
@@ -20,7 +19,7 @@
 static const char rcsid[] = "$Id: inet_pton.c,v 1.3.18.2 2005/07/28 07:38:07 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/inet_pton.c 213103 2010-09-24 15:01:45Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/inet_pton.c 213103 2010-09-24 15:01:45Z attilio $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

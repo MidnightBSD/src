@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/hda/Makefile 230130 2012-01-15 13:21:36Z mav $
+# $FreeBSD: stable/11/sys/modules/sound/driver/hda/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci/hda
+.PATH: ${SRCTOP}/sys/dev/sound/pci/hda
 
 KMOD=	snd_hda
 SRCS=	device_if.h bus_if.h pci_if.h channel_if.h mixer_if.h hdac_if.h

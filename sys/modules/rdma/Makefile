@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/rdma/Makefile 256820 2013-10-21 01:15:05Z np $
+# $FreeBSD: stable/11/sys/modules/rdma/Makefile 256467 2013-10-14 22:39:08Z np $
 
 SUBDIR+= krping
 

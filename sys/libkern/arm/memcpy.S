@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2013 Andrew Turner
  * All rights reserved.
@@ -27,13 +26,12 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/arm/memcpy.S 248367 2013-03-16 04:08:01Z andrew $");
-
-#ifdef __ARM_EABI__
+__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/memcpy.S 285338 2015-07-09 21:02:40Z andrew $");
 
 ENTRY_NP(__aeabi_memcpy)
+EENTRY_NP(__aeabi_memcpy4)
+EENTRY_NP(__aeabi_memcpy8)
 	b	memcpy
+EEND(__aeabi_memcpy8)
+EEND(__aeabi_memcpy4)
 END(__aeabi_memcpy)
-
-#endif
-

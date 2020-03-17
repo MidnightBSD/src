@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #/*
 # * Copyright (c) 2017-2018 Cavium, Inc.
 # * All rights reserved.
@@ -30,10 +29,13 @@
 # * Author : David C Somayajulu, Cavium, Inc., San Jose, CA 95131.
 # */
 #
-# $FreeBSD: stable/10/sys/modules/qlnx/Makefile 316485 2017-04-04 06:16:59Z davidcs $
+# $FreeBSD: stable/11/sys/modules/qlnx/Makefile 337517 2018-08-09 01:17:35Z davidcs $
 #
 
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
 SUBDIR=qlnxe
+SUBDIR+=qlnxev
 
 .include <bsd.subdir.mk>

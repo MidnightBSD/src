@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/i2c/iic/Makefile 93023 2002-03-23 15:49:15Z nsouch $
+# $FreeBSD: stable/11/sys/modules/i2c/iic/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:		${.CURDIR}/../../../dev/iicbus
+.PATH:		${SRCTOP}/sys/dev/iicbus
 KMOD		= iic
 SRCS		= device_if.h bus_if.h iicbus_if.h \
 		  iic.c

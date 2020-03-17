@@ -1,9 +1,8 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/cxgbe/if_cxl/Makefile 278303 2015-02-06 01:10:04Z np $
+# $FreeBSD: stable/11/sys/modules/cxgbe/if_cxl/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-CXGBE=	${.CURDIR}/../../../dev/cxgbe
+CXGBE=	${SRCTOP}/sys/dev/cxgbe
 .PATH: ${CXGBE}
 
 KMOD=	if_cxl

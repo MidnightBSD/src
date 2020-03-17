@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/if_ndis/Makefile 189488 2009-03-07 07:26:22Z weongyo $
+# $FreeBSD: stable/11/sys/modules/if_ndis/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/if_ndis
+.PATH: ${SRCTOP}/sys/dev/if_ndis
 
 KMOD=	if_ndis
 SRCS=	if_ndis.c if_ndis_pci.c if_ndis_pccard.c if_ndis_usb.c

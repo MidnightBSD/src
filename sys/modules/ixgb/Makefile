@@ -1,7 +1,6 @@
-# $MidnightBSD$
-#$FreeBSD: stable/10/sys/modules/ixgb/Makefile 150636 2005-09-27 18:10:43Z mlaier $
+#$FreeBSD: stable/11/sys/modules/ixgb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/ixgb
+.PATH: ${SRCTOP}/sys/dev/ixgb
 
 KMOD=	if_ixgb
 SRCS=	if_ixgb.c ixgb_hw.c ixgb_ee.c

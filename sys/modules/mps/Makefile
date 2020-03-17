@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mps/Makefile 239462 2012-08-20 18:33:03Z dim $
+# $FreeBSD: stable/11/sys/modules/mps/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mps
+.PATH: ${SRCTOP}/sys/dev/mps
 
 KMOD=	mps
 SRCS=	mps_pci.c mps.c mps_sas.c mps_table.c mps_user.c
@@ -16,4 +15,3 @@ SRCS+=	device_if.h bus_if.h pci_if.h
 CWARNFLAGS.mps_sas.c=		${NO_WUNNEEDED_INTERNAL_DECL}
 # XXX Work around clang warning, until maintainer approves fix.
 CWARNFLAGS.mps_mapping.c=	${NO_WSOMETIMES_UNINITIALIZED}
-CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

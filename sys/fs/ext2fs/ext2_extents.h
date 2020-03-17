@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012, 2010 Zheng Liu <lz@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_extents.h 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_extents.h 311231 2017-01-04 02:42:17Z pfg $
  */
 #ifndef _FS_EXT2FS_EXT2_EXTENTS_H_
 #define	_FS_EXT2FS_EXT2_EXTENTS_H_
@@ -41,10 +40,10 @@
  * Ext4 file system extent on disk.
  */
 struct ext4_extent {
-	uint32_t e_blk;	/* first logical block */
-	uint16_t e_len;	/* number of blocks */
-	uint16_t e_start_hi;	/* high 16 bits of physical block */
-	uint32_t e_start_lo;	/* low 32 bits of physical block */
+	uint32_t e_blk;			/* first logical block */
+	uint16_t e_len;			/* number of blocks */
+	uint16_t e_start_hi;		/* high 16 bits of physical block */
+	uint32_t e_start_lo;		/* low 32 bits of physical block */
 };
 
 /*
@@ -85,7 +84,11 @@ struct ext4_extent_cache {
 struct ext4_extent_path {
 	uint16_t ep_depth;
 	struct buf *ep_bp;
-	struct ext4_extent *ep_ext;
+	bool	ep_is_sparse;
+	union {
+		struct ext4_extent ep_sparse_ext;
+		struct ext4_extent *ep_ext;
+	};
 	struct ext4_extent_index *ep_index;
 	struct ext4_extent_header *ep_header;
 };

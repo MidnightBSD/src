@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/bf/bf_ecb.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -58,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/blowfish/bf_ecb.c 121072 2003-10-13 19:26:08Z ume $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/blowfish/bf_ecb.c 121072 2003-10-13 19:26:08Z ume $");
 
 #include <sys/types.h>
 #include <crypto/blowfish/blowfish.h>

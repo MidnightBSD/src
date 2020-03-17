@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * APM (Advanced Power Management) BIOS Device Driver
  *
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/bios/apm.c 241885 2012-10-22 13:06:09Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/bios/apm.c 267992 2014-06-28 03:56:17Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -135,8 +134,7 @@ SYSCTL_INT(_machdep, OID_AUTO, apm_suspend_delay, CTLFLAG_RW, &apm_suspend_delay
 SYSCTL_INT(_machdep, OID_AUTO, apm_standby_delay, CTLFLAG_RW, &apm_standby_delay, 1, "");
 SYSCTL_INT(_debug, OID_AUTO, apm_debug, CTLFLAG_RW, &apm_debug, 0, "");
 
-TUNABLE_INT("machdep.apm_swab_batt_minutes", &apm_swab_batt_minutes);
-SYSCTL_INT(_machdep, OID_AUTO, apm_swab_batt_minutes, CTLFLAG_RW,
+SYSCTL_INT(_machdep, OID_AUTO, apm_swab_batt_minutes, CTLFLAG_RWTUN,
 	   &apm_swab_batt_minutes, 0, "Byte swap battery time value.");
 
 #ifdef PC98

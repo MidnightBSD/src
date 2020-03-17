@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfs/nfsrvstate.h 299222 2016-05-07 20:09:15Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfs/nfsrvstate.h 298788 2016-04-29 16:07:25Z pfg $
  */
 
 #ifndef _NFS_NFSRVSTATE_H_
@@ -77,7 +76,7 @@ struct nfssessionhash {
  * Client server structure for V4. It is doubly linked into two lists.
  * The first is a hash table based on the clientid and the second is a
  * list of all clients maintained in LRU order.
- * The actual size malloc'd is large enough to accomodate the id string.
+ * The actual size malloc'd is large enough to accommodate the id string.
  */
 struct nfsclient {
 	LIST_ENTRY(nfsclient) lc_hash;		/* Clientid hash list */

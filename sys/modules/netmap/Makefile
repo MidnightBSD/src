@@ -1,14 +1,16 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netmap/Makefile 272648 2014-10-06 14:39:45Z luigi $
+# $FreeBSD: stable/11/sys/modules/netmap/Makefile 342033 2018-12-13 10:13:29Z vmaffione $
 #
 # Compile netmap as a module, useful if you want a netmap bridge
 # or loadable drivers.
 
+.include <bsd.own.mk> # FreeBSD 10 and earlier
+# .include "${SYSDIR}/conf/kern.opts.mk"
+
 .PATH: ${.CURDIR}/../../dev/netmap
 .PATH.h: ${.CURDIR}/../../net
-CFLAGS += -I${.CURDIR}/../../
+CFLAGS += -I${.CURDIR}/../../ -D INET
 KMOD	= netmap
-SRCS	= device_if.h bus_if.h opt_netmap.h
+SRCS	= device_if.h bus_if.h pci_if.h opt_netmap.h
 SRCS	+= netmap.c netmap.h netmap_kern.h
 SRCS	+= netmap_mem2.c netmap_mem2.h
 SRCS	+= netmap_generic.c
@@ -18,5 +20,10 @@ SRCS	+= netmap_freebsd.c
 SRCS	+= netmap_offloadings.c
 SRCS	+= netmap_pipe.c
 SRCS	+= netmap_monitor.c
+SRCS	+= netmap_kloop.c
+SRCS	+= netmap_legacy.c
+SRCS	+= netmap_bdg.c
+SRCS	+= netmap_null.c
+SRCS	+= opt_inet.h opt_inet6.h
 
 .include <bsd.kmod.mk>

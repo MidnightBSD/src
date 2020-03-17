@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mcd/Makefile 112806 2003-03-29 16:13:11Z mdodd $
+# $FreeBSD: stable/11/sys/modules/mcd/Makefile 112806 2003-03-29 16:13:11Z mdodd $
 
 .PATH: ${.CURDIR}/../../dev/mcd
 

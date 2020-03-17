@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/if_gif.c 293411 2016-01-08 02:59:56Z araujo $");
+__FBSDID("$FreeBSD: stable/11/sys/net/if_gif.c 338937 2018-09-25 23:33:30Z jpaetzel $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -149,7 +148,7 @@ static SYSCTL_NODE(_net_link, IFT_GIF, gif, CTLFLAG_RW, 0,
 #endif
 static VNET_DEFINE(int, max_gif_nesting) = MAX_GIF_NEST;
 #define	V_max_gif_nesting	VNET(max_gif_nesting)
-SYSCTL_VNET_INT(_net_link_gif, OID_AUTO, max_nesting, CTLFLAG_RW,
+SYSCTL_INT(_net_link_gif, OID_AUTO, max_nesting, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(max_gif_nesting), 0, "Max nested tunnels");
 
 /*
@@ -163,16 +162,9 @@ static VNET_DEFINE(int, parallel_tunnels) = 1;
 static VNET_DEFINE(int, parallel_tunnels) = 0;
 #endif
 #define	V_parallel_tunnels	VNET(parallel_tunnels)
-SYSCTL_VNET_INT(_net_link_gif, OID_AUTO, parallel_tunnels, CTLFLAG_RW,
-    &VNET_NAME(parallel_tunnels), 0, "Allow parallel tunnels?");
-
-/* copy from src/sys/net/if_ethersubr.c */
-static const u_char etherbroadcastaddr[ETHER_ADDR_LEN] =
-			{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-#ifndef ETHER_IS_BROADCAST
-#define ETHER_IS_BROADCAST(addr) \
-	(bcmp(etherbroadcastaddr, (addr), ETHER_ADDR_LEN) == 0)
-#endif
+SYSCTL_INT(_net_link_gif, OID_AUTO, parallel_tunnels,
+    CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(parallel_tunnels), 0,
+    "Allow parallel tunnels?");
 
 static int
 gif_clone_create(struct if_clone *ifc, int unit, caddr_t params)
@@ -282,9 +274,9 @@ int
 gif_encapcheck(const struct mbuf *m, int off, int proto, void *arg)
 {
 	GIF_RLOCK_TRACKER;
+	const struct ip *ip;
 	struct gif_softc *sc;
 	int ret;
-	uint8_t ver;
 
 	sc = (struct gif_softc *)arg;
 	if (sc == NULL || (GIF2IFP(sc)->if_flags & IFF_UP) == 0)
@@ -311,11 +303,12 @@ gif_encapcheck(const struct mbuf *m, int off, int proto, void *arg)
 	}
 
 	/* Bail on short packets */
+	M_ASSERTPKTHDR(m);
 	if (m->m_pkthdr.len < sizeof(struct ip))
 		goto done;
 
-	m_copydata(m, 0, 1, &ver);
-	switch (ver >> 4) {
+	ip = mtod(m, const struct ip *);
+	switch (ip->ip_v) {
 #ifdef INET
 	case 4:
 		if (sc->gif_family != AF_INET)
@@ -476,7 +469,7 @@ gif_check_nesting(struct ifnet *ifp, struct mbuf *m)
 	mtag = NULL;
 	while ((mtag = m_tag_locate(m, MTAG_GIF, 0, mtag)) != NULL) {
 		if (*(struct ifnet **)(mtag + 1) == ifp) {
-			log(LOG_NOTICE, "%s: loop detected\n", ifp->if_xname);
+			log(LOG_NOTICE, "%s: loop detected\n", if_name(ifp));
 			return (EIO);
 		}
 		count++;
@@ -905,12 +898,14 @@ gif_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		break;
 	case GIFGOPTS:
 		options = sc->gif_options;
-		error = copyout(&options, ifr->ifr_data, sizeof(options));
+		error = copyout(&options, ifr_data_get_ptr(ifr),
+		    sizeof(options));
 		break;
 	case GIFSOPTS:
 		if ((error = priv_check(curthread, PRIV_NET_GIF)) != 0)
 			break;
-		error = copyin(ifr->ifr_data, &options, sizeof(options));
+		error = copyin(ifr_data_get_ptr(ifr), &options,
+		    sizeof(options));
 		if (error)
 			break;
 		if (options & ~GIF_OPTMASK)
@@ -1022,7 +1017,7 @@ gif_set_tunnel(struct ifnet *ifp, struct sockaddr *src, struct sockaddr *dst)
 #endif
 	default:
 		return (EAFNOSUPPORT);
-	};
+	}
 
 	if (sc->gif_family != src->sa_family)
 		gif_detach(sc);

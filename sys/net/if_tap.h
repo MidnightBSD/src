@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1999-2000 by Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/net/if_tap.h 182880 2008-09-08 22:43:55Z emax $
+ * $FreeBSD: stable/11/sys/net/if_tap.h 182880 2008-09-08 22:43:55Z emax $
  * $Id: if_tap.h,v 0.7 2000/07/12 04:12:51 max Exp $
  */
 

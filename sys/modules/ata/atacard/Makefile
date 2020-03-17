@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ata/atacard/Makefile 249213 2013-04-06 19:12:49Z marius $
+# $FreeBSD: stable/11/sys/modules/ata/atacard/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/ata
+.PATH: ${SRCTOP}/sys/dev/ata
 
 KMOD=	atacard
 SRCS=	ata-card.c

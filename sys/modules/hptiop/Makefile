@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hptiop/Makefile 169412 2007-05-09 07:07:26Z scottl $
+# $FreeBSD: stable/11/sys/modules/hptiop/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/hptiop
+.PATH: ${SRCTOP}/sys/dev/hptiop
 
 KMOD=	hptiop
 SRCS=	hptiop.c

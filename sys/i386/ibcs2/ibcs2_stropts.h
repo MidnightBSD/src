@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ibcs2_stropts.h
  * Copyright (c) 1995 Scott Bartram
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_stropts.h 139799 2005-01-06 23:22:04Z imp $
+ * $FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_stropts.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _IBCS2_STROPTS_H

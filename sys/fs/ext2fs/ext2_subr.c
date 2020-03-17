@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  modified for Lites 1.1
  *
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_subr.c	8.2 (Berkeley) 9/21/93
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_subr.c 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_subr.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -54,10 +53,6 @@
 #include <fs/ext2fs/ext2_extents.h>
 #include <fs/ext2fs/ext2_mount.h>
 #include <fs/ext2fs/ext2_dinode.h>
-
-#ifdef KDB
-void	ext2_checkoverlap(struct buf *, struct inode *);
-#endif
 
 /*
  * Return buffer with the contents of block "offset" from the beginning of
@@ -130,34 +125,6 @@ normal:
 	}
 	return (0);
 }
-
-#ifdef KDB
-void
-ext2_checkoverlap(struct buf *bp, struct inode *ip)
-{
-	struct buf *ebp, *ep;
-	e4fs_daddr_t start, last;
-	struct vnode *vp;
-
-	ebp = &buf[nbuf];
-	start = bp->b_blkno;
-	last = start + btodb(bp->b_bcount) - 1;
-	for (ep = buf; ep < ebp; ep++) {
-		if (ep == bp || (ep->b_flags & B_INVAL))
-			continue;
-		vp = ip->i_ump->um_devvp;
-		/* look for overlap */
-		if (ep->b_bcount == 0 || ep->b_blkno > last ||
-		    ep->b_blkno + btodb(ep->b_bcount) <= start)
-			continue;
-		vprint("Disk overlap", vp);
-		printf("\tstart %jd, end %jd overlap start %jd, end %jd\n",
-		    (intmax_t)start, (intmax_t)last, (intmax_t)ep->b_blkno,
-		    (intmax_t)(ep->b_blkno + btodb(ep->b_bcount) - 1));
-		panic("ext2_checkoverlap: Disk buffer overlap");
-	}
-}
-#endif /* KDB */
 
 /*
  * Update the cluster map because of an allocation of free like ffs.

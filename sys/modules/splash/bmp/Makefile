@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/splash/bmp/Makefile 133226 2004-08-06 20:37:08Z des $
+# $FreeBSD: stable/11/sys/modules/splash/bmp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/fb
+.PATH:	${SRCTOP}/sys/dev/fb
 
 KMOD=	splash_bmp
 SRCS= 	splash_bmp.c

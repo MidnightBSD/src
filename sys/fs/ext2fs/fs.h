@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  modified for EXT2FS support in Lites 1.1
  *
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fs.h	8.7 (Berkeley) 4/19/94
- * $FreeBSD: stable/10/sys/fs/ext2fs/fs.h 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/fs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FS_EXT2FS_FS_H_

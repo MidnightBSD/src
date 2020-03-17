@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/cmi/Makefile 158979 2006-05-27 16:32:05Z netchild $
+# $FreeBSD: stable/11/sys/modules/sound/driver/cmi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_cmi
 SRCS=	device_if.h bus_if.h pci_if.h

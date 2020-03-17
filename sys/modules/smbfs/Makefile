@@ -1,18 +1,16 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/smbfs/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD: stable/11/sys/modules/smbfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../crypto/des \
-	${.CURDIR}/../../crypto/des/arch/${MACHINE_CPUARCH} \
-	${.CURDIR}/../../kern \
-	${.CURDIR}/../../libkern \
-	${.CURDIR}/../../netsmb \
-	${.CURDIR}/../../fs/smbfs
+.PATH:	${SRCTOP}/sys/crypto/des \
+	${SRCTOP}/sys/crypto/des/arch/${MACHINE_CPUARCH} \
+	${SRCTOP}/sys/kern \
+	${SRCTOP}/sys/libkern \
+	${SRCTOP}/sys/netsmb \
+	${SRCTOP}/sys/fs/smbfs
 
 KMOD=	smbfs
 
 SRCS=	vnode_if.h \
-	opt_inet.h opt_ipx.h \
-	opt_netsmb.h \
+	opt_inet.h opt_netsmb.h \
 	iconv_converter_if.h \
 	md4c.c \
 	smb_conn.c smb_dev.c smb_trantcp.c smb_smb.c smb_subr.c smb_rq.c \
@@ -28,28 +26,10 @@ SRCS+=	des_enc.S
 SRCS+=	des_enc.c
 .endif
 
-# Build with IPX support (1|0)
-SMB_IPX?=	0
-
-# Build with INET support (1|0)
-SMB_INET?=	1
-
 CFLAGS+= ${KDEBUG}
 
 .if defined(VNPRINT)
 CFLAGS+= -DVNPRINT
-.endif
-
-.if !defined(KERNBUILDDIR)
-.if ${SMB_INET} > 0
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${SMB_IPX} > 0
-opt_ipx.h:
-	echo "#define IPX 1" > ${.TARGET}
-.endif
 .endif
 
 .include <bsd.kmod.mk>

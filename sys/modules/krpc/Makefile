@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/krpc/Makefile 269398 2014-08-01 21:10:41Z rmacklem $
+# $FreeBSD: stable/11/sys/modules/krpc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../rpc ${.CURDIR}/../../xdr
+.PATH: ${SRCTOP}/sys/rpc ${SRCTOP}/sys/xdr
 KMOD=	krpc
 SRCS=	auth_none.c \
 	auth_unix.c \
@@ -32,14 +31,5 @@ SRCS+=	xdr.c \
 	xdr_sizeof.c
 
 SRCS+=	opt_inet6.h
-
-.if !defined(KERNBUILDDIR)
-NFS_INET6?=	1	# 0/1 - requires INET6 to be configured in kernel
-
-.if ${NFS_INET6} > 0
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/usb/rsu/Makefile 253789 2013-07-30 02:07:57Z rpaulo $
+# $FreeBSD: stable/11/sys/modules/usb/rsu/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/usb/wlan
+.PATH: ${SRCTOP}/sys/dev/usb/wlan
 
 KMOD    = if_rsu
 SRCS    = if_rsu.c if_rsureg.h \
 	  bus_if.h device_if.h \
-	  opt_bus.h opt_usb.h usb_if.h usbdevs.h
+	  opt_bus.h opt_usb.h opt_wlan.h usb_if.h usbdevs.h
 
 .include <bsd.kmod.mk>

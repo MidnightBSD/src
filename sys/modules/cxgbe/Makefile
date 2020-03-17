@@ -1,7 +1,9 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/cxgbe/Makefile 309560 2016-12-05 20:43:25Z jhb $
+# $FreeBSD: stable/11/sys/modules/cxgbe/Makefile 345040 2019-03-11 23:16:10Z jhb $
 #
+
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
 SUBDIR=	if_cxgbe
 SUBDIR+=	if_cxl
@@ -14,15 +16,19 @@ SUBDIR+=	t5_firmware
 SUBDIR+=	t6_firmware
 SUBDIR+=	${_tom}
 SUBDIR+=	${_iw_cxgbe}
+SUBDIR+=	${_cxgbei}
+SUBDIR+=	ccr
 
 .if ${MACHINE_CPUARCH} == "amd64"
 _tom=	tom
+_cxgbei=	cxgbei
+.if ${MK_OFED} != "no" || defined(ALL_MODULES)
 _iw_cxgbe=	iw_cxgbe
+.endif
 .endif
 
 .if ${MACHINE_CPUARCH} == "i386"
 _tom=	tom
 .endif
-
 
 .include <bsd.subdir.mk>

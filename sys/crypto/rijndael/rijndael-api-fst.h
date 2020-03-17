@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/crypto/rijndael/rijndael-api-fst.h 143420 2005-03-11 16:26:10Z ume $	*/
+/*	$FreeBSD: stable/11/sys/crypto/rijndael/rijndael-api-fst.h 274341 2014-11-10 09:55:35Z des $	*/
 /*	$KAME: rijndael-api-fst.h,v 1.6 2001/05/27 00:23:23 itojun Exp $	*/
 
 /*
@@ -57,18 +56,18 @@ typedef struct {                    /* changed order of the components */
 
 /*  Function prototypes  */
 
-int rijndael_makeKey(keyInstance *, u_int8_t, int, char *);
+int rijndael_makeKey(keyInstance *, u_int8_t, int, const char *);
 
 int rijndael_cipherInit(cipherInstance *, u_int8_t, char *);
 
-int rijndael_blockEncrypt(cipherInstance *, keyInstance *, u_int8_t *, int,
-	u_int8_t *);
-int rijndael_padEncrypt(cipherInstance *, keyInstance *, u_int8_t *, int,
-	u_int8_t *);
+int rijndael_blockEncrypt(cipherInstance *, keyInstance *, const u_int8_t *,
+	int, u_int8_t *);
+int rijndael_padEncrypt(cipherInstance *, keyInstance *, const u_int8_t *,
+	int, u_int8_t *);
 
-int rijndael_blockDecrypt(cipherInstance *, keyInstance *, u_int8_t *, int,
-	u_int8_t *);
-int rijndael_padDecrypt(cipherInstance *, keyInstance *, u_int8_t *, int,
-	u_int8_t *);
+int rijndael_blockDecrypt(cipherInstance *, keyInstance *, const u_int8_t *,
+	int, u_int8_t *);
+int rijndael_padDecrypt(cipherInstance *, keyInstance *, const u_int8_t *,
+	int, u_int8_t *);
 
 #endif /*  __RIJNDAEL_API_FST_H */

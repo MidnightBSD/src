@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfs/nfsclstate.h 325407 2017-11-04 21:30:27Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfs/nfsclstate.h 324997 2017-10-25 19:27:12Z rmacklem $
  */
 
 #ifndef _NFS_NFSCLSTATE_H_

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_vinum/Makefile 190507 2009-03-28 17:20:08Z lulf $
+# $FreeBSD: stable/11/sys/modules/geom/geom_vinum/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/vinum
+.PATH: ${SRCTOP}/sys/geom/vinum
 
 KMOD=	geom_vinum
 SRCS=	geom_vinum.c geom_vinum_create.c geom_vinum_drive.c geom_vinum_plex.c \

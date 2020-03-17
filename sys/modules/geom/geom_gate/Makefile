@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_gate/Makefile 128761 2004-04-30 16:09:28Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_gate/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/gate
+.PATH: ${SRCTOP}/sys/geom/gate
 
 KMOD=	geom_gate
 SRCS=	g_gate.c

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_map/Makefile 284152 2015-06-08 13:23:56Z ae $
+# $FreeBSD: stable/11/sys/modules/geom/geom_map/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom
+.PATH: ${SRCTOP}/sys/geom
 
 KMOD=	geom_map
 SRCS=	geom_map.c bus_if.h device_if.h

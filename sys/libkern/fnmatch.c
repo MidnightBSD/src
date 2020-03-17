@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/fnmatch.c 229272 2012-01-02 12:12:10Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/fnmatch.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.

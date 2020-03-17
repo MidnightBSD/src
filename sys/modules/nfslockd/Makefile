@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nfslockd/Makefile 197730 2009-10-03 12:22:12Z nyan $
+# $FreeBSD: stable/11/sys/modules/nfslockd/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../nlm ${.CURDIR}/../../rpc
+.PATH: ${SRCTOP}/sys/nlm ${SRCTOP}/sys/rpc
 KMOD=	nfslockd
 SRCS=	vnode_if.h \
 	nlm_advlock.c \
@@ -12,15 +11,5 @@ SRCS=	vnode_if.h \
 	nlm_prot_xdr.c \
 	sm_inter_xdr.c
 SRCS+=	opt_inet6.h opt_nfs.h
-
-.if !defined(KERNBUILDDIR)
-NFS_INET6?=	1	# 0/1 - requires INET6 to be configured in kernel
-
-.if ${NFS_INET6} > 0
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-
-.endif
 
 .include <bsd.kmod.mk>

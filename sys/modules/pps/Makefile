@@ -1,8 +1,7 @@
-# $MidnightBSD$
 
-# $FreeBSD: stable/10/sys/modules/pps/Makefile 122894 2003-11-19 05:08:27Z imp $
+# $FreeBSD: stable/11/sys/modules/pps/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/ppbus
+.PATH:	${SRCTOP}/sys/dev/ppbus
 KMOD=	pps
 SRCS=	bus_if.h device_if.h ppbus_if.h \
 	pps.c

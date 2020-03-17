@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ufs/Makefile 267494 2014-06-15 05:15:38Z kib $
+# $FreeBSD: stable/11/sys/modules/ufs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../ufs/ufs ${.CURDIR}/../../ufs/ffs
+.PATH:	${SRCTOP}/sys/ufs/ufs ${SRCTOP}/sys/ufs/ffs
 
 KMOD=	ufs
 SRCS=	opt_ddb.h opt_directio.h opt_ffs.h opt_quota.h opt_suiddir.h opt_ufs.h \

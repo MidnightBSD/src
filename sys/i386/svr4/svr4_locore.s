@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 #include "svr4_assym.h"			/* system definitions */
 #include <machine/asmacros.h>		/* miscellaneous asm macros */
 
 #include <compat/svr4/svr4_syscall.h>		/* system call numbers */
 
-/* $FreeBSD: stable/10/sys/i386/svr4/svr4_locore.s 187948 2009-01-31 11:37:21Z obrien $ */
+/* $FreeBSD: stable/11/sys/i386/svr4/svr4_locore.s 187948 2009-01-31 11:37:21Z obrien $ */
 	
 NON_GPROF_ENTRY(svr4_sigcode)
 	call	*SVR4_SIGF_HANDLER(%esp)

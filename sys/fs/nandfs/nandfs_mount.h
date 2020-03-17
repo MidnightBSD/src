@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Reinoud Zandijk
  * All rights reserved.
@@ -32,7 +31,7 @@
  *
  * From: NetBSD: nilfs_mount.h,v 1.1 2009/07/18 16:31:42 reinoud
  *
- * $FreeBSD: stable/10/sys/fs/nandfs/nandfs_mount.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/sys/fs/nandfs/nandfs_mount.h 235537 2012-05-17 10:11:18Z gber $
  */
 
 #ifndef _FS_NANDFS_NANDFS_MOUNT_H_

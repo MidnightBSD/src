@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cpsw/Makefile 239281 2012-08-15 06:31:32Z gonzo $
+# $FreeBSD: stable/11/sys/modules/cpsw/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../arm/ti/cpsw
+.PATH: ${SRCTOP}/sys/arm/ti/cpsw
 
 KMOD=   if_cpsw
 SRCS=   if_cpsw.c device_if.h bus_if.h ofw_bus_if.h miibus_if.h

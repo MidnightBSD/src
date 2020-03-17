@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_pc98/Makefile 115479 2003-05-31 18:36:41Z phk $
+# $FreeBSD: stable/11/sys/modules/geom/geom_pc98/Makefile 115479 2003-05-31 18:36:41Z phk $
 
 .PATH: ${.CURDIR}/../../../geom
 

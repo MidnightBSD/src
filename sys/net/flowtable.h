@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Gleb Smirnoff <glebius@FreeBSD.org>
  * Copyright (c) 2008-2010, BitGravity Inc.
@@ -26,7 +25,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/flowtable.h 262743 2014-03-04 15:14:47Z glebius $
+ * $FreeBSD: stable/11/sys/net/flowtable.h 262030 2014-02-17 12:07:17Z glebius $
  *
  */
 

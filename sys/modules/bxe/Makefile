@@ -1,6 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bxe/Makefile 271988 2014-09-22 19:00:30Z davidcs $
-BXE	= ${.CURDIR}/../../dev/bxe
+# $FreeBSD: stable/11/sys/modules/bxe/Makefile 319182 2017-05-30 04:11:12Z ngie $
+
+SYSDIR	?= ${SRCTOP}/sys
+
+BXE	= ${SYSDIR}/dev/bxe
 .PATH:	${BXE}
 
 KMOD	= if_bxe

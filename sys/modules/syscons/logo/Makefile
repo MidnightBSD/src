@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/syscons/logo/Makefile 89260 2002-01-11 15:49:02Z ru $
+# $FreeBSD: stable/11/sys/modules/syscons/logo/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/syscons/logo
+.PATH:	${SRCTOP}/sys/dev/syscons/logo
 
 KMOD=	logo_saver
 SRCS=	logo_saver.c logo.c

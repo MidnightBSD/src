@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ubsec/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: stable/11/sys/modules/ubsec/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/ubsec
+.PATH:	${SRCTOP}/sys/dev/ubsec
 KMOD	= ubsec
 SRCS	= ubsec.c opt_ubsec.h
 SRCS   += device_if.h bus_if.h pci_if.h

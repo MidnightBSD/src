@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_arc.h,v 1.13 1999/11/19 20:41:19 thorpej Exp $	*/
-/* $FreeBSD: stable/10/sys/net/if_arc.h 249925 2013-04-26 12:50:32Z glebius $ */
+/* $FreeBSD: stable/11/sys/net/if_arc.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 1982, 1986, 1993

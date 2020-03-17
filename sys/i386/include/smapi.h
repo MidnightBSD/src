@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd <winter@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/smapi.h 112558 2003-03-24 20:44:39Z mdodd $
+ * $FreeBSD: stable/11/sys/i386/include/smapi.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SMAPI_H_

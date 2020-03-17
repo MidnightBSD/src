@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/rc4/Makefile 109318 2003-01-15 19:55:17Z sam $
+# $FreeBSD: stable/11/sys/modules/rc4/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../crypto/rc4
+.PATH: ${SRCTOP}/sys/crypto/rc4
 
 KMOD=	rc4
 SRCS=	rc4.c

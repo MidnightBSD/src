@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfs/nfscl.h 244042 2012-12-08 22:52:39Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfs/nfscl.h 322909 2017-08-25 22:52:40Z rmacklem $
  */
 
 #ifndef	_NFS_NFSCL_H
@@ -59,6 +58,10 @@ struct nfsv4node {
  */
 #define	NFSCL_RENEW(l)	(((l) < 2) ? 1 : ((l) / 2))
 #define	NFSCL_LEASE(r)	((r) * 2)
+
+/* This macro checks to see if a forced dismount is about to occur. */
+#define	NFSCL_FORCEDISM(m)	(((m)->mnt_kern_flag & MNTK_UNMOUNTF) != 0 || \
+    (VFSTONFS(m)->nm_privflag & NFSMNTP_FORCEDISM) != 0)
 
 /*
  * These flag bits are used for the argument to nfscl_fillsattr() to

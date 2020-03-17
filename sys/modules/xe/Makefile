@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/xe/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD: stable/11/sys/modules/xe/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/xe
+.PATH: ${SRCTOP}/sys/dev/xe
 
 KMOD=	if_xe
 SRCS=	if_xe.c if_xe_pccard.c

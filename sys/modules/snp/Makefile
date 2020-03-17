@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/snp/Makefile 184689 2008-11-05 15:04:03Z ed $
+# $FreeBSD: stable/11/sys/modules/snp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/snp
+.PATH: ${SRCTOP}/sys/dev/snp
 
 KMOD=	snp
 SRCS=	snp.c

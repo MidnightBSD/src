@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_zero/Makefile 148382 2005-07-25 10:03:16Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_zero/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/zero
+.PATH: ${SRCTOP}/sys/geom/zero
 
 KMOD=	geom_zero
 SRCS=	g_zero.c

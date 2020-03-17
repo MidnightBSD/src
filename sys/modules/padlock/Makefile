@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/padlock/Makefile 167771 2007-03-21 17:37:13Z sam $
+# $FreeBSD: stable/11/sys/modules/padlock/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../crypto/via
+.PATH: ${SRCTOP}/sys/crypto/via
 
 KMOD=	padlock
 SRCS=	padlock.c padlock_cipher.c padlock_hash.c

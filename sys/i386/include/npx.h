@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)npx.h	5.3 (Berkeley) 1/18/91
- * $FreeBSD: stable/10/sys/i386/include/npx.h 276084 2014-12-22 21:32:39Z jhb $
+ * $FreeBSD: stable/11/sys/i386/include/npx.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -68,6 +67,11 @@ void	npxsuspend(union savefpu *addr);
 int	npxtrap_x87(void);
 int	npxtrap_sse(void);
 void	npxuserinited(struct thread *);
+void	npx_get_fsave(void *);
+int	npx_set_fsave(void *);
+void	npx_fill_fpregs_xmm(struct savexmm *, struct save87 *);
+void	npx_set_fpregs_xmm(struct save87 *, struct savexmm *);
+
 struct fpu_kern_ctx *fpu_kern_alloc_ctx(u_int flags);
 void	fpu_kern_free_ctx(struct fpu_kern_ctx *ctx);
 int	fpu_kern_enter(struct thread *td, struct fpu_kern_ctx *ctx,

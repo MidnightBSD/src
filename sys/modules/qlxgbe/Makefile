@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #/*
 # * Copyright (c) 2011-2016 Qlogic Corporation
 # * All rights reserved.
@@ -30,10 +29,10 @@
 # * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
 # */
 #
-# $FreeBSD: stable/10/sys/modules/qlxgbe/Makefile 322975 2017-08-28 19:17:28Z davidcs $
+# $FreeBSD: stable/11/sys/modules/qlxgbe/Makefile 322972 2017-08-28 17:21:33Z davidcs $
 #
 
-.PATH: ${.CURDIR}/../../dev/qlxgbe
+.PATH: ${SRCTOP}/sys/dev/qlxgbe
 #.PATH: ${.CURDIR}
 
 KMOD=if_qlxgbe
@@ -45,9 +44,6 @@ SRCS+= ql_minidump.c
 
 SRCS+= device_if.h bus_if.h pci_if.h
 
-# Uses unnamed structure and union fields
-CFLAGS+= ${GCC_MS_EXTENSIONS}
-
 CFLAGS += -DQLA_LOCK_NO_SLEEP=1
 #CFLAGS += -DQL_DBG -g
 # Please turn off QL_LDFLASH_FW when you enable QL_ENABLE_ISCSI_TLV
@@ -56,5 +52,5 @@ CFLAGS += -DQLA_LOCK_NO_SLEEP=1
 #CFLAGS += -DQL_ENABLE_ISCSI_TLV
 #CFLAGS += -DQL_LDFLASH_FW
 
-.include <bsd.kmod.mk>
 
+.include <bsd.kmod.mk>

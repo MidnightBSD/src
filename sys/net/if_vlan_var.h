@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -27,27 +26,11 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/if_vlan_var.h 326512 2017-12-04 09:27:36Z hselasky $
+ * $FreeBSD: stable/11/sys/net/if_vlan_var.h 332991 2018-04-25 12:21:13Z kib $
  */
 
 #ifndef _NET_IF_VLAN_VAR_H_
 #define	_NET_IF_VLAN_VAR_H_	1
-
-struct	ether_vlan_header {
-	u_char	evl_dhost[ETHER_ADDR_LEN];
-	u_char	evl_shost[ETHER_ADDR_LEN];
-	u_int16_t evl_encap_proto;
-	u_int16_t evl_tag;
-	u_int16_t evl_proto;
-};
-
-#define	EVL_VLID_MASK		0x0FFF
-#define	EVL_PRI_MASK		0xE000
-#define	EVL_VLANOFTAG(tag)	((tag) & EVL_VLID_MASK)
-#define	EVL_PRIOFTAG(tag)	(((tag) >> 13) & 7)
-#define	EVL_CFIOFTAG(tag)	(((tag) >> 12) & 1)
-#define	EVL_MAKETAG(vlid, pri, cfi)					\
-	((((((pri) & 7) << 1) | ((cfi) & 1)) << 12) | ((vlid) & EVL_VLID_MASK))
 
 /* Set the VLAN ID in an mbuf packet header non-destructively. */
 #define EVL_APPLY_VLID(m, vlid)						\
@@ -90,6 +73,9 @@ struct	vlanreq {
 #define	SIOCSETVLAN	SIOCSIFGENERIC
 #define	SIOCGETVLAN	SIOCGIFGENERIC
 
+#define	SIOCGVLANPCP	SIOCGLANPCP	/* Get VLAN PCP */
+#define	SIOCSVLANPCP	SIOCSLANPCP	/* Set VLAN PCP */
+
 #ifdef _KERNEL
 /*
  * Drivers that are capable of adding and removing the VLAN header
@@ -127,6 +113,16 @@ struct	vlanreq {
  * if_capabilities.
  */
 
+/*
+ * The 802.1q code may also tag mbufs with the PCP (priority) field for use in
+ * other layers of the stack, in which case an m_tag will be used.  This is
+ * semantically quite different from use of the ether_vtag field, which is
+ * defined only between the device driver and VLAN layer.
+ */
+#define	MTAG_8021Q		1326104895
+#define	MTAG_8021Q_PCP_IN	0		/* Input priority. */
+#define	MTAG_8021Q_PCP_OUT	1		/* Output priority. */
+
 #define	VLAN_CAPABILITIES(_ifp) do {				\
 	if ((_ifp)->if_vlantrunk != NULL) 			\
 		(*vlan_trunk_cap_p)(_ifp);			\
@@ -150,6 +146,14 @@ extern	struct ifnet *(*vlan_devat_p)(struct ifnet *, uint16_t);
 extern	int (*vlan_tag_p)(struct ifnet *, uint16_t *);
 extern	int (*vlan_setcookie_p)(struct ifnet *, void *);
 extern	void *(*vlan_cookie_p)(struct ifnet *);
+
+#ifdef _SYS_EVENTHANDLER_H_
+/* VLAN state change events */
+typedef void (*vlan_config_fn)(void *, struct ifnet *, uint16_t);
+typedef void (*vlan_unconfig_fn)(void *, struct ifnet *, uint16_t);
+EVENTHANDLER_DECLARE(vlan_config, vlan_config_fn);
+EVENTHANDLER_DECLARE(vlan_unconfig, vlan_unconfig_fn);
+#endif /* _SYS_EVENTHANDLER_H_ */
 
 #endif /* _KERNEL */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Alexander Motin <mav@freebsd.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/mppc.h 302061 2016-06-21 15:47:54Z pfg $
+ * $FreeBSD: stable/11/sys/net/mppc.h 301549 2016-06-07 15:07:00Z pfg $
  */
 
 /*

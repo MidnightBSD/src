@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  modified for Lites 1.1
  *
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_inode.c	8.5 (Berkeley) 12/30/93
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_inode.c 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_inode.c 349308 2019-06-23 14:49:30Z asomers $
  */
 
 #include <sys/param.h>
@@ -54,6 +53,7 @@
 #include <fs/ext2fs/ext2fs.h>
 #include <fs/ext2fs/fs.h>
 #include <fs/ext2fs/ext2_extern.h>
+#include <fs/ext2fs/ext2_extattr.h>
 
 static int ext2_indirtrunc(struct inode *, daddr_t, daddr_t,
 	    daddr_t, int, e4fs_daddr_t *);
@@ -90,8 +90,12 @@ ext2_update(struct vnode *vp, int waitfor)
 		brelse(bp);
 		return (error);
 	}
-	ext2_i2ei(ip, (struct ext2fs_dinode *)((char *)bp->b_data +
+	error = ext2_i2ei(ip, (struct ext2fs_dinode *)((char *)bp->b_data +
 	    EXT2_INODE_SIZE(fs) * ino_to_fsbo(fs, ip->i_number)));
+	if (error) {
+		brelse(bp);
+		return (error);
+	}
 	if (waitfor && !DOINGASYNC(vp))
 		return (bwrite(bp));
 	else {
@@ -184,7 +188,7 @@ ext2_truncate(struct vnode *vp, off_t length, int flags, struct ucred *cred,
 	}
 	/*
 	 * Shorten the size of the file. If the file is not being
-	 * truncated to a block boundry, the contents of the
+	 * truncated to a block boundary, the contents of the
 	 * partial block following the end of the file must be
 	 * zero'ed in case it ever become accessible again because
 	 * of subsequent file growth.
@@ -259,7 +263,7 @@ ext2_truncate(struct vnode *vp, off_t length, int flags, struct ucred *cred,
 		oip->i_ib[i] = oldblks[NDADDR + i];
 	}
 	oip->i_size = osize;
-	error = vtruncbuf(ovp, cred, length, (int)fs->e2fs_bsize);
+	error = vtruncbuf(ovp, length, (int)fs->e2fs_bsize);
 	if (error && (allerror == 0))
 		allerror = error;
 	vnode_pager_setsize(ovp, length);
@@ -488,6 +492,7 @@ ext2_inactive(struct vop_inactive_args *ap)
 	if (ip->i_mode == 0)
 		goto out;
 	if (ip->i_nlink <= 0) {
+		ext2_extattr_free(ip);
 		error = ext2_truncate(vp, (off_t)0, 0, NOCRED, td);
 		ip->i_rdev = 0;
 		mode = ip->i_mode;

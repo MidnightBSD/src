@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/i2c/controllers/alpm/Makefile 171020 2007-06-24 20:35:59Z njl $
+# $FreeBSD: stable/11/sys/modules/i2c/controllers/alpm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:		${.CURDIR}/../../../../pci
+.PATH:		${SRCTOP}/sys/dev/alpm
 KMOD		= alpm
 SRCS		= device_if.h bus_if.h iicbus_if.h smbus_if.h pci_if.h \
 		  alpm.c

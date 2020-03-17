@@ -1,6 +1,5 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hptnr/Makefile 252867 2013-07-06 07:49:41Z delphij $
-HPTNR=	${.CURDIR}/../../dev/hptnr
+# $FreeBSD: stable/11/sys/modules/hptnr/Makefile 319182 2017-05-30 04:11:12Z ngie $
+HPTNR=	${SRCTOP}/sys/dev/hptnr
 .PATH:	${HPTNR}
 
 KMOD=	hptnr

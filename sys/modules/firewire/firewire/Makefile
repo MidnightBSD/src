@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/firewire/firewire/Makefile 155824 2006-02-18 23:49:28Z yar $
+# $FreeBSD: stable/11/sys/modules/firewire/firewire/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 # Makefile for the IEEE1394 OHCI chipset
 
-.PATH: ${.CURDIR}/../../../dev/firewire
+.PATH: ${SRCTOP}/sys/dev/firewire
 
 KMOD= firewire
 SRCS	= bus_if.h device_if.h pci_if.h \

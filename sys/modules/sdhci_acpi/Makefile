@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sdhci_acpi/Makefile 318198 2017-05-11 21:01:02Z marius $
+# $FreeBSD: stable/11/sys/modules/sdhci_acpi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/sdhci
+.PATH: ${SRCTOP}/sys/dev/sdhci
 
 KMOD=	sdhci_acpi
 SRCS=	sdhci_acpi.c sdhci.h sdhci_if.h

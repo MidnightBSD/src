@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/kgssapi_krb5/Makefile 231118 2012-02-07 09:27:07Z dim $
+# $FreeBSD: stable/11/sys/modules/kgssapi_krb5/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../kgssapi/krb5
+.PATH: ${SRCTOP}/sys/kgssapi/krb5
 KMOD=	kgssapi_krb5
 
 SRCS=	krb5_mech.c \
@@ -13,10 +12,9 @@ SRCS=	krb5_mech.c \
 	opt_inet6.h
 
 SRCS+=		kgss_if.h gssd.h
-MFILES=		kgssapi/kgss_if.m
 CLEANFILES=	gssd.h
 
-S=		${.CURDIR}/../..
+S=		${SRCTOP}/sys
 
 gssd.h:		$S/kgssapi/gssd.x
 	RPCGEN_CPP=${CPP:Q} rpcgen -hM $S/kgssapi/gssd.x | grep -v pthread.h > gssd.h

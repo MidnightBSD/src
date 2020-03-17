@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Semihalf
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nandfs/bmap.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/sys/fs/nandfs/bmap.h 235537 2012-05-17 10:11:18Z gber $
  */
 
 #ifndef _BMAP_H

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/net/if_gif.h 287730 2015-09-13 01:35:40Z hrs $	*/
+/*	$FreeBSD: stable/11/sys/net/if_gif.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: if_gif.h,v 1.17 2000/09/11 11:36:41 sumikawa Exp $	*/
 
 /*-

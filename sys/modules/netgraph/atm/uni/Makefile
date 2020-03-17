@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netgraph/atm/uni/Makefile 122219 2003-11-07 09:15:14Z harti $
+# $FreeBSD: stable/11/sys/modules/netgraph/atm/uni/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #
 
-LIBBASE= ${.CURDIR}/../../../../contrib/ngatm
+LIBBASE= ${SRCTOP}/sys/contrib/ngatm
 
-.PATH: ${.CURDIR}/../../../../netgraph/atm/uni
+.PATH: ${SRCTOP}/sys/netgraph/atm/uni
 .PATH: ${LIBBASE}/netnatm/sig
 
 KMOD=	ng_uni

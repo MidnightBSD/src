@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/streams/Makefile 299215 2016-05-07 08:30:21Z dchagin $ 
+# $FreeBSD: stable/11/sys/modules/streams/Makefile 298519 2016-04-23 20:29:55Z dchagin $ 
 
 .PATH: ${.CURDIR}/../../dev/streams
 

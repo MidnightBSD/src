@@ -1,11 +1,10 @@
-# $MidnightBSD$
 #
 # Makefile for RR182x FreeBSD driver
 # Copyright (c)  2004-2005 HighPoint Technologies, Inc. All rights reserved
 #
-# $FreeBSD: stable/10/sys/modules/hptmv/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD: stable/11/sys/modules/hptmv/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-HPTMV= ${.CURDIR}/../../dev/hptmv
+HPTMV= ${SRCTOP}/sys/dev/hptmv
 .PATH: ${HPTMV}
 
 KMOD= hptmv

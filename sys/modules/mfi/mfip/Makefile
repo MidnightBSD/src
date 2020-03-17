@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mfi/mfip/Makefile 169609 2007-05-16 17:19:47Z scottl $
+# $FreeBSD: stable/11/sys/modules/mfi/mfip/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/mfi
+.PATH: ${SRCTOP}/sys/dev/mfi
 
 KMOD=	mfip
 SRCS=	mfi_cam.c

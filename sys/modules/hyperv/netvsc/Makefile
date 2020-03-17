@@ -1,13 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hyperv/netvsc/Makefile 310799 2016-12-30 01:59:19Z sephe $
+# $FreeBSD: stable/11/sys/modules/hyperv/netvsc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../../dev/hyperv/netvsc \
-	${.CURDIR}/../../../dev/hyperv/vmbus
+.PATH:  ${SRCTOP}/sys/dev/hyperv/netvsc \
+	${SRCTOP}/sys/dev/hyperv/vmbus
 
 KMOD=	hv_netvsc
 SRCS=	hn_nvs.c hn_rndis.c if_hn.c
-SRCS+=	bus_if.h device_if.h opt_inet.h opt_inet6.h vmbus_if.h opt_hn.h
+SRCS+=	bus_if.h device_if.h vmbus_if.h
+SRCS+=	opt_hn.h opt_inet.h opt_inet6.h opt_rss.h
 
-CFLAGS+= -I${.CURDIR}/../../../dev/hyperv/netvsc
+CFLAGS+= -I${SRCTOP}/sys/dev/hyperv/netvsc
 
 .include <bsd.kmod.mk>

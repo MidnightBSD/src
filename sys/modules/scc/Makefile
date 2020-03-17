@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/scc/Makefile 232176 2012-02-26 13:27:22Z jhibbits $
+# $FreeBSD: stable/11/sys/modules/scc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/scc
+.PATH: ${SRCTOP}/sys/dev/scc
 
 .if ${MACHINE} == "sparc64"
 scc_bfe= scc_bfe_ebus.c scc_bfe_sbus.c
@@ -14,8 +13,5 @@ KMOD=	scc
 SRCS=	${scc_bfe} scc_core.c scc_if.c scc_if.h \
 	scc_dev_sab82532.c scc_dev_z8530.c
 SRCS+=	bus_if.h device_if.h ofw_bus_if.h serdev_if.c serdev_if.h
-
-MFILES=	dev/ofw/ofw_bus_if.m dev/scc/scc_if.m \
-	kern/bus_if.m kern/device_if.m kern/serdev_if.m
 
 .include <bsd.kmod.mk>

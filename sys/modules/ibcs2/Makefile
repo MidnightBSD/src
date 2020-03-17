@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ibcs2/Makefile 193588 2009-06-06 17:01:44Z rwatson $
+# $FreeBSD: stable/11/sys/modules/ibcs2/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../i386/ibcs2
+.PATH: ${SRCTOP}/sys/i386/ibcs2
 
 KMOD=	ibcs2
 SRCS=	ibcs2_errno.c ibcs2_ipc.c ibcs2_stat.c ibcs2_misc.c \

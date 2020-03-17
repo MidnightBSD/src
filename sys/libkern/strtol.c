@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/strtol.c 278063 2015-02-02 08:05:11Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/strtol.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -124,7 +123,7 @@ strtol(nptr, endptr, base)
 		acc = neg ? LONG_MIN : LONG_MAX;
 	} else if (neg)
 		acc = -acc;
-	if (endptr != 0)
+	if (endptr != NULL)
 		*endptr = __DECONST(char *, any ? s - 1 : nptr);
 	return (acc);
 }

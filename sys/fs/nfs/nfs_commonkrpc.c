@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1991, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -33,13 +32,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nfs/nfs_commonkrpc.c 325407 2017-11-04 21:30:27Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nfs/nfs_commonkrpc.c 356189 2019-12-29 23:56:31Z rmacklem $");
 
 /*
  * Socket operations for use by nfs
  */
 
-#include "opt_kdtrace.h"
 #include "opt_kgssapi.h"
 #include "opt_nfs.h"
 
@@ -92,7 +90,7 @@ NFSSTATESPINLOCK;
 NFSREQSPINLOCK;
 NFSDLOCKMUTEX;
 NFSCLSTATEMUTEX;
-extern struct nfsstats newnfsstats;
+extern struct nfsstatsv1 nfsstatsv1;
 extern struct nfsreqhead nfsd_reqq;
 extern int nfscl_ticks;
 extern void (*ncl_call_invalcaches)(struct vnode *);
@@ -272,7 +270,7 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 
 	client = clnt_reconnect_create(nconf, saddr, nrp->nr_prog,
 	    nrp->nr_vers, sndreserve, rcvreserve);
-	CLNT_CONTROL(client, CLSET_WAITCHAN, "newnfsreq");
+	CLNT_CONTROL(client, CLSET_WAITCHAN, "nfsreq");
 	if (nmp != NULL) {
 		if ((nmp->nm_flag & NFSMNT_INT))
 			CLNT_CONTROL(client, CLSET_INTERRUPTIBLE, &one);
@@ -511,7 +509,7 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 	if (xidp != NULL)
 		*xidp = 0;
 	/* Reject requests while attempting a forced unmount. */
-	if (nmp != NULL && (nmp->nm_mountp->mnt_kern_flag & MNTK_UNMOUNTF)) {
+	if (nmp != NULL && NFSCL_FORCEDISM(nmp->nm_mountp)) {
 		m_freem(nd->nd_mreq);
 		return (ESTALE);
 	}
@@ -658,7 +656,7 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 		procnum = NFSV4PROC_COMPOUND;
 
 	if (nmp != NULL) {
-		NFSINCRGLOBAL(newnfsstats.rpcrequests);
+		NFSINCRGLOBAL(nfsstatsv1.rpcrequests);
 
 		/* Map the procnum to the old NFSv2 one, as required. */
 		if ((nd->nd_flag & ND_NFSV2) != 0) {
@@ -778,18 +776,18 @@ tryagain:
 	if (stat == RPC_SUCCESS) {
 		error = 0;
 	} else if (stat == RPC_TIMEDOUT) {
-		NFSINCRGLOBAL(newnfsstats.rpctimeouts);
+		NFSINCRGLOBAL(nfsstatsv1.rpctimeouts);
 		error = ETIMEDOUT;
 	} else if (stat == RPC_VERSMISMATCH) {
-		NFSINCRGLOBAL(newnfsstats.rpcinvalid);
+		NFSINCRGLOBAL(nfsstatsv1.rpcinvalid);
 		error = EOPNOTSUPP;
 	} else if (stat == RPC_PROGVERSMISMATCH) {
-		NFSINCRGLOBAL(newnfsstats.rpcinvalid);
+		NFSINCRGLOBAL(nfsstatsv1.rpcinvalid);
 		error = EPROTONOSUPPORT;
 	} else if (stat == RPC_INTR) {
 		error = EINTR;
 	} else {
-		NFSINCRGLOBAL(newnfsstats.rpcinvalid);
+		NFSINCRGLOBAL(nfsstatsv1.rpcinvalid);
 		error = EACCES;
 	}
 	if (error) {
@@ -833,7 +831,8 @@ tryagain:
 		 * Get rid of the tag, return count and SEQUENCE result for
 		 * NFSv4.
 		 */
-		if ((nd->nd_flag & ND_NFSV4) != 0) {
+		if ((nd->nd_flag & ND_NFSV4) != 0 && nd->nd_repstat !=
+		    NFSERR_MINORVERMISMATCH) {
 			NFSM_DISSECT(tl, u_int32_t *, NFSX_UNSIGNED);
 			i = fxdr_unsigned(int, *tl);
 			error = nfsm_advance(nd, NFSM_RNDUP(i), -1);
@@ -851,9 +850,9 @@ tryagain:
 			if ((nmp != NULL && i == NFSV4OP_SEQUENCE && j != 0) ||
 			    (clp != NULL && i == NFSV4OP_CBSEQUENCE && j != 0))
 				NFSCL_DEBUG(1, "failed seq=%d\n", j);
-			if ((nmp != NULL && i == NFSV4OP_SEQUENCE && j == 0) ||
-			    (clp != NULL && i == NFSV4OP_CBSEQUENCE && j == 0)
-			    ) {
+			if (((nmp != NULL && i == NFSV4OP_SEQUENCE && j == 0) ||
+			    (clp != NULL && i == NFSV4OP_CBSEQUENCE &&
+			    j == 0)) && sep != NULL) {
 				if (i == NFSV4OP_SEQUENCE)
 					NFSM_DISSECT(tl, uint32_t *,
 					    NFSX_V4SESSIONID +
@@ -895,7 +894,8 @@ tryagain:
 		}
 		if (nd->nd_repstat != 0) {
 			if (nd->nd_repstat == NFSERR_BADSESSION &&
-			    nmp != NULL && dssep == NULL) {
+			    nmp != NULL && dssep == NULL &&
+			    (nd->nd_flag & ND_NFSV41) != 0) {
 				/*
 				 * If this is a client side MDS RPC, mark
 				 * the MDS session defunct and initiate
@@ -964,10 +964,14 @@ tryagain:
 					NFSCL_DEBUG(1, "Got err=%d\n", reterr);
 				}
 			}
+			/*
+			 * When clp != NULL, it is a callback and all
+			 * callback operations can be retried for NFSERR_DELAY.
+			 */
 			if (((nd->nd_repstat == NFSERR_DELAY ||
 			      nd->nd_repstat == NFSERR_GRACE) &&
-			     (nd->nd_flag & ND_NFSV4) &&
-			     nd->nd_procnum != NFSPROC_DELEGRETURN &&
+			     (nd->nd_flag & ND_NFSV4) && (clp != NULL ||
+			     (nd->nd_procnum != NFSPROC_DELEGRETURN &&
 			     nd->nd_procnum != NFSPROC_SETATTR &&
 			     nd->nd_procnum != NFSPROC_READ &&
 			     nd->nd_procnum != NFSPROC_READDS &&
@@ -979,7 +983,7 @@ tryagain:
 			     nd->nd_procnum != NFSPROC_OPENDOWNGRADE &&
 			     nd->nd_procnum != NFSPROC_CLOSE &&
 			     nd->nd_procnum != NFSPROC_LOCK &&
-			     nd->nd_procnum != NFSPROC_LOCKU) ||
+			     nd->nd_procnum != NFSPROC_LOCKU))) ||
 			    (nd->nd_repstat == NFSERR_DELAY &&
 			     (nd->nd_flag & ND_NFSV4) == 0) ||
 			    nd->nd_repstat == NFSERR_RESOURCE) {
@@ -1168,7 +1172,7 @@ nfs_sig_pending(sigset_t set)
 {
 	int i;
 	
-	for (i = 0 ; i < sizeof(newnfs_sig_set)/sizeof(int) ; i++)
+	for (i = 0 ; i < nitems(newnfs_sig_set); i++)
 		if (SIGISMEMBER(set, newnfs_sig_set[i]))
 			return (1);
 	return (0);
@@ -1193,7 +1197,7 @@ newnfs_set_sigmask(struct thread *td, sigset_t *oldset)
 	/* Remove the NFS set of signals from newset */
 	PROC_LOCK(p);
 	mtx_lock(&p->p_sigacts->ps_mtx);
-	for (i = 0 ; i < sizeof(newnfs_sig_set)/sizeof(int) ; i++) {
+	for (i = 0 ; i < nitems(newnfs_sig_set); i++) {
 		/*
 		 * But make sure we leave the ones already masked
 		 * by the process, ie. remove the signal from the
@@ -1251,7 +1255,7 @@ newnfs_sigintr(struct nfsmount *nmp, struct thread *td)
 	sigset_t tmpset;
 	
 	/* Terminate all requests while attempting a forced unmount. */
-	if (nmp->nm_mountp->mnt_kern_flag & MNTK_UNMOUNTF)
+	if (NFSCL_FORCEDISM(nmp->nm_mountp))
 		return (EIO);
 	if (!(nmp->nm_flag & NFSMNT_INT))
 		return (0);
@@ -1281,10 +1285,10 @@ nfs_msg(struct thread *td, const char *server, const char *msg, int error)
 
 	p = td ? td->td_proc : NULL;
 	if (error) {
-		tprintf(p, LOG_INFO, "newnfs server %s: %s, error %d\n",
+		tprintf(p, LOG_INFO, "nfs server %s: %s, error %d\n",
 		    server, msg, error);
 	} else {
-		tprintf(p, LOG_INFO, "newnfs server %s: %s\n", server, msg);
+		tprintf(p, LOG_INFO, "nfs server %s: %s\n", server, msg);
 	}
 	return (0);
 }

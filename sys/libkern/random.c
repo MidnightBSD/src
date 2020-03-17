@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/random.c 319286 2017-05-31 06:00:14Z delphij $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/random.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/libkern.h>
 
@@ -51,7 +50,7 @@ srandom(seed)
 }
 
 /*
- * Pseudo-random number generator for randomizing the profiling clock,
+ * Pseudo-random number generator for perturbing the profiling clock,
  * and whatever else we might use it for.  The result is uniform on
  * [0, 2^31 - 1].
  */

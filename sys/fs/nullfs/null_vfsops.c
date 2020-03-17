@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  *	@(#)null_vfsops.c	8.2 (Berkeley) 1/21/94
  *
  * @(#)lofs_vfsops.c	1.2 (Berkeley) 6/18/92
- * $FreeBSD: stable/10/sys/fs/nullfs/null_vfsops.c 309530 2016-12-04 13:56:15Z kib $
+ * $FreeBSD: stable/11/sys/fs/nullfs/null_vfsops.c 345642 2019-03-28 13:44:18Z kib $
  */
 
 /*
@@ -73,14 +72,15 @@ static vfs_extattrctl_t	nullfs_extattrctl;
 static int
 nullfs_mount(struct mount *mp)
 {
-	int error = 0;
 	struct vnode *lowerrootvp, *vp;
 	struct vnode *nullm_rootvp;
 	struct null_mount *xmp;
 	struct thread *td = curthread;
+	struct null_node *nn;
+	struct nameidata nd, *ndp;
 	char *target;
-	int isvnunlocked = 0, len;
-	struct nameidata nd, *ndp = &nd;
+	int error, len;
+	bool isvnunlocked;
 
 	NULLFSDEBUG("nullfs_mount(mp = %p)\n", (void *)mp);
 
@@ -112,14 +112,18 @@ nullfs_mount(struct mount *mp)
 	/*
 	 * Unlock lower node to avoid possible deadlock.
 	 */
-	if ((mp->mnt_vnodecovered->v_op == &null_vnodeops) &&
+	if (mp->mnt_vnodecovered->v_op == &null_vnodeops &&
 	    VOP_ISLOCKED(mp->mnt_vnodecovered) == LK_EXCLUSIVE) {
 		VOP_UNLOCK(mp->mnt_vnodecovered, 0);
-		isvnunlocked = 1;
+		isvnunlocked = true;
+	} else {
+		isvnunlocked = false;
 	}
+
 	/*
 	 * Find lower node
 	 */
+	ndp = &nd;
 	NDINIT(ndp, LOOKUP, FOLLOW|LOCKLEAF, UIO_SYSSPACE, target, curthread);
 	error = namei(ndp);
 
@@ -142,10 +146,13 @@ nullfs_mount(struct mount *mp)
 	/*
 	 * Check multi null mount to avoid `lock against myself' panic.
 	 */
-	if (lowerrootvp == VTONULL(mp->mnt_vnodecovered)->null_lowervp) {
-		NULLFSDEBUG("nullfs_mount: multi null mount?\n");
-		vput(lowerrootvp);
-		return (EDEADLK);
+	if (mp->mnt_vnodecovered->v_op == &null_vnodeops) {
+		nn = VTONULL(mp->mnt_vnodecovered);
+		if (nn == NULL || lowerrootvp == nn->null_lowervp) {
+			NULLFSDEBUG("nullfs_mount: multi null mount?\n");
+			vput(lowerrootvp);
+			return (EDEADLK);
+		}
 	}
 
 	xmp = (struct null_mount *) malloc(sizeof(struct null_mount),
@@ -229,7 +236,7 @@ nullfs_unmount(mp, mntflags)
 {
 	struct null_mount *mntdata;
 	struct mount *ump;
-	int error, flags;
+	int error, flags, rootrefs;
 
 	NULLFSDEBUG("nullfs_unmount: mp = %p\n", (void *)mp);
 
@@ -238,10 +245,20 @@ nullfs_unmount(mp, mntflags)
 	else
 		flags = 0;
 
-	/* There is 1 extra root vnode reference (nullm_rootvp). */
-	error = vflush(mp, 1, flags, curthread);
-	if (error)
-		return (error);
+	for (rootrefs = 1;; rootrefs = 0) {
+		/* There is 1 extra root vnode reference (nullm_rootvp). */
+		error = vflush(mp, rootrefs, flags, curthread);
+		if (error)
+			return (error);
+		MNT_ILOCK(mp);
+		if (mp->mnt_nvnodelistsize == 0) {
+			MNT_IUNLOCK(mp);
+			break;
+		}
+		MNT_IUNLOCK(mp);
+		if ((mntflags & MNT_FORCE) == 0)
+			return (EBUSY);
+	}
 
 	/*
 	 * Finally, throw away the null_mount structure
@@ -302,29 +319,34 @@ nullfs_statfs(mp, sbp)
 	struct statfs *sbp;
 {
 	int error;
-	struct statfs mstat;
+	struct statfs *mstat;
 
 	NULLFSDEBUG("nullfs_statfs(mp = %p, vp = %p->%p)\n", (void *)mp,
 	    (void *)MOUNTTONULLMOUNT(mp)->nullm_rootvp,
 	    (void *)NULLVPTOLOWERVP(MOUNTTONULLMOUNT(mp)->nullm_rootvp));
 
-	bzero(&mstat, sizeof(mstat));
+	mstat = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK | M_ZERO);
 
-	error = VFS_STATFS(MOUNTTONULLMOUNT(mp)->nullm_vfs, &mstat);
-	if (error)
+	error = VFS_STATFS(MOUNTTONULLMOUNT(mp)->nullm_vfs, mstat);
+	if (error) {
+		free(mstat, M_STATFS);
 		return (error);
+	}
 
 	/* now copy across the "interesting" information and fake the rest */
-	sbp->f_type = mstat.f_type;
+	sbp->f_type = mstat->f_type;
 	sbp->f_flags = (sbp->f_flags & (MNT_RDONLY | MNT_NOEXEC | MNT_NOSUID |
-	    MNT_UNION | MNT_NOSYMFOLLOW)) | (mstat.f_flags & ~MNT_ROOTFS);
-	sbp->f_bsize = mstat.f_bsize;
-	sbp->f_iosize = mstat.f_iosize;
-	sbp->f_blocks = mstat.f_blocks;
-	sbp->f_bfree = mstat.f_bfree;
-	sbp->f_bavail = mstat.f_bavail;
-	sbp->f_files = mstat.f_files;
-	sbp->f_ffree = mstat.f_ffree;
+	    MNT_UNION | MNT_NOSYMFOLLOW | MNT_AUTOMOUNTED)) |
+	    (mstat->f_flags & ~(MNT_ROOTFS | MNT_AUTOMOUNTED));
+	sbp->f_bsize = mstat->f_bsize;
+	sbp->f_iosize = mstat->f_iosize;
+	sbp->f_blocks = mstat->f_blocks;
+	sbp->f_bfree = mstat->f_bfree;
+	sbp->f_bavail = mstat->f_bavail;
+	sbp->f_files = mstat->f_files;
+	sbp->f_ffree = mstat->f_ffree;
+
+	free(mstat, M_STATFS);
 	return (0);
 }
 

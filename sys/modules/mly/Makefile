@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mly/Makefile 79695 2001-07-14 00:12:23Z msmith $
+# $FreeBSD: stable/11/sys/modules/mly/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mly
+.PATH: ${SRCTOP}/sys/dev/mly
 
 KMOD=	mly
 SRCS=	mly.c

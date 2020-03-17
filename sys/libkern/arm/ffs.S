@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ffs.S,v 1.3 2003/04/05 23:27:15 bjh21 Exp $	*/
 /*-
  * Copyright (c) 2001 Christopher Gilbert
@@ -30,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/arm/ffs.S 275767 2014-12-14 16:28:53Z andrew $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/ffs.S 275520 2014-12-05 19:08:36Z andrew $");
 
 	.syntax	unified
 

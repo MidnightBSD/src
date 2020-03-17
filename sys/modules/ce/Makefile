@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # $Cronyx: sys.modules.ce.Makefile,v 1.2 2005/04/23 20:10:22 rik Exp $
-# $FreeBSD: stable/10/sys/modules/ce/Makefile 228971 2011-12-29 21:17:35Z dim $
+# $FreeBSD: stable/11/sys/modules/ce/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../dev/ce
+.PATH:  ${SRCTOP}/sys/dev/ce
 KMOD	= if_ce
 SRCS	= if_ce.c ceddk.c tau32-ddk.c
 SRCS   += opt_bpf.h opt_netgraph.h opt_ng_cronyx.h device_if.h bus_if.h \
@@ -29,4 +28,3 @@ opt_ng_cronyx.h:
 .include <bsd.kmod.mk>
 
 CWARNFLAGS.tau32-ddk.c=	${NO_WCONSTANT_CONVERSION}
-CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}

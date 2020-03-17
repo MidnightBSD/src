@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Defines for synchronous PPP/Cisco/Frame Relay link level subroutines.
  */
@@ -18,7 +17,7 @@
  *
  * From: Version 2.0, Fri Oct  6 20:39:21 MSK 1995
  *
- * $FreeBSD: stable/10/sys/net/if_sppp.h 147256 2005-06-10 16:49:24Z brooks $
+ * $FreeBSD: stable/11/sys/net/if_sppp.h 298995 2016-05-03 18:05:43Z pfg $
  */
 
 #ifndef _NET_IF_SPPP_H_
@@ -79,7 +78,7 @@ struct sauth {
 
 /*
  * Don't change the order of this.  Ordering the phases this way allows
- * for a comparision of ``pp_phase >= PHASE_AUTHENTICATE'' in order to
+ * for a comparison of ``pp_phase >= PHASE_AUTHENTICATE'' in order to
  * know whether LCP is up.
  */
 enum ppp_phase {

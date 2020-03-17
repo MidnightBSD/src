@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/esp/Makefile 227006 2011-11-01 21:26:57Z marius $
+# $FreeBSD: stable/11/sys/modules/esp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/esp
+.PATH: ${SRCTOP}/sys/dev/esp
 
 KMOD=	esp
 SRCS=	device_if.h esp_pci.c ${esp_sbus} bus_if.h ncr53c9x.c ${ofw_bus_if}

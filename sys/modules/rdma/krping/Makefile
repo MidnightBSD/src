@@ -1,13 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/rdma/krping/Makefile 237560 2012-06-25 09:46:06Z uqs $
-
-RDMA= ${.CURDIR}/../../../contrib/rdma/krping
-.PATH: ${RDMA}
+# $FreeBSD: stable/11/sys/modules/rdma/krping/Makefile 331769 2018-03-30 18:06:29Z hselasky $
+.PATH: ${SRCTOP}/sys/contrib/rdma/krping
 
 KMOD= krping
 SRCS= krping.c krping_dev.c getopt.c
 SRCS+=  bus_if.h device_if.h pci_if.h pcib_if.h vnode_if.h
 SRCS+=  opt_sched.h opt_inet.h opt_inet6.h
-CFLAGS+= -I${.CURDIR}/../../../ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 
 .include <bsd.kmod.mk>

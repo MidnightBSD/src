@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/vesa/Makefile 198251 2009-10-19 20:58:10Z jkim $
+# $FreeBSD: stable/11/sys/modules/vesa/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 KMOD=	vesa
 SRCS=	opt_vga.h opt_vesa.h
 SRCS+=	bus_if.h device_if.h pci_if.h
 
-.PATH:	${.CURDIR}/../../dev/fb
+.PATH:	${SRCTOP}/sys/dev/fb
 SRCS+=	vesa.c
 
-.PATH:	${.CURDIR}/../../dev/syscons
+.PATH:	${SRCTOP}/sys/dev/syscons
 SRCS+=	scvesactl.c
 
 .include <bsd.kmod.mk>

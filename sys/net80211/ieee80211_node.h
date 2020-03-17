@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net80211/ieee80211_node.h 246497 2013-02-07 21:12:55Z monthadar $
+ * $FreeBSD: stable/11/sys/net80211/ieee80211_node.h 330458 2018-03-05 08:18:13Z eadler $
  */
 #ifndef _NET80211_IEEE80211_NODE_H_
 #define _NET80211_IEEE80211_NODE_H_
@@ -66,6 +65,7 @@
 struct ieee80211_node_table;
 struct ieee80211com;
 struct ieee80211vap;
+struct ieee80211_scanparams;
 
 /*
  * Information element ``blob''.  We use this structure
@@ -116,7 +116,6 @@ struct ieee80211_node {
 	TAILQ_ENTRY(ieee80211_node) ni_list;	/* list of all nodes */
 	LIST_ENTRY(ieee80211_node) ni_hash;	/* hash collision list */
 	u_int			ni_refcnt;	/* count of held references */
-	u_int			ni_scangen;	/* gen# for timeout scan */
 	u_int			ni_flags;
 #define	IEEE80211_NODE_AUTH	0x000001	/* authorized for data */
 #define	IEEE80211_NODE_QOS	0x000002	/* QoS enabled */
@@ -219,6 +218,9 @@ struct ieee80211_node {
 	struct ieee80211_htrateset ni_htrates;	/* negotiated ht rate set */
 	struct ieee80211_tx_ampdu ni_tx_ampdu[WME_NUM_TID];
 	struct ieee80211_rx_ampdu ni_rx_ampdu[WME_NUM_TID];
+
+	/* fast-frames state */
+	struct mbuf *		ni_tx_superg[WME_NUM_TID];
 
 	/* others */
 	short			ni_inact;	/* inactivity mark count */
@@ -328,6 +330,9 @@ void	ieee80211_setupcurchan(struct ieee80211com *,
 	    struct ieee80211_channel *);
 void	ieee80211_setcurchan(struct ieee80211com *, struct ieee80211_channel *);
 void	ieee80211_update_chw(struct ieee80211com *);
+int	ieee80211_ibss_merge_check(struct ieee80211_node *);
+int	ieee80211_ibss_node_check_new(struct ieee80211_node *ni,
+	    const struct ieee80211_scanparams *);
 int	ieee80211_ibss_merge(struct ieee80211_node *);
 struct ieee80211_scan_entry;
 int	ieee80211_sta_join(struct ieee80211vap *, struct ieee80211_channel *,
@@ -357,8 +362,6 @@ struct ieee80211_node_table {
 	struct ieee80211_node	**nt_keyixmap;	/* key ix -> node map */
 	int			nt_keyixmax;	/* keyixmap size */
 	const char		*nt_name;	/* table name for debug msgs */
-	ieee80211_scan_lock_t	nt_scanlock;	/* on nt_scangen */
-	u_int			nt_scangen;	/* gen# for iterators */
 	int			nt_inact_init;	/* initial node inact setting */
 };
 

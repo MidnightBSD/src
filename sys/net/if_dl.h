@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_dl.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/net/if_dl.h 235640 2012-05-19 02:39:43Z marcel $
+ * $FreeBSD: stable/11/sys/net/if_dl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NET_IF_DL_H_
@@ -68,7 +67,14 @@ struct sockaddr_dl {
 };
 
 #define LLADDR(s) ((caddr_t)((s)->sdl_data + (s)->sdl_nlen))
+#define CLLADDR(s) ((c_caddr_t)((s)->sdl_data + (s)->sdl_nlen))
 #define LLINDEX(s) ((s)->sdl_index)
+
+
+struct ifnet;
+struct sockaddr_dl *link_alloc_sdl(size_t, int);
+void link_free_sdl(struct sockaddr *sa);
+struct sockaddr_dl *link_init_sdl(struct ifnet *, struct sockaddr *, u_char);
 
 #ifndef _KERNEL
 

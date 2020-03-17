@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -53,7 +52,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/fuse/fuse_ipc.h 241519 2012-10-13 23:54:26Z attilio $
+ * $FreeBSD: stable/11/sys/fs/fuse/fuse_ipc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FUSE_IPC_H_

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cxgb/cxgb_t3fw/Makefile 183292 2008-09-23 03:16:54Z kmacy $
+# $FreeBSD: stable/11/sys/modules/cxgb/cxgb_t3fw/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-CXGB = ${.CURDIR}/../../../dev/cxgb
+CXGB = ${SRCTOP}/sys/dev/cxgb
 .PATH: ${CXGB} 
 
 KMOD= cxgb_t3fw

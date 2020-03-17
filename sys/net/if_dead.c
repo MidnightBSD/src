@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/if_dead.c 249925 2013-04-26 12:50:32Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/net/if_dead.c 275730 2014-12-12 16:10:42Z jhb $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -94,6 +93,13 @@ ifdead_transmit(struct ifnet *ifp, struct mbuf *m)
 	return (ENXIO);
 }
 
+static uint64_t
+ifdead_get_counter(struct ifnet *ifp, ift_counter cnt)
+{
+
+	return (0);
+}
+
 void
 if_dead(struct ifnet *ifp)
 {
@@ -105,4 +111,5 @@ if_dead(struct ifnet *ifp)
 	ifp->if_resolvemulti = ifdead_resolvemulti;
 	ifp->if_qflush = ifdead_qflush;
 	ifp->if_transmit = ifdead_transmit;
+	ifp->if_get_counter = ifdead_get_counter;
 }

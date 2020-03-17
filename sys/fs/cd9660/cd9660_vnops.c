@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_vnops.c 248282 2013-03-14 20:28:26Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/cd9660/cd9660_vnops.c 341074 2018-11-27 16:51:18Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_vnops.c 248282 2013-03-14 20:
 #include <sys/dirent.h>
 #include <sys/unistd.h>
 #include <sys/filio.h>
+#include <sys/sysctl.h>
 
 #include <vm/vm.h>
 #include <vm/vnode_pager.h>
@@ -75,6 +75,7 @@ static vop_readdir_t	cd9660_readdir;
 static vop_readlink_t	cd9660_readlink;
 static vop_strategy_t	cd9660_strategy;
 static vop_vptofh_t	cd9660_vptofh;
+static vop_getpages_t	cd9660_getpages;
 
 /*
  * Setattr call. Only allowed for block and character special devices.
@@ -342,11 +343,9 @@ cd9660_read(ap)
 			} else
 				error = bread(vp, lbn, size, NOCRED, &bp);
 		}
-		n = MIN(n, size - bp->b_resid);
-		if (error) {
-			brelse(bp);
+		if (error != 0)
 			return (error);
-		}
+		n = MIN(n, size - bp->b_resid);
 
 		error = uiomove(bp->b_data + on, (int)n, uio);
 		brelse(bp);
@@ -379,8 +378,8 @@ iso_uiodir(idp,dp,off)
 {
 	int error;
 
-	dp->d_name[dp->d_namlen] = 0;
 	dp->d_reclen = GENERIC_DIRSIZ(dp);
+	dirent_terminate(dp);
 
 	if (idp->uio->uio_resid < dp->d_reclen) {
 		idp->eofflag = 0;
@@ -781,6 +780,9 @@ cd9660_pathconf(ap)
 {
 
 	switch (ap->a_name) {
+	case _PC_FILESIZEBITS:
+		*ap->a_retval = 32;
+		return (0);
 	case _PC_LINK_MAX:
 		*ap->a_retval = 1;
 		return (0);
@@ -790,20 +792,17 @@ cd9660_pathconf(ap)
 		else
 			*ap->a_retval = 37;
 		return (0);
-	case _PC_PATH_MAX:
-		*ap->a_retval = PATH_MAX;
-		return (0);
-	case _PC_PIPE_BUF:
-		*ap->a_retval = PIPE_BUF;
-		return (0);
-	case _PC_CHOWN_RESTRICTED:
-		*ap->a_retval = 1;
-		return (0);
+	case _PC_SYMLINK_MAX:
+		if (VTOI(ap->a_vp)->i_mnt->iso_ftype == ISO_FTYPE_RRIP) {
+			*ap->a_retval = MAXPATHLEN;
+			return (0);
+		}
+		return (EINVAL);
 	case _PC_NO_TRUNC:
 		*ap->a_retval = 1;
 		return (0);
 	default:
-		return (EINVAL);
+		return (vop_stdpathconf(ap));
 	}
 	/* NOTREACHED */
 }
@@ -839,6 +838,45 @@ cd9660_vptofh(ap)
 	return (0);
 }
 
+SYSCTL_NODE(_vfs, OID_AUTO, cd9660, CTLFLAG_RW, 0, "cd9660 filesystem");
+static int use_buf_pager = 0;
+SYSCTL_INT(_vfs_cd9660, OID_AUTO, use_buf_pager, CTLFLAG_RWTUN,
+    &use_buf_pager, 0,
+    "Use buffer pager instead of bmap");
+
+static daddr_t
+cd9660_gbp_getblkno(struct vnode *vp, vm_ooffset_t off)
+{
+
+	return (lblkno(VTOI(vp)->i_mnt, off));
+}
+
+static int
+cd9660_gbp_getblksz(struct vnode *vp, daddr_t lbn)
+{
+	struct iso_node *ip;
+
+	ip = VTOI(vp);
+	return (blksize(ip->i_mnt, ip, lbn));
+}
+
+static int
+cd9660_getpages(struct vop_getpages_args *ap)
+{
+	struct vnode *vp;
+
+	vp = ap->a_vp;
+	if (vp->v_type == VCHR || vp->v_type == VBLK)
+		return (EOPNOTSUPP);
+
+	if (use_buf_pager)
+		return (vfs_bio_getpages(vp, ap->a_m, ap->a_count,
+		    ap->a_rbehind, ap->a_rahead, cd9660_gbp_getblkno,
+		    cd9660_gbp_getblksz));
+	return (vnode_pager_generic_getpages(vp, ap->a_m, ap->a_count,
+	    ap->a_rbehind, ap->a_rahead, NULL, NULL));
+}
+
 /*
  * Global vfs data structures for cd9660
  */
@@ -860,6 +898,7 @@ struct vop_vector cd9660_vnodeops = {
 	.vop_setattr =		cd9660_setattr,
 	.vop_strategy =		cd9660_strategy,
 	.vop_vptofh =		cd9660_vptofh,
+	.vop_getpages =		cd9660_getpages,
 };
 
 /*

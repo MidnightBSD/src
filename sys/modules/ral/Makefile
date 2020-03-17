@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ral/Makefile 235233 2012-05-10 17:41:16Z bschmidt $
+# $FreeBSD: stable/11/sys/modules/ral/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/ral
+.PATH: ${SRCTOP}/sys/dev/ral
 
 KMOD=	if_ral
 SRCS=	rt2560.c rt2661.c rt2860.c if_ral_pci.c

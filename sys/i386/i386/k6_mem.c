@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Brian Fundakowski Feldman
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/k6_mem.c 189903 2009-03-17 00:48:11Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/k6_mem.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -79,7 +78,7 @@ static __inline int
 k6_mrmake(struct mem_range_desc *desc, u_int32_t *mtrr)
 {
 	u_int32_t len = 0, wc, uc;
-	register int bit;
+	int bit;
 
 	if (desc->mr_base &~ 0xfffe0000)
 		return (EINVAL);

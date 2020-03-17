@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/if_vxlan/Makefile 273331 2014-10-20 14:42:42Z bryanv $
+# $FreeBSD: stable/11/sys/modules/if_vxlan/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../net
+.PATH: ${SRCTOP}/sys/net
 
 KMOD=	if_vxlan
 SRCS=	if_vxlan.c

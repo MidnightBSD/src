@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #
 # Copyright (c) 2012 Adrian Chadd, Xenion Pty Ltd
 # All rights reserved.
@@ -27,16 +26,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: stable/10/sys/modules/gpio/gpioiic/Makefile 266105 2014-05-15 01:27:53Z loos $
+# $FreeBSD: stable/11/sys/modules/gpio/gpioiic/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH:	${.CURDIR}/../../../dev/gpio/
+.PATH:	${SRCTOP}/sys/dev/gpio/
 
 KMOD=	gpioiic
 SRCS=	gpioiic.c
 SRCS+=	device_if.h bus_if.h gpio_if.h gpiobus_if.h iicbus_if.h iicbb_if.h
-SRCS+=	opt_platform.h
+SRCS+=	ofw_bus_if.h opt_platform.h
 
-CFLAGS+=  -I. -I${.CURDIR}/../../../dev/gpio/
+CFLAGS+=  -I. -I${SRCTOP}/sys/dev/gpio/
 
 .include <bsd.kmod.mk>

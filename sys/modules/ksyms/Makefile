@@ -1,11 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ksyms/Makefile 192859 2009-05-26 21:39:09Z sson $
+# $FreeBSD: stable/11/sys/modules/ksyms/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/ksyms
+.PATH: ${SRCTOP}/sys/dev/ksyms
 
 KMOD=  ksyms   
 SRCS=  ksyms.c linker_if.h
-
-MFILES= kern/linker_if.m
 
 .include <bsd.kmod.mk>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1994, 1995 Massachusetts Institute of Technology
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/inet_ntoa.c 139815 2005-01-07 00:24:33Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/inet_ntoa.c 139815 2005-01-07 00:24:33Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

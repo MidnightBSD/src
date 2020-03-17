@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*-
  * Kernel interface to machine-dependent clock driver.
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $FreeBSD: stable/10/sys/i386/include/clock.h 221703 2011-05-09 17:34:00Z jkim $
+ * $FreeBSD: stable/11/sys/i386/include/clock.h 335657 2018-06-26 08:35:58Z avg $
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -23,6 +22,8 @@ extern int	tsc_is_invariant;
 extern int	tsc_perf_stat;
 
 void	i8254_init(void);
+void	i8254_delay(int);
+void	clock_init(void);
 
 /*
  * Driver to clock driver interface.
@@ -31,6 +32,7 @@ void	i8254_init(void);
 void	startrtclock(void);
 void	timer_restore(void);
 void	init_TSC(void);
+void	resume_TSC(void);
 
 #define	HAS_TIMER_SPKR 1
 int	timer_spkr_acquire(void);

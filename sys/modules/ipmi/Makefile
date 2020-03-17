@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ipmi/Makefile 190445 2009-03-26 17:14:22Z ambrisko $
+# $FreeBSD: stable/11/sys/modules/ipmi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 SUBDIR+= ipmi_linux
 
-.PATH: ${.CURDIR}/../../dev/ipmi
+.PATH: ${SRCTOP}/sys/dev/ipmi
 
 # XXX - ipmi_smbus and ipmi_ssif depend on smbus
 # XXX - ipmi_acpi depends on acpi

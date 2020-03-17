@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: muldi3.c,v 1.8 2003/08/07 16:32:09 agc Exp $	*/
 
 /*-
@@ -39,7 +38,7 @@
 #if 0
 static char sccsid[] = "@(#)muldi3.c	8.1 (Berkeley) 6/4/93";
 #else
-__FBSDID("$FreeBSD: stable/10/sys/libkern/arm/muldi3.c 129210 2004-05-14 12:28:31Z cognet $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/muldi3.c 331722 2018-03-29 02:50:57Z eadler $");
 #endif
 #endif /* LIBC_SCCS and not lint */
 

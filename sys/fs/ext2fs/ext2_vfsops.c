@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  modified for EXT2FS support in Lites 1.1
  *
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_vfsops.c	8.8 (Berkeley) 4/18/94
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_vfsops.c 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_vfsops.c 350385 2019-07-27 19:29:28Z fsu $
  */
 
 #include <sys/param.h>
@@ -159,11 +158,9 @@ ext2_mount(struct mount *mp)
 			}
 			fs->e2fs_ronly = 1;
 			vfs_flagopt(opts, "ro", &mp->mnt_flag, MNT_RDONLY);
-			DROP_GIANT();
 			g_topology_lock();
 			g_access(ump->um_cp, 0, -1, 0);
 			g_topology_unlock();
-			PICKUP_GIANT();
 		}
 		if (!error && (mp->mnt_flag & MNT_RELOAD))
 			error = ext2_reload(mp, td);
@@ -188,11 +185,9 @@ ext2_mount(struct mount *mp)
 				return (error);
 			}
 			VOP_UNLOCK(devvp, 0);
-			DROP_GIANT();
 			g_topology_lock();
 			error = g_access(ump->um_cp, 0, 1, 0);
 			g_topology_unlock();
-			PICKUP_GIANT();
 			if (error)
 				return (error);
 
@@ -284,6 +279,7 @@ ext2_mount(struct mount *mp)
 static int
 ext2_check_sb_compat(struct ext2fs *es, struct cdev *dev, int ronly)
 {
+	uint32_t i, mask;
 
 	if (es->e2fs_magic != E2FS_MAGIC) {
 		printf("ext2fs: %s: wrong magic number %#x (expected %#x)\n",
@@ -291,17 +287,29 @@ ext2_check_sb_compat(struct ext2fs *es, struct cdev *dev, int ronly)
 		return (1);
 	}
 	if (es->e2fs_rev > E2FS_REV0) {
-		if (es->e2fs_features_incompat & ~(EXT2F_INCOMPAT_SUPP |
-						   EXT4F_RO_INCOMPAT_SUPP)) {
-			printf(
-"WARNING: mount of %s denied due to unsupported optional features\n",
-			    devtoname(dev));
+		mask = es->e2fs_features_incompat & ~(EXT2F_INCOMPAT_SUPP |
+		    EXT4F_RO_INCOMPAT_SUPP);
+		if (mask) {
+			printf("WARNING: mount of %s denied due to "
+			    "unsupported optional features:\n", devtoname(dev));
+			for (i = 0;
+			    i < sizeof(incompat)/sizeof(struct ext2_feature);
+			    i++)
+				if (mask & incompat[i].mask)
+					printf("%s ", incompat[i].name);
+			printf("\n");
 			return (1);
 		}
-		if (!ronly &&
-		    (es->e2fs_features_rocompat & ~EXT2F_ROCOMPAT_SUPP)) {
+		mask = es->e2fs_features_rocompat & ~EXT2F_ROCOMPAT_SUPP;
+		if (!ronly && mask) {
 			printf("WARNING: R/W mount of %s denied due to "
-			    "unsupported optional features\n", devtoname(dev));
+			    "unsupported optional features:\n", devtoname(dev));
+			for (i = 0;
+			    i < sizeof(ro_compat)/sizeof(struct ext2_feature);
+			    i++)
+				if (mask & ro_compat[i].mask)
+					printf("%s ", ro_compat[i].name);
+			printf("\n");
 			return (1);
 		}
 	}
@@ -354,8 +362,37 @@ compute_sb_data(struct vnode *devvp, struct ext2fs *es,
 		printf("ext2fs: no space for extra inode timestamps\n");
 		return (EINVAL);
 	}
+	/* Check for group descriptor size */
+	if (EXT2_HAS_INCOMPAT_FEATURE(fs, EXT2F_INCOMPAT_64BIT) &&
+	    (es->e3fs_desc_size != sizeof(struct ext2_gd))) {
+		printf("ext2fs: group descriptor size unsupported %d\n",
+		    es->e3fs_desc_size);
+		return (EINVAL);
+	}
+	/* Check for block size = 1K|2K|4K */
+	if (es->e2fs_log_bsize > 2) {
+		printf("ext2fs: bad block size: %d\n", es->e2fs_log_bsize);
+		return (EINVAL);
+	}
+	/* Check for group size */
+	if (fs->e2fs_bpg == 0 || fs->e2fs_fpg == 0) {
+		printf("ext2fs: zero blocks/fragments per group");
+		return (EINVAL);
+	} else if (fs->e2fs_bpg != fs->e2fs_fpg) {
+		printf("ext2fs: blocks per group not equal fragments per group");
+		return (EINVAL);
+	}
+	if (fs->e2fs_bpg != fs->e2fs_bsize * 8) {
+		printf("ext2fs: non-standard group size unsupported %d\n",
+		    fs->e2fs_bpg);
+		return (EINVAL);
+	}
 
 	fs->e2fs_ipb = fs->e2fs_bsize / EXT2_INODE_SIZE(fs);
+	if (fs->e2fs_ipg == 0) {
+		printf("ext2fs: zero inodes per group\n");
+		return (EINVAL);
+	}
 	fs->e2fs_itpg = fs->e2fs_ipg / fs->e2fs_ipb;
 	/* s_resuid / s_resgid ? */
 	fs->e2fs_gcount = howmany(es->e2fs_bcount - es->e2fs_first_dblock,
@@ -391,6 +428,12 @@ compute_sb_data(struct vnode *devvp, struct ext2fs *es,
 		    fs->e2fs_bsize);
 		brelse(bp);
 		bp = NULL;
+	}
+	/* Verify cg csum */
+	if (EXT2_HAS_RO_COMPAT_FEATURE(fs, EXT2F_ROCOMPAT_GDT_CSUM)) {
+		error = ext2_gd_csum_verify(fs, devvp->v_rdev);
+		if (error)
+			return (error);
 	}
 	/* Initialization for the ext2 Orlov allocator variant. */
 	fs->e2fs_total_dir = 0;
@@ -549,11 +592,9 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 
 	ronly = vfs_flagopt(mp->mnt_optnew, "ro", NULL, 0);
 	/* XXX: use VOP_ACESS to check FS perms */
-	DROP_GIANT();
 	g_topology_lock();
 	error = g_vfs_open(devvp, &cp, "ext2fs", ronly ? 0 : 1);
 	g_topology_unlock();
-	PICKUP_GIANT();
 	VOP_UNLOCK(devvp, 0);
 	if (error)
 		return (error);
@@ -561,11 +602,9 @@ ext2_mountfs(struct vnode *devvp, struct mount *mp)
 	/* XXX: should we check for some sectorsize or 512 instead? */
 	if (((SBSIZE % cp->provider->sectorsize) != 0) ||
 	    (SBSIZE < cp->provider->sectorsize)) {
-		DROP_GIANT();
 		g_topology_lock();
 		g_vfs_close(cp);
 		g_topology_unlock();
-		PICKUP_GIANT();
 		return (EINVAL);
 	}
 
@@ -685,11 +724,9 @@ out:
 	if (bp)
 		brelse(bp);
 	if (cp != NULL) {
-		DROP_GIANT();
 		g_topology_lock();
 		g_vfs_close(cp);
 		g_topology_unlock();
-		PICKUP_GIANT();
 	}
 	if (ump) {
 		mtx_destroy(EXT2_MTX(ump));
@@ -731,11 +768,9 @@ ext2_unmount(struct mount *mp, int mntflags)
 		ext2_sbupdate(ump, MNT_WAIT);
 	}
 
-	DROP_GIANT();
 	g_topology_lock();
 	g_vfs_close(ump->um_cp);
 	g_topology_unlock();
-	PICKUP_GIANT();
 	vrele(ump->um_devvp);
 	sump = fs->e2fs_clustersum;
 	for (i = 0; i < fs->e2fs_gcount; i++, sump++)
@@ -794,7 +829,7 @@ ext2_statfs(struct mount *mp, struct statfs *sbp)
 	if (fs->e2fs->e2fs_rev > E2FS_REV0 &&
 	    fs->e2fs->e2fs_features_rocompat & EXT2F_ROCOMPAT_SPARSESUPER) {
 		for (i = 0, ngroups = 0; i < fs->e2fs_gcount; i++) {
-			if (cg_has_sb(i))
+			if (ext2_cg_has_sb(fs, i))
 				ngroups++;
 		}
 	} else {
@@ -908,8 +943,8 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	struct buf *bp;
 	struct vnode *vp;
 	struct thread *td;
-	int i, error;
-	int used_blocks;
+	unsigned int i, used_blocks;
+	int error;
 
 	td = curthread;
 	error = vfs_hash_get(mp, ino, flags, td, vpp, NULL, NULL);
@@ -996,15 +1031,6 @@ ext2_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	 * Finish inode initialization.
 	 */
 
-	/*
-	 * Set up a generation number for this inode if it does not
-	 * already have one. This should only happen on old filesystems.
-	 */
-	if (ip->i_gen == 0) {
-		ip->i_gen = random() + 1;
-		if ((vp->v_mount->mnt_flag & MNT_RDONLY) == 0)
-			ip->i_flag |= IN_MODIFIED;
-	}
 	*vpp = vp;
 	return (0);
 }
@@ -1084,6 +1110,11 @@ ext2_cgupdate(struct ext2mount *mp, int waitfor)
 	int i, error = 0, allerror = 0;
 
 	allerror = ext2_sbupdate(mp, waitfor);
+
+	/* Update gd csums */
+	if (EXT2_HAS_RO_COMPAT_FEATURE(fs, EXT2F_ROCOMPAT_GDT_CSUM))
+		ext2_gd_csum_set(fs);
+
 	for (i = 0; i < fs->e2fs_gdbcount; i++) {
 		bp = getblk(mp->um_devvp, fsbtodb(fs,
 		    fs->e2fs->e2fs_first_dblock +

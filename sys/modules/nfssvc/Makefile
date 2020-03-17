@@ -1,8 +1,6 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/modules/nfssvc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-# $FreeBSD: stable/10/sys/modules/nfssvc/Makefile 190971 2009-04-12 19:04:27Z rmacklem $
-
-.PATH: ${.CURDIR}/../../nfs
+.PATH: ${SRCTOP}/sys/nfs
 KMOD=	nfssvc
 SRCS=	nfs_nfssvc.c \
 	opt_nfs.h

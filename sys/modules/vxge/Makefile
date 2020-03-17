@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/vxge/Makefile 221167 2011-04-28 14:33:15Z gnn $
+# $FreeBSD: stable/11/sys/modules/vxge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/vxge
-VPATH =	${.CURDIR}/../../dev/vxge/vxgehal
+.PATH: ${SRCTOP}/sys/dev/vxge
+VPATH =	${SRCTOP}/sys/dev/vxge/vxgehal
 
 CFLAGS_VXGE = 
 

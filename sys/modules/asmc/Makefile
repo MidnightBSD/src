@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/asmc/Makefile 177973 2008-04-07 11:26:13Z rpaulo $
+# $FreeBSD: stable/11/sys/modules/asmc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/asmc
+.PATH: ${SRCTOP}/sys/dev/asmc
 
 KMOD=	asmc
 SRCS=	asmc.c opt_acpi.h opt_intr_filter.h acpi_if.h bus_if.h device_if.h

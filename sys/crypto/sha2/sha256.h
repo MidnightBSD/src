@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2005 Colin Percival
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/crypto/sha2/sha256.h 314327 2017-02-27 08:27:38Z avg $
+ * $FreeBSD: stable/11/sys/crypto/sha2/sha256.h 310372 2016-12-21 18:42:04Z emaste $
  */
 
 #ifndef _SHA256_H_
@@ -60,6 +59,12 @@ __BEGIN_DECLS
 #ifndef SHA256_End
 #define SHA256_End		_libmd_SHA256_End
 #endif
+#ifndef SHA256_Fd
+#define SHA256_Fd		_libmd_SHA256_Fd
+#endif
+#ifndef SHA256_FdChunk
+#define SHA256_FdChunk		_libmd_SHA256_FdChunk
+#endif
 #ifndef SHA256_File
 #define SHA256_File		_libmd_SHA256_File
 #endif
@@ -79,10 +84,13 @@ __BEGIN_DECLS
 
 void	SHA256_Init(SHA256_CTX *);
 void	SHA256_Update(SHA256_CTX *, const void *, size_t);
-void	SHA256_Final(unsigned char [SHA256_DIGEST_LENGTH], SHA256_CTX *);
+void	SHA256_Final(unsigned char [__min_size(SHA256_DIGEST_LENGTH)],
+    SHA256_CTX *);
 #ifndef _KERNEL
 char   *SHA256_End(SHA256_CTX *, char *);
 char   *SHA256_Data(const void *, unsigned int, char *);
+char   *SHA256_Fd(int, char *);
+char   *SHA256_FdChunk(int, char *, off_t, off_t);
 char   *SHA256_File(const char *, char *);
 char   *SHA256_FileChunk(const char *, char *, off_t, off_t);
 #endif

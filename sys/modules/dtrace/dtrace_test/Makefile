@@ -1,18 +1,16 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/dtrace/dtrace_test/Makefile 253996 2013-08-06 15:51:56Z avg $
+# $FreeBSD: stable/11/sys/modules/dtrace/dtrace_test/Makefile 326531 2017-12-04 15:19:50Z markj $
 
-.PATH: ${.CURDIR}/../../../cddl/dev/dtrace
+SYSDIR?=	${SRCTOP}/sys
+
+.PATH:		${SYSDIR}/cddl/dev/dtrace
 
 KMOD=		dtrace_test
 SRCS=		dtrace_test.c
 
-SRCS+=		opt_kdtrace.h
 SRCS+=		vnode_if.h
 
-CFLAGS+=	-I${.CURDIR}/../../..
-
-CFLAGS+=	-D_KERNEL
+CFLAGS+=	-I${SYSDIR}
 
 .include <bsd.kmod.mk>
 
-CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+CFLAGS+=	-include ${SYSDIR}/cddl/compat/opensolaris/sys/debug_compat.h

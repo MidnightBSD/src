@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Alan L. Cox <alc@cs.rice.edu>
  * Copyright (c) 1982, 1986, 1991, 1993
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/uio_machdep.c 266312 2014-05-17 13:59:11Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/uio_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

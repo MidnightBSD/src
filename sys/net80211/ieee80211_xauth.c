@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Video54 Technologies, Inc.
  * Copyright (c) 2004-2008 Sam Leffler, Errno Consulting
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_xauth.c 178354 2008-04-20 20:35:46Z sam $");
+__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_xauth.c 295126 2016-02-01 17:41:21Z glebius $");
 
 /*
  * External authenticator placeholder module.
@@ -45,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_xauth.c 178354 2008-04-20 2
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h> 
+#include <sys/malloc.h>   
 #include <sys/mbuf.h>   
 #include <sys/module.h>
 

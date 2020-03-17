@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/hdspe/Makefile 232337 2012-03-01 13:10:18Z mav $
+# $FreeBSD: stable/11/sys/modules/sound/driver/hdspe/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_hdspe
 SRCS=	device_if.h bus_if.h pci_if.h

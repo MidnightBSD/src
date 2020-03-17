@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sym/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD: stable/11/sys/modules/sym/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/sym
+.PATH: ${SRCTOP}/sys/dev/sym
 
 KMOD=	sym
 SRCS=	sym_hipd.c opt_sym.h opt_cam.h opt_scsi.h

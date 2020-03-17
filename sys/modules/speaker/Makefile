@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/speaker/Makefile 152306 2005-11-11 09:57:32Z ru $
+# $FreeBSD: stable/11/sys/modules/speaker/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/speaker
+.PATH: ${SRCTOP}/sys/dev/speaker
 
 KMOD=	speaker
 SRCS=	spkr.c

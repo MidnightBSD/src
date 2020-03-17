@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Yandex LLC.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/sff8436.h 294202 2016-01-17 05:38:03Z melifaro $
+ * $FreeBSD: stable/11/sys/net/sff8436.h 292831 2015-12-28 09:26:07Z melifaro $
  */
 
 /*

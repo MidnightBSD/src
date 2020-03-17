@@ -1,11 +1,10 @@
-# $MidnightBSD$
 # $Id: Makefile,v 1.1 2002/11/24 20:40:11 max Exp $
-# $FreeBSD: stable/10/sys/modules/netgraph/bluetooth/l2cap/Makefile 124472 2004-01-13 11:28:51Z ru $
+# $FreeBSD: stable/11/sys/modules/netgraph/bluetooth/l2cap/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../netgraph/bluetooth/l2cap
+.PATH: ${SRCTOP}/sys/netgraph/bluetooth/l2cap
 
-CFLAGS+=	-I${.CURDIR}/../../../../netgraph/bluetooth/include \
-		-I${.CURDIR}/../../../../netgraph/bluetooth/l2cap
+CFLAGS+=	-I${SRCTOP}/sys/netgraph/bluetooth/include \
+		-I${SRCTOP}/sys/netgraph/bluetooth/l2cap
 
 KMOD=		ng_l2cap
 SRCS=		ng_l2cap_main.c ng_l2cap_cmds.c ng_l2cap_evnt.c \

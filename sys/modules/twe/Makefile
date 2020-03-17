@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/twe/Makefile 148913 2005-08-10 04:01:21Z obrien $
+# $FreeBSD: stable/11/sys/modules/twe/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 KMOD=	twe
-.PATH: ${.CURDIR}/../../dev/${KMOD}
+.PATH: ${SRCTOP}/sys/dev/${KMOD}
 SRCS=	bus_if.h device_if.h pci_if.h twe.c twe_freebsd.c
 
 #CFLAGS+=-DTWE_DEBUG=0

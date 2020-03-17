@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ieee8023ad_lacp.c,v 1.3 2005/12/11 12:24:54 christos Exp $	*/
 
 /*-
@@ -29,10 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/ieee8023ad_lacp.c 313039 2017-02-01 04:54:23Z rpokala $");
+__FBSDID("$FreeBSD: stable/11/sys/net/ieee8023ad_lacp.c 338871 2018-09-21 23:31:04Z erj $");
 
 #include <sys/param.h>
 #include <sys/callout.h>
+#include <sys/eventhandler.h>
 #include <sys/mbuf.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -43,8 +43,10 @@ __FBSDID("$FreeBSD: stable/10/sys/net/ieee8023ad_lacp.c 313039 2017-02-01 04:54:
 #include <machine/stdarg.h>
 #include <sys/lock.h>
 #include <sys/rwlock.h>
+#include <sys/taskqueue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/ethernet.h>
 #include <net/if_media.h>
@@ -195,8 +197,8 @@ SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, debug, CTLFLAG_RWTUN | CTLFLAG_VNET,
     &VNET_NAME(lacp_debug), 0, "Enable LACP debug logging (1=debug, 2=trace)");
 
 static VNET_DEFINE(int, lacp_default_strict_mode) = 1;
-SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, default_strict_mode, CTLFLAG_RWTUN,
-    &VNET_NAME(lacp_default_strict_mode), 0,
+SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, default_strict_mode,
+    CTLFLAG_RWTUN | CTLFLAG_VNET, &VNET_NAME(lacp_default_strict_mode), 0,
     "LACP strict protocol compliance default");
 
 #define LACP_DPRINTF(a) if (V_lacp_debug & 0x01) { lacp_dprintf a ; }
@@ -459,7 +461,11 @@ lacp_linkstate(struct lagg_port *lgp)
 	uint16_t old_key;
 
 	bzero((char *)&ifmr, sizeof(ifmr));
-	error = (*ifp->if_ioctl)(ifp, SIOCGIFMEDIA, (caddr_t)&ifmr);
+	error = (*ifp->if_ioctl)(ifp, SIOCGIFXMEDIA, (caddr_t)&ifmr);
+	if (error != 0) {
+		bzero((char *)&ifmr, sizeof(ifmr));
+		error = (*ifp->if_ioctl)(ifp, SIOCGIFMEDIA, (caddr_t)&ifmr);
+	}
 	if (error != 0)
 		return;
 
@@ -524,18 +530,15 @@ lacp_port_create(struct lagg_port *lgp)
 	struct ifmultiaddr *rifma = NULL;
 	int error;
 
-	bzero((char *)&sdl, sizeof(sdl));
-	sdl.sdl_len = sizeof(sdl);
-	sdl.sdl_family = AF_LINK;
-	sdl.sdl_index = ifp->if_index;
-	sdl.sdl_type = IFT_ETHER;
+	link_init_sdl(ifp, (struct sockaddr *)&sdl, IFT_ETHER);
 	sdl.sdl_alen = ETHER_ADDR_LEN;
 
 	bcopy(&ethermulticastaddr_slowprotocols,
 	    LLADDR(&sdl), ETHER_ADDR_LEN);
 	error = if_addmulti(ifp, (struct sockaddr *)&sdl, &rifma);
 	if (error) {
-		printf("%s: ADDMULTI failed on %s\n", __func__, lgp->lp_ifname);
+		printf("%s: ADDMULTI failed on %s\n", __func__,
+		    lgp->lp_ifp->if_xname);
 		return (error);
 	}
 
@@ -545,7 +548,7 @@ lacp_port_create(struct lagg_port *lgp)
 		return (ENOMEM);
 
 	LACP_LOCK(lsc);
-	lgp->lp_psc = (caddr_t)lp;
+	lgp->lp_psc = lp;
 	lp->lp_ifp = ifp;
 	lp->lp_lagg = lgp;
 	lp->lp_lsc = lsc;
@@ -591,7 +594,7 @@ lacp_port_destroy(struct lagg_port *lgp)
 }
 
 void
-lacp_req(struct lagg_softc *sc, caddr_t data)
+lacp_req(struct lagg_softc *sc, void *data)
 {
 	struct lacp_opreq *req = (struct lacp_opreq *)data;
 	struct lacp_softc *lsc = LACP_SOFTC(sc);
@@ -599,7 +602,7 @@ lacp_req(struct lagg_softc *sc, caddr_t data)
 
 	bzero(req, sizeof(struct lacp_opreq));
 	
-	/* 
+	/*
 	 * If the LACP softc is NULL, return with the opreq structure full of
 	 * zeros.  It is normal for the softc to be NULL while the lagg is
 	 * being destroyed.
@@ -630,7 +633,7 @@ lacp_req(struct lagg_softc *sc, caddr_t data)
 }
 
 void
-lacp_portreq(struct lagg_port *lgp, caddr_t data)
+lacp_portreq(struct lagg_port *lgp, void *data)
 {
 	struct lacp_opreq *req = (struct lacp_opreq *)data;
 	struct lacp_port *lp = LACP_PORT(lgp);
@@ -761,10 +764,10 @@ lacp_attach(struct lagg_softc *sc)
 
 	lsc = malloc(sizeof(struct lacp_softc), M_DEVBUF, M_WAITOK | M_ZERO);
 
-	sc->sc_psc = (caddr_t)lsc;
+	sc->sc_psc = lsc;
 	lsc->lsc_softc = sc;
 
-	lsc->lsc_hashkey = arc4random();
+	lsc->lsc_hashkey = m_ether_tcpip_hash_init();
 	lsc->lsc_active_aggregator = NULL;
 	lsc->lsc_strict_mode = VNET(lacp_default_strict_mode);
 	LACP_LOCK_INIT(lsc);
@@ -779,7 +782,7 @@ lacp_attach(struct lagg_softc *sc)
 		lacp_init(sc);
 }
 
-int
+void
 lacp_detach(void *psc)
 {
 	struct lacp_softc *lsc = (struct lacp_softc *)psc;
@@ -794,7 +797,6 @@ lacp_detach(void *psc)
 
 	LACP_LOCK_DESTROY(lsc);
 	free(lsc, M_DEVBUF);
-	return (0);
 }
 
 void
@@ -841,7 +843,7 @@ lacp_select_tx_port(struct lagg_softc *sc, struct mbuf *m)
 	    M_HASHTYPE_GET(m) != M_HASHTYPE_NONE)
 		hash = m->m_pkthdr.flowid >> sc->flowid_shift;
 	else
-		hash = lagg_hashmbuf(sc, m, lsc->lsc_hashkey);
+		hash = m_ether_tcpip_hash(sc->sc_flags, m, lsc->lsc_hashkey);
 	hash %= pm->pm_count;
 	lp = pm->pm_map[hash];
 
@@ -950,13 +952,13 @@ lacp_select_active_aggregator(struct lacp_softc *lsc)
 		    lacp_format_lagid_aggregator(la, buf, sizeof(buf)),
 		    speed, la->la_nports));
 
-		/* This aggregator is chosen if
-		 *      the partner has a better system priority
-		 *  or, the total aggregated speed is higher
-		 *  or, it is already the chosen aggregator
+		/*
+		 * This aggregator is chosen if the partner has a better
+		 * system priority or, the total aggregated speed is higher
+		 * or, it is already the chosen aggregator
 		 */
 		if ((best_la != NULL && LACP_SYS_PRI(la->la_partner) <
-		     LACP_SYS_PRI(best_la->la_partner)) ||
+		    LACP_SYS_PRI(best_la->la_partner)) ||
 		    speed > best_speed ||
 		    (speed == best_speed &&
 		    la == lsc->lsc_active_aggregator)) {
@@ -1069,6 +1071,7 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_100_VG:
 		case IFM_100_T2:
 		case IFM_100_T:
+		case IFM_100_SGMII:
 			key = IFM_100_TX;
 			break;
 		case IFM_1000_SX:
@@ -1092,6 +1095,7 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_10G_CR1:
 		case IFM_10G_ER:
 		case IFM_10G_SFI:
+		case IFM_10G_AOC:
 			key = IFM_10G_LR;
 			break;
 		case IFM_20G_KR2:
@@ -1099,14 +1103,31 @@ lacp_compose_key(struct lacp_port *lp)
 			break;
 		case IFM_2500_KX:
 		case IFM_2500_T:
+		case IFM_2500_X:
 			key = IFM_2500_KX;
 			break;
 		case IFM_5000_T:
+		case IFM_5000_KR:
+		case IFM_5000_KR_S:
+		case IFM_5000_KR1:
 			key = IFM_5000_T;
 			break;
 		case IFM_50G_PCIE:
 		case IFM_50G_CR2:
 		case IFM_50G_KR2:
+		case IFM_50G_SR2:
+		case IFM_50G_LR2:
+		case IFM_50G_LAUI2_AC:
+		case IFM_50G_LAUI2:
+		case IFM_50G_AUI2_AC:
+		case IFM_50G_AUI2:
+		case IFM_50G_CP:
+		case IFM_50G_SR:
+		case IFM_50G_LR:
+		case IFM_50G_FR:
+		case IFM_50G_KR_PAM4:
+		case IFM_50G_AUI1_AC:
+		case IFM_50G_AUI1:
 			key = IFM_50G_PCIE;
 			break;
 		case IFM_56G_R4:
@@ -1116,6 +1137,15 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_25G_CR:
 		case IFM_25G_KR:
 		case IFM_25G_SR:
+		case IFM_25G_LR:
+		case IFM_25G_ACC:
+		case IFM_25G_AOC:
+		case IFM_25G_T:
+		case IFM_25G_CR_S:
+		case IFM_25G_CR1:
+		case IFM_25G_KR_S:
+		case IFM_25G_AUI:
+		case IFM_25G_KR1:
 			key = IFM_25G_PCIE;
 			break;
 		case IFM_40G_CR4:
@@ -1123,13 +1153,49 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_40G_LR4:
 		case IFM_40G_XLPPI:
 		case IFM_40G_KR4:
+		case IFM_40G_XLAUI:
+		case IFM_40G_XLAUI_AC:
+		case IFM_40G_ER4:
 			key = IFM_40G_CR4;
 			break;
 		case IFM_100G_CR4:
 		case IFM_100G_SR4:
 		case IFM_100G_KR4:
 		case IFM_100G_LR4:
+		case IFM_100G_CAUI4_AC:
+		case IFM_100G_CAUI4:
+		case IFM_100G_AUI4_AC:
+		case IFM_100G_AUI4:
+		case IFM_100G_CR_PAM4:
+		case IFM_100G_KR_PAM4:
+		case IFM_100G_CP2:
+		case IFM_100G_SR2:
+		case IFM_100G_DR:
+		case IFM_100G_KR2_PAM4:
+		case IFM_100G_CAUI2_AC:
+		case IFM_100G_CAUI2:
+		case IFM_100G_AUI2_AC:
+		case IFM_100G_AUI2:
 			key = IFM_100G_CR4;
+			break;
+		case IFM_200G_CR4_PAM4:
+		case IFM_200G_SR4:
+		case IFM_200G_FR4:
+		case IFM_200G_LR4:
+		case IFM_200G_DR4:
+		case IFM_200G_KR4_PAM4:
+		case IFM_200G_AUI4_AC:
+		case IFM_200G_AUI4:
+		case IFM_200G_AUI8_AC:
+		case IFM_200G_AUI8:
+			key = IFM_200G_CR4_PAM4;
+			break;
+		case IFM_400G_FR8:
+		case IFM_400G_LR8:
+		case IFM_400G_DR4:
+		case IFM_400G_AUI8_AC:
+		case IFM_400G_AUI8:
+			key = IFM_400G_FR8;
 			break;
 		default:
 			key = subtype;
@@ -1301,6 +1367,10 @@ lacp_select(struct lacp_port *lp)
 	if (lp->lp_aggregator) {
 		return;
 	}
+
+	/* If we haven't heard from our peer, skip this step. */
+	if (lp->lp_state & LACP_STATE_DEFAULTED)
+		return;
 
 	KASSERT(!LACP_TIMER_ISARMED(lp, LACP_TIMER_WAIT_WHILE),
 	    ("timer_wait_while still active"));
@@ -1657,7 +1727,15 @@ lacp_sm_rx_record_pdu(struct lacp_port *lp, const struct lacpdu *du)
 	    LACP_STATE_AGGREGATION) &&
 	    !lacp_compare_peerinfo(&lp->lp_actor, &du->ldu_partner))
 	    || (du->ldu_partner.lip_state & LACP_STATE_AGGREGATION) == 0)) {
-		/* XXX nothing? */
+		/*
+		 * XXX Maintain legacy behavior of leaving the
+		 * LACP_STATE_SYNC bit unchanged from the partner's
+		 * advertisement if lsc_strict_mode is false.
+		 * TODO: We should re-examine the concept of the "strict mode"
+		 * to ensure it makes sense to maintain a non-strict mode.
+		 */
+		if (lp->lp_lsc->lsc_strict_mode)
+			lp->lp_partner.lip_state |= LACP_STATE_SYNC;
 	} else {
 		lp->lp_partner.lip_state &= ~LACP_STATE_SYNC;
 	}
@@ -1671,10 +1749,6 @@ lacp_sm_rx_record_pdu(struct lacp_port *lp, const struct lacpdu *du)
 		    lacp_format_state(lp->lp_partner.lip_state, buf,
 		    sizeof(buf))));
 	}
-
-	/* XXX Hack, still need to implement 5.4.9 para 2,3,4 */
-	if (lp->lp_lsc->lsc_strict_mode)
-		lp->lp_partner.lip_state |= LACP_STATE_SYNC;
 
 	lacp_sm_ptx_update_timeout(lp, oldpstate);
 }

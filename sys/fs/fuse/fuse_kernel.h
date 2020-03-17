@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file defines the kernel interface of FUSE
  * Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/fuse/fuse_kernel.h 253619 2013-07-24 20:21:29Z pfg $
+ * $FreeBSD: stable/11/sys/fs/fuse/fuse_kernel.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef linux

@@ -1,16 +1,18 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/opensolaris/Makefile 253996 2013-08-06 15:51:56Z avg $
+# $FreeBSD: stable/11/sys/modules/opensolaris/Makefile 346786 2019-04-27 05:35:51Z markj $
 
-.PATH: ${.CURDIR}/../../cddl/compat/opensolaris/kern
+SYSDIR?=	${SRCTOP}/sys
+
+.PATH:		${SYSDIR}/cddl/compat/opensolaris/kern
 
 KMOD=		opensolaris
 SRCS=		opensolaris.c		\
 		opensolaris_cmn_err.c	\
 		opensolaris_kmem.c	\
 		opensolaris_misc.c	\
+		opensolaris_proc.c	\
 		opensolaris_sunddi.c
 
-_A=${.CURDIR}/../../cddl/contrib/opensolaris/common/atomic
+_A=${SYSDIR}/cddl/contrib/opensolaris/common/atomic
 .if exists(${_A}/${MACHINE_CPUARCH}/opensolaris_atomic.S)
 .PATH:	${_A}/${MACHINE_CPUARCH}
 SRCS+=		opensolaris_atomic.S
@@ -21,12 +23,14 @@ SRCS+=		opensolaris_atomic.S
 SRCS+=		opensolaris_atomic.c
 .endif
 
-CFLAGS+=	-I${.CURDIR}/../../cddl/compat/opensolaris		\
-		-I${.CURDIR}/../../cddl/contrib/opensolaris/uts/common	\
-		-I${.CURDIR}/../..
+CFLAGS+=	-I${SYSDIR}/cddl/compat/opensolaris		\
+		-I${SYSDIR}/cddl/contrib/opensolaris/uts/common	\
+		-I${SYSDIR}
+
+EXPORT_SYMS=	cpu_core
 
 IGNORE_PRAGMA=	1
 
 .include <bsd.kmod.mk>
 
-CFLAGS+=	-include ${.CURDIR}/../../cddl/compat/opensolaris/sys/debug_compat.h
+CFLAGS+=	-include ${SYSDIR}/cddl/compat/opensolaris/sys/debug_compat.h

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Andre Oppermann <andre@FreeBSD.org>
  * All rights reserved.
@@ -43,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/siphash/siphash.c 253214 2013-07-11 16:27:11Z andre $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/siphash/siphash.c 300773 2016-05-26 19:29:29Z cem $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -72,7 +71,7 @@ SipHash_InitX(SIPHASH_CTX *ctx, int rc, int rf)
 }
 
 void
-SipHash_SetKey(SIPHASH_CTX *ctx, const uint8_t key[16])
+SipHash_SetKey(SIPHASH_CTX *ctx, const uint8_t key[static SIPHASH_KEY_LENGTH])
 {
 	uint64_t k[2];
 
@@ -168,7 +167,7 @@ SipHash_Update(SIPHASH_CTX *ctx, const void *src, size_t len)
 }
 
 void
-SipHash_Final(void *dst, SIPHASH_CTX *ctx)
+SipHash_Final(uint8_t dst[static SIPHASH_DIGEST_LENGTH], SIPHASH_CTX *ctx)
 {
 	uint64_t r;
 
@@ -197,8 +196,8 @@ SipHash_End(SIPHASH_CTX *ctx)
 }
 
 uint64_t
-SipHashX(SIPHASH_CTX *ctx, int rc, int rf, const uint8_t key[16],
-    const void *src, size_t len)
+SipHashX(SIPHASH_CTX *ctx, int rc, int rf,
+    const uint8_t key[static SIPHASH_KEY_LENGTH], const void *src, size_t len)
 {
 
 	SipHash_InitX(ctx, rc, rf);

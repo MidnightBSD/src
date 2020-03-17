@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/iwnfw/iwn1000/Makefile 220892 2011-04-20 17:32:20Z bschmidt $
+# $FreeBSD: stable/11/sys/modules/iwnfw/iwn1000/Makefile 220892 2011-04-20 17:32:20Z bschmidt $
 
 KMOD=	iwn1000fw
 IMG=	iwlwifi-1000-39.31.5.1

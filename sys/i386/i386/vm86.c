@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Jonathan Lemon
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/vm86.c 332325 2018-04-09 13:01:43Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/vm86.c 332314 2018-04-09 01:06:09Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -171,7 +170,7 @@ vm86_emulate(struct vm86frame *vmf)
 					PUSHL((vmf->vmf_eflags & PUSH_MASK)
 					    | PSL_IOPL, vmf);
 				vmf->vmf_ip += inc_ip;
-				return (0);
+				return (retcode);
 
 			case POPF:
 				temp_flags = POPL(vmf) & POP_MASK;
@@ -185,7 +184,7 @@ vm86_emulate(struct vm86frame *vmf)
 				} else {
 					vmf->vmf_eflags &= ~PSL_VIF;
 				}
-				return (0);
+				return (retcode);
 			}
 			break;
 
@@ -203,7 +202,7 @@ vm86_emulate(struct vm86frame *vmf)
 		case INTn:
 			break;
 
-		/* VME if trying to set PSL_TF, or PSL_I when VIP is set */
+		/* VME if trying to set PSL_T, or PSL_I when VIP is set */
 		case POPF:
 			temp_flags = POP(vmf) & POP_MASK;
 			vmf->vmf_flags = (vmf->vmf_flags & ~POP_MASK)
@@ -218,7 +217,7 @@ vm86_emulate(struct vm86frame *vmf)
 			}
 			return (retcode);
 
-		/* VME if trying to set PSL_TF, or PSL_I when VIP is set */
+		/* VME if trying to set PSL_T, or PSL_I when VIP is set */
 		case IRET:
 			vmf->vmf_ip = POP(vmf);
 			vmf->vmf_cs = POP(vmf);
@@ -416,8 +415,8 @@ vm86_initialize(void)
 	 * pcb_esp	=    stack frame pointer at time of switch
 	 * pcb_ebx	= va of vm86 page table
 	 * pcb_eip	=    argument pointer to initial call
-	 * pcb_spare[0]	=    saved TSS descriptor, word 0
-	 * pcb_space[1]	=    saved TSS descriptor, word 1
+	 * pcb_vm86[0]	=    saved TSS descriptor, word 0
+	 * pcb_vm86[1]	=    saved TSS descriptor, word 1
 	 */
 #define new_ptd		pcb_esi
 #define vm86_frame	pcb_ebp

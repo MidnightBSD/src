@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/imgact_binmisc/Makefile 264269 2014-04-08 20:10:22Z sbruno $
+# $FreeBSD: stable/11/sys/modules/imgact_binmisc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../kern
+.PATH: ${SRCTOP}/sys/kern
 
 KMOD=	imgact_binmisc
 SRCS=	imgact_binmisc.c

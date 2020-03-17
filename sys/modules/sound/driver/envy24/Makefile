@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/envy24/Makefile 162892 2006-09-30 18:12:33Z netchild $
+# $FreeBSD: stable/11/sys/modules/sound/driver/envy24/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_envy24
 SRCS=	device_if.h bus_if.h pci_if.h

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/siis/Makefile 195801 2009-07-21 12:32:46Z mav $
+# $FreeBSD: stable/11/sys/modules/siis/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/siis
+.PATH: ${SRCTOP}/sys/dev/siis
 
 KMOD=	siis
 SRCS=	siis.c siis.h device_if.h bus_if.h pci_if.h opt_cam.h

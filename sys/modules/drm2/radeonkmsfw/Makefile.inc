@@ -1,5 +1,4 @@
-# $MidnightBSD$ 
-# $FreeBSD: stable/10/sys/modules/drm2/radeonkmsfw/Makefile.inc 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD: stable/11/sys/modules/drm2/radeonkmsfw/Makefile.inc 319182 2017-05-30 04:11:12Z ngie $
 #
 # Common rules for building firmware.  Note this gets auto-included
 # by the subdir Makefile's as a consequence of included bsd.kmod.mk.
@@ -15,5 +14,5 @@ FIRMWS=	${_FIRM}:${KMOD}
 #
 #FIRMWARE_LICENSE=
 
-${_FIRM}: ${.CURDIR}/../../../../contrib/dev/drm2/radeonkmsfw/${_FIRM}.uu
+${_FIRM}: ${SRCTOP}/sys/contrib/dev/drm2/radeonkmsfw/${_FIRM}.uu
 	uudecode -p $? > ${.TARGET}

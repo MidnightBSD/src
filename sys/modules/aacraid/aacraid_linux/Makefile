@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/aacraid/aacraid_linux/Makefile 250963 2013-05-24 09:22:43Z achim $
+# $FreeBSD: stable/11/sys/modules/aacraid/aacraid_linux/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/aacraid
+.PATH: ${SRCTOP}/sys/dev/aacraid
 
 KMOD=	aacraid_linux
 SRCS=	aacraid_linux.c

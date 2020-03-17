@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  modified for Lites 1.1
  *
@@ -39,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_lookup.c	8.6 (Berkeley) 4/1/94
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_lookup.c 332750 2018-04-19 02:50:15Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_lookup.c 341074 2018-11-27 16:51:18Z markj $
  */
 
 #include <sys/param.h>
@@ -220,7 +219,7 @@ ext2_readdir(struct vop_readdir_args *ap)
 			dstdp.d_fileno = dp->e2d_ino;
 			dstdp.d_reclen = GENERIC_DIRSIZ(&dstdp);
 			bcopy(dp->e2d_name, dstdp.d_name, dstdp.d_namlen);
-			dstdp.d_name[dstdp.d_namlen] = '\0';
+			dirent_terminate(&dstdp);
 			if (dstdp.d_reclen > uio->uio_resid) {
 				if (uio->uio_resid == startresid)
 					error = EINVAL;
@@ -544,7 +543,7 @@ found:
 	 * in the cache as to where the entry was found.
 	 */
 	if ((flags & ISLASTCN) && nameiop == LOOKUP)
-		dp->i_diroff = i_offset &~ (DIRBLKSIZ - 1);
+		dp->i_diroff = rounddown2(i_offset, DIRBLKSIZ);
 	/*
 	 * If deleting, and at end of pathname, return
 	 * parameters which can be used to remove file.
@@ -804,11 +803,13 @@ ext2_dirbad(struct inode *ip, doff_t offset, char *how)
 
 	mp = ITOV(ip)->v_mount;
 	if ((mp->mnt_flag & MNT_RDONLY) == 0)
-		panic("ext2_dirbad: %s: bad dir ino %lu at offset %ld: %s\n",
-			mp->mnt_stat.f_mntonname, (u_long)ip->i_number,(long)offset, how);
+		panic("ext2_dirbad: %s: bad dir ino %ju at offset %ld: %s\n",
+		    mp->mnt_stat.f_mntonname, (uintmax_t)ip->i_number,
+		    (long)offset, how);
 	else
-	(void)printf("%s: bad dir ino %lu at offset %ld: %s\n",
-	    mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
+		(void)printf("%s: bad dir ino %ju at offset %ld: %s\n",
+		    mp->mnt_stat.f_mntonname, (uintmax_t)ip->i_number,
+		    (long)offset, how);
 
 }
 

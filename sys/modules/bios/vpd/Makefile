@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bios/vpd/Makefile 204309 2010-02-25 14:13:39Z attilio $
+# $FreeBSD: stable/11/sys/modules/bios/vpd/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH:  ${.CURDIR}/../../../x86/bios
+.PATH:  ${SRCTOP}/sys/x86/bios
 
 KMOD=	vpd
 SRCS=	vpd.c \

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: rijndael.c,v 1.3 2003/08/28 14:20:22 itojun Exp $	*/
 
 /*
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/rijndael/rijndael-api.c 175360 2008-01-15 18:34:47Z sobomax $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/rijndael/rijndael-api.c 175360 2008-01-15 18:34:47Z sobomax $");
 
 #include <sys/types.h>
 #ifdef _KERNEL

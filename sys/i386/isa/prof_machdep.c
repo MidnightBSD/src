@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Bruce D. Evans.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/isa/prof_machdep.c 220433 2011-04-07 23:28:28Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/isa/prof_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef GUPROF
 #include "opt_i586_guprof.h"

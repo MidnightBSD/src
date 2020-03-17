@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_fcntl.c 280258 2015-03-19 13:37:36Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_fcntl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_spx_hack.h"
 
@@ -190,7 +189,7 @@ ibcs2_open(td, uap)
 		CHECKALTCREAT(td, uap->path, &path);
 	else
 		CHECKALTEXIST(td, uap->path, &path);
-	ret = kern_open(td, path, UIO_SYSSPACE, flags, uap->mode);
+	ret = kern_openat(td, AT_FDCWD, path, UIO_SYSSPACE, flags, uap->mode);
 
 #ifdef SPX_HACK
 	if (ret == ENXIO) {
@@ -231,8 +230,8 @@ ibcs2_creat(td, uap)
 	int error;
 
 	CHECKALTCREAT(td, uap->path, &path);
-	error = kern_open(td, path, UIO_SYSSPACE, O_WRONLY | O_CREAT | O_TRUNC,
-	    uap->mode);
+	error = kern_openat(td, AT_FDCWD, path, UIO_SYSSPACE,
+	    O_WRONLY | O_CREAT | O_TRUNC, uap->mode);
 	free(path, M_TEMP);
 	return (error);
 }       
@@ -246,7 +245,7 @@ ibcs2_access(td, uap)
 	int error;
 
         CHECKALTEXIST(td, uap->path, &path);
-	error = kern_access(td, path, UIO_SYSSPACE, uap->amode);
+	error = kern_accessat(td, AT_FDCWD, path, UIO_SYSSPACE, 0, uap->amode);
 	free(path, M_TEMP);
 	return (error);
 }

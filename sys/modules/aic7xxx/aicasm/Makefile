@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/aic7xxx/aicasm/Makefile 139607 2005-01-03 07:27:17Z njl $
+# $FreeBSD: stable/11/sys/modules/aic7xxx/aicasm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-MAKESRCPATH=	${.CURDIR}/../../../dev/aic7xxx/aicasm
+MAKESRCPATH=	${SRCTOP}/sys/dev/aic7xxx/aicasm
 
 install:
 
-.include "${.CURDIR}/../../../dev/aic7xxx/aicasm/Makefile"
+.include "${SRCTOP}/sys/dev/aic7xxx/aicasm/Makefile"
 
 build-tools: ${PROG}

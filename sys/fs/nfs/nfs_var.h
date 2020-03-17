@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfs/nfs_var.h 321031 2017-07-15 19:24:54Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfs/nfs_var.h 346463 2019-04-21 00:41:06Z rmacklem $
  */
 
 /*
@@ -81,7 +80,7 @@ struct nfsv4lock;
 struct nfsvattr;
 struct nfs_vattr;
 struct NFSSVCARGS;
-#ifdef __MidnightBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 NFS_ACCESS_ARGS;
 NFS_OPEN_ARGS;
 NFS_GETATTR_ARGS;
@@ -96,7 +95,9 @@ int nfsrv_getclient(nfsquad_t, int, struct nfsclient **, struct nfsdsession *,
     nfsquad_t, uint32_t, struct nfsrv_descript *, NFSPROC_T *);
 int nfsrv_destroyclient(nfsquad_t, NFSPROC_T *);
 int nfsrv_destroysession(struct nfsrv_descript *, uint8_t *);
+int nfsrv_bindconnsess(struct nfsrv_descript *, uint8_t *, int *);
 int nfsrv_freestateid(struct nfsrv_descript *, nfsv4stateid_t *, NFSPROC_T *);
+int nfsrv_teststateid(struct nfsrv_descript *, nfsv4stateid_t *, NFSPROC_T *);
 int nfsrv_adminrevoke(struct nfsd_clid *, NFSPROC_T *);
 void nfsrv_dumpclients(struct nfsd_dumpclients *, int);
 void nfsrv_dumplocks(vnode_t, struct nfsd_dumplocks *, int, NFSPROC_T *);
@@ -129,12 +130,12 @@ int nfsrv_checksetattr(vnode_t, struct nfsrv_descript *,
     NFSPROC_T *);
 int nfsrv_checkgetattr(struct nfsrv_descript *, vnode_t,
     struct nfsvattr *, nfsattrbit_t *, struct ucred *, NFSPROC_T *);
-int nfsrv_nfsuserdport(u_short, NFSPROC_T *);
+int nfsrv_nfsuserdport(struct nfsuserd_args *, NFSPROC_T *);
 void nfsrv_nfsuserddelport(void);
 void nfsrv_throwawayallstate(NFSPROC_T *);
 int nfsrv_checksequence(struct nfsrv_descript *, uint32_t, uint32_t *,
     uint32_t *, int, uint32_t *, NFSPROC_T *);
-int nfsrv_checkreclaimcomplete(struct nfsrv_descript *);
+int nfsrv_checkreclaimcomplete(struct nfsrv_descript *, int);
 void nfsrv_cache_session(uint8_t *, uint32_t, int, struct mbuf **);
 void nfsrv_freeallbackchannel_xprts(void);
 
@@ -231,9 +232,13 @@ int nfsrvd_reclaimcomplete(struct nfsrv_descript *, int,
     vnode_t, NFSPROC_T *, struct nfsexstuff *);
 int nfsrvd_destroyclientid(struct nfsrv_descript *, int,
     vnode_t, NFSPROC_T *, struct nfsexstuff *);
+int nfsrvd_bindconnsess(struct nfsrv_descript *, int,
+    vnode_t, NFSPROC_T *, struct nfsexstuff *);
 int nfsrvd_destroysession(struct nfsrv_descript *, int,
     vnode_t, NFSPROC_T *, struct nfsexstuff *);
 int nfsrvd_freestateid(struct nfsrv_descript *, int,
+    vnode_t, NFSPROC_T *, struct nfsexstuff *);
+int nfsrvd_teststateid(struct nfsrv_descript *, int,
     vnode_t, NFSPROC_T *, struct nfsexstuff *);
 int nfsrvd_notsupp(struct nfsrv_descript *, int,
     vnode_t, NFSPROC_T *, struct nfsexstuff *);
@@ -307,7 +312,7 @@ void nfscl_reqstart(struct nfsrv_descript *, int, struct nfsmount *,
 nfsuint64 *nfscl_getcookie(struct nfsnode *, off_t off, int);
 void nfscl_fillsattr(struct nfsrv_descript *, struct vattr *,
       vnode_t, int, u_int32_t);
-u_int8_t *nfscl_getmyip(struct nfsmount *, int *);
+u_int8_t *nfscl_getmyip(struct nfsmount *, struct in6_addr *, int *);
 int nfsm_getfh(struct nfsrv_descript *, struct nfsfh **);
 int nfscl_mtofh(struct nfsrv_descript *, struct nfsfh **,
         struct nfsvattr *, int *);
@@ -648,9 +653,9 @@ int nfsvno_updfilerev(vnode_t, struct nfsvattr *, struct ucred *,
 int nfsvno_fillattr(struct nfsrv_descript *, struct mount *, vnode_t,
     struct nfsvattr *, fhandle_t *, int, nfsattrbit_t *,
     struct ucred *, NFSPROC_T *, int, int, int, int, uint64_t);
-int nfsrv_sattr(struct nfsrv_descript *, struct nfsvattr *, nfsattrbit_t *,
+int nfsrv_sattr(struct nfsrv_descript *, vnode_t, struct nfsvattr *, nfsattrbit_t *,
     NFSACL_T *, NFSPROC_T *);
-int nfsv4_sattr(struct nfsrv_descript *, struct nfsvattr *, nfsattrbit_t *,
+int nfsv4_sattr(struct nfsrv_descript *, vnode_t, struct nfsvattr *, nfsattrbit_t *,
     NFSACL_T *, NFSPROC_T *);
 int nfsvno_checkexp(mount_t, NFSSOCKADDR_T, struct nfsexstuff *,
     struct ucred **);

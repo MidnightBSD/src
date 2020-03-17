@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: des_ecb.c,v 1.6 2001/09/10 04:03:58 itojun Exp $	*/
 
 /* crypto/des/ecb_enc.c */
@@ -50,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/des/des_ecb.c 130443 2004-06-14 00:38:54Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/des/des_ecb.c 130443 2004-06-14 00:38:54Z obrien $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

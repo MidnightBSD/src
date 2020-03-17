@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/if_me.c 290347 2015-11-04 00:21:02Z hrs $");
+__FBSDID("$FreeBSD: stable/11/sys/net/if_me.c 317403 2017-04-25 11:19:22Z ae $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -67,7 +66,7 @@ __FBSDID("$FreeBSD: stable/10/sys/net/if_me.c 290347 2015-11-04 00:21:02Z hrs $"
 #include <machine/in_cksum.h>
 #include <security/mac/mac_framework.h>
 
-#define	MEMTU			1500
+#define	MEMTU			(1500 - sizeof(struct mobhdr))
 static const char mename[] = "me";
 static MALLOC_DEFINE(M_IFME, mename, "Minimal Encapsulation for IP");
 static VNET_DEFINE(struct mtx, me_mtx);
@@ -142,14 +141,13 @@ SYSCTL_INT(_net_link_me, OID_AUTO, max_nesting, CTLFLAG_RW | CTLFLAG_VNET,
     &VNET_NAME(max_me_nesting), 0, "Max nested tunnels");
 
 extern struct domain inetdomain;
-static void me_input10(struct mbuf *, int);
 static const struct protosw in_mobile_protosw = {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inetdomain,
 	.pr_protocol =		IPPROTO_MOBILE,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		me_input10,
-	.pr_output =		(pr_output_t *)rip_output,
+	.pr_input =		me_input,
+	.pr_output =		rip_output,
 	.pr_ctlinput =		rip_ctlinput,
 	.pr_ctloutput =		rip_ctloutput,
 	.pr_usrreqs =		&rip_usrreqs
@@ -188,7 +186,7 @@ me_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ME2IFP(sc)->if_softc = sc;
 	if_initname(ME2IFP(sc), mename, unit);
 
-	ME2IFP(sc)->if_mtu = MEMTU - sizeof(struct mobhdr);
+	ME2IFP(sc)->if_mtu = MEMTU;;
 	ME2IFP(sc)->if_flags = IFF_POINTOPOINT|IFF_MULTICAST;
 	ME2IFP(sc)->if_output = me_output;
 	ME2IFP(sc)->if_ioctl = me_ioctl;
@@ -238,7 +236,7 @@ me_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	case SIOCSIFMTU:
 		if (ifr->ifr_mtu < 576)
 			return (EINVAL);
-		ifp->if_mtu = ifr->ifr_mtu - sizeof(struct mobhdr);
+		ifp->if_mtu = ifr->ifr_mtu;
 		return (0);
 	case SIOCSIFADDR:
 		ifp->if_flags |= IFF_UP;
@@ -414,15 +412,6 @@ me_in_cksum(uint16_t *p, int nwords)
 	sum = (sum >> 16) + (sum & 0xffff);
 	sum += (sum >> 16);
 	return (~sum);
-}
-
-static void
-me_input10(struct mbuf *m, int off)
-{
-	int proto;
-
-	proto = (mtod(m, struct ip *))->ip_p;
-	me_input(&m, &off, proto);
 }
 
 int

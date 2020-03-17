@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: bf_enc.c,v 1.7 2002/02/27 01:33:59 itojun Exp $	*/
 
 /* crypto/bf/bf_enc.c */
@@ -61,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/blowfish/bf_enc.c 116174 2003-06-10 21:44:29Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/blowfish/bf_enc.c 116174 2003-06-10 21:44:29Z obrien $");
 
 #include <sys/types.h>
 #include <crypto/blowfish/blowfish.h>

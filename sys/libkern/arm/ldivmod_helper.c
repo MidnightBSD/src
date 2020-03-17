@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2012 Andrew Turner
  * All rights reserved.
@@ -27,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/arm/ldivmod_helper.c 245548 2013-01-17 09:37:42Z andrew $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/ldivmod_helper.c 285338 2015-07-09 21:02:40Z andrew $");
 
-#ifdef __ARM_EABI__
 #include <libkern/quad.h>
 
 /*
@@ -49,6 +47,3 @@ __kern_ldivmod(long long n, long long m, long long *rem)
 
 	return q;
 }
-
-#endif
-

@@ -1,17 +1,16 @@
-# $MidnightBSD$
-#$FreeBSD: stable/10/sys/modules/ix/Makefile 315333 2017-03-15 21:20:17Z erj $
+#$FreeBSD: stable/11/sys/modules/ix/Makefile 320897 2017-07-11 21:25:07Z erj $
 
-.PATH:  ${.CURDIR}/../../dev/ixgbe
+.PATH:  ${SRCTOP}/sys/dev/ixgbe
 
 KMOD    = if_ix
-SRCS    = device_if.h bus_if.h pci_if.h
-SRCS	+= opt_inet.h opt_inet6.h
+SRCS    = device_if.h bus_if.h pci_if.h pci_iov_if.h
+SRCS	+= opt_inet.h opt_inet6.h opt_rss.h
 SRCS    += if_ix.c if_bypass.c if_fdir.c if_sriov.c ix_txrx.c ixgbe_osdep.c
 SRCS    += ixgbe_netmap.c
 # Shared source
-SRCS    += ixgbe_common.c ixgbe_api.c ixgbe_phy.c ixgbe_mbx.c
+SRCS    += ixgbe_common.c ixgbe_api.c ixgbe_phy.c ixgbe_mbx.c ixgbe_vf.c
 SRCS    += ixgbe_dcb.c ixgbe_dcb_82598.c ixgbe_dcb_82599.c
 SRCS    += ixgbe_82598.c ixgbe_82599.c ixgbe_x540.c ixgbe_x550.c
-CFLAGS+= -I${.CURDIR}/../../dev/ixgbe -DSMP
+CFLAGS+= -I${SRCTOP}/sys/dev/ixgbe -DSMP
 
 .include <bsd.kmod.mk>

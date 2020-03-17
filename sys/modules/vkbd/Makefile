@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # $Id: Makefile,v 1.1 2004/08/13 18:30:24 max Exp $
-# $FreeBSD: stable/10/sys/modules/vkbd/Makefile 162711 2006-09-27 19:57:02Z ru $
+# $FreeBSD: stable/11/sys/modules/vkbd/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/vkbd
+.PATH:	${SRCTOP}/sys/dev/vkbd
 
 KMOD=	vkbd
 SRCS=	vkbd.c opt_compat.h opt_kbd.h

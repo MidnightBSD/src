@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Tim J. Robbins.
  * All rights reserved.
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_fileno.c 263670 2014-03-23 19:48:30Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/msdosfs/msdosfs_fileno.c 276887 2015-01-09 14:50:08Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,8 +68,7 @@ static int msdosfs_fileno_compare(struct msdosfs_fileno *,
 
 /* Initialize file number mapping structures. */
 void
-msdosfs_fileno_init(mp)
-	struct mount *mp;
+msdosfs_fileno_init(struct mount *mp)
 {
 	struct msdosfsmount *pmp = VFSTOMSDOSFS(mp);
 
@@ -83,8 +81,7 @@ msdosfs_fileno_init(mp)
 
 /* Free 32-bit file number generation structures. */
 void
-msdosfs_fileno_free(mp)
-	struct mount *mp;
+msdosfs_fileno_free(struct mount *mp)
 {
 	struct msdosfsmount *pmp = VFSTOMSDOSFS(mp);
 	struct msdosfs_fileno *mf, *next;
@@ -99,9 +96,7 @@ msdosfs_fileno_free(mp)
 
 /* Map a 64-bit file number into a 32-bit one. */
 uint32_t
-msdosfs_fileno_map(mp, fileno)
-	struct mount *mp;
-	uint64_t fileno;
+msdosfs_fileno_map(struct mount *mp, uint64_t fileno)
 {
 	struct msdosfsmount *pmp = VFSTOMSDOSFS(mp);
 	struct msdosfs_fileno key, *mf, *tmf;
@@ -143,8 +138,7 @@ msdosfs_fileno_map(mp, fileno)
 
 /* Compare by 64-bit file number. */
 static int
-msdosfs_fileno_compare(fa, fb)
-	struct msdosfs_fileno *fa, *fb;
+msdosfs_fileno_compare(struct msdosfs_fileno *fa, struct msdosfs_fileno *fb)
 {
 
 	if (fa->mf_fileno64 > fb->mf_fileno64)

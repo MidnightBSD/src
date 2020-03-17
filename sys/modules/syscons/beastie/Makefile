@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/syscons/beastie/Makefile 206380 2010-04-07 18:42:21Z jkim $
+# $FreeBSD: stable/11/sys/modules/syscons/beastie/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/syscons/logo
+.PATH:	${SRCTOP}/sys/dev/syscons/logo
 
 KMOD=	beastie_saver
 SRCS=	beastie.c logo_saver.c

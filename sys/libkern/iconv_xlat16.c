@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2005 Ryuichiro Imura
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/iconv_xlat16.c 319286 2017-05-31 06:00:14Z delphij $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/iconv_xlat16.c 319284 2017-05-31 05:45:06Z delphij $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -269,7 +268,7 @@ iconv_xlat16_conv(void *d2p, const char **inbuf,
 			 * there is a case that inbuf char is a single
 			 * byte char while inlen == 2
 			 */
-			if ((u_char)*(src+1) == 0 && !nullin ) {
+			if ((u_char)*(src+1) == '\0' && !nullin ) {
 				src++;
 				ir--;
 			} else {

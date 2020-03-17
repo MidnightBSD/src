@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -53,7 +52,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/fuse/fuse_node.h 282960 2015-05-15 11:03:19Z trasz $
+ * $FreeBSD: stable/11/sys/fs/fuse/fuse_node.h 349308 2019-06-23 14:49:30Z asomers $
  */
 
 #ifndef _FUSE_NODE_H_
@@ -127,6 +126,6 @@ void fuse_vnode_refreshsize(struct vnode *vp, struct ucred *cred);
 
 int fuse_vnode_savesize(struct vnode *vp, struct ucred *cred);
 
-int fuse_vnode_setsize(struct vnode *vp, struct ucred *cred, off_t newsize);
+int fuse_vnode_setsize(struct vnode *vp, off_t newsize);
 
 #endif /* _FUSE_NODE_H_ */

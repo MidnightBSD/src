@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +25,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_adhoc.c 262007 2014-02-17 01:36:53Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_adhoc.c 344969 2019-03-09 12:54:10Z avos $");
 #endif
 
 /*
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_adhoc.c 262007 2014-02-17 0
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_llc.h>
 #include <net/ethernet.h>
@@ -70,11 +70,12 @@ __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_adhoc.c 262007 2014-02-17 0
 
 static	void adhoc_vattach(struct ieee80211vap *);
 static	int adhoc_newstate(struct ieee80211vap *, enum ieee80211_state, int);
-static int adhoc_input(struct ieee80211_node *, struct mbuf *, int, int);
+static int adhoc_input(struct ieee80211_node *, struct mbuf *,
+	    const struct ieee80211_rx_stats *, int, int);
 static void adhoc_recv_mgmt(struct ieee80211_node *, struct mbuf *,
-	int subtype, int, int);
+	int subtype, const struct ieee80211_rx_stats *, int, int);
 static void ahdemo_recv_mgmt(struct ieee80211_node *, struct mbuf *,
-	int subtype, int, int);
+	    int subtype, const struct ieee80211_rx_stats *rxs, int, int);
 static void adhoc_recv_ctl(struct ieee80211_node *, struct mbuf *, int subtype);
 
 void
@@ -229,6 +230,8 @@ adhoc_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			}
 #endif
 			break;
+		case IEEE80211_S_RUN:	/* IBSS merge */
+			break;
 		default:
 			goto invalid;
 		}
@@ -287,9 +290,9 @@ doprint(struct ieee80211vap *vap, int subtype)
  * by the 802.11 layer.
  */
 static int
-adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
+adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
+    const struct ieee80211_rx_stats *rxs, int rssi, int nf)
 {
-#define	HAS_SEQ(type)	((type & 0x4) == 0)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ifnet *ifp = vap->iv_ifp;
@@ -299,7 +302,6 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 	int hdrspace, need_tap = 1;	/* mbuf need to be tapped. */	
 	uint8_t dir, type, subtype, qos;
 	uint8_t *bssid;
-	uint16_t rxseq;
 
 	if (m->m_flags & M_AMPDU_MPDU) {
 		/*
@@ -369,7 +371,10 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 		/*
 		 * Validate the bssid.
 		 */
-		if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
+		if (!(type == IEEE80211_FC0_TYPE_MGT &&
+		     (subtype == IEEE80211_FC0_SUBTYPE_BEACON ||
+		      subtype == IEEE80211_FC0_SUBTYPE_PROBE_RESP)) &&
+		    !IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
 		    !IEEE80211_ADDR_EQ(bssid, ifp->if_broadcastaddr)) {
 			/* not interested in */
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
@@ -409,29 +414,14 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 		}
 		IEEE80211_RSSI_LPF(ni->ni_avgrssi, rssi);
 		ni->ni_noise = nf;
-		if (HAS_SEQ(type)) {
+		if (IEEE80211_HAS_SEQ(type, subtype) &&
+		    IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_macaddr)) {
 			uint8_t tid = ieee80211_gettid(wh);
 			if (IEEE80211_QOS_HAS_SEQ(wh) &&
 			    TID_TO_WME_AC(tid) >= WME_AC_VI)
 				ic->ic_wme.wme_hipri_traffic++;
-			rxseq = le16toh(*(uint16_t *)wh->i_seq);
-			if (! ieee80211_check_rxseq(ni, wh)) {
-				/* duplicate, discard */
-				IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
-				    bssid, "duplicate",
-				    "seqno <%u,%u> fragno <%u,%u> tid %u",
-				    rxseq >> IEEE80211_SEQ_SEQ_SHIFT,
-				    ni->ni_rxseqs[tid] >>
-					IEEE80211_SEQ_SEQ_SHIFT,
-				    rxseq & IEEE80211_SEQ_FRAG_MASK,
-				    ni->ni_rxseqs[tid] &
-					IEEE80211_SEQ_FRAG_MASK,
-				    tid);
-				vap->iv_stats.is_rx_dup++;
-				IEEE80211_NODE_STAT(ni, rx_dup);
+			if (! ieee80211_check_rxseq(ni, wh, bssid))
 				goto out;
-			}
-			ni->ni_rxseqs[tid] = rxseq;
 		}
 	}
 
@@ -502,11 +492,9 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 		/*
 		 * Save QoS bits for use below--before we strip the header.
 		 */
-		if (subtype == IEEE80211_FC0_SUBTYPE_QOS) {
-			qos = (dir == IEEE80211_FC1_DIR_DSTODS) ?
-			    ((struct ieee80211_qosframe_addr4 *)wh)->i_qos[0] :
-			    ((struct ieee80211_qosframe *)wh)->i_qos[0];
-		} else
+		if (subtype == IEEE80211_FC0_SUBTYPE_QOS)
+			qos = ieee80211_getqos(wh)[0];
+		else
 			qos = 0;
 
 		/*
@@ -626,8 +614,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 		if ((ieee80211_msg_debug(vap) && doprint(vap, subtype)) ||
 		    ieee80211_msg_dumppkts(vap)) {
 			if_printf(ifp, "received %s from %s rssi %d\n",
-			    ieee80211_mgt_subtype_name[subtype >>
-				IEEE80211_FC0_SUBTYPE_SHIFT],
+			    ieee80211_mgt_subtype_name(subtype),
 			    ether_sprintf(wh->i_addr2), rssi);
 		}
 #endif
@@ -637,7 +624,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 			vap->iv_stats.is_rx_mgtdiscard++; /* XXX */
 			goto out;
 		}
-		vap->iv_recv_mgmt(ni, m, subtype, rssi, nf);
+		vap->iv_recv_mgmt(ni, m, subtype, rxs, rssi, nf);
 		goto out;
 
 	case IEEE80211_FC0_TYPE_CTL:
@@ -653,7 +640,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m, int rssi, int nf)
 		break;
 	}
 err:
-	ifp->if_ierrors++;
+	if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 out:
 	if (m != NULL) {
 		if (need_tap && ieee80211_radiotap_active_vap(vap))
@@ -682,12 +669,13 @@ is11bclient(const uint8_t *rates, const uint8_t *xrates)
 
 static void
 adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
-	int subtype, int rssi, int nf)
+	int subtype, const struct ieee80211_rx_stats *rxs, int rssi, int nf)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
+	struct ieee80211_channel *rxchan = ic->ic_curchan;
 	struct ieee80211_frame *wh;
-	uint8_t *frm, *efrm, *sfrm;
+	uint8_t *frm, *efrm;
 	uint8_t *ssid, *rates, *xrates;
 #if 0
 	int ht_state_change = 0;
@@ -700,11 +688,17 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 	case IEEE80211_FC0_SUBTYPE_PROBE_RESP:
 	case IEEE80211_FC0_SUBTYPE_BEACON: {
 		struct ieee80211_scanparams scan;
+		struct ieee80211_channel *c;
 		/*
 		 * We process beacon/probe response
 		 * frames to discover neighbors.
 		 */ 
-		if (ieee80211_parse_beacon(ni, m0, &scan) != 0)
+		if (rxs != NULL) {
+			c = ieee80211_lookup_channel_rxstatus(vap, rxs);
+			if (c != NULL)
+				rxchan = c;
+		}
+		if (ieee80211_parse_beacon(ni, m0, rxchan, &scan) != 0)
 			return;
 		/*
 		 * Count frame now that we know it's to be processed.
@@ -730,15 +724,28 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 				ieee80211_probe_curchan(vap, 1);
 				ic->ic_flags_ext &= ~IEEE80211_FEXT_PROBECHAN;
 			}
-			ieee80211_add_scan(vap, &scan, wh, subtype, rssi, nf);
+			ieee80211_add_scan(vap, rxchan, &scan, wh,
+			    subtype, rssi, nf);
 			return;
 		}
 		if (scan.capinfo & IEEE80211_CAPINFO_IBSS) {
 			if (!IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_macaddr)) {
 				/*
 				 * Create a new entry in the neighbor table.
+				 *
+				 * XXX TODO:
+				 *
+				 * Here we're not scanning; so if we have an
+				 * SSID then make sure it matches our SSID.
+				 * Otherwise this code will match on all IBSS
+				 * beacons/probe requests for all SSIDs,
+				 * filling the node table with nodes that
+				 * aren't ours.
 				 */
-				ni = ieee80211_add_neighbor(vap, wh, &scan);
+				if (ieee80211_ibss_node_check_new(ni, &scan))
+					ni = ieee80211_add_neighbor(vap, wh, &scan);
+				else
+					ni = NULL;
 			} else if (ni->ni_capinfo == 0) {
 				/*
 				 * Update faked node created on transmit.
@@ -781,7 +788,7 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 			 *
 			 * Since there's no (current) way to inform
 			 * the driver that a channel width change has
-			 * occured for a single node, just stub this
+			 * occurred for a single node, just stub this
 			 * out.
 			 */
 #if 0
@@ -815,7 +822,6 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 		 *	[tlv] extended supported rates
 		 */
 		ssid = rates = xrates = NULL;
-		sfrm = frm;
 		while (efrm - frm > 1) {
 			IEEE80211_VERIFY_LENGTH(efrm - frm, frm[1] + 2, return);
 			switch (*frm) {
@@ -860,7 +866,8 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 
 	case IEEE80211_FC0_SUBTYPE_ACTION:
 	case IEEE80211_FC0_SUBTYPE_ACTION_NOACK:
-		if (ni == vap->iv_bss) {
+		if ((ni == vap->iv_bss) &&
+		    !IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_macaddr)) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
 			    wh, NULL, "%s", "unknown node");
 			vap->iv_stats.is_rx_mgtdiscard++;
@@ -884,6 +891,7 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 	case IEEE80211_FC0_SUBTYPE_ASSOC_RESP:
 	case IEEE80211_FC0_SUBTYPE_REASSOC_REQ:
 	case IEEE80211_FC0_SUBTYPE_REASSOC_RESP:
+	case IEEE80211_FC0_SUBTYPE_TIMING_ADV:
 	case IEEE80211_FC0_SUBTYPE_ATIM:
 	case IEEE80211_FC0_SUBTYPE_DISASSOC:
 	case IEEE80211_FC0_SUBTYPE_AUTH:
@@ -905,7 +913,7 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 
 static void
 ahdemo_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
-	int subtype, int rssi, int nf)
+	int subtype, const struct ieee80211_rx_stats *rxs, int rssi, int nf)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
@@ -916,7 +924,7 @@ ahdemo_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 	 * a site-survey.
 	 */
 	if (ic->ic_flags & IEEE80211_F_SCAN)
-		adhoc_recv_mgmt(ni, m0, subtype, rssi, nf);
+		adhoc_recv_mgmt(ni, m0, subtype, rxs, rssi, nf);
 	else {
 		wh = mtod(m0, struct ieee80211_frame *);
 		switch (subtype) {
@@ -926,6 +934,7 @@ ahdemo_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 		case IEEE80211_FC0_SUBTYPE_REASSOC_RESP:
 		case IEEE80211_FC0_SUBTYPE_PROBE_REQ:
 		case IEEE80211_FC0_SUBTYPE_PROBE_RESP:
+		case IEEE80211_FC0_SUBTYPE_TIMING_ADV:
 		case IEEE80211_FC0_SUBTYPE_BEACON:
 		case IEEE80211_FC0_SUBTYPE_ATIM:
 		case IEEE80211_FC0_SUBTYPE_DISASSOC:

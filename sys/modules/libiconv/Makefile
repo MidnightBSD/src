@@ -1,13 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/libiconv/Makefile 227650 2011-11-18 03:05:20Z kevlo $
+# $FreeBSD: stable/11/sys/modules/libiconv/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../libkern ${.CURDIR}/../../sys
+.PATH: ${SRCTOP}/sys/libkern ${SRCTOP}/sys/sys
 
 KMOD=	libiconv
 SRCS=	iconv.c iconv_ucs.c iconv_xlat.c iconv_xlat16.c
-SRCS+=	iconv.h 
+SRCS+=	iconv.h
 SRCS+=	iconv_converter_if.c iconv_converter_if.h
-MFILES=	libkern/iconv_converter_if.m
 
 EXPORT_SYMS=	iconv_add	\
 		iconv_open	\

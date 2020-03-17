@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/wbwd/Makefile 232614 2012-03-06 18:44:52Z bz $
+# $FreeBSD: stable/11/sys/modules/wbwd/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/wbwd
+.PATH: ${SRCTOP}/sys/dev/wbwd
 
 KMOD=	wbwd
 SRCS=	wbwd.c

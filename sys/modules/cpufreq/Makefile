@@ -1,15 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cpufreq/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD: stable/11/sys/modules/cpufreq/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/cpufreq		\
-	${.CURDIR}/../../${MACHINE_CPUARCH}/cpufreq
+.PATH:	${SRCTOP}/sys/dev/cpufreq		\
+	${SRCTOP}/sys/${MACHINE_CPUARCH}/cpufreq
 
 KMOD=	cpufreq
 SRCS=	ichss.c
 SRCS+=	bus_if.h cpufreq_if.h device_if.h pci_if.h
 
 .if ${MACHINE} == "i386" || ${MACHINE} == "amd64"
-.PATH:	${.CURDIR}/../../x86/cpufreq
+.PATH:	${SRCTOP}/sys/x86/cpufreq
 
 SRCS+=	acpi_if.h opt_acpi.h
 SRCS+=	est.c hwpstate.c p4tcc.c powernow.c
@@ -20,7 +19,7 @@ SRCS+=	smist.c
 .endif
 
 .if ${MACHINE} == "powerpc"
-.PATH:	${.CURDIR}/../../powerpc/cpufreq
+.PATH:	${SRCTOP}/sys/powerpc/cpufreq
 SRCS+= dfs.c
 .endif
 

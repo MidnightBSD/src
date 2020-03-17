@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: stable/10/sys/i386/i386/apic_vector.s 302041 2016-06-21 04:51:55Z sephe $
+ * $FreeBSD: stable/11/sys/i386/i386/apic_vector.s 329462 2018-02-17 18:00:01Z kib $
  */
 
 /*
@@ -40,9 +39,26 @@
 #include "opt_smp.h"
 
 #include <machine/asmacros.h>
+#include <machine/specialreg.h>
 #include <x86/apicreg.h>
 
 #include "assym.s"
+
+	.text
+	SUPERALIGN_TEXT
+	/* End Of Interrupt to APIC */
+as_lapic_eoi:
+	cmpl	$0,x2apic_mode
+	jne	1f
+	movl	lapic_map,%eax
+	movl	$0,LA_EOI(%eax)
+	ret
+1:
+	movl	$MSR_APIC_EOI,%ecx
+	xorl	%eax,%eax
+	xorl	%edx,%edx
+	wrmsr
+	ret
 
 /*
  * I/O Interrupt Entry Point.  Rather than having one entry point for
@@ -54,21 +70,29 @@
 #define	ISR_VEC(index, vec_name)					\
 	.text ;								\
 	SUPERALIGN_TEXT ;						\
+IDTVEC(vec_name ## _pti) ;						\
 IDTVEC(vec_name) ;							\
 	PUSH_FRAME ;							\
 	SET_KERNEL_SREGS ;						\
 	cld ;								\
 	FAKE_MCOUNT(TF_EIP(%esp)) ;					\
-	movl	lapic, %edx ;	/* pointer to local APIC */		\
+	cmpl	$0,x2apic_mode ;					\
+	je	1f ;							\
+	movl	$(MSR_APIC_ISR0 + index),%ecx ;				\
+	rdmsr ;								\
+	jmp	2f ;							\
+1: ;									\
+	movl	lapic_map, %edx ;/* pointer to local APIC */		\
 	movl	LA_ISR + 16 * (index)(%edx), %eax ;	/* load ISR */	\
+2: ;									\
 	bsrl	%eax, %eax ;	/* index of highest set bit in ISR */	\
-	jz	1f ;							\
+	jz	3f ;							\
 	addl	$(32 * index),%eax ;					\
 	pushl	%esp		;                                       \
 	pushl	%eax ;		/* pass the IRQ */			\
 	call	lapic_handle_intr ;					\
 	addl	$8, %esp ;	/* discard parameter */			\
-1: ;									\
+3: ;									\
 	MEXITCOUNT ;							\
 	jmp	doreti
 
@@ -100,6 +124,7 @@ IDTVEC(spuriousint)
  */
 	.text
 	SUPERALIGN_TEXT
+IDTVEC(timerint_pti)
 IDTVEC(timerint)
 	PUSH_FRAME
 	SET_KERNEL_SREGS
@@ -116,6 +141,7 @@ IDTVEC(timerint)
  */
 	.text
 	SUPERALIGN_TEXT
+IDTVEC(cmcint_pti)
 IDTVEC(cmcint)
 	PUSH_FRAME
 	SET_KERNEL_SREGS
@@ -130,6 +156,7 @@ IDTVEC(cmcint)
  */
 	.text
 	SUPERALIGN_TEXT
+IDTVEC(errorint_pti)
 IDTVEC(errorint)
 	PUSH_FRAME
 	SET_KERNEL_SREGS
@@ -165,10 +192,8 @@ IDTVEC(xen_intr_upcall)
 	.text
 	SUPERALIGN_TEXT
 invltlb_ret:
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-	POP_FRAME
-	iret
+	call	as_lapic_eoi
+	jmp	doreti
 
 	SUPERALIGN_TEXT
 IDTVEC(invltlb)
@@ -225,7 +250,6 @@ IDTVEC(invlcache)
 /*
  * Handler for IPIs sent via the per-cpu IPI bitmap.
  */
-#ifndef XEN
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(ipi_intr_bitmap_handler)	
@@ -233,15 +257,14 @@ IDTVEC(ipi_intr_bitmap_handler)
 	SET_KERNEL_SREGS
 	cld
 
-	movl	lapic, %edx
-	movl	$0, LA_EOI(%edx)	/* End Of Interrupt to APIC */
+	call	as_lapic_eoi
 	
 	FAKE_MCOUNT(TF_EIP(%esp))
 
 	call	ipi_bitmap_handler
 	MEXITCOUNT
 	jmp	doreti
-#endif
+
 /*
  * Executed by a CPU when it receives an IPI_STOP from another CPU.
  */
@@ -252,18 +275,13 @@ IDTVEC(cpustop)
 	SET_KERNEL_SREGS
 	cld
 
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
+	call	as_lapic_eoi
 	call	cpustop_handler
-
-	POP_FRAME
-	iret
+	jmp	doreti
 
 /*
  * Executed by a CPU when it receives an IPI_SUSPEND from another CPU.
  */
-#ifndef XEN
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(cpususpend)
@@ -271,14 +289,9 @@ IDTVEC(cpususpend)
 	SET_KERNEL_SREGS
 	cld
 
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
+	call	as_lapic_eoi
 	call	cpususpend_handler
-
-	POP_FRAME
-	jmp	doreti_iret
-#endif
+	jmp	doreti
 
 /*
  * Executed by a CPU when it receives a RENDEZVOUS IPI from another CPU.
@@ -299,25 +312,7 @@ IDTVEC(rendezvous)
 #endif
 	call	smp_rendezvous_action
 
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-	POP_FRAME
-	iret
+	call	as_lapic_eoi
+	jmp	doreti
 	
-/*
- * Clean up when we lose out on the lazy context switch optimization.
- * ie: when we are about to release a PTD but a cpu is still borrowing it.
- */
-	SUPERALIGN_TEXT
-IDTVEC(lazypmap)
-	PUSH_FRAME
-	SET_KERNEL_SREGS
-	cld
-
-	call	pmap_lazyfix_action
-
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-	POP_FRAME
-	iret
 #endif /* SMP */

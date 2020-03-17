@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 John Birrell <jb@freebsd.org>
  * 
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/modules/dtrace/dtraceall/dtraceall.c 287090 2015-08-24 03:41:14Z julian $
+ * $FreeBSD: stable/11/sys/modules/dtrace/dtraceall/dtraceall.c 332566 2018-04-16 14:39:04Z lidl $
  */
 
 #include <sys/cdefs.h>
@@ -70,16 +69,14 @@ MODULE_DEPEND(dtraceall, dtmalloc, 1, 1, 1);
 #if defined(NFSCL)
 MODULE_DEPEND(dtraceall, dtnfscl, 1, 1, 1);
 #endif
-#if defined(NFSCLIENT)
-MODULE_DEPEND(dtraceall, dtnfsclient, 1, 1, 1);
-#endif
-#if defined(__amd64__) || defined(__i386__) || defined(__powerpc__)
+#if defined(__aarch64__) || defined(__amd64__) || defined(__arm__) || \
+    defined(__i386__) || defined(__mips__) || \
+    defined(__powerpc__)
 MODULE_DEPEND(dtraceall, fbt, 1, 1, 1);
 #endif
 #if defined(__amd64__) || defined(__i386__)
 MODULE_DEPEND(dtraceall, fasttrap, 1, 1, 1);
 #endif
-MODULE_DEPEND(dtraceall, lockstat, 1, 1, 1);
 MODULE_DEPEND(dtraceall, sdt, 1, 1, 1);
 MODULE_DEPEND(dtraceall, systrace, 1, 1, 1);
 #if defined(COMPAT_FREEBSD32)

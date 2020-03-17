@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -33,7 +32,7 @@
  *
  *	@(#)procfs_note.c	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/10/sys/fs/procfs/procfs_note.c 128019 2004-04-07 20:46:16Z imp $
+ * $FreeBSD: stable/11/sys/fs/procfs/procfs_note.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

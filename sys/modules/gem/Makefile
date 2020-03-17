@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/gem/Makefile 212725 2010-09-16 09:29:48Z marius $
+# $FreeBSD: stable/11/sys/modules/gem/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/gem
+.PATH: ${SRCTOP}/sys/dev/gem
 
 KMOD=	if_gem
 SRCS=	bus_if.h device_if.h if_gem.c if_gem_pci.c ${if_gem_sbus} miibus_if.h

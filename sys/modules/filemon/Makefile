@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/filemon/Makefile 296015 2016-02-24 22:30:22Z bdrewery $
+# $FreeBSD: stable/11/sys/modules/filemon/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/filemon
+.PATH: ${SRCTOP}/sys/dev/filemon
 
 KMOD=	filemon
 SRCS=	${KMOD}.c

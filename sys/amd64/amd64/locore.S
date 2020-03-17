@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/amd64/locore.S 115431 2003-05-31 06:54:29Z peter $
+ * $FreeBSD: stable/11/sys/amd64/amd64/locore.S 263002 2014-03-11 10:07:01Z royger $
  */
 
 #include <machine/asmacros.h>
@@ -85,5 +84,6 @@ NON_GPROF_ENTRY(btext)
 
 	.bss
 	ALIGN_DATA			/* just to be sure */
+	.globl	bootstack
 	.space	0x1000			/* space for bootstack - temporary stack */
 bootstack:

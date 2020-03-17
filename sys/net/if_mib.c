@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996 Massachusetts Institute of Technology
  *
@@ -27,16 +26,18 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/if_mib.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD: stable/11/sys/net/if_mib.c 295126 2016-02-01 17:41:21Z glebius $
  */
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_mib.h>
 #include <net/vnet.h>
 
@@ -67,9 +68,9 @@ SYSCTL_DECL(_net_link_generic);
 static SYSCTL_NODE(_net_link_generic, IFMIB_SYSTEM, system, CTLFLAG_RW, 0,
 	    "Variables global to all interfaces");
 
-SYSCTL_VNET_INT(_net_link_generic_system, IFMIB_IFCOUNT, ifcount, CTLFLAG_RD,
-	    &VNET_NAME(if_index), 0,
-	     "Number of configured interfaces");
+SYSCTL_INT(_net_link_generic_system, IFMIB_IFCOUNT, ifcount,
+	CTLFLAG_VNET | CTLFLAG_RD, &VNET_NAME(if_index), 0,
+	"Number of configured interfaces");
 
 static int
 sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
@@ -99,37 +100,18 @@ sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
 		bzero(&ifmd, sizeof(ifmd));
 		strlcpy(ifmd.ifmd_name, ifp->if_xname, sizeof(ifmd.ifmd_name));
 
-#define COPY(fld) ifmd.ifmd_##fld = ifp->if_##fld
-		COPY(pcount);
-		COPY(data);
-#undef COPY
+		ifmd.ifmd_pcount = ifp->if_pcount;
+		if_data_copy(ifp, &ifmd.ifmd_data);
+
 		ifmd.ifmd_flags = ifp->if_flags | ifp->if_drv_flags;
 		ifmd.ifmd_snd_len = ifp->if_snd.ifq_len;
 		ifmd.ifmd_snd_maxlen = ifp->if_snd.ifq_maxlen;
-		ifmd.ifmd_snd_drops = ifp->if_snd.ifq_drops;
+		ifmd.ifmd_snd_drops =
+		    ifp->if_get_counter(ifp, IFCOUNTER_OQDROPS);
 
 		error = SYSCTL_OUT(req, &ifmd, sizeof ifmd);
-		if (error || !req->newptr)
-			goto out;
-
-		error = SYSCTL_IN(req, &ifmd, sizeof ifmd);
 		if (error)
 			goto out;
-
-#define DONTCOPY(fld) ifmd.ifmd_data.ifi_##fld = ifp->if_data.ifi_##fld
-		DONTCOPY(type);
-		DONTCOPY(physical);
-		DONTCOPY(addrlen);
-		DONTCOPY(hdrlen);
-		DONTCOPY(mtu);
-		DONTCOPY(metric);
-		DONTCOPY(baudrate);
-#undef DONTCOPY
-#define COPY(fld) ifp->if_##fld = ifmd.ifmd_##fld
-		COPY(data);
-		ifp->if_snd.ifq_maxlen = ifmd.ifmd_snd_maxlen;
-		ifp->if_snd.ifq_drops = ifmd.ifmd_snd_drops;
-#undef COPY
 		break;
 
 	case IFDATA_LINKSPECIFIC:

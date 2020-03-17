@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_vfsops.c 255867 2013-09-25 02:49:18Z jmg $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/cd9660/cd9660_vfsops.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -227,11 +226,9 @@ iso_mountfs(devvp, mp)
 
 	dev = devvp->v_rdev;
 	dev_ref(dev);
-	DROP_GIANT();
 	g_topology_lock();
 	error = g_vfs_open(devvp, &cp, "cd9660", 0);
 	g_topology_unlock();
-	PICKUP_GIANT();
 	VOP_UNLOCK(devvp, 0);
 	if (error)
 		goto out;
@@ -310,13 +307,13 @@ iso_mountfs(devvp, mp)
 		default:
 			break;
 		}
-		if (bp) {
+		if (bp != NULL) {
 			brelse(bp);
 			bp = NULL;
 		}
 	}
  vd_end:
-	if (bp) {
+	if (bp != NULL) {
 		brelse(bp);
 		bp = NULL;
 	}
@@ -475,18 +472,16 @@ iso_mountfs(devvp, mp)
 
 	return 0;
 out:
-	if (bp)
+	if (bp != NULL)
 		brelse(bp);
-	if (pribp)
+	if (pribp != NULL)
 		brelse(pribp);
-	if (supbp)
+	if (supbp != NULL)
 		brelse(supbp);
 	if (cp != NULL) {
-		DROP_GIANT();
 		g_topology_lock();
 		g_vfs_close(cp);
 		g_topology_unlock();
-		PICKUP_GIANT();
 	}
 	if (isomp) {
 		free(isomp, M_ISOFSMNT);
@@ -520,11 +515,9 @@ cd9660_unmount(mp, mntflags)
 		if (isomp->im_l2d)
 			cd9660_iconv->close(isomp->im_l2d);
 	}
-	DROP_GIANT();
 	g_topology_lock();
 	g_vfs_close(isomp->im_cp);
 	g_topology_unlock();
-	PICKUP_GIANT();
 	vrele(isomp->im_devvp);
 	dev_rel(isomp->im_dev);
 	free(isomp, M_ISOFSMNT);
@@ -710,7 +703,7 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 	if (error || *vpp != NULL)
 		return (error);
 
-	if (isodir == 0) {
+	if (isodir == NULL) {
 		int lbn, off;
 
 		lbn = lblkno(imp, ino);
@@ -742,8 +735,7 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 		if (off + isonum_711(isodir->length) >
 		    imp->logical_block_size) {
 			vput(vp);
-			if (bp != 0)
-				brelse(bp);
+			brelse(bp);
 			printf("fhtovp: directory crosses block boundary %d[off=%d/len=%d]\n",
 			       off +isonum_711(isodir->length), off,
 			       isonum_711(isodir->length));
@@ -753,8 +745,7 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 #if 0
 		if (isonum_733(isodir->extent) +
 		    isonum_711(isodir->ext_attr_length) != ifhp->ifid_start) {
-			if (bp != 0)
-				brelse(bp);
+			brelse(bp);
 			printf("fhtovp: file start miss %d vs %d\n",
 			       isonum_733(isodir->extent) + isonum_711(isodir->ext_attr_length),
 			       ifhp->ifid_start);
@@ -762,7 +753,7 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 		}
 #endif
 	} else
-		bp = 0;
+		bp = NULL;
 
 	ip->i_mnt = imp;
 
@@ -772,7 +763,7 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 		 * read the `.' entry out of a dir.
 		 */
 		ip->iso_start = ino >> imp->im_bshift;
-		if (bp != 0)
+		if (bp != NULL)
 			brelse(bp);
 		if ((error = cd9660_blkatoff(vp, (off_t)0, NULL, &bp)) != 0) {
 			vput(vp);
@@ -811,8 +802,7 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 		break;
 	}
 
-	if (bp != 0)
-		brelse(bp);
+	brelse(bp);
 
 	/*
 	 * Initialize the associated vnode

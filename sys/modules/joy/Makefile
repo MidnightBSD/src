@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/joy/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD: stable/11/sys/modules/joy/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/joy
+.PATH: ${SRCTOP}/sys/dev/joy
 
 KMOD=	joy
-SRCS=	bus_if.h device_if.h isa_if.h card_if.h joy.c joy_isa.c joy_pccard.c \
-	pccarddevs.h
+SRCS=	bus_if.h device_if.h isa_if.h joy.c joy_isa.c
 
 .include <bsd.kmod.mk>

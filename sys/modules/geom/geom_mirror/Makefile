@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_mirror/Makefile 132904 2004-07-30 23:13:45Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_mirror/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/mirror
+.PATH: ${SRCTOP}/sys/geom/mirror
 
 KMOD=	geom_mirror
 SRCS=	g_mirror.c

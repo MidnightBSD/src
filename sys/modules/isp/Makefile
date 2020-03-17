@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/isp/Makefile 331635 2018-03-27 17:48:39Z brooks $
+# $FreeBSD: stable/11/sys/modules/isp/Makefile 331634 2018-03-27 17:46:25Z brooks $
 
-.PATH: ${.CURDIR}/../../dev/isp
+.PATH: ${SRCTOP}/sys/dev/isp
 
 KMOD=	isp
 SRCS=	bus_if.h device_if.h pci_if.h \
@@ -11,6 +10,5 @@ SRCS=	bus_if.h device_if.h pci_if.h \
 .if ${MACHINE} == sparc64
 SRCS+=	isp_sbus.c ofw_bus_if.h
 .endif
-CFLAGS+=	-Wformat -Wall -Werror
 
 .include <bsd.kmod.mk>

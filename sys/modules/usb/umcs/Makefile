@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/umcs/Makefile 222696 2011-06-04 20:40:24Z hselasky $
+# $FreeBSD: stable/11/sys/modules/usb/umcs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/serial
 

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nvme/Makefile 253476 2013-07-19 21:40:57Z jimharris $
+# $FreeBSD: stable/11/sys/modules/nvme/Makefile 329095 2018-02-10 00:39:34Z mav $
 
-.PATH: ${.CURDIR}/../../dev/nvme
+.PATH: ${SRCTOP}/sys/dev/nvme
 
 KMOD = nvme
 
@@ -17,6 +16,8 @@ SRCS =	nvme.c			\
 				\
 	bus_if.h		\
 	device_if.h		\
+	opt_cam.h		\
+	opt_nvme.h		\
 	pci_if.h
 
 .include <bsd.kmod.mk>

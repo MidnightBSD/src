@@ -1,15 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/trm/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: stable/11/sys/modules/trm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/trm
+.PATH: ${SRCTOP}/sys/dev/trm
 
 KMOD=	trm
 SRCS=	trm.c trm.h opt_cam.h device_if.h bus_if.h \
 	opt_scsi.h pci_if.h
-
-.if !defined(KERNBUILDDIR)
-opt_scsi.h:
-	echo "#define SCSI_DELAY 15000" > ${.TARGET}
-.endif
 
 .include <bsd.kmod.mk>

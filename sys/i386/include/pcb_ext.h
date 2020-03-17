@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Jonathan Lemon
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/pcb_ext.h 150173 2005-09-15 17:30:08Z jhb $
+ * $FreeBSD: stable/11/sys/i386/include/pcb_ext.h 333626 2018-05-15 11:25:10Z kib $
  */
 
 #ifndef _I386_PCB_EXT_H_
@@ -45,10 +44,7 @@ struct pcb_ext {
 };
 
 #ifdef _KERNEL
-extern int private_tss;
-
 int i386_extend_pcb(struct thread *);
-
 #endif
 
 #endif /* _I386_PCB_EXT_H_ */

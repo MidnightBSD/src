@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/if_edsc/Makefile 167891 2007-03-26 04:39:18Z yar $
+# $FreeBSD: stable/11/sys/modules/if_edsc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../net
+.PATH: ${SRCTOP}/sys/net
 
 KMOD=	if_edsc
 SRCS=	if_edsc.c

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -35,7 +34,7 @@
  *
  * From:
  *	$Id: procfs_status.c,v 3.1 1993/12/15 09:40:17 jsp Exp $
- * $FreeBSD: stable/10/sys/fs/procfs/procfs_status.c 293473 2016-01-09 14:08:10Z dchagin $
+ * $FreeBSD: stable/11/sys/fs/procfs/procfs_status.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -71,6 +70,7 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 	const char *wmesg;
 	char *pc;
 	char *sep;
+	struct timeval boottime;
 	int pid, ppid, pgid, sid;
 	int i;
 
@@ -130,6 +130,7 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 		calcru(p, &ut, &st);
 		PROC_STATUNLOCK(p);
 		start = p->p_stats->p_start;
+		getboottime(&boottime);
 		timevaladd(&start, &boottime);
 		sbuf_printf(sb, " %jd,%ld %jd,%ld %jd,%ld",
 		    (intmax_t)start.tv_sec, start.tv_usec,

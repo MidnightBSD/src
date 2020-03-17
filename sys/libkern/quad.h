@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quad.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: stable/10/sys/libkern/quad.h 245840 2013-01-23 09:18:18Z andrew $
+ * $FreeBSD: stable/11/sys/libkern/quad.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _LIBKERN_QUAD_H_

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bm/Makefile 179645 2008-06-07 22:58:32Z marcel $
+# $FreeBSD: stable/11/sys/modules/bm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/bm
+.PATH: ${SRCTOP}/sys/dev/bm
 
 KMOD=	if_bm
 SRCS=	if_bm.c

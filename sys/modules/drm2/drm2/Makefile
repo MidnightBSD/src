@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/drm2/drm2/Makefile 282199 2015-04-28 19:35:05Z dumbbell $
+# $FreeBSD: stable/11/sys/modules/drm2/drm2/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/drm2 ${.CURDIR}/../../../dev/drm2/ttm
+.PATH:	${SRCTOP}/sys/dev/drm2 ${SRCTOP}/sys/dev/drm2/ttm
 KMOD	= drm2
 SRCS	= \
 	drm_agpsupport.c \

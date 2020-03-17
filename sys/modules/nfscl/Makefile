@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nfscl/Makefile 223483 2011-06-23 20:31:52Z uqs $
+# $FreeBSD: stable/11/sys/modules/nfscl/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/nfsclient ${.CURDIR}/../../nfs
+.PATH: ${SRCTOP}/sys/fs/nfsclient ${SRCTOP}/sys/nfs
 KMOD=	nfscl
 SRCS=	vnode_if.h \
 	nfs_clrpcops.c \
@@ -18,26 +17,13 @@ SRCS=	vnode_if.h \
 	opt_bootp.h \
 	opt_inet.h \
 	opt_inet6.h \
-	opt_kdtrace.h \
 	opt_kgssapi.h \
 	opt_nfs.h \
 	opt_nfsroot.h \
 	opt_ufs.h
 
 .if !defined(KERNBUILDDIR)
-NFS_INET?=	1	# 0/1 - requires INET to be configured in kernel
-NFS_INET6?=	1	# 0/1 - requires INET6 to be configured in kernel
 NFS_ROOT?=	1	# 0/1 - requires NFS_ROOT to be configured in kernel
-
-.if ${NFS_INET} > 0
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${NFS_INET6} > 0
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
 
 .if ${NFS_ROOT} > 0
 opt_nfsroot.h:

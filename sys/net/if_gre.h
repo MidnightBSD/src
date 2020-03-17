@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * Copyright (c) 2014 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -29,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: if_gre.h,v 1.13 2003/11/10 08:51:52 wiz Exp $
- * $FreeBSD: stable/10/sys/net/if_gre.h 284072 2015-06-06 13:26:13Z ae $
+ * $FreeBSD: stable/11/sys/net/if_gre.h 317403 2017-04-25 11:19:22Z ae $
  */
 
 #ifndef _NET_IF_GRE_H_
@@ -70,7 +69,6 @@ struct gre_softc {
 	uint32_t		gre_oseq;
 	uint32_t		gre_key;
 	uint32_t		gre_options;
-	uint32_t		gre_mtu;
 	u_int			gre_fibnum;
 	u_int			gre_hlen;	/* header size */
 	union {

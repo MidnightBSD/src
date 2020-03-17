@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bge/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD: stable/11/sys/modules/bge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/bge
+.PATH: ${SRCTOP}/sys/dev/bge
 
 KMOD=	if_bge
 SRCS=	if_bge.c miibus_if.h miidevs.h device_if.h bus_if.h pci_if.h

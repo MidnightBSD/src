@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/pty/Makefile 196480 2009-08-23 20:26:09Z ed $
+# $FreeBSD: stable/11/sys/modules/pty/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/pty
+.PATH: ${SRCTOP}/sys/dev/pty
 
 KMOD=	pty
 SRCS=	pty.c

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/wb/Makefile 181741 2008-08-14 21:26:29Z imp $
+# $FreeBSD: stable/11/sys/modules/wb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/wb
+.PATH: ${SRCTOP}/sys/dev/wb
 
 KMOD=	if_wb
 SRCS=	if_wb.c device_if.h

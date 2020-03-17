@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_vfsops.c 308552 2016-11-11 20:08:45Z kib $ */
+/* $FreeBSD: stable/11/sys/fs/msdosfs/msdosfs_vfsops.c 308545 2016-11-11 19:40:34Z kib $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
@@ -277,11 +276,9 @@ msdosfs_mount(struct mount *mp)
 			}
 
 			/* Downgrade the device from rw to ro. */
-			DROP_GIANT();
 			g_topology_lock();
 			error = g_access(pmp->pm_cp, 0, -1, 0);
 			g_topology_unlock();
-			PICKUP_GIANT();
 			if (error) {
 				(void)markvoldirty(pmp, 1);
 				return (error);
@@ -313,11 +310,9 @@ msdosfs_mount(struct mount *mp)
 				return (error);
 			}
 			VOP_UNLOCK(devvp, 0);
-			DROP_GIANT();
 			g_topology_lock();
 			error = g_access(pmp->pm_cp, 0, 1, 0);
 			g_topology_unlock();
-			PICKUP_GIANT();
 			if (error)
 				return (error);
 
@@ -386,8 +381,6 @@ msdosfs_mount(struct mount *mp)
 		return error;
 	}
 
-	if (devvp->v_type == VCHR && devvp->v_rdev != NULL)
-		devvp->v_rdev->si_mountpt = mp;
 	vfs_mountedfrom(mp, from);
 #ifdef MSDOSFS_DEBUG
 	printf("msdosfs_mount(): mp %p, pmp %p, inusemap %p\n", mp, pmp, pmp->pm_inusemap);
@@ -416,15 +409,21 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	ronly = (mp->mnt_flag & MNT_RDONLY) != 0;
 
 	dev = devvp->v_rdev;
-	dev_ref(dev);
-	DROP_GIANT();
+	if (atomic_cmpset_acq_ptr((uintptr_t *)&dev->si_mountpt, 0,
+	    (uintptr_t)mp) == 0) {
+		VOP_UNLOCK(devvp, 0);
+		return (EBUSY);
+	}
 	g_topology_lock();
 	error = g_vfs_open(devvp, &cp, "msdosfs", ronly ? 0 : 1);
 	g_topology_unlock();
-	PICKUP_GIANT();
+	if (error != 0) {
+		atomic_store_rel_ptr((uintptr_t *)&dev->si_mountpt, 0);
+		VOP_UNLOCK(devvp, 0);
+		return (error);
+	}
+	dev_ref(dev);
 	VOP_UNLOCK(devvp, 0);
-	if (error)
-		goto error_exit;
 
 	bo = &devvp->v_bufobj;
 
@@ -591,9 +590,8 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	} else {
 		pmp->pm_rootdirblk = pmp->pm_fatblk +
 			(pmp->pm_FATs * pmp->pm_FATsecs);
-		pmp->pm_rootdirsize = (pmp->pm_RootDirEnts * sizeof(struct direntry)
-				       + DEV_BSIZE - 1)
-			/ DEV_BSIZE; /* in blocks */
+		pmp->pm_rootdirsize = howmany(pmp->pm_RootDirEnts *
+			sizeof(struct direntry), DEV_BSIZE); /* in blocks */
 		pmp->pm_firstcluster = pmp->pm_rootdirblk + pmp->pm_rootdirsize;
 	}
 
@@ -756,11 +754,9 @@ error_exit:
 	if (bp)
 		brelse(bp);
 	if (cp != NULL) {
-		DROP_GIANT();
 		g_topology_lock();
 		g_vfs_close(cp);
 		g_topology_unlock();
-		PICKUP_GIANT();
 	}
 	if (pmp) {
 		lockdestroy(&pmp->pm_fatlock);
@@ -768,6 +764,7 @@ error_exit:
 		free(pmp, M_MSDOSFSMNT);
 		mp->mnt_data = NULL;
 	}
+	atomic_store_rel_ptr((uintptr_t *)&dev->si_mountpt, 0);
 	dev_rel(dev);
 	return (error);
 }
@@ -831,13 +828,10 @@ msdosfs_unmount(struct mount *mp, int mntflags)
 		BO_UNLOCK(bo);
 	}
 #endif
-	DROP_GIANT();
-	if (pmp->pm_devvp->v_type == VCHR && pmp->pm_devvp->v_rdev != NULL)
-		pmp->pm_devvp->v_rdev->si_mountpt = NULL;
 	g_topology_lock();
 	g_vfs_close(pmp->pm_cp);
 	g_topology_unlock();
-	PICKUP_GIANT();
+	atomic_store_rel_ptr((uintptr_t *)&pmp->pm_dev->si_mountpt, 0);
 	vrele(pmp->pm_devvp);
 	dev_rel(pmp->pm_dev);
 	free(pmp->pm_inusemap, M_MSDOSFSFAT);

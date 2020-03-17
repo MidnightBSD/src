@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/uhso/Makefile 202181 2010-01-13 03:16:31Z thompsa $
+# $FreeBSD: stable/11/sys/modules/usb/uhso/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2010 Andrew Thompson. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

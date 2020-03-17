@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/uled/Makefile 271159 2014-09-05 11:25:58Z kevlo $
+# $FreeBSD: stable/11/sys/modules/usb/uled/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2014 Kevin Lo. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/misc
 

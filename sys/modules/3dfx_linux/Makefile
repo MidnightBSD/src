@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/3dfx_linux/Makefile 156260 2006-03-03 21:37:38Z yar $
+# $FreeBSD: stable/11/sys/modules/3dfx_linux/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/tdfx
+.PATH: ${SRCTOP}/sys/dev/tdfx
 
 KMOD=	3dfx_linux
 SRCS=	tdfx_linux.c

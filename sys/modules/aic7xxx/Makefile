@@ -1,6 +1,5 @@
-# $MidnightBSD$
 
-# $FreeBSD: stable/10/sys/modules/aic7xxx/Makefile 270284 2014-08-21 17:18:21Z ian $
+# $FreeBSD: stable/11/sys/modules/aic7xxx/Makefile 260401 2014-01-07 19:33:17Z scottl $
 
 SUBDIR= ahc ahd
 

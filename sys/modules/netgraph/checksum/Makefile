@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netgraph/checksum/Makefile 303612 2016-08-01 12:09:04Z julian $
+# $FreeBSD: stable/11/sys/modules/netgraph/checksum/Makefile 303612 2016-08-01 12:09:04Z julian $
 
 .include <bsd.own.mk>
 

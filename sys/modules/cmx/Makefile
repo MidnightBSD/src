@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cmx/Makefile 241828 2012-10-22 02:12:11Z eadler $
+# $FreeBSD: stable/11/sys/modules/cmx/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
-.PATH:	${.CURDIR}/../../dev/cmx
+.PATH:	${SRCTOP}/sys/dev/cmx
 
 KMOD=	cmx
 SRCS=	cmx.c cmxvar.h cmxreg.h \

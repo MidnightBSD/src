@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/unionfs/Makefile 89260 2002-01-11 15:49:02Z ru $
+# $FreeBSD: stable/11/sys/modules/unionfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/unionfs
+.PATH: ${SRCTOP}/sys/fs/unionfs
 
 KMOD=	unionfs
 SRCS=	vnode_if.h \

@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cc/cc_cubic/Makefile 216114 2010-12-02 06:05:44Z lstewart $
+# $FreeBSD: stable/11/sys/modules/cc/cc_cubic/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../../netinet/cc
+.PATH: ${SRCTOP}/sys/netinet/cc
 KMOD=	cc_cubic
 SRCS=	cc_cubic.c
 

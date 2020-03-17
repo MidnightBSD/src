@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_mountver/Makefile 202437 2010-01-16 09:52:49Z trasz $
+# $FreeBSD: stable/11/sys/modules/geom/geom_mountver/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/mountver
+.PATH: ${SRCTOP}/sys/geom/mountver
 
 KMOD=	geom_mountver
 SRCS=	g_mountver.c

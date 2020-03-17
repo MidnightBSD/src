@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/accf_http/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD: stable/11/sys/modules/accf_http/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../netinet
+.PATH: ${SRCTOP}/sys/netinet
 
 KMOD=	accf_http
 SRCS=	accf_http.c

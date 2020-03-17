@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ncv/Makefile 150636 2005-09-27 18:10:43Z mlaier $
+# $FreeBSD: stable/11/sys/modules/ncv/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/ncv
+.PATH: ${SRCTOP}/sys/dev/ncv
 
 KMOD=	ncv
 SRCS=	ncr53c500_pccard.c ncr53c500.c 

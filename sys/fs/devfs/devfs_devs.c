@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -26,7 +25,7 @@
  *
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $FreeBSD: stable/10/sys/fs/devfs/devfs_devs.c 313932 2017-02-19 03:17:11Z kib $
+ * $FreeBSD: stable/11/sys/fs/devfs/devfs_devs.c 341074 2018-11-27 16:51:18Z markj $
  */
 
 #include <sys/param.h>
@@ -215,7 +214,7 @@ devfs_newdirent(char *name, int namelen)
 	de->de_dirent->d_namlen = namelen;
 	de->de_dirent->d_reclen = GENERIC_DIRSIZ(&d);
 	bcopy(name, de->de_dirent->d_name, namelen);
-	de->de_dirent->d_name[namelen] = '\0';
+	dirent_terminate(de->de_dirent);
 	vfs_timestamp(&de->de_ctime);
 	de->de_mtime = de->de_atime = de->de_ctime;
 	de->de_links = 1;
@@ -500,9 +499,9 @@ devfs_populate_loop(struct devfs_mount *dm, int cleanup)
 {
 	struct cdev_priv *cdp;
 	struct devfs_dirent *de;
-	struct devfs_dirent *dd;
+	struct devfs_dirent *dd, *dt;
 	struct cdev *pdev;
-	int de_flags, j;
+	int de_flags, depth, j;
 	char *q, *s;
 
 	sx_assert(&dm->dm_lock, SX_XLOCKED);
@@ -603,9 +602,17 @@ devfs_populate_loop(struct devfs_mount *dm, int cleanup)
 			de->de_mode = 0755;
 			de->de_dirent->d_type = DT_LNK;
 			pdev = cdp->cdp_c.si_parent;
-			j = strlen(pdev->si_name) + 1;
+			dt = dd;
+			depth = 0;
+			while (dt != dm->dm_rootdir &&
+			    (dt = devfs_parent_dirent(dt)) != NULL)
+				depth++;
+			j = depth * 3 + strlen(pdev->si_name) + 1;
 			de->de_symlink = malloc(j, M_DEVFS, M_WAITOK);
-			bcopy(pdev->si_name, de->de_symlink, j);
+			de->de_symlink[0] = 0;
+			while (depth-- > 0)
+				strcat(de->de_symlink, "../");
+			strcat(de->de_symlink, pdev->si_name);
 		} else {
 			de->de_uid = cdp->cdp_c.si_uid;
 			de->de_gid = cdp->cdp_c.si_gid;

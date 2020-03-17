@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mii/Makefile 239275 2012-08-15 04:03:55Z gonzo $
+# $FreeBSD: stable/11/sys/modules/mii/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mii
+.PATH: ${SRCTOP}/sys/dev/mii
 
 KMOD=	miibus
 SRCS=	acphy.c amphy.c atphy.c axphy.c bmtphy.c brgphy.c bus_if.h

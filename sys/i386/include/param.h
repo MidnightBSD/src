@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/10/sys/i386/include/param.h 286878 2015-08-18 09:09:39Z kib $
+ * $FreeBSD: stable/11/sys/i386/include/param.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 

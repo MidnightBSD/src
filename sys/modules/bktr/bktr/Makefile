@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bktr/bktr/Makefile 177671 2008-03-27 20:38:03Z antoine $
+# $FreeBSD: stable/11/sys/modules/bktr/bktr/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 # Makefile for the bktr Brooktree Bt848/Bt878 PCI video capture device
 
-.PATH: ${.CURDIR}/../../../dev/bktr
+.PATH: ${SRCTOP}/sys/dev/bktr
 
 KMOD=	bktr 
 SRCS=	bktr_core.c bktr_os.c bktr_audio.c bktr_tuner.c bktr_card.c msp34xx.c \

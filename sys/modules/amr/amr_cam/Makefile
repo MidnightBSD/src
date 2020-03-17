@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/amr/amr_cam/Makefile 184577 2008-11-03 04:13:27Z scottl $
+# $FreeBSD: stable/11/sys/modules/amr/amr_cam/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/amr
+.PATH: ${SRCTOP}/sys/dev/amr
 
 KMOD=	amr_cam
 SRCS=	amr_cam.c device_if.h bus_if.h

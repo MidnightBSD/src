@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mxge/mxge_ethp_z8e/Makefile 171500 2007-07-19 16:16:00Z gallatin $
+# $FreeBSD: stable/11/sys/modules/mxge/mxge_ethp_z8e/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/mxge
+.PATH: ${SRCTOP}/sys/dev/mxge
 KMOD=	mxge_ethp_z8e
 SRCS=	mxge_ethp_z8e.c
 

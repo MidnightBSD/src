@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/linprocfs/Makefile 293527 2016-01-09 16:08:22Z dchagin $
+# $FreeBSD: stable/11/sys/modules/linprocfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../compat/linprocfs
+.PATH: ${SRCTOP}/sys/compat/linprocfs
 
 KMOD=	linprocfs
 SRCS=	vnode_if.h \

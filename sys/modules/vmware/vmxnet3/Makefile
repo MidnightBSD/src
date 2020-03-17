@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/vmware/vmxnet3/Makefile 264866 2014-04-24 04:43:50Z bryanv $
+# $FreeBSD: stable/11/sys/modules/vmware/vmxnet3/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,9 +23,7 @@
 # SUCH DAMAGE.
 #
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../../dev/vmware/vmxnet3
+.PATH: ${SRCTOP}/sys/dev/vmware/vmxnet3
 
 KMOD=	if_vmx
 SRCS=	if_vmx.c
@@ -35,17 +32,5 @@ SRCS+=	bus_if.h device_if.h pci_if.h opt_inet.h opt_inet6.h
 # With VMXNET3_LEGACY_TX, the driver will use the non-multiqueue
 # capable if_start interface.
 #CFLAGS+= -DVMXNET3_LEGACY_TX
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/accf_dns/Makefile 180593 2008-07-18 14:44:51Z dwmalone $
+# $FreeBSD: stable/11/sys/modules/accf_dns/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../netinet
+.PATH: ${SRCTOP}/sys/netinet
 
 KMOD=	accf_dns
 SRCS=	accf_dns.c

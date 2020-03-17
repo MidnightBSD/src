@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Shalayeff
  * All rights reserved.
@@ -43,7 +42,7 @@
 
 /*
  *	$OpenBSD: if_pfsync.h,v 1.35 2008/06/29 08:42:15 mcbride Exp $
- *	$FreeBSD: stable/10/sys/net/if_pfsync.h 254925 2013-08-26 18:16:05Z jhb $
+ *	$FreeBSD: stable/11/sys/net/if_pfsync.h 262489 2014-02-25 18:44:33Z jhb $
  */
 
 
@@ -205,12 +204,6 @@ struct pfsync_tdb {
 } __packed;
 
 #define	PFSYNC_HDRLEN		sizeof(struct pfsync_header)
-
-/*
- * Names for PFSYNC sysctl objects
- */
-#define	PFSYNCCTL_STATS		1	/* PFSYNC stats */
-#define	PFSYNCCTL_MAXID		2
 
 struct pfsyncstats {
 	u_int64_t	pfsyncs_ipackets;	/* total input packets, IPv4 */

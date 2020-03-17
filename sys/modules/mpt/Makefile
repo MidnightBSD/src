@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mpt/Makefile 178814 2008-05-06 20:49:53Z jhb $
+# $FreeBSD: stable/11/sys/modules/mpt/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mpt
+.PATH: ${SRCTOP}/sys/dev/mpt
 
 KMOD=	mpt
 SRCS=	bus_if.h device_if.h pci_if.h \

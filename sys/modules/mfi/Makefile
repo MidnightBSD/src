@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mfi/Makefile 233711 2012-03-30 23:05:48Z ambrisko $
+# $FreeBSD: stable/11/sys/modules/mfi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mfi
+.PATH: ${SRCTOP}/sys/dev/mfi
 
 SUBDIR= mfip
 

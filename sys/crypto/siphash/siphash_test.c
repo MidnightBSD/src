@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Test Vectors from the SipHash reference C implementation:
  *
@@ -27,7 +26,7 @@
  * in = 00 01 02 ... 3e (63 bytes)
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/siphash/siphash_test.c 253208 2013-07-11 14:18:38Z andre $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/siphash/siphash_test.c 253208 2013-07-11 14:18:38Z andre $");
 
 #include <sys/param.h>
 #include <sys/types.h>

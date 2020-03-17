@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/iwn/Makefile 253911 2013-08-03 08:21:35Z uqs $
+# $FreeBSD: stable/11/sys/modules/iwn/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../dev/iwn
+.PATH:  ${SRCTOP}/sys/dev/iwn
 
 KMOD    = if_iwn
 SRCS    = if_iwn.c device_if.h bus_if.h pci_if.h opt_iwn.h opt_wlan.h

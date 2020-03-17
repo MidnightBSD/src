@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) KATO Takenori, 1997, 1998.
  * 
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/initcpu.c 313150 2017-02-03 12:20:44Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/initcpu.c 349955 2019-07-12 20:05:30Z jhb $");
 
 #include "opt_cpu.h"
 
@@ -60,37 +59,6 @@ SYSCTL_INT(_hw, OID_AUTO, lower_amd64_sharedpage, CTLFLAG_RDTUN,
  *  1: force disable CLFLUSH
  */
 static int	hw_clflush_disable = -1;
-
-int	cpu;			/* Are we 386, 386sx, 486, etc? */
-u_int	cpu_feature;		/* Feature flags */
-u_int	cpu_feature2;		/* Feature flags */
-u_int	amd_feature;		/* AMD feature flags */
-u_int	amd_feature2;		/* AMD feature flags */
-u_int	amd_pminfo;		/* AMD advanced power management info */
-u_int	via_feature_rng;	/* VIA RNG features */
-u_int	via_feature_xcrypt;	/* VIA ACE features */
-u_int	cpu_high;		/* Highest arg to CPUID */
-u_int	cpu_exthigh;		/* Highest arg to extended CPUID */
-u_int	cpu_id;			/* Stepping ID */
-u_int	cpu_procinfo;		/* HyperThreading Info / Brand Index / CLFUSH */
-u_int	cpu_procinfo2;		/* Multicore info */
-char	cpu_vendor[20];		/* CPU Origin code */
-u_int	cpu_vendor_id;		/* CPU vendor ID */
-u_int	cpu_fxsr;		/* SSE enabled */
-u_int	cpu_mxcsr_mask;		/* Valid bits in mxcsr */
-u_int	cpu_clflush_line_size = 32;
-u_int	cpu_stdext_feature;
-u_int	cpu_stdext_feature2;
-u_int	cpu_max_ext_state_size;
-u_int	cpu_mon_mwait_flags;	/* MONITOR/MWAIT flags (CPUID.05H.ECX) */
-u_int	cpu_mon_min_size;	/* MONITOR minimum range size, bytes */
-u_int	cpu_mon_max_size;	/* MONITOR minimum range size, bytes */
-u_int	cpu_maxphyaddr;		/* Max phys addr width in bits */
-
-SYSCTL_UINT(_hw, OID_AUTO, via_feature_rng, CTLFLAG_RD,
-	&via_feature_rng, 0, "VIA RNG feature available in CPU");
-SYSCTL_UINT(_hw, OID_AUTO, via_feature_xcrypt, CTLFLAG_RD,
-	&via_feature_xcrypt, 0, "VIA xcrypt feature available in CPU");
 
 static void
 init_amd(void)
@@ -154,9 +122,55 @@ init_amd(void)
 	 */
 	if (CPUID_TO_FAMILY(cpu_id) == 0x16 && CPUID_TO_MODEL(cpu_id) <= 0xf) {
 		if ((cpu_feature2 & CPUID2_HV) == 0) {
-			msr = rdmsr(0xc0011020);
+			msr = rdmsr(MSR_LS_CFG);
 			msr |= (uint64_t)1 << 15;
-			wrmsr(0xc0011020, msr);
+			wrmsr(MSR_LS_CFG, msr);
+		}
+	}
+
+	/* Ryzen erratas. */
+	if (CPUID_TO_FAMILY(cpu_id) == 0x17 && CPUID_TO_MODEL(cpu_id) == 0x1 &&
+	    (cpu_feature2 & CPUID2_HV) == 0) {
+		/* 1021 */
+		msr = rdmsr(0xc0011029);
+		msr |= 0x2000;
+		wrmsr(0xc0011029, msr);
+
+		/* 1033 */
+		msr = rdmsr(MSR_LS_CFG);
+		msr |= 0x10;
+		wrmsr(MSR_LS_CFG, msr);
+
+		/* 1049 */
+		msr = rdmsr(0xc0011028);
+		msr |= 0x10;
+		wrmsr(0xc0011028, msr);
+
+		/* 1095 */
+		msr = rdmsr(MSR_LS_CFG);
+		msr |= 0x200000000000000;
+		wrmsr(MSR_LS_CFG, msr);
+	}
+
+	/*
+	 * Work around a problem on Ryzen that is triggered by executing
+	 * code near the top of user memory, in our case the signal
+	 * trampoline code in the shared page on amd64.
+	 *
+	 * This function is executed once for the BSP before tunables take
+	 * effect so the value determined here can be overridden by the
+	 * tunable.  This function is then executed again for each AP and
+	 * also on resume.  Set a flag the first time so that value set by
+	 * the tunable is not overwritten.
+	 *
+	 * The stepping and/or microcode versions should be checked after
+	 * this issue is fixed by AMD so that we don't use this mode if not
+	 * needed.
+	 */
+	if (lower_sharedpage_init == 0) {
+		lower_sharedpage_init = 1;
+		if (CPUID_TO_FAMILY(cpu_id) == 0x17) {
+			hw_lower_amd64_sharedpage = 1;
 		}
 	}
 }
@@ -231,6 +245,8 @@ initializecpu(void)
 		wrmsr(MSR_EFER, msr);
 		pg_nx = PG_NX;
 	}
+	hw_ibrs_recalculate();
+	hw_ssb_recalculate(false);
 	switch (cpu_vendor_id) {
 	case CPU_VENDOR_AMD:
 		init_amd();
@@ -240,27 +256,9 @@ initializecpu(void)
 		break;
 	}
 
-	/*
-	 * Work around a problem on Ryzen that is triggered by executing
-	 * code near the top of user memory, in our case the signal
-	 * trampoline code in the shared page on amd64.
-	 *
-	 * This function is executed once for the BSP before tunables take
-	 * effect so the value determined here can be overridden by the
-	 * tunable.  This function is then executed again for each AP and
-	 * also on resume.  Set a flag the first time so that value set by
-	 * the tunable is not overwritten.
-	 *
-	 * The stepping and/or microcode versions should be checked after
-	 * this issue is fixed by AMD so that we don't use this mode if not
-	 * needed.
-	 */
-	if (lower_sharedpage_init == 0) {
-		lower_sharedpage_init = 1;
-		if (CPUID_TO_FAMILY(cpu_id) == 0x17) {
-			hw_lower_amd64_sharedpage = 1;
-		}
-	}
+	if ((amd_feature & AMDID_RDTSCP) != 0 ||
+	    (cpu_stdext_feature2 & CPUID_STDEXT2_RDPID) != 0)
+		wrmsr(MSR_TSC_AUX, PCPU_GET(cpuid));
 }
 
 void

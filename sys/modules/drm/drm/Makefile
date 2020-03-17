@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/drm/drm/Makefile 203287 2010-01-31 14:25:29Z rnoland $
+# $FreeBSD: stable/11/sys/modules/drm/drm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/drm
+.PATH:	${SRCTOP}/sys/dev/drm
 KMOD	= drm
 SRCS	= \
 	ati_pcigart.c \

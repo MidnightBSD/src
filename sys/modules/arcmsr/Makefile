@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/arcmsr/Makefile 144411 2005-03-31 18:19:55Z scottl $
+# $FreeBSD: stable/11/sys/modules/arcmsr/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/arcmsr
+.PATH: ${SRCTOP}/sys/dev/arcmsr
 
 KMOD=	arcmsr
 SRCS=	arcmsr.c

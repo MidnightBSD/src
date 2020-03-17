@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: des_setkey.c,v 1.7 2001/09/10 04:03:58 itojun Exp $	*/
 
 /* crypto/des/set_key.c */
@@ -58,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/des/des_setkey.c 130443 2004-06-14 00:38:54Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/des/des_setkey.c 331643 2018-03-27 18:52:27Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -173,10 +172,10 @@ int des_set_key_checked(des_cblock *key, des_key_schedule schedule)
 void des_set_key_unchecked(des_cblock *key, des_key_schedule schedule)
 {
 	static int shifts2[16]={0,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0};
-	register DES_LONG c,d,t,s,t2;
-	register const unsigned char *in;
-	register DES_LONG *k;
-	register int i;
+	DES_LONG c,d,t,s,t2;
+	const unsigned char *in;
+	DES_LONG *k;
+	int i;
 
 	k = &schedule->ks.deslong[0];
 	in = &(*key)[0];

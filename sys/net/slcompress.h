@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Definitions for tcp compression routines.
  */
@@ -32,7 +31,7 @@
  *
  *	Van Jacobson (van@helios.ee.lbl.gov), Dec 31, 1989:
  *	- Initial distribution.
- * $FreeBSD: stable/10/sys/net/slcompress.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/net/slcompress.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NET_SLCOMPRESS_H_

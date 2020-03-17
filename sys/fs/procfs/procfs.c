@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Smørgrav
  * Copyright (c) 1993 Jan-Simon Pendry
@@ -38,7 +37,7 @@
  *
  *	@(#)procfs_vfsops.c	8.7 (Berkeley) 5/10/95
  *
- * $FreeBSD: stable/10/sys/fs/procfs/procfs.c 232278 2012-02-29 00:30:18Z mm $
+ * $FreeBSD: stable/11/sys/fs/procfs/procfs.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, Larry Lile
  * All rights reserved.
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/iso88025.h 264299 2014-04-09 11:15:50Z glebius $
+ * $FreeBSD: stable/11/sys/net/iso88025.h 263203 2014-03-15 06:49:32Z glebius $
  *
  * Information gathered from tokenring@freebsd, /sys/net/ethernet.h and
  * the Mach token ring driver.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005,2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/pmc_mdep.h 286305 2015-08-05 07:21:44Z kib $
+ * $FreeBSD: stable/11/sys/i386/include/pmc_mdep.h 339769 2018-10-26 06:12:56Z mmacy $
  */
 
 #ifndef _MACHINE_PMC_MDEP_H
@@ -70,6 +69,7 @@ struct pmc_mdep;
 #define	PMC_MDEP_CLASS_INDEX_TSC	1
 #define	PMC_MDEP_CLASS_INDEX_K7		2
 #define	PMC_MDEP_CLASS_INDEX_K8		2
+#define	PMC_MDEP_CLASS_INDEX_F17H	2
 #define	PMC_MDEP_CLASS_INDEX_P4		2
 #define	PMC_MDEP_CLASS_INDEX_P5		2
 #define	PMC_MDEP_CLASS_INDEX_P6		2

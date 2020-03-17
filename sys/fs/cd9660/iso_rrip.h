@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)iso_rrip.h	8.2 (Berkeley) 1/23/94
- * $FreeBSD: stable/10/sys/fs/cd9660/iso_rrip.h 166639 2007-02-11 13:54:25Z rodrigc $
+ * $FreeBSD: stable/11/sys/fs/cd9660/iso_rrip.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 

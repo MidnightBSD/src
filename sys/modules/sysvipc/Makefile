@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sysvipc/Makefile 69487 2000-12-01 17:49:16Z alfred $
+# $FreeBSD: stable/11/sys/modules/sysvipc/Makefile 69487 2000-12-01 17:49:16Z alfred $
 
 SUBDIR= sysvmsg sysvsem sysvshm
 

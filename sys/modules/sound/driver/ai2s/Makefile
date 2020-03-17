@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/ai2s/Makefile 264375 2014-04-12 19:57:15Z andreast $
+# $FreeBSD: stable/11/sys/modules/sound/driver/ai2s/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/macio
+.PATH: ${SRCTOP}/sys/dev/sound/macio
 
 KMOD=	snd_ai2s
 SRCS=	device_if.h bus_if.h ofw_bus_if.h

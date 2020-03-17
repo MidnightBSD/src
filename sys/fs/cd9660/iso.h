@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)iso.h	8.6 (Berkeley) 5/10/95
- * $FreeBSD: stable/10/sys/fs/cd9660/iso.h 253742 2013-07-28 12:29:10Z marius $
+ * $FreeBSD: stable/11/sys/fs/cd9660/iso.h 332955 2018-04-24 18:13:28Z benno $
  */
 
 #define ISODCL(from, to) (to - from + 1)
@@ -94,7 +93,8 @@ struct iso_primary_descriptor {
 	char application_data		[ISODCL (884, 1395)];
 	char unused5			[ISODCL (1396, 2048)];
 };
-#define ISO_DEFAULT_BLOCK_SIZE		2048
+#define ISO_DEFAULT_BLOCK_SHIFT		11
+#define ISO_DEFAULT_BLOCK_SIZE		(1 << ISO_DEFAULT_BLOCK_SHIFT)
 
 /*
  * Used by Microsoft Joliet extension to ISO9660. Almost the same

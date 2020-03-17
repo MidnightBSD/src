@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
 * The white paper of AES-NI instructions can be downloaded from:
  *   http://softwarecommunity.intel.com/isn/downloads/intelavx/AES-Instructions-Set_WP.pdf
@@ -221,4 +220,4 @@ ENTRY(aesni_set_deckey)
 	.cfi_endproc
 END(aesni_set_deckey)
 
-	.ident	"$FreeBSD: stable/10/sys/crypto/aesni/aeskeys_amd64.S 255187 2013-09-03 18:31:23Z jmg $"
+	.ident	"$FreeBSD: stable/11/sys/crypto/aesni/aeskeys_amd64.S 255187 2013-09-03 18:31:23Z jmg $"

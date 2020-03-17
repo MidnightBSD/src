@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/drm2/radeonkms/Makefile 282199 2015-04-28 19:35:05Z dumbbell $
+# $FreeBSD: stable/11/sys/modules/drm2/radeonkms/Makefile 342691 2019-01-02 16:28:56Z markj $
 
-.include <bsd.own.mk>
-
-.PATH:	${.CURDIR}/../../../dev/drm2/radeon
+.PATH:	${SRCTOP}/sys/dev/drm2/radeon
 
 KMOD	= radeonkms
 SRCS	=								\
@@ -28,7 +25,6 @@ SRCS	+=								\
 	radeon_clocks.c							\
 	radeon_combios.c						\
 	radeon_connectors.c						\
-	radeon_cp.c							\
 	radeon_cs.c							\
 	radeon_cursor.c							\
 	radeon_device.c							\
@@ -53,7 +49,6 @@ SRCS	+=								\
 	radeon_ring.c							\
 	radeon_sa.c							\
 	radeon_semaphore.c						\
-	radeon_state.c							\
 	radeon_test.c							\
 	radeon_ttm.c							\
 	atom.c								\
@@ -64,7 +59,6 @@ SRCS	+=								\
 	r100.c								\
 	r200.c								\
 	r300.c								\
-	r300_cmdbuf.c							\
 	r420.c								\
 	rs400.c								\
 	rs600.c								\
@@ -73,10 +67,8 @@ SRCS	+=								\
 	r520.c								\
 	r600.c								\
 	r600_audio.c							\
-	r600_blit.c							\
 	r600_blit_kms.c							\
 	r600_blit_shaders.c						\
-	r600_cp.c							\
 	r600_cs.c							\
 	r600_hdmi.c							\
 	rv770.c								\
@@ -93,10 +85,6 @@ SRCS	+=								\
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 radeon_acpi=		radeon_acpi.c
 #radeon_atpx_handler=	radeon_atpx_handler.c
-.endif
-
-.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_ARCH} == "powerpc64"
-radeon_ioc32=		radeon_ioc32.c
 .endif
 
 #radeon_prime.c
@@ -117,8 +105,6 @@ SRCS	+=								\
 
 .include <bsd.kmod.mk>
 
-CFLAGS+=			-I${.CURDIR}/../../../dev/drm2/radeon ${GCC_MS_EXTENSIONS}
+CFLAGS+=			-I${SRCTOP}/sys/dev/drm2/radeon
 
-CWARNFLAGS.radeon_cp.c=		-Wno-unused-value
-CWARNFLAGS.r600_cp.c=		-Wno-unused-value
 CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

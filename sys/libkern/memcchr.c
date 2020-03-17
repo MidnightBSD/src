@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/memcchr.c 229198 2012-01-01 20:26:11Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/memcchr.c 229198 2012-01-01 20:26:11Z ed $");
 
 #include <sys/libkern.h>
 #include <sys/limits.h>

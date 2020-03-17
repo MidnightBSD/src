@@ -1,14 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/linux_common/Makefile 302964 2016-07-17 15:23:32Z dchagin $
+# $FreeBSD: stable/11/sys/modules/linux_common/Makefile 346827 2019-04-28 13:40:17Z dchagin $
 
-.PATH: ${.CURDIR}/../../compat/linux
+.PATH: ${SRCTOP}/sys/compat/linux
 
 KMOD=	linux_common
 SRCS=	linux_common.c linux_mib.c linux_mmap.c linux_util.c linux_emul.c \
+	linux_errno.c \
 	linux.c opt_compat.h device_if.h vnode_if.h bus_if.h
 
 EXPORT_SYMS=
 EXPORT_SYMS+=	linux_emul_path
+EXPORT_SYMS+=	linux_errtbl
 EXPORT_SYMS+=	linux_ioctl_register_handler
 EXPORT_SYMS+=	linux_ioctl_unregister_handler
 EXPORT_SYMS+=	linux_get_osname

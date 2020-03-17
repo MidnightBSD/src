@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/elan-mmcr.c 214346 2010-10-25 15:28:03Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/elan-mmcr.c 214346 2010-10-25 15:28:03Z jhb $");
 
 #include "opt_cpu.h"
 #include <sys/param.h>

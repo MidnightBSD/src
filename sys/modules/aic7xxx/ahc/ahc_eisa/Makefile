@@ -1,6 +1,5 @@
-# $MidnightBSD$
 
-# $FreeBSD: stable/10/sys/modules/aic7xxx/ahc/ahc_eisa/Makefile 270306 2014-08-21 21:36:06Z ian $
+# $FreeBSD: stable/11/sys/modules/aic7xxx/ahc/ahc_eisa/Makefile 270311 2014-08-21 22:42:02Z ian $
 
 .PATH:	${.CURDIR}/../../../../dev/aic7xxx
 KMOD=		ahc_eisa

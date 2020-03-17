@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 2001-2012 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/acpica/acpi_wakecode.S 237027 2012-06-13 21:03:01Z jkim $
+ * $FreeBSD: stable/11/sys/i386/acpica/acpi_wakecode.S 269887 2014-08-12 18:22:57Z jhb $
  */
 
 #include <machine/asmacros.h>
@@ -152,14 +151,7 @@ wakeup_32:
 	movl	wakeup_cr3 - wakeup_start(%ebx), %eax
 	mov	%eax, %cr3
 
-	/*
-	 * Finally, switch to long bit mode by enabling paging.  We have
-	 * to be very careful here because all the segmentation disappears
-	 * out from underneath us.  The spec says we can depend on the
-	 * subsequent pipelined branch to execute, but *only if* everthing
-	 * is still identity mapped.  If any mappings change, the pipeline
-	 * will flush.
-	 */
+	/* Enable paging. */
 	mov	%cr0, %eax
 	orl	$CR0_PG, %eax
 	mov	%eax, %cr0

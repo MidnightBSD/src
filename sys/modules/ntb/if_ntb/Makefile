@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ntb/if_ntb/Makefile 250079 2013-04-29 22:48:53Z carl $
+# $FreeBSD: stable/11/sys/modules/ntb/if_ntb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../../dev/ntb/if_ntb
+.PATH:  ${SRCTOP}/sys/dev/ntb/if_ntb
 
 KMOD    = if_ntb
 SRCS    = if_ntb.c

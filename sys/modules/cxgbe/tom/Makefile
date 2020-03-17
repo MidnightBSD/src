@@ -1,11 +1,8 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/cxgbe/tom/Makefile 270297 2014-08-21 19:54:02Z np $
+# $FreeBSD: stable/11/sys/modules/cxgbe/tom/Makefile 345664 2019-03-28 23:43:38Z jhb $
 #
 
-.include <bsd.own.mk>
-
-CXGBE=	${.CURDIR}/../../../dev/cxgbe
+CXGBE=	${SRCTOP}/sys/dev/cxgbe
 .PATH: ${CXGBE}/tom
 
 KMOD=	t4_tom
@@ -18,22 +15,10 @@ SRCS+=	t4_connect.c
 SRCS+=	t4_cpl_io.c
 SRCS+=	t4_ddp.c
 SRCS+=	t4_listen.c
+SRCS+=	t4_tls.c
 SRCS+=	t4_tom.c
 SRCS+=	t4_tom_l2t.c
 
 CFLAGS+= -I${CXGBE}
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-	@echo "#define TCP_OFFLOAD 1" >> ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

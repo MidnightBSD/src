@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/in_cksum.c 189572 2009-03-09 13:11:16Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/in_cksum.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -264,9 +263,9 @@ in_cksum_skip(m, len, skip)
 	int len;
 	int skip;
 {
-	register u_short *w;
-	register unsigned sum = 0;
-	register int mlen = 0;
+	u_short *w;
+	unsigned sum = 0;
+	int mlen = 0;
 	int byte_swapped = 0;
 	union { char	c[2]; u_short	s; } su;
 

@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/ipheth/Makefile 213805 2010-10-13 21:36:42Z hselasky $
+# $FreeBSD: stable/11/sys/modules/usb/ipheth/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

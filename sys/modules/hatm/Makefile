@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hatm/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: stable/11/sys/modules/hatm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #
-.PATH: ${.CURDIR}/../../dev/hatm
+.PATH: ${SRCTOP}/sys/dev/hatm
 
 KMOD=	if_hatm
 SRCS=	if_hatm.c if_hatm_intr.c if_hatm_ioctl.c if_hatm_tx.c if_hatm_rx.c \
@@ -11,13 +10,5 @@ SRCS=	if_hatm.c if_hatm_intr.c if_hatm_ioctl.c if_hatm_tx.c if_hatm_rx.c \
 
 CFLAGS+= -DENABLE_BPF
 # CFLAGS+= -DHATM_DEBUG -DINVARIANT_SUPPORT -DINVARIANTS
-
-.if !defined(KERNBUILDDIR)
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-
-opt_natm.h:
-	echo "#define NATM 1" > ${.TARGET}
-.endif
 
 .include <bsd.kmod.mk>

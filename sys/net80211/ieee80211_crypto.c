@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_crypto.c 195812 2009-07-21 19:36:32Z sam $");
+__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_crypto.c 343464 2019-01-26 12:35:06Z avos $");
 
 /*
  * IEEE 802.11 generic crypto support.
@@ -90,8 +89,7 @@ null_key_delete(struct ieee80211vap *vap, const struct ieee80211_key *k)
 	return 1;
 }
 static 	int
-null_key_set(struct ieee80211vap *vap, const struct ieee80211_key *k,
-	const uint8_t mac[IEEE80211_ADDR_LEN])
+null_key_set(struct ieee80211vap *vap, const struct ieee80211_key *k)
 {
 	return 1;
 }
@@ -133,7 +131,7 @@ dev_key_delete(struct ieee80211vap *vap,
 static __inline int
 dev_key_set(struct ieee80211vap *vap, const struct ieee80211_key *key)
 {
-	return vap->iv_key_set(vap, key, key->wk_macaddr);
+	return vap->iv_key_set(vap, key);
 }
 
 /*
@@ -522,17 +520,21 @@ ieee80211_crypto_setkey(struct ieee80211vap *vap, struct ieee80211_key *key)
 	return dev_key_set(vap, key);
 }
 
-/*
- * Add privacy headers appropriate for the specified key.
- */
+uint8_t
+ieee80211_crypto_get_keyid(struct ieee80211vap *vap, struct ieee80211_key *k)
+{
+	if (k >= &vap->iv_nw_keys[0] &&
+	    k <  &vap->iv_nw_keys[IEEE80211_WEP_NKID])
+		return (k - vap->iv_nw_keys);
+	else
+		return (0);
+}
+
 struct ieee80211_key *
-ieee80211_crypto_encap(struct ieee80211_node *ni, struct mbuf *m)
+ieee80211_crypto_get_txkey(struct ieee80211_node *ni, struct mbuf *m)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-	struct ieee80211_key *k;
 	struct ieee80211_frame *wh;
-	const struct ieee80211_cipher *cip;
-	uint8_t keyid;
 
 	/*
 	 * Multicast traffic always uses the multicast key.
@@ -551,14 +553,27 @@ ieee80211_crypto_encap(struct ieee80211_node *ni, struct mbuf *m)
 			vap->iv_stats.is_tx_nodefkey++;
 			return NULL;
 		}
-		keyid = vap->iv_def_txkey;
-		k = &vap->iv_nw_keys[vap->iv_def_txkey];
-	} else {
-		keyid = 0;
-		k = &ni->ni_ucastkey;
+		return &vap->iv_nw_keys[vap->iv_def_txkey];
 	}
-	cip = k->wk_cipher;
-	return (cip->ic_encap(k, m, keyid<<6) ? k : NULL);
+
+	return &ni->ni_ucastkey;
+}
+
+/*
+ * Add privacy headers appropriate for the specified key.
+ */
+struct ieee80211_key *
+ieee80211_crypto_encap(struct ieee80211_node *ni, struct mbuf *m)
+{
+	struct ieee80211_key *k;
+	const struct ieee80211_cipher *cip;
+
+	if ((k = ieee80211_crypto_get_txkey(ni, m)) != NULL) {
+		cip = k->wk_cipher;
+		return (cip->ic_encap(k, m) ? k : NULL);
+	}
+
+	return NULL;
 }
 
 /*
@@ -602,14 +617,15 @@ ieee80211_crypto_decap(struct ieee80211_node *ni, struct mbuf *m, int hdrlen)
 		k = &ni->ni_ucastkey;
 
 	/*
-	 * Insure crypto header is contiguous for all decap work.
+	 * Insure crypto header is contiguous and long enough for all
+	 * decap work.
 	 */
 	cip = k->wk_cipher;
-	if (m->m_len < hdrlen + cip->ic_header &&
-	    (m = m_pullup(m, hdrlen + cip->ic_header)) == NULL) {
+	if (m->m_len < hdrlen + cip->ic_header) {
 		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO, wh->i_addr2,
-		    "unable to pullup %s header", cip->ic_name);
-		vap->iv_stats.is_rx_wepfail++;	/* XXX */
+		    "frame is too short (%d < %u) for crypto decap",
+		    cip->ic_name, m->m_len, hdrlen + cip->ic_header);
+		vap->iv_stats.is_rx_tooshort++;
 		return NULL;
 	}
 

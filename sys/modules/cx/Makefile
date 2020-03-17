@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # Cronyx Id: sys.modules.cx.Makefile,v 1.1.2.2 2003/01/21 15:15:49 rik Exp $
-# $FreeBSD: stable/10/sys/modules/cx/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: stable/11/sys/modules/cx/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../dev/cx
+.PATH:  ${SRCTOP}/sys/dev/cx
 KMOD=   if_cx
 SRCS=   if_cx.c cxddk.c csigma.c opt_netgraph.h opt_ng_cronyx.h \
 	device_if.h bus_if.h isa_if.h

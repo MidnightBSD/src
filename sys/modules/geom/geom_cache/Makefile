@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_cache/Makefile 163048 2006-10-06 08:27:07Z ru $
+# $FreeBSD: stable/11/sys/modules/geom/geom_cache/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/cache
+.PATH: ${SRCTOP}/sys/geom/cache
 
 KMOD=	geom_cache
 SRCS=	g_cache.c

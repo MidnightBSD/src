@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/db_disasm.c 280272 2015-03-19 23:13:19Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/db_disasm.c 308418 2016-11-07 12:10:17Z kib $");
 
 /*
  * Instruction disassembler.
  */
 #include <sys/param.h>
+#include <sys/kdb.h>
 
 #include <ddb/ddb.h>
 #include <ddb/db_access.h>
@@ -954,17 +954,17 @@ db_read_address(loc, short_addr, regmodrm, addrp)
 	    return (loc);
 	}
 	addrp->is_reg = FALSE;
-	addrp->index = 0;
+	addrp->index = NULL;
 
 	if (short_addr) {
-	    addrp->index = 0;
+	    addrp->index = NULL;
 	    addrp->ss = 0;
 	    switch (mod) {
 		case 0:
 		    if (rm == 6) {
 			get_value_inc(disp, loc, 2, FALSE);
 			addrp->disp = disp;
-			addrp->base = 0;
+			addrp->base = NULL;
 		    }
 		    else {
 			addrp->disp = 0;
@@ -998,7 +998,7 @@ db_read_address(loc, short_addr, regmodrm, addrp)
 		case 0:
 		    if (rm == 5) {
 			get_value_inc(addrp->disp, loc, 4, FALSE);
-			addrp->base = 0;
+			addrp->base = NULL;
 		    }
 		    else {
 			addrp->disp = 0;
@@ -1038,7 +1038,7 @@ db_print_address(seg, size, addrp)
 	}
 
 	db_printsym((db_addr_t)addrp->disp, DB_STGY_ANY);
-	if (addrp->base != 0 || addrp->index != 0) {
+	if (addrp->base != NULL || addrp->index != NULL) {
 	    db_printf("(");
 	    if (addrp->base)
 		db_printf("%s", addrp->base);
@@ -1149,9 +1149,7 @@ db_disasm_esc(loc, inst, short_addr, size, seg)
  * next instruction.
  */
 db_addr_t
-db_disasm(loc, altfmt)
-	db_addr_t	loc;
-	boolean_t	altfmt;
+db_disasm(db_addr_t loc, bool altfmt)
 {
 	int	inst;
 	int	size;
@@ -1171,10 +1169,18 @@ db_disasm(loc, altfmt)
 	int	len;
 	struct i_addr	address;
 
+	if (db_segsize(kdb_frame) == 16)
+	   altfmt = !altfmt;
 	get_value_inc(inst, loc, 1, FALSE);
-	short_addr = FALSE;
-	size = LONG;
-	seg = 0;
+	if (altfmt) {
+	    short_addr = TRUE;
+	    size = WORD;
+	}
+	else {
+	    short_addr = FALSE;
+	    size = LONG;
+	}
+	seg = NULL;
 
 	/*
 	 * Get prefixes
@@ -1242,7 +1248,7 @@ db_disasm(loc, altfmt)
 	if (inst == 0x0f) {
 	    get_value_inc(inst, loc, 1, FALSE);
 	    ip = db_inst_0f[inst>>4];
-	    if (ip == 0) {
+	    if (ip == NULL) {
 		ip = &db_bad_inst;
 	    }
 	    else {

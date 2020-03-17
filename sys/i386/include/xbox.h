@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Rink Springer
  * All rights reserved.
@@ -25,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/xbox.h 156243 2006-03-03 14:52:57Z rink $
+ * $FreeBSD: stable/11/sys/i386/include/xbox.h 156243 2006-03-03 14:52:57Z rink $
  */
 #ifndef _MACHINE_XBOX_H_
 #define _MACHINE_XBOX_H_

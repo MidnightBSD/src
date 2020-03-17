@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: stable/10/sys/fs/ext2fs/inode.h 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/inode.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FS_EXT2FS_INODE_H_
@@ -106,6 +105,7 @@ struct inode {
 	int32_t		i_ctimensec;	/* Last inode change time. */
 	int32_t		i_birthnsec;	/* Inode creation time. */
 	uint32_t	i_gen;		/* Generation number. */
+	uint64_t	i_facl;		/* EA block number. */
 	uint32_t	i_flags;	/* Status flags (chflags). */
 	uint32_t	i_db[NDADDR];	/* Direct disk blocks. */
 	uint32_t	i_ib[NIADDR];	/* Indirect disk blocks. */

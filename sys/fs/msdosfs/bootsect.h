@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/fs/msdosfs/bootsect.h 203827 2010-02-13 12:41:07Z kib $ */
+/* $FreeBSD: stable/11/sys/fs/msdosfs/bootsect.h 203827 2010-02-13 12:41:07Z kib $ */
 /*	$NetBSD: bootsect.h,v 1.9 1997/11/17 15:36:17 ws Exp $	*/
 
 /*-

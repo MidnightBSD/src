@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_crypto_none.c 178354 2008-04-20 20:35:46Z sam $");
+__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_crypto_none.c 300232 2016-05-19 21:08:33Z avos $");
 
 /*
  * IEEE 802.11 NULL crypto support.
@@ -34,6 +33,7 @@ __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_crypto_none.c 178354 2008-0
 
 #include <sys/param.h>
 #include <sys/kernel.h> 
+#include <sys/malloc.h> 
 #include <sys/systm.h> 
 #include <sys/mbuf.h>   
 #include <sys/module.h>
@@ -49,7 +49,8 @@ __FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_crypto_none.c 178354 2008-0
 static	void *none_attach(struct ieee80211vap *, struct ieee80211_key *);
 static	void none_detach(struct ieee80211_key *);
 static	int none_setkey(struct ieee80211_key *);
-static	int none_encap(struct ieee80211_key *, struct mbuf *, uint8_t);
+static	void none_setiv(struct ieee80211_key *, uint8_t *);
+static	int none_encap(struct ieee80211_key *, struct mbuf *);
 static	int none_decap(struct ieee80211_key *, struct mbuf *, int);
 static	int none_enmic(struct ieee80211_key *, struct mbuf *, int);
 static	int none_demic(struct ieee80211_key *, struct mbuf *, int);
@@ -63,6 +64,7 @@ const struct ieee80211_cipher ieee80211_cipher_none = {
 	.ic_attach	= none_attach,
 	.ic_detach	= none_detach,
 	.ic_setkey	= none_setkey,
+	.ic_setiv	= none_setiv,
 	.ic_encap	= none_encap,
 	.ic_decap	= none_decap,
 	.ic_enmic	= none_enmic,
@@ -88,20 +90,28 @@ none_setkey(struct ieee80211_key *k)
 	return 1;
 }
 
+static void
+none_setiv(struct ieee80211_key *k, uint8_t *ivp)
+{
+}
+
 static int
-none_encap(struct ieee80211_key *k, struct mbuf *m, uint8_t keyid)
+none_encap(struct ieee80211_key *k, struct mbuf *m)
 {
 	struct ieee80211vap *vap = k->wk_private;
 #ifdef IEEE80211_DEBUG
 	struct ieee80211_frame *wh = mtod(m, struct ieee80211_frame *);
-#endif
+	uint8_t keyid;
+
+	keyid = ieee80211_crypto_get_keyid(vap, k);
 
 	/*
 	 * The specified key is not setup; this can
 	 * happen, at least, when changing keys.
 	 */
 	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO, wh->i_addr1,
-	    "key id %u is not set (encap)", keyid>>6);
+	    "key id %u is not set (encap)", keyid);
+#endif
 	vap->iv_stats.is_tx_badcipher++;
 	return 0;
 }

@@ -1,29 +1,33 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mlx5en/Makefile 290650 2015-11-10 12:20:22Z hselasky $
-.PATH:	${.CURDIR}/../../dev/mlx5/mlx5_en
+# $FreeBSD: stable/11/sys/modules/mlx5en/Makefile 353236 2019-10-07 09:40:57Z hselasky $
+.PATH:	${SRCTOP}/sys/dev/mlx5/mlx5_en
 
 KMOD=mlx5en
 SRCS= \
+mlx5_en_dim.c \
 mlx5_en_ethtool.c \
 mlx5_en_main.c \
 mlx5_en_tx.c \
 mlx5_en_flow_table.c \
 mlx5_en_rx.c \
 mlx5_en_txrx.c \
+mlx5_en_port_buffer.c \
 device_if.h bus_if.h vnode_if.h pci_if.h \
-        opt_inet.h opt_inet6.h
-
-.if defined(HAVE_TURBO_LRO)
-CFLAGS+= -DHAVE_TURBO_LRO
-SRCS+= tcp_tlro.c
-.endif
+        opt_inet.h opt_inet6.h opt_rss.h
 
 .if defined(HAVE_PER_CQ_EVENT_PACKET)
 CFLAGS+= -DHAVE_PER_CQ_EVENT_PACKET
 .endif
 
-CFLAGS+= -I${.CURDIR}/../../ofed/include
-CFLAGS+= -I${.CURDIR}/../../compat/linuxkpi/common/include
+.if defined(HAVE_TCP_LRO_RX)
+CFLAGS+= -DHAVE_TCP_LRO_RX
+.endif
+
+.if defined(CONFIG_BUILD_FPGA)
+CFLAGS+= -DCONFIG_MLX5_FPGA
+.endif
+
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 
 .include <bsd.kmod.mk>
 

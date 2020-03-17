@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/udf/Makefile 124472 2004-01-13 11:28:51Z ru $
+# $FreeBSD: stable/11/sys/modules/udf/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/udf
+.PATH: ${SRCTOP}/sys/fs/udf
 
 KMOD=	udf
 

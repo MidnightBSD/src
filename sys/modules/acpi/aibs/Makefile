@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/acpi/aibs/Makefile 209523 2010-06-25 15:32:46Z rpaulo $
+# $FreeBSD: stable/11/sys/modules/acpi/aibs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/acpi_support
+.PATH:	${SRCTOP}/sys/dev/acpi_support
 
 KMOD=	aibs
 SRCS=	atk0110.c

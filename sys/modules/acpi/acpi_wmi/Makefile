@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/acpi/acpi_wmi/Makefile 194701 2009-06-23 13:17:25Z rpaulo $
+# $FreeBSD: stable/11/sys/modules/acpi/acpi_wmi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/acpi_support
+.PATH:	${SRCTOP}/sys/dev/acpi_support
 
 KMOD=	acpi_wmi
-CFLAGS+=-I${.CURDIR}/../../../dev/acpi_support
+CFLAGS+=-I${SRCTOP}/sys/dev/acpi_support
 SRCS=	acpi_wmi.c opt_acpi.h acpi_if.h acpi_wmi_if.h device_if.h bus_if.h
 
 .include <bsd.kmod.mk>

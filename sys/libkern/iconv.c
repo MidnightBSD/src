@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/iconv.c 330512 2018-03-05 16:00:05Z dab $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/iconv.c 330505 2018-03-05 13:58:03Z dab $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -138,7 +137,7 @@ iconv_unregister_converter(struct iconv_converter_class *dcp)
 {
 	dcp->refs--;
 	if (dcp->refs > 1) {
-		ICDEBUG("converter have %d referenses left\n", dcp->refs);
+		ICDEBUG("converter has %d references left\n", dcp->refs);
 		return EBUSY;
 	}
 	TAILQ_REMOVE(&iconv_converters, dcp, cc_link);

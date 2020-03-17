@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/stg/Makefile 150636 2005-09-27 18:10:43Z mlaier $
+# $FreeBSD: stable/11/sys/modules/stg/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/stg
+.PATH: ${SRCTOP}/sys/dev/stg
 
 KMOD=	stg
 SRCS=	tmc18c30.c tmc18c30_subr.c \

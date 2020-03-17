@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Semihalf
  * Copyright (c) 2008, 2009 Reinoud Zandijk
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nandfs/nandfs_dir.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_dir.c 235537 2012-05-17 10:11:18Z gber $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

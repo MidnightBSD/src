@@ -1,7 +1,6 @@
-# $MidnightBSD$
-#$FreeBSD: stable/10/sys/modules/mxge/mxge/Makefile 247133 2013-02-21 21:28:33Z gallatin $
+#$FreeBSD: stable/11/sys/modules/mxge/mxge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/mxge
+.PATH: ${SRCTOP}/sys/dev/mxge
 
 KMOD=	if_mxge
 SRCS=	if_mxge.c device_if.h bus_if.h pci_if.h opt_inet.h opt_inet6.h

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_concat/Makefile 126008 2004-02-19 15:43:58Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_concat/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/concat
+.PATH: ${SRCTOP}/sys/geom/concat
 
 KMOD=	geom_concat
 SRCS=	g_concat.c

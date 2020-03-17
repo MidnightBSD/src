@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/dtrace/systrace_linux/Makefile 289769 2015-10-22 21:28:20Z jhb $
+# $FreeBSD: stable/11/sys/modules/dtrace/systrace_linux/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-SYSDIR?=	${.CURDIR}/../../..
+SYSDIR?=	${SRCTOP}/sys
 
 .PATH:		${SYSDIR}/cddl/dev/systrace
 

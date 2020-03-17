@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/wi/Makefile 253826 2013-07-31 01:42:59Z jhibbits $
+# $FreeBSD: stable/11/sys/modules/wi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/wi
+.PATH: ${SRCTOP}/sys/dev/wi
 
 KMOD=	if_wi
 SRCS=	if_wi.c if_wi_pccard.c if_wi_pci.c \

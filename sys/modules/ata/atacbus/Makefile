@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ata/atacbus/Makefile 251114 2013-05-29 23:56:49Z marius $
+# $FreeBSD: stable/11/sys/modules/ata/atacbus/Makefile 251114 2013-05-29 23:56:49Z marius $
 
 .PATH: ${.CURDIR}/../../../dev/ata
 

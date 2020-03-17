@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Synchronous Frame Relay link level subroutines.
  * ANSI T1.617-compaible link management signaling
@@ -21,15 +20,14 @@
  * works or modified versions.
  *
  * $Cronyx Id: if_spppfr.c,v 1.1.2.10 2004/06/29 09:02:30 rik Exp $
- * $FreeBSD: stable/10/sys/net/if_spppfr.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/net/if_spppfr.c 271867 2014-09-19 10:39:58Z glebius $
  */
 
 #include <sys/param.h>
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_ipx.h"
 #endif
 
 #ifdef NetBSD1_3
@@ -46,7 +44,7 @@
 #include <sys/sockio.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/random.h>
 #endif
 #include <sys/malloc.h>
@@ -59,6 +57,7 @@
 #endif
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/netisr.h>
 #include <net/if_types.h>
 #include <net/route.h>
@@ -79,15 +78,10 @@
 #include <netinet/tcp.h>
 #endif
 
-#if defined (__MidnightBSD__) || defined (__OpenBSD__)
+#if defined (__FreeBSD__) || defined (__OpenBSD__) || defined(__MidnightBSD__)
 #  include <netinet/if_ether.h>
 #else
 #  include <net/ethertypes.h>
-#endif
-
-#ifdef IPX
-#include <netipx/ipx.h>
-#include <netipx/ipx_if.h>
 #endif
 
 #include <net/if_sppp.h>
@@ -150,7 +144,7 @@ struct arp_req {
 	unsigned short  ptarget2;
 } __packed;
 
-#if defined(__MidnightBSD__) && __FreeBSD_version < 501113
+#if defined(__FreeBSD__) && __FreeBSD_version < 501113
 #define	SPP_FMT		"%s%d: "
 #define	SPP_ARGS(ifp)	(ifp)->if_name, (ifp)->if_unit
 #else
@@ -256,25 +250,15 @@ bad:            m_freem (m);
 
 	switch (proto) {
 	default:
-		++ifp->if_noproto;
-drop:		++ifp->if_ierrors;
-		++ifp->if_iqdrops;
+		if_inc_counter(ifp, IFCOUNTER_NOPROTO, 1);
+drop:		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
+		if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 		m_freem (m);
 		return;
 #ifdef INET
 	case ETHERTYPE_IP:
 		isr = NETISR_IP;
 		break;
-#endif
-#ifdef IPX
-	case ETHERTYPE_IPX:
-		isr = NETISR_IPX;
-		break;
-#endif
-#ifdef NETATALK
-        case ETHERTYPE_AT:
-		isr = NETISR_ATALK;
-                break;
 #endif
 	}
 
@@ -345,19 +329,9 @@ struct mbuf *sppp_fr_header (struct sppp *sp, struct mbuf *m,
 		h[3] = FR_IP;
 		return m;
 #endif
-#ifdef IPX
-	case AF_IPX:
-		type = ETHERTYPE_IPX;
-		break;
-#endif
 #ifdef NS
 	case AF_NS:
 		type = 0x8137;
-		break;
-#endif
-#ifdef NETATALK
-	case AF_APPLETALK:
-		type = ETHERTYPE_AT;
 		break;
 #endif
 	}
@@ -420,7 +394,7 @@ void sppp_fr_keepalive (struct sppp *sp)
 			(u_char) sp->pp_rseq[IDX_LCP]);
 
 	if (! IF_HANDOFF_ADJ(&sp->pp_cpq, m, ifp, 3))
-		++ifp->if_oerrors;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 }
 
 /*
@@ -534,7 +508,7 @@ static void sppp_fr_arp (struct sppp *sp, struct arp_req *req,
 	reply->ptarget2 = htonl (his_ip_address) >> 16;
 
 	if (! IF_HANDOFF_ADJ(&sp->pp_cpq, m, ifp, 3))
-		++ifp->if_oerrors;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 }
 
 /*

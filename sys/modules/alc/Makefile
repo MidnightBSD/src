@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/alc/Makefile 193880 2009-06-10 02:07:58Z yongari $
+# $FreeBSD: stable/11/sys/modules/alc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/alc
+.PATH: ${SRCTOP}/sys/dev/alc
 
 KMOD=	if_alc
 SRCS=	if_alc.c device_if.h bus_if.h pci_if.h miibus_if.h

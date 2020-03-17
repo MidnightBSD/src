@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nullfs/Makefile 89260 2002-01-11 15:49:02Z ru $
+# $FreeBSD: stable/11/sys/modules/nullfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/nullfs
+.PATH: ${SRCTOP}/sys/fs/nullfs
 
 KMOD=	nullfs
 SRCS=	vnode_if.h \

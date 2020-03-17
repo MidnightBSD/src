@@ -1,12 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ntb/ntb/Makefile 304380 2016-08-18 10:39:00Z mav $
+# $FreeBSD: stable/11/sys/modules/ntb/ntb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../../dev/ntb
+.PATH:  ${SRCTOP}/sys/dev/ntb
 
 KMOD    = ntb
 SRCS    = ntb.c ntb_if.c
 SRCS += device_if.h bus_if.h ntb_if.h
-
-MFILES=	kern/bus_if.m kern/device_if.m dev/ntb/ntb_if.m
 
 .include <bsd.kmod.mk>

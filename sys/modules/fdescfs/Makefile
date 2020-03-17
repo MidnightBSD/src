@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/fdescfs/Makefile 89260 2002-01-11 15:49:02Z ru $
+# $FreeBSD: stable/11/sys/modules/fdescfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/fdescfs
+.PATH: ${SRCTOP}/sys/fs/fdescfs
 
 KMOD=	fdescfs
 SRCS=	vnode_if.h \

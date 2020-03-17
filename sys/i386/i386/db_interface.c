@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/db_interface.c 139724 2005-01-05 19:10:48Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/db_interface.c 342825 2019-01-07 00:32:19Z kib $");
 
 /*
  * Interface to new debugger.
@@ -136,10 +135,35 @@ db_write_bytes(vm_offset_t addr, size_t size, char *data)
 	return (ret);
 }
 
+int
+db_segsize(struct trapframe *tfp)
+{
+	struct proc_ldt *plp;
+	struct segment_descriptor *sdp;
+	int sel;
+
+	if (tfp == NULL)
+	    return (32);
+	if (tfp->tf_eflags & PSL_VM)
+	    return (16);
+	sel = tfp->tf_cs & 0xffff;
+	if (sel == GSEL(GCODE_SEL, SEL_KPL))
+	    return (32);
+	/* Rare cases follow.  User mode cases are currently unreachable. */
+	if (ISLDT(sel)) {
+	    plp = curthread->td_proc->p_md.md_ldt;
+	    sdp = (plp != NULL) ? &plp->ldt_sd : &ldt[0].sd;
+	} else {
+	    sdp = &gdt[PCPU_GET(cpuid) * NGDT].sd;
+	}
+	return (sdp[IDXSEL(sel)].sd_def32 == 0 ? 16 : 32);
+}
+
 void
 db_show_mdpcpu(struct pcpu *pc)
 {
 
 	db_printf("APIC ID      = %d\n", pc->pc_apic_id);
 	db_printf("currentldt   = 0x%x\n", pc->pc_currentldt);
+	db_printf("tlb gen      = %u\n", pc->pc_smp_tlb_done);
 }

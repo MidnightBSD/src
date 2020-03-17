@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/sb16/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD: stable/11/sys/modules/sound/driver/sb16/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/isa
+.PATH: ${SRCTOP}/sys/dev/sound/isa
 
 KMOD=	snd_sb16
 SRCS=	device_if.h bus_if.h isa_if.h pci_if.h

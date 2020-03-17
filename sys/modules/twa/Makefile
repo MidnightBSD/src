@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/twa/Makefile 169400 2007-05-09 04:16:32Z scottl $
+# $FreeBSD: stable/11/sys/modules/twa/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2004-06 Applied Micro Circuits Corporation.
 # All rights reserved.
@@ -34,7 +33,7 @@
 #
 
 KMOD = twa
-.PATH: ${.CURDIR}/../../dev/${KMOD}
+.PATH: ${SRCTOP}/sys/dev/${KMOD}
 SRCS=  tw_osl_freebsd.c tw_osl_cam.c \
       tw_cl_init.c tw_cl_io.c tw_cl_intr.c tw_cl_misc.c \
       bus_if.h device_if.h pci_if.h opt_scsi.h opt_cam.h opt_twa.h
@@ -43,6 +42,6 @@ SRCS=  tw_osl_freebsd.c tw_osl_cam.c \
 #CFLAGS+= -DTWA_ENCLOSURE_SUPPORT
 
 #CFLAGS+= -DTWA_DEBUG=0
-CFLAGS+= -I${.CURDIR}/../../dev/${KMOD}
+CFLAGS+= -I${SRCTOP}/sys/dev/${KMOD}
 
 .include <bsd.kmod.mk>

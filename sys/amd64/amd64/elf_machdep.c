@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/elf_machdep.c 294136 2016-01-16 07:56:49Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/elf_machdep.c 338867 2018-09-21 20:40:37Z markj $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -52,8 +51,6 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -61,7 +58,6 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF64",
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
@@ -76,7 +72,7 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_setregs	= exec_setregs,
 	.sv_fixlimit	= NULL,
 	.sv_maxssiz	= NULL,
-	.sv_flags	= SV_ABI_FREEBSD | SV_LP64 | SV_SHP,
+	.sv_flags	= SV_ABI_FREEBSD | SV_LP64 | SV_SHP | SV_TIMEKEEP,
 	.sv_set_syscall_retval = cpu_set_syscall_retval,
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
@@ -139,6 +135,21 @@ SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_oinfo);
 
+static Elf64_Brandinfo kfreebsd_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_X86_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld-kfreebsd-x86-64.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
+
+SYSINIT(kelf64, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf64_insert_brand_entry,
+	&kfreebsd_brand_info);
 
 void
 elf64_dump_thread(struct thread *td, void *dst, size_t *off)
@@ -162,10 +173,17 @@ elf64_dump_thread(struct thread *td, void *dst, size_t *off)
 	*off = len;
 }
 
+bool
+elf_is_ifunc_reloc(Elf_Size r_info)
+{
+
+	return (ELF_R_TYPE(r_info) == R_X86_64_IRELATIVE);
+}
+
 /* Process one elf relocation with addend. */
 static int
 elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
-    int type, int local, elf_lookup_fn lookup)
+    int type, elf_lookup_fn lookup)
 {
 	Elf64_Addr *where, val;
 	Elf32_Addr *where32, val32;
@@ -186,6 +204,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		switch (rtype) {
 		case R_X86_64_PC32:
 		case R_X86_64_32S:
+		case R_X86_64_PLT32:
 			addend = *(Elf32_Addr *)where;
 			break;
 		default:
@@ -205,7 +224,6 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	}
 
 	switch (rtype) {
-
 		case R_X86_64_NONE:	/* none */
 			break;
 
@@ -219,6 +237,8 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			break;
 
 		case R_X86_64_PC32:	/* S + A - P */
+		case R_X86_64_PLT32:	/* L + A - P, L is PLT location for
+					   the symbol, which we treat as S */
 			error = lookup(lf, symidx, 1, &addr);
 			where32 = (Elf32_Addr *)where;
 			val32 = (Elf32_Addr)(addr + addend - (Elf_Addr)where);
@@ -244,7 +264,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			 * objects.
 			 */
 			printf("kldload: unexpected R_COPY relocation\n");
-			return -1;
+			return (-1);
 			break;
 
 		case R_X86_64_GLOB_DAT:	/* S */
@@ -263,12 +283,19 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 				*where = val;
 			break;
 
+		case R_X86_64_IRELATIVE:
+			addr = relocbase + addend;
+			val = ((Elf64_Addr (*)(void))addr)();
+			if (*where != val)
+				*where = val;
+			break;
+
 		default:
 			printf("kldload: unexpected relocation type %ld\n",
 			       rtype);
-			return -1;
+			return (-1);
 	}
-	return(0);
+	return (0);
 }
 
 int
@@ -276,7 +303,7 @@ elf_reloc(linker_file_t lf, Elf_Addr relocbase, const void *data, int type,
     elf_lookup_fn lookup)
 {
 
-	return (elf_reloc_internal(lf, relocbase, data, type, 0, lookup));
+	return (elf_reloc_internal(lf, relocbase, data, type, lookup));
 }
 
 int
@@ -284,7 +311,7 @@ elf_reloc_local(linker_file_t lf, Elf_Addr relocbase, const void *data,
     int type, elf_lookup_fn lookup)
 {
 
-	return (elf_reloc_internal(lf, relocbase, data, type, 1, lookup));
+	return (elf_reloc_internal(lf, relocbase, data, type, lookup));
 }
 
 int

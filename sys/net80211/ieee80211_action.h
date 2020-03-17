@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net80211/ieee80211_action.h 195377 2009-07-05 17:59:19Z sam $
+ * $FreeBSD: stable/11/sys/net80211/ieee80211_action.h 195377 2009-07-05 17:59:19Z sam $
  */
 #ifndef _NET80211_IEEE80211_ACTION_H_
 #define _NET80211_IEEE80211_ACTION_H_

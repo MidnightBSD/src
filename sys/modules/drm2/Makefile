@@ -1,7 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/drm2/Makefile 291811 2015-12-04 18:44:12Z bdrewery $
+# $FreeBSD: stable/11/sys/modules/drm2/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
 .if ${MACHINE_CPUARCH} == "amd64"
 _i915kms=	i915kms

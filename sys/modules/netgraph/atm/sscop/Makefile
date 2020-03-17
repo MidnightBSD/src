@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netgraph/atm/sscop/Makefile 121462 2003-10-24 07:42:08Z harti $
+# $FreeBSD: stable/11/sys/modules/netgraph/atm/sscop/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
-LIBBASE= ${.CURDIR}/../../../../contrib/ngatm
+LIBBASE= ${SRCTOP}/sys/contrib/ngatm
 
-.PATH: ${.CURDIR}/../../../../netgraph/atm/sscop ${LIBBASE}/netnatm/saal
+.PATH: ${SRCTOP}/sys/netgraph/atm/sscop ${LIBBASE}/netnatm/saal
 
 KMOD=	ng_sscop
 SRCS= 	ng_sscop.c saal_sscop.c

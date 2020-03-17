@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mac_bsdextended/Makefile 184331 2008-10-27 12:09:15Z rwatson $
+# $FreeBSD: stable/11/sys/modules/mac_bsdextended/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../security/mac_bsdextended
+.PATH: ${SRCTOP}/sys/security/mac_bsdextended
 
 KMOD=	mac_bsdextended
 SRCS=	vnode_if.h \

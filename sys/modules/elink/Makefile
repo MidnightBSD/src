@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/elink/Makefile 112793 2003-03-29 13:42:20Z mdodd $
+# $FreeBSD: stable/11/sys/modules/elink/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH:	${.CURDIR}/../../i386/isa
+.PATH:	${SRCTOP}/sys/i386/isa
 
 KMOD=		elink
 SRCS=		elink.c

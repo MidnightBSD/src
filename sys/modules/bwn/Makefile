@@ -1,14 +1,34 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bwn/Makefile 239462 2012-08-20 18:33:03Z dim $
+# $FreeBSD: stable/11/sys/modules/bwn/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/bwn
+.PATH: ${SRCTOP}/sys/dev/bwn
 
 KMOD=	if_bwn
 SRCS=	if_bwn.c if_bwnreg.h if_bwnvar.h
-SRCS+=	device_if.h bus_if.h pci_if.h
+SRCS+=	if_bwn_util.c
+
+# PHY
+SRCS+=	if_bwn_phy_common.c
+SRCS+=	if_bwn_phy_g.c if_bwn_phy_lp.c
+SRCS+=	if_bwn_phy_n.c
+
+# Other
+SRCS+=	device_if.h bus_if.h pci_if.h opt_bwn.h opt_wlan.h
+
+# Uncomment this for the GPL PHY code; this requires the
+# module be built with BWN_GPL_PHY set in the kernel
+# configuration.
+
+#.PATH: ${SRCTOP}/sys/gnu/dev/bwn/phy_n
+#SRCS+=  if_bwn_radio_2055.c
+#SRCS+=  if_bwn_radio_2056.c
+#SRCS+=  if_bwn_radio_2057.c
+#SRCS+=  if_bwn_phy_n_tables.c
+#SRCS+=  if_bwn_phy_n_ppr.c
+#SRCS+=  if_bwn_phy_n_core.c
 
 .include <bsd.kmod.mk>
 
-# XXX Work around clang warning, until maintainer approves fix.
+# XXX Work around clang warnings, until maintainer approves fix.
 CWARNFLAGS.if_bwn.c=	${NO_WSOMETIMES_UNINITIALIZED}
-CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}
+CWARNFLAGS.if_bwn_phy_g.c=	${NO_WSOMETIMES_UNINITIALIZED} ${NO_WCONSTANT_CONVERSION}
+CWARNFLAGS.if_bwn_phy_lp.c=	${NO_WSOMETIMES_UNINITIALIZED}

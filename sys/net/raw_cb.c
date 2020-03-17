@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/net/raw_cb.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD: stable/11/sys/net/raw_cb.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -45,8 +44,8 @@
 #include <sys/systm.h>
 
 #include <net/if.h>
-#include <net/raw_cb.h>
 #include <net/vnet.h>
+#include <net/raw_cb.h>
 
 /*
  * Routines to manage the raw protocol control blocks.

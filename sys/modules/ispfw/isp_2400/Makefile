@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2006 by Matthew Jacob
 # All rights reserved.
@@ -25,9 +24,9 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD: stable/10/sys/modules/ispfw/isp_2400/Makefile 161648 2006-08-26 18:40:25Z mjacob $
+# $FreeBSD: stable/11/sys/modules/ispfw/isp_2400/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/ispfw
+.PATH: ${SRCTOP}/sys/dev/ispfw
 
 KMOD=	isp_2400
 SRCS=	ispfw.c

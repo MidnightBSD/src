@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/syscons/warp/Makefile 106762 2002-11-11 10:11:59Z mux $
+# $FreeBSD: stable/11/sys/modules/syscons/warp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/syscons/warp
+.PATH:	${SRCTOP}/sys/dev/syscons/warp
 
 KMOD=	warp_saver
 SRCS=	warp_saver.c

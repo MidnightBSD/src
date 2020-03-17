@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/fuse/Makefile 241519 2012-10-13 23:54:26Z attilio $
+# $FreeBSD: stable/11/sys/modules/fuse/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/fuse
+.PATH: ${SRCTOP}/sys/fs/fuse
 
 KMOD=	fuse
 SRCS=	vnode_if.h \

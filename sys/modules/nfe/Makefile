@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nfe/Makefile 163962 2006-11-03 21:41:19Z ru $
+# $FreeBSD: stable/11/sys/modules/nfe/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/nfe
+.PATH: ${SRCTOP}/sys/dev/nfe
 
 KMOD=	if_nfe
 SRCS=	if_nfe.c device_if.h bus_if.h pci_if.h miibus_if.h

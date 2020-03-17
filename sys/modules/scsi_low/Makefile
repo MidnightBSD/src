@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/scsi_low/Makefile 240327 2012-09-10 21:57:40Z gnn $
+# $FreeBSD: stable/11/sys/modules/scsi_low/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../cam/scsi
+.PATH: ${SRCTOP}/sys/cam/scsi
 KMOD=	scsi_low
 SRCS=	scsi_low.c 
 SRCS+=  opt_ddb.h opt_scsi.h opt_cam.h bus_if.h device_if.h

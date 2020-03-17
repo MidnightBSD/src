@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nandfs/nandfs_segment.c 294853 2016-01-26 22:14:55Z rpokala $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_segment.c 297793 2016-04-10 23:07:00Z pfg $");
 
 #include "opt_ddb.h"
 
@@ -200,7 +199,7 @@ delete_segment(struct nandfs_seginfo *seginfo)
 			TAILQ_REMOVE(&seg->segsum, bp, b_cluster.cluster_entry);
 			bp->b_flags &= ~B_MANAGED;
 			brelse(bp);
-		};
+		}
 
 		LIST_REMOVE(seg, seg_link);
 		free(seg, M_DEVBUF);
@@ -753,7 +752,7 @@ nandfs_clean_segblocks(struct nandfs_segment *seg, uint8_t unlock)
 	TAILQ_FOREACH_SAFE(bp, &seg->segsum, b_cluster.cluster_entry, tbp) {
 		TAILQ_REMOVE(&seg->segsum, bp, b_cluster.cluster_entry);
 		nandfs_clean_buf(fsdev, bp);
-	};
+	}
 
 	TAILQ_FOREACH_SAFE(bp, &seg->data, b_cluster.cluster_entry, tbp) {
 		TAILQ_REMOVE(&seg->data, bp, b_cluster.cluster_entry);
@@ -808,7 +807,7 @@ nandfs_save_segblocks(struct nandfs_segment *seg, uint8_t unlock)
 			goto out;
 		}
 		i++;
-	};
+	}
 
 	i = 0;
 	TAILQ_FOREACH_SAFE(bp, &seg->data, b_cluster.cluster_entry, tbp) {

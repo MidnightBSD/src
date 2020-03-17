@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mac_lomac/Makefile 193588 2009-06-06 17:01:44Z rwatson $
+# $FreeBSD: stable/11/sys/modules/mac_lomac/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../security/mac_lomac
+.PATH: ${SRCTOP}/sys/security/mac_lomac
 
 KMOD=	mac_lomac
 SRCS=	vnode_if.h \

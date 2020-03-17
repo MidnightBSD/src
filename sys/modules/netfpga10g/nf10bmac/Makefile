@@ -1,17 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netfpga10g/nf10bmac/Makefile 264601 2014-04-17 12:33:26Z bz $
+# $FreeBSD: stable/11/sys/modules/netfpga10g/nf10bmac/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/netfpga10g/nf10bmac
+.PATH: ${SRCTOP}/sys/dev/netfpga10g/nf10bmac
 
 KMOD=	if_nf10bmac
 SRCS=	if_nf10bmac.c
 SRCS+=	device_if.h bus_if.h pci_if.h
 SRCS+=	opt_device_polling.h
+SRCS+=	opt_netfpga.h
 
 .if ${MACHINE_CPUARCH} == "mips"
 SRCS+=	if_nf10bmac_fdt.c ofw_bus_if.h
 .endif
-
-CFLAGS+=	-DDEVICE_POLLING
 
 .include <bsd.kmod.mk>

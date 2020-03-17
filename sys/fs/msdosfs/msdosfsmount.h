@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/fs/msdosfs/msdosfsmount.h 281095 2015-04-05 01:03:11Z kib $ */
+/* $FreeBSD: stable/11/sys/fs/msdosfs/msdosfsmount.h 280342 2015-03-22 09:09:26Z kib $ */
 /*	$NetBSD: msdosfsmount.h,v 1.17 1997/11/17 15:37:07 ws Exp $	*/
 
 /*-

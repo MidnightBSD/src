@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/via/padlock.c 268033 2014-06-30 09:48:44Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/via/padlock.c 267767 2014-06-23 07:37:54Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/bios.c 282065 2015-04-27 08:02:12Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/bios.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Code for dealing with the BIOS in x86 PC systems.
@@ -107,7 +106,7 @@ bios32_init(void *junk)
 	    }
 
 	    /* Allow user override of PCI BIOS search */
-	    if (((p = getenv("machdep.bios.pci")) == NULL) || strcmp(p, "disable")) {
+	    if (((p = kern_getenv("machdep.bios.pci")) == NULL) || strcmp(p, "disable")) {
 
 		/* See if there's a PCI BIOS entrypoint here */
 		PCIbios.ident.id = 0x49435024;	/* PCI systems should have this */
@@ -126,7 +125,7 @@ bios32_init(void *junk)
      *
      * Allow user override of PnP BIOS search
      */
-    if ((((p = getenv("machdep.bios.pnp")) == NULL) || strcmp(p, "disable")) &&
+    if ((((p = kern_getenv("machdep.bios.pnp")) == NULL) || strcmp(p, "disable")) &&
 	((sigaddr = bios_sigsearch(0, "$PnP", 4, 16, 0)) != 0)) {
 
 	/* get a virtual pointer to the structure */

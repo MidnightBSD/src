@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nvram/Makefile 172998 2007-10-26 03:23:54Z peter $
+# $FreeBSD: stable/11/sys/modules/nvram/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/nvram
+.PATH: ${SRCTOP}/sys/dev/nvram
 
 KMOD=	nvram
 SRCS=	nvram.c

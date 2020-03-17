@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/iscsi_initiator/Makefile 254657 2013-08-22 14:02:34Z trasz $
+# $FreeBSD: stable/11/sys/modules/iscsi_initiator/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/iscsi_initiator
+.PATH: ${SRCTOP}/sys/dev/iscsi_initiator
 KMOD=iscsi_initiator
 
 SRCS=  iscsi.h iscsivar.h

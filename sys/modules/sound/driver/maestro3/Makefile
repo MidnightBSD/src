@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/maestro3/Makefile 230898 2012-02-02 00:10:20Z pfg $
+# $FreeBSD: stable/11/sys/modules/sound/driver/maestro3/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_maestro3
 SRCS=	device_if.h bus_if.h pci_if.h

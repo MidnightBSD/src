@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010, 2013 Zheng Liu <lz@freebsd.org>
  * Copyright (c) 2012, Vyacheslav Matyushin
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2_hash.c 311232 2017-01-04 02:43:33Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_hash.c 311231 2017-01-04 02:42:17Z pfg $
  */
 
 /*

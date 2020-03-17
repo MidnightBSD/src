@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/fuse/fuse_vnops.c 325164 2017-10-30 20:31:48Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_vnops.c 349308 2019-06-23 14:49:30Z asomers $");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -124,6 +123,7 @@ static vop_lookup_t fuse_vnop_lookup;
 static vop_mkdir_t fuse_vnop_mkdir;
 static vop_mknod_t fuse_vnop_mknod;
 static vop_open_t fuse_vnop_open;
+static vop_pathconf_t fuse_vnop_pathconf;
 static vop_read_t fuse_vnop_read;
 static vop_readdir_t fuse_vnop_readdir;
 static vop_readlink_t fuse_vnop_readlink;
@@ -156,7 +156,7 @@ struct vop_vector fuse_vnops = {
 	.vop_mkdir = fuse_vnop_mkdir,
 	.vop_mknod = fuse_vnop_mknod,
 	.vop_open = fuse_vnop_open,
-	.vop_pathconf = vop_stdpathconf,
+	.vop_pathconf = fuse_vnop_pathconf,
 	.vop_read = fuse_vnop_read,
 	.vop_readdir = fuse_vnop_readdir,
 	.vop_readlink = fuse_vnop_readlink,
@@ -536,7 +536,7 @@ fuse_vnop_getattr(struct vop_getattr_args *ap)
 				      fdi.answ)->attr.size;
 
 		if (fvdat->filesize != new_filesize) {
-			fuse_vnode_setsize(vp, cred, new_filesize);
+			fuse_vnode_setsize(vp, new_filesize);
 		}
 	}
 	debug_printf("fuse_getattr e: returning 0\n");
@@ -1038,7 +1038,7 @@ out:
 				 * soon as we get those attrs... There is
 				 * one bit of info though not given us by
 				 * the daemon: whether his response is
-				 * authorative or not... His response should
+				 * authoritative or not... His response should
 				 * be ignored if something is mounted over
 				 * the dir in question. But that can be
 				 * known only by having the vnode...
@@ -1171,6 +1171,31 @@ fuse_vnop_open(struct vop_open_args *ap)
 	error = fuse_filehandle_open(vp, fufh_type, NULL, td, cred);
 
 	return error;
+}
+
+static int
+fuse_vnop_pathconf(struct vop_pathconf_args *ap)
+{
+
+	switch (ap->a_name) {
+	case _PC_FILESIZEBITS:
+		*ap->a_retval = 64;
+		return (0);
+	case _PC_NAME_MAX:
+		*ap->a_retval = NAME_MAX;
+		return (0);
+	case _PC_LINK_MAX:
+		*ap->a_retval = FUSE_LINK_MAX;
+		return (0);
+	case _PC_SYMLINK_MAX:
+		*ap->a_retval = MAXPATHLEN;
+		return (0);
+	case _PC_NO_TRUNC:
+		*ap->a_retval = 1;
+		return (0);
+	default:
+		return (vop_stdpathconf(ap));
+	}
 }
 
 /*
@@ -1623,7 +1648,7 @@ fuse_vnop_setattr(struct vop_setattr_args *ap)
 out:
 	fdisp_destroy(&fdi);
 	if (!err && sizechanged) {
-		fuse_vnode_setsize(vp, cred, newsize);
+		fuse_vnode_setsize(vp, newsize);
 		VTOFUD(vp)->flag &= ~FN_SIZECHANGE;
 	}
 	return err;
@@ -1752,7 +1777,6 @@ fuse_vnop_write(struct vop_write_args *ap)
         vm_page_t *a_m;
         int a_count;
         int a_reqpage;
-        vm_ooffset_t a_offset;
     };
 */
 static int
@@ -1775,40 +1799,29 @@ fuse_vnop_getpages(struct vop_getpages_args *ap)
 	td = curthread;			/* XXX */
 	cred = curthread->td_ucred;	/* XXX */
 	pages = ap->a_m;
-	count = ap->a_count;
+	npages = ap->a_count;
 
 	if (!fsess_opt_mmap(vnode_mount(vp))) {
 		FS_DEBUG("called on non-cacheable vnode??\n");
 		return (VM_PAGER_ERROR);
 	}
-	npages = btoc(count);
 
 	/*
-	 * If the requested page is partially valid, just return it and
-	 * allow the pager to zero-out the blanks.  Partially valid pages
-	 * can only occur at the file EOF.
+	 * If the last page is partially valid, just return it and allow
+	 * the pager to zero-out the blanks.  Partially valid pages can
+	 * only occur at the file EOF.
+	 *
+	 * XXXGL: is that true for FUSE, which is a local filesystem,
+	 * but still somewhat disconnected from the kernel?
 	 */
-
 	VM_OBJECT_WLOCK(vp->v_object);
-	fuse_vm_page_lock_queues();
-	if (pages[ap->a_reqpage]->valid != 0) {
-		for (i = 0; i < npages; ++i) {
-			if (i != ap->a_reqpage) {
-				fuse_vm_page_lock(pages[i]);
-				vm_page_free(pages[i]);
-				fuse_vm_page_unlock(pages[i]);
-			}
-		}
-		fuse_vm_page_unlock_queues();
-		VM_OBJECT_WUNLOCK(vp->v_object);
-		return 0;
-	}
-	fuse_vm_page_unlock_queues();
+	if (pages[npages - 1]->valid != 0 && --npages == 0)
+		goto out;
 	VM_OBJECT_WUNLOCK(vp->v_object);
 
 	/*
 	 * We use only the kva address for the buffer, but this is extremely
-	 * convienient and fast.
+	 * convenient and fast.
 	 */
 	bp = getpbuf(&fuse_pbuf_freecnt);
 
@@ -1817,6 +1830,7 @@ fuse_vnop_getpages(struct vop_getpages_args *ap)
 	PCPU_INC(cnt.v_vnodein);
 	PCPU_ADD(cnt.v_vnodepgsin, npages);
 
+	count = npages << PAGE_SHIFT;
 	iov.iov_base = (caddr_t)kva;
 	iov.iov_len = count;
 	uio.uio_iov = &iov;
@@ -1834,17 +1848,6 @@ fuse_vnop_getpages(struct vop_getpages_args *ap)
 
 	if (error && (uio.uio_resid == count)) {
 		FS_DEBUG("error %d\n", error);
-		VM_OBJECT_WLOCK(vp->v_object);
-		fuse_vm_page_lock_queues();
-		for (i = 0; i < npages; ++i) {
-			if (i != ap->a_reqpage) {
-				fuse_vm_page_lock(pages[i]);
-				vm_page_free(pages[i]);
-				fuse_vm_page_unlock(pages[i]);
-			}
-		}
-		fuse_vm_page_unlock_queues();
-		VM_OBJECT_WUNLOCK(vp->v_object);
 		return VM_PAGER_ERROR;
 	}
 	/*
@@ -1879,18 +1882,21 @@ fuse_vnop_getpages(struct vop_getpages_args *ap)
 			    ("fuse_getpages: page %p is dirty", m));
 		} else {
 			/*
-			 * Read operation was short.  If no error occured
+			 * Read operation was short.  If no error occurred
 			 * we may have hit a zero-fill section.   We simply
 			 * leave valid set to 0.
 			 */
 			;
 		}
-		if (i != ap->a_reqpage)
-			vm_page_readahead_finish(m);
 	}
 	fuse_vm_page_unlock_queues();
+out:
 	VM_OBJECT_WUNLOCK(vp->v_object);
-	return 0;
+	if (ap->a_rbehind)
+		*ap->a_rbehind = 0;
+	if (ap->a_rahead)
+		*ap->a_rahead = 0;
+	return (VM_PAGER_OK);
 }
 
 /*
@@ -1949,7 +1955,7 @@ fuse_vnop_putpages(struct vop_putpages_args *ap)
 	}
 	/*
 	 * We use only the kva address for the buffer, but this is extremely
-	 * convienient and fast.
+	 * convenient and fast.
 	 */
 	bp = getpbuf(&fuse_pbuf_freecnt);
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_bridgevar.h,v 1.4 2003/07/08 07:13:50 itojun Exp $	*/
 
 /*
@@ -68,7 +67,7 @@
  *
  * OpenBSD: if_bridge.h,v 1.14 2001/03/22 03:48:29 jason Exp
  *
- * $FreeBSD: stable/10/sys/net/if_bridgevar.h 313066 2017-02-01 21:44:50Z kp $
+ * $FreeBSD: stable/11/sys/net/if_bridgevar.h 313050 2017-02-01 20:27:38Z kp $
  */
 
 /*

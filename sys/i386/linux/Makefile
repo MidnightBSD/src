@@ -1,13 +1,7 @@
-# $MidnightBSD$
 # Makefile for syscall tables
 #
-# $FreeBSD: stable/10/sys/i386/linux/Makefile 315063 2017-03-11 08:40:59Z dchagin $
+# $FreeBSD: stable/11/sys/i386/linux/Makefile 357108 2020-01-25 05:47:56Z kevans $
 
-all:
-	@echo "make sysent only"
+GENERATED_PREFIX=	linux_
 
-sysent:  linux_sysent.c linux_syscall.h linux_proto.h linux_syscalls.c linux_systrace_args.c
-
-linux_sysent.c linux_syscall.h linux_proto.h linux_syscalls.c linux_systrace_args.c: \
-		../../kern/makesyscalls.sh syscalls.master syscalls.conf
-	sh ../../kern/makesyscalls.sh syscalls.master syscalls.conf
+.include "../../conf/sysent.mk"

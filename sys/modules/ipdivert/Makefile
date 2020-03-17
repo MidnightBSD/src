@@ -1,22 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ipdivert/Makefile 231838 2012-02-16 21:57:50Z uqs $
+# $FreeBSD: stable/11/sys/modules/ipdivert/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../netinet
+.PATH: ${SRCTOP}/sys/netinet
 
 KMOD=   ipdivert
 SRCS=   ip_divert.c opt_inet.h opt_inet6.h opt_sctp.h
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-.endif
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

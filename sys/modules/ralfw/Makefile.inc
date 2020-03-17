@@ -1,5 +1,4 @@
-# $MidnightBSD$ 
-# $FreeBSD: stable/10/sys/modules/ralfw/Makefile.inc 178354 2008-04-20 20:35:46Z sam $
+# $FreeBSD: stable/11/sys/modules/ralfw/Makefile.inc 351876 2019-09-05 17:20:24Z bdrewery $
 
 #
 # Common rules for building firmware.  Note this gets auto-included
@@ -12,5 +11,5 @@ CLEANFILES+=	${_FIRM}
 
 FIRMWS=	${_FIRM}:${KMOD}
 
-${_FIRM}: ${.CURDIR}/../../../contrib/dev/ral/${_FIRM}.uu
-	uudecode -p $? > ${.TARGET}
+${_FIRM}: ${SRCTOP}/sys/contrib/dev/ral/${_FIRM}.uu
+	uudecode -p ${.ALLSRC} > ${.TARGET}

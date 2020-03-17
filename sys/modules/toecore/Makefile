@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/toecore/Makefile 237560 2012-06-25 09:46:06Z uqs $
+# $FreeBSD: stable/11/sys/modules/toecore/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../netinet
+.PATH: ${SRCTOP}/sys/netinet
 
 KMOD=	toecore
 SRCS=	toecore.c

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_arp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/net/if_arp.h 253084 2013-07-09 09:50:15Z ae $
+ * $FreeBSD: stable/11/sys/net/if_arp.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NET_IF_ARP_H_
@@ -97,20 +96,6 @@ struct arpreq {
 #define	ATF_PERM	0x04	/* permanent entry */
 #define	ATF_PUBL	0x08	/* publish entry (respond for other host) */
 #define	ATF_USETRAILERS	0x10	/* has requested trailers */
-
-#ifdef _KERNEL
-/*
- * Structure shared between the ethernet driver modules and
- * the address resolution code.
- */
-struct	arpcom {
-	struct 	ifnet *ac_ifp;		/* network-visible interface */
-	void	*ac_netgraph;		/* ng_ether(4) netgraph node info */
-};
-#define IFP2AC(ifp) ((struct arpcom *)(ifp->if_l2com))
-#define AC2IFP(ac) ((ac)->ac_ifp)
-
-#endif /* _KERNEL */
 
 struct arpstat {
 	/* Normal things that happen: */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 The FreeBSD Project.
  * All rights reserved.
@@ -25,12 +24,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/if_enc.h 181627 2008-08-12 09:05:01Z vanhu $
+ * $FreeBSD: stable/11/sys/net/if_enc.h 322741 2017-08-21 09:03:20Z ae $
  */
 
 #ifndef _NET_IF_ENC_H
 #define _NET_IF_ENC_H
 
-extern struct ifnet	*encif;
+struct ipsec_ctx_data {
+	struct mbuf	**mp;
+	struct secasvar	*sav;
+	struct inpcb	*inp;
+	uint8_t		af;
+#define	IPSEC_ENC_BEFORE	0x01
+#define	IPSEC_ENC_AFTER		0x02
+	uint8_t		enc;
+};
 
 #endif /* _NET_IF_ENC_H */

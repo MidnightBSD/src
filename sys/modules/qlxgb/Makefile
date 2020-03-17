@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2010-2011 Qlogic Corporation
 # All rights reserved.
@@ -27,18 +26,13 @@
 # File : Makefile
 # Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
 #
-# $FreeBSD: stable/10/sys/modules/qlxgb/Makefile 227064 2011-11-03 21:20:22Z bz $
+# $FreeBSD: stable/11/sys/modules/qlxgb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH: ${.CURDIR}/../../dev/qlxgb
+.PATH: ${SRCTOP}/sys/dev/qlxgb
 
 KMOD=	if_qlxgb
 SRCS=	qla_os.c qla_dbg.c qla_hw.c qla_misc.c qla_isr.c qla_ioctl.c
 SRCS+=	device_if.h bus_if.h pci_if.h
-
-clean:
-	rm -f opt_bdg.h device_if.h bus_if.h pci_if.h export_syms
-	rm -f *.o *.kld *.ko
-	rm -f @ machine
 
 .include <bsd.kmod.mk>

@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cxgbe/iw_cxgbe/Makefile 270297 2014-08-21 19:54:02Z np $
+# $FreeBSD: stable/11/sys/modules/cxgbe/iw_cxgbe/Makefile 331769 2018-03-30 18:06:29Z hselasky $
 
-.include <bsd.own.mk>
-
-CXGBE=	${.CURDIR}/../../../dev/cxgbe
+CXGBE=	${SRCTOP}/sys/dev/cxgbe
 .PATH: ${CXGBE}/iw_cxgbe
 
 KMOD=	iw_cxgbe
@@ -26,19 +23,10 @@ SRCS+=	qp.c
 SRCS+=	resource.c
 SRCS+=	vnode_if.h
 
-CFLAGS+= -I${CXGBE} -I${.CURDIR}/../../../ofed/include -DLINUX_TYPES_DEFINED
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-	@echo "#define TCP_OFFLOAD 1" >> ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
+CFLAGS+= -I${CXGBE} -I${SRCTOP}/sys/ofed/include -DLINUX_TYPES_DEFINED
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
+CFLAGS+= -DCONFIG_INFINIBAND_USER_MEM
+CFLAGS+= -DINET6 -DINET
 
 .include <bsd.kmod.mk>

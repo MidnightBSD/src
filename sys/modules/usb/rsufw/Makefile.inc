@@ -1,5 +1,4 @@
-# $MidnightBSD$ 
-# $FreeBSD: stable/10/sys/modules/usb/rsufw/Makefile.inc 253761 2013-07-29 06:57:45Z rpaulo $
+# $FreeBSD: stable/11/sys/modules/usb/rsufw/Makefile.inc 351876 2019-09-05 17:20:24Z bdrewery $
 #
 # Common rules for building firmware.  Note this gets auto-included
 # by the subdir Makefile's as a consequence of included bsd.kmod.mk.
@@ -10,7 +9,7 @@ CLEANFILES+=	${_FIRM}
 
 FIRMWS=	${_FIRM}:${KMOD}:120
 
-FIRMWARE_LICENSE=	realtek
+# FIRMWARE_LICENSE=	realtek
 
-${_FIRM}: ${.CURDIR}/../../../../contrib/dev/rsu/${_FIRM}.uu
-	uudecode -p $? > ${.TARGET}
+${_FIRM}: ${SRCTOP}/sys/contrib/dev/rsu/${_FIRM}.uu
+	uudecode -p ${.ALLSRC} > ${.TARGET}

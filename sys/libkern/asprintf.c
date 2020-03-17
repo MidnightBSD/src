@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2015 Sandvine Inc.  All rights reserved.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/asprintf.c 288766 2015-10-05 09:46:23Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/asprintf.c 279433 2015-03-01 00:22:16Z rstone $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

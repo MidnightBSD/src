@@ -1,15 +1,15 @@
-# $MidnightBSD$
 # ioat Loadable Kernel Module
 #
-# $FreeBSD: stable/10/sys/modules/ioat/Makefile 300661 2016-05-25 07:09:54Z mav $
+# $FreeBSD: stable/11/sys/modules/ioat/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-IOAT_SRC_PATH = ${.CURDIR}/../..
+IOAT_SRC_PATH = ${SRCTOP}/sys
 
 .PATH:  ${IOAT_SRC_PATH}/dev/ioat
 
 KMOD=	ioat
 SRCS=	ioat.c ioat_test.c
 SRCS+=	device_if.h bus_if.h pci_if.h
+SRCS+=	opt_ddb.h
 
 CFLAGS+=	-I${IOAT_SRC_PATH}
 

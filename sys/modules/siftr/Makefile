@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/siftr/Makefile 209662 2010-07-03 13:32:39Z lstewart $
+# $FreeBSD: stable/11/sys/modules/siftr/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH:  ${.CURDIR}/../../netinet
+.PATH:  ${SRCTOP}/sys/netinet
 KMOD=	siftr
 SRCS=	siftr.c
 

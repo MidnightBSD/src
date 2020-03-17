@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/canbepm/Makefile 110285 2003-02-03 14:46:26Z nyan $
+# $FreeBSD: stable/11/sys/modules/canbepm/Makefile 110285 2003-02-03 14:46:26Z nyan $
 
 .PATH:	${.CURDIR}/../../pc98/pc98
 KMOD	= canbepm

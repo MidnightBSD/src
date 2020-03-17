@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mse/Makefile 138755 2004-12-12 20:05:50Z imp $
+# $FreeBSD: stable/11/sys/modules/mse/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mse
+.PATH: ${SRCTOP}/sys/dev/mse
 
 KMOD=	mse
 SRCS=	mse.c device_if.h bus_if.h isa_if.h

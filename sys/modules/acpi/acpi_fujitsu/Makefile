@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/acpi/acpi_fujitsu/Makefile 193530 2009-06-05 18:44:36Z jkim $
+# $FreeBSD: stable/11/sys/modules/acpi/acpi_fujitsu/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/acpi_support
+.PATH:	${SRCTOP}/sys/dev/acpi_support
 
 KMOD=	acpi_fujitsu
-CFLAGS+=-I${.CURDIR}/../../../dev/acpi_support
+CFLAGS+=-I${SRCTOP}/sys/dev/acpi_support
 SRCS=	acpi_fujitsu.c opt_acpi.h acpi_if.h device_if.h bus_if.h
 
 .include <bsd.kmod.mk>

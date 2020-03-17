@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_sysvec.c 294136 2016-01-16 07:56:49Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_sysvec.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -58,7 +57,7 @@ extern struct sysent ibcs2_sysent[IBCS2_SYS_MAXSYSCALL];
 static int ibcs2_fixup(register_t **, struct image_params *);
 
 struct sysentvec ibcs2_svr3_sysvec = {
-        .sv_size	= sizeof (ibcs2_sysent) / sizeof (ibcs2_sysent[0]),
+        .sv_size	= nitems(ibcs2_sysent),
         .sv_table	= ibcs2_sysent,
         .sv_mask	= 0xff,
         .sv_sigsize	= IBCS2_SIGTBLSZ,

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/nfs/nfsdport.h 284216 2015-06-10 12:17:19Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/nfs/nfsdport.h 283635 2015-05-27 22:00:05Z rmacklem $
  */
 
 /*

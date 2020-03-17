@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: stable/10/sys/i386/include/signal.h 247047 2013-02-20 17:39:52Z kib $
+ * $FreeBSD: stable/11/sys/i386/include/signal.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SIGNAL_H_

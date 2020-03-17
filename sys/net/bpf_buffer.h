@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Seccuris Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/bpf_buffer.h 235746 2012-05-21 22:19:19Z melifaro $
+ * $FreeBSD: stable/11/sys/net/bpf_buffer.h 235746 2012-05-21 22:19:19Z melifaro $
  */
 
 #ifndef _NET_BPF_BUFFER_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/db_trace.c 330132 2018-02-28 22:33:07Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/db_trace.c 330587 2018-03-07 13:37:25Z avg $");
 
 #include "opt_compat.h"
 
@@ -201,6 +200,7 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 	if (name != NULL) {
 		if (strcmp(name, "calltrap") == 0 ||
 		    strcmp(name, "fork_trampoline") == 0 ||
+		    strcmp(name, "mchk_calltrap") == 0 ||
 		    strcmp(name, "nmi_calltrap") == 0 ||
 		    strcmp(name, "Xdblfault") == 0)
 			frame_type = TRAP;
@@ -212,7 +212,9 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 		    strcmp(name, "Xcpususpend") == 0 ||
 		    strcmp(name, "Xrendezvous") == 0)
 			frame_type = INTERRUPT;
-		else if (strcmp(name, "Xfast_syscall") == 0)
+		else if (strcmp(name, "Xfast_syscall") == 0 ||
+		    strcmp(name, "Xfast_syscall_pti") == 0 ||
+		    strcmp(name, "fast_syscall_common") == 0)
 			frame_type = SYSCALL;
 #ifdef COMPAT_FREEBSD32
 		else if (strcmp(name, "Xint0x80_syscall") == 0)

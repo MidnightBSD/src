@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Seccuris Inc.
  * All rights reserved.
@@ -63,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/bpf_buffer.c 286856 2015-08-17 18:43:39Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/net/bpf_buffer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_bpf.h"
 

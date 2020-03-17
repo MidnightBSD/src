@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/strvalid.c 140960 2005-01-29 13:34:22Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/strvalid.c 140960 2005-01-29 13:34:22Z rwatson $");
 
 #include <sys/types.h>
 #include <sys/libkern.h>

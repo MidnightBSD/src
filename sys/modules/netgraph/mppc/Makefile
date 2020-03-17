@@ -1,6 +1,5 @@
-# $MidnightBSD$
 # $Whistle: Makefile,v 1.1 1999/12/08 20:20:39 archie Exp $
-# $FreeBSD: stable/10/sys/modules/netgraph/mppc/Makefile 302061 2016-06-21 15:47:54Z pfg $
+# $FreeBSD: stable/11/sys/modules/netgraph/mppc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 KMOD=	ng_mppc
 SRCS= 	ng_mppc.c opt_netgraph.h
@@ -9,12 +8,12 @@ NETGRAPH_MPPC_COMPRESSION?=	1
 NETGRAPH_MPPC_ENCRYPTION?=	1
 
 .if ${NETGRAPH_MPPC_COMPRESSION} > 0
-.PATH: ${.CURDIR}/../../../net
+.PATH: ${SRCTOP}/sys/net
 SRCS+=	mppcc.c mppcd.c
 .endif
 
 .if ${NETGRAPH_MPPC_ENCRYPTION} > 0
-.PATH: ${.CURDIR}/../../../crypto
+.PATH: ${SRCTOP}/sys/crypto
 SRCS+= sha1.c
 .endif
 

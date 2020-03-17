@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Semihalf
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nandfs/bmap.c 240358 2012-09-11 09:38:32Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/bmap.c 279502 2015-03-01 21:41:37Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -318,7 +317,8 @@ bmap_truncate_indirect(struct nandfs_node *node, int level, nandfs_lbn_t *left,
 
 	error = nandfs_bread_meta(node, lbn, NOCRED, 0, &bp);
 	if (error) {
-		brelse(bp);
+		if (bp != NULL)
+			brelse(bp);
 		return (error);
 	}
 
@@ -388,11 +388,10 @@ bmap_truncate_indirect(struct nandfs_node *node, int level, nandfs_lbn_t *left,
 	if (modified)
 		bcopy(copy, bp->b_data, fsdev->nd_blocksize);
 
-	error = nandfs_dirty_buf_meta(bp, 0);
-	if (error)
-		return (error);
+	/* Force success even if we can't dirty the buffer metadata when freeing space */
+	nandfs_dirty_buf_meta(bp, 1);
 
-	return (error);
+	return (0);
 }
 
 int
@@ -462,6 +461,7 @@ bmap_truncate_mapping(struct nandfs_node *node, nandfs_lbn_t lastblk,
 			error = bmap_truncate_indirect(node, level, &left,
 			    &cleaned, ap, f, copy);
 			if (error) {
+				free(copy, M_NANDFSTEMP);
 				nandfs_error("%s: error %d when truncate "
 				    "at level %d\n", __func__, error, level);
 				return (error);

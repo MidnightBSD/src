@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/strcasecmp.c 206360 2010-04-07 16:29:10Z joel $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/strcasecmp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ctype.h>

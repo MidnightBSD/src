@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/aac/aac_linux/Makefile 103952 2002-09-25 05:00:25Z scottl $
+# $FreeBSD: stable/11/sys/modules/aac/aac_linux/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/aac
+.PATH: ${SRCTOP}/sys/dev/aac
 
 KMOD=	aac_linux
 SRCS=	aac_linux.c

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_mbr/Makefile 117254 2003-07-05 08:11:43Z jmg $
+# $FreeBSD: stable/11/sys/modules/geom/geom_mbr/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom
+.PATH: ${SRCTOP}/sys/geom
 
 KMOD=	geom_mbr
 SRCS=	geom_mbr.c geom_mbr_enc.c

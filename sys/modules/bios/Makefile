@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bios/Makefile 309842 2016-12-11 02:01:59Z rpokala $
+# $FreeBSD: stable/11/sys/modules/bios/Makefile 309841 2016-12-11 02:01:57Z rpokala $
 #
 
 SUBDIR=	smbios vpd

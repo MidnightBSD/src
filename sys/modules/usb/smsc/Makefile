@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/smsc/Makefile 246585 2013-02-09 06:31:22Z delphij $
+# $FreeBSD: stable/11/sys/modules/usb/smsc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2011 Ben Gray. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

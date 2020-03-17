@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/fuse/fuse_vfsops.c 282270 2015-04-30 12:39:24Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_vfsops.c 347482 2019-05-11 03:41:58Z asomers $");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -216,7 +215,7 @@ fuse_vfsop_mount(struct mount *mp)
 	size_t len;
 
 	struct cdev *fdev;
-	struct fuse_data *data;
+	struct fuse_data *data = NULL;
 	struct thread *td;
 	struct file *fp, *fptmp;
 	char *fspec, *subtype;
@@ -356,7 +355,7 @@ fuse_vfsop_mount(struct mount *mp)
 out:
 	if (err) {
 		FUSE_LOCK();
-		if (data->mp == mp) {
+		if (data != NULL && data->mp == mp) {
 			/*
 			 * Destroy device only if we acquired reference to
 			 * it

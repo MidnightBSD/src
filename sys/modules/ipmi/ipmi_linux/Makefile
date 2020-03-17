@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ipmi/ipmi_linux/Makefile 190452 2009-03-26 19:15:31Z ambrisko $
+# $FreeBSD: stable/11/sys/modules/ipmi/ipmi_linux/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/ipmi
+.PATH: ${SRCTOP}/sys/dev/ipmi
 
 KMOD=	ipmi_linux
 SRCS=	ipmi_linux.c

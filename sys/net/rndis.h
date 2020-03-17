@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/net/rndis.h 321760 2017-07-31 06:40:09Z sephe $ */
+/*	$FreeBSD: stable/11/sys/net/rndis.h 321749 2017-07-31 02:57:39Z sephe $ */
 /*	$OpenBSD: if_urndisreg.h,v 1.19 2013/11/21 14:08:05 mpi Exp $ */
 
 /*

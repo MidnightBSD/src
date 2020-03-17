@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/mem.c 309426 2016-12-02 19:02:12Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/mem.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Memory special file
@@ -169,10 +168,9 @@ memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
 		if (offset > cpu_getmaxphyaddr())
 			return (-1);
 		*paddr = offset;
-	} else if (dev2unit(dev) == CDEV_MINOR_KMEM)
-        	*paddr = vtophys(offset);
-	/* else panic! */
-	return (0);
+		return (0);
+	}
+	return (-1);
 }
 
 /*

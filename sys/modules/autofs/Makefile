@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/autofs/Makefile 270096 2014-08-17 09:44:42Z trasz $
+# $FreeBSD: stable/11/sys/modules/autofs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/autofs
+.PATH: ${SRCTOP}/sys/fs/autofs
 
 KMOD=	autofs
 SRCS=	vnode_if.h \

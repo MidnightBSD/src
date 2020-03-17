@@ -1,8 +1,8 @@
-# $MidnightBSD$
 # $Whistle: Makefile,v 1.5 1999/01/24 06:48:37 archie Exp $
-# $FreeBSD: stable/10/sys/modules/netgraph/Makefile 291811 2015-12-04 18:44:12Z bdrewery $
+# $FreeBSD: stable/11/sys/modules/netgraph/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
 SUBDIR=	async \
 	atm \
@@ -19,7 +19,6 @@ SUBDIR=	async \
 	etf \
 	ether \
 	ether_echo \
-	fec \
 	frame_relay \
 	gif \
 	gif_demux \
@@ -59,7 +58,7 @@ SUBDIR=	async \
 _bluetooth=	bluetooth
 .endif
 
-.if ${MK_CRYPT} != "no" && exists(${.CURDIR}/../../crypto/rc4/rc4.c)
+.if ${MK_CRYPT} != "no" && exists(${SYSDIR}/crypto/rc4/rc4.c)
 _mppc=		mppc
 .endif
 

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/fs/msdosfs/denode.h 234605 2012-04-23 13:21:28Z trasz $ */
+/* $FreeBSD: stable/11/sys/fs/msdosfs/denode.h 234605 2012-04-23 13:21:28Z trasz $ */
 /*	$NetBSD: denode.h,v 1.25 1997/11/17 15:36:28 ws Exp $	*/
 
 /*-

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/if_vlan/Makefile 193744 2009-06-08 19:57:35Z bz $
+# $FreeBSD: stable/11/sys/modules/if_vlan/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../net
+.PATH: ${SRCTOP}/sys/net
 
 KMOD=	if_vlan
 SRCS=	if_vlan.c

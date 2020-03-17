@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/usb/urndis/Makefile 261541 2014-02-06 08:47:14Z hselasky $
+# $FreeBSD: stable/11/sys/modules/usb/urndis/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Copyright (c) 2014 Hans Petter Selasky. All rights reserved.
 #
@@ -26,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Adrian Chadd
  * Copyright (c) 1993
@@ -37,7 +36,7 @@
  *
  *	@(#)procfs_status.c	8.4 (Berkeley) 6/15/94
  *
- * $FreeBSD: stable/10/sys/fs/procfs/procfs_rlimit.c 139776 2005-01-06 18:10:42Z imp $
+ * $FreeBSD: stable/11/sys/fs/procfs/procfs_rlimit.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

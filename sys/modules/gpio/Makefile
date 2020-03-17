@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/gpio/Makefile 230150 2012-01-15 19:40:59Z adrian $
+# $FreeBSD: stable/11/sys/modules/gpio/Makefile 300894 2016-05-28 00:22:39Z gonzo $
 #
 # Copyright (c) 2011 Adrian Chadd.  All rights reserved.
 #
@@ -26,6 +25,10 @@
 # SUCH DAMAGE.
 #
 
-SUBDIR = gpiobus gpioiic gpioled
+SUBDIR = gpiobus gpioiic gpioled gpiospi
+
+.if !empty(OPT_FDT)
+SUBDIR += gpiokeys gpiopps
+.endif
 
 .include <bsd.subdir.mk>

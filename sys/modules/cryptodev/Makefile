@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cryptodev/Makefile 213781 2010-10-13 14:44:38Z rpaulo $
+# $FreeBSD: stable/11/sys/modules/cryptodev/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../opencrypto
+.PATH:	${SRCTOP}/sys/opencrypto
 KMOD	= cryptodev
 SRCS	= cryptodev.c
 SRCS	+= bus_if.h device_if.h opt_compat.h

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mlx/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD: stable/11/sys/modules/mlx/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mlx
+.PATH: ${SRCTOP}/sys/dev/mlx
 
 KMOD=	mlx
 SRCS=	mlx.c mlx_pci.c mlx_disk.c device_if.h bus_if.h pci_if.h

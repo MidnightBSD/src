@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mmcsd/Makefile 234524 2012-04-21 01:51:16Z marius $
+# $FreeBSD: stable/11/sys/modules/mmcsd/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/mmc
+.PATH: ${SRCTOP}/sys/dev/mmc
 
 KMOD=	mmcsd
 SRCS=	bus_if.h device_if.h mmcbr_if.h mmcbus_if.h mmcsd.c

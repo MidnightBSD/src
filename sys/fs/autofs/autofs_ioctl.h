@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/autofs/autofs_ioctl.h 279741 2015-03-07 19:32:19Z trasz $
+ * $FreeBSD: stable/11/sys/fs/autofs/autofs_ioctl.h 332596 2018-04-16 16:15:31Z trasz $
  */
 
 #ifndef AUTOFS_IOCTL_H

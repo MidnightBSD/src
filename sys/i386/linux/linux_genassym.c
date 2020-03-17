@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/linux/linux_genassym.c 293514 2016-01-09 15:44:38Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/linux/linux_genassym.c 283407 2015-05-24 15:28:17Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/assym.h>

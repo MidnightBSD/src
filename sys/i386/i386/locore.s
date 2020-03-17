@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)locore.s	7.3 (Berkeley) 5/13/91
- * $FreeBSD: stable/10/sys/i386/i386/locore.s 286878 2015-08-18 09:09:39Z kib $
+ * $FreeBSD: stable/11/sys/i386/i386/locore.s 347700 2019-05-16 14:42:16Z markj $
  *
  *		originally from: locore.s, by William F. Jolitz
  *
@@ -45,7 +44,6 @@
 #include "opt_nfsroot.h"
 #include "opt_pmap.h"
 
-#include <sys/syscall.h>
 #include <sys/reboot.h>
 
 #include <machine/asmacros.h>
@@ -223,8 +221,8 @@ NON_GPROF_ENTRY(btext)
  * inactive from now until we switch to new ones, since we don't load any
  * more segment registers or permit interrupts until after the switch.
  */
-	movl	$R(end),%ecx
-	movl	$R(edata),%edi
+	movl	$R(__bss_end),%ecx
+	movl	$R(__bss_start),%edi
 	subl	%edi,%ecx
 	xorl	%eax,%eax
 	cld
@@ -328,77 +326,6 @@ begin:
 	call	mi_startup		/* autoconfiguration, mountroot etc */
 	/* NOTREACHED */
 	addl	$0,%esp			/* for db_numargs() again */
-
-/*
- * Signal trampoline, copied to top of user stack
- */
-NON_GPROF_ENTRY(sigcode)
-	calll	*SIGF_HANDLER(%esp)
-	leal	SIGF_UC(%esp),%eax	/* get ucontext */
-	pushl	%eax
-	testl	$PSL_VM,UC_EFLAGS(%eax)
-	jne	1f
-	mov	UC_GS(%eax),%gs		/* restore %gs */
-1:
-	movl	$SYS_sigreturn,%eax
-	pushl	%eax			/* junk to fake return addr. */
-	int	$0x80			/* enter kernel with args */
-					/* on stack */
-1:
-	jmp	1b
-
-#ifdef COMPAT_FREEBSD4
-	ALIGN_TEXT
-freebsd4_sigcode:
-	calll	*SIGF_HANDLER(%esp)
-	leal	SIGF_UC4(%esp),%eax	/* get ucontext */
-	pushl	%eax
-	testl	$PSL_VM,UC4_EFLAGS(%eax)
-	jne	1f
-	mov	UC4_GS(%eax),%gs	/* restore %gs */
-1:
-	movl	$344,%eax		/* 4.x SYS_sigreturn */
-	pushl	%eax			/* junk to fake return addr. */
-	int	$0x80			/* enter kernel with args */
-					/* on stack */
-1:
-	jmp	1b
-#endif
-
-#ifdef COMPAT_43
-	ALIGN_TEXT
-osigcode:
-	call	*SIGF_HANDLER(%esp)	/* call signal handler */
-	lea	SIGF_SC(%esp),%eax	/* get sigcontext */
-	pushl	%eax
-	testl	$PSL_VM,SC_PS(%eax)
-	jne	9f
-	mov	SC_GS(%eax),%gs		/* restore %gs */
-9:
-	movl	$103,%eax		/* 3.x SYS_sigreturn */
-	pushl	%eax			/* junk to fake return addr. */
-	int	$0x80			/* enter kernel with args */
-0:	jmp	0b
-#endif /* COMPAT_43 */
-
-	ALIGN_TEXT
-esigcode:
-
-	.data
-	.globl	szsigcode
-szsigcode:
-	.long	esigcode-sigcode
-#ifdef COMPAT_FREEBSD4
-	.globl	szfreebsd4_sigcode
-szfreebsd4_sigcode:
-	.long	esigcode-freebsd4_sigcode
-#endif
-#ifdef COMPAT_43
-	.globl	szosigcode
-szosigcode:
-	.long	esigcode-osigcode
-#endif
-	.text
 
 /**********************************************************************
  *
@@ -559,7 +486,9 @@ olddiskboot:
  * Identify the CPU and initialize anything special about it
  *
  */
-identify_cpu:
+ENTRY(identify_cpu)
+
+	pushl	%ebx
 
 	/* Try to toggle alignment check flag; does not exist on 386. */
 	pushfl
@@ -680,7 +609,9 @@ trycpuid:	/* Use the `cpuid' instruction. */
 	/* Greater than Pentium...call it a Pentium Pro */
 	movl	$CPU_686,R(cpu)
 3:
+	popl	%ebx
 	ret
+END(identify_cpu)
 
 
 /**********************************************************************
@@ -899,3 +830,12 @@ done_pde:
 #endif
 
 	ret
+
+#ifdef XENHVM
+/* Xen Hypercall page */
+	.text
+.p2align PAGE_SHIFT, 0x90	/* Hypercall_page needs to be PAGE aligned */
+
+NON_GPROF_ENTRY(hypercall_page)
+	.skip	0x1000, 0x90	/* Fill with "nop"s */
+#endif

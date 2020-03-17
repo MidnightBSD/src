@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Jonathan Lemon
  * All rights reserved.
@@ -24,10 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/i386/vm86bios.s 282065 2015-04-27 08:02:12Z kib $
+ * $FreeBSD: stable/11/sys/i386/i386/vm86bios.s 331759 2018-03-30 10:36:54Z kib $
  */
-
-#include "opt_npx.h"
 
 #include <machine/asmacros.h>		/* miscellaneous asm macros */
 #include <machine/trap.h>
@@ -64,14 +61,9 @@ ENTRY(vm86_bioscall)
 	pushl	%edi
 	pushl	%gs
 
-#ifdef DEV_NPX
-	pushfl
-	cli
 	movl	PCPU(CURTHREAD),%ecx
 	cmpl	%ecx,PCPU(FPCURTHREAD)	/* do we need to save fp? */
 	jne	1f
-	testl	%ecx,%ecx
-	je 	1f			/* no curproc/npxproc */
 	pushl	%edx
 	movl	TD_PCB(%ecx),%ecx
 	pushl	PCB_SAVEFPU(%ecx)
@@ -79,9 +71,6 @@ ENTRY(vm86_bioscall)
 	addl	$4,%esp
 	popl	%edx			/* recover our pcb */
 1:
-	popfl
-#endif
-
 	movl	SCR_VMFRAME(%edx),%ebx	/* target frame location */
 	movl	%ebx,%edi		/* destination */
 	movl    SCR_ARGFRAME(%edx),%esi	/* source (set on entry) */

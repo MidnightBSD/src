@@ -1,34 +1,31 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/vmm/Makefile 284894 2015-06-27 22:48:22Z neel $
+# $FreeBSD: stable/11/sys/modules/vmm/Makefile 337507 2018-08-08 22:42:03Z bdrewery $
 
 KMOD=	vmm
 
 SRCS=	opt_acpi.h opt_ddb.h device_if.h bus_if.h pci_if.h
-SRCS+=	vmx_assym.h svm_assym.h
-DPSRCS=	vmx_genassym.c svm_genassym.c
+DPSRCS+=	vmx_assym.h svm_assym.h
+DPSRCS+=	vmx_genassym.c svm_genassym.c
 
 CFLAGS+= -DVMM_KEEP_STATS -DSMP
-CFLAGS+= -I${.CURDIR}/../../amd64/vmm
-CFLAGS+= -I${.CURDIR}/../../amd64/vmm/io
-CFLAGS+= -I${.CURDIR}/../../amd64/vmm/intel
-CFLAGS+= -I${.CURDIR}/../../amd64/vmm/amd
+CFLAGS+= -I${SRCTOP}/sys/amd64/vmm
+CFLAGS+= -I${SRCTOP}/sys/amd64/vmm/io
+CFLAGS+= -I${SRCTOP}/sys/amd64/vmm/intel
+CFLAGS+= -I${SRCTOP}/sys/amd64/vmm/amd
 
 # generic vmm support
-.PATH: ${.CURDIR}/../../amd64/vmm
+.PATH: ${SRCTOP}/sys/amd64/vmm
 SRCS+=	vmm.c		\
 	vmm_dev.c	\
 	vmm_host.c	\
 	vmm_instruction_emul.c	\
 	vmm_ioport.c	\
-	vmm_ipi.c	\
 	vmm_lapic.c	\
 	vmm_mem.c	\
 	vmm_stat.c	\
 	vmm_util.c	\
-	x86.c		\
-	vmm_support.S
+	x86.c
 
-.PATH: ${.CURDIR}/../../amd64/vmm/io
+.PATH: ${SRCTOP}/sys/amd64/vmm/io
 SRCS+=	iommu.c		\
 	ppt.c           \
 	vatpic.c	\
@@ -40,7 +37,7 @@ SRCS+=	iommu.c		\
 	vrtc.c
 
 # intel-specific files
-.PATH: ${.CURDIR}/../../amd64/vmm/intel
+.PATH: ${SRCTOP}/sys/amd64/vmm/intel
 SRCS+=	ept.c		\
 	vmcs.c		\
 	vmx_msr.c	\
@@ -49,7 +46,7 @@ SRCS+=	ept.c		\
 	vtd.c
 
 # amd-specific files
-.PATH: ${.CURDIR}/../../amd64/vmm/amd
+.PATH: ${SRCTOP}/sys/amd64/vmm/amd
 SRCS+=	vmcb.c		\
 	svm.c		\
 	svm_support.S	\
@@ -59,17 +56,14 @@ SRCS+=	vmcb.c		\
 
 CLEANFILES=	vmx_assym.h vmx_genassym.o svm_assym.h svm_genassym.o
 
+OBJS_DEPEND_GUESS.vmx_support.o+= vmx_assym.h
+OBJS_DEPEND_GUESS.svm_support.o+= svm_assym.h
+
 vmx_assym.h:    vmx_genassym.o
-.if exists(@)
-vmx_assym.h:    @/kern/genassym.sh
-.endif
-	sh @/kern/genassym.sh vmx_genassym.o > ${.TARGET}
+	sh ${SYSDIR}/kern/genassym.sh vmx_genassym.o > ${.TARGET}
 
 svm_assym.h:    svm_genassym.o
-.if exists(@)
-svm_assym.h:    @/kern/genassym.sh
-.endif
-	sh @/kern/genassym.sh svm_genassym.o > ${.TARGET}
+	sh ${SYSDIR}/kern/genassym.sh svm_genassym.o > ${.TARGET}
 
 vmx_support.o:
 	${CC} -c -x assembler-with-cpp -DLOCORE ${CFLAGS} \
@@ -80,9 +74,9 @@ svm_support.o:
 	    ${.IMPSRC} -o ${.TARGET}
 
 vmx_genassym.o:
-	${CC} -c ${CFLAGS:N-fno-common} ${.IMPSRC}
+	${CC} -c ${CFLAGS:N-flto:N-fno-common} ${.IMPSRC}
 
 svm_genassym.o:
-	${CC} -c ${CFLAGS:N-fno-common} ${.IMPSRC}
+	${CC} -c ${CFLAGS:N-flto:N-fno-common} ${.IMPSRC}
 
 .include <bsd.kmod.mk>

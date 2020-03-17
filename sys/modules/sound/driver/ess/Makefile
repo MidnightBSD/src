@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sound/driver/ess/Makefile 158491 2006-05-12 18:05:35Z ariff $
+# $FreeBSD: stable/11/sys/modules/sound/driver/ess/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../../dev/sound/isa
+.PATH: ${SRCTOP}/sys/dev/sound/isa
 
 KMOD=	snd_ess
 SRCS=	device_if.h bus_if.h isa_if.h pci_if.h

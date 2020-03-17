@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Semihalf
  * Copyright (c) 2008, 2009 Reinoud Zandijk
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/nandfs/nandfs_vnops.c 276648 2015-01-04 00:46:06Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_vnops.c 346032 2019-04-08 15:52:13Z sjg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -130,8 +129,8 @@ nandfs_reclaim(struct vop_reclaim_args *ap)
 static int
 nandfs_read(struct vop_read_args *ap)
 {
-	register struct vnode *vp = ap->a_vp;
-	register struct nandfs_node *node = VTON(vp);
+	struct vnode *vp = ap->a_vp;
+	struct nandfs_node *node = VTON(vp);
 	struct nandfs_device *nandfsdev = node->nn_nandfsdev;
 	struct uio *uio = ap->a_uio;
 	struct buf *bp;
@@ -406,8 +405,7 @@ nandfs_lookup(struct vop_cachedlookup_args *ap)
 			error = ENOENT;
 			if ((nameiop == CREATE || nameiop == RENAME) &&
 			    islastcn) {
-				error = VOP_ACCESS(dvp, VWRITE, cred,
-				    td);
+				error = VOP_ACCESS(dvp, VWRITE, cred, td);
 				if (!error) {
 					/* keep the component name */
 					cnp->cn_flags |= SAVENAME;
@@ -788,9 +786,8 @@ nandfs_chown(struct vnode *vp, uid_t uid, gid_t gid, struct ucred *cred,
 	node->nn_flags |= IN_CHANGE;
 	if ((inode->i_mode & (ISUID | ISGID)) &&
 	    (ouid != uid || ogid != gid)) {
-		if (priv_check_cred(cred, PRIV_VFS_RETAINSUGID, 0)) {
+		if (priv_check_cred(cred, PRIV_VFS_RETAINSUGID, 0))
 			inode->i_mode &= ~(ISUID | ISGID);
-		}
 	}
 	DPRINTF(VNCALL, ("%s: vp %p, cred %p, td %p - ret OK\n", __func__, vp,
 	    cred, td));
@@ -990,7 +987,7 @@ nandfs_check_possible(struct vnode *vp, struct vattr *vap, mode_t mode)
 		 * Normal nodes: check if we're on a read-only mounted
 		 * filingsystem and bomb out if we're trying to write.
 		 */
-		if ((mode & VWRITE) && (vp->v_mount->mnt_flag & MNT_RDONLY))
+		if ((mode & VMODIFY_PERMS) && (vp->v_mount->mnt_flag & MNT_RDONLY))
 			return (EROFS);
 		break;
 	case VBLK:
@@ -1007,7 +1004,7 @@ nandfs_check_possible(struct vnode *vp, struct vattr *vap, mode_t mode)
 		return (EINVAL);
 	}
 
-	/* Noone may write immutable files */
+	/* No one may write immutable files */
 	if ((mode & VWRITE) && (VTON(vp)->nn_inode.i_flags & IMMUTABLE))
 		return (EPERM);
 
@@ -1050,9 +1047,8 @@ nandfs_access(struct vop_access_args *ap)
 		return (error);
 
 	error = nandfs_check_possible(vp, &vap, accmode);
-	if (error) {
+	if (error)
 		return (error);
-	}
 
 	error = nandfs_check_permitted(vp, &vap, accmode, cred);
 
@@ -1229,13 +1225,14 @@ nandfs_readdir(struct vop_readdir_args *ap)
 			ndirent = (struct nandfs_dir_entry *)pos;
 
 			name_len = ndirent->name_len;
-			memset(&dirent, 0, sizeof(struct dirent));
+			memset(&dirent, 0, sizeof(dirent));
 			dirent.d_fileno = ndirent->inode;
 			if (dirent.d_fileno) {
 				dirent.d_type = ndirent->file_type;
 				dirent.d_namlen = name_len;
 				strncpy(dirent.d_name, ndirent->name, name_len);
 				dirent.d_reclen = GENERIC_DIRSIZ(&dirent);
+				dirent_terminate(&dirent);
 				DPRINTF(READDIR, ("copying `%*.*s`\n", name_len,
 				    name_len, dirent.d_name));
 			}
@@ -1249,18 +1246,18 @@ nandfs_readdir(struct vop_readdir_args *ap)
 
 			/* Transfer */
 			if (dirent.d_fileno)
-				uiomove(&dirent, GENERIC_DIRSIZ(&dirent), uio);
+				uiomove(&dirent, dirent.d_reclen, uio);
 
 			/* Advance */
 			diroffset += ndirent->rec_len;
 			blkoff += ndirent->rec_len;
 
-			/* Remember the last entry we transfered */
+			/* Remember the last entry we transferred */
 			transoffset = diroffset;
 		}
 		brelse(bp);
 
-		/* Pass on last transfered offset */
+		/* Pass on last transferred offset */
 		uio->uio_offset = transoffset;
 	}
 
@@ -2244,22 +2241,19 @@ nandfs_pathconf(struct vop_pathconf_args *ap)
 		*ap->a_retval = LINK_MAX;
 		break;
 	case _PC_NAME_MAX:
-		*ap->a_retval = NAME_MAX;
-		break;
-	case _PC_PATH_MAX:
-		*ap->a_retval = PATH_MAX;
+		*ap->a_retval = NANDFS_NAME_LEN;
 		break;
 	case _PC_PIPE_BUF:
-		*ap->a_retval = PIPE_BUF;
+		if (ap->a_vp->v_type == VDIR || ap->a_vp->v_type == VFIFO)
+			*ap->a_retval = PIPE_BUF;
+		else
+			error = EINVAL;
 		break;
 	case _PC_CHOWN_RESTRICTED:
 		*ap->a_retval = 1;
 		break;
 	case _PC_NO_TRUNC:
 		*ap->a_retval = 1;
-		break;
-	case _PC_ACL_EXTENDED:
-		*ap->a_retval = 0;
 		break;
 	case _PC_ALLOC_SIZE_MIN:
 		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_bsize;
@@ -2277,7 +2271,7 @@ nandfs_pathconf(struct vop_pathconf_args *ap)
 		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_iosize;
 		break;
 	default:
-		error = EINVAL;
+		error = vop_stdpathconf(ap);
 		break;
 	}
 	return (error);
@@ -2422,6 +2416,7 @@ struct vop_vector nandfs_fifoops = {
 	.vop_close =		nandfsfifo_close,
 	.vop_getattr =		nandfs_getattr,
 	.vop_inactive =		nandfs_inactive,
+	.vop_pathconf =		nandfs_pathconf,
 	.vop_print =		nandfs_print,
 	.vop_read =		VOP_PANIC,
 	.vop_reclaim =		nandfs_reclaim,

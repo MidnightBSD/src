@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_llc.h,v 1.12 1999/11/19 20:41:19 thorpej Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_llc.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/net/if_llc.h 164804 2006-12-01 17:50:11Z imp $
+ * $FreeBSD: stable/11/sys/net/if_llc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NET_IF_LLC_H_

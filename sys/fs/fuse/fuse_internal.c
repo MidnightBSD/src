@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/fuse/fuse_internal.c 332023 2018-04-04 13:16:00Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_internal.c 341074 2018-11-27 16:51:18Z markj $");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -356,7 +355,7 @@ fuse_internal_readdir_processdata(struct uio *uio,
 		memcpy((char *)cookediov->base + sizeof(struct dirent) - 
 		       MAXNAMLEN - 1,
 		       (char *)buf + FUSE_NAME_OFFSET, fudge->namelen);
-		((char *)cookediov->base)[bytesavail - 1] = '\0';
+		dirent_terminate(de);
 
 		err = uiomove(cookediov->base, cookediov->len, uio);
 		if (err) {

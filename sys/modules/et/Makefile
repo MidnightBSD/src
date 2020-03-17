@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # $DragonFly: src/sys/dev/netif/et/Makefile,v 1.1 2007/10/12 14:12:42 sephe Exp $
-# $FreeBSD: stable/10/sys/modules/et/Makefile 180925 2008-07-28 17:56:37Z antoine $
+# $FreeBSD: stable/11/sys/modules/et/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/et
+.PATH: ${SRCTOP}/sys/dev/et
 
 KMOD=	if_et
 SRCS=	if_et.c

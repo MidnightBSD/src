@@ -1,46 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/if_gif/Makefile 294025 2016-01-14 17:44:45Z sbruno $
+# $FreeBSD: stable/11/sys/modules/if_gif/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
-.PATH: ${.CURDIR}/../../net ${.CURDIR}/../../netinet ${.CURDIR}/../../netinet6
+.PATH: ${SYSDIR}/net ${SYSDIR}/netinet ${SYSDIR}/netinet6
 
 KMOD=	if_gif
-SRCS=	if_gif.c opt_inet.h opt_inet6.h opt_mrouting.h
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-.endif
-.else
-OPT_INET!= cat ${KERNBUILDDIR}/opt_inet.h; echo
-.if empty(OPT_INET)
-MK_INET_SUPPORT= no
-.endif
-.endif
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-
-opt_mrouting.h:
-	echo "#define MROUTING 1" > ${.TARGET}
-.else
-OPT_INET6!= cat ${KERNBUILDDIR}/opt_inet6.h; echo
-.if empty(OPT_INET6)
-MK_INET6_SUPPORT= no
-.endif
-.endif
-
-.if ${MK_INET_SUPPORT} != "no"
-SRCS+=	in_gif.c
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-SRCS+=	in6_gif.c
-.endif
+SRCS=	if_gif.c opt_inet.h opt_inet6.h
+SRCS.INET=in_gif.c
+SRCS.INET6=in6_gif.c
 
 .include <bsd.kmod.mk>

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/svr4/Makefile 299215 2016-05-07 08:30:21Z dchagin $
+# $FreeBSD: stable/11/sys/modules/svr4/Makefile 318292 2017-05-15 14:23:53Z emaste $
 
 .PATH:	${.CURDIR}/../../${MACHINE_CPUARCH}/svr4 ${.CURDIR}/../../compat/svr4
 KMOD=	svr4
@@ -16,17 +15,14 @@ SRCS+=	opt_ktrace.h opt_sysvipc.h
 CLEANFILES=	svr4_assym.h svr4_genassym.o
 
 svr4_assym.h: svr4_genassym.o
-.if exists(@)
-svr4_assym.h: @/kern/genassym.sh
-.endif
-	sh @/kern/genassym.sh svr4_genassym.o > ${.TARGET}
+	sh ${SYSDIR}/kern/genassym.sh svr4_genassym.o > ${.TARGET}
 
 svr4_locore.o: svr4_locore.s svr4_assym.h
 	${CC} -c -x assembler-with-cpp -DLOCORE ${CFLAGS} \
 		${.IMPSRC} -o ${.TARGET}
 
-svr4_genassym.o: svr4_genassym.c svr4.h @ machine
-	${CC} -c ${CFLAGS:N-fno-common} ${.IMPSRC}
+svr4_genassym.o: svr4_genassym.c svr4.h
+	${CC} -c ${CFLAGS:N-flto:N-fno-common} ${.IMPSRC}
 
 .if !defined(KERNBUILDDIR) && defined(DEBUG)
 opt_svr4.h:

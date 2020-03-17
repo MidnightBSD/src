@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_part/Makefile 268091 2014-07-01 13:29:17Z ae $
+# $FreeBSD: stable/11/sys/modules/geom/geom_part/Makefile 267359 2014-06-11 10:42:34Z ae $
 
 SUBDIR=	geom_part_apm \
 	geom_part_bsd \

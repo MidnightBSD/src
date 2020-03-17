@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/le/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD: stable/11/sys/modules/le/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/le
+.PATH: ${SRCTOP}/sys/dev/le
 
 KMOD=	if_le
 SRCS=	am7990.c am79900.c ${if_le_cbus} ${if_le_isa} ${if_le_lebuffer}

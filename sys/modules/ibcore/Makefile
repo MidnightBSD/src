@@ -1,27 +1,41 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ibcore/Makefile 260495 2014-01-09 22:40:51Z dim $
-.PATH:  ${.CURDIR}/../../ofed/drivers/infiniband/core
-.PATH:  ${.CURDIR}/../../ofed/include/linux
+# $FreeBSD: stable/11/sys/modules/ibcore/Makefile 331769 2018-03-30 18:06:29Z hselasky $
+.PATH:  ${SRCTOP}/sys/ofed/drivers/infiniband/core
 
-.include <bsd.own.mk>
+KMOD=	ibcore
+SRCS=	vnode_if.h device_if.h bus_if.h pci_if.h \
+	opt_inet.h opt_inet6.h \
+	ib_addr.c \
+	ib_agent.c \
+	ib_cache.c \
+	ib_cm.c \
+	ib_cma.c \
+	ib_cq.c \
+	ib_device.c \
+	ib_fmr_pool.c \
+	ib_iwcm.c \
+	ib_iwpm_msg.c \
+	ib_iwpm_util.c \
+	ib_mad.c \
+	ib_mad_rmpp.c \
+	ib_multicast.c \
+	ib_packer.c \
+	ib_roce_gid_mgmt.c \
+	ib_sa_query.c \
+	ib_smi.c \
+	ib_sysfs.c \
+	ib_ucm.c \
+	ib_ucma.c \
+	ib_ud_header.c \
+	ib_umem.c \
+	ib_user_mad.c \
+	ib_uverbs_cmd.c \
+	ib_uverbs_main.c \
+	ib_uverbs_marshall.c \
+	ib_verbs.c
 
-KMOD    = ibcore
-SRCS    = addr.c cm_msgs.h iwcm.c mad_rmpp.h sa_query.c ucma.c uverbs_cmd.c
-SRCS+= agent.c    local_sa.c iwcm.h multicast.c smi.c ud_header.c uverbs_main.c
-SRCS+= agent.h core_priv.h mad.c notice.c smi.h umem.c uverbs_marshall.c
-SRCS+= cache.c device.c mad_priv.h packer.c sysfs.c user_mad.c verbs.c
-SRCS+= cm.c fmr_pool.c mad_rmpp.c sa.h ucm.c uverbs.h cma.c
-SRCS+= linux_compat.c linux_radix.c linux_idr.c
-SRCS+= vnode_if.h device_if.h bus_if.h pci_if.h opt_inet.h opt_inet6.h
-
-CFLAGS+= -I${.CURDIR}/../../ofed/drivers/infiniband/core
-CFLAGS+= -I${.CURDIR}/../mlx4ib
-CFLAGS+= -I${.CURDIR}/../../ofed/include/
-CFLAGS+= -DINET6 -DINET -DOFED
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
+CFLAGS+= -DINET6 -DINET -DCONFIG_INFINIBAND_USER_MEM
 
 .include <bsd.kmod.mk>
-
-CFLAGS+= -Wno-cast-qual -Wno-pointer-arith ${GCC_MS_EXTENSIONS}
-
-CWARNFLAGS.cm.c=	-Wno-unused-function
-CWARNFLAGS+=		${CWARNFLAGS.${.IMPSRC:T}}

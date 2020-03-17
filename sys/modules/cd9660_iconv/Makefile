@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cd9660_iconv/Makefile 166640 2007-02-11 14:01:32Z rodrigc $
+# $FreeBSD: stable/11/sys/modules/cd9660_iconv/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../fs/cd9660
+.PATH:	${SRCTOP}/sys/fs/cd9660
 KMOD=	cd9660_iconv
 SRCS=	cd9660_iconv.c
 

@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: if_atm.h,v 1.7 1996/11/09 23:02:27 chuck Exp $       */
-/* $FreeBSD: stable/10/sys/net/if_atm.h 249925 2013-04-26 12:50:32Z glebius $ */
+/* $FreeBSD: stable/11/sys/net/if_atm.h 298995 2016-05-03 18:05:43Z pfg $ */
 
 /*-
  *
@@ -97,7 +96,7 @@ struct ifatm_mib {
 
 /*
  * Traffic parameters for ATM connections. This contains all parameters
- * to accomodate UBR, UBR+MCR, CBR, VBR and ABR connections.
+ * to accommodate UBR, UBR+MCR, CBR, VBR and ABR connections.
  *
  * Keep in sync with ng_atm.h
  */
@@ -203,7 +202,7 @@ struct atmio_closevcc {
 
 #if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__)
 #define	RTALLOC1(A,B)		rtalloc1((A),(B))
-#elif defined(__MidnightBSD__)
+#elif defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define	RTALLOC1(A,B)		rtalloc1((A),(B),0UL)
 #endif
 

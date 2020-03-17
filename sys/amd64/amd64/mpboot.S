@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/amd64/mpboot.S 130224 2004-06-08 01:02:52Z peter $
+ * $FreeBSD: stable/11/sys/amd64/amd64/mpboot.S 299010 2016-05-03 22:13:04Z pfg $
  */
 
 #include <machine/asmacros.h>		/* miscellaneous asm macros */
@@ -91,9 +90,9 @@ protmode:
 	mov	$bootdata-gdt, %eax
 	mov	%ax, %ds
 
-	/* Turn on the PAE, PSE and PGE bits for when paging is enabled */
+	/* Turn on the PAE bit for when paging is enabled */
 	mov	%cr4, %eax
-	orl	$(CR4_PAE | CR4_PSE), %eax
+	orl	$CR4_PAE, %eax
 	mov	%eax, %cr4
 
 	/*
@@ -122,7 +121,7 @@ protmode:
 	 * Finally, switch to long bit mode by enabling paging.  We have
 	 * to be very careful here because all the segmentation disappears
 	 * out from underneath us.  The spec says we can depend on the
-	 * subsequent pipelined branch to execute, but *only if* everthing
+	 * subsequent pipelined branch to execute, but *only if* everything
 	 * is still identity mapped.  If any mappings change, the pipeline
 	 * will flush.
 	 */
@@ -131,7 +130,7 @@ protmode:
 	mov	%eax, %cr0
 
 	/*
-	 * At this point paging is enabled, and we are in "compatability" mode.
+	 * At this point paging is enabled, and we are in "compatibility" mode.
 	 * We do another far jump to reload %cs with the 64 bit selector.
 	 * %cr3 points to a 4-level page table page.
 	 * We cannot yet jump all the way to the kernel because we can only

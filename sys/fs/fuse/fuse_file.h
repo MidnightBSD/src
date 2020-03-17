@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -53,7 +52,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/fuse/fuse_file.h 300978 2016-05-29 23:30:36Z rmacklem $
+ * $FreeBSD: stable/11/sys/fs/fuse/fuse_file.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FUSE_FILE_H_

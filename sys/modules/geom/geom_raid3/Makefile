@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_raid3/Makefile 133808 2004-08-16 06:23:14Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_raid3/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/raid3
+.PATH: ${SRCTOP}/sys/geom/raid3
 
 KMOD=	geom_raid3
 SRCS=	g_raid3.c

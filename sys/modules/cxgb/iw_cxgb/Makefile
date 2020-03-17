@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cxgb/iw_cxgb/Makefile 237263 2012-06-19 07:34:13Z np $
+# $FreeBSD: stable/11/sys/modules/cxgb/iw_cxgb/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-CXGB = ${.CURDIR}/../../../dev/cxgb
+CXGB = ${SRCTOP}/sys/dev/cxgb
 .PATH: ${CXGB}/ulp/iw_cxgb
 
 KMOD=   iw_cxgb
@@ -12,14 +9,7 @@ SRCS+=  iw_cxgb_provider.c iw_cxgb_qp.c iw_cxgb_resource.c
 SRCS+=  iw_cxgb_ev.c iw_cxgb_mem.c iw_cxgb_dbg.c iw_cxgb_cq.c
 SRCS+=  bus_if.h device_if.h opt_sched.h pci_if.h pcib_if.h opt_ktr.h
 SRCS+=  opt_inet.h opt_ofed.h vnode_if.h
-CFLAGS+= -I${CXGB} -I${.CURDIR}/../../../ofed/include -DLINUX_TYPES_DEFINED
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-	echo "#define TCP_OFFLOAD 1" >> ${.TARGET}
-.endif
-.endif
+CFLAGS+= -I${CXGB} -I${SRCTOP}/sys/ofed/include -DLINUX_TYPES_DEFINED
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 
 .include <bsd.kmod.mk>

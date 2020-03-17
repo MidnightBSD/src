@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/libalias/libalias/Makefile 188294 2009-02-07 18:49:42Z piso $
+# $FreeBSD: stable/11/sys/modules/libalias/libalias/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../netinet/libalias
+.PATH: ${SRCTOP}/sys/netinet/libalias
 
 KMOD=	libalias
 SRCS=	alias.c alias_db.c alias_proxy.c alias_util.c alias_mod.c alias_sctp.c

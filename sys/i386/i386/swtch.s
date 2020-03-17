@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,10 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/i386/swtch.s 282065 2015-04-27 08:02:12Z kib $
+ * $FreeBSD: stable/11/sys/i386/i386/swtch.s 338420 2018-09-01 10:01:19Z kib $
  */
 
-#include "opt_npx.h"
 #include "opt_sched.h"
 
 #include <machine/asmacros.h>
@@ -76,20 +74,16 @@
  */
 ENTRY(cpu_throw)
 	movl	PCPU(CPUID), %esi
-	movl	4(%esp),%ecx			/* Old thread */
-	testl	%ecx,%ecx			/* no thread? */
-	jz	1f
 	/* release bit from old pm_active */
 	movl	PCPU(CURPMAP), %ebx
 #ifdef SMP
 	lock
 #endif
 	btrl	%esi, PM_ACTIVE(%ebx)		/* clear old */
-1:
 	movl	8(%esp),%ecx			/* New thread */
 	movl	TD_PCB(%ecx),%edx
 	movl	PCB_CR3(%edx),%eax
-	LOAD_CR3(%eax)
+	movl	%eax,%cr3
 	/* set bit in new pm_active */
 	movl	TD_PROC(%ecx),%eax
 	movl	P_VMSPACE(%eax), %ebx
@@ -153,7 +147,6 @@ ENTRY(cpu_switch)
 	movl    %eax,PCB_DR0(%edx)
 1:
 
-#ifdef DEV_NPX
 	/* have we used fp, and need a save? */
 	cmpl	%ecx,PCPU(FPCURTHREAD)
 	jne	1f
@@ -161,7 +154,6 @@ ENTRY(cpu_switch)
 	call	npxsave				/* do it in a big C function */
 	popl	%eax
 1:
-#endif
 
 	/* Save is done.  Now fire up new thread. Leave old vmspace. */
 	movl	4(%esp),%edi
@@ -175,16 +167,10 @@ ENTRY(cpu_switch)
 
 	/* switch address space */
 	movl	PCB_CR3(%edx),%eax
-#if defined(PAE) || defined(PAE_TABLES)
-	cmpl	%eax,IdlePDPT			/* Kernel address space? */
-#else
-	cmpl	%eax,IdlePTD			/* Kernel address space? */
-#endif
-	je	sw0
-	READ_CR3(%ebx)				/* The same address space? */
+	movl	%cr3,%ebx			/* The same address space? */
 	cmpl	%ebx,%eax
 	je	sw0
-	LOAD_CR3(%eax)				/* new address space */
+	movl	%eax,%cr3			/* new address space */
 	movl	%esi,%eax
 	movl	PCPU(CPUID),%esi
 	SETOP	%eax,TD_LOCK(%edi)		/* Switchout td_lock */
@@ -211,18 +197,6 @@ sw0:
 	SETOP	%esi,TD_LOCK(%edi)		/* Switchout td_lock */
 sw1:
 	BLOCK_SPIN(%ecx)
-#ifdef XEN
-	pushl	%eax
-	pushl	%ecx
-	pushl	%edx
-	call	xen_handle_thread_switch
-	popl	%edx
-	popl	%ecx
-	popl	%eax
-	/*
-	 * XXX set IOPL
-	 */
-#else		
 	/*
 	 * At this point, we've switched address spaces and are ready
 	 * to load up the rest of the next context.
@@ -271,7 +245,7 @@ sw1:
 	movl	12(%esi), %ebx
 	movl	%eax, 8(%edi)
 	movl	%ebx, 12(%edi)
-#endif
+
 	/* Restore context. */
 	movl	PCB_EBX(%edx),%ebx
 	movl	PCB_ESP(%edx),%esp
@@ -284,7 +258,6 @@ sw1:
 	popfl
 
 	movl	%edx, PCPU(CURPCB)
-	movl	TD_TID(%ecx),%eax
 	movl	%ecx, PCPU(CURTHREAD)		/* into next thread */
 
 	/*
@@ -297,7 +270,7 @@ sw1:
 	movl	_default_ldt,%eax
 	cmpl	PCPU(CURRENTLDT),%eax
 	je	2f
-	LLDT(_default_ldt)
+	lldt	_default_ldt
 	movl	%eax,PCPU(CURRENTLDT)
 	jmp	2f
 1:
@@ -305,6 +278,10 @@ sw1:
 	pushl	%edx				/* Preserve pointer to pcb. */
 	addl	$P_MD,%eax			/* Pointer to mdproc is arg. */
 	pushl	%eax
+	/*
+	 * Holding dt_lock prevents context switches, so dt_lock cannot
+	 * be held now and set_user_ldt() will not deadlock acquiring it.
+	 */
 	call	set_user_ldt
 	addl	$4,%esp
 	popl	%edx
@@ -314,6 +291,12 @@ sw1:
 	.globl	cpu_switch_load_gs
 cpu_switch_load_gs:
 	mov	PCB_GS(%edx),%gs
+
+	pushl	%edx
+	pushl	PCPU(CURTHREAD)
+	call	npxswitch
+	popl	%edx
+	popl	%edx
 
 	/* Test if debug registers should be restored. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%edx)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/fuse/fuse_ipc.c 325164 2017-10-30 20:31:48Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_ipc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/module.h>

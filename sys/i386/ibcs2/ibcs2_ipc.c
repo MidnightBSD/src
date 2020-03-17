@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * Copyright (c) 1995 Steven Wallace
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_ipc.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_ipc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/utopia/Makefile 142445 2005-02-25 09:49:29Z harti $
+# $FreeBSD: stable/11/sys/modules/utopia/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/utopia
+.PATH: ${SRCTOP}/sys/dev/utopia
 
 KMOD=	utopia
 SRCS=	utopia.c suni.c idtphy.c bus_if.h device_if.h

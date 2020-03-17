@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # Makefile for mrsas driver
-# $FreeBSD: stable/10/sys/modules/mrsas/mrsas_linux/Makefile 275976 2014-12-21 02:35:22Z smh $
+# $FreeBSD: stable/11/sys/modules/mrsas/mrsas_linux/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/mrsas
+.PATH: ${SRCTOP}/sys/dev/mrsas
 
 KMOD=	mrsas_linux
 SRCS=	mrsas_linux.c

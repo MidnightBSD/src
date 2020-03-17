@@ -1,8 +1,7 @@
-# $MidnightBSD$
 
-# $FreeBSD: stable/10/sys/modules/plip/Makefile 89260 2002-01-11 15:49:02Z ru $
+# $FreeBSD: stable/11/sys/modules/plip/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/ppbus
+.PATH:	${SRCTOP}/sys/dev/ppbus
 KMOD=	plip
 SRCS=	bus_if.h device_if.h ppbus_if.h \
 	opt_plip.h \

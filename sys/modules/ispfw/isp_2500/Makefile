@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ispfw/isp_2500/Makefile 196007 2009-08-01 00:57:34Z mjacob $
+# $FreeBSD: stable/11/sys/modules/ispfw/isp_2500/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #-
 # Copyright (c) 2009 by Matthew Jacob
 # All rights reserved.
@@ -27,7 +26,7 @@
 #
 
 
-.PATH: ${.CURDIR}/../../../dev/ispfw
+.PATH: ${SRCTOP}/sys/dev/ispfw
 
 KMOD=	isp_2500
 SRCS=	ispfw.c

@@ -1,20 +1,26 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/dtrace/fbt/Makefile 253996 2013-08-06 15:51:56Z avg $
+# $FreeBSD: stable/11/sys/modules/dtrace/fbt/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../cddl/dev/fbt
+SYSDIR?=	${SRCTOP}/sys
+
+.PATH:		${SYSDIR}/cddl/dev/fbt
 
 KMOD=		fbt
-.if ${MACHINE_CPUARCH} == "powerpc"
-SRCS=		fbt_powerpc.c
-.else
-SRCS=		fbt.c
-.endif
+SRCS=		fbt.c fbt_isa.c
 SRCS+=		vnode_if.h
 
-CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
-		-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common \
-		-I${.CURDIR}/../../..
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+CFLAGS+=	-I${SYSDIR}/cddl/dev/fbt/x86
+.PATH:		${SYSDIR}/cddl/dev/fbt/x86
+.else
+CFLAGS+=	-I${SYSDIR}/cddl/dev/fbt/${MACHINE_CPUARCH}
+.PATH:		${SYSDIR}/cddl/dev/fbt/${MACHINE_CPUARCH}
+.endif
+
+CFLAGS+=	-I${SYSDIR}/cddl/dev/fbt \
+		-I${SYSDIR}/cddl/compat/opensolaris \
+		-I${SYSDIR}/cddl/contrib/opensolaris/uts/common \
+		-I${SYSDIR}
 
 .include <bsd.kmod.mk>
 
-CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+CFLAGS+=	-include ${SYSDIR}/cddl/compat/opensolaris/sys/debug_compat.h

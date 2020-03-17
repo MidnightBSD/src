@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/isa/pmtimer.c 247088 2013-02-21 07:16:40Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/isa/pmtimer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Timer device driver for power management events.

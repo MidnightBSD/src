@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # $Id: Makefile,v 1.6 2003/10/24 15:41:26 simokawa Exp $
-# $FreeBSD: stable/10/sys/modules/dcons/Makefile 225214 2011-08-27 14:24:27Z rwatson $
+# $FreeBSD: stable/11/sys/modules/dcons/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/dcons
+.PATH:	${SRCTOP}/sys/dev/dcons
 
 KMOD	= dcons
 SRCS	= dcons.c dcons.h dcons_os.c dcons_os.h \
@@ -16,6 +15,6 @@ opt_ddb.h:
 	echo "#define DDB 1" > $@
 .endif
 
-CFLAGS+= -I${.CURDIR}/../.. 
+CFLAGS+= -I${SRCTOP}/sys 
 
 .include <bsd.kmod.mk>

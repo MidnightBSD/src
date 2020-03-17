@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/drm/via/Makefile 242203 2012-10-28 02:15:35Z nwhitehorn $
+# $FreeBSD: stable/11/sys/modules/drm/via/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/drm
+.PATH:	${SRCTOP}/sys/dev/drm
 KMOD	= via
 SRCS	= via_dma.c via_dmablit.c via_drv.c via_irq.c via_map.c via_mm.c \
 	via_verifier.c via_video.c
@@ -25,4 +24,3 @@ opt_drm.h:
 
 CWARNFLAGS.via_dma.c=		-Wno-unused-value
 CWARNFLAGS.via_dmablit.c=	-Wno-unused-value
-CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

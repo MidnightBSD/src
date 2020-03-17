@@ -1,6 +1,5 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hpt27xx/Makefile 252867 2013-07-06 07:49:41Z delphij $
-HPT27XX=	${.CURDIR}/../../dev/hpt27xx
+# $FreeBSD: stable/11/sys/modules/hpt27xx/Makefile 319182 2017-05-30 04:11:12Z ngie $
+HPT27XX=	${SRCTOP}/sys/dev/hpt27xx
 .PATH:	${HPT27XX}
 
 KMOD=	hpt27xx

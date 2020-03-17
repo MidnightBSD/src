@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993 Sean Eric Fagan
@@ -34,7 +33,7 @@
  *
  *	@(#)procfs_mem.c	8.5 (Berkeley) 6/15/94
  *
- * $FreeBSD: stable/10/sys/fs/procfs/procfs_mem.c 139776 2005-01-06 18:10:42Z imp $
+ * $FreeBSD: stable/11/sys/fs/procfs/procfs_mem.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/firewire/fwe/Makefile 155824 2006-02-18 23:49:28Z yar $
+# $FreeBSD: stable/11/sys/modules/firewire/fwe/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 # Makefile for the fwe(4) module (Ethernet over IEEE1394)
 
-.PATH: ${.CURDIR}/../../../dev/firewire
+.PATH: ${SRCTOP}/sys/dev/firewire
 
 KMOD	= if_fwe
 SRCS	= bus_if.h device_if.h \

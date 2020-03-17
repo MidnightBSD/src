@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hme/Makefile 178762 2008-05-04 14:59:25Z marius $
+# $FreeBSD: stable/11/sys/modules/hme/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/hme
+.PATH: ${SRCTOP}/sys/dev/hme
 
 KMOD=	if_hme
 SRCS=	bus_if.h device_if.h if_hme.c if_hme_pci.c ${if_hme_sbus} miibus_if.h

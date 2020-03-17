@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -32,14 +31,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/i386/exception.s 322755 2017-08-21 15:44:57Z kib $
+ * $FreeBSD: stable/11/sys/i386/i386/exception.s 347568 2019-05-14 17:05:02Z kib $
  */
 
 #include "opt_apic.h"
 #include "opt_atpic.h"
 #include "opt_hwpmc_hooks.h"
-#include "opt_kdtrace.h"
-#include "opt_npx.h"
 
 #include <machine/asmacros.h>
 #include <machine/psl.h>
@@ -136,6 +133,7 @@ IDTVEC(page)
 	TRAP(T_PAGEFLT)
 IDTVEC(mchk)
 	pushl $0; TRAP(T_MCHK)
+IDTVEC(rsvd_pti)
 IDTVEC(rsvd)
 	pushl $0; TRAP(T_RESERVED)
 IDTVEC(fpu)
@@ -408,6 +406,7 @@ doreti_ast:
 	 */
 doreti_exit:
 	MEXITCOUNT
+	call	*mds_handler
 
 	.globl	doreti_popl_fs
 doreti_popl_fs:
@@ -428,8 +427,16 @@ doreti_iret:
 	 * doreti_iret_fault and friends.  Alternative return code for
 	 * the case where we get a fault in the doreti_exit code
 	 * above.  trap() (i386/i386/trap.c) catches this specific
-	 * case, sends the process a signal and continues in the
-	 * corresponding place in the code below.
+	 * case, and continues in the corresponding place in the code
+	 * below.
+	 *
+	 * If the fault occured during return to usermode, we recreate
+	 * the trap frame and call trap() to send a signal.  Otherwise
+	 * the kernel was tricked into fault by attempt to restore invalid
+	 * usermode segment selectors on return from nested fault or
+	 * interrupt, where interrupted kernel entry code not yet loaded
+	 * kernel selectors.  In the latter case, emulate iret and zero
+	 * the invalid selector.
 	 */
 	ALIGN_TEXT
 	.globl	doreti_iret_fault
@@ -440,18 +447,35 @@ doreti_iret_fault:
 	movw	%ds,(%esp)
 	.globl	doreti_popl_ds_fault
 doreti_popl_ds_fault:
+	testb	$SEL_RPL_MASK,TF_CS-TF_DS(%esp)
+	jz	doreti_popl_ds_kfault
 	pushl	$0
 	movw	%es,(%esp)
 	.globl	doreti_popl_es_fault
 doreti_popl_es_fault:
+	testb	$SEL_RPL_MASK,TF_CS-TF_ES(%esp)
+	jz	doreti_popl_es_kfault
 	pushl	$0
 	movw	%fs,(%esp)
 	.globl	doreti_popl_fs_fault
 doreti_popl_fs_fault:
+	testb	$SEL_RPL_MASK,TF_CS-TF_FS(%esp)
+	jz	doreti_popl_fs_kfault
 	sti
 	movl	$0,TF_ERR(%esp)	/* XXX should be the error code */
 	movl	$T_PROTFLT,TF_TRAPNO(%esp)
 	jmp	alltraps_with_regs_pushed
+
+doreti_popl_ds_kfault:
+	movl	$0,(%esp)
+	jmp	doreti_popl_ds
+doreti_popl_es_kfault:
+	movl	$0,(%esp)
+	jmp	doreti_popl_es
+doreti_popl_fs_kfault:
+	movl	$0,(%esp)
+	jmp	doreti_popl_fs
+	
 #ifdef HWPMC_HOOKS
 doreti_nmi:
 	/*

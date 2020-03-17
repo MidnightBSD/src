@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/usb/upgt/Makefile 191983 2009-05-11 02:39:49Z weongyo $
+# $FreeBSD: stable/11/sys/modules/usb/upgt/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/usb/wlan
+.PATH: ${SRCTOP}/sys/dev/usb/wlan
 
 KMOD    = if_upgt
 SRCS    = if_upgt.c if_upgtvar.h	\

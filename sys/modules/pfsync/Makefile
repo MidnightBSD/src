@@ -1,33 +1,17 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/pfsync/Makefile 240494 2012-09-14 11:51:49Z glebius $
+# $FreeBSD: stable/11/sys/modules/pfsync/Makefile 336087 2018-07-08 10:54:11Z kp $
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../netpfil/pf
+.PATH: ${SRCTOP}/sys/netpfil/pf
 
 KMOD=	pfsync
 SRCS=	if_pfsync.c \
-	opt_pf.h opt_inet.h opt_inet6.h
+	opt_pf.h opt_inet.h opt_inet6.h opt_global.h
 SRCS+=	bus_if.h device_if.h
 
-.if defined(KERNBUILDDIR)
-MKDEP+=		-include ${KERNBUILDDIR}/opt_global.h
-.else
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-
+.if !defined(KERNBUILDDIR)
 .if defined(VIMAGE)
 opt_global.h:
 	echo "#define VIMAGE 1" >> ${.TARGET}
 CFLAGS+=	-include opt_global.h
-MKDEP+=		-include opt_global.h
 .endif
 .endif
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -14,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,12 +31,16 @@
  *
  *	@(#)fdesc.h	8.5 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/10/sys/fs/fdescfs/fdesc.h 191990 2009-05-11 15:33:26Z attilio $
+ * $FreeBSD: stable/11/sys/fs/fdescfs/fdesc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
-#ifdef _KERNEL
+#ifndef _FS_FDESC_H_
+#define _FS_FDESC_H_
+
 /* Private mount flags for fdescfs. */
-#define FMNT_UNMOUNTF 0x01
+#define FMNT_UNMOUNTF	0x01
+#define FMNT_LINRDLNKF	0x02
+
 struct fdescmount {
 	struct vnode	*f_root;	/* Root node */
 	int flags;
@@ -67,4 +70,4 @@ extern vfs_init_t fdesc_init;
 extern vfs_uninit_t fdesc_uninit;
 extern int fdesc_allocvp(fdntype, unsigned, int, struct mount *,
     struct vnode **);
-#endif /* _KERNEL */
+#endif /* !_FS_FDESC_H_ */

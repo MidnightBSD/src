@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/nfslock/Makefile 210455 2010-07-24 22:11:11Z rmacklem $
+# $FreeBSD: stable/11/sys/modules/nfslock/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../nfs
+.PATH: ${SRCTOP}/sys/nfs
 KMOD=	nfslock
 SRCS=	vnode_if.h \
 	nfs_lock.c \

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2012 Andrew Turner
  * All rights reserved.
@@ -27,9 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/arm/ldivmod.S 248367 2013-03-16 04:08:01Z andrew $");
-
-#ifdef __ARM_EABI__
+__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/ldivmod.S 285338 2015-07-09 21:02:40Z andrew $");
 
 /*
  * These calculate:
@@ -65,6 +62,3 @@ ENTRY_NP(__aeabi_uldivmod)
 	ldmfd	sp!, {r2, r3}	/* Load the remainder */
 	RET
 END(__aeabi_uldivmod)
-
-#endif
-

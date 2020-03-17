@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2003 Sam Leffler, Errno Consulting
 # All rights reserved.
@@ -24,10 +23,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/modules/safe/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD: stable/11/sys/modules/safe/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH:	${.CURDIR}/../../dev/safe
+.PATH:	${SRCTOP}/sys/dev/safe
 KMOD	= safe
 SRCS	= safe.c opt_safe.h
 SRCS   += device_if.h bus_if.h pci_if.h

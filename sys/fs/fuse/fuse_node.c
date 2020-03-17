@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/fuse/fuse_node.c 300977 2016-05-29 23:05:14Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_node.c 349308 2019-06-23 14:49:30Z asomers $");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -271,29 +270,29 @@ void
 fuse_vnode_open(struct vnode *vp, int32_t fuse_open_flags, struct thread *td)
 {
 	/*
-         * Funcation is called for every vnode open.
-         * Merge fuse_open_flags it may be 0
-         *
-         * XXXIP: Handle FOPEN_KEEP_CACHE
-         */
-        /*
-	  * Ideally speaking, direct io should be enabled on
-         * fd's but do not see of any way of providing that
-         * this implementation.
-
-         * Also cannot think of a reason why would two
-         * different fd's on same vnode would like
-         * have DIRECT_IO turned on and off. But linux
-         * based implementation works on an fd not an
-         * inode and provides such a feature.
-         *
-         * XXXIP: Handle fd based DIRECT_IO
-         */
+	 * Funcation is called for every vnode open.
+	 * Merge fuse_open_flags it may be 0
+	 */
+	/*
+	 * Ideally speaking, direct io should be enabled on
+	 * fd's but do not see of any way of providing that
+	 * this implementation.
+	 *
+	 * Also cannot think of a reason why would two
+	 * different fd's on same vnode would like
+	 * have DIRECT_IO turned on and off. But linux
+	 * based implementation works on an fd not an
+	 * inode and provides such a feature.
+	 *
+	 * XXXIP: Handle fd based DIRECT_IO
+	 */
 	if (fuse_open_flags & FOPEN_DIRECT_IO) {
 		ASSERT_VOP_ELOCKED(vp, __func__);
 		VTOFUD(vp)->flag |= FN_DIRECTIO;
 		fuse_io_invalbuf(vp, td);
 	} else {
+		if ((fuse_open_flags & FOPEN_KEEP_CACHE) == 0)
+			fuse_io_invalbuf(vp, td);
 	        VTOFUD(vp)->flag &= ~FN_DIRECTIO;
 	}
 
@@ -367,7 +366,7 @@ fuse_vnode_refreshsize(struct vnode *vp, struct ucred *cred)
 }
 
 int
-fuse_vnode_setsize(struct vnode *vp, struct ucred *cred, off_t newsize)
+fuse_vnode_setsize(struct vnode *vp, off_t newsize)
 {
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
 	off_t oldsize;
@@ -383,7 +382,7 @@ fuse_vnode_setsize(struct vnode *vp, struct ucred *cred, off_t newsize)
 	fvdat->flag |= FN_SIZECHANGE;
 
 	if (newsize < oldsize) {
-		err = vtruncbuf(vp, cred, newsize, fuse_iosize(vp));
+		err = vtruncbuf(vp, newsize, fuse_iosize(vp));
 	}
 	vnode_pager_setsize(vp, newsize);
 	return err;

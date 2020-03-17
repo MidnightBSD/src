@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/virtio/scsi/Makefile 241470 2012-10-11 23:41:18Z grehan $
+# $FreeBSD: stable/11/sys/modules/virtio/scsi/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,14 +23,11 @@
 # SUCH DAMAGE.
 #
 
-.PATH: ${.CURDIR}/../../../dev/virtio/scsi
+.PATH: ${SRCTOP}/sys/dev/virtio/scsi
 
 KMOD=	virtio_scsi
 SRCS=	virtio_scsi.c
 SRCS+=	virtio_bus_if.h virtio_if.h
 SRCS+=	bus_if.h device_if.h opt_scsi.h opt_cam.h
-
-MFILES=	kern/bus_if.m kern/device_if.m \
-	dev/virtio/virtio_bus_if.m dev/virtio/virtio_if.m
 
 .include <bsd.kmod.mk>

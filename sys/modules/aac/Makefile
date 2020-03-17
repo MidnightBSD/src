@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/aac/Makefile 331637 2018-03-27 17:52:52Z brooks $
+# $FreeBSD: stable/11/sys/modules/aac/Makefile 331636 2018-03-27 17:51:45Z brooks $
 
-.PATH: ${.CURDIR}/../../dev/aac
+.PATH: ${SRCTOP}/sys/dev/aac
 
 .if ${MACHINE_CPUARCH} == "i386"
 SUBDIR= aac_linux

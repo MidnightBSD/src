@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD$	*/
 /*-
  * [NetBSD for NEC PC98 series]
@@ -28,7 +27,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/isa/ccbque.h 139790 2005-01-06 22:18:23Z imp $
+ * $FreeBSD: stable/11/sys/i386/isa/ccbque.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * Common command control queue funcs.
@@ -52,7 +51,7 @@ struct CCBTYPE##que {							\
 									\
 void DEV##_init_ccbque(int);					\
 struct CCBTYPE *DEV##_get_ccb(void);				\
-void DEV##_free_ccb(register struct CCBTYPE *);
+void DEV##_free_ccb(struct CCBTYPE *);
 
 /* (II)  static allocated memory */
 #define GENERIC_CCB_STATIC_ALLOC(DEV, CCBTYPE)				\
@@ -73,7 +72,7 @@ DEV##_init_ccbque(count)						\
 struct CCBTYPE *							\
 DEV##_get_ccb()								\
 {									\
-	register struct CCBTYPE *cb;					\
+	struct CCBTYPE *cb;						\
 	int s = splcam();						\
 									\
 	if (CCBTYPE##que.count < CCBTYPE##que.maxccb)			\
@@ -106,7 +105,7 @@ out:									\
 									\
 void									\
 DEV##_free_ccb(cb)							\
-	register struct CCBTYPE *cb;					\
+	struct CCBTYPE *cb;						\
 {									\
 	int s = splcam();						\
 									\

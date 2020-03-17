@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Charles Hannum.  All rights reserved.
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/isa/elink.c 241394 2012-10-10 08:36:38Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/isa/elink.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Common code for dealing with 3COM ethernet cards.
@@ -71,8 +70,8 @@ elink_reset()
 void
 elink_idseq(u_char p)
 {
-	register int i;
-	register u_char c;
+	int i;
+	u_char c;
 
 	c = 0xff;
 	for (i = 255; i; i--) {

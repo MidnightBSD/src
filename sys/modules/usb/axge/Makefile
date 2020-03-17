@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/usb/axge/Makefile 258331 2013-11-19 00:37:53Z markj $
+# $FreeBSD: stable/11/sys/modules/usb/axge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/usb/net
+.PATH: ${SRCTOP}/sys/dev/usb/net
 
 KMOD=	if_axge
 SRCS+=	if_axge.c usbdevs.h

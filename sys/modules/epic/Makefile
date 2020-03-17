@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/epic/Makefile 202006 2010-01-10 15:44:48Z marius $
+# $FreeBSD: stable/11/sys/modules/epic/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../sparc64/ebus
+.PATH: ${SRCTOP}/sys/sparc64/ebus
 
 KMOD=	epic
 SRCS=	device_if.h epic.c bus_if.h ofw_bus_if.h

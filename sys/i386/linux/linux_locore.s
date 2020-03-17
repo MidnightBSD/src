@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/i386/linux/linux_locore.s 293536 2016-01-09 16:25:30Z dchagin $ */
+/* $FreeBSD: stable/11/sys/i386/linux/linux_locore.s 346812 2019-04-28 09:53:08Z dchagin $ */
 
 #include "linux_assym.h"			/* system definitions */
 #include <machine/asmacros.h>			/* miscellaneous asm macros */
@@ -66,12 +65,12 @@ NON_GPROF_ENTRY(linux_vsyscall)
 	.previous
 #endif
 
-#define do_cfa_expr(offset)                                             \
-	.byte 0x0f;			/* DW_CFA_def_cfa_expression */ \
-	.uleb128 11f-10f;		/*   length */                  \
-10:	.byte 0x74;			/*     DW_OP_breg4 */           \
-	.sleb128 offset;		/*      offset */               \
-	.byte 0x06;			/*     DW_OP_deref */           \
+#define do_cfa_expr(offset)						\
+	.byte 0x0f;			/* DW_CFA_def_cfa_expression */	\
+	.uleb128 11f-10f;		/*   length */			\
+10:	.byte 0x74;			/*     DW_OP_breg4 */		\
+	.sleb128 offset;		/*      offset */		\
+	.byte 0x06;			/*     DW_OP_deref */		\
 11:
 
 

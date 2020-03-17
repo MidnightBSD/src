@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@
  *	...and...
  *	@(#)null_vnodeops.c 1.20 92/07/07 UCLA Ficus project
  *
- * $FreeBSD: stable/10/sys/fs/nullfs/null_vnops.c 295970 2016-02-24 13:48:40Z kib $
+ * $FreeBSD: stable/11/sys/fs/nullfs/null_vnops.c 344156 2019-02-15 11:28:32Z kib $
  */
 
 /*
@@ -118,7 +117,7 @@
  * are created as a result of vnode operations on
  * this or other null vnode stacks.
  *
- * New vnode stacks come into existance as a result of
+ * New vnode stacks come into existence as a result of
  * an operation which returns a vnode.
  * The bypass routine stacks a null-node above the new
  * vnode before returning it to the caller.
@@ -869,14 +868,14 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 	struct vnode **dvp = ap->a_vpp;
 	struct vnode *lvp, *ldvp;
 	struct ucred *cred = ap->a_cred;
+	struct mount *mp;
 	int error, locked;
-
-	if (vp->v_type == VDIR)
-		return (vop_stdvptocnp(ap));
 
 	locked = VOP_ISLOCKED(vp);
 	lvp = NULLVPTOLOWERVP(vp);
 	vhold(lvp);
+	mp = vp->v_mount;
+	vfs_ref(mp);
 	VOP_UNLOCK(vp, 0); /* vp is held by vn_vptocnp_locked that called us */
 	ldvp = lvp;
 	vref(lvp);
@@ -884,6 +883,7 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 	vdrop(lvp);
 	if (error != 0) {
 		vn_lock(vp, locked | LK_RETRY);
+		vfs_rel(mp);
 		return (ENOENT);
 	}
 
@@ -895,10 +895,10 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 	if (error != 0) {
 		vrele(ldvp);
 		vn_lock(vp, locked | LK_RETRY);
+		vfs_rel(mp);
 		return (ENOENT);
 	}
-	vref(ldvp);
-	error = null_nodeget(vp->v_mount, ldvp, dvp);
+	error = null_nodeget(mp, ldvp, dvp);
 	if (error == 0) {
 #ifdef DIAGNOSTIC
 		NULLVPTOLOWERVP(*dvp);
@@ -906,6 +906,7 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 		VOP_UNLOCK(*dvp, 0); /* keep reference on *dvp */
 	}
 	vn_lock(vp, locked | LK_RETRY);
+	vfs_rel(mp);
 	return (error);
 }
 

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/syscons/plasma/Makefile 293034 2016-01-01 04:04:40Z des $
+# $FreeBSD: stable/11/sys/modules/syscons/plasma/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/syscons/plasma
+.PATH:	${SRCTOP}/sys/dev/syscons/plasma
 
 KMOD=	plasma_saver
 SRCS=	fp16.c plasma_saver.c

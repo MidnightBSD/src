@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/pc/bios.h 272913 2014-10-10 20:47:23Z jhb $
+ * $FreeBSD: stable/11/sys/i386/include/pc/bios.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PC_BIOS_H_
@@ -211,6 +210,9 @@ struct PIR_table
 #define	SMAP_TYPE_ACPI_RECLAIM	3
 #define	SMAP_TYPE_ACPI_NVS	4
 #define	SMAP_TYPE_ACPI_ERROR	5
+#define	SMAP_TYPE_DISABLED	6
+#define	SMAP_TYPE_PMEM		7
+#define	SMAP_TYPE_PRAM		12
 
 #define	SMAP_XATTR_ENABLED	0x00000001
 #define	SMAP_XATTR_NON_VOLATILE	0x00000002

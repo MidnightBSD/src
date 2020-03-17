@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: stable/10/sys/i386/include/proc.h 233291 2012-03-22 04:52:51Z alc $
+ * $FreeBSD: stable/11/sys/i386/include/proc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -61,6 +60,13 @@ struct mdproc {
 
 #define	KINFO_PROC_SIZE 768
 
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[8];
+	int narg;
+};
+
 #ifdef	_KERNEL
 
 /* Get the current kernel thread stack usage. */
@@ -78,13 +84,6 @@ void 	user_ldt_free(struct thread *);
 void	user_ldt_deref(struct proc_ldt *pldt);
 
 extern struct mtx dt_lock;
-
-struct syscall_args {
-	u_int code;
-	struct sysent *callp;
-	register_t args[8];
-	int narg;
-};
 #endif	/* _KERNEL */
 
 #endif /* !_MACHINE_PROC_H_ */

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/fs/msdosfs/msdosfs_denode.c 254627 2013-08-21 23:04:48Z ken $ */
+/* $FreeBSD: stable/11/sys/fs/msdosfs/msdosfs_denode.c 352678 2019-09-25 12:58:49Z kevans $ */
 /*	$NetBSD: msdosfs_denode.c,v 1.28 1998/02/10 14:10:00 mrg Exp $	*/
 
 /*-
@@ -56,6 +55,7 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
+#include <sys/vmmeter.h>
 #include <sys/vnode.h>
 
 #include <vm/vm.h>
@@ -77,7 +77,7 @@ de_vncmpf(struct vnode *vp, void *arg)
 
 	a = arg;
 	de = VTODE(vp);
-	return (de->de_inode != *a);
+	return (de->de_inode != *a) || (de->de_refcnt <= 0);
 }
 
 /*
@@ -93,11 +93,8 @@ de_vncmpf(struct vnode *vp, void *arg)
  * depp	     - returns the address of the gotten denode.
  */
 int
-deget(pmp, dirclust, diroffset, depp)
-	struct msdosfsmount *pmp;	/* so we know the maj/min number */
-	u_long dirclust;		/* cluster this dir entry came from */
-	u_long diroffset;		/* index of entry within the cluster */
-	struct denode **depp;		/* returns the addr of the gotten denode */
+deget(struct msdosfsmount *pmp, u_long dirclust, u_long diroffset,
+    struct denode **depp)
 {
 	int error;
 	uint64_t inode;
@@ -125,8 +122,9 @@ deget(pmp, dirclust, diroffset, depp)
 	 * address of "." entry. For root dir (if not FAT32) use cluster
 	 * MSDOSFSROOT, offset MSDOSFSROOT_OFS
 	 *
-	 * NOTE: The check for de_refcnt > 0 below insures the denode being
-	 * examined does not represent an unlinked but still open file.
+	 * NOTE: de_vncmpf will explicitly skip any denodes that do not have
+	 * a de_refcnt > 0.  This insures that that we do not attempt to use
+	 * a denode that represents an unlinked but still open file.
 	 * These files are not to be accessible even when the directory
 	 * entry that represented the file happens to be reused while the
 	 * deleted file is still open.
@@ -285,9 +283,7 @@ deget(pmp, dirclust, diroffset, depp)
 }
 
 int
-deupdat(dep, waitfor)
-	struct denode *dep;
-	int waitfor;
+deupdat(struct denode *dep, int waitfor)
 {
 	struct direntry dir;
 	struct timespec ts;
@@ -300,7 +296,7 @@ deupdat(dep, waitfor)
 		    DE_MODIFIED);
 		return (0);
 	}
-	getnanotime(&ts);
+	vfs_timestamp(&ts);
 	DETIMES(dep, &ts, &ts, &ts);
 	if ((dep->de_flag & DE_MODIFIED) == 0 && waitfor == 0)
 		return (0);
@@ -335,11 +331,7 @@ deupdat(dep, waitfor)
  * Truncate the file described by dep to the length specified by length.
  */
 int
-detrunc(dep, length, flags, cred)
-	struct denode *dep;
-	u_long length;
-	int flags;
-	struct ucred *cred;
+detrunc(struct denode *dep, u_long length, int flags, struct ucred *cred)
 {
 	int error;
 	int allerror;
@@ -412,19 +404,21 @@ detrunc(dep, length, flags, cred)
 			bn = cntobn(pmp, eofentry);
 			error = bread(pmp->pm_devvp, bn, pmp->pm_bpcluster,
 			    NOCRED, &bp);
-			if (error) {
-				brelse(bp);
-#ifdef MSDOSFS_DEBUG
-				printf("detrunc(): bread fails %d\n", error);
-#endif
-				return (error);
-			}
-			bzero(bp->b_data + boff, pmp->pm_bpcluster - boff);
-			if (flags & IO_SYNC)
-				bwrite(bp);
-			else
-				bdwrite(bp);
+		} else {
+			error = bread(DETOV(dep), de_cluster(pmp, length),
+			    pmp->pm_bpcluster, cred, &bp);
 		}
+		if (error) {
+#ifdef MSDOSFS_DEBUG
+			printf("detrunc(): bread fails %d\n", error);
+#endif
+			return (error);
+		}
+		bzero(bp->b_data + boff, pmp->pm_bpcluster - boff);
+		if ((flags & IO_SYNC) != 0)
+			bwrite(bp);
+		else
+			bdwrite(bp);
 	}
 
 	/*
@@ -434,7 +428,7 @@ detrunc(dep, length, flags, cred)
 	dep->de_FileSize = length;
 	if (!isadir)
 		dep->de_flag |= DE_UPDATE | DE_MODIFIED;
-	allerror = vtruncbuf(DETOV(dep), cred, length, pmp->pm_bpcluster);
+	allerror = vtruncbuf(DETOV(dep), length, pmp->pm_bpcluster);
 #ifdef MSDOSFS_DEBUG
 	if (allerror)
 		printf("detrunc(): vtruncbuf error %d\n", allerror);
@@ -478,10 +472,7 @@ detrunc(dep, length, flags, cred)
  * Extend the file described by dep to length specified by length.
  */
 int
-deextend(dep, length, cred)
-	struct denode *dep;
-	u_long length;
-	struct ucred *cred;
+deextend(struct denode *dep, u_long length, struct ucred *cred)
 {
 	struct msdosfsmount *pmp = dep->de_pmp;
 	u_long count;
@@ -526,8 +517,7 @@ deextend(dep, length, cred)
  * been moved to a new directory.
  */
 void
-reinsert(dep)
-	struct denode *dep;
+reinsert(struct denode *dep)
 {
 	struct vnode *vp;
 
@@ -550,10 +540,7 @@ reinsert(dep)
 }
 
 int
-msdosfs_reclaim(ap)
-	struct vop_reclaim_args /* {
-		struct vnode *a_vp;
-	} */ *ap;
+msdosfs_reclaim(struct vop_reclaim_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct denode *dep = VTODE(vp);
@@ -584,11 +571,7 @@ msdosfs_reclaim(ap)
 }
 
 int
-msdosfs_inactive(ap)
-	struct vop_inactive_args /* {
-		struct vnode *a_vp;
-		struct thread *a_td;
-	} */ *ap;
+msdosfs_inactive(struct vop_inactive_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct denode *dep = VTODE(vp);

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/i2c/jedec_dimm/Makefile 329843 2018-02-22 23:18:46Z rpokala $
+# $FreeBSD: stable/11/sys/modules/i2c/jedec_dimm/Makefile 329843 2018-02-22 23:18:46Z rpokala $
 
 .PATH:		${.CURDIR}/../../../dev/jedec_dimm
 KMOD		= jedec_dimm

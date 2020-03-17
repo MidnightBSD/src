@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,10 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/bpf.c 315625 2017-03-20 08:16:05Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/net/bpf.c 345795 2019-04-02 09:33:30Z ae $");
 
 #include "opt_bpf.h"
 #include "opt_compat.h"
+#include "opt_ddb.h"
 #include "opt_netgraph.h"
 
 #include <sys/types.h>
@@ -68,8 +68,13 @@ __FBSDID("$FreeBSD: stable/10/sys/net/bpf.c 315625 2017-03-20 08:16:05Z ae $");
 
 #include <sys/socket.h>
 
+#ifdef DDB
+#include <ddb/ddb.h>
+#endif
+
 #include <net/if.h>
-#define	BPF_INTERNAL
+#include <net/if_var.h>
+#include <net/if_dl.h>
 #include <net/bpf.h>
 #include <net/bpf_buffer.h>
 #ifdef BPF_JITTER
@@ -77,6 +82,7 @@ __FBSDID("$FreeBSD: stable/10/sys/net/bpf.c 315625 2017-03-20 08:16:05Z ae $");
 #endif
 #include <net/bpf_zerocopy.h>
 #include <net/bpfdesc.h>
+#include <net/route.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -90,6 +96,25 @@ __FBSDID("$FreeBSD: stable/10/sys/net/bpf.c 315625 2017-03-20 08:16:05Z ae $");
 
 MALLOC_DEFINE(M_BPF, "BPF", "BPF data");
 
+static struct bpf_if_ext dead_bpf_if = {
+	.bif_dlist = LIST_HEAD_INITIALIZER()
+};
+
+struct bpf_if {
+#define	bif_next	bif_ext.bif_next
+#define	bif_dlist	bif_ext.bif_dlist
+	struct bpf_if_ext bif_ext;	/* public members */
+	u_int		bif_dlt;	/* link layer type */
+	u_int		bif_hdrlen;	/* length of link header */
+	struct ifnet	*bif_ifp;	/* corresponding interface */
+	struct rwlock	bif_lock;	/* interface lock */
+	LIST_HEAD(, bpf_d) bif_wlist;	/* writer-only list */
+	int		bif_flags;	/* Interface flags */
+	struct bpf_if	**bif_bpf;	/* Pointer to pointer to us */
+};
+
+CTASSERT(offsetof(struct bpf_if, bif_ext) == 0);
+
 #if defined(DEV_BPF) || defined(NETGRAPH_BPF)
 
 #define PRINET  26			/* interruptible */
@@ -101,7 +126,7 @@ MALLOC_DEFINE(M_BPF, "BPF", "BPF data");
 #include <sys/mount.h>
 #include <compat/freebsd32/freebsd32.h>
 #define BPF_ALIGNMENT32 sizeof(int32_t)
-#define BPF_WORDALIGN32(x) (((x)+(BPF_ALIGNMENT32-1))&~(BPF_ALIGNMENT32-1))
+#define	BPF_WORDALIGN32(x) roundup2(x, BPF_ALIGNMENT32)
 
 #ifndef BURN_BRIDGES
 /*
@@ -136,6 +161,9 @@ struct bpf_dltlist32 {
 #define	BIOCSETFNR32	_IOW('B', 130, struct bpf_program32)
 #endif
 
+#define BPF_LOCK()	   sx_xlock(&bpf_sx)
+#define BPF_UNLOCK()		sx_xunlock(&bpf_sx)
+#define BPF_LOCK_ASSERT()	sx_assert(&bpf_sx, SA_XLOCKED)
 /*
  * bpf_iflist is a list of BPF interface structures, each corresponding to a
  * specific DLT.  The same network interface might have several BPF interface
@@ -143,7 +171,7 @@ struct bpf_dltlist32 {
  * frames, ethernet frames, etc).
  */
 static LIST_HEAD(, bpf_if)	bpf_iflist, bpf_freelist;
-static struct mtx	bpf_mtx;		/* bpf global lock */
+static struct sx	bpf_sx;		/* bpf global lock */
 static int		bpf_bpfd_cnt;
 
 static void	bpf_attachd(struct bpf_d *, struct bpf_if *);
@@ -151,7 +179,7 @@ static void	bpf_detachd(struct bpf_d *);
 static void	bpf_detachd_locked(struct bpf_d *);
 static void	bpf_freed(struct bpf_d *);
 static int	bpf_movein(struct uio *, int, struct ifnet *, struct mbuf **,
-		    struct sockaddr *, int *, struct bpf_insn *);
+		    struct sockaddr *, int *, struct bpf_d *);
 static int	bpf_setif(struct bpf_d *, struct ifreq *);
 static void	bpf_timed_out(void *);
 static __inline void
@@ -180,8 +208,8 @@ static SYSCTL_NODE(_net_bpf, OID_AUTO, stats, CTLFLAG_MPSAFE | CTLFLAG_RW,
 
 static VNET_DEFINE(int, bpf_optimize_writers) = 0;
 #define	V_bpf_optimize_writers VNET(bpf_optimize_writers)
-SYSCTL_VNET_INT(_net_bpf, OID_AUTO, optimize_writers,
-    CTLFLAG_RW, &VNET_NAME(bpf_optimize_writers), 0,
+SYSCTL_INT(_net_bpf, OID_AUTO, optimize_writers, CTLFLAG_VNET | CTLFLAG_RW,
+    &VNET_NAME(bpf_optimize_writers), 0,
     "Do not send packets until BPF program is set");
 
 static	d_open_t	bpfopen;
@@ -441,7 +469,7 @@ bpf_ioctl_setzbuf(struct thread *td, struct bpf_d *d, struct bpf_zbuf *bz)
  */
 static int
 bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
-    struct sockaddr *sockp, int *hdrlen, struct bpf_insn *wfilter)
+    struct sockaddr *sockp, int *hdrlen, struct bpf_d *d)
 {
 	const struct ieee80211_bpf_params *p;
 	struct ether_header *eh;
@@ -536,7 +564,7 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 	if (error)
 		goto bad;
 
-	slen = bpf_filter(wfilter, mtod(m, u_char *), len, len);
+	slen = bpf_filter(d->bd_wfilter, mtod(m, u_char *), len, len);
 	if (slen == 0) {
 		error = EPERM;
 		goto bad;
@@ -552,6 +580,10 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 				m->m_flags |= M_BCAST;
 			else
 				m->m_flags |= M_MCAST;
+		}
+		if (d->bd_hdrcmplt == 0) {
+			memcpy(eh->ether_shost, IF_LLADDR(ifp),
+			    sizeof(eh->ether_shost));
 		}
 		break;
 	}
@@ -577,7 +609,7 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 				goto bad;
 			}
 		}
-		bcopy(m->m_data, sockp->sa_data, hlen);
+		bcopy(mtod(m, const void *), sockp->sa_data, hlen);
 	}
 	*hdrlen = hlen;
 
@@ -640,6 +672,67 @@ bpf_attachd(struct bpf_d *d, struct bpf_if *bp)
 
 	if (op_w == 0)
 		EVENTHANDLER_INVOKE(bpf_track, bp->bif_ifp, bp->bif_dlt, 1);
+}
+
+/*
+ * Check if we need to upgrade our descriptor @d from write-only mode.
+ */
+static int
+bpf_check_upgrade(u_long cmd, struct bpf_d *d, struct bpf_insn *fcode, int flen)
+{
+	int is_snap, need_upgrade;
+
+	/*
+	 * Check if we've already upgraded or new filter is empty.
+	 */
+	if (d->bd_writer == 0 || fcode == NULL)
+		return (0);
+
+	need_upgrade = 0;
+
+	/*
+	 * Check if cmd looks like snaplen setting from
+	 * pcap_bpf.c:pcap_open_live().
+	 * Note we're not checking .k value here:
+	 * while pcap_open_live() definitely sets to non-zero value,
+	 * we'd prefer to treat k=0 (deny ALL) case the same way: e.g.
+	 * do not consider upgrading immediately
+	 */
+	if (cmd == BIOCSETF && flen == 1 && fcode[0].code == (BPF_RET | BPF_K))
+		is_snap = 1;
+	else
+		is_snap = 0;
+
+	if (is_snap == 0) {
+		/*
+		 * We're setting first filter and it doesn't look like
+		 * setting snaplen.  We're probably using bpf directly.
+		 * Upgrade immediately.
+		 */
+		need_upgrade = 1;
+	} else {
+		/*
+		 * Do not require upgrade by first BIOCSETF
+		 * (used to set snaplen) by pcap_open_live().
+		 */
+
+		if (--d->bd_writer == 0) {
+			/*
+			 * First snaplen filter has already
+			 * been set. This is probably catch-all
+			 * filter
+			 */
+			need_upgrade = 1;
+		}
+	}
+
+	CTR5(KTR_NET,
+	    "%s: filter function set by pid %d, "
+	    "bd_writer counter %d, snap %d upgrade %d",
+	    __func__, d->bd_pid, d->bd_writer,
+	    is_snap, need_upgrade);
+
+	return (need_upgrade);
 }
 
 /*
@@ -1014,6 +1107,7 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	struct ifnet *ifp;
 	struct mbuf *m, *mc;
 	struct sockaddr dst;
+	struct route ro;
 	int error, hlen;
 
 	error = devfs_get_cdevpriv((void **)&d);
@@ -1045,7 +1139,7 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	hlen = 0;
 	/* XXX: bpf_movein() can sleep */
 	error = bpf_movein(uio, (int)d->bd_bif->bif_dlt, ifp,
-	    &m, &dst, &hlen, d->bd_wfilter);
+	    &m, &dst, &hlen, d);
 	if (error) {
 		d->bd_wdcount++;
 		return (error);
@@ -1077,7 +1171,14 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	BPFD_UNLOCK(d);
 #endif
 
-	error = (*ifp->if_output)(ifp, m, &dst, NULL);
+	bzero(&ro, sizeof(ro));
+	if (hlen != 0) {
+		ro.ro_prepend = (u_char *)&dst.sa_data;
+		ro.ro_plen = hlen;
+		ro.ro_flags = RT_HAS_HEADER;
+	}
+
+	error = (*ifp->if_output)(ifp, m, &dst, &ro);
 	if (error)
 		d->bd_wdcount++;
 
@@ -1129,7 +1230,6 @@ reset_d(struct bpf_d *d)
 
 /*
  *  FIONREAD		Check for read packet available.
- *  SIOCGIFADDR		Get interface address - convenient hook to driver.
  *  BIOCGBLEN		Get buffer len [for read()].
  *  BIOCSETF		Set read filter.
  *  BIOCSETFNR		Set read filter without resetting descriptor.
@@ -1256,19 +1356,6 @@ bpfioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 			BPFD_UNLOCK(d);
 
 			*(int *)addr = n;
-			break;
-		}
-
-	case SIOCGIFADDR:
-		{
-			struct ifnet *ifp;
-
-			if (d->bd_bif == NULL)
-				error = EINVAL;
-			else {
-				ifp = d->bd_bif->bif_ifp;
-				error = (*ifp->if_ioctl)(ifp, cmd, addr);
-			}
 			break;
 		}
 
@@ -1823,17 +1910,7 @@ bpf_setf(struct bpf_d *d, struct bpf_program *fp, u_long cmd)
 		if (cmd == BIOCSETF)
 			reset_d(d);
 
-		if (fcode != NULL) {
-			/*
-			 * Do not require upgrade by first BIOCSETF
-			 * (used to set snaplen) by pcap_open_live().
-			 */
-			if (d->bd_writer != 0 && --d->bd_writer == 0)
-				need_upgrade = 1;
-			CTR4(KTR_NET, "%s: filter function set by pid %d, "
-			    "bd_writer counter %d, need_upgrade %d",
-			    __func__, d->bd_pid, d->bd_writer, need_upgrade);
-		}
+		need_upgrade = bpf_check_upgrade(cmd, d, fcode, flen);
 	}
 	BPFD_UNLOCK(d);
 	if (d->bd_bif != NULL)
@@ -1846,7 +1923,7 @@ bpf_setf(struct bpf_d *d, struct bpf_program *fp, u_long cmd)
 #endif
 
 	/* Move d to active readers list. */
-	if (need_upgrade)
+	if (need_upgrade != 0)
 		bpf_upgraded(d);
 
 	BPF_UNLOCK();
@@ -1874,7 +1951,7 @@ bpf_setif(struct bpf_d *d, struct ifreq *ifr)
 
 	/* Check if interface is not being detached from BPF */
 	BPFIF_RLOCK(bp);
-	if (bp->flags & BPFIF_FLAG_DYING) {
+	if (bp->bif_flags & BPFIF_FLAG_DYING) {
 		BPFIF_RUNLOCK(bp);
 		return (ENXIO);
 	}
@@ -2259,12 +2336,13 @@ bpf_hdrlen(struct bpf_d *d)
 static void
 bpf_bintime2ts(struct bintime *bt, struct bpf_ts *ts, int tstype)
 {
-	struct bintime bt2;
+	struct bintime bt2, boottimebin;
 	struct timeval tsm;
 	struct timespec tsn;
 
 	if ((tstype & BPF_T_MONOTONIC) == 0) {
 		bt2 = *bt;
+		getboottimebin(&boottimebin);
 		bintime_add(&bt2, &boottimebin);
 		bt = &bt2;
 	}
@@ -2483,27 +2561,52 @@ bpfattach2(struct ifnet *ifp, u_int dlt, u_int hdrlen, struct bpf_if **driverp)
 {
 	struct bpf_if *bp;
 
-	bp = malloc(sizeof(*bp), M_BPF, M_NOWAIT | M_ZERO);
-	if (bp == NULL)
-		panic("bpfattach");
+	KASSERT(*driverp == NULL, ("bpfattach2: driverp already initialized"));
 
+	bp = malloc(sizeof(*bp), M_BPF, M_WAITOK | M_ZERO);
+
+	rw_init(&bp->bif_lock, "bpf interface lock");
 	LIST_INIT(&bp->bif_dlist);
 	LIST_INIT(&bp->bif_wlist);
 	bp->bif_ifp = ifp;
 	bp->bif_dlt = dlt;
-	rw_init(&bp->bif_lock, "bpf interface lock");
-	KASSERT(*driverp == NULL, ("bpfattach2: driverp already initialized"));
+	bp->bif_hdrlen = hdrlen;
+	bp->bif_bpf = driverp;
 	*driverp = bp;
 
 	BPF_LOCK();
 	LIST_INSERT_HEAD(&bpf_iflist, bp, bif_next);
 	BPF_UNLOCK();
 
-	bp->bif_hdrlen = hdrlen;
-
 	if (bootverbose && IS_DEFAULT_VNET(curvnet))
 		if_printf(ifp, "bpf attached\n");
 }
+
+#ifdef VIMAGE
+/*
+ * When moving interfaces between vnet instances we need a way to
+ * query the dlt and hdrlen before detach so we can re-attch the if_bpf
+ * after the vmove.  We unfortunately have no device driver infrastructure
+ * to query the interface for these values after creation/attach, thus
+ * add this as a workaround.
+ */
+int
+bpf_get_bp_params(struct bpf_if *bp, u_int *bif_dlt, u_int *bif_hdrlen)
+{
+
+	if (bp == NULL)
+		return (ENXIO);
+	if (bif_dlt == NULL && bif_hdrlen == NULL)
+		return (0);
+
+	if (bif_dlt != NULL)
+		*bif_dlt = bp->bif_dlt;
+	if (bif_hdrlen != NULL)
+		*bif_hdrlen = bp->bif_hdrlen;
+
+	return (0);
+}
+#endif
 
 /*
  * Detach bpf from an interface. This involves detaching each descriptor
@@ -2536,7 +2639,8 @@ bpfdetach(struct ifnet *ifp)
 		 * Mark bp as detached to restrict new consumers.
 		 */
 		BPFIF_WLOCK(bp);
-		bp->flags |= BPFIF_FLAG_DYING;
+		bp->bif_flags |= BPFIF_FLAG_DYING;
+		*bp->bif_bpf = (struct bpf_if *)&dead_bpf_if;
 		BPFIF_WUNLOCK(bp);
 
 		CTR4(KTR_NET, "%s: sheduling free for encap %d (%p) for if %p",
@@ -2606,13 +2710,6 @@ bpf_ifdetach(void *arg __unused, struct ifnet *ifp)
 		nmatched++;
 	}
 	BPF_UNLOCK();
-
-	/*
-	 * Note that we cannot zero other pointers to
-	 * custom DLTs possibly used by given interface.
-	 */
-	if (nmatched != 0)
-		ifp->if_bpf = NULL;
 }
 
 /*
@@ -2708,7 +2805,7 @@ bpf_drvinit(void *unused)
 {
 	struct cdev *dev;
 
-	mtx_init(&bpf_mtx, "bpf global lock", NULL, MTX_DEF);
+	sx_init(&bpf_sx, "bpf global lock");
 	LIST_INIT(&bpf_iflist);
 	LIST_INIT(&bpf_freelist);
 
@@ -2862,13 +2959,13 @@ bpf_stats_sysctl(SYSCTL_HANDLER_ARGS)
 SYSINIT(bpfdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,bpf_drvinit,NULL);
 
 #else /* !DEV_BPF && !NETGRAPH_BPF */
+
 /*
  * NOP stubs to allow bpf-using drivers to load and function.
  *
  * A 'better' implementation would allow the core bpf functionality
  * to be loaded at runtime.
  */
-static struct bpf_if bp_null;
 
 void
 bpf_tap(struct bpf_if *bp, u_char *pkt, u_int pktlen)
@@ -2896,7 +2993,7 @@ void
 bpfattach2(struct ifnet *ifp, u_int dlt, u_int hdrlen, struct bpf_if **driverp)
 {
 
-	*driverp = &bp_null;
+	*driverp = (struct bpf_if *)&dead_bpf_if;
 }
 
 void
@@ -2917,3 +3014,34 @@ bpf_validate(const struct bpf_insn *f, int len)
 }
 
 #endif /* !DEV_BPF && !NETGRAPH_BPF */
+
+#ifdef DDB
+static void
+bpf_show_bpf_if(struct bpf_if *bpf_if)
+{
+
+	if (bpf_if == NULL)
+		return;
+	db_printf("%p:\n", bpf_if);
+#define	BPF_DB_PRINTF(f, e)	db_printf("   %s = " f "\n", #e, bpf_if->e);
+	/* bif_ext.bif_next */
+	/* bif_ext.bif_dlist */
+	BPF_DB_PRINTF("%#x", bif_dlt);
+	BPF_DB_PRINTF("%u", bif_hdrlen);
+	BPF_DB_PRINTF("%p", bif_ifp);
+	/* bif_lock */
+	/* bif_wlist */
+	BPF_DB_PRINTF("%#x", bif_flags);
+}
+
+DB_SHOW_COMMAND(bpf_if, db_show_bpf_if)
+{
+
+	if (!have_addr) {
+		db_printf("usage: show bpf_if <struct bpf_if *>\n");
+		return;
+	}
+
+	bpf_show_bpf_if((struct bpf_if *)addr);
+}
+#endif

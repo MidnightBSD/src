@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Semihalf
  * Copyright (c) 2008, 2009 Reinoud Zandijk
@@ -26,7 +25,7 @@
  *
  * From: NetBSD: nilfs_subr.h,v 1.1 2009/07/18 16:31:42 reinoud
  *
- * $FreeBSD: stable/10/sys/fs/nandfs/nandfs_subr.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/sys/fs/nandfs/nandfs_subr.h 298806 2016-04-29 20:51:24Z pfg $
  */
 
 #ifndef _FS_NANDFS_NANDFS_SUBR_H_
@@ -115,7 +114,7 @@ int  nandfs_free_entry(struct nandfs_mdt *, struct nandfs_alloc_request *);
 int nandfs_get_entry_block(struct nandfs_mdt *, struct nandfs_node *,
     struct nandfs_alloc_request *, uint32_t *, int);
 
-/* inode managment */
+/* Inode management. */
 int  nandfs_node_create(struct nandfsmount *, struct nandfs_node **, uint16_t);
 int nandfs_node_destroy(struct nandfs_node *);
 int nandfs_node_update(struct nandfs_node *);

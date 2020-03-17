@@ -1,22 +1,19 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sfxge/Makefile 311500 2017-01-06 07:38:12Z arybchik $
-
-.include <bsd.own.mk>
+# $FreeBSD: stable/11/sys/modules/sfxge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
 KMOD=	sfxge
 
-SFXGE= ${.CURDIR}/../../dev/sfxge
+SFXGE= ${SRCTOP}/sys/dev/sfxge
 
 SRCS=	device_if.h bus_if.h pci_if.h
-SRCS+=	opt_inet.h opt_inet6.h opt_sched.h
+SRCS+=	opt_inet.h opt_inet6.h opt_sched.h opt_rss.h
 
-.PATH: ${.CURDIR}/../../dev/sfxge
+.PATH: ${SRCTOP}/sys/dev/sfxge
 SRCS+=	sfxge.c sfxge_dma.c sfxge_ev.c
 SRCS+=	sfxge_intr.c sfxge_mcdi.c sfxge_nvram.c
 SRCS+=	sfxge_port.c sfxge_rx.c sfxge_tx.c
 SRCS+=	sfxge.h sfxge_rx.h sfxge_tx.h sfxge_version.h
 
-.PATH: ${.CURDIR}/../../dev/sfxge/common
+.PATH: ${SRCTOP}/sys/dev/sfxge/common
 SRCS+=	efx_bootcfg.c efx_crc32.c efx_ev.c efx_intr.c efx_lic.c efx_mac.c
 SRCS+=	efx_mcdi.c efx_mon.c efx_nic.c
 SRCS+=	efx_nvram.c efx_phy.c efx_port.c efx_rx.c efx_sram.c efx_tx.c
@@ -44,17 +41,5 @@ SRCS+=	medford_impl.h
 
 # Extra debug checks
 #CFLAGS += -DDEBUG=1
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

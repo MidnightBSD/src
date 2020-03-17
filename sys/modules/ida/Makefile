@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ida/Makefile 124367 2004-01-11 07:01:30Z mdodd $
+# $FreeBSD: stable/11/sys/modules/ida/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/ida
+.PATH:	${SRCTOP}/sys/dev/ida
 
 KMOD=	ida
 SRCS=	ida.c ida_disk.c ida_pci.c \

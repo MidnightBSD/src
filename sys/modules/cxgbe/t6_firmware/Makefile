@@ -1,9 +1,8 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/cxgbe/t6_firmware/Makefile 331719 2018-03-29 01:20:58Z np $
+# $FreeBSD: stable/11/sys/modules/cxgbe/t6_firmware/Makefile 346940 2019-04-30 01:25:02Z np $
 #
 
-T6FW=	${.CURDIR}/../../../dev/cxgbe/firmware
+T6FW=	${SRCTOP}/sys/dev/cxgbe/firmware
 .PATH: ${T6FW}
 
 KMOD=	t6fw_cfg
@@ -18,7 +17,7 @@ FIRMWS+=	${F}:${F:C/.txt//}:1.0.0.0
 .endif
 .endfor
 
-T6FW_VER=	1.16.63.0
+T6FW_VER=	1.23.0.0
 FIRMWS+=	t6fw.fw:t6fw:${T6FW_VER}
 CLEANFILES+=	t6fw.fw
 

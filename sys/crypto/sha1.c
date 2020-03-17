@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: sha1.c,v 1.5 2000/11/08 06:13:08 itojun Exp $	*/
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/sha1.c 116174 2003-06-10 21:44:29Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/sha1.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/cdefs.h>
@@ -250,16 +249,14 @@ sha1_loop(ctxt, input, len)
 }
 
 void
-sha1_result(ctxt, digest0)
-	struct sha1_ctxt *ctxt;
-	caddr_t digest0;
+sha1_result(struct sha1_ctxt *ctxt, char digest0[static SHA1_RESULTLEN])
 {
 	u_int8_t *digest;
 
 	digest = (u_int8_t *)digest0;
 	sha1_pad(ctxt);
 #if BYTE_ORDER == BIG_ENDIAN
-	bcopy(&ctxt->h.b8[0], digest, 20);
+	bcopy(&ctxt->h.b8[0], digest, SHA1_RESULTLEN);
 #else
 	digest[0] = ctxt->h.b8[3]; digest[1] = ctxt->h.b8[2];
 	digest[2] = ctxt->h.b8[1]; digest[3] = ctxt->h.b8[0];

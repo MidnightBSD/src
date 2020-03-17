@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ucycom/Makefile 139399 2004-12-29 08:50:35Z imp $
+# $FreeBSD: stable/11/sys/modules/ucycom/Makefile 346521 2019-04-22 04:11:37Z ian $
 
-S=	${.CURDIR}/../..
-.PATH: $S/dev/usb
+S=	${SRCTOP}/sys
+.PATH: $S/dev/usb/serial
 
 KMOD=	ucycom
 SRCS=	ucycom.c opt_usb.h device_if.h bus_if.h usbdevs.h

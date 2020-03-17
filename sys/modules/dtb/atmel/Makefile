@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/dtb/atmel/Makefile 276846 2015-01-08 18:28:06Z imp $
+# $FreeBSD: stable/11/sys/modules/dtb/atmel/Makefile 276846 2015-01-08 18:28:06Z imp $
 # All the dts files for the boards we might likely support made by Atmel,
 # plus the SAMA5 offerings.
 DTS=at91-sama5d3_xplained.dts at91sam9g20ek.dts ethernut5.dts \

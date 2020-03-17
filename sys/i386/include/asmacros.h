@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/asmacros.h 290668 2015-11-11 01:32:35Z jhb $
+ * $FreeBSD: stable/11/sys/i386/include/asmacros.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -154,13 +153,6 @@
 	pushl	$0 ;							\
 	movw	%fs,(%esp)
 	
-#define	POP_FRAME							\
-	popl	%fs ;							\
-	popl	%es ;							\
-	popl	%ds ;							\
-	popal ;								\
-	addl	$4+4,%esp
-
 /*
  * Access per-CPU data.
  */
@@ -179,37 +171,6 @@
 	movl	%eax, %es ;						\
 	movl	$KPSEL, %eax ;	/* reload with per-CPU data segment */	\
 	movl	%eax, %fs
-
-#ifdef XEN
-#define LOAD_CR3(reg)          \
-        movl    reg,PCPU(CR3); \
-        pushl   %ecx ;         \
-        pushl   %edx ;         \
-        pushl   %esi ;         \
-        pushl   reg ;          \
-        call    xen_load_cr3 ;     \
-        addl    $4,%esp ;      \
-        popl    %esi ;         \
-        popl    %edx ;         \
-        popl    %ecx ;         \
- 
-#define READ_CR3(reg)   movl PCPU(CR3),reg;
-#define LLDT(arg)                 \
-        pushl   %edx ;                    \
-        pushl   %eax ;                    \
-        xorl    %eax,%eax ;               \
-        movl    %eax,%gs ;                \
-        call    i386_reset_ldt ;          \
-        popl    %eax ;                    \
-        popl    %edx 
-#define CLI             call ni_cli
-#else
-#define LOAD_CR3(reg)   movl reg,%cr3; 
-#define READ_CR3(reg)   movl %cr3,reg; 
-#define LLDT(arg)       lldt arg; 
-#define CLI             cli 
-#endif /* !XEN */ 
-
 
 #endif /* LOCORE */
 

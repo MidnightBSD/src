@@ -1,12 +1,9 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/cxgbe/if_cxgbe/Makefile 318851 2017-05-25 01:43:28Z np $
+# $FreeBSD: stable/11/sys/modules/cxgbe/if_cxgbe/Makefile 346934 2019-04-29 22:16:33Z np $
 #
 
-.include <bsd.own.mk>
-
-CXGBE=	${.CURDIR}/../../../dev/cxgbe
-.PATH: ${CXGBE} ${CXGBE}/common
+CXGBE=	${SRCTOP}/sys/dev/cxgbe
+.PATH: ${CXGBE} ${CXGBE}/common ${CXGBE}/cudbg
 
 KMOD=	if_cxgbe
 SRCS=	bus_if.h
@@ -15,33 +12,31 @@ SRCS+=	opt_ddb.h
 SRCS+=	opt_inet.h
 SRCS+=	opt_inet6.h
 SRCS+=	opt_ofed.h
-SRCS+=	pci_if.h
+SRCS+=	opt_rss.h
+SRCS+=	pci_if.h pci_iov_if.h
+SRCS+=	t4_clip.c
+SRCS+=	t4_filter.c
 SRCS+=	t4_hw.c
+SRCS+=	t4_if.c t4_if.h
+SRCS+=	t4_iov.c
 SRCS+=	t4_l2t.c
 SRCS+=	t4_main.c
 SRCS+=	t4_mp_ring.c
 SRCS+=	t4_netmap.c
 SRCS+=	t4_sched.c
 SRCS+=	t4_sge.c
+SRCS+=	t4_smt.c
 SRCS+=	t4_tracer.c
+SRCS+=  cudbg_common.c
+SRCS+=  cudbg_flash_utils.c
+SRCS+=  cudbg_lib.c
+SRCS+=  cudbg_wtp.c
+SRCS+=  fastlz_api.c
+SRCS+=  fastlz.c
 
 # Provide the timestamp of a packet in its header mbuf.
 #CFLAGS+= -DT4_PKT_TIMESTAMP
 
 CFLAGS+= -I${CXGBE}
 
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-	@echo "#define TCP_OFFLOAD 1" >> ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
-
 .include <bsd.kmod.mk>
-CFLAGS+= ${GCC_MS_EXTENSIONS}

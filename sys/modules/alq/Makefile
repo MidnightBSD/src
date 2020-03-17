@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/alq/Makefile 205959 2010-03-31 03:58:57Z lstewart $
+# $FreeBSD: stable/11/sys/modules/alq/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH:  ${.CURDIR}/../../kern
+.PATH:  ${SRCTOP}/sys/kern
 KMOD=	alq
 SRCS=	opt_mac.h vnode_if.h kern_alq.c
 

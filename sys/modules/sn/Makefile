@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sn/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD: stable/11/sys/modules/sn/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/sn
+.PATH: ${SRCTOP}/sys/dev/sn
 
 KMOD=	if_sn
 SRCS=	if_sn.c if_sn_isa.c if_sn_pccard.c device_if.h bus_if.h isa_if.h \

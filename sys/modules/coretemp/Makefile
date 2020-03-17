@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/coretemp/Makefile 171854 2007-08-15 19:26:03Z des $
+# $FreeBSD: stable/11/sys/modules/coretemp/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/coretemp
+.PATH: ${SRCTOP}/sys/dev/coretemp
 
 KMOD=	coretemp
 SRCS=	coretemp.c bus_if.h device_if.h

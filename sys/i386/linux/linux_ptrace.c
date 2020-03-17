@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Alexander Kabaev
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/linux/linux_ptrace.c 304188 2016-08-15 21:10:41Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/linux/linux_ptrace.c 346816 2019-04-28 13:19:28Z dchagin $");
 
 #include "opt_cpu.h"
 
@@ -47,10 +46,6 @@ __FBSDID("$FreeBSD: stable/10/sys/i386/linux/linux_ptrace.c 304188 2016-08-15 21
 #include <i386/linux/linux.h>
 #include <i386/linux/linux_proto.h>
 #include <compat/linux/linux_signal.h>
-
-#if !defined(CPU_DISABLE_SSE) && defined(I686_CPU)
-#define CPU_ENABLE_SSE
-#endif
 
 /*
  *   Linux ptrace requests numbers. Mostly identical to FreeBSD,
@@ -217,7 +212,6 @@ struct linux_pt_fpxreg {
 	l_long		padding[56];
 };
 
-#ifdef CPU_ENABLE_SSE
 static int
 linux_proc_read_fpxregs(struct thread *td, struct linux_pt_fpxreg *fpxregs)
 {
@@ -239,7 +233,6 @@ linux_proc_write_fpxregs(struct thread *td, struct linux_pt_fpxreg *fpxregs)
 	bcopy(fpxregs, &get_pcb_user_save_td(td)->sv_xmm, sizeof(*fpxregs));
 	return (0);
 }
-#endif
 
 int
 linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
@@ -331,14 +324,11 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 		}
 		break;
 	case PTRACE_SETFPXREGS:
-#ifdef CPU_ENABLE_SSE
 		error = copyin((void *)uap->data, &r.fpxreg, sizeof(r.fpxreg));
 		if (error)
 			break;
-#endif
 		/* FALL THROUGH */
 	case PTRACE_GETFPXREGS: {
-#ifdef CPU_ENABLE_SSE
 		struct proc *p;
 		struct thread *td2;
 
@@ -412,9 +402,6 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 
 	fail:
 		PROC_UNLOCK(p);
-#else
-		error = EIO;
-#endif
 		break;
 	}
 	case PTRACE_PEEKUSR:
@@ -425,7 +412,7 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 		if (uap->addr < 0 || uap->addr & (sizeof(l_int) - 1))
 			break;
 		/*
-		 * Allow linux programs to access register values in
+		 * Allow Linux programs to access register values in
 		 * user struct. We simulate this through PT_GET/SETREGS
 		 * as necessary.
 		 */

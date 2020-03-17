@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2013 Luigi Rizzo. All rights reserved.
  *
@@ -28,7 +27,7 @@
 #define NET_PARAVIRT_H
 
  /*
-  * $FreeBSD: stable/10/sys/net/paravirt.h 289385 2015-10-15 20:36:04Z adrian $
+  * $FreeBSD: stable/11/sys/net/paravirt.h 270063 2014-08-16 15:00:01Z luigi $
   *
  Support for virtio-like communication between host (H) and guest (G) NICs.
 

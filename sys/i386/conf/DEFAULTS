@@ -1,17 +1,11 @@
 #
 # DEFAULTS -- Default kernel configuration file for MidnightBSD/i386
-#
-# $FreeBSD: stable/10/sys/i386/conf/DEFAULTS 232619 2012-03-06 20:01:25Z attilio $
-# $MidnightBSD$
 
 machine		i386
 
 # Bus support.
 device		isa
 options 	ISAPNP
-
-# Floating point support.
-device		npx
 
 # Pseudo devices.
 device		mem		# Memory and kernel memory devices
@@ -27,7 +21,6 @@ options 	GEOM_PART_EBR_COMPAT
 options 	GEOM_PART_MBR
 
 # enable support for native hardware
-options 	NATIVE
 device		atpic
 
 options 	NEW_PCIB

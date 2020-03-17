@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/pst/Makefile 119571 2003-08-30 08:01:05Z sos $
+# $FreeBSD: stable/11/sys/modules/pst/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/pst
+.PATH: ${SRCTOP}/sys/dev/pst
 
 KMOD=	pst
 SRCS=	pst-pci.c pst-iop.c pst-raid.c

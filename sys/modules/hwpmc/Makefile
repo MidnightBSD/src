@@ -1,13 +1,16 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/hwpmc/Makefile 263132 2014-03-14 02:37:07Z jhibbits $
+# $FreeBSD: stable/11/sys/modules/hwpmc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH: ${.CURDIR}/../../dev/hwpmc
+.PATH: ${SRCTOP}/sys/dev/hwpmc
 
 KMOD=	hwpmc
 
 SRCS=	hwpmc_mod.c hwpmc_logging.c hwpmc_soft.c vnode_if.h
+
+.if ${MACHINE_CPUARCH} == "aarch64"
+SRCS+=  hwpmc_arm64.c hwpmc_arm64_md.c
+.endif
 
 .if ${MACHINE_CPUARCH} == "amd64"
 SRCS+=	hwpmc_amd.c hwpmc_core.c hwpmc_intel.c hwpmc_piv.c hwpmc_tsc.c
@@ -25,12 +28,8 @@ SRCS+=	hwpmc_pentium.c hwpmc_tsc.c hwpmc_x86.c hwpmc_uncore.c
 SRCS+=	device_if.h bus_if.h
 .endif
 
-.if ${MACHINE_CPUARCH} == "ia64"
-SRCS+=	hwpmc_ia64.c
-.endif
-
 .if ${MACHINE_CPUARCH} == "powerpc"
-SRCS+=	hwpmc_powerpc.c hwpmc_mpc7xxx.c hwpmc_ppc970.c
+SRCS+=	hwpmc_powerpc.c hwpmc_e500.c hwpmc_mpc7xxx.c hwpmc_ppc970.c
 .endif
 
 .if ${MACHINE_CPUARCH} == "sparc64"

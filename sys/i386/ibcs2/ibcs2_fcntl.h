@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ibcs2_fcntl.h,v 1.2 1994/10/26 02:52:54 cgd Exp $	*/
-/* $FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_fcntl.h 139799 2005-01-06 23:22:04Z imp $ */
+/* $FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_fcntl.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 1994 Scott Bartram

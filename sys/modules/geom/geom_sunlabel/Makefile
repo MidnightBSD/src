@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_sunlabel/Makefile 115479 2003-05-31 18:36:41Z phk $
+# $FreeBSD: stable/11/sys/modules/geom/geom_sunlabel/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom
+.PATH: ${SRCTOP}/sys/geom
 
 KMOD=	geom_sunlabel
 SRCS=	geom_sunlabel.c geom_sunlabel_enc.c

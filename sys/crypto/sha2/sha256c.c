@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2005 Colin Percival
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/crypto/sha2/sha256c.c 314335 2017-02-27 13:05:17Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/crypto/sha2/sha256c.c 300966 2016-05-29 17:26:40Z cperciva $");
 
 #include <sys/endian.h>
 #include <sys/types.h>
@@ -288,17 +287,17 @@ SHA256_Update(SHA256_CTX * ctx, const void *in, size_t len)
  * and clears the context state.
  */
 void
-SHA256_Final(unsigned char digest[32], SHA256_CTX * ctx)
+SHA256_Final(unsigned char digest[static SHA256_DIGEST_LENGTH], SHA256_CTX *ctx)
 {
 
 	/* Add padding */
 	SHA256_Pad(ctx);
 
 	/* Write the hash */
-	be32enc_vect(digest, ctx->state, 32);
+	be32enc_vect(digest, ctx->state, SHA256_DIGEST_LENGTH);
 
 	/* Clear the context state */
-	memset((void *)ctx, 0, sizeof(*ctx));
+	memset(ctx, 0, sizeof(*ctx));
 }
 
 #ifdef WEAK_REFS

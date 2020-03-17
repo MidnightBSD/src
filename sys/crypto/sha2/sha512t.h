@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Allan Jude <allanjude@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/crypto/sha2/sha512t.h 314550 2017-03-02 09:10:39Z avg $
+ * $FreeBSD: stable/11/sys/crypto/sha2/sha512t.h 310372 2016-12-21 18:42:04Z emaste $
  */
 
 #ifndef _SHA512T_H_
@@ -56,6 +55,12 @@ __BEGIN_DECLS
 #ifndef SHA512_224_End
 #define SHA512_224_End		_libmd_SHA512_224_End
 #endif
+#ifndef SHA512_224_Fd
+#define SHA512_224_Fd		_libmd_SHA512_224_Fd
+#endif
+#ifndef SHA512_224_FdChunk
+#define SHA512_224_FdChunk	_libmd_SHA512_224_FdChunk
+#endif
 #ifndef SHA512_224_File
 #define SHA512_224_File		_libmd_SHA512_224_File
 #endif
@@ -85,6 +90,12 @@ __BEGIN_DECLS
 #ifndef SHA512_256_End
 #define SHA512_256_End		_libmd_SHA512_256_End
 #endif
+#ifndef SHA512_256_Fd
+#define SHA512_256_Fd		_libmd_SHA512_256_Fd
+#endif
+#ifndef SHA512_256_FdChunk
+#define SHA512_256_FdChunk	_libmd_SHA512_256_FdChunk
+#endif
 #ifndef SHA512_256_File
 #define SHA512_256_File		_libmd_SHA512_256_File
 #endif
@@ -104,19 +115,25 @@ __BEGIN_DECLS
 
 void	SHA512_224_Init(SHA512_CTX *);
 void	SHA512_224_Update(SHA512_CTX *, const void *, size_t);
-void	SHA512_224_Final(unsigned char [SHA512_224_DIGEST_LENGTH], SHA512_CTX *);
+void	SHA512_224_Final(unsigned char [__min_size(SHA512_224_DIGEST_LENGTH)],
+    SHA512_CTX *);
 #ifndef _KERNEL
 char   *SHA512_224_End(SHA512_CTX *, char *);
 char   *SHA512_224_Data(const void *, unsigned int, char *);
+char   *SHA512_224_Fd(int, char *);
+char   *SHA512_224_FdChunk(int, char *, off_t, off_t);
 char   *SHA512_224_File(const char *, char *);
 char   *SHA512_224_FileChunk(const char *, char *, off_t, off_t);
 #endif
 void	SHA512_256_Init(SHA512_CTX *);
 void	SHA512_256_Update(SHA512_CTX *, const void *, size_t);
-void	SHA512_256_Final(unsigned char [SHA512_256_DIGEST_LENGTH], SHA512_CTX *);
+void	SHA512_256_Final(unsigned char [__min_size(SHA512_256_DIGEST_LENGTH)],
+    SHA512_CTX *);
 #ifndef _KERNEL
 char   *SHA512_256_End(SHA512_CTX *, char *);
 char   *SHA512_256_Data(const void *, unsigned int, char *);
+char   *SHA512_256_Fd(int, char *);
+char   *SHA512_256_FdChunk(int, char *, off_t, off_t);
 char   *SHA512_256_File(const char *, char *);
 char   *SHA512_256_FileChunk(const char *, char *, off_t, off_t);
 #endif

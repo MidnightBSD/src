@@ -4,8 +4,6 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $FreeBSD: stable/10/sys/i386/conf/NOTES 330680 2018-03-09 02:55:27Z rpokala $
-# $MidnightBSD$
 
 #
 # We want LINT to cover profiling as well.
@@ -16,6 +14,22 @@ profile         2
 # kernel modules.
 #
 options 	KDTRACE_HOOKS
+
+# DTrace core
+# NOTE: introduces CDDL-licensed components into the kernel
+#device		dtrace
+
+# DTrace modules
+#device		dtrace_profile
+#device		dtrace_sdt
+#device		dtrace_fbt
+#device		dtrace_systrace
+#device		dtrace_prototype
+#device		dtnfscl
+#device		dtmalloc
+
+# Alternatively include all the DTrace modules
+#device		dtraceall
 
 
 #####################################################################
@@ -99,15 +113,6 @@ cpu		I686_CPU		# aka Pentium Pro(tm)
 # reorder).  This option should not be used if you use memory mapped
 # I/O device(s).
 #
-# CPU_DISABLE_CMPXCHG disables the CMPXCHG instruction on > i386 IA32
-# machines.  VmWare 3.x seems to emulate this instruction poorly, causing
-# the guest OS to run very slowly.  This problem appears to be fixed in
-# VmWare 4.x, at least in version 4.5.2, so that enabling this option with
-# VmWare 4.x will result in locking operations to be 20-30 times slower.
-# Enabling this with an SMP kernel will cause the kernel to be unusable.
-#
-# CPU_DISABLE_SSE explicitly prevents I686_CPU from turning on SSE.
-#
 # CPU_ELAN enables support for AMDs ElanSC520 CPU.
 #    CPU_ELAN_PPS enables precision timestamp code.
 #    CPU_ELAN_XTAL sets the clock crystal frequency in Hz.
@@ -185,8 +190,6 @@ options 	CPU_BLUELIGHTNING_FPU_OP_CACHE
 options 	CPU_BTB_EN
 options 	CPU_DIRECT_MAPPED_CACHE
 options 	CPU_DISABLE_5X86_LSSER
-options 	CPU_DISABLE_CMPXCHG
-#options 	CPU_DISABLE_SSE
 options 	CPU_ELAN
 options 	CPU_ELAN_PPS
 options 	CPU_ELAN_XTAL=32768000
@@ -297,7 +300,7 @@ device		apm_saver	# Requires APM
 #
 # ISA bus
 #
-device		isa		# Required by npx(4)
+device		isa
 
 #
 # Options for `isa':
@@ -357,11 +360,6 @@ options 	EISA_SLOTS=12
 device		mca
 
 #
-# PCI bus & PCI options:
-#
-device		pci
-
-#
 # AGP GART support
 device		agp
 
@@ -384,8 +382,7 @@ device		dpms		# DPMS suspend & resume via VESA BIOS
 options 	X86BIOS
 
 #
-# The Numeric Processing eXtension driver.  This is non-optional.
-device		npx
+# Hints for the non-optional Numeric Processing eXtension driver.
 hint.npx.0.flags="0x0"
 hint.npx.0.irq="13"
 
@@ -433,7 +430,7 @@ hint.atkbd.0.irq="1"
 
 # Options for atkbd:
 options 	ATKBD_DFLT_KEYMAP	# specify the built-in keymap
-makeoptions	ATKBD_DFLT_KEYMAP=jp.106
+makeoptions	ATKBD_DFLT_KEYMAP=fr.dvorak
 
 # `flags' for atkbd:
 #       0x01    Force detection of keyboard, else we always assume a keyboard
@@ -465,6 +462,9 @@ options 	VGA_WIDTH90		# support 90 column modes
 
 # Debugging.
 options 	VGA_DEBUG
+
+# vt(4) drivers.
+device		vt_vga
 
 # Linear framebuffer driver for S3 VESA 1.2 cards. Works on top of VESA.
 device		s3pci
@@ -575,13 +575,13 @@ hint.mse.0.irq="5"
 # ipw:	Intel PRO/Wireless 2100 IEEE 802.11 adapter
 # iwi:	Intel PRO/Wireless 2200BG/2225BG/2915ABG IEEE 802.11 adapters
 #	Requires the iwi firmware module
-# iwn:	Intel Wireless WiFi Link 4965AGN 802.11 network adapters
+# iwn:	Intel Wireless WiFi Link 1000/105/135/2000/4965/5000/6000/6050 abgn
+#	802.11 network adapters
 #	Requires the iwn firmware module
-# mlx4ib: Mellanox ConnectX HCA InfiniBand
-# mlxen: Mellanox ConnectX HCA Ethernet
 # mthca: Mellanox HCA InfiniBand
+# mlx4ib: Mellanox ConnectX HCA InfiniBand
+# mlx4en: Mellanox ConnectX HCA Ethernet
 # nfe:	nVidia nForce MCP on-board Ethernet Networking (BSD open source)
-# nve:	nVidia nForce MCP on-board Ethernet Networking
 # sbni: Granch SBNI12-xx ISA and PCI adapters
 # vmx:	VMware VMXNET3 Ethernet (BSD open source)
 # wl:   Lucent Wavelan (ISA card only).
@@ -624,11 +624,11 @@ hint.le.0.at="isa"
 hint.le.0.port="0x280"
 hint.le.0.irq="10"
 hint.le.0.drq="0"
-device  	mlx4ib		# Mellanox ConnectX HCA InfiniBand
-device  	mlxen		# Mellanox ConnectX HCA Ethernet
 device  	mthca		# Mellanox HCA InfiniBand
+device		mlx4		# Shared code module between IB and Ethernet
+device  	mlx4ib		# Mellanox ConnectX HCA InfiniBand
+device  	mlx4en		# Mellanox ConnectX HCA Ethernet
 device		nfe		# nVidia nForce MCP on-board Ethernet
-device		nve		# nVidia nForce MCP on-board Ethernet Networking
 device		sbni
 hint.sbni.0.at="isa"
 hint.sbni.0.port="0x210"
@@ -655,12 +655,18 @@ device		wpi		# Intel 3945ABG wireless NICs.
 #   iwiibssfw:		IBSS mode firmware
 #   iwimonitorfw:	Monitor mode firmware
 # Intel Wireless WiFi Link 4965/1000/5000/6000 series firmware:
-#   iwnfw:		Single module to support the 4965/1000/5000/5150/6000
-#   iwn4965fw:		Specific module for the 4965 only
+#   iwnfw:		Single module to support all devices
 #   iwn1000fw:		Specific module for the 1000 only
+#   iwn105fw:		Specific module for the 105 only
+#   iwn135fw:		Specific module for the 135 only
+#   iwn2000fw:		Specific module for the 2000 only
+#   iwn2030fw:		Specific module for the 2030 only
+#   iwn4965fw:		Specific module for the 4965 only
 #   iwn5000fw:		Specific module for the 5000 only
 #   iwn5150fw:		Specific module for the 5150 only
 #   iwn6000fw:		Specific module for the 6000 only
+#   iwn6000g2afw:	Specific module for the 6000g2a only
+#   iwn6000g2bfw:	Specific module for the 6000g2b only
 #   iwn6050fw:		Specific module for the 6050 only
 # wpifw:	Intel 3945ABG Wireless LAN Controller firmware
 
@@ -673,13 +679,28 @@ device		ipwbssfw
 device		ipwibssfw
 device		ipwmonitorfw
 device		iwnfw
-device		iwn4965fw
 device		iwn1000fw
+device		iwn105fw
+device		iwn135fw
+device		iwn2000fw
+device		iwn2030fw
+device		iwn4965fw
 device		iwn5000fw
 device		iwn5150fw
 device		iwn6000fw
+device		iwn6000g2afw
+device		iwn6000g2bfw
 device		iwn6050fw
 device		wpifw
+
+#
+# Non-Transparent Bridge (NTB) drivers
+#
+device		if_ntb		# Virtual NTB network interface
+device		ntb_transport	# NTB packet transport driver
+device		ntb		# NTB hardware interface
+device		ntb_hw_intel	# Intel NTB hardware driver
+device		ntb_hw_plx	# PLX NTB hardware driver
 
 #
 # ATA raid adapters
@@ -723,12 +744,6 @@ device		aacp	# SCSI Passthrough interface (optional, CAM required)
 #
 # Adaptec by PMC RAID controllers, Series 6/7/8 and upcoming families
 device		aacraid		# Container interface, CAM required
-
-# The 'asr' driver provides support for current DPT/Adaptec SCSI RAID
-# controllers (SmartRAID V and VI and later).
-# These controllers require the CAM infrastructure.
-#
-device		asr
 
 #
 # Highpoint RocketRAID 27xx.
@@ -866,7 +881,7 @@ device		spic
 hint.spic.0.at="isa"
 hint.spic.0.port="0x10a0"
 device		asmc
-#device		si
+device		si
 device		tpm
 device		padlock_rng	# VIA Padlock RNG
 device		rdrand_rng	# Intel Bull Mountain RNG
@@ -970,10 +985,13 @@ options 	NKPT=31
 # ABI Emulation
 
 # Enable iBCS2 runtime support for SCO and ISC binaries
-options 	IBCS2
+#options 	IBCS2
 
 # Emulate spx device for client side of SVR3 local X interface
 options 	SPX_HACK
+
+# Enable 32-bit runtime support for CloudABI binaries.
+options 	COMPAT_CLOUDABI32
 
 # Enable Linux ABI emulation
 options 	COMPAT_LINUX
@@ -1012,9 +1030,6 @@ device		streams		# STREAMS network driver (required for svr4).
 # Enable NDIS binary driver support
 options 	NDISAPI
 device		ndis
-
-# Linux-specific pseudo devices support
-device		lindev
 
 
 #####################################################################
@@ -1067,9 +1082,3 @@ options 	VM_KMEM_SIZE_MAX
 options 	VM_KMEM_SIZE_SCALE
 
 
-# asr old ioctls support, needed by raidutils
-
-options 	ASR_COMPAT
-
-# Module to enable execution of application via emulators like QEMU
-options         IMAGACT_BINMISC

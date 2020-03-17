@@ -1,11 +1,10 @@
-/* $MidnightBSD$ */
 /*-
  *  modified for EXT2FS support in Lites 1.1
  *
  *  Aug 1995, Godmar Back (gback@cs.utah.edu)
  *  University of Utah, Department of Computer Science
  *
- * $FreeBSD: stable/10/sys/fs/ext2fs/ext2fs.h 320839 2017-07-09 15:09:15Z pfg $
+ * $FreeBSD: stable/11/sys/fs/ext2fs/ext2fs.h 322814 2017-08-23 15:43:59Z pfg $
  */
 /*-
  * Copyright (c) 2009 Aditya Sarawgi
@@ -88,7 +87,7 @@ struct ext2fs {
 	uint32_t  e3fs_journal_dev;	/* device number of journal file */
 	uint32_t  e3fs_last_orphan;	/* start of list of inodes to delete */
 	uint32_t  e3fs_hash_seed[4];	/* HTREE hash seed */
-	char      e3fs_def_hash_version; /* Default hash version to use */
+	char      e3fs_def_hash_version;/* Default hash version to use */
 	char      e3fs_jnl_backup_type;
 	uint16_t  e3fs_desc_size;	/* size of group descriptor */
 	uint32_t  e3fs_default_mount_opts;
@@ -98,13 +97,13 @@ struct ext2fs {
 	uint32_t  e4fs_bcount_hi;	/* high bits of blocks count */
 	uint32_t  e4fs_rbcount_hi;	/* high bits of reserved blocks count */
 	uint32_t  e4fs_fbcount_hi;	/* high bits of free blocks count */
-	uint16_t  e4fs_min_extra_isize; /* all inodes have at least some bytes */
-	uint16_t  e4fs_want_extra_isize; /* inodes must reserve some bytes */
+	uint16_t  e4fs_min_extra_isize; /* all inodes have some bytes */
+	uint16_t  e4fs_want_extra_isize;/* inodes must reserve some bytes */
 	uint32_t  e4fs_flags;		/* miscellaneous flags */
 	uint16_t  e4fs_raid_stride;	/* RAID stride */
-	uint16_t  e4fs_mmpintv;		/* number of seconds to wait in MMP checking */
+	uint16_t  e4fs_mmpintv;		/* seconds to wait in MMP checking */
 	uint64_t  e4fs_mmpblk;		/* block for multi-mount protection */
-	uint32_t  e4fs_raid_stripe_wid; /* blocks on all data disks (N * stride) */
+	uint32_t  e4fs_raid_stripe_wid; /* blocks on data disks (N * stride) */
 	uint8_t   e4fs_log_gpf;		/* FLEX_BG group size */
 	uint8_t   e4fs_chksum_type;	/* metadata checksum algorithm used */
 	uint8_t   e4fs_encrypt;		/* versioning level for encryption */
@@ -118,7 +117,7 @@ struct ext2fs {
 	uint32_t  e4fs_first_errtime;	/* first time an error happened */
 	uint32_t  e4fs_first_errino;	/* inode involved in first error */
 	uint64_t  e4fs_first_errblk;	/* block involved of first error */
-	uint8_t   e4fs_first_errfunc[32]; /* function where error happened */
+	uint8_t   e4fs_first_errfunc[32];/* function where error happened */
 	uint32_t  e4fs_first_errline;	/* line number where error happened */
 	uint32_t  e4fs_last_errtime;	/* most recent time of an error */
 	uint32_t  e4fs_last_errino;	/* inode involved in last error */
@@ -128,10 +127,10 @@ struct ext2fs {
 	uint8_t   e4fs_mount_opts[64];
 	uint32_t  e4fs_usrquota_inum;	/* inode for tracking user quota */
 	uint32_t  e4fs_grpquota_inum;	/* inode for tracking group quota */
-	uint32_t  e4fs_overhead_clusters; /* overhead blocks/clusters */
+	uint32_t  e4fs_overhead_clusters;/* overhead blocks/clusters */
 	uint32_t  e4fs_backup_bgs[2];	/* groups with sparse_super2 SBs */
-	uint8_t   e4fs_encrypt_algos[4]; /* encryption algorithms in use */
-	uint8_t   e4fs_encrypt_pw_salt[16]; /* salt used for string2key */
+	uint8_t   e4fs_encrypt_algos[4];/* encryption algorithms in use */
+	uint8_t   e4fs_encrypt_pw_salt[16];/* salt used for string2key */
 	uint32_t  e4fs_lpf_ino;		/* location of the lost+found inode */
 	uint32_t  e4fs_proj_quota_inum;	/* inode for tracking project quota */
 	uint32_t  e4fs_chksum_seed;	/* checksum seed */
@@ -204,9 +203,13 @@ struct csum {
  * compatible/incompatible features
  */
 #define	EXT2F_COMPAT_PREALLOC		0x0001
+#define	EXT2F_COMPAT_IMAGIC_INODES	0x0002
 #define	EXT2F_COMPAT_HASJOURNAL		0x0004
+#define	EXT2F_COMPAT_EXT_ATTR		0x0008
 #define	EXT2F_COMPAT_RESIZE		0x0010
 #define	EXT2F_COMPAT_DIRHASHINDEX	0x0020
+#define	EXT2F_COMPAT_LAZY_BG		0x0040
+#define	EXT2F_COMPAT_EXCLUDE_BITMAP	0x0100
 #define	EXT2F_COMPAT_SPARSESUPER2	0x0200
 
 #define	EXT2F_ROCOMPAT_SPARSESUPER	0x0001
@@ -216,15 +219,18 @@ struct csum {
 #define	EXT2F_ROCOMPAT_GDT_CSUM		0x0010
 #define	EXT2F_ROCOMPAT_DIR_NLINK	0x0020
 #define	EXT2F_ROCOMPAT_EXTRA_ISIZE	0x0040
+#define	EXT2F_ROCOMPAT_HAS_SNAPSHOT	0x0080
 #define	EXT2F_ROCOMPAT_QUOTA		0x0100
 #define	EXT2F_ROCOMPAT_BIGALLOC		0x0200
 #define	EXT2F_ROCOMPAT_METADATA_CKSUM	0x0400
+#define	EXT2F_ROCOMPAT_REPLICA		0x0800
 #define	EXT2F_ROCOMPAT_READONLY		0x1000
 #define	EXT2F_ROCOMPAT_PROJECT		0x2000
 
 #define	EXT2F_INCOMPAT_COMP		0x0001
 #define	EXT2F_INCOMPAT_FTYPE		0x0002
 #define	EXT2F_INCOMPAT_RECOVER		0x0004
+#define	EXT2F_INCOMPAT_JOURNAL_DEV	0x0008
 #define	EXT2F_INCOMPAT_META_BG		0x0010
 #define	EXT2F_INCOMPAT_EXTENTS		0x0040
 #define	EXT2F_INCOMPAT_64BIT		0x0080
@@ -237,6 +243,58 @@ struct csum {
 #define	EXT2F_INCOMPAT_INLINE_DATA	0x8000
 #define	EXT2F_INCOMPAT_ENCRYPT		0x10000
 
+struct ext2_feature
+{
+	int mask;
+	const char *name;
+};
+
+static const struct ext2_feature compat[] = {
+	{ EXT2F_COMPAT_PREALLOC,       "dir_prealloc"    },
+	{ EXT2F_COMPAT_IMAGIC_INODES,  "imagic_inodes"   },
+	{ EXT2F_COMPAT_HASJOURNAL,     "has_journal"     },
+	{ EXT2F_COMPAT_EXT_ATTR,       "ext_attr"        },
+	{ EXT2F_COMPAT_RESIZE,         "resize_inode"    },
+	{ EXT2F_COMPAT_DIRHASHINDEX,   "dir_index"       },
+	{ EXT2F_COMPAT_EXCLUDE_BITMAP, "snapshot_bitmap" },
+	{ EXT2F_COMPAT_SPARSESUPER2,   "sparse_super2"   }
+};
+
+static const struct ext2_feature ro_compat[] = {
+	{ EXT2F_ROCOMPAT_SPARSESUPER,    "sparse_super"  },
+	{ EXT2F_ROCOMPAT_LARGEFILE,      "large_file"    },
+	{ EXT2F_ROCOMPAT_BTREE_DIR,      "btree_dir"     },
+	{ EXT2F_ROCOMPAT_HUGE_FILE,      "huge_file"     },
+	{ EXT2F_ROCOMPAT_GDT_CSUM,       "uninit_groups" },
+	{ EXT2F_ROCOMPAT_DIR_NLINK,      "dir_nlink"     },
+	{ EXT2F_ROCOMPAT_EXTRA_ISIZE,    "extra_isize"   },
+	{ EXT2F_ROCOMPAT_HAS_SNAPSHOT,   "snapshot"      },
+	{ EXT2F_ROCOMPAT_QUOTA,          "quota"         },
+	{ EXT2F_ROCOMPAT_BIGALLOC,       "bigalloc"      },
+	{ EXT2F_ROCOMPAT_METADATA_CKSUM, "metadata_csum" },
+	{ EXT2F_ROCOMPAT_REPLICA,        "replica"       },
+	{ EXT2F_ROCOMPAT_READONLY,       "ro"            },
+	{ EXT2F_ROCOMPAT_PROJECT,        "project"       }
+};
+
+static const struct ext2_feature incompat[] = {
+	{ EXT2F_INCOMPAT_COMP,        "compression"        },
+	{ EXT2F_INCOMPAT_FTYPE,       "filetype"           },
+	{ EXT2F_INCOMPAT_RECOVER,     "needs_recovery"     },
+	{ EXT2F_INCOMPAT_JOURNAL_DEV, "journal_dev"        },
+	{ EXT2F_INCOMPAT_META_BG,     "meta_bg"            },
+	{ EXT2F_INCOMPAT_EXTENTS,     "extents"            },
+	{ EXT2F_INCOMPAT_64BIT,       "64bit"              },
+	{ EXT2F_INCOMPAT_MMP,         "mmp"                },
+	{ EXT2F_INCOMPAT_FLEX_BG,     "flex_bg"            },
+	{ EXT2F_INCOMPAT_EA_INODE,    "ea_inode"           },
+	{ EXT2F_INCOMPAT_DIRDATA,     "dirdata"            },
+	{ EXT2F_INCOMPAT_CSUM_SEED,   "metadata_csum_seed" },
+	{ EXT2F_INCOMPAT_LARGEDIR,    "large_dir"          },
+	{ EXT2F_INCOMPAT_INLINE_DATA, "inline_data"        },
+	{ EXT2F_INCOMPAT_ENCRYPT,     "encrypt"            }
+};
+
 /*
  * Features supported in this implementation
  *
@@ -246,7 +304,7 @@ struct csum {
  * - EXT2F_ROCOMPAT_EXTRA_ISIZE
  * - EXT2F_INCOMPAT_FTYPE
  *
- * We partially support (read-only) the following EXT4 features:
+ * We partially (read-only) support the following EXT4 features:
  * - EXT2F_ROCOMPAT_HUGE_FILE
  * - EXT2F_INCOMPAT_EXTENTS
  *
@@ -259,6 +317,7 @@ struct csum {
 #define	EXT2F_COMPAT_SUPP		EXT2F_COMPAT_DIRHASHINDEX
 #define	EXT2F_ROCOMPAT_SUPP		(EXT2F_ROCOMPAT_SPARSESUPER | \
 					 EXT2F_ROCOMPAT_LARGEFILE | \
+					 EXT2F_ROCOMPAT_GDT_CSUM | \
 					 EXT2F_ROCOMPAT_HUGE_FILE | \
 					 EXT2F_ROCOMPAT_EXTRA_ISIZE)
 #define	EXT2F_INCOMPAT_SUPP		EXT2F_INCOMPAT_FTYPE
@@ -294,6 +353,10 @@ struct csum {
 #define	E2FS_SIGNED_HASH	0x0001
 #define	E2FS_UNSIGNED_HASH	0x0002
 
+#define	EXT2_BG_INODE_UNINIT	0x0001	/* Inode table/bitmap not in use */
+#define	EXT2_BG_BLOCK_UNINIT	0x0002	/* Block bitmap not in use */
+#define	EXT2_BG_INODE_ZEROED	0x0004	/* On-disk itable initialized to zero */
+
 /* ext2 file system block group descriptor */
 
 struct ext2_gd {
@@ -311,9 +374,8 @@ struct ext2_gd {
 	uint16_t ext4bgd_csum;		/* group descriptor checksum */
 };
 
-
-/* EXT2FS metadatas are stored in little-endian byte order. These macros
- * helps reading these metadatas
+/* EXT2FS metadata is stored in little-endian byte order. These macros
+ * help reading it.
  */
 
 #define	e2fs_cgload(old, new, size) memcpy((new), (old), (size));

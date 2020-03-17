@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/bktr/bktr_mem/Makefile 160063 2006-07-01 10:51:55Z markm $
+# $FreeBSD: stable/11/sys/modules/bktr/bktr_mem/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../dev/bktr
+.PATH: ${SRCTOP}/sys/dev/bktr
 
 KMOD=	bktr_mem 
 SRCS=	bktr_mem.c

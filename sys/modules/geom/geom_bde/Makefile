@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_bde/Makefile 314327 2017-02-27 08:27:38Z avg $
+# $FreeBSD: stable/11/sys/modules/geom/geom_bde/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/bde
-.PATH: ${.CURDIR}/../../../crypto/rijndael
-.PATH: ${.CURDIR}/../../../crypto/sha2
+.PATH: ${SRCTOP}/sys/geom/bde
+.PATH: ${SRCTOP}/sys/crypto/rijndael
+.PATH: ${SRCTOP}/sys/crypto/sha2
 
 KMOD=	geom_bde
 SRCS=	g_bde.c g_bde_crypt.c g_bde_lock.c g_bde_work.c

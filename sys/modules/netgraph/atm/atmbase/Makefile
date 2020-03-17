@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netgraph/atm/atmbase/Makefile 121938 2003-11-03 09:18:52Z harti $
+# $FreeBSD: stable/11/sys/modules/netgraph/atm/atmbase/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #
 
-LIBBASE= ${.CURDIR}/../../../../contrib/ngatm
+LIBBASE= ${SRCTOP}/sys/contrib/ngatm
 
-.PATH: ${.CURDIR}/../../../../netgraph/atm
+.PATH: ${SRCTOP}/sys/netgraph/atm
 .PATH: ${LIBBASE}/netnatm/misc
 .PATH: ${LIBBASE}/netnatm/msg
 

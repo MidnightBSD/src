@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/virtio/Makefile 275273 2014-11-29 22:48:40Z bryanv $
+# $FreeBSD: stable/11/sys/modules/virtio/Makefile 273515 2014-10-23 04:47:32Z bryanv $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

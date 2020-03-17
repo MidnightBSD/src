@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/net80211/ieee80211_amrr.h 206358 2010-04-07 15:29:13Z rpaulo $ */
+/* $FreeBSD: stable/11/sys/net80211/ieee80211_amrr.h 206358 2010-04-07 15:29:13Z rpaulo $ */
 /*	$OpenBSD: ieee80211_amrr.h,v 1.3 2006/06/17 19:34:31 damien Exp $	*/
 
 /*-

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/auxio/Makefile 142435 2005-02-25 06:59:56Z yongari $
+# $FreeBSD: stable/11/sys/modules/auxio/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../dev/auxio
+.PATH: ${SRCTOP}/sys/dev/auxio
 
 KMOD=	auxio
 

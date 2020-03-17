@@ -1,23 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netgraph/netflow/Makefile 232921 2012-03-13 11:08:40Z melifaro $
+# $FreeBSD: stable/11/sys/modules/netgraph/netflow/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Author: Gleb Smirnoff <glebius@freebsd.org>
 #
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../../netgraph/netflow
+.PATH: ${SRCTOP}/sys/netgraph/netflow
 
 KMOD=   ng_netflow
 SRCS=   ng_netflow.c netflow.c netflow_v9.c opt_inet6.h opt_route.h
-
-.if !defined(KERNBUILDDIR)
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-
-.endif
 
 .include <bsd.kmod.mk>

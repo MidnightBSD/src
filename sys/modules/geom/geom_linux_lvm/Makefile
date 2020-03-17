@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_linux_lvm/Makefile 176418 2008-02-20 07:50:13Z thompsa $
+# $FreeBSD: stable/11/sys/modules/geom/geom_linux_lvm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/linux_lvm
+.PATH: ${SRCTOP}/sys/geom/linux_lvm
 
 KMOD=	geom_linux_lvm
 SRCS=	g_linux_lvm.c

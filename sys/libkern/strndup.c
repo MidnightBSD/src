@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/libkern/strndup.c 270892 2014-08-31 21:18:23Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sys/libkern/strndup.c 270096 2014-08-17 09:44:42Z trasz $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

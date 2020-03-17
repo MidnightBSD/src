@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1999-2000 by Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/net/if_tap.c 326692 2017-12-08 15:26:57Z hselasky $
+ * $FreeBSD: stable/11/sys/net/if_tap.c 348126 2019-05-22 22:56:05Z kevans $
  * $Id: if_tap.c,v 0.21 2000/07/23 21:46:02 max Exp $
  */
 
@@ -41,6 +40,7 @@
 
 #include <sys/param.h>
 #include <sys/conf.h>
+#include <sys/lock.h>
 #include <sys/fcntl.h>
 #include <sys/filio.h>
 #include <sys/jail.h>
@@ -55,6 +55,7 @@
 #include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
+#include <sys/sx.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/ttycom.h>
@@ -64,6 +65,7 @@
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_clone.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
@@ -163,6 +165,9 @@ MALLOC_DECLARE(M_TAP);
 MALLOC_DEFINE(M_TAP, CDEV_NAME, "Ethernet tunnel interface");
 SYSCTL_INT(_debug, OID_AUTO, if_tap_debug, CTLFLAG_RW, &tapdebug, 0, "");
 
+static struct sx tap_ioctl_sx;
+SX_SYSINIT(tap_ioctl_sx, &tap_ioctl_sx, "tap_ioctl");
+
 SYSCTL_DECL(_net_link);
 static SYSCTL_NODE(_net_link, OID_AUTO, tap, CTLFLAG_RW, 0,
     "Ethernet tunnel software network interface");
@@ -170,13 +175,12 @@ SYSCTL_INT(_net_link_tap, OID_AUTO, user_open, CTLFLAG_RW, &tapuopen, 0,
 	"Allow user to open /dev/tap (based on node permissions)");
 SYSCTL_INT(_net_link_tap, OID_AUTO, up_on_open, CTLFLAG_RW, &tapuponopen, 0,
 	"Bring interface up when /dev/tap is opened");
-SYSCTL_INT(_net_link_tap, OID_AUTO, devfs_cloning, CTLFLAG_RW, &tapdclone, 0,
-	"Enably legacy devfs interface creation");
+SYSCTL_INT(_net_link_tap, OID_AUTO, devfs_cloning, CTLFLAG_RWTUN, &tapdclone, 0,
+	"Enable legacy devfs interface creation");
 SYSCTL_INT(_net_link_tap, OID_AUTO, debug, CTLFLAG_RW, &tapdebug, 0, "");
 
-TUNABLE_INT("net.link.tap.devfs_cloning", &tapdclone);
-
 DEV_MODULE(if_tap, tapmodevent, NULL);
+MODULE_VERSION(if_tap, 1);
 
 static int
 tap_clone_create(struct if_clone *ifc, int unit, caddr_t params)
@@ -219,11 +223,17 @@ tap_destroy(struct tap_softc *tp)
 	struct ifnet *ifp = tp->tap_ifp;
 
 	CURVNET_SET(ifp->if_vnet);
+
 	destroy_dev(tp->tap_dev);
 	seldrain(&tp->tap_rsel);
 	knlist_clear(&tp->tap_rsel.si_note, 0);
 	knlist_destroy(&tp->tap_rsel.si_note);
 	ether_ifdetach(ifp);
+
+	sx_xlock(&tap_ioctl_sx);
+	ifp->if_softc = NULL;
+	sx_xunlock(&tap_ioctl_sx);
+
 	if_free(ifp);
 
 	mtx_destroy(&tp->tap_mtx);
@@ -534,11 +544,11 @@ tapclose(struct cdev *dev, int foo, int bar, struct thread *td)
 	IF_DRAIN(&ifp->if_snd);
 
 	/*
-	 * do not bring the interface down, and do not anything with
-	 * interface, if we are in VMnet mode. just close the device.
+	 * Do not bring the interface down, and do not anything with
+	 * interface, if we are in VMnet mode. Just close the device.
 	 */
-
-	if (((tp->tap_flags & TAP_VMNET) == 0) && (ifp->if_flags & IFF_UP)) {
+	if (((tp->tap_flags & TAP_VMNET) == 0) &&
+	    (ifp->if_flags & (IFF_UP | IFF_LINK0)) == IFF_UP) {
 		mtx_unlock(&tp->tap_mtx);
 		if_down(ifp);
 		mtx_lock(&tp->tap_mtx);
@@ -602,12 +612,18 @@ tapifinit(void *xtp)
 static int
 tapifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
-	struct tap_softc	*tp = ifp->if_softc;
+	struct tap_softc	*tp;
 	struct ifreq		*ifr = (struct ifreq *)data;
 	struct ifstat		*ifs = NULL;
 	struct ifmediareq	*ifmr = NULL;
 	int			 dummy, error = 0;
 
+	sx_xlock(&tap_ioctl_sx);
+	tp = ifp->if_softc;
+	if (tp == NULL) {
+		error = ENXIO;
+		goto bad;
+	}
 	switch (cmd) {
 		case SIOCSIFFLAGS: /* XXX -- just like vmnet does */
 		case SIOCADDMULTI:
@@ -636,12 +652,12 @@ tapifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 
 		case SIOCGIFSTATUS:
 			ifs = (struct ifstat *)data;
-			dummy = strlen(ifs->ascii);
 			mtx_lock(&tp->tap_mtx);
-			if (tp->tap_pid != 0 && dummy < sizeof(ifs->ascii))
-				snprintf(ifs->ascii + dummy,
-					sizeof(ifs->ascii) - dummy,
+			if (tp->tap_pid != 0)
+				snprintf(ifs->ascii, sizeof(ifs->ascii),
 					"\tOpened by PID %d\n", tp->tap_pid);
+			else
+				ifs->ascii[0] = '\0';
 			mtx_unlock(&tp->tap_mtx);
 			break;
 
@@ -650,6 +666,8 @@ tapifioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			break;
 	}
 
+bad:
+	sx_xunlock(&tap_ioctl_sx);
 	return (error);
 } /* tapifioctl */
 
@@ -684,7 +702,7 @@ tapifstart(struct ifnet *ifp)
 			IF_DEQUEUE(&ifp->if_snd, m);
 			if (m != NULL) {
 				m_freem(m);
-				ifp->if_oerrors++;
+				if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			} else
 				break;
 		}
@@ -709,7 +727,7 @@ tapifstart(struct ifnet *ifp)
 
 		selwakeuppri(&tp->tap_rsel, PZERO+1);
 		KNOTE_LOCKED(&tp->tap_rsel.si_note, 0);
-		ifp->if_opackets ++; /* obytes are counted in ether_output */
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1); /* obytes are counted in ether_output */
 	}
 
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
@@ -725,10 +743,12 @@ tapifstart(struct ifnet *ifp)
 static int
 tapioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 {
+	struct ifreq		 ifr;
 	struct tap_softc	*tp = dev->si_drv1;
 	struct ifnet		*ifp = tp->tap_ifp;
 	struct tapinfo		*tapp = NULL;
 	int			 f;
+	int			 error;
 #if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
     defined(COMPAT_FREEBSD4)
 	int			 ival;
@@ -740,7 +760,18 @@ tapioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 			if (ifp->if_type != tapp->type)
 				return (EPROTOTYPE);
 			mtx_lock(&tp->tap_mtx);
-			ifp->if_mtu = tapp->mtu;
+			if (ifp->if_mtu != tapp->mtu) {
+				strlcpy(ifr.ifr_name, if_name(ifp), IFNAMSIZ);
+				ifr.ifr_mtu = tapp->mtu;
+				CURVNET_SET(ifp->if_vnet);
+				error = ifhwioctl(SIOCSIFMTU, ifp,
+				    (caddr_t)&ifr, td);
+				CURVNET_RESTORE();
+				if (error) {
+					mtx_unlock(&tp->tap_mtx);
+					return (error);
+				}
+			}
 			ifp->if_baudrate = tapp->baudrate;
 			mtx_unlock(&tp->tap_mtx);
 			break;
@@ -830,8 +861,7 @@ tapioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 			mtx_unlock(&tp->tap_mtx);
 			break;
 
-		case OSIOCGIFADDR:	/* get MAC address of the remote side */
-		case SIOCGIFADDR:
+		case SIOCGIFADDR:	/* get MAC address of the remote side */
 			mtx_lock(&tp->tap_mtx);
 			bcopy(tp->ether_addr, data, sizeof(tp->ether_addr));
 			mtx_unlock(&tp->tap_mtx);
@@ -951,7 +981,7 @@ tapwrite(struct cdev *dev, struct uio *uio, int flag)
 
 	if ((m = m_uiotombuf(uio, M_NOWAIT, 0, ETHER_ALIGN,
 	    M_PKTHDR)) == NULL) {
-		ifp->if_ierrors ++;
+		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 		return (ENOBUFS);
 	}
 
@@ -978,7 +1008,7 @@ tapwrite(struct cdev *dev, struct uio *uio, int flag)
 	CURVNET_SET(ifp->if_vnet);
 	(*ifp->if_input)(ifp, m);
 	CURVNET_RESTORE();
-	ifp->if_ipackets ++; /* ibytes are counted in parent */
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1); /* ibytes are counted in parent */
 
 	return (0);
 } /* tapwrite */

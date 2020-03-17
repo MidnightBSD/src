@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Tamotsu Hattori.
  * Copyright (c) 2001 Mitsuru IWASAKI.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/i386/longrun.c 214346 2010-10-25 15:28:03Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/i386/longrun.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_cpu.h"
 

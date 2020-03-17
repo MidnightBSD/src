@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Sean Eric Fagan
  * Copyright (c) 1994 Søren Schmidt
@@ -30,10 +29,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/i386/ibcs2/ibcs2_xenix.c 230132 2012-01-15 13:23:18Z uqs $");
+__FBSDID("$FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_xenix.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fcntl.h>
 #include <sys/namei.h> 
 #include <sys/sysproto.h>
 #include <sys/clock.h>
@@ -210,7 +210,8 @@ xenix_eaccess(struct thread *td, struct xenix_eaccess_args *uap)
 		bsd_flags |= X_OK;
 
 	CHECKALTEXIST(td, uap->path, &path);
-	error = kern_eaccess(td, path, UIO_SYSSPACE, bsd_flags);
+	error = kern_accessat(td, AT_FDCWD, path, UIO_SYSSPACE,
+	    AT_EACCESS, bsd_flags);
 	free(path, M_TEMP);
         return (error);
 }

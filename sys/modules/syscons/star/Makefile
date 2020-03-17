@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/syscons/star/Makefile 106497 2002-11-06 13:47:00Z nyan $
+# $FreeBSD: stable/11/sys/modules/syscons/star/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/syscons/star
+.PATH:	${SRCTOP}/sys/dev/syscons/star
 
 KMOD=	star_saver
 SRCS=	star_saver.c

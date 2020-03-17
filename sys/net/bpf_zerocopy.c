@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Seccuris Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net/bpf_zerocopy.c 239065 2012-08-05 14:11:42Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/net/bpf_zerocopy.c 324128 2017-09-30 18:32:00Z alc $");
 
 #include "opt_bpf.h"
 
@@ -115,8 +114,7 @@ zbuf_page_free(vm_page_t pp)
 {
 
 	vm_page_lock(pp);
-	vm_page_unwire(pp, 0);
-	if (pp->wire_count == 0 && pp->object == NULL)
+	if (vm_page_unwire(pp, PQ_INACTIVE) && pp->object == NULL)
 		vm_page_free(pp);
 	vm_page_unlock(pp);
 }

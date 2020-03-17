@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/khelp/h_ertt/Makefile 217806 2011-01-24 23:08:38Z lstewart $
+# $FreeBSD: stable/11/sys/modules/khelp/h_ertt/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../../netinet/khelp
+.PATH: ${SRCTOP}/sys/netinet/khelp
 KMOD=	h_ertt
 SRCS=	h_ertt.c
 

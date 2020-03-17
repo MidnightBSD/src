@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #
 # Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
 # All rights reserved.
@@ -27,10 +26,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: stable/10/sys/modules/mwl/Makefile 234866 2012-05-01 07:38:40Z uqs $
+# $FreeBSD: stable/11/sys/modules/mwl/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 
-.PATH: ${.CURDIR}/../../dev/mwl
+.PATH: ${SRCTOP}/sys/dev/mwl
 
 KMOD=	if_mwl
 SRCS=	if_mwl.c if_mwl_pci.c mwlhal.c

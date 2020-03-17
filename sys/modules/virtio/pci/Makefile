@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/virtio/pci/Makefile 227652 2011-11-18 05:43:43Z grehan $
+# $FreeBSD: stable/11/sys/modules/virtio/pci/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,14 +23,11 @@
 # SUCH DAMAGE.
 #
 
-.PATH: ${.CURDIR}/../../../dev/virtio/pci
+.PATH: ${SRCTOP}/sys/dev/virtio/pci
 
 KMOD=	virtio_pci
 SRCS=	virtio_pci.c
 SRCS+=	virtio_bus_if.h virtio_if.h 
 SRCS+=	bus_if.h device_if.h pci_if.h
-
-MFILES=	kern/bus_if.m kern/device_if.m dev/pci/pci_if.m \
-	dev/virtio/virtio_bus_if.m dev/virtio/virtio_if.m
 
 .include <bsd.kmod.mk>

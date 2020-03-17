@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pcb.h	5.10 (Berkeley) 5/12/91
- * $FreeBSD: stable/10/sys/i386/include/pcb.h 294283 2016-01-18 18:27:21Z jhb $
+ * $FreeBSD: stable/11/sys/i386/include/pcb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _I386_PCB_H_

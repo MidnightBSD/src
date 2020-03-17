@@ -1,20 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/if_bridge/Makefile 160730 2006-07-26 22:15:15Z thompsa $
+# $FreeBSD: stable/11/sys/modules/if_bridge/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH:	${.CURDIR}/../../net
+.PATH:	${SRCTOP}/sys/net
 KMOD=	if_bridge
 SRCS=	if_bridge.c opt_inet.h opt_inet6.h opt_carp.h
-
-.if !defined(KERNBUILDDIR)
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-	
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

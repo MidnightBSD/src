@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ubser/Makefile 198041 2009-10-13 18:07:56Z jhb $
+# $FreeBSD: stable/11/sys/modules/ubser/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-S=	${.CURDIR}/../..
+S=	${SRCTOP}/sys
 .PATH: $S/dev/usb/serial
 
 KMOD=	ubser

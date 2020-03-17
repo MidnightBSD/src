@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Bernhard Schmidt <bschmidt@FreeBSD.org>
  * All rights reserved.
@@ -25,18 +24,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/net80211/ieee80211_ratectl_none.c 215244 2010-11-13 14:59:54Z bschmidt $");
+__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_ratectl_none.c 283614 2015-05-27 14:05:46Z glebius $");
 
 #include "opt_wlan.h"
 
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/if_media.h>
+#include <net/ethernet.h>
 
 #ifdef INET
 #include <netinet/in.h>
@@ -54,7 +56,7 @@ none_init(struct ieee80211vap *vap)
 static void
 none_deinit(struct ieee80211vap *vap)
 {
-	free(vap->iv_rs, M_80211_RATECTL);
+	IEEE80211_FREE(vap->iv_rs, M_80211_RATECTL);
 }
 
 static void

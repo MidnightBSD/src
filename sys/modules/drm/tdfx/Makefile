@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/drm/tdfx/Makefile 124472 2004-01-13 11:28:51Z ru $
+# $FreeBSD: stable/11/sys/modules/drm/tdfx/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../../dev/drm
+.PATH:	${SRCTOP}/sys/dev/drm
 KMOD	= tdfx
 SRCS	= tdfx_drv.c
 SRCS	+=device_if.h bus_if.h pci_if.h opt_drm.h

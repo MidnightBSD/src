@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/net/raw_cb.h 225837 2011-09-28 13:48:36Z bz $
+ * $FreeBSD: stable/11/sys/net/raw_cb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NET_RAW_CB_H_

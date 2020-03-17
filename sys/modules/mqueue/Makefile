@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mqueue/Makefile 247719 2013-03-03 16:17:09Z uqs $
+# $FreeBSD: stable/11/sys/modules/mqueue/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../kern
+.PATH: ${SRCTOP}/sys/kern
 
 KMOD=	mqueuefs
 SRCS=	uipc_mqueue.c \

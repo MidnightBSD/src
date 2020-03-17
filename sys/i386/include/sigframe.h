@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/sigframe.h 247047 2013-02-20 17:39:52Z kib $
+ * $FreeBSD: stable/11/sys/i386/include/sigframe.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SIGFRAME_H_

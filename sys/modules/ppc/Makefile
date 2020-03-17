@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/ppc/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD: stable/11/sys/modules/ppc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:	${.CURDIR}/../../dev/ppc
+.PATH:	${SRCTOP}/sys/dev/ppc
 KMOD=	ppc
 SRCS=	bus_if.h device_if.h ppbus_if.h isa_if.h pci_if.h serdev_if.h \
 	opt_ppc.h opt_isa.h \
@@ -16,10 +15,6 @@ SRCS+=	ppc_acpi.c ppc_isa.c
 SRCS+=	ppc_acpi.c
 .endif
 SRCS+=	ppc_isa.c
-.endif
-
-.if ${MACHINE_CPUARCH} == "ia64"
-SRCS+=	ppc_acpi.c
 .endif
 
 .include <bsd.kmod.mk>

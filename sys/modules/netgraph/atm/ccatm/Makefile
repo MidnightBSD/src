@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/netgraph/atm/ccatm/Makefile 220712 2011-04-16 11:15:57Z brucec $
+# $FreeBSD: stable/11/sys/modules/netgraph/atm/ccatm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #
 
-LIBBASE= ${.CURDIR}/../../../../contrib/ngatm
+LIBBASE= ${SRCTOP}/sys/contrib/ngatm
 
-.PATH: ${.CURDIR}/../../../../netgraph/atm/ccatm
+.PATH: ${SRCTOP}/sys/netgraph/atm/ccatm
 .PATH: ${LIBBASE}/netnatm/api
 
 KMOD=	ng_ccatm

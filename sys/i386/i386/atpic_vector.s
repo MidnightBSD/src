@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: stable/10/sys/i386/i386/atpic_vector.s 209483 2010-06-23 20:44:07Z kib $
+ * $FreeBSD: stable/11/sys/i386/i386/atpic_vector.s 329462 2018-02-17 18:00:01Z kib $
  */
 
 /*
@@ -47,6 +46,7 @@
 #define	INTR(irq_num, vec_name) \
 	.text ;								\
 	SUPERALIGN_TEXT ;						\
+IDTVEC(vec_name ##_pti) ;						\
 IDTVEC(vec_name) ;							\
 	PUSH_FRAME ;							\
 	SET_KERNEL_SREGS ;						\

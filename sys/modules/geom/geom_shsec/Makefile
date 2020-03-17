@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/geom/geom_shsec/Makefile 140074 2005-01-11 18:06:44Z pjd $
+# $FreeBSD: stable/11/sys/modules/geom/geom_shsec/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../geom/shsec
+.PATH: ${SRCTOP}/sys/geom/shsec
 
 KMOD=	geom_shsec
 SRCS=	g_shsec.c

@@ -1,4 +1,4 @@
- $FreeBSD: stable/10/sys/i386/ibcs2/syscalls.master 227691 2011-11-19 06:35:15Z ed $
+ $FreeBSD: stable/11/sys/i386/ibcs2/syscalls.master 346817 2019-04-28 13:21:01Z dchagin $
 
 ;	@(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ; System call name/number master file (or rather, slave, from IBCS2).
@@ -12,7 +12,7 @@
 ;		case where the event exists, but we don't want auditing, the
 ;		event should be #defined to AUE_NULL in audit_kevents.h.
 ;	type	one of STD, OBSOL, UNIMPL, COMPAT
-;	name	psuedo-prototype of syscall routine
+;	name	pseudo-prototype of syscall routine
 ;		If one of the following alts is different, then all appear:
 ;	altname	name of system call if different
 ;	alttag	name of args struct tag if different from [o]`name'"_args"

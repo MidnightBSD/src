@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/sysvipc/sysvshm/Makefile 193588 2009-06-06 17:01:44Z rwatson $
+# $FreeBSD: stable/11/sys/modules/sysvipc/sysvshm/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../../kern
+.PATH: ${SRCTOP}/sys/kern
 
 KMOD=	sysvshm
 SRCS=	sysv_shm.c opt_sysvipc.h opt_compat.h

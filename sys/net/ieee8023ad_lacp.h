@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ieee8023ad_impl.h,v 1.2 2005/12/10 23:21:39 elad Exp $	*/
 
 /*-
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/ieee8023ad_lacp.h 287808 2015-09-15 05:19:10Z hiren $
+ * $FreeBSD: stable/11/sys/net/ieee8023ad_lacp.h 286700 2015-08-12 20:21:04Z hiren $
  */
 
 /*
@@ -286,14 +285,14 @@ struct lacp_softc {
 struct mbuf	*lacp_input(struct lagg_port *, struct mbuf *);
 struct lagg_port *lacp_select_tx_port(struct lagg_softc *, struct mbuf *);
 void		lacp_attach(struct lagg_softc *);
-int		lacp_detach(void *);
+void		lacp_detach(void *);
 void		lacp_init(struct lagg_softc *);
 void		lacp_stop(struct lagg_softc *);
 int		lacp_port_create(struct lagg_port *);
 void		lacp_port_destroy(struct lagg_port *);
 void		lacp_linkstate(struct lagg_port *);
-void		lacp_req(struct lagg_softc *, caddr_t);
-void		lacp_portreq(struct lagg_port *, caddr_t);
+void		lacp_req(struct lagg_softc *, void *);
+void		lacp_portreq(struct lagg_port *, void *);
 
 static __inline int
 lacp_isactive(struct lagg_port *lgp)

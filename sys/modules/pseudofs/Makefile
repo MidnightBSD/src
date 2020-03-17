@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/pseudofs/Makefile 293595 2016-01-09 18:02:08Z dchagin $
+# $FreeBSD: stable/11/sys/modules/pseudofs/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH: ${.CURDIR}/../../fs/pseudofs
+.PATH: ${SRCTOP}/sys/fs/pseudofs
 
 KMOD=	pseudofs
 SRCS=	opt_pseudofs.h \

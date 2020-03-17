@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2006 by Matthew Jacob
 # All rights reserved.
@@ -25,7 +24,7 @@
 # SUCH DAMAGE.
 #
 
-# $FreeBSD: stable/10/sys/modules/ispfw/Makefile 291528 2015-11-30 21:55:35Z mav $ 
+# $FreeBSD: stable/11/sys/modules/ispfw/Makefile 291188 2015-11-23 10:06:19Z mav $ 
 
 
 SUBDIR = ispfw

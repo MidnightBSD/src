@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/cc/cc_cdg/Makefile 252504 2013-07-02 08:44:56Z lstewart $
+# $FreeBSD: stable/11/sys/modules/cc/cc_cdg/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../../netinet/cc
+.PATH: ${SRCTOP}/sys/netinet/cc
 KMOD=	cc_cdg
 SRCS=	cc_cdg.c
 

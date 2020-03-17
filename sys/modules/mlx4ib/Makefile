@@ -1,36 +1,29 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/mlx4ib/Makefile 271127 2014-09-04 20:12:36Z hselasky $
-.PATH:  ${.CURDIR}/../../ofed/drivers/infiniband/hw/mlx4
-.PATH:  ${.CURDIR}/../../ofed/include/linux
+# $FreeBSD: stable/11/sys/modules/mlx4ib/Makefile 331769 2018-03-30 18:06:29Z hselasky $
+.PATH:  ${SRCTOP}/sys/dev/mlx4/mlx4_ib
 
-.include <bsd.own.mk>
+KMOD=	mlx4ib
+SRCS=	device_if.h bus_if.h vnode_if.h pci_if.h \
+	opt_inet.h opt_inet6.h \
+	mlx4_ib_alias_GUID.c \
+	mlx4_ib_mcg.c \
+	mlx4_ib_sysfs.c \
+	mlx4_ib_ah.c \
+	mlx4_ib_cq.c \
+	mlx4_ib_doorbell.c \
+	mlx4_ib_mad.c \
+	mlx4_ib_main.c \
+	mlx4_ib_mr.c \
+	mlx4_ib_qp.c \
+	mlx4_ib_srq.c \
+	mlx4_ib_wc.c \
+	mlx4_ib_cm.c
 
-KMOD    = mlx4ib
-SRCS    = device_if.h bus_if.h pci_if.h vnode_if.h
-SRCS+= linux_compat.c linux_radix.c linux_idr.c 
-SRCS+=	alias_GUID.c mcg.c sysfs.c ah.c cq.c doorbell.c mad.c main.c mr.c qp.c srq.c wc.c cm.c
-SRCS+=	opt_inet.h opt_inet6.h
-
-#CFLAGS+= -I${.CURDIR}/../../ofed/include/
-#CFLAGS+= -I${.CURDIR}/../../../../include
-CFLAGS+= -I${.CURDIR}/../../ofed/drivers/infiniband/hw/mlx4
-CFLAGS+= -I${.CURDIR}/../../ofed/include/
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 CFLAGS+= -DCONFIG_INFINIBAND_USER_MEM
-CFLAGS+= -DINET6 -DINET -DOFED
-CFLAGS+= -fms-extensions
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
+CFLAGS+= -DINET6 -DINET
 
 .include <bsd.kmod.mk>
 
-CFLAGS+= -Wno-cast-qual -Wno-pointer-arith ${GCC_MS_EXTENSIONS}
+CFLAGS+= -Wno-cast-qual -Wno-pointer-arith

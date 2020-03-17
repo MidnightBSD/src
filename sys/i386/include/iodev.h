@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Mark R V Murray
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/iodev.h 207329 2010-04-28 15:38:01Z attilio $
+ * $FreeBSD: stable/11/sys/i386/include/iodev.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _MACHINE_IODEV_H_
 #define	_MACHINE_IODEV_H_

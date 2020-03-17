@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Seccuris Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/net/bpf_zerocopy.h 230108 2012-01-14 17:07:52Z eadler $
+ * $FreeBSD: stable/11/sys/net/bpf_zerocopy.h 230108 2012-01-14 17:07:52Z eadler $
  */
 
 #ifndef _NET_BPF_ZEROCOPY_H_

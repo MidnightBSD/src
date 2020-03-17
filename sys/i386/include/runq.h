@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder <jake@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/i386/include/runq.h 139790 2005-01-06 22:18:23Z imp $
+ * $FreeBSD: stable/11/sys/i386/include/runq.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_RUNQ_H_

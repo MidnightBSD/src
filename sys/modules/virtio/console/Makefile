@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/modules/virtio/console/Makefile 273515 2014-10-23 04:47:32Z bryanv $
+# $FreeBSD: stable/11/sys/modules/virtio/console/Makefile 319182 2017-05-30 04:11:12Z ngie $
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,14 +23,11 @@
 # SUCH DAMAGE.
 #
 
-.PATH: ${.CURDIR}/../../../dev/virtio/console
+.PATH: ${SRCTOP}/sys/dev/virtio/console
 
 KMOD=	virtio_console
 SRCS=	virtio_console.c
 SRCS+=	virtio_bus_if.h virtio_if.h
 SRCS+=	bus_if.h device_if.h
-
-MFILES=	kern/bus_if.m kern/device_if.m \
-	dev/virtio/virtio_bus_if.m dev/virtio/virtio_if.m
 
 .include <bsd.kmod.mk>

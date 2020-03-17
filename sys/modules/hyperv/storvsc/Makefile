@@ -1,16 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/modules/hyperv/storvsc/Makefile 307018 2016-10-11 06:35:29Z sephe $
+# $FreeBSD: stable/11/sys/modules/hyperv/storvsc/Makefile 319182 2017-05-30 04:11:12Z ngie $
 
-.PATH:  ${.CURDIR}/../../../dev/hyperv/storvsc \
-	${.CURDIR}/../../../dev/hyperv/vmbus \
+.PATH:  ${SRCTOP}/sys/dev/hyperv/storvsc \
+	${SRCTOP}/sys/dev/hyperv/vmbus \
 
 KMOD=	hv_storvsc
 SRCS =	hv_storvsc_drv_freebsd.c \
 	hv_vstorage.h
 SRCS+=	bus_if.h device_if.h opt_cam.h vmbus_if.h
 
-CFLAGS+= -I${.CURDIR}/../../../dev/hyperv/include \
-	 -I${.CURDIR}/../../../dev/hyperv/vmbus	\
-	 -I${.CURDIR}/../../../dev/hyperv/storvsc
+CFLAGS+= -I${SRCTOP}/sys/dev/hyperv/include \
+	 -I${SRCTOP}/sys/dev/hyperv/vmbus	\
+	 -I${SRCTOP}/sys/dev/hyperv/storvsc
 
 .include <bsd.kmod.mk>
