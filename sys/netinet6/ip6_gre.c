@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_gre.c 284072 2015-06-06 13:26:13Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet6/ip6_gre.c 276215 2014-12-25 21:32:37Z ae $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -58,13 +57,12 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_gre.c 284072 2015-06-06 13:26:13Z
 #endif
 #include <netinet/ip_encap.h>
 #include <netinet/ip6.h>
-#include <netinet6/ip6protosw.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_var.h>
 #include <net/if_gre.h>
 
 extern  struct domain inet6domain;
-struct ip6protosw in6_gre_protosw = {
+struct protosw in6_gre_protosw = {
 	.pr_type =	SOCK_RAW,
 	.pr_domain =	&inet6domain,
 	.pr_protocol =	IPPROTO_GRE,
@@ -141,7 +139,7 @@ in6_gre_attach(struct gre_softc *sc)
 
 	KASSERT(sc->gre_ecookie == NULL, ("gre_ecookie isn't NULL"));
 	sc->gre_ecookie = encap_attach_func(AF_INET6, IPPROTO_GRE,
-	    in6_gre_encapcheck, (void *)&in6_gre_protosw, sc);
+	    in6_gre_encapcheck, &in6_gre_protosw, sc);
 	if (sc->gre_ecookie == NULL)
 		return (EEXIST);
 	return (0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Nathan Whitehorn
  * All rights reserved
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/dbdma.c 227293 2011-11-07 06:44:47Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/dbdma.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -342,6 +341,31 @@ dbdma_sync_commands(dbdma_channel_t *chan, bus_dmasync_op_t op)
 {
 
 	bus_dmamap_sync(chan->sc_dmatag, chan->sc_dmamap, op);
+}
+
+void
+dbdma_save_state(dbdma_channel_t *chan)
+{
+
+	chan->sc_saved_regs[0] = dbdma_read_reg(chan, CHAN_CMDPTR);
+	chan->sc_saved_regs[1] = dbdma_read_reg(chan, CHAN_CMDPTR_HI);
+	chan->sc_saved_regs[2] = dbdma_read_reg(chan, CHAN_INTR_SELECT);
+	chan->sc_saved_regs[3] = dbdma_read_reg(chan, CHAN_BRANCH_SELECT);
+	chan->sc_saved_regs[4] = dbdma_read_reg(chan, CHAN_WAIT_SELECT);
+
+	dbdma_stop(chan);
+}
+
+void
+dbdma_restore_state(dbdma_channel_t *chan)
+{
+
+	dbdma_wake(chan);
+	dbdma_write_reg(chan, CHAN_CMDPTR, chan->sc_saved_regs[0]);
+	dbdma_write_reg(chan, CHAN_CMDPTR_HI, chan->sc_saved_regs[1]);
+	dbdma_write_reg(chan, CHAN_INTR_SELECT, chan->sc_saved_regs[2]);
+	dbdma_write_reg(chan, CHAN_BRANCH_SELECT, chan->sc_saved_regs[3]);
+	dbdma_write_reg(chan, CHAN_WAIT_SELECT, chan->sc_saved_regs[4]);
 }
 
 static uint32_t

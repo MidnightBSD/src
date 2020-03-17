@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/ata/ata_all.h 298100 2016-04-16 05:14:55Z scottl $
+ * $FreeBSD: stable/11/sys/cam/ata/ata_all.h 300207 2016-05-19 14:08:36Z ken $
  */
 
 #ifndef	CAM_ATA_ALL_H
@@ -108,7 +107,7 @@ void	ata_cmd_sbuf(struct ata_cmd *cmd, struct sbuf *sb);
 char *	ata_res_string(struct ata_res *res, char *res_string, size_t len);
 int	ata_command_sbuf(struct ccb_ataio *ataio, struct sbuf *sb);
 int	ata_status_sbuf(struct ccb_ataio *ataio, struct sbuf *sb);
-int	ata_res_sbuf(struct ccb_ataio *ataio, struct sbuf *sb);
+int	ata_res_sbuf(struct ata_res *res, struct sbuf *sb);
 
 void	ata_print_ident(struct ata_params *ident_data);
 void	ata_print_ident_short(struct ata_params *ident_data);
@@ -126,6 +125,11 @@ void	ata_ncq_cmd(struct ccb_ataio *ataio, uint8_t cmd,
 void	ata_reset_cmd(struct ccb_ataio *ataio);
 void	ata_pm_read_cmd(struct ccb_ataio *ataio, int reg, int port);
 void	ata_pm_write_cmd(struct ccb_ataio *ataio, int reg, int port, uint32_t val);
+void	ata_read_log(struct ccb_ataio *ataio, uint32_t retries,
+		     void (*cbfcnp)(struct cam_periph *, union ccb *),
+		     uint32_t log_address, uint32_t page_number,
+		     uint16_t block_count, uint32_t protocol,
+		     uint8_t *data_ptr, uint32_t dxfer_len, uint32_t timeout);
 
 void	ata_bswap(int8_t *buf, int len);
 void	ata_btrim(int8_t *buf, int len);
@@ -166,6 +170,18 @@ void semb_read_buffer(struct ccb_ataio *ataio,
 void semb_write_buffer(struct ccb_ataio *ataio,
 	u_int32_t retries, void (*cbfcnp)(struct cam_periph *, union ccb *),
 	uint8_t tag_action, uint8_t *data_ptr, uint16_t param_list_length,
+	uint32_t timeout);
+
+void ata_zac_mgmt_out(struct ccb_ataio *ataio, uint32_t retries, 
+	void (*cbfcnp)(struct cam_periph *, union ccb *),
+	int use_ncq __unused, uint8_t zm_action, uint64_t zone_id,
+	uint8_t zone_flags, uint16_t sector_count, uint8_t *data_ptr,
+	uint32_t dxfer_len, uint32_t timeout);
+
+void ata_zac_mgmt_in(struct ccb_ataio *ataio, uint32_t retries, 
+	void (*cbfcnp)(struct cam_periph *, union ccb *),
+	int use_ncq __unused, uint8_t zm_action, uint64_t zone_id,
+	uint8_t zone_flags, uint8_t *data_ptr, uint32_t dxfer_len,
 	uint32_t timeout);
 
 #endif

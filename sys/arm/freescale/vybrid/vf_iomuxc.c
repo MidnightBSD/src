@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_iomuxc.c 266203 2014-05-16 00:14:50Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_iomuxc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_iomuxc.c 266203 2014-0
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
@@ -150,12 +148,12 @@ pinmux_set(struct iomuxc_softc *sc)
 			continue;
 
 		if ((len = OF_getproplen(child, "iomux_config")) > 0) {
-			OF_getprop(child, "iomux_config", &iomux_config, len);
+			OF_getencprop(child, "iomux_config", iomux_config, len);
 
 			values = len / (sizeof(uint32_t));
 			for (i = 0; i < values; i += 2) {
-				pin = fdt32_to_cpu(iomux_config[i]);
-				pin_cfg = fdt32_to_cpu(iomux_config[i+1]);
+				pin = iomux_config[i];
+				pin_cfg = iomux_config[i+1];
 #if 0
 				device_printf(sc->dev, "Set pin %d to 0x%08x\n",
 				    pin, pin_cfg);

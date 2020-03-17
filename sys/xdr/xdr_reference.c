@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: xdr_reference.c,v 1.13 2000/01/22 22:19:18 mycroft Exp	$ */
 
 /*

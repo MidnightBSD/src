@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/malta/files.malta 255083 2013-08-30 20:28:35Z gonzo $
+# $FreeBSD: stable/11/sys/mips/malta/files.malta 255083 2013-08-30 20:28:35Z gonzo $
 mips/malta/gt.c				standard
 mips/malta/gt_pci.c			standard
 mips/malta/gt_pci_bus_space.c			standard

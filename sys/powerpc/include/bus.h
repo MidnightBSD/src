@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bus.h,v 1.11 2003/07/28 17:35:54 thorpej Exp $	*/
 
 /*-
@@ -61,7 +60,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/bus.h 263687 2014-03-24 13:48:04Z emaste $
+ * $FreeBSD: stable/11/sys/powerpc/include/bus.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_BUS_H_
@@ -80,8 +79,13 @@
 #define BUS_SPACE_MAXADDR 	0xFFFFFFFFFFFFFFFFUL
 #define BUS_SPACE_MAXSIZE 	0xFFFFFFFFFFFFFFFFUL
 #else
+#ifdef BOOKE
+#define BUS_SPACE_MAXADDR 	0xFFFFFFFFFULL
+#define BUS_SPACE_MAXSIZE 	0xFFFFFFFFUL
+#else
 #define BUS_SPACE_MAXADDR 	0xFFFFFFFFUL
 #define BUS_SPACE_MAXSIZE 	0xFFFFFFFFUL
+#endif
 #endif
 
 #define	BUS_SPACE_MAP_CACHEABLE		0x01

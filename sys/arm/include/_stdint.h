@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
@@ -28,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/_stdint.h 237517 2012-06-24 04:15:58Z andrew $
+ * $FreeBSD: stable/11/sys/arm/include/_stdint.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE__STDINT_H_
@@ -140,7 +139,7 @@
  * 7.18.3  Limits of other integer types
  */
 /* Limits of ptrdiff_t. */
-#define	PTRDIFF_MIN	INT32_MIN	
+#define	PTRDIFF_MIN	INT32_MIN
 #define	PTRDIFF_MAX	INT32_MAX
 
 /* Limits of sig_atomic_t. */

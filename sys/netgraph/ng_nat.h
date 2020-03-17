@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_nat.h 248570 2013-03-21 08:36:15Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_nat.h 248570 2013-03-21 08:36:15Z glebius $
  */
 
 #define NG_NAT_NODE_TYPE    "nat"

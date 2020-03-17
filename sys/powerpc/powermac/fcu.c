@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Andreas Tobler
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/fcu.c 273736 2014-10-27 14:38:00Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/fcu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -554,7 +553,7 @@ fcu_fanrpm_sysctl(SYSCTL_HANDLER_ARGS)
 		default:
 			/* This should never happen */
 			return (EINVAL);
-		};
+		}
 	}
 
 	/* We can only read the RPM from a PWM controlled fan, so return. */

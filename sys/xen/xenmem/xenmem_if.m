@@ -24,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/11/sys/xen/xenmem/xenmem_if.m 282634 2015-05-08 14:48:40Z royger $
-# $MidnightBSD$
+#
 
 #include <sys/bus.h>
 

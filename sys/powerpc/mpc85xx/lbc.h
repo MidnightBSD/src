@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2008, Juniper Networks, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/mpc85xx/lbc.h 238045 2012-07-03 00:06:14Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/mpc85xx/lbc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_LBC_H_

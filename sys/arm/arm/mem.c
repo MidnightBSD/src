@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/mem.c 278746 2015-02-14 08:44:12Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/mem.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Memory special file
@@ -114,6 +113,9 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				return (EINVAL);
 			sx_xlock(&tmppt_lock);
 			pmap_kenter((vm_offset_t)_tmppt, v);
+#if __ARM_ARCH >= 6
+			pmap_tlb_flush(kernel_pmap, (vm_offset_t)_tmppt);
+#endif
 			o = (int)uio->uio_offset & PAGE_MASK;
 			c = (u_int)(PAGE_SIZE - ((int)iov->iov_base & PAGE_MASK));
 			c = min(c, (u_int)(PAGE_SIZE - o));
@@ -159,10 +161,9 @@ int
 memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
     int prot __unused, vm_memattr_t *memattr __unused)
 {
-	if (dev2unit(dev) == CDEV_MINOR_MEM)
+	if (dev2unit(dev) == CDEV_MINOR_MEM) {
 		*paddr = offset;
-	else if (dev2unit(dev) == CDEV_MINOR_KMEM)
-        	*paddr = vtophys(offset);
-	/* else panic! */
-	return (0);
+		return (0);
+	}
+	return (-1);
 }

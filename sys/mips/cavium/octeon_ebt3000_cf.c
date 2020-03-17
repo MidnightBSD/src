@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  *  Copyright (c) 2003-2008 Cavium Networks (support@cavium.com). All rights
  *  reserved.
@@ -43,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octeon_ebt3000_cf.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octeon_ebt3000_cf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -216,37 +215,38 @@ static void cf_start (struct bio *bp)
 	* the bio struct.
 	*/
 
-	if(bp->bio_cmd & BIO_GETATTR) {
+	switch (bp->bio_cmd) {
+	case BIO_GETATTR:
 		if (g_handleattr_int(bp, "GEOM::fwsectors", cf_priv->drive_param.sec_track))
                         return;
                 if (g_handleattr_int(bp, "GEOM::fwheads", cf_priv->drive_param.heads))
                         return;
                 g_io_deliver(bp, ENOIOCTL);
                 return;
+
+	case BIO_READ:
+		error = cf_cmd_read(bp->bio_length / cf_priv->drive_param.sector_size,
+		    bp->bio_offset / cf_priv->drive_param.sector_size, bp->bio_data);
+		break;
+	case BIO_WRITE:
+		error = cf_cmd_write(bp->bio_length / cf_priv->drive_param.sector_size,
+		    bp->bio_offset/cf_priv->drive_param.sector_size, bp->bio_data);
+		break;
+
+	default:
+		printf("%s: unrecognized bio_cmd %x.\n", __func__, bp->bio_cmd);
+		error = ENOTSUP;
+		break;
 	}
 
-	if ((bp->bio_cmd & (BIO_READ | BIO_WRITE))) {
-
-		if (bp->bio_cmd & BIO_READ) {
-			error = cf_cmd_read(bp->bio_length / cf_priv->drive_param.sector_size,
-			    bp->bio_offset / cf_priv->drive_param.sector_size, bp->bio_data);
-		} else if (bp->bio_cmd & BIO_WRITE) {
-			error = cf_cmd_write(bp->bio_length / cf_priv->drive_param.sector_size,
-			    bp->bio_offset/cf_priv->drive_param.sector_size, bp->bio_data);
-		} else {
-			printf("%s: unrecognized bio_cmd %x.\n", __func__, bp->bio_cmd);
-			error = ENOTSUP;
-		}
-
-		if (error != 0) {
-			g_io_deliver(bp, error);
-			return;
-		}
-
-		bp->bio_resid = 0;
-		bp->bio_completed = bp->bio_length;
-		g_io_deliver(bp, 0);
+	if (error != 0) {
+		g_io_deliver(bp, error);
+		return;
 	}
+
+	bp->bio_resid = 0;
+	bp->bio_completed = bp->bio_length;
+	g_io_deliver(bp, 0);
 }
 
 
@@ -682,7 +682,8 @@ static void cf_attach_geom (void *arg, int flag)
 	cf_priv = (struct cf_priv *) arg;
 	cf_priv->cf_geom = g_new_geomf(&g_cf_class, "cf%d", device_get_unit(cf_priv->dev));
 	cf_priv->cf_geom->softc = cf_priv;
-	cf_priv->cf_provider = g_new_providerf(cf_priv->cf_geom, cf_priv->cf_geom->name);
+	cf_priv->cf_provider = g_new_providerf(cf_priv->cf_geom, "%s",
+	    cf_priv->cf_geom->name);
 	cf_priv->cf_provider->sectorsize = cf_priv->drive_param.sector_size;
 	cf_priv->cf_provider->mediasize = cf_priv->drive_param.nr_sectors * cf_priv->cf_provider->sectorsize;
         g_error_provider(cf_priv->cf_provider, 0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet/udp.h 246210 2013-02-01 15:32:20Z jhb $
+ * $FreeBSD: stable/11/sys/netinet/udp.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_UDP_H_
@@ -59,7 +58,7 @@ struct udphdr {
  */
 /* Encapsulation types. */
 #define	UDP_ENCAP_ESPINUDP_NON_IKE	1 /* draft-ietf-ipsec-nat-t-ike-00/01 */
-#define	UDP_ENCAP_ESPINUDP		2 /* draft-ietf-ipsec-udp-encaps-02+ */
+#define	UDP_ENCAP_ESPINUDP		2 /* RFC3948 */
 
 /* Default ESP in UDP encapsulation port. */
 #define	UDP_ENCAP_ESPINUDP_PORT		500

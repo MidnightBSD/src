@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2009 RMI Corporation
  * Copyright (c) 2002-2004 Juli Mallett <jmallett@FreeBSD.org>
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/intr_machdep.c 212102 2010-09-01 17:35:31Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/intr_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

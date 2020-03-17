@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cpu.h,v 1.70 2003/01/17 23:36:08 thorpej Exp $	*/
 
 /*-
@@ -36,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/cpuinfo.h 204690 2010-03-04 05:37:19Z neel $
+ * $FreeBSD: stable/11/sys/mips/include/cpuinfo.h 331722 2018-03-29 02:50:57Z eadler $
  *	@(#)cpu.h	8.4 (Berkeley) 1/4/94
  */
 
@@ -55,6 +54,7 @@ struct mips_cpuinfo {
 	u_int8_t	cpu_rev;
 	u_int8_t	cpu_impl;
 	u_int8_t	tlb_type;
+	u_int32_t	tlb_pgmask;
 	u_int16_t	tlb_nentries;
 	u_int8_t	icache_virtual;
 	boolean_t	cache_coherent_dma;
@@ -68,6 +68,12 @@ struct mips_cpuinfo {
 		u_int8_t	dc_nways;
 		u_int16_t	dc_nsets;
 	} l1;
+	struct {
+		u_int32_t	dc_size;
+		u_int8_t	dc_linesize;
+		u_int8_t	dc_nways;
+		u_int16_t	dc_nsets;
+	} l2;
 };
 
 extern struct mips_cpuinfo cpuinfo;

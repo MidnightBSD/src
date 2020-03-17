@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_btsocket_hci_raw.c
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_hci_raw.c,v 1.14 2003/09/14 23:29:06 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/socket/ng_btsocket_hci_raw.c 268061 2014-06-30 19:46:17Z trociny $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/socket/ng_btsocket_hci_raw.c 281198 2015-04-07 10:22:56Z takawata $
  */
 
 #include <sys/param.h>
@@ -877,6 +876,9 @@ ng_btsocket_hci_raw_init(void)
 	/* Commands - Testing */
 	f = ng_btsocket_hci_raw_sec_filter->commands[NG_HCI_OGF_TESTING - 1];
 	bit_set(f, NG_HCI_OCF_READ_LOOPBACK_MODE - 1);
+	/*Commands - LE*/
+	f = ng_btsocket_hci_raw_sec_filter->commands[NG_HCI_OGF_LE -1];
+
 } /* ng_btsocket_hci_raw_init */
 
 /*

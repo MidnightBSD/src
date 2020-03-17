@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * PIE - Proportional Integral controller Enhanced AQM algorithm.
  *
- * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_aqm_pie.h 316325 2017-03-31 06:33:20Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_aqm_pie.h 316324 2017-03-31 06:20:06Z truckman $
  * 
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.

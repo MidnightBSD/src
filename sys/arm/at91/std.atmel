@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/at91/std.atmel 274268 2014-11-08 03:42:19Z ian $
+# $FreeBSD: stable/11/sys/arm/at91/std.atmel 273703 2014-10-26 18:30:35Z ian $
 
 include 	"../at91/std.at91sam9"
 

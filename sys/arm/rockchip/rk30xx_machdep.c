@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -33,43 +32,45 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/rockchip/rk30xx_machdep.c 266397 2014-05-18 13:05:07Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/rockchip/rk30xx_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
-#define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
 #include <machine/armreg.h>
 #include <machine/bus.h>
-#include <machine/devmap.h>
 #include <machine/machdep.h>
+#include <machine/platform.h> 
 
 #include <dev/fdt/fdt_common.h>
 
+#include <arm/rockchip/rk30xx_wdog.h>
+
 vm_offset_t
-initarm_lastaddr(void)
+platform_lastaddr(void)
 {
 
-	return (arm_devmap_lastaddr());
+	return (devmap_lastaddr());
 }
 
 void
-initarm_early_init(void)
+platform_probe_and_attach(void)
 {
 
 }
 
 void
-initarm_gpio_init(void)
+platform_gpio_init(void)
 {
 }
 
 void
-initarm_late_init(void)
+platform_late_init(void)
 {
 
 	/* Enable cache */
@@ -81,26 +82,12 @@ initarm_late_init(void)
  * Set up static device mappings.
  */
 int
-initarm_devmap_init(void)
+platform_devmap_init(void)
 {
 
-	arm_devmap_add_entry(0x10000000, 0x00200000);
-	arm_devmap_add_entry(0x20000000, 0x00100000);
+	devmap_add_entry(0x10000000, 0x00200000);
+	devmap_add_entry(0x20000000, 0x00100000);
 	
-	return (0);
-}
-
-struct arm32_dma_range *
-bus_dma_get_range(void)
-{
-
-	return (NULL);
-}
-
-int
-bus_dma_get_range_nb(void)
-{
-
 	return (0);
 }
 
@@ -108,6 +95,7 @@ void
 cpu_reset()
 {
 
-	printf("No cpu_reset implementation!\n");
+	rk30_wd_watchdog_reset();
+	printf("Reset failed!\n");
 	while (1);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_com.h,v 1.3 2000/12/10 04:10:08 christos Exp $	*/
 
 /*-
@@ -28,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/rpc/rpc_com.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/sys/rpc/rpc_com.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * Copyright (c) 1986 - 1991 by Sun Microsystems, Inc.

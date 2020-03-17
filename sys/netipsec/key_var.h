@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/netipsec/key_var.h 254925 2013-08-26 18:16:05Z jhb $	*/
+/*	$FreeBSD: stable/11/sys/netipsec/key_var.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: key_var.h,v 1.11 2001/09/12 23:05:07 sakane Exp $	*/
 
 /*-
@@ -47,7 +46,6 @@
 #define KEYCTL_ESP_AUTH			10
 #define KEYCTL_AH_KEYMIN		11
 #define KEYCTL_PREFERED_OLDSA		12
-#define KEYCTL_MAXID			13
 
 #ifdef _KERNEL
 #define _ARRAYLEN(p) (sizeof(p)/sizeof(p[0]))

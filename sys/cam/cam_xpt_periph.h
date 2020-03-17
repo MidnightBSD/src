@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for dealing with the 
  * Common Access Method Transport (xpt) layer from peripheral
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/cam_xpt_periph.h 257049 2013-10-24 10:33:31Z mav $
+ * $FreeBSD: stable/11/sys/cam/cam_xpt_periph.h 256552 2013-10-15 17:59:41Z mav $
  */
 
 #ifndef _CAM_CAM_XPT_PERIPH_H

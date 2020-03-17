@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)reloc.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/arm/include/reloc.h 129198 2004-05-14 11:46:45Z cognet $
+ * $FreeBSD: stable/11/sys/arm/include/reloc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_RELOC_H_

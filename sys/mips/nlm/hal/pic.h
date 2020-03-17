@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -27,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/10/sys/mips/nlm/hal/pic.h 233563 2012-03-27 15:39:55Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/hal/pic.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NLM_HAL_PIC_H
@@ -169,13 +168,8 @@
 #define	PIC_IRT_TIMER_INDEX(num)	((num) + PIC_IRT_TIMER_0_INDEX)
 
 #define	PIC_CLOCK_TIMER			7
-#define	PIC_IRQ_BASE			8
 
 #if !defined(LOCORE) && !defined(__ASSEMBLY__)
-
-#define	PIC_IRT_FIRST_IRQ		(PIC_IRQ_BASE)
-#define	PIC_IRT_LAST_IRQ		63
-#define	XLP_IRQ_IS_PICINTR(irq)		((irq) >= PIC_IRT_FIRST_IRQ)
 
 /*
  *   Misc

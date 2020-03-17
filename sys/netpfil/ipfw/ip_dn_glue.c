@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -26,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/netpfil/ipfw/ip_dn_glue.c 301772 2016-06-10 00:00:25Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/ip_dn_glue.c 300779 2016-05-26 21:40:13Z truckman $
  *
  * Binary compatibility support for /sbin/ipfw RELENG_7 and RELENG_8
  */
@@ -782,7 +781,7 @@ ip_dummynet_compat(struct sockopt *sopt)
 	void *v = NULL;
 	struct dn_id oid;
 
-	/* Lenght of data, used to found ipfw version... */
+	/* Length of data, used to found ipfw version... */
 	int len = sopt->sopt_valsize;
 
 	/* len can be 0 if command was dummynet_flush */

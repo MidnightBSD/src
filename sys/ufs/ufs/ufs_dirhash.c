@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Ian Dowse.  All rights reserved.
  *

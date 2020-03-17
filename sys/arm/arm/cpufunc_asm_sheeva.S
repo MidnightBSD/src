@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
@@ -32,7 +31,7 @@
 
 #include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_sheeva.S 278613 2015-02-12 03:50:33Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_sheeva.S 275417 2014-12-02 18:35:34Z andrew $");
 
 #include <machine/param.h>
 
@@ -49,7 +48,7 @@ ENTRY(sheeva_setttb)
 
 	mov	r1, #0
 	mcr	p15, 0, r1, c7, c5, 0	/* Invalidate ICache */
-1:	mrc	p15, 0, r15, c7, c14, 3	/* Test, clean and invalidate DCache */
+1:	mrc	p15, 0, APSR_nzcv, c7, c14, 3	/* Test, clean and invalidate DCache */
 	bne	1b			/* More to do? */
 
 	mcr	p15, 1, r1, c15, c9, 0	/* Clean L2 */

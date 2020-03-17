@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_offload.c 237263 2012-06-19 07:34:13Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_offload.c 294869 2016-01-27 00:45:46Z glebius $");
 
 #include "opt_inet.h"
 
@@ -38,14 +37,15 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_offload.c 237263 2012-06-19 07:34:
 #include <sys/socketvar.h>
 #include <sys/sockopt.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/route.h>
 #include <netinet/in.h>
 #include <netinet/in_pcb.h>
 #include <netinet/tcp.h>
-#include <netinet/tcp_var.h>
 #include <netinet/tcp_offload.h>
 #define	TCPOUTFLAGS
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_var.h>
 #include <netinet/toecore.h>
 
 int registered_toedevs;

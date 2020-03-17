@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_vegas.c 220592 2011-04-13 11:28:46Z pluknet $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_vegas.c 342189 2018-12-18 09:16:04Z brooks $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -68,19 +67,15 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_vegas.c 220592 2011-04-13 11:28:
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
-#include <net/if.h>
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
-#include <netinet/tcp_seq.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
-
+#include <netinet/cc/cc.h>
 #include <netinet/cc/cc_module.h>
 
 #include <netinet/khelp/h_ertt.h>
-
-#define	CAST_PTR_INT(X)	(*((int*)(X)))
 
 /*
  * Private signal type for rate based congestion signal.
@@ -263,8 +258,7 @@ vegas_alpha_handler(SYSCTL_HANDLER_ARGS)
 	new = V_vegas_alpha;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) < 1 ||
-		    CAST_PTR_INT(req->newptr) > V_vegas_beta)
+		if (new == 0 || new > V_vegas_beta)
 			error = EINVAL;
 		else
 			V_vegas_alpha = new;
@@ -282,8 +276,7 @@ vegas_beta_handler(SYSCTL_HANDLER_ARGS)
 	new = V_vegas_beta;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) < 1 ||
-		    CAST_PTR_INT(req->newptr) < V_vegas_alpha)
+		if (new == 0 || new < V_vegas_alpha)
 			 error = EINVAL;
 		else
 			V_vegas_beta = new;
@@ -296,13 +289,15 @@ SYSCTL_DECL(_net_inet_tcp_cc_vegas);
 SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, vegas, CTLFLAG_RW, NULL,
     "Vegas related settings");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_vegas, OID_AUTO, alpha,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(vegas_alpha), 1, &vegas_alpha_handler,
-    "IU", "vegas alpha, specified as number of \"buffers\" (0 < alpha < beta)");
+SYSCTL_PROC(_net_inet_tcp_cc_vegas, OID_AUTO, alpha,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    &VNET_NAME(vegas_alpha), 1, &vegas_alpha_handler, "IU",
+    "vegas alpha, specified as number of \"buffers\" (0 < alpha < beta)");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_vegas, OID_AUTO, beta,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(vegas_beta), 3, &vegas_beta_handler,
-    "IU", "vegas beta, specified as number of \"buffers\" (0 < alpha < beta)");
+SYSCTL_PROC(_net_inet_tcp_cc_vegas, OID_AUTO, beta,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    &VNET_NAME(vegas_beta), 3, &vegas_beta_handler, "IU",
+    "vegas beta, specified as number of \"buffers\" (0 < alpha < beta)");
 
 DECLARE_CC_MODULE(vegas, &vegas_cc_algo);
 MODULE_DEPEND(vegas, ertt, 1, 1, 1);

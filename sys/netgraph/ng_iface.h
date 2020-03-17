@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_iface.h
  */
@@ -38,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_iface.h 187495 2009-01-20 22:26:09Z mav $
+ * $FreeBSD: stable/11/sys/netgraph/ng_iface.h 263152 2014-03-14 06:29:43Z glebius $
  * $Whistle: ng_iface.h,v 1.5 1999/01/20 00:22:13 archie Exp $
  */
 
@@ -55,8 +54,6 @@
 /* My hook names */
 #define NG_IFACE_HOOK_INET		"inet"
 #define NG_IFACE_HOOK_INET6		"inet6"
-#define NG_IFACE_HOOK_ATALK		"atalk"	/* AppleTalk phase 2 */
-#define NG_IFACE_HOOK_IPX		"ipx"
 #define NG_IFACE_HOOK_ATM		"atm"
 #define NG_IFACE_HOOK_NATM		"natm"
 

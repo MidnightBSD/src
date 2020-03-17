@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_source.h
  */
@@ -37,7 +36,7 @@
  *
  * Author: Dave Chapeskie
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_source.h 209730 2010-07-06 16:55:39Z emaste $
+ * $FreeBSD: stable/11/sys/netgraph/ng_source.h 209730 2010-07-06 16:55:39Z emaste $
  */
 
 #ifndef _NETGRAPH_NG_SOURCE_H_

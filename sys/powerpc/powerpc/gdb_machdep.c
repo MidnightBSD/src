@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/gdb_machdep.c 236141 2012-05-27 10:25:20Z raj $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/gdb_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

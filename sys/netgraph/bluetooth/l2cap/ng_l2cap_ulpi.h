@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_l2cap_ulpi.h
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_ulpi.h,v 1.1 2002/11/24 19:47:06 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_ulpi.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/l2cap/ng_l2cap_ulpi.h 290038 2015-10-27 03:42:26Z takawata $
  */
 
 #ifndef _NETGRAPH_L2CAP_ULPI_H_
@@ -75,6 +74,6 @@ int ng_l2cap_l2ca_get_info_rsp (ng_l2cap_con_p, u_int32_t, u_int16_t,
 					struct mbuf *);
 
 int ng_l2cap_l2ca_enable_clt   (ng_l2cap_p, struct ng_mesg *);
-
+int ng_l2cap_l2ca_encryption_change(ng_l2cap_chan_p , uint16_t );
 #endif /* ndef _NETGRAPH_L2CAP_ULPI_H_ */
 

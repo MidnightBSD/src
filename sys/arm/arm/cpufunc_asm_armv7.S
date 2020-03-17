@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Per Odlund <per.odlund@armagedon.se>
  * Copyright (C) 2011 MARVELL INTERNATIONAL LTD.
@@ -32,7 +31,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_armv7.S 283499 2015-05-24 18:23:57Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_armv7.S 307344 2016-10-15 08:27:54Z mmel $");
 
 #include <machine/sysreg.h>
 
@@ -65,7 +64,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_armv7.S 283499 2015-05-24 
 #define PT_OUTER_WT	(2 << 3)
 #define PT_OUTER_WB	(3 << 3)
 #define PT_OUTER_WBWA	(1 << 3)
-	
+
 #ifdef SMP
 #define PT_ATTR	(PT_S|PT_INNER_WBWA|PT_OUTER_WBWA|PT_NOS)
 #else
@@ -253,16 +252,6 @@ ENTRY(armv7_idcache_wbinv_range)
 	RET
 END(armv7_idcache_wbinv_range)
 
-ENTRY_NP(armv7_icache_sync_all)
-#ifdef SMP
-	mcr	CP15_ICIALLUIS
-#else
-	mcr	CP15_ICIALLU
-#endif
-	dsb				/* data synchronization barrier */
-	isb				/* instruction synchronization barrier */
-	RET
-END(armv7_icache_sync_all)
 
 ENTRY_NP(armv7_icache_sync_range)
 	ldr	ip, .Larmv7_icache_line_size
@@ -307,13 +296,6 @@ ENTRY(armv7_drain_writebuf)
 	dsb
 	RET
 END(armv7_drain_writebuf)
-
-ENTRY(armv7_sev)
-	dsb
-	sev
-	nop
-	RET
-END(armv7_sev)
 
 ENTRY(armv7_auxctrl)
 	mrc	CP15_ACTLR(r2)
@@ -366,10 +348,4 @@ ENTRY(armv7_idcache_inv_all)
 	isb                             @ instruction sync barrier
 	bx      lr                      @ return
 END(armv7_idcache_inv_all)
-
-ENTRY_NP(armv7_sleep)
-	dsb
-	wfi
-	bx	lr
-END(armv7_sleep)
 

@@ -1,0 +1,5 @@
+# $FreeBSD: stable/11/sys/arm/conf/CHROMEBOOK-PEACH-PIT.hints 269369 2014-08-01 06:20:25Z br $
+
+# Chrome Embedded Controller
+hint.chrome_ec.0.at="spibus0"
+hint.chrome_ec.0.addr=0x00

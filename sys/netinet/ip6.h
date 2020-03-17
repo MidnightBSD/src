@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/netinet/ip6.h 249294 2013-04-09 07:11:22Z ae $	*/
+/*	$FreeBSD: stable/11/sys/netinet/ip6.h 346755 2019-04-26 17:01:56Z mav $	*/
 /*	$KAME: ip6.h,v 1.18 2001/03/29 05:34:30 itojun Exp $	*/
 
 /*-
@@ -103,6 +102,7 @@ struct ip6_hdr {
 #define IPV6_FLOWLABEL_MASK	0xffff0f00	/* flow label (20 bits) */
 #endif /* LITTLE_ENDIAN */
 #endif
+#define IPV6_FLOWLABEL_LEN	20
 #if 1
 /* ECN bits proposed by Sally Floyd */
 #define IP6TOS_CE		0x01	/* congestion experienced */
@@ -278,12 +278,6 @@ do {									\
 	    (((m) = m_pullup((m), (off) + (hlen))) == NULL)) {		\
 		IP6STAT_INC(ip6s_exthdrtoolong);				\
 		return ret;						\
-	} else if ((m)->m_flags & M_EXT) {				\
-		if ((m)->m_len < (off) + (hlen)) {			\
-			IP6STAT_INC(ip6s_exthdrtoolong);			\
-			m_freem(m);					\
-			return ret;					\
-		}							\
 	} else {							\
 		if ((m)->m_len < (off) + (hlen)) {			\
 			IP6STAT_INC(ip6s_exthdrtoolong);			\

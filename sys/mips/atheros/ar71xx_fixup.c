@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_fixup.c 234485 2012-04-20 08:26:05Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar71xx_fixup.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ar71xx.h"
 
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_fixup.c 234485 2012-04-20 
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/intr_machdep.h>
-#include <machine/pmap.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>

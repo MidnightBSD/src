@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_pppoe.c
  */
@@ -38,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_pppoe.c 331059 2018-03-16 15:10:13Z eugen $
+ * $FreeBSD: stable/11/sys/netgraph/ng_pppoe.c 331058 2018-03-16 15:04:13Z eugen $
  * $Whistle: ng_pppoe.c,v 1.10 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -842,7 +841,7 @@ ng_pppoe_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			}
 
 			/*
-			 * PPPOE_SERVICE advertisments are set up
+			 * PPPOE_SERVICE advertisements are set up
 			 * on sessions that are in PRIMED state.
 			 */
 			if (msg->header.cmd == NGM_PPPOE_SERVICE)
@@ -1975,7 +1974,7 @@ ng_pppoe_rcvdata_debug(hook_p hook, item_p item)
 
 /*
  * Do local shutdown processing..
- * If we are a persistant device, we might refuse to go away, and
+ * If we are a persistent device, we might refuse to go away, and
  * we'd only remove our links and reset ourself.
  */
 static int

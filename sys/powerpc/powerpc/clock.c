@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/clock.c 265954 2014-05-13 16:59:50Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/clock.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -302,7 +301,7 @@ DELAY(int n)
 	u_quad_t	tb, ttb;
 
 	tb = mftb();
-	ttb = tb + (n * 1000 + ns_per_tick - 1) / ns_per_tick;
+	ttb = tb + howmany(n * 1000, ns_per_tick);
 	while (tb < ttb)
 		tb = mftb();
 }

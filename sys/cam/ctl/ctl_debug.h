@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_debug.h#2 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_debug.h 273531 2014-10-23 07:36:33Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_debug.h 273163 2014-10-16 08:42:17Z mav $
  */
 /*
  * CAM Target Layer debugging interface.

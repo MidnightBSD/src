@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 by Peter Grehan. All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powermac/hrowpic.c 237936 2012-07-01 19:07:45Z rpaulo $
+ * $FreeBSD: stable/11/sys/powerpc/powermac/hrowpic.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

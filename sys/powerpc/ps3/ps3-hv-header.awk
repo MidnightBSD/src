@@ -7,8 +7,7 @@
 # Invoke like so: awk -f ps3-hv-header.awk < ps3-hvcall.master > ps3-hv.h
 #
 
-# $FreeBSD: stable/10/sys/powerpc/ps3/ps3-hv-header.awk 217044 2011-01-06 04:12:29Z nwhitehorn $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/powerpc/ps3/ps3-hv-header.awk 217044 2011-01-06 04:12:29Z nwhitehorn $
 
 !/HVCALL.*/ && (!/#.*/ || /#define.*/ || /#include.*/) {
 	print($0);

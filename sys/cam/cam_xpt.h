@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for dealing with the 
  * Common Access Method Transport (xpt) layer.
@@ -27,11 +26,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/cam_xpt.h 292348 2015-12-16 19:01:14Z ken $
+ * $FreeBSD: stable/11/sys/cam/cam_xpt.h 350804 2019-08-08 22:16:19Z mav $
  */
 
 #ifndef _CAM_CAM_XPT_H
 #define _CAM_CAM_XPT_H 1
+
+#ifdef _KERNEL
+#include <sys/cdefs.h>
+#include <cam/cam_ccb.h>
+#endif
+
 
 /* Forward Declarations */
 union ccb;
@@ -106,7 +111,6 @@ int			xpt_path_string(struct cam_path *path, char *str,
 path_id_t		xpt_path_path_id(struct cam_path *path);
 target_id_t		xpt_path_target_id(struct cam_path *path);
 lun_id_t		xpt_path_lun_id(struct cam_path *path);
-int			xpt_path_legacy_ata_id(struct cam_path *path);
 struct cam_sim		*xpt_path_sim(struct cam_path *path);
 struct cam_periph	*xpt_path_periph(struct cam_path *path);
 void			xpt_async(u_int32_t async_code, struct cam_path *path,
@@ -136,6 +140,20 @@ void			xpt_copy_path(struct cam_path *new_path,
 				      struct cam_path *path);
 
 void			xpt_release_path(struct cam_path *path);
+
+/*
+ * Perform a path inquiry at the request priority. The bzero may be
+ * unnecessary.
+ */
+static inline void
+xpt_path_inq(struct ccb_pathinq *cpi, struct cam_path *path)
+{
+
+	bzero(cpi, sizeof(*cpi));
+	xpt_setup_ccb(&cpi->ccb_h, path, CAM_PRIORITY_NORMAL);
+	cpi->ccb_h.func_code = XPT_PATH_INQ;
+	xpt_action((union ccb *)cpi);
+}
 
 #endif /* _KERNEL */
 

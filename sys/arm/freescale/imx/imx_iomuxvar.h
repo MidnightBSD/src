@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/imx/imx_iomuxvar.h 273663 2014-10-26 02:44:41Z ian $
+ * $FreeBSD: stable/11/sys/arm/freescale/imx/imx_iomuxvar.h 323468 2017-09-11 22:28:38Z ian $
  */
 
 #ifndef	IMX_IOMUXVAR_H
@@ -43,8 +42,8 @@ u_int    iomux_get_pad_config(u_int pin);
  * with IO pin assignments or pad control.  These functions let other soc level
  * code manipulate these values.
  */
-uint32_t imx_iomux_gpr_get(u_int regnum);
-void     imx_iomux_gpr_set(u_int regnum, uint32_t val);
-void     imx_iomux_gpr_set_masked(u_int regnum, uint32_t clrbits, uint32_t setbits);
+uint32_t imx_iomux_gpr_get(u_int regaddr);
+void     imx_iomux_gpr_set(u_int regaddr, uint32_t val);
+void     imx_iomux_gpr_set_masked(u_int regaddr, uint32_t clrbits, uint32_t setbits);
 
 #endif

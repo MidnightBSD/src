@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/HL201.hints 239323 2012-08-16 04:53:30Z imp $
+# $FreeBSD: stable/11/sys/arm/conf/HL201.hints 239323 2012-08-16 04:53:30Z imp $
 
 # Atmel AT45DB21D
 hint.at45d.0.at="spibus0"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012, 2013 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/counter.h 266004 2014-05-14 04:42:38Z ian $
+ * $FreeBSD: stable/11/sys/powerpc/include/counter.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __MACHINE_COUNTER_H__
@@ -55,7 +54,7 @@ counter_u64_fetch_inline(uint64_t *p)
 	int i;
 
 	r = 0;
-	for (i = 0; i < mp_ncpus; i++)
+	CPU_FOREACH(i)
 		r += counter_u64_read_one((uint64_t *)p, i);
 
 	return (r);
@@ -73,8 +72,8 @@ static inline void
 counter_u64_zero_inline(counter_u64_t c)
 {
 
-	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
-	    smp_no_rendevous_barrier, c);
+	smp_rendezvous(smp_no_rendezvous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendezvous_barrier, c);
 }
 #endif
 
@@ -96,7 +95,7 @@ counter_u64_add(counter_u64_t c, int64_t inc)
 	    "bne-	1b"
 	    : "=&b" (ccpu), "=&r" (old)
 	    : "r" ((char *)c - (char *)&__pcpu[0]), "r" (inc)
-	    : "cc", "memory");
+	    : "cr0", "memory");
 }
 
 #else	/* !64bit */
@@ -139,8 +138,8 @@ static inline void
 counter_u64_zero_inline(counter_u64_t c)
 {
 
-	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
-	    smp_no_rendevous_barrier, c);
+	smp_rendezvous(smp_no_rendezvous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendezvous_barrier, c);
 }
 #endif
 

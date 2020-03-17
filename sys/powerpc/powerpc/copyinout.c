@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/copyinout.c 274648 2014-11-18 12:53:32Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/copyinout.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -71,8 +70,6 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/copyinout.c 274648 2014-11-18 
 #include <machine/sr.h>
 #include <machine/slb.h>
 #include <machine/vmparam.h>
-
-int	setfault(faultbuf);	/* defined in locore.S */
 
 #ifdef AIM
 /*
@@ -177,7 +174,7 @@ copyout(const void *kaddr, void *udaddr, size_t len)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	const char	*kp;
 	char		*up, *p;
 	size_t		l;
@@ -185,7 +182,8 @@ copyout(const void *kaddr, void *udaddr, size_t len)
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (EFAULT);
 	}
@@ -215,7 +213,7 @@ copyin(const void *udaddr, void *kaddr, size_t len)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	const char	*up;
 	char		*kp, *p;
 	size_t		l;
@@ -223,7 +221,8 @@ copyin(const void *udaddr, void *kaddr, size_t len)
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (EFAULT);
 	}
@@ -286,13 +285,14 @@ subyte(volatile void *addr, int byte)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	char		*p;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -314,13 +314,14 @@ suword32(volatile void *addr, int word)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	int		*p;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -342,13 +343,14 @@ suword(volatile void *addr, long word)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	long		*p;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -383,14 +385,15 @@ fubyte(volatile const void *addr)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	u_char		*p;
 	int		val;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -411,13 +414,14 @@ fuword16(volatile const void *addr)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	uint16_t	*p, val;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -438,13 +442,14 @@ fueword32(volatile const void *addr, int32_t *val)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	int32_t		*p;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -466,13 +471,14 @@ fueword64(volatile const void *addr, int64_t *val)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	int64_t		*p;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -494,13 +500,14 @@ fueword(volatile const void *addr, long *val)
 {
 	struct		thread *td;
 	pmap_t		pm;
-	faultbuf	env;
+	jmp_buf		env;
 	long		*p;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -522,13 +529,14 @@ casueword32(volatile uint32_t *addr, uint32_t old, uint32_t *oldvalp,
 {
 	struct thread *td;
 	pmap_t pm;
-	faultbuf env;
+	jmp_buf		env;
 	uint32_t *p, val;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -551,7 +559,7 @@ casueword32(volatile uint32_t *addr, uint32_t old, uint32_t *oldvalp,
 		"3:\n\t"
 		: "=&r" (val), "=m" (*p)
 		: "r" (p), "r" (old), "r" (new), "m" (*p)
-		: "cc", "memory");
+		: "cr0", "memory");
 
 	td->td_pcb->pcb_onfault = NULL;
 
@@ -573,13 +581,14 @@ casueword(volatile u_long *addr, u_long old, u_long *oldvalp, u_long new)
 {
 	struct thread *td;
 	pmap_t pm;
-	faultbuf env;
+	jmp_buf		env;
 	u_long *p, val;
 
 	td = curthread;
 	pm = &td->td_proc->p_vmspace->vm_pmap;
 
-	if (setfault(env)) {
+	td->td_pcb->pcb_onfault = &env;
+	if (setjmp(env)) {
 		td->td_pcb->pcb_onfault = NULL;
 		return (-1);
 	}
@@ -602,7 +611,7 @@ casueword(volatile u_long *addr, u_long old, u_long *oldvalp, u_long new)
 		"3:\n\t"
 		: "=&r" (val), "=m" (*p)
 		: "r" (p), "r" (old), "r" (new), "m" (*p)
-		: "cc", "memory");
+		: "cr0", "memory");
 
 	td->td_pcb->pcb_onfault = NULL;
 

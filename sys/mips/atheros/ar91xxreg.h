@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Adrian Chadd
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/mips/atheros/ar91xxreg.h 221518 2011-05-06 02:45:02Z adrian $ */
+/* $FreeBSD: stable/11/sys/mips/atheros/ar91xxreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef	__AR91XX_REG_H__
 #define	__AR91XX_REG_H__

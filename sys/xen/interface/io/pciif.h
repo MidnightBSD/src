@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * PCI Backend/Frontend Common Data Structures & Macros
  *

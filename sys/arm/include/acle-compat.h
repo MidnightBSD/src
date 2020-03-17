@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 ARM Ltd
  * All rights reserved.
@@ -26,7 +25,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/acle-compat.h 273827 2014-10-29 16:24:02Z andrew $
+ * $FreeBSD: stable/11/sys/arm/include/acle-compat.h 269956 2014-08-14 04:20:13Z imp $
  */
 
 #ifndef __ARM_ARCH

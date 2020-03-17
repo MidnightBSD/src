@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Olivier Houchard <cognet@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/asmacros.h 266311 2014-05-17 13:53:38Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/asmacros.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_ASMACROS_H_
@@ -35,7 +34,6 @@
 #ifdef _KERNEL
 
 #ifdef LOCORE
-#include "opt_global.h"
 
 #ifdef _ARM_ARCH_6
 #define GET_CURTHREAD_PTR(tmp) \
@@ -45,6 +43,18 @@
 	ldr	tmp, =_C_LABEL(__pcpu);\
 	ldr	tmp, [tmp, #PC_CURTHREAD]
 #endif
+
+#define	ELFNOTE(section, type, vendor, desctype, descdata...)	  \
+	.pushsection section					; \
+	    .balign 4						; \
+	    .long 2f - 1f		/* namesz */		; \
+	    .long 4f - 3f		/* descsz */		; \
+	    .long type			/* type */		; \
+	    1: .asciz vendor		/* vendor name */	; \
+	    2: .balign 4					; \
+	    3:  desctype descdata	/* node */		; \
+	    4: .balign 4					; \
+	.popsection
 
 #endif /* LOCORE */
 

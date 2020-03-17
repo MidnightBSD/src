@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: idtpci.c,v 1.1 2007/03/20 08:52:02 dyoung Exp $ */
 
 /*-
@@ -63,7 +62,7 @@
  */ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/idt/idtpci.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/idt/idtpci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,7 +80,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/idt/idtpci.c 227843 2011-11-22 21:28:20Z 
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/pmap.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -276,7 +274,7 @@ idtpci_attach(device_t dev)
 	        PCI_IRQ_END) != 0)
 		panic("idtpci_attach: failed to set up IRQ rman");
 
-	device_add_child(dev, "pci", busno);
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }
 
@@ -466,7 +464,7 @@ idtpci_write_ivar(device_t dev, device_t child, int which, uintptr_t result)
 
 static struct resource *
 idtpci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 
 	struct idtpci_softc *sc = device_get_softc(bus);	

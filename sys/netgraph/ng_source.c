@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_source.c
  */
@@ -40,11 +39,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netgraph/ng_source.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/netgraph/ng_source.c 343022 2019-01-14 09:57:36Z eugen $");
 
 /*
  * This node is used for high speed packet geneneration.  It queues
- * all data recieved on its 'input' hook and when told to start via
+ * all data received on its 'input' hook and when told to start via
  * a control message it sends the packets out its 'output' hook.  In
  * this way this node can be preloaded with a packet stream which it
  * can then send continuously as fast as possible.
@@ -126,8 +125,16 @@ static int		ng_source_dup_mod(sc_p, struct mbuf *,
 
 /* Parse type for timeval */
 static const struct ng_parse_struct_field ng_source_timeval_type_fields[] = {
+#ifdef __i386__
 	{ "tv_sec",		&ng_parse_int32_type	},
+#else
+	{ "tv_sec",		&ng_parse_int64_type	},
+#endif
+#ifdef __LP64__
+	{ "tv_usec",		&ng_parse_int64_type	},
+#else
 	{ "tv_usec",		&ng_parse_int32_type	},
+#endif
 	{ NULL }
 };
 const struct ng_parse_type ng_source_timeval_type = {
@@ -295,7 +302,7 @@ ng_source_newhook(node_p node, hook_p hook, const char *name)
 		sc->input = hook;
 	} else if (strcmp(name, NG_SOURCE_HOOK_OUTPUT) == 0) {
 		sc->output = hook;
-		sc->output_ifp = 0;
+		sc->output_ifp = NULL;
 		bzero(&sc->stats, sizeof(sc->stats));
 	} else
 		return (EINVAL);

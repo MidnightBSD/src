@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/resource.h 236992 2012-06-13 05:02:51Z imp $
+ * $FreeBSD: stable/11/sys/arm/include/resource.h 291650 2015-12-02 14:24:14Z mmel $
  */
 
 #ifndef _MACHINE_RESOURCE_H_
@@ -43,5 +42,8 @@
 #define	SYS_RES_MEMORY	3	/* i/o memory */
 #define	SYS_RES_IOPORT	4	/* i/o ports */
 #define	SYS_RES_GPIO	5	/* general purpose i/o */
+#ifdef NEW_PCIB
+#define PCI_RES_BUS	6	/* PCI bus numbers */
+#endif
 
 #endif /* !_MACHINE_RESOURCE_H_ */

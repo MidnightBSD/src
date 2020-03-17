@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/adm5120/files.adm5120 202175 2010-01-12 21:36:08Z imp $
+# $FreeBSD: stable/11/sys/mips/adm5120/files.adm5120 202175 2010-01-12 21:36:08Z imp $
 
 # ADM5120 on-board devices
 # mips/adm5120/console.c		standard

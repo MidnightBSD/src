@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Adrian Chadd
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_setup.c 253511 2013-07-21 03:56:57Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar71xx_setup.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -55,6 +54,8 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_setup.c 253511 2013-07-21 
 #include <mips/atheros/ar71xxreg.h>
 #include <mips/atheros/ar933xreg.h>
 #include <mips/atheros/ar934xreg.h>
+#include <mips/atheros/qca955xreg.h>
+#include <mips/atheros/qca953xreg.h>
 
 #include <mips/atheros/ar71xx_setup.h>
 
@@ -65,6 +66,8 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_setup.c 253511 2013-07-21 
 #include <mips/atheros/ar91xx_chip.h>
 #include <mips/atheros/ar933x_chip.h>
 #include <mips/atheros/ar934x_chip.h>
+#include <mips/atheros/qca953x_chip.h>
+#include <mips/atheros/qca955x_chip.h>
 
 #define	AR71XX_SYS_TYPE_LEN		128
 
@@ -183,6 +186,38 @@ ar71xx_detect_sys_type(void)
 		chip = "9344";
 		ar71xx_soc = AR71XX_SOC_AR9344;
 		ar71xx_cpu_ops = &ar934x_chip_def;
+		break;
+
+	case REV_ID_MAJOR_QCA9533:
+		minor = 0;
+		rev = (id & QCA953X_REV_ID_REVISION_MASK);
+		chip = "9533";
+		ar71xx_soc = AR71XX_SOC_QCA9533;
+		ar71xx_cpu_ops = &qca953x_chip_def;
+		break;
+
+	case REV_ID_MAJOR_QCA9533_V2:
+		minor = 0;
+		rev = (id & QCA953X_REV_ID_REVISION_MASK);
+		chip = "9533v2";
+		ar71xx_soc = AR71XX_SOC_QCA9533_V2;
+		ar71xx_cpu_ops = &qca953x_chip_def;
+		break;
+
+	case REV_ID_MAJOR_QCA9556:
+		minor = 0;
+		rev = (id & QCA955X_REV_ID_REVISION_MASK);
+		chip = "9556";
+		ar71xx_soc = AR71XX_SOC_QCA9556;
+		ar71xx_cpu_ops = &qca955x_chip_def;
+		break;
+
+	case REV_ID_MAJOR_QCA9558:
+		minor = 0;
+		rev = (id & QCA955X_REV_ID_REVISION_MASK);
+		chip = "9558";
+		ar71xx_soc = AR71XX_SOC_QCA9558;
+		ar71xx_cpu_ops = &qca955x_chip_def;
 		break;
 
 	default:

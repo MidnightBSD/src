@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013, 2015 The FreeBSD Foundation
  * All rights reserved.

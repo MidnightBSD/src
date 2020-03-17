@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Per Fogelstrom, Opsycon AB and RTMX Inc, USA.
  * 
@@ -31,7 +30,7 @@
  *
  *	$NetBSD: pio.h,v 1.1 1998/05/15 10:15:54 tsubai Exp $
  *	$OpenBSD: pio.h,v 1.1 1997/10/13 10:53:47 pefo Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/pio.h 235013 2012-05-04 16:00:22Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/include/pio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PIO_H_

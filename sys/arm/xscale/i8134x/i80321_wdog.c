@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: i80321_wdog.c,v 1.6 2003/07/15 00:24:54 lukem Exp $	*/
 
 /*-

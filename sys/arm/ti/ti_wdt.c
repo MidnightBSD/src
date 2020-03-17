@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_wdt.c 276290 2014-12-27 05:11:34Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/ti_wdt.c 281085 2015-04-04 21:34:26Z andrew $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,7 +48,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_wdt.c 276290 2014-12-27 05:11:34Z ia
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #include <arm/ti/ti_prcm.h>
 #include <arm/ti/ti_wdt.h>

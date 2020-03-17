@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Neelkanth Natu
  * All rights reserved.
@@ -45,7 +44,7 @@
 
 #include <machine/resource.h>
 
-__FBSDID("$FreeBSD: stable/10/sys/mips/sibyte/ata_zbbus.c 195333 2009-07-04 03:05:48Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/sibyte/ata_zbbus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 static int
 ata_zbbus_probe(device_t dev)
@@ -68,7 +67,7 @@ ata_zbbus_attach(device_t dev)
 	ch->attached = 1;
 
 	rid = 0;
-	io = bus_alloc_resource(dev, SYS_RES_MEMORY, &rid, 0, ~0, 1, RF_ACTIVE);
+	io = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, RF_ACTIVE);
 	if (io == NULL)
 		return (ENXIO);
 

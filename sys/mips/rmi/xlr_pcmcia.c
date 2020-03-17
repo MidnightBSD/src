@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -32,7 +31,7 @@
  * ATA driver for the XLR_PCMCIA Host adapter on the RMI XLR/XLS/.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/xlr_pcmcia.c 211923 2010-08-28 07:58:10Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/xlr_pcmcia.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

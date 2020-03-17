@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +37,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: ieee.h,v 1.1.1.1 1998/06/20 04:58:51 eeh Exp
- * $FreeBSD: stable/10/sys/powerpc/include/ieee.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD: stable/11/sys/powerpc/include/ieee.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_IEEE_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *
  * Copyright (c) 1999-2001, Vitaly V Belekhov
@@ -26,10 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_eiface.c 241686 2012-10-18 13:57:24Z andre $
+ * $FreeBSD: stable/11/sys/netgraph/ng_eiface.c 302054 2016-06-21 13:48:49Z bz $
  */
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/systm.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>
@@ -42,6 +42,7 @@
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/netisr.h>
@@ -235,6 +236,9 @@ ng_eiface_start2(node_p node, hook_p hook, void *arg1, int arg2)
 		if (m == NULL)
 			break;
 
+		/* Peel the mbuf off any stale tags */
+		m_tag_delete_chain(m, NULL);
+
 		/*
 		 * Berkeley packet filter.
 		 * Pass packet to bpf if there is a listener.
@@ -243,7 +247,7 @@ ng_eiface_start2(node_p node, hook_p hook, void *arg1, int arg2)
 		BPF_MTAP(ifp, m);
 
 		if (ifp->if_flags & IFF_MONITOR) {
-			ifp->if_ipackets++;
+			if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 			m_freem(m);
 			continue;
 		}
@@ -258,9 +262,9 @@ ng_eiface_start2(node_p node, hook_p hook, void *arg1, int arg2)
 
 		/* Update stats */
 		if (error == 0)
-			ifp->if_opackets++;
+			if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		else
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	}
 
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
@@ -485,7 +489,6 @@ ng_eiface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			}
 			error = if_setlladdr(priv->ifp,
 			    (u_char *)msg->data, ETHER_ADDR_LEN);
-			EVENTHANDLER_INVOKE(iflladdr_event, priv->ifp);
 			break;
 		    }
 
@@ -593,7 +596,7 @@ ng_eiface_rcvdata(hook_p hook, item_p item)
 	m->m_pkthdr.rcvif = ifp;
 
 	/* Update interface stats */
-	ifp->if_ipackets++;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 	(*ifp->if_input)(ifp, m);
 
@@ -676,5 +679,5 @@ vnet_ng_eiface_uninit(const void *unused)
 
 	delete_unrhdr(V_ng_eiface_unit);
 }
-VNET_SYSUNINIT(vnet_ng_eiface_uninit, SI_SUB_PSEUDO, SI_ORDER_ANY,
+VNET_SYSUNINIT(vnet_ng_eiface_uninit, SI_SUB_INIT_IF, SI_ORDER_ANY,
    vnet_ng_eiface_uninit, NULL);

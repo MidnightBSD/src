@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: varargs.h,v 1.16 1999/01/22 14:19:54 mycroft Exp $	*/
 
 /*-
@@ -36,7 +35,7 @@
  *
  *	@(#)varargs.h	8.2 (Berkeley) 3/22/94
  *	JNPR: varargs.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/10/sys/mips/include/varargs.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: stable/11/sys/mips/include/varargs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MIPS_VARARGS_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powermac/uninorthvar.h 266019 2014-05-14 14:08:45Z ian $
+ * $FreeBSD: stable/11/sys/powerpc/powermac/uninorthvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_POWERPC_POWERMAC_UNINORTHVAR_H_
@@ -31,7 +30,7 @@
 
 #include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/ofw_pci.h>
-#include <powerpc/ofw/ofw_pci.h>
+#include <dev/ofw/ofwpci.h>
 
 struct uninorth_softc {
 	struct ofw_pci_softc	pci_sc;

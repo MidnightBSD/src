@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Core definitions and data structures shareable across OS platforms.
  *

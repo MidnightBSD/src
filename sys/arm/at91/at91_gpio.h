@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 M. Warner Losh.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_gpio.h 266087 2014-05-14 20:31:54Z ian $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_gpio.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef ARM_AT91_AT91_GPIO_H
 #define ARM_AT91_AT91_GPIO_H

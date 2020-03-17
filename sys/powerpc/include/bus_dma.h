@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Scott Long
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/sys/powerpc/include/bus_dma.h 216154 2010-12-03 16:37:37Z nwhitehorn $ */
+/* $FreeBSD: stable/11/sys/powerpc/include/bus_dma.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _POWERPC_BUS_DMA_H_
 #define _POWERPC_BUS_DMA_H_

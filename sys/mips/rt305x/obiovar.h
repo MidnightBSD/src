@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: obiovar.h,v 1.4 2003/06/16 17:40:53 thorpej Exp $	*/
 
 /*-
@@ -28,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/rt305x/obiovar.h 220297 2011-04-03 14:39:55Z adrian $
+ * $FreeBSD: stable/11/sys/mips/rt305x/obiovar.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 

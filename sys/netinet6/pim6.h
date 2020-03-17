@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1998 WIDE Project.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: pim6.h,v 1.3 2000/03/25 07:23:58 sumikawa Exp $
- * $FreeBSD: stable/10/sys/netinet6/pim6.h 174510 2007-12-10 16:03:40Z obrien $
+ * $FreeBSD: stable/11/sys/netinet6/pim6.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * Protocol Independent Multicast (PIM) definitions

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/mips/atheros/ar934x_chip.h 253511 2013-07-21 03:56:57Z adrian $ */
+/* $FreeBSD: stable/11/sys/mips/atheros/ar934x_chip.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef	__AR934X_CHIP_H__
 #define	__AR934X_CHIP_H__

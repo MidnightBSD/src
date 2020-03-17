@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * alias_pptp.c
  *
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_pptp.c 190841 2009-04-08 11:56:49Z piso $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/libalias/alias_pptp.c 259858 2013-12-25 02:06:57Z glebius $");
 
 /* Includes */
 #ifdef _KERNEL
@@ -79,7 +78,7 @@ AliasHandlePptpGreOut(struct libalias *, struct ip *);
 static int
 AliasHandlePptpGreIn(struct libalias *, struct ip *);
 
-static int 
+static int
 fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
@@ -91,14 +90,14 @@ fingerprint(struct libalias *la, struct alias_data *ah)
 	return (-1);
 }
 
-static int 
+static int
 fingerprintgre(struct libalias *la, struct alias_data *ah)
 {
 
 	return (0);
 }
 
-static int 
+static int
 protohandlerin(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
@@ -106,7 +105,7 @@ protohandlerin(struct libalias *la, struct ip *pip, struct alias_data *ah)
 	return (0);
 }
 
-static int 
+static int
 protohandlerout(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
@@ -114,7 +113,7 @@ protohandlerout(struct libalias *la, struct ip *pip, struct alias_data *ah)
 	return (0);
 }
 
-static int 
+static int
 protohandlergrein(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 
@@ -124,7 +123,7 @@ protohandlergrein(struct libalias *la, struct ip *pip, struct alias_data *ah)
 	return (-1);
 }
 
-static int 
+static int
 protohandlergreout(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 
@@ -135,39 +134,39 @@ protohandlergreout(struct libalias *la, struct ip *pip, struct alias_data *ah)
 
 /* Kernel module definition. */
 struct proto_handler handlers[] = {
-	{ 
-	  .pri = 200, 
-	  .dir = IN, 
-	  .proto = TCP, 
-	  .fingerprint = &fingerprint, 
+	{
+	  .pri = 200,
+	  .dir = IN,
+	  .proto = TCP,
+	  .fingerprint = &fingerprint,
 	  .protohandler = &protohandlerin
 	},
-	{ 
-	  .pri = 210, 
-	  .dir = OUT, 
-	  .proto = TCP, 
-	  .fingerprint = &fingerprint, 
+	{
+	  .pri = 210,
+	  .dir = OUT,
+	  .proto = TCP,
+	  .fingerprint = &fingerprint,
 	  .protohandler = &protohandlerout
 	},
-/* 
- * WATCH OUT!!! these 2 handlers NEED a priority of INT_MAX (highest possible) 
+/*
+ * WATCH OUT!!! these 2 handlers NEED a priority of INT_MAX (highest possible)
  * cause they will ALWAYS process packets, so they must be the last one
  * in chain: look fingerprintgre() above.
  */
-	{ 
-	  .pri = INT_MAX, 
-	  .dir = IN, 
-	  .proto = IP, 
-	  .fingerprint = &fingerprintgre, 
+	{
+	  .pri = INT_MAX,
+	  .dir = IN,
+	  .proto = IP,
+	  .fingerprint = &fingerprintgre,
 	  .protohandler = &protohandlergrein
 	},
-	{ 
-	  .pri = INT_MAX, 
-	  .dir = OUT, 
-	  .proto = IP, 
-	  .fingerprint = &fingerprintgre, 
+	{
+	  .pri = INT_MAX,
+	  .dir = OUT,
+	  .proto = IP,
+	  .fingerprint = &fingerprintgre,
 	  .protohandler = &protohandlergreout
-	}, 
+	},
 	{ EOH }
 };
 static int
@@ -191,7 +190,7 @@ mod_handler(module_t mod, int type, void *data)
 }
 
 #ifdef _KERNEL
-static 
+static
 #endif
 moduledata_t alias_mod = {
        "alias_pptp", mod_handler, NULL

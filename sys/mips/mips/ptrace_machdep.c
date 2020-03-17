@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 M. Warner Losh.
  * All rights reserved.
@@ -28,7 +27,7 @@
 
 #if 0
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/ptrace_machdep.c 202105 2010-01-11 19:21:52Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/ptrace_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This file is a place holder for MIPS.  Some models of MIPS may need special

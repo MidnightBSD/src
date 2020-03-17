@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/clnt_rc.c 317473 2017-04-26 22:40:08Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/clnt_rc.c 317466 2017-04-26 22:04:55Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

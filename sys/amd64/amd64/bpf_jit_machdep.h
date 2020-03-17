@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
  * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
@@ -29,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/amd64/bpf_jit_machdep.h 207081 2010-04-22 23:47:19Z jkim $
+ * $FreeBSD: stable/11/sys/amd64/amd64/bpf_jit_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BPF_JIT_MACHDEP_H_

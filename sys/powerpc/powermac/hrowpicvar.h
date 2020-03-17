@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 by Peter Grehan. All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powermac/hrowpicvar.h 171805 2007-08-11 19:25:32Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/powermac/hrowpicvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef  _POWERPC_POWERMAC_HROWPICVAR_H_

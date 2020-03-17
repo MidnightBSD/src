@@ -1,0 +1,9 @@
+# $FreeBSD: stable/11/sys/mips/broadcom/std.broadcom 302190 2016-06-25 04:34:54Z landonf $
+#
+
+machine		mips mipsel
+
+makeoptions	INTRNG
+options		INTRNG
+
+files		"../broadcom/files.broadcom"

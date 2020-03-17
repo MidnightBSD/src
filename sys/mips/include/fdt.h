@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/fdt.h 266084 2014-05-14 19:18:58Z ian $
+ * $FreeBSD: stable/11/sys/mips/include/fdt.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_FDT_H_
@@ -41,7 +40,7 @@
 #if defined(CPU_RMI) || defined(CPU_NLM)
 #define fdtbus_bs_tag	rmi_uart_bus_space
 #else
-#define fdtbus_bs_tag	mips_bus_space_fdt
+#define fdtbus_bs_tag	mips_bus_space_generic
 #endif
 
 #endif /* _MACHINE_FDT_H_ */

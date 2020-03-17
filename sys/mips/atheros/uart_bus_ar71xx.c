@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/uart_bus_ar71xx.c 253509 2013-07-21 03:54:39Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/uart_bus_ar71xx.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,7 +83,7 @@ uart_ar71xx_probe(device_t dev)
 	sc->sc_bas.bst = mips_bus_space_generic;
 	sc->sc_bas.bsh = MIPS_PHYS_TO_KSEG1(AR71XX_UART_ADDR) + 3;
 
-	return (uart_bus_probe(dev, 2, freq, 0, 0));
+	return (uart_bus_probe(dev, 2, 0, freq, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, apb, uart_ar71xx_driver, uart_devclass, 0, 0);

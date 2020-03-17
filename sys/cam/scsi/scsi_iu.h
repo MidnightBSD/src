@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * This file is in the public domain.
- * $FreeBSD: stable/10/sys/cam/scsi/scsi_iu.h 139743 2005-01-05 22:34:37Z imp $
+ * $FreeBSD: stable/11/sys/cam/scsi/scsi_iu.h 139743 2005-01-05 22:34:37Z imp $
  */
 #ifndef	_SCSI_SCSI_IU_H
 #define _SCSI_SCSI_IU_H 1

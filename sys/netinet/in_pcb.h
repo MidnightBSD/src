@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet/in_pcb.h 309108 2016-11-24 14:48:46Z jch $
+ * $FreeBSD: stable/11/sys/netinet/in_pcb.h 343432 2019-01-25 15:25:53Z tuexen $
  */
 
 #ifndef _NETINET_IN_PCB_H_
@@ -43,6 +42,7 @@
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 #include <sys/_rwlock.h>
+#include <net/route.h>
 
 #ifdef _KERNEL
 #include <sys/lock.h>
@@ -80,6 +80,8 @@ struct in_addr_4in6 {
 /*
  * NOTE: ipv6 addrs should be 64-bit aligned, per RFC 2553.  in_conninfo has
  * some extra padding to accomplish this.
+ * NOTE 2: tcp_syncache.c uses first 5 32-bit words, which identify fport,
+ * lport, faddr to generate hash, so these fields shouldn't be moved.
  */
 struct in_endpoints {
 	u_int16_t	ie_fport;		/* foreign port */
@@ -95,6 +97,7 @@ struct in_endpoints {
 		struct	in_addr_4in6 ie46_local;
 		struct	in6_addr ie6_local;
 	} ie_dependladdr;
+	u_int32_t	ie6_zoneid;		/* scope zone id */
 };
 #define	ie_faddr	ie_dependfaddr.ie46_foreign.ia46_addr4
 #define	ie_laddr	ie_dependladdr.ie46_local.ia46_addr4
@@ -117,14 +120,16 @@ struct in_conninfo {
  * Flags for inc_flags.
  */
 #define	INC_ISIPV6	0x01
+#define	INC_IPV6MINMTU	0x02
 
-#define inc_isipv6	inc_flags	/* temp compatability */
+#define	inc_isipv6	inc_flags	/* temp compatibility */
 #define	inc_fport	inc_ie.ie_fport
 #define	inc_lport	inc_ie.ie_lport
 #define	inc_faddr	inc_ie.ie_faddr
 #define	inc_laddr	inc_ie.ie_laddr
 #define	inc6_faddr	inc_ie.ie6_faddr
 #define	inc6_laddr	inc_ie.ie6_laddr
+#define	inc6_zoneid	inc_ie.ie6_zoneid
 
 struct	icmp6_filter;
 
@@ -198,9 +203,10 @@ struct inpcb {
 	u_char	inp_ip_minttl;		/* (i) minimum TTL or drop */
 	uint32_t inp_flowid;		/* (x) flow id / queue id */
 	u_int	inp_refcount;		/* (i) refcount */
-	void	*inp_pspare[5];		/* (x) route caching / general use */
+	void	*inp_pspare[5];		/* (x) packet pacing / general use */
 	uint32_t inp_flowtype;		/* (x) M_HASHTYPE value */
-	u_int	inp_ispare[5];		/* (x) route caching / user cookie /
+	uint32_t inp_rss_listen_bucket;	/* (x) overridden RSS listen bucket */
+	u_int	inp_ispare[4];		/* (x) packet pacing / user cookie /
 					 *     general use */
 
 	/* Local and foreign ports, local and foreign addr. */
@@ -234,8 +240,14 @@ struct inpcb {
 #define inp_zero_size offsetof(struct inpcb, inp_gencnt)
 	inp_gen_t	inp_gencnt;	/* (c) generation count */
 	struct llentry	*inp_lle;	/* cached L2 information */
-	struct rtentry	*inp_rt;	/* cached L3 information */
 	struct rwlock	inp_lock;
+	rt_gen_t	inp_rt_cookie;	/* generation for route entry */
+	union {				/* cached L3 information */
+		struct route inpu_route;
+		struct route_in6 inpu_route6;
+	} inp_rtu;
+#define inp_route inp_rtu.inpu_route
+#define inp_route6 inp_rtu.inpu_route6
 };
 #define	inp_fport	inp_inc.inc_fport
 #define	inp_lport	inp_inc.inc_lport
@@ -247,6 +259,7 @@ struct inpcb {
 
 #define	in6p_faddr	inp_inc.inc6_faddr
 #define	in6p_laddr	inp_inc.inc6_laddr
+#define	in6p_zoneid	inp_inc.inc6_zoneid
 #define	in6p_hops	inp_depend6.inp6_hops	/* default hop limit */
 #define	in6p_flowinfo	inp_flow
 #define	in6p_options	inp_depend6.inp6_options
@@ -539,6 +552,7 @@ short	inp_so_options(const struct inpcb *inp);
 	(((faddr) ^ ((faddr) >> 16) ^ ntohs((lport) ^ (fport))) & (mask))
 #define INP_PCBPORTHASH(lport, mask) \
 	(ntohs((lport)) & (mask))
+#define	INP6_PCBHASHKEY(faddr)	((faddr)->s6_addr32[3])
 
 /*
  * Flags for inp_vflags -- historically version flags only
@@ -559,7 +573,7 @@ short	inp_so_options(const struct inpcb *inp);
 #define	INP_ANONPORT		0x00000040 /* port chosen for user */
 #define	INP_RECVIF		0x00000080 /* receive incoming interface */
 #define	INP_MTUDISC		0x00000100 /* user can do MTU discovery */
-#define	INP_FAITH		0x00000200 /* accept FAITH'ed connections */
+				   	   /* 0x000200 unused: was INP_FAITH */
 #define	INP_RECVTTL		0x00000400 /* receive incoming IP TTL */
 #define	INP_DONTFRAG		0x00000800 /* don't fragment packet */
 #define	INP_BINDANY		0x00001000 /* allow bind to any address */
@@ -599,6 +613,10 @@ short	inp_so_options(const struct inpcb *inp);
 #define	INP_REUSEPORT		0x00000008 /* SO_REUSEPORT option is set */
 #define	INP_FREED		0x00000010 /* inp itself is not valid */
 #define	INP_REUSEADDR		0x00000020 /* SO_REUSEADDR option is set */
+#define	INP_BINDMULTI		0x00000040 /* IP_BINDMULTI option is set */
+#define	INP_RSS_BUCKET_SET	0x00000080 /* IP_RSS_LISTEN_BUCKET is set */
+#define	INP_RECVFLOWID		0x00000100 /* populate recv datagram with flow info */
+#define	INP_RECVRSSBUCKETID	0x00000200 /* populate recv datagram with bucket id */
 
 /*
  * Flags passed to in_pcblookup*() functions.
@@ -657,6 +675,9 @@ void	in_pcbinfo_destroy(struct inpcbinfo *);
 void	in_pcbinfo_init(struct inpcbinfo *, const char *, struct inpcbhead *,
 	    int, int, char *, uma_init, uma_fini, uint32_t, u_int);
 
+int	in_pcbbind_check_bindmulti(const struct inpcb *ni,
+	    const struct inpcb *oi);
+
 struct inpcbgroup *
 	in_pcbgroup_byhash(struct inpcbinfo *, u_int, uint32_t);
 struct inpcbgroup *
@@ -709,6 +730,7 @@ void	in_pcbrehash_mbuf(struct inpcb *, struct mbuf *);
 int	in_pcbrele(struct inpcb *);
 int	in_pcbrele_rlocked(struct inpcb *);
 int	in_pcbrele_wlocked(struct inpcb *);
+void	in_losing(struct inpcb *);
 void	in_pcbsetsolabel(struct socket *so);
 int	in_getpeeraddr(struct socket *so, struct sockaddr **nam);
 int	in_getsockaddr(struct socket *so, struct sockaddr **nam);

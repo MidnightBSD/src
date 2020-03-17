@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: locore.h,v 1.78 2007/10/17 19:55:36 garbled Exp $ */
 
 /*
@@ -13,7 +12,7 @@
  * software for any purpose.  It is provided "as is" without
  * express or implied warranty.
  *
- * $FreeBSD: stable/10/sys/mips/include/locore.h 232615 2012-03-06 19:01:32Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/locore.h 232615 2012-03-06 19:01:32Z jmallett $
  */
 
 /*

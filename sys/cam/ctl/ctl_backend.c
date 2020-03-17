@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_backend.c 313369 2017-02-07 01:56:26Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_backend.c 313368 2017-02-07 01:55:48Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

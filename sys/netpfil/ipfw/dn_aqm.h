@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.
@@ -31,7 +30,7 @@
 /*
  * API for writing an Active Queue Management algorithm for Dummynet
  *
- * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_aqm.h 301772 2016-06-10 00:00:25Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_aqm.h 300783 2016-05-26 22:03:28Z truckman $
  */
 
 #ifndef _IP_DN_AQM_H

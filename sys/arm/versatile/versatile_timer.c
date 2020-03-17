@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/versatile/versatile_timer.c 259329 2013-12-13 20:43:11Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/versatile/versatile_timer.c 281085 2015-04-04 21:34:26Z andrew $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,7 +47,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/versatile/versatile_timer.c 259329 2013-12
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 void
 cpu_initclocks(void)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #include <machine/asm.h>
 
 

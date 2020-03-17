@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: blockio.S,v 1.5 2002/08/15 01:38:16 briggs Exp $	*/
 
 /*-
@@ -44,12 +43,12 @@
  *
  * Created      : 08/10/94
  * Modified	: 22/01/99  -- R.Earnshaw
- *			       Faster, and small tweaks for StrongARM 	
+ *			       Faster, and small tweaks for StrongARM
  */
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/blockio.S 275767 2014-12-14 16:28:53Z andrew $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/blockio.S 283366 2015-05-24 12:20:11Z andrew $");
 
 	.syntax	unified
 
@@ -252,7 +251,7 @@ ENTRY(outsw)
 
 	str	r3, [r0]
 	str	ip, [r0]
-	
+
 /*	mov	ip, r3, lsl #16
  *	orr	ip, ip, ip, lsr #16
  *	str	ip, [r0]
@@ -359,7 +358,7 @@ ENTRY(outsw16)
 	eor	r3, r3, r4, lsl #16	/* r3 = (A^B^A)(B) = (B)(B) */
 	str	r3, [r0]
 	str	r4, [r0]
-	
+
 /*	mov	r3, r4, lsl #16
  *	orr	r3, r3, r3, lsr #16
  *	str	r3, [r0]

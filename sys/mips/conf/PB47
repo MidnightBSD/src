@@ -10,8 +10,10 @@
 # * 8MB NOR SPI flash
 # * 64MB RAM
 #
-# $FreeBSD: stable/10/sys/mips/conf/PB47 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/PB47 345344 2019-03-20 18:49:45Z kib $
 #
+
+#NO_UNIVERSE
 
 include		"AR71XX_BASE"
 ident		"PB47"
@@ -30,11 +32,11 @@ options 	AR71XX_REALMEM=64*1024*1024
 options 	MSDOSFS
 
 # uncompress - to boot read-only lzma natively from flash
-device		geom_uncompress
-options 	GEOM_UNCOMPRESS
+device		xz
+options 	GEOM_UZIP
 
 # Used for the static uboot partition map
 device		geom_map
 
 # Boot off of the rootfs, as defined in the geom_map setup.
-options 	ROOTDEVNAME=\"ufs:map/rootfs.uncompress\"
+options 	ROOTDEVNAME=\"ufs:map/rootfs.uzip\"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2007 by Oleksandr Tymoshenko. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/idt/idtreg.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: stable/11/sys/mips/idt/idtreg.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef __IDTREG_H__

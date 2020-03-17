@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Neelkanth Natu
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/sibyte/sb_bus_space.h 203985 2010-02-17 06:43:37Z neel $
+ * $FreeBSD: stable/11/sys/mips/sibyte/sb_bus_space.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SB_BUS_SPACE_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_mbox.c 266152 2014-05-15 16:11:06Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/ti_mbox.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,14 +47,12 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_mbox.c 266152 2014-05-15 16:11:06Z i
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #include <arm/ti/ti_mbox.h>
 #include <arm/ti/ti_prcm.h>
 
 #include "mbox_if.h"
 
-#define DEBUG
 #ifdef DEBUG
 #define	DPRINTF(fmt, ...)	do {	\
 	printf("%s: ", __func__);	\
@@ -124,7 +121,7 @@ ti_mbox_probe(device_t dev)
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
-	if (ofw_bus_is_compatible(dev, "ti,system-mbox")) {
+	if (ofw_bus_is_compatible(dev, "ti,omap4-mailbox")) {
 		device_set_desc(dev, "TI System Mailbox");
 		return (BUS_PROBE_DEFAULT);
 	}

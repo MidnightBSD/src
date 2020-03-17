@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/twl/twl_vreg.c 263456 2014-03-21 00:19:20Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/twl/twl_vreg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management.
@@ -64,8 +63,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/twl/twl_vreg.c 263456 2014-03-21 00:19:
 #include <sys/malloc.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 

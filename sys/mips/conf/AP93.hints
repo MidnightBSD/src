@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/conf/AP93.hints 252689 2013-07-04 08:09:54Z adrian $
+# $FreeBSD: stable/11/sys/mips/conf/AP93.hints 266451 2014-05-19 19:34:44Z adrian $
 
 # arge0 MDIO bus
 hint.argemdio.0.at="nexus0"
@@ -121,8 +121,9 @@ hint.map.3.readonly=1
 hint.map.4.at="flash/spi0"
 hint.map.4.start=0x00880000
 hint.map.4.end=0x00890000
-hint.map.4.name="mib0"
-hint.map.4.readonly=1
+# hint.map.4.name="mib0"
+hint.map.4.name="cfg"
+# hint.map.4.readonly=1
 
 hint.map.5.at="flash/spi0"
 hint.map.5.start=0x00890000

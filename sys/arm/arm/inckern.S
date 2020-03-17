@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
@@ -26,7 +25,7 @@
 #include "opt_kernname.h"
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/inckern.S 159557 2006-06-12 22:58:50Z cognet $")
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/inckern.S 159557 2006-06-12 22:58:50Z cognet $")
 ENTRY(do_call)
 	mov	r6, r0
 	mov	r0, r1

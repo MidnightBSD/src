@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_ppp.h
  */
@@ -38,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_ppp.h 171688 2007-08-01 20:49:35Z mav $
+ * $FreeBSD: stable/11/sys/netgraph/ng_ppp.h 171688 2007-08-01 20:49:35Z mav $
  * $Whistle: ng_ppp.h,v 1.8 1999/01/25 02:40:02 archie Exp $
  */
 

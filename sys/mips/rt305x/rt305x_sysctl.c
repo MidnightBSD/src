@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Aleksandr Rybalko.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rt305x/rt305x_sysctl.c 232250 2012-02-28 13:19:34Z gavin $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/rt305x_sysctl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,6 +70,7 @@ rt305x_sysctl_dump_config(device_t dev)
 	    (val >> 24) & 0xff);
 
 	DUMPREG(SYSCTL_SYSCFG);
+#if !defined(RT5350) && !defined(MT7620)
 	if ( val & SYSCTL_SYSCFG_INIC_EE_SDRAM)
 		printf("\tGet SDRAM config from EEPROM\n");
 	if ( val & SYSCTL_SYSCFG_INIC_8MB_SDRAM)
@@ -124,6 +124,7 @@ rt305x_sysctl_dump_config(device_t dev)
 	    ((val & SYSCTL_CLKCFG1_PCM_CLK_DIV_MASK) >> 
 		SYSCTL_CLKCFG1_PCM_CLK_DIV_SHIFT));
 	DUMPREG(SYSCTL_GPIOMODE);
+#endif
 #undef DUMPREG
 
 	return;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Aleksandr Rybalko.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rt305x/rt305x_ic.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/rt305x_ic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

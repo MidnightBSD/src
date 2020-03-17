@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 by Peter Grehan. All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powermac/gracklevar.h 230993 2012-02-04 19:54:13Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/powermac/gracklevar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_POWERPC_POWERMAC_GRACKLEVAR_H_

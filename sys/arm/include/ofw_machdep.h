@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 The FreeBSD Foundation
  * All rights reserved.
@@ -27,19 +26,22 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/ofw_machdep.h 266084 2014-05-14 19:18:58Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/ofw_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_
 #define _MACHINE_OFW_MACHDEP_H_
 
+#include <sys/types.h>
+#include <sys/bus.h>
+#include <sys/rman.h>
 #include <vm/vm.h>
 
 typedef	uint32_t	cell_t;
 
 struct mem_region {
-	vm_offset_t	mr_start;
-	vm_size_t	mr_size;
+	uint64_t	mr_start;
+	uint64_t	mr_size;
 };
 
 #endif /* _MACHINE_OFW_MACHDEP_H_ */

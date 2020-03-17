@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mcontext.h,v 1.4 2003/10/08 22:43:01 thorpej Exp $	*/
 
 /*-
@@ -29,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/ucontext.h 203974 2010-02-16 21:59:17Z imp $
+ * $FreeBSD: stable/11/sys/arm/include/ucontext.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_MCONTEXT_H_
@@ -67,43 +66,22 @@ typedef __greg_t	__gregset_t[_NGREG];
 /*
  * Floating point register state
  */
-/* Note: the storage layout of this structure must be identical to ARMFPE! */
 typedef struct {
-	unsigned int	__fp_fpsr;
-	struct {
-		unsigned int	__fp_exponent;
-		unsigned int	__fp_mantissa_hi;
-		unsigned int	__fp_mantissa_lo;
-	}		__fp_fr[8];
-} __fpregset_t;
-
-typedef struct {
-	unsigned int	__vfp_fpscr;
-	unsigned int	__vfp_fstmx[33];
-	unsigned int	__vfp_fpsid;
-} __vfpregset_t;
+	__uint64_t	mcv_reg[32];
+	__uint32_t	mcv_fpscr;
+} mcontext_vfp_t;
 
 typedef struct {
 	__gregset_t	__gregs;
-	union {
-		__fpregset_t __fpregs;
-		__vfpregset_t __vfpregs;
-	} __fpu;
+
+	/*
+	 * Originally, rest of this structure was named __fpu, 35 * 4 bytes
+	 * long, never accessed from kernel. 
+	 */
+	__size_t	mc_vfp_size;
+	void 		*mc_vfp_ptr;
+	unsigned int	mc_spare[33];
 } mcontext_t;
 
-/* Machine-dependent uc_flags */
-#define	_UC_ARM_VFP	0x00010000	/* FPU field is VFP */
-
-/* used by signal delivery to indicate status of signal stack */
-#define _UC_SETSTACK	0x00020000
-#define _UC_CLRSTACK	0x00040000
-
-#define _UC_MACHINE_PAD	3		/* Padding appended to ucontext_t */
-
-#define _UC_MACHINE_SP(uc)	((uc)->uc_mcontext.__gregs[_REG_SP])
-#define _UC_MACHINE_PC(uc)	((uc)->uc_mcontext.__gregs[_REG_PC])
-#define _UC_MACHINE_INTRV(uc)	((uc)->uc_mcontext.__gregs[_REG_R0])
-
-#define	_UC_MACHINE_SET_PC(uc, pc)	_UC_MACHINE_PC(uc) = (pc)
-
+#define UC_
 #endif	/* !_MACHINE_MCONTEXT_H_ */

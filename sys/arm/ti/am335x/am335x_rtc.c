@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Luiz Otavio O Souza <loos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/am335x/am335x_rtc.c 279462 2015-03-01 00:57:01Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/am335x/am335x_rtc.c 279311 2015-02-26 07:45:40Z dim $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

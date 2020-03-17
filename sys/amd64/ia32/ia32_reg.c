@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Peter Wemm
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/ia32/ia32_reg.c 320525 2017-07-01 03:38:12Z kib $
+ * $FreeBSD: stable/11/sys/amd64/ia32/ia32_reg.c 341491 2018-12-04 19:07:10Z markj $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/ia32/ia32_reg.c 320525 2017-07-01 03:38:12Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/ia32/ia32_reg.c 341491 2018-12-04 19:07:10Z markj $");
 
 #include "opt_compat.h"
 
@@ -106,6 +105,8 @@ fill_regs32(struct thread *td, struct reg32 *regs)
 	regs->r_eflags = tp->tf_rflags;
 	regs->r_esp = tp->tf_rsp;
 	regs->r_ss = tp->tf_ss;
+	regs->r_err = 0;
+	regs->r_trapno = 0;
 	return (0);
 }
 

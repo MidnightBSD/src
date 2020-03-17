@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,11 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_timer.c 330303 2018-03-03 00:54:12Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_timer.c 334727 2018-06-06 19:48:39Z tuexen $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
+#include "opt_rss.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -51,19 +51,24 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_timer.c 330303 2018-03-03 00:54:12
 
 #include <net/if.h>
 #include <net/route.h>
+#include <net/rss_config.h>
 #include <net/vnet.h>
+#include <net/netisr.h>
 
-#include <netinet/cc.h>
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/in_pcb.h>
+#include <netinet/in_rss.h>
 #include <netinet/in_systm.h>
 #ifdef INET6
 #include <netinet6/in6_pcb.h>
 #endif
 #include <netinet/ip_var.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
+#include <netinet/cc/cc.h>
 #ifdef INET6
 #include <netinet6/tcp6_var.h>
 #endif
@@ -139,39 +144,39 @@ SYSCTL_INT(_net_inet_tcp, OID_AUTO, rexmit_drop_options, CTLFLAG_RW,
 
 static VNET_DEFINE(int, tcp_pmtud_blackhole_detect);
 #define	V_tcp_pmtud_blackhole_detect	VNET(tcp_pmtud_blackhole_detect)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_detection,
-    CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_detection,
+    CTLFLAG_RW|CTLFLAG_VNET,
     &VNET_NAME(tcp_pmtud_blackhole_detect), 0,
     "Path MTU Discovery Black Hole Detection Enabled");
 
 static VNET_DEFINE(int, tcp_pmtud_blackhole_activated);
 #define	V_tcp_pmtud_blackhole_activated \
     VNET(tcp_pmtud_blackhole_activated)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_activated,
-    CTLFLAG_RD,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_activated,
+    CTLFLAG_RD|CTLFLAG_VNET,
     &VNET_NAME(tcp_pmtud_blackhole_activated), 0,
     "Path MTU Discovery Black Hole Detection, Activation Count");
 
 static VNET_DEFINE(int, tcp_pmtud_blackhole_activated_min_mss);
 #define	V_tcp_pmtud_blackhole_activated_min_mss \
     VNET(tcp_pmtud_blackhole_activated_min_mss)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_activated_min_mss,
-    CTLFLAG_RD,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_activated_min_mss,
+    CTLFLAG_RD|CTLFLAG_VNET,
     &VNET_NAME(tcp_pmtud_blackhole_activated_min_mss), 0,
     "Path MTU Discovery Black Hole Detection, Activation Count at min MSS");
 
 static VNET_DEFINE(int, tcp_pmtud_blackhole_failed);
 #define	V_tcp_pmtud_blackhole_failed	VNET(tcp_pmtud_blackhole_failed)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_failed,
-    CTLFLAG_RD,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_failed,
+    CTLFLAG_RD|CTLFLAG_VNET,
     &VNET_NAME(tcp_pmtud_blackhole_failed), 0,
     "Path MTU Discovery Black Hole Detection, Failure Count");
 
 #ifdef INET
 static VNET_DEFINE(int, tcp_pmtud_blackhole_mss) = 1200;
 #define	V_tcp_pmtud_blackhole_mss	VNET(tcp_pmtud_blackhole_mss)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_mss,
-    CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_mss,
+    CTLFLAG_RW|CTLFLAG_VNET,
     &VNET_NAME(tcp_pmtud_blackhole_mss), 0,
     "Path MTU Discovery Black Hole Detection lowered MSS");
 #endif
@@ -179,18 +184,63 @@ SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, pmtud_blackhole_mss,
 #ifdef INET6
 static VNET_DEFINE(int, tcp_v6pmtud_blackhole_mss) = 1220;
 #define	V_tcp_v6pmtud_blackhole_mss	VNET(tcp_v6pmtud_blackhole_mss)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, v6pmtud_blackhole_mss,
-    CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, v6pmtud_blackhole_mss,
+    CTLFLAG_RW|CTLFLAG_VNET,
     &VNET_NAME(tcp_v6pmtud_blackhole_mss), 0,
     "Path MTU Discovery IPv6 Black Hole Detection lowered MSS");
 #endif
 
+#ifdef	RSS
+static int	per_cpu_timers = 1;
+#else
 static int	per_cpu_timers = 0;
+#endif
 SYSCTL_INT(_net_inet_tcp, OID_AUTO, per_cpu_timers, CTLFLAG_RW,
     &per_cpu_timers , 0, "run tcp timers on all cpus");
 
+#if 0
 #define	INP_CPU(inp)	(per_cpu_timers ? (!CPU_ABSENT(((inp)->inp_flowid % (mp_maxid+1))) ? \
 		((inp)->inp_flowid % (mp_maxid+1)) : curcpu) : 0)
+#endif
+
+/*
+ * Map the given inp to a CPU id.
+ *
+ * This queries RSS if it's compiled in, else it defaults to the current
+ * CPU ID.
+ */
+static inline int
+inp_to_cpuid(struct inpcb *inp)
+{
+	u_int cpuid;
+
+#ifdef	RSS
+	if (per_cpu_timers) {
+		cpuid = rss_hash2cpuid(inp->inp_flowid, inp->inp_flowtype);
+		if (cpuid == NETISR_CPUID_NONE)
+			return (curcpu);	/* XXX */
+		else
+			return (cpuid);
+	}
+#else
+	/* Legacy, pre-RSS behaviour */
+	if (per_cpu_timers) {
+		/*
+		 * We don't have a flowid -> cpuid mapping, so cheat and
+		 * just map unknown cpuids to curcpu.  Not the best, but
+		 * apparently better than defaulting to swi 0.
+		 */
+		cpuid = inp->inp_flowid % (mp_maxid + 1);
+		if (! CPU_ABSENT(cpuid))
+			return (cpuid);
+		return (curcpu);
+	}
+#endif
+	/* Default for RSS and non-RSS - cpuid 0 */
+	else {
+		return (0);
+	}
+}
 
 /*
  * Tcp protocol timeout routine called every 500 ms.
@@ -252,7 +302,7 @@ tcp_timer_delack(void *xtp)
 
 	tp->t_flags |= TF_ACKNOW;
 	TCPSTAT_INC(tcps_delack);
-	(void) tcp_output(tp);
+	(void) tp->t_fb->tfb_tcp_output(tp);
 	INP_WUNLOCK(inp);
 	CURVNET_RESTORE();
 }
@@ -330,6 +380,8 @@ tcp_timer_2msl(void *xtp)
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
 			  PRU_SLOWTIMO);
 #endif
+	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
+
 	if (tp != NULL)
 		INP_WUNLOCK(inp);
 	INP_INFO_RUNLOCK(&V_tcbinfo);
@@ -416,6 +468,7 @@ tcp_timer_keep(void *xtp)
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
 			  PRU_SLOWTIMO);
 #endif
+	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 	INP_WUNLOCK(inp);
 	INP_INFO_RUNLOCK(&V_tcbinfo);
 	CURVNET_RESTORE();
@@ -430,6 +483,7 @@ dropit:
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
 			  PRU_SLOWTIMO);
 #endif
+	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 	if (tp != NULL)
 		INP_WUNLOCK(tp->t_inpcb);
 	INP_INFO_RUNLOCK(&V_tcbinfo);
@@ -470,7 +524,7 @@ tcp_timer_persist(void *xtp)
 	KASSERT((tp->t_timers->tt_flags & TT_PERSIST) != 0,
 		("%s: tp %p persist callout should be running", __func__, tp));
 	/*
-	 * Persistance timer into zero window.
+	 * Persistence timer into zero window.
 	 * Force a byte to be output, if possible.
 	 */
 	TCPSTAT_INC(tcps_persisttimeo);
@@ -500,7 +554,7 @@ tcp_timer_persist(void *xtp)
 	}
 	tcp_setpersist(tp);
 	tp->t_flags |= TF_FORCEDATA;
-	(void) tcp_output(tp);
+	(void) tp->t_fb->tfb_tcp_output(tp);
 	tp->t_flags &= ~TF_FORCEDATA;
 
 out:
@@ -508,6 +562,7 @@ out:
 	if (tp != NULL && tp->t_inpcb->inp_socket->so_options & SO_DEBUG)
 		tcp_trace(TA_USER, ostate, tp, NULL, NULL, PRU_SLOWTIMO);
 #endif
+	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 	if (tp != NULL)
 		INP_WUNLOCK(inp);
 	INP_INFO_RUNLOCK(&V_tcbinfo);
@@ -551,6 +606,10 @@ tcp_timer_rexmt(void * xtp)
 	KASSERT((tp->t_timers->tt_flags & TT_REXMT) != 0,
 		("%s: tp %p rexmt callout should be running", __func__, tp));
 	tcp_free_sackholes(tp);
+	if (tp->t_fb->tfb_tcp_rexmit_tmr) {
+		/* The stack has a timer action too. */
+		(*tp->t_fb->tfb_tcp_rexmit_tmr)(tp);
+	}
 	/*
 	 * Retransmission timer went off.  Message has not
 	 * been acked within retransmit interval.  Back off
@@ -560,8 +619,7 @@ tcp_timer_rexmt(void * xtp)
 		tp->t_rxtshift = TCP_MAXRXTSHIFT;
 		TCPSTAT_INC(tcps_timeoutdrop);
 
-		tp = tcp_drop(tp, tp->t_softerror ?
-			      tp->t_softerror : ETIMEDOUT);
+		tp = tcp_drop(tp, ETIMEDOUT);
 		headlocked = 1;
 		goto out;
 	}
@@ -616,7 +674,6 @@ tcp_timer_rexmt(void * xtp)
 	 */
 	if (V_tcp_pmtud_blackhole_detect && (((tp->t_state == TCPS_ESTABLISHED))
 	    || (tp->t_state == TCPS_FIN_WAIT_1))) {
-		int optlen;
 #ifdef INET6
 		int isipv6;
 #endif
@@ -629,19 +686,20 @@ tcp_timer_rexmt(void * xtp)
 		 */
 		if (((tp->t_flags2 & (TF2_PLPMTU_PMTUD|TF2_PLPMTU_MAXSEGSNT)) ==
 		    (TF2_PLPMTU_PMTUD|TF2_PLPMTU_MAXSEGSNT)) &&
-		    (tp->t_rxtshift >= 2 && tp->t_rxtshift % 2 == 0)) {
+		    (tp->t_rxtshift >= 2 && tp->t_rxtshift < 6 &&
+		    tp->t_rxtshift % 2 == 0)) {
 			/*
 			 * Enter Path MTU Black-hole Detection mechanism:
 			 * - Disable Path MTU Discovery (IP "DF" bit).
 			 * - Reduce MTU to lower value than what we
 			 *   negotiated with peer.
 			 */
-			/* Record that we may have found a black hole. */
-			tp->t_flags2 |= TF2_PLPMTU_BLACKHOLE;
-
-			/* Keep track of previous MSS. */
-			optlen = tp->t_maxopd - tp->t_maxseg;
-			tp->t_pmtud_saved_maxopd = tp->t_maxopd;
+			if ((tp->t_flags2 & TF2_PLPMTU_BLACKHOLE) == 0) {
+				/* Record that we may have found a black hole. */
+				tp->t_flags2 |= TF2_PLPMTU_BLACKHOLE;
+				/* Keep track of previous MSS. */
+				tp->t_pmtud_saved_maxseg = tp->t_maxseg;
+			}
 
 			/* 
 			 * Reduce the MSS to blackhole value or to the default
@@ -650,13 +708,13 @@ tcp_timer_rexmt(void * xtp)
 #ifdef INET6
 			isipv6 = (tp->t_inpcb->inp_vflag & INP_IPV6) ? 1 : 0;
 			if (isipv6 &&
-			    tp->t_maxopd > V_tcp_v6pmtud_blackhole_mss) {
+			    tp->t_maxseg > V_tcp_v6pmtud_blackhole_mss) {
 				/* Use the sysctl tuneable blackhole MSS. */
-				tp->t_maxopd = V_tcp_v6pmtud_blackhole_mss;
+				tp->t_maxseg = V_tcp_v6pmtud_blackhole_mss;
 				V_tcp_pmtud_blackhole_activated++;
 			} else if (isipv6) {
 				/* Use the default MSS. */
-				tp->t_maxopd = V_tcp_v6mssdflt;
+				tp->t_maxseg = V_tcp_v6mssdflt;
 				/*
 				 * Disable Path MTU Discovery when we switch to
 				 * minmss.
@@ -669,13 +727,13 @@ tcp_timer_rexmt(void * xtp)
 			else
 #endif
 #ifdef INET
-			if (tp->t_maxopd > V_tcp_pmtud_blackhole_mss) {
+			if (tp->t_maxseg > V_tcp_pmtud_blackhole_mss) {
 				/* Use the sysctl tuneable blackhole MSS. */
-				tp->t_maxopd = V_tcp_pmtud_blackhole_mss;
+				tp->t_maxseg = V_tcp_pmtud_blackhole_mss;
 				V_tcp_pmtud_blackhole_activated++;
 			} else {
 				/* Use the default MSS. */
-				tp->t_maxopd = V_tcp_mssdflt;
+				tp->t_maxseg = V_tcp_mssdflt;
 				/*
 				 * Disable Path MTU Discovery when we switch to
 				 * minmss.
@@ -684,7 +742,6 @@ tcp_timer_rexmt(void * xtp)
 				V_tcp_pmtud_blackhole_activated_min_mss++;
 			}
 #endif
-			tp->t_maxseg = tp->t_maxopd - optlen;
 			/*
 			 * Reset the slow-start flight size
 			 * as it may depend on the new MSS.
@@ -701,12 +758,10 @@ tcp_timer_rexmt(void * xtp)
 			 * stage (1448, 1188, 524) 2 chances to recover.
 			 */
 			if ((tp->t_flags2 & TF2_PLPMTU_BLACKHOLE) &&
-			    (tp->t_rxtshift > 6)) {
+			    (tp->t_rxtshift >= 6)) {
 				tp->t_flags2 |= TF2_PLPMTU_PMTUD;
 				tp->t_flags2 &= ~TF2_PLPMTU_BLACKHOLE;
-				optlen = tp->t_maxopd - tp->t_maxseg;
-				tp->t_maxopd = tp->t_pmtud_saved_maxopd;
-				tp->t_maxseg = tp->t_maxopd - optlen;
+				tp->t_maxseg = tp->t_pmtud_saved_maxseg;
 				V_tcp_pmtud_blackhole_failed++;
 				/*
 				 * Reset the slow-start flight size as it
@@ -738,7 +793,9 @@ tcp_timer_rexmt(void * xtp)
 #ifdef INET6
 		if ((tp->t_inpcb->inp_vflag & INP_IPV6) != 0)
 			in6_losing(tp->t_inpcb);
+		else
 #endif
+			in_losing(tp->t_inpcb);
 		tp->t_rttvar += (tp->t_srtt >> TCP_RTT_SHIFT);
 		tp->t_srtt = 0;
 	}
@@ -755,7 +812,7 @@ tcp_timer_rexmt(void * xtp)
 
 	cc_cong_signal(tp, NULL, CC_RTO);
 
-	(void) tcp_output(tp);
+	(void) tp->t_fb->tfb_tcp_output(tp);
 
 out:
 #ifdef TCPDEBUG
@@ -763,6 +820,7 @@ out:
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
 			  PRU_SLOWTIMO);
 #endif
+	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 	if (tp != NULL)
 		INP_WUNLOCK(inp);
 	if (headlocked)
@@ -776,7 +834,7 @@ tcp_timer_activate(struct tcpcb *tp, uint32_t timer_type, u_int delta)
 	struct callout *t_callout;
 	timeout_t *f_callout;
 	struct inpcb *inp = tp->t_inpcb;
-	int cpu = INP_CPU(inp);
+	int cpu = inp_to_cpuid(inp);
 	uint32_t f_reset;
 
 #ifdef TCP_OFFLOAD
@@ -814,11 +872,15 @@ tcp_timer_activate(struct tcpcb *tp, uint32_t timer_type, u_int delta)
 			f_reset = TT_2MSL_RST;
 			break;
 		default:
+			if (tp->t_fb->tfb_tcp_timer_activate) {
+				tp->t_fb->tfb_tcp_timer_activate(tp, timer_type, delta);
+				return;
+			}
 			panic("tp %p bad timer_type %#x", tp, timer_type);
 		}
 	if (delta == 0) {
 		if ((tp->t_timers->tt_flags & timer_type) &&
-		    callout_stop(t_callout) &&
+		    (callout_stop(t_callout) > 0) &&
 		    (tp->t_timers->tt_flags & f_reset)) {
 			tp->t_timers->tt_flags &= ~(timer_type | f_reset);
 		}
@@ -860,6 +922,9 @@ tcp_timer_active(struct tcpcb *tp, uint32_t timer_type)
 			t_callout = &tp->t_timers->tt_2msl;
 			break;
 		default:
+			if (tp->t_fb->tfb_tcp_timer_active) {
+				return(tp->t_fb->tfb_tcp_timer_active(tp, timer_type));
+			}
 			panic("tp %p bad timer_type %#x", tp, timer_type);
 		}
 	return callout_active(t_callout);
@@ -869,7 +934,6 @@ void
 tcp_timer_stop(struct tcpcb *tp, uint32_t timer_type)
 {
 	struct callout *t_callout;
-	timeout_t *f_callout;
 	uint32_t f_reset;
 
 	tp->t_timers->tt_flags |= TT_STOPPED;
@@ -877,49 +941,44 @@ tcp_timer_stop(struct tcpcb *tp, uint32_t timer_type)
 	switch (timer_type) {
 		case TT_DELACK:
 			t_callout = &tp->t_timers->tt_delack;
-			f_callout = tcp_timer_delack_discard;
 			f_reset = TT_DELACK_RST;
 			break;
 		case TT_REXMT:
 			t_callout = &tp->t_timers->tt_rexmt;
-			f_callout = tcp_timer_rexmt_discard;
 			f_reset = TT_REXMT_RST;
 			break;
 		case TT_PERSIST:
 			t_callout = &tp->t_timers->tt_persist;
-			f_callout = tcp_timer_persist_discard;
 			f_reset = TT_PERSIST_RST;
 			break;
 		case TT_KEEP:
 			t_callout = &tp->t_timers->tt_keep;
-			f_callout = tcp_timer_keep_discard;
 			f_reset = TT_KEEP_RST;
 			break;
 		case TT_2MSL:
 			t_callout = &tp->t_timers->tt_2msl;
-			f_callout = tcp_timer_2msl_discard;
 			f_reset = TT_2MSL_RST;
 			break;
 		default:
+			if (tp->t_fb->tfb_tcp_timer_stop) {
+				/* 
+				 * XXXrrs we need to look at this with the
+				 * stop case below (flags).
+				 */
+				tp->t_fb->tfb_tcp_timer_stop(tp, timer_type);
+				return;
+			}
 			panic("tp %p bad timer_type %#x", tp, timer_type);
 		}
 
 	if (tp->t_timers->tt_flags & timer_type) {
-		if (callout_stop(t_callout) &&
-		    (tp->t_timers->tt_flags & f_reset)) {
-			tp->t_timers->tt_flags &= ~(timer_type | f_reset);
-		} else {
+		if (callout_async_drain(t_callout, tcp_timer_discard) == 0) {
 			/*
 			 * Can't stop the callout, defer tcpcb actual deletion
-			 * to the last tcp timer discard callout.
-			 * The TT_STOPPED flag will ensure that no tcp timer
-			 * callouts can be restarted on our behalf, and
-			 * past this point currently running callouts waiting
-			 * on inp lock will return right away after the
-			 * classical check for callout reset/stop events:
-			 * callout_pending() || !callout_active()
+			 * to the last one. We do this using the async drain
+			 * function and incrementing the count in 
 			 */
-			callout_reset(t_callout, 1, f_callout, tp);
+			tp->t_timers->tt_draincnt++;
 		}
 	}
 }

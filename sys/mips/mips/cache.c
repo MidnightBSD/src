@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: cache.c,v 1.33 2005/12/24 23:24:01 perry Exp $ */
 
 /*-
@@ -69,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/cache.c 261277 2014-01-29 22:01:42Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/cache.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -105,7 +104,13 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 		mips_cache_ops.mco_icache_sync_range_index =
 		    mipsNN_icache_sync_range_index_32;
 		break;
-#ifdef CPU_CNMIPS
+	case 64:
+		mips_cache_ops.mco_icache_sync_all = mipsNN_icache_sync_all_64;
+		mips_cache_ops.mco_icache_sync_range =
+		    mipsNN_icache_sync_range_64;
+		mips_cache_ops.mco_icache_sync_range_index =
+		    mipsNN_icache_sync_range_index_64;
+		break;
 	case 128:
 		mips_cache_ops.mco_icache_sync_all = mipsNN_icache_sync_all_128;
 		mips_cache_ops.mco_icache_sync_range =
@@ -113,7 +118,6 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 		mips_cache_ops.mco_icache_sync_range_index =
 		    mipsNN_icache_sync_range_index_128;
 		break;
-#endif
 
 #ifdef MIPS_DISABLE_L1_CACHE
 	case 0:
@@ -173,7 +177,21 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 		    mipsNN_pdcache_wb_range_32;
 #endif
 		break;
-#ifdef CPU_CNMIPS
+	case 64:
+		mips_cache_ops.mco_pdcache_wbinv_all =
+		    mips_cache_ops.mco_intern_pdcache_wbinv_all =
+		    mipsNN_pdcache_wbinv_all_64;
+		mips_cache_ops.mco_pdcache_wbinv_range =
+		    mipsNN_pdcache_wbinv_range_64;
+		mips_cache_ops.mco_pdcache_wbinv_range_index =
+		    mips_cache_ops.mco_intern_pdcache_wbinv_range_index =
+		    mipsNN_pdcache_wbinv_range_index_64;
+		mips_cache_ops.mco_pdcache_inv_range =
+		    mipsNN_pdcache_inv_range_64;
+		mips_cache_ops.mco_pdcache_wb_range =
+		    mips_cache_ops.mco_intern_pdcache_wb_range =
+		    mipsNN_pdcache_wb_range_64;
+		break;
 	case 128:
 		mips_cache_ops.mco_pdcache_wbinv_all =
 		    mips_cache_ops.mco_intern_pdcache_wbinv_all =
@@ -189,7 +207,6 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 		    mips_cache_ops.mco_intern_pdcache_wb_range =
 		    mipsNN_pdcache_wb_range_128;
 		break;
-#endif		
 #ifdef MIPS_DISABLE_L1_CACHE
 	case 0:
 		mips_cache_ops.mco_pdcache_wbinv_all =
@@ -261,19 +278,54 @@ mips_config_cache(struct mips_cpuinfo * cpuinfo)
 			panic("no pdcache_wb_range");
 	}
 
-	/* XXXMIPS: No secondary cache handlers yet */
-#ifdef notyet
-	if (mips_sdcache_size) {
-		if (!mips_cache_ops.mco_sdcache_wbinv_all)
-			panic("no sdcache_wbinv_all");
-		if (!mips_cache_ops.mco_sdcache_wbinv_range)
-			panic("no sdcache_wbinv_range");
-		if (!mips_cache_ops.mco_sdcache_wbinv_range_index)
-			panic("no sdcache_wbinv_range_index");
-		if (!mips_cache_ops.mco_sdcache_inv_range)
-			panic("no sdcache_inv_range");
-		if (!mips_cache_ops.mco_sdcache_wb_range)
-			panic("no sdcache_wb_range");
+	/* L2 data cache */
+	if (!cpuinfo->l2.dc_size) {
+		/* No L2 found, ignore */
+		return;
 	}
+
+	switch (cpuinfo->l2.dc_linesize) {
+	case 32:
+		mips_cache_ops.mco_sdcache_wbinv_all =
+			mipsNN_sdcache_wbinv_all_32;
+		mips_cache_ops.mco_sdcache_wbinv_range =
+			mipsNN_sdcache_wbinv_range_32;
+		mips_cache_ops.mco_sdcache_wbinv_range_index =
+			mipsNN_sdcache_wbinv_range_index_32;
+		mips_cache_ops.mco_sdcache_inv_range =
+			mipsNN_sdcache_inv_range_32;
+		mips_cache_ops.mco_sdcache_wb_range =
+			mipsNN_sdcache_wb_range_32;
+		break;
+	case 64:
+		mips_cache_ops.mco_sdcache_wbinv_all =
+			mipsNN_sdcache_wbinv_all_64;
+		mips_cache_ops.mco_sdcache_wbinv_range =
+			mipsNN_sdcache_wbinv_range_64;
+		mips_cache_ops.mco_sdcache_wbinv_range_index =
+			mipsNN_sdcache_wbinv_range_index_64;
+		mips_cache_ops.mco_sdcache_inv_range =
+			mipsNN_sdcache_inv_range_64;
+		mips_cache_ops.mco_sdcache_wb_range =
+			mipsNN_sdcache_wb_range_64;
+		break;
+	case 128:
+		mips_cache_ops.mco_sdcache_wbinv_all =
+			mipsNN_sdcache_wbinv_all_128;
+		mips_cache_ops.mco_sdcache_wbinv_range =
+			mipsNN_sdcache_wbinv_range_128;
+		mips_cache_ops.mco_sdcache_wbinv_range_index =
+			mipsNN_sdcache_wbinv_range_index_128;
+		mips_cache_ops.mco_sdcache_inv_range =
+			mipsNN_sdcache_inv_range_128;
+		mips_cache_ops.mco_sdcache_wb_range =
+			mipsNN_sdcache_wb_range_128;
+		break;
+	default:
+#ifdef CACHE_DEBUG
+		printf("  no sdcache ops for %d byte lines",
+		    cpuinfo->l2.dc_linesize);
 #endif
+		break;
+	}
 }

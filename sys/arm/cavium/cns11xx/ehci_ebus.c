@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009 Yohanes Nugroho <yohanes@gmail.com>
  * based on ehci_mbus.c
@@ -33,7 +32,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/ehci_ebus.c 308402 2016-11-07 09:19:04Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/cavium/cns11xx/ehci_ebus.c 346524 2019-04-22 04:56:41Z ian $");
 
 #include "opt_bus.h"
 
@@ -245,5 +244,5 @@ static driver_t ehci_driver = {
 
 static devclass_t ehci_devclass;
 
-DRIVER_MODULE(ehci, econaarm, ehci_driver, ehci_devclass, 0, 0);
-MODULE_DEPEND(ehci, usb, 1, 1, 1);
+DRIVER_MODULE(ebus_ehci, econaarm, ehci_driver, ehci_devclass, 0, 0);
+MODULE_DEPEND(ebus_ehci, usb, 1, 1, 1);

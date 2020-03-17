@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/mips/rmi/dev/sec/rmilib.h 212763 2010-09-16 20:23:22Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/rmi/dev/sec/rmilib.h 331722 2018-03-29 02:50:57Z eadler $
  * RMI_BSD
  */
 

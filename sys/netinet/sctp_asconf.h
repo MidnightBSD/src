@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_asconf.h 237715 2012-06-28 16:01:08Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_asconf.h 347154 2019-05-05 12:28:39Z tuexen $");
 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
@@ -59,10 +58,10 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *, struct sockaddr *,
     uint32_t, uint32_t, struct sctp_ifa *);
 
 
-extern int 
+extern int
 sctp_asconf_iterator_ep(struct sctp_inpcb *inp, void *ptr,
     uint32_t val);
-extern void 
+extern void
 sctp_asconf_iterator_stcb(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     void *ptr, uint32_t type);
@@ -72,9 +71,6 @@ extern void sctp_asconf_iterator_end(void *ptr, uint32_t val);
 extern int32_t
 sctp_set_primary_ip_address_sa(struct sctp_tcb *,
     struct sockaddr *);
-
-extern void
-     sctp_set_primary_ip_address(struct sctp_ifa *ifa);
 
 extern void
 sctp_check_address_list(struct sctp_tcb *, struct mbuf *, int, int,
@@ -91,7 +87,6 @@ sctp_asconf_send_nat_state_update(struct sctp_tcb *stcb,
 
 extern int
     sctp_is_addr_pending(struct sctp_tcb *, struct sctp_ifa *);
-
 #endif				/* _KERNEL */
 
 #endif				/* !_NETINET_SCTP_ASCONF_H_ */

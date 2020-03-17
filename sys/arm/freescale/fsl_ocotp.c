@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Steven Lawrance <stl@koffein.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/fsl_ocotp.c 273656 2014-10-26 02:09:58Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/fsl_ocotp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Access to the Freescale i.MX6 On-Chip One-Time-Programmable Memory
@@ -60,7 +59,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/fsl_ocotp.c 273656 2014-10-26 02
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <dev/fdt/fdt_common.h>
-#include <machine/devmap.h>
+#include <sys/devmap.h>
 
 static uint32_t   *ocotp_regs;
 static vm_size_t   ocotp_size;

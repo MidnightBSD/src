@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/cavium/cns11xx/std.econa 264219 2014-04-07 05:33:30Z rpaulo $
+# $FreeBSD: stable/11/sys/arm/cavium/cns11xx/std.econa 292591 2015-12-22 09:08:21Z andrew $
 
 files	"../cavium/cns11xx/files.econa"
 cpu		CPU_FA526
@@ -8,7 +8,6 @@ options	PHYSADDR=0x00000000
 makeoptions	KERNPHYSADDR=0x01000000
 makeoptions	KERNVIRTADDR=0xc1000000
 
-options	KERNPHYSADDR=0x01000000
 options	KERNVIRTADDR=0xc1000000	# Used in ldscript.arm
 options	FLASHADDR=0xD0000000
 options	LOADERRAMADDR=0x00000000

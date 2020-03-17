@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/mips/beri/fdt_ic_if.m 266128 2014-05-15 14:26:11Z ian $
+# $FreeBSD: stable/11/sys/mips/beri/fdt_ic_if.m 298094 2016-04-16 03:44:50Z gjb $
 #
 
 #include <sys/types.h>

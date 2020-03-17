@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Greg Ansley.  All rights reserved.
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/board_sam9g20ek.c 238189 2012-07-07 05:02:39Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/board_sam9g20ek.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/param.h>
 #include <sys/systm.h>
 

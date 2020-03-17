@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * bluetooth.h
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_bluetooth.h,v 1.4 2003/04/26 22:32:34 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/include/ng_bluetooth.h 180399 2008-07-10 00:15:29Z emax $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/include/ng_bluetooth.h 180399 2008-07-10 00:15:29Z emax $
  */
 
 #ifndef _NETGRAPH_BLUETOOTH_H_

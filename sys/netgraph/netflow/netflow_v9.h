@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander V. Chernikov <melifaro@ipfw.ru>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	 $FreeBSD: stable/10/sys/netgraph/netflow/netflow_v9.h 219182 2011-03-02 16:15:11Z glebius $
+ *	 $FreeBSD: stable/11/sys/netgraph/netflow/netflow_v9.h 219182 2011-03-02 16:15:11Z glebius $
  */
 
 #ifndef	_NETFLOW_V9_H_

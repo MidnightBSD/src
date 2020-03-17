@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>

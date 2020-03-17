@@ -1,0 +1,13 @@
+# $FreeBSD: stable/11/sys/arm/qemu/files.qemu 296155 2016-02-28 09:35:37Z andrew $
+
+#
+# Standard ARM support.
+#
+kern/kern_clocksource.c			standard
+
+#
+# Standard qemu virt devices and support.
+#
+arm/qemu/virt_common.c			standard
+arm/qemu/virt_machdep.c			standard
+arm/qemu/virt_mp.c			optional	smp

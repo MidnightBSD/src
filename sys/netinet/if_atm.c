@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: if_atm.c,v 1.6 1996/10/13 02:03:01 christos Exp $       */
 
 /*-
@@ -33,7 +32,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/if_atm.c 249925 2013-04-26 12:50:32Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/if_atm.c 257176 2013-10-26 17:58:36Z glebius $");
 
 /*
  * IP <=> ATM address resolution.
@@ -53,6 +52,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/if_atm.c 249925 2013-04-26 12:50:32Z g
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/route.h>
 #include <net/if_atm.h>

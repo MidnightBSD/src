@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2006-2008 Semihalf, Grzegorz Bernacki
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/mpc85xx/ds1553_bus_fdt.c 209908 2010-07-11 21:08:29Z raj $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/mpc85xx/ds1553_bus_fdt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/cdefs.h>
 #include <sys/param.h>

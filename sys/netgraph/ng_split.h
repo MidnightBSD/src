@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *
  * Copyright (c) 1999-2000, Vitaly V Belekhov
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_split.h 151676 2005-10-25 20:56:12Z ru $
+ * $FreeBSD: stable/11/sys/netgraph/ng_split.h 298813 2016-04-29 21:25:05Z pfg $
  *
  */
 
@@ -41,6 +40,6 @@
 /* My hook names */
 #define NG_SPLIT_HOOK_MIXED	"mixed"	/* Mixed stream (in/out) */
 #define NG_SPLIT_HOOK_OUT	"out"	/* Output to outhook (sending out) */
-#define NG_SPLIT_HOOK_IN	"in"	/* Input from inhook (recieving) */
+#define NG_SPLIT_HOOK_IN	"in"	/* Input from inhook (receiving) */
 
 #endif /* _NETGRAPH_NG_SPLIT_H_ */

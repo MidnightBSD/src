@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2013 Luiz Otavio O Souza <loos@freebsd.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_bscreg.h 261078 2014-01-23 12:32:30Z loos $
+ * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_bscreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_BCM2835_BSCREG_H_
@@ -41,6 +40,9 @@
 #define	BCM_BSC_CTRL_CLEAR1		(1 << 5)
 #define	BCM_BSC_CTRL_CLEAR0		(1 << 4)
 #define	BCM_BSC_CTRL_READ		(1 << 0)
+#define	BCM_BSC_CTRL_INT_ALL \
+    (BCM_BSC_CTRL_INTR | BCM_BSC_CTRL_INTT | BCM_BSC_CTRL_INTD)
+
 #define	BCM_BSC_STATUS		0x04
 #define	BCM_BSC_STATUS_CLKT		(1 << 9)
 #define	BCM_BSC_STATUS_ERR		(1 << 8)
@@ -52,6 +54,9 @@
 #define	BCM_BSC_STATUS_TXW		(1 << 2)
 #define	BCM_BSC_STATUS_DONE		(1 << 1)
 #define	BCM_BSC_STATUS_TA		(1 << 0)
+#define	BCM_BSC_STATUS_ERRBITS \
+    (BCM_BSC_STATUS_CLKT | BCM_BSC_STATUS_ERR)
+
 #define	BCM_BSC_DLEN		0x08
 #define	BCM_BSC_SLAVE		0x0c
 #define	BCM_BSC_DATA		0x10

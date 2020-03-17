@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/EA3250.hints 239279 2012-08-15 05:55:16Z gonzo $
+# $FreeBSD: stable/11/sys/arm/conf/EA3250.hints 239279 2012-08-15 05:55:16Z gonzo $
 
 hint.ssd1289.0.at="spibus0"
 hint.ssd1289.0.cs=26

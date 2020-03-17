@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cpufunc_asm_armv4.S,v 1.1 2001/11/10 23:14:09 thorpej Exp $	*/
 
 /*-
@@ -39,7 +38,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_armv4.S 266203 2014-05-16 00:14:50Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_armv4.S 295122 2016-02-01 13:13:53Z mmel $");
 
 /*
  * TLB functions
@@ -48,11 +47,6 @@ ENTRY(armv4_tlb_flushID)
 	mcr	p15, 0, r0, c8, c7, 0	/* flush I+D tlb */
 	RET
 END(armv4_tlb_flushID)
-
-ENTRY(armv4_tlb_flushI)
-	mcr	p15, 0, r0, c8, c5, 0	/* flush I tlb */
-	RET
-END(armv4_tlb_flushI)
 
 ENTRY(armv4_tlb_flushD)
 	mcr	p15, 0, r0, c8, c6, 0	/* flush D tlb */

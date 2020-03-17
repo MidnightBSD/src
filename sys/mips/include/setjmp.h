@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* From: NetBSD: setjmp.h,v 1.2 1997/04/06 08:47:41 cgd Exp */
 
 /*-
@@ -28,7 +27,7 @@
  * rights to redistribute these changes.
  *
  *	JNPR: setjmp.h,v 1.2 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/10/sys/mips/include/setjmp.h 209500 2010-06-24 08:08:43Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/include/setjmp.h 209500 2010-06-24 08:08:43Z jchandra $
  */
 
 #ifndef _MACHINE_SETJMP_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: reg.h,v 1.1 1998/01/28 11:14:53 pefo Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@
  *	from: Utah Hdr: reg.h 1.1 90/07/09
  *	@(#)reg.h	8.2 (Berkeley) 1/11/94
  *	JNPR: reg.h,v 1.6 2006/09/15 12:52:34 katta
- * $FreeBSD: stable/10/sys/mips/include/reg.h 283910 2015-06-02 14:54:53Z jhb $
+ * $FreeBSD: stable/11/sys/mips/include/reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_REG_H_

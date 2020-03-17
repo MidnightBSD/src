@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Wojciech A. Koszek <wkoszek@FreeBSD.org>
  * All rights reserved.
@@ -32,7 +31,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/malta/uart_bus_maltausart.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/malta/uart_bus_maltausart.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -86,7 +85,7 @@ uart_malta_probe(device_t dev)
 	sc->sc_sysdev->bas.bsh = MIPS_PHYS_TO_KSEG1(MALTA_UART0ADR);
 	sc->sc_bas.bst = mips_bus_space_generic;
 	sc->sc_bas.bsh = MIPS_PHYS_TO_KSEG1(MALTA_UART0ADR);
-	return(uart_bus_probe(dev, 0, 0, 0, 0));
+	return(uart_bus_probe(dev, 0, 0, 0, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, obio, uart_malta_driver, uart_devclass, 0, 0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -29,7 +28,7 @@
  * NETLOGIC_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/nlm/hal/fmn.c 245883 2013-01-24 15:23:01Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/nlm/hal/fmn.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/types.h>
 #include <sys/systm.h>
 

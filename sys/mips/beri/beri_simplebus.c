@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/beri/beri_simplebus.c 273675 2014-10-26 04:01:57Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/beri/beri_simplebus.c 297199 2016-03-22 22:25:08Z jhibbits $");
 
 #include "opt_platform.h"
 #include <sys/param.h>
@@ -86,7 +85,7 @@ static int simplebus_teardown_intr(device_t, device_t, struct resource *,
 static int simplebus_activate_resource(device_t, device_t, int, int,
     struct resource *);
 static struct resource *simplebus_alloc_resource(device_t, device_t, int,
-    int *, u_long, u_long, u_long, u_int);
+    int *, rman_res_t, rman_res_t, rman_res_t, u_int);
 static int simplebus_deactivate_resource(device_t, device_t, int, int,
     struct resource *);
 static int simplebus_release_resource(device_t, device_t, int, int,
@@ -137,9 +136,10 @@ static driver_t simplebus_driver = {
 
 devclass_t simplebus_devclass;
 
-DRIVER_MODULE(simplebus, ofwbus, simplebus_driver, simplebus_devclass, 0, 0);
-DRIVER_MODULE(simplebus, simplebus, simplebus_driver, simplebus_devclass, 0,
+DRIVER_MODULE(beri_simplebus, ofwbus, simplebus_driver, simplebus_devclass, 0,
     0);
+DRIVER_MODULE(beri_simplebus, simplebus, simplebus_driver, simplebus_devclass,
+    0, 0);
 
 static int
 simplebus_probe(device_t dev)
@@ -151,7 +151,7 @@ simplebus_probe(device_t dev)
 	if (!ofw_bus_is_compatible(dev, "simple-bus"))
 		return (ENXIO);
 
-	device_set_desc(dev, "Flattened device tree simple bus");
+	device_set_desc(dev, "Flattened device tree simple bus (BERI version)");
 
 	return (BUS_PROBE_SPECIFIC);
 }
@@ -198,7 +198,7 @@ simplebus_attach(device_t dev)
 			continue;
 		}
 
-		if (ofw_bus_intr_to_rl(dev, dt_child, &di->di_res)) {
+		if (ofw_bus_intr_to_rl(dev, dt_child, &di->di_res, NULL)) {
 			device_printf(dev, "%s: could not process "
 			    "'interrupts' property\n", di->di_ofw.obd_name);
 			resource_list_free(&di->di_res);
@@ -239,8 +239,8 @@ simplebus_print_child(device_t dev, device_t child)
 
 	rv = 0;
 	rv += bus_print_child_header(dev, child);
-	rv += resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#lx");
-	rv += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
+	rv += resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#jx");
+	rv += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%jd");
 	if ((ip = simplebus_get_interrupt_parent(child)) != NULL)
 		rv += printf(" (%s)", device_get_nameunit(ip));
 	rv += bus_print_child_footer(dev, child);
@@ -250,7 +250,7 @@ simplebus_print_child(device_t dev, device_t child)
 
 static struct resource *
 simplebus_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	device_t ic;
 	struct simplebus_devinfo *di;
@@ -260,7 +260,7 @@ simplebus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	 * Request for the default allocation with a given rid: use resource
 	 * list stored in the local device info.
 	 */
-	if ((start == 0UL) && (end == ~0UL)) {
+	if (RMAN_IS_DEFAULT_RANGE(start, end)) {
 		if ((di = device_get_ivars(child)) == NULL)
 			return (NULL);
 

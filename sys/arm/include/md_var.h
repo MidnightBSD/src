@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Bruce D. Evans.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/md_var.h,v 1.40 2001/07/12
- * $FreeBSD: stable/10/sys/arm/include/md_var.h 278730 2015-02-13 23:30:48Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/md_var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_MD_VAR_H_
@@ -39,6 +38,8 @@ extern char sigcode[];
 extern int szsigcode;
 extern uint32_t *vm_page_dump;
 extern int vm_page_dump_size;
+extern u_long elf_hwcap;
+extern u_long elf_hwcap2;
 
 extern int (*_arm_memcpy)(void *, void *, int, int);
 extern int (*_arm_bzero)(void *, int, int);
@@ -70,6 +71,8 @@ extern int busdma_swi_pending;
 void busdma_swi(void);
 void dump_add_page(vm_paddr_t);
 void dump_drop_page(vm_paddr_t);
-void minidumpsys(struct dumperinfo *);
+int minidumpsys(struct dumperinfo *);
+
+extern uint32_t initial_fpscr;
 
 #endif /* !_MACHINE_MD_VAR_H_ */

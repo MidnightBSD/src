@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_eiface.h
  */
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_eiface.h 215673 2010-11-22 12:32:19Z zec $
+ * $FreeBSD: stable/11/sys/netgraph/ng_eiface.h 215673 2010-11-22 12:32:19Z zec $
  */
 
 #ifndef _NETGRAPH_NG_EIFACE_H_

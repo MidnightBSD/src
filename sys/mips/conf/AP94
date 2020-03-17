@@ -11,7 +11,9 @@
 # + 32mb RAM
 # + uboot environment
 
-# $FreeBSD: stable/10/sys/mips/conf/AP94 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/AP94 345344 2019-03-20 18:49:45Z kib $
+
+#NO_UNIVERSE
 
 include		"AR71XX_BASE"
 ident		"AP94"
@@ -19,7 +21,7 @@ hints		"AP94.hints"
 
 # GEOM modules
 device		geom_redboot	# to get access to the SPI flash partitions
-device		geom_uzip	# compressed in-memory filesystem hackery!
+device		xz
 options 	GEOM_UZIP
 
 options 	ROOTDEVNAME=\"ufs:md0.uzip\"

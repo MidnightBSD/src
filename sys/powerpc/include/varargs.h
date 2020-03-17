@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 2000 Tsubai Masanari.  All rights reserved.
@@ -26,7 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  *	$NetBSD: varargs.h,v 1.5 2000/02/27 17:50:22 tsubai Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/varargs.h 143063 2005-03-02 21:33:29Z joerg $
+ * $FreeBSD: stable/11/sys/powerpc/include/varargs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_VARARGS_H_

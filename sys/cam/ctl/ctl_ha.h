@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 Silicon Graphics International Corp.
  * Copyright (c) 2011 Spectra Logic Corporation
@@ -31,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_ha.h#1 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_ha.h 288789 2015-10-05 10:53:13Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_ha.h 288146 2015-09-23 15:49:27Z mav $
  */
 
 #ifndef _CTL_HA_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/libalias/alias_local.h 223437 2011-06-22 20:00:27Z ae $
+ * $FreeBSD: stable/11/sys/netinet/libalias/alias_local.h 315456 2017-03-17 14:54:10Z vangyzen $
  */
 
 /*
@@ -70,6 +69,12 @@
 
 #define	GET_ALIAS_PORT		-1
 #define	GET_ALIAS_ID		GET_ALIAS_PORT
+
+#ifdef _KERNEL
+#define INET_NTOA_BUF(buf) (buf)
+#else
+#define INET_NTOA_BUF(buf) (buf), sizeof(buf)
+#endif
 
 struct proxy_entry;
 
@@ -358,7 +363,7 @@ void		PunchFWHole(struct alias_link *_lnk);
 /* Housekeeping function */
 void		HouseKeeping(struct libalias *);
 
-/* Tcp specfic routines */
+/* Tcp specific routines */
 /* lint -save -library Suppress flexelint warnings */
 
 /* Transparent proxy routines */

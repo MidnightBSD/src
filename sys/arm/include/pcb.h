@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pcb.h,v 1.10 2003/10/13 21:46:39 scw Exp $	*/
 
 /*-
@@ -33,14 +32,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/pcb.h 278614 2015-02-12 04:15:55Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/pcb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_PCB_H_
 #define	_MACHINE_PCB_H_
 
-#include <machine/fp.h>
 #include <machine/frame.h>
+#include <machine/vfp.h>
 
 
 /*
@@ -53,14 +52,20 @@ struct pcb {
 #define	PCB_OWNFPU	0x00000001
 #define PCB_NOALIGNFLT	0x00000002
 	caddr_t	pcb_onfault;			/* On fault handler */
-	vm_offset_t	pcb_pagedir;		/* PT hooks */
+	vm_offset_t	pcb_pagedir;		/* TTB0 value */
+	/*
+	 * XXX:
+	 * Variables pcb_pl1vec, pcb_l1vec, pcb_dacr are used solely
+	 * by old PMAP. Keep them here for PCB binary compatibility
+	 * between old and new PMAP.
+	 */
 	uint32_t *pcb_pl1vec;			/* PTR to vector_base L1 entry*/
 	uint32_t pcb_l1vec;			/* Value to stuff on ctx sw */
 	u_int	pcb_dacr;			/* Domain Access Control Reg */
 
 	struct vfp_state pcb_vfpstate;          /* VP/NEON state */
 	u_int pcb_vfpcpu;                       /* VP/NEON last cpu */
-} __aligned(8); /* 
+} __aligned(8); /*
 		 * We need the PCB to be aligned on 8 bytes, as we may
 		 * access it using ldrd/strd, and ARM ABI require it
 		 * to by aligned on 8 bytes.

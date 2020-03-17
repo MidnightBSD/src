@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Mark R V Murray
  * All rights reserved.
@@ -25,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/memdev.h,v 1.2 2004/08/01 18:51:44 markm
- * $FreeBSD: stable/10/sys/mips/include/memdev.h 217515 2011-01-17 22:58:28Z jkim $
+ * $FreeBSD: stable/11/sys/mips/include/memdev.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_MEMDEV_H_

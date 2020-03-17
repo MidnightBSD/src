@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012, 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/imx/imx51_sdmareg.h 250357 2013-05-08 09:42:50Z ray $
+ * $FreeBSD: stable/11/sys/arm/freescale/imx/imx51_sdmareg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* Internal Registers definition for Freescale i.MX515 SDMA Core */

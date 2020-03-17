@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Michal Hajduk
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/mpc85xx/i2c.c 289666 2015-10-20 21:20:34Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/mpc85xx/i2c.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,6 +97,7 @@ static int i2c_stop(device_t dev);
 static int i2c_reset(device_t dev, u_char speed, u_char addr, u_char *oldaddr);
 static int i2c_read(device_t dev, char *buf, int len, int *read, int last, int delay);
 static int i2c_write(device_t dev, const char *buf, int len, int *sent, int timeout);
+static phandle_t i2c_get_node(device_t bus, device_t dev);
 
 static device_method_t i2c_methods[] = {
 	DEVMETHOD(device_probe,			i2c_probe),
@@ -111,12 +111,13 @@ static device_method_t i2c_methods[] = {
 	DEVMETHOD(iicbus_read,			i2c_read),
 	DEVMETHOD(iicbus_write,			i2c_write),
 	DEVMETHOD(iicbus_transfer,		iicbus_transfer_gen),
+	DEVMETHOD(ofw_bus_get_node,		i2c_get_node),
 
 	{ 0, 0 }
 };
 
 static driver_t i2c_driver = {
-	"i2c",
+	"iichb",
 	i2c_methods,
 	sizeof(struct i2c_softc),
 };
@@ -425,4 +426,12 @@ i2c_write(device_t dev, const char *buf, int len, int *sent, int timeout)
 	mtx_unlock(&sc->mutex);
 
 	return (IIC_NOERR);
+}
+
+static phandle_t
+i2c_get_node(device_t bus, device_t dev)
+{
+
+	/* Share controller node with iibus device. */
+	return (ofw_bus_get_node(bus));
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,18 +23,24 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/kdb.h 266373 2014-05-17 22:50:16Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/kdb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_KDB_H_
 #define _MACHINE_KDB_H_
 
+#include <machine/cpu.h>
+#include <machine/db_machdep.h>
 #include <machine/frame.h>
 #include <machine/psl.h>
-#include <machine/cpufunc.h>
 
 #define	KDB_STOPPEDPCB(pc)	&stoppcbs[pc->pc_cpuid]
 
+#if __ARM_ARCH >= 6
+extern void kdb_cpu_clear_singlestep(void);
+extern void kdb_cpu_set_singlestep(void);
+boolean_t kdb_cpu_pc_is_singlestep(db_addr_t);
+#else
 static __inline void
 kdb_cpu_clear_singlestep(void)
 {
@@ -45,12 +50,13 @@ static __inline void
 kdb_cpu_set_singlestep(void)
 {
 }
+#endif
 
 static __inline void
 kdb_cpu_sync_icache(unsigned char *addr, size_t size)
 {
 
-	cpu_icache_sync_range((vm_offset_t)addr, size);
+	icache_sync((vm_offset_t)addr, size);
 }
 
 static __inline void

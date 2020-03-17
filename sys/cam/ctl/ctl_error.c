@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 Silicon Graphics International Corp.
  * Copyright (c) 2011 Spectra Logic Corporation
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_error.c 314380 2017-02-28 06:32:01Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_error.c 350787 2019-08-08 21:33:50Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,6 +78,12 @@ ctl_set_sense_data_va(struct scsi_sense_data *sense_data, u_int *sense_len,
 	 * data.
 	 */
 	if (sense_format == SSD_TYPE_NONE) {
+		/*
+		 * SPC-3 and up require some UAs to be returned as fixed.
+		 */
+		if (asc == 0x29 || (asc == 0x2A && ascq == 0x01))
+			sense_format = SSD_TYPE_FIXED;
+		else
 		/*
 		 * If the format isn't specified, we only return descriptor
 		 * sense if the LUN exists and descriptor sense is turned

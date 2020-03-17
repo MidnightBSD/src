@@ -1,8 +1,10 @@
 #
 # Routerstation Pro: boot from on-board flash
 #
-# $FreeBSD: stable/10/sys/mips/conf/RSPRO 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/RSPRO 345344 2019-03-20 18:49:45Z kib $
 #
+
+#NO_UNIVERSE
 
 include		"AR71XX_BASE"
 ident		"RSPRO"
@@ -13,7 +15,7 @@ device		pcf2123_rtc
 
 # GEOM modules
 device		geom_redboot	# to get access to the SPI flash partitions
-device		geom_uzip	# compressed in-memory filesystem support
+device		xz
 options 	GEOM_UZIP
 
 # For DOS

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/atheros/std.ar71xx 233644 2012-03-29 02:54:35Z jmallett $
+# $FreeBSD: stable/11/sys/mips/atheros/std.ar71xx 233644 2012-03-29 02:54:35Z jmallett $
 #
 # standard config for all ar71xx based kernels.
 

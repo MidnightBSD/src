@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/10/sys/mips/conf/SWARM64_SMP 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/SWARM64_SMP 263301 2014-03-18 14:41:18Z imp $
 #
 
 include		"std.SWARM"

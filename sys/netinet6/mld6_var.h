@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Bruce Simpson.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet6/mld6_var.h 200871 2009-12-22 20:40:22Z bms $
+ * $FreeBSD: stable/11/sys/netinet6/mld6_var.h 279027 2015-02-19 22:37:01Z glebius $
  */
 #ifndef _NETINET6_MLD6_VAR_H_
 #define _NETINET6_MLD6_VAR_H_
@@ -35,31 +34,6 @@
  * Multicast Listener Discovery (MLD)
  * implementation-specific definitions.
  */
-
-#ifdef _KERNEL
-
-/*
- * Per-link MLD state.
- */
-struct mld_ifinfo {
-	LIST_ENTRY(mld_ifinfo) mli_link;
-	struct ifnet *mli_ifp;	/* interface this instance belongs to */
-	uint32_t mli_version;	/* MLDv1 Host Compatibility Mode */
-	uint32_t mli_v1_timer;	/* MLDv1 Querier Present timer (s) */
-	uint32_t mli_v2_timer;	/* MLDv2 General Query (interface) timer (s)*/
-	uint32_t mli_flags;	/* MLD per-interface flags */
-	uint32_t mli_rv;	/* MLDv2 Robustness Variable */
-	uint32_t mli_qi;	/* MLDv2 Query Interval (s) */
-	uint32_t mli_qri;	/* MLDv2 Query Response Interval (s) */
-	uint32_t mli_uri;	/* MLDv2 Unsolicited Report Interval (s) */
-	SLIST_HEAD(,in6_multi)	mli_relinmhead; /* released groups */
-	struct ifqueue	 mli_gq;	/* queue of general query responses */
-};
-#define MLIF_SILENT	0x00000001	/* Do not use MLD on this ifp */
-#define MLIF_USEALLOW	0x00000002	/* Use ALLOW/BLOCK for joins/leaves */
-
-#define MLD_RANDOM_DELAY(X)		(arc4random() % (X) + 1)
-#define MLD_MAX_STATE_CHANGES		24 /* Max pending changes per group */
 
 /*
  * MLD per-group states.
@@ -130,6 +104,44 @@ struct mld_ifinfo {
 			 sizeof(struct icmp6_hdr))
 
 /*
+ * Structure returned by net.inet6.mld.ifinfo.
+ */
+struct mld_ifinfo {
+	uint32_t mli_version;	/* MLDv1 Host Compatibility Mode */
+	uint32_t mli_v1_timer;	/* MLDv1 Querier Present timer (s) */
+	uint32_t mli_v2_timer;	/* MLDv2 General Query (interface) timer (s)*/
+	uint32_t mli_flags;	/* MLD per-interface flags */
+#define MLIF_SILENT	0x00000001	/* Do not use MLD on this ifp */
+#define MLIF_USEALLOW	0x00000002	/* Use ALLOW/BLOCK for joins/leaves */
+	uint32_t mli_rv;	/* MLDv2 Robustness Variable */
+	uint32_t mli_qi;	/* MLDv2 Query Interval (s) */
+	uint32_t mli_qri;	/* MLDv2 Query Response Interval (s) */
+	uint32_t mli_uri;	/* MLDv2 Unsolicited Report Interval (s) */
+};
+
+#ifdef _KERNEL
+/*
+ * Per-link MLD state.
+ */
+struct mld_ifsoftc {
+	LIST_ENTRY(mld_ifsoftc) mli_link;
+	struct ifnet *mli_ifp;	/* interface this instance belongs to */
+	uint32_t mli_version;	/* MLDv1 Host Compatibility Mode */
+	uint32_t mli_v1_timer;	/* MLDv1 Querier Present timer (s) */
+	uint32_t mli_v2_timer;	/* MLDv2 General Query (interface) timer (s)*/
+	uint32_t mli_flags;	/* MLD per-interface flags */
+	uint32_t mli_rv;	/* MLDv2 Robustness Variable */
+	uint32_t mli_qi;	/* MLDv2 Query Interval (s) */
+	uint32_t mli_qri;	/* MLDv2 Query Response Interval (s) */
+	uint32_t mli_uri;	/* MLDv2 Unsolicited Report Interval (s) */
+	SLIST_HEAD(,in6_multi)	mli_relinmhead; /* released groups */
+	struct mbufq	 mli_gq;	/* queue of general query responses */
+};
+
+#define MLD_RANDOM_DELAY(X)		(arc4random() % (X) + 1)
+#define MLD_MAX_STATE_CHANGES		24 /* Max pending changes per group */
+
+/*
  * Subsystem lock macros.
  * The MLD lock is only taken with MLD. Currently it is system-wide.
  * VIMAGE: The lock could be pushed to per-VIMAGE granularity in future.
@@ -148,7 +160,7 @@ struct mld_ifinfo {
 	(((struct in6_ifextra *)(ifp)->if_afdata[AF_INET6])->mld_ifinfo)
 
 int	mld_change_state(struct in6_multi *, const int);
-struct mld_ifinfo *
+struct mld_ifsoftc *
 	mld_domifattach(struct ifnet *);
 void	mld_domifdetach(struct ifnet *);
 void	mld_fasttimo(void);

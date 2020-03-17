@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/scsi_ctl.c 315939 2017-03-25 11:45:19Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/scsi_ctl.c 322423 2017-08-12 10:22:18Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -175,6 +174,7 @@ MALLOC_DEFINE(M_CTLFE, "CAM CTL FE", "CAM CTL FE interface");
 static int		ctlfeinitialize(void);
 static int		ctlfeshutdown(void);
 static periph_init_t	ctlfeperiphinit;
+static periph_deinit_t	ctlfeperiphdeinit;
 static void		ctlfeasync(void *callback_arg, uint32_t code,
 				   struct cam_path *path, void *arg);
 static periph_ctor_t	ctlferegister;
@@ -203,7 +203,8 @@ static struct periph_driver ctlfe_driver =
 {
 	ctlfeperiphinit, "ctl",
 	TAILQ_HEAD_INITIALIZER(ctlfe_driver.units), /*generation*/ 0,
-	CAM_PERIPH_DRV_EARLY
+	CAM_PERIPH_DRV_EARLY,
+	ctlfeperiphdeinit
 };
 
 static struct ctl_frontend ctlfe_frontend =
@@ -216,20 +217,24 @@ static struct ctl_frontend ctlfe_frontend =
 CTL_FRONTEND_DECLARE(ctlfe, ctlfe_frontend);
 
 static int
-ctlfeshutdown(void)
-{
-
-	/* CAM does not support periph driver unregister now. */
-	return (EBUSY);
-}
-
-static int
 ctlfeinitialize(void)
 {
 
 	STAILQ_INIT(&ctlfe_softc_list);
 	mtx_init(&ctlfe_list_mtx, ctlfe_mtx_desc, NULL, MTX_DEF);
 	periphdriver_register(&ctlfe_driver);
+	return (0);
+}
+
+static int
+ctlfeshutdown(void)
+{
+	int error;
+
+	error = periphdriver_unregister(&ctlfe_driver);
+	if (error != 0)
+		return (error);
+	mtx_destroy(&ctlfe_list_mtx);
 	return (0);
 }
 
@@ -244,6 +249,17 @@ ctlfeperiphinit(void)
 		printf("ctl: Failed to attach async callback due to CAM "
 		       "status 0x%x!\n", status);
 	}
+}
+
+static int
+ctlfeperiphdeinit(void)
+{
+
+	/* XXX: It would be good to tear down active ports here. */
+	if (!TAILQ_EMPTY(&ctlfe_driver.units))
+		return (EBUSY);
+	xpt_register_async(0, ctlfeasync, NULL, NULL);
+	return (0);
 }
 
 static void
@@ -513,7 +529,7 @@ ctlferegister(struct cam_periph *periph, void *arg)
 		new_ccb->ccb_h.io_ptr = new_io;
 		LIST_INSERT_HEAD(&softc->atio_list, &new_ccb->ccb_h, periph_links.le);
 
-		xpt_setup_ccb(&new_ccb->ccb_h, periph->path, /*priority*/ 1);
+		xpt_setup_ccb(&new_ccb->ccb_h, periph->path, CAM_PRIORITY_NONE);
 		new_ccb->ccb_h.func_code = XPT_ACCEPT_TARGET_IO;
 		new_ccb->ccb_h.cbfcnp = ctlfedone;
 		new_ccb->ccb_h.flags |= CAM_UNLOCKED;
@@ -560,7 +576,7 @@ ctlferegister(struct cam_periph *periph, void *arg)
 		new_ccb->ccb_h.io_ptr = new_io;
 		LIST_INSERT_HEAD(&softc->inot_list, &new_ccb->ccb_h, periph_links.le);
 
-		xpt_setup_ccb(&new_ccb->ccb_h, periph->path, /*priority*/ 1);
+		xpt_setup_ccb(&new_ccb->ccb_h, periph->path, CAM_PRIORITY_NONE);
 		new_ccb->ccb_h.func_code = XPT_IMMEDIATE_NOTIFY;
 		new_ccb->ccb_h.cbfcnp = ctlfedone;
 		new_ccb->ccb_h.flags |= CAM_UNLOCKED;
@@ -993,10 +1009,8 @@ ctlfe_requeue_ccb(struct cam_periph *periph, union ccb *ccb, int unlock)
 	 * target/lun.  Reset the target and LUN fields back to the wildcard
 	 * values before we send them back down to the SIM.
 	 */
-	if (softc->flags & CTLFE_LUN_WILDCARD) {
-		ccb->ccb_h.target_id = CAM_TARGET_WILDCARD;
-		ccb->ccb_h.target_lun = CAM_LUN_WILDCARD;
-	}
+	xpt_setup_ccb_flags(&ccb->ccb_h, periph->path, CAM_PRIORITY_NONE,
+	    ccb->ccb_h.flags);
 
 	xpt_action(ccb);
 }
@@ -1499,6 +1513,7 @@ ctlfedone(struct cam_periph *periph, union ccb *done_ccb)
 		return;
 	case XPT_SET_SIM_KNOB:
 	case XPT_GET_SIM_KNOB:
+	case XPT_GET_SIM_KNOB_OLD:
 		break;
 	default:
 		panic("%s: unexpected CCB type %#x", __func__,

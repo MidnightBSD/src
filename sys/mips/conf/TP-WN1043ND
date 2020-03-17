@@ -1,8 +1,10 @@
 #
 # TP-1043ND -- Kernel configuration file for the TP-Link WR-1043ND
 #
-# $FreeBSD: stable/10/sys/mips/conf/TP-WN1043ND 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/TP-WN1043ND 345344 2019-03-20 18:49:45Z kib $
 #
+
+#NO_UNIVERSE
 
 # Include the default AR913x parameters common to all AR913x SoC users.
 include         "AR91XX_BASE"
@@ -35,14 +37,14 @@ options 	MSDOSFS
 options 	AR71XX_ENV_UBOOT
 
 # uncompress - to boot natively from flash
-device         geom_uncompress
-options                GEOM_UNCOMPRESS
+device		xz
+options        GEOM_UZIP
 
 # Used for the static uboot partition map
 device          geom_map
 
 # Boot off of the rootfs, as defined in the geom_map setup.
-options                ROOTDEVNAME=\"ufs:map/rootfs.uncompress\"
+options                ROOTDEVNAME=\"ufs:map/rootfs.uzip\"
 
 # We bite the performance overhead for now; the kernel won't
 # fit if the mutexes are inlined.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Structure and function declarations for Processor type devices.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/scsi/scsi_pt.h 139743 2005-01-05 22:34:37Z imp $
+ * $FreeBSD: stable/11/sys/cam/scsi/scsi_pt.h 139743 2005-01-05 22:34:37Z imp $
  */
 
 #ifndef	_SCSI_SCSI_PT_H

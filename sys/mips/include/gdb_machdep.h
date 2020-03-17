@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  *
  *	from: src/sys/alpha/include/gdb_machdep.h,v 1.3 2005/01/05 20:05:50 imp
  *	JNPR: gdb_machdep.h,v 1.1 2007/08/09 12:25:25 katta
- * $FreeBSD: stable/10/sys/mips/include/gdb_machdep.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: stable/11/sys/mips/include/gdb_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_GDB_MACHDEP_H_

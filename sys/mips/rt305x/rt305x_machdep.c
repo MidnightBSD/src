@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010-2011 by Aleksandr Rybalko. All rights reserved.
  * Copyright (C) 2007 by Oleksandr Tymoshenko. All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rt305x/rt305x_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/rt305x_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -72,6 +71,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/rt305x/rt305x_machdep.c 247297 2013-02-26
 #include <machine/vmparam.h>
 
 #include <mips/rt305x/rt305xreg.h>
+#include <mips/rt305x/rt305x_sysctlvar.h>
 
 extern int	*edata;
 extern int	*end;
@@ -88,11 +88,17 @@ static void
 mips_init(void)
 {
 	int i;
+	char *memsize;
 
 	printf("entry: mips_init()\n");
 
+	if ((memsize = kern_getenv("memsize")) != NULL)
+		realmem = btoc(strtol(memsize, NULL, 0) << 20);
+	else
+		realmem = btoc(32 << 20);
+	
+
 	bootverbose = 1;
-	realmem = btoc(32 << 20);
 
 	for (i = 0; i < 10; i++) {
 		phys_avail[i] = 0;
@@ -121,8 +127,13 @@ void
 platform_reset(void)
 {
 
+#if !defined(MT7620) && !defined(RT5350)
 	__asm __volatile("li	$25, 0xbf000000");
 	__asm __volatile("j	$25");
+#else
+	rt305x_sysctl_set(SYSCTL_RSTCTRL, 1);
+	while (1);
+#endif
 }
 
 void
@@ -144,6 +155,8 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 
 	/* Initialize pcpu stuff */
 	mips_pcpu0_init();
+
+	mips_timer_early_init(platform_counter_freq / 2);
 
 	/* initialize console so that we have printf */
 	boothowto |= (RB_SERIAL | RB_MULTIPLE);	/* Use multiple consoles */
@@ -168,25 +181,27 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 			arg = (char *)(intptr_t)MIPS_PHYS_TO_KSEG0(argv[i]);
 			printf("\targv[%d] = %s\n", i, arg);
 			sprintf(n, "argv%d", i);
-			setenv(n, arg);
+			kern_setenv(n, arg);
 		}
 	}
 
 	printf("Environment:\n");
 
-	for (i = 0; envp[i] ; i++) {
+	for (i = 0; envp[i] && MIPS_IS_VALID_PTR(envp[i]); i++) {
 		char *n, *arg;
 
 		arg = (char *)(intptr_t)MIPS_PHYS_TO_KSEG0(envp[i]);
+		if (! MIPS_IS_VALID_PTR(arg))
+			continue;
 		printf("\t%s\n", arg);
 		n = strsep(&arg, "=");
 		if (arg == NULL)
-			setenv(n, "1");
+			kern_setenv(n, "1");
 		else
-			setenv(n, arg);
+			kern_setenv(n, arg);
 	}
 
 
 	mips_init();
-	mips_timer_init_params(platform_counter_freq, 2);
+	mips_timer_init_params(platform_counter_freq, 1);
 }

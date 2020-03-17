@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2002 Packet Design, LLC.
  * All rights reserved.
@@ -37,7 +36,7 @@
  * 
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_l2tp.c 261009 2014-01-22 09:22:39Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_l2tp.c 260225 2014-01-03 12:06:54Z glebius $
  */
 
 /*

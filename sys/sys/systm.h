@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -477,7 +476,7 @@ void _gone_in(int major, const char *msg);
 void _gone_in_dev(struct device *dev, int major, const char *msg);
 #ifdef NO_OBSOLETE_CODE
 #define __gone_ok(m, msg)					 \
-	_Static_assert(m < P_OSREL_MAJOR(__FreeBSD_version)),	 \
+	_Static_assert(m < P_OSREL_MAJOR(__MidnightBSD_version)),	 \
 	    "Obsolete code" msg);
 #else
 #define	__gone_ok(m, msg)

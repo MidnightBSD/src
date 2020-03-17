@@ -27,7 +27,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: smp_all.c,v 1.2 2012-11-23 06:04:02 laffer1 Exp $
+ * $Id: //depot/users/kenm/FreeBSD-test/sys/cam/scsi/smp_all.c#4 $
  */
 
 /*
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/smp_all.c 298431 2016-04-21 19:40:10Z pfg $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -118,8 +118,7 @@ smp_error_desc(int function_result)
 {
 	int i;
 
-	for (i = 0; i < (sizeof(smp_error_table)/sizeof(smp_error_table[0]));
-	     i++){
+	for (i = 0; i < nitems(smp_error_table); i++){
 		if (function_result == smp_error_table[i].function_result)
 			return (smp_error_table[i].desc);
 	}
@@ -164,7 +163,7 @@ smp_command_desc(uint8_t cmd_num)
 {
 	int i;
 
-	for (i = 0; i < (sizeof(smp_cmd_table)/sizeof(smp_cmd_table[0])) &&
+	for (i = 0; i < nitems(smp_cmd_table) &&
 	     smp_cmd_table[i].cmd_num <= cmd_num; i++) {
 		if (cmd_num == smp_cmd_table[i].cmd_num)
 			return (smp_cmd_table[i].desc);

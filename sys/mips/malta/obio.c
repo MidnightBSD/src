@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: obio.c,v 1.11 2003/07/15 00:25:05 lukem Exp $	*/
 
 /*-
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/malta/obio.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/malta/obio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -112,7 +111,7 @@ obio_attach(device_t dev)
 
 static struct resource *
 obio_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct resource *rv;
 	struct rman *rm;

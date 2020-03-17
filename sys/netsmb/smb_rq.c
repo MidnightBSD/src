@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_rq.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_rq.c 243882 2012-12-05 08:04:20Z glebius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

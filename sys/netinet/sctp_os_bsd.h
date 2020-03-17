@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,14 +31,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_os_bsd.h 314327 2017-02-27 08:27:38Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_os_bsd.h 332189 2018-04-07 17:59:08Z tuexen $");
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
 #define _NETINET_SCTP_OS_BSD_H_
 /*
  * includes
  */
-#include "opt_ipsec.h"
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -83,16 +81,8 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_os_bsd.h 314327 2017-02-27 08:27:
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 
-#ifdef IPSEC
-#include <netipsec/ipsec.h>
-#include <netipsec/key.h>
-#endif				/* IPSEC */
-
 #ifdef INET6
 #include <sys/domain.h>
-#ifdef IPSEC
-#include <netipsec/ipsec6.h>
-#endif
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_pcb.h>
@@ -100,7 +90,6 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_os_bsd.h 314327 2017-02-27 08:27:
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
 #endif				/* INET6 */
-
 
 #include <netinet/ip_options.h>
 
@@ -248,7 +237,6 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 
 /* SCTP_ZONE_INIT: initialize the zone */
 typedef struct uma_zone *sctp_zone_t;
-
 #define SCTP_ZONE_INIT(zone, name, size, number) { \
 	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
 		0); \
@@ -299,16 +287,12 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_RESV_UF(m, size) m->m_data += size
 #define SCTP_BUF_AT(m, size) m->m_data + size
 #define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
-#define SCTP_BUF_EXTEND_SIZE(m) (m->m_ext.ext_size)
+#define SCTP_BUF_SIZE M_SIZE
 #define SCTP_BUF_TYPE(m) (m->m_type)
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
 #define SCTP_BUF_PREPEND	M_PREPEND
 
-#define SCTP_ALIGN_TO_END(m, len) if(m->m_flags & M_PKTHDR) { \
-                                     MH_ALIGN(m, len); \
-                                  } else if ((m->m_flags & M_EXT) == 0) { \
-                                     M_ALIGN(m, len); \
-                                  }
+#define SCTP_ALIGN_TO_END(m, len) M_ALIGN(m, len)
 
 /* We make it so if you have up to 4 threads
  * writing based on the default size of
@@ -340,7 +324,7 @@ typedef struct callout sctp_os_timer_t;
 /* return the base ext data pointer */
 #define SCTP_BUF_EXTEND_BASE(m) (m->m_ext.ext_buf)
  /* return the refcnt of the data pointer */
-#define SCTP_BUF_EXTEND_REFCNT(m) (*m->m_ext.ref_cnt)
+#define SCTP_BUF_EXTEND_REFCNT(m) (*m->m_ext.ext_cnt)
 /* return any buffer related flags, this is
  * used beyond logging for apple only.
  */
@@ -393,6 +377,11 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_CLEAR_SO_NBIO(so)	((so)->so_state &= ~SS_NBIO)
 /* get the socket type */
 #define SCTP_SO_TYPE(so)	((so)->so_type)
+/* Use a macro for renaming sb_cc to sb_acc.
+ * Initially sb_ccc was used, but this broke select() when used
+ * with SCTP sockets.
+ */
+#define sb_cc sb_acc
 /* reserve sb space for a socket */
 #define SCTP_SORESERVE(so, send, recv)	soreserve(so, send, recv)
 /* wakeup a socket */
@@ -414,11 +403,6 @@ typedef struct rtentry sctp_rtentry_t;
 
 #define SCTP_RTALLOC(ro, vrf_id, fibnum) \
 	rtalloc_ign_fib((struct route *)ro, 0UL, fibnum)
-
-/* Future zero copy wakeup/send  function */
-#define SCTP_ZERO_COPY_EVENT(inp, so)
-/* This is re-pulse ourselves for sendbuf */
-#define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
 /*
  * SCTP protocol specific mbuf flags.

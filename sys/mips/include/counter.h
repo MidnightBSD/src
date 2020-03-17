@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/counter.h 252434 2013-07-01 02:48:27Z kib $
+ * $FreeBSD: stable/11/sys/mips/include/counter.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __MACHINE_COUNTER_H__
@@ -73,8 +72,8 @@ static inline void
 counter_u64_zero_inline(counter_u64_t c)
 {
 
-	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
-	    smp_no_rendevous_barrier, c);
+	smp_rendezvous(smp_no_rendezvous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendezvous_barrier, c);
 }
 #endif
 

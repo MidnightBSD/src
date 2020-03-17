@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_cisco.c
  */
@@ -38,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_cisco.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_cisco.c 263152 2014-03-14 06:29:43Z glebius $
  * $Whistle: ng_cisco.c,v 1.25 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -55,11 +54,6 @@
 
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
-
-#include <netatalk/at.h>
-
-#include <netipx/ipx.h>
-#include <netipx/ipx_if.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>

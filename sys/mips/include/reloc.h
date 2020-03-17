@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -32,5 +31,5 @@
  *
  *	from: src/sys/alpha/include/reloc.h,v 1.1.1.1.6.1 2000/08/03 00:48:04 peter
  *	JNPR: reloc.h,v 1.3 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/10/sys/mips/include/reloc.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: stable/11/sys/mips/include/reloc.h 331722 2018-03-29 02:50:57Z eadler $
  */

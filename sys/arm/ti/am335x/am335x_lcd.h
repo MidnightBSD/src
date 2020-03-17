@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -24,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/ti/am335x/am335x_lcd.h 251018 2013-05-27 00:23:01Z gonzo $
+ * $FreeBSD: stable/11/sys/arm/ti/am335x/am335x_lcd.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef __AM335X_LCD_H__
 #define __AM335X_LCD_H__
 
 struct panel_info {
+	/* Timing part */
 	uint32_t panel_width;
 	uint32_t panel_height;
 	uint32_t panel_hfp;
@@ -38,17 +38,18 @@ struct panel_info {
 	uint32_t panel_vfp;
 	uint32_t panel_vbp;
 	uint32_t panel_vsw;
+	uint32_t hsync_active;
+	uint32_t vsync_active;
+	uint32_t panel_pxl_clk;
+
 	uint32_t ac_bias;
 	uint32_t ac_bias_intrpt;
 	uint32_t dma_burst_sz;
 	uint32_t bpp;
 	uint32_t fdd;
-	uint32_t invert_line_clock;
-	uint32_t invert_frm_clock;
 	uint32_t sync_edge;
 	uint32_t sync_ctrl;
-	uint32_t panel_pxl_clk;
-	uint32_t panel_invert_pxl_clk;	
+	uint32_t pixelclk_active;
 };
 
 int am335x_lcd_syscons_setup(vm_offset_t vaddr, vm_paddr_t paddr,

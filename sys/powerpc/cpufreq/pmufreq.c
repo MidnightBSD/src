@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Justin Hibbits
  * Copyright (c) 2009 Nathan Whitehorn
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/cpufreq/pmufreq.c 260674 2014-01-15 06:17:15Z jhibbits $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/cpufreq/pmufreq.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

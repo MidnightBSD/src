@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/cavium/octeon_cop2.h 229677 2012-01-06 01:23:26Z gonzo $
+ * $FreeBSD: stable/11/sys/mips/cavium/octeon_cop2.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/mv/armadaxp/std.mv78x60 239277 2012-08-15 05:15:49Z gonzo $
+# $FreeBSD: stable/11/sys/arm/mv/armadaxp/std.mv78x60 239277 2012-08-15 05:15:49Z gonzo $
 
 include	"../mv/std-pj4b.mv"
 include "../mv/armadaxp/std.armadaxp"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_target.c 288817 2015-10-05 11:45:28Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_target.c 350804 2019-08-08 22:16:19Z mav $");
 
 
 #include <sys/param.h>
@@ -392,9 +391,7 @@ targenable(struct targ_softc *softc, struct cam_path *path, int grp6_len,
 		return (CAM_LUN_ALRDY_ENA);
 
 	/* Make sure SIM supports target mode */
-	xpt_setup_ccb(&cpi.ccb_h, path, CAM_PRIORITY_NORMAL);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, path);
 	status = cpi.ccb_h.status & CAM_STATUS_MASK;
 	if (status != CAM_REQ_CMP) {
 		printf("pathinq failed, status %#x\n", status);

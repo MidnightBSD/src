@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Marcel Moolenaar
  * Copyright (c) 2001 Benno Rice
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/atomic.h 264375 2014-04-12 19:57:15Z andreast $
+ * $FreeBSD: stable/11/sys/powerpc/include/atomic.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_ATOMIC_H_
@@ -36,6 +35,8 @@
 #ifndef _SYS_CDEFS_H_
 #error this file needs sys/cdefs.h as a prerequisite
 #endif
+
+#include <sys/atomic_common.h>
 
 /*
  * The __ATOMIC_REL/ACQ() macros provide memory barriers only in conjunction
@@ -49,7 +50,7 @@
  */
 
 #ifdef __powerpc64__
-#define mb()		__asm __volatile("lwsync" : : : "memory")
+#define mb()		__asm __volatile("sync" : : : "memory")
 #define rmb()		__asm __volatile("lwsync" : : : "memory")
 #define wmb()		__asm __volatile("lwsync" : : : "memory")
 #define __ATOMIC_REL()	__asm __volatile("lwsync" : : : "memory")
@@ -61,6 +62,17 @@
 #define __ATOMIC_REL()	__asm __volatile("sync" : : : "memory")
 #define __ATOMIC_ACQ()	__asm __volatile("isync" : : : "memory")
 #endif
+
+static __inline void
+powerpc_lwsync(void)
+{
+
+#ifdef __powerpc64__
+	__asm __volatile("lwsync" : : : "memory");
+#else
+	__asm __volatile("sync" : : : "memory");
+#endif
+}
 
 /*
  * atomic_add(p, v)
@@ -75,7 +87,7 @@
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_add_int */
 
 #ifdef __powerpc64__
@@ -87,7 +99,7 @@
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_add_long */
 #else
 #define	__atomic_add_long(p, v, t)				\
@@ -98,7 +110,7 @@
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_add_long */
 #endif
 
@@ -161,7 +173,7 @@ _ATOMIC_ADD(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_clear_int */
 
 #ifdef __powerpc64__
@@ -173,7 +185,7 @@ _ATOMIC_ADD(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_clear_long */
 #else
 #define	__atomic_clear_long(p, v, t)				\
@@ -184,7 +196,7 @@ _ATOMIC_ADD(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_clear_long */
 #endif
 
@@ -263,7 +275,7 @@ _ATOMIC_CLEAR(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_set_int */
 
 #ifdef __powerpc64__
@@ -275,7 +287,7 @@ _ATOMIC_CLEAR(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_set_long */
 #else
 #define	__atomic_set_long(p, v, t)				\
@@ -286,7 +298,7 @@ _ATOMIC_CLEAR(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_set_long */
 #endif
 
@@ -349,7 +361,7 @@ _ATOMIC_SET(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_subtract_int */
 
 #ifdef __powerpc64__
@@ -361,7 +373,7 @@ _ATOMIC_SET(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_subtract_long */
 #else
 #define	__atomic_subtract_long(p, v, t)				\
@@ -372,7 +384,7 @@ _ATOMIC_SET(long)
 	"	bne-	1b\n"					\
 	: "=&r" (t), "=m" (*p)					\
 	: "r" (p), "r" (v), "m" (*p)				\
-	: "cc", "memory")					\
+	: "cr0", "memory")					\
     /* __atomic_subtract_long */
 #endif
 
@@ -445,7 +457,7 @@ atomic_readandclear_int(volatile u_int *addr)
 		"bne- 1b\n\t"			/* spin if failed */
 		: "=&r"(result), "=&r"(temp), "=m" (*addr)
 		: "r" (addr), "m" (*addr)
-		: "cc", "memory");
+		: "cr0", "memory");
 #endif
 
 	return (result);
@@ -466,7 +478,7 @@ atomic_readandclear_long(volatile u_long *addr)
 		"bne- 1b\n\t"			/* spin if failed */
 		: "=&r"(result), "=&r"(temp), "=m" (*addr)
 		: "r" (addr), "m" (*addr)
-		: "cc", "memory");
+		: "cr0", "memory");
 #endif
 
 	return (result);
@@ -507,7 +519,8 @@ atomic_load_acq_##TYPE(volatile u_##TYPE *p)			\
 static __inline void						\
 atomic_store_rel_##TYPE(volatile u_##TYPE *p, u_##TYPE v)	\
 {								\
-	mb();							\
+								\
+	powerpc_lwsync();					\
 	*p = v;							\
 }
 
@@ -569,7 +582,7 @@ atomic_cmpset_int(volatile u_int* p, u_int cmpval, u_int newval)
 		"3:\n\t"
 		: "=&r" (ret), "=m" (*p)
 		: "r" (p), "r" (cmpval), "r" (newval), "m" (*p)
-		: "cc", "memory");
+		: "cr0", "memory");
 #endif
 
 	return (ret);
@@ -605,7 +618,7 @@ atomic_cmpset_long(volatile u_long* p, u_long cmpval, u_long newval)
 		"3:\n\t"
 		: "=&r" (ret), "=m" (*p)
 		: "r" (p), "r" (cmpval), "r" (newval), "m" (*p)
-		: "cc", "memory");
+		: "cr0", "memory");
 #endif
 
 	return (ret);
@@ -663,6 +676,129 @@ atomic_cmpset_rel_long(volatile u_long *p, u_long cmpval, u_long newval)
 #define	atomic_cmpset_rel_ptr	atomic_cmpset_rel_int
 #endif
 
+/*
+ * Atomically compare the value stored at *p with *cmpval and if the
+ * two values are equal, update the value of *p with newval. Returns
+ * zero if the compare failed and sets *cmpval to the read value from *p,
+ * nonzero otherwise.
+ */
+static __inline int
+atomic_fcmpset_int(volatile u_int *p, u_int *cmpval, u_int newval)
+{
+	int	ret;
+
+#ifdef __GNUCLIKE_ASM
+	__asm __volatile (
+		"lwarx %0, 0, %3\n\t"	/* load old value */
+		"cmplw %4, %0\n\t"		/* compare */
+		"bne 1f\n\t"			/* exit if not equal */
+		"stwcx. %5, 0, %3\n\t"      	/* attempt to store */
+		"bne- 1f\n\t"			/* exit if failed */
+		"li %0, 1\n\t"			/* success - retval = 1 */
+		"b 2f\n\t"			/* we've succeeded */
+		"1:\n\t"
+		"stwcx. %0, 0, %3\n\t"       	/* clear reservation (74xx) */
+		"stwx %0, 0, %7\n\t"
+		"li %0, 0\n\t"			/* failure - retval = 0 */
+		"2:\n\t"
+		: "=&r" (ret), "=m" (*p), "=m" (*cmpval)
+		: "r" (p), "r" (*cmpval), "r" (newval), "m" (*p), "r"(cmpval)
+		: "cr0", "memory");
+#endif
+
+	return (ret);
+}
+static __inline int
+atomic_fcmpset_long(volatile u_long *p, u_long *cmpval, u_long newval)
+{
+	int ret;
+
+#ifdef __GNUCLIKE_ASM
+	__asm __volatile (
+	    #ifdef __powerpc64__
+		"ldarx %0, 0, %3\n\t"	/* load old value */
+		"cmpld %4, %0\n\t"		/* compare */
+		"bne 1f\n\t"			/* exit if not equal */
+		"stdcx. %5, 0, %3\n\t"		/* attempt to store */
+	    #else
+		"lwarx %0, 0, %3\n\t"	/* load old value */
+		"cmplw %4, %0\n\t"		/* compare */
+		"bne 1f\n\t"			/* exit if not equal */
+		"stwcx. %5, 0, %3\n\t"		/* attempt to store */
+	    #endif
+		"bne- 1f\n\t"			/* exit if failed */
+		"li %0, 1\n\t"			/* success - retval = 1 */
+		"b 2f\n\t"			/* we've succeeded */
+		"1:\n\t"
+	    #ifdef __powerpc64__
+		"stdcx. %0, 0, %3\n\t"		/* clear reservation (74xx) */
+		"stdx %0, 0, %7\n\t"
+	    #else
+		"stwcx. %0, 0, %3\n\t"		/* clear reservation (74xx) */
+		"stwx %0, 0, %7\n\t"
+	    #endif
+		"li %0, 0\n\t"			/* failure - retval = 0 */
+		"2:\n\t"
+		: "=&r" (ret), "=m" (*p), "=m" (*cmpval)
+		: "r" (p), "r" (*cmpval), "r" (newval), "m" (*p), "r"(cmpval)
+		: "cr0", "memory");
+#endif
+
+	return (ret);
+}
+
+static __inline int
+atomic_fcmpset_acq_int(volatile u_int *p, u_int *cmpval, u_int newval)
+{
+	int retval;
+
+	retval = atomic_fcmpset_int(p, cmpval, newval);
+	__ATOMIC_ACQ();
+	return (retval);
+}
+
+static __inline int
+atomic_fcmpset_rel_int(volatile u_int *p, u_int *cmpval, u_int newval)
+{
+	__ATOMIC_REL();
+	return (atomic_fcmpset_int(p, cmpval, newval));
+}
+
+static __inline int
+atomic_fcmpset_acq_long(volatile u_long *p, u_long *cmpval, u_long newval)
+{
+	u_long retval;
+
+	retval = atomic_fcmpset_long(p, cmpval, newval);
+	__ATOMIC_ACQ();
+	return (retval);
+}
+
+static __inline int
+atomic_fcmpset_rel_long(volatile u_long *p, u_long *cmpval, u_long newval)
+{
+	__ATOMIC_REL();
+	return (atomic_fcmpset_long(p, cmpval, newval));
+}
+
+#define	atomic_fcmpset_32	atomic_fcmpset_int
+#define	atomic_fcmpset_acq_32	atomic_fcmpset_acq_int
+#define	atomic_fcmpset_rel_32	atomic_fcmpset_rel_int
+
+#ifdef __powerpc64__
+#define	atomic_fcmpset_64	atomic_fcmpset_long
+#define	atomic_fcmpset_acq_64	atomic_fcmpset_acq_long
+#define	atomic_fcmpset_rel_64	atomic_fcmpset_rel_long
+
+#define	atomic_fcmpset_ptr	atomic_fcmpset_long
+#define	atomic_fcmpset_acq_ptr	atomic_fcmpset_acq_long
+#define	atomic_fcmpset_rel_ptr	atomic_fcmpset_rel_long
+#else
+#define	atomic_fcmpset_ptr	atomic_fcmpset_int
+#define	atomic_fcmpset_acq_ptr	atomic_fcmpset_acq_int
+#define	atomic_fcmpset_rel_ptr	atomic_fcmpset_rel_int
+#endif
+
 static __inline u_int
 atomic_fetchadd_int(volatile u_int *p, u_int v)
 {
@@ -696,7 +832,7 @@ atomic_swap_32(volatile u_int *p, u_int v)
 	"	bne-	1b\n"
 	: "=&r" (prev), "+m" (*(volatile u_int *)p)
 	: "r" (p), "r" (v)
-	: "cc", "memory");
+	: "cr0", "memory");
 
 	return (prev);
 }
@@ -713,7 +849,7 @@ atomic_swap_64(volatile u_long *p, u_long v)
 	"	bne-	1b\n"
 	: "=&r" (prev), "+m" (*(volatile u_long *)p)
 	: "r" (p), "r" (v)
-	: "cc", "memory");
+	: "cr0", "memory");
 
 	return (prev);
 }
@@ -730,5 +866,33 @@ atomic_swap_64(volatile u_long *p, u_long v)
 
 #undef __ATOMIC_REL
 #undef __ATOMIC_ACQ
+
+static __inline void
+atomic_thread_fence_acq(void)
+{
+
+	powerpc_lwsync();
+}
+
+static __inline void
+atomic_thread_fence_rel(void)
+{
+
+	powerpc_lwsync();
+}
+
+static __inline void
+atomic_thread_fence_acq_rel(void)
+{
+
+	powerpc_lwsync();
+}
+
+static __inline void
+atomic_thread_fence_seq_cst(void)
+{
+
+	__asm __volatile("sync" : : : "memory");
+}
 
 #endif /* ! _MACHINE_ATOMIC_H_ */

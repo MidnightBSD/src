@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2013 Luiz Otavio O Souza <loos@freebsd.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_spivar.h 259325 2013-12-13 19:27:23Z ian $
+ * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_spivar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_BCM2835_SPIVAR_H_

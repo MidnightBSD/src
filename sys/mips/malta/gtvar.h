@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/mips/malta/gtvar.h 202175 2010-01-12 21:36:08Z imp $ */
+/* $FreeBSD: stable/11/sys/mips/malta/gtvar.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _GTVAR_H_
 #define _GTVAR_H_

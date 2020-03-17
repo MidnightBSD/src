@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/dev/sec/rmilib.c 212763 2010-09-16 20:23:22Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/dev/sec/rmilib.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -398,7 +397,7 @@ xlr_sec_setup_packet(xlr_sec_io_pt op,
 	/* physical address of the source buffer */
 	addr = (uint64_t) vtophys((void *)(unsigned long)op->source_buf);
 	/* cache-aligned base of the source buffer */
-	seg_addr = (addr & ~(SMP_CACHE_BYTES - 1));
+	seg_addr = rounddown2(addr, SMP_CACHE_BYTES);
 	/* offset in bytes to the source buffer start from the segment base */
 	byte_offset = addr - seg_addr;
 	/* global offset: 0-7 bytes */
@@ -418,7 +417,7 @@ xlr_sec_setup_packet(xlr_sec_io_pt op,
 	len = op->source_buf_size + byte_offset - global_offset;
 	if (multi_frag_flag) {
 		next_seg_addr = (uint64_t)vtophys((void *)(uintptr_t)desc->next_src_buf);
-		next_seg_addr = (next_seg_addr & ~(SMP_CACHE_BYTES - 1));
+		next_seg_addr = rounddown2(next_seg_addr, SMP_CACHE_BYTES);
 		next_len = desc->next_src_len;
 	}
 	/* length of the whole thing in dwords */
@@ -603,10 +602,10 @@ xlr_sec_setup_packet(xlr_sec_io_pt op,
 	 */
 	if (multi_frag_flag) {
 		next_seg_addr = (uint64_t) vtophys((void *)(unsigned long)(desc->next_dest_buf));
-		next_seg_addr = (next_seg_addr & ~(SMP_CACHE_BYTES - 1));
+		next_seg_addr = rounddown2(next_seg_addr, SMP_CACHE_BYTES);
 	}
 	addr = (uint64_t) vtophys((void *)(unsigned long)op->dest_buf);
-	seg_addr = (addr & ~(SMP_CACHE_BYTES - 1));
+	seg_addr = rounddown2(addr, SMP_CACHE_BYTES);
 	byte_offset = addr - seg_addr;
 	global_offset = byte_offset & 0x7;
 

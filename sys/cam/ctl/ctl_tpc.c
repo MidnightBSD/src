@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_tpc.c 314767 2017-03-06 06:47:05Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_tpc.c 314766 2017-03-06 06:46:21Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

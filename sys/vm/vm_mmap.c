@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1991, 1993

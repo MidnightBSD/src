@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 1990, 1993
@@ -35,7 +34,7 @@
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
  *	from: src/sys/i386/include/_types.h,v 1.12 2005/07/02 23:13:31 thompsa
- * $FreeBSD: stable/10/sys/mips/include/_types.h 264496 2014-04-15 09:41:52Z tijl $
+ * $FreeBSD: stable/11/sys/mips/include/_types.h 332135 2018-04-06 19:17:59Z kevans $
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -74,8 +73,10 @@ typedef	unsigned long long	__uint64_t;
  * Standard type definitions.
  */
 typedef	__int32_t	__clock_t;		/* clock()... */
+#ifndef _STANDALONE
 typedef	double		__double_t;
 typedef	float		__float_t;
+#endif
 #ifdef __mips_n64
 typedef	__int64_t	__critical_t;
 typedef	__int64_t	__intfptr_t;
@@ -144,8 +145,6 @@ typedef	__uint64_t	__vm_paddr_t;
 typedef	__uint32_t	__vm_paddr_t;
 #endif
 
-typedef	__int64_t	__vm_ooffset_t;
-typedef	__uint64_t	__vm_pindex_t;
 typedef	int		___wchar_t;
 
 #define	__WCHAR_MIN	__INT_MIN	/* min value for a wchar_t */

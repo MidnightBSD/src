@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ixp425.c,v 1.10 2005/12/11 12:16:51 christos Exp $ */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_l2cap_evnt.h
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_evnt.h,v 1.1 2002/11/24 19:47:06 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_evnt.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/l2cap/ng_l2cap_evnt.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NETGRAPH_L2CAP_EVNT_H_

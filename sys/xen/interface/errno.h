@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __XEN_PUBLIC_ERRNO_H__
 
 #ifndef __ASSEMBLY__

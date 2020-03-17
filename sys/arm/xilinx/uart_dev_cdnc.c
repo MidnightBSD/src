@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 M. Warner Losh
  * Copyright (c) 2005 Olivier Houchard
@@ -37,16 +36,13 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/uart_dev_cdnc.c 283327 2015-05-23 20:54:25Z ian $");
-
-#include "opt_global.h"
+__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/uart_dev_cdnc.c 356020 2019-12-22 19:06:45Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
-#include <sys/tty.h>
 #include <machine/bus.h>
 
 #include <dev/uart/uart.h>

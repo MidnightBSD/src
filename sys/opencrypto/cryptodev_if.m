@@ -23,8 +23,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/opencrypto/cryptodev_if.m 167756 2007-03-21 03:43:33Z sam $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/opencrypto/cryptodev_if.m 167756 2007-03-21 03:43:33Z sam $
+#
 
 #include <sys/malloc.h>
 #include <opencrypto/cryptodev.h>

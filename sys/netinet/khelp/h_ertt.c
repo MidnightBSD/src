@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010
  * 	Swinburne University of Technology, Melbourne, Australia
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/khelp/h_ertt.c 239346 2012-08-17 01:49:51Z lstewart $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/khelp/h_ertt.c 239346 2012-08-17 01:49:51Z lstewart $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

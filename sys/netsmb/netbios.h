@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netsmb/netbios.h 206361 2010-04-07 16:50:38Z joel $
+ * $FreeBSD: stable/11/sys/netsmb/netbios.h 263140 2014-03-14 02:58:48Z glebius $
  */
 #ifndef _NETSMB_NETBIOS_H_
 #define	_NETSMB_NETBIOS_H_
@@ -34,10 +33,6 @@
  */
 #ifndef _NETINET_IN_H_
 #include <netinet/in.h>
-#endif
-
-#ifndef _NETIPX_IPX_H_
-#include <netipx/ipx.h>
 #endif
 
 #define	NMB_TCP_PORT	137
@@ -115,7 +110,7 @@
  */
 union nb_tran {
 	struct sockaddr_in	x_in;
-	struct sockaddr_ipx	x_ipx;
+	/* struct sockaddr_ipx was here. */
 };
 
 struct nb_name {

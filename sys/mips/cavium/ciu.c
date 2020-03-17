@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/cavium/ciu.c 265999 2014-05-14 01:35:43Z ian $
+ * $FreeBSD: stable/11/sys/mips/cavium/ciu.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/ciu.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/ciu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -76,7 +75,8 @@ static struct intr_event *ciu_en1_intr_events[CIU_IRQ_EN1_COUNT];
 static int		ciu_probe(device_t);
 static int		ciu_attach(device_t);
 static struct resource	*ciu_alloc_resource(device_t, device_t, int, int *,
-					    u_long, u_long, u_long, u_int);
+					    rman_res_t, rman_res_t, rman_res_t,
+					    u_int);
 static int		ciu_setup_intr(device_t, device_t, struct resource *,
 				       int, driver_filter_t *, driver_intr_t *,
 				       void *, void **);
@@ -92,13 +92,13 @@ static void		ciu_hinted_child(device_t, const char *, int);
 static void		ciu_en0_intr_mask(void *);
 static void		ciu_en0_intr_unmask(void *);
 #ifdef SMP
-static int		ciu_en0_intr_bind(void *, u_char);
+static int		ciu_en0_intr_bind(void *, int);
 #endif
 
 static void		ciu_en1_intr_mask(void *);
 static void		ciu_en1_intr_unmask(void *);
 #ifdef SMP
-static int		ciu_en1_intr_bind(void *, u_char);
+static int		ciu_en1_intr_bind(void *, int);
 #endif
 
 static int		ciu_intr(void *);
@@ -172,7 +172,7 @@ ciu_attach(device_t dev)
 
 static struct resource *
 ciu_alloc_resource(device_t bus, device_t child, int type, int *rid,
-		   u_long start, u_long end, u_long count, u_int flags)
+		   rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct resource *res;
 	struct ciu_softc *sc;
@@ -209,7 +209,7 @@ ciu_setup_intr(device_t bus, device_t child, struct resource *res, int flags,
 	struct intr_event *event, **eventp;
 	void (*mask_func)(void *);
 	void (*unmask_func)(void *);
-	int (*bind_func)(void *, u_char);
+	int (*bind_func)(void *, int);
 	mips_intrcnt_t intrcnt;
 	int error;
 	int irq;
@@ -344,7 +344,7 @@ ciu_en0_intr_unmask(void *arg)
 
 #ifdef SMP
 static int
-ciu_en0_intr_bind(void *arg, u_char target)
+ciu_en0_intr_bind(void *arg, int target)
 {
 	uint64_t mask;
 	int core;
@@ -390,7 +390,7 @@ ciu_en1_intr_unmask(void *arg)
 
 #ifdef SMP
 static int
-ciu_en1_intr_bind(void *arg, u_char target)
+ciu_en1_intr_bind(void *arg, int target)
 {
 	uint64_t mask;
 	int core;
@@ -434,7 +434,6 @@ ciu_intr(void *arg)
 	if (en0_sum == 0 && en1_sum == 0)
 		return (FILTER_STRAY);
 
-	irq_index = 0;
 	for (irq_index = 0; en0_sum != 0; irq_index++, en0_sum >>= 1) {
 		if ((en0_sum & 1) == 0)
 			continue;
@@ -446,7 +445,6 @@ ciu_intr(void *arg)
 			printf("%s: stray en0 irq%d\n", __func__, irq_index);
 	}
 
-	irq_index = 0;
 	for (irq_index = 0; en1_sum != 0; irq_index++, en1_sum >>= 1) {
 		if ((en1_sum & 1) == 0)
 			continue;

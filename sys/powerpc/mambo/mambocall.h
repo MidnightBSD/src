@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2008 by Nathan Whitehorn. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/mambo/mambocall.h 210677 2010-07-31 13:22:34Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/mambo/mambocall.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MAMBO_MAMBOCALL_H_

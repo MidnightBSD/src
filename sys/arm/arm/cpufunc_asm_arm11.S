@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cpufunc_asm_arm11.S,v 1.2 2005/12/11 12:16:41 christos Exp $	*/
 
 /*
@@ -31,26 +30,12 @@
  *
  * ARM11 assembly functions for CPU / MMU / TLB specific operations
  *
- * XXX We make no attempt at present to take advantage of the v6 memroy
+ * XXX We make no attempt at present to take advantage of the v6 memory
  * architecture or physically tagged cache.
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_arm11.S 266359 2014-05-17 21:28:49Z ian $");
-
-/*
- * Functions to set the MMU Translation Table Base register
- *
- * We need to clean and flush the cache as it uses virtual
- * addresses that are about to change.
- */
-ENTRY(arm11_setttb)
-	mcr	p15, 0, r0, c2, c0, 0	/* load new TTB */
-
-	mcr	p15, 0, r0, c8, c7, 0	/* invalidate I+D TLBs */
-	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
-	RET
-END(arm11_setttb)
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_arm11.S 299069 2016-05-04 15:48:59Z pfg $");
 
 /*
  * TLB functions
@@ -61,12 +46,6 @@ ENTRY(arm11_tlb_flushID_SE)
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	RET
 END(arm11_tlb_flushID_SE)
-
-ENTRY(arm11_tlb_flushI_SE)
-	mcr	p15, 0, r0, c8, c5, 1	/* flush I tlb single entry */
-	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
-	RET
-END(arm11_tlb_flushI_SE)
 
 /*
  * Context switch.
@@ -102,12 +81,6 @@ ENTRY(arm11_tlb_flushID)
 	mov	pc, lr
 END(arm11_tlb_flushID)
 
-ENTRY(arm11_tlb_flushI)
-	mcr	p15, 0, r0, c8, c5, 0	/* flush I tlb */
-	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
-	mov	pc, lr
-END(arm11_tlb_flushI)
-
 ENTRY(arm11_tlb_flushD)
 	mcr	p15, 0, r0, c8, c6, 0	/* flush D tlb */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
@@ -127,10 +100,3 @@ ENTRY(arm11_drain_writebuf)
 	mcr	p15, 0, r0, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
 END(arm11_drain_writebuf)
-
-ENTRY_NP(arm11_sleep)
-	mov	r0, #0
-	mcr	p15, 0, r0, c7, c0, 4   /* wait for interrupt */
-	RET
-END(arm11_sleep)
-

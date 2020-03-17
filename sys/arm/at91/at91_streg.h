@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 M. Warner Losh.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_streg.h 238376 2012-07-11 20:17:14Z imp $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_streg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef ARM_AT91_AT91STREG_H
 #define ARM_AT91_AT91STREG_H

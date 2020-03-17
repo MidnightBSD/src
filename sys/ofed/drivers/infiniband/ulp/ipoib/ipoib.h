@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, 2005 Topspin Communications.  All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All rights reserved.
@@ -31,6 +30,8 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
+ * $FreeBSD$
  */
 
 #ifndef _IPOIB_H
@@ -55,6 +56,7 @@
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/netisr.h>
 #include <net/route.h>
@@ -82,6 +84,7 @@
 #include <linux/workqueue.h>
 #include <linux/kref.h>
 #include <linux/mutex.h>
+#include <linux/rbtree.h>
 
 #include <asm/atomic.h>
 
@@ -128,8 +131,8 @@ enum {
 
 	IPOIB_NUM_WC		  = 4,
 
-	IPOIB_MAX_PATH_REC_QUEUE  = 3,
-	IPOIB_MAX_MCAST_QUEUE	  = 3,
+	IPOIB_MAX_PATH_REC_QUEUE  = 16,
+	IPOIB_MAX_MCAST_QUEUE	  = 16,
 
 	IPOIB_FLAG_OPER_UP	  = 0,
 	IPOIB_FLAG_INITIALIZED	  = 1,
@@ -315,6 +318,7 @@ struct ipoib_ethtool_st {
  */
 struct ipoib_dev_priv {
 	spinlock_t lock;
+	spinlock_t drain_lock;
 
 	struct ifnet *dev;
 
@@ -323,6 +327,7 @@ struct ipoib_dev_priv {
 	unsigned long flags;
 
 	int gone;
+	int unit;
 
 	struct mutex vlan_mutex;
 
@@ -347,7 +352,6 @@ struct ipoib_dev_priv {
 	u16		  pkey;
 	u16		  pkey_index;
 	struct ib_pd	 *pd;
-	struct ib_mr	 *mr;
 	struct ib_cq	 *recv_cq;
 	struct ib_cq	 *send_cq;
 	struct ib_qp	 *qp;
@@ -366,7 +370,7 @@ struct ipoib_dev_priv {
 	unsigned	     tx_head;
 	unsigned	     tx_tail;
 	struct ib_sge	     tx_sge[IPOIB_MAX_TX_SG];
-	struct ib_send_wr    tx_wr;
+	struct ib_ud_wr      tx_wr;
 	unsigned	     tx_outstanding;
 	struct ib_wc	     send_wc[MAX_SEND_CQE];
 
@@ -512,7 +516,7 @@ void ipoib_path_iter_read(struct ipoib_path_iter *iter,
 			  struct ipoib_path *path);
 #endif
 
-int ipoib_change_mtu(struct ipoib_dev_priv *priv, int new_mtu);
+int ipoib_change_mtu(struct ipoib_dev_priv *priv, int new_mtu, bool propagate);
 
 int ipoib_mcast_attach(struct ipoib_dev_priv *priv, u16 mlid,
 		       union ib_gid *mgid, int set_qkey);
@@ -530,7 +534,7 @@ void ipoib_drain_cq(struct ipoib_dev_priv *priv);
 
 int ipoib_dma_map_tx(struct ib_device *ca, struct ipoib_tx_buf *tx_req, int max);
 void ipoib_dma_unmap_tx(struct ib_device *ca, struct ipoib_tx_buf *tx_req);
-int ipoib_poll_tx(struct ipoib_dev_priv *priv);
+int ipoib_poll_tx(struct ipoib_dev_priv *priv, bool do_start);
 
 void ipoib_dma_unmap_rx(struct ipoib_dev_priv *priv, struct ipoib_rx_buf *rx_req);
 void ipoib_dma_mb(struct ipoib_dev_priv *priv, struct mbuf *mb, unsigned int length);
@@ -757,5 +761,7 @@ extern int ipoib_debug_level;
 #endif /* CONFIG_INFINIBAND_IPOIB_DEBUG_DATA */
 
 #define IPOIB_QPN(ha) (be32_to_cpup((__be32 *) ha) & 0xffffff)
+
+void ipoib_start_locked(struct ifnet *, struct ipoib_dev_priv *);
 
 #endif /* _IPOIB_H */

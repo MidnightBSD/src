@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Marcel Moolenaar
  * Copyright (c) 2009 Nathan Whitehorn
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/platform_powermac.c 266020 2014-05-14 14:17:51Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/platform_powermac.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,7 +44,6 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/platform_powermac.c 266020 20
 #include <machine/fpu.h>	/* For save_fpu() */
 #include <machine/hid.h>
 #include <machine/platformvar.h>
-#include <machine/pmap.h>
 #include <machine/setjmp.h>
 #include <machine/smp.h>
 #include <machine/spr.h>
@@ -127,6 +125,8 @@ powermac_mem_regions(platform_t plat, struct mem_region *phys, int *physsz,
 	int physacells = 1;
 
 	memory = OF_finddevice("/memory");
+	if (memory == -1)
+		memory = OF_finddevice("/memory@0");
 
 	/* "reg" has variable #address-cells, but #size-cells is always 1 */
 	OF_getprop(OF_parent(memory), "#address-cells", &physacells,
@@ -155,23 +155,32 @@ powermac_mem_regions(platform_t plat, struct mem_region *phys, int *physsz,
 	/* "available" always has #address-cells = 1 */
 	propsize = OF_getprop(memory, "available", memoryprop,
 	    sizeof(memoryprop));
-	propsize /= sizeof(cell_t);
-	for (i = 0, j = 0; i < propsize; i += 2, j++) {
-		avail[j].mr_start = memoryprop[i];
-		avail[j].mr_size = memoryprop[i + 1];
-	}
+	if (propsize <= 0) {
+		for (i = 0; i < *physsz; i++) {
+			avail[i].mr_start = phys[i].mr_start;
+			avail[i].mr_size = phys[i].mr_size;
+		}
+
+		*availsz = *physsz;
+	} else {
+		propsize /= sizeof(cell_t);
+		for (i = 0, j = 0; i < propsize; i += 2, j++) {
+			avail[j].mr_start = memoryprop[i];
+			avail[j].mr_size = memoryprop[i + 1];
+		}
 
 #ifdef __powerpc64__
-	/* Add in regions above 4 GB to the available list */
-	for (i = 0; i < *physsz; i++) {
-		if (phys[i].mr_start > BUS_SPACE_MAXADDR_32BIT) {
-			avail[j].mr_start = phys[i].mr_start;
-			avail[j].mr_size = phys[i].mr_size;
-			j++;
+		/* Add in regions above 4 GB to the available list */
+		for (i = 0; i < *physsz; i++) {
+			if (phys[i].mr_start > BUS_SPACE_MAXADDR_32BIT) {
+				avail[j].mr_start = phys[i].mr_start;
+				avail[j].mr_size = phys[i].mr_size;
+				j++;
+			}
 		}
-	}
 #endif
-	*availsz = j;
+		*availsz = j;
+	}
 }
 
 static int

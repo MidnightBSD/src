@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Alexander Motin <mav@alkar.net>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_deflate.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_deflate.c 281855 2015-04-22 14:38:58Z rodrigc $
  */
 
 /*
@@ -40,8 +39,7 @@
 #include <sys/endian.h>
 #include <sys/errno.h>
 #include <sys/syslog.h>
-
-#include <net/zlib.h>
+#include <sys/zlib.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>

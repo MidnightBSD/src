@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/vm.h 233670 2012-03-29 16:48:36Z jhb $
+ * $FreeBSD: stable/11/sys/mips/include/vm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_VM_H_

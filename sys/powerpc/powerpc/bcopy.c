@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -40,7 +39,7 @@ static char *rcsid = "$NetBSD: bcopy.c,v 1.2 1997/04/16 22:09:41 thorpej Exp $";
 #endif
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/bcopy.c 209850 2010-07-09 14:01:18Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/bcopy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #ifdef _KERNEL

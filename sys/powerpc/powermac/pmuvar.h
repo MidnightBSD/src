@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Michael Lorenz
  * Copyright (c) 2008 Nathan Whitehorn
@@ -25,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powermac/pmuvar.h 260674 2014-01-15 06:17:15Z jhibbits $
+ * $FreeBSD: stable/11/sys/powerpc/powermac/pmuvar.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -100,6 +99,7 @@
 
 /* Bits from PMU_GET_LID_STATE or PMU_INT_ENVIRONMENT on core99 */
 #define PMU_ENV_LID_CLOSED	0x01	/* The lid is closed */
+#define PMU_ENV_POWER		0x08	/* Power Button pressed */
 
 /* PMU PMU_POWER_EVENTS commands */
 enum {

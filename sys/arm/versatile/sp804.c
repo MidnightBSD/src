@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012 Damjan Marion <dmarion@freebsd.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/versatile/sp804.c 266152 2014-05-15 16:11:06Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/versatile/sp804.c 330897 2018-03-14 03:19:51Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,13 +44,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/versatile/sp804.c 266152 2014-05-15 16:11:
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #define	SP804_TIMER1_LOAD	0x00
 #define	SP804_TIMER1_VALUE	0x04
@@ -225,8 +224,8 @@ sp804_timer_attach(device_t dev)
 	sc->sysclk_freq = DEFAULT_FREQUENCY;
 	/* Get the base clock frequency */
 	node = ofw_bus_get_node(dev);
-	if ((OF_getprop(node, "clock-frequency", &clock, sizeof(clock))) > 0) {
-		sc->sysclk_freq = fdt32_to_cpu(clock);
+	if ((OF_getencprop(node, "clock-frequency", &clock, sizeof(clock))) > 0) {
+		sc->sysclk_freq = clock;
 	}
 
 	/* Setup and enable the timer */
@@ -246,7 +245,7 @@ sp804_timer_attach(device_t dev)
 	 * Timer 1, timecounter
 	 */
 	sc->tc.tc_frequency = sc->sysclk_freq;
-	sc->tc.tc_name = "SP804 Time Counter";
+	sc->tc.tc_name = "SP804-1";
 	sc->tc.tc_get_timecount = sp804_timer_tc_get_timecount;
 	sc->tc.tc_poll_pps = NULL;
 	sc->tc.tc_counter_mask = ~0u;
@@ -265,9 +264,7 @@ sp804_timer_attach(device_t dev)
 	 * Timer 2, event timer
 	 */
 	sc->et_enabled = 0;
-	sc->et.et_name = malloc(64, M_DEVBUF, M_NOWAIT | M_ZERO);
-	sprintf(sc->et.et_name, "SP804 Event Timer %d",
-		device_get_unit(dev));
+	sc->et.et_name = "SP804-2";
 	sc->et.et_flags = ET_FLAGS_PERIODIC | ET_FLAGS_ONESHOT;
 	sc->et.et_quality = 1000;
 	sc->et.et_frequency = sc->sysclk_freq / DEFAULT_DIVISOR;

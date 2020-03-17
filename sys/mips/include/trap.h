@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: trap.h,v 1.3 1999/01/27 04:46:06 imp Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@
  *	from: Utah Hdr: trap.h 1.1 90/07/09
  *	from: @(#)trap.h	8.1 (Berkeley) 6/10/93
  *	JNPR: trap.h,v 1.3 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/10/sys/mips/include/trap.h 232853 2012-03-12 07:34:15Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/trap.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_TRAP_H_

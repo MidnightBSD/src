@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc.c,v 1.21 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)svc.c 1.44 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc.c	2.4 88/08/11 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/svc.c 314034 2017-02-21 09:29:46Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/svc.c 336927 2018-07-30 19:23:52Z rmacklem $");
 
 /*
  * svc.c, Server-side remote procedure call interface.
@@ -479,7 +478,7 @@ xprt_inactive(SVCXPRT *xprt)
 
 /*
  * Variant of xprt_inactive() for use only when sure that port is
- * assigned to thread. For example, withing receive handlers.
+ * assigned to thread. For example, within receive handlers.
  */
 void
 xprt_inactive_self(SVCXPRT *xprt)
@@ -1184,7 +1183,8 @@ svc_run_internal(SVCGROUP *grp, bool_t ismaster)
 			/*
 			 * Enforce maxthreads count.
 			 */
-			if (grp->sg_threadcount > grp->sg_maxthreads)
+			if (!ismaster && grp->sg_threadcount >
+			    grp->sg_maxthreads)
 				break;
 
 			/*

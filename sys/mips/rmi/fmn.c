@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * RMI_BSD */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/fmn.c 223562 2011-06-26 10:07:48Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/fmn.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/param.h>
@@ -38,6 +37,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/rmi/fmn.c 223562 2011-06-26 10:07:48Z kev
 #include <sys/proc.h>
 #include <sys/limits.h>
 #include <sys/bus.h>
+#include <sys/sbuf.h>
 
 #include <sys/ktr.h>
 #include <sys/kernel.h>
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/rmi/fmn.c 223562 2011-06-26 10:07:48Z kev
 #include <machine/hwfunc.h>
 #include <machine/mips_opcode.h>
 
-#include <machine/param.h>
 #include <machine/intr_machdep.h>
 #include <mips/rmi/interrupt.h>
 #include <mips/rmi/msgring.h>
@@ -469,27 +468,22 @@ SYSINIT(start_msgring_threads, SI_SUB_SMP, SI_ORDER_MIDDLE,
 static int
 sys_print_debug(SYSCTL_HANDLER_ARGS)
 {
-	int error, nb, i, fs;
-	static char xprintb[4096], *buf;
+	struct sbuf sb;
+	int error, i;
 
-	buf = xprintb;
-	fs = sizeof(xprintb);
-	nb = snprintf(buf, fs,
+	sbuf_new_for_sysctl(&sb, NULL, 64, req);
+	sbuf_printf(&sb, 
 	    "\nID      INTR   ER   WU-SLP   WU-ERR     MSGS\n");
-	buf += nb;
-	fs -= nb;
 	for (i = 0; i < 32; i++) {
 		if ((xlr_hw_thread_mask & (1 << i)) == 0)
 			continue;
-		nb = snprintf(buf, fs,
-		    "%2d: %8d %4d %8d %8d %8d\n", i,
+		sbuf_printf(&sb, "%2d: %8d %4d %8d %8d %8d\n", i,
 		    msgring_nintr[i/4], msgring_badintr[i/4],
 		    msgring_wakeup_sleep[i], msgring_wakeup_nosleep[i],
 		    msgring_nmsgs[i]);
-		buf += nb;
-		fs -= nb;
 	} 
-	error = SYSCTL_OUT(req, xprintb, buf - xprintb);
+	error = sbuf_finish(&sb);
+	sbuf_delete(&sb);
 	return (error);
 }
 

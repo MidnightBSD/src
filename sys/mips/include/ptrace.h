@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)ptrace.h	8.1 (Berkeley) 6/11/93
  *	from: src/sys/i386/include/ptrace.h,v 1.14 2005/05/31 09:43:04 dfr
- * $FreeBSD: stable/10/sys/mips/include/ptrace.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: stable/11/sys/mips/include/ptrace.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PTRACE_H_

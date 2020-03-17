@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /* $NetBSD: reg.h,v 1.4 2000/06/04 09:30:44 tsubai Exp $	*/
-/* $FreeBSD: stable/10/sys/powerpc/include/reg.h 283910 2015-06-02 14:54:53Z jhb $	*/
+/* $FreeBSD: stable/11/sys/powerpc/include/reg.h 295132 2016-02-01 23:12:04Z jhb $	*/
 
 #ifndef _POWERPC_REG_H_
 #define	_POWERPC_REG_H_
@@ -19,10 +18,17 @@ struct reg {
 	register_t pc;
 };
 
-/* Must match pcb.pcb_fpu */
 struct fpreg {
 	double fpreg[32];
 	double fpscr;
+};
+
+/* Must match pcb.pcb_vec */
+struct vmxreg {
+	uint32_t vr[32][4];
+	uint32_t pad[2];
+	uint32_t vrsave;
+	uint32_t vscr;
 };
 
 struct dbreg {
@@ -42,6 +48,10 @@ struct reg32 {
 
 struct fpreg32 {
 	struct fpreg data;
+};
+
+struct vmxreg32 {
+	struct vmxreg data;
 };
 
 struct dbreg32 {

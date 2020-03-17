@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc_auth.c,v 1.12 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)svc_auth.c 1.26 89/02/07 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/svc_auth.c 261046 2014-01-22 23:45:27Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/svc_auth.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * svc_auth.c, Server-side rpc authenticator interface.

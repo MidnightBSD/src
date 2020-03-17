@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/ti/omap4/pandaboard/std.pandaboard 239281 2012-08-15 06:31:32Z gonzo $
+# $FreeBSD: stable/11/sys/arm/ti/omap4/pandaboard/std.pandaboard 239281 2012-08-15 06:31:32Z gonzo $
 
 include	"../ti/omap4/std.omap4"
 files	"../ti/omap4/pandaboard/files.pandaboard"

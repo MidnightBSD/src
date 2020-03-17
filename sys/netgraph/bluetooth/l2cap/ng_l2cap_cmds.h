@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_l2cap_cmds.h
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_cmds.h,v 1.4 2003/04/01 18:15:26 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.h 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.h 281198 2015-04-07 10:22:56Z takawata $
  */
 
 #ifndef _NETGRAPH_L2CAP_CMDS_H_
@@ -198,6 +197,25 @@ do {									\
 	}								\
 									\
 	c->hdr.length = htole16(c->hdr.length);				\
+} while (0)
+
+#define _ng_l2cap_cmd_urs(_m, _ident, _result)	\
+do {									\
+	struct  _cmd_urs{						\
+		ng_l2cap_cmd_hdr_t	 hdr;				\
+		uint16_t	 result;				\
+	} __attribute__ ((packed))	*c = NULL;			\
+									\
+	MGETHDR((_m), M_NOWAIT, MT_DATA);				\
+									\
+	(_m)->m_pkthdr.len = (_m)->m_len = sizeof(*c);			\
+									\
+	c = mtod((_m), struct _cmd_urs *);				\
+	c->hdr.code = NG_L2CAP_CMD_PARAM_UPDATE_RESPONSE;		\
+	c->hdr.ident = (_ident);					\
+	c->hdr.length = sizeof(c->result);				\
+									\
+	c->result = htole16((_result));				\
 } while (0)
 
 /* Build configuration options */

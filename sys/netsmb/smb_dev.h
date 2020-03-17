@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netsmb/smb_dev.h 250236 2013-05-04 14:03:18Z davide $
+ * $FreeBSD: stable/11/sys/netsmb/smb_dev.h 250236 2013-05-04 14:03:18Z davide $
  */
 #ifndef _NETSMB_DEV_H_
 #define _NETSMB_DEV_H_

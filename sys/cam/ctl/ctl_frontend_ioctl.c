@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 Silicon Graphics International Corp.
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_frontend_ioctl.c 313369 2017-02-07 01:56:26Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_frontend_ioctl.c 345114 2019-03-13 20:28:07Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -414,6 +413,7 @@ ctl_ioctl_io(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 	memcpy(io, (void *)addr, sizeof(*io));
 	io->io_hdr.pool = pool_tmp;
 	CTL_SOFTC(io) = sc_tmp;
+	TAILQ_INIT(&io->io_hdr.blocked_queue);
 
 	/*
 	 * No status yet, so make sure the status is set properly.

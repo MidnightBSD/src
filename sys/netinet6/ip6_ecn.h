@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1999 WIDE Project.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: ip_ecn.h,v 1.5 2000/03/27 04:58:38 sumikawa Exp $
- * $FreeBSD: stable/10/sys/netinet6/ip6_ecn.h 174510 2007-12-10 16:03:40Z obrien $
+ * $FreeBSD: stable/11/sys/netinet6/ip6_ecn.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

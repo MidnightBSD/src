@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Adrian Chadd
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/mips/atheros/ar71xx_setup.h 253027 2013-07-08 06:10:29Z adrian $ */
+/* $FreeBSD: stable/11/sys/mips/atheros/ar71xx_setup.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef	__AR71XX_SETUP_H__
 #define	__AR71XX_SETUP_H__
@@ -45,8 +44,12 @@ enum ar71xx_soc_type {
 	AR71XX_SOC_AR9341,
 	AR71XX_SOC_AR9342,
 	AR71XX_SOC_AR9344,
+	AR71XX_SOC_QCA9556,
+	AR71XX_SOC_QCA9558,
+	AR71XX_SOC_QCA9533,
+	AR71XX_SOC_QCA9533_V2,
 };
-extern enum ar71xx_soc_type ar71xx_soc;   
+extern enum ar71xx_soc_type ar71xx_soc;
 
 extern void ar71xx_detect_sys_type(void);
 extern const char *ar71xx_get_system_type(void);

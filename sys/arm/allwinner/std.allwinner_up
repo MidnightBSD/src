@@ -1,5 +1,5 @@
 # Allwinner Uniprocessor common options
-# $MidnightBSD$
+#$FreeBSD: stable/11/sys/arm/allwinner/std.allwinner_up 327658 2018-01-07 00:04:13Z ian $
 
 cpu		CPU_CORTEXA
 machine 	arm armv6

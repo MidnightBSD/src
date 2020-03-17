@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Written by Atsushi Murai <amurai@spec.co.jp>
  * Copyright (c) 1998, System Planning and Engineering Co.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_nbt.c 190938 2009-04-11 15:19:09Z piso $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/libalias/alias_nbt.c 315456 2017-03-17 14:54:10Z vangyzen $");
 
 /*
     alias_nbt.c performs special processing for NetBios over TCP/IP
@@ -71,17 +70,17 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_nbt.c 190938 2009-04-11
 #define NETBIOS_DGM_PORT_NUMBER 138
 
 static int
-AliasHandleUdpNbt(struct libalias *, struct ip *, struct alias_link *, 
+AliasHandleUdpNbt(struct libalias *, struct ip *, struct alias_link *,
 		  struct in_addr *, u_short);
 
 static int
 AliasHandleUdpNbtNS(struct libalias *, struct ip *, struct alias_link *,
 		    struct in_addr *, u_short *, struct in_addr *, u_short *);
-static int 
+static int
 fingerprint1(struct libalias *la, struct alias_data *ah)
 {
 
-	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL || 
+	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL ||
 	    ah->aaddr == NULL || ah->aport == NULL)
 		return (-1);
 	if (ntohs(*ah->dport) == NETBIOS_DGM_PORT_NUMBER
@@ -90,18 +89,18 @@ fingerprint1(struct libalias *la, struct alias_data *ah)
 	return (-1);
 }
 
-static int 
+static int
 protohandler1(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
 	return (AliasHandleUdpNbt(la, pip, ah->lnk, ah->aaddr, *ah->aport));
 }
 
-static int 
+static int
 fingerprint2(struct libalias *la, struct alias_data *ah)
 {
 
-	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL || 
+	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL ||
 	    ah->aaddr == NULL || ah->aport == NULL)
 		return (-1);
 	if (ntohs(*ah->dport) == NETBIOS_NS_PORT_NUMBER
@@ -110,7 +109,7 @@ fingerprint2(struct libalias *la, struct alias_data *ah)
 	return (-1);
 }
 
-static int 
+static int
 protohandler2in(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
@@ -119,7 +118,7 @@ protohandler2in(struct libalias *la, struct ip *pip, struct alias_data *ah)
 	return (0);
 }
 
-static int 
+static int
 protohandler2out(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
@@ -129,27 +128,27 @@ protohandler2out(struct libalias *la, struct ip *pip, struct alias_data *ah)
 
 /* Kernel module definition. */
 struct proto_handler handlers[] = {
-	{ 
-	  .pri = 130, 
-	  .dir = IN|OUT, 
-	  .proto = UDP, 
-	  .fingerprint = &fingerprint1, 
+	{
+	  .pri = 130,
+	  .dir = IN|OUT,
+	  .proto = UDP,
+	  .fingerprint = &fingerprint1,
 	  .protohandler = &protohandler1
-	}, 
-	{ 
-	  .pri = 140, 
-	  .dir = IN, 
-	  .proto = UDP, 
-	  .fingerprint = &fingerprint2, 
+	},
+	{
+	  .pri = 140,
+	  .dir = IN,
+	  .proto = UDP,
+	  .fingerprint = &fingerprint2,
 	  .protohandler = &protohandler2in
-	}, 
-	{ 
-	  .pri = 140, 
-	  .dir = OUT, 
-	  .proto = UDP, 
-	  .fingerprint = &fingerprint2, 
+	},
+	{
+	  .pri = 140,
+	  .dir = OUT,
+	  .proto = UDP,
+	  .fingerprint = &fingerprint2,
 	  .protohandler = &protohandler2out
-	}, 
+	},
 	{ EOH }
 };
 
@@ -174,7 +173,7 @@ mod_handler(module_t mod, int type, void *data)
 }
 
 #ifdef	_KERNEL
-static 
+static
 #endif
 moduledata_t alias_mod = {
        "alias_nbt", mod_handler, NULL
@@ -345,6 +344,9 @@ AliasHandleUdpNbt(
 	NbtDataHeader *ndh;
 	u_char *p = NULL;
 	char *pmax;
+#ifdef LIBALIAS_DEBUG
+	char addrbuf[INET_ADDRSTRLEN];
+#endif
 
 	(void)la;
 	(void)lnk;
@@ -380,7 +382,8 @@ AliasHandleUdpNbt(
 	if (p == NULL || (char *)p > pmax)
 		p = NULL;
 #ifdef LIBALIAS_DEBUG
-	printf("%s:%d-->", inet_ntoa(ndh->source_ip), ntohs(ndh->source_port));
+	printf("%s:%d-->", inet_ntoa_r(ndh->source_ip, INET_NTOA_BUF(addrbuf)),
+	    ntohs(ndh->source_port));
 #endif
 	/* Doing an IP address and Port number Translation */
 	if (uh->uh_sum != 0) {
@@ -400,7 +403,8 @@ AliasHandleUdpNbt(
 	ndh->source_ip = *alias_address;
 	ndh->source_port = alias_port;
 #ifdef LIBALIAS_DEBUG
-	printf("%s:%d\n", inet_ntoa(ndh->source_ip), ntohs(ndh->source_port));
+	printf("%s:%d\n", inet_ntoa_r(ndh->source_ip, INET_NTOA_BUF(addrbuf)),
+	    ntohs(ndh->source_port));
 	fflush(stdout);
 #endif
 	return ((p == NULL) ? -1 : 0);
@@ -481,6 +485,10 @@ AliasHandleResourceNB(
 {
 	NBTNsRNB *nb;
 	u_short bcount;
+#ifdef LIBALIAS_DEBUG
+	char oldbuf[INET_ADDRSTRLEN];
+	char newbuf[INET_ADDRSTRLEN];
+#endif
 
 	if (q == NULL || (char *)(q + 1) > pmax)
 		return (NULL);
@@ -492,8 +500,10 @@ AliasHandleResourceNB(
 
 	/* Processing all in_addr array */
 #ifdef LIBALIAS_DEBUG
-	printf("NB rec[%s", inet_ntoa(nbtarg->oldaddr));
-	printf("->%s, %dbytes] ", inet_ntoa(nbtarg->newaddr), bcount);
+	printf("NB rec[%s->%s, %dbytes] ",
+	    inet_ntoa_r(nbtarg->oldaddr, INET_NTOA_BUF(oldbuf)),
+	    inet_ntoa_r(nbtarg->newaddr, INET_NTOA_BUF(newbuf)),
+	    bcount);
 #endif
 	while (nb != NULL && bcount != 0) {
 		if ((char *)(nb + 1) > pmax) {
@@ -501,7 +511,7 @@ AliasHandleResourceNB(
 			break;
 		}
 #ifdef LIBALIAS_DEBUG
-		printf("<%s>", inet_ntoa(nb->addr));
+		printf("<%s>", inet_ntoa_r(nb->addr, INET_NTOA_BUF(newbuf)));
 #endif
 		if (!bcmp(&nbtarg->oldaddr, &nb->addr, sizeof(struct in_addr))) {
 			if (*nbtarg->uh_sum != 0) {
@@ -548,6 +558,10 @@ AliasHandleResourceA(
 {
 	NBTNsResourceA *a;
 	u_short bcount;
+#ifdef LIBALIAS_DEBUG
+	char oldbuf[INET_ADDRSTRLEN];
+	char newbuf[INET_ADDRSTRLEN];
+#endif
 
 	if (q == NULL || (char *)(q + 1) > pmax)
 		return (NULL);
@@ -560,14 +574,15 @@ AliasHandleResourceA(
 
 	/* Processing all in_addr array */
 #ifdef LIBALIAS_DEBUG
-	printf("Arec [%s", inet_ntoa(nbtarg->oldaddr));
-	printf("->%s]", inet_ntoa(nbtarg->newaddr));
+	printf("Arec [%s->%s]",
+	    inet_ntoa_r(nbtarg->oldaddr, INET_NTOA_BUF(oldbuf)),
+	    inet_ntoa_r(nbtarg->newaddr, INET_NTOA_BUF(newbuf)));
 #endif
 	while (bcount != 0) {
 		if (a == NULL || (char *)(a + 1) > pmax)
 			return (NULL);
 #ifdef LIBALIAS_DEBUG
-		printf("..%s", inet_ntoa(a->addr));
+		printf("..%s", inet_ntoa_r(a->addr, INET_NTOA_BUF(newbuf)));
 #endif
 		if (!bcmp(&nbtarg->oldaddr, &a->addr, sizeof(struct in_addr))) {
 			if (*nbtarg->uh_sum != 0) {

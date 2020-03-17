@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -24,19 +23,22 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/pmc_mdep.h 236997 2012-06-13 06:38:25Z fabient $
+ * $FreeBSD: stable/11/sys/arm/include/pmc_mdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_
 #define	_MACHINE_PMC_MDEP_H_
 
 #define	PMC_MDEP_CLASS_INDEX_XSCALE	1
+#define	PMC_MDEP_CLASS_INDEX_ARMV7	1
 /*
  * On the ARM platform we support the following PMCs.
  *
  * XSCALE	Intel XScale processors
+ * ARMV7	ARM Cortex-A processors
  */
 #include <dev/hwpmc/hwpmc_xscale.h>
+#include <dev/hwpmc/hwpmc_armv7.h>
 
 union pmc_md_op_pmcallocate {
 	uint64_t	__pad[4];
@@ -49,12 +51,12 @@ union pmc_md_op_pmcallocate {
 #ifdef	_KERNEL
 union pmc_md_pmc {
 	struct pmc_md_xscale_pmc	pm_xscale;
+	struct pmc_md_armv7_pmc		pm_armv7;
 };
 
 #define	PMC_IN_KERNEL_STACK(S,START,END)		\
 	((S) >= (START) && (S) < (END))
-#define	PMC_IN_KERNEL(va) (((va) >= USRSTACK) &&	\
-	((va) < VM_MAX_KERNEL_ADDRESS))
+#define	PMC_IN_KERNEL(va)	INKERNEL((va))
 
 #define	PMC_IN_USERSPACE(va) ((va) <= VM_MAXUSER_ADDRESS)
 
@@ -62,6 +64,8 @@ union pmc_md_pmc {
 #define	PMC_TRAPFRAME_TO_FP(TF)		((TF)->tf_r11)
 #define	PMC_TRAPFRAME_TO_SVC_SP(TF)	((TF)->tf_svc_sp)
 #define	PMC_TRAPFRAME_TO_USR_SP(TF)	((TF)->tf_usr_sp)
+#define	PMC_TRAPFRAME_TO_SVC_LR(TF)	((TF)->tf_svc_lr)
+#define	PMC_TRAPFRAME_TO_USR_LR(TF)	((TF)->tf_usr_lr)
 
 /* Build a fake kernel trapframe from current instruction pointer. */
 #define PMC_FAKE_TRAPFRAME(TF)						\
@@ -74,6 +78,8 @@ union pmc_md_pmc {
  */
 struct pmc_mdep *pmc_xscale_initialize(void);
 void		pmc_xscale_finalize(struct pmc_mdep *_md);
+struct pmc_mdep *pmc_armv7_initialize(void);
+void		pmc_armv7_finalize(struct pmc_mdep *_md);
 #endif /* _KERNEL */
 
 #endif /* !_MACHINE_PMC_MDEP_H_ */

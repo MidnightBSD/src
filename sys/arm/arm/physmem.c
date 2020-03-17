@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
- * All rights excluded.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/physmem.c 294685 2016-01-24 22:00:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/physmem.c 338694 2018-09-15 18:01:15Z markj $");
 
 #include "opt_ddb.h"
 
@@ -47,8 +46,10 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/arm/physmem.c 294685 2016-01-24 22:00:36Z 
  * that can be allocated, or both, depending on the exclusion flags associated
  * with the region.
  */
-#define	MAX_HWCNT	10
-#define	MAX_EXCNT	10
+#define	MAX_HWCNT	16
+#define	MAX_EXCNT	16
+
+#define	MAX_PHYS_ADDR	0xFFFFFFFFull
 
 struct region {
 	vm_paddr_t	addr;
@@ -63,7 +64,7 @@ static size_t hwcnt;
 static size_t excnt;
 
 /*
- * These "avail lists" are globals used to communicate physical memory layout to 
+ * These "avail lists" are globals used to communicate physical memory layout to
  * other parts of the kernel.  Within the arrays, each value is the starting
  * address of a contiguous area of physical address space.  The values at even
  * indexes are areas that contain usable memory and the values at odd indexes
@@ -144,7 +145,7 @@ physmem_dump_tables(int (*prfunc)(const char *, ...))
  * Print the contents of the static mapping table.  Used for bootverbose.
  */
 void
-arm_physmem_print_tables()
+arm_physmem_print_tables(void)
 {
 
 	physmem_dump_tables(printf);
@@ -274,14 +275,25 @@ insert_region(struct region *regions, size_t rcnt, vm_paddr_t addr,
  * Add a hardware memory region.
  */
 void
-arm_physmem_hardware_region(vm_paddr_t pa, vm_size_t sz)
+arm_physmem_hardware_region(uint64_t pa, uint64_t sz)
 {
 	vm_offset_t adj;
 
 	/*
 	 * Filter out the page at PA 0x00000000.  The VM can't handle it, as
 	 * pmap_extract() == 0 means failure.
-	 *
+	 */
+	if (pa == 0) {
+		if (sz <= PAGE_SIZE)
+			return;
+		pa  = PAGE_SIZE;
+		sz -= PAGE_SIZE;
+	} else if (pa > MAX_PHYS_ADDR) {
+		/* This range is past usable memory, ignore it */
+		return;
+	}
+
+	/*
 	 * Also filter out the page at the end of the physical address space --
 	 * if addr is non-zero and addr+size is zero we wrapped to the next byte
 	 * beyond what vm_paddr_t can express.  That leads to a NULL pointer
@@ -292,10 +304,10 @@ arm_physmem_hardware_region(vm_paddr_t pa, vm_size_t sz)
 	 * pointer deref in _vm_map_lock_read().  Better to give up a megabyte
 	 * than leave some folks with an unusable system while we investigate.
 	 */
-	if (pa == 0) {
-		pa  = PAGE_SIZE;
-		sz -= PAGE_SIZE;
-	} else if (pa + sz == 0) {
+	if ((pa + sz) > (MAX_PHYS_ADDR - 1024 * 1024)) {
+		sz = MAX_PHYS_ADDR - pa + 1;
+		if (sz <= 1024 * 1024)
+			return;
 		sz -= 1024 * 1024;
 	}
 
@@ -307,14 +319,15 @@ arm_physmem_hardware_region(vm_paddr_t pa, vm_size_t sz)
 	pa  = round_page(pa);
 	sz  = trunc_page(sz - adj);
 
-	if (hwcnt < nitems(hwregions))
+	if (sz > 0 && hwcnt < nitems(hwregions))
 		insert_region(hwregions, hwcnt++, pa, sz, 0);
 }
 
 /*
  * Add an exclusion region.
  */
-void arm_physmem_exclude_region(vm_paddr_t pa, vm_size_t sz, uint32_t exflags)
+void
+arm_physmem_exclude_region(vm_paddr_t pa, vm_size_t sz, uint32_t exflags)
 {
 	vm_offset_t adj;
 
@@ -326,8 +339,10 @@ void arm_physmem_exclude_region(vm_paddr_t pa, vm_size_t sz, uint32_t exflags)
 	pa  = trunc_page(pa);
 	sz  = round_page(sz + adj);
 
-	if (excnt < nitems(exregions))
-		insert_region(exregions, excnt++, pa, sz, exflags);
+	if (excnt >= nitems(exregions))
+		panic("failed to exclude region %#jx-%#jx", (uintmax_t)pa,
+		    (uintmax_t)(pa + sz));
+	insert_region(exregions, excnt++, pa, sz, exflags);
 }
 
 /*

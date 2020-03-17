@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: clnt_vc.c,v 1.4 2000/07/14 08:40:42 fvdl Exp $	*/
 
 /*-
@@ -35,7 +34,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/clnt_bck.c 302451 2016-07-08 20:30:20Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/clnt_bck.c 301800 2016-06-10 17:53:28Z ngie $");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -377,7 +376,7 @@ printf("emsgsize\n");
 			break;
 		default:
 			stat = RPC_CANTRECV;
-		};
+		}
 		errp->re_status = stat;
 		goto out;
 	} else {
@@ -427,7 +426,7 @@ got_reply:
 			}
 		}		/* end successful completion */
 		/*
-		 * If unsuccesful AND error is an authentication error
+		 * If unsuccessful AND error is an authentication error
 		 * then refresh credentials and try again, else break
 		 */
 		else if (stat == RPC_AUTHERROR)

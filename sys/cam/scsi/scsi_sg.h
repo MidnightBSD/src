@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * Structures and definitions for SCSI commands to the SG passthrough device.
  *
- * $FreeBSD: stable/10/sys/cam/scsi/scsi_sg.h 268139 2014-07-02 10:16:12Z mav $
+ * $FreeBSD: stable/11/sys/cam/scsi/scsi_sg.h 266981 2014-06-02 19:53:53Z mav $
  */
 
 #ifndef _SCSI_SG_H

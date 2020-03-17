@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1990 The Regents of the University of California.
@@ -36,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/10/sys/arm/include/param.h 274648 2014-11-18 12:53:32Z kib $
+ * $FreeBSD: stable/11/sys/arm/include/param.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARM_INCLUDE_PARAM_H_
@@ -47,7 +46,6 @@
  */
 
 #include <machine/_align.h>
-#include <machine/acle-compat.h>
 
 #define STACKALIGNBYTES	(8 - 1)
 #define STACKALIGN(p)	((u_int)(p) & ~STACKALIGNBYTES)
@@ -60,12 +58,6 @@
 #define	_V6_SUFFIX ""
 #endif
 
-#ifdef __ARM_PCS_VFP
-#define	_HF_SUFFIX "hf"
-#else
-#define	_HF_SUFFIX ""
-#endif
-
 #ifdef __ARM_BIG_ENDIAN
 #define	_EB_SUFFIX "eb"
 #else
@@ -76,7 +68,7 @@
 #define	MACHINE		"arm"
 #endif
 #ifndef MACHINE_ARCH
-#define	MACHINE_ARCH	"arm" _V6_SUFFIX _HF_SUFFIX _EB_SUFFIX
+#define	MACHINE_ARCH	"arm" _V6_SUFFIX _EB_SUFFIX
 #endif
 
 #if defined(SMP) || defined(KLD_MODULE)
@@ -98,6 +90,14 @@
  * is valid to fetch data elements of type t from on this architecture.
  * This does not reflect the optimal alignment, just the possibility
  * (within reasonable limits).
+ *
+ * armv4 and v5 require alignment to the type's size.  armv6 requires 8-byte
+ * alignment for the ldrd/strd instructions, but otherwise follows armv7 rules.
+ * armv7 requires that an 8-byte type be aligned to at least a 4-byte boundary;
+ * access to smaller types can be unaligned, except that the compiler may
+ * optimize access to adjacent uint32_t values into a single load/store-multiple
+ * instruction which requires 4-byte alignment, so we must provide the most-
+ * pessimistic answer possible even on armv7.
  */
 #define	ALIGNED_POINTER(p, t)	((((unsigned)(p)) & (sizeof(t)-1)) == 0)
 
@@ -111,7 +111,6 @@
 #define	PAGE_SHIFT	12
 #define	PAGE_SIZE	(1 << PAGE_SHIFT)	/* Page size */
 #define	PAGE_MASK	(PAGE_SIZE - 1)
-#define	NPTEPG		(PAGE_SIZE/(sizeof (pt_entry_t)))
 
 #define PDR_SHIFT	20 /* log2(NBPDR) */
 #define NBPDR		(1 << PDR_SHIFT)
@@ -132,7 +131,7 @@
 #define KSTACK_GUARD_PAGES	1
 #endif /* !KSTACK_GUARD_PAGES */
 
-#define USPACE_SVC_STACK_TOP		(KSTACK_PAGES * PAGE_SIZE)
+#define USPACE_SVC_STACK_TOP		(kstack_pages * PAGE_SIZE)
 
 /*
  * Mach derived conversion macros
@@ -149,9 +148,5 @@
 #define	arm32_ptob(x)		((unsigned)(x) << PAGE_SHIFT)
 
 #define	pgtok(x)		((x) * (PAGE_SIZE / 1024))
-
-#ifdef _KERNEL
-#define	NO_FUEWORD	1
-#endif
 
 #endif /* !_ARM_INCLUDE_PARAM_H_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
   rpcsec_gss_prot.c
   
@@ -37,7 +36,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/rpcsec_gss/rpcsec_gss_prot.c 249096 2013-04-04 15:16:53Z gnn $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/rpcsec_gss/rpcsec_gss_prot.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

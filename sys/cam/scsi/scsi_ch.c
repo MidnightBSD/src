@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
@@ -69,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_ch.c 316791 2017-04-13 20:36:40Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_ch.c 350804 2019-08-08 22:16:19Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -403,10 +402,7 @@ chregister(struct cam_periph *periph, void *arg)
 	if (cgd->inq_data.version <= SCSI_REV_2)
 		softc->quirks |= CH_Q_NO_DVCID;
 
-	bzero(&cpi, sizeof(cpi));
-	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, periph->path);
 
 	/*
 	 * Changers don't have a blocksize, and obviously don't support
@@ -665,7 +661,7 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 			 */
 			if (error == ERESTART) {
 				/*
-				 * A retry was scheuled, so
+				 * A retry was scheduled, so
 				 * just return.
 				 */
 				return;

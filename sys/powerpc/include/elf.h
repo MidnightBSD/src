@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1996-1997 John D. Polstra.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/elf.h 237430 2012-06-22 06:38:31Z kib $
+ * $FreeBSD: stable/11/sys/powerpc/include/elf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_ELF_H_
@@ -108,8 +107,11 @@ __ElfType(Auxinfo);
 #define	AT_PAGESIZESLEN	19	/* Number of pagesizes. */
 #define	AT_STACKPROT	21	/* Initial stack protection. */
 #define	AT_TIMEKEEP	22	/* Pointer to timehands. */
+#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
+#define	AT_HWCAP	25	/* CPU feature flags. */
+#define	AT_HWCAP2	26	/* CPU feature flags 2. */
 
-#define	AT_COUNT	23	/* Count of defined aux entry types. */
+#define	AT_COUNT	27	/* Count of defined aux entry types. */
 
 /*
  * Relocation types.

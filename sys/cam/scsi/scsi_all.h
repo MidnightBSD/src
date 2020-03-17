@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Largely written by Julian Elischer (julian@tfs.com)
  * for TRW Financial Systems.
@@ -15,7 +14,7 @@
  *
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
- * $FreeBSD: stable/10/sys/cam/scsi/scsi_all.h 317962 2017-05-08 17:21:57Z ken $
+ * $FreeBSD: stable/11/sys/cam/scsi/scsi_all.h 351582 2019-08-28 20:23:08Z mav $
  */
 
 /*
@@ -720,7 +719,9 @@ struct scsi_control_page {
 
 struct scsi_control_ext_page {
 	uint8_t page_code;
+#define SCEP_PAGE_CODE			0x0a
 	uint8_t subpage_code;
+#define SCEP_SUBPAGE_CODE		0x01
 	uint8_t page_length[2];
 	uint8_t flags;
 #define	SCEP_TCMOS			0x04	/* Timestamp Changeable by */
@@ -1423,6 +1424,7 @@ struct ata_pass_12 {
 #define	AP_PROTO_UDMA_OUT	(0x0b << 1)
 #define	AP_PROTO_FPDMA		(0x0c << 1)
 #define	AP_PROTO_RESP_INFO	(0x0f << 1)
+#define AP_PROTO_MASK		0x1e
 #define	AP_MULTI	0xe0
 	u_int8_t flags;
 #define	AP_T_LEN	0x03
@@ -2002,6 +2004,27 @@ struct ata_pass_16 {
 	u_int8_t control;
 };
 
+struct ata_pass_32 {
+	uint8_t opcode;
+	uint8_t control;
+	uint8_t reserved1[5];
+	uint8_t length;
+	uint8_t service_action[2];
+#define	ATA_PASS_32_SA		0x1ff0
+	uint8_t protocol;
+	uint8_t flags;
+	uint8_t reserved2[2];
+	uint8_t lba[6];
+	uint8_t features[2];
+	uint8_t count[2];
+	uint8_t device;
+	uint8_t command;
+	uint8_t reserved3;
+	uint8_t icc;
+	uint8_t auxiliary[4];
+};
+
+
 #define	SC_SCSI_1 0x01
 #define	SC_SCSI_2 0x03
 
@@ -2044,6 +2067,8 @@ struct ata_pass_16 {
 #define	MODE_SENSE_10		0x5A
 #define	PERSISTENT_RES_IN	0x5E
 #define	PERSISTENT_RES_OUT	0x5F
+#define	EXTENDED_CDB		0x7E
+#define	VARIABLE_LEN_CDB	0x7F
 #define	EXTENDED_COPY		0x83
 #define	RECEIVE_COPY_STATUS	0x84
 #define	ATA_PASS_16		0x85
@@ -2111,6 +2136,7 @@ struct ata_pass_16 {
 #define	T_OCRW		0x0f
 #define	T_OSD		0x11
 #define	T_ADC		0x12
+#define	T_ZBC_HM	0x14
 #define	T_NODEVICE	0x1f
 #define	T_ANY		0xff	/* Used in Quirk table matches */
 
@@ -2773,9 +2799,16 @@ struct scsi_vpd_block_device_characteristics
 	uint8_t flags;
 #define	SVPD_VBULS		0x01
 #define	SVPD_FUAB		0x02
-#define	SVPD_HAW_ZBC		0x10
+#define	SVPD_ZBC_NR		0x00	/* Not Reported */
+#define	SVPD_HAW_ZBC		0x10	/* Host Aware */
+#define	SVPD_DM_ZBC		0x20	/* Drive Managed */
+#define	SVPD_ZBC_MASK		0x30	/* Zoned mask */
 	uint8_t reserved[55];
 };
+
+#define SBDC_IS_PRESENT(bdc, length, field)				   \
+	((length >= offsetof(struct scsi_vpd_block_device_characteristics, \
+	  field) + sizeof(bdc->field)) ? 1 : 0)
 
 /*
  * Logical Block Provisioning VPD Page based on
@@ -2833,6 +2866,28 @@ struct scsi_vpd_block_limits
 	u_int8_t atomic_transfer_length_granularity[4];
 	u_int8_t max_atomic_transfer_length_with_atomic_boundary[4];
 	u_int8_t max_atomic_boundary_size[4];
+};
+
+/*
+ * Zoned Block Device Characacteristics VPD page.
+ * From ZBC-r04, dated August 12, 2015.
+ */
+struct scsi_vpd_zoned_bdc {
+	uint8_t device;
+	uint8_t page_code;
+#define	SVPD_ZONED_BDC		0xB6
+	uint8_t page_length[2];
+#define	SVPD_ZBDC_PL	0x3C
+	uint8_t flags;
+#define	SVPD_ZBDC_URSWRZ	0x01
+	uint8_t reserved1[3];
+	uint8_t optimal_seq_zones[4];
+#define	SVPD_ZBDC_OPT_SEQ_NR		0xffffffff
+	uint8_t optimal_nonseq_zones[4];
+#define SVPD_ZBDC_OPT_NONSEQ_NR		0xffffffff
+	uint8_t max_seq_req_zones[4];
+#define	SVPD_ZBDC_MAX_SEQ_UNLIMITED	0xffffffff
+	uint8_t reserved2[44];
 };
 
 struct scsi_read_capacity
@@ -2976,6 +3031,31 @@ struct scsi_target_group
 	uint8_t length[4];
 	uint8_t reserved2;
 	uint8_t control;
+};
+
+struct scsi_timestamp
+{
+	uint8_t opcode;
+	uint8_t service_action;
+	uint8_t reserved1[4];
+	uint8_t length[4];
+	uint8_t reserved2;
+	uint8_t control;
+};
+
+struct scsi_set_timestamp_parameters
+{
+	uint8_t reserved1[4];
+	uint8_t timestamp[6];
+	uint8_t reserved2[2];
+};
+
+struct scsi_report_timestamp_parameter_data
+{
+	uint8_t length[2];
+	uint8_t reserved1[2];
+	uint8_t timestamp[6];
+	uint8_t reserved2[2];
 };
 
 struct scsi_target_port_descriptor {
@@ -3494,7 +3574,9 @@ struct scsi_mode_header_10
 	u_int8_t data_length[2];/* Sense data length */
 	u_int8_t medium_type;
 	u_int8_t dev_spec;
-	u_int8_t unused[2];
+	u_int8_t flags;
+#define	SMH_LONGLBA	0x01
+	u_int8_t unused;
 	u_int8_t blk_desc_len[2];
 };
 
@@ -3665,8 +3747,8 @@ void scsi_command_sbuf(struct sbuf *sb, uint8_t *cdb, int cdb_len,
 void scsi_progress_sbuf(struct sbuf *sb, uint16_t progress);
 int scsi_sks_sbuf(struct sbuf *sb, int sense_key, uint8_t *sks);
 void scsi_fru_sbuf(struct sbuf *sb, uint64_t fru);
-void scsi_stream_sbuf(struct sbuf *sb, uint8_t stream_bits, uint64_t info);
-void scsi_block_sbuf(struct sbuf *sb, uint8_t block_bits, uint64_t info);
+void scsi_stream_sbuf(struct sbuf *sb, uint8_t stream_bits);
+void scsi_block_sbuf(struct sbuf *sb, uint8_t block_bits);
 void scsi_sense_info_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 			  u_int sense_len, uint8_t *cdb, int cdb_len,
 			  struct scsi_inquiry_data *inq_data,
@@ -3989,11 +4071,28 @@ void		scsi_report_target_group(struct ccb_scsiio *csio, u_int32_t retries,
 				 u_int32_t alloc_len, u_int8_t sense_len,
 				 u_int32_t timeout);
 
+void		scsi_report_timestamp(struct ccb_scsiio *csio, u_int32_t retries,
+				 void (*cbfcnp)(struct cam_periph *, 
+				 union ccb *), u_int8_t tag_action, 
+				 u_int8_t pdf,
+				 void *buf,
+				 u_int32_t alloc_len, u_int8_t sense_len,
+				 u_int32_t timeout);
+
 void		scsi_set_target_group(struct ccb_scsiio *csio, u_int32_t retries,
 				 void (*cbfcnp)(struct cam_periph *, 
 				 union ccb *), u_int8_t tag_action, void *buf,
 				 u_int32_t alloc_len, u_int8_t sense_len,
 				 u_int32_t timeout);
+
+void		scsi_create_timestamp(uint8_t *timestamp_6b_buf,
+				      uint64_t timestamp);
+
+void		scsi_set_timestamp(struct ccb_scsiio *csio, u_int32_t retries,
+				   void (*cbfcnp)(struct cam_periph *, 
+				   union ccb *), u_int8_t tag_action,
+				   void *buf, u_int32_t alloc_len,
+				   u_int8_t sense_len, u_int32_t timeout);
 
 void		scsi_synchronize_cache(struct ccb_scsiio *csio, 
 				       u_int32_t retries,
@@ -4063,6 +4162,23 @@ void scsi_ata_trim(struct ccb_scsiio *csio, u_int32_t retries,
 	           u_int8_t tag_action, u_int16_t block_count,
 	           u_int8_t *data_ptr, u_int16_t dxfer_len,
 	           u_int8_t sense_len, u_int32_t timeout);
+
+int scsi_ata_read_log(struct ccb_scsiio *csio, uint32_t retries,
+		      void (*cbfcnp)(struct cam_periph *, union ccb *),
+		      uint8_t tag_action, uint32_t log_address,
+		      uint32_t page_number, uint16_t block_count,
+		      uint8_t protocol, uint8_t *data_ptr, uint32_t dxfer_len,
+		      uint8_t sense_len, uint32_t timeout);
+
+int scsi_ata_pass(struct ccb_scsiio *csio, uint32_t retries,
+		  void (*cbfcnp)(struct cam_periph *, union ccb *),
+		  uint32_t flags, uint8_t tag_action,
+		  uint8_t protocol, uint8_t ata_flags, uint16_t features,
+		  uint16_t sector_count, uint64_t lba, uint8_t command,
+		  uint8_t device, uint8_t icc, uint32_t auxiliary,
+		  uint8_t control, u_int8_t *data_ptr, uint32_t dxfer_len,
+		  uint8_t *cdb_storage, size_t cdb_storage_len,
+		  int minimum_cmd_size, u_int8_t sense_len, u_int32_t timeout);
 
 void scsi_ata_pass_16(struct ccb_scsiio *csio, u_int32_t retries,
 		      void (*cbfcnp)(struct cam_periph *, union ccb *),

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_btsocket_l2cap_raw.c
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_l2cap_raw.c,v 1.12 2003/09/14 23:29:06 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap_raw.c 268061 2014-06-30 19:46:17Z trociny $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap_raw.c 281198 2015-04-07 10:22:56Z takawata $
  */
 
 #include <sys/param.h>
@@ -668,7 +667,8 @@ ng_btsocket_l2cap_raw_bind(struct socket *so, struct sockaddr *nam,
 		return (EINVAL);
 	if (sa->l2cap_family != AF_BLUETOOTH)
 		return (EAFNOSUPPORT);
-	if (sa->l2cap_len != sizeof(*sa))
+	if((sa->l2cap_len != sizeof(*sa))&&
+	   (sa->l2cap_len != sizeof(struct sockaddr_l2cap_compat)))
 		return (EINVAL);
 
 	if (bcmp(&sa->l2cap_bdaddr, NG_HCI_BDADDR_ANY,
@@ -721,8 +721,10 @@ ng_btsocket_l2cap_raw_connect(struct socket *so, struct sockaddr *nam,
 		return (EINVAL);
 	if (sa->l2cap_family != AF_BLUETOOTH)
 		return (EAFNOSUPPORT);
-	if (sa->l2cap_len != sizeof(*sa))
+	if((sa->l2cap_len != sizeof(*sa))&&
+	   (sa->l2cap_len != sizeof(struct sockaddr_l2cap_compat)))
 		return (EINVAL);
+
 	if (bcmp(&sa->l2cap_bdaddr, NG_HCI_BDADDR_ANY, sizeof(bdaddr_t)) == 0)
 		return (EINVAL);
 
@@ -1180,6 +1182,8 @@ ng_btsocket_l2cap_raw_peeraddr(struct socket *so, struct sockaddr **nam)
 	sa.l2cap_psm = 0;
 	sa.l2cap_len = sizeof(sa);
 	sa.l2cap_family = AF_BLUETOOTH;
+	sa.l2cap_cid = 0;
+	sa.l2cap_bdaddr_type = BDADDR_BREDR;
 
 	*nam = sodupsockaddr((struct sockaddr *) &sa, M_NOWAIT);
 
@@ -1222,7 +1226,8 @@ ng_btsocket_l2cap_raw_sockaddr(struct socket *so, struct sockaddr **nam)
 	sa.l2cap_psm = 0;
 	sa.l2cap_len = sizeof(sa);
 	sa.l2cap_family = AF_BLUETOOTH;
-
+	sa.l2cap_cid = 0;
+	sa.l2cap_bdaddr_type = BDADDR_BREDR;
 	*nam = sodupsockaddr((struct sockaddr *) &sa, M_NOWAIT);
 
 	return ((*nam == NULL)? ENOMEM : 0);

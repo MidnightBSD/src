@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $OpenBSD: cast.c,v 1.2 2000/06/06 06:49:47 deraadt Exp $       */
 /*-
  *	CAST-128 in C
@@ -8,7 +7,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/opencrypto/cast.c 171238 2007-07-05 06:59:14Z peter $");
+__FBSDID("$FreeBSD: stable/11/sys/opencrypto/cast.c 299202 2016-05-06 23:37:19Z pfg $");
 
 #include <sys/types.h>
 #include <opencrypto/cast.h>
@@ -128,7 +127,7 @@ u_int32_t t, l, r;
 }
 
 
-/***** Key Schedual *****/
+/***** Key Schedule *****/
 
 void cast_setkey(cast_key* key, u_int8_t* rawkey, int keybytes)
 {

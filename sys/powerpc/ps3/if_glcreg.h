@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/ps3/if_glcreg.h 217044 2011-01-06 04:12:29Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/ps3/if_glcreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _POWERPC_PS3_IF_GLCREG_H

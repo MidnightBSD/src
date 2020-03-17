@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for CAM peripheral ("type") drivers.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/cam_periph.h 288817 2015-10-05 11:45:28Z mav $
+ * $FreeBSD: stable/11/sys/cam/cam_periph.h 355341 2019-12-03 16:52:39Z mav $
  */
 
 #ifndef _CAM_CAM_PERIPH_H
@@ -46,6 +45,7 @@ extern struct cam_periph *xpt_periph;
 
 extern struct periph_driver **periph_drivers;
 void periphdriver_register(void *);
+int periphdriver_unregister(void *);
 void periphdriver_init(int level);
 
 #include <sys/module.h>
@@ -57,8 +57,7 @@ void periphdriver_init(int level);
 			periphdriver_register(data); \
 			break; \
 		case MOD_UNLOAD: \
-			printf(#name " module unload - not possible for this module type\n"); \
-			return EINVAL; \
+			return (periphdriver_unregister(data)); \
 		default: \
 			return EOPNOTSUPP; \
 		} \
@@ -72,20 +71,26 @@ void periphdriver_init(int level);
 	DECLARE_MODULE(name, name ## _mod, SI_SUB_DRIVERS, SI_ORDER_ANY); \
 	MODULE_DEPEND(name, cam, 1, 1, 1)
 
-typedef void (periph_init_t)(void); /*
-				     * Callback informing the peripheral driver
-				     * it can perform it's initialization since
-				     * the XPT is now fully initialized.
-				     */
-typedef periph_init_t *periph_init_func_t;
+/*
+ * Callback informing the peripheral driver it can perform it's
+ * initialization since the XPT is now fully initialized.
+ */
+typedef void (periph_init_t)(void);
+
+/*
+ * Callback requesting the peripheral driver to remove its instances
+ * and shutdown, if possible.
+ */
+typedef int (periph_deinit_t)(void);
 
 struct periph_driver {
-	periph_init_func_t	 init;
-	char			 *driver_name;
+	periph_init_t		*init;
+	char			*driver_name;
 	TAILQ_HEAD(,cam_periph)	 units;
 	u_int			 generation;
 	u_int			 flags;
 #define CAM_PERIPH_DRV_EARLY		0x01
+	periph_deinit_t		*deinit;
 };
 
 typedef enum {
@@ -124,6 +129,8 @@ struct cam_periph {
 #define CAM_PERIPH_RUN_TASK		0x40
 #define CAM_PERIPH_FREE			0x80
 #define CAM_PERIPH_ANNOUNCED		0x100
+#define CAM_PERIPH_RECOVERY_WAIT	0x200
+#define CAM_PERIPH_RECOVERY_WAIT_FAILED	0x400
 	uint32_t		 scheduled_priority;
 	uint32_t		 immediate_priority;
 	int			 periph_allocating;
@@ -141,6 +148,7 @@ struct cam_periph {
 
 struct cam_periph_map_info {
 	int		num_bufs_used;
+	void		*orig[CAM_PERIPH_MAXMAPS];
 	struct buf	*bp[CAM_PERIPH_MAXMAPS];
 };
 
@@ -167,7 +175,6 @@ void		cam_periph_unmapmem(union ccb *ccb,
 				    struct cam_periph_map_info *mapinfo);
 union ccb	*cam_periph_getccb(struct cam_periph *periph,
 				   u_int32_t priority);
-void		cam_periph_ccbwait(union ccb *ccb);
 int		cam_periph_runccb(union ccb *ccb,
 				  int (*error_routine)(union ccb *ccb,
 						       cam_flags camflags,

@@ -1,7 +1,7 @@
 #
 # GXEMUL "oldtestmips" sample kernel configuration.
 #
-# $FreeBSD: stable/10/sys/mips/conf/GXEMUL 253845 2013-07-31 17:21:18Z obrien $
+# $FreeBSD: stable/11/sys/mips/conf/GXEMUL 274331 2014-11-09 21:33:01Z melifaro $
 #
 
 ident		GXEMUL
@@ -55,7 +55,6 @@ device		ether		# Ethernet support
 device		tun		# Packet tunnel.
 device		md		# Memory "disks"
 device		gif		# IPv6 and IPv4 tunneling
-device		faith		# IPv6-to-IPv4 relaying (translation)
 
 # The `bpf' device enables the Berkeley Packet Filter.
 # Be aware of the administrative consequences of enabling this!

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -56,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/exec_machdep.c 301428 2016-06-05 07:34:10Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/exec_machdep.c 341165 2018-11-28 21:19:58Z vangyzen $");
 
 #include "opt_compat.h"
 #include "opt_fpu_emu.h"
@@ -153,13 +152,8 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	 * Fill siginfo structure.
 	 */
 	ksi->ksi_info.si_signo = ksi->ksi_signo;
-	#ifdef AIM
 	ksi->ksi_info.si_addr = (void *)((tf->exc == EXC_DSI) ? 
-	    tf->cpu.aim.dar : tf->srr0);
-	#else
-	ksi->ksi_info.si_addr = (void *)((tf->exc == EXC_DSI) ? 
-	    tf->cpu.booke.dear : tf->srr0);
-	#endif
+	    tf->dar : tf->srr0);
 
 	#ifdef COMPAT_FREEBSD32
 	if (SV_PROC_FLAG(p, SV_ILP32)) {
@@ -168,7 +162,7 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 		code = siginfo32.si_code;
 		sfp = (caddr_t)&sf32;
 		sfpsize = sizeof(sf32);
-		rndfsize = ((sizeof(sf32) + 15) / 16) * 16;
+		rndfsize = roundup(sizeof(sf32), 16);
 
 		/*
 		 * Save user context
@@ -195,9 +189,9 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 		 * 64-bit PPC defines a 288 byte scratch region
 		 * below the stack.
 		 */
-		rndfsize = 288 + ((sizeof(sf) + 47) / 48) * 48;
+		rndfsize = 288 + roundup(sizeof(sf), 48);
 		#else
-		rndfsize = ((sizeof(sf) + 15) / 16) * 16;
+		rndfsize = roundup(sizeof(sf), 16);
 		#endif
 
 		/*
@@ -279,13 +273,8 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	} else {
 		/* Old FreeBSD-style arguments. */
 		tf->fixreg[FIRSTARG+1] = code;
-		#ifdef AIM
 		tf->fixreg[FIRSTARG+3] = (tf->exc == EXC_DSI) ? 
-		    tf->cpu.aim.dar : tf->srr0;
-		#else
-		tf->fixreg[FIRSTARG+3] = (tf->exc == EXC_DSI) ? 
-		    tf->cpu.booke.dear : tf->srr0;
-		#endif
+		    tf->dar : tf->srr0;
 	}
 	mtx_unlock(&psp->ps_mtx);
 	PROC_UNLOCK(p);
@@ -368,6 +357,7 @@ static int
 grab_mcontext(struct thread *td, mcontext_t *mcp, int flags)
 {
 	struct pcb *pcb;
+	int i;
 
 	pcb = td->td_pcb;
 
@@ -397,7 +387,15 @@ grab_mcontext(struct thread *td, mcontext_t *mcp, int flags)
 		}
 		mcp->mc_flags |= _MC_FP_VALID;
 		memcpy(&mcp->mc_fpscr, &pcb->pcb_fpu.fpscr, sizeof(double));
-		memcpy(mcp->mc_fpreg, pcb->pcb_fpu.fpr, 32*sizeof(double));
+		for (i = 0; i < 32; i++)
+			memcpy(&mcp->mc_fpreg[i], &pcb->pcb_fpu.fpr[i].fpr,
+			    sizeof(double));
+	}
+
+	if (pcb->pcb_flags & PCB_VSX) {
+		for (i = 0; i < 32; i++)
+			memcpy(&mcp->mc_vsxfpreg[i],
+			    &pcb->pcb_fpu.fpr[i].vsr[2], sizeof(double));
 	}
 
 	/*
@@ -442,6 +440,7 @@ set_mcontext(struct thread *td, mcontext_t *mcp)
 	struct pcb *pcb;
 	struct trapframe *tf;
 	register_t tls;
+	int i;
 
 	pcb = td->td_pcb;
 	tf = td->td_frame;
@@ -471,7 +470,13 @@ set_mcontext(struct thread *td, mcontext_t *mcp)
 		/* enable_fpu() will happen lazily on a fault */
 		pcb->pcb_flags |= PCB_FPREGS;
 		memcpy(&pcb->pcb_fpu.fpscr, &mcp->mc_fpscr, sizeof(double));
-		memcpy(pcb->pcb_fpu.fpr, mcp->mc_fpreg, 32*sizeof(double));
+		bzero(pcb->pcb_fpu.fpr, sizeof(pcb->pcb_fpu.fpr));
+		for (i = 0; i < 32; i++) {
+			memcpy(&pcb->pcb_fpu.fpr[i].fpr, &mcp->mc_fpreg[i],
+			    sizeof(double));
+			memcpy(&pcb->pcb_fpu.fpr[i].vsr[2],
+			    &mcp->mc_vsxfpreg[i], sizeof(double));
+		}
 	}
 
 	if (mcp->mc_flags & _MC_AV_VALID) {
@@ -496,9 +501,6 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 {
 	struct trapframe	*tf;
 	register_t		argc;
-	#ifdef __powerpc64__
-	register_t		entry_desc[3];
-	#endif
 
 	tf = trapframe(td);
 	bzero(tf, sizeof *tf);
@@ -541,24 +543,13 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	tf->fixreg[7] = 0;				/* termination vector */
 	tf->fixreg[8] = (register_t)imgp->ps_strings;	/* NetBSD extension */
 
+	tf->srr0 = imgp->entry_addr;
 	#ifdef __powerpc64__
-	/*
-	 * For 64-bit, we need to disentangle the function descriptor
-	 * 
-	 * 0. entry point
-	 * 1. TOC value (r2)
-	 * 2. Environment pointer (r11)
-	 */
-
-	(void)copyin((void *)imgp->entry_addr, entry_desc, sizeof(entry_desc));
-	tf->srr0 = entry_desc[0] + imgp->reloc_base;
-	tf->fixreg[2] = entry_desc[1] + imgp->reloc_base;
-	tf->fixreg[11] = entry_desc[2] + imgp->reloc_base;
+	tf->fixreg[12] = imgp->entry_addr;
 	tf->srr1 = PSL_SF | PSL_USERSET | PSL_FE_DFLT;
 	if (mfmsr() & PSL_HV)
 		tf->srr1 |= PSL_HV;
 	#else
-	tf->srr0 = imgp->entry_addr;
 	tf->srr1 = PSL_USERSET | PSL_FE_DFLT;
 	#endif
 	td->td_pcb->pcb_flags = 0;
@@ -617,13 +608,18 @@ int
 fill_fpregs(struct thread *td, struct fpreg *fpregs)
 {
 	struct pcb *pcb;
+	int i;
 
 	pcb = td->td_pcb;
 
 	if ((pcb->pcb_flags & PCB_FPREGS) == 0)
 		memset(fpregs, 0, sizeof(struct fpreg));
-	else
-		memcpy(fpregs, &pcb->pcb_fpu, sizeof(struct fpreg));
+	else {
+		memcpy(&fpregs->fpscr, &pcb->pcb_fpu.fpscr, sizeof(double));
+		for (i = 0; i < 32; i++)
+			memcpy(&fpregs->fpreg[i], &pcb->pcb_fpu.fpr[i].fpr,
+			    sizeof(double));
+	}
 
 	return (0);
 }
@@ -650,10 +646,15 @@ int
 set_fpregs(struct thread *td, struct fpreg *fpregs)
 {
 	struct pcb *pcb;
+	int i;
 
 	pcb = td->td_pcb;
 	pcb->pcb_flags |= PCB_FPREGS;
-	memcpy(&pcb->pcb_fpu, fpregs, sizeof(struct fpreg));
+	memcpy(&pcb->pcb_fpu.fpscr, &fpregs->fpscr, sizeof(double));
+	for (i = 0; i < 32; i++) {
+		memcpy(&pcb->pcb_fpu.fpr[i].fpr, &fpregs->fpreg[i],
+		    sizeof(double));
+	}
 
 	return (0);
 }
@@ -714,6 +715,7 @@ grab_mcontext32(struct thread *td, mcontext32_t *mcp, int flags)
 	for (i = 0; i < 42; i++)
 		mcp->mc_frame[i] = mcp64.mc_frame[i];
 	memcpy(mcp->mc_fpreg,mcp64.mc_fpreg,sizeof(mcp64.mc_fpreg));
+	memcpy(mcp->mc_vsxfpreg,mcp64.mc_vsxfpreg,sizeof(mcp64.mc_vsxfpreg));
 
 	return (0);
 }
@@ -749,6 +751,7 @@ set_mcontext32(struct thread *td, mcontext32_t *mcp)
 		mcp64.mc_frame[i] = mcp->mc_frame[i];
 	mcp64.mc_srr1 |= (td->td_frame->srr1 & 0xFFFFFFFF00000000ULL);
 	memcpy(mcp64.mc_fpreg,mcp->mc_fpreg,sizeof(mcp64.mc_fpreg));
+	memcpy(mcp64.mc_vsxfpreg,mcp->mc_vsxfpreg,sizeof(mcp64.mc_vsxfpreg));
 
 	error = set_mcontext(td, &mcp64);
 
@@ -798,6 +801,7 @@ freebsd32_getcontext(struct thread *td, struct freebsd32_getcontext_args *uap)
 	if (uap->ucp == NULL)
 		ret = EINVAL;
 	else {
+		bzero(&uc, sizeof(uc));
 		get_mcontext32(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
 		PROC_LOCK(td->td_proc);
 		uc.uc_sigmask = td->td_sigmask;
@@ -837,6 +841,7 @@ freebsd32_swapcontext(struct thread *td, struct freebsd32_swapcontext_args *uap)
 	if (uap->oucp == NULL || uap->ucp == NULL)
 		ret = EINVAL;
 	else {
+		bzero(&uc, sizeof(uc));
 		get_mcontext32(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
 		PROC_LOCK(td->td_proc);
 		uc.uc_sigmask = td->td_sigmask;
@@ -876,8 +881,11 @@ cpu_set_syscall_retval(struct thread *td, int error)
 		int code = tf->fixreg[FIRSTARG + 1];
 		if (p->p_sysent->sv_mask)
 			code &= p->p_sysent->sv_mask;
-		fixup = (code != SYS_freebsd6_lseek && code != SYS_lseek) ?
-		    1 : 0;
+		fixup = (
+#if defined(COMPAT_FREEBSD6) && defined(SYS_freebsd6_lseek)
+		    code != SYS_freebsd6_lseek &&
+#endif
+		    code != SYS_lseek) ?  1 : 0;
 	} else
 		fixup = 0;
 
@@ -949,7 +957,7 @@ cpu_set_user_tls(struct thread *td, void *tls_base)
 }
 
 void
-cpu_set_upcall(struct thread *td, struct thread *td0)
+cpu_copy_thread(struct thread *td, struct thread *td0)
 {
 	struct pcb *pcb2;
 	struct trapframe *tf;
@@ -975,11 +983,12 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	cf->cf_arg1 = (register_t)tf;
 
 	pcb2->pcb_sp = (register_t)cf;
-	#ifdef __powerpc64__
+	#if defined(__powerpc64__) && (!defined(_CALL_ELF) || _CALL_ELF == 1)
 	pcb2->pcb_lr = ((register_t *)fork_trampoline)[0];
 	pcb2->pcb_toc = ((register_t *)fork_trampoline)[1];
 	#else
 	pcb2->pcb_lr = (register_t)fork_trampoline;
+	pcb2->pcb_context[0] = pcb2->pcb_lr;
 	#endif
 	pcb2->pcb_cpu.aim.usr_vsid = 0;
 
@@ -989,8 +998,8 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 }
 
 void
-cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
-	stack_t *stack)
+cpu_set_upcall(struct thread *td, void (*entry)(void *), void *arg,
+    stack_t *stack)
 {
 	struct trapframe *tf;
 	uintptr_t sp;
@@ -1062,7 +1071,7 @@ ppc_instr_emulate(struct trapframe *frame, struct pcb *pcb)
 		bzero(&pcb->pcb_fpu, sizeof(pcb->pcb_fpu));
 		pcb->pcb_flags |= PCB_FPREGS;
 	}
-	sig = fpu_emulate(frame, (struct fpreg *)&pcb->pcb_fpu);
+	sig = fpu_emulate(frame, &pcb->pcb_fpu);
 #endif
 
 	return (sig);

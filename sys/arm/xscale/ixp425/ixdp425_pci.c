@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: ixdp425_pci.c,v 1.5 2005/12/11 12:17:09 christos Exp $ */
 /*
  * Copyright (c) 2003

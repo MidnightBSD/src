@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_uart.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_uart.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -41,7 +40,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_uart.c 283327 2015-05-
 #include <sys/conf.h>
 #include <sys/kdb.h>
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
@@ -207,7 +205,7 @@ uart_reinit(struct uart_softc *sc, int clkspeed, int baud)
 
 	bas = &sc->sc_bas;
 	if (!bas) {
-		printf("Error: cant reconfigure bas\n");
+		printf("Error: can't reconfigure bas\n");
 		return;
 	}
 
@@ -278,7 +276,8 @@ static struct uart_class uart_vybrid_class = {
 	sizeof(struct vf_uart_softc),
 	.uc_ops = &uart_vybrid_ops,
 	.uc_range = 0x100,
-	.uc_rclk = 24000000 /* TODO: get value from CCM */
+	.uc_rclk = 24000000, /* TODO: get value from CCM */
+	.uc_rshift = 0
 };
 
 static struct ofw_compat_data compat_data[] = {

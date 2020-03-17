@@ -1,0 +1,5 @@
+# $FreeBSD: stable/11/sys/riscv/conf/LOWRISC.hints 298638 2016-04-26 13:22:08Z br $
+
+# MMC device
+hint.mmc_spi.0.at="spibus0"
+hint.mmc_spi.0.cs=0

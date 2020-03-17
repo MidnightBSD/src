@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1992-2015 Michal Meloun
  * All rights reserved.

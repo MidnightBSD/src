@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/GUMSTIX.hints 179595 2008-06-06 05:08:09Z benno $
+# $FreeBSD: stable/11/sys/arm/conf/GUMSTIX.hints 179595 2008-06-06 05:08:09Z benno $
 
 # Make sure we don't trample important bits in the UART registers.
 hint.uart.0.ier_mask="0xe0"

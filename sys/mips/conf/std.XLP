@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/conf/std.XLP 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/std.XLP 345344 2019-03-20 18:49:45Z kib $
 
 include		"../nlm/std.xlp"
 makeoptions	MODULES_OVERRIDE=""
@@ -55,6 +55,7 @@ options 	ALT_BREAK_TO_DEBUGGER
 #options 	LOCK_DEBUG
 #options 	LOCK_PROFILING
 
+device		xz
 options 	GEOM_UZIP
 
 # Device tree
@@ -94,7 +95,7 @@ device		umass			# Requires scbus and da
 device		iic
 device		iicbus
 device		iicoc
-device		ds1374			# RTC on XLP boards
+device		ds13rtc			# RTC on XLP boards
 
 # Crypto
 device		crypto

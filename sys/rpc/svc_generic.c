@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc_generic.c,v 1.3 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -38,7 +37,7 @@
 static char sccsid[] = "@(#)svc_generic.c 1.21 89/02/28 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/svc_generic.c 281520 2015-04-14 09:58:10Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/svc_generic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * svc_generic.c, Server side for RPC.

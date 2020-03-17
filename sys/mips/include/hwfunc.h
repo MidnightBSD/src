@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Juli Mallett.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/hwfunc.h 232853 2012-03-12 07:34:15Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/hwfunc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_HWFUNC_H_

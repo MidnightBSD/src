@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 EMC Corp.
  * Author: Conrad Meyer <conrad.meyer@isilon.com>

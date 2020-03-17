@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_rfc1490.c
  */
@@ -38,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_rfc1490.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_rfc1490.c 243882 2012-12-05 08:04:20Z glebius $
  * $Whistle: ng_rfc1490.c,v 1.22 1999/11/01 09:24:52 julian Exp $
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: i80321reg.h,v 1.14 2003/12/19 10:08:11 gavan Exp $	*/
 
 /*-

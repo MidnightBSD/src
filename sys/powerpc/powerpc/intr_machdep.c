@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -58,7 +57,7 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD: stable/10/sys/powerpc/powerpc/intr_machdep.c 266676 2014-05-26 01:37:43Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/powerpc/intr_machdep.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include "opt_isa.h"
@@ -127,6 +126,11 @@ static u_int nirqs = 16;	/* Allocated IRQS (ISA pre-allocated). */
 static u_int nirqs = 0;		/* Allocated IRQs. */
 #endif
 static u_int stray_count;
+
+u_long intrcnt[INTR_VECTORS];
+char intrnames[INTR_VECTORS * MAXCOMLEN];
+size_t sintrcnt = sizeof(intrcnt);
+size_t sintrnames = sizeof(intrnames);
 
 device_t root_pic;
 
@@ -294,7 +298,7 @@ powerpc_intr_post_ithread(void *arg)
 }
 
 static int
-powerpc_assign_intr_cpu(void *arg, u_char cpu)
+powerpc_assign_intr_cpu(void *arg, int cpu)
 {
 #ifdef SMP
 	struct powerpc_intr *i = arg;
@@ -348,6 +352,9 @@ powerpc_register_pic(device_t dev, uint32_t node, u_int irqs, u_int ipis,
 		npics++;
 	}
 
+	KASSERT(npics < MAX_PICS,
+	    ("Number of PICs exceeds maximum (%d)", MAX_PICS));
+
 	mtx_unlock(&intr_table_lock);
 }
 
@@ -380,6 +387,9 @@ powerpc_get_irq(uint32_t node, u_int pin)
 	piclist[idx].base = nirqs;
 	nirqs += 128;
 	npics++;
+
+	KASSERT(npics < MAX_PICS,
+	    ("Number of PICs exceeds maximum (%d)", MAX_PICS));
 
 	mtx_unlock(&intr_table_lock);
 
@@ -441,7 +451,7 @@ powerpc_enable_intr(void)
 		if (error)
 			continue;
 
-		if (i->trig == -1)
+		if (i->trig == INTR_TRIGGER_INVALID)
 			PIC_TRANSLATE_CODE(i->pic, i->intline, i->fwcode,
 			    &i->trig, &i->pol);
 		if (i->trig != INTR_TRIGGER_CONFORM ||
@@ -487,7 +497,7 @@ powerpc_setup_intr(const char *name, u_int irq, driver_filter_t filter,
 		error = powerpc_map_irq(i);
 
 		if (!error) {
-			if (i->trig == -1)
+			if (i->trig == INTR_TRIGGER_INVALID)
 				PIC_TRANSLATE_CODE(i->pic, i->intline,
 				    i->fwcode, &i->trig, &i->pol);
 	
@@ -535,7 +545,7 @@ powerpc_fw_config_intr(int irq, int sense_code)
 	if (i == NULL)
 		return (ENOMEM);
 
-	i->trig = -1;
+	i->trig = INTR_TRIGGER_INVALID;
 	i->pol = INTR_POLARITY_CONFORM;
 	i->fwcode = sense_code;
 
@@ -604,4 +614,28 @@ stray:
 	}
 	if (i != NULL)
 		PIC_MASK(i->pic, i->intline);
+}
+
+void
+powerpc_intr_mask(u_int irq)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL || i->pic == NULL)
+		return;
+
+	PIC_MASK(i->pic, i->intline);
+}
+
+void
+powerpc_intr_unmask(u_int irq)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL || i->pic == NULL)
+		return;
+
+	PIC_UNMASK(i->pic, i->intline);
 }

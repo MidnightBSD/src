@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/rpc/rpcm_subs.h 248195 2013-03-12 12:17:19Z glebius $ */
+/* $FreeBSD: stable/11/sys/rpc/rpcm_subs.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$OpenBSD: nfsm_subs.h,v 1.11 2000/01/05 20:50:52 millert Exp $	*/
 /*	$NetBSD: nfsm_subs.h,v 1.10 1996/03/20 21:59:56 fvdl Exp $	*/
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl.h#5 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl.h 312581 2017-01-21 08:37:53Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl.h 315521 2017-03-18 23:59:50Z trasz $
  */
 /*
  * Function definitions used both within CTL and potentially in various CTL
@@ -54,6 +53,7 @@ typedef enum {
 	CTL_PORT_INTERNAL	= 0x08,
 	CTL_PORT_ISCSI		= 0x10,
 	CTL_PORT_SAS		= 0x20,
+	CTL_PORT_UMASS		= 0x40,
 	CTL_PORT_ALL		= 0xff,
 	CTL_PORT_ISC		= 0x100 // FC port for inter-shelf communication
 } ctl_port_type;

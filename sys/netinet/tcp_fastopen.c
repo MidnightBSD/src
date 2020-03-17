@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Patrick Kelsey
  * All rights reserved.
@@ -100,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_fastopen.c 292823 2015-12-28 02:43:12Z pkelsey $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_fastopen.c 339037 2018-10-01 09:40:41Z ae $");
 
 #include "opt_inet.h"
 
@@ -109,6 +108,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_fastopen.c 292823 2015-12-28 02:43
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/rmlock.h>
+#include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
@@ -205,10 +205,11 @@ void
 tcp_fastopen_init(void)
 {
 	V_counter_zone = uma_zcreate("tfo", sizeof(unsigned int),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
+	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
 	rm_init(&V_tcp_fastopen_keylock, "tfo_keylock");
 	callout_init_rm(&V_tcp_fastopen_autokey_ctx.c,
 	    &V_tcp_fastopen_keylock, 0);
+	V_tcp_fastopen_autokey_ctx.v = curvnet;
 	V_tcp_fastopen_keys.newest = TCP_FASTOPEN_MAX_KEYS - 1;
 }
 

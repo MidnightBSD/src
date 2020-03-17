@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of the Target Mode 'Black Hole device' for CAM.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_targ_bh.c 260387 2014-01-07 01:51:48Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_targ_bh.c 256843 2013-10-21 12:00:26Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

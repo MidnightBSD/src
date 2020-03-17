@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/powerpc/powerpc/db_interface.c 209975 2010-07-13 05:32:19Z nwhitehorn $ */
+/*	$FreeBSD: stable/11/sys/powerpc/powerpc/db_interface.c 290434 2015-11-06 04:56:52Z jhibbits $ */
 /*	$NetBSD: db_interface.c,v 1.20 2002/05/13 20:30:09 matt Exp $ */
 /*	$OpenBSD: db_interface.c,v 1.2 1996/12/28 06:21:50 rahnds Exp $	*/
 
@@ -68,8 +67,14 @@ db_write_bytes(vm_offset_t addr, size_t size, char *data)
 		dst = (char *)addr;
 		cnt = size;
 
-		while (cnt-- > 0)
-			*dst++ = *data++;
+		if (size == 4 && (addr & 3) == 0 && ((uintptr_t)data & 3) == 0)
+			*((int*)dst) = *((int*)data);
+		else
+		if (size == 2 && (addr & 1) == 0 && ((uintptr_t)data & 1) == 0)
+			*((short*)dst) = *((short*)data);
+		else
+			while (cnt-- > 0)
+				*dst++ = *data++;
 		kdb_cpu_sync_icache((void *)addr, size);
 	}
 	(void)kdb_jmpbuf(prev_jb);

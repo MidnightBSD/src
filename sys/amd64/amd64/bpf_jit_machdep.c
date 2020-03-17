@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
  * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/bpf_jit_machdep.c 207081 2010-04-22 23:47:19Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/bpf_jit_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef _KERNEL
 #include "opt_bpf.h"
@@ -40,6 +39,7 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/bpf_jit_machdep.c 207081 2010-04-2
 #include <sys/kernel.h>
 #include <sys/socket.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <net/if.h>
 #else
 #include <stdlib.h>

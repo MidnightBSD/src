@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/aim/mmu_oea64.h 255418 2013-09-09 12:51:24Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/aim/mmu_oea64.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _POWERPC_AIM_MMU_OEA64_H
@@ -39,6 +38,15 @@ extern mmu_def_t oea64_mmu;
 
 /* Allocate physical memory for use in moea64_bootstrap. */
 vm_offset_t	moea64_bootstrap_alloc(vm_size_t, u_int);
+/* Set an LPTE structure to match the contents of a PVO */
+void	moea64_pte_from_pvo(const struct pvo_entry *pvo, struct lpte *lpte);
+
+/*
+ * Flags
+ */
+
+#define MOEA64_PTE_PROT_UPDATE	1
+#define MOEA64_PTE_INVALIDATE	2
 
 /*
  * Bootstrap subroutines
@@ -69,7 +77,6 @@ extern u_int	moea64_pte_overflow;
  * State variables
  */
 
-extern struct pvo_head *moea64_pvo_table;
 extern int		moea64_large_page_shift;
 extern uint64_t		moea64_large_page_size;
 extern u_int		moea64_pteg_count;

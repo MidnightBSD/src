@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -30,7 +29,7 @@
  * RMI_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/dev/iic/at24co2n.c 216410 2010-12-13 17:53:38Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/dev/iic/at24co2n.c 331722 2018-03-29 02:50:57Z eadler $");
 /*
  * reading eeprom for the mac address .
  */
@@ -85,7 +84,7 @@ at24co2n_mac_sysctl(SYSCTL_HANDLER_ARGS)
 	p = sc->sc_mac_addr;
 	len = snprintf(buf, sizeof(buf), "%02x:%02x:%02x:%02x:%02x:%02x",
 	    p[0], p[1], p[2], p[3], p[4], p[5]);
-	return SYSCTL_OUT(req, buf, len);
+	return SYSCTL_OUT_STR(req, buf);
 }
 
 

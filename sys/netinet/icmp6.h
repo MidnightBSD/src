@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/netinet/icmp6.h 327716 2018-01-09 06:07:51Z cy $	*/
+/*	$FreeBSD: stable/11/sys/netinet/icmp6.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: icmp6.h,v 1.46 2001/04/27 15:09:48 itojun Exp $	*/
 
 /*-
@@ -145,6 +144,9 @@ struct icmp6_hdr {
 #define ICMP6_DST_UNREACH_BEYONDSCOPE	2	/* beyond scope of source address */
 #define ICMP6_DST_UNREACH_ADDR		3	/* address unreachable */
 #define ICMP6_DST_UNREACH_NOPORT	4	/* port unreachable */
+#define ICMP6_DST_UNREACH_POLICY	5	/* failed ingress/egress policy */
+#define ICMP6_DST_UNREACH_REJECT	6	/* Reject route to destination */
+#define ICMP6_DST_UNREACH_SRCROUTE	7	/* Error in source routing header */
 
 #define ICMP6_TIME_EXCEED_TRANSIT 	0	/* ttl==0 in transit */
 #define ICMP6_TIME_EXCEED_REASSEMBLY	1	/* ttl==0 in reass */

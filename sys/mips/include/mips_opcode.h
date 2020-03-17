@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: mips_opcode.h,v 1.2 1999/01/27 04:46:05 imp Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  *
  *	from: @(#)mips_opcode.h 8.1 (Berkeley) 6/10/93
  *	JNPR: mips_opcode.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/10/sys/mips/include/mips_opcode.h 231312 2012-02-09 22:17:13Z gonzo $
+ * $FreeBSD: stable/11/sys/mips/include/mips_opcode.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_MIPS_OPCODE_H_

@@ -1,7 +1,7 @@
-# $FreeBSD: stable/10/sys/arm/ti/std.ti 278601 2015-02-11 22:47:48Z ian $
+# $FreeBSD: stable/11/sys/arm/ti/std.ti 276520 2015-01-01 23:21:46Z ian $
 
 cpu 		CPU_CORTEXA
 machine 	arm	armv6
-makeoptions	CONF_CFLAGS="-march=armv7a -Wa,-march=armv7a"
+makeoptions	CONF_CFLAGS="-march=armv7a"
 
 files		"../ti/files.ti"

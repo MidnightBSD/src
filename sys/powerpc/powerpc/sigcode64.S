@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/powerpc/powerpc/sigcode64.S 267040 2014-06-04 06:21:54Z nwhitehorn $ */
+/* $FreeBSD: stable/11/sys/powerpc/powerpc/sigcode64.S 291668 2015-12-03 00:10:57Z nwhitehorn $ */
 /* $NetBSD: sigcode.S,v 1.1 1999/11/17 14:56:11 kleink Exp $	*/
 
 /*-
@@ -43,15 +42,22 @@
  *
  * On entry r1 points to a struct sigframe at bottom of current stack.
  * All other registers are unchanged.
+ *
+ * Entered midway through for v2 ELF binaries that don't need to deal with
+ * function descriptors.
+ *
  */
 	.globl	CNAME(sigcode64),CNAME(szsigcode64)
+	.globl	CNAME(sigcode64_elfv2),CNAME(szsigcode64_elfv2)
 CNAME(sigcode64):
-	addi	1,1,-112		/* reserved space for callee */
 	mflr	2			/* resolve function descriptor */
 	ld	0,0(2)			
 	ld	2,8(2)
 	mtlr	0
 
+CNAME(sigcode64_elfv2):
+	addi	1,1,-112		/* reserved space for callee */
+	mflr	12			/* ELFv2 wants the address in r12 */
 	blrl
 
 	addi	3,1,112+SF_UC		/* restore sp, and get &frame->sf_uc */
@@ -65,3 +71,6 @@ endsigcode64:
 	.data
 CNAME(szsigcode64):
 	.long	endsigcode64 - CNAME(sigcode64)
+CNAME(szsigcode64_elfv2):
+	.long	endsigcode64 - CNAME(sigcode64_elfv2)
+

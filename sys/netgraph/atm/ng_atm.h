@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -31,7 +30,7 @@
 /*
  * Netgraph module to connect NATM interfaces to netgraph.
  *
- * $FreeBSD: stable/10/sys/netgraph/atm/ng_atm.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/atm/ng_atm.h 139823 2005-01-07 01:45:51Z imp $
  */
 #ifndef _NETGRAPH_ATM_NG_ATM_H_
 #define _NETGRAPH_ATM_NG_ATM_H_

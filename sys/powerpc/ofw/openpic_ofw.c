@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 by Peter Grehan. All rights reserved.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/ofw/openpic_ofw.c 266160 2014-05-15 17:30:16Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/ofw/openpic_ofw.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/ofw/openpic_ofw.c 266160 2014-05-15 17
 
 #include <sys/rman.h>
 
+#include <machine/openpicreg.h>
 #include <machine/openpicvar.h>
 
 #include "pic_if.h"
@@ -69,6 +69,8 @@ static device_method_t  openpic_ofw_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		openpic_ofw_probe),
 	DEVMETHOD(device_attach,	openpic_ofw_attach),
+	DEVMETHOD(device_suspend,	openpic_suspend),
+	DEVMETHOD(device_resume,	openpic_resume),
 
 	/* PIC interface */
 	DEVMETHOD(pic_bind,		openpic_bind),
@@ -125,9 +127,9 @@ openpic_ofw_attach(device_t dev)
 
 	node = ofw_bus_get_node(dev);
 
-	if (OF_getprop(node, "phandle", &xref, sizeof(xref)) == -1 &&
-	    OF_getprop(node, "ibm,phandle", &xref, sizeof(xref)) == -1 &&
-	    OF_getprop(node, "linux,phandle", &xref, sizeof(xref)) == -1)
+	if (OF_getencprop(node, "phandle", &xref, sizeof(xref)) == -1 &&
+	    OF_getencprop(node, "ibm,phandle", &xref, sizeof(xref)) == -1 &&
+	    OF_getencprop(node, "linux,phandle", &xref, sizeof(xref)) == -1)
 		xref = node;
 
 	return (openpic_common_attach(dev, xref));

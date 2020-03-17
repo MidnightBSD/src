@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/SAM9X25EK.hints 237742 2012-06-29 04:18:52Z imp $
+# $FreeBSD: stable/11/sys/arm/conf/SAM9X25EK.hints 237742 2012-06-29 04:18:52Z imp $
 #
 
 # EEPROM 

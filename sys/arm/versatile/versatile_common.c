@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2008-2011 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
  *
@@ -30,10 +31,8 @@
  * SUCH DAMAGE.
  */
 
-#include "opt_global.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/versatile/versatile_common.c 266277 2014-05-17 00:53:12Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/versatile/versatile_common.c 330897 2018-03-14 03:19:51Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,13 +46,9 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/versatile/versatile_common.c 266277 2014-0
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/vmparam.h>
 
-struct fdt_fixup_entry fdt_fixup_table[] = {
-	{ NULL, NULL }
-};
-
+#ifndef INTRNG
 static int
 fdt_intc_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
     int *pol)
@@ -74,3 +69,4 @@ fdt_pic_decode_t fdt_pic_table[] = {
 	&fdt_intc_decode_ic,
 	NULL
 };
+#endif

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 M. Warner Losh <imp@FreeBSD.org>
  * Copyright (c) 2006 Wojciech A. Koszek <wkoszek@FreeBSD.org>
@@ -30,7 +29,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/uart_cpu_octeonusart.c 242345 2012-10-30 06:29:17Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/uart_cpu_octeonusart.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

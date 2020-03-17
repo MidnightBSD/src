@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
@@ -53,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_hd.c 220560 2011-04-12 08:13:18Z lstewart $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_hd.c 342189 2018-12-18 09:16:04Z brooks $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -67,19 +66,16 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_hd.c 220560 2011-04-12 08:13:18Z
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
-#include <net/if.h>
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
-
+#include <netinet/cc/cc.h>
 #include <netinet/cc/cc_module.h>
 
 #include <netinet/khelp/h_ertt.h>
-
-#define	CAST_PTR_INT(X)	(*((int*)(X)))
 
 /* Largest possible number returned by random(). */
 #define	RANDOM_MAX	INT_MAX
@@ -188,8 +184,7 @@ hd_pmax_handler(SYSCTL_HANDLER_ARGS)
 	new = V_hd_pmax;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) == 0 ||
-		    CAST_PTR_INT(req->newptr) > 100)
+		if (new == 0 || new > 100)
 			error = EINVAL;
 		else
 			V_hd_pmax = new;
@@ -207,7 +202,7 @@ hd_qmin_handler(SYSCTL_HANDLER_ARGS)
 	new = V_hd_qmin;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) > V_hd_qthresh)
+		if (new > V_hd_qthresh)
 			error = EINVAL;
 		else
 			V_hd_qmin = new;
@@ -225,8 +220,7 @@ hd_qthresh_handler(SYSCTL_HANDLER_ARGS)
 	new = V_hd_qthresh;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) < 1 ||
-		    CAST_PTR_INT(req->newptr) < V_hd_qmin)
+		if (new == 0 || new < V_hd_qmin)
 			error = EINVAL;
 		else
 			V_hd_qthresh = new;
@@ -239,17 +233,18 @@ SYSCTL_DECL(_net_inet_tcp_cc_hd);
 SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, hd, CTLFLAG_RW, NULL,
     "Hamilton delay-based congestion control related settings");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_hd, OID_AUTO, queue_threshold,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(hd_qthresh), 20, &hd_qthresh_handler,
-    "IU", "queueing congestion threshold (qth) in ticks");
+SYSCTL_PROC(_net_inet_tcp_cc_hd, OID_AUTO, queue_threshold,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW, &VNET_NAME(hd_qthresh), 20,
+    &hd_qthresh_handler, "IU", "queueing congestion threshold (qth) in ticks");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_hd, OID_AUTO, pmax,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(hd_pmax), 5, &hd_pmax_handler,
-    "IU", "per packet maximum backoff probability as a percentage");
+SYSCTL_PROC(_net_inet_tcp_cc_hd, OID_AUTO, pmax,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW, &VNET_NAME(hd_pmax), 5,
+    &hd_pmax_handler, "IU",
+    "per packet maximum backoff probability as a percentage");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_hd, OID_AUTO, queue_min,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(hd_qmin), 5, &hd_qmin_handler,
-    "IU", "minimum queueing delay threshold (qmin) in ticks");
+SYSCTL_PROC(_net_inet_tcp_cc_hd, OID_AUTO, queue_min,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW, &VNET_NAME(hd_qmin), 5,
+    &hd_qmin_handler, "IU", "minimum queueing delay threshold (qmin) in ticks");
 
 DECLARE_CC_MODULE(hd, &hd_cc_algo);
 MODULE_DEPEND(hd, ertt, 1, 1, 1);

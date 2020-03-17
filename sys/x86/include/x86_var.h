@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Bruce D. Evans.
  * All rights reserved.

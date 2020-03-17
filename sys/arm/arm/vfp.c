@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * Copyright (c) 2012 Mark Tinguely
@@ -28,17 +27,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/vfp.c 278646 2015-02-13 00:15:13Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/vfp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef VFP
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/proc.h>
+#include <sys/imgact_elf.h>
 #include <sys/kernel.h>
 
 #include <machine/armreg.h>
+#include <machine/elf.h>
 #include <machine/frame.h>
-#include <machine/fp.h>
+#include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/undefined.h>
 #include <machine/vfp.h>
@@ -108,7 +109,7 @@ vfp_init(void)
 	coproc = get_coprocessorACR();
 	coproc |= COPROC10 | COPROC11;
 	set_coprocessorACR(coproc);
-	
+
 	fpsid = fmrx(fpsid);		/* read the vfp system id */
 	fpexc = fmrx(fpexc);		/* read the vfp exception reg */
 
@@ -116,6 +117,7 @@ vfp_init(void)
 		vfp_exists = 1;
 		is_d32 = 0;
 		PCPU_SET(vfpsid, fpsid);	/* save the fpsid */
+		elf_hwcap |= HWCAP_VFP;
 
 		vfp_arch =
 		    (fpsid & VFPSID_SUBVERSION2_MASK) >> VFPSID_SUBVERSION_OFF;
@@ -123,12 +125,32 @@ vfp_init(void)
 		if (vfp_arch >= VFP_ARCH3) {
 			tmp = fmrx(mvfr0);
 			PCPU_SET(vfpmvfr0, tmp);
+			elf_hwcap |= HWCAP_VFPv3;
 
-			if ((tmp & VMVFR0_RB_MASK) == 2)
+			if ((tmp & VMVFR0_RB_MASK) == 2) {
+				elf_hwcap |= HWCAP_VFPD32;
 				is_d32 = 1;
+			} else
+				elf_hwcap |= HWCAP_VFPv3D16;
 
 			tmp = fmrx(mvfr1);
 			PCPU_SET(vfpmvfr1, tmp);
+
+			if (PCPU_GET(cpuid) == 0) {
+				if ((tmp & VMVFR1_FZ_MASK) == 0x1) {
+					/* Denormals arithmetic support */
+					initial_fpscr &= ~VFPSCR_FZ;
+					thread0.td_pcb->pcb_vfpstate.fpscr =
+					    initial_fpscr;
+				}
+			}
+
+			if ((tmp & VMVFR1_LS_MASK) >> VMVFR1_LS_OFF == 1 &&
+			    (tmp & VMVFR1_I_MASK) >> VMVFR1_I_OFF == 1 &&
+			    (tmp & VMVFR1_SP_MASK) >> VMVFR1_SP_OFF == 1)
+				elf_hwcap |= HWCAP_NEON;
+			if ((tmp & VMVFR1_FMAC_MASK) >>  VMVFR1_FMAC_OFF == 1)
+				elf_hwcap |= HWCAP_VFPv4;
 		}
 
 		/* initialize the coprocess 10 and 11 calls
@@ -200,7 +222,7 @@ vfp_bounce(u_int addr, u_int insn, struct trapframe *frame, int code)
 	 */
 	fmxr(fpexc, fpexc | VFPEXC_EN);
 	curpcb = curthread->td_pcb;
-	cpu = PCPU_GET(cpu);
+	cpu = PCPU_GET(cpuid);
 	if (curpcb->pcb_vfpcpu != cpu || curthread != PCPU_GET(fpcurthread)) {
 		vfp_restore(&curpcb->pcb_vfpstate);
 		curpcb->pcb_vfpcpu = cpu;

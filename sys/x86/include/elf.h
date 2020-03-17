@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-1997 John D. Polstra.
  * All rights reserved.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ata/ata_pmp.c 290768 2015-11-13 10:34:14Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ata/ata_pmp.c 327228 2017-12-27 00:34:13Z mav $");
 
 #include <sys/param.h>
 
@@ -140,15 +139,12 @@ static int pmp_hide_special = PMP_DEFAULT_HIDE_SPECIAL;
 
 static SYSCTL_NODE(_kern_cam, OID_AUTO, pmp, CTLFLAG_RD, 0,
             "CAM Direct Access Disk driver");
-SYSCTL_INT(_kern_cam_pmp, OID_AUTO, retry_count, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_pmp, OID_AUTO, retry_count, CTLFLAG_RWTUN,
            &pmp_retry_count, 0, "Normal I/O retry count");
-TUNABLE_INT("kern.cam.pmp.retry_count", &pmp_retry_count);
-SYSCTL_INT(_kern_cam_pmp, OID_AUTO, default_timeout, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_pmp, OID_AUTO, default_timeout, CTLFLAG_RWTUN,
            &pmp_default_timeout, 0, "Normal I/O timeout (in seconds)");
-TUNABLE_INT("kern.cam.pmp.default_timeout", &pmp_default_timeout);
-SYSCTL_INT(_kern_cam_pmp, OID_AUTO, hide_special, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_pmp, OID_AUTO, hide_special, CTLFLAG_RWTUN,
            &pmp_hide_special, 0, "Hide extra ports");
-TUNABLE_INT("kern.cam.pmp.hide_special", &pmp_hide_special);
 
 static struct periph_driver pmpdriver =
 {
@@ -342,7 +338,7 @@ pmpsysctlinit(void *context, int pending)
 {
 	struct cam_periph *periph;
 	struct pmp_softc *softc;
-	char tmpstr[80], tmpstr2[80];
+	char tmpstr[32], tmpstr2[16];
 
 	periph = (struct cam_periph *)context;
 	if (cam_periph_acquire(periph) != CAM_REQ_CMP)

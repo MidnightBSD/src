@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Intel Inc. All rights reserved.
  *
@@ -29,6 +28,8 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
+ * $FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/mad_rmpp.h 331772 2018-03-30 18:17:33Z hselasky $
  */
 
 #ifndef __MAD_RMPP_H__

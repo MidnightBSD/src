@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Paolo Pisati <piso@FreeBSD.org>
  * All rights reserved.
@@ -26,9 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_dummy.c 190841 2009-04-08 11:56:49Z piso $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/libalias/alias_dummy.c 259858 2013-12-25 02:06:57Z glebius $");
 
-/* 
+/*
  * Alias_dummy is just an empty skeleton used to demostrate how to write
  * a module for libalias, that will run unalterated in userland or in
  * kernel land.
@@ -60,19 +59,19 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_dummy.c 190841 2009-04-
 static void
 AliasHandleDummy(struct libalias *la, struct ip *ip, struct alias_data *ah);
 
-static int 
+static int
 fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
-	/* 
-	 * Check here all the data that will be used later, if any field 
+	/*
+	 * Check here all the data that will be used later, if any field
 	 * is empy/NULL, return a -1 value.
 	 */
-	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL || 
+	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL ||
 		ah->maxpktsize == 0)
 		return (-1);
-	/* 
-	 * Fingerprint the incoming packet, if it matches any conditions 
+	/*
+	 * Fingerprint the incoming packet, if it matches any conditions
 	 * return an OK value.
 	 */
 	if (ntohs(*ah->dport) == 123
@@ -81,12 +80,12 @@ fingerprint(struct libalias *la, struct alias_data *ah)
 	return (-1); /* I don't recognize this packet. */
 }
 
-/* 
- * Wrap in this general purpose function, the real function used to alias the 
+/*
+ * Wrap in this general purpose function, the real function used to alias the
  * packets.
  */
 
-static int 
+static int
 protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
@@ -94,22 +93,22 @@ protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
 	return (0);
 }
 
-/* 
- * NOTA BENE: the next variable MUST NOT be renamed in any case if you want 
- * your module to work in userland, cause it's used to find and use all 
+/*
+ * NOTA BENE: the next variable MUST NOT be renamed in any case if you want
+ * your module to work in userland, cause it's used to find and use all
  * the protocol handlers present in every module.
- * So WATCH OUT, your module needs this variables and it needs it with 
+ * So WATCH OUT, your module needs this variables and it needs it with
  * ITS EXACT NAME: handlers.
  */
 
 struct proto_handler handlers [] = {
-	{ 
-	  .pri = 666, 
-	  .dir = IN|OUT, 
-	  .proto = UDP|TCP, 
-	  .fingerprint = &fingerprint, 
+	{
+	  .pri = 666,
+	  .dir = IN|OUT,
+	  .proto = UDP|TCP,
+	  .fingerprint = &fingerprint,
 	  .protohandler = &protohandler
-	}, 
+	},
 	{ EOH }
 };
 
@@ -118,7 +117,7 @@ mod_handler(module_t mod, int type, void *data)
 {
 	int error;
 
-	switch (type) {	  
+	switch (type) {	
 	case MOD_LOAD:
 		error = 0;
 		LibAliasAttachHandlers(handlers);

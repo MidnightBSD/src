@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_edma.c 266170 2014-05-15 18:38:19Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_edma.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,13 +43,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_edma.c 266170 2014-05-
 #include <sys/timetc.h>
 #include <sys/watchdog.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
@@ -163,7 +160,7 @@ channel_configure(struct edma_softc *sc, int mux_grp, int mux_src)
 	} else {
 		channel_first = 0;
 		mux_num = sc->device_id * 2;
-	};
+	}
 
 	/* Take first unused eDMA channel */
 	ch = NULL;
@@ -173,12 +170,12 @@ channel_configure(struct edma_softc *sc, int mux_grp, int mux_src)
 			break;
 		}
 		ch = NULL;
-	};
+	}
 
 	if (ch == NULL) {
 		/* Can't find free channel */
 		return (-1);
-	};
+	}
 
 	chnum = i;
 
@@ -286,8 +283,8 @@ edma_attach(device_t dev)
 	if ((len = OF_getproplen(node, "device-id")) <= 0)
 		return (ENXIO);
 
-	OF_getprop(node, "device-id", &dts_value, len);
-	sc->device_id = fdt32_to_cpu(dts_value);
+	OF_getencprop(node, "device-id", &dts_value, len);
+	sc->device_id = dts_value;
 
 	sc->dma_stop = dma_stop;
 	sc->dma_setup = dma_setup;

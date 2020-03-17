@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Dmitry Vagin <daemon.hammer@ya.ru>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netgraph/ng_checksum.c 309387 2016-12-02 05:38:25Z julian $");
+__FBSDID("$FreeBSD: stable/11/sys/netgraph/ng_checksum.c 309385 2016-12-02 05:36:37Z julian $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

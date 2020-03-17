@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Thomas Skibo
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xilinx/zy7_gpio.c 278782 2015-02-14 20:37:33Z loos $
+ * $FreeBSD: stable/11/sys/arm/xilinx/zy7_gpio.c 333619 2018-05-15 02:26:50Z gonzo $
  */
 
 /*
@@ -45,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_gpio.c 278782 2015-02-14 20:37:33Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_gpio.c 333619 2018-05-15 02:26:50Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,6 +63,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_gpio.c 278782 2015-02-14 20:37:
 #include <machine/stdarg.h>
 
 #include <dev/fdt/fdt_common.h>
+#include <dev/gpio/gpiobusvar.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -89,6 +89,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_gpio.c 278782 2015-02-14 20:37:
 
 struct zy7_gpio_softc {
 	device_t	dev;
+	device_t	busdev;
 	struct mtx	sc_mtx;
 	struct resource *mem_res;	/* Memory resource */
 };
@@ -114,6 +115,15 @@ struct zy7_gpio_softc {
 #define ZY7_GPIO_INT_POLARITY(b)	(0x0220+0x40*(b)) /* int polarity */
 #define ZY7_GPIO_INT_ANY(b)		(0x0224+0x40*(b)) /* any edge */
 
+static device_t
+zy7_gpio_get_bus(device_t dev)
+{
+	struct zy7_gpio_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	return (sc->busdev);
+}
 
 static int
 zy7_gpio_pin_max(device_t dev, int *maxpin)
@@ -287,24 +297,6 @@ zy7_gpio_probe(device_t dev)
 	return (0);
 }
 
-static void
-zy7_gpio_hw_reset(struct zy7_gpio_softc *sc)
-{
-	int i;
-
-	for (i = 0; i < NUMBANKS; i++) {
-		WR4(sc, ZY7_GPIO_DATA(i), 0);
-		WR4(sc, ZY7_GPIO_DIRM(i), 0);
-		WR4(sc, ZY7_GPIO_OEN(i), 0);
-		WR4(sc, ZY7_GPIO_INT_DIS(i), 0xffffffff);
-		WR4(sc, ZY7_GPIO_INT_POLARITY(i), 0);
-		WR4(sc, ZY7_GPIO_INT_TYPE(i),
-		    i == 1 ? 0x003fffff : 0xffffffff);
-		WR4(sc, ZY7_GPIO_INT_ANY(i), 0);
-		WR4(sc, ZY7_GPIO_INT_STAT(i), 0xffffffff);
-	}
-}
-
 static int zy7_gpio_detach(device_t dev);
 
 static int
@@ -327,13 +319,13 @@ zy7_gpio_attach(device_t dev)
 		return (ENOMEM);
 	}
 
-	/* Completely reset. */
-	zy7_gpio_hw_reset(sc);
+	sc->busdev = gpiobus_attach_bus(dev);
+	if (sc->busdev == NULL) {
+		zy7_gpio_detach(dev);
+		return (ENOMEM);
+	}
 
-	device_add_child(dev, "gpioc", -1);
-	device_add_child(dev, "gpiobus", -1);
-
-	return (bus_generic_attach(dev));
+	return (0);
 }
 
 static int
@@ -341,7 +333,7 @@ zy7_gpio_detach(device_t dev)
 {
 	struct zy7_gpio_softc *sc = device_get_softc(dev);
 
-	bus_generic_detach(dev);
+	gpiobus_detach_bus(dev);
 
 	if (sc->mem_res != NULL) {
 		/* Release memory resource. */
@@ -361,6 +353,7 @@ static device_method_t zy7_gpio_methods[] = {
 	DEVMETHOD(device_detach, 	zy7_gpio_detach),
 
 	/* GPIO protocol */
+	DEVMETHOD(gpio_get_bus, 	zy7_gpio_get_bus),
 	DEVMETHOD(gpio_pin_max, 	zy7_gpio_pin_max),
 	DEVMETHOD(gpio_pin_getname, 	zy7_gpio_pin_getname),
 	DEVMETHOD(gpio_pin_getflags, 	zy7_gpio_pin_getflags),
@@ -374,16 +367,11 @@ static device_method_t zy7_gpio_methods[] = {
 };
 
 static driver_t zy7_gpio_driver = {
-	"zy7_gpio",
+	"gpio",
 	zy7_gpio_methods,
 	sizeof(struct zy7_gpio_softc),
 };
 static devclass_t zy7_gpio_devclass;
 
-extern devclass_t gpiobus_devclass, gpioc_devclass;
-extern driver_t gpiobus_driver, gpioc_driver;
-
 DRIVER_MODULE(zy7_gpio, simplebus, zy7_gpio_driver, zy7_gpio_devclass, \
 	      NULL, NULL);
-DRIVER_MODULE(gpiobus, zy7_gpio, gpiobus_driver, gpiobus_devclass, 0, 0);
-DRIVER_MODULE(gpioc, zy7_gpio, gpioc_driver, gpioc_devclass, 0, 0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_pioreg.h 259378 2013-12-14 01:14:38Z ian $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_pioreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef ARM_AT91_AT91_PIOREG_H
 #define ARM_AT91_AT91_PIOREG_H

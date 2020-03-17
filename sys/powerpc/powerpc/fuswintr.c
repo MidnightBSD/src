@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1994 Wolfgang Solfrank.
  * Copyright (C) 1994 TooLs GmbH.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/fuswintr.c 113038 2003-04-03 21:36:33Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/fuswintr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

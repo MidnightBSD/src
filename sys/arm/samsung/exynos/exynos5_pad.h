@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.

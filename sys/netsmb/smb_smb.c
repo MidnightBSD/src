@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_smb.c 227650 2011-11-18 03:05:20Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_smb.c 298375 2016-04-20 21:13:24Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,8 +67,6 @@ static struct smb_dialect smb_dialects[] = {
 	{SMB_DIALECT_NTLM0_12,	"NT LM 0.12"},
 	{-1,			NULL}
 };
-
-#define	SMB_DIALECT_MAX	(sizeof(smb_dialects) / sizeof(struct smb_dialect) - 2)
 
 static u_int32_t
 smb_vc_maxread(struct smb_vc *vcp)

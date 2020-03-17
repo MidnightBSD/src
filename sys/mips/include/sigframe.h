@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
@@ -28,7 +27,7 @@
  *
  *	from: src/sys/alpha/include/sigframe.h,v 1.1 1999/09/29 15:06:26 marcel
  *	from: sigframe.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/10/sys/mips/include/sigframe.h 232449 2012-03-03 08:19:18Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/sigframe.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _MACHINE_SIGFRAME_H_
 #define	_MACHINE_SIGFRAME_H_

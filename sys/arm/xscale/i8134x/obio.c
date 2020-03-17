@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: obio.c,v 1.11 2003/07/15 00:25:05 lukem Exp $	*/
 
 /*-

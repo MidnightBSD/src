@@ -6,11 +6,10 @@
 # Invoke like so: awk -f ps3-hv-asm.awk < ps3-hvcall.master > ps3-hvcall.S
 #
 
-# $FreeBSD: stable/10/sys/powerpc/ps3/ps3-hv-asm.awk 228688 2011-12-18 16:53:03Z nwhitehorn $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/powerpc/ps3/ps3-hv-asm.awk 228688 2011-12-18 16:53:03Z nwhitehorn $
 
 BEGIN {
-	printf("/* $MidnightBSD$ */\n\n");
+	printf("/* $FreeBSD: stable/11/sys/powerpc/ps3/ps3-hv-asm.awk 228688 2011-12-18 16:53:03Z nwhitehorn $ */\n\n");
 	printf("#include <machine/asm.h>\n\n");
 	printf("#define hc .long 0x44000022\n\n");
 }

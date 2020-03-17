@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc_vc.c,v 1.7 2000/08/03 00:01:53 fvdl Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)svc_tcp.c 1.21 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/svc_vc.c 309503 2016-12-03 19:03:25Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/svc_vc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * svc_vc.c, Server side for Connection Oriented based RPC. 
@@ -551,7 +550,7 @@ svc_vc_ack(SVCXPRT *xprt, uint32_t *ack)
 {
 
 	*ack = atomic_load_acq_32(&xprt->xp_snt_cnt);
-	*ack -= xprt->xp_socket->so_snd.sb_cc;
+	*ack -= sbused(&xprt->xp_socket->so_snd);
 	return (TRUE);
 }
 
@@ -865,7 +864,7 @@ svc_vc_reply(SVCXPRT *xprt, struct rpc_msg *msg,
 		len = mrep->m_pkthdr.len;
 		*mtod(mrep, uint32_t *) =
 			htonl(0x80000000 | (len - sizeof(uint32_t)));
-		atomic_add_acq_32(&xprt->xp_snd_cnt, len);
+		atomic_add_32(&xprt->xp_snd_cnt, len);
 		error = sosend(xprt->xp_socket, NULL, NULL, mrep, NULL,
 		    0, curthread);
 		if (!error) {

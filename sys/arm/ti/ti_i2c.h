@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/ti/ti_i2c.h 273735 2014-10-27 12:18:07Z loos $
+ * $FreeBSD: stable/11/sys/arm/ti/ti_i2c.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _TI_I2C_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_gif_demux.h
  */
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_gif_demux.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/ng_gif_demux.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NETGRAPH_NG_GIF_DEMUX_H_

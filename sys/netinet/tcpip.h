@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcpip.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet/tcpip.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netinet/tcpip.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_TCPIP_H_

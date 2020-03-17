@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: trap.h,v 1.1 2001/02/23 03:48:19 ichiro Exp $	*/
-/* $FreeBSD: stable/10/sys/arm/include/trap.h 140001 2005-01-10 22:43:16Z cognet $ */
+/* $FreeBSD: stable/11/sys/arm/include/trap.h 291852 2015-12-05 09:32:36Z andrew $ */
 
 #ifndef _MACHINE_TRAP_H_
 #define _MACHINE_TRAP_H_
@@ -8,4 +7,5 @@
 #define GDB5_BREAKPOINT		0xe7ffdefe
 #define PTRACE_BREAKPOINT	0xe7fffff0
 #define KERNEL_BREAKPOINT	0xe7ffffff
+#define FBT_BREAKPOINT		0xe7f000f0
 #endif /* _MACHINE_TRAP_H_ */

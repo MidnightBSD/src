@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Adrian Chadd
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar91xx_chip.c 253508 2013-07-21 03:52:52Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar91xx_chip.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -58,8 +57,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar91xx_chip.c 253508 2013-07-21 0
 #include <mips/atheros/ar91xxreg.h>
 #include <mips/atheros/ar91xx_chip.h>
 
-#include <mips/sentry5/s5reg.h>
-
 static void
 ar91xx_chip_detect_mem_size(void)
 {
@@ -72,7 +69,7 @@ ar91xx_chip_detect_sys_frequency(void)
 	uint32_t freq;
 	uint32_t div;
 
-	u_ar71xx_refclk = AR91XX_BASE_FREQ;
+	u_ar71xx_mdio_freq = u_ar71xx_refclk = AR91XX_BASE_FREQ;
 
 	pll = ATH_READ_REG(AR91XX_PLL_REG_CPU_CONFIG);
 
@@ -139,30 +136,27 @@ ar91xx_chip_set_pll_ge(int unit, int speed, uint32_t pll)
 }
 
 static void
-ar91xx_chip_ddr_flush_ge(int unit)
+ar91xx_chip_ddr_flush(ar71xx_flush_ddr_id_t id)
 {
 
-	switch (unit) {
-	case 0:
+	switch (id) {
+	case AR71XX_CPU_DDR_FLUSH_GE0:
 		ar71xx_ddr_flush(AR91XX_DDR_REG_FLUSH_GE0);
 		break;
-	case 1:
+	case AR71XX_CPU_DDR_FLUSH_GE1:
 		ar71xx_ddr_flush(AR91XX_DDR_REG_FLUSH_GE1);
 		break;
+	case AR71XX_CPU_DDR_FLUSH_USB:
+		ar71xx_ddr_flush(AR91XX_DDR_REG_FLUSH_USB);
+		break;
+	case AR71XX_CPU_DDR_FLUSH_WMAC:
+		ar71xx_ddr_flush(AR91XX_DDR_REG_FLUSH_WMAC);
+		break;
 	default:
-		printf("%s: invalid DDR flush for arge unit: %d\n",
-		    __func__, unit);
-		return;
+		printf("%s: invalid DDR flush id (%d)\n", __func__, id);
+		break;
 	}
 }
-
-static void
-ar91xx_chip_ddr_flush_ip2(void)
-{
-
-	ar71xx_ddr_flush(AR91XX_DDR_REG_FLUSH_WMAC);
-}
-
 
 static uint32_t
 ar91xx_chip_get_eth_pll(unsigned int mac, int speed)
@@ -217,8 +211,7 @@ struct ar71xx_cpu_def ar91xx_chip_def = {
 	&ar91xx_chip_set_pll_ge,
 	&ar71xx_chip_set_mii_speed,
 	&ar71xx_chip_set_mii_if,
-	&ar91xx_chip_ddr_flush_ge,
 	&ar91xx_chip_get_eth_pll,
-	&ar91xx_chip_ddr_flush_ip2,
+	&ar91xx_chip_ddr_flush,
 	&ar91xx_chip_init_usb_peripheral,
 };

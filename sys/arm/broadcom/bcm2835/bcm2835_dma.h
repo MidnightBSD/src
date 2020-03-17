@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013 Daisuke Aoyama <aoyama@peach.ne.jp>
  * Copyright (c) 2013 Oleksandr Tymoshenko <gonzo@bluezbox.com>
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_dma.h 322724 2017-08-20 16:52:27Z marius $
+ * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_dma.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_BCM2835_DMA_H_

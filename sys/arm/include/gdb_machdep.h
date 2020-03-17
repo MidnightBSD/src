@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Olivier Houchard
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/gdb_machdep.h 160332 2006-07-14 00:50:51Z cognet $
+ * $FreeBSD: stable/11/sys/arm/include/gdb_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_GDB_MACHDEP_H_

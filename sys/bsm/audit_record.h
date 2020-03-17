@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Apple Inc.
  * All rights reserved.
@@ -27,14 +26,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/bsm/audit_record.h 293163 2016-01-04 16:51:56Z brueffer $
+ * $FreeBSD: stable/11/sys/bsm/audit_record.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BSM_AUDIT_RECORD_H_
 #define _BSM_AUDIT_RECORD_H_
 
+#include <sys/types.h>
 #include <sys/time.h>			/* struct timeval */
-#include <sys/caprights.h>		/* cap_rights_t */
 
 /*
  * Token type identifiers.
@@ -189,6 +188,13 @@ struct sockaddr_in6;
 struct sockaddr_un;
 #if defined(_KERNEL) || defined(KERNEL)
 struct vnode_au_info;
+#endif
+
+#ifndef	_CAP_RIGHTS_T_DECLARED
+#define	_CAP_RIGHTS_T_DECLARED
+struct cap_rights;
+
+typedef	struct cap_rights	cap_rights_t;
 #endif
 
 int	 au_open(void);

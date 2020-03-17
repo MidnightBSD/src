@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mitsuru IWASAKI
  * All rights reserved.

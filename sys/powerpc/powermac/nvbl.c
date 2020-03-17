@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Justin Hibbits
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/nvbl.c 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/nvbl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -39,6 +38,9 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/nvbl.c 261455 2014-02-04 03:3
 #include <machine/bus.h>
 
 #include <dev/ofw/openfirm.h>
+#include <dev/pci/pcivar.h>
+
+#define PCI_VENDOR_ID_NVIDIA	0x10de
 
 #define NVIDIA_BRIGHT_MIN     (0x0ec)
 #define NVIDIA_BRIGHT_MAX     (0x538)
@@ -103,7 +105,8 @@ nvbl_probe(device_t dev)
 	if (OF_getprop(handle, "backlight-control", &control, sizeof(control)) < 0)
 		return (ENXIO);
 
-	if (strcmp(control, "mnca") != 0)
+	if ((strcmp(control, "mnca") != 0) ||
+	    pci_get_vendor(device_get_parent(dev)) != PCI_VENDOR_ID_NVIDIA)
 		return (ENXIO);
 
 	device_set_desc(dev, "PowerBook backlight for nVidia graphics");

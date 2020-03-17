@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/ofw/ofw_pcib_pci.c 266128 2014-05-15 14:26:11Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/ofw/ofw_pcib_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -115,10 +114,7 @@ ofw_pcib_pci_attach(device_t dev)
 	    sizeof(cell_t));
 
 	pcib_attach_common(dev);
-
-	device_add_child(dev, "pci", -1);
-
-	return (bus_generic_attach(dev));
+	return (pcib_attach_child(dev));
 }
 
 static phandle_t

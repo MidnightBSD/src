@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cpufunc_asm_arm9.S,v 1.3 2004/01/26 15:54:16 rearnsha Exp $	*/
 
 /*
@@ -33,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_arm9.S 278652 2015-02-13 00:49:47Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_arm9.S 295207 2016-02-03 13:47:50Z mmel $");
 
 /*
  * Functions to set the MMU Translation Table Base register
@@ -86,9 +85,7 @@ ENTRY_NP(arm9_icache_sync_range)
 	subs	r1, r1, ip
 	bhi	.Larm9_sync_next
 	mov	pc, lr
-END(arm9_icache_sync_range)
 
-ENTRY_NP(arm9_icache_sync_all)
 .Larm9_icache_sync_all:
 	/*
 	 * We assume that the code here can never be out of sync with the
@@ -110,7 +107,7 @@ ENTRY_NP(arm9_icache_sync_all)
 	subs	s_max, s_max, s_inc
 	bhs	.Lnext_set		/* Next set */
 	mov	pc, lr
-END(arm9_icache_sync_all)
+END(arm9_icache_sync_range)
 
 .Larm9_line_size:
 	.word	_C_LABEL(arm_pdcache_line_size)
@@ -131,7 +128,7 @@ ENTRY(arm9_dcache_wb_range)
 	bhi	.Larm9_wb_next
 	mov	pc, lr
 END(arm9_dcache_wb_range)
-	
+
 ENTRY(arm9_dcache_wbinv_range)
 	ldr	ip, .Larm9_line_size
 	cmp	r1, #0x4000
@@ -148,7 +145,7 @@ ENTRY(arm9_dcache_wbinv_range)
 	bhi	.Larm9_wbinv_next
 	mov	pc, lr
 END(arm9_dcache_wbinv_range)
-	
+
 /*
  * Note, we must not invalidate everything.  If the range is too big we
  * must use wb-inv of the entire cache.

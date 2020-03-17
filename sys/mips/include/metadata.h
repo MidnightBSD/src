@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/metadata.h 245330 2013-01-12 13:20:21Z rwatson $
+ * $FreeBSD: stable/11/sys/mips/include/metadata.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_METADATA_H_

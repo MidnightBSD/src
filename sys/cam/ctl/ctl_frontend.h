@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2014-2017 Alexander Motin <mav@FreeBSD.org>
@@ -30,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_frontend.h#2 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_frontend.h 313369 2017-02-07 01:56:26Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_frontend.h 313368 2017-02-07 01:55:48Z mav $
  */
 /*
  * CAM Target Layer front end registration hooks

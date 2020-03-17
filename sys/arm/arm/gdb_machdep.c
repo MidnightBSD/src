@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Olivier Houchard
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/gdb_machdep.c 278614 2015-02-12 04:15:55Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/gdb_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 
 #include <sys/param.h>

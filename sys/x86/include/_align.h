@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1990 The Regents of the University of California.

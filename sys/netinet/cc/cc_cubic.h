@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -34,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/cc/cc_cubic.h 220560 2011-04-12 08:13:18Z lstewart $
+ * $FreeBSD: stable/11/sys/netinet/cc/cc_cubic.h 220560 2011-04-12 08:13:18Z lstewart $
  */
 
 #ifndef _NETINET_CC_CUBIC_H_

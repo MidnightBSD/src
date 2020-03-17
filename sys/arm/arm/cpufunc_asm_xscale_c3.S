@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cpufunc_asm_xscale.S,v 1.16 2002/08/17 16:36:32 thorpej Exp $	*/
 
 /*-
@@ -76,15 +75,12 @@
 
 #include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_xscale_c3.S 278613 2015-02-12 03:50:33Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_xscale_c3.S 331890 2018-04-02 22:02:49Z gonzo $");
 
 /*
  * Size of the XScale core D-cache.
  */
 #define	DCACHE_SIZE		0x00008000
-
-.Lblock_userspace_access:
-	.word	_C_LABEL(block_userspace_access)
 
 /*
  * CPWAIT -- Canonical method to wait for CP15 update.
@@ -131,16 +127,8 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm_xscale_c3.S 278613 2015-02
 	msr	cpsr_fsxc, r4					;	\
 	ldmfd	sp!, {r4}
 #else
-#define	XSCALE_CACHE_CLEAN_BLOCK					\
-	stmfd	sp!, {r4}					;	\
-	ldr	r4, .Lblock_userspace_access			;	\
-	ldr	ip, [r4]					;	\
-	orr	r0, ip, #1					;	\
-	str	r0, [r4]	
-
-#define	XSCALE_CACHE_CLEAN_UNBLOCK					\
-	str	ip, [r3]					;	\
-	ldmfd	sp!, {r4}
+#define	XSCALE_CACHE_CLEAN_BLOCK
+#define	XSCALE_CACHE_CLEAN_UNBLOCK
 #endif /* CACHE_CLEAN_BLOCK_INTR */
 
 
@@ -218,7 +206,7 @@ ENTRY(xscalec3_cache_syncI_rng)
 
 	CPWAIT_AND_RETURN(r0)
 END(xscalec3_cache_syncI_rng)
-	
+
 ENTRY(xscalec3_cache_purgeD_rng)
 
 	cmp	r1, #0x4000
@@ -353,11 +341,6 @@ ENTRY(xscalec3_setttb)
 	mrs	r3, cpsr
 	orr	r1, r3, #(PSR_I | PSR_F)
 	msr	cpsr_fsxc, r1
-#else
-	ldr	r3, .Lblock_userspace_access
-	ldr	r2, [r3]
-	orr	r1, r2, #1
-	str	r1, [r3]
 #endif
 	stmfd	sp!, {r0-r3, lr}
 	bl	_C_LABEL(xscalec3_cache_cleanID)
@@ -381,8 +364,6 @@ ENTRY(xscalec3_setttb)
 
 #ifdef CACHE_CLEAN_BLOCK_INTR
 	msr	cpsr_fsxc, r3
-#else
-	str	r2, [r3]
 #endif
 	RET
 END(xscalec3_setttb)

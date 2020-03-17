@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2007 by Oleksandr Tymoshenko. All rights reserved.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/idt/idt_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/idt/idt_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: stable/10/sys/arm/include/profile.h 278652 2015-02-13 00:49:47Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/profile.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -87,7 +86,12 @@ typedef u_long	fptrdiff_t;
 	/*								\
 	 * Restore registers that were trashed during mcount		\
 	 */								\
-	__asm__("ldmfd	sp!, {r0-r3, lr, pc}");
+	__asm__("ldmfd	sp!, {r0-r3, lr}");				\
+	/*								\
+	 * Return to the caller. Loading lr and pc in one instruction	\
+	 * is deprecated on ARMv7 so we need this on it's own.		\
+	 */								\
+	__asm__("ldmfd	sp!, {pc}");
 void bintr(void);
 void btrap(void);
 void eintr(void);

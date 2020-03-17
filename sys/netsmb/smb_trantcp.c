@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_trantcp.c 258123 2013-11-14 09:19:50Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_trantcp.c 257841 2013-11-08 08:44:09Z glebius $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>

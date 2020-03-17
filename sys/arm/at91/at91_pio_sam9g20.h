@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Theses defines come from an atmel file that says specifically that it
  * has no copyright.
@@ -7,7 +6,7 @@
  * that is identical to the AT91SAM9G20.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_pio_sam9g20.h 213498 2010-10-06 22:40:27Z cognet $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_pio_sam9g20.h 213498 2010-10-06 22:40:27Z cognet $ */
 
 #ifndef  ARM_AT91_AT91_PIO_SAM9G20_H
 #define  ARM_AT91_AT91_PIO_SAM9G20_H

@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /* 
  * FQ_PIE - The FlowQueue-PIE scheduler/AQM
  *
- * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_sched_fq_pie.c 325731 2017-11-12 01:28:20Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched_fq_pie.c 325730 2017-11-12 01:26:43Z truckman $
  * 
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.

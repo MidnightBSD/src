@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/sysarch.h 190703 2009-04-04 22:05:36Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/include/sysarch.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SYSARCH_H_

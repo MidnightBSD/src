@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/at91/at91_twiio.h 185265 2008-11-25 00:13:26Z imp $
+ * $FreeBSD: stable/11/sys/arm/at91/at91_twiio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARM_AT91_AT91_TWIIO_H

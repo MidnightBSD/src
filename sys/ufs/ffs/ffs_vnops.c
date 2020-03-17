@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
  * All rights reserved.

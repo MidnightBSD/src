@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 EMC Corporation
  * Copyright (c) 2005 Antoine Brodin

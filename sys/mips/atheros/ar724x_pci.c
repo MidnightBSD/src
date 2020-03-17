@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * Copyright (c) 2011, Luiz Otavio O Souza.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar724x_pci.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar724x_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ar71xx.h"
 
@@ -49,7 +48,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar724x_pci.c 265999 2014-05-14 01
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/intr_machdep.h>
-#include <machine/pmap.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -123,8 +121,12 @@ ar724x_pci_read_config(device_t dev, u_int bus, u_int slot, u_int func,
 
 	/* Register access is 32-bit aligned */
 	shift = (reg & 3) * 8;
-	if (shift)
-		mask = (1 << shift) - 1;
+
+	/* Create a mask based on the width, post-shift */
+	if (bytes == 2)
+		mask = 0xffff;
+	else if (bytes == 1)
+		mask = 0xff;
 	else
 		mask = 0xffffffff;
 
@@ -156,10 +158,18 @@ ar724x_pci_write_config(device_t dev, u_int bus, u_int slot, u_int func,
 		return;
 
 	/*
-	 * WAR for BAR issue on AR7240 - We are unable to access the PCI device
-	 * space if we set the BAR with proper base address.
+	 * WAR for BAR issue on AR7240 - We are unable to access the PCI
+	 * device space if we set the BAR with proper base address.
+	 *
+	 * However, we _do_ want to allow programming in the probe value
+	 * (0xffffffff) so the PCI code can find out how big the memory
+	 * map is for this device.  Without it, it'll think the memory
+	 * map is 32 bits wide, the PCI code will then end up thinking
+	 * the register window is '0' and fail to allocate resources.
 	 */
-	if (reg == PCIR_BAR(0) && bytes == 4 && ar71xx_soc == AR71XX_SOC_AR7240)
+	if (reg == PCIR_BAR(0) && bytes == 4
+	    && ar71xx_soc == AR71XX_SOC_AR7240
+	    && data != 0xffffffff)
 		ar724x_pci_write(AR724X_PCI_CFG_BASE, reg, 0xffff, bytes);
 	else
 		ar724x_pci_write(AR724X_PCI_CFG_BASE, reg, data, bytes);
@@ -262,11 +272,13 @@ ar724x_pci_fixup(device_t dev, long flash_addr, int len)
 	uint32_t bar0, reg, val;
 	uint16_t *cal_data = (uint16_t *) MIPS_PHYS_TO_KSEG1(flash_addr);
 
+#if 0
 	if (cal_data[0] != AR5416_EEPROM_MAGIC) {
 		device_printf(dev, "%s: Invalid calibration data from 0x%x\n",
 		    __func__, (uintptr_t) flash_addr);
 		return;
 	}
+#endif
 
 	/* Save bar(0) address - just to flush bar(0) (SoC WAR) ? */
 	bar0 = ar724x_pci_read_config(dev, 0, 0, 0, PCIR_BAR(0), 4);
@@ -336,7 +348,6 @@ ar724x_pci_slot_fixup(device_t dev)
 			return;
 		}
 
-
 		device_printf(dev, "found EEPROM at 0x%lx on %d.%d.%d\n",
 		    flash_addr, 0, 0, 0);
 		ar724x_pci_fixup(dev, flash_addr, size);
@@ -357,7 +368,6 @@ static int
 ar724x_pci_attach(device_t dev)
 {
 	struct ar71xx_pci_softc *sc = device_get_softc(dev);
-	int busno = 0;
 	int rid = 0;
 
 	sc->sc_mem_rman.rm_type = RMAN_ARRAY;
@@ -417,7 +427,7 @@ ar724x_pci_attach(device_t dev)
 	    | PCIM_CMD_SERRESPEN | PCIM_CMD_BACKTOBACK
 	    | PCIM_CMD_PERRESPEN | PCIM_CMD_MWRICEN, 2);
 
-	device_add_child(dev, "pci", busno);
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }
 
@@ -454,7 +464,7 @@ ar724x_pci_write_ivar(device_t dev, device_t child, int which, uintptr_t result)
 
 static struct resource *
 ar724x_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct ar71xx_pci_softc *sc = device_get_softc(bus);	
 	struct resource *rv;
@@ -484,7 +494,6 @@ ar724x_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
 			return (NULL);
 		}
 	} 
-
 
 	return (rv);
 }
@@ -576,7 +585,6 @@ ar724x_pci_intr(void *arg)
 	struct intr_event *event;
 	uint32_t reg, irq, mask;
 
-	ar71xx_device_ddr_flush_ip2();
 
 	reg = ATH_READ_REG(AR724X_PCI_INTR_STATUS);
 	mask = ATH_READ_REG(AR724X_PCI_INTR_MASK);
@@ -592,6 +600,9 @@ ar724x_pci_intr(void *arg)
 			printf("Stray IRQ %d\n", irq);
 			return (FILTER_STRAY);
 		}
+
+		/* Flush pending memory transactions */
+		ar71xx_device_flush_ddr(AR71XX_CPU_DDR_FLUSH_PCIE);
 
 		/* TODO: frame instead of NULL? */
 		intr_event_handle(event, NULL);

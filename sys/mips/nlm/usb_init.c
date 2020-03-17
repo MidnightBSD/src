@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -29,7 +28,7 @@
  * NETLOGIC_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/nlm/usb_init.c 227725 2011-11-19 14:33:14Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/nlm/usb_init.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/param.h>
@@ -48,26 +47,26 @@ nlm_usb_intr_en(int node, int port)
 	uint32_t val;
 	uint64_t port_addr;
 
-	port_addr = nlm_get_usb_regbase(node, port);	
+	port_addr = nlm_get_usb_regbase(node, port);
 	val = nlm_read_usb_reg(port_addr, USB_INT_EN);
-	val = USB_CTRL_INTERRUPT_EN  | USB_OHCI_INTERRUPT_EN | 
+	val = USB_CTRL_INTERRUPT_EN  | USB_OHCI_INTERRUPT_EN |
 		USB_OHCI_INTERRUPT1_EN | USB_CTRL_INTERRUPT_EN  |
 		USB_OHCI_INTERRUPT_EN | USB_OHCI_INTERRUPT2_EN;
         nlm_write_usb_reg(port_addr, USB_INT_EN, val);
 }
 
-static void 
+static void
 nlm_usb_hw_reset(int node, int port)
 {
 	uint64_t port_addr;
 	uint32_t val;
-        	
+
 	/* reset USB phy */
-	port_addr = nlm_get_usb_regbase(node, port); 
+	port_addr = nlm_get_usb_regbase(node, port);
 	val = nlm_read_usb_reg(port_addr, USB_PHY_0);
 	val &= ~(USB_PHY_RESET | USB_PHY_PORT_RESET_0 | USB_PHY_PORT_RESET_1);
 	nlm_write_usb_reg(port_addr, USB_PHY_0, val);
-      
+
 	DELAY(100);
 	val = nlm_read_usb_reg(port_addr, USB_CTL_0);
 	val &= ~(USB_CONTROLLER_RESET);
@@ -75,17 +74,17 @@ nlm_usb_hw_reset(int node, int port)
 	nlm_write_usb_reg(port_addr, USB_CTL_0, val);
 }
 
-static void 
+static void
 nlm_usb_init(void)
 {
 	/* XXX: should be checking if these are in Device mode here */
 	printf("Initialize USB Interface\n");
-	nlm_usb_hw_reset(0, 0); 
-	nlm_usb_hw_reset(0, 3); 
+	nlm_usb_hw_reset(0, 0);
+	nlm_usb_hw_reset(0, 3);
 
 	/* Enable PHY interrupts */
-	nlm_usb_intr_en(0, 0); 
-	nlm_usb_intr_en(0, 3); 
+	nlm_usb_intr_en(0, 0);
+	nlm_usb_intr_en(0, 3);
 }
 
 SYSINIT(nlm_usb_init, SI_SUB_CPU, SI_ORDER_MIDDLE,

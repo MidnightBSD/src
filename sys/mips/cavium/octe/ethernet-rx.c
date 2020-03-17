@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*************************************************************************
 Copyright (c) 2003-2007  Cavium Networks (support@cavium.com). All rights
 reserved.
@@ -29,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-rx.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octe/ethernet-rx.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-rx.c 243882 2012-12-
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"
@@ -304,7 +304,7 @@ void cvm_oct_tasklet_rx(void *context, int pending)
 					m->m_pkthdr.csum_flags = 0; /* XXX */
 				}
 
-				ifp->if_ipackets++;
+				if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 				(*ifp->if_input)(ifp, m);
 			} else {

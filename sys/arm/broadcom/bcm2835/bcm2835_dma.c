@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013 Daisuke Aoyama <aoyama@peach.ne.jp>
  * Copyright (c) 2013 Oleksandr Tymoshenko <gonzo@bluezbox.com>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_dma.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_dma.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,8 +48,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_dma.c 322724 2017
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 
 #include "bcm2835_dma.h"
 #include "bcm2835_vcbus.h"
@@ -285,7 +282,7 @@ bcm_dma_init(device_t dev)
 
 		/* 
 		 * Least alignment for busdma-allocated stuff is cache 
-		 * line size, so just make sure nothing stupid happend
+		 * line size, so just make sure nothing stupid happened
 		 * and we got properly aligned address
 		 */
 		if ((uintptr_t)cb_virt & 0x1f) {
@@ -546,7 +543,7 @@ bcm_dma_reg_dump(int ch)
  *     ch - channel number
  *     src, dst - source and destination address in
  *         ARM physical memory address space. 
- *     len - amount of bytes to be transfered
+ *     len - amount of bytes to be transferred
  *	  
  * Returns 0 on success, -1 otherwise
  */

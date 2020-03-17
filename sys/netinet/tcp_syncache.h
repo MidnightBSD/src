@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: stable/10/sys/netinet/tcp_syncache.h 322315 2017-08-09 13:26:12Z tuexen $
+ * $FreeBSD: stable/11/sys/netinet/tcp_syncache.h 347153 2019-05-05 12:11:58Z tuexen $
  */
 
 #ifndef _NETINET_TCP_SYNCACHE_H_
@@ -39,7 +38,7 @@ void	 syncache_init(void);
 #ifdef VIMAGE
 void	syncache_destroy(void);
 #endif
-void	 syncache_unreach(struct in_conninfo *, struct tcphdr *);
+void	 syncache_unreach(struct in_conninfo *, tcp_seq);
 int	 syncache_expand(struct in_conninfo *, struct tcpopt *,
 	     struct tcphdr *, struct socket **, struct mbuf *);
 int	 syncache_add(struct in_conninfo *, struct tcpopt *,
@@ -47,7 +46,6 @@ int	 syncache_add(struct in_conninfo *, struct tcpopt *,
 	     void *, void *);
 void	 syncache_chkrst(struct in_conninfo *, struct tcphdr *);
 void	 syncache_badack(struct in_conninfo *);
-int	 syncache_pcbcount(void);
 int	 syncache_pcblist(struct sysctl_req *req, int max_pcbs, int *pcbs_exported);
 
 struct syncache {
@@ -56,7 +54,6 @@ struct syncache {
 	int		sc_rxttime;		/* retransmit time */
 	u_int16_t	sc_rxmits;		/* retransmit counter */
 	u_int32_t	sc_tsreflect;		/* timestamp to reflect */
-	u_int32_t	sc_ts;			/* our timestamp to send */
 	u_int32_t	sc_tsoff;		/* ts offset w/ syncookies */
 	u_int32_t	sc_flowlabel;		/* IPv6 flowlabel */
 	tcp_seq		sc_irs;			/* seq from peer */
@@ -122,7 +119,7 @@ struct tcp_syncache {
 	u_int	bucket_limit;
 	u_int	cache_limit;
 	u_int	rexmt_limit;
-	u_int	hash_secret;
+	uint32_t hash_secret;
 	struct vnet *vnet;
 	struct syncookie_secret secret;
 };

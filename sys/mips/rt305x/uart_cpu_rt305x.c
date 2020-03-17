@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Wojciech A. Koszek <wkoszek@FreeBSD.org>
  * All rights reserved.
@@ -37,7 +36,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rt305x/uart_cpu_rt305x.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/uart_cpu_rt305x.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,6 +77,10 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 
 	uart_bus_space_io = NULL;
 	uart_bus_space_mem = mips_bus_space_generic;
+#ifdef RT305X_USE_UART
+	di->bas.bsh = MIPS_PHYS_TO_KSEG1(UART_BASE);
+#else
 	di->bas.bsh = MIPS_PHYS_TO_KSEG1(UARTLITE_BASE);
+#endif
 	return (0);
 }

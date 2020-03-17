@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_bsd_addr.h 237540 2012-06-24 21:25:54Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_bsd_addr.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef _NETINET_SCTP_BSD_ADDR_H_
 #define _NETINET_SCTP_BSD_ADDR_H_
@@ -49,13 +48,12 @@ void sctp_startup_iterator(void);
 
 #ifdef INET6
 void sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);
-
 #endif
 
 #ifdef  SCTP_PACKET_LOGGING
 
 void sctp_packet_log(struct mbuf *m);
-int sctp_copy_out_packet_log(uint8_t * target, int length);
+int sctp_copy_out_packet_log(uint8_t *target, int length);
 
 #endif
 

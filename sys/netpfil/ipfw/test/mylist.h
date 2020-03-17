@@ -1,12 +1,12 @@
-/* $MidnightBSD$ */
 /*
- * $FreeBSD: stable/10/sys/netpfil/ipfw/test/mylist.h 204735 2010-03-04 21:01:59Z luigi $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/test/mylist.h 294882 2016-01-27 02:22:31Z luigi $
  *
  * linux-like bidirectional lists
  */
 
 #ifndef _MYLIST_H
 #define _MYLIST_H
+/* not just a head, also the link field for a list entry */
 struct list_head {
         struct list_head *prev, *next;
 };

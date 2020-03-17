@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * Copyright (c) 2006 M. Warner Losh
@@ -32,7 +31,7 @@
 
 #ifndef FDT
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/uart_cpu_at91usart.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/uart_cpu_at91usart.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +50,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/at91/uart_cpu_at91usart.c 283327 2015-05-2
 bus_space_tag_t uart_bus_space_io;
 bus_space_tag_t uart_bus_space_mem;
 
-extern struct bus_space at91_bs_tag;
 extern struct uart_class at91_usart_class;
 
 int
@@ -70,7 +68,7 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 		class->uc_rclk = at91_master_clock;
 	di->ops = uart_getops(class);
 	di->bas.chan = 0;
-	di->bas.bst = &at91_bs_tag;
+	di->bas.bst = arm_base_bs_tag;
 	/*
 	 * XXX: Not pretty, but will work because we map the needed addresses
 	 * early.  At least we probed this so that the console will work on
@@ -83,7 +81,7 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	di->databits = 8;
 	di->stopbits = 1;
 	di->parity = UART_PARITY_NONE;
-	uart_bus_space_io = &at91_bs_tag;
+	uart_bus_space_io = arm_base_bs_tag;
 	uart_bus_space_mem = NULL;
 	/* Check the environment for overrides */
 	uart_getenv(devtype, di, class);

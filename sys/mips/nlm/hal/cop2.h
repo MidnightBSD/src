@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -27,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/10/sys/mips/nlm/hal/cop2.h 227783 2011-11-21 08:12:36Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/hal/cop2.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __NLM_HAL_COP2_H__

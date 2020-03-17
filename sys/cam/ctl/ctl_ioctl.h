@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2011 Spectra Logic Corporation
@@ -31,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_ioctl.h#4 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_ioctl.h 312841 2017-01-26 21:00:49Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_ioctl.h 326091 2017-11-22 14:06:40Z manu $
  */
 /*
  * CAM Target Layer ioctl interface.
@@ -60,24 +59,9 @@
 #define	CTL_MAX_TARGID		15
 
 /*
- * Maximum number of LUNs we support at the moment.  MUST be a power of 2.
- */
-#define	CTL_MAX_LUNS		1024
-
-/*
  * Maximum number of initiators per port.
  */
 #define	CTL_MAX_INIT_PER_PORT	2048
-
-/*
- * Maximum number of ports registered at one time.
- */
-#define	CTL_MAX_PORTS		256
-
-/*
- * Maximum number of initiators we support.
- */
-#define	CTL_MAX_INITIATORS	(CTL_MAX_INIT_PER_PORT * CTL_MAX_PORTS)
 
 /* Hopefully this won't conflict with new misc devices that pop up */
 #define	CTL_MINOR	225
@@ -151,7 +135,7 @@ struct ctl_lun_io_stats {
 	uint64_t			lun_number;
 	uint32_t			blocksize;
 	ctl_lun_stats_flags		flags;
-	struct ctl_lun_io_port_stats	ports[CTL_MAX_PORTS];
+	struct ctl_lun_io_port_stats	*ports;
 };
 
 struct ctl_stats {
@@ -344,20 +328,20 @@ typedef enum {
  *
  * flags:	Flags for the parameter, see above for values.
  *
- * vallen:	Length of the value in bytes.
+ * vallen:	Length of the value in bytes, including the terminating NUL.
  *
- * value:	Value to be set/fetched.
+ * value:	Value to be set/fetched. This must be NUL-terminated.
  *
  * kname:	For kernel use only.
  *
  * kvalue:	For kernel use only.
  */
 struct ctl_be_arg {
-	int	namelen;
-	char	*name;
-	int	flags;
-	int	vallen;
-	void	*value;
+	unsigned int	namelen;
+	char		*name;
+	int		flags;
+	unsigned int	vallen;
+	void		*value;
 
 	char	*kname;
 	void	*kvalue;
@@ -661,6 +645,7 @@ typedef enum {
 	CTL_ISCSI_LIST,
 	CTL_ISCSI_LOGOUT,
 	CTL_ISCSI_TERMINATE,
+	CTL_ISCSI_LIMITS,
 #if defined(ICL_KERNEL_PROXY) || 1
 	/*
 	 * We actually need those in all cases, but leave the ICL_KERNEL_PROXY,
@@ -681,6 +666,7 @@ typedef enum {
 #define	CTL_ISCSI_NAME_LEN	224	/* 223 bytes, by RFC 3720, + '\0' */
 #define	CTL_ISCSI_ADDR_LEN	47	/* INET6_ADDRSTRLEN + '\0' */
 #define	CTL_ISCSI_ALIAS_LEN	128	/* Arbitrary. */
+#define	CTL_ISCSI_OFFLOAD_LEN	8	/* Arbitrary. */
 
 struct ctl_iscsi_handoff_params {
 	char			initiator_name[CTL_ISCSI_NAME_LEN];
@@ -702,11 +688,12 @@ struct ctl_iscsi_handoff_params {
 	uint32_t		max_burst_length;
 	uint32_t		first_burst_length;
 	uint32_t		immediate_data;
+	char			offload[CTL_ISCSI_OFFLOAD_LEN];
 #ifdef ICL_KERNEL_PROXY
 	int			connection_id;
-	int			spare[3];
+	int			spare[1];
 #else
-	int			spare[4];
+	int			spare[2];
 #endif
 };
 
@@ -734,6 +721,14 @@ struct ctl_iscsi_terminate_params {
 	char			initiator_addr[CTL_ISCSI_NAME_LEN];
 						/* passed to kernel */
 	int			all;		/* passed to kernel */
+	int			spare[4];
+};
+
+struct ctl_iscsi_limits_params {
+	char			offload[CTL_ISCSI_OFFLOAD_LEN];
+						/* passed to kernel */
+	size_t			data_segment_limit;
+						/* passed to userland */
 	int			spare[4];
 };
 
@@ -784,6 +779,7 @@ union ctl_iscsi_data {
 	struct ctl_iscsi_list_params		list;
 	struct ctl_iscsi_logout_params		logout;
 	struct ctl_iscsi_terminate_params	terminate;
+	struct ctl_iscsi_limits_params		limits;
 #ifdef ICL_KERNEL_PROXY
 	struct ctl_iscsi_listen_params		listen;
 	struct ctl_iscsi_accept_params		accept;

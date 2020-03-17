@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Neelkanth Natu
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/sibyte/sb_scd.c 222813 2011-06-07 08:46:13Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/sibyte/sb_scd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

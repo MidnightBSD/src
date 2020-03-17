@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/cam/scsi/scsi_ch.h 311402 2017-01-05 11:20:31Z mav $ */
+/* $FreeBSD: stable/11/sys/cam/scsi/scsi_ch.h 298810 2016-04-29 21:05:48Z pfg $ */
 /*	$NetBSD: scsi_changer.h,v 1.11 1998/02/13 08:28:32 enami Exp $	*/
 
 /*-

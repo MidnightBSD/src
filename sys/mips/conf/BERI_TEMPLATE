@@ -4,7 +4,7 @@
 # kernel configuration file will be included by other board-specific files,
 # and so contains only BERI features common across all board targets.
 #
-# $FreeBSD: stable/10/sys/mips/conf/BERI_TEMPLATE 257527 2013-11-01 21:15:39Z brooks $
+# $FreeBSD: stable/11/sys/mips/conf/BERI_TEMPLATE 256912 2013-10-22 15:45:31Z brooks $
 #
 
 ident		BERI_TEMPLATE

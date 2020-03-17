@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: db_machdep.h,v 1.2 1998/09/15 10:50:12 pefo Exp $ */
 
 /*
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	JNPR: db_machdep.h,v 1.7 2006/10/16 12:30:34 katta
- * $FreeBSD: stable/10/sys/mips/include/db_machdep.h 230094 2012-01-13 23:31:36Z gonzo $
+ * $FreeBSD: stable/11/sys/mips/include/db_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MIPS_DB_MACHDEP_H_

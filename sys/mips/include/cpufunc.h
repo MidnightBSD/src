@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pio.h,v 1.2 1998/09/15 10:50:12 pefo Exp $	*/
 
 /*-
@@ -54,7 +53,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	JNPR: cpufunc.h,v 1.5 2007/08/09 11:23:32 katta
- * $FreeBSD: stable/10/sys/mips/include/cpufunc.h 257528 2013-11-01 21:17:45Z brooks $
+ * $FreeBSD: stable/11/sys/mips/include/cpufunc.h 338514 2018-09-06 22:23:39Z jhb $
  */
 
 #ifndef _MACHINE_CPUFUNC_H_
@@ -105,6 +104,12 @@ mips_wbflush(void)
 	__asm __volatile ("sync" : : : "memory");
 	mips_barrier();
 #endif
+}
+
+static __inline void
+breakpoint(void)
+{
+	__asm __volatile ("break");
 }
 
 #ifdef _KERNEL
@@ -249,7 +254,7 @@ MIPS_RW32_COP0_SEL(config5, MIPS_COP_0_CONFIG, 5);
 #if defined(CPU_NLM) || defined(BERI_LARGE_TLB)
 MIPS_RW32_COP0_SEL(config6, MIPS_COP_0_CONFIG, 6);
 #endif
-#ifdef CPU_NLM
+#if defined(CPU_NLM) || defined(CPU_MIPS1004K)
 MIPS_RW32_COP0_SEL(config7, MIPS_COP_0_CONFIG, 7);
 #endif
 MIPS_RW32_COP0(count, MIPS_COP_0_COUNT);
@@ -260,6 +265,7 @@ MIPS_RW32_COP0(cause, MIPS_COP_0_CAUSE);
 MIPS_RW32_COP0(excpc, MIPS_COP_0_EXC_PC);
 #endif
 MIPS_RW32_COP0(status, MIPS_COP_0_STATUS);
+MIPS_RW32_COP0_SEL(cmgcrbase, 15, 3);
 
 /* XXX: Some of these registers are specific to MIPS32. */
 #if !defined(__mips_n64)
@@ -339,12 +345,6 @@ get_intr_mask(void)
 {
 
 	return (mips_rd_status() & MIPS_SR_INT_MASK);
-}
-
-static __inline void
-breakpoint(void)
-{
-	__asm __volatile ("break");
 }
 
 #if defined(__GNUC__) && !defined(__mips_o32)

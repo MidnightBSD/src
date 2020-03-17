@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
   rpcsec_gss.h
   
@@ -35,7 +34,7 @@
 
   $Id: auth_gss.h,v 1.12 2001/04/30 19:44:47 andros Exp $
 */
-/* $FreeBSD: stable/10/sys/rpc/rpcsec_gss/rpcsec_gss_int.h 184588 2008-11-03 10:38:00Z dfr $ */
+/* $FreeBSD: stable/11/sys/rpc/rpcsec_gss/rpcsec_gss_int.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _RPCSEC_GSS_INT_H
 #define _RPCSEC_GSS_INT_H

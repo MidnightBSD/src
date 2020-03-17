@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * Copyright (c) 2000-2002 Luigi Rizzo, Universita` di Pisa
@@ -27,7 +26,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_sched_wf2q.c 325731 2017-11-12 01:28:20Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched_wf2q.c 325730 2017-11-12 01:26:43Z truckman $
  */
 
 #ifdef _KERNEL

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander V. Chernikov <melifaro@ipfw.ru>
  * All rights reserved.
@@ -24,25 +23,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * 	$FreeBSD: stable/10/sys/netgraph/netflow/netflow_v9.c 260278 2014-01-04 19:04:53Z dim $
+ * 	$FreeBSD: stable/11/sys/netgraph/netflow/netflow_v9.c 295126 2016-02-01 17:41:21Z glebius $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netgraph/netflow/netflow_v9.c 260278 2014-01-04 19:04:53Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/netgraph/netflow/netflow_v9.c 295126 2016-02-01 17:41:21Z glebius $");
 
 #include "opt_inet6.h"
 #include "opt_route.h"
 #include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/counter.h>
 #include <sys/kernel.h>
+#include <sys/ktr.h>
 #include <sys/limits.h>
+#include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/syslog.h>
-#include <sys/systm.h>
 #include <sys/socket.h>
-#include <sys/endian.h>
-
-#include <machine/atomic.h>
-#include <machine/stdarg.h>
+#include <vm/uma.h>
 
 #include <net/if.h>
 #include <net/route.h>

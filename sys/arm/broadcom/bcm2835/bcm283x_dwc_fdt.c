@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2015 Andrew Turner.
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm283x_dwc_fdt.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm283x_dwc_fdt.c 307575 2016-10-18 19:15:43Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

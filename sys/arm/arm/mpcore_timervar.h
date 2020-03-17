@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/arm/mpcore_timervar.h 266347 2014-05-17 20:10:12Z ian $
+ * $FreeBSD: stable/11/sys/arm/arm/mpcore_timervar.h 264051 2014-04-02 18:49:50Z ian $
  */
 
 #ifndef	_ARM_MPCORE_TIMERVAR_H_

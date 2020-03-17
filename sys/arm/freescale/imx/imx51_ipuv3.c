@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012, 2013 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx51_ipuv3.c 266365 2014-05-17 22:00:10Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx51_ipuv3.c 356110 2019-12-27 03:00:18Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,14 +53,14 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx51_ipuv3.c 266365 2014-05
 
 #include <sys/kdb.h>
 
+#include <vm/vm.h>
+#include <vm/pmap.h>
+
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/fdt.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -313,10 +312,10 @@ ipu3_fb_attach(device_t dev)
 	 * On i.MX53, the offset is 0.
 	 */
 	node = ofw_bus_get_node(dev);
-	if ((OF_getprop(node, "reg", &reg, sizeof(reg))) <= 0)
+	if ((OF_getencprop(node, "reg", &reg, sizeof(reg))) <= 0)
 		base = 0;
 	else
-		base = fdt32_to_cpu(reg) - IPU_CM_BASE(0);
+		base = reg - IPU_CM_BASE(0);
 	/* map controller registers */
 	err = bus_space_map(iot, IPU_CM_BASE(base), IPU_CM_SIZE, 0, &ioh);
 	if (err)
@@ -877,22 +876,3 @@ ipu3fb_putm(video_adapter_t *adp, int x, int y, uint8_t *pixel_image,
 
 	return (0);
 }
-
-/*
- * Define a stub keyboard driver in case one hasn't been
- * compiled into the kernel
- */
-#include <sys/kbio.h>
-#include <dev/kbd/kbdreg.h>
-
-static int dummy_kbd_configure(int flags);
-
-keyboard_switch_t ipu3dummysw;
-
-static int
-dummy_kbd_configure(int flags)
-{
-
-	return (0);
-}
-KEYBOARD_DRIVER(ipu3dummy, ipu3dummysw, dummy_kbd_configure);

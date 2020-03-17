@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Ioctl definitions for the SCSI Target Driver
  *
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/scsi/scsi_targetio.h 139743 2005-01-05 22:34:37Z imp $
+ * $FreeBSD: stable/11/sys/cam/scsi/scsi_targetio.h 139743 2005-01-05 22:34:37Z imp $
  */
 
 #ifndef _CAM_SCSI_SCSI_TARGETIO_H_

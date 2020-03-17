@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * APM (Advanced Power Management) BIOS Device Driver
  *

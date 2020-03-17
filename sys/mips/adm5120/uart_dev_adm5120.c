@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: uart.c,v 1.2 2007/03/23 20:05:47 dogcow Exp $ */
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/adm5120/uart_dev_adm5120.c 262649 2014-03-01 04:16:54Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/adm5120/uart_dev_adm5120.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -176,7 +175,8 @@ struct uart_class uart_adm5120_uart_class = {
 	sizeof(struct adm5120_uart_softc),
 	.uc_ops = &uart_adm5120_uart_ops,
 	.uc_range = 1, /* use hinted range */
-	.uc_rclk = 62500000
+	.uc_rclk = 62500000,
+	.uc_rshift = 0
 };
 
 #define	SIGCHG(c, i, s, d)				\

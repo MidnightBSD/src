@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/in_cksum.c 238941 2012-07-31 08:04:49Z luigi $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/in_cksum.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -49,9 +48,9 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/in_cksum.c 238941 2012-07-31 08:04:49Z
 int
 in_cksum(struct mbuf *m, int len)
 {
-	register u_short *w;
-	register int sum = 0;
-	register int mlen = 0;
+	u_short *w;
+	int sum = 0;
+	int mlen = 0;
 	int byte_swapped = 0;
 
 	union {

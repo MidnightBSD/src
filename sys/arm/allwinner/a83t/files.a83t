@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/arm/allwinner/a83t/files.a83t 299113 2016-05-05 09:41:57Z jmcneill $
 
 arm/allwinner/a83t/a83t_padconf.c	standard
 arm/allwinner/a83t/a83t_r_padconf.c	standard

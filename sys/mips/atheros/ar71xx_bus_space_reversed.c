@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_bus_space_reversed.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar71xx_bus_space_reversed.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

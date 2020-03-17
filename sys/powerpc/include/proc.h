@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -30,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: proc.h,v 1.2 1997/04/16 22:57:48 thorpej Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/proc.h 256007 2013-10-02 20:40:21Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/include/proc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -54,6 +53,13 @@ struct mdproc {
 #define	KINFO_PROC_SIZE 768
 #endif
 
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[10];
+	int narg;
+};
+
 #ifdef _KERNEL
 
 #include <machine/pcb.h>
@@ -66,13 +72,6 @@ struct mdproc {
 	    td->td_kstack_pages * PAGE_SIZE -				\
 	    (char *)&td;						\
 } while (0)
-
-struct syscall_args {
-	u_int code;
-	struct sysent *callp;
-	register_t args[10];
-	int narg;
-};
 #endif
 
 #endif /* !_MACHINE_PROC_H_ */

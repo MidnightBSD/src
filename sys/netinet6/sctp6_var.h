@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet6/sctp6_var.h 243186 2012-11-17 20:04:04Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet6/sctp6_var.h 347154 2019-05-05 12:28:39Z tuexen $");
 
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
@@ -44,14 +43,12 @@ extern struct pr_usrreqs sctp6_usrreqs;
 
 int sctp6_input(struct mbuf **, int *, int);
 int sctp6_input_with_port(struct mbuf **, int *, uint16_t);
-int 
+int
 sctp6_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, struct proc *);
 void sctp6_ctlinput(int, struct sockaddr *, void *);
-extern void 
-sctp6_notify(struct sctp_inpcb *, struct icmp6_hdr *,
-    struct sctphdr *, struct sockaddr *,
-    struct sctp_tcb *, struct sctp_nets *);
-
+void
+sctp6_notify(struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *,
+    uint8_t, uint8_t, uint32_t);
 #endif
 #endif

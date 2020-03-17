@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
  *
@@ -27,6 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD: stable/11/sys/mips/include/fls64.h 330897 2018-03-14 03:19:51Z eadler $
  * RMI_BSD */
 #ifndef _MIPS_FLS64_H_
 #define _MIPS_FLS64_H_

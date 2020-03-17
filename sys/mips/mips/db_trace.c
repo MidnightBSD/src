@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005, Juniper Networks, Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/db_trace.c 251103 2013-05-29 16:51:03Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/db_trace.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -261,7 +260,7 @@ loop:
 			case OP_SYSCALL:
 			case OP_BREAK:
 				more = 1;	/* stop now */
-			};
+			}
 			break;
 
 		case OP_BCOND:
@@ -282,7 +281,7 @@ loop:
 			case OP_BCx:
 			case OP_BCy:
 				more = 2;	/* stop after next instruction */
-			};
+			}
 			break;
 
 		case OP_SW:

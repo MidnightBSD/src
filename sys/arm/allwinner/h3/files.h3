@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/arm/allwinner/h3/files.h3 299688 2016-05-13 18:20:54Z manu $
 
 arm/allwinner/h3/h3_padconf.c		standard
 arm/allwinner/h3/h3_r_padconf.c		standard

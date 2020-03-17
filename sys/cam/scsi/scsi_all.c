@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of Utility functions for all SCSI device types.
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_all.c 323987 2017-09-25 18:26:31Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_all.c 355336 2019-12-03 16:47:04Z mav $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -112,6 +111,7 @@ static void	fetchtableentries(int sense_key, int asc, int ascq,
 				  struct scsi_inquiry_data *,
 				  const struct sense_key_table_entry **,
 				  const struct asc_table_entry **);
+
 #ifdef _KERNEL
 static void	init_scsi_delay(void);
 static int	sysctl_scsi_delay(SYSCTL_HANDLER_ARGS);
@@ -155,7 +155,7 @@ static struct scsi_op_quirk_entry scsi_op_quirk_table[] = {
 		 * feel free to change this quirk entry.
 		 */
 		{T_CDROM, SIP_MEDIA_REMOVABLE, "PLEXTOR", "CD-ROM PX*", "*"},
-		sizeof(plextor_cd_ops)/sizeof(struct op_table_entry),
+		nitems(plextor_cd_ops),
 		plextor_cd_ops
 	}
 };
@@ -377,7 +377,7 @@ static struct op_table_entry scsi_op_codes[] = {
 	{ 0x40,	D | T | L | P | W | R | O | M | S | C, "CHANGE DEFINITION" },
 	/* 41  O               WRITE SAME(10) */
 	{ 0x41,	D, "WRITE SAME(10)" },
-	/* 42       O          UNMAP */
+	/* 42  O               UNMAP */
 	{ 0x42,	D, "UNMAP" },
 	/* 42       O          READ SUB-CHANNEL */
 	{ 0x42,	R, "READ SUB-CHANNEL" },
@@ -392,7 +392,8 @@ static struct op_table_entry scsi_op_codes[] = {
 	{ 0x46,	R, "GET CONFIGURATION" },
 	/* 47       O          PLAY AUDIO MSF */
 	{ 0x47,	R, "PLAY AUDIO MSF" },
-	/* 48 */
+	/* 48  O               SANITIZE */
+	{ 0x48,	D, "SANITIZE" },
 	/* 49 */
 	/* 4A       M          GET EVENT STATUS NOTIFICATION */
 	{ 0x4A,	R, "GET EVENT STATUS NOTIFICATION" },
@@ -499,9 +500,9 @@ static struct op_table_entry scsi_op_codes[] = {
 	/* 93   M              ERASE(16) */
 	{ 0x93,	T, "ERASE(16)" },
 	/* 94  O               ZBC OUT */
-	{ 0x94,	D, "ZBC OUT" },
-	/* 95  O               ZBC OUT */
-	{ 0x95,	D, "ZBC OUT" },
+	{ 0x94,	ALL, "ZBC OUT" },
+	/* 95  O               ZBC IN */
+	{ 0x95,	ALL, "ZBC IN" },
 	/* 96 */
 	/* 97 */
 	/* 98 */
@@ -517,7 +518,6 @@ static struct op_table_entry scsi_op_codes[] = {
 	/* XXX KDM ALL for this?  op-num.txt defines it for none.. */
 	/* 9E                  SERVICE ACTION IN(16) */
 	{ 0x9E, ALL, "SERVICE ACTION IN(16)" },
-	/* XXX KDM ALL for this?  op-num.txt defines it for ADC.. */
 	/* 9F              M   SERVICE ACTION OUT(16) */
 	{ 0x9F,	ALL, "SERVICE ACTION OUT(16)" },
 	/* A0  MMOOO OMMM OMO  REPORT LUNS */
@@ -642,8 +642,7 @@ scsi_op_desc(u_int16_t opcode, struct scsi_inquiry_data *inq_data)
 
 		match = cam_quirkmatch((caddr_t)inq_data,
 				       (caddr_t)scsi_op_quirk_table,
-				       sizeof(scsi_op_quirk_table)/
-				       sizeof(*scsi_op_quirk_table),
+				       nitems(scsi_op_quirk_table),
 				       sizeof(*scsi_op_quirk_table),
 				       scsi_inquiry_match);
 	}
@@ -652,7 +651,7 @@ scsi_op_desc(u_int16_t opcode, struct scsi_inquiry_data *inq_data)
 		table[0] = ((struct scsi_op_quirk_entry *)match)->op_table;
 		num_ops[0] = ((struct scsi_op_quirk_entry *)match)->num_ops;
 		table[1] = scsi_op_codes;
-		num_ops[1] = sizeof(scsi_op_codes)/sizeof(scsi_op_codes[0]);
+		num_ops[1] = nitems(scsi_op_codes);
 		num_tables = 2;
 	} else {
 		/*	
@@ -663,12 +662,18 @@ scsi_op_desc(u_int16_t opcode, struct scsi_inquiry_data *inq_data)
 			return("Vendor Specific Command");
 
 		table[0] = scsi_op_codes;
-		num_ops[0] = sizeof(scsi_op_codes)/sizeof(scsi_op_codes[0]);
+		num_ops[0] = nitems(scsi_op_codes);
 		num_tables = 1;
 	}
 
 	/* RBC is 'Simplified' Direct Access Device */
 	if (pd_type == T_RBC)
+		pd_type = T_DIRECT;
+
+	/*
+	 * Host managed drives are direct access for the most part.
+	 */
+	if (pd_type == T_ZBC_HM)
 		pd_type = T_DIRECT;
 
 	/* Map NODEVICE to Direct Access Device to handle REPORT LUNS, etc. */
@@ -733,9 +738,6 @@ const struct sense_key_table_entry sense_key_table[] =
 	{ SSD_KEY_MISCOMPARE, SS_NOP, "MISCOMPARE" },
 	{ SSD_KEY_COMPLETED, SS_NOP, "COMPLETED" }
 };
-
-const int sense_key_table_size =
-    sizeof(sense_key_table)/sizeof(sense_key_table[0]);
 
 static struct asc_table_entry quantum_fireball_entries[] = {
 	{ SST(0x04, 0x0b, SS_START | SSQ_DECREMENT_COUNT | ENXIO, 
@@ -921,7 +923,7 @@ static struct scsi_sense_quirk_entry sense_quirk_table[] = {
 		 */
 		{T_DIRECT, SIP_MEDIA_FIXED, "QUANTUM", "FIREBALL S*", "*"},
 		/*num_sense_keys*/0,
-		sizeof(quantum_fireball_entries)/sizeof(struct asc_table_entry),
+		nitems(quantum_fireball_entries),
 		/*sense key entries*/NULL,
 		quantum_fireball_entries
 	},
@@ -932,7 +934,7 @@ static struct scsi_sense_quirk_entry sense_quirk_table[] = {
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "SONY", "SMO-*", "*"},
 		/*num_sense_keys*/0,
-		sizeof(sony_mo_entries)/sizeof(struct asc_table_entry),
+		nitems(sony_mo_entries),
 		/*sense key entries*/NULL,
 		sony_mo_entries
 	},
@@ -942,7 +944,7 @@ static struct scsi_sense_quirk_entry sense_quirk_table[] = {
 		 */
 		{T_DIRECT, SIP_MEDIA_FIXED, "HGST", "*", "*"},
 		/*num_sense_keys*/0,
-		sizeof(hgst_entries)/sizeof(struct asc_table_entry),
+		nitems(hgst_entries),
 		/*sense key entries*/NULL,
 		hgst_entries
 	},
@@ -952,14 +954,13 @@ static struct scsi_sense_quirk_entry sense_quirk_table[] = {
 		 */
 		{T_DIRECT, SIP_MEDIA_FIXED, "SEAGATE", "*", "*"},
 		/*num_sense_keys*/0,
-		sizeof(seagate_entries)/sizeof(struct asc_table_entry),
+		nitems(seagate_entries),
 		/*sense key entries*/NULL,
 		seagate_entries
 	}
 };
 
-const int sense_quirk_table_size =
-    sizeof(sense_quirk_table)/sizeof(sense_quirk_table[0]);
+const u_int sense_quirk_table_size = nitems(sense_quirk_table);
 
 static struct asc_table_entry asc_table[] = {
 	/*
@@ -1109,7 +1110,7 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x04, 0x08, SS_FATAL | EBUSY,
 	    "Logical unit not ready, long write in progress") },
 	/* DTLPWROMAEBKVF */
-	{ SST(0x04, 0x09, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x09, SS_FATAL | EBUSY,
 	    "Logical unit not ready, self-test in progress") },
 	/* DTLPWROMAEBKVF */
 	{ SST(0x04, 0x0A, SS_WAIT | ENXIO,
@@ -1127,46 +1128,46 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x04, 0x0E, SS_RDEF,	/* XXX TBD */
 	    "Logical unit not ready, security session in progress") },
 	/* DT  WROM  B    */
-	{ SST(0x04, 0x10, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x10, SS_FATAL | ENODEV,
 	    "Logical unit not ready, auxiliary memory not accessible") },
 	/* DT  WRO AEB VF */
-	{ SST(0x04, 0x11, SS_WAIT | EBUSY,
+	{ SST(0x04, 0x11, SS_WAIT | ENXIO,
 	    "Logical unit not ready, notify (enable spinup) required") },
 	/*        M    V  */
-	{ SST(0x04, 0x12, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x12, SS_FATAL | ENXIO,
 	    "Logical unit not ready, offline") },
 	/* DT   R MAEBKV  */
-	{ SST(0x04, 0x13, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x13, SS_WAIT | EBUSY,
 	    "Logical unit not ready, SA creation in progress") },
 	/* D         B    */
-	{ SST(0x04, 0x14, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x14, SS_WAIT | ENOSPC,
 	    "Logical unit not ready, space allocation in progress") },
 	/*        M       */
-	{ SST(0x04, 0x15, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x15, SS_FATAL | ENXIO,
 	    "Logical unit not ready, robotics disabled") },
 	/*        M       */
-	{ SST(0x04, 0x16, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x16, SS_FATAL | ENXIO,
 	    "Logical unit not ready, configuration required") },
 	/*        M       */
-	{ SST(0x04, 0x17, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x17, SS_FATAL | ENXIO,
 	    "Logical unit not ready, calibration required") },
 	/*        M       */
-	{ SST(0x04, 0x18, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x18, SS_FATAL | ENXIO,
 	    "Logical unit not ready, a door is open") },
 	/*        M       */
-	{ SST(0x04, 0x19, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x19, SS_FATAL | ENODEV,
 	    "Logical unit not ready, operating in sequential mode") },
 	/* DT        B    */
-	{ SST(0x04, 0x1A, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x1A, SS_WAIT | EBUSY,
 	    "Logical unit not ready, START/STOP UNIT command in progress") },
 	/* D         B    */
-	{ SST(0x04, 0x1B, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x1B, SS_WAIT | EBUSY,
 	    "Logical unit not ready, sanitize in progress") },
 	/* DT     MAEB    */
 	{ SST(0x04, 0x1C, SS_RDEF,	/* XXX TBD */
 	    "Logical unit not ready, additional power use not yet granted") },
 	/* D              */
-	{ SST(0x04, 0x1D, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x1D, SS_WAIT | EBUSY,
 	    "Logical unit not ready, configuration in progress") },
 	/* D              */
 	{ SST(0x04, 0x1E, SS_FATAL | ENXIO,
@@ -1175,14 +1176,20 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x04, 0x1F, SS_FATAL | ENXIO,
 	    "Logical unit not ready, microcode download required") },
 	/* DTLPWROMAEBKVF */
-	{ SST(0x04, 0x20, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x20, SS_FATAL | ENXIO,
 	    "Logical unit not ready, logical unit reset required") },
 	/* DTLPWROMAEBKVF */
-	{ SST(0x04, 0x21, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x21, SS_FATAL | ENXIO,
 	    "Logical unit not ready, hard reset required") },
 	/* DTLPWROMAEBKVF */
-	{ SST(0x04, 0x22, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x22, SS_FATAL | ENXIO,
 	    "Logical unit not ready, power cycle required") },
+	/* D              */
+	{ SST(0x04, 0x23, SS_FATAL | ENXIO,
+	    "Logical unit not ready, affiliation required") },
+	/* D              */
+	{ SST(0x04, 0x24, SS_FATAL | EBUSY,
+	    "Depopulation in progress") },
 	/* DTL WROMAEBKVF */
 	{ SST(0x05, 0x00, SS_RDEF,
 	    "Logical unit does not respond to selection") },
@@ -1451,7 +1458,7 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x11, 0x14, SS_RDEF,	/* XXX TBD */
 	    "Read error - LBA marked bad by application client") },
 	/* D              */
-	{ SST(0x11, 0x15, SS_RDEF,	/* XXX TBD */
+	{ SST(0x11, 0x15, SS_FATAL | EIO,
 	    "Write after sanitize required") },
 	/* D   W O   BK   */
 	{ SST(0x12, 0x00, SS_RDEF,
@@ -2053,7 +2060,7 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x30, 0x13, SS_RDEF,	/* XXX TBD */
 	    "Cleaning volume expired") },
 	/* DT  WRO   BK   */
-	{ SST(0x31, 0x00, SS_RDEF,
+	{ SST(0x31, 0x00, SS_FATAL | ENXIO,
 	    "Medium format corrupted") },
 	/* D L  RO   B    */
 	{ SST(0x31, 0x01, SS_RDEF,
@@ -2062,7 +2069,7 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x31, 0x02, SS_RDEF,	/* XXX TBD */
 	    "Zoned formatting failed due to spare linking") },
 	/* D         B    */
-	{ SST(0x31, 0x03, SS_RDEF,	/* XXX TBD */
+	{ SST(0x31, 0x03, SS_FATAL | EIO,
 	    "SANITIZE command failed") },
 	/* D   W O   BK   */
 	{ SST(0x32, 0x00, SS_RDEF,
@@ -2327,7 +2334,7 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x43, 0x00, SS_RDEF,
 	    "Message error") },
 	/* DTLPWROMAEBKVF */
-	{ SST(0x44, 0x00, SS_RDEF,
+	{ SST(0x44, 0x00, SS_FATAL | EIO,
 	    "Internal target failure") },
 	/* DT P   MAEBKVF */
 	{ SST(0x44, 0x01, SS_RDEF,	/* XXX TBD */
@@ -3201,7 +3208,7 @@ static struct asc_table_entry asc_table[] = {
 	    "Security conflict in translated device") }
 };
 
-const int asc_table_size = sizeof(asc_table)/sizeof(asc_table[0]);
+const u_int asc_table_size = nitems(asc_table);
 
 struct asc_key
 {
@@ -3294,14 +3301,14 @@ fetchtableentries(int sense_key, int asc, int ascq,
 		sense_tables[0] = quirk->sense_key_info;
 		sense_tables_size[0] = quirk->num_sense_keys;
 		sense_tables[1] = sense_key_table;
-		sense_tables_size[1] = sense_key_table_size;
+		sense_tables_size[1] = nitems(sense_key_table);
 		num_sense_tables = 2;
 	} else {
 		asc_tables[0] = asc_table;
 		asc_tables_size[0] = asc_table_size;
 		num_asc_tables = 1;
 		sense_tables[0] = sense_key_table;
-		sense_tables_size[0] = sense_key_table_size;
+		sense_tables_size[0] = nitems(sense_key_table);
 		num_sense_tables = 1;
 	}
 
@@ -3381,7 +3388,7 @@ scsi_error_action(struct ccb_scsiio *csio, struct scsi_inquiry_data *inq_data,
 
 	if (!scsi_extract_sense_ccb((union ccb *)csio,
 	    &error_code, &sense_key, &asc, &ascq)) {
-		action = SS_RETRY | SSQ_DECREMENT_COUNT | SSQ_PRINT_SENSE | EIO;
+		action = SS_RDEF;
 	} else if ((error_code == SSD_DEFERRED_ERROR)
 	 || (error_code == SSD_DESC_DEFERRED_ERROR)) {
 		/*
@@ -3941,7 +3948,7 @@ scsi_set_sense_data_fixed_va(struct scsi_sense_data *sense_data,
 			}
 			if (len > sizeof(sense->cmd_spec_info)) {
 				data += len - sizeof(sense->cmd_spec_info);
-				len -= len - sizeof(sense->cmd_spec_info);
+				len = sizeof(sense->cmd_spec_info);
 			}
 			bcopy(data, &sense->cmd_spec_info[
 			    sizeof(sense->cmd_spec_info) - len], len);
@@ -4059,6 +4066,10 @@ scsi_get_sense_info(struct scsi_sense_data *sense_data, u_int sense_len,
 			struct scsi_sense_info *info_desc;
 
 			info_desc = (struct scsi_sense_info *)desc;
+
+			if ((info_desc->byte2 & SSD_INFO_VALID) == 0)
+				goto bailout;
+
 			*info = scsi_8btou64(info_desc->info);
 			if (signed_info != NULL)
 				*signed_info = *info;
@@ -4078,6 +4089,9 @@ scsi_get_sense_info(struct scsi_sense_data *sense_data, u_int sense_len,
 			struct scsi_sense_fru *fru_desc;
 
 			fru_desc = (struct scsi_sense_fru *)desc;
+
+			if (fru_desc->fru == 0)
+				goto bailout;
 
 			*info = fru_desc->fru;
 			if (signed_info != NULL)
@@ -4179,10 +4193,9 @@ scsi_get_sks(struct scsi_sense_data *sense_data, u_int sense_len, uint8_t *sks)
 		if (desc == NULL)
 			goto bailout;
 
-		/*
-		 * No need to check the SKS valid bit for descriptor sense.
-		 * If the descriptor is present, it is valid.
-		 */
+		if ((desc->sense_key_spec[0] & SSD_SKS_VALID) == 0)
+			goto bailout;
+
 		bcopy(desc->sense_key_spec, sks, sizeof(desc->sense_key_spec));
 		break;
 	}
@@ -4226,6 +4239,7 @@ scsi_get_block_info(struct scsi_sense_data *sense_data, u_int sense_len,
 		switch (SID_TYPE(inq_data)) {
 		case T_DIRECT:
 		case T_RBC:
+		case T_ZBC_HM:
 			break;
 		default:
 			goto bailout;
@@ -4256,9 +4270,6 @@ scsi_get_block_info(struct scsi_sense_data *sense_data, u_int sense_len,
 		sense = (struct scsi_sense_data_fixed *)sense_data;
 
 		if (SSD_FIXED_IS_PRESENT(sense, sense_len, flags) == 0)
-			goto bailout;
-
-		if ((sense->flags & SSD_ILI) == 0)
 			goto bailout;
 
 		*block_bits = sense->flags & SSD_ILI;
@@ -4314,9 +4325,6 @@ scsi_get_stream_info(struct scsi_sense_data *sense_data, u_int sense_len,
 		if (SSD_FIXED_IS_PRESENT(sense, sense_len, flags) == 0)
 			goto bailout;
 
-		if ((sense->flags & (SSD_ILI|SSD_EOM|SSD_FILEMARK)) == 0)
-			goto bailout;
-
 		*stream_bits = sense->flags & (SSD_ILI|SSD_EOM|SSD_FILEMARK);
 		break;
 	}
@@ -4358,8 +4366,6 @@ scsi_progress_sbuf(struct sbuf *sb, uint16_t progress)
 int
 scsi_sks_sbuf(struct sbuf *sb, int sense_key, uint8_t *sks)
 {
-	if ((sks[0] & SSD_SKS_VALID) == 0)
-		return (1);
 
 	switch (sense_key) {
 	case SSD_KEY_ILLEGAL_REQUEST: {
@@ -4456,7 +4462,7 @@ scsi_fru_sbuf(struct sbuf *sb, uint64_t fru)
 }
 
 void
-scsi_stream_sbuf(struct sbuf *sb, uint8_t stream_bits, uint64_t info)
+scsi_stream_sbuf(struct sbuf *sb, uint8_t stream_bits)
 {
 	int need_comma;
 
@@ -4464,6 +4470,7 @@ scsi_stream_sbuf(struct sbuf *sb, uint8_t stream_bits, uint64_t info)
 	/*
 	 * XXX KDM this needs more descriptive decoding.
 	 */
+	sbuf_printf(sb, "Stream Command Sense Data: ");
 	if (stream_bits & SSD_DESC_STREAM_FM) {
 		sbuf_printf(sb, "Filemark");
 		need_comma = 1;
@@ -4476,15 +4483,15 @@ scsi_stream_sbuf(struct sbuf *sb, uint8_t stream_bits, uint64_t info)
 
 	if (stream_bits & SSD_DESC_STREAM_ILI)
 		sbuf_printf(sb, "%sILI", (need_comma) ? "," : "");
-
-	sbuf_printf(sb, ": Info: %#jx", (uintmax_t) info);
 }
 
 void
-scsi_block_sbuf(struct sbuf *sb, uint8_t block_bits, uint64_t info)
+scsi_block_sbuf(struct sbuf *sb, uint8_t block_bits)
 {
+
+	sbuf_printf(sb, "Block Command Sense Data: ");
 	if (block_bits & SSD_DESC_BLOCK_ILI)
-		sbuf_printf(sb, "ILI: residue %#jx", (uintmax_t) info);
+		sbuf_printf(sb, "ILI");
 }
 
 void
@@ -4496,6 +4503,9 @@ scsi_sense_info_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 	struct scsi_sense_info *info;
 
 	info = (struct scsi_sense_info *)header;
+
+	if ((info->byte2 & SSD_INFO_VALID) == 0)
+		return;
 
 	scsi_info_sbuf(sb, cdb, cdb_len, inq_data, scsi_8btou64(info->info));
 }
@@ -4525,6 +4535,9 @@ scsi_sense_sks_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 
 	sks = (struct scsi_sense_sks *)header;
 
+	if ((sks->sense_key_spec[0] & SSD_SKS_VALID) == 0)
+		return;
+
 	scsi_extract_sense_len(sense, sense_len, &error_code, &sense_key,
 			       &asc, &ascq, /*show_errors*/ 1);
 
@@ -4541,6 +4554,9 @@ scsi_sense_fru_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 
 	fru = (struct scsi_sense_fru *)header;
 
+	if (fru->fru == 0)
+		return;
+
 	scsi_fru_sbuf(sb, (uint64_t)fru->fru);
 }
 
@@ -4551,14 +4567,9 @@ scsi_sense_stream_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 		       struct scsi_sense_desc_header *header)
 {
 	struct scsi_sense_stream *stream;
-	uint64_t info;
 
 	stream = (struct scsi_sense_stream *)header;
-	info = 0;
-
-	scsi_get_sense_info(sense, sense_len, SSD_DESC_INFO, &info, NULL);
-
-	scsi_stream_sbuf(sb, stream->byte3, info);
+	scsi_stream_sbuf(sb, stream->byte3);
 }
 
 void
@@ -4568,14 +4579,9 @@ scsi_sense_block_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 		      struct scsi_sense_desc_header *header)
 {
 	struct scsi_sense_block *block;
-	uint64_t info;
 
 	block = (struct scsi_sense_block *)header;
-	info = 0;
-
-	scsi_get_sense_info(sense, sense_len, SSD_DESC_INFO, &info, NULL);
-
-	scsi_block_sbuf(sb, block->byte3, info);
+	scsi_block_sbuf(sb, block->byte3);
 }
 
 void
@@ -4736,10 +4742,9 @@ scsi_sense_desc_sbuf(struct sbuf *sb, struct scsi_sense_data *sense,
 		     struct scsi_inquiry_data *inq_data,
 		     struct scsi_sense_desc_header *header)
 {
-	int i;
+	u_int i;
 
-	for (i = 0; i < (sizeof(scsi_sense_printers) /
-	     sizeof(scsi_sense_printers[0])); i++) {
+	for (i = 0; i < nitems(scsi_sense_printers); i++) {
 		struct scsi_sense_desc_printer *printer;
 
 		printer = &scsi_sense_printers[i];
@@ -4861,7 +4866,7 @@ scsi_sense_only_sbuf(struct scsi_sense_data *sense, u_int sense_len,
 		const char *asc_desc;
 		uint8_t sks[3];
 		uint64_t val;
-		int info_valid;
+		uint8_t bits;
 
 		/*
 		 * Get descriptions for the sense key, ASC, and ASCQ.  If
@@ -4880,42 +4885,28 @@ scsi_sense_only_sbuf(struct scsi_sense_data *sense, u_int sense_len,
 		sbuf_printf(sb, " asc:%x,%x (%s)\n", asc, ascq, asc_desc);
 
 		/*
-		 * Get the info field if it is valid.
+		 * Print any block or stream device-specific information.
+		 */
+		if (scsi_get_block_info(sense, sense_len, inq_data,
+		    &bits) == 0 && bits != 0) {
+			sbuf_cat(sb, path_str);
+			scsi_block_sbuf(sb, bits);
+			sbuf_printf(sb, "\n");
+		} else if (scsi_get_stream_info(sense, sense_len, inq_data,
+		    &bits) == 0 && bits != 0) {
+			sbuf_cat(sb, path_str);
+			scsi_stream_sbuf(sb, bits);
+			sbuf_printf(sb, "\n");
+		}
+
+		/*
+		 * Print the info field.
 		 */
 		if (scsi_get_sense_info(sense, sense_len, SSD_DESC_INFO,
-					&val, NULL) == 0)
-			info_valid = 1;
-		else
-			info_valid = 0;
-
-		if (info_valid != 0) {
-			uint8_t bits;
-
-			/*
-			 * Determine whether we have any block or stream
-			 * device-specific information.
-			 */
-			if (scsi_get_block_info(sense, sense_len, inq_data,
-						&bits) == 0) {
-				sbuf_cat(sb, path_str);
-				scsi_block_sbuf(sb, bits, val);
-				sbuf_printf(sb, "\n");
-			} else if (scsi_get_stream_info(sense, sense_len,
-							inq_data, &bits) == 0) {
-				sbuf_cat(sb, path_str);
-				scsi_stream_sbuf(sb, bits, val);
-				sbuf_printf(sb, "\n");
-			} else if (val != 0) {
-				/*
-				 * The information field can be valid but 0.
-				 * If the block or stream bits aren't set,
-				 * and this is 0, it isn't terribly useful
-				 * to print it out.
-				 */
-				sbuf_cat(sb, path_str);
-				scsi_info_sbuf(sb, cdb, cdb_len, inq_data, val);
-				sbuf_printf(sb, "\n");
-			}
+					&val, NULL) == 0) {
+			sbuf_cat(sb, path_str);
+			scsi_info_sbuf(sb, cdb, cdb_len, inq_data, val);
+			sbuf_printf(sb, "\n");
 		}
 
 		/* 
@@ -5439,6 +5430,9 @@ scsi_print_inquiry(struct scsi_inquiry_data *inq_data)
 	case T_ADC:
 		dtype = "Automation/Drive Interface";
 		break;
+	case T_ZBC_HM:
+		dtype = "Host Managed Zoned Block";
+		break;
 	case T_NODEVICE:
 		dtype = "Uninstalled";
 		break;
@@ -5506,8 +5500,8 @@ static struct {
 u_int
 scsi_calc_syncsrate(u_int period_factor)
 {
-	int i;
-	int num_syncrates;
+	u_int i;
+	u_int num_syncrates;
 
 	/*
 	 * It's a bug if period is zero, but if it is anyway, don't
@@ -5518,7 +5512,7 @@ scsi_calc_syncsrate(u_int period_factor)
 		return (3300);
 	}
 
-	num_syncrates = sizeof(scsi_syncrates) / sizeof(scsi_syncrates[0]);
+	num_syncrates = nitems(scsi_syncrates);
 	/* See if the period is in the "exception" table */
 	for (i = 0; i < num_syncrates; i++) {
 
@@ -5536,21 +5530,21 @@ scsi_calc_syncsrate(u_int period_factor)
 }
 
 /*
- * Return the SCSI sync parameter that corresponsd to
+ * Return the SCSI sync parameter that corresponds to
  * the passed in period in 10ths of ns.
  */
 u_int
 scsi_calc_syncparam(u_int period)
 {
-	int i;
-	int num_syncrates;
+	u_int i;
+	u_int num_syncrates;
 
 	if (period == 0)
 		return (~0);	/* Async */
 
 	/* Adjust for exception table being in 100ths. */
 	period *= 10;
-	num_syncrates = sizeof(scsi_syncrates) / sizeof(scsi_syncrates[0]);
+	num_syncrates = nitems(scsi_syncrates);
 	/* See if the period is in the "exception" table */
 	for (i = 0; i < num_syncrates; i++) {
 
@@ -5572,6 +5566,7 @@ scsi_devid_is_naa_ieee_reg(uint8_t *bufp)
 {
 	struct scsi_vpd_id_descriptor *descr;
 	struct scsi_vpd_id_naa_basic *naa;
+	int n;
 
 	descr = (struct scsi_vpd_id_descriptor *)bufp;
 	naa = (struct scsi_vpd_id_naa_basic *)descr->identifier;
@@ -5579,7 +5574,8 @@ scsi_devid_is_naa_ieee_reg(uint8_t *bufp)
 		return 0;
 	if (descr->length < sizeof(struct scsi_vpd_id_naa_ieee_reg))
 		return 0;
-	if ((naa->naa >> SVPD_ID_NAA_NAA_SHIFT) != SVPD_ID_NAA_IEEE_REG)
+	n = naa->naa >> SVPD_ID_NAA_NAA_SHIFT;
+	if (n != SVPD_ID_NAA_LOCAL_REG && n != SVPD_ID_NAA_IEEE_REG)
 		return 0;
 	return 1;
 }
@@ -6013,7 +6009,7 @@ scsi_parse_transportid_64bit(int proto_id, char *id_str,
 		break;
 	default:
 		if (error_str != NULL) {
-			snprintf(error_str, error_str_len, "%s: unsupoprted "
+			snprintf(error_str, error_str_len, "%s: unsupported "
 				 "protocol %d", __func__, proto_id);
 		}
 		retval = 1;
@@ -6602,7 +6598,8 @@ scsi_parse_transportid(char *transportid_str,
 {
 	char *tmpstr;
 	scsi_nv_status status;
-	int retval, num_proto_entries, table_entry;
+	u_int num_proto_entries;
+	int retval, table_entry;
 
 	retval = 0;
 	table_entry = 0;
@@ -6622,8 +6619,7 @@ scsi_parse_transportid(char *transportid_str,
 		goto bailout;
 	}
 
-	num_proto_entries = sizeof(scsi_proto_map) /
-			    sizeof(scsi_proto_map[0]);
+	num_proto_entries = nitems(scsi_proto_map);
 	status = scsi_get_nv(scsi_proto_map, num_proto_entries, tmpstr,
 			     &table_entry, SCSI_NV_FLAG_IG_CASE);
 	if (status != SCSI_NV_FOUND) {
@@ -7343,8 +7339,7 @@ struct scsi_attrib_table_entry *
 scsi_get_attrib_entry(uint32_t id)
 {
 	return (scsi_find_attrib_entry(scsi_mam_attr_table,
-		sizeof(scsi_mam_attr_table) / sizeof(scsi_mam_attr_table[0]),
-		id));
+	    nitems(scsi_mam_attr_table), id));
 }
 
 int
@@ -7470,19 +7465,16 @@ scsi_attrib_sbuf(struct sbuf *sb, struct scsi_mam_attribute_header *hdr,
 			table1 = user_table;
 			table1_size = num_user_entries;
 			table2 = scsi_mam_attr_table;
-			table2_size = sizeof(scsi_mam_attr_table) /
-				      sizeof(scsi_mam_attr_table[0]);
+			table2_size = nitems(scsi_mam_attr_table);
 		} else {
 			table1 = scsi_mam_attr_table;
-			table1_size = sizeof(scsi_mam_attr_table) /
-				      sizeof(scsi_mam_attr_table[0]);
+			table1_size = nitems(scsi_mam_attr_table);
 			table2 = user_table;
 			table2_size = num_user_entries;
 		}
 	} else {
 		table1 = scsi_mam_attr_table;
-		table1_size = sizeof(scsi_mam_attr_table) /
-			      sizeof(scsi_mam_attr_table[0]);
+		table1_size = nitems(scsi_mam_attr_table);
 	}
 
 	entry = scsi_find_attrib_entry(table1, table1_size, id);
@@ -7962,6 +7954,32 @@ scsi_report_target_group(struct ccb_scsiio *csio, u_int32_t retries,
 }
 
 void
+scsi_report_timestamp(struct ccb_scsiio *csio, u_int32_t retries,
+		 void (*cbfcnp)(struct cam_periph *, union ccb *),
+		 u_int8_t tag_action, u_int8_t pdf,
+		 void *buf, u_int32_t alloc_len,
+		 u_int8_t sense_len, u_int32_t timeout)
+{
+	struct scsi_timestamp *scsi_cmd;
+
+	cam_fill_csio(csio,
+		      retries,
+		      cbfcnp,
+		      /*flags*/CAM_DIR_IN,
+		      tag_action,
+		      /*data_ptr*/(u_int8_t *)buf,
+		      /*dxfer_len*/alloc_len,
+		      sense_len,
+		      sizeof(*scsi_cmd),
+		      timeout);
+	scsi_cmd = (struct scsi_timestamp *)&csio->cdb_io.cdb_bytes;
+	bzero(scsi_cmd, sizeof(*scsi_cmd));
+	scsi_cmd->opcode = MAINTENANCE_IN;
+	scsi_cmd->service_action = REPORT_TIMESTAMP | pdf;
+	scsi_ulto4b(alloc_len, scsi_cmd->length);
+}
+
+void
 scsi_set_target_group(struct ccb_scsiio *csio, u_int32_t retries,
 		 void (*cbfcnp)(struct cam_periph *, union ccb *),
 		 u_int8_t tag_action, void *buf, u_int32_t alloc_len,
@@ -7983,6 +8001,45 @@ scsi_set_target_group(struct ccb_scsiio *csio, u_int32_t retries,
 	bzero(scsi_cmd, sizeof(*scsi_cmd));
 	scsi_cmd->opcode = MAINTENANCE_OUT;
 	scsi_cmd->service_action = SET_TARGET_PORT_GROUPS;
+	scsi_ulto4b(alloc_len, scsi_cmd->length);
+}
+
+void
+scsi_create_timestamp(uint8_t *timestamp_6b_buf,
+		      uint64_t timestamp)
+{
+	uint8_t buf[8];
+	scsi_u64to8b(timestamp, buf);
+	/*
+	 * Using memcopy starting at buf[2] because the set timestamp parameters
+	 * only has six bytes for the timestamp to fit into, and we don't have a
+	 * scsi_u64to6b function.
+	 */
+	memcpy(timestamp_6b_buf, &buf[2], 6);
+}
+
+void
+scsi_set_timestamp(struct ccb_scsiio *csio, u_int32_t retries,
+		   void (*cbfcnp)(struct cam_periph *, union ccb *),
+		   u_int8_t tag_action, void *buf, u_int32_t alloc_len,
+		   u_int8_t sense_len, u_int32_t timeout)
+{
+	struct scsi_timestamp *scsi_cmd;
+
+	cam_fill_csio(csio,
+		      retries,
+		      cbfcnp,
+		      /*flags*/CAM_DIR_OUT,
+		      tag_action,
+		      /*data_ptr*/(u_int8_t *) buf,
+		      /*dxfer_len*/alloc_len,
+		      sense_len,
+		      sizeof(*scsi_cmd),
+		      timeout);
+	scsi_cmd = (struct scsi_timestamp *)&csio->cdb_io.cdb_bytes;
+	bzero(scsi_cmd, sizeof(*scsi_cmd));
+	scsi_cmd->opcode = MAINTENANCE_OUT;
+	scsi_cmd->service_action = SET_TIMESTAMP;
 	scsi_ulto4b(alloc_len, scsi_cmd->length);
 }
 
@@ -8208,23 +8265,30 @@ scsi_ata_identify(struct ccb_scsiio *csio, u_int32_t retries,
 		  u_int16_t dxfer_len, u_int8_t sense_len,
 		  u_int32_t timeout)
 {
-	scsi_ata_pass_16(csio,
-			 retries,
-			 cbfcnp,
-			 /*flags*/CAM_DIR_IN,
-			 tag_action,
-			 /*protocol*/AP_PROTO_PIO_IN,
-			 /*ata_flags*/AP_FLAG_TDIR_FROM_DEV|
-				AP_FLAG_BYT_BLOK_BYTES|AP_FLAG_TLEN_SECT_CNT,
-			 /*features*/0,
-			 /*sector_count*/dxfer_len,
-			 /*lba*/0,
-			 /*command*/ATA_ATA_IDENTIFY,
-			 /*control*/0,
-			 data_ptr,
-			 dxfer_len,
-			 sense_len,
-			 timeout);
+	scsi_ata_pass(csio,
+		      retries,
+		      cbfcnp,
+		      /*flags*/CAM_DIR_IN,
+		      tag_action,
+		      /*protocol*/AP_PROTO_PIO_IN,
+		      /*ata_flags*/AP_FLAG_TDIR_FROM_DEV |
+				   AP_FLAG_BYT_BLOK_BLOCKS |
+				   AP_FLAG_TLEN_SECT_CNT,
+		      /*features*/0,
+		      /*sector_count*/dxfer_len / 512,
+		      /*lba*/0,
+		      /*command*/ATA_ATA_IDENTIFY,
+		      /*device*/ 0,
+		      /*icc*/ 0,
+		      /*auxiliary*/ 0,
+		      /*control*/0,
+		      data_ptr,
+		      dxfer_len,
+		      /*cdb_storage*/ NULL,
+		      /*cdb_storage_len*/ 0,
+		      /*minimum_cmd_size*/ 0,
+		      sense_len,
+		      timeout);
 }
 
 void
@@ -8250,6 +8314,248 @@ scsi_ata_trim(struct ccb_scsiio *csio, u_int32_t retries,
 			 dxfer_len,
 			 sense_len,
 			 timeout);
+}
+
+int
+scsi_ata_read_log(struct ccb_scsiio *csio, uint32_t retries,
+		  void (*cbfcnp)(struct cam_periph *, union ccb *),
+		  uint8_t tag_action, uint32_t log_address,
+		  uint32_t page_number, uint16_t block_count,
+		  uint8_t protocol, uint8_t *data_ptr, uint32_t dxfer_len,
+		  uint8_t sense_len, uint32_t timeout)
+{
+	uint8_t command, protocol_out;
+	uint16_t count_out;
+	uint64_t lba;
+	int retval;
+
+	retval = 0;
+
+	switch (protocol) {
+	case AP_PROTO_DMA:
+		count_out = block_count;
+		command = ATA_READ_LOG_DMA_EXT;
+		protocol_out = AP_PROTO_DMA;
+		break;
+	case AP_PROTO_PIO_IN:
+	default:
+		count_out = block_count;
+		command = ATA_READ_LOG_EXT;
+		protocol_out = AP_PROTO_PIO_IN;
+		break;
+	}
+
+	lba = (((uint64_t)page_number & 0xff00) << 32) |
+	      ((page_number & 0x00ff) << 8) |
+	      (log_address & 0xff);
+
+	protocol_out |= AP_EXTEND;
+
+	retval = scsi_ata_pass(csio,
+			       retries,
+			       cbfcnp,
+			       /*flags*/CAM_DIR_IN,
+			       tag_action,
+			       /*protocol*/ protocol_out,
+			       /*ata_flags*/AP_FLAG_TLEN_SECT_CNT |
+					    AP_FLAG_BYT_BLOK_BLOCKS |
+					    AP_FLAG_TDIR_FROM_DEV,
+			       /*feature*/ 0,
+			       /*sector_count*/ count_out,
+			       /*lba*/ lba,
+			       /*command*/ command,
+			       /*device*/ 0,
+			       /*icc*/ 0,
+			       /*auxiliary*/ 0,
+			       /*control*/0,
+			       data_ptr,
+			       dxfer_len,
+			       /*cdb_storage*/ NULL,
+			       /*cdb_storage_len*/ 0,
+			       /*minimum_cmd_size*/ 0,
+			       sense_len,
+			       timeout);
+
+	return (retval);
+}
+
+/*
+ * Note! This is an unusual CDB building function because it can return
+ * an error in the event that the command in question requires a variable
+ * length CDB, but the caller has not given storage space for one or has not
+ * given enough storage space.  If there is enough space available in the
+ * standard SCSI CCB CDB bytes, we'll prefer that over passed in storage.
+ */
+int
+scsi_ata_pass(struct ccb_scsiio *csio, uint32_t retries,
+	      void (*cbfcnp)(struct cam_periph *, union ccb *),
+	      uint32_t flags, uint8_t tag_action,
+	      uint8_t protocol, uint8_t ata_flags, uint16_t features,
+	      uint16_t sector_count, uint64_t lba, uint8_t command,
+	      uint8_t device, uint8_t icc, uint32_t auxiliary,
+	      uint8_t control, u_int8_t *data_ptr, uint32_t dxfer_len,
+	      uint8_t *cdb_storage, size_t cdb_storage_len,
+	      int minimum_cmd_size, u_int8_t sense_len, u_int32_t timeout)
+{
+	uint32_t cam_flags;
+	uint8_t *cdb_ptr;
+	int cmd_size;
+	int retval;
+	uint8_t cdb_len;
+
+	retval = 0;
+	cam_flags = flags;
+
+	/*
+	 * Round the user's request to the nearest command size that is at
+	 * least as big as what he requested.
+	 */
+	if (minimum_cmd_size <= 12)
+		cmd_size = 12;
+	else if (minimum_cmd_size > 16)
+		cmd_size = 32;
+	else
+		cmd_size = 16;
+
+	/*
+	 * If we have parameters that require a 48-bit ATA command, we have to
+	 * use the 16 byte ATA PASS-THROUGH command at least.
+	 */
+	if (((lba > ATA_MAX_28BIT_LBA) 
+	  || (sector_count > 255)
+	  || (features > 255)
+	  || (protocol & AP_EXTEND))
+	 && ((cmd_size < 16)
+	  || ((protocol & AP_EXTEND) == 0))) {
+		if (cmd_size < 16)
+			cmd_size = 16;
+		protocol |= AP_EXTEND;
+	}
+
+	/*
+	 * The icc and auxiliary ATA registers are only supported in the
+	 * 32-byte version of the ATA PASS-THROUGH command.
+	 */
+	if ((icc != 0)
+	 || (auxiliary != 0)) {
+		cmd_size = 32;
+		protocol |= AP_EXTEND;
+	}
+
+
+	if ((cmd_size > sizeof(csio->cdb_io.cdb_bytes))
+	 && ((cdb_storage == NULL)
+	  || (cdb_storage_len < cmd_size))) {
+		retval = 1;
+		goto bailout;
+	}
+
+	/*
+	 * At this point we know we have enough space to store the command
+	 * in one place or another.  We prefer the built-in array, but used
+	 * the passed in storage if necessary.
+	 */
+	if (cmd_size <= sizeof(csio->cdb_io.cdb_bytes))
+		cdb_ptr = csio->cdb_io.cdb_bytes;
+	else {
+		cdb_ptr = cdb_storage;
+		cam_flags |= CAM_CDB_POINTER;
+	}
+
+	if (cmd_size <= 12) {
+		struct ata_pass_12 *cdb;
+
+		cdb = (struct ata_pass_12 *)cdb_ptr;
+		cdb_len = sizeof(*cdb);
+		bzero(cdb, cdb_len);
+
+		cdb->opcode = ATA_PASS_12;
+		cdb->protocol = protocol;
+		cdb->flags = ata_flags;
+		cdb->features = features;
+		cdb->sector_count = sector_count;
+		cdb->lba_low = lba & 0xff;
+		cdb->lba_mid = (lba >> 8) & 0xff;
+		cdb->lba_high = (lba >> 16) & 0xff;
+		cdb->device = ((lba >> 24) & 0xf) | ATA_DEV_LBA;
+		cdb->command = command;
+		cdb->control = control;
+	} else if (cmd_size <= 16) {
+		struct ata_pass_16 *cdb;
+
+		cdb = (struct ata_pass_16 *)cdb_ptr;
+		cdb_len = sizeof(*cdb);
+		bzero(cdb, cdb_len);
+
+		cdb->opcode = ATA_PASS_16;
+		cdb->protocol = protocol;
+		cdb->flags = ata_flags;
+		cdb->features = features & 0xff;
+		cdb->sector_count = sector_count & 0xff;
+		cdb->lba_low = lba & 0xff;
+		cdb->lba_mid = (lba >> 8) & 0xff;
+		cdb->lba_high = (lba >> 16) & 0xff;
+		/*
+		 * If AP_EXTEND is set, we're sending a 48-bit command.
+		 * Otherwise it's a 28-bit command.
+		 */
+		if (protocol & AP_EXTEND) {
+			cdb->lba_low_ext = (lba >> 24) & 0xff;
+			cdb->lba_mid_ext = (lba >> 32) & 0xff;
+			cdb->lba_high_ext = (lba >> 40) & 0xff;
+			cdb->features_ext = (features >> 8) & 0xff;
+			cdb->sector_count_ext = (sector_count >> 8) & 0xff;
+			cdb->device = device | ATA_DEV_LBA;
+		} else {
+			cdb->lba_low_ext = (lba >> 24) & 0xf;
+			cdb->device = ((lba >> 24) & 0xf) | ATA_DEV_LBA;
+		}
+		cdb->command = command;
+		cdb->control = control;
+	} else {
+		struct ata_pass_32 *cdb;
+		uint8_t tmp_lba[8];
+
+		cdb = (struct ata_pass_32 *)cdb_ptr;
+		cdb_len = sizeof(*cdb);
+		bzero(cdb, cdb_len);
+		cdb->opcode = VARIABLE_LEN_CDB;
+		cdb->control = control;
+		cdb->length = sizeof(*cdb) - __offsetof(struct ata_pass_32,
+							service_action);
+		scsi_ulto2b(ATA_PASS_32_SA, cdb->service_action);
+		cdb->protocol = protocol;
+		cdb->flags = ata_flags;
+
+		if ((protocol & AP_EXTEND) == 0) {
+			lba &= 0x0fffffff;
+			cdb->device = ((lba >> 24) & 0xf) | ATA_DEV_LBA;
+			features &= 0xff;
+			sector_count &= 0xff;
+		} else {
+			cdb->device = device | ATA_DEV_LBA;
+		}
+		scsi_u64to8b(lba, tmp_lba);
+		bcopy(&tmp_lba[2], cdb->lba, sizeof(cdb->lba));
+		scsi_ulto2b(features, cdb->features);
+		scsi_ulto2b(sector_count, cdb->count);
+		cdb->command = command;
+		cdb->icc = icc;
+		scsi_ulto4b(auxiliary, cdb->auxiliary);
+	}
+
+	cam_fill_csio(csio,
+		      retries,
+		      cbfcnp,
+		      cam_flags,
+		      tag_action,
+		      data_ptr,
+		      dxfer_len,
+		      sense_len,
+		      cmd_size,
+		      timeout);
+bailout:
+	return (retval);
 }
 
 void

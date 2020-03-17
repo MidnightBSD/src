@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_sdma.c 283500 2015-05-24 18:59:45Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_sdma.c 318118 2017-05-09 21:25:49Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_sdma.c 283500 2015-05-2
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
+#include <vm/pmap.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
@@ -56,7 +56,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_sdma.c 283500 2015-05-2
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
@@ -353,7 +352,7 @@ sdma_configure(int chn, struct sdma_conf *conf)
 static int
 load_firmware(struct sdma_softc *sc)
 {
-	struct sdma_firmware_header *header;
+	const struct sdma_firmware_header *header;
 	const struct firmware *fp;
 
 	fp = firmware_get("sdma_fw");
@@ -362,14 +361,14 @@ load_firmware(struct sdma_softc *sc)
 		return (-1);
 	}
 
-	header = (struct sdma_firmware_header *)fp->data;
+	header = fp->data;
 	if (header->magic != FW_HEADER_MAGIC) {
 		device_printf(sc->dev, "Can't use firmware.\n");
 		return (-1);
 	}
 
 	sc->fw_header = header;
-	sc->fw_scripts = (void *)((char *)header +
+	sc->fw_scripts = (const void *)((const char *)header +
 				header->script_addrs_start);
 
 	return (0);
@@ -379,14 +378,14 @@ static int
 boot_firmware(struct sdma_softc *sc)
 {
 	struct sdma_buffer_descriptor *bd0;
-	uint32_t *ram_code;
+	const uint32_t *ram_code;
 	int timeout;
 	int ret;
 	int chn;
 	int sz;
 	int i;
 
-	ram_code = (void *)((char *)sc->fw_header +
+	ram_code = (const void *)((const char *)sc->fw_header +
 			sc->fw_header->ram_code_start);
 
 	/* Make sure SDMA has not started yet */
@@ -445,7 +444,7 @@ boot_firmware(struct sdma_softc *sc)
 		if (timeout-- <= 0)
 			break;
 		DELAY(10);
-	};
+	}
 
 	if (ret == 0) {
 		device_printf(sc->dev, "SDMA failed to boot\n");
@@ -516,4 +515,5 @@ static driver_t sdma_driver = {
 
 static devclass_t sdma_devclass;
 
-DRIVER_MODULE(sdma, simplebus, sdma_driver, sdma_devclass, 0, 0);
+EARLY_DRIVER_MODULE(sdma, simplebus, sdma_driver, sdma_devclass, 0, 0,
+    BUS_PASS_RESOURCE);

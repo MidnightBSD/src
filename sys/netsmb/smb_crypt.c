@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001, Boris Popov
  * All rights reserved.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_crypt.c 161523 2006-08-22 03:05:51Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_crypt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>

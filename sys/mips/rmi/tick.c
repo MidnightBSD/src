@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Bruce M. Simpson.
  * Copyright (c) 2003-2004 Juli Mallett.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/tick.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/tick.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -312,9 +311,6 @@ static int
 clock_probe(device_t dev)
 {
 
-	if (device_get_unit(dev) != 0)
-		panic("can't attach more clocks");
-
 	device_set_desc(dev, "Generic MIPS32 ticker");
 	return (BUS_PROBE_NOWILDCARD);
 }
@@ -330,6 +326,9 @@ static int
 clock_attach(device_t dev)
 {
 	struct clock_softc *sc;
+
+	if (device_get_unit(dev) != 0)
+		panic("can't attach more clocks");
 
 	softc = sc = device_get_softc(dev);
 	cpu_establish_hardintr("compare", clock_intr, NULL,

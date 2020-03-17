@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_ha.c 312587 2017-01-21 08:43:41Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_ha.c 312586 2017-01-21 08:43:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -357,7 +356,7 @@ ctl_ha_send(struct ha_softc *softc)
 			printf("%s: sosend() error %d\n", __func__, error);
 			return;
 		}
-	};
+	}
 }
 
 static void

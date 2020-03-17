@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Berndt Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_mcireg.h 234560 2012-04-22 00:43:32Z marius $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_mcireg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef ARM_AT91_AT91_MCIREG_H
 #define ARM_AT91_AT91_MCIREG_H
@@ -118,6 +117,30 @@
 #define	MCI_SR_DTOE     (0x1u << 22) /* (MCI) Data timeout Error flag */
 #define	MCI_SR_OVRE     (0x1u << 30) /* (MCI) Overrun flag */
 #define	MCI_SR_UNRE     (0x1u << 31) /* (MCI) Underrun flag */
+
+/*	TXRDY,DTIP,ENDTX,TXBUFE,RTOE */
+
+#define MCI_SR_BITSTRING \
+	"\020" \
+	"\001CMDRDY" \
+	"\002RXRDY" \
+	"\003TXRDY" \
+	"\004BLKE" \
+	"\005DTIP" \
+	"\006NOTBUSY" \
+	"\007ENDRX" \
+	"\010ENDTX" \
+	"\017RXBUFF" \
+	"\020TXBUFE" \
+	"\021RINDE" \
+	"\022RDIRE" \
+	"\023RCRCE" \
+	"\024RENDE" \
+	"\025RTOE" \
+	"\026DCRCE" \
+	"\027DTOE" \
+	"\037OVRE" \
+	"\040UNRE"
 
 /* -------- MCI_IER : (MCI Offset: 0x44) MCI Interrupt Enable Register --------  */
 /* -------- MCI_IDR : (MCI Offset: 0x48) MCI Interrupt Disable Register --------  */

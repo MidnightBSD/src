@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bus_space_asm_generic.S,v 1.3 2003/03/27 19:46:14 mycroft Exp $	*/
 
 /*-
@@ -37,8 +36,7 @@
  */
 
 #include <machine/asm.h>
-#include <machine/cpuconf.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/bus_space_asm_generic.S 278727 2015-02-13 22:32:02Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/bus_space_asm_generic.S 314530 2017-03-02 01:18:46Z ian $");
 
 /*
  * Generic bus_space functions.

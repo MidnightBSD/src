@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2004 by Peter Grehan. All rights reserved.
  *
@@ -27,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/ata_kauai.c 256857 2013-10-21 19:11:15Z andreast $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/ata_kauai.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Mac 'Kauai' PCI ATA controller

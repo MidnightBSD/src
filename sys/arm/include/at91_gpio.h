@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2006 M. Warner Losh. All rights reserved.
  * Copyright (C) 2012 Ian Lepore. All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/at91_gpio.h 248911 2013-03-29 19:52:57Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/at91_gpio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARM_AT91_GPIO_H

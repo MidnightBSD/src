@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013 M. Warner Losh. All Rights Reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/elf.h 294459 2016-01-20 21:06:24Z emaste $
+ * $FreeBSD: stable/11/sys/mips/include/elf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*-
@@ -145,8 +144,11 @@ __ElfType(Auxinfo);
 #define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
 #define	AT_TIMEKEEP	22	/* Pointer to timehands. */
 #define	AT_STACKPROT	23	/* Initial stack protection. */
+#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
+#define	AT_HWCAP	25	/* CPU feature flags. */
+#define	AT_HWCAP2	26	/* CPU feature flags 2. */
 
-#define	AT_COUNT	24	/* Count of defined aux entry types. */
+#define	AT_COUNT	27	/* Count of defined aux entry types. */
 
 #define	ET_DYN_LOAD_ADDR 0x0120000
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon.  All rights reserved.
  * Copyright (c) 2010 Greg Ansley.  All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91sam9g20reg.h 266277 2014-05-17 00:53:12Z ian $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91sam9g20reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef AT91SAM9G20REG_H_
 #define AT91SAM9G20REG_H_
@@ -166,7 +165,7 @@
  * 8: USART 2
  * 9: MMC Interface
  * 10: USB device port
- * 11: Two-wirte interface
+ * 11: Two-wire interface
  * 12: SPI 0
  * 13: SPI 1
  * 14: SSC

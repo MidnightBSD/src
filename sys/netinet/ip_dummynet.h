@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2010 Luigi Rizzo, Universita` di Pisa
  * Portions Copyright (c) 2000 Akamba Corp.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/ip_dummynet.h 301772 2016-06-10 00:00:25Z truckman $
+ * $FreeBSD: stable/11/sys/netinet/ip_dummynet.h 300779 2016-05-26 21:40:13Z truckman $
  */
 
 #ifndef _IP_DUMMYNET_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/imx/imx6_sdma.h 283500 2015-05-24 18:59:45Z ian $
+ * $FreeBSD: stable/11/sys/arm/freescale/imx/imx6_sdma.h 318118 2017-05-09 21:25:49Z gonzo $
  */
 
 #define	SDMAARM_MC0PTR		0x00	/* ARM platform Channel 0 Pointer */
@@ -222,8 +221,8 @@ struct sdma_softc {
 	uint32_t			num_bd;
 	uint32_t			ccb_phys;
 	uint32_t			context_phys;
-	struct sdma_firmware_header	*fw_header;
-	struct sdma_script_start_addrs	*fw_scripts;
+	const struct sdma_firmware_header	*fw_header;
+	const struct sdma_script_start_addrs	*fw_scripts;
 };
 
 struct sdma_conf {

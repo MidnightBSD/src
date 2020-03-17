@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012 Damjan Marion <dmarion@freebsd.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_systimer.c 266207 2014-05-16 02:21:51Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_systimer.c 331894 2018-04-02 23:30:21Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +41,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_systimer.c 266207
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
+#include <machine/machdep.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
@@ -49,11 +49,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_systimer.c 266207
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #define	BCM2835_NUM_TIMERS	4
 
 #define	DEFAULT_TIMER		3
+#define	DEFAULT_TIMER_NAME	"BCM2835-3"
 #define	DEFAULT_FREQUENCY	1000000
 #define	MIN_PERIOD		5LLU
 
@@ -102,8 +102,10 @@ static struct bcm_systimer_softc *bcm_systimer_sc = NULL;
 
 static unsigned bcm_systimer_tc_get_timecount(struct timecounter *);
 
+static delay_func bcm_systimer_delay;
+
 static struct timecounter bcm_systimer_tc = {
-	.tc_name           = "BCM2835 Timecounter",
+	.tc_name           = DEFAULT_TIMER_NAME,
 	.tc_get_timecount  = bcm_systimer_tc_get_timecount,
 	.tc_poll_pps       = NULL,
 	.tc_counter_mask   = ~0u,
@@ -114,6 +116,9 @@ static struct timecounter bcm_systimer_tc = {
 static unsigned
 bcm_systimer_tc_get_timecount(struct timecounter *tc)
 {
+	if (bcm_systimer_sc == NULL)
+		return (0);
+
 	return bcm_systimer_tc_read_4(SYSTIMER_CLO);
 }
 
@@ -148,7 +153,7 @@ restart:
 		intr_restore(s);
 
 		return (0);
-	} 
+	}
 
 	return (EINVAL);
 }
@@ -168,7 +173,7 @@ bcm_systimer_intr(void *arg)
 	struct systimer *st = (struct systimer *)arg;
 	uint32_t cs;
 
- 	cs = bcm_systimer_tc_read_4(SYSTIMER_CS);
+	cs = bcm_systimer_tc_read_4(SYSTIMER_CS);
 	if ((cs & (1 << st->index)) == 0)
 		return (FILTER_STRAY);
 
@@ -240,8 +245,7 @@ bcm_systimer_attach(device_t dev)
 
 	sc->st[DEFAULT_TIMER].index = DEFAULT_TIMER;
 	sc->st[DEFAULT_TIMER].enabled = 0;
-	sc->st[DEFAULT_TIMER].et.et_name = malloc(64, M_DEVBUF, M_NOWAIT | M_ZERO);
-	sprintf(sc->st[DEFAULT_TIMER].et.et_name, "BCM2835 Event Timer %d", DEFAULT_TIMER);
+	sc->st[DEFAULT_TIMER].et.et_name = DEFAULT_TIMER_NAME;
 	sc->st[DEFAULT_TIMER].et.et_flags = ET_FLAGS_ONESHOT;
 	sc->st[DEFAULT_TIMER].et.et_quality = 1000;
 	sc->st[DEFAULT_TIMER].et.et_frequency = sc->sysclk_freq;
@@ -255,6 +259,9 @@ bcm_systimer_attach(device_t dev)
 	et_register(&sc->st[DEFAULT_TIMER].et);
 
 	bcm_systimer_sc = sc;
+
+	if (device_get_unit(dev) == 0)
+		arm_set_delay(bcm_systimer_delay, sc);
 
 	bcm_systimer_tc.tc_frequency = DEFAULT_FREQUENCY;
 	tc_init(&bcm_systimer_tc);
@@ -278,19 +285,14 @@ static devclass_t bcm_systimer_devclass;
 
 DRIVER_MODULE(bcm_systimer, simplebus, bcm_systimer_driver, bcm_systimer_devclass, 0, 0);
 
-void
-DELAY(int usec)
+static void
+bcm_systimer_delay(int usec, void *arg)
 {
+	struct bcm_systimer_softc *sc;
 	int32_t counts;
 	uint32_t first, last;
 
-	if (bcm_systimer_sc == NULL) {
-		for (; usec > 0; usec--)
-			for (counts = 200; counts > 0; counts--)
-				/* Prevent gcc from optimizing  out the loop */
-				cpufunc_nullop();
-		return;
-	}
+	sc = (struct bcm_systimer_softc *) arg;
 
 	/* Get the number of times to count */
 	counts = usec * (bcm_systimer_tc.tc_frequency / 1000000) + 1;

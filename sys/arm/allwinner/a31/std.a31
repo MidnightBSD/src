@@ -1,5 +1,5 @@
 # Allwinner A31 common options
-# $MidnightBSD$
+#$FreeBSD: stable/11/sys/arm/allwinner/a31/std.a31 298422 2016-04-21 16:49:04Z jmcneill $
 
 cpu		CPU_CORTEXA
 machine 	arm armv6

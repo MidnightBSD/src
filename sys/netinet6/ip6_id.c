@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003 WIDE Project.
  * All rights reserved.
@@ -68,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_id.c 327550 2018-01-04 15:57:49Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet6/ip6_id.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * seed = random (bits - 1) bit
@@ -98,6 +97,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_id.c 327550 2018-01-04 15:57:49Z 
 
 #include <net/if.h>
 #include <net/route.h>
+#include <net/vnet.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
@@ -108,7 +108,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet6/ip6_id.c 327550 2018-01-04 15:57:49Z 
 
 struct randomtab {
 	const int	ru_bits; /* resulting bits */
-	const long	ru_out;	/* Time after wich will be reseeded */
+	const long	ru_out;	/* Time after which will be reseeded */
 	const u_int32_t ru_max;	/* Uniq cycle, avoid blackjack prediction */
 	const u_int32_t ru_gen;	/* Starting generator */
 	const u_int32_t ru_n;	/* ru_n: prime, ru_n - 1: product of pfacts[] */
@@ -128,7 +128,7 @@ struct randomtab {
 
 static struct randomtab randomtab_32 = {
 	32,			/* resulting bits */
-	180,			/* Time after wich will be reseeded */
+	180,			/* Time after which will be reseeded */
 	1000000000,		/* Uniq cycle, avoid blackjack prediction */
 	2,			/* Starting generator */
 	2147483629,		/* RU_N-1 = 2^2*3^2*59652323 */
@@ -139,7 +139,7 @@ static struct randomtab randomtab_32 = {
 
 static struct randomtab randomtab_20 = {
 	20,			/* resulting bits */
-	180,			/* Time after wich will be reseeded */
+	180,			/* Time after which will be reseeded */
 	200000,			/* Uniq cycle, avoid blackjack prediction */
 	2,			/* Starting generator */
 	524269,			/* RU_N-1 = 2^2*3^2*14563 */

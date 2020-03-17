@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * pvdrivers.h: Register of PV drivers product numbers.
  * Copyright (c) 2012, Citrix Systems Inc.

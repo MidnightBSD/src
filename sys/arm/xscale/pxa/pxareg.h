@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: pxa2x0reg.h,v 1.9 2006/04/10 04:13:58 simonb Exp $ */
 
 /*

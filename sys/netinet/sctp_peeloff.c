@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_peeloff.c 283724 2015-05-29 12:54:30Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_peeloff.c 347165 2019-05-05 20:08:01Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -73,7 +72,7 @@ sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
 		SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_PEELOFF, ENOENT);
 		return (ENOENT);
 	}
-	state = SCTP_GET_STATE((&stcb->asoc));
+	state = SCTP_GET_STATE(stcb);
 	if ((state == SCTP_STATE_EMPTY) ||
 	    (state == SCTP_STATE_INUSE)) {
 		SCTP_TCB_UNLOCK(stcb);
@@ -102,13 +101,15 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, ENOTCONN);
 		return (ENOTCONN);
 	}
-	state = SCTP_GET_STATE((&stcb->asoc));
+
+	state = SCTP_GET_STATE(stcb);
 	if ((state == SCTP_STATE_EMPTY) ||
 	    (state == SCTP_STATE_INUSE)) {
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, ENOTCONN);
 		return (ENOTCONN);
 	}
+
 	n_inp = (struct sctp_inpcb *)so->so_pcb;
 	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 	    SCTP_PCB_FLAGS_CONNECTED |

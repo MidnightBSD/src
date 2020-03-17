@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Octeon Crypto for OCF
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/cryptocteon/cryptocteon.c 210312 2010-07-20 19:32:25Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/cryptocteon/cryptocteon.c 210312 2010-07-20 19:32:25Z jmallett $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

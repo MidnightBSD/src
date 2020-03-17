@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/cam/scsi/scsi_low.h 311402 2017-01-05 11:20:31Z mav $	*/
+/*	$FreeBSD: stable/11/sys/cam/scsi/scsi_low.h 298810 2016-04-29 21:05:48Z pfg $	*/
 /*	$NecBSD: scsi_low.h,v 1.24.10.5 2001/06/26 07:31:46 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -45,10 +44,6 @@
 #ifndef	_SCSI_LOW_H_
 #define	_SCSI_LOW_H_
 
-/*================================================
- * Scsi low OSDEP 
- * (All os depend structures should be here!)
- ================================================*/
 /******** includes *******************************/
 
 #include <sys/bus.h>
@@ -66,51 +61,8 @@
 
 #undef	MSG_IDENTIFY
 
-/******** os depend interface structures **********/
-typedef	struct scsi_sense_data scsi_low_osdep_sense_data_t;
-
-struct scsi_low_osdep_interface {
-	device_t si_dev;
-
-	struct cam_sim *sim;
-	struct cam_path *path;
-
-	int si_poll_count;
-
-	struct callout_handle engage_ch;
-	struct callout_handle timeout_ch;
-#ifdef	SCSI_LOW_POWFUNC
-	struct callout_handle recover_ch;
-#endif
-};
-
-/******** os depend interface functions *************/
-struct slccb;
-struct scsi_low_softc;
-#define	SCSI_LOW_TIMEOUT_STOP		0
-#define	SCSI_LOW_TIMEOUT_START		1
-#define	SCSI_LOW_TIMEOUT_CH_IO		0
-#define	SCSI_LOW_TIMEOUT_CH_ENGAGE	1
-#define	SCSI_LOW_TIMEOUT_CH_RECOVER	2
-
-struct scsi_low_osdep_funcs {
-	int (*scsi_low_osdep_attach) \
-			(struct scsi_low_softc *);
-	int (*scsi_low_osdep_world_start) \
-			(struct scsi_low_softc *);
-	int (*scsi_low_osdep_dettach) \
-			(struct scsi_low_softc *);
-	int (*scsi_low_osdep_ccb_setup) \
-			(struct scsi_low_softc *, struct slccb *);
-	int (*scsi_low_osdep_done) \
-			(struct scsi_low_softc *, struct slccb *);
-	void (*scsi_low_osdep_timeout) \
-			(struct scsi_low_softc *, int, int);
-};
-
 /*================================================
  * Generic Scsi Low header file 
- * (All os depend structures should be above!)
  ================================================*/
 /*************************************************
  * Scsi low definitions
@@ -230,7 +182,7 @@ struct slccb {
 	 * Sense data buffer
 	 *****************************************/
 	u_int8_t ccb_scsi_cmd[12];
-	scsi_low_osdep_sense_data_t ccb_sense;
+	struct scsi_sense_data ccb_sense;
 };
 
 /*************************************************
@@ -487,10 +439,19 @@ struct scsi_low_funcs {
 };
 
 struct scsi_low_softc {
-	/* os depend structure */
-	struct scsi_low_osdep_interface sl_si;
-#define	sl_dev	sl_si.si_dev
-	struct scsi_low_osdep_funcs *sl_osdep_fp;
+	device_t sl_dev;
+
+	struct cam_sim *sl_sim;
+	struct cam_path *sl_path;
+
+	int sl_poll_count;
+
+	struct mtx sl_lock;
+	struct callout sl_engage_timer;
+	struct callout sl_timeout_timer;
+#ifdef	SCSI_LOW_POWFUNC
+	struct callout sl_recover_timer;
+#endif
 				
 	/* our chain */
 	LIST_ENTRY(scsi_low_softc) sl_chain;
@@ -597,6 +558,10 @@ struct scsi_low_softc {
 	int sl_targsize;
 };
 
+#define	SCSI_LOW_LOCK(sl)		mtx_lock(&(sl)->sl_lock)
+#define	SCSI_LOW_UNLOCK(sl)		mtx_unlock(&(sl)->sl_lock)
+#define	SCSI_LOW_ASSERT_LOCKED(sl)	mtx_assert(&(sl)->sl_lock, MA_OWNED)
+
 /*************************************************
  * SCSI LOW service functions
  *************************************************/
@@ -604,7 +569,7 @@ struct scsi_low_softc {
  * Scsi low attachment function.
  */
 int scsi_low_attach(struct scsi_low_softc *, int, int, int, int, int);
-int scsi_low_dettach(struct scsi_low_softc *);
+int scsi_low_detach(struct scsi_low_softc *);
 
 /* 
  * Scsi low interface activate or deactivate functions

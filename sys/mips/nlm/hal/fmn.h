@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -27,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/10/sys/mips/nlm/hal/fmn.h 227783 2011-11-21 08:12:36Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/hal/fmn.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __NLM_FMNV2_H__
@@ -95,7 +94,7 @@
 /* Each XLP chip can hold upto 32K messages on the chip itself */
 #define	CMS_ON_CHIP_MESG_SPACE	(32*1024)
 #define	CMS_MAX_ONCHIP_SEGMENTS	1024
-#define	CMS_MAX_SPILL_SEGMENTS_PER_QUEUE 	64
+#define	CMS_MAX_SPILL_SEGMENTS_PER_QUEUE	64
 
 /* FMN Network error */
 #define	CMS_ILLEGAL_DST_ERROR		0x100

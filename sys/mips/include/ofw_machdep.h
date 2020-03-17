@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/ofw_machdep.h 226496 2011-10-18 07:29:21Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/include/ofw_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_
@@ -33,7 +32,6 @@
 #include <sys/types.h>
 #include <sys/rman.h>
 #include <sys/bus.h>
-#include <dev/ofw/openfirm.h>
 
 typedef	uint32_t	cell_t;
 struct mem_region {
@@ -41,8 +39,6 @@ struct mem_region {
 	vm_size_t	mr_size;
 };
 
-
-int  OF_decode_addr(phandle_t, int, bus_space_tag_t *, bus_space_handle_t *);
 void OF_getetheraddr(device_t dev, u_char *addr);
 void OF_initial_setup(void *fdt_ptr, void *junk, int (*openfirm)(void *));
 

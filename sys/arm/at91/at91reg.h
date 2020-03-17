@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Greg Ansley  All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/arm/at91/at91reg.h 238331 2012-07-10 02:39:03Z imp $
+ * $FreeBSD: stable/11/sys/arm/at91/at91reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _AT91REG_H_
@@ -40,9 +39,9 @@
 #define	AT91_PA_BASE		0xf0000000
 
 /* A few things that we count on being the same
- * throught the whole family of SOCs */
+ * throughout the whole family of SOCs */
 
-/* SYSC System Controler */
+/* SYSC System Controller */
 /* System Registers */
 #define	AT91_SYS_BASE	0xffff000
 #define	AT91_SYS_SIZE	0x1000

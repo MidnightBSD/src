@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Codel/FQ_Codel and PIE/FQ-PIE Code:
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netpfil/ipfw/ip_dummynet.c 318155 2017-05-10 20:46:59Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_dummynet.c 318154 2017-05-10 20:46:55Z marius $");
 
 /*
  * Configuration and internal object management for dummynet.
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netpfil/ipfw/ip_dummynet.c 318155 2017-05-10 2
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/rwlock.h>
@@ -94,7 +94,7 @@ dummynet(void *arg)
 {
 
 	(void)arg;	/* UNUSED */
-	taskqueue_enqueue_fast(dn_tq, &dn_task);
+	taskqueue_enqueue(dn_tq, &dn_task);
 }
 
 void
@@ -1974,7 +1974,7 @@ dummynet_flush(void)
  * with an oid which is at least a dn_id.
  * - the first object is the command (config, delete, flush, ...)
  * - config_link must be issued after the corresponding config_sched
- * - parameters (DN_TXT) for an object must preceed the object
+ * - parameters (DN_TXT) for an object must precede the object
  *   processed on a config_sched.
  */
 int
@@ -2679,10 +2679,10 @@ static moduledata_t dummynet_mod = {
 	"dummynet", dummynet_modevent, NULL
 };
 
-#define	DN_SI_SUB	SI_SUB_PROTO_IFATTACHDOMAIN
+#define	DN_SI_SUB	SI_SUB_PROTO_FIREWALL
 #define	DN_MODEV_ORD	(SI_ORDER_ANY - 128) /* after ipfw */
 DECLARE_MODULE(dummynet, dummynet_mod, DN_SI_SUB, DN_MODEV_ORD);
-MODULE_DEPEND(dummynet, ipfw, 2, 2, 2);
+MODULE_DEPEND(dummynet, ipfw, 3, 3, 3);
 MODULE_VERSION(dummynet, 3);
 
 /*

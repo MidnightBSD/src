@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/opencrypto/skipjack.h 139825 2005-01-07 02:29:27Z imp $	*/
+/*	$FreeBSD: stable/11/sys/opencrypto/skipjack.h 292963 2015-12-30 22:43:07Z allanjude $	*/
 /*	$OpenBSD: skipjack.h,v 1.3 2002/03/14 01:26:51 millert Exp $	*/
 
 /*-
@@ -15,6 +14,11 @@
  * 29 May 1998
 */
 
+#ifndef _SKIPJACK_H_
+#define _SKIPJACK_H_
+
 extern void skipjack_forwards(u_int8_t *plain, u_int8_t *cipher, u_int8_t **key);
 extern void skipjack_backwards(u_int8_t *cipher, u_int8_t *plain, u_int8_t **key);
 extern void subkey_table_gen(u_int8_t *key, u_int8_t **key_tables);
+
+#endif

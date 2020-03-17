@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91var.h 266087 2014-05-14 20:31:54Z ian $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91var.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _AT91VAR_H_
 #define _AT91VAR_H_
@@ -169,5 +168,6 @@ void at91_add_child(device_t dev, int prio, const char *name, int unit,
 extern uint32_t at91_irq_system;
 extern uint32_t at91_master_clock;
 void at91_pmc_init_clock(void);
+void at91_soc_id(void);
 
 #endif /* _AT91VAR_H_ */

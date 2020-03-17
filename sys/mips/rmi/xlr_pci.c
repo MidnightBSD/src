@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * RMI_BSD */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/xlr_pci.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/xlr_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -126,16 +125,12 @@ xlr_pci_init_resources(void)
 	    || rman_manage_region(&irq_rman, 0, 255))
 		panic("pci_init_resources irq_rman");
 
-	port_rman.rm_start = 0;
-	port_rman.rm_end = ~0ul;
 	port_rman.rm_type = RMAN_ARRAY;
 	port_rman.rm_descr = "I/O ports";
 	if (rman_init(&port_rman)
 	    || rman_manage_region(&port_rman, 0x10000000, 0x1fffffff))
 		panic("pci_init_resources port_rman");
 
-	mem_rman.rm_start = 0;
-	mem_rman.rm_end = ~0ul;
 	mem_rman.rm_type = RMAN_ARRAY;
 	mem_rman.rm_descr = "I/O memory";
 	if (rman_init(&mem_rman)
@@ -307,7 +302,7 @@ xlr_pcib_attach(device_t dev)
 		    0xff, 0x7fffffff, 0, NULL, NULL, &sc->sc_pci_dmat) != 0)
 			panic("%s: bus_dma_tag_create failed", __func__);
 	}
-	device_add_child(dev, "pci", 0);
+	device_add_child(dev, "pci", -1);
 	bus_generic_attach(dev);
 	return (0);
 }
@@ -469,7 +464,7 @@ mips_platform_pci_setup_intr(device_t dev, device_t child,
 	if (error)
 		return error;
 	if (rman_get_start(irq) != rman_get_end(irq)) {
-		device_printf(dev, "Interrupt allocation %lu != %lu\n",
+		device_printf(dev, "Interrupt allocation %ju != %ju\n",
 		    rman_get_start(irq), rman_get_end(irq));
 		return (EINVAL);
 	}
@@ -517,7 +512,7 @@ mips_platform_pci_teardown_intr(device_t dev, device_t child,
 
 static struct resource *
 xlr_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-	u_long start, u_long end, u_long count, u_int flags)
+	rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct rman *rm;
 	struct resource *rv;
@@ -542,7 +537,7 @@ xlr_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	}
 
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
-	if (rv == 0)
+	if (rv == NULL)
 		return (0);
 
 	rman_set_rid(rv, *rid);

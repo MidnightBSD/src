@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Common functions for SCSI Interface Modules (SIMs).
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/cam_sim.c 316499 2017-04-04 18:01:35Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/cam_sim.c 316498 2017-04-04 17:59:10Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

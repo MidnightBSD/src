@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Olivier Houchard.  All rights reserved.
  *
@@ -25,7 +24,7 @@
 
 
 /*
- * $FreeBSD: stable/10/sys/arm/ti/ti_smc.h 239281 2012-08-15 06:31:32Z gonzo $
+ * $FreeBSD: stable/11/sys/arm/ti/ti_smc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef TI_SMC_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/metadata.h 217290 2011-01-11 22:07:39Z marcel $
+ * $FreeBSD: stable/11/sys/arm/include/metadata.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_METADATA_H_
@@ -32,5 +31,27 @@
 
 #define	MODINFOMD_BOOTINFO	0x1001
 #define	MODINFOMD_DTBP		0x1002
+#define	MODINFOMD_EFI_MAP	0x1003
+
+struct efi_map_header {
+	uint64_t	memory_size;
+	uint64_t	descriptor_size;
+	uint32_t	descriptor_version;
+};
+
+/*
+ * Placeholder for now
+ */
+struct efi_fb {
+	uint64_t	fb_addr;
+	uint64_t	fb_size;
+	uint32_t	fb_height;
+	uint32_t	fb_width;
+	uint32_t	fb_stride;
+	uint32_t	fb_mask_red;
+	uint32_t	fb_mask_green;
+	uint32_t	fb_mask_blue;
+	uint32_t	fb_mask_reserved;
+};
 
 #endif /* !_MACHINE_METADATA_H_ */

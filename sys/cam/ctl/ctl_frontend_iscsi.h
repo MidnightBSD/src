@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_frontend_iscsi.h 279003 2015-02-19 14:33:46Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_frontend_iscsi.h 332622 2018-04-16 17:24:33Z trasz $
  */
 
 #ifndef CTL_FRONTEND_ISCSI_H
@@ -60,6 +59,7 @@ struct cfiscsi_data_wait {
 	size_t				cdw_sg_len;
 	uint32_t			cdw_r2t_end;
 	uint32_t			cdw_datasn;
+	void				*cdw_icl_prv;
 };
 
 #define CFISCSI_SESSION_STATE_INVALID		0
@@ -83,9 +83,11 @@ struct cfiscsi_session {
 	int				cs_timeout;
 	struct cv			cs_maintenance_cv;
 	bool				cs_terminating;
+	bool				cs_handoff_in_progress;
 	bool				cs_tasks_aborted;
 	size_t				cs_max_data_segment_length;
 	size_t				cs_max_burst_length;
+	size_t				cs_first_burst_length;
 	bool				cs_immediate_data;
 	char				cs_initiator_name[CTL_ISCSI_NAME_LEN];
 	char				cs_initiator_addr[CTL_ISCSI_ADDR_LEN];

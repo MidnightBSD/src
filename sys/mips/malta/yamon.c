@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2008 Bruce M. Simpson
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/malta/yamon.c 254944 2013-08-27 01:08:55Z gonzo $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/malta/yamon.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

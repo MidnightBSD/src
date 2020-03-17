@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2013 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/pseries/phyp_vscsi.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/pseries/phyp_vscsi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -291,7 +290,8 @@ vscsi_attach(device_t dev)
 	mtx_init(&sc->io_lock, "vscsi", NULL, MTX_DEF);
 
 	/* Get properties */
-	OF_getprop(ofw_bus_get_node(dev), "reg", &sc->unit, sizeof(sc->unit));
+	OF_getencprop(ofw_bus_get_node(dev), "reg", &sc->unit,
+	    sizeof(sc->unit));
 
 	/* Setup interrupt */
 	sc->irqid = 0;
@@ -427,7 +427,7 @@ vscsi_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->target_sprt = 0;
 		cpi->hba_eng_cnt = 0;
 		cpi->max_target = 0;
-		cpi->max_lun = ~(lun_id_t)(0);
+		cpi->max_lun = 0;
 		cpi->initiator_id = ~0;
 		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "IBM", HBA_IDLEN);
@@ -932,10 +932,11 @@ vscsi_check_response_queue(struct vscsi_softc *sc)
 
 	mtx_assert(&sc->io_lock, MA_OWNED);
 
-	phyp_hcall(H_VIO_SIGNAL, sc->unit, 0);
-	bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_POSTREAD);
-
 	while (sc->crq_queue[sc->cur_crq].valid != 0) {
+		/* The hypercalls at both ends of this are not optimal */
+		phyp_hcall(H_VIO_SIGNAL, sc->unit, 0);
+		bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_POSTREAD);
+
 		crq = &sc->crq_queue[sc->cur_crq];
 
 		switch (crq->valid) {
@@ -984,9 +985,9 @@ vscsi_check_response_queue(struct vscsi_softc *sc)
 
 		crq->valid = 0;
 		sc->cur_crq = (sc->cur_crq + 1) % sc->n_crqs;
-	};
 
-	bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_PREWRITE);
-	phyp_hcall(H_VIO_SIGNAL, sc->unit, 1);
+		bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_PREWRITE);
+		phyp_hcall(H_VIO_SIGNAL, sc->unit, 1);
+	}
 }
 

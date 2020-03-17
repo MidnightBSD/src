@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_bridge.h
  */
@@ -38,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_bridge.h 207680 2010-05-05 22:06:05Z zec $
+ * $FreeBSD: stable/11/sys/netgraph/ng_bridge.h 207680 2010-05-05 22:06:05Z zec $
  */
 
 #ifndef _NETGRAPH_NG_BRIDGE_H_

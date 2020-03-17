@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-mv88e61xx.h 213346 2010-10-02 05:43:17Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/cavium/octe/ethernet-mv88e61xx.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_CAVIUM_OCTE_ETHERNET_MV88E61XX_H_

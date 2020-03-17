@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (C) 2013-2014 Daisuke Aoyama <aoyama@peach.ne.jp>
+ * Copyright (C) 2013-2015 Daisuke Aoyama <aoyama@peach.ne.jp>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_cpufreq.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_cpufreq.c 347070 2019-05-03 23:02:55Z peterj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,22 +65,29 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_cpufreq.c 322724 
 #define DPRINTF(fmt, ...)
 #endif
 
-#define HZ2MHZ(freq) ((freq) / (1000 * 1000))
-#define MHZ2HZ(freq) ((freq) * (1000 * 1000))
-#define OFFSET2MVOLT(val) (1200 + ((val) * 25))
-#define MVOLT2OFFSET(val) (((val) - 1200) / 25)
+#define	HZ2MHZ(freq) ((freq) / (1000 * 1000))
+#define	MHZ2HZ(freq) ((freq) * (1000 * 1000))
 
-#define DEFAULT_ARM_FREQUENCY	 700
-#define DEFAULT_CORE_FREQUENCY	 250
-#define DEFAULT_SDRAM_FREQUENCY	 400
-#define DEFAULT_LOWEST_FREQ	 300
-#define TRANSITION_LATENCY	1000
-#define MIN_OVER_VOLTAGE	 -16
-#define MAX_OVER_VOLTAGE	   6
-#define MSG_ERROR	  -999999999
-#define MHZSTEP			 100
-#define HZSTEP	   (MHZ2HZ(MHZSTEP))
-#define	TZ_ZEROC		2732
+#ifdef SOC_BCM2835
+#define	OFFSET2MVOLT(val) (1200 + ((val) * 25))
+#define	MVOLT2OFFSET(val) (((val) - 1200) / 25)
+#define	DEFAULT_ARM_FREQUENCY	 700
+#define	DEFAULT_LOWEST_FREQ	 300
+#else
+#define	OFFSET2MVOLT(val) (((val) / 1000))
+#define	MVOLT2OFFSET(val) (((val) * 1000))
+#define	DEFAULT_ARM_FREQUENCY	 600
+#define	DEFAULT_LOWEST_FREQ	 600
+#endif
+#define	DEFAULT_CORE_FREQUENCY	 250
+#define	DEFAULT_SDRAM_FREQUENCY	 400
+#define	TRANSITION_LATENCY	1000
+#define	MIN_OVER_VOLTAGE	 -16
+#define	MAX_OVER_VOLTAGE	   6
+#define	MSG_ERROR	  -999999999
+#define	MHZSTEP			 100
+#define	HZSTEP	   (MHZ2HZ(MHZSTEP))
+#define	TZ_ZEROC		2731
 
 #define VC_LOCK(sc) do {			\
 		sema_wait(&vc_sema);		\
@@ -122,6 +128,8 @@ static struct ofw_compat_data compat_data[] = {
 	{ "broadcom,bcm2835-vc",	1 },
 	{ "broadcom,bcm2708-vc",	1 },
 	{ "brcm,bcm2709",	1 },
+	{ "brcm,bcm2835",	1 },
+	{ "brcm,bcm2836",	1 },
 	{ NULL, 0 }
 };
 
@@ -1272,7 +1280,10 @@ static int
 bcm2835_cpufreq_probe(device_t dev)
 {
 
+	if (device_get_unit(dev) != 0)
+		return (ENXIO);
 	device_set_desc(dev, "CPU Frequency Control");
+
 	return (0);
 }
 
@@ -1537,6 +1548,7 @@ bcm2835_cpufreq_make_freq_list(device_t dev, struct cf_setting *sets,
 		if (min_freq > cpufreq_lowest_freq)
 			min_freq = cpufreq_lowest_freq;
 
+#ifdef SOC_BCM2835
 	/* from freq to min_freq */
 	for (idx = 0; idx < *count && freq >= min_freq; idx++) {
 		if (freq > sc->arm_min_freq)
@@ -1549,7 +1561,24 @@ bcm2835_cpufreq_make_freq_list(device_t dev, struct cf_setting *sets,
 		sets[idx].dev = dev;
 		freq -= MHZSTEP;
 	}
-	*count = ++idx;
+#else
+	/* XXX RPi2 have only 900/600MHz */
+	idx = 0;
+	volts = sc->min_voltage_core;
+	sets[idx].freq = freq;
+	sets[idx].volts = volts;
+	sets[idx].lat = TRANSITION_LATENCY;
+	sets[idx].dev = dev;
+	idx++;
+	if (freq != min_freq) {
+		sets[idx].freq = min_freq;
+		sets[idx].volts = volts;
+		sets[idx].lat = TRANSITION_LATENCY;
+		sets[idx].dev = dev;
+		idx++;
+	}
+#endif
+	*count = idx;
 
 	return (0);
 }

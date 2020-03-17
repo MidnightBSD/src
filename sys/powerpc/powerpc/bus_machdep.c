@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Semihalf, Rafal Jaworowski <raj@semihalf.com>
  * Copyright (c) 1996, 1997, 1998 The NetBSD Foundation, Inc.
@@ -16,13 +15,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -38,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/bus_machdep.c 265996 2014-05-14 00:51:26Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/bus_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define	KTR_BE_IO	0
 #define	KTR_LE_IO	0

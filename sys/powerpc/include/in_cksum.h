@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -11,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +29,7 @@
  *	from tahoe:	in_cksum.c	1.2	86/01/05
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
- * $FreeBSD: stable/10/sys/powerpc/include/in_cksum.h 235941 2012-05-24 22:00:48Z bz $
+ * $FreeBSD: stable/11/sys/powerpc/include/in_cksum.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: imx51_ccmvar.h,v 1.1 2012/04/17 09:33:31 bsh Exp $	*/
 /*
  * Copyright (c) 2012  Genetec Corporation.  All rights reserved.
@@ -54,7 +53,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/imx/imx51_ccmvar.h 250357 2013-05-08 09:42:50Z ray $
+ * $FreeBSD: stable/11/sys/arm/freescale/imx/imx51_ccmvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_ARM_IMX_IMX51_CCMVAR_H_

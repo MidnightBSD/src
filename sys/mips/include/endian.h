@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1991 Regents of the University of California.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)endian.h	7.8 (Berkeley) 4/3/91
- * $FreeBSD: stable/10/sys/mips/include/endian.h 211159 2010-08-11 02:28:39Z neel $
+ * $FreeBSD: stable/11/sys/mips/include/endian.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_ENDIAN_H_

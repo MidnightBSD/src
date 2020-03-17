@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Gallon Sylvestre.  All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/arm/at91/at91_wdtreg.h 236989 2012-06-13 04:52:19Z imp $
+ * $FreeBSD: stable/11/sys/arm/at91/at91_wdtreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef ARM_AT91_AT91WDTREG_H

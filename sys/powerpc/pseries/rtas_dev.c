@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/pseries/rtas_dev.c 266160 2014-05-15 17:30:16Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/pseries/rtas_dev.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -30,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: signal.h,v 1.4 1998/09/14 02:48:34 thorpej Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/signal.h 149337 2005-08-20 16:44:41Z stefanf $
+ * $FreeBSD: stable/11/sys/powerpc/include/signal.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_SIGNAL_H_

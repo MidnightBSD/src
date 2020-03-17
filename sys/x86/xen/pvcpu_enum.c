@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * Copyright (c) 2013 Roger Pau Monné <roger.pau@citrix.com>

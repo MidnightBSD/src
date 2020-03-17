@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon.  All rights reserved.
  * Copyright (c) 2010 Greg Ansley.  All rights reserved.
@@ -26,7 +25,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91sam9x5reg.h 238922 2012-07-30 21:30:43Z imp $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91sam9x5reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef AT91SAM9X5REG_H_
 #define AT91SAM9X5REG_H_
@@ -152,9 +151,9 @@
  * 6: USART 1
  * 7: USART 2
  * 8: USART 3
- * 9: Two-wirte interface
- * 10: Two-wirte interface
- * 11: Two-wirte interface
+ * 9: Two-wire interface
+ * 10: Two-wire interface
+ * 11: Two-wire interface
  * 12: HSMCI Interface
  * 13: SPI 0
  * 14: SPI 1

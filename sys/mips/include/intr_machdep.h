@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
@@ -24,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/intr_machdep.h 228982 2011-12-30 03:54:22Z marcel $
+ * $FreeBSD: stable/11/sys/mips/include/intr_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_
 #define	_MACHINE_INTR_MACHDEP_H_
 
+#include <sys/vmmeter.h>
 #include <machine/atomic.h>
 
 #if defined(CPU_RMI) || defined(CPU_NLM)
@@ -71,5 +71,6 @@ mips_intrcnt_inc(mips_intrcnt_t counter)
 {
 	if (counter)
 		atomic_add_long(counter, 1);
+	PCPU_INC(cnt.v_intr);
 }
 #endif /* !_MACHINE_INTR_MACHDEP_H_ */

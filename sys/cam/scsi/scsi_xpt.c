@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of the SCSI Transport
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_xpt.c 311402 2017-01-05 11:20:31Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_xpt.c 351754 2019-09-03 16:24:44Z mav $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -41,7 +40,6 @@ __FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_xpt.c 311402 2017-01-05 11:20:31
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 #include <sys/md5.h>
-#include <sys/interrupt.h>
 #include <sys/sbuf.h>
 
 #include <sys/lock.h>
@@ -79,9 +77,8 @@ struct scsi_quirk_entry {
 #define SCSI_QUIRK(dev)	((struct scsi_quirk_entry *)((dev)->quirk))
 
 static int cam_srch_hi = 0;
-TUNABLE_INT("kern.cam.cam_srch_hi", &cam_srch_hi);
 static int sysctl_cam_search_luns(SYSCTL_HANDLER_ARGS);
-SYSCTL_PROC(_kern_cam, OID_AUTO, cam_srch_hi, CTLTYPE_INT|CTLFLAG_RW, 0, 0,
+SYSCTL_PROC(_kern_cam, OID_AUTO, cam_srch_hi, CTLTYPE_INT | CTLFLAG_RWTUN, 0, 0,
     sysctl_cam_search_luns, "I",
     "allow search above LUN 7 for SCSI3 and greater devices");
 
@@ -102,10 +99,8 @@ SYSCTL_PROC(_kern_cam, OID_AUTO, cam_srch_hi, CTLTYPE_INT|CTLFLAG_RW, 0, 0,
 		(lval) |=  (lp)->luns[(i)].lundata[1];			\
 	}
 #define	CAM_GET_LUN(lp, i, lval)					\
-	(lval) = scsi_4btoul((lp)->luns[(i)].lundata);			\
-	(lval) = ((lval) >> 16) | ((lval) << 16);
-#define CAM_LUN_ONLY_32BITS(lp, i)				\
-	(scsi_4btoul(&((lp)->luns[(i)].lundata[4])) == 0)
+	(lval) = scsi_8btou64((lp)->luns[(i)].lundata);			\
+	(lval) = CAM_EXTLUN_BYTE_SWIZZLE(lval);
 
 /*
  * If we're not quirked to search <= the first 8 luns
@@ -551,6 +546,14 @@ static struct scsi_quirk_entry scsi_quirk_table[] =
 		CAM_QUIRK_NORPTLUNS, /*mintags*/2, /*maxtags*/255
 	},
 	{
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "Generic", "STORAGE DEVICE*", "120?" },
+		CAM_QUIRK_NORPTLUNS, /*mintags*/2, /*maxtags*/255
+	},
+	{
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "Generic", "MassStorageClass", "1533" },
+		CAM_QUIRK_NORPTLUNS, /*mintags*/2, /*maxtags*/255
+	},
+	{
 		/* Default tagged queuing parameters for all devices */
 		{
 		  T_ANY, SIP_MEDIA_REMOVABLE|SIP_MEDIA_FIXED,
@@ -559,9 +562,6 @@ static struct scsi_quirk_entry scsi_quirk_table[] =
 		/*quirks*/0, /*mintags*/2, /*maxtags*/255
 	},
 };
-
-static const int scsi_quirk_table_size =
-	sizeof(scsi_quirk_table) / sizeof(*scsi_quirk_table);
 
 static cam_status	proberegister(struct cam_periph *periph,
 				      void *arg);
@@ -596,19 +596,45 @@ static void	 scsi_dev_async(u_int32_t async_code,
 				void *async_arg);
 static void	 scsi_action(union ccb *start_ccb);
 static void	 scsi_announce_periph(struct cam_periph *periph);
+static void	 scsi_proto_announce(struct cam_ed *device);
+static void	 scsi_proto_denounce(struct cam_ed *device);
+static void	 scsi_proto_debug_out(union ccb *ccb);
 
-static struct xpt_xport scsi_xport = {
+static struct xpt_xport_ops scsi_xport_ops = {
 	.alloc_device = scsi_alloc_device,
 	.action = scsi_action,
 	.async = scsi_dev_async,
 	.announce = scsi_announce_periph,
 };
+#define SCSI_XPT_XPORT(x, X)			\
+static struct xpt_xport scsi_xport_ ## x = {	\
+	.xport = XPORT_ ## X,			\
+	.name = #x,				\
+	.ops = &scsi_xport_ops,			\
+};						\
+CAM_XPT_XPORT(scsi_xport_ ## x);
 
-struct xpt_xport *
-scsi_get_xport(void)
-{
-	return (&scsi_xport);
-}
+SCSI_XPT_XPORT(spi, SPI);
+SCSI_XPT_XPORT(sas, SAS);
+SCSI_XPT_XPORT(fc, FC);
+SCSI_XPT_XPORT(usb, USB);
+SCSI_XPT_XPORT(iscsi, ISCSI);
+SCSI_XPT_XPORT(srp, SRP);
+SCSI_XPT_XPORT(ppb, PPB);
+
+#undef SCSI_XPORT_XPORT
+
+static struct xpt_proto_ops scsi_proto_ops = {
+	.announce = scsi_proto_announce,
+	.denounce = scsi_proto_denounce,
+	.debug_out = scsi_proto_debug_out,
+};
+static struct xpt_proto scsi_proto = {
+	.proto = PROTO_SCSI,
+	.name = "scsi",
+	.ops = &scsi_proto_ops,
+};
+CAM_XPT_PROTO(scsi_proto);
 
 static void
 probe_periph_init()
@@ -671,9 +697,7 @@ probeschedule(struct cam_periph *periph)
 	softc = (probe_softc *)periph->softc;
 	ccb = (union ccb *)TAILQ_FIRST(&softc->request_ccbs);
 
-	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NONE);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, periph->path);
 
 	/*
 	 * If a device has gone away and another device, or the same one,
@@ -1135,6 +1159,7 @@ probedone(struct cam_periph *periph, union ccb *done_ccb)
 	softc = (probe_softc *)periph->softc;
 	path = done_ccb->ccb_h.path;
 	priority = done_ccb->ccb_h.pinfo.priority;
+	cam_periph_assert(periph, MA_OWNED);
 
 	switch (softc->action) {
 	case PROBE_TUR:
@@ -1352,6 +1377,12 @@ out:
 			probe_purge_old(path, lp, softc->flags);
 			lp = NULL;
 		}
+		/* The processing above should either exit via a `goto
+		 * out` or leave the `lp` variable `NULL` and (if
+		 * applicable) `free()` the storage to which it had
+		 * pointed. Assert here that is the case.
+		 */
+		KASSERT(lp == NULL, ("%s: lp is not NULL", __func__));
 		inq_buf = &path->device->inq_data;
 		if (path->device->flags & CAM_DEV_INQUIRY_DATA_VALID &&
 		    (SID_QUAL(inq_buf) == SID_QUAL_LU_CONNECTED ||
@@ -1364,9 +1395,6 @@ out:
 			xpt_release_ccb(done_ccb);
 			xpt_schedule(periph, priority);
 			goto out;
-		}
-		if (lp) {
-			free(lp, M_CAMXPT);
 		}
 		PROBE_SET_ACTION(softc, PROBE_INVALID);
 		xpt_release_ccb(done_ccb);
@@ -1566,13 +1594,22 @@ probe_device_check:
 				(u_int8_t *)malloc((serial_buf->length + 1),
 						   M_CAMXPT, M_NOWAIT);
 			if (path->device->serial_num != NULL) {
+				int start, slen;
+
+				start = strspn(serial_buf->serial_num, " ");
+				slen = serial_buf->length - start;
+				if (slen <= 0) {
+					/*
+					 * SPC5r05 says that an all-space serial
+					 * number means no product serial number
+					 * is available
+					 */
+					slen = 0;
+				}
 				memcpy(path->device->serial_num,
-				       serial_buf->serial_num,
-				       serial_buf->length);
-				path->device->serial_num_len =
-				    serial_buf->length;
-				path->device->serial_num[serial_buf->length]
-				    = '\0';
+				       &serial_buf->serial_num[start], slen);
+				path->device->serial_num_len = slen;
+				path->device->serial_num[slen] = '\0';
 			}
 		} else if (cam_periph_error(done_ccb, 0,
 					    SF_RETRY_UA|SF_NO_PRINT,
@@ -1598,8 +1635,8 @@ probe_device_check:
 				  sizeof(struct scsi_inquiry_data));
 
 			if (have_serialnum)
-				MD5Update(&context, serial_buf->serial_num,
-					  serial_buf->length);
+				MD5Update(&context, path->device->serial_num,
+					  path->device->serial_num_len);
 
 			MD5Final(digest, &context);
 			if (bcmp(softc->digest, digest, 16) == 0)
@@ -1644,8 +1681,9 @@ probe_device_check:
 	case PROBE_TUR_FOR_NEGOTIATION:
 	case PROBE_DV_EXIT:
 		if (cam_ccb_status(done_ccb) != CAM_REQ_CMP) {
-			cam_periph_error(done_ccb, 0,
-			    SF_NO_PRINT | SF_NO_RECOVERY | SF_NO_RETRY, NULL);
+			if (cam_periph_error(done_ccb, 0, SF_NO_PRINT |
+			    SF_NO_RECOVERY | SF_NO_RETRY, NULL) == ERESTART)
+				goto outr;
 		}
 		if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1695,8 +1733,9 @@ probe_device_check:
 		struct ccb_scsiio *csio;
 
 		if (cam_ccb_status(done_ccb) != CAM_REQ_CMP) {
-			cam_periph_error(done_ccb, 0,
-			    SF_NO_PRINT | SF_NO_RECOVERY | SF_NO_RETRY, NULL);
+			if (cam_periph_error(done_ccb, 0, SF_NO_PRINT |
+			    SF_NO_RECOVERY | SF_NO_RETRY, NULL) == ERESTART)
+				goto outr;
 		}
 		if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1828,8 +1867,6 @@ probe_purge_old(struct cam_path *path, struct scsi_report_luns_data *new,
 				continue;
 			CAM_GET_SIMPLE_LUN(old, idx1, this_lun);
 		}
-		if (!CAM_LUN_ONLY_32BITS(old, idx1))
-			continue;
 
 		if (xpt_create_path(&tp, NULL, xpt_path_path_id(path),
 		    xpt_path_target_id(path), this_lun) == CAM_REQ_CMP) {
@@ -1854,8 +1891,7 @@ scsi_find_quirk(struct cam_ed *device)
 
 	match = cam_quirkmatch((caddr_t)&device->inq_data,
 			       (caddr_t)scsi_quirk_table,
-			       sizeof(scsi_quirk_table) /
-			       sizeof(*scsi_quirk_table),
+			       nitems(scsi_quirk_table),
 			       sizeof(*scsi_quirk_table), scsi_inquiry_match);
 
 	if (match == NULL)
@@ -2079,7 +2115,7 @@ scsi_scan_bus(struct cam_periph *periph, union ccb *request_ccb)
 			CAM_GET_LUN(target->luns, 0, first);
 			if (first == 0 && scan_info->lunindex[target_id] == 0) {
 				scan_info->lunindex[target_id]++;
-			} 
+			}
 
 			/*
 			 * Skip any LUNs that the HBA can't deal with.
@@ -2092,10 +2128,6 @@ scsi_scan_bus(struct cam_periph *periph, union ccb *request_ccb)
 					break;
 				}
 
-				/* XXX print warning? */
-				if (!CAM_LUN_ONLY_32BITS(target->luns,
-				    scan_info->lunindex[target_id]))
-					continue;
 				if (CAM_CAN_GET_SIMPLE_LUN(target->luns,
 				    scan_info->lunindex[target_id])) {
 					CAM_GET_SIMPLE_LUN(target->luns,
@@ -2377,7 +2409,7 @@ scsi_alloc_device(struct cam_eb *bus, struct cam_et *target, lun_id_t lun_id)
 	 * Take the default quirk entry until we have inquiry
 	 * data and can determine a better quirk to use.
 	 */
-	quirk = &scsi_quirk_table[scsi_quirk_table_size - 1];
+	quirk = &scsi_quirk_table[nitems(scsi_quirk_table) - 1];
 	device->quirk = (void *)quirk;
 	device->mintags = quirk->mintags;
 	device->maxtags = quirk->maxtags;
@@ -2480,6 +2512,7 @@ scsi_dev_advinfo(union ccb *start_ccb)
 	struct ccb_dev_advinfo *cdai;
 	off_t amt;
 
+	xpt_path_assert(start_ccb->ccb_h.path, MA_OWNED);
 	start_ccb->ccb_h.status = CAM_REQ_INVALID;
 	device = start_ccb->ccb_h.path->device;
 	cdai = &start_ccb->cdai;
@@ -2511,8 +2544,8 @@ scsi_dev_advinfo(union ccb *start_ccb)
 			if (device->physpath != NULL) {
 				free(device->physpath, M_CAMXPT);
 				device->physpath = NULL;
+				device->physpath_len = 0;
 			}
-			device->physpath_len = cdai->bufsiz;
 			/* Clear existing buffer if zero length */
 			if (cdai->bufsiz == 0)
 				break;
@@ -2521,6 +2554,7 @@ scsi_dev_advinfo(union ccb *start_ccb)
 				start_ccb->ccb_h.status = CAM_REQ_ABORTED;
 				return;
 			}
+			device->physpath_len = cdai->bufsiz;
 			memcpy(device->physpath, cdai->buf, cdai->bufsiz);
 		} else {
 			cdai->provsiz = device->physpath_len;
@@ -2567,7 +2601,7 @@ scsi_dev_advinfo(union ccb *start_ccb)
 		 * We fetch extended inquiry data during probe, if
 		 * available.  We don't allow changing it.
 		 */
-		if (cdai->flags & CDAI_FLAG_STORE) 
+		if (cdai->flags & CDAI_FLAG_STORE)
 			return;
 		cdai->provsiz = device->ext_inq_len;
 		if (device->ext_inq_len == 0)
@@ -2959,7 +2993,7 @@ scsi_dev_async(u_int32_t async_code, struct cam_eb *bus, struct cam_et *target,
 		 */
 		if (async_code == AC_SENT_BDR
 		 || async_code == AC_BUS_RESET) {
-			cam_freeze_devq(&newpath); 
+			cam_freeze_devq(&newpath);
 			cam_release_devq(&newpath,
 				RELSIM_RELEASE_AFTER_TIMEOUT,
 				/*reduction*/0,
@@ -3019,7 +3053,7 @@ scsi_announce_periph(struct cam_periph *periph)
 	xpt_setup_ccb(&cpi.ccb_h, path, CAM_PRIORITY_NORMAL);
 	cpi.ccb_h.func_code = XPT_PATH_INQ;
 	xpt_action((union ccb *)&cpi);
-	/* Report connection speed */ 
+	/* Report connection speed */
 	speed = cpi.base_transfer_speed;
 	freq = 0;
 	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_SPI) {
@@ -3094,3 +3128,30 @@ scsi_announce_periph(struct cam_periph *periph)
 	printf("\n");
 }
 
+static void
+scsi_proto_announce(struct cam_ed *device)
+{
+	scsi_print_inquiry(&device->inq_data);
+}
+
+static void
+scsi_proto_denounce(struct cam_ed *device)
+{
+	scsi_print_inquiry_short(&device->inq_data);
+}
+
+static void
+scsi_proto_debug_out(union ccb *ccb)
+{
+	char cdb_str[(SCSI_MAX_CDBLEN * 3) + 1];
+	struct cam_ed *device;
+
+	if (ccb->ccb_h.func_code != XPT_SCSI_IO)
+		return;
+
+	device = ccb->ccb_h.path->device;
+	CAM_DEBUG(ccb->ccb_h.path,
+	    CAM_DEBUG_CDB,("%s. CDB: %s\n",
+		scsi_op_desc(ccb->csio.cdb_io.cdb_bytes[0], &device->inq_data),
+		scsi_cdb_string(ccb->csio.cdb_io.cdb_bytes, cdb_str, sizeof(cdb_str))));
+}

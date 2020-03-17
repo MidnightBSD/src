@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_frame_relay.c
  */
@@ -38,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_frame_relay.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_frame_relay.c 298813 2016-04-29 21:25:05Z pfg $
  * $Whistle: ng_frame_relay.c,v 1.20 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -148,6 +147,8 @@ static struct ng_type typestruct = {
 	.disconnect =	ngfrm_disconnect,
 };
 NETGRAPH_INIT(framerelay, &typestruct);
+
+#define ERROUT(x)		do { error = (x); goto done; } while (0)
 
 /*
  * Given a DLCI, return the index of the  context table entry for it,
@@ -336,10 +337,8 @@ ngfrm_rcvdata(hook_p hook, item_p item)
 	char   *data;
 
 	/* Data doesn't come in from just anywhere (e.g debug hook) */
-	if (ctxp == NULL) {
-		error = ENETDOWN;
-		goto bad;
-	}
+	if (ctxp == NULL)
+		ERROUT(ENETDOWN);
 
 	/* If coming from downstream, decode it to a channel */
 	dlci = ctxp->dlci;
@@ -352,24 +351,20 @@ ngfrm_rcvdata(hook_p hook, item_p item)
 
 	/* If there is no live channel, throw it away */
 	if ((sc->downstream.hook == NULL)
-	    || ((ctxp->flags & CHAN_ACTIVE) == 0)) {
-		error = ENETDOWN;
-		goto bad;
-	}
+	    || ((ctxp->flags & CHAN_ACTIVE) == 0))
+		ERROUT(ENETDOWN);
 
 	/* Store the DLCI on the front of the packet */
 	alen = sc->addrlen;
 	if (alen == 0)
 		alen = 2;	/* default value for transmit */
 	M_PREPEND(m, alen, M_NOWAIT);
-	if (m == NULL) {
-		error = ENOBUFS;
-		goto bad;
-	}
+	if (m == NULL)
+		ERROUT(ENOBUFS);
 	data = mtod(m, char *);
 
 	/*
-	 * Shift the lowest bits into the address field untill we are done.
+	 * Shift the lowest bits into the address field until we are done.
 	 * First byte is MSBits of addr so work backwards.
 	 */
 	switch (alen) {
@@ -402,7 +397,7 @@ ngfrm_rcvdata(hook_p hook, item_p item)
 	NG_FWD_NEW_DATA(error, item, sc->downstream.hook, m);
 	return (error);
 
-bad:
+done:
 	NG_FREE_ITEM(item);
 	NG_FREE_M(m);
 	return (error);
@@ -423,10 +418,8 @@ ngfrm_decode(node_p node, item_p item)
 	struct mbuf *m;
 
 	NGI_GET_M(item, m);
-	if (m->m_len < 4 && (m = m_pullup(m, 4)) == NULL) {
-		error = ENOBUFS;
-		goto out;
-	}
+	if (m->m_len < 4 && (m = m_pullup(m, 4)) == NULL)
+		ERROUT(ENOBUFS);
 	data = mtod(m, char *);
 	if ((alen = sc->addrlen) == 0) {
 		sc->addrlen = alen = ngfrm_addrlen(data);
@@ -448,14 +441,11 @@ ngfrm_decode(node_p node, item_p item)
 		SHIFTIN(makeup + 3, data[3], dlci);
 		break;
 	default:
-		error = EINVAL;
-		goto out;
+		ERROUT(EINVAL);
 	}
 
-	if (dlci > 1023) {
-		error = EINVAL;
-		goto out;
-	}
+	if (dlci > 1023)
+		ERROUT(EINVAL);
 	ctxnum = sc->ALT[dlci];
 	if ((ctxnum & CTX_VALID) && sc->channel[ctxnum &= CTX_VALUE].hook) {
 		/* Send it */
@@ -465,7 +455,7 @@ ngfrm_decode(node_p node, item_p item)
 	} else {
 		error = ENETDOWN;
 	}
-out:
+done:
 	NG_FREE_ITEM(item);
 	NG_FREE_M(m);
 	return (error);

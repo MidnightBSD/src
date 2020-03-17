@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/conf/RT305X.hints 224009 2011-07-14 11:53:23Z ray $
+# $FreeBSD: stable/11/sys/mips/conf/RT305X.hints 224009 2011-07-14 11:53:23Z ray $
 # device.hints
 hint.obio.0.at="nexus0"
 hint.obio.0.maddr=0x10000000

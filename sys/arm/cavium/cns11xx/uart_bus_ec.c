@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009 Yohanes Nugroho <yohanes@gmail.com>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/uart_bus_ec.c 264219 2014-04-07 05:33:30Z rpaulo $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/cavium/cns11xx/uart_bus_ec.c 340145 2018-11-04 23:28:56Z mmacy $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -70,7 +69,7 @@ uart_ec_probe(device_t dev)
 
 	sc = device_get_softc(dev);
 	sc->sc_class = &uart_ns8250_class;
-	status = uart_bus_probe(dev, EC_UART_REGSHIFT, EC_UART_CLOCK, 0, 0);
+	status = uart_bus_probe(dev, EC_UART_REGSHIFT, 0, EC_UART_CLOCK, 0, 0, 0);
 	return (status);
 }
 

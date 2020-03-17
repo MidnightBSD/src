@@ -1,8 +1,7 @@
-#$FreeBSD: stable/10/sys/arm/at91/std.eb9200 266110 2014-05-15 02:41:23Z ian $
+#$FreeBSD: stable/11/sys/arm/at91/std.eb9200 292591 2015-12-22 09:08:21Z andrew $
 include "../at91/std.at91"
 
 makeoptions	KERNPHYSADDR=0x20000000
-options		KERNPHYSADDR=0x20000000	
 makeoptions	KERNVIRTADDR=0xc0000000
 options		KERNVIRTADDR=0xc0000000
 

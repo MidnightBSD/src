@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1990 The Regents of the University of California.
  * All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/genassym.c 232587 2012-03-06 08:40:21Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/genassym.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

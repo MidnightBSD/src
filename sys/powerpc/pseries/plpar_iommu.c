@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013, Nathan Whitehorn <nwhitehorn@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/pseries/plpar_iommu.c 278122 2015-02-03 00:29:58Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/pseries/plpar_iommu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -89,19 +88,20 @@ phyp_iommu_set_dma_tag(device_t bus, device_t dev, bus_dma_tag_t tag)
 		return (ENXIO);
 
 	node = ofw_bus_get_node(p);
-	if (OF_getprop(node, "ibm,#dma-size-cells", &dma_scells,
+	if (OF_getencprop(node, "ibm,#dma-size-cells", &dma_scells,
 	    sizeof(cell_t)) <= 0)
-		OF_searchprop(node, "#size-cells", &dma_scells, sizeof(cell_t));
-	if (OF_getprop(node, "ibm,#dma-address-cells", &dma_acells,
+		OF_searchencprop(node, "#size-cells", &dma_scells,
+		    sizeof(cell_t));
+	if (OF_getencprop(node, "ibm,#dma-address-cells", &dma_acells,
 	    sizeof(cell_t)) <= 0)
-		OF_searchprop(node, "#address-cells", &dma_acells,
+		OF_searchencprop(node, "#address-cells", &dma_acells,
 		    sizeof(cell_t));
 
 	if (ofw_bus_has_prop(p, "ibm,my-dma-window"))
-		OF_getprop(node, "ibm,my-dma-window", dmawindow,
+		OF_getencprop(node, "ibm,my-dma-window", dmawindow,
 		    sizeof(cell_t)*(dma_scells + dma_acells + 1));
 	else
-		OF_getprop(node, "ibm,dma-window", dmawindow,
+		OF_getencprop(node, "ibm,dma-window", dmawindow,
 		    sizeof(cell_t)*(dma_scells + dma_acells + 1));
 
 	struct dma_window *window = malloc(sizeof(struct dma_window),

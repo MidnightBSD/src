@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octeon_gpio.c 278786 2015-02-14 21:16:19Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octeon_gpio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octeon_gpio.c 278786 2015-02-14 21
 #include <mips/cavium/octeon_irq.h>
 
 #include <mips/cavium/octeon_gpiovar.h>
+#include <dev/gpio/gpiobusvar.h>
 
 #include "gpio_if.h"
 
@@ -91,6 +91,7 @@ static void octeon_gpio_intr(void *arg);
 /*
  * GPIO interface
  */
+static device_t octeon_gpio_get_bus(device_t);
 static int octeon_gpio_pin_max(device_t dev, int *maxpin);
 static int octeon_gpio_pin_getcaps(device_t dev, uint32_t pin, uint32_t *caps);
 static int octeon_gpio_pin_getflags(device_t dev, uint32_t pin, uint32_t
@@ -133,6 +134,16 @@ octeon_gpio_pin_configure(struct octeon_gpio_softc *sc, struct gpio_pin *pin,
 	}
 
 	GPIO_UNLOCK(sc);
+}
+
+static device_t
+octeon_gpio_get_bus(device_t dev)
+{
+	struct octeon_gpio_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	return (sc->busdev);
 }
 
 static int
@@ -384,6 +395,7 @@ octeon_gpio_attach(device_t dev)
 		    OCTEON_IRQ_GPIO0 + i, OCTEON_IRQ_GPIO0 + i, 1, 
 		    RF_SHAREABLE | RF_ACTIVE)) == NULL) {
 			device_printf(dev, "unable to allocate IRQ resource\n");
+			octeon_gpio_detach(dev);
 			return (ENXIO);
 		}
 
@@ -393,6 +405,7 @@ octeon_gpio_attach(device_t dev)
 		    &(sc->gpio_intr_cookies[i]), &sc->gpio_ih[i]))) {
 			device_printf(dev,
 		    	"WARNING: unable to register interrupt handler\n");
+			octeon_gpio_detach(dev);
 			return (ENXIO);
 		}
 	}
@@ -433,11 +446,13 @@ octeon_gpio_attach(device_t dev)
 			    gpio_cfgx.s.int_en, gpio_cfgx.s.int_type ? "rising edge" : "level");
 		}
 	}
+	sc->busdev = gpiobus_attach_bus(dev);
+	if (sc->busdev == NULL) {
+		octeon_gpio_detach(dev);
+		return (ENXIO);
+	}
 
-	device_add_child(dev, "gpioc", -1);
-	device_add_child(dev, "gpiobus", -1);
-
-	return (bus_generic_attach(dev));
+	return (0);
 }
 
 static int
@@ -449,11 +464,14 @@ octeon_gpio_detach(device_t dev)
 	KASSERT(mtx_initialized(&sc->gpio_mtx), ("gpio mutex not initialized"));
 
 	for ( i = 0; i < OCTEON_GPIO_IRQS; i++) {
-		bus_release_resource(dev, SYS_RES_IRQ,
-		    sc->gpio_irq_rid[i], sc->gpio_irq_res[i]);
+		if (sc->gpio_ih[i])
+			bus_teardown_intr(dev, sc->gpio_irq_res[i],
+			    sc->gpio_ih[i]);
+		if (sc->gpio_irq_res[i])
+			bus_release_resource(dev, SYS_RES_IRQ,
+			    sc->gpio_irq_rid[i], sc->gpio_irq_res[i]);
 	}
-	bus_generic_detach(dev);
-
+	gpiobus_detach_bus(dev);
 	mtx_destroy(&sc->gpio_mtx);
 
 	return(0);
@@ -466,6 +484,7 @@ static device_method_t octeon_gpio_methods[] = {
 	DEVMETHOD(device_detach, octeon_gpio_detach),
 
 	/* GPIO protocol */
+	DEVMETHOD(gpio_get_bus, octeon_gpio_get_bus),
 	DEVMETHOD(gpio_pin_max, octeon_gpio_pin_max),
 	DEVMETHOD(gpio_pin_getname, octeon_gpio_pin_getname),
 	DEVMETHOD(gpio_pin_getflags, octeon_gpio_pin_getflags),

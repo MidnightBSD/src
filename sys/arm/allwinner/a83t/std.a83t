@@ -1,5 +1,5 @@
 # Allwinner A83T common options
-# $MidnightBSD$
+#$FreeBSD: stable/11/sys/arm/allwinner/a83t/std.a83t 299113 2016-05-05 09:41:57Z jmcneill $
 
 cpu		CPU_CORTEXA
 machine 	arm armv6

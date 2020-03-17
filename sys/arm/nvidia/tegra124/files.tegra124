@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/arm/nvidia/tegra124/files.tegra124 332010 2018-04-04 11:30:20Z mmel $
 
 #
 # Standard ARM support.

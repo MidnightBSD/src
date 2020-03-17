@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/slb.h 222620 2011-06-02 14:25:52Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/include/slb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SLB_H_
@@ -62,6 +61,9 @@
 #define	SLBE_INDEX_MASK	0x0000000000000fffUL /* SLB index mask*/
 #define	SLBE_ESID_MASK	0xfffffffff0000000UL /* Effective segment ID mask */
 #define	SLBE_ESID_SHIFT	28
+
+/* Virtual real-mode VSID in LPARs */
+#define VSID_VRMA	0x1ffffff
 
 /*
  * User segment for copyin/out

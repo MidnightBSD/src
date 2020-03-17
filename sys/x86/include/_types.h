@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 1990, 1993

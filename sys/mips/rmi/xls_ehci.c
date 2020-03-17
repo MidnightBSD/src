@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/xls_ehci.c 308402 2016-11-07 09:19:04Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/xls_ehci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_bus.h"
 
@@ -131,7 +130,7 @@ ehci_xls_attach(device_t self)
 	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
 	device_set_desc(sc->sc_bus.bdev, xlr_usb_dev_desc);
 
-	sprintf(sc->sc_vendor, xlr_vendor_desc);
+	strlcpy(sc->sc_vendor, xlr_vendor_desc, sizeof(sc->sc_vendor));
 
 	err = bus_setup_intr(self, sc->sc_irq_res,
 	    INTR_TYPE_BIO | INTR_MPSAFE, NULL,

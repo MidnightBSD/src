@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -24,39 +23,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/sf_buf.h 266175 2014-05-15 19:09:31Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/sf_buf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SF_BUF_H_
 #define _MACHINE_SF_BUF_H_
 
-#include <sys/queue.h>
-
-struct vm_page;
-
-struct sf_buf {
-	LIST_ENTRY(sf_buf) list_entry;	/* list of buffers */
-	TAILQ_ENTRY(sf_buf) free_entry;	/* list of buffers */
-	struct		vm_page *m;	/* currently mapped page */
-	vm_offset_t	kva;		/* va of mapping */
-	int		ref_count;	/* usage of this mapping */
-};
-
-static __inline vm_offset_t
-sf_buf_kva(struct sf_buf *sf)
+static inline void
+sf_buf_map(struct sf_buf *sf, int flags)
 {
 
-	return (sf->kva);
+#if __ARM_ARCH >= 6
+	pmap_qenter(sf->kva, &(sf->m), 1);
+#else
+	pmap_kenter(sf->kva, VM_PAGE_TO_PHYS(sf->m));
+#endif
 }
 
-static __inline struct vm_page *
-sf_buf_page(struct sf_buf *sf)
+static inline int
+sf_buf_unmap(struct sf_buf *sf)
 {
 
-	return (sf->m);
+#if __ARM_ARCH >= 6
+	pmap_qremove(sf->kva, 1);
+#else
+	pmap_kremove(sf->kva);
+#endif
+	return (1);
 }
-
-struct sf_buf *	sf_buf_alloc(struct vm_page *m, int flags);
-void sf_buf_free(struct sf_buf *sf);
-
 #endif /* !_MACHINE_SF_BUF_H_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -27,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/10/sys/mips/nlm/hal/mmu.h 227722 2011-11-19 14:06:15Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/hal/mmu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __XLP_MMU_H__
@@ -44,7 +43,7 @@ nlm_read_c0_config6(void)
 		".set	push\n"
 		".set	mips64\n"
 		"mfc0	%0, $16, 6\n"
-		".set	pop\n" 
+		".set	pop\n"
 		: "=r" (rv));
 
         return rv;
@@ -57,7 +56,7 @@ nlm_write_c0_config6(uint32_t value)
 		".set	push\n"
 		".set	mips64\n"
 		"mtc0	%0, $16, 6\n"
-		".set	pop\n" 
+		".set	pop\n"
 		: : "r" (value));
 }
 
@@ -70,7 +69,7 @@ nlm_read_c0_config7(void)
 		".set	push\n"
 		".set	mips64\n"
 		"mfc0	%0, $16, 7\n"
-		".set	pop\n" 
+		".set	pop\n"
 		: "=r" (rv));
 
         return rv;
@@ -83,7 +82,7 @@ nlm_write_c0_config7(uint32_t value)
 		".set	push\n"
 		".set	mips64\n"
 		"mtc0	%0, $16, 7\n"
-		".set	pop\n" 
+		".set	pop\n"
 		: : "r" (value));
 }
 /**

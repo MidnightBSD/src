@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2012 Broadcom Corporation
  * All Rights Reserved
@@ -13,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/nlm/dev/net/ucore/crt0_basic.S 233545 2012-03-27 14:05:12Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/dev/net/ucore/crt0_basic.S 279388 2015-02-28 00:22:10Z jchandra $
  */
 
 #include <machine/asm.h>
@@ -38,7 +37,7 @@
 _start:
 	.set	noreorder
 	la	gp, _gp
-	.end 	_start
+	.end	_start
 
 	.globl	__stack
 

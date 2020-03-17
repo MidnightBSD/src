@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2013-2014 Daisuke Aoyama <aoyama@peach.ne.jp>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_mbox_prop.h 322724 2017-08-20 16:52:27Z marius $
+ * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_mbox_prop.h 298383 2016-04-20 22:38:00Z gonzo $
  */
 
 #ifndef _BCM2835_MBOX_PROP_H_
@@ -437,6 +436,21 @@ struct bcm2835_mbox_tag_release_buffer {
 		struct {
 		} resp;
 	} body;
+};
+
+#define	BCM2835_MBOX_TAG_GET_TOUCHBUF		0x0004000f
+
+struct bcm2835_mbox_tag_touchbuf {
+	struct bcm2835_mbox_hdr hdr;
+	struct bcm2835_mbox_tag_hdr tag_hdr;
+	union {
+		struct {
+		} req;
+		struct {
+			uint32_t address;
+		} resp;
+	} body;
+	uint32_t end_tag;
 };
 
 struct bcm2835_fb_config {

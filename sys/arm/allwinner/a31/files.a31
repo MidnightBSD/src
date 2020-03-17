@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/arm/allwinner/a31/files.a31 298513 2016-04-23 13:59:18Z jmcneill $
 
 arm/allwinner/a31/a31_padconf.c		standard
 arm/allwinner/a31/a31_r_padconf.c	standard

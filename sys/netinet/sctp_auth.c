@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_auth.c 294174 2016-01-16 17:56:06Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_auth.c 352510 2019-09-19 10:06:18Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp.h>
@@ -52,9 +51,9 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_auth.c 294174 2016-01-16 17:56:06
 
 
 void
-sctp_clear_chunklist(sctp_auth_chklist_t * chklist)
+sctp_clear_chunklist(sctp_auth_chklist_t *chklist)
 {
-	bzero(chklist, sizeof(*chklist));
+	memset(chklist, 0, sizeof(*chklist));
 	/* chklist->num_chunks = 0; */
 }
 
@@ -74,14 +73,14 @@ sctp_alloc_chunklist(void)
 }
 
 void
-sctp_free_chunklist(sctp_auth_chklist_t * list)
+sctp_free_chunklist(sctp_auth_chklist_t *list)
 {
 	if (list != NULL)
 		SCTP_FREE(list, SCTP_M_AUTH_CL);
 }
 
 sctp_auth_chklist_t *
-sctp_copy_chunklist(sctp_auth_chklist_t * list)
+sctp_copy_chunklist(sctp_auth_chklist_t *list)
 {
 	sctp_auth_chklist_t *new_list;
 
@@ -93,7 +92,7 @@ sctp_copy_chunklist(sctp_auth_chklist_t * list)
 	if (new_list == NULL)
 		return (NULL);
 	/* copy it */
-	bcopy(list, new_list, sizeof(*new_list));
+	memcpy(new_list, list, sizeof(*new_list));
 
 	return (new_list);
 }
@@ -103,7 +102,7 @@ sctp_copy_chunklist(sctp_auth_chklist_t * list)
  * add a chunk to the required chunks list
  */
 int
-sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
+sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
 		return (-1);
@@ -129,7 +128,7 @@ sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
  * delete a chunk from the required chunks list
  */
 int
-sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
+sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
 		return (-1);
@@ -145,7 +144,7 @@ sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
 }
 
 size_t
-sctp_auth_get_chklist_size(const sctp_auth_chklist_t * list)
+sctp_auth_get_chklist_size(const sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
 		return (0);
@@ -158,7 +157,7 @@ sctp_auth_get_chklist_size(const sctp_auth_chklist_t * list)
  * guarantee ptr has space for up to 256 bytes
  */
 int
-sctp_serialize_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
+sctp_serialize_auth_chunks(const sctp_auth_chklist_t *list, uint8_t *ptr)
 {
 	int i, count = 0;
 
@@ -175,7 +174,7 @@ sctp_serialize_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
 }
 
 int
-sctp_pack_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
+sctp_pack_auth_chunks(const sctp_auth_chklist_t *list, uint8_t *ptr)
 {
 	int i, size = 0;
 
@@ -207,8 +206,8 @@ sctp_pack_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
 }
 
 int
-sctp_unpack_auth_chunks(const uint8_t * ptr, uint8_t num_chunks,
-    sctp_auth_chklist_t * list)
+sctp_unpack_auth_chunks(const uint8_t *ptr, uint8_t num_chunks,
+    sctp_auth_chklist_t *list)
 {
 	int i;
 	int size;
@@ -258,14 +257,14 @@ sctp_alloc_key(uint32_t keylen)
 }
 
 void
-sctp_free_key(sctp_key_t * key)
+sctp_free_key(sctp_key_t *key)
 {
 	if (key != NULL)
 		SCTP_FREE(key, SCTP_M_AUTH_KY);
 }
 
 void
-sctp_print_key(sctp_key_t * key, const char *str)
+sctp_print_key(sctp_key_t *key, const char *str)
 {
 	uint32_t i;
 
@@ -284,7 +283,7 @@ sctp_print_key(sctp_key_t * key, const char *str)
 }
 
 void
-sctp_show_key(sctp_key_t * key, const char *str)
+sctp_show_key(sctp_key_t *key, const char *str)
 {
 	uint32_t i;
 
@@ -303,7 +302,7 @@ sctp_show_key(sctp_key_t * key, const char *str)
 }
 
 static uint32_t
-sctp_get_keylen(sctp_key_t * key)
+sctp_get_keylen(sctp_key_t *key)
 {
 	if (key != NULL)
 		return (key->keylen);
@@ -330,7 +329,7 @@ sctp_generate_random_key(uint32_t keylen)
 }
 
 sctp_key_t *
-sctp_set_key(uint8_t * key, uint32_t keylen)
+sctp_set_key(uint8_t *key, uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
@@ -339,7 +338,7 @@ sctp_set_key(uint8_t * key, uint32_t keylen)
 		/* out of memory */
 		return (NULL);
 	}
-	bcopy(key, new_key->key, keylen);
+	memcpy(new_key->key, key, keylen);
 	return (new_key);
 }
 
@@ -350,7 +349,7 @@ sctp_set_key(uint8_t * key, uint32_t keylen)
  *           0 if key1 = key2
  */
 static int
-sctp_compare_key(sctp_key_t * key1, sctp_key_t * key2)
+sctp_compare_key(sctp_key_t *key1, sctp_key_t *key2)
 {
 	uint32_t maxlen;
 	uint32_t i;
@@ -401,7 +400,7 @@ sctp_compare_key(sctp_key_t * key1, sctp_key_t * key2)
  * order for concatenation
  */
 sctp_key_t *
-sctp_compute_hashkey(sctp_key_t * key1, sctp_key_t * key2, sctp_key_t * shared)
+sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 {
 	uint32_t keylen;
 	sctp_key_t *new_key;
@@ -428,28 +427,28 @@ sctp_compute_hashkey(sctp_key_t * key1, sctp_key_t * key2, sctp_key_t * shared)
 	if (sctp_compare_key(key1, key2) <= 0) {
 		/* key is shared + key1 + key2 */
 		if (sctp_get_keylen(shared)) {
-			bcopy(shared->key, key_ptr, shared->keylen);
+			memcpy(key_ptr, shared->key, shared->keylen);
 			key_ptr += shared->keylen;
 		}
 		if (sctp_get_keylen(key1)) {
-			bcopy(key1->key, key_ptr, key1->keylen);
+			memcpy(key_ptr, key1->key, key1->keylen);
 			key_ptr += key1->keylen;
 		}
 		if (sctp_get_keylen(key2)) {
-			bcopy(key2->key, key_ptr, key2->keylen);
+			memcpy(key_ptr, key2->key, key2->keylen);
 		}
 	} else {
 		/* key is shared + key2 + key1 */
 		if (sctp_get_keylen(shared)) {
-			bcopy(shared->key, key_ptr, shared->keylen);
+			memcpy(key_ptr, shared->key, shared->keylen);
 			key_ptr += shared->keylen;
 		}
 		if (sctp_get_keylen(key2)) {
-			bcopy(key2->key, key_ptr, key2->keylen);
+			memcpy(key_ptr, key2->key, key2->keylen);
 			key_ptr += key2->keylen;
 		}
 		if (sctp_get_keylen(key1)) {
-			bcopy(key1->key, key_ptr, key1->keylen);
+			memcpy(key_ptr, key1->key, key1->keylen);
 		}
 	}
 	return (new_key);
@@ -475,7 +474,7 @@ sctp_alloc_sharedkey(void)
 }
 
 void
-sctp_free_sharedkey(sctp_sharedkey_t * skey)
+sctp_free_sharedkey(sctp_sharedkey_t *skey)
 {
 	if (skey == NULL)
 		return;
@@ -501,7 +500,7 @@ sctp_find_sharedkey(struct sctp_keyhead *shared_keys, uint16_t key_id)
 
 int
 sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
-    sctp_sharedkey_t * new_skey)
+    sctp_sharedkey_t *new_skey)
 {
 	sctp_sharedkey_t *skey;
 
@@ -522,7 +521,7 @@ sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
 		} else if (new_skey->keyid == skey->keyid) {
 			/* replace the existing key */
 			/* verify this key *can* be replaced */
-			if ((skey->deactivated) && (skey->refcount > 1)) {
+			if ((skey->deactivated) || (skey->refcount > 1)) {
 				SCTPDBG(SCTP_DEBUG_AUTH1,
 				    "can't replace shared key id %u\n",
 				    new_skey->keyid);
@@ -543,7 +542,7 @@ sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
 		}
 	}
 	/* shouldn't reach here */
-	return (0);
+	return (EINVAL);
 }
 
 void
@@ -595,7 +594,7 @@ sctp_auth_key_release(struct sctp_tcb *stcb, uint16_t key_id, int so_locked
 }
 
 static sctp_sharedkey_t *
-sctp_copy_sharedkey(const sctp_sharedkey_t * skey)
+sctp_copy_sharedkey(const sctp_sharedkey_t *skey)
 {
 	sctp_sharedkey_t *new_skey;
 
@@ -623,8 +622,11 @@ sctp_copy_skeylist(const struct sctp_keyhead *src, struct sctp_keyhead *dest)
 	LIST_FOREACH(skey, src, next) {
 		new_skey = sctp_copy_sharedkey(skey);
 		if (new_skey != NULL) {
-			(void)sctp_insert_sharedkey(dest, new_skey);
-			count++;
+			if (sctp_insert_sharedkey(dest, new_skey)) {
+				sctp_free_sharedkey(new_skey);
+			} else {
+				count++;
+			}
 		}
 	}
 	return (count);
@@ -650,7 +652,7 @@ sctp_alloc_hmaclist(uint16_t num_hmacs)
 }
 
 void
-sctp_free_hmaclist(sctp_hmaclist_t * list)
+sctp_free_hmaclist(sctp_hmaclist_t *list)
 {
 	if (list != NULL) {
 		SCTP_FREE(list, SCTP_M_AUTH_HL);
@@ -659,7 +661,7 @@ sctp_free_hmaclist(sctp_hmaclist_t * list)
 }
 
 int
-sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id)
+sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 {
 	int i;
 
@@ -687,7 +689,7 @@ sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id)
 }
 
 sctp_hmaclist_t *
-sctp_copy_hmaclist(sctp_hmaclist_t * list)
+sctp_copy_hmaclist(sctp_hmaclist_t *list)
 {
 	sctp_hmaclist_t *new_list;
 	int i;
@@ -725,7 +727,7 @@ sctp_default_supported_hmaclist(void)
  * find the best HMAC id to use for the peer based on local support
  */
 uint16_t
-sctp_negotiate_hmacid(sctp_hmaclist_t * peer, sctp_hmaclist_t * local)
+sctp_negotiate_hmacid(sctp_hmaclist_t *peer, sctp_hmaclist_t *local)
 {
 	int i, j;
 
@@ -752,7 +754,7 @@ sctp_negotiate_hmacid(sctp_hmaclist_t * peer, sctp_hmaclist_t * local)
  * caller must guarantee ptr has appropriate space
  */
 int
-sctp_serialize_hmaclist(sctp_hmaclist_t * list, uint8_t * ptr)
+sctp_serialize_hmaclist(sctp_hmaclist_t *list, uint8_t *ptr)
 {
 	int i;
 	uint16_t hmac_id;
@@ -762,7 +764,7 @@ sctp_serialize_hmaclist(sctp_hmaclist_t * list, uint8_t * ptr)
 
 	for (i = 0; i < list->num_algo; i++) {
 		hmac_id = htons(list->hmac[i]);
-		bcopy(&hmac_id, ptr, sizeof(hmac_id));
+		memcpy(ptr, &hmac_id, sizeof(hmac_id));
 		ptr += sizeof(hmac_id);
 	}
 	return (list->num_algo * sizeof(hmac_id));
@@ -793,12 +795,12 @@ sctp_alloc_authinfo(void)
 		/* out of memory */
 		return (NULL);
 	}
-	bzero(new_authinfo, sizeof(*new_authinfo));
+	memset(new_authinfo, 0, sizeof(*new_authinfo));
 	return (new_authinfo);
 }
 
 void
-sctp_free_authinfo(sctp_authinfo_t * authinfo)
+sctp_free_authinfo(sctp_authinfo_t *authinfo)
 {
 	if (authinfo == NULL)
 		return;
@@ -856,7 +858,7 @@ sctp_get_hmac_block_len(uint16_t hmac_algo)
 }
 
 static void
-sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t * ctx)
+sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t *ctx)
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
@@ -873,8 +875,8 @@ sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t * ctx)
 }
 
 static void
-sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t * ctx,
-    uint8_t * text, uint32_t textlen)
+sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t *ctx,
+    uint8_t *text, uint32_t textlen)
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
@@ -891,8 +893,8 @@ sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t * ctx,
 }
 
 static void
-sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t * ctx,
-    uint8_t * digest)
+sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t *ctx,
+    uint8_t *digest)
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
@@ -919,8 +921,8 @@ sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t * ctx,
  * resultant digest.
  */
 uint32_t
-sctp_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    uint8_t * text, uint32_t textlen, uint8_t * digest)
+sctp_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
+    uint8_t *text, uint32_t textlen, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -951,10 +953,10 @@ sctp_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
 		key = temp;
 	}
 	/* initialize the inner/outer pads with the key and "append" zeroes */
-	bzero(ipad, blocklen);
-	bzero(opad, blocklen);
-	bcopy(key, ipad, keylen);
-	bcopy(key, opad, keylen);
+	memset(ipad, 0, blocklen);
+	memset(opad, 0, blocklen);
+	memcpy(ipad, key, keylen);
+	memcpy(opad, key, keylen);
 
 	/* XOR the key with ipad and opad values */
 	for (i = 0; i < blocklen; i++) {
@@ -979,8 +981,8 @@ sctp_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
 
 /* mbuf version */
 uint32_t
-sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    struct mbuf *m, uint32_t m_offset, uint8_t * digest, uint32_t trailer)
+sctp_hmac_m(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
+    struct mbuf *m, uint32_t m_offset, uint8_t *digest, uint32_t trailer)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1011,10 +1013,10 @@ sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
 		key = temp;
 	}
 	/* initialize the inner/outer pads with the key and "append" zeroes */
-	bzero(ipad, blocklen);
-	bzero(opad, blocklen);
-	bcopy(key, ipad, keylen);
-	bcopy(key, opad, keylen);
+	memset(ipad, 0, blocklen);
+	memset(opad, 0, blocklen);
+	memcpy(ipad, key, keylen);
+	memcpy(opad, key, keylen);
 
 	/* XOR the key with ipad and opad values */
 	for (i = 0; i < blocklen; i++) {
@@ -1027,17 +1029,17 @@ sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
 	sctp_hmac_update(hmac_algo, &ctx, ipad, blocklen);
 	/* find the correct starting mbuf and offset (get start of text) */
 	m_tmp = m;
-	while ((m_tmp != NULL) && (m_offset >= (uint32_t) SCTP_BUF_LEN(m_tmp))) {
+	while ((m_tmp != NULL) && (m_offset >= (uint32_t)SCTP_BUF_LEN(m_tmp))) {
 		m_offset -= SCTP_BUF_LEN(m_tmp);
 		m_tmp = SCTP_BUF_NEXT(m_tmp);
 	}
 	/* now use the rest of the mbuf chain for the text */
 	while (m_tmp != NULL) {
 		if ((SCTP_BUF_NEXT(m_tmp) == NULL) && trailer) {
-			sctp_hmac_update(hmac_algo, &ctx, mtod(m_tmp, uint8_t *) + m_offset,
+			sctp_hmac_update(hmac_algo, &ctx, mtod(m_tmp, uint8_t *)+m_offset,
 			    SCTP_BUF_LEN(m_tmp) - (trailer + m_offset));
 		} else {
-			sctp_hmac_update(hmac_algo, &ctx, mtod(m_tmp, uint8_t *) + m_offset,
+			sctp_hmac_update(hmac_algo, &ctx, mtod(m_tmp, uint8_t *)+m_offset,
 			    SCTP_BUF_LEN(m_tmp) - m_offset);
 		}
 
@@ -1062,9 +1064,9 @@ sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
  * Returns -1 on error, 0 on success.
  */
 int
-sctp_verify_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    uint8_t * text, uint32_t textlen,
-    uint8_t * digest, uint32_t digestlen)
+sctp_verify_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
+    uint8_t *text, uint32_t textlen,
+    uint8_t *digest, uint32_t digestlen)
 {
 	uint32_t len;
 	uint8_t temp[SCTP_AUTH_DIGEST_LEN_MAX];
@@ -1095,8 +1097,8 @@ sctp_verify_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
  * the keylen exceeds the HMAC block len).
  */
 uint32_t
-sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t * key, uint8_t * text,
-    uint32_t textlen, uint8_t * digest)
+sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t *key, uint8_t *text,
+    uint32_t textlen, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1122,7 +1124,7 @@ sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t * key, uint8_t * text,
 		sctp_hmac_final(hmac_algo, &ctx, temp);
 		/* save the hashed key as the new key */
 		key->keylen = digestlen;
-		bcopy(temp, key->key, key->keylen);
+		memcpy(key->key, temp, key->keylen);
 	}
 	return (sctp_hmac(hmac_algo, key->key, key->keylen, text, textlen,
 	    digest));
@@ -1130,8 +1132,8 @@ sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t * key, uint8_t * text,
 
 /* mbuf version */
 uint32_t
-sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t * key, struct mbuf *m,
-    uint32_t m_offset, uint8_t * digest)
+sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t *key, struct mbuf *m,
+    uint32_t m_offset, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1156,13 +1158,13 @@ sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t * key, struct mbuf *m,
 		sctp_hmac_final(hmac_algo, &ctx, temp);
 		/* save the hashed key as the new key */
 		key->keylen = digestlen;
-		bcopy(temp, key->key, key->keylen);
+		memcpy(key->key, temp, key->keylen);
 	}
 	return (sctp_hmac_m(hmac_algo, key->key, key->keylen, m, m_offset, digest, 0));
 }
 
 int
-sctp_auth_is_supported_hmac(sctp_hmaclist_t * list, uint16_t id)
+sctp_auth_is_supported_hmac(sctp_hmaclist_t *list, uint16_t id)
 {
 	int i;
 
@@ -1305,6 +1307,7 @@ sctp_auth_setactivekey(struct sctp_tcb *stcb, uint16_t keyid)
 		/* can't reactivate a deactivated key with other refcounts */
 		return (-1);
 	}
+
 	/* set the (new) active key */
 	stcb->asoc.authinfo.active_keyid = keyid;
 	/* reset the deactivated flag */
@@ -1359,6 +1362,7 @@ sctp_deact_sharedkey(struct sctp_tcb *stcb, uint16_t keyid)
 		sctp_ulp_notify(SCTP_NOTIFY_AUTH_FREE_KEY, stcb, keyid, 0,
 		    SCTP_SO_LOCKED);
 	}
+
 	/* mark the key as deactivated */
 	skey->deactivated = 1;
 
@@ -1420,7 +1424,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 	length += offset;
 
 	phdr = (struct sctp_paramhdr *)sctp_m_getptr(m, offset,
-	    sizeof(struct sctp_paramhdr), (uint8_t *) & tmp_param);
+	    sizeof(struct sctp_paramhdr), (uint8_t *)&tmp_param);
 	while (phdr != NULL) {
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
@@ -1432,7 +1436,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 			if (plen > sizeof(random_store))
 				break;
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)random_store, min(plen, sizeof(random_store)));
+			    (struct sctp_paramhdr *)random_store, plen);
 			if (phdr == NULL)
 				return;
 			/* save the random and length for the key */
@@ -1445,7 +1449,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 			if (plen > sizeof(hmacs_store))
 				break;
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)hmacs_store, min(plen, sizeof(hmacs_store)));
+			    (struct sctp_paramhdr *)hmacs_store, plen);
 			if (phdr == NULL)
 				return;
 			/* save the hmacs list and num for the key */
@@ -1467,7 +1471,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 			if (plen > sizeof(chunks_store))
 				break;
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)chunks_store, min(plen, sizeof(chunks_store)));
+			    (struct sctp_paramhdr *)chunks_store, plen);
 			if (phdr == NULL)
 				return;
 			chunks = (struct sctp_auth_chunk_list *)phdr;
@@ -1487,7 +1491,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 		if (offset + sizeof(struct sctp_paramhdr) > length)
 			break;
 		phdr = (struct sctp_paramhdr *)sctp_m_getptr(m, offset, sizeof(struct sctp_paramhdr),
-		    (uint8_t *) & tmp_param);
+		    (uint8_t *)&tmp_param);
 	}
 	/* concatenate the full random key */
 	keylen = sizeof(*p_random) + random_len + sizeof(*hmacs) + hmacs_len;
@@ -1499,17 +1503,19 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 		/* copy in the RANDOM */
 		if (p_random != NULL) {
 			keylen = sizeof(*p_random) + random_len;
-			bcopy(p_random, new_key->key, keylen);
+			memcpy(new_key->key, p_random, keylen);
+		} else {
+			keylen = 0;
 		}
 		/* append in the AUTH chunks */
 		if (chunks != NULL) {
-			bcopy(chunks, new_key->key + keylen,
+			memcpy(new_key->key + keylen, chunks,
 			    sizeof(*chunks) + num_chunks);
 			keylen += sizeof(*chunks) + num_chunks;
 		}
 		/* append in the HMACs */
 		if (hmacs != NULL) {
-			bcopy(hmacs, new_key->key + keylen,
+			memcpy(new_key->key + keylen, hmacs,
 			    sizeof(*hmacs) + hmacs_len);
 		}
 	}
@@ -1548,7 +1554,7 @@ sctp_fill_hmac_digest_m(struct mbuf *m, uint32_t auth_offset,
 
 	/* zero the digest + chunk padding */
 	digestlen = sctp_get_hmac_digest_len(stcb->asoc.peer_hmac_id);
-	bzero(auth->hmac, SCTP_SIZE32(digestlen));
+	memset(auth->hmac, 0, SCTP_SIZE32(digestlen));
 
 	/* is the desired key cached? */
 	if ((keyid != stcb->asoc.authinfo.assoc_keyid) ||
@@ -1576,6 +1582,7 @@ sctp_fill_hmac_digest_m(struct mbuf *m, uint32_t auth_offset,
 			    "Assoc Key");
 #endif
 	}
+
 	/* set in the active key id */
 	auth->shared_key_id = htons(keyid);
 
@@ -1586,7 +1593,7 @@ sctp_fill_hmac_digest_m(struct mbuf *m, uint32_t auth_offset,
 
 
 static void
-sctp_bzero_m(struct mbuf *m, uint32_t m_offset, uint32_t size)
+sctp_zero_m(struct mbuf *m, uint32_t m_offset, uint32_t size)
 {
 	struct mbuf *m_tmp;
 	uint8_t *data;
@@ -1597,18 +1604,18 @@ sctp_bzero_m(struct mbuf *m, uint32_t m_offset, uint32_t size)
 
 	/* find the correct starting mbuf and offset (get start position) */
 	m_tmp = m;
-	while ((m_tmp != NULL) && (m_offset >= (uint32_t) SCTP_BUF_LEN(m_tmp))) {
+	while ((m_tmp != NULL) && (m_offset >= (uint32_t)SCTP_BUF_LEN(m_tmp))) {
 		m_offset -= SCTP_BUF_LEN(m_tmp);
 		m_tmp = SCTP_BUF_NEXT(m_tmp);
 	}
 	/* now use the rest of the mbuf chain */
 	while ((m_tmp != NULL) && (size > 0)) {
-		data = mtod(m_tmp, uint8_t *) + m_offset;
-		if (size > (uint32_t) SCTP_BUF_LEN(m_tmp)) {
-			bzero(data, SCTP_BUF_LEN(m_tmp));
-			size -= SCTP_BUF_LEN(m_tmp);
+		data = mtod(m_tmp, uint8_t *)+m_offset;
+		if (size > (uint32_t)(SCTP_BUF_LEN(m_tmp) - m_offset)) {
+			memset(data, 0, SCTP_BUF_LEN(m_tmp) - m_offset);
+			size -= SCTP_BUF_LEN(m_tmp) - m_offset;
 		} else {
-			bzero(data, size);
+			memset(data, 0, size);
 			size = 0;
 		}
 		/* clear the offset since it's only for the first mbuf */
@@ -1725,13 +1732,13 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		return (-1);
 	}
 	/* save a copy of the digest, zero the pseudo header, and validate */
-	bcopy(auth->hmac, digest, digestlen);
-	sctp_bzero_m(m, offset + sizeof(*auth), SCTP_SIZE32(digestlen));
+	memcpy(digest, auth->hmac, digestlen);
+	sctp_zero_m(m, offset + sizeof(*auth), SCTP_SIZE32(digestlen));
 	(void)sctp_compute_hmac_m(hmac_id, stcb->asoc.authinfo.recv_key,
 	    m, offset, computed_digest);
 
 	/* compare the computed digest with the one in the AUTH chunk */
-	if (memcmp(digest, computed_digest, digestlen) != 0) {
+	if (timingsafe_bcmp(digest, computed_digest, digestlen) != 0) {
 		SCTP_STAT_INCR(sctps_recvauthfailed);
 		SCTPDBG(SCTP_DEBUG_AUTH1,
 		    "SCTP Auth: HMAC digest check failed\n");
@@ -1763,6 +1770,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 		/* If the socket is gone we are out of here */
 		return;
 	}
+
 	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_AUTHEVNT))
 		/* event not enabled */
 		return;
@@ -1795,8 +1803,8 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	control->spec_flags = M_NOTIFICATION;
 	control->length = SCTP_BUF_LEN(m_notify);
+	control->spec_flags = M_NOTIFICATION;
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb, control,
@@ -1812,7 +1820,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 int
 sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 {
-	struct sctp_paramhdr *phdr, parm_buf;
+	struct sctp_paramhdr *phdr, param_buf;
 	uint16_t ptype, plen;
 	int peer_supports_asconf = 0;
 	int peer_supports_auth = 0;
@@ -1821,7 +1829,7 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 	uint8_t saw_asconf_ack = 0;
 
 	/* go through each of the params. */
-	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
+	phdr = sctp_get_next_param(m, offset, &param_buf, sizeof(param_buf));
 	while (phdr) {
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
@@ -1835,11 +1843,15 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 		if (ptype == SCTP_SUPPORTED_CHUNK_EXT) {
 			/* A supported extension chunk */
 			struct sctp_supported_chunk_types_param *pr_supported;
-			uint8_t local_store[SCTP_PARAM_BUFFER_SIZE];
+			uint8_t local_store[SCTP_SMALL_CHUNK_STORE];
 			int num_ent, i;
 
+			if (plen > sizeof(local_store)) {
+				break;
+			}
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)&local_store, min(plen, sizeof(local_store)));
+			    (struct sctp_paramhdr *)&local_store,
+			    plen);
 			if (phdr == NULL) {
 				return (-1);
 			}
@@ -1857,7 +1869,6 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 				}
 			}
 		} else if (ptype == SCTP_RANDOM) {
-			got_random = 1;
 			/* enforce the random length */
 			if (plen != (sizeof(struct sctp_auth_random) +
 			    SCTP_AUTH_RANDOM_SIZE_REQUIRED)) {
@@ -1865,20 +1876,23 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 				    "SCTP: invalid RANDOM len\n");
 				return (-1);
 			}
+			got_random = 1;
 		} else if (ptype == SCTP_HMAC_LIST) {
-			uint8_t store[SCTP_PARAM_BUFFER_SIZE];
 			struct sctp_auth_hmac_algo *hmacs;
+			uint8_t store[SCTP_PARAM_BUFFER_SIZE];
 			int num_hmacs;
 
-			if (plen > sizeof(store))
+			if (plen > sizeof(store)) {
 				break;
+			}
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)store, min(plen, sizeof(store)));
-			if (phdr == NULL)
+			    (struct sctp_paramhdr *)store,
+			    plen);
+			if (phdr == NULL) {
 				return (-1);
+			}
 			hmacs = (struct sctp_auth_hmac_algo *)phdr;
-			num_hmacs = (plen - sizeof(*hmacs)) /
-			    sizeof(hmacs->hmac_ids[0]);
+			num_hmacs = (plen - sizeof(*hmacs)) / sizeof(hmacs->hmac_ids[0]);
 			/* validate the hmac list */
 			if (sctp_verify_hmac_param(hmacs, num_hmacs)) {
 				SCTPDBG(SCTP_DEBUG_AUTH1,
@@ -1887,18 +1901,19 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 			}
 			got_hmacs = 1;
 		} else if (ptype == SCTP_CHUNK_LIST) {
-			int i, num_chunks;
+			struct sctp_auth_chunk_list *chunks;
 			uint8_t chunks_store[SCTP_SMALL_CHUNK_STORE];
+			int i, num_chunks;
 
-			/* did the peer send a non-empty chunk list? */
-			struct sctp_auth_chunk_list *chunks = NULL;
-
+			if (plen > sizeof(chunks_store)) {
+				break;
+			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)chunks_store,
-			    min(plen, sizeof(chunks_store)));
-			if (phdr == NULL)
+			    plen);
+			if (phdr == NULL) {
 				return (-1);
-
+			}
 			/*-
 			 * Flip through the list and mark that the
 			 * peer supports asconf/asconf_ack.
@@ -1916,12 +1931,13 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 			if (num_chunks)
 				got_chklist = 1;
 		}
+
 		offset += SCTP_SIZE32(plen);
 		if (offset >= limit) {
 			break;
 		}
-		phdr = sctp_get_next_param(m, offset, &parm_buf,
-		    sizeof(parm_buf));
+		phdr = sctp_get_next_param(m, offset, &param_buf,
+		    sizeof(param_buf));
 	}
 	/* validate authentication required parameters */
 	if (got_random && got_hmacs) {
@@ -2010,6 +2026,7 @@ sctp_initialize_auth_params(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					new_key->key[keylen++] = i;
 			}
 		}
+
 		/* append in the HMACs */
 		ph = (struct sctp_paramhdr *)(new_key->key + keylen);
 		ph->param_type = htons(SCTP_HMAC_LIST);

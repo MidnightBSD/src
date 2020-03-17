@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: regnum.h,v 1.3 1999/01/27 04:46:06 imp Exp $	*/
 
 /*-
@@ -37,17 +36,21 @@
  *	from: Utah Hdr: reg.h 1.1 90/07/09
  *	@(#)reg.h	8.2 (Berkeley) 1/11/94
  *	JNPR: regnum.h,v 1.6 2007/08/09 11:23:32 katta
- * $FreeBSD: stable/10/sys/mips/include/regnum.h 249901 2013-04-25 17:23:54Z imp $
+ * $FreeBSD: stable/11/sys/mips/include/regnum.h 351792 2019-09-03 20:19:43Z kevans $
  */
 
 #ifndef _MACHINE_REGNUM_H_
 #define	_MACHINE_REGNUM_H_
+
+#define	NUMSAVEREGS	40
+#define	NUMFPREGS	34
 
 /*
  * Location of the saved registers relative to ZERO.
  * This must match struct trapframe defined in frame.h exactly.
  * This must also match regdef.h.
  */
+#if defined(_KERNEL) || defined(_WANT_MIPS_REGNUM)
 #define	ZERO	0
 #define	AST	1
 #define	V0	2
@@ -104,7 +107,6 @@
  */
 #define	IC	38
 #define	DUMMY	39	/* for 8 byte alignment */
-#define	NUMSAVEREGS 40
 
 /*
  * Pseudo registers so we save a complete set of registers regardless of
@@ -163,10 +165,6 @@
 #define	FSR	(FPBASE+32)
 #define FSR_DUMMY (FPBASE+33) /* For 8 byte alignment */
 
-#define	NUMFPREGS	34
-
-#define	NREGS	(NUMSAVEREGS + NUMFPREGS)
-
 /*
  * Index of FP registers in 'struct frame', relative to the base
  * of the FP registers in frame (i.e., *not* including the general
@@ -205,5 +203,7 @@
 #define	F30_NUM	(30)
 #define	F31_NUM	(31)
 #define	FSR_NUM	(32)
+
+#endif	/* _KERNEL || _WANT_MIPS_REGNUM */
 
 #endif /* !_MACHINE_REGNUM_H_ */

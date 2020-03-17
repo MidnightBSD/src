@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
  *	from: src/sys/i386/include/_limits.h,v 1.27 2005/01/06 22:18:15 imp
- * $FreeBSD: stable/10/sys/mips/include/_limits.h 218266 2011-02-04 13:09:46Z tijl $
+ * $FreeBSD: stable/11/sys/mips/include/_limits.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE__LIMITS_H_

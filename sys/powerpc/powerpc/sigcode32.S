@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/powerpc/powerpc/sigcode32.S 297630 2016-04-07 00:37:46Z jhibbits $ */
+/* $FreeBSD: stable/11/sys/powerpc/powerpc/sigcode32.S 295186 2016-02-03 01:50:27Z jhibbits $ */
 /* $NetBSD: sigcode.S,v 1.1 1999/11/17 14:56:11 kleink Exp $	*/
 
 /*-

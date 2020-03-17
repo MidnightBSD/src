@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/netinet/ip_divert.h 201527 2010-01-04 19:01:22Z luigi $
+ * $FreeBSD: stable/11/sys/netinet/ip_divert.h 201527 2010-01-04 19:01:22Z luigi $
  */
 
 #ifndef _NETINET_IP_DIVERT_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_ipfw.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_ipfw.c 297793 2016-04-10 23:07:00Z pfg $
  */
 
 #include "opt_inet.h"
@@ -43,6 +42,7 @@
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -90,7 +90,7 @@ static struct ng_type ng_ipfw_typestruct = {
 	.disconnect =	ng_ipfw_disconnect,
 };
 NETGRAPH_INIT(ipfw, &ng_ipfw_typestruct);
-MODULE_DEPEND(ng_ipfw, ipfw, 2, 2, 2);
+MODULE_DEPEND(ng_ipfw, ipfw, 3, 3, 3);
 
 /* Information we store for each hook */
 struct ng_ipfw_hook_priv {
@@ -117,7 +117,7 @@ ng_ipfw_mod_event(module_t mod, int event, void *data)
 		    != 0) {
 			log(LOG_ERR, "%s: can't create ng_ipfw node", __func__);
                 	break;
-		};
+		}
 
 		/* Try to name node */
 		if (ng_name_node(fw_node, "ipfw") != 0)
@@ -240,7 +240,7 @@ ng_ipfw_rcvdata(hook_p hook, item_p item)
 	if (tag == NULL) {
 		NG_FREE_M(m);
 		return (EINVAL);	/* XXX: find smth better */
-	};
+	}
 
 	if (m->m_len < sizeof(struct ip) &&
 	    (m = m_pullup(m, sizeof(struct ip))) == NULL)

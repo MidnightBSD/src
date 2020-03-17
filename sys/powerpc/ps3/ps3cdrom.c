@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010 Nathan Whitehorn
  * Copyright (C) 2011 glevand <geoffrey.levand@mail.ru>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/ps3/ps3cdrom.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/ps3/ps3cdrom.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -47,7 +46,6 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/ps3/ps3cdrom.c 315813 2017-03-23 06:41
 #include <machine/pio.h>
 #include <machine/bus.h>
 #include <machine/platform.h>
-#include <machine/pmap.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
 #include <sys/rman.h>

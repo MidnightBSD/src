@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2011 Semihalf
  * All rights reserved.
@@ -28,7 +27,7 @@
 #include <machine/asm.h>
 #include <machine/armreg.h>
 
-__FBSDID("$FreeBSD: stable/10/sys/arm/mv/armadaxp/mptramp.S 283340 2015-05-23 23:35:19Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/mv/armadaxp/mptramp.S 267130 2014-06-05 21:37:04Z zbb $");
 
 .global _C_LABEL(mptramp_pmu_boot)
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/mv/discovery/discovery.c 235609 2012-05-18 14:41:14Z gber $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/mv/discovery/discovery.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

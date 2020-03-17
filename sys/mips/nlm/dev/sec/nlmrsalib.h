@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2012 Broadcom Corporation
  * All Rights Reserved
@@ -13,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/nlm/dev/sec/nlmrsalib.h 256045 2013-10-04 10:01:20Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/dev/sec/nlmrsalib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _NLMRSALIB_H_
 #define _NLMRSALIB_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Ben Harris
  * Copyright (c) 1996 Scott K. Stevens
@@ -27,7 +26,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/arm/include/stack.h 236992 2012-06-13 05:02:51Z imp $
+ * $FreeBSD: stable/11/sys/arm/include/stack.h 278996 2015-02-19 12:06:57Z andrew $
  */
 
 #ifndef _MACHINE_STACK_H_
@@ -39,5 +38,23 @@
 #define FR_RLV	(-1)
 #define FR_RSP	(-2)
 #define FR_RFP	(-3)
+
+/* The state of the unwind process */
+struct unwind_state {
+	uint32_t registers[16];
+	uint32_t start_pc;
+	uint32_t *insn;
+	u_int entries;
+	u_int byte;
+	uint16_t update_mask;
+};
+
+/* The register names */
+#define	FP	11
+#define	SP	13
+#define	LR	14
+#define	PC	15
+
+int unwind_stack_one(struct unwind_state *, int);
 
 #endif /* !_MACHINE_STACK_H_ */

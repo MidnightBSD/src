@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: if_admsw.c,v 1.3 2007/04/22 19:26:25 dyoung Exp $ */
 
 /*-
@@ -77,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/adm5120/if_admsw.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/adm5120/if_admsw.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,6 +98,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/adm5120/if_admsw.c 243882 2012-12-05 08:0
 #include <net/if_media.h>
 #include <net/if_mib.h>
 #include <net/if_types.h>
+#include <net/if_var.h>
 
 #ifdef INET
 #include <netinet/in.h>
@@ -655,8 +655,7 @@ admsw_start(struct ifnet *ifp)
 				break;
 			}
 			if (m0->m_pkthdr.len > MHLEN) {
-				MCLGET(m, M_NOWAIT);
-				if ((m->m_flags & M_EXT) == 0) {
+				if (!(MCLGET(m, M_NOWAIT))) {
 					device_printf(sc->sc_dev, 
 					    "unable to allocate Tx cluster\n");
 					m_freem(m);
@@ -925,7 +924,7 @@ admsw_txintr(struct admsw_softc *sc, int prio)
 		gotone = 1;
 		/* printf("clear tx slot %d\n",i); */
 
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 
 		sc->sc_txfree++;
 	}
@@ -1047,7 +1046,7 @@ admsw_rxintr(struct admsw_softc *sc, int high)
 
 		m = ds->ds_mbuf;
 		if (admsw_add_rxlbuf(sc, i) != 0) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			ADMSW_INIT_RXLDESC(sc, i);
 			bus_dmamap_sync(sc->sc_bufs_dmat, ds->ds_dmamap,
 			    BUS_DMASYNC_PREREAD);
@@ -1066,7 +1065,7 @@ admsw_rxintr(struct admsw_softc *sc, int high)
 
 		/* Pass it on. */
 		(*ifp->if_input)(ifp, m);
-		ifp->if_ipackets++;
+		if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 	}
 
 	/* Update the receive pointer. */
@@ -1227,8 +1226,7 @@ admsw_add_rxbuf(struct admsw_softc *sc, int idx, int high)
 	if (m == NULL)
 		return (ENOBUFS);
 
-	MCLGET(m, M_NOWAIT);
-	if ((m->m_flags & M_EXT) == 0) {
+	if (!(MCLGET(m, M_NOWAIT))) {
 		m_freem(m);
 		return (ENOBUFS);
 	}

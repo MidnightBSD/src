@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: stable/10/sys/powerpc/include/_limits.h 217147 2011-01-08 12:43:05Z tijl $
+ * $FreeBSD: stable/11/sys/powerpc/include/_limits.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE__LIMITS_H_

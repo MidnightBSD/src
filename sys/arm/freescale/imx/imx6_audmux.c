@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_audmux.c 283500 2015-05-24 18:59:45Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_audmux.c 281085 2015-04-04 21:34:26Z andrew $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +50,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_audmux.c 283500 2015-05
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 

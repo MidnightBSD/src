@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: kgdb_machdep.c,v 1.11 2005/12/24 22:45:35 perry Exp $	*/
 
 /*-
@@ -86,7 +85,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	JNPR: gdb_machdep.c,v 1.1 2007/08/09 12:25:25 katta
- * $FreeBSD: stable/10/sys/mips/mips/gdb_machdep.c 263687 2014-03-24 13:48:04Z emaste $
+ * $FreeBSD: stable/11/sys/mips/mips/gdb_machdep.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>

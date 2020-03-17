@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Alexander Rybalko <ray@freebsd.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_wdog.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_wdog.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,13 +40,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_wdog.c 322724 201
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/cpufunc.h>
 #include <machine/machdep.h>
-#include <machine/fdt.h>
 
 #include <arm/broadcom/bcm2835/bcm2835_wdog.h>
 
-#define	BCM2835_PASSWORD	0x5a
+#define	BCM2835_PASWORD		0x5a
 
 #define BCM2835_WDOG_RESET	0
 #define BCM2835_PASSWORD_MASK	0xff000000
@@ -119,7 +116,7 @@ bcmwd_attach(device_t dev)
 
 	sc = device_get_softc(dev);
 	sc->wdog_period = 7;
-	sc->wdog_passwd = BCM2835_PASSWORD;
+	sc->wdog_passwd = BCM2835_PASWORD;
 	sc->wdog_armed = 0;
 	sc->dev = dev;
 
@@ -167,45 +164,45 @@ bcmwd_watchdog_fn(void *private, u_int cmd, int *error)
 			device_printf(sc->dev,
 			    "Can't arm, timeout must be between 1-15 seconds\n");
 			WRITE(sc, BCM2835_RSTC_REG, 
-			    (BCM2835_PASSWORD << BCM2835_PASSWORD_SHIFT) |
+			    (BCM2835_PASWORD << BCM2835_PASSWORD_SHIFT) |
 			    BCM2835_RSTC_RESET);
 			mtx_unlock(&sc->mtx);
 			return;
 		}
 
 		ticks = (sec << 16) & BCM2835_WDOG_TIME_MASK;
-		reg = (BCM2835_PASSWORD << BCM2835_PASSWORD_SHIFT) | ticks;
+		reg = (BCM2835_PASWORD << BCM2835_PASSWORD_SHIFT) | ticks;
 		WRITE(sc, BCM2835_WDOG_REG, reg);
 
 		reg = READ(sc, BCM2835_RSTC_REG);
 		reg &= BCM2835_RSTC_WRCFG_CLR;
 		reg |= BCM2835_RSTC_WRCFG_FULL_RESET;
-		reg |= (BCM2835_PASSWORD << BCM2835_PASSWORD_SHIFT);
+		reg |= (BCM2835_PASWORD << BCM2835_PASSWORD_SHIFT);
 		WRITE(sc, BCM2835_RSTC_REG, reg);
 
 		*error = 0;
 	}
 	else
 		WRITE(sc, BCM2835_RSTC_REG, 
-		    (BCM2835_PASSWORD << BCM2835_PASSWORD_SHIFT) |
+		    (BCM2835_PASWORD << BCM2835_PASSWORD_SHIFT) |
 		    BCM2835_RSTC_RESET);
 
 	mtx_unlock(&sc->mtx);
 }
 
 void
-bcmwd_watchdog_reset()
+bcmwd_watchdog_reset(void)
 {
 
 	if (bcmwd_lsc == NULL)
 		return;
 
 	WRITE(bcmwd_lsc, BCM2835_WDOG_REG,
-	    (BCM2835_PASSWORD << BCM2835_PASSWORD_SHIFT) | 10);
+	    (BCM2835_PASWORD << BCM2835_PASSWORD_SHIFT) | 10);
 
 	WRITE(bcmwd_lsc, BCM2835_RSTC_REG,
 	    (READ(bcmwd_lsc, BCM2835_RSTC_REG) & BCM2835_RSTC_WRCFG_CLR) |
-		(BCM2835_PASSWORD << BCM2835_PASSWORD_SHIFT) |
+		(BCM2835_PASWORD << BCM2835_PASSWORD_SHIFT) |
 		BCM2835_RSTC_WRCFG_FULL_RESET);
 }
 

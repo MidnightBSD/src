@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Apple Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE. 
  *
- * $FreeBSD: stable/10/sys/bsm/audit_errno.h 293163 2016-01-04 16:51:56Z brueffer $
+ * $FreeBSD: stable/11/sys/bsm/audit_errno.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BSM_AUDIT_ERRNO_H_

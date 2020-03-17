@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Oleksandr Tymoshenko
  * Copyright (c) 2002-2004 Juli Mallett <jmallett@FreeBSD.org>
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/intr_machdep.c 233318 2012-03-22 17:47:52Z gonzo $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/intr_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_hwpmc_hooks.h"
 

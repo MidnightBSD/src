@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*********************************************************************
  *
  * Copyright 2003-2006 Raza Microelectronics, Inc. (RMI). All rights
@@ -29,7 +28,7 @@
  *
  * *****************************RMI_2**********************************/
 #include <sys/cdefs.h>		/* RCS ID & Copyright macro defns */
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/board.c 216390 2010-12-12 06:00:26Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/board.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>

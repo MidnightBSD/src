@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013, Nathan Whitehorn <nwhitehorn@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/pseries/plpar_iommu.h 255643 2013-09-17 17:37:04Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/pseries/plpar_iommu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _PSERIES_PHYP_IOMMU_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 2000 Tsubai Masanari.  All rights reserved.
@@ -26,7 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: stdarg.h,v 1.5 2000/02/27 17:50:21 tsubai Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/stdarg.h 162487 2006-09-21 01:37:02Z kan $
+ * $FreeBSD: stable/11/sys/powerpc/include/stdarg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_STDARG_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Nathan Whitehorn.  All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/mambo/mambo_disk.c 210677 2010-07-31 13:22:34Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/mambo/mambo_disk.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

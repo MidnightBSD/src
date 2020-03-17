@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  ----------------------------------------------------------------------------
  *          ATMEL Microcontroller Software Support  -  ROUSSET  -
@@ -31,7 +30,7 @@
  * From AT91LIB version 1.9 boards/at91sam9g45-ek/at91sam9g45/AT91SAM9G45.h
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_pio_sam9g45.h 238788 2012-07-26 08:01:25Z andrew $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_pio_sam9g45.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef  ARM_AT91_AT91_PIO_SAM9G45_H
 #define  ARM_AT91_AT91_PIO_SAM9G45_H

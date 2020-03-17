@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yohanes Nugroho <yohanes@gmail.com>
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/cfi_bus_econa.c 264219 2014-04-07 05:33:30Z rpaulo $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/cavium/cns11xx/cfi_bus_econa.c 264219 2014-04-07 05:33:30Z rpaulo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

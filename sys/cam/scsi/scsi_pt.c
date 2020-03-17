@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of SCSI Processor Target Peripheral driver for CAM.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_pt.c 294978 2016-01-28 09:25:15Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_pt.c 350804 2019-08-08 22:16:19Z mav $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -276,10 +275,7 @@ ptctor(struct cam_periph *periph, void *arg)
 
 	periph->softc = softc;
 
-	bzero(&cpi, sizeof(cpi));
-	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, periph->path);
 
 	cam_periph_unlock(periph);
 

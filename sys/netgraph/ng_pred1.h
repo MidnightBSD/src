@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Alexander Motin <mav@alkar.net>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_pred1.h 165619 2006-12-29 09:54:32Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_pred1.h 165619 2006-12-29 09:54:32Z glebius $
  */
 
 #ifndef _NETGRAPH_NG_PRED1_H_

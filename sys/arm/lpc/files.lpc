@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/arm/lpc/files.lpc 291133 2015-11-21 15:30:08Z andrew $
 arm/lpc/lpc_machdep.c			standard
 arm/lpc/lpc_pwr.c			standard
 arm/lpc/lpc_intc.c			standard

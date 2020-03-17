@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * Copyright (c) 2010-2011, Juli Mallett <jmallett@FreeBSD.org>
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octeon_wdog.c 232812 2012-03-11 06:17:49Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octeon_wdog.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

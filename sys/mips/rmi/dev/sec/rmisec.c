@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/dev/sec/rmisec.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/dev/sec/rmisec.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -424,13 +423,8 @@ xlr_sec_process(device_t dev, struct cryptop *crp, int hint)
 
 	cmd->op.source_buf = (uint64_t) (unsigned long)crp->crp_buf;
 	cmd->op.source_buf_size = crp->crp_ilen;
-	if (crp->crp_flags & CRYPTO_F_REL) {
-		cmd->op.dest_buf = (uint64_t) (unsigned long)crp->crp_buf;
-		cmd->op.dest_buf_size = crp->crp_ilen;
-	} else {
-		cmd->op.dest_buf = (uint64_t) (unsigned long)crp->crp_buf;
-		cmd->op.dest_buf_size = crp->crp_ilen;
-	}
+	cmd->op.dest_buf = (uint64_t) (unsigned long)crp->crp_buf;
+	cmd->op.dest_buf_size = crp->crp_ilen;
 	cmd->op.num_packets = 1;
 	cmd->op.num_fragments = 1;
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -57,7 +56,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: stable/10/sys/netinet6/tcp6_var.h 241916 2012-10-22 21:49:56Z delphij $
+ * $FreeBSD: stable/11/sys/netinet6/tcp6_var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_TCP6_VAR_H_

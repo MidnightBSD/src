@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 M. Warner Losh
  * Copyright (c) 2005 Olivier Houchard
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/uart_dev_at91usart.c 283327 2015-05-23 20:54:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/uart_dev_at91usart.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -440,7 +439,6 @@ at91_usart_bus_attach(struct uart_softc *sc)
 {
 	int err;
 	int i;
-	uint32_t cr;
 	struct at91_usart_softc *atsc;
 
 	atsc = (struct at91_usart_softc *)sc;
@@ -509,8 +507,8 @@ at91_usart_bus_attach(struct uart_softc *sc)
 	}
 
 	/* Turn on rx and tx */
-	cr = USART_CR_RSTSTA | USART_CR_RSTRX | USART_CR_RSTTX;
-	WR4(&sc->sc_bas, USART_CR, cr);
+	DELAY(1000);		/* Give pending character a chance to drain.  */
+	WR4(&sc->sc_bas, USART_CR, USART_CR_RSTSTA | USART_CR_RSTRX | USART_CR_RSTTX);
 	WR4(&sc->sc_bas, USART_CR, USART_CR_RXEN | USART_CR_TXEN);
 
 	/*

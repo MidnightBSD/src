@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_ssi.c 283500 2015-05-24 18:59:45Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_ssi.c 318118 2017-05-09 21:25:49Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,7 +54,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_ssi.c 283500 2015-05-24
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
@@ -69,6 +67,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_ssi.c 283500 2015-05-24
 	bus_space_write_4(_sc->bst, _sc->bsh, _reg, _val)
 
 #define	SSI_NCHANNELS	1
+#define	DMAS_TOTAL	8
 
 /* i.MX6 SSI registers */
 
@@ -190,8 +189,8 @@ struct sc_info {
 	struct sdma_conf	*conf;
 	struct ssi_rate		*sr;
 	struct sdma_softc	*sdma_sc;
-	int			sdma_ev_rx;
-	int			sdma_ev_tx;
+	uint32_t		sdma_ev_rx;
+	uint32_t		sdma_ev_tx;
 	int			sdma_channel;
 };
 
@@ -440,7 +439,7 @@ find_sdma_controller(struct sc_info *sc)
 	struct sdma_softc *sdma_sc;
 	phandle_t node, sdma_node;
 	device_t sdma_dev;
-	int dts_value[8];
+	pcell_t dts_value[DMAS_TOTAL];
 	int len;
 
 	if ((node = ofw_bus_get_node(sc->dev)) == -1)
@@ -449,12 +448,19 @@ find_sdma_controller(struct sc_info *sc)
 	if ((len = OF_getproplen(node, "dmas")) <= 0)
 		return (ENXIO);
 
-	OF_getprop(node, "dmas", &dts_value, len);
+	if (len != sizeof(dts_value)) {
+		device_printf(sc->dev,
+		    "\"dmas\" property length is invalid: %d (expected %d)",
+		    len, sizeof(dts_value));
+		return (ENXIO);
+	}
 
-	sc->sdma_ev_rx = fdt32_to_cpu(dts_value[1]);
-	sc->sdma_ev_tx = fdt32_to_cpu(dts_value[5]);
+	OF_getencprop(node, "dmas", dts_value, sizeof(dts_value));
 
-	sdma_node = OF_node_from_xref(fdt32_to_cpu(dts_value[0]));
+	sc->sdma_ev_rx = dts_value[1];
+	sc->sdma_ev_tx = dts_value[5];
+
+	sdma_node = OF_node_from_xref(dts_value[0]);
 
 	sdma_sc = NULL;
 
@@ -465,7 +471,7 @@ find_sdma_controller(struct sc_info *sc)
 	if (sdma_sc == NULL) {
 		device_printf(sc->dev, "No sDMA found. Can't operate\n");
 		return (ENXIO);
-	};
+	}
 
 	sc->sdma_sc = sdma_sc;
 
@@ -740,7 +746,7 @@ ssi_attach(device_t dev)
 
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "ssi softc");
 	if (sc->lock == NULL) {
-		device_printf(dev, "Cant create mtx\n");
+		device_printf(dev, "Can't create mtx\n");
 		return (ENXIO);
 	}
 
@@ -766,7 +772,7 @@ ssi_attach(device_t dev)
 
 	/*
 	 * Maximum possible DMA buffer.
-	 * Will be used partialy to match 24 bit word.
+	 * Will be used partially to match 24 bit word.
 	 */
 	sc->dma_size = 131072;
 
@@ -853,4 +859,5 @@ static driver_t ssi_pcm_driver = {
 
 DRIVER_MODULE(ssi, simplebus, ssi_pcm_driver, pcm_devclass, 0, 0);
 MODULE_DEPEND(ssi, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
+MODULE_DEPEND(ssi, sdma, 0, 0, 0);
 MODULE_VERSION(ssi, 1);

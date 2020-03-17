@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/ofw/ofw_pci.h 265954 2014-05-13 16:59:50Z ian $
+ * $FreeBSD: stable/11/sys/powerpc/ofw/ofw_pci.h 294281 2016-01-18 17:27:16Z nwhitehorn $
  */
 
 #ifndef POWERPC_OFW_OFW_PCI_H
@@ -56,8 +55,6 @@ struct ofw_pci_softc {
 	int			sc_initialized;
 
 	int			sc_quirks;
-
-	struct ofw_pci_register	sc_pcir;
 
 	struct ofw_pci_range	*sc_range;
 	int			sc_nrange;

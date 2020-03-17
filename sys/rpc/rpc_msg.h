@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_msg.h,v 1.11 2000/06/02 22:57:56 fvdl Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)rpc_msg.h 1.7 86/07/16 SMI
  *	from: @(#)rpc_msg.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/10/sys/rpc/rpc_msg.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/sys/rpc/rpc_msg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

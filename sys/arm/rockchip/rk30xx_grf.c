@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
 /* General Register File for Rockchip RK30xx */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/rockchip/rk30xx_grf.c 266337 2014-05-17 18:53:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/rockchip/rk30xx_grf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/rockchip/rk30xx_grf.c 266337 2014-05-17 18
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #include "rk30xx_grf.h"
 

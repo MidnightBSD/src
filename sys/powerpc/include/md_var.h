@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/md_var.h 212453 2010-09-11 04:45:51Z mav $
+ * $FreeBSD: stable/11/sys/powerpc/include/md_var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -38,8 +37,8 @@ extern	char	sigcode32[];
 extern	int	szsigcode32;
 
 #ifdef __powerpc64__
-extern	char	sigcode64[];
-extern	int	szsigcode64;
+extern	char	sigcode64[], sigcode64_elfv2[];
+extern	int	szsigcode64, szsigcode64_elfv2;
 #endif
 
 extern	long	Maxmem;

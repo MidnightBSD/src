@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -30,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: asm.h,v 1.6.18.1 2000/07/25 08:37:14 kleink Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/asm.h 232488 2012-03-04 11:55:28Z andreast $
+ * $FreeBSD: stable/11/sys/powerpc/include/asm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -62,17 +61,26 @@
 #define	HIDENAME(asmsym)	__CONCAT(.,asmsym)
 #endif
 
+#if !defined(_CALL_ELF) || _CALL_ELF == 1
 #ifdef _KERNEL
+/* ELFv1 kernel uses global dot symbols */
 #define	DOT_LABEL(name)		__CONCAT(.,name)
 #define	TYPE_ENTRY(name)	.size	name,24; \
 				.type	DOT_LABEL(name),@function; \
 				.globl	DOT_LABEL(name);
 #define	END_SIZE(name)		.size	DOT_LABEL(name),.-DOT_LABEL(name);
 #else /* !_KERNEL */
+/* ELFv1 user code uses local function entry points */
 #define	DOT_LABEL(name)		__CONCAT(.L.,name)
 #define	TYPE_ENTRY(name)	.type	name,@function;
 #define	END_SIZE(name)		.size	name,.-DOT_LABEL(name);
 #endif /* _KERNEL */
+#else
+/* ELFv2 doesn't have any of this complication */
+#define	DOT_LABEL(name)		name
+#define	TYPE_ENTRY(name)	.type	name,@function;
+#define	END_SIZE(name)		.size	name,.-DOT_LABEL(name);
+#endif
 
 #define	_GLOBAL(name) \
 	.data; \
@@ -81,6 +89,17 @@
 	name:
 
 #ifdef __powerpc64__
+#define TOC_NAME_FOR_REF(name)	__CONCAT(.L,name)
+#define	TOC_REF(name)	TOC_NAME_FOR_REF(name)@toc
+#define TOC_ENTRY(name) \
+	.section ".toc","aw"; \
+	TOC_NAME_FOR_REF(name): \
+        .tc name[TC],name
+#endif
+
+#ifdef __powerpc64__
+
+#if !defined(_CALL_ELF) || _CALL_ELF == 1
 #define	_ENTRY(name) \
 	.section ".text"; \
 	.p2align 2; \
@@ -93,6 +112,17 @@
 	.p2align 4; \
 	TYPE_ENTRY(name) \
 DOT_LABEL(name):
+#else
+#define	_ENTRY(name) \
+	.text; \
+	.p2align 4; \
+	.globl	name; \
+	.type	name,@function; \
+name: \
+	addis	%r2, %r12, (.TOC.-name)@ha; \
+	addi	%r2, %r2, (.TOC.-name)@l; \
+	.localentry name, .-name;
+#endif
 
 #define	_END(name) \
 	.long	0; \

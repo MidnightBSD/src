@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2008 by Nathan Whitehorn. All rights reserved.
  *
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("* $FreeBSD: stable/10/sys/powerpc/powermac/ata_dbdma.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("* $FreeBSD: stable/11/sys/powerpc/powermac/ata_dbdma.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Common routines for the DMA engine on both the Apple Kauai and MacIO

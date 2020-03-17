@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/rockchip/rk30xx_wdog.c 266337 2014-05-17 18:53:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/rockchip/rk30xx_wdog.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +42,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/rockchip/rk30xx_wdog.c 266337 2014-05-17 1
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/cpufunc.h>
 #include <machine/machdep.h>
 #include <machine/fdt.h>
 
@@ -173,7 +171,7 @@ rk30_wd_watchdog_fn(void *private, u_int cmd, int *error)
 }
 
 void
-rk30_wd_watchdog_reset()
+rk30_wd_watchdog_reset(void)
 {
 	bus_space_handle_t bsh;
 

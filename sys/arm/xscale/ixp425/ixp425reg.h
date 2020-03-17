@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ixp425reg.h,v 1.19 2005/12/11 12:16:51 christos Exp $ */
 /*
  * Copyright (c) 2003

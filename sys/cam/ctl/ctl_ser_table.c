@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_ser_table.c#1 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_ser_table.c 288802 2015-10-05 11:05:04Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_ser_table.c 288224 2015-09-25 18:49:25Z mav $
  */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/atheros/ar933xreg.h 249123 2013-04-05 01:35:59Z adrian $
+ * $FreeBSD: stable/11/sys/mips/atheros/ar933xreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	__AR93XX_REG_H__
@@ -39,6 +38,24 @@
 
 #define	AR933X_UART_BASE	(AR71XX_APB_BASE + 0x00020000)
 #define	AR933X_UART_SIZE	0x14
+
+#define	AR933X_GMAC_BASE	(AR71XX_APB_BASE + 0x00070000)
+#define	AR933X_GMAC_SIZE	0x04
+
+#define	AR933X_GMAC_REG_ETH_CFG		(AR933X_GMAC_BASE + 0x00)
+
+#define	AR933X_ETH_CFG_RGMII_GE0	(1 << 0)
+#define	AR933X_ETH_CFG_MII_GE0		(1 << 1)
+#define	AR933X_ETH_CFG_GMII_GE0		(1 << 2)
+#define	AR933X_ETH_CFG_MII_GE0_MASTER	(1 << 3)
+#define	AR933X_ETH_CFG_MII_GE0_SLAVE	(1 << 4)
+#define	AR933X_ETH_CFG_MII_GE0_ERR_EN	(1 << 5)
+#define	AR933X_ETH_CFG_SW_PHY_SWAP	(1 << 7)
+#define	AR933X_ETH_CFG_SW_PHY_ADDR_SWAP	(1 << 8)
+#define	AR933X_ETH_CFG_RMII_GE0		(1 << 9)
+#define	AR933X_ETH_CFG_RMII_GE0_SPD_10		0
+#define	AR933X_ETH_CFG_RMII_GE0_SPD_100		(1 << 10)
+
 #define	AR933X_WMAC_BASE	(AR71XX_APB_BASE + 0x00100000)
 #define	AR933X_WMAC_SIZE	0x20000
 #define	AR933X_EHCI_BASE	0x1b000000

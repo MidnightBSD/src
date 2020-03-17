@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_timer.h 296052 2016-02-25 18:46:06Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_timer.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef _NETINET_SCTP_TIMER_H_
 #define _NETINET_SCTP_TIMER_H_

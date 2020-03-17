@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /* $NetBSD: cpu.h,v 1.2 2001/02/23 21:23:52 reinoud Exp $ */
-/* $FreeBSD: stable/10/sys/arm/include/cpu.h 278684 2015-02-13 17:53:11Z ian $ */
+/* $FreeBSD: stable/11/sys/arm/include/cpu.h 340270 2018-11-08 22:42:55Z jhb $ */
 
 #ifndef MACHINE_CPU_H
 #define MACHINE_CPU_H
 
-#include <machine/acle-compat.h>
 #include <machine/armreg.h>
 #include <machine/frame.h>
 
@@ -15,12 +13,38 @@ void	swi_vm(void *);
 #ifdef _KERNEL
 #if __ARM_ARCH >= 6
 #include <machine/cpu-v6.h>
-#endif
+#else
+#include <machine/cpu-v4.h>
+#endif /* __ARM_ARCH >= 6 */
+
 static __inline uint64_t
 get_cyclecount(void)
 {
 #if __ARM_ARCH >= 6
-	return cp15_pmccntr_get();
+#if (__ARM_ARCH > 6) && defined(DEV_PMU)
+	if (pmu_attched) {
+		u_int cpu;
+		uint64_t h, h2;
+		uint32_t l, r;
+
+		cpu = PCPU_GET(cpuid);
+		h = (uint64_t)atomic_load_acq_32(&ccnt_hi[cpu]);
+		l = cp15_pmccntr_get();
+		/* In case interrupts are disabled we need to check for overflow. */
+		r = cp15_pmovsr_get();
+		if (r & PMU_OVSR_C) {
+			atomic_add_32(&ccnt_hi[cpu], 1);
+			/* Clear the event. */
+			cp15_pmovsr_set(PMU_OVSR_C);
+		}
+		/* Make sure there was no wrap-around while we read the lo half. */
+		h2 = (uint64_t)atomic_load_acq_32(&ccnt_hi[cpu]);
+		if (h != h2)
+			l = cp15_pmccntr_get();
+		return (h2 << 32 | l);
+	} else
+#endif
+		return cp15_pmccntr_get();
 #else /* No performance counters, so use binuptime(9). This is slooooow */
 	struct bintime bt;
 
@@ -37,6 +61,7 @@ get_cyclecount(void)
 #define cpu_getstack(td)	((td)->td_frame->tf_usr_sp)
 #define cpu_setstack(td, sp)	((td)->td_frame->tf_usr_sp = (sp))
 #define cpu_spinwait()		/* nothing */
+#define	cpu_lock_delay()	DELAY(1)
 
 #define ARM_NVEC		8
 #define ARM_VEC_ALL		0xffffffff

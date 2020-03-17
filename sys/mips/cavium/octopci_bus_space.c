@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $    */
 /*-
  * $Id: bus.h,v 1.6 2007/08/09 11:23:32 katta Exp $
@@ -63,10 +62,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/bus.h,v 1.5 1999/08/28 00:38:40 peter
- * $FreeBSD: stable/10/sys/mips/cavium/octopci_bus_space.c 263687 2014-03-24 13:48:04Z emaste $
+ * $FreeBSD: stable/11/sys/mips/cavium/octopci_bus_space.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octopci_bus_space.c 263687 2014-03-24 13:48:04Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octopci_bus_space.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

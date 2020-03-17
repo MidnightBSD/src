@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Topspin Corporation.  All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All rights reserved.
@@ -30,6 +29,8 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
+ * $FreeBSD: stable/11/sys/ofed/include/rdma/ib_fmr_pool.h 331772 2018-03-30 18:17:33Z hselasky $
  */
 
 #if !defined(IB_FMR_POOL_H)

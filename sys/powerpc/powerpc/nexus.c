@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  * Copyright 2001 by Thomas Moestl <tmm@FreeBSD.org>.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/nexus.c 266160 2014-05-15 17:30:16Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/nexus.c 297000 2016-03-18 01:28:41Z jhibbits $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,6 +66,7 @@ static bus_setup_intr_t nexus_setup_intr;
 static bus_teardown_intr_t nexus_teardown_intr;
 static bus_activate_resource_t nexus_activate_resource;
 static bus_deactivate_resource_t nexus_deactivate_resource;
+static bus_space_tag_t nexus_get_bus_tag(device_t, device_t);
 #ifdef SMP
 static bus_bind_intr_t nexus_bind_intr;
 #endif
@@ -88,6 +88,7 @@ static device_method_t nexus_methods[] = {
 	DEVMETHOD(bus_bind_intr,	nexus_bind_intr),
 #endif
 	DEVMETHOD(bus_config_intr,	nexus_config_intr),
+	DEVMETHOD(bus_get_bus_tag,	nexus_get_bus_tag),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_map_intr,	nexus_ofw_map_intr),
@@ -156,6 +157,13 @@ nexus_teardown_intr(device_t bus __unused, device_t child __unused,
 	return (powerpc_teardown_intr(ih));
 }
 
+static bus_space_tag_t
+nexus_get_bus_tag(device_t bus __unused, device_t child __unused)
+{
+
+	return(&bs_be_tag);
+}
+
 #ifdef SMP
 static int
 nexus_bind_intr(device_t bus __unused, device_t child __unused,
@@ -190,13 +198,13 @@ nexus_activate_resource(device_t bus __unused, device_t child __unused,
 {
 
 	if (type == SYS_RES_MEMORY) {
-		vm_offset_t start;
+		vm_paddr_t start;
 		void *p;
 
-		start = (vm_offset_t) rman_get_start(r);
+		start = (vm_paddr_t) rman_get_start(r);
 		if (bootverbose)
-			printf("nexus mapdev: start %zx, len %ld\n", start,
-			    rman_get_size(r));
+			printf("nexus mapdev: start %jx, len %jd\n",
+			    (uintmax_t)start, rman_get_size(r));
 
 		p = pmap_mapdev(start, (vm_size_t) rman_get_size(r));
 		if (p == NULL)

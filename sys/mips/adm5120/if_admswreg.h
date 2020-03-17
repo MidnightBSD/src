@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: if_admswreg.h,v 1.1 2007/03/20 08:52:02 dyoung Exp $ */
 
 /*-
@@ -31,7 +30,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/adm5120/if_admswreg.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD: stable/11/sys/mips/adm5120/if_admswreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	_IF_ADMSWREG_H_
 #define	_IF_ADMSWREG_H_

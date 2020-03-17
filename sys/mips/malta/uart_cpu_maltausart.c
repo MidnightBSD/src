@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Wojciech A. Koszek <wkoszek@FreeBSD.org>
  * All rights reserved.
@@ -33,7 +32,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/malta/uart_cpu_maltausart.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/malta/uart_cpu_maltausart.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

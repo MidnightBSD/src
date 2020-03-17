@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/conf/PB92.hints 221489 2011-05-05 09:04:49Z adrian $
+# $FreeBSD: stable/11/sys/mips/conf/PB92.hints 221489 2011-05-05 09:04:49Z adrian $
 hint.apb.0.at="nexus0"
 hint.apb.0.irq=4
 

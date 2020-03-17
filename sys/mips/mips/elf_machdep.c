@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/elf_machdep.c 294136 2016-01-16 07:56:49Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/elf_machdep.c 338867 2018-09-21 20:40:37Z markj $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -55,8 +54,6 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -64,7 +61,6 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF64",
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
@@ -113,8 +109,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -122,7 +116,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
@@ -167,6 +160,13 @@ elf32_dump_thread(struct thread *td __unused, void *dst __unused,
 {
 }
 #endif
+
+bool
+elf_is_ifunc_reloc(Elf_Size r_info __unused)
+{
+
+	return (false);
+}
 
 /* Process one elf relocation with addend. */
 static int

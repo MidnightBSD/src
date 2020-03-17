@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_iomuxc.h 258057 2013-11-12 18:02:56Z br $
+ * $FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_iomuxc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	IOMUXC(n)	(n * 0x04)

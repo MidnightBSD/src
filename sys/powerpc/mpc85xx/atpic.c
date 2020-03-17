@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Marcel Moolenaar
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/mpc85xx/atpic.c 265969 2014-05-13 18:06:26Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/mpc85xx/atpic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

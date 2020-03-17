@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Thomas Skibo
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xilinx/zy7_machdep.c 266379 2014-05-17 23:25:20Z ian $
+ * $FreeBSD: stable/11/sys/arm/xilinx/zy7_machdep.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -34,15 +33,13 @@
  * (v1.4) November 16, 2012.  Xilinx doc UG585.
  */
 
-#include "opt_global.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_machdep.c 266379 2014-05-17 23:25:20Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
-#define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -50,33 +47,33 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_machdep.c 266379 2014-05-17 23:
 #include <dev/fdt/fdt_common.h>
 
 #include <machine/bus.h>
-#include <machine/devmap.h>
 #include <machine/machdep.h>
+#include <machine/platform.h> 
 
 #include <arm/xilinx/zy7_reg.h>
 
 void (*zynq7_cpu_reset)(void);
 
 vm_offset_t
-initarm_lastaddr(void)
+platform_lastaddr(void)
 {
 
-	return (arm_devmap_lastaddr());
+	return (devmap_lastaddr());
 }
 
 void
-initarm_early_init(void)
+platform_probe_and_attach(void)
 {
 
 }
 
 void
-initarm_gpio_init(void)
+platform_gpio_init(void)
 {
 }
 
 void
-initarm_late_init(void)
+platform_late_init(void)
 {
 }
 
@@ -86,20 +83,17 @@ initarm_late_init(void)
  * nice efficient 1MB section mappings.
  */
 int
-initarm_devmap_init(void)
+platform_devmap_init(void)
 {
 
-	arm_devmap_add_entry(ZYNQ7_PSIO_HWBASE, ZYNQ7_PSIO_SIZE);
-	arm_devmap_add_entry(ZYNQ7_PSCTL_HWBASE, ZYNQ7_PSCTL_SIZE);
+	devmap_add_entry(ZYNQ7_PSIO_HWBASE, ZYNQ7_PSIO_SIZE);
+	devmap_add_entry(ZYNQ7_PSCTL_HWBASE, ZYNQ7_PSCTL_SIZE);
 
 	return (0);
 }
 
 
-struct fdt_fixup_entry fdt_fixup_table[] = {
-	{ NULL, NULL }
-};
-
+#ifndef INTRNG
 static int
 fdt_gic_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
     int *pol)
@@ -119,24 +113,10 @@ fdt_pic_decode_t fdt_pic_table[] = {
 	&fdt_gic_decode_ic,
 	NULL
 };
-
-
-struct arm32_dma_range *
-bus_dma_get_range(void)
-{
-
-	return (NULL);
-}
-
-int
-bus_dma_get_range_nb(void)
-{
-
-	return (0);
-}
+#endif
 
 void
-cpu_reset()
+cpu_reset(void)
 {
 	if (zynq7_cpu_reset != NULL)
 		(*zynq7_cpu_reset)();

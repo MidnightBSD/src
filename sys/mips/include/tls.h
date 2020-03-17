@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/tls.h 232583 2012-03-06 07:47:28Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/tls.h 331722 2018-03-29 02:50:57Z eadler $
  * 
  */
 

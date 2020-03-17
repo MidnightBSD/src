@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: obiovar.h,v 1.4 2003/06/16 17:40:53 thorpej Exp $	*/
 
 /*-

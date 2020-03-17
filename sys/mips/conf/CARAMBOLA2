@@ -8,8 +8,10 @@
 # * 16MB flash
 # * Integrated 1x1 2GHz wifi and 10/100 bridge
 #
-# $FreeBSD: stable/10/sys/mips/conf/CARAMBOLA2 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/CARAMBOLA2 345344 2019-03-20 18:49:45Z kib $
 #
+
+#NO_UNIVERSE
 
 # Include the default AR933x parameters
 include         "AR933X_BASE"
@@ -43,11 +45,11 @@ device		arswitch
 options 	AR71XX_ENV_UBOOT
 
 # uzip - to boot natively from flash
-device		geom_uncompress
-options 	GEOM_UNCOMPRESS
+device		xz
+options 	GEOM_UZIP
 
 # Used for the static uboot partition map
 device          geom_map
 
 # Boot off of the rootfs, as defined in the geom_map setup.
-options 	ROOTDEVNAME=\"ufs:map/rootfs.uncompress\"
+options 	ROOTDEVNAME=\"ufs:map/rootfs.uzip\"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Luoqi Chen <luoqi@freebsd.org>
  * Copyright (c) Peter Wemm <peter@netplex.com.au>
@@ -26,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/pcpu.h,v 1.15 2004/11/05 19:16:44 jhb
- * $FreeBSD: stable/10/sys/mips/include/pcpu.h 290080 2015-10-27 22:57:58Z jhb $
+ * $FreeBSD: stable/11/sys/mips/include/pcpu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PCPU_H_

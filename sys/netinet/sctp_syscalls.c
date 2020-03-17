@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_syscalls.c 321021 2017-07-15 17:28:03Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_syscalls.c 321322 2017-07-21 06:48:47Z kib $");
 
 #include "opt_capsicum.h"
 #include "opt_inet.h"
@@ -83,10 +82,10 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_syscalls.c 321021 2017-07-15 17:2
 #include <netinet/sctp_peeloff.h>
 
 static struct syscall_helper_data sctp_syscalls[] = {
-	SYSCALL_INIT_HELPER(sctp_peeloff),
-	SYSCALL_INIT_HELPER(sctp_generic_sendmsg),
-	SYSCALL_INIT_HELPER(sctp_generic_sendmsg_iov),
-	SYSCALL_INIT_HELPER(sctp_generic_recvmsg),
+	SYSCALL_INIT_HELPER_F(sctp_peeloff, SYF_CAPENABLED),
+	SYSCALL_INIT_HELPER_F(sctp_generic_sendmsg, SYF_CAPENABLED),
+	SYSCALL_INIT_HELPER_F(sctp_generic_sendmsg_iov, SYF_CAPENABLED),
+	SYSCALL_INIT_HELPER_F(sctp_generic_recvmsg, SYF_CAPENABLED),
 	SYSCALL_INIT_LAST
 };
 
@@ -95,11 +94,11 @@ sctp_syscalls_init(void *unused __unused)
 {
 	int error;
 
-	error = syscall_helper_register(sctp_syscalls);
+	error = syscall_helper_register(sctp_syscalls, SY_THR_STATIC);
 	KASSERT((error == 0),
 	    ("%s: syscall_helper_register failed for sctp syscalls", __func__));
 #ifdef COMPAT_FREEBSD32
-	error = syscall32_helper_register(sctp_syscalls);
+	error = syscall32_helper_register(sctp_syscalls, SY_THR_STATIC);
 	KASSERT((error == 0),
 	    ("%s: syscall32_helper_register failed for sctp syscalls",
 	    __func__));
@@ -122,17 +121,18 @@ sys_sctp_peeloff(td, uap)
 	} */ *uap;
 {
 #if (defined(INET) || defined(INET6)) && defined(SCTP)
-	struct file *nfp = NULL;
+	struct file *headfp, *nfp = NULL;
 	struct socket *head, *so;
 	cap_rights_t rights;
 	u_int fflag;
 	int error, fd;
 
 	AUDIT_ARG_FD(uap->sd);
-	error = fgetsock(td, uap->sd, cap_rights_init(&rights, CAP_PEELOFF),
-	    &head, &fflag);
+	error = getsock_cap(td, uap->sd, cap_rights_init(&rights, CAP_PEELOFF),
+	    &headfp, &fflag, NULL);
 	if (error != 0)
 		goto done2;
+	head = headfp->f_data;
 	if (head->so_proto->pr_protocol != IPPROTO_SCTP) {
 		error = EOPNOTSUPP;
 		goto done;
@@ -197,7 +197,7 @@ noconnection:
 done:
 	if (nfp != NULL)
 		fdrop(nfp, td);
-	fputsock(head);
+	fdrop(headfp, td);
 done2:
 	return (error);
 #else  /* SCTP */
@@ -249,7 +249,7 @@ sys_sctp_generic_sendmsg (td, uap)
 	}
 
 	AUDIT_ARG_FD(uap->sd);
-	error = getsock_cap(td, uap->sd, &rights, &fp, NULL);
+	error = getsock_cap(td, uap->sd, &rights, &fp, NULL, NULL);
 	if (error != 0)
 		goto sctp_bad;
 #ifdef KTRACE
@@ -362,7 +362,7 @@ sys_sctp_generic_sendmsg_iov(td, uap)
 	}
 
 	AUDIT_ARG_FD(uap->sd);
-	error = getsock_cap(td, uap->sd, &rights, &fp, NULL);
+	error = getsock_cap(td, uap->sd, &rights, &fp, NULL, NULL);
 	if (error != 0)
 		goto sctp_bad1;
 
@@ -478,7 +478,7 @@ sys_sctp_generic_recvmsg(td, uap)
 
 	AUDIT_ARG_FD(uap->sd);
 	error = getsock_cap(td, uap->sd, cap_rights_init(&rights, CAP_RECV),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);
 #ifdef COMPAT_FREEBSD32
@@ -563,7 +563,7 @@ sys_sctp_generic_recvmsg(td, uap)
 
 	if (fromlen && uap->from) {
 		len = fromlen;
-		if (len <= 0 || fromsa == 0)
+		if (len <= 0 || fromsa == NULL)
 			len = 0;
 		else {
 			len = MIN(len, fromsa->sa_len);

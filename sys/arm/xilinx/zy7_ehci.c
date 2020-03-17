@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2013 Thomas Skibo
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/xilinx/zy7_ehci.c 308402 2016-11-07 09:19:04Z hselasky $
+ * $FreeBSD: stable/11/sys/arm/xilinx/zy7_ehci.c 346524 2019-04-22 04:56:41Z ian $
  */
 
 /*
@@ -37,7 +36,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_ehci.c 308402 2016-11-07 09:19:04Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_ehci.c 346524 2019-04-22 04:56:41Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -138,6 +137,18 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_ehci.c 308402 2016-11-07 09:19:
 
 #define EHCI_REG_OFFSET	ZY7_USB_CAPLENGTH_HCIVERSION
 #define EHCI_REG_SIZE	0x100
+
+static void
+zy7_ehci_post_reset(struct ehci_softc *ehci_softc)
+{
+	uint32_t usbmode;
+
+	/* Force HOST mode */
+	usbmode = EOREAD4(ehci_softc, EHCI_USBMODE_NOLPM);
+	usbmode &= ~EHCI_UM_CM;
+	usbmode |= EHCI_UM_CM_HOST;
+	EOWRITE4(ehci_softc, EHCI_USBMODE_NOLPM, usbmode);
+}
 
 static int
 zy7_phy_config(device_t dev, bus_space_tag_t io_tag, bus_space_handle_t bsh)
@@ -276,8 +287,9 @@ zy7_ehci_attach(device_t dev)
 	}
 
 	/* Customization. */
-	sc->sc_flags |= EHCI_SCFLG_SETMODE | EHCI_SCFLG_TT |
-		EHCI_SCFLG_NORESTERM;
+	sc->sc_flags |= EHCI_SCFLG_TT |	EHCI_SCFLG_NORESTERM;
+	sc->sc_vendor_post_reset = zy7_ehci_post_reset;
+	sc->sc_vendor_get_port_speed = ehci_get_port_speed_portsc;
 
 	/* Modify FIFO burst threshold from 2 to 8. */
 	bus_space_write_4(sc->sc_io_tag, bsh,
@@ -360,5 +372,5 @@ static driver_t ehci_driver = {
 };
 static devclass_t ehci_devclass;
 
-DRIVER_MODULE(ehci, simplebus, ehci_driver, ehci_devclass, NULL, NULL);
-MODULE_DEPEND(ehci, usb, 1, 1, 1);
+DRIVER_MODULE(zy7_ehci, simplebus, ehci_driver, ehci_devclass, NULL, NULL);
+MODULE_DEPEND(zy7_ehci, usb, 1, 1, 1);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: hpc_machdep.c,v 1.70 2003/09/16 08:18:22 agc Exp $	*/
 
 /*-

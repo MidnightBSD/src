@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
- * All rights excluded.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/arm/locore.S 278643 2015-02-13 00:06:07Z ian $
+ * $FreeBSD: stable/11/sys/arm/arm/locore.S 297682 2016-04-07 18:19:09Z ian $
  */
 
 /*

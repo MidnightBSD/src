@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bcopyinout_xscale.S,v 1.3 2003/12/15 09:27:18 scw Exp $	*/
 
 /*-
@@ -37,9 +36,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/bcopyinout_xscale.S 294681 2016-01-24 19:58:58Z ian $");
-
-#include <machine/acle-compat.h>
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/bcopyinout_xscale.S 300694 2016-05-25 19:44:26Z ian $");
 
 	.syntax	unified
 	.text
@@ -68,6 +65,15 @@ ENTRY(copyin)
 	movle	r0, #0x00
 	movle	pc, lr			/* Bail early if length is <= 0 */
 
+	adds	r3, r0, r2
+	movcs	r0, #EFAULT
+	RETc(cs)
+
+	ldr	r12, =(VM_MAXUSER_ADDRESS + 1)
+	cmp	r3, r12
+	movcs	r0, #EFAULT
+	RETc(cs)
+
 	ldr	r3, .L_arm_memcpy
 	ldr	r3, [r3]
 	cmp	r3, #0
@@ -88,7 +94,7 @@ ENTRY(copyin)
 	ldmfd   sp!, {r0-r2, r4, lr}
 	moveq	r0, #0
 	RETeq
-					
+
 .Lnormal:
 	stmfd	sp!, {r10-r11, lr}
 
@@ -510,6 +516,15 @@ ENTRY(copyout)
 	movle	r0, #0x00
 	movle	pc, lr			/* Bail early if length is <= 0 */
 
+	adds	r3, r1, r2
+	movcs	r0, #EFAULT
+	RETc(cs)
+
+	ldr	r12, =(VM_MAXUSER_ADDRESS + 1)
+	cmp	r3, r12
+	movcs	r0, #EFAULT
+	RETc(cs)
+
 	ldr	r3, .L_arm_memcpy
 	ldr	r3, [r3]
 	cmp	r3, #0
@@ -530,8 +545,8 @@ ENTRY(copyout)
 	ldmfd   sp!, {r0-r2, r4, lr}
 	moveq	r0, #0
 	RETeq
-	
-.Lnormale:									
+
+.Lnormale:
 	stmfd	sp!, {r10-r11, lr}
 
 	GET_PCB(r10)
@@ -587,7 +602,7 @@ ENTRY(copyout)
 	ldrne	ip, [r0], #0x04
 	subne	r2, r2, #0x04
 	strtne	ip, [r1], #0x04
-	
+
 	stmfd	sp!, {r4-r9}		/* Free up some registers */
 	mov	r3, #-1			/* Signal restore r4-r9 */
 

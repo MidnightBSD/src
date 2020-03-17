@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/intr_machdep.h 265969 2014-05-13 18:06:26Z ian $
+ * $FreeBSD: stable/11/sys/powerpc/include/intr_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_
@@ -31,7 +30,7 @@
 
 #define	INTR_VECTORS	256
 
-#define	MAX_PICS		5
+#define	MAX_PICS		16
 #define	MAP_IRQ(node, pin)	powerpc_get_irq(node, pin)
 
 /*
@@ -58,5 +57,8 @@ int	powerpc_teardown_intr(void *);
 int	powerpc_bind_intr(u_int irq, u_char cpu);
 int	powerpc_config_intr(int, enum intr_trigger, enum intr_polarity);
 int	powerpc_fw_config_intr(int irq, int sense_code);
+
+void	powerpc_intr_mask(u_int irq);
+void	powerpc_intr_unmask(u_int irq);
 
 #endif /* _MACHINE_INTR_MACHDEP_H_ */

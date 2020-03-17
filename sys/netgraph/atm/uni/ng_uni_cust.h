@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -29,7 +28,7 @@
  *
  * Customisation of signalling source to the NG environment.
  *
- * $FreeBSD: stable/10/sys/netgraph/atm/uni/ng_uni_cust.h 281657 2015-04-17 15:39:42Z rrs $
+ * $FreeBSD: stable/11/sys/netgraph/atm/uni/ng_uni_cust.h 280785 2015-03-28 12:50:24Z rrs $
  */
 
 #include <sys/param.h>

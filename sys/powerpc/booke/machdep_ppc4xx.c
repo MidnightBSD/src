@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2012 Semihalf.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/booke/machdep_ppc4xx.c 236324 2012-05-30 17:34:40Z raj $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/booke/machdep_ppc4xx.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fiq_subr.S,v 1.3 2002/04/12 18:50:31 thorpej Exp $	*/
 
 /*-
@@ -40,7 +39,7 @@
 
 #include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/fiq_subr.S 266311 2014-05-17 13:53:38Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/fiq_subr.S 262980 2014-03-10 19:36:26Z ian $");
 
 /*
  * MODE_CHANGE_NOP should be inserted between a mode change and a

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/exec.h 142107 2005-02-19 21:16:48Z ru $
+ * $FreeBSD: stable/11/sys/arm/include/exec.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_EXEC_H_

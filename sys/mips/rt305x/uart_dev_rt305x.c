@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: uart.c,v 1.2 2007/03/23 20:05:47 dogcow Exp $ */
 
 /*-
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rt305x/uart_dev_rt305x.c 262649 2014-03-01 04:16:54Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/uart_dev_rt305x.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -74,12 +73,8 @@ static struct uart_ops uart_rt305x_uart_ops = {
 };
 
 static int	uart_output = 1;
-TUNABLE_INT("kern.uart_output", &uart_output);
-SYSCTL_INT(_kern, OID_AUTO, uart_output, CTLFLAG_RW,
+SYSCTL_INT(_kern, OID_AUTO, uart_output, CTLFLAG_RWTUN,
     &uart_output, 0, "UART output enabled.");
-
-
-
 
 static int
 rt305x_uart_probe(struct uart_bas *bas)
@@ -222,7 +217,8 @@ struct uart_class uart_rt305x_uart_class = {
 	sizeof(struct rt305x_uart_softc),
 	.uc_ops = &uart_rt305x_uart_ops,
 	.uc_range = 1, /* use hinted range */
-	.uc_rclk = SYSTEM_CLOCK
+	.uc_rclk = SYSTEM_CLOCK,
+	.uc_rshift = 0
 };
 
 #define	SIGCHG(c, i, s, d)				\

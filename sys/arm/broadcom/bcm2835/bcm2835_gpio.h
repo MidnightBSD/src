@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Oleksandr Tymoshenko <gonzo@bluezbox.com>
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_gpio.h 255370 2013-09-07 18:48:15Z loos $
+ * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_gpio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_BCM2835_GPIO_H_

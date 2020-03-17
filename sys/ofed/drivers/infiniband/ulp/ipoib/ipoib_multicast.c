@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, 2005 Topspin Communications.  All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All rights reserved.
@@ -32,6 +31,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "ipoib.h"
 
@@ -71,7 +73,7 @@ static void ipoib_mcast_free(struct ipoib_mcast *mcast)
 	tx_dropped = mcast->pkt_queue.ifq_len;
 	_IF_DRAIN(&mcast->pkt_queue);	/* XXX Locking. */
 
-	dev->if_oerrors += tx_dropped;
+	if_inc_counter(dev, IFCOUNTER_OERRORS, tx_dropped);
 
 	kfree(mcast);
 }
@@ -168,7 +170,7 @@ static int ipoib_mcast_join_finish(struct ipoib_mcast *mcast,
 		}
 		priv->qkey = be32_to_cpu(priv->broadcast->mcmember.qkey);
 		spin_unlock_irq(&priv->lock);
-		priv->tx_wr.wr.ud.remote_qkey = priv->qkey;
+		priv->tx_wr.remote_qkey = priv->qkey;
 		set_qkey = 1;
 	}
 
@@ -256,7 +258,7 @@ ipoib_mcast_sendonly_join_complete(int status,
 					mcast->mcmember.mgid.raw, ":", status);
 
 		/* Flush out any queued packets */
-		priv->dev->if_oerrors += mcast->pkt_queue.ifq_len;
+		if_inc_counter(priv->dev, IFCOUNTER_OERRORS, mcast->pkt_queue.ifq_len);
 		_IF_DRAIN(&mcast->pkt_queue);
 
 		/* Clear the busy flag so we try again */
@@ -467,13 +469,21 @@ void ipoib_mcast_join_task(struct work_struct *work)
 	struct ipoib_dev_priv *priv =
 		container_of(work, struct ipoib_dev_priv, mcast_task.work);
 	struct ifnet *dev = priv->dev;
+	struct ib_port_attr attr;
 
 	ipoib_dbg_mcast(priv, "Running join task. flags 0x%lX\n", priv->flags);
 
 	if (!test_bit(IPOIB_MCAST_RUN, &priv->flags))
 		return;
 
-	if (ib_query_gid(priv->ca, priv->port, 0, &priv->local_gid))
+	if (ib_query_port(priv->ca, priv->port, &attr) ||
+            attr.state != IB_PORT_ACTIVE) {
+		ipoib_dbg(priv, "%s: port state is not ACTIVE (state = %d) suspend task.\n",
+                          __func__, attr.state);
+		return;
+	}
+
+	if (ib_query_gid(priv->ca, priv->port, 0, &priv->local_gid, NULL))
 		ipoib_warn(priv, "ib_query_gid() failed\n");
 	else
 		memcpy(IF_LLADDR(dev) + 4, priv->local_gid.raw, sizeof (union ib_gid));
@@ -552,7 +562,8 @@ void ipoib_mcast_join_task(struct work_struct *work)
 	spin_unlock_irq(&priv->lock);
 
 	if (!ipoib_cm_admin_enabled(priv))
-		ipoib_change_mtu(priv, min(priv->mcast_mtu, priv->admin_mtu));
+		ipoib_change_mtu(priv, min(priv->mcast_mtu, priv->admin_mtu),
+		    true);
 
 	ipoib_dbg_mcast(priv, "successfully joined all multicast groups\n");
 
@@ -618,7 +629,7 @@ ipoib_mcast_send(struct ipoib_dev_priv *priv, void *mgid, struct mbuf *mb)
 	if (!test_bit(IPOIB_FLAG_OPER_UP, &priv->flags)		||
 	    !priv->broadcast					||
 	    !test_bit(IPOIB_MCAST_FLAG_ATTACHED, &priv->broadcast->flags)) {
-		++dev->if_oerrors;
+		if_inc_counter(dev, IFCOUNTER_OERRORS, 1);
 		m_freem(mb);
 		return;
 	}
@@ -633,7 +644,7 @@ ipoib_mcast_send(struct ipoib_dev_priv *priv, void *mgid, struct mbuf *mb)
 		if (!mcast) {
 			ipoib_warn(priv, "unable to allocate memory for "
 				   "multicast structure\n");
-			++dev->if_oerrors;
+			if_inc_counter(dev, IFCOUNTER_OERRORS, 1);
 			m_freem(mb);
 			goto out;
 		}
@@ -648,7 +659,7 @@ ipoib_mcast_send(struct ipoib_dev_priv *priv, void *mgid, struct mbuf *mb)
 		if (mcast->pkt_queue.ifq_len < IPOIB_MAX_MCAST_QUEUE) {
 			_IF_ENQUEUE(&mcast->pkt_queue, mb);
 		} else {
-			++dev->if_oerrors;
+			if_inc_counter(dev, IFCOUNTER_OERRORS, 1);
 			m_freem(mb);
 		}
 

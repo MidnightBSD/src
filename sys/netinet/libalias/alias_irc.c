@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_irc.c 190841 2009-04-08 11:56:49Z piso $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/libalias/alias_irc.c 336279 2018-07-14 15:32:36Z markj $");
 
 /* Alias_irc.c intercepts packages contain IRC CTCP commands, and
 	changes DCC commands to export a port on the aliasing host instead
@@ -45,7 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_irc.c 190841 2009-04-08
 	 Version 2.1:  May, 1997 (cjm)
 	     Very minor changes to conform with
 	     local/global/function naming conventions
-	     withing the packet alising module.
+	     within the packet alising module.
 */
 
 /* Includes */
@@ -93,12 +92,11 @@ static void
 AliasHandleIrcOut(struct libalias *, struct ip *, struct alias_link *,	
 		  int maxpacketsize);
 
-static int 
+static int
 fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
-	if (ah->dport == NULL || ah->dport == NULL || ah->lnk == NULL || 
-	    ah->maxpktsize == 0)
+	if (ah->dport == NULL || ah->lnk == NULL || ah->maxpktsize == 0)
 		return (-1);
 	if (ntohs(*ah->dport) == IRC_CONTROL_PORT_NUMBER_1
 	    || ntohs(*ah->dport) == IRC_CONTROL_PORT_NUMBER_2)
@@ -106,7 +104,7 @@ fingerprint(struct libalias *la, struct alias_data *ah)
 	return (-1);
 }
 
-static int 
+static int
 protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 
@@ -119,13 +117,13 @@ protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
 }
 
 struct proto_handler handlers[] = {
-	{ 
-	  .pri = 90, 
-	  .dir = OUT, 
-	  .proto = TCP, 
-	  .fingerprint = &fingerprint, 
+	{
+	  .pri = 90,
+	  .dir = OUT,
+	  .proto = TCP,
+	  .fingerprint = &fingerprint,
 	  .protohandler = &protohandler
-	}, 
+	},
 	{ EOH }
 };
 
@@ -150,7 +148,7 @@ mod_handler(module_t mod, int type, void *data)
 }
 
 #ifdef _KERNEL
-static 
+static
 #endif
 moduledata_t alias_mod = {
        "alias_irc", mod_handler, NULL
@@ -483,7 +481,7 @@ lPACKET_DONE:
    which will generate a type-error on all but 32-bit machines.
 
 	[Note 2] This routine really ought to be replaced with one that
-	creates a transparent proxy on the aliasing host, to allow arbitary
+	creates a transparent proxy on the aliasing host, to allow arbitrary
 	changes in the TCP stream.  This should not be too difficult given
 	this base;  I (ee) will try to do this some time later.
 	*/

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -26,14 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_common.c 258057 2013-11-12 18:02:56Z br $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_common.c 314506 2017-03-01 19:55:04Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
@@ -45,16 +43,15 @@ void
 cpu_reset(void)
 {
 	phandle_t src;
-	uint32_t addr, paddr;
+	uint32_t paddr;
 	bus_addr_t vaddr;
 
 	if (src_swreset() == 0)
 		goto end;
 
 	src = OF_finddevice("src");
-	if ((src != 0) && (OF_getprop(src, "reg", &paddr, sizeof(paddr))) > 0) {
-		addr = fdt32_to_cpu(paddr);
-		if (bus_space_map(fdtbus_bs_tag, addr, 0x10, 0, &vaddr) == 0) {
+	if ((src != 0) && (OF_getencprop(src, "reg", &paddr, sizeof(paddr))) > 0) {
+		if (bus_space_map(fdtbus_bs_tag, paddr, 0x10, 0, &vaddr) == 0) {
 			bus_space_write_4(fdtbus_bs_tag, vaddr, 0x00, SW_RST);
 		}
 	}
@@ -63,10 +60,7 @@ end:
 	while (1);
 }
 
-struct fdt_fixup_entry fdt_fixup_table[] = {
-	{ NULL, NULL }
-};
-
+#ifndef INTRNG
 static int
 fdt_pic_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
     int *pol)
@@ -85,3 +79,4 @@ fdt_pic_decode_t fdt_pic_table[] = {
 	&fdt_pic_decode_ic,
 	NULL
 };
+#endif

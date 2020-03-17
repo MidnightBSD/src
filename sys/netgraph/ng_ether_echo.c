@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_ether_echo.c
  */
@@ -38,7 +37,7 @@
  *
  * Author: Julian Elisher <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_ether_echo.c 186481 2008-12-25 00:01:29Z julian $
+ * $FreeBSD: stable/11/sys/netgraph/ng_ether_echo.c 186481 2008-12-25 00:01:29Z julian $
  * $Whistle: ng_echo.c,v 1.13 1999/11/01 09:24:51 julian Exp $
  */
 

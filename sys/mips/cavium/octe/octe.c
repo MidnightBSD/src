@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/cavium/octe/octe.c 221407 2011-05-03 19:51:29Z marius $
+ * $FreeBSD: stable/11/sys/mips/cavium/octe/octe.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -190,7 +189,7 @@ octe_attach(device_t dev)
 
 	ifp->if_transmit = octe_transmit;
 
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 	ifp->if_capabilities = IFCAP_VLAN_MTU | IFCAP_HWCSUM;
 	ifp->if_capenable = ifp->if_capabilities;
 	ifp->if_hwassist = CSUM_TCP | CSUM_UDP;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_hci_misc.h
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_misc.h,v 1.3 2003/09/08 18:57:51 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/hci/ng_hci_misc.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/hci/ng_hci_misc.h 281198 2015-04-07 10:22:56Z takawata $
  */
 
 #ifndef _NETGRAPH_HCI_MISC_H_
@@ -42,7 +41,7 @@ void              ng_hci_unit_clean             (ng_hci_unit_p, int);
 ng_hci_neighbor_p ng_hci_new_neighbor           (ng_hci_unit_p);
 void              ng_hci_free_neighbor          (ng_hci_neighbor_p);
 void              ng_hci_flush_neighbor_cache   (ng_hci_unit_p);
-ng_hci_neighbor_p ng_hci_get_neighbor           (ng_hci_unit_p, bdaddr_p);
+ng_hci_neighbor_p ng_hci_get_neighbor           (ng_hci_unit_p, bdaddr_p, int);
 int               ng_hci_neighbor_stale         (ng_hci_neighbor_p);
 
 ng_hci_unit_con_p ng_hci_new_con                (ng_hci_unit_p, int);

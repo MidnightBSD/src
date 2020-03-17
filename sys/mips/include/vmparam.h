@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: vmparam.h,v 1.2 1998/09/15 10:50:12 pefo Exp $	*/
 /*	$NetBSD: vmparam.h,v 1.5 1994/10/26 21:10:10 cgd Exp $	*/
 
@@ -38,7 +37,7 @@
  *	from: Utah Hdr: vmparam.h 1.16 91/01/18
  *	@(#)vmparam.h	8.2 (Berkeley) 4/22/94
  *	JNPR: vmparam.h,v 1.3.2.1 2007/09/10 06:01:28 girish
- * $FreeBSD: stable/10/sys/mips/include/vmparam.h 285634 2015-07-16 14:41:58Z kib $
+ * $FreeBSD: stable/11/sys/mips/include/vmparam.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_VMPARAM_H_
@@ -150,13 +149,12 @@
 #define	VM_PHYSSEG_SPARSE
 
 /*
- * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * Create two free page pools: VM_FREEPOOL_DEFAULT is the default pool
  * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
  * the pool from which physical pages for small UMA objects are
  * allocated.
  */
-#define	VM_NFREEPOOL		3
-#define	VM_FREEPOOL_CACHE	2
+#define	VM_NFREEPOOL		2
 #define	VM_FREEPOOL_DEFAULT	0
 #define	VM_FREEPOOL_DIRECT	1
 
@@ -185,5 +183,10 @@
 #define	VM_NFREEORDER		9
 
 #define	ZERO_REGION_SIZE	(64 * 1024)	/* 64KB */
+
+#ifndef __mips_n64
+#define	SFBUF
+#define	SFBUF_MAP
+#endif
 
 #endif /* !_MACHINE_VMPARAM_H_ */

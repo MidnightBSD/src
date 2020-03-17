@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias.c 318519 2017-05-19 07:31:48Z eugen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/libalias/alias.c 335473 2018-06-21 10:51:25Z ae $");
 
 /*
     Alias.c provides supervisory control for the functions of the
@@ -1725,7 +1724,7 @@ LibAliasUnLoadAllModule(void)
 
 	/* Unload all modules then reload everything. */
 	while ((p = first_handler()) != NULL) {	
-		detach_handler(p);
+		LibAliasDetachHandlers(p);
 	}
 	while ((t = walk_dll_chain()) != NULL) {	
 		dlclose(t->handle);
@@ -1750,7 +1749,8 @@ LibAliasUnLoadAllModule(void)
  * the input packet, on failure NULL. The input packet is always consumed.
  */
 struct mbuf *
-m_megapullup(struct mbuf *m, int len) {
+m_megapullup(struct mbuf *m, int len)
+{
 	struct mbuf *mcl;
 
 	if (len > m->m_pkthdr.len)
@@ -1759,7 +1759,14 @@ m_megapullup(struct mbuf *m, int len) {
 	if (m->m_next == NULL && M_WRITABLE(m))
 		return (m);
 
-	mcl = m_get2(len, M_NOWAIT, MT_DATA, M_PKTHDR);
+	if (len <= MJUMPAGESIZE)
+		mcl = m_get2(len, M_NOWAIT, MT_DATA, M_PKTHDR);
+	else if (len <= MJUM9BYTES)
+		mcl = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
+	else if (len <= MJUM16BYTES)
+		mcl = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUM16BYTES);
+	else
+		goto bad;
 	if (mcl == NULL)
 		goto bad;
 	m_align(mcl, len);

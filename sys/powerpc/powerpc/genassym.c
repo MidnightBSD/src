@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)genassym.c	5.11 (Berkeley) 5/10/91
- * $FreeBSD: stable/10/sys/powerpc/powerpc/genassym.c 266003 2014-05-14 04:14:58Z ian $
+ * $FreeBSD: stable/11/sys/powerpc/powerpc/genassym.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -53,7 +52,6 @@
 #include <vm/vm_map.h>
 
 #include <machine/pcb.h>
-#include <machine/pmap.h>
 #include <machine/psl.h>
 #include <machine/sigframe.h>
 
@@ -120,10 +118,14 @@ ASSYM(USER_SR, USER_SR);
 #endif
 #elif defined(BOOKE)
 ASSYM(PM_PDIR, offsetof(struct pmap, pm_pdir));
-ASSYM(PTE_RPN, offsetof(struct pte, rpn));
-ASSYM(PTE_FLAGS, offsetof(struct pte, flags));
+/*
+ * With pte_t being a bitfield struct, these fields cannot be addressed via
+ * offsetof().
+ */
+ASSYM(PTE_RPN, 0);
+ASSYM(PTE_FLAGS, sizeof(uint32_t));
 #if defined(BOOKE_E500)
-ASSYM(TLB0_ENTRY_SIZE, sizeof(struct tlb_entry));
+ASSYM(TLB_ENTRY_SIZE, sizeof(struct tlb_entry));
 #endif
 #endif
 
@@ -172,9 +174,9 @@ ASSYM(FRAME_XER, offsetof(struct trapframe, xer));
 ASSYM(FRAME_SRR0, offsetof(struct trapframe, srr0));
 ASSYM(FRAME_SRR1, offsetof(struct trapframe, srr1));
 ASSYM(FRAME_EXC, offsetof(struct trapframe, exc));
-ASSYM(FRAME_AIM_DAR, offsetof(struct trapframe, cpu.aim.dar));
+ASSYM(FRAME_AIM_DAR, offsetof(struct trapframe, dar));
 ASSYM(FRAME_AIM_DSISR, offsetof(struct trapframe, cpu.aim.dsisr));
-ASSYM(FRAME_BOOKE_DEAR, offsetof(struct trapframe, cpu.booke.dear));
+ASSYM(FRAME_BOOKE_DEAR, offsetof(struct trapframe, dar));
 ASSYM(FRAME_BOOKE_ESR, offsetof(struct trapframe, cpu.booke.esr));
 ASSYM(FRAME_BOOKE_DBCR0, offsetof(struct trapframe, cpu.booke.dbcr0));
 

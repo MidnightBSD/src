@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Olivier Houchard.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/omap4/omap4_l2cache.c 266375 2014-05-17 23:07:26Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/omap4/omap4_l2cache.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/systm.h>

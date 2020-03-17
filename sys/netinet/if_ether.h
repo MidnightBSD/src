@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ether.h	8.3 (Berkeley) 5/2/95
- * $FreeBSD: stable/10/sys/netinet/if_ether.h 249925 2013-04-26 12:50:32Z glebius $
+ * $FreeBSD: stable/11/sys/netinet/if_ether.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_IF_ETHER_H_
@@ -113,16 +112,19 @@ struct sockaddr_inarp {
 extern u_char	ether_ipmulticast_min[ETHER_ADDR_LEN];
 extern u_char	ether_ipmulticast_max[ETHER_ADDR_LEN];
 
-struct llentry;
 struct ifaddr;
+struct llentry;
 
-int	arpresolve(struct ifnet *ifp, struct rtentry *rt, struct mbuf *m,
-	    const struct sockaddr *dst, u_char *desten, struct llentry **lle);
+int	arpresolve_addr(struct ifnet *ifp, int flags,
+	    const struct sockaddr *dst, char *desten, uint32_t *pflags,
+	    struct llentry **plle);
+int	arpresolve(struct ifnet *ifp, int is_gw, struct mbuf *m,
+	    const struct sockaddr *dst, u_char *desten, uint32_t *pflags,
+	    struct llentry **plle);
 void	arprequest(struct ifnet *, const struct in_addr *,
 	    const struct in_addr *, u_char *);
 void	arp_ifinit(struct ifnet *, struct ifaddr *);
-void	arp_ifinit2(struct ifnet *, struct ifaddr *, u_char *);
-void	arp_ifscrub(struct ifnet *, uint32_t);
+void	arp_announce_ifaddr(struct ifnet *, struct in_addr addr, u_char *);
 #endif
 
 #endif

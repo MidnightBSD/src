@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/powerpc/psim/psim-tree 125443 2004-02-04 13:23:05Z grehan $
+# $FreeBSD: stable/11/sys/powerpc/psim/psim-tree 125443 2004-02-04 13:23:05Z grehan $
 #
 # Simple psim h/w description
 #

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Luiz Otavio O Souza <loos@FreeBSD.org>
  * All rights reserved.

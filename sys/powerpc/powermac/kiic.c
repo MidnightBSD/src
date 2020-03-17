@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Tsubai Masanari.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powermac/kiic.c 254737 2013-08-23 20:39:41Z andreast $
+ * $FreeBSD: stable/11/sys/powerpc/powermac/kiic.c 331722 2018-03-29 02:50:57Z eadler $
  *	NetBSD: ki2c.c,v 1.11 2007/12/06 17:00:33 ad Exp
  *	Id: ki2c.c,v 1.7 2002/10/05 09:56:05 tsubai Exp
  */
@@ -187,11 +186,11 @@ kiic_attach(device_t self)
 		return (ENOMEM);
 	}
 
-	if (OF_getprop(node, "AAPL,i2c-rate", &rate, 4) != 4) {
+	if (OF_getencprop(node, "AAPL,i2c-rate", &rate, 4) != 4) {
 		device_printf(self, "cannot get i2c-rate\n");
 		return (ENXIO);
 	}
-	if (OF_getprop(node, "AAPL,address-step", &sc->sc_regstep, 4) != 4) {
+	if (OF_getencprop(node, "AAPL,address-step", &sc->sc_regstep, 4) != 4) {
 		device_printf(self, "unable to find i2c address step\n");
 		return (ENXIO);
 	}

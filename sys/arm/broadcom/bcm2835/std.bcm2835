@@ -1,9 +1,10 @@
-# $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/std.bcm2835 322724 2017-08-20 16:52:27Z marius $
+# $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/std.bcm2835 280452 2015-03-24 18:46:01Z andrew $
 
 machine	arm armv6
 cpu	CPU_ARM1176
-makeoptions	CONF_CFLAGS="-mcpu=arm1176jzf-s -Wa,-mcpu=arm1176jzf-s"
+makeoptions	CONF_CFLAGS="-mcpu=arm1176jzf-s"
 options 	SOC_BCM2835
 
 files	"../broadcom/bcm2835/files.bcm2835"
+files	"../broadcom/bcm2835/files.bcm283x"
 

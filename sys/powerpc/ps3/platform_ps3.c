@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/ps3/platform_ps3.c 271114 2014-09-04 18:28:30Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/ps3/platform_ps3.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,10 +44,11 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/ps3/platform_ps3.c 271114 2014-09-04 1
 #include <machine/hid.h>
 #include <machine/platform.h>
 #include <machine/platformvar.h>
-#include <machine/pmap.h>
 #include <machine/smp.h>
 #include <machine/spr.h>
 #include <machine/vmparam.h>
+
+#include <dev/ofw/openfirm.h>
 
 #include "platform_if.h"
 #include "ps3-hvcall.h"
@@ -104,8 +104,17 @@ PLATFORM_DEF(ps3_platform);
 static int
 ps3_probe(platform_t plat)
 {
+	phandle_t root;
+	char compatible[64];
 
-	return (BUS_PROBE_NOWILDCARD);
+	root = OF_finddevice("/");
+	if (OF_getprop(root, "compatible", compatible, sizeof(compatible)) <= 0)
+                return (BUS_PROBE_NOWILDCARD);
+	
+	if (strncmp(compatible, "sony,ps3", sizeof(compatible)) != 0)
+		return (BUS_PROBE_NOWILDCARD);
+
+	return (BUS_PROBE_SPECIFIC);
 }
 
 static int

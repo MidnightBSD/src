@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powerpc/mem.c 271113 2014-09-04 18:24:47Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/mem.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Memory special file
@@ -100,8 +99,6 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 
 	cnt = 0;
 	error = 0;
-
-	GIANT_REQUIRED;
 
 	while (uio->uio_resid > 0 && !error) {
 		iov = uio->uio_iov;
@@ -182,8 +179,6 @@ memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
 
 	if (dev2unit(dev) == CDEV_MINOR_MEM)
 		*paddr = offset;
-	else if (dev2unit(dev) == CDEV_MINOR_KMEM)
-		*paddr = vtophys(offset);
 	else
 		return (EFAULT);
 

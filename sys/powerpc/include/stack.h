@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1992 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie Mellon
  * the rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/stack.h 174195 2007-12-02 20:40:35Z rwatson $
+ * $FreeBSD: stable/11/sys/powerpc/include/stack.h 174195 2007-12-02 20:40:35Z rwatson $
  */
 
 #ifndef _MACHINE_STACK_H_

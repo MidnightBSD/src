@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: types.h,v 1.13 2000/06/13 01:02:44 thorpej Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)types.h 1.18 87/07/24 SMI
  *	from: @(#)types.h	2.3 88/08/15 4.0 RPCSRC
- * $FreeBSD: stable/10/sys/rpc/types.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/sys/rpc/types.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -95,7 +94,7 @@ struct netbuf {
 };
 
 /*
- * The format of the addres and options arguments of the XTI t_bind call.
+ * The format of the address and options arguments of the XTI t_bind call.
  * Only provided for compatibility, it should not be used.
  */
 

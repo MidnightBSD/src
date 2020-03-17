@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/powerpc/db_hwwatch.c 149925 2005-09-10 03:01:25Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/powerpc/db_hwwatch.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/param.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -30,7 +29,7 @@
  * RMI_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/xlr_i2c.c 241844 2012-10-22 03:00:37Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/xlr_i2c.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * I2C driver for the Palm-BK3220 I2C Host adapter on the RMI XLR.
@@ -188,7 +187,7 @@ xlr_i2c_attach(device_t dev)
 		return -1;
 	}
 	if(xlr_board_info.xlr_i2c_device[I2C_RTC].enabled == 1) {
-		tmpd = device_add_child(sc->iicbus, "ds1374u", 0);
+		tmpd = device_add_child(sc->iicbus, "ds13rtc", 0);
 		device_set_ivars(tmpd, &xlr_board_info.xlr_i2c_device[I2C_RTC]);
 	}
 	if(xlr_board_info.xlr_i2c_device[I2C_THERMAL].enabled == 1) {
@@ -199,6 +198,16 @@ xlr_i2c_attach(device_t dev)
 		tmpd = device_add_child(sc->iicbus, "at24co2n", 0);
 		device_set_ivars(tmpd, &xlr_board_info.xlr_i2c_device[I2C_EEPROM]);
 	}
+
+	/*
+	 * The old ds1374 rtc driver only handled one chip type.  The new
+	 * ds13rtc driver handles all ds13xx chips, but must be told the chip
+	 * type via hints.  XLR historically hasn't had a standard hints file,
+	 * so set up the hint now if it isn't already there.
+	 */
+#define HINTNAME "hint.ds13rtc.0.compatible"
+	if (!testenv(HINTNAME))
+		kern_setenv(HINTNAME, "dallas,ds1374");
 
 	bus_generic_attach(dev);
 

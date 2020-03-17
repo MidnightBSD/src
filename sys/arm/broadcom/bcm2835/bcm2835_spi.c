@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2013 Luiz Otavio O Souza <loos@freebsd.org>
@@ -27,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_spi.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_spi.c 346519 2019-04-22 04:02:16Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,10 +40,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_spi.c 322724 2017
 #include <sys/sysctl.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
-#include <machine/fdt.h>
 #include <machine/intr.h>
 
 #include <dev/fdt/fdt_common.h>
@@ -136,17 +132,6 @@ bcm_spi_clock_proc(SYSCTL_HANDLER_ARGS)
 	if (error != 0 || req->newptr == NULL)
 		return (error);
 
-	clk = SPI_CORE_CLK / clk;
-	if (clk <= 1)
-		clk = 2;
-	else if (clk % 2)
-		clk--;
-	if (clk > 0xffff)
-		clk = 0;
-	BCM_SPI_LOCK(sc);
-	BCM_SPI_WRITE(sc, SPI_CLK, clk);
-	BCM_SPI_UNLOCK(sc);
-
 	return (0);
 }
 
@@ -166,12 +151,6 @@ bcm_spi_cs_bit_proc(SYSCTL_HANDLER_ARGS, uint32_t bit)
 	error = sysctl_handle_int(oidp, &reg, sizeof(reg), req);
 	if (error != 0 || req->newptr == NULL)
 		return (error);
-
-	if (reg)
-		reg = bit;
-	BCM_SPI_LOCK(sc);
-	bcm_spi_modifyreg(sc, SPI_CS, bit, reg);
-	BCM_SPI_UNLOCK(sc);
 
 	return (0);
 }
@@ -204,6 +183,13 @@ bcm_spi_cspol1_proc(SYSCTL_HANDLER_ARGS)
 	return (bcm_spi_cs_bit_proc(oidp, arg1, arg2, req, SPI_CS_CSPOL1));
 }
 
+static int
+bcm_spi_cspol2_proc(SYSCTL_HANDLER_ARGS)
+{
+
+	return (bcm_spi_cs_bit_proc(oidp, arg1, arg2, req, SPI_CS_CSPOL2));
+}
+
 static void
 bcm_spi_sysctl_init(struct bcm_spi_softc *sc)
 {
@@ -218,20 +204,23 @@ bcm_spi_sysctl_init(struct bcm_spi_softc *sc)
 	tree_node = device_get_sysctl_tree(sc->sc_dev);
 	tree = SYSCTL_CHILDREN(tree_node);
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "clock",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, sizeof(*sc),
+	    CTLFLAG_RD | CTLTYPE_UINT, sc, sizeof(*sc),
 	    bcm_spi_clock_proc, "IU", "SPI BUS clock frequency");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "cpol",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, sizeof(*sc),
+	    CTLFLAG_RD | CTLTYPE_UINT, sc, sizeof(*sc),
 	    bcm_spi_cpol_proc, "IU", "SPI BUS clock polarity");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "cpha",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, sizeof(*sc),
+	    CTLFLAG_RD | CTLTYPE_UINT, sc, sizeof(*sc),
 	    bcm_spi_cpha_proc, "IU", "SPI BUS clock phase");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "cspol0",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, sizeof(*sc),
+	    CTLFLAG_RD | CTLTYPE_UINT, sc, sizeof(*sc),
 	    bcm_spi_cspol0_proc, "IU", "SPI BUS chip select 0 polarity");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "cspol1",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, sizeof(*sc),
+	    CTLFLAG_RD | CTLTYPE_UINT, sc, sizeof(*sc),
 	    bcm_spi_cspol1_proc, "IU", "SPI BUS chip select 1 polarity");
+	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "cspol2",
+	    CTLFLAG_RD | CTLTYPE_UINT, sc, sizeof(*sc),
+	    bcm_spi_cspol2_proc, "IU", "SPI BUS chip select 2 polarity");
 }
 
 static int
@@ -316,9 +305,6 @@ bcm_spi_attach(device_t dev)
 	 * Defaults to SPI mode 0.
 	 */
 	BCM_SPI_WRITE(sc, SPI_CS, SPI_CS_CLEAR_RXFIFO | SPI_CS_CLEAR_TXFIFO);
-
-	/* Set the SPI clock to 500Khz. */
-	BCM_SPI_WRITE(sc, SPI_CLK, SPI_CORE_CLK / 500000);
 
 #ifdef	BCM_SPI_DEBUG
 	bcm_spi_printr(dev);
@@ -426,7 +412,8 @@ static int
 bcm_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 {
 	struct bcm_spi_softc *sc;
-	int cs, err;
+	uint32_t cs, mode, clock;
+	int err;
 
 	sc = device_get_softc(dev);
 
@@ -435,18 +422,34 @@ bcm_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	KASSERT(cmd->tx_data_sz == cmd->rx_data_sz, 
 	    ("TX/RX data sizes should be equal"));
 
-	/* Get the proper chip select for this child. */
+	/* Get the bus speed, mode, and chip select for this child. */
+
 	spibus_get_cs(child, &cs);
-	if (cs < 0 || cs > 2) {
+	if ((cs & (~SPIBUS_CS_HIGH)) > 2) {
 		device_printf(dev,
-		    "Invalid chip select %d requested by %s\n", cs,
+		    "Invalid chip select %u requested by %s\n", cs,
 		    device_get_nameunit(child));
 		return (EINVAL);
 	}
 
-	BCM_SPI_LOCK(sc);
+	spibus_get_clock(child, &clock);
+	if (clock == 0) {
+		device_printf(dev,
+		    "Invalid clock %uHz requested by %s\n", clock,
+		    device_get_nameunit(child));
+		return (EINVAL);
+	}
+
+	spibus_get_mode(child, &mode);
+	if (mode > 3) {
+		device_printf(dev,
+		    "Invalid mode %u requested by %s\n", mode,
+		    device_get_nameunit(child));
+		return (EINVAL);
+	}
 
 	/* If the controller is in use wait until it is available. */
+	BCM_SPI_LOCK(sc);
 	while (sc->sc_flags & BCM_SPI_BUSY)
 		mtx_sleep(dev, &sc->sc_mtx, 0, "bcm_spi", 0);
 
@@ -464,13 +467,63 @@ bcm_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	sc->sc_written = 0;
 	sc->sc_len = cmd->tx_cmd_sz + cmd->tx_data_sz;
 
+#ifdef	BCM2835_SPI_USE_CS_HIGH /* TODO: for when behavior is correct */
+	/*
+	 * Assign CS polarity first, while the CS indicates 'inactive'.
+	 * This will need to set the correct polarity bit based on the 'cs', and
+	 * the polarity bit will remain in this state, even after the transaction
+	 * is complete.
+	 */
+	if((cs & ~SPIBUS_CS_HIGH) == 0) {
+		bcm_spi_modifyreg(sc, SPI_CS,
+		    SPI_CS_CSPOL0,
+		    ((cs & (SPIBUS_CS_HIGH)) ? SPI_CS_CSPOL0 : 0));
+	}
+	else if((cs & ~SPIBUS_CS_HIGH) == 1) {
+		bcm_spi_modifyreg(sc, SPI_CS,
+		    SPI_CS_CSPOL1,
+		    ((cs & (SPIBUS_CS_HIGH)) ? SPI_CS_CSPOL1 : 0));
+	}
+	else if((cs & ~SPIBUS_CS_HIGH) == 2) {
+		bcm_spi_modifyreg(sc, SPI_CS,
+		    SPI_CS_CSPOL2,
+		    ((cs & (SPIBUS_CS_HIGH)) ? SPI_CS_CSPOL2 : 0));
+	}
+#endif
+
+	/*
+	 * Set the mode in 'SPI_CS' (clock phase and polarity bits).
+	 * This must happen before CS output pin is active.
+	 * Otherwise, you might glitch and drop the first bit.
+	 */
+	bcm_spi_modifyreg(sc, SPI_CS,
+	    SPI_CS_CPOL | SPI_CS_CPHA,
+	    ((mode & SPIBUS_MODE_CPHA) ? SPI_CS_CPHA : 0) |
+	    ((mode & SPIBUS_MODE_CPOL) ? SPI_CS_CPOL : 0));
+
+	/*
+	 * Set the clock divider in 'SPI_CLK - see 'bcm_spi_clock_proc()'.
+	 */
+
+	/* calculate 'clock' as a divider value from freq */
+	clock = SPI_CORE_CLK / clock;
+	if (clock <= 1)
+		clock = 2;
+	else if (clock % 2)
+		clock--;
+	if (clock > 0xffff)
+		clock = 0;
+
+	BCM_SPI_WRITE(sc, SPI_CLK, clock);
+
 	/*
 	 * Set the CS for this transaction, enable interrupts and announce
 	 * we're ready to tx.  This will kick off the first interrupt.
 	 */
 	bcm_spi_modifyreg(sc, SPI_CS,
 	    SPI_CS_MASK | SPI_CS_TA | SPI_CS_INTR | SPI_CS_INTD,
-	    cs | SPI_CS_TA | SPI_CS_INTR | SPI_CS_INTD);
+	    (cs & (~SPIBUS_CS_HIGH)) | /* cs is the lower 2 bits of the reg */
+	    SPI_CS_TA | SPI_CS_INTR | SPI_CS_INTD);
 
 	/* Wait for the transaction to complete. */
 	err = mtx_sleep(dev, &sc->sc_mtx, 0, "bcm_spi", hz * 2);
@@ -488,7 +541,7 @@ bcm_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	 * return errors.
 	 */
 	if (err == EWOULDBLOCK) {
-		device_printf(sc->sc_dev, "SPI error\n");
+		device_printf(sc->sc_dev, "SPI error (timeout)\n");
 		err = EIO;
 	}
 

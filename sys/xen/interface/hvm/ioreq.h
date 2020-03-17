@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ioreq.h: I/O request definitions for device models
  * Copyright (c) 2004, Intel Corporation.

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/EB9200.hints 239324 2012-08-16 05:03:59Z imp $
+# $FreeBSD: stable/11/sys/arm/conf/EB9200.hints 239324 2012-08-16 05:03:59Z imp $
 
 # should likely list CF here since its address isn't fixed.
 # but since it is at an external chip select, do we use that or the address

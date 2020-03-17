@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Poul-Henning Kamp
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_sppp.h Netgraph to Sppp module.
  */
@@ -15,7 +14,7 @@
  * as long as this message is kept with the software, all derivative
  * works or modified versions.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_sppp.h 141197 2005-02-03 13:03:31Z ru $
+ * $FreeBSD: stable/11/sys/netgraph/ng_sppp.h 141197 2005-02-03 13:03:31Z ru $
  * Cronyx Id: ng_sppp.h,v 1.1.2.6 2004/03/01 15:17:21 rik Exp $
  */
 

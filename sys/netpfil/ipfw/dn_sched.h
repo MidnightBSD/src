@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Riccardo Panicucci, Luigi Rizzo, Universita` di Pisa
  * All rights reserved
@@ -28,7 +27,7 @@
 /*
  * The API to write a packet scheduling algorithm for dummynet.
  *
- * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_sched.h 301772 2016-06-10 00:00:25Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched.h 302054 2016-06-21 13:48:49Z bz $
  */
 
 #ifndef _DN_SCHED_H
@@ -176,6 +175,7 @@ dn_dequeue(struct dn_queue *q)
 		return q->fs->aqmfp->dequeue(q);
 #endif
 	q->mq.head = m->m_nextpkt;
+	q->mq.count--;
 
 	/* Update stats for the queue */
 	q->ni.length--;
@@ -196,6 +196,6 @@ int dn_sched_modevent(module_t mod, int cmd, void *arg);
 		#name, dn_sched_modevent, dnsched		\
 	};							\
 	DECLARE_MODULE(name, name##_mod, 			\
-		SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY); 	\
-        MODULE_DEPEND(name, dummynet, 3, 3, 3);
+		SI_SUB_PROTO_FIREWALL, SI_ORDER_ANY); 		\
+        MODULE_DEPEND(name, dummynet, 3, 3, 3)
 #endif /* _DN_SCHED_H */

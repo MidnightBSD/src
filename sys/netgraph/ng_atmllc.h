@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Benno Rice <benno@FreeBSD.org>
  * All Rights Reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_atmllc.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/ng_atmllc.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef	_NETGRAPH_ATMLLC_H_

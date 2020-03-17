@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_subr.c 227650 2011-11-18 03:05:20Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_subr.c 331867 2018-04-01 16:43:30Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -111,22 +110,11 @@ smb_strdup(const char *s)
 char *
 smb_strdupin(char *s, size_t maxlen)
 {
-	char *p, bt;
+	char *p;
 	int error;
-	size_t len;
 
-	len = 0;
-	for (p = s; ;p++) {
-		if (copyin(p, &bt, 1))
-			return NULL;
-		len++;
-		if (maxlen && len > maxlen)
-			return NULL;
-		if (bt == 0)
-			break;
-	}
-	p = malloc(len, M_SMBSTR, M_WAITOK);
-	error = copyin(s, p, len);
+	p = malloc(maxlen + 1, M_SMBSTR, M_WAITOK);
+	error = copyinstr(s, p, maxlen + 1, NULL);
 	if (error) {
 		free(p, M_SMBSTR);
 		return (NULL);
@@ -210,7 +198,7 @@ m_dumpm(struct mbuf *m) {
 			printf("%02x ",((int)*(p++)) & 0xff);
 		}
 		m=m->m_next;
-	};
+	}
 	printf("\n");
 }
 #endif

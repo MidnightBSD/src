@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)icmp_var.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet/icmp_var.h 254925 2013-08-26 18:16:05Z jhb $
+ * $FreeBSD: stable/11/sys/netinet/icmp_var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_ICMP_VAR_H_
@@ -79,12 +78,11 @@ void	kmod_icmpstat_inc(int statnum);
 #endif
 
 /*
- * Names for ICMP sysctl objects
+ * Identifiers for ICMP sysctl nodes
  */
 #define	ICMPCTL_MASKREPL	1	/* allow replies to netmask requests */
 #define	ICMPCTL_STATS		2	/* statistics (read-only) */
 #define ICMPCTL_ICMPLIM		3
-#define ICMPCTL_MAXID		4
 
 #ifdef _KERNEL
 SYSCTL_DECL(_net_inet_icmp);

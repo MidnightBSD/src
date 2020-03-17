@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: setstack.S,v 1.1 2001/07/28 13:28:03 chris Exp $	*/
 
 /*-
@@ -51,7 +50,7 @@
 
 #include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/setstack.s 269796 2014-08-11 01:29:28Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/setstack.s 269390 2014-08-01 18:24:44Z ian $");
 
 /* To set the stack pointer for a particular mode we must switch
  * to that mode update the banked r13 and then switch back.

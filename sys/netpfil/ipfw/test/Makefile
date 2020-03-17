@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sys/netpfil/ipfw/test/Makefile 205417 2010-03-21 16:30:32Z luigi $
+# $FreeBSD: stable/11/sys/netpfil/ipfw/test/Makefile 294882 2016-01-27 02:22:31Z luigi $
 #
 # Makefile for building userland tests
 # this is written in a form compatible with gmake
@@ -21,7 +20,7 @@ HEAP_OBJS=$(HEAP_SRCS:.c=.o)
 
 VPATH=	.:..
 
-CFLAGS = -I.. -I. -Wall -Werror -O3 -DIPFW
+CFLAGS = -I.. -I. -Wall -Werror -O3 -Wextra
 TARGETS= test_sched # no test_heap by default
 
 all:	$(TARGETS)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2007 David Malone <dwmalone@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/netinet/accf_dns.c 193272 2009-06-01 21:17:03Z jhb $
+ *	$FreeBSD: stable/11/sys/netinet/accf_dns.c 274421 2014-11-12 09:57:15Z glebius $
  */
 
 #define ACCEPT_FILTER_MOD
@@ -76,7 +75,7 @@ sohasdns(struct socket *so, void *arg, int waitflag)
 	struct sockbuf *sb = &so->so_rcv;
 
 	/* If the socket is full, we're ready. */
-	if (sb->sb_cc >= sb->sb_hiwat || sb->sb_mbcnt >= sb->sb_mbmax)
+	if (sbused(sb) >= sb->sb_hiwat || sb->sb_mbcnt >= sb->sb_mbmax)
 		goto ready;
 
 	/* Check to see if we have a request. */
@@ -116,14 +115,14 @@ skippacket(struct sockbuf *sb) {
 	unsigned long packlen;
 	struct packet q, *p = &q;
 
-	if (sb->sb_cc < 2)
+	if (sbavail(sb) < 2)
 		return DNS_WAIT;
 
 	q.m = sb->sb_mb;
 	q.n = q.m->m_nextpkt;
 	q.moff = 0;
 	q.offset = 0;
-	q.len = sb->sb_cc;
+	q.len = sbavail(sb);
 
 	GET16(p, packlen);
 	if (packlen + 2 > q.len)

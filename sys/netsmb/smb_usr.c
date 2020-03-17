@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_usr.c 242386 2012-10-31 03:34:07Z davide $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_usr.c 298995 2016-05-03 18:05:43Z pfg $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -159,7 +158,7 @@ out:
 /*
  * Connect to the resource specified by smbioc_ossn structure.
  * It may either find an existing connection or try to establish a new one.
- * If no errors occured smb_vc returned locked and referenced.
+ * If no errors occurred smb_vc returned locked and referenced.
  */
 int
 smb_usr_opensession(struct smbioc_ossn *dp, struct smb_cred *scred,

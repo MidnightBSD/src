@@ -27,8 +27,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: smp_all.h,v 1.2 2012-11-23 06:04:02 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: //depot/users/kenm/FreeBSD-test/sys/cam/scsi/smp_all.h#4 $
+ * $FreeBSD: stable/11/sys/cam/scsi/smp_all.h 216088 2010-11-30 22:39:46Z ken $
  */
 
 /*

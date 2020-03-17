@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2002 by Peter Grehan. All rights reserved.
  *
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/psim/ata_iobus.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/psim/ata_iobus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PSIM local bus ATA controller
@@ -60,7 +59,8 @@ static  int  ata_iobus_attach(device_t dev);
 static  int  ata_iobus_probe(device_t dev);
 static  int  ata_iobus_print_child(device_t dev, device_t child);
 struct resource *ata_iobus_alloc_resource(device_t, device_t, int, int *,
-					  u_long, u_long, u_long, u_int);
+					  rman_res_t, rman_res_t, rman_res_t,
+					  u_int);
 static int ata_iobus_release_resource(device_t, device_t, int, int,
 				      struct resource *);
 
@@ -136,7 +136,8 @@ ata_iobus_print_child(device_t dev, device_t child)
 
 struct resource *
 ata_iobus_alloc_resource(device_t dev, device_t child, int type, int *rid,
-			 u_long start, u_long end, u_long count, u_int flags)
+			 rman_res_t start, rman_res_t end, rman_res_t count,
+			 u_int flags)
 {
 	struct resource *res = NULL;
 	int myrid;

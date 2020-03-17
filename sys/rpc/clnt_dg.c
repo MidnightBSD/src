@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: clnt_dg.c,v 1.4 2000/07/14 08:40:41 fvdl Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/clnt_dg.c 303692 2016-08-03 01:19:10Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/clnt_dg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Implements a connectionless client side RPC.
@@ -220,8 +219,8 @@ clnt_dg_create(
 	/*
 	 * Should be multiple of 4 for XDR.
 	 */
-	sendsz = ((sendsz + 3) / 4) * 4;
-	recvsz = ((recvsz + 3) / 4) * 4;
+	sendsz = rounddown(sendsz + 3, 4);
+	recvsz = rounddown(recvsz + 3, 4);
 	cu = mem_alloc(sizeof (*cu));
 	cu->cu_threads = 0;
 	cu->cu_closing = FALSE;
@@ -741,7 +740,7 @@ got_reply:
 			}
 		}		/* end successful completion */
 		/*
-		 * If unsuccesful AND error is an authentication error
+		 * If unsuccessful AND error is an authentication error
 		 * then refresh credentials and try again, else break
 		 */
 		else if (stat == RPC_AUTHERROR)
@@ -881,7 +880,7 @@ clnt_dg_control(CLIENT *cl, u_int request, void *info)
 		/*
 		 * This RELIES on the information that, in the call body,
 		 * the version number field is the fifth field from the
-		 * begining of the RPC header. MUST be changed if the
+		 * beginning of the RPC header. MUST be changed if the
 		 * call_struct is changed
 		 */
 		*(uint32_t *)info =
@@ -898,7 +897,7 @@ clnt_dg_control(CLIENT *cl, u_int request, void *info)
 		/*
 		 * This RELIES on the information that, in the call body,
 		 * the program number field is the fourth field from the
-		 * begining of the RPC header. MUST be changed if the
+		 * beginning of the RPC header. MUST be changed if the
 		 * call_struct is changed
 		 */
 		*(uint32_t *)info =

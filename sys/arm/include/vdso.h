@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2012 Konstantin Belousov <kib@FreeBSD.ORG>.
  * All rights reserved.
@@ -23,13 +22,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/vdso.h 237433 2012-06-22 07:06:40Z kib $
+ * $FreeBSD: stable/11/sys/arm/include/vdso.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARM_VDSO_H
 #define	_ARM_VDSO_H
 
 #define	VDSO_TIMEHANDS_MD			\
-	uint32_t	th_res[8];
+	uint32_t	th_physical;		\
+	uint32_t	th_res[7];
+
+#define	VDSO_TH_ALGO_ARM_GENTIM	VDSO_TH_ALGO_1
 
 #endif

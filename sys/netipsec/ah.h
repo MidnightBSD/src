@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/netipsec/ah.h 139823 2005-01-07 01:45:51Z imp $	*/
+/*	$FreeBSD: stable/11/sys/netipsec/ah.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: ah.h,v 1.13 2000/10/18 21:28:00 itojun Exp $	*/
 
 /*-

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * @file
  * @section AUTHORS

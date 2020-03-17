@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2010 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/mips/tlb.c 255935 2013-09-29 10:14:16Z adrian $
+ * $FreeBSD: stable/11/sys/mips/mips/tlb.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include "opt_ddb.h"
@@ -216,7 +215,7 @@ tlb_invalidate_range(pmap_t pmap, vm_offset_t start, vm_offset_t end)
 	 * and round the virtual address "end" to an even page frame number.
 	 */
 	start &= ~((1 << TLBMASK_SHIFT) - 1);
-	end = (end + (1 << TLBMASK_SHIFT) - 1) & ~((1 << TLBMASK_SHIFT) - 1);
+	end = roundup2(end, 1 << TLBMASK_SHIFT);
 
 	s = intr_disable();
 	save_asid = mips_rd_entryhi() & TLBHI_ASID_MASK;

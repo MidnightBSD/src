@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 RMI Corporation
  * All rights reserved.
@@ -24,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/rmi/bus_space_rmi_pci.c 204175 2010-02-21 17:27:20Z rrs $
+ * $FreeBSD: stable/11/sys/mips/rmi/bus_space_rmi_pci.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/bus_space_rmi_pci.c 204175 2010-02-21 17:27:20Z rrs $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/bus_space_rmi_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

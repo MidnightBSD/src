@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Adrian Chadd
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/mips/atheros/ar724x_chip.h 211503 2010-08-19 11:53:55Z adrian $ */
+/* $FreeBSD: stable/11/sys/mips/atheros/ar724x_chip.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef	__AR724X_CHIP_H__
 #define	__AR724X_CHIP_H__

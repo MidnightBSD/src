@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/ti/ti_wdt.h 273624 2014-10-25 02:05:21Z rpaulo $
+ * $FreeBSD: stable/11/sys/arm/ti/ti_wdt.h 273257 2014-10-18 16:59:21Z rpaulo $
  */
 #ifndef _TI_WDT_H_
 #define _TI_WDT_H_

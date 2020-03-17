@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_pci.c 265999 2014-05-14 01:35:43Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar71xx_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ar71xx.h"
 
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/atheros/ar71xx_pci.c 265999 2014-05-14 01
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/intr_machdep.h>
-#include <machine/pmap.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -378,7 +376,6 @@ ar71xx_pci_probe(device_t dev)
 static int
 ar71xx_pci_attach(device_t dev)
 {
-	int busno = 0;
 	int rid = 0;
 	struct ar71xx_pci_softc *sc = device_get_softc(dev);
 
@@ -463,7 +460,7 @@ ar71xx_pci_attach(device_t dev)
 	ar71xx_pci_slot_fixup(dev, 0, 18, 0);
 #endif	/* AR71XX_ATH_EEPROM */
 
-	device_add_child(dev, "pci", busno);
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }
 
@@ -502,7 +499,7 @@ ar71xx_pci_write_ivar(device_t dev, device_t child, int which,
 
 static struct resource *
 ar71xx_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 
 	struct ar71xx_pci_softc *sc = device_get_softc(bus);
@@ -638,8 +635,8 @@ ar71xx_pci_intr(void *arg)
 				continue;
 			}
 
-			/* Flush DDR FIFO for IP2 */
-			ar71xx_device_ddr_flush_ip2();
+			/* Flush DDR FIFO for PCI/PCIe */
+			ar71xx_device_flush_ddr(AR71XX_CPU_DDR_FLUSH_PCIE);
 
 			/* TODO: frame instead of NULL? */
 			intr_event_handle(event, NULL);

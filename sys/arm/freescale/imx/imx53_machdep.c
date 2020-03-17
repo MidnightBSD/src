@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -28,46 +27,36 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx53_machdep.c 259365 2013-12-14 00:16:08Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx53_machdep.c 331893 2018-04-02 23:19:07Z gonzo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/reboot.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 
 #include <machine/bus.h>
-#include <machine/devmap.h>
 #include <machine/machdep.h>
+#include <machine/platformvar.h> 
+
 #include <arm/freescale/imx/imx_machdep.h>
 
-vm_offset_t
-initarm_lastaddr(void)
+#include "platform_if.h"
+
+static vm_offset_t
+imx53_lastaddr(platform_t plat)
 {
 
-	return (arm_devmap_lastaddr());
+	return (devmap_lastaddr());
 }
 
-void
-initarm_early_init(void)
+static int
+imx53_attach(platform_t plat)
 {
 
-	/* XXX - Get rid of this stuff soon. */
-	boothowto |= RB_VERBOSE|RB_MULTIPLE;
-	bootverbose = 1;
-}
-
-void
-initarm_gpio_init(void)
-{
-
-}
-
-void
-initarm_late_init(void)
-{
-
+	return (0);
 }
 
 /*
@@ -77,19 +66,19 @@ initarm_late_init(void)
  *
  * Notably missing are entries for GPU, IPU, in general anything video related.
  */
-int
-initarm_devmap_init(void)
+static int
+imx53_devmap_init(platform_t plat)
 {
 
-	arm_devmap_add_entry(0x50000000, 0x00100000);
-	arm_devmap_add_entry(0x53f00000, 0x00100000);
-	arm_devmap_add_entry(0x63f00000, 0x00100000);
+	devmap_add_entry(0x50000000, 0x00100000);
+	devmap_add_entry(0x53f00000, 0x00100000);
+	devmap_add_entry(0x63f00000, 0x00100000);
 
 	return (0);
 }
 
-void
-cpu_reset(void)
+static void
+imx53_cpu_reset(platform_t plat)
 {
 
 	imx_wdog_cpu_reset(0x53F98000);
@@ -100,4 +89,14 @@ u_int imx_soc_type()
 	return (IMXSOC_53);
 }
 
+static platform_method_t imx53_methods[] = {
+	PLATFORMMETHOD(platform_attach,		imx53_attach),
+	PLATFORMMETHOD(platform_devmap_init,	imx53_devmap_init),
+	PLATFORMMETHOD(platform_lastaddr,	imx53_lastaddr),
+	PLATFORMMETHOD(platform_cpu_reset,	imx53_cpu_reset),
+
+	PLATFORMMETHOD_END,
+};
+
+FDT_PLATFORM_DEF(imx53, "i.MX53", 0, "fsl,imx53", 0);
 

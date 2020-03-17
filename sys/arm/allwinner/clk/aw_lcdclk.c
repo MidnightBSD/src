@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Jared McNeill <jmcneill@invisible.ca>
  * All rights reserved.

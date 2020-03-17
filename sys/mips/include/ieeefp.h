@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: ieeefp.h,v 1.2 1999/01/27 04:46:05 imp Exp $	*/
 
 /*-
@@ -6,7 +5,7 @@
  * Public domain.
  *
  *	JNPR: ieeefp.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/10/sys/mips/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
+ * $FreeBSD: stable/11/sys/mips/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
  */
 
 #ifndef _MACHINE_IEEEFP_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Mark Johnston <markj@FreeBSD.org>
  *
@@ -24,13 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/in_kdtrace.c 318438 2017-05-18 03:32:01Z smh $
+ * $FreeBSD: stable/11/sys/netinet/in_kdtrace.c 328660 2018-02-01 14:36:24Z markj $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/in_kdtrace.c 318438 2017-05-18 03:32:01Z smh $");
-
-#include "opt_kdtrace.h"
+__FBSDID("$FreeBSD: stable/11/sys/netinet/in_kdtrace.c 328660 2018-02-01 14:36:24Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -59,28 +56,28 @@ SDT_PROBE_DEFINE6_XLATE(ip, , , send,
 SDT_PROBE_DEFINE5_XLATE(tcp, , , accept__established,
     "void *", "pktinfo_t *",
     "struct tcpcb *", "csinfo_t *",
-    "uint8_t *", "ipinfo_t *",
+    "struct mbuf *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfoh_t *");
 
 SDT_PROBE_DEFINE5_XLATE(tcp, , , accept__refused,
     "void *", "pktinfo_t *",
     "struct tcpcb *", "csinfo_t *",
-    "uint8_t *", "ipinfo_t *",
+    "struct mbuf *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfo_t *");
 
 SDT_PROBE_DEFINE5_XLATE(tcp, , , connect__established,
     "void *", "pktinfo_t *",
     "struct tcpcb *", "csinfo_t *",
-    "uint8_t *", "ipinfo_t *",
+    "struct mbuf *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfoh_t *");
 
 SDT_PROBE_DEFINE5_XLATE(tcp, , , connect__refused,
     "void *", "pktinfo_t *",
     "struct tcpcb *", "csinfo_t *",
-    "uint8_t *", "ipinfo_t *",
+    "struct mbuf *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfoh_t *");
 
@@ -94,7 +91,7 @@ SDT_PROBE_DEFINE5_XLATE(tcp, , , connect__request,
 SDT_PROBE_DEFINE5_XLATE(tcp, , , receive,
     "void *", "pktinfo_t *",
     "struct tcpcb *", "csinfo_t *",
-    "uint8_t *", "ipinfo_t *",
+    "struct mbuf *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfoh_t *");
 
@@ -104,6 +101,28 @@ SDT_PROBE_DEFINE5_XLATE(tcp, , , send,
     "uint8_t *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfo_t *");
+
+SDT_PROBE_DEFINE1_XLATE(tcp, , , siftr,
+    "struct pkt_node *", "siftrinfo_t *");
+
+SDT_PROBE_DEFINE3_XLATE(tcp, , , debug__input,
+    "struct tcpcb *", "tcpsinfo_t *" ,
+    "struct tcphdr *", "tcpinfoh_t *",
+    "uint8_t *", "ipinfo_t *");
+
+SDT_PROBE_DEFINE3_XLATE(tcp, , , debug__output,
+    "struct tcpcb *", "tcpsinfo_t *" ,
+    "struct tcphdr *", "tcpinfo_t *",
+    "struct mbuf *", "ipinfo_t *");
+
+SDT_PROBE_DEFINE2_XLATE(tcp, , , debug__user,
+    "struct tcpcb *", "tcpsinfo_t *" ,
+    "int", "int");
+
+SDT_PROBE_DEFINE3_XLATE(tcp, , , debug__drop,
+    "struct tcpcb *", "tcpsinfo_t *" ,
+    "struct tcphdr *", "tcpinfoh_t *",
+    "struct mbuf *", "ipinfo_t *");
 
 SDT_PROBE_DEFINE6_XLATE(tcp, , , state__change,
     "void *", "void *",
@@ -116,7 +135,7 @@ SDT_PROBE_DEFINE6_XLATE(tcp, , , state__change,
 SDT_PROBE_DEFINE6_XLATE(tcp, , , receive__autoresize,
     "void *", "void *",
     "struct tcpcb *", "csinfo_t *",
-    "uint8_t *", "ipinfo_t *",
+    "struct mbuf *", "ipinfo_t *",
     "struct tcpcb *", "tcpsinfo_t *" ,
     "struct tcphdr *", "tcpinfoh_t *",
     "int", "int");

@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: instr.h,v 1.4 2005/12/11 12:18:43 christos Exp $ */
-/* $FreeBSD: stable/10/sys/powerpc/fpu/fpu_instr.h 176491 2008-02-23 20:05:26Z marcel $ */
+/* $FreeBSD: stable/11/sys/powerpc/fpu/fpu_instr.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*
  * Copyright (c) 1992, 1993

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009
  * 	Swinburne University of Technology, Melbourne, Australia.
@@ -60,11 +59,12 @@
  ******************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/siftr.c 281174 2015-04-06 22:41:13Z hiren $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/siftr.c 343273 2019-01-21 19:33:05Z brooks $");
 
 #include <sys/param.h>
 #include <sys/alq.h>
 #include <sys/errno.h>
+#include <sys/eventhandler.h>
 #include <sys/hash.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/siftr.c 281174 2015-04-06 22:41:13Z hi
 #include <sys/pcpu.h>
 #include <sys/proc.h>
 #include <sys/sbuf.h>
+#include <sys/sdt.h>
 #include <sys/smp.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -82,9 +83,11 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/siftr.c 281174 2015-04-06 22:41:13Z hi
 #include <sys/unistd.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/pfil.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
@@ -114,7 +117,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/siftr.c 281174 2015-04-06 22:41:13Z hi
 #define HOOK 0
 #define UNHOOK 1
 #define SIFTR_EXPECTED_MAX_TCP_FLOWS 65536
-#define SYS_NAME "FreeBSD"
+#define SYS_NAME "MidnightBSD"
 #define PACKET_TAG_SIFTR 100
 #define PACKET_COOKIE_SIFTR 21749576
 #define SIFTR_LOG_FILE_MODE 0644
@@ -147,8 +150,6 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/siftr.c 281174 2015-04-06 22:41:13Z hi
 #endif
 
 /* useful macros */
-#define CAST_PTR_INT(X) (*((int*)(X)))
-
 #define UPPER_SHORT(X)	(((X) & 0xFFFF0000) >> 16)
 #define LOWER_SHORT(X)	((X) & 0x0000FFFF)
 
@@ -789,9 +790,9 @@ siftr_siftdata(struct pkt_node *pn, struct inpcb *inp, struct tcpcb *tp,
 	pn->flags = tp->t_flags;
 	pn->rxt_length = tp->t_rxtcur;
 	pn->snd_buf_hiwater = inp->inp_socket->so_snd.sb_hiwat;
-	pn->snd_buf_cc = inp->inp_socket->so_snd.sb_cc;
+	pn->snd_buf_cc = sbused(&inp->inp_socket->so_snd);
 	pn->rcv_buf_hiwater = inp->inp_socket->so_rcv.sb_hiwat;
-	pn->rcv_buf_cc = inp->inp_socket->so_rcv.sb_cc;
+	pn->rcv_buf_cc = sbused(&inp->inp_socket->so_rcv);
 	pn->sent_inflight_bytes = tp->snd_max - tp->snd_una;
 	pn->t_segqlen = tp->t_segqlen;
 	pn->flowid = inp->inp_flowid;
@@ -810,6 +811,8 @@ siftr_siftdata(struct pkt_node *pn, struct inpcb *inp, struct tcpcb *tp,
 	 * maximum pps throughput processing when SIFTR is loaded and enabled.
 	 */
 	microtime(&pn->tval);
+	TCP_PROBE1(siftr, &pn);
+
 }
 
 
@@ -1214,7 +1217,7 @@ siftr_manage_ops(uint8_t action)
 	if ((s = sbuf_new(NULL, NULL, 200, SBUF_AUTOEXTEND)) == NULL)
 		return (-1);
 
-	if (action == SIFTR_ENABLE) {
+	if (action == SIFTR_ENABLE && siftr_pkt_manager_thr == NULL) {
 		/*
 		 * Create our alq
 		 * XXX: We should abort if alq_open fails!
@@ -1419,7 +1422,8 @@ siftr_manage_ops(uint8_t action)
 
 		alq_close(siftr_alq);
 		siftr_alq = NULL;
-	}
+	} else
+		error = EINVAL;
 
 	sbuf_delete(s);
 
@@ -1435,29 +1439,33 @@ siftr_manage_ops(uint8_t action)
 static int
 siftr_sysctl_enabled_handler(SYSCTL_HANDLER_ARGS)
 {
-	if (req->newptr == NULL)
-		goto skip;
+	int error;
+	uint32_t new;
 
-	/* If the value passed in isn't 0 or 1, return an error. */
-	if (CAST_PTR_INT(req->newptr) != 0 && CAST_PTR_INT(req->newptr) != 1)
-		return (1);
-
-	/* If we are changing state (0 to 1 or 1 to 0). */
-	if (CAST_PTR_INT(req->newptr) != siftr_enabled )
-		if (siftr_manage_ops(CAST_PTR_INT(req->newptr))) {
-			siftr_manage_ops(SIFTR_DISABLE);
-			return (1);
+	new = siftr_enabled;
+	error = sysctl_handle_int(oidp, &new, 0, req);
+	if (error == 0 && req->newptr != NULL) {
+		if (new > 1)
+			return (EINVAL);
+		else if (new != siftr_enabled) {
+			if ((error = siftr_manage_ops(new)) == 0) {
+				siftr_enabled = new;
+			} else {
+				siftr_manage_ops(SIFTR_DISABLE);
+			}
 		}
+	}
 
-skip:
-	return (sysctl_handle_int(oidp, arg1, arg2, req));
+	return (error);
 }
 
 
 static void
 siftr_shutdown_handler(void *arg)
 {
-	siftr_manage_ops(SIFTR_DISABLE);
+	if (siftr_enabled == 1) {
+		siftr_manage_ops(SIFTR_DISABLE);
+	}
 }
 
 
@@ -1556,6 +1564,6 @@ static moduledata_t siftr_mod = {
  *          Defines the initialisation order of this kld relative to others
  *          within the same subsystem as defined by param 3
  */
-DECLARE_MODULE(siftr, siftr_mod, SI_SUB_SMP, SI_ORDER_ANY);
+DECLARE_MODULE(siftr, siftr_mod, SI_SUB_LAST, SI_ORDER_ANY);
 MODULE_DEPEND(siftr, alq, 1, 1, 1);
 MODULE_VERSION(siftr, MODVERSION);

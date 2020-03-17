@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: uart.c,v 1.2 2007/03/23 20:05:47 dogcow Exp $ */
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/adm5120/console.c 228631 2011-12-17 15:08:43Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/adm5120/console.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/param.h>

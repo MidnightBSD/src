@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: undefined.h,v 1.4 2001/12/20 01:20:23 thorpej Exp $	*/
 
 /*-
@@ -43,7 +42,7 @@
  *
  * Created      : 08/02/95
  *
- * $FreeBSD: stable/10/sys/arm/include/undefined.h 259329 2013-12-13 20:43:11Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/undefined.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 

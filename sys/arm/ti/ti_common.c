@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2011 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
@@ -30,10 +29,10 @@
  * SUCH DAMAGE.
  */
 
-#include "opt_global.h"
+#include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_common.c 266277 2014-05-17 00:53:12Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/ti_common.c 314506 2017-03-01 19:55:04Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,37 +46,18 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_common.c 266277 2014-05-17 00:53:12Z
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
+#include <machine/intr.h>
 #include <machine/vmparam.h>
 
-struct fdt_fixup_entry fdt_fixup_table[] = {
-	{ NULL, NULL }
-};
-
-#ifdef SOC_OMAP4
-static int
-fdt_gic_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
-    int *pol)
-{
-
-	if (!fdt_is_compatible(node, "arm,gic"))
-		return (ENXIO);
-
-	*interrupt = fdt32_to_cpu(intr[0]);
-	*trig = INTR_TRIGGER_CONFORM;
-	*pol = INTR_POLARITY_CONFORM;
-
-	return (0);
-}
-#endif
-
+#ifndef INTRNG
 #ifdef SOC_TI_AM335X
 static int
 fdt_aintc_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
     int *pol)
 {
 
-	if (!fdt_is_compatible(node, "ti,aintc"))
+	if (!fdt_is_compatible(node, "ti,aintc") &&
+	    !fdt_is_compatible(node, "ti,am33xx-intc"))
 		return (ENXIO);
 
 	*interrupt = fdt32_to_cpu(intr[0]);
@@ -89,11 +69,12 @@ fdt_aintc_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
 #endif
 
 fdt_pic_decode_t fdt_pic_table[] = {
-#ifdef SOC_OMAP4
-	&fdt_gic_decode_ic,
+#if defined(SOC_OMAP4)
+	&gic_decode_fdt,
 #endif
 #ifdef SOC_TI_AM335X
 	&fdt_aintc_decode_ic,
 #endif
 	NULL
 };
+#endif /* !INTRNG */

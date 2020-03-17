@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_iface.c
  */
@@ -38,13 +37,13 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_iface.c 324176 2017-10-01 19:40:29Z eugen $
+ * $FreeBSD: stable/11/sys/netgraph/ng_iface.c 324175 2017-10-01 19:39:27Z eugen $
  * $Whistle: ng_iface.c,v 1.33 1999/11/01 09:24:51 julian Exp $
  */
 
 /*
  * This node is also a system networking interface. It has
- * a hook for each protocol (IP, AppleTalk, IPX, etc). Packets
+ * a hook for each protocol (IP, AppleTalk, etc). Packets
  * are simply relayed between the interface and the hooks.
  *
  * Interfaces are named ng0, ng1, etc.  New nodes take the
@@ -53,10 +52,8 @@
  * This node also includes Berkeley packet filter support.
  */
 
-#include "opt_atalk.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_ipx.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,6 +72,7 @@
 #include <sys/libkern.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
 #include <net/bpf.h>
 #include <net/netisr.h>
@@ -87,7 +85,6 @@
 #include <netgraph/netgraph.h>
 #include <netgraph/ng_parse.h>
 #include <netgraph/ng_iface.h>
-#include <netgraph/ng_cisco.h>
 
 #ifdef NG_SEPARATE_MALLOC
 static MALLOC_DEFINE(M_NETGRAPH_IFACE, "netgraph_iface", "netgraph iface node");
@@ -106,12 +103,10 @@ typedef const struct iffam *iffam_p;
 const static struct iffam gFamilies[] = {
 	{ AF_INET,	NG_IFACE_HOOK_INET	},
 	{ AF_INET6,	NG_IFACE_HOOK_INET6	},
-	{ AF_APPLETALK,	NG_IFACE_HOOK_ATALK	},
-	{ AF_IPX,	NG_IFACE_HOOK_IPX	},
 	{ AF_ATM,	NG_IFACE_HOOK_ATM	},
 	{ AF_NATM,	NG_IFACE_HOOK_NATM	},
 };
-#define NUM_FAMILIES		(sizeof(gFamilies) / sizeof(*gFamilies))
+#define	NUM_FAMILIES		nitems(gFamilies)
 
 /* Node private data */
 struct ng_iface_private {
@@ -156,14 +151,6 @@ static iffam_p	get_iffam_from_hook(priv_p priv, hook_p hook);
 static iffam_p	get_iffam_from_name(const char *name);
 static hook_p  *get_hook_from_iffam(priv_p priv, iffam_p iffam);
 
-/* Parse type for struct ng_cisco_ipaddr */
-static const struct ng_parse_struct_field ng_cisco_ipaddr_type_fields[]
-	= NG_CISCO_IPADDR_TYPE_INFO;
-static const struct ng_parse_type ng_cisco_ipaddr_type = {
-	&ng_parse_struct_type,
-	&ng_cisco_ipaddr_type_fields
-};
-
 /* List of commands and how to convert arguments to/from ASCII */
 static const struct ng_cmdlist ng_iface_cmds[] = {
 	{
@@ -186,13 +173,6 @@ static const struct ng_cmdlist ng_iface_cmds[] = {
 	  "broadcast",
 	  NULL,
 	  NULL
-	},
-	{
-	  NGM_CISCO_COOKIE,
-	  NGM_CISCO_GET_IPADDR,
-	  "getipaddr",
-	  NULL,
-	  &ng_cisco_ipaddr_type
 	},
 	{
 	  NGM_IFACE_COOKIE,
@@ -405,10 +385,7 @@ ng_iface_output(struct ifnet *ifp, struct mbuf *m,
 	if (ALTQ_IS_ENABLED(&ifp->if_snd)) {
 		M_PREPEND(m, sizeof(sa_family_t), M_NOWAIT);
 		if (m == NULL) {
-			IFQ_LOCK(&ifp->if_snd);
-			IFQ_INC_DROPS(&ifp->if_snd);
-			IFQ_UNLOCK(&ifp->if_snd);
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OQDROPS, 1);
 			return (ENOBUFS);
 		}
 		*(sa_family_t *)m->m_data = af;
@@ -496,8 +473,8 @@ ng_iface_send(struct ifnet *ifp, struct mbuf *m, sa_family_t sa)
 
 	/* Update stats. */
 	if (error == 0) {
-		ifp->if_obytes += len;
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OBYTES, len);
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 	}
 
 	return (error);
@@ -686,50 +663,13 @@ ng_iface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			break;
 		}
 		break;
-	case NGM_CISCO_COOKIE:
-		switch (msg->header.cmd) {
-		case NGM_CISCO_GET_IPADDR:	/* we understand this too */
-		    {
-			struct ifaddr *ifa;
-
-			/* Return the first configured IP address */
-			if_addr_rlock(ifp);
-			TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
-				struct ng_cisco_ipaddr *ips;
-
-				if (ifa->ifa_addr->sa_family != AF_INET)
-					continue;
-				NG_MKRESPONSE(resp, msg, sizeof(ips), M_NOWAIT);
-				if (resp == NULL) {
-					error = ENOMEM;
-					break;
-				}
-				ips = (struct ng_cisco_ipaddr *)resp->data;
-				ips->ipaddr = ((struct sockaddr_in *)
-						ifa->ifa_addr)->sin_addr;
-				ips->netmask = ((struct sockaddr_in *)
-						ifa->ifa_netmask)->sin_addr;
-				break;
-			}
-			if_addr_runlock(ifp);
-
-			/* No IP addresses on this interface? */
-			if (ifa == NULL)
-				error = EADDRNOTAVAIL;
-			break;
-		    }
-		default:
-			error = EINVAL;
-			break;
-		}
-		break;
 	case NGM_FLOW_COOKIE:
 		switch (msg->header.cmd) {
 		case NGM_LINK_IS_UP:
-			ifp->if_drv_flags |= IFF_DRV_RUNNING;
+			if_link_state_change(ifp, LINK_STATE_UP);
 			break;
 		case NGM_LINK_IS_DOWN:
-			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+			if_link_state_change(ifp, LINK_STATE_DOWN);
 			break;
 		default:
 			break;
@@ -767,8 +707,8 @@ ng_iface_rcvdata(hook_p hook, item_p item)
 	}
 
 	/* Update interface stats */
-	ifp->if_ipackets++;
-	ifp->if_ibytes += m->m_pkthdr.len;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
+	if_inc_counter(ifp, IFCOUNTER_IBYTES, m->m_pkthdr.len);
 
 	/* Note receiving interface */
 	m->m_pkthdr.rcvif = ifp;
@@ -788,22 +728,11 @@ ng_iface_rcvdata(hook_p hook, item_p item)
 		isr = NETISR_IPV6;
 		break;
 #endif
-#ifdef IPX
-	case AF_IPX:
-		isr = NETISR_IPX;
-		break;
-#endif
-#ifdef NETATALK
-	case AF_APPLETALK:
-		isr = NETISR_ATALK2;
-		break;
-#endif
 	default:
 		m_freem(m);
 		return (EAFNOSUPPORT);
 	}
-	if (harvest.point_to_point)
-		random_harvest(&(m->m_data), 12, 2, RANDOM_NET_NG);
+	random_harvest_queue(m, sizeof(*m), 2, RANDOM_NET_NG);
 	M_SETFIB(m, ifp->if_fib);
 	netisr_dispatch(isr, m);
 	return (0);
@@ -887,5 +816,5 @@ vnet_ng_iface_uninit(const void *unused)
 
 	delete_unrhdr(V_ng_iface_unit);
 }
-VNET_SYSUNINIT(vnet_ng_iface_uninit, SI_SUB_PSEUDO, SI_ORDER_ANY,
+VNET_SYSUNINIT(vnet_ng_iface_uninit, SI_SUB_INIT_IF, SI_ORDER_ANY,
     vnet_ng_iface_uninit, NULL);

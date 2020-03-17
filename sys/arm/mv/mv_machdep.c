@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994-1998 Mark Brinicombe.
  * Copyright (c) 1994 Brini.
@@ -40,20 +39,27 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/mv/mv_machdep.c 266386 2014-05-18 00:32:35Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/mv/mv_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/devmap.h>
 #include <machine/fdt.h>
 #include <machine/machdep.h>
+#include <machine/platform.h> 
+
+#if __ARM_ARCH < 6
+#include <machine/cpu-v4.h>
+#else
+#include <machine/cpu-v6.h>
+#endif
 
 #include <arm/mv/mvreg.h>	/* XXX */
 #include <arm/mv/mvvar.h>	/* XXX eventually this should be eliminated */
@@ -65,6 +71,11 @@ static int platform_mpp_init(void);
 #if defined(SOC_MV_ARMADAXP)
 void armadaxp_init_coher_fabric(void);
 void armadaxp_l2_init(void);
+#endif
+#if defined(SOC_MV_ARMADA38X)
+int armada38x_win_set_iosync_barrier(void);
+int armada38x_scu_enable(void);
+int armada38x_open_bootrom_win(void);
 #endif
 
 #define MPP_PIN_MAX		68
@@ -135,21 +146,19 @@ moveon:
 	/*
 	 * Process 'pin-count' and 'pin-map' props.
 	 */
-	if (OF_getprop(node, "pin-count", &pin_count, sizeof(pin_count)) <= 0)
+	if (OF_getencprop(node, "pin-count", &pin_count, sizeof(pin_count)) <= 0)
 		return (ENXIO);
-	pin_count = fdt32_to_cpu(pin_count);
 	if (pin_count > MPP_PIN_MAX)
 		return (ERANGE);
 
-	if (OF_getprop(node, "#pin-cells", &pin_cells, sizeof(pin_cells)) <= 0)
+	if (OF_getencprop(node, "#pin-cells", &pin_cells, sizeof(pin_cells)) <= 0)
 		pin_cells = MPP_PIN_CELLS;
-	pin_cells = fdt32_to_cpu(pin_cells);
 	if (pin_cells > MPP_PIN_CELLS)
 		return (ERANGE);
 	tuple_size = sizeof(pcell_t) * pin_cells;
 
 	bzero(pinmap, sizeof(pinmap));
-	len = OF_getprop(node, "pin-map", pinmap, sizeof(pinmap));
+	len = OF_getencprop(node, "pin-map", pinmap, sizeof(pinmap));
 	if (len <= 0)
 		return (ERANGE);
 	if (len % tuple_size)
@@ -164,8 +173,8 @@ moveon:
 	bzero(mpp, sizeof(mpp));
 	pinmap_ptr = pinmap;
 	for (i = 0; i < pins; i++) {
-		mpp_pin = fdt32_to_cpu(*pinmap_ptr);
-		mpp_function = fdt32_to_cpu(*(pinmap_ptr + 1));
+		mpp_pin = *pinmap_ptr;
+		mpp_function = *(pinmap_ptr + 1);
 		mpp[mpp_pin] = mpp_function;
 		pinmap_ptr += pin_cells;
 	}
@@ -202,14 +211,14 @@ moveon:
 }
 
 vm_offset_t
-initarm_lastaddr(void)
+platform_lastaddr(void)
 {
 
 	return (fdt_immr_va);
 }
 
 void
-initarm_early_init(void)
+platform_probe_and_attach(void)
 {
 
 	if (fdt_immr_addr(MV_BASE) != 0)
@@ -217,7 +226,7 @@ initarm_early_init(void)
 }
 
 void
-initarm_gpio_init(void)
+platform_gpio_init(void)
 {
 
 	/*
@@ -229,7 +238,7 @@ initarm_gpio_init(void)
 }
 
 void
-initarm_late_init(void)
+platform_late_init(void)
 {
 	/*
 	 * Re-initialise decode windows
@@ -249,17 +258,30 @@ initarm_late_init(void)
 #endif
 	armadaxp_l2_init();
 #endif
+
+#if defined(SOC_MV_ARMADA38X)
+	/* Set IO Sync Barrier bit for all Mbus devices */
+	if (armada38x_win_set_iosync_barrier() != 0)
+		printf("WARNING: could not map CPU Subsystem registers\n");
+	if (armada38x_scu_enable() != 0)
+		printf("WARNING: could not enable SCU\n");
+#ifdef SMP
+	/* Open window to bootROM memory - needed for SMP */
+	if (armada38x_open_bootrom_win() != 0)
+		printf("WARNING: could not open window to bootROM\n");
+#endif
+#endif
 }
 
 #define FDT_DEVMAP_MAX	(MV_WIN_CPU_MAX + 2)
-static struct arm_devmap_entry fdt_devmap[FDT_DEVMAP_MAX] = {
-	{ 0, 0, 0, 0, 0, }
+static struct devmap_entry fdt_devmap[FDT_DEVMAP_MAX] = {
+	{ 0, 0, 0, }
 };
 
 static int
-platform_sram_devmap(struct arm_devmap_entry *map)
+platform_sram_devmap(struct devmap_entry *map)
 {
-#if !defined(SOC_MV_ARMADAXP)
+#if !defined(SOC_MV_ARMADAXP) && !defined(SOC_MV_ARMADA38X)
 	phandle_t child, root;
 	u_long base, size;
 	/*
@@ -284,8 +306,6 @@ moveon:
 	map->pd_va = MV_CESA_SRAM_BASE; /* XXX */
 	map->pd_pa = base;
 	map->pd_size = size;
-	map->pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-	map->pd_cache = PTE_DEVICE;
 
 	return (0);
 out:
@@ -302,10 +322,10 @@ out:
  * real implementation of this function in arm/mv/mv_pci.c overrides the weak
  * alias defined here.
  */
-int mv_default_fdt_pci_devmap(phandle_t node, struct arm_devmap_entry *devmap,
+int mv_default_fdt_pci_devmap(phandle_t node, struct devmap_entry *devmap,
     vm_offset_t io_va, vm_offset_t mem_va);
 int
-mv_default_fdt_pci_devmap(phandle_t node, struct arm_devmap_entry *devmap,
+mv_default_fdt_pci_devmap(phandle_t node, struct devmap_entry *devmap,
     vm_offset_t io_va, vm_offset_t mem_va)
 {
 
@@ -319,17 +339,17 @@ __weak_reference(mv_default_fdt_pci_devmap, mv_pci_devmap);
  */
 
 /*
- * Construct pmap_devmap[] with DT-derived config data.
+ * Construct devmap table with DT-derived config data.
  */
 int
-initarm_devmap_init(void)
+platform_devmap_init(void)
 {
 	phandle_t root, child;
 	pcell_t bank_count;
 	int i, num_mapped;
 
 	i = 0;
-	arm_devmap_register_table(&fdt_devmap[0]);
+	devmap_register_table(&fdt_devmap[0]);
 
 #ifdef SOC_MV_ARMADAXP
 	vm_paddr_t cur_immr_pa;
@@ -350,8 +370,6 @@ initarm_devmap_init(void)
 	fdt_devmap[i].pd_va = fdt_immr_va;
 	fdt_devmap[i].pd_pa = fdt_immr_pa;
 	fdt_devmap[i].pd_size = fdt_immr_size;
-	fdt_devmap[i].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-	fdt_devmap[i].pd_cache = PTE_DEVICE;
 	i++;
 
 	/*
@@ -388,12 +406,10 @@ initarm_devmap_init(void)
 
 		if (fdt_is_compatible(child, "mrvl,lbc")) {
 			/* Check available space */
-			if (OF_getprop(child, "bank-count", (void *)&bank_count,
+			if (OF_getencprop(child, "bank-count", &bank_count,
 			    sizeof(bank_count)) <= 0)
 				/* If no property, use default value */
 				bank_count = 1;
-			else
-				bank_count = fdt32_to_cpu(bank_count);
 
 			if ((i + bank_count) >= FDT_DEVMAP_MAX)
 				return (ENOMEM);
@@ -412,6 +428,7 @@ initarm_devmap_init(void)
 	return (0);
 }
 
+#if __ARM_ARCH < 6
 struct arm32_dma_range *
 bus_dma_get_range(void)
 {
@@ -425,6 +442,7 @@ bus_dma_get_range_nb(void)
 
 	return (0);
 }
+#endif
 
 #if defined(CPU_MV_PJ4B)
 #ifdef DDB
@@ -439,9 +457,9 @@ DB_SHOW_COMMAND(cp15, db_show_cp15)
 	__asm __volatile("mrc p15, 0, %0, c0, c0, 1" : "=r" (reg));
 	db_printf("Current Cache Lvl ID: 0x%08x\n",reg);
 
-	__asm __volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg));
+	reg = cp15_sctlr_get();
 	db_printf("Ctrl: 0x%08x\n",reg);
-	__asm __volatile("mrc p15, 0, %0, c1, c0, 1" : "=r" (reg));
+	reg = cp15_actlr_get();
 	db_printf("Aux Ctrl: 0x%08x\n",reg);
 
 	__asm __volatile("mrc p15, 0, %0, c0, c1, 0" : "=r" (reg));

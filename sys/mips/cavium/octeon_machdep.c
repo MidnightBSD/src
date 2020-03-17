@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Wojciech A. Koszek <wkoszek@FreeBSD.org>
  * All rights reserved.
@@ -24,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/cavium/octeon_machdep.c 247297 2013-02-26 01:00:11Z attilio $
+ * $FreeBSD: stable/11/sys/mips/cavium/octeon_machdep.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octeon_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octeon_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

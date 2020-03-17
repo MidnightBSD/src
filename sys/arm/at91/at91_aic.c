@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Warner Losh.  All rights reserved.
  *
@@ -27,7 +26,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_aic.c 278613 2015-02-12 03:50:33Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/at91_aic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -39,8 +38,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_aic.c 278613 2015-02-12 03:50:33
 
 #include <machine/armreg.h>
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/frame.h>
 #include <machine/intr.h>
 #include <machine/resource.h>
@@ -178,13 +175,9 @@ static driver_t at91_aic_driver = {
 static devclass_t at91_aic_devclass;
 
 #ifdef FDT
-DRIVER_MODULE(at91_aic, simplebus, at91_aic_driver, at91_aic_devclass, NULL,
-    NULL);
-#else
-DRIVER_MODULE(at91_aic, atmelarm, at91_aic_driver, at91_aic_devclass, NULL,
-    NULL);
-#endif
-/* not yet
 EARLY_DRIVER_MODULE(at91_aic, simplebus, at91_aic_driver, at91_aic_devclass,
     NULL, NULL, BUS_PASS_INTERRUPT);
-*/
+#else
+EARLY_DRIVER_MODULE(at91_aic, atmelarm, at91_aic_driver, at91_aic_devclass,
+    NULL, NULL, BUS_PASS_INTERRUPT);
+#endif

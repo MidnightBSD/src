@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -47,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_cubic.c 293711 2016-01-11 23:37:31Z hiren $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_cubic.c 347882 2019-05-16 18:29:25Z tuexen $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -60,11 +59,11 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/cc/cc_cubic.c 293711 2016-01-11 23:37:
 
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
-
+#include <netinet/cc/cc.h>
 #include <netinet/cc/cc_cubic.h>
 #include <netinet/cc/cc_module.h>
 
@@ -144,7 +143,7 @@ cubic_ack_received(struct cc_var *ccv, uint16_t type)
 			 * the I-D. Using min_rtt in the tf_cwnd calculation
 			 * causes w_tf to grow much faster than it should if the
 			 * RTT is dominated by network buffering rather than
-			 * propogation delay.
+			 * propagation delay.
 			 */
 			w_tf = tf_cwnd(ticks_since_cong,
 			    cubic_data->mean_rtt_ticks, cubic_data->max_cwnd,
@@ -262,9 +261,10 @@ cubic_cong_signal(struct cc_var *ccv, uint32_t type)
 		 * chance the first one is a false alarm and may not indicate
 		 * congestion.
 		 */
-		if (CCV(ccv, t_rxtshift) >= 2)
+		if (CCV(ccv, t_rxtshift) >= 2) {
 			cubic_data->num_cong_events++;
 			cubic_data->t_last_cong = ticks;
+		}
 		break;
 	}
 }
@@ -324,7 +324,12 @@ cubic_post_recovery(struct cc_var *ccv)
 			pipe = CCV(ccv, snd_max) - ccv->curack;
 
 		if (pipe < CCV(ccv, snd_ssthresh))
-			CCV(ccv, snd_cwnd) = pipe + CCV(ccv, t_maxseg);
+			/*
+			 * Ensure that cwnd does not collapse to 1 MSS under
+			 * adverse conditions. Implements RFC6582
+			 */
+			CCV(ccv, snd_cwnd) = max(pipe, CCV(ccv, t_maxseg)) +
+			    CCV(ccv, t_maxseg);
 		else
 			/* Update cwnd based on beta and adjusted max_cwnd. */
 			CCV(ccv, snd_cwnd) = max(1, ((CUBIC_BETA *

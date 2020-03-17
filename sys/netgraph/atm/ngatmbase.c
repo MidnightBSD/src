@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netgraph/atm/ngatmbase.c 241394 2012-10-10 08:36:38Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/netgraph/atm/ngatmbase.c 276750 2015-01-06 12:59:37Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -152,8 +151,7 @@ uni_msg_pack_mbuf(struct uni_msg *msg, void *hdr, size_t hdrlen)
 
 	} else {
 		if ((n = uni_msg_len(msg)) > MHLEN) {
-			MCLGET(m0, M_NOWAIT);
-			if (!(m0->m_flags & M_EXT))
+			if (!(MCLGET(m0, M_NOWAIT)))
 				goto drop;
 			if (n > MCLBYTES)
 				n = MCLBYTES;
@@ -174,8 +172,7 @@ uni_msg_pack_mbuf(struct uni_msg *msg, void *hdr, size_t hdrlen)
 		last = m;
 
 		if (n > MLEN) {
-			MCLGET(m, M_NOWAIT);
-			if (!(m->m_flags & M_EXT))
+			if (!(MCLGET(m, M_NOWAIT)))
 				goto drop;
 			if (n > MCLBYTES)
 				n = MCLBYTES;

@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/10/sys/mips/conf/QEMU 221753 2011-05-11 00:52:41Z gonzo $
+# $FreeBSD: stable/11/sys/mips/conf/QEMU 221753 2011-05-11 00:52:41Z gonzo $
 
 cpu		CPU_MIPS32
 ident		QEMU

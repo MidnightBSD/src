@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Hiroki Sato <hrs@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/mv/mv_ts.c 266152 2014-05-15 16:11:06Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/mv/mv_ts.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,7 +35,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/mv/mv_ts.c 266152 2014-05-15 16:11:06Z ian
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/sysctl.h>
-#include <machine/fdt.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
@@ -82,7 +80,7 @@ ts_probe(device_t dev)
 #define	MV_TEMP_SENS_OFFS	10
 #define	MV_TEMP_SENS_MASK	0x1ff
 #define	MV_TEMP_SENS_READ_MAX	16
-#define	TZ_ZEROC		2732
+#define	TZ_ZEROC		2731
 #define	MV_TEMP_CONVERT(x)	((((322 - x) * 100000) / 13625) + TZ_ZEROC)
 
 /*

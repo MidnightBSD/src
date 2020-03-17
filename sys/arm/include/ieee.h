@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ieee754.h,v 1.4 2003/10/27 02:30:26 simonb Exp $	*/
 
 /*-
@@ -40,7 +39,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD: stable/10/sys/arm/include/ieee.h 255361 2013-09-07 14:04:10Z andrew $
+ * $FreeBSD: stable/11/sys/arm/include/ieee.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 

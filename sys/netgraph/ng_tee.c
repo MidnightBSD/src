@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /*
  * ng_tee.c
@@ -39,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_tee.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_tee.c 298813 2016-04-29 21:25:05Z pfg $
  * $Whistle: ng_tee.c,v 1.18 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -169,7 +168,7 @@ ng_tee_newhook(node_p node, hook_p hook, const char *name)
 	sc_p	privdata = NG_NODE_PRIVATE(node);
 	hi_p	hinfo;
 
-	/* Precalculate internal pathes. */
+	/* Precalculate internal paths. */
 	if (strcmp(name, NG_TEE_HOOK_RIGHT) == 0) {
 		hinfo = &privdata->right;
 		if (privdata->left.dest)
@@ -372,7 +371,7 @@ ng_tee_disconnect(hook_p hook)
 	KASSERT(hinfo != NULL, ("%s: null info", __func__));
 	hinfo->hook = NULL;
 
-	/* Recalculate internal pathes. */
+	/* Recalculate internal paths. */
 	if (sc->left.dest == hinfo) {
 		sc->left.dest = sc->left.dup;
 		sc->left.dup = NULL;

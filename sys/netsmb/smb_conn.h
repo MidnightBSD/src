@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netsmb/smb_conn.h 250237 2013-05-04 14:18:10Z davide $
+ * $FreeBSD: stable/11/sys/netsmb/smb_conn.h 250237 2013-05-04 14:18:10Z davide $
  */
 
 /*

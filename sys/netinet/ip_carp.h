@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/netinet/ip_carp.h 253087 2013-07-09 10:02:51Z ae $	*/
+/*	$FreeBSD: stable/11/sys/netinet/ip_carp.h 338081 2018-08-20 01:01:33Z loos $	*/
 /*	$OpenBSD: ip_carp.h,v 1.8 2004/07/29 22:12:15 mcbride Exp $	*/
 
 /*
@@ -139,9 +138,9 @@ struct carpreq {
 #ifdef _KERNEL
 int		carp_ioctl(struct ifreq *, u_long, struct thread *);
 int		carp_attach(struct ifaddr *, int);
-void		carp_detach(struct ifaddr *);
+void		carp_detach(struct ifaddr *, bool);
 void		carp_carpdev_state(struct ifnet *);
-void		carp_input (struct mbuf *, int);
+int		carp_input(struct mbuf **, int *, int);
 int		carp6_input (struct mbuf **, int *, int);
 int		carp_output (struct ifnet *, struct mbuf *,
 		    const struct sockaddr *);
@@ -155,7 +154,7 @@ int		carp_forus(struct ifnet *, u_char *);
 /* net/if.c */
 extern int (*carp_ioctl_p)(struct ifreq *, u_long, struct thread *);
 extern int (*carp_attach_p)(struct ifaddr *, int);
-extern void (*carp_detach_p)(struct ifaddr *);
+extern void (*carp_detach_p)(struct ifaddr *, bool);
 extern void (*carp_linkstate_p)(struct ifnet *);
 extern void (*carp_demote_adj_p)(int, char *);
 extern int (*carp_master_p)(struct ifaddr *);

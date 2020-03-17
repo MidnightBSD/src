@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/ofw/ofw_pcibus.h 259257 2013-12-12 12:36:40Z andreast $
+ * $FreeBSD: stable/11/sys/powerpc/ofw/ofw_pcibus.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef POWERPC_OFW_OFW_PCIBUS_H

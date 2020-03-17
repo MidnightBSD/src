@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: locore.S,v 1.18 1998/09/15 10:58:53 pefo Exp $	*/
 /*-
  * Copyright (c) 1992, 1993
@@ -48,7 +47,7 @@
  *
  *	from: @(#)locore.s	8.5 (Berkeley) 1/4/94
  *	JNPR: support.S,v 1.5.2.2 2007/08/29 10:03:49 girish
- * $FreeBSD: stable/10/sys/mips/mips/support.S 255367 2013-09-07 16:31:30Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/mips/support.S 327195 2017-12-26 10:07:17Z kib $
  */
 
 /*
@@ -176,7 +175,7 @@ END(copystr)
  *		u_int maxlength;
  *		u_int *lencopied;
  */
-NON_LEAF(copyinstr, CALLFRAME_SIZ, ra)
+NESTED(copyinstr, CALLFRAME_SIZ, ra)
 	PTR_SUBU	sp, sp, CALLFRAME_SIZ
 	.mask	0x80000000, (CALLFRAME_RA - CALLFRAME_SIZ)
 	PTR_LA	v0, copyerr
@@ -204,7 +203,7 @@ END(copyinstr)
  *		u_int maxlength;
  *		u_int *lencopied;
  */
-NON_LEAF(copyoutstr, CALLFRAME_SIZ, ra)
+NESTED(copyoutstr, CALLFRAME_SIZ, ra)
 	PTR_SUBU	sp, sp, CALLFRAME_SIZ
 	.mask	0x80000000, (CALLFRAME_RA - CALLFRAME_SIZ)
 	PTR_LA	v0, copyerr
@@ -229,7 +228,7 @@ END(copyoutstr)
  *		caddr_t *to;	(kernel destination address)
  *		unsigned len;
  */
-NON_LEAF(copyin, CALLFRAME_SIZ, ra)
+NESTED(copyin, CALLFRAME_SIZ, ra)
 	PTR_SUBU	sp, sp, CALLFRAME_SIZ
 	.mask	0x80000000, (CALLFRAME_RA - CALLFRAME_SIZ)
 	PTR_LA	v0, copyerr
@@ -255,7 +254,7 @@ END(copyin)
  *		caddr_t *to;	(user destination address)
  *		unsigned len;
  */
-NON_LEAF(copyout, CALLFRAME_SIZ, ra)
+NESTED(copyout, CALLFRAME_SIZ, ra)
 	PTR_SUBU	sp, sp, CALLFRAME_SIZ
 	.mask	0x80000000, (CALLFRAME_RA - CALLFRAME_SIZ)
 	PTR_LA	v0, copyerr
@@ -289,7 +288,7 @@ END(copyerr)
  */
 #ifdef __mips_n64
 LEAF(fuword64)
-ALEAF(fuword)
+XLEAF(fuword)
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
 	nop
@@ -304,7 +303,7 @@ END(fuword64)
 
 LEAF(fuword32)
 #ifndef __mips_n64
-ALEAF(fuword)
+XLEAF(fuword)
 #endif
 	PTR_LA	v0, fswberr
 	blt	a0, zero, fswberr	# make sure address is in user space
@@ -554,7 +553,7 @@ END(memset)
  * bzero(s1, n)
  */
 LEAF(bzero)
-ALEAF(blkclr)
+XLEAF(blkclr)
 	.set	noreorder
 	blt	a1, 12, smallclr	# small amount to clear?
 	PTR_SUBU	a3, zero, a0		# compute # bytes to word align address
@@ -840,74 +839,7 @@ LEAF(atomic_subtract_8)
 	nop
 END(atomic_subtract_8)
 
-/*
- *	atomic 64-bit register read/write assembly language support routines.
- */
-
 	.set	noreorder		# Noreorder is default style!
-
-#if !defined(__mips_n64) && !defined(__mips_n32)	
-	/*
-	 * I don't know if these routines have the right number of
-	 * NOPs in it for all processors.  XXX
-	 *
-	 * Maybe it would be better to just leave this undefined in that case.
-	 *
-	 * XXX These routines are not safe in the case of a TLB miss on a1 or
-	 *     a0 unless the trapframe is 64-bit, which it just isn't with O32.
-	 *     If we take any exception, not just an interrupt, the upper
-	 *     32-bits will be clobbered.  Use only N32 and N64 kernels if you
-	 *     want to use 64-bit registers while interrupts are enabled or
-	 *     with memory operations.  Since this isn't even using load-linked
-	 *     and store-conditional, perhaps it should just use two registers
-	 *     instead, as is right and good with the O32 ABI.
-	 */
-LEAF(atomic_store_64)
-	mfc0	t1, MIPS_COP_0_STATUS
-	and	t2, t1, ~MIPS_SR_INT_IE
-	mtc0	t2, MIPS_COP_0_STATUS
-	nop
-	nop
-	nop
-	nop
-	ld	t0, (a1)
-	nop
-	nop
-	sd	t0, (a0)
-	nop
-	nop
-	mtc0	t1,MIPS_COP_0_STATUS
-	nop
-	nop
-	nop
-	nop
-	j	ra
-	nop
-END(atomic_store_64)
-
-LEAF(atomic_load_64)
-	mfc0	t1, MIPS_COP_0_STATUS
-	and	t2, t1, ~MIPS_SR_INT_IE
-	mtc0	t2, MIPS_COP_0_STATUS
-	nop
-	nop
-	nop
-	nop
-	ld	t0, (a0)
-	nop
-	nop
-	sd	t0, (a1)
-	nop
-	nop
-	mtc0	t1,MIPS_COP_0_STATUS
-	nop
-	nop
-	nop
-	nop
-	j	ra
-	nop
-END(atomic_load_64)
-#endif
 
 #if defined(DDB) || defined(DEBUG)
 

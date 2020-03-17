@@ -1,0 +1,10 @@
+# $FreeBSD: stable/11/sys/arm/mv/armada38x/std.armada38x 327658 2018-01-07 00:04:13Z ian $
+files		"../mv/armada38x/files.armada38x"
+files		"../mv/files.mv"
+cpu		CPU_CORTEXA
+machine		arm	armv6
+
+makeoptions	CONF_CFLAGS="-march=armv7a"
+
+options		IPI_IRQ_START=0
+options		IPI_IRQ_END=15

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Bruce D. Evans.
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	from: src/sys/i386/include/md_var.h,v 1.35 2000/02/20 20:51:23 bsd
  *	JNPR: md_var.h,v 1.4 2006/10/16 12:30:34 katta
- * $FreeBSD: stable/10/sys/mips/include/md_var.h 232855 2012-03-12 08:13:04Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/md_var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -80,5 +79,6 @@ void	busdma_swi(void);
 struct	dumperinfo;
 void	dump_add_page(vm_paddr_t);
 void	dump_drop_page(vm_paddr_t);
-void	minidumpsys(struct dumperinfo *);
+int	minidumpsys(struct dumperinfo *);
+
 #endif /* !_MACHINE_MD_VAR_H_ */

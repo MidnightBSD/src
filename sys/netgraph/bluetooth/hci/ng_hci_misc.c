@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_hci_misc.c
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_misc.c,v 1.5 2003/09/08 18:57:51 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/hci/ng_hci_misc.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/hci/ng_hci_misc.c 281198 2015-04-07 10:22:56Z takawata $
  */
 
 #include <sys/param.h>
@@ -215,7 +214,7 @@ ng_hci_flush_neighbor_cache(ng_hci_unit_p unit)
  */
 
 ng_hci_neighbor_p
-ng_hci_get_neighbor(ng_hci_unit_p unit, bdaddr_p bdaddr)
+ng_hci_get_neighbor(ng_hci_unit_p unit, bdaddr_p bdaddr,int link_type)
 {
 	ng_hci_neighbor_p	n = NULL;
 
@@ -223,7 +222,8 @@ ng_hci_get_neighbor(ng_hci_unit_p unit, bdaddr_p bdaddr)
 		ng_hci_neighbor_p	nn = LIST_NEXT(n, next);
 
 		if (!ng_hci_neighbor_stale(n)) {
-			if (bcmp(&n->bdaddr, bdaddr, sizeof(*bdaddr)) == 0)
+			if (n->addrtype == link_type && 
+			    bcmp(&n->bdaddr, bdaddr, sizeof(*bdaddr)) == 0)
 				break;
 		} else 
 			ng_hci_free_neighbor(n); /* remove old entry */
@@ -285,7 +285,7 @@ ng_hci_new_con(ng_hci_unit_p unit, int link_type)
 
 		con->link_type = link_type;
 
-		if (con->link_type == NG_HCI_LINK_ACL)
+		if (con->link_type != NG_HCI_LINK_SCO)
 			NG_HCI_BUFF_ACL_TOTAL(unit->buffer, num_pkts);
 		else
 			NG_HCI_BUFF_SCO_TOTAL(unit->buffer, num_pkts);
@@ -314,7 +314,7 @@ ng_hci_free_con(ng_hci_unit_con_p con)
 	 * flushed these packets and we can free them too
 	 */
 
-	if (con->link_type == NG_HCI_LINK_ACL)
+	if (con->link_type != NG_HCI_LINK_SCO)
 		NG_HCI_BUFF_ACL_FREE(con->unit->buffer, con->pending);
 	else
 		NG_HCI_BUFF_SCO_FREE(con->unit->buffer, con->pending);

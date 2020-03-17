@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_gif.c
  */
@@ -63,7 +62,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_gif.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_gif.c 298813 2016-04-29 21:25:05Z pfg $
  */
 
 /*
@@ -492,7 +491,7 @@ ng_gif_shutdown(node_p node)
 	if (node->nd_flags & NGF_REALLY_DIE) {
 		/*
 		 * WE came here because the gif interface is being destroyed,
-		 * so stop being persistant.
+		 * so stop being persistent.
 		 * Actually undo all the things we did on creation.
 		 * Assume the ifp has already been freed.
 		 */

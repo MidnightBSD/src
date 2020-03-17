@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2012 Avionic Design GmbH
  *

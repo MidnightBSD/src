@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2012 Konstantin Belousov <kib@FreeBSD.ORG>.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/vdso.h 237433 2012-06-22 07:06:40Z kib $
+ * $FreeBSD: stable/11/sys/mips/include/vdso.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MIPS_VDSO_H

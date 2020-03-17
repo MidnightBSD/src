@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: disassem.c,v 1.14 2003/03/27 16:58:36 mycroft Exp $	*/
 
 /*-
@@ -49,14 +48,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/disassem.c 279467 2015-03-01 01:08:14Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/disassem.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/param.h>
 
 
 #include <sys/systm.h>
 #include <machine/disassem.h>
 #include <machine/armreg.h>
-#include <machine/acle-compat.h>
 #include <ddb/ddb.h>
 
 /*
@@ -524,7 +522,7 @@ disasm(const disasm_interface_t *di, vm_offset_t loc, int altfmt)
 			else
 				di->di_printf(", ");
 		}
-	};
+	}
 
 	di->di_printf("\n");
 

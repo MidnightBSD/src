@@ -3,7 +3,7 @@
 # RISC Implementation) FPGA soft core, as configured in its NetFPGA reference
 # configuration.
 #
-# $FreeBSD: stable/10/sys/mips/conf/BERI_NETFPGA_MDROOT 270061 2014-08-16 14:30:46Z bz $
+# $FreeBSD: stable/11/sys/mips/conf/BERI_NETFPGA_MDROOT 267922 2014-06-26 17:20:45Z bz $
 #
 
 include "BERI_TEMPLATE"
@@ -23,6 +23,7 @@ device		bpf
 
 options 	DEVICE_POLLING
 device		netfpga10g_nf10bmac
+options 	NF10BMAC_64BIT
 
 #
 # This kernel configuration uses an embedded memory root file system.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
@@ -28,7 +27,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/omap4/pandaboard/pandaboard.c 259329 2013-12-13 20:43:11Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/omap4/pandaboard/pandaboard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,11 +38,9 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/omap4/pandaboard/pandaboard.c 259329 20
 #include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/pte.h>
 #include <machine/vmparam.h>
 #include <machine/fdt.h>
 
-#include <arm/ti/omap4/omap4var.h>
 #include <arm/ti/omap4/omap4_reg.h>
 
 /* Registers in the SCRM that control the AUX clocks */

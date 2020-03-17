@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/pseries/vdevice.c 273675 2014-10-26 04:01:57Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/pseries/vdevice.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -133,6 +132,10 @@ vdevice_attach(device_t dev)
 
 	root = ofw_bus_get_node(dev);
 
+	/* The XICP (root PIC) will handle all our interrupts */
+	powerpc_register_pic(root_pic, OF_xref_from_node(root),
+	    1 << 24 /* 24-bit XIRR field */, 1 /* Number of IPIs */, FALSE);
+
 	for (child = OF_child(root); child != 0; child = OF_peer(child)) {
 		dinfo = malloc(sizeof(*dinfo), M_DEVBUF, M_WAITOK | M_ZERO);
 
@@ -143,7 +146,7 @@ vdevice_attach(device_t dev)
                 }
 		resource_list_init(&dinfo->mdi_resources);
 
-		ofw_bus_intr_to_rl(dev, child, &dinfo->mdi_resources);
+		ofw_bus_intr_to_rl(dev, child, &dinfo->mdi_resources, NULL);
 
                 cdev = device_add_child(dev, NULL, -1);
                 if (cdev == NULL) {
@@ -177,7 +180,7 @@ vdevice_print_child(device_t dev, device_t child)
 
 	retval += bus_print_child_header(dev, child);
 
-	retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
+	retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%jd");
 
 	retval += bus_print_child_footer(dev, child);
 

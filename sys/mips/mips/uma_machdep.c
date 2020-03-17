@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -26,13 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/uma_machdep.c 287945 2015-09-17 23:31:44Z rstone $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/uma_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
+#include <sys/vmmeter.h>
 #include <vm/vm.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
@@ -51,14 +51,23 @@ uma_small_alloc(uma_zone_t zone, vm_size_t bytes, u_int8_t *flags, int wait)
 
 	*flags = UMA_SLAB_PRIV;
 	pflags = malloc2vm_flags(wait) | VM_ALLOC_WIRED;
+#ifndef __mips_n64
+	pflags &= ~(VM_ALLOC_WAITOK | VM_ALLOC_WAITFAIL);
+	pflags |= VM_ALLOC_NOWAIT;
+#endif
 
 	for (;;) {
 		m = vm_page_alloc_freelist(VM_FREELIST_DIRECT, pflags);
+#ifndef __mips_n64
+		if (m == NULL && vm_page_reclaim_contig(pflags, 1,
+		    0, MIPS_KSEG0_LARGEST_PHYS, PAGE_SIZE, 0))
+			continue;
+#endif
 		if (m == NULL) {
 			if (wait & M_NOWAIT)
 				return (NULL);
 			else
-				pmap_grow_direct_page_cache();
+				VM_WAIT;
 		} else
 			break;
 	}
@@ -80,5 +89,5 @@ uma_small_free(void *mem, vm_size_t size, u_int8_t flags)
 	m = PHYS_TO_VM_PAGE(pa);
 	m->wire_count--;
 	vm_page_free(m);
-	atomic_subtract_int(&cnt.v_wire_count, 1);
+	atomic_subtract_int(&vm_cnt.v_wire_count, 1);
 }

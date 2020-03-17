@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/NSLU.hints 191858 2009-05-06 20:24:17Z cognet $
+# $FreeBSD: stable/11/sys/arm/conf/NSLU.hints 191858 2009-05-06 20:24:17Z cognet $
 
 #
 # Device wiring for the Linksys NSLU2

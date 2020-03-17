@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1990 The Regents of the University of California.
@@ -36,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/10/sys/powerpc/include/_align.h 209975 2010-07-13 05:32:19Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/include/_align.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _POWERPC_INCLUDE__ALIGN_H_

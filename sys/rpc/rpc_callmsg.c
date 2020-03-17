@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_callmsg.c,v 1.16 2000/07/14 08:40:42 fvdl Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)rpc_callmsg.c 1.4 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)rpc_callmsg.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/rpc_callmsg.c 261046 2014-01-22 23:45:27Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/rpc_callmsg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * rpc_callmsg.c

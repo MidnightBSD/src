@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc.h,v 1.17 2000/06/02 22:57:56 fvdl Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)svc.h 1.35 88/12/17 SMI
  *	from: @(#)svc.h      1.27    94/04/25 SMI
- * $FreeBSD: stable/10/sys/rpc/svc.h 314034 2017-02-21 09:29:46Z avg $
+ * $FreeBSD: stable/11/sys/rpc/svc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -227,7 +226,7 @@ typedef struct __rpc_svcxprt_ext {
  * The services list
  * Each entry represents a set of procedures (an rpc program).
  * The dispatch routine takes request structs and runs the
- * apropriate procedure.
+ * appropriate procedure.
  */
 struct svc_callout {
 	TAILQ_ENTRY(svc_callout) sc_link;
@@ -241,7 +240,7 @@ TAILQ_HEAD(svc_callout_list, svc_callout);
 /*
  * The services connection loss list
  * The dispatch routine takes request structs and runs the
- * apropriate procedure.
+ * appropriate procedure.
  */
 struct svc_loss_callout {
 	TAILQ_ENTRY(svc_loss_callout) slc_link;

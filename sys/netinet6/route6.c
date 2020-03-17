@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet6/route6.c 249294 2013-04-09 07:11:22Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet6/route6.c 356623 2020-01-11 01:15:38Z bz $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -43,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet6/route6.c 249294 2013-04-09 07:11:22Z 
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet6/in6_var.h>
@@ -108,5 +108,6 @@ route6_input(struct mbuf **mp, int *offp, int proto)
 	}
 
 	*offp += rhlen;
+	*mp = m;
 	return (rh->ip6r_nxt);
 }

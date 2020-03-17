@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: clnt.h,v 1.14 2000/06/02 22:57:55 fvdl Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)clnt.h 1.31 94/04/29 SMI
  *	from: @(#)clnt.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/10/sys/rpc/clnt.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/sys/rpc/clnt.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -530,7 +529,7 @@ extern CLIENT *clnt_tli_create(const int, const struct netconfig *,
 			       struct netbuf *, const rpcprog_t,
 			       const rpcvers_t, const u_int, const u_int);
 /*
- *	const register int fd;		-- fd
+ *	const int fd;			-- fd
  *	const struct netconfig *nconf;	-- netconfig structure
  *	struct netbuf *svcaddr;		-- servers address
  *	const u_long prog;			-- program number

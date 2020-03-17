@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2009-2011 Spectra Logic Corporation
@@ -42,9 +41,7 @@
  * Author: Ken Merry <ken@FreeBSD.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_backend_block.c 313369 2017-02-07 01:56:26Z mav $");
-
-#include <opt_kdtrace.h>
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_backend_block.c 345007 2019-03-11 13:56:51Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -221,10 +218,9 @@ struct ctl_be_block_io {
 extern struct ctl_softc *control_softc;
 
 static int cbb_num_threads = 14;
-TUNABLE_INT("kern.cam.ctl.block.num_threads", &cbb_num_threads);
 SYSCTL_NODE(_kern_cam_ctl, OID_AUTO, block, CTLFLAG_RD, 0,
 	    "CAM Target Layer Block Backend");
-SYSCTL_INT(_kern_cam_ctl_block, OID_AUTO, num_threads, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_ctl_block, OID_AUTO, num_threads, CTLFLAG_RWTUN,
            &cbb_num_threads, 0, "Number of threads per backing file");
 
 static struct ctl_be_block_io *ctl_alloc_beio(struct ctl_be_block_softc *softc);
@@ -2136,18 +2132,7 @@ ctl_be_block_open(struct ctl_be_block_lun *be_lun, struct ctl_lun_req *req)
 			 "Root filesystem is not mounted");
 		return (1);
 	}
-	if (!curthread->td_proc->p_fd->fd_cdir) {
-		curthread->td_proc->p_fd->fd_cdir = rootvnode;
-		VREF(rootvnode);
-	}
-	if (!curthread->td_proc->p_fd->fd_rdir) {
-		curthread->td_proc->p_fd->fd_rdir = rootvnode;
-		VREF(rootvnode);
-	}
-	if (!curthread->td_proc->p_fd->fd_jdir) {
-		curthread->td_proc->p_fd->fd_jdir = rootvnode;
-		VREF(rootvnode);
-	}
+	pwd_ensure_dirs();
 
 	value = ctl_get_opt(&cbe_lun->options, "file");
 	if (value == NULL) {
@@ -2393,7 +2378,7 @@ ctl_be_block_create(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 	 */
 	retval = taskqueue_start_threads(&be_lun->io_taskqueue,
 					 /*num threads*/num_threads,
-					 /*priority*/PWAIT,
+					 /*priority*/PUSER,
 					 /*thread name*/
 					 "%s taskq", be_lun->lunname);
 
@@ -2665,11 +2650,8 @@ bailout_error:
 static void
 ctl_be_block_lun_shutdown(void *be_lun)
 {
-	struct ctl_be_block_lun *lun;
-	struct ctl_be_block_softc *softc;
-
-	lun = (struct ctl_be_block_lun *)be_lun;
-	softc = lun->softc;
+	struct ctl_be_block_lun *lun = be_lun;
+	struct ctl_be_block_softc *softc = lun->softc;
 
 	mtx_lock(&softc->lock);
 	lun->flags |= CTL_BE_BLOCK_LUN_UNCONFIGURED;

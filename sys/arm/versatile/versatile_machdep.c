@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2012 Oleksandr Tymoshenko.
  * All rights reserved.
  *
@@ -36,22 +37,21 @@
 
 #include "opt_ddb.h"
 #include "opt_platform.h"
-#include "opt_global.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/versatile/versatile_machdep.c 259365 2013-12-14 00:16:08Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/versatile/versatile_machdep.c 330897 2018-03-14 03:19:51Z eadler $");
 
-#define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/devmap.h>
 #include <machine/machdep.h>
+#include <machine/platform.h> 
 
 #include <dev/fdt/fdt_common.h>
 
@@ -59,68 +59,52 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/versatile/versatile_machdep.c 259365 2013-
 #define DEVMAP_BOOTSTRAP_MAP_START	0xE0000000
 
 vm_offset_t
-initarm_lastaddr(void)
+platform_lastaddr(void)
 {
 
 	return (DEVMAP_BOOTSTRAP_MAP_START);
 }
 
 void
-initarm_early_init(void)
+platform_probe_and_attach(void)
 {
 
 }
 
 void
-initarm_gpio_init(void)
+platform_gpio_init(void)
 {
 }
 
 void
-initarm_late_init(void)
+platform_late_init(void)
 {
 }
 
 #define FDT_DEVMAP_MAX	(2)		/* FIXME */
-static struct arm_devmap_entry fdt_devmap[FDT_DEVMAP_MAX] = {
-	{ 0, 0, 0, 0, 0, },
-	{ 0, 0, 0, 0, 0, }
+static struct devmap_entry fdt_devmap[FDT_DEVMAP_MAX] = {
+	{ 0, 0, 0, },
+	{ 0, 0, 0, }
 };
 
 
 /*
- * Construct pmap_devmap[] with DT-derived config data.
+ * Construct devmap table with DT-derived config data.
  */
 int
-initarm_devmap_init(void)
+platform_devmap_init(void)
 {
 	int i = 0;
 	fdt_devmap[i].pd_va = 0xf0100000;
 	fdt_devmap[i].pd_pa = 0x10100000;
 	fdt_devmap[i].pd_size = 0x01000000;       /* 1 MB */
-	fdt_devmap[i].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-	fdt_devmap[i].pd_cache = PTE_DEVICE;
 
-	arm_devmap_register_table(&fdt_devmap[0]);
-	return (0);
-}
-
-struct arm32_dma_range *
-bus_dma_get_range(void)
-{
-
-	return (NULL);
-}
-
-int
-bus_dma_get_range_nb(void)
-{
-
+	devmap_register_table(&fdt_devmap[0]);
 	return (0);
 }
 
 void
-cpu_reset()
+cpu_reset(void)
 {
 	printf("cpu_reset\n");
 	while (1);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2009 Scott Long
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/cam_xpt_internal.h 278974 2015-02-18 23:08:13Z ken $
+ * $FreeBSD: stable/11/sys/cam/cam_xpt_internal.h 328820 2018-02-02 23:22:58Z mav $
  */
 
 #ifndef _CAM_CAM_XPT_INTERNAL_H
@@ -49,13 +48,43 @@ typedef void (*xpt_dev_async_func)(u_int32_t async_code,
 				   void *async_arg);
 typedef void (*xpt_announce_periph_func)(struct cam_periph *periph);
 
-struct xpt_xport {
+struct xpt_xport_ops {
 	xpt_alloc_device_func	alloc_device;
 	xpt_release_device_func	reldev;
 	xpt_action_func		action;
 	xpt_dev_async_func	async;
 	xpt_announce_periph_func announce;
 };
+
+struct xpt_xport {
+	cam_xport		xport;
+	const char		*name;
+	struct xpt_xport_ops	*ops;
+};
+
+SET_DECLARE(cam_xpt_xport_set, struct xpt_xport);
+#define CAM_XPT_XPORT(data) 				\
+	DATA_SET(cam_xpt_xport_set, data)
+
+typedef void (*xpt_proto_announce_func)(struct cam_ed *);
+typedef void (*xpt_proto_debug_out_func)(union ccb *);
+
+struct xpt_proto_ops {
+	xpt_proto_announce_func	announce;
+	xpt_proto_announce_func	denounce;
+	xpt_proto_debug_out_func debug_out;
+};
+
+struct xpt_proto {
+	cam_proto		proto;
+	const char		*name;
+	struct xpt_proto_ops	*ops;
+};
+
+SET_DECLARE(cam_xpt_proto_set, struct xpt_proto);
+#define CAM_XPT_PROTO(data) 				\
+	DATA_SET(cam_xpt_proto_set, data)
+
 
 /*
  * The CAM EDT (Existing Device Table) contains the device information for
@@ -118,6 +147,8 @@ struct cam_ed {
 	STAILQ_ENTRY(cam_ed) highpowerq_entry;
 	struct mtx	 device_mtx;
 	struct task	 device_destroy_task;
+	const struct	 nvme_controller_data *nvme_cdata;
+	const struct	 nvme_namespace_data *nvme_data;
 };
 
 /*
@@ -165,9 +196,6 @@ struct cam_path {
 	struct cam_et	  *target;
 	struct cam_ed	  *device;
 };
-
-struct xpt_xport *	scsi_get_xport(void);
-struct xpt_xport *	ata_get_xport(void);
 
 struct cam_ed *		xpt_alloc_device(struct cam_eb *bus,
 					 struct cam_et *target,

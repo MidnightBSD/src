@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/usb/octusb.c 241082 2012-10-01 05:42:43Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/usb/octusb.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -83,11 +82,8 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/cavium/usb/octusb.c 241082 2012-10-01 05:
 static int octusbdebug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, octusb, CTLFLAG_RW, 0, "OCTUSB");
-SYSCTL_INT(_hw_usb_octusb, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_octusb, OID_AUTO, debug, CTLFLAG_RWTUN,
     &octusbdebug, 0, "OCTUSB debug level");
-
-TUNABLE_INT("hw.usb.octusb.debug", &octusbdebug);
-
 #endif
 
 struct octusb_std_temp {

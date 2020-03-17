@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: if_admswvar.h,v 1.1 2007/03/20 08:52:02 dyoung Exp $ */
 
 /*-
@@ -35,7 +34,7 @@
 #define	_IF_ADMSWVAR_H_
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/adm5120/if_admswvar.h 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/adm5120/if_admswvar.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

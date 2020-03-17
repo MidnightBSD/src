@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_port.c 266274 2014-05-16 23:27:18Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_port.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_port.c 266274 2014-05-
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
@@ -166,14 +164,14 @@ port_setup(int pnum, enum ev_type pevt, void (*ih)(void *), void *ih_user)
 		val = PCR_INT_FE;
 		break;
 	case INT_EITHER_EDGE:
-		val = PCR_INT_RE;
+		val = PCR_INT_EE;
 		break;
 	case INT_LOGIC_ONE:
 		val = PCR_INT_LO;
 		break;
 	default:
 		return (-1);
-	};
+	}
 
 	reg = READ4(sc, PORT_PCR(pnum));
 	reg &= ~(PCR_IRQC_M << PCR_IRQC_S);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014, Kevin Lo
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/udplite.h 265946 2014-05-13 06:05:53Z kevlo $
+ * $FreeBSD: stable/11/sys/netinet/udplite.h 264212 2014-04-07 01:53:03Z kevlo $
  */
 
 #ifndef _NETINET_UDPLITE_H_

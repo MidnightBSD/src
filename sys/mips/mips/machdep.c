@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
     /*	$OpenBSD: machdep.c,v 1.33 1998/09/15 10:58:54 pefo Exp $	*/
 /* tracked to 1.38 */
 /*
@@ -41,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/machdep.c 262717 2014-03-03 20:28:27Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 #include "opt_md.h"
@@ -168,9 +167,6 @@ extern char MipsCache[], MipsCacheEnd[];
 extern char MipsWaitStart[], MipsWaitEnd[];
 
 extern char edata[], end[];
-#ifdef DDB
-extern vm_offset_t ksym_start, ksym_end;
-#endif
 
 u_int32_t bootdev;
 struct bootinfo bootinfo;
@@ -212,8 +208,8 @@ cpu_startup(void *dummy)
 	vm_ksubmap_init(&kmi);
 
 	printf("avail memory = %ju (%juMB)\n", 
-	    ptoa((uintmax_t)cnt.v_free_count),
-	    ptoa((uintmax_t)cnt.v_free_count) / 1048576);
+	    ptoa((uintmax_t)vm_cnt.v_free_count),
+	    ptoa((uintmax_t)vm_cnt.v_free_count) / 1048576);
 	cpu_init_interrupts();
 
 	/*
@@ -320,7 +316,7 @@ cpu_initclocks(void)
 	cpu_initclocks_bsp();
 }
 
-struct msgbuf *msgbufp=0;
+struct msgbuf *msgbufp = NULL;
 
 /*
  * Initialize the hardware exception vectors, and the jump table used to
@@ -435,6 +431,8 @@ mips_postboot_fixup(void)
 #ifdef DDB
 	Elf_Size *trampoline_data = (Elf_Size*)kernel_kseg0_end;
 	Elf_Size symtabsize = 0;
+	vm_offset_t ksym_start;
+	vm_offset_t ksym_end;
 
 	if (trampoline_data[0] == SYMTAB_MAGIC) {
 		symtabsize = trampoline_data[1];
@@ -444,6 +442,7 @@ mips_postboot_fixup(void)
 		kernel_kseg0_end += symtabsize;
 		/* end of .strtab */
 		ksym_end = kernel_kseg0_end;
+		db_fetch_ksymtab(ksym_start, ksym_end);
 	}
 #endif
 }

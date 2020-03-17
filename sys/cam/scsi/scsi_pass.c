@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 2000 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_pass.c 331632 2018-03-27 17:42:04Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_pass.c 350804 2019-08-08 22:16:19Z mav $");
 
 #include "opt_compat.h"
 
@@ -590,10 +589,7 @@ passregister(struct cam_periph *periph, void *arg)
 	softc->io_zone_size = MAXPHYS;
 	knlist_init_mtx(&softc->read_select.si_note, cam_periph_mtx(periph));
 
-	bzero(&cpi, sizeof(cpi));
-	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, periph->path);
 
 	if (cpi.maxio == 0)
 		softc->maxio = DFLTPHYS;	/* traditional default */
@@ -775,9 +771,6 @@ passclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 
 	if (softc->open_count == 0) {
 		struct pass_io_req *io_req, *io_req2;
-		int need_unlock;
-
-		need_unlock = 0;
 
 		TAILQ_FOREACH_SAFE(io_req, &softc->done_queue, links, io_req2) {
 			TAILQ_REMOVE(&softc->done_queue, io_req, links);
@@ -950,7 +943,7 @@ passdone(struct cam_periph *periph, union ccb *done_ccb)
 		case XPT_ATA_IO:
 			devstat_end_transaction(softc->device_stats,
 			    done_ccb->ataio.dxfer_len - done_ccb->ataio.resid,
-			    done_ccb->ataio.tag_action & 0x3,
+			    0, /* Not used in ATA */
 			    ((done_ccb->ccb_h.flags & CAM_DIR_MASK) ==
 			    CAM_DIR_NONE) ? DEVSTAT_NO_DATA : 
 			    (done_ccb->ccb_h.flags & CAM_DIR_OUT) ?
@@ -1152,6 +1145,11 @@ passiocleanup(struct pass_softc *softc, struct pass_io_req *io_req)
 	case XPT_DEV_ADVINFO:
 		numbufs = min(io_req->num_bufs, 1);
 		data_ptrs[0] = (uint8_t **)&ccb->cdai.buf;
+		break;
+	case XPT_NVME_IO:
+	case XPT_NVME_ADMIN:
+		data_ptrs[0] = &ccb->nvmeio.data_ptr;
+		numbufs = min(io_req->num_bufs, 1);
 		break;
 	default:
 		/* allow ourselves to be swapped once again */
@@ -1390,6 +1388,21 @@ passmemsetup(struct cam_periph *periph, struct pass_io_req *io_req)
 		lengths[0] = ccb->cdai.bufsiz;
 		dirs[0] = CAM_DIR_IN;
 		numbufs = 1;
+		break;
+	case XPT_NVME_ADMIN:
+	case XPT_NVME_IO:
+		if ((ccb->ccb_h.flags & CAM_DIR_MASK) == CAM_DIR_NONE)
+			return (0);
+
+		io_req->data_flags = ccb->ccb_h.flags & CAM_DATA_MASK;
+
+		data_ptrs[0] = &ccb->nvmeio.data_ptr;
+		lengths[0] = ccb->nvmeio.dxfer_len;
+		dirs[0] = ccb->ccb_h.flags & CAM_DIR_MASK;
+		num_segs = ccb->nvmeio.sglist_cnt;
+		seg_cnt_ptr = &ccb->nvmeio.sglist_cnt;
+		numbufs = 1;
+		maxmap = softc->maxio;
 		break;
 	default:
 		return(EINVAL);
@@ -1785,6 +1798,11 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 
 		inccb = (union ccb *)addr;
 
+		if (inccb->ccb_h.flags & CAM_UNLOCKED) {
+			error = EINVAL;
+			break;
+		}
+
 		/*
 		 * Some CCB types, like scan bus and scan lun can only go
 		 * through the transport layer device.
@@ -1884,20 +1902,23 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 			xpt_print(periph->path, "Copy of user CCB %p to "
 				  "kernel address %p failed with error %d\n",
 				  *user_ccb, ccb, error);
-			uma_zfree(softc->pass_zone, io_req);
-			cam_periph_lock(periph);
-			break;
+			goto camioqueue_error;
+		}
+
+		if (ccb->ccb_h.flags & CAM_UNLOCKED) {
+			error = EINVAL;
+			goto camioqueue_error;
 		}
 
 		if (ccb->ccb_h.flags & CAM_CDB_POINTER) {
 			if (ccb->csio.cdb_len > IOCDBLEN) {
 				error = EINVAL;
-				break;
+				goto camioqueue_error;
 			}
 			error = copyin(ccb->csio.cdb_io.cdb_ptr,
 			    ccb->csio.cdb_io.cdb_bytes, ccb->csio.cdb_len);
-			if (error)
-				break;
+			if (error != 0)
+				goto camioqueue_error;
 			ccb->ccb_h.flags &= ~CAM_CDB_POINTER;
 		}
 
@@ -1909,10 +1930,8 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 			xpt_print(periph->path, "CCB function code %#x is "
 			    "restricted to the XPT device\n",
 			    ccb->ccb_h.func_code);
-			uma_zfree(softc->pass_zone, io_req);
-			cam_periph_lock(periph);
 			error = ENODEV;
-			break;
+			goto camioqueue_error;
 		}
 
 		/*
@@ -1956,13 +1975,11 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 		 */
 		if ((fc == XPT_SCSI_IO) || (fc == XPT_ATA_IO)
 		 || (fc == XPT_SMP_IO) || (fc == XPT_DEV_MATCH)
-		 || (fc == XPT_DEV_ADVINFO)) {
+		 || (fc == XPT_DEV_ADVINFO)
+		 || (fc == XPT_NVME_ADMIN) || (fc == XPT_NVME_IO)) {
 			error = passmemsetup(periph, io_req);
-			if (error != 0) {
-				uma_zfree(softc->pass_zone, io_req);
-				cam_periph_lock(periph);
-				break;
-			}
+			if (error != 0)
+				goto camioqueue_error;
 		} else
 			io_req->mapinfo.num_bufs_used = 0;
 
@@ -2006,6 +2023,11 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 			TAILQ_REMOVE(&softc->active_queue, io_req, links);
 			TAILQ_INSERT_TAIL(&softc->done_queue, io_req, links);
 		}
+		break;
+
+camioqueue_error:
+		uma_zfree(softc->pass_zone, io_req);
+		cam_periph_lock(periph);
 		break;
 	}
 	case CAMIOGET:
@@ -2237,7 +2259,9 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	    /* sense_flags */ SF_RETRY_UA | SF_NO_PRINT,
 	    softc->device_stats);
 
+	cam_periph_unlock(periph);
 	cam_periph_unmapmem(ccb, &mapinfo);
+	cam_periph_lock(periph);
 
 	ccb->ccb_h.cbfcnp = NULL;
 	ccb->ccb_h.periph_priv = inccb->ccb_h.periph_priv;

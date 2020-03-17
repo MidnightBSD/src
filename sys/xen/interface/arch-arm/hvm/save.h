@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Structure definitions for HVM state that is held by Xen and must
  * be saved along with the domain's memory and device-model state.

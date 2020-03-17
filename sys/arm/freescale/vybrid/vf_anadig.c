@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_anadig.c 266198 2014-05-15 22:03:24Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_anadig.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_anadig.c 266198 2014-0
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
@@ -91,7 +89,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/freescale/vybrid/vf_anadig.c 266198 2014-0
 #define	USB_LOOPBACK(n)			(0x1E0 + 0x60 * n)
 #define	USB_MISC(n)			(0x1F0 + 0x60 * n)
 
-#define	ANADIG_PLL_LOCKED	(1 << 31)
+#define	ANADIG_PLL_LOCKED	(1U << 31)
 #define	ENABLE_LINREG		(1 << 0)
 #define	EN_CLK_TO_UTMI		(1 << 30)
 

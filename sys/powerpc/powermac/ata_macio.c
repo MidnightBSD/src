@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2002 by Peter Grehan. All rights reserved.
  *
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/ata_macio.c 256857 2013-10-21 19:11:15Z andreast $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/ata_macio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Mac-io ATA controller
@@ -115,11 +114,15 @@ static  int  ata_macio_probe(device_t dev);
 static  int  ata_macio_setmode(device_t dev, int target, int mode);
 static  int  ata_macio_attach(device_t dev);
 static  int  ata_macio_begin_transaction(struct ata_request *request);
+static  int  ata_macio_suspend(device_t dev);
+static  int  ata_macio_resume(device_t dev);
 
 static device_method_t ata_macio_methods[] = {
         /* Device interface */
 	DEVMETHOD(device_probe,		ata_macio_probe),
 	DEVMETHOD(device_attach,        ata_macio_attach),
+	DEVMETHOD(device_suspend,	ata_macio_suspend),
+	DEVMETHOD(device_resume,	ata_macio_resume),
 
 	/* ATA interface */
 	DEVMETHOD(ata_setmode,		ata_macio_setmode),
@@ -337,3 +340,34 @@ ata_macio_begin_transaction(struct ata_request *request)
 
 	return ata_begin_transaction(request);
 }
+
+static int
+ata_macio_suspend(device_t dev)
+{
+	struct ata_dbdma_channel *ch = device_get_softc(dev);
+	int error;
+
+	if (!ch->sc_ch.attached)
+		return (0);
+
+	error = ata_suspend(dev);
+	dbdma_save_state(ch->dbdma);
+
+	return (error);
+}
+
+static int
+ata_macio_resume(device_t dev)
+{
+	struct ata_dbdma_channel *ch = device_get_softc(dev);
+	int error;
+
+	if (!ch->sc_ch.attached)
+		return (0);
+
+	dbdma_restore_state(ch->dbdma);
+	error = ata_resume(dev);
+
+	return (error);
+}
+

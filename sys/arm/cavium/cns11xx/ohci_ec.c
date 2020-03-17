@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yohanes Nugroho <yohanes@gmail.com>
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/ohci_ec.c 308402 2016-11-07 09:19:04Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/cavium/cns11xx/ohci_ec.c 308401 2016-11-07 08:36:06Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

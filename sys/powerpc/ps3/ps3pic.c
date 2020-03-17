@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2010 Nathan Whitehorn
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/ps3/ps3pic.c 266676 2014-05-26 01:37:43Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/ps3/ps3pic.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

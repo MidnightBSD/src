@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996 Wolfgang Solfrank.
  * Copyright (C) 1996 TooLs GmbH.
@@ -30,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: fpu.h,v 1.2 1999/12/07 15:14:56 danw Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/fpu.h 174632 2007-12-16 00:45:56Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/include/fpu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_FPU_H_

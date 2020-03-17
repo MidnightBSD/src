@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,13 +31,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_peeloff.h 243516 2012-11-25 14:25:08Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_peeloff.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef _NETINET_SCTP_PEELOFF_H_
 #define _NETINET_SCTP_PEELOFF_H_
 #if defined(_KERNEL)
 int sctp_can_peel_off(struct socket *, sctp_assoc_t);
 int sctp_do_peeloff(struct socket *, struct socket *, sctp_assoc_t);
-
 #endif				/* _KERNEL */
 #endif				/* _NETINET_SCTP_PEELOFF_H_ */

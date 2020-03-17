@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1992 Carnegie Mellon University
@@ -26,7 +25,7 @@
  *
  *	$OpenBSD: db_machdep.h,v 1.2 1997/03/21 00:48:48 niklas Exp $
  *	$NetBSD: db_machdep.h,v 1.4.22.1 2000/08/05 11:10:43 wiz Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/db_machdep.h 209975 2010-07-13 05:32:19Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/include/db_machdep.h 276652 2015-01-04 01:45:26Z jhibbits $
  */
 
 /*
@@ -88,7 +87,7 @@ typedef	intptr_t	db_expr_t;	/* expression - signed */
 #define	inst_load(ins)		0
 #define	inst_store(ins)		0
 
-#define	DB_SMALL_VALUE_MAX	(0x7fffffff)
+#define	DB_SMALL_VALUE_MAX	(KERNBASE-1)
 #define	DB_SMALL_VALUE_MIN	(-0x40001)
 
 #endif	/* _POWERPC_DB_MACHDEP_H_ */

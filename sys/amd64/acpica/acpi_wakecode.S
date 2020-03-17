@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 2001 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/acpica/acpi_wakecode.S 237037 2012-06-13 22:53:56Z jkim $
+ * $FreeBSD: stable/11/sys/amd64/acpica/acpi_wakecode.S 319133 2017-05-29 13:17:00Z kib $
  */
 
 #include <machine/asmacros.h>
@@ -149,19 +148,20 @@ wakeup_32:
 	mov	$bootdata32 - bootgdt, %eax
 	mov	%ax, %ds
 
-	/* Turn on the PAE and PSE bits for when paging is enabled */
+	/* Turn on the PAE bit for when paging is enabled */
 	mov	%cr4, %eax
-	orl	$(CR4_PAE | CR4_PSE), %eax
+	orl	$CR4_PAE, %eax
 	mov	%eax, %cr4
 
 	/*
 	 * Enable EFER.LME so that we get long mode when all the prereqs are
 	 * in place.  In this case, it turns on when CR0_PG is finally enabled.
-	 * Pick up a few other EFER bits that we'll use need we're here.
+	 * Also it picks up a few other EFER bits that we'll use need we're
+	 * here, like SYSCALL and NX enable.
 	 */
 	movl	$MSR_EFER, %ecx
-	rdmsr
-	orl	$EFER_LME | EFER_SCE, %eax
+	movl	wakeup_efer - wakeup_start(%ebx), %eax
+	movl	wakeup_efer + 4 - wakeup_start(%ebx), %edx
 	wrmsr
 
 	/*
@@ -180,7 +180,7 @@ wakeup_32:
 	 * Finally, switch to long bit mode by enabling paging.  We have
 	 * to be very careful here because all the segmentation disappears
 	 * out from underneath us.  The spec says we can depend on the
-	 * subsequent pipelined branch to execute, but *only if* everthing
+	 * subsequent pipelined branch to execute, but *only if* everything
 	 * is still identity mapped.  If any mappings change, the pipeline
 	 * will flush.
 	 */
@@ -189,7 +189,7 @@ wakeup_32:
 	mov	%eax, %cr0
 
 	/*
-	 * At this point paging is enabled, and we are in "compatability" mode.
+	 * At this point paging is enabled, and we are in "compatibility" mode.
 	 * We do another far jump to reload %cs with the 64 bit selector.
 	 * %cr3 points to a 4-level page table page.
 	 * We cannot yet jump all the way to the kernel because we can only
@@ -276,6 +276,8 @@ bootgdtdesc:
 wakeup_pcb:
 	.quad	0
 wakeup_ret:
+	.quad	0
+wakeup_efer:
 	.quad	0
 wakeup_gdt:
 	.word	0

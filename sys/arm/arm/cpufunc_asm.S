@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cpufunc_asm.S,v 1.12 2003/09/06 09:14:52 rearnsha Exp $	*/
 
 /*-
@@ -44,7 +43,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/cpufunc_asm.S 278652 2015-02-13 00:49:47Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm.S 300533 2016-05-23 20:07:17Z ian $");
 
 	.text
 	.align	2
@@ -63,18 +62,13 @@ END(cpufunc_nullop)
  *
  */
 
-ENTRY(cpufunc_id)
+ENTRY(cpu_ident)
 	mrc	p15, 0, r0, c0, c0, 0
 	RET
-END(cpufunc_id)
-
-ENTRY(cpufunc_cpuid)
-	mrc	p15, 0, r0, c0, c0, 0
-	RET
-END(cpufunc_cpuid)
+END(cpu_ident)
 
 ENTRY(cpu_get_control)
-	mrc	p15, 0, r0, c1, c0, 0
+	mrc	CP15_SCTLR(r0)
 	RET
 END(cpu_get_control)
 
@@ -83,15 +77,15 @@ ENTRY(cpu_read_cache_config)
 	RET
 END(cpu_read_cache_config)
 
-ENTRY(cpufunc_faultstatus)
+ENTRY(cpu_faultstatus)
 	mrc	p15, 0, r0, c5, c0, 0
 	RET
-END(cpufunc_faultstatus)
+END(cpu_faultstatus)
 
-ENTRY(cpufunc_faultaddress)
+ENTRY(cpu_faultaddress)
 	mrc	p15, 0, r0, c6, c0, 0
 	RET
-END(cpufunc_faultaddress)
+END(cpu_faultaddress)
 
 /*
  * Generic functions to write the internal coprocessor registers
@@ -104,17 +98,10 @@ END(cpufunc_faultaddress)
  * All other registers are CPU architecture specific
  */
 
-#if 0 /* See below. */
-ENTRY(cpufunc_control)
-	mcr	p15, 0, r0, c1, c0, 0
-	RET
-END(cpufunc_control)
-#endif
-
-ENTRY(cpufunc_domains)
+ENTRY(cpu_domains)
 	mcr	p15, 0, r0, c3, c0, 0
 	RET
-END(cpufunc_domains)
+END(cpu_domains)
 
 /*
  * Generic functions to read/modify/write the internal coprocessor registers
@@ -127,13 +114,13 @@ END(cpufunc_domains)
  */
 
 ENTRY(cpufunc_control)
-	mrc	p15, 0, r3, c1, c0, 0	/* Read the control register */
+	mrc	CP15_SCTLR(r3)		/* Read the control register */
 	bic	r2, r3, r0		/* Clear bits */
 	eor     r2, r2, r1		/* XOR bits */
 
 
 	teq	r2, r3			/* Only write if there is a change */
-	mcrne	p15, 0, r2, c1, c0, 0	/* Write new control register */
+	mcrne	CP15_SCTLR(r2)		/* Write new control register */
 	mov	r0, r3			/* Return old value */
 
 	RET

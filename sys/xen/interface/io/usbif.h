@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * usbif.h
  *

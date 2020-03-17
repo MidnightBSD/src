@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Gallon Sylvestre.  All rights reserved.
  * Copyright (c) 2010 Greg Ansley.  All rights reserved.
@@ -28,7 +27,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_pit.c 266196 2014-05-15 21:21:47Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/at91_pit.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -43,7 +42,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_pit.c 266196 2014-05-15 21:21:47
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/frame.h>
 #include <machine/intr.h>
 #include <machine/resource.h>
@@ -99,7 +97,7 @@ at91_pit_delay(int us)
 
 	/* Max delay ~= 260s. @ 133Mhz */
 	pit_freq = at91_master_clock / PIT_PRESCALE;
-	cnt  = ((pit_freq * us) + (mhz -1)) / mhz;
+	cnt  = howmany(pit_freq * us, mhz);
 	cnt  = (cnt <= 0) ? 1 : cnt;
 
 	while (cnt > 0) {
@@ -215,9 +213,9 @@ static driver_t at91_pit_driver = {
 static devclass_t at91_pit_devclass;
 
 #ifdef FDT
-DRIVER_MODULE(at91_pit, simplebus, at91_pit_driver, at91_pit_devclass, NULL,
-    NULL);
+EARLY_DRIVER_MODULE(at91_pit, simplebus, at91_pit_driver, at91_pit_devclass,
+    NULL, NULL, BUS_PASS_TIMER);
 #else
-DRIVER_MODULE(at91_pit, atmelarm, at91_pit_driver, at91_pit_devclass, NULL,
-    NULL);
+EARLY_DRIVER_MODULE(at91_pit, atmelarm, at91_pit_driver, at91_pit_devclass,
+    NULL, NULL, BUS_PASS_TIMER);
 #endif

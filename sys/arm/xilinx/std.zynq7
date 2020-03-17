@@ -1,25 +1,13 @@
 #
 # std.zynq7		- Generic configuration for Xilinx Zynq-7000 PS.
 #
-# $FreeBSD: stable/10/sys/arm/xilinx/std.zynq7 278601 2015-02-11 22:47:48Z ian $
+# $FreeBSD: stable/11/sys/arm/xilinx/std.zynq7 327658 2018-01-07 00:04:13Z ian $
 
 cpu		CPU_CORTEXA
 machine		arm	armv6
-makeoptions	CONF_CFLAGS="-march=armv7a -Wa,-march=armv7a"
+makeoptions	CONF_CFLAGS="-march=armv7a"
 
 files		"../xilinx/files.zynq7"
-
-# Physical memory starts at 0x00000000.  We assume images are loaded at
-# 0x00100000, e.g. from u-boot with 'fatload mmc 0 0x100000 kernel.bin'
-#
-#
-options		PHYSADDR=0x00000000
-options		KERNPHYSADDR=0x00100000
-makeoptions	KERNPHYSADDR=0x00100000
-options		KERNVIRTADDR=0xc0100000		# Used in ldscript.arm
-makeoptions	KERNVIRTADDR=0xc0100000
-
-options		ARM_L2_PIPT
 
 options		IPI_IRQ_START=0
 options		IPI_IRQ_END=15

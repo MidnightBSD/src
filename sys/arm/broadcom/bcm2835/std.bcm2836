@@ -1,9 +1,11 @@
-# $FreeBSD: stable/10/sys/arm/broadcom/bcm2835/std.bcm2836 322724 2017-08-20 16:52:27Z marius $
+# $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/std.bcm2836 295885 2016-02-22 11:47:28Z skra $
 
 machine 	arm armv6
 cpu		CPU_CORTEXA
 makeoptions	CONF_CFLAGS="-march=armv7a"
 options 	SOC_BCM2836
+
+options 	IPI_IRQ_START=76
 
 files	"../broadcom/bcm2835/files.bcm2836"
 files	"../broadcom/bcm2835/files.bcm283x"

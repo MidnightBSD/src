@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	From: $NetBSD: int_fmtio.h,v 1.2 2001/04/26 16:25:21 kleink Exp $
  *	from: src/sys/i386/include/_inttypes.h,v 1.2 2002/06/30 05:48:02 mike
- * $FreeBSD: stable/10/sys/mips/include/_inttypes.h 218266 2011-02-04 13:09:46Z tijl $
+ * $FreeBSD: stable/11/sys/mips/include/_inttypes.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_INTTYPES_H_

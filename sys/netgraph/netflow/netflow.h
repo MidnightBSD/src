@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2011 Alexander V. Chernikov <melifaro@ipfw.ru>
  * Copyright (c) 2004 Gleb Smirnoff <glebius@FreeBSD.org>
@@ -26,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	 $SourceForge: netflow.h,v 1.8 2004/09/16 17:05:11 glebius Exp $
- *	 $FreeBSD: stable/10/sys/netgraph/netflow/netflow.h 219182 2011-03-02 16:15:11Z glebius $
+ *	 $FreeBSD: stable/11/sys/netgraph/netflow/netflow.h 219182 2011-03-02 16:15:11Z glebius $
  */
 
 /* netflow timeouts in seconds */

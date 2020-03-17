@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1994, 1995
  *	The Regents of the University of California.
@@ -72,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_sack.c 293710 2016-01-11 23:34:29Z hiren $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_sack.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -96,6 +95,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_sack.c 293710 2016-01-11 23:34:29Z
 #include <vm/uma.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/route.h>
 #include <net/vnet.h>
 
@@ -129,24 +129,24 @@ VNET_DECLARE(struct uma_zone *, sack_hole_zone);
 SYSCTL_NODE(_net_inet_tcp, OID_AUTO, sack, CTLFLAG_RW, 0, "TCP SACK");
 VNET_DEFINE(int, tcp_do_sack) = 1;
 #define	V_tcp_do_sack			VNET(tcp_do_sack)
-SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, enable, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, enable, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(tcp_do_sack), 0, "Enable/Disable TCP SACK support");
 
 VNET_DEFINE(int, tcp_sack_maxholes) = 128;
 #define	V_tcp_sack_maxholes		VNET(tcp_sack_maxholes)
-SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, maxholes, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, maxholes, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(tcp_sack_maxholes), 0,
     "Maximum number of TCP SACK holes allowed per connection");
 
 VNET_DEFINE(int, tcp_sack_globalmaxholes) = 65536;
 #define	V_tcp_sack_globalmaxholes	VNET(tcp_sack_globalmaxholes)
-SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, globalmaxholes, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, globalmaxholes, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(tcp_sack_globalmaxholes), 0, 
     "Global maximum number of TCP SACK holes");
 
 VNET_DEFINE(int, tcp_sack_globalholes) = 0;
 #define	V_tcp_sack_globalholes		VNET(tcp_sack_globalholes)
-SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, globalholes, CTLFLAG_RD,
+SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, globalholes, CTLFLAG_VNET | CTLFLAG_RD,
     &VNET_NAME(tcp_sack_globalholes), 0,
     "Global number of TCP SACK holes currently allocated");
 
@@ -401,8 +401,8 @@ tcp_sack_doack(struct tcpcb *tp, struct tcpopt *to, tcp_seq th_ack)
 
 	/*
 	 * Sort the SACK blocks so we can update the scoreboard with just one
-	 * pass. The overhead of sorting upto 4+1 elements is less than
-	 * making upto 4+1 passes over the scoreboard.
+	 * pass. The overhead of sorting up to 4+1 elements is less than
+	 * making up to 4+1 passes over the scoreboard.
 	 */
 	for (i = 0; i < num_sack_blks; i++) {
 		for (j = i + 1; j < num_sack_blks; j++) {
@@ -470,9 +470,6 @@ tcp_sack_doack(struct tcpcb *tp, struct tcpopt *to, tcp_seq th_ack)
 		tp->snd_fack = sblkp->end;
 		sack_changed = 1;
 	}
-	/* We must have at least one SACK hole in scoreboard. */
-	KASSERT(!TAILQ_EMPTY(&tp->snd_holes),
-	    ("SACK scoreboard must not be empty"));
 	cur = TAILQ_LAST(&tp->snd_holes, sackhole_head); /* Last SACK hole. */
 	/*
 	 * Since the incoming sack blocks are sorted, we can process them
@@ -599,7 +596,7 @@ tcp_sack_partialack(struct tcpcb *tp, struct tcphdr *th)
 	if (tp->snd_cwnd > tp->snd_ssthresh)
 		tp->snd_cwnd = tp->snd_ssthresh;
 	tp->t_flags |= TF_ACKNOW;
-	(void) tcp_output(tp);
+	(void) tp->t_fb->tfb_tcp_output(tp);
 }
 
 #if 0

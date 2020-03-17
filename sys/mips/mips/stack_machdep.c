@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Antoine Brodin
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/stack_machdep.c 250576 2013-05-12 16:43:26Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/stack_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -36,7 +35,6 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/mips/stack_machdep.c 250576 2013-05-12 16
 
 #include <machine/mips_opcode.h>
 
-#include <machine/param.h>
 #include <machine/pcb.h>
 #include <machine/regnum.h>
 
@@ -141,6 +139,13 @@ stack_save_td(struct stack *st, struct thread *td)
 	pc = td->td_pcb->pcb_regs.pc;
 	sp = td->td_pcb->pcb_regs.sp;
 	stack_capture(st, pc, sp);
+}
+
+int
+stack_save_td_running(struct stack *st, struct thread *td)
+{
+
+	return (EOPNOTSUPP);
 }
 
 void

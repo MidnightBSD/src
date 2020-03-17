@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ng_tcpmss.c
  *
@@ -30,7 +29,7 @@
  * This software includes fragments of the following programs:
  *	tcpmssd		Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_tcpmss.c 206032 2010-04-01 10:41:01Z mav $
+ * $FreeBSD: stable/11/sys/netgraph/ng_tcpmss.c 206032 2010-04-01 10:41:01Z mav $
  */
 
 /*

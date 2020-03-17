@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_debug.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet/tcp_debug.h 188578 2009-02-13 15:14:43Z luigi $
+ * $FreeBSD: stable/11/sys/netinet/tcp_debug.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_TCP_DEBUG_H_

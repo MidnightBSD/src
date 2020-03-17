@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Alexander Fedorov <alexander.fedorov@rtlservice.com>
  * All rights reserved.

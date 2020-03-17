@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx_nop_usbphy.c 266371 2014-05-17 22:29:24Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx_nop_usbphy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * USBPHY "no-op" driver for Freescale family of SoCs.  This driver is used on

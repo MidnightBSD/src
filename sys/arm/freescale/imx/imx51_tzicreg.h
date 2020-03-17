@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: imx51_tzicreg.h,v 1.1 2010/11/13 07:11:03 bsh Exp $	*/
 /*
  * Copyright (c) 2010  Genetec Corporation.  All rights reserved.
@@ -54,7 +53,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/imx/imx51_tzicreg.h 263455 2014-03-20 23:48:18Z dim $
+ * $FreeBSD: stable/11/sys/arm/freescale/imx/imx51_tzicreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _IMX51_TZICREG_H_

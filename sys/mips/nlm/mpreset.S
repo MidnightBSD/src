@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -13,11 +12,11 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY Netlogic Microsystems ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NETLOGIC OR CONTRIBUTORS BE 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NETLOGIC OR CONTRIBUTORS BE
  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -27,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/10/sys/mips/nlm/mpreset.S 233535 2012-03-27 07:51:42Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/mpreset.S 279387 2015-02-28 00:17:29Z jchandra $
  */
 
 #include <machine/asm.h>
@@ -125,7 +124,7 @@ nmi_handler:
 	/*
 	 * Enable other threads in the core, called from thread 0
 	 * of the core
- 	 */
+	 */
 LEAF(xlp_enable_threads)
 	/*
 	 * Save and restore callee saved registers of all ABIs
@@ -153,7 +152,7 @@ LEAF(xlp_enable_threads)
 
 	/* Use register number to work in o32 and n32 */
 	li	$9, ((CPU_BLOCKID_MAP << 8) | MAP_THREADMODE)
-	move	$8, a0	
+	move	$8, a0
 	sync
 	MTCR(8, 9)
 	mfc0	t0, MIPS_COP_0_PRID, 1
@@ -165,7 +164,7 @@ LEAF(xlp_enable_threads)
 	nop
 
 
-2: 	/*
+2:	/*
 	 * Parent hardware thread, restore registers, return
 	 */
 #if 1

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -13,11 +12,11 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY Netlogic Microsystems ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NETLOGIC OR CONTRIBUTORS BE 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NETLOGIC OR CONTRIBUTORS BE
  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -41,7 +40,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/nlm/uart_cpu_xlp.c 233549 2012-03-27 14:48:40Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/nlm/uart_cpu_xlp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,7 +79,7 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	di->bas.chan = 0;
 	di->bas.bst = rmi_uart_bus_space;
 	di->bas.bsh = nlm_get_uart_regbase(0, BOARD_CONSOLE_UART);
-	
+
 	di->bas.regshft = 2;
 	/* divisor = rclk / (baudrate * 16); */
 	di->bas.rclk = XLP_IO_CLK;

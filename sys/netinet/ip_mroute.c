@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Stephen Deering
  * Copyright (c) 1992, 1993
@@ -68,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/ip_mroute.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/ip_mroute.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 #include "opt_mrouting.h"
@@ -78,6 +77,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/ip_mroute.c 314667 2017-03-04 13:03:31
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/stddef.h>
+#include <sys/eventhandler.h>
 #include <sys/lock.h>
 #include <sys/ktr.h>
 #include <sys/malloc.h>
@@ -97,6 +97,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/ip_mroute.c 314667 2017-03-04 13:03:31
 #include <sys/counter.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/netisr.h>
 #include <net/route.h>
 #include <net/vnet.h>
@@ -121,7 +122,6 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/ip_mroute.c 314667 2017-03-04 13:03:31
 #endif
 
 #define		VIFI_INVALID	((vifi_t) -1)
-#define		M_HASCL(m)	((m)->m_flags & M_EXT)
 
 static VNET_DEFINE(uint32_t, last_tv_sec); /* last time we processed this */
 #define	V_last_tv_sec	VNET(last_tv_sec)
@@ -179,7 +179,7 @@ static VNET_DEFINE(vifi_t, numvifs);
 #define	V_numvifs		VNET(numvifs)
 static VNET_DEFINE(struct vif, viftable[MAXVIFS]);
 #define	V_viftable		VNET(viftable)
-SYSCTL_VNET_OPAQUE(_net_inet_ip, OID_AUTO, viftable, CTLFLAG_RD,
+SYSCTL_OPAQUE(_net_inet_ip, OID_AUTO, viftable, CTLFLAG_VNET | CTLFLAG_RD,
     &VNET_NAME(viftable), sizeof(V_viftable), "S,vif[MAXVIFS]",
     "IPv4 Multicast Interfaces (struct vif[MAXVIFS], netinet/ip_mroute.h)");
 
@@ -247,7 +247,7 @@ static const struct protosw in_pim_protosw = {
 	.pr_protocol =		IPPROTO_PIM,
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
 	.pr_input =		pim_input,
-	.pr_output =		(pr_output_t*)rip_output,
+	.pr_output =		rip_output,
 	.pr_ctloutput =		rip_ctloutput,
 	.pr_usrreqs =		&rip_usrreqs
 };
@@ -538,7 +538,7 @@ X_mrt_ioctl(u_long cmd, caddr_t data, int fibnum __unused)
     int error = 0;
 
     /*
-     * Currently the only function calling this ioctl routine is rtioctl().
+     * Currently the only function calling this ioctl routine is rtioctl_fib().
      * Typically, only root can create the raw socket in order to execute
      * this ioctl method, however the request might be coming from a prison
      */
@@ -928,8 +928,8 @@ add_vif(struct vifctl *vifcp)
 
     VIF_UNLOCK();
 
-    CTR4(KTR_IPMF, "%s: add vif %d laddr %s thresh %x", __func__,
-	(int)vifcp->vifc_vifi, inet_ntoa(vifcp->vifc_lcl_addr),
+    CTR4(KTR_IPMF, "%s: add vif %d laddr 0x%08x thresh %x", __func__,
+	(int)vifcp->vifc_vifi, ntohl(vifcp->vifc_lcl_addr.s_addr),
 	(int)vifcp->vifc_threshold);
 
     return 0;
@@ -1060,8 +1060,8 @@ add_mfc(struct mfcctl2 *mfccp)
 
     /* If an entry already exists, just update the fields */
     if (rt) {
-	CTR4(KTR_IPMF, "%s: update mfc orig %s group %lx parent %x",
-	    __func__, inet_ntoa(mfccp->mfcc_origin),
+	CTR4(KTR_IPMF, "%s: update mfc orig 0x%08x group %lx parent %x",
+	    __func__, ntohl(mfccp->mfcc_origin.s_addr),
 	    (u_long)ntohl(mfccp->mfcc_mcastgrp.s_addr),
 	    mfccp->mfcc_parent);
 	update_mfc_params(rt, mfccp);
@@ -1080,8 +1080,8 @@ add_mfc(struct mfcctl2 *mfccp)
 	    in_hosteq(rt->mfc_mcastgrp, mfccp->mfcc_mcastgrp) &&
 	    !TAILQ_EMPTY(&rt->mfc_stall)) {
 		CTR5(KTR_IPMF,
-		    "%s: add mfc orig %s group %lx parent %x qh %p",
-		    __func__, inet_ntoa(mfccp->mfcc_origin),
+		    "%s: add mfc orig 0x%08x group %lx parent %x qh %p",
+		    __func__, ntohl(mfccp->mfcc_origin.s_addr),
 		    (u_long)ntohl(mfccp->mfcc_mcastgrp.s_addr),
 		    mfccp->mfcc_parent,
 		    TAILQ_FIRST(&rt->mfc_stall));
@@ -1159,8 +1159,8 @@ del_mfc(struct mfcctl2 *mfccp)
     origin = mfccp->mfcc_origin;
     mcastgrp = mfccp->mfcc_mcastgrp;
 
-    CTR3(KTR_IPMF, "%s: delete mfc orig %s group %lx", __func__,
-	inet_ntoa(origin), (u_long)ntohl(mcastgrp.s_addr));
+    CTR3(KTR_IPMF, "%s: delete mfc orig 0x%08x group %lx", __func__,
+	ntohl(origin.s_addr), (u_long)ntohl(mcastgrp.s_addr));
 
     MFC_LOCK();
 
@@ -1224,8 +1224,8 @@ X_ip_mforward(struct ip *ip, struct ifnet *ifp, struct mbuf *m,
     int error;
     vifi_t vifi;
 
-    CTR3(KTR_IPMF, "ip_mforward: delete mfc orig %s group %lx ifp %p",
-	inet_ntoa(ip->ip_src), (u_long)ntohl(ip->ip_dst.s_addr), ifp);
+    CTR3(KTR_IPMF, "ip_mforward: delete mfc orig 0x%08x group %lx ifp %p",
+	ntohl(ip->ip_src.s_addr), (u_long)ntohl(ip->ip_dst.s_addr), ifp);
 
     if (ip->ip_hl < (sizeof(struct ip) + TUNNEL_LEN) >> 2 ||
 		((u_char *)(ip + 1))[1] != IPOPT_LSRR ) {
@@ -1287,8 +1287,8 @@ X_ip_mforward(struct ip *ip, struct ifnet *ifp, struct mbuf *m,
 
 	MRTSTAT_INC(mrts_mfc_misses);
 	MRTSTAT_INC(mrts_no_route);
-	CTR2(KTR_IPMF, "ip_mforward: no mfc for (%s,%lx)",
-	    inet_ntoa(ip->ip_src), (u_long)ntohl(ip->ip_dst.s_addr));
+	CTR2(KTR_IPMF, "ip_mforward: no mfc for (0x%08x,%lx)",
+	    ntohl(ip->ip_src.s_addr), (u_long)ntohl(ip->ip_dst.s_addr));
 
 	/*
 	 * Allocate mbufs early so that we don't do extra work if we are
@@ -1304,7 +1304,7 @@ X_ip_mforward(struct ip *ip, struct ifnet *ifp, struct mbuf *m,
 	}
 
 	mb0 = m_copypacket(m, M_NOWAIT);
-	if (mb0 && (M_HASCL(mb0) || mb0->m_len < hlen))
+	if (mb0 && (!M_WRITABLE(mb0) || mb0->m_len < hlen))
 	    mb0 = m_pullup(mb0, hlen);
 	if (mb0 == NULL) {
 	    free(rte, M_MRTABLE);
@@ -1544,7 +1544,7 @@ ip_mdq(struct mbuf *m, struct ifnet *ifp, struct mfc *rt, vifi_t xmt_vif)
 		int hlen = ip->ip_hl << 2;
 		struct mbuf *mm = m_copy(m, 0, hlen);
 
-		if (mm && (M_HASCL(mm) || mm->m_len < hlen))
+		if (mm && (!M_WRITABLE(mm) || mm->m_len < hlen))
 		    mm = m_pullup(mm, hlen);
 		if (mm == NULL)
 		    return ENOBUFS;
@@ -1665,7 +1665,7 @@ phyint_send(struct ip *ip, struct vif *vifp, struct mbuf *m)
      * so that ip_output() only scribbles on the copy.
      */
     mb_copy = m_copypacket(m, M_NOWAIT);
-    if (mb_copy && (M_HASCL(mb_copy) || mb_copy->m_len < hlen))
+    if (mb_copy && (!M_WRITABLE(mb_copy) || mb_copy->m_len < hlen))
 	mb_copy = m_pullup(mb_copy, hlen);
     if (mb_copy == NULL)
 	return;
@@ -1718,12 +1718,16 @@ X_ip_rsvp_force_done(struct socket *so __unused)
 
 }
 
-static void
-X_rsvp_input(struct mbuf *m, int off __unused)
+static int
+X_rsvp_input(struct mbuf **mp, int *offp, int proto)
 {
+	struct mbuf *m;
 
+	m = *mp;
+	*mp = NULL;
 	if (!V_rsvp_on)
 		m_freem(m);
+	return (IPPROTO_DONE);
 }
 
 /*
@@ -2498,7 +2502,6 @@ pim_register_send_rp(struct ip *ip, struct vif *vifp, struct mbuf *mb_copy,
      */
     ip_outer = mtod(mb_first, struct ip *);
     *ip_outer = pim_encap_iphdr;
-    ip_outer->ip_id = ip_newid();
     ip_outer->ip_len = htons(len + sizeof(pim_encap_iphdr) +
 	sizeof(pim_encap_pimhdr));
     ip_outer->ip_src = V_viftable[vifi].v_lcl_addr;
@@ -2510,6 +2513,7 @@ pim_register_send_rp(struct ip *ip, struct vif *vifp, struct mbuf *mb_copy,
     ip_outer->ip_tos = ip->ip_tos;
     if (ip->ip_off & htons(IP_DF))
 	ip_outer->ip_off |= htons(IP_DF);
+    ip_fillid(ip_outer);
     pimhdr = (struct pim_encap_pimhdr *)((caddr_t)ip_outer
 					 + sizeof(pim_encap_iphdr));
     *pimhdr = pim_encap_pimhdr;
@@ -2556,14 +2560,18 @@ pim_encapcheck(const struct mbuf *m, int off, int proto, void *arg)
  * (used by PIM-SM): the PIM header is stripped off, and the inner packet
  * is passed to if_simloop().
  */
-void
-pim_input(struct mbuf *m, int iphlen)
+int
+pim_input(struct mbuf **mp, int *offp, int proto)
 {
+    struct mbuf *m = *mp;
     struct ip *ip = mtod(m, struct ip *);
     struct pim *pim;
+    int iphlen = *offp;
     int minlen;
     int datalen = ntohs(ip->ip_len) - iphlen;
     int ip_tos;
+ 
+    *mp = NULL;
 
     /* Keep statistics */
     PIMSTAT_INC(pims_rcv_total_msgs);
@@ -2574,10 +2582,10 @@ pim_input(struct mbuf *m, int iphlen)
      */
     if (datalen < PIM_MINLEN) {
 	PIMSTAT_INC(pims_rcv_tooshort);
-	CTR3(KTR_IPMF, "%s: short packet (%d) from %s",
-	    __func__, datalen, inet_ntoa(ip->ip_src));
+	CTR3(KTR_IPMF, "%s: short packet (%d) from 0x%08x",
+	    __func__, datalen, ntohl(ip->ip_src.s_addr));
 	m_freem(m);
-	return;
+	return (IPPROTO_DONE);
     }
 
     /*
@@ -2593,9 +2601,9 @@ pim_input(struct mbuf *m, int iphlen)
      * Get the IP and PIM headers in contiguous memory, and
      * possibly the PIM REGISTER header.
      */
-    if (m->m_len < minlen && (m = m_pullup(m, minlen)) == 0) {
+    if (m->m_len < minlen && (m = m_pullup(m, minlen)) == NULL) {
 	CTR1(KTR_IPMF, "%s: m_pullup() failed", __func__);
-	return;
+	return (IPPROTO_DONE);
     }
 
     /* m_pullup() may have given us a new mbuf so reset ip. */
@@ -2620,7 +2628,7 @@ pim_input(struct mbuf *m, int iphlen)
 	PIMSTAT_INC(pims_rcv_badsum);
 	CTR1(KTR_IPMF, "%s: invalid checksum", __func__);
 	m_freem(m);
-	return;
+	return (IPPROTO_DONE);
     }
 
     /* PIM version check */
@@ -2629,7 +2637,7 @@ pim_input(struct mbuf *m, int iphlen)
 	CTR3(KTR_IPMF, "%s: bad version %d expect %d", __func__,
 	    (int)PIM_VT_V(pim->pim_vt), PIM_VERSION);
 	m_freem(m);
-	return;
+	return (IPPROTO_DONE);
     }
 
     /* restore mbuf back to the outer IP */
@@ -2654,7 +2662,7 @@ pim_input(struct mbuf *m, int iphlen)
 	    CTR2(KTR_IPMF, "%s: register vif not set: %d", __func__,
 		(int)V_reg_vif_num);
 	    m_freem(m);
-	    return;
+	    return (IPPROTO_DONE);
 	}
 	/* XXX need refcnt? */
 	vifp = V_viftable[V_reg_vif_num].v_ifp;
@@ -2668,30 +2676,31 @@ pim_input(struct mbuf *m, int iphlen)
 	    PIMSTAT_INC(pims_rcv_badregisters);
 	    CTR1(KTR_IPMF, "%s: register packet size too small", __func__);
 	    m_freem(m);
-	    return;
+	    return (IPPROTO_DONE);
 	}
 
 	reghdr = (u_int32_t *)(pim + 1);
 	encap_ip = (struct ip *)(reghdr + 1);
 
-	CTR3(KTR_IPMF, "%s: register: encap ip src %s len %d",
-	    __func__, inet_ntoa(encap_ip->ip_src), ntohs(encap_ip->ip_len));
+	CTR3(KTR_IPMF, "%s: register: encap ip src 0x%08x len %d",
+	    __func__, ntohl(encap_ip->ip_src.s_addr),
+	    ntohs(encap_ip->ip_len));
 
 	/* verify the version number of the inner packet */
 	if (encap_ip->ip_v != IPVERSION) {
 	    PIMSTAT_INC(pims_rcv_badregisters);
 	    CTR1(KTR_IPMF, "%s: bad encap ip version", __func__);
 	    m_freem(m);
-	    return;
+	    return (IPPROTO_DONE);
 	}
 
 	/* verify the inner packet is destined to a mcast group */
 	if (!IN_MULTICAST(ntohl(encap_ip->ip_dst.s_addr))) {
 	    PIMSTAT_INC(pims_rcv_badregisters);
-	    CTR2(KTR_IPMF, "%s: bad encap ip dest %s", __func__,
-		inet_ntoa(encap_ip->ip_dst));
+	    CTR2(KTR_IPMF, "%s: bad encap ip dest 0x%08x", __func__,
+		ntohl(encap_ip->ip_dst.s_addr));
 	    m_freem(m);
-	    return;
+	    return (IPPROTO_DONE);
 	}
 
 	/* If a NULL_REGISTER, pass it to the daemon */
@@ -2730,7 +2739,7 @@ pim_input(struct mbuf *m, int iphlen)
 	if (mcp == NULL) {
 	    CTR1(KTR_IPMF, "%s: m_copy() failed", __func__);
 	    m_freem(m);
-	    return;
+	    return (IPPROTO_DONE);
 	}
 
 	/* Keep statistics */
@@ -2766,9 +2775,10 @@ pim_input_to_daemon:
      * XXX: the outer IP header pkt size of a Register is not adjust to
      * reflect the fact that the inner multicast data is truncated.
      */
-    rip_input(m, iphlen);
+    *mp = m;
+    rip_input(mp, offp, proto);
 
-    return;
+    return (IPPROTO_DONE);
 }
 
 static int
@@ -2813,7 +2823,7 @@ vnet_mroute_init(const void *unused __unused)
 	callout_init(&V_bw_meter_ch, 1);
 }
 
-VNET_SYSINIT(vnet_mroute_init, SI_SUB_PSEUDO, SI_ORDER_ANY, vnet_mroute_init,
+VNET_SYSINIT(vnet_mroute_init, SI_SUB_PROTO_MC, SI_ORDER_ANY, vnet_mroute_init,
 	NULL);
 
 static void
@@ -2824,7 +2834,7 @@ vnet_mroute_uninit(const void *unused __unused)
 	V_nexpire = NULL;
 }
 
-VNET_SYSUNINIT(vnet_mroute_uninit, SI_SUB_PSEUDO, SI_ORDER_MIDDLE, 
+VNET_SYSUNINIT(vnet_mroute_uninit, SI_SUB_PROTO_MC, SI_ORDER_MIDDLE, 
 	vnet_mroute_uninit, NULL);
 
 static int
@@ -2937,4 +2947,4 @@ static moduledata_t ip_mroutemod = {
     0
 };
 
-DECLARE_MODULE(ip_mroute, ip_mroutemod, SI_SUB_PSEUDO, SI_ORDER_MIDDLE);
+DECLARE_MODULE(ip_mroute, ip_mroutemod, SI_SUB_PROTO_MC, SI_ORDER_MIDDLE);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start************************************
  * Copyright (c) 2005-2007 Cavium Networks (support@cavium.com). All rights
  * reserved.
@@ -36,7 +35,7 @@
  * For any questions regarding licensing please contact marketing@caviumnetworks.com
  *
  ***********************license end**************************************/
-/* $FreeBSD: stable/10/sys/mips/cavium/octopcireg.h 213089 2010-09-24 00:14:24Z jmallett $ */
+/* $FreeBSD: stable/11/sys/mips/cavium/octopcireg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef	_CAVIUM_OCTOPCIREG_H_
 #define	_CAVIUM_OCTOPCIREG_H_

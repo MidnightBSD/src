@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/10/sys/mips/conf/XLP64 233644 2012-03-29 02:54:35Z jmallett $
+# $FreeBSD: stable/11/sys/mips/conf/XLP64 233644 2012-03-29 02:54:35Z jmallett $
 
 machine 	mips mips64
 ident           XLP64

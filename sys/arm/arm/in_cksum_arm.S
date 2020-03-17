@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: in_cksum_arm.S,v 1.2 2003/09/23 10:01:36 scw Exp $	*/
 
 /*-
@@ -45,7 +44,7 @@
 
 #include <machine/asm.h>
 #include "assym.s"
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/in_cksum_arm.S 275767 2014-12-14 16:28:53Z andrew $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/in_cksum_arm.S 275418 2014-12-02 18:37:04Z andrew $");
 
 	.syntax	unified
 /*

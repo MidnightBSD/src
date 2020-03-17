@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
@@ -29,7 +28,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_mci.c 318198 2017-05-11 21:01:02Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/at91_mci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,8 +44,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_mci.c 318198 2017-05-11 21:01:02
 #include <sys/sysctl.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 
@@ -85,7 +82,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_mci.c 318198 2017-05-11 21:01:02
  * speed is 25MHz and the next highest speed is 15MHz or less.  This appears
  * to work on virtually all SD cards, since it is what this driver has been
  * doing prior to the introduction of this option, where the overclocking vs
- * underclocking decision was automaticly "overclock".  Modern SD cards can
+ * underclocking decision was automatically "overclock".  Modern SD cards can
  * run at 45mhz/1-bit in standard mode (high speed mode enable commands not
  * sent) without problems.
  *
@@ -205,7 +202,7 @@ at91_bswap_buf(struct at91_mci_softc *sc, void * dptr, void * sptr, uint32_t mem
 	/*
 	 * If the hardware doesn't need byte-swapping, let bcopy() do the
 	 * work.  Use bounce buffer even if we don't need byteswap, since
-	 * buffer may straddle a page boundry, and we don't handle
+	 * buffer may straddle a page boundary, and we don't handle
 	 * multi-segment transfers in hardware.  Seen from 'bsdlabel -w' which
 	 * uses raw geom access to the volume.  Greg Ansley (gja (at)
 	 * ansley.com)
@@ -519,16 +516,16 @@ at91_mci_deactivate(device_t dev)
 	sc = device_get_softc(dev);
 	if (sc->intrhand)
 		bus_teardown_intr(dev, sc->irq_res, sc->intrhand);
-	sc->intrhand = 0;
+	sc->intrhand = NULL;
 	bus_generic_detach(sc->dev);
 	if (sc->mem_res)
 		bus_release_resource(dev, SYS_RES_MEMORY,
 		    rman_get_rid(sc->mem_res), sc->mem_res);
-	sc->mem_res = 0;
+	sc->mem_res = NULL;
 	if (sc->irq_res)
 		bus_release_resource(dev, SYS_RES_IRQ,
 		    rman_get_rid(sc->irq_res), sc->irq_res);
-	sc->irq_res = 0;
+	sc->irq_res = NULL;
 	return;
 }
 
@@ -1202,10 +1199,11 @@ at91_mci_intr(void *arg)
 		 */
 		if (cmd->opcode != 8) {
 			device_printf(sc->dev,
-			    "IO error; status MCI_SR = 0x%x cmd opcode = %d%s\n",
-			    sr, cmd->opcode,
+			    "IO error; status MCI_SR = 0x%b cmd opcode = %d%s\n",
+			    sr, MCI_SR_BITSTRING, cmd->opcode,
 			    (cmd->opcode != 12) ? "" :
 			    (sc->flags & CMD_MULTIREAD) ? " after read" : " after write");
+			/* XXX not sure RTOE needs a full reset, just a retry */
 			at91_mci_reset(sc);
 		}
 		at91_mci_next_operation(sc);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Oleksandr Tymoshenko
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/mips/atheros/ar71xxreg.h 261455 2014-02-04 03:36:42Z eadler $ */
+/* $FreeBSD: stable/11/sys/mips/atheros/ar71xxreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _AR71XX_REG_H_
 #define _AR71XX_REG_H_
@@ -274,6 +273,7 @@ typedef enum {
 	AR71XX_MII_MODE_MII,
 	AR71XX_MII_MODE_RGMII,
 	AR71XX_MII_MODE_RMII,
+	AR71XX_MII_MODE_SGMII	/* not hardware defined, though! */
 } ar71xx_mii_mode;
 
 /*

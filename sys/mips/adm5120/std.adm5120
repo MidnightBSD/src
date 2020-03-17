@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/adm5120/std.adm5120 232896 2012-03-12 21:25:32Z jmallett $
+# $FreeBSD: stable/11/sys/mips/adm5120/std.adm5120 232896 2012-03-12 21:25:32Z jmallett $
 #
 # Standard include file for ADM5120
 

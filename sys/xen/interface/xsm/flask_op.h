@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  *  This file contains the flask_op hypercall commands and definitions.
  *

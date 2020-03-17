@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -30,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: frame.h,v 1.2 1999/01/10 10:13:15 tsubai Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/frame.h 255282 2013-09-05 23:28:50Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/include/frame.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_FRAME_H_
@@ -57,14 +56,13 @@ struct trapframe {
 	register_t srr0;
 	register_t srr1;
 	register_t exc;
+	register_t dar;	/* DAR/DEAR filled in on DSI traps */
 	union {
 		struct {
-			/* dar & dsisr are only filled on a DSI trap */
-			register_t dar;
+			/* dsisr only filled on a DSI trap */
 			register_t dsisr;
 		} aim;
 		struct {
-			register_t dear;
 			register_t esr;
 			register_t dbcr0;
 		} booke;
@@ -111,7 +109,5 @@ struct callframe {
 /* Definitions for syscalls */
 #define	FIRSTARG	3				/* first arg in reg 3 */
 #define	NARGREG		8				/* 8 args in regs */
-#define	MOREARGS(sp)	((caddr_t)((uintptr_t)(sp) + \
-    sizeof(struct callframe) - 3*sizeof(register_t))) /* more args go here */
 
 #endif	/* _MACHINE_FRAME_H_ */

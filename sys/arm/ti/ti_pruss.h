@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Rui Paulo <rpaulo@FreeBSD.org>
+ * Copyright (c) 2017 Manuel Stuehn
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/ti/ti_pruss.h 266098 2014-05-14 23:57:07Z ian $
+ * $FreeBSD: stable/11/sys/arm/ti/ti_pruss.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _TI_PRUSS_H_
 #define _TI_PRUSS_H_
@@ -33,5 +33,23 @@
 #define	PRUSS_AM18XX_REV	0x4e825900
 #define	PRUSS_AM33XX_REV	0x4e82A900
 #define	PRUSS_AM33XX_INTC	0x20000
+
+#define PRUSS_INTC_GER			(PRUSS_AM33XX_INTC + 0x0010)
+#define PRUSS_INTC_SISR			(PRUSS_AM33XX_INTC + 0x0020)
+#define PRUSS_INTC_SICR			(PRUSS_AM33XX_INTC + 0x0024)
+#define PRUSS_INTC_EISR			(PRUSS_AM33XX_INTC + 0x0028)
+#define PRUSS_INTC_EICR			(PRUSS_AM33XX_INTC + 0x002C)
+#define PRUSS_INTC_HIEISR		(PRUSS_AM33XX_INTC + 0x0034)
+#define PRUSS_INTC_HIDISR		(PRUSS_AM33XX_INTC + 0x0038)
+#define PRUSS_INTC_SECR0		(PRUSS_AM33XX_INTC + 0x0280)
+#define PRUSS_INTC_SECR1		(PRUSS_AM33XX_INTC + 0x0284)
+#define PRUSS_INTC_CMR_BASE		(PRUSS_AM33XX_INTC + 0x0400)
+#define PRUSS_INTC_HMR_BASE		(PRUSS_AM33XX_INTC + 0x0800)
+#define PRUSS_INTC_HIPIR_BASE	(PRUSS_AM33XX_INTC + 0x0900)
+#define PRUSS_INTC_SIPR0		(PRUSS_AM33XX_INTC + 0x0D00)
+#define PRUSS_INTC_SIPR1		(PRUSS_AM33XX_INTC + 0x0D04)
+#define PRUSS_INTC_SITR0		(PRUSS_AM33XX_INTC + 0x0D80)
+#define PRUSS_INTC_SITR1		(PRUSS_AM33XX_INTC + 0x0D84)
+#define PRUSS_INTC_HIER		    (PRUSS_AM33XX_INTC + 0x1500)
 
 #endif /* _TI_PRUSS_H_ */

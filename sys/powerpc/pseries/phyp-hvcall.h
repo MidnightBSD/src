@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010 Andreas Tobler
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/pseries/phyp-hvcall.h 255643 2013-09-17 17:37:04Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/powerpc/pseries/phyp-hvcall.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_PSERIES_PHYP_HVCALL_H_

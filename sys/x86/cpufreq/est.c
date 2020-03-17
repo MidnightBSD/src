@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson

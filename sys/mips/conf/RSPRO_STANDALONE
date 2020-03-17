@@ -2,7 +2,7 @@
 # Ubiquiti Routerstation Pro: boot from first DOS-partitioned, BSD
 # sliced flash disk.
 #
-# $FreeBSD: stable/10/sys/mips/conf/RSPRO_STANDALONE 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/RSPRO_STANDALONE 345344 2019-03-20 18:49:45Z kib $
 #
 
 include		"AR71XX_BASE"
@@ -14,7 +14,7 @@ device		pcf2123_rtc
 
 # GEOM modules
 device		geom_redboot	# to get access to the SPI flash partitions
-device		geom_uzip	# compressed in-memory filesystem support
+device		xz
 options 	GEOM_UZIP
 
 # For DOS

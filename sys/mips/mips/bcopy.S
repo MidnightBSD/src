@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bcopy.S,v 1.3 2009/12/14 00:39:00 matt Exp $	*/
 
 /*
@@ -37,7 +36,7 @@
 
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/bcopy.S 255367 2013-09-07 16:31:30Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/bcopy.S 256495 2013-10-15 04:43:31Z imp $");
 
 #include <machine/endian.h>
 
@@ -73,8 +72,8 @@ LEAF(memcpy)
 	move	a0, a1
 	move	a1, v0
 
-ALEAF(bcopy)
-ALEAF(ovbcopy)
+XLEAF(bcopy)
+XLEAF(ovbcopy)
 	/*
 	 *	Make sure we can copy forwards.
 	 */

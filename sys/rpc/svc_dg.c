@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc_dg.c,v 1.4 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@
 #ident	"@(#)svc_dg.c	1.17	94/04/24 SMI"
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/rpc/svc_dg.c 303692 2016-08-03 01:19:10Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/rpc/svc_dg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * svc_dg.c, Server side for connectionless RPC.

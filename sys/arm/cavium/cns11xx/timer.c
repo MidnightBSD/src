@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yohanes Nugroho <yohanes@gmail.com>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/timer.c 257200 2013-10-27 01:34:10Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/cavium/cns11xx/timer.c 257200 2013-10-27 01:34:10Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

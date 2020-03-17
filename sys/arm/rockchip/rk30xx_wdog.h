@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/rockchip/rk30xx_wdog.h 266337 2014-05-17 18:53:36Z ian $
+ * $FreeBSD: stable/11/sys/arm/rockchip/rk30xx_wdog.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef	__RK30XX_WDOG_H__

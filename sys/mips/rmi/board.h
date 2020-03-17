@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * RMI_BSD
- * $FreeBSD: stable/10/sys/mips/rmi/board.h 216390 2010-12-12 06:00:26Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/rmi/board.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _RMI_BOARD_H_
 #define	_RMI_BOARD_H_

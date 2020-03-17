@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_nat.c 248570 2013-03-21 08:36:15Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_nat.c 297793 2016-04-10 23:07:00Z pfg $
  */
 
 #include <sys/param.h>
@@ -839,7 +838,7 @@ ng_nat_shutdown(node_p node)
 		struct ng_nat_rdr_lst *entry = STAILQ_FIRST(&priv->redirhead);
 		STAILQ_REMOVE_HEAD(&priv->redirhead, entries);
 		free(entry, M_NETGRAPH);
-	};
+	}
 
 	/* Final free. */
 	LibAliasUninit(priv->lib);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* 
  * hvm/save.h
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * CAM request queue management definitions.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/cam_queue.h 273078 2014-10-14 12:13:01Z mav $
+ * $FreeBSD: stable/11/sys/cam/cam_queue.h 308352 2016-11-05 20:23:18Z markj $
  */
 
 #ifndef _CAM_CAM_QUEUE_H
@@ -198,6 +197,11 @@ cam_ccbq_insert_ccb(struct cam_ccbq *ccbq, union ccb *new_ccb)
 	struct ccb_hdr *old_ccb;
 	struct camq *queue = &ccbq->queue;
 
+	KASSERT((new_ccb->ccb_h.func_code & XPT_FC_QUEUED) != 0 &&
+	    (new_ccb->ccb_h.func_code & XPT_FC_USER_CCB) == 0,
+	    ("%s: Cannot queue ccb %p func_code %#x", __func__, new_ccb,
+	     new_ccb->ccb_h.func_code));
+
 	/*
 	 * If queue is already full, try to resize.
 	 * If resize fail, push CCB with lowest priority out to the TAILQ.
@@ -219,6 +223,7 @@ cam_ccbq_remove_ccb(struct cam_ccbq *ccbq, union ccb *ccb)
 {
 	struct ccb_hdr *cccb, *bccb;
 	struct camq *queue = &ccbq->queue;
+	cam_pinfo *removed_entry __unused;
 
 	/* If the CCB is on the TAILQ, remove it from there. */
 	if (ccb->ccb_h.pinfo.index == CAM_EXTRAQ_INDEX) {
@@ -229,7 +234,10 @@ cam_ccbq_remove_ccb(struct cam_ccbq *ccbq, union ccb *ccb)
 		return;
 	}
 
-	camq_remove(queue, ccb->ccb_h.pinfo.index);
+	removed_entry = camq_remove(queue, ccb->ccb_h.pinfo.index);
+	KASSERT(removed_entry == &ccb->ccb_h.pinfo,
+	    ("%s: Removed wrong entry from queue (%p != %p)", __func__,
+	     removed_entry, &ccb->ccb_h.pinfo));
 
 	/*
 	 * If there are some CCBs on TAILQ, find the best one and move it

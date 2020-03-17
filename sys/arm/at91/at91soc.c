@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Warner Losh.  All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91soc.c 238376 2012-07-11 20:17:14Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/at91soc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_lock_bsd.h 235828 2012-05-23 11:26:28Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_lock_bsd.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef _NETINET_SCTP_LOCK_BSD_H_
 #define _NETINET_SCTP_LOCK_BSD_H_
@@ -50,7 +49,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/sctp_lock_bsd.h 235828 2012-05-23 11:2
  * Most other locks (INP and INFO) attempt to localize the locking i.e. we try
  * to contain the lock and unlock within the function that needs to lock it.
  * This sometimes mean we do extra locks and unlocks and lose a bit of
- * efficency, but if the performance statements about non-recursive locks are
+ * efficiency, but if the performance statements about non-recursive locks are
  * true this should not be a problem.  One issue that arises with this only
  * lock when needed is that if an implicit association setup is done we have
  * a problem. If at the time I lookup an association I have NULL in the tcb

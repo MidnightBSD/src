@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2012 Broadcom Corporation
  * All Rights Reserved
@@ -13,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/nlm/dev/net/ucore/ld.ucore.S 233545 2012-03-27 14:05:12Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/dev/net/ucore/ld.ucore.S 279388 2015-02-28 00:22:10Z jchandra $
  */
 
 ENTRY(_start)
@@ -97,7 +96,7 @@ SECTIONS
 
 	/* ----------------------------------------- */
 
-	. = 0x18000 ; 		
+	. = 0x18000 ;
 	shmemstart = . ;
 	.sharedmem : {
 		*(.sharedmem)
@@ -146,10 +145,10 @@ SECTIONS
 
 	PROVIDE(__stackmarker = .) ;
 
-	. = 0xFFA00 ;	
+	. = 0xFFA00 ;
 
 	/* 32 + 4(argc) + 4(argv), aligned to 64 */
-	PROVIDE(__stack =  . - 64); 
+	PROVIDE(__stack =  . - 64);
 
 	/* ----------------------------------------- */
 

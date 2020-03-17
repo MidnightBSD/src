@@ -15,11 +15,11 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $FreeBSD: stable/10/sys/arm/conf/COLIBRI-VF50 266383 2014-05-18 00:21:14Z ian $
+# $FreeBSD: stable/11/sys/arm/conf/COLIBRI-VF50 282576 2015-05-07 12:38:23Z andrew $
 
 #NO_UNIVERSE
 
-include		"VYBRID"
+include 	"VYBRID"
 ident		COLIBRI-VF50
 
 #FDT

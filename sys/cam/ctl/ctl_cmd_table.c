@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2004, 2005, 2009 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
@@ -30,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_cmd_table.c#4 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_cmd_table.c 312579 2017-01-21 08:36:05Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_cmd_table.c 312578 2017-01-21 08:35:28Z mav $
  */
 /*
  * CAM Target Layer command table.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Luoqi Chen <luoqi@freebsd.org>
  * Copyright (c) Peter Wemm <peter@netplex.com.au>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/pcpu.h 266001 2014-05-14 03:09:37Z ian $
+ * $FreeBSD: stable/11/sys/powerpc/include/pcpu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -36,6 +35,7 @@
 #include <machine/tlb.h>
 
 struct pmap;
+struct pvo_entry;
 #define	CPUSAVE_LEN	9
 
 #define	PCPU_MD_COMMON_FIELDS						\
@@ -54,6 +54,9 @@ struct pmap;
 	void		*pc_restore;
 
 #define PCPU_MD_AIM32_FIELDS						\
+	vm_offset_t	pc_qmap_addr;					\
+	struct pvo_entry *pc_qmap_pvo;					\
+	struct mtx	pc_qmap_lock;					\
 	/* char		__pad[0] */
 
 #define PCPU_MD_AIM64_FIELDS						\
@@ -61,7 +64,10 @@ struct pmap;
 	struct slb	**pc_userslb;					\
 	register_t	pc_slbsave[18];					\
 	uint8_t		pc_slbstack[1024];				\
-	char		__pad[1137]
+	vm_offset_t	pc_qmap_addr;					\
+	struct pvo_entry *pc_qmap_pvo;					\
+	struct mtx	pc_qmap_lock;					\
+	char		__pad[1121 - sizeof(struct mtx)]
 
 #ifdef __powerpc64__
 #define PCPU_MD_AIM_FIELDS	PCPU_MD_AIM64_FIELDS
@@ -79,9 +85,10 @@ struct pmap;
 	register_t	pc_booke_mchksave[CPUSAVE_LEN];			\
 	register_t	pc_booke_tlbsave[BOOKE_TLBSAVE_LEN];		\
 	register_t	pc_booke_tlb_level;				\
+	vm_offset_t	pc_qmap_addr;					\
 	uint32_t	*pc_booke_tlb_lock;				\
 	int		pc_tid_next;					\
-	char		__pad[173]
+	char		__pad[165]
 
 /* Definitions for register offsets within the exception tmp save areas */
 #define	CPUSAVE_R27	0		/* where r27 gets saved */

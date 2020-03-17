@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: vmparam.h,v 1.26 2003/08/07 16:27:47 agc Exp $	*/
 
 /*-
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/include/vmparam.h 283339 2015-05-23 23:27:00Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/vmparam.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -43,7 +42,7 @@
  * Virtual memory related constants, all in bytes
  */
 #ifndef	MAXTSIZ
-#define	MAXTSIZ		(64UL*1024*1024)	/* max text size */
+#define	MAXTSIZ		(256UL*1024*1024)	/* max text size */
 #endif
 #ifndef	DFLDSIZ
 #define	DFLDSIZ		(128UL*1024*1024)	/* initial data size limit */
@@ -74,6 +73,19 @@
 #endif
 
 /*
+ * The virtual address the kernel is linked to run at.  For armv4/5 platforms
+ * the low-order 30 bits of this must match the low-order bits of the physical
+ * address the kernel is loaded at, so the value is most often provided as a
+ * kernel config option in the std.platform file. For armv6/7 the kernel can
+ * be loaded at any 2MB boundary, and KERNVIRTADDR can also be set to any 2MB
+ * boundary.  It is typically overridden in the std.platform file only when
+ * KERNBASE is also set to a lower address to provide more KVA.
+ */
+#ifndef KERNVIRTADDR
+#define	KERNVIRTADDR		0xc0000000
+#endif
+
+/*
  * max number of non-contig chunks of physical RAM you can have
  */
 
@@ -85,13 +97,12 @@
 #define	VM_PHYSSEG_SPARSE
 
 /*
- * Create two free page pools.  Since the ARM kernel virtual address
+ * Create one free page pool.  Since the ARM kernel virtual address
  * space does not include a mapping onto the machine's entire physical
  * memory, VM_FREEPOOL_DIRECT is defined as an alias for the default
  * pool, VM_FREEPOOL_DEFAULT.
  */
-#define	VM_NFREEPOOL		2
-#define	VM_FREEPOOL_CACHE	1
+#define	VM_NFREEPOOL		1
 #define	VM_FREEPOOL_DEFAULT	0
 #define	VM_FREEPOOL_DIRECT	0
 
@@ -120,16 +131,14 @@
 #define	VM_LEVEL_0_ORDER	8
 #endif
 
-#define UPT_MAX_ADDRESS		VADDR(UPTPTDI + 3, 0)
-#define UPT_MIN_ADDRESS		VADDR(UPTPTDI, 0)
-
 #define VM_MIN_ADDRESS          (0x00001000)
 #ifndef VM_MAXUSER_ADDRESS
-#define VM_MAXUSER_ADDRESS      KERNBASE
-#endif /* VM_MAXUSER_ADDRESS */
+#define VM_MAXUSER_ADDRESS      (KERNBASE - 0x00400000) /* !!! PT2MAP_SIZE */
+#endif
 #define VM_MAX_ADDRESS          VM_MAXUSER_ADDRESS
 
-#define USRSTACK        VM_MAXUSER_ADDRESS
+#define	SHAREDPAGE		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
+#define	USRSTACK		SHAREDPAGE
 
 /* initial pagein size of beginning of executable file */
 #ifndef VM_INITIAL_PAGEIN
@@ -172,5 +181,10 @@ extern vm_offset_t vm_max_kernel_address;
 #ifndef VM_MAX_AUTOTUNE_MAXUSERS
 #define	VM_MAX_AUTOTUNE_MAXUSERS	384
 #endif
+
+#define	SFBUF
+#define	SFBUF_MAP
+
+#define	DEVMAP_MAX_VADDR	ARM_VECTORS_HIGH
 
 #endif	/* _MACHINE_VMPARAM_H_ */

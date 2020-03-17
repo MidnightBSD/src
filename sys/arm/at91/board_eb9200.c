@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Olivier Houchard.  All rights reserved.
  * Copyright (c) 2005-2012 Warner Losh.  All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/board_eb9200.c 266196 2014-05-15 21:21:47Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/board_eb9200.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/param.h>
 #include <sys/systm.h>
 

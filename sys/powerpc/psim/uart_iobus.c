@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2002 by Peter Grehan. All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/psim/uart_iobus.c 160722 2006-07-26 19:39:55Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/psim/uart_iobus.c 356020 2019-12-22 19:06:45Z kevans $
  */
 
 /*
@@ -41,7 +40,6 @@
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/module.h>
-#include <sys/tty.h>
 #include <machine/bus.h>
 #include <sys/timepps.h>
 
@@ -82,7 +80,7 @@ uart_iobus_probe(device_t dev)
 	sc->sc_class = &uart_ns8250_class;
 
 	device_set_desc(dev, "PSIM serial port");
-	return (uart_bus_probe(dev, 0, 0, 0, 0));
+	return (uart_bus_probe(dev, 0, 0, 0, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, iobus, uart_iobus_driver, uart_devclass, 0, 0);

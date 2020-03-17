@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yohanes Nugroho <yohanes@gmail.com>
  * Copyright (c) 1994-1998 Mark Brinicombe.
@@ -37,7 +36,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/econa_machdep.c 266386 2014-05-18 00:32:35Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/cavium/cns11xx/econa_machdep.c 300535 2016-05-23 20:13:17Z ian $");
+
+#include "opt_kstack_pages.h"
 
 #define	_ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -61,6 +62,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/econa_machdep.c 266386 2014
 #include <sys/exec.h>
 #include <sys/kdb.h>
 #include <sys/msgbuf.h>
+#include <sys/devmap.h>
 #include <machine/physmem.h>
 #include <machine/reg.h>
 #include <machine/cpu.h>
@@ -70,7 +72,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/cavium/cns11xx/econa_machdep.c 266386 2014
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
-#include <machine/devmap.h>
 #include <machine/vmparam.h>
 #include <machine/pcb.h>
 #include <machine/undefined.h>
@@ -104,7 +105,7 @@ struct pv_addr abtstack;
 struct pv_addr kernelstack;
 
 /* Static device mappings. */
-static const struct arm_devmap_entry econa_devmap[] = {
+static const struct devmap_entry econa_devmap[] = {
 	{
 		/*
 		 * This maps DDR SDRAM
@@ -112,8 +113,6 @@ static const struct arm_devmap_entry econa_devmap[] = {
 		ECONA_SDRAM_BASE, /*virtual*/
 		ECONA_SDRAM_BASE, /*physical*/
 		ECONA_SDRAM_SIZE, /*size*/
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_DEVICE,
 	},
 	/*
 	 * Map the on-board devices VA == PA so that we can access them
@@ -127,8 +126,6 @@ static const struct arm_devmap_entry econa_devmap[] = {
 		ECONA_IO_BASE, /*virtual*/
 		ECONA_IO_BASE, /*physical*/
 		ECONA_IO_SIZE, /*size*/
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_DEVICE,
 	},
 	{
 		/*
@@ -137,8 +134,6 @@ static const struct arm_devmap_entry econa_devmap[] = {
 		ECONA_OHCI_VBASE, /*virtual*/
 		ECONA_OHCI_PBASE, /*physical*/
 		ECONA_USB_SIZE, /*size*/
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_DEVICE,
 	},
 	{
 		/*
@@ -147,12 +142,8 @@ static const struct arm_devmap_entry econa_devmap[] = {
 		ECONA_CFI_VBASE, /*virtual*/
 		ECONA_CFI_PBASE, /*physical*/
 		ECONA_CFI_SIZE,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_DEVICE,
 	},
 	{
-		0,
-		0,
 		0,
 		0,
 		0,
@@ -221,7 +212,7 @@ initarm(struct arm_boot_params *abp)
 	valloc_pages(irqstack, IRQ_STACK_SIZE);
 	valloc_pages(abtstack, ABT_STACK_SIZE);
 	valloc_pages(undstack, UND_STACK_SIZE);
-	valloc_pages(kernelstack, KSTACK_PAGES);
+	valloc_pages(kernelstack, kstack_pages);
 	valloc_pages(msgbufpv, round_page(msgbufsize) / PAGE_SIZE);
 
 	/*
@@ -238,9 +229,9 @@ initarm(struct arm_boot_params *abp)
 		pmap_link_l2pt(l1pagetable, KERNBASE + i * L1_S_SIZE,
 		    &kernel_pt_table[KERNEL_PT_KERN + i]);
 	pmap_map_chunk(l1pagetable, KERNBASE, PHYSADDR,
-	   (((uint32_t)lastaddr - KERNBASE) + PAGE_SIZE) & ~(PAGE_SIZE - 1),
-	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
-	afterkern = round_page((lastaddr + L1_S_SIZE) & ~(L1_S_SIZE - 1));
+	   rounddown2(((uint32_t)lastaddr - KERNBASE) + PAGE_SIZE, PAGE_SIZE),
+	   VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
+	afterkern = round_page(rounddown2(lastaddr + L1_S_SIZE, L1_S_SIZE));
 	for (i = 0; i < KERNEL_PT_AFKERNEL_NUM; i++) {
 		pmap_link_l2pt(l1pagetable, afterkern + i * L1_S_SIZE,
 		    &kernel_pt_table[KERNEL_PT_AFKERNEL + i]);
@@ -259,7 +250,7 @@ initarm(struct arm_boot_params *abp)
 	pmap_map_chunk(l1pagetable, undstack.pv_va, undstack.pv_pa,
 	    UND_STACK_SIZE * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	pmap_map_chunk(l1pagetable, kernelstack.pv_va, kernelstack.pv_pa,
-	    KSTACK_PAGES * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
+	    kstack_pages * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 
 	pmap_map_chunk(l1pagetable, kernel_l1pt.pv_va, kernel_l1pt.pv_pa,
 	    L1_TABLE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_PAGETABLE);
@@ -272,14 +263,17 @@ initarm(struct arm_boot_params *abp)
 		    VM_PROT_READ|VM_PROT_WRITE, PTE_PAGETABLE);
 	}
 
-	arm_devmap_bootstrap(l1pagetable, econa_devmap);
+	devmap_bootstrap(l1pagetable, econa_devmap);
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
-	setttb(kernel_l1pt.pv_pa);
+	cpu_setttb(kernel_l1pt.pv_pa);
 	cpu_tlb_flushID();
 	cpu_domains(DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2));
 	cninit();
 	mem_info = ((*ddr) >> 4) & 0x3;
 	memsize = (8<<mem_info)*1024*1024;
+
+	/* Enable MMU in system control register (SCTLR). */
+	cpu_control(CPU_CONTROL_MMU_ENABLE, CPU_CONTROL_MMU_ENABLE);
 
 	/*
 	 * Pages were allocated during the secondary bootstrap for the
@@ -289,14 +283,12 @@ initarm(struct arm_boot_params *abp)
 	 * Since the ARM stacks use STMFD etc. we must set r13 to the top end
 	 * of the stack memory.
 	 */
-	cpu_control(CPU_CONTROL_MMU_ENABLE, CPU_CONTROL_MMU_ENABLE);
-
 	set_stackptrs(0);
 
 	/*
 	 * We must now clean the cache again....
 	 * Cleaning may be done by reading new data to displace any
-	 * dirty data in the cache. This will have happened in setttb()
+	 * dirty data in the cache. This will have happened in cpu_setttb()
 	 * but since we are boot strapping the addresses used for the read
 	 * may have just been remapped and thus the cache could be out
 	 * of sync. A re-clean after the switch will cure this.
@@ -304,7 +296,7 @@ initarm(struct arm_boot_params *abp)
 	 * this problem will not occur after initarm().
 	 */
 	cpu_idcache_wbinv_all();
-	cpu_setup("");
+	cpu_setup();
 
 	undefined_init();
 

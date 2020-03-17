@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 Roger Pau Monné <roger.pau@citrix.com>
  * All rights reserved.

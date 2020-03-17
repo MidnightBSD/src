@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/arm/conf/SAM9260EK.hints 238811 2012-07-26 16:34:21Z imp $
+# $FreeBSD: stable/11/sys/arm/conf/SAM9260EK.hints 238811 2012-07-26 16:34:21Z imp $
 
 # Atmel AT45DB21D
 hint.at45d.0.at="spibus0"

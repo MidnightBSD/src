@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: psl.h,v 1.6 2003/06/16 20:00:58 thorpej Exp $	*/
 
 /*-
@@ -42,7 +41,7 @@
  *
  * Created      : 21/07/95
  *
- * $FreeBSD: stable/10/sys/arm/include/psl.h 266084 2014-05-14 19:18:58Z ian $
+ * $FreeBSD: stable/11/sys/arm/include/psl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PSL_H_

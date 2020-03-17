@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_sdhci.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_sdhci.c 346397 2019-04-19 15:54:32Z bz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,8 +63,17 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_sdhci.c 322724 20
 #define	NUM_DMA_SEGS			2
 
 #ifdef DEBUG
-#define dprintf(fmt, args...) do { printf("%s(): ", __func__);   \
-    printf(fmt,##args); } while (0)
+static int bcm2835_sdhci_debug = 0;
+
+TUNABLE_INT("hw.bcm2835.sdhci.debug", &bcm2835_sdhci_debug);
+SYSCTL_INT(_hw_sdhci, OID_AUTO, bcm2835_sdhci_debug, CTLFLAG_RWTUN,
+    &bcm2835_sdhci_debug, 0, "bcm2835 SDHCI debug level");
+
+#define	dprintf(fmt, args...)					\
+	do {							\
+		if (bcm2835_sdhci_debug)			\
+			printf("%s: " fmt, __func__, ##args);	\
+	}  while (0)
 #else
 #define dprintf(fmt, args...)
 #endif
@@ -248,8 +256,9 @@ bcm_sdhci_attach(device_t dev)
 		goto fail;
 	}
 
-	sc->sc_sdhci_buffer_phys = BUS_SPACE_PHYSADDR(sc->sc_mem_res, 
-	    SDHCI_BUFFER);
+	/* FIXME: Fix along with other BUS_SPACE_PHYSADDR instances */
+	sc->sc_sdhci_buffer_phys = rman_get_start(sc->sc_mem_res) +
+	    SDHCI_BUFFER;
 
 	bus_generic_probe(dev);
 	bus_generic_attach(dev);
@@ -554,7 +563,7 @@ bcm_sdhci_read_dma(device_t dev, struct sdhci_slot *slot)
 	    slot->curcmd->data->len - slot->offset);
 
 	KASSERT((left & 3) == 0,
-	    ("%s: len = %d, not word-aligned", __func__, left));
+	    ("%s: len = %zu, not word-aligned", __func__, left));
 
 	if (bus_dmamap_load(sc->sc_dma_tag, sc->sc_dma_map, 
 	    (uint8_t *)slot->curcmd->data->data + slot->offset, left, 
@@ -583,7 +592,7 @@ bcm_sdhci_write_dma(device_t dev, struct sdhci_slot *slot)
 	    slot->curcmd->data->len - slot->offset);
 
 	KASSERT((left & 3) == 0,
-	    ("%s: len = %d, not word-aligned", __func__, left));
+	    ("%s: len = %zu, not word-aligned", __func__, left));
 
 	if (bus_dmamap_load(sc->sc_dma_tag, sc->sc_dma_map,
 	    (uint8_t *)slot->curcmd->data->data + slot->offset, left, 
@@ -679,5 +688,5 @@ static driver_t bcm_sdhci_driver = {
 
 DRIVER_MODULE(sdhci_bcm, simplebus, bcm_sdhci_driver, bcm_sdhci_devclass,
     NULL, NULL);
-MODULE_DEPEND(sdhci_bcm, sdhci, 1, 1, 1);
+SDHCI_DEPEND(sdhci_bcm);
 MMC_DECLARE_BRIDGE(sdhci_bcm);

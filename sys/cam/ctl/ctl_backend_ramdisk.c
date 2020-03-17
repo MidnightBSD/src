@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2008 Silicon Graphics International Corp.
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_backend_ramdisk.c 314026 2017-02-21 05:13:16Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_backend_ramdisk.c 345007 2019-03-11 13:56:51Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -526,6 +525,11 @@ nospc:
 	io->scsiio.kern_sg_entries = sgs;
 	io->io_hdr.flags |= CTL_FLAG_ALLOCATED;
 	PRIV(io)->len += lbas;
+	if ((ARGS(io)->flags & CTL_LLF_READ) &&
+	    ARGS(io)->len <= PRIV(io)->len) {
+		ctl_set_success(&io->scsiio);
+		ctl_serseq_done(io);
+	}
 #ifdef CTL_TIME_IO
 	getbinuptime(&io->io_hdr.dma_start_bt);
 #endif
@@ -1141,7 +1145,7 @@ ctl_backend_ramdisk_create(struct ctl_be_ramdisk_softc *softc,
 
 	retval = taskqueue_start_threads(&be_lun->io_taskqueue,
 					 /*num threads*/1,
-					 /*priority*/PWAIT,
+					 /*priority*/PUSER,
 					 /*thread name*/
 					 "%s taskq", be_lun->lunname);
 	if (retval != 0)
@@ -1288,13 +1292,8 @@ bailout_error:
 static void
 ctl_backend_ramdisk_lun_shutdown(void *be_lun)
 {
-	struct ctl_be_ramdisk_lun *lun;
-	struct ctl_be_ramdisk_softc *softc;
-	int do_free;
-
-	lun = (struct ctl_be_ramdisk_lun *)be_lun;
-	softc = lun->softc;
-	do_free = 0;
+	struct ctl_be_ramdisk_lun *lun = be_lun;
+	struct ctl_be_ramdisk_softc *softc = lun->softc;
 
 	mtx_lock(&softc->lock);
 	lun->flags |= CTL_BE_RAMDISK_LUN_UNCONFIGURED;
@@ -1304,12 +1303,9 @@ ctl_backend_ramdisk_lun_shutdown(void *be_lun)
 		STAILQ_REMOVE(&softc->lun_list, lun, ctl_be_ramdisk_lun,
 			      links);
 		softc->num_luns--;
-		do_free = 1;
+		free(be_lun, M_RAMDISK);
 	}
 	mtx_unlock(&softc->lock);
-
-	if (do_free != 0)
-		free(be_lun, M_RAMDISK);
 }
 
 static void

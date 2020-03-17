@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008, 2013 Citrix Systems, Inc.
  * Copyright (c) 2012 Spectra Logic Corporation

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2015 Luiz Otavio O Souza <loos@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/ti/am335x/am335x_rtcreg.h 278079 2015-02-02 12:48:13Z loos $
+ * $FreeBSD: stable/11/sys/arm/ti/am335x/am335x_rtcreg.h 277042 2015-01-12 03:23:16Z loos $
  */
 
 #ifndef _AM335X_RTCREG_H_

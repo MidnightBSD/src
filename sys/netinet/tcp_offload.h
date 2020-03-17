@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/tcp_offload.h 237263 2012-06-19 07:34:13Z np $
+ * $FreeBSD: stable/11/sys/netinet/tcp_offload.h 237263 2012-06-19 07:34:13Z np $
  *
  */
 

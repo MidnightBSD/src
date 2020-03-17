@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_timewait.c 309108 2016-11-24 14:48:46Z jch $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_timewait.c 347161 2019-05-05 19:20:27Z tuexen $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -48,6 +47,9 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_timewait.c 309108 2016-11-24 14:48
 #include <sys/proc.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#ifndef INVARIANTS
+#include <sys/syslog.h>
+#endif
 #include <sys/protosw.h>
 #include <sys/random.h>
 
@@ -55,9 +57,11 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_timewait.c 309108 2016-11-24 14:48
 
 #include <net/route.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
+#include <netinet/in_kdtrace.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
@@ -169,7 +173,7 @@ SYSCTL_PROC(_net_inet_tcp, OID_AUTO, maxtcptw, CTLTYPE_INT|CTLFLAG_RW,
 
 VNET_DEFINE(int, nolocaltimewait) = 0;
 #define	V_nolocaltimewait	VNET(nolocaltimewait)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, nolocaltimewait, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, nolocaltimewait, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(nolocaltimewait), 0,
     "Do not create compressed TCP TIME_WAIT entries for local connections");
 
@@ -186,7 +190,7 @@ tcp_tw_init(void)
 {
 
 	V_tcptw_zone = uma_zcreate("tcptw", sizeof(struct tcptw),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
+	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
 	TUNABLE_INT_FETCH("net.inet.tcp.maxtcptw", &maxtcptw);
 	if (maxtcptw == 0)
 		uma_zone_set_max(V_tcptw_zone, tcptw_auto_size());
@@ -224,6 +228,7 @@ tcp_twstart(struct tcpcb *tp)
 	struct inpcb *inp = tp->t_inpcb;
 	int acknow;
 	struct socket *so;
+	uint32_t recwin;
 #ifdef INET6
 	int isipv6 = inp->inp_inc.inc_flags & INC_ISIPV6;
 #endif
@@ -290,10 +295,16 @@ tcp_twstart(struct tcpcb *tp)
 	/*
 	 * Recover last window size sent.
 	 */
-	if (SEQ_GT(tp->rcv_adv, tp->rcv_nxt))
-		tw->last_win = (tp->rcv_adv - tp->rcv_nxt) >> tp->rcv_scale;
-	else
-		tw->last_win = 0;
+	so = inp->inp_socket;
+	recwin = lmin(lmax(sbspace(&so->so_rcv), 0),
+	    (long)TCP_MAXWIN << tp->rcv_scale);
+	if (recwin < (so->so_rcv.sb_hiwat / 4) &&
+	    recwin < tp->t_maxseg)
+		recwin = 0;
+	if (SEQ_GT(tp->rcv_adv, tp->rcv_nxt) &&
+	    recwin < (tp->rcv_adv - tp->rcv_nxt))
+		recwin = (tp->rcv_adv - tp->rcv_nxt);
+	tw->last_win = (u_short)(recwin >> tp->rcv_scale);
 
 	/*
 	 * Set t_recent if timestamps are used on the connection.
@@ -330,7 +341,6 @@ tcp_twstart(struct tcpcb *tp)
 	 * and might not be needed here any longer.
 	 */
 	tcp_discardcb(tp);
-	so = inp->inp_socket;
 	soisdisconnected(so);
 	tw->tw_cred = crhold(so->so_cred);
 	SOCK_LOCK(so);
@@ -340,6 +350,7 @@ tcp_twstart(struct tcpcb *tp)
 		tcp_twrespond(tw, TH_ACK);
 	inp->inp_ppcb = tw;
 	inp->inp_flags |= INP_TIMEWAIT;
+	TCPSTATES_INC(TCPS_TIME_WAIT);
 	tcp_tw_2msl_reset(tw, 0);
 
 	/*
@@ -358,39 +369,6 @@ tcp_twstart(struct tcpcb *tp)
 	} else
 		INP_WUNLOCK(inp);
 }
-
-#if 0
-/*
- * The appromixate rate of ISN increase of Microsoft TCP stacks;
- * the actual rate is slightly higher due to the addition of
- * random positive increments.
- *
- * Most other new OSes use semi-randomized ISN values, so we
- * do not need to worry about them.
- */
-#define	MS_ISN_BYTES_PER_SECOND		250000
-
-/*
- * Determine if the ISN we will generate has advanced beyond the last
- * sequence number used by the previous connection.  If so, indicate
- * that it is safe to recycle this tw socket by returning 1.
- */
-int
-tcp_twrecycleable(struct tcptw *tw)
-{
-	tcp_seq new_iss = tw->iss;
-	tcp_seq new_irs = tw->irs;
-
-	INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
-	new_iss += (ticks - tw->t_starttime) * (ISN_BYTES_PER_SECOND / hz);
-	new_irs += (ticks - tw->t_starttime) * (MS_ISN_BYTES_PER_SECOND / hz);
-
-	if (SEQ_GT(new_iss, tw->snd_nxt) && SEQ_GT(new_irs, tw->rcv_nxt))
-		return (1);
-	else
-		return (0);
-}
-#endif
 
 /*
  * Returns 1 if the TIME_WAIT state was killed and we should start over,
@@ -479,9 +457,14 @@ tcp_twcheck(struct inpcb *inp, struct tcpopt *to __unused, struct tcphdr *th,
 	 * Acknowledge the segment if it has data or is not a duplicate ACK.
 	 */
 	if (thflags != TH_ACK || tlen != 0 ||
-	    th->th_seq != tw->rcv_nxt || th->th_ack != tw->snd_nxt)
+	    th->th_seq != tw->rcv_nxt || th->th_ack != tw->snd_nxt) {
+		TCP_PROBE5(receive, NULL, NULL, m, NULL, th);
 		tcp_twrespond(tw, TH_ACK);
+		goto dropnoprobe;
+	}
 drop:
+	TCP_PROBE5(receive, NULL, NULL, m, NULL, th);
+dropnoprobe:
 	INP_WUNLOCK(inp);
 	m_freem(m);
 	return (0);
@@ -628,6 +611,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 		th->th_sum = in6_cksum_pseudo(ip6,
 		    sizeof(struct tcphdr) + optlen, IPPROTO_TCP, 0);
 		ip6->ip6_hlim = in6_selecthlim(inp, NULL);
+		TCP_PROBE5(send, NULL, NULL, ip6, NULL, th);
 		error = ip6_output(m, inp->in6p_outputopts, NULL,
 		    (tw->tw_so_options & SO_DONTROUTE), NULL, NULL, inp);
 	}
@@ -643,6 +627,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 		ip->ip_len = htons(m->m_pkthdr.len);
 		if (V_path_mtu_discovery)
 			ip->ip_off |= htons(IP_DF);
+		TCP_PROBE5(send, NULL, NULL, ip, NULL, th);
 		error = ip_output(m, inp->inp_options, NULL,
 		    ((tw->tw_so_options & SO_DONTROUTE) ? IP_ROUTETOIF : 0),
 		    NULL, inp);
@@ -697,6 +682,7 @@ tcp_tw_2msl_stop(struct tcptw *tw, int reuse)
 
 	if (!reuse)
 		uma_zfree(V_tcptw_zone, tw);
+	TCPSTATES_DEC(TCPS_TIME_WAIT);
 }
 
 struct tcptw *
@@ -742,10 +728,29 @@ tcp_tw_2msl_scan(int reuse)
 			INP_WLOCK(inp);
 			tw = intotw(inp);
 			if (in_pcbrele_wlocked(inp)) {
-				KASSERT(tw == NULL, ("%s: held last inp "
-				    "reference but tw not NULL", __func__));
-				INP_INFO_RUNLOCK(&V_tcbinfo);
-				continue;
+				if (__predict_true(tw == NULL)) {
+					INP_INFO_RUNLOCK(&V_tcbinfo);
+					continue;
+				} else {
+					/* This should not happen as in TIMEWAIT
+					 * state the inp should not be destroyed
+					 * before its tcptw. If INVARIANTS is
+					 * defined panic.
+					 */
+#ifdef INVARIANTS
+					panic("%s: Panic before an infinite "
+					    "loop: INP_TIMEWAIT && (INP_FREED "
+					    "|| inp last reference) && tw != "
+					    "NULL", __func__);
+#else
+					log(LOG_ERR, "%s: Avoid an infinite "
+					    "loop: INP_TIMEWAIT && (INP_FREED "
+					    "|| inp last reference) && tw != "
+					    "NULL", __func__);
+#endif
+					INP_INFO_RUNLOCK(&V_tcbinfo);
+					break;
+				}
 			}
 
 			if (tw == NULL) {

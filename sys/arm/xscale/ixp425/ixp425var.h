@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ixp425var.h,v 1.10 2006/04/10 03:36:03 simonb Exp $ */
 
 /*

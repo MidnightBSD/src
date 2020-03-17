@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: setcpsr.S,v 1.2 2002/08/15 01:37:02 briggs Exp $	*/
 
 /*-
@@ -50,7 +49,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/setcpsr.S 266144 2014-05-15 15:40:05Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/setcpsr.S 261393 2014-02-02 00:48:15Z ian $");
 
 /* Sets and clears bits in the CPSR register
  *

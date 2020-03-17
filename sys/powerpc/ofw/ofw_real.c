@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: Locore.c,v 1.7 2000/08/20 07:04:59 tsubai Exp $	*/
 
 /*-
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/ofw/ofw_real.c 262586 2014-02-28 00:39:35Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/ofw/ofw_real.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -72,7 +71,6 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/ofw/ofw_real.c 262586 2014-02-28 00:39
 #include <machine/bus.h>
 #include <machine/md_var.h>
 #include <machine/ofw_machdep.h>
-#include <machine/pmap.h>
 #include <machine/stdarg.h>
 
 #include <dev/ofw/openfirm.h>
@@ -366,7 +364,7 @@ ofw_real_peer(ofw_t ofw, phandle_t node)
 	argsptr = ofw_real_map(&args, sizeof(args));
 	if (openfirmware((void *)argsptr) == -1) {
 		ofw_real_stop();
-		return (-1);
+		return (0);
 	}
 	ofw_real_unmap(argsptr, &args, sizeof(args));
 	ofw_real_stop();
@@ -395,7 +393,7 @@ ofw_real_child(ofw_t ofw, phandle_t node)
 	argsptr = ofw_real_map(&args, sizeof(args));
 	if (openfirmware((void *)argsptr) == -1) {
 		ofw_real_stop();
-		return (-1);
+		return (0);
 	}
 	ofw_real_unmap(argsptr, &args, sizeof(args));
 	ofw_real_stop();
@@ -424,7 +422,7 @@ ofw_real_parent(ofw_t ofw, phandle_t node)
 	argsptr = ofw_real_map(&args, sizeof(args));
 	if (openfirmware((void *)argsptr) == -1) {
 		ofw_real_stop();
-		return (-1);
+		return (0);
 	}
 	ofw_real_unmap(argsptr, &args, sizeof(args));
 	ofw_real_stop();

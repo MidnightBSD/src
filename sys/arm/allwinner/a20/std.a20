@@ -1,5 +1,5 @@
 # Allwinner A20 common options
-# $MidnightBSD$
+#$FreeBSD: stable/11/sys/arm/allwinner/a20/std.a20 295885 2016-02-22 11:47:28Z skra $
 
 cpu		CPU_CORTEXA
 machine 	arm armv6

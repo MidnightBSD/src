@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_parse.c
  */
@@ -39,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_parse.c,v 1.3 1999/11/29 01:43:48 archie Exp $
- * $FreeBSD: stable/10/sys/netgraph/ng_parse.c 278140 2015-02-03 07:59:33Z dim $
+ * $FreeBSD: stable/11/sys/netgraph/ng_parse.c 277951 2015-01-30 21:59:53Z dim $
  */
 
 #include <sys/types.h>

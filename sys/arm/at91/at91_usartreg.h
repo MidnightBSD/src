@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/arm/at91/at91_usartreg.h 185265 2008-11-25 00:13:26Z imp $ */
+/* $FreeBSD: stable/11/sys/arm/at91/at91_usartreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef AT91USARTREG_H_
 #define AT91USARTREG_H_

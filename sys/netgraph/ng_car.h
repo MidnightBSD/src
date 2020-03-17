@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nuno Antunes <nuno.antunes@gmail.com>
  * Copyright (c) 2007 Alexander Motin <mav@freebsd.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_car.h 174795 2007-12-19 22:50:14Z mav $
+ * $FreeBSD: stable/11/sys/netgraph/ng_car.h 298813 2016-04-29 21:25:05Z pfg $
  */
 
 #ifndef _NETGRAPH_NG_CAR_H_
@@ -70,9 +69,9 @@ struct ng_car_bulkstats {
 
 /* Per hook configuration */
 struct ng_car_hookconf {
-	u_int64_t cbs;		/* Commited burst size (bytes) */
+	u_int64_t cbs;		/* Committed burst size (bytes) */
 	u_int64_t ebs;		/* Exceeded/Peak burst size (bytes) */
-	u_int64_t cir;		/* Commited information rate (bits/s) */
+	u_int64_t cir;		/* Committed information rate (bits/s) */
 	u_int64_t pir;		/* Peak information rate (bits/s) */
 	u_int8_t green_action;	/* Action for green packets */
 	u_int8_t yellow_action;	/* Action for yellow packets */

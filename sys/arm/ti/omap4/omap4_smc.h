@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Olivier Houchard.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/arm/ti/omap4/omap4_smc.h 244914 2012-12-31 21:19:44Z gonzo $
+ * $FreeBSD: stable/11/sys/arm/ti/omap4/omap4_smc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef OMAP4_SMC_H_

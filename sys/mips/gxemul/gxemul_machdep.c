@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Wojciech A. Koszek <wkoszek@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/gxemul/gxemul_machdep.c 247297 2013-02-26 01:00:11Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/gxemul/gxemul_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 

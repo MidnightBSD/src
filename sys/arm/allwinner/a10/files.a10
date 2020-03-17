@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/arm/allwinner/a10/files.a10 308274 2016-11-04 00:54:21Z manu $
 
 arm/allwinner/a10/a10_intc.c		standard
 arm/allwinner/a10/a10_padconf.c		standard

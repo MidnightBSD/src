@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * Copyright (c) 2009, Luiz Otavio O Souza.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/atheros/ar71xx_gpiovar.h 255335 2013-09-06 23:47:50Z loos $
+ * $FreeBSD: stable/11/sys/mips/atheros/ar71xx_gpiovar.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -58,12 +57,13 @@
 
 struct ar71xx_gpio_softc {
 	device_t		dev;
-        struct mtx		gpio_mtx;
-        struct resource		*gpio_mem_res;
-        int			gpio_mem_rid;
-        struct resource		*gpio_irq_res;
-        int			gpio_irq_rid;
-        void			*gpio_ih;
+	device_t		busdev;
+	struct mtx		gpio_mtx;
+	struct resource		*gpio_mem_res;
+	int			gpio_mem_rid;
+	struct resource		*gpio_irq_res;
+	int			gpio_irq_rid;
+	void			*gpio_ih;
 	int			gpio_npins;
 	struct gpio_pin		*gpio_pins;
 };

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bcopy_page.S,v 1.7 2003/10/13 21:03:13 scw Exp $	*/
 
 /*-
@@ -41,7 +40,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/bcopy_page.S 248361 2013-03-16 02:48:49Z andrew $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/arm/bcopy_page.S 288662 2015-10-04 09:39:40Z rwatson $");
 
 #include "assym.s"
 
@@ -76,7 +75,7 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/arm/bcopy_page.S 248361 2013-03-16 02:48:4
 #endif /* ! COPY_CHUNK */
 
 #ifndef SAVE_REGS
-#define	SAVE_REGS	stmfd	sp!, {r4-r8, lr}
+#define	SAVE_REGS	stmfd	sp!, {r4-r8, lr}; _SAVE({r4-r8, lr})
 #define	RESTORE_REGS	ldmfd	sp!, {r4-r8, pc}
 #endif
 
@@ -135,6 +134,7 @@ END(bcopy_page)
 
 ENTRY(bzero_page)
 	stmfd	sp!, {r4-r8, lr}
+	_SAVE({r4-r8, lr})
 #ifdef BIG_LOOPS
 	mov	r2, #(PAGE_SIZE >> 9)
 #else
@@ -190,6 +190,7 @@ END(bzero_page)
 ENTRY(bcopy_page)
 	pld	[r0]
 	stmfd	sp!, {r4, r5}
+	_SAVE({r4, r5})
 	mov	ip, #32
 	ldr	r2, [r0], #0x04		/* 0x00 */
 	ldr	r3, [r0], #0x04		/* 0x04 */

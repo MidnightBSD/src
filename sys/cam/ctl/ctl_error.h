@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
@@ -30,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_error.h#1 $
- * $FreeBSD: stable/10/sys/cam/ctl/ctl_error.h 313365 2017-02-07 01:42:53Z mav $
+ * $FreeBSD: stable/11/sys/cam/ctl/ctl_error.h 313364 2017-02-07 01:42:13Z mav $
  */
 /*
  * Function definitions for various error reporting routines used both

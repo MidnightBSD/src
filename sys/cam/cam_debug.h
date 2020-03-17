@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Macros for tracing/loging information in the CAM layer
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/cam/cam_debug.h 265632 2014-05-08 06:55:48Z mav $
+ * $FreeBSD: stable/11/sys/cam/cam_debug.h 260509 2014-01-10 12:18:05Z mav $
  */
 #ifndef	_CAM_CAM_DEBUG_H
 #define _CAM_CAM_DEBUG_H 1

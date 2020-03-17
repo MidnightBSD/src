@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ixp425_pci.c,v 1.5 2006/04/10 03:36:03 simonb Exp $ */
 
 /*

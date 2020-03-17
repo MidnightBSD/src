@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Scott Long
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/scsi/scsi_sg.c 294978 2016-01-28 09:25:15Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_sg.c 350804 2019-08-08 22:16:19Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -323,10 +322,7 @@ sgregister(struct cam_periph *periph, void *arg)
 	TAILQ_INIT(&softc->rdwr_done);
 	periph->softc = softc;
 
-	bzero(&cpi, sizeof(cpi));
-	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, periph->path);
 
 	if (cpi.maxio == 0)
 		softc->maxio = DFLTPHYS;	/* traditional default */
@@ -917,7 +913,9 @@ sgsendccb(struct cam_periph *periph, union ccb *ccb)
 				  SF_RETRY_UA,
 				  softc->device_stats);
 
+	cam_periph_unlock(periph);
 	cam_periph_unmapmem(ccb, &mapinfo);
+	cam_periph_lock(periph);
 
 	return (error);
 }

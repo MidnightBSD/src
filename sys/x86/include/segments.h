@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz
  * Copyright (c) 1990 The Regents of the University of California.

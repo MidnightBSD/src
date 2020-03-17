@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Warner Losh.  All rights reserved.
  *
@@ -27,7 +26,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91_tcb.c 266217 2014-05-16 12:43:45Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/at91_tcb.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

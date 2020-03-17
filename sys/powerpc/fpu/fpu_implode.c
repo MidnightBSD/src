@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fpu_implode.c,v 1.6 2005/12/11 12:18:42 christos Exp $ */
 
 /*
@@ -47,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/fpu/fpu_implode.c 178030 2008-04-09 08:50:37Z grehan $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/fpu/fpu_implode.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/systm.h>

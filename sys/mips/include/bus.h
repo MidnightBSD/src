@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bus.h,v 1.11 2003/07/28 17:35:54 thorpej Exp $	*/
 
 /*-
@@ -61,7 +60,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/bus.h 263687 2014-03-24 13:48:04Z emaste $
+ * $FreeBSD: stable/11/sys/mips/include/bus.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_BUS_H_
@@ -722,7 +721,6 @@ void	__bs_c(f,_bs_c_8) (void *t, bus_space_handle_t bsh1,	\
  */
 DECLARE_BUS_SPACE_PROTOTYPES(generic);
 extern bus_space_tag_t mips_bus_space_generic;
-extern bus_space_tag_t mips_bus_space_fdt;
 
 /* Special bus space for RMI processors */
 #if defined(CPU_RMI) || defined (CPU_NLM)

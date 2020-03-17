@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*************************************************************************
 Copyright (c) 2003-2007  Cavium Networks (support@cavium.com). All rights
 reserved.
@@ -29,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-tx.c 243264 2012-11-19 08:30:29Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octe/ethernet-tx.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +41,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-tx.c 243264 2012-11-
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"
@@ -158,7 +158,7 @@ int cvm_oct_xmit(struct mbuf *m, struct ifnet *ifp)
 		work = cvmx_fpa_alloc(CVMX_FPA_WQE_POOL);
 		if (work == NULL) {
 			m_freem(m);
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			return 1;
 		}
 
@@ -231,7 +231,7 @@ int cvm_oct_xmit(struct mbuf *m, struct ifnet *ifp)
 	if (__predict_false(dropped)) {
 		m_freem(m);
 		cvmx_fau_atomic_add32(priv->fau+qos*4, -1);
-		ifp->if_oerrors++;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	} else {
 		/* Put this packet on the queue to be freed later */
 		_IF_ENQUEUE(&priv->tx_free_queue[qos], m);
@@ -239,8 +239,8 @@ int cvm_oct_xmit(struct mbuf *m, struct ifnet *ifp)
 		/* Pass it to any BPF listeners.  */
 		ETHER_BPF_MTAP(ifp, m);
 
-		ifp->if_opackets++;
-		ifp->if_obytes += m->m_pkthdr.len;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
+		if_inc_counter(ifp, IFCOUNTER_OBYTES, m->m_pkthdr.len);
 	}
 
 	/* Free mbufs not in use by the hardware */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: frame.h,v 1.3 1998/09/15 10:50:12 pefo Exp $ */
 
 /*-
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	JNPR: frame.h,v 1.6.2.1 2007/09/10 08:14:57 girish
- * $FreeBSD: stable/10/sys/mips/include/frame.h 249790 2013-04-23 09:38:18Z imp $
+ * $FreeBSD: stable/11/sys/mips/include/frame.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef _MACHINE_FRAME_H_

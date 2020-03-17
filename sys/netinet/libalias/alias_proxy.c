@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/libalias/alias_proxy.c 241648 2012-10-17 20:23:07Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/libalias/alias_proxy.c 315456 2017-03-17 14:54:10Z vangyzen $");
 
 /* file: alias_proxy.c
 
@@ -295,6 +294,7 @@ ProxyEncodeTcpStream(struct alias_link *lnk,
 	int slen;
 	char buffer[40];
 	struct tcphdr *tc;
+	char addrbuf[INET_ADDRSTRLEN];
 
 /* Compute pointer to tcp header */
 	tc = (struct tcphdr *)ip_next(pip);
@@ -306,7 +306,8 @@ ProxyEncodeTcpStream(struct alias_link *lnk,
 
 /* Translate destination address and port to string form */
 	snprintf(buffer, sizeof(buffer) - 2, "[DEST %s %d]",
-	    inet_ntoa(GetProxyAddress(lnk)), (u_int) ntohs(GetProxyPort(lnk)));
+	    inet_ntoa_r(GetProxyAddress(lnk), INET_NTOA_BUF(addrbuf)),
+	    (u_int) ntohs(GetProxyPort(lnk)));
 
 /* Pad string out to a multiple of two in length */
 	slen = strlen(buffer);

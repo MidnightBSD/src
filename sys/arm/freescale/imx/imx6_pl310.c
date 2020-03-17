@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Olivier Houchard.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/freescale/imx/imx6_pl310.c 266384 2014-05-18 00:26:42Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_pl310.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * The machine-dependent part of the arm/pl310 driver for imx6 SoCs.

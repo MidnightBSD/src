@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2009 RMI Corporation
  * Copyright (c) 2002-2004 Juli Mallett <jmallett@FreeBSD.org>
@@ -27,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/xlr_machdep.c 232853 2012-03-12 07:34:15Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/xlr_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -149,7 +148,7 @@ xlr_parse_mmu_options(void)
 	 * We don't support sharing TLB per core - TODO
 	 */
 	xlr_shtlb_enabled = 0;
-	if ((hw_env = getenv("xlr.shtlb")) != NULL) {
+	if ((hw_env = kern_getenv("xlr.shtlb")) != NULL) {
 		start = hw_env;
 		tmp = strtoul(start, &end, 0);
 		if (start != end)
@@ -231,9 +230,9 @@ xlr_set_boot_flags(void)
 {
 	char *p;
 
-	p = getenv("bootflags");
+	p = kern_getenv("bootflags");
 	if (p == NULL)
-		p = getenv("boot_flags");  /* old style */
+		p = kern_getenv("boot_flags");  /* old style */
 	if (p == NULL)
 		return;
 
@@ -459,9 +458,9 @@ platform_start(__register_t a0 __unused,
 		printf("\t%s\n", arg);
 		n = strsep(&arg, "=");
 		if (arg == NULL)
-			setenv(n, "1");
+			kern_setenv(n, "1");
 		else
-			setenv(n, arg);
+			kern_setenv(n, arg);
 	}
 
 	xlr_set_boot_flags();

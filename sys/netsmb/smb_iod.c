@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netsmb/smb_iod.c 291655 2015-12-02 21:48:34Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_iod.c 291035 2015-11-18 23:04:01Z rmacklem $");
  
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: spr.h,v 1.25 2002/08/14 15:38:40 matt Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/spr.h 263122 2014-03-14 00:12:53Z jhibbits $
+ * $FreeBSD: stable/11/sys/powerpc/include/spr.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _POWERPC_SPR_H_
 #define	_POWERPC_SPR_H_
@@ -170,7 +169,8 @@
 #define	  IBM970MP		  0x0044
 #define	  IBM970GX		  0x0045
 #define	  IBMPOWER7PLUS		  0x004a
-#define	  IBMPOWER8		  0x004b
+#define	  IBMPOWER8E		  0x004b
+#define	  IBMPOWER8		  0x004d
 #define	  MPC860		  0x0050
 #define	  IBMCELLBE		  0x0070
 #define	  MPC8240		  0x0081
@@ -190,6 +190,7 @@
 #define	  FSL_E500v2		  0x8021
 #define	  FSL_E500mc		  0x8023
 #define	  FSL_E5500		  0x8024
+#define	  FSL_E6500		  0x8040
 
 #define	SPR_IBAT0U		0x210	/* .68 Instruction BAT Reg 0 Upper */
 #define	SPR_IBAT0U		0x210	/* .6. Instruction BAT Reg 0 Upper */
@@ -527,6 +528,14 @@
 #define	  MSSCR0_ABD		  0x00100000 /* 11: address bus driven (read-only) */
 #define	  MSSCR0_MBZ		  0x000fffff /* 12-31: must be zero */
 #define	  MSSCR0_L2PFE		  0x00000003 /* 30-31: L2 prefetch enable */
+#define	SPR_MSSSR0		0x3f7	/* .6. Memory Subsystem Status Register (MPC745x) */
+#define	  MSSSR0_L2TAG		  0x00040000 /* 13: L2 tag parity error */
+#define	  MSSSR0_L2DAT		  0x00020000 /* 14: L2 data parity error */
+#define	  MSSSR0_L3TAG		  0x00010000 /* 15: L3 tag parity error */
+#define	  MSSSR0_L3DAT		  0x00008000 /* 16: L3 data parity error */
+#define	  MSSSR0_APE		  0x00004000 /* 17: Address parity error */
+#define	  MSSSR0_DPE		  0x00002000 /* 18: Data parity error */
+#define	  MSSSR0_TEA		  0x00001000 /* 19: Bus transfer error acknowledge */
 #define	SPR_LDSTCR		0x3f8	/* .6. Load/Store Control Register */
 #define	SPR_L2PM		0x3f8	/* .6. L2 Private Memory Control Register */
 #define	SPR_L2CR		0x3f9	/* .6. L2 Control Register */
@@ -643,7 +652,9 @@
 
 #elif defined(BOOKE)
 
+#define	SPR_MCARU		0x239	/* ..8 Machine Check Address register upper bits */
 #define	SPR_MCSR		0x23c	/* ..8 Machine Check Syndrome register */
+#define	SPR_MCAR		0x23d	/* ..8 Machine Check Address register */
 
 #define	SPR_ESR			0x003e	/* ..8 Exception Syndrome Register */
 #define	  ESR_PIL		  0x08000000 /* Program interrupt - illegal */
@@ -700,6 +711,8 @@
 #define	  SVR_P4040E		  0x8208
 #define	  SVR_P4080		  0x8201
 #define	  SVR_P4080E		  0x8209
+#define	  SVR_P5010		  0x8221
+#define	  SVR_P5010E		  0x8229
 #define	  SVR_P5020		  0x8220
 #define	  SVR_P5020E		  0x8228
 #define	SVR_VER(svr)		(((svr) >> 16) & 0xffff)

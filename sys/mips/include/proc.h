@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: proc.h,v 1.2 1998/09/15 10:50:12 pefo Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  *
  *	@(#)proc.h	8.1 (Berkeley) 6/10/93
  *	JNPR: proc.h,v 1.7.2.1 2007/09/10 06:25:24 girish
- * $FreeBSD: stable/10/sys/mips/include/proc.h 232855 2012-03-12 08:13:04Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/proc.h 351793 2019-09-03 20:23:58Z kevans $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -77,10 +76,10 @@ struct mdthread {
 #define	MDTD_COP2USED	0x0002		/* Process used the COP2 */
 
 struct mdproc {
-	/* empty */
+	/* Avoid empty structs because they are undefined behavior. */
+	long	md_spare;
 };
 
-#ifdef _KERNEL
 struct syscall_args {
 	u_int code;
 	struct sysent *callp;
@@ -88,7 +87,6 @@ struct syscall_args {
 	int narg;
 	struct trapframe *trapframe;
 };
-#endif
 
 #ifdef __mips_n64
 #define	KINFO_PROC_SIZE 1088

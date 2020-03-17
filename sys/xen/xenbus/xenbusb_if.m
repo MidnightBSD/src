@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2010 Spectra Logic Corporation
 # All rights reserved.

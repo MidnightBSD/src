@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  * Copyright (c) 2010 Greg Ansley.  All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/at91/at91sam9260.c 266087 2014-05-14 20:31:54Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/at91/at91sam9260.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -104,6 +103,7 @@ static const uint32_t at91_pio_base[] = {
 
 static const struct cpu_devs at91_devs[] =
 {
+	DEVICE("at91_aic", AIC,  0),
 	DEVICE("at91_pmc", PMC,  0),
 	DEVICE("at91_wdt", WDT,  0),
 	DEVICE("at91_rst", RSTC, 0),
@@ -188,7 +188,7 @@ at91_clock_init(void)
 	 * PMC alogrithm choose the divisor that causes the input clock
 	 * to be near the optimal 2 MHz per datasheet.  We know
 	 * we are going to be using this for the USB clock at 96 MHz.
-	 * Causes no extra frequency deviation for all recomended crystal
+	 * Causes no extra frequency deviation for all recommended crystal
 	 * values.  See Note 1, table 40-16 SAM9260 doc.
 	 */
 	clk = at91_pmc_clock_ref("pllb");

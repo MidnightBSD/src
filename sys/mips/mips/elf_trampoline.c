@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/elf_trampoline.c 256171 2013-10-09 00:22:21Z adrian $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/mips/elf_trampoline.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <machine/asm.h>
 #include <sys/param.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: profile.h,v 1.2 1999/01/27 04:46:05 imp Exp $ */
 /*-
  * Copyright (c) 1992, 1993
@@ -33,7 +32,7 @@
  *
  *	from: @(#)profile.h	8.1 (Berkeley) 6/10/93
  *	JNPR: profile.h,v 1.4 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/10/sys/mips/include/profile.h 210606 2010-07-29 14:04:29Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/include/profile.h 352083 2019-09-09 17:37:52Z kevans $
  */
 #ifndef _MACHINE_PROFILE_H_
 #define	_MACHINE_PROFILE_H_
@@ -45,7 +44,8 @@
 /*XXX This is not MIPS64 safe. */
 
 #define	MCOUNT \
-	__asm(".globl _mcount;"		\
+	__asm(".text;"			\
+	".globl _mcount;"		\
 	".type _mcount,@function;"	\
 	"_mcount:;"			\
 	".set noreorder;"		\

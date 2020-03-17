@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
@@ -27,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/10/sys/mips/nlm/hal/iomap.h 233545 2012-03-27 14:05:12Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/nlm/hal/iomap.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __NLM_HAL_IOMAP_H__

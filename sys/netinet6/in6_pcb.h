@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -59,7 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet6/in6_pcb.h 241916 2012-10-22 21:49:56Z delphij $
+ * $FreeBSD: stable/11/sys/netinet6/in6_pcb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET6_IN6_PCB_H_
@@ -87,17 +86,12 @@ int	in6_pcbconnect(struct inpcb *, struct sockaddr *, struct ucred *);
 int	in6_pcbconnect_mbuf(struct inpcb *, struct sockaddr *,
 	    struct ucred *, struct mbuf *);
 void	in6_pcbdisconnect(struct inpcb *);
-int	in6_pcbladdr(struct inpcb *, struct sockaddr *, struct in6_addr *);
 struct	inpcb *
 	in6_pcblookup_local(struct inpcbinfo *,
 				 struct in6_addr *, u_short, int,
 				 struct ucred *);
 struct	inpcb *
 	in6_pcblookup(struct inpcbinfo *, struct in6_addr *,
-			   u_int, struct in6_addr *, u_int, int,
-			   struct ifnet *);
-struct	inpcb *
-	in6_pcblookup_hash_locked(struct inpcbinfo *, struct in6_addr *,
 			   u_int, struct in6_addr *, u_int, int,
 			   struct ifnet *);
 struct	inpcb *

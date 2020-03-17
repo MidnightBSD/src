@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/uninorthpci.c 266160 2014-05-15 17:30:16Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/uninorthpci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,11 +32,13 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/uninorthpci.c 266160 2014-05-
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/rman.h>
 
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_pci.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
+#include <dev/ofw/ofwpci.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -48,9 +49,6 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/powermac/uninorthpci.c 266160 2014-05-
 #include <machine/pio.h>
 #include <machine/resource.h>
 
-#include <sys/rman.h>
-
-#include <powerpc/ofw/ofw_pci.h>
 #include <powerpc/powermac/uninorthvar.h>
 
 #include <vm/vm.h>

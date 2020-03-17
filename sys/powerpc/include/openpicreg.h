@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Tsubai Masanari.  All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from NetBSD: openpicreg.h,v 1.3 2001/08/30 03:08:52 briggs Exp
- * $FreeBSD: stable/10/sys/powerpc/include/openpicreg.h 176208 2008-02-12 18:14:46Z marcel $
+ * $FreeBSD: stable/11/sys/powerpc/include/openpicreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -100,6 +99,7 @@
  */
 
 /* interrupt vector/priority reg */
+#define OPENPIC_SRC_VECTOR_COUNT	64
 #ifndef OPENPIC_SRC_VECTOR
 #define OPENPIC_SRC_VECTOR(irq)		(0x10000 + (irq) * 0x20)
 #endif

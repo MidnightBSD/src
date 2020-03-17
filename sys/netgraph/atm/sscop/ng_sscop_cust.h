@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netgraph/atm/sscop/ng_sscop_cust.h 281657 2015-04-17 15:39:42Z rrs $
+ * $FreeBSD: stable/11/sys/netgraph/atm/sscop/ng_sscop_cust.h 280785 2015-03-28 12:50:24Z rrs $
  *
  * Customisation of the SSCOP code to ng_sscop.
  */
@@ -328,8 +327,7 @@ ng_sscop_mbuf_alloc(size_t n)						\
 		m->m_len = 0;						\
 		m->m_pkthdr.len = 0;					\
 		if (n > MHLEN) {					\
-			MCLGET(m, M_NOWAIT);				\
-			if (!(m->m_flags & M_EXT)){			\
+			if (!(MCLGET(m, M_NOWAIT))){			\
 				m_free(m);				\
 				m = NULL;				\
 			}						\

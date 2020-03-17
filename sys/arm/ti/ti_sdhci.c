@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * Copyright (c) 2011 Ben Gray <ben.r.gray@gmail.com>.
@@ -27,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_sdhci.c 318198 2017-05-11 21:01:02Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/ti/ti_sdhci.c 343504 2019-01-27 19:04:28Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,7 +44,6 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_sdhci.c 318198 2017-05-11 21:01:02Z 
 #include <machine/resource.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -54,28 +52,30 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_sdhci.c 318198 2017-05-11 21:01:02Z 
 #include <dev/mmc/mmcbrvar.h>
 
 #include <dev/sdhci/sdhci.h>
+#include <dev/sdhci/sdhci_fdt_gpio.h>
 #include "sdhci_if.h"
 
 #include <arm/ti/ti_cpuid.h>
 #include <arm/ti/ti_prcm.h>
+#include <arm/ti/ti_hwmods.h>
 #include "gpio_if.h"
 
 struct ti_sdhci_softc {
 	device_t		dev;
-	device_t		gpio_dev;
+	struct sdhci_fdt_gpio * gpio;
 	struct resource *	mem_res;
 	struct resource *	irq_res;
 	void *			intr_cookie;
 	struct sdhci_slot	slot;
-	uint32_t		mmchs_device_id;
+	clk_ident_t		mmchs_clk_id;
 	uint32_t		mmchs_reg_off;
 	uint32_t		sdhci_reg_off;
 	uint32_t		baseclk_hz;
-	uint32_t		wp_gpio_pin;
 	uint32_t		cmd_and_mode;
 	uint32_t		sdhci_clkdiv;
 	boolean_t		disable_highspeed;
 	boolean_t		force_card_present;
+	boolean_t		disable_readonly;
 };
 
 /*
@@ -363,19 +363,26 @@ static int
 ti_sdhci_get_ro(device_t brdev, device_t reqdev)
 {
 	struct ti_sdhci_softc *sc = device_get_softc(brdev);
-	unsigned int readonly = 0;
 
-	/* If a gpio pin is configured, read it. */
-	if (sc->gpio_dev != NULL) {
-		GPIO_PIN_GET(sc->gpio_dev, sc->wp_gpio_pin, &readonly);
-	}
+	if (sc->disable_readonly)
+		return (0);
 
-	return (readonly);
+	return (sdhci_fdt_gpio_get_readonly(sc->gpio));
+}
+
+static bool
+ti_sdhci_get_card_present(device_t dev, struct sdhci_slot *slot)
+{
+	struct ti_sdhci_softc *sc = device_get_softc(dev);
+
+	return (sdhci_fdt_gpio_get_present(sc->gpio));
 }
 
 static int
 ti_sdhci_detach(device_t dev)
 {
+
+	/* sdhci_fdt_gpio_teardown(sc->gpio); */
 
 	return (EBUSY);
 }
@@ -384,19 +391,18 @@ static void
 ti_sdhci_hw_init(device_t dev)
 {
 	struct ti_sdhci_softc *sc = device_get_softc(dev);
-	clk_ident_t clk;
 	uint32_t regval;
 	unsigned long timeout;
 
 	/* Enable the controller and interface/functional clocks */
-	clk = MMC0_CLK + sc->mmchs_device_id;
-	if (ti_prcm_clk_enable(clk) != 0) {
+	if (ti_prcm_clk_enable(sc->mmchs_clk_id) != 0) {
 		device_printf(dev, "Error: failed to enable MMC clock\n");
 		return;
 	}
 
 	/* Get the frequency of the source clock */
-	if (ti_prcm_clk_get_source_freq(clk, &sc->baseclk_hz) != 0) {
+	if (ti_prcm_clk_get_source_freq(sc->mmchs_clk_id,
+	    &sc->baseclk_hz) != 0) {
 		device_printf(dev, "Error: failed to get source clock freq\n");
 		return;
 	}
@@ -485,12 +491,10 @@ ti_sdhci_attach(device_t dev)
 	 * up and added in freebsd, it doesn't exist in the published bindings.
 	 */
 	node = ofw_bus_get_node(dev);
-	if ((OF_getprop(node, "mmchs-device-id", &prop, sizeof(prop))) <= 0) {
-		sc->mmchs_device_id = device_get_unit(dev);
-		device_printf(dev, "missing mmchs-device-id attribute in FDT, "
-		    "using unit number (%d)", sc->mmchs_device_id);
-	} else
-		sc->mmchs_device_id = fdt32_to_cpu(prop);
+	sc->mmchs_clk_id = ti_hwmods_get_clock(dev);
+	if (sc->mmchs_clk_id == INVALID_CLK_IDENT) {
+		device_printf(dev, "failed to get clock based on hwmods property\n");
+	}
 
 	/*
 	 * The hardware can inherently do dual-voltage (1p8v, 3p0v) on the first
@@ -501,42 +505,29 @@ ti_sdhci_attach(device_t dev)
 	 * be done once and never reset.
 	 */
 	sc->slot.host.caps |= MMC_OCR_LOW_VOLTAGE;
-	if (sc->mmchs_device_id == 0 || OF_hasprop(node, "ti,dual-volt")) {
+	if (sc->mmchs_clk_id == MMC1_CLK || OF_hasprop(node, "ti,dual-volt")) {
 		sc->slot.host.caps |= MMC_OCR_290_300 | MMC_OCR_300_310;
-	}
-
-	/*
-	 * See if we've got a GPIO-based write detect pin.  This is not the
-	 * standard documented property for this, we added it in freebsd.
-	 */
-	if ((OF_getprop(node, "mmchs-wp-gpio-pin", &prop, sizeof(prop))) <= 0)
-		sc->wp_gpio_pin = 0xffffffff;
-	else
-		sc->wp_gpio_pin = fdt32_to_cpu(prop);
-
-	if (sc->wp_gpio_pin != 0xffffffff) {
-		sc->gpio_dev = devclass_get_device(devclass_find("gpio"), 0);
-		if (sc->gpio_dev == NULL) 
-			device_printf(dev, "Error: No GPIO device, "
-			    "Write Protect pin will not function\n");
-		else
-			GPIO_PIN_SETFLAGS(sc->gpio_dev, sc->wp_gpio_pin,
-			                  GPIO_PIN_INPUT);
 	}
 
 	/*
 	 * Set the offset from the device's memory start to the MMCHS registers.
 	 * Also for OMAP4 disable high speed mode due to erratum ID i626.
 	 */
-	if (ti_chip() == CHIP_OMAP_3)
-		sc->mmchs_reg_off = OMAP3_MMCHS_REG_OFFSET;
-	else if (ti_chip() == CHIP_OMAP_4) {
+	switch (ti_chip()) {
+#ifdef SOC_OMAP4
+	case CHIP_OMAP_4:
 		sc->mmchs_reg_off = OMAP4_MMCHS_REG_OFFSET;
 		sc->disable_highspeed = true;
-        } else if (ti_chip() == CHIP_AM335X)
+		break;
+#endif
+#ifdef SOC_TI_AM335X
+	case CHIP_AM335X:
 		sc->mmchs_reg_off = AM335X_MMCHS_REG_OFFSET;
-	else
+		break;
+#endif
+	default:
 		panic("Unknown OMAP device\n");
+	}
 
 	/*
 	 * The standard SDHCI registers are at a fixed offset (the same on all
@@ -569,6 +560,21 @@ ti_sdhci_attach(device_t dev)
 		err = ENXIO;
 		goto fail;
 	}
+
+	/*
+	 * Set up handling of card-detect and write-protect gpio lines.
+	 *
+	 * If there is no write protect info in the fdt data, fall back to the
+	 * historical practice of assuming that the card is writable.  This
+	 * works around bad fdt data from the upstream source.  The alternative
+	 * would be to trust the sdhci controller's PRESENT_STATE register WP
+	 * bit, but it may say write protect is in effect when it's not if the
+	 * pinmux setup doesn't route the WP signal into the sdchi block.
+	 */
+	sc->gpio = sdhci_fdt_gpio_setup(sc->dev, &sc->slot);
+
+	if (!OF_hasprop(node, "wp-gpios") && !OF_hasprop(node, "wp-disable"))
+		sc->disable_readonly = true;
 
 	/* Initialise the MMCHS hardware. */
 	ti_sdhci_hw_init(dev);
@@ -708,6 +714,7 @@ static device_method_t ti_sdhci_methods[] = {
 	DEVMETHOD(sdhci_write_2,	ti_sdhci_write_2),
 	DEVMETHOD(sdhci_write_4,	ti_sdhci_write_4),
 	DEVMETHOD(sdhci_write_multi_4,	ti_sdhci_write_multi_4),
+	DEVMETHOD(sdhci_get_card_present, ti_sdhci_get_card_present),
 
 	DEVMETHOD_END
 };
@@ -722,5 +729,5 @@ static driver_t ti_sdhci_driver = {
 
 DRIVER_MODULE(sdhci_ti, simplebus, ti_sdhci_driver, ti_sdhci_devclass, NULL,
     NULL);
-MODULE_DEPEND(sdhci_ti, sdhci, 1, 1, 1);
+SDHCI_DEPEND(sdhci_ti);
 MMC_DECLARE_BRIDGE(sdhci_ti);

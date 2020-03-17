@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/sys/mips/gxemul/files.gxemul 235117 2012-05-07 04:15:46Z jmallett $
+# $FreeBSD: stable/11/sys/mips/gxemul/files.gxemul 235117 2012-05-07 04:15:46Z jmallett $
 dev/gxemul/cons/gxemul_cons.c		optional gxemul_cons
 mips/gxemul/gxemul_machdep.c		standard
 mips/mips/intr_machdep.c		standard

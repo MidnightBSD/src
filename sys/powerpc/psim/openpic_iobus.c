@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 by Peter Grehan. All rights reserved.
  *
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/psim/openpic_iobus.c 218075 2011-01-29 20:58:38Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/psim/openpic_iobus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,6 +53,7 @@ __FBSDID("$FreeBSD: stable/10/sys/powerpc/psim/openpic_iobus.c 218075 2011-01-29
 
 #include <sys/rman.h>
 
+#include <machine/openpicreg.h>
 #include <machine/openpicvar.h>
 #include <powerpc/psim/iobusvar.h>
 

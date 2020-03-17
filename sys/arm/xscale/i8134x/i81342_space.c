@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: i80321_space.c,v 1.6 2003/10/06 15:43:35 thorpej Exp $	*/
 
 /*-

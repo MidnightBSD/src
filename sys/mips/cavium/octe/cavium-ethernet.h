@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*************************************************************************
 Copyright (c) 2003-2007  Cavium Networks (support@cavium.com). All rights
 reserved.
@@ -27,7 +26,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
 AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO THE SOFTWARE, INCLUDING ITS CONDITION, ITS CONFORMITY TO ANY REPRESENTATION OR DESCRIPTION, OR THE EXISTENCE OF ANY LATENT OR PATENT DEFECTS, AND CAVIUM SPECIFICALLY DISCLAIMS ALL IMPLIED (IF ANY) WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. THE ENTIRE  RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE LIES WITH YOU.
 
 *************************************************************************/
-/* $FreeBSD: stable/10/sys/mips/cavium/octe/cavium-ethernet.h 213762 2010-10-13 09:17:44Z jmallett $ */
+/* $FreeBSD: stable/11/sys/mips/cavium/octe/cavium-ethernet.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /**
  * @file
@@ -39,7 +38,9 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 #ifndef CAVIUM_ETHERNET_H
 #define CAVIUM_ETHERNET_H
 
+#include <sys/taskqueue.h>
 #include <net/if_media.h>
+#include <net/ifq.h>
 
 /**
  * This is the definition of the Ethernet driver's private

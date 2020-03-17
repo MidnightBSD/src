@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: disassem.h,v 1.4 2001/03/04 04:15:58 matt Exp $	*/
 
 /*-
@@ -36,14 +35,14 @@
  *
  * Define the interface structure required by the disassembler.
  *
- * $FreeBSD: stable/10/sys/arm/include/disassem.h 208052 2010-05-14 00:00:19Z cognet $
+ * $FreeBSD: stable/11/sys/arm/include/disassem.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_DISASSEM_H_
 #define _MACHINE_DISASSEM_H_
 typedef struct {
 	u_int	(*di_readword)(u_int);
-	void	(*di_printaddr)(u_int);	
+	void	(*di_printaddr)(u_int);
 	int	(*di_printf)(const char *, ...) __printflike(1, 2);
 } disasm_interface_t;
 

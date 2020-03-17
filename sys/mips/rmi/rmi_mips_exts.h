@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2009 RMI Corporation
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * RMI_BSD
- * $FreeBSD: stable/10/sys/mips/rmi/rmi_mips_exts.h 213441 2010-10-05 05:49:38Z jchandra $
+ * $FreeBSD: stable/11/sys/mips/rmi/rmi_mips_exts.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef __MIPS_EXTS_H__
 #define	__MIPS_EXTS_H__

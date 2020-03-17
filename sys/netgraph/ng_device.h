@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mark Santcroos <marks@ripe.net>
  *
@@ -23,7 +22,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_device.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/ng_device.h 139823 2005-01-07 01:45:51Z imp $
  *
  */
 

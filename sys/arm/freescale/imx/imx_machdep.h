@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/arm/freescale/imx/imx_machdep.h 294678 2016-01-24 19:34:05Z ian $
+ * $FreeBSD: stable/11/sys/arm/freescale/imx/imx_machdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	IMX_MACHDEP_H
@@ -56,10 +55,16 @@ void imx_wdog_init_last_reset(vm_offset_t _wdsr_phys);
 #define	IMXSOC_6DL	0x61000000
 #define	IMXSOC_6S	0x62000000
 #define	IMXSOC_6Q	0x63000000
+#define	IMXSOC_6UL	0x64000000
 #define	IMXSOC_FAMSHIFT	28
 
 u_int imx_soc_type(void);
-u_int imx_soc_family(void);
+
+static inline u_int
+imx_soc_family(void)
+{
+	return (imx_soc_type() >> IMXSOC_FAMSHIFT);
+}
 
 #endif
 

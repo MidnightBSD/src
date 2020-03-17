@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip.h	8.2 (Berkeley) 6/1/94
- * $FreeBSD: stable/10/sys/netinet/ip.h 286105 2015-07-31 03:40:09Z kevlo $
+ * $FreeBSD: stable/11/sys/netinet/ip.h 346755 2019-04-26 17:01:56Z mav $
  */
 
 #ifndef _NETINET_IP_H_
@@ -93,6 +92,11 @@ struct ip {
 #define	IPTOS_PREC_ROUTINE		IPTOS_DSCP_CS0
 
 /*
+ * Offset of Diffserv decimal value to convert it to tos value .
+ */
+#define	IPTOS_DSCP_OFFSET		2
+
+/*
  * Definitions for DiffServ Codepoints as per RFC2474 and RFC5865.
  */
 #define	IPTOS_DSCP_CS0		0x00
@@ -148,7 +152,7 @@ struct ip {
 #define	IPOPT_SECURITY		130		/* provide s,c,h,tcc */
 #define	IPOPT_LSRR		131		/* loose source route */
 #define	IPOPT_ESO		133		/* extended security */
-#define	IPOPT_CIPSO		134		/* commerical security */
+#define	IPOPT_CIPSO		134		/* commercial security */
 #define	IPOPT_SATID		136		/* satnet id */
 #define	IPOPT_SSRR		137		/* strict source route */
 #define	IPOPT_RA		148		/* router alert */

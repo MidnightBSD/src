@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.

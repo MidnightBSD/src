@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: stable/10/sys/mips/conf/XLRN32 266331 2014-05-17 17:34:37Z ian $
+# $FreeBSD: stable/11/sys/mips/conf/XLRN32 323467 2017-09-11 22:21:15Z ian $
 
 machine 	mips mipsn32
 ident 		XLRN32
@@ -113,7 +113,7 @@ device		ic
 device		iic
 device		iicbb
 device		iicbus
-device		ds1374u		# RTC on XLR boards
+device		ds13rtc		# RTC on XLR boards
 device		max6657		# Temparature sensor on XLR boards
 device		at24co2n	# EEPROM on XLR boards
 

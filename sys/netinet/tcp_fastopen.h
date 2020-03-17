@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Patrick Kelsey
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/netinet/tcp_fastopen.h 292823 2015-12-28 02:43:12Z pkelsey $
+ * $FreeBSD: stable/11/sys/netinet/tcp_fastopen.h 292706 2015-12-24 19:09:48Z pkelsey $
  */
 
 #ifndef _TCP_FASTOPEN_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: iq31244_7seg.c,v 1.2 2003/07/15 00:25:01 lukem Exp $	*/
 
 /*-

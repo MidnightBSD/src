@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  * Copyright (C) 2005 Rusty Russell, IBM Corporation
  * Copyright (C) 2005 XenSource Ltd.

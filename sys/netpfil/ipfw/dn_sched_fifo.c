@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -26,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/netpfil/ipfw/dn_sched_fifo.c 325731 2017-11-12 01:28:20Z truckman $
+ * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched_fifo.c 325730 2017-11-12 01:26:43Z truckman $
  */
 
 #ifdef _KERNEL
@@ -68,6 +67,7 @@ fifo_enqueue(struct dn_sch_inst *si, struct dn_queue *q, struct mbuf *m)
 	 * re-enqueue from an existing scheduler, which we should
 	 * handle.
 	 */
+	(void)q;
 	return dn_enqueue((struct dn_queue *)(si+1), m, 0);
 }
 

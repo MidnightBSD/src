@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/cam/ctl/ctl_util.c 312847 2017-01-26 21:08:58Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_util.c 312846 2017-01-26 21:08:27Z mav $");
 
 #ifdef _KERNEL
 #include <sys/param.h>

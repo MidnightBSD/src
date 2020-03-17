@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_fsm.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/netinet/tcp_fsm.h 171656 2007-07-30 11:06:42Z des $
+ * $FreeBSD: stable/11/sys/netinet/tcp_fsm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETINET_TCP_FSM_H_
@@ -74,7 +73,8 @@
 
 #define	TCPS_HAVERCVDSYN(s)	((s) >= TCPS_SYN_RECEIVED)
 #define	TCPS_HAVEESTABLISHED(s)	((s) >= TCPS_ESTABLISHED)
-#define	TCPS_HAVERCVDFIN(s)	((s) >= TCPS_TIME_WAIT)
+#define	TCPS_HAVERCVDFIN(s)	\
+    ((s) == TCPS_CLOSE_WAIT || ((s) >= TCPS_CLOSING && (s) != TCPS_FIN_WAIT_2))
 
 #ifdef	TCPOUTFLAGS
 /*

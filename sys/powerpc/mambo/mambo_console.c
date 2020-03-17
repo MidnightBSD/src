@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 by Nathan Whitehorn. All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/powerpc/mambo/mambo_console.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/powerpc/mambo/mambo_console.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>

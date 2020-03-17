@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cache_mipsNN.h,v 1.4 2003/02/17 11:35:02 simonb Exp $	*/
 
 /*
@@ -35,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/include/cache_mipsNN.h 210311 2010-07-20 19:25:11Z jmallett $
+ * $FreeBSD: stable/11/sys/mips/include/cache_mipsNN.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	_MACHINE_CACHE_MIPSNN_H_
 #define	_MACHINE_CACHE_MIPSNN_H_
@@ -44,29 +43,50 @@ void	mipsNN_cache_init(struct mips_cpuinfo *);
 
 void	mipsNN_icache_sync_all_16(void);
 void	mipsNN_icache_sync_all_32(void);
+void	mipsNN_icache_sync_all_64(void);
+void	mipsNN_icache_sync_all_128(void);
 void	mipsNN_icache_sync_range_16(vm_offset_t, vm_size_t);
 void	mipsNN_icache_sync_range_32(vm_offset_t, vm_size_t);
+void	mipsNN_icache_sync_range_64(vm_offset_t, vm_size_t);
+void	mipsNN_icache_sync_range_128(vm_offset_t, vm_size_t);
 void	mipsNN_icache_sync_range_index_16(vm_offset_t, vm_size_t);
 void	mipsNN_icache_sync_range_index_32(vm_offset_t, vm_size_t);
+void	mipsNN_icache_sync_range_index_64(vm_offset_t, vm_size_t);
+void	mipsNN_icache_sync_range_index_128(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wbinv_all_16(void);
 void	mipsNN_pdcache_wbinv_all_32(void);
+void	mipsNN_pdcache_wbinv_all_64(void);
+void	mipsNN_pdcache_wbinv_all_128(void);
 void	mipsNN_pdcache_wbinv_range_16(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wbinv_range_32(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_wbinv_range_64(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_wbinv_range_128(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wbinv_range_index_16(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wbinv_range_index_32(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_wbinv_range_index_64(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_wbinv_range_index_128(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_inv_range_16(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_inv_range_32(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_inv_range_64(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_inv_range_128(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wb_range_16(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wb_range_32(vm_offset_t, vm_size_t);
-#ifdef CPU_CNMIPS
-void	mipsNN_icache_sync_all_128(void);
-void	mipsNN_icache_sync_range_128(vm_offset_t, vm_size_t);
-void	mipsNN_icache_sync_range_index_128(vm_offset_t, vm_size_t);
-void	mipsNN_pdcache_wbinv_all_128(void);
-void	mipsNN_pdcache_wbinv_range_128(vm_offset_t, vm_size_t);
-void	mipsNN_pdcache_wbinv_range_index_128(vm_offset_t, vm_size_t);
-void	mipsNN_pdcache_inv_range_128(vm_offset_t, vm_size_t);
+void	mipsNN_pdcache_wb_range_64(vm_offset_t, vm_size_t);
 void	mipsNN_pdcache_wb_range_128(vm_offset_t, vm_size_t);
-#endif
+void	mipsNN_sdcache_wbinv_all_32(void);
+void	mipsNN_sdcache_wbinv_all_64(void);
+void	mipsNN_sdcache_wbinv_all_128(void);
+void	mipsNN_sdcache_wbinv_range_32(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wbinv_range_64(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wbinv_range_128(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wbinv_range_index_32(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wbinv_range_index_64(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wbinv_range_index_128(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_inv_range_32(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_inv_range_64(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_inv_range_128(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wb_range_32(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wb_range_64(vm_offset_t, vm_size_t);
+void	mipsNN_sdcache_wb_range_128(vm_offset_t, vm_size_t);
 
 #endif	/* _MACHINE_CACHE_MIPSNN_H_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_pppoe.h
  */
@@ -38,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_pppoe.h 331059 2018-03-16 15:10:13Z eugen $
+ * $FreeBSD: stable/11/sys/netgraph/ng_pppoe.h 331058 2018-03-16 15:04:13Z eugen $
  * $Whistle: ng_pppoe.h,v 1.7 1999/10/16 10:16:43 julian Exp $
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_hci_ulpi.h
  */
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_ulpi.h,v 1.2 2003/04/26 22:35:21 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/hci/ng_hci_ulpi.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD: stable/11/sys/netgraph/bluetooth/hci/ng_hci_ulpi.h 290038 2015-10-27 03:42:26Z takawata $
  */
 
 #ifndef _NETGRAPH_HCI_ULPI_H_
@@ -48,6 +47,7 @@ int  ng_hci_lp_discon_ind                (ng_hci_unit_con_p, int);
 int  ng_hci_lp_qos_req                   (ng_hci_unit_p, item_p, hook_p);
 int  ng_hci_lp_qos_cfm                   (ng_hci_unit_con_p, int);
 int  ng_hci_lp_qos_ind                   (ng_hci_unit_con_p);
+int  ng_hci_lp_enc_change                (ng_hci_unit_con_p, int);
 
 void ng_hci_process_con_timeout          (node_p, hook_p, void *, int);
 

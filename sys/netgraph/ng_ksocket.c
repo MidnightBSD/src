@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_ksocket.c
  */
@@ -38,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_ksocket.c 260226 2014-01-03 12:28:33Z glebius $
+ * $FreeBSD: stable/11/sys/netgraph/ng_ksocket.c 298813 2016-04-29 21:25:05Z pfg $
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -68,7 +67,6 @@
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netatalk/at.h>
 
 #ifdef NG_SEPARATE_MALLOC
 static MALLOC_DEFINE(M_NETGRAPH_KSOCKET, "netgraph_ksock",
@@ -122,8 +120,6 @@ static const struct ng_ksocket_alias ng_ksocket_families[] = {
 	{ "local",	PF_LOCAL	},
 	{ "inet",	PF_INET		},
 	{ "inet6",	PF_INET6	},
-	{ "atalk",	PF_APPLETALK	},
-	{ "ipx",	PF_IPX		},
 	{ "atm",	PF_ATM		},
 	{ NULL,		-1		},
 };
@@ -153,8 +149,6 @@ static const struct ng_ksocket_alias ng_ksocket_protos[] = {
 	{ "encap",	IPPROTO_ENCAP,		PF_INET		},
 	{ "divert",	IPPROTO_DIVERT,		PF_INET		},
 	{ "pim",	IPPROTO_PIM,		PF_INET		},
-	{ "ddp",	ATPROTO_DDP,		PF_APPLETALK	},
-	{ "aarp",	ATPROTO_AARP,		PF_APPLETALK	},
 	{ NULL,		-1					},
 };
 
@@ -302,9 +296,7 @@ ng_ksocket_sockaddr_parse(const struct ng_parse_type *type,
 	    }
 
 #if 0
-	case PF_APPLETALK:	/* XXX implement these someday */
-	case PF_INET6:
-	case PF_IPX:
+	case PF_INET6:	/* XXX implement this someday */
 #endif
 
 	default:
@@ -366,9 +358,7 @@ ng_ksocket_sockaddr_unparse(const struct ng_parse_type *type,
 	    }
 
 #if 0
-	case PF_APPLETALK:	/* XXX implement these someday */
-	case PF_INET6:
-	case PF_IPX:
+	case PF_INET6:	/* XXX implement this someday */
 #endif
 
 	default:
@@ -642,7 +632,7 @@ ng_ksocket_connect(hook_p hook)
 	 * first created and now (on another processesor) will
 	 * be earlier on the queue than the request to finalise the hook.
 	 * By the time the hook is finalised,
-	 * The queued upcalls will have happenned and the code
+	 * The queued upcalls will have happened and the code
 	 * will have discarded them because of a lack of a hook.
 	 * (socket not open).
 	 *
@@ -652,9 +642,9 @@ ng_ksocket_connect(hook_p hook)
 	 * Since we are a netgraph operation
 	 * We know that we hold a lock on this node. This forces the
 	 * request we make below to be queued rather than implemented
-	 * immediatly which will cause the upcall function to be called a bit
+	 * immediately which will cause the upcall function to be called a bit
 	 * later.
-	 * However, as we will run any waiting queued operations immediatly
+	 * However, as we will run any waiting queued operations immediately
 	 * after doing this one, if we have not finalised the other end
 	 * of the hook, those queued operations will fail.
 	 */

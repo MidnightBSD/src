@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/broadcom/bcm2835/bcm2835_fb.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_fb.c 356110 2019-12-27 03:00:18Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -475,15 +474,15 @@ bcmfb_configure(int flags)
 	if ((root != 0) && 
 	    (display = fdt_find_compatible(root, "broadcom,bcm2835-fb", 1))) {
 		if (sc->width == 0) {
-			if ((OF_getprop(display, "broadcom,width", 
+			if ((OF_getencprop(display, "broadcom,width",
 			    &cell, sizeof(cell))) > 0)
-				sc->width = (int)fdt32_to_cpu(cell);
+				sc->width = cell;
 		}
 
 		if (sc->height == 0) {
 			if ((OF_getprop(display, "broadcom,height", 
 			    &cell, sizeof(cell))) > 0)
-				sc->height = (int)fdt32_to_cpu(cell);
+				sc->height = cell;
 		}
 	}
 
@@ -850,22 +849,3 @@ bcmfb_putm(video_adapter_t *adp, int x, int y, uint8_t *pixel_image,
 
 	return (0);
 }
-
-/*
- * Define a stub keyboard driver in case one hasn't been
- * compiled into the kernel
- */
-#include <sys/kbio.h>
-#include <dev/kbd/kbdreg.h>
-
-static int dummy_kbd_configure(int flags);
-
-keyboard_switch_t bcmdummysw;
-
-static int
-dummy_kbd_configure(int flags)
-{
-
-	return (0);
-}
-KEYBOARD_DRIVER(bcmdummy, bcmdummysw, dummy_kbd_configure);

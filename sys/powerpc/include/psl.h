@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
@@ -30,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: psl.h,v 1.5 2000/11/19 19:52:37 matt Exp $
- * $FreeBSD: stable/10/sys/powerpc/include/psl.h 271171 2014-09-05 15:13:41Z jhibbits $
+ * $FreeBSD: stable/11/sys/powerpc/include/psl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_PSL_H_
@@ -40,6 +39,7 @@
  * Machine State Register (MSR) - All cores
  */
 #define	PSL_VEC		0x02000000UL	/* AltiVec/SPE vector unit available */
+#define	PSL_VSX		0x00800000UL	/* Vector-Scalar unit available */
 #define	PSL_EE		0x00008000UL	/* external interrupt enable */
 #define	PSL_PR		0x00004000UL	/* privilege mode (1 == user) */
 #define	PSL_FP		0x00002000UL	/* floating point enable */

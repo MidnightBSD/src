@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Thomas Skibo.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_mp.c 278701 2015-02-13 20:21:13Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_mp.c 307344 2016-10-15 08:27:54Z mmel $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -32,6 +31,10 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_mp.c 278701 2015-02-13 20:21:13
 #include <sys/mutex.h>
 #include <sys/smp.h>
 
+#include <vm/vm.h>
+#include <vm/pmap.h>
+
+#include <machine/cpu.h>
 #include <machine/smp.h>
 #include <machine/fdt.h>
 #include <machine/intr.h>
@@ -44,25 +47,11 @@ __FBSDID("$FreeBSD: stable/10/sys/arm/xilinx/zy7_mp.c 278701 2015-02-13 20:21:13
 #define	   SCU_CONTROL_ENABLE	(1 << 0)
 
 void
-platform_mp_init_secondary(void)
-{
-
-	gic_init_secondary();
-}
-
-void
 platform_mp_setmaxid(void)
 {
 
 	mp_maxid = 1;
-}
-
-int
-platform_mp_probe(void)
-{
-
 	mp_ncpus = 2;
-	return (1);
 }
 
 void    
@@ -102,16 +91,9 @@ platform_mp_start_ap(void)
 	 * magic location, 0xfffffff0, isn't in the SCU's filtering range so it
 	 * needs a write-back too.
 	 */
-	cpu_idcache_wbinv_all();
-	cpu_l2cache_wbinv_all();
+	dcache_wbinv_poc_all();
 
 	/* Wake up CPU1. */
-	armv7_sev();
-}
-
-void
-platform_ipi_send(cpuset_t cpus, u_int ipi)
-{
-
-	pic_ipi_send(cpus, ipi);
+	dsb();
+	sev();
 }

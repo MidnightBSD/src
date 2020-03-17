@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet6/dest6.c 249294 2013-04-09 07:11:22Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet6/dest6.c 356623 2020-01-11 01:15:38Z bz $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -48,6 +47,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet6/dest6.c 249294 2013-04-09 07:11:22Z a
 #include <sys/kernel.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/route.h>
 
 #include <netinet/in.h>
@@ -91,7 +91,7 @@ dest6_input(struct mbuf **mp, int *offp, int proto)
 	opt = (u_int8_t *)dstopts + sizeof(struct ip6_dest);
 
 	/* search header for all options. */
-	for (optlen = 0; dstoptlen > 0; dstoptlen -= optlen, opt += optlen) {
+	for (; dstoptlen > 0; dstoptlen -= optlen, opt += optlen) {
 		if (*opt != IP6OPT_PAD1 &&
 		    (dstoptlen < IP6OPT_MINLEN || *(opt + 1) + 2 > dstoptlen)) {
 			IP6STAT_INC(ip6s_toosmall);
@@ -116,6 +116,7 @@ dest6_input(struct mbuf **mp, int *offp, int proto)
 	}
 
 	*offp = off;
+	*mp = m;
 	return (dstopts->ip6d_nxt);
 
   bad:

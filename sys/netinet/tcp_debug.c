@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/tcp_debug.c 241913 2012-10-22 21:09:03Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_debug.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

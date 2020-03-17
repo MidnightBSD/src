@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 David E. O'Brien
  *
@@ -28,7 +27,7 @@
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
  * $NetBSD: endian.h,v 1.7 1999/08/21 05:53:51 simonb Exp $
- * $FreeBSD: stable/10/sys/arm/include/endian.h 236992 2012-06-13 05:02:51Z imp $
+ * $FreeBSD: stable/11/sys/arm/include/endian.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ENDIAN_H_
@@ -93,7 +92,7 @@ __bswap32_var(__uint32_t v)
 			"mov %0, %0, ror #8\n"
 			"eor %0, %0, %1, lsr #8\n"
 			 : "+r" (v), "=r" (t1));
-	
+
 	return (v);
 }
 
@@ -107,9 +106,9 @@ __bswap16_var(__uint16_t v)
 	    "orr    %0, %0, %0, lsr #16\n"
 	    "bic    %0, %0, %0, lsl #16"
 	    : "+r" (ret));
-	
+
 	return ((__uint16_t)ret);
-}		
+}
 
 #ifdef __OPTIMIZE__
 

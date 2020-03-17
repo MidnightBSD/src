@@ -4,7 +4,7 @@
 # then override the default options (adding devices as needed) and adding
 # hints as needed (for example, the GPIO and LAN PHY.)
 
-# $FreeBSD: stable/10/sys/mips/conf/AR934X_BASE.hints 253512 2013-07-21 04:00:48Z adrian $
+# $FreeBSD: stable/11/sys/mips/conf/AR934X_BASE.hints 261871 2014-02-14 05:25:15Z adrian $
 
 hint.apb.0.at="nexus0"
 hint.apb.0.irq=4
@@ -21,6 +21,10 @@ hint.ehci.0.at="nexus0"
 hint.ehci.0.maddr=0x1b000100
 hint.ehci.0.msize=0x00001000
 hint.ehci.0.irq=1
+
+# pci
+hint.pcib.0.at="nexus0"
+hint.pcib.0.irq=0
 
 hint.arge.0.at="nexus0"
 hint.arge.0.maddr=0x19000000

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/sctp.h 294158 2016-01-16 16:46:00Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp.h 347673 2019-05-16 09:20:54Z tuexen $");
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
@@ -197,6 +196,9 @@ struct sctp_paramhdr {
 #define SCTP_SS_VALUE			0x00001204
 #define SCTP_CC_OPTION			0x00001205	/* Options for CC
 							 * modules */
+/* For I-DATA */
+#define SCTP_INTERLEAVING_SUPPORTED	0x00001206
+
 /* read only */
 #define SCTP_GET_SNDBUF_USE		0x00001101
 #define SCTP_GET_STAT_LOG		0x00001103
@@ -415,7 +417,7 @@ struct sctp_error_unresolv_addr {
 
 struct sctp_error_unrecognized_chunk {
 	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_UNRECOG_CHUNK */
-	struct sctp_chunkhdr ch;/* header from chunk in error */
+	struct sctp_chunkhdr ch;	/* header from chunk in error */
 }                             SCTP_PACKED;
 
 struct sctp_error_no_user_data {
@@ -453,6 +455,7 @@ struct sctp_error_auth_invalid_hmac {
 /* EY nr_sack chunk id*/
 #define SCTP_NR_SELECTIVE_ACK	0x10
 /************0x40 series ***********/
+#define SCTP_IDATA		0x40
 /************0x80 series ***********/
 /* RFC5061 */
 #define	SCTP_ASCONF_ACK		0x80
@@ -468,7 +471,7 @@ struct sctp_error_auth_invalid_hmac {
 #define SCTP_FORWARD_CUM_TSN	0xc0
 /* RFC5061 */
 #define SCTP_ASCONF		0xc1
-
+#define SCTP_IFORWARD_CUM_TSN	0xc2
 
 /* ABORT and SHUTDOWN COMPLETE FLAG */
 #define SCTP_HAD_NO_TCB		0x01
@@ -486,6 +489,7 @@ struct sctp_error_auth_invalid_hmac {
 					 * time */
 #define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst
 					 * in sat */
+#define SCTP_MAX_SENDALL_LIMIT 1024
 
 /* Data Chuck Specific Flags */
 #define SCTP_DATA_FRAG_MASK        0x03
@@ -511,6 +515,7 @@ struct sctp_error_auth_invalid_hmac {
 #define SCTP_PCB_FLAGS_BOUNDALL		0x00000004
 #define SCTP_PCB_FLAGS_ACCEPTING	0x00000008
 #define SCTP_PCB_FLAGS_UNBOUND		0x00000010
+#define SCTP_PCB_FLAGS_SND_ITERATOR_UP  0x00000020
 #define SCTP_PCB_FLAGS_CLOSE_IP         0x00040000
 #define SCTP_PCB_FLAGS_WAS_CONNECTED    0x00080000
 #define SCTP_PCB_FLAGS_WAS_ABORTED      0x00100000
@@ -542,7 +547,6 @@ struct sctp_error_auth_invalid_hmac {
 #define SCTP_PCB_FLAGS_INTERLEAVE_STRMS  0x0000000000000010
 #define SCTP_PCB_FLAGS_DO_ASCONF         0x0000000000000020
 #define SCTP_PCB_FLAGS_AUTO_ASCONF       0x0000000000000040
-#define SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE  0x0000000000000080
 /* socket options */
 #define SCTP_PCB_FLAGS_NODELAY           0x0000000000000100
 #define SCTP_PCB_FLAGS_AUTOCLOSE         0x0000000000000200

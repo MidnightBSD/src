@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/mips/atheros/uart_dev_ar933x.h 248843 2013-03-28 19:27:06Z adrian $
+ * $FreeBSD: stable/11/sys/mips/atheros/uart_dev_ar933x.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef	__UART_DEV_AR933X__
 #define	__UART_DEV_AR933X__

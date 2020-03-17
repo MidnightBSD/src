@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*************************************************************************
 Copyright (c) 2003-2007  Cavium Networks (support@cavium.com). All rights
 reserved.
@@ -29,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-mdio.c 215974 2010-11-28 05:57:24Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octe/ethernet-mdio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/mips/cavium/octe/ethernet-mdio.c 215974 2010-1
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"
@@ -71,6 +71,7 @@ int cvm_oct_mdio_read(struct ifnet *ifp, int phy_id, int location)
 	cvmx_write_csr(CVMX_SMI_CMD, smi_cmd.u64);
 
 	do {
+		cvmx_wait(1000);
 		smi_rd.u64 = cvmx_read_csr(CVMX_SMI_RD_DAT);
 	} while (smi_rd.s.pending);
 
@@ -108,6 +109,7 @@ void cvm_oct_mdio_write(struct ifnet *ifp, int phy_id, int location, int val)
 	cvmx_write_csr(CVMX_SMI_CMD, smi_cmd.u64);
 
 	do {
+		cvmx_wait(1000);
 		smi_wr.u64 = cvmx_read_csr(CVMX_SMI_WR_DAT);
 	} while (smi_wr.s.pending);
 	MDIO_UNLOCK();

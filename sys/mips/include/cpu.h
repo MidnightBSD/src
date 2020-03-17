@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: cpu.h,v 1.4 1998/09/15 10:50:12 pefo Exp $	*/
 
 /*-
@@ -42,7 +41,7 @@
  *
  *	from: @(#)cpu.h	8.4 (Berkeley) 1/4/94
  *	JNPR: cpu.h,v 1.9.2.2 2007/09/10 08:23:46 girish
- * $FreeBSD: stable/10/sys/mips/include/cpu.h 253750 2013-07-28 18:44:17Z avg $
+ * $FreeBSD: stable/11/sys/mips/include/cpu.h 340270 2018-11-08 22:42:55Z jhb $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -70,6 +69,7 @@
 #define	cpu_getstack(td)	((td)->td_frame->sp)
 #define	cpu_setstack(td, nsp)	((td)->td_frame->sp = (nsp))
 #define	cpu_spinwait()		/* nothing */
+#define	cpu_lock_delay()	DELAY(1)
 
 /*
  * A machine-independent interface to the CPU's counter.

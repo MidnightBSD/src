@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_ip_input.c
  */
@@ -65,7 +64,7 @@
  * Author:		Brooks Davis <brooks@FreeBSD.org>
  * Derived from:	ng_hole.c
  *
- * $FreeBSD: stable/10/sys/netgraph/ng_ip_input.c 194012 2009-06-11 16:50:49Z zec $
+ * $FreeBSD: stable/11/sys/netgraph/ng_ip_input.c 194012 2009-06-11 16:50:49Z zec $
  */
 
 /*

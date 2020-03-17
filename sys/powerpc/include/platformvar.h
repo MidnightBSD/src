@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Peter Grehan
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/powerpc/include/platformvar.h 246732 2013-02-13 02:21:45Z rpaulo $
+ * $FreeBSD: stable/11/sys/powerpc/include/platformvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_PLATFORMVAR_H_

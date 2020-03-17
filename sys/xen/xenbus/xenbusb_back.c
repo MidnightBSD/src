@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  * Talks to Xen Store to figure out what devices we have.
  *
