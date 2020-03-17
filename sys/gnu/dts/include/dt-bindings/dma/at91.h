@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides macros for at91 dma bindings.
  *

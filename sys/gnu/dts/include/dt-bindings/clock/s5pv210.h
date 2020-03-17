@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013 Samsung Electronics Co., Ltd.
  * Author: Mateusz Krawczuk <m.krawczuk@partner.samsung.com>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Inspired by original work from pxa2xx-regs.h by Nicolas Pitre
  * Copyright (C) 2014 Robert Jarzmik

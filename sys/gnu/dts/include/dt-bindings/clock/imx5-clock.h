@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2013 Lucas Stach, Pengutronix <l.stach@pengutronix.de>
  *

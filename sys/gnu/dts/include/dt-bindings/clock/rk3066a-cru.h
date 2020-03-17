@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 MundoReader S.L.
  * Author: Heiko Stuebner <heiko@sntech.de>
@@ -13,6 +12,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+
+#ifndef _DT_BINDINGS_CLK_ROCKCHIP_RK3066A_H
+#define _DT_BINDINGS_CLK_ROCKCHIP_RK3066A_H
 
 #include <dt-bindings/clock/rk3188-cru-common.h>
 
@@ -34,3 +36,5 @@
 #define SRST_HDMI		96
 #define SRST_HDMI_APB		97
 #define SRST_CIF1		111
+
+#endif

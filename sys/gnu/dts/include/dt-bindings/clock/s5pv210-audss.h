@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 Tomasz Figa <tomasz.figa@gmail.com>
  *

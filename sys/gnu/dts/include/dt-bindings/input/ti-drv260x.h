@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * DRV260X haptics driver family
  *

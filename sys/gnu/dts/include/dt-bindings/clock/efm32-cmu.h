@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __DT_BINDINGS_CLOCK_EFM32_CMU_H
 #define __DT_BINDINGS_CLOCK_EFM32_CMU_H
 

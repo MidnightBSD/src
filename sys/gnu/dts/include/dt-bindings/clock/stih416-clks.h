@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants clk index STMicroelectronics
  * STiH416 SoC.

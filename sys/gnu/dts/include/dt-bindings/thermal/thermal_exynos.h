@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * thermal_exynos.h - Samsung EXYNOS TMU device tree definitions
  *

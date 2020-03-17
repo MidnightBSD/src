@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants for binding nvidia,tegra20-car.
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef _DT_BINDINGS_CLOCK_EXYNOS_5410_H
 #define _DT_BINDINGS_CLOCK_EXYNOS_5410_H
 

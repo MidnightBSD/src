@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2013 Freescale Semiconductor, Inc.
  *

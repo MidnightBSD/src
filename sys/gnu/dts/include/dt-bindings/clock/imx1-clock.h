@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2014 Alexander Shiyan <shc_work@mail.ru>
  *

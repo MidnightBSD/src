@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2013 Greg Ungerer <gerg@uclinux.org>
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef _DT_BINDINGS_SAMSUNG_I2S_H
 #define _DT_BINDINGS_SAMSUNG_I2S_H
 

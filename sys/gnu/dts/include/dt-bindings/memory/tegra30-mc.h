@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef DT_BINDINGS_MEMORY_TEGRA30_MC_H
 #define DT_BINDINGS_MEMORY_TEGRA30_MC_H
 

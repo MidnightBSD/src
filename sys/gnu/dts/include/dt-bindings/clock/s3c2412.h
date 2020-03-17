@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013 Heiko Stuebner <heiko@sntech.de>
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2014 Maxime Ripard
  *

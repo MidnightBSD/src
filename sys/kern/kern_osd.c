@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_osd.c 298834 2016-04-30 04:01:22Z jamie $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_osd.c 298661 2016-04-26 19:57:35Z cem $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -65,8 +64,7 @@ struct osd_master {
 static MALLOC_DEFINE(M_OSD, "osd", "Object Specific Data");
 
 static int osd_debug = 0;
-TUNABLE_INT("debug.osd", &osd_debug);
-SYSCTL_INT(_debug, OID_AUTO, osd, CTLFLAG_RW, &osd_debug, 0, "OSD debug level");
+SYSCTL_INT(_debug, OID_AUTO, osd, CTLFLAG_RWTUN, &osd_debug, 0, "OSD debug level");
 
 #define	OSD_DEBUG(...)	do {						\
 	if (osd_debug) {						\
@@ -204,7 +202,7 @@ osd_set(u_int type, struct osd *osd, u_int slot, void *value)
 	return (osd_set_reserved(type, osd, slot, NULL, value));
 }
 
-void *
+void **
 osd_reserve(u_int slot)
 {
 
@@ -215,7 +213,7 @@ osd_reserve(u_int slot)
 }
 
 int
-osd_set_reserved(u_int type, struct osd *osd, u_int slot, void *rsv,
+osd_set_reserved(u_int type, struct osd *osd, u_int slot, void **rsv,
     void *value)
 {
 	struct rm_priotracker tracker;
@@ -226,7 +224,7 @@ osd_set_reserved(u_int type, struct osd *osd, u_int slot, void *rsv,
 
 	rm_rlock(&osdm[type].osd_object_lock, &tracker);
 	if (slot > osd->osd_nslots) {
-		void *newptr;
+		void **newptr;
 
 		if (value == NULL) {
 			OSD_DEBUG(
@@ -285,7 +283,7 @@ osd_set_reserved(u_int type, struct osd *osd, u_int slot, void *rsv,
 }
 
 void
-osd_free_reserved(void *rsv)
+osd_free_reserved(void **rsv)
 {
 
 	OSD_DEBUG("Discarding reserved slot array.");

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants for MPC512x clock specs in DT bindings.
  */

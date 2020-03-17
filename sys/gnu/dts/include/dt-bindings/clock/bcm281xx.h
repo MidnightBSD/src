@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2013 Broadcom Corporation
  * Copyright 2013 Linaro Limited

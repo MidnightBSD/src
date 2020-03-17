@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Header providing constants for Rockchip pinctrl bindings.
  *

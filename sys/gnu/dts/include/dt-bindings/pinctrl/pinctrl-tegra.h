@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants for Tegra pinctrl bindings.
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Header providing constants for i.MX28 pinctrl bindings.
  *

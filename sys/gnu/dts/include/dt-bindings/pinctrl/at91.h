@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants for most at91 pinctrl bindings.
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __DT_CS35L32_H
 #define __DT_CS35L32_H
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants for DRA7 ATL (Audio Tracking Logic)
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __DT_FSL_IMX_AUDMUX_H
 #define __DT_FSL_IMX_AUDMUX_H
 

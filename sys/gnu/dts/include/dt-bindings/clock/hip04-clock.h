@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2014 Hisilicon Limited.
  * Copyright (c) 2013-2014 Linaro Limited.

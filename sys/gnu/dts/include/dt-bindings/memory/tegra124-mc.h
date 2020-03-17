@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* SPDX-License-Identifier: GPL-2.0 */
 #ifndef DT_BINDINGS_MEMORY_TEGRA124_MC_H
 #define DT_BINDINGS_MEMORY_TEGRA124_MC_H
 

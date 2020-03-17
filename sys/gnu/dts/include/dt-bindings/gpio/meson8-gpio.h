@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * GPIO definitions for Amlogic Meson8 SoCs
  *

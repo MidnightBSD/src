@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Berlin2 BG2/BG2CD clock tree IDs
  */

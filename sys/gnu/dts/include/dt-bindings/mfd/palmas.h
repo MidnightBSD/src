@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides macros for Palmas device bindings.
  *
@@ -8,7 +7,7 @@
  *
  */
 
-#ifndef __DT_BINDINGS_PALMAS_H__
+#ifndef __DT_BINDINGS_PALMAS_H
 #define __DT_BINDINGS_PALMAS_H
 
 /* External control pins */
