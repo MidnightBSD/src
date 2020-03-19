@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2008 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -38,7 +37,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac_bsdextended/mac_bsdextended.c 321056 2017-07-16 19:25:18Z emaste $
+ * $FreeBSD: stable/11/sys/security/mac_bsdextended/mac_bsdextended.c 321055 2017-07-16 19:24:09Z emaste $
  */
 
 /*
@@ -77,9 +76,8 @@ static SYSCTL_NODE(_security_mac, OID_AUTO, bsdextended, CTLFLAG_RW, 0,
     "TrustedBSD extended BSD MAC policy controls");
 
 static int	ugidfw_enabled = 1;
-SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, enabled, CTLFLAG_RWTUN,
     &ugidfw_enabled, 0, "Enforce extended BSD policy");
-TUNABLE_INT("security.mac.bsdextended.enabled", &ugidfw_enabled);
 
 static MALLOC_DEFINE(M_MACBSDEXTENDED, "mac_bsdextended",
     "BSD Extended MAC rule");

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * Copyright (c) 2001-2002 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac_partition/mac_partition.h 126097 2004-02-22 00:33:12Z rwatson $
+ * $FreeBSD: stable/11/sys/security/mac_partition/mac_partition.h 126097 2004-02-22 00:33:12Z rwatson $
  */
 
 /*

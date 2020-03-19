@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2006, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -67,11 +66,10 @@
  * src/sys/security/mac_*.
  */
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_framework.c 302237 2016-06-27 22:10:07Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_framework.c 337465 2018-08-08 17:11:07Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -439,7 +437,7 @@ mac_policy_register(struct mac_policy_conf *mpc)
 	 * Per-policy initialization.  Currently, this takes place under the
 	 * exclusive lock, so policies must not sleep in their init method.
 	 * In the future, we may want to separate "init" from "start", with
-	 * "init" occuring without the lock held.  Likewise, on tear-down,
+	 * "init" occurring without the lock held.  Likewise, on tear-down,
 	 * breaking out "stop" from "destroy".
 	 */
 	if (mpc->mpc_ops->mpo_init != NULL)
@@ -588,7 +586,9 @@ int
 mac_check_structmac_consistent(struct mac *mac)
 {
 
-	if (mac->m_buflen > MAC_MAX_LABEL_BUF_LEN)
+	/* Require that labels have a non-zero length. */
+	if (mac->m_buflen > MAC_MAX_LABEL_BUF_LEN ||
+	    mac->m_buflen <= sizeof(""))
 		return (EINVAL);
 
 	return (0);

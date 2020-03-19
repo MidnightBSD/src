@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2006 SPARTA, Inc.
  * Copyright (c) 2009-2011 Robert N. M. Watson
@@ -38,9 +37,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_posix_shm.c 255971 2013-10-01 15:40:27Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_posix_shm.c 258541 2013-11-25 07:38:45Z attilio $");
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>

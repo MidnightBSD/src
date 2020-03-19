@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * Copyright (c) 2001-2004 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac_biba/mac_biba.h 132232 2004-07-16 02:03:50Z rwatson $
+ * $FreeBSD: stable/11/sys/security/mac_biba/mac_biba.h 299187 2016-05-06 16:59:04Z pfg $
  */
 /*
  * Definitions for the TrustedBSD Biba integrity policy module.
@@ -55,7 +54,7 @@
 					 * MAC_BIBA_TYPE_LABEL. */
 #define	MAC_BIBA_TYPE_HIGH	3	/* Dominates any
 					 * MAC_BIBA_TYPE_LABEL. */
-#define	MAC_BIBA_TYPE_EQUAL	4	/* Equivilent to any
+#define	MAC_BIBA_TYPE_EQUAL	4	/* Equivalent to any
 					 * MAC_BIBA_TYPE_LABEL. */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -44,9 +43,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_net.c 233937 2012-04-06 06:53:58Z melifaro $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_net.c 332288 2018-04-08 16:54:07Z brooks $");
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -408,7 +406,7 @@ mac_ifnet_ioctl_get(struct ucred *cred, struct ifreq *ifr,
 	if (!(mac_labeled & MPC_OBJECT_IFNET))
 		return (EINVAL);
 
-	error = copyin(ifr->ifr_ifru.ifru_data, &mac, sizeof(mac));
+	error = copyin(ifr_data_get_ptr(ifr), &mac, sizeof(mac));
 	if (error)
 		return (error);
 
@@ -451,7 +449,7 @@ mac_ifnet_ioctl_set(struct ucred *cred, struct ifreq *ifr, struct ifnet *ifp)
 	if (!(mac_labeled & MPC_OBJECT_IFNET))
 		return (EINVAL);
 
-	error = copyin(ifr->ifr_ifru.ifru_data, &mac, sizeof(mac));
+	error = copyin(ifr_data_get_ptr(ifr), &mac, sizeof(mac));
 	if (error)
 		return (error);
 

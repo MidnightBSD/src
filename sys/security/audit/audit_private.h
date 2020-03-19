@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2009 Apple Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/audit/audit_private.h 255219 2013-09-05 00:09:56Z pjd $
+ * $FreeBSD: stable/11/sys/security/audit/audit_private.h 349087 2019-06-15 23:00:23Z asomers $
  */
 
 /*
@@ -264,7 +263,7 @@ struct audit_record {
 #define	ARG_SADDRINET		0x0000000000100000ULL
 #define	ARG_SADDRINET6		0x0000000000200000ULL
 #define	ARG_SADDRUNIX		0x0000000000400000ULL
-#define	ARG_TERMID_ADDR		0x0000000000400000ULL
+#define	ARG_TERMID_ADDR		0x0000000000800000ULL
 #define	ARG_UNUSED2		0x0000000001000000ULL
 #define	ARG_UPATH1		0x0000000002000000ULL
 #define	ARG_UPATH2		0x0000000004000000ULL

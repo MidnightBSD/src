@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2011 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -40,7 +39,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac/mac_policy.h 254603 2013-08-21 17:45:00Z kib $
+ * $FreeBSD: stable/11/sys/security/mac/mac_policy.h 263152 2014-03-14 06:29:43Z glebius $
  */
 /*
  * Kernel interface for MAC policy modules.
@@ -271,10 +270,6 @@ typedef void	(*mpo_mount_create_t)(struct ucred *cred, struct mount *mp,
 		    struct label *mplabel);
 typedef void	(*mpo_mount_destroy_label_t)(struct label *label);
 typedef void	(*mpo_mount_init_label_t)(struct label *label);
-
-typedef void	(*mpo_netatalk_aarp_send_t)(struct ifnet *ifp,
-		    struct label *ifplabel, struct mbuf *m,
-		    struct label *mlabel);
 
 typedef void	(*mpo_netinet_arp_send_t)(struct ifnet *ifp,
 		    struct label *ifplabel, struct mbuf *m,
@@ -782,8 +777,6 @@ struct mac_policy_ops {
 	mpo_mount_create_t			mpo_mount_create;
 	mpo_mount_destroy_label_t		mpo_mount_destroy_label;
 	mpo_mount_init_label_t			mpo_mount_init_label;
-
-	mpo_netatalk_aarp_send_t		mpo_netatalk_aarp_send;
 
 	mpo_netinet_arp_send_t			mpo_netinet_arp_send;
 	mpo_netinet_firewall_reply_t		mpo_netinet_firewall_reply;

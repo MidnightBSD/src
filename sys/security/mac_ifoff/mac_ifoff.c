@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2002 Networks Associates Technology, Inc.
@@ -36,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac_ifoff/mac_ifoff.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD: stable/11/sys/security/mac_ifoff/mac_ifoff.c 267992 2014-06-28 03:56:17Z hselasky $
  */
 
 /*
@@ -50,11 +49,14 @@
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
-#include <net/bpfdesc.h>
+#include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
+#include <net/bpfdesc.h>
 
 #include <security/mac/mac_policy.h>
 
@@ -64,25 +66,21 @@ static SYSCTL_NODE(_security_mac, OID_AUTO, ifoff, CTLFLAG_RW, 0,
     "TrustedBSD mac_ifoff policy controls");
 
 static int	ifoff_enabled = 1;
-SYSCTL_INT(_security_mac_ifoff, OID_AUTO, enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_ifoff, OID_AUTO, enabled, CTLFLAG_RWTUN,
     &ifoff_enabled, 0, "Enforce ifoff policy");
-TUNABLE_INT("security.mac.ifoff.enabled", &ifoff_enabled);
 
 static int	ifoff_lo_enabled = 1;
-SYSCTL_INT(_security_mac_ifoff, OID_AUTO, lo_enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_ifoff, OID_AUTO, lo_enabled, CTLFLAG_RWTUN,
     &ifoff_lo_enabled, 0, "Enable loopback interfaces");
-TUNABLE_INT("security.mac.ifoff.lo_enabled", &ifoff_lo_enabled);
 
 static int	ifoff_other_enabled = 0;
-SYSCTL_INT(_security_mac_ifoff, OID_AUTO, other_enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_ifoff, OID_AUTO, other_enabled, CTLFLAG_RWTUN,
     &ifoff_other_enabled, 0, "Enable other interfaces");
-TUNABLE_INT("security.mac.ifoff.other_enabled", &ifoff_other_enabled);
 
 static int	ifoff_bpfrecv_enabled = 0;
-SYSCTL_INT(_security_mac_ifoff, OID_AUTO, bpfrecv_enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_ifoff, OID_AUTO, bpfrecv_enabled, CTLFLAG_RWTUN,
     &ifoff_bpfrecv_enabled, 0, "Enable BPF reception even when interface "
     "is disabled");
-TUNABLE_INT("security.mac.ifoff.bpfrecv.enabled", &ifoff_bpfrecv_enabled);
 
 static int
 ifnet_check_outgoing(struct ifnet *ifp)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2005 Apple Inc.
  * Copyright (c) 2006-2007 Robert N. M. Watson
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit.c 253078 2013-07-09 09:03:01Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/audit.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -92,7 +91,7 @@ static SYSCTL_NODE(_security, OID_AUTO, audit, CTLFLAG_RW, 0,
  *
  * Define the audit control flags.
  */
-int			audit_enabled;
+int __read_frequently	audit_enabled;
 int			audit_suspended;
 
 /*

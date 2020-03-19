@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999-2009 Apple Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_bsm.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/audit_bsm.c 336207 2018-07-11 19:39:56Z asomers $");
 
 #include <sys/param.h>
 #include <sys/vnode.h>
@@ -419,7 +418,6 @@ audit_sys_auditon(struct audit_record *ar, struct au_record *rec)
 		break;
 
 	case A_SETCLASS:
-		kau_write(rec, tok);
 		tok = au_to_arg32(2, "setclass:ec_event",
 		    ar->ar_arg_auditon.au_evclass.ec_number);
 		kau_write(rec, tok);
@@ -953,6 +951,8 @@ kaudit_to_bsm(struct kaudit_record *kar, struct au_record **pau)
 	case AUE_GETDIRENTRIESATTR:
 	case AUE_LSEEK:
 	case AUE_POLL:
+	case AUE_PREAD:
+	case AUE_PWRITE:
 	case AUE_READ:
 	case AUE_READV:
 	case AUE_WRITE:

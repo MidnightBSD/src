@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -44,9 +43,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_vfs.c 255971 2013-10-01 15:40:27Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_vfs.c 258541 2013-11-25 07:38:45Z attilio $");
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>

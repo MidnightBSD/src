@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Networks Associates Technology, Inc.
  * Copyright (c) 2006 SPARTA, Inc.
@@ -40,9 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_sysv_msg.c 191731 2009-05-01 21:05:40Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_sysv_msg.c 258541 2013-11-25 07:38:45Z attilio $");
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>

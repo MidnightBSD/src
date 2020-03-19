@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Robert N. M. Watson
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_inet6.c 193391 2009-06-03 18:46:28Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_inet6.c 193391 2009-06-03 18:46:28Z rwatson $");
 
 #include "opt_mac.h"
 

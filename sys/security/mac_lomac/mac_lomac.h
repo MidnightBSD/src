@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * Copyright (c) 2001-2002 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac_lomac/mac_lomac.h 140661 2005-01-23 14:26:09Z rwatson $
+ * $FreeBSD: stable/11/sys/security/mac_lomac/mac_lomac.h 299187 2016-05-06 16:59:04Z pfg $
  */
 /*
  * Definitions for the TrustedBSD LOMAC integrity policy module.
@@ -57,7 +56,7 @@
 					 * MAC_LOMAC_TYPE_LABEL. */
 #define	MAC_LOMAC_TYPE_HIGH	3	/* Dominates any
 					 * MAC_LOMAC_TYPE_LABEL. */
-#define	MAC_LOMAC_TYPE_EQUAL	4	/* Equivilent to any
+#define	MAC_LOMAC_TYPE_EQUAL	4	/* Equivalent to any
 					 * MAC_LOMAC_TYPE_LABEL. */
 
 /*

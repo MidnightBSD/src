@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2005 Apple Inc.
  * All rights reserved.
@@ -29,10 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_arg.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/audit_arg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/filedesc.h>
+#include <sys/capsicum.h>
 #include <sys/ipc.h>
 #include <sys/mount.h>
 #include <sys/proc.h>
@@ -895,6 +895,7 @@ audit_arg_fcntl_rights(uint32_t fcntlrights)
 void
 audit_sysclose(struct thread *td, int fd)
 {
+	cap_rights_t rights;
 	struct kaudit_record *ar;
 	struct vnode *vp;
 	struct file *fp;
@@ -907,7 +908,7 @@ audit_sysclose(struct thread *td, int fd)
 
 	audit_arg_fd(fd);
 
-	if (getvnode(td->td_proc->p_fd, fd, 0, &fp) != 0)
+	if (getvnode(td, fd, cap_rights_init(&rights), &fp) != 0)
 		return;
 
 	vp = fp->f_vnode;

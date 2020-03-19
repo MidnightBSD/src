@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007-2011 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -39,7 +38,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac/mac_framework.h 254603 2013-08-21 17:45:00Z kib $
+ * $FreeBSD: stable/11/sys/security/mac/mac_framework.h 263152 2014-03-14 06:29:43Z glebius $
  */
 
 /*
@@ -195,8 +194,6 @@ int	mac_mount_check_stat(struct ucred *cred, struct mount *mp);
 void	mac_mount_create(struct ucred *cred, struct mount *mp);
 void	mac_mount_destroy(struct mount *);
 void	mac_mount_init(struct mount *);
-
-void	mac_netatalk_aarp_send(struct ifnet *ifp, struct mbuf *m);
 
 void	mac_netinet_arp_send(struct ifnet *ifp, struct mbuf *m);
 void	mac_netinet_firewall_reply(struct mbuf *mrecv, struct mbuf *msend);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Networks Associates Technology, Inc.
  * Copyright (c) 2006 SPARTA, Inc.
@@ -33,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac_portacl/mac_portacl.c 330500 2018-03-05 12:21:36Z eugen $
+ * $FreeBSD: stable/11/sys/security/mac_portacl/mac_portacl.c 330499 2018-03-05 12:16:37Z eugen $
  */
 
 /*
@@ -88,27 +87,21 @@ static SYSCTL_NODE(_security_mac, OID_AUTO, portacl, CTLFLAG_RW, 0,
     "TrustedBSD mac_portacl policy controls");
 
 static int	portacl_enabled = 1;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, enabled, CTLFLAG_RWTUN,
     &portacl_enabled, 0, "Enforce portacl policy");
-TUNABLE_INT("security.mac.portacl.enabled", &portacl_enabled);
 
 static int	portacl_suser_exempt = 1;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, suser_exempt, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, suser_exempt, CTLFLAG_RWTUN,
     &portacl_suser_exempt, 0, "Privilege permits binding of any port");
-TUNABLE_INT("security.mac.portacl.suser_exempt",
-    &portacl_suser_exempt);
 
 static int	portacl_autoport_exempt = 1;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, autoport_exempt, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, autoport_exempt, CTLFLAG_RWTUN,
     &portacl_autoport_exempt, 0, "Allow automatic allocation through "
     "binding port 0 if not IP_PORTRANGELOW");
-TUNABLE_INT("security.mac.portacl.autoport_exempt",
-    &portacl_autoport_exempt);
 
 static int	portacl_port_high = 1023;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, port_high, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, port_high, CTLFLAG_RWTUN,
     &portacl_port_high, 0, "Highest port to enforce for");
-TUNABLE_INT("security.mac.portacl.port_high", &portacl_port_high);
 
 static MALLOC_DEFINE(M_PORTACL, "portacl_rule", "Rules for mac_portacl");
 

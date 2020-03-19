@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Apple Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/bsm_socket_type.c 293163 2016-01-04 16:51:56Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/bsm_socket_type.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -53,8 +52,7 @@ static const struct bsm_socket_type bsm_socket_types[] = {
 	{ BSM_SOCK_RDM, SOCK_RDM },
 	{ BSM_SOCK_SEQPACKET, SOCK_SEQPACKET },
 };
-static const int bsm_socket_types_count = sizeof(bsm_socket_types) /
-	    sizeof(bsm_socket_types[0]);
+static const int bsm_socket_types_count = nitems(bsm_socket_types);
 
 static const struct bsm_socket_type *
 bsm_lookup_local_socket_type(int local_socket_type)

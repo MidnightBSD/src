@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2008 Apple Inc.
  * Copyright (c) 2006-2008 Robert N. M. Watson
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_worker.c 294619 2016-01-23 07:35:29Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/audit_worker.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>

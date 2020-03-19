@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Apple Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/bsm_errno.c 293163 2016-01-04 16:51:56Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/bsm_errno.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 
@@ -700,14 +699,13 @@ static const struct bsm_errno bsm_errnos[] = {
 #endif
 	ES("Not permitted in capability mode") },
 };
-static const int bsm_errnos_count = sizeof(bsm_errnos) / sizeof(bsm_errnos[0]);
 
 static const struct bsm_errno *
 bsm_lookup_errno_local(int local_errno)
 {
 	int i;
 
-	for (i = 0; i < bsm_errnos_count; i++) {
+	for (i = 0; i < nitems(bsm_errnos); i++) {
 		if (bsm_errnos[i].be_local_errno == local_errno)
 			return (&bsm_errnos[i]);
 	}
@@ -734,7 +732,7 @@ bsm_lookup_errno_bsm(u_char bsm_errno)
 {
 	int i;
 
-	for (i = 0; i < bsm_errnos_count; i++) {
+	for (i = 0; i < nitems(bsm_errnos); i++) {
 		if (bsm_errnos[i].be_bsm_errno == bsm_errno)
 			return (&bsm_errnos[i]);
 	}

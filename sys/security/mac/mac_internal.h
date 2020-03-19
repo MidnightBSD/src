@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2006, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -46,7 +45,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/mac/mac_internal.h 302237 2016-06-27 22:10:07Z bdrewery $
+ * $FreeBSD: stable/11/sys/security/mac/mac_internal.h 292384 2015-12-16 23:39:27Z markj $
  */
 
 #ifndef _SECURITY_MAC_MAC_INTERNAL_H_

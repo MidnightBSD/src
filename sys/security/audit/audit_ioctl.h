@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Robert N. M. Watson
  * All rights reserved.
@@ -26,11 +25,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/audit/audit_ioctl.h 169097 2007-04-29 16:20:32Z rwatson $
+ * $FreeBSD: stable/11/sys/security/audit/audit_ioctl.h 336210 2018-07-11 19:46:56Z asomers $
  */
 
 #ifndef _SECURITY_AUDIT_AUDIT_IOCTL_H_
 #define	_SECURITY_AUDIT_AUDIT_IOCTL_H_
+
+#include <bsm/audit.h>
 
 #define	AUDITPIPE_IOBASE	'A'
 

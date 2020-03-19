@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2009 Apple Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/audit/audit_syscalls.c 302229 2016-06-27 21:25:01Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/security/audit/audit_syscalls.c 337243 2018-08-03 14:06:08Z asomers $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -242,7 +241,7 @@ sys_auditon(struct thread *td, struct auditon_args *uap)
 	case A_OLDSETPOLICY:
 	case A_SETPOLICY:
 		if (uap->length == sizeof(udata.au_policy64)) {
-			if (udata.au_policy & (~AUDIT_CNT|AUDIT_AHLT|
+			if (udata.au_policy & ~(AUDIT_CNT|AUDIT_AHLT|
 			    AUDIT_ARGV|AUDIT_ARGE))
 				return (EINVAL);
 			audit_fail_stop = ((udata.au_policy64 & AUDIT_CNT) ==
@@ -304,8 +303,8 @@ sys_auditon(struct thread *td, struct auditon_args *uap)
 			    (udata.au_qctrl64.aq64_lowater >=
 			    udata.au_qctrl.aq_hiwater) ||
 			    (udata.au_qctrl64.aq64_bufsz > AQ_MAXBUFSZ) ||
-			    (udata.au_qctrl64.aq64_minfree < 0) ||
-			    (udata.au_qctrl64.aq64_minfree > 100))
+			    (udata.au_qctrl64.aq64_minfree > 100) ||
+			    (udata.au_qctrl64.aq64_minfree < 0))
 				return (EINVAL);
 			audit_qctrl.aq_hiwater =
 			    (int)udata.au_qctrl64.aq64_hiwater;

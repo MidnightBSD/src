@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2005 Apple Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/security/audit/audit.h 255219 2013-09-05 00:09:56Z pjd $
+ * $FreeBSD: stable/11/sys/security/audit/audit.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

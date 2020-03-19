@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2006, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/security/mac/mac_syscalls.c 302229 2016-06-27 21:25:01Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_syscalls.c 280130 2015-03-16 00:10:03Z mjg $");
 
 #include "opt_mac.h"
 
