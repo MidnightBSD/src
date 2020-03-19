@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/sys/power.h 100084 2002-07-15 14:06:03Z markm $
+ *	$FreeBSD: stable/11/sys/sys/power.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_POWER_H_

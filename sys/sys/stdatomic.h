@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Ed Schouten <ed@FreeBSD.org>
  *                    David Chisnall <theraven@FreeBSD.org>
@@ -24,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/11/sys/sys/stdatomic.h 263998 2014-04-01 14:46:11Z tijl $
+ * $FreeBSD: stable/11/sys/sys/stdatomic.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _STDATOMIC_H_

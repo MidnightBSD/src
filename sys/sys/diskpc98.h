@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: stable/10/sys/sys/diskpc98.h 254015 2013-08-07 00:00:48Z marcel $
+ * $FreeBSD: stable/11/sys/sys/diskpc98.h 254015 2013-08-07 00:00:48Z marcel $
  */
 
 #ifndef _SYS_DISKPC98_H_

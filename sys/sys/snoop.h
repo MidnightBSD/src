@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Ugen J.S.Antsilevich
  *
@@ -12,7 +13,7 @@
  *
  * Snoop stuff.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/sys/snoop.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_SNOOP_H_

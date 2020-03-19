@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Spectra Logic Corporation
  * All rights reserved.

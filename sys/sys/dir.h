@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dir.h	8.2 (Berkeley) 1/4/94
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/sys/dir.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_DIR_H_

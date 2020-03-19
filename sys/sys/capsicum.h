@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010, 2015 Robert N. M. Watson
  * Copyright (c) 2012 FreeBSD Foundation

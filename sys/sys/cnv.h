@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Adam Starak <starak.adam@gmail.com>
  * All rights reserved.

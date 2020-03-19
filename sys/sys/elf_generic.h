@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/elf_generic.h 314197 2017-02-24 09:30:51Z kib $
+ * $FreeBSD: stable/11/sys/sys/elf_generic.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_ELF_GENERIC_H_

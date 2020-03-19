@@ -33,13 +33,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)errno.h	8.5 (Berkeley) 1/21/94
- * $FreeBSD: stable/10/sys/sys/errno.h 311708 2017-01-09 00:09:19Z jhb $
+ * $FreeBSD: stable/11/sys/sys/errno.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_ERRNO_H_
 #define _SYS_ERRNO_H_
 
-#ifndef _KERNEL
+#if !defined(_KERNEL) && !defined(_STANDALONE)
 #include <sys/cdefs.h>
 __BEGIN_DECLS
 int *	__error(void);
@@ -191,6 +191,17 @@ __END_DECLS
 #define	EJUSTRETURN	(-2)		/* don't modify regs, just return */
 #define	ENOIOCTL	(-3)		/* ioctl not handled by this layer */
 #define	EDIRIOCTL	(-4)		/* do direct ioctl in GEOM */
+#define	ERELOOKUP	(-5)		/* retry the directory lookup */
+#endif
+
+#ifndef _KERNEL
+#if __EXT1_VISIBLE
+/* ISO/IEC 9899:2011 K.3.2.2 */
+#ifndef _ERRNO_T_DEFINED
+#define _ERRNO_T_DEFINED
+typedef int errno_t;
+#endif
+#endif /* __EXT1_VISIBLE */
 #endif
 
 #endif

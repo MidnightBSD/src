@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/eui64.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD: stable/11/sys/sys/eui64.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SYS_EUI64_H
 #define _SYS_EUI64_H

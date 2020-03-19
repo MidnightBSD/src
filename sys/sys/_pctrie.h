@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013 EMC Corp.
  * Copyright (c) 2011 Jeffrey Roberson <jeff@freebsd.org>

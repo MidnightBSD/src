@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)domain.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/sys/sys/domain.h 305261 2016-09-02 00:14:28Z markj $
+ * $FreeBSD: stable/11/sys/sys/domain.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_DOMAIN_H_
@@ -55,23 +55,16 @@ struct domain {
 	int	(*dom_externalize)	/* externalize access rights */
 		(struct mbuf *, struct mbuf **, int);
 	void	(*dom_dispose)		/* dispose of internalized rights */
-		(struct mbuf *);
+		(struct socket *);
 	struct	protosw *dom_protosw, *dom_protoswNPROTOSW;
 	struct	domain *dom_next;
 	int	(*dom_rtattach)		/* initialize routing table */
 		(void **, int);
 	int	(*dom_rtdetach)		/* clean up routing table */
 		(void **, int);
-	int	dom_rtoffset;		/* an arg to rtattach, in bits */
-		/* XXX MRT.
-		 * rtoffset May be 0 if the domain supplies its own rtattach(),
-		 * in which case, a 0 indicates it's being called from 
-		 * vfs_export.c (HACK)  Only for AF_INET{,6} at this time.
-		 * Temporary ABI compat hack.. fix post RELENG_7
-		 */
-	int	dom_maxrtkey;		/* for routing layer */
 	void	*(*dom_ifattach)(struct ifnet *);
 	void	(*dom_ifdetach)(struct ifnet *, void *);
+	int	(*dom_ifmtu)(struct ifnet *);
 					/* af-dependent data on ifnet */
 };
 
@@ -80,9 +73,6 @@ extern int	domain_init_status;
 extern struct	domain *domains;
 void		domain_add(void *);
 void		domain_init(void *);
-
-/* Hack to fix dom_dispose for unix domain sockets. */
-void		unp_dispose_so(struct socket *);
 #ifdef VIMAGE
 void		vnet_domain_init(void *);
 void		vnet_domain_uninit(void *);

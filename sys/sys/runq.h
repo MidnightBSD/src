@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/runq.h 177435 2008-03-20 05:51:16Z jeff $
+ * $FreeBSD: stable/11/sys/sys/runq.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_RUNQ_H_

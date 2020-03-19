@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/poll.h 275986 2014-12-21 07:58:28Z dchagin $
+ * $FreeBSD: stable/11/sys/sys/poll.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_POLL_H_

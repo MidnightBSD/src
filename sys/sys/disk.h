@@ -7,7 +7,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/10/sys/sys/disk.h 279005 2015-02-19 14:40:50Z mav $
+ * $FreeBSD: stable/11/sys/sys/disk.h 325003 2017-10-25 22:25:32Z asomers $
  *
  */
 
@@ -16,6 +16,7 @@
 
 #include <sys/ioccom.h>
 #include <sys/types.h>
+#include <sys/disk_zone.h>
 
 #ifdef _KERNEL
 
@@ -133,8 +134,11 @@ struct diocgattr_arg {
 		char str[DISK_IDENT_SIZE];
 		off_t off;
 		int i;
+		uint16_t u16;
 	} value;
 };
 #define	DIOCGATTR _IOWR('d', 142, struct diocgattr_arg)
+
+#define	DIOCZONECMD	_IOWR('d', 143, struct disk_zone_args)
 
 #endif /* _SYS_DISK_H_ */

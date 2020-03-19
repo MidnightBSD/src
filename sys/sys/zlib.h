@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/sys/sys/zlib.h 281855 2015-04-22 14:38:58Z rodrigc $	*/
 
 /*

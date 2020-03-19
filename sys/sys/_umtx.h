@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010, David Xu <davidxu@freebsd.org>
  * All rights reserved.

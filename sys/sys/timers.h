@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (c) 1994 by Chris Provenzano, proven@mit.edu
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/sys/timers.h 331722 2018-03-29 02:50:57Z eadler $
  *
  * Description : Basic timers header.
  */

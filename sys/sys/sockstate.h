@@ -29,7 +29,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD: stable/10/sys/sys/sockstate.h 180948 2008-07-29 07:45:05Z kmacy $
+ * $FreeBSD: stable/11/sys/sys/sockstate.h 180948 2008-07-29 07:45:05Z kmacy $
  */
 #ifndef _SYS_SOCKTATE_H_
 #define _SYS_SOCKTATE_H_

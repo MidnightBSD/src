@@ -13,7 +13,7 @@
  * Portions of this software were developed by Julien Ridoux at the University
  * of Melbourne under sponsorship from the FreeBSD Foundation.
  *
- * $FreeBSD: stable/10/sys/sys/timepps.h 283341 2015-05-24 00:53:43Z ian $
+ * $FreeBSD: stable/11/sys/sys/timepps.h 282424 2015-05-04 17:59:39Z ian $
  *
  * The is a FreeBSD version of the RFC 2783 API for Pulse Per Second 
  * timing interfaces.  

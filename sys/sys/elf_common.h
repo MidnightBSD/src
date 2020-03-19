@@ -1,5 +1,6 @@
 /* $MidnightBSD$ */
 /*-
+ * Copyright (c) 2017 Dell EMC
  * Copyright (c) 2000, 2001, 2008, 2011, David E. O'Brien
  * Copyright (c) 1998 John D. Polstra.
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/elf_common.h 302002 2016-06-18 01:23:38Z emaste $
+ * $FreeBSD: stable/11/sys/sys/elf_common.h 351766 2019-09-03 17:29:54Z emaste $
  */
 
 #ifndef _SYS_ELF_COMMON_H_
@@ -172,6 +173,7 @@ typedef struct {
 #define	ELFOSABI_AROS		15	/* Amiga Research OS */
 #define	ELFOSABI_FENIXOS	16	/* FenixOS */
 #define	ELFOSABI_CLOUDABI	17	/* Nuxi CloudABI */
+#define	ELFOSABI_ARM_AEABI	64	/* ARM EABI */
 #define	ELFOSABI_ARM		97	/* ARM */
 #define	ELFOSABI_STANDALONE	255	/* Standalone (embedded) application */
 
@@ -330,8 +332,10 @@ typedef struct {
 #define	EF_ARM_ALIGN8		0x00000040
 #define	EF_ARM_NEW_ABI		0x00000080
 #define	EF_ARM_OLD_ABI		0x00000100
-#define	EF_ARM_SOFT_FLOAT	0x00000200
-#define	EF_ARM_VFP_FLOAT	0x00000400
+#define	EF_ARM_ABI_FLOAT_SOFT	0x00000200
+#define	EF_ARM_SOFT_FLOAT	EF_ARM_ABI_FLOAT_SOFT /* Pre-V5 ABI name */
+#define	EF_ARM_ABI_FLOAT_HARD	0x00000400
+#define	EF_ARM_VFP_FLOAT	EF_ARM_ABI_FLOAT_HARD /* Pre-V5 ABI name */
 #define	EF_ARM_MAVERICK_FLOAT	0x00000800
 
 #define	EF_MIPS_NOREORDER	0x00000001
@@ -416,7 +420,8 @@ typedef struct {
 #define	SHT_HISUNW		0x6fffffff
 #define	SHT_HIOS		0x6fffffff	/* Last of OS specific semantics */
 #define	SHT_LOPROC		0x70000000	/* reserved range for processor */
-#define	SHT_AMD64_UNWIND	0x70000001	/* unwind information */
+#define	SHT_X86_64_UNWIND	0x70000001	/* unwind information */
+#define	SHT_AMD64_UNWIND	SHT_X86_64_UNWIND 
 
 #define	SHT_ARM_EXIDX		0x70000001	/* Exception index table. */
 #define	SHT_ARM_PREEMPTMAP	0x70000002	/* BPABI DLL dynamic linking 
@@ -510,6 +515,8 @@ typedef struct {
 #define	PT_HISUNW	0x6fffffff
 #define	PT_HIOS		0x6fffffff	/* Last OS-specific. */
 #define	PT_LOPROC	0x70000000	/* First processor-specific type. */
+#define	PT_ARM_ARCHEXT	0x70000000	/* ARM arch compat information. */
+#define	PT_ARM_EXIDX	0x70000001	/* ARM exception unwind tables. */
 #define	PT_HIPROC	0x7fffffff	/* Last processor-specific type. */
 
 /* Values for p_flags. */
@@ -577,6 +584,7 @@ typedef struct {
 #define	DT_SUNW_RTLDINF		0x6000000e	/* ld.so.1 info (private) */
 #define	DT_SUNW_FILTER		0x6000000f	/* symbol filter name */
 #define	DT_SUNW_CAP		0x60000010	/* hardware/software */
+#define	DT_SUNW_ASLR		0x60000023	/* ASLR control */
 #define	DT_HIOS		0x6ffff000	/* Last OS-specific */
 
 /*
@@ -731,6 +739,15 @@ typedef struct {
 #define	LL_DELAY_LOAD		0x10
 #define	LL_DELTA		0x20
 
+/* Values for n_type used in executables. */
+#define	NT_FREEBSD_ABI_TAG	1
+#define	NT_FREEBSD_NOINIT_TAG	2
+#define	NT_FREEBSD_ARCH_TAG	3
+#define	NT_FREEBSD_FEATURE_CTL	4
+
+/* NT_FREEBSD_FEATURE_CTL desc[0] bits */
+#define	NT_FREEBSD_FCTL_ASLR_DISABLE	0x00000001
+
 /* Values for n_type.  Used in core files. */
 #define	NT_PRSTATUS	1	/* Process status. */
 #define	NT_FPREGSET	2	/* Floating point registers. */
@@ -745,8 +762,25 @@ typedef struct {
 #define	NT_PROCSTAT_OSREL	14	/* Procstat osreldate data. */
 #define	NT_PROCSTAT_PSSTRINGS	15	/* Procstat ps_strings data. */
 #define	NT_PROCSTAT_AUXV	16	/* Procstat auxv data. */
+#define	NT_PTLWPINFO		17	/* Thread ptrace miscellaneous info. */
 #define	NT_PPC_VMX	0x100	/* PowerPC Altivec/VMX registers */
 #define	NT_X86_XSTATE	0x202	/* x86 XSAVE extended state. */
+#define	NT_ARM_VFP	0x400	/* ARM VFP registers */
+
+/* GNU note types. */
+#define	NT_GNU_ABI_TAG		1
+#define	NT_GNU_HWCAP		2
+#define	NT_GNU_BUILD_ID		3
+#define	NT_GNU_GOLD_VERSION	4
+#define	NT_GNU_PROPERTY_TYPE_0	5
+
+#define	GNU_PROPERTY_LOPROC			0xc0000000
+#define	GNU_PROPERTY_HIPROC			0xdfffffff
+
+#define	GNU_PROPERTY_X86_FEATURE_1_AND		0xc0000002
+
+#define	GNU_PROPERTY_X86_FEATURE_1_IBT		0x00000001
+#define	GNU_PROPERTY_X86_FEATURE_1_SHSTK	0x00000002
 
 /* Symbol Binding - ELFNN_ST_BIND - st_info */
 #define	STB_LOCAL	0	/* Local symbol */
@@ -770,8 +804,9 @@ typedef struct {
 #define	STT_LOOS	10	/* Reserved range for operating system */
 #define	STT_GNU_IFUNC	10
 #define	STT_HIOS	12	/*   specific semantics. */
-#define	STT_LOPROC	13	/* reserved range for processor */
-#define	STT_HIPROC	15	/*   specific semantics. */
+#define	STT_LOPROC	13	/* Start of processor reserved range. */
+#define	STT_SPARC_REGISTER 13	/* SPARC register information. */
+#define	STT_HIPROC	15	/* End of processor reserved range. */
 
 /* Symbol visibility - ELFNN_ST_VISIBILITY - st_other */
 #define	STV_DEFAULT	0x0	/* Default visibility (see binding). */
@@ -839,6 +874,13 @@ typedef struct {
 #define	SYMINFO_NONE		0	/* Syminfo version */
 #define	SYMINFO_CURRENT		1
 #define	SYMINFO_NUM		2
+
+/* Values for ch_type (compressed section headers). */
+#define	ELFCOMPRESS_ZLIB	1	/* ZLIB/DEFLATE */
+#define	ELFCOMPRESS_LOOS	0x60000000	/* OS-specific */
+#define	ELFCOMPRESS_HIOS	0x6fffffff
+#define	ELFCOMPRESS_LOPROC	0x70000000	/* Processor-specific */
+#define	ELFCOMPRESS_HIPROC	0x7fffffff
 
 /*
  * Relocation types.
@@ -1031,10 +1073,16 @@ typedef struct {
 #define	R_MIPS_CALL16	11	/* 16 bit GOT entry for function */
 #define	R_MIPS_GPREL32	12	/* GP relative 32 bit */
 #define	R_MIPS_64	18	/* Direct 64 bit */
-#define	R_MIPS_GOTHI16	21	/* GOT HI 16 bit */
-#define	R_MIPS_GOTLO16	22	/* GOT LO 16 bit */
+#define	R_MIPS_GOT_DISP	19
+#define	R_MIPS_GOT_PAGE	20
+#define	R_MIPS_GOT_OFST	21
+#define	R_MIPS_GOT_HI16	22	/* GOT HI 16 bit */
+#define	R_MIPS_GOT_LO16	23	/* GOT LO 16 bit */
+#define	R_MIPS_SUB	24
 #define	R_MIPS_CALLHI16 30	/* upper 16 bit GOT entry for function */
 #define	R_MIPS_CALLLO16 31	/* lower 16 bit GOT entry for function */
+#define	R_MIPS_JALR	37
+#define	R_MIPS_TLS_GD	42
 
 #define	R_PPC_NONE		0	/* No relocation. */
 #define	R_PPC_ADDR32		1
@@ -1144,6 +1192,56 @@ typedef struct {
 #define	R_PPC_EMB_RELST_HA	114
 #define	R_PPC_EMB_BIT_FLD	115
 #define	R_PPC_EMB_RELSDA	116
+
+/*
+ * RISC-V relocation types.
+ */
+
+/* Relocation types used by the dynamic linker. */
+#define	R_RISCV_NONE		0
+#define	R_RISCV_32		1
+#define	R_RISCV_64		2
+#define	R_RISCV_RELATIVE	3
+#define	R_RISCV_COPY		4
+#define	R_RISCV_JUMP_SLOT	5
+#define	R_RISCV_TLS_DTPMOD32	6
+#define	R_RISCV_TLS_DTPMOD64	7
+#define	R_RISCV_TLS_DTPREL32	8
+#define	R_RISCV_TLS_DTPREL64	9
+#define	R_RISCV_TLS_TPREL32	10
+#define	R_RISCV_TLS_TPREL64	11
+
+/* Relocation types not used by the dynamic linker. */
+#define	R_RISCV_BRANCH		16
+#define	R_RISCV_JAL		17
+#define	R_RISCV_CALL		18
+#define	R_RISCV_CALL_PLT	19
+#define	R_RISCV_GOT_HI20	20
+#define	R_RISCV_TLS_GOT_HI20	21
+#define	R_RISCV_TLS_GD_HI20	22
+#define	R_RISCV_PCREL_HI20	23
+#define	R_RISCV_PCREL_LO12_I	24
+#define	R_RISCV_PCREL_LO12_S	25
+#define	R_RISCV_HI20		26
+#define	R_RISCV_LO12_I		27
+#define	R_RISCV_LO12_S		28
+#define	R_RISCV_TPREL_HI20	29
+#define	R_RISCV_TPREL_LO12_I	30
+#define	R_RISCV_TPREL_LO12_S	31
+#define	R_RISCV_TPREL_ADD	32
+#define	R_RISCV_ADD8		33
+#define	R_RISCV_ADD16		34
+#define	R_RISCV_ADD32		35
+#define	R_RISCV_ADD64		36
+#define	R_RISCV_SUB8		37
+#define	R_RISCV_SUB16		38
+#define	R_RISCV_SUB32		39
+#define	R_RISCV_SUB64		40
+#define	R_RISCV_GNU_VTINHERIT	41
+#define	R_RISCV_GNU_VTENTRY	42
+#define	R_RISCV_ALIGN		43
+#define	R_RISCV_RVC_BRANCH	44
+#define	R_RISCV_RVC_JUMP	45
 
 #define	R_SPARC_NONE		0
 #define	R_SPARC_8		1
