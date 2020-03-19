@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -6,7 +7,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/sys/inflate.h 139825 2005-01-07 02:29:27Z imp $
  *
  */
 #ifndef	_SYS_INFLATE_H_

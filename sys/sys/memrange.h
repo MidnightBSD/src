@@ -2,7 +2,7 @@
 /*
  * Memory range attribute operations, performed on /dev/mem
  *
- * $FreeBSD: stable/10/sys/sys/memrange.h 300060 2016-05-17 15:18:01Z pfg $
+ * $FreeBSD: stable/11/sys/sys/memrange.h 298981 2016-05-03 15:14:17Z pfg $
  */
 
 #ifndef _SYS_MEMRANGE_H_

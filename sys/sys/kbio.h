@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * $FreeBSD: stable/10/sys/sys/kbio.h 224126 2011-07-17 08:19:19Z ed $
+ * $FreeBSD: stable/11/sys/sys/kbio.h 224126 2011-07-17 08:19:19Z ed $
  */
 
 #ifndef	_SYS_KBIO_H_

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/memdesc.h 246713 2013-02-12 16:57:20Z kib $
+ * $FreeBSD: stable/11/sys/sys/memdesc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_MEMDESC_H_

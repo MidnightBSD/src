@@ -34,7 +34,7 @@
 /*
  * procfs ioctl definitions.
  *
- * $FreeBSD: stable/10/sys/sys/pioctl.h 217747 2011-01-23 12:44:17Z kib $
+ * $FreeBSD: stable/11/sys/sys/pioctl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_PIOCTL_H

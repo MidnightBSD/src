@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Berkeley Software Design, Inc. All rights reserved.
  *

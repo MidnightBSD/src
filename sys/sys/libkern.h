@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)libkern.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/sys/libkern.h 306536 2016-09-30 22:40:58Z jkim $
+ * $FreeBSD: stable/11/sys/sys/libkern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_LIBKERN_H_
@@ -54,6 +54,13 @@ extern char const	hex2ascii_data[];
 #define	bin2bcd(bin)	(bin2bcd_data[bin])
 #define	hex2ascii(hex)	(hex2ascii_data[hex])
 
+static inline bool
+validbcd(int bcd)
+{
+
+	return (bcd == 0 || (bcd > 0 && bcd <= 0x99 && bcd2bin_data[bcd] != 0));
+}
+
 static __inline int imax(int a, int b) { return (a > b ? a : b); }
 static __inline int imin(int a, int b) { return (a < b ? a : b); }
 static __inline long lmax(long a, long b) { return (a > b ? a : b); }
@@ -62,8 +69,20 @@ static __inline u_int max(u_int a, u_int b) { return (a > b ? a : b); }
 static __inline u_int min(u_int a, u_int b) { return (a < b ? a : b); }
 static __inline quad_t qmax(quad_t a, quad_t b) { return (a > b ? a : b); }
 static __inline quad_t qmin(quad_t a, quad_t b) { return (a < b ? a : b); }
+static __inline u_quad_t uqmax(u_quad_t a, u_quad_t b) { return (a > b ? a : b); }
+static __inline u_quad_t uqmin(u_quad_t a, u_quad_t b) { return (a < b ? a : b); }
 static __inline u_long ulmax(u_long a, u_long b) { return (a > b ? a : b); }
 static __inline u_long ulmin(u_long a, u_long b) { return (a < b ? a : b); }
+static __inline __uintmax_t ummax(__uintmax_t a, __uintmax_t b)
+{
+
+	return (a > b ? a : b);
+}
+static __inline __uintmax_t ummin(__uintmax_t a, __uintmax_t b)
+{
+
+	return (a < b ? a : b);
+}
 static __inline off_t omax(off_t a, off_t b) { return (a > b ? a : b); }
 static __inline off_t omin(off_t a, off_t b) { return (a < b ? a : b); }
 
@@ -81,6 +100,7 @@ struct malloc_type;
 uint32_t arc4random(void);
 void	 arc4rand(void *ptr, u_int len, int reseed);
 int	 bcmp(const void *, const void *, size_t);
+int	 timingsafe_bcmp(const void *, const void *, size_t);
 void	*bsearch(const void *, const void *, size_t,
 	    size_t, int (*)(const void *, const void *));
 #ifndef	HAVE_INLINE_FFS
@@ -88,6 +108,9 @@ int	 ffs(int);
 #endif
 #ifndef	HAVE_INLINE_FFSL
 int	 ffsl(long);
+#endif
+#ifndef	HAVE_INLINE_FFSLL
+int	 ffsll(long long);
 #endif
 #ifndef	HAVE_INLINE_FLS
 int	 fls(int);
@@ -109,6 +132,7 @@ int	 locc(int, char *, u_int);
 void	*memchr(const void *s, int c, size_t n);
 void	*memcchr(const void *s, int c, size_t n);
 int	 memcmp(const void *b1, const void *b2, size_t len);
+void	*memmem(const void *l, size_t l_len, const void *s, size_t s_len);
 void	 qsort(void *base, size_t nmemb, size_t size,
 	    int (*compar)(const void *, const void *));
 void	 qsort_r(void *base, size_t nmemb, size_t size, void *thunk,
@@ -162,6 +186,14 @@ crc32(const void *buf, size_t size)
 uint32_t
 calculate_crc32c(uint32_t crc32c, const unsigned char *buffer,
     unsigned int length);
+#ifdef _KERNEL
+#if defined(__amd64__) || defined(__i386__)
+uint32_t sse42_crc32c(uint32_t, const unsigned char *, unsigned);
+#endif
+#if defined(__aarch64__)
+uint32_t armv8_crc32c(uint32_t, const unsigned char *, unsigned int);
+#endif
+#endif
 
 
 LIBKERN_INLINE void *memset(void *, int, size_t);

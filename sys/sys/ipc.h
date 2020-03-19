@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ipc.h	8.4 (Berkeley) 2/19/95
- * $FreeBSD: stable/10/sys/sys/ipc.h 300060 2016-05-17 15:18:01Z pfg $
+ * $FreeBSD: stable/11/sys/sys/ipc.h 347995 2019-05-20 16:31:45Z kib $
  */
 
 /*
@@ -118,12 +118,14 @@ struct ipc_perm {
 #define	IPC_INFO	3	/* get info */
 #endif
 
-#ifdef _KERNEL
+#if defined(_KERNEL) || defined(_WANT_SYSVIPC_INTERNALS)
 /* Macros to convert between ipc ids and array indices or sequence ids */
 #define	IPCID_TO_IX(id)		((id) & 0xffff)
 #define	IPCID_TO_SEQ(id)	(((id) >> 16) & 0xffff)
 #define	IXSEQ_TO_IPCID(ix,perm)	(((perm.seq) << 16) | (ix & 0xffff))
+#endif
 
+#ifdef _KERNEL
 struct thread;
 struct proc;
 struct vmspace;

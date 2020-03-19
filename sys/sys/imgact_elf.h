@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/imgact_elf.h 316277 2017-03-30 15:05:58Z ed $
+ * $FreeBSD: stable/11/sys/sys/imgact_elf.h 346821 2019-04-28 13:28:05Z dchagin $
  */
 
 #ifndef _SYS_IMGACT_ELF_H_
@@ -38,6 +38,7 @@
 
 #define	AUXARGS_ENTRY(pos, id, val) {suword(pos++, id); suword(pos++, val);}
 
+struct image_params;
 struct thread;
 struct vnode;
 
@@ -54,13 +55,14 @@ typedef struct {
 	Elf_Size	base;
 	Elf_Size	flags;
 	Elf_Size	entry;
+	Elf_Word	hdr_eflags;		/* e_flags field from ehdr */
 } __ElfN(Auxargs);
 
 typedef struct {
 	Elf_Note	hdr;
 	const char *	vendor;
 	int		flags;
-	boolean_t	(*trans_osrel)(const Elf_Note *, int32_t *);
+	bool		(*trans_osrel)(const Elf_Note *, int32_t *);
 #define	BN_CAN_FETCH_OSREL	0x0001	/* Deprecated. */
 #define	BN_TRANSLATE_OSREL	0x0002	/* Use trans_osrel to fetch osrel */
 		/* after checking the image ABI specification, if needed. */
@@ -76,9 +78,11 @@ typedef struct {
 	const char *interp_newpath;
 	int flags;
 	Elf_Brandnote *brand_note;
+	boolean_t	(*header_supported)(struct image_params *);
 #define	BI_CAN_EXEC_DYN		0x0001
 #define	BI_BRAND_NOTE		0x0002	/* May have note.ABI-tag section. */
 #define	BI_BRAND_NOTE_MANDATORY	0x0004	/* Must have note.ABI-tag section. */
+#define	BI_BRAND_ONLY_STATIC	0x0008	/* Match only interp-less binaries. */
 } __ElfN(Brandinfo);
 
 __ElfType(Auxargs);
@@ -98,6 +102,7 @@ void	__elfN(dump_thread)(struct thread *, void *, size_t *);
 
 extern int __elfN(fallback_brand);
 extern Elf_Brandnote __elfN(freebsd_brandnote);
+extern Elf_Brandnote __elfN(kfreebsd_brandnote);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_IMGACT_ELF_H_ */

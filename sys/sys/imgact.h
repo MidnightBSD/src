@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/imgact.h 302238 2016-06-27 22:12:11Z bdrewery $
+ * $FreeBSD: stable/11/sys/sys/imgact.h 337046 2018-08-01 17:40:17Z jhb $
  */
 
 #ifndef _SYS_IMGACT_H_
@@ -43,6 +43,7 @@ struct ucred;
 
 struct image_args {
 	char *buf;		/* pointer to string buffer */
+	void *bufkva;		/* cookie for string buffer KVA */
 	char *begin_argv;	/* beginning of argv in buf */
 	char *begin_envv;	/* beginning of envv in buf */
 	char *endp;		/* current `end' pointer of arg & env strings */
@@ -52,6 +53,7 @@ struct image_args {
 	int argc;		/* count of argument strings */
 	int envc;		/* count of environment strings */
 	int fd;			/* file descriptor of the executable */
+	struct filedesc *fdp;	/* new file descriptor table */
 };
 
 struct image_params {
@@ -72,7 +74,6 @@ struct image_params {
 	void *auxargs;		/* ELF Auxinfo structure pointer */
 	struct sf_buf *firstpage;	/* first page that we mapped */
 	unsigned long ps_strings; /* PS_STRINGS for BSD/OS binaries */
-	size_t auxarg_size;
 	struct image_args *args;	/* system call arguments */
 	struct sysentvec *sysent;	/* system entry vector */
 	char *execpath;
@@ -104,6 +105,8 @@ void	exec_setregs(struct thread *, struct image_params *, u_long);
 int	exec_shell_imgact(struct image_params *);
 int	exec_copyin_args(struct image_args *, char *, enum uio_seg,
 	char **, char **);
+int	exec_copyin_data_fds(struct thread *, struct image_args *, const void *,
+	size_t, const int *, size_t);
 int	pre_execve(struct thread *td, struct vmspace **oldvmspace);
 void	post_execve(struct thread *td, int error, struct vmspace *oldvmspace);
 #endif

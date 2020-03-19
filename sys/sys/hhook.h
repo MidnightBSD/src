@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/hhook.h 251770 2013-06-15 04:03:40Z lstewart $
+ * $FreeBSD: stable/11/sys/sys/hhook.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -65,6 +65,9 @@
 
 /* Helper hook types. */
 #define	HHOOK_TYPE_TCP		1
+#define	HHOOK_TYPE_SOCKET	2
+#define	HHOOK_TYPE_IPSEC_IN	3
+#define	HHOOK_TYPE_IPSEC_OUT	4
 
 struct helper;
 struct osd;

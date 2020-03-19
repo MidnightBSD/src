@@ -30,7 +30,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/soundcard.h 302006 2016-06-18 12:44:14Z ed $
+ * $FreeBSD: stable/11/sys/sys/soundcard.h 301406 2016-06-04 18:57:00Z ed $
  */
 
 /*

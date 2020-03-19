@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/module_khelp.h 251789 2013-06-15 10:38:31Z lstewart $
+ * $FreeBSD: stable/11/sys/sys/module_khelp.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_MODULE_KHELP_H_

@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fcntl.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: stable/10/sys/sys/fcntl.h 273840 2014-10-29 22:55:16Z jilles $
+ * $FreeBSD: stable/11/sys/sys/fcntl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_FCNTL_H_
@@ -130,11 +130,22 @@ typedef	__pid_t		pid_t;
 #define	O_CLOEXEC	0x00100000
 #endif
 
+#if __BSD_VISIBLE
+#define	O_VERIFY	0x00200000	/* open only after verification */
+#endif
+
 /*
  * XXX missing O_DSYNC, O_RSYNC.
  */
 
 #ifdef _KERNEL
+
+/* Only for devfs d_close() flags. */
+#define	FLASTCLOSE	O_DIRECTORY
+#define	FREVOKE		O_VERIFY
+/* Only for fo_close() from half-succeeded open */
+#define	FOPENFAILED	O_TTY_INIT
+
 /* convert from open() flags to/from fflags; convert O_RD/WR to FREAD/FWRITE */
 #define	FFLAGS(oflags)	((oflags) & O_EXEC ? (oflags) : (oflags) + 1)
 #define	OFLAGS(fflags)	((fflags) & O_EXEC ? (fflags) : (fflags) - 1)

@@ -25,7 +25,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/fdcio.h 274024 2014-11-03 10:26:29Z nyan $
+ * $FreeBSD: stable/11/sys/sys/fdcio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_IOCTL_FD_H_
@@ -210,6 +210,7 @@ enum fd_drivetype {
 #define FDF_5_800  10,2,0xFF,0x10,80,0,FDC_300KBPS,2,0x2e,1,0,FL_MFM
 #define FDF_5_720   9,2,0xFF,0x20,80,0,FDC_300KBPS,2,0x50,1,0,FL_MFM
 #define FDF_5_640   8,2,0xFF,0x2A,80,0,FDC_300KBPS,2,0x50,1,0,FL_MFM
+#define FDF_5_400  10,2,0xFF,0x10,80,0,FDC_300KBPS,1,0x2e,1,0,FL_MFM /* RX50 */
 #define FDF_5_360   9,2,0xFF,0x23,40,0,FDC_300KBPS,2,0x50,1,0,FL_MFM
 /* XXX:                      0x2a ? */
 #endif

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/sys/khelp.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -55,6 +56,7 @@ struct osd;
 
 /* Helper classes. */
 #define	HELPER_CLASS_TCP	0x00000001
+#define	HELPER_CLASS_SOCKET	0x00000002
 
 /* Public KPI functions. */
 int	khelp_register_helper(struct helper *h);
