@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ian Lepore
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/sys/busdma_bufalloc.h 287945 2015-09-17 23:31:44Z rstone $
+ * $FreeBSD: stable/11/sys/sys/busdma_bufalloc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

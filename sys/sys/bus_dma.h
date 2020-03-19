@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
 
 /*-
@@ -61,7 +60,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/sys/sys/bus_dma.h 263687 2014-03-24 13:48:04Z emaste $ */
+/* $FreeBSD: stable/11/sys/sys/bus_dma.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _BUS_DMA_H_
 #define _BUS_DMA_H_
@@ -283,13 +282,25 @@ int bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 void bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map);
 
 /*
- * Perform a synchronization operation on the given map.
+ * Perform a synchronization operation on the given map. If the map
+ * is NULL we have a fully IO-coherent system. On every ARM architecture
+ * there must be a memory barrier placed to ensure that all data
+ * accesses are visible before going any further.
  */
 void _bus_dmamap_sync(bus_dma_tag_t, bus_dmamap_t, bus_dmasync_op_t);
+#if defined(__arm__)
+	#define __BUS_DMAMAP_SYNC_DEFAULT		mb()
+#elif defined(__aarch64__)
+	#define	__BUS_DMAMAP_SYNC_DEFAULT		dmb(sy)
+#else
+	#define	__BUS_DMAMAP_SYNC_DEFAULT		do {} while (0)
+#endif
 #define bus_dmamap_sync(dmat, dmamap, op) 			\
 	do {							\
 		if ((dmamap) != NULL)				\
 			_bus_dmamap_sync(dmat, dmamap, op);	\
+		else						\
+			__BUS_DMAMAP_SYNC_DEFAULT;		\
 	} while (0)
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/_types.h 309258 2016-11-28 18:36:37Z jhb $
+ * $FreeBSD: stable/11/sys/sys/_types.h 332135 2018-04-06 19:17:59Z kevans $
  */
 
 #ifndef _SYS__TYPES_H_
@@ -36,7 +35,7 @@
 /*
  * Standard type definitions.
  */
-typedef	__uint32_t	__blksize_t;	/* file block size */
+typedef	__int32_t	__blksize_t;	/* file block size */
 typedef	__int64_t	__blkcnt_t;	/* file block count */
 typedef	__int32_t	__clockid_t;	/* clock_gettime()... */
 typedef	__uint32_t	__fflags_t;	/* file flags */
@@ -52,6 +51,7 @@ typedef	int		__accmode_t;	/* access permissions */
 typedef	int		__nl_item;
 typedef	__uint16_t	__nlink_t;	/* link count */
 typedef	__int64_t	__off_t;	/* file offset */
+typedef	__int64_t	__off64_t;	/* file offset (alias) */
 typedef	__int32_t	__pid_t;	/* process [group] */
 typedef	__int64_t	__rlim_t;	/* resource limit - intentionally */
 					/* signed, because of legacy code */
@@ -102,7 +102,9 @@ typedef	__uint_least32_t __char32_t;
 
 typedef struct {
 	long long __max_align1 __aligned(_Alignof(long long));
+#ifndef _STANDALONE
 	long double __max_align2 __aligned(_Alignof(long double));
+#endif
 } __max_align_t;
 
 typedef	__uint32_t	__dev_t;	/* device number */
@@ -117,5 +119,7 @@ typedef union {
 	char		__mbstate8[128];
 	__int64_t	_mbstateL;	/* for alignment */
 } __mbstate_t;
+
+typedef __uintmax_t     __rman_res_t;
 
 #endif /* !_SYS__TYPES_H_ */

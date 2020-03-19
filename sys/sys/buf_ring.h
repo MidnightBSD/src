@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Kip Macy <kmacy@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/buf_ring.h 301913 2016-06-15 05:16:37Z sephe $
+ * $FreeBSD: stable/11/sys/sys/buf_ring.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -156,15 +155,49 @@ buf_ring_dequeue_mc(struct buf_ring *br)
 static __inline void *
 buf_ring_dequeue_sc(struct buf_ring *br)
 {
-	uint32_t cons_head, cons_next, cons_next_next;
+	uint32_t cons_head, cons_next;
+#ifdef PREFETCH_DEFINED
+	uint32_t cons_next_next;
+#endif
 	uint32_t prod_tail;
 	void *buf;
-	
+
+	/*
+	 * This is a workaround to allow using buf_ring on ARM and ARM64.
+	 * ARM64TODO: Fix buf_ring in a generic way.
+	 * REMARKS: It is suspected that br_cons_head does not require
+	 *   load_acq operation, but this change was extensively tested
+	 *   and confirmed it's working. To be reviewed once again in
+	 *   FreeBSD-12.
+	 *
+	 * Preventing following situation:
+
+	 * Core(0) - buf_ring_enqueue()                                       Core(1) - buf_ring_dequeue_sc()
+	 * -----------------------------------------                                       ----------------------------------------------
+	 *
+	 *                                                                                cons_head = br->br_cons_head;
+	 * atomic_cmpset_acq_32(&br->br_prod_head, ...));
+	 *                                                                                buf = br->br_ring[cons_head];     <see <1>>
+	 * br->br_ring[prod_head] = buf;
+	 * atomic_store_rel_32(&br->br_prod_tail, ...);
+	 *                                                                                prod_tail = br->br_prod_tail;
+	 *                                                                                if (cons_head == prod_tail) 
+	 *                                                                                        return (NULL);
+	 *                                                                                <condition is false and code uses invalid(old) buf>`	
+	 *
+	 * <1> Load (on core 1) from br->br_ring[cons_head] can be reordered (speculative readed) by CPU.
+	 */	
+#if defined(__arm__) || defined(__aarch64__)
+	cons_head = atomic_load_acq_32(&br->br_cons_head);
+#else
 	cons_head = br->br_cons_head;
-	prod_tail = br->br_prod_tail;
+#endif
+	prod_tail = atomic_load_acq_32(&br->br_prod_tail);
 	
 	cons_next = (cons_head + 1) & br->br_cons_mask;
+#ifdef PREFETCH_DEFINED
 	cons_next_next = (cons_head + 2) & br->br_cons_mask;
+#endif
 	
 	if (cons_head == prod_tail) 
 		return (NULL);

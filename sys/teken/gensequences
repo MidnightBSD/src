@@ -25,8 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/teken/gensequences 223574 2011-06-26 18:25:10Z ed $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/teken/gensequences 223574 2011-06-26 18:25:10Z ed $
 
 function die(msg) {
 	print msg;

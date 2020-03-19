@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Matthew Dillon.  All Rights Reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +49,7 @@
  *		that.  Managing something like 512MB worth of 4K blocks 
  *		eats around 32 KBytes of memory. 
  *
- * $FreeBSD: stable/10/sys/sys/blist.h 321459 2017-07-25 04:13:43Z alc $
+ * $FreeBSD: stable/11/sys/sys/blist.h 331722 2018-03-29 02:50:57Z eadler $
 
  */
 
@@ -81,8 +80,7 @@ typedef struct blmeta {
 
 typedef struct blist {
 	daddr_t		bl_blocks;	/* area of coverage		*/
-	daddr_t		bl_radix;	/* coverage radix		*/
-	daddr_t		bl_skip;	/* starting skip		*/
+	u_daddr_t	bl_radix;	/* coverage radix		*/
 	daddr_t		bl_cursor;	/* next-fit search starts at	*/
 	blmeta_t	*bl_root;	/* root of radix tree		*/
 } *blist_t;
@@ -92,6 +90,8 @@ typedef struct blist {
 
 #define BLIST_MAX_ALLOC		BLIST_BMAP_RADIX
 
+struct sbuf;
+
 daddr_t	blist_alloc(blist_t blist, daddr_t count);
 daddr_t	blist_avail(blist_t blist);
 blist_t	blist_create(daddr_t blocks, int flags);
@@ -100,6 +100,7 @@ daddr_t	blist_fill(blist_t bl, daddr_t blkno, daddr_t count);
 void	blist_free(blist_t blist, daddr_t blkno, daddr_t count);
 void	blist_print(blist_t blist);
 void	blist_resize(blist_t *pblist, daddr_t count, int freenew, int flags);
+void	blist_stats(blist_t blist, struct sbuf *s);
 
 #endif	/* _SYS_BLIST_H_ */
 

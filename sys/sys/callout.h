@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)callout.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: stable/10/sys/sys/callout.h 314667 2017-03-04 13:03:31Z avg $
+ * $FreeBSD: stable/11/sys/sys/callout.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_CALLOUT_H_
@@ -59,6 +58,7 @@
 #define	C_HARDCLOCK		0x0100 /* align to hardclock() calls */
 #define	C_ABSOLUTE		0x0200 /* event time is absolute. */
 #define	C_PRECALC		0x0400 /* event time is pre-calculated. */
+#define	C_CATCH			0x0800 /* catch signals, used by pause_sbt(9) */
 
 struct callout_handle {
 	struct callout *callout;
@@ -66,9 +66,8 @@ struct callout_handle {
 
 /* Flags for callout_stop_safe() */
 #define	CS_DRAIN		0x0001 /* callout_drain(), wait allowed */
-#define	CS_MIGRBLOCK		0x0002 /* Block migration, return value
-					  indicates that the callout was
-				          executing */
+#define	CS_EXECUTING		0x0002 /* Positive return value indicates that
+					  the callout was executing */
 
 #ifdef _KERNEL
 /* 
@@ -89,7 +88,7 @@ struct callout_handle {
  */
 #define	callout_active(c)	((c)->c_flags & CALLOUT_ACTIVE)
 #define	callout_deactivate(c)	((c)->c_flags &= ~CALLOUT_ACTIVE)
-#define	callout_drain(c)	_callout_stop_safe(c, CS_DRAIN)
+#define	callout_drain(c)	_callout_stop_safe(c, CS_DRAIN, NULL)
 void	callout_init(struct callout *, int);
 void	_callout_init_lock(struct callout *, struct lock_object *, int);
 #define	callout_init_mtx(c, mtx, flags)					\
@@ -127,10 +126,11 @@ int	callout_schedule(struct callout *, int);
 int	callout_schedule_on(struct callout *, int, int);
 #define	callout_schedule_curcpu(c, on_tick)				\
     callout_schedule_on((c), (on_tick), PCPU_GET(cpuid))
-#define	callout_stop(c)		_callout_stop_safe(c, 0)
-int	_callout_stop_safe(struct callout *, int);
+#define	callout_stop(c)		_callout_stop_safe(c, 0, NULL)
+int	_callout_stop_safe(struct callout *, int, void (*)(void *));
 void	callout_process(sbintime_t now);
-
+#define callout_async_drain(c, d)					\
+    _callout_stop_safe(c, 0, d)
 void callout_when(sbintime_t sbt, sbintime_t precision, int flags,
     sbintime_t *sbt_res, sbintime_t *prec_res);
 #endif

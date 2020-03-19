@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
@@ -27,11 +26,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/bitset.h 320940 2017-07-13 08:33:02Z kib $
+ * $FreeBSD: stable/11/sys/sys/bitset.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_BITSET_H_
 #define	_SYS_BITSET_H_
+
+#define	__bitset_mask(_s, n)						\
+	(1L << ((__bitset_words((_s)) == 1) ?				\
+	    (__size_t)(n) : ((n) % _BITSET_BITS)))
+
+#define	__bitset_word(_s, n)						\
+	((__bitset_words((_s)) == 1) ? 0 : ((n) / _BITSET_BITS))
 
 #define	BIT_CLR(_s, n, p)						\
 	((p)->__bits[__bitset_word(_s, n)] &= ~__bitset_mask((_s), (n)))
@@ -231,5 +237,17 @@
 		__count += __bitcountl((p)->__bits[__i]);		\
 	__count;							\
 })
-	
+
+#define	BITSET_T_INITIALIZER(x)						\
+	{ .__bits = { x } }
+
+#define	BITSET_FSET(n)							\
+	[ 0 ... ((n) - 1) ] = (-1L)
+
+/*
+ * Dynamically allocate a bitset.
+ */
+#define BITSET_ALLOC(_s, mt, mf)					\
+	malloc(__bitset_words(_s) * sizeof(long), mt, (mf))
+
 #endif /* !_SYS_BITSET_H_ */

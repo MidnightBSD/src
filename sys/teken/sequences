@@ -24,7 +24,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/11/sys/teken/sequences 214817 2010-11-05 00:56:21Z ed $
-# $MidnightBSD$
 
 # File format is as follows:
 #	Abbr		Abbreviation of sequence name

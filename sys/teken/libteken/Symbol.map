@@ -1,6 +1,5 @@
 /*
- * $MidnightBSD$
- * $FreeBSD: stable/10/sys/teken/libteken/Symbol.map 226111 2011-10-07 15:05:24Z ed $
+ * $FreeBSD: stable/11/sys/teken/libteken/Symbol.map 226111 2011-10-07 15:05:24Z ed $
  */
 
 FBSD_1.2 {

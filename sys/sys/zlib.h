@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/sys/sys/zlib.h 281855 2015-04-22 14:38:58Z rodrigc $	*/
 
 /*
@@ -511,8 +510,8 @@ extern int EXPORT inflateInit OF((z_streamp strm));
    done by inflate().
 */
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
-#define inflate       _zlib104_inflate     /* FreeBSD already has an inflate :-( */
+#if defined(__MidnightBSD__) && defined(_KERNEL)
+#define inflate       _zlib104_inflate     /* BSD already has an inflate :-( */
 #endif
 
 extern int EXPORT inflate OF((z_streamp strm, int flush));

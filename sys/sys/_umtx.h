@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010, David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/_umtx.h 232144 2012-02-25 02:12:17Z davidxu $
+ * $FreeBSD: stable/11/sys/sys/_umtx.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -34,15 +33,15 @@
 #include <sys/_types.h>
 #include <sys/_timespec.h>
 
-struct umtx {
-	volatile unsigned long	u_owner;	/* Owner of the mutex. */
-};
-
 struct umutex {
 	volatile __lwpid_t	m_owner;	/* Owner of the mutex */
 	__uint32_t		m_flags;	/* Flags of the mutex */
 	__uint32_t		m_ceilings[2];	/* Priority protect ceiling */
-	__uint32_t		m_spare[4];
+	__uintptr_t		m_rb_lnk;	/* Robust linkage */
+#ifndef __LP64__
+	__uint32_t		m_pad;
+#endif
+	__uint32_t		m_spare[2];
 };
 
 struct ucond {
@@ -63,6 +62,11 @@ struct urwlock {
 struct _usem {
 	volatile __uint32_t	_has_waiters;
 	volatile __uint32_t	_count;
+	__uint32_t		_flags;
+};
+
+struct _usem2 {
+	volatile __uint32_t	_count;		/* Waiters flag in high bit. */
 	__uint32_t		_flags;
 };
 
