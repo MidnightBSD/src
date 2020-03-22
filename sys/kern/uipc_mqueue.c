@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_mqueue.c 325783 2017-11-13 23:21:17Z jamie $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/uipc_mqueue.c 351257 2019-08-20 17:46:22Z emaste $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -83,6 +82,7 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/uipc_mqueue.c 325783 2017-11-13 23:21:17Z
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
 #include <sys/unistd.h>
+#include <sys/user.h>
 #include <sys/vnode.h>
 #include <machine/atomic.h>
 
@@ -1421,7 +1421,6 @@ mqfs_readdir(struct vop_readdir_args *ap)
 		entry.d_fileno = pn->mn_fileno;
 		for (i = 0; i < MQFS_NAMELEN - 1 && pn->mn_name[i] != '\0'; ++i)
 			entry.d_name[i] = pn->mn_name[i];
-		entry.d_name[i] = 0;
 		entry.d_namlen = i;
 		switch (pn->mn_type) {
 		case mqfstype_root:
@@ -1440,6 +1439,7 @@ mqfs_readdir(struct vop_readdir_args *ap)
 			panic("%s has unexpected node type: %d", pn->mn_name,
 				pn->mn_type);
 		}
+		dirent_terminate(&entry);
 		if (entry.d_reclen > uio->uio_resid)
                         break;
 		if (offset >= uio->uio_offset) {
@@ -2478,35 +2478,6 @@ mq_proc_exit(void *arg __unused, struct proc *p)
 }
 
 static int
-mqf_read(struct file *fp, struct uio *uio, struct ucred *active_cred,
-	int flags, struct thread *td)
-{
-	return (EOPNOTSUPP);
-}
-
-static int
-mqf_write(struct file *fp, struct uio *uio, struct ucred *active_cred,
-	int flags, struct thread *td)
-{
-	return (EOPNOTSUPP);
-}
-
-static int
-mqf_truncate(struct file *fp, off_t length, struct ucred *active_cred,
-    struct thread *td)
-{
-
-	return (EINVAL);
-}
-
-static int
-mqf_ioctl(struct file *fp, u_long cmd, void *data,
-	struct ucred *active_cred, struct thread *td)
-{
-	return (ENOTTY);
-}
-
-static int
 mqf_poll(struct file *fp, int events, struct ucred *active_cred,
 	struct thread *td)
 {
@@ -2660,18 +2631,27 @@ filt_mqwrite(struct knote *kn, long hint)
 	return (mq->mq_curmsgs < mq->mq_maxmsg);
 }
 
+static int
+mqf_fill_kinfo(struct file *fp, struct kinfo_file *kif, struct filedesc *fdp)
+{
+
+	kif->kf_type = KF_TYPE_MQUEUE;
+	return (0);
+}
+
 static struct fileops mqueueops = {
-	.fo_read		= mqf_read,
-	.fo_write		= mqf_write,
-	.fo_truncate		= mqf_truncate,
-	.fo_ioctl		= mqf_ioctl,
+	.fo_read		= invfo_rdwr,
+	.fo_write		= invfo_rdwr,
+	.fo_truncate		= invfo_truncate,
+	.fo_ioctl		= invfo_ioctl,
 	.fo_poll		= mqf_poll,
 	.fo_kqfilter		= mqf_kqfilter,
 	.fo_stat		= mqf_stat,
+	.fo_close		= mqf_close,
 	.fo_chmod		= mqf_chmod,
 	.fo_chown		= mqf_chown,
-	.fo_close		= mqf_close,
 	.fo_sendfile		= invfo_sendfile,
+	.fo_fill_kinfo		= mqf_fill_kinfo,
 };
 
 static struct vop_vector mqfs_vnodeops = {
@@ -2713,10 +2693,10 @@ static struct vfsconf mqueuefs_vfsconf = {
 
 static struct syscall_helper_data mq_syscalls[] = {
 	SYSCALL_INIT_HELPER(kmq_open),
-	SYSCALL_INIT_HELPER(kmq_setattr),
-	SYSCALL_INIT_HELPER(kmq_timedsend),
-	SYSCALL_INIT_HELPER(kmq_timedreceive),
-	SYSCALL_INIT_HELPER(kmq_notify),
+	SYSCALL_INIT_HELPER_F(kmq_setattr, SYF_CAPENABLED),
+	SYSCALL_INIT_HELPER_F(kmq_timedsend, SYF_CAPENABLED),
+	SYSCALL_INIT_HELPER_F(kmq_timedreceive, SYF_CAPENABLED),
+	SYSCALL_INIT_HELPER_F(kmq_notify, SYF_CAPENABLED),
 	SYSCALL_INIT_HELPER(kmq_unlink),
 	SYSCALL_INIT_LAST
 };
@@ -2875,10 +2855,10 @@ freebsd32_kmq_notify(struct thread *td, struct freebsd32_kmq_notify_args *uap)
 
 static struct syscall_helper_data mq32_syscalls[] = {
 	SYSCALL32_INIT_HELPER(freebsd32_kmq_open),
-	SYSCALL32_INIT_HELPER(freebsd32_kmq_setattr),
-	SYSCALL32_INIT_HELPER(freebsd32_kmq_timedsend),
-	SYSCALL32_INIT_HELPER(freebsd32_kmq_timedreceive),
-	SYSCALL32_INIT_HELPER(freebsd32_kmq_notify),
+	SYSCALL32_INIT_HELPER_F(freebsd32_kmq_setattr, SYF_CAPENABLED),
+	SYSCALL32_INIT_HELPER_F(freebsd32_kmq_timedsend, SYF_CAPENABLED),
+	SYSCALL32_INIT_HELPER_F(freebsd32_kmq_timedreceive, SYF_CAPENABLED),
+	SYSCALL32_INIT_HELPER_F(freebsd32_kmq_notify, SYF_CAPENABLED),
 	SYSCALL32_INIT_HELPER_COMPAT(kmq_unlink),
 	SYSCALL_INIT_LAST
 };
@@ -2889,11 +2869,11 @@ mqinit(void)
 {
 	int error;
 
-	error = syscall_helper_register(mq_syscalls);
+	error = syscall_helper_register(mq_syscalls, SY_THR_STATIC_KLD);
 	if (error != 0)
 		return (error);
 #ifdef COMPAT_FREEBSD32
-	error = syscall32_helper_register(mq32_syscalls);
+	error = syscall32_helper_register(mq32_syscalls, SY_THR_STATIC_KLD);
 	if (error != 0)
 		return (error);
 #endif

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Boris Popov
  * All rights reserved.
@@ -29,13 +28,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_mchain.c 302234 2016-06-27 21:50:30Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_mchain.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <sys/endian.h>
 #include <sys/errno.h>
+#include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/uio.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mike Frantzen <frantzen@w4g.org>
  *
@@ -18,12 +17,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_osfp.c 315028 2017-03-10 20:38:18Z vangyzen $");
+__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/pf_osfp.c 339418 2018-10-18 04:36:25Z kp $");
 
 #include "opt_inet6.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mbuf.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
@@ -31,11 +32,11 @@ __FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_osfp.c 315028 2017-03-10 20:38:1
 #include <netinet/tcp.h>
 
 #include <net/if.h>
+#include <net/vnet.h>
 #include <net/pfvar.h>
 
 #ifdef INET6
 #include <netinet/ip6.h>
-#include <netinet6/in6_var.h>
 #endif
 
 static MALLOC_DEFINE(M_PFOSFP, "pf_osfp", "pf(4) operating system fingerprints");

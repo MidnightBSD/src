@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp.  All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/tty_tty.c 216952 2011-01-04 10:59:38Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/tty_tty.c 285214 2015-07-06 18:53:56Z mjg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -59,25 +58,27 @@ static void
 ctty_clone(void *arg, struct ucred *cred, char *name, int namelen,
     struct cdev **dev)
 {
+	struct proc *p;
 
 	if (*dev != NULL)
 		return;
 	if (strcmp(name, "tty"))
 		return;
+	p = curproc;
 	sx_sunlock(&clone_drain_lock);
 	sx_slock(&proctree_lock);
 	sx_slock(&clone_drain_lock);
 	dev_lock();
-	if (!(curthread->td_proc->p_flag & P_CONTROLT))
+	if (!(p->p_flag & P_CONTROLT))
 		*dev = ctty;
-	else if (curthread->td_proc->p_session->s_ttyvp == NULL)
+	else if (p->p_session->s_ttyvp == NULL)
 		*dev = ctty;
-	else if (curthread->td_proc->p_session->s_ttyvp->v_type == VBAD ||
-	    curthread->td_proc->p_session->s_ttyvp->v_rdev == NULL) {
+	else if (p->p_session->s_ttyvp->v_type == VBAD ||
+	    p->p_session->s_ttyvp->v_rdev == NULL) {
 		/* e.g. s_ttyvp was revoked */
 		*dev = ctty;
 	} else
-		*dev = curthread->td_proc->p_session->s_ttyvp->v_rdev;
+		*dev = p->p_session->s_ttyvp->v_rdev;
 	dev_refl(*dev);
 	dev_unlock();
 	sx_sunlock(&proctree_lock);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Daniel M. Eischen <deischen@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_context.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_context.c 338983 2018-09-27 18:42:40Z gordon $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -69,6 +68,7 @@ sys_getcontext(struct thread *td, struct getcontext_args *uap)
 	if (uap->ucp == NULL)
 		ret = EINVAL;
 	else {
+		bzero(&uc, sizeof(ucontext_t));
 		get_mcontext(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
 		PROC_LOCK(td->td_proc);
 		uc.uc_sigmask = td->td_sigmask;
@@ -109,6 +109,7 @@ sys_swapcontext(struct thread *td, struct swapcontext_args *uap)
 	if (uap->oucp == NULL || uap->ucp == NULL)
 		ret = EINVAL;
 	else {
+		bzero(&uc, sizeof(ucontext_t));
 		get_mcontext(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
 		bzero(uc.__spare__, sizeof(uc.__spare__));
 		PROC_LOCK(td->td_proc);

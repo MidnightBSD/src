@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_pmc.c 233628 2012-03-28 20:58:30Z fabient $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_pmc.c 315285 2017-03-14 20:43:04Z mjg $");
 
 #include "opt_hwpmc_hooks.h"
 
@@ -60,10 +59,10 @@ MALLOC_DEFINE(M_PMCHOOKS, "pmchooks", "Memory space for PMC hooks");
 const int pmc_kernel_version = PMC_KERNEL_VERSION;
 
 /* Hook variable. */
-int (*pmc_hook)(struct thread *td, int function, void *arg) = NULL;
+int __read_mostly (*pmc_hook)(struct thread *td, int function, void *arg) = NULL;
 
 /* Interrupt handler */
-int (*pmc_intr)(int cpu, struct trapframe *tf) = NULL;
+int __read_mostly (*pmc_intr)(int cpu, struct trapframe *tf) = NULL;
 
 /* Bitmask of CPUs requiring servicing at hardclock time */
 volatile cpuset_t pmc_cpumask;
@@ -97,8 +96,7 @@ struct trapframe pmc_tf[MAXCPU];
 SYSCTL_NODE(_kern, OID_AUTO, hwpmc, CTLFLAG_RW, 0, "HWPMC parameters");
 
 static int pmc_softevents = 16;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "softevents", &pmc_softevents);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, softevents, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, softevents, CTLFLAG_RDTUN,
     &pmc_softevents, 0, "maximum number of soft events");
 
 struct mtx pmc_softs_mtx;

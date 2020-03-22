@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Gordon Ross, Adam Glass
  * Copyright (c) 1992 Regents of the University of California.
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfs/bootp_subr.c 301057 2016-05-31 17:15:57Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/nfs/bootp_subr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_bootp.h"
 #include "opt_nfs.h"
@@ -65,7 +64,11 @@ __FBSDID("$FreeBSD: stable/10/sys/nfs/bootp_subr.c 301057 2016-05-31 17:15:57Z i
 #include <sys/uio.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/route.h>
+#ifdef BOOTP_DEBUG
+#include <net/route_var.h>
+#endif
 
 #include <netinet/in.h>
 #include <netinet/in_var.h>
@@ -372,15 +375,15 @@ bootpboot_p_tree(struct radix_node *rn)
 void
 bootpboot_p_rtlist(void)
 {
-	struct radix_node_head *rnh;
+	struct rib_head *rnh;
 
 	printf("Routing table:\n");
 	rnh = rt_tables_get_rnh(0, AF_INET);
 	if (rnh == NULL)
 		return;
-	RADIX_NODE_HEAD_RLOCK(rnh);	/* could sleep XXX */
+	RIB_RLOCK(rnh);	/* could sleep XXX */
 	bootpboot_p_tree(rnh->rnh_treetop);
-	RADIX_NODE_HEAD_RUNLOCK(rnh);
+	RIB_RUNLOCK(rnh);
 }
 
 void
@@ -1487,7 +1490,7 @@ bootpc_decode_reply(struct nfsv3_diskless *nd, struct bootpc_ifcontext *ifctx,
 	 *    the server value).
 	 */
 	p = NULL;
-	if ((s = getenv("vfs.root.mountfrom")) != NULL) {
+	if ((s = kern_getenv("vfs.root.mountfrom")) != NULL) {
 		if ((p = strstr(s, "nfs:")) != NULL)
 			p = strdup(p + 4, M_TEMP);
 		freeenv(s);
@@ -1760,7 +1763,7 @@ retry:
 
 	if (gctx->gotrootpath != 0) {
 
-		setenv("boot.netif.name", ifctx->ifp->if_xname);
+		kern_setenv("boot.netif.name", ifctx->ifp->if_xname);
 
 		bootpc_add_default_route(ifctx);
 		error = md_mount(&nd->root_saddr, nd->root_hostnam,
@@ -1774,9 +1777,6 @@ retry:
 				goto out;
 		}
 		rootdevnames[0] = "nfs:";
-#ifdef NFSCLIENT
-		rootdevnames[1] = "oldnfs:";
-#endif
 		nfs_diskless_valid = 3;
 	}
 

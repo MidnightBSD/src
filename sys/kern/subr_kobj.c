@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_kobj.c 318275 2017-05-14 14:21:11Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_kobj.c 318274 2017-05-14 14:21:09Z marius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

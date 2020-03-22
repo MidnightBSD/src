@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder <jake@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_switch.c 312946 2017-01-29 10:36:43Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_switch.c 327481 2018-01-02 00:14:46Z mjg $");
 
 #include "opt_sched.h"
 
@@ -151,24 +150,37 @@ SYSCTL_PROC(_kern_sched_stats, OID_AUTO, reset, CTLTYPE_INT | CTLFLAG_WR, NULL,
 /*
  * Select the thread that will be run next.
  */
-struct thread *
-choosethread(void)
-{
-	struct thread *td;
 
-retry:
-	td = sched_choose();
+static __noinline struct thread *
+choosethread_panic(struct thread *td)
+{
 
 	/*
 	 * If we are in panic, only allow system threads,
 	 * plus the one we are running in, to be run.
 	 */
-	if (panicstr && ((td->td_proc->p_flag & P_SYSTEM) == 0 &&
+retry:
+	if (((td->td_proc->p_flag & P_SYSTEM) == 0 &&
 	    (td->td_flags & TDF_INPANIC) == 0)) {
 		/* note that it is no longer on the run queue */
 		TD_SET_CAN_RUN(td);
+		td = sched_choose();
 		goto retry;
 	}
+
+	TD_SET_RUNNING(td);
+	return (td);
+}
+
+struct thread *
+choosethread(void)
+{
+	struct thread *td;
+
+	td = sched_choose();
+
+	if (__predict_false(panicstr != NULL))
+		return (choosethread_panic(td));
 
 	TD_SET_RUNNING(td);
 	return (td);

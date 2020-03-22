@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
  * All rights reserved.
@@ -40,16 +39,19 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netnatm/natm_pcb.c 184205 2008-10-23 15:53:51Z des $");
+__FBSDID("$FreeBSD: stable/11/sys/netnatm/natm_pcb.c 257176 2013-10-26 17:58:36Z glebius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 
 #include <net/if.h>
+#include <net/if_var.h>		/* XXX: db_show_natm() */
 
 #include <netinet/in.h>
 

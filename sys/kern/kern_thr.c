@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_thr.c 315949 2017-03-25 13:33:23Z badger $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_thr.c 337242 2018-08-03 14:05:22Z asomers $");
 
 #include "opt_compat.h"
 #include "opt_posix.h"
@@ -55,6 +54,8 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_thr.c 315949 2017-03-25 13:33:23Z ba
 #include <sys/rtprio.h>
 #include <sys/umtx.h>
 #include <sys/limits.h>
+
+#include <vm/vm_domain.h>
 
 #include <machine/frame.h>
 
@@ -163,7 +164,7 @@ thr_new_initthr(struct thread *td, void *thunk)
 	stack.ss_sp = param->stack_base;
 	stack.ss_size = param->stack_size;
 	/* Set upcall address to user thread entry function. */
-	cpu_set_upcall_kse(td, param->start_func, param->arg, &stack);
+	cpu_set_upcall(td, param->start_func, param->arg, &stack);
 	/* Setup user TLS address and TLS pointer register. */
 	return (cpu_set_user_tls(td, param->tls_base));
 }
@@ -213,11 +214,13 @@ thread_create(struct thread *td, struct rtprio *rtp,
 	}
 
 #ifdef RACCT
-	PROC_LOCK(td->td_proc);
-	error = racct_add(p, RACCT_NTHR, 1);
-	PROC_UNLOCK(td->td_proc);
-	if (error != 0)
-		return (EPROCLIM);
+	if (racct_enable) {
+		PROC_LOCK(p);
+		error = racct_add(p, RACCT_NTHR, 1);
+		PROC_UNLOCK(p);
+		if (error != 0)
+			return (EPROCLIM);
+	}
 #endif
 
 	/* Initialize our td */
@@ -225,29 +228,30 @@ thread_create(struct thread *td, struct rtprio *rtp,
 	if (error)
 		goto fail;
 
-	cpu_set_upcall(newtd, td);
+	cpu_copy_thread(newtd, td);
 
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
-	newtd->td_su = NULL;
 	newtd->td_sleeptimo = 0;
+	newtd->td_vslock_sz = 0;
+	bzero(&newtd->td_si, sizeof(newtd->td_si));
 	bcopy(&td->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
+	newtd->td_sa = td->td_sa;
 	newtd->td_proc = td->td_proc;
-	newtd->td_ucred = crhold(td->td_ucred);
-	newtd->td_dbg_sc_code = td->td_dbg_sc_code;
-	newtd->td_dbg_sc_narg = td->td_dbg_sc_narg;
+	newtd->td_rb_list = newtd->td_rbp_list = newtd->td_rb_inact = 0;
+	thread_cow_get(newtd, td);
 
 	error = initialize_thread(newtd, thunk);
 	if (error != 0) {
+		thread_cow_free(newtd);
 		thread_free(newtd);
-		crfree(td->td_ucred);
 		goto fail;
 	}
 
-	PROC_LOCK(td->td_proc);
-	td->td_proc->p_flag |= P_HADTHREADS;
-	thread_link(newtd, p); 
+	PROC_LOCK(p);
+	p->p_flag |= P_HADTHREADS;
+	thread_link(newtd, p);
 	bcopy(p->p_comm, newtd->td_name, sizeof(newtd->td_name));
 	thread_lock(td);
 	/* let the scheduler know about these things. */
@@ -257,6 +261,13 @@ thread_create(struct thread *td, struct rtprio *rtp,
 		newtd->td_flags |= TDF_ASTPENDING | TDF_NEEDSUSPCHK;
 	if (p->p_ptevents & PTRACE_LWP)
 		newtd->td_dbgflags |= TDB_BORN;
+
+	/*
+	 * Copy the existing thread VM policy into the new thread.
+	 */
+	vm_domain_policy_localcopy(&newtd->td_vm_dom_policy,
+	    &td->td_vm_dom_policy);
+
 	PROC_UNLOCK(p);
 
 	tidhash_add(newtd);
@@ -302,6 +313,8 @@ int
 sys_thr_exit(struct thread *td, struct thr_exit_args *uap)
     /* long *state */
 {
+
+	umtx_thread_exit(td);
 
 	/* Signal userland that it can free the stack. */
 	if ((void *)uap->state != NULL) {
@@ -362,7 +375,11 @@ kern_thr_exit(struct thread *td)
 	KASSERT(p->p_numthreads > 1, ("too few threads"));
 	racct_sub(p, RACCT_NTHR, 1);
 	tdsigcleanup(td);
-	umtx_thread_exit(td);
+
+#ifdef AUDIT
+	AUDIT_SYSCALL_EXIT(0, td);
+#endif
+
 	PROC_SLOCK(p);
 	thread_stopped(p);
 	thread_exit();

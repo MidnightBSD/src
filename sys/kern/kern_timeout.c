@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,14 +35,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_timeout.c 305853 2016-09-16 00:14:26Z hiren $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_timeout.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_callout_profiling.h"
-#include "opt_kdtrace.h"
 #include "opt_ddb.h"
 #if defined(__arm__)
 #include "opt_timer.h"
 #endif
+#include "opt_rss.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,8 +106,21 @@ SYSCTL_INT(_debug, OID_AUTO, to_avg_mpcalls_dir, CTLFLAG_RD, &avg_mpcalls_dir,
 #endif
 
 static int ncallout;
-SYSCTL_INT(_kern, OID_AUTO, ncallout, CTLFLAG_RDTUN, &ncallout, 0,
+SYSCTL_INT(_kern, OID_AUTO, ncallout, CTLFLAG_RDTUN | CTLFLAG_NOFETCH, &ncallout, 0,
     "Number of entries in callwheel and size of timeout() preallocation");
+
+#ifdef	RSS
+static int pin_default_swi = 1;
+static int pin_pcpu_swi = 1;
+#else
+static int pin_default_swi = 0;
+static int pin_pcpu_swi = 0;
+#endif
+
+SYSCTL_INT(_kern, OID_AUTO, pin_default_swi, CTLFLAG_RDTUN | CTLFLAG_NOFETCH, &pin_default_swi,
+    0, "Pin the default (non-per-cpu) swi (shared with PCPU 0 swi)");
+SYSCTL_INT(_kern, OID_AUTO, pin_pcpu_swi, CTLFLAG_RDTUN | CTLFLAG_NOFETCH, &pin_pcpu_swi,
+    0, "Pin the per-CPU swis (except PCPU 0, which is also default");
 
 /*
  * TODO:
@@ -128,6 +140,7 @@ u_int callwheelsize, callwheelmask;
  */
 struct cc_exec {
 	struct callout		*cc_curr;
+	void			(*cc_drain)(void *);
 #ifdef SMP
 	void			(*ce_migration_func)(void *);
 	void			*ce_migration_arg;
@@ -162,6 +175,7 @@ struct callout_cpu {
 #define	callout_migrating(c)	((c)->c_iflags & CALLOUT_DFRMIGRATION)
 
 #define	cc_exec_curr(cc, dir)		cc->cc_exec_entity[dir].cc_curr
+#define	cc_exec_drain(cc, dir)		cc->cc_exec_entity[dir].cc_drain
 #define	cc_exec_next(cc)		cc->cc_next
 #define	cc_exec_cancel(cc, dir)		cc->cc_exec_entity[dir].cc_cancel
 #define	cc_exec_waiting(cc, dir)	cc->cc_exec_entity[dir].cc_waiting
@@ -273,6 +287,12 @@ callout_callwheel_init(void *dummy)
 	callwheelmask = callwheelsize - 1;
 
 	/*
+	 * Fetch whether we're pinning the swi's or not.
+	 */
+	TUNABLE_INT_FETCH("kern.pin_default_swi", &pin_default_swi);
+	TUNABLE_INT_FETCH("kern.pin_pcpu_swi", &pin_pcpu_swi);
+
+	/*
 	 * Only cpu0 handles timeout(9) and receives a preallocation.
 	 *
 	 * XXX: Once all timeout(9) consumers are converted this can
@@ -355,14 +375,24 @@ static void
 start_softclock(void *dummy)
 {
 	struct callout_cpu *cc;
+	char name[MAXCOMLEN];
 #ifdef SMP
 	int cpu;
+	struct intr_event *ie;
 #endif
 
 	cc = CC_CPU(timeout_cpu);
-	if (swi_add(&clk_intr_event, "clock", softclock, cc, SWI_CLOCK,
+	snprintf(name, sizeof(name), "clock (%d)", timeout_cpu);
+	if (swi_add(&clk_intr_event, name, softclock, cc, SWI_CLOCK,
 	    INTR_MPSAFE, &cc->cc_cookie))
 		panic("died while creating standard software ithreads");
+	if (pin_default_swi &&
+	    (intr_event_bind(clk_intr_event, timeout_cpu) != 0)) {
+		printf("%s: timeout clock couldn't be pinned to cpu %d\n",
+		    __func__,
+		    timeout_cpu);
+	}
+
 #ifdef SMP
 	CPU_FOREACH(cpu) {
 		if (cpu == timeout_cpu)
@@ -370,9 +400,17 @@ start_softclock(void *dummy)
 		cc = CC_CPU(cpu);
 		cc->cc_callout = NULL;	/* Only cpu0 handles timeout(9). */
 		callout_cpu_init(cc, cpu);
-		if (swi_add(NULL, "clock", softclock, cc, SWI_CLOCK,
+		snprintf(name, sizeof(name), "clock (%d)", cpu);
+		ie = NULL;
+		if (swi_add(&ie, name, softclock, cc, SWI_CLOCK,
 		    INTR_MPSAFE, &cc->cc_cookie))
 			panic("died while creating standard software ithreads");
+		if (pin_pcpu_swi && (intr_event_bind(ie, cpu) != 0)) {
+			printf("%s: per-cpu clock couldn't be pinned to "
+			    "cpu %d\n",
+			    __func__,
+			    cpu);
+		}
 	}
 #endif
 }
@@ -647,6 +685,7 @@ softclock_call_cc(struct callout *c, struct callout_cpu *cc,
 	
 	cc_exec_curr(cc, direct) = c;
 	cc_exec_cancel(cc, direct) = false;
+	cc_exec_drain(cc, direct) = NULL;
 	CC_UNLOCK(cc);
 	if (c_lock != NULL) {
 		class->lc_lock(c_lock, lock_status);
@@ -712,6 +751,15 @@ skip:
 	CC_LOCK(cc);
 	KASSERT(cc_exec_curr(cc, direct) == c, ("mishandled cc_curr"));
 	cc_exec_curr(cc, direct) = NULL;
+	if (cc_exec_drain(cc, direct)) {
+		void (*drain)(void *);
+		
+		drain = cc_exec_drain(cc, direct);
+		cc_exec_drain(cc, direct) = NULL;
+		CC_UNLOCK(cc);
+		drain(c_arg);
+		CC_LOCK(cc);
+	}
 	if (cc_exec_waiting(cc, direct)) {
 		/*
 		 * There is someone waiting for the
@@ -851,10 +899,7 @@ softclock(void *arg)
  *	identify entries for untimeout.
  */
 struct callout_handle
-timeout(ftn, arg, to_ticks)
-	timeout_t *ftn;
-	void *arg;
-	int to_ticks;
+timeout(timeout_t *ftn, void *arg, int to_ticks)
 {
 	struct callout_cpu *cc;
 	struct callout *new;
@@ -876,10 +921,7 @@ timeout(ftn, arg, to_ticks)
 }
 
 void
-untimeout(ftn, arg, handle)
-	timeout_t *ftn;
-	void *arg;
-	struct callout_handle handle;
+untimeout(timeout_t *ftn, void *arg, struct callout_handle handle)
 {
 	struct callout_cpu *cc;
 
@@ -939,6 +981,8 @@ callout_when(sbintime_t sbt, sbintime_t precision, int flags,
 		spinlock_exit();
 #endif
 #endif
+		if (cold && to_sbt == 0)
+			to_sbt = sbinuptime();
 		if ((flags & C_HARDCLOCK) == 0)
 			to_sbt += tick_sbt;
 	} else
@@ -1130,14 +1174,16 @@ callout_schedule(struct callout *c, int to_ticks)
 }
 
 int
-_callout_stop_safe(c, flags)
-	struct	callout *c;
-	int	flags;
+_callout_stop_safe(struct callout *c, int flags, void (*drain)(void *))
 {
 	struct callout_cpu *cc, *old_cc;
 	struct lock_class *class;
 	int direct, sq_locked, use_lock;
-	int not_on_a_list;
+	int cancelled, not_on_a_list;
+
+	if ((flags & CS_DRAIN) != 0)
+		WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, c->c_lock,
+		    "calling %s", __func__);
 
 	/*
 	 * Some old subsystems don't hold Giant while running a callout_stop(),
@@ -1203,25 +1249,17 @@ again:
 	}
 
 	/*
-	 * If the callout isn't pending, it's not on the queue, so
-	 * don't attempt to remove it from the queue.  We can try to
-	 * stop it by other means however.
+	 * If the callout is running, try to stop it or drain it.
 	 */
-	if (!(c->c_iflags & CALLOUT_PENDING)) {
-		c->c_flags &= ~CALLOUT_ACTIVE;
-
+	if (cc_exec_curr(cc, direct) == c) {
 		/*
-		 * If it wasn't on the queue and it isn't the current
-		 * callout, then we can't stop it, so just bail.
+		 * Succeed we to stop it or not, we must clear the
+		 * active flag - this is what API users expect.  If we're
+		 * draining and the callout is currently executing, first wait
+		 * until it finishes.
 		 */
-		if (cc_exec_curr(cc, direct) != c) {
-			CTR3(KTR_CALLOUT, "failed to stop %p func %p arg %p",
-			    c, c->c_func, c->c_arg);
-			CC_UNLOCK(cc);
-			if (sq_locked)
-				sleepq_release(&cc_exec_waiting(cc, direct));
-			return (0);
-		}
+		if ((flags & CS_DRAIN) == 0)
+			c->c_flags &= ~CALLOUT_ACTIVE;
 
 		if ((flags & CS_DRAIN) != 0) {
 			/*
@@ -1280,15 +1318,18 @@ again:
 				PICKUP_GIANT();
 				CC_LOCK(cc);
 			}
+			c->c_flags &= ~CALLOUT_ACTIVE;
 		} else if (use_lock &&
-			   !cc_exec_cancel(cc, direct)) {
+			   !cc_exec_cancel(cc, direct) && (drain == NULL)) {
 			
 			/*
 			 * The current callout is waiting for its
 			 * lock which we hold.  Cancel the callout
 			 * and return.  After our caller drops the
 			 * lock, the callout will be skipped in
-			 * softclock().
+			 * softclock(). This *only* works with a
+			 * callout_stop() *not* callout_drain() or
+			 * callout_async_drain().
 			 */
 			cc_exec_cancel(cc, direct) = true;
 			CTR3(KTR_CALLOUT, "cancelled %p func %p arg %p",
@@ -1334,17 +1375,37 @@ again:
 #endif
 			CTR3(KTR_CALLOUT, "postponing stop %p func %p arg %p",
 			    c, c->c_func, c->c_arg);
+ 			if (drain) {
+				cc_exec_drain(cc, direct) = drain;
+			}
 			CC_UNLOCK(cc);
-			return ((flags & CS_MIGRBLOCK) != 0);
+			return ((flags & CS_EXECUTING) != 0);
 		}
 		CTR3(KTR_CALLOUT, "failed to stop %p func %p arg %p",
 		    c, c->c_func, c->c_arg);
-		CC_UNLOCK(cc);
+		if (drain) {
+			cc_exec_drain(cc, direct) = drain;
+		}
 		KASSERT(!sq_locked, ("sleepqueue chain still locked"));
-		return (0);
-	}
+		cancelled = ((flags & CS_EXECUTING) != 0);
+	} else
+		cancelled = 1;
+
 	if (sq_locked)
 		sleepq_release(&cc_exec_waiting(cc, direct));
+
+	if ((c->c_iflags & CALLOUT_PENDING) == 0) {
+		CTR3(KTR_CALLOUT, "failed to stop %p func %p arg %p",
+		    c, c->c_func, c->c_arg);
+		/*
+		 * For not scheduled and not executing callout return
+		 * negative value.
+		 */
+		if (cc_exec_curr(cc, direct) != c)
+			cancelled = -1;
+		CC_UNLOCK(cc);
+		return (cancelled);
+	}
 
 	c->c_iflags &= ~CALLOUT_PENDING;
 	c->c_flags &= ~CALLOUT_ACTIVE;
@@ -1362,13 +1423,11 @@ again:
 	}
 	callout_cc_del(c, cc);
 	CC_UNLOCK(cc);
-	return (1);
+	return (cancelled);
 }
 
 void
-callout_init(c, mpsafe)
-	struct	callout *c;
-	int mpsafe;
+callout_init(struct callout *c, int mpsafe)
 {
 	bzero(c, sizeof *c);
 	if (mpsafe) {
@@ -1382,10 +1441,7 @@ callout_init(c, mpsafe)
 }
 
 void
-_callout_init_lock(c, lock, flags)
-	struct	callout *c;
-	struct	lock_object *lock;
-	int flags;
+_callout_init_lock(struct callout *c, struct lock_object *lock, int flags)
 {
 	bzero(c, sizeof *c);
 	c->c_lock = lock;
@@ -1417,10 +1473,9 @@ _callout_init_lock(c, lock, flags)
  * 2 days.  Your milage may vary.   - Ken Key <key@cs.utk.edu>
  */
 void
-adjust_timeout_calltodo(time_change)
-    struct timeval *time_change;
+adjust_timeout_calltodo(struct timeval *time_change)
 {
-	register struct callout *p;
+	struct callout *p;
 	unsigned long delta_ticks;
 
 	/* 
@@ -1432,11 +1487,11 @@ adjust_timeout_calltodo(time_change)
 	if (time_change->tv_sec < 0)
 		return;
 	else if (time_change->tv_sec <= LONG_MAX / 1000000)
-		delta_ticks = (time_change->tv_sec * 1000000 +
-			       time_change->tv_usec + (tick - 1)) / tick + 1;
+		delta_ticks = howmany(time_change->tv_sec * 1000000 +
+		    time_change->tv_usec, tick) + 1;
 	else if (time_change->tv_sec <= LONG_MAX / hz)
 		delta_ticks = time_change->tv_sec * hz +
-			      (time_change->tv_usec + (tick - 1)) / tick + 1;
+		    howmany(time_change->tv_usec, tick) + 1;
 	else
 		delta_ticks = LONG_MAX;
 

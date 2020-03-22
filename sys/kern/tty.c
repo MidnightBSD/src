@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/tty.c 302234 2016-06-27 21:50:30Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/tty.c 356020 2019-12-22 19:06:45Z kevans $");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -96,72 +95,101 @@ static const char	*dev_console_filename;
 
 #define	TTY_CALLOUT(tp,d) (dev2unit(d) & TTYUNIT_CALLOUT)
 
+static int  tty_drainwait = 5 * 60;
+SYSCTL_INT(_kern, OID_AUTO, tty_drainwait, CTLFLAG_RWTUN,
+    &tty_drainwait, 0, "Default output drain timeout in seconds");
+
 /*
  * Set TTY buffer sizes.
  */
 
 #define	TTYBUF_MAX	65536
 
-static void
+/*
+ * Allocate buffer space if necessary, and set low watermarks, based on speed.
+ * Note that the ttyxxxq_setsize() functions may drop and then reacquire the tty
+ * lock during memory allocation.  They will return ENXIO if the tty disappears
+ * while unlocked.
+ */
+static int
 tty_watermarks(struct tty *tp)
 {
 	size_t bs = 0;
+	int error;
 
-	/* Provide an input buffer for 0.2 seconds of data. */
+	/* Provide an input buffer for 2 seconds of data. */
 	if (tp->t_termios.c_cflag & CREAD)
 		bs = MIN(tp->t_termios.c_ispeed / 5, TTYBUF_MAX);
-	ttyinq_setsize(&tp->t_inq, tp, bs);
+	error = ttyinq_setsize(&tp->t_inq, tp, bs);
+	if (error != 0)
+		return (error);
 
 	/* Set low watermark at 10% (when 90% is available). */
 	tp->t_inlow = (ttyinq_getallocatedsize(&tp->t_inq) * 9) / 10;
 
-	/* Provide an output buffer for 0.2 seconds of data. */
+	/* Provide an output buffer for 2 seconds of data. */
 	bs = MIN(tp->t_termios.c_ospeed / 5, TTYBUF_MAX);
-	ttyoutq_setsize(&tp->t_outq, tp, bs);
+	error = ttyoutq_setsize(&tp->t_outq, tp, bs);
+	if (error != 0)
+		return (error);
 
 	/* Set low watermark at 10% (when 90% is available). */
 	tp->t_outlow = (ttyoutq_getallocatedsize(&tp->t_outq) * 9) / 10;
+
+	return (0);
 }
 
 static int
 tty_drain(struct tty *tp, int leaving)
 {
-	size_t bytesused;
-	int error, revokecnt;
+	sbintime_t timeout_at;
+	size_t bytes;
+	int error;
 
 	if (ttyhook_hashook(tp, getc_inject))
 		/* buffer is inaccessible */
 		return (0);
 
-	while (ttyoutq_bytesused(&tp->t_outq) > 0 || ttydevsw_busy(tp)) {
-		ttydevsw_outwakeup(tp);
-		/* Could be handled synchronously. */
-		bytesused = ttyoutq_bytesused(&tp->t_outq);
-		if (bytesused == 0 && !ttydevsw_busy(tp))
+	/*
+	 * For close(), use the recent historic timeout of "1 second without
+	 * making progress".  For tcdrain(), use t_drainwait as the timeout,
+	 * with zero meaning "no timeout" which gives POSIX behavior.
+	 */
+	if (leaving)
+		timeout_at = getsbinuptime() + SBT_1S;
+	else if (tp->t_drainwait != 0)
+		timeout_at = getsbinuptime() + SBT_1S * tp->t_drainwait;
+	else
+		timeout_at = 0;
+
+	/*
+	 * Poll the output buffer and the hardware for completion, at 10 Hz.
+	 * Polling is required for devices which are not able to signal an
+	 * interrupt when the transmitter becomes idle (most USB serial devs).
+	 * The unusual structure of this loop ensures we check for busy one more
+	 * time after tty_timedwait() returns EWOULDBLOCK, so that success has
+	 * higher priority than timeout if the IO completed in the last 100mS.
+	 */
+	error = 0;
+	bytes = ttyoutq_bytesused(&tp->t_outq);
+	for (;;) {
+		if (ttyoutq_bytesused(&tp->t_outq) == 0 && !ttydevsw_busy(tp))
 			return (0);
-
-		/* Wait for data to be drained. */
-		if (leaving) {
-			revokecnt = tp->t_revokecnt;
-			error = tty_timedwait(tp, &tp->t_outwait, hz);
-			switch (error) {
-			case ERESTART:
-				if (revokecnt != tp->t_revokecnt)
-					error = 0;
-				break;
-			case EWOULDBLOCK:
-				if (ttyoutq_bytesused(&tp->t_outq) < bytesused)
-					error = 0;
-				break;
-			}
-		} else
-			error = tty_wait(tp, &tp->t_outwait);
-
-		if (error)
+		if (error != 0)
 			return (error);
+		ttydevsw_outwakeup(tp);
+		error = tty_timedwait(tp, &tp->t_outwait, hz / 10);
+		if (error != 0 && error != EWOULDBLOCK)
+			return (error);
+		else if (timeout_at == 0 || getsbinuptime() < timeout_at)
+			error = 0;
+		else if (leaving && ttyoutq_bytesused(&tp->t_outq) < bytes) {
+			/* In close, making progress, grant an extra second. */
+			error = 0;
+			timeout_at += SBT_1S;
+			bytes = ttyoutq_bytesused(&tp->t_outq);
+		}
 	}
-
-	return (0);
 }
 
 /*
@@ -207,7 +235,6 @@ ttydev_leave(struct tty *tp)
 		constty_clear();
 
 	/* Drain any output. */
-	MPASS((tp->t_flags & TF_STOPPED) == 0);
 	if (!tty_gone(tp))
 		tty_drain(tp, 1);
 
@@ -301,7 +328,9 @@ ttydev_open(struct cdev *dev, int oflags, int devtype __unused,
 			goto done;
 
 		ttydisc_open(tp);
-		tty_watermarks(tp); /* XXXGL: drops lock */
+		error = tty_watermarks(tp);
+		if (error != 0)
+			goto done;
 	}
 
 	/* Wait for Carrier Detect. */
@@ -354,11 +383,11 @@ ttydev_close(struct cdev *dev, int fflag, int devtype __unused,
 		return (0);
 	}
 
-	/*
-	 * This can only be called once. The callin and the callout
-	 * devices cannot be opened at the same time.
-	 */
-	tp->t_flags &= ~(TF_EXCLUDE|TF_STOPPED);
+	/* If revoking, flush output now to avoid draining it later. */
+	if (fflag & FREVOKE)
+		tty_flush(tp, FWRITE);
+
+	tp->t_flags &= ~TF_EXCLUDE;
 
 	/* Properly wake up threads that are stuck - revoke(). */
 	tp->t_revokecnt++;
@@ -1022,6 +1051,7 @@ tty_alloc_mutex(struct ttydevsw *tsw, void *sc, struct mtx *mutex)
 	tp->t_devsw = tsw;
 	tp->t_devswsoftc = sc;
 	tp->t_flags = tsw->tsw_flags;
+	tp->t_drainwait = tty_drainwait;
 
 	tty_init_termios(tp);
 
@@ -1139,6 +1169,7 @@ void
 tty_rel_gone(struct tty *tp)
 {
 
+	tty_lock_assert(tp, MA_OWNED);
 	MPASS(!tty_gone(tp));
 
 	/* Simulate carrier removal. */
@@ -1216,10 +1247,11 @@ SYSCTL_PROC(_kern, OID_AUTO, ttys, CTLTYPE_OPAQUE|CTLFLAG_RD|CTLFLAG_MPSAFE,
  * the user.
  */
 
-static int
-tty_vmakedevf(struct tty *tp, struct ucred *cred, int flags,
-    const char *fmt, va_list ap)
+int
+tty_makedevf(struct tty *tp, struct ucred *cred, int flags,
+    const char *fmt, ...)
 {
+	va_list ap;
 	struct make_dev_args args;
 	struct cdev *dev, *init, *lock, *cua, *cinit, *clock;
 	const char *prefix = "tty";
@@ -1233,7 +1265,9 @@ tty_vmakedevf(struct tty *tp, struct ucred *cred, int flags,
 	if (tp->t_flags & TF_NOPREFIX)
 		prefix = "";
 
+	va_start(ap, fmt);
 	vsnrprintf(name, sizeof name, 32, fmt, ap);
+	va_end(ap);
 
 	if (cred == NULL) {
 		/* System device. */
@@ -1339,30 +1373,6 @@ fail:
 		destroy_dev(clock);
 
 	return (error);
-}
-
-int
-tty_makedevf(struct tty *tp, struct ucred *cred, int flags,
-    const char *fmt, ...)
-{
-	va_list ap;
-	int error;
-
-	va_start(ap, fmt);
-	error = tty_vmakedevf(tp, cred, flags, fmt, ap);
-	va_end(ap);
-
-	return (error);
-}
-
-void
-tty_makedev(struct tty *tp, struct ucred *cred, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	(void) tty_vmakedevf(tp, cred, 0, fmt, ap);
-	va_end(ap);
 }
 
 /*
@@ -1482,13 +1492,19 @@ tty_flush(struct tty *tp, int flags)
 		tp->t_flags &= ~TF_HIWAT_OUT;
 		ttyoutq_flush(&tp->t_outq);
 		tty_wakeup(tp, FWRITE);
-		ttydevsw_pktnotify(tp, TIOCPKT_FLUSHWRITE);
+		if (!tty_gone(tp)) {
+			ttydevsw_outwakeup(tp);
+			ttydevsw_pktnotify(tp, TIOCPKT_FLUSHWRITE);
+		}
 	}
 	if (flags & FREAD) {
 		tty_hiwat_in_unblock(tp);
 		ttyinq_flush(&tp->t_inq);
-		ttydevsw_inwakeup(tp);
-		ttydevsw_pktnotify(tp, TIOCPKT_FLUSHREAD);
+		tty_wakeup(tp, FREAD);
+		if (!tty_gone(tp)) {
+			ttydevsw_inwakeup(tp);
+			ttydevsw_pktnotify(tp, TIOCPKT_FLUSHREAD);
+		}
 	}
 }
 
@@ -1627,7 +1643,9 @@ tty_generic_ioctl(struct tty *tp, u_long cmd, void *data, int fflag,
 			tp->t_termios.c_ospeed = t->c_ospeed;
 
 			/* Baud rate has changed - update watermarks. */
-			tty_watermarks(tp);
+			error = tty_watermarks(tp);
+			if (error)
+				return (error);
 		}
 
 		/* Copy new non-device driver parameters. */
@@ -1780,6 +1798,14 @@ tty_generic_ioctl(struct tty *tp, u_long cmd, void *data, int fflag,
 	case TIOCDRAIN:
 		/* Drain TTY output. */
 		return tty_drain(tp, 0);
+	case TIOCGDRAINWAIT:
+		*(int *)data = tp->t_drainwait;
+		return (0);
+	case TIOCSDRAINWAIT:
+		error = priv_check(td, PRIV_TTY_DRAINWAIT);
+		if (error == 0)
+			tp->t_drainwait = *(int *)data;
+		return (error);
 	case TIOCCONS:
 		/* Set terminal as console TTY. */
 		if (*(int *)data) {
@@ -1955,7 +1981,7 @@ ttyhook_register(struct tty **rtp, struct proc *p, int fd, struct ttyhook *th,
 	/* Validate the file descriptor. */
 	fdp = p->p_fd;
 	error = fget_unlocked(fdp, fd, cap_rights_init(&rights, CAP_TTYHOOK),
-	    0, &fp, NULL);
+	    &fp, NULL);
 	if (error != 0)
 		return (error);
 	if (fp->f_ops == &badfileops) {

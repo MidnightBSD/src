@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_prf.c 321108 2017-07-18 06:45:41Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_prf.c 339446 2018-10-20 16:20:36Z jamie $");
 
 #ifdef _KERNEL
 #include "opt_ddb.h"
@@ -119,26 +118,35 @@ static void  putchar(int ch, void *arg);
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *len, int upper);
 static void  snprintf_func(int ch, void *arg);
 
-static int msgbufmapped;		/* Set when safe to use msgbuf */
+static bool msgbufmapped;		/* Set when safe to use msgbuf */
 int msgbuftrigger;
 
-static int      log_console_output = 1;
-TUNABLE_INT("kern.log_console_output", &log_console_output);
-SYSCTL_INT(_kern, OID_AUTO, log_console_output, CTLFLAG_RW,
-    &log_console_output, 0, "Duplicate console output to the syslog.");
+#ifndef BOOT_TAG_SZ
+#define	BOOT_TAG_SZ	32
+#endif
+#ifndef BOOT_TAG
+/* Tag used to mark the start of a boot in dmesg */
+#define	BOOT_TAG	""
+#endif
+
+static char current_boot_tag[BOOT_TAG_SZ + 1] = BOOT_TAG;
+SYSCTL_STRING(_kern, OID_AUTO, boot_tag, CTLFLAG_RDTUN | CTLFLAG_NOFETCH,
+    current_boot_tag, 0, "Tag added to dmesg at start of boot");
+
+static int log_console_output = 1;
+SYSCTL_INT(_kern, OID_AUTO, log_console_output, CTLFLAG_RWTUN,
+    &log_console_output, 0, "Duplicate console output to the syslog");
 
 /*
  * See the comment in log_console() below for more explanation of this.
  */
-static int log_console_add_linefeed = 0;
-TUNABLE_INT("kern.log_console_add_linefeed", &log_console_add_linefeed);
-SYSCTL_INT(_kern, OID_AUTO, log_console_add_linefeed, CTLFLAG_RW,
-    &log_console_add_linefeed, 0, "log_console() adds extra newlines.");
+static int log_console_add_linefeed;
+SYSCTL_INT(_kern, OID_AUTO, log_console_add_linefeed, CTLFLAG_RWTUN,
+    &log_console_add_linefeed, 0, "log_console() adds extra newlines");
 
-static int	always_console_output = 0;
-TUNABLE_INT("kern.always_console_output", &always_console_output);
-SYSCTL_INT(_kern, OID_AUTO, always_console_output, CTLFLAG_RW,
-    &always_console_output, 0, "Always output to console despite TIOCCONS.");
+static int always_console_output;
+SYSCTL_INT(_kern, OID_AUTO, always_console_output, CTLFLAG_RWTUN,
+    &always_console_output, 0, "Always output to console despite TIOCCONS");
 
 /*
  * Warn that a system table is full.
@@ -318,9 +326,15 @@ log(int level, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	(void)_vprintf(level, log_open ? TOLOG : TOCONS | TOLOG, fmt, ap);
+	vlog(level, fmt, ap);
 	va_end(ap);
+}
 
+void
+vlog(int level, const char *fmt, va_list ap)
+{
+
+	(void)_vprintf(level, log_open ? TOLOG : TOCONS | TOLOG, fmt, ap);
 	msgbuftrigger = 1;
 }
 
@@ -626,7 +640,7 @@ ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
  * the next characters (up to a control character, i.e. a character <= 32),
  * give the name of the register.  Thus:
  *
- *	kvprintf("reg=%b\n", 3, "\10\2BITTWO\1BITONE\n");
+ *	kvprintf("reg=%b\n", 3, "\10\2BITTWO\1BITONE");
  *
  * would produce output:
  *
@@ -708,6 +722,7 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 				padc = '0';
 				goto reswitch;
 			}
+			/* FALLTHROUGH */
 		case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7': case '8': case '9':
 				for (n = 0;; ++fmt) {
@@ -745,7 +760,15 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 				PCHAR('>');
 			break;
 		case 'c':
+			width -= 1;
+
+			if (!ladjust && width > 0)
+				while (width--)
+					PCHAR(padc);
 			PCHAR(va_arg(ap, int));
+			if (ladjust && width > 0)
+				while (width--)
+					PCHAR(padc);
 			break;
 		case 'D':
 			up = va_arg(ap, u_char *);
@@ -939,7 +962,7 @@ number:
 			while (percent < fmt)
 				PCHAR(*percent++);
 			/*
-			 * Since we ignore a formatting argument it is no 
+			 * Since we ignore a formatting argument it is no
 			 * longer safe to obey the remaining formatting
 			 * arguments as the arguments will no longer match
 			 * the format specs.
@@ -1000,21 +1023,24 @@ msgbufinit(void *ptr, int size)
 {
 	char *cp;
 	static struct msgbuf *oldp = NULL;
+	bool print_boot_tag;
 
 	size -= sizeof(*msgbufp);
 	cp = (char *)ptr;
+	print_boot_tag = !msgbufmapped;
+	/* Attempt to fetch kern.boot_tag tunable on first mapping */
+	if (!msgbufmapped)
+		TUNABLE_STR_FETCH("kern.boot_tag", current_boot_tag,
+		    sizeof(current_boot_tag));
 	msgbufp = (struct msgbuf *)(cp + size);
 	msgbuf_reinit(msgbufp, cp, size);
 	if (msgbufmapped && oldp != msgbufp)
 		msgbuf_copy(oldp, msgbufp);
-	msgbufmapped = 1;
+	msgbufmapped = true;
+	if (print_boot_tag && *current_boot_tag != '\0')
+		printf("%s\n", current_boot_tag);
 	oldp = msgbufp;
 }
-
-static int unprivileged_read_msgbuf = 1;
-SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_read_msgbuf,
-    CTLFLAG_RW, &unprivileged_read_msgbuf, 0,
-    "Unprivileged processes may read the kernel message buffer");
 
 /* Sysctls for accessing/clearing the msgbuf */
 static int
@@ -1024,11 +1050,9 @@ sysctl_kern_msgbuf(SYSCTL_HANDLER_ARGS)
 	u_int seq;
 	int error, len;
 
-	if (!unprivileged_read_msgbuf) {
-		error = priv_check(req->td, PRIV_MSGBUF);
-		if (error)
-			return (error);
-	}
+	error = priv_check(req->td, PRIV_MSGBUF);
+	if (error)
+		return (error);
 
 	/* Read the whole buffer, one chunk at a time. */
 	mtx_lock(&msgbuf_lock);
@@ -1037,7 +1061,7 @@ sysctl_kern_msgbuf(SYSCTL_HANDLER_ARGS)
 		len = msgbuf_peekbytes(msgbufp, buf, sizeof(buf), &seq);
 		mtx_unlock(&msgbuf_lock);
 		if (len == 0)
-			return (0);
+			return (SYSCTL_OUT(req, "", 1)); /* add nulterm */
 
 		error = sysctl_handle_opaque(oidp, buf, len, req);
 		if (error)

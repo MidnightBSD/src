@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: stable/10/sys/nfsserver/nfsm_subs.h 184588 2008-11-03 10:38:00Z dfr $
+ * $FreeBSD: stable/11/sys/nfsserver/nfsm_subs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NFSSERVER_NFSM_SUBS_H_
@@ -46,14 +45,6 @@
  * the assistance of the nfs code. To attempt to use them for any
  * other purpose will be dangerous. (they make weird assumptions)
  */
-
-/*
- * First define what the actual subs. return
- */
-
-#define	M_HASCL(m)	((m)->m_flags & M_EXT)
-#define	NFSMSIZ(m)	((M_HASCL(m))?MCLBYTES: \
-				(((m)->m_flags & M_PKTHDR)?MHLEN:MLEN))
 
 /*
  * Now for the macros that do the simple stuff and call the functions

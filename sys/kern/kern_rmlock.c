@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Stephan Uphoff <ups@FreeBSD.org>
  * All rights reserved.
@@ -33,10 +32,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_rmlock.c 323870 2017-09-21 19:24:11Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_rmlock.c 341100 2018-11-27 22:33:58Z vangyzen $");
 
 #include "opt_ddb.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -338,17 +336,10 @@ rm_wowned(const struct rmlock *rm)
 void
 rm_sysinit(void *arg)
 {
-	struct rm_args *args = arg;
+	struct rm_args *args;
 
-	rm_init(args->ra_rm, args->ra_desc);
-}
-
-void
-rm_sysinit_flags(void *arg)
-{
-	struct rm_args_flags *args = arg;
-
-	rm_init_flags(args->ra_rm, args->ra_desc, args->ra_opts);
+	args = arg;
+	rm_init_flags(args->ra_rm, args->ra_desc, args->ra_flags);
 }
 
 static int
@@ -558,9 +549,9 @@ _rm_wlock(struct rmlock *rm)
 		 */
 #ifdef SMP
 		smp_rendezvous_cpus(readcpus,
-		    smp_no_rendevous_barrier,
+		    smp_no_rendezvous_barrier,
 		    rm_cleanIPI,
-		    smp_no_rendevous_barrier,
+		    smp_no_rendezvous_barrier,
 		    rm);
 
 #else
@@ -612,11 +603,8 @@ _rm_wlock_debug(struct rmlock *rm, const char *file, int line)
 	_rm_wlock(rm);
 
 	LOCK_LOG_LOCK("RMWLOCK", &rm->lock_object, 0, 0, file, line);
-
 	WITNESS_LOCK(&rm->lock_object, LOP_EXCLUSIVE, file, line);
-
-	curthread->td_locks++;
-
+	TD_LOCKS_INC(curthread);
 }
 
 void
@@ -632,7 +620,7 @@ _rm_wunlock_debug(struct rmlock *rm, const char *file, int line)
 	WITNESS_UNLOCK(&rm->lock_object, LOP_EXCLUSIVE, file, line);
 	LOCK_LOG_LOCK("RMWUNLOCK", &rm->lock_object, 0, 0, file, line);
 	_rm_wunlock(rm);
-	curthread->td_locks--;
+	TD_LOCKS_DEC(curthread);
 }
 
 int
@@ -674,9 +662,7 @@ _rm_rlock_debug(struct rmlock *rm, struct rm_priotracker *tracker,
 			LOCK_LOG_LOCK("RMRLOCK", &rm->lock_object, 0, 0, file,
 			    line);
 		WITNESS_LOCK(&rm->lock_object, 0, file, line);
-
-		curthread->td_locks++;
-
+		TD_LOCKS_INC(curthread);
 		return (1);
 	} else if (trylock)
 		LOCK_LOG_TRY("RMRLOCK", &rm->lock_object, 0, 0, file, line);
@@ -698,7 +684,7 @@ _rm_runlock_debug(struct rmlock *rm, struct rm_priotracker *tracker,
 	WITNESS_UNLOCK(&rm->lock_object, 0, file, line);
 	LOCK_LOG_LOCK("RMRUNLOCK", &rm->lock_object, 0, 0, file, line);
 	_rm_runlock(rm, tracker);
-	curthread->td_locks--;
+	TD_LOCKS_DEC(curthread);
 }
 
 #else
@@ -754,7 +740,7 @@ _rm_assert(const struct rmlock *rm, int what, const char *file, int line)
 {
 	int count;
 
-	if (panicstr != NULL)
+	if (SCHEDULER_STOPPED())
 		return;
 	switch (what) {
 	case RA_LOCKED:

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,9 +35,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_synch.c 316843 2017-04-14 14:45:44Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_synch.c 354405 2019-11-06 18:02:18Z mav $");
 
-#include "opt_kdtrace.h"
 #include "opt_ktrace.h"
 #include "opt_sched.h"
 
@@ -68,12 +66,6 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_synch.c 316843 2017-04-14 14:45:44Z 
 
 #include <machine/cpu.h>
 
-#ifdef XEN
-#include <vm/vm.h>
-#include <vm/vm_param.h>
-#include <vm/pmap.h>
-#endif
-
 static void synch_setup(void *dummy);
 SYSINIT(synch_setup, SI_SUB_KICK_SCHEDULER, SI_ORDER_FIRST, synch_setup,
     NULL);
@@ -102,17 +94,6 @@ static void	loadav(void *arg);
 
 SDT_PROVIDER_DECLARE(sched);
 SDT_PROBE_DEFINE(sched, , , preempt);
-
-/*
- * These probes reference Solaris features that are not implemented in FreeBSD.
- * Create the probes anyway for compatibility with existing D scripts; they'll
- * just never fire.
- */
-SDT_PROBE_DEFINE(sched, , , cpucaps__sleep);
-SDT_PROBE_DEFINE(sched, , , cpucaps__wakeup);
-SDT_PROBE_DEFINE(sched, , , schedctl__nopreempt);
-SDT_PROBE_DEFINE(sched, , , schedctl__preempt);
-SDT_PROBE_DEFINE(sched, , , schedctl__yield);
 
 static void
 sleepinit(void *unused)
@@ -174,15 +155,7 @@ _sleep(void *ident, struct lock_object *lock, int priority,
 	else
 		class = NULL;
 
-	if (cold || SCHEDULER_STOPPED()) {
-		/*
-		 * During autoconfiguration, just return;
-		 * don't run any other threads or panic below,
-		 * in case this is the idle thread and already asleep.
-		 * XXX: this used to do "s = splhigh(); splx(safepri);
-		 * splx(s);" to give interrupts a chance, but there is
-		 * no way to give interrupts a chance now.
-		 */
+	if (SCHEDULER_STOPPED_TD(td)) {
 		if (lock != NULL && priority & PDROP)
 			class->lc_unlock(lock);
 		return (0);
@@ -270,17 +243,8 @@ msleep_spin_sbt(void *ident, struct mtx *mtx, const char *wmesg,
 	KASSERT(p != NULL, ("msleep1"));
 	KASSERT(ident != NULL && TD_IS_RUNNING(td), ("msleep"));
 
-	if (cold || SCHEDULER_STOPPED()) {
-		/*
-		 * During autoconfiguration, just return;
-		 * don't run any other threads or panic below,
-		 * in case this is the idle thread and already asleep.
-		 * XXX: this used to do "s = splhigh(); splx(safepri);
-		 * splx(s);" to give interrupts a chance, but there is
-		 * no way to give interrupts a chance now.
-		 */
+	if (SCHEDULER_STOPPED_TD(td))
 		return (0);
-	}
 
 	sleepq_lock(ident);
 	CTR5(KTR_PROC, "msleep_spin: thread %ld (pid %ld, %s) on %s (%p)",
@@ -335,22 +299,23 @@ msleep_spin_sbt(void *ident, struct mtx *mtx, const char *wmesg,
 }
 
 /*
- * pause() delays the calling thread by the given number of system ticks.
- * During cold bootup, pause() uses the DELAY() function instead of
- * the tsleep() function to do the waiting. The "timo" argument must be
- * greater than or equal to zero. A "timo" value of zero is equivalent
- * to a "timo" value of one.
+ * pause_sbt() delays the calling thread by the given signed binary
+ * time. During cold bootup, pause_sbt() uses the DELAY() function
+ * instead of the _sleep() function to do the waiting. The "sbt"
+ * argument must be greater than or equal to zero. A "sbt" value of
+ * zero is equivalent to a "sbt" value of one tick.
  */
 int
 pause_sbt(const char *wmesg, sbintime_t sbt, sbintime_t pr, int flags)
 {
-	KASSERT(sbt >= 0, ("pause: timeout must be >= 0"));
+	KASSERT(sbt >= 0, ("pause_sbt: timeout must be >= 0"));
 
 	/* silently convert invalid timeouts */
 	if (sbt == 0)
 		sbt = tick_sbt;
 
-	if (cold || kdb_active || SCHEDULER_STOPPED()) {
+	if ((cold && curthread == &thread0) || kdb_active ||
+	    SCHEDULER_STOPPED()) {
 		/*
 		 * We delay one second at a time to avoid overflowing the
 		 * system specific DELAY() function(s):
@@ -360,12 +325,13 @@ pause_sbt(const char *wmesg, sbintime_t sbt, sbintime_t pr, int flags)
 			sbt -= SBT_1S;
 		}
 		/* Do the delay remainder, if any */
-		sbt = (sbt + SBT_1US - 1) / SBT_1US;
+		sbt = howmany(sbt, SBT_1US);
 		if (sbt > 0)
 			DELAY(sbt);
-		return (0);
+		return (EWOULDBLOCK);
 	}
-	return (_sleep(&pause_wchan[curcpu], NULL, 0, wmesg, sbt, pr, flags));
+	return (_sleep(&pause_wchan[curcpu], NULL,
+	    (flags & C_CATCH) ? PCATCH : 0, wmesg, sbt, pr, flags));
 }
 
 /*
@@ -398,6 +364,19 @@ wakeup_one(void *ident)
 
 	sleepq_lock(ident);
 	wakeup_swapper = sleepq_signal(ident, SLEEPQ_SLEEP, 0, 0);
+	sleepq_release(ident);
+	if (wakeup_swapper)
+		kick_proc0();
+}
+
+void
+wakeup_any(void *ident)
+{
+	int wakeup_swapper;
+
+	sleepq_lock(ident);
+	wakeup_swapper = sleepq_signal(ident, SLEEPQ_SLEEP | SLEEPQ_UNFAIR,
+	    0, 0);
 	sleepq_release(ident);
 	if (wakeup_swapper)
 		kick_proc0();
@@ -439,13 +418,15 @@ mi_switch(int flags, struct thread *newtd)
 	 */
 	if (kdb_active)
 		kdb_switch();
-	if (SCHEDULER_STOPPED())
+	if (SCHEDULER_STOPPED_TD(td))
 		return;
 	if (flags & SW_VOL) {
 		td->td_ru.ru_nvcsw++;
 		td->td_swvoltick = ticks;
-	} else
+	} else {
 		td->td_ru.ru_nivcsw++;
+		td->td_swinvoltick = ticks;
+	}
 #ifdef SCHED_STATS
 	SCHED_STAT_INC(sched_switch_stats[flags & SW_TYPE_MASK]);
 #endif
@@ -462,18 +443,15 @@ mi_switch(int flags, struct thread *newtd)
 	PCPU_INC(cnt.v_swtch);
 	PCPU_SET(switchticks, ticks);
 	CTR4(KTR_PROC, "mi_switch: old thread %ld (td_sched %p, pid %ld, %s)",
-	    td->td_tid, td->td_sched, td->td_proc->p_pid, td->td_name);
+	    td->td_tid, td_get_sched(td), td->td_proc->p_pid, td->td_name);
 #ifdef KDTRACE_HOOKS
 	if ((flags & SW_PREEMPT) != 0 || ((flags & SW_INVOL) != 0 &&
 	    (flags & SW_TYPE_MASK) == SWT_NEEDRESCHED))
 		SDT_PROBE0(sched, , , preempt);
 #endif
-#ifdef XEN
-	PT_UPDATES_FLUSH();
-#endif
 	sched_switch(td, newtd, flags);
 	CTR4(KTR_PROC, "mi_switch: new thread %ld (td_sched %p, pid %ld, %s)",
-	    td->td_tid, td->td_sched, td->td_proc->p_pid, td->td_name);
+	    td->td_tid, td_get_sched(td), td->td_proc->p_pid, td->td_name);
 
 	/* 
 	 * If the last thread was exiting, finish cleaning it up.

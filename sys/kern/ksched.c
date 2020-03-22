@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, 1997
  *	HD Associates, Inc.  All rights reserved.
@@ -34,7 +33,7 @@
 /* ksched: Soft real time scheduling based on "rtprio". */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/ksched.c 287508 2015-09-06 17:36:09Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/ksched.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_posix.h"
 

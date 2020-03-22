@@ -37,7 +37,7 @@
 /*static char sccsid[] = "from: * @(#)nlm_prot.x	2.1 88/08/01 4.0 RPCSRC";*/
 __RCSID("$NetBSD: nlm_prot.x,v 1.6 2000/06/07 14:30:15 bouyer Exp $");
 #endif /* not lint */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/nlm/nlm_prot_svc.c 184886 2008-11-12 15:30:30Z dfr $");
 
 void nlm_prog_0(struct svc_req *rqstp, SVCXPRT *transp);
 void nlm_prog_1(struct svc_req *rqstp, SVCXPRT *transp);

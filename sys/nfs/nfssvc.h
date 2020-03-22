@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/nfs/nfssvc.h 292223 2015-12-14 21:21:43Z rmacklem $
+ * $FreeBSD: stable/11/sys/nfs/nfssvc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NFS_NFSSVC_H_
@@ -71,6 +70,7 @@
 #define	NFSSVC_RESUMENFSD	0x08000000
 #define	NFSSVC_DUMPMNTOPTS	0x10000000
 #define	NFSSVC_NEWSTRUCT	0x20000000
+#define	NFSSVC_FORCEDISM	0x40000000
 
 /* Argument structure for NFSSVC_DUMPMNTOPTS. */
 struct nfscl_dumpmntopts {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Ian Dowse.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/kern/subr_msgbuf.c 302234 2016-06-27 21:50:30Z bdrewery $
+ * $FreeBSD: stable/11/sys/kern/subr_msgbuf.c 338109 2018-08-20 17:27:30Z kevans $
  */
 
 /*
@@ -54,9 +53,8 @@ static u_int msgbuf_cksum(struct msgbuf *mbp);
  * or other actions occurred.
  */
 static int msgbuf_show_timestamp = 0;
-SYSCTL_INT(_kern, OID_AUTO, msgbuf_show_timestamp, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_kern, OID_AUTO, msgbuf_show_timestamp, CTLFLAG_RWTUN,
     &msgbuf_show_timestamp, 0, "Show timestamp in msgbuf");
-TUNABLE_INT("kern.msgbuf_show_timestamp", &msgbuf_show_timestamp);
 
 /*
  * Initialize a message buffer of the specified size at the specified
@@ -181,7 +179,7 @@ msgbuf_addchar(struct msgbuf *mbp, int c)
  * carriage returns down this path.  So do we still need it?
  */
 void
-msgbuf_addstr(struct msgbuf *mbp, int pri, char *str, int filter_cr)
+msgbuf_addstr(struct msgbuf *mbp, int pri, const char *str, int filter_cr)
 {
 	u_int seq;
 	size_t len, prefix_len;

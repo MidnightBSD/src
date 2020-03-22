@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfs/nfs_fha.c 322138 2017-08-07 07:40:00Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/nfs/nfs_fha.c 322137 2017-08-07 07:02:51Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

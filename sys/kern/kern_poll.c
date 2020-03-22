@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2002 Luigi Rizzo
  *
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_poll.c 261276 2014-01-29 21:57:00Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_poll.c 281528 2015-04-14 14:22:34Z gnn $");
 
 #include "opt_device_polling.h"
 
@@ -43,7 +42,8 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_poll.c 261276 2014-01-29 21:57:00Z b
 #include <sys/sysctl.h>
 #include <sys/syslog.h>
 
-#include <net/if.h>			/* for IFF_* flags		*/
+#include <net/if.h>
+#include <net/if_var.h>
 #include <net/netisr.h>			/* for NETISR_POLL		*/
 #include <net/vnet.h>
 
@@ -367,6 +367,9 @@ netisr_pollmore()
 	struct timeval t;
 	int kern_load;
 
+	if (poll_handlers == 0)
+		return;
+
 	mtx_lock(&poll_mtx);
 	if (!netisr_pollmore_scheduled) {
 		mtx_unlock(&poll_mtx);
@@ -424,6 +427,9 @@ netisr_poll(void)
 	int i, cycles;
 	enum poll_cmd arg = POLL_ONLY;
 
+	if (poll_handlers == 0)
+		return;
+
 	mtx_lock(&poll_mtx);
 	if (!netisr_poll_scheduled) {
 		mtx_unlock(&poll_mtx);
@@ -459,7 +465,7 @@ netisr_poll(void)
  * This is called from within the *_ioctl() functions.
  */
 int
-ether_poll_register(poll_handler_t *h, struct ifnet *ifp)
+ether_poll_register(poll_handler_t *h, if_t ifp)
 {
 	int i;
 
@@ -506,7 +512,7 @@ ether_poll_register(poll_handler_t *h, struct ifnet *ifp)
  * Remove interface from the polling list. Called from *_ioctl(), too.
  */
 int
-ether_poll_deregister(struct ifnet *ifp)
+ether_poll_deregister(if_t ifp)
 {
 	int i;
 

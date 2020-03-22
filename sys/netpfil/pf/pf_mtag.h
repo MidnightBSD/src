@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/netpfil/pf/pf_mtag.h 298091 2016-04-16 02:11:04Z loos $	*/
+/*	$FreeBSD: stable/11/sys/netpfil/pf/pf_mtag.h 284777 2015-06-24 19:16:41Z eri $	*/
 /*
  * Copyright (c) 2001 Daniel Hartmeier
  * All rights reserved.

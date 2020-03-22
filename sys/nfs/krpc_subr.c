@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: krpc_subr.c,v 1.12.4.1 1996/06/07 00:52:26 cgd Exp $	*/
 
 /*-
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfs/krpc_subr.c 248207 2013-03-12 13:42:47Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/nfs/krpc_subr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -218,10 +217,10 @@ krpc_call(struct sockaddr_in *sa, u_int prog, u_int vers, u_int func,
 	from = NULL;
 
 	/*
-	 * Create socket and set its recieve timeout.
+	 * Create socket and set its receive timeout.
 	 */
 	if ((error = socreate(AF_INET, &so, SOCK_DGRAM, 0, td->td_ucred, td)))
-		goto out;
+		return error;
 
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;

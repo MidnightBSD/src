@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2008 Poul-Henning Kamp
  * Copyright (c) 2000-2008 Dag-Erling Coïdan Smørgrav
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_sbuf.c 321112 2017-07-18 08:15:02Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_sbuf.c 321110 2017-07-18 06:57:50Z ngie $");
 
 #include <sys/param.h>
 

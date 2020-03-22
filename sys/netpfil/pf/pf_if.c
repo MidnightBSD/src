@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Daniel Hartmeier
  * Copyright (c) 2003 Cedric Berger
@@ -35,16 +34,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_if.c 287207 2015-08-27 14:07:28Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/pf_if.c 344964 2019-03-09 10:28:36Z kp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/eventhandler.h>
+#include <sys/lock.h>
+#include <sys/mbuf.h>
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
+#include <net/vnet.h>
 #include <net/pfvar.h>
 #include <net/route.h>
 
@@ -52,6 +56,9 @@ VNET_DEFINE(struct pfi_kif *,	 pfi_all);
 static VNET_DEFINE(long, pfi_update);
 #define	V_pfi_update	VNET(pfi_update)
 #define PFI_BUFFER_MAX	0x10000
+
+VNET_DECLARE(int, pf_vnet_active);
+#define V_pf_vnet_active	VNET(pf_vnet_active)
 
 static VNET_DEFINE(struct pfr_addr *, pfi_buffer);
 static VNET_DEFINE(int, pfi_buffer_cnt);
@@ -99,9 +106,11 @@ LIST_HEAD(pfi_list, pfi_kif);
 static VNET_DEFINE(struct pfi_list, pfi_unlinked_kifs);
 #define	V_pfi_unlinked_kifs	VNET(pfi_unlinked_kifs)
 static struct mtx pfi_unlnkdkifs_mtx;
+MTX_SYSINIT(pfi_unlnkdkifs_mtx, &pfi_unlnkdkifs_mtx, "pf unlinked interfaces",
+    MTX_DEF);
 
 void
-pfi_initialize(void)
+pfi_initialize_vnet(void)
 {
 	struct ifg_group *ifg;
 	struct ifnet *ifp;
@@ -110,8 +119,6 @@ pfi_initialize(void)
 	V_pfi_buffer_max = 64;
 	V_pfi_buffer = malloc(V_pfi_buffer_max * sizeof(*V_pfi_buffer),
 	    PFI_MTYPE, M_WAITOK);
-
-	mtx_init(&pfi_unlnkdkifs_mtx, "pf unlinked interfaces", NULL, MTX_DEF);
 
 	kif = malloc(sizeof(*kif), PFI_MTYPE, M_WAITOK);
 	PF_RULES_WLOCK();
@@ -124,6 +131,11 @@ pfi_initialize(void)
 	TAILQ_FOREACH(ifp, &V_ifnet, if_link)
 		pfi_attach_ifnet(ifp);
 	IFNET_RUNLOCK();
+}
+
+void
+pfi_initialize(void)
+{
 
 	pfi_attach_cookie = EVENTHANDLER_REGISTER(ifnet_arrival_event,
 	    pfi_attach_ifnet_event, NULL, EVENTHANDLER_PRI_ANY);
@@ -140,9 +152,37 @@ pfi_initialize(void)
 }
 
 void
+pfi_cleanup_vnet(void)
+{
+	struct pfi_kif *kif;
+
+	PF_RULES_WASSERT();
+
+	V_pfi_all = NULL;
+	while ((kif = RB_MIN(pfi_ifhead, &V_pfi_ifs))) {
+		RB_REMOVE(pfi_ifhead, &V_pfi_ifs, kif);
+		if (kif->pfik_group)
+			kif->pfik_group->ifg_pf_kif = NULL;
+		if (kif->pfik_ifp) {
+			if_rele(kif->pfik_ifp);
+			kif->pfik_ifp->if_pf_kif = NULL;
+		}
+		free(kif, PFI_MTYPE);
+	}
+
+	mtx_lock(&pfi_unlnkdkifs_mtx);
+	while ((kif = LIST_FIRST(&V_pfi_unlinked_kifs))) {
+		LIST_REMOVE(kif, pfik_list);
+		free(kif, PFI_MTYPE);
+	}
+	mtx_unlock(&pfi_unlnkdkifs_mtx);
+
+	free(V_pfi_buffer, PFI_MTYPE);
+}
+
+void
 pfi_cleanup(void)
 {
-	struct pfi_kif *p;
 
 	EVENTHANDLER_DEREGISTER(ifnet_arrival_event, pfi_attach_cookie);
 	EVENTHANDLER_DEREGISTER(ifnet_departure_event, pfi_detach_cookie);
@@ -150,21 +190,6 @@ pfi_cleanup(void)
 	EVENTHANDLER_DEREGISTER(group_change_event, pfi_change_group_cookie);
 	EVENTHANDLER_DEREGISTER(group_detach_event, pfi_detach_group_cookie);
 	EVENTHANDLER_DEREGISTER(ifaddr_event, pfi_ifaddr_event_cookie);
-
-	V_pfi_all = NULL;
-	while ((p = RB_MIN(pfi_ifhead, &V_pfi_ifs))) {
-		RB_REMOVE(pfi_ifhead, &V_pfi_ifs, p);
-		free(p, PFI_MTYPE);
-	}
-
-	while ((p = LIST_FIRST(&V_pfi_unlinked_kifs))) {
-		LIST_REMOVE(p, pfik_list);
-		free(p, PFI_MTYPE);
-	}
-
-	mtx_destroy(&pfi_unlnkdkifs_mtx);
-
-	free(V_pfi_buffer, PFI_MTYPE);
 }
 
 struct pfi_kif *
@@ -291,6 +316,8 @@ pfi_attach_ifnet(struct ifnet *ifp)
 	PF_RULES_WLOCK();
 	V_pfi_update++;
 	kif = pfi_kif_attach(kif, ifp->if_xname);
+
+	if_ref(ifp);
 
 	kif->pfik_ifp = ifp;
 	ifp->if_pf_kif = kif;
@@ -665,7 +692,7 @@ pfi_update_status(const char *name, struct pf_status *pfs)
 		bzero(pfs->bcounters, sizeof(pfs->bcounters));
 	}
 	TAILQ_FOREACH(ifgm, &ifg_members, ifgm_next) {
-		if (ifgm->ifgm_ifp == NULL)
+		if (ifgm->ifgm_ifp == NULL || ifgm->ifgm_ifp->if_pf_kif == NULL)
 			continue;
 		p = (struct pfi_kif *)ifgm->ifgm_ifp->if_pf_kif;
 
@@ -710,6 +737,7 @@ pfi_get_ifaces(const char *name, struct pfi_kif *buf, int *size)
 static int
 pfi_skip_if(const char *filter, struct pfi_kif *p)
 {
+	struct ifg_list *i;
 	int	n;
 
 	if (filter == NULL || !*filter)
@@ -720,10 +748,19 @@ pfi_skip_if(const char *filter, struct pfi_kif *p)
 	if (n < 1 || n >= IFNAMSIZ)
 		return (1);	/* sanity check */
 	if (filter[n-1] >= '0' && filter[n-1] <= '9')
-		return (1);	/* only do exact match in that case */
-	if (strncmp(p->pfik_name, filter, n))
-		return (1);	/* prefix doesn't match */
-	return (p->pfik_name[n] < '0' || p->pfik_name[n] > '9');
+		return (1);	/* group names may not end in a digit */
+	if (p->pfik_ifp != NULL) {
+		IF_ADDR_RLOCK(p->pfik_ifp);
+		TAILQ_FOREACH(i, &p->pfik_ifp->if_groups, ifgl_next) {
+			if (!strncmp(i->ifgl_group->ifg_group, filter,
+			      IFNAMSIZ)) {
+				IF_ADDR_RUNLOCK(p->pfik_ifp);
+				return (0); /* iface is in group "filter" */
+			}
+		}
+		IF_ADDR_RUNLOCK(p->pfik_ifp);
+	}
+	return (1);
 }
 
 int
@@ -777,6 +814,11 @@ pfi_attach_ifnet_event(void *arg __unused, struct ifnet *ifp)
 {
 
 	CURVNET_SET(ifp->if_vnet);
+	if (V_pf_vnet_active == 0) {
+		/* Avoid teardown race in the least expensive way. */
+		CURVNET_RESTORE();
+		return;
+	}
 	pfi_attach_ifnet(ifp);
 #ifdef ALTQ
 	PF_RULES_WLOCK();
@@ -791,10 +833,25 @@ pfi_detach_ifnet_event(void *arg __unused, struct ifnet *ifp)
 {
 	struct pfi_kif *kif = (struct pfi_kif *)ifp->if_pf_kif;
 
+	if (pfsync_detach_ifnet_ptr)
+		pfsync_detach_ifnet_ptr(ifp);
+
+	if (kif == NULL)
+		return;
+
 	CURVNET_SET(ifp->if_vnet);
+	if (V_pf_vnet_active == 0) {
+		/* Avoid teardown race in the least expensive way. */
+		CURVNET_RESTORE();
+		return;
+	}
+
 	PF_RULES_WLOCK();
 	V_pfi_update++;
 	pfi_kif_update(kif);
+
+	if (kif->pfik_ifp)
+		if_rele(kif->pfik_ifp);
 
 	kif->pfik_ifp = NULL;
 	ifp->if_pf_kif = NULL;
@@ -810,6 +867,11 @@ pfi_attach_group_event(void *arg , struct ifg_group *ifg)
 {
 
 	CURVNET_SET((struct vnet *)arg);
+	if (V_pf_vnet_active == 0) {
+		/* Avoid teardown race in the least expensive way. */
+		CURVNET_RESTORE();
+		return;
+	}
 	pfi_attach_ifgroup(ifg);
 	CURVNET_RESTORE();
 }
@@ -819,9 +881,14 @@ pfi_change_group_event(void *arg, char *gname)
 {
 	struct pfi_kif *kif;
 
-	kif = malloc(sizeof(*kif), PFI_MTYPE, M_WAITOK);
-
 	CURVNET_SET((struct vnet *)arg);
+	if (V_pf_vnet_active == 0) {
+		/* Avoid teardown race in the least expensive way. */
+		CURVNET_RESTORE();
+		return;
+	}
+
+	kif = malloc(sizeof(*kif), PFI_MTYPE, M_WAITOK);
 	PF_RULES_WLOCK();
 	V_pfi_update++;
 	kif = pfi_kif_attach(kif, gname);
@@ -835,7 +902,15 @@ pfi_detach_group_event(void *arg, struct ifg_group *ifg)
 {
 	struct pfi_kif *kif = (struct pfi_kif *)ifg->ifg_pf_kif;
 
+	if (kif == NULL)
+		return;
+
 	CURVNET_SET((struct vnet *)arg);
+	if (V_pf_vnet_active == 0) {
+		/* Avoid teardown race in the least expensive way. */
+		CURVNET_RESTORE();
+		return;
+	}
 	PF_RULES_WLOCK();
 	V_pfi_update++;
 
@@ -848,8 +923,15 @@ pfi_detach_group_event(void *arg, struct ifg_group *ifg)
 static void
 pfi_ifaddr_event(void *arg __unused, struct ifnet *ifp)
 {
+	if (ifp->if_pf_kif == NULL)
+		return;
 
 	CURVNET_SET(ifp->if_vnet);
+	if (V_pf_vnet_active == 0) {
+		/* Avoid teardown race in the least expensive way. */
+		CURVNET_RESTORE();
+		return;
+	}
 	PF_RULES_WLOCK();
 	if (ifp && ifp->if_pf_kif) {
 		V_pfi_update++;

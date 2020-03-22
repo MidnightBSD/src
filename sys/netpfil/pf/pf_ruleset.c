@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Daniel Hartmeier
  * Copyright (c) 2002,2003 Henning Brauer
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_ruleset.c 244769 2012-12-28 09:19:49Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/pf_ruleset.c 257179 2013-10-26 18:18:50Z glebius $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_ruleset.c 244769 2012-12-28 09:1
 #include <netinet/tcp.h>
 
 #include <net/if.h>
+#include <net/vnet.h>
 #include <net/pfvar.h>
 
 #ifdef INET6

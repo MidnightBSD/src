@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,23 +36,26 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_mib.c 294283 2016-01-18 18:27:21Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_mib.c 354762 2019-11-16 00:33:02Z scottl $");
 
 #include "opt_compat.h"
 #include "opt_posix.h"
 #include "opt_config.h"
 
 #include <sys/param.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
-#include <sys/sbuf.h>
-#include <sys/systm.h>
-#include <sys/sysctl.h>
-#include <sys/proc.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
-#include <sys/jail.h>
+#include <sys/proc.h>
+#include <sys/random.h>
+#include <sys/sbuf.h>
 #include <sys/smp.h>
 #include <sys/sx.h>
+#include <sys/vmmeter.h>
+#include <sys/sysctl.h>
+#include <sys/systm.h>
 #include <sys/unistd.h>
 
 SYSCTL_ROOT_NODE(0,	  sysctl, CTLFLAG_RW, 0,
@@ -74,6 +76,8 @@ SYSCTL_ROOT_NODE(CTL_HW,	  hw,     CTLFLAG_RW, 0,
 	"hardware");
 SYSCTL_ROOT_NODE(CTL_MACHDEP, machdep, CTLFLAG_RW, 0,
 	"machine dependent");
+SYSCTL_NODE(_machdep, OID_AUTO, mitigations, CTLFLAG_RW, 0,
+	"Machine dependent platform mitigations.");
 SYSCTL_ROOT_NODE(CTL_USER,	  user,   CTLFLAG_RW, 0,
 	"user-level");
 SYSCTL_ROOT_NODE(CTL_P1003_1B,  p1003_1b,   CTLFLAG_RW, 0,
@@ -103,13 +107,13 @@ SYSCTL_STRING(_kern, OID_AUTO, compiler_version, CTLFLAG_RD|CTLFLAG_MPSAFE,
 SYSCTL_STRING(_kern, KERN_OSTYPE, ostype, CTLFLAG_RD|CTLFLAG_MPSAFE|
     CTLFLAG_CAPRD, ostype, 0, "Operating system type");
 
-SYSCTL_INT(_kern, KERN_MAXPROC, maxproc, CTLFLAG_RDTUN,
+SYSCTL_INT(_kern, KERN_MAXPROC, maxproc, CTLFLAG_RDTUN | CTLFLAG_NOFETCH,
     &maxproc, 0, "Maximum number of processes");
 
 SYSCTL_INT(_kern, KERN_MAXPROCPERUID, maxprocperuid, CTLFLAG_RW,
     &maxprocperuid, 0, "Maximum processes allowed per userid");
 
-SYSCTL_INT(_kern, OID_AUTO, maxusers, CTLFLAG_RDTUN,
+SYSCTL_INT(_kern, OID_AUTO, maxusers, CTLFLAG_RDTUN | CTLFLAG_NOFETCH,
     &maxusers, 0, "Hint for kernel tuning");
 
 SYSCTL_INT(_kern, KERN_ARGMAX, argmax, CTLFLAG_RD|CTLFLAG_CAPRD,
@@ -118,8 +122,8 @@ SYSCTL_INT(_kern, KERN_ARGMAX, argmax, CTLFLAG_RD|CTLFLAG_CAPRD,
 SYSCTL_INT(_kern, KERN_POSIX1, posix1version, CTLFLAG_RD|CTLFLAG_CAPRD,
     SYSCTL_NULL_INT_PTR, _POSIX_VERSION, "Version of POSIX attempting to comply to");
 
-SYSCTL_INT(_kern, KERN_NGROUPS, ngroups, CTLFLAG_RDTUN|CTLFLAG_CAPRD,
-    &ngroups_max, 0,
+SYSCTL_INT(_kern, KERN_NGROUPS, ngroups, CTLFLAG_RDTUN |
+    CTLFLAG_NOFETCH | CTLFLAG_CAPRD, &ngroups_max, 0,
     "Maximum number of supplemental groups a user can belong to");
 
 SYSCTL_INT(_kern, KERN_JOB_CONTROL, job_control, CTLFLAG_RD|CTLFLAG_CAPRD,
@@ -133,9 +137,9 @@ SYSCTL_INT(_kern, KERN_SAVED_IDS, saved_ids, CTLFLAG_RD|CTLFLAG_CAPRD,
     SYSCTL_NULL_INT_PTR, 0, "Whether saved set-group/user ID is available");
 #endif
 
-char kernelname[MAXPATHLEN] = "/kernel";	/* XXX bloat */
+char kernelname[MAXPATHLEN] = "/boot/kernel/kernel";	/* XXX bloat */
 
-SYSCTL_STRING(_kern, KERN_BOOTFILE, bootfile, CTLFLAG_RW,
+SYSCTL_STRING(_kern, KERN_BOOTFILE, bootfile, CTLFLAG_RW | CTLFLAG_MPSAFE,
     kernelname, sizeof kernelname, "Name of kernel file booted");
 
 SYSCTL_INT(_hw, HW_NCPU, ncpu, CTLFLAG_RD|CTLFLAG_CAPRD,
@@ -153,10 +157,15 @@ sysctl_kern_arnd(SYSCTL_HANDLER_ARGS)
 	char buf[256];
 	size_t len;
 
-	len = req->oldlen;
-	if (len > sizeof(buf))
-		len = sizeof(buf);
-	arc4rand(buf, len, 0);
+	/*-
+	 * This is one of the very few legitimate uses of read_random(9).
+	 * Use of arc4random(9) is not recommended as that will ignore
+	 * an unsafe (i.e. unseeded) random(4).
+	 *
+	 * If random(4) is not seeded, then this returns 0, so the
+	 * sysctl will return a zero-length buffer.
+	 */
+	len = read_random(buf, MIN(req->oldlen, sizeof(buf)));
 	return (SYSCTL_OUT(req, buf, len));
 }
 
@@ -167,37 +176,51 @@ SYSCTL_PROC(_kern, KERN_ARND, arandom,
 static int
 sysctl_hw_physmem(SYSCTL_HANDLER_ARGS)
 {
-	u_long val;
+	u_long val, p;
 
-	val = ctob(physmem);
+	p = SIZE_T_MAX >> PAGE_SHIFT;
+	if (physmem < p)
+		p = physmem;
+	val = ctob(p);
 	return (sysctl_handle_long(oidp, &val, 0, req));
 }
-
 SYSCTL_PROC(_hw, HW_PHYSMEM, physmem, CTLTYPE_ULONG | CTLFLAG_RD,
-	0, 0, sysctl_hw_physmem, "LU", "");
+    0, 0, sysctl_hw_physmem, "LU",
+    "Amount of physical memory (in bytes)");
 
 static int
 sysctl_hw_realmem(SYSCTL_HANDLER_ARGS)
 {
-	u_long val;
-	val = ctob(realmem);
+	u_long val, p;
+
+	p = SIZE_T_MAX >> PAGE_SHIFT;
+	if (realmem < p)
+		p = realmem;
+	val = ctob(p);
 	return (sysctl_handle_long(oidp, &val, 0, req));
 }
 SYSCTL_PROC(_hw, HW_REALMEM, realmem, CTLTYPE_ULONG | CTLFLAG_RD,
-	0, 0, sysctl_hw_realmem, "LU", "");
+    0, 0, sysctl_hw_realmem, "LU",
+    "Amount of memory (in bytes) reported by the firmware");
+
 static int
 sysctl_hw_usermem(SYSCTL_HANDLER_ARGS)
 {
-	u_long val;
+	u_long val, p, p1;
 
-	val = ctob(physmem - cnt.v_wire_count);
+	p1 = physmem - vm_cnt.v_wire_count;
+	p = SIZE_T_MAX >> PAGE_SHIFT;
+	if (p1 < p)
+		p = p1;
+	val = ctob(p);
 	return (sysctl_handle_long(oidp, &val, 0, req));
 }
-
 SYSCTL_PROC(_hw, HW_USERMEM, usermem, CTLTYPE_ULONG | CTLFLAG_RD,
-	0, 0, sysctl_hw_usermem, "LU", "");
+    0, 0, sysctl_hw_usermem, "LU",
+    "Amount of memory (in bytes) which is not wired");
 
-SYSCTL_LONG(_hw, OID_AUTO, availpages, CTLFLAG_RD, &physmem, 0, "");
+SYSCTL_LONG(_hw, OID_AUTO, availpages, CTLFLAG_RD, &physmem, 0,
+    "Amount of physical memory (in pages)");
 
 u_long pagesizes[MAXPAGESIZES] = { PAGE_SIZE };
 
@@ -249,8 +272,9 @@ sysctl_hw_machine_arch(SYSCTL_HANDLER_ARGS)
 	return (error);
 
 }
-SYSCTL_PROC(_hw, HW_MACHINE_ARCH, machine_arch, CTLTYPE_STRING | CTLFLAG_RD,
-    NULL, 0, sysctl_hw_machine_arch, "A", "System architecture");
+SYSCTL_PROC(_hw, HW_MACHINE_ARCH, machine_arch, CTLTYPE_STRING | CTLFLAG_RD |
+    CTLFLAG_MPSAFE, NULL, 0, sysctl_hw_machine_arch, "A",
+    "System architecture");
 
 SYSCTL_STRING(_kern, OID_AUTO, supported_archs, CTLFLAG_RD | CTLFLAG_MPSAFE,
 #ifdef COMPAT_FREEBSD32
@@ -378,8 +402,8 @@ SYSCTL_PROC(_kern, KERN_SECURELVL, securelevel,
 /* Actual kernel configuration options. */
 extern char kernconfstring[];
 
-SYSCTL_STRING(_kern, OID_AUTO, conftxt, CTLFLAG_RD, kernconfstring, 0,
-    "Kernel configuration file");
+SYSCTL_STRING(_kern, OID_AUTO, conftxt, CTLFLAG_RD | CTLFLAG_MPSAFE,
+    kernconfstring, 0, "Kernel configuration file");
 #endif
 
 static int
@@ -417,7 +441,7 @@ sysctl_hostid(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_PROC(_kern, KERN_HOSTID, hostid,
-    CTLTYPE_ULONG | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    CTLTYPE_ULONG | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE | CTLFLAG_CAPRD,
     NULL, 0, sysctl_hostid, "LU", "Host ID");
 
 /*
@@ -560,9 +584,9 @@ sysctl_kern_pid_max(SYSCTL_HANDLER_ARGS)
 	sx_xunlock(&proctree_lock);
 	return (error);
 }
-SYSCTL_PROC(_kern, OID_AUTO, pid_max, CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_TUN |
-    CTLFLAG_MPSAFE, 0, 0, sysctl_kern_pid_max, "I",
-    "Maximum allowed pid");
+SYSCTL_PROC(_kern, OID_AUTO, pid_max, CTLTYPE_INT |
+    CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE,
+    0, 0, sysctl_kern_pid_max, "I", "Maximum allowed pid");
 
 #include <sys/bio.h>
 #include <sys/buf.h>

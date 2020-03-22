@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Matthew Dillon.  All Rights Reserved.
  *
@@ -45,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_mtxpool.c 302234 2016-06-27 21:50:30Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_mtxpool.c 343329 2019-01-23 00:55:57Z mav $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -60,18 +59,15 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_mtxpool.c 302234 2016-06-27 21:50:30
 static MALLOC_DEFINE(M_MTXPOOL, "mtx_pool", "mutex pool");
 
 /* Pool sizes must be a power of two */
-#ifndef MTX_POOL_LOCKBUILDER_SIZE
-#define MTX_POOL_LOCKBUILDER_SIZE	128
-#endif
 #ifndef MTX_POOL_SLEEP_SIZE
-#define MTX_POOL_SLEEP_SIZE		128
+#define MTX_POOL_SLEEP_SIZE		1024
 #endif
 
 struct mtxpool_header {
 	int		mtxpool_size;
 	int		mtxpool_mask;
 	int		mtxpool_shift;
-	int		mtxpool_next;
+	int		mtxpool_next __aligned(CACHE_LINE_SIZE);
 };
 
 struct mtx_pool {
@@ -79,18 +75,12 @@ struct mtx_pool {
 	struct mtx	mtx_pool_ary[1];
 };
 
-static struct mtx_pool_lockbuilder {
-	struct mtxpool_header mtx_pool_header;
-	struct mtx	mtx_pool_ary[MTX_POOL_LOCKBUILDER_SIZE];
-} lockbuilder_pool;
-
 #define mtx_pool_size	mtx_pool_header.mtxpool_size
 #define mtx_pool_mask	mtx_pool_header.mtxpool_mask
 #define mtx_pool_shift	mtx_pool_header.mtxpool_shift
 #define mtx_pool_next	mtx_pool_header.mtxpool_next
 
 struct mtx_pool *mtxpool_sleep;
-struct mtx_pool *mtxpool_lockbuilder;
 
 #if UINTPTR_MAX == UINT64_MAX	/* 64 bits */
 # define POINTER_BITS		64
@@ -167,15 +157,6 @@ mtx_pool_destroy(struct mtx_pool **poolp)
 }
 
 static void
-mtx_pool_setup_static(void *dummy __unused)
-{
-	mtx_pool_initialize((struct mtx_pool *)&lockbuilder_pool,
-	    "lockbuilder mtxpool", MTX_POOL_LOCKBUILDER_SIZE,
-	    MTX_DEF | MTX_NOWITNESS | MTX_QUIET);
-	mtxpool_lockbuilder = (struct mtx_pool *)&lockbuilder_pool;
-}
-
-static void
 mtx_pool_setup_dynamic(void *dummy __unused)
 {
 	mtxpool_sleep = mtx_pool_create("sleep mtxpool",
@@ -203,17 +184,5 @@ mtx_pool_alloc(struct mtx_pool *pool)
 	return (&pool->mtx_pool_ary[i]);
 }
 
-/*
- * The lockbuilder pool must be initialized early because the lockmgr
- * and sx locks depend on it.  The sx locks are used in the kernel
- * memory allocator.  The lockmgr subsystem is initialized by
- * SYSINIT(..., SI_SUB_LOCKMGR, ...).
- *
- * We can't call malloc() to dynamically allocate the sleep pool
- * until after kmeminit() has been called, which is done by
- * SYSINIT(..., SI_SUB_KMEM, ...).
- */
-SYSINIT(mtxpooli1, SI_SUB_MTX_POOL_STATIC, SI_ORDER_FIRST,
-    mtx_pool_setup_static, NULL);
 SYSINIT(mtxpooli2, SI_SUB_MTX_POOL_DYNAMIC, SI_ORDER_FIRST,
     mtx_pool_setup_dynamic, NULL);

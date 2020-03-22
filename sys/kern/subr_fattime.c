@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/kern/subr_fattime.c 266368 2014-05-17 22:03:44Z ian $
+ * $FreeBSD: stable/11/sys/kern/subr_fattime.c 331503 2018-03-24 23:01:10Z ian $
  *
  * Convert MS-DOS FAT format timestamps to and from unix timespecs
  *
@@ -46,7 +45,7 @@
  * Later on again, in Windows NT, timestamps were defined relative to GMT.
  *
  * Purists will point out that UTC replaced GMT for such uses around
- * a century ago, already then.  Ironically "NT" was an abbreviation of 
+ * half a century ago, already then.  Ironically "NT" was an abbreviation of 
  * "New Technology".  Anyway...
  *
  * The 'utc' argument determines if the resulting FATTIME timestamp
@@ -136,7 +135,8 @@ static const struct {
 
 
 void
-timespec2fattime(struct timespec *tsp, int utc, uint16_t *ddp, uint16_t *dtp, uint8_t *dhp)
+timespec2fattime(const struct timespec *tsp, int utc, uint16_t *ddp,
+    uint16_t *dtp, uint8_t *dhp)
 {
 	time_t t1;
 	unsigned t2, l, m;
@@ -216,7 +216,8 @@ static const uint16_t daytab[64] = {
 };
 
 void
-fattime2timespec(unsigned dd, unsigned dt, unsigned dh, int utc, struct timespec *tsp)
+fattime2timespec(unsigned dd, unsigned dt, unsigned dh, int utc,
+    struct timespec *tsp)
 {
 	unsigned day;
 

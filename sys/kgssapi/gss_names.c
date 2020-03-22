@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kgssapi/gss_names.c 184588 2008-11-03 10:38:00Z dfr $");
+__FBSDID("$FreeBSD: stable/11/sys/kgssapi/gss_names.c 184588 2008-11-03 10:38:00Z dfr $");
 
 #include <sys/param.h>
 #include <kgssapi/gssapi.h>

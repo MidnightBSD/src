@@ -1,10 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
- *
- * sendfile(2) and related extensions:
- * Copyright (c) 1998, David Greenman. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_syscalls.c 321021 2017-07-15 17:28:03Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/uipc_syscalls.c 343786 2019-02-05 17:57:30Z markj $");
 
 #include "opt_capsicum.h"
 #include "opt_inet.h"
@@ -45,33 +41,23 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/uipc_syscalls.c 321021 2017-07-15 17:28:0
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/capsicum.h>
-#include <sys/condvar.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sysproto.h>
 #include <sys/malloc.h>
 #include <sys/filedesc.h>
-#include <sys/event.h>
 #include <sys/proc.h>
-#include <sys/fcntl.h>
-#include <sys/file.h>
 #include <sys/filio.h>
 #include <sys/jail.h>
-#include <sys/mman.h>
-#include <sys/mount.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
 #include <sys/rwlock.h>
-#include <sys/sf_buf.h>
-#include <sys/sysent.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include <sys/signalvar.h>
 #include <sys/syscallsubr.h>
-#include <sys/sysctl.h>
-#include <sys/uio.h>
-#include <sys/vnode.h>
+#include <sys/un.h>
+#include <sys/unpcb.h>
 #ifdef KTRACE
 #include <sys/ktrace.h>
 #endif
@@ -83,14 +69,6 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/uipc_syscalls.c 321021 2017-07-15 17:28:0
 
 #include <security/audit/audit.h>
 #include <security/mac/mac_framework.h>
-
-#include <vm/vm.h>
-#include <vm/vm_param.h>
-#include <vm/vm_object.h>
-#include <vm/vm_page.h>
-#include <vm/vm_pager.h>
-#include <vm/vm_kern.h>
-#include <vm/vm_extern.h>
 
 /*
  * Flags for accept1() and kern_accept4(), in addition to SOCK_CLOEXEC
@@ -104,64 +82,32 @@ static int recvit(struct thread *td, int s, struct msghdr *mp, void *namelenp);
 
 static int accept1(struct thread *td, int s, struct sockaddr *uname,
 		   socklen_t *anamelen, int flags);
-static int do_sendfile(struct thread *td, struct sendfile_args *uap,
-		   int compat);
 static int getsockname1(struct thread *td, struct getsockname_args *uap,
 			int compat);
 static int getpeername1(struct thread *td, struct getpeername_args *uap,
 			int compat);
-
-counter_u64_t sfstat[sizeof(struct sfstat) / sizeof(uint64_t)];
-
-/*
- * sendfile(2)-related variables and associated sysctls
- */
-static SYSCTL_NODE(_kern_ipc, OID_AUTO, sendfile, CTLFLAG_RW, 0,
-    "sendfile(2) tunables");
-static int sfreadahead = 1;
-SYSCTL_INT(_kern_ipc_sendfile, OID_AUTO, readahead, CTLFLAG_RW,
-    &sfreadahead, 0, "Number of sendfile(2) read-ahead MAXBSIZE blocks");
-
-
-static void
-sfstat_init(const void *unused)
-{
-
-	COUNTER_ARRAY_ALLOC(sfstat, sizeof(struct sfstat) / sizeof(uint64_t),
-	    M_WAITOK);
-}
-SYSINIT(sfstat, SI_SUB_MBUF, SI_ORDER_FIRST, sfstat_init, NULL);
-
-static int
-sfstat_sysctl(SYSCTL_HANDLER_ARGS)
-{
-	struct sfstat s;
-
-	COUNTER_ARRAY_COPY(sfstat, &s, sizeof(s) / sizeof(uint64_t));
-	if (req->newptr)
-		COUNTER_ARRAY_ZERO(sfstat, sizeof(s) / sizeof(uint64_t));
-	return (SYSCTL_OUT(req, &s, sizeof(s)));
-}
-SYSCTL_PROC(_kern_ipc, OID_AUTO, sfstat, CTLTYPE_OPAQUE | CTLFLAG_RW,
-    NULL, 0, sfstat_sysctl, "I", "sendfile statistics");
+static int sockargs(struct mbuf **, char *, socklen_t, int);
 
 /*
  * Convert a user file descriptor to a kernel file entry and check if required
  * capability rights are present.
+ * If required copy of current set of capability rights is returned.
  * A reference on the file entry is held upon returning.
  */
 int
 getsock_cap(struct thread *td, int fd, cap_rights_t *rightsp,
-    struct file **fpp, u_int *fflagp)
+    struct file **fpp, u_int *fflagp, struct filecaps *havecapsp)
 {
 	struct file *fp;
 	int error;
 
-	error = fget_unlocked(td->td_proc->p_fd, fd, rightsp, 0, &fp, NULL);
+	error = fget_cap(td, fd, rightsp, &fp, havecapsp);
 	if (error != 0)
 		return (error);
 	if (fp->f_type != DTYPE_SOCKET) {
 		fdrop(fp, td);
+		if (havecapsp != NULL)
+			filecaps_free(havecapsp);
 		return (ENOTSOCK);
 	}
 	if (fflagp != NULL)
@@ -186,13 +132,19 @@ sys_socket(td, uap)
 		int	protocol;
 	} */ *uap;
 {
+
+	return (kern_socket(td, uap->domain, uap->type, uap->protocol));
+}
+
+int
+kern_socket(struct thread *td, int domain, int type, int protocol)
+{
 	struct socket *so;
 	struct file *fp;
-	int fd, error, type, oflag, fflag;
+	int fd, error, oflag, fflag;
 
-	AUDIT_ARG_SOCKET(uap->domain, uap->type, uap->protocol);
+	AUDIT_ARG_SOCKET(domain, type, protocol);
 
-	type = uap->type;
 	oflag = 0;
 	fflag = 0;
 	if ((type & SOCK_CLOEXEC) != 0) {
@@ -205,8 +157,7 @@ sys_socket(td, uap)
 	}
 
 #ifdef MAC
-	error = mac_socket_check_create(td->td_ucred, uap->domain, type,
-	    uap->protocol);
+	error = mac_socket_check_create(td->td_ucred, domain, type, protocol);
 	if (error != 0)
 		return (error);
 #endif
@@ -214,8 +165,7 @@ sys_socket(td, uap)
 	if (error != 0)
 		return (error);
 	/* An extra reference on `fp' has been held for us by falloc(). */
-	error = socreate(uap->domain, &so, type, uap->protocol,
-	    td->td_ucred, td);
+	error = socreate(domain, &so, type, protocol, td->td_ucred, td);
 	if (error != 0) {
 		fdclose(td, fp, fd);
 	} else {
@@ -243,13 +193,13 @@ sys_bind(td, uap)
 
 	error = getsockaddr(&sa, uap->name, uap->namelen);
 	if (error == 0) {
-		error = kern_bind(td, uap->s, sa);
+		error = kern_bindat(td, AT_FDCWD, uap->s, sa);
 		free(sa, M_SONAME);
 	}
 	return (error);
 }
 
-static int
+int
 kern_bindat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 {
 	struct socket *so;
@@ -260,7 +210,7 @@ kern_bindat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 	AUDIT_ARG_FD(fd);
 	AUDIT_ARG_SOCKADDR(td, dirfd, sa);
 	error = getsock_cap(td, fd, cap_rights_init(&rights, CAP_BIND),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);
 	so = fp->f_data;
@@ -281,13 +231,6 @@ kern_bindat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 #endif
 	fdrop(fp, td);
 	return (error);
-}
-
-int
-kern_bind(struct thread *td, int fd, struct sockaddr *sa)
-{
-
-	return (kern_bindat(td, AT_FDCWD, fd, sa));
 }
 
 /* ARGSUSED */
@@ -321,24 +264,31 @@ sys_listen(td, uap)
 		int	backlog;
 	} */ *uap;
 {
+
+	return (kern_listen(td, uap->s, uap->backlog));
+}
+
+int
+kern_listen(struct thread *td, int s, int backlog)
+{
 	struct socket *so;
 	struct file *fp;
 	cap_rights_t rights;
 	int error;
 
-	AUDIT_ARG_FD(uap->s);
-	error = getsock_cap(td, uap->s, cap_rights_init(&rights, CAP_LISTEN),
-	    &fp, NULL);
+	AUDIT_ARG_FD(s);
+	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_LISTEN),
+	    &fp, NULL, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 #ifdef MAC
 		error = mac_socket_check_listen(td->td_ucred, so);
 		if (error == 0)
 #endif
-			error = solisten(so, uap->backlog, td);
+			error = solisten(so, backlog, td);
 		fdrop(fp, td);
 	}
-	return(error);
+	return (error);
 }
 
 /*
@@ -366,14 +316,8 @@ accept1(td, s, uname, anamelen, flags)
 
 	error = kern_accept4(td, s, &name, &namelen, flags, &fp);
 
-	/*
-	 * return a namelen of zero for older code which might
-	 * ignore the return value from accept.
-	 */
-	if (error != 0) {
-		(void) copyout(&namelen, anamelen, sizeof(*anamelen));
+	if (error != 0)
 		return (error);
-	}
 
 	if (error == 0 && uname != NULL) {
 #ifdef COMPAT_OLDSOCK
@@ -407,6 +351,7 @@ kern_accept4(struct thread *td, int s, struct sockaddr **name,
 	struct file *headfp, *nfp = NULL;
 	struct sockaddr *sa = NULL;
 	struct socket *head, *so;
+	struct filecaps fcaps;
 	cap_rights_t rights;
 	u_int fflag;
 	pid_t pgid;
@@ -417,7 +362,7 @@ kern_accept4(struct thread *td, int s, struct sockaddr **name,
 
 	AUDIT_ARG_FD(s);
 	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_ACCEPT),
-	    &headfp, &fflag);
+	    &headfp, &fflag, &fcaps);
 	if (error != 0)
 		return (error);
 	head = headfp->f_data;
@@ -430,7 +375,8 @@ kern_accept4(struct thread *td, int s, struct sockaddr **name,
 	if (error != 0)
 		goto done;
 #endif
-	error = falloc(td, &nfp, &fd, (flags & SOCK_CLOEXEC) ? O_CLOEXEC : 0);
+	error = falloc_caps(td, &nfp, &fd,
+	    (flags & SOCK_CLOEXEC) ? O_CLOEXEC : 0, &fcaps);
 	if (error != 0)
 		goto done;
 	ACCEPT_LOCK();
@@ -503,17 +449,10 @@ kern_accept4(struct thread *td, int s, struct sockaddr **name,
 	(void) fo_ioctl(nfp, FIONBIO, &tmp, td->td_ucred, td);
 	tmp = fflag & FASYNC;
 	(void) fo_ioctl(nfp, FIOASYNC, &tmp, td->td_ucred, td);
-	sa = 0;
+	sa = NULL;
 	error = soaccept(so, &sa);
-	if (error != 0) {
-		/*
-		 * return a namelen of zero for older code which might
-		 * ignore the return value from accept.
-		 */
-		if (name)
-			*namelen = 0;
+	if (error != 0)
 		goto noconnection;
-	}
 	if (sa == NULL) {
 		if (name)
 			*namelen = 0;
@@ -546,6 +485,8 @@ noconnection:
 	 * a reference on nfp to the caller on success if they request it.
 	 */
 done:
+	if (nfp == NULL)
+		filecaps_free(&fcaps);
 	if (fp != NULL) {
 		if (error == 0) {
 			*fp = nfp;
@@ -607,13 +548,13 @@ sys_connect(td, uap)
 
 	error = getsockaddr(&sa, uap->name, uap->namelen);
 	if (error == 0) {
-		error = kern_connect(td, uap->s, sa);
+		error = kern_connectat(td, AT_FDCWD, uap->s, sa);
 		free(sa, M_SONAME);
 	}
 	return (error);
 }
 
-static int
+int
 kern_connectat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 {
 	struct socket *so;
@@ -624,7 +565,7 @@ kern_connectat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 	AUDIT_ARG_FD(fd);
 	AUDIT_ARG_SOCKADDR(td, dirfd, sa);
 	error = getsock_cap(td, fd, cap_rights_init(&rights, CAP_CONNECT),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);
 	so = fp->f_data;
@@ -674,13 +615,6 @@ bad:
 done1:
 	fdrop(fp, td);
 	return (error);
-}
-
-int
-kern_connect(struct thread *td, int fd, struct sockaddr *sa)
-{
-
-	return (kern_connectat(td, AT_FDCWD, fd, sa));
 }
 
 /* ARGSUSED */
@@ -759,6 +693,15 @@ kern_socketpair(struct thread *td, int domain, int type, int protocol,
 		 error = soconnect2(so2, so1);
 		 if (error != 0)
 			goto free4;
+	} else if (so1->so_proto->pr_flags & PR_CONNREQUIRED) {
+		struct unpcb *unp, *unp2;
+		unp = sotounpcb(so1);
+		unp2 = sotounpcb(so2);
+		/* 
+		 * No need to lock the unps, because the sockets are brand-new.
+		 * No other threads can be using them yet
+		 */
+		unp_copy_peercred(td, unp, unp2, unp);
 	}
 	finit(fp1, FREAD | FWRITE | fflag, DTYPE_SOCKET, fp1->f_data,
 	    &socketops);
@@ -891,9 +834,11 @@ kern_sendit(td, s, mp, flags, control, segflg)
 		AUDIT_ARG_SOCKADDR(td, AT_FDCWD, mp->msg_name);
 		cap_rights_set(&rights, CAP_CONNECT);
 	}
-	error = getsock_cap(td, s, &rights, &fp, NULL);
-	if (error != 0)
+	error = getsock_cap(td, s, &rights, &fp, NULL, NULL);
+	if (error != 0) {
+		m_freem(control);
 		return (error);
+	}
 	so = (struct socket *)fp->f_data;
 
 #ifdef KTRACE
@@ -904,12 +849,16 @@ kern_sendit(td, s, mp, flags, control, segflg)
 	if (mp->msg_name != NULL) {
 		error = mac_socket_check_connect(td->td_ucred, so,
 		    mp->msg_name);
-		if (error != 0)
+		if (error != 0) {
+			m_freem(control);
 			goto bad;
+		}
 	}
 	error = mac_socket_check_send(td->td_ucred, so);
-	if (error != 0)
+	if (error != 0) {
+		m_freem(control);
 		goto bad;
+	}
 #endif
 
 	auio.uio_iov = mp->msg_iov;
@@ -923,6 +872,7 @@ kern_sendit(td, s, mp, flags, control, segflg)
 	for (i = 0; i < mp->msg_iovlen; i++, iov++) {
 		if ((auio.uio_resid += iov->iov_len) < 0) {
 			error = EINVAL;
+			m_freem(control);
 			goto bad;
 		}
 	}
@@ -1075,7 +1025,7 @@ kern_recvit(td, s, mp, fromseg, controlp)
 {
 	struct uio auio;
 	struct iovec *iov;
-	struct mbuf *m, *control = NULL;
+	struct mbuf *control, *m;
 	caddr_t ctlbuf;
 	struct file *fp;
 	struct socket *so;
@@ -1092,7 +1042,7 @@ kern_recvit(td, s, mp, fromseg, controlp)
 
 	AUDIT_ARG_FD(s);
 	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_RECV),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);
 	so = fp->f_data;
@@ -1123,6 +1073,7 @@ kern_recvit(td, s, mp, fromseg, controlp)
 	if (KTRPOINT(td, KTR_GENIO))
 		ktruio = cloneuio(&auio);
 #endif
+	control = NULL;
 	len = auio.uio_resid;
 	error = soreceive(so, &fromsa, &auio, NULL,
 	    (mp->msg_control || controlp) ? &control : NULL,
@@ -1186,30 +1137,22 @@ kern_recvit(td, s, mp, fromseg, controlp)
 			control->m_data += sizeof (struct cmsghdr);
 		}
 #endif
-		len = mp->msg_controllen;
-		m = control;
-		mp->msg_controllen = 0;
 		ctlbuf = mp->msg_control;
-
-		while (m && len > 0) {
-			unsigned int tocopy;
-
-			if (len >= m->m_len)
-				tocopy = m->m_len;
-			else {
-				mp->msg_flags |= MSG_CTRUNC;
-				tocopy = len;
-			}
-
-			if ((error = copyout(mtod(m, caddr_t),
-					ctlbuf, tocopy)) != 0)
+		len = mp->msg_controllen;
+		mp->msg_controllen = 0;
+		for (m = control; m != NULL && len >= m->m_len; m = m->m_next) {
+			if ((error = copyout(mtod(m, caddr_t), ctlbuf,
+			    m->m_len)) != 0)
 				goto out;
 
-			ctlbuf += tocopy;
-			len -= tocopy;
-			m = m->m_next;
+			ctlbuf += m->m_len;
+			len -= m->m_len;
+			mp->msg_controllen += m->m_len;
 		}
-		mp->msg_controllen = ctlbuf - (caddr_t)mp->msg_control;
+		if (m != NULL) {
+			mp->msg_flags |= MSG_CTRUNC;
+			m_dispose_extcontrolm(m);
+		}
 	}
 out:
 	fdrop(fp, td);
@@ -1221,8 +1164,11 @@ out:
 
 	if (error == 0 && controlp != NULL)
 		*controlp = control;
-	else  if (control)
+	else if (control != NULL) {
+		if (error != 0)
+			m_dispose_extcontrolm(control);
 		m_freem(control);
+	}
 
 	return (error);
 }
@@ -1400,17 +1346,33 @@ sys_shutdown(td, uap)
 		int	how;
 	} */ *uap;
 {
+
+	return (kern_shutdown(td, uap->s, uap->how));
+}
+
+int
+kern_shutdown(struct thread *td, int s, int how)
+{
 	struct socket *so;
 	struct file *fp;
 	cap_rights_t rights;
 	int error;
 
-	AUDIT_ARG_FD(uap->s);
-	error = getsock_cap(td, uap->s, cap_rights_init(&rights, CAP_SHUTDOWN),
-	    &fp, NULL);
+	AUDIT_ARG_FD(s);
+	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_SHUTDOWN),
+	    &fp, NULL, NULL);
 	if (error == 0) {
 		so = fp->f_data;
-		error = soshutdown(so, uap->how);
+		error = soshutdown(so, how);
+		/*
+		 * Previous versions did not return ENOTCONN, but 0 in
+		 * case the socket was not connected. Some important
+		 * programs like syslogd up to r279016, 2015-02-19,
+		 * still depend on this behavior.
+		 */
+		if (error == ENOTCONN &&
+		    td->td_proc->p_osrel < P_OSREL_SHUTDOWN_ENOTCONN)
+			error = 0;
 		fdrop(fp, td);
 	}
 	return (error);
@@ -1472,7 +1434,7 @@ kern_setsockopt(td, s, level, name, val, valseg, valsize)
 
 	AUDIT_ARG_FD(s);
 	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_SETSOCKOPT),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 		error = sosetopt(so, &sopt);
@@ -1553,7 +1515,7 @@ kern_getsockopt(td, s, level, name, val, valseg, valsize)
 
 	AUDIT_ARG_FD(s);
 	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_GETSOCKOPT),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 		error = sogetopt(so, &sopt);
@@ -1614,7 +1576,7 @@ kern_getsockname(struct thread *td, int fd, struct sockaddr **sa,
 
 	AUDIT_ARG_FD(fd);
 	error = getsock_cap(td, fd, cap_rights_init(&rights, CAP_GETSOCKNAME),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);
 	so = fp->f_data;
@@ -1713,7 +1675,7 @@ kern_getpeername(struct thread *td, int fd, struct sockaddr **sa,
 
 	AUDIT_ARG_FD(fd);
 	error = getsock_cap(td, fd, cap_rights_init(&rights, CAP_GETPEERNAME),
-	    &fp, NULL);
+	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);
 	so = fp->f_data;
@@ -1767,18 +1729,12 @@ ogetpeername(td, uap)
 }
 #endif /* COMPAT_OLDSOCK */
 
-int
-sockargs(mp, buf, buflen, type)
-	struct mbuf **mp;
-	caddr_t buf;
-	int buflen, type;
+static int
+sockargs(struct mbuf **mp, char *buf, socklen_t buflen, int type)
 {
 	struct sockaddr *sa;
 	struct mbuf *m;
 	int error;
-
-	if (buflen < 0)
-		return (EINVAL);
 
 	if (buflen > MLEN) {
 #ifdef COMPAT_OLDSOCK
@@ -1791,7 +1747,7 @@ sockargs(mp, buf, buflen, type)
 	}
 	m = m_get2(buflen, M_WAITOK, type, 0);
 	m->m_len = buflen;
-	error = copyin(buf, mtod(m, caddr_t), (u_int)buflen);
+	error = copyin(buf, mtod(m, void *), buflen);
 	if (error != 0)
 		(void) m_free(m);
 	else {
@@ -1837,730 +1793,53 @@ getsockaddr(namp, uaddr, len)
 	return (error);
 }
 
-struct sendfile_sync {
-	struct mtx	mtx;
-	struct cv	cv;
-	unsigned	count;
-};
-
 /*
- * Detach mapped page and release resources back to the system.
+ * Dispose of externalized rights from an SCM_RIGHTS message.  This function
+ * should be used in error or truncation cases to avoid leaking file descriptors
+ * into the recipient's (the current thread's) table.
  */
-int
-sf_buf_mext(struct mbuf *mb, void *addr, void *args)
+void
+m_dispose_extcontrolm(struct mbuf *m)
 {
-	vm_page_t m;
-	struct sendfile_sync *sfs;
-
-	m = sf_buf_page(args);
-	sf_buf_free(args);
-	vm_page_lock(m);
-	vm_page_unwire(m, 0);
-	/*
-	 * Check for the object going away on us. This can
-	 * happen since we don't hold a reference to it.
-	 * If so, we're responsible for freeing the page.
-	 */
-	if (m->wire_count == 0 && m->object == NULL)
-		vm_page_free(m);
-	vm_page_unlock(m);
-	if (addr == NULL)
-		return (EXT_FREE_OK);
-	sfs = addr;
-	mtx_lock(&sfs->mtx);
-	KASSERT(sfs->count> 0, ("Sendfile sync botchup count == 0"));
-	if (--sfs->count == 0)
-		cv_signal(&sfs->cv);
-	mtx_unlock(&sfs->mtx);
-	return (EXT_FREE_OK);
-}
-
-/*
- * sendfile(2)
- *
- * int sendfile(int fd, int s, off_t offset, size_t nbytes,
- *	 struct sf_hdtr *hdtr, off_t *sbytes, int flags)
- *
- * Send a file specified by 'fd' and starting at 'offset' to a socket
- * specified by 's'. Send only 'nbytes' of the file or until EOF if nbytes ==
- * 0.  Optionally add a header and/or trailer to the socket output.  If
- * specified, write the total number of bytes sent into *sbytes.
- */
-int
-sys_sendfile(struct thread *td, struct sendfile_args *uap)
-{
-
-	return (do_sendfile(td, uap, 0));
-}
-
-static int
-do_sendfile(struct thread *td, struct sendfile_args *uap, int compat)
-{
-	struct sf_hdtr hdtr;
-	struct uio *hdr_uio, *trl_uio;
+	struct cmsghdr *cm;
 	struct file *fp;
+	struct thread *td;
 	cap_rights_t rights;
-	int error;
+	socklen_t clen, datalen;
+	int error, fd, *fds, nfd;
 
-	/*
-	 * File offset must be positive.  If it goes beyond EOF
-	 * we send only the header/trailer and no payload data.
-	 */
-	if (uap->offset < 0)
-		return (EINVAL);
+	td = curthread;
+	for (; m != NULL; m = m->m_next) {
+		if (m->m_type != MT_EXTCONTROL)
+			continue;
+		cm = mtod(m, struct cmsghdr *);
+		clen = m->m_len;
+		while (clen > 0) {
+			if (clen < sizeof(*cm))
+				panic("%s: truncated mbuf %p", __func__, m);
+			datalen = CMSG_SPACE(cm->cmsg_len - CMSG_SPACE(0));
+			if (clen < datalen)
+				panic("%s: truncated mbuf %p", __func__, m);
 
-	hdr_uio = trl_uio = NULL;
+			if (cm->cmsg_level == SOL_SOCKET &&
+			    cm->cmsg_type == SCM_RIGHTS) {
+				fds = (int *)CMSG_DATA(cm);
+				nfd = (cm->cmsg_len - CMSG_SPACE(0)) /
+				    sizeof(int);
 
-	if (uap->hdtr != NULL) {
-		error = copyin(uap->hdtr, &hdtr, sizeof(hdtr));
-		if (error != 0)
-			goto out;
-		if (hdtr.headers != NULL) {
-			error = copyinuio(hdtr.headers, hdtr.hdr_cnt, &hdr_uio);
-			if (error != 0)
-				goto out;
-		}
-		if (hdtr.trailers != NULL) {
-			error = copyinuio(hdtr.trailers, hdtr.trl_cnt, &trl_uio);
-			if (error != 0)
-				goto out;
-
-		}
-	}
-
-	AUDIT_ARG_FD(uap->fd);
-
-	/*
-	 * sendfile(2) can start at any offset within a file so we require
-	 * CAP_READ+CAP_SEEK = CAP_PREAD.
-	 */
-	if ((error = fget_read(td, uap->fd,
-	    cap_rights_init(&rights, CAP_PREAD), &fp)) != 0) {
-		goto out;
-	}
-
-	error = fo_sendfile(fp, uap->s, hdr_uio, trl_uio, uap->offset,
-	    uap->nbytes, uap->sbytes, uap->flags, compat ? SFK_COMPAT : 0, td);
-	fdrop(fp, td);
-
-out:
-	free(hdr_uio, M_IOV);
-	free(trl_uio, M_IOV);
-	return (error);
-}
-
-#ifdef COMPAT_FREEBSD4
-int
-freebsd4_sendfile(struct thread *td, struct freebsd4_sendfile_args *uap)
-{
-	struct sendfile_args args;
-
-	args.fd = uap->fd;
-	args.s = uap->s;
-	args.offset = uap->offset;
-	args.nbytes = uap->nbytes;
-	args.hdtr = uap->hdtr;
-	args.sbytes = uap->sbytes;
-	args.flags = uap->flags;
-
-	return (do_sendfile(td, &args, 1));
-}
-#endif /* COMPAT_FREEBSD4 */
-
-static int
-sendfile_readpage(vm_object_t obj, struct vnode *vp, int nd,
-    off_t off, int xfsize, int bsize, struct thread *td, vm_page_t *res)
-{
-	vm_page_t m;
-	vm_pindex_t pindex;
-	ssize_t resid;
-	int error, readahead, rv;
-
-	pindex = OFF_TO_IDX(off);
-	VM_OBJECT_WLOCK(obj);
-	m = vm_page_grab(obj, pindex, (vp != NULL ? VM_ALLOC_NOBUSY |
-	    VM_ALLOC_IGN_SBUSY : 0) | VM_ALLOC_WIRED | VM_ALLOC_NORMAL);
-
-	/*
-	 * Check if page is valid for what we need, otherwise initiate I/O.
-	 *
-	 * The non-zero nd argument prevents disk I/O, instead we
-	 * return the caller what he specified in nd.  In particular,
-	 * if we already turned some pages into mbufs, nd == EAGAIN
-	 * and the main function send them the pages before we come
-	 * here again and block.
-	 */
-	if (m->valid != 0 && vm_page_is_valid(m, off & PAGE_MASK, xfsize)) {
-		if (vp == NULL)
-			vm_page_xunbusy(m);
-		VM_OBJECT_WUNLOCK(obj);
-		*res = m;
-		return (0);
-	} else if (nd != 0) {
-		if (vp == NULL)
-			vm_page_xunbusy(m);
-		error = nd;
-		goto free_page;
-	}
-
-	/*
-	 * Get the page from backing store.
-	 */
-	error = 0;
-	if (vp != NULL) {
-		VM_OBJECT_WUNLOCK(obj);
-		readahead = sfreadahead * MAXBSIZE;
-
-		/*
-		 * Use vn_rdwr() instead of the pager interface for
-		 * the vnode, to allow the read-ahead.
-		 *
-		 * XXXMAC: Because we don't have fp->f_cred here, we
-		 * pass in NOCRED.  This is probably wrong, but is
-		 * consistent with our original implementation.
-		 */
-		error = vn_rdwr(UIO_READ, vp, NULL, readahead, trunc_page(off),
-		    UIO_NOCOPY, IO_NODELOCKED | IO_VMIO | ((readahead /
-		    bsize) << IO_SEQSHIFT), td->td_ucred, NOCRED, &resid, td);
-		SFSTAT_INC(sf_iocnt);
-		VM_OBJECT_WLOCK(obj);
-	} else {
-		if (vm_pager_has_page(obj, pindex, NULL, NULL)) {
-			rv = vm_pager_get_pages(obj, &m, 1, 0);
-			SFSTAT_INC(sf_iocnt);
-			m = vm_page_lookup(obj, pindex);
-			if (m == NULL)
-				error = EIO;
-			else if (rv != VM_PAGER_OK) {
-				vm_page_lock(m);
-				vm_page_free(m);
-				vm_page_unlock(m);
-				m = NULL;
-				error = EIO;
-			}
-		} else {
-			pmap_zero_page(m);
-			m->valid = VM_PAGE_BITS_ALL;
-			m->dirty = 0;
-		}
-		if (m != NULL)
-			vm_page_xunbusy(m);
-	}
-	if (error == 0) {
-		*res = m;
-	} else if (m != NULL) {
-free_page:
-		vm_page_lock(m);
-		vm_page_unwire(m, 0);
-
-		/*
-		 * See if anyone else might know about this page.  If
-		 * not and it is not valid, then free it.
-		 */
-		if (m->wire_count == 0 && m->valid == 0 && !vm_page_busied(m))
-			vm_page_free(m);
-		vm_page_unlock(m);
-	}
-	KASSERT(error != 0 || (m->wire_count > 0 &&
-	    vm_page_is_valid(m, off & PAGE_MASK, xfsize)),
-	    ("wrong page state m %p off %#jx xfsize %d", m, (uintmax_t)off,
-	    xfsize));
-	VM_OBJECT_WUNLOCK(obj);
-	return (error);
-}
-
-static int
-sendfile_getobj(struct thread *td, struct file *fp, vm_object_t *obj_res,
-    struct vnode **vp_res, struct shmfd **shmfd_res, off_t *obj_size,
-    int *bsize)
-{
-	struct vattr va;
-	vm_object_t obj;
-	struct vnode *vp;
-	struct shmfd *shmfd;
-	int error;
-
-	vp = *vp_res = NULL;
-	obj = NULL;
-	shmfd = *shmfd_res = NULL;
-	*bsize = 0;
-
-	/*
-	 * The file descriptor must be a regular file and have a
-	 * backing VM object.
-	 */
-	if (fp->f_type == DTYPE_VNODE) {
-		vp = fp->f_vnode;
-		vn_lock(vp, LK_SHARED | LK_RETRY);
-		if (vp->v_type != VREG) {
-			error = EINVAL;
-			goto out;
-		}
-		*bsize = vp->v_mount->mnt_stat.f_iosize;
-		error = VOP_GETATTR(vp, &va, td->td_ucred);
-		if (error != 0)
-			goto out;
-		*obj_size = va.va_size;
-		obj = vp->v_object;
-		if (obj == NULL) {
-			error = EINVAL;
-			goto out;
-		}
-	} else if (fp->f_type == DTYPE_SHM) {
-		error = 0;
-		shmfd = fp->f_data;
-		obj = shmfd->shm_object;
-		*obj_size = shmfd->shm_size;
-	} else {
-		error = EINVAL;
-		goto out;
-	}
-
-	VM_OBJECT_WLOCK(obj);
-	if ((obj->flags & OBJ_DEAD) != 0) {
-		VM_OBJECT_WUNLOCK(obj);
-		error = EBADF;
-		goto out;
-	}
-
-	/*
-	 * Temporarily increase the backing VM object's reference
-	 * count so that a forced reclamation of its vnode does not
-	 * immediately destroy it.
-	 */
-	vm_object_reference_locked(obj);
-	VM_OBJECT_WUNLOCK(obj);
-	*obj_res = obj;
-	*vp_res = vp;
-	*shmfd_res = shmfd;
-
-out:
-	if (vp != NULL)
-		VOP_UNLOCK(vp, 0);
-	return (error);
-}
-
-static int
-kern_sendfile_getsock(struct thread *td, int s, struct file **sock_fp,
-    struct socket **so)
-{
-	cap_rights_t rights;
-	int error;
-
-	*sock_fp = NULL;
-	*so = NULL;
-
-	/*
-	 * The socket must be a stream socket and connected.
-	 */
-	error = getsock_cap(td, s, cap_rights_init(&rights, CAP_SEND),
-	    sock_fp, NULL);
-	if (error != 0)
-		return (error);
-	*so = (*sock_fp)->f_data;
-	if ((*so)->so_type != SOCK_STREAM)
-		return (EINVAL);
-	if (((*so)->so_state & SS_ISCONNECTED) == 0)
-		return (ENOTCONN);
-	return (0);
-}
-
-int
-vn_sendfile(struct file *fp, int sockfd, struct uio *hdr_uio,
-    struct uio *trl_uio, off_t offset, size_t nbytes, off_t *sent, int flags,
-    int kflags, struct thread *td)
-{
-	struct file *sock_fp;
-	struct vnode *vp;
-	struct vm_object *obj;
-	struct socket *so;
-	struct mbuf *m;
-	struct sf_buf *sf;
-	struct vm_page *pg;
-	struct shmfd *shmfd;
-	struct sendfile_sync *sfs;
-	struct vattr va;
-	off_t off, xfsize, fsbytes, sbytes, rem, obj_size;
-	int error, bsize, nd, hdrlen, mnw;
-	bool inflight_called;
-
-	pg = NULL;
-	obj = NULL;
-	so = NULL;
-	m = NULL;
-	sfs = NULL;
-	fsbytes = sbytes = 0;
-	hdrlen = mnw = 0;
-	rem = nbytes;
-	obj_size = 0;
-	inflight_called = false;
-
-	error = sendfile_getobj(td, fp, &obj, &vp, &shmfd, &obj_size, &bsize);
-	if (error != 0)
-		return (error);
-	if (rem == 0)
-		rem = obj_size;
-
-	error = kern_sendfile_getsock(td, sockfd, &sock_fp, &so);
-	if (error != 0)
-		goto out;
-
-	/*
-	 * Do not wait on memory allocations but return ENOMEM for
-	 * caller to retry later.
-	 * XXX: Experimental.
-	 */
-	if (flags & SF_MNOWAIT)
-		mnw = 1;
-
-	if (flags & SF_SYNC) {
-		sfs = malloc(sizeof *sfs, M_TEMP, M_WAITOK | M_ZERO);
-		mtx_init(&sfs->mtx, "sendfile", NULL, MTX_DEF);
-		cv_init(&sfs->cv, "sendfile");
-	}
-
-#ifdef MAC
-	error = mac_socket_check_send(td->td_ucred, so);
-	if (error != 0)
-		goto out;
-#endif
-
-	/* If headers are specified copy them into mbufs. */
-	if (hdr_uio != NULL) {
-		hdr_uio->uio_td = td;
-		hdr_uio->uio_rw = UIO_WRITE;
-		if (hdr_uio->uio_resid > 0) {
-			/*
-			 * In FBSD < 5.0 the nbytes to send also included
-			 * the header.  If compat is specified subtract the
-			 * header size from nbytes.
-			 */
-			if (kflags & SFK_COMPAT) {
-				if (nbytes > hdr_uio->uio_resid)
-					nbytes -= hdr_uio->uio_resid;
-				else
-					nbytes = 0;
-			}
-			m = m_uiotombuf(hdr_uio, (mnw ? M_NOWAIT : M_WAITOK),
-			    0, 0, 0);
-			if (m == NULL) {
-				error = mnw ? EAGAIN : ENOBUFS;
-				goto out;
-			}
-			hdrlen = m_length(m, NULL);
-		}
-	}
-
-	/*
-	 * Protect against multiple writers to the socket.
-	 *
-	 * XXXRW: Historically this has assumed non-interruptibility, so now
-	 * we implement that, but possibly shouldn't.
-	 */
-	(void)sblock(&so->so_snd, SBL_WAIT | SBL_NOINTR);
-
-	/*
-	 * Loop through the pages of the file, starting with the requested
-	 * offset. Get a file page (do I/O if necessary), map the file page
-	 * into an sf_buf, attach an mbuf header to the sf_buf, and queue
-	 * it on the socket.
-	 * This is done in two loops.  The inner loop turns as many pages
-	 * as it can, up to available socket buffer space, without blocking
-	 * into mbufs to have it bulk delivered into the socket send buffer.
-	 * The outer loop checks the state and available space of the socket
-	 * and takes care of the overall progress.
-	 */
-	for (off = offset; ; ) {
-		struct mbuf *mtail;
-		int loopbytes;
-		int space;
-		int done;
-
-		if ((nbytes != 0 && nbytes == fsbytes) ||
-		    (nbytes == 0 && obj_size == fsbytes))
-			break;
-
-		mtail = NULL;
-		loopbytes = 0;
-		space = 0;
-		done = 0;
-
-		/*
-		 * Check the socket state for ongoing connection,
-		 * no errors and space in socket buffer.
-		 * If space is low allow for the remainder of the
-		 * file to be processed if it fits the socket buffer.
-		 * Otherwise block in waiting for sufficient space
-		 * to proceed, or if the socket is nonblocking, return
-		 * to userland with EAGAIN while reporting how far
-		 * we've come.
-		 * We wait until the socket buffer has significant free
-		 * space to do bulk sends.  This makes good use of file
-		 * system read ahead and allows packet segmentation
-		 * offloading hardware to take over lots of work.  If
-		 * we were not careful here we would send off only one
-		 * sfbuf at a time.
-		 */
-		SOCKBUF_LOCK(&so->so_snd);
-		if (so->so_snd.sb_lowat < so->so_snd.sb_hiwat / 2)
-			so->so_snd.sb_lowat = so->so_snd.sb_hiwat / 2;
-retry_space:
-		if (so->so_snd.sb_state & SBS_CANTSENDMORE) {
-			error = EPIPE;
-			SOCKBUF_UNLOCK(&so->so_snd);
-			goto done;
-		} else if (so->so_error) {
-			error = so->so_error;
-			so->so_error = 0;
-			SOCKBUF_UNLOCK(&so->so_snd);
-			goto done;
-		}
-		space = sbspace(&so->so_snd);
-		if (space < rem &&
-		    (space <= 0 ||
-		     space < so->so_snd.sb_lowat)) {
-			if (so->so_state & SS_NBIO) {
-				SOCKBUF_UNLOCK(&so->so_snd);
-				error = EAGAIN;
-				goto done;
-			}
-			/*
-			 * sbwait drops the lock while sleeping.
-			 * When we loop back to retry_space the
-			 * state may have changed and we retest
-			 * for it.
-			 */
-			error = sbwait(&so->so_snd);
-			/*
-			 * An error from sbwait usually indicates that we've
-			 * been interrupted by a signal. If we've sent anything
-			 * then return bytes sent, otherwise return the error.
-			 */
-			if (error != 0) {
-				SOCKBUF_UNLOCK(&so->so_snd);
-				goto done;
-			}
-			goto retry_space;
-		}
-		SOCKBUF_UNLOCK(&so->so_snd);
-
-		/*
-		 * Reduce space in the socket buffer by the size of
-		 * the header mbuf chain.
-		 * hdrlen is set to 0 after the first loop.
-		 */
-		space -= hdrlen;
-
-		if (vp != NULL) {
-			error = vn_lock(vp, LK_SHARED);
-			if (error != 0)
-				goto done;
-			error = VOP_GETATTR(vp, &va, td->td_ucred);
-			if (error != 0 || off >= va.va_size) {
-				VOP_UNLOCK(vp, 0);
-				goto done;
-			}
-			obj_size = va.va_size;
-		}
-
-		/*
-		 * Loop and construct maximum sized mbuf chain to be bulk
-		 * dumped into socket buffer.
-		 */
-		while (space > loopbytes) {
-			vm_offset_t pgoff;
-			struct mbuf *m0;
-
-			/*
-			 * Calculate the amount to transfer.
-			 * Not to exceed a page, the EOF,
-			 * or the passed in nbytes.
-			 */
-			pgoff = (vm_offset_t)(off & PAGE_MASK);
-			rem = obj_size - offset;
-			if (nbytes != 0)
-				rem = omin(rem, nbytes);
-			rem -= fsbytes + loopbytes;
-			xfsize = omin(PAGE_SIZE - pgoff, rem);
-			xfsize = omin(space - loopbytes, xfsize);
-			if (xfsize <= 0) {
-				done = 1;		/* all data sent */
-				break;
-			}
-
-			/*
-			 * Attempt to look up the page.  Allocate
-			 * if not found or wait and loop if busy.
-			 */
-			if (m != NULL)
-				nd = EAGAIN; /* send what we already got */
-			else if ((flags & SF_NODISKIO) != 0)
-				nd = EBUSY;
-			else
-				nd = 0;
-			error = sendfile_readpage(obj, vp, nd, off,
-			    xfsize, bsize, td, &pg);
-			if (error != 0) {
-				if (error == EAGAIN)
-					error = 0;	/* not a real error */
-				break;
-			}
-
-			/*
-			 * Get a sendfile buf.  When allocating the
-			 * first buffer for mbuf chain, we usually
-			 * wait as long as necessary, but this wait
-			 * can be interrupted.  For consequent
-			 * buffers, do not sleep, since several
-			 * threads might exhaust the buffers and then
-			 * deadlock.
-			 */
-			sf = sf_buf_alloc(pg, (mnw || m != NULL) ? SFB_NOWAIT :
-			    SFB_CATCH);
-			if (sf == NULL) {
-				SFSTAT_INC(sf_allocfail);
-				vm_page_lock(pg);
-				vm_page_unwire(pg, 0);
-				KASSERT(pg->object != NULL,
-				    ("%s: object disappeared", __func__));
-				vm_page_unlock(pg);
-				if (m == NULL)
-					error = (mnw ? EAGAIN : EINTR);
-				break;
-			}
-
-			/*
-			 * Get an mbuf and set it up as having
-			 * external storage.
-			 */
-			m0 = m_get((mnw ? M_NOWAIT : M_WAITOK), MT_DATA);
-			if (m0 == NULL) {
-				error = (mnw ? EAGAIN : ENOBUFS);
-				(void)sf_buf_mext(NULL, NULL, sf);
-				break;
-			}
-			if (m_extadd(m0, (caddr_t )sf_buf_kva(sf), PAGE_SIZE,
-			    sf_buf_mext, sfs, sf, M_RDONLY, EXT_SFBUF,
-			    (mnw ? M_NOWAIT : M_WAITOK)) != 0) {
-				error = (mnw ? EAGAIN : ENOBUFS);
-				(void)sf_buf_mext(NULL, NULL, sf);
-				m_freem(m0);
-				break;
-			}
-			m0->m_data = (char *)sf_buf_kva(sf) + pgoff;
-			m0->m_len = xfsize;
-
-			/* Append to mbuf chain. */
-			if (mtail != NULL)
-				mtail->m_next = m0;
-			else if (m != NULL)
-				m_last(m)->m_next = m0;
-			else
-				m = m0;
-			mtail = m0;
-
-			/* Keep track of bits processed. */
-			loopbytes += xfsize;
-			off += xfsize;
-
-			if (sfs != NULL) {
-				mtx_lock(&sfs->mtx);
-				sfs->count++;
-				mtx_unlock(&sfs->mtx);
-			}
-		}
-
-		if (vp != NULL)
-			VOP_UNLOCK(vp, 0);
-
-		/* Add the buffer chain to the socket buffer. */
-		if (m != NULL) {
-			int mlen, err;
-
-			mlen = m_length(m, NULL);
-			SOCKBUF_LOCK(&so->so_snd);
-			if (so->so_snd.sb_state & SBS_CANTSENDMORE) {
-				error = EPIPE;
-				SOCKBUF_UNLOCK(&so->so_snd);
-				goto done;
-			}
-			SOCKBUF_UNLOCK(&so->so_snd);
-			CURVNET_SET(so->so_vnet);
-			/* Avoid error aliasing. */
-			err = (*so->so_proto->pr_usrreqs->pru_send)
-				    (so, 0, m, NULL, NULL, td);
-			CURVNET_RESTORE();
-			if (err == 0) {
-				/*
-				 * We need two counters to get the
-				 * file offset and nbytes to send
-				 * right:
-				 * - sbytes contains the total amount
-				 *   of bytes sent, including headers.
-				 * - fsbytes contains the total amount
-				 *   of bytes sent from the file.
-				 */
-				sbytes += mlen;
-				fsbytes += mlen;
-				if (hdrlen) {
-					fsbytes -= hdrlen;
-					hdrlen = 0;
+				while (nfd-- > 0) {
+					fd = *fds++;
+					error = fget(td, fd,
+					    cap_rights_init(&rights), &fp);
+					if (error == 0) {
+						fdclose(td, fp, fd);
+						fdrop(fp, td);
+					}
 				}
-			} else if (error == 0)
-				error = err;
-			m = NULL;	/* pru_send always consumes */
+			}
+			clen -= datalen;
+			cm = (struct cmsghdr *)((uint8_t *)cm + datalen);
 		}
-
-		/* Quit outer loop on error or when we're done. */
-		if (done)
-			break;
-		if (error != 0)
-			goto done;
+		m_chtype(m, MT_CONTROL);
 	}
-
-	/*
-	 * Send trailers. Wimp out and use writev(2).
-	 */
-	if (trl_uio != NULL) {
-		sbunlock(&so->so_snd);
-		error = kern_writev(td, sockfd, trl_uio);
-		if (error == 0)
-			sbytes += td->td_retval[0];
-		goto out;
-	}
-
-done:
-	sbunlock(&so->so_snd);
-out:
-	/*
-	 * If there was no error we have to clear td->td_retval[0]
-	 * because it may have been set by writev.
-	 */
-	if (error == 0) {
-		td->td_retval[0] = 0;
-	}
-	if (sent != NULL) {
-		copyout(&sbytes, sent, sizeof(off_t));
-	}
-	if (obj != NULL)
-		vm_object_deallocate(obj);
-	if (so)
-		fdrop(sock_fp, td);
-	if (m)
-		m_freem(m);
-
-	if (sfs != NULL) {
-		mtx_lock(&sfs->mtx);
-		if (sfs->count != 0)
-			cv_wait(&sfs->cv, &sfs->mtx);
-		KASSERT(sfs->count == 0, ("sendfile sync still busy"));
-		cv_destroy(&sfs->cv);
-		mtx_destroy(&sfs->mtx);
-		free(sfs, M_TEMP);
-	}
-
-	if (error == ERESTART)
-		error = EINTR;
-
-	return (error);
 }

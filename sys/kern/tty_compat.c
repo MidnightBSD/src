@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/tty_compat.c 201532 2010-01-04 20:59:52Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/tty_compat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_compat.h"
 

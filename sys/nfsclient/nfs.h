@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $FreeBSD: stable/10/sys/nfsclient/nfs.h 221986 2011-05-16 13:12:09Z rmacklem $
+ * $FreeBSD: stable/11/sys/nfsclient/nfs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NFSCLIENT_NFS_H_
@@ -115,10 +114,7 @@
 #ifdef _KERNEL
 
 #ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_NFSREQ);
 MALLOC_DECLARE(M_NFSDIROFF);
-MALLOC_DECLARE(M_NFSBIGFH);
-MALLOC_DECLARE(M_NFSHASH);
 MALLOC_DECLARE(M_NFSDIRECTIO);
 #endif
 

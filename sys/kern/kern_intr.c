@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_intr.c 272946 2014-10-11 17:49:51Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_intr.c 346560 2019-04-22 15:20:46Z ian $");
 
 #include "opt_ddb.h"
 #include "opt_kstack_usage_prof.h"
@@ -91,8 +90,7 @@ struct proc *intrproc;
 static MALLOC_DEFINE(M_ITHREAD, "ithread", "Interrupt Threads");
 
 static int intr_storm_threshold = 1000;
-TUNABLE_INT("hw.intr_storm_threshold", &intr_storm_threshold);
-SYSCTL_INT(_hw, OID_AUTO, intr_storm_threshold, CTLFLAG_RW,
+SYSCTL_INT(_hw, OID_AUTO, intr_storm_threshold, CTLFLAG_RWTUN,
     &intr_storm_threshold, 0,
     "Number of consecutive interrupts before storm protection is enabled");
 static TAILQ_HEAD(, intr_event) event_list =
@@ -221,10 +219,20 @@ intr_event_update(struct intr_event *ie)
 	}
 
 	/*
-	 * If the handler names were too long, add +'s to indicate missing
-	 * names. If we run out of room and still have +'s to add, change
-	 * the last character from a + to a *.
+	 * If there is only one handler and its name is too long, just copy in
+	 * as much of the end of the name (includes the unit number) as will
+	 * fit.  Otherwise, we have multiple handlers and not all of the names
+	 * will fit.  Add +'s to indicate missing names.  If we run out of room
+	 * and still have +'s to add, change the last character from a + to a *.
 	 */
+	if (missed == 1 && space == 1) {
+		ih = TAILQ_FIRST(&ie->ie_handlers);
+		missed = strlen(ie->ie_fullname) + strlen(ih->ih_name) + 2 -
+		    sizeof(ie->ie_fullname);
+		strcat(ie->ie_fullname, (missed == 0) ? " " : "-");
+		strcat(ie->ie_fullname, &ih->ih_name[missed]);
+		missed = 0;
+	}
 	last = &ie->ie_fullname[sizeof(ie->ie_fullname) - 2];
 	while (missed-- > 0) {
 		if (strlen(ie->ie_fullname) + 1 == sizeof(ie->ie_fullname)) {
@@ -252,7 +260,7 @@ intr_event_update(struct intr_event *ie)
 int
 intr_event_create(struct intr_event **event, void *source, int flags, int irq,
     void (*pre_ithread)(void *), void (*post_ithread)(void *),
-    void (*post_filter)(void *), int (*assign_cpu)(void *, u_char),
+    void (*post_filter)(void *), int (*assign_cpu)(void *, int),
     const char *fmt, ...)
 {
 	struct intr_event *ie;
@@ -289,15 +297,12 @@ intr_event_create(struct intr_event **event, void *source, int flags, int irq,
 /*
  * Bind an interrupt event to the specified CPU.  Note that not all
  * platforms support binding an interrupt to a CPU.  For those
- * platforms this request will fail.  For supported platforms, any
- * associated ithreads as well as the primary interrupt context will
- * be bound to the specificed CPU.  Using a cpu id of NOCPU unbinds
+ * platforms this request will fail.  Using a cpu id of NOCPU unbinds
  * the interrupt event.
  */
-int
-intr_event_bind(struct intr_event *ie, u_char cpu)
+static int
+_intr_event_bind(struct intr_event *ie, int cpu, bool bindirq, bool bindithread)
 {
-	cpuset_t mask;
 	lwpid_t id;
 	int error;
 
@@ -316,42 +321,73 @@ intr_event_bind(struct intr_event *ie, u_char cpu)
 	 * If we have any ithreads try to set their mask first to verify
 	 * permissions, etc.
 	 */
-	mtx_lock(&ie->ie_lock);
-	if (ie->ie_thread != NULL) {
-		CPU_ZERO(&mask);
-		if (cpu == NOCPU)
-			CPU_COPY(cpuset_root, &mask);
-		else
-			CPU_SET(cpu, &mask);
-		id = ie->ie_thread->it_thread->td_tid;
-		mtx_unlock(&ie->ie_lock);
-		error = cpuset_setthread(id, &mask);
-		if (error)
-			return (error);
-	} else
-		mtx_unlock(&ie->ie_lock);
-	error = ie->ie_assign_cpu(ie->ie_source, cpu);
-	if (error) {
+	if (bindithread) {
 		mtx_lock(&ie->ie_lock);
 		if (ie->ie_thread != NULL) {
-			CPU_ZERO(&mask);
-			if (ie->ie_cpu == NOCPU)
-				CPU_COPY(cpuset_root, &mask);
-			else
-				CPU_SET(ie->ie_cpu, &mask);
 			id = ie->ie_thread->it_thread->td_tid;
 			mtx_unlock(&ie->ie_lock);
-			(void)cpuset_setthread(id, &mask);
+			error = cpuset_setithread(id, cpu);
+			if (error)
+				return (error);
 		} else
 			mtx_unlock(&ie->ie_lock);
+	}
+	if (bindirq)
+		error = ie->ie_assign_cpu(ie->ie_source, cpu);
+	if (error) {
+		if (bindithread) {
+			mtx_lock(&ie->ie_lock);
+			if (ie->ie_thread != NULL) {
+				cpu = ie->ie_cpu;
+				id = ie->ie_thread->it_thread->td_tid;
+				mtx_unlock(&ie->ie_lock);
+				(void)cpuset_setithread(id, cpu);
+			} else
+				mtx_unlock(&ie->ie_lock);
+		}
 		return (error);
 	}
 
-	mtx_lock(&ie->ie_lock);
-	ie->ie_cpu = cpu;
-	mtx_unlock(&ie->ie_lock);
+	if (bindirq) {
+		mtx_lock(&ie->ie_lock);
+		ie->ie_cpu = cpu;
+		mtx_unlock(&ie->ie_lock);
+	}
 
 	return (error);
+}
+
+/*
+ * Bind an interrupt event to the specified CPU.  For supported platforms, any
+ * associated ithreads as well as the primary interrupt context will be bound
+ * to the specificed CPU.
+ */
+int
+intr_event_bind(struct intr_event *ie, int cpu)
+{
+
+	return (_intr_event_bind(ie, cpu, true, true));
+}
+
+/*
+ * Bind an interrupt event to the specified CPU, but do not bind associated
+ * ithreads.
+ */
+int
+intr_event_bind_irqonly(struct intr_event *ie, int cpu)
+{
+
+	return (_intr_event_bind(ie, cpu, true, false));
+}
+
+/*
+ * Bind an interrupt event's ithread to the specified CPU.
+ */
+int
+intr_event_bind_ithread(struct intr_event *ie, int cpu)
+{
+
+	return (_intr_event_bind(ie, cpu, false, true));
 }
 
 static struct intr_event *
@@ -370,12 +406,11 @@ intr_lookup(int irq)
 }
 
 int
-intr_setaffinity(int irq, void *m)
+intr_setaffinity(int irq, int mode, void *m)
 {
 	struct intr_event *ie;
 	cpuset_t *mask;
-	u_char cpu;
-	int n;
+	int cpu, n;
 
 	mask = m;
 	cpu = NOCPU;
@@ -389,32 +424,68 @@ intr_setaffinity(int irq, void *m)
 				continue;
 			if (cpu != NOCPU)
 				return (EINVAL);
-			cpu = (u_char)n;
+			cpu = n;
 		}
 	}
 	ie = intr_lookup(irq);
 	if (ie == NULL)
 		return (ESRCH);
-	return (intr_event_bind(ie, cpu));
+	switch (mode) {
+	case CPU_WHICH_IRQ:
+		return (intr_event_bind(ie, cpu));
+	case CPU_WHICH_INTRHANDLER:
+		return (intr_event_bind_irqonly(ie, cpu));
+	case CPU_WHICH_ITHREAD:
+		return (intr_event_bind_ithread(ie, cpu));
+	default:
+		return (EINVAL);
+	}
 }
 
 int
-intr_getaffinity(int irq, void *m)
+intr_getaffinity(int irq, int mode, void *m)
 {
 	struct intr_event *ie;
+	struct thread *td;
+	struct proc *p;
 	cpuset_t *mask;
+	lwpid_t id;
+	int error;
 
 	mask = m;
 	ie = intr_lookup(irq);
 	if (ie == NULL)
 		return (ESRCH);
+
+	error = 0;
 	CPU_ZERO(mask);
-	mtx_lock(&ie->ie_lock);
-	if (ie->ie_cpu == NOCPU)
-		CPU_COPY(cpuset_root, mask);
-	else
-		CPU_SET(ie->ie_cpu, mask);
-	mtx_unlock(&ie->ie_lock);
+	switch (mode) {
+	case CPU_WHICH_IRQ:
+	case CPU_WHICH_INTRHANDLER:
+		mtx_lock(&ie->ie_lock);
+		if (ie->ie_cpu == NOCPU)
+			CPU_COPY(cpuset_root, mask);
+		else
+			CPU_SET(ie->ie_cpu, mask);
+		mtx_unlock(&ie->ie_lock);
+		break;
+	case CPU_WHICH_ITHREAD:
+		mtx_lock(&ie->ie_lock);
+		if (ie->ie_thread == NULL) {
+			mtx_unlock(&ie->ie_lock);
+			CPU_COPY(cpuset_root, mask);
+		} else {
+			id = ie->ie_thread->it_thread->td_tid;
+			mtx_unlock(&ie->ie_lock);
+			error = cpuset_which(CPU_WHICH_TID, id, &p, &td, NULL);
+			if (error != 0)
+				return (error);
+			CPU_COPY(&td->td_cpuset->cs_mask, mask);
+			PROC_UNLOCK(p);
+		}
+	default:
+		return (EINVAL);
+	}
 	return (0);
 }
 
@@ -842,6 +913,12 @@ ok:
 		 * Ensure that the thread will process the handler list
 		 * again and remove this handler if it has already passed
 		 * it on the list.
+		 *
+		 * The release part of the following store ensures
+		 * that the update of ih_flags is ordered before the
+		 * it_need setting.  See the comment before
+		 * atomic_cmpset_acq(&ithd->it_need, ...) operation in
+		 * the ithread_execute_handlers().
 		 */
 		atomic_store_rel_int(&ie->ie_thread->it_need, 1);
 	} else
@@ -898,13 +975,10 @@ intr_event_schedule_thread(struct intr_event *ie)
 	 * If any of the handlers for this ithread claim to be good
 	 * sources of entropy, then gather some.
 	 */
-	if (harvest.interrupt && ie->ie_flags & IE_ENTROPY) {
-		CTR3(KTR_INTR, "%s: pid %d (%s) gathering entropy", __func__,
-		    p->p_pid, td->td_name);
+	if (ie->ie_flags & IE_ENTROPY) {
 		entropy.event = (uintptr_t)ie;
 		entropy.td = ctd;
-		random_harvest(&entropy, sizeof(entropy), 2,
-		    RANDOM_INTERRUPT);
+		random_harvest_queue(&entropy, sizeof(entropy), 2, RANDOM_INTERRUPT);
 	}
 
 	KASSERT(p != NULL, ("ithread %s has no process", ie->ie_name));
@@ -913,6 +987,10 @@ intr_event_schedule_thread(struct intr_event *ie)
 	 * Set it_need to tell the thread to keep running if it is already
 	 * running.  Then, lock the thread and see if we actually need to
 	 * put it on the runqueue.
+	 *
+	 * Use store_rel to arrange that the store to ih_need in
+	 * swi_sched() is before the store to it_need and prepare for
+	 * transfer of this order to loads in the ithread.
 	 */
 	atomic_store_rel_int(&it->it_need, 1);
 	thread_lock(td);
@@ -991,6 +1069,12 @@ ok:
 		 * Ensure that the thread will process the handler list
 		 * again and remove this handler if it has already passed
 		 * it on the list.
+		 *
+		 * The release part of the following store ensures
+		 * that the update of ih_flags is ordered before the
+		 * it_need setting.  See the comment before
+		 * atomic_cmpset_acq(&ithd->it_need, ...) operation in
+		 * the ithread_execute_handlers().
 		 */
 		atomic_store_rel_int(&it->it_need, 1);
 	} else
@@ -1052,13 +1136,10 @@ intr_event_schedule_thread(struct intr_event *ie, struct intr_thread *it)
 	 * If any of the handlers for this ithread claim to be good
 	 * sources of entropy, then gather some.
 	 */
-	if (harvest.interrupt && ie->ie_flags & IE_ENTROPY) {
-		CTR3(KTR_INTR, "%s: pid %d (%s) gathering entropy", __func__,
-		    p->p_pid, td->td_name);
+	if (ie->ie_flags & IE_ENTROPY) {
 		entropy.event = (uintptr_t)ie;
 		entropy.td = ctd;
-		random_harvest(&entropy, sizeof(entropy), 2,
-		    RANDOM_INTERRUPT);
+		random_harvest_queue(&entropy, sizeof(entropy), 2, RANDOM_INTERRUPT);
 	}
 
 	KASSERT(p != NULL, ("ithread %s has no process", ie->ie_name));
@@ -1067,6 +1148,10 @@ intr_event_schedule_thread(struct intr_event *ie, struct intr_thread *it)
 	 * Set it_need to tell the thread to keep running if it is already
 	 * running.  Then, lock the thread and see if we actually need to
 	 * put it on the runqueue.
+	 *
+	 * Use store_rel to arrange that the store to ih_need in
+	 * swi_sched() is before the store to it_need and prepare for
+	 * transfer of this order to loads in the ithread.
 	 */
 	atomic_store_rel_int(&it->it_need, 1);
 	thread_lock(td);
@@ -1091,7 +1176,7 @@ intr_event_schedule_thread(struct intr_event *ie, struct intr_thread *it)
  * a PIC.
  */
 static int
-swi_assign_cpu(void *arg, u_char cpu)
+swi_assign_cpu(void *arg, int cpu)
 {
 
 	return (0);
@@ -1143,21 +1228,16 @@ swi_sched(void *cookie, int flags)
 	CTR3(KTR_INTR, "swi_sched: %s %s need=%d", ie->ie_name, ih->ih_name,
 	    ih->ih_need);
 
-	if (harvest.swi) {
-		CTR2(KTR_INTR, "swi_sched: pid %d (%s) gathering entropy",
-		    curproc->p_pid, curthread->td_name);
-		entropy.event = (uintptr_t)ih;
-		entropy.td = curthread;
-		random_harvest(&entropy, sizeof(entropy), 1,
-		    RANDOM_SWI);
-	}
+	entropy.event = (uintptr_t)ih;
+	entropy.td = curthread;
+	random_harvest_queue(&entropy, sizeof(entropy), 1, RANDOM_SWI);
 
 	/*
 	 * Set ih_need for this handler so that if the ithread is already
 	 * running it will execute this handler on the next pass.  Otherwise,
 	 * it will execute it the next time it runs.
 	 */
-	atomic_store_rel_int(&ih->ih_need, 1);
+	ih->ih_need = 1;
 
 	if (!(flags & SWI_DELAY)) {
 		PCPU_INC(cnt.v_soft);
@@ -1247,13 +1327,14 @@ intr_event_execute_handlers(struct proc *p, struct intr_event *ie)
 		 * For software interrupt threads, we only execute
 		 * handlers that have their need flag set.  Hardware
 		 * interrupt threads always invoke all of their handlers.
+		 *
+		 * ih_need can only be 0 or 1.  Failed cmpset below
+		 * means that there is no request to execute handlers,
+		 * so a retry of the cmpset is not needed.
 		 */
-		if (ie->ie_flags & IE_SOFT) {
-			if (atomic_load_acq_int(&ih->ih_need) == 0)
-				continue;
-			else
-				atomic_store_rel_int(&ih->ih_need, 0);
-		}
+		if ((ie->ie_flags & IE_SOFT) != 0 &&
+		    atomic_cmpset_int(&ih->ih_need, 1, 0) == 0)
+			continue;
 
 		/* Execute this handler. */
 		CTR6(KTR_INTR, "%s: pid %d exec %p(%p) for %s flg=%x",
@@ -1350,17 +1431,13 @@ ithread_loop(void *arg)
 		 * Service interrupts.  If another interrupt arrives while
 		 * we are running, it will set it_need to note that we
 		 * should make another pass.
+		 *
+		 * The load_acq part of the following cmpset ensures
+		 * that the load of ih_need in ithread_execute_handlers()
+		 * is ordered after the load of it_need here.
 		 */
-		while (atomic_load_acq_int(&ithd->it_need) != 0) {
-			/*
-			 * This might need a full read and write barrier
-			 * to make sure that this write posts before any
-			 * of the memory or device accesses in the
-			 * handlers.
-			 */
-			atomic_store_rel_int(&ithd->it_need, 0);
+		while (atomic_cmpset_acq_int(&ithd->it_need, 1, 0) != 0)
 			ithread_execute_handlers(p, ie);
-		}
 		WITNESS_WARN(WARN_PANIC, NULL, "suspending ithread");
 		mtx_assert(&Giant, MA_NOTOWNED);
 
@@ -1370,8 +1447,8 @@ ithread_loop(void *arg)
 		 * set again, so we have to check it again.
 		 */
 		thread_lock(td);
-		if ((atomic_load_acq_int(&ithd->it_need) == 0) &&
-		    !(ithd->it_flags & (IT_DEAD | IT_WAIT))) {
+		if (atomic_load_acq_int(&ithd->it_need) == 0 &&
+		    (ithd->it_flags & (IT_DEAD | IT_WAIT)) == 0) {
 			TD_SET_IWAIT(td);
 			ie->ie_count = 0;
 			mi_switch(SW_VOL | SWT_IWAIT, NULL);
@@ -1479,12 +1556,7 @@ intr_event_handle(struct intr_event *ie, struct trapframe *frame)
 	/* Schedule the ithread if needed. */
 	if (thread) {
 		error = intr_event_schedule_thread(ie);
-#ifndef XEN		
 		KASSERT(error == 0, ("bad stray interrupt"));
-#else
-		if (error != 0)
-			log(LOG_WARNING, "bad stray interrupt");
-#endif		
 	}
 	critical_exit();
 	td->td_intr_nesting_level--;
@@ -1535,15 +1607,12 @@ ithread_loop(void *arg)
 		 * Service interrupts.  If another interrupt arrives while
 		 * we are running, it will set it_need to note that we
 		 * should make another pass.
+		 *
+		 * The load_acq part of the following cmpset ensures
+		 * that the load of ih_need in ithread_execute_handlers()
+		 * is ordered after the load of it_need here.
 		 */
-		while (atomic_load_acq_int(&ithd->it_need) != 0) {
-			/*
-			 * This might need a full read and write barrier
-			 * to make sure that this write posts before any
-			 * of the memory or device accesses in the
-			 * handlers.
-			 */
-			atomic_store_rel_int(&ithd->it_need, 0);
+		while (atomic_cmpset_acq_int(&ithd->it_need, 1, 0) != 0) {
 			if (priv)
 				priv_ithread_execute_handler(p, ih);
 			else 
@@ -1558,8 +1627,8 @@ ithread_loop(void *arg)
 		 * set again, so we have to check it again.
 		 */
 		thread_lock(td);
-		if ((atomic_load_acq_int(&ithd->it_need) == 0) &&
-		    !(ithd->it_flags & (IT_DEAD | IT_WAIT))) {
+		if (atomic_load_acq_int(&ithd->it_need) == 0 &&
+		    (ithd->it_flags & (IT_DEAD | IT_WAIT)) == 0) {
 			TD_SET_IWAIT(td);
 			ie->ie_count = 0;
 			mi_switch(SW_VOL | SWT_IWAIT, NULL);

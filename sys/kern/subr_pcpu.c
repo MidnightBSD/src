@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Wind River Systems, Inc.
  * All rights reserved.
@@ -47,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_pcpu.c 262739 2014-03-04 14:46:30Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_pcpu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -249,7 +248,7 @@ dpcpu_copy(void *s, int size)
 	uintptr_t dpcpu;
 	int i;
 
-	for (i = 0; i < mp_ncpus; ++i) {
+	CPU_FOREACH(i) {
 		dpcpu = dpcpu_off[i];
 		if (dpcpu == 0)
 			continue;
@@ -290,7 +289,7 @@ sysctl_dpcpu_quad(SYSCTL_HANDLER_ARGS)
 	int i;
 
 	count = 0;
-	for (i = 0; i < mp_ncpus; ++i) {
+	CPU_FOREACH(i) {
 		dpcpu = dpcpu_off[i];
 		if (dpcpu == 0)
 			continue;
@@ -307,7 +306,7 @@ sysctl_dpcpu_long(SYSCTL_HANDLER_ARGS)
 	int i;
 
 	count = 0;
-	for (i = 0; i < mp_ncpus; ++i) {
+	CPU_FOREACH(i) {
 		dpcpu = dpcpu_off[i];
 		if (dpcpu == 0)
 			continue;
@@ -324,7 +323,7 @@ sysctl_dpcpu_int(SYSCTL_HANDLER_ARGS)
 	int i;
 
 	count = 0;
-	for (i = 0; i < mp_ncpus; ++i) {
+	CPU_FOREACH(i) {
 		dpcpu = dpcpu_off[i];
 		if (dpcpu == 0)
 			continue;

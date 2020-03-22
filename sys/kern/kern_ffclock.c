@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 The University of Melbourne
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_ffclock.c 273847 2014-10-30 08:04:48Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_ffclock.c 298310 2016-04-19 23:48:27Z pfg $");
 
 #include "opt_ffclock.h"
 
@@ -161,7 +160,7 @@ SYSCTL_NODE(_kern_sysclock, OID_AUTO, ffclock, CTLFLAG_RW, 0,
 
 static char *sysclocks[] = {"feedback", "feed-forward"};
 #define	MAX_SYSCLOCK_NAME_LEN 16
-#define	NUM_SYSCLOCKS (sizeof(sysclocks) / sizeof(*sysclocks))
+#define	NUM_SYSCLOCKS nitems(sysclocks)
 
 static int ffclock_version = 2;
 SYSCTL_INT(_kern_sysclock_ffclock, OID_AUTO, version, CTLFLAG_RD,

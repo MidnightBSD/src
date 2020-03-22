@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsmount.h	8.3 (Berkeley) 3/30/95
- * $FreeBSD: stable/10/sys/nfsclient/nfsmount.h 248255 2013-03-13 21:06:03Z jhb $
+ * $FreeBSD: stable/11/sys/nfsclient/nfsmount.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_

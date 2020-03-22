@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/sys/nfs/nfs_fha.h 322138 2017-08-07 07:40:00Z mav $ */
+/* $FreeBSD: stable/11/sys/nfs/nfs_fha.h 322137 2017-08-07 07:02:51Z mav $ */
 
 #ifndef	_NFS_FHA_H
 #define	_NFS_FHA_H 1

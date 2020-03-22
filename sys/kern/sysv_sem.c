@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of SVID semaphores
  *
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/sysv_sem.c 329741 2018-02-21 18:32:57Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/sysv_sem.c 329739 2018-02-21 18:31:21Z brooks $");
 
 #include "opt_compat.h"
 #include "opt_sysvipc.h"
@@ -176,7 +175,7 @@ struct sem_undo {
  * SEMUSZ is properly aligned.
  */
 
-#define SEM_ALIGN(bytes) (((bytes) + (sizeof(long) - 1)) & ~(sizeof(long) - 1))
+#define	SEM_ALIGN(bytes) roundup2(bytes, sizeof(long))
 
 /* actual size of an undo structure */
 #define SEMUSZ	SEM_ALIGN(offsetof(struct sem_undo, un_ent[SEMUME]))
@@ -208,7 +207,7 @@ SYSCTL_INT(_kern_ipc, OID_AUTO, semmns, CTLFLAG_RDTUN, &seminfo.semmns, 0,
     "Maximum number of semaphores in the system");
 SYSCTL_INT(_kern_ipc, OID_AUTO, semmnu, CTLFLAG_RDTUN, &seminfo.semmnu, 0,
     "Maximum number of undo structures in the system");
-SYSCTL_INT(_kern_ipc, OID_AUTO, semmsl, CTLFLAG_RW, &seminfo.semmsl, 0,
+SYSCTL_INT(_kern_ipc, OID_AUTO, semmsl, CTLFLAG_RWTUN, &seminfo.semmsl, 0,
     "Max semaphores per id");
 SYSCTL_INT(_kern_ipc, OID_AUTO, semopm, CTLFLAG_RDTUN, &seminfo.semopm, 0,
     "Max operations per semop call");
@@ -216,9 +215,9 @@ SYSCTL_INT(_kern_ipc, OID_AUTO, semume, CTLFLAG_RDTUN, &seminfo.semume, 0,
     "Max undo entries per process");
 SYSCTL_INT(_kern_ipc, OID_AUTO, semusz, CTLFLAG_RDTUN, &seminfo.semusz, 0,
     "Size in bytes of undo structure");
-SYSCTL_INT(_kern_ipc, OID_AUTO, semvmx, CTLFLAG_RW, &seminfo.semvmx, 0,
+SYSCTL_INT(_kern_ipc, OID_AUTO, semvmx, CTLFLAG_RWTUN, &seminfo.semvmx, 0,
     "Semaphore maximum value");
-SYSCTL_INT(_kern_ipc, OID_AUTO, semaem, CTLFLAG_RW, &seminfo.semaem, 0,
+SYSCTL_INT(_kern_ipc, OID_AUTO, semaem, CTLFLAG_RWTUN, &seminfo.semaem, 0,
     "Adjust on exit max value");
 SYSCTL_PROC(_kern_ipc, OID_AUTO, sema,
     CTLTYPE_OPAQUE | CTLFLAG_RD | CTLFLAG_MPSAFE,
@@ -262,7 +261,7 @@ static int
 seminit(void)
 {
 	struct prison *pr;
-	void *rsv;
+	void **rsv;
 	int i, error;
 	osd_method_t methods[PR_MAXMETHOD] = {
 	    [PR_METHOD_CHECK] =		sem_prison_check,
@@ -271,19 +270,9 @@ seminit(void)
 	    [PR_METHOD_REMOVE] =	sem_prison_remove,
 	};
 
-	TUNABLE_INT_FETCH("kern.ipc.semmni", &seminfo.semmni);
-	TUNABLE_INT_FETCH("kern.ipc.semmns", &seminfo.semmns);
-	TUNABLE_INT_FETCH("kern.ipc.semmnu", &seminfo.semmnu);
-	TUNABLE_INT_FETCH("kern.ipc.semmsl", &seminfo.semmsl);
-	TUNABLE_INT_FETCH("kern.ipc.semopm", &seminfo.semopm);
-	TUNABLE_INT_FETCH("kern.ipc.semume", &seminfo.semume);
-	TUNABLE_INT_FETCH("kern.ipc.semusz", &seminfo.semusz);
-	TUNABLE_INT_FETCH("kern.ipc.semvmx", &seminfo.semvmx);
-	TUNABLE_INT_FETCH("kern.ipc.semaem", &seminfo.semaem);
-
 	sem = malloc(sizeof(struct sem) * seminfo.semmns, M_SEM, M_WAITOK);
 	sema = malloc(sizeof(struct semid_kernel) * seminfo.semmni, M_SEM,
-	    M_WAITOK);
+	    M_WAITOK | M_ZERO);
 	sema_mtx = malloc(sizeof(struct mtx) * seminfo.semmni, M_SEM,
 	    M_WAITOK | M_ZERO);
 	semu = malloc(seminfo.semmnu * seminfo.semusz, M_SEM, M_WAITOK);
@@ -333,11 +322,11 @@ seminit(void)
 		osd_free_reserved(rsv);
 	sx_sunlock(&allprison_lock);
 
-	error = syscall_helper_register(sem_syscalls);
+	error = syscall_helper_register(sem_syscalls, SY_THR_STATIC_KLD);
 	if (error != 0)
 		return (error);
 #ifdef COMPAT_FREEBSD32
-	error = syscall32_helper_register(sem32_syscalls);
+	error = syscall32_helper_register(sem32_syscalls, SY_THR_STATIC_KLD);
 	if (error != 0)
 		return (error);
 #endif
@@ -1087,8 +1076,8 @@ sys_semop(struct thread *td, struct semop_args *uap)
 	struct prison *rpr;
 	struct sembuf *sops;
 	struct semid_kernel *semakptr;
-	struct sembuf *sopptr = 0;
-	struct sem *semptr = 0;
+	struct sembuf *sopptr = NULL;
+	struct sem *semptr = NULL;
 	struct sem_undo *suptr;
 	struct mtx *sema_mtxp;
 	size_t i, j, k;
@@ -1479,6 +1468,11 @@ sysctl_sema(SYSCTL_HANDLER_ARGS)
 {
 	struct prison *pr, *rpr;
 	struct semid_kernel tsemak;
+#ifdef COMPAT_FREEBSD32
+	struct semid_kernel32 tsemak32;
+#endif
+	void *outaddr;
+	size_t outsize;
 	int error, i;
 
 	pr = req->td->td_ucred->cr_prison;
@@ -1495,7 +1489,28 @@ sysctl_sema(SYSCTL_HANDLER_ARGS)
 				tsemak.u.sem_perm.key = IPC_PRIVATE;
 		}
 		mtx_unlock(&sema_mtx[i]);
-		error = SYSCTL_OUT(req, &tsemak, sizeof(tsemak));
+#ifdef COMPAT_FREEBSD32
+		if (SV_CURPROC_FLAG(SV_ILP32)) {
+			bzero(&tsemak32, sizeof(tsemak32));
+			freebsd32_ipcperm_out(&tsemak.u.sem_perm,
+			    &tsemak32.u.sem_perm);
+			/* Don't copy u.sem_base */
+			CP(tsemak, tsemak32, u.sem_nsems);
+			CP(tsemak, tsemak32, u.sem_otime);
+			CP(tsemak, tsemak32, u.sem_ctime);
+			/* Don't copy label or cred */
+			outaddr = &tsemak32;
+			outsize = sizeof(tsemak32);
+		} else
+#endif
+		{
+			tsemak.u.sem_base = NULL;
+			tsemak.label = NULL;
+			tsemak.cred = NULL;
+			outaddr = &tsemak;
+			outsize = sizeof(tsemak);
+		}
+		error = SYSCTL_OUT(req, outaddr, outsize);
 		if (error != 0)
 			break;
 	}
@@ -1704,8 +1719,7 @@ sys_semsys(td, uap)
 {
 	int error;
 
-	if (uap->which < 0 ||
-	    uap->which >= sizeof(semcalls)/sizeof(semcalls[0]))
+	if (uap->which < 0 || uap->which >= nitems(semcalls))
 		return (EINVAL);
 	error = (*semcalls[uap->which])(td, &uap->a2);
 	return (error);

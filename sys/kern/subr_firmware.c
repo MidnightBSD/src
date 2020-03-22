@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008, Sam Leffler <sam@errno.com>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_firmware.c 237546 2012-06-25 05:41:16Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_firmware.c 355418 2019-12-05 14:52:06Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -256,7 +255,6 @@ firmware_unregister(const char *imagename)
 static void
 loadimage(void *arg, int npending)
 {
-	struct thread *td = curthread;
 	char *imagename = arg;
 	struct priv_fw *fp;
 	linker_file_t result;
@@ -266,11 +264,6 @@ loadimage(void *arg, int npending)
 	mtx_lock(&firmware_mtx);
 	mtx_unlock(&firmware_mtx);
 
-	if (td->td_proc->p_fd->fd_rdir == NULL) {
-		printf("%s: root not mounted yet, no way to load image\n",
-		    imagename);
-		goto done;
-	}
 	error = linker_reference_module(imagename, NULL, &result);
 	if (error != 0) {
 		printf("%s: could not load firmware image, error %d\n",
@@ -384,19 +377,8 @@ firmware_put(const struct firmware *p, int flags)
 static void
 set_rootvnode(void *arg, int npending)
 {
-	struct thread *td = curthread;
-	struct proc *p = td->td_proc;
 
-	FILEDESC_XLOCK(p->p_fd);
-	if (p->p_fd->fd_cdir == NULL) {
-		p->p_fd->fd_cdir = rootvnode;
-		VREF(rootvnode);
-	}
-	if (p->p_fd->fd_rdir == NULL) {
-		p->p_fd->fd_rdir = rootvnode;
-		VREF(rootvnode);
-	}
-	FILEDESC_XUNLOCK(p->p_fd);
+	pwd_ensure_dirs();
 
 	free(arg, M_TEMP);
 }

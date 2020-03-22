@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_autoconf.c 217075 2011-01-06 22:09:37Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_autoconf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 
@@ -44,6 +43,7 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/subr_autoconf.c 217075 2011-01-06 22:09:3
 #include <sys/kernel.h>
 #include <sys/linker.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 
@@ -62,6 +62,27 @@ MTX_SYSINIT(intr_config_hook, &intr_config_hook_lock, "intr config", MTX_DEF);
 
 /* ARGSUSED */
 static void run_interrupt_driven_config_hooks(void);
+
+/*
+ * Private data and a shim function for implementing config_interhook_oneshot().
+ */
+struct oneshot_config_hook {
+	struct intr_config_hook 
+			och_hook;		/* Must be first */
+	ich_func_t	och_func;
+	void		*och_arg;
+};
+
+static void
+config_intrhook_oneshot_func(void *arg)
+{
+	struct oneshot_config_hook *ohook;
+
+	ohook = arg;
+	ohook->och_func(ohook->och_arg);
+	config_intrhook_disestablish(&ohook->och_hook);
+	free(ohook, M_DEVBUF);
+}
 
 /*
  * If we wait too long for an interrupt-driven config hook to return, print
@@ -182,6 +203,22 @@ config_intrhook_establish(struct intr_config_hook *hook)
 		/* XXX Sufficient for modules loaded after initial config??? */
 		run_interrupt_driven_config_hooks();	
 	return (0);
+}
+
+/*
+ * Register a hook function that is automatically unregistered after it runs.
+ */
+void
+config_intrhook_oneshot(ich_func_t func, void *arg)
+{
+	struct oneshot_config_hook *ohook;
+
+	ohook = malloc(sizeof(*ohook), M_DEVBUF, M_WAITOK);
+	ohook->och_func = func;
+	ohook->och_arg  = arg;
+	ohook->och_hook.ich_func = config_intrhook_oneshot_func;
+	ohook->och_hook.ich_arg  = ohook;
+	config_intrhook_establish(&ohook->och_hook);
 }
 
 void

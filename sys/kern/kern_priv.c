@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
  * Copyright (c) 2009 Robert N. M. Watson
@@ -29,10 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "opt_kdtrace.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_priv.c 260817 2014-01-17 10:58:59Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_priv.c 339446 2018-10-20 16:20:36Z jamie $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -56,14 +53,17 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_priv.c 260817 2014-01-17 10:58:59Z a
  * the consequences.
  */
 static int	suser_enabled = 1;
-SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RWTUN,
     &suser_enabled, 0, "processes with uid 0 have privilege");
-TUNABLE_INT("security.bsd.suser_enabled", &suser_enabled);
 
 static int	unprivileged_mlock = 1;
-SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_mlock, CTLFLAG_RW|CTLFLAG_TUN,
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_mlock, CTLFLAG_RWTUN,
     &unprivileged_mlock, 0, "Allow non-root users to call mlock(2)");
-TUNABLE_INT("security.bsd.unprivileged_mlock", &unprivileged_mlock);
+
+static int	unprivileged_read_msgbuf = 1;
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_read_msgbuf,
+    CTLFLAG_RW, &unprivileged_read_msgbuf, 0,
+    "Unprivileged processes may read the kernel message buffer");
 
 SDT_PROVIDER_DEFINE(priv);
 SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv__ok, "int");
@@ -107,6 +107,17 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 		switch (priv) {
 		case PRIV_VM_MLOCK:
 		case PRIV_VM_MUNLOCK:
+			error = 0;
+			goto out;
+		}
+	}
+
+	if (unprivileged_read_msgbuf) {
+		/*
+		 * Allow an unprivileged user to read the kernel message
+		 * buffer.
+		 */
+		if (priv == PRIV_MSGBUF) {
 			error = 0;
 			goto out;
 		}

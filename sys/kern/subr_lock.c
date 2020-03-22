@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_lock.c 323870 2017-09-21 19:24:11Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_lock.c 315339 2017-03-16 00:51:24Z mjg $");
 
 #include "opt_ddb.h"
 #include "opt_mprof.h"
@@ -56,7 +55,9 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/subr_lock.c 323870 2017-09-21 19:24:11Z m
 #endif
 
 #include <machine/cpufunc.h>
-#include <machine/cpu.h>
+
+SDT_PROVIDER_DEFINE(lock);
+SDT_PROBE_DEFINE1(lock, , , starvation, "u_int");
 
 CTASSERT(LOCK_CLASS_MAX == 15);
 
@@ -77,7 +78,7 @@ lock_init(struct lock_object *lock, struct lock_class *class, const char *name,
 	int i;
 
 	/* Check for double-init and zero object. */
-	KASSERT(flags & LO_NEW || !lock_initalized(lock),
+	KASSERT(flags & LO_NEW || !lock_initialized(lock),
 	    ("lock \"%s\" %p already initialized", name, lock));
 
 	/* Look up lock class to find its index. */
@@ -99,38 +100,62 @@ void
 lock_destroy(struct lock_object *lock)
 {
 
-	KASSERT(lock_initalized(lock), ("lock %p is not initialized", lock));
+	KASSERT(lock_initialized(lock), ("lock %p is not initialized", lock));
 	WITNESS_DESTROY(lock);
 	LOCK_LOG_DESTROY(lock, 0);
 	lock->lo_flags &= ~LO_INITIALIZED;
 }
 
+static SYSCTL_NODE(_debug, OID_AUTO, lock, CTLFLAG_RD, NULL, "lock debugging");
+static SYSCTL_NODE(_debug_lock, OID_AUTO, delay, CTLFLAG_RD, NULL,
+    "lock delay");
+
+static u_int __read_mostly starvation_limit = 131072;
+SYSCTL_INT(_debug_lock_delay, OID_AUTO, starvation_limit, CTLFLAG_RW,
+    &starvation_limit, 0, "");
+
+static u_int __read_mostly restrict_starvation = 0;
+SYSCTL_INT(_debug_lock_delay, OID_AUTO, restrict_starvation, CTLFLAG_RW,
+    &restrict_starvation, 0, "");
+
 void
 lock_delay(struct lock_delay_arg *la)
 {
-	u_int i, delay, backoff, min, max;
 	struct lock_delay_config *lc = la->config;
+	u_int i;
 
-	delay = la->delay;
+	la->delay <<= 1;
+	if (__predict_false(la->delay > lc->max))
+		la->delay = lc->max;
 
-	if (delay == 0)
-		delay = lc->initial;
-	else {
-		delay += lc->step;
-		max = lc->max;
-		if (delay > max)
-			delay = max;
-	}
-
-	backoff = cpu_ticks() % delay;
-	min = lc->min;
-	if (backoff < min)
-		backoff = min;
-	for (i = 0; i < backoff; i++)
+	for (i = la->delay; i > 0; i--)
 		cpu_spinwait();
 
-	la->delay = delay;
-	la->spin_cnt += backoff;
+	la->spin_cnt += la->delay;
+	if (__predict_false(la->spin_cnt > starvation_limit)) {
+		SDT_PROBE1(lock, , , starvation, la->delay);
+		if (restrict_starvation)
+			la->delay = lc->base;
+	}
+}
+
+static u_int
+lock_roundup_2(u_int val)
+{
+	u_int res;
+
+	for (res = 1; res <= val; res <<= 1)
+		continue;
+
+	return (res);
+}
+
+void
+lock_delay_default_init(struct lock_delay_config *lc)
+{
+
+	lc->base = lock_roundup_2(mp_ncpus) / 4;
+	lc->max = lc->base * 1024;
 }
 
 #ifdef DDB
@@ -215,7 +240,7 @@ struct lock_prof_cpu {
 
 struct lock_prof_cpu *lp_cpu[MAXCPU];
 
-volatile int lock_prof_enable = 0;
+volatile int __read_mostly lock_prof_enable;
 static volatile int lock_prof_resetting;
 
 #define LPROF_SBUF_SIZE		256
@@ -657,7 +682,6 @@ out:
 	critical_exit();
 }
 
-static SYSCTL_NODE(_debug, OID_AUTO, lock, CTLFLAG_RD, NULL, "lock debugging");
 static SYSCTL_NODE(_debug_lock, OID_AUTO, prof, CTLFLAG_RD, NULL,
     "lock profiling");
 SYSCTL_INT(_debug_lock_prof, OID_AUTO, skipspin, CTLFLAG_RW,

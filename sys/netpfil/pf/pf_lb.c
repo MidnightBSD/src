@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Daniel Hartmeier
  * Copyright (c) 2002 - 2008 Henning Brauer
@@ -36,17 +35,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_lb.c 314940 2017-03-09 03:20:20Z kp $");
+__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/pf_lb.c 342543 2018-12-26 12:54:27Z kp $");
 
 #include "opt_pf.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
+#include <sys/lock.h>
+#include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/vnet.h>
 #include <net/pfvar.h>
 #include <net/if_pflog.h>
 
@@ -215,7 +217,6 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 {
 	struct pf_state_key_cmp	key;
 	struct pf_addr		init_addr;
-	uint16_t		cut;
 
 	bzero(&init_addr, sizeof(init_addr));
 	if (pf_map_addr(af, r, saddr, naddr, &init_addr, sn))
@@ -257,7 +258,8 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 				return (0);
 			}
 		} else {
-			uint16_t tmp;
+			uint32_t tmp;
+			uint16_t cut;
 
 			if (low > high) {
 				tmp = low;
@@ -265,9 +267,9 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 				high = tmp;
 			}
 			/* low < high */
-			cut = htonl(arc4random()) % (1 + high - low) + low;
+			cut = arc4random() % (1 + high - low) + low;
 			/* low <= cut <= high */
-			for (tmp = cut; tmp <= high; ++(tmp)) {
+			for (tmp = cut; tmp <= high && tmp <= 0xffff; ++tmp) {
 				key.port[1] = htons(tmp);
 				if (pf_find_state_all(&key, PF_IN, NULL) ==
 				    NULL) {
@@ -275,7 +277,8 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 					return (0);
 				}
 			}
-			for (tmp = cut - 1; tmp >= low; --(tmp)) {
+			tmp = cut;
+			for (tmp -= 1; tmp >= low && tmp <= 0xffff; --tmp) {
 				key.port[1] = htons(tmp);
 				if (pf_find_state_all(&key, PF_IN, NULL) ==
 				    NULL) {
@@ -319,6 +322,12 @@ pf_map_addr(sa_family_t af, struct pf_rule *r, struct pf_addr *saddr,
 	   src node was created just a moment ago in pf_create_state and it
 	   needs to be filled in with routing decision calculated here. */
 	if (*sn != NULL && !PF_AZERO(&(*sn)->raddr, af)) {
+		/* If the supplied address is the same as the current one we've
+		 * been asked before, so tell the caller that there's no other
+		 * address to be had. */
+		if (PF_AEQ(naddr, &(*sn)->raddr, af))
+			return (1);
+
 		PF_ACPY(naddr, &(*sn)->raddr, af);
 		if (V_pf_status.debug >= PF_DEBUG_MISC) {
 			printf("pf_map_addr: src tracking maps ");

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Paycounter, Inc.
  * Copyright (c) 2005 Robert N. M. Watson
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_accf.c 201145 2009-12-28 22:56:30Z antoine $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/uipc_accf.c 269142 2014-07-26 19:27:34Z marcel $");
 
 #define ACCEPT_FILTER_MOD
 
@@ -61,9 +60,8 @@ MALLOC_DEFINE(M_ACCF, "accf", "accept filter data");
 
 static int unloadable = 0;
 
-SYSCTL_DECL(_net_inet);	/* XXX: some header should do this for me */
-SYSCTL_NODE(_net_inet, OID_AUTO, accf, CTLFLAG_RW, 0, "Accept filters");
-SYSCTL_INT(_net_inet_accf, OID_AUTO, unloadable, CTLFLAG_RW, &unloadable, 0,
+SYSCTL_NODE(_net, OID_AUTO, accf, CTLFLAG_RW, 0, "Accept filters");
+SYSCTL_INT(_net_accf, OID_AUTO, unloadable, CTLFLAG_RW, &unloadable, 0,
 	"Allow unload of accept filters (not recommended)");
 
 /*

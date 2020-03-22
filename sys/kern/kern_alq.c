@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, Jeffrey Roberson <jeff@freebsd.org>
  * Copyright (c) 2008-2009, Lawrence Stewart <lstewart@freebsd.org>
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_alq.c 264366 2014-04-12 06:50:11Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_alq.c 296688 2016-03-11 23:18:06Z jhb $");
 
 #include "opt_mac.h"
 
@@ -970,5 +969,5 @@ static moduledata_t alq_mod =
 	NULL
 };
 
-DECLARE_MODULE(alq, alq_mod, SI_SUB_SMP, SI_ORDER_ANY);
+DECLARE_MODULE(alq, alq_mod, SI_SUB_LAST, SI_ORDER_ANY);
 MODULE_VERSION(alq, 1);

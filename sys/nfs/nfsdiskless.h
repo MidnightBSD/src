@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsdiskless.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: stable/10/sys/nfs/nfsdiskless.h 221032 2011-04-25 22:22:51Z rmacklem $
+ * $FreeBSD: stable/11/sys/nfs/nfsdiskless.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NFSCLIENT_NFSDISKLESS_H_

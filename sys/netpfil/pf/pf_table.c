@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Cedric Berger
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_table.c 332494 2018-04-13 22:33:18Z kp $");
+__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/pf_table.c 345691 2019-03-29 14:34:50Z kp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -40,15 +39,17 @@ __FBSDID("$FreeBSD: stable/10/sys/netpfil/pf/pf_table.c 332494 2018-04-13 22:33:
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <sys/mutex.h>
 #include <sys/refcount.h>
-#include <sys/rwlock.h>
 #include <sys/socket.h>
 #include <vm/uma.h>
 
 #include <net/if.h>
 #include <net/vnet.h>
 #include <net/pfvar.h>
+
+#define DPFPRINTF(n, x) if (V_pf_status.debug >= (n)) printf x
 
 #define	ACCEPT_FLAGS(flags, oklist)		\
 	do {					\
@@ -110,6 +111,7 @@ struct pfr_walktree {
 		struct pfi_dynaddr	*pfrw1_dyn;
 	}	 pfrw_1;
 	int	 pfrw_free;
+	int	 pfrw_flags;
 };
 #define	pfrw_addr	pfrw_1.pfrw1_addr
 #define	pfrw_astats	pfrw_1.pfrw1_astats
@@ -123,15 +125,16 @@ struct pfr_walktree {
 static MALLOC_DEFINE(M_PFTABLE, "pf_table", "pf(4) tables structures");
 static VNET_DEFINE(uma_zone_t, pfr_kentry_z);
 #define	V_pfr_kentry_z		VNET(pfr_kentry_z)
-static VNET_DEFINE(uma_zone_t, pfr_kcounters_z);
-#define	V_pfr_kcounters_z	VNET(pfr_kcounters_z)
 
 static struct pf_addr	 pfr_ffaddr = {
 	.addr32 = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }
 };
 
+static void		 pfr_copyout_astats(struct pfr_astats *,
+			    const struct pfr_kentry *,
+			    const struct pfr_walktree *);
 static void		 pfr_copyout_addr(struct pfr_addr *,
-			    struct pfr_kentry *ke);
+			    const struct pfr_kentry *ke);
 static int		 pfr_validate_addr(struct pfr_addr *);
 static void		 pfr_enqueue_addrs(struct pfr_ktable *,
 			    struct pfr_kentryworkq *, int *, int);
@@ -139,8 +142,12 @@ static void		 pfr_mark_addrs(struct pfr_ktable *);
 static struct pfr_kentry
 			*pfr_lookup_addr(struct pfr_ktable *,
 			    struct pfr_addr *, int);
+static bool		 pfr_create_kentry_counter(struct pfr_kcounters *,
+			    int, int);
 static struct pfr_kentry *pfr_create_kentry(struct pfr_addr *);
 static void		 pfr_destroy_kentries(struct pfr_kentryworkq *);
+static void		 pfr_destroy_kentry_counter(struct pfr_kcounters *,
+			    int, int);
 static void		 pfr_destroy_kentry(struct pfr_kentry *);
 static void		 pfr_insert_kentries(struct pfr_ktable *,
 			    struct pfr_kentryworkq *, long);
@@ -194,9 +201,6 @@ pfr_initialize(void)
 	V_pfr_kentry_z = uma_zcreate("pf table entries",
 	    sizeof(struct pfr_kentry), NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,
 	    0);
-	V_pfr_kcounters_z = uma_zcreate("pf table counters",
-	    sizeof(struct pfr_kcounters), NULL, NULL, NULL, NULL,
-	    UMA_ALIGN_PTR, 0);
 	V_pf_limits[PF_LIMIT_TABLE_ENTRIES].zone = V_pfr_kentry_z;
 	V_pf_limits[PF_LIMIT_TABLE_ENTRIES].limit = PFR_KENTRY_HIWAT;
 }
@@ -206,7 +210,6 @@ pfr_cleanup(void)
 {
 
 	uma_zdestroy(V_pfr_kentry_z);
-	uma_zdestroy(V_pfr_kcounters_z);
 }
 
 int
@@ -558,10 +561,10 @@ pfr_get_addrs(struct pfr_table *tbl, struct pfr_addr *addr, int *size,
 	w.pfrw_op = PFRW_GET_ADDRS;
 	w.pfrw_addr = addr;
 	w.pfrw_free = kt->pfrkt_cnt;
-	rv = kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
+	rv = kt->pfrkt_ip4->rnh_walktree(&kt->pfrkt_ip4->rh, pfr_walktree, &w);
 	if (!rv)
-		rv = kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree,
-		    &w);
+		rv = kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh,
+		    pfr_walktree, &w);
 	if (rv)
 		return (rv);
 
@@ -600,10 +603,17 @@ pfr_get_astats(struct pfr_table *tbl, struct pfr_astats *addr, int *size,
 	w.pfrw_op = PFRW_GET_ASTATS;
 	w.pfrw_astats = addr;
 	w.pfrw_free = kt->pfrkt_cnt;
-	rv = kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
+	/*
+	 * Flags below are for backward compatibility. It was possible to have
+	 * a table without per-entry counters. Now they are always allocated,
+	 * we just discard data when reading it if table is not configured to
+	 * have counters.
+	 */
+	w.pfrw_flags = kt->pfrkt_flags;
+	rv = kt->pfrkt_ip4->rnh_walktree(&kt->pfrkt_ip4->rh, pfr_walktree, &w);
 	if (!rv)
-		rv = kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree,
-		    &w);
+		rv = kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh,
+		    pfr_walktree, &w);
 	if (!rv && (flags & PFR_FLAG_CLSTATS)) {
 		pfr_enqueue_addrs(kt, &workq, NULL, 0);
 		pfr_clstats_kentries(&workq, tzero, 0);
@@ -709,12 +719,12 @@ pfr_enqueue_addrs(struct pfr_ktable *kt, struct pfr_kentryworkq *workq,
 	w.pfrw_op = sweep ? PFRW_SWEEP : PFRW_ENQUEUE;
 	w.pfrw_workq = workq;
 	if (kt->pfrkt_ip4 != NULL)
-		if (kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree,
-		    &w))
+		if (kt->pfrkt_ip4->rnh_walktree(&kt->pfrkt_ip4->rh,
+		    pfr_walktree, &w))
 			printf("pfr_enqueue_addrs: IPv4 walktree failed.\n");
 	if (kt->pfrkt_ip6 != NULL)
-		if (kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree,
-		    &w))
+		if (kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh,
+		    pfr_walktree, &w))
 			printf("pfr_enqueue_addrs: IPv6 walktree failed.\n");
 	if (naddr != NULL)
 		*naddr = w.pfrw_cnt;
@@ -727,9 +737,9 @@ pfr_mark_addrs(struct pfr_ktable *kt)
 
 	bzero(&w, sizeof(w));
 	w.pfrw_op = PFRW_MARK;
-	if (kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w))
+	if (kt->pfrkt_ip4->rnh_walktree(&kt->pfrkt_ip4->rh, pfr_walktree, &w))
 		printf("pfr_mark_addrs: IPv4 walktree failed.\n");
-	if (kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, &w))
+	if (kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh, pfr_walktree, &w))
 		printf("pfr_mark_addrs: IPv6 walktree failed.\n");
 }
 
@@ -738,7 +748,7 @@ static struct pfr_kentry *
 pfr_lookup_addr(struct pfr_ktable *kt, struct pfr_addr *ad, int exact)
 {
 	union sockaddr_union	 sa, mask;
-	struct radix_node_head	*head = NULL;
+	struct radix_head	*head = NULL;
 	struct pfr_kentry	*ke;
 
 	PF_RULES_ASSERT();
@@ -746,10 +756,10 @@ pfr_lookup_addr(struct pfr_ktable *kt, struct pfr_addr *ad, int exact)
 	bzero(&sa, sizeof(sa));
 	if (ad->pfra_af == AF_INET) {
 		FILLIN_SIN(sa.sin, ad->pfra_ip4addr);
-		head = kt->pfrkt_ip4;
+		head = &kt->pfrkt_ip4->rh;
 	} else if ( ad->pfra_af == AF_INET6 ) {
 		FILLIN_SIN6(sa.sin6, ad->pfra_ip6addr);
-		head = kt->pfrkt_ip6;
+		head = &kt->pfrkt_ip6->rh;
 	}
 	if (ADDR_NETWORK(ad)) {
 		pfr_prepare_network(&mask, ad->pfra_af, ad->pfra_net);
@@ -766,10 +776,30 @@ pfr_lookup_addr(struct pfr_ktable *kt, struct pfr_addr *ad, int exact)
 	return (ke);
 }
 
+static bool
+pfr_create_kentry_counter(struct pfr_kcounters *kc, int pfr_dir, int pfr_op)
+{
+	kc->pfrkc_packets[pfr_dir][pfr_op] = counter_u64_alloc(M_NOWAIT);
+	if (! kc->pfrkc_packets[pfr_dir][pfr_op])
+		return (false);
+
+	kc->pfrkc_bytes[pfr_dir][pfr_op] = counter_u64_alloc(M_NOWAIT);
+	if (! kc->pfrkc_bytes[pfr_dir][pfr_op]) {
+		/* Previous allocation will be freed through
+		 * pfr_destroy_kentry() */
+		return (false);
+	}
+
+	kc->pfrkc_tzero = 0;
+
+	return (true);
+}
+
 static struct pfr_kentry *
 pfr_create_kentry(struct pfr_addr *ad)
 {
 	struct pfr_kentry	*ke;
+	int pfr_dir, pfr_op;
 
 	ke =  uma_zalloc(V_pfr_kentry_z, M_NOWAIT | M_ZERO);
 	if (ke == NULL)
@@ -782,6 +812,14 @@ pfr_create_kentry(struct pfr_addr *ad)
 	ke->pfrke_af = ad->pfra_af;
 	ke->pfrke_net = ad->pfra_net;
 	ke->pfrke_not = ad->pfra_not;
+	for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++)
+		for (pfr_op = 0; pfr_op < PFR_OP_ADDR_MAX; pfr_op ++) {
+			if (! pfr_create_kentry_counter(&ke->pfrke_counters,
+			    pfr_dir, pfr_op)) {
+				pfr_destroy_kentry(ke);
+				return (NULL);
+			}
+		}
 	return (ke);
 }
 
@@ -797,10 +835,22 @@ pfr_destroy_kentries(struct pfr_kentryworkq *workq)
 }
 
 static void
+pfr_destroy_kentry_counter(struct pfr_kcounters *kc, int pfr_dir, int pfr_op)
+{
+	counter_u64_free(kc->pfrkc_packets[pfr_dir][pfr_op]);
+	counter_u64_free(kc->pfrkc_bytes[pfr_dir][pfr_op]);
+}
+
+static void
 pfr_destroy_kentry(struct pfr_kentry *ke)
 {
-	if (ke->pfrke_counters)
-		uma_zfree(V_pfr_kcounters_z, ke->pfrke_counters);
+	int pfr_dir, pfr_op;
+
+	for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++)
+		for (pfr_op = 0; pfr_op < PFR_OP_ADDR_MAX; pfr_op ++)
+			pfr_destroy_kentry_counter(&ke->pfrke_counters,
+			    pfr_dir, pfr_op);
+
 	uma_zfree(V_pfr_kentry_z, ke);
 }
 
@@ -818,7 +868,7 @@ pfr_insert_kentries(struct pfr_ktable *kt,
 			    "(code=%d).\n", rv);
 			break;
 		}
-		p->pfrke_tzero = tzero;
+		p->pfrke_counters.pfrkc_tzero = tzero;
 		n++;
 	}
 	kt->pfrkt_cnt += n;
@@ -841,7 +891,7 @@ pfr_insert_kentry(struct pfr_ktable *kt, struct pfr_addr *ad, long tzero)
 	if (rv)
 		return (rv);
 
-	p->pfrke_tzero = tzero;
+	p->pfrke_counters.pfrkc_tzero = tzero;
 	kt->pfrkt_cnt++;
 
 	return (0);
@@ -876,15 +926,20 @@ static void
 pfr_clstats_kentries(struct pfr_kentryworkq *workq, long tzero, int negchange)
 {
 	struct pfr_kentry	*p;
+	int			 pfr_dir, pfr_op;
 
 	SLIST_FOREACH(p, workq, pfrke_workq) {
 		if (negchange)
 			p->pfrke_not = !p->pfrke_not;
-		if (p->pfrke_counters) {
-			uma_zfree(V_pfr_kcounters_z, p->pfrke_counters);
-			p->pfrke_counters = NULL;
+		for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++) {
+			for (pfr_op = 0; pfr_op < PFR_OP_ADDR_MAX; pfr_op ++) {
+				counter_u64_zero(p->pfrke_counters.
+					pfrkc_packets[pfr_dir][pfr_op]);
+				counter_u64_zero(p->pfrke_counters.
+					pfrkc_bytes[pfr_dir][pfr_op]);
+			}
 		}
-		p->pfrke_tzero = tzero;
+		p->pfrke_counters.pfrkc_tzero = tzero;
 	}
 }
 
@@ -928,15 +983,15 @@ pfr_route_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 {
 	union sockaddr_union	 mask;
 	struct radix_node	*rn;
-	struct radix_node_head	*head = NULL;
+	struct radix_head	*head = NULL;
 
 	PF_RULES_WASSERT();
 
 	bzero(ke->pfrke_node, sizeof(ke->pfrke_node));
 	if (ke->pfrke_af == AF_INET)
-		head = kt->pfrkt_ip4;
+		head = &kt->pfrkt_ip4->rh;
 	else if (ke->pfrke_af == AF_INET6)
-		head = kt->pfrkt_ip6;
+		head = &kt->pfrkt_ip6->rh;
 
 	if (KENTRY_NETWORK(ke)) {
 		pfr_prepare_network(&mask, ke->pfrke_af, ke->pfrke_net);
@@ -952,12 +1007,12 @@ pfr_unroute_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 {
 	union sockaddr_union	 mask;
 	struct radix_node	*rn;
-	struct radix_node_head	*head = NULL;
+	struct radix_head	*head = NULL;
 
 	if (ke->pfrke_af == AF_INET)
-		head = kt->pfrkt_ip4;
+		head = &kt->pfrkt_ip4->rh;
 	else if (ke->pfrke_af == AF_INET6)
-		head = kt->pfrkt_ip6;
+		head = &kt->pfrkt_ip6->rh;
 
 	if (KENTRY_NETWORK(ke)) {
 		pfr_prepare_network(&mask, ke->pfrke_af, ke->pfrke_net);
@@ -973,7 +1028,7 @@ pfr_unroute_kentry(struct pfr_ktable *kt, struct pfr_kentry *ke)
 }
 
 static void
-pfr_copyout_addr(struct pfr_addr *ad, struct pfr_kentry *ke)
+pfr_copyout_addr(struct pfr_addr *ad, const struct pfr_kentry *ke)
 {
 	bzero(ad, sizeof(*ad));
 	if (ke == NULL)
@@ -985,6 +1040,33 @@ pfr_copyout_addr(struct pfr_addr *ad, struct pfr_kentry *ke)
 		ad->pfra_ip4addr = ke->pfrke_sa.sin.sin_addr;
 	else if (ad->pfra_af == AF_INET6)
 		ad->pfra_ip6addr = ke->pfrke_sa.sin6.sin6_addr;
+}
+
+static void
+pfr_copyout_astats(struct pfr_astats *as, const struct pfr_kentry *ke,
+    const struct pfr_walktree *w)
+{
+	int dir, op;
+	const struct pfr_kcounters *kc = &ke->pfrke_counters;
+
+	pfr_copyout_addr(&as->pfras_a, ke);
+	as->pfras_tzero = kc->pfrkc_tzero;
+
+	if (! (w->pfrw_flags & PFR_TFLAG_COUNTERS)) {
+		bzero(as->pfras_packets, sizeof(as->pfras_packets));
+		bzero(as->pfras_bytes, sizeof(as->pfras_bytes));
+		as->pfras_a.pfra_fback = PFR_FB_NOCOUNT;
+		return;
+	}
+
+	for (dir = 0; dir < PFR_DIR_MAX; dir ++) {
+		for (op = 0; op < PFR_OP_ADDR_MAX; op ++) {
+			as->pfras_packets[dir][op] =
+			    counter_u64_fetch(kc->pfrkc_packets[dir][op]);
+			as->pfras_bytes[dir][op] =
+			    counter_u64_fetch(kc->pfrkc_bytes[dir][op]);
+		}
+	}
 }
 
 static int
@@ -1015,19 +1097,7 @@ pfr_walktree(struct radix_node *rn, void *arg)
 		if (w->pfrw_free-- > 0) {
 			struct pfr_astats as;
 
-			pfr_copyout_addr(&as.pfras_a, ke);
-
-			if (ke->pfrke_counters) {
-				bcopy(ke->pfrke_counters->pfrkc_packets,
-				    as.pfras_packets, sizeof(as.pfras_packets));
-				bcopy(ke->pfrke_counters->pfrkc_bytes,
-				    as.pfras_bytes, sizeof(as.pfras_bytes));
-			} else {
-				bzero(as.pfras_packets, sizeof(as.pfras_packets));
-				bzero(as.pfras_bytes, sizeof(as.pfras_bytes));
-				as.pfras_a.pfra_fback = PFR_FB_NOCOUNT;
-			}
-			as.pfras_tzero = ke->pfrke_tzero;
+			pfr_copyout_astats(&as, ke, w);
 
 			bcopy(&as, w->pfrw_astats, sizeof(as));
 			w->pfrw_astats++;
@@ -1252,6 +1322,7 @@ pfr_get_tstats(struct pfr_table *filter, struct pfr_tstats *tbl, int *size,
 	struct pfr_ktableworkq	 workq;
 	int			 n, nn;
 	long			 tzero = time_second;
+	int			 pfr_dir, pfr_op;
 
 	/* XXX PFR_FLAG_CLSTATS disabled */
 	ACCEPT_FLAGS(flags, PFR_FLAG_ALLRSETS);
@@ -1270,7 +1341,25 @@ pfr_get_tstats(struct pfr_table *filter, struct pfr_tstats *tbl, int *size,
 			continue;
 		if (n-- <= 0)
 			continue;
-		bcopy(&p->pfrkt_ts, tbl++, sizeof(*tbl));
+		bcopy(&p->pfrkt_kts.pfrts_t, &tbl->pfrts_t,
+		    sizeof(struct pfr_table));
+		for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++) {
+			for (pfr_op = 0; pfr_op < PFR_OP_TABLE_MAX; pfr_op ++) {
+				tbl->pfrts_packets[pfr_dir][pfr_op] =
+				    counter_u64_fetch(
+					p->pfrkt_packets[pfr_dir][pfr_op]);
+				tbl->pfrts_bytes[pfr_dir][pfr_op] =
+				    counter_u64_fetch(
+					p->pfrkt_bytes[pfr_dir][pfr_op]);
+			}
+		}
+		tbl->pfrts_match = counter_u64_fetch(p->pfrkt_match);
+		tbl->pfrts_nomatch = counter_u64_fetch(p->pfrkt_nomatch);
+		tbl->pfrts_tzero = p->pfrkt_tzero;
+		tbl->pfrts_cnt = p->pfrkt_cnt;
+		for (pfr_op = 0; pfr_op < PFR_REFCNT_MAX; pfr_op++)
+			tbl->pfrts_refcnt[pfr_op] = p->pfrkt_refcnt[pfr_op];
+		tbl++;
 		SLIST_INSERT_HEAD(&workq, p, pfrkt_workq);
 	}
 	if (flags & PFR_FLAG_CLSTATS)
@@ -1604,7 +1693,7 @@ pfr_commit_ktable(struct pfr_ktable *kt, long tzero)
 				q->pfrke_mark = 1;
 				SLIST_INSERT_HEAD(&garbageq, p, pfrke_workq);
 			} else {
-				p->pfrke_tzero = tzero;
+				p->pfrke_counters.pfrkc_tzero = tzero;
 				SLIST_INSERT_HEAD(&addq, p, pfrke_workq);
 			}
 		}
@@ -1748,6 +1837,7 @@ pfr_setflags_ktable(struct pfr_ktable *kt, int newf)
 	PF_RULES_WASSERT();
 
 	if (!(newf & PFR_TFLAG_REFERENCED) &&
+	    !(newf & PFR_TFLAG_REFDANCHOR) &&
 	    !(newf & PFR_TFLAG_PERSIST))
 		newf &= ~PFR_TFLAG_ACTIVE;
 	if (!(newf & PFR_TFLAG_ACTIVE))
@@ -1787,14 +1877,20 @@ static void
 pfr_clstats_ktable(struct pfr_ktable *kt, long tzero, int recurse)
 {
 	struct pfr_kentryworkq	 addrq;
+	int			 pfr_dir, pfr_op;
 
 	if (recurse) {
 		pfr_enqueue_addrs(kt, &addrq, NULL, 0);
 		pfr_clstats_kentries(&addrq, tzero, 0);
 	}
-	bzero(kt->pfrkt_packets, sizeof(kt->pfrkt_packets));
-	bzero(kt->pfrkt_bytes, sizeof(kt->pfrkt_bytes));
-	kt->pfrkt_match = kt->pfrkt_nomatch = 0;
+	for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++) {
+		for (pfr_op = 0; pfr_op < PFR_OP_TABLE_MAX; pfr_op ++) {
+			counter_u64_zero(kt->pfrkt_packets[pfr_dir][pfr_op]);
+			counter_u64_zero(kt->pfrkt_bytes[pfr_dir][pfr_op]);
+		}
+	}
+	counter_u64_zero(kt->pfrkt_match);
+	counter_u64_zero(kt->pfrkt_nomatch);
 	kt->pfrkt_tzero = tzero;
 }
 
@@ -1803,6 +1899,7 @@ pfr_create_ktable(struct pfr_table *tbl, long tzero, int attachruleset)
 {
 	struct pfr_ktable	*kt;
 	struct pf_ruleset	*rs;
+	int			 pfr_dir, pfr_op;
 
 	PF_RULES_WASSERT();
 
@@ -1819,6 +1916,34 @@ pfr_create_ktable(struct pfr_table *tbl, long tzero, int attachruleset)
 		}
 		kt->pfrkt_rs = rs;
 		rs->tables++;
+	}
+
+	for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++) {
+		for (pfr_op = 0; pfr_op < PFR_OP_TABLE_MAX; pfr_op ++) {
+			kt->pfrkt_packets[pfr_dir][pfr_op] =
+			    counter_u64_alloc(M_NOWAIT);
+			if (! kt->pfrkt_packets[pfr_dir][pfr_op]) {
+				pfr_destroy_ktable(kt, 0);
+				return (NULL);
+			}
+			kt->pfrkt_bytes[pfr_dir][pfr_op] =
+			    counter_u64_alloc(M_NOWAIT);
+			if (! kt->pfrkt_bytes[pfr_dir][pfr_op]) {
+				pfr_destroy_ktable(kt, 0);
+				return (NULL);
+			}
+		}
+	}
+	kt->pfrkt_match = counter_u64_alloc(M_NOWAIT);
+	if (! kt->pfrkt_match) {
+		pfr_destroy_ktable(kt, 0);
+		return (NULL);
+	}
+
+	kt->pfrkt_nomatch = counter_u64_alloc(M_NOWAIT);
+	if (! kt->pfrkt_nomatch) {
+		pfr_destroy_ktable(kt, 0);
+		return (NULL);
 	}
 
 	if (!rn_inithead((void **)&kt->pfrkt_ip4,
@@ -1848,26 +1973,32 @@ static void
 pfr_destroy_ktable(struct pfr_ktable *kt, int flushaddr)
 {
 	struct pfr_kentryworkq	 addrq;
+	int			 pfr_dir, pfr_op;
 
 	if (flushaddr) {
 		pfr_enqueue_addrs(kt, &addrq, NULL, 0);
 		pfr_clean_node_mask(kt, &addrq);
 		pfr_destroy_kentries(&addrq);
 	}
-	if (kt->pfrkt_ip4 != NULL) {
-		RADIX_NODE_HEAD_DESTROY(kt->pfrkt_ip4);
+	if (kt->pfrkt_ip4 != NULL)
 		rn_detachhead((void **)&kt->pfrkt_ip4);
-	}
-	if (kt->pfrkt_ip6 != NULL) {
-		RADIX_NODE_HEAD_DESTROY(kt->pfrkt_ip6);
+	if (kt->pfrkt_ip6 != NULL)
 		rn_detachhead((void **)&kt->pfrkt_ip6);
-	}
 	if (kt->pfrkt_shadow != NULL)
 		pfr_destroy_ktable(kt->pfrkt_shadow, flushaddr);
 	if (kt->pfrkt_rs != NULL) {
 		kt->pfrkt_rs->tables--;
 		pf_remove_if_empty_ruleset(kt->pfrkt_rs);
 	}
+	for (pfr_dir = 0; pfr_dir < PFR_DIR_MAX; pfr_dir ++) {
+		for (pfr_op = 0; pfr_op < PFR_OP_TABLE_MAX; pfr_op ++) {
+			counter_u64_free(kt->pfrkt_packets[pfr_dir][pfr_op]);
+			counter_u64_free(kt->pfrkt_bytes[pfr_dir][pfr_op]);
+		}
+	}
+	counter_u64_free(kt->pfrkt_match);
+	counter_u64_free(kt->pfrkt_nomatch);
+
 	free(kt, M_PFTABLE);
 }
 
@@ -1912,7 +2043,7 @@ pfr_match_addr(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af)
 		sin.sin_len = sizeof(sin);
 		sin.sin_family = AF_INET;
 		sin.sin_addr.s_addr = a->addr32[0];
-		ke = (struct pfr_kentry *)rn_match(&sin, kt->pfrkt_ip4);
+		ke = (struct pfr_kentry *)rn_match(&sin, &kt->pfrkt_ip4->rh);
 		if (ke && KENTRY_RNF_ROOT(ke))
 			ke = NULL;
 		break;
@@ -1927,7 +2058,7 @@ pfr_match_addr(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af)
 		sin6.sin6_len = sizeof(sin6);
 		sin6.sin6_family = AF_INET6;
 		bcopy(a, &sin6.sin6_addr, sizeof(sin6.sin6_addr));
-		ke = (struct pfr_kentry *)rn_match(&sin6, kt->pfrkt_ip6);
+		ke = (struct pfr_kentry *)rn_match(&sin6, &kt->pfrkt_ip6->rh);
 		if (ke && KENTRY_RNF_ROOT(ke))
 			ke = NULL;
 		break;
@@ -1936,9 +2067,9 @@ pfr_match_addr(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af)
 	}
 	match = (ke && !ke->pfrke_not);
 	if (match)
-		kt->pfrkt_match++;
+		counter_u64_add(kt->pfrkt_match, 1);
 	else
-		kt->pfrkt_nomatch++;
+		counter_u64_add(kt->pfrkt_nomatch, 1);
 	return (match);
 }
 
@@ -1963,7 +2094,7 @@ pfr_update_stats(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af,
 		sin.sin_len = sizeof(sin);
 		sin.sin_family = AF_INET;
 		sin.sin_addr.s_addr = a->addr32[0];
-		ke = (struct pfr_kentry *)rn_match(&sin, kt->pfrkt_ip4);
+		ke = (struct pfr_kentry *)rn_match(&sin, &kt->pfrkt_ip4->rh);
 		if (ke && KENTRY_RNF_ROOT(ke))
 			ke = NULL;
 		break;
@@ -1978,7 +2109,7 @@ pfr_update_stats(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af,
 		sin6.sin6_len = sizeof(sin6);
 		sin6.sin6_family = AF_INET6;
 		bcopy(a, &sin6.sin6_addr, sizeof(sin6.sin6_addr));
-		ke = (struct pfr_kentry *)rn_match(&sin6, kt->pfrkt_ip6);
+		ke = (struct pfr_kentry *)rn_match(&sin6, &kt->pfrkt_ip6->rh);
 		if (ke && KENTRY_RNF_ROOT(ke))
 			ke = NULL;
 		break;
@@ -1989,20 +2120,18 @@ pfr_update_stats(struct pfr_ktable *kt, struct pf_addr *a, sa_family_t af,
 	}
 	if ((ke == NULL || ke->pfrke_not) != notrule) {
 		if (op_pass != PFR_OP_PASS)
-			printf("pfr_update_stats: assertion failed.\n");
+			DPFPRINTF(PF_DEBUG_URGENT,
+			    ("pfr_update_stats: assertion failed.\n"));
 		op_pass = PFR_OP_XPASS;
 	}
-	kt->pfrkt_packets[dir_out][op_pass]++;
-	kt->pfrkt_bytes[dir_out][op_pass] += len;
+	counter_u64_add(kt->pfrkt_packets[dir_out][op_pass], 1);
+	counter_u64_add(kt->pfrkt_bytes[dir_out][op_pass], len);
 	if (ke != NULL && op_pass != PFR_OP_XPASS &&
 	    (kt->pfrkt_flags & PFR_TFLAG_COUNTERS)) {
-		if (ke->pfrke_counters == NULL)
-			ke->pfrke_counters = uma_zalloc(V_pfr_kcounters_z,
-			    M_NOWAIT | M_ZERO);
-		if (ke->pfrke_counters != NULL) {
-			ke->pfrke_counters->pfrkc_packets[dir_out][op_pass]++;
-			ke->pfrke_counters->pfrkc_bytes[dir_out][op_pass] += len;
-		}
+		counter_u64_add(ke->pfrke_counters.
+		    pfrkc_packets[dir_out][op_pass], 1);
+		counter_u64_add(ke->pfrke_counters.
+		    pfrkc_bytes[dir_out][op_pass], len);
 	}
 }
 
@@ -2092,7 +2221,7 @@ pfr_pool_get(struct pfr_ktable *kt, int *pidx, struct pf_addr *counter,
 _next_block:
 	ke = pfr_kentry_byidx(kt, idx, af);
 	if (ke == NULL) {
-		kt->pfrkt_nomatch++;
+		counter_u64_add(kt->pfrkt_nomatch, 1);
 		return (1);
 	}
 	pfr_prepare_network(&umask, af, ke->pfrke_net);
@@ -2117,7 +2246,7 @@ _next_block:
 		/* this is a single IP address - no possible nested block */
 		PF_ACPY(counter, addr, af);
 		*pidx = idx;
-		kt->pfrkt_match++;
+		counter_u64_add(kt->pfrkt_match, 1);
 		return (0);
 	}
 	for (;;) {
@@ -2125,11 +2254,11 @@ _next_block:
 		switch (af) {
 		case AF_INET:
 			ke2 = (struct pfr_kentry *)rn_match(&uaddr,
-			    kt->pfrkt_ip4);
+			    &kt->pfrkt_ip4->rh);
 			break;
 		case AF_INET6:
 			ke2 = (struct pfr_kentry *)rn_match(&uaddr,
-			    kt->pfrkt_ip6);
+			    &kt->pfrkt_ip6->rh);
 			break;
 		}
 		/* no need to check KENTRY_RNF_ROOT() here */
@@ -2137,7 +2266,7 @@ _next_block:
 			/* lookup return the same block - perfect */
 			PF_ACPY(counter, addr, af);
 			*pidx = idx;
-			kt->pfrkt_match++;
+			counter_u64_add(kt->pfrkt_match, 1);
 			return (0);
 		}
 
@@ -2167,12 +2296,12 @@ pfr_kentry_byidx(struct pfr_ktable *kt, int idx, int af)
 	switch (af) {
 #ifdef INET
 	case AF_INET:
-		kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
+		kt->pfrkt_ip4->rnh_walktree(&kt->pfrkt_ip4->rh, pfr_walktree, &w);
 		return (w.pfrw_kentry);
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-		kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, &w);
+		kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh, pfr_walktree, &w);
 		return (w.pfrw_kentry);
 #endif /* INET6 */
 	default:
@@ -2192,7 +2321,7 @@ pfr_dynaddr_update(struct pfr_ktable *kt, struct pfi_dynaddr *dyn)
 	dyn->pfid_acnt4 = 0;
 	dyn->pfid_acnt6 = 0;
 	if (!dyn->pfid_af || dyn->pfid_af == AF_INET)
-		kt->pfrkt_ip4->rnh_walktree(kt->pfrkt_ip4, pfr_walktree, &w);
+		kt->pfrkt_ip4->rnh_walktree(&kt->pfrkt_ip4->rh, pfr_walktree, &w);
 	if (!dyn->pfid_af || dyn->pfid_af == AF_INET6)
-		kt->pfrkt_ip6->rnh_walktree(kt->pfrkt_ip6, pfr_walktree, &w);
+		kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh, pfr_walktree, &w);
 }

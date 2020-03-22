@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/kgssapi/krb5/krb5_mech.c 299008 2016-05-03 22:05:03Z pfg $");
 
 #include "opt_inet6.h"
 
@@ -1340,7 +1339,7 @@ krb5_wrap_old(struct krb5_context *kc, int conf_req_flag,
 	 * SND_SEQ:
 	 *
 	 * Take the four bytes of the sequence number least
-	 * significant first (most signficant first for ARCFOUR)
+	 * significant first (most significant first for ARCFOUR)
 	 * followed by four bytes of direction marker (zero for
 	 * initiator and 0xff for acceptor). Encrypt that data using
 	 * the SGN_CKSUM as IV.

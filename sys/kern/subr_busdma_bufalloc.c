@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ian Lepore
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_busdma_bufalloc.c 294677 2016-01-24 19:21:53Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_busdma_bufalloc.c 289618 2015-10-20 03:25:17Z ian $");
 
 /*
  * Buffer allocation support routines for bus_dmamem_alloc implementations.

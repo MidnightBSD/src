@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2008 Kip Macy <kmacy@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_bufring.c 207673 2010-05-05 20:39:02Z joel $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_bufring.c 207673 2010-05-05 20:39:02Z joel $");
 
 
 #include <sys/param.h>

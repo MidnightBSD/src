@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsnode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: stable/10/sys/nfsclient/nfsnode.h 235332 2012-05-12 12:02:51Z rmacklem $
+ * $FreeBSD: stable/11/sys/nfsclient/nfsnode.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_

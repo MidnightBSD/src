@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel Hartmeier
  * All rights reserved.
@@ -28,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	$OpenBSD: pfvar.h,v 1.282 2009/01/29 15:12:28 pyr Exp $
- *	$FreeBSD: stable/10/sys/netpfil/pf/pf.h 284571 2015-06-18 20:34:39Z kp $
+ *	$FreeBSD: stable/11/sys/netpfil/pf/pf.h 332513 2018-04-15 15:22:28Z kp $
  */
 
 #ifndef	_NET_PF_H_
@@ -44,7 +43,7 @@
 #endif
 #endif
 
-enum	{ PF_INOUT, PF_IN, PF_OUT, PF_FWD };
+enum	{ PF_INOUT, PF_IN, PF_OUT };
 enum	{ PF_PASS, PF_DROP, PF_SCRUB, PF_NOSCRUB, PF_NAT, PF_NONAT,
 	  PF_BINAT, PF_NOBINAT, PF_RDR, PF_NORDR, PF_SYNPROXY_DROP, PF_DEFER };
 enum	{ PF_RULESET_SCRUB, PF_RULESET_FILTER, PF_RULESET_NAT,
@@ -69,8 +68,7 @@ enum	{ PFTM_TCP_FIRST_PACKET, PFTM_TCP_OPENING, PFTM_TCP_ESTABLISHED,
 	  PFTM_OTHER_FIRST_PACKET, PFTM_OTHER_SINGLE,
 	  PFTM_OTHER_MULTIPLE, PFTM_FRAG, PFTM_INTERVAL,
 	  PFTM_ADAPTIVE_START, PFTM_ADAPTIVE_END, PFTM_SRC_NODE,
-	  PFTM_TS_DIFF, PFTM_MAX, PFTM_PURGE, PFTM_UNLINKED,
-	  PFTM_UNTIL_PACKET };
+	  PFTM_TS_DIFF, PFTM_MAX, PFTM_PURGE, PFTM_UNLINKED };
 
 /* PFTM default values */
 #define PFTM_TCP_FIRST_PACKET_VAL	120	/* First TCP packet */
@@ -126,7 +124,8 @@ enum	{ PF_ADDR_ADDRMASK, PF_ADDR_NOROUTE, PF_ADDR_DYNIFTL,
 #define PFRES_MAXSTATES	12		/* State limit */
 #define PFRES_SRCLIMIT	13		/* Source node/conn limit */
 #define PFRES_SYNPROXY	14		/* SYN proxy */
-#define PFRES_MAX	15		/* total+1 */
+#define PFRES_MAPFAILED	15		/* pf_map_addr() failed */
+#define PFRES_MAX	16		/* total+1 */
 
 #define PFRES_NAMES { \
 	"match", \
@@ -144,6 +143,7 @@ enum	{ PF_ADDR_ADDRMASK, PF_ADDR_NOROUTE, PF_ADDR_DYNIFTL,
 	"state-limit", \
 	"src-limit", \
 	"synproxy", \
+	"map-failed", \
 	NULL \
 }
 

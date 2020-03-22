@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 EMC Corp.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_bus_dma.c 292348 2015-12-16 19:01:14Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_bus_dma.c 328696 2018-02-01 18:57:10Z mav $");
 
 #include "opt_bus.h"
 
@@ -132,28 +131,6 @@ _bus_dmamap_load_mbuf_sg(bus_dma_tag_t dmat, bus_dmamap_t map,
 }
 
 /*
- * Load tlen data starting at offset within a region specified by a list of
- * physical pages.
- */
-static int
-_bus_dmamap_load_pages(bus_dma_tag_t dmat, bus_dmamap_t map,
-    vm_page_t *pages, bus_size_t tlen, int offset, int *nsegs, int flags)
-{
-	vm_paddr_t paddr;
-	bus_size_t len;
-	int error, i;
- 
-	for (i = 0, error = 0; error == 0 && tlen > 0; i++, tlen -= len) {
-		len = min(PAGE_SIZE - offset, tlen);
-		paddr = VM_PAGE_TO_PHYS(pages[i]) + offset;
-		error = _bus_dmamap_load_phys(dmat, map, paddr, len,
-		    flags, NULL, nsegs);
-		offset = 0;
-	}
-	return (error);
-}
- 
-/*
  * Load from block io.
  */
 static int
@@ -169,8 +146,8 @@ _bus_dmamap_load_bio(bus_dma_tag_t dmat, bus_dmamap_t map, struct bio *bio,
 	}
 
 	if ((bio->bio_flags & BIO_UNMAPPED) != 0)
-		return (_bus_dmamap_load_pages(dmat, map, bio->bio_ma,
-		    bio->bio_bcount, bio->bio_ma_offset, nsegs, flags));
+		return (_bus_dmamap_load_ma(dmat, map, bio->bio_ma,
+		    bio->bio_bcount, bio->bio_ma_offset, flags, NULL, nsegs));
 
 	return (_bus_dmamap_load_buffer(dmat, map, bio->bio_data,
 	    bio->bio_bcount, kernel_pmap, flags, NULL, nsegs));
@@ -239,6 +216,16 @@ _bus_dmamap_load_ccb(bus_dma_tag_t dmat, bus_dmamap_t map, union ccb *ccb,
 		data_ptr = ataio->data_ptr;
 		dxfer_len = ataio->dxfer_len;
 		sglist_cnt = 0;
+		break;
+	}
+	case XPT_NVME_IO:
+	case XPT_NVME_ADMIN: {
+		struct ccb_nvmeio *nvmeio;
+
+		nvmeio = &ccb->nvmeio;
+		data_ptr = nvmeio->data_ptr;
+		dxfer_len = nvmeio->dxfer_len;
+		sglist_cnt = nvmeio->sglist_cnt;
 		break;
 	}
 	default:

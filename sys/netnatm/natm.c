@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Robert N. M. Watson
  * All rights reserved.
@@ -61,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netnatm/natm.c 255442 2013-09-10 10:05:59Z des $");
+__FBSDID("$FreeBSD: stable/11/sys/netnatm/natm.c 257176 2013-10-26 17:58:36Z glebius $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -79,6 +78,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netnatm/natm.c 255442 2013-09-10 10:05:59Z des
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_atm.h>
 #include <net/netisr.h>
 

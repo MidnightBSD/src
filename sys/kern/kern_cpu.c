@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2007 Nate Lawson (SDG)
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_cpu.c 266165 2014-05-15 18:07:35Z cperciva $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_cpu.c 299746 2016-05-14 18:22:52Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -134,13 +133,11 @@ DRIVER_MODULE(cpufreq, cpu, cpufreq_driver, cpufreq_dc, 0, 0);
 
 static int		cf_lowest_freq;
 static int		cf_verbose;
-TUNABLE_INT("debug.cpufreq.lowest", &cf_lowest_freq);
-TUNABLE_INT("debug.cpufreq.verbose", &cf_verbose);
 static SYSCTL_NODE(_debug, OID_AUTO, cpufreq, CTLFLAG_RD, NULL,
     "cpufreq debugging");
-SYSCTL_INT(_debug_cpufreq, OID_AUTO, lowest, CTLFLAG_RW, &cf_lowest_freq, 1,
+SYSCTL_INT(_debug_cpufreq, OID_AUTO, lowest, CTLFLAG_RWTUN, &cf_lowest_freq, 1,
     "Don't provide levels below this frequency.");
-SYSCTL_INT(_debug_cpufreq, OID_AUTO, verbose, CTLFLAG_RW, &cf_verbose, 1,
+SYSCTL_INT(_debug_cpufreq, OID_AUTO, verbose, CTLFLAG_RWTUN, &cf_verbose, 1,
     "Print verbose debugging messages");
 
 static int
@@ -262,6 +259,9 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 	CF_MTX_LOCK(&sc->lock);
 
 #ifdef SMP
+#ifdef EARLY_AP_STARTUP
+	MPASS(mp_ncpus == 1 || smp_started);
+#else
 	/*
 	 * If still booting and secondary CPUs not started yet, don't allow
 	 * changing the frequency until they're online.  This is because we
@@ -274,6 +274,7 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 		error = ENXIO;
 		goto out;
 	}
+#endif
 #endif /* SMP */
 
 	/*

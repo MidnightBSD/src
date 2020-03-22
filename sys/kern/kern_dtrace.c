@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 John Birrell <jb@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_dtrace.c 269752 2014-08-09 14:05:01Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_dtrace.c 327409 2017-12-31 03:35:34Z mjg $");
 
 #include "opt_kdb.h"
 
@@ -55,7 +54,7 @@ dtrace_doubletrap_func_t	dtrace_doubletrap_func;
 dtrace_pid_probe_ptr_t		dtrace_pid_probe_ptr;
 dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
 
-systrace_probe_func_t		systrace_probe_func;
+systrace_probe_func_t __read_frequently	systrace_probe_func;
 
 /* Return the DTrace process data size compiled in the kernel hooks. */
 size_t

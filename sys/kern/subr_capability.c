@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 FreeBSD Foundation
  * All rights reserved.
@@ -29,22 +28,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_capability.c 280258 2015-03-19 13:37:36Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_capability.c 291553 2015-12-01 02:48:42Z mjg $");
 
 /*
  * Note that this file is compiled into the kernel and into libc.
  */
 
-#ifdef _KERNEL
 #include <sys/types.h>
 #include <sys/capsicum.h>
+
+#ifdef _KERNEL
 #include <sys/systm.h>
 
 #include <machine/stdarg.h>
 #else	/* !_KERNEL */
-#include <sys/types.h>
-#include <sys/capsicum.h>
-
 #include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -160,7 +157,6 @@ __cap_rights_init(int version, cap_rights_t *rights, ...)
 
 	n = version + 2;
 	assert(n >= CAPARSIZE_MIN && n <= CAPARSIZE_MAX);
-	memset(rights->cr_rights, 0, sizeof(rights->cr_rights[0]) * n);
 	CAP_NONE(rights);
 	va_start(ap, rights);
 	cap_rights_vset(rights, ap);

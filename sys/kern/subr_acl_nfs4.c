@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -33,7 +32,7 @@
 
 #ifdef _KERNEL
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_acl_nfs4.c 290893 2015-11-15 23:54:34Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_acl_nfs4.c 287445 2015-09-04 00:14:20Z delphij $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

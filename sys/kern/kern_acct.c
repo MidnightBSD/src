@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -69,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_acct.c 252422 2013-06-30 19:08:06Z mjg $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_acct.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,6 +78,7 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_acct.c 252422 2013-06-30 19:08:06Z m
 #include <sys/kthread.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/namei.h>
@@ -390,7 +390,7 @@ acct_process(struct thread *td)
 	acct.ac_stime = encode_timeval(st);
 
 	/* (4) The elapsed time the command ran (and its starting time) */
-	tmp = boottime;
+	getboottime(&tmp);
 	timevaladd(&tmp, &p->p_stats->p_start);
 	acct.ac_btime = tmp.tv_sec;
 	microuptime(&tmp);
@@ -553,7 +553,7 @@ encode_long(long val)
 static void
 acctwatch(void)
 {
-	struct statfs sb;
+	struct statfs *sp;
 
 	sx_assert(&acct_sx, SX_XLOCKED);
 
@@ -581,21 +581,25 @@ acctwatch(void)
 	 * Stopping here is better than continuing, maybe it will be VBAD
 	 * next time around.
 	 */
-	if (VFS_STATFS(acct_vp->v_mount, &sb) < 0)
+	sp = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	if (VFS_STATFS(acct_vp->v_mount, sp) < 0) {
+		free(sp, M_STATFS);
 		return;
+	}
 	if (acct_suspended) {
-		if (sb.f_bavail > (int64_t)(acctresume * sb.f_blocks /
+		if (sp->f_bavail > (int64_t)(acctresume * sp->f_blocks /
 		    100)) {
 			acct_suspended = 0;
 			log(LOG_NOTICE, "Accounting resumed\n");
 		}
 	} else {
-		if (sb.f_bavail <= (int64_t)(acctsuspend * sb.f_blocks /
+		if (sp->f_bavail <= (int64_t)(acctsuspend * sp->f_blocks /
 		    100)) {
 			acct_suspended = 1;
 			log(LOG_NOTICE, "Accounting suspended\n");
 		}
 	}
+	free(sp, M_STATFS);
 }
 
 /*

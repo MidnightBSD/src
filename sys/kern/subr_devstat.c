@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
  * All rights reserved.
@@ -28,9 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_devstat.c 302234 2016-06-27 21:50:30Z bdrewery $");
-
-#include "opt_kdtrace.h"
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_devstat.c 300207 2016-05-19 14:08:36Z ken $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -357,7 +354,9 @@ devstat_end_transaction_bio_bt(struct devstat *ds, struct bio *bp,
 
 	if (bp->bio_cmd == BIO_DELETE)
 		flg = DEVSTAT_FREE;
-	else if (bp->bio_cmd == BIO_READ)
+	else if ((bp->bio_cmd == BIO_READ)
+	      || ((bp->bio_cmd == BIO_ZONE)
+	       && (bp->bio_zone.zone_cmd == DISK_ZONE_REPORT_ZONES)))
 		flg = DEVSTAT_READ;
 	else if (bp->bio_cmd == BIO_WRITE)
 		flg = DEVSTAT_WRITE;

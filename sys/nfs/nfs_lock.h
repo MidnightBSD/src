@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Berkeley Software Design, Inc. All rights reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *      from nfs_lock.h,v 2.2 1998/04/28 19:38:41 don Exp
- * $FreeBSD: stable/10/sys/nfs/nfs_lock.h 214048 2010-10-19 00:20:00Z rmacklem $
+ * $FreeBSD: stable/11/sys/nfs/nfs_lock.h 214048 2010-10-19 00:20:00Z rmacklem $
  */
 
 /*

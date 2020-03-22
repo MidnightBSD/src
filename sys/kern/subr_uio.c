@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_uio.c 308103 2016-10-30 11:45:01Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_uio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -464,17 +463,16 @@ copyout_map(struct thread *td, vm_offset_t *addr, size_t sz)
 	/*
 	 * Map somewhere after heap in process memory.
 	 */
-	PROC_LOCK(td->td_proc);
 	*addr = round_page((vm_offset_t)vms->vm_daddr +
-	    lim_max(td->td_proc, RLIMIT_DATA));
-	PROC_UNLOCK(td->td_proc);
+	    lim_max(td, RLIMIT_DATA));
 
 	/* round size up to page boundary */
 	size = (vm_size_t)round_page(sz);
-
-	error = vm_mmap(&vms->vm_map, addr, size, PROT_READ | PROT_WRITE,
-	    VM_PROT_ALL, MAP_PRIVATE | MAP_ANON, OBJT_DEFAULT, NULL, 0);
-
+	if (size == 0)
+		return (EINVAL);
+	error = vm_mmap_object(&vms->vm_map, addr, size, VM_PROT_READ |
+	    VM_PROT_WRITE, VM_PROT_ALL, MAP_PRIVATE | MAP_ANON, NULL, 0,
+	    FALSE, td);
 	return (error);
 }
 
@@ -503,8 +501,8 @@ copyout_unmap(struct thread *td, vm_offset_t addr, size_t sz)
 /*
  * XXXKIB The temporal implementation of fue*() functions which do not
  * handle usermode -1 properly, mixing it with the fault code.  Keep
- * this until MD code is written.  Currently sparc64, mips and arm do
- * not have proper implementation.
+ * this until MD code is written.  Currently sparc64 and mips do not
+ * have proper implementation.
  */
 
 int

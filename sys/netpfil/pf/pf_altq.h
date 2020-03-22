@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel Hartmeier
  * All rights reserved.
@@ -28,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	$OpenBSD: pfvar.h,v 1.282 2009/01/29 15:12:28 pyr Exp $
- *	$FreeBSD: stable/10/sys/netpfil/pf/pf_altq.h 298133 2016-04-16 22:02:32Z loos $
+ *	$FreeBSD: stable/11/sys/netpfil/pf/pf_altq.h 287009 2015-08-21 22:02:22Z loos $
  */
 
 #ifndef	_NET_PF_ALTQ_H_

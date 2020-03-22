@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/kgssapi/krb5/kcrypto_des.c 351358 2019-08-21 22:42:08Z jhb $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -52,11 +51,14 @@ struct des1_state {
 static void
 des1_init(struct krb5_key_state *ks)
 {
+	static struct timeval lastwarn;
 	struct des1_state *ds;
 
 	ds = malloc(sizeof(struct des1_state), M_GSSAPI, M_WAITOK|M_ZERO);
 	mtx_init(&ds->ds_lock, "gss des lock", NULL, MTX_DEF);
 	ks->ks_priv = ds;
+	if (ratecheck(&lastwarn, &krb5_warn_interval))
+		gone_in(13, "DES cipher for Kerberos GSS");
 }
 
 static void

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Jake Burkholder <jake@freebsd.org>.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_condvar.c 302234 2016-06-27 21:50:30Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_condvar.c 315386 2017-03-16 07:10:08Z mjg $");
 
 #include "opt_ktrace.h"
 
@@ -123,15 +122,8 @@ _cv_wait(struct cv *cvp, struct lock_object *lock)
 	    "Waiting on \"%s\"", cvp->cv_description);
 	class = LOCK_CLASS(lock);
 
-	if (cold || panicstr) {
-		/*
-		 * During autoconfiguration, just give interrupts
-		 * a chance, then just return.  Don't run any other
-		 * thread or panic below, in case this is the idle
-		 * process and already asleep.
-		 */
+	if (SCHEDULER_STOPPED_TD(td))
 		return;
-	}
 
 	sleepq_lock(cvp);
 
@@ -184,13 +176,7 @@ _cv_wait_unlock(struct cv *cvp, struct lock_object *lock)
 	    ("cv_wait_unlock cannot be used with Giant"));
 	class = LOCK_CLASS(lock);
 
-	if (cold || panicstr) {
-		/*
-		 * During autoconfiguration, just give interrupts
-		 * a chance, then just return.  Don't run any other
-		 * thread or panic below, in case this is the idle
-		 * process and already asleep.
-		 */
+	if (SCHEDULER_STOPPED_TD(td)) {
 		class->lc_unlock(lock);
 		return;
 	}
@@ -241,15 +227,8 @@ _cv_wait_sig(struct cv *cvp, struct lock_object *lock)
 	    "Waiting on \"%s\"", cvp->cv_description);
 	class = LOCK_CLASS(lock);
 
-	if (cold || panicstr) {
-		/*
-		 * After a panic, or during autoconfiguration, just give
-		 * interrupts a chance, then just return; don't run any other
-		 * procs or panic below, in case this is the idle process and
-		 * already asleep.
-		 */
+	if (SCHEDULER_STOPPED_TD(td))
 		return (0);
-	}
 
 	sleepq_lock(cvp);
 
@@ -308,15 +287,8 @@ _cv_timedwait_sbt(struct cv *cvp, struct lock_object *lock, sbintime_t sbt,
 	    "Waiting on \"%s\"", cvp->cv_description);
 	class = LOCK_CLASS(lock);
 
-	if (cold || panicstr) {
-		/*
-		 * After a panic, or during autoconfiguration, just give
-		 * interrupts a chance, then just return; don't run any other
-		 * thread or panic below, in case this is the idle process and
-		 * already asleep.
-		 */
-		return 0;
-	}
+	if (SCHEDULER_STOPPED_TD(td))
+		return (0);
 
 	sleepq_lock(cvp);
 
@@ -377,15 +349,8 @@ _cv_timedwait_sig_sbt(struct cv *cvp, struct lock_object *lock,
 	    "Waiting on \"%s\"", cvp->cv_description);
 	class = LOCK_CLASS(lock);
 
-	if (cold || panicstr) {
-		/*
-		 * After a panic, or during autoconfiguration, just give
-		 * interrupts a chance, then just return; don't run any other
-		 * thread or panic below, in case this is the idle process and
-		 * already asleep.
-		 */
-		return 0;
-	}
+	if (SCHEDULER_STOPPED_TD(td))
+		return (0);
 
 	sleepq_lock(cvp);
 
@@ -432,6 +397,8 @@ cv_signal(struct cv *cvp)
 {
 	int wakeup_swapper;
 
+	if (cvp->cv_waiters == 0)
+		return;
 	wakeup_swapper = 0;
 	sleepq_lock(cvp);
 	if (cvp->cv_waiters > 0) {
@@ -459,6 +426,8 @@ cv_broadcastpri(struct cv *cvp, int pri)
 {
 	int wakeup_swapper;
 
+	if (cvp->cv_waiters == 0)
+		return;
 	/*
 	 * XXX sleepq_broadcast pri argument changed from -1 meaning
 	 * no pri to 0 meaning no pri.

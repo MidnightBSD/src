@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kgssapi/gssd_prot.c 299617 2016-05-13 08:25:06Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/kgssapi/gssd_prot.c 298655 2016-04-26 18:11:45Z cem $");
 
 #ifdef _KERNEL
 #include <sys/malloc.h>

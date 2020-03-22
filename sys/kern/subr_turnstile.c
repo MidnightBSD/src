@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -58,10 +57,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_turnstile.c 296728 2016-03-12 17:17:34Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_turnstile.c 295488 2016-02-10 21:16:37Z kib $");
 
 #include "opt_ddb.h"
-#include "opt_kdtrace.h"
 #include "opt_turnstile_profiling.h"
 #include "opt_sched.h"
 
@@ -1151,7 +1149,7 @@ DB_SHOW_COMMAND(lockchain, db_show_lockchain)
 
 	/* Figure out which thread to start with. */
 	if (have_addr)
-		td = db_lookup_thread(addr, TRUE);
+		td = db_lookup_thread(addr, true);
 	else
 		td = kdb_thread;
 
@@ -1235,7 +1233,7 @@ DB_SHOW_COMMAND(sleepchain, db_show_sleepchain)
 
 	/* Figure out which thread to start with. */
 	if (have_addr)
-		td = db_lookup_thread(addr, TRUE);
+		td = db_lookup_thread(addr, true);
 	else
 		td = kdb_thread;
 

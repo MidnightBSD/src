@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/tty_pts.c 321020 2017-07-15 17:25:40Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/tty_pts.c 356020 2019-12-22 19:06:45Z kevans $");
 
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/tty_pts.c 321020 2017-07-15 17:25:40Z dch
 #include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/poll.h>
 #include <sys/proc.h>
 #include <sys/racct.h>
@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/tty_pts.c 321020 2017-07-15 17:25:40Z dch
 #include <sys/systm.h>
 #include <sys/tty.h>
 #include <sys/ttycom.h>
+#include <sys/user.h>
 
 #include <machine/stdarg.h>
 
@@ -251,14 +252,6 @@ done:	ttydisc_rint_done(tp);
 	 */
 	uio->uio_resid += iblen;
 	return (error);
-}
-
-static int
-ptsdev_truncate(struct file *fp, off_t length, struct ucred *active_cred,
-    struct thread *td)
-{
-
-	return (EINVAL);
 }
 
 static int
@@ -592,10 +585,22 @@ ptsdev_close(struct file *fp, struct thread *td)
 	return (0);
 }
 
+static int
+ptsdev_fill_kinfo(struct file *fp, struct kinfo_file *kif, struct filedesc *fdp)
+{
+	struct tty *tp;
+
+	kif->kf_type = KF_TYPE_PTS;
+	tp = fp->f_data;
+	kif->kf_un.kf_pts.kf_pts_dev = tty_udev(tp);
+	strlcpy(kif->kf_path, tty_devname(tp), sizeof(kif->kf_path));
+	return (0);
+}
+
 static struct fileops ptsdev_ops = {
 	.fo_read	= ptsdev_read,
 	.fo_write	= ptsdev_write,
-	.fo_truncate	= ptsdev_truncate,
+	.fo_truncate	= invfo_truncate,
 	.fo_ioctl	= ptsdev_ioctl,
 	.fo_poll	= ptsdev_poll,
 	.fo_kqfilter	= ptsdev_kqfilter,
@@ -604,6 +609,7 @@ static struct fileops ptsdev_ops = {
 	.fo_chmod	= invfo_chmod,
 	.fo_chown	= invfo_chown,
 	.fo_sendfile	= invfo_sendfile,
+	.fo_fill_kinfo	= ptsdev_fill_kinfo,
 	.fo_flags	= DFLAG_PASSABLE,
 };
 
@@ -736,7 +742,7 @@ pts_alloc(int fflags, struct thread *td, struct file *fp)
 		PROC_UNLOCK(p);
 		return (EAGAIN);
 	}
-	ok = chgptscnt(cred->cr_ruidinfo, 1, lim_cur(p, RLIMIT_NPTS));
+	ok = chgptscnt(cred->cr_ruidinfo, 1, lim_cur(td, RLIMIT_NPTS));
 	if (!ok) {
 		racct_sub(p, RACCT_NPTS, 1);
 		PROC_UNLOCK(p);
@@ -790,7 +796,7 @@ pts_alloc_external(int fflags, struct thread *td, struct file *fp,
 		PROC_UNLOCK(p);
 		return (EAGAIN);
 	}
-	ok = chgptscnt(cred->cr_ruidinfo, 1, lim_cur(p, RLIMIT_NPTS));
+	ok = chgptscnt(cred->cr_ruidinfo, 1, lim_cur(td, RLIMIT_NPTS));
 	if (!ok) {
 		racct_sub(p, RACCT_NPTS, 1);
 		PROC_UNLOCK(p);

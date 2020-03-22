@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kgssapi/krb5/kcrypto_aes.c 299617 2016-05-13 08:25:06Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/kgssapi/krb5/kcrypto_aes.c 295134 2016-02-02 00:14:51Z cem $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

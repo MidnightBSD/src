@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: uipc_mbuf2.c,v 1.31 2001/11/28 11:08:53 itojun Exp $	*/
 /*	$NetBSD: uipc_mbuf.c,v 1.40 1999/04/01 00:23:25 thorpej Exp $	*/
 
@@ -62,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_mbuf2.c 312442 2017-01-19 23:44:05Z rpokala $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/uipc_mbuf2.c 356449 2020-01-07 16:49:56Z bz $");
 
 /*#define PULLDOWN_DEBUG*/
 
@@ -100,8 +99,8 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	int writable;
 
 	/* check invalid arguments. */
-	if (m == NULL)
-		panic("m == NULL in m_pulldown()");
+	KASSERT(m != NULL, ("%s: fix caller: m is NULL off %d len %d offp %p\n",
+	    __func__, off, len, offp));
 	if (len > MCLBYTES) {
 		m_freem(m);
 		return NULL;	/* impossible */
@@ -132,6 +131,8 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	}
 
 	/*
+	 * The following comment is dated but still partially applies:
+	 *
 	 * XXX: This code is flawed because it considers a "writable" mbuf
 	 *      data region to require all of the following:
 	 *	  (i) mbuf _has_ to have M_EXT set; if it is just a regular
@@ -148,10 +149,6 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	 * to 1), but we'll fail to notice it unless we re-evaluate
 	 * M_WRITABLE(). For now, we only evaluate once at the beginning and
 	 * live with this.
-	 */
-	/*
-	 * XXX: This is dumb. If we're just a regular mbuf with no M_EXT,
-	 *      then we're not "writable," according to this code.
 	 */
 	writable = 0;
 	if ((n->m_flags & M_EXT) == 0 ||
@@ -430,7 +427,7 @@ m_tag_copy(struct m_tag *t, int how)
  * destination mbuf.
  */
 int
-m_tag_copy_chain(struct mbuf *to, struct mbuf *from, int how)
+m_tag_copy_chain(struct mbuf *to, const struct mbuf *from, int how)
 {
 	struct m_tag *p, *t, *tprev = NULL;
 

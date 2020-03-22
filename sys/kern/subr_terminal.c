@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_terminal.c 274860 2014-11-22 16:55:55Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_terminal.c 332831 2018-04-20 15:55:09Z jtl $");
 
 #include <sys/param.h>
 #include <sys/cons.h>
@@ -131,9 +130,34 @@ static const teken_attr_t default_message = {
 	.ta_format	= TCHAR_FORMAT(TERMINAL_NORM_ATTR)
 };
 
+/* Fudge fg brightness as TF_BOLD (shifted). */
+#define	TCOLOR_FG_FUDGED(color) __extension__ ({			\
+	teken_color_t _c;						\
+									\
+	_c = (color);							\
+	TCOLOR_FG(_c & 7) | ((_c & 8) << 18);				\
+})
+
+/* Fudge bg brightness as TF_BLINK (shifted). */
+#define	TCOLOR_BG_FUDGED(color) __extension__ ({			\
+	teken_color_t _c;						\
+									\
+	_c = (color);							\
+	TCOLOR_BG(_c & 7) | ((_c & 8) << 20);				\
+})
+
+#define	TCOLOR_256TO16(color) __extension__ ({				\
+	teken_color_t _c;						\
+									\
+	_c = (color);							\
+	if (_c >= 16)							\
+		_c = teken_256to16(_c);					\
+	_c;								\
+})
+
 #define	TCHAR_CREATE(c, a)	((c) | TFORMAT((a)->ta_format) |	\
-	TCOLOR_FG(teken_256to8((a)->ta_fgcolor)) |			\
-	TCOLOR_BG(teken_256to8((a)->ta_bgcolor)))
+	TCOLOR_FG_FUDGED(TCOLOR_256TO16((a)->ta_fgcolor)) |		\
+	TCOLOR_BG_FUDGED(TCOLOR_256TO16((a)->ta_bgcolor)))
 
 static void
 terminal_init(struct terminal *tm)

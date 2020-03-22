@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_mbpool.c 302234 2016-06-27 21:50:30Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_mbpool.c 298819 2016-04-29 22:15:33Z pfg $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -281,12 +280,11 @@ mbp_free(struct mbpool *p, void *ptr)
 /*
  * Mbuf system external mbuf free routine
  */
-int
+void
 mbp_ext_free(struct mbuf *m, void *buf, void *arg)
 {
-	mbp_free(arg, buf);
 
-	return (EXT_FREE_OK);
+	mbp_free(arg, buf);
 }
 
 /*

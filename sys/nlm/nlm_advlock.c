@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nlm/nlm_advlock.c 302209 2016-06-26 13:18:03Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/nlm/nlm_advlock.c 302216 2016-06-26 20:08:42Z kib $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -698,7 +697,8 @@ nlm_record_lock(struct vnode *vp, int op, struct flock *fl,
 {
 	struct vop_advlockasync_args a;
 	struct flock newfl;
-	int error;
+	struct proc *p;
+	int error, stops_deferred;
 
 	a.a_vp = vp;
 	a.a_id = NULL;
@@ -731,7 +731,12 @@ nlm_record_lock(struct vnode *vp, int op, struct flock *fl,
 			 * return EDEADLK.
 			*/
 			pause("nlmdlk", 1);
-			/* XXXKIB allow suspend */
+			p = curproc;
+			stops_deferred = sigdeferstop(SIGDEFERSTOP_OFF);
+			PROC_LOCK(p);
+			thread_suspend_check(0);
+			PROC_UNLOCK(p);
+			sigallowstop(stops_deferred);
 		} else if (error == EINTR) {
 			/*
 			 * lf_purgelocks() might wake up the lock

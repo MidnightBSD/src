@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1991 The Regents of the University of California.
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_cons.c 283333 2015-05-23 22:34:25Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_cons.c 335659 2018-06-26 09:04:24Z avg $");
 
 #include "opt_ddb.h"
 #include "opt_syscons.h"
@@ -293,7 +292,8 @@ sysctl_kern_console(SYSCTL_HANDLER_ARGS)
 	int delete, error;
 	struct sbuf *sb;
 
-	sb = sbuf_new(NULL, NULL, CNDEVPATHMAX * 2, SBUF_AUTOEXTEND);
+	sb = sbuf_new(NULL, NULL, CNDEVPATHMAX * 2, SBUF_AUTOEXTEND |
+	    SBUF_INCLUDENUL);
 	if (sb == NULL)
 		return (ENOMEM);
 	sbuf_clear(sb);
@@ -379,6 +379,19 @@ cnungrab()
 		cn = cnd->cnd_cn;
 		if (!kdb_active || !(cn->cn_flags & CN_FLAG_NODEBUG))
 			cn->cn_ops->cn_ungrab(cn);
+	}
+}
+
+void
+cnresume()
+{
+	struct cn_device *cnd;
+	struct consdev *cn;
+
+	STAILQ_FOREACH(cnd, &cn_devlist, cnd_next) {
+		cn = cnd->cnd_cn;
+		if (cn->cn_ops->cn_resume != NULL)
+			cn->cn_ops->cn_resume(cn);
 	}
 }
 
@@ -622,6 +635,7 @@ SYSINIT(cndev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, cn_drvinit, NULL);
 #ifdef HAS_TIMER_SPKR
 
 static int beeping;
+static struct callout beeping_timer;
 
 static void
 sysbeepstop(void *chan)
@@ -644,11 +658,18 @@ sysbeep(int pitch, int period)
 	timer_spkr_setfreq(pitch);
 	if (!beeping) {
 		beeping = period;
-		timeout(sysbeepstop, (void *)NULL, period);
+		callout_reset(&beeping_timer, period, sysbeepstop, NULL);
 	}
 	return (0);
 }
 
+static void
+sysbeep_init(void *unused)
+{
+
+	callout_init(&beeping_timer, 1);
+}
+SYSINIT(sysbeep, SI_SUB_SOFTINTR, SI_ORDER_ANY, sysbeep_init, NULL);
 #else
 
 /*
@@ -669,8 +690,8 @@ sysbeep(int pitch __unused, int period __unused)
  */
 static unsigned vty_prefer;
 static char vty_name[16];
-SYSCTL_STRING(_kern, OID_AUTO, vty, CTLFLAG_RDTUN, vty_name, 0,
-    "Console vty driver");
+SYSCTL_STRING(_kern, OID_AUTO, vty, CTLFLAG_RDTUN | CTLFLAG_NOFETCH, vty_name,
+    0, "Console vty driver");
 
 int
 vty_enabled(unsigned vty)
@@ -696,10 +717,10 @@ vty_enabled(unsigned vty)
 				vty_selected = vty_prefer;
 				break;
 			}
-#if defined(DEV_SC)
-			vty_selected = VTY_SC;
-#elif defined(DEV_VT)
+#if defined(DEV_VT)
 			vty_selected = VTY_VT;
+#elif defined(DEV_SC)
+			vty_selected = VTY_SC;
 #endif
 		} while (0);
 

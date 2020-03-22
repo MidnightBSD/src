@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,12 +35,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/subr_scanf.c 302234 2016-06-27 21:50:30Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/subr_scanf.c 351760 2019-09-03 16:38:52Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ctype.h>
 #include <sys/limits.h>
+#include <sys/stddef.h>
 
 /*
  * Note that stdarg.h and the ANSI style va_start macro is used for both
@@ -60,6 +60,9 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/subr_scanf.c 302234 2016-06-27 21:50:30Z 
 #define	POINTER		0x10	/* weird %p pointer (`fake hex') */
 #define	NOSKIP		0x20	/* do not skip blanks */
 #define	QUAD		0x400
+#define	INTMAXT		0x800	/* j: intmax_t */
+#define	PTRDIFFT	0x1000	/* t: ptrdiff_t */
+#define	SIZET		0x2000	/* z: size_t */
 #define	SHORTSHORT	0x4000	/** hh: char */
 
 /*
@@ -161,6 +164,9 @@ literal:
 		case '*':
 			flags |= SUPPRESS;
 			goto again;
+		case 'j':
+			flags |= INTMAXT;
+			goto again;
 		case 'l':
 			if (flags & LONG){
 				flags &= ~LONG;
@@ -171,6 +177,12 @@ literal:
 			goto again;
 		case 'q':
 			flags |= QUAD;
+			goto again;
+		case 't':
+			flags |= PTRDIFFT;
+			goto again;
+		case 'z':
+			flags |= SIZET;
 			goto again;
 		case 'h':
 			if (flags & SHORT){
@@ -255,6 +267,12 @@ literal:
 				*va_arg(ap, long *) = nread;
 			else if (flags & QUAD)
 				*va_arg(ap, quad_t *) = nread;
+			else if (flags & INTMAXT)
+				*va_arg(ap, intmax_t *) = nread;
+			else if (flags & SIZET)
+				*va_arg(ap, size_t *) = nread;
+			else if (flags & PTRDIFFT)
+				*va_arg(ap, ptrdiff_t *) = nread;
 			else
 				*va_arg(ap, int *) = nread;
 			continue;
@@ -532,6 +550,12 @@ literal:
 					*va_arg(ap, long *) = res;
 				else if (flags & QUAD)
 					*va_arg(ap, quad_t *) = res;
+				else if (flags & INTMAXT)
+					*va_arg(ap, intmax_t *) = res;
+				else if (flags & PTRDIFFT)
+					*va_arg(ap, ptrdiff_t *) = res;
+				else if (flags & SIZET)
+					*va_arg(ap, size_t *) = res;
 				else
 					*va_arg(ap, int *) = res;
 				nassigned++;

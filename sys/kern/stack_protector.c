@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/stack_protector.c 198295 2009-10-20 16:36:51Z ru $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/stack_protector.c 284462 2015-06-16 20:19:00Z pfg $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -18,15 +17,14 @@ __stack_chk_fail(void)
 	panic("stack overflow detected; backtrace may be corrupted");
 }
 
-#define __arraycount(__x)	(sizeof(__x) / sizeof(__x[0]))
 static void
 __stack_chk_init(void *dummy __unused)
 {
 	size_t i;
-	long guard[__arraycount(__stack_chk_guard)];
+	long guard[nitems(__stack_chk_guard)];
 
 	arc4rand(guard, sizeof(guard), 0);
-	for (i = 0; i < __arraycount(guard); i++)
+	for (i = 0; i < nitems(guard); i++)
 		__stack_chk_guard[i] = guard[i];
 }
 SYSINIT(stack_chk, SI_SUB_RANDOM, SI_ORDER_ANY, __stack_chk_init, NULL);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/uipc_domain.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/uipc_domain.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -136,6 +135,7 @@ protosw_init(struct protosw *pr)
 
 #define DEFAULT(foo, bar)	if ((foo) == NULL)  (foo) = (bar)
 	DEFAULT(pu->pru_accept, pru_accept_notsupp);
+	DEFAULT(pu->pru_aio_queue, pru_aio_queue_notsupp);
 	DEFAULT(pu->pru_bind, pru_bind_notsupp);
 	DEFAULT(pu->pru_bindat, pru_bindat_notsupp);
 	DEFAULT(pu->pru_connect, pru_connect_notsupp);
@@ -153,6 +153,7 @@ protosw_init(struct protosw *pr)
 	DEFAULT(pu->pru_sosend, sosend_generic);
 	DEFAULT(pu->pru_soreceive, soreceive_generic);
 	DEFAULT(pu->pru_sopoll, sopoll_generic);
+	DEFAULT(pu->pru_ready, pru_ready_notsupp);
 #undef DEFAULT
 	if (pr->pr_init)
 		(*pr->pr_init)();
@@ -195,11 +196,7 @@ void
 vnet_domain_uninit(void *arg)
 {
 	struct domain *dp = arg;
-	struct protosw *pr;
 
-	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
-		if (pr->pr_destroy)
-			(*pr->pr_destroy)();
 	if (dp->dom_destroy)
 		(*dp->dom_destroy)();
 }

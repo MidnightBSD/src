@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_time.c 330422 2018-03-04 23:31:25Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_time.c 335828 2018-06-30 21:36:35Z cperciva $");
 
 #include "opt_ktrace.h"
 
@@ -87,6 +86,9 @@ static uma_zone_t	itimer_zone = NULL;
 
 static int	settime(struct thread *, struct timeval *);
 static void	timevalfix(struct timeval *);
+static int	user_clock_nanosleep(struct thread *td, clockid_t clock_id,
+		    int flags, const struct timespec *ua_rqtp,
+		    struct timespec *ua_rmtp);
 
 static void	itimer_start(void);
 static int	itimer_init(void *, int, int);
@@ -121,9 +123,7 @@ settime(struct thread *td, struct timeval *tv)
 	struct timeval delta, tv1, tv2;
 	static struct timeval maxtime, laststep;
 	struct timespec ts;
-	int s;
 
-	s = splclock();
 	microtime(&tv1);
 	delta = *tv;
 	timevalsub(&delta, &tv1);
@@ -153,10 +153,8 @@ settime(struct thread *td, struct timeval *tv)
 				printf("Time adjustment clamped to -1 second\n");
 			}
 		} else {
-			if (tv1.tv_sec == laststep.tv_sec) {
-				splx(s);
+			if (tv1.tv_sec == laststep.tv_sec)
 				return (EPERM);
-			}
 			if (delta.tv_sec > 1) {
 				tv->tv_sec = tv1.tv_sec + 1;
 				printf("Time adjustment clamped to +1 second\n");
@@ -167,10 +165,8 @@ settime(struct thread *td, struct timeval *tv)
 
 	ts.tv_sec = tv->tv_sec;
 	ts.tv_nsec = tv->tv_usec * 1000;
-	mtx_lock(&Giant);
 	tc_setclock(&ts);
 	resettodr();
-	mtx_unlock(&Giant);
 	return (0);
 }
 
@@ -282,6 +278,8 @@ get_process_cputime(struct proc *targetp, struct timespec *ats)
 	PROC_STATLOCK(targetp);
 	rufetch(targetp, &ru);
 	runtime = targetp->p_rux.rux_runtime;
+	if (curthread->td_proc == targetp)
+		runtime += cpu_ticks() - PCPU_GET(switchtime);
 	PROC_STATUNLOCK(targetp);
 	cputick2timespec(runtime, ats);
 }
@@ -404,7 +402,8 @@ kern_clock_settime(struct thread *td, clockid_t clock_id, struct timespec *ats)
 		return (error);
 	if (clock_id != CLOCK_REALTIME)
 		return (EINVAL);
-	if (ats->tv_nsec < 0 || ats->tv_nsec >= 1000000000)
+	if (ats->tv_nsec < 0 || ats->tv_nsec >= 1000000000 ||
+	    ats->tv_sec < 0)
 		return (EINVAL);
 	/* XXX Don't convert nsec->usec and back */
 	TIMESPEC_TO_TIMEVAL(&atv, ats);
@@ -458,7 +457,7 @@ kern_clock_getres(struct thread *td, clockid_t clock_id, struct timespec *ts)
 	case CLOCK_VIRTUAL:
 	case CLOCK_PROF:
 		/* Accurately round up here because we can do so cheaply. */
-		ts->tv_nsec = (1000000000 + hz - 1) / hz;
+		ts->tv_nsec = howmany(1000000000, hz);
 		break;
 	case CLOCK_SECOND:
 		ts->tv_sec = 1;
@@ -480,48 +479,96 @@ kern_clock_getres(struct thread *td, clockid_t clock_id, struct timespec *ts)
 	return (0);
 }
 
-static uint8_t nanowait[MAXCPU];
-
 int
 kern_nanosleep(struct thread *td, struct timespec *rqt, struct timespec *rmt)
 {
-	struct timespec ts;
+
+	return (kern_clock_nanosleep(td, CLOCK_REALTIME, TIMER_RELTIME, rqt,
+	    rmt));
+}
+
+static uint8_t nanowait[MAXCPU];
+
+int
+kern_clock_nanosleep(struct thread *td, clockid_t clock_id, int flags,
+    const struct timespec *rqt, struct timespec *rmt)
+{
+	struct timespec ts, now;
 	sbintime_t sbt, sbtt, prec, tmp;
 	time_t over;
 	int error;
+	bool is_abs_real;
 
 	if (rqt->tv_nsec < 0 || rqt->tv_nsec >= 1000000000)
 		return (EINVAL);
-	if (rqt->tv_sec < 0 || (rqt->tv_sec == 0 && rqt->tv_nsec == 0))
-		return (0);
-	ts = *rqt;
-	if (ts.tv_sec > INT32_MAX / 2) {
-		over = ts.tv_sec - INT32_MAX / 2;
-		ts.tv_sec -= over;
-	} else
-		over = 0;
-	tmp = tstosbt(ts);
-	prec = tmp;
-	prec >>= tc_precexp;
-	if (TIMESEL(&sbt, tmp))
-		sbt += tc_tick_sbt;
-	sbt += tmp;
-	error = tsleep_sbt(&nanowait[curcpu], PWAIT | PCATCH, "nanslp",
-	    sbt, prec, C_ABSOLUTE);
+	if ((flags & ~TIMER_ABSTIME) != 0)
+		return (EINVAL);
+	switch (clock_id) {
+	case CLOCK_REALTIME:
+	case CLOCK_REALTIME_PRECISE:
+	case CLOCK_REALTIME_FAST:
+	case CLOCK_SECOND:
+		is_abs_real = (flags & TIMER_ABSTIME) != 0;
+		break;
+	case CLOCK_MONOTONIC:
+	case CLOCK_MONOTONIC_PRECISE:
+	case CLOCK_MONOTONIC_FAST:
+	case CLOCK_UPTIME:
+	case CLOCK_UPTIME_PRECISE:
+	case CLOCK_UPTIME_FAST:
+		is_abs_real = false;
+		break;
+	case CLOCK_VIRTUAL:
+	case CLOCK_PROF:
+	case CLOCK_PROCESS_CPUTIME_ID:
+		return (ENOTSUP);
+	case CLOCK_THREAD_CPUTIME_ID:
+	default:
+		return (EINVAL);
+	}
+	do {
+		ts = *rqt;
+		if ((flags & TIMER_ABSTIME) != 0) {
+			if (is_abs_real)
+				td->td_rtcgen =
+				    atomic_load_acq_int(&rtc_generation);
+			error = kern_clock_gettime(td, clock_id, &now);
+			KASSERT(error == 0, ("kern_clock_gettime: %d", error));
+			timespecsub(&ts, &now);
+		}
+		if (ts.tv_sec < 0 || (ts.tv_sec == 0 && ts.tv_nsec == 0)) {
+			error = EWOULDBLOCK;
+			break;
+		}
+		if (ts.tv_sec > INT32_MAX / 2) {
+			over = ts.tv_sec - INT32_MAX / 2;
+			ts.tv_sec -= over;
+		} else
+			over = 0;
+		tmp = tstosbt(ts);
+		prec = tmp;
+		prec >>= tc_precexp;
+		if (TIMESEL(&sbt, tmp))
+			sbt += tc_tick_sbt;
+		sbt += tmp;
+		error = tsleep_sbt(&nanowait[curcpu], PWAIT | PCATCH, "nanslp",
+		    sbt, prec, C_ABSOLUTE);
+	} while (error == 0 && is_abs_real && td->td_rtcgen == 0);
+	td->td_rtcgen = 0;
 	if (error != EWOULDBLOCK) {
-		if (error == ERESTART)
-			error = EINTR;
 		if (TIMESEL(&sbtt, tmp))
 			sbtt += tc_tick_sbt;
-		if (rmt != NULL) {
+		if (sbtt >= sbt)
+			return (0);
+		if (error == ERESTART)
+			error = EINTR;
+		if ((flags & TIMER_ABSTIME) == 0 && rmt != NULL) {
 			ts = sbttots(sbt - sbtt);
 			ts.tv_sec += over;
 			if (ts.tv_sec < 0)
 				timespecclear(&ts);
 			*rmt = ts;
 		}
-		if (sbtt >= sbt)
-			return (0);
 		return (error);
 	}
 	return (0);
@@ -537,21 +584,48 @@ struct nanosleep_args {
 int
 sys_nanosleep(struct thread *td, struct nanosleep_args *uap)
 {
+
+	return (user_clock_nanosleep(td, CLOCK_REALTIME, TIMER_RELTIME,
+	    uap->rqtp, uap->rmtp));
+}
+
+#ifndef _SYS_SYSPROTO_H_
+struct clock_nanosleep_args {
+	clockid_t clock_id;
+	int 	  flags;
+	struct	timespec *rqtp;
+	struct	timespec *rmtp;
+};
+#endif
+/* ARGSUSED */
+int
+sys_clock_nanosleep(struct thread *td, struct clock_nanosleep_args *uap)
+{
+	int error;
+
+	error = user_clock_nanosleep(td, uap->clock_id, uap->flags, uap->rqtp,
+	    uap->rmtp);
+	return (kern_posix_error(td, error));
+}
+
+static int
+user_clock_nanosleep(struct thread *td, clockid_t clock_id, int flags,
+    const struct timespec *ua_rqtp, struct timespec *ua_rmtp)
+{
 	struct timespec rmt, rqt;
 	int error;
 
-	error = copyin(uap->rqtp, &rqt, sizeof(rqt));
+	error = copyin(ua_rqtp, &rqt, sizeof(rqt));
 	if (error)
 		return (error);
-
-	if (uap->rmtp &&
-	    !useracc((caddr_t)uap->rmtp, sizeof(rmt), VM_PROT_WRITE))
-			return (EFAULT);
-	error = kern_nanosleep(td, &rqt, &rmt);
-	if (error == EINTR && uap->rmtp) {
+	if (ua_rmtp != NULL && (flags & TIMER_ABSTIME) == 0 &&
+	    !useracc(ua_rmtp, sizeof(rmt), VM_PROT_WRITE))
+		return (EFAULT);
+	error = kern_clock_nanosleep(td, clock_id, flags, &rqt, &rmt);
+	if (error == EINTR && ua_rmtp != NULL && (flags & TIMER_ABSTIME) == 0) {
 		int error2;
 
-		error2 = copyout(&rmt, uap->rmtp, sizeof(rmt));
+		error2 = copyout(&rmt, ua_rmtp, sizeof(rmt));
 		if (error2)
 			error = error2;
 	}
@@ -625,7 +699,8 @@ kern_settimeofday(struct thread *td, struct timeval *tv, struct timezone *tzp)
 		return (error);
 	/* Verify all parameters before changing time. */
 	if (tv) {
-		if (tv->tv_usec < 0 || tv->tv_usec >= 1000000)
+		if (tv->tv_usec < 0 || tv->tv_usec >= 1000000 ||
+		    tv->tv_sec < 0)
 			return (EINVAL);
 		error = settime(td, tv);
 	}

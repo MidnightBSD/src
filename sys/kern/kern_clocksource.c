@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2013 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,14 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_clocksource.c 315255 2017-03-14 15:37:29Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/kern/kern_clocksource.c 335656 2018-06-26 08:31:08Z avg $");
 
 /*
  * Common routines to manage event timers hardware.
  */
 
 #include "opt_device_polling.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,7 +54,6 @@ __FBSDID("$FreeBSD: stable/10/sys/kern/kern_clocksource.c 315255 2017-03-14 15:3
 #include <machine/cpu.h>
 #include <machine/smp.h>
 
-int			cpu_deepest_sleep = 0;	/* Deepest Cx state available. */
 int			cpu_disable_c2_sleep = 0; /* Timer dies in C2. */
 int			cpu_disable_c3_sleep = 0; /* Timer dies in C3. */
 
@@ -94,23 +91,21 @@ static sbintime_t	statperiod;	/* statclock() events period. */
 static sbintime_t	profperiod;	/* profclock() events period. */
 static sbintime_t	nexttick;	/* Next global timer tick time. */
 static u_int		busy = 1;	/* Reconfiguration is in progress. */
-static int		profiling = 0;	/* Profiling events enabled. */
+static int		profiling;	/* Profiling events enabled. */
 
 static char		timername[32];	/* Wanted timer. */
 TUNABLE_STR("kern.eventtimer.timer", timername, sizeof(timername));
 
-static int		singlemul = 0;	/* Multiplier for periodic mode. */
-TUNABLE_INT("kern.eventtimer.singlemul", &singlemul);
-SYSCTL_INT(_kern_eventtimer, OID_AUTO, singlemul, CTLFLAG_RW, &singlemul,
+static int		singlemul;	/* Multiplier for periodic mode. */
+SYSCTL_INT(_kern_eventtimer, OID_AUTO, singlemul, CTLFLAG_RWTUN, &singlemul,
     0, "Multiplier for periodic mode");
 
-static u_int		idletick = 0;	/* Run periodic events when idle. */
-TUNABLE_INT("kern.eventtimer.idletick", &idletick);
-SYSCTL_UINT(_kern_eventtimer, OID_AUTO, idletick, CTLFLAG_RW, &idletick,
+static u_int		idletick;	/* Run periodic events when idle. */
+SYSCTL_UINT(_kern_eventtimer, OID_AUTO, idletick, CTLFLAG_RWTUN, &idletick,
     0, "Run periodic events when idle");
 
-static int		periodic = 0;	/* Periodic or one-shot mode. */
-static int		want_periodic = 0; /* What mode to prefer. */
+static int		periodic;	/* Periodic or one-shot mode. */
+static int		want_periodic;	/* What mode to prefer. */
 TUNABLE_INT("kern.eventtimer.periodic", &want_periodic);
 
 struct pcpu_state {
@@ -120,7 +115,7 @@ struct pcpu_state {
 	sbintime_t	now;		/* Last tick time. */
 	sbintime_t	nextevent;	/* Next scheduled event on this CPU. */
 	sbintime_t	nexttick;	/* Next timer tick time. */
-	sbintime_t	nexthard;	/* Next hardlock() event. */
+	sbintime_t	nexthard;	/* Next hardclock() event. */
 	sbintime_t	nextstat;	/* Next statclock() event. */
 	sbintime_t	nextprof;	/* Next profclock() event. */
 	sbintime_t	nextcall;	/* Next callout event. */
@@ -326,9 +321,16 @@ timercb(struct eventtimer *et, void *arg)
 	    curcpu, (int)(now >> 32), (u_int)(now & 0xffffffff));
 
 #ifdef SMP
+#ifdef EARLY_AP_STARTUP
+	MPASS(mp_ncpus == 1 || smp_started);
+#endif
 	/* Prepare broadcasting to other CPUs for non-per-CPU timers. */
 	bcast = 0;
+#ifdef EARLY_AP_STARTUP
+	if ((et->et_flags & ET_FLAGS_PERCPU) == 0) {
+#else
 	if ((et->et_flags & ET_FLAGS_PERCPU) == 0 && smp_started) {
+#endif
 		CPU_FOREACH(cpu) {
 			state = DPCPU_ID_PTR(cpu, timerstate);
 			ET_HW_LOCK(state);
@@ -489,12 +491,17 @@ configtimer(int start)
 			nexttick = next;
 		else
 			nexttick = -1;
+#ifdef EARLY_AP_STARTUP
+		MPASS(mp_ncpus == 1 || smp_started);
+#endif
 		CPU_FOREACH(cpu) {
 			state = DPCPU_ID_PTR(cpu, timerstate);
 			state->now = now;
+#ifndef EARLY_AP_STARTUP
 			if (!smp_started && cpu != CPU_FIRST())
 				state->nextevent = SBT_MAX;
 			else
+#endif
 				state->nextevent = next;
 			if (periodic)
 				state->nexttick = next;
@@ -517,8 +524,13 @@ configtimer(int start)
 	}
 	ET_HW_UNLOCK(DPCPU_PTR(timerstate));
 #ifdef SMP
+#ifdef EARLY_AP_STARTUP
+	/* If timer is global we are done. */
+	if ((timer->et_flags & ET_FLAGS_PERCPU) == 0) {
+#else
 	/* If timer is global or there is no other CPUs yet - we are done. */
 	if ((timer->et_flags & ET_FLAGS_PERCPU) == 0 || !smp_started) {
+#endif
 		critical_exit();
 		return;
 	}
@@ -678,6 +690,22 @@ cpu_initclocks_ap(void)
 	handleevents(state->now, 2);
 	td->td_intr_nesting_level--;
 	spinlock_exit();
+}
+
+void
+suspendclock(void)
+{
+	ET_LOCK();
+	configtimer(0);
+	ET_UNLOCK();
+}
+
+void
+resumeclock(void)
+{
+	ET_LOCK();
+	configtimer(1);
+	ET_UNLOCK();
 }
 
 /*

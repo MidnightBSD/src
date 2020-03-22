@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/nfs/nfs_kdtrace.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD: stable/11/sys/nfs/nfs_kdtrace.h 222813 2011-06-07 08:46:13Z attilio $
  */
 
 #ifndef _NFSCLIENT_NFS_KDTRACE_H_
