@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/nop/g_nop.c 293738 2016-01-12 09:27:01Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/nop/g_nop.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -125,6 +124,11 @@ g_nop_start(struct bio *bp)
 		break;
 	case BIO_GETATTR:
 		sc->sc_getattrs++;
+		if (sc->sc_physpath && 
+		    g_handleattr_str(bp, "GEOM::physpath", sc->sc_physpath)) {
+			mtx_unlock(&sc->sc_lock);
+			return;
+		}
 		break;
 	case BIO_FLUSH:
 		sc->sc_flushes++;
@@ -181,7 +185,7 @@ g_nop_access(struct g_provider *pp, int dr, int dw, int de)
 static int
 g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
     int ioerror, u_int rfailprob, u_int wfailprob, off_t offset, off_t size,
-    u_int secsize, u_int stripesize, u_int stripeoffset)
+    u_int secsize, u_int stripesize, u_int stripeoffset, const char *physpath)
 {
 	struct g_nop_softc *sc;
 	struct g_geom *gp;
@@ -252,6 +256,10 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	sc->sc_explicitsize = explicitsize;
 	sc->sc_stripesize = stripesize;
 	sc->sc_stripeoffset = stripeoffset;
+	if (physpath && strcmp(physpath, G_NOP_PHYSPATH_PASSTHROUGH)) {
+		sc->sc_physpath = strndup(physpath, MAXPATHLEN, M_GEOM);
+	} else
+		sc->sc_physpath = NULL;
 	sc->sc_error = ioerror;
 	sc->sc_rfailprob = rfailprob;
 	sc->sc_wfailprob = wfailprob;
@@ -298,6 +306,7 @@ fail:
 	g_destroy_consumer(cp);
 	g_destroy_provider(newpp);
 	mtx_destroy(&sc->sc_lock);
+	free(sc->sc_physpath, M_GEOM);
 	g_free(gp->softc);
 	g_destroy_geom(gp);
 	return (error);
@@ -313,6 +322,7 @@ g_nop_destroy(struct g_geom *gp, boolean_t force)
 	sc = gp->softc;
 	if (sc == NULL)
 		return (ENXIO);
+	free(sc->sc_physpath, M_GEOM);
 	pp = LIST_FIRST(&gp->provider);
 	if (pp != NULL && (pp->acr != 0 || pp->acw != 0 || pp->ace != 0)) {
 		if (force) {
@@ -347,7 +357,7 @@ g_nop_ctl_create(struct gctl_req *req, struct g_class *mp)
 	struct g_provider *pp;
 	intmax_t *error, *rfailprob, *wfailprob, *offset, *secsize, *size,
 	    *stripesize, *stripeoffset;
-	const char *name;
+	const char *name, *physpath;
 	char param[16];
 	int i, *nargs;
 
@@ -430,6 +440,7 @@ g_nop_ctl_create(struct gctl_req *req, struct g_class *mp)
 		gctl_error(req, "Invalid '%s' argument", "stripeoffset");
 		return;
 	}
+	physpath = gctl_get_asciiparam(req, "physpath");
 
 	for (i = 0; i < *nargs; i++) {
 		snprintf(param, sizeof(param), "arg%d", i);
@@ -451,7 +462,8 @@ g_nop_ctl_create(struct gctl_req *req, struct g_class *mp)
 		    *rfailprob == -1 ? 0 : (u_int)*rfailprob,
 		    *wfailprob == -1 ? 0 : (u_int)*wfailprob,
 		    (off_t)*offset, (off_t)*size, (u_int)*secsize,
-		    (u_int)*stripesize, (u_int)*stripeoffset) != 0) {
+		    (u_int)*stripesize, (u_int)*stripeoffset,
+		    physpath) != 0) {
 			return;
 		}
 	}
@@ -703,3 +715,4 @@ g_nop_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 }
 
 DECLARE_GEOM_CLASS(g_nop_class, g_nop);
+MODULE_VERSION(geom_nop, 0);

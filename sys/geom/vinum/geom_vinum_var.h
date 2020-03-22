@@ -35,7 +35,7 @@
  * otherwise) arising in any way out of the use of this software, even if
  * advised of the possibility of such damage.
  *  
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/geom/vinum/geom_vinum_var.h 356577 2020-01-10 00:42:05Z mav $
  */
 
 #ifndef	_GEOM_VINUM_VAR_H_
@@ -258,10 +258,12 @@ struct gv_drive {
 #define	GV_DRIVE_REFERENCED	0x01	/* The drive isn't really existing,
 					   but was referenced by a subdisk
 					   during taste. */
+#define	GV_DRIVE_ORPHANED	0x02	/* The drive was orphaned. */
 
 	struct gv_hdr	*hdr;		/* The drive header. */
 
 	struct g_consumer *consumer;	/* Consumer attached to this drive. */
+	int	active;			/* Number of active requests. */
 
 	int freelist_entries;			/* Count of freelist entries. */
 	LIST_HEAD(,gv_freelist)	freelist;	/* List of freelist entries. */

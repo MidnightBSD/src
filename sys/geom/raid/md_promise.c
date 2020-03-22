@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/raid/md_promise.c 299397 2016-05-11 00:36:31Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/raid/md_promise.c 298698 2016-04-27 15:10:40Z pfg $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -291,7 +290,7 @@ promise_meta_unused_range(struct promise_raid_conf **metaarr, int nsd,
 		     metaarr[i]->disk_sectors;
 		csize = sectors - coff;
 		i++;
-	};
+	}
 	return ((*size > 0) ? 1 : 0);
 }
 

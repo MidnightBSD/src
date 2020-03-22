@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/raid3/g_raid3.h,v 1.19.2.1 2009/12/29 21:41:51 mav Exp $
+ * $FreeBSD: stable/11/sys/geom/raid3/g_raid3.h 200821 2009-12-21 23:31:03Z mav $
  */
 
 #ifndef	_G_RAID3_H_

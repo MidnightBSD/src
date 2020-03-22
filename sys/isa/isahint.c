@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/isa/isahint.c 196520 2009-08-24 21:51:46Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/isa/isahint.c 196520 2009-08-24 21:51:46Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

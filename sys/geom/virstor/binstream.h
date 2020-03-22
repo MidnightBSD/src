@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/geom/virstor/binstream.h 172302 2007-09-23 07:34:23Z pjd $
  */
 
-// $Id: binstream.h,v 1.4 2013-01-17 23:29:37 laffer1 Exp $
+// $Id: binstream.h,v 1.1 2006/07/05 10:47:54 ivoras Exp $
 
 
 #ifndef _BIN_STREAM_

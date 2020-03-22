@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/isa/pnpvar.h 139268 2004-12-24 22:08:57Z imp $
+ *	$FreeBSD: stable/11/sys/isa/pnpvar.h 139268 2004-12-24 22:08:57Z imp $
  */
 
 #ifndef _ISA_PNPVAR_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/raid/md_jmicron.c 286759 2015-08-14 02:45:22Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/raid/md_jmicron.c 286615 2015-08-11 03:12:09Z pfg $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

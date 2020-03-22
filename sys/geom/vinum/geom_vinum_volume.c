@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/geom/vinum/geom_vinum_volume.c 356577 2020-01-10 00:42:05Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -161,4 +161,6 @@ gv_bio_done(struct gv_softc *sc, struct bio *bp)
 		gv_plex_raid5_done(p, bp);
 		break;
 	}
+
+	gv_drive_done(s->drive_sc);
 }

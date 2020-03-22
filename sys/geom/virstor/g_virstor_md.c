@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/geom/virstor/g_virstor_md.c 172302 2007-09-23 07:34:23Z pjd $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

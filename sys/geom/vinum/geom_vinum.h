@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/geom/vinum/geom_vinum.h 356577 2020-01-10 00:42:05Z mav $
  */
 
 #ifndef	_GEOM_VINUM_H_
@@ -125,6 +125,7 @@ void	gv_post_event(struct gv_softc *, int, void *, void *, intmax_t,
 void	gv_worker_exit(struct gv_softc *);
 struct gv_event *gv_get_event(struct gv_softc *);
 void	gv_remove_event(struct gv_softc *, struct gv_event *);
+void	gv_drive_done(struct gv_drive *);
 void	gv_drive_tasted(struct gv_softc *, struct g_provider *);
 void	gv_drive_lost(struct gv_softc *, struct gv_drive *);
 void	gv_setup_objects(struct gv_softc *);

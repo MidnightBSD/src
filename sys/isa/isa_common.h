@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/isa/isa_common.h 221526 2011-05-06 13:48:53Z jhb $
+ * $FreeBSD: stable/11/sys/isa/isa_common.h 299006 2016-05-03 21:51:52Z pfg $
  */
 
 /*
@@ -66,11 +65,12 @@ struct isa_device {
 #define DEVTOISA(dev)	((struct isa_device *) device_get_ivars(dev))
 
 /*
- * These functions are architecture dependant.
+ * These functions are architecture dependent.
  */
 extern void isa_init(device_t dev);
 extern struct resource *isa_alloc_resource(device_t bus, device_t child,
-    int type, int *rid, u_long start, u_long end, u_long count, u_int flags);
+    int type, int *rid, rman_res_t start, rman_res_t end, rman_res_t count,
+    u_int flags);
 extern int isa_release_resource(device_t bus, device_t child,
     int type, int rid, struct resource *r);
 

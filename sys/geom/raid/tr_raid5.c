@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/raid/tr_raid5.c 326745 2017-12-10 13:45:41Z eugen $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/raid/tr_raid5.c 326744 2017-12-10 13:44:58Z eugen $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

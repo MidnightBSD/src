@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/journal/g_journal_ufs.c 163837 2006-10-31 21:31:00Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/journal/g_journal_ufs.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -106,3 +105,4 @@ const struct g_journal_desc g_journal_ufs = {
 };
 
 MODULE_DEPEND(g_journal, ufs, 1, 1, 1);
+MODULE_VERSION(geom_journal, 0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/raid/tr_raid0.c 260385 2014-01-07 01:32:23Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/raid/tr_raid0.c 339033 2018-10-01 04:02:00Z mav $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -322,7 +321,7 @@ g_raid_tr_iodone_raid0(struct g_raid_tr_object *tr,
 	pbp->bio_inbed++;
 	if (pbp->bio_children == pbp->bio_inbed) {
 		pbp->bio_completed = pbp->bio_length;
-		g_raid_iodone(pbp, bp->bio_error);
+		g_raid_iodone(pbp, pbp->bio_error);
 	}
 }
 

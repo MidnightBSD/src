@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/isa/syscons_isa.c 221708 2011-05-09 18:46:49Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/isa/syscons_isa.c 221708 2011-05-09 18:46:49Z jkim $");
 
 #include "opt_syscons.h"
 

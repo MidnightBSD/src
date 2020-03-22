@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2013 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2006-2007 Matthew Jacob <mjacob@FreeBSD.org>
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/multipath/g_multipath.c 312862 2017-01-27 05:59:26Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/multipath/g_multipath.c 332640 2018-04-17 02:18:04Z kevans $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -1531,3 +1530,4 @@ g_multipath_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 }
 
 DECLARE_GEOM_CLASS(g_multipath_class, g_multipath);
+MODULE_VERSION(geom_multipath, 0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Max Khon
  * Copyright (c) 2014 Juniper Networks, Inc.
@@ -28,13 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/uzip/g_uzip_zlib.c 303167 2016-07-21 23:49:26Z sobomax $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/uzip/g_uzip_zlib.c 302284 2016-06-29 18:19:05Z sobomax $");
 
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 
-#include <net/zlib.h>
+#include <sys/zlib.h>
 
 #include <geom/uzip/g_uzip.h>
 #include <geom/uzip/g_uzip_dapi.h>

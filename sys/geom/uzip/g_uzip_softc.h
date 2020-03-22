@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Max Khon
  * Copyright (c) 2014 Juniper Networks, Inc.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/geom/uzip/g_uzip_softc.h 303167 2016-07-21 23:49:26Z sobomax $
+ * $FreeBSD: stable/11/sys/geom/uzip/g_uzip_softc.h 295943 2016-02-23 23:59:08Z sobomax $
  */
 
 struct g_uzip_softc;

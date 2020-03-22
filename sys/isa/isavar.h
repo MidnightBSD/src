@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/isa/isavar.h 185059 2008-11-18 21:01:54Z jhb $
+ * $FreeBSD: stable/11/sys/isa/isavar.h 185059 2008-11-18 21:01:54Z jhb $
  */
 
 #ifndef _ISA_ISAVAR_H_

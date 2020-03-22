@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)rtc.h	7.1 (Berkeley) 5/12/91
- * $FreeBSD: stable/10/sys/isa/rtc.h 209371 2010-06-20 21:33:29Z mav $
+ * $FreeBSD: stable/11/sys/isa/rtc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _I386_ISA_RTC_H_
@@ -113,7 +112,7 @@
 #define	RTC_CENTURY	0x32	/* current century */
 
 #ifdef _KERNEL
-extern  struct mtx clock_lock;
+extern  struct mtx atrtc_time_lock;
 extern	int atrtcclock_disable;
 int	rtcin(int reg);
 void	atrtc_restore(void);

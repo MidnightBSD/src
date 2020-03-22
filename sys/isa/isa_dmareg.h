@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005 TAKAHASHI Yoshihiro. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/isa/isa_dmareg.h 146214 2005-05-14 10:14:56Z nyan $
+ * $FreeBSD: stable/11/sys/isa/isa_dmareg.h 146214 2005-05-14 10:14:56Z nyan $
  */
 
 #ifndef _ISA_ISA_DMAREG_H_

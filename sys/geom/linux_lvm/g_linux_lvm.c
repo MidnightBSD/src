@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/linux_lvm/g_linux_lvm.c 306765 2016-10-06 15:36:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/linux_lvm/g_linux_lvm.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -80,8 +79,7 @@ SYSCTL_DECL(_kern_geom);
 SYSCTL_NODE(_kern_geom, OID_AUTO, linux_lvm, CTLFLAG_RW, 0,
     "GEOM_LINUX_LVM stuff");
 static u_int g_llvm_debug = 0;
-TUNABLE_INT("kern.geom.linux_lvm.debug", &g_llvm_debug);
-SYSCTL_UINT(_kern_geom_linux_lvm, OID_AUTO, debug, CTLFLAG_RW, &g_llvm_debug, 0,
+SYSCTL_UINT(_kern_geom_linux_lvm, OID_AUTO, debug, CTLFLAG_RWTUN, &g_llvm_debug, 0,
     "Debug level");
 
 LIST_HEAD(, g_llvm_vg) vg_list;
@@ -1190,3 +1188,4 @@ static struct g_class g_llvm_class = {
 };
 
 DECLARE_GEOM_CLASS(g_llvm_class, g_linux_lvm);
+MODULE_VERSION(geom_linux_lvm, 0);

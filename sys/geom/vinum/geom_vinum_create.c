@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/geom/vinum/geom_vinum_create.c 202974 2010-01-25 16:55:30Z trasz $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

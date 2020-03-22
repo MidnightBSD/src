@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2016 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -26,14 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/uzip/g_uzip_wrkthr.c 303167 2016-07-21 23:49:26Z sobomax $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/uzip/g_uzip_wrkthr.c 295943 2016-02-23 23:59:08Z sobomax $");
 
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
-#include <sys/systm.h>
 #include <sys/proc.h>
 #include <sys/sched.h>
 #include <sys/kthread.h>

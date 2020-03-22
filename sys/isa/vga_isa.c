@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/isa/vga_isa.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/isa/vga_isa.c 295790 2016-02-19 03:37:56Z jhibbits $");
 
 #include "opt_vga.h"
 #include "opt_fb.h"
@@ -196,11 +195,11 @@ isavga_attach(device_t dev)
 	sc = device_get_softc(dev);
 
 	rid = 0;
-	bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				  0, ~0, 0, RF_ACTIVE | RF_SHAREABLE);
+	bus_alloc_resource_any(dev, SYS_RES_IOPORT, &rid,
+				  RF_ACTIVE | RF_SHAREABLE);
 	rid = 0;
-	bus_alloc_resource(dev, SYS_RES_MEMORY, &rid,
-				 0, ~0, 0, RF_ACTIVE | RF_SHAREABLE);
+	bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
+				 RF_ACTIVE | RF_SHAREABLE);
 
 	error = vga_attach_unit(unit, sc, device_get_flags(dev));
 	if (error)

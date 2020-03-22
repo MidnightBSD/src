@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/geom/vinum/geom_vinum.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -50,8 +50,7 @@ SYSCTL_DECL(_kern_geom);
 static SYSCTL_NODE(_kern_geom, OID_AUTO, vinum, CTLFLAG_RW, 0,
     "GEOM_VINUM stuff");
 u_int g_vinum_debug = 0;
-TUNABLE_INT("kern.geom.vinum.debug", &g_vinum_debug);
-SYSCTL_UINT(_kern_geom_vinum, OID_AUTO, debug, CTLFLAG_RW, &g_vinum_debug, 0,
+SYSCTL_UINT(_kern_geom_vinum, OID_AUTO, debug, CTLFLAG_RWTUN, &g_vinum_debug, 0,
     "Debug level");
 
 static int	gv_create(struct g_geom *, struct gctl_req *);
@@ -1047,3 +1046,4 @@ static struct g_class g_vinum_class	= {
 };
 
 DECLARE_GEOM_CLASS(g_vinum_class, g_vinum);
+MODULE_VERSION(geom_vinum, 0);

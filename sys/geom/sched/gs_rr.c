@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2010 Fabio Checconi
  * Copyright (c) 2009-2010 Luigi Rizzo, Universita` di Pisa
@@ -28,7 +27,7 @@
 
 /*
  * $Id$
- * $FreeBSD: stable/10/sys/geom/sched/gs_rr.c 314667 2017-03-04 13:03:31Z avg $
+ * $FreeBSD: stable/11/sys/geom/sched/gs_rr.c 296606 2016-03-10 06:25:39Z imp $
  *
  * A round-robin (RR) anticipatory scheduler, with per-client queues.
  *
@@ -316,7 +315,7 @@ g_rr_init_class(void *data, void *priv)
 	struct g_rr_softc *sc = data;
 	struct g_rr_queue *qp = priv;
 
-	gs_bioq_init(&qp->q_bioq);
+	bioq_init(&qp->q_bioq);
 
 	/*
 	 * Set the initial parameters for the client:
@@ -351,7 +350,7 @@ g_rr_fini_class(void *data, void *priv)
 {
 	struct g_rr_queue *qp = priv;
 
-	KASSERT(gs_bioq_first(&qp->q_bioq) == NULL,
+	KASSERT(bioq_first(&qp->q_bioq) == NULL,
 			("released nonempty queue"));
 	qp->q_sc->sc_nqueues--;
 	me.queues--;
@@ -376,7 +375,7 @@ g_rr_should_anticipate(struct g_rr_queue *qp, struct bio *bp)
 {
 	int wait = get_bounded(&me.wait_ms, 2);
 
-	if (!me.w_anticipate && (bp->bio_cmd & BIO_WRITE))
+	if (!me.w_anticipate && (bp->bio_cmd == BIO_WRITE))
 		return (0);
 
 	if (g_savg_valid(&qp->q_thinktime) &&
@@ -439,7 +438,7 @@ g_rr_next(void *data, int force)
 		qp->q_flags &= ~G_FLAG_COMPLETED;
 	}
 
-	bp = gs_bioq_takefirst(&qp->q_bioq);	/* surely not NULL */
+	bp = bioq_takefirst(&qp->q_bioq);	/* surely not NULL */
 	qp->q_service += bp->bio_length;	/* charge the service */
 
 	/*
@@ -457,7 +456,7 @@ g_rr_next(void *data, int force)
 	 *    on read or writes (e.g., anticipate only on reads).
 	 */
 	expired = g_rr_queue_expired(qp);	/* are we expired ? */
-	next = gs_bioq_first(&qp->q_bioq);	/* do we have one more ? */
+	next = bioq_first(&qp->q_bioq);	/* do we have one more ? */
  	if (expired) {
 		sc->sc_active = NULL;
 		/* Either requeue or release reference. */
@@ -539,7 +538,7 @@ g_rr_start(void *data, struct bio *bp)
 	if (qp == NULL)
 		return (-1); /* allocation failed, tell upstream */
 
-	if (gs_bioq_first(&qp->q_bioq) == NULL) {
+	if (bioq_first(&qp->q_bioq) == NULL) {
 		/*
 		 * We are inserting into an empty queue.
 		 * Reset its state if it is sc_active,
@@ -561,7 +560,7 @@ g_rr_start(void *data, struct bio *bp)
 
 	/* Inherit the reference returned by g_rr_queue_get(). */
 	bp->bio_caller1 = qp;
-	gs_bioq_disksort(&qp->q_bioq, bp);
+	bioq_disksort(&qp->q_bioq, bp);
 
 	return (0);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996, Sujal M. Patel
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/isa/pnp.c 220126 2011-03-29 12:38:13Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/isa/pnp.c 299006 2016-05-03 21:51:52Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -417,14 +416,14 @@ static int
 pnp_create_devices(device_t parent, pnp_id *p, int csn,
     u_char *resources, int len)
 {
-	u_char tag, *resp, *resinfo, *startres = 0;
+	u_char tag, *resp, *resinfo, *startres = NULL;
 	int large_len, scanning = len, retval = FALSE;
 	uint32_t logical_id;
 	device_t dev = 0;
 	int ldn = 0;
 	struct pnp_set_config_arg *csnldn;
 	char buf[100];
-	char *desc = 0;
+	char *desc = NULL;
 
 	resp = resources;
 	while (scanning > 0) {
@@ -451,7 +450,7 @@ pnp_create_devices(device_t parent, pnp_id *p, int csn,
 				if (dev) {
 					/*
 					 * This is an optional device
-					 * indentifier string. Skipt it
+					 * identifier string. Skip it
 					 * for now.
 					 */
 					continue;
@@ -493,7 +492,7 @@ pnp_create_devices(device_t parent, pnp_id *p, int csn,
 				pnp_parse_resources(dev, startres,
 				    resinfo - startres - 1, ldn);
 				dev = 0;
-				startres = 0;
+				startres = NULL;
 			}
 
 			/* 
@@ -538,7 +537,7 @@ pnp_create_devices(device_t parent, pnp_id *p, int csn,
 			pnp_parse_resources(dev, startres,
 			    resinfo - startres - 1, ldn);
 			dev = 0;
-			startres = 0;
+			startres = NULL;
 			scanning = 0;
 			break;
 
@@ -675,7 +674,7 @@ pnp_isolation_protocol(device_t parent)
 	int csn;
 	pnp_id id;
 	int found = 0, len;
-	u_char *resources = 0;
+	u_char *resources = NULL;
 	int space = 0;
 	int error;
 #ifdef PC98

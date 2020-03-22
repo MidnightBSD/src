@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/geom/vinum/geom_vinum_rename.c 213318 2010-10-01 06:12:13Z lulf $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
