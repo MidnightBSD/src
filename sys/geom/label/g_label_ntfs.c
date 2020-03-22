@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Takanori Watanabe
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_ntfs.c 250264 2013-05-05 08:00:16Z stas $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/label/g_label_ntfs.c 250264 2013-05-05 08:00:16Z stas $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

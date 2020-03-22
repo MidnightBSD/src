@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_ctl.c 299397 2016-05-11 00:36:31Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_ctl.c 344584 2019-02-26 15:06:44Z markj $");
 
 #include "opt_geom.h"
 
@@ -137,6 +136,12 @@ gctl_copyin(struct gctl_req *req)
 	struct gctl_req_arg *ap;
 	char *p;
 	u_int i;
+
+	if (req->narg > GEOM_CTL_ARG_MAX) {
+		gctl_error(req, "too many arguments");
+		req->arg = NULL;
+		return;
+	}
 
 	ap = geom_alloc_copyin(req, req->arg, req->narg * sizeof(*ap));
 	if (ap == NULL) {

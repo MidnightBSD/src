@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Stanislav Sedov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_reiserfs.c 199875 2009-11-28 11:57:43Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/label/g_label_reiserfs.c 199875 2009-11-28 11:57:43Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2011 Aleksandr Rybalko <ray@dlink.ua>
  *   based on geom_redboot.c
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_map.c 237875 2012-07-01 05:22:13Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_map.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -148,14 +147,19 @@ find_marker(struct g_consumer *cp, const char *line, off_t *offset)
 	bzero(search_key, MAP_MAX_MARKER_LEN);
 	sectorsize = cp->provider->sectorsize;
 
+#ifdef __LP64__
+	ret = sscanf(line, "search:%li:%li:%63c",
+	    &search_start, &search_step, search_key);
+#else
 	ret = sscanf(line, "search:%qi:%qi:%63c",
 	    &search_start, &search_step, search_key);
+#endif
 	if (ret < 3)
 		return (1);
 
 	if (bootverbose) {
-		printf("MAP: search key \"%s\" from 0x%jx, step 0x%jx\n",
-		    search_key, (intmax_t)search_start, (intmax_t)search_step);
+		printf("MAP: search %s for key \"%s\" from 0x%jx, step 0x%jx\n",
+		    cp->geom->name, search_key, (intmax_t)search_start, (intmax_t)search_step);
 	}
 
 	/* error if search_key is empty */
@@ -172,6 +176,13 @@ find_marker(struct g_consumer *cp, const char *line, off_t *offset)
 		    roundup(strlen(search_key), sectorsize), NULL);
 		g_topology_lock();
 
+		/*
+		 * Don't bother doing the rest if buf==NULL; eg derefencing
+		 * to assemble 'key'.
+		 */
+		if (buf == NULL)
+			continue;
+
 		/* Wildcard, replace '.' with byte from data */
 		/* TODO: add support wildcard escape '\.' */
 
@@ -184,7 +195,8 @@ find_marker(struct g_consumer *cp, const char *line, off_t *offset)
 			}
 		}
 
-		if (buf != NULL && strncmp(buf + search_offset % sectorsize,
+		/* Assume buf != NULL here */
+		if (memcmp(buf + search_offset % sectorsize,
 		    key, strlen(search_key)) == 0) {
 			g_free(buf);
 			/* Marker found, so return their offset */
@@ -252,7 +264,7 @@ g_map_parse_part(struct g_class *mp, struct g_provider *pp,
 	}
 	if (find_marker(cp, value, &end) != 0) {
 		if (bootverbose) {
-			printf("MAP: \"%s\" can't parse/use start value\n",
+			printf("MAP: \"%s\" can't parse/use end value\n",
 			    name);
 		}
 		return (1);
@@ -322,9 +334,9 @@ g_map_parse_part(struct g_class *mp, struct g_provider *pp,
 	}
 
 	if (bootverbose) {
-		printf("MAP: %jxx%jx, data=%jxx%jx "
+		printf("MAP: %s: %jxx%jx, data=%jxx%jx "
 		    "\"/dev/map/%s\"\n",
-		    (intmax_t)start, (intmax_t)size, (intmax_t)offset,
+		    cp->geom->name, (intmax_t)start, (intmax_t)size, (intmax_t)offset,
 		    (intmax_t)dsize, name);
 	}
 
@@ -393,3 +405,4 @@ static struct g_class g_map_class = {
 	.ctlreq = g_map_config,
 };
 DECLARE_GEOM_CLASS(g_map_class, g_map);
+MODULE_VERSION(geom_map, 0);

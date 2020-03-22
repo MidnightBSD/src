@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/geom/geom_bsd_enc.c,v 1.3 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -36,14 +35,13 @@
 
 /*
  * Functions to encode and decode struct disklabel and struct partition into
- * a bytestream of little endianess and correct packing.
+ * a bytestream of little endianness and correct packing.
  *
  * NB!  This file must be usable both in kernel and userland.
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sys/geom/geom_bsd_enc.c,v 1.6.10.1 2008/03/16 22:51:28 marcel Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_bsd_enc.c 298808 2016-04-29 20:56:58Z pfg $");
 
 #include <sys/types.h>
 #include <sys/endian.h>

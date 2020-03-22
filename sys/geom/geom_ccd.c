@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/geom/geom_ccd.c,v 1.4 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp.
  * Copyright (c) 1995 Jason R. Thorpe.
@@ -51,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_ccd.c,v 1.155.2.1 2009/01/11 21:45:23 sam Exp $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_ccd.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -272,7 +271,7 @@ ccdinit(struct gctl_req *req, struct ccd_s *cs)
 
 	/*
 	 * If uniform interleave is desired set all sizes to that of
-	 * the smallest component.  This will guarentee that a single
+	 * the smallest component.  This will guarantee that a single
 	 * interleave table is generated.
 	 *
 	 * Lost space must be taken into account when calculating the
@@ -292,7 +291,7 @@ ccdinit(struct gctl_req *req, struct ccd_s *cs)
 		 * Check to see if an even number of components
 		 * have been specified.  The interleave must also
 		 * be non-zero in order for us to be able to 
-		 * guarentee the topology.
+		 * guarantee the topology.
 		 */
 		if (cs->sc_ndisks % 2) {
 			gctl_error(req,
@@ -907,3 +906,4 @@ static struct g_class g_ccd_class = {
 };
 
 DECLARE_GEOM_CLASS(g_ccd_class, g_ccd);
+MODULE_VERSION(geom_ccd, 0);

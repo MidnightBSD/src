@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -33,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/geom/geom.h 332096 2018-04-06 12:23:59Z avg $
+ * $FreeBSD: stable/11/sys/geom/geom.h 347378 2019-05-09 03:51:34Z kevans $
  */
 
 #ifndef _GEOM_GEOM_H_
@@ -57,6 +56,7 @@ struct bio;
 struct sbuf;
 struct gctl_req;
 struct g_configargs;
+struct disk_zone_args;
 
 typedef int g_config_t (struct g_configargs *ca);
 typedef void g_ctl_req_t (struct gctl_req *, struct g_class *cp, char const *verb);
@@ -321,12 +321,14 @@ struct bio * g_duplicate_bio(struct bio *);
 void g_destroy_bio(struct bio *);
 void g_io_deliver(struct bio *bp, int error);
 int g_io_getattr(const char *attr, struct g_consumer *cp, int *len, void *ptr);
+int g_io_zonecmd(struct disk_zone_args *zone_args, struct g_consumer *cp);
 int g_io_flush(struct g_consumer *cp);
 int g_register_classifier(struct g_classifier_hook *hook);
 void g_unregister_classifier(struct g_classifier_hook *hook);
 void g_io_request(struct bio *bp, struct g_consumer *cp);
 struct bio *g_new_bio(void);
 struct bio *g_alloc_bio(void);
+void g_reset_bio(struct bio *);
 void * g_read_data(struct g_consumer *cp, off_t offset, off_t length, int *error);
 int g_write_data(struct g_consumer *cp, off_t offset, void *ptr, off_t length);
 int g_delete_data(struct g_consumer *cp, off_t offset, off_t length);
@@ -371,7 +373,6 @@ g_free(void *ptr)
 
 #define g_topology_lock() 					\
 	do {							\
-		mtx_assert(&Giant, MA_NOTOWNED);		\
 		sx_xlock(&topology_lock);			\
 	} while (0)
 
@@ -399,7 +400,7 @@ g_free(void *ptr)
 	static moduledata_t name##_mod = {			\
 		#name, g_modevent, &class			\
 	};							\
-	DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
+	DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_SECOND);
 
 int g_is_geom_thread(struct thread *td);
 

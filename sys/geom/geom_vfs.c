@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_vfs.c 260385 2014-01-07 01:32:23Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_vfs.c 322083 2017-08-05 09:34:09Z trasz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -169,7 +168,7 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	sc = cp->geom->softc;
 
 	/*
-	 * If the provider has orphaned us, just return EXIO.
+	 * If the provider has orphaned us, just return ENXIO.
 	 */
 	mtx_lock(&sc->sc_mtx);
 	if (sc->sc_orphaned) {

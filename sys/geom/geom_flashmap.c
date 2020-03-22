@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Semihalf
  * Copyright (c) 2009 Jakub Klama <jakub.klama@uj.edu.pl>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_flashmap.c 320168 2017-06-20 19:59:57Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_flashmap.c 346559 2019-04-22 15:09:47Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,16 +34,14 @@ __FBSDID("$FreeBSD: stable/10/sys/geom/geom_flashmap.c 320168 2017-06-20 19:59:5
 #include <sys/malloc.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
-#include <sys/proc.h>
 #include <sys/slicer.h>
 
 #include <geom/geom.h>
-#include <geom/geom_slice.h>
 #include <geom/geom_disk.h>
+#include <geom/geom_flashmap.h>
+#include <geom/geom_slice.h>
 
 #include <dev/nand/nand_dev.h>
-
-#define	FLASHMAP_CLASS_NAME "Flashmap"
 
 struct g_flashmap_slice {
 	off_t		sl_start;
@@ -71,8 +68,8 @@ static g_taste_t g_flashmap_taste;
 
 static int g_flashmap_load(device_t dev, struct g_provider *pp,
     flash_slicer_t slicer, struct g_flashmap_head *head);
-static int g_flashmap_modify(struct g_geom *gp, const char *devname,
-    int secsize, struct g_flashmap_head *slices);
+static int g_flashmap_modify(struct g_flashmap *gfp, struct g_geom *gp,
+    const char *devname, int secsize, struct g_flashmap_head *slices);
 static void g_flashmap_print(struct g_flashmap_slice *slice);
 
 MALLOC_DECLARE(M_FLASHMAP);
@@ -88,8 +85,8 @@ g_flashmap_print(struct g_flashmap_slice *slice)
 }
 
 static int
-g_flashmap_modify(struct g_geom *gp, const char *devname, int secsize,
-    struct g_flashmap_head *slices)
+g_flashmap_modify(struct g_flashmap *gfp, struct g_geom *gp,
+    const char *devname, int secsize, struct g_flashmap_head *slices)
 {
 	struct g_flashmap_slice *slice;
 	int i, error;
@@ -114,6 +111,8 @@ g_flashmap_modify(struct g_geom *gp, const char *devname, int secsize,
 
 	i = 0;
 	STAILQ_FOREACH(slice, slices, sl_link) {
+		free(__DECONST(void *, gfp->labels[i]), M_FLASHMAP);
+		gfp->labels[i] = strdup(slice->sl_name, M_FLASHMAP);
 		error = g_slice_config(gp, i++, G_SLICE_CONFIG_SET,
 		    slice->sl_start,
 		    slice->sl_end - slice->sl_start + 1,
@@ -153,6 +152,7 @@ g_flashmap_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	struct g_consumer *cp;
 	struct g_flashmap_head head;
 	struct g_flashmap_slice *slice, *slice_temp;
+	struct g_flashmap *gfp;
 	flash_slicer_t slicer;
 	device_t dev;
 	int i, size;
@@ -164,7 +164,8 @@ g_flashmap_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	    strcmp(pp->geom->class->name, G_DISK_CLASS_NAME) != 0)
 		return (NULL);
 
-	gp = g_slice_new(mp, FLASH_SLICES_MAX_NUM, pp, &cp, NULL, 0, NULL);
+	gp = g_slice_new(mp, FLASH_SLICES_MAX_NUM, pp, &cp, (void**)&gfp,
+	    sizeof(struct g_flashmap), NULL);
 	if (gp == NULL)
 		return (NULL);
 
@@ -186,7 +187,7 @@ g_flashmap_taste(struct g_class *mp, struct g_provider *pp, int flags)
 		if (g_flashmap_load(dev, pp, slicer, &head) == 0)
 			break;
 
-		g_flashmap_modify(gp, cp->provider->name,
+		g_flashmap_modify(gfp, gp, cp->provider->name,
 		    cp->provider->sectorsize, &head);
 	} while (0);
 
@@ -232,12 +233,10 @@ g_flashmap_load(device_t dev, struct g_provider *pp, flash_slicer_t slicer,
 void flash_register_slicer(flash_slicer_t slicer, u_int type, bool force)
 {
 
-	DROP_GIANT();
 	g_topology_lock();
 	if (g_flashmap_slicers[type].slicer == NULL || force == TRUE)
 		g_flashmap_slicers[type].slicer = slicer;
 	g_topology_unlock();
-	PICKUP_GIANT();
 }
 
 static struct g_class g_flashmap_class = {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_subr.c 332096 2018-04-06 12:23:59Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_subr.c 332095 2018-04-06 12:13:32Z avg $");
 
 #include "opt_ddb.h"
 
@@ -248,9 +247,7 @@ g_modevent(module_t mod, int type, void *data)
 		break;
 	case MOD_UNLOAD:
 		g_trace(G_T_TOPOLOGY, "g_modevent(%s, UNLOAD)", mp->name);
-		DROP_GIANT();
 		error = g_unload_class(mp);
-		PICKUP_GIANT();
 		if (error == 0) {
 			KASSERT(LIST_EMPTY(&mp->geom),
 			    ("Unloaded class (%s) still has geom", mp->name));
@@ -623,6 +620,8 @@ g_resize_provider_event(void *arg, int flag)
 	g_free(hh);
 
 	G_VALID_PROVIDER(pp);
+	KASSERT(!(pp->flags & G_PF_WITHER),
+	    ("g_resize_provider_event but withered"));
 	g_trace(G_T_TOPOLOGY, "g_resize_provider_event(%p)", pp);
 
 	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
@@ -637,7 +636,7 @@ g_resize_provider_event(void *arg, int flag)
 	
 	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
 		gp = cp->geom;
-		if (gp->resize != NULL)
+		if ((gp->flags & G_GEOM_WITHER) == 0 && gp->resize != NULL)
 			gp->resize(cp);
 	}
 
@@ -665,6 +664,8 @@ g_resize_provider(struct g_provider *pp, off_t size)
 	struct g_hh00 *hh;
 
 	G_VALID_PROVIDER(pp);
+	if (pp->flags & G_PF_WITHER)
+		return;
 
 	if (size == pp->mediasize)
 		return;
@@ -815,6 +816,7 @@ g_attach(struct g_consumer *cp, struct g_provider *pp)
 	g_trace(G_T_TOPOLOGY, "g_attach(%p, %p)", cp, pp);
 	KASSERT(cp->provider == NULL, ("attach but attached"));
 	cp->provider = pp;
+	cp->flags &= ~G_CF_ORPHAN;
 	LIST_INSERT_HEAD(&pp->consumers, cp, consumers);
 	error = redo_rank(cp->geom);
 	if (error) {
@@ -937,8 +939,11 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	else if (dcw > 0 && pe > 0)
 		return (EPERM);
 	/* If we try to open more but provider is error'ed: fail */
-	else if ((dcr > 0 || dcw > 0 || dce > 0) && pp->error != 0)
+	else if ((dcr > 0 || dcw > 0 || dce > 0) && pp->error != 0) {
+		printf("%s(%d): provider %s has error %d set\n",
+		    __func__, __LINE__, pp->name, pp->error);
 		return (pp->error);
+	}
 
 	/* Ok then... */
 
@@ -1513,6 +1518,7 @@ db_print_bio_cmd(struct bio *bp)
 	case BIO_CMD0: db_printf("BIO_CMD0"); break;
 	case BIO_CMD1: db_printf("BIO_CMD1"); break;
 	case BIO_CMD2: db_printf("BIO_CMD2"); break;
+	case BIO_ZONE: db_printf("BIO_ZONE"); break;
 	default: db_printf("UNKNOWN"); break;
 	}
 	db_printf("\n");
@@ -1550,8 +1556,8 @@ DB_SHOW_COMMAND(bio, db_show_bio)
 		db_printf("BIO %p\n", bp);
 		db_print_bio_cmd(bp);
 		db_print_bio_flags(bp);
-		db_printf("  cflags: 0x%hhx\n", bp->bio_cflags);
-		db_printf("  pflags: 0x%hhx\n", bp->bio_pflags);
+		db_printf("  cflags: 0x%hx\n", bp->bio_cflags);
+		db_printf("  pflags: 0x%hx\n", bp->bio_pflags);
 		db_printf("  offset: %jd\n", (intmax_t)bp->bio_offset);
 		db_printf("  length: %jd\n", (intmax_t)bp->bio_length);
 		db_printf("  bcount: %ld\n", bp->bio_bcount);

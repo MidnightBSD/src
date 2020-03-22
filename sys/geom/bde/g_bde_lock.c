@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/geom/bde/g_bde_lock.c 314327 2017-02-27 08:27:38Z avg $
+ * $FreeBSD: stable/11/sys/geom/bde/g_bde_lock.c 298808 2016-04-29 20:56:58Z pfg $
  */
 /* This souce file contains routines which operates on the lock sectors, both
  * for the kernel and the userland program gbde(1).
@@ -290,7 +289,7 @@ g_bde_decode_lock(struct g_bde_softc *sc, struct g_bde_key *gl, u_char *ptr)
  * Security objectives: Encode/Decode the metadata encrypted by key-material.
  *
  * A simple AES/128/CBC will do.  We take care to always store the metadata
- * in the same endianess to make it MI.
+ * in the same endianness to make it MI.
  *
  * In the typical case the metadata is stored in encrypted format in sector
  * zero on the media, but at the users discretion or if the piece of the

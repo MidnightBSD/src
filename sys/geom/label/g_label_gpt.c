@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Marius Nuennerich
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_gpt.c 223921 2011-07-11 05:22:31Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/label/g_label_gpt.c 223921 2011-07-11 05:22:31Z ae $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/geom/cache/g_cache.h,v 1.2 2008/12/03 00:25:47 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 Ruslan Ermilov <ru@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/cache/g_cache.h,v 1.1 2006/10/06 08:27:07 ru Exp $
+ * $FreeBSD: stable/11/sys/geom/cache/g_cache.h 210046 2010-07-14 08:22:00Z ru $
  */
 
 #ifndef	_G_CACHE_H_

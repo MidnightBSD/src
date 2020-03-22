@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/geom/bde/g_bde_work.c 314327 2017-02-27 08:27:38Z avg $
+ * $FreeBSD: stable/11/sys/geom/bde/g_bde_work.c 292782 2015-12-27 17:33:59Z allanjude $
  */
 /*
  * This source file contains the state-engine which makes things happen in the

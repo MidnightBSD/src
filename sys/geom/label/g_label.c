@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label.c 286193 2015-08-02 10:08:57Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/label/g_label.c 346559 2019-04-22 15:09:47Z ian $");
+
+#include "opt_geom.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,8 +51,7 @@ FEATURE(geom_label, "GEOM labeling support");
 SYSCTL_DECL(_kern_geom);
 SYSCTL_NODE(_kern_geom, OID_AUTO, label, CTLFLAG_RW, 0, "GEOM_LABEL stuff");
 u_int g_label_debug = 0;
-TUNABLE_INT("kern.geom.label.debug", &g_label_debug);
-SYSCTL_UINT(_kern_geom_label, OID_AUTO, debug, CTLFLAG_RW, &g_label_debug, 0,
+SYSCTL_UINT(_kern_geom_label, OID_AUTO, debug, CTLFLAG_RWTUN, &g_label_debug, 0,
     "Debug level");
 
 static int g_label_destroy_geom(struct gctl_req *req, struct g_class *mp,
@@ -82,6 +82,9 @@ struct g_class g_label_class = {
  * 6. Add your file system to manual page sbin/geom/class/label/glabel.8.
  */
 const struct g_label_desc *g_labels[] = {
+	&g_label_gpt,
+	&g_label_gpt_uuid,
+#ifdef GEOM_LABEL
 	&g_label_ufs_id,
 	&g_label_ufs_volume,
 	&g_label_iso9660,
@@ -89,9 +92,9 @@ const struct g_label_desc *g_labels[] = {
 	&g_label_ext2fs,
 	&g_label_reiserfs,
 	&g_label_ntfs,
-	&g_label_gpt,
-	&g_label_gpt_uuid,
 	&g_label_disk_ident,
+	&g_label_flashmap,
+#endif
 	NULL
 };
 
@@ -548,3 +551,4 @@ g_label_config(struct gctl_req *req, struct g_class *mp, const char *verb)
 }
 
 DECLARE_GEOM_CLASS(g_label_class, g_label);
+MODULE_VERSION(geom_label, 0);

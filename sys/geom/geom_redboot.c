@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_redboot.c 203411 2010-02-03 01:12:19Z gonzo $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_redboot.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -344,3 +343,4 @@ static struct g_class g_redboot_class	= {
 	.ioctl		= g_redboot_ioctl,
 };
 DECLARE_GEOM_CLASS(g_redboot_class, g_redboot);
+MODULE_VERSION(geom_redboot, 0);

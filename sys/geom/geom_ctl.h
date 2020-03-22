@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_ctl.h,v 1.5 2003/06/01 13:47:51 phk Exp $
+ * $FreeBSD: stable/11/sys/geom/geom_ctl.h 344584 2019-02-26 15:06:44Z markj $
  */
 
 #ifndef _GEOM_GEOM_CTL_H_
@@ -77,7 +76,8 @@ struct gctl_req {
 
 #define GEOM_CTL	_IOW('G', GCTL_VERSION, struct gctl_req)
 
-#define PATH_GEOM_CTL	"geom.ctl"
+#define GEOM_CTL_ARG_MAX 2048	/* maximum number of parameters */
 
+#define PATH_GEOM_CTL	"geom.ctl"
 
 #endif /* _GEOM_GEOM_CTL_H_ */

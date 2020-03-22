@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part_pc98.c 267156 2014-06-06 12:37:56Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part_pc98.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -116,6 +115,7 @@ static struct g_part_scheme g_part_pc98_scheme = {
 	.gps_bootcodesz = BOOTSIZE,
 };
 G_PART_SCHEME_DECLARE(g_part_pc98);
+MODULE_VERSION(geom_part_pc98, 0);
 
 static int
 pc98_parse_type(const char *type, u_char *dp_mid, u_char *dp_sid)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/geom/bde/g_bde.h 120876 2003-10-07 09:28:07Z phk $
+ * $FreeBSD: stable/11/sys/geom/bde/g_bde.h 274341 2014-11-10 09:55:35Z des $
  */
 
 #ifndef _SYS_GEOM_BDE_G_BDE_H_
@@ -183,7 +182,7 @@ AES_init(cipherInstance *ci)
 }
 
 static __inline void
-AES_makekey(keyInstance *ki, int dir, u_int len, void *key)
+AES_makekey(keyInstance *ki, int dir, u_int len, const void *key)
 {
 	int error;
 
@@ -192,7 +191,7 @@ AES_makekey(keyInstance *ki, int dir, u_int len, void *key)
 }
 
 static __inline void
-AES_encrypt(cipherInstance *ci, keyInstance *ki, void *in, void *out, u_int len)
+AES_encrypt(cipherInstance *ci, keyInstance *ki, const void *in, void *out, u_int len)
 {
 	int error;
 
@@ -201,7 +200,7 @@ AES_encrypt(cipherInstance *ci, keyInstance *ki, void *in, void *out, u_int len)
 }
 
 static __inline void
-AES_decrypt(cipherInstance *ci, keyInstance *ki, void *in, void *out, u_int len)
+AES_decrypt(cipherInstance *ci, keyInstance *ki, const void *in, void *out, u_int len)
 {
 	int error;
 

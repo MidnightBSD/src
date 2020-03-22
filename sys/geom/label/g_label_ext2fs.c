@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Stanislav Sedov
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/label/g_label_ext2fs.c 219400 2011-03-08 17:00:31Z sobomax $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/label/g_label_ext2fs.c 219400 2011-03-08 17:00:31Z sobomax $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_event.c 266970 2014-06-02 10:14:03Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_event.c 300287 2016-05-20 08:22:20Z kib $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -84,7 +83,6 @@ g_waitidle(void)
 {
 
 	g_topology_assert_not();
-	mtx_assert(&Giant, MA_NOTOWNED);
 
 	mtx_lock(&g_eventlock);
 	while (!TAILQ_EMPTY(&g_events))

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Marcel Moolenaar
  * All rights reserved.
@@ -28,7 +27,7 @@
 #include "opt_geom.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part_ebr.c 265912 2014-05-12 12:04:44Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part_ebr.c 339286 2018-10-10 15:44:14Z emaste $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -81,7 +80,7 @@ static int g_part_ebr_dumpto(struct g_part_table *, struct g_part_entry *);
 static void g_part_ebr_fullname(struct g_part_table *, struct g_part_entry *,
     struct sbuf *, const char *);
 #endif
-static int g_part_ebr_modify(struct g_part_table *, struct g_part_entry *,  
+static int g_part_ebr_modify(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
 static const char *g_part_ebr_name(struct g_part_table *, struct g_part_entry *,
     char *, size_t);
@@ -127,14 +126,16 @@ static struct g_part_scheme g_part_ebr_scheme = {
 	.gps_maxent = INT_MAX,
 };
 G_PART_SCHEME_DECLARE(g_part_ebr);
+MODULE_VERSION(geom_part_ebr, 0);
 
 static struct g_part_ebr_alias {
 	u_char		typ;
 	int		alias;
 } ebr_alias_match[] = {
-	{ DOSPTYP_386BSD,	G_PART_ALIAS_FREEBSD },
+	{ DOSPTYP_386BSD,	G_PART_ALIAS_MIDNIGHTBSD },
 	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
 	{ DOSPTYP_FAT32,	G_PART_ALIAS_MS_FAT32 },
+	{ DOSPTYP_FAT32LBA,	G_PART_ALIAS_MS_FAT32LBA },
 	{ DOSPTYP_LINSWP,	G_PART_ALIAS_LINUX_SWAP },
 	{ DOSPTYP_LINUX,	G_PART_ALIAS_LINUX_DATA },
 	{ DOSPTYP_LINLVM,	G_PART_ALIAS_LINUX_LVM },
@@ -189,8 +190,7 @@ ebr_parse_type(const char *type, u_char *dp_typ)
 		*dp_typ = (u_char)lt;
 		return (0);
 	}
-	for (i = 0;
-	    i < sizeof(ebr_alias_match) / sizeof(ebr_alias_match[0]); i++) {
+	for (i = 0; i < nitems(ebr_alias_match); i++) {
 		alias = g_part_alias_name(ebr_alias_match[i].alias);
 		if (strcasecmp(type, alias) == 0) {
 			*dp_typ = ebr_alias_match[i].typ;
@@ -324,11 +324,11 @@ g_part_ebr_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 }
 
 static void
-g_part_ebr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry, 
+g_part_ebr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
     struct sbuf *sb, const char *indent)
 {
 	struct g_part_ebr_entry *entry;
- 
+
 	entry = (struct g_part_ebr_entry *)baseentry;
 	if (indent == NULL) {
 		/* conftxt: libdisk compatibility */
@@ -345,7 +345,7 @@ g_part_ebr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
 }
 
 static int
-g_part_ebr_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)  
+g_part_ebr_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)
 {
 	struct g_part_ebr_entry *entry;
 
@@ -597,15 +597,14 @@ g_part_ebr_setunset(struct g_part_table *table, struct g_part_entry *baseentry,
 }
 
 static const char *
-g_part_ebr_type(struct g_part_table *basetable, struct g_part_entry *baseentry, 
+g_part_ebr_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
     char *buf, size_t bufsz)
 {
 	struct g_part_ebr_entry *entry;
 	int i;
 
 	entry = (struct g_part_ebr_entry *)baseentry;
-	for (i = 0;
-	    i < sizeof(ebr_alias_match) / sizeof(ebr_alias_match[0]); i++) {
+	for (i = 0; i < nitems(ebr_alias_match); i++) {
 		if (ebr_alias_match[i].typ == entry->ent.dp_typ)
 			return (g_part_alias_name(ebr_alias_match[i].alias));
 	}
@@ -670,7 +669,7 @@ g_part_ebr_write(struct g_part_table *basetable, struct g_consumer *cp)
 		p[7] = entry->ent.dp_ecyl;
 		le32enc(p + 8, entry->ent.dp_start);
 		le32enc(p + 12, entry->ent.dp_size);
- 
+
 		next = LIST_NEXT(baseentry, gpe_entry);
 		while (next != NULL && next->gpe_deleted)
 			next = LIST_NEXT(next, gpe_entry);

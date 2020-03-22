@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_aes.c 243333 2012-11-20 12:32:18Z jh $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_aes.c 332520 2018-04-16 00:18:57Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,6 +67,7 @@ static const u_char *aes_magic = "<<FreeBSD-GEOM-AES>>";
 static const u_char *aes_magic_random = "<<FreeBSD-GEOM-AES-RANDOM>>";
 static const u_char *aes_magic_test = "<<FreeBSD-GEOM-AES-TEST>>";
 
+static int g_aes_once;
 
 struct g_aes_softc {
 	enum {
@@ -353,8 +353,14 @@ g_aes_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (buf)
 		g_free(buf);
 	g_access(cp, -1, 0, 0);
-	if (gp->softc != NULL) 
+	if (gp->softc != NULL) {
+		if (!g_aes_once) {
+			g_aes_once = 1;
+			printf("WARNING: geom_aes (geom %s) is deprecated.",
+			    gp->name);
+		}
 		return (gp);
+	}
 	g_detach(cp);
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);

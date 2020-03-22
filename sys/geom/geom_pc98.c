@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_pc98.c 254015 2013-08-07 00:00:48Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/geom_pc98.c 332640 2018-04-17 02:18:04Z kevans $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -177,7 +176,6 @@ g_pc98_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct th
 	case DIOCSPC98: {
 		if (!(fflag & FWRITE))
 			return (EPERM);
-		DROP_GIANT();
 		g_topology_lock();
 		cp = LIST_FIRST(&gp->consumer);
 		if (cp->acw == 0) {
@@ -192,7 +190,6 @@ g_pc98_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct th
 		if (opened)
 			g_access(cp, 0, -1 , 0);
 		g_topology_unlock();
-		PICKUP_GIANT();
 		return(error);
 	}
 	default:
@@ -373,3 +370,4 @@ static struct g_class g_pc98_class = {
 };
 
 DECLARE_GEOM_CLASS(g_pc98_class, g_pc98);
+MODULE_VERSION(geom_pc98, 0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part_mbr.c 282861 2015-05-13 14:05:53Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part_mbr.c 339286 2018-10-10 15:44:14Z emaste $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -54,9 +53,9 @@ SYSCTL_DECL(_kern_geom_part);
 static SYSCTL_NODE(_kern_geom_part, OID_AUTO, mbr, CTLFLAG_RW, 0,
     "GEOM_PART_MBR Master Boot Record");
 
-static u_int enforce_chs = 1;
+static u_int enforce_chs = 0;
 SYSCTL_UINT(_kern_geom_part_mbr, OID_AUTO, enforce_chs,
-    CTLFLAG_RWTUN, &enforce_chs, 1, "Enforce alignment to CHS addressing");
+    CTLFLAG_RWTUN, &enforce_chs, 0, "Enforce alignment to CHS addressing");
 
 #define	MBRSIZE		512
 
@@ -78,7 +77,7 @@ static int g_part_mbr_destroy(struct g_part_table *, struct g_part_parms *);
 static void g_part_mbr_dumpconf(struct g_part_table *, struct g_part_entry *,
     struct sbuf *, const char *);
 static int g_part_mbr_dumpto(struct g_part_table *, struct g_part_entry *);
-static int g_part_mbr_modify(struct g_part_table *, struct g_part_entry *,  
+static int g_part_mbr_modify(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
 static const char *g_part_mbr_name(struct g_part_table *, struct g_part_entry *,
     char *, size_t);
@@ -120,6 +119,7 @@ static struct g_part_scheme g_part_mbr_scheme = {
 	.gps_bootcodesz = MBRSIZE,
 };
 G_PART_SCHEME_DECLARE(g_part_mbr);
+MODULE_VERSION(geom_part_mbr, 0);
 
 static struct g_part_mbr_alias {
 	u_char		typ;
@@ -130,6 +130,7 @@ static struct g_part_mbr_alias {
 	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
 	{ DOSPTYP_FAT16,	G_PART_ALIAS_MS_FAT16 },
 	{ DOSPTYP_FAT32,	G_PART_ALIAS_MS_FAT32 },
+	{ DOSPTYP_FAT32LBA,	G_PART_ALIAS_MS_FAT32LBA },
 	{ DOSPTYP_EXTLBA,	G_PART_ALIAS_EBR },
 	{ DOSPTYP_LDM,		G_PART_ALIAS_MS_LDM_DATA },
 	{ DOSPTYP_LINSWP,	G_PART_ALIAS_LINUX_SWAP },
@@ -159,8 +160,7 @@ mbr_parse_type(const char *type, u_char *dp_typ)
 		*dp_typ = (u_char)lt;
 		return (0);
 	}
-	for (i = 0;
-	    i < sizeof(mbr_alias_match) / sizeof(mbr_alias_match[0]); i++) {
+	for (i = 0; i < nitems(mbr_alias_match); i++) {
 		alias = g_part_alias_name(mbr_alias_match[i].alias);
 		if (strcasecmp(type, alias) == 0) {
 			*dp_typ = mbr_alias_match[i].typ;
@@ -305,11 +305,14 @@ g_part_mbr_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 }
 
 static void
-g_part_mbr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry, 
+g_part_mbr_dumpconf(struct g_part_table *basetable, struct g_part_entry *baseentry,
     struct sbuf *sb, const char *indent)
 {
 	struct g_part_mbr_entry *entry;
- 
+	struct g_part_mbr_table *table;
+	uint32_t dsn;
+
+	table = (struct g_part_mbr_table *)basetable;
 	entry = (struct g_part_mbr_entry *)baseentry;
 	if (indent == NULL) {
 		/* conftxt: libdisk compatibility */
@@ -320,13 +323,18 @@ g_part_mbr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
 		    entry->ent.dp_typ);
 		if (entry->ent.dp_flag & 0x80)
 			sbuf_printf(sb, "%s<attrib>active</attrib>\n", indent);
+		dsn = le32dec(table->mbr + DOSDSNOFF);
+		sbuf_printf(sb, "%s<efimedia>HD(%d,MBR,%#08x,%#jx,%#jx)", indent,
+		    entry->base.gpe_index, dsn, (intmax_t)entry->base.gpe_start,
+		    (intmax_t)(entry->base.gpe_end - entry->base.gpe_start + 1));
+		sbuf_printf(sb, "</efimedia>\n");
 	} else {
 		/* confxml: scheme information */
 	}
 }
 
 static int
-g_part_mbr_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)  
+g_part_mbr_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)
 {
 	struct g_part_mbr_entry *entry;
 
@@ -554,15 +562,14 @@ g_part_mbr_setunset(struct g_part_table *table, struct g_part_entry *baseentry,
 }
 
 static const char *
-g_part_mbr_type(struct g_part_table *basetable, struct g_part_entry *baseentry, 
+g_part_mbr_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
     char *buf, size_t bufsz)
 {
 	struct g_part_mbr_entry *entry;
 	int i;
 
 	entry = (struct g_part_mbr_entry *)baseentry;
-	for (i = 0;
-	    i < sizeof(mbr_alias_match) / sizeof(mbr_alias_match[0]); i++) {
+	for (i = 0; i < nitems(mbr_alias_match); i++) {
 		if (mbr_alias_match[i].typ == entry->ent.dp_typ)
 			return (g_part_alias_name(mbr_alias_match[i].alias));
 	}

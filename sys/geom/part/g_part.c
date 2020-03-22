@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/part/g_part.c 286207 2015-08-02 16:25:21Z ae $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part.c 339286 2018-10-10 15:44:14Z emaste $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -79,10 +79,24 @@ struct g_part_alias_list {
 	{ "apple-tv-recovery", G_PART_ALIAS_APPLE_TV_RECOVERY },
 	{ "apple-ufs", G_PART_ALIAS_APPLE_UFS },
 	{ "bios-boot", G_PART_ALIAS_BIOS_BOOT },
+	{ "chromeos-firmware", G_PART_ALIAS_CHROMEOS_FIRMWARE },
+	{ "chromeos-kernel", G_PART_ALIAS_CHROMEOS_KERNEL },
+	{ "chromeos-reserved", G_PART_ALIAS_CHROMEOS_RESERVED },
+	{ "chromeos-root", G_PART_ALIAS_CHROMEOS_ROOT },
+	{ "dragonfly-ccd", G_PART_ALIAS_DFBSD_CCD },
+	{ "dragonfly-hammer", G_PART_ALIAS_DFBSD_HAMMER },
+	{ "dragonfly-hammer2", G_PART_ALIAS_DFBSD_HAMMER2 },
+	{ "dragonfly-label32", G_PART_ALIAS_DFBSD },
+	{ "dragonfly-label64", G_PART_ALIAS_DFBSD64 },
+	{ "dragonfly-legacy", G_PART_ALIAS_DFBSD_LEGACY },
+	{ "dragonfly-swap", G_PART_ALIAS_DFBSD_SWAP },
+	{ "dragonfly-ufs", G_PART_ALIAS_DFBSD_UFS },
+	{ "dragonfly-vinum", G_PART_ALIAS_DFBSD_VINUM },
 	{ "ebr", G_PART_ALIAS_EBR },
 	{ "efi", G_PART_ALIAS_EFI },
 	{ "fat16", G_PART_ALIAS_MS_FAT16 },
 	{ "fat32", G_PART_ALIAS_MS_FAT32 },
+	{ "fat32lba", G_PART_ALIAS_MS_FAT32LBA },
 	{ "freebsd", G_PART_ALIAS_FREEBSD },
 	{ "freebsd-boot", G_PART_ALIAS_FREEBSD_BOOT },
 	{ "freebsd-nandfs", G_PART_ALIAS_FREEBSD_NANDFS },
@@ -105,37 +119,30 @@ struct g_part_alias_list {
 	{ "ms-basic-data", G_PART_ALIAS_MS_BASIC_DATA },
 	{ "ms-ldm-data", G_PART_ALIAS_MS_LDM_DATA },
 	{ "ms-ldm-metadata", G_PART_ALIAS_MS_LDM_METADATA },
+	{ "ms-recovery", G_PART_ALIAS_MS_RECOVERY },
 	{ "ms-reserved", G_PART_ALIAS_MS_RESERVED },
-	{ "ntfs", G_PART_ALIAS_MS_NTFS },
+	{ "ms-spaces", G_PART_ALIAS_MS_SPACES },
 	{ "netbsd-ccd", G_PART_ALIAS_NETBSD_CCD },
 	{ "netbsd-cgd", G_PART_ALIAS_NETBSD_CGD },
 	{ "netbsd-ffs", G_PART_ALIAS_NETBSD_FFS },
 	{ "netbsd-lfs", G_PART_ALIAS_NETBSD_LFS },
 	{ "netbsd-raid", G_PART_ALIAS_NETBSD_RAID },
 	{ "netbsd-swap", G_PART_ALIAS_NETBSD_SWAP },
+	{ "ntfs", G_PART_ALIAS_MS_NTFS },
+	{ "openbsd-data", G_PART_ALIAS_OPENBSD_DATA },
+	{ "prep-boot", G_PART_ALIAS_PREP_BOOT },
+	{ "vmware-reserved", G_PART_ALIAS_VMRESERVED },
 	{ "vmware-vmfs", G_PART_ALIAS_VMFS },
 	{ "vmware-vmkdiag", G_PART_ALIAS_VMKDIAG },
-	{ "vmware-reserved", G_PART_ALIAS_VMRESERVED },
 	{ "vmware-vsanhdr", G_PART_ALIAS_VMVSANHDR },
-	{ "dragonfly-label32", G_PART_ALIAS_DFBSD },
-	{ "dragonfly-label64", G_PART_ALIAS_DFBSD64 },
-	{ "dragonfly-swap", G_PART_ALIAS_DFBSD_SWAP },
-	{ "dragonfly-ufs", G_PART_ALIAS_DFBSD_UFS },
-	{ "dragonfly-vinum", G_PART_ALIAS_DFBSD_VINUM },
-	{ "dragonfly-ccd", G_PART_ALIAS_DFBSD_CCD },
-	{ "dragonfly-legacy", G_PART_ALIAS_DFBSD_LEGACY },
-	{ "dragonfly-hammer", G_PART_ALIAS_DFBSD_HAMMER },
-	{ "dragonfly-hammer2", G_PART_ALIAS_DFBSD_HAMMER2 },
-	{ "prep-boot", G_PART_ALIAS_PREP_BOOT },
 };
 
 SYSCTL_DECL(_kern_geom);
 SYSCTL_NODE(_kern_geom, OID_AUTO, part, CTLFLAG_RW, 0,
     "GEOM_PART stuff");
 static u_int check_integrity = 1;
-TUNABLE_INT("kern.geom.part.check_integrity", &check_integrity);
 SYSCTL_UINT(_kern_geom_part, OID_AUTO, check_integrity,
-    CTLFLAG_RW | CTLFLAG_TUN, &check_integrity, 1,
+    CTLFLAG_RWTUN, &check_integrity, 1,
     "Enable integrity checking");
 
 /*
@@ -153,6 +160,7 @@ static g_orphan_t g_part_orphan;
 static g_spoiled_t g_part_spoiled;
 static g_start_t g_part_start;
 static g_resize_t g_part_resize;
+static g_ioctl_t g_part_ioctl;
 
 static struct g_class g_part_class = {
 	.name = "PART",
@@ -169,7 +177,8 @@ static struct g_class g_part_class = {
 	.orphan = g_part_orphan,
 	.spoiled = g_part_spoiled,
 	.start = g_part_start,
-	.resize = g_part_resize
+	.resize = g_part_resize,
+	.ioctl = g_part_ioctl,
 };
 
 DECLARE_GEOM_CLASS(g_part_class, g_part);
@@ -267,6 +276,35 @@ g_part_geometry(struct g_part_table *table, struct g_consumer *cp,
 		table->gpt_sectors = sectors;
 	}
 }
+
+static void
+g_part_get_physpath_done(struct bio *bp)
+{
+	struct g_geom *gp;
+	struct g_part_entry *entry;
+	struct g_part_table *table;
+	struct g_provider *pp;
+	struct bio *pbp;
+
+	pbp = bp->bio_parent;
+	pp = pbp->bio_to;
+	gp = pp->geom;
+	table = gp->softc;
+	entry = pp->private;
+
+	if (bp->bio_error == 0) {
+		char *end;
+		size_t len, remainder;
+		len = strlcat(bp->bio_data, "/", bp->bio_length);
+		if (len < bp->bio_length) {
+			end = bp->bio_data + len;
+			remainder = bp->bio_length - len;
+			G_PART_NAME(table, entry, end, remainder);
+		}
+	}
+	g_std_done(bp);
+}
+
 
 #define	DPRINTF(...)	if (bootverbose) {	\
 	printf("GEOM_PART: " __VA_ARGS__);	\
@@ -884,6 +922,11 @@ g_part_ctl_commit(struct gctl_req *req, struct g_part_parms *gpp)
 
 	LIST_FOREACH_SAFE(entry, &table->gpt_entry, gpe_entry, tmp) {
 		if (!entry->gpe_deleted) {
+			/* Notify consumers that provider might be changed. */
+			if (entry->gpe_modified && (
+			    entry->gpe_pp->acw + entry->gpe_pp->ace +
+			    entry->gpe_pp->acr) == 0)
+				g_media_changed(entry->gpe_pp, M_NOWAIT);
 			entry->gpe_created = 0;
 			entry->gpe_modified = 0;
 			continue;
@@ -1329,7 +1372,7 @@ g_part_ctl_resize(struct gctl_req *req, struct g_part_parms *gpp)
 			/* Deny shrinking of an opened partition. */
 			gctl_error(req, "%d", EBUSY);
 			return (EBUSY);
-		} 
+		}
 	}
 
 	error = G_PART_RESIZE(table, entry, gpp);
@@ -2068,6 +2111,25 @@ g_part_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 	}
 }
 
+/*-
+ * This start routine is only called for non-trivial requests, all the
+ * trivial ones are handled autonomously by the slice code.
+ * For requests we handle here, we must call the g_io_deliver() on the
+ * bio, and return non-zero to indicate to the slice code that we did so.
+ * This code executes in the "DOWN" I/O path, this means:
+ *    * No sleeping.
+ *    * Don't grab the topology lock.
+ *    * Don't call biowait, g_getattr(), g_setattr() or g_read_data()
+ */
+static int
+g_part_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct thread *td)
+{
+	struct g_part_table *table;
+
+	table = pp->geom->softc;
+	return G_PART_IOCTL(table, pp, cmd, data, fflag, td);
+}
+
 static void
 g_part_resize(struct g_consumer *cp)
 {
@@ -2133,6 +2195,7 @@ g_part_start(struct bio *bp)
 	struct g_part_table *table;
 	struct g_kerneldump *gkd;
 	struct g_provider *pp;
+	void (*done_func)(struct bio *) = g_std_done;
 	char buf[64];
 
 	pp = bp->bio_to;
@@ -2185,6 +2248,10 @@ g_part_start(struct bio *bp)
 		if (g_handleattr_str(bp, "PART::type",
 		    G_PART_TYPE(table, entry, buf, sizeof(buf))))
 			return;
+		if (!strcmp("GEOM::physpath", bp->bio_attribute)) {
+			done_func = g_part_get_physpath_done;
+			break;
+		}
 		if (!strcmp("GEOM::kerneldump", bp->bio_attribute)) {
 			/*
 			 * Check that the partition is suitable for kernel
@@ -2221,7 +2288,7 @@ g_part_start(struct bio *bp)
 		g_io_deliver(bp, ENOMEM);
 		return;
 	}
-	bp2->bio_done = g_std_done;
+	bp2->bio_done = done_func;
 	g_io_request(bp2, cp);
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/concat/g_concat.c 306765 2016-10-06 15:36:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/geom/concat/g_concat.c 344822 2019-03-05 19:41:32Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,8 +48,7 @@ SYSCTL_DECL(_kern_geom);
 static SYSCTL_NODE(_kern_geom, OID_AUTO, concat, CTLFLAG_RW, 0,
     "GEOM_CONCAT stuff");
 static u_int g_concat_debug = 0;
-TUNABLE_INT("kern.geom.concat.debug", &g_concat_debug);
-SYSCTL_UINT(_kern_geom_concat, OID_AUTO, debug, CTLFLAG_RW, &g_concat_debug, 0,
+SYSCTL_UINT(_kern_geom_concat, OID_AUTO, debug, CTLFLAG_RWTUN, &g_concat_debug, 0,
     "Debug level");
 
 static int g_concat_destroy(struct g_concat_softc *sc, boolean_t force);
@@ -221,8 +219,10 @@ g_concat_kernel_dump(struct bio *bp)
 		    sc->sc_disks[i].d_end > gkd->offset)
 			break;
 	}
-	if (i == sc->sc_ndisks)
+	if (i == sc->sc_ndisks) {
 		g_io_deliver(bp, EOPNOTSUPP);
+		return;
+	}
 	disk = &sc->sc_disks[i];
 	gkd->offset -= disk->d_start;
 	if (gkd->length > disk->d_end - disk->d_start - gkd->offset)
@@ -993,3 +993,4 @@ g_concat_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 }
 
 DECLARE_GEOM_CLASS(g_concat_class, g_concat);
+MODULE_VERSION(geom_concat, 0);
