@@ -1,2 +1,0 @@
-# $FreeBSD: stable/10/sys/ia64/conf/GENERIC.hints 137708 2004-11-14 23:42:48Z marcel $
-hw.uart.console="io:0x3f8"
