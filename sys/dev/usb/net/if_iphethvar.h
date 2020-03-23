@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/net/if_iphethvar.h 213805 2010-10-13 21:36:42Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/net/if_iphethvar.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2009 Diego Giagio. All rights reserved.

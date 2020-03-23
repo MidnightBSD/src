@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_aue.c 271355 2014-09-10 06:48:23Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/if_aue.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * ADMtek AN986 Pegasus and AN8511 Pegasus II USB to ethernet driver.
@@ -75,6 +74,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_aue.c 271355 2014-09-10 06:48:2
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/systm.h>
+#include <sys/socket.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/module.h>
@@ -87,6 +87,9 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_aue.c 271355 2014-09-10 06:48:2
 #include <sys/callout.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>
+
+#include <net/if.h>
+#include <net/if_var.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -104,7 +107,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_aue.c 271355 2014-09-10 06:48:2
 static int aue_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, aue, CTLFLAG_RW, 0, "USB aue");
-SYSCTL_INT(_hw_usb_aue, OID_AUTO, debug, CTLFLAG_RW, &aue_debug, 0,
+SYSCTL_INT(_hw_usb_aue, OID_AUTO, debug, CTLFLAG_RWTUN, &aue_debug, 0,
     "Debug level");
 #endif
 
@@ -276,6 +279,7 @@ MODULE_DEPEND(aue, usb, 1, 1, 1);
 MODULE_DEPEND(aue, ether, 1, 1, 1);
 MODULE_DEPEND(aue, miibus, 1, 1, 1);
 MODULE_VERSION(aue, 1);
+USB_PNP_HOST_INFO(aue_devs);
 
 static const struct usb_ether_methods aue_ue_methods = {
 	.ue_attach_post = aue_attach_post,
@@ -745,10 +749,10 @@ aue_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 			usbd_copy_out(pc, 0, &pkt, sizeof(pkt));
 
 			if (pkt.aue_txstat0)
-				ifp->if_oerrors++;
+				if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			if (pkt.aue_txstat0 & (AUE_TXSTAT0_LATECOLL |
 			    AUE_TXSTAT0_EXCESSCOLL))
-				ifp->if_collisions++;
+				if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 		}
 		/* FALLTHROUGH */
 	case USB_ST_SETUP:
@@ -787,13 +791,13 @@ aue_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 		if (sc->sc_flags & AUE_FLAG_VER_2) {
 
 			if (actlen == 0) {
-				ifp->if_ierrors++;
+				if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 				goto tr_setup;
 			}
 		} else {
 
 			if (actlen <= (int)(sizeof(stat) + ETHER_CRC_LEN)) {
-				ifp->if_ierrors++;
+				if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 				goto tr_setup;
 			}
 			usbd_copy_out(pc, actlen - sizeof(stat), &stat,
@@ -805,7 +809,7 @@ aue_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 			 */
 			stat.aue_rxstat &= AUE_RXSTAT_MASK;
 			if (stat.aue_rxstat) {
-				ifp->if_ierrors++;
+				if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 				goto tr_setup;
 			}
 			/* No errors; receive the packet. */
@@ -850,7 +854,7 @@ aue_bulk_write_callback(struct usb_xfer *xfer, usb_error_t error)
 	switch (USB_GET_STATE(xfer)) {
 	case USB_ST_TRANSFERRED:
 		DPRINTFN(11, "transfer of %d bytes complete\n", actlen);
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 
 		/* FALLTHROUGH */
 	case USB_ST_SETUP:
@@ -907,7 +911,7 @@ tr_setup:
 		DPRINTFN(11, "transfer error, %s\n",
 		    usbd_errstr(error));
 
-		ifp->if_oerrors++;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 
 		if (error != USB_ERR_CANCELLED) {
 			/* try to clear stall first */

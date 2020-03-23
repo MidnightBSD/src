@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012
  *	Ben Gray <bgray@freebsd.org>.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_smsc.c 322724 2017-08-20 16:52:27Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/if_smsc.c 353927 2019-10-23 14:33:49Z emaste $");
 
 /*
  * SMSC LAN9xxx devices (http://www.smsc.com/)
@@ -75,6 +74,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_smsc.c 322724 2017-08-20 16:52:
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
+#include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <sys/sx.h>
 #include <sys/unistd.h>
@@ -82,6 +82,9 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_smsc.c 322724 2017-08-20 16:52:
 #include <sys/malloc.h>
 #include <sys/priv.h>
 #include <sys/random.h>
+
+#include <net/if.h>
+#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -111,7 +114,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/net/if_smsc.c 322724 2017-08-20 16:52:
 static int smsc_debug = 0;
 
 SYSCTL_NODE(_hw_usb, OID_AUTO, smsc, CTLFLAG_RW, 0, "USB smsc");
-SYSCTL_INT(_hw_usb_smsc, OID_AUTO, debug, CTLFLAG_RW, &smsc_debug, 0,
+SYSCTL_INT(_hw_usb_smsc, OID_AUTO, debug, CTLFLAG_RWTUN, &smsc_debug, 0,
     "Debug level");
 #endif
 
@@ -120,7 +123,24 @@ SYSCTL_INT(_hw_usb_smsc, OID_AUTO, debug, CTLFLAG_RW, &smsc_debug, 0,
  */
 static const struct usb_device_id smsc_devs[] = {
 #define	SMSC_DEV(p,i) { USB_VPI(USB_VENDOR_SMC2, USB_PRODUCT_SMC2_##p, i) }
+	SMSC_DEV(LAN89530_ETH, 0),
+	SMSC_DEV(LAN9500_ETH, 0),
+	SMSC_DEV(LAN9500_ETH_2, 0),
+	SMSC_DEV(LAN9500A_ETH, 0),
+	SMSC_DEV(LAN9500A_ETH_2, 0),
+	SMSC_DEV(LAN9505_ETH, 0),
+	SMSC_DEV(LAN9505A_ETH, 0),
 	SMSC_DEV(LAN9514_ETH, 0),
+	SMSC_DEV(LAN9514_ETH_2, 0),
+	SMSC_DEV(LAN9530_ETH, 0),
+	SMSC_DEV(LAN9730_ETH, 0),
+	SMSC_DEV(LAN9500_SAL10, 0),
+	SMSC_DEV(LAN9505_SAL10, 0),
+	SMSC_DEV(LAN9500A_SAL10, 0),
+	SMSC_DEV(LAN9505A_SAL10, 0),
+	SMSC_DEV(LAN9514_SAL10, 0),
+	SMSC_DEV(LAN9500A_HAL, 0),
+	SMSC_DEV(LAN9505A_HAL, 0),
 #undef SMSC_DEV
 };
 
@@ -988,9 +1008,9 @@ smsc_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 			
 			if (rxhdr & SMSC_RX_STAT_ERROR) {
 				smsc_dbg_printf(sc, "rx error (hdr 0x%08x)\n", rxhdr);
-				ifp->if_ierrors++;
+				if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 				if (rxhdr & SMSC_RX_STAT_COLLISION)
-					ifp->if_collisions++;
+					if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 			} else {
 
 				/* Check if the ethernet frame is too big or too small */
@@ -1001,7 +1021,7 @@ smsc_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 				m = uether_newbuf();
 				if (m == NULL) {
 					smsc_warn_printf(sc, "failed to create new mbuf\n");
-					ifp->if_iqdrops++;
+					if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 					goto tr_setup;
 				}
 				
@@ -1157,7 +1177,7 @@ tr_setup:
 			usbd_m_copy_in(pc, frm_len, m, 0, m->m_pkthdr.len);
 			frm_len += m->m_pkthdr.len;
 
-			ifp->if_opackets++;
+			if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 
 			/* If there's a BPF listener, bounce a copy of this frame to him */
 			BPF_MTAP(ifp, m);
@@ -1175,7 +1195,7 @@ tr_setup:
 		return;
 
 	default:
-		ifp->if_oerrors++;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 		
 		if (error != USB_ERR_CANCELLED) {
@@ -1284,7 +1304,7 @@ smsc_phy_init(struct smsc_softc *sc)
 	do {
 		uether_pause(&sc->sc_ue, hz / 100);
 		bmcr = smsc_miibus_readreg(sc->sc_ue.ue_dev, sc->sc_phyno, MII_BMCR);
-	} while ((bmcr & MII_BMCR) && ((ticks - start_ticks) < max_ticks));
+	} while ((bmcr & BMCR_RESET) && ((ticks - start_ticks) < max_ticks));
 
 	if (((usb_ticks_t)(ticks - start_ticks)) >= max_ticks) {
 		smsc_err_printf(sc, "PHY reset timed-out");
@@ -1548,8 +1568,9 @@ smsc_fdt_find_eth_node(phandle_t start)
 
 	/* Traverse through entire tree to find usb ethernet nodes. */
 	for (node = OF_child(start); node != 0; node = OF_peer(node)) {
-		if (fdt_is_compatible(node, "net,ethernet") &&
-		    fdt_is_compatible(node, "usb,device"))
+		if ((ofw_bus_node_is_compatible(node, "net,ethernet") &&
+		    ofw_bus_node_is_compatible(node, "usb,device")) ||
+		    ofw_bus_node_is_compatible(node, "usb424,ec00"))
 			return (node);
 		child = smsc_fdt_find_eth_node(node);
 		if (child != -1)
@@ -1616,6 +1637,37 @@ smsc_fdt_find_eth_node_by_path(phandle_t start)
 	return (-1);
 }
 
+/*
+ * Look through known names that can contain mac address
+ * return 0 if valid MAC address has been found
+ */
+static int
+smsc_fdt_read_mac_property(phandle_t node, unsigned char *mac)
+{
+	int len;
+
+	/* Check if there is property */
+	if ((len = OF_getproplen(node, "local-mac-address")) > 0) {
+		if (len != ETHER_ADDR_LEN)
+			return (EINVAL);
+
+		OF_getprop(node, "local-mac-address", mac,
+		    ETHER_ADDR_LEN);
+		return (0);
+	}
+
+	if ((len = OF_getproplen(node, "mac-address")) > 0) {
+		if (len != ETHER_ADDR_LEN)
+			return (EINVAL);
+
+		OF_getprop(node, "mac-address", mac,
+		    ETHER_ADDR_LEN);
+		return (0);
+	}
+
+	return (ENXIO);
+}
+
 /**
  * Get MAC address from FDT blob.  Firmware or loader should fill
  * mac-address or local-mac-address property.  Returns 0 if MAC address
@@ -1625,37 +1677,22 @@ static int
 smsc_fdt_find_mac(unsigned char *mac)
 {
 	phandle_t node, root;
-	int len;
 
 	root = OF_finddevice("/");
 	node = smsc_fdt_find_eth_node(root);
+	if (node != -1) {
+		if (smsc_fdt_read_mac_property(node, mac) == 0)
+			return (0);
+	}
+
 	/*
 	 * If it's not FreeBSD FDT blob for RPi, try more
 	 *     generic .../usb/hub/ethernet
 	 */
-	if (node == -1)
-		node = smsc_fdt_find_eth_node_by_path(root);
+	node = smsc_fdt_find_eth_node_by_path(root);
 
-	if (node != -1) {
-		/* Check if there is property */
-		if ((len = OF_getproplen(node, "local-mac-address")) > 0) {
-			if (len != ETHER_ADDR_LEN)
-				return (EINVAL);
-
-			OF_getprop(node, "local-mac-address", mac,
-			    ETHER_ADDR_LEN);
-			return (0);
-		}
-
-		if ((len = OF_getproplen(node, "mac-address")) > 0) {
-			if (len != ETHER_ADDR_LEN)
-				return (EINVAL);
-
-			OF_getprop(node, "mac-address", mac,
-			    ETHER_ADDR_LEN);
-			return (0);
-		}
-	}
+	if (node != -1)
+		return smsc_fdt_read_mac_property(node, mac);
 
 	return (ENXIO);
 }
@@ -1906,3 +1943,4 @@ MODULE_DEPEND(smsc, usb, 1, 1, 1);
 MODULE_DEPEND(smsc, ether, 1, 1, 1);
 MODULE_DEPEND(smsc, miibus, 1, 1, 1);
 MODULE_VERSION(smsc, 1);
+USB_PNP_HOST_INFO(smsc_devs);

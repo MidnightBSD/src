@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aacraid/aacraid_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aacraid/aacraid_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PCI bus interface and resource allocation.
@@ -103,8 +102,6 @@ struct aac_ident
 	 "Adaptec RAID Controller"},
 	{0x9005, 0x028d, 0, 0, AAC_HWIF_SRCV, 0,
 	 "Adaptec RAID Controller"},
-	{0x9005, 0x028f, 0, 0, AAC_HWIF_SRCV, 0,
-	 "Adaptec RAID Controller"},
 	{0, 0, 0, 0, 0, 0, 0}
 };
 
@@ -112,12 +109,10 @@ static struct aac_ident *
 aac_find_ident(device_t dev)
 {
 	struct aac_ident *m;
-	u_int16_t vendid, devid, sub_vendid, sub_devid;
+	u_int16_t vendid, devid;
 
 	vendid = pci_get_vendor(dev);
 	devid = pci_get_device(dev);
-	sub_vendid = pci_get_subvendor(dev);
-	sub_devid = pci_get_subdevice(dev);
 
 	for (m = aacraid_family_identifiers; m->vendor != 0; m++) {
 		if ((m->vendor == vendid) && (m->device == devid))

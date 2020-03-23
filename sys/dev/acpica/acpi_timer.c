@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_timer.c 255726 2013-09-20 05:06:03Z gibbs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_timer.c 297000 2016-03-18 01:28:41Z jhibbits $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -65,6 +64,9 @@ static bus_space_tag_t		acpi_timer_bst;
 static eventhandler_tag		acpi_timer_eh;
 
 static u_int	acpi_timer_frequency = 14318182 / 4;
+
+/* Knob to disable acpi_timer device */
+bool acpi_timer_disabled = false;
 
 static void	acpi_timer_identify(driver_t *driver, device_t parent);
 static int	acpi_timer_probe(device_t dev);
@@ -120,13 +122,14 @@ static void
 acpi_timer_identify(driver_t *driver, device_t parent)
 {
     device_t dev;
-    u_long rlen, rstart;
+    rman_res_t rlen, rstart;
     int rid, rtype;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
     if (acpi_disabled("timer") || (acpi_quirks & ACPI_Q_TIMER) ||
-	acpi_timer_dev)
+	acpi_timer_dev || acpi_timer_disabled ||
+	AcpiGbl_FADT.PmTimerLength == 0)
 	return_VOID;
 
     if ((dev = BUS_ADD_CHILD(parent, 2, "acpi_timer", 0)) == NULL) {
@@ -149,7 +152,7 @@ acpi_timer_identify(driver_t *driver, device_t parent)
     rlen = AcpiGbl_FADT.PmTimerLength;
     rstart = AcpiGbl_FADT.XPmTimerBlock.Address;
     if (bus_set_resource(dev, rtype, rid, rstart, rlen))
-	device_printf(dev, "couldn't set resource (%s 0x%lx+0x%lx)\n",
+	device_printf(dev, "couldn't set resource (%s 0x%jx+0x%jx)\n",
 	    (rtype == SYS_RES_IOPORT) ? "port" : "mem", rstart, rlen);
     return_VOID;
 }

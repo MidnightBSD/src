@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Takanori Watanabe
  * Copyright (c) 2005 Markus Brueffer <markus@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_ibm.c 300421 2016-05-22 13:58:32Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_ibm.c 347636 2019-05-16 00:51:30Z gonzo $");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -341,7 +340,7 @@ static devclass_t acpi_ibm_devclass;
 DRIVER_MODULE(acpi_ibm, acpi, acpi_ibm_driver, acpi_ibm_devclass,
 	      0, 0);
 MODULE_DEPEND(acpi_ibm, acpi, 1, 1, 1);
-static char    *ibm_ids[] = {"IBM0068", "LEN0068", NULL};
+static char    *ibm_ids[] = {"IBM0068", "LEN0068", "LEN0268", NULL};
 
 static void
 ibm_led(void *softc, int onoff)
@@ -388,9 +387,14 @@ static int
 acpi_ibm_attach(device_t dev)
 {
 	int i;
+	int hkey;
 	struct acpi_ibm_softc	*sc;
 	char *maker, *product;
-	devclass_t		ec_devclass;
+	ACPI_OBJECT_LIST input;
+	ACPI_OBJECT params[1];
+	ACPI_OBJECT out_obj;
+	ACPI_BUFFER result;
+	devclass_t ec_devclass;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
 
@@ -425,15 +429,42 @@ acpi_ibm_attach(device_t dev)
 		    "initialmask", CTLFLAG_RD,
 		    &sc->events_initialmask, 0, "Initial eventmask");
 
-		/* The availmask is the bitmask of supported events */
-		if (ACPI_FAILURE(acpi_GetInteger(sc->handle,
-		    IBM_NAME_EVENTS_AVAILMASK, &sc->events_availmask)))
+		if (ACPI_SUCCESS (acpi_GetInteger(sc->handle, "MHKV", &hkey))) {
+			device_printf(dev, "Firmware version is 0x%X\n", hkey);
+			switch(hkey >> 8)
+			{
+			case 1:
+				/* The availmask is the bitmask of supported events */
+				if (ACPI_FAILURE(acpi_GetInteger(sc->handle,
+				    IBM_NAME_EVENTS_AVAILMASK, &sc->events_availmask)))
+					sc->events_availmask = 0xffffffff;
+				break;
+
+			case 2:
+				result.Length = sizeof(out_obj);
+				result.Pointer = &out_obj;
+				params[0].Type = ACPI_TYPE_INTEGER;
+				params[0].Integer.Value = 1;
+				input.Pointer = params;
+				input.Count = 1;
+
+				sc->events_availmask = 0xffffffff;
+
+				if (ACPI_SUCCESS(AcpiEvaluateObject (sc->handle,
+				    IBM_NAME_EVENTS_AVAILMASK, &input, &result)))
+					sc->events_availmask = out_obj.Integer.Value;
+				break;
+			default:
+				device_printf(dev, "Unknown firmware version 0x%x\n", hkey);
+				break;
+			}
+		} else
 			sc->events_availmask = 0xffffffff;
 
 		SYSCTL_ADD_UINT(sc->sysctl_ctx,
-		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		    "availmask", CTLFLAG_RD,
-		    &sc->events_availmask, 0, "Mask of supported events");
+				SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+				"availmask", CTLFLAG_RD,
+				&sc->events_availmask, 0, "Mask of supported events");
 	}
 
 	/* Hook up proc nodes */
@@ -484,8 +515,8 @@ acpi_ibm_attach(device_t dev)
 		    (sc->light_val ? 1 : 0));
 
 	/* Enable per-model events. */
-	maker = getenv("smbios.system.maker");
-	product = getenv("smbios.system.product");
+	maker = kern_getenv("smbios.system.maker");
+	product = kern_getenv("smbios.system.product");
 	if (maker == NULL || product == NULL)
 		goto nosmbios;
 

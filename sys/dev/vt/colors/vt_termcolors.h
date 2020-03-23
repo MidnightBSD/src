@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/vt/colors/vt_termcolors.h 270262 2014-08-21 10:18:42Z dumbbell $
+ * $FreeBSD: stable/11/sys/dev/vt/colors/vt_termcolors.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 enum vt_color_format {

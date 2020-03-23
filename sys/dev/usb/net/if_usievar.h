@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/net/if_usievar.h 223864 2011-07-08 10:58:56Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/net/if_usievar.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2011 Anybots Inc

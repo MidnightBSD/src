@@ -60,6 +60,7 @@ vendor UNKNOWN2		0x0105	Unknown vendor
 vendor EGALAX2		0x0123	eGalax, Inc.
 vendor CHIPSBANK	0x0204	Chipsbank Microelectronics Co.
 vendor HUMAX		0x02ad	HUMAX
+vendor INTENSO		0x2109	INTENSO
 vendor LTS		0x0386	LTS
 vendor BWCT		0x03da	Bernd Walter Computer Technology
 vendor AOX		0x03e8	AOX
@@ -134,7 +135,7 @@ vendor MEGATRENDS	0x046b	American Megatrends
 vendor LOGITECH		0x046d	Logitech
 vendor BTC		0x046e	Behavior Tech. Computer
 vendor PHILIPS		0x0471	Philips
-vendor SUN2		0x0472	Sun Microsystems (offical)
+vendor SUN2		0x0472	Sun Microsystems (official)
 vendor SANYO		0x0474	Sanyo Electric
 vendor SEAGATE		0x0477	Seagate
 vendor CONNECTIX	0x0478	Connectix
@@ -742,11 +743,13 @@ vendor VIALABS		0x2109	VIA Labs
 vendor ERICSSON		0x2282	Ericsson
 vendor MOTOROLA2	0x22b8	Motorola
 vendor WETELECOM	0x22de	WeTelecom
+vendor TPLINK		0x2357	TP-Link
 vendor WESTMOUNTAIN	0x2405	West Mountain Radio
 vendor TRIPPLITE	0x2478	Tripp-Lite
 vendor HIROSE		0x2631	Hirose Electric
 vendor NHJ		0x2770	NHJ
 vendor PLANEX		0x2c02	Planex Communications
+vendor QUECTEL		0x2c7c	Quectel Wireless Solutions
 vendor VIDZMEDIA	0x3275	VidzMedia Pte Ltd
 vendor LINKINSTRUMENTS	0x3195	Link Instruments Inc.
 vendor AEI		0x3334	AEI
@@ -841,6 +844,7 @@ product ABOCOM RT2573_4		0xb21e	RT2573
 product ABOCOM RTL8188CU_1	0x8188  RTL8188CU
 product ABOCOM RTL8188CU_2	0x8189  RTL8188CU
 product ABOCOM RTL8192CU	0x8178  RTL8192CU
+product ABOCOM RTL8188EU	0x8179  RTL8188EU
 product ABOCOM WUG2700		0xb21f	WUG2700
 
 /* Acton Research Corp. */
@@ -1518,6 +1522,7 @@ product COREGA FETHER_USB_TXC	0x9601	FEther USB-TXC
 
 /* Corsair products */
 product CORSAIR K60		0x0a60	Corsair Vengeance K60 keyboard
+product CORSAIR K68		0x1b3f	Corsair Gaming K68 keyboard
 product CORSAIR K70		0x1b09	Corsair Vengeance K70 keyboard
 product CORSAIR K70_RGB		0x1b13	Corsair K70 RGB Keyboard
 product CORSAIR K70_LUX		0x1b36	Cossair K70 LUX keyboard
@@ -1709,10 +1714,12 @@ product DISPLAYLINK M01061	0x01e2	Lenovo DVI
 product DISPLAYLINK SWDVI	0x024c	SUNWEIT DVI
 product DISPLAYLINK NBDOCK	0x0215	VideoHome NBdock1920
 product DISPLAYLINK LUM70	0x02a9	Lilliput UM-70
+product DISPLAYLINK DVI_19	0x0360	USB to DVI-19
 product DISPLAYLINK UM7X0	0x401a	nanovision MiMo
 product DISPLAYLINK LT1421	0x03e0	Lenovo ThinkVision LT1421
 product DISPLAYLINK POLARIS2	0x0117	Polaris2 USB dock
 product DISPLAYLINK PLUGABLE	0x0377	Plugable docking station
+product DISPLAYLINK ITEC	0x02e9  i-tec USB 2.0 Docking Station
 
 /* DMI products */
 product DMI CFSM_RW		0xa109	CF/SM Reader/Writer
@@ -2136,6 +2143,7 @@ product FTDI TAVIR_STK500	0xfa33	FTDI compatible adapter
 product FTDI TERATRONIK_D2XX	0xec89	FTDI compatible adapter
 product FTDI TERATRONIK_VCP	0xec88	FTDI compatible adapter
 product FTDI THORLABS		0xfaf0	FTDI compatible adapter
+product FTDI TIAO		0x8a98	FTDI compatible adapter
 product FTDI TNC_X		0xebe0	FTDI compatible adapter
 product FTDI TTUSB		0xff20	FTDI compatible adapter
 product FTDI USBX_707		0xf857	FTDI compatible adapter
@@ -2162,6 +2170,7 @@ product FUJITSU AH_F401U	0x105b	AH-F401U Air H device
 product FUJITSUSIEMENS SCR	0x0009	Fujitsu-Siemens SCR USB Reader
 
 /* Garmin products */
+product GARMIN FORERUNNER230	0x086d	ForeRunner 230
 product GARMIN IQUE_3600	0x0004	iQue 3600
 
 /* Gemalto products */
@@ -2476,6 +2485,9 @@ product INSYSTEM ISD105		0x0202	IDE Adapter ISD105
 product INSYSTEM USBCABLE	0x081a	USB cable
 product INSYSTEM STORAGE_V2	0x5701	USB Storage Adapter V2
 
+/* Intenso products */
+product INTENSO MEMORY_BOX	0x0701	External disk
+
 /* Intel products */
 product INTEL EASYPC_CAMERA	0x0110	Easy PC Camera
 product INTEL TESTBOARD		0x9890	82930 test board
@@ -2544,6 +2556,8 @@ product JATON EDA		0x5704	Ethernet
 product JETI SPC1201		0x04b2	FTDI compatible adapter
 
 /* JMicron products */
+product JMICRON JMS566		0x3569	USB to SATA 3.0Gb/s bridge 
+product JMICRON JMS567		0x0567	USB to SATA 6.0Gb/s bridge 
 product JMICRON JM20336		0x2336	USB to SATA Bridge
 product JMICRON JM20337		0x2338	USB to ATA/ATAPI Bridge
 
@@ -2735,6 +2749,7 @@ product LOGITECH UN58A		0xc030	iFeel Mouse
 product LOGITECH UN53B		0xc032	iFeel MouseMan
 product LOGITECH WMPAD		0xc208	WingMan GamePad Extreme
 product LOGITECH WMRPAD		0xc20a	WingMan RumblePad
+product LOGITECH G510S		0xc22d  G510s Keyboard
 product LOGITECH WMJOY		0xc281	WingMan Force joystick
 product LOGITECH BB13		0xc401	USB-PS/2 Trackball
 product LOGITECH RK53		0xc501	Cordless mouse
@@ -3631,6 +3646,7 @@ product PROLIFIC PL2305		0x2305	Parallel printer
 product PROLIFIC ATAPI4		0x2307	ATAPI-4 Controller
 product PROLIFIC PL2501		0x2501	PL2501 Host-Host interface
 product PROLIFIC PL2506		0x2506	PL2506 USB to IDE Bridge
+product PROLIFIC PL27A1		0x27A1	PL27A1 USB 3.0 Host-Host interface
 product PROLIFIC HCR331		0x331a	HCR331 Hybrid Card Reader
 product PROLIFIC PHAROS		0xaaa0	Prolific Pharos
 product PROLIFIC RSAQ3		0xaaa2	PL2303 Serial Adapter (IODATA USB-RSAQ3)
@@ -3762,11 +3778,14 @@ product QUANTA GKE		0xea05	HSDPA modem
 product QUANTA GLE		0xea06	HSDPA modem
 product QUANTA RW6815R		0xf003	HP iPAQ rw6815 RNDIS
 
-/* Qtronix products */
-product QTRONIX 980N		0x2011	Scorpion-980N keyboard
+/* Quectel products */
+product QUECTEL EC25		0x0125	LTE modem
 
 /* Quickshot products */
 product QUICKSHOT STRIKEPAD	0x6238	USB StrikePad
+
+/* Qtronix products */
+product QTRONIX 980N		0x2011	Scorpion-980N keyboard
 
 /* Radio Shack */
 product RADIOSHACK USBCABLE	0x4026	USB to Serial Cable
@@ -3806,6 +3825,7 @@ product REALTEK USB20CRW	0x0158	USB20CRW Card Reader
 product REALTEK RTL8188ETV	0x0179	RTL8188ETV
 product REALTEK RTL8188CTV      0x018a  RTL8188CTV
 product REALTEK USBKR100	0x8150	USBKR100 USB Ethernet
+product REALTEK RTL8152		0x8152	RTL8152 USB Ethernet
 product REALTEK RTL8153		0x8153	RTL8153 USB Ethernet
 product REALTEK RTL8188CE_0     0x8170  RTL8188CE
 product REALTEK RTL8171		0x8171	RTL8171
@@ -4183,6 +4203,7 @@ product SILABS	CP210X_2	0xea61	CP210x Serial
 product SILABS	CP210X_3	0xea70	CP210x Serial
 product SILABS	CP210X_4	0xea80	CP210x Serial
 product SILABS	INFINITY_MIC	0xea71	Infinity GPS-MIC-1 Radio Monophone
+product SILABS	CP2112		0xea90	CP2112 HID USB-to-SMBus Bridge with GPIO
 product SILABS	USBSCOPE50	0xf001	USBscope50
 product SILABS	USBWAVE12	0xf002	USBwave12
 product SILABS	USBPULSE100	0xf003	USBpulse100
@@ -4226,10 +4247,12 @@ product SITECOMEU RT3072_4	0x0048	RT3072
 product SITECOMEU RT3072_5	0x004a	RT3072
 product SITECOMEU WL349V1	0x004b	WL-349 v1
 product SITECOMEU RT3072_6	0x004d	RT3072
+product SITECOMEU WLA1000	0x005b	WLA-1000
 product SITECOMEU RTL8188CU_1	0x0052	RTL8188CU
 product SITECOMEU RTL8188CU_2	0x005c	RTL8188CU
 product SITECOMEU RTL8192CU	0x0061	RTL8192CU
 product SITECOMEU LN032		0x0072	LN-032
+product SITECOMEU LN031  	0x0056	LN-031
 product SITECOMEU LN028		0x061c	LN-028
 product SITECOMEU WL113		0x9071	WL-113
 product SITECOMEU ZD1211B	0x9075	ZD1211B
@@ -4471,6 +4494,10 @@ product TOSHIBA RT3070		0x0a07	RT3070
 product TOSHIBA G450		0x0d45	G450 modem
 product TOSHIBA HSDPA		0x1302	G450 modem
 product TOSHIBA TRANSMEMORY	0x6545	USB ThumbDrive
+
+/* TP-Link products */
+product TPLINK T4U		0x0101	Archer T4U
+product TPLINK WN722NV2		0x010c	TL-WN722N v2
 
 /* Trek Technology products */
 product TREK THUMBDRIVE		0x1111	ThumbDrive

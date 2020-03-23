@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/scsi/virtio_scsi.h 241470 2012-10-11 23:41:18Z grehan $
+ * $FreeBSD: stable/11/sys/dev/virtio/scsi/virtio_scsi.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VIRTIO_SCSI_H

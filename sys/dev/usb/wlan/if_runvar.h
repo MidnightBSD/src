@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: if_runvar.h,v 1.3 2009/03/26 20:17:27 damien Exp $	*/
 
 /*-
@@ -18,7 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/wlan/if_runvar.h 262604 2014-02-28 16:08:31Z kevlo $
+ * $FreeBSD: stable/11/sys/dev/usb/wlan/if_runvar.h 345636 2019-03-28 09:50:25Z avos $
  */
 
 #ifndef _IF_RUNVAR_H_
@@ -46,6 +45,7 @@
 
 struct run_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
+	uint64_t	wr_tsf;
 	uint8_t		wr_flags;
 	uint8_t		wr_rate;
 	uint16_t	wr_chan_freq;
@@ -56,7 +56,8 @@ struct run_rx_radiotap_header {
 } __packed __aligned(8);
 
 #define	RUN_RX_RADIOTAP_PRESENT				\
-	(1 << IEEE80211_RADIOTAP_FLAGS |		\
+	(1 << IEEE80211_RADIOTAP_TSFT |			\
+	 1 << IEEE80211_RADIOTAP_FLAGS |		\
 	 1 << IEEE80211_RADIOTAP_RATE |			\
 	 1 << IEEE80211_RADIOTAP_CHANNEL |		\
 	 1 << IEEE80211_RADIOTAP_DBM_ANTSIGNAL |	\
@@ -70,7 +71,7 @@ struct run_tx_radiotap_header {
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
 	uint8_t		wt_hwqueue;
-} __packed __aligned(8);
+} __packed;
 
 #define IEEE80211_RADIOTAP_HWQUEUE 15
 
@@ -102,6 +103,7 @@ struct run_node {
 	uint8_t			mgt_ridx;
 	uint8_t			fix_ridx;
 };
+#define RUN_NODE(ni)		((struct run_node *)(ni))
 
 struct run_cmdq {
 	void			*arg0;
@@ -115,11 +117,14 @@ struct run_cmdq {
 
 struct run_vap {
 	struct ieee80211vap             vap;
-	struct ieee80211_beacon_offsets bo;
 	struct mbuf			*beacon_mbuf;
 
 	int                             (*newstate)(struct ieee80211vap *,
                                             enum ieee80211_state, int);
+	void				(*recv_mgmt)(struct ieee80211_node *,
+					    struct mbuf *, int,
+					    const struct ieee80211_rx_stats *,
+					    int, int);
 
 	uint8_t				rvp_id;
 };
@@ -152,13 +157,16 @@ struct run_endpoint_queue {
 };
 
 struct run_softc {
+	struct mtx			sc_mtx;
+	struct ieee80211com		sc_ic;
+	struct mbufq			sc_snd;
 	device_t			sc_dev;
 	struct usb_device		*sc_udev;
-	struct ifnet			*sc_ifp;
 	int				sc_need_fwload;
 
 	int				sc_flags;
 #define	RUN_FLAG_FWLOAD_NEEDED		0x01
+#define	RUN_RUNNING			0x02
 
 	uint16_t			wcid_stats[RT2870_WCID_MAX + 1][3];
 #define	RUN_TXCNT	0
@@ -204,10 +212,6 @@ struct run_softc {
 	uint32_t			txpow40mhz_2ghz[5];
 	uint32_t			txpow40mhz_5ghz[5];
 
-	uint8_t				sc_bssid[6];
-
-	struct mtx			sc_mtx;
-
 	struct run_endpoint_queue	sc_epq[RUN_EP_QUEUES];
 
 	struct task                     ratectl_task;
@@ -242,19 +246,19 @@ struct run_softc {
 	uint8_t				rvp_bmap;
 	uint8_t				sc_detached;
 
+	uint8_t				sc_bssid[IEEE80211_ADDR_LEN];
+
 	union {
 		struct run_rx_radiotap_header th;
 		uint8_t	pad[64];
 	}				sc_rxtapu;
 #define sc_rxtap	sc_rxtapu.th
-	int				sc_rxtap_len;
 
 	union {
 		struct run_tx_radiotap_header th;
 		uint8_t	pad[64];
 	}				sc_txtapu;
 #define sc_txtap	sc_txtapu.th
-	int				sc_txtap_len;
 };
 
 #define	RUN_LOCK(sc)		mtx_lock(&(sc)->sc_mtx)

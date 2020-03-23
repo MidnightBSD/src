@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_generic.h 196219 2009-08-14 20:03:53Z jhb $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_generic.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

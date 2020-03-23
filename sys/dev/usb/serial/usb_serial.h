@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ucomvar.h,v 1.9 2001/01/23 21:56:17 augustss Exp $	*/
-/*	$FreeBSD: stable/10/sys/dev/usb/serial/usb_serial.h 283341 2015-05-24 00:53:43Z ian $	*/
+/*	$FreeBSD: stable/11/sys/dev/usb/serial/usb_serial.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*-
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -181,6 +180,7 @@ struct ucom_softc {
 #define	UCOM_FLAG_WAIT_REFS   0x0100	/* set if we must wait for refs */
 #define	UCOM_FLAG_FREE_UNIT   0x0200	/* set if we must free the unit */
 #define	UCOM_FLAG_INWAKEUP    0x0400	/* set if we are in the tsw_inwakeup callback */
+#define	UCOM_FLAG_LSRTXIDLE   0x0800	/* set if sc_lsr bits ULSR_TSRE+TXRDY work */
 	uint8_t	sc_lsr;
 	uint8_t	sc_msr;
 	uint8_t	sc_mcr;
@@ -219,4 +219,12 @@ void	ucom_drain(struct ucom_super_softc *);
 void	ucom_drain_all(void *);
 void	ucom_ref(struct ucom_super_softc *);
 int	ucom_unref(struct ucom_super_softc *);
+
+static inline void
+ucom_use_lsr_txbits(struct ucom_softc *sc)
+{
+
+	sc->sc_flag |= UCOM_FLAG_LSRTXIDLE;
+}
+
 #endif					/* _USB_SERIAL_H_ */

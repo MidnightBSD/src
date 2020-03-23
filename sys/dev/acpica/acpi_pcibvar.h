@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/acpica/acpi_pcibvar.h 211430 2010-08-17 15:44:52Z jhb $
+ * $FreeBSD: stable/11/sys/dev/acpica/acpi_pcibvar.h 299286 2016-05-09 20:50:21Z jhb $
  */
 
 #ifndef	_ACPI_PCIBVAR_H_
@@ -36,7 +35,9 @@
 void	acpi_pci_link_add_reference(device_t dev, int index, device_t pcib,
     int slot, int pin);
 int	acpi_pci_link_route_interrupt(device_t dev, int index);
-int	acpi_pcib_attach(device_t bus, ACPI_BUFFER *prt, int busno);
+void	acpi_pcib_fetch_prt(device_t bus, ACPI_BUFFER *prt);
+int	acpi_pcib_get_cpus(device_t pcib, device_t dev, enum cpu_sets op,
+    size_t setsize, cpuset_t *cpuset);
 int	acpi_pcib_route_interrupt(device_t pcib, device_t dev, int pin,
     ACPI_BUFFER *prtbuf);
 int	acpi_pcib_power_for_sleep(device_t pcib, device_t dev,

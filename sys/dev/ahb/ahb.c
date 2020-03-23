@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * CAM SCSI device driver for the Adaptec 174X SCSI Host adapter
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ahb/ahb.c 315813 2017-03-23 06:41:13Z mav $
+ * $FreeBSD: stable/11/sys/dev/ahb/ahb.c 335138 2018-06-14 14:46:20Z mav $
  */
 
 #include <sys/param.h>
@@ -422,7 +421,6 @@ ahbfree(struct ahb_softc *ahb)
 	case 3:
 		bus_dmamem_free(ahb->ecb_dmat, ahb->ecb_array,
 				ahb->ecb_dmamap);
-		bus_dmamap_destroy(ahb->ecb_dmat, ahb->ecb_dmamap);
 	case 2:
 		bus_dma_tag_destroy(ahb->ecb_dmat);
 	case 1:
@@ -887,7 +885,7 @@ ahbintr_locked(struct ahb_softc *ahb)
 				xpt_async(AC_BUS_RESET, ahb->path, NULL);
 				break;
 			}
-			printf("Unsupported initiator selection AEN occured\n");
+			printf("Unsupported initiator selection AEN occurred\n");
 			break;
 		case INTSTAT_IMMED_OK:
 		case INTSTAT_IMMED_ERR:
@@ -1184,10 +1182,10 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 		strlcpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-                cpi->transport = XPORT_SPI;
-                cpi->transport_version = 2;
-                cpi->protocol = PROTO_SCSI;
-                cpi->protocol_version = SCSI_REV_2;
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1237,7 +1235,7 @@ ahbtimeout(void *arg)
 	 * means that the driver attempts to clear only one error
 	 * condition at a time.  In general, timeouts that occur
 	 * close together are related anyway, so there is no benefit
-	 * in attempting to handle errors in parrallel.  Timeouts will
+	 * in attempting to handle errors in parallel.  Timeouts will
 	 * be reinstated when the recovery process ends.
 	 */
 	if ((ecb->state & ECB_DEVICE_RESET) == 0) {

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_core.h 278507 2015-02-10 13:16:53Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_core.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

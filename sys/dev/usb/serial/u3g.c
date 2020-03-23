@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2008 AnyWi Technologies
  * Author: Andrea Guzzo <aguzzo@anywi.com>
@@ -17,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/serial/u3g.c 342037 2018-12-13 10:34:26Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/usb/serial/u3g.c 342036 2018-12-13 10:33:17Z hselasky $
  */
 
 /*
@@ -69,7 +68,7 @@
 static int u3g_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, u3g, CTLFLAG_RW, 0, "USB 3g");
-SYSCTL_INT(_hw_usb_u3g, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_u3g, OID_AUTO, debug, CTLFLAG_RWTUN,
     &u3g_debug, 0, "Debug level");
 #endif
 
@@ -199,11 +198,6 @@ static driver_t u3g_driver = {
 	.size = sizeof(struct u3g_softc),
 };
 
-DRIVER_MODULE(u3g, uhub, u3g_driver, u3g_devclass, u3g_driver_loaded, 0);
-MODULE_DEPEND(u3g, ucom, 1, 1, 1);
-MODULE_DEPEND(u3g, usb, 1, 1, 1);
-MODULE_VERSION(u3g, 1);
-
 static const STRUCT_USB_HOST_ID u3g_devs[] = {
 #define	U3G_DEV(v,p,i) { USB_VPI(USB_VENDOR_##v, USB_PRODUCT_##v##_##p, i) }
 	U3G_DEV(ABIT, AK_020, 0),
@@ -314,7 +308,7 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(HUAWEI, E173, 0),
 	U3G_DEV(HUAWEI, E173_INIT, U3GINIT_HUAWEISCSI),
 	U3G_DEV(HUAWEI, E3131, 0),
-	U3G_DEV(HUAWEI, E3131_INIT, U3GINIT_HUAWEISCSI),
+	U3G_DEV(HUAWEI, E3131_INIT, U3GINIT_HUAWEISCSI2),
 	U3G_DEV(HUAWEI, E180V, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, E220, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, E220BIS, U3GINIT_HUAWEI),
@@ -333,6 +327,8 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(HUAWEI, K4505, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, K4505_INIT, U3GINIT_HUAWEISCSI),
 	U3G_DEV(HUAWEI, ETS2055, U3GINIT_HUAWEI),
+	U3G_DEV(HUAWEI, E3272_INIT, U3GINIT_HUAWEISCSI2),
+	U3G_DEV(HUAWEI, E3272, 0),
 	U3G_DEV(KYOCERA2, CDMA_MSM_K, 0),
 	U3G_DEV(KYOCERA2, KPC680, 0),
 	U3G_DEV(LONGCHEER, WM66, U3GINIT_HUAWEI),
@@ -351,6 +347,7 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(NOVATEL, MC547, 0),
 	U3G_DEV(NOVATEL, MC679, 0),
 	U3G_DEV(NOVATEL, MC950D, 0),
+	U3G_DEV(NOVATEL, MC990D, 0),
 	U3G_DEV(NOVATEL, MIFI2200, U3GINIT_SCSIEJECT),
 	U3G_DEV(NOVATEL, MIFI2200V, U3GINIT_SCSIEJECT),
 	U3G_DEV(NOVATEL, U720, 0),
@@ -481,6 +478,7 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(QUALCOMMINC, E2003, 0),
 	U3G_DEV(QUALCOMMINC, K3772_Z, 0),
 	U3G_DEV(QUALCOMMINC, K3772_Z_INIT, U3GINIT_SCSIEJECT),
+	U3G_DEV(QUALCOMMINC, MF112, U3GINIT_ZTESTOR),
 	U3G_DEV(QUALCOMMINC, MF195E, 0),
 	U3G_DEV(QUALCOMMINC, MF195E_INIT, U3GINIT_SCSIEJECT),
 	U3G_DEV(QUALCOMMINC, MF626, 0),
@@ -493,6 +491,7 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(QUANTA, GLX, 0),
 	U3G_DEV(QUANTA, Q101, 0),
 	U3G_DEV(QUANTA, Q111, 0),
+	U3G_DEV(QUECTEL, EC25, 0),
 	U3G_DEV(SIERRA, AC402, 0),
 	U3G_DEV(SIERRA, AC595U, 0),
 	U3G_DEV(SIERRA, AC313U, 0),
@@ -590,6 +589,12 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 #undef	U3G_DEV
 };
 
+DRIVER_MODULE(u3g, uhub, u3g_driver, u3g_devclass, u3g_driver_loaded, 0);
+MODULE_DEPEND(u3g, ucom, 1, 1, 1);
+MODULE_DEPEND(u3g, usb, 1, 1, 1);
+MODULE_VERSION(u3g, 1);
+USB_PNP_HOST_INFO(u3g_devs);
+
 static int
 u3g_sierra_init(struct usb_device *udev)
 {
@@ -623,6 +628,45 @@ u3g_huawei_init(struct usb_device *udev)
 	    NULL, 0, NULL, USB_MS_HZ)) {
 		/* ignore any errors */
 	}
+	return (0);
+}
+
+static int
+u3g_huawei_is_cdce(uint16_t idVendor, uint8_t bInterfaceSubClass,
+    uint8_t bInterfaceProtocol)
+{
+	/*
+	 * This function returns non-zero if the interface being
+	 * probed is of type CDC ethernet, which the U3G driver should
+	 * not attach to. See sys/dev/usb/net/if_cdce.c for matching
+	 * entries.
+	 */
+	if (idVendor != USB_VENDOR_HUAWEI)
+		goto done;
+
+	switch (bInterfaceSubClass) {
+	case 0x02:
+		switch (bInterfaceProtocol) {
+		case 0x16:
+		case 0x46:
+		case 0x76:
+			return (1);
+		default:
+			break;
+		}
+		break;
+	case 0x03:
+		switch (bInterfaceProtocol) {
+		case 0x16:
+			return (1);
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+done:
 	return (0);
 }
 
@@ -672,7 +716,7 @@ u3g_sael_m460_init(struct usb_device *udev)
 		return;
 	}
 
-	for (n = 0; n != (sizeof(setup)/sizeof(setup[0])); n++) {
+	for (n = 0; n != nitems(setup); n++) {
 
 		memcpy(&req, setup[n], sizeof(req));
 
@@ -780,7 +824,8 @@ u3g_test_autoinst(void *arg, struct usb_device *udev,
 			break;
 		case U3GINIT_ZTESTOR:
 			error = usb_msc_eject(udev, 0, MSC_EJECT_STOPUNIT);
-			error |= usb_msc_eject(udev, 0, MSC_EJECT_ZTESTOR);
+			if (error == 0)
+			    error = usb_msc_eject(udev, 0, MSC_EJECT_ZTESTOR);
 			break;
 		case U3GINIT_CMOTECH:
 			error = usb_msc_eject(udev, 0, MSC_EJECT_CMOTECH);
@@ -838,6 +883,10 @@ u3g_probe(device_t self)
 	if (uaa->info.bInterfaceClass != UICLASS_VENDOR) {
 		return (ENXIO);
 	}
+	if (u3g_huawei_is_cdce(uaa->info.idVendor, uaa->info.bInterfaceSubClass,
+	    uaa->info.bInterfaceProtocol)) {
+		return (ENXIO);
+	}
 	return (usbd_lookup_id_by_uaa(u3g_devs, sizeof(u3g_devs), uaa));
 }
 
@@ -880,6 +929,9 @@ u3g_attach(device_t dev)
 			break;
 		id = usbd_get_interface_descriptor(iface);
 		if (id == NULL || id->bInterfaceClass != UICLASS_VENDOR)
+			continue;
+		if (u3g_huawei_is_cdce(uaa->info.idVendor,
+		    id->bInterfaceSubClass, id->bInterfaceProtocol))
 			continue;
 		usbd_set_parent_iface(uaa->device, i, uaa->info.bIfaceIndex);
 		iface_valid |= (1<<i);
@@ -1101,6 +1153,7 @@ u3g_cfg_get_status(struct ucom_softc *ucom, uint8_t *lsr, uint8_t *msr)
 {
 	struct u3g_softc *sc = ucom->sc_parent;
 
+	/* XXX Note: sc_lsr is always zero */
 	*lsr = sc->sc_lsr[ucom->sc_subunit];
 	*msr = sc->sc_msr[ucom->sc_subunit];
 }

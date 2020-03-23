@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Justin Hibbits.
  * Copyright (c) 2002, Miodrag Vallat.
@@ -29,7 +28,7 @@
  * OpenBSD: abtn.c,v 1.12 2009/01/10 18:00:59 robert Exp
  * NetBSD: abtn.c,v 1.1 1999/07/12 17:48:26 tsubai Exp
  *
- * $FreeBSD: stable/10/sys/dev/adb/adb_buttons.c 226449 2011-10-16 21:01:42Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/dev/adb/adb_buttons.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -119,37 +118,32 @@ abtn_receive_packet(device_t dev, u_char status,
 
 	switch (cmd) {
 	case 0x0a:	/* decrease brightness */
-		if (devctl_process_running())
-			devctl_notify("PMU", "keys", "brightness",
-			    "notify=down");
+		devctl_notify("PMU", "keys", "brightness",
+		    "notify=down");
 		break;
 
 	case 0x09:	/* increase brightness */
-		if (devctl_process_running())
-			devctl_notify("PMU", "keys", "brightness", "notify=up");
+		devctl_notify("PMU", "keys", "brightness", "notify=up");
 		break;
 
 	case 0x08:	/* mute */
 	case 0x01:	/* mute, AV hardware */
-		if (devctl_process_running())
-			devctl_notify("PMU", "keys", "mute", NULL);
+		devctl_notify("PMU", "keys", "mute", NULL);
 		break;
 	case 0x07:	/* decrease volume */
 	case 0x02:	/* decrease volume, AV hardware */
-		if (devctl_process_running())
-			devctl_notify("PMU", "keys", "volume", "notify=down");
+		devctl_notify("PMU", "keys", "volume", "notify=down");
 		break;
 	case 0x06:	/* increase volume */
 	case 0x03:	/* increase volume, AV hardware */
-		if (devctl_process_running())
-			devctl_notify("PMU", "keys", "volume", "notify=up");
+		devctl_notify("PMU", "keys", "volume", "notify=up");
 		break;
 	case 0x0c:	/* mirror display key */
 		/* Need callback to do something with this */
 		break;
 	case 0x0b:	/* eject tray */
-		if (devctl_process_running())
-			devctl_notify("PMU", "keys", "eject", NULL);
+		devctl_notify("PMU", "keys", "eject", NULL);
+		break;
 	case 0x7f:	/* numlock */
 		/* Need callback to do something with this */
 		break;

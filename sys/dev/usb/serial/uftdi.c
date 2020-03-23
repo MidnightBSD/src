@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: uftdi.c,v 1.13 2002/09/23 05:51:23 simonb Exp $	*/
 
 /*-
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uftdi.c 293209 2016-01-05 17:12:33Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/uftdi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * NOTE: all function names beginning like "uftdi_cfg_" can only
@@ -87,7 +86,7 @@ static SYSCTL_NODE(_hw_usb, OID_AUTO, uftdi, CTLFLAG_RW, 0, "USB uftdi");
 
 #ifdef USB_DEBUG
 static int uftdi_debug = 0;
-SYSCTL_INT(_hw_usb_uftdi, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uftdi, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uftdi_debug, 0, "Debug level");
 #endif
 
@@ -266,11 +265,6 @@ static driver_t uftdi_driver = {
 	.size = sizeof(struct uftdi_softc),
 };
 
-DRIVER_MODULE(uftdi, uhub, uftdi_driver, uftdi_devclass, NULL, NULL);
-MODULE_DEPEND(uftdi, ucom, 1, 1, 1);
-MODULE_DEPEND(uftdi, usb, 1, 1, 1);
-MODULE_VERSION(uftdi, 1);
-
 static const STRUCT_USB_HOST_ID uftdi_devs[] = {
 #define	UFTDI_DEV(v, p, i) \
   { USB_VPI(USB_VENDOR_##v, USB_PRODUCT_##v##_##p, i) }
@@ -445,7 +439,7 @@ static const STRUCT_USB_HOST_ID uftdi_devs[] = {
 	UFTDI_DEV(FTDI, IPLUS2, 0),
 	UFTDI_DEV(FTDI, IRTRANS, 0),
 	UFTDI_DEV(FTDI, KBS, 0),
-	UFTDI_DEV(FTDI, KTLINK, 0),
+	UFTDI_DEV(FTDI, KTLINK, UFTDI_JTAG_IFACE(0)),
 	UFTDI_DEV(FTDI, LENZ_LIUSB, 0),
 	UFTDI_DEV(FTDI, LK202, 0),
 	UFTDI_DEV(FTDI, LK204, 0),
@@ -526,6 +520,7 @@ static const STRUCT_USB_HOST_ID uftdi_devs[] = {
 	UFTDI_DEV(FTDI, TERATRONIK_D2XX, 0),
 	UFTDI_DEV(FTDI, TERATRONIK_VCP, 0),
 	UFTDI_DEV(FTDI, THORLABS, 0),
+	UFTDI_DEV(FTDI, TIAO, 0),
 	UFTDI_DEV(FTDI, TNC_X, 0),
 	UFTDI_DEV(FTDI, TTUSB, 0),
 	UFTDI_DEV(FTDI, TURTELIZER2, UFTDI_JTAG_IFACE(0)),
@@ -915,6 +910,12 @@ static const STRUCT_USB_HOST_ID uftdi_devs[] = {
 #undef UFTDI_DEV
 };
 
+DRIVER_MODULE(uftdi, uhub, uftdi_driver, uftdi_devclass, NULL, NULL);
+MODULE_DEPEND(uftdi, ucom, 1, 1, 1);
+MODULE_DEPEND(uftdi, usb, 1, 1, 1);
+MODULE_VERSION(uftdi, 1);
+USB_PNP_HOST_INFO(uftdi_devs);
+
 /*
  * Jtag product name strings table.  Some products have one or more interfaces
  * dedicated to jtag or gpio, but use a product ID that's the same as other
@@ -936,7 +937,6 @@ static const struct jtag_by_name {
  * creation of tty devices for jtag interfaces.  Enabled by default.
  */
 static int skip_jtag_interfaces = 1;
-TUNABLE_INT("hw.usb.uftdi.skip_jtag_interfaces", &skip_jtag_interfaces);
 SYSCTL_INT(_hw_usb_uftdi, OID_AUTO, skip_jtag_interfaces, CTLFLAG_RWTUN,
     &skip_jtag_interfaces, 1, "Skip creating tty devices for jtag interfaces");
 
@@ -1124,6 +1124,9 @@ uftdi_attach(device_t dev)
 	    FTDI_SIO_SET_DATA_PARITY_NONE |
 	    FTDI_SIO_SET_DATA_BITS(8));
 
+	/* Indicate tx bits in sc_lsr can be used to determine busy vs idle. */
+	ucom_use_lsr_txbits(&sc->sc_ucom);
+
 	error = ucom_attach(&sc->sc_super_ucom, &sc->sc_ucom, 1, sc,
 	    &uftdi_callback, &sc->sc_mtx);
 	if (error) {
@@ -1179,7 +1182,7 @@ uftdi_cfg_open(struct ucom_softc *ucom)
 	 * DPRINTF() so that you can see the point at which open gets called
 	 * when debugging is enabled.
 	 */
-	DPRINTF("");
+	DPRINTF("\n");
 }
 
 static void
@@ -1191,7 +1194,7 @@ uftdi_cfg_close(struct ucom_softc *ucom)
 	 * DPRINTF() so that you can see the point at which close gets called
 	 * when debugging is enabled.
 	 */
-	DPRINTF("");
+	DPRINTF("\n");
 }
 
 static void
@@ -1202,6 +1205,8 @@ uftdi_write_callback(struct usb_xfer *xfer, usb_error_t error)
 	uint32_t pktlen;
 	uint32_t buflen;
 	uint8_t buf[1];
+
+	DPRINTFN(3, "\n");
 
 	switch (USB_GET_STATE(xfer)) {
 	default:			/* Error */
@@ -1263,6 +1268,8 @@ uftdi_read_callback(struct usb_xfer *xfer, usb_error_t error)
 	int pktmax;
 	int offset;
 
+	DPRINTFN(3, "\n");
+
 	usbd_xfer_status(xfer, &buflen, NULL, NULL, NULL);
 
 	switch (USB_GET_STATE(xfer)) {
@@ -1276,16 +1283,20 @@ uftdi_read_callback(struct usb_xfer *xfer, usb_error_t error)
 		offset = 0;
 		/*
 		 * Extract packet headers and payload bytes from the buffer.
-		 * Feed payload bytes to ucom/tty layer; OR-accumulate header
-		 * status bits which are transient and could toggle with each
-		 * packet. After processing all packets in the buffer, process
-		 * the accumulated transient MSR and LSR values along with the
+		 * Feed payload bytes to ucom/tty layer; OR-accumulate the
+		 * receiver-related header status bits which are transient and
+		 * could toggle with each packet, but for transmitter-related
+		 * bits keep only the ones from the last packet.
+		 *
+		 * After processing all packets in the buffer, process the
+		 * accumulated transient MSR and LSR values along with the
 		 * non-transient bits from the last packet header.
 		 */
 		while (buflen >= UFTDI_IHDRSIZE) {
 			usbd_copy_out(pc, offset, buf, UFTDI_IHDRSIZE);
 			offset += UFTDI_IHDRSIZE;
 			buflen -= UFTDI_IHDRSIZE;
+			lsr &= ~(ULSR_TXRDY | ULSR_TSRE);
 			lsr |= FTDI_GET_LSR(buf);
 			if (FTDI_GET_MSR(buf) & FTDI_SIO_RI_MASK)
 				msr |= SER_RI;
@@ -1308,8 +1319,7 @@ uftdi_read_callback(struct usb_xfer *xfer, usb_error_t error)
 		if (ftdi_msr & FTDI_SIO_RLSD_MASK)
 			msr |= SER_DCD;
 
-		if ((sc->sc_msr != msr) ||
-		    ((sc->sc_lsr & FTDI_LSR_MASK) != (lsr & FTDI_LSR_MASK))) {
+		if (sc->sc_msr != msr || sc->sc_lsr != lsr) {
 			DPRINTF("status change msr=0x%02x (0x%02x) "
 			    "lsr=0x%02x (0x%02x)\n", msr, sc->sc_msr,
 			    lsr, sc->sc_lsr);
@@ -1344,6 +1354,8 @@ uftdi_cfg_set_dtr(struct ucom_softc *ucom, uint8_t onoff)
 	uint16_t wValue;
 	struct usb_device_request req;
 
+	DPRINTFN(2, "DTR=%u\n", onoff);
+
 	wValue = onoff ? FTDI_SIO_SET_DTR_HIGH : FTDI_SIO_SET_DTR_LOW;
 
 	req.bmRequestType = UT_WRITE_VENDOR_DEVICE;
@@ -1363,6 +1375,8 @@ uftdi_cfg_set_rts(struct ucom_softc *ucom, uint8_t onoff)
 	uint16_t wValue;
 	struct usb_device_request req;
 
+	DPRINTFN(2, "RTS=%u\n", onoff);
+
 	wValue = onoff ? FTDI_SIO_SET_RTS_HIGH : FTDI_SIO_SET_RTS_LOW;
 
 	req.bmRequestType = UT_WRITE_VENDOR_DEVICE;
@@ -1381,6 +1395,8 @@ uftdi_cfg_set_break(struct ucom_softc *ucom, uint8_t onoff)
 	uint16_t wIndex = ucom->sc_portno;
 	uint16_t wValue;
 	struct usb_device_request req;
+
+	DPRINTFN(2, "BREAK=%u\n", onoff);
 
 	if (onoff) {
 		sc->sc_last_lcr |= FTDI_SIO_SET_BREAK;
@@ -1619,13 +1635,13 @@ uftdi_cfg_param(struct ucom_softc *ucom, struct termios *t)
 	struct uftdi_param_config cfg;
 	struct usb_device_request req;
 
+	DPRINTF("\n");
+
 	if (uftdi_set_parm_soft(ucom, t, &cfg)) {
 		/* should not happen */
 		return;
 	}
 	sc->sc_last_lcr = cfg.lcr;
-
-	DPRINTF("\n");
 
 	req.bmRequestType = UT_WRITE_VENDOR_DEVICE;
 	req.bRequest = FTDI_SIO_SET_BAUD_RATE;
@@ -1657,8 +1673,7 @@ uftdi_cfg_get_status(struct ucom_softc *ucom, uint8_t *lsr, uint8_t *msr)
 {
 	struct uftdi_softc *sc = ucom->sc_parent;
 
-	DPRINTF("msr=0x%02x lsr=0x%02x\n",
-	    sc->sc_msr, sc->sc_lsr);
+	DPRINTFN(3, "msr=0x%02x lsr=0x%02x\n", sc->sc_msr, sc->sc_lsr);
 
 	*msr = sc->sc_msr;
 	*lsr = sc->sc_lsr;
@@ -1669,6 +1684,8 @@ uftdi_reset(struct ucom_softc *ucom, int reset_type)
 {
 	struct uftdi_softc *sc = ucom->sc_parent;
 	usb_device_request_t req;
+
+	DPRINTFN(2, "\n");
 
 	req.bmRequestType = UT_WRITE_VENDOR_DEVICE;
 	req.bRequest = FTDI_SIO_RESET;
@@ -1686,6 +1703,8 @@ uftdi_set_bitmode(struct ucom_softc *ucom, uint8_t bitmode, uint8_t iomask)
 	struct uftdi_softc *sc = ucom->sc_parent;
 	usb_device_request_t req;
 	int rv;
+
+	DPRINTFN(2, "\n");
 
 	req.bmRequestType = UT_WRITE_VENDOR_DEVICE;
 	req.bRequest = FTDI_SIO_SET_BITMODE;
@@ -1711,6 +1730,8 @@ uftdi_get_bitmode(struct ucom_softc *ucom, uint8_t *bitmode, uint8_t *iomask)
 	struct uftdi_softc *sc = ucom->sc_parent;
 	usb_device_request_t req;
 
+	DPRINTFN(2, "\n");
+
 	req.bmRequestType = UT_READ_VENDOR_DEVICE;
 	req.bRequest = FTDI_SIO_GET_BITMODE;
 
@@ -1727,6 +1748,8 @@ uftdi_set_latency(struct ucom_softc *ucom, int latency)
 {
 	struct uftdi_softc *sc = ucom->sc_parent;
 	usb_device_request_t req;
+
+	DPRINTFN(2, "\n");
 
 	if (latency < 0 || latency > 255)
 		return (USB_ERR_INVAL);
@@ -1749,6 +1772,8 @@ uftdi_get_latency(struct ucom_softc *ucom, int *latency)
 	usb_error_t err;
 	uint8_t buf;
 
+	DPRINTFN(2, "\n");
+
 	req.bmRequestType = UT_READ_VENDOR_DEVICE;
 	req.bRequest = FTDI_SIO_GET_LATENCY;
 
@@ -1769,6 +1794,8 @@ uftdi_set_event_char(struct ucom_softc *ucom, int echar)
 	usb_device_request_t req;
 	uint8_t enable;
 
+	DPRINTFN(2, "\n");
+
 	enable = (echar == -1) ? 0 : 1;
 
 	req.bmRequestType = UT_WRITE_VENDOR_DEVICE;
@@ -1787,6 +1814,8 @@ uftdi_set_error_char(struct ucom_softc *ucom, int echar)
 	struct uftdi_softc *sc = ucom->sc_parent;
 	usb_device_request_t req;
 	uint8_t enable;
+
+	DPRINTFN(2, "\n");
 
 	enable = (echar == -1) ? 0 : 1;
 
@@ -1807,6 +1836,8 @@ uftdi_read_eeprom(struct ucom_softc *ucom, struct uftdi_eeio *eeio)
 	usb_device_request_t req;
 	usb_error_t err;
 	uint16_t widx, wlength, woffset;
+
+	DPRINTFN(3, "\n");
 
 	/* Offset and length must both be evenly divisible by two. */
 	if ((eeio->offset | eeio->length) & 0x01)
@@ -1836,6 +1867,8 @@ uftdi_write_eeprom(struct ucom_softc *ucom, struct uftdi_eeio *eeio)
 	usb_error_t err;
 	uint16_t widx, wlength, woffset;
 
+	DPRINTFN(3, "\n");
+
 	/* Offset and length must both be evenly divisible by two. */
 	if ((eeio->offset | eeio->length) & 0x01)
 		return (EINVAL);
@@ -1862,6 +1895,8 @@ uftdi_erase_eeprom(struct ucom_softc *ucom, int confirmation)
 	usb_device_request_t req;
 	usb_error_t err;
 
+	DPRINTFN(2, "\n");
+
 	/* Small effort to prevent accidental erasure. */
 	if (confirmation != UFTDI_CONFIRM_ERASE)
 		return (EINVAL);
@@ -1883,8 +1918,6 @@ uftdi_ioctl(struct ucom_softc *ucom, uint32_t cmd, caddr_t data,
 	struct uftdi_softc *sc = ucom->sc_parent;
 	int err;
 	struct uftdi_bitmode * mode;
-
-	DPRINTF("portno: %d cmd: %#x\n", ucom->sc_portno, cmd);
 
 	switch (cmd) {
 	case UFTDIIOC_RESET_IO:

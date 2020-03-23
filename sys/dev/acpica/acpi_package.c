@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Nate Lawson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_package.c 315021 2017-03-10 19:34:14Z vangyzen $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_package.c 315020 2017-03-10 19:33:37Z vangyzen $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -81,7 +80,6 @@ acpi_PkgStr(ACPI_OBJECT *res, int idx, void *dst, size_t size)
     obj = &res->Package.Elements[idx];
     if (obj == NULL)
 	return (EINVAL);
-    bzero(dst, sizeof(dst));
 
     switch (obj->Type) {
     case ACPI_TYPE_STRING:
@@ -119,6 +117,28 @@ acpi_PkgGas(device_t dev, ACPI_OBJECT *res, int idx, int *type, int *rid,
     memcpy(&gas, obj->Buffer.Pointer + 3, sizeof(gas));
 
     return (acpi_bus_alloc_gas(dev, type, rid, &gas, dst, flags));
+}
+
+int
+acpi_PkgFFH_IntelCpu(ACPI_OBJECT *res, int idx, int *vendor, int *class,
+    uint64_t *address, int *accsize)
+{
+    ACPI_GENERIC_ADDRESS gas;
+    ACPI_OBJECT *obj;
+
+    obj = &res->Package.Elements[idx];
+    if (obj == NULL || obj->Type != ACPI_TYPE_BUFFER ||
+	obj->Buffer.Length < sizeof(ACPI_GENERIC_ADDRESS) + 3)
+	return (EINVAL);
+
+    memcpy(&gas, obj->Buffer.Pointer + 3, sizeof(gas));
+    if (gas.SpaceId != ACPI_ADR_SPACE_FIXED_HARDWARE)
+	return (ERESTART);
+    *vendor = gas.BitWidth;
+    *class = gas.BitOffset;
+    *address = gas.Address;
+    *accsize = gas.AccessWidth;
+    return (0);
 }
 
 ACPI_HANDLE

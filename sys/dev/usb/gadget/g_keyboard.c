@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/gadget/g_keyboard.c 253618 2013-07-24 18:32:15Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/gadget/g_keyboard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -65,18 +64,18 @@ static SYSCTL_NODE(_hw_usb, OID_AUTO, g_keyboard, CTLFLAG_RW, 0, "USB keyboard g
 #ifdef USB_DEBUG
 static int g_keyboard_debug = 0;
 
-SYSCTL_INT(_hw_usb_g_keyboard, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_g_keyboard, OID_AUTO, debug, CTLFLAG_RWTUN,
     &g_keyboard_debug, 0, "Debug level");
 #endif
 
 static int g_keyboard_mode = 0;
 
-SYSCTL_INT(_hw_usb_g_keyboard, OID_AUTO, mode, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_g_keyboard, OID_AUTO, mode, CTLFLAG_RWTUN,
     &g_keyboard_mode, 0, "Mode selection");
 
 static int g_keyboard_key_press_interval = 1000;
 
-SYSCTL_INT(_hw_usb_g_keyboard, OID_AUTO, key_press_interval, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_g_keyboard, OID_AUTO, key_press_interval, CTLFLAG_RWTUN,
     &g_keyboard_key_press_interval, 0, "Key Press Interval in milliseconds");
 
 static char g_keyboard_key_press_pattern[G_KEYBOARD_MAX_STRLEN];

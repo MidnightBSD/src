@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_mbuf.c 246122 2013-01-30 15:26:04Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_mbuf.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

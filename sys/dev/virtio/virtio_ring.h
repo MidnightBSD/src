@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright Rusty Russell IBM Corporation 2007.
  *
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/virtio_ring.h 238360 2012-07-11 02:57:19Z grehan $
+ * $FreeBSD: stable/11/sys/dev/virtio/virtio_ring.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef VIRTIO_RING_H

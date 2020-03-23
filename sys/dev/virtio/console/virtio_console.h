@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -29,7 +28,7 @@
  * Copyright (C) Red Hat, Inc., 2009, 2010, 2011
  * Copyright (C) Amit Shah <amit.shah@redhat.com>, 2009, 2010, 2011
  *
- * $FreeBSD: stable/10/sys/dev/virtio/console/virtio_console.h 273515 2014-10-23 04:47:32Z bryanv $
+ * $FreeBSD: stable/11/sys/dev/virtio/console/virtio_console.h 273515 2014-10-23 04:47:32Z bryanv $
  */
 
 #ifndef _VIRTIO_CONSOLE_H

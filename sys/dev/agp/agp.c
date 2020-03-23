@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp.c 275406 2014-12-02 13:46:13Z tijl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/agp/agp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_agp.h"
 
@@ -186,7 +185,7 @@ static u_int agp_max[][2] = {
 	{2048,	1920},
 	{4096,	3932}
 };
-#define agp_max_size	(sizeof(agp_max) / sizeof(agp_max[0]))
+#define	AGP_MAX_SIZE	nitems(agp_max)
 
 /**
  * Sets the PCI resource which represents the AGP aperture.
@@ -229,12 +228,12 @@ agp_generic_attach(device_t dev)
 	 * uses a heurisitc table from the Linux driver.
 	 */
 	memsize = ptoa(realmem) >> 20;
-	for (i = 0; i < agp_max_size; i++) {
+	for (i = 0; i < AGP_MAX_SIZE; i++) {
 		if (memsize <= agp_max[i][0])
 			break;
 	}
-	if (i == agp_max_size)
-		i = agp_max_size - 1;
+	if (i == AGP_MAX_SIZE)
+		i = AGP_MAX_SIZE - 1;
 	sc->as_maxmem = agp_max[i][1] << 20U;
 
 	/*
@@ -616,7 +615,7 @@ bad:
 		if (k >= i)
 			vm_page_xunbusy(m);
 		vm_page_lock(m);
-		vm_page_unwire(m, 0);
+		vm_page_unwire(m, PQ_INACTIVE);
 		vm_page_unlock(m);
 	}
 	VM_OBJECT_WUNLOCK(mem->am_obj);
@@ -653,7 +652,7 @@ agp_generic_unbind_memory(device_t dev, struct agp_memory *mem)
 	for (i = 0; i < mem->am_size; i += PAGE_SIZE) {
 		m = vm_page_lookup(mem->am_obj, atop(i));
 		vm_page_lock(m);
-		vm_page_unwire(m, 0);
+		vm_page_unwire(m, PQ_INACTIVE);
 		vm_page_unlock(m);
 	}
 	VM_OBJECT_WUNLOCK(mem->am_obj);
@@ -821,7 +820,7 @@ agp_close(struct cdev *kdev, int fflag, int devtype, struct thread *td)
 	/*
 	 * Clear the GATT and force release on last close
 	 */
-	while ((mem = TAILQ_FIRST(&sc->as_memory)) != 0) {
+	while ((mem = TAILQ_FIRST(&sc->as_memory)) != NULL) {
 		if (mem->am_is_bound)
 			AGP_UNBIND_MEMORY(dev, mem);
 		AGP_FREE_MEMORY(dev, mem);

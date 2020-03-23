@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2008 Nathan Whitehorn
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/adb/adb_hb_if.m 184299 2008-10-26 19:37:38Z nwhitehorn $
+# $FreeBSD: stable/11/sys/dev/adb/adb_hb_if.m 184299 2008-10-26 19:37:38Z nwhitehorn $
 #
 
 #include <sys/bus.h>

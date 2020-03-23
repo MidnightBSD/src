@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
     ----------------------------------------------------------------------
 
@@ -6,7 +5,7 @@
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted under any licence of your choise which
-    meets the open source licence definiton
+    meets the open source licence definition
     http://www.opensource.org/opd.html such as the GNU licence or the
     BSD licence.
 
@@ -21,7 +20,7 @@
 
     ---------------------------------------------------------------------- */
 
-/*  $FreeBSD: stable/10/sys/dev/usb/storage/rio500_usb.h 196219 2009-08-14 20:03:53Z jhb $ */
+/*  $FreeBSD: stable/11/sys/dev/usb/storage/rio500_usb.h 298932 2016-05-02 17:44:03Z pfg $ */
 
 #include <sys/ioccom.h>
 #ifndef USB_VENDOR_DIAMOND

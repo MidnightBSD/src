@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/network/if_vtnetvar.h 304081 2016-08-14 15:27:59Z smh $
+ * $FreeBSD: stable/11/sys/dev/virtio/network/if_vtnetvar.h 347878 2019-05-16 18:26:42Z tuexen $
  */
 
 #ifndef _IF_VTNETVAR_H
@@ -78,6 +77,9 @@ struct vtnet_rxq {
 	struct vtnet_rxq_stats	 vtnrx_stats;
 	struct taskqueue	*vtnrx_tq;
 	struct task		 vtnrx_intrtask;
+#ifdef DEV_NETMAP
+	struct virtio_net_hdr_mrg_rxbuf vtnrx_shrhdr;
+#endif  /* DEV_NETMAP */
 	char			 vtnrx_name[16];
 } __aligned(CACHE_LINE_SIZE);
 
@@ -113,6 +115,9 @@ struct vtnet_txq {
 #ifndef VTNET_LEGACY_TX
 	struct task		 vtntx_defrtask;
 #endif
+#ifdef DEV_NETMAP
+	struct virtio_net_hdr_mrg_rxbuf vtntx_shrhdr;
+#endif  /* DEV_NETMAP */
 	char			 vtntx_name[16];
 } __aligned(CACHE_LINE_SIZE);
 
@@ -261,8 +266,8 @@ struct vtnet_mac_filter {
 CTASSERT(sizeof(struct vtnet_mac_filter) <= PAGE_SIZE);
 
 #define VTNET_TX_TIMEOUT	5
-#define VTNET_CSUM_OFFLOAD	(CSUM_TCP | CSUM_UDP | CSUM_SCTP)
-#define VTNET_CSUM_OFFLOAD_IPV6	(CSUM_TCP_IPV6 | CSUM_UDP_IPV6 | CSUM_SCTP_IPV6)
+#define VTNET_CSUM_OFFLOAD	(CSUM_TCP | CSUM_UDP)
+#define VTNET_CSUM_OFFLOAD_IPV6	(CSUM_TCP_IPV6 | CSUM_UDP_IPV6)
 
 #define VTNET_CSUM_ALL_OFFLOAD	\
     (VTNET_CSUM_OFFLOAD | VTNET_CSUM_OFFLOAD_IPV6 | CSUM_TSO)

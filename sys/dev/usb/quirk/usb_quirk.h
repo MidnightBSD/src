@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/quirk/usb_quirk.h 315249 2017-03-14 15:21:41Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/quirk/usb_quirk.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -111,6 +110,7 @@ enum {
 	UQ_SINGLE_CMD_MIDI,	/* at most one command per USB packet */
 	UQ_MSC_DYMO_EJECT,	/* ejects Dymo MSC device */
 	UQ_AU_SET_SPDIF_CM6206,	/* enable S/PDIF audio output */
+	UQ_WMT_IGNORE,          /* device should be ignored by wmt driver */
 
 	USB_QUIRK_MAX
 };

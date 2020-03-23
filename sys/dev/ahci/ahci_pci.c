@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ahci/ahci_pci.c 313446 2017-02-08 16:07:59Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ahci/ahci_pci.c 355329 2019-12-03 14:48:13Z mav $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -69,14 +68,19 @@ static const struct {
 	    AHCI_Q_ATI_PMP_BUG | AHCI_Q_1MSI},
 	/* Not sure SB8x0/SB9x0 needs this quirk. Be conservative though */
 	{0x43951002, 0x00, "AMD SB8x0/SB9x0",	AHCI_Q_ATI_PMP_BUG},
-	{0x43b61022, 0x00, "AMD X399",          0},
-	{0x43b51022, 0x00, "AMD 300 Series",    0}, /* X370 */
+	{0x43b61022, 0x00, "AMD X399",		0},
+	{0x43b51022, 0x00, "AMD 300 Series",	0}, /* X370 */
 	{0x43b71022, 0x00, "AMD 300 Series",	0}, /* B350 */
 	{0x78001022, 0x00, "AMD Hudson-2",	0},
 	{0x78011022, 0x00, "AMD Hudson-2",	0},
 	{0x78021022, 0x00, "AMD Hudson-2",	0},
 	{0x78031022, 0x00, "AMD Hudson-2",	0},
 	{0x78041022, 0x00, "AMD Hudson-2",	0},
+	{0x79001022, 0x00, "AMD KERNCZ",	0},
+	{0x79011022, 0x00, "AMD KERNCZ",	0},
+	{0x79021022, 0x00, "AMD KERNCZ",	0},
+	{0x79031022, 0x00, "AMD KERNCZ",	0},
+	{0x79041022, 0x00, "AMD KERNCZ",	0},
 	{0x06011b21, 0x00, "ASMedia ASM1060",	AHCI_Q_NOCCS|AHCI_Q_NOAUX},
 	{0x06021b21, 0x00, "ASMedia ASM1060",	AHCI_Q_NOCCS|AHCI_Q_NOAUX},
 	{0x06111b21, 0x00, "ASMedia ASM1061",	AHCI_Q_NOCCS|AHCI_Q_NOAUX},
@@ -115,18 +119,37 @@ static const struct {
 	{0x3a058086, 0x00, "Intel ICH10 (RAID)",	0},
 	{0x3a228086, 0x00, "Intel ICH10",	0},
 	{0x3a258086, 0x00, "Intel ICH10 (RAID)",	0},
-	{0x3b228086, 0x00, "Intel 5 Series/3400 Series",	0},
-	{0x3b238086, 0x00, "Intel 5 Series/3400 Series",	0},
-	{0x3b258086, 0x00, "Intel 5 Series/3400 Series",	0},
-	{0x3b298086, 0x00, "Intel 5 Series/3400 Series",	0},
-	{0x3b2c8086, 0x00, "Intel 5 Series/3400 Series",	0},
-	{0x3b2f8086, 0x00, "Intel 5 Series/3400 Series",	0},
-	{0x19cf8086, 0x00, "Intel Denverton",   0},
+	{0x3b228086, 0x00, "Intel Ibex Peak",	0},
+	{0x3b238086, 0x00, "Intel Ibex Peak",	0},
+	{0x3b258086, 0x00, "Intel Ibex Peak (RAID)",	0},
+	{0x3b298086, 0x00, "Intel Ibex Peak-M",	0},
+	{0x3b2c8086, 0x00, "Intel Ibex Peak-M (RAID)",	0},
+	{0x3b2f8086, 0x00, "Intel Ibex Peak-M",	0},
+	{0x19b08086, 0x00, "Intel Denverton",	0},
+	{0x19b18086, 0x00, "Intel Denverton",	0},
+	{0x19b28086, 0x00, "Intel Denverton",	0},
+	{0x19b38086, 0x00, "Intel Denverton",	0},
+	{0x19b48086, 0x00, "Intel Denverton",	0},
+	{0x19b58086, 0x00, "Intel Denverton",	0},
+	{0x19b68086, 0x00, "Intel Denverton",	0},
+	{0x19b78086, 0x00, "Intel Denverton",	0},
+	{0x19be8086, 0x00, "Intel Denverton",	0},
+	{0x19bf8086, 0x00, "Intel Denverton",	0},
+	{0x19c08086, 0x00, "Intel Denverton",	0},
+	{0x19c18086, 0x00, "Intel Denverton",	0},
+	{0x19c28086, 0x00, "Intel Denverton",	0},
+	{0x19c38086, 0x00, "Intel Denverton",	0},
+	{0x19c48086, 0x00, "Intel Denverton",	0},
+	{0x19c58086, 0x00, "Intel Denverton",	0},
+	{0x19c68086, 0x00, "Intel Denverton",	0},
+	{0x19c78086, 0x00, "Intel Denverton",	0},
+	{0x19ce8086, 0x00, "Intel Denverton",	0},
+	{0x19cf8086, 0x00, "Intel Denverton",	0},
 	{0x1c028086, 0x00, "Intel Cougar Point",	0},
 	{0x1c038086, 0x00, "Intel Cougar Point",	0},
 	{0x1c048086, 0x00, "Intel Cougar Point (RAID)",	0},
 	{0x1c058086, 0x00, "Intel Cougar Point (RAID)",	0},
-	{0x1c068086, 0x00, "Intel Cougar Point (RAID)", 0},
+	{0x1c068086, 0x00, "Intel Cougar Point (RAID)",	0},
 	{0x1d028086, 0x00, "Intel Patsburg",	0},
 	{0x1d048086, 0x00, "Intel Patsburg",	0},
 	{0x1d068086, 0x00, "Intel Patsburg",	0},
@@ -179,7 +202,7 @@ static const struct {
 	{0x8d648086, 0x00, "Intel Wellsburg (RAID)",	0},
 	{0x8d668086, 0x00, "Intel Wellsburg (RAID)",	0},
 	{0x8d6e8086, 0x00, "Intel Wellsburg (RAID)",	0},
-	{0x28238086, 0x00, "Intel Wellsburg+ (RAID)",   0},
+	{0x28238086, 0x00, "Intel Wellsburg+ (RAID)",	0},
 	{0x28278086, 0x00, "Intel Wellsburg+ (RAID)",	0},
 	{0x9c028086, 0x00, "Intel Lynx Point-LP",	0},
 	{0x9c038086, 0x00, "Intel Lynx Point-LP",	0},
@@ -189,6 +212,10 @@ static const struct {
 	{0x9c078086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
 	{0x9c0e8086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
 	{0x9c0f8086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
+	{0x9c838086, 0x00, "Intel Wildcat Point-LP",	0},
+	{0x9c858086, 0x00, "Intel Wildcat Point-LP (RAID)",	0},
+	{0x9c878086, 0x00, "Intel Wildcat Point-LP (RAID)",	0},
+	{0x9c8f8086, 0x00, "Intel Wildcat Point-LP (RAID)",	0},
 	{0x9d038086, 0x00, "Intel Sunrise Point-LP",	0},
 	{0x9d058086, 0x00, "Intel Sunrise Point-LP (RAID)",	0},
 	{0x9d078086, 0x00, "Intel Sunrise Point-LP (RAID)",	0},
@@ -198,17 +225,19 @@ static const struct {
 	{0xa1068086, 0x00, "Intel Sunrise Point (RAID)",	0},
 	{0xa1078086, 0x00, "Intel Sunrise Point (RAID)",	0},
 	{0xa10f8086, 0x00, "Intel Sunrise Point (RAID)",	0},
-	{0xa1828086, 0x00, "Intel Lewisburg",   0},
-        {0xa1868086, 0x00, "Intel Lewisburg (RAID)",    0},
-        {0xa1d28086, 0x00, "Intel Lewisburg",   0},
-        {0xa1d68086, 0x00, "Intel Lewisburg (RAID)",    0},
-        {0xa2028086, 0x00, "Intel Lewisburg",   0},
-        {0xa2068086, 0x00, "Intel Lewisburg (RAID)",    0},
-        {0xa2528086, 0x00, "Intel Lewisburg",   0},
-        {0xa2568086, 0x00, "Intel Lewisburg (RAID)",    0},
-        {0xa2828086, 0x00, "Intel Union Point", 0},
-        {0xa2868086, 0x00, "Intel Union Point (RAID)",  0},
-        {0xa28e8086, 0x00, "Intel Union Point (RAID)",  0},
+	{0xa1828086, 0x00, "Intel Lewisburg",	0},
+	{0xa1868086, 0x00, "Intel Lewisburg (RAID)",	0},
+	{0xa1d28086, 0x00, "Intel Lewisburg",	0},
+	{0xa1d68086, 0x00, "Intel Lewisburg (RAID)",	0},
+	{0xa2028086, 0x00, "Intel Lewisburg",	0},
+	{0xa2068086, 0x00, "Intel Lewisburg (RAID)",	0},
+	{0xa2528086, 0x00, "Intel Lewisburg",	0},
+	{0xa2568086, 0x00, "Intel Lewisburg (RAID)",	0},
+	{0xa2828086, 0x00, "Intel Union Point",	0},
+	{0xa2868086, 0x00, "Intel Union Point (RAID)",	0},
+	{0xa28e8086, 0x00, "Intel Union Point (RAID)",	0},
+	{0xa3528086, 0x00, "Intel Cannon Lake",	0},
+	{0xa3538086, 0x00, "Intel Cannon Lake",	0},
 	{0x23238086, 0x00, "Intel DH89xxCC",	0},
 	{0x2360197b, 0x00, "JMicron JMB360",	0},
 	{0x2361197b, 0x00, "JMicron JMB361",	AHCI_Q_NOFORCE | AHCI_Q_1CH},
@@ -325,9 +354,8 @@ static const struct {
 	{0x11841039, 0x00, "SiS 966",		0},
 	{0x11851039, 0x00, "SiS 968",		0},
 	{0x01861039, 0x00, "SiS 968",		0},
-	{0x00311c36, 0x00, "Annapurna",         AHCI_Q_FORCE_PI|AHCI_Q_RESTORE_CAP|AHCI_Q_NOMSIX},
-	{0x1600144d, 0x00, "Samsung",           AHCI_Q_NOMSI},
 	{0xa01c177d, 0x00, "ThunderX",		AHCI_Q_ABAR0|AHCI_Q_1MSI},
+	{0x00311c36, 0x00, "Annapurna",		AHCI_Q_FORCE_PI|AHCI_Q_RESTORE_CAP|AHCI_Q_NOMSIX},
 	{0x00000000, 0x00, NULL,		0}
 };
 
@@ -411,12 +439,39 @@ ahci_ata_probe(device_t dev)
 }
 
 static int
+ahci_pci_read_msix_bars(device_t dev, uint8_t *table_bar, uint8_t *pba_bar)
+{
+	int cap_offset = 0, ret;
+	uint32_t val;
+
+	if ((table_bar == NULL) || (pba_bar == NULL))
+		return (EINVAL);
+
+	ret = pci_find_cap(dev, PCIY_MSIX, &cap_offset);
+	if (ret != 0)
+		return (EINVAL);
+
+	val = pci_read_config(dev, cap_offset + PCIR_MSIX_TABLE, 4);
+	*table_bar = PCIR_BAR(val & PCIM_MSIX_BIR_MASK);
+
+	val = pci_read_config(dev, cap_offset + PCIR_MSIX_PBA, 4);
+	*pba_bar = PCIR_BAR(val & PCIM_MSIX_BIR_MASK);
+
+	return (0);
+}
+
+static int
 ahci_pci_attach(device_t dev)
 {
 	struct ahci_controller *ctlr = device_get_softc(dev);
 	int	error, i;
 	uint32_t devid = pci_get_devid(dev);
 	uint8_t revid = pci_get_revid(dev);
+	int msi_count, msix_count;
+	uint8_t table_bar = 0, pba_bar = 0;
+
+	msi_count = pci_msi_count(dev);
+	msix_count = pci_msix_count(dev);
 
 	i = 0;
 	while (ahci_ids[i].id != 0 &&
@@ -445,12 +500,62 @@ ahci_pci_attach(device_t dev)
 	if (!(ctlr->r_mem = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
 	    &ctlr->r_rid, RF_ACTIVE)))
 		return ENXIO;
+
+	if (ctlr->quirks & AHCI_Q_NOMSIX)
+		msix_count = 0;
+
+	/* Read MSI-x BAR IDs if supported */
+	if (msix_count > 0) {
+		error = ahci_pci_read_msix_bars(dev, &table_bar, &pba_bar);
+		if (error == 0) {
+			ctlr->r_msix_tab_rid = table_bar;
+			ctlr->r_msix_pba_rid = pba_bar;
+		} else {
+			/* Failed to read BARs, disable MSI-x */
+			msix_count = 0;
+		}
+	}
+
+	/* Allocate resources for MSI-x table and PBA */
+	if (msix_count > 0) {
+		/*
+		 * Allocate new MSI-x table only if not
+		 * allocated before.
+		 */
+		ctlr->r_msix_table = NULL;
+		if (ctlr->r_msix_tab_rid != ctlr->r_rid) {
+			/* Separate BAR for MSI-x */
+			ctlr->r_msix_table = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+			    &ctlr->r_msix_tab_rid, RF_ACTIVE);
+			if (ctlr->r_msix_table == NULL) {
+				ahci_free_mem(dev);
+				return (ENXIO);
+			}
+		}
+
+		/*
+		 * Allocate new PBA table only if not
+		 * allocated before.
+		 */
+		ctlr->r_msix_pba = NULL;
+		if ((ctlr->r_msix_pba_rid != ctlr->r_msix_tab_rid) &&
+		    (ctlr->r_msix_pba_rid != ctlr->r_rid)) {
+			/* Separate BAR for PBA */
+			ctlr->r_msix_pba = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+			    &ctlr->r_msix_pba_rid, RF_ACTIVE);
+			if (ctlr->r_msix_pba == NULL) {
+				ahci_free_mem(dev);
+				return (ENXIO);
+			}
+		}
+	}
+
 	pci_enable_busmaster(dev);
 	/* Reset controller */
 	if ((error = ahci_pci_ctlr_reset(dev)) != 0) {
-		bus_release_resource(dev, SYS_RES_MEMORY, ctlr->r_rid, ctlr->r_mem);
+		ahci_free_mem(dev);
 		return (error);
-	};
+	}
 
 	/* Setup interrupts. */
 
@@ -465,24 +570,51 @@ ahci_pci_attach(device_t dev)
 	resource_int_value(device_get_name(dev),
 	    device_get_unit(dev), "msi", &ctlr->msi);
 	ctlr->numirqs = 1;
+	if (msi_count == 0 && msix_count == 0)
+		ctlr->msi = 0;
 	if (ctlr->msi < 0)
 		ctlr->msi = 0;
-	else if (ctlr->msi == 1)
-		ctlr->msi = min(1, pci_msi_count(dev));
-	else if (ctlr->msi > 1) {
+	else if (ctlr->msi == 1) {
+		msi_count = min(1, msi_count);
+		msix_count = min(1, msix_count);
+	} else if (ctlr->msi > 1)
 		ctlr->msi = 2;
-		ctlr->numirqs = pci_msi_count(dev);
-	}
-	/* Allocate MSI if needed/present. */
-	if (ctlr->msi && pci_alloc_msi(dev, &ctlr->numirqs) != 0) {
-		ctlr->msi = 0;
-		ctlr->numirqs = 1;
+
+	/* Allocate MSI/MSI-x if needed/present. */
+	if (ctlr->msi > 0) {
+		error = ENXIO;
+
+		/* Try to allocate MSI-x first */
+		if (msix_count > 0) {
+			error = pci_alloc_msix(dev, &msix_count);
+			if (error == 0)
+				ctlr->numirqs = msix_count;
+		}
+
+		/*
+		 * Try to allocate MSI if msi_count is greater than 0
+		 * and if MSI-x allocation failed.
+		 */
+		if ((error != 0) && (msi_count > 0)) {
+			error = pci_alloc_msi(dev, &msi_count);
+			if (error == 0)
+				ctlr->numirqs = msi_count;
+		}
+
+		/* Both MSI and MSI-x allocations failed */
+		if (error != 0) {
+			ctlr->msi = 0;
+			device_printf(dev, "Failed to allocate MSI/MSI-x, "
+			    "falling back to INTx\n");
+		}
 	}
 
 	error = ahci_attach(dev);
-	if (error != 0)
-		if (ctlr->msi)
+	if (error != 0) {
+		if (ctlr->msi > 0)
 			pci_release_msi(dev);
+		ahci_free_mem(dev);
+	}
 	return error;
 }
 
@@ -518,7 +650,6 @@ ahci_pci_resume(device_t dev)
 	return (bus_generic_resume(dev));
 }
 
-devclass_t ahci_devclass;
 static device_method_t ahci_methods[] = {
 	DEVMETHOD(device_probe,     ahci_probe),
 	DEVMETHOD(device_attach,    ahci_pci_attach),

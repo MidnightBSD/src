@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.h 334758 2018-06-07 07:33:46Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/net/usb_ethernet.h 334757 2018-06-07 07:32:51Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/net/usb_ethernet.h 334758 2018-06-07 07:33:46Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/usb/net/usb_ethernet.h 334757 2018-06-07 07:32:51Z hselasky $
  */
 
 #ifndef _USB_ETHERNET_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-2000 Whistle Communications, Inc.
  * All rights reserved.
@@ -35,7 +34,7 @@
  * This file was derived from src/sys/netgraph/ng_sample.h, revision 1.1
  * written by Julian Elischer, Whistle Communications.
  *
- * $FreeBSD: stable/10/sys/dev/usb/misc/udbp.h 196219 2009-08-14 20:03:53Z jhb $
+ * $FreeBSD: stable/11/sys/dev/usb/misc/udbp.h 196219 2009-08-14 20:03:53Z jhb $
  */
 
 #ifndef	_NETGRAPH_UDBP_H_

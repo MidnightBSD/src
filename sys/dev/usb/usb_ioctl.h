@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_ioctl.h 269922 2014-08-13 08:21:52Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_ioctl.h 353174 2019-10-07 08:13:10Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -66,6 +65,8 @@ enum {
 	USB_TEMP_KBD,		/* USB Keyboard */
 	USB_TEMP_MOUSE,		/* USB Mouse */
 	USB_TEMP_PHONE,		/* USB Phone */
+	USB_TEMP_SERIALNET,	/* USB CDC Ethernet and Modem */
+	USB_TEMP_MIDI,		/* USB MIDI */
 	USB_TEMP_MAX,
 };
 
@@ -219,7 +220,7 @@ struct usb_fs_uninit {
 } USB_IOCTL_STRUCT_ALIGN(1);
 
 struct usb_fs_open {
-#define	USB_FS_MAX_BUFSIZE (1 << 18)
+#define	USB_FS_MAX_BUFSIZE (1 << 25)	/* 32 MBytes */
 	uint32_t max_bufsize;
 #define	USB_FS_MAX_FRAMES		(1U << 12)
 #define	USB_FS_MAX_FRAMES_PRE_SCALE	(1U << 31)	/* for ISOCHRONOUS transfers */

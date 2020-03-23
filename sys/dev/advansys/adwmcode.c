@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Downloadable microcode for Second Generation
  * Advanced Systems Inc. SCSI controllers
@@ -17,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/adwmcode.c 139749 2005-01-06 01:43:34Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/advansys/adwmcode.c 139749 2005-01-06 01:43:34Z imp $");
 
 #include <sys/param.h>
 

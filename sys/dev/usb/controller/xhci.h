@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/xhci.h 333203 2018-05-03 07:38:45Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/xhci.h 356782 2020-01-16 08:52:54Z hselasky $ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -407,6 +406,8 @@ struct xhci_hw_dev {
 
 	struct xhci_endpoint_ext endp[XHCI_MAX_ENDPOINTS];
 
+	uint32_t		ep_configured;
+
 	uint8_t			state;
 	uint8_t			nports;
 	uint8_t			tt;
@@ -467,6 +468,7 @@ struct xhci_softc {
 	struct usb_device	*sc_devices[XHCI_MAX_DEVICES];
 	struct resource		*sc_io_res;
 	struct resource		*sc_irq_res;
+	struct resource		*sc_msix_res;
 
 	void			*sc_intr_hdl;
 	bus_size_t		sc_io_size;

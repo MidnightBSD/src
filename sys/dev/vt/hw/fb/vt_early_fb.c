@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -26,12 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/sys/dev/vt/hw/fb/vt_early_fb.c 271769 2014-09-18 14:38:18Z dumbbell $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vt/hw/fb/vt_early_fb.c 271769 2014-09-18 14:38:18Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vt/hw/fb/vt_early_fb.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,7 +125,7 @@ vt_efb_initialize(struct fb_info *info)
 	default:
 		panic("Unknown color space fb_depth %d", info->fb_depth);
 		break;
-        }
+	}
 }
 
 static phandle_t
@@ -214,9 +211,9 @@ vt_efb_init(struct vt_device *vd)
 	if (len == -1) {
 		len = OF_getprop(OF_parent(node), "assigned-addresses",
 		    pciaddrs, sizeof(pciaddrs));
-        }
-        if (len == -1)
-                len = 0;
+	}
+	if (len == -1)
+		len = 0;
 	n_pciaddrs = len / sizeof(struct ofw_pci_register);
 
 	/*
@@ -284,7 +281,7 @@ vt_efb_init(struct vt_device *vd)
 		    BUS_SPACE_MAP_PREFETCHABLE,
 		    (bus_space_handle_t *)&info->fb_vbase);
 	#endif
-        }
+	}
 
 	/* blank full size */
 	len = info->fb_size / 4;

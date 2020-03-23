@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdSynch.c 303252 2016-07-23 22:50:59Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/Osd/OsdSynch.c 299977 2016-05-16 21:33:31Z jhb $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>

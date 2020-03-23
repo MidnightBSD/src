@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Definitions for low level routines and data structures
  * for the Advanced Systems Inc. SCSI controllers chips.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/advansys/advlib.h 241492 2012-10-12 21:31:44Z jhb $
+ * $FreeBSD: stable/11/sys/dev/advansys/advlib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*-
  * Ported from:
@@ -229,7 +228,7 @@ struct adv_ccb_info {
 #define		ADV_CSW_SCSI_RESET_LATCH	0x0002
 #define		ADV_CSW_INT_PENDING		0x0001
 /*
- * XXX I don't understand the relevence of the naming
+ * XXX I don't understand the relevance of the naming
  * convention change here.  What does CIW stand for?
  * Perhaps this is to differentiate read and write
  * values?
@@ -591,7 +590,7 @@ struct adv_scsiq_1 {
 	u_int8_t		target_lun;	/* LUN - taken from our xs */
 
 	u_int32_t		data_addr;	/*
-						 * physical addres of first
+						 * physical address of first
 						 * (possibly only) segment
 						 * to transfer.
 						 */
@@ -794,7 +793,7 @@ u_int16_t adv_read_lram_16(struct adv_softc *adv, u_int16_t addr);
 void	  adv_write_lram_16(struct adv_softc *adv, u_int16_t addr,
 			    u_int16_t value);
 
-/* Intialization */
+/* Initialization */
 int	  adv_find_signature(struct resource *res);
 void	  adv_lib_init(struct adv_softc *adv);
 

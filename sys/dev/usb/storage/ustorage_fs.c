@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/storage/ustorage_fs.c 246128 2013-01-30 18:01:20Z sbz $ */
+/* $FreeBSD: stable/11/sys/dev/usb/storage/ustorage_fs.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (C) 2003-2005 Alan Stern
  * Copyright (C) 2008 Hans Petter Selasky
@@ -72,7 +71,7 @@
 static int ustorage_fs_debug = 0;
 
 SYSCTL_NODE(_hw_usb, OID_AUTO, ustorage_fs, CTLFLAG_RW, 0, "USB ustorage_fs");
-SYSCTL_INT(_hw_usb_ustorage_fs, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_ustorage_fs, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ustorage_fs_debug, 0, "ustorage_fs debug level");
 #endif
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012
  *	Ben Gray <bgray@freebsd.org>.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/net/if_smscreg.h 239275 2012-08-15 04:03:55Z gonzo $
+ * $FreeBSD: stable/11/sys/dev/usb/net/if_smscreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _IF_SMSCREG_H_
 #define _IF_SMSCREG_H_

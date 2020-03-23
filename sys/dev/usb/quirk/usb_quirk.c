@@ -95,6 +95,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(TELEX, MIC1, 0x009, 0x009, UQ_AU_NO_FRAC),
 	USB_QUIRK(SILICONPORTALS, YAPPHONE, 0x100, 0x100, UQ_AU_INP_ASYNC),
 	USB_QUIRK(LOGITECH, UN53B, 0x0000, 0xffff, UQ_NO_STRINGS),
+	USB_QUIRK(LOGITECH, G510S, 0x0000, 0xFFFF, UQ_KBD_BOOTPROTO),
 	USB_QUIRK(REALTEK, RTL8196EU, 0x0000, 0xffff, UQ_CFG_INDEX_1),
 	USB_QUIRK(REALTEK, RTL8153, 0x0000, 0xffff, UQ_CFG_INDEX_1),
 	USB_QUIRK(ELSA, MODEM1, 0x0000, 0xffff, UQ_CFG_INDEX_1),
@@ -135,6 +136,8 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(MICROSOFT, WLINTELLIMOUSE, 0x0000, 0xffff, UQ_MS_LEADING_BYTE),
 	/* Quirk for Corsair Vengeance K60 keyboard */
 	USB_QUIRK(CORSAIR, K60, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	/* Quirk for Corsair Gaming K68 keyboard */
+	USB_QUIRK(CORSAIR, K68, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 	/* Quirk for Corsair Vengeance K70 keyboard */
 	USB_QUIRK(CORSAIR, K70, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 	/* Quirk for Corsair K70 RGB keyboard */
@@ -206,6 +209,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(FREECOM, DVD, 0x0000, 0xffff, UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(FUJIPHOTO, MASS0100, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI_I,
 	    UQ_MSC_FORCE_PROTO_ATAPI, UQ_MSC_NO_RS_CLEAR_UA, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(GARMIN, FORERUNNER230, 0x0000, 0xffff, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(GENESYS, GL641USB2IDE, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_FORCE_SHORT_INQ,
 	    UQ_MSC_NO_START_STOP, UQ_MSC_IGNORE_RESIDUE, UQ_MSC_NO_SYNC_CACHE),
@@ -240,6 +244,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_RBC),
 	USB_QUIRK(INSYSTEM, STORAGE_V2, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI,
 	    UQ_MSC_FORCE_PROTO_RBC),
+	USB_QUIRK(INTENSO, MEMORY_BOX, 0x0000, 0xffff, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(IODATA, IU_CD2, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(IODATA, DVR_UEH8, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
@@ -247,6 +252,8 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(IOMEGA, ZIP100, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI,
 	    UQ_MSC_NO_TEST_UNIT_READY), /* XXX ZIP drives can also use ATAPI */
+	USB_QUIRK(JMICRON, JMS566, 0x0000, 0xffff, UQ_MSC_NO_GETMAXLUN),
+	USB_QUIRK(JMICRON, JMS567, 0x0000, 0xffff, UQ_MSC_NO_GETMAXLUN),
 	USB_QUIRK(JMICRON, JM20337, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI,
 	    UQ_MSC_NO_SYNC_CACHE),
@@ -617,6 +624,7 @@ static const char *usb_quirk_str[USB_QUIRK_MAX] = {
 	[UQ_SINGLE_CMD_MIDI]		= "UQ_SINGLE_CMD_MIDI",
 	[UQ_MSC_DYMO_EJECT]		= "UQ_MSC_DYMO_EJECT",
 	[UQ_AU_SET_SPDIF_CM6206]	= "UQ_AU_SET_SPDIF_CM6206",
+	[UQ_WMT_IGNORE]			= "UQ_WMT_IGNORE",
 };
 
 /*------------------------------------------------------------------------*
@@ -1008,7 +1016,7 @@ usb_quirk_init(void *arg)
 			break;
 
 		/* parse environment variable */
-		usb_quirk_add_entry_from_str(envkey, getenv(envkey));
+		usb_quirk_add_entry_from_str(envkey, kern_getenv(envkey));
 	}
 	
 	/* register our function */

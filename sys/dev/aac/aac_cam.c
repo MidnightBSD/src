@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Adaptec, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac_cam.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac_cam.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -556,7 +555,7 @@ aac_cam_fix_inquiry(struct aac_softc *sc, union ccb *ccb)
 			/*
 			 * Some aac(4) adapters will always report that a direct
 			 * access device is offline in response to a INQUIRY
-			 * command that does not retreive vital product data.
+			 * command that does not retrieve vital product data.
 			 * Force the qualifier to connected so that upper layers
 			 * correctly recognize that a disk is present.
 			 */
@@ -591,7 +590,7 @@ aac_cam_complete(struct aac_command *cm)
 	} else {
 		/*
 		 * The SRB error codes just happen to match the CAM error
-		 * codes.  How convienient!
+		 * codes.  How convenient!
 		 */
 		ccb->ccb_h.status = srbr->srb_status;
 

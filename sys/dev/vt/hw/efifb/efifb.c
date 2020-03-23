@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
@@ -26,12 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/sys/dev/vt/hw/efifb/efifb.c 287128 2015-08-25 15:14:50Z marcel $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vt/hw/efifb/efifb.c 287128 2015-08-25 15:14:50Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vt/hw/efifb/efifb.c 355811 2019-12-16 18:04:31Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,11 +39,9 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/vt/hw/efifb/efifb.c 287128 2015-08-25 15:1
 #include "opt_platform.h"
 
 #include <machine/metadata.h>
-#include <machine/vm.h>
 #include <machine/vmparam.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
-#include <machine/pmap.h>
 
 #include <dev/vt/vt.h>
 #include <dev/vt/hw/fb/vt_fb.h>
@@ -66,6 +61,8 @@ static struct vt_driver vt_efifb_driver = {
 	.vd_setpixel = vt_fb_setpixel,
 	.vd_fb_ioctl = vt_fb_ioctl,
 	.vd_fb_mmap = vt_fb_mmap,
+	.vd_suspend = vt_suspend,
+	.vd_resume = vt_resume,
 	/* Better than VGA, but still generic driver. */
 	.vd_priority = VD_PRIORITY_GENERIC + 1,
 };
@@ -121,7 +118,7 @@ vt_efifb_init(struct vt_device *vd)
 	info->fb_depth = fls(efifb->fb_mask_red | efifb->fb_mask_green |
 	    efifb->fb_mask_blue | efifb->fb_mask_reserved);
 	/* Round to a multiple of the bits in a byte. */
-	info->fb_bpp = (info->fb_depth + NBBY - 1) & ~(NBBY - 1);
+	info->fb_bpp = roundup2(info->fb_depth, NBBY);
 
 	/* Stride in bytes, not pixels */
 	info->fb_stride = efifb->fb_stride * (info->fb_bpp / NBBY);

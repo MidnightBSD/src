@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Hardware structure definitions for the Adaptec 174X CAM SCSI device driver.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ahb/ahbreg.h 241590 2012-10-15 16:05:02Z jhb $
+ * $FreeBSD: stable/11/sys/dev/ahb/ahbreg.h 298955 2016-05-03 03:41:25Z pfg $
  */
 
 /* Resource Constatns */
@@ -65,7 +64,7 @@
 #define		RSTBUS			0x10
 
 #define	BUSDEF				0x0C4
-#define		B0uS			0x00	/* give up bus immediatly */
+#define		B0uS			0x00	/* give up bus immediately */
 #define		B4uS			0x01	/* delay 4uSec. */
 #define		B8uS			0x02	/* delay 8uSec. */
 

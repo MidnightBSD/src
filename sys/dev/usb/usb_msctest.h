@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_msctest.h 283173 2015-05-21 06:47:20Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_msctest.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -44,6 +43,15 @@ usb_error_t usb_msc_eject(struct usb_device *udev,
 	    uint8_t iface_index, int method);
 usb_error_t usb_msc_auto_quirk(struct usb_device *udev,
 	    uint8_t iface_index);
+usb_error_t usb_msc_read_10(struct usb_device *udev,
+	    uint8_t iface_index, uint32_t lba, uint32_t blocks,
+	    void *buffer);
+usb_error_t usb_msc_write_10(struct usb_device *udev,
+	    uint8_t iface_index, uint32_t lba, uint32_t blocks,
+	    void *buffer);
+usb_error_t usb_msc_read_capacity(struct usb_device *udev,
+	    uint8_t iface_index, uint32_t *lba_last,
+	    uint32_t *block_size);
 usb_error_t usb_dymo_eject(struct usb_device *udev,
 	    uint8_t iface_index);
 

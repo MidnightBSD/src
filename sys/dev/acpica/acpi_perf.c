@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005 Nate Lawson (SDG)
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_perf.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_perf.c 299353 2016-05-10 10:26:07Z trasz $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -268,8 +267,6 @@ acpi_perf_evaluate(device_t dev)
 
 	sc->px_states = malloc(sc->px_count * sizeof(struct acpi_px),
 	    M_ACPIPERF, M_WAITOK | M_ZERO);
-	if (sc->px_states == NULL)
-		goto out;
 
 	/*
 	 * Each state is a package of {CoreFreq, Power, TransitionLatency,

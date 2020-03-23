@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac.c 331637 2018-03-27 17:52:52Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Driver for the Adaptec 'FSA' family of PCI/SCSI RAID adapters.
@@ -423,9 +422,6 @@ aac_startup(void *arg)
 	sc = (struct aac_softc *)arg;
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
-	/* disconnect ourselves from the intrhook chain */
-	config_intrhook_disestablish(&sc->aac_ich);
-
 	mtx_lock(&sc->aac_io_lock);
 	aac_alloc_sync_fib(sc, &fib);
 
@@ -442,12 +438,15 @@ aac_startup(void *arg)
 	aac_release_sync_fib(sc);
 	mtx_unlock(&sc->aac_io_lock);
 
+	/* mark the controller up */
+	sc->aac_state &= ~AAC_STATE_SUSPEND;
+
 	/* poke the bus to actually attach the child devices */
 	if (bus_generic_attach(sc->aac_dev))
 		device_printf(sc->aac_dev, "bus_generic_attach failed\n");
 
-	/* mark the controller up */
-	sc->aac_state &= ~AAC_STATE_SUSPEND;
+	/* disconnect ourselves from the intrhook chain */
+	config_intrhook_disestablish(&sc->aac_ich);
 
 	/* enable interrupts now */
 	AAC_UNMASK_INTERRUPTS(sc);
@@ -919,7 +918,7 @@ aac_filter(void *arg)
 
 	/* handle completion processing */
 	if (reason & AAC_DB_RESPONSE_READY)
-		taskqueue_enqueue_fast(taskqueue_fast, &sc->aac_task_complete);
+		taskqueue_enqueue(taskqueue_fast, &sc->aac_task_complete);
 
 	/* controller wants to talk to us */
 	if (reason & (AAC_DB_PRINTF | AAC_DB_COMMAND_READY)) {
@@ -1784,8 +1783,8 @@ aac_check_firmware(struct aac_softc *sc)
 		rid = rman_get_rid(sc->aac_regs_res1);
 		bus_release_resource(sc->aac_dev, SYS_RES_MEMORY, rid,
 		    sc->aac_regs_res1);
-		sc->aac_regs_res1 = bus_alloc_resource(sc->aac_dev,
-		    SYS_RES_MEMORY, &rid, 0ul, ~0ul, atu_size, RF_ACTIVE);
+		sc->aac_regs_res1 = bus_alloc_resource_anywhere(sc->aac_dev,
+		    SYS_RES_MEMORY, &rid, atu_size, RF_ACTIVE);
 		if (sc->aac_regs_res1 == NULL) {
 			sc->aac_regs_res1 = bus_alloc_resource_any(
 			    sc->aac_dev, SYS_RES_MEMORY, &rid, RF_ACTIVE);
@@ -3790,7 +3789,7 @@ aac_get_bus_info(struct aac_softc *sc)
 			device_printf(sc->aac_dev,
 			    "No memory to add passthrough bus %d\n", i);
 			break;
-		};
+		}
 
 		child = device_add_child(sc->aac_dev, "aacp", -1);
 		if (child == NULL) {

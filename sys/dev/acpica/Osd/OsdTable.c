@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mitsaru Iwasaki
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdTable.c 281075 2015-04-04 10:17:51Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/Osd/OsdTable.c 316303 2017-03-30 20:18:34Z jkim $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

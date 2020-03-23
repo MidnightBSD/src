@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000-2001 Scott Long
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/aacraid/aacraid_reg.h 263024 2014-03-11 14:59:34Z achim $
+ *	$FreeBSD: stable/11/sys/dev/aacraid/aacraid_reg.h 354965 2019-11-21 14:55:27Z emaste $
  */
 
 /*
@@ -41,7 +40,7 @@
 /*
  * Misc. magic numbers.
  */
-#define AAC_MAX_CONTAINERS	64
+#define AAC_MAX_CONTAINERS	240
 #define AAC_BLOCK_SIZE		512
 
 /*
@@ -876,7 +875,7 @@ typedef enum {
 	AifEnSMARTEvent, 	       	/* SMART Event */
 	AifEnBatteryNeedsRecond,	/* The battery needs reconditioning */
 	AifEnClusterEvent,		/* Some cluster event */
-	AifEnDiskSetEvent,		/* A disk set event occured. */
+	AifEnDiskSetEvent,		/* A disk set event occurred. */
 	AifEnContainerScsiEvent,	/* a container event with no. and scsi id */
 	AifEnPicBatteryEvent,	/* An event gen. by pic_battery.c for an ABM */
 	AifEnExpEvent,		/* Exp. Event Type to replace CTPopUp messages */

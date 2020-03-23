@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/at91dci.c 269916 2014-08-13 06:59:40Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/at91dci.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2007-2008 Hans Petter Selasky. All rights reserved.
  *
@@ -99,7 +98,7 @@
 static int at91dcidebug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, at91dci, CTLFLAG_RW, 0, "USB at91dci");
-SYSCTL_INT(_hw_usb_at91dci, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_at91dci, OID_AUTO, debug, CTLFLAG_RWTUN,
     &at91dcidebug, 0, "at91dci debug level");
 #endif
 
@@ -107,11 +106,11 @@ SYSCTL_INT(_hw_usb_at91dci, OID_AUTO, debug, CTLFLAG_RW,
 
 /* prototypes */
 
-struct usb_bus_methods at91dci_bus_methods;
-struct usb_pipe_methods at91dci_device_bulk_methods;
-struct usb_pipe_methods at91dci_device_ctrl_methods;
-struct usb_pipe_methods at91dci_device_intr_methods;
-struct usb_pipe_methods at91dci_device_isoc_fs_methods;
+static const struct usb_bus_methods at91dci_bus_methods;
+static const struct usb_pipe_methods at91dci_device_bulk_methods;
+static const struct usb_pipe_methods at91dci_device_ctrl_methods;
+static const struct usb_pipe_methods at91dci_device_intr_methods;
+static const struct usb_pipe_methods at91dci_device_isoc_fs_methods;
 
 static at91dci_cmd_t at91dci_setup_rx;
 static at91dci_cmd_t at91dci_data_rx;
@@ -924,7 +923,8 @@ at91dci_setup_standard_chain(struct usb_xfer *xfer)
 	temp.td = NULL;
 	temp.td_next = xfer->td_start[0];
 	temp.offset = 0;
-	temp.setup_alt_next = xfer->flags_int.short_frames_ok;
+	temp.setup_alt_next = xfer->flags_int.short_frames_ok ||
+	    xfer->flags_int.isochronous_xfr;
 	temp.did_stall = !xfer->flags_int.control_stall;
 
 	sc = AT9100_DCI_BUS2SC(xfer->xroot->bus);
@@ -1156,7 +1156,8 @@ at91dci_standard_done_sub(struct usb_xfer *xfer)
 		}
 		/* Check for short transfer */
 		if (len > 0) {
-			if (xfer->flags_int.short_frames_ok) {
+			if (xfer->flags_int.short_frames_ok ||
+			    xfer->flags_int.isochronous_xfr) {
 				/* follow alt next */
 				if (td->alt_next) {
 					td = td->obj_next;
@@ -1329,7 +1330,7 @@ at91dci_clear_stall_sub(struct at91dci_softc *sc, uint8_t ep_no,
 
 	/*
 	 * NOTE: One would assume that a FIFO reset would release the
-	 * FIFO banks aswell, but it doesn't! We have to do this
+	 * FIFO banks as well, but it doesn't! We have to do this
 	 * manually!
 	 */
 
@@ -1563,7 +1564,7 @@ at91dci_device_bulk_start(struct usb_xfer *xfer)
 	at91dci_start_standard_chain(xfer);
 }
 
-struct usb_pipe_methods at91dci_device_bulk_methods =
+static const struct usb_pipe_methods at91dci_device_bulk_methods =
 {
 	.open = at91dci_device_bulk_open,
 	.close = at91dci_device_bulk_close,
@@ -1600,7 +1601,7 @@ at91dci_device_ctrl_start(struct usb_xfer *xfer)
 	at91dci_start_standard_chain(xfer);
 }
 
-struct usb_pipe_methods at91dci_device_ctrl_methods =
+static const struct usb_pipe_methods at91dci_device_ctrl_methods =
 {
 	.open = at91dci_device_ctrl_open,
 	.close = at91dci_device_ctrl_close,
@@ -1637,7 +1638,7 @@ at91dci_device_intr_start(struct usb_xfer *xfer)
 	at91dci_start_standard_chain(xfer);
 }
 
-struct usb_pipe_methods at91dci_device_intr_methods =
+static const struct usb_pipe_methods at91dci_device_intr_methods =
 {
 	.open = at91dci_device_intr_open,
 	.close = at91dci_device_intr_close,
@@ -1719,7 +1720,7 @@ at91dci_device_isoc_fs_start(struct usb_xfer *xfer)
 	at91dci_start_standard_chain(xfer);
 }
 
-struct usb_pipe_methods at91dci_device_isoc_fs_methods =
+static const struct usb_pipe_methods at91dci_device_isoc_fs_methods =
 {
 	.open = at91dci_device_isoc_fs_open,
 	.close = at91dci_device_isoc_fs_close,
@@ -2364,7 +2365,7 @@ at91dci_set_hw_power_sleep(struct usb_bus *bus, uint32_t state)
 	}
 }
 
-struct usb_bus_methods at91dci_bus_methods =
+static const struct usb_bus_methods at91dci_bus_methods =
 {
 	.endpoint_init = &at91dci_ep_init,
 	.xfer_setup = &at91dci_xfer_setup,

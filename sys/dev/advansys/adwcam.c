@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * CAM SCSI interface for the Advanced Systems Inc.
  * Second Generation SCSI controllers.
@@ -45,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/adwcam.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/advansys/adwcam.c 335137 2018-06-14 14:45:08Z mav $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -345,12 +344,10 @@ adw_action(struct cam_sim *sim, union ccb *ccb)
 	case XPT_SCSI_IO:	/* Execute the requested I/O operation */
 	{
 		struct	ccb_scsiio *csio;
-		struct	ccb_hdr *ccbh;
 		struct	acb *acb;
 		int error;
 
 		csio = &ccb->csio;
-		ccbh = &ccb->ccb_h;
 
 		/* Max supported CDB length is 12 bytes */
 		if (csio->cdb_len > 12) { 
@@ -715,10 +712,10 @@ adw_action(struct cam_sim *sim, union ccb *ccb)
 		strlcpy(cpi->hba_vid, "AdvanSys", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-                cpi->transport = XPORT_SPI;
-                cpi->transport_version = 2;
-                cpi->protocol = PROTO_SCSI;
-                cpi->protocol_version = SCSI_REV_2;
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -780,7 +777,6 @@ adw_free(struct adw_softc *adw)
 	case 7:
 		bus_dmamem_free(adw->acb_dmat, adw->acbs,
 				adw->acb_dmamap);
-		bus_dmamap_destroy(adw->acb_dmat, adw->acb_dmamap);
 	case 6:
 		bus_dma_tag_destroy(adw->acb_dmat);
 	case 5:
@@ -788,7 +784,6 @@ adw_free(struct adw_softc *adw)
 	case 4:
 		bus_dmamem_free(adw->carrier_dmat, adw->carriers,
 				adw->carrier_dmamap);
-		bus_dmamap_destroy(adw->carrier_dmat, adw->carrier_dmamap);
 	case 3:
 		bus_dma_tag_destroy(adw->carrier_dmat);
 	case 2:

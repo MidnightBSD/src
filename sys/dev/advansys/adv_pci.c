@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Device probe and attach routines for the following
  * Advanced Systems Inc. SCSI controllers:
@@ -60,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/adv_pci.c 241492 2012-10-12 21:31:44Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/advansys/adv_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

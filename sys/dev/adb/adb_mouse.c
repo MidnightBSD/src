@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/adb/adb_mouse.c 262668 2014-03-01 21:50:23Z jhibbits $
+ * $FreeBSD: stable/11/sys/dev/adb/adb_mouse.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
@@ -404,7 +403,7 @@ adb_mouse_receive_packet(device_t dev, u_char status, u_char command,
 	 * high button events when they are touched.
 	 */
 
-	if (buttons & ~((1 << sc->hw.buttons) - 1)
+	if (rounddown2(buttons, 1 << sc->hw.buttons)
 	    && !(sc->flags & AMS_TOUCHPAD)) {
 		buttons |= 1 << (sc->hw.buttons - 1);
 	}
@@ -521,7 +520,7 @@ ams_read(struct cdev *dev, struct uio *uio, int flag)
 			}
 		}
 
-		sc->packet[0] = 1 << 7;
+		sc->packet[0] = 1U << 7;
 		sc->packet[0] |= (!(sc->buttons & 1)) << 2;
 		sc->packet[0] |= (!(sc->buttons & 4)) << 1;
 		sc->packet[0] |= (!(sc->buttons & 2));

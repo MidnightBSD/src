@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2014 Dimitar Toshkov Zhekov.  All rights reserved.
  *
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vt/font/vt_font_default.c 332745 2018-04-19 00:50:51Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vt/font/vt_font_default.c 332744 2018-04-19 00:40:34Z emaste $");
 
 #include <dev/vt/vt.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/adb/adb.h 199888 2009-11-28 17:48:25Z nwhitehorn $
+ * $FreeBSD: stable/11/sys/dev/adb/adb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_POWERPC_ADB_H_

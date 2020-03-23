@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac_debug.c 242823 2012-11-09 13:58:52Z rdivacky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac_debug.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Debugging support.
@@ -352,7 +351,7 @@ aac_print_aif(struct aac_softc *sc, struct aac_aif_command *aif)
 			device_printf(sc->aac_dev, "(ClusterEvent) event %d\n",
 				      aif->data.EN.data.ECLE.eventType);
 			break;
-		case AifEnDiskSetEvent:		/* A disk set event occured. */
+		case AifEnDiskSetEvent:		/* A disk set event occurred. */
 			device_printf(sc->aac_dev, "(DiskSetEvent) event %d "
 				      "diskset %jd creator %jd\n",
 				      aif->data.EN.data.EDS.eventType,

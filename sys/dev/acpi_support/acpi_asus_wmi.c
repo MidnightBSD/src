@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_asus_wmi.c 273736 2014-10-27 14:38:00Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_asus_wmi.c 300421 2016-05-22 13:58:32Z loos $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -499,7 +498,7 @@ acpi_asus_wmi_sysctl_get(struct acpi_asus_wmi_softc *sc, int dev_id)
 
 	switch(dev_id) {
 	case ASUS_WMI_DEVID_THERMAL_CTRL:
-		val = (val - 2732 + 5) / 10;
+		val = (val - 2731 + 5) / 10;
 		break;
 	case ASUS_WMI_DEVID_PROCESSOR_STATE:
 	case ASUS_WMI_DEVID_FAN_CTRL:

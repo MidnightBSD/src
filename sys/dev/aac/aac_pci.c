@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac_pci.c 254005 2013-08-06 19:14:02Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PCI bus interface and resource allocation.
@@ -62,7 +61,6 @@ static int	aac_pci_probe(device_t dev);
 static int	aac_pci_attach(device_t dev);
 
 static int aac_enable_msi = 1;
-TUNABLE_INT("hw.aac.enable_msi", &aac_enable_msi);
 SYSCTL_INT(_hw_aac, OID_AUTO, enable_msi, CTLFLAG_RDTUN, &aac_enable_msi, 0,
     "Enable MSI interrupts");
 

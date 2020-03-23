@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_freebsd.h 277364 2015-01-19 07:06:15Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_freebsd.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -42,6 +41,7 @@
 #define	USB_HAVE_TT_SUPPORT 1
 #define	USB_HAVE_POWERD 1
 #define	USB_HAVE_MSCTEST 1
+#define	USB_HAVE_MSCTEST_DETACH 1
 #define	USB_HAVE_PF 1
 #define	USB_HAVE_ROOT_MOUNT_HOLD 1
 #define	USB_HAVE_ID_SECTION 1

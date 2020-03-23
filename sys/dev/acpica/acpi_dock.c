@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/acpica/acpi_dock.c 246128 2013-01-30 18:01:20Z sbz $
+ * $FreeBSD: stable/11/sys/dev/acpica/acpi_dock.c 246128 2013-01-30 18:01:20Z sbz $
  */
 
 #include "opt_acpi.h"

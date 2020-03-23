@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ucom.c,v 1.40 2001/11/13 06:24:54 lukem Exp $	*/
 
 /*-
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/usb_serial.c 294637 2016-01-23 19:13:48Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/usb_serial.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*-
  * Copyright (c) 1998, 2000 The NetBSD Foundation, Inc.
@@ -108,7 +107,7 @@ SYSCTL_INT(_hw_usb_ucom, OID_AUTO, pps_mode, CTLFLAG_RWTUN,
 #ifdef USB_DEBUG
 static int ucom_debug = 0;
 
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ucom_debug, 0, "ucom debug level");
 #endif
 
@@ -128,14 +127,11 @@ static int ucom_cons_subunit = 0;
 static int ucom_cons_baud = 9600;
 static struct ucom_softc *ucom_cons_softc = NULL;
 
-TUNABLE_INT("hw.usb.ucom.cons_unit", &ucom_cons_unit);
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_unit, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_unit, CTLFLAG_RWTUN,
     &ucom_cons_unit, 0, "console unit number");
-TUNABLE_INT("hw.usb.ucom.cons_subunit", &ucom_cons_subunit);
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_subunit, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_subunit, CTLFLAG_RWTUN,
     &ucom_cons_subunit, 0, "console subunit number");
-TUNABLE_INT("hw.usb.ucom.cons_baud", &ucom_cons_baud);
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_baud, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_baud, CTLFLAG_RWTUN,
     &ucom_cons_baud, 0, "console baud rate");
 
 static usb_proc_callback_t ucom_cfg_start_transfers;
@@ -166,6 +162,7 @@ static tsw_param_t ucom_param;
 static tsw_outwakeup_t ucom_outwakeup;
 static tsw_inwakeup_t ucom_inwakeup;
 static tsw_free_t ucom_free;
+static tsw_busy_t ucom_busy;
 
 static struct ttydevsw ucom_class = {
 	.tsw_flags = TF_INITLOCK | TF_CALLOUT,
@@ -177,6 +174,7 @@ static struct ttydevsw ucom_class = {
 	.tsw_param = ucom_param,
 	.tsw_modem = ucom_modem,
 	.tsw_free = ucom_free,
+	.tsw_busy = ucom_busy,
 };
 
 MODULE_DEPEND(ucom, usb, 1, 1, 1);
@@ -1297,6 +1295,27 @@ ucom_outwakeup(struct tty *tp)
 		return;
 	}
 	ucom_start_transfers(sc);
+}
+
+static bool
+ucom_busy(struct tty *tp)
+{
+	struct ucom_softc *sc = tty_softc(tp);
+	const uint8_t txidle = ULSR_TXRDY | ULSR_TSRE;
+
+	UCOM_MTX_ASSERT(sc, MA_OWNED);
+
+	DPRINTFN(3, "sc = %p lsr 0x%02x\n", sc, sc->sc_lsr);
+
+	/*
+	 * If the driver maintains the txidle bits in LSR, we can use them to
+	 * determine whether the transmitter is busy or idle.  Otherwise we have
+	 * to assume it is idle to avoid hanging forever on tcdrain(3).
+	 */
+	if (sc->sc_flag & UCOM_FLAG_LSRTXIDLE)
+		return ((sc->sc_lsr & txidle) != txidle);
+	else
+		return (false);
 }
 
 /*------------------------------------------------------------------------*

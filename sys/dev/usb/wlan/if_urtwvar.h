@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/usb/wlan/if_urtwvar.h 253757 2013-07-29 05:54:13Z hselasky $	*/
+/*	$FreeBSD: stable/11/sys/dev/usb/wlan/if_urtwvar.h 346003 2019-04-07 12:57:38Z avos $	*/
 
 /*-
  * Copyright (c) 2008 Weongyo Jeong <weongyo@FreeBSD.org>
@@ -48,10 +47,6 @@ struct urtw_data {
 };
 typedef STAILQ_HEAD(, urtw_data) urtw_datahead;
 
-/* XXX not correct..  */
-#define	URTW_MIN_RXBUFSZ						\
-	(sizeof(struct ieee80211_frame_min))
-
 #define URTW_RX_DATA_LIST_COUNT		4
 #define URTW_TX_DATA_LIST_COUNT		16
 #define URTW_RX_MAXSIZE			0x9c4
@@ -60,23 +55,27 @@ typedef STAILQ_HEAD(, urtw_data) urtw_datahead;
 
 struct urtw_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
+	uint64_t	wr_tsf;
 	uint8_t		wr_flags;
+	uint8_t		wr_pad;
 	uint16_t	wr_chan_freq;
 	uint16_t	wr_chan_flags;
 	int8_t		wr_dbm_antsignal;
 } __packed __aligned(8);
 
 #define URTW_RX_RADIOTAP_PRESENT					\
-	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
+	((1 << IEEE80211_RADIOTAP_TSFT) |				\
+	 (1 << IEEE80211_RADIOTAP_FLAGS) |				\
 	 (1 << IEEE80211_RADIOTAP_CHANNEL) |				\
 	 (1 << IEEE80211_RADIOTAP_DBM_ANTSIGNAL))
 
 struct urtw_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
 	uint8_t		wt_flags;
+	uint8_t		wt_pad;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-} __packed __aligned(8);
+} __packed;
 
 #define URTW_TX_RADIOTAP_PRESENT					\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -94,14 +93,14 @@ struct urtw_vap {
 #define	URTW_VAP(vap)	((struct urtw_vap *)(vap))
 
 struct urtw_softc {
-	struct ifnet			*sc_ifp;
+	struct ieee80211com		sc_ic;
+	struct mbufq			sc_snd;
 	device_t			sc_dev;
 	struct usb_device		*sc_udev;
 	struct mtx			sc_mtx;
 	void				*sc_tx_dma_buf;
 
 	int				sc_debug;
-	int				sc_if_flags;
 	int				sc_flags;
 #define	URTW_INIT_ONCE			(1 << 1)
 #define	URTW_RTL8187B			(1 << 2)
@@ -109,13 +108,13 @@ struct urtw_softc {
 #define	URTW_RTL8187B_REV_D		(1 << 4)
 #define	URTW_RTL8187B_REV_E		(1 << 5)
 #define	URTW_DETACHED			(1 << 6)
+#define	URTW_RUNNING			(1 << 7)
 	enum ieee80211_state		sc_state;
 
 	int				sc_epromtype;
 #define URTW_EEPROM_93C46		0
 #define URTW_EEPROM_93C56		1
 	uint8_t				sc_crcmon;
-	uint8_t				sc_bssid[IEEE80211_ADDR_LEN];
 
 	struct ieee80211_channel	*sc_curchan;
 
@@ -179,9 +178,7 @@ struct urtw_softc {
 	struct urtw_stats		sc_stats;
 
 	struct	urtw_rx_radiotap_header	sc_rxtap;
-	int				sc_rxtap_len;
 	struct	urtw_tx_radiotap_header	sc_txtap;
-	int				sc_txtap_len;
 };
 
 #define URTW_LOCK(sc)			mtx_lock(&(sc)->sc_mtx)

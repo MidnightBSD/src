@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_request.h 250207 2013-05-03 11:10:04Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_request.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

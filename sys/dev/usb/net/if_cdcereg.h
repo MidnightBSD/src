@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005 Craig Boston
  * All rights reserved.
@@ -30,7 +29,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/net/if_cdcereg.h 221077 2011-04-26 19:40:37Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/usb/net/if_cdcereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _USB_IF_CDCEREG_H_
@@ -94,6 +93,10 @@ struct cdce_softc {
 
 	uint8_t sc_eaddr_str_index;
 	uint8_t	sc_ifaces_index[2];
+	uint8_t sc_notify_state;
+#define	CDCE_NOTIFY_NETWORK_CONNECTION	0
+#define	CDCE_NOTIFY_SPEED_CHANGE	1
+#define	CDCE_NOTIFY_DONE		2
 };
 
 #define	CDCE_LOCK(_sc)			mtx_lock(&(_sc)->sc_mtx)

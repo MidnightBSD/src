@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/vt/hw/fb/vt_fb.h 282749 2015-05-11 08:00:16Z avg $
+ * $FreeBSD: stable/11/sys/dev/vt/hw/fb/vt_fb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_VT_HW_FB_VT_FB_H_
@@ -36,8 +35,10 @@
 int vt_fb_attach(struct fb_info *info);
 void vt_fb_resume(struct vt_device *vd);
 void vt_fb_suspend(struct vt_device *vd);
+int vt_fb_detach(struct fb_info *info);
 
 vd_init_t		vt_fb_init;
+vd_fini_t		vt_fb_fini;
 vd_blank_t		vt_fb_blank;
 vd_bitblt_text_t	vt_fb_bitblt_text;
 vd_bitblt_bmp_t		vt_fb_bitblt_bitmap;

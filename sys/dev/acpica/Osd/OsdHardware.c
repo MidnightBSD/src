@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -31,16 +30,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdHardware.c 213787 2010-10-13 17:06:25Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/Osd/OsdHardware.c 335554 2018-06-22 10:39:22Z avg $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 
 #include <machine/iodev.h>
 #include <machine/pci_cfgreg.h>
 
+extern int	acpi_susp_bounce;
+
 ACPI_STATUS
 AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValue)
 {
+
+	/* If testing device suspend only, back out of everything here. */
+	if (acpi_susp_bounce)
+		return (AE_CTRL_TERMINATE);
 
 	return (AE_OK);
 }
@@ -97,6 +102,10 @@ AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT64 *Value,
     UINT32 Width)
 {
 
+#ifdef __aarch64__
+    /* ARM64TODO: Add pci support */
+    return (AE_SUPPORT);
+#else
     if (Width == 64)
 	return (AE_SUPPORT);
 
@@ -107,6 +116,7 @@ AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT64 *Value,
 	PciId->Function, Register, Width / 8);
 
     return (AE_OK);
+#endif
 }
 
 
@@ -115,6 +125,10 @@ AcpiOsWritePciConfiguration (ACPI_PCI_ID *PciId, UINT32 Register,
     UINT64 Value, UINT32 Width)
 {
 
+#ifdef __aarch64__
+    /* ARM64TODO: Add pci support */
+    return (AE_SUPPORT);
+#else
     if (Width == 64)
 	return (AE_SUPPORT);
 
@@ -125,4 +139,5 @@ AcpiOsWritePciConfiguration (ACPI_PCI_ID *PciId, UINT32 Register,
 	Value, Width / 8);
 
     return (AE_OK);
+#endif
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vt/logo/logo_freebsd.c 271952 2014-09-22 10:21:08Z ray $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vt/logo/logo_freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 unsigned int vt_logo_width = 257;
 unsigned int vt_logo_height = 219;

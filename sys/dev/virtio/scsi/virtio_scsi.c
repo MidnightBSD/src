@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
 /* Driver for VirtIO SCSI devices. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/virtio/scsi/virtio_scsi.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/virtio/scsi/virtio_scsi.c 349693 2019-07-03 19:54:56Z vangyzen $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,6 +79,7 @@ static void	vtscsi_read_config(struct vtscsi_softc *,
 		    struct virtio_scsi_config *);
 static int	vtscsi_maximum_segments(struct vtscsi_softc *, int);
 static int	vtscsi_alloc_virtqueues(struct vtscsi_softc *);
+static void	vtscsi_check_sizes(struct vtscsi_softc *);
 static void	vtscsi_write_device_config(struct vtscsi_softc *);
 static int	vtscsi_reinit(struct vtscsi_softc *);
 
@@ -313,6 +313,8 @@ vtscsi_attach(device_t dev)
 		goto fail;
 	}
 
+	vtscsi_check_sizes(sc);
+
 	error = vtscsi_init_event_vq(sc);
 	if (error) {
 		device_printf(dev, "cannot populate the eventvq\n");
@@ -477,6 +479,26 @@ vtscsi_alloc_virtqueues(struct vtscsi_softc *sc)
 	    "%s request", device_get_nameunit(dev));
 
 	return (virtio_alloc_virtqueues(dev, 0, nvqs, vq_info));
+}
+
+static void
+vtscsi_check_sizes(struct vtscsi_softc *sc)
+{
+	int rqsize;
+
+	if ((sc->vtscsi_flags & VTSCSI_FLAG_INDIRECT) == 0) {
+		/*
+		 * Ensure the assertions in virtqueue_enqueue(),
+		 * even if the hypervisor reports a bad seg_max.
+		 */
+		rqsize = virtqueue_size(sc->vtscsi_request_vq);
+		if (sc->vtscsi_max_nsegs > rqsize) {
+			device_printf(sc->vtscsi_dev,
+			    "clamping seg_max (%d %d)\n", sc->vtscsi_max_nsegs,
+			    rqsize);
+			sc->vtscsi_max_nsegs = rqsize;
+		}
+	}
 }
 
 static void
@@ -1309,8 +1331,7 @@ vtscsi_complete_scsi_cmd_response(struct vtscsi_softc *sc,
 		else
 			csio->sense_resid = 0;
 
-		bzero(&csio->sense_data, sizeof(csio->sense_data));
-		memcpy(cmd_resp->sense, &csio->sense_data,
+		memcpy(&csio->sense_data, cmd_resp->sense,
 		    csio->sense_len - csio->sense_resid);
 	}
 

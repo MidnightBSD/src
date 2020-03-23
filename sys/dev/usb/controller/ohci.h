@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/ohci.h 228483 2011-12-14 00:28:54Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/ohci.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.

@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: uplcom.c,v 1.21 2001/11/13 06:24:56 lukem Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uplcom.c 339853 2018-10-29 12:11:27Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/uplcom.c 339852 2018-10-29 12:10:06Z hselasky $");
 
 /*-
  * Copyright (c) 2001-2003, 2005 Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -113,7 +112,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uplcom.c 339853 2018-10-29 12:1
 static int uplcom_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uplcom, CTLFLAG_RW, 0, "USB uplcom");
-SYSCTL_INT(_hw_usb_uplcom, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uplcom, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uplcom_debug, 0, "Debug level");
 #endif
 
@@ -335,6 +334,7 @@ DRIVER_MODULE(uplcom, uhub, uplcom_driver, uplcom_devclass, NULL, 0);
 MODULE_DEPEND(uplcom, ucom, 1, 1, 1);
 MODULE_DEPEND(uplcom, usb, 1, 1, 1);
 MODULE_VERSION(uplcom, UPLCOM_MODVER);
+USB_PNP_HOST_INFO(uplcom_devs);
 
 static int
 uplcom_probe(device_t dev)
@@ -701,7 +701,7 @@ static const uint32_t uplcom_rates[] = {
 	12000000
 };
 
-#define	N_UPLCOM_RATES	(sizeof(uplcom_rates)/sizeof(uplcom_rates[0]))
+#define	N_UPLCOM_RATES	nitems(uplcom_rates)
 
 static int
 uplcom_baud_supported(unsigned int speed)

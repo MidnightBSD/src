@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/virtio.h 268010 2014-06-29 00:37:59Z bryanv $
+ * $FreeBSD: stable/11/sys/dev/virtio/virtio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VIRTIO_H_
@@ -77,6 +76,7 @@ int	 virtio_alloc_virtqueues(device_t dev, int flags, int nvqs,
 int	 virtio_setup_intr(device_t dev, enum intr_type type);
 int	 virtio_with_feature(device_t dev, uint64_t feature);
 void	 virtio_stop(device_t dev);
+int	 virtio_config_generation(device_t dev);
 int	 virtio_reinit(device_t dev, uint64_t features);
 void	 virtio_reinit_complete(device_t dev);
 

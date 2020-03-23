@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * Exported interface to downloadable microcode for AdvanSys SCSI Adapters
  *
- * $FreeBSD: stable/10/sys/dev/advansys/adwmcode.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/advansys/adwmcode.h 139749 2005-01-06 01:43:34Z imp $
  *
  * Obtained from:
  *

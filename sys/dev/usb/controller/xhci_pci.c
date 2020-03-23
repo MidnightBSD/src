@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/xhci_pci.c 333203 2018-05-03 07:38:45Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/xhci_pci.c 351019 2019-08-14 09:44:04Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -123,6 +122,8 @@ xhci_pci_match(device_t self)
 
 	case 0x0f358086:
 		return ("Intel BayTrail USB 3.0 controller");
+	case 0x19d08086:
+		return ("Intel Denverton USB 3.0 controller");
 	case 0x9c318086:
 	case 0x1e318086:
 		return ("Intel Panther Point USB 3.0 controller");
@@ -146,6 +147,8 @@ xhci_pci_match(device_t self)
 		return ("Intel Lewisburg USB 3.0 controller");
 	case 0xa2af8086:
 		return ("Intel Union Point USB 3.0 controller");
+	case 0xa36d8086:
+		return ("Intel Cannon Lake USB 3.1 controller");
 
 	case 0xa01b177d:
 		return ("Cavium ThunderX USB 3.0 controller");
@@ -177,6 +180,8 @@ xhci_pci_probe(device_t self)
 
 static int xhci_use_msi = 1;
 TUNABLE_INT("hw.usb.xhci.msi", &xhci_use_msi);
+static int xhci_use_msix = 1;
+TUNABLE_INT("hw.usb.xhci.msix", &xhci_use_msix);
 
 static void
 xhci_interrupt_poll(void *_sc)
@@ -217,7 +222,7 @@ static int
 xhci_pci_attach(device_t self)
 {
 	struct xhci_softc *sc = device_get_softc(self);
-	int count, err, rid;
+	int count, err, msix_table, rid;
 	uint8_t usemsi = 1;
 	uint8_t usedma32 = 0;
 
@@ -270,7 +275,27 @@ xhci_pci_attach(device_t self)
 	usb_callout_init_mtx(&sc->sc_callout, &sc->sc_bus.bus_mtx, 0);
 
 	rid = 0;
-	if (xhci_use_msi && usemsi) {
+	if (xhci_use_msix && (msix_table = pci_msix_table_bar(self)) >= 0) {
+		sc->sc_msix_res = bus_alloc_resource_any(self, SYS_RES_MEMORY,
+		    &msix_table, RF_ACTIVE);
+		if (sc->sc_msix_res == NULL) {
+			/* May not be enabled */
+			device_printf(self,
+			    "Unable to map MSI-X table \n");
+		} else {
+			count = 1;
+			if (pci_alloc_msix(self, &count) == 0) {
+				if (bootverbose)
+					device_printf(self, "MSI-X enabled\n");
+				rid = 1;
+			} else {
+				bus_release_resource(self, SYS_RES_MEMORY,
+				    msix_table, sc->sc_msix_res);
+				sc->sc_msix_res = NULL;
+			}
+		}
+	}
+	if (rid == 0 && xhci_use_msi && usemsi) {
 		count = 1;
 		if (pci_alloc_msi(self, &count) == 0) {
 			if (bootverbose)
@@ -365,6 +390,11 @@ xhci_pci_detach(device_t self)
 		bus_release_resource(self, SYS_RES_MEMORY, PCI_XHCI_CBMEM,
 		    sc->sc_io_res);
 		sc->sc_io_res = NULL;
+	}
+	if (sc->sc_msix_res) {
+		bus_release_resource(self, SYS_RES_MEMORY,
+		    rman_get_rid(sc->sc_msix_res), sc->sc_msix_res);
+		sc->sc_msix_res = NULL;
 	}
 
 	xhci_uninit(sc);

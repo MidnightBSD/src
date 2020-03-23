@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_transfer.c 305734 2016-09-12 10:17:25Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_transfer.c 356680 2020-01-13 11:30:07Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -106,6 +105,33 @@ static const struct usb_config usb_control_ep_cfg[USB_CTRL_XFER_MAX] = {
 	},
 };
 
+static const struct usb_config usb_control_ep_quirk_cfg[USB_CTRL_XFER_MAX] = {
+
+	/* This transfer is used for generic control endpoint transfers */
+
+	[0] = {
+		.type = UE_CONTROL,
+		.endpoint = 0x00,	/* Control endpoint */
+		.direction = UE_DIR_ANY,
+		.bufsize = 65535,	/* bytes */
+		.callback = &usb_request_callback,
+		.usb_mode = USB_MODE_DUAL,	/* both modes */
+	},
+
+	/* This transfer is used for generic clear stall only */
+
+	[1] = {
+		.type = UE_CONTROL,
+		.endpoint = 0x00,	/* Control pipe */
+		.direction = UE_DIR_ANY,
+		.bufsize = sizeof(struct usb_device_request),
+		.callback = &usb_do_clear_stall_callback,
+		.timeout = 1000,	/* 1 second */
+		.interval = 50,	/* 50ms */
+		.usb_mode = USB_MODE_HOST,
+	},
+};
+
 /* function prototypes */
 
 static void	usbd_update_max_frame_size(struct usb_xfer *);
@@ -161,7 +187,7 @@ usbd_update_max_frame_size(struct usb_xfer *xfer)
 usb_timeout_t
 usbd_get_dma_delay(struct usb_device *udev)
 {
-	struct usb_bus_methods *mtod;
+	const struct usb_bus_methods *mtod;
 	uint32_t temp;
 
 	mtod = udev->bus->methods;
@@ -247,7 +273,7 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 		 * Compute number of DMA chunks, rounded up
 		 * to nearest one:
 		 */
-		n_dma_pc = ((count + n_obj - 1) / n_obj);
+		n_dma_pc = howmany(count, n_obj);
 		n_dma_pg = 1;
 	}
 
@@ -616,7 +642,7 @@ usbd_transfer_setup_sub(struct usb_setup_params *parm)
 	/*
 	 * NOTE: we do not allow "max_packet_size" or "max_frame_size"
 	 * to be equal to zero when setting up USB transfers, hence
-	 * this leads to alot of extra code in the USB kernel.
+	 * this leads to a lot of extra code in the USB kernel.
 	 */
 
 	if ((xfer->max_frame_size == 0) ||
@@ -926,7 +952,7 @@ usbd_transfer_setup(struct usb_device *udev,
 		DPRINTFN(6, "setup array has zero length!\n");
 		return (USB_ERR_INVAL);
 	}
-	if (ifaces == 0) {
+	if (ifaces == NULL) {
 		DPRINTFN(6, "ifaces array is NULL!\n");
 		return (USB_ERR_INVAL);
 	}
@@ -1021,7 +1047,8 @@ usbd_transfer_setup(struct usb_device *udev,
 			 * context, else there is a chance of
 			 * deadlock!
 			 */
-			if (setup_start == usb_control_ep_cfg)
+			if (setup_start == usb_control_ep_cfg ||
+			    setup_start == usb_control_ep_quirk_cfg)
 				info->done_p =
 				    USB_BUS_CONTROL_XFER_PROC(udev->bus);
 			else if (xfer_mtx == &Giant)
@@ -2449,7 +2476,7 @@ done:
  *
  * This function is called when the DMA delay has been exectuded, and
  * will make sure that the callback is called to complete the USB
- * transfer. This code path is ususally only used when there is an USB
+ * transfer. This code path is usually only used when there is an USB
  * error like USB_ERR_CANCELLED.
  *------------------------------------------------------------------------*/
 void
@@ -2565,11 +2592,14 @@ usbd_transfer_done(struct usb_xfer *xfer, usb_error_t error)
 	}
 #endif
 	/* keep some statistics */
-	if (xfer->error) {
-		info->bus->stats_err.uds_requests
+	if (xfer->error == USB_ERR_CANCELLED) {
+		info->udev->stats_cancelled.uds_requests
+		    [xfer->endpoint->edesc->bmAttributes & UE_XFERTYPE]++;
+	} else if (xfer->error != USB_ERR_NORMAL_COMPLETION) {
+		info->udev->stats_err.uds_requests
 		    [xfer->endpoint->edesc->bmAttributes & UE_XFERTYPE]++;
 	} else {
-		info->bus->stats_ok.uds_requests
+		info->udev->stats_ok.uds_requests
 		    [xfer->endpoint->edesc->bmAttributes & UE_XFERTYPE]++;
 	}
 
@@ -3149,7 +3179,8 @@ repeat:
 	 */
 	iface_index = 0;
 	if (usbd_transfer_setup(udev, &iface_index,
-	    udev->ctrl_xfer, usb_control_ep_cfg, USB_CTRL_XFER_MAX, NULL,
+	    udev->ctrl_xfer, udev->bus->control_ep_quirk ?
+	    usb_control_ep_quirk_cfg : usb_control_ep_cfg, USB_CTRL_XFER_MAX, NULL,
 	    &udev->device_mtx)) {
 		DPRINTFN(0, "could not setup default "
 		    "USB transfer\n");

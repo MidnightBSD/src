@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/at91dci.h 269916 2014-08-13 06:59:40Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/at91dci.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2006 ATMEL
  * Copyright (c) 2007 Hans Petter Selasky <hselasky@FreeBSD.org>

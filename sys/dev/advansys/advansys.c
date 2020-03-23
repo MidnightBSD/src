@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Generic driver for the Advanced Systems Inc. SCSI controllers
  * Product specific probe and attach routines can be found in:
@@ -47,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/advansys.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/advansys/advansys.c 331722 2018-03-29 02:50:57Z eadler $");
  
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -234,10 +233,6 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		break;
 	}
 	case XPT_RESET_DEV:	/* Bus Device Reset the specified SCSI device */
-	case XPT_TARGET_IO:	/* Execute target I/O request */
-	case XPT_ACCEPT_TARGET_IO:	/* Accept Host Target Mode CDB */
-	case XPT_CONT_TARGET_IO:	/* Continue Host Target I/O Connection*/
-	case XPT_EN_LUN:		/* Enable LUN as a target */
 	case XPT_ABORT:			/* Abort the specified CCB */
 		/* XXX Implement */
 		ccb->ccb_h.status = CAM_REQ_INVALID;
@@ -634,7 +629,7 @@ adv_timeout(void *arg)
 		 * means that the driver attempts to clear only one error
 		 * condition at a time.  In general, timeouts that occur
 		 * close together are related anyway, so there is no benefit
-		 * in attempting to handle errors in parrallel.  Timeouts will
+		 * in attempting to handle errors in parallel.  Timeouts will
 		 * be reinstated when the recovery process ends.
 		 */
 		adv_set_state(adv, ADV_IN_TIMEOUT);
@@ -1006,7 +1001,6 @@ adv_run_doneq(struct adv_softc *adv)
 		struct adv_ccb_info *cinfo;
 		u_int done_qaddr;
 		u_int sg_queue_cnt;
-		int   aborted;
 
 		done_qaddr = ADV_QNO_TO_QADDR(done_qno);
 
@@ -1050,8 +1044,6 @@ adv_run_doneq(struct adv_softc *adv)
 			      "queues than are active");
 #endif		
 		adv->cur_active -= sg_queue_cnt + 1;
-
-		aborted = (scsiq.q_status & QS_ABORTED) != 0;
 
 		if ((scsiq.q_status != QS_DONE)
 		 && (scsiq.q_status & QS_ABORTED) == 0)
@@ -1127,7 +1119,7 @@ adv_done(struct adv_softc *adv, union ccb *ccb, u_int done_stat,
 			 * from this initiator are in effect, but this
 			 * ignores multi-initiator setups and there is
 			 * evidence that the firmware gets its per-device
-			 * transaction counts screwed up occassionally.
+			 * transaction counts screwed up occasionally.
 			 */
 			ccb->ccb_h.status |= CAM_SCSI_STATUS_ERROR;
 			if ((ccb->ccb_h.flags & CAM_TAG_ACTION_VALID) != 0

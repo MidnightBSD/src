@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Product specific probe and attach routines for:
  *      Adaptec 154x.
@@ -56,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aha/aha_isa.c 241603 2012-10-16 08:40:09Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aha/aha_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -121,8 +120,8 @@ aha_isa_probe(device_t dev)
 		return (ENXIO);
 
 	port_rid = 0;
-	aha->port = bus_alloc_resource(dev, SYS_RES_IOPORT, &port_rid,
-	    0ul, ~0ul, AHA_NREGS, RF_ACTIVE);
+	aha->port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &port_rid,
+	    AHA_NREGS, RF_ACTIVE);
 
 	if (aha->port == NULL)
 		return (ENXIO);
@@ -192,8 +191,8 @@ aha_isa_attach(device_t dev)
 
 	aha->dev = dev;
 	aha->portrid = 0;
-	aha->port = bus_alloc_resource(dev, SYS_RES_IOPORT, &aha->portrid,
-	    0ul, ~0ul, AHA_NREGS, RF_ACTIVE);
+	aha->port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+	    &aha->portrid, AHA_NREGS, RF_ACTIVE);
 	if (!aha->port) {
 		device_printf(dev, "Unable to allocate I/O ports\n");
 		goto fail;
@@ -311,8 +310,7 @@ aha_isa_identify(driver_t *driver, device_t parent)
 	device_t child;
 
 	/* Attempt to find an adapter */
-	for (i = 0; i < sizeof(aha_board_ports) / sizeof(aha_board_ports[0]);
-	    i++) {
+	for (i = 0; i < nitems(aha_board_ports); i++) {
 		bzero(&aha, sizeof(aha));
 		ioport = aha_board_ports[i];
 		/*

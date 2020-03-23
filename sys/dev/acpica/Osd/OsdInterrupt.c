@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdInterrupt.c 227293 2011-11-07 06:44:47Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/Osd/OsdInterrupt.c 227293 2011-11-07 06:44:47Z ed $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

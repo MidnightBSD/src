@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
 /* Driver for VirtIO console devices. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/virtio/console/virtio_console.c 275273 2014-11-29 22:48:40Z bryanv $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/virtio/console/virtio_console.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1178,7 +1177,7 @@ vtcon_port_enable_intr(struct vtcon_port *port)
 {
 
 	/*
-	 * NOTE: The out virtqueue is always polled, so its interupt
+	 * NOTE: The out virtqueue is always polled, so its interrupt
 	 * kept disabled.
 	 */
 	virtqueue_enable_intr(port->vtcport_invq);

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_hub.c 343136 2019-01-18 08:49:10Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_hub.c 343135 2019-01-18 08:48:30Z hselasky $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -87,15 +86,14 @@ enum {
 static int uhub_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uhub, CTLFLAG_RW, 0, "USB HUB");
-SYSCTL_INT(_hw_usb_uhub, OID_AUTO, debug, CTLFLAG_RW | CTLFLAG_TUN, &uhub_debug, 0,
+SYSCTL_INT(_hw_usb_uhub, OID_AUTO, debug, CTLFLAG_RWTUN, &uhub_debug, 0,
     "Debug level");
-TUNABLE_INT("hw.usb.uhub.debug", &uhub_debug);
 #endif
 
 #if USB_HAVE_POWERD
 static int usb_power_timeout = 30;	/* seconds */
 
-SYSCTL_INT(_hw_usb, OID_AUTO, power_timeout, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb, OID_AUTO, power_timeout, CTLFLAG_RWTUN,
     &usb_power_timeout, 0, "USB power timeout");
 #endif
 
@@ -105,12 +103,10 @@ SYSCTL_INT(_hw_usb, OID_AUTO, disable_enumeration, CTLFLAG_RWTUN,
     &usb_disable_enumeration, 0, "Set to disable all USB device enumeration. "
 	"This can secure against USB devices turning evil, "
 	"for example a USB memory stick becoming a USB keyboard.");
-TUNABLE_INT("hw.usb.disable_enumeration", &usb_disable_enumeration);
 
 static int usb_disable_port_power = 0;
 SYSCTL_INT(_hw_usb, OID_AUTO, disable_port_power, CTLFLAG_RWTUN,
     &usb_disable_port_power, 0, "Set to disable all USB port power.");
-TUNABLE_INT("hw.usb.disable_port_power", &usb_disable_port_power);
 #endif
 
 struct uhub_current_state {
@@ -1438,20 +1434,10 @@ uhub_attach(device_t dev)
 	sysctl_tree = device_get_sysctl_tree(dev);
 
 	if (sysctl_ctx != NULL && sysctl_tree != NULL) {
-		char path[128];
-
-		snprintf(path, sizeof(path), "dev.uhub.%d.disable_enumeration",
-		    device_get_unit(dev));
-		TUNABLE_INT_FETCH(path, &sc->sc_disable_enumeration);
-
 		(void) SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
 		    OID_AUTO, "disable_enumeration", CTLFLAG_RWTUN,
 		    &sc->sc_disable_enumeration, 0,
 		    "Set to disable enumeration on this USB HUB.");
-
-		snprintf(path, sizeof(path), "dev.uhub.%d.disable_port_power",
-		    device_get_unit(dev));
-		TUNABLE_INT_FETCH(path, &sc->sc_disable_port_power);
 
 		(void) SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
 		    OID_AUTO, "disable_port_power", CTLFLAG_RWTUN,
@@ -1761,6 +1747,7 @@ uhub_child_pnpinfo_string(device_t parent, device_t child,
 	if (iface && iface->idesc) {
 		snprintf(buf, buflen, "vendor=0x%04x product=0x%04x "
 		    "devclass=0x%02x devsubclass=0x%02x "
+		    "devproto=0x%02x "
 		    "sernum=\"%s\" "
 		    "release=0x%04x "
 		    "mode=%s "
@@ -1770,6 +1757,7 @@ uhub_child_pnpinfo_string(device_t parent, device_t child,
 		    UGETW(res.udev->ddesc.idProduct),
 		    res.udev->ddesc.bDeviceClass,
 		    res.udev->ddesc.bDeviceSubClass,
+		    res.udev->ddesc.bDeviceProtocol,
 		    usb_get_serial(res.udev),
 		    UGETW(res.udev->ddesc.bcdDevice),
 		    (res.udev->flags.usb_mode == USB_MODE_HOST) ? "host" : "device",
@@ -1794,7 +1782,7 @@ done:
  * The USB Transaction Translator:
  * ===============================
  *
- * When doing LOW- and FULL-speed USB transfers accross a HIGH-speed
+ * When doing LOW- and FULL-speed USB transfers across a HIGH-speed
  * USB HUB, bandwidth must be allocated for ISOCHRONOUS and INTERRUPT
  * USB transfers. To utilize bandwidth dynamically the "scatter and
  * gather" principle must be applied. This means that bandwidth must
@@ -1866,7 +1854,7 @@ usb_intr_find_best_slot(usb_size_t *ptr, uint8_t start,
 /*------------------------------------------------------------------------*
  *	usb_hs_bandwidth_adjust
  *
- * This function will update the bandwith usage for the microframe
+ * This function will update the bandwidth usage for the microframe
  * having index "slot" by "len" bytes. "len" can be negative.  If the
  * "slot" argument is greater or equal to "USB_HS_MICRO_FRAMES_MAX"
  * the "slot" argument will be replaced by the slot having least used
@@ -2343,7 +2331,7 @@ usb_needs_explore_all(void)
 		return;
 	}
 	/*
-	 * Explore all USB busses in parallell.
+	 * Explore all USB busses in parallel.
 	 */
 	max = devclass_get_maxunit(dc);
 	while (max >= 0) {
@@ -2915,7 +2903,7 @@ usbd_set_power_mode(struct usb_device *udev, uint8_t power_mode)
 uint8_t
 usbd_filter_power_mode(struct usb_device *udev, uint8_t power_mode)
 {
-	struct usb_bus_methods *mtod;
+	const struct usb_bus_methods *mtod;
 	int8_t temp;
 
 	mtod = udev->bus->methods;

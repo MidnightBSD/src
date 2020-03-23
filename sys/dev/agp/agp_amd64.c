@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, 2005 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/agp/agp_amd64.c 275406 2014-12-02 13:46:13Z tijl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/agp/agp_amd64.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -275,8 +274,7 @@ static uint32_t agp_amd64_table[] = {
 	0x80000000,	/* 2048 MB */
 };
 
-#define AGP_AMD64_TABLE_SIZE \
-	(sizeof(agp_amd64_table) / sizeof(agp_amd64_table[0]))
+#define AGP_AMD64_TABLE_SIZE nitems(agp_amd64_table)
 
 static uint32_t
 agp_amd64_get_aperture(device_t dev)

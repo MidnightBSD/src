@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_battery.c 227992 2011-11-26 13:43:50Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_battery.c 348726 2019-06-06 05:10:32Z allanjude $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -120,7 +119,7 @@ int
 acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 {
     int	batt_stat, devcount, dev_idx, error, i;
-    int total_cap, total_min, valid_rate, valid_units;
+    int total_cap, total_lfcap, total_min, valid_rate, valid_units;
     devclass_t batt_dc;
     device_t batt_dev;
     struct acpi_bst *bst;
@@ -153,6 +152,7 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
      */
     dev_idx = -1;
     batt_stat = valid_rate = valid_units = 0;
+    total_cap = total_lfcap = 0;
     for (i = 0; i < devcount; i++) {
 	/* Default info for every battery is "not present". */
 	acpi_reset_battinfo(&bi[i]);
@@ -214,16 +214,22 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	if (!acpi_battery_bif_valid(bif))
 	    continue;
 
-	/* Calculate percent capacity remaining. */
-	bi[i].cap = (100 * bst[i].cap) / bif->lfcap;
-
 	/*
 	 * Some laptops report the "design-capacity" instead of the
 	 * "real-capacity" when the battery is fully charged.  That breaks
 	 * the above arithmetic as it needs to be 100% maximum.
 	 */
-	if (bi[i].cap > 100)
-	    bi[i].cap = 100;
+	if (bst[i].cap > bif->lfcap)
+	    bst[i].cap = bif->lfcap;
+
+	/* Calculate percent capacity remaining. */
+	bi[i].cap = (100 * bst[i].cap) / bif->lfcap;
+
+	/* If this battery is not present, don't use its capacity. */
+	if (bi[i].cap != -1) {
+	    total_cap += bst[i].cap;
+	    total_lfcap += bif->lfcap;
+	}
 
 	/*
 	 * On systems with more than one battery, they may get used
@@ -245,7 +251,7 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
     }
 
     /* Pass 2:  calculate capacity and remaining time for all batteries. */
-    total_cap = total_min = 0;
+    total_min = 0;
     for (i = 0; i < devcount; i++) {
 	/*
 	 * If any batteries are discharging, use the sum of the bst.rate
@@ -257,10 +263,6 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	else
 	    bi[i].min = 0;
 	total_min += bi[i].min;
-
-	/* If this battery is not present, don't use its capacity. */
-	if (bi[i].cap != -1)
-	    total_cap += bi[i].cap;
     }
 
     /*
@@ -269,7 +271,7 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
      */
     if (valid_units > 0) {
 	if (dev == NULL) {
-	    battinfo->cap = total_cap / valid_units;
+	    battinfo->cap = (total_cap * 100) / total_lfcap;
 	    battinfo->min = total_min;
 	    battinfo->state = batt_stat;
 	    battinfo->rate = valid_rate;
@@ -486,6 +488,11 @@ acpi_battery_init(void)
 	OID_AUTO, "time", CTLTYPE_INT | CTLFLAG_RD,
 	&acpi_battery_battinfo.min, 0, acpi_battery_sysctl, "I",
 	"remaining time in minutes");
+    SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
+	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
+	OID_AUTO, "rate", CTLTYPE_INT | CTLFLAG_RD,
+	&acpi_battery_battinfo.rate, 0, acpi_battery_sysctl, "I",
+	"present rate in mW");
     SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
 	OID_AUTO, "state", CTLTYPE_INT | CTLFLAG_RD,

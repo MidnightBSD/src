@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -26,12 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/sys/dev/vt/hw/fb/vt_fb.c 321198 2017-07-19 13:11:35Z emaste $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/vt/hw/fb/vt_fb.c 321198 2017-07-19 13:11:35Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/vt/hw/fb/vt_fb.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,9 +39,13 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/vt/hw/fb/vt_fb.c 321198 2017-07-19 13:11:3
 #include <dev/vt/hw/fb/vt_fb.h>
 #include <dev/vt/colors/vt_termcolors.h>
 
+#include <vm/vm.h>
+#include <vm/pmap.h>
+
 static struct vt_driver vt_fb_driver = {
 	.vd_name = "fb",
 	.vd_init = vt_fb_init,
+	.vd_fini = vt_fb_fini,
 	.vd_blank = vt_fb_blank,
 	.vd_bitblt_text = vt_fb_bitblt_text,
 	.vd_bitblt_bmp = vt_fb_bitblt_bitmap,
@@ -136,10 +137,14 @@ vt_fb_mmap(struct vt_device *vd, vm_ooffset_t offset, vm_paddr_t *paddr,
 		return (ENODEV);
 
 	if (offset >= 0 && offset < info->fb_size) {
-		*paddr = info->fb_pbase + offset;
-	#ifdef VM_MEMATTR_WRITE_COMBINING
-		*memattr = VM_MEMATTR_WRITE_COMBINING;
-	#endif
+		if (info->fb_pbase == 0) {
+			*paddr = vtophys((uint8_t *)info->fb_vbase + offset);
+		} else {
+			*paddr = info->fb_pbase + offset;
+#ifdef VM_MEMATTR_WRITE_COMBINING
+			*memattr = VM_MEMATTR_WRITE_COMBINING;
+#endif
+		}
 		return (0);
 	}
 
@@ -156,6 +161,9 @@ vt_fb_setpixel(struct vt_device *vd, int x, int y, term_color_t color)
 	info = vd->vd_softc;
 	c = info->fb_cmap[color];
 	o = info->fb_stride * y + x * FBTYPE_GET_BYTESPP(info);
+
+	if (info->fb_flags & FB_FLAG_NOWRITE)
+		return;
 
 	KASSERT((info->fb_vbase != 0), ("Unmapped framebuffer"));
 
@@ -178,7 +186,6 @@ vt_fb_setpixel(struct vt_device *vd, int x, int y, term_color_t color)
 		/* panic? */
 		return;
 	}
-
 }
 
 void
@@ -207,6 +214,9 @@ vt_fb_blank(struct vt_device *vd, term_color_t color)
 
 	info = vd->vd_softc;
 	c = info->fb_cmap[color];
+
+	if (info->fb_flags & FB_FLAG_NOWRITE)
+		return;
 
 	KASSERT((info->fb_vbase != 0), ("Unmapped framebuffer"));
 
@@ -259,6 +269,9 @@ vt_fb_bitblt_bitmap(struct vt_device *vd, const struct vt_window *vw,
 	fgc = info->fb_cmap[fg];
 	bgc = info->fb_cmap[bg];
 	bpl = (width + 7) / 8; /* Bytes per source line. */
+
+	if (info->fb_flags & FB_FLAG_NOWRITE)
+		return;
 
 	KASSERT((info->fb_vbase != 0), ("Unmapped framebuffer"));
 
@@ -409,11 +422,12 @@ vt_fb_init(struct vt_device *vd)
 	vd->vd_width = MIN(VT_FB_MAX_WIDTH, info->fb_width);
 	margin = (info->fb_width - vd->vd_width) >> 1;
 	vd->vd_transpose += margin * (info->fb_bpp / NBBY);
+	vd->vd_video_dev = info->fb_video_dev;
 
 	if (info->fb_size == 0)
 		return (CN_DEAD);
 
-	if (info->fb_pbase == 0)
+	if (info->fb_pbase == 0 && info->fb_vbase == 0)
 		info->fb_flags |= FB_FLAG_NOMMAP;
 
 	if (info->fb_cmsize <= 0) {
@@ -432,11 +446,27 @@ vt_fb_init(struct vt_device *vd)
 	return (CN_INTERNAL);
 }
 
+void
+vt_fb_fini(struct vt_device *vd, void *softc)
+{
+
+	vd->vd_video_dev = NULL;
+}
+
 int
 vt_fb_attach(struct fb_info *info)
 {
 
 	vt_allocate(&vt_fb_driver, info);
+
+	return (0);
+}
+
+int
+vt_fb_detach(struct fb_info *info)
+{
+
+	vt_deallocate(&vt_fb_driver, info);
 
 	return (0);
 }

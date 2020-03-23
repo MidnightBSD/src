@@ -23,8 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/virtio/virtio_bus_if.m 252707 2013-07-04 17:57:26Z bryanv $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/virtio/virtio_bus_if.m 331112 2018-03-17 20:37:01Z bryanv $
 
 #include <sys/bus.h>
 #include <machine/bus.h>
@@ -33,6 +32,14 @@ INTERFACE virtio_bus;
 
 HEADER {
 struct vq_alloc_info;
+};
+
+CODE {
+	static int
+	virtio_bus_default_config_generation(device_t dev)
+	{
+		return (0);
+	}
 };
 
 METHOD uint64_t negotiate_features {
@@ -75,6 +82,10 @@ METHOD void notify_vq {
 	uint16_t	queue;
 };
 
+METHOD int config_generation {
+	device_t	dev;
+} DEFAULT virtio_bus_default_config_generation;
+
 METHOD void read_device_config {
 	device_t	dev;
 	bus_size_t	offset;
@@ -88,3 +99,8 @@ METHOD void write_device_config {
 	void		*src;
 	int		len;
 };
+
+METHOD void poll {
+	device_t	dev;
+};
+

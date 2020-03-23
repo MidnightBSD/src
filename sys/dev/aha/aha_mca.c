@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aha/aha_mca.c 241611 2012-10-16 15:25:04Z pluknet $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aha/aha_mca.c 241611 2012-10-16 15:25:04Z pluknet $");
 
 #include <sys/types.h>
 #include <sys/param.h>

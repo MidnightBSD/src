@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/virtqueue.h 270270 2014-08-21 13:27:05Z bryanv $
+ * $FreeBSD: stable/11/sys/dev/virtio/virtqueue.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VIRTIO_VIRTQUEUE_H
@@ -83,7 +82,11 @@ void	 virtqueue_disable_intr(struct virtqueue *vq);
 
 /* Get physical address of the virtqueue ring. */
 vm_paddr_t virtqueue_paddr(struct virtqueue *vq);
+vm_paddr_t virtqueue_desc_paddr(struct virtqueue *vq);
+vm_paddr_t virtqueue_avail_paddr(struct virtqueue *vq);
+vm_paddr_t virtqueue_used_paddr(struct virtqueue *vq);
 
+uint16_t virtqueue_index(struct virtqueue *vq);
 int	 virtqueue_full(struct virtqueue *vq);
 int	 virtqueue_empty(struct virtqueue *vq);
 int	 virtqueue_size(struct virtqueue *vq);

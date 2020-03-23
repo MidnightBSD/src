@@ -23,8 +23,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/acpi_support/acpi_wmi_if.m 195185 2009-06-30 09:51:41Z rpaulo $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/acpi_support/acpi_wmi_if.m 195185 2009-06-30 09:51:41Z rpaulo $
+#
 
 #include <sys/bus.h>
 #include <sys/types.h>

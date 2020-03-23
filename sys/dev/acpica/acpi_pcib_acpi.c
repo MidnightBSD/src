@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,9 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_pcib_acpi.c 318393 2017-05-17 02:40:06Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_pcib_acpi.c 318392 2017-05-17 01:48:44Z sephe $");
 
 #include "opt_acpi.h"
+#include "opt_pci.h"
+
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -92,12 +93,12 @@ static int		acpi_pcib_alloc_msix(device_t pcib, device_t dev,
 			    int *irq);
 static struct resource *acpi_pcib_acpi_alloc_resource(device_t dev,
 			    device_t child, int type, int *rid,
-			    u_long start, u_long end, u_long count,
+			    rman_res_t start, rman_res_t end, rman_res_t count,
 			    u_int flags);
 #ifdef NEW_PCIB
 static int		acpi_pcib_acpi_adjust_resource(device_t dev,
 			    device_t child, int type, struct resource *r,
-			    u_long start, u_long end);
+			    rman_res_t start, rman_res_t end);
 #ifdef PCI_RES_BUS
 static int		acpi_pcib_acpi_release_resource(device_t dev,
 			    device_t child, int type, int rid,
@@ -131,6 +132,7 @@ static device_method_t acpi_pcib_acpi_methods[] = {
     DEVMETHOD(bus_deactivate_resource,	bus_generic_deactivate_resource),
     DEVMETHOD(bus_setup_intr,		bus_generic_setup_intr),
     DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
+    DEVMETHOD(bus_get_cpus,		acpi_pcib_get_cpus),
 
     /* pcib interface */
     DEVMETHOD(pcib_maxslots,		pcib_maxslots),
@@ -284,7 +286,7 @@ acpi_pcib_producer_handler(ACPI_RESOURCE *res, void *context)
 
 #if defined(NEW_PCIB) && defined(PCI_RES_BUS)
 static int
-first_decoded_bus(struct acpi_hpcib_softc *sc, u_long *startp)
+first_decoded_bus(struct acpi_hpcib_softc *sc, rman_res_t *startp)
 {
 	struct resource_list_entry *rle;
 
@@ -313,6 +315,11 @@ acpi_pcib_osc(struct acpi_hpcib_softc *sc)
 	/* Control Field */
 	cap_set[2] = 0;
 
+#ifdef PCI_HP
+	/* Control Field: PCI Express Native Hot Plug */
+	cap_set[2] |= 0x1;
+#endif
+
 	status = acpi_EvaluateOSC(sc->ap_handle, pci_host_bridge_uuid, 1,
 	    nitems(cap_set), cap_set, cap_set, false);
 	if (ACPI_FAILURE(status)) {
@@ -338,7 +345,7 @@ acpi_pcib_acpi_attach(device_t dev)
     u_int slot, func, busok;
 #if defined(NEW_PCIB) && defined(PCI_RES_BUS)
     struct resource *bus_res;
-    u_long start;
+    rman_res_t start;
     int rid;
 #endif
     uint8_t busno;
@@ -510,8 +517,17 @@ acpi_pcib_acpi_attach(device_t dev)
     if (sc->ap_segment == 0 && sc->ap_bus == 0)
 	    bus0_seen = 1;
 
+    acpi_pcib_fetch_prt(dev, &sc->ap_prt);
+
     bus_generic_probe(dev);
-    return (acpi_pcib_attach(dev, &sc->ap_prt, sc->ap_bus));
+    if (device_add_child(dev, "pci", -1) == NULL) {
+	device_printf(device_get_parent(dev), "couldn't attach pci bus\n");
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+	pcib_host_res_free(dev, &sc->ap_host_res);
+#endif
+	return (ENXIO);
+    }
+    return (bus_generic_attach(dev));
 }
 
 /*
@@ -628,7 +644,7 @@ acpi_pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
 
 struct resource *
 acpi_pcib_acpi_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 #ifdef NEW_PCIB
     struct acpi_hpcib_softc *sc;
@@ -669,7 +685,7 @@ acpi_pcib_acpi_alloc_resource(device_t dev, device_t child, int type, int *rid,
 #ifdef NEW_PCIB
 int
 acpi_pcib_acpi_adjust_resource(device_t dev, device_t child, int type,
-    struct resource *r, u_long start, u_long end)
+    struct resource *r, rman_res_t start, rman_res_t end)
 {
 	struct acpi_hpcib_softc *sc;
 

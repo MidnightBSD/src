@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_resource.c 333080 2018-04-28 00:16:54Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_resource.c 333080 2018-04-28 00:16:54Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -184,7 +183,9 @@ acpi_parse_resource(ACPI_RESOURCE *res, void *context)
     struct acpi_parse_resource_set *set;
     struct acpi_resource_context *arc;
     UINT64 min, max, length, gran;
+#ifdef ACPI_DEBUG
     const char *name;
+#endif
     device_t dev;
 
     arc = context;
@@ -301,21 +302,27 @@ acpi_parse_resource(ACPI_RESOURCE *res, void *context)
 	    min = res->Data.Address16.Address.Minimum;
 	    max = res->Data.Address16.Address.Maximum;
 	    length = res->Data.Address16.Address.AddressLength;
+#ifdef ACPI_DEBUG
 	    name = "Address16";
+#endif
 	    break;
 	case ACPI_RESOURCE_TYPE_ADDRESS32:
 	    gran = res->Data.Address32.Address.Granularity;
 	    min = res->Data.Address32.Address.Minimum;
 	    max = res->Data.Address32.Address.Maximum;
 	    length = res->Data.Address32.Address.AddressLength;
+#ifdef ACPI_DEBUG
 	    name = "Address32";
+#endif
 	    break;
 	case ACPI_RESOURCE_TYPE_ADDRESS64:
 	    gran = res->Data.Address64.Address.Granularity;
 	    min = res->Data.Address64.Address.Minimum;
 	    max = res->Data.Address64.Address.Maximum;
 	    length = res->Data.Address64.Address.AddressLength;
+#ifdef ACPI_DEBUG
 	    name = "Address64";
+#endif
 	    break;
 	default:
 	    KASSERT(res->Type == ACPI_RESOURCE_TYPE_EXTENDED_ADDRESS64,
@@ -324,7 +331,9 @@ acpi_parse_resource(ACPI_RESOURCE *res, void *context)
 	    min = res->Data.ExtAddress64.Address.Minimum;
 	    max = res->Data.ExtAddress64.Address.Maximum;
 	    length = res->Data.ExtAddress64.Address.AddressLength;
+#ifdef ACPI_DEBUG
 	    name = "ExtAddress64";
+#endif
 	    break;
 	}
 	if (length <= 0)
@@ -680,7 +689,7 @@ acpi_sysres_attach(device_t dev)
     struct resource_list_entry *bus_rle, *dev_rle;
     struct resource_list *bus_rl, *dev_rl;
     int done, type;
-    u_long start, end, count;
+    rman_res_t start, end, count;
 
     /*
      * Loop through all current resources to see if the new one overlaps

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aac/aac_disk.c 251116 2013-05-30 00:22:07Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac_disk.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_aac.h"
 
@@ -89,7 +88,7 @@ DRIVER_MODULE(aacd, aac, aac_disk_driver, aac_disk_devclass, NULL, NULL);
  * Handle open from generic layer.
  *
  * This is called by the diskslice code on first open in order to get the
- * basic device geometry paramters.
+ * basic device geometry parameters.
  */
 static int
 aac_disk_open(struct disk *dp)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /*-
  * Copyright (c) 2006-2010 Adaptec, Inc.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aacraid/aacraid_debug.c 250963 2013-05-24 09:22:43Z achim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aacraid/aacraid_debug.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Debugging support.
@@ -266,7 +265,7 @@ aacraid_print_aif(struct aac_softc *sc, struct aac_aif_command *aif)
 			device_printf(sc->aac_dev, "(ClusterEvent) event %d\n",
 				      aif->data.EN.data.ECLE.eventType);
 			break;
-		case AifEnDiskSetEvent:		/* A disk set event occured. */
+		case AifEnDiskSetEvent:		/* A disk set event occurred. */
 			device_printf(sc->aac_dev, "(DiskSetEvent) event %d "
 				      "diskset %jd creator %jd\n",
 				      aif->data.EN.data.EDS.eventType,

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_controller.h 259603 2013-12-19 07:13:59Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_controller.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

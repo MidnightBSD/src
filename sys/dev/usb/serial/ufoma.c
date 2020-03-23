@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: umodem.c,v 1.45 2002/09/23 05:51:23 simonb Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/ufoma.c 263687 2014-03-24 13:48:04Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/ufoma.c 331722 2018-03-29 02:50:57Z eadler $");
 #define UFOMA_HANDSFREE
 /*-
  * Copyright (c) 2005, Takanori Watanabe
@@ -318,15 +317,16 @@ static driver_t ufoma_driver = {
 	.size = sizeof(struct ufoma_softc),
 };
 
-DRIVER_MODULE(ufoma, uhub, ufoma_driver, ufoma_devclass, NULL, 0);
-MODULE_DEPEND(ufoma, ucom, 1, 1, 1);
-MODULE_DEPEND(ufoma, usb, 1, 1, 1);
-MODULE_VERSION(ufoma, 1);
-
 static const STRUCT_USB_HOST_ID ufoma_devs[] = {
 	{USB_IFACE_CLASS(UICLASS_CDC),
 	 USB_IFACE_SUBCLASS(UISUBCLASS_MCPC),},
 };
+
+DRIVER_MODULE(ufoma, uhub, ufoma_driver, ufoma_devclass, NULL, 0);
+MODULE_DEPEND(ufoma, ucom, 1, 1, 1);
+MODULE_DEPEND(ufoma, usb, 1, 1, 1);
+MODULE_VERSION(ufoma, 1);
+USB_PNP_HOST_INFO(ufoma_devs);
 
 static int
 ufoma_probe(device_t dev)
@@ -900,6 +900,7 @@ ufoma_cfg_get_status(struct ucom_softc *ucom, uint8_t *lsr, uint8_t *msr)
 {
 	struct ufoma_softc *sc = ucom->sc_parent;
 
+	/* XXX Note: sc_lsr is always zero */
 	*lsr = sc->sc_lsr;
 	*msr = sc->sc_msr;
 }

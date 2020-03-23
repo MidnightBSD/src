@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_device.h 305734 2016-09-12 10:17:25Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_device.h 356680 2020-01-13 11:30:07Z hselasky $ */
 /*-
- * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2008-2019 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -140,7 +139,7 @@ struct usb_hw_ep_scratch {
 	struct usb_hw_ep_scratch_sub *ep_max;
 	struct usb_config_descriptor *cd;
 	struct usb_device *udev;
-	struct usb_bus_methods *methods;
+	const struct usb_bus_methods *methods;
 	uint8_t	bmOutAlloc[(USB_EP_MAX + 15) / 16];
 	uint8_t	bmInAlloc[(USB_EP_MAX + 15) / 16];
 };
@@ -176,10 +175,22 @@ union usb_device_scratch {
 };
 
 /*
+ * Helper structure to keep track of USB device statistics.
+ */
+struct usb_device_statistics {
+	uint32_t uds_requests[4];
+};
+
+/*
  * The following structure defines an USB device. There exists one of
  * these structures for every USB device.
  */
 struct usb_device {
+	/* statistics */
+	struct usb_device_statistics stats_err;
+	struct usb_device_statistics stats_ok;
+  	struct usb_device_statistics stats_cancelled;
+
 	/* generic clear stall message */
 	struct usb_udev_msg cs_msg[2];
 	struct sx enum_sx;

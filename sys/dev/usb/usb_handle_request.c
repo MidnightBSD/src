@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_handle_request.c 246759 2013-02-13 12:35:17Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_handle_request.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -314,7 +313,7 @@ tr_repeat:
 		case UR_SET_INTERFACE:
 			/*
 			 * We assume that the endpoints are the same
-			 * accross the alternate settings.
+			 * across the alternate settings.
 			 *
 			 * Reset the endpoints, because re-attaching
 			 * only a part of the device is not possible.

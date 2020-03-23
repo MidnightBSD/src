@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Bernd Walter <ticso@FreeBSD.org>
  *
@@ -64,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/ubser.c 263687 2014-03-24 13:48:04Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/ubser.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * BWCT serial adapter driver
@@ -111,7 +110,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/ubser.c 263687 2014-03-24 13:48
 static int ubser_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, ubser, CTLFLAG_RW, 0, "USB ubser");
-SYSCTL_INT(_hw_usb_ubser, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_ubser, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ubser_debug, 0, "ubser debug level");
 #endif
 

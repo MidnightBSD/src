@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 OGAWA Takaya <t-ogawa@triaez.kaisei.org>
  * Copyright (c) 2004 TAKAHASHI Yoshihiro <nyan@FreeBSD.org>
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_panasonic.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_panasonic.c 331173 2018-03-19 03:53:46Z eadler $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -494,6 +493,10 @@ acpi_panasonic_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 		}
 		ACPI_SERIAL_END(panasonic);
 		break;
+	case 0x81:
+		if (!bootverbose)
+			break;
+		/* FALLTHROUGH */
 	default:
 		device_printf(sc->dev, "unknown notify: %#x\n", notify);
 		break;

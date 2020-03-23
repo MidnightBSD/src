@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Michael Gmelin <freebsd@grem.de>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_hp.c 273736 2014-10-27 14:38:00Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_hp.c 298848 2016-04-30 14:41:18Z pfg $");
 
 /*
  * Driver for extra ACPI-controlled features found on HP laptops
@@ -1034,7 +1033,8 @@ acpi_hp_hex_decode(char* buffer)
 	UINT8	*uin;
 	UINT8	uout;
 
-	if (((int)length/2)*2 == length || length < 10) return;
+	if (rounddown((int)length, 2) == length || length < 10)
+		return;
 
 	for (i = 0; i<length; ++i) {
 		if (!((i+1)%3)) {

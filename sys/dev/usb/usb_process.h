@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_process.h 287274 2015-08-29 06:23:40Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_process.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

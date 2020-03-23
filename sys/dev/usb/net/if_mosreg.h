@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/net/if_mosreg.h 232257 2012-02-28 15:45:42Z kevlo $ */
+/* $FreeBSD: stable/11/sys/dev/usb/net/if_mosreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2010, 2011 Rick van der Zwet <info@rickvanderzwet.nl>
  *

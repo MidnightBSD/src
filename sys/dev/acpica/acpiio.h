@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/acpica/acpiio.h 216503 2010-12-17 16:21:30Z avg $
+ * $FreeBSD: stable/11/sys/dev/acpica/acpiio.h 298955 2016-05-03 03:41:25Z pfg $
  */
 
 #ifndef _ACPIIO_H_
@@ -65,7 +64,7 @@ struct acpi_bif {
     char model[ACPI_CMBAT_MAXSTRLEN];	/* model identifier */
     char serial[ACPI_CMBAT_MAXSTRLEN];	/* Serial number */
     char type[ACPI_CMBAT_MAXSTRLEN];	/* Type */
-    char oeminfo[ACPI_CMBAT_MAXSTRLEN];	/* OEM infomation */
+    char oeminfo[ACPI_CMBAT_MAXSTRLEN];	/* OEM information */
 };
 
 struct acpi_bst {

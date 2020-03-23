@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, 2005 Philip Paeps <philip@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/acpi_asus.c 273736 2014-10-27 14:38:00Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_asus.c 273377 2014-10-21 07:31:21Z hselasky $");
 
 /*
  * Driver for extra ACPI-controlled gadgets (hotkeys, leds, etc) found on

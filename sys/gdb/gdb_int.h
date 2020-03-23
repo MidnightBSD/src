@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/gdb/gdb_int.h 271173 2014-09-05 16:40:47Z benno $
  */
 
 #ifndef _GDB_GDB_INT_H_
@@ -60,6 +60,9 @@ void gdb_tx_begin(char);
 int gdb_tx_end(void);
 int gdb_tx_mem(const unsigned char *, size_t);
 void gdb_tx_reg(int);
+int gdb_rx_bindata(unsigned char *data, size_t datalen, size_t *amt);
+int gdb_search_mem(const unsigned char *addr, size_t size,
+    const unsigned char *pat, size_t patlen, const unsigned char **found);
 
 static __inline void
 gdb_tx_char(char c)

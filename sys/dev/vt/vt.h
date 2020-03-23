@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/vt/vt.h 321198 2017-07-19 13:11:35Z emaste $
+ * $FreeBSD: stable/11/sys/dev/vt/vt.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_VT_VT_H_
@@ -84,14 +83,13 @@
 #define	ISSIGVALID(sig)	((sig) > 0 && (sig) < NSIG)
 
 #define	VT_SYSCTL_INT(_name, _default, _descr)				\
-static int vt_##_name = (_default);					\
-SYSCTL_INT(_kern_vt, OID_AUTO, _name, CTLFLAG_RWTUN, &vt_##_name, 0,	\
-		_descr);						\
-TUNABLE_INT("kern.vt." #_name, &vt_##_name)
+int vt_##_name = (_default);						\
+SYSCTL_INT(_kern_vt, OID_AUTO, _name, CTLFLAG_RWTUN, &vt_##_name, 0, _descr)
 
 struct vt_driver;
 
-void vt_allocate(struct vt_driver *, void *);
+void vt_allocate(const struct vt_driver *, void *);
+void vt_deallocate(const struct vt_driver *, void *);
 
 typedef unsigned int 	vt_axis_t;
 
@@ -126,6 +124,9 @@ struct vt_device {
 	struct vt_pastebuf	 vd_pastebuf;	/* (?) Copy/paste buf. */
 	const struct vt_driver	*vd_driver;	/* (c) Graphics driver. */
 	void			*vd_softc;	/* (u) Driver data. */
+	const struct vt_driver	*vd_prev_driver;/* (?) Previous driver. */
+	void			*vd_prev_softc;	/* (?) Previous driver data. */
+	device_t		 vd_video_dev;	/* (?) Video adapter. */
 #ifndef SC_NO_CUTPASTE
 	struct vt_mouse_cursor	*vd_mcursor;	/* (?) Cursor bitmap. */
 	term_color_t		 vd_mcursor_fg;	/* (?) Cursor fg color. */
@@ -153,6 +154,7 @@ struct vt_device {
 #define	VDF_INITIALIZED	0x20	/* vtterm_cnprobe already done. */
 #define	VDF_MOUSECURSOR	0x40	/* Mouse cursor visible. */
 #define	VDF_QUIET_BELL	0x80	/* Disable bell. */
+#define	VDF_DOWNGRADE	0x8000	/* The driver is being downgraded. */
 	int			 vd_keyboard;	/* (G) Keyboard index. */
 	unsigned int		 vd_kbstate;	/* (?) Device unit. */
 	unsigned int		 vd_unit;	/* (c) Device unit. */
@@ -163,7 +165,12 @@ struct vt_device {
 #define	VD_PASTEBUFSZ(vd)	((vd)->vd_pastebuf.vpb_bufsz)
 #define	VD_PASTEBUFLEN(vd)	((vd)->vd_pastebuf.vpb_len)
 
+#define	VT_LOCK(vd)	mtx_lock(&(vd)->vd_lock)
+#define	VT_UNLOCK(vd)	mtx_unlock(&(vd)->vd_lock)
+#define	VT_LOCK_ASSERT(vd, what)	mtx_assert(&(vd)->vd_lock, what)
+
 void vt_resume(struct vt_device *vd);
+void vt_resume_flush_timer(struct vt_device *vd, int ms);
 void vt_suspend(struct vt_device *vd);
 
 /*
@@ -187,8 +194,8 @@ struct vt_buf {
 #define	VBF_SCROLL	0x8	/* scroll locked mode. */
 #define	VBF_HISTORY_FULL 0x10	/* All rows filled. */
 	unsigned int		 vb_history_size;
-	int			 vb_roffset;	/* (b) History rows offset. */
-	int			 vb_curroffset;	/* (b) Saved rows offset. */
+	unsigned int		 vb_roffset;	/* (b) History rows offset. */
+	unsigned int		 vb_curroffset;	/* (b) Saved rows offset. */
 	term_pos_t		 vb_cursor;	/* (u) Cursor position. */
 	term_pos_t		 vb_mark_start;	/* (b) Copy region start. */
 	term_pos_t		 vb_mark_end;	/* (b) Copy region end. */
@@ -214,7 +221,7 @@ void vtbuf_cursor_position(struct vt_buf *, const term_pos_t *);
 void vtbuf_scroll_mode(struct vt_buf *vb, int yes);
 void vtbuf_dirty(struct vt_buf *vb, const term_rect_t *area);
 void vtbuf_undirty(struct vt_buf *, term_rect_t *);
-void vtbuf_sethistory_size(struct vt_buf *, int);
+void vtbuf_sethistory_size(struct vt_buf *, unsigned int);
 int vtbuf_iscursor(const struct vt_buf *vb, int row, int col);
 void vtbuf_cursor_visibility(struct vt_buf *, int);
 #ifndef SC_NO_CUTPASTE
@@ -304,6 +311,7 @@ struct vt_window {
 
 typedef int vd_init_t(struct vt_device *vd);
 typedef int vd_probe_t(struct vt_device *vd);
+typedef void vd_fini_t(struct vt_device *vd, void *softc);
 typedef void vd_postswitch_t(struct vt_device *vd);
 typedef void vd_blank_t(struct vt_device *vd, term_color_t color);
 typedef void vd_bitblt_text_t(struct vt_device *vd, const struct vt_window *vw,
@@ -326,6 +334,7 @@ struct vt_driver {
 	/* Console attachment. */
 	vd_probe_t	*vd_probe;
 	vd_init_t	*vd_init;
+	vd_fini_t	*vd_fini;
 
 	/* Drawing. */
 	vd_blank_t	*vd_blank;
@@ -360,6 +369,8 @@ struct vt_driver {
  * Utility macro to make early vt(4) instances work.
  */
 
+extern struct vt_device vt_consdev;
+extern struct terminal vt_consterm;
 extern const struct terminal_class vt_termclass;
 void vt_upgrade(struct vt_device *vd);
 
@@ -424,10 +435,29 @@ void vt_mouse_state(int show);
 #define	VT_MOUSE_HIDE 0
 
 /* Utilities. */
+void	vt_compute_drawable_area(struct vt_window *);
 void	vt_determine_colors(term_char_t c, int cursor,
 	    term_color_t *fg, term_color_t *bg);
 int	vt_is_cursor_in_area(const struct vt_device *vd,
 	    const term_rect_t *area);
+void	vt_termsize(struct vt_device *, struct vt_font *, term_pos_t *);
+void	vt_winsize(struct vt_device *, struct vt_font *, struct winsize *);
+
+/* Logos-on-boot. */
+#define	VT_LOGOS_DRAW_BEASTIE		0
+#define	VT_LOGOS_DRAW_ALT_BEASTIE	1
+#define	VT_LOGOS_DRAW_ORB		2
+
+extern int vt_draw_logo_cpus;
+extern int vt_splash_cpu;
+extern int vt_splash_ncpu;
+extern int vt_splash_cpu_style;
+extern int vt_splash_cpu_duration;
+
+extern const unsigned int vt_logo_sprite_height;
+extern const unsigned int vt_logo_sprite_width;
+
+void vtterm_draw_cpu_logos(struct vt_device *);
 
 #endif /* !_DEV_VT_VT_H_ */
 

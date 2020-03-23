@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/gadget/g_audio.h 253544 2013-07-22 13:39:33Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/gadget/g_audio.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *

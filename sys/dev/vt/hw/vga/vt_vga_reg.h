@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/vt/hw/vga/vt_vga_reg.h 287126 2015-08-25 14:39:40Z marcel $
+ * $FreeBSD: stable/11/sys/dev/vt/hw/vga/vt_vga_reg.h 286723 2015-08-13 14:43:11Z marcel $
  */
 
 #ifndef _DEV_VT_HW_VGA_VGA_REG_H_

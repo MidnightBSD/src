@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: uipaq.c,v 1.4 2006/11/16 01:33:27 christos Exp $	*/
 /*	$OpenBSD: uipaq.c,v 1.1 2005/06/17 23:50:33 deraadt Exp $	*/
 
@@ -43,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uipaq.c 239299 2012-08-15 15:42:57Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/uipaq.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -1089,6 +1088,7 @@ DRIVER_MODULE(uipaq, uhub, uipaq_driver, uipaq_devclass, NULL, 0);
 MODULE_DEPEND(uipaq, ucom, 1, 1, 1);
 MODULE_DEPEND(uipaq, usb, 1, 1, 1);
 MODULE_VERSION(uipaq, 1);
+USB_PNP_HOST_INFO(uipaq_devs);
 
 static int
 uipaq_probe(device_t dev)

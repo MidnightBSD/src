@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Munehiro Matsuda
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/acpi_cmbat.c 315264 2017-03-14 15:56:19Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_cmbat.c 315263 2017-03-14 15:55:17Z hselasky $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>

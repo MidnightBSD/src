@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_hub.h 267347 2014-06-11 05:39:08Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_hub.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

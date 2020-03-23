@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Low level routines for Second Generation
  * Advanced Systems Inc. SCSI controllers chips
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/advansys/adwlib.c 241588 2012-10-15 15:26:00Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/advansys/adwlib.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -161,8 +160,6 @@ const struct adw_syncrate adw_syncrates[] =
 	{ ADW_MC_SDTR_5,	    50,	     "5.0"   },
 	{ ADW_MC_SDTR_ASYNC,	    0,	     "async" }
 };
-
-const int adw_num_syncrates = sizeof(adw_syncrates) / sizeof(adw_syncrates[0]);
 
 static u_int16_t	adw_eeprom_read_16(struct adw_softc *adw, int addr);
 static void		adw_eeprom_write_16(struct adw_softc *adw, int addr,
@@ -818,7 +815,7 @@ adw_find_sdtr(struct adw_softc *adw, u_int period)
 	if (period == 0)
 		return ADW_MC_SDTR_ASYNC;
 
-	for (; i < adw_num_syncrates; i++) {
+	for (; i < nitems(adw_syncrates); i++) {
 		if (period <= adw_syncrates[i].period)
 			return (adw_syncrates[i].mc_sdtr);
 	}	
@@ -830,7 +827,7 @@ adw_find_period(struct adw_softc *adw, u_int mc_sdtr)
 {
 	int i;
 
-	for (i = 0; i < adw_num_syncrates; i++) {
+	for (i = 0; i < nitems(adw_syncrates); i++) {
 		if (mc_sdtr == adw_syncrates[i].mc_sdtr)
 			break;
 	}	

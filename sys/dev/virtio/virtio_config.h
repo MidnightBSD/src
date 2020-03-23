@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/virtio_config.h 268010 2014-06-29 00:37:59Z bryanv $
+ * $FreeBSD: stable/11/sys/dev/virtio/virtio_config.h 267522 2014-06-16 04:25:04Z bryanv $
  */
 
 #ifndef _VIRTIO_CONFIG_H_

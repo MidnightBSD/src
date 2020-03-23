@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: usbcdc.h,v 1.9 2004/10/23 13:24:24 augustss Exp $	*/
-/*	$FreeBSD: stable/10/sys/dev/usb/usb_cdc.h 213809 2010-10-13 22:04:55Z hselasky $	*/
+/*	$FreeBSD: stable/11/sys/dev/usb/usb_cdc.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -162,7 +161,7 @@ struct usb_cdc_notification {
 #define	UCDC_NOTIFICATION_LENGTH	8
 
 /*
- * Bits set in the SERIAL STATE notifcation (first byte of data)
+ * Bits set in the SERIAL STATE notification (first byte of data)
  */
 
 #define	UCDC_N_SERIAL_OVERRUN		0x40

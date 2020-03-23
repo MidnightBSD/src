@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdDebug.c 306536 2016-09-30 22:40:58Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/Osd/OsdDebug.c 316303 2017-03-30 20:18:34Z jkim $");
 
 #include "opt_ddb.h"
 #include <sys/param.h>

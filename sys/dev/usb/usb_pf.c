@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_pf.c 287272 2015-08-29 06:11:50Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/usb/usb_pf.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -46,6 +45,7 @@
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
 #include <net/if_clone.h>
 #include <net/bpf.h>

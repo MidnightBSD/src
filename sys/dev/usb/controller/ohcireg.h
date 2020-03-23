@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/controller/ohcireg.h 204632 2010-03-03 10:18:03Z joel $ */
+/* $FreeBSD: stable/11/sys/dev/usb/controller/ohcireg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: atk0110.c,v 1.4 2010/02/11 06:54:57 cnst Exp $	*/
 /*	$OpenBSD: atk0110.c,v 1.1 2009/07/23 01:38:16 cnst Exp $	*/
 
@@ -19,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpi_support/atk0110.c 308369 2016-11-06 13:51:50Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/atk0110.c 335471 2018-06-21 09:41:44Z dim $");
 
 #include <machine/_inttypes.h>
 #include <sys/param.h>
@@ -73,7 +72,7 @@ struct aibs_sensor {
 };
 
 struct aibs_softc {
-	struct device		*sc_dev;
+	device_t		sc_dev;
 	ACPI_HANDLE		sc_ah;
 
 	struct aibs_sensor	*sc_asens_volt;
@@ -454,7 +453,7 @@ static int
 aibs_sysctl(SYSCTL_HANDLER_ARGS)
 {
 	struct aibs_softc	*sc = arg1;
-	struct aibs_sensor	*sensor = (void *)arg2;
+	struct aibs_sensor	*sensor = (void *)(intptr_t)arg2;
 	int			i = oidp->oid_number;
 	ACPI_STATUS		rs;
 	ACPI_OBJECT		p, *bp;
@@ -503,9 +502,9 @@ aibs_sysctl(SYSCTL_HANDLER_ARGS)
 	case AIBS_SENS_TYPE_VOLT:
 		break;
 	case AIBS_SENS_TYPE_TEMP:
-		v += 2732;
-		l += 2732;
-		h += 2732;
+		v += 2731;
+		l += 2731;
+		h += 2731;
 		break;
 	case AIBS_SENS_TYPE_FAN:
 		break;
@@ -520,7 +519,7 @@ static int
 aibs_sysctl_ggrp(SYSCTL_HANDLER_ARGS)
 {
 	struct aibs_softc	*sc = arg1;
-	struct aibs_sensor	*sensor = (void *)arg2;
+	struct aibs_sensor	*sensor = (void *)(intptr_t)arg2;
 	ACPI_STATUS		rs;
 	ACPI_OBJECT		p, *bp;
 	ACPI_OBJECT_LIST	arg;

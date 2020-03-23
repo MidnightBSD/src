@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsaru Iwasaki
  * Copyright (c) 2000 Michael Smith
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/acpica/Osd/OsdMemory.c 231844 2012-02-16 22:59:29Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/Osd/OsdMemory.c 231844 2012-02-16 22:59:29Z jkim $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 

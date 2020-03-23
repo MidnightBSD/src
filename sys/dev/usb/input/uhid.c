@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: uhid.c,v 1.46 2001/11/13 06:24:55 lukem Exp $	*/
 
 /* Also already merged from NetBSD:
@@ -6,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/input/uhid.c 291205 2015-11-23 13:47:31Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/input/uhid.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -80,7 +79,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/input/uhid.c 291205 2015-11-23 13:47:3
 static int uhid_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uhid, CTLFLAG_RW, 0, "USB uhid");
-SYSCTL_INT(_hw_usb_uhid, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uhid, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uhid_debug, 0, "Debug level");
 #endif
 
@@ -879,3 +878,4 @@ static driver_t uhid_driver = {
 DRIVER_MODULE(uhid, uhub, uhid_driver, uhid_devclass, NULL, 0);
 MODULE_DEPEND(uhid, usb, 1, 1, 1);
 MODULE_VERSION(uhid, 1);
+USB_PNP_HOST_INFO(uhid_devs);

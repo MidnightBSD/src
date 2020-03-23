@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright IBM Corp. 2007
  *
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/virtio/pci/virtio_pci.h 268010 2014-06-29 00:37:59Z bryanv $
+ * $FreeBSD: stable/11/sys/dev/virtio/pci/virtio_pci.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VIRTIO_PCI_H

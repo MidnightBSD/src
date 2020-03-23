@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: uchcom.c,v 1.1 2007/09/03 17:57:37 tshiozak Exp $	*/
 
 /*-
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uchcom.c 335627 2018-06-25 08:57:03Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/uchcom.c 335626 2018-06-25 08:56:30Z avg $");
 
 /*
  * Driver for WinChipHead CH341/340, the worst USB-serial chip in the
@@ -98,7 +97,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/usb/serial/uchcom.c 335627 2018-06-25 08:5
 static int uchcom_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uchcom, CTLFLAG_RW, 0, "USB uchcom");
-SYSCTL_INT(_hw_usb_uchcom, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uchcom, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uchcom_debug, 0, "uchcom debug level");
 #endif
 
@@ -198,7 +197,7 @@ static const struct uchcom_divider_record dividers[] =
 	{367, 1, 11719, {0, 0, 0}},
 };
 
-#define	NUM_DIVIDERS	(sizeof (dividers) / sizeof (dividers[0]))
+#define	NUM_DIVIDERS	nitems(dividers)
 
 static const STRUCT_USB_HOST_ID uchcom_devs[] = {
 	{USB_VPI(USB_VENDOR_WCH, USB_PRODUCT_WCH_CH341SER, 0)},
@@ -641,6 +640,7 @@ uchcom_cfg_get_status(struct ucom_softc *ucom, uint8_t *lsr, uint8_t *msr)
 
 	DPRINTF("\n");
 
+	/* XXX Note: sc_lsr is always zero */
 	*lsr = sc->sc_lsr;
 	*msr = sc->sc_msr;
 }
@@ -909,3 +909,4 @@ DRIVER_MODULE(uchcom, uhub, uchcom_driver, uchcom_devclass, NULL, 0);
 MODULE_DEPEND(uchcom, ucom, 1, 1, 1);
 MODULE_DEPEND(uchcom, usb, 1, 1, 1);
 MODULE_VERSION(uchcom, 1);
+USB_PNP_HOST_INFO(uchcom_devs);

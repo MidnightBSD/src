@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/usb/controller/ehci_pci.c 346669 2019-04-25 12:02:17Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/ehci_pci.c 355329 2019-12-03 14:48:13Z mav $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -181,6 +180,8 @@ ehci_pci_match(device_t self)
 		return ("Intel Wellsburg USB 2.0 controller");
 	case 0x9c268086:
 		return ("Intel Lynx Point-LP USB 2.0 controller");
+	case 0x9ca68086:
+		return ("Intel Wildcat Point-LP USB 2.0 controller");
 
 	case 0x00e01033:
 		return ("NEC uPD 72010x USB 2.0 controller");

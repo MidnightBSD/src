@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Definitions for low level routines and data structures
  * for the Advanced Systems Inc. SCSI controllers chips.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/advansys/adwlib.h 241588 2012-10-15 15:26:00Z jhb $
+ * $FreeBSD: stable/11/sys/dev/advansys/adwlib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*-
  * Ported from:
@@ -564,7 +563,7 @@ typedef enum {
 	ADW_FENONE	  = 0x0000,
 	ADW_ULTRA	  = 0x0001,	/* Supports 20MHz Transfers */
 	ADW_ULTRA2	  = 0x0002,	/* Supports 40MHz Transfers */
-	ADW_DT		  = 0x0004,	/* Supports Double Transistion REQ/ACK*/
+	ADW_DT		  = 0x0004,	/* Supports Double Transition REQ/ACK */
 	ADW_WIDE  	  = 0x0008,	/* Wide Channel */
 	ADW_ASC3550_FE	  = ADW_ULTRA,	
 	ADW_ASC38C0800_FE = ADW_ULTRA2,
@@ -802,7 +801,7 @@ carrierbtov(struct adw_softc *adw, u_int32_t baddr)
 	return (carrierbotov(adw, baddr - adw->carrier_busbase));
 }
 
-/* Intialization */
+/* Initialization */
 int		adw_find_signature(struct adw_softc *adw);
 void		adw_reset_chip(struct adw_softc *adw);
 int		adw_reset_bus(struct adw_softc *adw);
