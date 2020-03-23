@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* radeon_irq.c -- IRQ handling for radeon -*- linux-c -*- */
 /*-
  * Copyright (C) The Weather Channel, Inc.  2002.  All Rights Reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_irq.c 197603 2009-09-28 22:37:07Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/radeon_irq.c 197603 2009-09-28 22:37:07Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

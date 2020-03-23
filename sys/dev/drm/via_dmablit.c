@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* via_dmablit.c -- PCI DMA BitBlt support for the VIA Unichrome/Pro
  *
  * Copyright (C) 2005 Thomas Hellstrom, All Rights Reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_dmablit.c 242825 2012-11-09 14:46:23Z rdivacky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/via_dmablit.c 267548 2014-06-16 18:15:27Z attilio $");
 
 /*
  * Unmaps the DMA mappings.
@@ -180,7 +179,7 @@ via_free_sg_info(drm_via_sg_info_t *vsg)
 		for (i=0; i < vsg->num_pages; ++i) {
 			page = vsg->pages[i];
 			vm_page_lock(page);
-			vm_page_unwire(page, 0);
+			vm_page_unwire(page, PQ_INACTIVE);
 			vm_page_unlock(page);
 		}
 	case dr_via_pages_alloc:

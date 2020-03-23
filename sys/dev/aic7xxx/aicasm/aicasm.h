@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Assembler for the sequencer program downloaded to Aic7xxx SCSI host adapters
  *
@@ -40,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.h#14 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm.h 224046 2011-07-15 00:36:47Z emaste $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/queue.h>

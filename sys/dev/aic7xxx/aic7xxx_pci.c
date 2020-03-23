@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *      3940, 2940, aic7895, aic7890, aic7880,
@@ -49,7 +48,7 @@
 #include "aic7xxx_93cx6.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/aic7xxx_pci.c 300060 2016-05-17 15:18:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aic7xxx_93cx6.h>

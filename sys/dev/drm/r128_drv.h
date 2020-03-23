@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* r128_drv.h -- Private header for r128 driver -*- linux-c -*-
  * Created: Mon Dec 13 09:51:11 1999 by faith@precisioninsight.com
  */
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/r128_drv.h 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/r128_drv.h 258780 2013-11-30 22:17:27Z eadler $");
 
 #ifndef __R128_DRV_H__
 #define __R128_DRV_H__

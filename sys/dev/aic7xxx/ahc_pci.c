@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * FreeBSD, PCI product support functions
  *
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/ahc_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/ahc_pci.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mga_dma.c -- DMA support for mga g200/g400 -*- linux-c -*-
  * Created: Mon Dec 13 01:50:01 1999 by jhartmann@precisioninsight.com
  */
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_dma.c 207066 2010-04-22 18:21:25Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mga_dma.c 298955 2016-05-03 03:41:25Z pfg $");
 
 /**
  * \file mga_dma.c
@@ -434,7 +433,7 @@ int mga_driver_load(struct drm_device *dev, unsigned long flags)
  * Bootstrap the driver for AGP DMA.
  *
  * \todo
- * Investigate whether there is any benifit to storing the WARP microcode in
+ * Investigate whether there is any benefit to storing the WARP microcode in
  * AGP memory.  If not, the microcode may as well always be put in PCI
  * memory.
  *

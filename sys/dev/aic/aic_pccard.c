@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Luoqi Chen.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic/aic_pccard.c 241591 2012-10-15 16:09:59Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic/aic_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/callout.h>
@@ -78,8 +77,8 @@ aic_pccard_alloc_resources(device_t dev)
 	sc->sc_port = sc->sc_irq = NULL;
 
 	rid = 0;
-	sc->sc_port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-	    0ul, ~0ul, AIC_PCCARD_PORTSIZE, RF_ACTIVE);
+	sc->sc_port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+	    AIC_PCCARD_PORTSIZE, RF_ACTIVE);
 	if (!sc->sc_port)
 		return (ENOMEM);
 
@@ -197,3 +196,4 @@ extern devclass_t aic_devclass;
 
 MODULE_DEPEND(aic, cam, 1,1,1);
 DRIVER_MODULE(aic, pccard, aic_pccard_driver, aic_devclass, 0, 0);
+PCCARD_PNP_INFO(aic_pccard_products);

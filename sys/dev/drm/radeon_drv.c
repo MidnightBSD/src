@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* radeon_drv.c -- ATI Radeon driver -*- linux-c -*-
  * Created: Wed Feb 14 17:10:04 2001 by gareth@valinux.com
  */
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/radeon_drv.c 283999 2015-06-04 20:36:16Z jhb $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -128,9 +127,5 @@ static driver_t radeon_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(radeon, vgapci, radeon_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(radeon, pci, radeon_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(radeon, drm, 1, 1, 1);

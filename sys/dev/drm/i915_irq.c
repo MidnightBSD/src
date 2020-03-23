@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* i915_irq.c -- IRQ support for the I915 -*- linux-c -*-
  */
 /*-
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/i915_irq.c 194986 2009-06-25 18:27:08Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/i915_irq.c 194986 2009-06-25 18:27:08Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Aic7xxx SCSI host adapter firmware asssembler
  *
@@ -40,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.c#23 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm.c 300060 2016-05-17 15:18:01Z pfg $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/types.h>
 #include <sys/mman.h>

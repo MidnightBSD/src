@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* via_drv.c -- VIA unichrome driver -*- linux-c -*-
  * Created: Fri Aug 12 2005 by anholt@FreeBSD.org
  */
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_drv.c 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/via_drv.c 203288 2010-01-31 14:30:39Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

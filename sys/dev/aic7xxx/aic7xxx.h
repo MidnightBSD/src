@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Core definitions and data structures shareable across OS platforms.
  *
@@ -40,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx.h#85 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aic7xxx.h 300060 2016-05-17 15:18:01Z pfg $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _AIC7XXX_H_

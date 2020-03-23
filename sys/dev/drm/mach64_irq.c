@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mach64_irq.c -- IRQ handling for ATI Mach64 -*- linux-c -*-
  * Created: Tue Feb 25, 2003 by Leif Delgass, based on radeon_irq.c/r128_irq.c
  */
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mach64_irq.c 189130 2009-02-28 02:37:55Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mach64_irq.c 189130 2009-02-28 02:37:55Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Aic7xxx SCSI host adapter firmware asssembler symbol table implementation
  *
@@ -40,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_symbol.c#24 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_symbol.c 233479 2012-03-25 21:54:36Z rmh $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm_symbol.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2006 Tungsten Graphics Inc., Bismarck, ND., USA.
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_mm.c 207066 2010-04-22 18:21:25Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/via_mm.c 207066 2010-04-22 18:21:25Z rnoland $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/via_drm.h"

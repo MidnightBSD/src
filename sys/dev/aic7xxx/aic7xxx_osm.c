@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Bus independent FreeBSD shim for the aic7xxx based Adaptec SCSI controllers
  *
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/aic7xxx_osm.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx_osm.c 315812 2017-03-23 06:40:20Z mav $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>

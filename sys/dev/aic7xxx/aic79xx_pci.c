@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *	aic7901 and aic7902 SCSI controllers
@@ -47,7 +46,7 @@
 #include "aic79xx_inline.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/aic79xx_pci.c 300060 2016-05-17 15:18:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic79xx_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
 #endif
@@ -335,14 +334,12 @@ ahd_find_pci_device(aic_dev_softc_t pci)
 int
 ahd_pci_config(struct ahd_softc *ahd, struct ahd_pci_identity *entry)
 {
-	struct scb_data *shared_scb_data;
 	u_int		 command;
 	uint32_t	 devconfig;
 	uint16_t	 device; 
 	uint16_t	 subvendor; 
 	int		 error;
 
-	shared_scb_data = NULL;
 	ahd->description = entry->name;
 	/*
 	 * Record if this is a HostRAID board.

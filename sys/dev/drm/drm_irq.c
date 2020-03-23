@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Eric Anholt
  * All Rights Reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_irq.c 331410 2018-03-23 02:34:45Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/drm_irq.c 331409 2018-03-23 02:33:30Z emaste $");
 
 /** @file drm_irq.c
  * Support code for handling setup/teardown of interrupt handlers and
@@ -176,15 +175,9 @@ int drm_irq_install(struct drm_device *dev)
 	DRM_UNLOCK();
 
 	/* Install handler */
-#if __FreeBSD_version >= 700031
 	retcode = bus_setup_intr(dev->device, dev->irqr,
 				 INTR_TYPE_TTY | INTR_MPSAFE,
 				 NULL, drm_irq_handler_wrap, dev, &dev->irqh);
-#else
-	retcode = bus_setup_intr(dev->device, dev->irqr,
-				 INTR_TYPE_TTY | INTR_MPSAFE,
-				 drm_irq_handler_wrap, dev, &dev->irqh);
-#endif
 	if (retcode != 0)
 		goto err;
 

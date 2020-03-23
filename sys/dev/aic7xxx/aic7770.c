@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  * 	27/284X and aic7770 motherboard SCSI controllers
@@ -47,7 +46,7 @@
 #include "aic7xxx_93cx6.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/aic7770.c 168807 2007-04-17 06:26:25Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic7770.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aic7xxx_93cx6.h>

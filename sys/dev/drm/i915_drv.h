@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* i915_drv.h -- Private header for the I915 driver -*- linux-c -*-
  */
 /*
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/i915_drv.h 228443 2011-12-12 18:43:24Z mdf $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/i915_drv.h 298955 2016-05-03 03:41:25Z pfg $");
 
 #ifndef _I915_DRV_H_
 #define _I915_DRV_H_
@@ -308,7 +307,7 @@ typedef struct drm_i915_private {
 		 * Flag if the hardware appears to be wedged.
 		 *
 		 * This is set when attempts to idle the device timeout.
-		 * It prevents command submission from occuring and makes
+		 * It prevents command submission from occurring and makes
 		 * every pending request fail
 		 */
 		int wedged;
@@ -561,7 +560,7 @@ extern void opregion_enable_asle(struct drm_device *dev);
 		LOCK_TEST_WITH_RETURN(dev, file_priv);			\
 } while (0)
 
-#if defined(__MidnightBSD__) && !defined(__bool_true_false_are_defined)
+#if defined(__FreeBSD__) && !defined(__bool_true_false_are_defined)
 typedef boolean_t bool;
 #endif
 

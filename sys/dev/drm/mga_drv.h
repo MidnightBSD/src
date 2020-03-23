@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mga_drv.h -- Private header for the Matrox G200/G400 driver -*- linux-c -*-
  * Created: Mon Dec 13 01:50:01 1999 by jhartmann@precisioninsight.com
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_drv.h 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mga_drv.h 258780 2013-11-30 22:17:27Z eadler $");
 
 #ifndef __MGA_DRV_H__
 #define __MGA_DRV_H__

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Interface to the 93C46/56 serial EEPROM that is used to store BIOS
  * settings for the aic7xxx based adaptec SCSI controllers.  It can
@@ -41,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx_93cx6.h#12 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aic7xxx_93cx6.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx_93cx6.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _AIC7XXX_93CX6_H_
 #define _AIC7XXX_93CX6_H_

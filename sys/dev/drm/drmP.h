@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* drmP.h -- Private header for Direct Rendering Manager -*- linux-c -*-
  * Created: Mon Jan  4 10:05:05 1999 by faith@precisioninsight.com
  */
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drmP.h 248084 2013-03-09 02:32:23Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/drmP.h 331017 2018-03-15 19:08:33Z kevans $");
 
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
@@ -52,9 +51,7 @@ struct drm_file;
 #include <sys/conf.h>
 #include <sys/sglist.h>
 #include <sys/stat.h>
-#if __FreeBSD_version >= 700000
 #include <sys/priv.h>
-#endif
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/fcntl.h>
@@ -68,6 +65,7 @@ struct drm_file;
 #include <sys/poll.h>
 #include <sys/taskqueue.h>
 #include <sys/tree.h>
+#include <sys/vmmeter.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
@@ -78,8 +76,6 @@ struct drm_file;
 #include <vm/vm_pager.h>
 #include <vm/vm_param.h>
 #include <vm/vm_phys.h>
-#include <machine/param.h>
-#include <machine/pmap.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
 #if defined(__i386__) || defined(__amd64__)
@@ -95,11 +91,7 @@ struct drm_file;
 #include <sys/mman.h>
 #include <sys/rman.h>
 #include <sys/memrange.h>
-#if __FreeBSD_version >= 800004
 #include <dev/agp/agpvar.h>
-#else /* __FreeBSD_version >= 800004 */
-#include <pci/agpvar.h>
-#endif /* __FreeBSD_version >= 800004 */
 #include <sys/agpio.h>
 #include <sys/mutex.h>
 #include <dev/pci/pcivar.h>
@@ -181,8 +173,8 @@ SYSCTL_DECL(_hw_drm);
 #define __OS_HAS_AGP	1
 
 #define DRM_DEV_MODE	(S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP)
-#define DRM_DEV_UID	0
-#define DRM_DEV_GID	0
+#define DRM_DEV_UID	UID_ROOT
+#define DRM_DEV_GID	GID_VIDEO
 
 #define wait_queue_head_t	atomic_t
 #define DRM_WAKEUP(w)		wakeup((void *)w)
@@ -228,11 +220,7 @@ enum {
 
 #define PAGE_ALIGN(addr) round_page(addr)
 /* DRM_SUSER returns true if the user is superuser */
-#if __FreeBSD_version >= 700000
 #define DRM_SUSER(p)		(priv_check(p, PRIV_DRIVER) == 0)
-#else
-#define DRM_SUSER(p)		(suser(p) == 0)
-#endif
 #define DRM_AGP_FIND_DEVICE()	agp_find_device()
 #define DRM_MTRR_WC		MDF_WRITECOMBINE
 #define jiffies			ticks

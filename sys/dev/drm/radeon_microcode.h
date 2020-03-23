@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2007 Advanced Micro Devices, Inc.
  * All Rights Reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_microcode.h 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/radeon_microcode.h 182080 2008-08-23 20:59:12Z rnoland $");
 
 #ifndef RADEON_MICROCODE_H
 #define RADEON_MICROCODE_H

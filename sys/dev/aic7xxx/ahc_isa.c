@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * FreeBSD, VLB/ISA product support functions
  *
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/ahc_isa.c 249574 2013-04-17 02:33:56Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/ahc_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 

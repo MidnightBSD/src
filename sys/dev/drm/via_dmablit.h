@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* via_dmablit.h -- PCI DMA BitBlt support for the VIA Unichrome/Pro
  *
  * Copyright 2005 Thomas Hellstrom.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/via_dmablit.h 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/via_dmablit.h 203288 2010-01-31 14:30:39Z rnoland $");
 
 #ifndef _VIA_DMABLIT_H
 #define _VIA_DMABLIT_H

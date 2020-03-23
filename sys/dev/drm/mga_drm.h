@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mga_drm.h -- Public header for the Matrox g200/g400 driver -*- linux-c -*-
  * Created: Tue Jan 25 01:50:01 1999 by jhartmann@precisioninsight.com
  *
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_drm.h 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mga_drm.h 298955 2016-05-03 03:41:25Z pfg $");
 
 #ifndef __MGA_DRM_H__
 #define __MGA_DRM_H__
@@ -109,7 +108,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_drm.h 182080 2008-08-23 20:59:12Z 
  */
 #define MGA_NR_SAREA_CLIPRECTS	8
 
-/* 2 heaps (1 for card, 1 for agp), each divided into upto 128
+/* 2 heaps (1 for card, 1 for agp), each divided into up to 128
  * regions, subject to a minimum region size of (1<<16) == 64k.
  *
  * Clients may subdivide regions internally, but when sharing between

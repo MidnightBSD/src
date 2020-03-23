@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Interface for the 93C66/56/46/26/06 serial eeprom parts.
  *
@@ -71,7 +70,7 @@
 #include "aic7xxx_93cx6.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic7xxx/aic7xxx_93cx6.c 139757 2005-01-06 05:30:44Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx_93cx6.c 139757 2005-01-06 05:30:44Z scottl $");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aic7xxx_93cx6.h>

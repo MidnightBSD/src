@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1999, 2000 Precision Insight, Inc., Cedar Park, Texas.
  * Copyright 2000 VA Linux Systems, Inc., Sunnyvale, California.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_bufs.c 331412 2018-03-23 02:38:31Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/drm_bufs.c 331411 2018-03-23 02:37:08Z emaste $");
 
 /** @file drm_bufs.c
  * Implementation of the ioctls for setup of DRM mappings and DMA buffers.
@@ -669,7 +668,7 @@ static int drm_do_addbufs_pci(struct drm_device *dev, struct drm_buf_desc *reque
 		dma->buflist[i + dma->buf_count] = &entry->buflist[i];
 	}
 
-	/* No allocations failed, so now we can replace the orginal pagelist
+	/* No allocations failed, so now we can replace the original pagelist
 	 * with the new one.
 	 */
 	free(dma->pagelist, DRM_MEM_PAGES);
@@ -1068,15 +1067,9 @@ int drm_mapbufs(struct drm_device *dev, void *data, struct drm_file *file_priv)
 	}
 
 	vaddr = round_page((vm_offset_t)vms->vm_daddr + MAXDSIZ);
-#if __FreeBSD_version >= 600023
-	retcode = vm_mmap(&vms->vm_map, &vaddr, size, PROT_READ | PROT_WRITE,
-	    VM_PROT_ALL, MAP_SHARED | MAP_NOSYNC, OBJT_DEVICE,
+	retcode = vm_mmap(&vms->vm_map, &vaddr, size, VM_PROT_READ |
+	    VM_PROT_WRITE, VM_PROT_ALL, MAP_SHARED | MAP_NOSYNC, OBJT_DEVICE,
 	    dev->devnode, foff);
-#else
-	retcode = vm_mmap(&vms->vm_map, &vaddr, size, PROT_READ | PROT_WRITE,
-	    VM_PROT_ALL, MAP_SHARED | MAP_NOSYNC,
-	    SLIST_FIRST(&dev->devnode->si_hlist), foff);
-#endif
 	if (retcode)
 		goto done;
 

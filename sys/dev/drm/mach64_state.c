@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mach64_state.c -- State support for mach64 (Rage Pro) driver -*- linux-c -*-
  * Created: Sun Dec 03 19:20:26 2000 by gareth@valinux.com
  */
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mach64_state.c 198332 2009-10-21 15:54:45Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mach64_state.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -710,10 +709,10 @@ static int mach64_dma_dispatch_blit(struct drm_device * dev,
 	 * XXX: This is overkill. The most efficient solution would be having 
 	 * two sets of buffers (one set private for vertex data, the other set 
 	 * client-writable for blits). However that would bring more complexity 
-	 * and would break backward compatability. The solution currently 
+	 * and would break backward compatibility. The solution currently 
 	 * implemented is keeping all buffers private, allowing to secure the
 	 * driver, without increasing complexity at the expense of some speed 
-	 * transfering data.
+	 * transferring data.
 	 */
 	verify_ret = copy_from_user_blit(GETBUFPTR(copy_buf), blit->buf, used);
 

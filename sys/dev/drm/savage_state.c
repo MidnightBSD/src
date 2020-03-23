@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* savage_state.c -- State and drawing support for Savage
  *
  * Copyright 2004  Felix Kuehling
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/savage_state.c 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/savage_state.c 182080 2008-08-23 20:59:12Z rnoland $");
 #include "dev/drm/drmP.h"
 #include "dev/drm/savage_drm.h"
 #include "dev/drm/savage_drv.h"

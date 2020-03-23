@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1999, 2000 Precision Insight, Inc., Cedar Park, Texas.
  * Copyright 2000 VA Linux Systems, Inc., Sunnyvale, California.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_drv.c 215367 2010-11-16 03:43:06Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/drm_drv.c 283999 2015-06-04 20:36:16Z jhb $");
 
 /** @file drm_drv.c
  * The catch-all file for DRM device support, including module setup/teardown,
@@ -133,7 +132,6 @@ static struct cdevsw drm_cdevsw = {
 };
 
 static int drm_msi = 1;	/* Enable by default. */
-TUNABLE_INT("hw.drm.msi", &drm_msi);
 SYSCTL_NODE(_hw, OID_AUTO, drm, CTLFLAG_RW, NULL, "DRM device");
 SYSCTL_INT(_hw_drm, OID_AUTO, msi, CTLFLAG_RDTUN, &drm_msi, 1,
     "Enable MSI interrupts for drm devices");
@@ -163,19 +161,8 @@ int drm_probe(device_t kdev, drm_pci_id_list_t *idlist)
 {
 	drm_pci_id_list_t *id_entry;
 	int vendor, device;
-#if __FreeBSD_version < 700010
-	device_t realdev;
-
-	if (!strcmp(device_get_name(kdev), "drmsub"))
-		realdev = device_get_parent(kdev);
-	else
-		realdev = kdev;
-	vendor = pci_get_vendor(realdev);
-	device = pci_get_device(realdev);
-#else
 	vendor = pci_get_vendor(kdev);
 	device = pci_get_device(kdev);
-#endif
 
 	if (pci_get_class(kdev) != PCIC_DISPLAY
 	    || pci_get_subclass(kdev) != PCIS_DISPLAY_VGA)
@@ -202,14 +189,7 @@ int drm_attach(device_t kdev, drm_pci_id_list_t *idlist)
 	unit = device_get_unit(kdev);
 	dev = device_get_softc(kdev);
 
-#if __FreeBSD_version < 700010
-	if (!strcmp(device_get_name(kdev), "drmsub"))
-		dev->device = device_get_parent(kdev);
-	else
-		dev->device = kdev;
-#else
 	dev->device = kdev;
-#endif
 	dev->devnode = make_dev(&drm_cdevsw,
 			0,
 			DRM_DEV_UID,
@@ -218,11 +198,7 @@ int drm_attach(device_t kdev, drm_pci_id_list_t *idlist)
 			"dri/card%d", unit);
 	dev->devnode->si_drv1 = dev;
 
-#if __FreeBSD_version >= 700053
 	dev->pci_domain = pci_get_domain(dev->device);
-#else
-	dev->pci_domain = 0;
-#endif
 	dev->pci_bus = pci_get_bus(dev->device);
 	dev->pci_slot = pci_get_slot(dev->device);
 	dev->pci_func = pci_get_function(dev->device);

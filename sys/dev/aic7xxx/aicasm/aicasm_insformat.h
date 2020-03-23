@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Instruction formats for the sequencer program downloaded to
  * Aic7xxx SCSI host adapters
@@ -40,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_insformat.h#11 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_insformat.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm_insformat.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct ins_format1 {

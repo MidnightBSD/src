@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * FreeBSD platform specific, shared driver option settings, data structures,
  * function declarations and includes.
@@ -33,7 +32,7 @@
  *
  * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aic_osm_lib.h#5 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aic_osm_lib.h 172842 2007-10-21 04:11:13Z julian $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aic_osm_lib.h 172842 2007-10-21 04:11:13Z julian $
  */
 
 /******************************** OS Includes *********************************/

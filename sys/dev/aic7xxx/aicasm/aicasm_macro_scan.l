@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*-
  * Sub-Lexical Analyzer for macro invokation in 
@@ -41,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_scan.l#8 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_macro_scan.l 228556 2011-12-16 00:04:28Z dim $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm_macro_scan.l 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

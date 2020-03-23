@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* tdfx_drv.c -- tdfx driver -*- linux-c -*-
  * Created: Thu Oct  7 10:38:32 1999 by faith@precisioninsight.com
  */
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/tdfx_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/tdfx_drv.c 283999 2015-06-04 20:36:16Z jhb $");
 
 #include "dev/drm/tdfx_drv.h"
 #include "dev/drm/drmP.h"
@@ -110,9 +109,5 @@ static driver_t tdfx_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(tdfx, vgapci, tdfx_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(tdfx, pci, tdfx_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(tdfx, drm, 1, 1, 1);

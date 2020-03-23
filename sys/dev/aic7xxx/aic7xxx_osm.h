@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * FreeBSD platform specific driver option settings, data structures,
  * function declarations and includes.
@@ -32,7 +31,7 @@
  *
  * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aic7xxx_osm.h#18 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aic7xxx_osm.h 218909 2011-02-21 09:01:34Z brucec $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx_osm.h 218909 2011-02-21 09:01:34Z brucec $
  */
 
 #ifndef _AIC7XXX_FREEBSD_H_

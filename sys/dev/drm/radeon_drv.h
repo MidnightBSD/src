@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* radeon_drv.h -- Private header for radeon driver -*- linux-c -*-
  *
  * Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_drv.h 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/radeon_drv.h 298955 2016-05-03 03:41:25Z pfg $");
 
 #ifndef __RADEON_DRV_H__
 #define __RADEON_DRV_H__
@@ -366,7 +365,7 @@ typedef struct drm_radeon_private {
 
 	u32 scratch_ages[5];
 
-	/* starting from here on, data is preserved accross an open */
+	/* starting from here on, data is preserved across an open */
 	uint32_t flags;		/* see radeon_chip_flags */
 	unsigned long fb_aper_offset;
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mga_state.c -- State support for MGA G200/G400 -*- linux-c -*-
  * Created: Thu Jan 27 02:53:43 2000 by jhartmann@precisioninsight.com
  */
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mga_state.c 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mga_state.c 330446 2018-03-05 06:59:30Z eadler $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -259,7 +258,7 @@ static __inline__ void mga_g200_emit_pipe(drm_mga_private_t * dev_priv)
 		  MGA_WR42, 0x0000ffff,
 		  MGA_WR60, 0x0000ffff);
 
-	/* Padding required to to hardware bug.
+	/* Padding required due to hardware bug.
 	 */
 	DMA_BLOCK(MGA_DMAPAD, 0xffffffff,
 		  MGA_DMAPAD, 0xffffffff,
@@ -341,7 +340,7 @@ static __inline__ void mga_g400_emit_pipe(drm_mga_private_t * dev_priv)
 		  MGA_WR52, MGA_G400_WR_MAGIC,	/* tex1 width        */
 		  MGA_WR60, MGA_G400_WR_MAGIC);	/* tex1 height       */
 
-	/* Padding required to to hardware bug */
+	/* Padding required due to hardware bug */
 	DMA_BLOCK(MGA_DMAPAD, 0xffffffff,
 		  MGA_DMAPAD, 0xffffffff,
 		  MGA_DMAPAD, 0xffffffff,

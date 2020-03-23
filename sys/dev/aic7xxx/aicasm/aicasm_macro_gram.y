@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*-
  * Sub-parser for macro invocation in the Aic7xxx SCSI
@@ -41,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_gram.y#5 $
  *
- * $FreeBSD: stable/10/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y 224046 2011-07-15 00:36:47Z emaste $
+ * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

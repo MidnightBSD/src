@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mach64_drv.h -- Private header for mach64 driver -*- linux-c -*-
  * Created: Fri Nov 24 22:07:58 2000 by gareth@valinux.com
  */
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/mach64_drv.h 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mach64_drv.h 258780 2013-11-30 22:17:27Z eadler $");
 
 #ifndef __MACH64_DRV_H__
 #define __MACH64_DRV_H__

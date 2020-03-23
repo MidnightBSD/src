@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Luoqi Chen.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/aic/aic_cbus.c 241591 2012-10-15 16:09:59Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/aic/aic_cbus.c 298431 2016-04-21 19:40:10Z pfg $");
 
 #include <sys/param.h>
 #include <sys/callout.h>
@@ -58,7 +57,8 @@ static int aic_isa_probe(device_t);
 static int aic_isa_attach(device_t);
 
 static u_int aic_isa_ports[] = { 0x1840 };
-#define	AIC_ISA_NUMPORTS (sizeof(aic_isa_ports) / sizeof(aic_isa_ports[0]))
+
+#define	AIC_ISA_NUMPORTS nitems(aic_isa_ports)
 #define	AIC_ISA_PORTSIZE 0x20
 
 #define	AIC98_GENERIC		0x00

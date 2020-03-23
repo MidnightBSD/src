@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* radeon_drm.h -- Public header for the radeon driver -*- linux-c -*-
  *
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/radeon_drm.h 196471 2009-08-23 15:02:58Z rnoland $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/drm/radeon_drm.h 298955 2016-05-03 03:41:25Z pfg $");
 
 #ifndef __RADEON_DRM_H__
 #define __RADEON_DRM_H__
@@ -619,7 +618,7 @@ typedef struct drm_radeon_vertex2 {
 } drm_radeon_vertex2_t;
 
 /* v1.3 - obsoletes drm_radeon_vertex2
- *      - allows arbitarily large cliprect list
+ *      - allows arbitrarily large cliprect list
  *      - allows updating of tcl packet, vector and scalar state
  *      - allows memory-efficient description of state updates
  *      - allows state to be emitted without a primitive
