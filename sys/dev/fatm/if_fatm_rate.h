@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -36,7 +35,7 @@
  *	    for(i=period-1; i>0; i--) printf "{ 0x%08x, %u },\n", \
  *		(i * 65536) + (period - i), i * linerate/period; }'
  *
- * $FreeBSD: stable/10/sys/dev/fatm/if_fatm_rate.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/fatm/if_fatm_rate.h 139749 2005-01-06 01:43:34Z imp $
  */
 { 0x00000000, 353053 },
 { 0x00fe0001, 351668 },

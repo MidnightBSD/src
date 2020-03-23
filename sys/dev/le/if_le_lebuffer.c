@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/le/if_le_lebuffer.c 183337 2008-09-24 21:26:46Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/le/if_le_lebuffer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -105,8 +104,7 @@ MODULE_DEPEND(le, lebuffer, 1, 1, 1);
 static const int le_lebuffer_media[] = {
 	IFM_MAKEWORD(IFM_ETHER, IFM_10_T, 0, 0)
 };
-#define	NLEMEDIA							\
-    (sizeof(le_lebuffer_media) / sizeof(le_lebuffer_media[0]))
+#define	NLEMEDIA nitems(le_lebuffer_media)
 
 static void le_lebuffer_wrcsr(struct lance_softc *, uint16_t, uint16_t);
 static uint16_t le_lebuffer_rdcsr(struct lance_softc *, uint16_t);

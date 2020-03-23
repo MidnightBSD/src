@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_syspd.c 267084 2014-06-05 00:43:32Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_syspd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_mfi.h"
 

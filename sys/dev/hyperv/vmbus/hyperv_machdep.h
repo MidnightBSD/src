@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/vmbus/hyperv_machdep.h 302170 2016-06-24 02:30:14Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/vmbus/hyperv_machdep.h 301483 2016-06-06 05:55:37Z sephe $
  */
 
 #ifndef _HYPERV_MACHDEP_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_ssp_request.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_ssp_request.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * @file
@@ -280,7 +279,7 @@ scic_sds_ssp_task_request_started_substate_handler_table
  *        for this sub-state.
  *
  * @param[in]  object This parameter specifies the request object for which
- *             the sub-state change is occuring.
+ *             the sub-state change is occurring.
  *
  * @return none.
  */
@@ -305,7 +304,7 @@ void scic_sds_io_request_started_task_mgmt_await_tc_completion_substate_enter(
  *        sub-state.
  *
  * @param[in]  object This parameter specifies the request object for which
- *             the sub-state change is occuring.
+ *             the sub-state change is occurring.
  *
  * @return none.
  */

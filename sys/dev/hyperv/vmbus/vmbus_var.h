@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,13 +23,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus_var.h 311257 2017-01-04 05:41:47Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/vmbus/vmbus_var.h 311389 2017-01-05 08:42:58Z sephe $
  */
 
 #ifndef _VMBUS_VAR_H_
 #define _VMBUS_VAR_H_
 
 #include <sys/param.h>
+#include <sys/kernel.h>
 #include <sys/taskqueue.h>
 #include <sys/rman.h>
 
@@ -128,6 +128,8 @@ struct vmbus_softc {
 	/* Complete channel list */
 	struct mtx		vmbus_chan_lock;
 	TAILQ_HEAD(, vmbus_channel) vmbus_chans;
+
+	struct intr_config_hook	vmbus_intrhook;
 
 #ifdef NEW_PCIB
 	/* The list of usable MMIO ranges for PCIe pass-through */

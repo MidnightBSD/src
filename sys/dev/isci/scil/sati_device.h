@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/sati_device.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/sati_device.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SATI_DEVICE_H_
 #define _SATI_DEVICE_H_
@@ -152,7 +151,7 @@ typedef struct SATI_DEVICE
    U8 unit_attention_ascq;
 
    /**
-    * This field indicates the ATA standby timer value set throught the
+    * This field indicates the ATA standby timer value set through the
     * ATA IDLE and ATA Standby commands
     */
    U8 ata_standby_timer;

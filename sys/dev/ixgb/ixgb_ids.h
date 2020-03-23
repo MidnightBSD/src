@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 
   Copyright (c) 2001-2004, Intel Corporation
@@ -32,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: stable/10/sys/dev/ixgb/ixgb_ids.h 253102 2013-07-09 18:15:59Z jkim $*/
+/*$FreeBSD: stable/11/sys/dev/ixgb/ixgb_ids.h 331722 2018-03-29 02:50:57Z eadler $*/
 
 #ifndef _IXGB_IDS_H_
 #define _IXGB_IDS_H_

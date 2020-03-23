@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/utilities/hv_utilreg.h 308516 2016-11-11 08:04:24Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/utilities/hv_utilreg.h 308635 2016-11-14 06:37:04Z sephe $
  */
 
 #ifndef _HV_UTILREG_H_

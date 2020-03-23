@@ -217,4 +217,4 @@ Technical support and service
         (http://www.highpoint-tech.com) to check if there is a new or 
         updated device driver for your system.
 
-$FreeBSD: stable/10/sys/dev/hpt27xx/README 284879 2015-06-26 19:55:01Z delphij $
+$FreeBSD: stable/11/sys/dev/hpt27xx/README 284730 2015-06-23 17:26:16Z delphij $

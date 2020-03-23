@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
  * Copyright (c) 2012 NetApp Inc.
@@ -34,7 +33,7 @@
  * partition StorVSP driver over the Hyper-V VMBUS.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c 332904 2018-04-24 03:07:49Z dexuan $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/storvsc/hv_storvsc_drv_freebsd.c 350804 2019-08-08 22:16:19Z mav $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -2351,10 +2350,7 @@ storvsc_ada_probe_veto(void *arg __unused, struct cam_path *path,
 	if (path->device->protocol == PROTO_ATA) {
 		struct ccb_pathinq cpi;
 
-		bzero(&cpi, sizeof(cpi));
-		xpt_setup_ccb(&cpi.ccb_h, path, CAM_PRIORITY_NONE);
-		cpi.ccb_h.func_code = XPT_PATH_INQ;
-		xpt_action((union ccb *)&cpi);
+		xpt_path_inq(&cpi, path);
 		if (cpi.ccb_h.status == CAM_REQ_CMP &&
 		    cpi.hba_vendor == PCI_VENDOR_INTEL &&
 		    cpi.hba_device == PCI_PRODUCT_PIIX4) {

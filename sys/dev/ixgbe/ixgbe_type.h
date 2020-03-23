@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_type.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_type.h 347419 2019-05-10 00:46:43Z erj $*/
 
 #ifndef _IXGBE_TYPE_H_
 #define _IXGBE_TYPE_H_
@@ -48,7 +47,7 @@
  *
  * - IXGBE_ERROR_POLLING
  * This category is for errors related to polling/timeout issues and should be
- * used in any case where the timeout occured, or a failure to obtain a lock, or
+ * used in any case where the timeout occurred, or a failure to obtain a lock, or
  * failure to receive data within the time limit.
  *
  * - IXGBE_ERROR_CAUTION
@@ -123,13 +122,16 @@
 #define IXGBE_SUBDEV_ID_82599EN_SFP_OCP1	0x0001
 #define IXGBE_DEV_ID_82599_XAUI_LOM		0x10FC
 #define IXGBE_DEV_ID_82599_T3_LOM		0x151C
+#define IXGBE_DEV_ID_82599_VF			0x10ED
+#define IXGBE_DEV_ID_82599_VF_HV		0x152E
 #define IXGBE_DEV_ID_82599_BYPASS		0x155D
 #define IXGBE_DEV_ID_X540T			0x1528
+#define IXGBE_DEV_ID_X540_VF			0x1515
+#define IXGBE_DEV_ID_X540_VF_HV			0x1530
 #define IXGBE_DEV_ID_X540_BYPASS		0x155C
 #define IXGBE_DEV_ID_X540T1			0x1560
 #define IXGBE_DEV_ID_X550T			0x1563
 #define IXGBE_DEV_ID_X550T1			0x15D1
-/* Placeholder value, pending official value. */
 #define IXGBE_DEV_ID_X550EM_A_KR		0x15C2
 #define IXGBE_DEV_ID_X550EM_A_KR_L		0x15C3
 #define IXGBE_DEV_ID_X550EM_A_SFP_N		0x15C4
@@ -147,6 +149,12 @@
 #define IXGBE_DEV_ID_X550EM_X_10G_T		0x15AD
 #define IXGBE_DEV_ID_X550EM_X_1G_T		0x15AE
 #define IXGBE_DEV_ID_X550EM_X_XFI		0x15B0
+#define IXGBE_DEV_ID_X550_VF_HV			0x1564
+#define IXGBE_DEV_ID_X550_VF			0x1565
+#define IXGBE_DEV_ID_X550EM_A_VF		0x15C5
+#define IXGBE_DEV_ID_X550EM_A_VF_HV		0x15B4
+#define IXGBE_DEV_ID_X550EM_X_VF		0x15A8
+#define IXGBE_DEV_ID_X550EM_X_VF_HV		0x15A9
 
 #define IXGBE_CAT(r,m) IXGBE_##r##m
 
@@ -2161,7 +2169,7 @@ enum {
 #define IXGBE_MACC_FS		0x00040000
 #define IXGBE_MAC_RX2TX_LPBK	0x00000002
 
-/* Veto Bit definiton */
+/* Veto Bit definition */
 #define IXGBE_MMNGC_MNG_VETO	0x00000001
 
 /* LINKS Bit Masks */
@@ -2582,6 +2590,7 @@ enum {
 #define IXGBE_MRQC_VMDQRSS64EN	0x0000000B /* VMDq2 64 pools w/ RSS */
 #define IXGBE_MRQC_VMDQRT8TCEN	0x0000000C /* VMDq2/RT 16 pool 8 TC */
 #define IXGBE_MRQC_VMDQRT4TCEN	0x0000000D /* VMDq2/RT 32 pool 4 TC */
+#define IXGBE_MRQC_L3L4TXSWEN	0x00008000 /* Enable L3/L4 Tx switch */
 #define IXGBE_MRQC_RSS_FIELD_MASK	0xFFFF0000
 #define IXGBE_MRQC_RSS_FIELD_IPV4_TCP	0x00010000
 #define IXGBE_MRQC_RSS_FIELD_IPV4	0x00020000
@@ -3361,24 +3370,25 @@ typedef u32 ixgbe_link_speed;
 					 IXGBE_LINK_SPEED_10GB_FULL)
 
 /* Physical layer type */
-typedef u32 ixgbe_physical_layer;
+typedef u64 ixgbe_physical_layer;
 #define IXGBE_PHYSICAL_LAYER_UNKNOWN		0
-#define IXGBE_PHYSICAL_LAYER_10GBASE_T		0x0001
-#define IXGBE_PHYSICAL_LAYER_1000BASE_T		0x0002
-#define IXGBE_PHYSICAL_LAYER_100BASE_TX		0x0004
-#define IXGBE_PHYSICAL_LAYER_SFP_PLUS_CU	0x0008
-#define IXGBE_PHYSICAL_LAYER_10GBASE_LR		0x0010
-#define IXGBE_PHYSICAL_LAYER_10GBASE_LRM	0x0020
-#define IXGBE_PHYSICAL_LAYER_10GBASE_SR		0x0040
-#define IXGBE_PHYSICAL_LAYER_10GBASE_KX4	0x0080
-#define IXGBE_PHYSICAL_LAYER_10GBASE_CX4	0x0100
-#define IXGBE_PHYSICAL_LAYER_1000BASE_KX	0x0200
-#define IXGBE_PHYSICAL_LAYER_1000BASE_BX	0x0400
-#define IXGBE_PHYSICAL_LAYER_10GBASE_KR		0x0800
-#define IXGBE_PHYSICAL_LAYER_10GBASE_XAUI	0x1000
-#define IXGBE_PHYSICAL_LAYER_SFP_ACTIVE_DA	0x2000
-#define IXGBE_PHYSICAL_LAYER_1000BASE_SX	0x4000
-#define IXGBE_PHYSICAL_LAYER_10BASE_T		0x8000
+#define IXGBE_PHYSICAL_LAYER_10GBASE_T		0x00001
+#define IXGBE_PHYSICAL_LAYER_1000BASE_T		0x00002
+#define IXGBE_PHYSICAL_LAYER_100BASE_TX		0x00004
+#define IXGBE_PHYSICAL_LAYER_SFP_PLUS_CU	0x00008
+#define IXGBE_PHYSICAL_LAYER_10GBASE_LR		0x00010
+#define IXGBE_PHYSICAL_LAYER_10GBASE_LRM	0x00020
+#define IXGBE_PHYSICAL_LAYER_10GBASE_SR		0x00040
+#define IXGBE_PHYSICAL_LAYER_10GBASE_KX4	0x00080
+#define IXGBE_PHYSICAL_LAYER_10GBASE_CX4	0x00100
+#define IXGBE_PHYSICAL_LAYER_1000BASE_KX	0x00200
+#define IXGBE_PHYSICAL_LAYER_1000BASE_BX	0x00400
+#define IXGBE_PHYSICAL_LAYER_10GBASE_KR		0x00800
+#define IXGBE_PHYSICAL_LAYER_10GBASE_XAUI	0x01000
+#define IXGBE_PHYSICAL_LAYER_SFP_ACTIVE_DA	0x02000
+#define IXGBE_PHYSICAL_LAYER_1000BASE_SX	0x04000
+#define IXGBE_PHYSICAL_LAYER_10BASE_T		0x08000
+#define IXGBE_PHYSICAL_LAYER_2500BASE_KX	0x10000
 
 /* Flow Control Data Sheet defined values
  * Calculation and defines taken from 802.1bb Annex O
@@ -3578,10 +3588,15 @@ enum ixgbe_mac_type {
 	ixgbe_mac_unknown = 0,
 	ixgbe_mac_82598EB,
 	ixgbe_mac_82599EB,
+	ixgbe_mac_82599_vf,
 	ixgbe_mac_X540,
+	ixgbe_mac_X540_vf,
 	ixgbe_mac_X550,
 	ixgbe_mac_X550EM_x,
 	ixgbe_mac_X550EM_a,
+	ixgbe_mac_X550_vf,
+	ixgbe_mac_X550EM_x_vf,
+	ixgbe_mac_X550EM_a_vf,
 	ixgbe_num_macs
 };
 
@@ -3594,6 +3609,7 @@ enum ixgbe_phy_type {
 	ixgbe_phy_x550em_kx4,
 	ixgbe_phy_x550em_xfi,
 	ixgbe_phy_x550em_ext_t,
+	ixgbe_phy_ext_1g_t,
 	ixgbe_phy_cu_unknown,
 	ixgbe_phy_qt,
 	ixgbe_phy_xaui,
@@ -3851,7 +3867,7 @@ struct ixgbe_mac_operations {
 	s32 (*clear_hw_cntrs)(struct ixgbe_hw *);
 	void (*enable_relaxed_ordering)(struct ixgbe_hw *);
 	enum ixgbe_media_type (*get_media_type)(struct ixgbe_hw *);
-	u32 (*get_supported_physical_layer)(struct ixgbe_hw *);
+	u64 (*get_supported_physical_layer)(struct ixgbe_hw *);
 	s32 (*get_mac_addr)(struct ixgbe_hw *, u8 *);
 	s32 (*get_san_mac_addr)(struct ixgbe_hw *, u8 *);
 	s32 (*set_san_mac_addr)(struct ixgbe_hw *, u8 *);
@@ -3860,6 +3876,7 @@ struct ixgbe_mac_operations {
 	s32 (*get_fcoe_boot_status)(struct ixgbe_hw *, u16 *);
 	s32 (*stop_adapter)(struct ixgbe_hw *);
 	s32 (*get_bus_info)(struct ixgbe_hw *);
+	s32 (*negotiate_api_version)(struct ixgbe_hw *, int);
 	void (*set_lan_id)(struct ixgbe_hw *);
 	s32 (*read_analog_reg8)(struct ixgbe_hw*, u32, u8*);
 	s32 (*write_analog_reg8)(struct ixgbe_hw*, u32, u8);
@@ -3907,12 +3924,14 @@ struct ixgbe_mac_operations {
 				   ixgbe_mc_addr_itr);
 	s32 (*update_mc_addr_list)(struct ixgbe_hw *, u8 *, u32,
 				   ixgbe_mc_addr_itr, bool clear);
+	s32 (*update_xcast_mode)(struct ixgbe_hw *, int);
 	s32 (*enable_mc)(struct ixgbe_hw *);
 	s32 (*disable_mc)(struct ixgbe_hw *);
 	s32 (*clear_vfta)(struct ixgbe_hw *);
 	s32 (*set_vfta)(struct ixgbe_hw *, u32, u32, bool, bool);
 	s32 (*set_vlvf)(struct ixgbe_hw *, u32, u32, bool, u32 *, u32,
 			bool);
+	s32 (*set_rlpml)(struct ixgbe_hw *, u16);
 	s32 (*init_uta_tables)(struct ixgbe_hw *);
 	void (*set_mac_anti_spoofing)(struct ixgbe_hw *, bool, int);
 	void (*set_vlan_anti_spoofing)(struct ixgbe_hw *, bool, int);
@@ -4372,5 +4391,12 @@ struct ixgbe_bypass_eeprom {
 #define IXGBE_NW_MNG_IF_SEL_MDIO_PHY_ADD_SHIFT 3
 #define IXGBE_NW_MNG_IF_SEL_MDIO_PHY_ADD	\
 				(0x1F << IXGBE_NW_MNG_IF_SEL_MDIO_PHY_ADD_SHIFT)
+
+#define IXGBE_REQUEST_TASK_MOD		0x01
+#define IXGBE_REQUEST_TASK_MSF		0x02
+#define IXGBE_REQUEST_TASK_MBX		0x04
+#define IXGBE_REQUEST_TASK_FDIR		0x08
+#define IXGBE_REQUEST_TASK_PHY		0x10
+#define IXGBE_REQUEST_TASK_LINK		0x20
 
 #endif /* _IXGBE_TYPE_H_ */

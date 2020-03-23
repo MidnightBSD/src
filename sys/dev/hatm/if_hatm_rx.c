@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hatm/if_hatm_rx.c 148887 2005-08-09 10:20:02Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hatm/if_hatm_rx.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -57,6 +56,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hatm/if_hatm_rx.c 148887 2005-08-09 10:20:
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
 #include <net/route.h>
@@ -149,7 +149,7 @@ hatm_rx(struct hatm_softc *sc, u_int cid, u_int flags, struct mbuf *m0,
 			m_freem(vcc->chain);
 		vcc->chain = vcc->last = NULL;
 		sc->istats.crc_error++;
-		sc->ifp->if_ierrors++;
+		if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 		return;
 	}
 	if (flags & HE_REGM_RBRQ_LEN_ERROR) {
@@ -157,7 +157,7 @@ hatm_rx(struct hatm_softc *sc, u_int cid, u_int flags, struct mbuf *m0,
 			m_freem(vcc->chain);
 		vcc->chain = vcc->last = NULL;
 		sc->istats.len_error++;
-		sc->ifp->if_ierrors++;
+		if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 		return;
 	}
 
@@ -178,7 +178,7 @@ hatm_rx(struct hatm_softc *sc, u_int cid, u_int flags, struct mbuf *m0,
 	if (vcc->param.aal == ATMIO_AAL_5) {
 		/*
 		 * Need to remove padding and the trailer. The trailer
-		 * may be split accross buffers according to 2.10.1.2
+		 * may be split across buffers according to 2.10.1.2
 		 * Assume that mbufs sizes are even (buffer sizes and cell
 		 * payload sizes are) and that there are no empty mbufs.
 		 */
@@ -240,9 +240,9 @@ hatm_rx(struct hatm_softc *sc, u_int cid, u_int flags, struct mbuf *m0,
 	ATM_PH_VPI(&aph) = vpi;
 	ATM_PH_SETVCI(&aph, vci);
 
-	sc->ifp->if_ipackets++;
+	if_inc_counter(sc->ifp, IFCOUNTER_IPACKETS, 1);
 	/* this is in if_atmsubr.c */
-	/* sc->ifp->if_ibytes += len; */
+	/* if_inc_counter(sc->ifp, IFCOUNTER_IBYTES, len); */
 
 	vcc->ibytes += len;
 	vcc->ipackets++;

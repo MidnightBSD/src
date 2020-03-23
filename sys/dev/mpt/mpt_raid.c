@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Routines for handling the integrated RAID features LSI MPT Fusion adapters.
  *
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpt/mpt_raid.c 264949 2014-04-25 22:01:02Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpt/mpt_raid.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_raid.h>
@@ -596,7 +595,7 @@ mpt_issue_raid_req(struct mpt_softc *mpt, struct mpt_raid_volume *vol,
 	rap->Function = MPI_FUNCTION_RAID_ACTION;
 	rap->VolumeID = vol->config_page->VolumeID;
 	rap->VolumeBus = vol->config_page->VolumeBus;
-	if (disk != 0)
+	if (disk != NULL)
 		rap->PhysDiskNum = disk->config_page.PhysDiskNum;
 	else
 		rap->PhysDiskNum = 0xFF;

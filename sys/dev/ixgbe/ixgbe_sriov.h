@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_sriov.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_sriov.h 347419 2019-05-10 00:46:43Z erj $*/
 
 
 #ifndef _IXGBE_SRIOV_H_
@@ -76,7 +75,6 @@ void ixgbe_ping_all_vfs(struct adapter *);
 int  ixgbe_pci_iov_detach(device_t);
 void ixgbe_define_iov_schemas(device_t, int *);
 void ixgbe_align_all_queue_indices(struct adapter *);
-int  ixgbe_vf_que_index(int, int, int);
 u32  ixgbe_get_mtqc(int);
 u32  ixgbe_get_mrqc(int);
 
@@ -93,12 +91,12 @@ u32  ixgbe_get_mrqc(int);
 #define ixgbe_pci_iov_detach(_a) 0
 #define ixgbe_define_iov_schemas(_a,_b)
 #define ixgbe_align_all_queue_indices(_a)
-#define ixgbe_vf_que_index(_a,_b,_c) (_c)
 #define ixgbe_get_mtqc(_a) IXGBE_MTQC_64Q_1PB
 #define ixgbe_get_mrqc(_a) 0
 
 #endif /* PCI_IOV */
 
-void ixgbe_handle_mbx(void *, int);
+void ixgbe_handle_mbx(void *);
+int  ixgbe_vf_que_index(int, int, int);
 
 #endif

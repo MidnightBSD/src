@@ -1,4 +1,4 @@
-/*$FreeBSD: stable/10/sys/dev/ixgb/README 250168 2013-05-02 01:36:52Z eadler $*/
+/*$FreeBSD: stable/11/sys/dev/ixgb/README 250168 2013-05-02 01:36:52Z eadler $*/
 FreeBSD Driver for Intel(R) PRO/10GbE Server Adapters
 =====================================================
 

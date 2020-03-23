@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_82599.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_82599.h 331722 2018-03-29 02:50:57Z eadler $*/
 
 #ifndef _IXGBE_82599_H_
 #define _IXGBE_82599_H_
@@ -59,7 +58,7 @@ s32 ixgbe_write_analog_reg8_82599(struct ixgbe_hw *hw, u32 reg, u8 val);
 s32 ixgbe_start_hw_82599(struct ixgbe_hw *hw);
 s32 ixgbe_identify_phy_82599(struct ixgbe_hw *hw);
 s32 ixgbe_init_phy_ops_82599(struct ixgbe_hw *hw);
-u32 ixgbe_get_supported_physical_layer_82599(struct ixgbe_hw *hw);
+u64 ixgbe_get_supported_physical_layer_82599(struct ixgbe_hw *hw);
 s32 ixgbe_enable_rx_dma_82599(struct ixgbe_hw *hw, u32 regval);
 s32 prot_autoc_read_82599(struct ixgbe_hw *hw, bool *locked, u32 *reg_val);
 s32 prot_autoc_write_82599(struct ixgbe_hw *hw, u32 reg_val, bool locked);

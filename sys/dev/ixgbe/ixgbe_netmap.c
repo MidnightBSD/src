@@ -1,4 +1,37 @@
-/* $MidnightBSD$ */
+/******************************************************************************
+
+  Copyright (c) 2001-2017, Intel Corporation
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+   3. Neither the name of the Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+
+******************************************************************************/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_netmap.c 344047 2019-02-12 09:26:05Z vmaffione $*/
+
 /*
  * Copyright (C) 2011-2014 Matteo Landi, Luigi Rizzo. All rights reserved.
  *
@@ -25,7 +58,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_netmap.c 323830 2017-09-20 21:22:20Z marius $
+ * $FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_netmap.c 344047 2019-02-12 09:26:05Z vmaffione $
  *
  * netmap support for: ixgbe
  *
@@ -85,7 +118,7 @@ set_crcstrip(struct ixgbe_hw *hw, int onoff)
 	hl = IXGBE_READ_REG(hw, IXGBE_HLREG0);
 	rxc = IXGBE_READ_REG(hw, IXGBE_RDRXCTL);
 	if (netmap_verbose)
-		D("%s read  HLREG 0x%x rxc 0x%x",
+		nm_prinf("%s read  HLREG 0x%x rxc 0x%x",
 			onoff ? "enter" : "exit", hl, rxc);
 	/* hw requirements ... */
 	rxc &= ~IXGBE_RDRXCTL_RSCFRSTSIZE;
@@ -100,7 +133,7 @@ set_crcstrip(struct ixgbe_hw *hw, int onoff)
 		rxc |= IXGBE_RDRXCTL_CRCSTRIP;
 	}
 	if (netmap_verbose)
-		D("%s write HLREG 0x%x rxc 0x%x",
+		nm_prinf("%s write HLREG 0x%x rxc 0x%x",
 			onoff ? "enter" : "exit", hl, rxc);
 	IXGBE_WRITE_REG(hw, IXGBE_HLREG0, hl);
 	IXGBE_WRITE_REG(hw, IXGBE_RDRXCTL, rxc);
@@ -118,6 +151,7 @@ ixgbe_netmap_reg(struct netmap_adapter *na, int onoff)
 	struct adapter *adapter = ifp->if_softc;
 
 	IXGBE_CORE_LOCK(adapter);
+	msec_delay(1000);
 	adapter->stop_locked(adapter);
 
 	set_crcstrip(&adapter->hw, onoff);
@@ -306,8 +340,8 @@ ixgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 		 * good way.
 		 */
 		nic_i = IXGBE_READ_REG(&adapter->hw, IXGBE_TDH(kring->ring_id));
-		if (nic_i >= kring->nkr_num_slots) { /* XXX can it happen ? */
-			D("TDH wrap %d", nic_i);
+		if (unlikely(nic_i >= kring->nkr_num_slots)) {
+			nm_prinf("TDH wrap %d", nic_i);
 			nic_i -= kring->nkr_num_slots;
 		}
 		if (nic_i != txr->next_to_clean) {
@@ -316,8 +350,6 @@ ixgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 			kring->nr_hwtail = nm_prev(netmap_idx_n2k(kring, nic_i), lim);
 		}
 	}
-
-	nm_txsync_finalize(kring);
 
 	return 0;
 }
@@ -346,7 +378,7 @@ ixgbe_netmap_rxsync(struct netmap_kring *kring, int flags)
 	u_int nic_i;	/* index into the NIC ring */
 	u_int n;
 	u_int const lim = kring->nkr_num_slots - 1;
-	u_int const head = nm_rxsync_prologue(kring);
+	u_int const head = kring->rhead;
 	int force_update = (flags & NAF_FORCE_READ) || kring->nr_kflags & NKR_PENDINTR;
 
 	/* device-specific */
@@ -377,7 +409,6 @@ ixgbe_netmap_rxsync(struct netmap_kring *kring, int flags)
 	 */
 	if (netmap_no_pendintr || force_update) {
 		int crclen = (ix_crcstrip) ? 0 : 4;
-		uint16_t slot_flags = kring->nkr_slot_flags;
 
 		nic_i = rxr->next_to_check; // or also k2n(kring->nr_hwtail)
 		nm_i = netmap_idx_n2k(kring, nic_i);
@@ -389,7 +420,7 @@ ixgbe_netmap_rxsync(struct netmap_kring *kring, int flags)
 			if ((staterr & IXGBE_RXD_STAT_DD) == 0)
 				break;
 			ring->slot[nm_i].len = le16toh(curr->wb.upper.length) - crclen;
-			ring->slot[nm_i].flags = slot_flags;
+			ring->slot[nm_i].flags = 0;
 			bus_dmamap_sync(rxr->ptag,
 			    rxr->rx_buffers[nic_i].pmap, BUS_DMASYNC_POSTREAD);
 			nm_i = nm_next(nm_i, lim);
@@ -452,9 +483,6 @@ ixgbe_netmap_rxsync(struct netmap_kring *kring, int flags)
 		nic_i = nm_prev(nic_i, lim);
 		IXGBE_WRITE_REG(&adapter->hw, rxr->tail, nic_i);
 	}
-
-	/* tell userspace that there might be new packets */
-	nm_rxsync_finalize(kring);
 
 	return 0;
 

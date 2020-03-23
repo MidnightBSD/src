@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: unicode.h,v 1.1.1.1 2007/03/06 00:10:39 dillo Exp $ */
 
 /*-
@@ -29,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/utilities/unicode.h 272322 2014-09-30 17:54:57Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hyperv/utilities/unicode.h 271493 2014-09-13 02:15:31Z delphij $
  */
 
 #include <sys/types.h>

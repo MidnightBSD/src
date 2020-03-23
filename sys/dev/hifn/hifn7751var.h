@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/hifn/hifn7751var.h 213091 2010-09-24 04:46:46Z gonzo $ */
+/* $FreeBSD: stable/11/sys/dev/hifn/hifn7751var.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$OpenBSD: hifn7751var.h,v 1.42 2002/04/08 17:49:42 jason Exp $	*/
 
 /*-
@@ -129,7 +128,7 @@ struct hifn_session {
 struct hifn_softc {
 	device_t		sc_dev;		/* device backpointer */
 	struct mtx		sc_mtx;		/* per-instance lock */
-	bus_dma_tag_t		sc_dmat;	/* parent DMA tag decriptor */
+	bus_dma_tag_t		sc_dmat;	/* parent DMA tag descriptor */
 	struct resource		*sc_bar0res;
 	bus_space_handle_t	sc_sh0;		/* bar0 bus space handle */
 	bus_space_tag_t		sc_st0;		/* bar0 bus space tag */

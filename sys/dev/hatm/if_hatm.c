@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hatm/if_hatm.c 273736 2014-10-27 14:38:00Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hatm/if_hatm.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -61,6 +60,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hatm/if_hatm.c 273736 2014-10-27 14:38:00Z
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
 #include <net/if_types.h>
@@ -557,7 +557,7 @@ hatm_init_bus_width(struct hatm_softc *sc)
 }
 
 /*
- * 4.6 Set Host Endianess
+ * 4.6 Set Host Endianness
  */
 static void
 hatm_init_endianess(struct hatm_softc *sc)
@@ -608,7 +608,7 @@ hatm_read_prom_byte(struct hatm_softc *sc, u_int addr)
 	BARRIER_W(sc);
 
 	/* send READ */
-	for (i = 0; i < sizeof(readtab) / sizeof(readtab[0]); i++) {
+	for (i = 0; i < nitems(readtab); i++) {
 		WRITE4(sc, HE_REGO_HOST_CNTL, val | readtab[i]);
 		BARRIER_W(sc);
 		DELAY(EEPROM_DELAY);
@@ -788,16 +788,14 @@ hatm_init_cm(struct hatm_softc *sc)
 	rsra = 0;
 	mlbm = ((rsra + IFP2IFATM(sc->ifp)->mib.max_vccs * 8) + 0x7ff) & ~0x7ff;
 	rabr = ((mlbm + numbuffs * 2) + 0x7ff) & ~0x7ff;
-	sc->rsrb = ((rabr + 2048) + (2 * IFP2IFATM(sc->ifp)->mib.max_vccs - 1)) &
-	    ~(2 * IFP2IFATM(sc->ifp)->mib.max_vccs - 1);
+	sc->rsrb = roundup2(rabr + 2048, 2 * IFP2IFATM(sc->ifp)->mib.max_vccs);
 
 	tsra = 0;
 	sc->tsrb = tsra + IFP2IFATM(sc->ifp)->mib.max_vccs * 8;
 	sc->tsrc = sc->tsrb + IFP2IFATM(sc->ifp)->mib.max_vccs * 4;
 	sc->tsrd = sc->tsrc + IFP2IFATM(sc->ifp)->mib.max_vccs * 2;
 	tabr = sc->tsrd + IFP2IFATM(sc->ifp)->mib.max_vccs * 1;
-	mtpd = ((tabr + 1024) + (16 * IFP2IFATM(sc->ifp)->mib.max_vccs - 1)) &
-	    ~(16 * IFP2IFATM(sc->ifp)->mib.max_vccs - 1);
+	mtpd = roundup2(tabr + 1024, 16 * IFP2IFATM(sc->ifp)->mib.max_vccs);
 
 	DBG(sc, ATTACH, ("rsra=%x mlbm=%x rabr=%x rsrb=%x",
 	    rsra, mlbm, rabr, sc->rsrb));
@@ -1327,7 +1325,7 @@ kenv_getuint(struct hatm_softc *sc, const char *var,
 	snprintf(full, sizeof(full), "hw.%s.%s",
 	    device_get_nameunit(sc->dev), var);
 
-	if ((val = getenv(full)) == NULL)
+	if ((val = kern_getenv(full)) == NULL)
 		return (0);
 	u = strtoul(val, &end, 0);
 	if (end == val || *end != '\0') {

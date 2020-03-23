@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/if_fdir.c 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/if_fdir.c 347419 2019-05-10 00:46:43Z erj $*/
 
 #include "ixgbe.h"
 
@@ -51,7 +50,7 @@ ixgbe_init_fdir(struct adapter *adapter)
 } /* ixgbe_init_fdir */
 
 void
-ixgbe_reinit_fdir(void *context, int pending)
+ixgbe_reinit_fdir(void *context)
 {
 	struct adapter *adapter = context;
 	struct ifnet   *ifp = adapter->ifp;
@@ -147,9 +146,15 @@ ixgbe_atr(struct tx_ring *txr, struct mbuf *mp)
 
 /* TASK_INIT needs this function defined regardless if it's enabled */
 void
-ixgbe_reinit_fdir(void *context, int pending)
+ixgbe_reinit_fdir(void *context)
 {
-	UNREFERENCED_2PARAMETER(context, pending);
+	UNREFERENCED_1PARAMETER(context);
 } /* ixgbe_reinit_fdir */
+
+void
+ixgbe_atr(struct tx_ring *txr, struct mbuf *mp)
+{
+	UNREFERENCED_2PARAMETER(txr, mp);
+} /* ixgbe_atr */
 
 #endif

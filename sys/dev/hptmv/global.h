@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/global.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hptmv/global.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
@@ -133,11 +132,6 @@ typedef struct _VDevice_Ext
 #define LongDiv(x, y)      	(x / (UINT)(y))
 #define LongRem(x, y)		(x % (UINT)(y))
 #define LongMul(x, y)      	(x * y)
-/* Minimum and maximum macros */
-#if (__FreeBSD_version < 501000)
-#define MAX(a, b)	(((a) > (b)) ? (a) : (b))
-#define MIN(a, b)	(((a) < (b)) ? (a) : (b))
-#endif
 
 /*************************************************************************
  * C library
@@ -152,9 +146,6 @@ unsigned HPTLIBAPI os_strlen(const char *s);
 #define memcpy os_memcpy
 #define memset os_memset
 #define strlen os_strlen
-#elif (__FreeBSD_version <= 410000) 
-#define	memcpy(d, s, len)     bcopy((s),(d),(len))
-#define	memset(d, s, len)     bzero((d),(len))
 #endif
 #define ZeroMemory(a, b)  	memset((char *)a, 0, b)
 #define MemoryCopy(a,b,c) 	memcpy((char *)(a), (char *)(b), (UINT)(c))
@@ -205,7 +196,7 @@ int HPTLIBAPI fDeSetReadAhead(PDevice pDev, int enable);
 #include <dev/hptmv/raid5n.h>
 #include <dev/hptmv/vdevice.h>
 
-#if defined(__MidnightBSD__) && defined(HPTLIBAPI)
+#if defined(__FreeBSD__) && defined(HPTLIBAPI)
 #undef HPTLIBAPI
 #define HPTLIBAPI 
 #endif

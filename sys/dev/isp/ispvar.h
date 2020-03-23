@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/isp/ispvar.h 318149 2017-05-10 18:59:20Z ken $ */
+/* $FreeBSD: stable/11/sys/dev/isp/ispvar.h 347894 2019-05-16 22:03:25Z ken $ */
 /*-
+ *  Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
  *
@@ -38,7 +38,7 @@
 #include <dev/ic/isp_stds.h>
 #include <dev/ic/ispmbox.h>
 #endif
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 #include <dev/isp/isp_stds.h>
 #include <dev/isp/ispmbox.h>
 #endif
@@ -355,9 +355,9 @@ typedef struct {
  * index to put it into the Database, but that's just an optimization. We mark
  * the entry VALID and make sure that the target index is updated and correct.
  *
- * When we get done searching the local loop, we then search similarily for
+ * When we get done searching the local loop, we then search similarly for
  * a list of devices we've gotten from the fabric name controller (if we're
- * on a fabric). VALID marking is also done similarily.
+ * on a fabric). VALID marking is also done similarly.
  *
  * When all of this is done, we can march through the database and clean up
  * any entry that is still PROBATIONAL (these represent devices which have
@@ -379,6 +379,9 @@ typedef struct {
 	uint16_t	handle;
 
 	/*
+	 * PRLI word 0 contains the Establish Image Pair bit, which is
+	 * important for knowing when to reset the CRN.
+	 *
 	 * PRLI word 3 parameters contains role as well as other things.
 	 *
 	 * The state is the current state of this entry.
@@ -390,7 +393,9 @@ typedef struct {
 	 * Portid is obvious, as are node && port WWNs. The new_role and
 	 * new_portid is for when we are pending a change.
 	 */
+	uint16_t	prli_word0;		/* PRLI parameters */
 	uint16_t	prli_word3;		/* PRLI parameters */
+	uint16_t	new_prli_word0;		/* Incoming new PRLI parameters */
 	uint16_t	new_prli_word3;		/* Incoming new PRLI parameters */
 	uint16_t			: 12,
 			probational	: 1,
@@ -447,6 +452,8 @@ typedef struct {
 	uint16_t		isp_login_hdl;		/* Logging in handle */
 	uint8_t			isp_retry_delay;
 	uint8_t			isp_retry_count;
+	int			isp_use_gft_id;		/* Use GFT_ID */
+	int			isp_use_gff_id;		/* Use GFF_ID */
 
 	/*
 	 * Current active WWNN/WWPN
@@ -629,8 +636,8 @@ struct ispsoftc {
 #define	ISP_CFG_NPORT_ONLY	0x04	/* insist on {N/F}-Port connection */
 #define	ISP_CFG_LPORT		0x06	/* prefer {N/F}L-Port connection */
 #define	ISP_CFG_NPORT		0x08	/* prefer {N/F}-Port connection */
-#define	ISP_CFG_1GB		0x10	/* force 1GB connection (23XX only) */
-#define	ISP_CFG_2GB		0x20	/* force 2GB connection (23XX only) */
+#define	ISP_CFG_1GB		0x10	/* force 1Gb connection (23XX only) */
+#define	ISP_CFG_2GB		0x20	/* force 2Gb connection (23XX only) */
 #define	ISP_CFG_NORELOAD	0x80	/* don't download f/w */
 #define	ISP_CFG_NONVRAM		0x40	/* ignore NVRAM */
 #define	ISP_CFG_NOFCTAPE	0x100	/* disable FC-Tape */
@@ -638,9 +645,10 @@ struct ispsoftc {
 #define	ISP_CFG_OWNFSZ		0x400	/* override NVRAM frame size */
 #define	ISP_CFG_OWNLOOPID	0x800	/* override NVRAM loopid */
 #define	ISP_CFG_OWNEXCTHROTTLE	0x1000	/* override NVRAM execution throttle */
-#define	ISP_CFG_4GB		0x2000	/* force 4GB connection (24XX only) */
-#define	ISP_CFG_8GB		0x4000	/* force 8GB connection (25XX only) */
-#define	ISP_CFG_16GB		0x8000	/* force 16GB connection (82XX only) */
+#define	ISP_CFG_4GB		0x2000	/* force 4Gb connection (24XX only) */
+#define	ISP_CFG_8GB		0x4000	/* force 8Gb connection (25XX only) */
+#define	ISP_CFG_16GB		0x8000	/* force 16Gb connection (26XX only) */
+#define	ISP_CFG_32GB		0x10000	/* force 32Gb connection (27XX only) */
 
 /*
  * For each channel, the outer layers should know what role that channel
@@ -741,6 +749,7 @@ struct ispsoftc {
 #define	ISP_HA_FC_2400		0x60
 #define	ISP_HA_FC_2500		0x70
 #define	ISP_HA_FC_2600		0x80
+#define	ISP_HA_FC_2700		0x90
 
 #define	IS_SCSI(isp)	(isp->isp_type & ISP_HA_SCSI)
 #define	IS_1020(isp)	(isp->isp_type < ISP_HA_SCSI_1240)
@@ -767,6 +776,7 @@ struct ispsoftc {
 #define	IS_24XX(isp)	((isp)->isp_type >= ISP_HA_FC_2400)
 #define	IS_25XX(isp)	((isp)->isp_type >= ISP_HA_FC_2500)
 #define	IS_26XX(isp)	((isp)->isp_type >= ISP_HA_FC_2600)
+#define	IS_27XX(isp)	((isp)->isp_type >= ISP_HA_FC_2700)
 
 /*
  * DMA related macros
@@ -1018,7 +1028,7 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	XS_STSP(xs)		gets a pointer to the SCSI status byte ""
  *	XS_SNSP(xs)		gets a pointer to the associate sense data
  *	XS_TOT_SNSLEN(xs)	gets the total length of sense data storage
- *	XS_CUR_SNSLEN(xs)	gets the currently used lenght of sense data storage
+ *	XS_CUR_SNSLEN(xs)	gets the currently used length of sense data storage
  *	XS_SNSKEY(xs)		dereferences XS_SNSP to get the current stored Sense Key
  *	XS_SNSASC(xs)		dereferences XS_SNSP to get the current stored Additional Sense Code
  *	XS_SNSASCQ(xs)		dereferences XS_SNSP to get the current stored Additional Sense Code Qualifier

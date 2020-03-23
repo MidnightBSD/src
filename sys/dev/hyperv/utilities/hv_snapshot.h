@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/utilities/hv_snapshot.h 310735 2016-12-29 05:32:34Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/utilities/hv_snapshot.h 311353 2017-01-05 03:20:00Z sephe $
  */
 
 #ifndef _VSS_H

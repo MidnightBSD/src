@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Bjoern A. Zeeb
  * All rights reserved.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/netfpga10g/nf10bmac/if_nf10bmacreg.h 270061 2014-08-16 14:30:46Z bz $
+ * $FreeBSD: stable/11/sys/dev/netfpga10g/nf10bmac/if_nf10bmacreg.h 265766 2014-05-09 12:59:38Z bz $
  */
 
 #ifndef	_DEV_IF_NF10BMACREG_H

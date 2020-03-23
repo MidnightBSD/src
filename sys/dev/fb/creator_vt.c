@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/creator_vt.c 271128 2014-09-04 20:18:08Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/creator_vt.c 270720 2014-08-27 15:10:28Z dumbbell $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2014 QLogic Corporation
  *
@@ -23,7 +22,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/bce/if_bcefw.h 278403 2015-02-08 21:12:48Z marius $
+ * $FreeBSD: stable/11/sys/dev/bce/if_bcefw.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

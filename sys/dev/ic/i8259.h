@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ic/i8259.h 151580 2005-10-23 09:05:51Z glebius $
+ * $FreeBSD: stable/11/sys/dev/ic/i8259.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/dev/firewire/fwphyreg.h 188508 2009-02-12 03:05:42Z sbruno $
+ * $FreeBSD: stable/11/sys/dev/firewire/fwphyreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

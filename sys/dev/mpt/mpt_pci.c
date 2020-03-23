@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * PCI specific probe and attach routines for LSI Fusion Adapters
  * FreeBSD Version.
@@ -100,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpt/mpt_pci.c 315809 2017-03-23 06:34:45Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpt/mpt_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fatm/if_fatm.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fatm/if_fatm.c 332288 2018-04-08 16:54:07Z brooks $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -57,6 +56,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/fatm/if_fatm.c 254263 2013-08-12 23:30:01Z
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/if_atm.h>
@@ -116,8 +116,8 @@ static const struct utopia_methods fatm_utopia_methods = {
 };
 
 #define VC_OK(SC, VPI, VCI)						\
-	(((VPI) & ~((1 << IFP2IFATM((SC)->ifp)->mib.vpi_bits) - 1)) == 0 &&	\
-	 (VCI) != 0 && ((VCI) & ~((1 << IFP2IFATM((SC)->ifp)->mib.vci_bits) - 1)) == 0)
+	(rounddown2(VPI, 1 << IFP2IFATM((SC)->ifp)->mib.vpi_bits) == 0 &&	\
+	 (VCI) != 0 && rounddown2(VCI, 1 << IFP2IFATM((SC)->ifp)->mib.vci_bits) == 0)
 
 static int fatm_load_vc(struct fatm_softc *sc, struct card_vcc *vc);
 
@@ -1085,7 +1085,7 @@ fatm_supply_small_buffers(struct fatm_softc *sc)
 	nbufs = min(nbufs, SMALL_POOL_SIZE);
 	nbufs -= sc->small_cnt;
 
-	nblocks = (nbufs + SMALL_SUPPLY_BLKSIZE - 1) / SMALL_SUPPLY_BLKSIZE;
+	nblocks = howmany(nbufs, SMALL_SUPPLY_BLKSIZE);
 	for (cnt = 0; cnt < nblocks; cnt++) {
 		q = GET_QUEUE(sc->s1queue, struct supqueue, sc->s1queue.head);
 
@@ -1105,7 +1105,7 @@ fatm_supply_small_buffers(struct fatm_softc *sc)
 				LIST_INSERT_HEAD(&sc->rbuf_free, rb, link);
 				break;
 			}
-			MH_ALIGN(m, SMALL_BUFFER_LEN);
+			M_ALIGN(m, SMALL_BUFFER_LEN);
 			error = bus_dmamap_load(sc->rbuf_tag, rb->map,
 			    m->m_data, SMALL_BUFFER_LEN, dmaload_helper,
 			    &phys, BUS_DMA_NOWAIT);
@@ -1174,7 +1174,7 @@ fatm_supply_large_buffers(struct fatm_softc *sc)
 	nbufs = min(nbufs, LARGE_POOL_SIZE);
 	nbufs -= sc->large_cnt;
 
-	nblocks = (nbufs + LARGE_SUPPLY_BLKSIZE - 1) / LARGE_SUPPLY_BLKSIZE;
+	nblocks = howmany(nbufs, LARGE_SUPPLY_BLKSIZE);
 
 	for (cnt = 0; cnt < nblocks; cnt++) {
 		q = GET_QUEUE(sc->l1queue, struct supqueue, sc->l1queue.head);
@@ -1501,7 +1501,7 @@ fatm_intr_drain_rx(struct fatm_softc *sc)
 
 		rpd->nseg = le32toh(rpd->nseg);
 		mlen = 0;
-		m0 = last = 0;
+		m0 = last = NULL;
 		for (i = 0; i < rpd->nseg; i++) {
 			rb = sc->rbufs + rpd->segment[i].handle;
 			if (m0 == NULL) {
@@ -1564,7 +1564,7 @@ fatm_intr_drain_rx(struct fatm_softc *sc)
 			ATM_PH_SETVCI(&aph, vci);
 
 			ifp = sc->ifp;
-			ifp->if_ipackets++;
+			if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 			vc->ipackets++;
 			vc->ibytes += m0->m_pkthdr.len;
@@ -1664,7 +1664,7 @@ fatm_intr(void *p)
  * is stopped the stopping function will broadcast the cv. All threads will
  * find that the interface has been stopped and return.
  *
- * Aquiring of the buffer is done by the fatm_getstat() function. The freeing
+ * Acquiring of the buffer is done by the fatm_getstat() function. The freeing
  * must be done by the caller when he has finished using the buffer.
  */
 static void
@@ -1974,7 +1974,7 @@ fatm_tx(struct fatm_softc *sc, struct mbuf *m, struct card_vcc *vc, u_int mlen)
 	error = bus_dmamap_load_mbuf(sc->tx_tag, q->map, m,
 	    fatm_tpd_load, tpd, BUS_DMA_NOWAIT);
 	if(error) {
-		sc->ifp->if_oerrors++;
+		if_inc_counter(sc->ifp, IFCOUNTER_OERRORS, 1);
 		if_printf(sc->ifp, "mbuf loaded error=%d\n", error);
 		m_freem(m);
 		return (0);
@@ -2025,7 +2025,7 @@ fatm_tx(struct fatm_softc *sc, struct mbuf *m, struct card_vcc *vc, u_int mlen)
 	BARRIER_W(sc);
 
 	sc->txcnt++;
-	sc->ifp->if_opackets++;
+	if_inc_counter(sc->ifp, IFCOUNTER_OPACKETS, 1);
 	vc->obytes += m->m_pkthdr.len;
 	vc->opackets++;
 
@@ -2105,7 +2105,7 @@ fatm_start(struct ifnet *ifp)
 }
 
 /*
- * VCC managment
+ * VCC management
  *
  * This may seem complicated. The reason for this is, that we need an
  * asynchronuous open/close for the NATM VCCs because our ioctl handler
@@ -2116,7 +2116,7 @@ fatm_start(struct ifnet *ifp)
 
 /*
  * Command the card to open/close a VC.
- * Return the queue entry for waiting if we are succesful.
+ * Return the queue entry for waiting if we are successful.
  */
 static struct cmdqueue *
 fatm_start_vcc(struct fatm_softc *sc, u_int vpi, u_int vci, uint32_t cmd,
@@ -2497,7 +2497,7 @@ fatm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t arg)
 		/* return vcc table */
 		vtab = atm_getvccs((struct atmio_vcc **)sc->vccs,
 		    FORE_MAX_VCC + 1, sc->open_vccs, &sc->mtx, 1);
-		error = copyout(vtab, ifr->ifr_data, sizeof(*vtab) +
+		error = copyout(vtab, ifr_data_get_ptr(ifr), sizeof(*vtab) +
 		    vtab->count * sizeof(vtab->vccs[0]));
 		free(vtab, M_DEVBUF);
 		break;
@@ -2849,7 +2849,7 @@ fatm_attach(device_t dev)
 	sc->memt = rman_get_bustag(sc->memres);
 
 	/*
-	 * Convert endianess of slave access
+	 * Convert endianness of slave access
 	 */
 	cfg = pci_read_config(dev, FATM_PCIR_MCTL, 1);
 	cfg |= FATM_PCIM_SWAB;

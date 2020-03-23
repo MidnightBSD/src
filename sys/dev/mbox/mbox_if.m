@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2013 Rui Paulo
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/mbox/mbox_if.m 252998 2013-07-07 19:47:22Z rpaulo $
+# $FreeBSD: stable/11/sys/dev/mbox/mbox_if.m 252998 2013-07-07 19:47:22Z rpaulo $
 #
 # Mailboxes are used as an IPC mechanism that allows subsystems to 
 # communicate with each other.

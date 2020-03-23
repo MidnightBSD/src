@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ed/if_edvar.h 264942 2014-04-25 21:32:34Z marius $
+ * $FreeBSD: stable/11/sys/dev/ed/if_edvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef SYS_DEV_ED_IF_EDVAR_H

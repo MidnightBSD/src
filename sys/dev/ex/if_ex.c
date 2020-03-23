@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, Javier Martín Rueda (jmrueda@diatel.upm.es)
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ex/if_ex.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ex/if_ex.c 347962 2019-05-18 20:43:13Z brooks $");
 
 /*
  * Intel EtherExpress Pro/10, Pro/10+ Ethernet driver
@@ -57,6 +56,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ex/if_ex.c 243857 2012-12-04 09:32:43Z gle
 #include <sys/rman.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h> 
@@ -273,6 +273,8 @@ ex_attach(device_t dev)
 		mtx_destroy(&sc->lock);
 		return (error);
 	}
+
+	gone_by_fcp101_dev(dev);
 
 	return(0);
 }
@@ -571,7 +573,7 @@ ex_start_locked(struct ifnet *ifp)
 			BPF_MTAP(ifp, opkt);
 
 			sc->tx_timeout = 2;
-			ifp->if_opackets++;
+			if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 			m_freem(opkt);
 		} else {
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
@@ -684,12 +686,12 @@ ex_tx_intr(struct ex_softc *sc)
 		sc->tx_head = CSR_READ_2(sc, IO_PORT_REG);
 
 		if (tx_status & TX_OK_bit) {
-			ifp->if_opackets++;
+			if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		} else {
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 		}
 
-		ifp->if_collisions += tx_status & No_Collisions_bits;
+		if_inc_counter(ifp, IFCOUNTER_COLLISIONS, tx_status & No_Collisions_bits);
 	}
 
 	/*
@@ -737,7 +739,7 @@ ex_rx_intr(struct ex_softc *sc)
 			MGETHDR(m, M_NOWAIT, MT_DATA);
 			ipkt = m;
 			if (ipkt == NULL) {
-				ifp->if_iqdrops++;
+				if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 			} else {
 				ipkt->m_pkthdr.rcvif = ifp;
 				ipkt->m_pkthdr.len = pkt_len;
@@ -745,12 +747,11 @@ ex_rx_intr(struct ex_softc *sc)
 
 				while (pkt_len > 0) {
 					if (pkt_len >= MINCLSIZE) {
-						MCLGET(m, M_NOWAIT);
-						if (m->m_flags & M_EXT) {
+						if (MCLGET(m, M_NOWAIT)) {
 							m->m_len = MCLBYTES;
 						} else {
 							m_freem(ipkt);
-							ifp->if_iqdrops++;
+							if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 							goto rx_another;
 						}
 					}
@@ -773,7 +774,7 @@ ex_rx_intr(struct ex_softc *sc)
 						MGET(m->m_next, M_NOWAIT, MT_DATA);
 						if (m->m_next == NULL) {
 							m_freem(ipkt);
-							ifp->if_iqdrops++;
+							if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 							goto rx_another;
 						}
 						m = m->m_next;
@@ -792,10 +793,10 @@ ex_rx_intr(struct ex_softc *sc)
 				EX_UNLOCK(sc);
 				(*ifp->if_input)(ifp, ipkt);
 				EX_LOCK(sc);
-				ifp->if_ipackets++;
+				if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 			}
 		} else {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 		}
 		CSR_WRITE_2(sc, HOST_ADDR_REG, sc->rx_head);
 rx_another: ;
@@ -983,7 +984,7 @@ ex_watchdog(void *arg)
 
 		DODEBUG(Status, printf("OIDLE watchdog\n"););
 
-		ifp->if_oerrors++;
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 		ex_reset(sc);
 		ex_start_locked(ifp);
 

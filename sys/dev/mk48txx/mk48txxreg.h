@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	$NetBSD: mk48txxreg.h,v 1.10 2008/04/28 20:23:50 martin Exp $
  *
- * $FreeBSD: stable/10/sys/dev/mk48txx/mk48txxreg.h 221957 2011-05-15 13:17:08Z marius $
+ * $FreeBSD: stable/11/sys/dev/mk48txx/mk48txxreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

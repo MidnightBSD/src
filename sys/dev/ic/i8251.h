@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ic/i8251.h 182835 2008-09-07 04:35:04Z nyan $
+ * $FreeBSD: stable/11/sys/dev/ic/i8251.h 182835 2008-09-07 04:35:04Z nyan $
  */
 
 /*

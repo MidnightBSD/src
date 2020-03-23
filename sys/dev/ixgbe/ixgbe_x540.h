@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_x540.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_x540.h 331722 2018-03-29 02:50:57Z eadler $*/
 
 #ifndef _IXGBE_X540_H_
 #define _IXGBE_X540_H_
@@ -45,7 +44,7 @@ s32 ixgbe_setup_mac_link_X540(struct ixgbe_hw *hw, ixgbe_link_speed speed,
 			      bool link_up_wait_to_complete);
 s32 ixgbe_reset_hw_X540(struct ixgbe_hw *hw);
 s32 ixgbe_start_hw_X540(struct ixgbe_hw *hw);
-u32 ixgbe_get_supported_physical_layer_X540(struct ixgbe_hw *hw);
+u64 ixgbe_get_supported_physical_layer_X540(struct ixgbe_hw *hw);
 
 s32 ixgbe_init_eeprom_params_X540(struct ixgbe_hw *hw);
 s32 ixgbe_read_eerd_X540(struct ixgbe_hw *hw, u16 offset, u16 *data);

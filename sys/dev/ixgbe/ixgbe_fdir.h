@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_fdir.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_fdir.h 347419 2019-05-10 00:46:43Z erj $*/
 
 #ifndef _IXGBE_FDIR_H_
 #define _IXGBE_FDIR_H_
@@ -46,15 +45,14 @@
 int fdir_pballoc = 1;
 
 void ixgbe_init_fdir(struct adapter *);
-void ixgbe_atr(struct tx_ring *, struct mbuf *);
 
 #else
 
 #define ixgbe_init_fdir(_a)
-#define ixgbe_atr(_a, _b)
 
 #endif
 
-void ixgbe_reinit_fdir(void *, int);
+void ixgbe_reinit_fdir(void *);
+void ixgbe_atr(struct tx_ring *, struct mbuf *);
 
-#endif
+#endif /* _IXGBE_FDIR_H_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Izumi Tsutsui.  All rights reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mc146818/mc146818.c 201009 2009-12-25 22:58:43Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mc146818/mc146818.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * mc146818 and compatible time of day chip subroutines
@@ -78,7 +77,7 @@ mc146818_attach(device_t dev)
 	}
 
 	mtx_lock_spin(&sc->sc_mtx);
-	if (!(*sc->sc_mcread)(dev, MC_REGD) & MC_REGD_VRT) {
+	if (((*sc->sc_mcread)(dev, MC_REGD) & MC_REGD_VRT) == 0) {
 		mtx_unlock_spin(&sc->sc_mtx);
 		device_printf(dev, "%s: battery low\n", __func__);
 		return (ENXIO);
@@ -119,7 +118,7 @@ mc146818_gettime(device_t dev, struct timespec *ts)
 	 */
 	for (;;) {
 		mtx_lock_spin(&sc->sc_mtx);
-		if (!((*sc->sc_mcread)(dev, MC_REGA) & MC_REGA_UIP))
+		if (((*sc->sc_mcread)(dev, MC_REGA) & MC_REGA_UIP) == 0)
 			break;
 		mtx_unlock_spin(&sc->sc_mtx);
 		if (--timeout < 0) {
@@ -165,7 +164,7 @@ mc146818_getsecs(device_t dev, int *secp)
 
 	for (;;) {
 		mtx_lock_spin(&sc->sc_mtx);
-		if (!((*sc->sc_mcread)(dev, MC_REGA) & MC_REGA_UIP)) {
+		if (((*sc->sc_mcread)(dev, MC_REGA) & MC_REGA_UIP) == 0) {
 			sec = FROMREG((*sc->sc_mcread)(dev, MC_SEC));
 			mtx_unlock_spin(&sc->sc_mtx);
 			break;

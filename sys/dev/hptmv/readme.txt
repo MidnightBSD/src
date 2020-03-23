@@ -1,6 +1,6 @@
 RocketRAID 18xx Driver for FreeBSD
 Copyright (C) 2007-2008 HighPoint Technologies, Inc. All rights reserved.
-$FreeBSD: stable/10/sys/dev/hptmv/readme.txt 230133 2012-01-15 13:23:33Z uqs $
+$FreeBSD: stable/11/sys/dev/hptmv/readme.txt 230133 2012-01-15 13:23:33Z uqs $
 
 #############################################################################
 Revision History:

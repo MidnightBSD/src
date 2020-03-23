@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/boot_font.c 271105 2014-09-04 16:51:45Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/boot_font.c 260047 2013-12-29 18:44:12Z emaste $");
 
 #include <sys/param.h>
 

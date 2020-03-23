@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/sati_move.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/sati_move.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * @file
@@ -148,7 +147,7 @@ void sati_move_small_udma_translate_command(
  *        please reference sati_translate_command()
  *
  * @param[in] sector_count This parameter specifies the number of sectors
- *            to be transfered.
+ *            to be transferred.
  * @param[in] write_opcode This parameter specifies the value to be written
  *            to the ATA command register for a write (data out) operation.
  * @param[in] read_opcode This parameter specifies the value to be written
@@ -221,7 +220,7 @@ void sati_move_ncq_translate_8_bit_sector_count(
  * @note This method should only be called for CDB sizes of 10-bytes or larger.
  *
  * @param[in] sector_count This parameter specifies the number of sectors
- *            to be transfered.
+ *            to be transferred.
  * @param[in] is_fpdma_command This parameter indicates if the supplied
  *            ata_io is a first party DMA request (NCQ).
  *
@@ -492,7 +491,7 @@ SATI_STATUS sati_move_small_translate_command(
  *        please reference sati_translate_command().
  *
  * @param[in] sector_count This parameter specifies the number of sectors
- *            to be transfered.
+ *            to be transferred.
  * @param[in] device_head This parameter specifies the contents to be
  *            written to the device head register.
  *

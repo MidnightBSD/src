@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus_reg.h 307198 2016-10-13 07:42:44Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/vmbus/vmbus_reg.h 307498 2016-10-17 08:10:24Z sephe $
  */
 
 #ifndef _VMBUS_REG_H_

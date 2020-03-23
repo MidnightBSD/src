@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Kazutaka YOKOTA and Michael Smith
  * Copyright (c) 2009-2013 Jung-uk Kim <jkim@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/vesa.c 317501 2017-04-27 12:15:15Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/vesa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_vga.h"
 #include "opt_vesa.h"
@@ -103,7 +102,6 @@ static video_adapter_t *vesa_adp;
 
 static SYSCTL_NODE(_debug, OID_AUTO, vesa, CTLFLAG_RD, NULL, "VESA debugging");
 static int vesa_shadow_rom;
-TUNABLE_INT("debug.vesa.shadow_rom", &vesa_shadow_rom);
 SYSCTL_INT(_debug_vesa, OID_AUTO, shadow_rom, CTLFLAG_RDTUN, &vesa_shadow_rom,
     0, "Enable video BIOS shadow");
 
@@ -656,7 +654,7 @@ vesa_map_gen_mode_num(int type, int color, int mode)
     };
     int i;
 
-    for (i = 0; i < sizeof(mode_map)/sizeof(mode_map[0]); ++i) {
+    for (i = 0; i < nitems(mode_map); ++i) {
         if (mode_map[i].from == mode)
             return (mode_map[i].to);
     }
@@ -679,7 +677,7 @@ vesa_translate_flags(u_int16_t vflags)
 	int flags;
 	int i;
 
-	for (flags = 0, i = 0; i < sizeof(ftable)/sizeof(ftable[0]); ++i) {
+	for (flags = 0, i = 0; i < nitems(ftable); ++i) {
 		flags |= (vflags & ftable[i].mask) ? 
 			 ftable[i].set : ftable[i].reset;
 	}
@@ -1585,7 +1583,7 @@ vesa_set_origin(video_adapter_t *adp, off_t offset)
 	regs.R_DX = offset / adp->va_window_gran;
 	x86bios_intr(&regs, 0x10);
 
-	adp->va_window_orig = (offset/adp->va_window_gran)*adp->va_window_gran;
+	adp->va_window_orig = rounddown(offset, adp->va_window_gran);
 	return (0);			/* XXX */
 }
 

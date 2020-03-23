@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_sysctl.c 276269 2014-12-26 23:18:09Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/isci_sysctl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/isci/isci.h>
 

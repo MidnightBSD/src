@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_vf.c 333216 2018-05-03 15:47:49Z marius $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/e1000_vf.c 333215 2018-05-03 15:47:42Z marius $*/
 
 
 #include "e1000_api.h"

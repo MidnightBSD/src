@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_phy.c 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_phy.c 331722 2018-03-29 02:50:57Z eadler $*/
 
 #include "ixgbe_api.h"
 #include "ixgbe_common.h"
@@ -481,6 +480,10 @@ enum ixgbe_phy_type ixgbe_get_phy_type_from_id(u32 phy_id)
 	case X557_PHY_ID:
 	case X557_PHY_ID2:
 		phy_type = ixgbe_phy_x550em_ext_t;
+		break;
+	case IXGBE_M88E1500_E_PHY_ID:
+	case IXGBE_M88E1543_E_PHY_ID:
+		phy_type = ixgbe_phy_ext_1g_t;
 		break;
 	default:
 		phy_type = ixgbe_phy_unknown;
@@ -1538,16 +1541,7 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 				status = IXGBE_SUCCESS;
 			} else {
 				if (hw->allow_unsupported_sfp == TRUE) {
-					EWARN(hw, "WARNING: Intel (R) Network "
-					      "Connections are quality tested "
-					      "using Intel (R) Ethernet Optics."
-					      " Using untested modules is not "
-					      "supported and may cause unstable"
-					      " operation or damage to the "
-					      "module or the adapter. Intel "
-					      "Corporation is not responsible "
-					      "for any harm caused by using "
-					      "untested modules.\n", status);
+					EWARN(hw, "WARNING: Intel (R) Network Connections are quality tested using Intel (R) Ethernet Optics. Using untested modules is not supported and may cause unstable operation or damage to the module or the adapter. Intel Corporation is not responsible for any harm caused by using untested modules.\n");
 					status = IXGBE_SUCCESS;
 				} else {
 					DEBUGOUT("SFP+ module not supported\n");
@@ -1579,9 +1573,9 @@ err_read_i2c_eeprom:
  *
  *  Determines physical layer capabilities of the current SFP.
  */
-s32 ixgbe_get_supported_phy_sfp_layer_generic(struct ixgbe_hw *hw)
+u64 ixgbe_get_supported_phy_sfp_layer_generic(struct ixgbe_hw *hw)
 {
-	u32 physical_layer = IXGBE_PHYSICAL_LAYER_UNKNOWN;
+	u64 physical_layer = IXGBE_PHYSICAL_LAYER_UNKNOWN;
 	u8 comp_codes_10g = 0;
 	u8 comp_codes_1g = 0;
 
@@ -1800,16 +1794,7 @@ s32 ixgbe_identify_qsfp_module_generic(struct ixgbe_hw *hw)
 				status = IXGBE_SUCCESS;
 			} else {
 				if (hw->allow_unsupported_sfp == TRUE) {
-					EWARN(hw, "WARNING: Intel (R) Network "
-					      "Connections are quality tested "
-					      "using Intel (R) Ethernet Optics."
-					      " Using untested modules is not "
-					      "supported and may cause unstable"
-					      " operation or damage to the "
-					      "module or the adapter. Intel "
-					      "Corporation is not responsible "
-					      "for any harm caused by using "
-					      "untested modules.\n", status);
+					EWARN(hw, "WARNING: Intel (R) Network Connections are quality tested using Intel (R) Ethernet Optics. Using untested modules is not supported and may cause unstable operation or damage to the module or the adapter. Intel Corporation is not responsible for any harm caused by using untested modules.\n");
 					status = IXGBE_SUCCESS;
 				} else {
 					DEBUGOUT("QSFP module not supported\n");
@@ -1833,7 +1818,6 @@ err_read_i2c_eeprom:
 
 	return IXGBE_ERR_SFP_NOT_PRESENT;
 }
-
 
 /**
  *  ixgbe_get_sfp_init_sequence_offsets - Provides offset of PHY init sequence

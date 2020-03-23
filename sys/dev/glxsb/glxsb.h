@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/glxsb/glxsb.h 181467 2008-08-09 14:52:31Z philip $
+ * $FreeBSD: stable/11/sys/dev/glxsb/glxsb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _GLXSB_H_

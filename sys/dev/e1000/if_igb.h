@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/if_igb.h 303174 2016-07-22 03:16:37Z sbruno $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/if_igb.h 299182 2016-05-06 15:41:38Z sbruno $*/
 
 #ifndef _IF_IGB_H_
 #define _IF_IGB_H_

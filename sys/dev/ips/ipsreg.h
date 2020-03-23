@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Adaptec Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ips/ipsreg.h 163024 2006-10-05 07:28:43Z maxim $
+ * $FreeBSD: stable/11/sys/dev/ips/ipsreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

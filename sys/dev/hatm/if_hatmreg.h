@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/dev/hatm/if_hatmreg.h 261455 2014-02-04 03:36:42Z eadler $
+ * $FreeBSD: stable/11/sys/dev/hatm/if_hatmreg.h 258780 2013-11-30 22:17:27Z eadler $
  *
  * Fore HE driver for NATM
  */

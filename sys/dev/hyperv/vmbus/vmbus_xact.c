@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus_xact.c 310761 2016-12-29 07:27:13Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/vmbus/vmbus_xact.c 311367 2017-01-05 05:46:06Z sephe $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

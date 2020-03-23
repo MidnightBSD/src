@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Authors: Ravi Pokala (rpokala@freebsd.org)
  *
  * Copyright (c) 2018 Panasas
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/jedec_dimm/jedec_dimm.h 329843 2018-02-22 23:18:46Z rpokala $
+ * $FreeBSD: stable/11/sys/dev/jedec_dimm/jedec_dimm.h 355366 2019-12-03 22:53:50Z rpokala $
  */
 
 #ifndef _DEV__JEDEC_DIMM__JEDEC_DIMM_H_

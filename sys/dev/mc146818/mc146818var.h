@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Izumi Tsutsui.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  *
  *	$NetBSD: mc146818var.h,v 1.7 2008/05/14 13:29:29 tsutsui Exp $
  *
- * $FreeBSD: stable/10/sys/dev/mc146818/mc146818var.h 201009 2009-12-25 22:58:43Z marius $
+ * $FreeBSD: stable/11/sys/dev/mc146818/mc146818var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct mc146818_softc {

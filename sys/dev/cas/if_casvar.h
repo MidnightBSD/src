@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2008 Marius Strobl <marius@FreeBSD.org>
@@ -28,7 +27,7 @@
  *	from: NetBSD: gemvar.h,v 1.8 2002/05/15 02:36:12 matt Exp
  *	from: FreeBSD: if_gemvar.h 177560 2008-03-24 17:23:53Z marius
  *
- * $FreeBSD: stable/10/sys/dev/cas/if_casvar.h 249583 2013-04-17 11:42:40Z gabor $
+ * $FreeBSD: stable/11/sys/dev/cas/if_casvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_IF_CASVAR_H

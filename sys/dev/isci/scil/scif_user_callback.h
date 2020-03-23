@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/scif_user_callback.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/scif_user_callback.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SCIF_USER_CALLBACK_H_
 #define _SCIF_USER_CALLBACK_H_
@@ -101,7 +100,7 @@ void * scif_cb_timer_create(
 );
 
 /**
- * @brief This callback method asks the user to destory the supplied timer.
+ * @brief This callback method asks the user to destroy the supplied timer.
  *
  * @param[in]  controller This parameter specifies the controller with
  *             which this timer is to associated.
@@ -372,14 +371,14 @@ void scif_cb_task_request_complete(
 
 /**
  * @brief This callback method asks the user to provide the number of
- *        bytes to be transfered as part of this request.
+ *        bytes to be transferred as part of this request.
  *
  * @param[in] scif_user_io_request This parameter points to the user's
  *            IO request object.  It is a cookie that allows the user to
  *            provide the necessary information for this callback.
  *
  * @return This method returns the number of payload data bytes to be
- *         transfered for this IO request.
+ *         transferred for this IO request.
  */
 U32 scif_cb_io_request_get_transfer_length(
    void * scif_user_io_request

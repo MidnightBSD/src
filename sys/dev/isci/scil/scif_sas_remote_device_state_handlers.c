@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scif_sas_remote_device_state_handlers.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/scif_sas_remote_device_state_handlers.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * @file
@@ -669,7 +668,7 @@ SCI_STATUS scif_sas_remote_device_default_complete_task_handler(
  *        such a notification isn't supported.
  *
  * @param[in]  remote_device This parameter specifies the remote device object
- *             for which the completion notification has occured.
+ *             for which the completion notification has occurred.
  * @param[in]  completion_status This parameter specifies the status
  *             of the completion operation.
  *
@@ -695,7 +694,7 @@ void scif_sas_remote_device_default_start_complete_handler(
  *        such a notification isn't supported.
  *
  * @param[in]  remote_device This parameter specifies the remote device object
- *             for which the completion notification has occured.
+ *             for which the completion notification has occurred.
  * @param[in]  completion_status This parameter specifies the status
  *             of the completion operation.
  *
@@ -721,7 +720,7 @@ void scif_sas_remote_device_default_stop_complete_handler(
  *        notification isn't supported.
  *
  * @param[in]  remote_device This parameter specifies the remote device object
- *             for which the notification has occured.
+ *             for which the notification has occurred.
  *
  * @return none.
  */
@@ -744,7 +743,7 @@ void scif_sas_remote_device_default_ready_handler(
  *        notification isn't supported.
  *
  * @param[in]  remote_device This parameter specifies the remote device object
- *             for which the notification has occured.
+ *             for which the notification has occurred.
  *
  * @return none.
  */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008, M. Warner Losh
  * Copyright (c) 2000,2001 Jonathan Chen.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cardbus/cardbus_cis.c 225515 2011-09-12 15:21:52Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cardbus/cardbus_cis.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * CIS Handling for the Cardbus Bus
@@ -206,7 +205,7 @@ decode_tuple_funcid(device_t cbdev, device_t child, int id,
     struct tuple_callbacks *info, void *argp)
 {
 	struct cardbus_devinfo *dinfo = device_get_ivars(child);
-	int numnames = sizeof(funcnames) / sizeof(funcnames[0]);
+	int numnames = nitems(funcnames);
 	int i;
 
 	if (cardbus_cis_debug) {
@@ -407,7 +406,7 @@ cardbus_read_tuple_conf(device_t cbdev, device_t child, uint32_t start,
 }
 
 /*
- * Read the CIS data out of memroy.  We indirect through the bus space
+ * Read the CIS data out of memory.  We indirect through the bus space
  * routines to ensure proper byte ordering conversions when necessary.
  */
 static int
@@ -486,7 +485,8 @@ cardbus_read_tuple_init(device_t cbdev, device_t child, uint32_t *start,
 		    "to read CIS.\n");
 		return (NULL);
 	}
-	DEVPRINTF((cbdev, "CIS Mapped to %#lx\n", rman_get_start(res)));
+	DEVPRINTF((cbdev, "CIS Mapped to %#jx\n",
+	    rman_get_start(res)));
 
 	/* Flip to the right ROM image if CIS is in ROM */
 	if (space == PCIM_CIS_ASI_ROM) {

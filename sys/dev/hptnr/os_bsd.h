@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $Id: os_bsd.h,v 1.20 2010/05/11 03:12:11 lcn Exp $ */
 /*-
  * HighPoint RAID Driver for FreeBSD
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptnr/os_bsd.h 281957 2015-04-25 00:32:47Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hptnr/os_bsd.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <dev/hptnr/hptnr_config.h>

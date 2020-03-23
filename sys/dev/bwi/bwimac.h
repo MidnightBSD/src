@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/bwi/bwimac.h,v 1.2 2008/02/15 11:15:38 sephe Exp $
- * $FreeBSD: stable/10/sys/dev/bwi/bwimac.h 191762 2009-05-03 04:01:43Z imp $
+ * $FreeBSD: stable/11/sys/dev/bwi/bwimac.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BWI_MAC_H
@@ -58,6 +57,7 @@ void		bwi_mac_init_tpctl_11bg(struct bwi_mac *);
 void		bwi_mac_dummy_xmit(struct bwi_mac *);
 void		bwi_mac_reset_hwkeys(struct bwi_mac *);
 int		bwi_mac_config_ps(struct bwi_mac *);
+int		bwi_mac_fw_alloc(struct bwi_mac *);
 
 uint16_t	bwi_memobj_read_2(struct bwi_mac *, uint16_t, uint16_t);
 uint32_t	bwi_memobj_read_4(struct bwi_mac *, uint16_t, uint16_t);

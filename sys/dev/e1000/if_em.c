@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/if_em.c 333214 2018-05-03 15:41:04Z marius $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/if_em.c 354208 2019-10-30 21:48:43Z marius $*/
 
 #include "opt_em.h"
 #include "opt_ddb.h"
@@ -71,6 +70,7 @@
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
@@ -239,20 +239,21 @@ static int	em_shutdown(device_t);
 static int	em_suspend(device_t);
 static int	em_resume(device_t);
 #ifdef EM_MULTIQUEUE
-static int	em_mq_start(struct ifnet *, struct mbuf *);
-static int	em_mq_start_locked(struct ifnet *,
+static int	em_mq_start(if_t, struct mbuf *);
+static int	em_mq_start_locked(if_t,
 		    struct tx_ring *);
-static void	em_qflush(struct ifnet *);
+static void	em_qflush(if_t);
 #else
-static void	em_start(struct ifnet *);
-static void	em_start_locked(struct ifnet *, struct tx_ring *);
+static void	em_start(if_t);
+static void	em_start_locked(if_t, struct tx_ring *);
 #endif
-static int	em_ioctl(struct ifnet *, u_long, caddr_t);
+static int	em_ioctl(if_t, u_long, caddr_t);
+static uint64_t	em_get_counter(if_t, ift_counter);
 static void	em_init(void *);
 static void	em_init_locked(struct adapter *);
 static void	em_stop(void *);
-static void	em_media_status(struct ifnet *, struct ifmediareq *);
-static int	em_media_change(struct ifnet *);
+static void	em_media_status(if_t, struct ifmediareq *);
+static int	em_media_change(if_t);
 static void	em_identify_hardware(struct adapter *);
 static int	em_allocate_pci_resources(struct adapter *);
 static int	em_allocate_legacy(struct adapter *);
@@ -298,8 +299,8 @@ static void	em_disable_promisc(struct adapter *);
 static void	em_set_multi(struct adapter *);
 static void	em_update_link_status(struct adapter *);
 static void	em_refresh_mbufs(struct rx_ring *, int);
-static void	em_register_vlan(void *, struct ifnet *, u16);
-static void	em_unregister_vlan(void *, struct ifnet *, u16);
+static void	em_register_vlan(void *, if_t, u16);
+static void	em_unregister_vlan(void *, if_t, u16);
 static void	em_setup_vlan_hw_support(struct adapter *);
 static int	em_xmit(struct tx_ring *, struct mbuf **);
 static int	em_dma_malloc(struct adapter *, bus_size_t,
@@ -372,6 +373,9 @@ devclass_t em_devclass;
 DRIVER_MODULE(em, pci, em_driver, em_devclass, 0, 0);
 MODULE_DEPEND(em, pci, 1, 1, 1);
 MODULE_DEPEND(em, ether, 1, 1, 1);
+#ifdef DEV_NETMAP
+MODULE_DEPEND(em, netmap, 1, 1, 1);
+#endif /* DEV_NETMAP */
 
 /*********************************************************************
  *  Tunable default values.
@@ -394,8 +398,6 @@ SYSCTL_INT(_hw_em, OID_AUTO, disable_crc_stripping, CTLFLAG_RDTUN,
 
 static int em_tx_int_delay_dflt = EM_TICKS_TO_USECS(EM_TIDV);
 static int em_rx_int_delay_dflt = EM_TICKS_TO_USECS(EM_RDTR);
-TUNABLE_INT("hw.em.tx_int_delay", &em_tx_int_delay_dflt);
-TUNABLE_INT("hw.em.rx_int_delay", &em_rx_int_delay_dflt);
 SYSCTL_INT(_hw_em, OID_AUTO, tx_int_delay, CTLFLAG_RDTUN, &em_tx_int_delay_dflt,
     0, "Default transmit interrupt delay in usecs");
 SYSCTL_INT(_hw_em, OID_AUTO, rx_int_delay, CTLFLAG_RDTUN, &em_rx_int_delay_dflt,
@@ -403,8 +405,6 @@ SYSCTL_INT(_hw_em, OID_AUTO, rx_int_delay, CTLFLAG_RDTUN, &em_rx_int_delay_dflt,
 
 static int em_tx_abs_int_delay_dflt = EM_TICKS_TO_USECS(EM_TADV);
 static int em_rx_abs_int_delay_dflt = EM_TICKS_TO_USECS(EM_RADV);
-TUNABLE_INT("hw.em.tx_abs_int_delay", &em_tx_abs_int_delay_dflt);
-TUNABLE_INT("hw.em.rx_abs_int_delay", &em_rx_abs_int_delay_dflt);
 SYSCTL_INT(_hw_em, OID_AUTO, tx_abs_int_delay, CTLFLAG_RDTUN,
     &em_tx_abs_int_delay_dflt, 0,
     "Default transmit interrupt delay limit in usecs");
@@ -414,32 +414,26 @@ SYSCTL_INT(_hw_em, OID_AUTO, rx_abs_int_delay, CTLFLAG_RDTUN,
 
 static int em_rxd = EM_DEFAULT_RXD;
 static int em_txd = EM_DEFAULT_TXD;
-TUNABLE_INT("hw.em.rxd", &em_rxd);
-TUNABLE_INT("hw.em.txd", &em_txd);
 SYSCTL_INT(_hw_em, OID_AUTO, rxd, CTLFLAG_RDTUN, &em_rxd, 0,
     "Number of receive descriptors per queue");
 SYSCTL_INT(_hw_em, OID_AUTO, txd, CTLFLAG_RDTUN, &em_txd, 0,
     "Number of transmit descriptors per queue");
 
 static int em_smart_pwr_down = FALSE;
-TUNABLE_INT("hw.em.smart_pwr_down", &em_smart_pwr_down);
 SYSCTL_INT(_hw_em, OID_AUTO, smart_pwr_down, CTLFLAG_RDTUN, &em_smart_pwr_down,
     0, "Set to true to leave smart power down enabled on newer adapters");
 
 /* Controls whether promiscuous also shows bad packets */
 static int em_debug_sbp = FALSE;
-TUNABLE_INT("hw.em.sbp", &em_debug_sbp);
 SYSCTL_INT(_hw_em, OID_AUTO, sbp, CTLFLAG_RDTUN, &em_debug_sbp, 0,
     "Show bad packets in promiscuous mode");
 
 static int em_enable_msix = TRUE;
-TUNABLE_INT("hw.em.enable_msix", &em_enable_msix);
 SYSCTL_INT(_hw_em, OID_AUTO, enable_msix, CTLFLAG_RDTUN, &em_enable_msix, 0,
     "Enable MSI-X interrupts");
 
 #ifdef EM_MULTIQUEUE
 static int em_num_queues = 1;
-TUNABLE_INT("hw.em.num_queues", &em_num_queues);
 SYSCTL_INT(_hw_em, OID_AUTO, num_queues, CTLFLAG_RDTUN, &em_num_queues, 0,
     "82574 only: Number of queues to configure, 0 indicates autoconfigure");
 #endif
@@ -453,7 +447,6 @@ static int em_last_bind_cpu = -1;
 
 /* How many packets rxeof tries to clean at a time */
 static int em_rx_process_limit = 100;
-TUNABLE_INT("hw.em.rx_process_limit", &em_rx_process_limit);
 SYSCTL_INT(_hw_em, OID_AUTO, rx_process_limit, CTLFLAG_RDTUN,
     &em_rx_process_limit, 0,
     "Maximum number of received packets to process "
@@ -461,7 +454,6 @@ SYSCTL_INT(_hw_em, OID_AUTO, rx_process_limit, CTLFLAG_RDTUN,
 
 /* Energy efficient ethernet - default to OFF */
 static int eee_setting = 1;
-TUNABLE_INT("hw.em.eee_setting", &eee_setting);
 SYSCTL_INT(_hw_em, OID_AUTO, eee_setting, CTLFLAG_RDTUN, &eee_setting, 0,
     "Enable Energy Efficient Ethernet");
 
@@ -609,7 +601,7 @@ em_attach(device_t dev)
 	}
 	/*
 	** In the new SPT device flash is not  a
-	** seperate BAR, rather it is also in BAR0,
+	** separate BAR, rather it is also in BAR0,
 	** so use the same tag and an offset handle for the
 	** FLASH read/write macros in the shared code.
 	*/
@@ -820,8 +812,7 @@ em_attach(device_t dev)
 		em_get_hw_control(adapter);
 
 	/* Tell the stack that the interface is not active */
-	adapter->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	adapter->ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+	if_setdrvflagbits(adapter->ifp, IFF_DRV_OACTIVE, IFF_DRV_RUNNING);
 
 	adapter->led_dev = led_create(em_led_func, adapter,
 	    device_get_nameunit(dev));
@@ -837,7 +828,7 @@ err_late:
 	em_free_transmit_structures(adapter);
 	em_free_receive_structures(adapter);
 	em_release_hw_control(adapter);
-	if (adapter->ifp != NULL)
+	if (adapter->ifp != (void *)NULL)
 		if_free(adapter->ifp);
 err_pci:
 	em_free_pci_resources(adapter);
@@ -861,18 +852,18 @@ static int
 em_detach(device_t dev)
 {
 	struct adapter	*adapter = device_get_softc(dev);
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	INIT_DEBUGOUT("em_detach: begin");
 
 	/* Make sure VLANS are not using driver */
-	if (adapter->ifp->if_vlantrunk != NULL) {
+	if (if_vlantrunkinuse(ifp)) {
 		device_printf(dev,"Vlan in use, detach first\n");
 		return (EBUSY);
 	}
 
 #ifdef DEVICE_POLLING
-	if (ifp->if_capenable & IFCAP_POLLING)
+	if (if_getcapenable(ifp) & IFCAP_POLLING)
 		ether_poll_deregister(ifp);
 #endif
 
@@ -952,7 +943,7 @@ em_resume(device_t dev)
 {
 	struct adapter *adapter = device_get_softc(dev);
 	struct tx_ring	*txr = adapter->tx_rings;
-	struct ifnet *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	EM_CORE_LOCK(adapter);
 	if (adapter->hw.mac.type == e1000_pch2lan)
@@ -960,15 +951,15 @@ em_resume(device_t dev)
 	em_init_locked(adapter);
 	em_init_manageability(adapter);
 
-	if ((ifp->if_flags & IFF_UP) &&
-	    (ifp->if_drv_flags & IFF_DRV_RUNNING) && adapter->link_active) {
+	if ((if_getflags(ifp) & IFF_UP) &&
+	    (if_getdrvflags(ifp) & IFF_DRV_RUNNING) && adapter->link_active) {
 		for (int i = 0; i < adapter->num_queues; i++, txr++) {
 			EM_TX_LOCK(txr);
 #ifdef EM_MULTIQUEUE
 			if (!drbr_empty(ifp, txr->br))
 				em_mq_start_locked(ifp, txr);
 #else
-			if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+			if (!if_sendq_empty(ifp))
 				em_start_locked(ifp, txr);
 #endif
 			EM_TX_UNLOCK(txr);
@@ -982,29 +973,29 @@ em_resume(device_t dev)
 
 #ifndef EM_MULTIQUEUE
 static void
-em_start_locked(struct ifnet *ifp, struct tx_ring *txr)
+em_start_locked(if_t ifp, struct tx_ring *txr)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	struct mbuf	*m_head;
 
 	EM_TX_LOCK_ASSERT(txr);
 
-	if ((ifp->if_drv_flags & (IFF_DRV_RUNNING|IFF_DRV_OACTIVE)) !=
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING|IFF_DRV_OACTIVE)) !=
 	    IFF_DRV_RUNNING)
 		return;
 
 	if (!adapter->link_active)
 		return;
 
-	while (!IFQ_DRV_IS_EMPTY(&ifp->if_snd)) {
+	while (!if_sendq_empty(ifp)) {
         	/* Call cleanup if number of TX descriptors low */
 		if (txr->tx_avail <= EM_TX_CLEANUP_THRESHOLD)
 			em_txeof(txr);
 		if (txr->tx_avail < EM_MAX_SCATTER) {
-			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+			if_setdrvflagbits(ifp,IFF_DRV_OACTIVE, 0);
 			break;
 		}
-		IFQ_DRV_DEQUEUE(&ifp->if_snd, m_head);
+		m_head = if_dequeue(ifp);
 		if (m_head == NULL)
 			break;
 		/*
@@ -1014,7 +1005,7 @@ em_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 		if (em_xmit(txr, &m_head)) {
 			if (m_head == NULL)
 				break;
-			IFQ_DRV_PREPEND(&ifp->if_snd, m_head);
+			if_sendq_prepend(ifp, m_head);
 			break;
 		}
 
@@ -1031,12 +1022,12 @@ em_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 }
 
 static void
-em_start(struct ifnet *ifp)
+em_start(if_t ifp)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	struct tx_ring	*txr = adapter->tx_rings;
 
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+	if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 		EM_TX_LOCK(txr);
 		em_start_locked(ifp, txr);
 		EM_TX_UNLOCK(txr);
@@ -1056,9 +1047,9 @@ em_start(struct ifnet *ifp)
 ** Multiqueue capable stack interface
 */
 static int
-em_mq_start(struct ifnet *ifp, struct mbuf *m)
+em_mq_start(if_t ifp, struct mbuf *m)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	struct tx_ring	*txr = adapter->tx_rings;
 	unsigned int	i, error;
 
@@ -1083,14 +1074,16 @@ em_mq_start(struct ifnet *ifp, struct mbuf *m)
 }
 
 static int
-em_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr)
+em_mq_start_locked(if_t ifp, struct tx_ring *txr)
 {
 	struct adapter  *adapter = txr->adapter;
         struct mbuf     *next;
         int             err = 0, enq = 0;
 
-	if ((ifp->if_drv_flags & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
-	    IFF_DRV_RUNNING || adapter->link_active == 0) {
+	EM_TX_LOCK_ASSERT(txr);
+
+	if (((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0) ||
+	    adapter->link_active == 0) {
 		return (ENETDOWN);
 	}
 
@@ -1112,11 +1105,11 @@ em_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 		}
 		drbr_advance(ifp, txr->br);
 		enq++;
-		ifp->if_obytes += next->m_pkthdr.len;
+		if_inc_counter(ifp, IFCOUNTER_OBYTES, next->m_pkthdr.len);
 		if (next->m_flags & M_MCAST)
-			ifp->if_omcasts++;
+			if_inc_counter(ifp, IFCOUNTER_OMCASTS, 1);
 		ETHER_BPF_MTAP(ifp, next);
-		if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
+		if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0)
                         break;
 	}
 
@@ -1127,7 +1120,7 @@ em_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 	if (txr->tx_avail < EM_MAX_SCATTER)
 		em_txeof(txr);
 	if (txr->tx_avail < EM_MAX_SCATTER) {
-		ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+		if_setdrvflagbits(ifp, IFF_DRV_OACTIVE,0);
 	}
 	return (err);
 }
@@ -1136,9 +1129,9 @@ em_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 ** Flush all ring buffers
 */
 static void
-em_qflush(struct ifnet *ifp)
+em_qflush(if_t ifp)
 {
-	struct adapter  *adapter = ifp->if_softc;
+	struct adapter  *adapter = if_getsoftc(ifp);
 	struct tx_ring  *txr = adapter->tx_rings;
 	struct mbuf     *m;
 
@@ -1162,9 +1155,9 @@ em_qflush(struct ifnet *ifp)
  **********************************************************************/
 
 static int
-em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
+em_ioctl(if_t ifp, u_long command, caddr_t data)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	struct ifreq	*ifr = (struct ifreq *)data;
 #if defined(INET) || defined(INET6)
 	struct ifaddr	*ifa = (struct ifaddr *)data;
@@ -1190,11 +1183,11 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		** so we avoid doing it when possible.
 		*/
 		if (avoid_reset) {
-			ifp->if_flags |= IFF_UP;
-			if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
+			if_setflagbits(ifp,IFF_UP,0);
+			if (!(if_getdrvflags(ifp)& IFF_DRV_RUNNING))
 				em_init(adapter);
 #ifdef INET
-			if (!(ifp->if_flags & IFF_NOARP))
+			if (!(if_getflags(ifp) & IFF_NOARP))
 				arp_ifinit(ifp, ifa);
 #endif
 		} else
@@ -1238,10 +1231,10 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			break;
 		}
 
-		ifp->if_mtu = ifr->ifr_mtu;
+		if_setmtu(ifp, ifr->ifr_mtu);
 		adapter->hw.mac.max_frame_size =
-		    ifp->if_mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
-		if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+		    if_getmtu(ifp) + ETHER_HDR_LEN + ETHER_CRC_LEN;
+		if (if_getdrvflags(ifp) & IFF_DRV_RUNNING)
 			em_init_locked(adapter);
 		EM_CORE_UNLOCK(adapter);
 		break;
@@ -1250,9 +1243,9 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		IOCTL_DEBUGOUT("ioctl rcv'd:\
 		    SIOCSIFFLAGS (Set Interface Flags)");
 		EM_CORE_LOCK(adapter);
-		if (ifp->if_flags & IFF_UP) {
-			if ((ifp->if_drv_flags & IFF_DRV_RUNNING)) {
-				if ((ifp->if_flags ^ adapter->if_flags) &
+		if (if_getflags(ifp) & IFF_UP) {
+			if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
+				if ((if_getflags(ifp) ^ adapter->if_flags) &
 				    (IFF_PROMISC | IFF_ALLMULTI)) {
 					em_disable_promisc(adapter);
 					em_set_promisc(adapter);
@@ -1260,20 +1253,20 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			} else
 				em_init_locked(adapter);
 		} else
-			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+			if (if_getdrvflags(ifp) & IFF_DRV_RUNNING)
 				em_stop(adapter);
-		adapter->if_flags = ifp->if_flags;
+		adapter->if_flags = if_getflags(ifp);
 		EM_CORE_UNLOCK(adapter);
 		break;
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		IOCTL_DEBUGOUT("ioctl rcv'd: SIOC(ADD|DEL)MULTI");
-		if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+		if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 			EM_CORE_LOCK(adapter);
 			em_disable_intr(adapter);
 			em_set_multi(adapter);
 #ifdef DEVICE_POLLING
-			if (!(ifp->if_capenable & IFCAP_POLLING))
+			if (!(if_getcapenable(ifp) & IFCAP_POLLING))
 #endif
 				em_enable_intr(adapter);
 			EM_CORE_UNLOCK(adapter);
@@ -1301,7 +1294,7 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 		IOCTL_DEBUGOUT("ioctl rcv'd: SIOCSIFCAP (Set Capabilities)");
 		reinit = 0;
-		mask = ifr->ifr_reqcap ^ ifp->if_capenable;
+		mask = ifr->ifr_reqcap ^ if_getcapenable(ifp);
 #ifdef DEVICE_POLLING
 		if (mask & IFCAP_POLLING) {
 			if (ifr->ifr_reqcap & IFCAP_POLLING) {
@@ -1310,48 +1303,48 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 					return (error);
 				EM_CORE_LOCK(adapter);
 				em_disable_intr(adapter);
-				ifp->if_capenable |= IFCAP_POLLING;
+				if_setcapenablebit(ifp, IFCAP_POLLING, 0);
 				EM_CORE_UNLOCK(adapter);
 			} else {
 				error = ether_poll_deregister(ifp);
 				/* Enable interrupt even in error case */
 				EM_CORE_LOCK(adapter);
 				em_enable_intr(adapter);
-				ifp->if_capenable &= ~IFCAP_POLLING;
+				if_setcapenablebit(ifp, 0, IFCAP_POLLING);
 				EM_CORE_UNLOCK(adapter);
 			}
 		}
 #endif
 		if (mask & IFCAP_HWCSUM) {
-			ifp->if_capenable ^= IFCAP_HWCSUM;
+			if_togglecapenable(ifp,IFCAP_HWCSUM);
 			reinit = 1;
 		}
 		if (mask & IFCAP_TSO4) {
-			ifp->if_capenable ^= IFCAP_TSO4;
+			if_togglecapenable(ifp,IFCAP_TSO4);
 			reinit = 1;
 		}
 		if (mask & IFCAP_VLAN_HWTAGGING) {
-			ifp->if_capenable ^= IFCAP_VLAN_HWTAGGING;
+			if_togglecapenable(ifp,IFCAP_VLAN_HWTAGGING);
 			reinit = 1;
 		}
 		if (mask & IFCAP_VLAN_HWFILTER) {
-			ifp->if_capenable ^= IFCAP_VLAN_HWFILTER;
+			if_togglecapenable(ifp, IFCAP_VLAN_HWFILTER);
 			reinit = 1;
 		}
 		if (mask & IFCAP_VLAN_HWTSO) {
-			ifp->if_capenable ^= IFCAP_VLAN_HWTSO;
+			if_togglecapenable(ifp, IFCAP_VLAN_HWTSO);
 			reinit = 1;
 		}
 		if ((mask & IFCAP_WOL) &&
-		    (ifp->if_capabilities & IFCAP_WOL) != 0) {
+		    (if_getcapabilities(ifp) & IFCAP_WOL) != 0) {
 			if (mask & IFCAP_WOL_MCAST)
-				ifp->if_capenable ^= IFCAP_WOL_MCAST;
+				if_togglecapenable(ifp, IFCAP_WOL_MCAST);
 			if (mask & IFCAP_WOL_MAGIC)
-				ifp->if_capenable ^= IFCAP_WOL_MAGIC;
+				if_togglecapenable(ifp, IFCAP_WOL_MAGIC);
 		}
-		if (reinit && (ifp->if_drv_flags & IFF_DRV_RUNNING))
+		if (reinit && (if_getdrvflags(ifp) & IFF_DRV_RUNNING))
 			em_init(adapter);
-		VLAN_CAPABILITIES(ifp);
+		if_vlancap(ifp);
 		break;
 	    }
 
@@ -1378,7 +1371,7 @@ em_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 static void
 em_init_locked(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	device_t	dev = adapter->dev;
 
 	INIT_DEBUGOUT("em_init: begin");
@@ -1389,7 +1382,7 @@ em_init_locked(struct adapter *adapter)
 	callout_stop(&adapter->timer);
 
 	/* Get the latest mac address, User can use a LAA */
-        bcopy(IF_LLADDR(adapter->ifp), adapter->hw.mac.addr,
+        bcopy(if_getlladdr(adapter->ifp), adapter->hw.mac.addr,
               ETHER_ADDR_LEN);
 
 	/* Put the address into the Receive Address Array */
@@ -1415,10 +1408,10 @@ em_init_locked(struct adapter *adapter)
 	E1000_WRITE_REG(&adapter->hw, E1000_VET, ETHERTYPE_VLAN);
 
 	/* Set hardware offload abilities */
-	if (ifp->if_capenable & IFCAP_TXCSUM)
-		ifp->if_hwassist |= (CSUM_TCP | CSUM_UDP);
+	if (if_getcapenable(ifp) & IFCAP_TXCSUM)
+		if_sethwassistbits(ifp, CSUM_TCP | CSUM_UDP, 0);
 	else
-		ifp->if_hwassist &= ~(CSUM_TCP | CSUM_UDP);
+		if_sethwassistbits(ifp, 0, CSUM_TCP | CSUM_UDP);
 
 	/* Configure for OS presence */
 	em_init_manageability(adapter);
@@ -1436,15 +1429,8 @@ em_init_locked(struct adapter *adapter)
 	*/
 	if (adapter->hw.mac.max_frame_size <= 2048)
 		adapter->rx_mbuf_sz = MCLBYTES;
-#ifndef CONTIGMALLOC_WORKS
        else
                adapter->rx_mbuf_sz = MJUMPAGESIZE;
-#else
-	else if (adapter->hw.mac.max_frame_size <= 4096)
-		adapter->rx_mbuf_sz = MJUMPAGESIZE;
-	else
-		adapter->rx_mbuf_sz = MJUM9BYTES;
-#endif
 
 	/* Prepare receive descriptors and buffers */
 	if (em_setup_receive_structures(adapter)) {
@@ -1455,8 +1441,8 @@ em_init_locked(struct adapter *adapter)
 	em_initialize_receive_unit(adapter);
 
 	/* Use real VLAN Filter support? */
-	if (ifp->if_capenable & IFCAP_VLAN_HWTAGGING) {
-		if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
+	if (if_getcapenable(ifp) & IFCAP_VLAN_HWTAGGING) {
+		if (if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER)
 			/* Use real VLAN Filter support */
 			em_setup_vlan_hw_support(adapter);
 		else {
@@ -1471,8 +1457,7 @@ em_init_locked(struct adapter *adapter)
 	em_set_promisc(adapter);
 
 	/* Set the interface as ACTIVE */
-	ifp->if_drv_flags |= IFF_DRV_RUNNING;
-	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+	if_setdrvflagbits(ifp, IFF_DRV_RUNNING, IFF_DRV_OACTIVE);
 
 	callout_reset(&adapter->timer, hz, em_local_timer, adapter);
 	e1000_clear_hw_cntrs_base_generic(&adapter->hw);
@@ -1492,7 +1477,7 @@ em_init_locked(struct adapter *adapter)
 	 * Only enable interrupts if we are not polling, make sure
 	 * they are off otherwise.
 	 */
-	if (ifp->if_capenable & IFCAP_POLLING)
+	if (if_getcapenable(ifp) & IFCAP_POLLING)
 		em_disable_intr(adapter);
 	else
 #endif /* DEVICE_POLLING */
@@ -1521,16 +1506,16 @@ em_init(void *arg)
  *
  *********************************************************************/
 static int
-em_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
+em_poll(if_t ifp, enum poll_cmd cmd, int count)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 	struct tx_ring	*txr = adapter->tx_rings;
 	struct rx_ring	*rxr = adapter->rx_rings;
 	u32		reg_icr;
 	int		rx_done;
 
 	EM_CORE_LOCK(adapter);
-	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
+	if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0) {
 		EM_CORE_UNLOCK(adapter);
 		return (0);
 	}
@@ -1555,7 +1540,7 @@ em_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 	if (!drbr_empty(ifp, txr->br))
 		em_mq_start_locked(ifp, txr);
 #else
-	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+	if (!if_sendq_empty(ifp))
 		em_start_locked(ifp, txr);
 #endif
 	EM_TX_UNLOCK(txr);
@@ -1574,7 +1559,7 @@ static int
 em_irq_fast(void *arg)
 {
 	struct adapter	*adapter = arg;
-	struct ifnet	*ifp;
+	if_t ifp;
 	u32		reg_icr;
 
 	ifp = adapter->ifp;
@@ -1616,11 +1601,11 @@ static void
 em_handle_que(void *context, int pending)
 {
 	struct adapter	*adapter = context;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct tx_ring	*txr = adapter->tx_rings;
 	struct rx_ring	*rxr = adapter->rx_rings;
 
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+	if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 		bool more = em_rxeof(rxr, adapter->rx_process_limit, NULL);
 
 		EM_TX_LOCK(txr);
@@ -1629,7 +1614,7 @@ em_handle_que(void *context, int pending)
 		if (!drbr_empty(ifp, txr->br))
 			em_mq_start_locked(ifp, txr);
 #else
-		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+		if (!if_sendq_empty(ifp))
 			em_start_locked(ifp, txr);
 #endif
 		EM_TX_UNLOCK(txr);
@@ -1654,7 +1639,7 @@ em_msix_tx(void *arg)
 {
 	struct tx_ring *txr = arg;
 	struct adapter *adapter = txr->adapter;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	++txr->tx_irq;
 	EM_TX_LOCK(txr);
@@ -1663,7 +1648,7 @@ em_msix_tx(void *arg)
 	if (!drbr_empty(ifp, txr->br))
 		em_mq_start_locked(ifp, txr);
 #else
-	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+	if (!if_sendq_empty(ifp))
 		em_start_locked(ifp, txr);
 #endif
 
@@ -1687,7 +1672,7 @@ em_msix_rx(void *arg)
 	bool		more;
 
 	++rxr->rx_irq;
-	if (!(adapter->ifp->if_drv_flags & IFF_DRV_RUNNING))
+	if (!(if_getdrvflags(adapter->ifp) & IFF_DRV_RUNNING))
 		return;
 	more = em_rxeof(rxr, adapter->rx_process_limit, NULL);
 	if (more)
@@ -1756,7 +1741,7 @@ em_handle_tx(void *context, int pending)
 {
 	struct tx_ring	*txr = context;
 	struct adapter	*adapter = txr->adapter;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	EM_TX_LOCK(txr);
 	em_txeof(txr);
@@ -1764,7 +1749,7 @@ em_handle_tx(void *context, int pending)
 	if (!drbr_empty(ifp, txr->br))
 		em_mq_start_locked(ifp, txr);
 #else
-	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+	if (!if_sendq_empty(ifp))
 		em_start_locked(ifp, txr);
 #endif
 	E1000_WRITE_REG(&adapter->hw, E1000_IMS, txr->ims);
@@ -1775,18 +1760,19 @@ static void
 em_handle_link(void *context, int pending)
 {
 	struct adapter	*adapter = context;
+	struct e1000_hw *hw = &adapter->hw;
 	struct tx_ring	*txr = adapter->tx_rings;
-	struct ifnet *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
-	if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
+	if (!(if_getdrvflags(ifp) & IFF_DRV_RUNNING))
 		return;
 
 	EM_CORE_LOCK(adapter);
 	callout_stop(&adapter->timer);
 	em_update_link_status(adapter);
 	callout_reset(&adapter->timer, hz, em_local_timer, adapter);
-	E1000_WRITE_REG(&adapter->hw, E1000_IMS,
-	    EM_MSIX_LINK | E1000_IMS_LSC);
+	if (hw->mac.type == e1000_82574 && adapter->msix_mem != NULL)
+		E1000_WRITE_REG(hw, E1000_IMS, EM_MSIX_LINK | E1000_IMS_LSC);
 	if (adapter->link_active) {
 		for (int i = 0; i < adapter->num_queues; i++, txr++) {
 			EM_TX_LOCK(txr);
@@ -1794,7 +1780,7 @@ em_handle_link(void *context, int pending)
 			if (!drbr_empty(ifp, txr->br))
 				em_mq_start_locked(ifp, txr);
 #else
-			if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+			if (if_sendq_empty(ifp))
 				em_start_locked(ifp, txr);
 #endif
 			EM_TX_UNLOCK(txr);
@@ -1813,9 +1799,9 @@ em_handle_link(void *context, int pending)
  *
  **********************************************************************/
 static void
-em_media_status(struct ifnet *ifp, struct ifmediareq *ifmr)
+em_media_status(if_t ifp, struct ifmediareq *ifmr)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 	u_char fiber_type = IFM_1000_SX;
 
 	INIT_DEBUGOUT("em_media_status: begin");
@@ -1865,9 +1851,9 @@ em_media_status(struct ifnet *ifp, struct ifmediareq *ifmr)
  *
  **********************************************************************/
 static int
-em_media_change(struct ifnet *ifp)
+em_media_change(if_t ifp)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 	struct ifmedia  *ifm = &adapter->media;
 
 	INIT_DEBUGOUT("em_media_change: begin");
@@ -1955,7 +1941,7 @@ em_xmit(struct tx_ring *txr, struct mbuf **m_headp)
 	 * so we firstly get a writable mbuf chain then coalesce ethernet/
 	 * IP/TCP header into a single buffer to meet the requirement of
 	 * controller. This also simplifies IP/TCP/UDP checksum offloading
-	 * which also has similiar restrictions.
+	 * which also has similar restrictions.
 	 */
 	if (do_tso || m_head->m_pkthdr.csum_flags & CSUM_OFFLOAD) {
 		if (do_tso || (m_head->m_next != NULL && 
@@ -2137,8 +2123,7 @@ retry:
 
 	if (m_head->m_flags & M_VLANTAG) {
 		/* Set the vlan id. */
-		txd_upper |=
-		    (htole16(m_head->m_pkthdr.ether_vtag) << 16);
+		txd_upper |= htole16(if_getvtag(m_head)) << 16;
                 /* Tell hardware to add tag */
                 txd_lower |= htole32(E1000_TXD_CMD_VLE);
         }
@@ -2236,18 +2221,18 @@ retry:
 static void
 em_set_promisc(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	u32		reg_rctl;
 
 	reg_rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
 
-	if (ifp->if_flags & IFF_PROMISC) {
+	if (if_getflags(ifp) & IFF_PROMISC) {
 		reg_rctl |= (E1000_RCTL_UPE | E1000_RCTL_MPE);
 		/* Turn this on if you want to see bad packets */
 		if (em_debug_sbp)
 			reg_rctl |= E1000_RCTL_SBP;
 		E1000_WRITE_REG(&adapter->hw, E1000_RCTL, reg_rctl);
-	} else if (ifp->if_flags & IFF_ALLMULTI) {
+	} else if (if_getflags(ifp) & IFF_ALLMULTI) {
 		reg_rctl |= E1000_RCTL_MPE;
 		reg_rctl &= ~E1000_RCTL_UPE;
 		E1000_WRITE_REG(&adapter->hw, E1000_RCTL, reg_rctl);
@@ -2257,34 +2242,16 @@ em_set_promisc(struct adapter *adapter)
 static void
 em_disable_promisc(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t		ifp = adapter->ifp;
 	u32		reg_rctl;
 	int		mcnt = 0;
 
 	reg_rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
 	reg_rctl &=  (~E1000_RCTL_UPE);
-	if (ifp->if_flags & IFF_ALLMULTI)
+	if (if_getflags(ifp) & IFF_ALLMULTI)
 		mcnt = MAX_NUM_MULTICAST_ADDRESSES;
-	else {
-		struct  ifmultiaddr *ifma;
-#if __FreeBSD_version < 800000
-		IF_ADDR_LOCK(ifp);
-#else   
-		if_maddr_rlock(ifp);
-#endif
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			if (mcnt == MAX_NUM_MULTICAST_ADDRESSES)
-				break;
-			mcnt++;
-		}
-#if __FreeBSD_version < 800000
-		IF_ADDR_UNLOCK(ifp);
-#else
-		if_maddr_runlock(ifp);
-#endif
-	}
+	else
+		mcnt = if_multiaddr_count(ifp, MAX_NUM_MULTICAST_ADDRESSES);
 	/* Don't disable if in MAX groups */
 	if (mcnt < MAX_NUM_MULTICAST_ADDRESSES)
 		reg_rctl &=  (~E1000_RCTL_MPE);
@@ -2303,8 +2270,7 @@ em_disable_promisc(struct adapter *adapter)
 static void
 em_set_multi(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
-	struct ifmultiaddr *ifma;
+	if_t ifp = adapter->ifp;
 	u32 reg_rctl = 0;
 	u8  *mta; /* Multicast array memory */
 	int mcnt = 0;
@@ -2324,27 +2290,8 @@ em_set_multi(struct adapter *adapter)
 		msec_delay(5);
 	}
 
-#if __FreeBSD_version < 800000
-	IF_ADDR_LOCK(ifp);
-#else
-	if_maddr_rlock(ifp);
-#endif
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
+	if_multiaddr_array(ifp, mta, &mcnt, MAX_NUM_MULTICAST_ADDRESSES);
 
-		if (mcnt == MAX_NUM_MULTICAST_ADDRESSES)
-			break;
-
-		bcopy(LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
-		    &mta[mcnt * ETH_ADDR_LEN], ETH_ADDR_LEN);
-		mcnt++;
-	}
-#if __FreeBSD_version < 800000
-	IF_ADDR_UNLOCK(ifp);
-#else
-	if_maddr_runlock(ifp);
-#endif
 	if (mcnt >= MAX_NUM_MULTICAST_ADDRESSES) {
 		reg_rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
 		reg_rctl |= E1000_RCTL_MPE;
@@ -2375,7 +2322,7 @@ static void
 em_local_timer(void *arg)
 {
 	struct adapter	*adapter = arg;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct tx_ring	*txr = adapter->tx_rings;
 	struct rx_ring	*rxr = adapter->rx_rings;
 	u32		trigger = 0;
@@ -2424,7 +2371,7 @@ hung:
 	device_printf(adapter->dev, "Watchdog timeout Queue[%d]-- resetting\n",
 			txr->me);
 	em_print_debug_info(adapter);
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	if_setdrvflagbits(ifp, 0, IFF_DRV_RUNNING);
 	adapter->watchdog_events++;
 	em_init_locked(adapter);
 }
@@ -2434,7 +2381,7 @@ static void
 em_update_link_status(struct adapter *adapter)
 {
 	struct e1000_hw *hw = &adapter->hw;
-	struct ifnet *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	device_t dev = adapter->dev;
 	struct tx_ring *txr = adapter->tx_rings;
 	u32 link_check = 0;
@@ -2477,11 +2424,11 @@ em_update_link_status(struct adapter *adapter)
 		** gigabit speed, so disable the assist automatically when at
 		** lower speeds.  -jfv
 		*/
-		if (ifp->if_capenable & IFCAP_TSO4) {
+		if (if_getcapenable(ifp) & IFCAP_TSO4) {
 			if (adapter->link_speed == SPEED_1000)
-				ifp->if_hwassist |= CSUM_IP_TSO;
+				if_sethwassistbits(ifp, CSUM_IP_TSO, 0);
 			else
-				ifp->if_hwassist &= ~CSUM_IP_TSO;
+				if_sethwassistbits(ifp, 0, CSUM_IP_TSO);
 		}
 
 		/* Check if we must disable SPEED_MODE bit on PCI-E */
@@ -2500,10 +2447,11 @@ em_update_link_status(struct adapter *adapter)
 			    "Full Duplex" : "Half Duplex"));
 		adapter->link_active = 1;
 		adapter->smartspeed = 0;
-		ifp->if_baudrate = adapter->link_speed * 1000000;
+		if_setbaudrate(ifp, adapter->link_speed * 1000000);
 		if_link_state_change(ifp, LINK_STATE_UP);
 	} else if (!link_check && (adapter->link_active == 1)) {
-		ifp->if_baudrate = adapter->link_speed = 0;
+		if_setbaudrate(ifp, 0);
+		adapter->link_speed = 0;
 		adapter->link_duplex = 0;
 		if (bootverbose)
 			device_printf(dev, "Link is Down\n");
@@ -2528,7 +2476,7 @@ static void
 em_stop(void *arg)
 {
 	struct adapter	*adapter = arg;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct tx_ring	*txr = adapter->tx_rings;
 
 	EM_CORE_LOCK_ASSERT(adapter);
@@ -2539,8 +2487,7 @@ em_stop(void *arg)
 	callout_stop(&adapter->timer);
 
 	/* Tell the stack that the interface is no longer active */
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+	if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, IFF_DRV_RUNNING);
 
         /* Disarm Hang Detection. */
 	for (int i = 0; i < adapter->num_queues; i++, txr++) {
@@ -2673,7 +2620,7 @@ em_allocate_legacy(struct adapter *adapter)
  *
  *  Setup the MSIX Interrupt handlers
  *   This is not really Multiqueue, rather
- *   its just seperate interrupt vectors
+ *   its just separate interrupt vectors
  *   for TX, RX, and Link.
  *
  **********************************************************************/
@@ -3092,7 +3039,7 @@ static void
 em_reset(struct adapter *adapter)
 {
 	device_t	dev = adapter->dev;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct e1000_hw	*hw = &adapter->hw;
 	u16		rx_buffer_size;
 	u32		pba;
@@ -3162,7 +3109,7 @@ em_reset(struct adapter *adapter)
 	 *   received after sending an XOFF.
 	 * - Low water mark works best when it is very near the high water mark.
 	 *   This allows the receiver to restart by sending XON when it has
-	 *   drained a bit. Here we use an arbitary value of 1500 which will
+	 *   drained a bit. Here we use an arbitrary value of 1500 which will
 	 *   restart after one full frame is pulled from the buffer. There
 	 *   could be several smaller frames in the buffer and if so they will
 	 *   not trigger the XON until their total number reduces the buffer
@@ -3192,7 +3139,7 @@ em_reset(struct adapter *adapter)
 		/* Workaround: no TX flow ctrl for PCH */
                 hw->fc.requested_mode = e1000_fc_rx_pause;
 		hw->fc.pause_time = 0xFFFF; /* override */
-		if (ifp->if_mtu > ETHERMTU) {
+		if (if_getmtu(ifp) > ETHERMTU) {
 			hw->fc.high_water = 0x3500;
 			hw->fc.low_water = 0x1500;
 		} else {
@@ -3210,14 +3157,14 @@ em_reset(struct adapter *adapter)
 		hw->fc.pause_time = 0x0650;
 		hw->fc.refresh_time = 0x0400;
 		/* Jumbos need adjusted PBA */
-		if (ifp->if_mtu > ETHERMTU)
+		if (if_getmtu(ifp) > ETHERMTU)
 			E1000_WRITE_REG(hw, E1000_PBA, 12);
 		else
 			E1000_WRITE_REG(hw, E1000_PBA, 26);
 		break;
         case e1000_ich9lan:
         case e1000_ich10lan:
-		if (ifp->if_mtu > ETHERMTU) {
+		if (if_getmtu(ifp) > ETHERMTU) {
 			hw->fc.high_water = 0x2800;
 			hw->fc.low_water = hw->fc.high_water - 8;
 			break;
@@ -3257,20 +3204,22 @@ em_reset(struct adapter *adapter)
 static int
 em_setup_interface(device_t dev, struct adapter *adapter)
 {
-	struct ifnet   *ifp;
+	if_t ifp;
 
 	INIT_DEBUGOUT("em_setup_interface: begin");
 
-	ifp = adapter->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
+	ifp = adapter->ifp = if_gethandle(IFT_ETHER);
+	if (ifp == 0) {
 		device_printf(dev, "can not allocate ifnet structure\n");
 		return (-1);
 	}
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_init =  em_init;
-	ifp->if_softc = adapter;
-	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
-	ifp->if_ioctl = em_ioctl;
+	if_setdev(ifp, dev);
+	if_setinitfn(ifp, em_init);
+	if_setsoftc(ifp, adapter);
+	if_setflags(ifp, IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
+	if_setioctlfn(ifp, em_ioctl);
+	if_setgetcounterfn(ifp, em_get_counter);
 
 	/* TSO parameters */
 	ifp->if_hw_tsomax = IP_MAXPACKET;
@@ -3280,30 +3229,27 @@ em_setup_interface(device_t dev, struct adapter *adapter)
 
 #ifdef EM_MULTIQUEUE
 	/* Multiqueue stack interface */
-	ifp->if_transmit = em_mq_start;
-	ifp->if_qflush = em_qflush;
+	if_settransmitfn(ifp, em_mq_start);
+	if_setqflushfn(ifp, em_qflush);
 #else
-	ifp->if_start = em_start;
-	IFQ_SET_MAXLEN(&ifp->if_snd, adapter->num_tx_desc - 1);
-	ifp->if_snd.ifq_drv_maxlen = adapter->num_tx_desc - 1;
-	IFQ_SET_READY(&ifp->if_snd);
+	if_setstartfn(ifp, em_start);
+	if_setsendqlen(ifp, adapter->num_tx_desc - 1);
+	if_setsendqready(ifp);
 #endif	
 
 	ether_ifattach(ifp, adapter->hw.mac.addr);
 
-	ifp->if_capabilities = IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM;
-	ifp->if_capenable = ifp->if_capabilities;
+	if_setcapabilities(ifp, IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM);
+	if_setcapenable(ifp, if_getcapabilities(ifp));
 
 	/*
 	 * Tell the upper layer(s) we
 	 * support full VLAN capability
 	 */
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
-	ifp->if_capabilities |= IFCAP_VLAN_HWTAGGING
-			     |  IFCAP_VLAN_HWTSO
-			     |  IFCAP_VLAN_MTU;
-	ifp->if_capenable |= IFCAP_VLAN_HWTAGGING
-			  |  IFCAP_VLAN_MTU;
+	if_setifheaderlen(ifp, sizeof(struct ether_vlan_header));
+	if_setcapabilitiesbit(ifp, IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_HWTSO |
+	    IFCAP_VLAN_MTU, 0);
+	if_setcapenablebit(ifp, IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU, 0);
 
 	/*
 	 * We don't enable IFCAP_{TSO4,VLAN_HWTSO} by default because:
@@ -3321,7 +3267,7 @@ em_setup_interface(device_t dev, struct adapter *adapter)
 	 * - Despite all the workarounds for TSO-related silicon bugs, at
 	 *   least 82579 still may hang at gigabit speed with IFCAP_TSO4.
 	 */
-	ifp->if_capabilities |= IFCAP_TSO4 | IFCAP_VLAN_HWTSO;
+	if_setcapabilitiesbit(ifp, IFCAP_TSO4 | IFCAP_VLAN_HWTSO, 0);
 
 	/*
 	** Don't turn this on by default, if vlans are
@@ -3331,16 +3277,16 @@ em_setup_interface(device_t dev, struct adapter *adapter)
 	** using vlans directly on the em driver you can
 	** enable this and get full hardware tag filtering.
 	*/
-	ifp->if_capabilities |= IFCAP_VLAN_HWFILTER;
+	if_setcapabilitiesbit(ifp, IFCAP_VLAN_HWFILTER,0);
 
 #ifdef DEVICE_POLLING
-	ifp->if_capabilities |= IFCAP_POLLING;
+	if_setcapabilitiesbit(ifp, IFCAP_POLLING,0);
 #endif
 
 	/* Enable only WOL MAGIC by default */
 	if (adapter->wol) {
-		ifp->if_capabilities |= IFCAP_WOL;
-		ifp->if_capenable |= IFCAP_WOL_MAGIC;
+		if_setcapabilitiesbit(ifp, IFCAP_WOL, 0);
+		if_setcapenablebit(ifp, IFCAP_WOL_MAGIC, 0);
 	}
 		
 	/*
@@ -3664,8 +3610,8 @@ em_setup_transmit_ring(struct tx_ring *txr)
 	struct em_txbuffer *txbuf;
 	int i;
 #ifdef DEV_NETMAP
-	struct netmap_adapter *na = NA(adapter->ifp);
 	struct netmap_slot *slot;
+	struct netmap_adapter *na = netmap_getna(adapter->ifp);
 #endif /* DEV_NETMAP */
 
 	/* Clear the old descriptor contents */
@@ -3692,7 +3638,7 @@ em_setup_transmit_ring(struct tx_ring *txr)
 		}
 #ifdef DEV_NETMAP
 		if (slot) {
-			int si = netmap_idx_n2k(&na->tx_rings[txr->me], i);
+			int si = netmap_idx_n2k(na->tx_rings[txr->me], i);
 			uint64_t paddr;
 			void *addr;
 
@@ -4194,7 +4140,7 @@ em_txeof(struct tx_ring *txr)
         int first, last, done, processed;
         struct em_txbuffer *tx_buffer;
         struct e1000_tx_desc   *tx_desc, *eop_desc;
-	struct ifnet   *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	EM_TX_LOCK_ASSERT(txr);
 #ifdef DEV_NETMAP
@@ -4254,7 +4200,7 @@ em_txeof(struct tx_ring *txr)
 	                tx_buffer = &txr->tx_buffers[first];
 			tx_desc = &txr->tx_base[first];
 		}
-		++ifp->if_opackets;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		/* See if we can continue to the next packet */
 		last = tx_buffer->next_eop;
 		if (last != -1) {
@@ -4290,7 +4236,7 @@ em_txeof(struct tx_ring *txr)
 	 * sanity.
          */
         if (txr->tx_avail >= EM_MAX_SCATTER) {
-		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+		if_setdrvflagbits(ifp, 0, IFF_DRV_OACTIVE);
 	}
 
 	/* Disable hang detection if all clean */
@@ -4451,8 +4397,8 @@ em_setup_receive_ring(struct rx_ring *rxr)
 	bus_dma_segment_t	seg[1];
 	int			rsize, nsegs, error = 0;
 #ifdef DEV_NETMAP
-	struct netmap_adapter *na = NA(adapter->ifp);
 	struct netmap_slot *slot;
+	struct netmap_adapter *na = netmap_getna(adapter->ifp);
 #endif
 
 
@@ -4462,7 +4408,7 @@ em_setup_receive_ring(struct rx_ring *rxr)
 	    sizeof(union e1000_rx_desc_extended), EM_DBA_ALIGN);
 	bzero((void *)rxr->rx_base, rsize);
 #ifdef DEV_NETMAP
-	slot = netmap_reset(na, NR_RX, 0, 0);
+	slot = netmap_reset(na, NR_RX, rxr->me, 0);
 #endif
 
 	/*
@@ -4484,7 +4430,7 @@ em_setup_receive_ring(struct rx_ring *rxr)
 		rxbuf = &rxr->rx_buffers[j];
 #ifdef DEV_NETMAP
 		if (slot) {
-			int si = netmap_idx_n2k(&na->rx_rings[rxr->me], j);
+			int si = netmap_idx_n2k(na->rx_rings[rxr->me], j);
 			uint64_t paddr;
 			void *addr;
 
@@ -4645,7 +4591,7 @@ static void
 em_initialize_receive_unit(struct adapter *adapter)
 {
 	struct rx_ring *rxr = adapter->rx_rings;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct e1000_hw	*hw = &adapter->hw;
 	u32	rctl, rxcsum, rfctl;
 
@@ -4670,7 +4616,7 @@ em_initialize_receive_unit(struct adapter *adapter)
 	rctl &= ~E1000_RCTL_SBP;
 
 	/* Enable Long Packet receive */
-	if (ifp->if_mtu > ETHERMTU)
+	if (if_getmtu(ifp) > ETHERMTU)
 		rctl |= E1000_RCTL_LPE;
 	else
 		rctl &= ~E1000_RCTL_LPE;
@@ -4707,7 +4653,7 @@ em_initialize_receive_unit(struct adapter *adapter)
 	E1000_WRITE_REG(hw, E1000_RFCTL, rfctl);
 
 	rxcsum = E1000_READ_REG(hw, E1000_RXCSUM);
-	if (ifp->if_capenable & IFCAP_RXCSUM) {
+	if (if_getcapenable(ifp) & IFCAP_RXCSUM) {
 #ifdef EM_MULTIQUEUE
 		rxcsum |= E1000_RXCSUM_TUOFL |
 			  E1000_RXCSUM_IPOFL |
@@ -4787,8 +4733,10 @@ em_initialize_receive_unit(struct adapter *adapter)
 		 * an init() while a netmap client is active must
 		 * preserve the rx buffers passed to userspace.
 		 */
-		if (ifp->if_capenable & IFCAP_NETMAP)
-			rdt -= nm_kr_rxspace(&NA(adapter->ifp)->rx_rings[i]);
+		if (if_getcapenable(ifp) & IFCAP_NETMAP) {
+			struct netmap_adapter *na = netmap_getna(adapter->ifp);
+			rdt -= nm_kr_rxspace(na->rx_rings[i]);
+		}
 #endif /* DEV_NETMAP */
 		E1000_WRITE_REG(hw, E1000_RDT(i), rdt);
 	}
@@ -4803,7 +4751,7 @@ em_initialize_receive_unit(struct adapter *adapter)
 	if (((adapter->hw.mac.type == e1000_ich9lan) ||
 	    (adapter->hw.mac.type == e1000_pch2lan) ||
 	    (adapter->hw.mac.type == e1000_ich10lan)) &&
-	    (ifp->if_mtu > ETHERMTU)) {
+	    (if_getmtu(ifp) > ETHERMTU)) {
 		u32 rxdctl = E1000_READ_REG(hw, E1000_RXDCTL(0));
 		E1000_WRITE_REG(hw, E1000_RXDCTL(0), rxdctl | 3);
 	} else if (adapter->hw.mac.type == e1000_82574) {
@@ -4819,7 +4767,7 @@ em_initialize_receive_unit(struct adapter *adapter)
 	}
 		
 	if (adapter->hw.mac.type >= e1000_pch2lan) {
-		if (ifp->if_mtu > ETHERMTU)
+		if (if_getmtu(ifp) > ETHERMTU)
 			e1000_lv_jumbo_workaround_ich8lan(hw, TRUE);
 		else
 			e1000_lv_jumbo_workaround_ich8lan(hw, FALSE);
@@ -4859,7 +4807,7 @@ static bool
 em_rxeof(struct rx_ring *rxr, int count, int *done)
 {
 	struct adapter		*adapter = rxr->adapter;
-	struct ifnet		*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct mbuf		*mp, *sendmp;
 	u32			status = 0;
 	u16 			len;
@@ -4882,7 +4830,7 @@ em_rxeof(struct rx_ring *rxr, int count, int *done)
 #endif /* DEV_NETMAP */
 
 	for (i = rxr->next_to_check, processed = 0; count != 0;) {
-		if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
+		if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0)
 			break;
 
 		cur = &rxr->rx_base[i];
@@ -4930,8 +4878,8 @@ em_rxeof(struct rx_ring *rxr, int count, int *done)
 		if (eop) {
 			--count;
 			sendmp = rxr->fmp;
-			sendmp->m_pkthdr.rcvif = ifp;
-			ifp->if_ipackets++;
+			if_setrcvif(sendmp, ifp);
+			if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 			em_receive_checksum(status, sendmp);
 #ifndef __NO_STRICT_ALIGNMENT
 			if (adapter->hw.mac.max_frame_size >
@@ -4940,8 +4888,8 @@ em_rxeof(struct rx_ring *rxr, int count, int *done)
 				goto skip;
 #endif
 			if (status & E1000_RXD_STAT_VP) {
-				sendmp->m_pkthdr.ether_vtag =
-				    le16toh(cur->wb.upper.vlan);
+				if_setvtag(sendmp, 
+				    le16toh(cur->wb.upper.vlan));
 				sendmp->m_flags |= M_VLANTAG;
 			}
 #ifndef __NO_STRICT_ALIGNMENT
@@ -4967,7 +4915,7 @@ next_desc:
 		if (sendmp != NULL) {
 			rxr->next_to_check = i;
 			EM_RX_UNLOCK(rxr);
-			(*ifp->if_input)(ifp, sendmp);
+			if_input(ifp, sendmp);
 			EM_RX_LOCK(rxr);
 			i = rxr->next_to_check;
 		}
@@ -5113,12 +5061,12 @@ em_receive_checksum(uint32_t status, struct mbuf *mp)
  * config EVENT
  */
 static void
-em_register_vlan(void *arg, struct ifnet *ifp, u16 vtag)
+em_register_vlan(void *arg, if_t ifp, u16 vtag)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	u32		index, bit;
 
-	if (ifp->if_softc !=  arg)   /* Not our event */
+	if ((void*)adapter !=  arg)   /* Not our event */
 		return;
 
 	if ((vtag == 0) || (vtag > 4095))       /* Invalid ID */
@@ -5130,7 +5078,7 @@ em_register_vlan(void *arg, struct ifnet *ifp, u16 vtag)
 	adapter->shadow_vfta[index] |= (1 << bit);
 	++adapter->num_vlans;
 	/* Re-init to load the changes */
-	if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
+	if (if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER)
 		em_init_locked(adapter);
 	EM_CORE_UNLOCK(adapter);
 }
@@ -5140,12 +5088,12 @@ em_register_vlan(void *arg, struct ifnet *ifp, u16 vtag)
  * unconfig EVENT
  */
 static void
-em_unregister_vlan(void *arg, struct ifnet *ifp, u16 vtag)
+em_unregister_vlan(void *arg, if_t ifp, u16 vtag)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	u32		index, bit;
 
-	if (ifp->if_softc !=  arg)
+	if (adapter != arg)
 		return;
 
 	if ((vtag == 0) || (vtag > 4095))       /* Invalid */
@@ -5157,7 +5105,7 @@ em_unregister_vlan(void *arg, struct ifnet *ifp, u16 vtag)
 	adapter->shadow_vfta[index] &= ~(1 << bit);
 	--adapter->num_vlans;
 	/* Re-init to load the changes */
-	if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
+	if (if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER)
 		em_init_locked(adapter);
 	EM_CORE_UNLOCK(adapter);
 }
@@ -5414,7 +5362,7 @@ static void
 em_enable_wakeup(device_t dev)
 {
 	struct adapter	*adapter = device_get_softc(dev);
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	int		error = 0;
 	u32		pmc, ctrl, ctrl_ext, rctl;
 	u16     	status;
@@ -5426,10 +5374,10 @@ em_enable_wakeup(device_t dev)
 	** Determine type of Wakeup: note that wol
 	** is set with all bits on by default.
 	*/
-	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) == 0)
+	if ((if_getcapenable(ifp) & IFCAP_WOL_MAGIC) == 0)
 		adapter->wol &= ~E1000_WUFC_MAG;
 
-	if ((ifp->if_capenable & IFCAP_WOL_MCAST) == 0)
+	if ((if_getcapenable(ifp) & IFCAP_WOL_MCAST) == 0)
 		adapter->wol &= ~E1000_WUFC_MC;
 	else {
 		rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
@@ -5479,7 +5427,7 @@ em_enable_wakeup(device_t dev)
 pme:
         status = pci_read_config(dev, pmc + PCIR_POWER_STATUS, 2);
 	status &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
-	if (!error && (ifp->if_capenable & IFCAP_WOL))
+	if (!error && (if_getcapenable(ifp) & IFCAP_WOL))
 		status |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
         pci_write_config(dev, pmc + PCIR_POWER_STATUS, status, 2);
 
@@ -5615,7 +5563,6 @@ em_disable_aspm(struct adapter *adapter)
 static void
 em_update_stats_counters(struct adapter *adapter)
 {
-	struct ifnet   *ifp;
 
 	if(adapter->hw.phy.media_type == e1000_media_type_copper ||
 	   (E1000_READ_REG(&adapter->hw, E1000_STATUS) & E1000_STATUS_LU)) {
@@ -5702,19 +5649,29 @@ em_update_stats_counters(struct adapter *adapter)
 		adapter->stats.tsctfc += 
 		E1000_READ_REG(&adapter->hw, E1000_TSCTFC);
 	}
-	ifp = adapter->ifp;
+}
 
-	ifp->if_collisions = adapter->stats.colc;
+static uint64_t
+em_get_counter(if_t ifp, ift_counter cnt)
+{
+	struct adapter *adapter;
 
-	/* Rx Errors */
-	ifp->if_ierrors = adapter->dropped_pkts + adapter->stats.rxerrc +
-	    adapter->stats.crcerrs + adapter->stats.algnerrc +
-	    adapter->stats.ruc + adapter->stats.roc +
-	    adapter->stats.mpc + adapter->stats.cexterr;
+	adapter = if_getsoftc(ifp);
 
-	/* Tx Errors */
-	ifp->if_oerrors = adapter->stats.ecol +
-	    adapter->stats.latecol + adapter->watchdog_events;
+	switch (cnt) {
+	case IFCOUNTER_COLLISIONS:
+		return (adapter->stats.colc);
+	case IFCOUNTER_IERRORS:
+		return (adapter->dropped_pkts + adapter->stats.rxerrc +
+		    adapter->stats.crcerrs + adapter->stats.algnerrc +
+		    adapter->stats.ruc + adapter->stats.roc +
+		    adapter->stats.mpc + adapter->stats.cexterr);
+	case IFCOUNTER_OERRORS:
+		return (adapter->stats.ecol + adapter->stats.latecol +
+		    adapter->watchdog_events);
+	default:
+		return (if_get_counter_default(ifp, cnt));
+	}
 }
 
 /* Export a single 32-bit register via a read-only sysctl. */
@@ -6237,12 +6194,12 @@ em_print_debug_info(struct adapter *adapter)
 	struct tx_ring *txr = adapter->tx_rings;
 	struct rx_ring *rxr = adapter->rx_rings;
 
-	if (adapter->ifp->if_drv_flags & IFF_DRV_RUNNING)
+	if (if_getdrvflags(adapter->ifp) & IFF_DRV_RUNNING)
 		printf("Interface is RUNNING ");
 	else
 		printf("Interface is NOT RUNNING\n");
 
-	if (adapter->ifp->if_drv_flags & IFF_DRV_OACTIVE)
+	if (if_getdrvflags(adapter->ifp) & IFF_DRV_OACTIVE)
 		printf("and INACTIVE\n");
 	else
 		printf("and ACTIVE\n");

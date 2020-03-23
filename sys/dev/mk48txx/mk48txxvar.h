@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	$NetBSD: mk48txxvar.h,v 1.6 2008/04/28 20:23:50 martin Exp $
  *
- * $FreeBSD: stable/10/sys/dev/mk48txx/mk48txxvar.h 201005 2009-12-25 21:53:20Z marius $
+ * $FreeBSD: stable/11/sys/dev/mk48txx/mk48txxvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 typedef uint8_t (*mk48txx_nvrd_t)(device_t dev, int off);

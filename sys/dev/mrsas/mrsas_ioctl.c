@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2015, AVAGO Tech. All rights reserved. Author: Marian Choy
  * Copyright (c) 2014, LSI Corp. All rights reserved. Author: Marian Choy
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mrsas/mrsas_ioctl.c 300736 2016-05-26 12:00:14Z kadesai $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas_ioctl.c 299671 2016-05-13 12:21:50Z kadesai $");
 
 #include <dev/mrsas/mrsas.h>
 #include <dev/mrsas/mrsas_ioctl.h>
@@ -87,7 +86,7 @@ mrsas_passthru(struct mrsas_softc *sc, void *arg, u_long ioctlCmd)
 	bus_addr_t ioctl_data_phys_addr[MAX_IOCTL_SGE];
 	bus_dma_tag_t ioctl_sense_tag = 0;
 	bus_dmamap_t ioctl_sense_dmamap = 0;
-	void *ioctl_sense_mem = 0;
+	void *ioctl_sense_mem = NULL;
 	bus_addr_t ioctl_sense_phys_addr = 0;
 	int i, ioctl_data_size = 0, ioctl_sense_size, ret = 0;
 	struct mrsas_sge32 *kern_sge32;

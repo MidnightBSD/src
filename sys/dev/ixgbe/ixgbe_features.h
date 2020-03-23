@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_features.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_features.h 320897 2017-07-11 21:25:07Z erj $*/
 
 
 #ifndef _IXGBE_FEATURES_H_
@@ -44,8 +43,9 @@
  * support, make sure to add an #undef below if expected to run on
  * OSs that don't support said feature.
  */
-#define IXGBE_FEATURE_SRIOV                     (u32)(1 << 0)
-#define IXGBE_FEATURE_RSS                       (u32)(1 << 1)
+#define IXGBE_FEATURE_VF                        (u32)(1 << 0)
+#define IXGBE_FEATURE_SRIOV                     (u32)(1 << 1)
+#define IXGBE_FEATURE_RSS                       (u32)(1 << 2)
 #define IXGBE_FEATURE_NETMAP                    (u32)(1 << 3)
 #define IXGBE_FEATURE_FAN_FAIL                  (u32)(1 << 4)
 #define IXGBE_FEATURE_TEMP_SENSOR               (u32)(1 << 5)
@@ -54,9 +54,9 @@
 #define IXGBE_FEATURE_FDIR                      (u32)(1 << 8)
 #define IXGBE_FEATURE_MSI                       (u32)(1 << 9)
 #define IXGBE_FEATURE_MSIX                      (u32)(1 << 10)
-#define IXGBE_FEATURE_FRAME_LIMIT               (u32)(1 << 11)
-#define IXGBE_FEATURE_EEE                       (u32)(1 << 12)
-#define IXGBE_FEATURE_LEGACY_IRQ                (u32)(1 << 13)
+#define IXGBE_FEATURE_EEE                       (u32)(1 << 11)
+#define IXGBE_FEATURE_LEGACY_IRQ                (u32)(1 << 12)
+#define IXGBE_FEATURE_NEEDS_CTXD                (u32)(1 << 13)
 
 /* Check for OS support.  Undefine features if not included in the OS */
 #ifndef PCI_IOV
@@ -74,4 +74,4 @@
 #define IXGBE_FEATURE_NETMAP                    0
 #endif
 
-#endif
+#endif /* _IXGBE_FEATURES_H_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2012 Intel Corporation
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-__FBSDID("$FreeBSD: stable/10/sys/dev/ioat/ioat_hw.h 300661 2016-05-25 07:09:54Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ioat/ioat_hw.h 344401 2019-02-21 00:44:26Z mav $");
 
 #ifndef __IOAT_HW_H__
 #define __IOAT_HW_H__
@@ -56,27 +55,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ioat/ioat_hw.h 300661 2016-05-25 07:09:54Z
 #define	IOAT_CS_STATUS_OFFSET		0x0E
 
 #define	IOAT_DMACAPABILITY_OFFSET	0x10
-#define	IOAT_DMACAP_PB			(1 << 0)
-#define	IOAT_DMACAP_CRC			(1 << 1)
-#define	IOAT_DMACAP_MARKER_SKIP		(1 << 2)
-#define	IOAT_DMACAP_OLD_XOR		(1 << 3)
-#define	IOAT_DMACAP_DCA			(1 << 4)
-#define	IOAT_DMACAP_MOVECRC		(1 << 5)
-#define	IOAT_DMACAP_BFILL		(1 << 6)
-#define	IOAT_DMACAP_EXT_APIC		(1 << 7)
-#define	IOAT_DMACAP_XOR			(1 << 8)
-#define	IOAT_DMACAP_PQ			(1 << 9)
-#define	IOAT_DMACAP_DMA_DIF		(1 << 10)
-#define	IOAT_DMACAP_DWBES		(1 << 13)
-#define	IOAT_DMACAP_RAID16SS		(1 << 17)
-#define	IOAT_DMACAP_DMAMC		(1 << 18)
-#define	IOAT_DMACAP_CTOS		(1 << 19)
-
-#define	IOAT_DMACAP_STR \
-    "\20\24Completion_Timeout_Support\23DMA_with_Multicasting_Support" \
-    "\22RAID_Super_descriptors\16Descriptor_Write_Back_Error_Support" \
-    "\13DMA_with_DIF\12PQ\11XOR\10Extended_APIC_ID\07Block_Fill\06Move_CRC" \
-    "\05DCA\04Old_XOR\03Marker_Skipping\02CRC\01Page_Break"
 
 /* DMA Channel Registers */
 #define	IOAT_CHANCTRL_OFFSET			0x80

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fb/fbreg.h 239696 2012-08-25 23:59:31Z gonzo $
+ * $FreeBSD: stable/11/sys/dev/fb/fbreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_FB_FBREG_H_
@@ -50,27 +49,7 @@ copyw(uint16_t *src, uint16_t *dst, size_t size)
 #define bzero_io(d, c)		bzero((void *)(d), (c))
 #define fill_io(p, d, c)	fill((p), (void *)(d), (c))
 #define fillw_io(p, d, c)	fillw((p), (void *)(d), (c))
-#elif defined(__ia64__) || defined(__sparc64__)
-#if defined(__ia64__)
-#include <machine/bus.h>
-#define	bcopy_fromio(s, d, c)	\
-	bus_space_read_region_1(IA64_BUS_SPACE_MEM, s, 0, (void*)(d), c)
-#define	bcopy_io(s, d, c)	\
-	bus_space_copy_region_1(IA64_BUS_SPACE_MEM, s, 0, d, 0, c)
-#define	bcopy_toio(s, d, c)	\
-	bus_space_write_region_1(IA64_BUS_SPACE_MEM, d, 0, (void*)(s), c)
-#define	bzero_io(d, c)		\
-	bus_space_set_region_1(IA64_BUS_SPACE_MEM, (intptr_t)(d), 0, 0, c)
-#define	fill_io(p, d, c)	\
-	bus_space_set_region_1(IA64_BUS_SPACE_MEM, (intptr_t)(d), 0, p, c)
-#define	fillw_io(p, d, c)	\
-	bus_space_set_region_2(IA64_BUS_SPACE_MEM, (intptr_t)(d), 0, p, c)
-#define	readb(a)		bus_space_read_1(IA64_BUS_SPACE_MEM, a, 0)
-#define	readw(a)		bus_space_read_2(IA64_BUS_SPACE_MEM, a, 0)
-#define	writeb(a, v)		bus_space_write_1(IA64_BUS_SPACE_MEM, a, 0, v)
-#define	writew(a, v)		bus_space_write_2(IA64_BUS_SPACE_MEM, a, 0, v)
-#define	writel(a, v)		bus_space_write_4(IA64_BUS_SPACE_MEM, a, 0, v)
-#endif /* __ia64__ */
+#elif defined(__sparc64__)
 static __inline void
 fillw(int val, uint16_t *buf, size_t size)
 {
@@ -121,7 +100,7 @@ fillw(int val, uint16_t *buf, size_t size)
 #define	writew(a, v)		(*(uint16_t*)(a) = (v))
 #endif
 
-#else /* !__i386__ && !__amd64__ && !__ia64__ && !__sparc64__ && !__powerpc__ */
+#else /* !__i386__ && !__amd64__ && !__sparc64__ && !__powerpc__ */
 #define bcopy_io(s, d, c)	memcpy_io((d), (s), (c))
 #define bcopy_toio(s, d, c)	memcpy_toio((d), (void *)(s), (c))
 #define bcopy_fromio(s, d, c)	memcpy_fromio((void *)(d), (s), (c))

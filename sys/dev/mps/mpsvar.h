@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -28,7 +27,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mps/mpsvar.h 322661 2017-08-18 15:38:08Z ken $
+ * $FreeBSD: stable/11/sys/dev/mps/mpsvar.h 331849 2018-03-31 19:18:07Z smh $
  */
 
 #ifndef _MPSVAR_H
@@ -39,6 +38,7 @@
 #define MPS_DB_MAX_WAIT		2500
 
 #define MPS_REQ_FRAMES		1024
+#define MPS_PRI_REQ_FRAMES	128
 #define MPS_EVT_REPLY_FRAMES	32
 #define MPS_REPLY_FRAMES	MPS_REQ_FRAMES
 #define MPS_CHAIN_FRAMES	2048
@@ -315,6 +315,7 @@ struct mps_softc {
 
 	MPI2_IOC_FACTS_REPLY		*facts;
 	int				num_reqs;
+	int				num_prireqs;
 	int				num_replies;
 	int				fqdepth;	/* Free queue */
 	int				pqdepth;	/* Post queue */
@@ -721,7 +722,7 @@ int mps_config_get_volume_wwid(struct mps_softc *sc, u16 volume_handle,
 int mps_config_get_raid_pd_pg0(struct mps_softc *sc,
     Mpi2ConfigReply_t *mpi_reply, Mpi2RaidPhysDiskPage0_t *config_page,
     u32 page_address);
-void mpssas_ir_shutdown(struct mps_softc *sc);
+void mpssas_ir_shutdown(struct mps_softc *sc, int howto);
 
 int mps_reinit(struct mps_softc *sc);
 void mpssas_handle_reinit(struct mps_softc *sc);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Adaptec Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ips/ips.h 161425 2006-08-17 22:50:33Z imp $
+ * $FreeBSD: stable/11/sys/dev/ips/ips.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _IPS_H
 #define _IPS_H
@@ -57,13 +56,13 @@ MALLOC_DECLARE(M_IPSBUF);
  *  IPS MACROS
  */
 
-#define ips_read_1(sc,offset)		bus_space_read_1(sc->bustag, sc->bushandle, offset)
-#define ips_read_2(sc,offset) 		bus_space_read_2(sc->bustag, sc->bushandle, offset)
-#define ips_read_4(sc,offset)		bus_space_read_4(sc->bustag, sc->bushandle, offset)
+#define ips_read_1(sc,offset)		bus_read_1(sc->iores, offset)
+#define ips_read_2(sc,offset) 		bus_read_2(sc->iores, offset)
+#define ips_read_4(sc,offset)		bus_read_4(sc->iores, offset)
 
-#define ips_write_1(sc,offset,value)	bus_space_write_1(sc->bustag, sc->bushandle, offset, value)
-#define ips_write_2(sc,offset,value) 	bus_space_write_2(sc->bustag, sc->bushandle, offset, value)
-#define ips_write_4(sc,offset,value)	bus_space_write_4(sc->bustag, sc->bushandle, offset, value)
+#define ips_write_1(sc,offset,value)	bus_write_1(sc->iores, offset, value)
+#define ips_write_2(sc,offset,value) 	bus_write_2(sc->iores, offset, value)
+#define ips_write_4(sc,offset,value)	bus_write_4(sc->iores, offset, value)
 
 /* this is ugly.  It zeros the end elements in an ips_command_t struct starting with the status element */
 #define clear_ips_command(command)	bzero(&((command)->status), (unsigned long)(&(command)[1])-(unsigned long)&((command)->status))
@@ -123,14 +122,12 @@ typedef struct ips_softc{
         int                     rid;
         int                     irqrid;
         void *                  irqcookie;
-        bus_space_tag_t	        bustag;
-	bus_space_handle_t      bushandle;
 	bus_dma_tag_t	        adapter_dmatag;
 	bus_dma_tag_t		command_dmatag;
 	bus_dma_tag_t		sg_dmatag;
         device_t                dev;
         struct cdev *device_file;
-	struct callout_handle	timer;
+	struct callout		timer;
 	u_int16_t		adapter_type;
 	ips_adapter_info_t	adapter_info;
 	device_t		diskdev[IPS_MAX_NUM_DRIVES];

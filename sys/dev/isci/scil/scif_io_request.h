@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/scif_io_request.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/scif_io_request.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SCIF_IO_REQUEST_H_
 #define _SCIF_IO_REQUEST_H_
@@ -82,13 +81,13 @@ U32 scif_io_request_get_object_size(
 );
 
 /**
-* @brief This method simply the number of data bytes transfered for a
+* @brief This method simply the number of data bytes transferred for a
 *        STP or SSP io request.
 *
 * @param[in] scif_io_request This parameter specifies the framework IO
 *            handle to retrieve the number of data bytes transferred.
 *
-* @return Return the number of data bytes transfered by the io request
+* @return Return the number of data bytes transferred by the io request
 */
 U32 scif_io_request_get_number_of_bytes_transferred(
    void * scif_io_request

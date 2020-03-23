@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe.h 315434 2017-03-16 23:18:57Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe.h 347419 2019-05-10 00:46:43Z erj $*/
 
 
 #ifndef _IXGBE_H_
@@ -91,10 +90,11 @@
 #include <machine/smp.h>
 #include <sys/sbuf.h>
 
-#include "ixgbe_features.h"
 #include "ixgbe_api.h"
 #include "ixgbe_common.h"
 #include "ixgbe_phy.h"
+#include "ixgbe_vf.h"
+#include "ixgbe_features.h"
 
 /* Tunables */
 
@@ -239,16 +239,12 @@
 #define IXGBE_LINK_ITR         ((IXGBE_LINK_ITR_QUANTA << 3) & \
                                 IXGBE_EITR_ITR_INT_MASK)
 
-#define IXGBE_IS_VF(_x) 0
-#define IXGBE_IS_X550VF(_x) 0
 
-/* Netmap helper macro */
-#define IXGBE_VFTDH IXGBE_TDH
 
 /************************************************************************
  * vendor_info_array
  *
- *   This array contains the list of Subvendor/Subdevice IDs on
+ *   Contains the list of Subvendor/Subdevice IDs on
  *   which the driver should load.
  ************************************************************************/
 typedef struct _ixgbe_vendor_info_t {
@@ -347,9 +343,9 @@ struct tx_ring {
 	u32                     bytes;  /* used for AIM */
 	u32                     packets;
 	/* Soft Stats */
-	u64			tso_tx;
-	u64			no_tx_map_avail;
-	u64			no_tx_dma_setup;
+	u64                     tso_tx;
+	u64                     no_tx_map_avail;
+	u64                     no_tx_dma_setup;
 	u64                     no_desc_avail;
 	u64                     total_packets;
 };
@@ -412,7 +408,7 @@ struct adapter {
 	struct ixgbe_hw         hw;
 	struct ixgbe_osdep      osdep;
 
-	struct device           *dev;
+	device_t                dev;
 	struct ifnet            *ifp;
 
 	struct resource         *pci_mem;
@@ -449,7 +445,7 @@ struct adapter {
 
 	/* Info about the interface */
 	int                     advertise;  /* link speeds */
-	bool                    enable_aim; /* adaptive interrupt moderation */
+	int                     enable_aim; /* adaptive interrupt moderation */
 	bool                    link_active;
 	u16                     max_frame_size;
 	u16                     num_segs;
@@ -468,17 +464,15 @@ struct adapter {
 
 	/* Support for pluggable optics */
 	bool                    sfp_probe;
-	struct task             link_task;  /* Link tasklet */
-	struct task             mod_task;   /* SFP tasklet */
-	struct task             msf_task;   /* Multispeed Fiber */
-	struct task             mbx_task;   /* VF -> PF mailbox interrupt */
+	struct task		link_task;  /* Link tasklet */
 
 	/* Flow Director */
 	int                     fdir_reinit;
-	struct task             fdir_task;
 
-	struct task             phy_task;   /* PHY intr tasklet */
-	struct taskqueue        *tq;
+	/* Admin task */
+	struct taskqueue	*tq;
+	struct task		admin_task;
+	u32			task_requests;
 
 	/*
 	 * Queues:
@@ -528,7 +522,10 @@ struct adapter {
 	unsigned long           mbuf_packet_failed;
 	unsigned long           watchdog_events;
 	unsigned long           link_irq;
-	struct ixgbe_hw_stats   stats_pf;
+	union {
+		struct ixgbe_hw_stats pf;
+		struct ixgbevf_hw_stats vf;
+	} stats;
 #if __FreeBSD_version >= 1100036
 	/* counter(9) stats */
 	u64                     ipackets;
@@ -677,7 +674,6 @@ int  ixgbe_mq_start(struct ifnet *, struct mbuf *);
 int  ixgbe_mq_start_locked(struct ifnet *, struct tx_ring *);
 void ixgbe_qflush(struct ifnet *);
 void ixgbe_deferred_mq_start(void *, int);
-void ixgbe_init_locked(struct adapter *);
 
 int  ixgbe_allocate_queues(struct adapter *);
 int  ixgbe_setup_transmit_structures(struct adapter *);
@@ -687,8 +683,8 @@ void ixgbe_free_receive_structures(struct adapter *);
 void ixgbe_txeof(struct tx_ring *);
 bool ixgbe_rxeof(struct ix_queue *);
 
-#include "ixgbe_sriov.h"
 #include "ixgbe_bypass.h"
+#include "ixgbe_sriov.h"
 #include "ixgbe_fdir.h"
 #include "ixgbe_rss.h"
 #include "ixgbe_netmap.h"

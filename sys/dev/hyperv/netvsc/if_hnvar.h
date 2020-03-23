@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016-2017 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/netvsc/if_hnvar.h 324574 2017-10-13 02:26:39Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/netvsc/if_hnvar.h 324578 2017-10-13 05:09:56Z sephe $
  */
 
 #ifndef _IF_HNVAR_H_
@@ -177,7 +176,6 @@ struct hn_tx_ring {
  */
 struct hn_softc {
 	struct ifnet    *hn_ifp;
-	struct arpcom   arpcom;
 	struct ifmedia	hn_media;
 	device_t        hn_dev;
 	int             hn_if_flags;

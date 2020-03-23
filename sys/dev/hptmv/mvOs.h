@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/mvOs.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hptmv/mvOs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef __INCmvOsBsdh
 #define __INCmvOsBsdh
@@ -73,7 +72,7 @@ typedef enum mvBoolean{MV_FALSE, MV_TRUE} MV_BOOLEAN;
 #define NULL  0
 #endif
 
-/* System dependant typedefs */
+/* System dependent typedefs */
 typedef void			MV_VOID;
 typedef unsigned int 	MV_U32;
 typedef unsigned short	MV_U16;

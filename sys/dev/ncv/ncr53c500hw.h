@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/ncv/ncr53c500hw.h 240325 2012-09-10 18:49:49Z jhb $	*/
+/*	$FreeBSD: stable/11/sys/dev/ncv/ncr53c500hw.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$NecBSD: ncr53c500hw.h,v 1.6.18.1 2001/06/08 06:27:44 honda Exp $	*/
 /*	$NetBSD$	*/
 

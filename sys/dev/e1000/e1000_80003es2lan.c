@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_80003es2lan.c 296055 2016-02-25 19:15:06Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/e1000_80003es2lan.c 331722 2018-03-29 02:50:57Z eadler $*/
 
 /* 80003ES2LAN Gigabit Ethernet Controller (Copper)
  * 80003ES2LAN Gigabit Ethernet Controller (Serdes)

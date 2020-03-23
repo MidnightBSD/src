@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -55,7 +54,7 @@
 #define _MFIVAR_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfivar.h 270732 2014-08-27 21:11:19Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfivar.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/lock.h>
 #include <sys/sx.h>

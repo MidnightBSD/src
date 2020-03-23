@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/if_em.h 316588 2017-04-06 19:13:40Z sbruno $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/if_em.h 342789 2019-01-05 19:32:48Z marius $*/
 
 
 #ifndef _EM_H_DEFINED_
@@ -278,7 +277,7 @@
 #define EM_MSIX_LINK		0x01000000 /* For 82574 use */
 #define ETH_ZLEN		60
 #define ETH_ADDR_LEN		6
-#define CSUM_OFFLOAD		7	/* Offload bits in mbuf flag */
+#define CSUM_OFFLOAD		(CSUM_IP | CSUM_IP_UDP | CSUM_IP_TCP) /* Offload bits in mbuf flag */
 
 /*
  * 82574 has a nonstandard address for EIAC
@@ -390,7 +389,7 @@ struct rx_ring {
 
 /* Our adapter structure */
 struct adapter {
-	struct ifnet	*ifp;
+	if_t 		ifp;
 	struct e1000_hw	hw;
 
 	/* FreeBSD operating-system-specific structures. */

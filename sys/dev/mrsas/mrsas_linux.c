@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2015, AVAGO Tech. All rights reserved. Author: Kashyap Desai,
  * Copyright (c) 2014, LSI Corp. All rights reserved. Author: Kashyap Desai,
@@ -39,12 +38,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mrsas/mrsas_linux.c 284267 2015-06-11 14:11:41Z kadesai $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas_linux.c 340180 2018-11-06 12:57:38Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#if (__FreeBSD_version > 900000)
+#if (__FreeBSD_version >= 1001511)
+#include <sys/capsicum.h>
+#elif (__FreeBSD_version > 900000)
 #include <sys/capability.h>
 #endif
 

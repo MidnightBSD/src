@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/if_lem.h 296073 2016-02-26 00:09:50Z marius $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/if_lem.h 342789 2019-01-05 19:32:48Z marius $*/
 
 
 #ifndef _LEM_H_DEFINED_
@@ -294,7 +293,7 @@ struct em_int_delay_info {
 
 /* Our adapter structure */
 struct adapter {
-	struct ifnet	*ifp;
+	if_t		ifp;
 	struct e1000_hw	hw;
 
 	/* FreeBSD operating-system-specific structures. */

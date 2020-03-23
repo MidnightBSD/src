@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -27,7 +26,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mps/mps_sas.h 281564 2015-04-15 21:47:15Z slm $
+ * $FreeBSD: stable/11/sys/dev/mps/mps_sas.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct mps_fw_event_work;

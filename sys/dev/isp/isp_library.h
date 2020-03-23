@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/isp/isp_library.h 317366 2017-04-24 11:21:32Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/isp/isp_library.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
+ *  Copyright (c) 2009-2017 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
  * 
@@ -128,10 +128,11 @@ void isp_put_ct_pt(ispsoftc_t *isp, isp_ct_pt_t *, isp_ct_pt_t *);
 void isp_put_ms(ispsoftc_t *isp, isp_ms_t *, isp_ms_t *);
 void isp_put_sns_request(ispsoftc_t *, sns_screq_t *, sns_screq_t *);
 void isp_put_gid_ft_request(ispsoftc_t *, sns_gid_ft_req_t *, sns_gid_ft_req_t *);
-void isp_put_gxn_id_request(ispsoftc_t *, sns_gxn_id_req_t *, sns_gxn_id_req_t *);
-void isp_get_sns_response(ispsoftc_t *, sns_scrsp_t *, sns_scrsp_t *, int);
-void isp_get_gid_ft_response(ispsoftc_t *, sns_gid_ft_rsp_t *, sns_gid_ft_rsp_t *, int);
+void isp_put_gid_pt_request(ispsoftc_t *, sns_gid_pt_req_t *, sns_gid_pt_req_t *);
+void isp_put_gxx_id_request(ispsoftc_t *, sns_gxx_id_req_t *, sns_gxx_id_req_t *);
+void isp_get_gid_xx_response(ispsoftc_t *, sns_gid_xx_rsp_t *, sns_gid_xx_rsp_t *, int);
 void isp_get_gxn_id_response(ispsoftc_t *, sns_gxn_id_rsp_t *, sns_gxn_id_rsp_t *);
+void isp_get_gft_id_response(ispsoftc_t *, sns_gft_id_rsp_t *, sns_gft_id_rsp_t *);
 void isp_get_gff_id_response(ispsoftc_t *, sns_gff_id_rsp_t *, sns_gff_id_rsp_t *);
 void isp_get_ga_nxt_response(ispsoftc_t *, sns_ga_nxt_rsp_t *, sns_ga_nxt_rsp_t *);
 void isp_get_els(ispsoftc_t *, els_t *, els_t *);
@@ -152,7 +153,7 @@ void isp_put_fcp_rsp_iu(ispsoftc_t *isp, fcp_rsp_iu_t *, fcp_rsp_iu_t *);
 #ifdef ISP_TARGET_MODE
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 #include <dev/ic/isp_target.h>
-#elif  defined(__MidnightBSD__)
+#elif  defined(__FreeBSD__)
 #include <dev/isp/isp_target.h>
 #else
 #include "isp_target.h"

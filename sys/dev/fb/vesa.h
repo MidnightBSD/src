@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Michael Smith and Kazutaka YOKOTA
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fb/vesa.h 231841 2012-02-16 22:33:53Z jkim $
+ * $FreeBSD: stable/11/sys/dev/fb/vesa.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_FB_VESA_H_

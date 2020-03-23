@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ic/z8530.h 155967 2006-02-24 02:03:35Z marcel $
+ * $FreeBSD: stable/11/sys/dev/ic/z8530.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_IC_Z8530_H_

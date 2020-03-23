@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
  * Copyright (c) 2012 NetApp Inc.
@@ -31,7 +30,7 @@
  * Implements low-level interactions with Hyper-V/Azure
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/hyperv.c 332067 2018-04-05 12:59:49Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/vmbus/hyperv.c 332068 2018-04-05 12:59:50Z emaste $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

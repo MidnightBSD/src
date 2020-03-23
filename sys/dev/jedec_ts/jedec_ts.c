@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Andriy Gapon <avg@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/jedec_ts/jedec_ts.c 329015 2018-02-08 09:24:23Z rpokala $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/jedec_ts/jedec_ts.c 336976 2018-07-31 16:08:38Z rpokala $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -193,10 +192,6 @@ ts_temp_sysctl(SYSCTL_HANDLER_ARGS)
 	if ((val & 0x1000) != 0)
 		temp = -temp;
 	temp = temp * 625 + 2731500;
-
-	/* sysctl(8) reports deciKelvin, so round accordingly. */
-	temp = (temp + 500) / 1000;
-
 	err = sysctl_handle_int(oidp, &temp, 0, req);
 	return (err);
 }
@@ -250,7 +245,10 @@ ts_attach(device_t dev)
 	tree = SYSCTL_CHILDREN(device_get_sysctl_tree(dev));
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "temp",
 	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, dev, 0,
-	    ts_temp_sysctl, "IK", "Current temperature");
+	    ts_temp_sysctl, "IK4", "Current temperature");
+
+	gone_in_dev(dev, 12,
+	    "jedec_ts(4) driver; see COMPATIBILITY section of jedec_dimm(4)");
 
 	return (0);
 }

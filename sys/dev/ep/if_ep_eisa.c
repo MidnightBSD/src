@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  * 	3COM 3C579 and 3C509(in eisa config mode) ethernet controllers
@@ -22,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ep/if_ep_eisa.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ep/if_ep_eisa.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

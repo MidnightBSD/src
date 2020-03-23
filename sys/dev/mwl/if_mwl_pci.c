@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Marvell Semiconductor, Inc.
@@ -30,8 +29,8 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/10/sys/dev/mwl/if_mwl_pci.c 278415 2015-02-08 22:27:17Z marius $");
+#ifdef __FreeBSD__
+__FBSDID("$FreeBSD: stable/11/sys/dev/mwl/if_mwl_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 #endif
 
 /*
@@ -43,6 +42,8 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/mwl/if_mwl_pci.c 278415 2015-02-08 22:27:1
 #include <sys/module.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -53,9 +54,11 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/mwl/if_mwl_pci.c 278415 2015-02-08 22:27:1
 
 #include <sys/socket.h>
  
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
+#include <net/route.h>
 
 #include <net80211/ieee80211_var.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ichsmb_pci.c
  *
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ichsmb/ichsmb_pci.c 321932 2017-08-02 15:13:13Z gavin $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ichsmb/ichsmb_pci.c 345820 2019-04-03 01:29:54Z mav $");
 
 /*
  * Support for the SMBus controller logical device which is part of the
@@ -105,6 +104,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ichsmb/ichsmb_pci.c 321932 2017-08-02 15:1
 #define	ID_LEWISBURG			0xa1a3
 #define	ID_LEWISBURG2			0xa223
 #define	ID_KABYLAKE			0xa2a3
+#define	ID_CANNONLAKE			0xa323
 
 static const struct ichsmb_device {
 	uint16_t	id;
@@ -149,6 +149,7 @@ static const struct ichsmb_device {
 	{ ID_LEWISBURG,	"Intel Lewisburg SMBus controller"		},
 	{ ID_LEWISBURG2,"Intel Lewisburg SMBus controller"		},
 	{ ID_KABYLAKE,	"Intel Kaby Lake SMBus controller"		},
+	{ ID_CANNONLAKE,"Intel Cannon Lake SMBus controller"		},
 	{ 0, NULL },
 };
 
@@ -224,11 +225,11 @@ ichsmb_pci_attach(device_t dev)
 
 	/* Allocate an I/O range */
 	sc->io_rid = ICH_SMB_BASE;
-	sc->io_res = bus_alloc_resource(dev, SYS_RES_IOPORT,
-	    &sc->io_rid, 0, ~0, 16, RF_ACTIVE);
+	sc->io_res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+	    &sc->io_rid, 16, RF_ACTIVE);
 	if (sc->io_res == NULL)
-		sc->io_res = bus_alloc_resource(dev, SYS_RES_IOPORT,
-		    &sc->io_rid, 0ul, ~0ul, 32, RF_ACTIVE);
+		sc->io_res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+		    &sc->io_rid, 32, RF_ACTIVE);
 	if (sc->io_res == NULL) {
 		device_printf(dev, "can't map I/O\n");
 		error = ENXIO;

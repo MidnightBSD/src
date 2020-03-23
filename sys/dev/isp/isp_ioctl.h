@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/isp/isp_ioctl.h 196008 2009-08-01 01:04:26Z mjacob $ */
+/* $FreeBSD: stable/11/sys/dev/isp/isp_ioctl.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 1997-2006 by Matthew Jacob
  * All rights reserved.

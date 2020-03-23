@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptrr/him.h 176018 2008-02-06 01:02:20Z scottl $
+ * $FreeBSD: stable/11/sys/dev/hptrr/him.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <dev/hptrr/hptrr_config.h>
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
  * Copyright (c) 2012 NetApp Inc.
@@ -31,7 +30,7 @@
  * VM Bus Driver Implementation
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus.c 324572 2017-10-13 02:01:03Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/vmbus/vmbus.c 329462 2018-02-17 18:00:01Z kib $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -40,7 +39,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus.c 324572 2017-10-13 02:
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/proc.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
@@ -48,9 +46,9 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/vmbus.c 324572 2017-10-13 02:
 
 #include <machine/bus.h>
 #include <machine/intr_machdep.h>
-#include <machine/resource.h>
-#include <machine/apicvar.h>
 #include <machine/md_var.h>
+#include <machine/resource.h>
+#include <x86/include/apicvar.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <dev/acpica/acpivar.h>
@@ -103,6 +101,9 @@ static uint32_t			vmbus_get_vcpu_id_method(device_t bus,
 				    device_t dev, int cpu);
 static struct taskqueue		*vmbus_get_eventtq_method(device_t, device_t,
 				    int);
+#ifdef EARLY_AP_STARTUP
+static void			vmbus_intrhook(void *);
+#endif
 
 static int			vmbus_init(struct vmbus_softc *);
 static int			vmbus_connect(struct vmbus_softc *, uint32_t);
@@ -128,14 +129,14 @@ static void			vmbus_event_proc_dummy(struct vmbus_softc *,
 
 static struct vmbus_softc	*vmbus_sc;
 
-extern inthand_t IDTVEC(rsvd), IDTVEC(vmbus_isr);
-
 SYSCTL_NODE(_hw, OID_AUTO, vmbus, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
     "Hyper-V vmbus");
 
 static int			vmbus_pin_evttask = 1;
 SYSCTL_INT(_hw_vmbus, OID_AUTO, pin_evttask, CTLFLAG_RDTUN,
     &vmbus_pin_evttask, 0, "Pin event tasks to their respective CPU");
+
+extern inthand_t IDTVEC(vmbus_isr), IDTVEC(vmbus_isr_pti);
 
 static const uint32_t		vmbus_version[] = {
 	VMBUS_VERSION_WIN8_1,
@@ -171,9 +172,7 @@ static device_method_t vmbus_methods[] = {
 	DEVMETHOD(bus_deactivate_resource,	bus_generic_deactivate_resource),
 	DEVMETHOD(bus_setup_intr,		bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,		bus_generic_teardown_intr),
-#if __FreeBSD_version >= 1100000
 	DEVMETHOD(bus_get_cpus,			bus_generic_get_cpus),
-#endif
 
 	/* pcib interface */
 	DEVMETHOD(pcib_alloc_msi,		vmbus_alloc_msi),
@@ -892,83 +891,12 @@ vmbus_dma_free(struct vmbus_softc *sc)
 	}
 }
 
-/**
- * @brief Find a free IDT slot and setup the interrupt handler.
- */
-static int
-vmbus_vector_alloc(void)
-{
-	int vector;
-	uintptr_t func;
-	struct gate_descriptor *ip;
-
-	/*
-	 * Search backwards form the highest IDT vector available for use
-	 * as vmbus channel callback vector. We install 'vmbus_isr'
-	 * handler at that vector and use it to interrupt vcpus.
-	 */
-	vector = APIC_SPURIOUS_INT;
-	while (--vector >= APIC_IPI_INTS) {
-		ip = &idt[vector];
-		func = ((long)ip->gd_hioffset << 16 | ip->gd_looffset);
-		if (func == (uintptr_t)&IDTVEC(rsvd)) {
-#ifdef __i386__
-			setidt(vector , IDTVEC(vmbus_isr), SDT_SYS386IGT,
-			    SEL_KPL, GSEL(GCODE_SEL, SEL_KPL));
-#else
-			setidt(vector , IDTVEC(vmbus_isr), SDT_SYSIGT,
-			    SEL_KPL, 0);
-#endif
-
-			return (vector);
-		}
-	}
-	return (0);
-}
-
-/**
- * @brief Restore the IDT slot to rsvd.
- */
-static void
-vmbus_vector_free(int vector)
-{
-	uintptr_t func;
-	struct gate_descriptor *ip;
-
-	if (vector == 0)
-		return;
-
-	KASSERT(vector >= APIC_IPI_INTS && vector < APIC_SPURIOUS_INT,
-	    ("invalid vector %d", vector));
-
-	ip = &idt[vector];
-	func = ((long)ip->gd_hioffset << 16 | ip->gd_looffset);
-	KASSERT(func == (uintptr_t)&IDTVEC(vmbus_isr),
-	    ("invalid vector %d", vector));
-
-	setidt(vector, IDTVEC(rsvd), SDT_SYSIGT, SEL_KPL, 0);
-}
-
-static void
-vmbus_cpuset_setthread_task(void *xmask, int pending __unused)
-{
-	cpuset_t *mask = xmask;
-	int error;
-
-	error = cpuset_setthread(curthread->td_tid, mask);
-	if (error) {
-		panic("curthread=%ju: can't pin; error=%d",
-		    (uintmax_t)curthread->td_tid, error);
-	}
-}
-
 static int
 vmbus_intr_setup(struct vmbus_softc *sc)
 {
 	int cpu;
 
 	CPU_FOREACH(cpu) {
-		struct task cpuset_task;
 		char buf[MAXCOMLEN + 1];
 		cpuset_t cpu_mask;
 
@@ -983,17 +911,15 @@ vmbus_intr_setup(struct vmbus_softc *sc)
 		VMBUS_PCPU_GET(sc, event_tq, cpu) = taskqueue_create_fast(
 		    "hyperv event", M_WAITOK, taskqueue_thread_enqueue,
 		    VMBUS_PCPU_PTR(sc, event_tq, cpu));
-		taskqueue_start_threads(VMBUS_PCPU_PTR(sc, event_tq, cpu),
-		    1, PI_NET, "hvevent%d", cpu);
-
 		if (vmbus_pin_evttask) {
 			CPU_SETOF(cpu, &cpu_mask);
-			TASK_INIT(&cpuset_task, 0, vmbus_cpuset_setthread_task,
-			    &cpu_mask);
-			taskqueue_enqueue(VMBUS_PCPU_GET(sc, event_tq, cpu),
-			    &cpuset_task);
-			taskqueue_drain(VMBUS_PCPU_GET(sc, event_tq, cpu),
-			    &cpuset_task);
+			taskqueue_start_threads_cpuset(
+			    VMBUS_PCPU_PTR(sc, event_tq, cpu), 1, PI_NET,
+			    &cpu_mask, "hvevent%d", cpu);
+		} else {
+			taskqueue_start_threads(
+			    VMBUS_PCPU_PTR(sc, event_tq, cpu), 1, PI_NET,
+			    "hvevent%d", cpu);
 		}
 
 		/*
@@ -1002,26 +928,21 @@ vmbus_intr_setup(struct vmbus_softc *sc)
 		VMBUS_PCPU_GET(sc, message_tq, cpu) = taskqueue_create_fast(
 		    "hyperv msg", M_WAITOK, taskqueue_thread_enqueue,
 		    VMBUS_PCPU_PTR(sc, message_tq, cpu));
-		taskqueue_start_threads(VMBUS_PCPU_PTR(sc, message_tq, cpu), 1,
-		    PI_NET, "hvmsg%d", cpu);
+		CPU_SETOF(cpu, &cpu_mask);
+		taskqueue_start_threads_cpuset(
+		    VMBUS_PCPU_PTR(sc, message_tq, cpu), 1, PI_NET, &cpu_mask,
+		    "hvmsg%d", cpu);
 		TASK_INIT(VMBUS_PCPU_PTR(sc, message_task, cpu), 0,
 		    vmbus_msg_task, sc);
-
-		CPU_SETOF(cpu, &cpu_mask);
-		TASK_INIT(&cpuset_task, 0, vmbus_cpuset_setthread_task,
-		    &cpu_mask);
-		taskqueue_enqueue(VMBUS_PCPU_GET(sc, message_tq, cpu),
-		    &cpuset_task);
-		taskqueue_drain(VMBUS_PCPU_GET(sc, message_tq, cpu),
-		    &cpuset_task);
 	}
 
 	/*
 	 * All Hyper-V ISR required resources are setup, now let's find a
 	 * free IDT vector for Hyper-V ISR and set it up.
 	 */
-	sc->vmbus_idtvec = vmbus_vector_alloc();
-	if (sc->vmbus_idtvec == 0) {
+	sc->vmbus_idtvec = lapic_ipi_alloc(pti ? IDTVEC(vmbus_isr_pti) :
+	    IDTVEC(vmbus_isr));
+	if (sc->vmbus_idtvec < 0) {
 		device_printf(sc->vmbus_dev, "cannot find free IDT vector\n");
 		return ENXIO;
 	}
@@ -1037,7 +958,10 @@ vmbus_intr_teardown(struct vmbus_softc *sc)
 {
 	int cpu;
 
-	vmbus_vector_free(sc->vmbus_idtvec);
+	if (sc->vmbus_idtvec >= 0) {
+		lapic_ipi_free(sc->vmbus_idtvec);
+		sc->vmbus_idtvec = -1;
+	}
 
 	CPU_FOREACH(cpu) {
 		if (VMBUS_PCPU_GET(sc, event_tq, cpu) != NULL) {
@@ -1512,11 +1436,27 @@ vmbus_event_proc_dummy(struct vmbus_softc *sc __unused, int cpu __unused)
 {
 }
 
+#ifdef EARLY_AP_STARTUP
+
+static void
+vmbus_intrhook(void *xsc)
+{
+	struct vmbus_softc *sc = xsc;
+
+	if (bootverbose)
+		device_printf(sc->vmbus_dev, "intrhook\n");
+	vmbus_doattach(sc);
+	config_intrhook_disestablish(&sc->vmbus_intrhook);
+}
+
+#endif	/* EARLY_AP_STARTUP */
+
 static int
 vmbus_attach(device_t dev)
 {
 	vmbus_sc = device_get_softc(dev);
 	vmbus_sc->vmbus_dev = dev;
+	vmbus_sc->vmbus_idtvec = -1;
 
 	/*
 	 * Event processing logic will be configured:
@@ -1525,6 +1465,14 @@ vmbus_attach(device_t dev)
 	 */
 	vmbus_sc->vmbus_event_proc = vmbus_event_proc_dummy;
 
+#ifdef EARLY_AP_STARTUP
+	/*
+	 * Defer the real attach until the pause(9) works as expected.
+	 */
+	vmbus_sc->vmbus_intrhook.ich_func = vmbus_intrhook;
+	vmbus_sc->vmbus_intrhook.ich_arg = vmbus_sc;
+	config_intrhook_establish(&vmbus_sc->vmbus_intrhook);
+#else	/* !EARLY_AP_STARTUP */
 	/* 
 	 * If the system has already booted and thread
 	 * scheduling is possible indicated by the global
@@ -1533,6 +1481,7 @@ vmbus_attach(device_t dev)
 	 */
 	if (!cold)
 		vmbus_doattach(vmbus_sc);
+#endif	/* EARLY_AP_STARTUP */
 
 	return (0);
 }
@@ -1573,6 +1522,8 @@ vmbus_detach(device_t dev)
 	return (0);
 }
 
+#ifndef EARLY_AP_STARTUP
+
 static void
 vmbus_sysinit(void *arg __unused)
 {
@@ -1596,3 +1547,5 @@ vmbus_sysinit(void *arg __unused)
  * initialized.
  */
 SYSINIT(vmbus_initialize, SI_SUB_SMP, SI_ORDER_ANY, vmbus_sysinit, NULL);
+
+#endif	/* !EARLY_AP_STARTUP */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/jme/if_jmereg.h 216551 2010-12-18 23:52:50Z yongari $
+ * $FreeBSD: stable/11/sys/dev/jme/if_jmereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_IF_JMEREG_H
@@ -926,7 +925,7 @@
 #define	TIMER3_TIMEOUT_COUNT_SHIFT	8
 #define	TIMER3_TIMEOUT_VALUE_SHIFT	1
 
-/* Aggresive power mode control. */
+/* Aggressive power mode control. */
 #define	JME_APMC		0x087C
 #define	APMC_PCIE_SDOWN_STAT	0x80000000
 #define	APMC_PCIE_SDOWN_ENB	0x40000000

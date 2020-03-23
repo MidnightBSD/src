@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 TAKAHASHI Yoshihiro
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ic/i8255.h 182835 2008-09-07 04:35:04Z nyan $
+ * $FreeBSD: stable/11/sys/dev/ic/i8255.h 182835 2008-09-07 04:35:04Z nyan $
  */
 
 #ifndef	_DEV_IC_I8255_H_

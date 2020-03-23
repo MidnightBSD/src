@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/dev/fatm/if_fatmvar.h 199559 2009-11-19 22:06:40Z jhb $
+ * $FreeBSD: stable/11/sys/dev/fatm/if_fatmvar.h 298955 2016-05-03 03:41:25Z pfg $
  *
  * Fore PCA200E driver definitions.
  */
@@ -119,7 +118,7 @@ typedef void (*completion_cb)(struct fatm_softc *, struct cmdqueue *);
 struct cmdqueue {		/* command queue element */
 	struct fqelem	q;
 	completion_cb	cb;	/* call on command completion */
-	int		error;	/* set if error occured */
+	int		error;	/* set if error occurred */
 };
 
 /*

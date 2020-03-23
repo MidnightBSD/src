@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/dev/firewire/if_fwevar.h 170374 2007-06-06 14:31:36Z simokawa $
+ * $FreeBSD: stable/11/sys/dev/firewire/if_fwevar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NET_IF_FWEVAR_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2007 Marius Strobl <marius@FreeBSD.org>
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/gem/if_gem_sbus.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/gem/if_gem_sbus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * SBus bindings for Sun GEM Ethernet controllers

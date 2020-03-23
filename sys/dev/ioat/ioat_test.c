@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2012 Intel Corporation
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ioat/ioat_test.c 315071 2017-03-11 15:26:41Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ioat/ioat_test.c 355198 2019-11-29 00:38:34Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,6 +65,7 @@ struct test_transaction {
 	void			*buf[IOAT_MAX_BUFS];
 	uint32_t		length;
 	uint32_t		depth;
+	uint32_t		crc[IOAT_MAX_BUFS];
 	struct ioat_test	*test;
 	TAILQ_ENTRY(test_transaction)	entry;
 };
@@ -313,6 +313,28 @@ ioat_test_submit_1_tx(struct ioat_test *test, bus_dmaengine_t dma)
 
 			desc = ioat_copy_8k_aligned(dma, dest, dst2, src, src2,
 			    cb, tx, flags);
+		} else if (test->testkind == IOAT_TEST_DMA_8K_PB) {
+			bus_addr_t src2, dst2;
+
+			src2 = vtophys((vm_offset_t)tx->buf[2*i+1] + PAGE_SIZE);
+			dst2 = vtophys((vm_offset_t)tx->buf[2*i] + PAGE_SIZE);
+
+			desc = ioat_copy_8k_aligned(dma, dest, dst2, src, src2,
+			    cb, tx, flags);
+		} else if (test->testkind == IOAT_TEST_DMA_CRC) {
+			bus_addr_t crc;
+
+			tx->crc[i] = 0;
+			crc = vtophys((vm_offset_t)&tx->crc[i]);
+			desc = ioat_crc(dma, src, tx->length,
+			    NULL, crc, cb, tx, flags | DMA_CRC_STORE);
+		} else if (test->testkind == IOAT_TEST_DMA_CRC_COPY) {
+			bus_addr_t crc;
+
+			tx->crc[i] = 0;
+			crc = vtophys((vm_offset_t)&tx->crc[i]);
+			desc = ioat_copy_crc(dma, dest, src, tx->length,
+			    NULL, crc, cb, tx, flags | DMA_CRC_STORE);
 		}
 		if (desc == NULL)
 			break;
@@ -347,7 +369,8 @@ ioat_dma_test(void *arg)
 	test = arg;
 	memset(__DEVOLATILE(void *, test->status), 0, sizeof(test->status));
 
-	if (test->testkind == IOAT_TEST_DMA_8K &&
+	if ((test->testkind == IOAT_TEST_DMA_8K ||
+	    test->testkind == IOAT_TEST_DMA_8K_PB) &&
 	    test->buffer_size != 2 * PAGE_SIZE) {
 		ioat_test_log(0, "Asked for 8k test and buffer size isn't 8k\n");
 		test->status[IOAT_TEST_INVALID_INPUT]++;
@@ -560,24 +583,15 @@ SYSCTL_PROC(_hw_ioat, OID_AUTO, enable_ioat_test, CTLTYPE_INT | CTLFLAG_RW,
 void
 ioat_test_attach(void)
 {
-#ifdef notyet
 	char *val;
 
 	val = kern_getenv("hw.ioat.enable_ioat_test");
 	if (val != NULL && strcmp(val, "0") != 0) {
-#else
-	int val = 0;
-
-	TUNABLE_INT_FETCH("hw.ioat.enable_ioat_test", &val);
-	if (val != 0) {
-#endif
 		mtx_lock(&Giant);
 		enable_ioat_test(true);
 		mtx_unlock(&Giant);
 	}
-#ifdef notyet
 	freeenv(val);
-#endif
 }
 
 void

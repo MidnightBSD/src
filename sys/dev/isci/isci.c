@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci.c 287677 2015-09-11 17:01:01Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/isci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/isci/isci.h>
 
@@ -139,8 +138,8 @@ isci_allocate_pci_memory(struct isci_softc *isci)
 		struct ISCI_PCI_BAR *pci_bar = &isci->pci_bar[i];
 
 		pci_bar->resource_id = PCIR_BAR(i*2);
-		pci_bar->resource = bus_alloc_resource(isci->device,
-		    SYS_RES_MEMORY, &pci_bar->resource_id, 0, ~0, 1,
+		pci_bar->resource = bus_alloc_resource_any(isci->device,
+		    SYS_RES_MEMORY, &pci_bar->resource_id,
 		    RF_ACTIVE);
 
 		if(pci_bar->resource == NULL)

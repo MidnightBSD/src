@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1992,1993,1994,1995,1996,1997 by Kevin E. Martin, Chapel Hill, North Carolina.
  *
@@ -27,7 +26,7 @@
  *
  *	from: NetBSD: machfbreg.h,v 1.1 2002/10/24 18:15:57 junyoung Exp
  *
- * $FreeBSD: stable/10/sys/dev/fb/machfbreg.h 146482 2005-05-21 20:47:38Z marius $
+ * $FreeBSD: stable/11/sys/dev/fb/machfbreg.h 146482 2005-05-21 20:47:38Z marius $
  */
 
 #ifndef _DEV_FB_MACHFB_H_

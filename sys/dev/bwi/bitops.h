@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, 2005 David Young.  All rights reserved.
  *
@@ -30,7 +29,7 @@
  * OF SUCH DAMAGE.
  *
  * $DragonFly: src/sys/dev/netif/bwi/bitops.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
- * $FreeBSD: stable/10/sys/dev/bwi/bitops.h 191762 2009-05-03 04:01:43Z imp $
+ * $FreeBSD: stable/11/sys/dev/bwi/bitops.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BITOPS_H

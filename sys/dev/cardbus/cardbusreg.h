@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2001 Jonathan Chen.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cardbus/cardbusreg.h 184584 2008-11-03 06:37:59Z imp $
+ * $FreeBSD: stable/11/sys/dev/cardbus/cardbusreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

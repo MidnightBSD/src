@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Peter Wemm
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/nvram/nvram.c 181132 2008-08-01 20:39:18Z jhb $
+ * $FreeBSD: stable/11/sys/dev/nvram/nvram.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

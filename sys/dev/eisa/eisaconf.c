@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * EISA bus probe and attach routines 
  *
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/eisa/eisaconf.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/eisa/eisaconf.c 295832 2016-02-20 01:32:58Z jhibbits $");
 
 #include "opt_eisa.h"
 
@@ -353,14 +352,14 @@ eisa_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
 
 static struct resource *
 eisa_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	int isdefault;
 	struct eisa_device *e_dev = device_get_ivars(child);
 	struct resource *rv, **rvp = 0;
 
 	isdefault = (device_get_parent(child) == dev &&
-	     start == 0UL && end == ~0UL && count == 1);
+	    RMAN_IS_DEFAULT_RANGE(start, end) && count == 1);
 
 	switch (type) {
 	case SYS_RES_IRQ:

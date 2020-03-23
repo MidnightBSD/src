@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/mpt/mpt_cam.h 203108 2010-01-28 08:41:30Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/mpt/mpt_cam.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * LSI MPT Host Adapter FreeBSD Wrapper Definitions (CAM version)
  *

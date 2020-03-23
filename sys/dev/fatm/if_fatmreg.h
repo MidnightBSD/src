@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/dev/fatm/if_fatmreg.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/fatm/if_fatmreg.h 298955 2016-05-03 03:41:25Z pfg $
  *
  * Fore PCA200E hardware definitions.
  */
@@ -64,7 +63,7 @@ enum {
  * status word to PENDING. The card sets it to COMPLETE upon completion of
  * the transmit/receive or command. An unused queue entry contains FREE.
  * The ERROR can be ored into the COMPLETE. Note, that there are circumstances
- * when ERROR is set without COMPLETE beeing set (when you try to activate
+ * when ERROR is set without COMPLETE being set (when you try to activate
  * a bad VCI like, for example, VCI 0).
  */
 enum {

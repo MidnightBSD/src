@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/include/hyperv_busdma.h 307133 2016-10-12 08:58:03Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/include/hyperv_busdma.h 307466 2016-10-17 03:48:22Z sephe $
  */
 
 #ifndef _HYPERV_BUSDMA_H_

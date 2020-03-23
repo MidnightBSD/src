@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_config.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mps/mps_config.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* TODO Move headers to mpsvar */
 #include <sys/types.h>
@@ -371,7 +370,7 @@ mps_base_static_config_pages(struct mps_softc *sc)
 
 /**
  * mps_wd_config_pages - get info required to support WarpDrive.  This needs to
- *    be called after discovery is complete to guarentee that IR info is there.
+ *    be called after discovery is complete to guarantee that IR info is there.
  * @sc: per adapter object
  *
  * Return nothing.

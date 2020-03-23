@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_mapping.c 319445 2017-06-01 16:54:10Z slm $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mps/mps_mapping.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* TODO Move headers to mpsvar */
 #include <sys/types.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_pci.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mps/mps_pci.c 340403 2018-11-13 18:49:43Z scottl $");
 
 /* PCI/PCI-X/PCIe bus interface for the Avago Tech (LSI) MPT2 controllers */
 
@@ -248,12 +247,16 @@ mps_pci_alloc_interrupts(struct mps_softc *sc)
 	error = 0;
 	msgs = 0;
 
-	if ((sc->disable_msix == 0) &&
-	    ((msgs = pci_msix_count(dev)) >= MPS_MSI_COUNT))
-		error = mps_alloc_msix(sc, MPS_MSI_COUNT);
-	if ((error != 0) && (sc->disable_msi == 0) &&
-	    ((msgs = pci_msi_count(dev)) >= MPS_MSI_COUNT))
-		error = mps_alloc_msi(sc, MPS_MSI_COUNT);
+	if (sc->disable_msix == 0) {
+		msgs = pci_msix_count(dev);
+		if (msgs >= MPS_MSI_COUNT)
+			error = mps_alloc_msix(sc, MPS_MSI_COUNT);
+	}
+	if (((error != 0) || (msgs == 0)) && (sc->disable_msi == 0)) {
+		msgs = pci_msi_count(dev);
+		if (msgs >= MPS_MSI_COUNT)
+			error = mps_alloc_msi(sc, MPS_MSI_COUNT);
+	}
 	if (error != 0)
 		msgs = 0;
 

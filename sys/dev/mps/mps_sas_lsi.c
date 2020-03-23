@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_sas_lsi.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mps/mps_sas_lsi.c 331849 2018-03-31 19:18:07Z smh $");
 
 /* Communications core for Avago Technologies (LSI) MPT2 */
 
@@ -51,6 +50,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_sas_lsi.c 322661 2017-08-18 15:38:
 #include <sys/kthread.h>
 #include <sys/taskqueue.h>
 #include <sys/sbuf.h>
+#include <sys/reboot.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -125,7 +125,7 @@ int mpssas_get_sas_address_for_sata_disk(struct mps_softc *sc,
     u64 *sas_address, u16 handle, u32 device_info, u8 *is_SATA_SSD);
 static int mpssas_volume_add(struct mps_softc *sc,
     u16 handle);
-static void mpssas_SSU_to_SATA_devices(struct mps_softc *sc);
+static void mpssas_SSU_to_SATA_devices(struct mps_softc *sc, int howto);
 static void mpssas_stop_unit_done(struct cam_periph *periph,
     union ccb *done_ccb);
 
@@ -655,7 +655,7 @@ mpssas_add_device(struct mps_softc *sc, u16 handle, u8 linkrate){
 			parent_devinfo = le32toh(parent_config_page.DeviceInfo);
 		}
 	}
-	/* TODO Check proper endianess */
+	/* TODO Check proper endianness */
 	sas_address = config_page.SASAddress.High;
 	sas_address = (sas_address << 32) | config_page.SASAddress.Low;
 
@@ -1113,7 +1113,7 @@ out:
  * Return nothing.
  */
 static void
-mpssas_SSU_to_SATA_devices(struct mps_softc *sc)
+mpssas_SSU_to_SATA_devices(struct mps_softc *sc, int howto)
 {
 	struct mpssas_softc *sassc = sc->sassc;
 	union ccb *ccb;
@@ -1121,7 +1121,7 @@ mpssas_SSU_to_SATA_devices(struct mps_softc *sc)
 	target_id_t targetid;
 	struct mpssas_target *target;
 	char path_str[64];
-	struct timeval cur_time, start_time;
+	int timeout;
 
 	/*
 	 * For each target, issue a StartStopUnit command to stop the device.
@@ -1184,17 +1184,23 @@ mpssas_SSU_to_SATA_devices(struct mps_softc *sc)
 	}
 
 	/*
-	 * Wait until all of the SSU commands have completed or time has
-	 * expired (60 seconds).  Pause for 100ms each time through.  If any
-	 * command times out, the target will be reset in the SCSI command
-	 * timeout routine.
+	 * Timeout after 60 seconds by default or 10 seconds if howto has
+	 * RB_NOSYNC set which indicates we're likely handling a panic.
 	 */
-	getmicrotime(&start_time);
-	while (sc->SSU_refcount) {
+	timeout = 600;
+	if (howto & RB_NOSYNC)
+		timeout = 100;
+
+	/*
+	 * Wait until all of the SSU commands have completed or timeout has
+	 * expired.  Pause for 100ms each time through.  If any command
+	 * times out, the target will be reset in the SCSI command timeout
+	 * routine.
+	 */
+	while (sc->SSU_refcount > 0) {
 		pause("mpswait", hz/10);
 		
-		getmicrotime(&cur_time);
-		if ((cur_time.tv_sec - start_time.tv_sec) > 60) {
+		if (--timeout == 0) {
 			mps_dprint(sc, MPS_FAULT, "Time has expired waiting "
 			    "for SSU commands to complete.\n");
 			break;
@@ -1236,7 +1242,7 @@ mpssas_stop_unit_done(struct cam_periph *periph, union ccb *done_ccb)
  * Return nothing.
  */
 void
-mpssas_ir_shutdown(struct mps_softc *sc)
+mpssas_ir_shutdown(struct mps_softc *sc, int howto)
 {
 	u16 volume_mapping_flags;
 	u16 ioc_pg8_flags = le16toh(sc->ioc_pg8.Flags);
@@ -1341,5 +1347,5 @@ out:
 			}
 		}
 	}
-	mpssas_SSU_to_SATA_devices(sc);
+	mpssas_SSU_to_SATA_devices(sc, howto);
 }

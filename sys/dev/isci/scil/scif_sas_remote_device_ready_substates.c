@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scif_sas_remote_device_ready_substates.c 231296 2012-02-09 17:50:24Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/scif_sas_remote_device_ready_substates.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * @file
@@ -246,7 +245,7 @@ void scif_sas_remote_device_ready_ncq_error_substate_enter(
       pending_request =
          (SCIF_SAS_REQUEST_T*) sci_fast_list_get_object(pending_request_element);
 
-      // The current element may be deleted from the list becasue of
+      // The current element may be deleted from the list because of
       // IO completion so advance to the next element early
       pending_request_element = sci_fast_list_get_next(pending_request_element);
 

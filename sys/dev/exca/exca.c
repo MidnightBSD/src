@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2005 M Warner Losh.  All rights reserved.
  *
@@ -54,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/exca/exca.c 189579 2009-03-09 13:29:13Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/exca/exca.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -403,7 +402,7 @@ exca_mem_set_offset(struct exca_softc *sc, struct resource *res,
 		    "set_memory_offset: specified resource not active\n");
 		return (ENOENT);
 	}
-	sc->mem[win].cardaddr = cardaddr & ~(EXCA_MEM_PAGESIZE - 1);
+	sc->mem[win].cardaddr = rounddown2(cardaddr, EXCA_MEM_PAGESIZE);
 	delta = cardaddr % EXCA_MEM_PAGESIZE;
 	if (deltap)
 		*deltap = delta;

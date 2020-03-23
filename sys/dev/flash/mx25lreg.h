@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/flash/mx25lreg.h 210238 2010-07-19 15:05:35Z adrian $
+ * $FreeBSD: stable/11/sys/dev/flash/mx25lreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __MX25LREG_H__
@@ -46,6 +45,8 @@
 #define CMD_BULK_ERASE		0xC7
 #define	CMD_BLOCK_4K_ERASE	0x20
 #define	CMD_BLOCK_32K_ERASE	0x52
+#define	CMD_ENTER_4B_MODE	0xB7
+#define	CMD_EXIT_4B_MODE	0xE9
 
 /*
  * Status register flags

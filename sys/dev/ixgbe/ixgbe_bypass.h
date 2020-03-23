@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_bypass.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_bypass.h 320897 2017-07-11 21:25:07Z erj $*/
 
 #ifndef _IXGBE_BYPASS_H_
 #define _IXGBE_BYPASS_H_
@@ -49,4 +48,4 @@
 
 void ixgbe_bypass_init(struct adapter *);
 
-#endif
+#endif /* _IXGBE_BYPASS_H_ */

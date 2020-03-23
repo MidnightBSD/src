@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mca/mca_busvar.h 51674 1999-09-26 07:02:05Z mdodd $
+ * $FreeBSD: stable/11/sys/dev/mca/mca_busvar.h 51674 1999-09-26 07:02:05Z mdodd $
  */
 
 typedef u_int16_t mca_id_t;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) HighPoint Technologies, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hptrr/hptrr_osm_bsd.c 328268 2018-01-23 02:29:39Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hptrr/hptrr_osm_bsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/hptrr/hptrr_config.h>
 /* $Id: osm_bsd.c,v 1.27 2007/11/22 07:35:49 gmm Exp $
@@ -1094,8 +1093,8 @@ static void hpt_final_init(void *dummy)
 
 		for (hba = vbus_ext->hba_list; hba; hba = hba->next) {
 			int rid = 0;
-			if ((hba->irq_res = bus_alloc_resource(hba->pcidev,
-				SYS_RES_IRQ, &rid, 0, ~0ul, 1, RF_SHAREABLE | RF_ACTIVE)) == NULL)
+			if ((hba->irq_res = bus_alloc_resource_any(hba->pcidev,
+				SYS_RES_IRQ, &rid, RF_SHAREABLE | RF_ACTIVE)) == NULL)
 			{
 				os_printk("can't allocate interrupt");
 				return ;

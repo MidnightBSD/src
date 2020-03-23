@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1993, David Greenman. This software may be used, modified,
  *   copied, distributed, and sold, in both source and binary form provided
@@ -7,7 +6,7 @@
  *   of this software, nor does the author assume any responsibility
  *   for damages incurred with its use.
  *
- * $FreeBSD: stable/10/sys/dev/ed/if_edreg.h 264942 2014-04-25 21:32:34Z marius $
+ * $FreeBSD: stable/11/sys/dev/ed/if_edreg.h 298955 2016-05-03 03:41:25Z pfg $
  */
 /*
  * National Semiconductor DS8390 NIC register definitions
@@ -794,7 +793,7 @@ struct ed_ring	{
 #define ED_3COM_PSPR		1
 
 /*
- *	Drq Timer Register. Determines number of bytes to be transfered during
+ *	Drq Timer Register. Determines number of bytes to be transferred during
  *		a DMA burst.
  */
 #define ED_3COM_DQTR		2

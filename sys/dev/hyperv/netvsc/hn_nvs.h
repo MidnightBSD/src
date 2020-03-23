@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
  * Copyright (c) 2010-2012 Citrix Inc.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/netvsc/hn_nvs.h 324461 2017-10-10 02:22:34Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/netvsc/hn_nvs.h 322612 2017-08-17 05:09:22Z sephe $
  */
 
 #ifndef _HN_NVS_H_

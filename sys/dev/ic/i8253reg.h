@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: Header: timerreg.h,v 1.2 93/02/28 15:08:58 mccanne Exp
- * $FreeBSD: stable/10/sys/dev/ic/i8253reg.h 146215 2005-05-14 10:26:31Z nyan $
+ * $FreeBSD: stable/11/sys/dev/ic/i8253reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

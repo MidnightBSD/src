@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Cronyx-Tau-PCI adapter driver for FreeBSD.
  * Supports PPP/HDLC, Cisco/HDLC and FrameRelay protocol in synchronous mode,
@@ -23,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cp/if_cp.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cp/if_cp.c 315221 2017-03-14 02:06:03Z pfg $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -43,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cp/if_cp.c 314667 2017-03-04 13:03:31Z avg
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
 #include <machine/bus.h>
@@ -67,7 +67,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cp/if_cp.c 314667 2017-03-04 13:03:31Z avg
 #include <dev/cp/cpddk.h>
 #include <machine/cserial.h>
 #include <machine/resource.h>
-#include <machine/pmap.h>
 
 /* If we don't have Cronyx's sppp version, we don't have fr support via sppp */
 #ifndef PP_FR
@@ -182,22 +181,6 @@ static struct cdevsw cp_cdevsw = {
 };
 
 /*
- * Print the mbuf chain, for debug purposes only.
- */
-static void printmbuf (struct mbuf *m)
-{
-	printf ("mbuf:");
-	for (; m; m=m->m_next) {
-		if (m->m_flags & M_PKTHDR)
-			printf (" HDR %d:", m->m_pkthdr.len);
-		if (m->m_flags & M_EXT)
-			printf (" EXT:");
-		printf (" %d", m->m_len);
-	}
-	printf ("\n");
-}
-
-/*
  * Make an mbuf from data.
  */
 static struct mbuf *makembuf (void *buf, unsigned len)
@@ -207,8 +190,7 @@ static struct mbuf *makembuf (void *buf, unsigned len)
 	MGETHDR (m, M_NOWAIT, MT_DATA);
 	if (! m)
 		return 0;
-	MCLGET (m, M_NOWAIT);
-	if (! (m->m_flags & M_EXT)) {
+	if (!(MCLGET (m, M_NOWAIT))) {
 		m_freem (m);
 		return 0;
 	}
@@ -646,11 +628,11 @@ static int cp_detach (device_t dev)
 		if (! d || ! d->chan->type)
 			continue;
 		callout_drain (&d->timeout_handle);
-		channel [b->num*NCHAN + c->num] = 0;
+		channel [b->num*NCHAN + c->num] = NULL;
 		/* Deallocate buffers. */
 		cp_bus_dma_mem_free (&d->dmamem);
 	}
-	adapter [b->num] = 0;
+	adapter [b->num] = NULL;
 	cp_bus_dma_mem_free (&bd->dmamem);
 	free (b, M_DEVBUF);
 	mtx_destroy (&bd->cp_mtx);
@@ -883,7 +865,7 @@ static void cp_transmit (cp_chan_t *c, void *attachment, int len)
 
 	d->timeout = 0;
 #ifndef NETGRAPH
-	++d->ifp->if_opackets;
+	if_inc_counter(d->ifp, IFCOUNTER_OPACKETS, 1);
 	d->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #endif
 	cp_start (d);
@@ -904,21 +886,21 @@ static void cp_receive (cp_chan_t *c, unsigned char *data, int len)
 	if (! m) {
 		CP_DEBUG (d, ("no memory for packet\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_iqdrops;
+		if_inc_counter(d->ifp, IFCOUNTER_IQDROPS, 1);
 #endif
 		return;
 	}
 	if (c->debug > 1)
-		printmbuf (m);
+		m_print (m, 0);
 #ifdef NETGRAPH
 	m->m_pkthdr.rcvif = 0;
 	NG_SEND_DATA_ONLY (error, d->hook, m);
 #else
-	++d->ifp->if_ipackets;
+	if_inc_counter(d->ifp, IFCOUNTER_IPACKETS, 1);
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-	BPF_TAP (d->ifp, data, len);
+	BPF_MTAP(d->ifp, m);
 	IF_ENQUEUE (&d->queue, m);
 #endif
 }
@@ -931,33 +913,33 @@ static void cp_error (cp_chan_t *c, int data)
 	case CP_FRAME:
 		CP_DEBUG (d, ("frame error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CP_CRC:
 		CP_DEBUG (d, ("crc error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CP_OVERRUN:
 		CP_DEBUG (d, ("overrun error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_collisions;
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_COLLISIONS, 1);
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CP_OVERFLOW:
 		CP_DEBUG (d, ("overflow error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CP_UNDERRUN:
 		CP_DEBUG (d, ("underrun error\n"));
 		d->timeout = 0;
 #ifndef NETGRAPH
-		++d->ifp->if_oerrors;
+		if_inc_counter(d->ifp, IFCOUNTER_OERRORS, 1);
 		d->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #endif
 		cp_start (d);
@@ -2157,7 +2139,6 @@ static int ng_cp_rcvdata (hook_p hook, item_p item)
 	CP_LOCK (bd);
 	IF_LOCK (q);
 	if (_IF_QFULL (q)) {
-		_IF_DROP (q);
 		IF_UNLOCK (q);
 		CP_UNLOCK (bd);
 		splx (s);
@@ -2190,7 +2171,7 @@ static int ng_cp_rmnode (node_p node)
 		NG_NODE_SET_PRIVATE (node, NULL);
 		NG_NODE_UNREF (node);
 	}
-	NG_NODE_REVIVE(node);		/* Persistant node */
+	NG_NODE_REVIVE(node);		/* Persistent node */
 #endif
 	return 0;
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jonathan Lemon
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fxp/inphy.c 226154 2011-10-08 12:33:10Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fxp/inphy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * driver for Intel 82553 and 82555 PHYs
@@ -44,6 +43,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/fxp/inphy.c 226154 2011-10-08 12:33:10Z ma
 #include <sys/bus.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 
 #include <dev/mii/mii.h>
@@ -122,7 +122,7 @@ inphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		/*
 		 * If the interface is not up, don't do anything.
 		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
+		if ((if_getflags(mii->mii_ifp) & IFF_UP) == 0)
 			break;
 
 		mii_phy_setmedia(sc);

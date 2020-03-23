@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Authors: Joe Kloss; Ravi Pokala (rpokala@freebsd.org)
  *
  * Copyright (c) 2017-2018 Panasas
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/imcsmb/imcsmb_var.h 330304 2018-03-03 01:53:51Z rpokala $
+ * $FreeBSD: stable/11/sys/dev/imcsmb/imcsmb_var.h 355366 2019-12-03 22:53:50Z rpokala $
  */
 
 #ifndef _DEV__IMCSMB__IMCSMB_VAR_H_

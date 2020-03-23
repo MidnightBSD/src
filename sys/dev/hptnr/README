@@ -220,4 +220,4 @@ Technical support and service
         (http://www.highpoint-tech.com) to check if there is a new or 
         updated device driver for your system.
 
-$FreeBSD: stable/10/sys/dev/hptnr/README 284935 2015-06-29 18:34:30Z delphij $
+$FreeBSD: stable/11/sys/dev/hptnr/README 284792 2015-06-25 06:15:08Z delphij $

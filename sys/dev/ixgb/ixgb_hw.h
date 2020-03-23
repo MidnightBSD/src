@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 
   Copyright (c) 2001-2004, Intel Corporation
@@ -32,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: stable/10/sys/dev/ixgb/ixgb_hw.h 129794 2004-05-28 00:23:00Z tackerman $*/
+/*$FreeBSD: stable/11/sys/dev/ixgb/ixgb_hw.h 331722 2018-03-29 02:50:57Z eadler $*/
 #ifndef _IXGB_HW_H_
 #define _IXGB_HW_H_
 

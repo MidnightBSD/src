@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_mbx.c 333216 2018-05-03 15:47:49Z marius $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/e1000_mbx.c 333215 2018-05-03 15:47:42Z marius $*/
 
 #include "e1000_mbx.h"
 
@@ -68,7 +67,7 @@ static s32 e1000_null_mbx_transact(struct e1000_hw E1000_UNUSEDARG *hw,
  *  @size: Length of buffer
  *  @mbx_id: id of mailbox to read
  *
- *  returns SUCCESS if it successfuly read message from buffer
+ *  returns SUCCESS if it successfully read message from buffer
  **/
 s32 e1000_read_mbx(struct e1000_hw *hw, u32 *msg, u16 size, u16 mbx_id)
 {
@@ -494,7 +493,7 @@ out_no_write:
  *  @size: Length of buffer
  *  @mbx_id: id of mailbox to read
  *
- *  returns SUCCESS if it successfuly read message from buffer
+ *  returns SUCCESS if it successfully read message from buffer
  **/
 static s32 e1000_read_mbx_vf(struct e1000_hw *hw, u32 *msg, u16 size,
 			     u16 E1000_UNUSEDARG mbx_id)

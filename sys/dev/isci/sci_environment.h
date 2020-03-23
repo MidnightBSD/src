@@ -1,2 +1,1 @@
-/* $MidnightBSD$ */
 /* empty file for now. compiler needs it */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * Copyright (c) 2005 - 2006 Marius Strobl <marius@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/creator.c 263763 2014-03-26 07:31:57Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/creator.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -152,8 +151,7 @@ static const struct {
 	{ FFB_VIRT_EXP,		FFB_PHYS_EXP,		FFB_SIZE_EXP },
 };
 
-#define	CREATOR_FB_MAP_SIZE						\
-	(sizeof(creator_fb_map) / sizeof(creator_fb_map[0]))
+#define	CREATOR_FB_MAP_SIZE	nitems(creator_fb_map)
 
 extern const struct gfb_font gallant12x22;
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2007 Scott Long
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_cam.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_cam.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_mfi.h"
 
@@ -91,8 +90,7 @@ static struct mfi_command * mfip_start(void *);
 static void	mfip_done(struct mfi_command *cm);
 
 static int mfi_allow_disks = 0;
-TUNABLE_INT("hw.mfi.allow_cam_disk_passthrough", &mfi_allow_disks);
-SYSCTL_INT(_hw_mfi, OID_AUTO, allow_cam_disk_passthrough, CTLFLAG_RD,
+SYSCTL_INT(_hw_mfi, OID_AUTO, allow_cam_disk_passthrough, CTLFLAG_RDTUN,
     &mfi_allow_disks, 0, "event message locale");
 
 static devclass_t	mfip_devclass;

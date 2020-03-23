@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, David Madole
  * All rights reserved.
@@ -32,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_rtl80x9.c 264942 2014-04-25 21:32:34Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_rtl80x9.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ed.h"
 
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_rtl80x9.c 264942 2014-04-25 21:32
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_mib.h>

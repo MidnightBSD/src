@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Henrik Brix Andersen <brix@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/glxiic/glxiic.c 275982 2014-12-21 03:06:11Z smh $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/glxiic/glxiic.c 331722 2018-03-29 02:50:57Z eadler $");
 /*
  * AMD Geode LX CS5536 System Management Bus controller.
  *
@@ -315,7 +314,6 @@ glxiic_attach(device_t dev)
 	struct sysctl_oid *tree;
 	int error, irq, unit;
 	uint32_t irq_map;
-	char tn[32];
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
@@ -403,20 +401,17 @@ glxiic_attach(device_t dev)
 	tree = device_get_sysctl_tree(dev);
 
 	sc->timeout = GLXIIC_DEFAULT_TIMEOUT;
-	snprintf(tn, sizeof(tn), "dev.glxiic.%d.timeout", unit);
-	TUNABLE_INT_FETCH(tn, &sc->timeout);
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "timeout", CTLFLAG_RW | CTLFLAG_TUN, &sc->timeout, 0,
+	    "timeout", CTLFLAG_RWTUN, &sc->timeout, 0,
 	    "activity timeout in ms");
 
 	glxiic_gpio_enable(sc);
 	glxiic_smb_enable(sc, IIC_FASTEST, 0);
 
-	error = bus_generic_attach(dev);
-	if (error != 0) {
-		device_printf(dev, "Could not probe and attach children\n");
-		error = ENXIO;
-	}
+	/* Probe and attach the iicbus when interrupts are available. */
+	config_intrhook_oneshot((ich_func_t)bus_generic_attach, dev);
+	error = 0;
+
 out:
 	if (error != 0) {
 		callout_drain(&sc->callout);

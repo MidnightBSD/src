@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_wd80x3.c 190483 2009-03-28 04:56:56Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_wd80x3.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ed.h"
 
@@ -98,7 +97,7 @@ ed_probe_WD80x3_generic(device_t dev, int flags, uint16_t *intr_vals[])
 	int     i;
 	u_int   memsize;
 	u_char  iptr, isa16bit, sum, totalsum;
-	u_long	irq, junk, pmem;
+	rman_res_t	irq, junk, pmem;
 
 	sc->chip_type = ED_CHIP_TYPE_DP8390;
 

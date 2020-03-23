@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/sati_passthrough.c 265570 2014-05-07 16:56:20Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/sati_passthrough.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * @file
@@ -231,9 +230,9 @@ void sati_passthrough_construct_sense(
 
    // Command specific section
    sati_set_sense_data_byte(sense_data, sense_len, 8,  (PASSTHROUGH_CDB_EXTEND(cdb) << 7) | (sector_count_upper << 6) | (lba_upper << 5));
-   sati_set_sense_data_byte(sense_data, sense_len, 9,  sati_get_ata_lba_high(register_fis));
+   sati_set_sense_data_byte(sense_data, sense_len, 9,  sati_get_ata_lba_low(register_fis));
    sati_set_sense_data_byte(sense_data, sense_len, 10, sati_get_ata_lba_mid(register_fis));
-   sati_set_sense_data_byte(sense_data, sense_len, 11, sati_get_ata_lba_low(register_fis));
+   sati_set_sense_data_byte(sense_data, sense_len, 11, sati_get_ata_lba_high(register_fis));
 
    sequence->is_sense_response_set = TRUE;
 }

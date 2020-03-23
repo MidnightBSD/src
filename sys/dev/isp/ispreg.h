@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/isp/ispreg.h 291500 2015-11-30 21:30:18Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/isp/ispreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.

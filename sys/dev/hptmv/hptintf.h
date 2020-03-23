@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/hptintf.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hptmv/hptintf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef HPT_INTF_H
@@ -102,7 +101,7 @@ typedef DWORD DEVICEID;
 
 #define MAX_ARRAY_MEMBERS_V1 8
 #define MAX_ARRAY_MEMBERS_V2 16
-/* keep definition for source code compatiblity */
+/* keep definition for source code compatibility */
 #define MAX_ARRAY_MEMBERS MAX_ARRAY_MEMBERS_V1
 
 /*

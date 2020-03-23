@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2008 M. Warner Losh.  All Rights Reserved.
  * Copyright (c) 2000,2001 Jonathan Chen.  All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cardbus/cardbus.c 330938 2018-03-14 19:04:40Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cardbus/cardbus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,16 +57,12 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cardbus/cardbus.c 330938 2018-03-14 19:04:
 static SYSCTL_NODE(_hw, OID_AUTO, cardbus, CTLFLAG_RD, 0, "CardBus parameters");
 
 int    cardbus_debug = 0;
-TUNABLE_INT("hw.cardbus.debug", &cardbus_debug);
-SYSCTL_INT(_hw_cardbus, OID_AUTO, debug, CTLFLAG_RW,
-    &cardbus_debug, 0,
-  "CardBus debug");
+SYSCTL_INT(_hw_cardbus, OID_AUTO, debug, CTLFLAG_RWTUN,
+    &cardbus_debug, 0, "CardBus debug");
 
 int    cardbus_cis_debug = 0;
-TUNABLE_INT("hw.cardbus.cis_debug", &cardbus_cis_debug);
-SYSCTL_INT(_hw_cardbus, OID_AUTO, cis_debug, CTLFLAG_RW,
-    &cardbus_cis_debug, 0,
-  "CardBus CIS debug");
+SYSCTL_INT(_hw_cardbus, OID_AUTO, cis_debug, CTLFLAG_RWTUN,
+    &cardbus_cis_debug, 0, "CardBus CIS debug");
 
 #define	DPRINTF(a) if (cardbus_debug) printf a
 #define	DEVPRINTF(x) if (cardbus_debug) device_printf x
@@ -111,6 +106,8 @@ cardbus_attach(device_t cbdev)
 		device_printf(cbdev, "failed to allocate bus number\n");
 		return (ENXIO);
 	}
+#else
+	device_printf(cbdev, "Your bus numbers may be AFU\n");
 #endif
 	return (0);
 }
@@ -125,6 +122,7 @@ cardbus_detach(device_t cbdev)
 	cardbus_detach_card(cbdev);
 #ifdef PCI_RES_BUS
 	sc = device_get_softc(cbdev);
+	device_printf(cbdev, "Freeing up the allocatd bus\n");
 	(void)bus_release_resource(cbdev, PCI_RES_BUS, 0, sc->sc_bus);
 #endif
 	return (0);
@@ -171,6 +169,15 @@ cardbus_device_setup_regs(pcicfgregs *cfg)
 	pci_write_config(dev, PCIR_MAXLAT, 0x14, 1);
 }
 
+static struct pci_devinfo *
+cardbus_alloc_devinfo(device_t dev)
+{
+	struct cardbus_devinfo *dinfo;
+
+	dinfo = malloc(sizeof(*dinfo), M_DEVBUF, M_WAITOK | M_ZERO);
+	return (&dinfo->pci);
+}
+
 static int
 cardbus_attach_card(device_t cbdev)
 {
@@ -183,6 +190,7 @@ cardbus_attach_card(device_t cbdev)
 
 	sc = device_get_softc(cbdev);
 	cardbus_detach_card(cbdev); /* detach existing cards */
+	POWER_DISABLE_SOCKET(brdev, cbdev); /* Turn the socket off first */
 	POWER_ENABLE_SOCKET(brdev, cbdev);
 	domain = pcib_get_domain(cbdev);
 	bus = pcib_get_bus(cbdev);
@@ -192,8 +200,7 @@ cardbus_attach_card(device_t cbdev)
 		struct cardbus_devinfo *dinfo;
 
 		dinfo = (struct cardbus_devinfo *)
-		    pci_read_device(brdev, domain, bus, slot, func,
-			sizeof(struct cardbus_devinfo));
+		    pci_read_device(brdev, cbdev, domain, bus, slot, func);
 		if (dinfo == NULL)
 			continue;
 		if (dinfo->pci.cfg.mfdev)
@@ -339,10 +346,14 @@ static device_method_t cardbus_methods[] = {
 	DEVMETHOD(bus_get_dma_tag,	bus_generic_get_dma_tag),
 	DEVMETHOD(bus_read_ivar,	cardbus_read_ivar),
 	DEVMETHOD(bus_driver_added,	cardbus_driver_added),
+	DEVMETHOD(bus_rescan,		bus_null_rescan),
 
 	/* Card Interface */
 	DEVMETHOD(card_attach_card,	cardbus_attach_card),
 	DEVMETHOD(card_detach_card,	cardbus_detach_card),
+
+	/* PCI interface */
+	DEVMETHOD(pci_alloc_devinfo,	cardbus_alloc_devinfo),
 
 	{0,0}
 };

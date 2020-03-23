@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -55,7 +54,7 @@
 #define _MFIREG_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfireg.h 255806 2013-09-22 23:48:41Z sbruno $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfireg.h 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * MegaRAID SAS MFI firmware definitions

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2004 by Peter Grehan. All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ic/via6522reg.h 153030 2005-12-02 22:36:14Z grehan $
+ * $FreeBSD: stable/11/sys/dev/ic/via6522reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VIA6522REG_H_

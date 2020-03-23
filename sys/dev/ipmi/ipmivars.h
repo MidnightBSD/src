@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ipmi/ipmivars.h 287435 2015-09-03 16:43:35Z jhb $
+ * $FreeBSD: stable/11/sys/dev/ipmi/ipmivars.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __IPMIVARS_H__
@@ -194,13 +193,6 @@ struct ipmi_ipmb {
 #define	IPMI_IO_LOCK(sc)	mtx_lock(&(sc)->ipmi_io_lock)
 #define	IPMI_IO_UNLOCK(sc)	mtx_unlock(&(sc)->ipmi_io_lock)
 #define	IPMI_IO_LOCK_ASSERT(sc)	mtx_assert(&(sc)->ipmi_io_lock, MA_OWNED)
-
-#if __FreeBSD_version < 601105
-#define bus_read_1(r, o) \
-	bus_space_read_1(rman_get_bustag(r), rman_get_bushandle(r), (o))
-#define bus_write_1(r, o, v) \
-	bus_space_write_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
-#endif
 
 /* I/O to a single I/O resource. */
 #define INB_SINGLE(sc, x)						\

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016-2017 Microsoft Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/amd64/hyperv_machdep.c 324461 2017-10-10 02:22:34Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/vmbus/amd64/hyperv_machdep.c 322612 2017-08-17 05:09:22Z sephe $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -34,6 +33,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/vmbus/amd64/hyperv_machdep.c 324461
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/timetc.h>
+#include <sys/vdso.h>
 
 #include <machine/cpufunc.h>
 #include <machine/cputypes.h>
@@ -53,18 +53,20 @@ struct hyperv_reftsc_ctx {
 	struct hyperv_dma	tsc_ref_dma;
 };
 
+static uint32_t			hyperv_tsc_vdso_timehands(
+				    struct vdso_timehands *,
+				    struct timecounter *);
+
 static d_open_t			hyperv_tsc_open;
 static d_mmap_t			hyperv_tsc_mmap;
 
 static struct timecounter	hyperv_tsc_timecounter = {
 	.tc_get_timecount	= NULL,	/* based on CPU vendor. */
-	.tc_poll_pps		= NULL,
 	.tc_counter_mask	= 0xffffffff,
 	.tc_frequency		= HYPERV_TIMER_FREQ,
 	.tc_name		= "Hyper-V-TSC",
 	.tc_quality		= 3000,
-	.tc_flags		= 0,
-	.tc_priv		= NULL
+	.tc_fill_vdso_timehands = hyperv_tsc_vdso_timehands,
 };
 
 static struct cdevsw		hyperv_tsc_cdevsw = {
@@ -118,6 +120,18 @@ hyperv_tsc_mmap(struct cdev *dev __unused, vm_ooffset_t offset,
 	return (0);
 }
 
+static uint32_t
+hyperv_tsc_vdso_timehands(struct vdso_timehands *vdso_th,
+    struct timecounter *tc __unused)
+{
+
+	vdso_th->th_algo = VDSO_TH_ALGO_X86_HVTSC;
+	vdso_th->th_x86_shift = 0;
+	vdso_th->th_x86_hpet_idx = 0;
+	bzero(vdso_th->th_res, sizeof(vdso_th->th_res));
+	return (1);
+}
+
 #define HYPERV_TSC_TIMECOUNT(fence)					\
 static uint64_t								\
 hyperv_tc64_tsc_##fence(void)						\
@@ -125,13 +139,10 @@ hyperv_tc64_tsc_##fence(void)						\
 	struct hyperv_reftsc *tsc_ref = hyperv_ref_tsc.tsc_ref;		\
 	uint32_t seq;							\
 									\
-	while ((seq = tsc_ref->tsc_seq) != 0) {				\
-		uint64_t disc, ret, tsc, scale;				\
-		int64_t ofs;						\
-									\
-		__compiler_membar();					\
-		scale = tsc_ref->tsc_scale;				\
-		ofs = tsc_ref->tsc_ofs;					\
+	while ((seq = atomic_load_acq_int(&tsc_ref->tsc_seq)) != 0) {	\
+		uint64_t disc, ret, tsc;				\
+		uint64_t scale = tsc_ref->tsc_scale;			\
+		int64_t ofs = tsc_ref->tsc_ofs;				\
 									\
 		fence();						\
 		tsc = rdtsc();						\
@@ -142,7 +153,7 @@ hyperv_tc64_tsc_##fence(void)						\
 		    "a" (tsc), "r" (scale));				\
 		ret += ofs;						\
 									\
-		__compiler_membar();					\
+		atomic_thread_fence_acq();				\
 		if (tsc_ref->tsc_seq == seq)				\
 			return (ret);					\
 									\

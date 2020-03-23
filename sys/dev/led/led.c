@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -10,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/led/led.c 247008 2013-02-19 19:25:50Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/led/led.c 283360 2015-05-24 07:45:42Z ganbold $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -294,7 +293,8 @@ led_create_state(led_t *func, void *priv, char const *name, int state)
 	mtx_lock(&led_mtx);
 	sc->dev->si_drv1 = sc;
 	LIST_INSERT_HEAD(&led_list, sc, list);
-	sc->func(sc->private, state != 0);
+	if (state != -1)
+		sc->func(sc->private, state != 0);
 	mtx_unlock(&led_mtx);
 
 	return (sc->dev);

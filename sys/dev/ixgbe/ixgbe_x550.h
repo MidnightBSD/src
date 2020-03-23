@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/ixgbe_x550.h 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_x550.h 320897 2017-07-11 21:25:07Z erj $*/
 
 #ifndef _IXGBE_X550_H_
 #define _IXGBE_X550_H_
@@ -90,7 +89,7 @@ s32 ixgbe_setup_kr_x550em(struct ixgbe_hw *hw);
 s32 ixgbe_init_ext_t_x550em(struct ixgbe_hw *hw);
 s32 ixgbe_setup_internal_phy_t_x550em(struct ixgbe_hw *hw);
 s32 ixgbe_setup_phy_loopback_x550em(struct ixgbe_hw *hw);
-u32 ixgbe_get_supported_physical_layer_X550em(struct ixgbe_hw *hw);
+u64 ixgbe_get_supported_physical_layer_X550em(struct ixgbe_hw *hw);
 void ixgbe_disable_rx_x550(struct ixgbe_hw *hw);
 s32 ixgbe_get_lcd_t_x550em(struct ixgbe_hw *hw, ixgbe_link_speed *lcd_speed);
 s32 ixgbe_enter_lplu_t_x550em(struct ixgbe_hw *hw);

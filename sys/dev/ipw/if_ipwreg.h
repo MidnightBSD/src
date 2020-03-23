@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*      $FreeBSD: stable/10/sys/dev/ipw/if_ipwreg.h 172567 2007-10-12 05:23:00Z thompsa $	*/
+/*      $FreeBSD: stable/11/sys/dev/ipw/if_ipwreg.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*-
  * Copyright (c) 2004-2006

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pcscpreg.h,v 1.2 2008/04/28 20:23:55 martin Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/dev/esp/am53c974reg.h 227006 2011-11-01 21:26:57Z marius $ */
+/* $FreeBSD: stable/11/sys/dev/esp/am53c974reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _AM53C974_H_
 #define	_AM53C974_H_

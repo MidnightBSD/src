@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/gui_lib.c 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hptmv/gui_lib.c 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * gui_lib.c
@@ -75,7 +74,7 @@ check_VDevice_valid(PVDevice p)
 	PVBus    _vbus_p;
 	IAL_ADAPTER_T *pAdapter = gIal_Adapter;
 	
-	while(pAdapter != 0)
+	while(pAdapter != NULL)
 	{
 		for (i = 0; i < MV_SATA_CHANNELS_NUM; i++)
 			if(&(pAdapter->VDevices[i]) == p)  return 0;
@@ -84,7 +83,7 @@ check_VDevice_valid(PVDevice p)
 
 #ifdef SUPPORT_ARRAY
 	pAdapter = gIal_Adapter;
-	while(pAdapter != 0)
+	while(pAdapter != NULL)
 	{
 		_vbus_p = &pAdapter->VBus;
 		for (i=0;i<MAX_ARRAY_PER_VBUS;i++) 
@@ -404,7 +403,7 @@ int hpt_get_controller_count(void)
 	IAL_ADAPTER_T    *pAdapTemp = gIal_Adapter;
 	int iControllerCount = 0;
 	
-	while(pAdapTemp != 0)
+	while(pAdapTemp != NULL)
 	{		 
 		iControllerCount++;
 		pAdapTemp = pAdapTemp->next;
@@ -449,7 +448,7 @@ int hpt_get_channel_info(int id, int bus, PCHANNEL_INFO pInfo)
 	IAL_ADAPTER_T    *pAdapTemp = gIal_Adapter;
 	int i,iControllerCount = 0;
 
-	while(pAdapTemp != 0)
+	while(pAdapTemp != NULL)
 	{
 		if (iControllerCount++==id) 
 			goto found;
@@ -784,8 +783,8 @@ simple:
 			for(i = 0; i < pArray->u.array.bArnMember; i++)
 				if(pArray->u.array.pMember[i]->VDeviceCapacity < capacity)
 					capacity = pArray->u.array.pMember[i]->VDeviceCapacity;
-			pArray->VDeviceCapacity = (capacity & ~(pArray->u.array.bStripeWitch - 1))
-				* (pArray->u.array.bArnMember - 1);
+			pArray->VDeviceCapacity = rounddown2(capacity, pArray->u.array.bStripeWitch) *
+			    (pArray->u.array.bArnMember - 1);
 			break;
 
 		default:

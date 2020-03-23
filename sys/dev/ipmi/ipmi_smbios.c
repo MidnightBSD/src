@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ipmi/ipmi_smbios.c 241027 2012-09-28 11:59:32Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ipmi/ipmi_smbios.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,11 +45,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ipmi/ipmi_smbios.c 241027 2012-09-28 11:59
 #else
 #include <sys/ipmi.h>
 #include <dev/ipmi/ipmivars.h>
-#endif
-
-#if __FreeBSD_version < 602110
-#define	pmap_mapbios		pmap_mapdev
-#define	pmap_unmapbios		pmap_unmapdev
 #endif
 
 struct ipmi_entry {

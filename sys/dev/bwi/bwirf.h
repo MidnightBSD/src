@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
  * 
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/bwi/bwirf.h,v 1.3 2007/10/03 04:53:19 sephe Exp $
- * $FreeBSD: stable/10/sys/dev/bwi/bwirf.h 191762 2009-05-03 04:01:43Z imp $
+ * $FreeBSD: stable/11/sys/dev/bwi/bwirf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BWI_RF_H

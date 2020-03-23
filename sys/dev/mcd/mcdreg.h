@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1993 by Holger Veit (data part)
  * Copyright 1993 by Brian Moore (audio part)
@@ -42,7 +41,7 @@
  * the manufacturer or anyone else might provide better documentation,
  * so this file (and the driver) will then have a better quality.
  *
- * $FreeBSD: stable/10/sys/dev/mcd/mcdreg.h 143063 2005-03-02 21:33:29Z joerg $
+ * $FreeBSD: stable/11/sys/dev/mcd/mcdreg.h 143063 2005-03-02 21:33:29Z joerg $
  */
 
 #ifndef MCD_H

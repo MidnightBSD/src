@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2007 Marius Strobl <marius@FreeBSD.org>
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/gem/if_gem_pci.c 242625 2012-11-05 19:16:27Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/gem/if_gem_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PCI bindings for Apple GMAC, Sun ERI and Sun GEM Ethernet controllers

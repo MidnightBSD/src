@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_remote_device.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_remote_device.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * @file
@@ -2376,7 +2375,7 @@ SCIC_SDS_REMOTE_DEVICE_STATE_HANDLER_T
 
 /**
  * This is the enter method for the SCI_BASE_REMOTE_DEVICE_STATE_INITIAL it
- * immediatly transitions the remote device object to the stopped state.
+ * immediately transitions the remote device object to the stopped state.
  *
  * @param[in] object This is the SCI_BASE_OBJECT that is cast into a
  *            SCIC_SDS_REMOTE_DEVICE.

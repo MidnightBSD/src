@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014,2016-2017 Microsoft Corp.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/utilities/hv_kvp.c 324461 2017-10-10 02:22:34Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/utilities/hv_kvp.c 322612 2017-08-17 05:09:22Z sephe $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -133,7 +132,7 @@ typedef struct hv_kvp_sc {
 	device_t		dev;
 
 	/* Unless specified the pending mutex should be
-	 * used to alter the values of the following paramters:
+	 * used to alter the values of the following parameters:
 	 * 1. req_in_progress
 	 * 2. req_timed_out
 	 */
@@ -757,7 +756,7 @@ hv_kvp_dev_daemon_read(struct cdev *dev, struct uio *uio, int ioflag __unused)
 
 /*
  * hv_kvp_daemon write invokes this function
- * acts as a recieve from daemon
+ * acts as a receive from daemon
  */
 static int
 hv_kvp_dev_daemon_write(struct cdev *dev, struct uio *uio, int ioflag __unused)

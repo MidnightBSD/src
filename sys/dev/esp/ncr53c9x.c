@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Scott Long
  * Copyright (c) 2005, 2008 Marius Strobl <marius@FreeBSD.org>
@@ -99,7 +98,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/esp/ncr53c9x.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/esp/ncr53c9x.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1083,8 +1082,7 @@ ncr53c9x_action(struct cam_sim *sim, union ccb *ccb)
 
 	case XPT_RESET_DEV:
 	case XPT_SCSI_IO:
-		if (ccb->ccb_h.target_id < 0 ||
-		    ccb->ccb_h.target_id >= sc->sc_ntarg) {
+		if (ccb->ccb_h.target_id >= sc->sc_ntarg) {
 			ccb->ccb_h.status = CAM_PATH_INVALID;
 			goto done;
 		}

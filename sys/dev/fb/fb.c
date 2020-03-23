@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/fb.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/fb.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_fb.h"
 
@@ -87,7 +86,7 @@ vid_realloc_array(void)
 		return ENOMEM;
 
 	s = spltty();
-	newsize = ((adapters + ARRAY_DELTA)/ARRAY_DELTA)*ARRAY_DELTA;
+	newsize = rounddown(adapters + ARRAY_DELTA, ARRAY_DELTA);
 	new_adp = malloc(sizeof(*new_adp)*newsize, M_DEVBUF, M_WAITOK | M_ZERO);
 	new_vidsw = malloc(sizeof(*new_vidsw)*newsize, M_DEVBUF,
 	    M_WAITOK | M_ZERO);
@@ -611,7 +610,7 @@ fb_type(int adp_type)
 	};
 	int i;
 
-	for (i = 0; i < sizeof(types)/sizeof(types[0]); ++i) {
+	for (i = 0; i < nitems(types); ++i) {
 		if (types[i].va_type == adp_type)
 			return types[i].fb_type;
 	}

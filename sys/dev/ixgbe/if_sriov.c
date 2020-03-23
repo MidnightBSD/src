@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2017, Intel Corporation
@@ -31,13 +30,13 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/ixgbe/if_sriov.c 315333 2017-03-15 21:20:17Z erj $*/
+/*$FreeBSD: stable/11/sys/dev/ixgbe/if_sriov.c 347419 2019-05-10 00:46:43Z erj $*/
 
 #include "ixgbe.h"
 
 #ifdef PCI_IOV
 
-MALLOC_DECLARE(M_IXGBE);
+MALLOC_DEFINE(M_IXGBE_SRIOV, "ix_sriov", "ix SR-IOV allocations");
 
 /************************************************************************
  * ixgbe_pci_iov_detach
@@ -95,7 +94,7 @@ ixgbe_send_vf_msg(struct adapter *adapter, struct ixgbe_vf *vf, u32 msg)
 	if (vf->flags & IXGBE_VF_CTS)
 		msg |= IXGBE_VT_MSGTYPE_CTS;
 
-	ixgbe_write_mbx(&adapter->hw, &msg, 1, vf->pool);
+	adapter->hw.mbx.ops.write(&adapter->hw, &msg, 1, vf->pool);
 }
 
 static inline void
@@ -370,7 +369,7 @@ ixgbe_vf_reset_msg(struct adapter *adapter, struct ixgbe_vf *vf, uint32_t *msg)
 	resp[0] = IXGBE_VF_RESET | ack | IXGBE_VT_MSGTYPE_CTS;
 	bcopy(vf->ether_addr, &resp[1], ETHER_ADDR_LEN);
 	resp[3] = hw->mac.mc_filter_type;
-	ixgbe_write_mbx(hw, resp, IXGBE_VF_PERMADDR_MSG_LEN, vf->pool);
+	hw->mbx.ops.write(hw, resp, IXGBE_VF_PERMADDR_MSG_LEN, vf->pool);
 } /* ixgbe_vf_reset_msg */
 
 
@@ -432,7 +431,6 @@ ixgbe_vf_set_mc_addr(struct adapter *adapter, struct ixgbe_vf *vf, u32 *msg)
 	vmolr |= IXGBE_VMOLR_ROMPE;
 	IXGBE_WRITE_REG(&adapter->hw, IXGBE_VMOLR(vf->pool), vmolr);
 	ixgbe_send_vf_ack(adapter, vf, msg[0]);
-	return;
 } /* ixgbe_vf_set_mc_addr */
 
 
@@ -562,7 +560,7 @@ ixgbe_vf_get_queues(struct adapter *adapter, struct ixgbe_vf *vf, uint32_t *msg)
 	resp[IXGBE_VF_TRANS_VLAN] = (vf->default_vlan != 0);
 	resp[IXGBE_VF_DEF_QUEUE] = 0;
 
-	ixgbe_write_mbx(hw, resp, IXGBE_VF_GET_QUEUES_RESP_LEN, vf->pool);
+	hw->mbx.ops.write(hw, resp, IXGBE_VF_GET_QUEUES_RESP_LEN, vf->pool);
 } /* ixgbe_vf_get_queues */
 
 
@@ -575,7 +573,7 @@ ixgbe_process_vf_msg(struct adapter *adapter, struct ixgbe_vf *vf)
 
 	hw = &adapter->hw;
 
-	error = ixgbe_read_mbx(hw, msg, IXGBE_VFMAILBOX_SIZE, vf->pool);
+	error = hw->mbx.ops.read(hw, msg, IXGBE_VFMAILBOX_SIZE, vf->pool);
 
 	if (error != 0)
 		return;
@@ -622,7 +620,7 @@ ixgbe_process_vf_msg(struct adapter *adapter, struct ixgbe_vf *vf)
 
 /* Tasklet for handling VF -> PF mailbox messages */
 void
-ixgbe_handle_mbx(void *context, int pending)
+ixgbe_handle_mbx(void *context)
 {
 	struct adapter *adapter;
 	struct ixgbe_hw *hw;
@@ -637,13 +635,13 @@ ixgbe_handle_mbx(void *context, int pending)
 		vf = &adapter->vfs[i];
 
 		if (vf->flags & IXGBE_VF_ACTIVE) {
-			if (ixgbe_check_for_rst(hw, vf->pool) == 0)
+			if (hw->mbx.ops.check_for_rst(hw, vf->pool) == 0)
 				ixgbe_process_vf_reset(adapter, vf);
 
-			if (ixgbe_check_for_msg(hw, vf->pool) == 0)
+			if (hw->mbx.ops.check_for_msg(hw, vf->pool) == 0)
 				ixgbe_process_vf_msg(adapter, vf);
 
-			if (ixgbe_check_for_ack(hw, vf->pool) == 0)
+			if (hw->mbx.ops.check_for_ack(hw, vf->pool) == 0)
 				ixgbe_process_vf_ack(adapter, vf);
 		}
 	}
@@ -658,34 +656,35 @@ ixgbe_init_iov(device_t dev, u16 num_vfs, const nvlist_t *config)
 
 	adapter = device_get_softc(dev);
 	adapter->iov_mode = IXGBE_NO_VM;
-	adapter->num_vfs = num_vfs;
 
-	if (adapter->num_vfs == 0) {
+	if (num_vfs == 0) {
 		/* Would we ever get num_vfs = 0? */
 		retval = EINVAL;
 		goto err_init_iov;
 	}
 
-	if (adapter->num_queues <= 2)
+	/*
+	 * We've got to reserve a VM's worth of queues for the PF,
+	 * thus we go into "64 VF mode" if 32+ VFs are requested.
+	 * With 64 VFs, you can only have two queues per VF.
+	 * With 32 VFs, you can have up to four queues per VF.
+	 */
+	if (num_vfs >= IXGBE_32_VM)
 		adapter->iov_mode = IXGBE_64_VM;
-	else if (adapter->num_queues <= 4)
+	else
 		adapter->iov_mode = IXGBE_32_VM;
-	else {
-		retval = EINVAL;
-		goto err_init_iov;
-	}
 
-	/* Reserve 1 VM's worth of queues for the PF */
+	/* Again, reserving 1 VM's worth of queues for the PF */
 	adapter->pool = adapter->iov_mode - 1;
 
-	if (num_vfs > adapter->pool) {
+	if ((num_vfs > adapter->pool) || (num_vfs >= IXGBE_64_VM)) {
 		retval = ENOSPC;
 		goto err_init_iov;
 	}
 
 	IXGBE_CORE_LOCK(adapter);
 
-	adapter->vfs = malloc(sizeof(*adapter->vfs) * num_vfs, M_IXGBE,
+	adapter->vfs = malloc(sizeof(*adapter->vfs) * num_vfs, M_IXGBE_SRIOV,
 	    M_NOWAIT | M_ZERO);
 
 	if (adapter->vfs == NULL) {
@@ -694,7 +693,8 @@ ixgbe_init_iov(device_t dev, u16 num_vfs, const nvlist_t *config)
 		goto err_init_iov;
 	}
 
-	ixgbe_init_locked(adapter);
+	adapter->num_vfs = num_vfs;
+	adapter->init_locked(adapter);
 	adapter->feat_en |= IXGBE_FEATURE_SRIOV;
 
 	IXGBE_CORE_UNLOCK(adapter);
@@ -735,7 +735,7 @@ ixgbe_uninit_iov(device_t dev)
 
 	IXGBE_WRITE_REG(hw, IXGBE_VT_CTL, 0);
 
-	free(adapter->vfs, M_IXGBE);
+	free(adapter->vfs, M_IXGBE_SRIOV);
 	adapter->vfs = NULL;
 	adapter->num_vfs = 0;
 	adapter->feat_en &= ~IXGBE_FEATURE_SRIOV;
@@ -887,7 +887,7 @@ ixgbe_add_vf(device_t dev, u16 vfnum, const nvlist_t *config)
 		 */
 		vf->flags |= IXGBE_VF_CAP_MAC;
 
-	vf->flags = IXGBE_VF_ACTIVE;
+	vf->flags |= IXGBE_VF_ACTIVE;
 
 	ixgbe_init_vf(adapter, vf);
 	IXGBE_CORE_UNLOCK(adapter);
@@ -898,9 +898,17 @@ ixgbe_add_vf(device_t dev, u16 vfnum, const nvlist_t *config)
 #else
 
 void
-ixgbe_handle_mbx(void *context, int pending)
+ixgbe_handle_mbx(void *context)
 {
-	UNREFERENCED_2PARAMETER(context, pending);
+	UNREFERENCED_1PARAMETER(context);
 } /* ixgbe_handle_mbx */
+
+inline int
+ixgbe_vf_que_index(int mode, int vfnum, int num)
+{
+	UNREFERENCED_2PARAMETER(mode, vfnum);
+
+	return num;
+} /* ixgbe_vf_que_index */
 
 #endif

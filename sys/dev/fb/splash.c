@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/splash.c 218661 2011-02-13 19:25:48Z marcel $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/splash.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_splash.h"
 
@@ -116,7 +115,7 @@ splash_register(splash_decoder_t *decoder)
 
 	if (splash_adp != NULL) {
 		/*
-		 * If the video card has aleady been initialized, test
+		 * If the video card has already been initialized, test
 		 * this decoder immediately.
 		 */
 		error = splash_test(decoder);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_defines.h 323080 2017-08-31 23:59:46Z marius $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/e1000_defines.h 331722 2018-03-29 02:50:57Z eadler $*/
 
 #ifndef _E1000_DEFINES_H_
 #define _E1000_DEFINES_H_

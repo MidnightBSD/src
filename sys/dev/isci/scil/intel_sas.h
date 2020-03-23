@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/intel_sas.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/intel_sas.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _INTEL_SAS_H_
 #define _INTEL_SAS_H_
@@ -466,7 +465,7 @@ typedef struct SMP_REQUEST_CONFIGURE_ROUTE_INFORMATION
 
 /**
  * @struct SMP_REQUEST_PHY_CONTROL
- * @brief  This structure defines the contents of an SMP Phy Controler
+ * @brief  This structure defines the contents of an SMP Phy Controller
  *         request.
  *         @note For specific information on each of these
  *               individual fields please reference the SAS specification.

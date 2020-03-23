@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: gallant12x22.h,v 1.2 2002/05/09 08:59:03 maja Exp $ */
 /* 	$NetBSD: gallant12x22.h,v 1.2 1999/05/18 21:51:58 ad Exp $ */
 
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/gallant12x22.c 271105 2014-09-04 16:51:45Z emaste $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/gallant12x22.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 

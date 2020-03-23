@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_3c503.c 264942 2014-04-25 21:32:34Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_3c503.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ed.h"
 
@@ -51,6 +50,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_3c503.c 264942 2014-04-25 21:32:3
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>		/* XXX: ed_3c503_mediachg() */
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_mib.h>
@@ -74,7 +74,7 @@ ed_probe_3Com(device_t dev, int port_rid, int flags)
 	int     i;
 	u_int   memsize;
 	u_char  isa16bit;
-	u_long	conf_maddr, conf_msize, irq, junk, pmem;
+	rman_res_t	conf_maddr, conf_msize, irq, junk, pmem;
 
 	error = ed_alloc_port(dev, 0, ED_3COM_IO_PORTS);
 	if (error)
@@ -324,7 +324,7 @@ ed_probe_3Com(device_t dev, int port_rid, int flags)
 		ed_asic_outb(sc, ED_3COM_IDCFR, ED_3COM_IDCFR_IRQ5);
 		break;
 	default:
-		device_printf(dev, "Invalid irq configuration (%ld) must be 3-5,9 for 3c503\n",
+		device_printf(dev, "Invalid irq configuration (%jd) must be 3-5,9 for 3c503\n",
 			      irq);
 		return (ENXIO);
 	}

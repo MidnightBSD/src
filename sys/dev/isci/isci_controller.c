@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * BSD LICENSE
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/isci_controller.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/isci_controller.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/isci/isci.h>
 
@@ -471,7 +470,7 @@ int isci_controller_allocate_memory(struct ISCI_CONTROLLER *controller)
 
 	/* Create DMA tag for our I/O requests.  Then we can create DMA maps based off
 	 *  of this tag and store them in each of our ISCI_IO_REQUEST objects.  This
-	 *  will enable better performance than creating the DMA maps everytime we get
+	 *  will enable better performance than creating the DMA maps every time we get
 	 *  an I/O.
 	 */
 	status = bus_dma_tag_create(bus_get_dma_tag(device), 0x1, 0x0,
@@ -685,14 +684,12 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->hba_eng_cnt = 0;
 			cpi->max_target = SCI_MAX_REMOTE_DEVICES - 1;
 			cpi->max_lun = ISCI_MAX_LUN;
-#if __FreeBSD_version >= 800102
 			cpi->maxio = isci_io_request_get_max_io_size();
-#endif
 			cpi->unit_number = cam_sim_unit(sim);
 			cpi->bus_id = bus;
 			cpi->initiator_id = SCI_MAX_REMOTE_DEVICES;
 			cpi->base_transfer_speed = 300000;
-			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->transport = XPORT_SAS;
@@ -748,11 +745,9 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 		}
 		isci_io_request_execute_scsi_io(ccb, controller);
 		break;
-#if __FreeBSD_version >= 900026
 	case XPT_SMP_IO:
 		isci_io_request_execute_smp_io(ccb, controller);
 		break;
-#endif
 	case XPT_SET_TRAN_SETTINGS:
 		ccb->ccb_h.status &= ~CAM_STATUS_MASK;
 		ccb->ccb_h.status |= CAM_REQ_CMP;

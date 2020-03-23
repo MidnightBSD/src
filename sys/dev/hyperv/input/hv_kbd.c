@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2017 Microsoft Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/input/hv_kbd.c 317823 2017-05-05 06:00:32Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/input/hv_kbd.c 356013 2019-12-22 17:15:48Z kevans $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -447,25 +446,23 @@ hvkbd_read(keyboard_t *kbd, int wait)
 }
 
 static keyboard_switch_t hvkbdsw = {
-	hvkbd_probe,		/* not used */
-	hvkbd_init,
-	hvkbd_term,		/* not used */
-	hvkbd_intr,		/* not used */
-	hvkbd_test_if,		/* not used */
-	hvkbd_enable,
-	hvkbd_disable,
-	hvkbd_read,
-	hvkbd_check,
-	hvkbd_read_char,
-	hvkbd_check_char,
-	hvkbd_ioctl,
-	hvkbd_lock,		/* not used */
-	hvkbd_clear_state,
-	hvkbd_get_state,	/* not used */
-	hvkbd_set_state,	/* not used */
-	genkbd_get_fkeystr,
-	hvkbd_poll,
-	genkbd_diag,
+	.probe =	hvkbd_probe,		/* not used */
+	.init =		hvkbd_init,
+	.term =		hvkbd_term,		/* not used */
+	.intr =		hvkbd_intr,		/* not used */
+	.test_if =	hvkbd_test_if,		/* not used */
+	.enable =	hvkbd_enable,
+	.disable =	hvkbd_disable,
+	.read =		hvkbd_read,
+	.check =	hvkbd_check,
+	.read_char =	hvkbd_read_char,
+	.check_char =	hvkbd_check_char,
+	.ioctl =	hvkbd_ioctl,
+	.lock =		hvkbd_lock,		/* not used */
+	.clear_state =	hvkbd_clear_state,
+	.get_state =	hvkbd_get_state,	/* not used */
+	.set_state =	hvkbd_set_state,	/* not used */
+	.poll =		hvkbd_poll,
 };
 
 KEYBOARD_DRIVER(hvkbd, hvkbdsw, hvkbd_configure);
@@ -536,7 +533,7 @@ hv_kbd_drv_attach(device_t dev)
 	}
 #endif
 	if (bootverbose) {
-		genkbd_diag(kbd, bootverbose);
+		kbdd_diag(kbd, bootverbose);
 	}
 	return (0);
 detach:

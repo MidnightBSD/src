@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/isp/isp_freebsd.h 317366 2017-04-24 11:21:32Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/isp/isp_freebsd.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Qlogic ISP SCSI Host Adapter FreeBSD Wrapper Definitions
  *

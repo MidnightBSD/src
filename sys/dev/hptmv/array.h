@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/array.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD: stable/11/sys/dev/hptmv/array.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARRAY_H_
@@ -100,7 +99,7 @@ typedef struct _RaidArray
 } RaidArray;
 
 /***************************************************************************
- *            Array Descripton on disk
+ *            Array Description on disk
  ***************************************************************************/
 #pragma pack(1)	
 typedef struct _ArrayDescript

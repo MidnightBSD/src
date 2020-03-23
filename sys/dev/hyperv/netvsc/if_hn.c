@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Citrix Inc.
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
@@ -54,11 +53,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/netvsc/if_hn.c 324575 2017-10-13 02:29:43Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/netvsc/if_hn.c 356411 2020-01-06 09:51:22Z hselasky $");
 
+#include "opt_hn.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_hn.h"
+#include "opt_rss.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,7 +69,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/netvsc/if_hn.c 324575 2017-10-13 02
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
-#include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/lock.h>
 #include <sys/rmlock.h>
@@ -89,13 +88,14 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/netvsc/if_hn.c 324575 2017-10-13 02
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
-#include <net/if_vlan_var.h>
 #include <net/rndis.h>
+#ifdef RSS
+#include <net/rss_config.h>
+#endif
 
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
@@ -119,11 +119,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/netvsc/if_hn.c 324575 2017-10-13 02
 #include "vmbus_if.h"
 
 #define HN_IFSTART_SUPPORT
-
-/* NOTE: M_HASHTYPE_RSS_UDP_IPV4 is not available on stable/10. */
-#ifndef M_HASHTYPE_RSS_UDP_IPV4
-#define M_HASHTYPE_RSS_UDP_IPV4		M_HASHTYPE_OPAQUE
-#endif
 
 #define HN_RING_CNT_DEF_MAX		8
 
@@ -188,7 +183,11 @@ do {							\
 #define HN_PKTSIZE(m, align)		\
 	roundup2((m)->m_pkthdr.len + HN_RNDIS_PKT_LEN, (align))
 
+#ifdef RSS
+#define HN_RING_IDX2CPU(sc, idx)	rss_getcpu((idx) % rss_getnumbuckets())
+#else
 #define HN_RING_IDX2CPU(sc, idx)	(((sc)->hn_cpu + (idx)) % mp_ncpus)
+#endif
 
 struct hn_txdesc {
 #ifndef HN_USE_TXDESC_BUFRING
@@ -326,8 +325,10 @@ static int			hn_ndis_version_sysctl(SYSCTL_HANDLER_ARGS);
 static int			hn_caps_sysctl(SYSCTL_HANDLER_ARGS);
 static int			hn_hwassist_sysctl(SYSCTL_HANDLER_ARGS);
 static int			hn_rxfilter_sysctl(SYSCTL_HANDLER_ARGS);
+#ifndef RSS
 static int			hn_rss_key_sysctl(SYSCTL_HANDLER_ARGS);
 static int			hn_rss_ind_sysctl(SYSCTL_HANDLER_ARGS);
+#endif
 static int			hn_rss_hash_sysctl(SYSCTL_HANDLER_ARGS);
 static int			hn_rss_hcap_sysctl(SYSCTL_HANDLER_ARGS);
 static int			hn_rss_mbuf_sysctl(SYSCTL_HANDLER_ARGS);
@@ -559,7 +560,7 @@ SYSCTL_INT(_hw_hn, OID_AUTO, tx_swq_depth, CTLFLAG_RDTUN,
 
 /* Enable sorted LRO, and the depth of the per-channel mbuf queue */
 #if __FreeBSD_version >= 1100095
-static u_int			hn_lro_mbufq_depth = 0;
+static u_int			hn_lro_mbufq_depth = 512;
 SYSCTL_UINT(_hw_hn, OID_AUTO, lro_mbufq_depth, CTLFLAG_RDTUN,
     &hn_lro_mbufq_depth, 0, "Depth of LRO mbuf queue");
 #endif
@@ -605,6 +606,7 @@ static struct rmlock		hn_vfmap_lock;
 static int			hn_vfmap_size;
 static struct ifnet		**hn_vfmap;
 
+#ifndef RSS
 static const uint8_t
 hn_rss_key_default[NDIS_HASH_KEYSIZE_TOEPLITZ] = {
 	0x6d, 0x5a, 0x56, 0xda, 0x25, 0x5b, 0x0e, 0xc2,
@@ -613,6 +615,7 @@ hn_rss_key_default[NDIS_HASH_KEYSIZE_TOEPLITZ] = {
 	0x77, 0xcb, 0x2d, 0xa3, 0x80, 0x30, 0xf2, 0x0c,
 	0x6a, 0x42, 0xb7, 0x3b, 0xbe, 0xac, 0x01, 0xfa
 };
+#endif	/* !RSS */
 
 static const struct hyperv_guid	hn_guid = {
 	.hv_guid = {
@@ -858,7 +861,8 @@ hn_set_hlen(struct mbuf *m_head)
 
 		PULLUP_HDR(m_head, ehlen + sizeof(*ip6));
 		ip6 = mtodo(m_head, ehlen);
-		if (ip6->ip6_nxt != IPPROTO_TCP) {
+		if (ip6->ip6_nxt != IPPROTO_TCP &&
+		    ip6->ip6_nxt != IPPROTO_UDP) {
 			m_freem(m_head);
 			return (NULL);
 		}
@@ -1156,6 +1160,13 @@ hn_ismyvf(const struct hn_softc *sc, const struct ifnet *ifp)
 	/* Ignore lagg/vlan interfaces */
 	if (strcmp(ifp->if_dname, "lagg") == 0 ||
 	    strcmp(ifp->if_dname, "vlan") == 0)
+		return (false);
+
+	/*
+	 * During detach events ifp->if_addr might be NULL.
+	 * Make sure the bcmp() below doesn't panic on that:
+	 */
+	if (ifp->if_addr == NULL || hn_ifp->if_addr == NULL)
 		return (false);
 
 	if (bcmp(IF_LLADDR(ifp), IF_LLADDR(hn_ifp), ETHER_ADDR_LEN) != 0)
@@ -1495,7 +1506,7 @@ hn_vf_rss_fixup(struct hn_softc *sc, bool reconf)
 	strlcpy(ifrk.ifrk_name, vf_ifp->if_xname, sizeof(ifrk.ifrk_name));
 	error = vf_ifp->if_ioctl(vf_ifp, SIOCGIFRSSKEY, (caddr_t)&ifrk);
 	if (error) {
-		if_printf(ifp, "%s SIOCGRSSKEY failed: %d\n",
+		if_printf(ifp, "%s SIOCGIFRSSKEY failed: %d\n",
 		    vf_ifp->if_xname, error);
 		goto done;
 	}
@@ -1717,7 +1728,7 @@ hn_xpnt_vf_setready(struct hn_softc *sc)
 		ifr.ifr_mtu = ifp->if_mtu;
 		error = vf_ifp->if_ioctl(vf_ifp, SIOCSIFMTU, (caddr_t)&ifr);
 		if (error) {
-			if_printf(ifp, "%s SIOCSIFMTU %lu failed\n",
+			if_printf(ifp, "%s SIOCSIFMTU %u failed\n",
 			    vf_ifp->if_xname, ifp->if_mtu);
 			if (ifp->if_mtu > ETHERMTU) {
 				if_printf(ifp, "change MTU to %d\n", ETHERMTU);
@@ -2137,7 +2148,7 @@ hn_attach(device_t dev)
 	 * can be used by functions, which will be called after
 	 * ether_ifattach().
 	 */
-	ifp = sc->hn_ifp = sc->arpcom.ac_ifp = if_alloc(IFT_ETHER);
+	ifp = sc->hn_ifp = if_alloc(IFT_ETHER);
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 
@@ -2163,6 +2174,10 @@ hn_attach(device_t dev)
 	} else if (ring_cnt > mp_ncpus) {
 		ring_cnt = mp_ncpus;
 	}
+#ifdef RSS
+	if (ring_cnt > rss_getnumbuckets())
+		ring_cnt = rss_getnumbuckets();
+#endif
 
 	tx_ring_cnt = hn_tx_ring_cnt;
 	if (tx_ring_cnt <= 0 || tx_ring_cnt > ring_cnt)
@@ -2283,12 +2298,17 @@ hn_attach(device_t dev)
 	    hn_rss_mbuf_sysctl, "A", "RSS hash for mbufs");
 	SYSCTL_ADD_INT(ctx, child, OID_AUTO, "rss_ind_size",
 	    CTLFLAG_RD, &sc->hn_rss_ind_size, 0, "RSS indirect entry count");
+#ifndef RSS
+	/*
+	 * Don't allow RSS key/indirect table changes, if RSS is defined.
+	 */
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "rss_key",
 	    CTLTYPE_OPAQUE | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, 0,
 	    hn_rss_key_sysctl, "IU", "RSS key");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "rss_ind",
 	    CTLTYPE_OPAQUE | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, 0,
 	    hn_rss_ind_sysctl, "IU", "RSS indirect table");
+#endif
 	SYSCTL_ADD_UINT(ctx, child, OID_AUTO, "rndis_agg_size",
 	    CTLFLAG_RD, &sc->hn_rndis_agg_size, 0,
 	    "RNDIS offered packet transmission aggregation size limit");
@@ -2341,12 +2361,7 @@ hn_attach(device_t dev)
 	 * Setup the ifnet for this interface.
 	 */
 
-#ifdef __LP64__
 	ifp->if_baudrate = IF_Gbps(10);
-#else
-	/* if_baudrate is 32bits on 32bit system. */
-	ifp->if_baudrate = IF_Gbps(1);
-#endif
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = hn_ioctl;
 	ifp->if_init = hn_init;
@@ -2418,7 +2433,7 @@ hn_attach(device_t dev)
 		    ifp->if_hw_tsomaxsegcount, ifp->if_hw_tsomaxsegsize);
 	}
 	if (mtu < ETHERMTU) {
-		if_printf(ifp, "fixup mtu %lu -> %u\n", ifp->if_mtu, mtu);
+		if_printf(ifp, "fixup mtu %u -> %u\n", ifp->if_mtu, mtu);
 		ifp->if_mtu = mtu;
 	}
 
@@ -2848,13 +2863,7 @@ static void
 hn_chan_rollup(struct hn_rx_ring *rxr, struct hn_tx_ring *txr)
 {
 #if defined(INET) || defined(INET6)
-	struct lro_ctrl *lro = &rxr->hn_lro;
-	struct lro_entry *queued;
-
-	while ((queued = SLIST_FIRST(&lro->lro_active)) != NULL) {
-		SLIST_REMOVE_HEAD(&lro->lro_active, next);
-		tcp_lro_flush(lro, queued);
-	}
+	tcp_lro_flush_all(&rxr->hn_lro);
 #endif
 
 	/*
@@ -3352,7 +3361,7 @@ hv_m_append(struct mbuf *m0, int len, c_caddr_t cp)
 		 * Allocate a new mbuf; could check space
 		 * and allocate a cluster instead.
 		 */
-		n = m_getjcl(M_DONTWAIT, m->m_type, 0, MJUMPAGESIZE);
+		n = m_getjcl(M_NOWAIT, m->m_type, 0, MJUMPAGESIZE);
 		if (n == NULL)
 			break;
 		n->m_len = min(MJUMPAGESIZE, remainder);
@@ -3556,7 +3565,7 @@ hn_rxpkt(struct hn_rx_ring *rxr, const void *data, int dlen,
 		rxr->hn_rss_pkts++;
 		m_new->m_pkthdr.flowid = info->hash_value;
 		if (!is_vf)
-			hash_type = M_HASHTYPE_OPAQUE;
+			hash_type = M_HASHTYPE_OPAQUE_HASH;
 		if ((info->hash_info & NDIS_HASH_FUNCTION_MASK) ==
 		    NDIS_HASH_FUNCTION_TOEPLITZ) {
 			uint32_t type = (info->hash_info & NDIS_HASH_TYPE_MASK &
@@ -3577,7 +3586,7 @@ hn_rxpkt(struct hn_rx_ring *rxr, const void *data, int dlen,
 			case NDIS_HASH_TCP_IPV4:
 				hash_type = M_HASHTYPE_RSS_TCP_IPV4;
 				if (rxr->hn_rx_flags & HN_RX_FLAG_UDP_HASH) {
-					int def_htype = M_HASHTYPE_OPAQUE;
+					int def_htype = M_HASHTYPE_OPAQUE_HASH;
 
 					if (is_vf)
 						def_htype = M_HASHTYPE_NONE;
@@ -3630,6 +3639,7 @@ hn_rxpkt(struct hn_rx_ring *rxr, const void *data, int dlen,
 		}
 	} else if (!is_vf) {
 		m_new->m_pkthdr.flowid = rxr->hn_rx_idx;
+		hash_type = M_HASHTYPE_OPAQUE;
 	}
 	M_HASHTYPE_SET(m_new, hash_type);
 
@@ -4219,7 +4229,7 @@ hn_rx_stat_int_sysctl(SYSCTL_HANDLER_ARGS)
 	uint64_t stat;
 
 	stat = 0;
-	for (i = 0; i < sc->hn_rx_ring_inuse; ++i) {
+	for (i = 0; i < sc->hn_rx_ring_cnt; ++i) {
 		rxr = &sc->hn_rx_ring[i];
 		stat += *((int *)((uint8_t *)rxr + ofs));
 	}
@@ -4229,7 +4239,7 @@ hn_rx_stat_int_sysctl(SYSCTL_HANDLER_ARGS)
 		return error;
 
 	/* Zero out this stat. */
-	for (i = 0; i < sc->hn_rx_ring_inuse; ++i) {
+	for (i = 0; i < sc->hn_rx_ring_cnt; ++i) {
 		rxr = &sc->hn_rx_ring[i];
 		*((int *)((uint8_t *)rxr + ofs)) = 0;
 	}
@@ -4508,6 +4518,8 @@ hn_rxfilter_sysctl(SYSCTL_HANDLER_ARGS)
 	return sysctl_handle_string(oidp, filter_str, sizeof(filter_str), req);
 }
 
+#ifndef RSS
+
 static int
 hn_rss_key_sysctl(SYSCTL_HANDLER_ARGS)
 {
@@ -4578,6 +4590,8 @@ back:
 	HN_UNLOCK(sc);
 	return (error);
 }
+
+#endif	/* !RSS */
 
 static int
 hn_rss_hash_sysctl(SYSCTL_HANDLER_ARGS)
@@ -6002,26 +6016,37 @@ hn_transmit(struct ifnet *ifp, struct mbuf *m)
 	 * Select the TX ring based on flowid
 	 */
 	if (M_HASHTYPE_GET(m) != M_HASHTYPE_NONE) {
-#if defined(INET6) || defined(INET)
-		int tcpsyn = 0;
+#ifdef RSS
+		uint32_t bid;
 
-		if (m->m_pkthdr.len < 128 &&
-		    (m->m_pkthdr.csum_flags & (CSUM_IP_TCP | CSUM_IP6_TCP)) &&
-		    (m->m_pkthdr.csum_flags & CSUM_TSO) == 0) {
-			m = hn_check_tcpsyn(m, &tcpsyn);
-			if (__predict_false(m == NULL)) {
-				if_inc_counter(ifp,
-				    IFCOUNTER_OERRORS, 1);
-				return (EIO);
-			}
-		}
-#else
-		const int tcpsyn = 0;
-#endif
-		if (tcpsyn)
-			idx = 0;
+		if (rss_hash2bucket(m->m_pkthdr.flowid, M_HASHTYPE_GET(m),
+		    &bid) == 0)
+			idx = bid % sc->hn_tx_ring_inuse;
 		else
-			idx = m->m_pkthdr.flowid % sc->hn_tx_ring_inuse;
+#endif
+		{
+#if defined(INET6) || defined(INET)
+			int tcpsyn = 0;
+
+			if (m->m_pkthdr.len < 128 &&
+			    (m->m_pkthdr.csum_flags &
+			     (CSUM_IP_TCP | CSUM_IP6_TCP)) &&
+			    (m->m_pkthdr.csum_flags & CSUM_TSO) == 0) {
+				m = hn_check_tcpsyn(m, &tcpsyn);
+				if (__predict_false(m == NULL)) {
+					if_inc_counter(ifp,
+					    IFCOUNTER_OERRORS, 1);
+					return (EIO);
+				}
+			}
+#else
+			const int tcpsyn = 0;
+#endif
+			if (tcpsyn)
+				idx = 0;
+			else
+				idx = m->m_pkthdr.flowid % sc->hn_tx_ring_inuse;
+		}
 	}
 	txr = &sc->hn_tx_ring[idx];
 
@@ -6508,7 +6533,11 @@ hn_synth_attach(struct hn_softc *sc, int mtu)
 		 */
 		if (bootverbose)
 			if_printf(sc->hn_ifp, "setup default RSS key\n");
+#ifdef RSS
+		rss_getkey(rss->rss_key);
+#else
 		memcpy(rss->rss_key, hn_rss_key_default, sizeof(rss->rss_key));
+#endif
 		sc->hn_flags |= HN_FLAG_HAS_RSSKEY;
 	}
 
@@ -6521,8 +6550,16 @@ hn_synth_attach(struct hn_softc *sc, int mtu)
 			if_printf(sc->hn_ifp, "setup default RSS indirect "
 			    "table\n");
 		}
-		for (i = 0; i < NDIS_HASH_INDCNT; ++i)
-			rss->rss_ind[i] = i % nchan;
+		for (i = 0; i < NDIS_HASH_INDCNT; ++i) {
+			uint32_t subidx;
+
+#ifdef RSS
+			subidx = rss_get_indirection_to_bucket(i);
+#else
+			subidx = i;
+#endif
+			rss->rss_ind[i] = subidx % nchan;
+		}
 		sc->hn_flags |= HN_FLAG_HAS_RSSIND;
 	} else {
 		/*
@@ -6608,6 +6645,14 @@ hn_set_ring_inuse(struct hn_softc *sc, int ring_cnt)
 	else
 		sc->hn_tx_ring_inuse = sc->hn_tx_ring_cnt;
 	sc->hn_rx_ring_inuse = ring_cnt;
+
+#ifdef RSS
+	if (sc->hn_rx_ring_inuse != rss_getnumbuckets()) {
+		if_printf(sc->hn_ifp, "# of RX rings (%d) does not match "
+		    "# of RSS buckets (%d)\n", sc->hn_rx_ring_inuse,
+		    rss_getnumbuckets());
+	}
+#endif
 
 	if (bootverbose) {
 		if_printf(sc->hn_ifp, "%d TX ring, %d RX ring\n",

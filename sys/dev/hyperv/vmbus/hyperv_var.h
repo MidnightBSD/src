@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,13 +23,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/vmbus/hyperv_var.h 310801 2016-12-30 02:13:21Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/vmbus/hyperv_var.h 311373 2017-01-05 06:19:07Z sephe $
  */
 
 #ifndef _HYPERV_VAR_H_
 #define _HYPERV_VAR_H_
-
-#include <machine/bus.h>
 
 extern u_int	hyperv_recommends;
 

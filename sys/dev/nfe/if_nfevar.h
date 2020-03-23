@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: if_nfevar.h,v 1.11 2006/02/19 13:57:02 damien Exp $	*/
 
 /*-
@@ -16,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/nfe/if_nfevar.h 216925 2011-01-03 18:28:30Z jhb $
+ * $FreeBSD: stable/11/sys/dev/nfe/if_nfevar.h 216925 2011-01-03 18:28:30Z jhb $
  */
 
 struct nfe_tx_data {

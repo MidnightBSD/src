@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/mly/mlyio.h 79695 2001-07-14 00:12:23Z msmith $
+ *	$FreeBSD: stable/11/sys/dev/mly/mlyio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /********************************************************************************

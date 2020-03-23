@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2014 Bjoern A. Zeeb
  * All rights reserved.
@@ -38,9 +37,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/netfpga10g/nf10bmac/if_nf10bmac.c 270061 2014-08-16 14:30:46Z bz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/netfpga10g/nf10bmac/if_nf10bmac.c 298955 2016-05-03 03:41:25Z pfg $");
 
 #include "opt_device_polling.h"
+#include "opt_netfpga.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -355,7 +355,7 @@ nf10bmac_rx_locked(struct nf10bmac_softc *sc)
 	/*
 	 * General problem here in case we need to sync ourselves to the
 	 * beginning of a packet.  Length will only be set for the first
-	 * read, and together with strb we can detect the begining (or
+	 * read, and together with strb we can detect the beginning (or
 	 * skip to tlast).
 	 */
 
@@ -414,7 +414,7 @@ nf10bmac_rx_locked(struct nf10bmac_softc *sc)
 			 * packet on the floor and count the error.
 			 */
 			nf10bmac_eat_packet_munch_munch(sc);		
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			m_freem(m);
 			return (0);
 		} else if ((len - l) <= sizeof(val)) {
@@ -445,14 +445,14 @@ nf10bmac_rx_locked(struct nf10bmac_softc *sc)
 	if ((md & NF10BMAC_DATA_LAST) == 0 || (md & NF10BMAC_DATA_STRB) == 0) {
 		device_printf(sc->nf10bmac_dev, "Unexpected rx loop end state: "
 		    "md=0x%08jx len=%d l=%d\n", (uintmax_t)md, len, l);
-		ifp->if_ierrors++;
+		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 		m_freem(m);
 		return (0);
 	}
 
 	m->m_pkthdr.len = m->m_len = len;
 	m->m_pkthdr.rcvif = ifp;
-	ifp->if_ipackets++;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 	NF10BMAC_UNLOCK(sc);
 	(*ifp->if_input)(ifp, m);
@@ -584,7 +584,7 @@ nf10bmac_watchdog(struct nf10bmac_softc *sc)
 		return;
 
 	device_printf(sc->nf10bmac_dev, "watchdog timeout\n");
-	sc->nf10bmac_ifp->if_oerrors++;
+	sc->nf10if_inc_counter(bmac_ifp, IFCOUNTER_OERRORS, 1);
 
 	sc->nf10bmac_ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	nf10bmac_init_locked(sc);
@@ -819,7 +819,7 @@ nf10bmac_attach(device_t dev)
 	ether_ifattach(ifp, sc->nf10bmac_eth_addr);
 
 	/* Tell the upper layer(s) about vlan mtu support. */
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 	ifp->if_capabilities |= IFCAP_VLAN_MTU;
 	ifp->if_capenable = ifp->if_capabilities;
 #ifdef DEVICE_POLLING

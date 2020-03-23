@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2015, AVAGO Tech. All rights reserved. Author: Marian Choy
  * Copyright (c) 2014, LSI Corp. All rights reserved. Author: Marian Choy
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mrsas/mrsas_ioctl.h 284267 2015-06-11 14:11:41Z kadesai $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas_ioctl.h 282533 2015-05-06 10:46:28Z kadesai $");
 
 #ifndef MRSAS_IOCTL_H
 #define	MRSAS_IOCTL_H

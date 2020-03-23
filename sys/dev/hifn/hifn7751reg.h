@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/hifn/hifn7751reg.h 167755 2007-03-21 03:42:51Z sam $ */
+/* $FreeBSD: stable/11/sys/dev/hifn/hifn7751reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$OpenBSD: hifn7751reg.h,v 1.35 2002/04/08 17:49:42 jason Exp $	*/
 
 /*-

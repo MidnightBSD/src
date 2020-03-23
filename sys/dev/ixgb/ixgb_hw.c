@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 
   Copyright (c) 2001-2004, Intel Corporation
@@ -32,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: stable/10/sys/dev/ixgb/ixgb_hw.c 129794 2004-05-28 00:23:00Z tackerman $*/
+/*$FreeBSD: stable/11/sys/dev/ixgb/ixgb_hw.c 331722 2018-03-29 02:50:57Z eadler $*/
 
 /* ixgb_hw.c
  * Shared functions for accessing and configuring the adapter
@@ -940,7 +939,7 @@ ixgb_check_for_link(struct ixgb_hw *hw)
 }
 
 /******************************************************************************
- * Check for a bad link condition that may have occured.
+ * Check for a bad link condition that may have occurred.
  * The indication is that the RFC / LFC registers may be incrementing
  * continually.  A full adapter reset is required to recover.
  *

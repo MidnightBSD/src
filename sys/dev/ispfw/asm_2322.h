@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/ispfw/asm_2322.h 291543 2015-11-30 23:00:22Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/ispfw/asm_2322.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (C) 2004-2005 by Qlogic, Inc.
  * All rights reserved.

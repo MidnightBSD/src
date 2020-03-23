@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_controller.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_controller.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SCIC_SDS_CONTROLLER_H_
 #define _SCIC_SDS_CONTROLLER_H_
@@ -248,7 +247,7 @@ typedef struct SCIC_SDS_CONTROLLER
    SCI_POOL_CREATE(tci_pool, U16, SCI_MAX_IO_REQUESTS);
 
    /**
-    * This filed is the SCIC_POWER_CONTROL data used to controll when direct
+    * This filed is the SCIC_POWER_CONTROL data used to control when direct
     * attached devices can consume power.
     */
    SCIC_POWER_CONTROL_T power_control;
@@ -372,7 +371,7 @@ typedef struct SCIC_SDS_CONTROLLER
    U32 next_phy_to_start;
 
    /**
-    * This field controlls the invalid link up notifications to the SCI_USER.  If
+    * This field controls the invalid link up notifications to the SCI_USER.  If
     * an invalid_link_up notification is reported a bit for the PHY index is set
     * so further notifications are not made.  Once the PHY object reports link up
     * and is made part of a port then this bit for the PHY index is cleared.

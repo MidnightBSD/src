@@ -1,5 +1,5 @@
-/* $MidnightBSD$ */
 /*-
+ * Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 1997-2008 by Matthew Jacob
  * All rights reserved.
  *
@@ -29,7 +29,7 @@
  * FreeBSD Version.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isp/isp_pci.c 317366 2017-04-24 11:21:32Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isp/isp_pci.c 344911 2019-03-08 00:56:41Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -176,6 +176,17 @@ static struct ispmdvec mdvec_2600 = {
 	NULL
 };
 
+static struct ispmdvec mdvec_2700 = {
+	isp_pci_run_isr_2400,
+	isp_pci_rd_reg_2600,
+	isp_pci_wr_reg_2600,
+	isp_pci_mbxdma,
+	isp_pci_dmasetup,
+	isp_common_dmateardown,
+	isp_pci_irqsetup,
+	NULL
+};
+
 #ifndef	PCIM_CMD_INVEN
 #define	PCIM_CMD_INVEN			0x10
 #endif
@@ -208,142 +219,80 @@ static struct ispmdvec mdvec_2600 = {
 #define	PCIR_ROMADDR			0x30
 #endif
 
-#ifndef	PCI_VENDOR_QLOGIC
 #define	PCI_VENDOR_QLOGIC		0x1077
-#endif
 
-#ifndef	PCI_PRODUCT_QLOGIC_ISP1020
 #define	PCI_PRODUCT_QLOGIC_ISP1020	0x1020
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP1080
 #define	PCI_PRODUCT_QLOGIC_ISP1080	0x1080
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP10160
 #define	PCI_PRODUCT_QLOGIC_ISP10160	0x1016
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP12160
 #define	PCI_PRODUCT_QLOGIC_ISP12160	0x1216
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP1240
 #define	PCI_PRODUCT_QLOGIC_ISP1240	0x1240
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP1280
 #define	PCI_PRODUCT_QLOGIC_ISP1280	0x1280
-#endif
 
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2100
 #define	PCI_PRODUCT_QLOGIC_ISP2100	0x2100
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2200
 #define	PCI_PRODUCT_QLOGIC_ISP2200	0x2200
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2300
 #define	PCI_PRODUCT_QLOGIC_ISP2300	0x2300
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2312
 #define	PCI_PRODUCT_QLOGIC_ISP2312	0x2312
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2322
 #define	PCI_PRODUCT_QLOGIC_ISP2322	0x2322
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2422
 #define	PCI_PRODUCT_QLOGIC_ISP2422	0x2422
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2432
 #define	PCI_PRODUCT_QLOGIC_ISP2432	0x2432
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2532
 #define	PCI_PRODUCT_QLOGIC_ISP2532	0x2532
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP6312
+#define	PCI_PRODUCT_QLOGIC_ISP5432	0x5432
 #define	PCI_PRODUCT_QLOGIC_ISP6312	0x6312
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP6322
 #define	PCI_PRODUCT_QLOGIC_ISP6322	0x6322
-#endif
-
-#ifndef        PCI_PRODUCT_QLOGIC_ISP5432
-#define        PCI_PRODUCT_QLOGIC_ISP5432      0x5432
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP2031
 #define	PCI_PRODUCT_QLOGIC_ISP2031	0x2031
-#endif
-
-#ifndef	PCI_PRODUCT_QLOGIC_ISP8031
 #define	PCI_PRODUCT_QLOGIC_ISP8031	0x8031
-#endif
-
-#define        PCI_QLOGIC_ISP5432      \
-       ((PCI_PRODUCT_QLOGIC_ISP5432 << 16) | PCI_VENDOR_QLOGIC)
+#define	PCI_PRODUCT_QLOGIC_ISP2684	0x2171
+#define	PCI_PRODUCT_QLOGIC_ISP2692	0x2b61
+#define	PCI_PRODUCT_QLOGIC_ISP2714	0x2071
+#define	PCI_PRODUCT_QLOGIC_ISP2722	0x2261
 
 #define	PCI_QLOGIC_ISP1020	\
 	((PCI_PRODUCT_QLOGIC_ISP1020 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP1080	\
 	((PCI_PRODUCT_QLOGIC_ISP1080 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP10160	\
 	((PCI_PRODUCT_QLOGIC_ISP10160 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP12160	\
 	((PCI_PRODUCT_QLOGIC_ISP12160 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP1240	\
 	((PCI_PRODUCT_QLOGIC_ISP1240 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP1280	\
 	((PCI_PRODUCT_QLOGIC_ISP1280 << 16) | PCI_VENDOR_QLOGIC)
 
 #define	PCI_QLOGIC_ISP2100	\
 	((PCI_PRODUCT_QLOGIC_ISP2100 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2200	\
 	((PCI_PRODUCT_QLOGIC_ISP2200 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2300	\
 	((PCI_PRODUCT_QLOGIC_ISP2300 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2312	\
 	((PCI_PRODUCT_QLOGIC_ISP2312 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2322	\
 	((PCI_PRODUCT_QLOGIC_ISP2322 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2422	\
 	((PCI_PRODUCT_QLOGIC_ISP2422 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2432	\
 	((PCI_PRODUCT_QLOGIC_ISP2432 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2532	\
 	((PCI_PRODUCT_QLOGIC_ISP2532 << 16) | PCI_VENDOR_QLOGIC)
-
+#define	PCI_QLOGIC_ISP5432	\
+	((PCI_PRODUCT_QLOGIC_ISP5432 << 16) | PCI_VENDOR_QLOGIC)
 #define	PCI_QLOGIC_ISP6312	\
 	((PCI_PRODUCT_QLOGIC_ISP6312 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP6322	\
 	((PCI_PRODUCT_QLOGIC_ISP6322 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP2031	\
 	((PCI_PRODUCT_QLOGIC_ISP2031 << 16) | PCI_VENDOR_QLOGIC)
-
 #define	PCI_QLOGIC_ISP8031	\
 	((PCI_PRODUCT_QLOGIC_ISP8031 << 16) | PCI_VENDOR_QLOGIC)
+#define	PCI_QLOGIC_ISP2684	\
+	((PCI_PRODUCT_QLOGIC_ISP2684 << 16) | PCI_VENDOR_QLOGIC)
+#define	PCI_QLOGIC_ISP2692	\
+	((PCI_PRODUCT_QLOGIC_ISP2692 << 16) | PCI_VENDOR_QLOGIC)
+#define	PCI_QLOGIC_ISP2714	\
+	((PCI_PRODUCT_QLOGIC_ISP2714 << 16) | PCI_VENDOR_QLOGIC)
+#define	PCI_QLOGIC_ISP2722	\
+	((PCI_PRODUCT_QLOGIC_ISP2722 << 16) | PCI_VENDOR_QLOGIC)
 
 /*
  * Odd case for some AMI raid cards... We need to *not* attach to this.
@@ -463,6 +412,18 @@ isp_pci_probe(device_t dev)
 	case PCI_QLOGIC_ISP8031:
 		device_set_desc(dev, "Qlogic ISP 8031 PCI FCoE Adapter");
 		break;
+	case PCI_QLOGIC_ISP2684:
+		device_set_desc(dev, "Qlogic ISP 2684 PCI FC Adapter");
+		break;
+	case PCI_QLOGIC_ISP2692:
+		device_set_desc(dev, "Qlogic ISP 2692 PCI FC Adapter");
+		break;
+	case PCI_QLOGIC_ISP2714:
+		device_set_desc(dev, "Qlogic ISP 2714 PCI FC Adapter");
+		break;
+	case PCI_QLOGIC_ISP2722:
+		device_set_desc(dev, "Qlogic ISP 2722 PCI FC Adapter");
+		break;
 	default:
 		return (ENXIO);
 	}
@@ -575,10 +536,10 @@ isp_get_specific_options(device_t dev, int chan, ispsoftc_t *isp)
 	    name, &tval) == 0 && tval != 0) {
 		isp->isp_confopts |= ISP_CFG_FULL_DUPLEX;
 	}
-	sptr = 0;
+	sptr = NULL;
 	snprintf(name, sizeof(name), "%stopology", prefix);
 	if (resource_string_value(device_get_name(dev), device_get_unit(dev),
-	    name, (const char **) &sptr) == 0 && sptr != 0) {
+	    name, (const char **) &sptr) == 0 && sptr != NULL) {
 		if (strcmp(sptr, "lport") == 0) {
 			isp->isp_confopts |= ISP_CFG_LPORT;
 		} else if (strcmp(sptr, "nport") == 0) {
@@ -623,12 +584,12 @@ isp_get_specific_options(device_t dev, int chan, ispsoftc_t *isp)
 	 * hint replacement to specify WWN strings with a leading
 	 * 'w' (e..g w50000000aaaa0001). Sigh.
 	 */
-	sptr = 0;
+	sptr = NULL;
 	snprintf(name, sizeof(name), "%sportwwn", prefix);
 	tval = resource_string_value(device_get_name(dev), device_get_unit(dev),
 	    name, (const char **) &sptr);
-	if (tval == 0 && sptr != 0 && *sptr++ == 'w') {
-		char *eptr = 0;
+	if (tval == 0 && sptr != NULL && *sptr++ == 'w') {
+		char *eptr = NULL;
 		ISP_FC_PC(isp, chan)->def_wwpn = strtouq(sptr, &eptr, 16);
 		if (eptr < sptr + 16 || ISP_FC_PC(isp, chan)->def_wwpn == -1) {
 			device_printf(dev, "mangled portwwn hint '%s'\n", sptr);
@@ -636,12 +597,12 @@ isp_get_specific_options(device_t dev, int chan, ispsoftc_t *isp)
 		}
 	}
 
-	sptr = 0;
+	sptr = NULL;
 	snprintf(name, sizeof(name), "%snodewwn", prefix);
 	tval = resource_string_value(device_get_name(dev), device_get_unit(dev),
 	    name, (const char **) &sptr);
-	if (tval == 0 && sptr != 0 && *sptr++ == 'w') {
-		char *eptr = 0;
+	if (tval == 0 && sptr != NULL && *sptr++ == 'w') {
+		char *eptr = NULL;
 		ISP_FC_PC(isp, chan)->def_wwnn = strtouq(sptr, &eptr, 16);
 		if (eptr < sptr + 16 || ISP_FC_PC(isp, chan)->def_wwnn == 0) {
 			device_printf(dev, "mangled nodewwn hint '%s'\n", sptr);
@@ -808,6 +769,16 @@ isp_pci_attach(device_t dev)
 		isp->isp_nchan += isp_nvports;
 		isp->isp_mdvec = &mdvec_2600;
 		isp->isp_type = ISP_HA_FC_2600;
+		pcs->pci_poff[MBOX_BLOCK >> _BLK_REG_SHFT] = PCI_MBOX_REGS2400_OFF;
+		break;
+	case PCI_QLOGIC_ISP2684:
+	case PCI_QLOGIC_ISP2692:
+	case PCI_QLOGIC_ISP2714:
+	case PCI_QLOGIC_ISP2722:
+		did = 0x2700;
+		isp->isp_nchan += isp_nvports;
+		isp->isp_mdvec = &mdvec_2700;
+		isp->isp_type = ISP_HA_FC_2700;
 		pcs->pci_poff[MBOX_BLOCK >> _BLK_REG_SHFT] = PCI_MBOX_REGS2400_OFF;
 		break;
 	default:
@@ -1937,14 +1908,21 @@ isp_pci_irqsetup(ispsoftc_t *isp)
 
 	ISP_UNLOCK(isp);
 	if (ISP_CAP_MSIX(isp)) {
-		max_irq = min(ISP_MAX_IRQS, IS_26XX(isp) ? 3 : 2);
+		max_irq = IS_26XX(isp) ? 3 : (IS_25XX(isp) ? 2 : 0);
+		resource_int_value(device_get_name(dev),
+		    device_get_unit(dev), "msix", &max_irq);
+		max_irq = imin(ISP_MAX_IRQS, max_irq);
 		pcs->msicount = imin(pci_msix_count(dev), max_irq);
 		if (pcs->msicount > 0 &&
 		    pci_alloc_msix(dev, &pcs->msicount) != 0)
 			pcs->msicount = 0;
 	}
 	if (pcs->msicount == 0) {
-		pcs->msicount = imin(pci_msi_count(dev), 1);
+		max_irq = 1;
+		resource_int_value(device_get_name(dev),
+		    device_get_unit(dev), "msi", &max_irq);
+		max_irq = imin(1, max_irq);
+		pcs->msicount = imin(pci_msi_count(dev), max_irq);
 		if (pcs->msicount > 0 &&
 		    pci_alloc_msi(dev, &pcs->msicount) != 0)
 			pcs->msicount = 0;

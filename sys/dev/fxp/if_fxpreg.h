@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * Copyright (c) 2001 Jonathan Lemon <jlemon@freebsd.org>
@@ -26,10 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fxp/if_fxpreg.h 264442 2014-04-14 04:51:59Z yongari $
+ * $FreeBSD: stable/11/sys/dev/fxp/if_fxpreg.h 345186 2019-03-15 15:16:31Z markj $
  */
-
-#define FXP_VENDORID_INTEL	0x8086
 
 #define FXP_PCI_MMBA	0x10
 #define FXP_PCI_IOBA	0x14
@@ -282,10 +279,15 @@ struct fxp_cb_tx {
 	uint16_t cb_status;
 	uint16_t cb_command;
 	uint32_t link_addr;
-	uint32_t tbd_array_addr;
-	uint16_t byte_count;
-	uint8_t tx_threshold;
-	uint8_t tbd_number;
+	union {
+		struct {
+			uint32_t tbd_array_addr;
+			uint16_t byte_count;
+			uint8_t tx_threshold;
+			uint8_t tbd_number;
+		};
+		struct fxp_tbd tbdtso;
+	};
 
 	/*
 	 * The following structure isn't actually part of the TxCB,

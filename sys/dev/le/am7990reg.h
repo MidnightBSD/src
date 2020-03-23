@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: am7990reg.h,v 1.11 2005/12/11 12:21:25 christos Exp $	*/
 
 /*-
@@ -64,7 +63,7 @@
  *	@(#)if_lereg.h	8.1 (Berkeley) 6/10/93
  */
 
-/* $FreeBSD: stable/10/sys/dev/le/am7990reg.h 263687 2014-03-24 13:48:04Z emaste $ */
+/* $FreeBSD: stable/11/sys/dev/le/am7990reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _DEV_LE_AM7990REG_H_
 #define	_DEV_LE_AM7990REG_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, Javier Mart^mn Rueda (jmrueda@diatel.upm.es)
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/ex/if_exvar.h 182088 2008-08-24 00:22:42Z imp $
+ *	$FreeBSD: stable/11/sys/dev/ex/if_exvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct ex_softc {

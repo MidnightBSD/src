@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@freebsd.org>
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fb/splash_txt.c 228445 2011-12-12 21:12:07Z eadler $
+ * $FreeBSD: stable/11/sys/dev/fb/splash_txt.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

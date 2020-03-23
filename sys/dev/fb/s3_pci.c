@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Alcove - Nicolas Souchu <nsouch@freebsd.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fb/s3_pci.c 234362 2012-04-16 23:29:12Z jkim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fb/s3_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* Enable LFB on S3 cards that has only VESA 1.2 BIOS */
 
@@ -479,8 +478,8 @@ s3pci_attach(device_t dev)
 	/* Allocate resources
 	 */
 	rid = 0;
-	if (!(sc->port_res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				0ul, ~0ul, 0, RF_ACTIVE | RF_SHAREABLE))) {
+	if (!(sc->port_res = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &rid,
+				RF_ACTIVE | RF_SHAREABLE))) {
 		printf("%s: port resource allocation failed!\n", __func__);
 		goto error;
 	}
@@ -488,8 +487,8 @@ s3pci_attach(device_t dev)
 	sc->sh = rman_get_bushandle(sc->port_res);
 
 	rid = 1;
-	if (!(sc->enh_res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				0ul, ~0ul, 0, RF_ACTIVE | RF_SHAREABLE))) {
+	if (!(sc->enh_res = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &rid,
+				RF_ACTIVE | RF_SHAREABLE))) {
 		printf("%s: enhanced port resource allocation failed!\n",
 			__func__);
 		goto error;

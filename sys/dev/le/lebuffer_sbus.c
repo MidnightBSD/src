@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/le/lebuffer_sbus.c 225931 2011-10-02 23:22:38Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/le/lebuffer_sbus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -198,7 +197,7 @@ lebuffer_setup_dinfo(device_t dev, phandle_t node)
 		if (slot != -1 && slot != rslot) {
 			device_printf(dev, "<%s>: multiple slots\n",
 			    ldi->ldi_obdinfo.obd_name);
-			free(reg, M_OFWPROP);
+			OF_prop_free(reg);
 			goto fail;
 		}
 		slot = rslot;
@@ -206,7 +205,7 @@ lebuffer_setup_dinfo(device_t dev, phandle_t node)
 		resource_list_add(&ldi->ldi_rl, SYS_RES_MEMORY, i, base,
 		    base + reg[i].sbr_size, reg[i].sbr_size);
 	}
-	free(reg, M_OFWPROP);
+	OF_prop_free(reg);
 	if (slot != sbus_get_slot(dev)) {
 		device_printf(dev, "<%s>: parent and child slot do not match\n",
 		    ldi->ldi_obdinfo.obd_name);
@@ -232,7 +231,7 @@ lebuffer_setup_dinfo(device_t dev, phandle_t node)
 			resource_list_add(&ldi->ldi_rl, SYS_RES_IRQ, i,
 			    iv, iv, 1);
 		}
-		free(intr, M_OFWPROP);
+		OF_prop_free(intr);
 	}
 	return (ldi);
 
@@ -298,7 +297,7 @@ lebuffer_print_res(struct lebuffer_devinfo *ldi)
 
 	rv = 0;
 	rv += resource_list_print_type(&ldi->ldi_rl, "mem", SYS_RES_MEMORY,
-	    "%#lx");
-	rv += resource_list_print_type(&ldi->ldi_rl, "irq", SYS_RES_IRQ, "%ld");
+	    "%#jx");
+	rv += resource_list_print_type(&ldi->ldi_rl, "irq", SYS_RES_IRQ, "%jd");
 	return (rv);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/mv.c 149871 2005-09-07 23:33:26Z scottl $
+ * $FreeBSD: stable/11/sys/dev/hptmv/mv.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,17 +33,7 @@
 #include <sys/bus.h>
 #include <machine/resource.h>
 
-#if __FreeBSD_version >= 500043
 #include <machine/pci_cfgreg.h>
-#endif
-
-#if (__FreeBSD_version < 500043)
-#include <sys/bus_private.h>
-#endif
-
-#if (__FreeBSD_version < 500000)
-#include <machine/clock.h>
-#endif
 
 #ifndef __KERNEL__
 #define __KERNEL__

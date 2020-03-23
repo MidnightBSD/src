@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -27,14 +26,14 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mps/mps_mapping.h 281564 2015-04-15 21:47:15Z slm $
+ * $FreeBSD: stable/11/sys/dev/mps/mps_mapping.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MPS_MAPPING_H
 #define _MPS_MAPPING_H
 
 /**
- * struct _map_phy_change - PHY entries recieved in Topology change list
+ * struct _map_phy_change - PHY entries received in Topology change list
  * @physical_id: SAS address of the device attached with the associate PHY
  * @device_info: bitfield provides detailed info about the device
  * @dev_handle: device handle for the device pointed by this entry

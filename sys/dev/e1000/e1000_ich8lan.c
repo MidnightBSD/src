@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2015, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/10/sys/dev/e1000/e1000_ich8lan.c 333214 2018-05-03 15:41:04Z marius $*/
+/*$FreeBSD: stable/11/sys/dev/e1000/e1000_ich8lan.c 333213 2018-05-03 15:40:56Z marius $*/
 
 /* 82562G 10/100 Network Connection
  * 82562G-2 10/100 Network Connection
@@ -4924,7 +4923,7 @@ static s32 e1000_id_led_init_pchlan(struct e1000_hw *hw)
  *  @hw: pointer to the HW structure
  *
  *  ICH8 use the PCI Express bus, but does not contain a PCI Express Capability
- *  register, so the the bus width is hard coded.
+ *  register, so the bus width is hard coded.
  **/
 static s32 e1000_get_bus_info_ich8lan(struct e1000_hw *hw)
 {

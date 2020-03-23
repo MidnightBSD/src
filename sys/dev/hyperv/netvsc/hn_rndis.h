@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
  * Copyright (c) 2010-2012 Citrix Inc.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/netvsc/hn_rndis.h 324466 2017-10-10 03:29:36Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/netvsc/hn_rndis.h 324477 2017-10-10 05:52:28Z sephe $
  */
 
 #ifndef _HN_RNDIS_H_

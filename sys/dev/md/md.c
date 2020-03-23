@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -7,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/10/sys/dev/md/md.c 320154 2017-06-20 17:03:06Z markj $
+ * $FreeBSD: stable/11/sys/dev/md/md.c 356824 2020-01-17 04:12:03Z mav $
  *
  */
 
@@ -59,6 +58,7 @@
  * From: src/sys/dev/vn/vn.c,v 1.122 2000/12/16 16:06:03
  */
 
+#include "opt_rootdevname.h"
 #include "opt_geom.h"
 #include "opt_md.h"
 
@@ -106,6 +106,7 @@
 
 #define MD_SHUTDOWN	0x10000		/* Tell worker thread to terminate. */
 #define	MD_EXITING	0x20000		/* Worker thread is exiting. */
+#define	MD_PROVIDERGONE	0x40000		/* Safe to free the softc */
 
 #ifndef MD_NSECT
 #define MD_NSECT (10000 * 2)
@@ -125,20 +126,25 @@ SYSCTL_INT(_vm, OID_AUTO, md_malloc_wait, CTLFLAG_RW, &md_malloc_wait, 0,
 #define	MD_ROOT_FSTYPE	"ufs"
 #endif
 
-#if defined(MD_ROOT) && defined(MD_ROOT_SIZE)
+#if defined(MD_ROOT)
 /*
  * Preloaded image gets put here.
- * Applications that patch the object with the image can determine
- * the size looking at the start and end markers (strings),
- * so we want them contiguous.
  */
-static struct {
-	u_char start[MD_ROOT_SIZE*1024];
-	u_char end[128];
-} mfs_root = {
-	.start = "MFS Filesystem goes here",
-	.end = "MFS Filesystem had better STOP here",
-};
+#if defined(MD_ROOT_SIZE)
+/*
+ * We put the mfs_root symbol into the oldmfs section of the kernel object file.
+ * Applications that patch the object with the image can determine
+ * the size looking at the oldmfs section size within the kernel.
+ */
+u_char mfs_root[MD_ROOT_SIZE*1024] __attribute__ ((section ("oldmfs")));
+const int mfs_root_size = sizeof(mfs_root);
+#else
+extern volatile u_char __weak_symbol mfs_root;
+extern volatile u_char __weak_symbol mfs_root_end;
+__GLOBL(mfs_root);
+__GLOBL(mfs_root_end);
+#define mfs_root_size ((uintptr_t)(&mfs_root_end - &mfs_root))
+#endif
 #endif
 
 static g_init_t g_md_init;
@@ -147,8 +153,9 @@ static g_start_t g_md_start;
 static g_access_t g_md_access;
 static void g_md_dumpconf(struct sbuf *sb, const char *indent,
     struct g_geom *gp, struct g_consumer *cp __unused, struct g_provider *pp);
+static g_provgone_t g_md_providergone;
 
-static struct cdev *status_dev = 0;
+static struct cdev *status_dev = NULL;
 static struct sx md_sx;
 static struct unrhdr *md_uh;
 
@@ -168,6 +175,7 @@ struct g_class g_md_class = {
 	.start = g_md_start,
 	.access = g_md_access,
 	.dumpconf = g_md_dumpconf,
+	.providergone = g_md_providergone,
 };
 
 DECLARE_GEOM_CLASS(g_md_class, g_md);
@@ -427,8 +435,8 @@ g_md_start(struct bio *bp)
 	}
 	mtx_lock(&sc->queue_mtx);
 	bioq_disksort(&sc->bio_queue, bp);
-	mtx_unlock(&sc->queue_mtx);
 	wakeup(sc);
+	mtx_unlock(&sc->queue_mtx);
 }
 
 #define	MD_MALLOC_MOVE_ZERO	1
@@ -1019,9 +1027,10 @@ mdstart_swap(struct md_s *sc, struct bio *bp)
 			if (m->valid == VM_PAGE_BITS_ALL)
 				rv = VM_PAGER_OK;
 			else
-				rv = vm_pager_get_pages(sc->object, &m, 1, 0);
+				rv = vm_pager_get_pages(sc->object, &m, 1,
+				    NULL, NULL);
 			if (rv == VM_PAGER_ERROR) {
-				vm_page_xunbusy(m);
+				md_swap_page_free(m);
 				break;
 			} else if (rv == VM_PAGER_FAIL) {
 				/*
@@ -1048,9 +1057,10 @@ mdstart_swap(struct md_s *sc, struct bio *bp)
 			if (len == PAGE_SIZE || m->valid == VM_PAGE_BITS_ALL)
 				rv = VM_PAGER_OK;
 			else
-				rv = vm_pager_get_pages(sc->object, &m, 1, 0);
+				rv = vm_pager_get_pages(sc->object, &m, 1,
+				    NULL, NULL);
 			if (rv == VM_PAGER_ERROR) {
-				vm_page_xunbusy(m);
+				md_swap_page_free(m);
 				break;
 			} else if (rv == VM_PAGER_FAIL)
 				pmap_zero_page(m);
@@ -1066,15 +1076,18 @@ mdstart_swap(struct md_s *sc, struct bio *bp)
 			}
 
 			m->valid = VM_PAGE_BITS_ALL;
-			vm_page_dirty(m);
-			vm_pager_page_unswapped(m);
+			if (m->dirty != VM_PAGE_BITS_ALL) {
+				vm_page_dirty(m);
+				vm_pager_page_unswapped(m);
+			}
 		} else if (bp->bio_cmd == BIO_DELETE) {
 			if (len == PAGE_SIZE || m->valid == VM_PAGE_BITS_ALL)
 				rv = VM_PAGER_OK;
 			else
-				rv = vm_pager_get_pages(sc->object, &m, 1, 0);
+				rv = vm_pager_get_pages(sc->object, &m, 1,
+				    NULL, NULL);
 			if (rv == VM_PAGER_ERROR) {
-				vm_page_xunbusy(m);
+				md_swap_page_free(m);
 				break;
 			} else if (rv == VM_PAGER_FAIL) {
 				md_swap_page_free(m);
@@ -1083,10 +1096,12 @@ mdstart_swap(struct md_s *sc, struct bio *bp)
 				/* Page is valid. */
 				if (len != PAGE_SIZE) {
 					pmap_zero_page_area(m, offs, len);
-					vm_page_dirty(m);
-				}
-				vm_pager_page_unswapped(m);
-				if (len == PAGE_SIZE) {
+					if (m->dirty != VM_PAGE_BITS_ALL) {
+						vm_page_dirty(m);
+						vm_pager_page_unswapped(m);
+					}
+				} else {
+					vm_pager_page_unswapped(m);
 					md_swap_page_free(m);
 					m = NULL;
 				}
@@ -1104,7 +1119,7 @@ mdstart_swap(struct md_s *sc, struct bio *bp)
 		offs = 0;
 		ma_offs += len;
 	}
-	vm_object_pip_subtract(sc->object, 1);
+	vm_object_pip_wakeup(sc->object);
 	VM_OBJECT_WUNLOCK(sc->object);
 	return (rv != VM_PAGER_ERROR ? 0 : ENOSPC);
 }
@@ -1234,6 +1249,8 @@ mdinit(struct md_s *sc)
 	gp = g_new_geomf(&g_md_class, "md%d", sc->unit);
 	gp->softc = sc;
 	pp = g_new_providerf(gp, "md%d", sc->unit);
+	devstat_remove_entry(pp->stat);
+	pp->stat = NULL;
 	pp->flags |= G_PF_DIRECT_SEND | G_PF_DIRECT_RECEIVE;
 	pp->mediasize = sc->mediasize;
 	pp->sectorsize = sc->sectorsize;
@@ -1249,10 +1266,11 @@ mdinit(struct md_s *sc)
 	}
 	sc->gp = gp;
 	sc->pp = pp;
-	g_error_provider(pp, 0);
-	g_topology_unlock();
 	sc->devstat = devstat_new_entry("md", sc->unit, sc->sectorsize,
 	    DEVSTAT_ALL_SUPPORTED, DEVSTAT_TYPE_DIRECT, DEVSTAT_PRIORITY_MAX);
+	sc->devstat->id = pp;
+	g_error_provider(pp, 0);
+	g_topology_unlock();
 }
 
 static int
@@ -1409,17 +1427,30 @@ bad:
 	return (error);
 }
 
+static void
+g_md_providergone(struct g_provider *pp)
+{
+	struct md_s *sc = pp->geom->softc;
+
+	mtx_lock(&sc->queue_mtx);
+	sc->flags |= MD_PROVIDERGONE;
+	wakeup(&sc->flags);
+	mtx_unlock(&sc->queue_mtx);
+}
+
 static int
 mddestroy(struct md_s *sc, struct thread *td)
 {
 
 	if (sc->gp) {
-		sc->gp->softc = NULL;
 		g_topology_lock();
 		g_wither_geom(sc->gp, ENXIO);
 		g_topology_unlock();
-		sc->gp = NULL;
-		sc->pp = NULL;
+
+		mtx_lock(&sc->queue_mtx);
+		while (!(sc->flags & MD_PROVIDERGONE))
+			msleep(&sc->flags, &sc->queue_mtx, PRIBIO, "mddestroy", 0);
+		mtx_unlock(&sc->queue_mtx);
 	}
 	if (sc->devstat) {
 		devstat_remove_entry(sc->devstat);
@@ -1521,8 +1552,8 @@ mdcreate_swap(struct md_s *sc, struct md_ioctl *mdio, struct thread *td)
 	int error;
 
 	/*
-	 * Range check.  Disallow negative sizes or any size less then the
-	 * size of a page.  Then round to a page.
+	 * Range check.  Disallow negative sizes and sizes not being
+	 * multiple of page size.
 	 */
 	if (sc->mediasize <= 0 || (sc->mediasize % PAGE_SIZE) != 0)
 		return (EDOM);
@@ -1563,8 +1594,8 @@ mdcreate_null(struct md_s *sc, struct md_ioctl *mdio, struct thread *td)
 {
 
 	/*
-	 * Range check.  Disallow negative sizes or any size less then the
-	 * size of a page.  Then round to a page.
+	 * Range check.  Disallow negative sizes and sizes not being
+	 * multiple of page size.
 	 */
 	if (sc->mediasize <= 0 || (sc->mediasize % PAGE_SIZE) != 0)
 		return (EDOM);
@@ -1744,13 +1775,22 @@ md_preloaded(u_char *image, size_t length, const char *name)
 	sc->pl_len = length;
 	sc->start = mdstart_preload;
 #ifdef MD_ROOT
-	if (sc->unit == 0)
+	if (sc->unit == 0) {
+#ifndef ROOTDEVNAME
 		rootdevnames[0] = MD_ROOT_FSTYPE ":/dev/md0";
+#endif
+#ifdef MD_ROOT_READONLY
+		sc->flags |= MD_READONLY;
+#endif
+	}
 #endif
 	mdinit(sc);
 	if (name != NULL) {
 		printf("%s%d: Preloaded image <%s> %zd bytes at %p\n",
 		    MD_NAME, sc->unit, name, length, image);
+	} else {
+		printf("%s%d: Embedded image %zd bytes at %p\n",
+		    MD_NAME, sc->unit, length, image);
 	}
 }
 
@@ -1770,10 +1810,13 @@ g_md_init(struct g_class *mp __unused)
 	sx_init(&md_sx, "MD config lock");
 	g_topology_unlock();
 	md_uh = new_unrhdr(0, INT_MAX, NULL);
-#ifdef MD_ROOT_SIZE
-	sx_xlock(&md_sx);
-	md_preloaded(mfs_root.start, sizeof(mfs_root.start), NULL);
-	sx_xunlock(&md_sx);
+#ifdef MD_ROOT
+	if (mfs_root_size != 0) {
+		sx_xlock(&md_sx);
+		md_preloaded(__DEVOLATILE(u_char *, &mfs_root), mfs_root_size,
+		    NULL);
+		sx_xunlock(&md_sx);
+	}
 #endif
 	/* XXX: are preload_* static or do they need Giant ? */
 	while ((mod = preload_search_next_name(mod)) != NULL) {

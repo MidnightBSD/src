@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi SHimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi SHimokawa
@@ -32,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/dev/firewire/fwohcivar.h 188079 2009-02-03 17:13:37Z sbruno $
+ * $FreeBSD: stable/11/sys/dev/firewire/fwohcivar.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -43,13 +42,9 @@ typedef struct fwohci_softc {
 	bus_space_tag_t bst;
 	bus_space_handle_t bsh;
 	void *ih;
-#if defined(__DragonFly__) || __FreeBSD_version < 500000
-	void *ih_cam;
-	void *ih_bio;
-#endif
 	struct resource *bsr;
 	struct resource *irq_res;
-	struct fwohci_dbch{
+	struct fwohci_dbch {
 		u_int ndb;
 		u_int ndesc;
 		STAILQ_HEAD(, fwohcidb_tr) db_trq;

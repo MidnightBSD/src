@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_en_pci.c,v 1.1 1996/06/22 02:00:31 chuck Exp $	*/
 /*-
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/en/if_en_pci.c 223624 2011-06-28 08:36:48Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/en/if_en_pci.c 257176 2013-10-26 17:58:36Z glebius $");
 
 /*
  * i f _ e n _ p c i . c  
@@ -61,6 +60,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/en/if_en_pci.c 223624 2011-06-28 08:36:48Z
 #include <vm/uma.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_atm.h>
 #include <net/if_media.h>
 #include <net/if_types.h>

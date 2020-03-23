@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mca/mca_busreg.h 50825 1999-09-03 03:40:00Z mdodd $
+ * $FreeBSD: stable/11/sys/dev/mca/mca_busreg.h 50825 1999-09-03 03:40:00Z mdodd $
  */
 
 /*

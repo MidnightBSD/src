@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Marvell Semiconductor, Inc.
@@ -28,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/mwl/mwlhal.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD: stable/11/sys/dev/mwl/mwlhal.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -310,19 +309,12 @@ mwl_hal_attach(device_t dev, uint16_t devid,
 		       NULL,			/* lockarg */
 		       &mh->mh_dmat);
 	if (error != 0) {
-		device_printf(dev, "unable to allocate memory for cmd buffer, "
+		device_printf(dev, "unable to allocate memory for cmd tag, "
 			"error %u\n", error);
 		goto fail0;
 	}
 
 	/* allocate descriptors */
-	error = bus_dmamap_create(mh->mh_dmat, BUS_DMA_NOWAIT, &mh->mh_dmamap);
-	if (error != 0) {
-		device_printf(dev, "unable to create dmamap for cmd buffers, "
-			"error %u\n", error);
-		goto fail0;
-	}
-
 	error = bus_dmamem_alloc(mh->mh_dmat, (void**) &mh->mh_cmdbuf,
 				 BUS_DMA_NOWAIT | BUS_DMA_COHERENT, 
 				 &mh->mh_dmamap);
@@ -366,9 +358,8 @@ mwl_hal_attach(device_t dev, uint16_t devid,
 fail2:
 	bus_dmamem_free(mh->mh_dmat, mh->mh_cmdbuf, mh->mh_dmamap);
 fail1:
-	bus_dmamap_destroy(mh->mh_dmat, mh->mh_dmamap);
-fail0:
 	bus_dma_tag_destroy(mh->mh_dmat);
+fail0:
 	mtx_destroy(&mh->mh_mtx);
 	free(mh, M_DEVBUF);
 	return NULL;
@@ -380,7 +371,6 @@ mwl_hal_detach(struct mwl_hal *mh0)
 	struct mwl_hal_priv *mh = MWLPRIV(mh0);
 
 	bus_dmamem_free(mh->mh_dmat, mh->mh_cmdbuf, mh->mh_dmamap);
-	bus_dmamap_destroy(mh->mh_dmat, mh->mh_dmamap);
 	bus_dma_tag_destroy(mh->mh_dmat);
 	mtx_destroy(&mh->mh_mtx);
 	free(mh, M_DEVBUF);
@@ -1450,7 +1440,7 @@ mwl_hal_bastream_alloc(struct mwl_hal_vap *vap, int ba_policy,
 	sp->setup = 0;
 	sp->ba_policy = ba_policy;
 	MWL_HAL_UNLOCK(mh);
-	return sp != NULL ? &sp->public : NULL;
+	return &sp->public;
 }
 
 const MWL_HAL_BASTREAM *

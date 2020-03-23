@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ncr53c9xvar.h,v 1.55 2011/07/31 18:39:00 jakllsch Exp $	*/
 
 /*-
@@ -60,7 +59,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/dev/esp/ncr53c9xvar.h 263687 2014-03-24 13:48:04Z emaste $ */
+/* $FreeBSD: stable/11/sys/dev/esp/ncr53c9xvar.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 #ifndef _NCR53C9XVAR_H_
 #define	_NCR53C9XVAR_H_
@@ -103,7 +102,7 @@
 /*
  * ECB. Holds additional information for each SCSI command Comments: We
  * need a separate scsi command block because we may need to overwrite it
- * with a request sense command.  Basicly, we refrain from fiddling with
+ * with a request sense command.  Basically, we refrain from fiddling with
  * the ccb union (except do the expected updating of return values).
  * We'll generally update: ccb->ccb_h.status and ccb->csio.{resid,
  * scsi_status,sense_data}.

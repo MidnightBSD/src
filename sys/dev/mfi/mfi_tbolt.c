@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
  /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_tbolt.c 262967 2014-03-10 02:31:50Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_tbolt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_mfi.h"
 
@@ -87,7 +86,6 @@ static void mfi_queue_map_sync(struct mfi_softc *sc);
 extern int	mfi_polled_cmd_timeout;
 static int	mfi_fw_reset_test = 0;
 #ifdef MFI_DEBUG
-TUNABLE_INT("hw.mfi.fw_reset_test", &mfi_fw_reset_test);
 SYSCTL_INT(_hw_mfi, OID_AUTO, fw_reset_test, CTLFLAG_RWTUN, &mfi_fw_reset_test,
            0, "Force a firmware reset condition");
 #endif
@@ -1150,7 +1148,7 @@ mfi_tbolt_send_frame(struct mfi_softc *sc, struct mfi_command *cm)
 	 * This is a polled command, so busy-wait for it to complete.
 	 *
 	 * The value of hdr->cmd_status is updated directly by the hardware
-	 * so there is no garantee that mfi_tbolt_complete_cmd is called
+	 * so there is no guarantee that mfi_tbolt_complete_cmd is called
 	 * prior to this value changing.
 	 */
 	while (hdr->cmd_status == MFI_STAT_INVALID_STATUS) {
@@ -1353,7 +1351,7 @@ mfi_process_fw_state_chg_isr(void *arg)
  * interrupt thread.
  *
  * The driver could get the RAID state via the MFI_DCMD_LD_MAP_GET_INFO
- * That requires a bunch of structure and it is simplier to just do
+ * That requires a bunch of structure and it is simpler to just do
  * the MFI_DCMD_LD_GET_LIST versus walking the RAID map.
  */
 

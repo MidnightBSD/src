@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/mvs/mvs.h 280276 2015-03-20 08:28:11Z mav $
+ * $FreeBSD: stable/11/sys/dev/mvs/mvs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include "mvs_if.h"
@@ -567,7 +566,7 @@ struct mvs_channel {
 	int			numtslotspd[16];/* Number of NCQ slots per dev */
 	int			numhslots;	/* Number of held slots */
 	int			recoverycmd;	/* Our READ LOG active */
-	int			fatalerr;	/* Fatal error happend */
+	int			fatalerr;	/* Fatal error happened */
 	int			lastslot;	/* Last used slot */
 	int			taggedtarget;	/* Last tagged target */
 	int			resetting;	/* Hard-reset in progress. */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * All Rights Reserved, Copyright (C) Fujitsu Limited 1995
  *
@@ -23,13 +22,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/fe/if_fe_pccard.c 199798 2009-11-25 13:31:17Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/fe/if_fe_pccard.c 292079 2015-12-11 05:27:56Z imp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 
 #include <sys/bus.h>
 #include <machine/bus.h>
@@ -37,6 +38,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/fe/if_fe_pccard.c 199798 2009-11-25 13:31:
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_mib.h>
 #include <net/if_media.h>
 
@@ -143,6 +145,7 @@ static driver_t fe_pccard_driver = {
 
 DRIVER_MODULE(fe, pccard, fe_pccard_driver, fe_devclass, 0, 0);
 MODULE_DEPEND(fe, pccard, 1, 1, 1);
+PCCARD_PNP_INFO(fe_pccard_products);
 
 static int fe_probe_mbh(device_t, const struct fe_pccard_product *);
 static int fe_probe_tdk(device_t, const struct fe_pccard_product *);

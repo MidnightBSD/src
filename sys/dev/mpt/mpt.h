@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/mpt/mpt.h 315828 2017-03-23 06:55:32Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/mpt/mpt.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Generic defines for LSI '909 FC  adapters.
  * FreeBSD Version.
@@ -238,7 +237,7 @@ struct mpt_map_info {
 
 void mpt_map_rquest(void *, bus_dma_segment_t *, int, int);
 
-/********************************** Endianess *********************************/
+/********************************* Endianness *********************************/
 #define	MPT_2_HOST64(ptr, tag)	ptr->tag = le64toh(ptr->tag)
 #define	MPT_2_HOST32(ptr, tag)	ptr->tag = le32toh(ptr->tag)
 #define	MPT_2_HOST16(ptr, tag)	ptr->tag = le16toh(ptr->tag)
@@ -666,8 +665,8 @@ struct mpt_softc {
 	bus_addr_t		reply_phys;	/* BusAddr of reply memory */
 
 	bus_dma_tag_t		buffer_dmat;	/* DMA tag for buffers */
-	bus_dma_tag_t		request_dmat;	/* DMA tag for request memroy */
-	bus_dmamap_t		request_dmap;	/* DMA map for request memroy */
+	bus_dma_tag_t		request_dmat;	/* DMA tag for request memory */
+	bus_dmamap_t		request_dmap;	/* DMA map for request memory */
 	uint8_t		       *request;	/* KVA of Request memory */
 	bus_addr_t		request_phys;	/* BusAddr of request memory */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $Id: ldm.h,v 1.78 2010/05/10 10:08:46 lcn Exp $ */
 /*-
  * Copyright (C) 2005-2011 HighPoint Technologies, Inc.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptnr/ldm.h 314224 2017-02-24 21:22:13Z pfg $
+ * $FreeBSD: stable/11/sys/dev/hptnr/ldm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <dev/hptnr/hptnr_config.h>
 #ifndef _HPT_LDM_H_

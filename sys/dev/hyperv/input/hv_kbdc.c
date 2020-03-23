@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2017 Microsoft Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/input/hv_kbdc.c 320766 2017-07-07 09:38:40Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/input/hv_kbdc.c 320765 2017-07-07 08:49:37Z sephe $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mfi/mfi_disk.c 267084 2014-06-05 00:43:32Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_disk.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_mfi.h"
 

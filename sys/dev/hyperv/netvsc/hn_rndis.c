@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016-2017 Microsoft Corp.
  * Copyright (c) 2010-2012 Citrix Inc.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/netvsc/hn_rndis.c 324574 2017-10-13 02:26:39Z sephe $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/netvsc/hn_rndis.c 324578 2017-10-13 05:09:56Z sephe $");
 
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -42,7 +41,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hyperv/netvsc/hn_rndis.c 324574 2017-10-13
 
 #include <net/ethernet.h>
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/rndis.h>

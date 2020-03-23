@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -28,11 +27,11 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mps/mps.c 322661 2017-08-18 15:38:08Z ken $
+ * $FreeBSD: stable/11/sys/dev/mps/mps.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mps/mps.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* Communications core for Avago Technologies (LSI) MPT2 */
 
@@ -490,7 +489,10 @@ mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 		 * Size the queues. Since the reply queues always need one free
 		 * entry, we'll just deduct one reply message here.
 		 */
-		sc->num_reqs = MIN(MPS_REQ_FRAMES, sc->facts->RequestCredit);
+		sc->num_prireqs = MIN(MPS_PRI_REQ_FRAMES,
+		    sc->facts->HighPriorityCredit);
+		sc->num_reqs = MIN(MPS_REQ_FRAMES, sc->facts->RequestCredit) +
+		    sc->num_prireqs;
 		sc->num_replies = MIN(MPS_REPLY_FRAMES + MPS_EVT_REPLY_FRAMES,
 		    sc->facts->MaxReplyDescriptorPostQueueDepth) - 1;
 
@@ -789,7 +791,7 @@ mps_wait_db_ack(struct mps_softc *sc, int timeout, int sleep_flag)
 		int_status = mps_regread(sc, MPI2_HOST_INTERRUPT_STATUS_OFFSET);
 		if (!(int_status & MPI2_HIS_SYS2IOC_DB_STATUS)) {
 			mps_dprint(sc, MPS_INIT, 
-			"%s: successfull count(%d), timeout(%d)\n",
+			"%s: successful count(%d), timeout(%d)\n",
 			__func__, count, timeout);
 		return 0;
 		} else if (int_status & MPI2_HIS_IOC2SYS_DB_STATUS) {
@@ -1087,8 +1089,8 @@ mps_alloc_queues(struct mps_softc *sc)
 	 *
 	 * These two queues are allocated together for simplicity.
 	 */
-	sc->fqdepth = roundup2((sc->num_replies + 1), 16);
-	sc->pqdepth = roundup2((sc->num_replies + 1), 16);
+	sc->fqdepth = roundup2(sc->num_replies + 1, 16);
+	sc->pqdepth = roundup2(sc->num_replies + 1, 16);
 	fqsize= sc->fqdepth * 4;
 	pqsize = sc->pqdepth * 8;
 	qsize = fqsize + pqsize;
@@ -1304,7 +1306,7 @@ mps_alloc_requests(struct mps_softc *sc)
 
 		/* XXX Is a failure here a critical problem? */
 		if (bus_dmamap_create(sc->buffer_dmat, 0, &cm->cm_dmamap) == 0)
-			if (i <= sc->facts->HighPriorityCredit)
+			if (i <= sc->num_prireqs)
 				mps_free_high_priority_command(sc, cm);
 			else
 				mps_free_command(sc, cm);
@@ -1935,7 +1937,7 @@ mps_intr_locked(void *data)
 				       sc->reply_frames, sc->fqdepth,
 				       sc->facts->ReplyFrameSize * 4);
 				printf("%s: baddr %#x,\n", __func__, baddr);
-				/* LSI-TODO. See Linux Code. Need Gracefull exit*/
+				/* LSI-TODO. See Linux Code. Need Graceful exit*/
 				panic("Reply address out of range");
 			}
 			if (le16toh(desc->AddressReply.SMID) == 0) {
@@ -2226,7 +2228,7 @@ mps_add_chain(struct mps_command *cm)
 	 *	sgc->Flags = ( MPI2_SGE_FLAGS_CHAIN_ELEMENT | MPI2_SGE_FLAGS_64_BIT_ADDRESSING |
 	 *	            MPI2_SGE_FLAGS_SYSTEM_ADDRESS) << MPI2_SGE_FLAGS_SHIFT
 	 *	This is fine.. because we are not using simple element. In case of 
-	 *	MPI2_SGE_CHAIN32, we have seperate Length and Flags feild.
+	 *	MPI2_SGE_CHAIN32, we have separate Length and Flags feild.
  	 */
 	sgc->Flags = MPI2_SGE_FLAGS_CHAIN_ELEMENT;
 	sgc->Address = htole32(chain->chain_busaddr);
@@ -2611,7 +2613,7 @@ mps_wait_command(struct mps_softc *sc, struct mps_command **cmp, int timeout,
 
 /*
  * The MPT driver had a verbose interface for config pages.  In this driver,
- * reduce it to much simplier terms, similar to the Linux driver.
+ * reduce it to much simpler terms, similar to the Linux driver.
  */
 int
 mps_read_config_page(struct mps_softc *sc, struct mps_config_params *params)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/sci_fast_list.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/sci_fast_list.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SCI_FAST_LIST_HEADER_
 #define _SCI_FAST_LIST_HEADER_
@@ -68,7 +67,7 @@
  *        queue.   Pointers in this implementation never == NULL.
  *
  *        Definitions:
- *        - anchor : This is ths list container and has a
+ *        - anchor : This is the list container and has a
  *                   pointer to both the head and tail of the
  *                   list elements
  *        - element: This is the list element not the actual

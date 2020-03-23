@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2014 Intel Corporation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ismt/ismt.c 293676 2016-01-11 17:54:23Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ismt/ismt.c 293369 2016-01-07 21:16:44Z jimharris $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

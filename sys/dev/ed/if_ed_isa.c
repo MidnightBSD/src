@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_isa.c 211764 2010-08-24 18:17:40Z yongari $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ed.h"
 
@@ -202,3 +201,6 @@ static driver_t ed_isa_driver = {
 DRIVER_MODULE(ed, isa, ed_isa_driver, ed_devclass, 0, 0);
 MODULE_DEPEND(ed, isa, 1, 1, 1);
 MODULE_DEPEND(ed, ether, 1, 1, 1);
+MODULE_PNP_INFO("E:pnpid;", isa, ed, ed_ids, sizeof(ed_ids[0]),
+    nitems(ed_ids) - 1);
+

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_port.h 240518 2012-09-14 21:28:56Z eadler $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_port.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SCIC_SDS_PORT_H_
 #define _SCIC_SDS_PORT_H_
@@ -215,7 +214,7 @@ typedef struct SCIC_SDS_PORT
    SCU_PORT_PE_CONFIGURATION_REGISTER_T *port_pe_configuration_register;
 
    /**
-    * This field is the VIIT register space for ths port object.
+    * This field is the VIIT register space for this port object.
     */
    SCU_VIIT_ENTRY_T *viit_registers;
 

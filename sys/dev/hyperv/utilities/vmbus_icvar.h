@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2012,2016 Microsoft Corp.
  * Copyright (c) 2012 NetApp Inc.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/utilities/vmbus_icvar.h 311230 2017-01-04 02:39:00Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/utilities/vmbus_icvar.h 311379 2017-01-05 08:02:37Z sephe $
  */
 
 #ifndef _VMBUS_ICVAR_H_

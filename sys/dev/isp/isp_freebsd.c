@@ -1,5 +1,5 @@
-/* $MidnightBSD$ */
 /*-
+ * Copyright (c) 2009-2017 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 1997-2009 by Matthew Jacob
  * All rights reserved.
  *
@@ -29,7 +29,7 @@
  * Platform (FreeBSD) dependent common attachment code for Qlogic adapters.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isp/isp_freebsd.c 331635 2018-03-27 17:48:39Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isp/isp_freebsd.c 348483 2019-05-31 20:36:32Z ken $");
 
 #include <dev/isp/isp_freebsd.h>
 #include <sys/unistd.h>
@@ -170,6 +170,8 @@ isp_attach_chan(ispsoftc_t *isp, struct cam_devq *devq, int chan)
 		fc->path = path;
 		fc->isp = isp;
 		fc->ready = 1;
+		fcp->isp_use_gft_id = 1;
+		fcp->isp_use_gff_id = 1;
 
 		callout_init_mtx(&fc->gdt, &isp->isp_lock, 0);
 		TASK_INIT(&fc->gtask, 1, isp_gdt_task, fc);
@@ -236,6 +238,12 @@ isp_attach_chan(ispsoftc_t *isp, struct cam_devq *devq, int chan)
 		SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 		    "topo", CTLFLAG_RD, &fcp->isp_topo, 0,
 		    "Connection topology");
+		SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
+		    "use_gft_id", CTLFLAG_RWTUN, &fcp->isp_use_gft_id, 0,
+		    "Use GFT_ID during fabric scan");
+		SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
+		    "use_gff_id", CTLFLAG_RWTUN, &fcp->isp_use_gff_id, 0,
+		    "Use GFF_ID during fabric scan");
 	}
 	return (0);
 }
@@ -963,6 +971,7 @@ create_lun_state(ispsoftc_t *isp, int bus, struct cam_path *path, tstate_t **rsl
 	tptr->ts_lun = lun;
 	SLIST_INIT(&tptr->atios);
 	SLIST_INIT(&tptr->inots);
+	STAILQ_INIT(&tptr->restart_queue);
 	ISP_GET_PC_ADDR(isp, bus, lun_hash[LUN_HASH_FUNC(lun)], lhp);
 	SLIST_INSERT_HEAD(lhp, tptr, next);
 	*rslt = tptr;
@@ -1609,7 +1618,7 @@ isp_target_putback_atio(union ccb *ccb)
 	}
 	at->at_status = CT_OK;
 	at->at_rxid = cso->tag_id;
-	at->at_iid = cso->ccb_h.target_id;
+	at->at_iid = cso->init_id;
 	if (isp_target_put_entry(isp, at)) {
 		callout_reset(&PISP_PCMD(ccb)->wdog, 10,
 		    isp_refire_putback_atio, ccb);
@@ -1665,7 +1674,7 @@ isp_handle_platform_atio2(ispsoftc_t *isp, at2_entry_t *aep)
 	if (tptr == NULL) {
 		tptr = get_lun_statep(isp, 0, CAM_LUN_WILDCARD);
 		if (tptr == NULL) {
-			isp_prt(isp, ISP_LOGWARN, "%s: [0x%x] no state pointer for lun %d or wildcard", __func__, aep->at_rxid, lun);
+			isp_prt(isp, ISP_LOGWARN, "%s: [0x%x] no state pointer for lun %jx or wildcard", __func__, aep->at_rxid, (uintmax_t)lun);
 			if (lun == 0) {
 				isp_endcmd(isp, aep, nphdl, 0, SCSI_STATUS_BUSY, 0);
 			} else {
@@ -1694,7 +1703,7 @@ isp_handle_platform_atio2(ispsoftc_t *isp, at2_entry_t *aep)
 	atp->state = ATPD_STATE_ATIO;
 	SLIST_REMOVE_HEAD(&tptr->atios, sim_links.sle);
 	ISP_PATH_PRT(isp, ISP_LOGTDEBUG2, atiop->ccb_h.path, "Take FREE ATIO\n");
-	atiop->ccb_h.target_id = fcp->isp_loopid;
+	atiop->ccb_h.target_id = ISP_MAX_TARGETS(isp);
 	atiop->ccb_h.target_lun = lun;
 
 	/*
@@ -1752,7 +1761,7 @@ isp_handle_platform_atio2(ispsoftc_t *isp, at2_entry_t *aep)
 	atp->tattr = aep->at_taskflags & ATIO2_TC_ATTR_MASK;
 	atp->state = ATPD_STATE_CAM;
 	xpt_done((union ccb *)atiop);
-	isp_prt(isp, ISP_LOGTDEBUG0, "ATIO2[0x%x] CDB=0x%x lun %d datalen %u", aep->at_rxid, atp->cdb0, lun, atp->orig_datalen);
+	isp_prt(isp, ISP_LOGTDEBUG0, "ATIO2[0x%x] CDB=0x%x lun %jx datalen %u", aep->at_rxid, atp->cdb0, (uintmax_t)lun, atp->orig_datalen);
 	return;
 noresrc:
 	ntp = isp_get_ntpd(isp, 0);
@@ -1873,7 +1882,7 @@ isp_handle_platform_atio7(ispsoftc_t *isp, at7_entry_t *aep)
 	SLIST_REMOVE_HEAD(&tptr->atios, sim_links.sle);
 	ISP_PATH_PRT(isp, ISP_LOGTDEBUG2, atiop->ccb_h.path, "Take FREE ATIO\n");
 	atiop->init_id = FC_PORTDB_TGT(isp, chan, lp);
-	atiop->ccb_h.target_id = FCPARAM(isp, chan)->isp_loopid;
+	atiop->ccb_h.target_id = ISP_MAX_TARGETS(isp);
 	atiop->ccb_h.target_lun = lun;
 	atiop->sense_len = 0;
 	cdbxlen = aep->at_cmnd.fcp_cmnd_alen_datadir >> FCP_CMND_ADDTL_CDBLEN_SHIFT;
@@ -2331,7 +2340,7 @@ isp_handle_platform_target_tmf(ispsoftc_t *isp, isp_notify_t *notify)
 	atio_private_data_t *atp;
 	lun_id_t lun;
 
-	isp_prt(isp, ISP_LOGTDEBUG0, "%s: code 0x%x sid  0x%x tagval 0x%016llx chan %d lun %x", __func__, notify->nt_ncode,
+	isp_prt(isp, ISP_LOGTDEBUG0, "%s: code 0x%x sid  0x%x tagval 0x%016llx chan %d lun %jx", __func__, notify->nt_ncode,
 	    notify->nt_sid, (unsigned long long) notify->nt_tagval, notify->nt_channel, notify->nt_lun);
 	if (notify->nt_lun == LUN_ANY) {
 		if (notify->nt_tagval == TAG_ANY) {
@@ -2348,16 +2357,18 @@ isp_handle_platform_target_tmf(ispsoftc_t *isp, isp_notify_t *notify)
 	if (tptr == NULL) {
 		tptr = get_lun_statep(isp, notify->nt_channel, CAM_LUN_WILDCARD);
 		if (tptr == NULL) {
-			isp_prt(isp, ISP_LOGWARN, "%s: no state pointer found for chan %d lun 0x%x", __func__, notify->nt_channel, lun);
+			isp_prt(isp, ISP_LOGWARN, "%s: no state pointer found for chan %d lun %#jx", __func__, notify->nt_channel, (uintmax_t)lun);
 			goto bad;
 		}
 	}
 	inot = (struct ccb_immediate_notify *) SLIST_FIRST(&tptr->inots);
 	if (inot == NULL) {
-		isp_prt(isp, ISP_LOGWARN, "%s: out of immediate notify structures for chan %d lun 0x%x", __func__, notify->nt_channel, lun);
+		isp_prt(isp, ISP_LOGWARN, "%s: out of immediate notify structures for chan %d lun %#jx", __func__, notify->nt_channel, (uintmax_t)lun);
 		goto bad;
 	}
 
+	inot->ccb_h.target_id = ISP_MAX_TARGETS(isp);
+	inot->ccb_h.target_lun = lun;
 	if (isp_find_pdb_by_portid(isp, notify->nt_channel, notify->nt_sid, &lp) == 0 &&
 	    isp_find_pdb_by_handle(isp, notify->nt_channel, notify->nt_nphdl, &lp) == 0) {
 		inot->initiator_id = CAM_TARGET_WILDCARD;
@@ -2395,7 +2406,7 @@ isp_handle_platform_target_tmf(ispsoftc_t *isp, isp_notify_t *notify)
 		inot->arg = MSG_QUERY_ASYNC_EVENT;
 		break;
 	default:
-		isp_prt(isp, ISP_LOGWARN, "%s: unknown TMF code 0x%x for chan %d lun 0x%x", __func__, notify->nt_ncode, notify->nt_channel, lun);
+		isp_prt(isp, ISP_LOGWARN, "%s: unknown TMF code 0x%x for chan %d lun %#jx", __func__, notify->nt_ncode, notify->nt_channel, (uintmax_t)lun);
 		goto bad;
 	}
 
@@ -3241,7 +3252,7 @@ isp_action(struct cam_sim *sim, union ccb *ccb)
 			} else {
 				*dptr &= ~DPARM_SYNC;
 			}
-			isp_prt(isp, ISP_LOGDEBUG0, "SET (%d.%d.%d) to flags %x off %x per %x", bus, tgt, cts->ccb_h.target_lun, sdp->isp_devparam[tgt].goal_flags,
+			isp_prt(isp, ISP_LOGDEBUG0, "SET (%d.%d.%jx) to flags %x off %x per %x", bus, tgt, (uintmax_t)cts->ccb_h.target_lun, sdp->isp_devparam[tgt].goal_flags,
 			    sdp->isp_devparam[tgt].goal_offset, sdp->isp_devparam[tgt].goal_period);
 			sdp->isp_devparam[tgt].dev_update = 1;
 			sdp->update = 1;
@@ -3327,8 +3338,8 @@ isp_action(struct cam_sim *sim, union ccb *ccb)
 				}
 				spi->valid |= CTS_SPI_VALID_DISC;
 			}
-			isp_prt(isp, ISP_LOGDEBUG0, "GET %s (%d.%d.%d) to flags %x off %x per %x", IS_CURRENT_SETTINGS(cts)? "ACTIVE" : "NVRAM",
-			    bus, tgt, cts->ccb_h.target_lun, dval, oval, pval);
+			isp_prt(isp, ISP_LOGDEBUG0, "GET %s (%d.%d.%jx) to flags %x off %x per %x", IS_CURRENT_SETTINGS(cts)? "ACTIVE" : "NVRAM",
+			    bus, tgt, (uintmax_t)cts->ccb_h.target_lun, dval, oval, pval);
 		}
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
@@ -3425,6 +3436,7 @@ isp_action(struct cam_sim *sim, union ccb *ccb)
 		xpt_done(ccb);
 		break;
 	}
+	case XPT_GET_SIM_KNOB_OLD:	/* Get SIM knobs -- compat value */
 	case XPT_GET_SIM_KNOB:		/* Get SIM knobs */
 	{
 		struct ccb_sim_knob *kp = &ccb->knob;
@@ -3728,6 +3740,10 @@ isp_async(ispsoftc_t *isp, ispasync_t cmd, ...)
 		break;
 	case ISPASYNC_DEV_CHANGED:
 	case ISPASYNC_DEV_STAYED:		
+	{
+		int crn_reset_done;
+
+		crn_reset_done = 0;
 		va_start(ap, cmd);
 		bus = va_arg(ap, int);
 		lp = va_arg(ap, fcportdb_t *);
@@ -3745,13 +3761,17 @@ isp_async(ispsoftc_t *isp, ispasync_t cmd, ...)
 		     (lp->new_prli_word3 & PRLI_WD3_TARGET_FUNCTION))) {
 			lp->is_target = !lp->is_target;
 			if (lp->is_target) {
-				if (cmd == ISPASYNC_DEV_CHANGED)
+				if (cmd == ISPASYNC_DEV_CHANGED) {
 					isp_fcp_reset_crn(isp, bus, tgt, /*tgt_set*/ 1);
+					crn_reset_done = 1;
+				}
 				isp_make_here(isp, lp, bus, tgt);
 			} else {
 				isp_make_gone(isp, lp, bus, tgt);
-				if (cmd == ISPASYNC_DEV_CHANGED)
+				if (cmd == ISPASYNC_DEV_CHANGED) {
 					isp_fcp_reset_crn(isp, bus, tgt, /*tgt_set*/ 1);
+					crn_reset_done = 1;
+				}
 			}
 		}
 		if (lp->is_initiator !=
@@ -3766,7 +3786,13 @@ isp_async(ispsoftc_t *isp, ispasync_t cmd, ...)
 			adc->arrived = lp->is_initiator;
 			xpt_async(AC_CONTRACT, fc->path, &ac);
 		}
+
+		if ((cmd == ISPASYNC_DEV_CHANGED) &&
+		    (crn_reset_done == 0))
+			isp_fcp_reset_crn(isp, bus, tgt, /*tgt_set*/ 1);
+
 		break;
+	}
 	case ISPASYNC_DEV_GONE:
 		va_start(ap, cmd);
 		bus = va_arg(ap, int);

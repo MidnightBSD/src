@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@freebsd.org>
@@ -28,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/fb/splash_pcx.c 230132 2012-01-15 13:23:18Z uqs $
+ * $FreeBSD: stable/11/sys/dev/fb/splash_pcx.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>

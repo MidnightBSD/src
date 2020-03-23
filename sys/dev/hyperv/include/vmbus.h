@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/include/vmbus.h 310802 2016-12-30 02:18:34Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/include/vmbus.h 311375 2017-01-05 06:25:16Z sephe $
  */
 
 #ifndef _VMBUS_H_
@@ -32,7 +31,6 @@
 
 #include <sys/param.h>
 #include <sys/bus.h>
-#include <machine/bus.h>
 
 /*
  * VMBUS version is 32 bit, upper 16 bit for major_number and lower

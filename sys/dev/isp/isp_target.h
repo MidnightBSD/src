@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/isp/isp_target.h 316165 2017-03-29 16:14:33Z mav $ */
+/* $FreeBSD: stable/11/sys/dev/isp/isp_target.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.

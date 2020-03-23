@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/sati_log_sense.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/sati_log_sense.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
 * @file
@@ -395,7 +394,7 @@ void sati_self_test_log_header_construct(
 
 /**
  * @brief This method will construct the SCSI self test log page from
- *        the Extended SMART self-test log response recieved from the
+ *        the Extended SMART self-test log response received from the
  *        ATA device. The response is from a ATA_Read_Log_EXT command
  *        issued by SATI.
  *
@@ -428,7 +427,7 @@ void sati_extended_self_test_log_page_construct(
 
 /**
 * @brief This method will construct the SCSI self test log page from
-*        the SMART self-test log response recieved from the ATA device.
+*        the SMART self-test log response received from the ATA device.
 *        The response is from a ATA_SMART_Read_Log command issued by SATI.
 *
 * @return n/a
@@ -514,7 +513,7 @@ void sati_self_test_log_page_construct(
 
 /**
 * @brief This method will construct the SCSI information exception log page from
-*        the ATA SMART response recieved from the ATA device. The response is
+*        the ATA SMART response received from the ATA device. The response is
 *         from a ATA SMART return status command issued by SATI.
 *
 * @return n/a

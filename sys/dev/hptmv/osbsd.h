@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hptmv/osbsd.h 255871 2013-09-25 17:16:21Z scottl $
+ * $FreeBSD: stable/11/sys/dev/hptmv/osbsd.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _OSBSD_H_
 #define _OSBSD_H_
@@ -34,18 +33,10 @@
 #include <sys/eventhandler.h>
 #include <sys/devicestat.h>
 
-#if (__FreeBSD_version < 500043)
-#include <stddef.h>
-#include <sys/buf.h>
-#endif
-
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 
-#if (__FreeBSD_version < 600000)
-#include <machine/bus_memio.h>
-#endif
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <machine/bus.h>
@@ -63,9 +54,6 @@
 #include <cam/scsi/scsi_message.h>
 
 
-
-extern intrmask_t lock_driver(void);
-extern void unlock_driver(intrmask_t spl);
 
 typedef struct 
 {
@@ -154,13 +142,14 @@ typedef struct _BUS_DMAMAP
 {	struct _BUS_DMAMAP 	 	*next;
 	struct IALAdapter 			*pAdapter;
 	bus_dmamap_t 			dma_map;
-	struct callout_handle		timeout_ch;
+	struct callout		timeout;
 	SCAT_GATH				psg[MAX_SG_DESCRIPTORS];
 } BUS_DMAMAP, *PBUS_DMAMAP;
 
 typedef struct IALAdapter 
 {
 	struct cam_path 	*path;
+	struct mtx		lock;
 
 	bus_dma_tag_t	  io_dma_parent; /* I/O buffer DMA tag */
 	PBUS_DMAMAP	  pbus_dmamap_list;
@@ -184,8 +173,8 @@ typedef struct IALAdapter
 	dma_addr_t			responsesArrayBaseDmaAlignedAddr;
 	SATA_EVENT			sataEvents[MV_SATA_CHANNELS_NUM];
 	
-   	struct	callout_handle event_timer_connect;
-  	struct	callout_handle event_timer_disconnect;
+   	struct	callout event_timer_connect;
+  	struct	callout event_timer_disconnect;
 
 	struct _VBus        VBus;
 	struct _VDevice     VDevices[MV_SATA_CHANNELS_NUM];
@@ -254,10 +243,6 @@ hpt_get_periph(int path_id,int target_id)
     }
 	return periph;	
 }
-
-#if (__FreeBSD_version < 500000)
-#define YIELD_THREAD yield(curproc, 0)
-#endif
 
 #ifdef __i386__
 #define BITS_PER_LONG 32

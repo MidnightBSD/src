@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,13 +23,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/vmbus/amd64/vmbus_vector.S 302167 2016-06-24 02:06:13Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/vmbus/amd64/vmbus_vector.S 329462 2018-02-17 18:00:01Z kib $
  */
+
+#include "assym.s"
 
 #include <machine/asmacros.h>
 #include <machine/specialreg.h>
-
-#include "assym.s"
 
 /*
  * This is the Hyper-V vmbus channel direct callback interrupt.
@@ -38,8 +37,7 @@
  */
 	.text
 	SUPERALIGN_TEXT
-IDTVEC(vmbus_isr)
-	PUSH_FRAME
+	INTR_HANDLER	vmbus_isr
 	FAKE_MCOUNT(TF_RIP(%rsp))
 	movq	%rsp, %rdi
 	call	vmbus_handle_intr

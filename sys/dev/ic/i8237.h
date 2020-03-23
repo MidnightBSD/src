@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * Intel 8237 DMA Controller
  *
- * $FreeBSD: stable/10/sys/dev/ic/i8237.h 146214 2005-05-14 10:14:56Z nyan $
+ * $FreeBSD: stable/11/sys/dev/ic/i8237.h 146214 2005-05-14 10:14:56Z nyan $
  */
 
 #define	DMA37MD_SINGLE	0x40	/* single pass mode */

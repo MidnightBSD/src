@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -50,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/isci/scil/sati_translator_sequence.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD: stable/11/sys/dev/isci/scil/sati_translator_sequence.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _SATI_TRANSLATOR_SEQUENCE_H_
 #define _SATI_TRANSLATOR_SEQUENCE_H_
@@ -58,7 +57,7 @@
 /**
  * @file
  * @brief This file contains all of the defintions for the SATI translator
- *        sequence.  A translator sequence is simply a defintion for the
+ *        sequence.  A translator sequence is simply a definition for the
  *        various sequences of commands that occur in this translator.
  */
 
@@ -311,7 +310,7 @@ typedef struct SATI_TRANSLATOR_SEQUENCE
 
    /**
     * This field specifies the amount of data that will actually be
-    * transfered across the wire for this ATA request.
+    * transferred across the wire for this ATA request.
     */
    U32 ata_transfer_length;
 

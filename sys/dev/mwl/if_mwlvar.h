@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Marvell Semiconductor, Inc.
@@ -28,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/sys/dev/mwl/if_mwlvar.h 234324 2012-04-15 20:29:39Z adrian $
+ * $FreeBSD: stable/11/sys/dev/mwl/if_mwlvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -38,6 +37,7 @@
 #define _DEV_MWL_MVVAR_H
 
 #include <sys/endian.h>
+#include <sys/bus.h>
 #include <net80211/ieee80211_radiotap.h>
 #include <dev/mwl/mwlhal.h>
 #include <dev/mwl/mwlreg.h>
@@ -65,7 +65,7 @@
 #define	MWL_TXDESC	1		/* max tx descriptors/segments */
 #endif
 #ifndef MWL_AGGR_SIZE
-#define MWL_AGGR_SIZE	3839		/* max tx agregation size */
+#define	MWL_AGGR_SIZE	3839		/* max tx aggregation size */
 #endif
 #define	MWL_AGEINTERVAL	1		/* poke f/w every sec to age q's */ 
 #define	MWL_MAXSTAID	64		/* max of 64 stations */
@@ -245,7 +245,8 @@ struct mwl_vap {
 #define	MWL_VAP_CONST(vap)	((const struct mwl_vap *)(vap))
 
 struct mwl_softc {
-	struct ifnet		*sc_ifp;	/* interface common */
+	struct ieee80211com	sc_ic;
+	struct mbufq		sc_snd;
 	struct mwl_stats	sc_stats;	/* interface statistics */
 	int			sc_debug;
 	device_t		sc_dev;
@@ -258,7 +259,8 @@ struct mwl_softc {
 	struct taskqueue	*sc_tq;		/* private task queue */
 	struct callout	sc_watchdog;
 	int			sc_tx_timer;
-	unsigned int		sc_invalid : 1,	/* disable hardware accesses */
+	unsigned int		sc_running : 1,
+				sc_invalid : 1,	/* disable hardware accesses */
 				sc_recvsetup:1,	/* recv setup */
 				sc_csapending:1,/* 11h channel switch pending */
 				sc_radarena : 1,/* radar detection enabled */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Microsoft Corp.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/hyperv/include/vmbus_xact.h 310761 2016-12-29 07:27:13Z sephe $
+ * $FreeBSD: stable/11/sys/dev/hyperv/include/vmbus_xact.h 311367 2017-01-05 05:46:06Z sephe $
  */
 
 #ifndef _VMBUS_XACT_H_
@@ -32,7 +31,6 @@
 
 #include <sys/param.h>
 #include <sys/bus.h>
-#include <machine/bus.h>
 
 struct vmbus_xact;
 struct vmbus_xact_ctx;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/scic_sds_smp_request.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_smp_request.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/isci/scil/scic_sds_smp_request.h>
 #include <dev/isci/scil/scic_sds_logger.h>
@@ -353,7 +352,7 @@ SCI_STATUS scic_io_request_construct_smp_pass_through(
  *          -# task_type == SCU_TASK_TYPE_SMP.  This simply indicates
  *             that a normal request type (i.e. non-raw frame) is being
  *             utilized to perform task management.
- *          -# control_frame == 1.  This ensures that the proper endianess
+ *          -# control_frame == 1.  This ensures that the proper endianness
  *             is set so that the bytes are transmitted in the right order
  *             for a smp request frame.
  *
@@ -812,7 +811,7 @@ scic_sds_smp_request_started_substate_handler_table
  *        sub-state.
  *
  * @param[in]  object This parameter specifies the request object for which
- *             the sub-state change is occuring.
+ *             the sub-state change is occurring.
  *
  * @return none.
  */
@@ -837,7 +836,7 @@ void scic_sds_smp_request_started_await_response_substate_enter(
  *        this sub-state.
  *
  * @param[in]  object This parameter specifies the request object for which
- *             the sub-state change is occuring.
+ *             the sub-state change is occurring.
  *
  * @return none.
  */

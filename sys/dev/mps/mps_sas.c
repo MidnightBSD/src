@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -28,11 +27,11 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mps/mps_sas.c 322661 2017-08-18 15:38:08Z ken $
+ * $FreeBSD: stable/11/sys/dev/mps/mps_sas.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mps/mps_sas.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mps/mps_sas.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* Communications core for Avago Technologies (LSI) MPT2 */
 
@@ -717,7 +716,7 @@ mps_attach_sas(struct mps_softc *sc)
 {
 	struct mpssas_softc *sassc;
 	cam_status status;
-	int unit, error = 0;
+	int unit, error = 0, reqs;
 
 	MPS_FUNCTRACE(sc);
 
@@ -746,7 +745,8 @@ mps_attach_sas(struct mps_softc *sc)
 	sc->sassc = sassc;
 	sassc->sc = sc;
 
-	if ((sassc->devq = cam_simq_alloc(sc->num_reqs)) == NULL) {
+	reqs = sc->num_reqs - sc->num_prireqs - 1;
+	if ((sassc->devq = cam_simq_alloc(reqs)) == NULL) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate SIMQ\n");
 		error = ENOMEM;
 		goto out;
@@ -754,7 +754,7 @@ mps_attach_sas(struct mps_softc *sc)
 
 	unit = device_get_unit(sc->mps_dev);
 	sassc->sim = cam_sim_alloc(mpssas_action, mpssas_poll, "mps", sassc,
-	    unit, &sc->mps_mtx, sc->num_reqs, sc->num_reqs, sassc->devq);
+	    unit, &sc->mps_mtx, reqs, reqs, sassc->devq);
 	if (sassc->sim == NULL) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate SIM\n");
 		error = EINVAL;
@@ -2548,7 +2548,7 @@ mpssas_direct_drive_io(struct mpssas_softc *sassc, struct mps_command *cm,
 			 * Check if the I/O crosses a stripe boundary.  If not,
 			 * translate the virtual LBA to a physical LBA and set
 			 * the DevHandle for the PhysDisk to be used.  If it
-			 * does cross a boundry, do normal I/O.  To get the
+			 * does cross a boundary, do normal I/O.  To get the
 			 * right DevHandle to use, get the map number for the
 			 * column, then use that map number to look up the
 			 * DevHandle of the PhysDisk.
@@ -2634,7 +2634,7 @@ mpssas_direct_drive_io(struct mpssas_softc *sassc, struct mps_command *cm,
 				 * If not, translate the virtual LBA to a
 				 * physical LBA and set the DevHandle for the
 				 * PhysDisk to be used.  If it does cross a
-				 * boundry, do normal I/O.  To get the right
+				 * boundary, do normal I/O.  To get the right
 				 * DevHandle to use, get the map number for the
 				 * column, then use that map number to look up
 				 * the DevHandle of the PhysDisk.
@@ -2712,7 +2712,7 @@ mpssas_direct_drive_io(struct mpssas_softc *sassc, struct mps_command *cm,
 				 * If not, translate the virtual LBA to a
 				 * physical LBA and set the DevHandle for the
 				 * PhysDisk to be used.  If it does cross a
-				 * boundry, do normal I/O.  To get the right
+				 * boundary, do normal I/O.  To get the right
 				 * DevHandle to use, get the map number for the
 				 * column, then use that map number to look up
 				 * the DevHandle of the PhysDisk.
@@ -3336,8 +3336,19 @@ mpssas_async(void *callback_arg, uint32_t code, struct cam_path *path,
 
 		if ((mpssas_get_ccbstatus((union ccb *)&cdai) == CAM_REQ_CMP)
 		 && (rcap_buf.prot & SRC16_PROT_EN)) {
-			lun->eedp_formatted = TRUE;
-			lun->eedp_block_size = scsi_4btoul(rcap_buf.length);
+			switch (rcap_buf.prot & SRC16_P_TYPE) {
+			case SRC16_PTYPE_1:
+			case SRC16_PTYPE_3:
+				lun->eedp_formatted = TRUE;
+				lun->eedp_block_size =
+				    scsi_4btoul(rcap_buf.length);
+				break;
+			case SRC16_PTYPE_2:
+			default:
+				lun->eedp_formatted = FALSE;
+				lun->eedp_block_size = 0;
+				break;
+			}
 		} else {
 			lun->eedp_formatted = FALSE;
 			lun->eedp_block_size = 0;

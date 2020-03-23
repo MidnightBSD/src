@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
@@ -52,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/isci/scil/sati_write_buffer.c 240514 2012-09-14 20:05:38Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/sati_write_buffer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
 * @file

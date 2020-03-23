@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, M. Warner Losh
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_hpp.c 264942 2014-04-25 21:32:34Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_hpp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ed.h"
 
@@ -51,6 +50,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ed/if_ed_hpp.c 264942 2014-04-25 21:32:34Z
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>		/* XXX: ed_hpp_set_physical_link() */
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_mib.h>
@@ -126,7 +126,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 	u_char irq;			/* board configured IRQ */
 	uint8_t test_pattern[ED_HPP_TEST_SIZE];	/* read/write areas for */
 	uint8_t test_buffer[ED_HPP_TEST_SIZE];	/* probing card */
-	u_long conf_maddr, conf_msize, conf_irq, junk;
+	rman_res_t conf_maddr, conf_msize, conf_irq, junk;
 
 	error = ed_alloc_port(dev, 0, ED_HPP_IO_PORTS);
 	if (error)
@@ -214,7 +214,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
  	 * Check for impossible IRQ.
 	 */
 
-	if (irq >= (sizeof(ed_hpp_intr_val) / sizeof(ed_hpp_intr_val[0])))
+	if (irq >= nitems(ed_hpp_intr_val))
 		return (ENXIO);
 
 	/* 
