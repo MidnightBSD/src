@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Jonathan Lemon
  * Copyright (c) 1999 by Matthew N. Dodd <winter@jurai.net>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ida/ida_eisa.c 281826 2015-04-21 11:27:50Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ida/ida_eisa.c 299471 2016-05-11 17:38:09Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -334,7 +333,7 @@ ida_eisa_attach(device_t dev)
 		return (ENOMEM);
 	}
 
-	error = ida_init(ida);
+	error = ida_setup(ida);
 	if (error) {
 		ida_free(ida);
 		return (error);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Cronyx-Tau32-PCI adapter driver for FreeBSD.
  *
@@ -17,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ce/if_ce.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ce/if_ce.c 315221 2017-03-14 02:06:03Z pfg $");
 
 #include <sys/param.h>
 
@@ -48,6 +47,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ce/if_ce.c 314667 2017-03-04 13:03:31Z avg
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #if __FreeBSD_version > 501000
 #   include <dev/pci/pcivar.h>
 #   include <dev/pci/pcireg.h>
@@ -76,7 +76,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ce/if_ce.c 314667 2017-03-04 13:03:31Z avg
 #include <dev/ce/ceddk.h>
 #include <machine/cserial.h>
 #include <machine/resource.h>
-#include <machine/pmap.h>
 
 /* If we don't have Cronyx's sppp version, we don't have fr support via sppp */
 #ifndef PP_FR
@@ -294,22 +293,6 @@ static struct cdevsw ce_cdevsw = {
 #endif
 
 /*
- * Print the mbuf chain, for debug purposes only.
- */
-static void printmbuf (struct mbuf *m)
-{
-	printf ("mbuf:");
-	for (; m; m=m->m_next) {
-		if (m->m_flags & M_PKTHDR)
-			printf (" HDR %d:", m->m_pkthdr.len);
-		if (m->m_flags & M_EXT)
-			printf (" EXT:");
-		printf (" %d", m->m_len);
-	}
-	printf ("\n");
-}
-
-/*
  * Make an mbuf from data.
  */
 static struct mbuf *makembuf (void *buf, unsigned len)
@@ -319,8 +302,7 @@ static struct mbuf *makembuf (void *buf, unsigned len)
 	MGETHDR (m, M_NOWAIT, MT_DATA);
 	if (! m)
 		return 0;
-	MCLGET (m, M_NOWAIT);
-	if (! (m->m_flags & M_EXT)) {
+	if (!(MCLGET(m, M_NOWAIT))) {
 		m_freem (m);
 		return 0;
 	}
@@ -858,11 +840,11 @@ static int ce_detach (device_t dev)
 		if (! d || ! d->chan)
 			continue;
 		callout_drain (&d->timeout_handle);
-		channel [b->num * NCHAN + c->num] = 0;
+		channel [b->num * NCHAN + c->num] = NULL;
 		/* Deallocate buffers. */
 		ce_bus_dma_mem_free (&d->dmamem);
 	}
-	adapter [b->num] = 0;
+	adapter [b->num] = NULL;
 	ce_bus_dma_mem_free (&bd->dmamem);
 	free (b, M_DEVBUF);
 #if __FreeBSD_version >= 504000
@@ -1109,7 +1091,7 @@ static void ce_transmit (ce_chan_t *c, void *attachment, int len)
 
 	d->timeout = 0;
 #ifndef NETGRAPH
-	++d->ifp->if_opackets;
+	if_inc_counter(d->ifp, IFCOUNTER_OPACKETS, 1);
 #if __FreeBSD_version >=  600034
 	d->ifp->if_flags &= ~IFF_DRV_OACTIVE;
 #else
@@ -1131,26 +1113,21 @@ static void ce_receive (ce_chan_t *c, unsigned char *data, int len)
 	if (! m) {
 		CE_DEBUG (d, ("no memory for packet\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_iqdrops;
+		if_inc_counter(d->ifp, IFCOUNTER_IQDROPS, 1);
 #endif
 		return;
 	}
 	if (c->debug > 1)
-		printmbuf (m);
+		m_print (m, 0);
 #ifdef NETGRAPH
 	m->m_pkthdr.rcvif = 0;
 	IF_ENQUEUE(&d->rqueue, m);
 #else
-	++d->ifp->if_ipackets;
+	if_inc_counter(d->ifp, IFCOUNTER_IPACKETS, 1);
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-#if __FreeBSD_version >= 500000
-	BPF_TAP (d->ifp, data, len);
-#else
-	if (d->ifp->if_bpf)
-		bpf_tap (d->ifp, data, len);
-#endif
+	BPF_MTAP(d->ifp, m);
 	IF_ENQUEUE(&d->rqueue, m);
 #endif
 }
@@ -1163,33 +1140,33 @@ static void ce_error (ce_chan_t *c, int data)
 	case CE_FRAME:
 		CE_DEBUG (d, ("frame error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CE_CRC:
 		CE_DEBUG (d, ("crc error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CE_OVERRUN:
 		CE_DEBUG (d, ("overrun error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_collisions;
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_COLLISIONS, 1);
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CE_OVERFLOW:
 		CE_DEBUG (d, ("overflow error\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_ierrors;
+		if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CE_UNDERRUN:
 		CE_DEBUG (d, ("underrun error\n"));
 		d->timeout = 0;
 #ifndef NETGRAPH
-		++d->ifp->if_oerrors;
+		if_inc_counter(d->ifp, IFCOUNTER_OERRORS, 1);
 #if __FreeBSD_version >= 600034
 		d->ifp->if_flags &= ~IFF_DRV_OACTIVE;
 #else
@@ -2420,7 +2397,6 @@ static int ng_ce_rcvdata (hook_p hook, struct mbuf *m, meta_p meta)
 #if __FreeBSD_version >= 500000
 	IF_LOCK (q);
 	if (_IF_QFULL (q)) {
-		_IF_DROP (q);
 		IF_UNLOCK (q);
 		CE_UNLOCK (bd);
 		splx (s);
@@ -2472,7 +2448,7 @@ static int ng_ce_rmnode (node_p node)
 		NG_NODE_UNREF (node);
 	}
 #if __FreeBSD_version >= 502120
-	NG_NODE_REVIVE(node);		/* Persistant node */
+	NG_NODE_REVIVE(node);		/* Persistent node */
 #else
 	node->nd_flags &= ~NG_INVALID;
 #endif

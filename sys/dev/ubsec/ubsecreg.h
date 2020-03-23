@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/ubsec/ubsecreg.h 191894 2009-05-07 18:03:47Z philip $ */
+/* $FreeBSD: stable/11/sys/dev/ubsec/ubsecreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$OpenBSD: ubsecreg.h,v 1.27 2002/09/11 22:40:31 jason Exp $	*/
 
 /*-

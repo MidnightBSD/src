@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * DDK (Driver Development Kit) for Cronyx Tau32-PCI adapter.
  *
@@ -23,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ce/tau32-ddk.c 156143 2006-03-01 09:50:20Z rik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ce/tau32-ddk.c 156143 2006-03-01 09:50:20Z rik $");
 
 #ifndef __noinline
 #	ifdef __GNUC__

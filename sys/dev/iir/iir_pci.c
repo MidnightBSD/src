@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *       Copyright (c) 2000-03 ICP vortex GmbH
  *       Copyright (c) 2002-03 Intel Corporation
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iir/iir_pci.c 281826 2015-04-21 11:27:50Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iir/iir_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  *  iir_pci.c:  PCI Bus Attachment for Intel Integrated RAID Controller driver
@@ -229,7 +228,7 @@ iir_pci_attach(device_t dev)
     /* check and reset interface area */
     bus_write_4(gdt->sc_dpmem, GDT_MPR_IC, htole32(GDT_MPR_MAGIC));
     if (bus_read_4(gdt->sc_dpmem, GDT_MPR_IC) != htole32(GDT_MPR_MAGIC)) {
-	device_printf(dev, "cannot access DPMEM at 0x%lx (shadowed?)\n",
+	device_printf(dev, "cannot access DPMEM at 0x%jx (shadowed?)\n",
 	    rman_get_start(gdt->sc_dpmem));
         error = ENXIO;
         goto err;

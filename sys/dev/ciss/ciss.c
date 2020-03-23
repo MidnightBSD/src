@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * Copyright (c) 2004 Paul Saab
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/ciss/ciss.c 315813 2017-03-23 06:41:13Z mav $
+ *	$FreeBSD: stable/11/sys/dev/ciss/ciss.c 335138 2018-06-14 14:46:20Z mav $
  */
 
 /*
@@ -3028,10 +3027,10 @@ ciss_cam_action(struct cam_sim *sim, union ccb *ccb)
 	cpi->max_lun = 0;		/* 'logical drive' channel only */
 	cpi->initiator_id = sc->ciss_cfg->max_logical_supported;
 	strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-        strlcpy(cpi->hba_vid, "CISS", HBA_IDLEN);
-        strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
-        cpi->unit_number = cam_sim_unit(sim);
-        cpi->bus_id = cam_sim_bus(sim);
+	strlcpy(cpi->hba_vid, "CISS", HBA_IDLEN);
+	strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+	cpi->unit_number = cam_sim_unit(sim);
+	cpi->bus_id = cam_sim_bus(sim);
 	cpi->base_transfer_speed = 132 * 1024;	/* XXX what to set this to? */
 	cpi->transport = XPORT_SPI;
 	cpi->transport_version = 2;
@@ -3440,11 +3439,9 @@ ciss_name_device(struct ciss_softc *sc, int bus, int target)
 			     target, 0);
 
     if (status == CAM_REQ_CMP) {
-	mtx_lock(&sc->ciss_mtx);
 	xpt_path_lock(path);
 	periph = cam_periph_find(path, NULL);
 	xpt_path_unlock(path);
-	mtx_unlock(&sc->ciss_mtx);
 	xpt_free_path(path);
 	if (periph != NULL) {
 		sprintf(sc->ciss_logical[bus][target].cl_name, "%s%d",
@@ -4165,9 +4162,7 @@ ciss_notify_thread(void *arg)
     struct ciss_notify		*cn;
 
     sc = (struct ciss_softc *)arg;
-#if __FreeBSD_version >= 500000
     mtx_lock(&sc->ciss_mtx);
-#endif
 
     for (;;) {
 	if (STAILQ_EMPTY(&sc->ciss_notify) != 0 &&
@@ -4202,9 +4197,7 @@ ciss_notify_thread(void *arg)
     sc->ciss_notify_thread = NULL;
     wakeup(&sc->ciss_notify_thread);
 
-#if __FreeBSD_version >= 500000
     mtx_unlock(&sc->ciss_mtx);
-#endif
     kproc_exit(0);
 }
 
@@ -4215,15 +4208,9 @@ static void
 ciss_spawn_notify_thread(struct ciss_softc *sc)
 {
 
-#if __FreeBSD_version > 500005
     if (kproc_create((void(*)(void *))ciss_notify_thread, sc,
 		       &sc->ciss_notify_thread, 0, 0, "ciss_notify%d",
 		       device_get_unit(sc->ciss_dev)))
-#else
-    if (kproc_create((void(*)(void *))ciss_notify_thread, sc,
-		       &sc->ciss_notify_thread, "ciss_notify%d",
-		       device_get_unit(sc->ciss_dev)))
-#endif
 	panic("Could not create notify thread\n");
 }
 

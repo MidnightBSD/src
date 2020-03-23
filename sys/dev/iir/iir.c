@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *       Copyright (c) 2000-04 ICP vortex GmbH
  *       Copyright (c) 2002-04 Intel Corporation
@@ -31,7 +30,7 @@
  */
 
 /*
- * iir.c: SCSI dependant code for the Intel Integrated RAID Controller driver
+ * iir.c: SCSI dependent code for the Intel Integrated RAID Controller driver
  *
  * Written by: Achim Leubner <achim_leubner@adaptec.com>
  * Fixes/Additions: Boji Tony Kannanthanam <boji.t.kannanthanam@intel.com>
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iir/iir.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iir/iir.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define _IIR_C_
 

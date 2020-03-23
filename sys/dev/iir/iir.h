@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/iir/iir.h 275975 2014-12-21 01:39:21Z smh $ */
+/* $FreeBSD: stable/11/sys/dev/iir/iir.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  *       Copyright (c) 2000-04 ICP vortex GmbH
  *       Copyright (c) 2002-04 Intel Corporation

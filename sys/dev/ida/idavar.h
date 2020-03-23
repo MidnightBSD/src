@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Jonathan Lemon
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ida/idavar.h 239740 2012-08-27 17:24:07Z jhb $
+ * $FreeBSD: stable/11/sys/dev/ida/idavar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -198,7 +197,7 @@ extern int ida_detach(device_t dev);
 extern struct ida_softc *ida_alloc(device_t dev, struct resource *regs,
 	int regs_type, int regs_id, bus_dma_tag_t parent_dmat);
 extern void ida_free(struct ida_softc *ida);
-extern int ida_init(struct ida_softc *ida);
+extern int ida_setup(struct ida_softc *ida);
 extern int ida_command(struct ida_softc *ida, int command, void *data,
 	int datasize, int drive, u_int32_t pblkno, int flags);
 extern void ida_submit_buf(struct ida_softc *ida, struct bio *bp);

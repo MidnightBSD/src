@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *       Copyright (c) 2000-03 ICP vortex GmbH
  *       Copyright (c) 2002-03 Intel Corporation
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/iir/iir_ctrl.c 275975 2014-12-21 01:39:21Z smh $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/iir/iir_ctrl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

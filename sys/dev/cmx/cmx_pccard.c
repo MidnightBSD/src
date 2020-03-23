@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cmx/cmx_pccard.c 176868 2008-03-06 08:09:45Z rink $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cmx/cmx_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -73,7 +72,7 @@ cmx_pccard_probe(device_t dev)
 }
 
 /*
- * Attach to the pccard, and call bus independant attach and
+ * Attach to the pccard, and call bus independent attach and
  * resource allocation routines.
  */
 static int
@@ -113,4 +112,4 @@ static driver_t cmx_pccard_driver = {
 };
 
 DRIVER_MODULE(cmx, pccard, cmx_pccard_driver, cmx_devclass, 0, 0);
-
+PCCARD_PNP_INFO(cmx_pccard_products);

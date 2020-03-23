@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/ciss/cissvar.h 246713 2013-02-12 16:57:20Z kib $
+ *	$FreeBSD: stable/11/sys/dev/ciss/cissvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -59,7 +58,7 @@ typedef STAILQ_HEAD(, ciss_request)	cr_qhead_t;
 
 /*
  * Interrupt reduction can be controlled by tuning the interrupt
- * coalesce delay and count paramters.  The delay (in microseconds)
+ * coalesce delay and count parameters.  The delay (in microseconds)
  * defers delivery of interrupts to increase the chance of there being
  * more than one completed command ready when the interrupt is
  * delivered.  The count expedites the delivery of the interrupt when
@@ -76,14 +75,6 @@ typedef STAILQ_HEAD(, ciss_request)	cr_qhead_t;
  * run very often.
  */
 #define CISS_HEARTBEAT_RATE		10
-
-/************************************************************************
- * Compatibility with older versions of FreeBSD
- */
-#if __FreeBSD_version < 440001
-#warning testing old-FreeBSD compat
-typedef struct proc	d_thread_t;
-#endif
 
 /************************************************************************
  * Driver version.  Only really significant to the ACU interface.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, 1994, 1995
  *	Rodney W. Grimes, Milwaukie, Oregon  97222.  All rights reserved.
@@ -29,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ie/if_iee16.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/ie/if_iee16.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 /*

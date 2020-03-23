@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/txp/3c990img.h 189022 2009-02-25 01:12:56Z yongari $	*/	
+/*	$FreeBSD: stable/11/sys/dev/txp/3c990img.h 331722 2018-03-29 02:50:57Z eadler $	*/	
 
 /*-
  * Copyright 1999-2003 3Com Corporation.  All Rights Reserved.    

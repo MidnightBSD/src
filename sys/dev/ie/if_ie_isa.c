@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd
  * All rights reserved.
@@ -38,11 +37,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ie/if_ie_isa.c 241066 2012-09-30 09:21:10Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ie/if_ie_isa.c 297793 2016-04-10 23:07:00Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 
 #include <sys/module.h>
@@ -55,7 +57,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ie/if_ie_isa.c 241066 2012-09-30 09:21:10Z
 #include <machine/md_var.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_media.h>
 
 #include <isa/isavar.h>
@@ -880,7 +881,7 @@ ie_modevent (mod, what, arg)
 		break;
 	default:
 		break;
-	};
+	}
 
 	return (0);
 }

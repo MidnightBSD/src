@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: if_txpreg.h,v 1.34 2001/11/05 17:25:58 art Exp $ */
-/*	$FreeBSD: stable/10/sys/dev/txp/if_txpreg.h 327590 2018-01-05 17:23:17Z pfg $ */
+/*	$FreeBSD: stable/11/sys/dev/txp/if_txpreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2001 Aaron Campbell <aaron@monkey.org>.

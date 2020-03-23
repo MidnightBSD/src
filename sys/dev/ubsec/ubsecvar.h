@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/ubsec/ubsecvar.h 158705 2006-05-17 18:34:26Z pjd $ */
+/* $FreeBSD: stable/11/sys/dev/ubsec/ubsecvar.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$OpenBSD: ubsecvar.h,v 1.35 2002/09/24 18:33:26 jason Exp $	*/
 
 /*-
