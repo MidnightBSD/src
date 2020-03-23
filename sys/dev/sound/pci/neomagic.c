@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -39,7 +38,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/neomagic.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/neomagic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* -------------------------------------------------------------------- */
 
@@ -665,7 +664,7 @@ static int
 nm_pci_attach(device_t dev)
 {
 	struct sc_info *sc;
-	struct ac97_info *codec = 0;
+	struct ac97_info *codec = NULL;
 	char 		status[SND_STATUSLEN];
 
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -703,7 +702,7 @@ nm_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at memory 0x%lx, 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at memory 0x%jx, 0x%jx irq %jd %s",
 		 rman_get_start(sc->buf), rman_get_start(sc->reg),
 		 rman_get_start(sc->irq),PCM_KLDSTRING(snd_neomagic));
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2004 Taku YAMAMOTO <taku@tackymt.homeip.net>
  * All rights reserved.
@@ -59,7 +58,7 @@
 
 #include <dev/sound/pci/maestro_reg.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/maestro.c 260298 2014-01-04 23:12:01Z dim $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/maestro.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PCI IDs of supported chips:
@@ -88,12 +87,6 @@ SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/maestro.c 260298 2014-01
 #define AGG_DEFAULT_BUFSZ	0x4000 /* 0x1000, but gets underflows */
 
 
-/* compatibility */
-#if __FreeBSD_version < 500000
-# define critical_enter()	disable_intr()
-# define critical_exit()	enable_intr()
-#endif
-
 #ifndef PCIR_BAR
 #define PCIR_BAR(x)	(PCIR_MAPS + (x) * 4)
 #endif
@@ -111,6 +104,7 @@ struct agg_chinfo {
 	struct snd_dbuf		*buffer;
 
 	/* OS independent */
+	bus_dmamap_t		map;
 	bus_addr_t		phys;	/* channel buffer physical address */
 	bus_addr_t		base;	/* channel buffer segment base */
 	u_int32_t		blklen;	/* DMA block length in WORDs */
@@ -131,6 +125,7 @@ struct agg_rchinfo {
 	struct snd_dbuf		*buffer;
 
 	/* OS independent */
+	bus_dmamap_t		map;
 	bus_addr_t		phys;	/* channel buffer physical address */
 	bus_addr_t		base;	/* channel buffer segment base */
 	u_int32_t		blklen;	/* DMA block length in WORDs */
@@ -167,6 +162,7 @@ struct agg_info {
 	struct ac97_info	*codec;
 
 	/* OS independent */
+	bus_dmamap_t		stat_map;
 	u_int8_t		*stat;	/* status buffer pointer */
 	bus_addr_t		phys;	/* status buffer physical address */
 	unsigned int		bufsz;	/* channel buffer size in bytes */
@@ -263,8 +259,9 @@ static int	agg_suspend(device_t);
 static int	agg_resume(device_t);
 static int	agg_shutdown(device_t);
 
-static void	*dma_malloc(bus_dma_tag_t, u_int32_t, bus_addr_t*);
-static void	dma_free(bus_dma_tag_t, void *);
+static void	*dma_malloc(bus_dma_tag_t, u_int32_t, bus_addr_t*,
+		    bus_dmamap_t *);
+static void	dma_free(bus_dma_tag_t, void *, bus_dmamap_t);
 
 
 /* -----------------------------
@@ -1298,7 +1295,7 @@ aggpch_init(kobj_t obj, void *devinfo, struct snd_dbuf *b,
 	ch->buffer = b;
 	ch->num = ess->playchns;
 
-	p = dma_malloc(ess->buf_dmat, ess->bufsz, &physaddr);
+	p = dma_malloc(ess->buf_dmat, ess->bufsz, &physaddr, &ch->map);
 	if (p == NULL)
 		return NULL;
 	ch->phys = physaddr;
@@ -1361,7 +1358,7 @@ aggpch_free(kobj_t obj, void *data)
 	struct agg_info *ess = ch->parent;
 
 	/* free up buffer - called after channel stopped */
-	dma_free(ess->buf_dmat, sndbuf_getbuf(ch->buffer));
+	dma_free(ess->buf_dmat, sndbuf_getbuf(ch->buffer), ch->map);
 
 	/* return 0 if ok */
 	return 0;
@@ -1723,25 +1720,26 @@ setmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 }
 
 static void *
-dma_malloc(bus_dma_tag_t dmat, u_int32_t sz, bus_addr_t *phys)
+dma_malloc(bus_dma_tag_t dmat, u_int32_t sz, bus_addr_t *phys,
+    bus_dmamap_t *map)
 {
 	void *buf;
-	bus_dmamap_t map;
 
-	if (bus_dmamem_alloc(dmat, &buf, BUS_DMA_NOWAIT, &map))
+	if (bus_dmamem_alloc(dmat, &buf, BUS_DMA_NOWAIT, map))
 		return NULL;
-	if (bus_dmamap_load(dmat, map, buf, sz, setmap, phys, 0)
-	    || !*phys || map) {
-		bus_dmamem_free(dmat, buf, map);
+	if (bus_dmamap_load(dmat, *map, buf, sz, setmap, phys, 0) != 0 ||
+	    *phys == 0) {
+		bus_dmamem_free(dmat, buf, *map);
 		return NULL;
 	}
 	return buf;
 }
 
 static void
-dma_free(bus_dma_tag_t dmat, void *buf)
+dma_free(bus_dma_tag_t dmat, void *buf, bus_dmamap_t map)
 {
-	bus_dmamem_free(dmat, buf, NULL);
+	bus_dmamap_unload(dmat, map);
+	bus_dmamem_free(dmat, buf, map);
 }
 
 static int
@@ -1811,9 +1809,7 @@ agg_attach(device_t dev)
 			       /*filter*/ NULL, NULL,
 			       /*size  */ ess->bufsz, 1, 0x3ffff,
 			       /*flags */ 0,
-#if __FreeBSD_version >= 501102
 			       /*lock  */ busdma_lock_mutex, &Giant,
-#endif
 			       &ess->buf_dmat) != 0) {
 		device_printf(dev, "unable to create dma tag\n");
 		ret = ENOMEM;
@@ -1827,9 +1823,7 @@ agg_attach(device_t dev)
 			       /*filter*/ NULL, NULL,
 			       /*size  */ 3*ess->bufsz, 1, 0x3ffff,
 			       /*flags */ 0,
-#if __FreeBSD_version >= 501102
 			       /*lock  */ busdma_lock_mutex, &Giant,
-#endif
 			       &ess->stat_dmat) != 0) {
 		device_printf(dev, "unable to create dma tag\n");
 		ret = ENOMEM;
@@ -1837,7 +1831,8 @@ agg_attach(device_t dev)
 	}
 
 	/* Allocate the room for brain-damaging status buffer. */
-	ess->stat = dma_malloc(ess->stat_dmat, 3*ess->bufsz, &ess->phys);
+	ess->stat = dma_malloc(ess->stat_dmat, 3*ess->bufsz, &ess->phys,
+	    &ess->stat_map);
 	if (ess->stat == NULL) {
 		device_printf(dev, "cannot allocate status buffer\n");
 		ret = ENOMEM;
@@ -1922,7 +1917,7 @@ agg_attach(device_t dev)
 	adjust_pchbase(ess->pch, ess->playchns, ess->bufsz);
 
 	snprintf(status, SND_STATUSLEN,
-	    "port 0x%lx-0x%lx irq %ld at device %d.%d on pci%d",
+	    "port 0x%jx-0x%jx irq %jd at device %d.%d on pci%d",
 	    rman_get_start(reg), rman_get_end(reg), rman_get_start(irq),
 	    pci_get_slot(dev), pci_get_function(dev), pci_get_bus(dev));
 	pcm_setstatus(dev, status);
@@ -1940,7 +1935,7 @@ agg_attach(device_t dev)
 		bus_release_resource(dev, SYS_RES_IOPORT, regid, reg);
 	if (ess != NULL) {
 		if (ess->stat != NULL)
-			dma_free(ess->stat_dmat, ess->stat);
+			dma_free(ess->stat_dmat, ess->stat, ess->stat_map);
 		if (ess->stat_dmat != NULL)
 			bus_dma_tag_destroy(ess->stat_dmat);
 		if (ess->buf_dmat != NULL)
@@ -1984,7 +1979,7 @@ agg_detach(device_t dev)
 	bus_teardown_intr(dev, ess->irq, ess->ih);
 	bus_release_resource(dev, SYS_RES_IRQ, ess->irqid, ess->irq);
 	bus_release_resource(dev, SYS_RES_IOPORT, ess->regid, ess->reg);
-	dma_free(ess->stat_dmat, ess->stat);
+	dma_free(ess->stat_dmat, ess->stat, ess->stat_map);
 	bus_dma_tag_destroy(ess->stat_dmat);
 	bus_dma_tag_destroy(ess->buf_dmat);
 	mtx_destroy(&ess->lock);

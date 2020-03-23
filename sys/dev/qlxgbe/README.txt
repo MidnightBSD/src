@@ -1,5 +1,4 @@
-$MidnightBSD$
-# $FreeBSD: stable/10/sys/dev/qlxgbe/README.txt 322975 2017-08-28 19:17:28Z davidcs $
+# $FreeBSD: stable/11/sys/dev/qlxgbe/README.txt 322972 2017-08-28 17:21:33Z davidcs $
 
 			README File
 		QLogic 8300 series Dual Port

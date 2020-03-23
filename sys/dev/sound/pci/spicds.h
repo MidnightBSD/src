@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
  * Copyright (c) 2001 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/spicds.h 205859 2010-03-29 20:27:17Z joel $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/spicds.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* supported CODECs */

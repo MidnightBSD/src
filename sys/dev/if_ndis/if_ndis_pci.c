@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,19 +31,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/if_ndis/if_ndis_pci.c 292614 2015-12-22 18:39:07Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/if_ndis/if_ndis_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/socket.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_media.h>
+#include <net/ethernet.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>

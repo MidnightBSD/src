@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD userland interface
  *
- * $FreeBSD: stable/10/sys/dev/mpr/mpr_ioctl.h 299962 2016-05-16 18:47:53Z slm $
+ * $FreeBSD: stable/11/sys/dev/mpr/mpr_ioctl.h 331903 2018-04-03 02:29:17Z mav $
  */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
@@ -60,7 +59,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mpr/mpr_ioctl.h 299962 2016-05-16 18:47:53Z slm $
+ * $FreeBSD: stable/11/sys/dev/mpr/mpr_ioctl.h 331903 2018-04-03 02:29:17Z mav $
  */
 
 #ifndef _MPR_IOCTL_H_
@@ -150,6 +149,7 @@ typedef struct mpr_pci_bits
  *
  */
 #define	MPRIOCTL_ADAPTER_TYPE_SAS3		6
+#define	MPRIOCTL_ADAPTER_TYPE_SAS35		7
 typedef struct mpr_adapter_data
 {
 	uint32_t	StructureLength;
@@ -203,7 +203,7 @@ typedef struct mpr_pass_thru
 /*
  * Event queue defines
  */
-#define	MPR_EVENT_QUEUE_SIZE		(50) /* Max Events stored in driver */
+#define	MPR_EVENT_QUEUE_SIZE		(200) /* Max Events stored in driver */
 #define	MPR_MAX_EVENT_DATA_LENGTH	(48) /* Size of each event in Dwords */
 
 typedef struct mpr_event_query

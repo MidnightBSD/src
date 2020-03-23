@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -36,13 +35,12 @@
 #include "feeder_if.h"
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/mixer.c 271193 2014-09-06 15:24:48Z mav $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/mixer.c 336889 2018-07-30 09:25:56Z hselasky $");
 
 static MALLOC_DEFINE(M_MIXER, "mixer", "mixer");
 
 static int mixer_bypass = 1;
-TUNABLE_INT("hw.snd.vpc_mixer_bypass", &mixer_bypass);
-SYSCTL_INT(_hw_snd, OID_AUTO, vpc_mixer_bypass, CTLFLAG_RW,
+SYSCTL_INT(_hw_snd, OID_AUTO, vpc_mixer_bypass, CTLFLAG_RWTUN,
     &mixer_bypass, 0,
     "control channel pcm/rec volume, bypassing real mixer device");
 
@@ -324,6 +322,7 @@ mixer_set(struct snd_mixer *m, u_int dev, u_int lev)
 	MIXER_SET_LOCK(m, dropmtx);
 
 	m->level[dev] = l | (r << 8);
+	m->modify_counter++;
 
 	return 0;
 }
@@ -885,10 +884,10 @@ mixer_hwvol_init(device_t dev)
 	m->hwvol_step = 5;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-            OID_AUTO, "hwvol_step", CTLFLAG_RW, &m->hwvol_step, 0, "");
+            OID_AUTO, "hwvol_step", CTLFLAG_RWTUN, &m->hwvol_step, 0, "");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-            OID_AUTO, "hwvol_mixer", CTLTYPE_STRING | CTLFLAG_RW, m, 0,
+            OID_AUTO, "hwvol_mixer", CTLTYPE_STRING | CTLFLAG_RWTUN, m, 0,
 	    sysctl_hw_snd_hwvol_mixer, "A", "");
 	return 0;
 }
@@ -1330,9 +1329,7 @@ done:
 
 static void
 mixer_clone(void *arg,
-#if __FreeBSD_version >= 600034
     struct ucred *cred,
-#endif
     char *name, int namelen, struct cdev **dev)
 {
 	struct snddev_info *d;

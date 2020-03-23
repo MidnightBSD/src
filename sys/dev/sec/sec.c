@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sec/sec.c 266152 2014-05-15 16:11:06Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sec/sec.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/sec/sec.c 266152 2014-05-15 16:11:06Z ian 
 #include <sys/random.h>
 #include <sys/rman.h>
 
+#include <machine/_inttypes.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
 
@@ -236,7 +236,7 @@ sec_probe(device_t dev)
 		sc->sc_version = 3;
 		break;
 	default:
-		device_printf(dev, "unknown SEC ID 0x%016llx!\n", id);
+		device_printf(dev, "unknown SEC ID 0x%016"PRIx64"!\n", id);
 		return (ENXIO);
 	}
 

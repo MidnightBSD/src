@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * All rights reserved.
@@ -23,7 +22,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sec/sec.h 235938 2012-05-24 21:24:23Z raj $
+ * $FreeBSD: stable/11/sys/dev/sec/sec.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_SEC_H

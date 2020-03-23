@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 M. Warner Losh <imp@village.org> 
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sn/if_snvar.h 199559 2009-11-19 22:06:40Z jhb $
+ * $FreeBSD: stable/11/sys/dev/sn/if_snvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _IF_SNVAR_H

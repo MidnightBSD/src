@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996-2000 Specialix International.
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/si/si3_t225.c 154082 2006-01-06 19:58:08Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/si/si3_t225.c 154082 2006-01-06 19:58:08Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

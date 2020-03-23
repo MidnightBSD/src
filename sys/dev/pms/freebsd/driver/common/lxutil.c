@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *
@@ -20,7 +19,7 @@
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 ******************************************************************************/
-/* $FreeBSD$ */
+/* $FreeBSD: stable/11/sys/dev/pms/freebsd/driver/common/lxutil.c 286208 2015-08-02 16:26:41Z imp $ */
 /******************************************************************************
 This program is part of PMC-Sierra initiator/target device driver. 
 The functions here are commonly used by different type of drivers that support

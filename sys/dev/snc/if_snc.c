@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/snc/if_snc.c 242871 2012-11-10 14:58:06Z nyan $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/snc/if_snc.c 296137 2016-02-27 03:38:01Z jhibbits $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/snc/if_snc.c 242871 2012-11-10 14:58:06Z n
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <net/if_media.h>
+#include <net/if_var.h>
 
 #include <dev/snc/dp83932reg.h>
 #include <dev/snc/dp83932var.h>
@@ -72,8 +72,8 @@ snc_alloc_port(device_t dev, int rid)
 	struct snc_softc *sc = device_get_softc(dev);
 	struct resource *res;
 
-	res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				 0ul, ~0ul, SNEC_NREGS, RF_ACTIVE);
+	res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					  SNEC_NREGS, RF_ACTIVE);
 	if (res) {
 		sc->ioport = res;
 		sc->ioport_rid = rid;
@@ -95,8 +95,8 @@ snc_alloc_memory(device_t dev, int rid)
 	struct snc_softc *sc = device_get_softc(dev);
 	struct resource *res;
 
-	res = bus_alloc_resource(dev, SYS_RES_MEMORY, &rid,
-				 0ul, ~0ul, SNEC_NMEMS, RF_ACTIVE);
+	res = bus_alloc_resource_anywhere(dev, SYS_RES_MEMORY, &rid,
+					  SNEC_NMEMS, RF_ACTIVE);
 	if (res) {
 		sc->iomem = res;
 		sc->iomem_rid = rid;

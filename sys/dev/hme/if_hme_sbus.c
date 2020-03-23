@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/hme/if_hme_sbus.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/hme/if_hme_sbus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * SBus front-end device driver for the HME ethernet device.
@@ -40,8 +39,10 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hme/if_hme_sbus.c 227843 2011-11-22 21:28:
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 
@@ -53,11 +54,9 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/hme/if_hme_sbus.c 227843 2011-11-22 21:28:
 
 #include <sys/rman.h>
 
-#include <net/ethernet.h>
 #include <net/if.h>
-#include <net/if_arp.h>
-#include <net/if_dl.h>
 #include <net/if_media.h>
+#include <net/ethernet.h>
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>

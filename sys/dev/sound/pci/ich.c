@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * Copyright (c) 2001 Cameron Grant <cg@freebsd.org>
@@ -37,7 +36,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/ich.c 216518 2010-12-18 14:21:28Z tijl $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/ich.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* -------------------------------------------------------------------- */
 
@@ -688,7 +687,7 @@ ich_setstatus(struct sc_info *sc)
 	char status[SND_STATUSLEN];
 
 	snprintf(status, SND_STATUSLEN,
-	    "at io 0x%lx, 0x%lx irq %ld bufsz %u %s",
+	    "at io 0x%jx, 0x%jx irq %jd bufsz %u %s",
 	    rman_get_start(sc->nambar), rman_get_start(sc->nabmbar),
 	    rman_get_start(sc->irq), sc->bufsz,PCM_KLDSTRING(snd_ich));
 

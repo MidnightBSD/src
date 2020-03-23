@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/siena_flash.h 311056 2017-01-02 09:04:22Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/siena_flash.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_SYS_SIENA_FLASH_H

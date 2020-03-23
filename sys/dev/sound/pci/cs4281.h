@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Orion Hodson <O.Hodson@cs.ucl.ac.uk>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/cs4281.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/cs4281.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _CS4281_H_

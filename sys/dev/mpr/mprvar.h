@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -28,17 +27,18 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mpr/mprvar.h 322661 2017-08-18 15:38:08Z ken $
+ * $FreeBSD: stable/11/sys/dev/mpr/mprvar.h 331903 2018-04-03 02:29:17Z mav $
  */
 
 #ifndef _MPRVAR_H
 #define _MPRVAR_H
 
-#define MPR_DRIVER_VERSION	"15.03.00.00-fbsd"
+#define MPR_DRIVER_VERSION	"18.03.00.00-fbsd"
 
 #define MPR_DB_MAX_WAIT		2500
 
 #define MPR_REQ_FRAMES		1024
+#define MPR_PRI_REQ_FRAMES	128
 #define MPR_EVT_REPLY_FRAMES	32
 #define MPR_REPLY_FRAMES	MPR_REQ_FRAMES
 #define MPR_CHAIN_FRAMES	2048
@@ -329,6 +329,7 @@ struct mpr_softc {
 
 	MPI2_IOC_FACTS_REPLY		*facts;
 	int				num_reqs;
+	int				num_prireqs;
 	int				num_replies;
 	int				fqdepth;	/* Free queue */
 	int				pqdepth;	/* Post queue */

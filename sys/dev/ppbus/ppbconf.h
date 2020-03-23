@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ppbus/ppbconf.h 305555 2016-09-07 19:02:47Z dim $
+ * $FreeBSD: stable/11/sys/dev/ppbus/ppbconf.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef __PPBCONF_H

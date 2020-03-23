@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2016 Solarflare Communications, Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/sfxge_nvram.c 301388 2016-06-04 17:08:34Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/sfxge_nvram.c 300607 2016-05-24 12:16:57Z arybchik $");
 
 
 #include <sys/types.h>
@@ -76,10 +75,6 @@ sfxge_nvram_rw(struct sfxge_softc *sc, sfxge_ioc_t *ip, efx_nvram_type_t type,
 		goto fail1;
 
 	buf = malloc(chunk_size, M_TEMP, M_WAITOK);
-	if (buf == NULL) {
-		rc = ENOMEM;
-		goto fail2;
-	}
 
 	off = 0;
 	while (total_size) {
@@ -109,7 +104,6 @@ sfxge_nvram_rw(struct sfxge_softc *sc, sfxge_ioc_t *ip, efx_nvram_type_t type,
 
 fail3:
 	free(buf, M_TEMP);
-fail2:
 	efx_nvram_rw_finish(enp, type);
 fail1:
 	return (rc);

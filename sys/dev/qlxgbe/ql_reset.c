@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgbe/ql_reset.c 333422 2018-05-09 18:35:49Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgbe/ql_reset.c 333428 2018-05-09 19:52:33Z davidcs $");
 
 #include "ql_os.h"
 

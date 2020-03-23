@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 David Jones <dej@ox.org>
  * All rights reserved.
@@ -38,7 +37,7 @@
 
 #include <dev/sound/pci/via82c686.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/via82c686.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/via82c686.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define VIA_PCI_ID 0x30581106
 #define	NSEGS		4	/* Number of segments in SGD table */
@@ -478,7 +477,7 @@ dma_cb(void *p, bus_dma_segment_t *bds, int a, int b)
 static int
 via_attach(device_t dev)
 {
-	struct via_info *via = 0;
+	struct via_info *via = NULL;
 	char status[SND_STATUSLEN];
 	u_int32_t data, cnt;
 
@@ -591,7 +590,7 @@ via_attach(device_t dev)
 	    NSEGS * sizeof(struct via_dma_op), dma_cb, via, 0) != 0)
 		goto bad;
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
 		 rman_get_start(via->reg), rman_get_start(via->irq),
 		 PCM_KLDSTRING(snd_via82c686));
 
@@ -607,7 +606,7 @@ bad:
 	if (via->ih) bus_teardown_intr(dev, via->irq, via->ih);
 	if (via->irq) bus_release_resource(dev, SYS_RES_IRQ, via->irqid, via->irq);
 	if (via->parent_dmat) bus_dma_tag_destroy(via->parent_dmat);
-	if (via->sgd_dmamap) bus_dmamap_unload(via->sgd_dmat, via->sgd_dmamap);
+	if (via->sgd_addr) bus_dmamap_unload(via->sgd_dmat, via->sgd_dmamap);
 	if (via->sgd_table) bus_dmamem_free(via->sgd_dmat, via->sgd_table, via->sgd_dmamap);
 	if (via->sgd_dmat) bus_dma_tag_destroy(via->sgd_dmat);
 	if (via->lock) snd_mtxfree(via->lock);
@@ -619,7 +618,7 @@ static int
 via_detach(device_t dev)
 {
 	int r;
-	struct via_info *via = 0;
+	struct via_info *via = NULL;
 
 	r = pcm_unregister(dev);
 	if (r)

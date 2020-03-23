@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2006 Bob Jenkins
  *
@@ -41,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/efx_hash.c 301388 2016-06-04 17:08:34Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/efx_hash.c 300607 2016-05-24 12:16:57Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"

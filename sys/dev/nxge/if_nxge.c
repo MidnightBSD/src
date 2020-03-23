@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Neterion, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/nxge/if_nxge.c 332280 2018-04-08 15:35:57Z brooks $
+ * $FreeBSD: stable/11/sys/dev/nxge/if_nxge.c 333367 2018-05-08 16:56:14Z sbruno $
  */
 
 #include <dev/nxge/if_nxge.h>
@@ -32,6 +31,7 @@
 #include <net/if_arp.h>
 #include <sys/types.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_vlan_var.h>
 
 int       copyright_print       = 0;
@@ -1004,6 +1004,7 @@ xge_attach(device_t dev)
 attach_out:
 	xge_os_free(NULL, device_config, sizeof(xge_hal_device_config_t));
 attach_out_config:
+	gone_in_dev(dev, 12, "nxge(4) driver");
 	return status;
 }
 
@@ -1366,7 +1367,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	void *info = NULL;
 	int retValue;
 
-	cmd = retValue = fubyte(ifreqp->ifr_data);
+	cmd = retValue = fubyte(ifr_data_get_ptr(ifreqp));
 	if (retValue == -1)
 		return (EFAULT);
 
@@ -1378,7 +1379,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	            (xge_hal_stats_hw_info_t **)&info);
 	        mtx_unlock(&lldev->mtx_drv);
 	        if(status == XGE_HAL_OK) {
-	            if(copyout(info, ifreqp->ifr_data,
+	            if(copyout(info, ifr_data_get_ptr(ifreqp),
 	                sizeof(xge_hal_stats_hw_info_t)) == 0)
 	                retValue = 0;
 	        }
@@ -1396,7 +1397,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	                sizeof(xge_hal_pci_config_t));
 	            mtx_unlock(&lldev->mtx_drv);
 	            if(status == XGE_HAL_OK) {
-	                if(copyout(info, ifreqp->ifr_data,
+	                if(copyout(info, ifr_data_get_ptr(ifreqp),
 	                    sizeof(xge_hal_pci_config_t)) == 0)
 	                    retValue = 0;
 	            }
@@ -1416,7 +1417,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	                sizeof(xge_hal_stats_device_info_t));
 	            mtx_unlock(&lldev->mtx_drv);
 	            if(status == XGE_HAL_OK) {
-	                if(copyout(info, ifreqp->ifr_data,
+	                if(copyout(info, ifr_data_get_ptr(ifreqp),
 	                    sizeof(xge_hal_stats_device_info_t)) == 0)
 	                    retValue = 0;
 	            }
@@ -1437,7 +1438,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	                sizeof(xge_hal_stats_sw_err_t));
 	            mtx_unlock(&lldev->mtx_drv);
 	            if(status == XGE_HAL_OK) {
-	                if(copyout(info, ifreqp->ifr_data,
+	                if(copyout(info, ifr_data_get_ptr(ifreqp),
 	                    sizeof(xge_hal_stats_sw_err_t)) == 0)
 	                    retValue = 0;
 	            }
@@ -1450,7 +1451,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	        break;
 
 	    case XGE_QUERY_DRIVERSTATS:
-		if(copyout(&lldev->driver_stats, ifreqp->ifr_data,
+		if(copyout(&lldev->driver_stats, ifr_data_get_ptr(ifreqp),
 	            sizeof(xge_driver_stats_t)) == 0) {
 	            retValue = 0;
 	        }
@@ -1462,9 +1463,10 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 
 	    case XGE_READ_VERSION:
 	        info = xge_os_malloc(NULL, XGE_BUFFER_SIZE);
-	        if(version != NULL) {
+	        if(info != NULL) {
 	            strcpy(info, XGE_DRIVER_VERSION);
-	            if(copyout(info, ifreqp->ifr_data, XGE_BUFFER_SIZE) == 0)
+	            if(copyout(info, ifr_data_get_ptr(ifreqp),
+			XGE_BUFFER_SIZE) == 0)
 	                retValue = 0;
 	            xge_os_free(NULL, info, XGE_BUFFER_SIZE);
 	        }
@@ -1478,7 +1480,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	                sizeof(xge_hal_device_config_t));
 	            mtx_unlock(&lldev->mtx_drv);
 	            if(status == XGE_HAL_OK) {
-	                if(copyout(info, ifreqp->ifr_data,
+	                if(copyout(info, ifr_data_get_ptr(ifreqp),
 	                    sizeof(xge_hal_device_config_t)) == 0)
 	                    retValue = 0;
 	            }
@@ -1491,7 +1493,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	        break;
 
 	    case XGE_QUERY_BUFFER_MODE:
-	        if(copyout(&lldev->buffer_mode, ifreqp->ifr_data,
+	        if(copyout(&lldev->buffer_mode, ifr_data_get_ptr(ifreqp),
 	            sizeof(int)) == 0)
 	            retValue = 0;
 	        break;
@@ -1500,7 +1502,7 @@ xge_ioctl_stats(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	    case XGE_SET_BUFFER_MODE_2:
 	    case XGE_SET_BUFFER_MODE_5:
 	        mode = (cmd == XGE_SET_BUFFER_MODE_1) ? 'Y':'N';
-	        if(copyout(&mode, ifreqp->ifr_data, sizeof(mode)) == 0)
+	        if(copyout(&mode, ifr_data_get_ptr(ifreqp), sizeof(mode)) == 0)
 	            retValue = 0;
 	        break;
 	    default:
@@ -1528,7 +1530,7 @@ xge_ioctl_registers(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	int error;
 	u64 val64 = 0;
 
-	error = copyin(ifreqp->ifr_data, &tmpdata, sizeof(tmpdata));
+	error = copyin(ifr_data_get_ptr(ifreqp), &tmpdata, sizeof(tmpdata));
 	if (error != 0)
 		return (error);
 	data = &tmpdata;
@@ -1541,7 +1543,8 @@ xge_ioctl_registers(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	        &data->value);
 	    mtx_unlock(&lldev->mtx_drv);
 	    if(status == XGE_HAL_OK) {
-	        if(copyout(data, ifreqp->ifr_data, sizeof(xge_register_t)) == 0)
+	        if(copyout(data, ifr_data_get_ptr(ifreqp),
+		    sizeof(xge_register_t)) == 0)
 	            retValue = 0;
 	    }
 	}
@@ -1586,7 +1589,7 @@ xge_ioctl_registers(xge_lldev_t *lldev, struct ifreq *ifreqp)
 	    mtx_unlock(&lldev->mtx_drv);
 
 	    if(retValue == 0) {
-	        if(copyout(data, ifreqp->ifr_data,
+	        if(copyout(data, ifr_data_get_ptr(ifreqp),
 	            sizeof(xge_hal_pci_bar0_t)) != 0) {
 	            xge_trace(XGE_ERR, "Copyout of register values failed");
 	            retValue = EINVAL;

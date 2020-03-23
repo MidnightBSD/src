@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/siis/siis.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/siis/siis.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -315,13 +314,13 @@ siis_intr(void *data)
 
 static struct resource *
 siis_alloc_resource(device_t dev, device_t child, int type, int *rid,
-		       u_long start, u_long end, u_long count, u_int flags)
+		    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct siis_controller *ctlr = device_get_softc(dev);
 	int unit = ((struct siis_channel *)device_get_softc(child))->unit;
 	struct resource *res = NULL;
 	int offset = unit << 13;
-	long st;
+	rman_res_t st;
 
 	switch (type) {
 	case SYS_RES_MEMORY:
@@ -466,6 +465,7 @@ siis_ch_attach(device_t dev)
 	ch->dev = dev;
 	ch->unit = (intptr_t)device_get_ivars(dev);
 	ch->quirks = ctlr->quirks;
+	ch->pm_level = 0;
 	resource_int_value(device_get_name(dev),
 	    device_get_unit(dev), "pm_level", &ch->pm_level);
 	resource_int_value(device_get_name(dev),
@@ -856,7 +856,7 @@ siis_ch_intr(void *data)
 	/* Read command statuses. */
 	sstatus = ATA_INL(ch->r_mem, SIIS_P_SS);
 	ok = ch->rslots & ~sstatus;
-	/* Complete all successfull commands. */
+	/* Complete all successful commands. */
 	for (i = 0; i < SIIS_MAX_SLOTS; i++) {
 		if ((ok >> i) & 1)
 			siis_end_transaction(&ch->slot[i], SIIS_ERR_NONE);
@@ -1728,6 +1728,12 @@ siis_setup_fis(device_t dev, struct siis_cmd *ctp, union ccb *ccb, int tag)
 			fis[13] = ccb->ataio.cmd.sector_count_exp;
 		}
 		fis[15] = ATA_A_4BIT;
+		if (ccb->ataio.ata_flags & ATA_FLAG_AUX) {
+			fis[16] =  ccb->ataio.aux        & 0xff;
+			fis[17] = (ccb->ataio.aux >>  8) & 0xff;
+			fis[18] = (ccb->ataio.aux >> 16) & 0xff;
+			fis[19] = (ccb->ataio.aux >> 24) & 0xff;
+		}
 	} else {
 		/* Soft reset. */
 	}
@@ -1829,10 +1835,6 @@ siisaction(struct cam_sim *sim, union ccb *ccb)
 		}
 		siis_begin_transaction(dev, ccb);
 		return;
-	case XPT_EN_LUN:		/* Enable LUN as a target */
-	case XPT_TARGET_IO:		/* Execute target I/O request */
-	case XPT_ACCEPT_TARGET_IO:	/* Accept Host Target Mode CDB */
-	case XPT_CONT_TARGET_IO:	/* Continue Host Target I/O Connection*/
 	case XPT_ABORT:			/* Abort the specified CCB */
 		/* XXX Implement */
 		ccb->ccb_h.status = CAM_REQ_INVALID;
@@ -1953,7 +1955,7 @@ siisaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "SIIS", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

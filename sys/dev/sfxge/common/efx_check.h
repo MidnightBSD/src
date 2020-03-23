@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/efx_check.h 311500 2017-01-06 07:38:12Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/efx_check.h 342424 2018-12-25 07:00:37Z arybchik $
  */
 
 #ifndef _SYS_EFX_CHECK_H
@@ -227,8 +226,8 @@
 
 /* Support for PHY LED control */
 #if EFSYS_OPT_PHY_LED_CONTROL
-# if !EFSYS_OPT_SIENA
-#  error "PHY_LED_CONTROL requires SIENA"
+# if !(EFSYS_OPT_SIENA || EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD)
+#  error "PHY_LED_CONTROL requires SIENA or HUNTINGTON or MEDFORD"
 # endif
 #endif /* EFSYS_OPT_PHY_LED_CONTROL */
 

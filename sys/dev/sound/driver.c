@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/driver.c 193640 2009-06-07 19:12:08Z ariff $
+ * $FreeBSD: stable/11/sys/dev/sound/driver.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS

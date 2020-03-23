@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/ef10_ev.c 311094 2017-01-02 09:48:34Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_ev.c 342445 2018-12-25 07:27:45Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -101,11 +100,10 @@ efx_mcdi_set_evq_tmr(
 	__in		uint32_t timer_ns)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_SET_EVQ_TMR_IN_LEN,
-			    MC_CMD_SET_EVQ_TMR_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_SET_EVQ_TMR_IN_LEN,
+		MC_CMD_SET_EVQ_TMR_OUT_LEN);
 	efx_rc_t rc;
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_SET_EVQ_TMR;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_SET_EVQ_TMR_IN_LEN;
@@ -151,9 +149,9 @@ efx_mcdi_init_evq(
 	__in		boolean_t low_latency)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[
-	    MAX(MC_CMD_INIT_EVQ_IN_LEN(EFX_EVQ_NBUFS(EFX_EVQ_MAXNEVS)),
-		MC_CMD_INIT_EVQ_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload,
+		MC_CMD_INIT_EVQ_IN_LEN(EFX_EVQ_NBUFS(EFX_EVQ_MAXNEVS)),
+		MC_CMD_INIT_EVQ_OUT_LEN);
 	efx_qword_t *dma_addr;
 	uint64_t addr;
 	int npages;
@@ -168,7 +166,6 @@ efx_mcdi_init_evq(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_INIT_EVQ;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_INIT_EVQ_IN_LEN(npages);
@@ -288,9 +285,9 @@ efx_mcdi_init_evq_v2(
 	__in		uint32_t flags)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[
-		MAX(MC_CMD_INIT_EVQ_V2_IN_LEN(EFX_EVQ_NBUFS(EFX_EVQ_MAXNEVS)),
-		    MC_CMD_INIT_EVQ_V2_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload,
+		MC_CMD_INIT_EVQ_V2_IN_LEN(EFX_EVQ_NBUFS(EFX_EVQ_MAXNEVS)),
+		MC_CMD_INIT_EVQ_V2_OUT_LEN);
 	boolean_t interrupting;
 	unsigned int evq_type;
 	efx_qword_t *dma_addr;
@@ -305,7 +302,6 @@ efx_mcdi_init_evq_v2(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_INIT_EVQ;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_INIT_EVQ_V2_IN_LEN(npages);
@@ -412,11 +408,10 @@ efx_mcdi_fini_evq(
 	__in		uint32_t instance)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_FINI_EVQ_IN_LEN,
-			    MC_CMD_FINI_EVQ_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_FINI_EVQ_IN_LEN,
+		MC_CMD_FINI_EVQ_OUT_LEN);
 	efx_rc_t rc;
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_FINI_EVQ;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_FINI_EVQ_IN_LEN;
@@ -435,7 +430,12 @@ efx_mcdi_fini_evq(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+	/*
+	 * EALREADY is not an error, but indicates that the MC has rebooted and
+	 * that the EVQ has already been destroyed.
+	 */
+	if (rc != EALREADY)
+		EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
@@ -572,7 +572,7 @@ ef10_ev_qdestroy(
 	EFSYS_ASSERT(enp->en_family == EFX_FAMILY_HUNTINGTON ||
 	    enp->en_family == EFX_FAMILY_MEDFORD);
 
-	(void) efx_mcdi_fini_evq(eep->ee_enp, eep->ee_index);
+	(void) efx_mcdi_fini_evq(enp, eep->ee_index);
 }
 
 	__checkReturn	efx_rc_t
@@ -623,8 +623,8 @@ efx_mcdi_driver_event(
 	__in		efx_qword_t data)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_DRIVER_EVENT_IN_LEN,
-			    MC_CMD_DRIVER_EVENT_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_DRIVER_EVENT_IN_LEN,
+		MC_CMD_DRIVER_EVENT_OUT_LEN);
 	efx_rc_t rc;
 
 	req.emr_cmd = MC_CMD_DRIVER_EVENT;
@@ -839,7 +839,7 @@ ef10_ev_rx(
 		flags |= EFX_PKT_PREFIX_LEN;
 	}
 
-	/* Calculate the index of the the last descriptor consumed */
+	/* Calculate the index of the last descriptor consumed */
 	last_used_id = (eersp->eers_rx_read_ptr - 1) & eersp->eers_rx_mask;
 
 	/* Check for errors that invalidate checksum and L3/L4 fields */

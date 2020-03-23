@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/twe/twevar.h 240209 2012-09-07 18:41:19Z jhb $
+ *	$FreeBSD: stable/11/sys/dev/twe/twevar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define TWE_DRIVER_VERSION_STRING	"1.50.01.002"
@@ -144,7 +143,7 @@ struct twe_softc
 };
 
 /*
- * Interface betwen driver core and platform-dependant code.
+ * Interface between driver core and platform-dependant code.
  */
 extern int	twe_setup(struct twe_softc *sc);		/* do early driver/controller setup */
 extern void	twe_init(struct twe_softc *sc);			/* init controller */

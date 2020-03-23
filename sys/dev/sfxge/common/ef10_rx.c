@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/ef10_rx.c 311086 2017-01-02 09:39:19Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_rx.c 350411 2019-07-29 10:42:21Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -50,8 +49,9 @@ efx_mcdi_init_rxq(
 	__in		boolean_t disable_scatter)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[
-	    MC_CMD_INIT_RXQ_IN_LEN(EFX_RXQ_NBUFS(EFX_RXQ_MAXNDESCS))];
+	EFX_MCDI_DECLARE_BUF(payload,
+		MC_CMD_INIT_RXQ_IN_LEN(EFX_RXQ_NBUFS(EFX_RXQ_MAXNDESCS)),
+		MC_CMD_INIT_RXQ_OUT_LEN);
 	int npages = EFX_RXQ_NBUFS(size);
 	int i;
 	efx_qword_t *dma_addr;
@@ -62,7 +62,6 @@ efx_mcdi_init_rxq(
 	EFSYS_ASSERT3U(MC_CMD_INIT_RXQ_OUT_LEN, ==, 0);
 	EFSYS_ASSERT3U(size, <=, EFX_RXQ_MAXNDESCS);
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_INIT_RXQ;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_INIT_RXQ_IN_LEN(npages);
@@ -116,11 +115,10 @@ efx_mcdi_fini_rxq(
 	__in		uint32_t instance)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_FINI_RXQ_IN_LEN,
-			    MC_CMD_FINI_RXQ_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_FINI_RXQ_IN_LEN,
+		MC_CMD_FINI_RXQ_OUT_LEN);
 	efx_rc_t rc;
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_FINI_RXQ;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_FINI_RXQ_IN_LEN;
@@ -131,7 +129,7 @@ efx_mcdi_fini_rxq(
 
 	efx_mcdi_execute_quiet(enp, &req);
 
-	if ((req.emr_rc != 0) && (req.emr_rc != MC_CMD_ERR_EALREADY)) {
+	if (req.emr_rc != 0) {
 		rc = req.emr_rc;
 		goto fail1;
 	}
@@ -139,7 +137,12 @@ efx_mcdi_fini_rxq(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+	/*
+	 * EALREADY is not an error, but indicates that the MC has rebooted and
+	 * that the RXQ has already been destroyed.
+	 */
+	if (rc != EALREADY)
+		EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
@@ -153,8 +156,8 @@ efx_mcdi_rss_context_alloc(
 	__out		uint32_t *rss_contextp)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_RSS_CONTEXT_ALLOC_IN_LEN,
-			    MC_CMD_RSS_CONTEXT_ALLOC_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_RSS_CONTEXT_ALLOC_IN_LEN,
+		MC_CMD_RSS_CONTEXT_ALLOC_OUT_LEN);
 	uint32_t rss_context;
 	uint32_t context_type;
 	efx_rc_t rc;
@@ -176,7 +179,6 @@ efx_mcdi_rss_context_alloc(
 		goto fail2;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_RSS_CONTEXT_ALLOC;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_RSS_CONTEXT_ALLOC_IN_LEN;
@@ -233,8 +235,8 @@ efx_mcdi_rss_context_free(
 	__in		uint32_t rss_context)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_RSS_CONTEXT_FREE_IN_LEN,
-			    MC_CMD_RSS_CONTEXT_FREE_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_RSS_CONTEXT_FREE_IN_LEN,
+		MC_CMD_RSS_CONTEXT_FREE_OUT_LEN);
 	efx_rc_t rc;
 
 	if (rss_context == EF10_RSS_CONTEXT_INVALID) {
@@ -242,7 +244,6 @@ efx_mcdi_rss_context_free(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_RSS_CONTEXT_FREE;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_RSS_CONTEXT_FREE_IN_LEN;
@@ -277,8 +278,8 @@ efx_mcdi_rss_context_set_flags(
 	__in		efx_rx_hash_type_t type)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_RSS_CONTEXT_SET_FLAGS_IN_LEN,
-			    MC_CMD_RSS_CONTEXT_SET_FLAGS_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_RSS_CONTEXT_SET_FLAGS_IN_LEN,
+		MC_CMD_RSS_CONTEXT_SET_FLAGS_OUT_LEN);
 	efx_rc_t rc;
 
 	if (rss_context == EF10_RSS_CONTEXT_INVALID) {
@@ -286,7 +287,6 @@ efx_mcdi_rss_context_set_flags(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_RSS_CONTEXT_SET_FLAGS;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_RSS_CONTEXT_SET_FLAGS_IN_LEN;
@@ -333,8 +333,8 @@ efx_mcdi_rss_context_set_key(
 	__in		size_t n)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_RSS_CONTEXT_SET_KEY_IN_LEN,
-			    MC_CMD_RSS_CONTEXT_SET_KEY_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_RSS_CONTEXT_SET_KEY_IN_LEN,
+		MC_CMD_RSS_CONTEXT_SET_KEY_OUT_LEN);
 	efx_rc_t rc;
 
 	if (rss_context == EF10_RSS_CONTEXT_INVALID) {
@@ -342,7 +342,6 @@ efx_mcdi_rss_context_set_key(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_RSS_CONTEXT_SET_KEY;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_RSS_CONTEXT_SET_KEY_IN_LEN;
@@ -390,8 +389,8 @@ efx_mcdi_rss_context_set_table(
 	__in		size_t n)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_RSS_CONTEXT_SET_TABLE_IN_LEN,
-			    MC_CMD_RSS_CONTEXT_SET_TABLE_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_RSS_CONTEXT_SET_TABLE_IN_LEN,
+		MC_CMD_RSS_CONTEXT_SET_TABLE_OUT_LEN);
 	uint8_t *req_table;
 	int i, rc;
 
@@ -400,7 +399,6 @@ efx_mcdi_rss_context_set_table(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_RSS_CONTEXT_SET_TABLE;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_RSS_CONTEXT_SET_TABLE_IN_LEN;
@@ -653,6 +651,8 @@ ef10_rx_qpost(
 	unsigned int offset;
 	unsigned int id;
 
+	_NOTE(ARGUNUSED(completed))
+
 	/* The client driver must not overfill the queue */
 	EFSYS_ASSERT3U(added - completed + n, <=,
 	    EFX_RXQ_LIMIT(erp->er_mask + 1));
@@ -689,7 +689,7 @@ ef10_rx_qpush(
 	efx_dword_t dword;
 
 	/* Hardware has alignment restriction for WPTR */
-	wptr = P2ALIGN(added, EF10_RX_WPTR_ALIGN);
+	wptr = EFX_P2ALIGN(unsigned int, added, EF10_RX_WPTR_ALIGN);
 	if (pushed == wptr)
 		return;
 
@@ -721,7 +721,14 @@ ef10_rx_qflush(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+	/*
+	 * EALREADY is not an error, but indicates that the MC has rebooted and
+	 * that the RXQ has already been destroyed. Callers need to know that
+	 * the RXQ flush has completed to avoid waiting until timeout for a
+	 * flush done event that will not be delivered.
+	 */
+	if (rc != EALREADY)
+		EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }

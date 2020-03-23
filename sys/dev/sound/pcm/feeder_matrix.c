@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -53,7 +52,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder_matrix.c 317794 2017-05-04 14:50:25Z pfg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder_matrix.c 331722 2018-03-29 02:50:57Z eadler $");
 #endif
 
 #define FEEDMATRIX_RESERVOIR	(SND_CHN_MAX * PCM_32_BPS)

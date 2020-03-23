@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/ef10_tlv_layout.h 311090 2017-01-02 09:43:46Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/ef10_tlv_layout.h 311027 2017-01-01 19:30:45Z arybchik $
  */
 
 /* These structures define the layouts for the TLV items stored in static and

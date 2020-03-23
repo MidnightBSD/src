@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Mikael Hybsch
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/scd/scdreg.h 143063 2005-03-02 21:33:29Z joerg $
+ * $FreeBSD: stable/11/sys/dev/scd/scdreg.h 143063 2005-03-02 21:33:29Z joerg $
  *
  */
 

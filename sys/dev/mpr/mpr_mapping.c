@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr_mapping.c 326341 2017-11-28 19:57:16Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr_mapping.c 333415 2018-05-09 15:22:40Z mav $");
 
 /* TODO Move headers to mprvar */
 #include <sys/types.h>
@@ -2389,6 +2388,8 @@ fail:
 		 * sc->mapping_table volumes tooi
 		 */
 	}
+	for (enc_idx = 0; enc_idx < sc->num_enc_table_entries; enc_idx++)
+		_mapping_clear_enc_entry(sc->enclosure_table + enc_idx);
 	sc->num_enc_table_entries = 0;
 	return (false);
 }

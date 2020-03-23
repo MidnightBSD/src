@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/patm/if_patm_intr.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/patm/if_patm_intr.c 257176 2013-10-26 17:58:36Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -58,6 +57,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/patm/if_patm_intr.c 243857 2012-12-04 09:3
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
 #include <net/route.h>

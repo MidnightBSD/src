@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: uaudio.c,v 1.91 2004/11/05 17:46:14 kent Exp $	*/
-/*	$FreeBSD: stable/10/sys/dev/sound/usb/uaudio.c 345546 2019-03-26 13:53:33Z hselasky $ */
+/*	$FreeBSD: stable/11/sys/dev/sound/usb/uaudio.c 345545 2019-03-26 13:52:46Z hselasky $ */
 
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sound/usb/uaudio.c 345546 2019-03-26 13:53:33Z hselasky $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sound/usb/uaudio.c 345545 2019-03-26 13:52:46Z hselasky $");
 
 /*
  * USB audio specs: http://www.usb.org/developers/devclass_docs/audio10.pdf
@@ -103,19 +102,13 @@ static int uaudio_debug;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uaudio, CTLFLAG_RW, 0, "USB uaudio");
 
-SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uaudio_debug, 0, "uaudio debug level");
-
-TUNABLE_INT("hw.usb.uaudio.default_rate", &uaudio_default_rate);
-SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, default_rate, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, default_rate, CTLFLAG_RWTUN,
     &uaudio_default_rate, 0, "uaudio default sample rate");
-
-TUNABLE_INT("hw.usb.uaudio.default_bits", &uaudio_default_bits);
-SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, default_bits, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, default_bits, CTLFLAG_RWTUN,
     &uaudio_default_bits, 0, "uaudio default sample bits");
-
-TUNABLE_INT("hw.usb.uaudio.default_channels", &uaudio_default_channels);
-SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, default_channels, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uaudio, OID_AUTO, default_channels, CTLFLAG_RWTUN,
     &uaudio_default_channels, 0, "uaudio default sample channels");
 
 static int
@@ -1267,8 +1260,8 @@ uaudio_get_buffer_size(struct uaudio_chan *ch, uint8_t alt)
 {
 	struct uaudio_chan_alt *chan_alt = &ch->usb_alt[alt];
 	/* We use 2 times 8ms of buffer */
-	uint32_t buf_size = (((chan_alt->sample_rate * (UAUDIO_NFRAMES / 8)) +
-	    1000 - 1) / 1000) * chan_alt->sample_size;
+	uint32_t buf_size = chan_alt->sample_size *
+	    howmany(chan_alt->sample_rate * (UAUDIO_NFRAMES / 8), 1000);
 	return (buf_size);
 }
 
@@ -1386,8 +1379,8 @@ uaudio_configure_msg_sub(struct uaudio_softc *sc,
 	/* bytes per frame should not be zero */
 	chan->bytes_per_frame[0] =
 	    ((chan_alt->sample_rate / fps) * chan_alt->sample_size);
-	chan->bytes_per_frame[1] =
-	    (((chan_alt->sample_rate + fps - 1) / fps) * chan_alt->sample_size);
+	chan->bytes_per_frame[1] = howmany(chan_alt->sample_rate, fps) *
+	    chan_alt->sample_size;
 
 	/* setup data rate dithering, if any */
 	chan->frames_per_second = fps;
@@ -2937,7 +2930,7 @@ uaudio_mixer_register_sysctl(struct uaudio_softc *sc, device_t dev)
 
 			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 			    SYSCTL_CHILDREN(control_tree),
-			    OID_AUTO, "val", CTLTYPE_INT | CTLFLAG_RW, sc,
+			    OID_AUTO, "val", CTLTYPE_INT | CTLFLAG_RWTUN, sc,
 			    pmc->wValue[chan],
 			    uaudio_mixer_sysctl_handler, "I", "Current value");
 
@@ -6289,3 +6282,4 @@ DRIVER_MODULE_ORDERED(uaudio, uhub, uaudio_driver, uaudio_devclass, NULL, 0, SI_
 MODULE_DEPEND(uaudio, usb, 1, 1, 1);
 MODULE_DEPEND(uaudio, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(uaudio, 1);
+USB_PNP_HOST_INFO(uaudio_devs);

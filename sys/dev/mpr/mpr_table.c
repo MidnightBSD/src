@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr_table.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr_table.c 322658 2017-08-18 14:25:07Z ken $");
 
 /* Debugging tables for MPT2 */
 

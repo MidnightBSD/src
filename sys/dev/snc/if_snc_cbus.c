@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/snc/if_snc_cbus.c 242871 2012-11-10 14:58:06Z nyan $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/snc/if_snc_cbus.c 296137 2016-02-27 03:38:01Z jhibbits $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
@@ -73,7 +72,7 @@ snc_isapnp_reconfig(device_t dev)
 {
 	struct isa_device *idev = DEVTOISA(dev);
         struct isa_config config;
-	u_long start, count;
+	rman_res_t start, count;
 	int rid;
 
 	bzero(&config, sizeof(config));
@@ -148,9 +147,9 @@ snc_isa_probe(device_t dev)
 		for (port = 0x0888; port <= 0x3888; port += 0x1000) {
 			bus_set_resource(dev, SYS_RES_IOPORT, rid,
 					 port, SNEC_NREGS);
-			res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-						 0ul, ~0ul, SNEC_NREGS,
-						 0 /* !RF_ACTIVE */);
+			res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+							  &rid, SNEC_NREGS,
+							  0 /* !RF_ACTIVE */);
 			if (res) break;
 		}
 

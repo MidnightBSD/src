@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pcm/channel.h 283950 2015-06-03 15:32:43Z hselasky $
+ * $FreeBSD: stable/11/sys/dev/sound/pcm/channel.h 352326 2019-09-14 13:31:07Z hselasky $
  */
 
 struct pcmchan_caps {
@@ -412,7 +411,7 @@ extern int report_soft_matrix;
 
 #define CHN_LATENCY_MIN		0
 #define CHN_LATENCY_MAX		10
-#define CHN_LATENCY_DEFAULT	5
+#define	CHN_LATENCY_DEFAULT	2	/* 21.3ms total buffering */
 #define CHN_POLICY_MIN		CHN_LATENCY_MIN
 #define CHN_POLICY_MAX		CHN_LATENCY_MAX
 #define CHN_POLICY_DEFAULT	CHN_LATENCY_DEFAULT

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: stable/10/sys/dev/patm/if_patmvar.h 147256 2005-06-10 16:49:24Z brooks $
+ * $FreeBSD: stable/11/sys/dev/patm/if_patmvar.h 298955 2016-05-03 03:41:25Z pfg $
  *
  * Driver for IDT77252 (ABR) based cards like ProSum's.
  */
@@ -257,7 +256,7 @@ struct patm_softc {
 	struct callout		tst_callout;
 	u_int			tst_free;	/* free slots */
 	u_int			tst_reserve;	/* non-CBR reserve */
-	u_int			bwrem;		/* remaining bandwith */
+	u_int			bwrem;		/* remaining bandwidth */
 
 	/* sysctl support */
 	struct sysctl_ctx_list	sysctl_ctx;

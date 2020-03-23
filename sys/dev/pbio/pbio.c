@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2000-2004
  *          Diomidis D. Spinellis, Athens, Greece
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pbio/pbio.c 183397 2008-09-27 08:51:18Z ed $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pbio/pbio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -171,8 +170,8 @@ pbioprobe(device_t dev)
 	if (isa_get_logicalid(dev))		/* skip PnP probes */
 		return (ENXIO);
 	rid = 0;
-	scp->res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-	    0, ~0, IO_PBIOSIZE, RF_ACTIVE);
+	scp->res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+	    IO_PBIOSIZE, RF_ACTIVE);
 	if (scp->res == NULL)
 		return (ENXIO);
 
@@ -226,8 +225,8 @@ pbioattach (device_t dev)
 	sc = device_get_softc(dev);
 	unit = device_get_unit(dev);
 	rid = 0;
-	sc->res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-	    0, ~0, IO_PBIOSIZE, RF_ACTIVE);
+	sc->res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+	    IO_PBIOSIZE, RF_ACTIVE);
 	if (sc->res == NULL)
 		return (ENXIO);
 	sc->bst = rman_get_bustag(sc->res);

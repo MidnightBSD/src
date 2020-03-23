@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/ral/rt2661var.h 206358 2010-04-07 15:29:13Z rpaulo $	*/
+/*	$FreeBSD: stable/11/sys/dev/ral/rt2661var.h 345636 2019-03-28 09:50:25Z avos $	*/
 
 /*-
  * Copyright (c) 2005
@@ -27,7 +26,7 @@ struct rt2661_rx_radiotap_header {
 	uint16_t	wr_chan_flags;
 	int8_t		wr_antsignal;
 	int8_t		wr_antnoise;
-} __packed;
+} __packed __aligned(8);
 
 #define RT2661_RX_RADIOTAP_PRESENT					\
 	((1 << IEEE80211_RADIOTAP_TSFT) |				\
@@ -98,12 +97,12 @@ struct rt2661_vap {
 #define	RT2661_VAP(vap)		((struct rt2661_vap *)(vap))
 
 struct rt2661_softc {
-	struct ifnet			*sc_ifp;
+	struct ieee80211com		sc_ic;
+	struct mtx			sc_mtx;
+	struct mbufq			sc_snd;
 	device_t			sc_dev;
 	bus_space_tag_t			sc_st;
 	bus_space_handle_t		sc_sh;
-
-	struct mtx			sc_mtx;
 
 	struct callout			watchdog_ch;
 
@@ -118,6 +117,7 @@ struct rt2661_softc {
 	int                             sc_flags;
 #define	RAL_FW_LOADED		0x1
 #define	RAL_INPUT_RUNNING	0x2
+#define	RAL_RUNNING		0x4
 	int				sc_id;
 	struct ieee80211_channel	*sc_curchan;
 
@@ -157,9 +157,7 @@ struct rt2661_softc {
 	int				dwelltime;
 
 	struct rt2661_rx_radiotap_header sc_rxtap;
-	int				sc_rxtap_len;
 	struct rt2661_tx_radiotap_header sc_txtap;
-	int				sc_txtap_len;
 };
 
 int	rt2661_attach(device_t, int);

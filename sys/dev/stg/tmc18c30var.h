@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/stg/tmc18c30var.h 240325 2012-09-10 18:49:49Z jhb $	*/
+/*	$FreeBSD: stable/11/sys/dev/stg/tmc18c30var.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$NecBSD: tmc18c30var.h,v 1.12.18.2 2001/06/13 05:51:23 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -45,10 +44,6 @@
 struct stg_softc {
 	struct scsi_low_softc sc_sclow;	/* generic data */
 
-	bus_space_tag_t sc_iot;
-	bus_space_tag_t sc_memt;
-	bus_space_handle_t sc_ioh;
-
 	int port_rid;
 	int irq_rid;
 	int mem_rid;
@@ -89,7 +84,7 @@ struct stg_targ_info {
 /*****************************************************************
  * Proto
  *****************************************************************/
-int stgprobesubr(bus_space_tag_t, bus_space_handle_t, u_int);
+int stgprobesubr(struct resource *, u_int);
 void stgattachsubr(struct stg_softc *);
 int stgintr(void *);
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Neterion, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/nxge/include/xgehal-mgmt.h 173139 2007-10-29 14:19:32Z rwatson $
+ * $FreeBSD: stable/11/sys/dev/nxge/include/xgehal-mgmt.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef XGE_HAL_MGMT_H

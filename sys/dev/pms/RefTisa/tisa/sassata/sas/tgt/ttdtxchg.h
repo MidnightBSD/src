@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *

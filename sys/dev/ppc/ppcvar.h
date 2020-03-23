@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2000 Nicolas Souchu
  * Copyright (c) 2001 Alcove - Nicolas Souchu
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ppc/ppcvar.h 188173 2009-02-05 19:31:55Z imp $
+ * $FreeBSD: stable/11/sys/dev/ppc/ppcvar.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -42,7 +41,7 @@ u_char ppc_io(device_t, int, u_char *, int, u_char);
 int ppc_exec_microseq(device_t, struct ppb_microseq **);
 
 struct resource *ppc_alloc_resource(device_t bus, device_t child, int type,
-    int *rid, u_long start, u_long end, u_long count, u_int flags);
+    int *rid, rman_res_t start, rman_res_t end, rman_res_t count, u_int flags);
 int ppc_release_resource(device_t bus, device_t child, int type, int rid,
     struct resource *r);
 int ppc_reset_epp(device_t);

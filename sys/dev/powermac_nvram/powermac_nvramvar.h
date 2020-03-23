@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/powermac_nvram/powermac_nvramvar.h 212240 2010-09-05 20:04:02Z mav $
+ * $FreeBSD: stable/11/sys/dev/powermac_nvram/powermac_nvramvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_POWERPC_POWERMAC_POWERMAC_NVRAMVAR_H_

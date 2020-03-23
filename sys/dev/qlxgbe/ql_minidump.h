@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -29,7 +28,7 @@
 /*
  * File: ql_minidump.h
  *
- * $FreeBSD: stable/10/sys/dev/qlxgbe/ql_minidump.h 305490 2016-09-06 19:27:00Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlxgbe/ql_minidump.h 305487 2016-09-06 19:15:44Z davidcs $
  */
 #ifndef _QL_MINIDUMP_H_
 #define _QL_MINIDUMP_H_

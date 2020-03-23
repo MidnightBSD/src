@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * Copyright (c) 1997-2000 Nicolas Souchu
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppc/ppc_puc.c 187576 2009-01-21 23:10:06Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppc/ppc_puc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

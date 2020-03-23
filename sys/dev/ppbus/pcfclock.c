@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Sascha Schumann. All rights reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/pcfclock.c 198358 2009-10-22 06:51:29Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/pcfclock.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_pcfclock.h"
 

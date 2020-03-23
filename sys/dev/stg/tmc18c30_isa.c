@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NecBSD: tmc18c30_pisa.c,v 1.22 1998/11/26 01:59:21 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/stg/tmc18c30_isa.c 240325 2012-09-10 18:49:49Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/stg/tmc18c30_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,7 +79,7 @@ stg_isa_probe(device_t dev)
 
 	stg_release_resource(dev);
 
-	return(0);
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
@@ -96,8 +95,8 @@ stg_isa_attach(device_t dev)
 		return(error);
 	}
 
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY,
-			       NULL, stg_intr, (void *)sc, &sc->stg_intrhand);
+	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY |
+	    INTR_MPSAFE, NULL, stg_intr, sc, &sc->stg_intrhand);
 	if (error) {
 		stg_release_resource(dev);
 		return(error);

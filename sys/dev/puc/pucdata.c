@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/puc/pucdata.c 318151 2017-05-10 20:12:23Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/puc/pucdata.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PCI "universal" communications card driver configuration data (used to

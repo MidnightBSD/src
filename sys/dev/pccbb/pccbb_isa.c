@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 M. Warner Losh.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pccbb/pccbb_isa.c 284034 2015-06-05 17:05:09Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pccbb/pccbb_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,13 +74,12 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/pccbb/pccbb_isa.c 284034 2015-06-05 17:05:
 static SYSCTL_NODE(_hw, OID_AUTO, pcic, CTLFLAG_RD, 0, "PCIC parameters");
 
 static int isa_intr_mask = EXCA_INT_MASK_ALLOWED;
-TUNABLE_INT("hw.cbb.intr_mask", &isa_intr_mask);
-SYSCTL_INT(_hw_pcic, OID_AUTO, intr_mask, CTLFLAG_RD, &isa_intr_mask, 0,
-    "Mask of allowable interrupts for this laptop.  The default is generally\n\
-correct, but some laptops do not route all the IRQ pins to the bridge to\n\
-save wires.  Sometimes you need a more restrictive mask because some of the\n\
-hardware in your laptop may not have a driver so its IRQ might not be\n\
-allocated.");
+SYSCTL_INT(_hw_pcic, OID_AUTO, intr_mask, CTLFLAG_RDTUN, &isa_intr_mask, 0,
+    "Mask of allowable interrupts for this laptop.  The default is generally"
+    " correct, but some laptops do not route all the IRQ pins to the bridge to"
+    " save wires.  Sometimes you need a more restrictive mask because some of"
+    " the hardware in your laptop may not have a driver so its IRQ might not be"
+    " allocated.");
 
 /*
  * CL-PD6722's VSENSE method
@@ -90,16 +88,15 @@ allocated.");
  *     2: 6729's method
  */
 int pcic_pd6722_vsense = 1;
-TUNABLE_INT("hw.pcic.pd6722_vsense", &pcic_pd6722_vsense);
 SYSCTL_INT(_hw_pcic, OID_AUTO, pd6722_vsense, CTLFLAG_RDTUN,
     &pcic_pd6722_vsense, 1,
-    "Select CL-PD6722's VSENSE method.  VSENSE is used to determine the\n\
-volatage of inserted cards.  The CL-PD6722 has two methods to determine the\n\
-voltage of the card.  0 means assume a 5.0V card and do not check.  1 means\n\
-use the same method that the CL-PD6710 uses (default).  2 means use the\n\
-same method as the CL-PD6729.  2 is documented in the datasheet as being\n\
-the correct way, but 1 seems to give better results on more laptops.");
-
+    "Select CL-PD6722's VSENSE method.  VSENSE is used to determine the"
+    " voltage of inserted cards.  The CL-PD6722 has two methods to determine"
+    " the voltage of the card.  0 means assume a 5.0V card and do not check.  1"
+    " means use the same method that the CL-PD6710 uses (default).  2 means use"
+    " the same method as the CL-PD6729.  2 is documented in the datasheet as"
+    " being the correct way, but 1 seems to give better results on more"
+    " laptops."); 
 /*****************************************************************************
  * End of configurable parameters.
  *****************************************************************************/

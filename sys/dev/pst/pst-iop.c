@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pst/pst-iop.c 230132 2012-01-15 13:23:18Z uqs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pst/pst-iop.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

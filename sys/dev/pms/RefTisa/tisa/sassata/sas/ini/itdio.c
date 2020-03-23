@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *
@@ -28,7 +27,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/tisa/sassata/sas/ini/itdio.c 345507 2019-03-25 17:04:14Z dab $");
 #include <dev/pms/config.h>
 
 #include <dev/pms/freebsd/driver/common/osenv.h>
@@ -1821,12 +1820,6 @@ tiNumOfLunIOCTLreq(
       break;
     }
     tdIORequestBody = (tdIORequestBody_t *)tiRequestBody;
-    
-    if(tdIORequestBody == agNULL)
-    {
-      status = IOCTL_CALL_FAIL;
-      break;
-    }
     tdIORequestBody->tiIORequest = tiIORequest;
     
     /* save context if we need to abort later */
@@ -1881,7 +1874,9 @@ tiNumOfLunIOCTLreq(
       
     agSSPFrame->dataLength = REPORT_LUN_LEN;
     agSSPFrame->agSgl.len =	sizeof(agsaSSPCmdInfoUnit_t);
-    
+    agSSPFrame->agSgl.extReserved = 0;
+    CLEAR_ESGL_EXTEND(agSSPFrame->agSgl.extReserved);
+
     status = saSSPStart(agRoot, agIORequest, 0, agDevHandle, agRequestType,agSASRequestBody,agNULL,
     										   &ossaSSPIoctlCompleted);
     if(status != AGSA_RC_SUCCESS)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/puc/puc_cfg.h 251862 2013-06-17 20:11:04Z pluknet $
+ * $FreeBSD: stable/11/sys/dev/puc/puc_cfg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_PUC_CFG_H_

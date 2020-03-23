@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2008-2013 Solarflare Communications Inc.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/efx_regs_mcdi.h 311089 2017-01-02 09:42:47Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/efx_regs_mcdi.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SIENA_MC_DRIVER_PCOL_H

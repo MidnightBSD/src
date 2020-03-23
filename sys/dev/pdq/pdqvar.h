@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pdqvar.h,v 1.27 2000/05/03 19:17:54 thorpej Exp $	*/
 
 /*-
@@ -25,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Id: pdqvar.h,v 1.21 1997/03/21 21:16:04 thomas Exp
- * $FreeBSD: stable/10/sys/dev/pdq/pdqvar.h 243857 2012-12-04 09:32:43Z glebius $
+ * $FreeBSD: stable/11/sys/dev/pdq/pdqvar.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -217,8 +216,7 @@ typedef struct mbuf PDQ_OS_DATABUF_T;
     PDQ_OS_DATABUF_T *x_m0; \
     MGETHDR(x_m0, M_NOWAIT, MT_DATA); \
     if (x_m0 != NULL) { \
-	MCLGET(x_m0, M_NOWAIT);	\
-	if ((x_m0->m_flags & M_EXT) == 0) { \
+	if (!(MCLGET(x_m0, M_NOWAIT))) { \
 	    m_free(x_m0); \
 	    (b) = NULL; \
 	} else { \

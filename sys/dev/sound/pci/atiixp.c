@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -68,7 +67,7 @@
 
 #include <dev/sound/pci/atiixp.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/atiixp.c 314667 2017-03-04 13:03:31Z avg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/atiixp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define ATI_IXP_DMA_RETRY_MAX	100
 
@@ -1098,7 +1097,7 @@ atiixp_chip_post_init(void *arg)
 	    "polling", CTLTYPE_INT | CTLFLAG_RW, sc->dev, sizeof(sc->dev),
 	    sysctl_atiixp_polling, "I", "Enable polling mode");
 
-	snprintf(status, SND_STATUSLEN, "at memory 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at memory 0x%jx irq %jd %s",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
 	    PCM_KLDSTRING(snd_atiixp));
 
@@ -1147,13 +1146,14 @@ atiixp_release_resource(struct atiixp_info *sc)
 		bus_dma_tag_destroy(sc->parent_dmat);
 		sc->parent_dmat = NULL;
 	}
-	if (sc->sgd_dmamap)
+	if (sc->sgd_addr) {
 		bus_dmamap_unload(sc->sgd_dmat, sc->sgd_dmamap);
+		sc->sgd_addr = 0;
+	}
 	if (sc->sgd_table) {
 		bus_dmamem_free(sc->sgd_dmat, sc->sgd_table, sc->sgd_dmamap);
 		sc->sgd_table = NULL;
 	}
-	sc->sgd_dmamap = NULL;
 	if (sc->sgd_dmat) {
 		bus_dma_tag_destroy(sc->sgd_dmat);
 		sc->sgd_dmat = NULL;

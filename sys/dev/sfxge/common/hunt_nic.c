@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/hunt_nic.c 311768 2017-01-09 08:12:22Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/hunt_nic.c 342407 2018-12-25 06:45:39Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -318,6 +317,12 @@ hunt_board_cfg(
 	encp->enc_evq_limit = 1024;
 	encp->enc_rxq_limit = EFX_RXQ_LIMIT_TARGET;
 	encp->enc_txq_limit = EFX_TXQ_LIMIT_TARGET;
+
+	/*
+	 * The workaround for bug35388 uses the top bit of transmit queue
+	 * descriptor writes, preventing the use of 4096 descriptor TXQs.
+	 */
+	encp->enc_txq_max_ndescs = encp->enc_bug35388_workaround ? 2048 : 4096;
 
 	encp->enc_buftbl_limit = 0xFFFFFFFF;
 

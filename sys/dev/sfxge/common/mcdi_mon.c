@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,10 +29,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/mcdi_mon.c 311082 2017-01-02 09:34:45Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/mcdi_mon.c 342445 2018-12-25 07:27:45Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
+#include "mcdi_mon.h"
 
 #if EFSYS_OPT_MON_MCDI
 
@@ -266,7 +266,6 @@ mcdi_mon_ev(
 	__out				efx_mon_stat_value_t *valuep)
 {
 	efx_mcdi_iface_t *emip = &(enp->en_mcdi.em_emip);
-	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
 	uint16_t port_mask;
 	uint16_t sensor;
 	uint16_t state;
@@ -282,11 +281,13 @@ mcdi_mon_ev(
 	value = (uint16_t)MCDI_EV_FIELD(eqp, SENSOREVT_VALUE);
 
 	/* Hardware must support this MCDI sensor */
-	EFSYS_ASSERT3U(sensor, <, (8 * encp->enc_mcdi_sensor_mask_size));
+	EFSYS_ASSERT3U(sensor, <,
+	    (8 * enp->en_nic_cfg.enc_mcdi_sensor_mask_size));
 	EFSYS_ASSERT((sensor % MCDI_MON_PAGE_SIZE) != MC_CMD_SENSOR_PAGE0_NEXT);
-	EFSYS_ASSERT(encp->enc_mcdi_sensor_maskp != NULL);
-	EFSYS_ASSERT((encp->enc_mcdi_sensor_maskp[sensor / MCDI_MON_PAGE_SIZE] &
-		(1U << (sensor % MCDI_MON_PAGE_SIZE))) != 0);
+	EFSYS_ASSERT(enp->en_nic_cfg.enc_mcdi_sensor_maskp != NULL);
+	EFSYS_ASSERT(
+	    (enp->en_nic_cfg.enc_mcdi_sensor_maskp[sensor/MCDI_MON_PAGE_SIZE] &
+	    (1U << (sensor % MCDI_MON_PAGE_SIZE))) != 0);
 
 	/* But we don't have to understand it */
 	if (sensor >= EFX_ARRAY_SIZE(mcdi_sensor_map)) {
@@ -318,9 +319,15 @@ efx_mcdi_read_sensors(
 	__in		uint32_t size)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_READ_SENSORS_EXT_IN_LEN,
-			    MC_CMD_READ_SENSORS_EXT_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_READ_SENSORS_EXT_IN_LEN,
+		MC_CMD_READ_SENSORS_EXT_OUT_LEN);
 	uint32_t addr_lo, addr_hi;
+	efx_rc_t rc;
+
+	if (EFSYS_MEM_SIZE(esmp) < size) {
+		rc = EINVAL;
+		goto fail1;
+	}
 
 	req.emr_cmd = MC_CMD_READ_SENSORS;
 	req.emr_in_buf = payload;
@@ -338,6 +345,11 @@ efx_mcdi_read_sensors(
 	efx_mcdi_execute(enp, &req);
 
 	return (req.emr_rc);
+
+fail1:
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	return (rc);
 }
 
 static	__checkReturn	efx_rc_t
@@ -346,8 +358,8 @@ efx_mcdi_sensor_info_npages(
 	__out		uint32_t *npagesp)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_SENSOR_INFO_EXT_IN_LEN,
-			    MC_CMD_SENSOR_INFO_OUT_LENMAX)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_SENSOR_INFO_EXT_IN_LEN,
+		MC_CMD_SENSOR_INFO_OUT_LENMAX);
 	int page;
 	efx_rc_t rc;
 
@@ -390,12 +402,17 @@ efx_mcdi_sensor_info(
 	__in			size_t npages)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_SENSOR_INFO_EXT_IN_LEN,
-			    MC_CMD_SENSOR_INFO_OUT_LENMAX)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_SENSOR_INFO_EXT_IN_LEN,
+		MC_CMD_SENSOR_INFO_OUT_LENMAX);
 	uint32_t page;
 	efx_rc_t rc;
 
 	EFSYS_ASSERT(sensor_maskp != NULL);
+
+	if (npages < 1) {
+		rc = EINVAL;
+		goto fail1;
+	}
 
 	for (page = 0; page < npages; page++) {
 		uint32_t mask;
@@ -413,7 +430,7 @@ efx_mcdi_sensor_info(
 
 		if (req.emr_rc != 0) {
 			rc = req.emr_rc;
-			goto fail1;
+			goto fail2;
 		}
 
 		mask = MCDI_OUT_DWORD(req, SENSOR_INFO_OUT_MASK);
@@ -421,18 +438,20 @@ efx_mcdi_sensor_info(
 		if ((page != (npages - 1)) &&
 		    ((mask & (1U << MC_CMD_SENSOR_PAGE0_NEXT)) == 0)) {
 			rc = EINVAL;
-			goto fail2;
+			goto fail3;
 		}
 		sensor_maskp[page] = mask;
 	}
 
 	if (sensor_maskp[npages - 1] & (1U << MC_CMD_SENSOR_PAGE0_NEXT)) {
 		rc = EINVAL;
-		goto fail3;
+		goto fail4;
 	}
 
 	return (0);
 
+fail4:
+	EFSYS_PROBE(fail4);
 fail3:
 	EFSYS_PROBE(fail3);
 fail2:

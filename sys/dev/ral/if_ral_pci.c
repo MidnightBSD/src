@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, 2006
  *	Damien Bergamini <damien.bergamini@free.fr>
@@ -17,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ral/if_ral_pci.c 279157 2015-02-22 15:27:02Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ral/if_ral_pci.c 352563 2019-09-20 19:56:55Z mizhka $");
 
 /*
  * PCI/Cardbus front-end for the Ralink RT2560/RT2561/RT2561S/RT2661 driver.
@@ -29,6 +28,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/ral/if_ral_pci.c 279157 2015-02-22 15:27:0
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/rman.h>
@@ -99,6 +99,7 @@ static const struct ral_pci_ident ral_pci_ids[] = {
 	{ 0x1814, 0x5390, "Ralink Technology RT5390" },
 	{ 0x1814, 0x5392, "Ralink Technology RT5392" },
 	{ 0x1814, 0x539a, "Ralink Technology RT5390" },
+	{ 0x1814, 0x539b, "Ralink Technology RT5390" },
 	{ 0x1814, 0x539f, "Ralink Technology RT5390" },
 	{ 0x1a3b, 0x1059, "AWT RT2890" },
 	{ 0, 0, NULL }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/via82c686.h 192457 2009-05-20 18:31:11Z joel $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/via82c686.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VIA_H

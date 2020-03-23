@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: puc.c,v 1.7 2000/07/29 17:43:38 jlam Exp $	*/
 
 /*-
@@ -59,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/puc/puc_pci.c 287926 2015-09-17 17:56:23Z rstone $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/puc/puc_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,8 +80,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/puc/puc_pci.c 287926 2015-09-17 17:56:23Z 
 #include <dev/puc/puc_bfe.h>
 
 static int puc_msi_disable;
-TUNABLE_INT("hw.puc.msi_disable", &puc_msi_disable);
-SYSCTL_INT(_hw_puc, OID_AUTO, msi_disable, CTLFLAG_RD | CTLFLAG_TUN,
+SYSCTL_INT(_hw_puc, OID_AUTO, msi_disable, CTLFLAG_RDTUN,
     &puc_msi_disable, 0, "Disable use of MSI interrupts by puc(9)");
 
 static const struct puc_cfg *

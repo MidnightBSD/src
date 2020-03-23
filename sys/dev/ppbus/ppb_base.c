@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/ppb_base.c 305555 2016-09-07 19:02:47Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/ppb_base.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/lock.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pcm/matrix_map.h 243138 2012-11-16 07:05:57Z mav $
+ * $FreeBSD: stable/11/sys/dev/sound/pcm/matrix_map.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SND_MATRIX_MAP_H_

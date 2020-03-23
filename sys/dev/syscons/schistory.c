@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * Copyright (c) 1992-1998 Søren Schmidt
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/schistory.c 239696 2012-08-25 23:59:31Z gonzo $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/syscons/schistory.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_syscons.h"
 

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/pccard/pccard_cis.h 147962 2005-07-13 14:59:06Z imp $ */
+/* $FreeBSD: stable/11/sys/dev/pccard/pccard_cis.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.

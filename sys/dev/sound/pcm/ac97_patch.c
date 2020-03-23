@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Orion Hodson
  * All rights reserved.
@@ -33,7 +32,7 @@
 #include <dev/sound/pcm/ac97.h>
 #include <dev/sound/pcm/ac97_patch.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/ac97_patch.c 193640 2009-06-07 19:12:08Z ariff $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/ac97_patch.c 331722 2018-03-29 02:50:57Z eadler $");
 
 void ad1886_patch(struct ac97_info* codec)
 {

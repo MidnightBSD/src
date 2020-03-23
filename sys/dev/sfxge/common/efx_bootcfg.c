@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/efx_bootcfg.c 311499 2017-01-06 07:37:06Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/efx_bootcfg.c 342432 2018-12-25 07:12:08Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -147,7 +146,7 @@ efx_bootcfg_verify(
 	size_t used = 0;
 	efx_rc_t rc;
 
-	/* Start parsing tags immediatly after the checksum */
+	/* Start parsing tags immediately after the checksum */
 	for (offset = 1; offset < size; ) {
 		uint8_t tag;
 		uint8_t length;
@@ -294,7 +293,7 @@ fail1:
 				efx_rc_t
 efx_bootcfg_read(
 	__in			efx_nic_t *enp,
-	__out_bcount(size)	caddr_t data,
+	__out_bcount(size)	uint8_t *data,
 	__in			size_t size)
 {
 	uint8_t *payload = NULL;
@@ -357,10 +356,10 @@ efx_bootcfg_read(
 		goto fail7;
 
 	/* Verify that the area is correctly formatted and checksummed */
-	rc = efx_bootcfg_verify(enp, (caddr_t)payload, sector_length,
+	rc = efx_bootcfg_verify(enp, payload, sector_length,
 	    &used_bytes);
 	if (rc != 0 || used_bytes == 0) {
-		payload[0] = (uint8_t)~DHCP_END;
+		payload[0] = (uint8_t)(~DHCP_END & 0xff);
 		payload[1] = DHCP_END;
 		used_bytes = 2;
 	}
@@ -434,7 +433,7 @@ fail1:
 				efx_rc_t
 efx_bootcfg_write(
 	__in			efx_nic_t *enp,
-	__in_bcount(size)	caddr_t data,
+	__in_bcount(size)	uint8_t *data,
 	__in			size_t size)
 {
 	uint8_t *partn_data;

@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * $FreeBSD: stable/10/sys/dev/stg/tmc18c30.h 194023 2009-06-11 17:14:28Z avg $
+ * $FreeBSD: stable/11/sys/dev/stg/tmc18c30.h 194023 2009-06-11 17:14:28Z avg $
  */
 
 extern devclass_t stg_devclass;

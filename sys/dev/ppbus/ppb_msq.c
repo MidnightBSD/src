@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Nicolas Souchu
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/ppb_msq.c 227814 2011-11-22 11:35:24Z attilio $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/ppb_msq.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <machine/stdarg.h>
 
 #include <sys/param.h>

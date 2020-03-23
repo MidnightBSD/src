@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: yukonreg.h,v 1.2 2003/08/12 05:23:06 nate Exp $ */
 /*-
  * Copyright (c) 2003 Nathan L. Binkert <binkertn@umich.edu>
@@ -15,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/sys/dev/sk/yukonreg.h 158070 2006-04-27 05:59:09Z yongari $
+ * $FreeBSD: stable/11/sys/dev/sk/yukonreg.h 298955 2016-05-03 03:41:25Z pfg $
  */
 
 /* General Purpose Status Register (GPSR) */
@@ -166,7 +165,7 @@
 /* SMI Data Register (SMIDR) */
 #define YUKON_SMIDR		0x0084
 
-/* PHY Addres Register (PAR) */
+/* PHY Address Register (PAR) */
 #define YUKON_PAR		0x0088
 
 #define YU_PAR_MIB_CLR		0x0020	/* MIB Counters Clear Mode */

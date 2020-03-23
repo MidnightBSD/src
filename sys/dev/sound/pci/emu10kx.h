@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <gandalf@vilnya.demon.co.uk>
  * Copyright (c) 2003-2006 Yuriy Tsibizov <yuriy.tsibizov@gfk.ru>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/emu10kx.h 229981 2012-01-11 21:17:14Z pfg $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/emu10kx.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef EMU10KX_H

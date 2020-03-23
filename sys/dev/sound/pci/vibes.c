@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Orion Hodson <O.Hodson@cs.ucl.ac.uk>
  * All rights reserved.
@@ -43,7 +42,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/vibes.c 312398 2017-01-18 23:23:46Z marius $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/vibes.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* ------------------------------------------------------------------------- */
 /* Constants */
@@ -722,22 +721,21 @@ sv_probe(device_t dev)
 static int
 sv_attach(device_t dev) {
 	struct sc_info	*sc;
+	rman_res_t	count, midi_start, games_start;
 	u_int32_t	data;
 	char		status[SND_STATUSLEN];
-	u_long		midi_start, games_start, count, sdmaa, sdmac, ml, mu;
+	u_long		sdmaa, sdmac, ml, mu;
 
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->dev = dev;
 
 	pci_enable_busmaster(dev);
 
-#if __FreeBSD_version > 500000
         if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0) {
                 device_printf(dev, "chip is in D%d power mode "
                               "-- setting to D0\n", pci_get_powerstate(dev));
                 pci_set_powerstate(dev, PCI_POWERSTATE_D0);
         }
-#endif
 	sc->enh_rid  = SV_PCI_ENHANCED;
 	sc->enh_type = SYS_RES_IOPORT;
 	sc->enh_reg  = bus_alloc_resource_any(dev, sc->enh_type,
@@ -760,8 +758,8 @@ sv_attach(device_t dev) {
 
 	/* Register IRQ handler */
 	sc->irqid = 0;
-        sc->irq   = bus_alloc_resource(dev, SYS_RES_IRQ, &sc->irqid,
-				       0, ~0, 1, RF_ACTIVE | RF_SHAREABLE);
+        sc->irq   = bus_alloc_resource_any(dev, SYS_RES_IRQ, &sc->irqid,
+					   RF_ACTIVE | RF_SHAREABLE);
         if (!sc->irq ||
 	    snd_setup_intr(dev, sc->irq, 0, sv_intr, sc, &sc->ih)) {
                 device_printf(dev, "sv_attach: Unable to map interrupt\n");
@@ -817,7 +815,7 @@ sv_attach(device_t dev) {
 	    ((mu - ml) % 0x200)) {
 		device_printf(dev, "sv_attach: resource assumptions not met "
 			      "(midi 0x%08lx, games 0x%08lx)\n",
-			      midi_start, games_start);
+			      (u_long)midi_start, (u_long)games_start);
 		goto fail;
 	}
 
@@ -876,7 +874,7 @@ sv_attach(device_t dev) {
         pcm_addchan(dev, PCMDIR_PLAY, &svpchan_class, sc);
         pcm_addchan(dev, PCMDIR_REC,  &svrchan_class, sc);
 
-        snprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
+        snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
                  rman_get_start(sc->enh_reg),  rman_get_start(sc->irq),PCM_KLDSTRING(snd_vibes));
         pcm_setstatus(dev, status);
 

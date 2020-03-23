@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/efx_phy_ids.h 301388 2016-06-04 17:08:34Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/efx_phy_ids.h 300607 2016-05-24 12:16:57Z arybchik $
  */
 
 #ifndef	_SYS_EFX_PHY_IDS_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 by Coleman Kane <cokane@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/tdfx/tdfx_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/tdfx/tdfx_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* 3dfx driver for FreeBSD 4.x - Finished 11 May 2000, 12:25AM ET
  *
@@ -128,7 +127,7 @@ tdfx_probe(device_t dev)
 	case PCI_DEVICE_3DFX_VOODOO1:
 		device_set_desc(dev, "3DFX Voodoo Graphics 3D Accelerator");
 		return BUS_PROBE_DEFAULT;
-	};
+	}
 
 	return ENXIO;
 }

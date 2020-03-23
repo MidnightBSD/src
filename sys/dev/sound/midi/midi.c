@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mathew Kanner
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -36,7 +35,7 @@
   */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sound/midi/midi.c 299632 2016-05-13 09:01:20Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sound/midi/midi.c 351265 2019-08-20 17:54:18Z markj $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -667,7 +666,7 @@ midi_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 	         * from a previous session
 	         */
 		MIDIQ_CLEAR(m->inq);
-	};
+	}
 
 	if (flags & FWRITE)
 		m->flags |= M_TX;
@@ -1119,7 +1118,7 @@ midisynth_open(void *n, void *arg, int flags)
 	         */
 		MIDIQ_CLEAR(m->inq);
 		m->rchan = 0;
-	};
+	}
 
 	if (flags & FWRITE) {
 		m->flags |= M_TX;
@@ -1456,18 +1455,14 @@ midi_modevent(module_t mod, int type, void *data)
 	switch (type) {
 	case MOD_LOAD:
 		retval = midi_load();
-#if 0
 		if (retval == 0)
 			retval = seq_modevent(mod, type, data);
-#endif
 		break;
 
 	case MOD_UNLOAD:
 		retval = midi_unload();
-#if 0
 		if (retval == 0)
 			retval = seq_modevent(mod, type, data);
-#endif
 		break;
 
 	default:
@@ -1480,7 +1475,7 @@ midi_modevent(module_t mod, int type, void *data)
 kobj_t
 midimapper_addseq(void *arg1, int *unit, void **cookie)
 {
-	unit = 0;
+	unit = NULL;
 
 	return (kobj_t)arg1;
 }

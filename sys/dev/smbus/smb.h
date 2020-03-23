@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/smbus/smb.h 162234 2006-09-11 20:52:41Z jhb $
+ * $FreeBSD: stable/11/sys/dev/smbus/smb.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef __SMB_H
@@ -33,21 +32,24 @@
 #include <sys/ioccom.h>
 
 struct smbcmd {
-	char cmd;
-	int count;
-	u_char slave;
+	u_char cmd;
+	u_char reserved;
+	u_short op;
 	union {
-		char byte;
-		short word;
-
-		char *byte_ptr;
-		short *word_ptr;
-
-		struct {
-			short sdata;
-			short *rdata;
-		} process;
-	} data;
+		char	byte;
+		char	buf[2];
+		short	word;
+	} wdata;
+	union {
+		char	byte;
+		char	buf[2];
+		short	word;
+	} rdata;
+	int  slave;
+	char *wbuf;	/* use wdata if NULL */
+	int  wcount;
+	char *rbuf;	/* use rdata if NULL */
+	int  rcount;
 };
 
 /*
@@ -61,11 +63,11 @@ struct smbcmd {
 #define SMB_RECVB	_IOWR('i', 4, struct smbcmd)
 #define SMB_WRITEB	_IOW('i', 5, struct smbcmd)
 #define SMB_WRITEW	_IOW('i', 6, struct smbcmd)
-#define SMB_READB	_IOW('i', 7, struct smbcmd)
-#define SMB_READW	_IOW('i', 8, struct smbcmd)
-#define SMB_PCALL	_IOW('i', 9, struct smbcmd)
+#define SMB_READB	_IOWR('i', 7, struct smbcmd)
+#define SMB_READW	_IOWR('i', 8, struct smbcmd)
+#define SMB_PCALL	_IOWR('i', 9, struct smbcmd)
 #define SMB_BWRITE	_IOW('i', 10, struct smbcmd)
-#define SMB_OLD_BREAD	_IOW('i', 11, struct smbcmd)
 #define SMB_BREAD	_IOWR('i', 11, struct smbcmd)
+#define SMB_OLD_TRANS	_IOWR('i', 12, struct smbcmd)
 
 #endif

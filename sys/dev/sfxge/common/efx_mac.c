@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/efx_mac.c 311080 2017-01-02 09:32:45Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/efx_mac.c 342437 2018-12-25 07:15:51Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -44,7 +43,7 @@ siena_mac_multicast_list_set(
 #endif /* EFSYS_OPT_SIENA */
 
 #if EFSYS_OPT_SIENA
-static const efx_mac_ops_t	__efx_siena_mac_ops = {
+static const efx_mac_ops_t	__efx_mac_siena_ops = {
 	siena_mac_poll,				/* emo_poll */
 	siena_mac_up,				/* emo_up */
 	siena_mac_reconfigure,			/* emo_addr_set */
@@ -67,7 +66,7 @@ static const efx_mac_ops_t	__efx_siena_mac_ops = {
 #endif	/* EFSYS_OPT_SIENA */
 
 #if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD
-static const efx_mac_ops_t	__efx_ef10_mac_ops = {
+static const efx_mac_ops_t	__efx_mac_ef10_ops = {
 	ef10_mac_poll,				/* emo_poll */
 	ef10_mac_up,				/* emo_up */
 	ef10_mac_addr_set,			/* emo_addr_set */
@@ -730,15 +729,8 @@ efx_mac_stats_upload(
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PORT);
 	EFSYS_ASSERT(emop != NULL);
 
-	/*
-	 * Don't assert !ep_mac_stats_pending, because the client might
-	 * have failed to finalise statistics when previously stopping
-	 * the port.
-	 */
 	if ((rc = emop->emo_stats_upload(enp, esmp)) != 0)
 		goto fail1;
-
-	epp->ep_mac_stats_pending = B_TRUE;
 
 	return (0);
 
@@ -799,8 +791,6 @@ efx_mac_stats_update(
 	EFSYS_ASSERT(emop != NULL);
 
 	rc = emop->emo_stats_update(enp, esmp, essp, generationp);
-	if (rc == 0)
-		epp->ep_mac_stats_pending = B_FALSE;
 
 	return (rc);
 }
@@ -819,21 +809,21 @@ efx_mac_select(
 	switch (enp->en_family) {
 #if EFSYS_OPT_SIENA
 	case EFX_FAMILY_SIENA:
-		emop = &__efx_siena_mac_ops;
+		emop = &__efx_mac_siena_ops;
 		type = EFX_MAC_SIENA;
 		break;
 #endif /* EFSYS_OPT_SIENA */
 
 #if EFSYS_OPT_HUNTINGTON
 	case EFX_FAMILY_HUNTINGTON:
-		emop = &__efx_ef10_mac_ops;
+		emop = &__efx_mac_ef10_ops;
 		type = EFX_MAC_HUNTINGTON;
 		break;
 #endif /* EFSYS_OPT_HUNTINGTON */
 
 #if EFSYS_OPT_MEDFORD
 	case EFX_FAMILY_MEDFORD:
-		emop = &__efx_ef10_mac_ops;
+		emop = &__efx_mac_ef10_ops;
 		type = EFX_MAC_MEDFORD;
 		break;
 #endif /* EFSYS_OPT_MEDFORD */

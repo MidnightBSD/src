@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/sound/pci/cs461x_dsp.h 230897 2012-02-01 21:38:01Z pfg $ */
+/* $FreeBSD: stable/11/sys/dev/sound/pci/cs461x_dsp.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (C) 1996-2008, 4Front Technologies
  * All rights reserved.

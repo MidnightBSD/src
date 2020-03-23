@@ -23,8 +23,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/smbus/smbus_if.m 162234 2006-09-11 20:52:41Z jhb $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/smbus/smbus_if.m 310520 2016-12-24 14:44:25Z avg $
+#
 
 #include <sys/bus.h>
 

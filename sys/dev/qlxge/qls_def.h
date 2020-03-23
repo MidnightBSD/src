@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlxge/qls_def.h 252206 2013-06-25 17:50:22Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlxge/qls_def.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -238,7 +237,7 @@ typedef struct _qla_mcast {
 #define QLA_PAGE_SIZE		4096
 
 /*
- * Adapter structure contains the hardware independant information of the
+ * Adapter structure contains the hardware independent information of the
  * pci function.
  */
 struct qla_host {

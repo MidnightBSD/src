@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/sound/usb/uaudio.h 280591 2015-03-25 13:14:25Z hselasky $ */
+/* $FreeBSD: stable/11/sys/dev/sound/usb/uaudio.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>

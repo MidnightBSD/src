@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -46,7 +45,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hda/hdaa.c 314667 2017-03-04 13:03:31Z avg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/hda/hdaa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define hdaa_lock(devinfo)	snd_mtxlock((devinfo)->lock)
 #define hdaa_unlock(devinfo)	snd_mtxunlock((devinfo)->lock)
@@ -780,7 +779,7 @@ hdaa_sense_init(struct hdaa_devinfo *devinfo)
 					    (w->unsol < 0) ? "polling" :
 					    "unsolicited responses");
 				);
-			};
+			}
 		}
 		hdaa_presence_handler(w);
 		if (!HDA_PARAM_PIN_CAP_DP(w->wclass.pin.cap) &&
@@ -848,7 +847,7 @@ hdaa_widget_pin_patch(uint32_t config, const char *str)
 			if (bad[0] == 0) {
 				config |= ((ival << HDA_CONFIG_DEFAULTCONF_COLOR_SHIFT) &
 				    HDA_CONFIG_DEFAULTCONF_COLOR_MASK);
-			};
+			}
 			for (i = 0; i < 16; i++) {
 				if (strcasecmp(HDA_COLORS[i], value) == 0) {
 					config |= (i << HDA_CONFIG_DEFAULTCONF_COLOR_SHIFT);
@@ -873,7 +872,7 @@ hdaa_widget_pin_patch(uint32_t config, const char *str)
 				config |= ((ival << HDA_CONFIG_DEFAULTCONF_DEVICE_SHIFT) &
 				    HDA_CONFIG_DEFAULTCONF_DEVICE_MASK);
 				continue;
-			};
+			}
 			for (i = 0; i < 16; i++) {
 				if (strcasecmp(HDA_DEVS[i], value) == 0) {
 					config |= (i << HDA_CONFIG_DEFAULTCONF_DEVICE_SHIFT);
@@ -899,7 +898,7 @@ hdaa_widget_pin_patch(uint32_t config, const char *str)
 				config |= ((ival << HDA_CONFIG_DEFAULTCONF_CONNECTIVITY_SHIFT) &
 				    HDA_CONFIG_DEFAULTCONF_CONNECTIVITY_MASK);
 				continue;
-			};
+			}
 			for (i = 0; i < 4; i++) {
 				if (strcasecmp(HDA_CONNS[i], value) == 0) {
 					config |= (i << HDA_CONFIG_DEFAULTCONF_CONNECTIVITY_SHIFT);
@@ -2131,7 +2130,8 @@ hdaa_channel_start(struct hdaa_chan *ch)
 	uint32_t fmt;
 
 	fmt = hdaa_stream_format(ch);
-	ch->stripectl = fls(ch->stripecap & hdaa_allowed_stripes(fmt)) - 1;
+	ch->stripectl = fls(ch->stripecap & hdaa_allowed_stripes(fmt) &
+	    hda_get_stripes_mask(devinfo->dev)) - 1;
 	ch->sid = HDAC_STREAM_ALLOC(device_get_parent(devinfo->dev), devinfo->dev,
 	    ch->dir == PCMDIR_PLAY ? 1 : 0, fmt, ch->stripectl, &ch->dmapos);
 	if (ch->sid <= 0)

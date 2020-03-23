@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -39,7 +38,7 @@
 
 #include <mixer_if.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hdspe-pcm.c 241066 2012-09-30 09:21:10Z kevlo $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/hdspe-pcm.c 331722 2018-03-29 02:50:57Z eadler $");
 
 struct hdspe_latency {
 	uint32_t n;
@@ -669,7 +668,7 @@ hdspe_pcm_attach(device_t dev)
 		scp->chnum++;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
 	    rman_get_start(scp->sc->cs),
 	    rman_get_start(scp->sc->irq),
 	    PCM_KLDSTRING(snd_hdspe));

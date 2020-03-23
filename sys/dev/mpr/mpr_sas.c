@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr_sas.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr_sas.c 331903 2018-04-03 02:29:17Z mav $");
 
 /* Communications core for Avago Technologies (LSI) MPT3 */
 
@@ -709,6 +708,7 @@ mprsas_register_events(struct mpr_softc *sc)
 	setbit(events, MPI2_EVENT_IR_PHYSICAL_DISK);
 	setbit(events, MPI2_EVENT_IR_OPERATION_STATUS);
 	setbit(events, MPI2_EVENT_TEMP_THRESHOLD);
+	setbit(events, MPI2_EVENT_SAS_DEVICE_DISCOVERY_ERROR);
 	if (sc->facts->MsgVersion >= MPI2_VERSION_02_06) {
 		setbit(events, MPI2_EVENT_ACTIVE_CABLE_EXCEPTION);
 		if (sc->mpr_flags & MPR_FLAGS_GEN35_IOC) {
@@ -729,7 +729,7 @@ mpr_attach_sas(struct mpr_softc *sc)
 {
 	struct mprsas_softc *sassc;
 	cam_status status;
-	int unit, error = 0;
+	int unit, error = 0, reqs;
 
 	MPR_FUNCTRACE(sc);
 
@@ -758,7 +758,8 @@ mpr_attach_sas(struct mpr_softc *sc)
 	sc->sassc = sassc;
 	sassc->sc = sc;
 
-	if ((sassc->devq = cam_simq_alloc(sc->num_reqs)) == NULL) {
+	reqs = sc->num_reqs - sc->num_prireqs - 1;
+	if ((sassc->devq = cam_simq_alloc(reqs)) == NULL) {
 		mpr_dprint(sc, MPR_ERROR, "Cannot allocate SIMQ\n");
 		error = ENOMEM;
 		goto out;
@@ -766,7 +767,7 @@ mpr_attach_sas(struct mpr_softc *sc)
 
 	unit = device_get_unit(sc->mpr_dev);
 	sassc->sim = cam_sim_alloc(mprsas_action, mprsas_poll, "mpr", sassc,
-	    unit, &sc->mpr_mtx, sc->num_reqs, sc->num_reqs, sassc->devq);
+	    unit, &sc->mpr_mtx, reqs, reqs, sassc->devq);
 	if (sassc->sim == NULL) {
 		mpr_dprint(sc, MPR_ERROR, "Cannot allocate SIM\n");
 		error = EINVAL;
@@ -2112,8 +2113,8 @@ mprsas_action_scsiio(struct mprsas_softc *sassc, union ccb *ccb)
 				    CDB.EEDP32.PrimaryReferenceTag);
 				req->CDB.EEDP32.PrimaryApplicationTagMask =
 				    0xFFFF;
-				req->CDB.CDB32[1] = (req->CDB.CDB32[1] & 0x1F) |
-				    0x20;
+				req->CDB.CDB32[1] =
+				    (req->CDB.CDB32[1] & 0x1F) | 0x20;
 			} else {
 				eedp_flags |=
 				    MPI2_SCSIIO_EEDPFLAGS_INC_PRI_APPTAG;
@@ -3614,8 +3615,19 @@ mprsas_async(void *callback_arg, uint32_t code, struct cam_path *path,
 
 		if ((mprsas_get_ccbstatus((union ccb *)&cdai) == CAM_REQ_CMP)
 		    && (rcap_buf.prot & SRC16_PROT_EN)) {
-			lun->eedp_formatted = TRUE;
-			lun->eedp_block_size = scsi_4btoul(rcap_buf.length);
+			switch (rcap_buf.prot & SRC16_P_TYPE) {
+			case SRC16_PTYPE_1:
+			case SRC16_PTYPE_3:
+				lun->eedp_formatted = TRUE;
+				lun->eedp_block_size =
+				    scsi_4btoul(rcap_buf.length);
+				break;
+			case SRC16_PTYPE_2:
+			default:
+				lun->eedp_formatted = FALSE;
+				lun->eedp_block_size = 0;
+				break;
+			}
 		} else {
 			lun->eedp_formatted = FALSE;
 			lun->eedp_block_size = 0;

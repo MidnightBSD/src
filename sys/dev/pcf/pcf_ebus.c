@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marius Strobl, Joerg Wunsch
  *
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pcf/pcf_ebus.c 233018 2012-03-15 22:53:39Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pcf/pcf_ebus.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Device specific driver for the EBus i2c devices found on some sun4u

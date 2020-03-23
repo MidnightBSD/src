@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/twe/twe_freebsd.c 281826 2015-04-21 11:27:50Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/twe/twe_freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * FreeBSD-specific code.

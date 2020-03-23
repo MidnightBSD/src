@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/stg/tmc18c30reg.h 139749 2005-01-06 01:43:34Z imp $	*/
+/*	$FreeBSD: stable/11/sys/dev/stg/tmc18c30reg.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$NecBSD: tmc18c30reg.h,v 1.4.24.1 2001/06/08 06:27:50 honda Exp $	*/
 /*	$NetBSD$	*/
 

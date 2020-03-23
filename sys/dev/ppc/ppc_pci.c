@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppc/ppc_pci.c 262230 2014-02-19 19:38:25Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppc/ppc_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -92,6 +91,7 @@ static struct pci_id pci_ids[] = {
 	{ 0xc1101415, "Oxford Semiconductor OXPCIe952 Parallel port", 0x10 },
 	{ 0x98059710, "NetMos NM9805 1284 Printer port", 0x10 },
 	{ 0x98659710, "MosChip MCS9865 1284 Printer port", 0x10 },
+	{ 0x99009710, "MosChip MCS9900 PCIe to Peripheral Controller", 0x10 },
 	{ 0x99019710, "MosChip MCS9901 PCIe to Peripheral Controller", 0x10 },
 	{ 0xffff }
 };

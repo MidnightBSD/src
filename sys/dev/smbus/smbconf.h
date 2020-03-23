@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
@@ -24,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/smbus/smbconf.h 310062 2016-12-14 15:38:28Z avg $
+ * $FreeBSD: stable/11/sys/dev/smbus/smbconf.h 331722 2018-03-29 02:50:57Z eadler $
  */
-#ifndef __SMBONF_H
-#define __SMBONF_H
+#ifndef __DEV_SMBUS_SMBCONF_H
+#define	__DEV_SMBUS_SMBCONF_H
 
 #include <sys/queue.h>
 
@@ -116,10 +115,13 @@ extern devclass_t smbus_devclass;
 	(SMBUS_BWRITE(device_get_parent(bus), slave, cmd, count, buf))
 #define smbus_bread(bus,slave,cmd,count,buf) \
 	(SMBUS_BREAD(device_get_parent(bus), slave, cmd, count, buf))
+#define smbus_trans(bus,slave,cmd,op,wbuf,wcount,rbuf,rcount,actualp) \
+	(SMBUS_TRANS(device_get_parent(bus), slave, cmd, op, \
+	wbuf, wcount, rbuf, rcount, actualp))
 
 #define SMBUS_MODVER	1
 #define SMBUS_MINVER	1
 #define SMBUS_MAXVER	1
 #define SMBUS_PREFVER	SMBUS_MODVER
 
-#endif
+#endif	/* __DEV_SMBUS_SMBCONF_H */

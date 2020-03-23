@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010, LSI Corp.
  * All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/tws/tws.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/tws/tws.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/tws/tws.h>
 #include <dev/tws/tws_services.h>
@@ -114,7 +113,7 @@ static struct cdevsw tws_cdevsw = {
  */
 
 int
-tws_open(struct cdev *dev, int oflags, int devtype, d_thread_t *td)
+tws_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 {
     struct tws_softc *sc = dev->si_drv1;
 
@@ -124,7 +123,7 @@ tws_open(struct cdev *dev, int oflags, int devtype, d_thread_t *td)
 }
 
 int
-tws_close(struct cdev *dev, int fflag, int devtype, d_thread_t *td)
+tws_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 {
     struct tws_softc *sc = dev->si_drv1;
 
@@ -246,8 +245,8 @@ tws_attach(device_t dev)
 
     /* allocate MMIO register space */ 
     sc->reg_res_id = TWS_PCI_BAR1; /* BAR1 offset */
-    if ((sc->reg_res = bus_alloc_resource(dev, SYS_RES_MEMORY,
-                                &(sc->reg_res_id), 0, ~0, 1, RF_ACTIVE))
+    if ((sc->reg_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+                                &(sc->reg_res_id), RF_ACTIVE))
                                 == NULL) {
         tws_log(sc, ALLOC_MEMORY_RES);
         goto attach_fail_1;
@@ -312,6 +311,12 @@ tws_attach(device_t dev)
 attach_fail_4:
     tws_teardown_intr(sc);
     destroy_dev(sc->tws_cdev);
+    if (sc->dma_mem_phys)
+	    bus_dmamap_unload(sc->cmd_tag, sc->cmd_map);
+    if (sc->dma_mem)
+	    bus_dmamem_free(sc->cmd_tag, sc->dma_mem, sc->cmd_map);
+    if (sc->cmd_tag)
+	    bus_dma_tag_destroy(sc->cmd_tag);
 attach_fail_3:
     for(i=0;i<sc->irqs;i++) {
         if ( sc->irq_res[i] ){
@@ -384,6 +389,13 @@ tws_detach(device_t dev)
     }
 
     tws_cam_detach(sc);
+
+    if (sc->dma_mem_phys)
+	    bus_dmamap_unload(sc->cmd_tag, sc->cmd_map);
+    if (sc->dma_mem)
+	    bus_dmamem_free(sc->cmd_tag, sc->dma_mem, sc->cmd_map);
+    if (sc->cmd_tag)
+	    bus_dma_tag_destroy(sc->cmd_tag);
 
     /* Release memory resource */
     if ( sc->mfa_res ){

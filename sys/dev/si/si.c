@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  *
@@ -34,12 +33,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/si/si.c 320923 2017-07-12 22:16:54Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/si/si.c 320921 2017-07-12 20:10:53Z jhb $");
 
 #ifndef lint
-static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International, 1990,1992,1998",
-		  si_copyright2[] =  "@(#) Copyright (C) Andy Rutter 1993",
-		  si_copyright3[] =  "@(#) Copyright (C) Peter Wemm 2000";
+__IDSTRING(si_copyright1, "@(#) Copyright (C) Specialix International, 1990,1992,1998");
+__IDSTRING(si_copyright2, "@(#) Copyright (C) Andy Rutter 1993");
+__IDSTRING(si_copyright3, "@(#) Copyright (C) Peter Wemm 2000");
 #endif	/* not lint */
 
 #include "opt_compat.h"
@@ -120,8 +119,7 @@ static int si_Nports;
 static int si_Nmodules;
 static int si_debug;
 
-SYSCTL_INT(_machdep, OID_AUTO, si_debug, CTLFLAG_RW, &si_debug, 0, "");
-TUNABLE_INT("machdep.si_debug", &si_debug);
+SYSCTL_INT(_machdep, OID_AUTO, si_debug, CTLFLAG_RWTUN, &si_debug, 0, "");
 
 static int si_numunits;
 
@@ -543,7 +541,7 @@ try_next:
 	pp = sc->sc_ports;
 	nmodule = 0;
 	modp = (struct si_module *)(maddr + 0x80);
-	uart_type = 1000;	/* arbitary, > uchar_max */
+	uart_type = 1000;	/* arbitrary, > uchar_max */
 	for (;;) {
 		switch (modp->sm_type) {
 		case TA4:

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -30,7 +29,7 @@
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgbe/ql_dbg.c 284982 2015-06-30 20:59:07Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgbe/ql_dbg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "ql_os.h"
 #include "ql_hw.h"

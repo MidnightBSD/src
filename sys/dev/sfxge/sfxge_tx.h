@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/sfxge_tx.h 301388 2016-06-04 17:08:34Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/sfxge_tx.h 342455 2018-12-25 07:39:34Z arybchik $
  */
 
 #ifndef _SFXGE_TX_H
@@ -138,6 +137,10 @@ enum sfxge_txq_type {
 	SFXGE_TXQ_NTYPES
 };
 
+#define	SFXGE_EVQ0_N_TXQ(_sc)						\
+	((_sc)->txq_dynamic_cksum_toggle_supported ?			\
+	1 : SFXGE_TXQ_NTYPES)
+
 #define	SFXGE_TXQ_UNBLOCK_LEVEL(_entries)	(EFX_TXQ_LIMIT(_entries) / 4)
 
 #define	SFXGE_TX_BATCH	64
@@ -173,7 +176,6 @@ struct sfxge_txq {
 	enum sfxge_flush_state		flush_state;
 	unsigned int			tso_fw_assisted;
 	enum sfxge_txq_type		type;
-	unsigned int			txq_index;
 	unsigned int			evq_index;
 	efsys_mem_t			mem;
 	unsigned int			buf_base_id;
@@ -204,6 +206,9 @@ struct sfxge_txq {
 	unsigned int			added;
 	unsigned int			reaped;
 
+	/* The last (or constant) set of HW offloads requested on the queue */
+	uint16_t			hw_cksum_flags;
+
 	/* The last VLAN TCI seen on the queue if FW-assisted tagging is
 	   used */
 	uint16_t			hw_vlan_tci;
@@ -231,7 +236,7 @@ struct sfxge_txq {
 
 struct sfxge_evq;
 
-extern void sfxge_tx_update_stats(struct sfxge_softc *sc);
+extern uint64_t sfxge_tx_get_drops(struct sfxge_softc *sc);
 
 extern int sfxge_tx_init(struct sfxge_softc *sc);
 extern void sfxge_tx_fini(struct sfxge_softc *sc);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/siena_impl.h 311496 2017-01-06 07:32:19Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/siena_impl.h 342425 2018-12-25 07:01:25Z arybchik $
  */
 
 #ifndef _SYS_SIENA_IMPL_H
@@ -58,6 +57,15 @@ siena_nic_init(
 	__in		efx_nic_t *enp);
 
 #if EFSYS_OPT_DIAG
+
+extern	efx_sram_pattern_fn_t	__efx_sram_pattern_fns[];
+
+typedef struct siena_register_set_s {
+	unsigned int		address;
+	unsigned int		step;
+	unsigned int		rows;
+	efx_oword_t		mask;
+} siena_register_set_t;
 
 extern	__checkReturn	efx_rc_t
 siena_nic_register_test(

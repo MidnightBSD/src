@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/smbus/smbconf.c 162234 2006-09-11 20:52:41Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/smbus/smbconf.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
@@ -30,7 +29,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mpr/mpi/mpi2_type.h 299962 2016-05-16 18:47:53Z slm $
+ * $FreeBSD: stable/11/sys/dev/mpr/mpi/mpi2_type.h 299263 2016-05-09 16:12:32Z slm $
  */
 
 /*
@@ -82,7 +81,7 @@ typedef unsigned char   U8;
 typedef signed   short  S16;
 typedef unsigned short  U16;
 
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 
 typedef int32_t  S32;
 typedef uint32_t U32;

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/ral/rt2661reg.h 261455 2014-02-04 03:36:42Z eadler $	*/
+/*	$FreeBSD: stable/11/sys/dev/ral/rt2661reg.h 258780 2013-11-30 22:17:27Z eadler $	*/
 
 /*-
  * Copyright (c) 2006

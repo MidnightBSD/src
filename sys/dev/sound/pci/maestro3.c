@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Scott Long <scottl@freebsd.org>
  * Copyright (c) 2001 Darrell Anderson <anderson@cs.duke.edu>
@@ -68,7 +67,7 @@
 #include <dev/sound/pci/allegro_reg.h>
 #include <dev/sound/pci/allegro_code.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/maestro3.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/maestro3.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* -------------------------------------------------------------------- */
 
@@ -1441,7 +1440,7 @@ m3_pci_attach(device_t dev)
 			goto bad;
 		}
 	}
- 	snprintf(status, SND_STATUSLEN, "at %s 0x%lx irq %ld %s",
+ 	snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
 	    (sc->regtype == SYS_RES_IOPORT)? "io" : "memory",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
 	    PCM_KLDSTRING(snd_maestro3));

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_stge.c,v 1.32 2005/12/11 12:22:49 christos Exp $	*/
 
 /*-
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/stge/if_stge.c 312362 2017-01-18 02:16:17Z yongari $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/stge/if_stge.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -57,6 +56,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/stge/if_stge.c 312362 2017-01-18 02:16:17Z
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
@@ -416,8 +416,7 @@ stge_probe(device_t dev)
 	vendor = pci_get_vendor(dev);
 	devid = pci_get_device(dev);
 	sp = stge_products;
-	for (i = 0; i < sizeof(stge_products)/sizeof(stge_products[0]);
-	    i++, sp++) {
+	for (i = 0; i < nitems(stge_products); i++, sp++) {
 		if (vendor == sp->stge_vendorid &&
 		    devid == sp->stge_deviceid) {
 			device_set_desc(dev, sp->stge_name);
@@ -621,7 +620,7 @@ stge_attach(device_t dev)
 	 * Must appear after the call to ether_ifattach() because
 	 * ether_ifattach() sets ifi_hdrlen to the default value.
 	 */
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 
 	/*
 	 * The manual recommends disabling early transmit, so we
@@ -902,31 +901,29 @@ stge_dma_free(struct stge_softc *sc)
 
 	/* Tx ring */
 	if (sc->sc_cdata.stge_tx_ring_tag) {
-		if (sc->sc_cdata.stge_tx_ring_map)
+		if (sc->sc_rdata.stge_tx_ring_paddr)
 			bus_dmamap_unload(sc->sc_cdata.stge_tx_ring_tag,
 			    sc->sc_cdata.stge_tx_ring_map);
-		if (sc->sc_cdata.stge_tx_ring_map &&
-		    sc->sc_rdata.stge_tx_ring)
+		if (sc->sc_rdata.stge_tx_ring)
 			bus_dmamem_free(sc->sc_cdata.stge_tx_ring_tag,
 			    sc->sc_rdata.stge_tx_ring,
 			    sc->sc_cdata.stge_tx_ring_map);
 		sc->sc_rdata.stge_tx_ring = NULL;
-		sc->sc_cdata.stge_tx_ring_map = 0;
+		sc->sc_rdata.stge_tx_ring_paddr = 0;
 		bus_dma_tag_destroy(sc->sc_cdata.stge_tx_ring_tag);
 		sc->sc_cdata.stge_tx_ring_tag = NULL;
 	}
 	/* Rx ring */
 	if (sc->sc_cdata.stge_rx_ring_tag) {
-		if (sc->sc_cdata.stge_rx_ring_map)
+		if (sc->sc_rdata.stge_rx_ring_paddr)
 			bus_dmamap_unload(sc->sc_cdata.stge_rx_ring_tag,
 			    sc->sc_cdata.stge_rx_ring_map);
-		if (sc->sc_cdata.stge_rx_ring_map &&
-		    sc->sc_rdata.stge_rx_ring)
+		if (sc->sc_rdata.stge_rx_ring)
 			bus_dmamem_free(sc->sc_cdata.stge_rx_ring_tag,
 			    sc->sc_rdata.stge_rx_ring,
 			    sc->sc_cdata.stge_rx_ring_map);
 		sc->sc_rdata.stge_rx_ring = NULL;
-		sc->sc_cdata.stge_rx_ring_map = 0;
+		sc->sc_rdata.stge_rx_ring_paddr = 0;
 		bus_dma_tag_destroy(sc->sc_cdata.stge_rx_ring_tag);
 		sc->sc_cdata.stge_rx_ring_tag = NULL;
 	}
@@ -1238,7 +1235,7 @@ stge_watchdog(struct stge_softc *sc)
 
 	ifp = sc->sc_ifp;
 	if_printf(sc->sc_ifp, "device timeout\n");
-	ifp->if_oerrors++;
+	if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	stge_init_locked(sc);
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
@@ -1686,7 +1683,7 @@ stge_rxeof(struct stge_softc *sc)
 		 * Add a new receive buffer to the ring.
 		 */
 		if (stge_newbuf(sc, cons) != 0) {
-			ifp->if_iqdrops++;
+			if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 			stge_discard_rxbuf(sc, cons);
 			if (sc->sc_cdata.stge_rxhead != NULL) {
 				m_freem(sc->sc_cdata.stge_rxhead);
@@ -1876,22 +1873,22 @@ stge_stats_update(struct stge_softc *sc)
 
 	CSR_READ_4(sc,STGE_OctetRcvOk);
 
-	ifp->if_ipackets += CSR_READ_4(sc, STGE_FramesRcvdOk);
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, CSR_READ_4(sc, STGE_FramesRcvdOk));
 
-	ifp->if_ierrors += CSR_READ_2(sc, STGE_FramesLostRxErrors);
+	if_inc_counter(ifp, IFCOUNTER_IERRORS, CSR_READ_2(sc, STGE_FramesLostRxErrors));
 
 	CSR_READ_4(sc, STGE_OctetXmtdOk);
 
-	ifp->if_opackets += CSR_READ_4(sc, STGE_FramesXmtdOk);
+	if_inc_counter(ifp, IFCOUNTER_OPACKETS, CSR_READ_4(sc, STGE_FramesXmtdOk));
 
-	ifp->if_collisions +=
+	if_inc_counter(ifp, IFCOUNTER_COLLISIONS,
 	    CSR_READ_4(sc, STGE_LateCollisions) +
 	    CSR_READ_4(sc, STGE_MultiColFrames) +
-	    CSR_READ_4(sc, STGE_SingleColFrames);
+	    CSR_READ_4(sc, STGE_SingleColFrames));
 
-	ifp->if_oerrors +=
+	if_inc_counter(ifp, IFCOUNTER_OERRORS,
 	    CSR_READ_2(sc, STGE_FramesAbortXSColls) +
-	    CSR_READ_2(sc, STGE_FramesWEXDeferal);
+	    CSR_READ_2(sc, STGE_FramesWEXDeferal));
 }
 
 /*

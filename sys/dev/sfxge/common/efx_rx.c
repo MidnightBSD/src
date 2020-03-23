@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/efx_rx.c 311088 2017-01-02 09:41:27Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/efx_rx.c 342434 2018-12-25 07:13:30Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -1165,10 +1164,6 @@ siena_rx_qcreate(
 
 #if EFSYS_OPT_RX_SCATTER
 	case EFX_RXQ_TYPE_SCATTER:
-		if (enp->en_family < EFX_FAMILY_SIENA) {
-			rc = EINVAL;
-			goto fail4;
-		}
 		jumbo = B_TRUE;
 		break;
 #endif	/* EFSYS_OPT_RX_SCATTER */

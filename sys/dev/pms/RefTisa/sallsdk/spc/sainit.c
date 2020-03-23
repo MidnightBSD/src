@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *
@@ -27,7 +26,7 @@
  */
 /******************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/sallsdk/spc/sainit.c 315221 2017-03-14 02:06:03Z pfg $");
 #include <dev/pms/config.h>
 
 #include <dev/pms/RefTisa/sallsdk/spc/saglobal.h>
@@ -49,7 +48,7 @@ bit32 gLLSoftResetCounter   = 0;
 bit32 gPollForMissingInt;
 
 #ifdef FW_EVT_LOG_TST
-void  *eventLogAddress = 0;
+void  *eventLogAddress = NULL;
 #endif
 
 extern bit32 gWait_3;

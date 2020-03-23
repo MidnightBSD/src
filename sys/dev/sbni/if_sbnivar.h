@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/dev/sbni/if_sbnivar.h 180263 2008-07-04 20:53:41Z jhb $
  */
 
 /*

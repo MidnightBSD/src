@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 LSI Corp. 
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/tws/tws_cam.c 315813 2017-03-23 06:41:13Z mav $
+ * $FreeBSD: stable/11/sys/dev/tws/tws_cam.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <dev/tws/tws.h>
@@ -1100,7 +1099,7 @@ tws_intr_attn_aen(struct tws_softc *sc)
 {
     u_int32_t db=0;
 
-    /* maskoff db intrs untill all the aens are fetched */
+    /* maskoff db intrs until all the aens are fetched */
     /* tws_disable_db_intr(sc); */
     tws_fetch_aen((void *)sc);
     tws_write_reg(sc, TWS_I2O0_HOBDBC, TWS_BIT18, 4);

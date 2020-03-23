@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/csavar.h 147626 2005-06-27 07:43:57Z glebius $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/csavar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _CSA_VAR_H

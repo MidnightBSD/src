@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -49,7 +48,7 @@
 
 #define HDA_DRV_TEST_REV	"20120126_0002"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/hda/hdac.c 314667 2017-03-04 13:03:31Z avg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/hda/hdac.c 345822 2019-04-03 01:30:59Z mav $");
 
 #define hdac_lock(sc)		snd_mtxlock((sc)->lock)
 #define hdac_unlock(sc)		snd_mtxunlock((sc)->lock)
@@ -95,11 +94,11 @@ static const struct {
 	{ HDA_INTEL_LPTLP1,  "Intel Lynx Point-LP",	0, 0 },
 	{ HDA_INTEL_LPTLP2,  "Intel Lynx Point-LP",	0, 0 },
 	{ HDA_INTEL_SRPTLP,  "Intel Sunrise Point-LP",	0, 0 },
-	{ HDA_INTEL_KBLKLP,  "Intel Kabylake-LP",	0, 0 },
+	{ HDA_INTEL_KBLKLP,  "Intel Kaby Lake-LP",	0, 0 },
 	{ HDA_INTEL_SRPT,    "Intel Sunrise Point",	0, 0 },
-	{ HDA_INTEL_KBLK,    "Intel Kabylake",	0, 0 },
-	{ HDA_INTEL_KBLKH,   "Intel Kabylake-H",        0, 0 },
-	{ HDA_INTEL_CFLK,    "Intel Coffelake", 0, 0 },
+	{ HDA_INTEL_KBLK,    "Intel Kaby Lake",	0, 0 },
+	{ HDA_INTEL_KBLKH,   "Intel Kaby Lake-H",	0, 0 },
+	{ HDA_INTEL_CFLK,    "Intel Coffee Lake",	0, 0 },
 	{ HDA_INTEL_82801F,  "Intel 82801F",	0, 0 },
 	{ HDA_INTEL_63XXESB, "Intel 631x/632xESB",	0, 0 },
 	{ HDA_INTEL_82801G,  "Intel 82801G",	0, 0 },
@@ -107,8 +106,8 @@ static const struct {
 	{ HDA_INTEL_82801I,  "Intel 82801I",	0, 0 },
 	{ HDA_INTEL_82801JI, "Intel 82801JI",	0, 0 },
 	{ HDA_INTEL_82801JD, "Intel 82801JD",	0, 0 },
-	{ HDA_INTEL_PCH,     "Intel 5 Series/3400 Series",	0, 0 },
-	{ HDA_INTEL_PCH2,    "Intel 5 Series/3400 Series",	0, 0 },
+	{ HDA_INTEL_PCH,     "Intel Ibex Peak",	0, 0 },
+	{ HDA_INTEL_PCH2,    "Intel Ibex Peak",	0, 0 },
 	{ HDA_INTEL_SCH,     "Intel SCH",	0, 0 },
 	{ HDA_NVIDIA_MCP51,  "NVIDIA MCP51",	0, HDAC_QUIRK_MSI },
 	{ HDA_NVIDIA_MCP55,  "NVIDIA MCP55",	0, HDAC_QUIRK_MSI },
@@ -176,6 +175,7 @@ static const struct {
 	{ HDA_NVIDIA_ALL, "NVIDIA",		0, 0 },
 	{ HDA_ATI_ALL,    "ATI",		0, 0 },
 	{ HDA_AMD_ALL,    "AMD",		0, 0 },
+	{ HDA_CREATIVE_ALL,    "Creative",	0, 0 },
 	{ HDA_VIA_ALL,    "VIA",		0, 0 },
 	{ HDA_SIS_ALL,    "SiS",		0, 0 },
 	{ HDA_ULI_ALL,    "ULI",		0, 0 },
@@ -623,19 +623,19 @@ hdac_dma_alloc_fail:
 static void
 hdac_dma_free(struct hdac_softc *sc, struct hdac_dma *dma)
 {
-	if (dma->dma_map != NULL) {
+	if (dma->dma_paddr != 0) {
 #if 0
 		/* Flush caches */
 		bus_dmamap_sync(dma->dma_tag, dma->dma_map,
 		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 #endif
 		bus_dmamap_unload(dma->dma_tag, dma->dma_map);
+		dma->dma_paddr = 0;
 	}
 	if (dma->dma_vaddr != NULL) {
 		bus_dmamem_free(dma->dma_tag, dma->dma_vaddr, dma->dma_map);
 		dma->dma_vaddr = NULL;
 	}
-	dma->dma_map = NULL;
 	if (dma->dma_tag != NULL) {
 		bus_dma_tag_destroy(dma->dma_tag);
 		dma->dma_tag = NULL;
@@ -1770,6 +1770,9 @@ hdac_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	case HDA_IVAR_DMA_NOCACHE:
 		*result = (sc->flags & HDAC_F_DMA_NOCACHE) != 0;
 		break;
+	case HDA_IVAR_STRIPES_MASK:
+		*result = (1 << (1 << sc->num_sdo)) - 1;
+		break;
 	default:
 		return (ENOENT);
 	}
@@ -1798,7 +1801,7 @@ hdac_find_stream(struct hdac_softc *sc, int dir, int stream)
 	int i, ss;
 
 	ss = -1;
-	/* Allocate ISS/BSS first. */
+	/* Allocate ISS/OSS first. */
 	if (dir == 0) {
 		for (i = 0; i < sc->num_iss; i++) {
 			if (sc->streams[i].stream == stream) {
@@ -1866,7 +1869,7 @@ hdac_stream_alloc(device_t dev, device_t child, int dir, int format, int stripe,
 
 	/* Allocate stream number */
 	if (ss >= sc->num_iss + sc->num_oss)
-		stream = 15 - (ss - sc->num_iss + sc->num_oss);
+		stream = 15 - (ss - sc->num_iss - sc->num_oss);
 	else if (ss >= sc->num_iss)
 		stream = ss - sc->num_iss + 1;
 	else

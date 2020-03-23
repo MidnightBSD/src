@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011-2012 Qlogic Corporation
  * All rights reserved.
@@ -29,11 +28,11 @@
 /*
  * File: qla_hw.c
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
- * Content: Contains Hardware dependant functions
+ * Content: Contains Hardware dependent functions
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgb/qla_hw.c 297056 2016-03-20 03:09:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgb/qla_hw.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "qla_os.h"
 #include "qla_reg.h"
@@ -320,7 +319,7 @@ qla_init_cntxt_regions(qla_host_t *ha)
 
 	/*
 	 * Initialize the Transmit Context Request so that we don't need to
-	 * do it everytime we need to create a context
+	 * do it every time we need to create a context
 	 */
 	tx_cntxt_req = hw->tx_cntxt_req;
 
@@ -637,7 +636,7 @@ qla_config_mac_addr(qla_host_t *ha, uint8_t *mac_addr, uint16_t cntxt_id,
 
 /*
  * Name: qla_set_mac_rcv_mode
- * Function: Enable/Disable AllMulticast and Promiscous Modes.
+ * Function: Enable/Disable AllMulticast and Promiscuous Modes.
  */
 static int
 qla_set_mac_rcv_mode(qla_host_t *ha, uint16_t cntxt_id, uint32_t mode)

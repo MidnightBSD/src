@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD$	*/
 
 /*-
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/rndtest/rndtest.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/rndtest/rndtest.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,7 +68,7 @@ static const struct rndtest_testfunc {
 	{ rndtest_longruns },
 };
 
-#define	RNDTEST_NTESTS	(sizeof(rndtest_funcs)/sizeof(rndtest_funcs[0]))
+#define	RNDTEST_NTESTS	nitems(rndtest_funcs)
 
 static SYSCTL_NODE(_kern, OID_AUTO, rndtest, CTLFLAG_RD, 0,
 	    "RNG test parameters");
@@ -146,16 +145,9 @@ rndtest_harvest(struct rndtest_state *rsp, void *buf, u_int len)
 	 */
 	if (rsp->rs_discard)
 		rndstats.rst_discard += len;
-	else {
-#if __FreeBSD_version < 500000
-		/* XXX verify buffer is word aligned */
-		u_int32_t *p = buf;
-		for (len /= sizeof (u_int32_t); len; len--)
-			add_true_randomness(*p++);
-#else
-		random_harvest(buf, len, len*NBBY/2, RANDOM_PURE_RNDTEST);
-#endif
-	}
+	else
+	/* MarkM: FIX!! Check that this does not swamp the harvester! */
+	random_harvest_queue(buf, len, len*NBBY/2, RANDOM_PURE_RNDTEST);
 }
 
 static void

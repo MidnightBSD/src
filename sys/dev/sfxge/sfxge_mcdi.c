@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/sfxge_mcdi.c 311497 2017-01-06 07:33:22Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/sfxge_mcdi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -254,10 +253,6 @@ sfxge_mcdi_ioctl(struct sfxge_softc *sc, sfxge_ioc_t *ip)
 	}
 
 	mcdibuf = malloc(SFXGE_MCDI_MAX_PAYLOAD, M_TEMP, M_WAITOK | M_ZERO);
-	if (mcdibuf == NULL) {
-		rc = ENOMEM;
-		goto fail4;
-	}
 	if ((rc = copyin(ip->u.mcdi.payload, mcdibuf, ip->u.mcdi.len)) != 0) {
 		goto fail5;
 	}
@@ -296,7 +291,6 @@ sfxge_mcdi_ioctl(struct sfxge_softc *sc, sfxge_ioc_t *ip)
 fail6:
 fail5:
 	free(mcdibuf, M_TEMP);
-fail4:
 fail3:
 fail2:
 fail1:

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -34,7 +33,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder.c 227293 2011-11-07 06:44:47Z ed $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder.c 331722 2018-03-29 02:50:57Z eadler $");
 
 static MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
 

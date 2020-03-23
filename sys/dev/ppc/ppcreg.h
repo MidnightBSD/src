@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Alcove - Nicolas Souchu
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ppc/ppcreg.h 187576 2009-01-21 23:10:06Z jhb $
+ * $FreeBSD: stable/11/sys/dev/ppc/ppcreg.h 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 #ifndef __PPCREG_H

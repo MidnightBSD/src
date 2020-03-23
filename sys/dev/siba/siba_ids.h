@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Bruce M. Simpson.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/siba/siba_ids.h 203319 2010-01-31 21:18:22Z weongyo $
+ * $FreeBSD: stable/11/sys/dev/siba/siba_ids.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SIBA_SIBA_IDS_H_

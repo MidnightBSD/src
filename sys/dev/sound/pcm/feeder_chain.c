@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -33,7 +32,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder_chain.c 283950 2015-06-03 15:32:43Z hselasky $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder_chain.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* chain state */
 struct feeder_chain_state {
@@ -126,8 +125,7 @@ static uint32_t *feeder_chain_formats[FEEDER_CHAIN_LAST] = {
 static int feeder_chain_mode = FEEDER_CHAIN_DEFAULT;
 
 #if defined(_KERNEL) && defined(SND_DEBUG) && defined(SND_FEEDER_FULL_MULTIFORMAT)
-TUNABLE_INT("hw.snd.feeder_chain_mode", &feeder_chain_mode);
-SYSCTL_INT(_hw_snd, OID_AUTO, feeder_chain_mode, CTLFLAG_RW,
+SYSCTL_INT(_hw_snd, OID_AUTO, feeder_chain_mode, CTLFLAG_RWTUN,
     &feeder_chain_mode, 0,
     "feeder chain mode "
     "(0=lean, 1=16bit, 2=32bit, 3=multiformat, 4=fullmultiformat)");

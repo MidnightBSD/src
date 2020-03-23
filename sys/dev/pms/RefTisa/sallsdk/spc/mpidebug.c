@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *
@@ -30,7 +29,7 @@
  */
 /*******************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/sallsdk/spc/mpidebug.c 285242 2015-07-07 13:17:02Z achim $");
 #include <dev/pms/config.h>
 
 #include <dev/pms/RefTisa/sallsdk/spc/saglobal.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	from: NetBSD: hmevar.h,v 1.5 2000/06/25 01:10:04 eeh Exp
  *
- * $FreeBSD: stable/10/sys/dev/hme/if_hmevar.h 204646 2010-03-03 17:55:51Z joel $
+ * $FreeBSD: stable/11/sys/dev/hme/if_hmevar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/callout.h>

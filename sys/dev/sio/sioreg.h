@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)comreg.h	7.2 (Berkeley) 5/9/91
- * $FreeBSD: stable/10/sys/dev/sio/sioreg.h 128019 2004-04-07 20:46:16Z imp $
+ * $FreeBSD: stable/11/sys/dev/sio/sioreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* Receiver clock frequency for "standard" pc serial ports. */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr.c 329189 2018-02-13 02:11:39Z mav $");
 
 /* Communications core for Avago Technologies (LSI) MPT3 */
 
@@ -504,7 +503,10 @@ mpr_iocfacts_allocate(struct mpr_softc *sc, uint8_t attaching)
 		 * Size the queues. Since the reply queues always need one free
 		 * entry, we'll just deduct one reply message here.
 		 */
-		sc->num_reqs = MIN(MPR_REQ_FRAMES, sc->facts->RequestCredit);
+		sc->num_prireqs = MIN(MPR_PRI_REQ_FRAMES,
+		    sc->facts->HighPriorityCredit);
+		sc->num_reqs = MIN(MPR_REQ_FRAMES, sc->facts->RequestCredit) +
+		    sc->num_prireqs;
 		sc->num_replies = MIN(MPR_REPLY_FRAMES + MPR_EVT_REPLY_FRAMES,
 		    sc->facts->MaxReplyDescriptorPostQueueDepth) - 1;
 
@@ -1114,8 +1116,8 @@ mpr_alloc_queues(struct mpr_softc *sc)
 	 *
 	 * These two queues are allocated together for simplicity.
 	 */
-	sc->fqdepth = roundup2((sc->num_replies + 1), 16);
-	sc->pqdepth = roundup2((sc->num_replies + 1), 16);
+	sc->fqdepth = roundup2(sc->num_replies + 1, 16);
+	sc->pqdepth = roundup2(sc->num_replies + 1, 16);
 	fqsize= sc->fqdepth * 4;
 	pqsize = sc->pqdepth * 8;
 	qsize = fqsize + pqsize;
@@ -1363,7 +1365,7 @@ mpr_alloc_requests(struct mpr_softc *sc)
 		/* XXX Is a failure here a critical problem? */
 		if (bus_dmamap_create(sc->buffer_dmat, 0, &cm->cm_dmamap)
 		    == 0) {
-			if (i <= sc->facts->HighPriorityCredit)
+			if (i <= sc->num_prireqs)
 				mpr_free_high_priority_command(sc, cm);
 			else
 				mpr_free_command(sc, cm);
@@ -3398,7 +3400,7 @@ mpr_request_polled(struct mpr_softc *sc, struct mpr_command **cmp)
 
 /*
  * The MPT driver had a verbose interface for config pages.  In this driver,
- * reduce it to much simplier terms, similar to the Linux driver.
+ * reduce it to much simpler terms, similar to the Linux driver.
  */
 int
 mpr_read_config_page(struct mpr_softc *sc, struct mpr_config_params *params)

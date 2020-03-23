@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  *
@@ -18,7 +17,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $FreeBSD: stable/10/sys/dev/si/sivar.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/si/sivar.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 #ifdef _KERNEL

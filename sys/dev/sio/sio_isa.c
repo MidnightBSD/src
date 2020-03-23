@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  *
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sio/sio_isa.c 242996 2012-11-13 20:38:55Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sio/sio_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_sio.h"
 

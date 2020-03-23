@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, David Greenman
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/snc/if_snc_pccard.c 181393 2008-08-07 20:55:20Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/snc/if_snc_pccard.c 292079 2015-12-11 05:27:56Z imp $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
@@ -42,6 +41,8 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/snc/if_snc_pccard.c 181393 2008-08-07 20:5
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 #include <sys/module.h>
 #include <sys/bus.h>
@@ -91,6 +92,7 @@ static driver_t snc_pccard_driver = {
 
 DRIVER_MODULE(snc, pccard, snc_pccard_driver, snc_devclass, 0, 0);
 MODULE_DEPEND(snc, ether, 1, 1, 1);
+PCCARD_PNP_INFO(snc_pccard_products);
 
 /*
  *      snc_pccard_detach - detach this instance from the device.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr_config.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr_config.c 322658 2017-08-18 14:25:07Z ken $");
 
 /* TODO Move headers to mprvar */
 #include <sys/types.h>

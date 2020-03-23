@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *
@@ -21,7 +20,7 @@
 
 ********************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/sat/src/smsat.c 300050 2016-05-17 12:52:31Z eadler $");
 #include <dev/pms/config.h>
 
 #include <dev/pms/freebsd/driver/common/osenv.h>
@@ -10884,7 +10883,7 @@ smsatReadCapacity10(
     /*
      * Setting RETURNED LOGICAL BLOCK ADDRESS in READ CAPACITY(10) response data:
      * SBC-2 specifies that if the capacity exceeded the 4-byte RETURNED LOGICAL
-     * BLOCK ADDRESS in READ CAPACITY(10) parameter data, the the RETURNED LOGICAL
+     * BLOCK ADDRESS in READ CAPACITY(10) parameter data, the RETURNED LOGICAL
      * BLOCK ADDRESS should be set to 0xFFFFFFFF so the application client would
      * then issue a READ CAPACITY(16) command.
      */

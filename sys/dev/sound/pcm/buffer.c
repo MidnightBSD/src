@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -39,7 +38,7 @@
 #define	SND_DECLARE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/buffer.c 319066 2017-05-28 10:44:43Z hselasky $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/buffer.c 331722 2018-03-29 02:50:57Z eadler $");
 
 struct snd_dbuf *
 sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel)
@@ -141,7 +140,7 @@ sndbuf_free(struct snd_dbuf *b)
 
 	if (b->buf) {
 		if (b->flags & SNDBUF_F_MANAGED) {
-			if (b->dmamap)
+			if (b->buf_addr)
 				bus_dmamap_unload(b->dmatag, b->dmamap);
 			if (b->dmatag)
 				bus_dmamem_free(b->dmatag, b->buf, b->dmamap);

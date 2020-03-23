@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pst/pst-pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pst/pst-pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,15 +73,13 @@ iop_pci_attach(device_t dev)
     struct iop_softc *sc = device_get_softc(dev);
     int rid;
 
-    bzero(sc, sizeof(struct iop_softc));
-
     /* get resources */
-    rid = 0x10;
+    rid = PCIR_BAR(0);
     sc->r_mem = 
 	bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, RF_ACTIVE);
 
     if (!sc->r_mem)
-	return 0;
+	return ENXIO;
 
     rid = 0x00;
     sc->r_irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
@@ -105,11 +102,16 @@ static int
 iop_pci_detach(device_t dev)
 {
     struct iop_softc *sc = device_get_softc(dev);
+    int error;
 
+    error = bus_generic_detach(dev);
+    if (error)
+	    return (error);
     bus_teardown_intr(dev, sc->r_irq, sc->handle);
     bus_release_resource(dev, SYS_RES_IRQ, 0x00, sc->r_irq);
-    bus_release_resource(dev, SYS_RES_MEMORY, 0x10, sc->r_mem);
-    return bus_generic_detach(dev);
+    bus_release_resource(dev, SYS_RES_MEMORY, PCIR_BAR(0), sc->r_mem);
+    mtx_destroy(&sc->mtx);
+    return (0);
 }
 
 

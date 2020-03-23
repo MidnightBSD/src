@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/siena_nvram.c 311495 2017-01-06 07:31:15Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/siena_nvram.c 342445 2018-12-25 07:27:45Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -345,7 +344,7 @@ siena_nvram_get_dynamic_cfg(
 	    != SIENA_MC_DYNAMIC_CONFIG_MAGIC)
 		goto invalid1;
 
-	/* All future versions of the structure must be backwards compatable */
+	/* All future versions of the structure must be backwards compatible */
 	EFX_STATIC_ASSERT(SIENA_MC_DYNAMIC_CONFIG_VERSION == 0);
 
 	hdr_length = EFX_WORD_FIELD(dcfg->length, EFX_WORD_0);
@@ -437,12 +436,11 @@ siena_nvram_get_subtype(
 	__out			uint32_t *subtypep)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_GET_BOARD_CFG_IN_LEN,
-			    MC_CMD_GET_BOARD_CFG_OUT_LENMAX)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_GET_BOARD_CFG_IN_LEN,
+		MC_CMD_GET_BOARD_CFG_OUT_LENMAX);
 	efx_word_t *fw_list;
 	efx_rc_t rc;
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_GET_BOARD_CFG;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_GET_BOARD_CFG_IN_LEN;
@@ -526,7 +524,7 @@ siena_nvram_partn_get_version(
 			: MC_CMD_NVRAM_TYPE_DYNAMIC_CFG_PORT1;
 		/*
 		 * Ingore missing partitions on port 2, assuming they're due
-		 * to to running on a single port part.
+		 * to running on a single port part.
 		 */
 		if ((1 << dcfg_partn) &  ~enp->en_u.siena.enu_partn_mask) {
 			if (entry->port == 2)

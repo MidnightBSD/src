@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/neomagic.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/neomagic.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NM256_H_

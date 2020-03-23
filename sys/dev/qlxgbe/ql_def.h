@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlxgbe/ql_def.h 330556 2018-03-06 23:17:56Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlxgbe/ql_def.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

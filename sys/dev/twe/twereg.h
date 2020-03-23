@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      $FreeBSD: stable/10/sys/dev/twe/twereg.h 129144 2004-05-12 04:10:37Z vkashyap $
+ *      $FreeBSD: stable/11/sys/dev/twe/twereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* 

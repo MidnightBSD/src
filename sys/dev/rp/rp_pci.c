@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) Comtrol Corporation <support@comtrol.com>
  * All rights reserved.
@@ -35,16 +34,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/rp/rp_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/rp/rp_pci.c 356020 2019-12-22 19:06:45Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
-#include <sys/tty.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/bus.h>
@@ -238,7 +238,7 @@ rp_pcishutdown(device_t dev)
 static void
 rp_pcireleaseresource(CONTROLLER_t *ctlp)
 {
-	rp_untimeout();
+	rp_releaseresource(ctlp);
 	if (ctlp->io != NULL) {
 		if (ctlp->io[0] != NULL)
 			bus_release_resource(ctlp->dev, SYS_RES_IOPORT, ctlp->io_rid[0], ctlp->io[0]);
@@ -249,7 +249,6 @@ rp_pcireleaseresource(CONTROLLER_t *ctlp)
 		free(ctlp->io_rid, M_DEVBUF);
 		ctlp->io = NULL;
 	}
-	rp_releaseresource(ctlp);
 }
 
 static int

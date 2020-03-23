@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/streams/streams.c 321020 2017-07-15 17:25:40Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/streams/streams.c 298519 2016-04-23 20:29:55Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,20 +87,8 @@ enum {
 static struct cdev *dt_ptm, *dt_arp, *dt_icmp, *dt_ip, *dt_tcp, *dt_udp,
 	*dt_rawip, *dt_unix_dgram, *dt_unix_stream, *dt_unix_ord_stream;
 
-static struct fileops svr4_netops = {
-	.fo_read = soo_read,
-	.fo_write = soo_write,
-	.fo_truncate = soo_truncate,
-	.fo_ioctl = soo_ioctl,
-	.fo_poll = soo_poll,
-	.fo_kqfilter = soo_kqfilter,
-	.fo_stat = soo_stat,
-	.fo_close =  svr4_soo_close,
-	.fo_chmod = invfo_chmod,
-	.fo_chown = invfo_chown,
-	.fo_sendfile = invfo_sendfile,
-};
- 
+static struct fileops svr4_netops;
+
 static struct cdevsw streams_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_open =	streamsopen,
@@ -148,6 +135,11 @@ streams_modevent(module_t mod, int type, void *unused)
 			printf("WARNING: device config for STREAMS failed\n");
 			printf("Suggest unloading streams KLD\n");
 		}
+
+		/* Inherit generic socket file operations, except close(2). */
+		bcopy(&socketops, &svr4_netops, sizeof(struct fileops));
+		svr4_netops.fo_close = svr4_soo_close;
+
 		return 0;
 	case MOD_UNLOAD:
 	  	/* XXX should check to see if it's busy first */
@@ -309,7 +301,8 @@ svr4_ptm_alloc(td)
 		ptyname[8] = ttyletters[l];
 		ptyname[9] = ttynumbers[n];
 
-		error = kern_open(td, ptyname, UIO_SYSSPACE, O_RDWR, 0);
+		error = kern_openat(td, AT_FDCWD, ptyname, UIO_SYSSPACE,
+		    O_RDWR, 0);
 		switch (error) {
 		case ENOENT:
 		case ENXIO:
@@ -332,11 +325,15 @@ svr4_ptm_alloc(td)
 static int
 svr4_soo_close(struct file *fp, struct thread *td)
 {
-        struct socket *so = fp->f_data;
+	struct socket *so = fp->f_data;
 	
 	/*	CHECKUNIT_DIAG(ENXIO);*/
 
 	svr4_delete_socket(td->td_proc, fp);
 	free(so->so_emuldata, M_TEMP);
-	return soo_close(fp, td);
+
+	fp->f_ops = &badfileops;
+	fp->f_data = NULL;
+
+	return soclose(so);
 }

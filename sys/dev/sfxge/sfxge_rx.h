@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/sfxge_rx.h 301388 2016-06-04 17:08:34Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/sfxge_rx.h 342406 2018-12-25 06:38:42Z arybchik $
  */
 
 #ifndef _SFXGE_RX_H
@@ -156,10 +155,10 @@ struct sfxge_rxq {
 	struct sfxge_softc		*sc __aligned(CACHE_LINE_SIZE);
 	unsigned int			index;
 	efsys_mem_t			mem;
-	unsigned int			buf_base_id;
 	enum sfxge_rxq_state		init_state;
 	unsigned int			entries;
 	unsigned int			ptr_mask;
+	efx_rxq_t			*common;
 
 	struct sfxge_rx_sw_desc		*queue __aligned(CACHE_LINE_SIZE);
 	unsigned int			added;
@@ -174,8 +173,8 @@ struct sfxge_rxq {
 	struct callout			refill_callout;
 	unsigned int			refill_delay;
 
-	efx_rxq_t			*common __aligned(CACHE_LINE_SIZE);
-	volatile enum sfxge_flush_state	flush_state;
+	volatile enum sfxge_flush_state	flush_state __aligned(CACHE_LINE_SIZE);
+	unsigned int			buf_base_id;
 };
 
 /*

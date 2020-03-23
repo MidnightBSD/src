@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2000 Nicolas Souchu
  * Copyright (c) 2001 Alcove - Nicolas Souchu
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppc/ppc_isa.c 247065 2013-02-21 00:26:31Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppc/ppc_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

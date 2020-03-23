@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Orion Hodson <O.Hodson@cs.ucl.ac.uk>
  * All rights reserved.
@@ -44,7 +43,7 @@
 
 #include <dev/sound/pci/cs4281.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/cs4281.c 312398 2017-01-18 23:23:46Z marius $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/cs4281.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define CS4281_DEFAULT_BUFSZ 16384
 
@@ -769,7 +768,6 @@ cs4281_pci_attach(device_t dev)
 
     pci_enable_busmaster(dev);
 
-#if __FreeBSD_version > 500000
     if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0) {
 	/* Reset the power state. */
 	device_printf(dev, "chip is in D%d power mode "
@@ -777,17 +775,6 @@ cs4281_pci_attach(device_t dev)
 
 	pci_set_powerstate(dev, PCI_POWERSTATE_D0);
     }
-#else
-    data = pci_read_config(dev, CS4281PCI_PMCS_OFFSET, 4);
-    if (data & CS4281PCI_PMCS_PS_MASK) {
-	    /* Reset the power state. */
-	    device_printf(dev, "chip is in D%d power mode "
-			  "-- setting to D0\n",
-			  data & CS4281PCI_PMCS_PS_MASK);
-	    pci_write_config(dev, CS4281PCI_PMCS_OFFSET,
-			     data & ~CS4281PCI_PMCS_PS_MASK, 4);
-    }
-#endif
 
     sc->regid   = PCIR_BAR(0);
     sc->regtype = SYS_RES_MEMORY;
@@ -862,7 +849,7 @@ cs4281_pci_attach(device_t dev)
     pcm_addchan(dev, PCMDIR_PLAY, &cs4281chan_class, sc);
     pcm_addchan(dev, PCMDIR_REC, &cs4281chan_class, sc);
 
-    snprintf(status, SND_STATUSLEN, "at %s 0x%lx irq %ld %s",
+    snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
 	     (sc->regtype == SYS_RES_IOPORT)? "io" : "memory",
 	     rman_get_start(sc->reg), rman_get_start(sc->irq),PCM_KLDSTRING(snd_cs4281));
     pcm_setstatus(dev, status);

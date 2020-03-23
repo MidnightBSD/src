@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/hda/hdac_reg.h 230130 2012-01-15 13:21:36Z mav $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/hda/hdac_reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _HDAC_REG_H_

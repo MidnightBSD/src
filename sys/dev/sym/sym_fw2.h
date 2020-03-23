@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
@@ -56,7 +55,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/dev/sym/sym_fw2.h 220950 2011-04-22 12:46:39Z marius $ */
+/* $FreeBSD: stable/11/sys/dev/sym/sym_fw2.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*
  *  Scripts for SYMBIOS-Processor

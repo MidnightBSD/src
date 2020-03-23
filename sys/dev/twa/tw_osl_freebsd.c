@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/twa/tw_osl_freebsd.c 314667 2017-03-04 13:03:31Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/twa/tw_osl_freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
@@ -339,8 +338,8 @@ twa_attach(device_t dev)
 		return(error);
 	}
 	sc->reg_res_id = PCIR_BARS + bar0_offset;
-	if ((sc->reg_res = bus_alloc_resource(dev, SYS_RES_MEMORY,
-				&(sc->reg_res_id), 0, ~0, 1, RF_ACTIVE))
+	if ((sc->reg_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+				&(sc->reg_res_id), RF_ACTIVE))
 				== NULL) {
 		tw_osli_printf(sc, "error = %d",
 			TW_CL_SEVERITY_ERROR_STRING,
@@ -356,8 +355,8 @@ twa_attach(device_t dev)
 
 	/* Allocate and register our interrupt. */
 	sc->irq_res_id = 0;
-	if ((sc->irq_res = bus_alloc_resource(sc->bus_dev, SYS_RES_IRQ,
-				&(sc->irq_res_id), 0, ~0, 1,
+	if ((sc->irq_res = bus_alloc_resource_any(sc->bus_dev, SYS_RES_IRQ,
+				&(sc->irq_res_id),
 				RF_SHAREABLE | RF_ACTIVE)) == NULL) {
 		tw_osli_printf(sc, "error = %d",
 			TW_CL_SEVERITY_ERROR_STRING,

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  *
@@ -21,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/si/si_isa.c 166914 2007-02-23 19:34:52Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/si/si_isa.c 335087 2018-06-13 20:33:52Z dim $");
 
 #include "opt_debug_si.h"
 
@@ -59,14 +58,14 @@ si_isa_probe(device_t dev)
 	unit = device_get_unit(dev);
 
 	sc->sc_mem_rid = 0;
-	sc->sc_mem_res = bus_alloc_resource(dev, SYS_RES_MEMORY,
-					    &sc->sc_mem_rid,
-					    0, ~0, SIPROBEALLOC, RF_ACTIVE);
+	sc->sc_mem_res = bus_alloc_resource_anywhere(dev, SYS_RES_MEMORY,
+						     &sc->sc_mem_rid,
+						     SIPROBEALLOC, RF_ACTIVE);
 	if (!sc->sc_mem_res) {
 		device_printf(dev, "cannot allocate memory resource\n");
 		return ENXIO;
 	}
-	paddr = (caddr_t)rman_get_start(sc->sc_mem_res);/* physical */
+	paddr = (caddr_t)(uintptr_t)rman_get_start(sc->sc_mem_res);/* physical */
 	maddr = rman_get_virtual(sc->sc_mem_res);	/* in kvm */
 
 	DPRINT((0, DBG_AUTOBOOT, "si%d: probe at virtual=0x%x physical=0x%x\n",
@@ -280,7 +279,7 @@ si_isa_attach(device_t dev)
 		device_printf(dev, "couldn't map memory\n");
 		goto fail;
 	}
-	sc->sc_paddr = (caddr_t)rman_get_start(sc->sc_mem_res);
+	sc->sc_paddr = (caddr_t)(uintptr_t)rman_get_start(sc->sc_mem_res);
 	sc->sc_maddr = rman_get_virtual(sc->sc_mem_res);
 
 	sc->sc_irq_rid = 0;

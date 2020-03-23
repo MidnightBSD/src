@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  *
@@ -38,7 +37,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/solo.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/solo.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define SOLO_DEFAULT_BUFSZ 16384
 #define ABS(x) (((x) < 0)? -(x) : (x))
@@ -837,31 +836,31 @@ ess_release_resources(struct ess_info *sc, device_t dev)
 		if (sc->ih)
 			bus_teardown_intr(dev, sc->irq, sc->ih);
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq);
-		sc->irq = 0;
+		sc->irq = NULL;
     	}
     	if (sc->io) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(0), sc->io);
-		sc->io = 0;
+		sc->io = NULL;
     	}
 
     	if (sc->sb) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(1), sc->sb);
-		sc->sb = 0;
+		sc->sb = NULL;
     	}
 
     	if (sc->vc) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(2), sc->vc);
-		sc->vc = 0;
+		sc->vc = NULL;
     	}
 
     	if (sc->mpu) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(3), sc->mpu);
-		sc->mpu = 0;
+		sc->mpu = NULL;
     	}
 
     	if (sc->gp) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(4), sc->gp);
-		sc->gp = 0;
+		sc->gp = NULL;
     	}
 
 	if (sc->parent_dmat) {
@@ -1052,7 +1051,7 @@ ess_attach(device_t dev)
     	if (mixer_init(dev, &solomixer_class, sc))
 		goto no;
 
-    	snprintf(status, SND_STATUSLEN, "at io 0x%lx,0x%lx,0x%lx irq %ld %s",
+    	snprintf(status, SND_STATUSLEN, "at io 0x%jx,0x%jx,0x%jx irq %jd %s",
     	     	rman_get_start(sc->io), rman_get_start(sc->sb), rman_get_start(sc->vc),
 		rman_get_start(sc->irq),PCM_KLDSTRING(snd_solo));
 

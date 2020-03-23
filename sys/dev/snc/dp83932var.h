@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/snc/dp83932var.h 181298 2008-08-04 19:19:18Z jhb $	*/
+/*	$FreeBSD: stable/11/sys/dev/snc/dp83932var.h 298955 2016-05-03 03:41:25Z pfg $	*/
 /*	$NecBSD: dp83932var.h,v 1.3 1999/01/24 01:39:51 kmatsuda Exp $	*/
 /*	$NetBSD: if_snvar.h,v 1.12 1998/05/01 03:42:47 scottr Exp $	*/
 
@@ -212,7 +211,7 @@ typedef struct snc_softc {
 
 /*
  * Accessing SONIC data structures and registers as 32 bit values
- * makes code endianess independent.  The SONIC is however always in
+ * makes code endianness independent.  The SONIC is however always in
  * bigendian mode so it is necessary to ensure that data structures shared
  * between the CPU and the SONIC are always in bigendian order.
  */

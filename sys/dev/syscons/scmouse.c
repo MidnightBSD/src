@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/syscons/scmouse.c 256381 2013-10-12 15:31:36Z markm $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/syscons/scmouse.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_syscons.h"
 
@@ -496,7 +495,7 @@ mouse_cut_start(scr_stat *scp)
 	    i = skip_spc_left(scp, scp->mouse_pos) + 1;
 	    s = spltty();
 	    scp->mouse_cut_start =
-	        (scp->mouse_pos / scp->xsize) * scp->xsize + i;
+	        rounddown(scp->mouse_pos, scp->xsize) + i;
 	    scp->mouse_cut_end =
 	        (scp->mouse_pos / scp->xsize + 1) * scp->xsize - 1;
 	    splx(s);
@@ -541,7 +540,7 @@ mouse_cut_word(scr_stat *scp)
      * unless user specified SC_CUT_SEPCHARS in his kernel config file.
      */
     if (scp->status & MOUSE_VISIBLE) {
-	sol = (scp->mouse_pos / scp->xsize) * scp->xsize;
+	sol = rounddown(scp->mouse_pos, scp->xsize);
 	eol = sol + scp->xsize;
 	c = sc_vtb_getc(&scp->vtb, scp->mouse_pos);
 	if (IS_SEP_CHAR(c)) {
@@ -590,7 +589,7 @@ mouse_cut_line(scr_stat *scp)
     int from;
 
     if (scp->status & MOUSE_VISIBLE) {
-	from = (scp->mouse_pos / scp->xsize) * scp->xsize;
+	from = rounddown(scp->mouse_pos, scp->xsize);
 	mouse_do_cut(scp, from, from + scp->xsize - 1);
 	len = strlen(cut_buffer);
 	if (cut_buffer[len - 1] == '\r')
@@ -667,7 +666,7 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 
 	mouse = (mouse_info_t*)data;
 
-	random_harvest(mouse, sizeof(mouse_info_t), 2, RANDOM_MOUSE);
+	random_harvest_queue(mouse, sizeof(mouse_info_t), 2, RANDOM_MOUSE);
 
 	if (cmd == OLD_CONS_MOUSECTL) {
 	    static u_char swapb[] = { 0, 4, 2, 6, 1, 5, 3, 7 };

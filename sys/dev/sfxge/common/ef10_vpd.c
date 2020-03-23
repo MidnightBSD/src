@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/ef10_vpd.c 301388 2016-06-04 17:08:34Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_vpd.c 300607 2016-05-24 12:16:57Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"

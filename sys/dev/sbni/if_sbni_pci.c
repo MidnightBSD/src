@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sbni/if_sbni_pci.c 296329 2016-03-03 01:07:17Z jhibbits $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,8 +95,8 @@ sbni_pci_probe(device_t dev)
 		device_set_desc(dev, "Granch SBNI12/PCI adapter");
 
 	sc->io_rid = PCIR_BAR(0);
- 	sc->io_res = bus_alloc_resource(dev, SYS_RES_IOPORT, &sc->io_rid,
-					0ul, ~0ul, ports, RF_ACTIVE);
+ 	sc->io_res = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
+					    &sc->io_rid, RF_ACTIVE);
 	if (!sc->io_res) {
 		device_printf(dev, "cannot allocate io ports!\n");
 		if (sc->slave_sc)

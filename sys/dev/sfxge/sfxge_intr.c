@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -33,18 +32,28 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/sfxge_intr.c 301388 2016-06-04 17:08:34Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/sfxge_intr.c 331722 2018-03-29 02:50:57Z eadler $");
+
+#include "opt_rss.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/queue.h>
 #include <sys/rman.h>
 #include <sys/syslog.h>
+#include <sys/taskqueue.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
+
+#ifdef RSS
+#include <net/rss_config.h>
+#endif
 
 #include "common/efx.h"
 
@@ -189,7 +198,12 @@ sfxge_intr_bus_enable(struct sfxge_softc *sc)
 			bus_describe_intr(sc->dev, table[index].eih_res,
 			    table[index].eih_tag, "%d", index);
 #endif
+#ifdef RSS
+		bus_bind_intr(sc->dev, table[index].eih_res,
+			      rss_getcpu(index));
+#else
 		bus_bind_intr(sc->dev, table[index].eih_res, index);
+#endif
 
 	}
 

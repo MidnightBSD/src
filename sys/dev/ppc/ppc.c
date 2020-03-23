@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2000 Nicolas Souchu
  * Copyright (c) 2001 Alcove - Nicolas Souchu
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppc/ppc.c 247094 2013-02-21 12:40:52Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppc/ppc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ppc.h"
 
@@ -291,7 +290,7 @@ ppc_detect_port(struct ppc_data *ppc)
 static void
 ppc_reset_epp_timeout(struct ppc_data *ppc)
 {
-	register char r;
+	char r;
 
 	r = r_str(ppc);
 	w_str(ppc, r | 0x1);
@@ -1327,12 +1326,12 @@ ppc_exec_microseq(device_t dev, struct ppb_microseq **p_msq)
 	int i, iter, len;
 	int error;
 
-	register int reg;
-	register char mask;
-	register int accum = 0;
-	register char *ptr = 0;
+	int reg;
+	char mask;
+	int accum = 0;
+	char *ptr = NULL;
 
-	struct ppb_microseq *stack = 0;
+	struct ppb_microseq *stack = NULL;
 
 /* microsequence registers are equivalent to PC-like port registers */
 
@@ -1502,7 +1501,7 @@ ppc_exec_microseq(device_t dev, struct ppb_microseq **p_msq)
 			mi = stack;
 
 			/* reset the stack */
-			stack = 0;
+			stack = NULL;
 
 			/* XXX return code */
 
@@ -1675,7 +1674,7 @@ ppc_probe(device_t dev, int rid)
 #endif
 	struct ppc_data *ppc;
 	int error;
-	u_long port;
+	rman_res_t port;
 
 	/*
 	 * Allocate the ppc_data structure.
@@ -1700,7 +1699,7 @@ ppc_probe(device_t dev, int rid)
 			next_bios_ppc += 1;
 			if (bootverbose)
 				device_printf(dev,
-				    "parallel port found at 0x%lx\n", port);
+				    "parallel port found at 0x%jx\n", port);
 		}
 #else
 		if ((next_bios_ppc < BIOS_MAX_PPC) &&
@@ -1708,7 +1707,7 @@ ppc_probe(device_t dev, int rid)
 			port = *(BIOS_PORTS + next_bios_ppc++);
 			if (bootverbose)
 				device_printf(dev,
-				    "parallel port found at 0x%lx\n", port);
+				    "parallel port found at 0x%jx\n", port);
 		} else {
 			device_printf(dev, "parallel port not found.\n");
 			return (ENXIO);
@@ -1722,19 +1721,21 @@ ppc_probe(device_t dev, int rid)
 	/* IO port is mandatory */
 
 	/* Try "extended" IO port range...*/
-	ppc->res_ioport = bus_alloc_resource(dev, SYS_RES_IOPORT,
-					     &ppc->rid_ioport, 0, ~0,
-					     IO_LPTSIZE_EXTENDED, RF_ACTIVE);
+	ppc->res_ioport = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+						      &ppc->rid_ioport,
+						      IO_LPTSIZE_EXTENDED,
+						      RF_ACTIVE);
 
 	if (ppc->res_ioport != 0) {
 		if (bootverbose)
 			device_printf(dev, "using extended I/O port range\n");
 	} else {
 		/* Failed? If so, then try the "normal" IO port range... */
-		 ppc->res_ioport = bus_alloc_resource(dev, SYS_RES_IOPORT,
-						      &ppc->rid_ioport, 0, ~0,
-						      IO_LPTSIZE_NORMAL,
-						      RF_ACTIVE);
+		 ppc->res_ioport = bus_alloc_resource_anywhere(dev,
+		 	 				       SYS_RES_IOPORT,
+							       &ppc->rid_ioport,
+							       IO_LPTSIZE_NORMAL,
+							       RF_ACTIVE);
 		if (ppc->res_ioport != 0) {
 			if (bootverbose)
 				device_printf(dev, "using normal I/O port range\n");
@@ -2016,7 +2017,7 @@ ppc_write_ivar(device_t bus, device_t dev, int index, uintptr_t val)
  */
 struct resource *
 ppc_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct ppc_data *ppc = DEVTOSOFTC(bus);
 

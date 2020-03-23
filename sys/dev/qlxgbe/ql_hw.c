@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -29,11 +28,11 @@
 /*
  * File: ql_hw.c
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
- * Content: Contains Hardware dependant functions
+ * Content: Contains Hardware dependent functions
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgbe/ql_hw.c 332053 2018-04-04 23:58:35Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgbe/ql_hw.c 332052 2018-04-04 23:53:29Z davidcs $");
 
 #include "ql_os.h"
 #include "ql_hw.h"
@@ -3825,7 +3824,7 @@ ql_hw_tx_done_locked(qla_host_t *ha, uint32_t txr_idx)
 		comp_count++;
 
 		if (txb->m_head) {
-			ha->ifp->if_opackets++;
+			if_inc_counter(ha->ifp, IFCOUNTER_OPACKETS, 1);
 
 			bus_dmamap_sync(ha->tx_tag, txb->map,
 				BUS_DMASYNC_POSTWRITE);

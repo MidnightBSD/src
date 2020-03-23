@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/chip.h 55320 2000-01-03 02:51:16Z tanimura $
+ * $FreeBSD: stable/11/sys/dev/sound/chip.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

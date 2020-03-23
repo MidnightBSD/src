@@ -1,4 +1,3 @@
-$MidnightBSD$
 
 "Readme.freebsd.txt"    PMC-Sierra, Inc.   05/01/2013
 

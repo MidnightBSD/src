@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2008-2012 Alexander Motin <mav@FreeBSD.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/hda/hdac_private.h 230326 2012-01-19 01:55:48Z mav $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/hda/hdac_private.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _HDAC_PRIVATE_H_

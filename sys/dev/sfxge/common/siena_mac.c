@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/siena_mac.c 311080 2017-01-02 09:32:45Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/siena_mac.c 342445 2018-12-25 07:27:45Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -96,14 +95,13 @@ siena_mac_reconfigure(
 	efx_port_t *epp = &(enp->en_port);
 	efx_oword_t multicast_hash[2];
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MAX(MC_CMD_SET_MAC_IN_LEN,
-				MC_CMD_SET_MAC_OUT_LEN),
-			    MAX(MC_CMD_SET_MCAST_HASH_IN_LEN,
-				MC_CMD_SET_MCAST_HASH_OUT_LEN))];
+	EFX_MCDI_DECLARE_BUF(payload,
+		MAX(MC_CMD_SET_MAC_IN_LEN, MC_CMD_SET_MCAST_HASH_IN_LEN),
+		MAX(MC_CMD_SET_MAC_OUT_LEN, MC_CMD_SET_MCAST_HASH_OUT_LEN));
+
 	unsigned int fcntl;
 	efx_rc_t rc;
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_SET_MAC;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_SET_MAC_IN_LEN;

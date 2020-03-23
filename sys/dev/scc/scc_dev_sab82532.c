@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/scc/scc_dev_sab82532.c 253899 2013-08-02 23:28:49Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/scc/scc_dev_sab82532.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

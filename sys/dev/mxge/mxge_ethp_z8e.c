@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*
  * from: FreeBSD: src/sys/tools/fw_stub.awk,v 1.6 2007/03/02 11:42:53 flz
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mxge/mxge_ethp_z8e.c 241394 2012-10-10 08:36:38Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mxge/mxge_ethp_z8e.c 241394 2012-10-10 08:36:38Z kevlo $");
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>

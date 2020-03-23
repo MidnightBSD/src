@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr_sas_lsi.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr_sas_lsi.c 331903 2018-04-03 02:29:17Z mav $");
 
 /* Communications core for Avago Technologies (LSI) MPT3 */
 
@@ -682,6 +681,41 @@ skip_fp_send:
 		}
 		break;
 	}
+	case MPI2_EVENT_SAS_DEVICE_DISCOVERY_ERROR:
+	{
+		pMpi25EventDataSasDeviceDiscoveryError_t discovery_error_data;
+		uint64_t sas_address;
+
+		discovery_error_data =
+		    (pMpi25EventDataSasDeviceDiscoveryError_t)
+		    fw_event->event_data;
+		
+		sas_address = discovery_error_data->SASAddress.High;
+		sas_address = (sas_address << 32) |
+		    discovery_error_data->SASAddress.Low;
+
+		switch(discovery_error_data->ReasonCode) {
+		case MPI25_EVENT_SAS_DISC_ERR_SMP_FAILED:
+		{
+			mpr_printf(sc, "SMP command failed during discovery "
+			    "for expander with SAS Address %jx and "
+			    "handle 0x%x.\n", sas_address,
+			    discovery_error_data->DevHandle);
+			break;
+		}
+		case MPI25_EVENT_SAS_DISC_ERR_SMP_TIMEOUT:
+		{
+			mpr_printf(sc, "SMP command timed out during "
+			    "discovery for expander with SAS Address %jx and "
+			    "handle 0x%x.\n", sas_address,
+			    discovery_error_data->DevHandle);
+			break;
+		}
+		default:
+			break;
+		}
+		break;
+	}
 	case MPI2_EVENT_PCIE_TOPOLOGY_CHANGE_LIST: 
 	{
 		MPI26_EVENT_DATA_PCIE_TOPOLOGY_CHANGE_LIST *data;
@@ -808,7 +842,7 @@ mprsas_add_device(struct mpr_softc *sc, u16 handle, u8 linkrate)
 			parent_devinfo = le32toh(parent_config_page.DeviceInfo);
 		}
 	}
-	/* TODO Check proper endianess */
+	/* TODO Check proper endianness */
 	sas_address = config_page.SASAddress.High;
 	sas_address = (sas_address << 32) | config_page.SASAddress.Low;
 	mpr_dprint(sc, MPR_INFO, "SAS Address from SAS device page0 = %jx\n",

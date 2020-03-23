@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -33,7 +32,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/sfxge.c 312168 2017-01-14 10:58:08Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/sfxge.c 342455 2018-12-25 07:39:34Z arybchik $");
+
+#include "opt_rss.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -55,8 +56,13 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/sfxge.c 312168 2017-01-14 10:58:08Z 
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
+
+#ifdef RSS
+#include <net/rss_config.h>
+#endif
 
 #include "common/efx.h"
 
@@ -127,7 +133,15 @@ sfxge_estimate_rsrc_limits(struct sfxge_softc *sc)
 	 *  - hardwire maximum RSS channels
 	 *  - administratively specified maximum RSS channels
 	 */
+#ifdef RSS
+	/*
+	 * Avoid extra limitations so that the number of queues
+	 * may be configured at administrator's will
+	 */
+	evq_max = MIN(MAX(rss_getnumbuckets(), 1), EFX_MAXRSS);
+#else
 	evq_max = MIN(mp_ncpus, EFX_MAXRSS);
+#endif
 	if (sc->max_rss_channels > 0)
 		evq_max = MIN(evq_max, sc->max_rss_channels);
 
@@ -135,8 +149,8 @@ sfxge_estimate_rsrc_limits(struct sfxge_softc *sc)
 
 	limits.edl_min_evq_count = 1;
 	limits.edl_max_evq_count = evq_max;
-	limits.edl_min_txq_count = SFXGE_TXQ_NTYPES;
-	limits.edl_max_txq_count = evq_max + SFXGE_TXQ_NTYPES - 1;
+	limits.edl_min_txq_count = SFXGE_EVQ0_N_TXQ(sc);
+	limits.edl_max_txq_count = evq_max + SFXGE_EVQ0_N_TXQ(sc) - 1;
 	limits.edl_min_rxq_count = 1;
 	limits.edl_max_rxq_count = evq_max;
 
@@ -152,16 +166,24 @@ sfxge_estimate_rsrc_limits(struct sfxge_softc *sc)
 		return (rc);
 	}
 
-	KASSERT(txq_allocated >= SFXGE_TXQ_NTYPES,
-		("txq_allocated < SFXGE_TXQ_NTYPES"));
+	KASSERT(txq_allocated >= SFXGE_EVQ0_N_TXQ(sc),
+		("txq_allocated < %u", SFXGE_EVQ0_N_TXQ(sc)));
 
 	sc->evq_max = MIN(evq_allocated, evq_max);
 	sc->evq_max = MIN(rxq_allocated, sc->evq_max);
-	sc->evq_max = MIN(txq_allocated - (SFXGE_TXQ_NTYPES - 1),
+	sc->evq_max = MIN(txq_allocated - (SFXGE_EVQ0_N_TXQ(sc) - 1),
 			  sc->evq_max);
 
 	KASSERT(sc->evq_max <= evq_max,
 		("allocated more than maximum requested"));
+
+#ifdef RSS
+	if (sc->evq_max < rss_getnumbuckets())
+		device_printf(sc->dev, "The number of allocated queues (%u) "
+			      "is less than the number of RSS buckets (%u); "
+			      "performance degradation might be observed",
+			      sc->evq_max, rss_getnumbuckets());
+#endif
 
 	/*
 	 * NIC is kept initialized in the case of success to be able to
@@ -181,7 +203,7 @@ sfxge_set_drv_limits(struct sfxge_softc *sc)
 	limits.edl_min_evq_count = limits.edl_max_evq_count =
 	    sc->intr.n_alloc;
 	limits.edl_min_txq_count = limits.edl_max_txq_count =
-	    sc->intr.n_alloc + SFXGE_TXQ_NTYPES - 1;
+	    sc->intr.n_alloc + SFXGE_EVQ0_N_TXQ(sc) - 1;
 	limits.edl_min_rxq_count = limits.edl_max_rxq_count =
 	    sc->intr.n_alloc;
 
@@ -505,7 +527,7 @@ sfxge_if_ioctl(struct ifnet *ifp, unsigned long command, caddr_t data)
 	{
 		struct ifi2creq i2c;
 
-		error = copyin(ifr->ifr_data, &i2c, sizeof(i2c));
+		error = copyin(ifr_data_get_ptr(ifr), &i2c, sizeof(i2c));
 		if (error != 0)
 			break;
 
@@ -520,7 +542,8 @@ sfxge_if_ioctl(struct ifnet *ifp, unsigned long command, caddr_t data)
 						&i2c.data[0]);
 		SFXGE_ADAPTER_UNLOCK(sc);
 		if (error == 0)
-			error = copyout(&i2c, ifr->ifr_data, sizeof(i2c));
+			error = copyout(&i2c, ifr_data_get_ptr(ifr),
+			    sizeof(i2c));
 		break;
 	}
 #endif
@@ -528,12 +551,13 @@ sfxge_if_ioctl(struct ifnet *ifp, unsigned long command, caddr_t data)
 		error = priv_check(curthread, PRIV_DRIVER);
 		if (error != 0)
 			break;
-		error = copyin(ifr->ifr_data, &ioc, sizeof(ioc));
+		error = copyin(ifr_data_get_ptr(ifr), &ioc, sizeof(ioc));
 		if (error != 0)
 			return (error);
 		error = sfxge_private_ioctl(sc, &ioc);
 		if (error == 0) {
-			error = copyout(&ioc, ifr->ifr_data, sizeof(ioc));
+			error = copyout(&ioc, ifr_data_get_ptr(ifr),
+			    sizeof(ioc));
 		}
 		break;
 	default:
@@ -544,24 +568,9 @@ sfxge_if_ioctl(struct ifnet *ifp, unsigned long command, caddr_t data)
 }
 
 static void
-sfxge_tick(void *arg)
-{
-	struct sfxge_softc *sc = arg;
-
-	sfxge_port_update_stats(sc);
-	sfxge_tx_update_stats(sc);
-
-	callout_reset(&sc->tick_callout,
-		      hz * sc->port.stats_update_period_ms / 1000,
-		      sfxge_tick, sc);
-}
-
-static void
 sfxge_ifnet_fini(struct ifnet *ifp)
 {
 	struct sfxge_softc *sc = ifp->if_softc;
-
-	callout_drain(&sc->tick_callout);
 
 	SFXGE_ADAPTER_LOCK(sc);
 	sfxge_stop(sc);
@@ -611,15 +620,11 @@ sfxge_ifnet_init(struct ifnet *ifp, struct sfxge_softc *sc)
 	ifp->if_transmit = sfxge_if_transmit;
 	ifp->if_qflush = sfxge_if_qflush;
 
-	callout_init(&sc->tick_callout, B_TRUE);
+	ifp->if_get_counter = sfxge_get_counter;
 
 	DBGPRINT(sc->dev, "ifmedia_init");
 	if ((rc = sfxge_port_ifmedia_init(sc)) != 0)
 		goto fail;
-
-	callout_reset(&sc->tick_callout,
-		      hz * sc->port.stats_update_period_ms / 1000,
-		      sfxge_tick, sc);
 
 	return (0);
 
@@ -755,12 +760,17 @@ sfxge_create(struct sfxge_softc *sc)
 	}
 	sc->rxq_entries = sfxge_rx_ring_entries;
 
+	if (efx_nic_cfg_get(enp)->enc_features & EFX_FEATURE_TXQ_CKSUM_OP_DESC)
+		sc->txq_dynamic_cksum_toggle_supported = B_TRUE;
+	else
+		sc->txq_dynamic_cksum_toggle_supported = B_FALSE;
+
 	if (!ISP2(sfxge_tx_ring_entries) ||
 	    (sfxge_tx_ring_entries < EFX_TXQ_MINNDESCS) ||
-	    (sfxge_tx_ring_entries > EFX_TXQ_MAXNDESCS(efx_nic_cfg_get(enp)))) {
+	    (sfxge_tx_ring_entries > efx_nic_cfg_get(enp)->enc_txq_max_ndescs)) {
 		log(LOG_ERR, "%s=%d must be power of 2 from %u to %u",
 		    SFXGE_PARAM_TX_RING, sfxge_tx_ring_entries,
-		    EFX_TXQ_MINNDESCS, EFX_TXQ_MAXNDESCS(efx_nic_cfg_get(enp)));
+		    EFX_TXQ_MINNDESCS, efx_nic_cfg_get(enp)->enc_txq_max_ndescs);
 		error = EINVAL;
 		goto fail_tx_ring_entries;
 	}

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * Copyright (C) 2006-2007 Semihalf, Piotr Kruszynski
@@ -24,7 +23,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/tsec/if_tsecreg.h 259235 2013-12-11 22:36:20Z andreast $
+ * $FreeBSD: stable/11/sys/dev/tsec/if_tsecreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	TSEC_REG_ID		0x000	/* Controller ID register #1. */

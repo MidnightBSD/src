@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/quicc/quicc_bus.h 176772 2008-03-03 18:20:17Z raj $
+ * $FreeBSD: stable/11/sys/dev/quicc/quicc_bus.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEV_QUICC_BUS_H_

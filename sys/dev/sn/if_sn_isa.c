@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 M. Warner Losh
  * All rights reserved.
@@ -26,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sn/if_sn_isa.c 147797 2005-07-06 15:59:47Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sn/if_sn_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgbe/ql_os.c 332053 2018-04-04 23:58:35Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgbe/ql_os.c 332052 2018-04-04 23:53:29Z davidcs $");
 
 
 #include "ql_os.h"
@@ -871,14 +870,9 @@ qla_init_ifnet(device_t dev, qla_host_t *ha)
 
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 
-#if __FreeBSD_version >= 1000000
-	if_initbaudrate(ifp, IF_Gbps(10));
+	ifp->if_baudrate = IF_Gbps(10);
 	ifp->if_capabilities = IFCAP_LINKSTATE;
-#else
 	ifp->if_mtu = ETHERMTU;
-	ifp->if_baudrate = (1 * 1000 * 1000 *1000);
-
-#endif /* #if __FreeBSD_version >= 1000000 */
 
 	ifp->if_init = qla_init;
 	ifp->if_softc = ha;
@@ -907,7 +901,7 @@ qla_init_ifnet(device_t dev, qla_host_t *ha)
 
 	ifp->if_capenable = ifp->if_capabilities;
 
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 
 	ifmedia_init(&ha->media, IFM_IMASK, qla_media_change, qla_media_status);
 
@@ -1984,7 +1978,7 @@ qla_free_rcv_bufs(qla_host_t *ha)
 int
 ql_get_mbuf(qla_host_t *ha, qla_rx_buf_t *rxb, struct mbuf *nmp)
 {
-	register struct mbuf *mp = nmp;
+	struct mbuf *mp = nmp;
 	struct ifnet   		*ifp;
 	int            		ret = 0;
 	uint32_t		offset;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/ef10_nvram.c 311498 2017-01-06 07:34:37Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_nvram.c 350409 2019-07-29 10:41:21Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -395,7 +394,8 @@ tlv_write(
 	if (len > 0) {
 		ptr[(len - 1) / sizeof (uint32_t)] = 0;
 		memcpy(ptr, data, len);
-		ptr += P2ROUNDUP(len, sizeof (uint32_t)) / sizeof (*ptr);
+		ptr += EFX_P2ROUNDUP(uint32_t, len,
+		    sizeof (uint32_t)) / sizeof (*ptr);
 	}
 
 	return (ptr);
@@ -676,6 +676,7 @@ ef10_nvram_buffer_validate(
 	int pos;
 	efx_rc_t rc;
 
+	_NOTE(ARGUNUSED(enp, partn))
 	EFX_STATIC_ASSERT(sizeof (*header) <= EF10_NVRAM_CHUNK);
 
 	if ((partn_data == NULL) || (partn_size == 0)) {
@@ -1286,6 +1287,8 @@ ef10_nvram_buf_read_tlv(
 	caddr_t value;
 	efx_rc_t rc;
 
+	_NOTE(ARGUNUSED(enp))
+
 	if ((seg_data == NULL) || (max_seg_size == 0)) {
 		rc = EINVAL;
 		goto fail1;
@@ -1829,7 +1832,7 @@ ef10_nvram_partn_write_segment_tlv(
 		goto fail7;
 
 	/* Unlock the partition */
-	ef10_nvram_partn_unlock(enp, partn, NULL);
+	(void) ef10_nvram_partn_unlock(enp, partn, NULL);
 
 	EFSYS_KMEM_FREE(enp->en_esip, partn_size, partn_data);
 
@@ -1844,7 +1847,7 @@ fail5:
 fail4:
 	EFSYS_PROBE(fail4);
 
-	ef10_nvram_partn_unlock(enp, partn, NULL);
+	(void) ef10_nvram_partn_unlock(enp, partn, NULL);
 fail3:
 	EFSYS_PROBE(fail3);
 
@@ -1998,7 +2001,7 @@ ef10_nvram_partn_write(
 	__in			efx_nic_t *enp,
 	__in			uint32_t partn,
 	__in			unsigned int offset,
-	__out_bcount(size)	caddr_t data,
+	__in_bcount(size)	caddr_t data,
 	__in			size_t size)
 {
 	size_t chunk;

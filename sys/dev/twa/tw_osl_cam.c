@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/twa/tw_osl_cam.c 315813 2017-03-23 06:41:13Z mav $
+ *	$FreeBSD: stable/11/sys/dev/twa/tw_osl_cam.c 335138 2018-06-14 14:46:20Z mav $
  */
 
 /*
@@ -208,15 +207,17 @@ tw_osli_execute_scsi(struct tw_osli_req_context *req, union ccb *ccb)
 		csio->cdb_io.cdb_bytes[0]);
 
 	if (ccb_h->target_id >= TW_CL_MAX_NUM_UNITS) {
-		tw_osli_dbg_dprintf(3, sc, "Invalid target. PTL = %x %x %x",
-			ccb_h->path_id, ccb_h->target_id, ccb_h->target_lun);
+		tw_osli_dbg_dprintf(3, sc, "Invalid target. PTL = %x %x %jx",
+			ccb_h->path_id, ccb_h->target_id,
+			(uintmax_t)ccb_h->target_lun);
 		ccb_h->status |= CAM_TID_INVALID;
 		xpt_done(ccb);
 		return(1);
 	}
 	if (ccb_h->target_lun >= TW_CL_MAX_NUM_LUNS) {
-		tw_osli_dbg_dprintf(3, sc, "Invalid lun. PTL = %x %x %x",
-			ccb_h->path_id, ccb_h->target_id, ccb_h->target_lun);
+		tw_osli_dbg_dprintf(3, sc, "Invalid lun. PTL = %x %x %jx",
+			ccb_h->path_id, ccb_h->target_id,
+			(uintmax_t)ccb_h->target_lun);
 		ccb_h->status |= CAM_LUN_INVALID;
 		xpt_done(ccb);
 		return(1);
@@ -426,11 +427,11 @@ twa_action(struct cam_sim *sim, union ccb *ccb)
 		strlcpy(path_inq->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(path_inq->hba_vid, "3ware", HBA_IDLEN);
 		strlcpy(path_inq->dev_name, cam_sim_name(sim), DEV_IDLEN);
-                path_inq->transport = XPORT_SPI;
-                path_inq->transport_version = 2;
-                path_inq->protocol = PROTO_SCSI;
-                path_inq->protocol_version = SCSI_REV_2;
-                path_inq->maxio = TW_CL_MAX_IO_SIZE;
+		path_inq->transport = XPORT_SPI;
+		path_inq->transport_version = 2;
+		path_inq->protocol = PROTO_SCSI;
+		path_inq->protocol_version = SCSI_REV_2;
+		path_inq->maxio = TW_CL_MAX_IO_SIZE;
 		ccb_h->status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sbni/if_sbni_isa.c 315221 2017-03-14 02:06:03Z pfg $");
 
 
 #include <sys/param.h>
@@ -42,8 +42,8 @@ __MBSDID("$MidnightBSD$");
 #include <sys/rman.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/ethernet.h>
-#include <net/if_arp.h>
 
 #include <isa/isavar.h>
 
@@ -86,8 +86,9 @@ sbni_probe_isa(device_t dev)
 
 	sc = device_get_softc(dev);
 
- 	sc->io_res = bus_alloc_resource(dev, SYS_RES_IOPORT, &sc->io_rid,
-					0ul, ~0ul, SBNI_PORTS, RF_ACTIVE);
+ 	sc->io_res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+ 						 &sc->io_rid, SBNI_PORTS,
+ 						 RF_ACTIVE);
 	if (!sc->io_res) {
 		printf("sbni: cannot allocate io ports!\n");
 		return (ENOENT);
@@ -131,7 +132,7 @@ sbni_attach_isa(device_t dev)
 	} else {
 		struct sbni_softc  *master;
 
-		if ((master = connect_to_master(sc)) == 0) {
+		if ((master = connect_to_master(sc)) == NULL) {
 			device_printf(dev, "failed to alloc irq\n");
 			sbni_release_resources(sc);
 			return (ENXIO);

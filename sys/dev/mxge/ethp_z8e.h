@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 
 Copyright (c) 2006-2012, Myricom Inc.
@@ -26,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/10/sys/dev/mxge/ethp_z8e.h 236212 2012-05-29 00:53:51Z gallatin $
+$FreeBSD: stable/11/sys/dev/mxge/ethp_z8e.h 331722 2018-03-29 02:50:57Z eadler $
 ***************************************************************************/
 
 static unsigned int ethp_z8e_uncompressed_length = 387604 ;

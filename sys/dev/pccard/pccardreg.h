@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pcmciareg.h,v 1.7 1998/10/29 09:45:52 enami Exp $	*/
-/* $FreeBSD: stable/10/sys/dev/pccard/pccardreg.h 139749 2005-01-06 01:43:34Z imp $ */
+/* $FreeBSD: stable/11/sys/dev/pccard/pccardreg.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.

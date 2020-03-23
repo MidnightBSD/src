@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/dev/rndtest/rndtest.h 139749 2005-01-06 01:43:34Z imp $	*/
+/*	$FreeBSD: stable/11/sys/dev/rndtest/rndtest.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$OpenBSD$	*/
 
 /*-

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Warner Losh.
  * Copyright (c) 2000,2001 Jonathan Chen.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/pccbb/pccbbvar.h 284034 2015-06-05 17:05:09Z jhb $
+ * $FreeBSD: stable/11/sys/dev/pccbb/pccbbvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -114,7 +113,7 @@ extern devclass_t cbb_devclass;
 int	cbb_activate_resource(device_t brdev, device_t child,
 	    int type, int rid, struct resource *r);
 struct resource	*cbb_alloc_resource(device_t brdev, device_t child,
-	    int type, int *rid, u_long start, u_long end, u_long count,
+	    int type, int *rid, rman_res_t start, rman_res_t end, rman_res_t count,
 	    u_int flags);
 void	cbb_child_detached(device_t brdev, device_t child);
 int	cbb_child_present(device_t parent, device_t child);

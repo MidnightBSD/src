@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/sfxge/common/ef10_intr.c 301388 2016-06-04 17:08:34Z arybchik $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_intr.c 342445 2018-12-25 07:27:45Z arybchik $");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -79,8 +78,8 @@ efx_mcdi_trigger_interrupt(
 	__in		unsigned int level)
 {
 	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_TRIGGER_INTERRUPT_IN_LEN,
-			    MC_CMD_TRIGGER_INTERRUPT_OUT_LEN)];
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_TRIGGER_INTERRUPT_IN_LEN,
+		MC_CMD_TRIGGER_INTERRUPT_OUT_LEN);
 	efx_rc_t rc;
 
 	EFSYS_ASSERT(enp->en_family == EFX_FAMILY_HUNTINGTON ||
@@ -91,7 +90,6 @@ efx_mcdi_trigger_interrupt(
 		goto fail1;
 	}
 
-	(void) memset(payload, 0, sizeof (payload));
 	req.emr_cmd = MC_CMD_TRIGGER_INTERRUPT;
 	req.emr_in_buf = payload;
 	req.emr_in_length = MC_CMD_TRIGGER_INTERRUPT_IN_LEN;

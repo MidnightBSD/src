@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
 *
@@ -28,7 +27,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/tisa/sassata/common/tdioctl.c 315221 2017-03-14 02:06:03Z pfg $");
 #include <dev/pms/config.h>
 
 #include <dev/pms/freebsd/driver/common/osenv.h>
@@ -380,7 +379,7 @@ tiCOMMgntIOCTL(
   bit32                     Offset = 0;
   bit32                     RequestLength = 0;  /* user request on how much data to pass to application */
   agsaContext_t		    *agContext = NULL;
-  bit8                      *loc = 0;
+  bit8                      *loc = NULL;
 
   TI_DBG3(("tiCOMMgntIOCTL: start\n"));
 
@@ -3390,7 +3389,7 @@ tdsaSendTMFIoctl( tiRoot_t	     	*tiRoot,
 {
 	bit32		status;
 	tmf_pass_through_req_t  *tmf_req = (tmf_pass_through_req_t*)agIOCTLPayload->FunctionSpecificArea;
-#if !(defined(__MidnightBSD__))
+#if !(defined(__FreeBSD__))
 	status = ostiSendResetDeviceIoctl(tiRoot, agParam2, tmf_req->pathId, tmf_req->targetId, tmf_req->lun, resetType);
 #endif
 	TI_DBG3(("Status returned from ostiSendResetDeviceIoctl is %d\n",status));

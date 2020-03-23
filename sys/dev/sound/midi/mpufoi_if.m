@@ -23,8 +23,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/sound/midi/mpufoi_if.m 166971 2007-02-25 13:51:52Z netchild $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/sound/midi/mpufoi_if.m 166971 2007-02-25 13:51:52Z netchild $
+#
 
 #include <sys/bus.h>
 #include <dev/sound/midi/mpu401.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -60,7 +59,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pcm/feeder_rate.c 209193 2010-06-15 07:06:54Z avg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder_rate.c 331722 2018-03-29 02:50:57Z eadler $");
 #endif
 
 #include "feeder_rate_gen.h"
@@ -163,14 +162,7 @@ static int feeder_rate_polyphase_max = Z_POLYPHASE_MAX;
 static char feeder_rate_presets[] = FEEDER_RATE_PRESETS;
 SYSCTL_STRING(_hw_snd, OID_AUTO, feeder_rate_presets, CTLFLAG_RD,
     &feeder_rate_presets, 0, "compile-time rate presets");
-
-TUNABLE_INT("hw.snd.feeder_rate_min", &feeder_rate_min);
-TUNABLE_INT("hw.snd.feeder_rate_max", &feeder_rate_max);
-TUNABLE_INT("hw.snd.feeder_rate_round", &feeder_rate_round);
-TUNABLE_INT("hw.snd.feeder_rate_quality", &feeder_rate_quality);
-
-TUNABLE_INT("hw.snd.feeder_rate_polyphase_max", &feeder_rate_polyphase_max);
-SYSCTL_INT(_hw_snd, OID_AUTO, feeder_rate_polyphase_max, CTLFLAG_RW,
+SYSCTL_INT(_hw_snd, OID_AUTO, feeder_rate_polyphase_max, CTLFLAG_RWTUN,
     &feeder_rate_polyphase_max, 0, "maximum allowable polyphase entries");
 
 static int
@@ -191,7 +183,7 @@ sysctl_hw_snd_feeder_rate_min(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_min, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_min, CTLTYPE_INT | CTLFLAG_RWTUN,
     0, sizeof(int), sysctl_hw_snd_feeder_rate_min, "I",
     "minimum allowable rate");
 
@@ -213,7 +205,7 @@ sysctl_hw_snd_feeder_rate_max(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_max, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_max, CTLTYPE_INT | CTLFLAG_RWTUN,
     0, sizeof(int), sysctl_hw_snd_feeder_rate_max, "I",
     "maximum allowable rate");
 
@@ -235,7 +227,7 @@ sysctl_hw_snd_feeder_rate_round(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_round, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_round, CTLTYPE_INT | CTLFLAG_RWTUN,
     0, sizeof(int), sysctl_hw_snd_feeder_rate_round, "I",
     "sample rate converter rounding threshold");
 
@@ -287,7 +279,7 @@ sysctl_hw_snd_feeder_rate_quality(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_quality, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_hw_snd, OID_AUTO, feeder_rate_quality, CTLTYPE_INT | CTLFLAG_RWTUN,
     0, sizeof(int), sysctl_hw_snd_feeder_rate_quality, "I",
     "sample rate converter quality ("__XSTRING(Z_QUALITY_MIN)"=low .. "
     __XSTRING(Z_QUALITY_MAX)"=high)");

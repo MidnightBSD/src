@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
@@ -31,7 +30,7 @@
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxge/qls_isr.c 281955 2015-04-24 23:26:44Z hiren $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxge/qls_isr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 
 
@@ -58,7 +57,7 @@ qls_tx_comp(qla_host_t *ha, uint32_t txr_idx, q81_tx_mac_comp_t *tx_comp)
 	txb = &ha->tx_ring[txr_idx].tx_buf[tx_idx];
 
 	if (txb->m_head) {
-		ha->ifp->if_opackets++;
+		if_inc_counter(ha->ifp, IFCOUNTER_OPACKETS, 1);
 		bus_dmamap_sync(ha->tx_tag, txb->map,
 		        BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(ha->tx_tag, txb->map);
@@ -191,7 +190,7 @@ qls_rx_comp(qla_host_t *ha, uint32_t rxr_idx, uint32_t cq_idx, q81_rx_t *cq_e)
 			if ((cq_e->flags1 & Q81_RX_FLAGS1_RSS_MATCH_MASK)) {
 				rxr->rss_int++;
 				mp->m_pkthdr.flowid = cq_e->rss;
-				M_HASHTYPE_SET(mp, M_HASHTYPE_OPAQUE);
+				M_HASHTYPE_SET(mp, M_HASHTYPE_OPAQUE_HASH);
 			}
 			if (cq_e->flags0 & (Q81_RX_FLAGS0_TE |
 				Q81_RX_FLAGS0_NU | Q81_RX_FLAGS0_IE)) {
@@ -202,10 +201,10 @@ qls_rx_comp(qla_host_t *ha, uint32_t rxr_idx, uint32_t cq_idx, q81_rx_t *cq_e)
 					CSUM_PSEUDO_HDR;
 				mp->m_pkthdr.csum_data = 0xFFFF;
 			}
-			ifp->if_ipackets++;
+			if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 			if (lro->lro_cnt && (tcp_lro_rx(lro, mp, 0) == 0)) {
-				/* LRO packet has been successfuly queued */
+				/* LRO packet has been successfully queued */
 			} else {
 				(*ifp->if_input)(ifp, mp);
 			}
@@ -233,7 +232,6 @@ qls_cq_isr(qla_host_t *ha, uint32_t cq_idx)
 	uint32_t i, cq_comp_idx;
 	int ret = 0, tx_comp_done = 0;
 	struct lro_ctrl	*lro;
-	struct lro_entry *queued;
 
 	cq_b = ha->rx_ring[cq_idx].cq_base_vaddr;
 	lro = &ha->rx_ring[cq_idx].lro;
@@ -288,11 +286,7 @@ qls_cq_isr(qla_host_t *ha, uint32_t cq_idx)
                 }
 	}
 
-        while((!SLIST_EMPTY(&lro->lro_active))) {
-                queued = SLIST_FIRST(&lro->lro_active);
-                SLIST_REMOVE_HEAD(&lro->lro_active, next);
-                tcp_lro_flush(lro, queued);
-        }
+	tcp_lro_flush_all(lro);
 
 	ha->rx_ring[cq_idx].cq_next = cq_comp_idx;
 

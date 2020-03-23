@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
 **
 *Copyright (c) 2014 PMC-Sierra, Inc.  All rights reserved. 
@@ -31,7 +30,7 @@
  */
 /*******************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/sallsdk/spc/mpi.c 300050 2016-05-17 12:52:31Z eadler $");
 #include <dev/pms/config.h>
 
 #include <dev/pms/RefTisa/sallsdk/spc/saglobal.h>
@@ -807,7 +806,7 @@ mpiMsgConsume(
  *  \param messagePtr1 Pointer to the returned message buffer to free
  *  \param messagePtr2 Pointer to the returned message buffer to free if bc > 1
  *
- * Returns consumed and processed message to the the specified outbounf queue
+ * Returns consumed and processed message to the specified outbounf queue
  *
  * Return:
  *         AGSA_RC_SUCCESS if the message has been returned succesfully

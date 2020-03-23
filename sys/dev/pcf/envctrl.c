@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Joerg Wunsch
  *
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pcf/envctrl.c 181332 2008-08-05 17:39:37Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pcf/envctrl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Device specific driver for the SUNW,envctrl device found on some

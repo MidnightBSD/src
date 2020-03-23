@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/sound/pci/allegro_reg.h 230401 2012-01-20 22:37:10Z pfg $ */
+/* $FreeBSD: stable/11/sys/dev/sound/pci/allegro_reg.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 1996-2008, 4Front Technologies
  * Copyright (C) 1992-2000  Don Kim (don.kim@esstech.com)

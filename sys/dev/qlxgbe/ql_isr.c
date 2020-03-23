@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxgbe/ql_isr.c 332053 2018-04-04 23:58:35Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgbe/ql_isr.c 351677 2019-09-02 00:31:05Z emaste $");
 
 
 #include "ql_os.h"
@@ -160,7 +159,7 @@ qla_rx_intr(qla_host_t *ha, qla_sgl_rcv_t *sgc, uint32_t sds_idx)
 		mpf->m_pkthdr.csum_flags = 0;
 	}
 
-	ifp->if_ipackets++;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 	mpf->m_pkthdr.flowid = sgc->rss_hash;
 
@@ -358,9 +357,8 @@ qla_lro_intr(qla_host_t *ha, qla_sgl_lro_t *sgc, uint32_t sds_idx)
 	mpf->m_pkthdr.csum_data = 0xFFFF;
 
 	mpf->m_pkthdr.flowid = sgc->rss_hash;
-	M_HASHTYPE_SET(mpf, M_HASHTYPE_OPAQUE);
 
-	ifp->if_ipackets++;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
 	(*ifp->if_input)(ifp, mpf);
 
@@ -793,7 +791,7 @@ ql_mbx_isr(void *arg)
 	ha = arg;
 
 	if (ha == NULL) {
-		device_printf(ha->pci_dev, "%s: arg == NULL\n", __func__);
+		printf("%s: arg == NULL\n", __func__);
 		return;
 	}
 

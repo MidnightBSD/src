@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu, Marc Bouget
  * Copyright (c) 2004 Joerg Wunsch
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pcf/pcf.c 289666 2015-10-20 21:20:34Z ian $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pcf/pcf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -467,7 +466,7 @@ pcf_read(device_t dev, char *buf, int len, int *read, int last,
 
 		len --;
 		bytes ++;
-	};
+	}
 
 error:
 	*read = bytes;

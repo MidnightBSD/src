@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998-2003
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/rl/if_rlreg.h 292783 2015-12-27 17:34:18Z marius $
+ * $FreeBSD: stable/11/sys/dev/rl/if_rlreg.h 306309 2016-09-25 13:52:55Z kevlo $
  */
 
 /*
@@ -682,7 +681,7 @@ struct rl_desc {
 #define	RL_TDESC_STAT_LINKFAIL	0x00200000	/* link faulure */
 #define	RL_TDESC_STAT_OWINCOL	0x00400000	/* out-of-window collision */
 #define	RL_TDESC_STAT_TXERRSUM	0x00800000	/* transmit error summary */
-#define	RL_TDESC_STAT_UNDERRUN	0x02000000	/* TX underrun occured */
+#define	RL_TDESC_STAT_UNDERRUN	0x02000000	/* TX underrun occurred */
 #define	RL_TDESC_STAT_OWN	0x80000000
 
 /*
@@ -1159,3 +1158,8 @@ struct rl_softc {
 /* US Robotics 997902 device ID */
 
 #define	USR_DEVICEID_997902	0x0116
+
+/* 
+ * NCube vendor ID
+ */
+#define	NCUBE_VENDORID		0x10FF

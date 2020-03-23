@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Neterion, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/nxge/xge-osdep.h 185162 2008-11-22 05:55:56Z kmacy $
+ * $FreeBSD: stable/11/sys/dev/nxge/xge-osdep.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef XGE_OSDEP_H
@@ -407,7 +406,6 @@ xge_os_dma_free(pci_dev_h pdev, const void *vaddr, int size,
 	XGE_OS_MEMORY_CHECK_FREE(p_dmah->dma_viraddr, size);
 	bus_dmamem_free(p_dmah->dma_tag, p_dmah->dma_viraddr, p_dmah->dma_map);
 	bus_dma_tag_destroy(p_dmah->dma_tag);
-	p_dmah->dma_map = NULL;
 	p_dmah->dma_tag = NULL;
 	p_dmah->dma_viraddr = NULL;
 	return;

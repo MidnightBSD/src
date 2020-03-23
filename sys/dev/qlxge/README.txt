@@ -1,5 +1,4 @@
-$MidnightBSD$
-#$FreeBSD: stable/10/sys/dev/qlxge/README.txt 252206 2013-06-25 17:50:22Z davidcs $
+#$FreeBSD: stable/11/sys/dev/qlxge/README.txt 252206 2013-06-25 17:50:22Z davidcs $
 
 			README File
 		QLogic 8100 series Dual Port

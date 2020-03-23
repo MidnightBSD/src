@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  *
@@ -21,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/si/si_eisa.c 166923 2007-02-23 20:11:27Z piso $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/si/si_eisa.c 166923 2007-02-23 20:11:27Z piso $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

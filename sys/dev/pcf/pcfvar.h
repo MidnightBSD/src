@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Nicolas Souchu, Marc Bouget
  * Copyright (c) 2004 Joerg Wunsch
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/pcf/pcfvar.h 194026 2009-06-11 17:15:44Z avg $
+ * $FreeBSD: stable/11/sys/dev/pcf/pcfvar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __PCFVAR_H__

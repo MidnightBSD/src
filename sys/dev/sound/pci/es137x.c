@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Russell Cattelan <cattelan@thebarn.com>
  * Copyright (c) 1998 Joachim Kuebart <joachim.kuebart@gmx.net>
@@ -89,7 +88,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/es137x.c 314667 2017-03-04 13:03:31Z avg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/es137x.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define MEM_MAP_REG 0x14
 
@@ -1857,7 +1856,7 @@ es_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at %s 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
 	    (es->regtype == SYS_RES_IOPORT)? "io" : "memory",
 	    rman_get_start(es->reg), rman_get_start(es->irq),
 	    PCM_KLDSTRING(snd_es137x));

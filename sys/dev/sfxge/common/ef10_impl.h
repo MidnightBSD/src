@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/10/sys/dev/sfxge/common/ef10_impl.h 311498 2017-01-06 07:34:37Z arybchik $
+ * $FreeBSD: stable/11/sys/dev/sfxge/common/ef10_impl.h 342441 2018-12-25 07:21:35Z arybchik $
  */
 
 #ifndef	_SYS_EF10_IMPL_H
@@ -441,7 +440,7 @@ ef10_nvram_partn_read(
 	__in			efx_nic_t *enp,
 	__in			uint32_t partn,
 	__in			unsigned int offset,
-	__out_bcount(size)	caddr_t data,
+	__in_bcount(size)	caddr_t data,
 	__in			size_t size);
 
 extern	__checkReturn		efx_rc_t
@@ -760,6 +759,11 @@ ef10_tx_qdesc_vlantci_create(
 	__in	uint16_t vlan_tci,
 	__out	efx_desc_t *edp);
 
+extern	void
+ef10_tx_qdesc_checksum_create(
+	__in	efx_txq_t *etp,
+	__in	uint16_t flags,
+	__out	efx_desc_t *edp);
 
 #if EFSYS_OPT_QSTATS
 
@@ -991,6 +995,13 @@ typedef struct ef10_filter_entry_s {
 /* Allow for the broadcast address to be added to the multicast list */
 #define	EFX_EF10_FILTER_MULTICAST_FILTERS_MAX	(EFX_MAC_MULTICAST_LIST_MAX + 1)
 
+/*
+ * For encapsulated packets, there is one filter each for each combination of
+ * IPv4 or IPv6 outer frame, VXLAN, GENEVE or NVGRE packet type, and unicast or
+ * multicast inner frames.
+ */
+#define EFX_EF10_FILTER_ENCAP_FILTERS_MAX	12
+
 typedef struct ef10_filter_table_s {
 	ef10_filter_entry_t	eft_entry[EFX_EF10_FILTER_TBL_ROWS];
 	efx_rxq_t		*eft_default_rxq;
@@ -1002,6 +1013,9 @@ typedef struct ef10_filter_table_s {
 	    EFX_EF10_FILTER_MULTICAST_FILTERS_MAX];
 	uint32_t		eft_mulcst_filter_count;
 	boolean_t		eft_using_all_mulcst;
+	uint32_t		eft_encap_filter_indexes[
+	    EFX_EF10_FILTER_ENCAP_FILTERS_MAX];
+	uint32_t		eft_encap_filter_count;
 } ef10_filter_table_t;
 
 	__checkReturn	efx_rc_t

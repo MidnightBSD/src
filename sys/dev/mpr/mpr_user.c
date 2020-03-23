@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -58,11 +57,11 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mpr/mpr_user.c 322661 2017-08-18 15:38:08Z ken $
+ * $FreeBSD: stable/11/sys/dev/mpr/mpr_user.c 331903 2018-04-03 02:29:17Z mav $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/mpr/mpr_user.c 322661 2017-08-18 15:38:08Z ken $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/mpr/mpr_user.c 331903 2018-04-03 02:29:17Z mav $");
 
 #include "opt_compat.h"
 
@@ -1190,7 +1189,10 @@ mpr_user_get_adapter_data(struct mpr_softc *sc, mpr_adapter_data_t *data)
 	/*
 	 * General device info.
 	 */
-	data->AdapterType = MPRIOCTL_ADAPTER_TYPE_SAS3;
+	if (sc->mpr_flags & MPR_FLAGS_GEN35_IOC)
+		data->AdapterType = MPRIOCTL_ADAPTER_TYPE_SAS35;
+	else
+		data->AdapterType = MPRIOCTL_ADAPTER_TYPE_SAS3;
 	data->PCIDeviceHwId = pci_get_device(sc->mpr_dev);
 	data->PCIDeviceHwRev = pci_read_config(sc->mpr_dev, PCIR_REVID, 1);
 	data->SubSystemId = pci_get_subdevice(sc->mpr_dev);

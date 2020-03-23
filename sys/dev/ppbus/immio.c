@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Nicolas Souchu
  * Copyright (c) 2001 Alcove - Nicolas Souchu
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/immio.c 187576 2009-01-21 23:10:06Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/immio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Iomega ZIP+ Matchmaker Parallel Port Interface driver
@@ -675,10 +674,10 @@ imm_do_scsi(struct vpoio_data *vpo, int host, int target, char *command,
 		int *ret)
 {
 	device_t ppbus = device_get_parent(vpo->vpo_dev);
-	register char r;
+	char r;
 	char l, h = 0;
 	int len, error = 0, not_connected = 0;
-	register int k;
+	int k;
 	int negociated = 0;
 
 	/*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *	Copyright (c) 2003 Bob Bishop
  *      All rights reserved.
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/stg/tmc18c30_pci.c 240325 2012-09-10 18:49:49Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/stg/tmc18c30_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -100,8 +99,8 @@ stg_pci_attach(device_t dev)
 	}
 
 	/* XXXX remove INTR_ENTROPY below for MFC */
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY,
-			       NULL, stg_intr, (void *)sc, &sc->stg_intrhand);
+	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY |
+	    INTR_MPSAFE, NULL, stg_intr, sc, &sc->stg_intrhand);
 	if (error) {
 		stg_release_resource(dev);
 		return(error);

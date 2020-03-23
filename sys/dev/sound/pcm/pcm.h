@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pcm/pcm.h 193640 2009-06-07 19:12:08Z ariff $
+ * $FreeBSD: stable/11/sys/dev/sound/pcm/pcm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SND_PCM_H_
@@ -43,7 +42,7 @@
 
 /*
  * Automatically turn on 64bit arithmetic on suitable archs
- * (amd64 64bit, ia64, etc..) for wider 32bit samples / integer processing.
+ * (amd64 64bit, etc..) for wider 32bit samples / integer processing.
  */
 #if LONG_BIT >= 64
 #undef SND_PCM_64

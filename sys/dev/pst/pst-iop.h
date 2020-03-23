@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/pst/pst-iop.h 230132 2012-01-15 13:23:18Z uqs $
+ * $FreeBSD: stable/11/sys/dev/pst/pst-iop.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* misc defines */

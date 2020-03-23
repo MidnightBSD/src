@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/coretemp/coretemp.c 246951 2013-02-18 22:47:16Z markj $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/coretemp/coretemp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -49,7 +48,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/coretemp/coretemp.c 246951 2013-02-18 22:4
 #include <machine/cputypes.h>
 #include <machine/md_var.h>
 
-#define	TZ_ZEROC			2732
+#define	TZ_ZEROC			2731
 
 #define	THERM_STATUS_LOG		0x02
 #define	THERM_STATUS			0x01

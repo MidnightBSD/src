@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/dev/twa/tw_osl.h 246713 2013-02-12 16:57:20Z kib $
+ *	$FreeBSD: stable/11/sys/dev/twa/tw_osl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/ppbconf.c 249585 2013-04-17 11:45:15Z gabor $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/ppbconf.c 331722 2018-03-29 02:50:57Z eadler $");
 #include "opt_ppb_1284.h"
 
 #include <sys/param.h>
@@ -207,7 +206,7 @@ search_token(char *str, int slen, char *token)
 static int
 ppb_pnp_detect(device_t bus)
 {
-	char *token, *class = 0;
+	char *token, *class = NULL;
 	int i, len, error;
 	int class_id = -1;
 	char str[PPB_PnP_STRING_SIZE+1];

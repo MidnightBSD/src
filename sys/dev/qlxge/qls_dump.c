@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
@@ -30,7 +29,7 @@
  * File: qls_dump.c
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/qlxge/qls_dump.c 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/qlxge/qls_dump.c 331722 2018-03-29 02:50:57Z eadler $");
 
 
 #include "qls_os.h"

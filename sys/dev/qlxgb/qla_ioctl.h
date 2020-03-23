@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/qlxgb/qla_ioctl.h 250340 2013-05-07 22:58:42Z davidcs $
+ * $FreeBSD: stable/11/sys/dev/qlxgb/qla_ioctl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * File: qla_ioctl.h

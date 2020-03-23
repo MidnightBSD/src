@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Orion Hodson <orion@freebsd.org>
  * Portions of this code derived from via82c686.c:
@@ -49,7 +48,7 @@
 
 #include <dev/sound/pci/via8233.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/via8233.c 314667 2017-03-04 13:03:31Z avg $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/via8233.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define VIA8233_PCI_ID 0x30591106
 
@@ -1165,7 +1164,7 @@ via_chip_init(device_t dev)
 static int
 via_attach(device_t dev)
 {
-	struct via_info *via = 0;
+	struct via_info *via = NULL;
 	char status[SND_STATUSLEN];
 	int i, via_dxs_disabled, via_dxs_src, via_dxs_chnum, via_sgd_chnum;
 	int nsegs;
@@ -1349,7 +1348,7 @@ via_attach(device_t dev)
 		ac97_setextmode(via->codec, ext);
 	}
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
 	    rman_get_start(via->reg), rman_get_start(via->irq),
 	    PCM_KLDSTRING(snd_via8233));
 
@@ -1382,7 +1381,7 @@ bad:
 		bus_release_resource(dev, SYS_RES_IRQ, via->irqid, via->irq);
 	if (via->parent_dmat)
 		bus_dma_tag_destroy(via->parent_dmat);
-	if (via->sgd_dmamap)
+	if (via->sgd_addr)
 		bus_dmamap_unload(via->sgd_dmat, via->sgd_dmamap);
 	if (via->sgd_table)
 		bus_dmamem_free(via->sgd_dmat, via->sgd_table, via->sgd_dmamap);

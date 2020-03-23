@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Device driver for Specialix range (SI/XIO) of serial line multiplexors.
  * 'C' definitions for Specialix serial multiplex driver.
@@ -31,7 +30,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $FreeBSD: stable/10/sys/dev/si/si.h 179668 2008-06-09 08:43:27Z ed $
+ * $FreeBSD: stable/11/sys/dev/si/si.h 298955 2016-05-03 03:41:25Z pfg $
  */
 
 #include <sys/callout.h>
@@ -77,7 +76,7 @@ struct si_module {
 };
 
 /*
- *	The 'next' pointer & with 0x7fff + SI base addres give
+ *	The 'next' pointer & with 0x7fff + SI base address give
  *	the address of the next module block if fitted. (else 0)
  *	Note that next points to the TX buffer so 0x60 must be
  *	subtracted to find the true base.

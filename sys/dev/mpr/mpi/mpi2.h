@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
@@ -30,7 +29,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/10/sys/dev/mpr/mpi/mpi2.h 319436 2017-06-01 15:43:24Z slm $
+ * $FreeBSD: stable/11/sys/dev/mpr/mpi/mpi2.h 331903 2018-04-03 02:29:17Z mav $
  */
 
 /*
@@ -45,7 +44,7 @@
  *                  scatter/gather formats.
  *  Creation Date:  June 21, 2006
  *
- *  mpi2.h Version:  02.00.46
+ *  mpi2.h Version:  02.00.48
  *
  *  NOTE: Names (typedefs, defines, etc.) beginning with an MPI25 or Mpi25
  *        prefix are for use only on MPI v2.5 products, and must not be used
@@ -152,6 +151,8 @@
  *  04-10-16  02.00.44  Bumped MPI2_HEADER_VERSION_UNIT.
  *  07-06-16  02.00.45  Bumped MPI2_HEADER_VERSION_UNIT.
  *  09-02-16  02.00.46  Bumped MPI2_HEADER_VERSION_UNIT.
+ *  11-23-16  02.00.47  Bumped MPI2_HEADER_VERSION_UNIT.
+ *  02-03-17  02.00.48  Bumped MPI2_HEADER_VERSION_UNIT.
  *  --------------------------------------------------------------------------
  */
 
@@ -195,7 +196,7 @@
 
 
 /* Unit and Dev versioning for this MPI header set */
-#define MPI2_HEADER_VERSION_UNIT            (0x2E)
+#define MPI2_HEADER_VERSION_UNIT            (0x30)
 #define MPI2_HEADER_VERSION_DEV             (0x00)
 #define MPI2_HEADER_VERSION_UNIT_MASK       (0xFF00)
 #define MPI2_HEADER_VERSION_UNIT_SHIFT      (8)

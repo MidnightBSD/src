@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010, LSI Corp.
  * All rights reserved.
@@ -32,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/tws/tws_services.c 275977 2014-12-21 02:39:10Z smh $
+ * $FreeBSD: stable/11/sys/dev/tws/tws_services.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <dev/tws/tws.h>

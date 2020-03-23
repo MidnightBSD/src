@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pcmcia_cis_quirks.c,v 1.6 2000/04/12 21:07:55 scw Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pccard/pccard_cis_quirks.c 182142 2008-08-25 04:59:43Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pccard/pccard_cis_quirks.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define	PCCARDDEBUG
 
@@ -258,9 +257,6 @@ static struct pccard_cis_quirk pccard_cis_quirks[] = {
 	  &pccard_ndc_nd5100_func0, &pccard_ndc_nd5100_func0_cfe0 },
 };
 	
-static int n_pccard_cis_quirks =
-	sizeof(pccard_cis_quirks)/sizeof(pccard_cis_quirks[0]);
-
 static int
 pccard_cis_quirk_match(struct pccard_softc *sc, struct pccard_cis_quirk *q)
 {
@@ -290,7 +286,7 @@ void pccard_check_cis_quirks(device_t dev)
 	pf = NULL;
 	pf_last = NULL;
 
-	for (i=0; i<n_pccard_cis_quirks; i++) {
+	for (i = 0; i < nitems(pccard_cis_quirks); i++) {
 		q = &pccard_cis_quirks[i];
 		if (!pccard_cis_quirk_match(sc, q))
 			continue;

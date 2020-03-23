@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/sf/starfire_rx.h 175524 2008-01-21 05:02:44Z yongari $ */
+/* $FreeBSD: stable/11/sys/dev/sf/starfire_rx.h 175524 2008-01-21 05:02:44Z yongari $ */
 /*
  *   MODULE: GFP_RX.H
  *

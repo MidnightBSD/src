@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -38,7 +37,7 @@
 #include <dev/sound/pci/ds1.h>
 #include <dev/sound/pci/ds1-fw.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/10/sys/dev/sound/pci/ds1.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/ds1.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* -------------------------------------------------------------------- */
 
@@ -1011,7 +1010,7 @@ ds_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at memory 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at memory 0x%jx irq %jd %s",
 		 rman_get_start(sc->reg), rman_get_start(sc->irq),PCM_KLDSTRING(snd_ds1));
 
 	if (pcm_register(dev, sc, DS1_CHANS, 2))

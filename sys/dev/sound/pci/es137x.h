@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Joachim Kuebart <joachim.kuebart@gmx.net>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/pci/es137x.h 204875 2010-03-08 18:51:28Z joel $
+ * $FreeBSD: stable/11/sys/dev/sound/pci/es137x.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* This supports the ENSONIQ AudioPCI board based on the ES1370. */

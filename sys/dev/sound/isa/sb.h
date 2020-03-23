@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997,1998 Luigi Rizzo
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/isa/sb.h 166425 2007-02-02 13:33:35Z joel $
+ * $FreeBSD: stable/11/sys/dev/sound/isa/sb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef SB_H

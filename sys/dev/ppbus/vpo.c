@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ppbus/vpo.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/vpo.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -222,7 +221,7 @@ vpo_intr(struct vpo_data *vpo, struct ccb_scsiio *csio)
 		return;
 	}
 
-	/* if a timeout occured, no sense */
+	/* if a timeout occurred, no sense */
 	if (vpo->vpo_error) {
 		if (vpo->vpo_error != VP0_ESELECT_TIMEOUT)
 			device_printf(vpo->vpo_dev, "VP0 error/timeout (%d)\n",

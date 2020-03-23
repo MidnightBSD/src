@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, 1996 Matt Thomas <matt@3am-software.com>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/pdq/if_fpa.c 199542 2009-11-19 19:25:47Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/pdq/if_fpa.c 331882 2018-04-02 16:11:49Z brooks $");
 
 /*
  * DEC PDQ FDDI Controller; code for BSD derived operating systems
@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/pdq/if_fpa.c 199542 2009-11-19 19:25:47Z j
 #include <sys/rman.h> 
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h> 
 #include <net/fddi.h>
 
@@ -156,6 +156,7 @@ pdq_pci_attach(device_t dev)
     }
 
 
+    gone_in_dev(dev, 12, "fpa(4) driver");
     return (0);
 bad:
     pdq_free(dev);
