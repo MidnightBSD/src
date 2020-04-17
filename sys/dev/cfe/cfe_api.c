@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: cfe_api.c,v 1.5 2005/12/11 12:18:07 christos Exp $ */
 /* from: SiByte Id: cfe_api.c,v 1.16 2002/07/09 23:29:11 cgd Exp $ */
 
@@ -49,7 +48,7 @@
     ********************************************************************* */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cfe/cfe_api.c 202091 2010-01-11 17:16:06Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cfe/cfe_api.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <dev/cfe/cfe_api.h>
 #include <dev/cfe/cfe_api_int.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
@@ -29,7 +28,7 @@
 #define BXE_STATS_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe_stats.h 315882 2017-03-24 03:11:11Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_stats.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 
@@ -265,7 +264,7 @@ struct bxe_eth_stats {
     uint32_t mbuf_alloc_sge;
     uint32_t mbuf_alloc_tpa;
 
-    /* num. of times tx queue full occured */
+    /* num. of times tx queue full occurred */
     uint32_t tx_queue_full_return;
     /* debug stats */
     uint32_t bxe_tx_mq_sc_state_failures;
@@ -379,7 +378,7 @@ struct bxe_eth_q_stats {
     uint32_t mbuf_alloc_sge;
     uint32_t mbuf_alloc_tpa;
 
-    /* num. of times tx queue full occured */
+    /* num. of times tx queue full occurred */
     uint32_t tx_queue_full_return;
 
     /* debug stats */
@@ -708,6 +707,7 @@ void bxe_stats_init(struct bxe_softc *sc);
 void bxe_stats_handle(struct bxe_softc *sc, enum bxe_stats_event event);
 void bxe_save_statistics(struct bxe_softc *sc);
 void bxe_afex_collect_stats(struct bxe_softc *sc, void *void_afex_stats, uint32_t stats_type);
+uint64_t bxe_get_counter(if_t, ift_counter);
 
 #endif /* BXE_STATS_H */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-intel.c 291456 2015-11-29 17:14:05Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/chipsets/ata-intel.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -150,12 +149,12 @@ ata_intel_probe(device_t dev)
      { ATA_I82801JD_S2,  0, INTEL_6CH2, 0, ATA_SA300, "ICH10" },
      { ATA_I82801JI_S1,  0, INTEL_6CH,  0, ATA_SA300, "ICH10" },
      { ATA_I82801JI_S2,  0, INTEL_6CH2, 0, ATA_SA300, "ICH10" },
-     { ATA_5Series_S1,   0, INTEL_6CH,  0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_S2,   0, INTEL_6CH2, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_S3,   0, INTEL_6CH2, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_S4,   0, INTEL_6CH,  0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_S5,   0, INTEL_6CH2, 0, ATA_SA300, "5 Series/3400 Series PCH" },
-     { ATA_5Series_S6,   0, INTEL_6CH,  0, ATA_SA300, "5 Series/3400 Series PCH" },
+     { ATA_IBP_S1,       0, INTEL_6CH,  0, ATA_SA300, "Ibex Peak" },
+     { ATA_IBP_S2,       0, INTEL_6CH2, 0, ATA_SA300, "Ibex Peak" },
+     { ATA_IBP_S3,       0, INTEL_6CH2, 0, ATA_SA300, "Ibex Peak" },
+     { ATA_IBP_S4,       0, INTEL_6CH,  0, ATA_SA300, "Ibex Peak-M" },
+     { ATA_IBP_S5,       0, INTEL_6CH2, 0, ATA_SA300, "Ibex Peak-M" },
+     { ATA_IBP_S6,       0, INTEL_6CH,  0, ATA_SA300, "Ibex Peak-M" },
      { ATA_CPT_S1,       0, INTEL_6CH,  0, ATA_SA600, "Cougar Point" },
      { ATA_CPT_S2,       0, INTEL_6CH,  0, ATA_SA600, "Cougar Point" },
      { ATA_CPT_S3,       0, INTEL_6CH2, 0, ATA_SA300, "Cougar Point" },
@@ -381,7 +380,7 @@ ata_intel_ch_attach(device_t dev)
 				} else if (ata_intel_sata_sidpr_test(dev)) {
 					ch->hw.pm_read = ata_intel_sata_sidpr_read;
 					ch->hw.pm_write = ata_intel_sata_sidpr_write;
-				};
+				}
 			}
 			if (ch->hw.pm_write != NULL) {
 				ch->flags |= ATA_PERIODIC_POLL;

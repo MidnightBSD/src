@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe_stats.c 315882 2017-03-24 03:11:11Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_stats.c 339881 2018-10-29 21:09:39Z davidcs $");
 
 #include "bxe.h"
 #include "bxe_stats.h"
@@ -37,7 +36,6 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe_stats.c 315882 2017-03-24 03:11:11
 #define BITS_PER_LONG 64
 #endif
 
-extern int bxe_grc_dump(struct bxe_softc *sc);
 
 static inline long
 bxe_hilo(uint32_t *hiref)
@@ -237,11 +235,11 @@ bxe_stats_comp(struct bxe_softc *sc)
     while (*stats_comp != DMAE_COMP_VAL) {
         if (!cnt) {
             BLOGE(sc, "Timeout waiting for stats finished\n");
-            if(sc->trigger_grcdump) {
-                /* taking grcdump */
-                bxe_grc_dump(sc);
-            }
+	    BXE_SET_ERROR_BIT(sc, BXE_ERR_STATS_TO);
+            taskqueue_enqueue_timeout(taskqueue_thread,
+                &sc->sp_err_timeout_task, hz/10);
             break;
+
         }
 
         cnt--;
@@ -924,6 +922,7 @@ bxe_hw_stats_update(struct bxe_softc *sc)
         nig_timer_max = SHMEM_RD(sc, port_mb[SC_PORT(sc)].stat_nig_timer);
         if (nig_timer_max != estats->nig_timer_max) {
             estats->nig_timer_max = nig_timer_max;
+	    /*NOTE: not setting error bit */
             BLOGE(sc, "invalid NIG timer max (%u)\n",
                   estats->nig_timer_max);
         }
@@ -1171,54 +1170,54 @@ bxe_storm_stats_update(struct bxe_softc *sc)
 static void
 bxe_net_stats_update(struct bxe_softc *sc)
 {
-    struct bxe_eth_stats *estats = &sc->eth_stats;
-    struct ifnet *ifnet = sc->ifnet;
-    unsigned long tmp;
-    int i;
 
-    ifnet->if_data.ifi_ipackets =
-        bxe_hilo(&estats->total_unicast_packets_received_hi) +
-        bxe_hilo(&estats->total_multicast_packets_received_hi) +
-        bxe_hilo(&estats->total_broadcast_packets_received_hi);
+    for (int i = 0; i < sc->num_queues; i++)
+        if_inc_counter(sc->ifp, IFCOUNTER_IQDROPS,
+	    le32toh(sc->fp[i].old_tclient.checksum_discard));
+}
 
-    ifnet->if_data.ifi_opackets =
-        bxe_hilo(&estats->total_unicast_packets_transmitted_hi) +
-        bxe_hilo(&estats->total_multicast_packets_transmitted_hi) +
-        bxe_hilo(&estats->total_broadcast_packets_transmitted_hi);
+uint64_t
+bxe_get_counter(if_t ifp, ift_counter cnt)
+{
+	struct bxe_softc *sc;
+	struct bxe_eth_stats *estats;
 
-    ifnet->if_data.ifi_ibytes = bxe_hilo(&estats->total_bytes_received_hi);
+	sc = if_getsoftc(ifp);
+	estats = &sc->eth_stats;
 
-    ifnet->if_data.ifi_obytes = bxe_hilo(&estats->total_bytes_transmitted_hi);
-
-    tmp = 0;
-    for (i = 0; i < sc->num_queues; i++) {
-        struct tstorm_per_queue_stats *old_tclient =
-            &sc->fp[i].old_tclient;
-        tmp += le32toh(old_tclient->checksum_discard);
-    }
-
-    ifnet->if_data.ifi_iqdrops = tmp;
-
-    ifnet->if_data.ifi_ierrors =
-        bxe_hilo(&estats->rx_stat_etherstatsundersizepkts_hi) +
-        bxe_hilo(&estats->etherstatsoverrsizepkts_hi) +
-        bxe_hilo(&estats->brb_drop_hi) +
-        bxe_hilo(&estats->brb_truncate_hi) +
-        bxe_hilo(&estats->rx_stat_dot3statsfcserrors_hi) +
-        bxe_hilo(&estats->rx_stat_dot3statsalignmenterrors_hi) +
-        bxe_hilo(&estats->no_buff_discard_hi);
-
-    ifnet->if_data.ifi_oerrors =
-        bxe_hilo(&estats->rx_stat_dot3statscarriersenseerrors_hi) +
-        bxe_hilo(&estats->tx_stat_dot3statsinternalmactransmiterrors_hi);
-
-    ifnet->if_data.ifi_imcasts =
-        bxe_hilo(&estats->total_multicast_packets_received_hi);
-
-    ifnet->if_data.ifi_collisions =
-        bxe_hilo(&estats->tx_stat_etherstatscollisions_hi) +
-        bxe_hilo(&estats->tx_stat_dot3statslatecollisions_hi) +
-        bxe_hilo(&estats->tx_stat_dot3statsexcessivecollisions_hi);
+	switch (cnt) {
+	case IFCOUNTER_IPACKETS:
+		return (bxe_hilo(&estats->total_unicast_packets_received_hi) +
+		    bxe_hilo(&estats->total_multicast_packets_received_hi) +
+		    bxe_hilo(&estats->total_broadcast_packets_received_hi));
+	case IFCOUNTER_OPACKETS:
+		return (bxe_hilo(&estats->total_unicast_packets_transmitted_hi) +
+		    bxe_hilo(&estats->total_multicast_packets_transmitted_hi) +
+		    bxe_hilo(&estats->total_broadcast_packets_transmitted_hi));
+	case IFCOUNTER_IBYTES:
+		return (bxe_hilo(&estats->total_bytes_received_hi));
+	case IFCOUNTER_OBYTES:
+		return (bxe_hilo(&estats->total_bytes_transmitted_hi));
+	case IFCOUNTER_IERRORS:
+		return (bxe_hilo(&estats->rx_stat_etherstatsundersizepkts_hi) +
+		    bxe_hilo(&estats->etherstatsoverrsizepkts_hi) +
+		    bxe_hilo(&estats->brb_drop_hi) +
+		    bxe_hilo(&estats->brb_truncate_hi) +
+		    bxe_hilo(&estats->rx_stat_dot3statsfcserrors_hi) +
+		    bxe_hilo(&estats->rx_stat_dot3statsalignmenterrors_hi) +
+		    bxe_hilo(&estats->no_buff_discard_hi));
+	case IFCOUNTER_OERRORS:
+		return (bxe_hilo(&estats->rx_stat_dot3statscarriersenseerrors_hi) +
+		    bxe_hilo(&estats->tx_stat_dot3statsinternalmactransmiterrors_hi));
+	case IFCOUNTER_IMCASTS:
+		return (bxe_hilo(&estats->total_multicast_packets_received_hi));
+	case IFCOUNTER_COLLISIONS:
+		return (bxe_hilo(&estats->tx_stat_etherstatscollisions_hi) +
+		    bxe_hilo(&estats->tx_stat_dot3statslatecollisions_hi) +
+		    bxe_hilo(&estats->tx_stat_dot3statsexcessivecollisions_hi));
+	default:
+		return (if_get_counter_default(ifp, cnt));
+	}
 }
 
 static void
@@ -1316,13 +1315,11 @@ bxe_stats_update(struct bxe_softc *sc)
 
         if (bxe_storm_stats_update(sc)) {
             if (sc->stats_pending++ == 3) {
-		if (sc->ifnet->if_drv_flags & IFF_DRV_RUNNING) {
-                    if(sc->trigger_grcdump) {
-                        /* taking grcdump */
-                        bxe_grc_dump(sc);
-                    }
-                    atomic_store_rel_long(&sc->chip_tq_flags, CHIP_TQ_REINIT);
-                    taskqueue_enqueue(sc->chip_tq, &sc->chip_tq_task);
+		if (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) {
+		    BLOGE(sc, "Storm stats not updated for 3 times, resetting\n");
+		    BXE_SET_ERROR_BIT(sc, BXE_ERR_STATS_TO);
+		    taskqueue_enqueue_timeout(taskqueue_thread,
+                            &sc->sp_err_timeout_task, hz/10);
 		}
             }
             return;
@@ -1651,15 +1648,6 @@ bxe_stats_init(struct bxe_softc *sc)
     /* prepare statistics ramrod data */
     bxe_prep_fw_stats_req(sc);
 
-    sc->ifnet->if_data.ifi_ipackets   = 0;
-    sc->ifnet->if_data.ifi_opackets   = 0;
-    sc->ifnet->if_data.ifi_ibytes     = 0;
-    sc->ifnet->if_data.ifi_obytes     = 0;
-    sc->ifnet->if_data.ifi_ierrors    = 0;
-    sc->ifnet->if_data.ifi_oerrors    = 0;
-    sc->ifnet->if_data.ifi_imcasts    = 0;
-    sc->ifnet->if_data.ifi_collisions = 0;
-
     if (sc->stats_init) {
         memset(&sc->net_stats_old, 0, sizeof(sc->net_stats_old));
         memset(&sc->fw_stats_old, 0, sizeof(sc->fw_stats_old));
@@ -1682,7 +1670,7 @@ bxe_stats_init(struct bxe_softc *sc)
         bxe_port_stats_base_init(sc);
     }
 
-    /* mark the end of statistics initializiation */
+    /* mark the end of statistics initialization */
     sc->stats_init = FALSE;
 }
 
@@ -1712,9 +1700,6 @@ bxe_save_statistics(struct bxe_softc *sc)
         UPDATE_QSTAT_OLD(total_tpa_bytes_hi);
         UPDATE_QSTAT_OLD(total_tpa_bytes_lo);
     }
-
-    /* save net_device_stats statistics */
-    sc->net_stats_old.rx_dropped = sc->ifnet->if_data.ifi_iqdrops;
 
     /* store port firmware statistics */
     if (sc->port.pmf) {

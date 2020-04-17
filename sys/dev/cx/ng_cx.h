@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Defines for Cronyx-Tau adapter driver.
  *
@@ -14,7 +13,7 @@
  * works or modified versions.
  *
  * Cronyx Id: ng_cx.h,v 1.1.2.3 2004/01/27 14:39:11 rik Exp $
- * $FreeBSD: stable/10/sys/dev/cx/ng_cx.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/cx/ng_cx.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 #ifdef NETGRAPH

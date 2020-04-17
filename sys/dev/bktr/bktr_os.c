@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the 
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_os.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_os.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -41,7 +40,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_os.c 254263 2013-08-12 23:30:01Z
  * chipset.
  * Copyright Roger Hardiman and Amancio Hasty.
  *
- * bktr_os : This has all the Operating System dependant code,
+ * bktr_os : This has all the Operating System dependent code,
  *             probe/attach and open/close/ioctl/read/mmap
  *             memory allocation
  *             PCI bus interfacing
@@ -56,7 +55,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_os.c 254263 2013-08-12 23:30:01Z
 /*******************/
 /* *** FreeBSD *** */
 /*******************/
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -305,7 +304,7 @@ bktr_probe( device_t dev )
 			device_set_desc(dev, "BrookTree 879");
 			return BUS_PROBE_DEFAULT;
 		}
-	};
+	}
 
         return ENXIO;
 }
@@ -396,12 +395,12 @@ bktr_attach( device_t dev )
         fun = fun | 1;	/* Enable writes to the sub-system vendor ID */
 
 #if defined( BKTR_430_FX_MODE )
-	if (bootverbose) printf("Using 430 FX chipset compatibilty mode\n");
+	if (bootverbose) printf("Using 430 FX chipset compatibility mode\n");
         fun = fun | 2;	/* Enable Intel 430 FX compatibility mode */
 #endif
 
 #if defined( BKTR_SIS_VIA_MODE )
-	if (bootverbose) printf("Using SiS/VIA chipset compatibilty mode\n");
+	if (bootverbose) printf("Using SiS/VIA chipset compatibility mode\n");
         fun = fun | 4;	/* Enable SiS/VIA compatibility mode (useful for
                            OPTi chipset motherboards too */
 #endif

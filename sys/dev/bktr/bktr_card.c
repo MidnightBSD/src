@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_card.c 218909 2011-02-21 09:01:34Z brucec $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_card.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -53,7 +52,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_card.c 218909 2011-02-21 09:01:3
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */
@@ -1218,7 +1217,7 @@ checkTuner:
 	} /* end switch(card) */
 
 
-	/* At this point, a goto checkDBX has not occured */
+	/* At this point, a goto checkDBX has not occurred */
 	/* We have not been able to select a Tuner */
 	/* Some cards make use of the tuner address to */
 	/* identify the make/model of tuner */

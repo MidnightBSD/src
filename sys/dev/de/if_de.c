@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_de.c,v 1.86 1999/06/01 19:17:59 thorpej Exp $	*/
 /*-
  * Copyright (c) 1994-1997 Matt Thomas (matt@3am-software.com)
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/de/if_de.c 332291 2018-04-08 17:03:39Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/de/if_de.c 347962 2019-05-18 20:43:13Z brooks $");
 
 #define	TULIP_HDR_DATA
 
@@ -61,6 +60,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/de/if_de.c 332291 2018-04-08 17:03:39Z bro
 #include <sys/rman.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_media.h>
@@ -419,7 +419,7 @@ tulip_linkup(tulip_softc_t * const sc, tulip_media_t media)
      * We could set probe_timeout to 0 but setting to 3000 puts this
      * in one central place and the only matters is tulip_link is
      * followed by a tulip_timeout.  Therefore setting it should not
-     * result in aberrant behavour.
+     * result in aberrant behaviour.
      */
     sc->tulip_probe_timeout = 3000;
     sc->tulip_probe_state = TULIP_PROBE_INACTIVE;
@@ -3439,7 +3439,7 @@ tulip_rx_intr(tulip_softc_t * const sc)
 	} else {
 	    CTR1(KTR_TULIP, "tulip_rx_intr: bad packet; status %08x",
 		DESC_STATUS(eop));
-	    ifp->if_ierrors++;
+	    if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 	    if (DESC_STATUS(eop) & (TULIP_DSTS_RxBADLENGTH|TULIP_DSTS_RxOVERFLOW|TULIP_DSTS_RxWATCHDOG)) {
 		sc->tulip_dot3stats.dot3StatsInternalMacReceiveErrors++;
 	    } else {
@@ -3479,7 +3479,7 @@ tulip_rx_intr(tulip_softc_t * const sc)
 #if defined(TULIP_DEBUG)
 	cnt++;
 #endif
-	ifp->if_ipackets++;
+	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 	if (++eop == ri->ri_last)
 	    eop = ri->ri_first;
 	ri->ri_nextin = eop;
@@ -3501,7 +3501,7 @@ tulip_rx_intr(tulip_softc_t * const sc)
 	     */
 	    m0 = m_devget(mtod(ms, caddr_t), total_len, ETHER_ALIGN, ifp, NULL);
 	    if (m0 == NULL) {
-		ifp->if_ierrors++;
+		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 		goto skip_input;
 	    }
 #else
@@ -3675,7 +3675,7 @@ tulip_tx_intr(tulip_softc_t * const sc)
 		    if (d_status & TULIP_DSTS_ERRSUM) {
 			CTR1(KTR_TULIP, "tulip_tx_intr: output error: %08x",
 			    d_status);
-			sc->tulip_ifp->if_oerrors++;
+			if_inc_counter(sc->tulip_ifp, IFCOUNTER_OERRORS, 1);
 			if (d_status & TULIP_DSTS_TxEXCCOLL)
 			    sc->tulip_dot3stats.dot3StatsExcessiveCollisions++;
 			if (d_status & TULIP_DSTS_TxLATECOLL)
@@ -3696,7 +3696,7 @@ tulip_tx_intr(tulip_softc_t * const sc)
 			CTR2(KTR_TULIP,
 		    "tulip_tx_intr: output ok, collisions %d, status %08x",
 			    collisions, d_status);
-			sc->tulip_ifp->if_collisions += collisions;
+			if_inc_counter(sc->tulip_ifp, IFCOUNTER_COLLISIONS, collisions);
 			if (collisions == 1)
 			    sc->tulip_dot3stats.dot3StatsSingleCollisionFrames++;
 			else if (collisions > 1)
@@ -3730,7 +3730,7 @@ tulip_tx_intr(tulip_softc_t * const sc)
 	sc->tulip_txtimer = 0;
     else if (xmits > 0)
 	sc->tulip_txtimer = TULIP_TXTIMER;
-    sc->tulip_ifp->if_opackets += xmits;
+    if_inc_counter(sc->tulip_ifp, IFCOUNTER_OPACKETS, xmits);
     TULIP_PERFEND(txintr);
     return descs;
 }
@@ -3918,7 +3918,7 @@ tulip_txput(tulip_softc_t * const sc, struct mbuf *m)
      * a bit reminiscent of going on the Ark two by two
      * since each descriptor for the TULIP can describe
      * two buffers.  So we advance through packet filling
-     * each of the two entries at a time to to fill each
+     * each of the two entries at a time to fill each
      * descriptor.  Clear the first and last segment bits
      * in each descriptor (actually just clear everything
      * but the end-of-ring or chain bits) to make sure
@@ -3937,8 +3937,8 @@ tulip_txput(tulip_softc_t * const sc, struct mbuf *m)
 	    segcnt++;
 	    m0 = m0->m_next;
     }
-#endif
     CTR2(KTR_TULIP, "tulip_txput: sending packet %p (%d chunks)", m, segcnt);
+#endif
     d_status = 0;
     eop = nextout = ri->ri_nextout;
     segcnt = 0;
@@ -4430,6 +4430,8 @@ tulip_attach(tulip_softc_t * const sc)
     TULIP_LOCK(sc);
     sc->tulip_flags &= ~TULIP_DEVICEPROBE;
     TULIP_UNLOCK(sc);
+
+    gone_by_fcp101_dev(sc->tulip_dev);
 }
 
 /* Release memory for a single descriptor ring. */
@@ -4461,7 +4463,6 @@ tulip_busdma_freering(tulip_ringinfo_t *ri)
     }
     if (ri->ri_descs != NULL) {
 	bus_dmamem_free(ri->ri_ring_tag, ri->ri_descs, ri->ri_ring_map);
-	ri->ri_ring_map = NULL;
 	ri->ri_descs = NULL;
     }
     if (ri->ri_ring_tag != NULL) {
@@ -4546,8 +4547,6 @@ tulip_busdma_cleanup(tulip_softc_t * const sc)
     if (sc->tulip_setupbuf != NULL) {
 	bus_dmamem_free(sc->tulip_setup_tag, sc->tulip_setupbuf,
 	    sc->tulip_setup_map);
-	bus_dmamap_destroy(sc->tulip_setup_tag, sc->tulip_setup_map);
-	sc->tulip_setup_map = NULL;
 	sc->tulip_setupbuf = NULL;
     }
     if (sc->tulip_setup_tag != NULL) {
@@ -4878,8 +4877,8 @@ tulip_pci_attach(device_t dev)
 	    rid = 0;
 	    res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 					 RF_SHAREABLE | RF_ACTIVE);
-	    if (res == 0 || bus_setup_intr(dev, res, INTR_TYPE_NET |
-		    INTR_MPSAFE, NULL, intr_rtn, sc, &ih)) {
+	    if (res == NULL || bus_setup_intr(dev, res, INTR_TYPE_NET |
+                                              INTR_MPSAFE, NULL, intr_rtn, sc, &ih)) {
 		device_printf(dev, "couldn't map interrupt\n");
 		tulip_busdma_cleanup(sc);
 		ether_ifdetach(sc->tulip_ifp);

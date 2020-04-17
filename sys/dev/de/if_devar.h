@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_devar.h,v 1.32 1999/04/01 14:55:25 tsubai Exp $	*/
 
-/* $FreeBSD: stable/10/sys/dev/de/if_devar.h 332291 2018-04-08 17:03:39Z brooks $ */
+/* $FreeBSD: stable/11/sys/dev/de/if_devar.h 332290 2018-04-08 16:59:39Z brooks $ */
 
 /*-
  * Copyright (c) 1994-1997 Matt Thomas (matt@3am-software.com)
@@ -843,7 +842,7 @@ static const struct {
 
 /*
  * This driver supports a maximum of 32 tulip boards.
- * This should be enough for the forseeable future.
+ * This should be enough for the foreseeable future.
  */
 #define	TULIP_MAX_DEVICES	32
 

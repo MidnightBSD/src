@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -28,7 +27,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_mem.c 237263 2012-06-19 07:34:13Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_mem.c 237263 2012-06-19 07:34:13Z np $");
 
 #include "opt_inet.h"
 

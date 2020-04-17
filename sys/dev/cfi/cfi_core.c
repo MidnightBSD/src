@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, Juniper Networks, Inc.
  * Copyright (c) 2012-2013, SRI International
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_core.c 257524 2013-11-01 20:33:30Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cfi/cfi_core.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_cfi.h"
 
@@ -100,11 +99,17 @@ cfi_read(struct cfi_softc *sc, u_int ofs)
 		break;
 	case 2:
 		sval = bus_space_read_2(sc->sc_tag, sc->sc_handle, ofs);
+#ifdef CFI_HARDWAREBYTESWAP
+		val = sval;
+#else
 		val = le16toh(sval);
+#endif
 		break;
 	case 4:
 		val = bus_space_read_4(sc->sc_tag, sc->sc_handle, ofs);
+#ifndef CFI_HARDWAREBYTESWAP
 		val = le32toh(val);
+#endif
 		break;
 	default:
 		val = ~0;
@@ -123,10 +128,19 @@ cfi_write(struct cfi_softc *sc, u_int ofs, u_int val)
 		bus_space_write_1(sc->sc_tag, sc->sc_handle, ofs, val);
 		break;
 	case 2:
+#ifdef CFI_HARDWAREBYTESWAP
+		bus_space_write_2(sc->sc_tag, sc->sc_handle, ofs, val);
+#else
 		bus_space_write_2(sc->sc_tag, sc->sc_handle, ofs, htole16(val));
+
+#endif
 		break;
 	case 4:
+#ifdef CFI_HARDWAREBYTESWAP
+		bus_space_write_4(sc->sc_tag, sc->sc_handle, ofs, val);
+#else
 		bus_space_write_4(sc->sc_tag, sc->sc_handle, ofs, htole32(val));
+#endif
 		break;
 	}
 }
@@ -411,7 +425,7 @@ cfi_attach(device_t dev)
 		    device_get_nameunit(dev)) < (sizeof(name) - 1) &&
 		    snprintf(value, sizeof(value), "0x%016jx", ppr) <
 		    (sizeof(value) - 1))
-			(void) setenv(name, value);
+			(void) kern_setenv(name, value);
 	}
 #endif
 

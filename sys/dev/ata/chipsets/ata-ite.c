@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-ite.c 281140 2015-04-06 08:23:06Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/chipsets/ata-ite.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -104,7 +103,7 @@ ata_ite_chipinit(device_t dev)
 	pci_write_config(dev, 0x56, 0x31, 1);
 
 	ctlr->setmode = ata_ite_821x_setmode;
-	/* No timing restrictions initally. */
+	/* No timing restrictions initially. */
 	ctlr->chipset_data = NULL;
     }
     ctlr->ch_attach = ata_ite_ch_attach;

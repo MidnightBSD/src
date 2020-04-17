@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002-2004
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,9 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: stable/10/sys/dev/dcons/dcons_os.h 170408 2007-06-08 00:54:44Z simokawa $
+ * $FreeBSD: stable/11/sys/dev/dcons/dcons_os.h 331722 2018-03-29 02:50:57Z eadler $
  */
-
 
 typedef void (*dcons_poll_fn)(void *, int);
 EVENTHANDLER_DECLARE(dcons_poll, dcons_poll_fn);

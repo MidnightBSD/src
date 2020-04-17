@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  *   based on work by Slawa Olhovchenkov
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/digi/digi.c 320923 2017-07-12 22:16:54Z jhb $
+ * $FreeBSD: stable/11/sys/dev/digi/digi.c 320921 2017-07-12 20:10:53Z jhb $
  */
 
 /*-
@@ -1442,8 +1441,8 @@ digi_errortxt(int id)
 		"tty-level buffer overflow",
 	};
 
-	KASSERT(id >= 0 && id < sizeof(error_desc) / sizeof(error_desc[0]),
-	    ("Unexpected digi error id %d\n", id));
+	KASSERT(id >= 0 && id < nitems(error_desc),
+		("Unexpected digi error id %d\n", id));
 
 	return (error_desc[id]);
 }

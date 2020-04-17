@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_listen.c 309108 2016-11-24 14:48:46Z jch $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/ulp/tom/cxgb_listen.c 303690 2016-08-03 00:19:52Z ngie $");
 
 #include "opt_inet.h"
 
@@ -37,15 +36,17 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_listen.c 309108 2016-11-
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/route.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/in_fib.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/tcp_timer.h>
-#include <netinet/tcp_var.h>
 #define TCPSTATES
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_var.h>
 #include <netinet/toecore.h>
 
 #include "cxgb_include.h"
@@ -442,26 +443,13 @@ static struct synq_entry *
 mbuf_to_synq_entry(struct mbuf *m)
 {
 	int len = roundup(sizeof (struct synq_entry), 8);
-	uint8_t *buf;
-	int buflen;
 
 	if (__predict_false(M_TRAILINGSPACE(m) < len)) {
 	    panic("%s: no room for synq_entry (%td, %d)\n", __func__,
 	    M_TRAILINGSPACE(m), len);
 	}
 
-	if (m->m_flags & M_EXT) {
-		buf = m->m_ext.ext_buf;
-		buflen = m->m_ext.ext_size;
-	} else if (m->m_flags & M_PKTHDR) {
-		buf = &m->m_pktdat[0];
-		buflen = MHLEN;
-	} else {
-		buf = &m->m_dat[0];
-		buflen = MLEN;
-	}
-
-	return ((void *)(buf + buflen - len));
+	return ((void *)(M_START(m) + M_SIZE(m) - len));
 }
 
 #ifdef KTR
@@ -493,8 +481,8 @@ do_pass_accept_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	unsigned int tid = GET_TID(req);
 	struct listen_ctx *lctx = lookup_stid(&td->tid_maps, stid);
 	struct l2t_entry *e = NULL;
+	struct nhop4_basic nh4;
 	struct sockaddr_in nam;
-	struct rtentry *rt;
 	struct inpcb *inp;
 	struct socket *so;
 	struct port_info *pi;
@@ -538,18 +526,12 @@ do_pass_accept_req(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	nam.sin_len = sizeof(nam);
 	nam.sin_family = AF_INET;
 	nam.sin_addr = inc.inc_faddr;
-	rt = rtalloc1((struct sockaddr *)&nam, 0, 0);
-	if (rt == NULL)
+	if (fib4_lookup_nh_basic(RT_DEFAULT_FIB, nam.sin_addr, 0, 0, &nh4) != 0)
 		REJECT_PASS_ACCEPT();
 	else {
-		struct sockaddr *nexthop;
-
-		RT_UNLOCK(rt);
-		nexthop = rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway :
-		    (struct sockaddr *)&nam;
-		if (rt->rt_ifp == ifp)
-			e = t3_l2t_get(pi, rt->rt_ifp, nexthop);
-		RTFREE(rt);
+		nam.sin_addr = nh4.nh_addr;
+		if (nh4.nh_ifp == ifp)
+			e = t3_l2t_get(pi, ifp, (struct sockaddr *)&nam);
 		if (e == NULL)
 			REJECT_PASS_ACCEPT();	/* no l2te, or ifp mismatch */
 	}
@@ -939,9 +921,6 @@ t3_syncache_removed(struct toedev *tod __unused, void *arg)
 
 	release_synqe(synqe);
 }
-
-/* XXX */
-extern void tcp_dooptions(struct tcpopt *, u_char *, int, int);
 
 int
 t3_syncache_respond(struct toedev *tod, void *arg, struct mbuf *m)

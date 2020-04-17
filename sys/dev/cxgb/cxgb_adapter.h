@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2009, Chelsio Inc.
@@ -26,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/10/sys/dev/cxgb/cxgb_adapter.h 237832 2012-06-30 02:11:53Z np $
+$FreeBSD: stable/11/sys/dev/cxgb/cxgb_adapter.h 331722 2018-03-29 02:50:57Z eadler $
 
 ***************************************************************************/
 
@@ -42,9 +41,11 @@ $FreeBSD: stable/10/sys/dev/cxgb/cxgb_adapter.h 237832 2012-06-30 02:11:53Z np $
 #include <sys/sockio.h>
 #include <sys/condvar.h>
 #include <sys/buf_ring.h>
+#include <sys/taskqueue.h>
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_dl.h>
 #include <netinet/in.h>
@@ -58,7 +59,6 @@ $FreeBSD: stable/10/sys/dev/cxgb/cxgb_adapter.h 237832 2012-06-30 02:11:53Z np $
 #include <dev/pci/pcivar.h>
 
 #include <cxgb_osdep.h>
-#include <sys/mbufq.h>
 
 struct adapter;
 struct sge_qset;
@@ -96,6 +96,7 @@ struct port_info {
 	const struct port_type_info *port_type;
 	struct cphy	phy;
 	struct cmac	mac;
+	struct timeval	last_refreshed;
 	struct link_config link_config;
 	struct ifmedia	media;
 	struct mtx	lock;
@@ -249,7 +250,7 @@ struct sge_txq {
 	bus_dma_tag_t	desc_tag;
 	bus_dmamap_t	desc_map;
 	bus_dma_tag_t   entry_tag;
-	struct mbuf_head sendq;
+	struct mbufq	sendq;
 
 	struct buf_ring *txq_mr;
 	struct ifaltq	*txq_ifq;
@@ -574,4 +575,5 @@ void cxgb_tx_watchdog(void *arg);
 int cxgb_transmit(struct ifnet *ifp, struct mbuf *m);
 void cxgb_qflush(struct ifnet *ifp);
 void t3_iterate(void (*)(struct adapter *, void *), void *);
+void cxgb_refresh_stats(struct port_info *);
 #endif

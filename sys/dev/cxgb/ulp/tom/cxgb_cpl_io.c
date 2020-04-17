@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_cpl_io.c 330303 2018-03-03 00:54:12Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/ulp/tom/cxgb_cpl_io.c 330303 2018-03-03 00:54:12Z jhb $");
 
 #include "opt_inet.h"
 
@@ -53,6 +52,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_cpl_io.c 330303 2018-03-
 #include <sys/taskqueue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/ethernet.h>
 #include <net/route.h>
 
@@ -62,9 +62,9 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_cpl_io.c 330303 2018-03-
 #include <netinet/in_var.h>
 
 #include <netinet/ip.h>
-#include <netinet/tcp_var.h>
 #define TCPSTATES
 #include <netinet/tcp_fsm.h>
+#include <netinet/tcp_var.h>
 #include <netinet/toecore.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
@@ -285,7 +285,7 @@ release_tid(struct toedev *tod, unsigned int tid, int qset)
 	struct tid_info *t = &td->tid_maps;
 #endif
 
-	KASSERT(tid >= 0 && tid < t->ntids,
+	KASSERT(tid < t->ntids,
 	    ("%s: tid=%d, ntids=%d", __func__, tid, t->ntids));
 
 	m = M_GETHDR_OFLD(qset, CPL_PRIORITY_CONTROL, cpl);
@@ -444,8 +444,8 @@ t3_push_frames(struct socket *so, int req_completion)
 	 * Autosize the send buffer.
 	 */
 	if (snd->sb_flags & SB_AUTOSIZE && VNET(tcp_do_autosndbuf)) {
-		if (snd->sb_cc >= (snd->sb_hiwat / 8 * 7) &&
-		    snd->sb_cc < VNET(tcp_autosndbuf_max)) {
+		if (sbused(snd) >= (snd->sb_hiwat / 8 * 7) &&
+		    sbused(snd) < VNET(tcp_autosndbuf_max)) {
 			if (!sbreserve_locked(snd, min(snd->sb_hiwat +
 			    VNET(tcp_autosndbuf_inc), VNET(tcp_autosndbuf_max)),
 			    so, curthread))
@@ -596,10 +596,10 @@ t3_rcvd(struct toedev *tod, struct tcpcb *tp)
 	INP_WLOCK_ASSERT(inp);
 
 	SOCKBUF_LOCK(so_rcv);
-	KASSERT(toep->tp_enqueued >= so_rcv->sb_cc,
-	    ("%s: so_rcv->sb_cc > enqueued", __func__));
-	toep->tp_rx_credits += toep->tp_enqueued - so_rcv->sb_cc;
-	toep->tp_enqueued = so_rcv->sb_cc;
+	KASSERT(toep->tp_enqueued >= sbused(so_rcv),
+	    ("%s: sbused(so_rcv) > enqueued", __func__));
+	toep->tp_rx_credits += toep->tp_enqueued - sbused(so_rcv);
+	toep->tp_enqueued = sbused(so_rcv);
 	SOCKBUF_UNLOCK(so_rcv);
 
 	must_send = toep->tp_rx_credits + 16384 >= tp->rcv_wnd;
@@ -860,7 +860,7 @@ calc_opt0l(struct socket *so, int rcv_bufsize)
 	KASSERT(rcv_bufsize <= M_RCV_BUFSIZ,
 	    ("%s: rcv_bufsize (%d) is too high", __func__, rcv_bufsize));
 
-	if (so != NULL)		/* optional because noone cares about IP TOS */
+	if (so != NULL)		/* optional because no one cares about IP TOS */
 		opt0l |= V_TOS(INP_TOS(sotoinpcb(so)));
 
 	return (htobe32(opt0l));
@@ -1087,7 +1087,7 @@ send_reset(struct toepcb *toep)
 	req->cmd = CPL_ABORT_SEND_RST;
 
 	if (tp->t_state == TCPS_SYN_SENT)
-		mbufq_tail(&toep->out_of_order_queue, m); /* defer */
+		(void )mbufq_enqueue(&toep->out_of_order_queue, m); /* defer */
 	else
 		l2t_send(sc, m, toep->tp_l2t);
 }
@@ -1198,7 +1198,7 @@ do_rx_data(struct sge_qset *qs, struct rsp_desc *r, struct mbuf *m)
 	}
 
 	toep->tp_enqueued += m->m_pkthdr.len;
-	sbappendstream_locked(so_rcv, m);
+	sbappendstream_locked(so_rcv, m, 0);
 	sorwakeup_locked(so);
 	SOCKBUF_UNLOCK_ASSERT(so_rcv);
 
@@ -1535,14 +1535,13 @@ assign_rxopt(struct tcpcb *tp, uint16_t tcpopt)
 	struct toepcb *toep = tp->t_toe;
 	struct adapter *sc = toep->tp_tod->tod_softc;
 
-	tp->t_maxseg = tp->t_maxopd = sc->params.mtus[G_TCPOPT_MSS(tcpopt)] - 40;
+	tp->t_maxseg = sc->params.mtus[G_TCPOPT_MSS(tcpopt)] - 40;
 
 	if (G_TCPOPT_TSTAMP(tcpopt)) {
 		tp->t_flags |= TF_RCVD_TSTMP;
 		tp->t_flags |= TF_REQ_TSTMP;	/* forcibly set */
 		tp->ts_recent = 0;		/* XXX */
 		tp->ts_recent_age = tcp_ts_getticks();
-		tp->t_maxseg -= TCPOLEN_TSTAMP_APPA;
 	}
 
 	if (G_TCPOPT_SACK(tcpopt))
@@ -1766,7 +1765,7 @@ wr_ack(struct toepcb *toep, struct mbuf *m)
 		so_sowwakeup_locked(so);
 	}
 
-	if (snd->sb_sndptroff < snd->sb_cc)
+	if (snd->sb_sndptroff < sbused(snd))
 		t3_push_frames(so, 0);
 
 out_free:

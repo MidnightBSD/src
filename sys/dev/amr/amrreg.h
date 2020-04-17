@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -54,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: stable/10/sys/dev/amr/amrreg.h 176041 2008-02-06 14:26:31Z scottl $
+ *      $FreeBSD: stable/11/sys/dev/amr/amrreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /********************************************************************************

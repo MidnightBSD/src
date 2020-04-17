@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -26,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/atkbdc/atkbd_atkbdc.c 245315 2013-01-11 21:42:23Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/atkbdc/atkbd_atkbdc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_kbd.h"
+#include "opt_evdev.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -170,3 +170,6 @@ atkbdintr(void *arg)
 }
 
 DRIVER_MODULE(atkbd, atkbdc, atkbd_driver, atkbd_devclass, 0, 0);
+#ifdef EVDEV_SUPPORT
+MODULE_DEPEND(atkbd, evdev, 1, 1, 1);
+#endif

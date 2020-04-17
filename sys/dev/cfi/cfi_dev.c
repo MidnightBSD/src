@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, Juniper Networks, Inc.
  * Copyright (c) 2012-2013, SRI International
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_dev.c 255207 2013-09-04 17:19:21Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cfi/cfi_dev.c 355159 2019-11-28 02:15:45Z emaste $");
 
 #include "opt_cfi.h"
 
@@ -45,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_dev.c 255207 2013-09-04 17:19:21Z 
 #include <sys/conf.h>
 #include <sys/ioccom.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/malloc.h>   
 #include <sys/proc.h>
 #include <sys/sysctl.h>
@@ -279,7 +279,8 @@ cfi_devioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		rq = (struct cfiocqry *)data;
 		if (rq->offset >= sc->sc_size / sc->sc_width)
 			return (ESPIPE);
-		if (rq->offset + rq->count > sc->sc_size / sc->sc_width)
+		if (rq->offset > ULONG_MAX - rq->count ||
+		    rq->offset + rq->count > sc->sc_size / sc->sc_width)
 			return (ENOSPC);
 
 		while (!error && rq->count--) {

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/bktr/bktr_os.h 139749 2005-01-06 01:43:34Z imp $ */
+/* $FreeBSD: stable/11/sys/dev/bktr/bktr_os.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -7,7 +6,7 @@
  * chipset.
  * Copyright Roger Hardiman and Amancio Hasty.
  *
- * bktr_os : This has all the Operating System dependant code.
+ * bktr_os : This has all the Operating System dependent code.
  *
  */
 
@@ -48,7 +47,7 @@
 /******************************/
 /* *** Memory Allocation  *** */
 /******************************/
-#if (defined(__MidnightBSD__) || defined(__bsdi__))
+#if (defined(__FreeBSD__) || defined(__bsdi__))
 vm_offset_t     get_bktr_mem( int unit, unsigned size );
 #endif
 
@@ -60,7 +59,7 @@ void            free_bktr_mem(bktr_ptr_t, bus_dmamap_t, vm_offset_t);
 /************************************/
 /* *** Interrupt Enable/Disable *** */
 /************************************/
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #if (__FreeBSD_version >=500000)
 #define USE_VBIMUTEX
 #define	DECLARE_INTR_MASK(s)	/* no need to declare 's' */

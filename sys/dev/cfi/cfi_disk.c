@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2012-2013, SRI International
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_disk.c 255207 2013-09-04 17:19:21Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cfi/cfi_disk.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

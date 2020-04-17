@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997,1998 Maxim Bolotin and Oleg Sharoiko.
  * All rights reserved.
@@ -28,10 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cs/if_cs_isa.c 179618 2008-06-06 16:10:10Z imp $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cs/if_cs_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 
 #include <sys/module.h>
@@ -42,7 +44,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cs/if_cs_isa.c 179618 2008-06-06 16:10:10Z
 
 #include <net/ethernet.h> 
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_media.h>
 
 #include <isa/isavar.h>
 

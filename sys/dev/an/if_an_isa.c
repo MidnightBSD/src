@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/an/if_an_isa.c 199756 2009-11-24 16:54:54Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/an/if_an_isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 

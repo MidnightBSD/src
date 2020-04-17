@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  *   based on work by Slawa Olhovchenkov
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/digi/digi_pci.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/digi/digi_pci.c 246128 2013-01-30 18:01:20Z sbz $");
 
 #include <sys/param.h>
 

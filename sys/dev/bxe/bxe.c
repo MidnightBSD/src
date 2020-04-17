@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe.c 333431 2018-05-09 20:18:23Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe.c 339881 2018-10-29 21:09:39Z davidcs $");
 
 #define BXE_DRIVER_VERSION "1.78.91"
 
@@ -175,6 +174,12 @@ static struct bxe_device_type bxe_devs[] = {
     },
     {
         BRCM_VENDORID,
+        CHIP_NUM_57840_2_20,
+        PCI_ANY_ID, PCI_ANY_ID,
+        "QLogic NetXtreme II BCM57840 2x20GbE"
+    },
+    {
+        BRCM_VENDORID,
         CHIP_NUM_57840_MF,
         PCI_ANY_ID, PCI_ANY_ID,
         "QLogic NetXtreme II BCM57840 MF 10GbE"
@@ -194,6 +199,7 @@ static int bxe_probe(device_t);
 static int bxe_attach(device_t);
 static int bxe_detach(device_t);
 static int bxe_shutdown(device_t);
+
 
 /*
  * FreeBSD KLD module/device interface event handler method.
@@ -252,67 +258,56 @@ SYSCTL_NODE(_hw, OID_AUTO, bxe, CTLFLAG_RD, 0, "bxe driver parameters");
 
 /* Debug */
 unsigned long bxe_debug = 0;
-TUNABLE_ULONG("hw.bxe.debug", &bxe_debug);
-SYSCTL_ULONG(_hw_bxe, OID_AUTO, debug, (CTLFLAG_RDTUN),
+SYSCTL_ULONG(_hw_bxe, OID_AUTO, debug, CTLFLAG_RDTUN,
              &bxe_debug, 0, "Debug logging mode");
 
 /* Interrupt Mode: 0 (IRQ), 1 (MSI/IRQ), and 2 (MSI-X/MSI/IRQ) */
 static int bxe_interrupt_mode = INTR_MODE_MSIX;
-TUNABLE_INT("hw.bxe.interrupt_mode", &bxe_interrupt_mode);
 SYSCTL_INT(_hw_bxe, OID_AUTO, interrupt_mode, CTLFLAG_RDTUN,
            &bxe_interrupt_mode, 0, "Interrupt (MSI-X/MSI/INTx) mode");
 
 /* Number of Queues: 0 (Auto) or 1 to 16 (fixed queue number) */
 static int bxe_queue_count = 4;
-TUNABLE_INT("hw.bxe.queue_count", &bxe_queue_count);
 SYSCTL_INT(_hw_bxe, OID_AUTO, queue_count, CTLFLAG_RDTUN,
            &bxe_queue_count, 0, "Multi-Queue queue count");
 
 /* max number of buffers per queue (default RX_BD_USABLE) */
 static int bxe_max_rx_bufs = 0;
-TUNABLE_INT("hw.bxe.max_rx_bufs", &bxe_max_rx_bufs);
 SYSCTL_INT(_hw_bxe, OID_AUTO, max_rx_bufs, CTLFLAG_RDTUN,
            &bxe_max_rx_bufs, 0, "Maximum Number of Rx Buffers Per Queue");
 
 /* Host interrupt coalescing RX tick timer (usecs) */
 static int bxe_hc_rx_ticks = 25;
-TUNABLE_INT("hw.bxe.hc_rx_ticks", &bxe_hc_rx_ticks);
 SYSCTL_INT(_hw_bxe, OID_AUTO, hc_rx_ticks, CTLFLAG_RDTUN,
            &bxe_hc_rx_ticks, 0, "Host Coalescing Rx ticks");
 
 /* Host interrupt coalescing TX tick timer (usecs) */
 static int bxe_hc_tx_ticks = 50;
-TUNABLE_INT("hw.bxe.hc_tx_ticks", &bxe_hc_tx_ticks);
 SYSCTL_INT(_hw_bxe, OID_AUTO, hc_tx_ticks, CTLFLAG_RDTUN,
            &bxe_hc_tx_ticks, 0, "Host Coalescing Tx ticks");
 
 /* Maximum number of Rx packets to process at a time */
 static int bxe_rx_budget = 0xffffffff;
-TUNABLE_INT("hw.bxe.rx_budget", &bxe_rx_budget);
 SYSCTL_INT(_hw_bxe, OID_AUTO, rx_budget, CTLFLAG_TUN,
            &bxe_rx_budget, 0, "Rx processing budget");
 
 /* Maximum LRO aggregation size */
 static int bxe_max_aggregation_size = 0;
-TUNABLE_INT("hw.bxe.max_aggregation_size", &bxe_max_aggregation_size);
 SYSCTL_INT(_hw_bxe, OID_AUTO, max_aggregation_size, CTLFLAG_TUN,
            &bxe_max_aggregation_size, 0, "max aggregation size");
 
 /* PCI MRRS: -1 (Auto), 0 (128B), 1 (256B), 2 (512B), 3 (1KB) */
 static int bxe_mrrs = -1;
-TUNABLE_INT("hw.bxe.mrrs", &bxe_mrrs);
 SYSCTL_INT(_hw_bxe, OID_AUTO, mrrs, CTLFLAG_RDTUN,
            &bxe_mrrs, 0, "PCIe maximum read request size");
 
 /* AutoGrEEEn: 0 (hardware default), 1 (force on), 2 (force off) */
 static int bxe_autogreeen = 0;
-TUNABLE_INT("hw.bxe.autogreeen", &bxe_autogreeen);
 SYSCTL_INT(_hw_bxe, OID_AUTO, autogreeen, CTLFLAG_RDTUN,
            &bxe_autogreeen, 0, "AutoGrEEEn support");
 
 /* 4-tuple RSS support for UDP: 0 (disabled), 1 (enabled) */
 static int bxe_udp_rss = 0;
-TUNABLE_INT("hw.bxe.udp_rss", &bxe_udp_rss);
 SYSCTL_INT(_hw_bxe, OID_AUTO, udp_rss, CTLFLAG_RDTUN,
            &bxe_udp_rss, 0, "UDP RSS support");
 
@@ -707,6 +702,9 @@ static void    bxe_interrupt_detach(struct bxe_softc *sc);
 static void    bxe_set_rx_mode(struct bxe_softc *sc);
 static int     bxe_init_locked(struct bxe_softc *sc);
 static int     bxe_stop_locked(struct bxe_softc *sc);
+static void    bxe_sp_err_timeout_task(void *arg, int pending);
+void           bxe_parity_recover(struct bxe_softc *sc);
+void           bxe_handle_error(struct bxe_softc *sc);
 static __noinline int bxe_nic_load(struct bxe_softc *sc,
                                    int              load_mode);
 static __noinline int bxe_nic_unload(struct bxe_softc *sc,
@@ -1670,7 +1668,7 @@ bxe_read_dmae(struct bxe_softc *sc,
     /* issue the command and wait for completion */
     if ((rc = bxe_issue_dmae_with_comp(sc, &dmae)) != 0) {
         bxe_panic(sc, ("DMAE failed (%d)\n", rc));
-    };
+    }
 }
 
 void
@@ -2268,7 +2266,7 @@ storm_memset_eq_prod(struct bxe_softc *sc,
 /*
  * Post a slowpath command.
  *
- * A slowpath command is used to propogate a configuration change through
+ * A slowpath command is used to propagate a configuration change through
  * the controller in a controlled manner, allowing each STORM processor and
  * other H/W blocks to phase in the change.  The commands sent on the
  * slowpath are referred to as ramrods.  Depending on the ramrod used the
@@ -2501,14 +2499,11 @@ bxe_sp_post(struct bxe_softc *sc,
 static int
 bxe_probe(device_t dev)
 {
-    struct bxe_softc *sc;
     struct bxe_device_type *t;
     char *descbuf;
     uint16_t did, sdid, svid, vid;
 
     /* Find our device structure */
-    sc = device_get_softc(dev);
-    sc->dev = dev;
     t = bxe_devs;
 
     /* Get the data for the device to be probed. */
@@ -2516,10 +2511,6 @@ bxe_probe(device_t dev)
     did  = pci_get_device(dev);
     svid = pci_get_subvendor(dev);
     sdid = pci_get_subdevice(dev);
-
-    BLOGD(sc, DBG_LOAD,
-          "%s(); VID = 0x%04X, DID = 0x%04X, SVID = 0x%04X, "
-          "SDID = 0x%04X\n", __FUNCTION__, vid, did, svid, sdid);
 
     /* Look through the list of known devices for a match. */
     while (t->bxe_name != NULL) {
@@ -2633,11 +2624,11 @@ bxe_release_mutexes(struct bxe_softc *sc)
 static void
 bxe_tx_disable(struct bxe_softc* sc)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
 
     /* tell the stack the driver is stopped and TX queue is full */
-    if (ifp != NULL) {
-        ifp->if_drv_flags = 0;
+    if (ifp !=  NULL) {
+        if_setdrvflags(ifp, 0);
     }
 }
 
@@ -3063,7 +3054,7 @@ bxe_tpa_stop(struct bxe_softc          *sc,
 			 struct eth_end_agg_rx_cqe *cqe,
              uint16_t                  cqe_idx)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
     struct mbuf *m;
     int rc = 0;
 
@@ -3108,7 +3099,7 @@ bxe_tpa_stop(struct bxe_softc          *sc,
         }
 
         /* assign packet to this interface interface */
-        m->m_pkthdr.rcvif = ifp;
+        if_setrcvif(m, ifp);
 
 #if __FreeBSD_version >= 800000
         /* specify what RSS queue was used for this flow */
@@ -3116,11 +3107,11 @@ bxe_tpa_stop(struct bxe_softc          *sc,
         BXE_SET_FLOWID(m);
 #endif
 
-        ifp->if_ipackets++;
+        if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
         fp->eth_q_stats.rx_tpa_pkts++;
 
         /* pass the frame to the stack */
-        (*ifp->if_input)(ifp, m);
+        if_input(ifp, m);
     }
 
     /* we passed an mbuf up the stack or dropped the frame */
@@ -3183,7 +3174,7 @@ static uint8_t
 bxe_rxeof(struct bxe_softc    *sc,
           struct bxe_fastpath *fp)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
     uint16_t bd_cons, bd_prod, bd_prod_fw, comp_ring_cons;
     uint16_t hw_cq_cons, sw_cq_cons, sw_cq_prod;
     int rx_pkts = 0;
@@ -3358,13 +3349,13 @@ bxe_rxeof(struct bxe_softc    *sc,
         }
 
         /* assign packet to this interface interface */
-        m->m_pkthdr.rcvif = ifp;
+	if_setrcvif(m, ifp);
 
         /* assume no hardware checksum has complated */
         m->m_pkthdr.csum_flags = 0;
 
         /* validate checksum if offload enabled */
-        if (ifp->if_capenable & IFCAP_RXCSUM) {
+        if (if_getcapenable(ifp) & IFCAP_RXCSUM) {
             /* check for a valid IP frame */
             if (!(cqe->fast_path_cqe.status_flags &
                   ETH_FAST_PATH_RX_CQE_IP_XSUM_NO_VALIDATION_FLG)) {
@@ -3413,9 +3404,9 @@ next_rx:
 
         /* pass the frame to the stack */
         if (__predict_true(m != NULL)) {
-            ifp->if_ipackets++;
+            if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
             rx_pkts++;
-            (*ifp->if_input)(ifp, m);
+            if_input(ifp, m);
         }
 
 next_cqe:
@@ -3495,15 +3486,11 @@ bxe_watchdog(struct bxe_softc    *sc,
     }
 
     BLOGE(sc, "TX watchdog timeout on fp[%02d], resetting!\n", fp->index);
-    if(sc->trigger_grcdump) {
-         /* taking grcdump */
-         bxe_grc_dump(sc);
-    }
 
     BXE_FP_TX_UNLOCK(fp);
-
-    atomic_store_rel_long(&sc->chip_tq_flags, CHIP_TQ_REINIT);
-    taskqueue_enqueue(sc->chip_tq, &sc->chip_tq_task);
+    BXE_SET_ERROR_BIT(sc, BXE_ERR_TXQ_STUCK);
+    taskqueue_enqueue_timeout(taskqueue_thread,
+        &sc->sp_err_timeout_task, hz/10);
 
     return (-1);
 }
@@ -3513,7 +3500,7 @@ static uint8_t
 bxe_txeof(struct bxe_softc    *sc,
           struct bxe_fastpath *fp)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
     uint16_t bd_cons, hw_cons, sw_cons, pkt_cons;
     uint16_t tx_bd_avail;
 
@@ -3547,9 +3534,9 @@ bxe_txeof(struct bxe_softc    *sc,
     tx_bd_avail = bxe_tx_avail(sc, fp);
 
     if (tx_bd_avail < BXE_TX_CLEANUP_THRESHOLD) {
-        ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+        if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, 0);
     } else {
-        ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+        if_setdrvflagbits(ifp, 0, IFF_DRV_OACTIVE);
     }
 
     if (fp->tx_pkt_prod != fp->tx_pkt_cons) {
@@ -4253,12 +4240,13 @@ bxe_nic_unload(struct bxe_softc *sc,
 
     BXE_CORE_LOCK_ASSERT(sc);
 
-    sc->ifnet->if_drv_flags &= ~IFF_DRV_RUNNING;
+    if_setdrvflagbits(sc->ifp, 0, IFF_DRV_RUNNING);
 
     for (i = 0; i < sc->num_queues; i++) {
         struct bxe_fastpath *fp;
 
         fp = &sc->fp[i];
+	fp->watchdog_timer = 0;
         BXE_FP_TX_LOCK(fp);
         BXE_FP_TX_UNLOCK(fp);
     }
@@ -4274,20 +4262,22 @@ bxe_nic_unload(struct bxe_softc *sc,
 
     if (IS_PF(sc) && sc->recovery_state != BXE_RECOVERY_DONE &&
         (sc->state == BXE_STATE_CLOSED || sc->state == BXE_STATE_ERROR)) {
-        /*
-         * We can get here if the driver has been unloaded
-         * during parity error recovery and is either waiting for a
-         * leader to complete or for other functions to unload and
-         * then ifconfig down has been issued. In this case we want to
-         * unload and let other functions to complete a recovery
-         * process.
-         */
-        sc->recovery_state = BXE_RECOVERY_DONE;
-        sc->is_leader = 0;
-        bxe_release_leader_lock(sc);
-        mb();
 
-        BLOGD(sc, DBG_LOAD, "Releasing a leadership...\n");
+	if(CHIP_PORT_MODE(sc) == CHIP_4_PORT_MODE) {
+            /*
+             * We can get here if the driver has been unloaded
+             * during parity error recovery and is either waiting for a
+             * leader to complete or for other functions to unload and
+             * then ifconfig down has been issued. In this case we want to
+             * unload and let other functions to complete a recovery
+             * process.
+             */
+            sc->recovery_state = BXE_RECOVERY_DONE;
+            sc->is_leader = 0;
+            bxe_release_leader_lock(sc);
+            mb();
+            BLOGD(sc, DBG_LOAD, "Releasing a leadership...\n");
+	}
         BLOGE(sc, "Can't unload in closed or error state recover_state 0x%x"
             " state = 0x%x\n", sc->recovery_state, sc->state);
         return (-1);
@@ -4295,7 +4285,7 @@ bxe_nic_unload(struct bxe_softc *sc,
 
     /*
      * Nothing to do during unload if previous bxe_nic_load()
-     * did not completed succesfully - all resourses are released.
+     * did not completed successfully - all resourses are released.
      */
     if ((sc->state == BXE_STATE_CLOSED) ||
         (sc->state == BXE_STATE_ERROR)) {
@@ -4405,6 +4395,8 @@ bxe_nic_unload(struct bxe_softc *sc,
 
     BLOGD(sc, DBG_LOAD, "Ended NIC unload\n");
 
+    bxe_link_report(sc);
+
     return (0);
 }
 
@@ -4413,9 +4405,9 @@ bxe_nic_unload(struct bxe_softc *sc,
  * the user runs "ifconfig bxe media ..." or "ifconfig bxe mediaopt ...".
  */
 static int
-bxe_ifmedia_update(struct ifnet *ifp)
+bxe_ifmedia_update(struct ifnet  *ifp)
 {
-    struct bxe_softc *sc = (struct bxe_softc *)ifp->if_softc;
+    struct bxe_softc *sc = (struct bxe_softc *)if_getsoftc(ifp);
     struct ifmedia *ifm;
 
     ifm = &sc->ifmedia;
@@ -4448,32 +4440,41 @@ bxe_ifmedia_update(struct ifnet *ifp)
 static void
 bxe_ifmedia_status(struct ifnet *ifp, struct ifmediareq *ifmr)
 {
-    struct bxe_softc *sc = ifp->if_softc;
+    struct bxe_softc *sc = if_getsoftc(ifp);
+
+    /* Bug 165447: the 'ifconfig' tool skips printing of the "status: ..."
+       line if the IFM_AVALID flag is *NOT* set. So we need to set this
+       flag unconditionally (irrespective of the admininistrative
+       'up/down' state of the interface) to ensure that that line is always
+       displayed.
+    */
+    ifmr->ifm_status = IFM_AVALID;
+
+    /* Setup the default interface info. */
+    ifmr->ifm_active = IFM_ETHER;
 
     /* Report link down if the driver isn't running. */
     if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
         ifmr->ifm_active |= IFM_NONE;
+        BLOGD(sc, DBG_PHY, "in %s : nic still not loaded fully\n", __func__);
+        BLOGD(sc, DBG_PHY, "in %s : link_up (1) : %d\n",
+                __func__, sc->link_vars.link_up);
         return;
     }
 
-    /* Setup the default interface info. */
-    ifmr->ifm_status = IFM_AVALID;
-    ifmr->ifm_active = IFM_ETHER;
 
     if (sc->link_vars.link_up) {
         ifmr->ifm_status |= IFM_ACTIVE;
+        ifmr->ifm_active |= IFM_FDX;
     } else {
         ifmr->ifm_active |= IFM_NONE;
+        BLOGD(sc, DBG_PHY, "in %s : setting IFM_NONE\n",
+                __func__);
         return;
     }
 
     ifmr->ifm_active |= sc->media;
-
-    if (sc->link_vars.duplex == DUPLEX_FULL) {
-        ifmr->ifm_active |= IFM_FDX;
-    } else {
-        ifmr->ifm_active |= IFM_HDX;
-    }
+    return;
 }
 
 static void
@@ -4485,8 +4486,9 @@ bxe_handle_chip_tq(void *context,
 
     switch (work)
     {
+
     case CHIP_TQ_REINIT:
-        if (sc->ifnet->if_drv_flags & IFF_DRV_RUNNING) {
+        if (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) {
             /* restart the interface */
             BLOGD(sc, DBG_LOAD, "Restarting the interface...\n");
             bxe_periodic_stop(sc);
@@ -4509,11 +4511,11 @@ bxe_handle_chip_tq(void *context,
  *   0 = Success, >0 Failure
  */
 static int
-bxe_ioctl(struct ifnet *ifp,
+bxe_ioctl(if_t ifp,
           u_long       command,
           caddr_t      data)
 {
-    struct bxe_softc *sc = ifp->if_softc;
+    struct bxe_softc *sc = if_getsoftc(ifp);
     struct ifreq *ifr = (struct ifreq *)data;
     int mask = 0;
     int reinit = 0;
@@ -4542,9 +4544,12 @@ bxe_ioctl(struct ifnet *ifp,
 
         atomic_store_rel_int((volatile unsigned int *)&sc->mtu,
                              (unsigned long)ifr->ifr_mtu);
-        atomic_store_rel_long((volatile unsigned long *)&ifp->if_mtu,
+	/* 
+        atomic_store_rel_long((volatile unsigned long *)&if_getmtu(ifp),
                               (unsigned long)ifr->ifr_mtu);
-
+	XXX - Not sure why it needs to be atomic
+	*/
+	if_setmtu(ifp, ifr->ifr_mtu);
         reinit = 1;
         break;
 
@@ -4554,15 +4559,15 @@ bxe_ioctl(struct ifnet *ifp,
 
 	BXE_CORE_LOCK(sc);
         /* check if the interface is up */
-        if (ifp->if_flags & IFF_UP) {
-            if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+        if (if_getflags(ifp) & IFF_UP) {
+            if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
                 /* set the receive mode flags */
                 bxe_set_rx_mode(sc);
             } else if(sc->state != BXE_STATE_DISABLED) {
 		bxe_init_locked(sc);
             }
         } else {
-            if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+            if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 		bxe_periodic_stop(sc);
 		bxe_stop_locked(sc);
             }
@@ -4577,7 +4582,7 @@ bxe_ioctl(struct ifnet *ifp,
         BLOGD(sc, DBG_IOCTL, "Received SIOCADDMULTI/SIOCDELMULTI ioctl\n");
 
         /* check if the interface is up */
-        if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+        if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
             /* set the receive mode flags */
 	    BXE_CORE_LOCK(sc);
             bxe_set_rx_mode(sc);
@@ -4588,72 +4593,73 @@ bxe_ioctl(struct ifnet *ifp,
 
     case SIOCSIFCAP:
         /* find out which capabilities have changed */
-        mask = (ifr->ifr_reqcap ^ ifp->if_capenable);
+        mask = (ifr->ifr_reqcap ^ if_getcapenable(ifp));
 
         BLOGD(sc, DBG_IOCTL, "Received SIOCSIFCAP ioctl (mask=0x%08x)\n",
               mask);
 
         /* toggle the LRO capabilites enable flag */
         if (mask & IFCAP_LRO) {
-            ifp->if_capenable ^= IFCAP_LRO;
+	    if_togglecapenable(ifp, IFCAP_LRO);
             BLOGD(sc, DBG_IOCTL, "Turning LRO %s\n",
-                  (ifp->if_capenable & IFCAP_LRO) ? "ON" : "OFF");
+                  (if_getcapenable(ifp) & IFCAP_LRO) ? "ON" : "OFF");
             reinit = 1;
         }
 
         /* toggle the TXCSUM checksum capabilites enable flag */
         if (mask & IFCAP_TXCSUM) {
-            ifp->if_capenable ^= IFCAP_TXCSUM;
+	    if_togglecapenable(ifp, IFCAP_TXCSUM);
             BLOGD(sc, DBG_IOCTL, "Turning TXCSUM %s\n",
-                  (ifp->if_capenable & IFCAP_TXCSUM) ? "ON" : "OFF");
-            if (ifp->if_capenable & IFCAP_TXCSUM) {
-                ifp->if_hwassist = (CSUM_IP       |
+                  (if_getcapenable(ifp) & IFCAP_TXCSUM) ? "ON" : "OFF");
+            if (if_getcapenable(ifp) & IFCAP_TXCSUM) {
+                if_sethwassistbits(ifp, (CSUM_IP      | 
                                     CSUM_TCP      |
                                     CSUM_UDP      |
                                     CSUM_TSO      |
                                     CSUM_TCP_IPV6 |
-                                    CSUM_UDP_IPV6);
+                                    CSUM_UDP_IPV6), 0);
             } else {
-                ifp->if_hwassist = 0;
+		if_clearhwassist(ifp); /* XXX */
             }
         }
 
         /* toggle the RXCSUM checksum capabilities enable flag */
         if (mask & IFCAP_RXCSUM) {
-            ifp->if_capenable ^= IFCAP_RXCSUM;
+	    if_togglecapenable(ifp, IFCAP_RXCSUM);
             BLOGD(sc, DBG_IOCTL, "Turning RXCSUM %s\n",
-                  (ifp->if_capenable & IFCAP_RXCSUM) ? "ON" : "OFF");
-            if (ifp->if_capenable & IFCAP_RXCSUM) {
-                ifp->if_hwassist = (CSUM_IP       |
+                  (if_getcapenable(ifp) & IFCAP_RXCSUM) ? "ON" : "OFF");
+            if (if_getcapenable(ifp) & IFCAP_RXCSUM) {
+                if_sethwassistbits(ifp, (CSUM_IP      |
                                     CSUM_TCP      |
                                     CSUM_UDP      |
                                     CSUM_TSO      |
                                     CSUM_TCP_IPV6 |
-                                    CSUM_UDP_IPV6);
+                                    CSUM_UDP_IPV6), 0);
             } else {
-                ifp->if_hwassist = 0;
+		if_clearhwassist(ifp); /* XXX */
             }
         }
 
         /* toggle TSO4 capabilities enabled flag */
         if (mask & IFCAP_TSO4) {
-            ifp->if_capenable ^= IFCAP_TSO4;
+            if_togglecapenable(ifp, IFCAP_TSO4);
             BLOGD(sc, DBG_IOCTL, "Turning TSO4 %s\n",
-                  (ifp->if_capenable & IFCAP_TSO4) ? "ON" : "OFF");
+                  (if_getcapenable(ifp) & IFCAP_TSO4) ? "ON" : "OFF");
         }
 
         /* toggle TSO6 capabilities enabled flag */
         if (mask & IFCAP_TSO6) {
-            ifp->if_capenable ^= IFCAP_TSO6;
+	    if_togglecapenable(ifp, IFCAP_TSO6);
             BLOGD(sc, DBG_IOCTL, "Turning TSO6 %s\n",
-                  (ifp->if_capenable & IFCAP_TSO6) ? "ON" : "OFF");
+                  (if_getcapenable(ifp) & IFCAP_TSO6) ? "ON" : "OFF");
         }
 
         /* toggle VLAN_HWTSO capabilities enabled flag */
         if (mask & IFCAP_VLAN_HWTSO) {
-            ifp->if_capenable ^= IFCAP_VLAN_HWTSO;
+
+	    if_togglecapenable(ifp, IFCAP_VLAN_HWTSO);
             BLOGD(sc, DBG_IOCTL, "Turning VLAN_HWTSO %s\n",
-                  (ifp->if_capenable & IFCAP_VLAN_HWTSO) ? "ON" : "OFF");
+                  (if_getcapenable(ifp) & IFCAP_VLAN_HWTSO) ? "ON" : "OFF");
         }
 
         /* toggle VLAN_HWCSUM capabilities enabled flag */
@@ -4706,7 +4712,7 @@ bxe_ioctl(struct ifnet *ifp,
         break;
     }
 
-    if (reinit && (ifp->if_drv_flags & IFF_DRV_RUNNING)) {
+    if (reinit && (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING)) {
         BLOGD(sc, DBG_LOAD | DBG_IOCTL,
               "Re-initializing hardware from IOCTL change\n");
 	bxe_periodic_stop(sc);
@@ -4804,7 +4810,7 @@ bxe_dump_mbuf(struct bxe_softc *sc,
  * Checks to ensure the 13 bd sliding window is >= MSS for TSO.
  * Check that (13 total bds - 3 bds) = 10 bd window >= MSS.
  * The window: 3 bds are = 1 for headers BD + 2 for parse BD and last BD
- * The headers comes in a seperate bd in FreeBSD so 13-3=10.
+ * The headers comes in a separate bd in FreeBSD so 13-3=10.
  * Returns: 0 if OK to send, 1 if packet needs further defragmentation
  */
 static int
@@ -5183,7 +5189,7 @@ bxe_tx_encap(struct bxe_fastpath *fp, struct mbuf **m_head)
         } else if (error == EFBIG) {
             /* possibly recoverable with defragmentation */
             fp->eth_q_stats.mbuf_defrag_attempts++;
-            m0 = m_defrag(*m_head, M_DONTWAIT);
+            m0 = m_defrag(*m_head, M_NOWAIT);
             if (m0 == NULL) {
                 fp->eth_q_stats.mbuf_defrag_failures++;
                 rc = ENOBUFS;
@@ -5245,7 +5251,7 @@ bxe_tx_encap(struct bxe_fastpath *fp, struct mbuf **m_head)
         fp->eth_q_stats.mbuf_defrag_attempts++;
         bus_dmamap_unload(fp->tx_mbuf_tag, tx_buf->m_map);
 
-        m0 = m_defrag(*m_head, M_DONTWAIT);
+        m0 = m_defrag(*m_head, M_NOWAIT);
         if (m0 == NULL) {
             fp->eth_q_stats.mbuf_defrag_failures++;
             /* Ugh, just drop the frame... :( */
@@ -5560,8 +5566,8 @@ bxe_tx_encap_continue:
 }
 
 static void
-bxe_tx_start_locked(struct bxe_softc    *sc,
-                    struct ifnet        *ifp,
+bxe_tx_start_locked(struct bxe_softc *sc,
+                    if_t ifp,
                     struct bxe_fastpath *fp)
 {
     struct mbuf *m = NULL;
@@ -5571,13 +5577,13 @@ bxe_tx_start_locked(struct bxe_softc    *sc,
     BXE_FP_TX_LOCK_ASSERT(fp);
 
     /* keep adding entries while there are frames to send */
-    while (!IFQ_DRV_IS_EMPTY(&ifp->if_snd)) {
+    while (!if_sendq_empty(ifp)) {
 
         /*
          * check for any frames to send
          * dequeue can still be NULL even if queue is not empty
          */
-        IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
+        m = if_dequeue(ifp);
         if (__predict_false(m == NULL)) {
             break;
         }
@@ -5594,8 +5600,8 @@ bxe_tx_start_locked(struct bxe_softc    *sc,
             fp->eth_q_stats.tx_encap_failures++;
             if (m != NULL) {
                 /* mark the TX queue as full and return the frame */
-                ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-                IFQ_DRV_PREPEND(&ifp->if_snd, m);
+                if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, 0);
+		if_sendq_prepend(ifp, m);
                 fp->eth_q_stats.mbuf_alloc_tx--;
                 fp->eth_q_stats.tx_queue_xoff++;
             }
@@ -5608,7 +5614,7 @@ bxe_tx_start_locked(struct bxe_softc    *sc,
         tx_count++;
 
         /* send a copy of the frame to any BPF listeners. */
-        BPF_MTAP(ifp, m);
+        if_etherbpfmtap(ifp, m);
 
         tx_bd_avail = bxe_tx_avail(sc, fp);
 
@@ -5616,7 +5622,7 @@ bxe_tx_start_locked(struct bxe_softc    *sc,
         if (tx_bd_avail < BXE_TX_CLEANUP_THRESHOLD) {
             /* bxe_txeof will set IFF_DRV_OACTIVE appropriately */
             bxe_txeof(sc, fp);
-            if (ifp->if_drv_flags & IFF_DRV_OACTIVE) {
+            if (if_getdrvflags(ifp) & IFF_DRV_OACTIVE) {
                 break;
             }
         }
@@ -5631,14 +5637,14 @@ bxe_tx_start_locked(struct bxe_softc    *sc,
 
 /* Legacy (non-RSS) dispatch routine */
 static void
-bxe_tx_start(struct ifnet *ifp)
+bxe_tx_start(if_t ifp)
 {
     struct bxe_softc *sc;
     struct bxe_fastpath *fp;
 
-    sc = ifp->if_softc;
+    sc = if_getsoftc(ifp);
 
-    if (!(ifp->if_drv_flags & IFF_DRV_RUNNING)) {
+    if (!(if_getdrvflags(ifp) & IFF_DRV_RUNNING)) {
         BLOGW(sc, "Interface not running, ignoring transmit request\n");
         return;
     }
@@ -5664,7 +5670,7 @@ bxe_tx_start(struct ifnet *ifp)
 
 static int
 bxe_tx_mq_start_locked(struct bxe_softc    *sc,
-                       struct ifnet        *ifp,
+                       if_t                ifp,
                        struct bxe_fastpath *fp,
                        struct mbuf         *m)
 {
@@ -5701,7 +5707,7 @@ bxe_tx_mq_start_locked(struct bxe_softc    *sc,
     }
 
     /* fetch the depth of the driver queue */
-    depth = drbr_inuse(ifp, tx_br);
+    depth = drbr_inuse_drv(ifp, tx_br);
     if (depth > fp->eth_q_stats.tx_max_drbr_queue_depth) {
         fp->eth_q_stats.tx_max_drbr_queue_depth = depth;
     }
@@ -5736,7 +5742,7 @@ bxe_tx_mq_start_locked(struct bxe_softc    *sc,
             fp->eth_q_stats.tx_encap_failures++;
             if (next != NULL) {
                 /* mark the TX queue as full and save the frame */
-                ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+                if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, 0);
                 drbr_putback(ifp, tx_br, next);
                 fp->eth_q_stats.mbuf_alloc_tx--;
                 fp->eth_q_stats.tx_frames_deferred++;
@@ -5751,7 +5757,7 @@ bxe_tx_mq_start_locked(struct bxe_softc    *sc,
         tx_count++;
 
         /* send a copy of the frame to any BPF listeners */
-        BPF_MTAP(ifp, next);
+	if_etherbpfmtap(ifp, next);
 
         drbr_advance(ifp, tx_br);
     }
@@ -5778,7 +5784,7 @@ bxe_tx_mq_start_deferred(void *arg,
 {
     struct bxe_fastpath *fp = (struct bxe_fastpath *)arg;
     struct bxe_softc *sc = fp->sc;
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
 
     BXE_FP_TX_LOCK(fp);
     bxe_tx_mq_start_locked(sc, ifp, fp, NULL);
@@ -5790,7 +5796,7 @@ static int
 bxe_tx_mq_start(struct ifnet *ifp,
                 struct mbuf  *m)
 {
-    struct bxe_softc *sc = ifp->if_softc;
+    struct bxe_softc *sc = if_getsoftc(ifp);
     struct bxe_fastpath *fp;
     int fp_index, rc;
 
@@ -5822,7 +5828,7 @@ bxe_tx_mq_start(struct ifnet *ifp,
 static void
 bxe_mq_flush(struct ifnet *ifp)
 {
-    struct bxe_softc *sc = ifp->if_softc;
+    struct bxe_softc *sc = if_getsoftc(ifp);
     struct bxe_fastpath *fp;
     struct mbuf *m;
     int i;
@@ -6268,7 +6274,7 @@ bxe_alloc_rx_bd_mbuf(struct bxe_fastpath *fp,
     rc = 0;
 
     /* allocate the new RX BD mbuf */
-    m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, fp->mbuf_alloc_size);
+    m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, fp->mbuf_alloc_size);
     if (__predict_false(m == NULL)) {
         fp->eth_q_stats.mbuf_rx_bd_alloc_failed++;
         return (ENOBUFS);
@@ -6349,7 +6355,7 @@ bxe_alloc_rx_tpa_mbuf(struct bxe_fastpath *fp,
     int rc = 0;
 
     /* allocate the new TPA mbuf */
-    m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, fp->mbuf_alloc_size);
+    m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, fp->mbuf_alloc_size);
     if (__predict_false(m == NULL)) {
         fp->eth_q_stats.mbuf_rx_tpa_alloc_failed++;
         return (ENOBUFS);
@@ -6411,7 +6417,7 @@ bxe_alloc_rx_sge_mbuf(struct bxe_fastpath *fp,
     int rc = 0;
 
     /* allocate a new SGE mbuf */
-    m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR, SGE_PAGE_SIZE);
+    m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, SGE_PAGE_SIZE);
     if (__predict_false(m == NULL)) {
         fp->eth_q_stats.mbuf_rx_sge_alloc_failed++;
         return (ENOMEM);
@@ -7042,7 +7048,7 @@ bxe_link_attn(struct bxe_softc *sc)
 
     /* Make sure that we are synced with the current statistics */
     bxe_stats_handle(sc, STATS_EVENT_STOP);
-	BLOGI(sc, "link_vars phy_flags : %x\n", sc->link_vars.phy_flags);
+    BLOGD(sc, DBG_LOAD, "link_vars phy_flags : %x\n", sc->link_vars.phy_flags);
     elink_link_update(&sc->link_params, &sc->link_vars);
 
     if (sc->link_vars.link_up) {
@@ -7069,13 +7075,13 @@ bxe_link_attn(struct bxe_softc *sc)
 
         if (sc->state == BXE_STATE_OPEN) {
             bxe_stats_handle(sc, STATS_EVENT_LINK_UP);
+	    /* Restart tx when the link comes back. */
+	    FOR_EACH_ETH_QUEUE(sc, i) {
+		fp = &sc->fp[i];
+		taskqueue_enqueue(fp->tq, &fp->tx_task);
+	    }
         }
 
-	/* Restart tx when the link comes back. */
-        FOR_EACH_ETH_QUEUE(sc, i) {
-            fp = &sc->fp[i];
-            taskqueue_enqueue(fp->tq, &fp->tx_task);
-	}
     }
 
     if (sc->link_vars.link_up && sc->link_vars.line_speed) {
@@ -7563,6 +7569,10 @@ bxe_parity_attn(struct bxe_softc *sc,
         if (print)
             BLOGI(sc, "\n");
 
+	if( *global == TRUE ) {
+                BXE_SET_ERROR_BIT(sc, BXE_ERR_GLOBAL);
+        }
+
         return (TRUE);
     }
 
@@ -7576,6 +7586,9 @@ bxe_chk_parity_attn(struct bxe_softc *sc,
 {
     struct attn_route attn = { {0} };
     int port = SC_PORT(sc);
+
+    if(sc->state != BXE_STATE_OPEN)
+        return FALSE;
 
     attn.sig[0] = REG_RD(sc, MISC_REG_AEU_AFTER_INVERT_1_FUNC_0 + port*4);
     attn.sig[1] = REG_RD(sc, MISC_REG_AEU_AFTER_INVERT_2_FUNC_0 + port*4);
@@ -7603,10 +7616,12 @@ bxe_attn_int_deasserted4(struct bxe_softc *sc,
                          uint32_t         attn)
 {
     uint32_t val;
+    boolean_t err_flg = FALSE;
 
     if (attn & AEU_INPUTS_ATTN_BITS_PGLUE_HW_INTERRUPT) {
         val = REG_RD(sc, PGLUE_B_REG_PGLUE_B_INT_STS_CLR);
         BLOGE(sc, "PGLUE hw attention 0x%08x\n", val);
+        err_flg = TRUE;
         if (val & PGLUE_B_PGLUE_B_INT_STS_REG_ADDRESS_ERROR)
             BLOGE(sc, "PGLUE_B_PGLUE_B_INT_STS_REG_ADDRESS_ERROR\n");
         if (val & PGLUE_B_PGLUE_B_INT_STS_REG_INCORRECT_RCV_BEHAVIOR)
@@ -7630,6 +7645,7 @@ bxe_attn_int_deasserted4(struct bxe_softc *sc,
     if (attn & AEU_INPUTS_ATTN_BITS_ATC_HW_INTERRUPT) {
         val = REG_RD(sc, ATC_REG_ATC_INT_STS_CLR);
         BLOGE(sc, "ATC hw attention 0x%08x\n", val);
+	err_flg = TRUE;
         if (val & ATC_ATC_INT_STS_REG_ADDRESS_ERROR)
             BLOGE(sc, "ATC_ATC_INT_STS_REG_ADDRESS_ERROR\n");
         if (val & ATC_ATC_INT_STS_REG_ATC_TCPL_TO_NOT_PEND)
@@ -7649,7 +7665,14 @@ bxe_attn_int_deasserted4(struct bxe_softc *sc,
         BLOGE(sc, "FATAL parity attention set4 0x%08x\n",
               (uint32_t)(attn & (AEU_INPUTS_ATTN_BITS_PGLUE_PARITY_ERROR |
                                  AEU_INPUTS_ATTN_BITS_ATC_PARITY_ERROR)));
+	err_flg = TRUE;
     }
+    if (err_flg) {
+	BXE_SET_ERROR_BIT(sc, BXE_ERR_MISC);
+	taskqueue_enqueue_timeout(taskqueue_thread,
+	    &sc->sp_err_timeout_task, hz/10);
+    }
+
 }
 
 static void
@@ -7723,7 +7746,7 @@ bxe_drv_info_ether_stat(struct bxe_softc *sc)
     ether_stat->mtu_size = sc->mtu;
 
     ether_stat->feature_flags |= FEATURE_ETH_CHKSUM_OFFLOAD_MASK;
-    if (sc->ifnet->if_capenable & (IFCAP_TSO4 | IFCAP_TSO6)) {
+    if (if_getcapenable(sc->ifp) & (IFCAP_TSO4 | IFCAP_TSO6)) {
         ether_stat->feature_flags |= FEATURE_ETH_LSO_MASK;
     }
 
@@ -8004,13 +8027,20 @@ bxe_attn_int_deasserted3(struct bxe_softc *sc,
             REG_WR(sc, MISC_REG_AEU_GENERAL_ATTN_9, 0);
             REG_WR(sc, MISC_REG_AEU_GENERAL_ATTN_8, 0);
             REG_WR(sc, MISC_REG_AEU_GENERAL_ATTN_7, 0);
-            bxe_panic(sc, ("MC assert!\n"));
-
+            bxe_int_disable(sc);
+            BXE_SET_ERROR_BIT(sc, BXE_ERR_MC_ASSERT);
+            taskqueue_enqueue_timeout(taskqueue_thread,
+                &sc->sp_err_timeout_task, hz/10);
+	
         } else if (attn & BXE_MCP_ASSERT) {
 
             BLOGE(sc, "MCP assert!\n");
             REG_WR(sc, MISC_REG_AEU_GENERAL_ATTN_11, 0);
-            // XXX bxe_fw_dump(sc);
+            BXE_SET_ERROR_BIT(sc, BXE_ERR_MCP_ASSERT);
+            taskqueue_enqueue_timeout(taskqueue_thread,
+                &sc->sp_err_timeout_task, hz/10);
+            bxe_int_disable(sc);  /*avoid repetive assert alert */
+
 
         } else {
             BLOGE(sc, "Unknown HW assert! (attn 0x%08x)\n", attn);
@@ -8039,6 +8069,7 @@ bxe_attn_int_deasserted2(struct bxe_softc *sc,
     int reg_offset;
     uint32_t val0, mask0, val1, mask1;
     uint32_t val;
+    boolean_t err_flg = FALSE;
 
     if (attn & AEU_INPUTS_ATTN_BITS_CFC_HW_INTERRUPT) {
         val = REG_RD(sc, CFC_REG_CFC_INT_STS_CLR);
@@ -8046,6 +8077,7 @@ bxe_attn_int_deasserted2(struct bxe_softc *sc,
         /* CFC error attention */
         if (val & 0x2) {
             BLOGE(sc, "FATAL error from CFC\n");
+	    err_flg = TRUE;
         }
     }
 
@@ -8055,11 +8087,13 @@ bxe_attn_int_deasserted2(struct bxe_softc *sc,
         /* RQ_USDMDP_FIFO_OVERFLOW */
         if (val & 0x18000) {
             BLOGE(sc, "FATAL error from PXP\n");
+	    err_flg = TRUE;
         }
 
         if (!CHIP_IS_E1x(sc)) {
             val = REG_RD(sc, PXP_REG_PXP_INT_STS_CLR_1);
             BLOGE(sc, "PXP hw attention-1 0x%08x\n", val);
+	    err_flg = TRUE;
         }
     }
 
@@ -8076,7 +8110,7 @@ bxe_attn_int_deasserted2(struct bxe_softc *sc,
             mask1 = REG_RD(sc, PXP2_REG_PXP2_INT_MASK_1);
             val0 = REG_RD(sc, PXP2_REG_PXP2_INT_STS_0);
             /*
-             * If the olny PXP2_EOP_ERROR_BIT is set in
+             * If the only PXP2_EOP_ERROR_BIT is set in
              * STS0 and STS1 - clear it
              *
              * probably we lose additional attentions between
@@ -8096,6 +8130,7 @@ bxe_attn_int_deasserted2(struct bxe_softc *sc,
              */
             if (val0 & PXP2_EOP_ERROR_BIT) {
                 BLOGE(sc, "PXP2_WR_PGLUE_EOP_ERROR\n");
+		err_flg = TRUE;
 
                 /*
                  * if only PXP2_PXP2_INT_STS_0_REG_WR_PGLUE_EOP_ERROR is
@@ -8118,8 +8153,15 @@ bxe_attn_int_deasserted2(struct bxe_softc *sc,
 
         BLOGE(sc, "FATAL HW block attention set2 0x%x\n",
               (uint32_t)(attn & HW_INTERRUT_ASSERT_SET_2));
+	err_flg = TRUE;
         bxe_panic(sc, ("HW block attention set2\n"));
     }
+    if(err_flg) {
+        BXE_SET_ERROR_BIT(sc, BXE_ERR_GLOBAL);
+        taskqueue_enqueue_timeout(taskqueue_thread,
+           &sc->sp_err_timeout_task, hz/10);
+    }
+
 }
 
 static void
@@ -8129,6 +8171,7 @@ bxe_attn_int_deasserted1(struct bxe_softc *sc,
     int port = SC_PORT(sc);
     int reg_offset;
     uint32_t val;
+    boolean_t err_flg = FALSE;
 
     if (attn & AEU_INPUTS_ATTN_BITS_DOORBELLQ_HW_INTERRUPT) {
         val = REG_RD(sc, DORQ_REG_DORQ_INT_STS_CLR);
@@ -8136,6 +8179,7 @@ bxe_attn_int_deasserted1(struct bxe_softc *sc,
         /* DORQ discard attention */
         if (val & 0x2) {
             BLOGE(sc, "FATAL error from DORQ\n");
+	    err_flg = TRUE;
         }
     }
 
@@ -8149,8 +8193,15 @@ bxe_attn_int_deasserted1(struct bxe_softc *sc,
 
         BLOGE(sc, "FATAL HW block attention set1 0x%08x\n",
               (uint32_t)(attn & HW_INTERRUT_ASSERT_SET_1));
+        err_flg = TRUE;
         bxe_panic(sc, ("HW block attention set1\n"));
     }
+    if(err_flg) {
+        BXE_SET_ERROR_BIT(sc, BXE_ERR_MISC);
+        taskqueue_enqueue_timeout(taskqueue_thread,
+           &sc->sp_err_timeout_task, hz/10);
+    }
+
 }
 
 static void
@@ -8187,6 +8238,11 @@ bxe_attn_int_deasserted0(struct bxe_softc *sc,
         val &= ~(attn & HW_INTERRUT_ASSERT_SET_0);
         REG_WR(sc, reg_offset, val);
 
+
+        BXE_SET_ERROR_BIT(sc, BXE_ERR_MISC);
+        taskqueue_enqueue_timeout(taskqueue_thread,
+           &sc->sp_err_timeout_task, hz/10);
+
         bxe_panic(sc, ("FATAL HW block attention set0 0x%lx\n",
                        (attn & HW_INTERRUT_ASSERT_SET_0)));
     }
@@ -8216,10 +8272,12 @@ bxe_attn_int_deasserted(struct bxe_softc *sc,
          * In case of parity errors don't handle attentions so that
          * other function would "see" parity errors.
          */
-        sc->recovery_state = BXE_RECOVERY_INIT;
         // XXX schedule a recovery task...
         /* disable HW interrupts */
         bxe_int_disable(sc);
+        BXE_SET_ERROR_BIT(sc, BXE_ERR_PARITY);
+        taskqueue_enqueue_timeout(taskqueue_thread,
+           &sc->sp_err_timeout_task, hz/10);
         bxe_release_alr(sc);
         return;
     }
@@ -8686,7 +8744,7 @@ bxe_handle_fp_tq(void *context,
      * can use to tell the task here not to do anything.
      */
 #if 0
-    if (!(sc->ifnet->if_drv_flags & IFF_DRV_RUNNING)) {
+    if (!(if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING)) {
         return;
     }
 #endif
@@ -8708,7 +8766,7 @@ bxe_handle_fp_tq(void *context,
 
     if (more_rx /*|| more_tx*/) {
         /* still more work to do */
-        taskqueue_enqueue_fast(fp->tq, &fp->tq_task);
+        taskqueue_enqueue(fp->tq, &fp->tq_task);
         return;
     }
 
@@ -8742,7 +8800,7 @@ bxe_task_fp(struct bxe_fastpath *fp)
 
     if (more_rx /*|| more_tx*/) {
         /* still more work to do, bail out if this ISR and process later */
-        taskqueue_enqueue_fast(fp->tq, &fp->tq_task);
+        taskqueue_enqueue(fp->tq, &fp->tq_task);
         return;
     }
 
@@ -8809,7 +8867,7 @@ bxe_intr_legacy(void *xsc)
         bxe_ack_sb(sc, sc->igu_dsb_id, USTORM_ID, 0, IGU_INT_DISABLE, 0);
 
         /* schedule slowpath handler */
-        taskqueue_enqueue_fast(sc->sp_tq, &sc->sp_tq_task);
+        taskqueue_enqueue(sc->sp_tq, &sc->sp_tq_task);
 
         status &= ~0x1;
     }
@@ -8831,7 +8889,7 @@ bxe_intr_sp(void *xsc)
     bxe_ack_sb(sc, sc->igu_dsb_id, USTORM_ID, 0, IGU_INT_DISABLE, 0);
 
     /* schedule slowpath handler */
-    taskqueue_enqueue_fast(sc->sp_tq, &sc->sp_tq_task);
+    taskqueue_enqueue(sc->sp_tq, &sc->sp_tq_task);
 }
 
 /* fastpath interrupt entry point */
@@ -9131,11 +9189,16 @@ bxe_interrupt_detach(struct bxe_softc *sc)
             while (taskqueue_cancel_timeout(fp->tq, &fp->tx_timeout_task,
                 NULL))
                 taskqueue_drain_timeout(fp->tq, &fp->tx_timeout_task);
-            taskqueue_free(fp->tq);
-            fp->tq = NULL;
+        }
+
+        for (i = 0; i < sc->num_queues; i++) {
+            fp = &sc->fp[i];
+            if (fp->tq != NULL) {
+                taskqueue_free(fp->tq);
+                fp->tq = NULL;
+            }
         }
     }
-
 
     if (sc->sp_tq) {
         taskqueue_drain(sc->sp_tq, &sc->sp_tq_task);
@@ -10181,7 +10244,7 @@ bxe_pf_init(struct bxe_softc *sc)
      * This flag is relevant for E1x only.
      * E2 doesn't have a TPA configuration in a function level.
      */
-    flags |= (sc->ifnet->if_capenable & IFCAP_LRO) ? FUNC_FLG_TPA : 0;
+    flags |= (if_getcapenable(sc->ifp) & IFCAP_LRO) ? FUNC_FLG_TPA : 0;
 
     func_init.func_flgs = flags;
     func_init.pf_id     = SC_FUNC(sc);
@@ -10720,7 +10783,7 @@ bxe_set_234_gates(struct bxe_softc *sc,
                (!close) ? (val | HC_CONFIG_0_REG_BLOCK_DISABLE_0) :
                (val & ~(uint32_t)HC_CONFIG_0_REG_BLOCK_DISABLE_0));
     } else {
-        /* Prevent incomming interrupts in IGU */
+        /* Prevent incoming interrupts in IGU */
         val = REG_RD(sc, IGU_REG_BLOCK_CONFIGURATION);
 
         REG_WR(sc, IGU_REG_BLOCK_CONFIGURATION,
@@ -11245,7 +11308,7 @@ bxe_get_q_flags(struct bxe_softc    *sc,
         bxe_set_bit(ECORE_Q_FLG_OV, &flags);
     }
 
-    if (sc->ifnet->if_capenable & IFCAP_LRO) {
+    if (if_getcapenable(sc->ifp) & IFCAP_LRO) {
         bxe_set_bit(ECORE_Q_FLG_TPA, &flags);
 #if __FreeBSD_version >= 800000
         bxe_set_bit(ECORE_Q_FLG_TPA_IPV6, &flags);
@@ -11797,7 +11860,7 @@ bxe_link_report_locked(struct bxe_softc *sc)
 
     if (bxe_test_bit(BXE_LINK_REPORT_LINK_DOWN,
                      &cur_data.link_report_flags)) {
-        if_link_state_change(sc->ifnet, LINK_STATE_DOWN);
+        if_link_state_change(sc->ifp, LINK_STATE_DOWN);
     } else {
         const char *duplex;
         const char *flow;
@@ -11839,7 +11902,7 @@ bxe_link_report_locked(struct bxe_softc *sc)
             flow = "none";
         }
 
-        if_link_state_change(sc->ifnet, LINK_STATE_UP);
+        if_link_state_change(sc->ifp, LINK_STATE_UP);
         BLOGI(sc, "NIC Link is Up, %d Mbps %s duplex, Flow control: %s\n",
               cur_data.line_speed, duplex, flow);
     }
@@ -12003,7 +12066,7 @@ static int
 bxe_init_mcast_macs_list(struct bxe_softc                 *sc,
                          struct ecore_mcast_ramrod_params *p)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
     int mc_count = 0;
     struct ifmultiaddr *ifma;
     struct ecore_mcast_list_elem *mc_mac;
@@ -12064,7 +12127,6 @@ bxe_free_mcast_macs_list(struct ecore_mcast_ramrod_params *p)
         free(mc_mac, M_DEVBUF);
     }
 }
-
 static int
 bxe_set_mc_list(struct bxe_softc *sc)
 {
@@ -12108,7 +12170,7 @@ bxe_set_mc_list(struct bxe_softc *sc)
 static int
 bxe_set_uc_list(struct bxe_softc *sc)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
     struct ecore_vlan_mac_obj *mac_obj = &sc->sp_objs->mac_obj;
     struct ifaddr *ifa;
     unsigned long ramrod_flags = 0;
@@ -12132,7 +12194,7 @@ bxe_set_uc_list(struct bxe_softc *sc)
         return (rc);
     }
 
-    ifa = ifp->if_addr;
+    ifa = if_getifaddr(ifp); /* XXX Is this structure */
     while (ifa) {
         if (ifa->ifa_addr->sa_family != AF_LINK) {
             ifa = TAILQ_NEXT(ifa, ifa_link);
@@ -12173,7 +12235,7 @@ bxe_set_uc_list(struct bxe_softc *sc)
 static void
 bxe_set_rx_mode(struct bxe_softc *sc)
 {
-    struct ifnet *ifp = sc->ifnet;
+    if_t ifp = sc->ifp;
     uint32_t rx_mode = BXE_RX_MODE_NORMAL;
 
     if (sc->state != BXE_STATE_OPEN) {
@@ -12181,12 +12243,12 @@ bxe_set_rx_mode(struct bxe_softc *sc)
         return;
     }
 
-    BLOGD(sc, DBG_SP, "ifp->if_flags=0x%x\n", ifp->if_flags);
+    BLOGD(sc, DBG_SP, "if_flags(ifp)=0x%x\n", if_getflags(sc->ifp));
 
-    if (ifp->if_flags & IFF_PROMISC) {
+    if (if_getflags(ifp) & IFF_PROMISC) {
         rx_mode = BXE_RX_MODE_PROMISC;
-    } else if ((ifp->if_flags & IFF_ALLMULTI) ||
-               ((ifp->if_amcount > BXE_MAX_MULTICAST) &&
+    } else if ((if_getflags(ifp) & IFF_ALLMULTI) ||
+               ((if_getamcount(ifp) > BXE_MAX_MULTICAST) &&
                 CHIP_IS_E1(sc))) {
         rx_mode = BXE_RX_MODE_ALLMULTI;
     } else {
@@ -12267,7 +12329,7 @@ bxe_periodic_callout_func(void *xsc)
         BLOGW(sc, "periodic callout exit (state=0x%x)\n", sc->state);
         BXE_CORE_UNLOCK(sc);
         return;
-    }
+        }
 
 
     /* Check for TX timeouts on any fastpath. */
@@ -12343,6 +12405,259 @@ bxe_periodic_stop(struct bxe_softc *sc)
 {
     atomic_store_rel_long(&sc->periodic_flags, PERIODIC_STOP);
     callout_drain(&sc->periodic_callout);
+}
+
+void
+bxe_parity_recover(struct bxe_softc *sc)
+{
+    uint8_t global = FALSE;
+    uint32_t error_recovered, error_unrecovered;
+    bool is_parity;
+
+
+    if ((sc->recovery_state == BXE_RECOVERY_FAILED) &&
+        (sc->state == BXE_STATE_ERROR)) {
+        BLOGE(sc, "RECOVERY failed, "
+            "stack notified driver is NOT running! "
+            "Please reboot/power cycle the system.\n");
+        return;
+    }
+
+    while (1) {
+        BLOGD(sc, DBG_SP,
+           "%s sc=%p state=0x%x rec_state=0x%x error_status=%x\n",
+            __func__, sc, sc->state, sc->recovery_state, sc->error_status);
+
+        switch(sc->recovery_state) {
+
+        case BXE_RECOVERY_INIT:
+            is_parity = bxe_chk_parity_attn(sc, &global, FALSE);
+
+            if ((CHIP_PORT_MODE(sc) == CHIP_4_PORT_MODE) ||
+                (sc->error_status & BXE_ERR_MCP_ASSERT) ||
+                (sc->error_status & BXE_ERR_GLOBAL)) {
+
+                BXE_CORE_LOCK(sc);
+                if (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) {
+                    bxe_periodic_stop(sc);
+                }
+                bxe_nic_unload(sc, UNLOAD_RECOVERY, false);
+                sc->state = BXE_STATE_ERROR;
+                sc->recovery_state = BXE_RECOVERY_FAILED;
+                BLOGE(sc, " No Recovery tried for error 0x%x"
+                    " stack notified driver is NOT running!"
+                    " Please reboot/power cycle the system.\n",
+                    sc->error_status);
+                BXE_CORE_UNLOCK(sc);
+                return;
+            }
+
+
+           /* Try to get a LEADER_LOCK HW lock */
+            if (bxe_trylock_leader_lock(sc)) {
+
+                bxe_set_reset_in_progress(sc);
+                /*
+                 * Check if there is a global attention and if
+                 * there was a global attention, set the global
+                 * reset bit.
+                 */
+                if (global) {
+                    bxe_set_reset_global(sc);
+                }
+                sc->is_leader = 1;
+            }
+
+            /* If interface has been removed - break */
+
+            if (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) {
+                bxe_periodic_stop(sc);
+            }
+
+            BXE_CORE_LOCK(sc);
+            bxe_nic_unload(sc,UNLOAD_RECOVERY, false);
+            sc->recovery_state = BXE_RECOVERY_WAIT;
+            BXE_CORE_UNLOCK(sc);
+
+            /*
+             * Ensure "is_leader", MCP command sequence and
+             * "recovery_state" update values are seen on other
+             * CPUs.
+             */
+            mb();
+            break;
+        case BXE_RECOVERY_WAIT:
+
+            if (sc->is_leader) {
+                int other_engine = SC_PATH(sc) ? 0 : 1;
+                bool other_load_status =
+                    bxe_get_load_status(sc, other_engine);
+                bool load_status =
+                    bxe_get_load_status(sc, SC_PATH(sc));
+                global = bxe_reset_is_global(sc);
+
+                /*
+                 * In case of a parity in a global block, let
+                 * the first leader that performs a
+                 * leader_reset() reset the global blocks in
+                 * order to clear global attentions. Otherwise
+                 * the gates will remain closed for that
+                 * engine.
+                 */
+                if (load_status ||
+                    (global && other_load_status)) {
+                    /*
+                     * Wait until all other functions get
+                     * down.
+                     */
+                    taskqueue_enqueue_timeout(taskqueue_thread,
+                        &sc->sp_err_timeout_task, hz/10);
+                    return;
+                } else {
+                    /*
+                     * If all other functions got down
+                     * try to bring the chip back to
+                     * normal. In any case it's an exit
+                     * point for a leader.
+                     */
+                    if (bxe_leader_reset(sc)) {
+                        BLOGE(sc, "RECOVERY failed, "
+                            "stack notified driver is NOT running!\n");
+                        sc->recovery_state = BXE_RECOVERY_FAILED;
+                        sc->state = BXE_STATE_ERROR;
+                        mb();
+                        return;
+                    }
+
+                    /*
+                     * If we are here, means that the
+                     * leader has succeeded and doesn't
+                     * want to be a leader any more. Try
+                     * to continue as a none-leader.
+                     */
+                break;
+                }
+
+            } else { /* non-leader */
+                if (!bxe_reset_is_done(sc, SC_PATH(sc))) {
+                    /*
+                     * Try to get a LEADER_LOCK HW lock as
+                     * long as a former leader may have
+                     * been unloaded by the user or
+                     * released a leadership by another
+                     * reason.
+                     */
+                    if (bxe_trylock_leader_lock(sc)) {
+                        /*
+                         * I'm a leader now! Restart a
+                         * switch case.
+                         */
+                        sc->is_leader = 1;
+                        break;
+                    }
+
+                    taskqueue_enqueue_timeout(taskqueue_thread,
+                        &sc->sp_err_timeout_task, hz/10);
+                    return;
+
+                } else {
+                    /*
+                     * If there was a global attention, wait
+                     * for it to be cleared.
+                     */
+                    if (bxe_reset_is_global(sc)) {
+                        taskqueue_enqueue_timeout(taskqueue_thread,
+                            &sc->sp_err_timeout_task, hz/10);
+                        return;
+                     }
+
+                     error_recovered =
+                         sc->eth_stats.recoverable_error;
+                     error_unrecovered =
+                         sc->eth_stats.unrecoverable_error;
+                     BXE_CORE_LOCK(sc);
+                     sc->recovery_state =
+                         BXE_RECOVERY_NIC_LOADING;
+                     if (bxe_nic_load(sc, LOAD_NORMAL)) {
+                         error_unrecovered++;
+                         sc->recovery_state = BXE_RECOVERY_FAILED;
+                         sc->state = BXE_STATE_ERROR;
+                         BLOGE(sc, "Recovery is NOT successfull, "
+                            " state=0x%x recovery_state=0x%x error=%x\n",
+                            sc->state, sc->recovery_state, sc->error_status);
+                         sc->error_status = 0;
+                     } else {
+                         sc->recovery_state =
+                             BXE_RECOVERY_DONE;
+                         error_recovered++;
+                         BLOGI(sc, "Recovery is successfull from errors %x,"
+                            " state=0x%x"
+                            " recovery_state=0x%x \n", sc->error_status,
+                            sc->state, sc->recovery_state);
+                         mb();
+                     }
+                     sc->error_status = 0;
+                     BXE_CORE_UNLOCK(sc);
+                     sc->eth_stats.recoverable_error =
+                         error_recovered;
+                     sc->eth_stats.unrecoverable_error =
+                         error_unrecovered;
+
+                     return;
+                 }
+             }
+         default:
+             return;
+         }
+    }
+}
+void
+bxe_handle_error(struct bxe_softc * sc)
+{
+
+    if(sc->recovery_state == BXE_RECOVERY_WAIT) {
+        return;
+    }
+    if(sc->error_status) {
+        if (sc->state == BXE_STATE_OPEN)  {
+            bxe_int_disable(sc);
+        }
+        if (sc->link_vars.link_up) {
+            if_link_state_change(sc->ifp, LINK_STATE_DOWN);
+        }
+        sc->recovery_state = BXE_RECOVERY_INIT;
+        BLOGI(sc, "bxe%d: Recovery started errors 0x%x recovery state 0x%x\n",
+            sc->unit, sc->error_status, sc->recovery_state);
+        bxe_parity_recover(sc);
+   }
+}
+
+static void
+bxe_sp_err_timeout_task(void *arg, int pending)
+{
+
+    struct bxe_softc *sc = (struct bxe_softc *)arg;
+
+    BLOGD(sc, DBG_SP,
+        "%s state = 0x%x rec state=0x%x error_status=%x\n",
+        __func__, sc->state, sc->recovery_state, sc->error_status);
+
+    if((sc->recovery_state == BXE_RECOVERY_FAILED) &&
+       (sc->state == BXE_STATE_ERROR)) {
+        return;
+    }
+    /* if can be taken */
+    if ((sc->error_status) && (sc->trigger_grcdump)) {
+        bxe_grc_dump(sc);
+    }
+    if (sc->recovery_state != BXE_RECOVERY_DONE) {
+        bxe_handle_error(sc);
+        bxe_parity_recover(sc);
+    } else if (sc->error_status) {
+        bxe_handle_error(sc);
+    }
+
+    return;
 }
 
 /* start the controller */
@@ -12568,7 +12883,7 @@ bxe_nic_load(struct bxe_softc *sc,
     }
 
     /* Tell the stack the driver is running! */
-    sc->ifnet->if_drv_flags = IFF_DRV_RUNNING;
+    if_setdrvflags(sc->ifp, IFF_DRV_RUNNING);
 
     BLOGD(sc, DBG_LOAD, "NIC successfully loaded\n");
 
@@ -12621,10 +12936,19 @@ bxe_init_locked(struct bxe_softc *sc)
     BXE_CORE_LOCK_ASSERT(sc);
 
     /* check if the driver is already running */
-    if (sc->ifnet->if_drv_flags & IFF_DRV_RUNNING) {
+    if (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) {
         BLOGD(sc, DBG_LOAD, "Init called while driver is running!\n");
         return (0);
     }
+
+    if((sc->state == BXE_STATE_ERROR) &&
+        (sc->recovery_state == BXE_RECOVERY_FAILED)) {
+        BLOGE(sc, "Initialization not done, "
+                  "as previous recovery failed."
+                  "Reboot/Power-cycle the system\n" );
+        return (ENXIO);
+    }
+
 
     bxe_set_power_state(sc, PCI_PM_D0);
 
@@ -12686,7 +13010,7 @@ bxe_init_locked_done:
         /* Tell the stack the driver is NOT running! */
         BLOGE(sc, "Initialization failed, "
                   "stack notified driver is NOT running!\n");
-        sc->ifnet->if_drv_flags &= ~IFF_DRV_RUNNING;
+	if_setdrvflagbits(sc->ifp, 0, IFF_DRV_RUNNING);
     }
 
     return (rc);
@@ -12719,7 +13043,8 @@ bxe_init(void *xsc)
 static int
 bxe_init_ifnet(struct bxe_softc *sc)
 {
-    struct ifnet *ifp;
+    if_t ifp;
+    int capabilities;
 
     /* ifconfig entrypoint for media type/status reporting */
     ifmedia_init(&sc->ifmedia, IFM_IMASK,
@@ -12735,32 +13060,34 @@ bxe_init_ifnet(struct bxe_softc *sc)
 	BLOGI(sc, "IFMEDIA flags : %x\n", sc->ifmedia.ifm_media);
 
     /* allocate the ifnet structure */
-    if ((ifp = if_alloc(IFT_ETHER)) == NULL) {
+    if ((ifp = if_gethandle(IFT_ETHER)) == NULL) {
         BLOGE(sc, "Interface allocation failed!\n");
         return (ENXIO);
     }
 
-    ifp->if_softc = sc;
+    if_setsoftc(ifp, sc);
     if_initname(ifp, device_get_name(sc->dev), device_get_unit(sc->dev));
-    ifp->if_flags = (IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
-    ifp->if_ioctl = bxe_ioctl;
-    ifp->if_start = bxe_tx_start;
+    if_setflags(ifp, (IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST));
+    if_setioctlfn(ifp, bxe_ioctl);
+    if_setstartfn(ifp, bxe_tx_start);
+    if_setgetcounterfn(ifp, bxe_get_counter);
 #if __FreeBSD_version >= 901504
-    ifp->if_transmit = bxe_tx_mq_start;
-    ifp->if_qflush = bxe_mq_flush;
+    if_settransmitfn(ifp, bxe_tx_mq_start);
+    if_setqflushfn(ifp, bxe_mq_flush);
 #endif
 #ifdef FreeBSD8_0
-    ifp->if_timer = 0;
+    if_settimer(ifp, 0);
 #endif
-    ifp->if_init = bxe_init;
-    ifp->if_mtu = sc->mtu;
-    ifp->if_hwassist = (CSUM_IP       |
+    if_setinitfn(ifp, bxe_init);
+    if_setmtu(ifp, sc->mtu);
+    if_sethwassist(ifp, (CSUM_IP      |
                         CSUM_TCP      |
                         CSUM_UDP      |
                         CSUM_TSO      |
                         CSUM_TCP_IPV6 |
-                        CSUM_UDP_IPV6);
-    ifp->if_capabilities =
+                        CSUM_UDP_IPV6));
+
+    capabilities =
 #if __FreeBSD_version < 700000
         (IFCAP_VLAN_MTU       |
          IFCAP_VLAN_HWTAGGING |
@@ -12780,19 +13107,15 @@ bxe_init_ifnet(struct bxe_softc *sc)
          IFCAP_TSO6           |
          IFCAP_WOL_MAGIC);
 #endif
-    ifp->if_capenable = ifp->if_capabilities;
-    ifp->if_capenable &= ~IFCAP_WOL_MAGIC; /* XXX not yet... */
-#if __FreeBSD_version < 1000025
-    ifp->if_baudrate = 1000000000;
-#else
-    if_initbaudrate(ifp, IF_Gbps(10));
-#endif
-    ifp->if_snd.ifq_drv_maxlen = sc->tx_ring_size;
+    if_setcapabilitiesbit(ifp, capabilities, 0); /* XXX */
+    if_setcapenable(ifp, if_getcapabilities(ifp));
+    if_setbaudrate(ifp, IF_Gbps(10));
+/* XXX */
+    if_setsendqlen(ifp, sc->tx_ring_size);
+    if_setsendqready(ifp);
+/* XXX */
 
-    IFQ_SET_MAXLEN(&ifp->if_snd, ifp->if_snd.ifq_drv_maxlen);
-    IFQ_SET_READY(&ifp->if_snd);
-
-    sc->ifnet = ifp;
+    sc->ifp = ifp;
 
     /* attach to the Ethernet interface list */
     ether_ifattach(ifp, sc->link_params.mac_addr);
@@ -12852,12 +13175,12 @@ bxe_allocate_bars(struct bxe_softc *sc)
         sc->bar[i].handle = rman_get_bushandle(sc->bar[i].resource);
         sc->bar[i].kva    = (vm_offset_t)rman_get_virtual(sc->bar[i].resource);
 
-        BLOGI(sc, "PCI BAR%d [%02x] memory allocated: %p-%p (%ld) -> %p\n",
+        BLOGI(sc, "PCI BAR%d [%02x] memory allocated: %#jx-%#jx (%jd) -> %#jx\n",
               i, PCIR_BAR(i),
-              (void *)rman_get_start(sc->bar[i].resource),
-              (void *)rman_get_end(sc->bar[i].resource),
+              rman_get_start(sc->bar[i].resource),
+              rman_get_end(sc->bar[i].resource),
               rman_get_size(sc->bar[i].resource),
-              (void *)sc->bar[i].kva);
+              (uintmax_t)sc->bar[i].kva);
     }
 
     return (0);
@@ -14658,7 +14981,7 @@ bxe_alloc_hsi_mem(struct bxe_softc *sc)
         /***********************/
 
         /* set required sizes before mapping to conserve resources */
-        if (sc->ifnet->if_capenable & (IFCAP_TSO4 | IFCAP_TSO6)) {
+        if (if_getcapenable(sc->ifp) & (IFCAP_TSO4 | IFCAP_TSO6)) {
             max_size     = BXE_TSO_MAX_SIZE;
             max_segments = BXE_TSO_MAX_SEGMENTS;
             max_seg_size = BXE_TSO_MAX_SEG_SIZE;
@@ -15726,10 +16049,10 @@ bxe_sysctl_pauseparam(SYSCTL_HANDLER_ARGS)
                         sc->link_params.req_fc_auto_adv |= ELINK_FLOW_CTRL_NONE;
         }
          if (IS_PF(sc)) {
-                if (sc->link_vars.link_up) {
-                        bxe_stats_handle(sc, STATS_EVENT_STOP);
-                }
-		if (sc->ifnet->if_drv_flags & IFF_DRV_RUNNING) {
+                        if (sc->link_vars.link_up) {
+                                bxe_stats_handle(sc, STATS_EVENT_STOP);
+                        }
+			if (if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) {
                         bxe_force_link_reset(sc);
                         bxe_acquire_phy_lock(sc);
 
@@ -15738,7 +16061,7 @@ bxe_sysctl_pauseparam(SYSCTL_HANDLER_ARGS)
                         bxe_release_phy_lock(sc);
 
                         bxe_calc_fc_adv(sc);
-                }
+                        }
         }
         return rc;
 }
@@ -16024,6 +16347,10 @@ bxe_attach(device_t dev)
     taskqueue_start_threads(&sc->chip_tq, 1, PWAIT, /* lower priority */
                             "%s", sc->chip_tq_name);
 
+    TIMEOUT_TASK_INIT(taskqueue_thread,
+        &sc->sp_err_timeout_task, 0, bxe_sp_err_timeout_task,  sc);
+
+
     /* get device info and set params */
     if (bxe_get_device_info(sc) != 0) {
         BLOGE(sc, "getting device info\n");
@@ -16057,8 +16384,8 @@ bxe_attach(device_t dev)
     }
 
     if (bxe_add_cdev(sc) != 0) {
-        if (sc->ifnet != NULL) {
-            ether_ifdetach(sc->ifnet);
+        if (sc->ifp != NULL) {
+            ether_ifdetach(sc->ifp);
         }
         ifmedia_removeall(&sc->ifmedia);
         bxe_release_mutexes(sc);
@@ -16070,8 +16397,8 @@ bxe_attach(device_t dev)
     /* allocate device interrupts */
     if (bxe_interrupt_alloc(sc) != 0) {
         bxe_del_cdev(sc);
-        if (sc->ifnet != NULL) {
-            ether_ifdetach(sc->ifnet);
+        if (sc->ifp != NULL) {
+            ether_ifdetach(sc->ifp);
         }
         ifmedia_removeall(&sc->ifmedia);
         bxe_release_mutexes(sc);
@@ -16086,8 +16413,8 @@ bxe_attach(device_t dev)
 	bxe_free_buf_rings(sc);
         bxe_interrupt_free(sc);
         bxe_del_cdev(sc);
-        if (sc->ifnet != NULL) {
-            ether_ifdetach(sc->ifnet);
+        if (sc->ifp != NULL) {
+            ether_ifdetach(sc->ifp);
         }
         ifmedia_removeall(&sc->ifmedia);
         bxe_release_mutexes(sc);
@@ -16101,8 +16428,8 @@ bxe_attach(device_t dev)
 	bxe_free_buf_rings(sc);
         bxe_interrupt_free(sc);
         bxe_del_cdev(sc);
-        if (sc->ifnet != NULL) {
-            ether_ifdetach(sc->ifnet);
+        if (sc->ifp != NULL) {
+            ether_ifdetach(sc->ifp);
         }
         ifmedia_removeall(&sc->ifmedia);
         bxe_release_mutexes(sc);
@@ -16117,8 +16444,8 @@ bxe_attach(device_t dev)
 	bxe_free_buf_rings(sc);
         bxe_interrupt_free(sc);
         bxe_del_cdev(sc);
-        if (sc->ifnet != NULL) {
-            ether_ifdetach(sc->ifnet);
+        if (sc->ifp != NULL) {
+            ether_ifdetach(sc->ifp);
         }
         ifmedia_removeall(&sc->ifmedia);
         bxe_release_mutexes(sc);
@@ -16176,14 +16503,14 @@ static int
 bxe_detach(device_t dev)
 {
     struct bxe_softc *sc;
-    struct ifnet *ifp;
+    if_t ifp;
 
     sc = device_get_softc(dev);
 
     BLOGD(sc, DBG_LOAD, "Starting detach...\n");
 
-    ifp = sc->ifnet;
-    if (ifp != NULL && ifp->if_vlantrunk != NULL) {
+    ifp = sc->ifp;
+    if (ifp != NULL && if_vlantrunkinuse(ifp)) {
         BLOGE(sc, "Cannot detach while VLANs are in use.\n");
         return(EBUSY);
     }
@@ -16199,6 +16526,8 @@ bxe_detach(device_t dev)
         taskqueue_drain(sc->chip_tq, &sc->chip_tq_task);
         taskqueue_free(sc->chip_tq);
         sc->chip_tq = NULL;
+        taskqueue_drain_timeout(taskqueue_thread,
+            &sc->sp_err_timeout_task);
     }
 
     /* stop and reset the controller if it was open */
@@ -16237,8 +16566,8 @@ bxe_detach(device_t dev)
     bxe_deallocate_bars(sc);
 
     /* Release the FreeBSD interface. */
-    if (sc->ifnet != NULL) {
-        if_free(sc->ifnet);
+    if (sc->ifp != NULL) {
+        if_free(sc->ifp);
     }
 
     pci_disable_busmaster(dev);
@@ -16266,9 +16595,11 @@ bxe_shutdown(device_t dev)
     /* stop the periodic callout */
     bxe_periodic_stop(sc);
 
-    BXE_CORE_LOCK(sc);
-    bxe_nic_unload(sc, UNLOAD_NORMAL, FALSE);
-    BXE_CORE_UNLOCK(sc);
+    if (sc->state != BXE_STATE_CLOSED) {
+    	BXE_CORE_LOCK(sc);
+    	bxe_nic_unload(sc, UNLOAD_NORMAL, FALSE);
+    	BXE_CORE_UNLOCK(sc);
+    }
 
     return (0);
 }
@@ -18872,12 +19203,12 @@ bxe_add_cdev(struct bxe_softc *sc)
     }
 
     sc->ioctl_dev = make_dev(&bxe_cdevsw,
-                            sc->ifnet->if_dunit,
+                            sc->ifp->if_dunit,
                             UID_ROOT,
                             GID_WHEEL,
                             0600,
                             "%s",
-                            if_name(sc->ifnet));
+                            if_name(sc->ifp));
 
     if (sc->ioctl_dev == NULL) {
         free(sc->eeprom, M_DEVBUF);
@@ -18908,7 +19239,7 @@ bxe_del_cdev(struct bxe_softc *sc)
 static bool bxe_is_nvram_accessible(struct bxe_softc *sc)
 {
 
-    if ((sc->ifnet->if_drv_flags & IFF_DRV_RUNNING) == 0)
+    if ((if_getdrvflags(sc->ifp) & IFF_DRV_RUNNING) == 0)
         return FALSE;
 
     return TRUE;

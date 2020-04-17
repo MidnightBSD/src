@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/ata-sata.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/ata-sata.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -298,7 +297,7 @@ ata_pm_identify(device_t dev)
 
     /* get PM revision data */
     if (ch->hw.pm_read(dev, ATA_PM, 1, &pm_revision)) {
-	device_printf(dev, "error getting PM revison data\n");
+	device_printf(dev, "error getting PM revision data\n");
 	return;
     }
 

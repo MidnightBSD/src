@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_i2c.c 201758 2010-01-07 21:01:37Z mbr $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_i2c.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * I2C support for the bti2c chipset.

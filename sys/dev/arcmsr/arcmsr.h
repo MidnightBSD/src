@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 ********************************************************************************
 **        OS    : FreeBSD
@@ -33,7 +32,7 @@
 **(INCLUDING NEGLIGENCE OR OTHERWISE)ARISING IN ANY WAY OUT OF THE USE OF
 ** THIS SOFTWARE,EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **************************************************************************
-* $FreeBSD: stable/10/sys/dev/arcmsr/arcmsr.h 326088 2017-11-22 06:36:55Z delphij $
+* $FreeBSD: stable/11/sys/dev/arcmsr/arcmsr.h 331722 2018-03-29 02:50:57Z eadler $
 */
 #define ARCMSR_SCSI_INITIATOR_ID	255
 #define ARCMSR_DEV_SECTOR_SIZE		512

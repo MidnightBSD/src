@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_l2t.c 237263 2012-06-19 07:34:13Z np $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/ulp/tom/cxgb_l2t.c 292978 2015-12-31 05:03:27Z melifaro $");
 
 #include "opt_inet.h"
 
@@ -216,7 +215,7 @@ resolve_entry(struct adapter *sc, struct l2t_entry *e)
 	struct tom_data *td = sc->tom_softc;
 	struct toedev *tod = &td->tod;
 	struct sockaddr_in sin = {0};
-	uint8_t dmac[ETHER_ADDR_LEN];
+	uint8_t dmac[ETHER_HDR_LEN];
 	uint16_t vtag = EVL_VLID_MASK;
 	int rc;
 

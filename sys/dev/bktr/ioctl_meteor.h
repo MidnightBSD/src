@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Mark Tinguely and Jim Lowe
  * All rights reserved.
@@ -29,7 +28,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/bktr/ioctl_meteor.h 205781 2010-03-28 00:10:09Z gibbs $
+ * $FreeBSD: stable/11/sys/dev/bktr/ioctl_meteor.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  *	ioctl constants for Matrox Meteor Capture card.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/digi/EPCX.c 119418 2003-08-24 17:55:58Z obrien $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/digi/EPCX.c 119418 2003-08-24 17:55:58Z obrien $");
 
 #include <sys/param.h>
 #include <sys/conf.h>

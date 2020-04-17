@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  *                    based on work by Slawa Olhovchenkov
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/digi/EPCX.fepos.h 145975 2005-05-06 20:53:34Z anholt $
+ * $FreeBSD: stable/11/sys/dev/digi/EPCX.fepos.h 145975 2005-05-06 20:53:34Z anholt $
  */
 
 static const u_char EPCX_fepos[] = {

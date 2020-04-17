@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the 
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -64,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_core.c 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_core.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -93,7 +92,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_core.c 261455 2014-02-04 03:36:4
 #include "opt_bktr.h"		/* Include any kernel config options */
 
 #if (                                                            \
-       (defined(__MidnightBSD__))                                    \
+       (defined(__FreeBSD__))                                    \
     || (defined(__bsdi__))                                       \
     || (defined(__OpenBSD__))                                    \
     || (defined(__NetBSD__))                                     \
@@ -103,7 +102,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_core.c 261455 2014-02-04 03:36:4
 /*******************/
 /* *** FreeBSD *** */
 /*******************/
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -163,7 +162,7 @@ bktr_name(bktr_ptr_t bktr)
 }
 
 
-#endif  /* __MidnightBSD__ */
+#endif  /* __FreeBSD__ */
 
 
 /****************/
@@ -257,7 +256,7 @@ typedef u_char bool_t;
  */
 
 #define MAX_VBI_LINES	      16   /* Maximum for all vidoe formats */
-#define VBI_LINE_SIZE         2048 /* Store upto 2048 bytes per line */
+#define	VBI_LINE_SIZE         2048 /* Store up to 2048 bytes per line */
 #define VBI_BUFFER_ITEMS      20   /* Number of frames we buffer */
 #define VBI_DATA_SIZE         (VBI_LINE_SIZE * MAX_VBI_LINES * 2)
 #define VBI_BUFFER_SIZE       (VBI_DATA_SIZE * VBI_BUFFER_ITEMS)
@@ -325,7 +324,7 @@ static struct meteor_pixfmt_internal {
 { { 0, METEOR_PIXTYPE_YUV_12, 2, { 0xff0000,0x00ff00,0x0000ff }, 1,1 }, 0x88 },
 
 };
-#define PIXFMT_TABLE_SIZE ( sizeof(pixfmt_table) / sizeof(pixfmt_table[0]) )
+#define	PIXFMT_TABLE_SIZE nitems(pixfmt_table)
 
 /*
  * Table of Meteor-supported Pixel Formats (for SETGEO compatibility)
@@ -355,8 +354,7 @@ static struct {
     },
 
 };
-#define METEOR_PIXFMT_TABLE_SIZE ( sizeof(meteor_pixfmt_table) / \
-				   sizeof(meteor_pixfmt_table[0]) )
+#define	METEOR_PIXFMT_TABLE_SIZE nitems(meteor_pixfmt_table)
 
 
 #define BSWAP (BT848_COLOR_CTL_BSWAP_ODD | BT848_COLOR_CTL_BSWAP_EVEN)
@@ -492,7 +490,7 @@ common_bktr_attach( bktr_ptr_t bktr, int unit, u_long pci_id, u_int rev )
                 buf = 0;
 #endif
 
-#if defined(__MidnightBSD__) || defined(__bsdi__)
+#if defined(__FreeBSD__) || defined(__bsdi__)
 
 /* If this is a module, check if there is any currently saved contiguous memory */
 #if defined(BKTR_FREEBSD_MODULE)
@@ -591,7 +589,7 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
 			bktr->id = BROOKTREE_879;
 			break;
 		}
-	};
+	}
 
 	bktr->clr_on_start = FALSE;
 
@@ -612,7 +610,7 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
         bktr->msp_source_selected = -1;
 	bktr->audio_mux_present = 1;
 
-#if defined(__MidnightBSD__) 
+#if defined(__FreeBSD__) 
 #ifdef BKTR_NEW_MSP34XX_DRIVER
 	/* get hint on short programming of the msp34xx, so we know */
 	/* if the decision what thread to start should be overwritten */
@@ -628,7 +626,7 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
 	init_audio_devices( bktr );
 
 #ifdef BKTR_NEW_MSP34XX_DRIVER
-	/* setup the kenrel thread */
+	/* setup the kernel thread */
 	err = msp_attach( bktr );
 	if ( err != 0 ) /* error doing kernel thread stuff, disable msp3400c */
 		bktr->card.msp3400c = 0;
@@ -1788,7 +1786,7 @@ video_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thr
 			    && bktr->video.addr == 0) {
 
 /*****************************/
-/* *** OS Dependant code *** */
+/* *** OS Dependent code *** */
 /*****************************/
 #if defined(__NetBSD__) || defined(__OpenBSD__)
                                 bus_dmamap_t dmamap;
@@ -2371,7 +2369,7 @@ common_ioctl( bktr_ptr_t bktr, ioctl_cmd_t cmd, caddr_t arg )
 		/*   Tuner is MUX0, RCA is MUX1, S-Video is MUX2 */
 		/* On the Hauppauge bt878 boards, */
 		/*   Tuner is MUX0, RCA is MUX3 */
-		/* Unfortunatly Meteor driver codes DEV_RCA as DEV_0, so we */
+		/* Unfortunately Meteor driver codes DEV_RCA as DEV_0, so we */
 		/* stick with this system in our Meteor Emulation */
 
 		switch(*(unsigned long *)arg & METEOR_DEV_MASK) {
@@ -3047,7 +3045,7 @@ rgb_prog( bktr_ptr_t bktr, char i_flag, int cols, int rows, int interlace )
 		/* sync vro */
 		*dma_prog++ = OP_SYNC | BKTR_GEN_IRQ | BKTR_RESYNC | BKTR_VRO;
 		*dma_prog++ = 0;  /* NULL WORD */
-		*dma_prog++ = OP_JUMP; ;
+		*dma_prog++ = OP_JUMP;
 		*dma_prog = (uint32_t ) vtophys(bktr->odd_dma_prog);
 		break;
 	}

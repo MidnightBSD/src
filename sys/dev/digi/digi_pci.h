@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/digi/digi_pci.h 76195 2001-05-02 01:08:09Z brian $
+ * $FreeBSD: stable/11/sys/dev/digi/digi_pci.h 76195 2001-05-02 01:08:09Z brian $
  */
 
 #define	PCI_VENDOR_DIGI		0x114F

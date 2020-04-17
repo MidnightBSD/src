@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007-2015 QLogic Corporation. All rights reserved.
  *
@@ -30,7 +29,7 @@
 #define __BXE_DUMP_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe_dump.h 293788 2016-01-12 23:16:27Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_dump.h 292639 2015-12-23 03:19:12Z davidcs $");
 
 /* WaitP Definitions */
 #define DRV_DUMP_XSTORM_WAITP_ADDRESS    0x2b8a80

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Low-level subroutines for Cronyx-Sigma adapter.
  *
@@ -13,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: csigma.c,v 1.1.2.1 2003/11/12 17:13:41 rik Exp $
- * $FreeBSD: stable/10/sys/dev/cx/csigma.c 250460 2013-05-10 16:41:26Z eadler $
+ * $FreeBSD: stable/11/sys/dev/cx/csigma.c 298955 2016-05-03 03:41:25Z pfg $
  */
 #include <dev/cx/machdep.h>
 #include <dev/cx/cxddk.h>
@@ -101,7 +100,7 @@ static int cx_reset (port_t port)
 
 	cx_cmd (port, CCR_RSTALL);
 
-	/* Firmware revision code should clear imediately. */
+	/* Firmware revision code should clear immediately. */
 	/* Wait up to 10 msec for revision code to appear again. */
 	for (count=0; count<20000; ++count)
 		if (inb(GFRCR(port)) != 0)

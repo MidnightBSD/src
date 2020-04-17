@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Level One LXT318 E1 transceiver registers.
  * Crystal CS61318 E1 Line Interface Unit registers.
@@ -18,7 +17,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: lxt318.h,v 1.2.4.4 2003/11/14 19:08:45 rik Exp $
- * $FreeBSD: stable/10/sys/dev/ctau/lxt318.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/ctau/lxt318.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 #define LX_WRITE	0x00

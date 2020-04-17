@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -27,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: stable/10/sys/dev/cxgb/cxgb_osdep.h 278744 2015-02-14 06:58:32Z ngie $
+$FreeBSD: stable/11/sys/dev/cxgb/cxgb_osdep.h 331722 2018-03-29 02:50:57Z eadler $
 
 ***************************************************************************/
 
@@ -170,7 +169,7 @@ static const int debug_flags = DBG_RX;
 #define test_and_clear_bit(bit, p) atomic_cmpset_int((p), ((*(p)) | (1<<bit)), ((*(p)) & ~(1<<bit)))
 
 #define max_t(type, a, b) (type)max((a), (b))
-#define cpu_to_be32            htobe32
+#define cpu_to_be32(x)		htobe32(x)
 
 /* Standard PHY definitions */
 #define BMCR_LOOPBACK		BMCR_LOOP
@@ -232,7 +231,9 @@ static const int debug_flags = DBG_RX;
 #define le16_to_cpu(x) le16toh(x)
 #define cpu_to_le32(x) htole32(x)
 #define swab32(x) bswap32(x)
-#define simple_strtoul strtoul
+#ifndef simple_strtoul
+#define simple_strtoul(...) strtoul(__VA_ARGS__)
+#endif
 
 
 #ifndef LINUX_TYPES_DEFINED

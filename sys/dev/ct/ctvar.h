@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/ct/ctvar.h 240325 2012-09-10 18:49:49Z jhb $ */
+/* $FreeBSD: stable/11/sys/dev/ct/ctvar.h 274760 2014-11-20 20:50:05Z jhb $ */
 /*	$NecBSD: ctvar.h,v 1.4.14.3 2001/06/20 06:13:34 honda Exp $	*/
 /*	$NetBSD$	*/
 
@@ -45,15 +44,8 @@
  * Host adapter structure
  *****************************************************************/
 struct ct_bus_access_handle {
-	bus_space_tag_t ch_iot;			/* core chip ctrl port tag */
-	bus_space_tag_t ch_delayt;		/* delay port tag */
-	bus_space_tag_t ch_datat;		/* data port tag (pio) */
-	bus_space_tag_t ch_memt;		/* data port tag (shm) */
-
-	bus_space_handle_t ch_ioh;
-	bus_space_handle_t ch_delaybah;
-	bus_space_handle_t ch_datah;
-	bus_space_handle_t ch_memh;
+	struct resource *ch_io;			/* core chip ctrl port */
+	struct resource *ch_mem;		/* data port (shm) */
 
 	void (*ch_bus_weight)(struct ct_bus_access_handle *);
 
@@ -133,5 +125,5 @@ struct ct_targ_info {
  *****************************************************************/
 int ctprobesubr(struct ct_bus_access_handle *, u_int, int, u_int, int *);
 void ctattachsubr(struct ct_softc *);
-int ctintr(void *);
+void ctintr(void *);
 #endif	/* !_CTVAR_H_ */

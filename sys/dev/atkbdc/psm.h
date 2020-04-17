@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993 Erik Forsberg.
  * Copyright (c) 1996, 1997 Kazutaka YOKOTA.
@@ -22,7 +21,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/isa/psm.c,v 1.84 2005/01/10 13:05:58 philip
- * $FreeBSD: stable/10/sys/dev/atkbdc/psm.h 147271 2005-06-10 20:56:38Z marius $
+ * $FreeBSD: stable/11/sys/dev/atkbdc/psm.h 147271 2005-06-10 20:56:38Z marius $
  */
 
 #ifndef _DEV_ATKBDC_PSM_H_

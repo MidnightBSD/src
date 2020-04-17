@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/chipsets/ata-serverworks.c 281140 2015-04-06 08:23:06Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/chipsets/ata-serverworks.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -163,9 +162,8 @@ ata_serverworks_chipinit(device_t dev)
 	}
     }
     else {
-	pci_write_config(dev, 0x5a,
-			 (pci_read_config(dev, 0x5a, 1) & ~0x40) |
-			 (ctlr->chip->cfg1 == SWKS_100) ? 0x03 : 0x02, 1);
+	pci_write_config(dev, 0x5a, (pci_read_config(dev, 0x5a, 1) & ~0x40) |
+	    ((ctlr->chip->cfg1 == SWKS_100) ? 0x03 : 0x02), 1);
     }
     ctlr->setmode = ata_serverworks_setmode;
     return 0;

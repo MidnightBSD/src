@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 ********************************************************************************
 **        OS    : FreeBSD
@@ -84,7 +83,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/arcmsr/arcmsr.c 326088 2017-11-22 06:36:55Z delphij $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/arcmsr/arcmsr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #if 0
 #define ARCMSR_DEBUG1			1

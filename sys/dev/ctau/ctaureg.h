@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Defines for Cronyx-Tau adapter, based on Hitachi HD64570 controller.
  *
@@ -13,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: ctaureg.h,v 1.1.2.1 2003/11/12 17:16:10 rik Exp $
- * $FreeBSD: stable/10/sys/dev/ctau/ctaureg.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD: stable/11/sys/dev/ctau/ctaureg.h 139749 2005-01-06 01:43:34Z imp $
  */
 
 /*

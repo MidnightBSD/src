@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2008, Chelsio Inc.
@@ -27,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: stable/10/sys/dev/cxgb/t3b_protocol_sram.h 176613 2008-02-26 23:05:05Z kmacy $
+$FreeBSD: stable/11/sys/dev/cxgb/t3b_protocol_sram.h 331722 2018-03-29 02:50:57Z eadler $
 
 ***************************************************************************/
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002-2004
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $Id: dcons.h,v 1.15 2003/10/23 15:05:31 simokawa Exp $
- * $FreeBSD: stable/10/sys/dev/dcons/dcons.h 181905 2008-08-20 08:31:58Z ed $
+ * $FreeBSD: stable/11/sys/dev/dcons/dcons.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #if defined(_KERNEL) || defined(_BOOT)

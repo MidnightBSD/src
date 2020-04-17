@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Wind River Systems
  * Copyright (c) 1997, 1998, 1999, 2001
@@ -31,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/bge/if_bgereg.h 301848 2016-06-13 03:03:08Z sephe $
+ * $FreeBSD: stable/11/sys/dev/bge/if_bgereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

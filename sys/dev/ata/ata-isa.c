@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/ata-isa.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/ata-isa.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,7 +60,7 @@ static int
 ata_isa_probe(device_t dev)
 {
     struct resource *io = NULL, *ctlio = NULL;
-    u_long tmp;
+    rman_res_t tmp;
     int rid;
 
     /* check isapnp ids */
@@ -70,8 +69,8 @@ ata_isa_probe(device_t dev)
 
     /* allocate the io port range */
     rid = ATA_IOADDR_RID;
-    if (!(io = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
-				  ATA_IOSIZE, RF_ACTIVE)))
+    if (!(io = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   ATA_IOSIZE, RF_ACTIVE)))
 	return ENXIO;
 
     /* set the altport range */
@@ -82,8 +81,8 @@ ata_isa_probe(device_t dev)
 
     /* allocate the altport range */
     rid = ATA_CTLADDR_RID; 
-    if (!(ctlio = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
-				     ATA_CTLIOSIZE, RF_ACTIVE))) {
+    if (!(ctlio = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					      ATA_CTLIOSIZE, RF_ACTIVE))) {
 	bus_release_resource(dev, SYS_RES_IOPORT, ATA_IOADDR_RID, io);
 	return ENXIO;
     }
@@ -101,7 +100,7 @@ ata_isa_attach(device_t dev)
 {
     struct ata_channel *ch = device_get_softc(dev);
     struct resource *io = NULL, *ctlio = NULL;
-    u_long tmp;
+    rman_res_t tmp;
     int i, rid;
 
     if (ch->attached)
@@ -110,8 +109,8 @@ ata_isa_attach(device_t dev)
 
     /* allocate the io port range */
     rid = ATA_IOADDR_RID;
-    if (!(io = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
-				  ATA_IOSIZE, RF_ACTIVE)))
+    if (!(io = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   ATA_IOSIZE, RF_ACTIVE)))
 	return ENXIO;
 
     /* set the altport range */
@@ -122,8 +121,8 @@ ata_isa_attach(device_t dev)
 
     /* allocate the altport range */
     rid = ATA_CTLADDR_RID; 
-    if (!(ctlio = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
-				     ATA_CTLIOSIZE, RF_ACTIVE))) {
+    if (!(ctlio = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					      ATA_CTLIOSIZE, RF_ACTIVE))) {
 	bus_release_resource(dev, SYS_RES_IOPORT, ATA_IOADDR_RID, io);
 	return ENXIO;
     }

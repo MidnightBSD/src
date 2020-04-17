@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *      Buslogic BT946, BT948, BT956, BT958 SCSI controllers
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/buslogic/bt_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/buslogic/bt_pci.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -59,8 +58,8 @@ static int
 bt_pci_alloc_resources(device_t dev)
 {
 	int		type = 0, rid, zero;
-	struct resource *regs = 0;
-	struct resource *irq = 0;
+	struct resource *regs = NULL;
+	struct resource *irq = NULL;
 
 #if 0
 	/* XXX Memory Mapped I/O seems to cause problems */

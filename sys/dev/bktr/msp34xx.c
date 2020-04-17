@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2001 Gerd Knorr <kraxel@bytesex.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/bktr/msp34xx.c 332920 2018-04-24 10:02:17Z riggs $
+ * $FreeBSD: stable/11/sys/dev/bktr/msp34xx.c 332924 2018-04-24 10:07:13Z riggs $
  */
 
 /*
@@ -40,7 +39,7 @@
  *
  *  FM-Mono
  *      should work. The stereo modes are backward compatible to FM-mono,
- *      therefore FM-Mono should be allways available.
+ *      therefore FM-Mono should be always available.
  *
  *  FM-Stereo (B/G, used in germany)
  *      should work, with autodetect
@@ -223,7 +222,7 @@ static struct MSP_INIT_DATA_DEM {
 	  MSP_CARRIER(10.7), MSP_CARRIER(10.7),
 	  0x00d0, 0x0480, 0x0020, 0x3000 },
 
-	/* Terrestial FM-mono + FM-stereo */
+	/* Terrestrial FM-mono + FM-stereo */
 	{ {  3, 18, 27, 48, 66, 72 }, {  3, 18, 27, 48, 66, 72 },
 	  MSP_CARRIER(5.5), MSP_CARRIER(5.5),
 	  0x00d0, 0x0480,   0x0030, 0x3000},

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ata/ata-all.h 287285 2015-08-29 10:52:16Z mav $
+ * $FreeBSD: stable/11/sys/dev/ata/ata-all.h 344430 2019-02-21 09:54:10Z avos $
  */
 
 #if 0
@@ -207,10 +206,6 @@
 #define ATA_OP_CONTINUES                0
 #define ATA_OP_FINISHED                 1
 #define ATA_MAX_28BIT_LBA               268435455UL
-
-#ifndef	ATA_REQUEST_TIMEOUT
-#define	ATA_REQUEST_TIMEOUT		10
-#endif
 
 /* structure used for composite atomic operations */
 #define MAX_COMPOSITES          32              /* u_int32_t bits */

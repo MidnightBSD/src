@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/an/if_an_pccard.c 265614 2014-05-07 21:38:33Z gavin $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/an/if_an_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_inet.h"
 
@@ -109,6 +108,7 @@ static const struct pccard_product an_pccard_products[] = {
 	PCMCIA_CARD(XIRCOM, CWE1130), 
 	{ NULL }
 };
+PCCARD_PNP_INFO(an_pccard_products);
 
 static int
 an_pccard_probe(device_t dev)

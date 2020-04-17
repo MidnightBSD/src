@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Roelof Jonkman, Carlson Wireless Inc.
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cfi/cfi_bus_ixp4xx.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cfi/cfi_bus_ixp4xx.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

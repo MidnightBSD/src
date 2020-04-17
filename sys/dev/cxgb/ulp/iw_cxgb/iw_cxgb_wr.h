@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, 2008 Chelsio Inc.
@@ -26,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_wr.h 237263 2012-06-19 07:34:13Z np $
+$FreeBSD: stable/11/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_wr.h 298955 2016-05-03 03:41:25Z pfg $
 
 ***************************************************************************/
 #ifndef __CXIO_WR_H__
@@ -634,7 +633,7 @@ struct t3_swrq {
  * A T3 WQ implements both the SQ and RQ.
  */
 struct t3_wq {
-	union t3_wr *queue;		/* DMA accessable memory */
+	union t3_wr *queue;		/* DMA accessible memory */
 	bus_addr_t dma_addr;		/* DMA address for HW */
 	u32 error;			/* 1 once we go to ERROR */
 	u32 qpid;

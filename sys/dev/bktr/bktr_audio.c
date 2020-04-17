@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_audio.c 242692 2012-11-07 07:00:59Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_audio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -55,7 +54,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/bktr/bktr_audio.c 242692 2012-11-07 07:00:
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */
@@ -133,7 +132,7 @@ set_audio( bktr_ptr_t bktr, int cmd )
 	else
 #endif /* AUDIOMUX_DISCOVER */
 
-	/* check for existance of audio MUXes */
+	/* check for existence of audio MUXes */
 	if ( !bktr->card.audiomuxs[ 4 ] )
 		return( -1 );
 
@@ -309,7 +308,7 @@ init_BTSC( bktr_ptr_t bktr )
 
 /*
  * setup the dbx chip
- * XXX FIXME: alot of work to be done here, this merely unmutes it.
+ * XXX FIXME: a lot of work to be done here, this merely unmutes it.
  */
 int
 set_BTSC( bktr_ptr_t bktr, int control )
@@ -472,7 +471,7 @@ void msp_read_id( bktr_ptr_t bktr ){
  * For the MSP3430G, we use fast autodetect mode
  * For the MSP3410/3415 there are two schemes for this
  *  a) Fast autodetection - the chip is put into autodetect mode, and the function
- *     returns immediatly. This works in most cases and is the Default Mode.
+ *     returns immediately. This works in most cases and is the Default Mode.
  *  b) Slow mode. The function sets the MSP3410/3415 chip, then waits for feedback from 
  *     the chip and re-programs it if needed.
  */
@@ -562,7 +561,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0008,0x0020);/* Loudspeaker set stereo*/
         /*
           set spatial effect strength to 50% enlargement
-          set spatial effect mode b, stereo basewidth enlargment only
+          set spatial effect mode b, stereo basewidth enlargement only
         */
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0005,0x3f28);
       } else if (stereo > 0x8000) {    /* bilingual mode */
@@ -574,7 +573,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0008,0x0030);/* Loudspeaker */
         /*
           set spatial effect strength to 50% enlargement
-          set spatial effect mode a, stereo basewidth enlargment
+          set spatial effect mode a, stereo basewidth enlargement
           and pseudo stereo effect with automatic high-pass filter
         */
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0005,0x3f08);

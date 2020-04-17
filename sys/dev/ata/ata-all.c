@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/ata-all.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/ata-all.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,9 +77,8 @@ int ata_dma_check_80pin = 1;
 
 /* sysctl vars */
 static SYSCTL_NODE(_hw, OID_AUTO, ata, CTLFLAG_RD, 0, "ATA driver parameters");
-TUNABLE_INT("hw.ata.ata_dma_check_80pin", &ata_dma_check_80pin);
 SYSCTL_INT(_hw_ata, OID_AUTO, ata_dma_check_80pin,
-	   CTLFLAG_RW, &ata_dma_check_80pin, 1,
+	   CTLFLAG_RWTUN, &ata_dma_check_80pin, 0,
 	   "Check for 80pin cable before setting ATA DMA mode");
 FEATURE(ata_cam, "ATA devices are accessed through the cam(4) driver");
 
@@ -428,7 +426,7 @@ ata_default_registers(device_t dev)
 void
 ata_udelay(int interval)
 {
-    /* for now just use DELAY, the timer/sleep subsytems are not there yet */
+    /* for now just use DELAY, the timer/sleep subsystems are not there yet */
     if (1 || interval < (1000000/hz) || ata_delayed_attach)
 	DELAY(interval);
     else
@@ -964,6 +962,12 @@ ata_check_ids(device_t dev, union ccb *ccb)
 		xpt_done(ccb);
 		return (-1);
 	}
+	/*
+	 * It's a programming error to see AUXILIARY register requests.
+	 */
+	KASSERT(ccb->ccb_h.func_code != XPT_ATA_IO ||
+	    ((ccb->ataio.ata_flags & ATA_FLAG_AUX) == 0),
+	    ("AUX register unsupported"));
 	return (0);
 }
 
@@ -1009,10 +1013,6 @@ ataaction(struct cam_sim *sim, union ccb *ccb)
 		}
 		ata_cam_begin_transaction(dev, ccb);
 		return;
-	case XPT_EN_LUN:		/* Enable LUN as a target */
-	case XPT_TARGET_IO:		/* Execute target I/O request */
-	case XPT_ACCEPT_TARGET_IO:	/* Accept Host Target Mode CDB */
-	case XPT_CONT_TARGET_IO:	/* Continue Host Target I/O Connection*/
 	case XPT_ABORT:			/* Abort the specified CCB */
 		/* XXX Implement */
 		ccb->ccb_h.status = CAM_REQ_INVALID;
@@ -1150,7 +1150,7 @@ ataaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->version_num = 1; /* XXX??? */
 		cpi->hba_inquiry = PI_SDTR_ABLE;
 		cpi->target_sprt = 0;
-		cpi->hba_misc = PIM_SEQSCAN;
+		cpi->hba_misc = PIM_SEQSCAN | PIM_UNMAPPED;
 		cpi->hba_eng_cnt = 0;
 		if (ch->flags & ATA_NO_SLAVE)
 			cpi->max_target = 0;

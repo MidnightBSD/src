@@ -22,8 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/ata/ata_if.m 249083 2013-04-04 07:12:24Z mav $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/dev/ata/ata_if.m 249083 2013-04-04 07:12:24Z mav $
 
 #include <sys/bus.h>
 #include <sys/kernel.h>

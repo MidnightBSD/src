@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, 2009 Chelsio Inc.
@@ -27,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_tom.h 241733 2012-10-19 13:26:40Z ed $
+$FreeBSD: stable/11/sys/dev/cxgb/ulp/tom/cxgb_tom.h 241733 2012-10-19 13:26:40Z ed $
 
 ***************************************************************************/
 #ifndef CXGB_TOM_H_

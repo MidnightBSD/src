@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -26,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/10/sys/dev/cxgb/common/cxgb_sge_defs.h 172096 2007-09-09 01:28:03Z kmacy $
+$FreeBSD: stable/11/sys/dev/cxgb/common/cxgb_sge_defs.h 331722 2018-03-29 02:50:57Z eadler $
 
 ***************************************************************************/
 /*

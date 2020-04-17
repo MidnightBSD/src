@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2015-2016 Qlogic Corporation
  * All rights reserved.
@@ -30,7 +29,7 @@
 #define _BXE_IOCTL_H_
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe_ioctl.h 298282 2016-04-19 18:47:34Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_ioctl.h 297884 2016-04-12 22:31:48Z davidcs $");
 
 #include <sys/ioccom.h>
 

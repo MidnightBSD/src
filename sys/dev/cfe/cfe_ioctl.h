@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: cfe_ioctl.h,v 1.2 2003/02/07 17:52:08 cgd Exp $ */
 
 /*-
@@ -32,7 +31,7 @@
  *    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  *    OR OTHERWISE), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/cfe/cfe_ioctl.h 183370 2008-09-26 03:53:10Z imp $
+ * $FreeBSD: stable/11/sys/dev/cfe/cfe_ioctl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*  *********************************************************************

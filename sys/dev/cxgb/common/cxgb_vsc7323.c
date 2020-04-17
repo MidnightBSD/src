@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /**************************************************************************
 
@@ -30,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/common/cxgb_vsc7323.c 183292 2008-09-23 03:16:54Z kmacy $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/common/cxgb_vsc7323.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <common/cxgb_common.h>
 

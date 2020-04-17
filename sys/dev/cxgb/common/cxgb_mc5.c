@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, Chelsio Inc.
@@ -29,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cxgb/common/cxgb_mc5.c 259992 2013-12-28 02:11:17Z dim $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/common/cxgb_mc5.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <common/cxgb_common.h>
 #include <common/cxgb_regs.h>

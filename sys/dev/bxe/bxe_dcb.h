@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/bxe_dcb.h 265797 2014-05-10 02:10:32Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_dcb.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef BXE_DCB_H
 #define BXE_DCB_H

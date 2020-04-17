@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 2000 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/dpt/dpt_eisa.c 241593 2012-10-15 16:29:08Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/dpt/dpt_eisa.c 241593 2012-10-15 16:29:08Z jhb $");
 
 #include "opt_eisa.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Michael Smith
  * All rights reserved.
@@ -53,7 +52,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: stable/10/sys/dev/amr/amrio.h 153409 2005-12-14 03:26:49Z scottl $
+ *	$FreeBSD: stable/11/sys/dev/amr/amrio.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -109,7 +108,7 @@ struct amr_user_ioctl {
 
 #define AMR_IO_COMMAND	_IOWR('A', 0x201, struct amr_user_ioctl)
 
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 
 struct amr_user_ioctl32 {
     unsigned char	au_cmd[32];	/* command text from userspace */

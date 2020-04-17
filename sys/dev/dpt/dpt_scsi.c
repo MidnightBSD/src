@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *       Copyright (c) 1997 by Simon Shapiro
  *       All Rights Reserved
@@ -29,10 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/dpt/dpt_scsi.c 315813 2017-03-23 06:41:13Z mav $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/dpt/dpt_scsi.c 335138 2018-06-14 14:46:20Z mav $");
 
 /*
- * dpt_scsi.c: SCSI dependant code for the DPT driver
+ * dpt_scsi.c: SCSI dependent code for the DPT driver
  *
  * credits:	Assisted by Mike Neuffer in the early low level DPT code
  *		Thanx to Mark Salyzyn of DPT for his assistance.
@@ -96,7 +95,7 @@ devclass_t	dpt_devclass;
 
 /*
  * These will have to be setup by parameters passed at boot/load time. For
- * perfromance reasons, we make them constants for the time being.
+ * performance reasons, we make them constants for the time being.
  */
 #define	dpt_min_segs	DPT_MAX_SEGS
 #define	dpt_max_segs	DPT_MAX_SEGS
@@ -599,7 +598,7 @@ dpt_detect_cache(dpt_softc_t *dpt, dpt_ccb_t *dccb, u_int32_t dccb_busaddr,
 	mtx_assert(&dpt->lock, MA_OWNED);
 
 	/*
-	 * Default setting, for best perfromance..
+	 * Default setting, for best performance..
 	 * This is what virtually all cards default to..
 	 */
 	dpt->cache_type = DPT_CACHE_WRITEBACK;
@@ -1032,10 +1031,10 @@ dpt_action(struct cam_sim *sim, union ccb *ccb)
 		strlcpy(cpi->hba_vid, "DPT", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-                cpi->transport = XPORT_SPI;
-                cpi->transport_version = 2;
-                cpi->protocol = PROTO_SCSI;
-                cpi->protocol_version = SCSI_REV_2;
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1150,7 +1149,6 @@ dpt_free(struct dpt_softc *dpt)
 	case 4:
 		bus_dmamem_free(dpt->dccb_dmat, dpt->dpt_dccbs,
 				dpt->dccb_dmamap);
-		bus_dmamap_destroy(dpt->dccb_dmat, dpt->dccb_dmamap);
 	case 3:
 		bus_dma_tag_destroy(dpt->dccb_dmat);
 	case 2:
@@ -1880,7 +1878,7 @@ dpt_reset_hba(dpt_softc_t *dpt)
 	ccb->cp_msg[0] = HA_IDENTIFY_MSG | HA_DISCO_RECO;
 	ccb->cp_scsi_cmd = 0;  /* Should be ignored */
 
-	/* Lock up the submitted queue.  We are very persistant here */
+	/* Lock up the submitted queue.  We are very persistent here */
 	while (dpt->queue_status & DPT_SUBMITTED_QUEUE_ACTIVE) {
 		DELAY(100);
 	}

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2017 QLogic Corporation. All rights reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/bxe/ecore_sp.h 296580 2016-03-09 21:30:21Z davidcs $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/ecore_sp.h 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef ECORE_SP_H
 #define ECORE_SP_H
@@ -1950,7 +1949,7 @@ void ecore_init_mcast_obj(struct bxe_softc *sc,
  * the current command will be enqueued to the tail of the
  * pending commands list.
  *
- * Return: 0 is operation was successfull and there are no pending completions,
+ * Return: 0 is operation was successful and there are no pending completions,
  *         negative if there were errors, positive if there are pending
  *         completions.
  */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2009, Chelsio Inc.
@@ -26,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/10/sys/dev/cxgb/ulp/tom/cxgb_l2t.h 237263 2012-06-19 07:34:13Z np $
+$FreeBSD: stable/11/sys/dev/cxgb/ulp/tom/cxgb_l2t.h 237263 2012-06-19 07:34:13Z np $
 
 ***************************************************************************/
 #ifndef _CHELSIO_L2T_H

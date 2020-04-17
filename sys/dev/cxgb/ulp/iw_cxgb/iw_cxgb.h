@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007, 2008 Chelsio Inc.
@@ -26,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: stable/10/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.h 309378 2016-12-01 23:38:52Z jhb $
+$FreeBSD: stable/11/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.h 294610 2016-01-22 23:33:34Z np $
 
 ***************************************************************************/
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2007-2009, Chelsio Inc.
@@ -27,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: stable/10/sys/dev/cxgb/t3c_tp_eeprom.h 189643 2009-03-10 19:22:45Z gnn $
+$FreeBSD: stable/11/sys/dev/cxgb/t3c_tp_eeprom.h 331722 2018-03-29 02:50:57Z eadler $
 
 ***************************************************************************/
 

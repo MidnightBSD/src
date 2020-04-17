@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_bah_zbus.c,v 1.6 2000/01/23 21:06:12 aymeric Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/cm/if_cm_isa.c 204520 2010-03-01 16:52:11Z joel $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/cm/if_cm_isa.c 331882 2018-04-02 16:11:49Z brooks $");
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -37,6 +36,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cm/if_cm_isa.c 204520 2010-03-01 16:52:11Z
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 
 #include <sys/module.h>
 #include <sys/bus.h>
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/cm/if_cm_isa.c 204520 2010-03-01 16:52:11Z
 #include <machine/resource.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arc.h>
 
 #include <dev/cm/smc90cx6reg.h>
@@ -62,8 +63,8 @@ cm_isa_probe(dev)
 	int rid;
 
 	rid = 0;
-	sc->port_res = bus_alloc_resource(
-	    dev, SYS_RES_IOPORT, &rid, 0ul, ~0ul, CM_IO_PORTS, RF_ACTIVE);
+	sc->port_res = bus_alloc_resource_anywhere(
+	    dev, SYS_RES_IOPORT, &rid, CM_IO_PORTS, RF_ACTIVE);
 	if (sc->port_res == NULL)
 		return (ENOENT);
 
@@ -73,8 +74,8 @@ cm_isa_probe(dev)
 	}
 
 	rid = 0;
-	sc->mem_res = bus_alloc_resource(
-	    dev, SYS_RES_MEMORY, &rid, 0ul, ~0ul, CM_MEM_SIZE, RF_ACTIVE);
+	sc->mem_res = bus_alloc_resource_anywhere(
+	    dev, SYS_RES_MEMORY, &rid, CM_MEM_SIZE, RF_ACTIVE);
 	if (sc->mem_res == NULL) {
 		cm_release_resources(dev);
 		return (ENOENT);
@@ -110,6 +111,7 @@ cm_isa_attach(dev)
 	if (error)
 		goto err;
 
+	gone_in_dev(dev, 12, "cm(4) driver");
 	return 0;
 
 err:

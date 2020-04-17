@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997,1998 Maxim Bolotin and Oleg Sharoiko.
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/sys/dev/cs/if_csreg.h 218055 2011-01-29 00:53:58Z andrew $
+ * $FreeBSD: stable/11/sys/dev/cs/if_csreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/rman.h>

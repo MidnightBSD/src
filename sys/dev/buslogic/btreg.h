@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Generic register and struct definitions for the BusLogic
  * MultiMaster SCSI host adapters.  Product specific probe and
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/buslogic/btreg.h 241592 2012-10-15 16:13:55Z jhb $
+ * $FreeBSD: stable/11/sys/dev/buslogic/btreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BTREG_H_
@@ -596,7 +595,7 @@ struct sg_map_node {
 };
 	
 struct bt_softc {
-	struct device		*dev;
+	device_t		dev;
 	struct resource		*port;
 	struct resource		*irq;
 	struct resource		*drq;

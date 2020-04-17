@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ata/ata-card.c 256326 2013-10-11 18:27:12Z grehan $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/ata/ata-card.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,8 +98,8 @@ ata_pccard_attach(device_t dev)
 
     /* allocate the io range to get start and length */
     rid = ATA_IOADDR_RID;
-    if (!(io = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
-				  ATA_IOSIZE, RF_ACTIVE)))
+    if (!(io = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   ATA_IOSIZE, RF_ACTIVE)))
 	return (ENXIO);
 
     /* setup the resource vectors */
@@ -120,8 +119,8 @@ ata_pccard_attach(device_t dev)
     }
     else {
 	rid = ATA_CTLADDR_RID;
-	if (!(ctlio = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
-					 ATA_CTLIOSIZE, RF_ACTIVE))) {
+	if (!(ctlio = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+						  ATA_CTLIOSIZE, RF_ACTIVE))) {
 	    bus_release_resource(dev, SYS_RES_IOPORT, ATA_IOADDR_RID, io);
 	    for (i = ATA_DATA; i < ATA_MAX_RES; i++)
 		ch->r_io[i].res = NULL;
@@ -184,3 +183,4 @@ static driver_t ata_pccard_driver = {
 
 DRIVER_MODULE(ata, pccard, ata_pccard_driver, ata_devclass, NULL, NULL);
 MODULE_DEPEND(ata, ata, 1, 1, 1);
+PCCARD_PNP_INFO(ata_pccard_products);

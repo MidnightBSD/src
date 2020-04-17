@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Jonathan Lemon
  * Copyright (c) 1999, 2000 Michael Smith
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/amr/amr_disk.c 163834 2006-10-31 21:19:25Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/amr/amr_disk.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Disk driver for AMI MegaRaid controllers
