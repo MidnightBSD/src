@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * Copyright (c) 2003 Peter Wemm
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/ia32/ia32_sysvec.c 294136 2016-01-16 07:56:49Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/ia32/ia32_sysvec.c 315302 2017-03-15 10:53:40Z kib $");
 
 #include "opt_compat.h"
 
@@ -90,21 +89,16 @@ extern const char *freebsd32_syscallnames[];
 static SYSCTL_NODE(_compat, OID_AUTO, ia32, CTLFLAG_RW, 0, "ia32 mode");
 
 static u_long	ia32_maxdsiz = IA32_MAXDSIZ;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RW, &ia32_maxdsiz, 0, "");
-TUNABLE_ULONG("compat.ia32.maxdsiz", &ia32_maxdsiz);
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RWTUN, &ia32_maxdsiz, 0, "");
 u_long	ia32_maxssiz = IA32_MAXSSIZ;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxssiz, CTLFLAG_RW, &ia32_maxssiz, 0, "");
-TUNABLE_ULONG("compat.ia32.maxssiz", &ia32_maxssiz);
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxssiz, CTLFLAG_RWTUN, &ia32_maxssiz, 0, "");
 static u_long	ia32_maxvmem = IA32_MAXVMEM;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxvmem, CTLFLAG_RW, &ia32_maxvmem, 0, "");
-TUNABLE_ULONG("compat.ia32.maxvmem", &ia32_maxvmem);
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxvmem, CTLFLAG_RWTUN, &ia32_maxvmem, 0, "");
 
 struct sysentvec ia32_freebsd_sysvec = {
 	.sv_size	= FREEBSD32_SYS_MAXSYSCALL,
 	.sv_table	= freebsd32_sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -112,7 +106,6 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_sendsig	= ia32_sendsig,
 	.sv_sigcode	= ia32_sigcode,
 	.sv_szsigcode	= &sz_ia32_sigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= elf32_coredump,
 	.sv_imgact_try	= NULL,
@@ -128,12 +121,7 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_fixlimit	= ia32_fixlimit,
 	.sv_maxssiz	= &ia32_maxssiz,
 	.sv_flags	= SV_ABI_FREEBSD | SV_IA32 | SV_ILP32 |
-#ifdef __amd64__
-		SV_SHP
-#else
-		0
-#endif
-	,
+			    SV_SHP | SV_TIMEKEEP,
 	.sv_set_syscall_retval = ia32_set_syscall_retval,
 	.sv_fetch_syscall_args = ia32_fetch_syscall_args,
 	.sv_syscallnames = freebsd32_syscallnames,
@@ -177,10 +165,24 @@ SYSINIT(oia32, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf32_insert_brand_entry,
 	&ia32_brand_oinfo);
 
+static Elf32_Brandinfo kia32_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_386,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld.so.1",
+	.sysvec		= &ia32_freebsd_sysvec,
+	.brand_note	= &elf32_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
+
+SYSINIT(kia32, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf32_insert_brand_entry,
+	&kia32_brand_info);
+
 void
 elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 {
-#ifdef __amd64__
 	void *buf;
 	size_t len;
 
@@ -198,7 +200,6 @@ elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 			    cpu_max_ext_state_size, NULL);
 	}
 	*off = len;
-#endif
 }
 
 void

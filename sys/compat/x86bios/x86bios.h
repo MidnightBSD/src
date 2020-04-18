@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/11/sys/compat/x86bios/x86bios.h 298827 2016-04-30 00:34:04Z pfg $
  */
 /*
  * x86 registers were borrowed from x86emu.h x86emu_regs.h
- * for compatability.
+ * for compatibility.
  */
 
 #ifndef _X86BIOS_H_

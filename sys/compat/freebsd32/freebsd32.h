@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32.h 310121 2016-12-15 16:52:17Z vangyzen $
+ * $FreeBSD: stable/11/sys/compat/freebsd32/freebsd32.h 338617 2018-09-12 18:52:18Z sobomax $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
@@ -77,6 +76,15 @@ struct itimerspec32 {
 #define ITS_CP(src, dst) do {			\
 	TS_CP((src), (dst), it_interval);	\
 	TS_CP((src), (dst), it_value);		\
+} while (0)
+
+struct bintime32 {
+	uint32_t sec;
+	uint32_t frac[2];
+};
+#define BT_CP(src, dst, fld) do {				\
+	CP((src).fld, (dst).fld, sec);				\
+	*(uint64_t *)&(dst).fld.frac[0] = (src).fld.frac;	\
 } while (0)
 
 struct rusage32 {
@@ -134,15 +142,6 @@ struct statfs32 {
 	char	f_mntfromname[FREEBSD4_MNAMELEN];
 	int16_t	f_spares2 __packed;
 	int32_t f_spare[2];
-};
-
-struct kevent32 {
-	u_int32_t	ident;		/* identifier for this event */
-	short		filter;		/* filter for event */
-	u_short		flags;
-	u_int		fflags;
-	int32_t		data;
-	u_int32_t	udata;		/* opaque user data identifier */
 };
 
 struct iovec32 {
@@ -307,8 +306,8 @@ struct kinfo_proc32 {
 	signed char ki_nice;
 	char	ki_lock;
 	char	ki_rqindex;
-	u_char	ki_oncpu;
-	u_char	ki_lastcpu;
+	u_char	ki_oncpu_old;
+	u_char	ki_lastcpu_old;
 	char	ki_tdname[TDNAMLEN+1];
 	char	ki_wmesg[WMESGLEN+1];
 	char	ki_login[LOGNAMELEN+1];
@@ -319,6 +318,9 @@ struct kinfo_proc32 {
 	char	ki_moretdname[MAXCOMLEN-TDNAMLEN+1];
 	char	ki_sparestrings[46];
 	int	ki_spareints[KI_NSPARE_INT];
+	int	ki_oncpu;
+	int	ki_lastcpu;
+	int	ki_tracer;
 	int	ki_flag2;
 	int	ki_fibnum;
 	u_int	ki_cr_flags;

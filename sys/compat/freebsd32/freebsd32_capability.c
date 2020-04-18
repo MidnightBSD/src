@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_capability.c 280258 2015-03-19 13:37:36Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/freebsd32/freebsd32_capability.c 306586 2016-10-02 16:13:18Z kib $");
 
 #include "opt_capsicum.h"
 
@@ -48,18 +47,6 @@ __FBSDID("$FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_capability.c 280258
 #ifdef CAPABILITIES
 
 MALLOC_DECLARE(M_FILECAPS);
-
-int
-freebsd32_cap_enter(struct thread *td,
-    struct freebsd32_cap_enter_args *uap)
-{
-
-	/*
-	 * We do not have an equivalent of capabilities.conf for freebsd32
-	 * compatibility, so do not allow capability mode for now.
-	 */
-	return (ENOSYS);
-}
 
 int
 freebsd32_cap_ioctls_limit(struct thread *td,
@@ -147,14 +134,6 @@ out:
 }
 
 #else /* !CAPABILITIES */
-
-int
-freebsd32_cap_enter(struct thread *td,
-    struct freebsd32_cap_enter_args *uap)
-{
-
-	return (ENOSYS);
-}
 
 int
 freebsd32_cap_ioctls_limit(struct thread *td,

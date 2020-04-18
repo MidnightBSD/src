@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-1999 Andrew Gallatin
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_util.h 225617 2011-09-16 13:58:51Z kmacy $
+ * $FreeBSD: stable/11/sys/compat/freebsd32/freebsd32_util.h 321322 2017-07-21 06:48:47Z kib $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_UTIL_H_
@@ -48,7 +47,7 @@ struct freebsd32_ps_strings {
 	int	ps_nenvstr;	/* the number of environment strings */
 };
 
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 #include <compat/ia32/ia32_util.h>
 #endif
 
@@ -80,29 +79,36 @@ SYSCALL32_MODULE(syscallname,                           \
     & syscallname##_syscall32, & syscallname##_sysent32,\
     NULL, NULL);
 
-#define SYSCALL32_INIT_HELPER(syscallname) {			\
+#define SYSCALL32_INIT_HELPER_F(syscallname, flags) {		\
     .new_sysent = {						\
 	.sy_narg = (sizeof(struct syscallname ## _args )	\
 	    / sizeof(register_t)),				\
 	.sy_call = (sy_call_t *)& syscallname,			\
+	.sy_flags = (flags)					\
     },								\
     .syscall_no = FREEBSD32_SYS_##syscallname			\
 }
 
-#define SYSCALL32_INIT_HELPER_COMPAT(syscallname) {		\
+#define SYSCALL32_INIT_HELPER_COMPAT_F(syscallname, flags) {	\
     .new_sysent = {						\
 	.sy_narg = (sizeof(struct syscallname ## _args )	\
 	    / sizeof(register_t)),				\
 	.sy_call = (sy_call_t *)& sys_ ## syscallname,		\
+	.sy_flags = (flags)					\
     },								\
     .syscall_no = FREEBSD32_SYS_##syscallname			\
 }
 
+#define SYSCALL32_INIT_HELPER(syscallname)			\
+    SYSCALL32_INIT_HELPER_F(syscallname, 0)
+#define SYSCALL32_INIT_HELPER_COMPAT(syscallname)		\
+    SYSCALL32_INIT_HELPER_COMPAT_F(syscallname, 0)
+
 int    syscall32_register(int *offset, struct sysent *new_sysent,
-	    struct sysent *old_sysent);
+	    struct sysent *old_sysent, int flags);
 int    syscall32_deregister(int *offset, struct sysent *old_sysent);
 int    syscall32_module_handler(struct module *mod, int what, void *arg);
-int    syscall32_helper_register(struct syscall_helper_data *sd);
+int    syscall32_helper_register(struct syscall_helper_data *sd, int flags);
 int    syscall32_helper_unregister(struct syscall_helper_data *sd);
 
 struct iovec32;

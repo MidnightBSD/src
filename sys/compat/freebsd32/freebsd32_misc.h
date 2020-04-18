@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_misc.h 254490 2013-08-18 13:34:11Z pjd $
+ * $FreeBSD: stable/11/sys/compat/freebsd32/freebsd32_misc.h 254490 2013-08-18 13:34:11Z pjd $
  */
 
 #ifndef	_COMPAT_FREEBSD32_MISC_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David E. O'Brien
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/freebsd32/freebsd32_ioctl.c 280258 2015-03-19 13:37:36Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/freebsd32/freebsd32_ioctl.c 350217 2019-07-22 18:14:34Z emaste $");
 
 #include "opt_compat.h"
 

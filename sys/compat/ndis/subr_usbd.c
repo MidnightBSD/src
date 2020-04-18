@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/compat/ndis/subr_usbd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,7 +54,9 @@ __MBSDID("$MidnightBSD$");
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
+#include <net/ethernet.h>
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_ioctl.h>
 

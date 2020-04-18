@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sys/compat/ndis/subr_ntoskrnl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/ctype.h>
 #include <sys/unistd.h>
@@ -722,7 +722,7 @@ IoGetDriverObjectExtension(drv, clid)
 
 	/*
 	 * Sanity check. Our dummy bus drivers don't have
-	 * any driver extentions.
+	 * any driver extensions.
 	 */
 
 	if (drv->dro_driverext == NULL)
@@ -4204,7 +4204,7 @@ KeQueryInterruptTime(void)
 
 	ticks = tvtohz(&tv);
 
-	return ticks * ((10000000 + hz - 1) / hz);
+	return ticks * howmany(10000000, hz);
 }
 
 static struct thread *

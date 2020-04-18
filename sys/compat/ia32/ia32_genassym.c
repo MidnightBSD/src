@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/compat/ia32/ia32_genassym.c 220238 2011-04-01 11:16:29Z kib $");
+__FBSDID("$FreeBSD: stable/11/sys/compat/ia32/ia32_genassym.c 220238 2011-04-01 11:16:29Z kib $");
 
 #include "opt_compat.h"
 
