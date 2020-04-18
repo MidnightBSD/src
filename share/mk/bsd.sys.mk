@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/bsd.sys.mk 313790 2017-02-16 05:14:07Z ngie $
+# $FreeBSD: stable/11/share/mk/bsd.sys.mk 352023 2019-09-07 20:01:26Z imp $
 #
 # This file contains common settings used for building MidnightBSD
 # sources.
 
 # Enable various levels of compiler warning checks.  These may be
-# overridden (e.g. if using a non-gcc compiler) by defining NO_WARNS.
+# overridden (e.g. if using a non-gcc compiler) by defining MK_WARNS=no.
 
 # for GCC:   http://gcc.gnu.org/onlinedocs/gcc-4.2.1/gcc/Warning-Options.html
 
@@ -25,16 +24,23 @@ CFLAGS+=	-std=iso9899:1999
 .else # CSTD
 CFLAGS+=	-std=${CSTD}
 .endif # CSTD
-.if !defined(NO_WARNS)
+#
+# Turn off -Werror for gcc 4.2.1. The compiler is on the glide path out of the
+# system, and any warnings specific to it are no longer relevant as there are
+# too many false positives.
+#
+.if ${COMPILER_VERSION} <  50000
+NO_WERROR.gcc=	yes
+.endif
+
 # -pedantic is problematic because it also imposes namespace restrictions
 #CFLAGS+=	-pedantic
 .if defined(WARNS)
 .if ${WARNS} >= 1
 CWARNFLAGS+=	-Wsystem-headers
-.if !defined(NO_WERROR) && (${COMPILER_TYPE} != "clang" \
-    || !defined(NO_WERROR.clang))
+.if !defined(NO_WERROR) && !defined(NO_WERROR.${COMPILER_TYPE})
 CWARNFLAGS+=	-Werror
-.endif # !NO_WERROR && (!CLANG || !NO_WERROR.clang)
+.endif # !NO_WERROR && !NO_WERROR.${COMPILER_TYPE}
 .endif # WARNS >= 1
 .if ${WARNS} >= 2
 CWARNFLAGS+=	-Wall -Wno-format-y2k
@@ -46,18 +52,19 @@ CWARNFLAGS+=	-W -Wno-unused-parameter -Wstrict-prototypes\
 .if ${WARNS} >= 4
 CWARNFLAGS+=	-Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wshadow\
 		-Wunused-parameter
-.if !defined(NO_WCAST_ALIGN) && (${COMPILER_TYPE} != "clang" \
-    || !defined(NO_WCAST_ALIGN.clang))
+.if !defined(NO_WCAST_ALIGN) && !defined(NO_WCAST_ALIGN.${COMPILER_TYPE})
 CWARNFLAGS+=	-Wcast-align
-.endif # !NO_WCAST_ALIGN && (!CLANG || !NO_WCAST_ALIGN.clang)
+.endif # !NO_WCAST_ALIGN !NO_WCAST_ALIGN.${COMPILER_TYPE}
 .endif # WARNS >= 4
 # BDECFLAGS
 .if ${WARNS} >= 6
 CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls\
 		-Wold-style-definition
-.if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD) && \
-    !defined(NO_WMISSING_VARIABLE_DECLARATIONS)
-CWARNFLAGS+=	-Wmissing-variable-declarations
+.if !defined(NO_WMISSING_VARIABLE_DECLARATIONS)
+CWARNFLAGS.clang+=	-Wmissing-variable-declarations
+.endif
+.if !defined(NO_WTHREAD_SAFETY)
+CWARNFLAGS.clang+=	-Wthread-safety
 .endif
 .endif # WARNS >= 6
 .if ${WARNS} >= 2 && ${WARNS} <= 4
@@ -68,27 +75,35 @@ CWARNFLAGS+=	-Wno-uninitialized
 CWARNFLAGS+=	-Wno-pointer-sign
 # Clang has more warnings enabled by default, and when using -Wall, so if WARNS
 # is set to low values, these have to be disabled explicitly.
-.if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD)
 .if ${WARNS} <= 6
-CWARNFLAGS+=	-Wno-empty-body -Wno-string-plus-int
-.if ${COMPILER_VERSION} > 30300
-CWARNFLAGS+=	-Wno-unused-const-variable
+CWARNFLAGS.clang+=	-Wno-empty-body -Wno-string-plus-int
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30400
+CWARNFLAGS.clang+= -Wno-unused-const-variable
 .endif
 .endif # WARNS <= 6
 .if ${WARNS} <= 3
-CWARNFLAGS+=	-Wno-tautological-compare -Wno-unused-value\
+CWARNFLAGS.clang+=	-Wno-tautological-compare -Wno-unused-value\
 		-Wno-parentheses-equality -Wno-unused-function -Wno-enum-conversion
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30600
+CWARNFLAGS.clang+=	-Wno-unused-local-typedef
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 40000
+CWARNFLAGS.clang+=	-Wno-address-of-packed-member
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 70000 && \
+    ${MACHINE_CPUARCH} == "arm" && !${MACHINE_ARCH:Marmv[67]*}
+CWARNFLAGS.clang+=	-Wno-atomic-alignment
+.endif
 .endif # WARNS <= 3
 .if ${WARNS} <= 2
-CWARNFLAGS+=	-Wno-switch -Wno-switch-enum -Wno-knr-promoted-parameter
+CWARNFLAGS.clang+=	-Wno-switch -Wno-switch-enum -Wno-knr-promoted-parameter
 .endif # WARNS <= 2
 .if ${WARNS} <= 1
-CWARNFLAGS+=	-Wno-parentheses
+CWARNFLAGS.clang+=	-Wno-parentheses
 .endif # WARNS <= 1
 .if defined(NO_WARRAY_BOUNDS)
-CWARNFLAGS+=	-Wno-array-bounds
+CWARNFLAGS.clang+=	-Wno-array-bounds
 .endif # NO_WARRAY_BOUNDS
-.endif # CLANG
 .endif # WARNS
 
 .if defined(FORMAT_AUDIT)
@@ -98,77 +113,241 @@ WFORMAT=	1
 .if ${WFORMAT} > 0
 #CWARNFLAGS+=	-Wformat-nonliteral -Wformat-security -Wno-format-extra-args
 CWARNFLAGS+=	-Wformat=2 -Wno-format-extra-args
-.if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD)
 .if ${WARNS} <= 3
-CWARNFLAGS+=	-Wno-format-nonliteral
+CWARNFLAGS.clang+=	-Wno-format-nonliteral
 .endif # WARNS <= 3
-.endif # CLANG
-.if !defined(NO_WERROR) && (${COMPILER_TYPE} != "clang" \
-    || !defined(NO_WERROR.clang))
+.if !defined(NO_WERROR) && !defined(NO_WERROR.${COMPILER_TYPE})
 CWARNFLAGS+=	-Werror
-.endif # !NO_WERROR && (!CLANG || !NO_WERROR.clang)
+.endif # !NO_WERROR && !NO_WERROR.${COMPILER_TYPE}
 .endif # WFORMAT > 0
 .endif # WFORMAT
-.if defined(NO_WFORMAT) || (${COMPILER_TYPE} == "clang" && defined(NO_WFORMAT.clang))
+.if defined(NO_WFORMAT) || defined(NO_WFORMAT.${COMPILER_TYPE})
 CWARNFLAGS+=	-Wno-format
-.endif # NO_WFORMAT || (CLANG && NO_WFORMAT.clang)
-.endif # !NO_WARNS
+.endif # NO_WFORMAT || NO_WFORMAT.${COMPILER_TYPE}
+
+# GCC 5.2.0
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 50200
+CWARNFLAGS+=	-Wno-error=address			\
+		-Wno-error=array-bounds			\
+		-Wno-error=attributes			\
+		-Wno-error=bool-compare			\
+		-Wno-error=cast-align			\
+		-Wno-error=clobbered			\
+		-Wno-error=enum-compare			\
+		-Wno-error=extra			\
+		-Wno-error=inline			\
+		-Wno-error=logical-not-parentheses	\
+		-Wno-error=strict-aliasing		\
+		-Wno-error=uninitialized		\
+		-Wno-error=unused-but-set-variable	\
+		-Wno-error=unused-function		\
+		-Wno-error=unused-value
+.endif
+
+# GCC 6.1.0
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100
+CWARNFLAGS+=	-Wno-error=misleading-indentation	\
+		-Wno-error=nonnull-compare		\
+		-Wno-error=shift-negative-value		\
+		-Wno-error=tautological-compare		\
+		-Wno-error=unused-const-variable
+.endif
+
+# How to handle BSD custom printf format specifiers.
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30600
+FORMAT_EXTENSIONS=	-D__printf__=__freebsd_kprintf__
+.else
+FORMAT_EXTENSIONS=	-fformat-extensions
+.endif
 
 .if defined(IGNORE_PRAGMA)
 CWARNFLAGS+=	-Wno-unknown-pragmas
 .endif # IGNORE_PRAGMA
 
-.if !defined(EARLY_BUILD)
+# We need this conditional because many places that use it
+# only enable it for some files with CLFAGS.$FILE+=${CLANG_NO_IAS}.
+# unconditionally, and can't easily use the CFLAGS.clang=
+# mechanism.
 .if ${COMPILER_TYPE} == "clang"
 CLANG_NO_IAS=	 -no-integrated-as
+.endif
 CLANG_OPT_SMALL= -mstack-alignment=8 -mllvm -inline-threshold=3\
-		 -mllvm -enable-load-pre=false -mllvm -simplifycfg-dup-ret
-CFLAGS+=	 -Qunused-arguments
+		 -mllvm -simplifycfg-dup-ret
+.if ${COMPILER_VERSION} >= 30500 && ${COMPILER_VERSION} < 30700
+CLANG_OPT_SMALL+= -mllvm -enable-gvn=false
+.else
+CLANG_OPT_SMALL+= -mllvm -enable-load-pre=false
+.endif
+CFLAGS.clang+=	 -Qunused-arguments
 .if ${MACHINE_CPUARCH} == "sparc64"
 # Don't emit .cfi directives, since we must use GNU as on sparc64, for now.
-CFLAGS+=	 -fno-dwarf2-cfi-asm
+CFLAGS.clang+=	 -fno-dwarf2-cfi-asm
 .endif # SPARC64
 # The libc++ headers use c++11 extensions.  These are normally silenced because
 # they are treated as system headers, but we explicitly disable that warning
 # suppression when building the base system to catch bugs in our headers.
 # Eventually we'll want to start building the base system C++ code as C++11,
 # but not yet.
-CXXFLAGS+=	 -Wno-c++11-extensions
-CFLAGS+=	 ${CFLAGS.clang}
-CXXFLAGS+=	 ${CXXFLAGS.clang}
-.else # !CLANG
-GCC_MS_EXTENSIONS= -fms-extensions
-CFLAGS+=	 ${CFLAGS.gcc}
-CXXFLAGS+=	 ${CXXFLAGS.gcc}
-.endif # CLANG
-.endif # !EARLY_BUILD
+CXXFLAGS.clang+=	 -Wno-c++11-extensions
 
-.if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "ia64" && \
+.if ${MK_SSP} != "no" && \
     ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
+.if (${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30500) || \
+    (${COMPILER_TYPE} == "gcc" && \
+     (${COMPILER_VERSION} == 40201 || ${COMPILER_VERSION} >= 40900))
 # Don't use -Wstack-protector as it breaks world with -Werror.
+SSP_CFLAGS?=	-fstack-protector-strong
+.else
 SSP_CFLAGS?=	-fstack-protector
+.endif
 CFLAGS+=	${SSP_CFLAGS}
-.endif # SSP && !IA64 && !ARM && !MIPS
+.endif # SSP && !ARM && !MIPS
 
-# Allow user-specified additional warning flags and file specific flag
-# overrides.
-CFLAGS+=	${CWARNFLAGS} ${CWARNFLAGS.${.IMPSRC:T}}
+# Allow user-specified additional warning flags, plus compiler and file
+# specific flag overrides, unless we've overriden this...
+.if ${MK_WARNS} != "no"
+CFLAGS+=	${CWARNFLAGS:M*} ${CWARNFLAGS.${COMPILER_TYPE}}
+CFLAGS+=	${CWARNFLAGS.${.IMPSRC:T}}
+.endif
 
+CFLAGS+=	 ${CFLAGS.${COMPILER_TYPE}}
+CXXFLAGS+=	 ${CXXFLAGS.${COMPILER_TYPE}}
+
+AFLAGS+=	${AFLAGS.${.IMPSRC:T}}
+ACFLAGS+=	${ACFLAGS.${.IMPSRC:T}}
+CFLAGS+=	${CFLAGS.${.IMPSRC:T}}
+CXXFLAGS+=	${CXXFLAGS.${.IMPSRC:T}}
+
+.if defined(SRCTOP)
+# Prevent rebuilding during install to support read-only objdirs.
+.if ${.TARGETS:M*install*} == ${.TARGETS} && empty(.MAKE.MODE:Mmeta)
+CFLAGS+=	ERROR-tried-to-rebuild-during-make-install
+.endif
+.endif
 
 # Tell bmake not to mistake standard targets for things to be searched for
 # or expect to ever be up-to-date.
-PHONY_NOTMAIN = afterdepend afterinstall all beforedepend beforeinstall \
-		beforelinking build build-tools buildfiles buildincludes \
-		check checkdpadd clean cleandepend cleandir cleanobj configure \
-		depend dependall distclean distribute exe extract \
-		html includes install installfiles installincludes lint \
-		obj objlink objs objwarn realall realdepend \
-		realinstall subdir-all subdir-depend subdir-install \
-		tags whereobj
+PHONY_NOTMAIN = analyze afterdepend afterinstall all beforedepend beforeinstall \
+		beforelinking build build-tools buildconfig buildfiles \
+		buildincludes check checkdpadd clean cleandepend cleandir \
+		cleanobj configure depend distclean distribute exe \
+		files html includes install installconfig installfiles \
+		installincludes lint obj objlink objs objwarn \
+		realinstall tags whereobj
 
-.if defined(PORTNAME)
-PHONY_NOTMAIN+=	fetch patch
+# we don't want ${PROG} to be PHONY
+.PHONY: ${PHONY_NOTMAIN:N${PROG:U}}
+.NOTMAIN: ${PHONY_NOTMAIN:Nall}
+
+.if ${MK_STAGING} != "no"
+.if defined(_SKIP_BUILD) || (!make(all) && !make(clean*))
+_SKIP_STAGING?= yes
+.endif
+.if ${_SKIP_STAGING:Uno} == "yes"
+staging stage_libs stage_files stage_as stage_links stage_symlinks:
+.else
+# allow targets like beforeinstall to be leveraged
+DESTDIR= ${STAGE_OBJTOP}
+.export DESTDIR
+
+.if target(beforeinstall)
+.if !empty(_LIBS) || (${MK_STAGING_PROG} != "no" && !defined(INTERNALPROG))
+staging: beforeinstall
+.endif
 .endif
 
-.PHONY: ${PHONY_NOTMAIN}
-.NOTMAIN: ${PHONY_NOTMAIN}
+# normally only libs and includes are staged
+.if ${MK_STAGING_PROG} != "no" && !defined(INTERNALPROG)
+STAGE_DIR.prog= ${STAGE_OBJTOP}${BINDIR}
+
+.if !empty(PROG)
+.if defined(PROGNAME)
+STAGE_AS_SETS+= prog
+STAGE_AS_${PROG}= ${PROGNAME}
+stage_as.prog: ${PROG}
+.else
+STAGE_SETS+= prog
+stage_files.prog: ${PROG}
+STAGE_TARGETS+= stage_files
+.endif
+.endif
+.endif
+
+.if !empty(_LIBS) && !defined(INTERNALLIB)
+.if defined(SHLIBDIR) && ${SHLIBDIR} != ${LIBDIR} && ${_LIBS:Uno:M*.so.*} != ""
+STAGE_SETS+= shlib
+STAGE_DIR.shlib= ${STAGE_OBJTOP}${SHLIBDIR}
+STAGE_FILES.shlib+= ${_LIBS:M*.so.*}
+stage_files.shlib: ${_LIBS:M*.so.*}
+.endif
+
+.if defined(SHLIB_LINK) && commands(${SHLIB_LINK:R}.ld)
+STAGE_AS_SETS+= ldscript
+STAGE_AS.ldscript+= ${SHLIB_LINK:R}.ld
+stage_as.ldscript: ${SHLIB_LINK:R}.ld
+STAGE_DIR.ldscript = ${STAGE_LIBDIR}
+STAGE_AS_${SHLIB_LINK:R}.ld:= ${SHLIB_LINK}
+NO_SHLIB_LINKS=
+.endif
+
+.if target(stage_files.shlib)
+stage_libs: ${_LIBS}
+.if defined(DEBUG_FLAGS) && target(${SHLIB_NAME}.symbols)
+stage_files.shlib: ${SHLIB_NAME}.symbols
+.endif
+.else
+stage_libs: ${_LIBS}
+.endif
+.if defined(SHLIB_NAME) && defined(DEBUG_FLAGS) && target(${SHLIB_NAME}.symbols)
+stage_libs: ${SHLIB_NAME}.symbols
+.endif
+
+.endif
+
+.if !empty(INCS) || !empty(INCSGROUPS) && target(buildincludes)
+.if !defined(NO_BEFOREBUILD_INCLUDES)
+stage_includes: buildincludes
+beforebuild: stage_includes
+.endif
+.endif
+
+.for t in stage_libs stage_files stage_as
+.if target($t)
+STAGE_TARGETS+= $t
+.endif
+.endfor
+
+.if !empty(STAGE_AS_SETS)
+STAGE_TARGETS+= stage_as
+.endif
+
+.if !empty(_LIBS) || (${MK_STAGING_PROG} != "no" && !defined(INTERNALPROG))
+
+.if !empty(LINKS)
+STAGE_TARGETS+= stage_links
+.if ${MAKE_VERSION} < 20131001
+stage_links.links: ${_LIBS} ${PROG}
+.endif
+STAGE_SETS+= links
+STAGE_LINKS.links= ${LINKS}
+.endif
+
+.if !empty(SYMLINKS)
+STAGE_TARGETS+= stage_symlinks
+STAGE_SETS+= links
+STAGE_SYMLINKS.links= ${SYMLINKS}
+.endif
+
+.endif
+
+.include <meta.stage.mk>
+.endif
+.endif
+
+.if defined(META_TARGETS)
+.for _tgt in ${META_TARGETS}
+.if target(${_tgt})
+${_tgt}: ${META_DEPS}
+.endif
+.endfor
+.endif

@@ -1,10 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/netbsd-tests.test.mk 292278 2015-12-15 17:58:10Z ngie $
+# $FreeBSD: stable/11/share/mk/netbsd-tests.test.mk 291738 2015-12-04 03:17:47Z bdrewery $
 
 .if !target(__netbsd_tests.test.mk__)
 __netbsd_tests.test.mk__:
-
-OBJTOP?=	${.OBJDIR:S/${RELDIR}//}
 
 TESTSRC?=	${SRCTOP}/contrib/netbsd-tests/${RELDIR:H}
 
@@ -21,8 +18,7 @@ LIBNETBSD_OBJDIR=	${OBJTOP}/lib/libnetbsd
 CFLAGS.$t+=	-I${LIBNETBSD_SRCDIR} -I${SRCTOP}/contrib/netbsd-tests
 LDFLAGS.$t+=	-L${LIBNETBSD_OBJDIR}
 
-DPADD.$t+=	${LIBNETBSD}
-LDADD.$t+=	-lnetbsd
+LIBADD.${t}+=	netbsd
 
 SRCS.$t?=	${t:C/^/t_/:C/_test$//g}.c
 .endfor

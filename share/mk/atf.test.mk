@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/atf.test.mk 292148 2015-12-13 04:20:47Z ngie $
+# $FreeBSD: stable/11/share/mk/atf.test.mk 291896 2015-12-06 07:30:18Z ngie $
 #
 # You must include bsd.test.mk instead of this file from your Makefile.
 #
@@ -31,8 +30,11 @@ BINDIR.${_T}= ${TESTSDIR}
 MAN.${_T}?= # empty
 SRCS.${_T}?= ${_T}.c
 DPADD.${_T}+= ${LIBATF_C}
-LDADD.${_T}+= -latf-c
-USEPRIVATELIB+= atf-c
+.if empty(LDFLAGS:M-static) && empty(LDFLAGS.${_T}:M-static)
+LDADD.${_T}+= ${LDADD_atf_c}
+.else
+LDADD.${_T}+= ${LIBATF_C}
+.endif
 TEST_INTERFACE.${_T}= atf
 .endfor
 .endif
@@ -45,8 +47,11 @@ BINDIR.${_T}= ${TESTSDIR}
 MAN.${_T}?= # empty
 SRCS.${_T}?= ${_T}${CXX_SUFFIX:U.cc}
 DPADD.${_T}+= ${LIBATF_CXX} ${LIBATF_C}
-LDADD.${_T}+= -latf-c++ -latf-c
-USEPRIVATELIB+= atf-c++
+.if empty(LDFLAGS:M-static) && empty(LDFLAGS.${_T}:M-static)
+LDADD.${_T}+= ${LDADD_atf_cxx} ${LDADD_atf_c}
+.else
+LDADD.${_T}+= ${LIBATF_CXX} ${LIBATF_C}
+.endif
 TEST_INTERFACE.${_T}= atf
 .endfor
 .endif

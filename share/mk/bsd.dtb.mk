@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/bsd.dtb.mk 283930 2015-06-02 21:24:47Z imp $
+# $FreeBSD: stable/11/share/mk/bsd.dtb.mk 276846 2015-01-08 18:28:06Z imp $
 
 # Search for kernel source tree in standard places.
 .for _dir in ${.CURDIR}/../.. ${.CURDIR}/../../.. ${.CURDIR}/../../../.. \

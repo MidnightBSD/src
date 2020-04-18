@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/bsd.test.mk 313791 2017-02-16 05:17:40Z ngie $
+# $FreeBSD: stable/11/share/mk/bsd.test.mk 322689 2017-08-19 01:43:02Z ngie $
 #
 # Generic build infrastructure for test programs.
 #
@@ -16,6 +15,12 @@ LOCALBASE?=	/usr/local
 
 # Tests install directory
 TESTSDIR?=	${TESTSBASE}/${RELDIR:H}
+
+PACKAGE?=	tests
+
+FILESGROUPS+=	${PACKAGE}FILES
+${PACKAGE}FILESPACKAGE=	${PACKAGE}
+${PACKAGE}FILESDIR=	${TESTSDIR}
 
 # List of subdirectories containing tests into which to recurse.  This has the
 # same semantics as SUBDIR at build-time.  However, the directories listed here
@@ -46,19 +51,11 @@ DISTRIBUTION:=	tests
 # Ordered list of directories to construct the PATH for the tests.
 TESTS_PATH+= ${DESTDIR}/bin ${DESTDIR}/sbin \
              ${DESTDIR}/usr/bin ${DESTDIR}/usr/sbin
-.if defined(.PARSEDIR)
 TESTS_ENV+= PATH=${TESTS_PATH:tW:C/ +/:/g}
-.else
-TESTS_ENV+= PATH=${TESTS_PATH:N :Q:S,\\ ,:,g}
-.endif
 
 # Ordered list of directories to construct the LD_LIBRARY_PATH for the tests.
 TESTS_LD_LIBRARY_PATH+= ${DESTDIR}/lib ${DESTDIR}/usr/lib
-.if defined(.PARSEDIR)
 TESTS_ENV+= LD_LIBRARY_PATH=${TESTS_LD_LIBRARY_PATH:tW:C/ +/:/g}
-.else
-TESTS_ENV+= LD_LIBRARY_PATH=${TESTS_LD_LIBRARY_PATH:N :Q:S,\\ ,:,g}
-.endif
 
 # List of all tests being built.  The various *.test.mk modules extend this
 # variable as needed.
@@ -68,6 +65,10 @@ _TESTS=
 .include <atf.test.mk>
 .include <plain.test.mk>
 .include <tap.test.mk>
+
+# Sort the tests alphabetically, so the results are deterministically formed
+# across runs.
+_TESTS:=	${_TESTS:O}
 
 # kyua automatically descends directories; only run make check on the
 # top-level directory

@@ -1,19 +1,14 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: stable/10/share/mk/bsd.prog.mk 298503 2016-04-23 07:09:23Z ngie $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/mk/bsd.prog.mk 302176 2016-06-24 18:45:16Z emaste $
 
 .include <bsd.init.mk>
+.include <bsd.compiler.mk>
 
 .SUFFIXES: .out .o .c .cc .cpp .cxx .C .m .y .l .ln .s .S .asm
 
-# some ports make a custom makefile with this, we want to work correctly with fake.
-.if defined (TRUE_PREFIX)
-PREFIX=${TRUE_PREFIX}
-.endif
-
 # XXX The use of COPTS in modern makefiles is discouraged.
 .if defined(COPTS)
-.warning COPTS should be CFLAGS.
+.warning ${.CURDIR}: COPTS should be CFLAGS.
 CFLAGS+=${COPTS}
 .endif
 
@@ -53,12 +48,15 @@ CTFFLAGS+= -g
 STRIP?=	-s
 .endif
 
-.if defined(NO_SHARED) && (${NO_SHARED} != "no" && ${NO_SHARED} != "NO")
-LDFLAGS+= -static
+.if defined(NO_ROOT)
+.if !defined(TAGS) || ! ${TAGS:Mpackage=*}
+TAGS+=		package=${PACKAGE:Uruntime}
+.endif
+TAG_ARGS=	-T ${TAGS:[*]:S/ /,/g}
 .endif
 
-.if defined(USEPRIVATELIB)
-LDFLAGS+= -L${_SHLIBDIRPREFIX}${LIBPRIVATEDIR} -rpath ${LIBPRIVATEDIR}
+.if defined(NO_SHARED) && (${NO_SHARED} != "no" && ${NO_SHARED} != "NO")
+LDFLAGS+= -static
 .endif
 
 .if ${MK_DEBUG_FILES} != "no"
@@ -66,13 +64,16 @@ PROG_FULL=${PROG}.full
 # Use ${DEBUGDIR} for base system debug files, else .debug subdirectory
 .if defined(BINDIR) && (\
     ${BINDIR} == "/bin" ||\
-    ${BINDIR} == "/libexec" ||\
+    ${BINDIR:C%/libexec(/.*)?%/libexec%} == "/libexec" ||\
     ${BINDIR} == "/sbin" ||\
-    ${BINDIR:C%/usr/(bin|bsdinstall|games|libexec|lpr|sendmail|sm.bin|sbin)(/.*)?%/usr/bin%} == "/usr/bin"\
+    ${BINDIR:C%/usr/(bin|bsdinstall|libexec|lpr|sendmail|sm.bin|sbin|tests)(/.*)?%/usr/bin%} == "/usr/bin" ||\
+    ${BINDIR} == "/usr/lib" \
      )
 DEBUGFILEDIR=	${DEBUGDIR}${BINDIR}
 .else
 DEBUGFILEDIR?=	${BINDIR}/.debug
+.endif
+.if !exists(${DESTDIR}${DEBUGFILEDIR})
 DEBUGMKDIR=
 .endif
 .else
@@ -92,9 +93,11 @@ ${PROG_FULL}: beforelinking
 .endif
 ${PROG_FULL}: ${OBJS}
 .if defined(PROG_CXX)
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CXX:N${CCACHE_BIN}} ${CXXFLAGS:N-M*} ${LDFLAGS} -o ${.TARGET} \
+	    ${OBJS} ${LDADD}
 .else
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CC:N${CCACHE_BIN}} ${CFLAGS:N-M*} ${LDFLAGS} -o ${.TARGET} ${OBJS} \
+	    ${LDADD}
 .endif
 .if ${MK_CTF} != "no"
 	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
@@ -122,9 +125,11 @@ ${PROG_FULL}: beforelinking
 .endif
 ${PROG_FULL}: ${OBJS}
 .if defined(PROG_CXX)
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CXX:N${CCACHE_BIN}} ${CXXFLAGS:N-M*} ${LDFLAGS} -o ${.TARGET} \
+	    ${OBJS} ${LDADD}
 .else
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CC:N${CCACHE_BIN}} ${CFLAGS:N-M*} ${LDFLAGS} -o ${.TARGET} ${OBJS} \
+	    ${LDADD}
 .endif
 .if ${MK_CTF} != "no"
 	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
@@ -151,10 +156,13 @@ MAN1=	${MAN}
 .endif
 .endif # defined(PROG)
 
-all: beforebuild .WAIT ${PROG} ${SCRIPTS}
-beforebuild: objwarn
+.if defined(_SKIP_BUILD)
+all:
+.else
+all: ${PROG} ${SCRIPTS}
 .if ${MK_MAN} != "no"
-all: _manpages
+all: all-man
+.endif
 .endif
 
 .if defined(PROG)
@@ -171,6 +179,7 @@ CLEANFILES+= ${OBJS}
 .include <bsd.libnames.mk>
 
 .if defined(PROG)
+.if !defined(NO_EXTRADEPEND)
 _EXTRADEPEND:
 .if defined(LDFLAGS) && !empty(LDFLAGS:M-nostdlib)
 .if defined(DPADD) && !empty(DPADD)
@@ -179,13 +188,14 @@ _EXTRADEPEND:
 .else
 	echo ${PROG_FULL}: ${LIBC} ${DPADD} >> ${DEPENDFILE}
 .if defined(PROG_CXX)
-.if ${MK_CLANG_IS_CC} != "no" && empty(CXXFLAGS:M-stdlib=libstdc++)
+.if ${COMPILER_TYPE} == "clang" && empty(CXXFLAGS:M-stdlib=libstdc++)
 	echo ${PROG_FULL}: ${LIBCPLUSPLUS} >> ${DEPENDFILE}
 .else
 	echo ${PROG_FULL}: ${LIBSTDCPLUSPLUS} >> ${DEPENDFILE}
 .endif
 .endif
 .endif
+.endif	# !defined(NO_EXTRADEPEND)
 .endif
 
 .if !target(install)
@@ -207,13 +217,13 @@ realinstall: _proginstall
 .ORDER: beforeinstall _proginstall
 _proginstall:
 .if defined(PROG)
-	${INSTALL} ${STRIP} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
+	${INSTALL} ${TAG_ARGS} ${STRIP} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
 	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${BINDIR}/${PROGNAME}
 .if ${MK_DEBUG_FILES} != "no"
 .if defined(DEBUGMKDIR)
-	${INSTALL} -T debug -d ${DESTDIR}${DEBUGFILEDIR}
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},debug} -d ${DESTDIR}${DEBUGFILEDIR}/
 .endif
-	${INSTALL} -T debug -o ${BINOWN} -g ${BINGRP} -m ${DEBUGMODE} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},debug} -o ${BINOWN} -g ${BINGRP} -m ${DEBUGMODE} \
 	    ${PROGNAME}.debug ${DESTDIR}${DEBUGFILEDIR}/${PROGNAME}.debug
 .endif
 .endif
@@ -228,6 +238,10 @@ SCRIPTSOWN?=	${BINOWN}
 SCRIPTSGRP?=	${BINGRP}
 SCRIPTSMODE?=	${BINMODE}
 
+STAGE_AS_SETS+= scripts
+stage_as.scripts: ${SCRIPTS}
+FLAGS.stage_as.scripts= -m ${SCRIPTSMODE}
+STAGE_FILES_DIR.scripts= ${STAGE_OBJTOP}
 .for script in ${SCRIPTS}
 .if defined(SCRIPTSNAME)
 SCRIPTSNAME_${script:T}?=	${SCRIPTSNAME}
@@ -238,9 +252,10 @@ SCRIPTSDIR_${script:T}?=	${SCRIPTSDIR}
 SCRIPTSOWN_${script:T}?=	${SCRIPTSOWN}
 SCRIPTSGRP_${script:T}?=	${SCRIPTSGRP}
 SCRIPTSMODE_${script:T}?=	${SCRIPTSMODE}
+STAGE_AS_${script:T}=		${SCRIPTSDIR_${script:T}}/${SCRIPTSNAME_${script:T}}
 _scriptsinstall: _SCRIPTSINS_${script:T}
 _SCRIPTSINS_${script:T}: ${script}
-	${INSTALL} -o ${SCRIPTSOWN_${.ALLSRC:T}} \
+	${INSTALL} ${TAG_ARGS} -o ${SCRIPTSOWN_${.ALLSRC:T}} \
 	    -g ${SCRIPTSGRP_${.ALLSRC:T}} -m ${SCRIPTSMODE_${.ALLSRC:T}} \
 	    ${.ALLSRC} \
 	    ${DESTDIR}${SCRIPTSDIR_${.ALLSRC:T}}/${SCRIPTSNAME_${.ALLSRC:T}}
@@ -250,13 +265,14 @@ _SCRIPTSINS_${script:T}: ${script}
 NLSNAME?=	${PROG}
 .include <bsd.nls.mk>
 
+.include <bsd.confs.mk>
 .include <bsd.files.mk>
 .include <bsd.incs.mk>
 .include <bsd.links.mk>
 
 .if ${MK_MAN} != "no"
-realinstall: _maninstall
-.ORDER: beforeinstall _maninstall
+realinstall: maninstall
+.ORDER: beforeinstall maninstall
 .endif
 
 .endif	# !target(install)
@@ -272,16 +288,11 @@ lint: ${SRCS:M*.c}
 .include <bsd.man.mk>
 .endif
 
+.if defined(PROG)
+OBJS_DEPEND_GUESS+= ${SRCS:M*.h}
+.endif
+
 .include <bsd.dep.mk>
-
-.if defined(PROG) && !exists(${.OBJDIR}/${DEPENDFILE})
-${OBJS}: ${SRCS:M*.h}
-.endif
-
+.include <bsd.clang-analyze.mk>
 .include <bsd.obj.mk>
-
 .include <bsd.sys.mk>
-
-.if defined(PORTNAME)
-.include <bsd.pkg.mk>
-.endif

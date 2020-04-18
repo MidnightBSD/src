@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/suite.test.mk 313792 2017-02-16 05:22:08Z ngie $
+# $FreeBSD: stable/11/share/mk/suite.test.mk 299094 2016-05-04 23:20:53Z ngie $
 #
 # You must include bsd.test.mk instead of this file from your Makefile.
 #
@@ -47,8 +46,8 @@ KYUAFILE?= auto
 #TEST_METADATA.<test-program>+= key="value"
 
 .if ${KYUAFILE:tl} != "no"
-FILES+=	Kyuafile
-FILESDIR_Kyuafile= ${TESTSDIR}
+${PACKAGE}FILES+=	Kyuafile
+${PACKAGE}FILESDIR_Kyuafile=	${TESTSDIR}
 .endif
 
 .for _T in ${_TESTS}
@@ -67,13 +66,8 @@ Kyuafile: Makefile
             echo; \
 	} > ${.TARGET}.tmp
 .for _T in ${_TESTS}
-.if defined(.PARSEDIR)
 	@echo '${TEST_INTERFACE.${_T}}_test_program{name="${_T}"${_TEST_METADATA.${_T}:C/$/,/:tW:C/^/, /W:C/,$//W}}' \
 	    >>${.TARGET}.tmp
-.else
-	@echo '${TEST_INTERFACE.${_T}}_test_program{name="${_T}"${_TEST_METADATA.${_T}:C/^/, /:Q:S/\\ ,/,/g:S,\\,,g}}' \
-	    >>${.TARGET}.tmp
-.endif
 .endfor
 .for _T in ${TESTS_SUBDIRS:N.WAIT}
 	@echo "include(\"${_T}/${.TARGET}\")" >>${.TARGET}.tmp

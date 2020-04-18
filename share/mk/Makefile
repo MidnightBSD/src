@@ -1,18 +1,25 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/mk/Makefile 357107 2020-01-25 05:17:44Z kevans $
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
 
 # Only parse this if executing make in this directory, not in other places
 # in src that lack a Makefile, such as sys/dev/*.  Otherwise the MAKESYSPATH
 # will read this Makefile since it auto includes it into -I.
-# Note that this guard only works for bmake.
-.if !defined(.PARSEDIR) || ${.CURDIR} == ${.PARSEDIR}
+.if ${.CURDIR} == ${.PARSEDIR}
 
-.include <bsd.own.mk>
+# Avoid creating a Makefile.depend here as it would get included anywhere
+# in the build, similar to the problem above.  It would cause dirdeps.mk
+# to be included more times than desired.
+UPDATE_DEPENDFILE= no
+
+.include <src.opts.mk>
 
 FILES=	\
+	auto.obj.mk \
 	bsd.README \
 	bsd.arch.inc.mk \
+	bsd.clang-analyze.mk \
 	bsd.compiler.mk \
+	bsd.confs.mk \
 	bsd.cpu.mk \
 	bsd.crunchgen.mk \
 	bsd.dep.mk \
@@ -26,10 +33,13 @@ FILES=	\
 	bsd.kmod.mk \
 	bsd.lib.mk \
 	bsd.libnames.mk \
+	bsd.linker.mk \
 	bsd.links.mk \
 	bsd.man.mk \
+	bsd.mkopt.mk \
 	bsd.nls.mk \
 	bsd.obj.mk \
+	bsd.opts.mk \
 	bsd.own.mk \
 	bsd.port.mk \
 	bsd.mport.options.mk \
@@ -42,11 +52,20 @@ FILES=	\
 	bsd.subdir.mk \
 	bsd.symver.mk \
 	bsd.sys.mk \
+	bsd.sysdir.mk \
 	bsd.test.mk \
+	dirdeps.mk \
+	gendirdeps.mk \
+	install-new.mk \
+	meta.autodep.mk \
+	meta.stage.mk \
+	meta.subdir.mk \
+	meta.sys.mk \
+	stage-install.sh \
 	sys.mk \
+	sys.dependfile.mk \
 	version_gen.awk
 
-NO_OBJ=
 FILESDIR=	${BINDIR}/mk
 
 .if ${MK_TESTS} != "no"

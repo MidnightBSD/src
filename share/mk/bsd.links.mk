@@ -1,32 +1,24 @@
-# $FreeBSD: src/share/mk/bsd.links.mk,v 1.2 2002/07/03 12:28:03 ru Exp $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/mk/bsd.links.mk 322745 2017-08-21 10:26:11Z lwhsu $
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.links.mk cannot be included directly.
 .endif
 
+.if defined(NO_ROOT)
+.if !defined(TAGS) || ! ${TAGS:Mpackage=*}
+TAGS+=         package=${PACKAGE}
+.endif
+TAG_ARGS=      -T ${TAGS:[*]:S/ /,/g}
+.endif
+
 afterinstall: _installlinks
 .ORDER: realinstall _installlinks
 _installlinks:
-.if defined(LINKS) && !empty(LINKS)
-	@set ${LINKS}; \
-	while test $$# -ge 2; do \
-		l=${DESTDIR}$$1; \
-		shift; \
-		t=${DESTDIR}$$1; \
-		shift; \
-		${ECHO} $$t -\> $$l; \
-		${INSTALL_LINK} $$l $$t; \
-	done; true
-.endif
-.if defined(SYMLINKS) && !empty(SYMLINKS)
-	@set ${SYMLINKS}; \
-	while test $$# -ge 2; do \
-		l=$$1; \
-		shift; \
-		t=${DESTDIR}$$1; \
-		shift; \
-		${ECHO} $$t -\> $$l; \
-		${INSTALL_SYMLINK} $$l $$t; \
-	done; true
-.endif
+.for s t in ${LINKS}
+	@${ECHO} "${t} -> ${s}" ;\
+	${INSTALL_LINK} ${TAG_ARGS} ${DESTDIR}${s} ${DESTDIR}${t}
+.endfor
+.for s t in ${SYMLINKS}
+	@${ECHO} "${t} -> ${s}" ;\
+	${INSTALL_SYMLINK} ${TAG_ARGS} ${s} ${DESTDIR}${t}
+.endfor

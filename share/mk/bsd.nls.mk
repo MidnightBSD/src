@@ -1,5 +1,4 @@
-# $FreeBSD: src/share/mk/bsd.nls.mk,v 1.13 2005/04/11 07:13:29 harti Exp $
-# $MidnightBSD: src/share/mk/bsd.nls.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $FreeBSD: stable/11/share/mk/bsd.nls.mk 301284 2016-06-03 19:25:36Z bdrewery $
 #
 # This include file <bsd.nls.mk> handles building and installing Native
 # Language Support (NLS) catalogs
@@ -62,13 +61,25 @@ NLSDIR?=	${SHAREDIR}/nls
 #
 # installation rules
 #
+.if ${MK_STAGING_PROG} == "yes"
+.if !defined(_SKIP_BUILD)
+STAGE_TARGETS+= stage_symlinks
+.endif
+STAGE_SYMLINKS.NLS= ${NLSSYMLINKS}
+STAGE_SYMLINKS_DIR.NLS= ${STAGE_OBJTOP}
+.else
+SYMLINKS+= ${NLSSYMLINKS}
+.endif
 .for file in ${NLS}
 NLSNAME_${file:T}= ${file:T:R}/${NLSNAME}.cat
 .if defined(NLSLINKS_${file:R}) && !empty(NLSLINKS_${file:R})
+.if !empty(NLSLINKS_${file:R}:M${file:R})
+.error NLSLINKS_${file:R} contains itself: ${file:R}
+.endif
 NLSLINKS+=	${file:R}
 .endif
 .for dst in ${NLSLINKS_${file:R}}
-SYMLINKS+=	../${file:R}/${NLSNAME}.cat ${NLSDIR}/${dst}/${NLSNAME}.cat
+NLSSYMLINKS+= ../${file:R}/${NLSNAME}.cat ${NLSDIR}/${dst}/${NLSNAME}.cat
 .endfor
 .endfor
 

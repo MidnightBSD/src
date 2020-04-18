@@ -1,6 +1,5 @@
 #	from: @(#)bsd.doc.mk	5.3 (Berkeley) 1/2/91
-# $FreeBSD: src/share/mk/bsd.doc.mk,v 1.59 2004/12/21 09:33:42 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.doc.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $FreeBSD: stable/11/share/mk/bsd.doc.mk 298107 2016-04-16 07:45:30Z gjb $
 #
 # The include file <bsd.doc.mk> handles installing BSD troff documents.
 #
@@ -20,7 +19,7 @@
 #
 # MACROS	Macro packages used to build the document.  [not set]
 #
-# NO_DOCCOMPRESS If you do not want formatted troff documents to be
+# WITHOUT_DOCCOMPRESS If you do not want formatted troff documents to be
 #		compressed when they are installed.  [not set]
 #
 # PRINTERDEVICE	Indicates which output formats will be generated
@@ -76,10 +75,17 @@ TRFLAGS+=	-p
 TRFLAGS+=	-R
 .endif
 .if defined(USE_SOELIM)
-TRFLAGS+=	-I${SRCDIR}
+TRFLAGS+=	-I${.CURDIR}
 .endif
 .if defined(USE_TBL)
 TRFLAGS+=	-t
+.endif
+
+.if defined(NO_ROOT)
+.if !defined(TAGS) || ! ${TAGS:Mpackage=*}
+TAGS+=		package=${PACKAGE:Uruntime}
+.endif
+TAG_ARGS=	-T ${TAGS:[*]:S/ /,/g}
 .endif
 
 DCOMPRESS_EXT?=	${COMPRESS_EXT}
@@ -88,7 +94,7 @@ DCOMPRESS_CMD?=	${COMPRESS_CMD}
 DFILE.html=	${DOC}.html
 .endfor
 .for _dev in ${PRINTERDEVICE:Nhtml}
-.if defined(NO_DOCCOMPRESS)
+.if ${MK_DOCCOMPRESS} == "no"
 DFILE.${_dev}=	${DOC}.${_dev}
 .else
 DFILE.${_dev}=	${DOC}.${_dev}${DCOMPRESS_EXT}
@@ -108,9 +114,11 @@ COMPAT?=	-C
 
 .PATH: ${.CURDIR} ${SRCDIR}
 
+.if !defined(_SKIP_BUILD)
 .for _dev in ${PRINTERDEVICE}
 all: ${DFILE.${_dev}}
 .endfor
+.endif
 
 .if !target(print)
 .for _dev in ${PRINTERDEVICE}
@@ -118,7 +126,7 @@ print: ${DFILE.${_dev}}
 .endfor
 print:
 .for _dev in ${PRINTERDEVICE}
-.if defined(NO_DOCCOMPRESS)
+.if ${MK_DOCCOMPRESS} == "no"
 	${LPR} ${DFILE.${_dev}}
 .else
 	${DCOMPRESS_CMD} -d ${DFILE.${_dev}} | ${LPR}
@@ -134,14 +142,14 @@ CLEANFILES+=	${DOC}.ascii ${DOC}.ascii${DCOMPRESS_EXT} \
 		${DOC}.html ${DOC}-*.html
 
 realinstall:
-.for _dev in ${PRINTERDEVICE:Mhtml}
+.if ${PRINTERDEVICE:Mhtml}
 	cd ${SRCDIR}; \
-	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
-	    ${DOC}*.html ${DESTDIR}${BINDIR}/${VOLUME}
-.endfor
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},docs} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
+	    ${DOC}*.html ${DESTDIR}${BINDIR}/${VOLUME}/
+.endif
 .for _dev in ${PRINTERDEVICE:Nhtml}
-	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
-	    ${DFILE.${_dev}} ${DESTDIR}${BINDIR}/${VOLUME}
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},docs} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
+	    ${DFILE.${_dev}} ${DESTDIR}${BINDIR}/${VOLUME}/
 .endfor
 
 spell: ${SRCS}
@@ -165,7 +173,7 @@ CLEANFILES+=	_stamp.extra
 ${DFILE.${_dev}}: _stamp.extra
 .endif
 ${DFILE.${_dev}}: ${SRCS}
-.if defined(NO_DOCCOMPRESS)
+.if ${MK_DOCCOMPRESS} == "no"
 	${ROFF.${_dev}} ${.ALLSRC:N_stamp.extra} > ${.TARGET}
 .else
 	${ROFF.${_dev}} ${.ALLSRC:N_stamp.extra} | ${DCOMPRESS_CMD} > ${.TARGET}
@@ -185,7 +193,6 @@ ${DFILE.html}: ${SRCS}
 .else # unroff(1) requires a macro package as an argument
 	cd ${SRCDIR}; ${UNROFF} -ms ${UNROFFFLAGS} \
 	    document=${DOC} ${SRCS}
-.else
 .endif
 .endif
 .endfor

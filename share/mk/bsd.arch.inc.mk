@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #
 # Include the arch-specific Makefile.inc.$ARCH.  We go from most specific
 # to least specific, stopping after we get a hit.

@@ -21,6 +21,6 @@
 USEOPTIONSMK=	yes
 INOPTIONSMK=	yes
 
-.include "bsd.port.mk"
+.include <bsd.port.mk>
 
 .undef INOPTIONSMK

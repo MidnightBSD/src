@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/share/mk/version_gen.awk,v 1.2 2012/03/10 00:42:52 laffer1 Exp $
+# $FreeBSD: stable/11/share/mk/version_gen.awk 172747 2007-10-18 10:32:28Z yar $
 #
 
 #

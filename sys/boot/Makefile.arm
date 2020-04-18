@@ -1,8 +1,0 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sys/boot/Makefile.arm 223539 2011-06-25 16:01:45Z marius $
-
-.if ${MK_FDT} != "no"
-SUBDIR+=		fdt
-.endif
-
-SUBDIR+=		uboot

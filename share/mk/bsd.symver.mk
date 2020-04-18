@@ -1,5 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.symver.mk,v 1.1 2008/09/03 02:23:05 laffer1 Exp $
-# $FreeBSD: src/share/mk/bsd.symver.mk,v 1.4 2007/05/21 09:01:23 ru Exp $
+# $FreeBSD: stable/11/share/mk/bsd.symver.mk 172755 2007-10-18 15:21:35Z yar $
 
 .if !target(__<bsd.symver.mk>__)
 __<bsd.symver.mk>__:

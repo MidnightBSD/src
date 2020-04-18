@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/mk/plain.test.mk 276423 2014-12-30 20:46:01Z ngie $
+# $FreeBSD: stable/11/share/mk/plain.test.mk 274077 2014-11-04 01:57:31Z ngie $
 #
 # You must include bsd.test.mk instead of this file from your Makefile.
 #
