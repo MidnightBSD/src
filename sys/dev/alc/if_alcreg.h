@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/alc/if_alcreg.h 314019 2017-02-21 03:27:59Z sephe $
+ * $FreeBSD: stable/11/sys/dev/alc/if_alcreg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_IF_ALCREG_H

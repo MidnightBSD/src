@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/ale/if_alereg.h 273357 2014-10-21 01:14:56Z yongari $
+ * $FreeBSD: stable/11/sys/dev/ale/if_alereg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_IF_ALEREG_H
