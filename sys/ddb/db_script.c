@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_script.c 331301 2018-03-21 15:05:45Z avg $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_script.c 331300 2018-03-21 15:05:08Z avg $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -340,7 +339,7 @@ db_script_kdbenter(const char *eventname)
  * List scripts and their contents.
  */
 void
-db_scripts_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
+db_scripts_cmd(db_expr_t addr, bool have_addr, db_expr_t count,
     char *modif)
 {
 	int i;
@@ -358,7 +357,7 @@ db_scripts_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
  * Execute a script.
  */
 void
-db_run_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count, char *modif)
+db_run_cmd(db_expr_t addr, bool have_addr, db_expr_t count, char *modif)
 {
 	int t;
 
@@ -382,7 +381,7 @@ db_run_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count, char *modif)
  * we do not wish to use db_lex's token processing.
  */
 void
-db_script_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
+db_script_cmd(db_expr_t addr, bool have_addr, db_expr_t count,
     char *modif)
 {
 	char *buf, scriptname[DB_MAXSCRIPTNAME];
@@ -428,7 +427,7 @@ db_script_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
  * Remove a named script.
  */
 void
-db_unscript_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
+db_unscript_cmd(db_expr_t addr, bool have_addr, db_expr_t count,
     char *modif)
 {
 	int error, t;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_access.c 273265 2014-10-18 19:22:59Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_access.c 331643 2018-03-27 18:52:27Z dim $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -55,11 +54,11 @@ static unsigned db_extend[] = {	/* table for sign-extending */
 #endif
 
 db_expr_t
-db_get_value(db_addr_t addr, int size, boolean_t is_signed)
+db_get_value(db_addr_t addr, int size, bool is_signed)
 {
 	char		data[sizeof(u_int64_t)];
-	register db_expr_t value;
-	register int	i;
+	db_expr_t	value;
+	int		i;
 
 	if (db_read_bytes(addr, size, data) != 0) {
 		db_printf("*** error reading from address %llx ***\n",
@@ -88,7 +87,7 @@ void
 db_put_value(db_addr_t addr, int size, db_expr_t value)
 {
 	char		data[sizeof(int)];
-	register int	i;
+	int		i;
 
 #if	BYTE_MSF
 	for (i = size - 1; i >= 0; i--)

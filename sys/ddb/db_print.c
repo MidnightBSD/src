@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_print.c 290731 2015-11-12 23:49:47Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_print.c 285783 2015-07-22 01:09:02Z jhb $");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -48,7 +47,7 @@ __FBSDID("$FreeBSD: stable/10/sys/ddb/db_print.c 290731 2015-11-12 23:49:47Z jhb
 #include <ddb/db_sym.h>
 
 void
-db_show_regs(db_expr_t _1, boolean_t _2, db_expr_t _3, char *_4)
+db_show_regs(db_expr_t _1, bool _2, db_expr_t _3, char *_4)
 {
 	struct db_variable *regp;
 	db_expr_t value, offset;

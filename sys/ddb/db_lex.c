@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_lex.c 273265 2014-10-18 19:22:59Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_lex.c 299970 2016-05-16 19:42:38Z pfg $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -275,6 +274,10 @@ db_lex(void)
 	    case '/':
 		return (tSLASH);
 	    case '=':
+		c = db_read_char();
+		if (c == '=')
+		    return (tLOG_EQ);
+		db_unread_char(c);
 		return (tEQ);
 	    case '%':
 		return (tPCT);
@@ -291,21 +294,46 @@ db_lex(void)
 	    case '$':
 		return (tDOLLAR);
 	    case '!':
+		c = db_read_char();
+		if (c == '='){
+			return (tLOG_NOT_EQ);
+		}
+		db_unread_char(c);
 		return (tEXCL);
 	    case ';':
 		return (tSEMI);
+	    case '&':
+		c = db_read_char();
+		if (c == '&')
+		    return (tLOG_AND);
+		db_unread_char(c);
+		return (tBIT_AND);
+	    case '|':
+		c = db_read_char();
+		if (c == '|')
+		    return (tLOG_OR);
+		db_unread_char(c);
+		return (tBIT_OR);
 	    case '<':
 		c = db_read_char();
 		if (c == '<')
 		    return (tSHIFT_L);
+		if (c == '=') 
+		    return (tLESS_EQ);
 		db_unread_char(c);
-		break;
+		return (tLESS);
 	    case '>':
 		c = db_read_char();
 		if (c == '>')
 		    return (tSHIFT_R);
+		if (c == '=')
+		    return (tGREATER_EQ);
 		db_unread_char(c);
-		break;
+		return (tGREATER);
+	    case '?':
+		return (tQUESTION);
+	    case '~':
+		return (tBIT_NOT);
 	    case -1:
 		return (tEOF);
 	}

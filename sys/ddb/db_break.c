@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_break.c 273265 2014-10-18 19:22:59Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_break.c 283248 2015-05-21 15:16:18Z pfg $");
 
 #include <sys/param.h>
 
@@ -156,12 +155,12 @@ db_find_breakpoint_here(db_addr_t addr)
 	return db_find_breakpoint(db_map_addr(addr), addr);
 }
 
-static boolean_t	db_breakpoints_inserted = TRUE;
+static bool	db_breakpoints_inserted = true;
 
 #ifndef BKPT_WRITE
 #define	BKPT_WRITE(addr, storage)				\
 do {								\
-	*storage = db_get_value(addr, BKPT_SIZE, FALSE);	\
+	*storage = db_get_value(addr, BKPT_SIZE, false);	\
 	db_put_value(addr, BKPT_SIZE, BKPT_SET(*storage));	\
 } while (0)
 #endif
@@ -184,7 +183,7 @@ db_set_breakpoints(void)
 			if (db_map_current(bkpt->map)) {
 				BKPT_WRITE(bkpt->address, &bkpt->bkpt_inst);
 			}
-		db_breakpoints_inserted = TRUE;
+		db_breakpoints_inserted = true;
 	}
 }
 
@@ -201,7 +200,7 @@ db_clear_breakpoints(void)
 			if (db_map_current(bkpt->map)) {
 				BKPT_CLEAR(bkpt->address, &bkpt->bkpt_inst);
 			}
-		db_breakpoints_inserted = FALSE;
+		db_breakpoints_inserted = false;
 	}
 }
 
@@ -268,7 +267,7 @@ db_list_breakpoints(void)
 /* Delete breakpoint */
 /*ARGSUSED*/
 void
-db_delete_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count, char *modif)
+db_delete_cmd(db_expr_t addr, bool have_addr, db_expr_t count, char *modif)
 {
 	db_delete_breakpoint(db_map_addr(addr), (db_addr_t)addr);
 }
@@ -276,8 +275,7 @@ db_delete_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count, char *modif)
 /* Set breakpoint with skip count */
 /*ARGSUSED*/
 void
-db_breakpoint_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
-    char *modif)
+db_breakpoint_cmd(db_expr_t addr, bool have_addr, db_expr_t count, char *modif)
 {
 	if (count == -1)
 	    count = 1;
@@ -287,8 +285,7 @@ db_breakpoint_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
 
 /* list breakpoints */
 void
-db_listbreak_cmd(db_expr_t dummy1, boolean_t dummy2, db_expr_t dummy3,
-    char *dummy4)
+db_listbreak_cmd(db_expr_t dummy1, bool dummy2, db_expr_t dummy3, char *dummy4)
 {
 	db_list_breakpoints();
 }
@@ -299,7 +296,7 @@ db_listbreak_cmd(db_expr_t dummy1, boolean_t dummy2, db_expr_t dummy3,
  *	(or both) may be null.
  */
 
-boolean_t
+bool
 db_map_equal(vm_map_t map1, vm_map_t map2)
 {
 	return ((map1 == map2) ||
@@ -307,7 +304,7 @@ db_map_equal(vm_map_t map1, vm_map_t map2)
 		((map1 == kernel_map) && (map2 == NULL)));
 }
 
-boolean_t
+bool
 db_map_current(vm_map_t map)
 {
 #if 0
@@ -318,7 +315,7 @@ db_map_current(vm_map_t map)
 		(((thread = current_thread()) != NULL) &&
 		 (map == thread->task->map)));
 #else
-	return (1);
+	return (true);
 #endif
 }
 

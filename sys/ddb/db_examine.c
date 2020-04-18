@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_examine.c 273265 2014-10-18 19:22:59Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_examine.c 308418 2016-11-07 12:10:17Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,8 +52,7 @@ static void	db_search(db_addr_t, int, db_expr_t, db_expr_t, u_int);
  */
 /*ARGSUSED*/
 void
-db_examine_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
-    char *modif)
+db_examine_cmd(db_expr_t addr, bool have_addr, db_expr_t count, char *modif)
 {
 	if (modif[0] != '\0')
 	    db_strcpy(db_examine_format, modif);
@@ -111,37 +109,37 @@ db_examine(db_addr_t addr, char *fmt, int count)
 			width = size * 4;
 			switch (c) {
 			    case 'r':	/* signed, current radix */
-				value = db_get_value(addr, size, TRUE);
+				value = db_get_value(addr, size, true);
 				addr += size;
 				db_printf("%+-*lr", width, (long)value);
 				break;
 			    case 'x':	/* unsigned hex */
-				value = db_get_value(addr, size, FALSE);
+				value = db_get_value(addr, size, false);
 				addr += size;
 				db_printf("%-*lx", width, (long)value);
 				break;
 			    case 'z':	/* signed hex */
-				value = db_get_value(addr, size, TRUE);
+				value = db_get_value(addr, size, true);
 				addr += size;
 				db_printf("%-*ly", width, (long)value);
 				break;
 			    case 'd':	/* signed decimal */
-				value = db_get_value(addr, size, TRUE);
+				value = db_get_value(addr, size, true);
 				addr += size;
 				db_printf("%-*ld", width, (long)value);
 				break;
 			    case 'u':	/* unsigned decimal */
-				value = db_get_value(addr, size, FALSE);
+				value = db_get_value(addr, size, false);
 				addr += size;
 				db_printf("%-*lu", width, (long)value);
 				break;
 			    case 'o':	/* unsigned octal */
-				value = db_get_value(addr, size, FALSE);
+				value = db_get_value(addr, size, false);
 				addr += size;
 				db_printf("%-*lo", width, (long)value);
 				break;
 			    case 'c':	/* character */
-				value = db_get_value(addr, 1, FALSE);
+				value = db_get_value(addr, 1, false);
 				addr += 1;
 				if (value >= ' ' && value <= '~')
 				    db_printf("%c", (int)value);
@@ -150,7 +148,7 @@ db_examine(db_addr_t addr, char *fmt, int count)
 				break;
 			    case 's':	/* null-terminated string */
 				for (;;) {
-				    value = db_get_value(addr, 1, FALSE);
+				    value = db_get_value(addr, 1, false);
 				    addr += 1;
 				    if (value == 0)
 					break;
@@ -162,15 +160,15 @@ db_examine(db_addr_t addr, char *fmt, int count)
 				break;
 			    case 'S':	/* symbol */
 				value = db_get_value(addr, sizeof(void *),
-				    FALSE);
+				    false);
 				addr += sizeof(void *);
 				db_printsym(value, DB_STGY_ANY);
 				break;
 			    case 'i':	/* instruction */
-				addr = db_disasm(addr, FALSE);
+				addr = db_disasm(addr, false);
 				break;
 			    case 'I':	/* instruction, alternate form */
-				addr = db_disasm(addr, TRUE);
+				addr = db_disasm(addr, true);
 				break;
 			    default:
 				break;
@@ -191,8 +189,7 @@ static char	db_print_format = 'x';
 
 /*ARGSUSED*/
 void
-db_print_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
-    char *modif)
+db_print_cmd(db_expr_t addr, bool have_addr, db_expr_t count, char *modif)
 {
 	db_expr_t	value;
 
@@ -228,6 +225,10 @@ db_print_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
 		else
 		    db_printf("\\%03o", (int)value);
 		break;
+	    default:
+		db_print_format = 'x';
+		db_error("Syntax error: unsupported print modifier\n");
+		/*NOTREACHED*/
 	}
 	db_printf("\n");
 }
@@ -235,9 +236,13 @@ db_print_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
 void
 db_print_loc_and_inst(db_addr_t loc)
 {
+	db_expr_t off;
+
 	db_printsym(loc, DB_STGY_PROC);
-	db_printf(":\t");
-	(void) db_disasm(loc, TRUE);
+	if (db_search_symbol(loc, DB_STGY_PROC, &off) != C_DB_SYM_NULL) {
+		db_printf(":\t");
+		(void)db_disasm(loc, false);
+	}
 }
 
 /*
@@ -245,8 +250,7 @@ db_print_loc_and_inst(db_addr_t loc)
  * Syntax: search [/bhl] addr value [mask] [,count]
  */
 void
-db_search_cmd(db_expr_t dummy1, boolean_t dummy2, db_expr_t dummy3,
-    char *dummy4)
+db_search_cmd(db_expr_t dummy1, bool dummy2, db_expr_t dummy3, char *dummy4)
 {
 	int		t;
 	db_addr_t	addr;
@@ -315,7 +319,7 @@ db_search(db_addr_t addr, int size, db_expr_t value, db_expr_t mask,
 {
 	while (count-- != 0) {
 		db_prev = addr;
-		if ((db_get_value(addr, size, FALSE) & mask) == value)
+		if ((db_get_value(addr, size, false) & mask) == value)
 			break;
 		addr += size;
 	}

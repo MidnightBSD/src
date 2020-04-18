@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/ddb/db_variables.c 195699 2009-07-14 22:48:30Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sys/ddb/db_variables.c 298354 2016-04-20 16:19:44Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,8 +53,7 @@ static struct db_variable db_vars[] = {
 	{ "db_vnet",	NULL, db_var_db_vnet },
 #endif
 };
-static struct db_variable *db_evars =
-	db_vars + sizeof(db_vars)/sizeof(db_vars[0]);
+static struct db_variable *db_evars = db_vars + nitems(db_vars);
 
 static int
 db_find_variable(struct db_variable **varp)
@@ -129,7 +127,7 @@ db_write_variable(struct db_variable *vp, db_expr_t value)
 }
 
 void
-db_set_cmd(db_expr_t dummy1, boolean_t dummy2, db_expr_t dummy3, char *dummy4)
+db_set_cmd(db_expr_t dummy1, bool dummy2, db_expr_t dummy3, char *dummy4)
 {
 	struct db_variable *vp;
 	db_expr_t value;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/ddb/db_access.h 139747 2005-01-06 01:34:41Z imp $
+ * $FreeBSD: stable/11/sys/ddb/db_access.h 283248 2015-05-21 15:16:18Z pfg $
  */
 
 #ifndef _DDB_DB_ACCESS_H_
@@ -37,7 +36,7 @@
 /*
  * Data access functions for debugger.
  */
-db_expr_t	db_get_value(db_addr_t addr, int size, boolean_t is_signed);
+db_expr_t	db_get_value(db_addr_t addr, int size, bool is_signed);
 void		db_put_value(db_addr_t addr, int size, db_expr_t value);
 
 #endif /* !_DDB_DB_ACCESS_H_ */

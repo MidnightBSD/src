@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/ddb/db_lex.h 174914 2007-12-26 09:33:19Z rwatson $
+ * $FreeBSD: stable/11/sys/ddb/db_lex.h 299970 2016-05-16 19:42:38Z pfg $
  */
 
 #ifndef _DDB_DB_LEX_H_
@@ -70,5 +69,18 @@ extern char	db_tok_string[TOK_STRING_SIZE];
 #define	tSHIFT_R	19
 #define	tDOTDOT		20
 #define	tSEMI		21
+#define	tLOG_EQ		22
+#define	tLOG_NOT_EQ	23
+#define	tLESS		24
+#define	tLESS_EQ	25
+#define	tGREATER	26
+#define	tGREATER_EQ	27
+#define	tBIT_AND	28
+#define	tBIT_OR		29
+#define	tLOG_AND	30
+#define	tLOG_OR		31
+#define	tSTRING		32
+#define	tQUESTION	33
+#define	tBIT_NOT	34
 
 #endif /* !_DDB_DB_LEX_H_ */

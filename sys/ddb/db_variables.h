@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/10/sys/ddb/db_variables.h 273265 2014-10-18 19:22:59Z pfg $
+ * $FreeBSD: stable/11/sys/ddb/db_variables.h 272958 2014-10-11 20:25:19Z pfg $
  */
 
 /*
